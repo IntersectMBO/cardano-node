@@ -1,0 +1,59 @@
+resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/a136c4242b9c9f6124b811329bc8ccdfd86c514e/snapshot.yaml
+
+packages:
+  - .
+  - validate-mainnet
+
+extra-deps:
+    # Cardano-ledger dependencies
+  - git: https://github.com/input-output-hk/cardano-ledger
+    commit: 20afe954f847281665ada871c40943bf346f6cf5
+    subdirs:
+      - .
+      - crypto
+      - crypto/test
+      - test
+
+  - git: https://github.com/input-output-hk/cardano-prelude
+    commit: a136c4242b9c9f6124b811329bc8ccdfd86c514e
+    subdirs:
+      - .
+      - test
+
+  - git: https://github.com/input-output-hk/cardano-base
+    commit: b676160954cea07d4378ccca870a61242bc188a2
+    subdirs:
+      - binary
+      - binary/test
+
+    # Following deps are for cardano-shell
+  - git: https://github.com/input-output-hk/cardano-shell
+    commit: 4be5660c721cae4b001187ec614ef5cf4fad8fc7
+
+  - containers-0.5.11.0
+  - ekg-prometheus-adapter-0.1.0.4
+  - prometheus-2.1.1
+  - time-units-1.0.0
+    # iohk-monitoring-framework currently not pinned to a release
+  - git: https://github.com/input-output-hk/iohk-monitoring-framework
+    commit: a4f49e7b696b16c51cc7d92f68a0f1329c7005a1
+    subdirs:
+      - contra-tracer
+      - iohk-monitoring
+
+    # Extracted from cardano-sl since it's quite useful
+  - git: https://github.com/input-output-hk/cardano-sl-x509
+    commit: e8bfc1294e088f90e5ae0b4aedbc82ee46ac5ee4
+
+  - git: https://github.com/joelwilliamson/bimap
+    commit: 997fbb38b08dec14d225d064dac05b0a85f4ceae
+
+    #Ouroboros-network dependencies
+
+  - git: https://github.com/input-output-hk/ouroboros-network
+    commit: b3a46e40ba95204866890caf9713c5c2af282141
+    subdirs:
+        - io-sim-classes
+        - ouroboros-network
+        - ouroboros-consensus
+        - typed-protocols

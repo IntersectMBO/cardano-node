@@ -1,0 +1,39 @@
+packages:
+    ./
+
+package cardano-node
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/cardano-ledger
+  tag: 20afe954f847281665ada871c40943bf346f6cf5
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/cardano-prelude
+  tag: a136c4242b9c9f6124b811329bc8ccdfd86c514e
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/cardano-prelude
+  tag: a136c4242b9c9f6124b811329bc8ccdfd86c514e
+  subdir: test
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/cardano-shell
+  tag: 4be5660c721cae4b001187ec614ef5cf4fad8fc7
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/ouroboros-network
+  tag: b3a46e40ba95204866890caf9713c5c2af282141
+  subdir: ouroboros-network
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/ouroboros-network
+  tag: e40e48f9aa86bab9c2a4b43b65747de030069b84
+  subdir: ouroboros-consensus
+
+
