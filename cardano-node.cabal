@@ -20,6 +20,7 @@ library
   build-depends:
       base >=4.7 && <5
     , cardano-ledger
+    , cardano-crypto-wrapper
     , cardano-prelude
     , cardano-shell
     , ouroboros-consensus
@@ -32,11 +33,10 @@ executable cardano-node-exe
       Paths_cardano_node
   hs-source-dirs:
       app
-  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
   build-depends:
       base >=4.7 && <5
     , cardano-node
-
   default-language: Haskell2010
 
 test-suite cardano-node-test
@@ -46,8 +46,9 @@ test-suite cardano-node-test
       Paths_cardano_node
   hs-source-dirs:
       test
-  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
   build-depends:
       base >=4.7 && <5
     , cardano-node
+    , cardano-base
   default-language: Haskell2010
