@@ -19,8 +19,8 @@ library
       src
   build-depends:
       base >=4.7 && <5
-    , cardano-ledger
     , cardano-crypto-wrapper
+    , cardano-ledger
     , cardano-prelude
     , cardano-shell
     , ouroboros-consensus
@@ -50,5 +50,4 @@ test-suite cardano-node-test
   build-depends:
       base >=4.7 && <5
     , cardano-node
-    , cardano-base
   default-language: Haskell2010

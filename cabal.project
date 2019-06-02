@@ -16,8 +16,13 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: d4a6a8710a3dd6a4cf2299d362a8e55a49245f14
+  tag: b676160954cea07d4378ccca870a61242bc188a2
   subdir: binary
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/cardano-base
+  tag: b676160954cea07d4378ccca870a61242bc188a2
+  subdir: binary/test
 
 source-repository-package
   type: git
@@ -63,6 +68,7 @@ source-repository-package
   tag: b2857c646e0643ec6016faa246391fd7d69bdd9e
   subdir: contra-tracer
 
+constraints: iohk-monitoring +disable-prometheus
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/iohk-monitoring-framework
