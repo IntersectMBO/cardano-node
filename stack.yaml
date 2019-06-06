@@ -1,4 +1,4 @@
-resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/a136c4242b9c9f6124b811329bc8ccdfd86c514e/snapshot.yaml
+resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/066f854e0ab43048cbcba6511f1eff78c2141c26/snapshot.yaml
 
 packages:
   - .
@@ -7,7 +7,7 @@ packages:
 extra-deps:
     # Cardano-ledger dependencies
   - git: https://github.com/input-output-hk/cardano-ledger
-    commit: 20afe954f847281665ada871c40943bf346f6cf5
+    commit: fbffd18089041efb1f8d1896c5410bc2302811ef
     subdirs:
       - .
       - crypto
@@ -28,15 +28,16 @@ extra-deps:
 
     # Following deps are for cardano-shell
   - git: https://github.com/input-output-hk/cardano-shell
-    commit: 4be5660c721cae4b001187ec614ef5cf4fad8fc7
+    commit: f6fcda280ddd1d4ef87e5203d65d132f924a6e39
 
   - containers-0.5.11.0
   - ekg-prometheus-adapter-0.1.0.4
   - prometheus-2.1.1
   - time-units-1.0.0
+  - libsystemd-journal-1.4.4
     # iohk-monitoring-framework currently not pinned to a release
   - git: https://github.com/input-output-hk/iohk-monitoring-framework
-    commit: a4f49e7b696b16c51cc7d92f68a0f1329c7005a1
+    commit: 9129241a1306e2418bb775c63ad8a3ccd785c068
     subdirs:
       - contra-tracer
       - iohk-monitoring
@@ -51,9 +52,13 @@ extra-deps:
     #Ouroboros-network dependencies
 
   - git: https://github.com/input-output-hk/ouroboros-network
-    commit: b3a46e40ba95204866890caf9713c5c2af282141
+    commit: 1c291da70decc003b474b192e335e86e80c252b3
     subdirs:
         - io-sim-classes
         - ouroboros-network
         - ouroboros-consensus
         - typed-protocols
+
+flags:
+  iohk-monitoring:
+    disable-prometheus: true
