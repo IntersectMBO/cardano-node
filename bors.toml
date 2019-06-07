@@ -1,0 +1,8 @@
+status = [
+  "buildkite/cardano-node",
+  "ci/hydra:Cardano:cardano-node:required",
+]
+timeout_sec = 7200
+required_approvals = 1
+block_labels = [ "WIP", "DO NOT MERGE" ]
+delete_merged_branches = true
