@@ -2,7 +2,6 @@ resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/a136
 
 packages:
   - .
-  - validate-mainnet
 
 extra-deps:
     # Cardano-ledger dependencies
