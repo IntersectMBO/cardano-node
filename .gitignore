@@ -3,3 +3,5 @@
 dist-newstyle/
 dist/
 *~
+result*
+launch-*

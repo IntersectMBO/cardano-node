@@ -1,4 +1,4 @@
-resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/066f854e0ab43048cbcba6511f1eff78c2141c26/snapshot.yaml
+resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/a136c4242b9c9f6124b811329bc8ccdfd86c514e/snapshot.yaml
 
 packages:
   - .
@@ -62,3 +62,6 @@ extra-deps:
 flags:
   iohk-monitoring:
     disable-prometheus: true
+
+nix:
+  shell-file: nix/stack-shell.nix
