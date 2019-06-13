@@ -16,7 +16,6 @@
         "pretty-show" = (((hackage.pretty-show)."1.8.2").revisions).default;
         } // {
         cardano-node = ./.stack.nix/cardano-node.nix;
-        validate-mainnet = ./.stack.nix/validate-mainnet.nix;
         cardano-ledger = ./.stack.nix/cardano-ledger.nix;
         cardano-crypto-wrapper = ./.stack.nix/cardano-crypto-wrapper.nix;
         cardano-crypto-test = ./.stack.nix/cardano-crypto-test.nix;

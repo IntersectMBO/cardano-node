@@ -15,7 +15,6 @@
         "process" = (((hackage.process)."1.6.5.0").revisions).default;
         } // {
         cardano-node = ./cardano-node.nix;
-        validate-mainnet = ./validate-mainnet.nix;
         cardano-ledger = ./cardano-ledger.nix;
         cardano-crypto-wrapper = ./cardano-crypto-wrapper.nix;
         cardano-crypto-test = ./cardano-crypto-test.nix;
