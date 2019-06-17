@@ -19,6 +19,8 @@ module CLI (
   , progDesc
   ) where
 
+import           Prelude
+
 import           Data.Foldable (asum)
 import           Data.Semigroup ((<>))
 import           Options.Applicative

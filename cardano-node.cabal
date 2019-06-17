@@ -11,51 +11,24 @@ cabal-version:  >= 1.10
 extra-source-files: README.md, ChangeLog.md
 
 library
-  hs-source-dirs:      cardano-node
+  hs-source-dirs:      src
 
   exposed-modules:
-                       Parser
-
-  other-modules:
-                       Paths_cardano_node
+                       CLI
+                       Mock.TxSubmission
+                       NamedPipe
+                       Run
+                       Topology
 
   build-depends:
                        base >=4.12 && <5
                      , cardano-ledger
+                     , cardano-ledger-test
                      , cardano-prelude
                      , cardano-shell
+                     , contra-tracer
                      , ouroboros-consensus
                      , ouroboros-network
-
-  default-language:    Haskell2010
-  default-extensions:  NoImplicitPrelude
-
-  ghc-options:         -Weverything
-                       -fno-warn-safe
-                       -fno-warn-unsafe
-                       -fno-warn-missing-import-lists
-
-  if os(windows)
-     build-depends:    Win32
-  else
-     build-depends:    unix
-
-executable cardano-node
-  main-is:              cardano-node.hs
-
-  other-modules:
-                        Features.Blockchain
-  hs-source-dirs:
-                        app
-  build-depends:
-                        base
-                      , cardano-node
-                      , cardano-prelude
-                      , cardano-shell
-
-
-  default-language:     Haskell2010
-  default-extensions:   NoImplicitPrelude
 
                      , aeson
                      , async
@@ -71,6 +44,60 @@ executable cardano-node
                      , stm
                      , string-conv
                      , text
+
+  if os(windows)
+     build-depends:    Win32
+  else
+     build-depends:    unix
+
+  default-language:    Haskell2010
+  default-extensions:  NoImplicitPrelude
+
+  ghc-options:         -Weverything
+                       -fno-warn-safe
+                       -fno-warn-unsafe
+                       -fno-warn-missing-import-lists
+
+  if os(windows)
+     build-depends:    Win32
+  else
+     build-depends:    unix
+
+executable cardano-node
+  main-is:             cardano-node.hs
+
+  other-modules:
+                       Features.Blockchain
+  default-extensions:  NoImplicitPrelude
+  hs-source-dirs:
+                       app
+  build-depends:
+                        base
+                      , cardano-node
+                      , contra-tracer
+                      , ouroboros-network
+                      , ouroboros-consensus
+                      , io-sim-classes
+                      , cardano-crypto-wrapper
+                      , cardano-ledger
+                      , cardano-ledger-test
+                      , cardano-prelude
+                      , cardano-shell
+                      , aeson
+                      , async
+                      , bytestring
+                      , cborg
+                      , containers
+                      , cryptonite
+                      , directory
+                      , formatting
+                      , mtl
+                      , optparse-applicative
+                      , serialise
+                      , stm
+                      , string-conv
+                      , text
+
   if os(windows)
      build-depends:    Win32
   else

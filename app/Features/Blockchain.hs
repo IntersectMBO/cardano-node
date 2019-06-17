@@ -15,24 +15,18 @@ import           Cardano.Shell.Features.Logging (LoggingLayer (..))
 import           Cardano.Shell.Types            (ApplicationEnvironment (..),
                                                  CardanoEnvironment,
                                                  CardanoFeature (..))
+import           CLI                            (CLI)
+import           Run                            (runNode)
 
-newtype BlockchainLayer = BlockchainLayer { dummy :: forall m . MonadIO m =>  m () }
 
-{-
 newtype BlockchainLayer = BlockchainLayer
-  { bcHandleSimpleNode :: forall blk. RunDemo blk => DemoProtocol blk -> CLI -> TopologyInfo -> IO () }
--}
+  { bcHandleSimpleNode :: CLI -> LoggingLayer -> IO () }
+
 
 cleanup :: forall m . MonadIO m => m ()
 cleanup = pure ()
 
--- This needs to basically be populated with the results from the opt-applicative parser
-newtype BlockchainConfig = BlockchainConfig {dummyConfig :: Text}
-{-
--- TODO: I think this type should eventually be removed because we should
--- be getting the configuration from CardanoConfiguration
-newtype BlockchainConfig = BlockchainConfig { cfg :: CLI, topology :: TopologyInfo}
--}
+newtype BlockchainConfig = BlockchainConfig { parsedConfig :: CLI }
 
 init
   :: forall m
@@ -46,28 +40,22 @@ init config appEnv bcl ll = do
   _ <- case appEnv of
     Development -> pure $ "Development"
     Production  -> pure $ "Production"
-  {-
-  --TODO: Need to also pass in logging here, i.e modify handleSimpleNode
-  bcHandleSimpleNode demoProtocol (cfg config) (cfg topology)
-  -}
+    -- It seems in validate mainnet we used this to
+    -- check for the result in an MVAR
+    -- we are not looking for a result here. Therefore
+    -- I think this init function does not make sense at the moment.
   return ()
 
 createBlockchainFeature
   :: CardanoEnvironment
   -> CardanoConfiguration
+  -> BlockchainConfig
   -> ApplicationEnvironment
   -> LoggingLayer
-   -- TODO: Should be a typed error not Text
   -> ExceptT Text IO (BlockchainLayer, CardanoFeature)
-createBlockchainFeature _ cc appEnv loggingLayer = do
-    --TODO: Get topology from cc
+createBlockchainFeature _ cc nodeConf appEnv loggingLayer = do
 
-  let nodeConf = BlockchainConfig "DummyConfig"
-
-  let bcLayer   = BlockchainLayer $ return ()
-  {-
-  let bcLayer = BlockchainLayer $ handleSimpleNode
-  -}
+  let bcLayer = BlockchainLayer $ runNode
 
   let
     nFeature = CardanoFeature

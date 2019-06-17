@@ -12,6 +12,8 @@ module Mock.TxSubmission (
     , spawnMempoolListener
     ) where
 
+import           Prelude
+
 import           Codec.Serialise (decode, hPutSerialise)
 import qualified Control.Concurrent.Async as Async
 import           Control.Monad.Except

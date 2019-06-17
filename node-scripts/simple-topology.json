@@ -1,0 +1,14 @@
+[
+    { "nodeId": 0
+    , "producers": [1,2]
+    , "consumers": [1,2]
+    },
+    { "nodeId": 1
+    , "producers": [0,2]
+    , "consumers": [0,2]
+    },
+    { "nodeId": 2
+    , "producers": [0,1]
+    , "consumers": [0,1]
+    }
+]

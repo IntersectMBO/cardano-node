@@ -10,50 +10,54 @@ module Run (
       runNode
     ) where
 
-import           Codec.CBOR.Decoding (Decoder)
-import           Codec.CBOR.Encoding (Encoding)
-import qualified Control.Concurrent.Async as Async
+import           Prelude
+
+import           Codec.CBOR.Decoding                         (Decoder)
+import           Codec.CBOR.Encoding                         (Encoding)
+import qualified Control.Concurrent.Async                    as Async
 import           Control.Monad
 import           Control.Tracer
 import           Crypto.Random
-import           Data.Functor.Contravariant (contramap)
-import qualified Data.Map.Strict as M
+import           Data.Functor.Contravariant                  (contramap)
+import qualified Data.Map.Strict                             as M
 import           Data.Maybe
-import           Data.Semigroup ((<>))
+import           Data.Semigroup                              ((<>))
 
-import qualified Ouroboros.Network.AnchoredFragment as AF
+import qualified Ouroboros.Network.AnchoredFragment          as AF
 import           Ouroboros.Network.Block
-import qualified Ouroboros.Network.Block as Block
-import           Ouroboros.Network.Chain (genesisPoint, pointHash)
-import qualified Ouroboros.Network.Chain as Chain
+import qualified Ouroboros.Network.Block                     as Block
+import           Ouroboros.Network.Chain                     (genesisPoint,
+                                                              pointHash)
+import qualified Ouroboros.Network.Chain                     as Chain
 import           Ouroboros.Network.Protocol.BlockFetch.Codec
 import           Ouroboros.Network.Protocol.ChainSync.Codec
 
 import           Ouroboros.Consensus.Block
 import           Ouroboros.Consensus.BlockchainTime
-import           Ouroboros.Consensus.ChainSyncClient (ClockSkew (..))
+import           Ouroboros.Consensus.ChainSyncClient         (ClockSkew (..))
 import           Ouroboros.Consensus.Demo
 import           Ouroboros.Consensus.Demo.Run
-import           Ouroboros.Consensus.NodeId
 import           Ouroboros.Consensus.Node
+import           Ouroboros.Consensus.NodeId
 import           Ouroboros.Consensus.NodeNetwork
 import           Ouroboros.Consensus.Util.Condense
-import           Ouroboros.Consensus.Util.Orphans ()
+import           Ouroboros.Consensus.Util.Orphans            ()
 import           Ouroboros.Consensus.Util.STM
 import           Ouroboros.Consensus.Util.ThreadRegistry
 
-import           Ouroboros.Storage.ChainDB (ChainDB)
-import qualified Ouroboros.Storage.ChainDB as ChainDB
-import qualified Ouroboros.Storage.ChainDB.Mock as ChainDB
+import           Ouroboros.Storage.ChainDB                   (ChainDB)
+import qualified Ouroboros.Storage.ChainDB                   as ChainDB
+import qualified Ouroboros.Storage.ChainDB.Mock              as ChainDB
 
+import           Cardano.Shell.Features.Logging              (LoggingLayer (..))
 import           CLI
 import           Mock.TxSubmission
-import           NamedPipe (DataFlow (..), NodeMapping ((:==>:)))
+import           NamedPipe                                   (DataFlow (..), NodeMapping ((:==>:)))
 import qualified NamedPipe
 import           Topology
 
-runNode :: CLI -> IO ()
-runNode cli@CLI{..} = do
+runNode :: CLI -> LoggingLayer -> IO ()
+runNode cli@CLI{..} _ = do
     -- If the user asked to submit a transaction, we don't have to spin up a
     -- full node, we simply transmit it and exit.
     case command of

@@ -8,18 +8,19 @@ module NamedPipe (
   , NodeMapping((:==>:))
   ) where
 
-import           Control.Exception          (SomeException, bracket, catch)
-import           Control.Monad              (when)
-import           Data.ByteString.Lazy       (ByteString)
-import           Data.Semigroup             ((<>))
-import           System.Directory           (removeFile)
-import           System.IO
-import           System.Posix.Files         (createNamedPipe, otherReadMode,
-                                             otherWriteMode, ownerModes,
-                                             unionFileModes)
+import           Prelude
 
-import           Ouroboros.Consensus.NodeId (NodeId (..))
-import           Ouroboros.Network.Channel  (Channel, handlesAsChannel)
+import           Control.Exception (SomeException, bracket, catch)
+import           Control.Monad (when)
+import           Data.Semigroup ((<>))
+import           Data.ByteString.Lazy (ByteString)
+import           System.Directory (removeFile)
+import           System.IO
+import           System.Posix.Files (createNamedPipe, otherReadMode,
+                     otherWriteMode, ownerModes, unionFileModes)
+
+import           Ouroboros.Network.Channel (Channel, handlesAsChannel)
+import           Ouroboros.Consensus.NodeId (NodeId(..))
 
 
 data NodeMapping src tgt = src :==>: tgt

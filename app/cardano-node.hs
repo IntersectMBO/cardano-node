@@ -6,7 +6,6 @@ module Main
 where
 
 import           Cardano.Prelude
-
 import           Cardano.Shell.Features.Logging (LoggingLayer (..), Trace,
                                                  createLoggingFeature)
 import           Cardano.Shell.Lib              (runCardanoApplicationWithFeatures)
@@ -19,35 +18,30 @@ import           Features.Blockchain            (BlockchainConfig (..),
                                                  BlockchainLayer (..),
                                                  createBlockchainFeature)
 
+import           CLI                            (execParser, fullDesc, helper,
+                                                 info, parseCLI, progDesc)
 import           Parser                         (parseFunc)
 
 main :: IO ()
 main = do
-  -- The topology comes from a json file at the moment
-  -- TODO: Move json file to cardano-node
-  -- For now we get out configuration from the commandline
-  -- I believe we would want to get the entire configuration from
-  -- CardanoConfiguration
-  {-
-  cli <- execParser opts
 
-  Populate BlockchainConfig here via parser
-  then pass it to nodeApp
-  -}
-  let dummyBlockchainConfig = BlockchainConfig "dummy"
+    -- Parse command line arguments
+    cli <- execParser opts
+    let blcConfig = BlockchainConfig cli
 
-  let cardanoConfiguration = devConfiguration
-  cardanoEnvironment <- initializeCardanoEnvironment
+    let cardanoConfiguration = devConfiguration
+    cardanoEnvironment <- initializeCardanoEnvironment
 
-  --Features 'NodeApp' will use.
-  (loggingLayer, loggingFeature) <- createLoggingFeature cardanoEnvironment cardanoConfiguration
-  blockchainFeature  <- runExceptT $ createBlockchainFeature cardanoEnvironment cardanoConfiguration Production loggingLayer
+    --Features 'NodeApp' will use.
+    (loggingLayer, loggingFeature) <- createLoggingFeature cardanoEnvironment cardanoConfiguration
+    blockchainFeature  <- runExceptT $ createBlockchainFeature cardanoEnvironment cardanoConfiguration blcConfig Production loggingLayer
 
-  case blockchainFeature  of
-    Left err -> print err
-    Right (nodeLayer, blockchainFeature ) ->
-      runCardanoApplicationWithFeatures Production [blockchainFeature , loggingFeature] . CardanoApplication $ nodeApp loggingLayer nodeLayer dummyBlockchainConfig
-
+    case blockchainFeature  of
+      Left err -> print err
+      Right (nodeLayer, blockchainFeature ) ->
+        runCardanoApplicationWithFeatures Production [blockchainFeature , loggingFeature] . CardanoApplication $ nodeApp loggingLayer nodeLayer blcConfig
+  where
+   opts = info (parseCLI <**> helper) (fullDesc <> progDesc "Run a node with the chain-following protocol hooked in.")
 
 nodeApp :: LoggingLayer -> BlockchainLayer -> BlockchainConfig -> IO ()
 nodeApp ll bcl bcc = do
@@ -59,7 +53,7 @@ nodeApp ll bcl bcc = do
 shellRunNode :: Trace IO Text -> BlockchainConfig -> BlockchainLayer -> LoggingLayer -> IO ()
 shellRunNode logTrace bcc bcl ll = do
     logNotice logTrace "Begin shellRunNode..."
-    -- bcHandleSimpleNode bcl $ demoProtocol (cfg bcc) (topology bcc)
+    (bcHandleSimpleNode bcl) (parsedConfig bcc) (ll)
   where
     logNotice :: Trace IO Text -> Text -> IO ()
     logNotice = llLogNotice ll

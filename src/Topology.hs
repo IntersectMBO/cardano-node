@@ -4,6 +4,8 @@
 
 module Topology where
 
+import           Prelude
+
 import           Data.Aeson
 import           Data.Aeson.TH
 import qualified Data.ByteString as B
@@ -12,7 +14,7 @@ import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
 import           Data.String.Conv (toS)
 
-import           Ouroboros.Consensus.NodeId (NodeId(..))
+import           Ouroboros.Consensus.NodeId (NodeId (..))
 
 -- | A data structure bundling together a node identifier and the path to
 -- the topology file.
