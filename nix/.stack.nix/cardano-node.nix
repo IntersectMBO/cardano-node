@@ -23,20 +23,23 @@
           (hsPkgs.cardano-shell)
           (hsPkgs.ouroboros-consensus)
           (hsPkgs.ouroboros-network)
-          ];
+          ] ++ (if system.isWindows
+          then [ (hsPkgs.Win32) ]
+          else [ (hsPkgs.unix) ]);
         };
       exes = {
         "cardano-node" = {
           depends = [
             (hsPkgs.base)
-            (hsPkgs.contra-tracer)
-            (hsPkgs.ouroboros-network)
-            (hsPkgs.ouroboros-consensus)
-            (hsPkgs.io-sim-classes)
             (hsPkgs.cardano-crypto-wrapper)
             (hsPkgs.cardano-ledger)
             (hsPkgs.cardano-ledger-test)
             (hsPkgs.cardano-prelude)
+            (hsPkgs.cardano-shell)
+            (hsPkgs.contra-tracer)
+            (hsPkgs.io-sim-classes)
+            (hsPkgs.ouroboros-network)
+            (hsPkgs.ouroboros-consensus)
             (hsPkgs.aeson)
             (hsPkgs.async)
             (hsPkgs.bytestring)
