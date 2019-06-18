@@ -47,16 +47,15 @@ executable cardano-node
                        Run
                        Topology
   build-depends:       base
-                     , contra-tracer
-                     , ouroboros-network
-                     , ouroboros-consensus
-                     , io-sim-classes
                      , cardano-crypto-wrapper
                      , cardano-ledger
                      , cardano-ledger-test
                      , cardano-prelude
                      , cardano-shell
-                    --  , cardano-prelude
+                     , contra-tracer
+                     , io-sim-classes
+                     , ouroboros-network
+                     , ouroboros-consensus
 
                      , aeson
                      , async
