@@ -37,6 +37,7 @@
             (hsPkgs.cardano-ledger)
             (hsPkgs.cardano-ledger-test)
             (hsPkgs.cardano-prelude)
+            (hsPkgs.cardano-shell)
             (hsPkgs.aeson)
             (hsPkgs.async)
             (hsPkgs.bytestring)
