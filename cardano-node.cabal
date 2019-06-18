@@ -55,6 +55,8 @@ executable cardano-node
                      , cardano-ledger
                      , cardano-ledger-test
                      , cardano-prelude
+                     , cardano-shell
+                    --  , cardano-prelude
 
                      , aeson
                      , async
@@ -70,8 +72,6 @@ executable cardano-node
                      , stm
                      , string-conv
                      , text
-                    --  , cardano-node
-                    --  , cardano-prelude
   if os(windows)
      build-depends:    Win32
   else
