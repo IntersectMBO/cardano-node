@@ -2,6 +2,7 @@
   extras = hackage:
     {
       packages = {
+        "binary" = (((hackage.binary)."0.8.7.0").revisions).default;
         "containers" = (((hackage.containers)."0.5.11.0").revisions).default;
         "ekg-prometheus-adapter" = (((hackage.ekg-prometheus-adapter)."0.1.0.4").revisions).default;
         "prometheus" = (((hackage.prometheus)."2.1.1").revisions).default;
