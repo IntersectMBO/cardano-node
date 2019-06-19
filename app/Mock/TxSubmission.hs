@@ -27,8 +27,8 @@ import qualified Ouroboros.Consensus.Crypto.Hash as H
 import           Ouroboros.Consensus.Demo.Run
 import qualified Ouroboros.Consensus.Ledger.Mock as Mock
 import           Ouroboros.Consensus.Mempool
+import           Ouroboros.Consensus.Node (NodeKernel (..))
 import           Ouroboros.Consensus.NodeId (NodeId (..))
-import           Ouroboros.Consensus.Node   (NodeKernel (..))
 import           Ouroboros.Consensus.Util.CBOR (Decoder (..), initDecoderIO)
 import           Ouroboros.Consensus.Util.Condense
 
@@ -84,20 +84,20 @@ command' c descr p =
   Main logic
 -------------------------------------------------------------------------------}
 
-handleTxSubmission :: TopologyInfo -> Mock.Tx -> IO ()
-handleTxSubmission tinfo tx = do
+handleTxSubmission :: TopologyInfo -> Mock.Tx -> Tracer IO String -> IO ()
+handleTxSubmission tinfo tx tracer = do
     topoE <- readTopologyFile (topologyFile tinfo)
     case topoE of
          Left e  -> error e
          Right t ->
              case M.lookup (node tinfo) (toNetworkMap t) of
                   Nothing -> error "Target node not found."
-                  Just _  -> submitTx (node tinfo) tx
+                  Just _  -> submitTx (node tinfo) tx tracer
 
-submitTx :: NodeId -> Mock.Tx -> IO ()
-submitTx n tx = do
+submitTx :: NodeId -> Mock.Tx -> Tracer IO String -> IO ()
+submitTx n tx tracer = do
     withTxPipe n WriteMode False $ \h -> hPutSerialise h tx
-    putStrLn $ "The Id for this transaction is: " <> condense (H.hash @ShortHash tx)
+    traceWith tracer $ "The Id for this transaction is: " <> condense (H.hash @ShortHash tx)
 
 -- | Auxiliary to 'spawnMempoolListener'
 readIncomingTx :: RunDemo blk

@@ -38,6 +38,7 @@
             (hsPkgs.cardano-shell)
             (hsPkgs.contra-tracer)
             (hsPkgs.io-sim-classes)
+            (hsPkgs.iohk-monitoring)
             (hsPkgs.ouroboros-network)
             (hsPkgs.ouroboros-consensus)
             (hsPkgs.aeson)
