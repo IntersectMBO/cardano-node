@@ -8,13 +8,14 @@ import           Prelude hiding ((.))
 
 import           Cardano.Prelude
 import           Cardano.Shell.Constants.Types (CardanoConfiguration (..))
+import           Cardano.Shell.Features.Logging (LoggingLayer (..),
+                                                 createLoggingFeature)
 import           Cardano.Shell.Lib (runCardanoApplicationWithFeatures)
 import           Cardano.Shell.Presets (mainnetConfiguration)
 import           Cardano.Shell.Types (ApplicationEnvironment (Development),
                                       CardanoApplication (..),
                                       CardanoEnvironment, CardanoFeature (..),
                                       CardanoFeatureInit (..),
-                                      NoDependency (..),
                                       initializeCardanoEnvironment)
 
 import           CLI
@@ -36,12 +37,14 @@ main = do
 initializeAllFeatures :: CardanoConfiguration -> CardanoEnvironment -> IO ([CardanoFeature], NodeLayer)
 initializeAllFeatures cardanoConfiguration cardanoEnvironment = do
 
-    (nodeLayer, nodeFeature) <- createNodeFeature NoDependency cardanoEnvironment cardanoConfiguration
+    (loggingLayer, loggingFeature) <- createLoggingFeature              cardanoEnvironment cardanoConfiguration
+    (nodeLayer   , nodeFeature)    <- createNodeFeature    loggingLayer cardanoEnvironment cardanoConfiguration
 
     -- Here we return all the features.
     let allCardanoFeatures :: [CardanoFeature]
         allCardanoFeatures =
-            [ nodeFeature
+            [ loggingFeature
+            , nodeFeature
             ]
 
     pure (allCardanoFeatures, nodeLayer)
@@ -59,10 +62,10 @@ data NodeLayer = NodeLayer
 --------------------------------
 
 -- type NodeCardanoFeature = CardanoFeatureInit LoggingLayer Text NodeLayer
-type NodeCardanoFeature = CardanoFeatureInit NoDependency CLI NodeLayer
+type NodeCardanoFeature = CardanoFeatureInit LoggingLayer CLI NodeLayer
 
 
-createNodeFeature :: NoDependency -> CardanoEnvironment -> CardanoConfiguration -> IO (NodeLayer, CardanoFeature)
+createNodeFeature :: LoggingLayer -> CardanoEnvironment -> CardanoConfiguration -> IO (NodeLayer, CardanoFeature)
 createNodeFeature loggingLayer cardanoEnvironment cardanoConfiguration = do
     -- we parse any additional configuration if there is any
     -- We don't know where the user wants to fetch the additional configuration from, it could be from
@@ -91,8 +94,10 @@ nodeCardanoFeatureInit = CardanoFeatureInit
     , featureCleanup = featureCleanup'
     }
   where
-    featureStart' :: CardanoEnvironment -> NoDependency -> CardanoConfiguration -> CLI -> IO NodeLayer
-    featureStart' _ _ _ cli = pure $ NodeLayer {nlRunNode = liftIO $ runNode cli}
+    featureStart' :: CardanoEnvironment -> LoggingLayer -> CardanoConfiguration -> CLI -> IO NodeLayer
+    featureStart' _ loggingLayer _ cli = do
+        tr <- (llAppendName loggingLayer) "node" (llBasicTrace loggingLayer)
+        pure $ NodeLayer {nlRunNode = liftIO $ runNode cli tr}
 
     featureCleanup' :: NodeLayer -> IO ()
     featureCleanup' _ = pure ()

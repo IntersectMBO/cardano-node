@@ -20,6 +20,10 @@ import           Data.Functor.Contravariant (contramap)
 import qualified Data.Map.Strict as M
 import           Data.Maybe
 import           Data.Semigroup ((<>))
+import           Data.Text (Text, pack)
+
+import           Cardano.BM.Data.Tracer (ToLogObject (..))
+import           Cardano.BM.Trace (Trace, appendName)
 
 import qualified Ouroboros.Network.AnchoredFragment as AF
 import           Ouroboros.Network.Block
@@ -34,8 +38,8 @@ import           Ouroboros.Consensus.BlockchainTime
 import           Ouroboros.Consensus.ChainSyncClient (ClockSkew (..))
 import           Ouroboros.Consensus.Demo
 import           Ouroboros.Consensus.Demo.Run
-import           Ouroboros.Consensus.NodeId
 import           Ouroboros.Consensus.Node
+import           Ouroboros.Consensus.NodeId
 import           Ouroboros.Consensus.NodeNetwork
 import           Ouroboros.Consensus.Util.Condense
 import           Ouroboros.Consensus.Util.Orphans ()
@@ -52,35 +56,43 @@ import           NamedPipe (DataFlow (..), NodeMapping ((:==>:)))
 import qualified NamedPipe
 import           Topology
 
-runNode :: CLI -> IO ()
-runNode cli@CLI{..} = do
+runNode :: CLI -> Trace IO Text -> IO ()
+runNode cli@CLI{..} trace = do
     -- If the user asked to submit a transaction, we don't have to spin up a
     -- full node, we simply transmit it and exit.
     case command of
-      TxSubmitter topology tx ->
-        handleTxSubmission topology tx
-      SimpleNode topology protocol -> do
-        SomeProtocol p <- fromProtocol protocol
-        handleSimpleNode p cli topology
+        TxSubmitter topology tx -> do
+            trace' <- appendName (pack (show (node topology))) trace
+            let tracer = contramap pack $ toLogObject trace'
+            handleTxSubmission topology tx tracer
+        SimpleNode topology protocol -> do
+            trace' <- appendName (pack $ show $ node topology) trace
+            let tracer = contramap pack $ toLogObject trace'
+            SomeProtocol p <- fromProtocol protocol
+            handleSimpleNode p cli topology tracer
 
 -- | Sets up a simple node, which will run the chain sync protocol and block
 -- fetch protocol, and, if core, will also look at the mempool when trying to
 -- create a new block.
 handleSimpleNode :: forall blk. RunDemo blk
-                 => DemoProtocol blk -> CLI -> TopologyInfo -> IO ()
-handleSimpleNode p CLI{..} (TopologyInfo myNodeId topologyFile) = do
-    putStrLn $ "System started at " <> show systemStart
+                 => DemoProtocol blk
+                 -> CLI
+                 -> TopologyInfo
+                 -> Tracer IO String
+                 -> IO ()
+handleSimpleNode p CLI{..} (TopologyInfo myNodeId topologyFile) tracer = do
+    traceWith tracer $ "System started at " <> show systemStart
     t@(NetworkTopology nodeSetups) <-
       either error id <$> readTopologyFile topologyFile
     let topology  = toNetworkMap t
         nodeSetup = fromMaybe (error "node not found.") $
                           M.lookup myNodeId topology
 
-    putStrLn $ "**************************************"
-    putStrLn $ "I am Node = " <> show myNodeId
-    putStrLn $ "My consumers are " <> show (consumers nodeSetup)
-    putStrLn $ "My producers are " <> show (producers nodeSetup)
-    putStrLn $ "**************************************"
+    traceWith tracer $ "**************************************"
+    traceWith tracer $ "I am Node = " <> show myNodeId
+    traceWith tracer $ "My consumers are " <> show (consumers nodeSetup)
+    traceWith tracer $ "My producers are " <> show (producers nodeSetup)
+    traceWith tracer $ "**************************************"
 
     let pInfo@ProtocolInfo{..} =
           protocolInfo (NumCoreNodes (length nodeSetups)) (CoreNodeId nid) p
@@ -115,8 +127,7 @@ handleSimpleNode p CLI{..} (TopologyInfo myNodeId topologyFile) = do
           getHeader
 
       btime  <- realBlockchainTime registry slotDuration systemStart
-      let tracer = contramap ((show myNodeId <> " | ") <>) stdoutTracer
-          nodeParams = NodeParams
+      let nodeParams = NodeParams
             { tracer             = tracer
             , threadRegistry     = registry
             , maxClockSkew       = ClockSkew 1
@@ -151,7 +162,7 @@ handleSimpleNode p CLI{..} (TopologyInfo myNodeId topologyFile) = do
                  -> Tracer IO String
                  -> ChainDB IO blk (Header blk)
                  -> IO ()
-      watchChain registry tracer chainDB = onEachChange
+      watchChain registry tracer' chainDB = onEachChange
           registry fingerprint initFingerprint
           (ChainDB.getCurrentChain chainDB) (const logFullChain)
         where
@@ -159,7 +170,7 @@ handleSimpleNode p CLI{..} (TopologyInfo myNodeId topologyFile) = do
           fingerprint frag = (AF.headPoint frag, AF.anchorPoint frag)
           logFullChain = do
             chain <- ChainDB.toChain chainDB
-            traceWith tracer $
+            traceWith tracer' $
               "Updated chain: " <> condense (Chain.toOldestFirst chain)
 
       -- We need to make sure that both nodes read from the same file

@@ -58,6 +58,7 @@ executable cardano-node
                      , cardano-shell
                      , contra-tracer
                      , io-sim-classes
+                     , iohk-monitoring
                      , ouroboros-network
                      , ouroboros-consensus
 
