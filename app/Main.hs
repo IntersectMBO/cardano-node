@@ -101,6 +101,6 @@ nodeCardanoFeatureInit = CardanoFeatureInit
 nodeCardanoFeature :: NodeCardanoFeature -> NodeLayer -> CardanoFeature
 nodeCardanoFeature nodeCardanoFeature' nodeLayer = CardanoFeature
     { featureName       = featureType nodeCardanoFeature'
-    , featureStart      = nlRunNode nodeLayer
+    , featureStart      = pure ()
     , featureShutdown   = liftIO $ (featureCleanup nodeCardanoFeature') nodeLayer
     }
