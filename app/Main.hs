@@ -25,20 +25,9 @@ import           Cardano.Shell.Types (ApplicationEnvironment (Development),
 import           CLI
 import           Run
 
+
 -- | The product type of all command line arguments
 data ArgParser = ArgParser !CLIarguments !CLI
-
---data LogConfiguration = LogConfiguration !FilePath
---    deriving (Eq, Show)
---
---instance IsString LogConfiguration where
---    fromString = LogConfiguration . fromString
---
---parseLogging :: Parser LogConfiguration
---parseLogging = strOption
---          ( long "log-config"
---         <> metavar "CONFIG"
---         <> help "Log configuration path" )
 
 -- | The product parser for all the CLI arguments.
 commandLineParser :: Parser ArgParser
@@ -53,6 +42,7 @@ opts = info (commandLineParser <**> helper)
     <> progDesc "Cardano demo node."
     <> header "Demo node to run." )
 
+-- | Main function.
 main :: IO ()
 main = do
 
@@ -69,9 +59,9 @@ main = do
     runCardanoApplicationWithFeatures Development cardanoFeatures (cardanoApplication nodeLayer)
 
 initializeAllFeatures :: ArgParser -> CardanoConfiguration -> CardanoEnvironment -> IO ([CardanoFeature], NodeLayer)
-initializeAllFeatures (ArgParser logConfig cli) cardanoConfiguration cardanoEnvironment = do
+initializeAllFeatures (ArgParser logCli cli) cardanoConfiguration cardanoEnvironment = do
 
-    (loggingLayer, loggingFeature) <- createLoggingFeature cardanoEnvironment cardanoConfiguration logConfig
+    (loggingLayer, loggingFeature) <- createLoggingFeature cardanoEnvironment cardanoConfiguration logCli
     (nodeLayer   , nodeFeature)    <- createNodeFeature loggingLayer cli cardanoEnvironment cardanoConfiguration
 
     -- Here we return all the features.
