@@ -1,15 +1,19 @@
+{-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes        #-}
+
 
 module Main (main) where
 
 import           Data.Semigroup ((<>))
-import           Prelude hiding ((.))
 
-import           Cardano.Prelude
+import           Options.Applicative
+
+import           Cardano.Prelude hiding (option)
 import           Cardano.Shell.Constants.Types (CardanoConfiguration (..))
-import           Cardano.Shell.Features.Logging (LoggingLayer (..),
-                                                 createLoggingFeature)
+import           Cardano.Shell.Features.Logging (CLIarguments (..),
+                                                 LoggingLayer (..),
+                                                 createLoggingFeature, parse)
 import           Cardano.Shell.Lib (runCardanoApplicationWithFeatures)
 import           Cardano.Shell.Presets (mainnetConfiguration)
 import           Cardano.Shell.Types (ApplicationEnvironment (Development),
@@ -21,24 +25,54 @@ import           Cardano.Shell.Types (ApplicationEnvironment (Development),
 import           CLI
 import           Run
 
+-- | The product type of all command line arguments
+data ArgParser = ArgParser !CLIarguments !CLI
+
+--data LogConfiguration = LogConfiguration !FilePath
+--    deriving (Eq, Show)
+--
+--instance IsString LogConfiguration where
+--    fromString = LogConfiguration . fromString
+--
+--parseLogging :: Parser LogConfiguration
+--parseLogging = strOption
+--          ( long "log-config"
+--         <> metavar "CONFIG"
+--         <> help "Log configuration path" )
+
+-- | The product parser for all the CLI arguments.
+commandLineParser :: Parser ArgParser
+commandLineParser = ArgParser
+    <$> parse
+    <*> parseCLI
+
+-- | Top level parser with info.
+opts :: ParserInfo ArgParser
+opts = info (commandLineParser <**> helper)
+    ( fullDesc
+    <> progDesc "Cardano demo node."
+    <> header "Demo node to run." )
+
 main :: IO ()
 main = do
 
     let cardanoConfiguration = mainnetConfiguration
-    cardanoEnvironment <- initializeCardanoEnvironment
+    cardanoEnvironment  <- initializeCardanoEnvironment
 
-    (cardanoFeatures, nodeLayer) <- initializeAllFeatures cardanoConfiguration cardanoEnvironment
+    logConfig           <- execParser opts
+
+    (cardanoFeatures, nodeLayer) <- initializeAllFeatures logConfig cardanoConfiguration cardanoEnvironment
 
     let cardanoApplication :: NodeLayer -> CardanoApplication
         cardanoApplication = CardanoApplication . nlRunNode
 
     runCardanoApplicationWithFeatures Development cardanoFeatures (cardanoApplication nodeLayer)
 
-initializeAllFeatures :: CardanoConfiguration -> CardanoEnvironment -> IO ([CardanoFeature], NodeLayer)
-initializeAllFeatures cardanoConfiguration cardanoEnvironment = do
+initializeAllFeatures :: ArgParser -> CardanoConfiguration -> CardanoEnvironment -> IO ([CardanoFeature], NodeLayer)
+initializeAllFeatures (ArgParser logConfig cli) cardanoConfiguration cardanoEnvironment = do
 
-    (loggingLayer, loggingFeature) <- createLoggingFeature              cardanoEnvironment cardanoConfiguration
-    (nodeLayer   , nodeFeature)    <- createNodeFeature    loggingLayer cardanoEnvironment cardanoConfiguration
+    (loggingLayer, loggingFeature) <- createLoggingFeature cardanoEnvironment cardanoConfiguration logConfig
+    (nodeLayer   , nodeFeature)    <- createNodeFeature loggingLayer cli cardanoEnvironment cardanoConfiguration
 
     -- Here we return all the features.
     let allCardanoFeatures :: [CardanoFeature]
@@ -65,12 +99,11 @@ data NodeLayer = NodeLayer
 type NodeCardanoFeature = CardanoFeatureInit LoggingLayer CLI NodeLayer
 
 
-createNodeFeature :: LoggingLayer -> CardanoEnvironment -> CardanoConfiguration -> IO (NodeLayer, CardanoFeature)
-createNodeFeature loggingLayer cardanoEnvironment cardanoConfiguration = do
+createNodeFeature :: LoggingLayer -> CLI -> CardanoEnvironment -> CardanoConfiguration -> IO (NodeLayer, CardanoFeature)
+createNodeFeature loggingLayer cli cardanoEnvironment cardanoConfiguration = do
     -- we parse any additional configuration if there is any
     -- We don't know where the user wants to fetch the additional configuration from, it could be from
     -- the filesystem, so we give him the most flexible/powerful context, @IO@.
-    cli <- execParser opts
 
     -- we construct the layer
     nodeLayer <- (featureInit nodeCardanoFeatureInit) cardanoEnvironment loggingLayer cardanoConfiguration cli
@@ -80,12 +113,6 @@ createNodeFeature loggingLayer cardanoEnvironment cardanoConfiguration = do
 
     -- we return both
     pure (nodeLayer, cardanoFeature)
-  where
-    opts = info (parseCLI <**> helper)
-      ( fullDesc
-     <> progDesc "Run a node with the chain-following protocol hooked in."
-     )
-
 
 nodeCardanoFeatureInit :: NodeCardanoFeature
 nodeCardanoFeatureInit = CardanoFeatureInit
