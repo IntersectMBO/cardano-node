@@ -9,20 +9,21 @@ rotation:
 
 # these backends are initialized:
 setupBackends:
-  - AggregationBK
   - KatipBK
+  - EKGViewBK
   # - EditorBK
-  # - EKGViewBK
+  # - AggregationBK
 
 # if not indicated otherwise, then messages are passed to these backends:
 defaultBackends:
   - KatipBK
+  - EKGViewBK
 
 # if wanted, the GUI is listening on this port:
 # hasGUI: 12787
 
 # if wanted, the EKG interface is listening on this port:
-# hasEKG: 12788
+hasEKG: 12788
 
 # here we set up outputs of logging in 'katip':
 setupScribes:
@@ -60,6 +61,10 @@ options:
           contents: '#ekgview.#aggregation.cardano.epoch-validation.benchmark'
         - - tag: Contains
             contents: diff.RTS.gcNum.timed.
+      - - tag: StartsWith
+          contents: '#ekgview.cardano.node'
+        - - tag: Contains
+            contents: mempool-size
       subtrace: FilterTrace
     'cardano.epoch-validation.utxo-stats':
       # Change the `subtrace` value to `Neutral` in order to log

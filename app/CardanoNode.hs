@@ -9,7 +9,7 @@ import           Data.Semigroup ((<>))
 
 import           Options.Applicative
 
-import           Cardano.Prelude hiding (option)
+import           Cardano.Prelude
 import           Cardano.Shell.Constants.Types (CardanoConfiguration (..))
 import           Cardano.Shell.Features.Logging (CLIarguments (..),
                                                  LoggingLayer (..),

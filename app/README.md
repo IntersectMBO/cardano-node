@@ -7,9 +7,9 @@ there are 3 core nodes and they all follow each other.
 For example, to setup a minimal example, run in three separate terminal (in this order):
 
 ```
-./scripts/start-node.sh --bft -n 0
-./scripts/start-node.sh --bft -n 1
-./scripts/start-node.sh --bft -n 2
+./scripts/start-node.sh --bft -n 0 --log-config=./configuration/log-configuration-ekg.yaml
+./scripts/start-node.sh --bft -n 1 --log-config=./configuration/log-configuration.yaml
+./scripts/start-node.sh --bft -n 2 --log-config=./configuration/log-configuration.yaml
 ```
 
 You will see that the three nodes syncs with each other and agree on a common chain.
@@ -19,7 +19,7 @@ You will see that the three nodes syncs with each other and agree on a common ch
 To submit transactions, first spin up the node you want to target, then type:
 
 ```
-./scripts/submit-tx.sh -n 2 --address a --amount 1000
+./scripts/submit-tx.sh -n 2 --address a --amount 1000 --log-config=./configuration/log-configuration.yaml
 ```
 
 This would send the transaction to the node 2. The node would then add the Tx
@@ -28,7 +28,7 @@ You can chain transactions once you know the hash, which is printed after you
 submit the transaction:
 
 ```
-> ./scripts/submit-tx.sh -n 2 --address a --amount 1000
+> ./scripts/submit-tx.sh -n 2 --address a --amount 1000 --log-config=./configuration/log-configuration.yaml
 Up to date
 The Id for this transaction is: 6f6e1118
 ```

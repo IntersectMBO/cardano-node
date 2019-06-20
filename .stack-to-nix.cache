@@ -18,3 +18,4 @@ https://github.com/input-output-hk/ouroboros-network c848f9cb6b964f70c5c5248c596
 https://github.com/input-output-hk/ouroboros-network c848f9cb6b964f70c5c5248c596a071d2ff57132 ouroboros-network 1fcg38nrv2mcra2xhkyzkqagc5w3in7ingv3984bnmh1j3z3bvpm ouroboros-network ouroboros-network.nix
 https://github.com/input-output-hk/ouroboros-network c848f9cb6b964f70c5c5248c596a071d2ff57132 ouroboros-consensus 1fcg38nrv2mcra2xhkyzkqagc5w3in7ingv3984bnmh1j3z3bvpm ouroboros-consensus ouroboros-consensus.nix
 https://github.com/input-output-hk/ouroboros-network c848f9cb6b964f70c5c5248c596a071d2ff57132 typed-protocols 1fcg38nrv2mcra2xhkyzkqagc5w3in7ingv3984bnmh1j3z3bvpm typed-protocols typed-protocols.nix
+https://github.com/input-output-hk/cardano-shell 64cdb7f84ab34934d5001031c911ca3615d2d2a4 . 17i7nj7kyxzvwpb1d0ah7r4bgvg0kfg5csp8jrlw94h11arxbzsw cardano-shell cardano-shell.nix

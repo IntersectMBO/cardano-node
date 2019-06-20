@@ -1,19 +1,21 @@
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE GADTs               #-}
 {-# LANGUAGE NamedFieldPuns      #-}
+{-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE RecordWildCards     #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 {-# OPTIONS_GHC -Wno-simplifiable-class-constraints #-}
 
 module Run (
-      runNode
+    runNode
     ) where
 
 import           Codec.CBOR.Decoding (Decoder)
 import           Codec.CBOR.Encoding (Encoding)
 import qualified Control.Concurrent.Async as Async
 import           Control.Monad
+import           Control.Monad.IO.Class (MonadIO (liftIO))
 import           Control.Tracer
 import           Crypto.Random
 import           Data.Functor.Contravariant (contramap)
@@ -22,8 +24,12 @@ import           Data.Maybe
 import           Data.Semigroup ((<>))
 import           Data.Text (Text, pack)
 
+import           Cardano.BM.Data.Aggregated (Measurable (..))
+import           Cardano.BM.Data.LogItem (LOContent (..),
+                                          PrivacyAnnotation (Public), mkLOMeta)
+import           Cardano.BM.Data.Severity (Severity (Debug))
 import           Cardano.BM.Data.Tracer (ToLogObject (..))
-import           Cardano.BM.Trace (Trace, appendName)
+import           Cardano.BM.Trace (Trace, appendName, traceNamedObject)
 
 import qualified Ouroboros.Network.AnchoredFragment as AF
 import           Ouroboros.Network.Block
@@ -67,9 +73,19 @@ runNode cli@CLI{..} trace = do
             handleTxSubmission topology tx tracer
         SimpleNode topology protocol -> do
             trace' <- appendName (pack $ show $ node topology) trace
+            traceMempool <- appendName "mempool-size" trace'
             let tracer = contramap pack $ toLogObject trace'
+                mempoolTracer = Tracer $ \a -> do
+                    let (name, value) =
+                            case a of
+                                -- AfterNewBlock txs -> ("newBlockTxs", txs)
+                                AfterAddTxs   txs -> ("afterAddTxs", txs)
+                    traceNamedObject traceMempool =<<
+                        (,) <$> liftIO (mkLOMeta Debug Public)
+                            <*> pure (LogValue name (PureI $ fromIntegral value))
+
             SomeProtocol p <- fromProtocol protocol
-            handleSimpleNode p cli topology tracer
+            handleSimpleNode p cli topology tracer mempoolTracer
 
 -- | Sets up a simple node, which will run the chain sync protocol and block
 -- fetch protocol, and, if core, will also look at the mempool when trying to
@@ -79,8 +95,9 @@ handleSimpleNode :: forall blk. RunDemo blk
                  -> CLI
                  -> TopologyInfo
                  -> Tracer IO String
+                 -> Tracer IO MemPoolSize
                  -> IO ()
-handleSimpleNode p CLI{..} (TopologyInfo myNodeId topologyFile) tracer = do
+handleSimpleNode p CLI{..} (TopologyInfo myNodeId topologyFile) tracer mempoolTracer = do
     traceWith tracer $ "System started at " <> show systemStart
     t@(NetworkTopology nodeSetups) <-
       either error id <$> readTopologyFile topologyFile
@@ -146,7 +163,7 @@ handleSimpleNode p CLI{..} (TopologyInfo myNodeId topologyFile) tracer = do
       watchChain registry tracer chainDB
 
       -- Spawn the thread which listens to the mempool.
-      mempoolThread <- spawnMempoolListener tracer myNodeId kernel
+      mempoolThread <- spawnMempoolListener tracer mempoolTracer myNodeId kernel
 
       forM_ (producers nodeSetup) (addUpstream'   pInfo network)
       forM_ (consumers nodeSetup) (addDownstream' pInfo network)

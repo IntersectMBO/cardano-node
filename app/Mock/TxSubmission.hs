@@ -10,14 +10,17 @@ module Mock.TxSubmission (
     , parseMockTx
     , handleTxSubmission
     , spawnMempoolListener
+    , MemPoolSize (..)
     ) where
 
 import           Codec.Serialise (decode, hPutSerialise)
 import qualified Control.Concurrent.Async as Async
+import qualified Control.Concurrent.STM as STM
 import           Control.Monad.Except
 import           Control.Tracer
 import qualified Data.ByteString as BS
 import qualified Data.Map.Strict as M
+import qualified Data.Sequence as Seq
 import qualified Data.Set as Set
 import           Options.Applicative
 import           System.IO (IOMode (..))
@@ -102,12 +105,16 @@ submitTx n tx tracer = do
 -- | Auxiliary to 'spawnMempoolListener'
 readIncomingTx :: RunDemo blk
                => Tracer IO String
+               -> Tracer IO MemPoolSize
                -> NodeKernel IO NodeId blk
                -> Decoder IO
                -> IO ()
-readIncomingTx tracer kernel Decoder{..} = forever $ do
+readIncomingTx tracer mempoolTracer kernel Decoder{..} = forever $ do
     newTx :: Mock.Tx <- decodeNext decode
-    rejected <- addTxs (getMempool kernel) [demoMockTx (getNodeConfig kernel) newTx]
+    let memPool = getMempool kernel
+    rejected <- addTxs memPool [demoMockTx (getNodeConfig kernel) newTx]
+    txs <- STM.atomically $ getTxs memPool
+    traceWith mempoolTracer $ AfterAddTxs $ Seq.length txs
     traceWith tracer $
       (if null rejected then "Accepted" else "Rejected") <>
       " transaction: " <> show newTx
@@ -115,14 +122,17 @@ readIncomingTx tracer kernel Decoder{..} = forever $ do
 -- | Listen for transactions coming a named pipe and add them to the mempool
 spawnMempoolListener :: RunDemo blk
                      => Tracer IO String
+                     -> Tracer IO MemPoolSize
                      -> NodeId
                      -> NodeKernel IO NodeId blk
                      -> IO (Async.Async ())
-spawnMempoolListener tracer myNodeId kernel = do
+spawnMempoolListener tracer mempoolTracer myNodeId kernel = do
     Async.async $ do
         -- Apparently I have to pass 'ReadWriteMode' here, otherwise the
         -- node will die prematurely with a (DeserialiseFailure 0 "end of input")
         -- error.
         withTxPipe myNodeId ReadWriteMode True $ \h -> do
             let getChunk = BS.hGetSome h 1024
-            readIncomingTx tracer kernel =<< initDecoderIO getChunk
+            readIncomingTx tracer mempoolTracer kernel =<< initDecoderIO getChunk
+
+data MemPoolSize = AfterAddTxs   Int
