@@ -7,6 +7,6 @@ let
 
 in haskell.lib.buildStackProject {
   name = "cardano-ledger-env";
-  buildInputs = [ zlib openssl gmp libffi git systemd ];
+  buildInputs = [ zlib openssl gmp libffi git systemd haskellPackages.happy ];
   ghc = haskell.packages.${compiler}.ghc;
 }
