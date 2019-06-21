@@ -51,9 +51,9 @@ iohkLib.nix-tools.release-nix {
     jobs.nix-tools.tests.cardano-node.cardano-node-test.x86_64-linux
 
     # windows cross compilation targets
-    jobs.nix-tools.libs.x86_64-pc-mingw32-cardano-node.x86_64-linux
+    #jobs.nix-tools.libs.x86_64-pc-mingw32-cardano-node.x86_64-linux
     #jobs.nix-tools.exes.x86_64-pc-mingw32-cardano-node.x86_64-linux
-    jobs.nix-tools.tests.x86_64-pc-mingw32-cardano-node.cardano-node-test.x86_64-linux
+    #jobs.nix-tools.tests.x86_64-pc-mingw32-cardano-node.cardano-node-test.x86_64-linux
 
   ];
 }

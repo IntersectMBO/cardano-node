@@ -5,3 +5,4 @@ dist/
 *~
 result*
 launch-*
+.stack-to-nix.cache
