@@ -2,8 +2,10 @@
 
 #tmux new-session -s 'Demo' -t demo
 
+#ALGO="--real-pbft"
+ALGO="--bft"
 NOW=`date "+%Y-%m-%d 00:00:00"`
-NETARGS="--system-start \"${NOW}\" --slot-duration 2 node -t configuration/simple-topology.json --bft"
+NETARGS="--system-start \"${NOW}\" --slot-duration 2 node -t configuration/simple-topology.json ${ALGO}"
 #SCR="./scripts/start-node.sh"
 CMD="cabal new-exec cardano-node --"
 
