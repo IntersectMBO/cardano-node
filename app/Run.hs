@@ -13,6 +13,7 @@ module Run (
 
 import           Codec.CBOR.Decoding (Decoder)
 import           Codec.CBOR.Encoding (Encoding)
+import qualified Codec.Serialise as Serialise (encode, decode)
 import           Control.Exception
 import           Control.Concurrent (threadDelay)
 import qualified Control.Concurrent.Async as Async
@@ -23,8 +24,11 @@ import           Data.Functor.Contravariant (contramap)
 import qualified Data.Map.Strict as M
 import           Data.Maybe
 import           Data.Semigroup ((<>))
+import           Data.ByteString.Lazy (ByteString)
 import           Data.Text (Text, pack)
-import           Network.Socket
+import           System.IO.Error (isDoesNotExistError)
+import           System.Directory (removeFile)
+import           Network.Socket as Socket
 
 import           Control.Monad.Class.MonadAsync
 
@@ -36,10 +40,12 @@ import           Ouroboros.Network.Block
 import qualified Ouroboros.Network.Block as Block
 import           Ouroboros.Network.Chain (genesisPoint, pointHash)
 import qualified Ouroboros.Network.Chain as Chain
-import           Ouroboros.Network.NodeToNode
+import           Ouroboros.Network.NodeToNode   as NodeToNode
+import           Ouroboros.Network.NodeToClient as NodeToClient
 
 import           Ouroboros.Network.Protocol.BlockFetch.Codec
 import           Ouroboros.Network.Protocol.ChainSync.Codec
+import           Ouroboros.Network.Protocol.LocalTxSubmission.Codec
 import           Ouroboros.Network.Protocol.Handshake.Type
 import           Ouroboros.Network.Protocol.Handshake.Version
 
@@ -61,7 +67,7 @@ import qualified Ouroboros.Storage.ChainDB as ChainDB
 import qualified Ouroboros.Storage.ChainDB.Mock as ChainDB
 
 import           CLI
-import           Mock.TxSubmission
+import           TxSubmission
 import           Topology
 
 runNode :: CLI -> Trace IO Text -> IO ()
@@ -69,15 +75,16 @@ runNode cli@CLI{..} trace = do
     -- If the user asked to submit a transaction, we don't have to spin up a
     -- full node, we simply transmit it and exit.
     case command of
-        TxSubmitter topology tx -> do
-            trace' <- appendName (pack (show (node topology))) trace
-            let tracer = contramap pack $ toLogObject trace'
-            handleTxSubmission topology tx tracer
-        SimpleNode topology myNodeAddress protocol -> do
-            trace' <- appendName (pack $ show $ node topology) trace
-            let tracer = contramap pack $ toLogObject trace'
-            SomeProtocol p <- fromProtocol protocol
-            handleSimpleNode p cli myNodeAddress topology tracer
+      TxSubmitter topology tx protocol -> do
+        trace' <- appendName (pack (show (node topology))) trace
+        let tracer = contramap pack $ toLogObject trace'
+        SomeProtocol p <- fromProtocol protocol
+        handleTxSubmission p topology tx tracer
+      SimpleNode topology myNodeAddress protocol -> do
+        trace' <- appendName (pack $ show $ node topology) trace
+        let tracer = contramap pack $ toLogObject trace'
+        SomeProtocol p <- fromProtocol protocol
+        handleSimpleNode p cli myNodeAddress topology tracer
 
 -- | Sets up a simple node, which will run the chain sync protocol and block
 -- fetch protocol, and, if core, will also look at the mempool when trying to
@@ -102,7 +109,7 @@ handleSimpleNode p CLI{..} myNodeAddress (TopologyInfo myNodeId topologyFile) tr
     traceWith tracer $ "My producers are " <> show (producers nodeSetup)
     traceWith tracer $ "**************************************"
 
-    let pInfo@ProtocolInfo{..} =
+    let ProtocolInfo{pInfoConfig, pInfoInitLedger, pInfoInitState} =
           protocolInfo (NumCoreNodes (length nodeSetups)) (CoreNodeId nid) p
 
     withThreadRegistry $ \registry -> do
@@ -151,48 +158,104 @@ handleSimpleNode p CLI{..} myNodeAddress (TopologyInfo myNodeId topologyFile) tr
 
       kernel <- nodeKernel nodeParams
 
-      let networkApp =
+      let networkApps :: NetworkApplication
+                           IO NodeAddress
+                           ByteString ByteString
+                           ByteString ByteString ()
+          networkApps =
+            consensusNetworkApps
+              nullTracer
+              nullTracer
+              kernel
+              ProtocolCodecs
+                { pcChainSyncCodec =
+                    codecChainSync
+                      (demoEncodeHeader pInfoConfig)
+                      (demoDecodeHeader pInfoConfig)
+                       encodePoint'
+                       decodePoint'
+
+                , pcBlockFetchCodec =
+                    codecBlockFetch
+                      (demoEncodeBlock pInfoConfig)
+                      demoEncodeHeaderHash
+                      (demoDecodeBlock pInfoConfig)
+                      demoDecodeHeaderHash
+
+                , pcLocalChainSyncCodec =
+                    codecChainSync
+                      (demoEncodeBlock pInfoConfig)
+                      (demoDecodeBlock pInfoConfig)
+                       encodePoint'
+                       decodePoint'
+
+                , pcLocalTxSubmissionCodec =
+                    codecLocalTxSubmission
+                      demoEncodeGenTx
+                      demoDecodeGenTx
+                      Serialise.encode
+                      Serialise.decode
+
+                }
+              (protocolHandlers nodeParams kernel)
+
+      let networkAppNodeToNode :: Versions
+                                    NodeToNodeVersion
+                                    DictVersion
+                                    (NetworkApplication
+                                       IO NodeAddress
+                                       ByteString ByteString
+                                       ByteString ByteString ())
+          networkAppNodeToNode =
             simpleSingletonVersions
-                NodeToNodeV_1
-                (NodeToNodeVersionData { networkMagic = 0 })
-                (DictVersion nodeToNodeCodecCBORTerm)
-              $ consensusNetworkApps
-                  nullTracer
-                  nullTracer
-                  kernel
-                  ProtocolCodecs
-                    { pcChainSyncCodec =
-                        (codecChainSync
-                          (demoEncodeHeader pInfoConfig)
-                          (demoDecodeHeader pInfoConfig)
-                          (encodePoint'         pInfo)
-                          (decodePoint'         pInfo))
-                    , pcBlockFetchCodec =
-                        codecBlockFetch
-                          (demoEncodeBlock pInfoConfig)
-                          demoEncodeHeaderHash
-                          (demoDecodeBlock pInfoConfig)
-                          demoDecodeHeaderHash
-                    }
-                  (protocolHandlers nodeParams kernel)
+              NodeToNodeV_1
+              (NodeToNodeVersionData { networkMagic = 0 })
+              (DictVersion nodeToNodeCodecCBORTerm)
+              networkApps
+
+      let networkAppNodeToClient :: Versions
+                                      NodeToClientVersion
+                                      DictVersion
+                                      (NetworkApplication
+                                         IO NodeAddress
+                                         ByteString ByteString
+                                         ByteString ByteString ())
+          networkAppNodeToClient =
+            simpleSingletonVersions
+              NodeToClientV_1
+              (NodeToClientVersionData { networkMagic = 0 })
+              (DictVersion nodeToClientCodecCBORTerm)
+              networkApps
 
       watchChain registry tracer chainDB
 
-      -- Spawn the thread which listens to the mempool.
-      mempoolThread <- spawnMempoolListener tracer myNodeId kernel
-
       myAddr:_ <- case myNodeAddress of
         NodeAddress host port -> getAddrInfo Nothing (Just host) (Just port)
+
+      let myLocalSockPath = localSocketFilePath myNodeId
+          myLocalAddr     = localSocketAddrInfo myLocalSockPath
+      removeStaleLocalSocket myLocalSockPath
 
       -- TODO: cheap subscription managment, a proper one is on the way.  The
       -- point is that it only requires 'NetworkApplications' which is a thin
       -- layer around 'MuxApplication'.
 
+      -- serve local clients (including tx submission)
+      localServer <-
+        forkLinked registry $
+          NodeToClient.withServer
+            myLocalAddr
+            (\(DictVersion _) -> acceptEq)
+            (muxLocalResponderNetworkApplication <$> networkAppNodeToClient)
+            wait
+
       -- serve downstream nodes
-      _ <- forkLinked registry $
-             withServer myAddr (\(DictVersion _) -> acceptEq)
-                        (muxResponderNetworkApplication <$> networkApp)
-                        wait
+      peerServer <-
+        forkLinked registry $
+          NodeToNode.withServer
+            myAddr (\(DictVersion _) -> acceptEq)
+            (muxResponderNetworkApplication <$> networkAppNodeToNode)
+            wait
 
       -- connect to upstream nodes
       forM_ (producers nodeSetup) $ \na@(NodeAddress host port) ->
@@ -200,8 +263,8 @@ handleSimpleNode p CLI{..} myNodeAddress (TopologyInfo myNodeId topologyFile) tr
 
           let io = do
                 addr:_ <- getAddrInfo Nothing (Just host) (Just port)
-                connectTo
-                      (muxInitiatorNetworkApplication na <$> networkApp)
+                NodeToNode.connectTo
+                      (muxInitiatorNetworkApplication na <$> networkAppNodeToNode)
                       -- Do not bind to a local port, use ephemeral
                       -- one.  We cannot bind to port on which the server is
                       -- already accepting connections.
@@ -213,7 +276,8 @@ handleSimpleNode p CLI{..} myNodeAddress (TopologyInfo myNodeId topologyFile) tr
 
           io
 
-      Async.wait mempoolThread
+      _ <- Async.waitAny [localServer, peerServer]
+      return ()
   where
       nid :: Int
       nid = case myNodeId of
@@ -235,10 +299,19 @@ handleSimpleNode p CLI{..} myNodeAddress (TopologyInfo myNodeId topologyFile) tr
             traceWith tracer' $
               "Updated chain: " <> condense (Chain.toOldestFirst chain)
 
-      encodePoint' :: ProtocolInfo blk -> Point blk -> Encoding
-      encodePoint' ProtocolInfo{..} =
+      encodePoint' ::  Point blk -> Encoding
+      encodePoint' =
           Block.encodePoint $ Block.encodeChainHash demoEncodeHeaderHash
 
-      decodePoint' :: forall s. ProtocolInfo blk -> Decoder s (Point blk)
-      decodePoint' ProtocolInfo{..} =
+      decodePoint' :: forall s. Decoder s (Point blk)
+      decodePoint' =
           Block.decodePoint $ Block.decodeChainHash demoDecodeHeaderHash
+
+
+removeStaleLocalSocket :: FilePath -> IO ()
+removeStaleLocalSocket socketPath =
+    removeFile socketPath
+      `catch` \e ->
+        if isDoesNotExistError e
+          then return ()
+          else throwIO e

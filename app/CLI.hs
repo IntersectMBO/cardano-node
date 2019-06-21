@@ -30,7 +30,7 @@ import qualified Ouroboros.Consensus.Ledger.Mock as Mock
 import           Ouroboros.Consensus.NodeId (NodeId (..))
 import           Ouroboros.Consensus.Util
 
-import           Mock.TxSubmission (command', parseMockTx)
+import           TxSubmission (command', parseMockTx)
 import           Topology (TopologyInfo (..), NodeAddress (..))
 
 import qualified Test.Cardano.Chain.Genesis.Dummy as Dummy
@@ -83,7 +83,7 @@ data CLI = CLI {
 
 data Command =
     SimpleNode  TopologyInfo NodeAddress Protocol
-  | TxSubmitter TopologyInfo Mock.Tx
+  | TxSubmitter TopologyInfo Mock.Tx     Protocol
 
 parseCLI :: Parser CLI
 parseCLI = CLI
@@ -132,7 +132,7 @@ parseCommand = subparser $ mconcat [
     command' "node" "Run a node." $
       SimpleNode <$> parseTopologyInfo <*> parseNodeAddress <*> parseProtocol
   , command' "submit" "Submit a transaction." $
-      TxSubmitter <$> parseTopologyInfo <*> parseMockTx
+      TxSubmitter <$> parseTopologyInfo <*> parseMockTx <*> parseProtocol
   ]
 
 parseNodeId :: Parser NodeId
