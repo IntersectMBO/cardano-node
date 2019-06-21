@@ -10,8 +10,8 @@ rotation:
 # these backends are initialized:
 setupBackends:
   - KatipBK
-  - EKGViewBK
-  - EditorBK
+    #- EKGViewBK
+    #- EditorBK
 
 # if not indicated otherwise, then messages are passed to these backends:
 defaultBackends:
