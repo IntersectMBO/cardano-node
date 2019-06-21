@@ -56,6 +56,7 @@
             (hsPkgs.stm)
             (hsPkgs.string-conv)
             (hsPkgs.text)
+            (hsPkgs.typed-protocols)
             ] ++ (if system.isWindows
             then [ (hsPkgs.Win32) ]
             else [ (hsPkgs.unix) ]);

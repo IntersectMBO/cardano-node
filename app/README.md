@@ -19,7 +19,7 @@ You will see that the three nodes syncs with each other and agree on a common ch
 To submit transactions, first spin up the node you want to target, then type:
 
 ```
-./scripts/submit-tx.sh -n 2 --address a --amount 1000
+./scripts/submit-tx.sh --bft -n 2 --address a --amount 1000
 ```
 
 This would send the transaction to the node 2. The node would then add the Tx
@@ -28,7 +28,7 @@ You can chain transactions once you know the hash, which is printed after you
 submit the transaction:
 
 ```
-> ./scripts/submit-tx.sh -n 2 --address a --amount 1000
+> ./scripts/submit-tx.sh --bft -n 2 --address a --amount 1000
 Up to date
 The Id for this transaction is: 6f6e1118
 ```
