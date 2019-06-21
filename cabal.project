@@ -23,36 +23,36 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger
-  tag: fbffd18089041efb1f8d1896c5410bc2302811ef
-  subdir: .
+  tag: 7f5263eac329d73a0626fc0d9603dec2cd51d352
+  subdir: cardano-ledger
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger
-  tag: fbffd18089041efb1f8d1896c5410bc2302811ef
+  tag: 7f5263eac329d73a0626fc0d9603dec2cd51d352
   subdir: crypto
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger
-  tag: fbffd18089041efb1f8d1896c5410bc2302811ef
-  subdir: test
+  tag: 7f5263eac329d73a0626fc0d9603dec2cd51d352
+  subdir: cardano-ledger/test
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger
-  tag: fbffd18089041efb1f8d1896c5410bc2302811ef
+  tag: 7f5263eac329d73a0626fc0d9603dec2cd51d352
   subdir: crypto/test
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-prelude
-  tag: a136c4242b9c9f6124b811329bc8ccdfd86c514e
+  tag: a21f83d9407b2955fbaea4ce8a79b262361112aa
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-prelude
-  tag: a136c4242b9c9f6124b811329bc8ccdfd86c514e
+  tag: a21f83d9407b2955fbaea4ce8a79b262361112aa
   subdir: test
 
 source-repository-package
@@ -109,11 +109,12 @@ source-repository-package
 
 source-repository-package
   type: git
-  location: https://github.com/joelwilliamson/bimap
-  tag: 997fbb38b08dec14d225d064dac05b0a85f4ceae
+  location: http://github.com/well-typed/canonical-json
+  tag: ddfe3593b80b5ceb88842bb7a6f2268df75d2c2f
 
 constraints:
   ip < 1.5,
   ekg-prometheus-adapter >= 0.1.0.4,
   hedgehog >= 1.0,
-  libsystemd-journal >= 1.4.4
+  libsystemd-journal >= 1.4.4,
+  bimap >= 0.4.0

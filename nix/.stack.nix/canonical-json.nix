@@ -3,7 +3,7 @@
     flags = {};
     package = {
       specVersion = "1.10";
-      identifier = { name = "canonical-json"; version = "0.5.0.2"; };
+      identifier = { name = "canonical-json"; version = "0.6.0.0"; };
       license = "BSD-3-Clause";
       copyright = "Copyright 2015-2017 Well-Typed LLP";
       maintainer = "duncan@well-typed.com, edsko@well-typed.com";
@@ -20,6 +20,7 @@
           (hsPkgs.base)
           (hsPkgs.bytestring)
           (hsPkgs.containers)
+          (hsPkgs.deepseq)
           (hsPkgs.parsec)
           (hsPkgs.pretty)
           ];
@@ -30,6 +31,7 @@
             (hsPkgs.base)
             (hsPkgs.bytestring)
             (hsPkgs.canonical-json)
+            (hsPkgs.containers)
             (hsPkgs.aeson)
             (hsPkgs.vector)
             (hsPkgs.unordered-containers)
@@ -39,11 +41,22 @@
             ];
           };
         };
+      benchmarks = {
+        "parse-bench" = {
+          depends = [
+            (hsPkgs.base)
+            (hsPkgs.bytestring)
+            (hsPkgs.canonical-json)
+            (hsPkgs.containers)
+            (hsPkgs.criterion)
+            ];
+          };
+        };
       };
     } // {
     src = (pkgs.lib).mkDefault (pkgs.fetchgit {
-      url = "http://github.com/nc6/canonical-json";
-      rev = "a9dc9b893649bc2e2a770ab22d278a780f7e3a3c";
-      sha256 = "0alwbi9xqaj6fmwzs6lr2drqrnhlnp13d9k2qkl5ga7h4grz9zcr";
+      url = "http://github.com/well-typed/canonical-json";
+      rev = "ddfe3593b80b5ceb88842bb7a6f2268df75d2c2f";
+      sha256 = "02fzn1xskis1lc1pkz0j92v6ipd89ww0k2p3dvwpm3yap5dpnm7k";
       });
     }
