@@ -11,8 +11,10 @@ import           Data.List (foldl')
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
 import           Data.String.Conv (toS)
+import           Network.Socket
 
 import           Ouroboros.Consensus.NodeId (NodeId(..))
+import           Ouroboros.Consensus.Util.Condense (Condense (..))
 
 -- | A data structure bundling together a node identifier and the path to
 -- the topology file.
@@ -21,11 +23,23 @@ data TopologyInfo = TopologyInfo {
   , topologyFile :: FilePath
   }
 
+data NodeAddress = NodeAddress HostName ServiceName
+  deriving (Eq, Ord, Show)
+
+instance Condense NodeAddress where
+    condense (NodeAddress addr port) = addr ++ ":" ++ show port
+
+instance FromJSON NodeAddress where
+    parseJSON = withObject "NodeAddress" $ \v -> NodeAddress
+      <$> v .: "addr"
+      <*> v .: "port"
+
 data NodeSetup = NodeSetup {
-    nodeId    :: NodeId
-  , producers :: [NodeId]
-  , consumers :: [NodeId]
+    nodeId      :: NodeId  -- TODO: do we need this?
+  , nodeAddress :: NodeAddress
+  , producers   :: [NodeAddress]
   }
+  deriving Show
 
 instance FromJSON NodeId where
     parseJSON v = CoreId <$> parseJSON v
@@ -33,6 +47,7 @@ instance FromJSON NodeId where
 deriveFromJSON defaultOptions ''NodeSetup
 
 data NetworkTopology = NetworkTopology [NodeSetup]
+  deriving Show
 
 deriveFromJSON defaultOptions ''NetworkTopology
 

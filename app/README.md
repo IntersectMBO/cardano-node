@@ -7,9 +7,9 @@ there are 3 core nodes and they all follow each other.
 For example, to setup a minimal example, run in three separate terminal (in this order):
 
 ```
-./scripts/start-node.sh --bft -n 0
-./scripts/start-node.sh --bft -n 1
-./scripts/start-node.sh --bft -n 2
+./scripts/start-node.sh --bft -n 0 --host 127.0.0.1 --port 3000
+./scripts/start-node.sh --bft -n 1 --host 127.0.0.1 --port 3001
+./scripts/start-node.sh --bft -n 2 --host 127.0.0.1 --port 3002
 ```
 
 You will see that the three nodes syncs with each other and agree on a common chain.

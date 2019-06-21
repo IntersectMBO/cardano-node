@@ -31,7 +31,7 @@ import           Ouroboros.Consensus.NodeId (NodeId (..))
 import           Ouroboros.Consensus.Util
 
 import           Mock.TxSubmission (command', parseMockTx)
-import           Topology (TopologyInfo (..))
+import           Topology (TopologyInfo (..), NodeAddress (..))
 
 import qualified Test.Cardano.Chain.Genesis.Dummy as Dummy
 
@@ -82,7 +82,7 @@ data CLI = CLI {
   }
 
 data Command =
-    SimpleNode  TopologyInfo Protocol
+    SimpleNode  TopologyInfo NodeAddress Protocol
   | TxSubmitter TopologyInfo Mock.Tx
 
 parseCLI :: Parser CLI
@@ -130,7 +130,7 @@ parseProtocol = asum [
 parseCommand :: Parser Command
 parseCommand = subparser $ mconcat [
     command' "node" "Run a node." $
-      SimpleNode <$> parseTopologyInfo <*> parseProtocol
+      SimpleNode <$> parseTopologyInfo <*> parseNodeAddress <*> parseProtocol
   , command' "submit" "Submit a transaction." $
       TxSubmitter <$> parseTopologyInfo <*> parseMockTx
   ]
@@ -143,6 +143,25 @@ parseNodeId =
          <> metavar "NODE-ID"
          <> help "The ID for this node"
     )
+
+parseHostName :: Parser String
+parseHostName =
+    option str (
+          long "host"
+       <> metavar "HOST-NAME"
+       <> help "The host name"
+    )
+
+parsePort :: Parser String
+parsePort =
+    option str (
+          long "port"
+       <> metavar "PORT"
+       <> help "The port number"
+    )
+
+parseNodeAddress :: Parser NodeAddress
+parseNodeAddress = NodeAddress <$> parseHostName <*> parsePort
 
 parseTopologyFile :: Parser FilePath
 parseTopologyFile =

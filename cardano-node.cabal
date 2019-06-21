@@ -71,6 +71,7 @@ executable cardano-node
                      , directory
                      , formatting
                      , mtl
+                     , network
                      , optparse-applicative
                      , serialise
                      , stm

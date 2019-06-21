@@ -1,4 +1,4 @@
-resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/a136c4242b9c9f6124b811329bc8ccdfd86c514e/snapshot.yaml
+resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/a21f83d9407b2955fbaea4ce8a79b262361112aa/snapshot.yaml
 
 packages:
   - .
@@ -6,15 +6,15 @@ packages:
 extra-deps:
     # Cardano-ledger dependencies
   - git: https://github.com/input-output-hk/cardano-ledger
-    commit: fbffd18089041efb1f8d1896c5410bc2302811ef
+    commit: 7f5263eac329d73a0626fc0d9603dec2cd51d352
     subdirs:
-      - .
+      - cardano-ledger
+      - cardano-ledger/test
       - crypto
       - crypto/test
-      - test
 
   - git: https://github.com/input-output-hk/cardano-prelude
-    commit: a136c4242b9c9f6124b811329bc8ccdfd86c514e
+    commit: a21f83d9407b2955fbaea4ce8a79b262361112aa
     subdirs:
       - .
       - test
@@ -34,6 +34,7 @@ extra-deps:
   - prometheus-2.1.1
   - time-units-1.0.0
   - libsystemd-journal-1.4.4
+  - tasty-hedgehog-1.0.0.1
     # iohk-monitoring-framework currently not pinned to a release
   - git: https://github.com/input-output-hk/iohk-monitoring-framework
     commit: 9129241a1306e2418bb775c63ad8a3ccd785c068
@@ -51,7 +52,7 @@ extra-deps:
     #Ouroboros-network dependencies
 
   - git: https://github.com/input-output-hk/ouroboros-network
-    commit: c848f9cb6b964f70c5c5248c596a071d2ff57132
+    commit: a11ff4617ec2aa35146f873d6657cfd32d649105
     subdirs:
         - io-sim-classes
         - ouroboros-network
