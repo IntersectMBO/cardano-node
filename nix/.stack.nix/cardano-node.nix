@@ -93,6 +93,31 @@
             then [ (hsPkgs.Win32) ]
             else [ (hsPkgs.unix) ]);
           };
+        "genesis-tool" = {
+          depends = [
+            (hsPkgs.base)
+            (hsPkgs.cardano-crypto-wrapper)
+            (hsPkgs.cardano-ledger)
+            (hsPkgs.aeson)
+            (hsPkgs.async)
+            (hsPkgs.bytestring)
+            (hsPkgs.cborg)
+            (hsPkgs.containers)
+            (hsPkgs.cryptonite)
+            (hsPkgs.directory)
+            (hsPkgs.formatting)
+            (hsPkgs.mtl)
+            (hsPkgs.network)
+            (hsPkgs.optparse-applicative)
+            (hsPkgs.serialise)
+            (hsPkgs.stm)
+            (hsPkgs.string-conv)
+            (hsPkgs.text)
+            (hsPkgs.typed-protocols)
+            ] ++ (if system.isWindows
+            then [ (hsPkgs.Win32) ]
+            else [ (hsPkgs.unix) ]);
+          };
         };
       tests = {
         "cardano-node-test" = {
