@@ -14,6 +14,8 @@ module Cardano.Node.CLI (
   , parseCoreNodeId
   , parseNumCoreNodes
   , parseViewMode
+  -- * Generic
+  , command'
   ) where
 
 import           Prelude
@@ -146,3 +148,13 @@ parseViewMode =
         [ long "live-view"
         , help "Live view with TUI."
         ]
+
+{-------------------------------------------------------------------------------
+  optparse-applicative auxiliary
+-------------------------------------------------------------------------------}
+
+command' :: String -> String -> Parser a -> Mod CommandFields a
+command' c descr p =
+    command c $ info (p <**> helper) $ mconcat [
+        progDesc descr
+      ]

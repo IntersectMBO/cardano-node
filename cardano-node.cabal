@@ -29,10 +29,13 @@ library
                      , ouroboros-consensus
                      , ouroboros-network
 
+                     , optparse-applicative
+
   default-language:    Haskell2010
-  default-extensions:  NoImplicitPrelude
+  default-extensions:
 
   ghc-options:         -Weverything
+                       -Wno-implicit-prelude
                        -fno-warn-safe
                        -fno-warn-unsafe
                        -fno-warn-missing-import-lists
