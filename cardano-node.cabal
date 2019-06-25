@@ -92,6 +92,7 @@ executable cardano-node
                      , stm
                      , string-conv
                      , text
+                     , time
                      , typed-protocols
   if os(windows)
      build-depends:    Win32
@@ -147,6 +148,7 @@ executable genesis-tool
   other-modules:       CLI
                      , Run
   build-depends:       base
+                     , cardano-binary
                      , cardano-crypto-wrapper
                      , cardano-ledger
                      , cardano-ledger-test
