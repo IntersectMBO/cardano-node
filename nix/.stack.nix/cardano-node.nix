@@ -25,6 +25,7 @@
           (hsPkgs.cardano-shell)
           (hsPkgs.ouroboros-consensus)
           (hsPkgs.ouroboros-network)
+          (hsPkgs.optparse-applicative)
           ] ++ (if system.isWindows
           then [ (hsPkgs.Win32) ]
           else [ (hsPkgs.unix) ]);
@@ -63,6 +64,7 @@
             (hsPkgs.stm)
             (hsPkgs.string-conv)
             (hsPkgs.text)
+            (hsPkgs.time)
             (hsPkgs.typed-protocols)
             ] ++ (if system.isWindows
             then [ (hsPkgs.Win32) ]
@@ -96,11 +98,20 @@
         "genesis-tool" = {
           depends = [
             (hsPkgs.base)
+            (hsPkgs.cardano-binary)
             (hsPkgs.cardano-crypto-wrapper)
             (hsPkgs.cardano-ledger)
+            (hsPkgs.cardano-ledger-test)
+            (hsPkgs.cardano-node)
+            (hsPkgs.cardano-prelude)
+            (hsPkgs.contra-tracer)
+            (hsPkgs.iohk-monitoring)
+            (hsPkgs.pvss)
             (hsPkgs.aeson)
+            (hsPkgs.aeson-pretty)
             (hsPkgs.async)
             (hsPkgs.bytestring)
+            (hsPkgs.canonical-json)
             (hsPkgs.cborg)
             (hsPkgs.containers)
             (hsPkgs.cryptonite)

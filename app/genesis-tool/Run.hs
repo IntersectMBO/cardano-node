@@ -7,6 +7,7 @@
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE RecordWildCards     #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications    #-}
 
 {-# OPTIONS_GHC -Wno-simplifiable-class-constraints #-}
 
@@ -16,18 +17,27 @@ module Run (
 
 import           Prelude (error, id)
 
+import qualified Codec.CBOR.Decoding as D
+import qualified Codec.CBOR.Encoding as E
 import           Codec.CBOR.Write (toLazyByteString)
+import           Control.Lens (LensLike, _Left)
 import           Control.Monad
+import qualified Data.Binary as Binary
+import           Data.Coerce
 import           Data.Semigroup ((<>))
 import           Data.Text (Text)
+import qualified Data.Text as T
 import qualified Data.ByteString.Lazy as LB
 import           System.Posix.Files (ownerReadMode, setFileMode)
 import           System.Directory (createDirectory, doesPathExist)
 
 import qualified Text.JSON.Canonical as CanonicalJSON
 
+import qualified Crypto.SCRAPE as Scrape
+
 import           Cardano.Prelude hiding (option)
 
+import qualified Cardano.Crypto.Wallet as CC
 import           Cardano.Crypto.Random (runSecureRandom)
 import           Cardano.Crypto.Signing
   (keyGen, SigningKey(..), toCBORXPrv)
@@ -56,6 +66,72 @@ canonicalDecPre
 canonicalDecPre bs = do
   eVal <- first toS (CanonicalJSON.parseCanonicalJSON bs)
   first show (CanonicalJSON.fromJSON eVal :: Either SchemaError a)
+
+-- LegacyRichmenKey is a subset of the UserSecret's from the legacy codebase:
+-- 1. the VSS keypair must be present
+-- 2. the signing key must be present
+-- 3. the rest must be absent (Nothing)
+--
+-- Legacy reference: https://github.com/input-output-hk/cardano-sl/blob/release/3.0.1/lib/src/Pos/Util/UserSecret.hs#L189
+data LegacyRichmenKey
+  =  LegacyRichmenKey
+  { lrkSigningKey :: SigningKey
+  , lrkVSSKeyPair :: Scrape.KeyPair
+  }
+
+-- Stolen from: cardano-sl/binary/src/Pos/Binary/Class/Core.hs
+encodeBinary :: Binary.Binary a => a -> E.Encoding
+encodeBinary = E.encodeBytes . LB.toStrict . Binary.encode
+
+-- Stolen from: cardano-sl/binary/src/Pos/Binary/Class/Core.hs
+decodeBinary :: Binary.Binary a => D.Decoder s a
+decodeBinary = do
+    x <- D.decodeBytesCanonical
+    toCborError $ case Binary.decodeOrFail (LB.fromStrict x) of
+        Left (_, _, err) -> Left (T.pack err)
+        Right (bs, _, res)
+            | LB.null bs -> Right res
+            | otherwise  -> Left "decodeBinary: unconsumed input"
+
+encodeXPrv :: CC.XPrv -> E.Encoding
+encodeXPrv a = E.encodeBytes $ CC.unXPrv a
+
+decodeXPrv :: D.Decoder s CC.XPrv
+decodeXPrv = toCborError . over _Left T.pack . CC.xprv =<< D.decodeBytesCanonical
+  where over :: LensLike Identity s t a b -> (a -> b) -> s -> t
+        over = coerce
+
+-- Stolen from: cardano-sl/binary/src/Pos/Binary/Class/Core.hs
+-- | Enforces that the input size is the same as the decoded one, failing in
+-- case it's not.
+enforceSize :: Text -> Int -> D.Decoder s ()
+enforceSize lbl requestedSize = D.decodeListLenCanonical >>= matchSize requestedSize lbl
+
+-- Stolen from: cardano-sl/binary/src/Pos/Binary/Class/Core.hs
+-- | Compare two sizes, failing if they are not equal.
+matchSize :: Int -> Text -> Int -> D.Decoder s ()
+matchSize requestedSize lbl actualSize =
+  when (actualSize /= requestedSize) $
+    cborError (lbl <> " failed the size check. Expected " <> show requestedSize <> ", found " <> show actualSize)
+
+-- Reverse-engineered from cardano-sl legacy codebase.
+encodeLegacyRichmenKey :: LegacyRichmenKey -> E.Encoding
+encodeLegacyRichmenKey LegacyRichmenKey{lrkSigningKey=(SigningKey sk),..}
+  =  E.encodeListLen 4
+  <> E.encodeListLen 1 <> encodeBinary lrkVSSKeyPair
+  <> E.encodeListLen 1 <> encodeXPrv sk
+  <> E.encodeListLenIndef <> E.encodeBreak
+  <> E.encodeListLen 0
+
+-- Reverse-engineered from cardano-sl legacy codebase.
+decodeLegacyRichmenKey :: D.Decoder s LegacyRichmenKey
+decodeLegacyRichmenKey = do
+    enforceSize "UserSecret" 4
+    vss     <- decodeBinary
+    pkey    <- fmap SigningKey decodeXPrv
+    _dummy0 <- D.decodeListLenCanonical
+    _dummy1 <- D.decodeListLenCanonical
+    pure $ LegacyRichmenKey pkey vss
 
 runCLI :: CLI -> IO ()
 runCLI CLI{..} = do
@@ -116,6 +192,10 @@ runCLI CLI{..} = do
         res <- runExceptT $ generateGenesisData startTime genesisSpec
         let (gd, GeneratedSecrets{..}) = either (error . show) id res
 
+        richmenSecrets <- zipWith LegacyRichmenKey gsRichSecrets
+                       <$> (runSecureRandom $ flip replicateM Scrape.keyPairGenerate
+                                            $ length gsRichSecrets)
+
         let outJSONFile = outDir <> "/genesis.json"
             serialiseSigningKey (SigningKey x) = toLazyByteString $ toCBORXPrv x
             writeSecrets :: FilePath -> [a] -> (a -> LB.ByteString) -> IO ()
@@ -127,6 +207,6 @@ runCLI CLI{..} = do
                 setFileMode filename ownerReadMode
         LB.writeFile outJSONFile $ canonicalEncPre gd
         writeSecrets "dlg-issuer"  gsDlgIssuersSecrets $ serialiseSigningKey
-        writeSecrets "rich-secret" gsRichSecrets       $ serialiseSigningKey
+        writeSecrets "rich-secret" richmenSecrets      $ toLazyByteString . encodeLegacyRichmenKey
         writeSecrets "poor-secret" gsPoorSecrets       $ serialiseSigningKey . poorSecretToKey
         writeSecrets "avvm-seed"   gsFakeAvvmSeeds     $ LB.fromStrict

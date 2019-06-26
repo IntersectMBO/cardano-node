@@ -33,6 +33,7 @@ extra-deps:
   - containers-0.5.11.0
   - ekg-prometheus-adapter-0.1.0.4
   - prometheus-2.1.1
+  - pvss-0.2.0
   - time-units-1.0.0
   - libsystemd-journal-1.4.4
   - tasty-hedgehog-1.0.0.1

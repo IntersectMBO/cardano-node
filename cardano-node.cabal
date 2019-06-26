@@ -85,6 +85,7 @@ executable cardano-node
                      , cryptonite
                      , directory
                      , formatting
+                     , lens
                      , mtl
                      , network
                      , optparse-applicative
@@ -149,6 +150,7 @@ executable genesis-tool
                      , Run
   build-depends:       base
                      , cardano-binary
+                     , cardano-crypto
                      , cardano-crypto-wrapper
                      , cardano-ledger
                      , cardano-ledger-test
@@ -156,10 +158,12 @@ executable genesis-tool
                      , cardano-prelude
                      , contra-tracer
                      , iohk-monitoring
+                     , pvss
 
                      , aeson
                      , aeson-pretty
                      , async
+                     , binary
                      , bytestring
                      , canonical-json
                      , cborg

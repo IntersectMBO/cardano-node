@@ -55,14 +55,14 @@ parseCLI = CLI
 
 parseCommand :: Parser Command
 parseCommand = subparser $ mconcat [
-    command' "keygen" "Generate a keypair." $
+    command' "keygen"                         "Generate a Byron/OBFT keypair." $
       KeyGen
       <$> (SigningFilePath      <$>
            parseFilePath   "out-signing"              "Signing key output file path.")
       <*> (VerificationFilePath <$>
            parseFilePath   "out-verification"         "Verification key output file path.")
-  , command' "full-byron-genesis" "Generate a fully-parametrised Byron genesis from scratch." $
-      FullByronGenesis 
+  , command' "full-byron-genesis"             "Generate a fully-parametrised Byron genesis from scratch." $
+      FullByronGenesis
       <$> parseFilePath    "genesis-output-dir"       "A yet-absent directory where genesis JSON file along with secrets shall be placed."
       <*> parseUTCTime     "start-time"               "Start time of the new cluster to be enshrined in the new genesis."
       <*> parseFilePath    "protocol-parameters-file" "JSON file with protocol parameters."
