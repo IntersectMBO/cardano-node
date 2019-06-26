@@ -19,6 +19,7 @@ import           Prelude (error, id)
 
 import qualified Codec.CBOR.Decoding as D
 import qualified Codec.CBOR.Encoding as E
+import           Codec.CBOR.Read (deserialiseFromBytes)
 import           Codec.CBOR.Write (toLazyByteString)
 import           Control.Lens (LensLike, _Left)
 import           Control.Monad
@@ -127,10 +128,17 @@ encodeLegacyRichmenKey LegacyRichmenKey{lrkSigningKey=(SigningKey sk),..}
 decodeLegacyRichmenKey :: D.Decoder s LegacyRichmenKey
 decodeLegacyRichmenKey = do
     enforceSize "UserSecret" 4
-    vss     <- decodeBinary
-    pkey    <- fmap SigningKey decodeXPrv
-    _dummy0 <- D.decodeListLenCanonical
-    _dummy1 <- D.decodeListLenCanonical
+    vss  <- do
+      enforceSize "vss" 1
+      decodeBinary
+    pkey <- do
+      enforceSize "pkey" 1
+      SigningKey <$> decodeXPrv
+    _    <- do
+      D.decodeListLenIndef
+      D.decodeSequenceLenIndef (flip (:)) [] reverse D.decodeNull
+    _    <- do
+      enforceSize "wallet" 0
     pure $ LegacyRichmenKey pkey vss
 
 runCLI :: CLI -> IO ()
@@ -143,6 +151,11 @@ runCLI CLI{..} = do
         -- Write private key as raw CBOR, public as JSON.
         LB.writeFile (fromVerificationPath vrfPath) $ canonicalEncPre vrf
         LB.writeFile (fromSigningPath      sigPath) $ toLazyByteString $ toCBORXPrv sig
+
+      RtByronLegacyRichmanKey src dst -> do
+        bytes <- LB.readFile src
+        let (,) _ key = either (error . show) id $ deserialiseFromBytes decodeLegacyRichmenKey bytes
+        LB.writeFile dst $ toLazyByteString $ encodeLegacyRichmenKey key
 
       FullByronGenesis
         outDir

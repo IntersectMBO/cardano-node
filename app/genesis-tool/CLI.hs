@@ -35,6 +35,9 @@ data Command =
     KeyGen
     !SigningFilePath
     !VerificationFilePath
+  | RtByronLegacyRichmanKey
+    !FilePath
+    !FilePath
   | FullByronGenesis
     !FilePath
     !UTCTime
@@ -61,6 +64,10 @@ parseCommand = subparser $ mconcat [
            parseFilePath   "out-signing"              "Signing key output file path.")
       <*> (VerificationFilePath <$>
            parseFilePath   "out-verification"         "Verification key output file path.")
+  , command' "rt-byron-legacy-richman-key"    "Roundtrip a Byron/Legacy richman keypair." $
+      RtByronLegacyRichmanKey
+      <$> parseFilePath    "key-from"                 "Input keyfile."
+      <*> parseFilePath    "key-to"                   "Output keyfile."
   , command' "full-byron-genesis"             "Generate a fully-parametrised Byron genesis from scratch." $
       FullByronGenesis
       <$> parseFilePath    "genesis-output-dir"       "A yet-absent directory where genesis JSON file along with secrets shall be placed."

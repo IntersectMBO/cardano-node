@@ -99,6 +99,7 @@
           depends = [
             (hsPkgs.base)
             (hsPkgs.cardano-binary)
+            (hsPkgs.cardano-crypto)
             (hsPkgs.cardano-crypto-wrapper)
             (hsPkgs.cardano-ledger)
             (hsPkgs.cardano-ledger-test)
@@ -110,6 +111,7 @@
             (hsPkgs.aeson)
             (hsPkgs.aeson-pretty)
             (hsPkgs.async)
+            (hsPkgs.binary)
             (hsPkgs.bytestring)
             (hsPkgs.canonical-json)
             (hsPkgs.cborg)
@@ -117,6 +119,7 @@
             (hsPkgs.cryptonite)
             (hsPkgs.directory)
             (hsPkgs.formatting)
+            (hsPkgs.lens)
             (hsPkgs.mtl)
             (hsPkgs.network)
             (hsPkgs.optparse-applicative)
