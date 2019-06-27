@@ -1,0 +1,3 @@
+[
+ ./cardano-node.nix
+]
