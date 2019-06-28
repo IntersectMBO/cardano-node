@@ -12,6 +12,7 @@
         "hedgehog" = (((hackage.hedgehog)."1.0").revisions).default;
         "micro-recursion-schemes" = (((hackage.micro-recursion-schemes)."5.0.2.2").revisions).default;
         "streaming-binary" = (((hackage.streaming-binary)."0.3.0.1").revisions).default;
+        "pretty-show" = (((hackage.pretty-show)."1.8.2").revisions).default;
         } // {
         cardano-node = ./cardano-node.nix;
         cardano-ledger = ./cardano-ledger.nix;
@@ -22,15 +23,18 @@
         cardano-prelude-test = ./cardano-prelude-test.nix;
         cardano-binary = ./cardano-binary.nix;
         cardano-binary-test = ./cardano-binary-test.nix;
+        cardano-crypto-class = ./cardano-crypto-class.nix;
         cardano-shell = ./cardano-shell.nix;
         contra-tracer = ./contra-tracer.nix;
         iohk-monitoring = ./iohk-monitoring.nix;
         cardano-sl-x509 = ./cardano-sl-x509.nix;
         bimap = ./bimap.nix;
         io-sim-classes = ./io-sim-classes.nix;
+        network-mux = ./network-mux.nix;
         ouroboros-network = ./ouroboros-network.nix;
         ouroboros-consensus = ./ouroboros-consensus.nix;
         typed-protocols = ./typed-protocols.nix;
+        typed-protocols-cbor = ./typed-protocols-cbor.nix;
         cborg = ./cborg.nix;
         cardano-crypto = ./cardano-crypto.nix;
         canonical-json = ./canonical-json.nix;

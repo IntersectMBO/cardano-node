@@ -3,7 +3,7 @@
     flags = {};
     package = {
       specVersion = "1.8";
-      identifier = { name = "bimap"; version = "0.3.3"; };
+      identifier = { name = "bimap"; version = "0.4.0"; };
       license = "BSD-3-Clause";
       copyright = "Stuart Cook and contributors 2008, Joel Williamson 2015";
       maintainer = "Joel Williamson <joel@joelwilliamson.ca>";
@@ -39,7 +39,7 @@
     } // {
     src = (pkgs.lib).mkDefault (pkgs.fetchgit {
       url = "https://github.com/joelwilliamson/bimap";
-      rev = "997fbb38b08dec14d225d064dac05b0a85f4ceae";
-      sha256 = "0wacks3f94rpms1ghg6lp8jw73rr3kz6zcw5c39drhnvv1dzc8sz";
+      rev = "013a0639c222b3f5572ae20ce364815e5d8f2156";
+      sha256 = "1nlpmx4i42a2c6xij6hrj8byvzc0d9qqvwhy2040cqy9xsihqg7x";
       });
     }

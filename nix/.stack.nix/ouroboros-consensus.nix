@@ -19,7 +19,9 @@
         depends = [
           (hsPkgs.base)
           (hsPkgs.ouroboros-network)
+          (hsPkgs.network-mux)
           (hsPkgs.typed-protocols)
+          (hsPkgs.typed-protocols-cbor)
           (hsPkgs.io-sim-classes)
           (hsPkgs.contra-tracer)
           (hsPkgs.cardano-ledger-test)
@@ -27,6 +29,7 @@
           (hsPkgs.bimap)
           (hsPkgs.bytestring)
           (hsPkgs.cardano-binary)
+          (hsPkgs.cardano-crypto-class)
           (hsPkgs.cardano-crypto-wrapper)
           (hsPkgs.cardano-ledger)
           (hsPkgs.cardano-prelude)
@@ -52,44 +55,13 @@
           then [ (hsPkgs.Win32) ]
           else [ (hsPkgs.unix) ]);
         };
-      exes = {
-        "demo-playground" = {
-          depends = [
-            (hsPkgs.base)
-            (hsPkgs.contra-tracer)
-            (hsPkgs.typed-protocols)
-            (hsPkgs.ouroboros-network)
-            (hsPkgs.ouroboros-consensus)
-            (hsPkgs.io-sim-classes)
-            (hsPkgs.cardano-crypto-wrapper)
-            (hsPkgs.cardano-ledger)
-            (hsPkgs.cardano-ledger-test)
-            (hsPkgs.cardano-prelude)
-            (hsPkgs.aeson)
-            (hsPkgs.async)
-            (hsPkgs.bytestring)
-            (hsPkgs.cborg)
-            (hsPkgs.containers)
-            (hsPkgs.cryptonite)
-            (hsPkgs.directory)
-            (hsPkgs.formatting)
-            (hsPkgs.mtl)
-            (hsPkgs.network)
-            (hsPkgs.optparse-applicative)
-            (hsPkgs.serialise)
-            (hsPkgs.stm)
-            (hsPkgs.string-conv)
-            (hsPkgs.text)
-            ] ++ (if system.isWindows
-            then [ (hsPkgs.Win32) ]
-            else [ (hsPkgs.unix) ]);
-          };
-        };
       tests = {
         "test-consensus" = {
           depends = [
             (hsPkgs.base)
+            (hsPkgs.cardano-crypto-class)
             (hsPkgs.typed-protocols)
+            (hsPkgs.network-mux)
             (hsPkgs.ouroboros-network)
             (hsPkgs.ouroboros-consensus)
             (hsPkgs.io-sim-classes)
@@ -111,23 +83,10 @@
             (hsPkgs.time)
             ];
           };
-        "test-crypto" = {
-          depends = [
-            (hsPkgs.base)
-            (hsPkgs.ouroboros-network-testing)
-            (hsPkgs.ouroboros-network)
-            (hsPkgs.ouroboros-consensus)
-            (hsPkgs.bytestring)
-            (hsPkgs.QuickCheck)
-            (hsPkgs.serialise)
-            (hsPkgs.tasty)
-            (hsPkgs.tasty-quickcheck)
-            (hsPkgs.time)
-            ];
-          };
         "test-storage" = {
           depends = [
             (hsPkgs.base)
+            (hsPkgs.cardano-crypto-class)
             (hsPkgs.ouroboros-network)
             (hsPkgs.ouroboros-network-testing)
             (hsPkgs.ouroboros-consensus)
@@ -161,8 +120,8 @@
     } // {
     src = (pkgs.lib).mkDefault (pkgs.fetchgit {
       url = "https://github.com/input-output-hk/ouroboros-network";
-      rev = "8f999f3a0e7765a673654486c79951a32e4a5c37";
-      sha256 = "14yqhqzlf5yffks9az15v4ba5rdpq64dlbnz1n4dlpss0r10md5v";
+      rev = "f132a47c7d8711cc2c0457c62509fa1dbcb9347c";
+      sha256 = "1vp0m4zhv93z7x4vwaj5izp13dzx5s44wa6q0dpkq0l8x73pi47x";
       });
     postUnpack = "sourceRoot+=/ouroboros-consensus; echo source root reset to \$sourceRoot";
     }

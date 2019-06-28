@@ -3,55 +3,42 @@
     flags = { development = false; };
     package = {
       specVersion = "1.10";
-      identifier = { name = "cardano-binary"; version = "1.5.0"; };
+      identifier = { name = "cardano-crypto-class"; version = "2.0.0"; };
       license = "MIT";
       copyright = "2019 IOHK";
       maintainer = "operations@iohk.io";
       author = "IOHK";
       homepage = "";
       url = "";
-      synopsis = "Binary serialization for Cardano";
-      description = "This package includes the binary serialization format for Cardano";
+      synopsis = "Type classes abstracting over cryptography primitives for Cardano";
+      description = "Type classes abstracting over cryptography primitives for Cardano";
       buildType = "Simple";
       };
     components = {
       "library" = {
         depends = [
           (hsPkgs.base)
-          (hsPkgs.aeson)
+          (hsPkgs.base16-bytestring)
           (hsPkgs.bytestring)
-          (hsPkgs.cardano-prelude)
-          (hsPkgs.cborg)
-          (hsPkgs.containers)
-          (hsPkgs.digest)
-          (hsPkgs.formatting)
-          (hsPkgs.recursion-schemes)
-          (hsPkgs.safe-exceptions)
-          (hsPkgs.tagged)
-          (hsPkgs.text)
-          (hsPkgs.time)
+          (hsPkgs.cardano-binary)
+          (hsPkgs.cryptonite)
+          (hsPkgs.memory)
+          (hsPkgs.reflection)
           (hsPkgs.vector)
           ];
         };
       tests = {
-        "test" = {
+        "test-crypto" = {
           depends = [
             (hsPkgs.base)
             (hsPkgs.bytestring)
             (hsPkgs.cardano-binary)
-            (hsPkgs.cardano-prelude)
-            (hsPkgs.cardano-prelude-test)
+            (hsPkgs.cardano-crypto-class)
             (hsPkgs.cborg)
-            (hsPkgs.containers)
-            (hsPkgs.formatting)
-            (hsPkgs.hedgehog)
-            (hsPkgs.hspec)
-            (hsPkgs.pretty-show)
+            (hsPkgs.cryptonite)
             (hsPkgs.QuickCheck)
-            (hsPkgs.quickcheck-instances)
-            (hsPkgs.tagged)
-            (hsPkgs.text)
-            (hsPkgs.vector)
+            (hsPkgs.tasty)
+            (hsPkgs.tasty-quickcheck)
             ];
           };
         };
@@ -62,5 +49,5 @@
       rev = "501d91e426ae84ce0ae056be38bd3db594af9fc2";
       sha256 = "0f58kabypp3fnw856izycpxdnimc0h3x6pp46rc2v2nnd1gkf6w7";
       });
-    postUnpack = "sourceRoot+=/binary; echo source root reset to \$sourceRoot";
+    postUnpack = "sourceRoot+=/cardano-crypto-class; echo source root reset to \$sourceRoot";
     }

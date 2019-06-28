@@ -18,10 +18,11 @@
       "library" = {
         depends = [
           (hsPkgs.base)
+          (hsPkgs.network-mux)
           (hsPkgs.typed-protocols)
+          (hsPkgs.typed-protocols-cbor)
           (hsPkgs.io-sim-classes)
           (hsPkgs.contra-tracer)
-          (hsPkgs.array)
           (hsPkgs.async)
           (hsPkgs.binary)
           (hsPkgs.bytestring)
@@ -29,7 +30,6 @@
           (hsPkgs.containers)
           (hsPkgs.fingertree)
           (hsPkgs.network)
-          (hsPkgs.process)
           (hsPkgs.serialise)
           (hsPkgs.stm)
           (hsPkgs.time)
@@ -42,8 +42,10 @@
           depends = [
             (hsPkgs.base)
             (hsPkgs.directory)
+            (hsPkgs.network-mux)
             (hsPkgs.ouroboros-network)
             (hsPkgs.typed-protocols)
+            (hsPkgs.typed-protocols-cbor)
             (hsPkgs.async)
             (hsPkgs.bytestring)
             (hsPkgs.containers)
@@ -62,8 +64,10 @@
           depends = [
             (hsPkgs.base)
             (hsPkgs.typed-protocols)
+            (hsPkgs.typed-protocols-cbor)
             (hsPkgs.io-sim-classes)
             (hsPkgs.io-sim)
+            (hsPkgs.network-mux)
             (hsPkgs.ouroboros-network-testing)
             (hsPkgs.contra-tracer)
             (hsPkgs.array)
@@ -103,6 +107,7 @@
             (hsPkgs.text)
             (hsPkgs.io-sim-classes)
             (hsPkgs.typed-protocols)
+            (hsPkgs.typed-protocols-cbor)
             ];
           };
         };
@@ -110,8 +115,8 @@
     } // {
     src = (pkgs.lib).mkDefault (pkgs.fetchgit {
       url = "https://github.com/input-output-hk/ouroboros-network";
-      rev = "8f999f3a0e7765a673654486c79951a32e4a5c37";
-      sha256 = "14yqhqzlf5yffks9az15v4ba5rdpq64dlbnz1n4dlpss0r10md5v";
+      rev = "f132a47c7d8711cc2c0457c62509fa1dbcb9347c";
+      sha256 = "1vp0m4zhv93z7x4vwaj5izp13dzx5s44wa6q0dpkq0l8x73pi47x";
       });
     postUnpack = "sourceRoot+=/ouroboros-network; echo source root reset to \$sourceRoot";
     }
