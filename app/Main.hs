@@ -11,9 +11,10 @@ import           Options.Applicative
 
 import           Cardano.Prelude hiding (option)
 import           Cardano.Shell.Constants.Types (CardanoConfiguration (..))
-import           Cardano.Shell.Features.Logging (CLIarguments (..),
+import           Cardano.Shell.Features.Logging (LoggingCLIArguments (..),
                                                  LoggingLayer (..),
-                                                 createLoggingFeature, parse)
+                                                 createLoggingFeature,
+                                                 loggingParser)
 import           Cardano.Shell.Lib (runCardanoApplicationWithFeatures)
 import           Cardano.Shell.Presets (mainnetConfiguration)
 import           Cardano.Shell.Types (ApplicationEnvironment (Development),
@@ -26,21 +27,23 @@ import           CLI
 import           Run
 
 
--- | The product type of all command line arguments
-data ArgParser = ArgParser !CLIarguments !CLI
+-- | The product type of all command line arguments.
+-- All here being - from all the features.
+data CLIArguments = CLIArguments !LoggingCLIArguments !NodeCLIArguments
 
 -- | The product parser for all the CLI arguments.
-commandLineParser :: Parser ArgParser
-commandLineParser = ArgParser
-    <$> parse
-    <*> parseCLI
+commandLineParser :: Parser CLIArguments
+commandLineParser = CLIArguments
+    <$> loggingParser
+    <*> nodeParser
 
 -- | Top level parser with info.
-opts :: ParserInfo ArgParser
+opts :: ParserInfo CLIArguments
 opts = info (commandLineParser <**> helper)
-    ( fullDesc
+    (  fullDesc
     <> progDesc "Cardano demo node."
-    <> header "Demo node to run." )
+    <> header "Demo node to run."
+    )
 
 -- | Main function.
 main :: IO ()
@@ -58,11 +61,11 @@ main = do
 
     runCardanoApplicationWithFeatures Development cardanoFeatures (cardanoApplication nodeLayer)
 
-initializeAllFeatures :: ArgParser -> CardanoConfiguration -> CardanoEnvironment -> IO ([CardanoFeature], NodeLayer)
-initializeAllFeatures (ArgParser logCli cli) cardanoConfiguration cardanoEnvironment = do
+initializeAllFeatures :: CLIArguments -> CardanoConfiguration -> CardanoEnvironment -> IO ([CardanoFeature], NodeLayer)
+initializeAllFeatures (CLIArguments logCli nodeCli) cardanoConfiguration cardanoEnvironment = do
 
     (loggingLayer, loggingFeature) <- createLoggingFeature cardanoEnvironment cardanoConfiguration logCli
-    (nodeLayer   , nodeFeature)    <- createNodeFeature loggingLayer cli cardanoEnvironment cardanoConfiguration
+    (nodeLayer   , nodeFeature)    <- createNodeFeature loggingLayer nodeCli cardanoEnvironment cardanoConfiguration
 
     -- Here we return all the features.
     let allCardanoFeatures :: [CardanoFeature]
@@ -85,18 +88,17 @@ data NodeLayer = NodeLayer
 -- Node Feature
 --------------------------------
 
--- type NodeCardanoFeature = CardanoFeatureInit LoggingLayer Text NodeLayer
-type NodeCardanoFeature = CardanoFeatureInit LoggingLayer CLI NodeLayer
+type NodeCardanoFeature = CardanoFeatureInit LoggingLayer NodeCLIArguments NodeLayer
 
 
-createNodeFeature :: LoggingLayer -> CLI -> CardanoEnvironment -> CardanoConfiguration -> IO (NodeLayer, CardanoFeature)
-createNodeFeature loggingLayer cli cardanoEnvironment cardanoConfiguration = do
+createNodeFeature :: LoggingLayer -> NodeCLIArguments -> CardanoEnvironment -> CardanoConfiguration -> IO (NodeLayer, CardanoFeature)
+createNodeFeature loggingLayer nodeCLI cardanoEnvironment cardanoConfiguration = do
     -- we parse any additional configuration if there is any
     -- We don't know where the user wants to fetch the additional configuration from, it could be from
     -- the filesystem, so we give him the most flexible/powerful context, @IO@.
 
     -- we construct the layer
-    nodeLayer <- (featureInit nodeCardanoFeatureInit) cardanoEnvironment loggingLayer cardanoConfiguration cli
+    nodeLayer <- (featureInit nodeCardanoFeatureInit) cardanoEnvironment loggingLayer cardanoConfiguration nodeCLI
 
     -- we construct the cardano feature
     let cardanoFeature = nodeCardanoFeature nodeCardanoFeatureInit nodeLayer
@@ -111,10 +113,10 @@ nodeCardanoFeatureInit = CardanoFeatureInit
     , featureCleanup = featureCleanup'
     }
   where
-    featureStart' :: CardanoEnvironment -> LoggingLayer -> CardanoConfiguration -> CLI -> IO NodeLayer
-    featureStart' _ loggingLayer _ cli = do
+    featureStart' :: CardanoEnvironment -> LoggingLayer -> CardanoConfiguration -> NodeCLIArguments -> IO NodeLayer
+    featureStart' _ loggingLayer _ nodeCli = do
         tr <- (llAppendName loggingLayer) "node" (llBasicTrace loggingLayer)
-        pure $ NodeLayer {nlRunNode = liftIO $ runNode cli tr}
+        pure $ NodeLayer {nlRunNode = liftIO $ runNode nodeCli tr}
 
     featureCleanup' :: NodeLayer -> IO ()
     featureCleanup' _ = pure ()
