@@ -6,10 +6,10 @@ module CLI (
   , SomeProtocol(..)
   , fromProtocol
     -- * CLI
-  , CLI(..)
+  , NodeCLIArguments(..)
   , TopologyInfo(..)
   , Command(..)
-  , parseCLI
+  , nodeParser
   -- * Handy re-exports
   , execParser
   , info
@@ -75,18 +75,18 @@ fromProtocol RealPBFT =
   Command line arguments
 -------------------------------------------------------------------------------}
 
-data CLI = CLI {
-    systemStart  :: SystemStart
-  , slotDuration :: SlotLength
-  , command      :: Command
+data NodeCLIArguments = NodeCLIArguments {
+    systemStart  :: !SystemStart
+  , slotDuration :: !SlotLength
+  , command      :: !Command
   }
 
 data Command =
     SimpleNode  TopologyInfo NodeAddress Protocol
   | TxSubmitter TopologyInfo Mock.Tx     Protocol
 
-parseCLI :: Parser CLI
-parseCLI = CLI
+nodeParser :: Parser NodeCLIArguments
+nodeParser = NodeCLIArguments
     <$> parseSystemStart
     <*> parseSlotDuration
     <*> parseCommand

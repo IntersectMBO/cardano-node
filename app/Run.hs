@@ -70,33 +70,35 @@ import           CLI
 import           TxSubmission
 import           Topology
 
-runNode :: CLI -> Trace IO Text -> IO ()
-runNode cli@CLI{..} trace = do
+runNode :: NodeCLIArguments -> Trace IO Text -> IO ()
+runNode nodeCli@NodeCLIArguments{..} trace = do
     -- If the user asked to submit a transaction, we don't have to spin up a
     -- full node, we simply transmit it and exit.
     case command of
+
       TxSubmitter topology tx protocol -> do
-        trace' <- appendName (pack (show (node topology))) trace
-        let tracer = contramap pack $ toLogObject trace'
-        SomeProtocol p <- fromProtocol protocol
+        trace'          <- appendName (pack (show (node topology))) trace
+        let tracer      = contramap pack $ toLogObject trace'
+        SomeProtocol p  <- fromProtocol protocol
         handleTxSubmission p topology tx tracer
+
       SimpleNode topology myNodeAddress protocol -> do
-        trace' <- appendName (pack $ show $ node topology) trace
-        let tracer = contramap pack $ toLogObject trace'
-        SomeProtocol p <- fromProtocol protocol
-        handleSimpleNode p cli myNodeAddress topology tracer
+        trace'          <- appendName (pack $ show $ node topology) trace
+        let tracer      = contramap pack $ toLogObject trace'
+        SomeProtocol p  <- fromProtocol protocol
+        handleSimpleNode p nodeCli myNodeAddress topology tracer
 
 -- | Sets up a simple node, which will run the chain sync protocol and block
 -- fetch protocol, and, if core, will also look at the mempool when trying to
 -- create a new block.
 handleSimpleNode :: forall blk. RunDemo blk
                  => DemoProtocol blk
-                 -> CLI
+                 -> NodeCLIArguments
                  -> NodeAddress
                  -> TopologyInfo
                  -> Tracer IO String
                  -> IO ()
-handleSimpleNode p CLI{..} myNodeAddress (TopologyInfo myNodeId topologyFile) tracer = do
+handleSimpleNode p NodeCLIArguments{..} myNodeAddress (TopologyInfo myNodeId topologyFile) tracer = do
     traceWith tracer $ "System started at " <> show systemStart
     t@(NetworkTopology nodeSetups) <-
       either error id <$> readTopologyFile topologyFile
