@@ -1,6 +1,7 @@
-{-# LANGUAGE NoImplicitPrelude #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RankNTypes        #-}
+{-# LANGUAGE NoImplicitPrelude   #-}
+{-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE RecordWildCards     #-}
+{-# LANGUAGE RankNTypes          #-}
 
 
 module Main (main) where
@@ -34,5 +35,5 @@ opts = info (commandLineParser <**> helper)
 -- | Main function.
 main :: IO ()
 main = do
-    ArgParser cli      <- execParser opts
-    runCLI cli
+    ArgParser CLI{..} <- execParser opts
+    runCommand (decideKeyMaterialOps systemVersion) mainCommand

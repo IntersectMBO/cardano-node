@@ -148,6 +148,7 @@ executable genesis-tool
                        -fno-warn-unticked-promoted-constructors
   other-modules:       CLI
                      , Run
+                     , Byron.Legacy
   build-depends:       base
                      , cardano-binary
                      , cardano-crypto

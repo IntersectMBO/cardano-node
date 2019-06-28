@@ -5,11 +5,12 @@ module CLI (
     CLI(..)
   , Command(..)
   , parseCLI
-    --
-  , SigningFilePath,      fromSigningPath
-  , VerificationFilePath, fromVerificationPath
+  , KeyMaterialOps(..)
+  , SystemVersion(..)
   ) where
 
+import qualified Data.ByteString.Lazy as LB
+import           Data.Foldable (asum)
 import           Data.Maybe (fromMaybe)
 import           Data.Semigroup ((<>))
 import           Data.Time (UTCTime)
@@ -18,27 +19,27 @@ import           Options.Applicative
 
 import           Cardano.Binary (Annotated(..))
 import           Cardano.Crypto.ProtocolMagic
+import           Cardano.Crypto.Signing
 import           Cardano.Chain.Common
 import           Cardano.Chain.Genesis
 
 import           NodeLib
 
 {-------------------------------------------------------------------------------
-  Command line arguments
 -------------------------------------------------------------------------------}
 
-data CLI = CLI {
-    command      :: Command
+data CLI = CLI
+  { systemVersion :: SystemVersion
+  , mainCommand   :: Command
   }
 
+data SystemVersion
+  = ByronLegacy
+  | ByronPBFT
+  deriving Show
+
 data Command =
-    KeyGen
-    !SigningFilePath
-    !VerificationFilePath
-  | RtByronLegacyRichmanKey
-    !FilePath
-    !FilePath
-  | FullByronGenesis
+    Genesis
     !FilePath
     !UTCTime
     !FilePath
@@ -49,27 +50,33 @@ data Command =
     !LovelacePortion
     !Integer
 
-newtype SigningFilePath      = SigningFilePath      { fromSigningPath      :: FilePath }
-newtype VerificationFilePath = VerificationFilePath { fromVerificationPath :: FilePath }
+data KeyMaterialOps m
+  = KeyMaterialOps
+  { kmoSerialiseGenesisKey  :: SigningKey  -> m LB.ByteString
+  , kmoSerialiseDelegateKey :: SigningKey  -> m LB.ByteString
+  , kmoSerialisePoorKey     :: PoorSecret  -> m LB.ByteString
+  , kmoSerialiseGenesis     :: GenesisData -> m LB.ByteString
+  }
+
+{-------------------------------------------------------------------------------
+  CLI parsers.
+-------------------------------------------------------------------------------}
 
 parseCLI :: Parser CLI
 parseCLI = CLI
-    <$> parseCommand
+    <$> parseSystemVersion
+    <*> parseCommand
+
+parseSystemVersion :: Parser SystemVersion
+parseSystemVersion = asum
+  [ flag' ByronLegacy $ mconcat [ long "byron-legacy" ]
+  , flag' ByronPBFT   $ mconcat [ long "byron-pbft" ]
+  ]
 
 parseCommand :: Parser Command
 parseCommand = subparser $ mconcat [
-    command' "keygen"                         "Generate a Byron/OBFT keypair." $
-      KeyGen
-      <$> (SigningFilePath      <$>
-           parseFilePath   "out-signing"              "Signing key output file path.")
-      <*> (VerificationFilePath <$>
-           parseFilePath   "out-verification"         "Verification key output file path.")
-  , command' "rt-byron-legacy-richman-key"    "Roundtrip a Byron/Legacy richman keypair." $
-      RtByronLegacyRichmanKey
-      <$> parseFilePath    "key-from"                 "Input keyfile."
-      <*> parseFilePath    "key-to"                   "Output keyfile."
-  , command' "full-byron-genesis"             "Generate a fully-parametrised Byron genesis from scratch." $
-      FullByronGenesis
+    command' "genesis"                        "Perform genesis." $
+      Genesis
       <$> parseFilePath    "genesis-output-dir"       "A yet-absent directory where genesis JSON file along with secrets shall be placed."
       <*> parseUTCTime     "start-time"               "Start time of the new cluster to be enshrined in the new genesis."
       <*> parseFilePath    "protocol-parameters-file" "JSON file with protocol parameters."
@@ -87,9 +94,9 @@ parseTestnetBalanceOptions :: Parser TestnetBalanceOptions
 parseTestnetBalanceOptions =
   TestnetBalanceOptions
   <$> parseIntegral        "n-poor-addresses"         "Number of poor nodes (with small balance)."
-  <*> parseIntegral        "n-richmen-addresses"      "Number of rich nodes (with huge balance)."
+  <*> parseIntegral        "n-delegate-addresses"     "Number of delegate nodes (with huge balance)."
   <*> parseLovelace        "total-balance"            "Total balance owned by these nodes."
-  <*> parseLovelacePortion "richmen-share"            "Portion of stake owned by all richmen together."
+  <*> parseLovelacePortion "delegate-share"           "Portion of stake owned by all delegates together."
   <*> parseFlag            "use-hd-addresses"         "Whether generate plain addresses or with hd payload."
 
 parseLovelace :: String -> String -> Parser Lovelace
