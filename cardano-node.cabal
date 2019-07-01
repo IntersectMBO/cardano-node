@@ -13,15 +13,17 @@ extra-source-files: README.md, ChangeLog.md
 library
   hs-source-dirs:      cardano-node
 
-  exposed-modules:
-                       NodeLib
+  exposed-modules:     Cardano.Node.CLI
 
   other-modules:
                        Paths_cardano_node
 
   build-depends:
                        base >=4.12 && <5
+                     , optparse-applicative
+
                      , cardano-ledger
+                     , cardano-ledger-test
                      , cardano-prelude
                      , cardano-shell
                      , ouroboros-consensus
@@ -58,6 +60,7 @@ executable cardano-node
                      , cardano-crypto-wrapper
                      , cardano-ledger
                      , cardano-ledger-test
+                     , cardano-node
                      , cardano-prelude
                      , cardano-shell
                      , contra-tracer
@@ -104,6 +107,7 @@ executable wallet-client
   build-depends:       base
                      , cardano-ledger
                      , cardano-ledger-test
+                     , cardano-node
                      , cardano-prelude
                      , cardano-shell
                      , contra-tracer

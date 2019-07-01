@@ -18,7 +18,9 @@
       "library" = {
         depends = [
           (hsPkgs.base)
+          (hsPkgs.optparse-applicative)
           (hsPkgs.cardano-ledger)
+          (hsPkgs.cardano-ledger-test)
           (hsPkgs.cardano-prelude)
           (hsPkgs.cardano-shell)
           (hsPkgs.ouroboros-consensus)
@@ -35,6 +37,7 @@
             (hsPkgs.cardano-crypto-wrapper)
             (hsPkgs.cardano-ledger)
             (hsPkgs.cardano-ledger-test)
+            (hsPkgs.cardano-node)
             (hsPkgs.cardano-prelude)
             (hsPkgs.cardano-shell)
             (hsPkgs.contra-tracer)
@@ -69,6 +72,7 @@
             (hsPkgs.base)
             (hsPkgs.cardano-ledger)
             (hsPkgs.cardano-ledger-test)
+            (hsPkgs.cardano-node)
             (hsPkgs.cardano-prelude)
             (hsPkgs.cardano-shell)
             (hsPkgs.contra-tracer)
