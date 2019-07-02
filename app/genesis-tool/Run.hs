@@ -18,11 +18,15 @@ module Run (
 
 import           Prelude (String, error, id)
 
+import           Codec.CBOR.Read (deserialiseFromBytes)
 import           Codec.CBOR.Write (toLazyByteString)
 import           Control.Monad
+import qualified Data.ByteString.Lazy as LB
 import           Data.Semigroup ((<>))
 import           Data.Text (Text)
-import qualified Data.ByteString.Lazy as LB
+import qualified Data.Text as T
+import qualified Data.Text.Lazy as TL
+import qualified Formatting as F
 import           System.Posix.Files (ownerReadMode, setFileMode)
 import           System.Directory (createDirectory, doesPathExist)
 import           Text.Printf (printf)
@@ -33,8 +37,11 @@ import qualified Crypto.SCRAPE as Scrape
 
 import           Cardano.Prelude hiding (option)
 
-import           Cardano.Crypto.Random (runSecureRandom)
-import           Cardano.Crypto.Signing (SigningKey(..), toCBORXPrv)
+import qualified Cardano.Chain.Common as CC
+import qualified Cardano.Crypto.Random as CCr
+import qualified Cardano.Crypto.Hashing as CCr
+import qualified Cardano.Crypto.Signing as CCr
+import           Cardano.Crypto (SigningKey(..))
 
 import           Cardano.Chain.Genesis
 
@@ -102,25 +109,38 @@ runCommand
     writeSecrets outDir "poor-keys"     "key"  kmoSerialisePoorKey      gsPoorSecrets
     writeSecrets outDir "avvm-seed"     "seed" (pure . LB.fromStrict)   gsFakeAvvmSeeds
 
+runCommand
+  KeyMaterialOps{..}
+  (PrettySecretKeyPublicHash
+    secretPath)
+  =
+  putStrLn =<< T.unpack . prettySigningKeyPub . kmoDeserialiseDelegateKey <$> LB.readFile secretPath
+  where
+      prettySigningKeyPub :: SigningKey -> Text
+      -- prettySigningKeyPub = TL.toStrict . Builder.toLazyText . formatFullVerificationKey . toVerification
+      prettySigningKeyPub = TL.toStrict . F.format CCr.hashHexF . CC.addressHash . CCr.toVerification
+
 decideKeyMaterialOps :: SystemVersion -> KeyMaterialOps IO
 decideKeyMaterialOps =
-  let serialiseSigningKey (SigningKey x) = toLazyByteString $ toCBORXPrv x
+  let serialiseSigningKey (SigningKey x) = toLazyByteString $ CCr.toCBORXPrv x
   in \case
   ByronLegacy ->
     KeyMaterialOps
-    { kmoSerialiseGenesisKey  = pure . serialiseSigningKey
-    , kmoSerialiseDelegateKey = \sk->
+    { kmoSerialiseGenesisKey          = pure . serialiseSigningKey
+    , kmoSerialiseDelegateKey         = \sk->
         toLazyByteString . Legacy.encodeLegacyDelegateKey . Legacy.LegacyDelegateKey sk
-        <$> runSecureRandom Scrape.keyPairGenerate
-    , kmoSerialisePoorKey     = pure . serialiseSigningKey . poorSecretToKey
-    , kmoSerialiseGenesis     = pure . canonicalEncPre
+        <$> CCr.runSecureRandom Scrape.keyPairGenerate
+    , kmoSerialisePoorKey             = pure . serialiseSigningKey . poorSecretToKey
+    , kmoSerialiseGenesis             = pure . canonicalEncPre
+    , kmoDeserialiseDelegateKey       = Legacy.lrkSigningKey . snd . either (error . show) id . deserialiseFromBytes Legacy.decodeLegacyDelegateKey
     }
   ByronPBFT ->
     KeyMaterialOps
-    { kmoSerialiseGenesisKey  = pure . serialiseSigningKey
-    , kmoSerialiseDelegateKey = pure . serialiseSigningKey
-    , kmoSerialisePoorKey     = pure . serialiseSigningKey . poorSecretToKey
-    , kmoSerialiseGenesis     = pure . canonicalEncPre
+    { kmoSerialiseGenesisKey          = pure . serialiseSigningKey
+    , kmoSerialiseDelegateKey         = pure . serialiseSigningKey
+    , kmoSerialisePoorKey             = pure . serialiseSigningKey . poorSecretToKey
+    , kmoSerialiseGenesis             = pure . canonicalEncPre
+    , kmoDeserialiseDelegateKey       = SigningKey . snd . either (error . show) id . deserialiseFromBytes CCr.fromCBORXPrv
     }
 
 writeSecrets :: FilePath -> String -> String -> (a -> IO LB.ByteString) -> [a] -> IO ()

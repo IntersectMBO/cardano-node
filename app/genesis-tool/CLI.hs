@@ -38,8 +38,8 @@ data SystemVersion
   | ByronPBFT
   deriving Show
 
-data Command =
-    Genesis
+data Command
+  = Genesis
     !FilePath
     !UTCTime
     !FilePath
@@ -49,13 +49,16 @@ data Command =
     !FakeAvvmOptions
     !LovelacePortion
     !Integer
+  | PrettySecretKeyPublicHash
+    !FilePath
 
 data KeyMaterialOps m
   = KeyMaterialOps
-  { kmoSerialiseGenesisKey  :: SigningKey  -> m LB.ByteString
-  , kmoSerialiseDelegateKey :: SigningKey  -> m LB.ByteString
-  , kmoSerialisePoorKey     :: PoorSecret  -> m LB.ByteString
-  , kmoSerialiseGenesis     :: GenesisData -> m LB.ByteString
+  { kmoSerialiseGenesisKey       :: SigningKey  -> m LB.ByteString
+  , kmoSerialiseDelegateKey      :: SigningKey  -> m LB.ByteString
+  , kmoSerialisePoorKey          :: PoorSecret  -> m LB.ByteString
+  , kmoSerialiseGenesis          :: GenesisData -> m LB.ByteString
+  , kmoDeserialiseDelegateKey    :: LB.ByteString -> SigningKey
   }
 
 {-------------------------------------------------------------------------------
@@ -88,6 +91,9 @@ parseCommand = subparser $ mconcat [
            (optional $
             parseIntegral  "avvm-balance-factor"      "AVVM balances will be multiplied by this factor (defaults to 1)."))
       <*> parseIntegral    "secret-seed"              "Optionally specify the seed of generation."
+  , command' "pretty-secret-key-public-hash"  "Print a hash of secret key's public key (not a secret)." $
+      PrettySecretKeyPublicHash
+      <$> parseFilePath    "secret"                   "File name of the secret key to pretty-print."
   ]
 
 parseTestnetBalanceOptions :: Parser TestnetBalanceOptions
