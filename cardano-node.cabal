@@ -13,6 +13,7 @@ extra-source-files: README.md, ChangeLog.md
 library
   hs-source-dirs:      cardano-node
 
+  exposed-modules:     Cardano.Node.CanonicalJSON
   exposed-modules:     Cardano.Node.CLI
 
   other-modules:
@@ -20,16 +21,19 @@ library
 
   build-depends:
                        base >=4.12 && <5
+                     , bytestring
+                     , canonical-json
                      , optparse-applicative
+                     , time
 
+                     , cardano-binary
+                     , cardano-crypto-wrapper
                      , cardano-ledger
                      , cardano-ledger-test
                      , cardano-prelude
                      , cardano-shell
                      , ouroboros-consensus
                      , ouroboros-network
-
-                     , optparse-applicative
 
   default-language:    Haskell2010
   default-extensions:
@@ -172,6 +176,7 @@ executable genesis-tool
                      , cryptonite
                      , directory
                      , formatting
+                     , lens
                      , mtl
                      , network
                      , optparse-applicative
@@ -179,6 +184,7 @@ executable genesis-tool
                      , stm
                      , string-conv
                      , text
+                     , time
                      , typed-protocols
   if os(windows)
      build-depends:    Win32

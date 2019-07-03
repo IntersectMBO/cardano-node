@@ -57,7 +57,7 @@ import           Ouroboros.Network.Protocol.ChainSync.Codec
 import           Ouroboros.Network.Protocol.Handshake.Version
 import           Ouroboros.Network.NodeToClient
 
-import           NodeLib
+import           Cardano.Node.CLI
 
 import           Topology
 

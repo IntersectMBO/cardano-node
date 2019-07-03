@@ -31,8 +31,6 @@ import           System.Posix.Files (ownerReadMode, setFileMode)
 import           System.Directory (createDirectory, doesPathExist)
 import           Text.Printf (printf)
 
-import qualified Text.JSON.Canonical as CanonicalJSON
-
 import qualified Crypto.SCRAPE as Scrape
 
 import           Cardano.Prelude hiding (option)
@@ -44,6 +42,8 @@ import qualified Cardano.Crypto.Signing as CCr
 import           Cardano.Crypto (SigningKey(..))
 
 import           Cardano.Chain.Genesis
+
+import           Cardano.Node.CanonicalJSON
 
 import qualified Byron.Legacy as Legacy
 import           CLI
@@ -161,24 +161,3 @@ writeSecrets outDir prefix suffix secretOp xs =
     let filename = outDir <> "/" <> prefix <> "." <> printf "%03d" nr <> "." <> suffix
     secretOp secret >>= LB.writeFile filename
     setFileMode                      filename ownerReadMode
-
--- Stolen from: cardano-prelude/test/Test/Cardano/Prelude/Tripping.hs
-canonicalEncPre
-  :: forall a . CanonicalJSON.ToJSON Identity a => a -> LB.ByteString
-canonicalEncPre x =
-  LB.fromStrict
-    . encodeUtf8
-    . toS
-    $ CanonicalJSON.prettyCanonicalJSON
-    $ runIdentity
-    $ CanonicalJSON.toJSON x
-
--- Stolen from: cardano-prelude/test/Test/Cardano/Prelude/Tripping.hs
-canonicalDecPre
-  :: forall a
-   . CanonicalJSON.FromJSON (Either SchemaError) a
-  => LB.ByteString
-  -> Either Text a
-canonicalDecPre bs = do
-  eVal <- first toS (CanonicalJSON.parseCanonicalJSON bs)
-  first show (CanonicalJSON.fromJSON eVal :: Either SchemaError a)
