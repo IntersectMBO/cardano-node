@@ -32,3 +32,14 @@ submit the transaction:
 Up to date
 The Id for this transaction is: 6f6e1118
 ```
+
+## Spawning trace acceptor
+
+To spawn the trace acceptor:
+
+```
+./scripts/trace-acceptor.sh
+```
+
+This would spawn an acceptor which gathers all the messages being sent from the
+nodes.

@@ -10,13 +10,15 @@ rotation:
 # these backends are initialized:
 setupBackends:
   - KatipBK
-  # - EKGViewBK
-  # - EditorBK
-  # - AggregationBK
+  - TraceForwarderBK
 
 # if not indicated otherwise, then messages are passed to these backends:
 defaultBackends:
   - KatipBK
+  - TraceForwarderBK
+
+# file to forward traced objects
+logOutput: "log-pipe-1"
 
 # if wanted, the GUI is listening on this port:
 #hasGUI: 12871

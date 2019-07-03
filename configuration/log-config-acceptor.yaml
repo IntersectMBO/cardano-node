@@ -10,15 +10,22 @@ rotation:
 # these backends are initialized:
 setupBackends:
   - KatipBK
-  - TraceForwarderBK
+  - kind: TraceAcceptorBK
+    path: log-pipe-0
+  - kind: TraceAcceptorBK
+    path: log-pipe-1
+  - kind: TraceAcceptorBK
+    path: log-pipe-2
 
 # if not indicated otherwise, then messages are passed to these backends:
 defaultBackends:
   - KatipBK
-  - TraceForwarderBK
-
-# file to forward traced objects
-logOutput: "log-pipe-2"
+  - kind: TraceAcceptorBK
+    path: log-pipe-0
+  - kind: TraceAcceptorBK
+    path: log-pipe-1
+  - kind: TraceAcceptorBK
+    path: log-pipe-2
 
 # if wanted, the GUI is listening on this port:
 #hasGUI: 12872
