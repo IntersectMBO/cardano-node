@@ -18,7 +18,9 @@
       "library" = {
         depends = [
           (hsPkgs.base)
+          (hsPkgs.optparse-applicative)
           (hsPkgs.cardano-ledger)
+          (hsPkgs.cardano-ledger-test)
           (hsPkgs.cardano-prelude)
           (hsPkgs.cardano-shell)
           (hsPkgs.ouroboros-consensus)
@@ -31,16 +33,20 @@
         "cardano-node" = {
           depends = [
             (hsPkgs.base)
+            (hsPkgs.cardano-crypto-class)
             (hsPkgs.cardano-crypto-wrapper)
             (hsPkgs.cardano-ledger)
             (hsPkgs.cardano-ledger-test)
+            (hsPkgs.cardano-node)
             (hsPkgs.cardano-prelude)
             (hsPkgs.cardano-shell)
             (hsPkgs.contra-tracer)
             (hsPkgs.io-sim-classes)
             (hsPkgs.iohk-monitoring)
+            (hsPkgs.network-mux)
             (hsPkgs.ouroboros-network)
             (hsPkgs.ouroboros-consensus)
+            (hsPkgs.typed-protocols-cbor)
             (hsPkgs.aeson)
             (hsPkgs.async)
             (hsPkgs.bytestring)
@@ -57,6 +63,31 @@
             (hsPkgs.string-conv)
             (hsPkgs.text)
             (hsPkgs.typed-protocols)
+            ] ++ (if system.isWindows
+            then [ (hsPkgs.Win32) ]
+            else [ (hsPkgs.unix) ]);
+          };
+        "wallet-client" = {
+          depends = [
+            (hsPkgs.base)
+            (hsPkgs.cardano-ledger)
+            (hsPkgs.cardano-ledger-test)
+            (hsPkgs.cardano-node)
+            (hsPkgs.cardano-prelude)
+            (hsPkgs.cardano-shell)
+            (hsPkgs.contra-tracer)
+            (hsPkgs.io-sim-classes)
+            (hsPkgs.iohk-monitoring)
+            (hsPkgs.network-mux)
+            (hsPkgs.ouroboros-network)
+            (hsPkgs.ouroboros-consensus)
+            (hsPkgs.typed-protocols)
+            (hsPkgs.typed-protocols-cbor)
+            (hsPkgs.bytestring)
+            (hsPkgs.network)
+            (hsPkgs.optparse-applicative)
+            (hsPkgs.serialise)
+            (hsPkgs.text)
             ] ++ (if system.isWindows
             then [ (hsPkgs.Win32) ]
             else [ (hsPkgs.unix) ]);

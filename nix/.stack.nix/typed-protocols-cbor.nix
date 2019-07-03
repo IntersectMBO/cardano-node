@@ -3,14 +3,14 @@
     flags = {};
     package = {
       specVersion = "1.10";
-      identifier = { name = "typed-protocols"; version = "0.1.0.0"; };
+      identifier = { name = "typed-protocols-cbor"; version = "0.1.0.0"; };
       license = "MIT";
-      copyright = "2018-2019 IOHK";
+      copyright = "";
       maintainer = "alex@well-typed.com, duncan@well-typed.com, marcin.szamotulski@iohk.io";
       author = "Alexander Vieth, Duncan Coutts, Marcin Szamotulski";
       homepage = "";
       url = "";
-      synopsis = "A framework for strongly typed protocols";
+      synopsis = "";
       description = "";
       buildType = "Simple";
       };
@@ -18,22 +18,25 @@
       "library" = {
         depends = [
           (hsPkgs.base)
-          (hsPkgs.io-sim-classes)
           (hsPkgs.bytestring)
-          (hsPkgs.contra-tracer)
+          (hsPkgs.cborg)
+          (hsPkgs.serialise)
+          (hsPkgs.io-sim-classes)
+          (hsPkgs.typed-protocols)
           ];
         };
       tests = {
-        "tests" = {
+        "test-typed-protocols-cbor" = {
           depends = [
             (hsPkgs.base)
             (hsPkgs.bytestring)
-            (hsPkgs.contra-tracer)
-            (hsPkgs.io-sim-classes)
-            (hsPkgs.io-sim)
+            (hsPkgs.cborg)
+            (hsPkgs.serialise)
             (hsPkgs.QuickCheck)
             (hsPkgs.tasty)
             (hsPkgs.tasty-quickcheck)
+            (hsPkgs.io-sim-classes)
+            (hsPkgs.typed-protocols)
             ];
           };
         };
@@ -44,5 +47,5 @@
       rev = "f132a47c7d8711cc2c0457c62509fa1dbcb9347c";
       sha256 = "1vp0m4zhv93z7x4vwaj5izp13dzx5s44wa6q0dpkq0l8x73pi47x";
       });
-    postUnpack = "sourceRoot+=/typed-protocols; echo source root reset to \$sourceRoot";
+    postUnpack = "sourceRoot+=/typed-protocols-cbor; echo source root reset to \$sourceRoot";
     }
