@@ -51,6 +51,7 @@ executable cardano-node
                        -fno-warn-unticked-promoted-constructors
   other-modules:       CLI
                        TxSubmission
+                       TraceAcceptor
                        Run
                        Topology
   build-depends:       base

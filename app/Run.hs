@@ -2,6 +2,7 @@
 {-# LANGUAGE GADTs               #-}
 {-# LANGUAGE NamedFieldPuns      #-}
 {-# LANGUAGE NumericUnderscores  #-}
+{-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE RecordWildCards     #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -13,22 +14,22 @@ module Run (
 
 import           Codec.CBOR.Decoding (Decoder)
 import           Codec.CBOR.Encoding (Encoding)
-import qualified Codec.Serialise as Serialise (encode, decode)
-import           Control.Exception
+import qualified Codec.Serialise as Serialise (decode, encode)
 import           Control.Concurrent (threadDelay)
 import qualified Control.Concurrent.Async as Async
+import           Control.Exception
 import           Control.Monad
 import           Control.Tracer
 import           Crypto.Random
+import           Data.ByteString.Lazy (ByteString)
 import           Data.Functor.Contravariant (contramap)
 import qualified Data.Map.Strict as M
 import           Data.Maybe
 import           Data.Semigroup ((<>))
-import           Data.ByteString.Lazy (ByteString)
 import           Data.Text (Text, pack)
-import           System.IO.Error (isDoesNotExistError)
-import           System.Directory (removeFile)
 import           Network.Socket as Socket
+import           System.Directory (removeFile)
+import           System.IO.Error (isDoesNotExistError)
 
 import           Control.Monad.Class.MonadAsync
 
@@ -40,22 +41,22 @@ import           Ouroboros.Network.Block
 import qualified Ouroboros.Network.Block as Block
 import           Ouroboros.Network.Chain (genesisPoint, pointHash)
 import qualified Ouroboros.Network.Chain as Chain
-import           Ouroboros.Network.NodeToNode   as NodeToNode
 import           Ouroboros.Network.NodeToClient as NodeToClient
+import           Ouroboros.Network.NodeToNode as NodeToNode
 
 import           Ouroboros.Network.Protocol.BlockFetch.Codec
 import           Ouroboros.Network.Protocol.ChainSync.Codec
-import           Ouroboros.Network.Protocol.LocalTxSubmission.Codec
 import           Ouroboros.Network.Protocol.Handshake.Type
 import           Ouroboros.Network.Protocol.Handshake.Version
+import           Ouroboros.Network.Protocol.LocalTxSubmission.Codec
 
 import           Ouroboros.Consensus.Block
 import           Ouroboros.Consensus.BlockchainTime
 import           Ouroboros.Consensus.ChainSyncClient (ClockSkew (..))
 import           Ouroboros.Consensus.Demo
 import           Ouroboros.Consensus.Demo.Run
-import           Ouroboros.Consensus.NodeId
 import           Ouroboros.Consensus.Node
+import           Ouroboros.Consensus.NodeId
 import           Ouroboros.Consensus.NodeNetwork
 import           Ouroboros.Consensus.Util.Condense
 import           Ouroboros.Consensus.Util.Orphans ()
@@ -67,8 +68,9 @@ import qualified Ouroboros.Storage.ChainDB as ChainDB
 import qualified Ouroboros.Storage.ChainDB.Mock as ChainDB
 
 import           CLI
-import           TxSubmission
 import           Topology
+import           TraceAcceptor
+import           TxSubmission
 
 runNode :: NodeCLIArguments -> Trace IO Text -> IO ()
 runNode nodeCli@NodeCLIArguments{..} trace = do
@@ -81,6 +83,11 @@ runNode nodeCli@NodeCLIArguments{..} trace = do
         let tracer      = contramap pack $ toLogObject trace'
         SomeProtocol p  <- fromProtocol protocol
         handleTxSubmission p topology tx tracer
+
+      TraceAcceptor -> do
+        trace'          <- appendName "acceptor" trace
+        let tracer      = contramap pack $ toLogObject trace'
+        handleTraceAcceptor tracer
 
       SimpleNode topology myNodeAddress protocol -> do
         trace'          <- appendName (pack $ show $ node topology) trace

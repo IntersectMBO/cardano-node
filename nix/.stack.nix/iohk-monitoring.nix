@@ -3,10 +3,14 @@
     flags = {
       disable-aggregation = false;
       disable-ekg = false;
+      disable-graylog = false;
       disable-prometheus = false;
       disable-gui = false;
       disable-monitoring = false;
       disable-observables = false;
+      disable-systemd = false;
+      disable-examples = false;
+      performance-test-queue = false;
       };
     package = {
       specVersion = "1.10";
@@ -23,7 +27,7 @@
       };
     components = {
       "library" = {
-        depends = (((([
+        depends = ((((([
           (hsPkgs.base)
           (hsPkgs.contra-tracer)
           (hsPkgs.aeson)
@@ -61,9 +65,11 @@
           (hsPkgs.ekg-prometheus-adapter)
           (hsPkgs.prometheus)
           (hsPkgs.warp)
-          ]) ++ (pkgs.lib).optional (!flags.disable-gui) (hsPkgs.threepenny-gui)) ++ (if system.isWindows
+          ]) ++ (pkgs.lib).optional (!flags.disable-graylog) (hsPkgs.network)) ++ (pkgs.lib).optional (!flags.disable-gui) (hsPkgs.threepenny-gui)) ++ (if system.isWindows
           then [ (hsPkgs.Win32) ]
-          else [ (hsPkgs.unix) ])) ++ (pkgs.lib).optionals (system.isLinux) [
+          else [
+            (hsPkgs.unix)
+            ])) ++ (pkgs.lib).optionals (system.isLinux && !flags.disable-systemd) [
           (hsPkgs.hsyslog)
           (hsPkgs.libsystemd-journal)
           ];
@@ -72,6 +78,7 @@
         "example-simple" = {
           depends = [
             (hsPkgs.base)
+            (hsPkgs.aeson)
             (hsPkgs.iohk-monitoring)
             (hsPkgs.async)
             (hsPkgs.bytestring)
@@ -95,6 +102,16 @@
             else [
               (hsPkgs.unix)
               ])) ++ (pkgs.lib).optional (system.isLinux) (hsPkgs.download);
+          };
+        "example-performance" = {
+          depends = [
+            (hsPkgs.base)
+            (hsPkgs.iohk-monitoring)
+            (hsPkgs.async)
+            (hsPkgs.criterion)
+            (hsPkgs.text)
+            (hsPkgs.unordered-containers)
+            ];
           };
         };
       tests = {
@@ -138,8 +155,8 @@
     } // {
     src = (pkgs.lib).mkDefault (pkgs.fetchgit {
       url = "https://github.com/input-output-hk/iohk-monitoring-framework";
-      rev = "9129241a1306e2418bb775c63ad8a3ccd785c068";
-      sha256 = "18agmlxlnkvncl34hzgznv5i5b0l1kk5kn8zn3h4l1rn3q3vhfyj";
+      rev = "916c21aabefaa3f68f414931edc81004027d4004";
+      sha256 = "0jg017pwizq4idmxifpy2gffxykz0rbg5r7hnmc1n41jnpbambmd";
       });
     postUnpack = "sourceRoot+=/iohk-monitoring; echo source root reset to \$sourceRoot";
     }

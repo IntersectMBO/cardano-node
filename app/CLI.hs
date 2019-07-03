@@ -30,8 +30,8 @@ import qualified Ouroboros.Consensus.Ledger.Mock as Mock
 import           Ouroboros.Consensus.NodeId (NodeId (..))
 import           Ouroboros.Consensus.Util
 
+import           Topology (NodeAddress (..), TopologyInfo (..))
 import           TxSubmission (command', parseMockTx)
-import           Topology (TopologyInfo (..), NodeAddress (..))
 
 import qualified Test.Cardano.Chain.Genesis.Dummy as Dummy
 
@@ -84,6 +84,7 @@ data NodeCLIArguments = NodeCLIArguments {
 data Command =
     SimpleNode  TopologyInfo NodeAddress Protocol
   | TxSubmitter TopologyInfo Mock.Tx     Protocol
+  | TraceAcceptor
 
 nodeParser :: Parser NodeCLIArguments
 nodeParser = NodeCLIArguments
@@ -133,6 +134,8 @@ parseCommand = subparser $ mconcat [
       SimpleNode <$> parseTopologyInfo <*> parseNodeAddress <*> parseProtocol
   , command' "submit" "Submit a transaction." $
       TxSubmitter <$> parseTopologyInfo <*> parseMockTx <*> parseProtocol
+  , command' "trace-acceptor" "Spawn an acceptor." $
+      pure TraceAcceptor
   ]
 
 parseNodeId :: Parser NodeId
