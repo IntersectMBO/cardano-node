@@ -30,6 +30,9 @@ import           Control.Monad.Class.MonadThrow
 import           Control.Monad.Class.MonadTimer
 import           Control.Tracer
 
+import           Cardano.Crypto.Hash (ShortHash)
+import qualified Cardano.Crypto.Hash as H
+
 import           Ouroboros.Consensus.Demo
 import           Ouroboros.Consensus.Demo.Run
 import qualified Ouroboros.Consensus.Ledger.Mock as Mock
@@ -37,15 +40,13 @@ import           Ouroboros.Consensus.Mempool
 import           Ouroboros.Consensus.NodeId
 import           Ouroboros.Consensus.Protocol.Abstract (NodeConfig)
 import           Ouroboros.Consensus.Block (BlockProtocol)
-import           Ouroboros.Consensus.Crypto.Hash (ShortHash)
-import qualified Ouroboros.Consensus.Crypto.Hash as H
 import           Ouroboros.Consensus.Util.Condense
 
 import           Network.TypedProtocol.Driver
+import           Network.TypedProtocol.Codec.Cbor
+import           Network.Mux.Interface
 import           Ouroboros.Network.Block (Point)
 import qualified Ouroboros.Network.Block as Block
-import           Ouroboros.Network.Codec
-import           Ouroboros.Network.Mux.Interface
 import           Ouroboros.Network.Protocol.LocalTxSubmission.Type
 import           Ouroboros.Network.Protocol.LocalTxSubmission.Client
 import           Ouroboros.Network.Protocol.LocalTxSubmission.Codec
@@ -53,6 +54,7 @@ import           Ouroboros.Network.Protocol.ChainSync.Type (ChainSync)
 import           Ouroboros.Network.Protocol.ChainSync.Client
                    (ChainSyncClient(..), chainSyncClientPeer)
 import           Ouroboros.Network.Protocol.ChainSync.Codec
+import           Ouroboros.Network.Protocol.Handshake.Version
 import           Ouroboros.Network.NodeToClient
 
 import           Topology

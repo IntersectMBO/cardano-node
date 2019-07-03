@@ -54,6 +54,7 @@ executable cardano-node
                        Run
                        Topology
   build-depends:       base
+                     , cardano-crypto-class
                      , cardano-crypto-wrapper
                      , cardano-ledger
                      , cardano-ledger-test
@@ -62,8 +63,10 @@ executable cardano-node
                      , contra-tracer
                      , io-sim-classes
                      , iohk-monitoring
+                     , network-mux
                      , ouroboros-network
                      , ouroboros-consensus
+                     , typed-protocols-cbor
 
                      , aeson
                      , async

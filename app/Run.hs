@@ -49,7 +49,6 @@ import           Ouroboros.Network.Protocol.LocalTxSubmission.Codec
 import           Ouroboros.Network.Protocol.Handshake.Type
 import           Ouroboros.Network.Protocol.Handshake.Version
 
-import           Ouroboros.Consensus.Block
 import           Ouroboros.Consensus.BlockchainTime
 import           Ouroboros.Consensus.ChainSyncClient (ClockSkew (..))
 import           Ouroboros.Consensus.Demo
@@ -137,11 +136,10 @@ handleSimpleNode p NodeCLIArguments{..} myNodeAddress (TopologyInfo myNodeId top
                                proof
           }
 
-      chainDB :: ChainDB IO blk (Header blk) <-
+      chainDB :: ChainDB IO blk <-
         ChainDB.openDB
           pInfoConfig
           pInfoInitLedger
-          getHeader
 
       btime  <- realBlockchainTime registry slotDuration systemStart
       let nodeParams :: NodeParams IO NodeAddress blk
@@ -288,7 +286,7 @@ handleSimpleNode p NodeCLIArguments{..} myNodeAddress (TopologyInfo myNodeId top
 
       watchChain :: ThreadRegistry IO
                  -> Tracer IO String
-                 -> ChainDB IO blk (Header blk)
+                 -> ChainDB IO blk
                  -> IO ()
       watchChain registry tracer' chainDB = onEachChange
           registry fingerprint initFingerprint
