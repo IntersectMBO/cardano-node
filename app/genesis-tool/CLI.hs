@@ -10,7 +10,6 @@ module CLI (
   ) where
 
 import qualified Data.ByteString.Lazy as LB
-import           Data.Foldable (asum)
 import           Data.Maybe (fromMaybe)
 import           Data.Semigroup ((<>))
 import           Data.Time (UTCTime)
@@ -51,6 +50,10 @@ data Command
     !Integer
   | PrettySecretKeyPublicHash
     !FilePath
+  | MigrateDelegateKeyFrom
+    !SystemVersion
+    !FilePath
+    !FilePath
 
 data KeyMaterialOps m
   = KeyMaterialOps
@@ -71,14 +74,16 @@ parseCLI = CLI
     <*> parseCommand
 
 parseSystemVersion :: Parser SystemVersion
-parseSystemVersion = asum
-  [ flag' ByronLegacy $ mconcat [ long "byron-legacy" ]
-  , flag' ByronPBFT   $ mconcat [ long "byron-pbft" ]
+parseSystemVersion = subparser $ mconcat
+  [ commandGroup "System version"
+  , metavar "SYSTEMVER"
+  , command' "byron-legacy" "Byron Legacy mode" $ pure ByronLegacy
+  , command' "byron-pbft"   "Byron PBFT mode"   $ pure ByronPBFT
   ]
 
 parseCommand :: Parser Command
-parseCommand = subparser $ mconcat [
-    command' "genesis"                        "Perform genesis." $
+parseCommand = subparser $ mconcat
+  [ command' "genesis"                        "Perform genesis." $
       Genesis
       <$> parseFilePath    "genesis-output-dir"       "A yet-absent directory where genesis JSON file along with secrets shall be placed."
       <*> parseUTCTime     "start-time"               "Start time of the new cluster to be enshrined in the new genesis."
@@ -94,6 +99,11 @@ parseCommand = subparser $ mconcat [
   , command' "pretty-secret-key-public-hash"  "Print a hash of secret key's public key (not a secret)." $
       PrettySecretKeyPublicHash
       <$> parseFilePath    "secret"                   "File name of the secret key to pretty-print."
+  , command' "migrate-delegate-key-from"      "Migrate a delegate key from an older version." $
+      MigrateDelegateKeyFrom
+      <$> parseSystemVersion
+      <*> parseFilePath    "to"                       "Output secret key file."
+      <*> parseFilePath    "from"                     "Secret key file to migrate."
   ]
 
 parseTestnetBalanceOptions :: Parser TestnetBalanceOptions

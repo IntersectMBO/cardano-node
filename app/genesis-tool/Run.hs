@@ -120,6 +120,17 @@ runCommand
       -- prettySigningKeyPub = TL.toStrict . Builder.toLazyText . formatFullVerificationKey . toVerification
       prettySigningKeyPub = TL.toStrict . F.format CCr.hashHexF . CC.addressHash . CCr.toVerification
 
+runCommand
+  toKMO
+  (MigrateDelegateKeyFrom
+    fromVer
+    secretPathTo
+    secretPathFrom)
+  =
+  LB.writeFile secretPathTo =<< kmoSerialiseDelegateKey toKMO =<< kmoDeserialiseDelegateKey fromKMO <$> LB.readFile secretPathFrom
+  where
+    fromKMO = decideKeyMaterialOps fromVer
+
 decideKeyMaterialOps :: SystemVersion -> KeyMaterialOps IO
 decideKeyMaterialOps =
   let serialiseSigningKey (SigningKey x) = toLazyByteString $ CCr.toCBORXPrv x
