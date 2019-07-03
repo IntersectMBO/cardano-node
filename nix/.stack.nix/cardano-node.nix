@@ -48,6 +48,7 @@
             (hsPkgs.ouroboros-consensus)
             (hsPkgs.typed-protocols-cbor)
             (hsPkgs.aeson)
+            (hsPkgs.ansi-terminal-game)
             (hsPkgs.async)
             (hsPkgs.bytestring)
             (hsPkgs.cborg)

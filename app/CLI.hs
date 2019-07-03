@@ -41,7 +41,7 @@ data NodeCLIArguments = NodeCLIArguments {
   }
 
 data Command =
-    SimpleNode  TopologyInfo NodeAddress Protocol
+    SimpleNode  TopologyInfo NodeAddress Protocol ViewMode
   | TxSubmitter TopologyInfo Mock.Tx     Protocol
   | TraceAcceptor
 
@@ -54,7 +54,7 @@ nodeParser = NodeCLIArguments
 parseCommand :: Parser Command
 parseCommand = subparser $ mconcat [
     command' "node" "Run a node." $
-      SimpleNode <$> parseTopologyInfo <*> parseNodeAddress <*> parseProtocol
+      SimpleNode <$> parseTopologyInfo <*> parseNodeAddress <*> parseProtocol <*> parseViewMode
   , command' "submit" "Submit a transaction." $
       TxSubmitter <$> parseTopologyInfo <*> parseMockTx <*> parseProtocol
   , command' "trace-acceptor" "Spawn an acceptor." $

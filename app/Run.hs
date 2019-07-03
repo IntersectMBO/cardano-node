@@ -66,7 +66,9 @@ import           Ouroboros.Storage.ChainDB (ChainDB)
 import qualified Ouroboros.Storage.ChainDB as ChainDB
 import qualified Ouroboros.Storage.ChainDB.Mock as ChainDB
 
+import           Cardano.Node.CLI
 import           CLI
+import           LiveView
 import           Topology
 import           TraceAcceptor
 import           TxSubmission
@@ -88,11 +90,19 @@ runNode nodeCli@NodeCLIArguments{..} trace = do
         let tracer      = contramap pack $ toLogObject trace'
         handleTraceAcceptor tracer
 
-      SimpleNode topology myNodeAddress protocol -> do
+      SimpleNode topology myNodeAddress protocol viewMode -> do
         trace'          <- appendName (pack $ show $ node topology) trace
         let tracer      = contramap pack $ toLogObject trace'
         SomeProtocol p  <- fromProtocol protocol
-        handleSimpleNode p nodeCli myNodeAddress topology tracer
+        case viewMode of
+          SimpleView -> handleSimpleNode p nodeCli myNodeAddress topology tracer
+          LiveView   -> do
+            -- We run 'handleSimpleNode' as usual and run TUI thread as well.
+            -- User will see a terminal graphics and will be able to interact with it.
+            nodeThread <- Async.async $ handleSimpleNode p nodeCli myNodeAddress topology tracer
+            tuiThread  <- Async.async $ runNodeLiveView 1
+            _ <- Async.waitAny [nodeThread, tuiThread]
+            return ()
 
 -- | Sets up a simple node, which will run the chain sync protocol and block
 -- fetch protocol, and, if core, will also look at the mempool when trying to
