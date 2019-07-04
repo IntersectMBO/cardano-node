@@ -80,18 +80,18 @@ runNode nodeCli@NodeCLIArguments{..} trace = do
     case command of
 
       TxSubmitter topology tx protocol -> do
-        trace'          <- appendName (pack (show (node topology))) trace
+        let trace'      = appendName (pack (show (node topology))) trace
         let tracer      = contramap pack $ toLogObject trace'
         SomeProtocol p  <- fromProtocol protocol
         handleTxSubmission p topology tx tracer
 
       TraceAcceptor -> do
-        trace'          <- appendName "acceptor" trace
+        let trace'      = appendName "acceptor" trace
         let tracer      = contramap pack $ toLogObject trace'
         handleTraceAcceptor tracer
 
       SimpleNode topology myNodeAddress protocol viewMode -> do
-        trace'          <- appendName (pack $ show $ node topology) trace
+        let trace'      = appendName (pack $ show $ node topology) trace
         let tracer      = contramap pack $ toLogObject trace'
         SomeProtocol p  <- fromProtocol protocol
         case viewMode of
