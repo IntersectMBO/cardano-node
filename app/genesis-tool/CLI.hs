@@ -45,7 +45,7 @@ data Command
     !FakeAvvmOptions
     !LovelacePortion
     !Integer
-  | PrettySecretKeyPublicHash
+  | PrettySecretKeyPublic
     !FilePath
   | MigrateDelegateKeyFrom
     !SystemVersion
@@ -93,8 +93,8 @@ parseCommand = subparser $ mconcat
            (optional $
             parseIntegral  "avvm-balance-factor"      "AVVM balances will be multiplied by this factor (defaults to 1)."))
       <*> parseIntegral    "secret-seed"              "Optionally specify the seed of generation."
-  , command' "pretty-secret-key-public-hash"  "Print a hash of secret key's public key (not a secret)." $
-      PrettySecretKeyPublicHash
+  , command' "pretty-secret-key-public"       "Pretty-print a secret key's public key (not a secret)." $
+      PrettySecretKeyPublic
       <$> parseFilePath    "secret"                   "File name of the secret key to pretty-print."
   , command' "migrate-delegate-key-from"      "Migrate a delegate key from an older version." $
       MigrateDelegateKeyFrom

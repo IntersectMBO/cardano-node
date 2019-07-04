@@ -8,6 +8,7 @@
 {-# LANGUAGE RecordWildCards     #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications    #-}
+{-# LANGUAGE ViewPatterns        #-}
 
 {-# OPTIONS_GHC -Wno-simplifiable-class-constraints #-}
 
@@ -26,6 +27,7 @@ import           Data.Semigroup ((<>))
 import           Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
+import qualified Data.Text.Lazy.Builder as Builder
 import qualified Formatting as F
 import           System.Posix.Files (ownerReadMode, setFileMode)
 import           System.Directory (createDirectory, doesPathExist)
@@ -111,14 +113,15 @@ runCommand
 
 runCommand
   KeyMaterialOps{..}
-  (PrettySecretKeyPublicHash
+  (PrettySecretKeyPublic
     secretPath)
   =
   putStrLn =<< T.unpack . prettySigningKeyPub . kmoDeserialiseDelegateKey <$> LB.readFile secretPath
   where
       prettySigningKeyPub :: SigningKey -> Text
-      -- prettySigningKeyPub = TL.toStrict . Builder.toLazyText . formatFullVerificationKey . toVerification
-      prettySigningKeyPub = TL.toStrict . F.format CCr.hashHexF . CC.addressHash . CCr.toVerification
+      prettySigningKeyPub (CCr.toVerification -> vk) = TL.toStrict
+                                $  "public key hash: " <> (F.format CCr.hashHexF . CC.addressHash $ vk) <> "\n"
+                                <> "     public key: " <> (Builder.toLazyText . CCr.formatFullVerificationKey $ vk)
 
 runCommand
   toKMO

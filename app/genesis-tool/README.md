@@ -14,6 +14,6 @@ The supported commands are (as per excerpt from the tool's `--help`):
 ```
 Available commands:
   genesis                         Perform genesis.
-  pretty-secret-key-public-hash   Print a hash of secret key's public key (not a secret).
+  pretty-secret-key-public        Pretty-print a secret key's public key and its hash (not a secret).
   migrate-delegate-key-from       Migrate a delegate key from an older version.
 ```
