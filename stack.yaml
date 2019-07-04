@@ -29,6 +29,7 @@ extra-deps:
   - git: https://github.com/input-output-hk/cardano-shell
     commit: 64cdb7f84ab34934d5001031c911ca3615d2d2a4
 
+  - binary-0.8.7.0
   - containers-0.5.11.0
   - ekg-prometheus-adapter-0.1.0.4
   - prometheus-2.1.1
