@@ -6,7 +6,7 @@ packages:
 extra-deps:
     # Cardano-ledger dependencies
   - git: https://github.com/input-output-hk/cardano-ledger
-    commit: ccb81fc69285c127c47ce622c4996317556aff42
+    commit: b81e722c28ed7d65d93c70b43ea744afd95ea1c3
     subdirs:
       - cardano-ledger
       - cardano-ledger/test
@@ -28,7 +28,7 @@ extra-deps:
 
     # Following deps are for cardano-shell
   - git: https://github.com/input-output-hk/cardano-shell
-    commit: d2ab3fdc2ad69d6b2b9ab8897010ee731a14b403
+    commit: 92e6b42167d1399971df788b691423222722c2f6
 
   - containers-0.5.11.0
   - ekg-prometheus-adapter-0.1.0.4
@@ -38,7 +38,7 @@ extra-deps:
   - tasty-hedgehog-1.0.0.1
     # iohk-monitoring-framework currently not pinned to a release
   - git: https://github.com/input-output-hk/iohk-monitoring-framework
-    commit: 916c21aabefaa3f68f414931edc81004027d4004
+    commit: e67ac43fc26e3a47ffcf1a10666f2ccd34ce8b1a
     subdirs:
       - contra-tracer
       - iohk-monitoring

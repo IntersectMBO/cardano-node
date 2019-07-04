@@ -18,8 +18,7 @@ import           WalletClient
 runClient :: CLI -> Trace IO Text -> IO ()
 runClient CLI{..} tracer = do
     let CoreNodeId nid = cliCoreNodeId
-    tracer'
-      <- contramap pack . toLogObject <$>
+    let tracer' = contramap pack . toLogObject $
           appendName ("Wallet " <> pack (show nid)) tracer
     SomeProtocol p <- fromProtocol cliProtocol
     runWalletClient p cliCoreNodeId cliNumCoreNodes tracer'

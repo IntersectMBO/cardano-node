@@ -111,7 +111,7 @@ nodeCardanoFeatureInit = CardanoFeatureInit
   where
     featureStart' :: CardanoEnvironment -> LoggingLayer -> CardanoConfiguration -> CLI -> IO NodeLayer
     featureStart' _ loggingLayer _ cli = do
-        tr <- llAppendName loggingLayer "wallet" (llBasicTrace loggingLayer)
+        let tr = llAppendName loggingLayer "wallet" (llBasicTrace loggingLayer)
         pure $ NodeLayer {nlRunNode = liftIO $ runClient cli tr}
 
     featureCleanup' :: NodeLayer -> IO ()
