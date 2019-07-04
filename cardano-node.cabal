@@ -52,6 +52,7 @@ executable cardano-node
                        "-with-rtsopts=-T"
                        -fno-warn-unticked-promoted-constructors
   other-modules:       CLI
+                       LiveView
                        TxSubmission
                        TraceAcceptor
                        Run
@@ -73,6 +74,7 @@ executable cardano-node
                      , typed-protocols-cbor
 
                      , aeson
+                     , ansi-terminal-game == 0.3.1.0
                      , async
                      , bytestring
                      , cborg

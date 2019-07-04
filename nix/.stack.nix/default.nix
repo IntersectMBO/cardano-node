@@ -13,6 +13,9 @@
         "micro-recursion-schemes" = (((hackage.micro-recursion-schemes)."5.0.2.2").revisions).default;
         "streaming-binary" = (((hackage.streaming-binary)."0.3.0.1").revisions).default;
         "pretty-show" = (((hackage.pretty-show)."1.8.2").revisions).default;
+        "ansi-terminal-game" = (((hackage.ansi-terminal-game)."0.3.1.0").revisions)."3a1697c0ce0216f4c7fbc02b22c8b7663d142ed6703785d2eb8fae5f1fec6005";
+        "linebreak" = (((hackage.linebreak)."1.0.0.3").revisions)."3152802008e06f8444d364f6e1047b412e3cb692c1382b1657a425d72a0cfd5f";
+        "timers-tick" = (((hackage.timers-tick)."0.4.1.0").revisions)."27d345648b8e01fad48adf1dc0e870b19fabb03ccdf3ad0bc5acb57f5da6cb5c";
         } // {
         cardano-node = ./cardano-node.nix;
         cardano-ledger = ./cardano-ledger.nix;

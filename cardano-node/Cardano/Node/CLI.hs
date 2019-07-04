@@ -4,6 +4,7 @@ module Cardano.Node.CLI (
   -- * Untyped/typed protocol boundary
     Protocol(..)
   , SomeProtocol(..)
+  , ViewMode(..)
   , fromProtocol
   -- * Parsers
   , parseSystemStart
@@ -12,6 +13,7 @@ module Cardano.Node.CLI (
   , parseNodeId
   , parseCoreNodeId
   , parseNumCoreNodes
+  , parseViewMode
   ) where
 
 import           Prelude
@@ -23,7 +25,7 @@ import           Options.Applicative
 import           Ouroboros.Consensus.BlockchainTime
 import           Ouroboros.Consensus.Demo
 import           Ouroboros.Consensus.Demo.Run
-import           Ouroboros.Consensus.NodeId (NodeId (..), CoreNodeId (..))
+import           Ouroboros.Consensus.NodeId (CoreNodeId (..), NodeId (..))
 import           Ouroboros.Consensus.Util
 
 import qualified Test.Cardano.Chain.Genesis.Dummy as Dummy
@@ -64,6 +66,11 @@ fromProtocol RealPBFT =
   where
     p = DemoRealPBFT defaultDemoPBftParams genesisConfig
     genesisConfig = Dummy.dummyConfig
+
+-- Node can be run in two modes.
+data ViewMode =
+    LiveView    -- Live mode with TUI (based on 'ansi-terminal-game').
+  | SimpleView  -- Simple mode, just output text.
 
 {-------------------------------------------------------------------------------
   Command parsers
@@ -131,3 +138,11 @@ parseNumCoreNodes =
          <> metavar "NUM-CORE-NODES"
          <> help "The number of core nodes"
     )
+
+-- Optional flag for live view (with TUI graphics).
+parseViewMode :: Parser ViewMode
+parseViewMode =
+    flag SimpleView LiveView $ mconcat
+        [ long "live-view"
+        , help "Live view with TUI."
+        ]
