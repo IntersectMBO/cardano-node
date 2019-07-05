@@ -13,9 +13,7 @@ module Cardano.Node.CLI (
   , parseNodeId
   , parseCoreNodeId
   , parseNumCoreNodes
-<<<<<<< HEAD
   , parseViewMode
-=======
   , parseTestnetBalanceOptions
   , parseLovelace
   , parseLovelacePortion
@@ -26,7 +24,6 @@ module Cardano.Node.CLI (
   , parseIntegral
   , parseFlag
   , parseUTCTime
->>>>>>> genesis-tool:  move more things to NodeLib
   -- * Generic
   , command'
   ) where
@@ -45,10 +42,10 @@ import           Ouroboros.Consensus.Demo.Run
 import           Ouroboros.Consensus.NodeId (CoreNodeId (..), NodeId (..))
 import           Ouroboros.Consensus.Util
 
-import           Cardano.Binary (Annotated(..))
-import           Cardano.Crypto.ProtocolMagic
+import           Cardano.Binary (Annotated (..))
 import           Cardano.Chain.Common
 import           Cardano.Chain.Genesis
+import           Cardano.Crypto.ProtocolMagic
 
 import qualified Test.Cardano.Chain.Genesis.Dummy as Dummy
 
