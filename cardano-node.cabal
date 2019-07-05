@@ -52,6 +52,8 @@ executable cardano-node
                        "-with-rtsopts=-T"
                        -fno-warn-unticked-promoted-constructors
   other-modules:       CLI
+                       GitRev
+                       GitRevFromGit
                        LiveView
                        TxSubmission
                        TraceAcceptor
@@ -81,13 +83,17 @@ executable cardano-node
                      , containers
                      , cryptonite
                      , directory
+                     , file-embed
                      , formatting
                      , mtl
                      , network
                      , optparse-applicative
+                     , process
                      , serialise
+                     , safe-exceptions
                      , stm
                      , string-conv
+                     , template-haskell
                      , text
                      , typed-protocols
   if os(windows)
