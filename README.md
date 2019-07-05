@@ -5,8 +5,13 @@
 Integration of the [ledger](https://github.com/input-output-hk/cardano-ledger), [consensus](https://github.com/input-output-hk/ouroboros-network/tree/master/ouroboros-consensus), [networking](https://github.com/input-output-hk/ouroboros-network/tree/master/ouroboros-network) and [node shell](https://github.com/input-output-hk/cardano-shell) repositories.
 [Logging](https://github.com/input-output-hk/iohk-monitoring-framework) is provided as a [feature](https://github.com/input-output-hk/cardano-shell/blob/master/app/Cardano/Shell/Features/Logging.hs) by the node shell to the other packages.
 
+# `genesis-tool`
 
-# demonstration
+A CLI utility to support a variety of key material operations (genesis, migration, pretty-printing..) for different system generations.
+
+Detailed documentation in its attendant [README](https://github.com/input-output-hk/cardano-shell/blob/master/app/genesis-tool/README.md).
+
+# Node demonstration
 
 The demonstration starts up three nodes that are connected to each other and produce blocks according to the algorithm selected (e.g. "BFT").
 The blocks are shared among the nodes and after verification integrated into a nodes ledger.
@@ -31,7 +36,7 @@ The user can submit transactions to a node which includes them in its local memp
 
 ```
 
-## startup of the demonstration
+## Startup of the demonstration
 
 Write the following commands in a terminal:
 

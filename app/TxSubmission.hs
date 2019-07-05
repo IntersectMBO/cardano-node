@@ -57,6 +57,8 @@ import           Ouroboros.Network.Protocol.ChainSync.Codec
 import           Ouroboros.Network.Protocol.Handshake.Version
 import           Ouroboros.Network.NodeToClient
 
+import           Cardano.Node.CLI
+
 import           Topology
 
 {-------------------------------------------------------------------------------
@@ -93,16 +95,6 @@ parseMockTxOut = (,)
           , help "Amount to transfer"
           ])
 
-
-{-------------------------------------------------------------------------------
-  optparse-applicative auxiliary
--------------------------------------------------------------------------------}
-
-command' :: String -> String -> Parser a -> Mod CommandFields a
-command' c descr p =
-    command c $ info (p <**> helper) $ mconcat [
-        progDesc descr
-      ]
 
 {-------------------------------------------------------------------------------
   Main logic

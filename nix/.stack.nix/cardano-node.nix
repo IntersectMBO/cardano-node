@@ -18,7 +18,12 @@
       "library" = {
         depends = [
           (hsPkgs.base)
+          (hsPkgs.bytestring)
+          (hsPkgs.canonical-json)
           (hsPkgs.optparse-applicative)
+          (hsPkgs.time)
+          (hsPkgs.cardano-binary)
+          (hsPkgs.cardano-crypto-wrapper)
           (hsPkgs.cardano-ledger)
           (hsPkgs.cardano-ledger-test)
           (hsPkgs.cardano-prelude)
@@ -56,6 +61,7 @@
             (hsPkgs.cryptonite)
             (hsPkgs.directory)
             (hsPkgs.formatting)
+            (hsPkgs.lens)
             (hsPkgs.mtl)
             (hsPkgs.network)
             (hsPkgs.optparse-applicative)
@@ -63,6 +69,7 @@
             (hsPkgs.stm)
             (hsPkgs.string-conv)
             (hsPkgs.text)
+            (hsPkgs.time)
             (hsPkgs.typed-protocols)
             ] ++ (if system.isWindows
             then [ (hsPkgs.Win32) ]
@@ -89,6 +96,44 @@
             (hsPkgs.optparse-applicative)
             (hsPkgs.serialise)
             (hsPkgs.text)
+            ] ++ (if system.isWindows
+            then [ (hsPkgs.Win32) ]
+            else [ (hsPkgs.unix) ]);
+          };
+        "genesis-tool" = {
+          depends = [
+            (hsPkgs.base)
+            (hsPkgs.cardano-binary)
+            (hsPkgs.cardano-crypto)
+            (hsPkgs.cardano-crypto-wrapper)
+            (hsPkgs.cardano-ledger)
+            (hsPkgs.cardano-ledger-test)
+            (hsPkgs.cardano-node)
+            (hsPkgs.cardano-prelude)
+            (hsPkgs.contra-tracer)
+            (hsPkgs.iohk-monitoring)
+            (hsPkgs.pvss)
+            (hsPkgs.aeson)
+            (hsPkgs.aeson-pretty)
+            (hsPkgs.async)
+            (hsPkgs.binary)
+            (hsPkgs.bytestring)
+            (hsPkgs.canonical-json)
+            (hsPkgs.cborg)
+            (hsPkgs.containers)
+            (hsPkgs.cryptonite)
+            (hsPkgs.directory)
+            (hsPkgs.formatting)
+            (hsPkgs.lens)
+            (hsPkgs.mtl)
+            (hsPkgs.network)
+            (hsPkgs.optparse-applicative)
+            (hsPkgs.serialise)
+            (hsPkgs.stm)
+            (hsPkgs.string-conv)
+            (hsPkgs.text)
+            (hsPkgs.time)
+            (hsPkgs.typed-protocols)
             ] ++ (if system.isWindows
             then [ (hsPkgs.Win32) ]
             else [ (hsPkgs.unix) ]);
