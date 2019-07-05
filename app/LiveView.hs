@@ -5,6 +5,7 @@
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE RecordWildCards     #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell     #-}
 
 {-# OPTIONS_GHC -Wno-simplifiable-class-constraints #-}
 
@@ -13,9 +14,11 @@ module LiveView (
     ) where
 
 import           Control.Monad (void)
+import           Data.Text (unpack)
 import           Data.Version (showVersion)
 import           Terminal.Game
 
+import           GitRev (gitRev)
 import           Ouroboros.Consensus.NodeId
 import           Paths_cardano_node (version)
 import           Topology
@@ -55,7 +58,7 @@ initLiveViewState (TopologyInfo nodeId _) = LiveViewState
     , lvsRelease         = "Shelley"   -- Should be taken from ..?
     , lvsNodeId          = nodeIdNum
     , lvsVersion         = showVersion version
-    , lvsCommit          = "bc39f7124" -- Should be taken from ..?
+    , lvsCommit          = unpack gitRev
     , lvsUpTime          = "00:00:00"
     , lvsBlockHeight     = 0
     , lvsBlocksMinted    = 0
