@@ -34,6 +34,7 @@ import           System.IO.Error (isDoesNotExistError)
 import           Control.Monad.Class.MonadAsync
 
 import qualified Cardano.BM.Configuration.Model as CM
+import           Cardano.BM.Data.BackendKind (BackendKind (TraceForwarderBK))
 import           Cardano.BM.Data.Tracer (ToLogObject (..))
 import           Cardano.BM.Trace (Trace, appendName)
 
