@@ -28,7 +28,7 @@ extra-deps:
 
     # Following deps are for cardano-shell
   - git: https://github.com/input-output-hk/cardano-shell
-    commit: 92e6b42167d1399971df788b691423222722c2f6
+    commit: 52baef406c82b0e1d8858e35ee5597b51b7df48a
 
   - containers-0.5.11.0
   - ekg-prometheus-adapter-0.1.0.4
