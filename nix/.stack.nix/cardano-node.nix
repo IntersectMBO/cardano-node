@@ -18,14 +18,18 @@
       "library" = {
         depends = [
           (hsPkgs.base)
+          (hsPkgs.bytestring)
+          (hsPkgs.canonical-json)
           (hsPkgs.optparse-applicative)
+          (hsPkgs.time)
+          (hsPkgs.cardano-binary)
+          (hsPkgs.cardano-crypto-wrapper)
           (hsPkgs.cardano-ledger)
           (hsPkgs.cardano-ledger-test)
           (hsPkgs.cardano-prelude)
           (hsPkgs.cardano-shell)
           (hsPkgs.ouroboros-consensus)
           (hsPkgs.ouroboros-network)
-          (hsPkgs.optparse-applicative)
           ] ++ (if system.isWindows
           then [ (hsPkgs.Win32) ]
           else [ (hsPkgs.unix) ]);
@@ -57,6 +61,7 @@
             (hsPkgs.cryptonite)
             (hsPkgs.directory)
             (hsPkgs.formatting)
+            (hsPkgs.lens)
             (hsPkgs.mtl)
             (hsPkgs.network)
             (hsPkgs.optparse-applicative)
@@ -127,6 +132,7 @@
             (hsPkgs.stm)
             (hsPkgs.string-conv)
             (hsPkgs.text)
+            (hsPkgs.time)
             (hsPkgs.typed-protocols)
             ] ++ (if system.isWindows
             then [ (hsPkgs.Win32) ]
