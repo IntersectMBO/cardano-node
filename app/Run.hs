@@ -33,6 +33,7 @@ import           System.IO.Error (isDoesNotExistError)
 
 import           Control.Monad.Class.MonadAsync
 
+import qualified Cardano.BM.Configuration.Model as CM
 import           Cardano.BM.Data.Tracer (ToLogObject (..))
 import           Cardano.BM.Trace (Trace, appendName)
 
@@ -73,8 +74,8 @@ import           Topology
 import           TraceAcceptor
 import           TxSubmission
 
-runNode :: NodeCLIArguments -> Trace IO Text -> IO ()
-runNode nodeCli@NodeCLIArguments{..} trace = do
+runNode :: NodeCLIArguments -> CM.Configuration -> Trace IO Text -> IO ()
+runNode nodeCli@NodeCLIArguments{..} logconfig trace = do
     -- If the user asked to submit a transaction, we don't have to spin up a
     -- full node, we simply transmit it and exit.
     case command of
@@ -98,6 +99,8 @@ runNode nodeCli@NodeCLIArguments{..} trace = do
           SimpleView -> handleSimpleNode p nodeCli myNodeAddress topology tracer
           LiveView   -> do
             -- We run 'handleSimpleNode' as usual and run TUI thread as well.
+            -- turn off logging to the console, only forward it through a pipe to a central logging process
+            CM.setDefaultBackends logconfig [TraceForwarderBK]
             -- User will see a terminal graphics and will be able to interact with it.
             nodeThread <- Async.async $ handleSimpleNode p nodeCli myNodeAddress topology tracer
             tuiThread  <- Async.async $ runNodeLiveView topology

@@ -55,3 +55,8 @@ The window of the terminal will be split into four panes showing the three nodes
 The above command will prepare a transaction of amount 99 to address _a_ and sends the transaction for validation and integration into a block to node _2_.
 
 
+
+# development
+
+run *ghcid* with: `ghcid -c "cabal new-repl exe:cardano-node --reorder-goals"`
+

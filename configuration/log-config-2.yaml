@@ -75,6 +75,8 @@ options:
       subtrace: NoTrace
     '#messagecounters.katip':
       subtrace: NoTrace
+    '#messagecounters.monitoring':
+      subtrace: NoTrace
   mapBackends:
     cardano.epoch-validation.benchmark:
       - AggregationBK

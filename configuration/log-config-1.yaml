@@ -43,11 +43,6 @@ options:
   cfokey:
     value: "Release-1.0.0"
   mapSubtrace:
-    benchmark:
-      contents:
-        - GhcRtsStats
-        - MonotonicClock
-      subtrace: ObservableTrace
     '#ekgview':
       contents:
       - - tag: Contains
@@ -74,6 +69,8 @@ options:
     '#messagecounters.switchboard':
       subtrace: NoTrace
     '#messagecounters.katip':
+      subtrace: NoTrace
+    '#messagecounters.monitoring':
       subtrace: NoTrace
   mapBackends:
     cardano.epoch-validation.benchmark:
