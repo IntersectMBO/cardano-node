@@ -100,7 +100,7 @@ runNode nodeCli@NodeCLIArguments{..} trace = do
             -- We run 'handleSimpleNode' as usual and run TUI thread as well.
             -- User will see a terminal graphics and will be able to interact with it.
             nodeThread <- Async.async $ handleSimpleNode p nodeCli myNodeAddress topology tracer
-            tuiThread  <- Async.async $ runNodeLiveView 1
+            tuiThread  <- Async.async $ runNodeLiveView topology
             _ <- Async.waitAny [nodeThread, tuiThread]
             return ()
 
