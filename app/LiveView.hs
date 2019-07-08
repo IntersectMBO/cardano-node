@@ -1,5 +1,6 @@
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE GADTs               #-}
+{-# LANGUAGE MultiWayIf          #-}
 {-# LANGUAGE NamedFieldPuns      #-}
 {-# LANGUAGE NumericUnderscores  #-}
 {-# LANGUAGE OverloadedStrings   #-}
@@ -13,7 +14,6 @@ module LiveView (
       runNodeLiveView
     ) where
 
-import           Control.Monad (void)
 import           Data.Text (unpack)
 import           Data.Version (showVersion)
 import           Terminal.Game
@@ -24,12 +24,23 @@ import           Paths_cardano_node (version)
 import           Topology
 
 runNodeLiveView :: TopologyInfo -> IO ()
-runNodeLiveView topology = void $
-    runGame (initLiveViewState topology)
-            liveViewLogic
-            liveViewDraw
-            lvsQuit
-            (13 :: FPS)
+runNodeLiveView topology = playGame game
+  where
+    game = Game
+        { gScreenWidth   = mw
+        , gScreenHeight  = mh
+        , gFPS           = 13
+        , gInitState     = initLiveViewState topology
+        , gLogicFunction = liveViewLogic
+        , gDrawFunction  = liveViewDraw
+        , gQuitFunction  = lvsQuit
+        }
+
+mh :: Height
+mh = 25
+
+mw :: Width
+mw = 95
 
 data LiveViewState = LiveViewState
     { lvsQuit            :: Bool
@@ -65,10 +76,10 @@ initLiveViewState (TopologyInfo nodeId _) = LiveViewState
     , lvsTransactions    = 0
     , lvsPeersConnected  = 0
     , lvsMaxNetDelay     = 0
-    , lvsMempool         = 0
-    , lvsMempoolPerc     = 0
-    , lvsCPUUsagePerc    = 0
-    , lvsMemoryUsageCurr = 0
+    , lvsMempool         = 95
+    , lvsMempoolPerc     = 79
+    , lvsCPUUsagePerc    = 58
+    , lvsMemoryUsageCurr = 3
     , lvsMemoryUsageMax  = 0
     }
   where
@@ -85,53 +96,69 @@ liveViewLogic lvs (KeyPress 'Q') = lvs { lvsQuit = True }
 liveViewLogic lvs (KeyPress _)   = lvs
 liveViewLogic lvs Tick           = lvs
 
--- Creates textBox exactly for one text line.
-oneLine :: String -> Plane
-oneLine s = textBox s ((fromIntegral $ length s) :: Width) (1 :: Height)
-
-makeProgressBar :: Int -> String
+makeProgressBar :: Int -> Plane
 makeProgressBar percentage =
     if percentage < 0 || percentage > 100
     then error "Impossible: percentage is out of range!"
-    else "[" <> progress <> "]"
+    else blankPlane fullLength (1 :: Height)
+       & (1 :: Row, 1 :: Column) % stringPlane "["
+                                 # bold
+       & (1 :: Row, 2 :: Column) % stringPlane progress
+                                 # color progressColor Vivid
+       & (1 :: Row, fullLength)  % stringPlane "]"
+                                 # bold
   where
     progress       = replicate progressChars '|' ++ replicate emptyChars ' '
-    progressChars  = round $ (fromIntegral (percentage `div` percPerChar) :: Double)
+    progressColor  = if | percentage <= 50 -> Green
+                        | percentage <= 75 -> Yellow
+                        | otherwise        -> Red
+    progressChars' = round $ (fromIntegral (percentage `div` percPerChar) :: Double)
+    progressChars  = if progressChars' == 0 then 1 else progressChars'
     emptyChars     = progressLength - progressChars
     percPerChar    = 100 `div` progressLength
     progressLength = 20
+    fullLength :: Integer
+    fullLength = fromIntegral progressLength + 2
 
 header :: LiveViewState -> Plane
 header lvs = blankPlane (85 :: Width) (1 :: Height)
-    & (1 :: Row,  1 :: Column) % oneLine "CARDANO SL"
+    & (1 :: Row,  1 :: Column) % stringPlane "CARDANO SL"
                                # bold
-    & (1 :: Row, 17 :: Column) % oneLine ("Release: " <> lvsRelease lvs)
-    & (1 :: Row, 76 :: Column) % oneLine ("Node: " <> (show . lvsNodeId $ lvs))
+    & (1 :: Row, 17 :: Column) % stringPlane ("Release: ")
+    & (1 :: Row, 26 :: Column) % (stringPlane $ lvsRelease lvs)
+                               # color Cyan Vivid
+    & (1 :: Row, 76 :: Column) % stringPlane ("Node: ")
+    & (1 :: Row, 82 :: Column) % (stringPlane . show $ lvsNodeId lvs)
+                               # color Cyan Vivid
+                               # bold
 
 mempoolStats :: LiveViewState -> Plane
 mempoolStats lvs = blankPlane (27 :: Width) (3 :: Height)
-    & (1 :: Row,  1 :: Column) % oneLine "Memory pool"
+    & (1 :: Row,  1 :: Column) % stringPlane "Memory pool"
                                # bold
-    & (1 :: Row, 19 :: Column) % oneLine (
+    & (1 :: Row, 19 :: Column) % stringPlane (
                                             (show . lvsMempool $ lvs)
                                          <> " / "
                                          <> (show . lvsMempoolPerc $ lvs) <> "%"
                                          )
-    & (3 :: Row,  3 :: Column) % oneLine (makeProgressBar $ lvsMempoolPerc lvs)
+                               # color White Vivid
+    & (3 :: Row,  3 :: Column) % (makeProgressBar $ lvsMempoolPerc lvs)
 
 cpuStats :: LiveViewState -> Plane
 cpuStats lvs = blankPlane (27 :: Width) (3 :: Height)
-    & (1 :: Row,  1 :: Column) % oneLine "CPU usage"
+    & (1 :: Row,  1 :: Column) % stringPlane "CPU usage"
                                # bold
-    & (1 :: Row, 19 :: Column) % oneLine ((show . lvsCPUUsagePerc $ lvs) <> "%")
-    & (3 :: Row,  3 :: Column) % oneLine (makeProgressBar $ lvsCPUUsagePerc lvs)
+    & (1 :: Row, 19 :: Column) % stringPlane ((show . lvsCPUUsagePerc $ lvs) <> "%")
+                               # color White Vivid
+    & (3 :: Row,  3 :: Column) % (makeProgressBar $ lvsCPUUsagePerc lvs)
 
 memoryStats :: LiveViewState -> Plane
 memoryStats lvs = blankPlane (27 :: Width) (3 :: Height)
-    & (1 :: Row,  1 :: Column) % oneLine "Memory usage"
+    & (1 :: Row,  1 :: Column) % stringPlane "Memory usage"
                                # bold
-    & (1 :: Row, 19 :: Column) % oneLine ((show . lvsMemoryUsageCurr $ lvs) <> " GB")
-    & (3 :: Row,  3 :: Column) % oneLine (makeProgressBar $ lvsMemoryUsageCurr lvs)
+    & (1 :: Row, 19 :: Column) % stringPlane ((show . lvsMemoryUsageCurr $ lvs) <> " GB")
+                               # color White Vivid
+    & (3 :: Row,  3 :: Column) % (makeProgressBar $ lvsMemoryUsageCurr lvs)
 
 systemStats :: LiveViewState -> Plane
 systemStats lvs = blankPlane (30 :: Width) (17 :: Height)
@@ -141,33 +168,33 @@ systemStats lvs = blankPlane (30 :: Width) (17 :: Height)
 
 nodeInfoLabels :: Plane
 nodeInfoLabels = blankPlane (20 :: Width) (18 :: Height)
-    & ( 1 :: Row, 1 :: Column) % oneLine "version:"
-    & ( 2 :: Row, 1 :: Column) % oneLine "commit:"
-    & ( 4 :: Row, 1 :: Column) % oneLine "uptime:"
-    & ( 6 :: Row, 1 :: Column) % oneLine "block height:"
-    & ( 7 :: Row, 1 :: Column) % oneLine "minted:"
-    & ( 9 :: Row, 1 :: Column) % oneLine "transactions:"
-    & (11 :: Row, 1 :: Column) % oneLine "peers connected:"
-    & (13 :: Row, 1 :: Column) % oneLine "max network delay:"
+    & ( 1 :: Row, 1 :: Column) % stringPlane "version:"
+    & ( 2 :: Row, 1 :: Column) % stringPlane "commit:"
+    & ( 4 :: Row, 1 :: Column) % stringPlane "uptime:"
+    & ( 6 :: Row, 1 :: Column) % stringPlane "block height:"
+    & ( 7 :: Row, 1 :: Column) % stringPlane "minted:"
+    & ( 9 :: Row, 1 :: Column) % stringPlane "transactions:"
+    & (11 :: Row, 1 :: Column) % stringPlane "peers connected:"
+    & (13 :: Row, 1 :: Column) % stringPlane "max network delay:"
 
 nodeInfoValues :: LiveViewState -> Plane
 nodeInfoValues lvs = blankPlane (15 :: Width) (18 :: Height)
-    & ( 1 :: Row,  1 :: Column) % oneLine (lvsVersion lvs)
-                                # bold
-    & ( 2 :: Row,  1 :: Column) % oneLine (lvsCommit lvs)
-                                # bold
-    & ( 4 :: Row,  1 :: Column) % oneLine (lvsUpTime lvs)
-                                # bold
-    & ( 6 :: Row,  1 :: Column) % oneLine (show . lvsBlockHeight $ lvs)
-                                # bold
-    & ( 7 :: Row,  1 :: Column) % oneLine (show . lvsBlocksMinted $ lvs)
-                                # bold
-    & ( 9 :: Row,  1 :: Column) % oneLine (show . lvsTransactions $ lvs)
-                                # bold
-    & (11 :: Row,  1 :: Column) % oneLine (show . lvsPeersConnected $ lvs)
-                                # bold
-    & (13 :: Row,  1 :: Column) % oneLine ((show . lvsMaxNetDelay $ lvs) <> " ms")
-                                # bold
+    & ( 1 :: Row,  1 :: Column) % stringPlane (lvsVersion lvs)
+                                # color White Vivid # bold
+    & ( 2 :: Row,  1 :: Column) % stringPlane (lvsCommit lvs)
+                                # color White Vivid # bold
+    & ( 4 :: Row,  1 :: Column) % stringPlane (lvsUpTime lvs)
+                                # color White Vivid # bold
+    & ( 6 :: Row,  1 :: Column) % stringPlane (show . lvsBlockHeight $ lvs)
+                                # color White Vivid # bold
+    & ( 7 :: Row,  1 :: Column) % stringPlane (show . lvsBlocksMinted $ lvs)
+                                # color White Vivid # bold
+    & ( 9 :: Row,  1 :: Column) % stringPlane (show . lvsTransactions $ lvs)
+                                # color White Vivid # bold
+    & (11 :: Row,  1 :: Column) % stringPlane (show . lvsPeersConnected $ lvs)
+                                # color White Vivid # bold
+    & (13 :: Row,  1 :: Column) % stringPlane ((show . lvsMaxNetDelay $ lvs) <> " ms")
+                                # color White Vivid # bold
 
 nodeInfo :: LiveViewState -> Plane
 nodeInfo lvs = blankPlane (40 :: Width) (18 :: Height)
@@ -181,6 +208,3 @@ liveViewDraw lvs = blankPlane mw mh
     & (3 :: Row,   7 :: Column) % header lvs
     & (7 :: Row,   9 :: Column) % systemStats lvs
     & (7 :: Row,  55 :: Column) % nodeInfo lvs
-  where
-    mh = 25 :: Height
-    mw = 95 :: Width

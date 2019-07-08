@@ -83,7 +83,7 @@ executable cardano-node
                      , typed-protocols-cbor
 
                      , aeson
-                     , ansi-terminal-game == 0.3.1.0
+                     , ansi-terminal-game == 0.4.0.1
                      , async
                      , bytestring
                      , cborg

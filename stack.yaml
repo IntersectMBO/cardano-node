@@ -63,11 +63,12 @@ extra-deps:
         - typed-protocols
         - typed-protocols-cbor
 
-          # - ansi-terminal-game-0.4.0.0@sha256:a261f0caae1e6fdba09e6ef5b0c6851ecb1ba8456a6e05785e1feaf8839ee45e
-  - ansi-terminal-game-0.3.1.0@sha256:3a1697c0ce0216f4c7fbc02b22c8b7663d142ed6703785d2eb8fae5f1fec6005
+  # We have to use own fork because of problems with LTS dependencies (QuickCheck 2.12 against 2.13).
+  - git: https://github.com/denisshevchenko/ansi-terminal-game
+    commit: b0d9aba5684d5fc4681fa12afcf0ac9d4db38747
+
   - linebreak-1.0.0.3@sha256:3152802008e06f8444d364f6e1047b412e3cb692c1382b1657a425d72a0cfd5f
   - timers-tick-0.4.1.0@sha256:27d345648b8e01fad48adf1dc0e870b19fabb03ccdf3ad0bc5acb57f5da6cb5c
-
 
 flags:
   iohk-monitoring:
