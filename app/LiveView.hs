@@ -13,12 +13,13 @@
 {-# OPTIONS_GHC -Wno-simplifiable-class-constraints #-}
 
 module LiveView (
-      runNodeLiveView
-    , LiveViewState (..)
+      LiveViewBackend (..)
+    , realize
+    , effectuate
     ) where
 
-import           Control.Concurrent.MVar (MVar, newMVar, withMVar)
-import           Control.Monad (void)
+import qualified Control.Concurrent.Async as Async
+import           Control.Concurrent.MVar (MVar, modifyMVar_, newMVar)
 import           Data.Aeson (FromJSON)
 import           Data.Text (unpack)
 import           Data.Time.Clock (UTCTime, getCurrentTime)
@@ -28,29 +29,10 @@ import           Terminal.Game
 import           GitRev (gitRev)
 
 import           Cardano.BM.Data.Backend
-import           Cardano.Shell.Features.Logging (LoggingLayer (..))
 import           Ouroboros.Consensus.NodeId
 import           Paths_cardano_node (version)
 import           Topology
 
-
-runNodeLiveView :: LoggingLayer -> TopologyInfo -> IO ()
-runNodeLiveView ll topology = void $ do
-    mv <- newMVar =<< initLiveViewState topology
-    let sharedState = LiveViewBackend mv 
-    runBackend ll sharedState
-    playGame (game sharedState)
-
-  where
-      game sst = Game
-          { gScreenWidth   = mw
-          , gScreenHeight  = mh
-          , gFPS           = 5
-          , gInitState     = sst -- initLiveViewState topology
-          , gLogicFunction = liveViewLogic
-          , gDrawFunction  = liveViewDraw
-          , gQuitFunction  = lvsQuit
-          }
 
 mh :: Height
 mh = 25
@@ -63,21 +45,32 @@ newtype LiveViewBackend a = LiveViewBackend { getbe :: LiveViewMVar a }
 
 instance (FromJSON a) => IsBackend LiveViewBackend a where
     typeof _ = UserDefinedBK "LiveViewBackend"
-    realize _ = return ()
+    realize _ = do
+        initState <- initLiveViewState
+        mv <- newMVar initState
+        let sharedState = LiveViewBackend mv
+        thr <- Async.async $ playGame $ Game
+            { gScreenWidth   = mw
+            , gScreenHeight  = mh
+            , gFPS           = 5
+            , gInitState     = initState
+            , gLogicFunction = liveViewLogic
+            , gDrawFunction  = liveViewDraw
+            , gQuitFunction  = lvsQuit
+            }
+        modifyMVar_ mv $ \lvs -> return $ lvs { lvsThread = thr }
+        return $ sharedState
+  
     unrealize be = putStrLn $ "unrealize " <> show (typeof be)
 
 instance IsEffectuator LiveViewBackend a where
-    effectuate mlvs _item = do
-        modifyMVar_ (mlvs) $ \lvs ->
+    effectuate lvbe _item = do
+        modifyMVar_ (getbe lvbe) $ \lvs ->
             return $ lvs { lvsBlockHeight = lvsBlockHeight lvs + 1 }
 
     handleOverflow _ = return ()
 
 
-runBackend :: LoggingLayer -> LiveViewBackend a -> IO ()
-runBackend _ll _lvs = do
-    return ()
-            
 data LiveViewState a = LiveViewState
     { lvsQuit            :: Bool
     , lvsRelease         :: String
@@ -97,44 +90,51 @@ data LiveViewState a = LiveViewState
     , lvsMemoryUsageMax  :: Int
     -- internal state
     , lvsStartTime       :: UTCTime
-    } deriving (Show, Eq)
+    , lvsMessage         :: a
+    , lvsThread          :: Async.Async ()
+    } deriving (Eq)
 
 initLiveViewState
-    :: forall a .
-       TopologyInfo
-    -> IO (LiveViewBackend a)
-initLiveViewState (TopologyInfo nodeId _) = return $ LiveViewState
-    { lvsQuit            = False
-    , lvsRelease         = "Shelley"   -- Should be taken from ..?
-    , lvsNodeId          = nodeIdNum
-    , lvsVersion         = showVersion version
-    , lvsCommit          = unpack gitRev
-    , lvsUpTime          = "00:00:00"
-    , lvsBlockHeight     = 0
-    , lvsBlocksMinted    = 0
-    , lvsTransactions    = 0
-    , lvsPeersConnected  = 0
-    , lvsMaxNetDelay     = 0
-    , lvsMempool         = 95
-    , lvsMempoolPerc     = 79
-    , lvsCPUUsagePerc    = 58
-    , lvsMemoryUsageCurr = 3
-    , lvsMemoryUsageMax  = 0
-    , lvsStartTime       = getCurrentTime
-    }
-  where
-    nodeIdNum = case nodeId of
-        CoreId num  -> num
-        RelayId num -> num
+    :: IO (LiveViewState a)
+initLiveViewState = do
+    tstamp <- getCurrentTime
+    return $ LiveViewState
+                { lvsQuit            = False
+                , lvsRelease         = "Shelley"
+                , lvsNodeId          = 99
+                , lvsVersion         = showVersion version
+                , lvsCommit          = unpack gitRev
+                , lvsUpTime          = "00:00:00"
+                , lvsBlockHeight     = 1891
+                , lvsBlocksMinted    = 543
+                , lvsTransactions    = 1732
+                , lvsPeersConnected  = 3
+                , lvsMaxNetDelay     = 17
+                , lvsMempool         = 95
+                , lvsMempoolPerc     = 79
+                , lvsCPUUsagePerc    = 58
+                , lvsMemoryUsageCurr = 3
+                , lvsMemoryUsageMax  = 5
+                , lvsStartTime       = tstamp
+                }
 
+setTopology :: LiveViewBackend a -> TopologyInfo -> IO ()
+setTopology lvbe (TopologyInfo nodeId _) =
+    modifyMVar_ (getbe lvbe) $ \lvs ->
+        return $ lvs { lvsNodeId = nodeIdNum }
+  where
+      nodeIdNum = case nodeId of
+          CoreId num  -> num
+          RelayId num -> num
+        
 liveViewLogic
-    :: LiveViewBackend a
+    :: LiveViewState a
     -> Event
-    -> LiveViewBackend a
-liveViewLogic lvbe (KeyPress 'q') = modifyMVar_ (getbe lvbe) $ \lvs -> lvs { lvsQuit = True }
-liveViewLogic lvbe (KeyPress 'Q') = lvs { lvsQuit = True }
-liveViewLogic lvbe (KeyPress _)   = lvs
-liveViewLogic lvbe Tick           = lvs
+    -> LiveViewState a
+liveViewLogic lvs (KeyPress 'q') = lvs { lvsQuit = True }
+liveViewLogic lvs (KeyPress 'Q') = lvs { lvsQuit = True }
+liveViewLogic lvs (KeyPress _)   = lvs
+liveViewLogic lvs Tick           = lvs
 
 makeProgressBar :: Int -> Plane
 makeProgressBar percentage =
@@ -160,8 +160,8 @@ makeProgressBar percentage =
     fullLength :: Integer
     fullLength = fromIntegral progressLength + 2
 
-header :: LiveViewBackend a -> Plane
-header lvbe = blankPlane (85 :: Width) (1 :: Height)
+header :: LiveViewState a -> Plane
+header lvs = blankPlane (85 :: Width) (1 :: Height)
     & (1 :: Row,  1 :: Column) % stringPlane "CARDANO SL"
                                # bold
     & (1 :: Row, 17 :: Column) % stringPlane ("Release: ")
@@ -172,8 +172,8 @@ header lvbe = blankPlane (85 :: Width) (1 :: Height)
                                # color Cyan Vivid
                                # bold
 
-mempoolStats :: LiveViewBackend a -> Plane
-mempoolStats lvbe = blankPlane (27 :: Width) (3 :: Height)
+mempoolStats :: LiveViewState a -> Plane
+mempoolStats lvs = blankPlane (27 :: Width) (3 :: Height)
     & (1 :: Row,  1 :: Column) % stringPlane "Memory pool"
                                # bold
     & (1 :: Row, 19 :: Column) % stringPlane (
@@ -184,24 +184,24 @@ mempoolStats lvbe = blankPlane (27 :: Width) (3 :: Height)
                                # color White Vivid
     & (3 :: Row,  3 :: Column) % (makeProgressBar $ lvsMempoolPerc lvs)
 
-cpuStats :: LiveViewBackend a -> Plane
-cpuStats lvbe = blankPlane (27 :: Width) (3 :: Height)
+cpuStats :: LiveViewState a -> Plane
+cpuStats lvs = blankPlane (27 :: Width) (3 :: Height)
     & (1 :: Row,  1 :: Column) % stringPlane "CPU usage"
                                # bold
     & (1 :: Row, 19 :: Column) % stringPlane ((show . lvsCPUUsagePerc $ lvs) <> "%")
                                # color White Vivid
     & (3 :: Row,  3 :: Column) % (makeProgressBar $ lvsCPUUsagePerc lvs)
 
-memoryStats :: LiveViewBackend a -> Plane
-memoryStats lvbe = blankPlane (27 :: Width) (3 :: Height)
+memoryStats :: LiveViewState a -> Plane
+memoryStats lvs = blankPlane (27 :: Width) (3 :: Height)
     & (1 :: Row,  1 :: Column) % stringPlane "Memory usage"
                                # bold
     & (1 :: Row, 19 :: Column) % stringPlane ((show . lvsMemoryUsageCurr $ lvs) <> " GB")
                                # color White Vivid
     & (3 :: Row,  3 :: Column) % (makeProgressBar $ lvsMemoryUsageCurr lvs)
 
-systemStats :: LiveViewBackend a -> Plane
-systemStats lvbe = blankPlane (30 :: Width) (17 :: Height)
+systemStats :: LiveViewState a -> Plane
+systemStats lvs = blankPlane (30 :: Width) (17 :: Height)
     & ( 1 :: Row, 1 :: Column) % mempoolStats lvs
     & ( 7 :: Row, 1 :: Column) % cpuStats lvs
     & (13 :: Row, 1 :: Column) % memoryStats lvs
@@ -217,7 +217,7 @@ nodeInfoLabels = blankPlane (20 :: Width) (18 :: Height)
     & (11 :: Row, 1 :: Column) % stringPlane "peers connected:"
     & (13 :: Row, 1 :: Column) % stringPlane "max network delay:"
 
-nodeInfoValues :: LiveViewBackend a -> Plane
+nodeInfoValues :: LiveViewState a -> Plane
 nodeInfoValues lvs = blankPlane (15 :: Width) (18 :: Height)
     & ( 1 :: Row,  1 :: Column) % stringPlane (lvsVersion lvs)
                                 # color White Vivid # bold
@@ -236,13 +236,13 @@ nodeInfoValues lvs = blankPlane (15 :: Width) (18 :: Height)
     & (13 :: Row,  1 :: Column) % stringPlane ((show . lvsMaxNetDelay $ lvs) <> " ms")
                                 # color White Vivid # bold
 
-nodeInfo :: LiveViewBackend a -> Plane
-nodeInfo lvbe = blankPlane (40 :: Width) (18 :: Height)
+nodeInfo :: LiveViewState a -> Plane
+nodeInfo lvs = blankPlane (40 :: Width) (18 :: Height)
     & (1 :: Row,  1 :: Column) % nodeInfoLabels
     & (1 :: Row, 22 :: Column) % nodeInfoValues lvs
 
-liveViewDraw :: LiveViewBackend a -> Plane
-liveViewDraw lvbe = blankPlane mw mh
+liveViewDraw :: LiveViewState a -> Plane
+liveViewDraw lvs = blankPlane mw mh
     & (1 :: Row,   1 :: Column) % box '*' mw       mh       -- border
     & (2 :: Row,   2 :: Column) % box ' ' (mw - 2) (mh - 2) -- space inside of border
     & (3 :: Row,   7 :: Column) % header lvs
