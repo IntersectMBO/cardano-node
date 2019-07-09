@@ -15,7 +15,25 @@ import qualified Brick.Main as M
 import           Brick.Types (Widget)
 import qualified Brick.Types as T
 import           Brick.Util (bg, clamp, fg, on)
-import           Brick.Widgets.Core (overrideAttr, str, updateAttrMap, (<+>),
+import           Brick.Widgets.Core (hBox, hLimitPercent, overrideAttr,
+                                     padBottom, padLeft, padRight, padTop, str,
+                                     updateAttrMap, vBox, vLimitPercent, (<+>),
+                                     (<=>))
+import           Control.Applicative ((<$>))
+
+import           Data.Monoid ((<>))
+import qualified Data.Text as T
+import qualified Graphics.Vty as V
+
+import qualified Brick.AttrMap as A
+import qualified Brick.Main as M
+import           Brick.Types (Widget)
+import           Brick.Util (fg, on)
+import qualified Brick.Widgets.Border as B
+import qualified Brick.Widgets.Border.Style as BS
+import qualified Brick.Widgets.Center as C
+import           Brick.Widgets.Core (hBox, hLimit, str, txt, updateAttrMap,
+                                     vLimit, withAttr, withBorderStyle, (<+>),
                                      (<=>))
 import qualified Brick.Widgets.ProgressBar as P
 import qualified Control.Concurrent.Async as Async
@@ -116,29 +134,120 @@ setTopology lvbe (TopologyInfo nodeId _) =
           RelayId num -> num
 
 drawUI :: LiveViewState a -> [Widget ()]
-drawUI p = [ui]
-    where
-      -- use mapAttrNames
-      memPoolBar = updateAttrMap
-                    (A.mapAttrNames [ (mempoolDoneAttr, P.progressCompleteAttr)
-                                    , (mempoolToDoAttr, P.progressIncompleteAttr)
-                                    ]
-                    ) $ bar mempoolLabel lvsMempoolPerc
-      mempoolLabel = Just $ (show . lvsMempool $ p)
-                         ++ " / "
-                         ++ (show . lvsMempoolPerc $ p) ++ "%"
-      cpuUsageBar = updateAttrMap
-                    (A.mapAttrNames [ (cpuDoneAttr, P.progressCompleteAttr)
-                                    , (cpuToDoAttr, P.progressIncompleteAttr)
-                                    ]
-                    ) $ bar cpuLabel lvsCPUUsagePerc
-      cpuLabel = Just $ (show . lvsCPUUsagePerc $ p) ++ "%"
-      bar lbl pcntg = P.progressBar lbl (pcntg p)
-      ui = str "Cardano Shelley"
-       <=> str ""
-       <=> (str "mempool:   " <+> memPoolBar)
-       <=> (str "cpu usage: " <+> cpuUsageBar)
+drawUI p = [mainWidget p]
 
+mainWidget :: LiveViewState a -> Widget ()
+mainWidget p =
+      C.hCenter
+    . C.vCenter
+    . hLimitPercent 50
+    . vLimitPercent 80
+    $ mainContentW p
+
+mainContentW :: LiveViewState a -> Widget ()
+mainContentW p =
+    withBorderStyle BS.unicode
+    . B.border $ vBox
+        [ headerW
+        , hBox [systemStatsW p, nodeInfoW p]
+        ]
+
+titleAttr :: A.AttrName
+titleAttr = "title"
+
+valueAttr :: A.AttrName
+valueAttr = "value"
+
+borderMappings :: [(A.AttrName, V.Attr)]
+borderMappings =
+    [ (titleAttr, fg V.cyan)
+    , (valueAttr, fg V.white)
+    ]
+
+headerW :: Widget ()
+headerW =
+      C.hCenter
+    . padTop   (T.Pad 1)
+    . padLeft  (T.Pad 3)
+    . padRight (T.Pad 3)
+    $ hBox [ padRight (T.Pad 10) $ txt "CARDANO SL"
+           , txt "release: "
+           , releaseW
+           , padLeft T.Max $ txt "Node: "
+           , nodeIdW
+           ]
+  where
+    releaseW =   updateAttrMap (A.applyAttrMappings borderMappings)
+               $ withAttr titleAttr
+               $ txt "Shelley"
+    nodeIdW  =   updateAttrMap (A.applyAttrMappings borderMappings)
+               $ withAttr titleAttr
+               $ txt "0"
+
+systemStatsW :: LiveViewState a -> Widget ()
+systemStatsW p =
+      padTop   (T.Pad 2)
+    . padLeft  (T.Pad 3)
+    . padRight (T.Pad 3)
+    $ vBox [ vBox [ padBottom (T.Pad 1) $ txt "Memory pool:"
+                  , padBottom (T.Pad 2) $ memPoolBar
+                  ]
+           , vBox [ padBottom (T.Pad 1) $ txt "CPU usage:"
+                  , padBottom (T.Pad 2) $ cpuUsageBar
+                  ]
+           ]
+  where
+    -- use mapAttrNames
+    memPoolBar = updateAttrMap
+                 (A.mapAttrNames [ (mempoolDoneAttr, P.progressCompleteAttr)
+                                 , (mempoolToDoAttr, P.progressIncompleteAttr)
+                                 ]
+                 ) $ bar mempoolLabel lvsMempoolPerc
+    mempoolLabel = Just $ (show . lvsMempool $ p)
+                        ++ " / "
+                        ++ (show . lvsMempoolPerc $ p) ++ "%"
+    cpuUsageBar = updateAttrMap
+                  (A.mapAttrNames [ (cpuDoneAttr, P.progressCompleteAttr)
+                                  , (cpuToDoAttr, P.progressIncompleteAttr)
+                                  ]
+                  ) $ bar cpuLabel lvsCPUUsagePerc
+    cpuLabel = Just $ (show . lvsCPUUsagePerc $ p) ++ "%"
+    bar lbl pcntg = P.progressBar lbl (pcntg p)
+
+nodeInfoW :: LiveViewState a -> Widget ()
+nodeInfoW p =
+      padTop    (T.Pad 2)
+    . padLeft   (T.Pad 3)
+    . padRight  (T.Pad 3)
+    . padBottom (T.Pad 2)
+    $ hBox [nodeInfoLabels, nodeInfoValues p]
+
+nodeInfoLabels :: Widget ()
+nodeInfoLabels =
+      padRight (T.Pad 3)
+    $ vBox [                    txt "version:"
+           ,                    txt "commit:"
+           , padTop (T.Pad 1) $ txt "uptime:"
+           , padTop (T.Pad 1) $ txt "block height:"
+           ,                    txt "minted:"
+           , padTop (T.Pad 1) $ txt "transactions:"
+           , padTop (T.Pad 1) $ txt "peers connected:"
+           , padTop (T.Pad 1) $ txt "max network delay:"
+           ]
+
+nodeInfoValues :: LiveViewState a -> Widget ()
+nodeInfoValues lvs =
+      updateAttrMap (A.applyAttrMappings borderMappings)
+    . withAttr valueAttr
+    $ vBox [                    str (lvsVersion lvs)
+           ,                    str (take 7 $ lvsCommit lvs) -- Probably we don't need the full commit
+           , padTop (T.Pad 1) $ str (lvsUpTime lvs)
+           , padTop (T.Pad 1) $ str (show . lvsBlockHeight $ lvs)
+           ,                    str (show . lvsBlocksMinted $ lvs)
+           , padTop (T.Pad 1) $ str (show . lvsTransactions $ lvs)
+           , padTop (T.Pad 1) $ str (show . lvsPeersConnected $ lvs)
+           , padTop (T.Pad 1) $ str ((show . lvsMaxNetDelay $ lvs) <> " ms")
+           ]
 
 theBaseAttr :: A.AttrName
 theBaseAttr = A.attrName "theBase"
