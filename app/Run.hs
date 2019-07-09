@@ -115,7 +115,7 @@ runNode nodeCli@NodeCLIArguments{..} loggingLayer = do
             CM.setDefaultBackends c [TraceForwarderBK]
             -- User will see a terminal graphics and will be able to interact with it.
             nodeThread <- Async.async $ handleSimpleNode p nodeCli myNodeAddress topology tracer
-            --tuiThread  <- Async.async $ runNodeLiveView topology loggingLayer
+
             be :: LiveViewBackend Text <- realize c
             let lvbe = MkBackend { bEffectuate = effectuate be, bUnrealize = unrealize be }
             llAddBackend loggingLayer lvbe "LiveViewBackend"

@@ -35,7 +35,8 @@ import           GitRev (gitRev)
 import           Cardano.BM.Counters (readCounters)
 import           Cardano.BM.Data.Backend
 import           Cardano.BM.Data.Counter
-import           Cardano.BM.Data.LogItem
+import           Cardano.BM.Data.LogItem (LOContent (LogValue),
+                     PrivacyAnnotation (Confidential), mkLOMeta)
 import           Cardano.BM.Data.Observable
 import           Cardano.BM.Data.Severity
 import           Cardano.BM.Data.SubTrace
@@ -121,11 +122,11 @@ initLiveViewState = do
                 }
 
 setTopology :: LiveViewBackend a -> TopologyInfo -> IO ()
-setTopology lvbe (TopologyInfo nodeId _) =
+setTopology lvbe (TopologyInfo nodeid _) =
     modifyMVar_ (getbe lvbe) $ \lvs ->
         return $ lvs { lvsNodeId = namenum }
   where
-    namenum = case nodeId of
+    namenum = case nodeid of
         CoreId num  -> "C" <> pack (show num)
         RelayId num -> "R" <> pack (show num)
 
