@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP                 #-}
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE GADTs               #-}
 {-# LANGUAGE NamedFieldPuns      #-}
@@ -7,6 +8,10 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 {-# OPTIONS_GHC -Wno-simplifiable-class-constraints #-}
+
+#if !defined(mingw32_HOST_OS)
+#define UNIX
+#endif
 
 module Run (
       runNode
@@ -103,6 +108,7 @@ runNode nodeCli@NodeCLIArguments{..} loggingLayer = do
         case viewMode of
           SimpleView -> handleSimpleNode p nodeCli myNodeAddress topology tracer
           LiveView   -> do
+#ifdef UNIX
             let c = llConfiguration loggingLayer
             -- We run 'handleSimpleNode' as usual and run TUI thread as well.
             -- turn off logging to the console, only forward it through a pipe to a central logging process
@@ -115,6 +121,7 @@ runNode nodeCli@NodeCLIArguments{..} loggingLayer = do
             llAddBackend loggingLayer lvbe "LiveViewBackend"
 
             _ <- Async.waitAny [nodeThread]
+#endif
             return ()
 
 -- | Sets up a simple node, which will run the chain sync protocol and block

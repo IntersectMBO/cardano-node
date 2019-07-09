@@ -60,7 +60,6 @@ executable cardano-node
   other-modules:       CLI
                        GitRev
                        GitRevFromGit
-                       LiveView
                        Paths_cardano_node
                        TraceAcceptor
                        TxSubmission
@@ -83,7 +82,6 @@ executable cardano-node
                      , typed-protocols-cbor
 
                      , aeson
-                     , ansi-terminal-game == 0.4.0.1
                      , async
                      , bytestring
                      , cborg
@@ -109,6 +107,8 @@ executable cardano-node
      build-depends:    Win32
   else
      build-depends:    unix
+                     , brick
+     other-modules:    LiveView
 
 executable wallet-client
   hs-source-dirs:      wallet-client
