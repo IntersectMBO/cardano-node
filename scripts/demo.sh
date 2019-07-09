@@ -10,12 +10,11 @@
 # then run this script
 
 
-ALGO="--real-pbft"
+ALGO="--bft"
 NOW=`date "+%Y-%m-%d 00:00:00"`
 NETARGS="--system-start \"${NOW}\" --slot-duration 2 node -t configuration/simple-topology.json ${ALGO}"
 #SCR="./scripts/start-node.sh"
-#CMD="stack exec --nix cardano-node --"
-CMD="cabal new-exec cardano-node --"
+CMD="stack exec --nix cardano-node --"
 HOST="127.0.0.1"
 
 function mklogcfg () {

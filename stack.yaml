@@ -14,13 +14,13 @@ extra-deps:
       - crypto/test
 
   - git: https://github.com/input-output-hk/cardano-prelude
-    commit: a21f83d9407b2955fbaea4ce8a79b262361112aa
+    commit: d673b92f2a2d9354d102514d0a0fa74f8248b14a
     subdirs:
       - .
       - test
 
   - git: https://github.com/input-output-hk/cardano-base
-    commit: 501d91e426ae84ce0ae056be38bd3db594af9fc2
+    commit: 14f9b09920813447a4060b6810bf17fc4ea35840
     subdirs:
       - binary
       - binary/test
@@ -39,14 +39,14 @@ extra-deps:
   - tasty-hedgehog-1.0.0.1
     # iohk-monitoring-framework currently not pinned to a release
   - git: https://github.com/input-output-hk/iohk-monitoring-framework
-    commit: b2022cf7f5925e486f9e0a31f6f6d02145d5ebda
+    commit: 5241971fe563c90ea82b20af344116d46d672835
     subdirs:
       - contra-tracer
       - iohk-monitoring
 
     # Extracted from cardano-sl since it's quite useful
   - git: https://github.com/input-output-hk/cardano-sl-x509
-    commit: e8bfc1294e088f90e5ae0b4aedbc82ee46ac5ee4
+    commit: ec96c64c665b741c17b4e38f611315bae9b0b054
 
   - git: https://github.com/joelwilliamson/bimap
     commit: 013a0639c222b3f5572ae20ce364815e5d8f2156
@@ -54,7 +54,7 @@ extra-deps:
     #Ouroboros-network dependencies
 
   - git: https://github.com/input-output-hk/ouroboros-network
-    commit: f3f5f4903d88bcbd52496c38046732b22515cec2
+    commit: af06ad8d87336f416d1bf81a89f043e921ef68d4
     subdirs:
         - io-sim-classes
         - network-mux
