@@ -90,6 +90,7 @@ executable cardano-node
                      , directory
                      , file-embed
                      , formatting
+                     , iproute
                      , lens
                      , mtl
                      , network
