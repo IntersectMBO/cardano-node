@@ -108,6 +108,7 @@ executable cardano-node
   else
      build-depends:    unix
                      , brick
+                     , vty
      other-modules:    LiveView
 
 executable wallet-client

@@ -12,12 +12,13 @@ setupBackends:
   - KatipBK
   - EKGViewBK
   - EditorBK
-  - TraceForwarderBK
+  # - TraceForwarderBK
 
 # if not indicated otherwise, then messages are passed to these backends:
 defaultBackends:
-  - KatipBK
-  - TraceForwarderBK
+  - EditorBK
+  # - KatipBK
+  # - TraceForwarderBK
 
 # file to forward traced objects
 logOutput: "log-pipe-0"

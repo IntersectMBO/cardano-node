@@ -1,14 +1,6 @@
-{-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE FlexibleInstances     #-}
-{-# LANGUAGE GADTs                 #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE MultiWayIf            #-}
-{-# LANGUAGE NamedFieldPuns        #-}
-{-# LANGUAGE NumericUnderscores    #-}
 {-# LANGUAGE OverloadedStrings     #-}
-{-# LANGUAGE RecordWildCards       #-}
-{-# LANGUAGE ScopedTypeVariables   #-}
-{-# LANGUAGE TypeSynonymInstances  #-}
 
 {-# OPTIONS_GHC -Wno-simplifiable-class-constraints #-}
 
@@ -20,15 +12,23 @@ module LiveView (
     , setTopology
     ) where
 
+import qualified Brick.AttrMap as A
 import qualified Brick.Main as M
+import           Brick.Types (Widget)
+import qualified Brick.Types as T
+import           Brick.Util (bg, clamp, fg, on)
+import           Brick.Widgets.Core (overrideAttr, str, updateAttrMap, (<+>),
+                                     (<=>))
+import qualified Brick.Widgets.ProgressBar as P
 import           Control.Concurrent (threadDelay)
 import qualified Control.Concurrent.Async as Async
 import           Control.Concurrent.MVar (MVar, modifyMVar_, newMVar)
-import           Control.Monad (forever)
+import           Control.Monad (forever, void)
 import           Data.Aeson (FromJSON)
 import           Data.Text (Text, pack)
 import           Data.Time.Clock (UTCTime, getCurrentTime)
 import           Data.Version (showVersion)
+import qualified Graphics.Vty as V
 
 import           GitRev (gitRev)
 
@@ -54,9 +54,8 @@ instance (FromJSON a) => IsBackend LiveViewBackend a where
         initState <- initLiveViewState
         mv <- newMVar initState
         let sharedState = LiveViewBackend mv
-        -- start UI
-        thr <- Async.async $
-            -- brick process
+        thr <- Async.async $ do
+            void $ M.defaultMain theApp initState
             return ()
         modifyMVar_ mv $ \lvs -> return $ lvs { lvsUIThread = Just thr }
         return $ sharedState
@@ -84,10 +83,10 @@ data LiveViewState a = LiveViewState
     , lvsPeersConnected  :: Int
     , lvsMaxNetDelay     :: Int
     , lvsMempool         :: Int
-    , lvsMempoolPerc     :: Int
-    , lvsCPUUsagePerc    :: Int
-    , lvsMemoryUsageCurr :: Double
-    , lvsMemoryUsageMax  :: Double
+    , lvsMempoolPerc     :: Float
+    , lvsCPUUsagePerc    :: Float
+    , lvsMemoryUsageCurr :: Float
+    , lvsMemoryUsageMax  :: Float
     -- internal state
     , lvsStartTime       :: UTCTime
     , lvsMessage         :: Maybe a
@@ -95,8 +94,7 @@ data LiveViewState a = LiveViewState
     , lvsMetricsThread   :: Maybe (Async.Async ())
     } deriving (Eq)
 
-initLiveViewState
-    :: IO (LiveViewState a)
+initLiveViewState :: IO (LiveViewState a)
 initLiveViewState = do
     tstamp <- getCurrentTime
     return $ LiveViewState
@@ -111,9 +109,9 @@ initLiveViewState = do
                 , lvsTransactions    = 1732
                 , lvsPeersConnected  = 3
                 , lvsMaxNetDelay     = 17
-                , lvsMempool         = 95
-                , lvsMempoolPerc     = 79
-                , lvsCPUUsagePerc    = 58
+                , lvsMempool         = 50
+                , lvsMempoolPerc     = 0.25
+                , lvsCPUUsagePerc    = 0.58
                 , lvsMemoryUsageCurr = 2.1
                 , lvsMemoryUsageMax  = 4.7
                 , lvsStartTime       = tstamp
@@ -128,8 +126,8 @@ setTopology lvbe (TopologyInfo nodeId _) =
         return $ lvs { lvsNodeId = namenum }
   where
     namenum = case nodeId of
-          CoreId num  -> "C" <> pack (show num)
-          RelayId num -> "R" <> pack (show num)
+        CoreId num  -> "C" <> pack (show num)
+        RelayId num -> "R" <> pack (show num)
 
 captureCounters :: LiveViewBackend a -> Trace IO Text -> IO ()
 captureCounters lvbe trace0 = do
@@ -137,15 +135,70 @@ captureCounters lvbe trace0 = do
         counters = [MemoryStats, ProcessStats, NetStats, IOStats]
     -- start capturing counters on this process
     thr <- Async.async $ forever $ do
-               threadDelay 1000000   -- 1 second
-               cts <- readCounters (ObservableTraceSelf counters)
-               traceCounters trace cts
+                threadDelay 1000000   -- 1 second
+                cts <- readCounters (ObservableTraceSelf counters)
+                traceCounters trace cts
 
     modifyMVar_ (getbe lvbe) $ \lvs -> return $ lvs { lvsMetricsThread = Just thr }
     return ()
-  where
+    where
     traceCounters _tr [] = return ()
     traceCounters tr (c@(Counter _ct cn cv) : cs) = do
         mle <- mkLOMeta Info Confidential
         traceNamedObject tr (mle, LogValue (nameCounter c <> "." <> cn) cv)
         traceCounters tr cs
+        
+drawUI :: LiveViewState a -> [Widget ()]
+drawUI p = [ui]
+    where
+      -- use mapAttrNames
+      memPoolBar = updateAttrMap
+                    (A.mapAttrNames [ (mempoolDoneAttr, P.progressCompleteAttr)
+                                    , (mempoolToDoAttr, P.progressIncompleteAttr)
+                                    ]
+                    ) $ bar mempoolLabel lvsMempoolPerc
+      mempoolLabel = Just $ (show . lvsMempool $ p)
+                         ++ " / "
+                         ++ (show . lvsMempoolPerc $ p) ++ "%"
+      cpuUsageBar = updateAttrMap
+                    (A.mapAttrNames [ (cpuDoneAttr, P.progressCompleteAttr)
+                                    , (cpuToDoAttr, P.progressIncompleteAttr)
+                                    ]
+                    ) $ bar cpuLabel lvsCPUUsagePerc
+      cpuLabel = Just $ (show . lvsCPUUsagePerc $ p) ++ "%"
+      bar lbl pcntg = P.progressBar lbl (pcntg p)
+      ui = str "Cardano Shelley"
+       <=> str ""
+       <=> (str "mempool:   " <+> memPoolBar)
+       <=> (str "cpu usage: " <+> cpuUsageBar)
+
+
+theBaseAttr :: A.AttrName
+theBaseAttr = A.attrName "theBase"
+
+mempoolDoneAttr, mempoolToDoAttr :: A.AttrName
+mempoolDoneAttr = theBaseAttr <> A.attrName "mempool:done"
+mempoolToDoAttr = theBaseAttr <> A.attrName "mempool:remaining"
+
+cpuDoneAttr, cpuToDoAttr :: A.AttrName
+cpuDoneAttr = theBaseAttr <> A.attrName "cpu:done"
+cpuToDoAttr = theBaseAttr <> A.attrName "cpu:remaining"
+
+theMap :: A.AttrMap
+theMap = A.attrMap V.defAttr
+         [ (theBaseAttr,              bg V.brightBlack  )
+         , (mempoolDoneAttr,          V.red `on` V.white)
+         , (mempoolToDoAttr,          V.red `on` V.black)
+         , (cpuDoneAttr,              V.red `on` V.white)
+         , (cpuToDoAttr,              V.red `on` V.black)
+         , (P.progressIncompleteAttr, fg V.yellow       )
+         ]
+
+theApp :: M.App (LiveViewState a) e ()
+theApp =
+    M.App { M.appDraw = drawUI
+          , M.appChooseCursor = M.showFirstCursor
+          , M.appHandleEvent = M.resizeOrQuit -- appEvent
+          , M.appStartEvent = return
+          , M.appAttrMap = const theMap
+          }
