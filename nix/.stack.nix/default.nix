@@ -14,8 +14,11 @@
         "micro-recursion-schemes" = (((hackage.micro-recursion-schemes)."5.0.2.2").revisions).default;
         "streaming-binary" = (((hackage.streaming-binary)."0.3.0.1").revisions).default;
         "pretty-show" = (((hackage.pretty-show)."1.8.2").revisions).default;
-        "linebreak" = (((hackage.linebreak)."1.0.0.3").revisions)."3152802008e06f8444d364f6e1047b412e3cb692c1382b1657a425d72a0cfd5f";
-        "timers-tick" = (((hackage.timers-tick)."0.4.1.0").revisions)."27d345648b8e01fad48adf1dc0e870b19fabb03ccdf3ad0bc5acb57f5da6cb5c";
+        "brick" = (((hackage.brick)."0.47").revisions)."4936c50acfdf09620dad5217fb384fc0d59626f75abed8b48250b419ec2ab623";
+        "config-ini" = (((hackage.config-ini)."0.2.4.0").revisions)."38a6d484d471c6fac81445de2eac8c4e8c82760962fca5491ae1c3bfca9c4047";
+        "data-clist" = (((hackage.data-clist)."0.1.2.2").revisions)."4d70add0a200a178853cd37c6469101bac3c36aebb3aa9c503ff225211b1a8c9";
+        "text-zipper" = (((hackage.text-zipper)."0.10.1").revisions)."8b73a97a3717a17df9b0a722b178950c476ff2268ca5c583e99d010c94af849e";
+        "word-wrap" = (((hackage.word-wrap)."0.4.1").revisions)."f72233b383ef569c557bfd9812cbb8e306c415ce509082c0bd15ee51c0239ccc";
         } // {
         cardano-node = ./cardano-node.nix;
         cardano-ledger = ./cardano-ledger.nix;
@@ -38,7 +41,6 @@
         ouroboros-consensus = ./ouroboros-consensus.nix;
         typed-protocols = ./typed-protocols.nix;
         typed-protocols-cbor = ./typed-protocols-cbor.nix;
-        ansi-terminal-game = ./ansi-terminal-game.nix;
         cborg = ./cborg.nix;
         cardano-crypto = ./cardano-crypto.nix;
         canonical-json = ./canonical-json.nix;

@@ -53,7 +53,6 @@
             (hsPkgs.ouroboros-consensus)
             (hsPkgs.typed-protocols-cbor)
             (hsPkgs.aeson)
-            (hsPkgs.ansi-terminal-game)
             (hsPkgs.async)
             (hsPkgs.bytestring)
             (hsPkgs.cborg)
@@ -77,7 +76,7 @@
             (hsPkgs.typed-protocols)
             ] ++ (if system.isWindows
             then [ (hsPkgs.Win32) ]
-            else [ (hsPkgs.unix) ]);
+            else [ (hsPkgs.unix) (hsPkgs.brick) ]);
           };
         "wallet-client" = {
           depends = [
