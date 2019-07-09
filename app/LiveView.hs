@@ -39,14 +39,14 @@ runNodeLiveView ll topology = void $ do
     mv <- newMVar =<< initLiveViewState topology
     let sharedState = LiveViewBackend mv 
     runBackend ll sharedState
-    playGame game
+    playGame (game sharedState)
 
   where
-      game = Game
+      game sst = Game
           { gScreenWidth   = mw
           , gScreenHeight  = mh
           , gFPS           = 5
-          , gInitState     = initLiveViewState topology
+          , gInitState     = sst -- initLiveViewState topology
           , gLogicFunction = liveViewLogic
           , gDrawFunction  = liveViewDraw
           , gQuitFunction  = lvsQuit
@@ -75,7 +75,7 @@ instance IsEffectuator LiveViewBackend a where
 
 
 runBackend :: LoggingLayer -> LiveViewBackend a -> IO ()
-runBackend ll lvs = do
+runBackend _ll _lvs = do
     return ()
             
 data LiveViewState a = LiveViewState
