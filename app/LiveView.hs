@@ -16,19 +16,30 @@ module LiveView (
       LiveViewBackend (..)
     , realize
     , effectuate
+    , captureCounters
+    , setTopology
     ) where
 
 import qualified Brick.Main as M
+import           Control.Concurrent (threadDelay)
 import qualified Control.Concurrent.Async as Async
 import           Control.Concurrent.MVar (MVar, modifyMVar_, newMVar)
+import           Control.Monad (forever)
 import           Data.Aeson (FromJSON)
-import           Data.Text (unpack)
+import           Data.Text (Text, pack)
 import           Data.Time.Clock (UTCTime, getCurrentTime)
 import           Data.Version (showVersion)
 
 import           GitRev (gitRev)
 
+import           Cardano.BM.Counters (readCounters)
 import           Cardano.BM.Data.Backend
+import           Cardano.BM.Data.Counter
+import           Cardano.BM.Data.LogItem
+import           Cardano.BM.Data.Observable
+import           Cardano.BM.Data.Severity
+import           Cardano.BM.Data.SubTrace
+import           Cardano.BM.Trace
 import           Ouroboros.Consensus.NodeId
 import           Paths_cardano_node (version)
 import           Topology
@@ -43,10 +54,11 @@ instance (FromJSON a) => IsBackend LiveViewBackend a where
         initState <- initLiveViewState
         mv <- newMVar initState
         let sharedState = LiveViewBackend mv
+        -- start UI
         thr <- Async.async $
             -- brick process
             return ()
-        modifyMVar_ mv $ \lvs -> return $ lvs { lvsThread = thr }
+        modifyMVar_ mv $ \lvs -> return $ lvs { lvsUIThread = Just thr }
         return $ sharedState
 
     unrealize be = putStrLn $ "unrealize " <> show (typeof be)
@@ -61,11 +73,11 @@ instance IsEffectuator LiveViewBackend a where
 
 data LiveViewState a = LiveViewState
     { lvsQuit            :: Bool
-    , lvsRelease         :: String
-    , lvsNodeId          :: Int
-    , lvsVersion         :: String
-    , lvsCommit          :: String
-    , lvsUpTime          :: String
+    , lvsRelease         :: Text
+    , lvsNodeId          :: Text
+    , lvsVersion         :: Text
+    , lvsCommit          :: Text
+    , lvsUpTime          :: Text
     , lvsBlockHeight     :: Int
     , lvsBlocksMinted    :: Int
     , lvsTransactions    :: Int
@@ -74,12 +86,13 @@ data LiveViewState a = LiveViewState
     , lvsMempool         :: Int
     , lvsMempoolPerc     :: Int
     , lvsCPUUsagePerc    :: Int
-    , lvsMemoryUsageCurr :: Int
-    , lvsMemoryUsageMax  :: Int
+    , lvsMemoryUsageCurr :: Double
+    , lvsMemoryUsageMax  :: Double
     -- internal state
     , lvsStartTime       :: UTCTime
-    , lvsMessage         :: a
-    , lvsThread          :: Async.Async ()
+    , lvsMessage         :: Maybe a
+    , lvsUIThread        :: Maybe (Async.Async ())
+    , lvsMetricsThread   :: Maybe (Async.Async ())
     } deriving (Eq)
 
 initLiveViewState
@@ -89,9 +102,9 @@ initLiveViewState = do
     return $ LiveViewState
                 { lvsQuit            = False
                 , lvsRelease         = "Shelley"
-                , lvsNodeId          = 99
-                , lvsVersion         = showVersion version
-                , lvsCommit          = unpack gitRev
+                , lvsNodeId          = "N/A"
+                , lvsVersion         = pack $ showVersion version
+                , lvsCommit          = gitRev
                 , lvsUpTime          = "00:00:00"
                 , lvsBlockHeight     = 1891
                 , lvsBlocksMinted    = 543
@@ -101,16 +114,38 @@ initLiveViewState = do
                 , lvsMempool         = 95
                 , lvsMempoolPerc     = 79
                 , lvsCPUUsagePerc    = 58
-                , lvsMemoryUsageCurr = 3
-                , lvsMemoryUsageMax  = 5
+                , lvsMemoryUsageCurr = 2.1
+                , lvsMemoryUsageMax  = 4.7
                 , lvsStartTime       = tstamp
+                , lvsMessage         = Nothing
+                , lvsUIThread        = Nothing
+                , lvsMetricsThread   = Nothing
                 }
 
 setTopology :: LiveViewBackend a -> TopologyInfo -> IO ()
 setTopology lvbe (TopologyInfo nodeId _) =
     modifyMVar_ (getbe lvbe) $ \lvs ->
-        return $ lvs { lvsNodeId = nodeIdNum }
+        return $ lvs { lvsNodeId = namenum }
   where
-      nodeIdNum = case nodeId of
-          CoreId num  -> num
-          RelayId num -> num
+    namenum = case nodeId of
+          CoreId num  -> "C" <> pack (show num)
+          RelayId num -> "R" <> pack (show num)
+
+captureCounters :: LiveViewBackend a -> Trace IO Text -> IO ()
+captureCounters lvbe trace0 = do
+    let trace = appendName "metrics" trace0
+        counters = [MemoryStats, ProcessStats, NetStats, IOStats]
+    -- start capturing counters on this process
+    thr <- Async.async $ forever $ do
+               threadDelay 1000000   -- 1 second
+               cts <- readCounters (ObservableTraceSelf counters)
+               traceCounters trace cts
+
+    modifyMVar_ (getbe lvbe) $ \lvs -> return $ lvs { lvsMetricsThread = Just thr }
+    return ()
+  where
+    traceCounters _tr [] = return ()
+    traceCounters tr (c@(Counter _ct cn cv) : cs) = do
+        mle <- mkLOMeta Info Confidential
+        traceNamedObject tr (mle, LogValue (nameCounter c <> "." <> cn) cv)
+        traceCounters tr cs
