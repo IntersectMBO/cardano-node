@@ -19,7 +19,7 @@ tmux select-pane -t 0
 tmux split-window -v
 
 tmux select-pane -t 0
-tmux send-keys "${CMD} $(mklogcfg 0) ${NETARGS} -n 0 --host ${HOST} --port 3000" C-m
+tmux send-keys "${CMD} $(mklogcfg 0) ${NETARGS} -n 0 --host ${HOST} --port 3000 --live-view" C-m
 tmux select-pane -t 1
 tmux send-keys "${CMD} $(mklogcfg 1) ${NETARGS} -n 1 --host ${HOST} --port 3001" C-m
 tmux select-pane -t 2

@@ -76,7 +76,7 @@
             (hsPkgs.typed-protocols)
             ] ++ (if system.isWindows
             then [ (hsPkgs.Win32) ]
-            else [ (hsPkgs.unix) (hsPkgs.brick) ]);
+            else [ (hsPkgs.unix) (hsPkgs.brick) (hsPkgs.vty) ]);
           };
         "wallet-client" = {
           depends = [
