@@ -75,8 +75,10 @@ import           Topology
 import           TraceAcceptor
 import           TxSubmission
 
-runNode :: NodeCLIArguments -> CM.Configuration -> Trace IO Text -> IO ()
-runNode nodeCli@NodeCLIArguments{..} logconfig trace = do
+runNode :: NodeCLIArguments -> LoggingLayer -> IO ()
+runNode nodeCli@NodeCLIArguments{..} loggingLayer = do
+    let tr = (llAppendName loggingLayer) "node" (llBasicTrace loggingLayer)
+
     -- If the user asked to submit a transaction, we don't have to spin up a
     -- full node, we simply transmit it and exit.
     case command of
@@ -104,7 +106,7 @@ runNode nodeCli@NodeCLIArguments{..} logconfig trace = do
             CM.setDefaultBackends logconfig [TraceForwarderBK]
             -- User will see a terminal graphics and will be able to interact with it.
             nodeThread <- Async.async $ handleSimpleNode p nodeCli myNodeAddress topology tracer
-            tuiThread  <- Async.async $ runNodeLiveView topology
+            tuiThread  <- Async.async $ runNodeLiveView topology loggingLayer
             _ <- Async.waitAny [nodeThread, tuiThread]
             return ()
 

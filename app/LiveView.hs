@@ -1,48 +1,84 @@
-{-# LANGUAGE FlexibleContexts    #-}
-{-# LANGUAGE GADTs               #-}
-{-# LANGUAGE MultiWayIf          #-}
-{-# LANGUAGE NamedFieldPuns      #-}
-{-# LANGUAGE NumericUnderscores  #-}
-{-# LANGUAGE OverloadedStrings   #-}
-{-# LANGUAGE RecordWildCards     #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TemplateHaskell     #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE GADTs                 #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE MultiWayIf            #-}
+{-# LANGUAGE NamedFieldPuns        #-}
+{-# LANGUAGE NumericUnderscores    #-}
+{-# LANGUAGE OverloadedStrings     #-}
+{-# LANGUAGE RecordWildCards       #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE TypeSynonymInstances  #-}
 
 {-# OPTIONS_GHC -Wno-simplifiable-class-constraints #-}
 
 module LiveView (
       runNodeLiveView
+    , LiveViewState (..)
     ) where
 
+import           Control.Concurrent.MVar (MVar, newMVar, withMVar)
+import           Control.Monad (void)
+import           Data.Aeson (FromJSON)
 import           Data.Text (unpack)
+import           Data.Time.Clock (UTCTime, getCurrentTime)
 import           Data.Version (showVersion)
 import           Terminal.Game
 
 import           GitRev (gitRev)
+
+import           Cardano.BM.Data.Backend
+import           Cardano.Shell.Features.Logging (LoggingLayer (..))
 import           Ouroboros.Consensus.NodeId
 import           Paths_cardano_node (version)
 import           Topology
 
-runNodeLiveView :: TopologyInfo -> IO ()
-runNodeLiveView topology = playGame game
+
+runNodeLiveView :: LoggingLayer -> TopologyInfo -> IO ()
+runNodeLiveView ll topology = void $ do
+    mv <- newMVar =<< initLiveViewState topology
+    let sharedState = LiveViewBackend mv 
+    runBackend ll sharedState
+    playGame game
+
   where
-    game = Game
-        { gScreenWidth   = mw
-        , gScreenHeight  = mh
-        , gFPS           = 13
-        , gInitState     = initLiveViewState topology
-        , gLogicFunction = liveViewLogic
-        , gDrawFunction  = liveViewDraw
-        , gQuitFunction  = lvsQuit
-        }
+      game = Game
+          { gScreenWidth   = mw
+          , gScreenHeight  = mh
+          , gFPS           = 5
+          , gInitState     = initLiveViewState topology
+          , gLogicFunction = liveViewLogic
+          , gDrawFunction  = liveViewDraw
+          , gQuitFunction  = lvsQuit
+          }
 
 mh :: Height
 mh = 25
-
+            
 mw :: Width
 mw = 95
 
-data LiveViewState = LiveViewState
+type LiveViewMVar a = MVar (LiveViewState a)
+newtype LiveViewBackend a = LiveViewBackend { getbe :: LiveViewMVar a }
+
+instance (FromJSON a) => IsBackend LiveViewBackend a where
+    typeof _ = UserDefinedBK "LiveViewBackend"
+    realize _ = return ()
+    unrealize be = putStrLn $ "unrealize " <> show (typeof be)
+
+instance IsEffectuator LiveViewBackend a where
+    effectuate mlvs _item = do
+        modifyMVar_ (mlvs) $ \lvs ->
+            return $ lvs { lvsBlockHeight = lvsBlockHeight lvs + 1 }
+
+    handleOverflow _ = return ()
+
+
+runBackend :: LoggingLayer -> LiveViewBackend a -> IO ()
+runBackend ll lvs = do
+    return ()
+            
+data LiveViewState a = LiveViewState
     { lvsQuit            :: Bool
     , lvsRelease         :: String
     , lvsNodeId          :: Int
@@ -59,12 +95,15 @@ data LiveViewState = LiveViewState
     , lvsCPUUsagePerc    :: Int
     , lvsMemoryUsageCurr :: Int
     , lvsMemoryUsageMax  :: Int
+    -- internal state
+    , lvsStartTime       :: UTCTime
     } deriving (Show, Eq)
 
 initLiveViewState
-    :: TopologyInfo
-    -> LiveViewState
-initLiveViewState (TopologyInfo nodeId _) = LiveViewState
+    :: forall a .
+       TopologyInfo
+    -> IO (LiveViewBackend a)
+initLiveViewState (TopologyInfo nodeId _) = return $ LiveViewState
     { lvsQuit            = False
     , lvsRelease         = "Shelley"   -- Should be taken from ..?
     , lvsNodeId          = nodeIdNum
@@ -81,6 +120,7 @@ initLiveViewState (TopologyInfo nodeId _) = LiveViewState
     , lvsCPUUsagePerc    = 58
     , lvsMemoryUsageCurr = 3
     , lvsMemoryUsageMax  = 0
+    , lvsStartTime       = getCurrentTime
     }
   where
     nodeIdNum = case nodeId of
@@ -88,13 +128,13 @@ initLiveViewState (TopologyInfo nodeId _) = LiveViewState
         RelayId num -> num
 
 liveViewLogic
-    :: LiveViewState
+    :: LiveViewBackend a
     -> Event
-    -> LiveViewState
-liveViewLogic lvs (KeyPress 'q') = lvs { lvsQuit = True }
-liveViewLogic lvs (KeyPress 'Q') = lvs { lvsQuit = True }
-liveViewLogic lvs (KeyPress _)   = lvs
-liveViewLogic lvs Tick           = lvs
+    -> LiveViewBackend a
+liveViewLogic lvbe (KeyPress 'q') = modifyMVar_ (getbe lvbe) $ \lvs -> lvs { lvsQuit = True }
+liveViewLogic lvbe (KeyPress 'Q') = lvs { lvsQuit = True }
+liveViewLogic lvbe (KeyPress _)   = lvs
+liveViewLogic lvbe Tick           = lvs
 
 makeProgressBar :: Int -> Plane
 makeProgressBar percentage =
@@ -120,8 +160,8 @@ makeProgressBar percentage =
     fullLength :: Integer
     fullLength = fromIntegral progressLength + 2
 
-header :: LiveViewState -> Plane
-header lvs = blankPlane (85 :: Width) (1 :: Height)
+header :: LiveViewBackend a -> Plane
+header lvbe = blankPlane (85 :: Width) (1 :: Height)
     & (1 :: Row,  1 :: Column) % stringPlane "CARDANO SL"
                                # bold
     & (1 :: Row, 17 :: Column) % stringPlane ("Release: ")
@@ -132,8 +172,8 @@ header lvs = blankPlane (85 :: Width) (1 :: Height)
                                # color Cyan Vivid
                                # bold
 
-mempoolStats :: LiveViewState -> Plane
-mempoolStats lvs = blankPlane (27 :: Width) (3 :: Height)
+mempoolStats :: LiveViewBackend a -> Plane
+mempoolStats lvbe = blankPlane (27 :: Width) (3 :: Height)
     & (1 :: Row,  1 :: Column) % stringPlane "Memory pool"
                                # bold
     & (1 :: Row, 19 :: Column) % stringPlane (
@@ -144,24 +184,24 @@ mempoolStats lvs = blankPlane (27 :: Width) (3 :: Height)
                                # color White Vivid
     & (3 :: Row,  3 :: Column) % (makeProgressBar $ lvsMempoolPerc lvs)
 
-cpuStats :: LiveViewState -> Plane
-cpuStats lvs = blankPlane (27 :: Width) (3 :: Height)
+cpuStats :: LiveViewBackend a -> Plane
+cpuStats lvbe = blankPlane (27 :: Width) (3 :: Height)
     & (1 :: Row,  1 :: Column) % stringPlane "CPU usage"
                                # bold
     & (1 :: Row, 19 :: Column) % stringPlane ((show . lvsCPUUsagePerc $ lvs) <> "%")
                                # color White Vivid
     & (3 :: Row,  3 :: Column) % (makeProgressBar $ lvsCPUUsagePerc lvs)
 
-memoryStats :: LiveViewState -> Plane
-memoryStats lvs = blankPlane (27 :: Width) (3 :: Height)
+memoryStats :: LiveViewBackend a -> Plane
+memoryStats lvbe = blankPlane (27 :: Width) (3 :: Height)
     & (1 :: Row,  1 :: Column) % stringPlane "Memory usage"
                                # bold
     & (1 :: Row, 19 :: Column) % stringPlane ((show . lvsMemoryUsageCurr $ lvs) <> " GB")
                                # color White Vivid
     & (3 :: Row,  3 :: Column) % (makeProgressBar $ lvsMemoryUsageCurr lvs)
 
-systemStats :: LiveViewState -> Plane
-systemStats lvs = blankPlane (30 :: Width) (17 :: Height)
+systemStats :: LiveViewBackend a -> Plane
+systemStats lvbe = blankPlane (30 :: Width) (17 :: Height)
     & ( 1 :: Row, 1 :: Column) % mempoolStats lvs
     & ( 7 :: Row, 1 :: Column) % cpuStats lvs
     & (13 :: Row, 1 :: Column) % memoryStats lvs
@@ -177,7 +217,7 @@ nodeInfoLabels = blankPlane (20 :: Width) (18 :: Height)
     & (11 :: Row, 1 :: Column) % stringPlane "peers connected:"
     & (13 :: Row, 1 :: Column) % stringPlane "max network delay:"
 
-nodeInfoValues :: LiveViewState -> Plane
+nodeInfoValues :: LiveViewBackend a -> Plane
 nodeInfoValues lvs = blankPlane (15 :: Width) (18 :: Height)
     & ( 1 :: Row,  1 :: Column) % stringPlane (lvsVersion lvs)
                                 # color White Vivid # bold
@@ -196,13 +236,13 @@ nodeInfoValues lvs = blankPlane (15 :: Width) (18 :: Height)
     & (13 :: Row,  1 :: Column) % stringPlane ((show . lvsMaxNetDelay $ lvs) <> " ms")
                                 # color White Vivid # bold
 
-nodeInfo :: LiveViewState -> Plane
-nodeInfo lvs = blankPlane (40 :: Width) (18 :: Height)
+nodeInfo :: LiveViewBackend a -> Plane
+nodeInfo lvbe = blankPlane (40 :: Width) (18 :: Height)
     & (1 :: Row,  1 :: Column) % nodeInfoLabels
     & (1 :: Row, 22 :: Column) % nodeInfoValues lvs
 
-liveViewDraw :: LiveViewState -> Plane
-liveViewDraw lvs = blankPlane mw mh
+liveViewDraw :: LiveViewBackend a -> Plane
+liveViewDraw lvbe = blankPlane mw mh
     & (1 :: Row,   1 :: Column) % box '*' mw       mh       -- border
     & (2 :: Row,   2 :: Column) % box ' ' (mw - 2) (mh - 2) -- space inside of border
     & (3 :: Row,   7 :: Column) % header lvs

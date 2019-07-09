@@ -64,7 +64,7 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-shell
-  tag: 52baef406c82b0e1d8858e35ee5597b51b7df48a
+  tag: 71fb36665338491e92d3ef14c20ae38ad6882c94
 
 source-repository-package
   type: git
