@@ -10,6 +10,7 @@ import qualified Data.ByteString as B
 import           Data.List (foldl')
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
+import qualified Data.IP as IP
 import           Data.String.Conv (toS)
 import           Network.Socket
 
@@ -23,8 +24,15 @@ data TopologyInfo = TopologyInfo {
   , topologyFile :: FilePath
   }
 
+-- | IPv4 address with port number
+--
+-- TODO: this type should be extended to take into account IPv6 addresses.
+--
 data NodeAddress = NodeAddress HostName ServiceName
   deriving (Eq, Ord, Show)
+
+nodeAddressToSockAddr :: NodeAddress -> SockAddr
+nodeAddressToSockAddr (NodeAddress addr port) = SockAddrInet (read port) (IP.toHostAddress (read addr))
 
 instance Condense NodeAddress where
     condense (NodeAddress addr port) = addr ++ ":" ++ show port
