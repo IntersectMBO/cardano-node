@@ -162,8 +162,8 @@ mainWidget :: LiveViewState a -> Widget ()
 mainWidget p =
       C.hCenter
     . C.vCenter
-    . hLimitPercent 50
-    . vLimitPercent 80
+    . hLimitPercent 96
+    . vLimitPercent 96
     $ mainContentW p
 
 mainContentW :: LiveViewState a -> Widget ()
