@@ -184,11 +184,11 @@ valueAttr = "value"
 qAttr :: A.AttrName
 qAttr = "quit"
 
-borderMappings :: [(A.AttrName, V.Attr)]
-borderMappings =
-    [ (titleAttr, fg V.cyan)
-    , (valueAttr, fg V.white)
-    , (qAttr,     fg V.green)
+attributes :: [(A.AttrName, V.Attr)]
+attributes =
+    [ (titleAttr,    fg V.cyan)
+    , (valueAttr,    V.withStyle (fg V.white) V.bold)
+    , (qAttr,        fg V.green)
     ]
 
 quitMessageW :: Widget ()
@@ -196,7 +196,7 @@ quitMessageW =
       padBottom (T.Pad 1)
     . padLeft   (T.Pad 2)
     $ hBox [ txt "Press "
-           ,   updateAttrMap (A.applyAttrMappings borderMappings)
+           ,   updateAttrMap (A.applyAttrMappings attributes)
              . withAttr qAttr
              $ txt "Q"
            , txt " to quit"
@@ -208,17 +208,20 @@ headerW =
     . padTop   (T.Pad 1)
     . padLeft  (T.Pad 2)
     . padRight (T.Pad 2)
-    $ hBox [ padRight (T.Pad 10) $ txt "CARDANO SL"
+    $ hBox [   updateAttrMap (A.applyAttrMappings attributes)
+             . withAttr valueAttr
+             . padRight (T.Pad 10)
+             $ txt "CARDANO SL"
            , txt "release: "
            , releaseW
            , padLeft T.Max $ txt "Node: "
            , nodeIdW
            ]
   where
-    releaseW =   updateAttrMap (A.applyAttrMappings borderMappings)
+    releaseW =   updateAttrMap (A.applyAttrMappings attributes)
                $ withAttr titleAttr
                $ txt "Shelley"
-    nodeIdW  =   updateAttrMap (A.applyAttrMappings borderMappings)
+    nodeIdW  =   updateAttrMap (A.applyAttrMappings attributes)
                $ withAttr titleAttr
                $ txt "0"
 
@@ -285,7 +288,7 @@ nodeInfoLabels =
 
 nodeInfoValues :: LiveViewState a -> Widget ()
 nodeInfoValues lvs =
-      updateAttrMap (A.applyAttrMappings borderMappings)
+      updateAttrMap (A.applyAttrMappings attributes)
     . withAttr valueAttr
     $ vBox [                    str (lvsVersion lvs)
            ,                    str (take 7 $ lvsCommit lvs) -- Probably we don't need the full commit
