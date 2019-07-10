@@ -39,7 +39,7 @@ import           Cardano.BM.Trace (Trace, appendName)
 import qualified Ouroboros.Network.AnchoredFragment as AF
 import           Ouroboros.Network.Block
 import qualified Ouroboros.Network.Block as Block
-import           Ouroboros.Network.Chain (genesisPoint, pointHash)
+import           Ouroboros.Network.Chain (genesisPoint)
 import qualified Ouroboros.Network.Chain as Chain
 import           Ouroboros.Network.NodeToClient as NodeToClient
 import           Ouroboros.Network.NodeToNode as NodeToNode
@@ -318,11 +318,11 @@ handleSimpleNode p NodeCLIArguments{..} myNodeAddress (TopologyInfo myNodeId top
 
       encodePoint' ::  Point blk -> Encoding
       encodePoint' =
-          Block.encodePoint $ Block.encodeChainHash demoEncodeHeaderHash
+          Block.encodePoint demoEncodeHeaderHash
 
       decodePoint' :: forall s. Decoder s (Point blk)
       decodePoint' =
-          Block.decodePoint $ Block.decodeChainHash demoDecodeHeaderHash
+          Block.decodePoint demoDecodeHeaderHash
 
 
 removeStaleLocalSocket :: FilePath -> IO ()

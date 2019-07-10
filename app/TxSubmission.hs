@@ -225,8 +225,8 @@ localChainSyncCodec pInfoConfig =
     codecChainSync
       (demoEncodeBlock pInfoConfig)
       (demoDecodeBlock pInfoConfig)
-      (Block.encodePoint (Block.encodeChainHash demoEncodeHeaderHash))
-      (Block.decodePoint (Block.decodeChainHash demoDecodeHeaderHash))
+      (Block.encodePoint demoEncodeHeaderHash)
+      (Block.decodePoint demoDecodeHeaderHash)
 
 
 localSocketFilePath :: NodeId -> FilePath

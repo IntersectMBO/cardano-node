@@ -81,11 +81,11 @@ muxLocalInitiatorNetworkApplication
   -- from 'cardano-chain'.  This should remove the dependency of this module
   -- from 'ouroboros-consensus'.
   => Proxy blk
-  -> Tracer m (TraceSendRecv (ChainSync blk (Point blk)))
+  -> Tracer m (TraceSendRecv (ChainSync blk (Point blk)) DeserialiseFailure)
   -- ^ tracer which logs all chain-sync messages send and received by the client
   -- (see 'Ouroboros.Network.Protocol.ChainSync.Type' in 'ouroboros-network'
   -- package)
-  -> Tracer m (TraceSendRecv (LocalTxSubmission (GenTx blk) String))
+  -> Tracer m (TraceSendRecv (LocalTxSubmission (GenTx blk) String) DeserialiseFailure)
   -- ^ tracer which logs all local tx submission protocol messages send and
   -- received by the client (see 'Ouroboros.Network.Protocol.LocalTxSubmission.Type'
   -- in 'ouroboros-network' package).
@@ -196,8 +196,8 @@ localChainSyncCodec pInfoConfig =
     codecChainSync
       (demoEncodeBlock pInfoConfig)
       (demoDecodeBlock pInfoConfig)
-      (Block.encodePoint (Block.encodeChainHash demoEncodeHeaderHash))
-      (Block.decodePoint (Block.decodeChainHash demoDecodeHeaderHash))
+      (Block.encodePoint demoEncodeHeaderHash)
+      (Block.decodePoint demoDecodeHeaderHash)
 
 
 -- | Local unix socket file path over which the client communicates with a core
