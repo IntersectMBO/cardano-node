@@ -13,8 +13,9 @@ module LiveView (
     ) where
 
 import qualified Brick.AttrMap as A
+import qualified Brick.BChan as Brick.BChan
 import qualified Brick.Main as M
-import           Brick.Types (Widget)
+import           Brick.Types (BrickEvent (..), EventM, Next, Widget)
 import qualified Brick.Types as T
 import           Brick.Util (bg, fg, on)
 import qualified Brick.Widgets.Border as B
@@ -27,8 +28,9 @@ import           Brick.Widgets.Core (hBox, hLimitPercent, padBottom, padLeft,
 import qualified Brick.Widgets.ProgressBar as P
 import           Control.Concurrent (threadDelay)
 import qualified Control.Concurrent.Async as Async
-import           Control.Concurrent.MVar (MVar, modifyMVar_, newMVar)
+import           Control.Concurrent.MVar (MVar, modifyMVar_, newMVar, readMVar)
 import           Control.Monad (forever, void)
+import           Control.Monad.IO.Class (liftIO)
 import           Data.Aeson (FromJSON)
 import           Data.Text (Text, pack, unpack)
 import           Data.Time.Clock (UTCTime, getCurrentTime)
@@ -62,9 +64,21 @@ instance (FromJSON a) => IsBackend LiveViewBackend a where
         mv <- newMVar initState
         let sharedState = LiveViewBackend mv
         thr <- Async.async $ do
-            void $ M.defaultMain theApp initState
-            return ()
+            eventChan <- Brick.BChan.newBChan 10
+            let buildVty = V.mkVty V.defaultConfig
+            initialVty <- buildVty
+            ticker <- Async.async $ forever $ do
+                        -- could be replaced by retry if we have TVar-like vars
+                        threadDelay 1000000 -- refresh TUI every 1s
+                        Brick.BChan.writeBChan eventChan $ LiveViewBackend mv
+            Async.link ticker
+            void $ M.customMain initialVty buildVty (Just eventChan) app initState
         modifyMVar_ mv $ \lvs -> return $ lvs { lvsUIThread = Just thr }
+        -- test changing of state
+        -- _ <- Async.async $ forever $ do
+        --         threadDelay 500000 -- refresh every 0.5s
+        --         modifyMVar_ mv $ \lvs -> do
+        --                 return $ lvs { lvsCPUUsagePerc = lvsCPUUsagePerc lvs + 0.001}
         return $ sharedState
 
     unrealize be = putStrLn $ "unrealize " <> show (typeof be)
@@ -261,7 +275,7 @@ systemStatsW p =
                                   , (cpuToDoAttr, P.progressIncompleteAttr)
                                   ]
                   ) $ bar cpuLabel (lvsCPUUsagePerc p)
-    cpuLabel = Just $ (take 5 $ show $ lvsCPUUsagePerc p) ++ "%"
+    cpuLabel = Just $ (take 5 $ show $ lvsCPUUsagePerc p * 100) ++ "%"
     bar lbl pcntg = P.progressBar lbl pcntg
     lvsMemUsagePerc = (lvsMemoryUsageCurr p) / (0.2 + (lvsMemoryUsageMax p))
 
@@ -327,11 +341,22 @@ theMap = A.attrMap V.defAttr
          , (P.progressIncompleteAttr, fg V.yellow       )
          ]
 
-theApp :: M.App (LiveViewState a) e ()
-theApp =
+eventHandler :: LiveViewState a -> BrickEvent n (LiveViewBackend a) -> EventM n (Next (LiveViewState a))
+eventHandler _   (AppEvent lvBackend) = do
+    next <- liftIO . readMVar . getbe $ lvBackend
+    M.continue next
+eventHandler lvs (VtyEvent e)         =
+    case e of
+        V.EvKey  (V.KChar 'q') [] -> M.halt     lvs
+        V.EvKey  (V.KChar 'Q') [] -> M.halt     lvs
+        _                         -> M.continue lvs
+eventHandler lvs _                    = M.halt     lvs
+
+app :: M.App (LiveViewState a) (LiveViewBackend a) ()
+app =
     M.App { M.appDraw = drawUI
           , M.appChooseCursor = M.showFirstCursor
-          , M.appHandleEvent = M.resizeOrQuit -- appEvent
+          , M.appHandleEvent = eventHandler
           , M.appStartEvent = return
           , M.appAttrMap = const theMap
           }
