@@ -12,20 +12,6 @@ module LiveView (
     , setTopology
     ) where
 
-import qualified Brick.AttrMap as A
-import qualified Brick.BChan as Brick.BChan
-import qualified Brick.Main as M
-import           Brick.Types (BrickEvent (..), EventM, Next, Widget)
-import qualified Brick.Types as T
-import           Brick.Util (bg, fg, on)
-import qualified Brick.Widgets.Border as B
-import qualified Brick.Widgets.Border.Style as BS
-import qualified Brick.Widgets.Center as C
-import           Brick.Widgets.Core (hBox, hLimitPercent, padBottom, padLeft,
-                                     padRight, padTop, str, txt, updateAttrMap,
-                                     vBox, vLimitPercent, withAttr,
-                                     withBorderStyle)
-import qualified Brick.Widgets.ProgressBar as P
 import           Control.Concurrent (threadDelay)
 import qualified Control.Concurrent.Async as Async
 import           Control.Concurrent.MVar (MVar, modifyMVar_, newMVar, readMVar)
@@ -35,9 +21,23 @@ import           Data.Aeson (FromJSON)
 import           Data.Text (Text, pack, unpack)
 import           Data.Time.Clock (UTCTime, getCurrentTime)
 import           Data.Version (showVersion)
-import qualified Graphics.Vty as V
 
-import           GitRev (gitRev)
+import qualified Brick.AttrMap as A
+import qualified Brick.BChan as Brick.BChan
+import qualified Brick.Main as M
+import           Brick.Themes (Theme, newTheme, themeToAttrMap)
+import           Brick.Types (BrickEvent (..), EventM, Next, Widget)
+import qualified Brick.Types as T
+import           Brick.Util (fg, on)
+import qualified Brick.Widgets.Border as B
+import qualified Brick.Widgets.Border.Style as BS
+import qualified Brick.Widgets.Center as C
+import           Brick.Widgets.Core (hBox, hLimitPercent, padBottom, padLeft,
+                                     padRight, padTop, str, txt, updateAttrMap,
+                                     vBox, vLimitPercent, withAttr,
+                                     withBorderStyle)
+import qualified Brick.Widgets.ProgressBar as P
+import qualified Graphics.Vty as V
 
 import           Cardano.BM.Counters (readCounters)
 import           Cardano.BM.Data.Backend
@@ -49,6 +49,8 @@ import           Cardano.BM.Data.Observable
 import           Cardano.BM.Data.Severity
 import           Cardano.BM.Data.SubTrace
 import           Cardano.BM.Trace
+
+import           GitRev (gitRev)
 import           Ouroboros.Consensus.NodeId
 import           Paths_cardano_node (version)
 import           Topology
@@ -90,6 +92,10 @@ instance IsEffectuator LiveViewBackend a where
 
     handleOverflow _ = return ()
 
+data ColorTheme
+    = DarkTheme
+    | LightTheme
+    deriving (Eq)
 
 data LiveViewState a = LiveViewState
     { lvsQuit            :: Bool
@@ -113,6 +119,7 @@ data LiveViewState a = LiveViewState
     , lvsMessage         :: Maybe a
     , lvsUIThread        :: Maybe (Async.Async ())
     , lvsMetricsThread   :: Maybe (Async.Async ())
+    , lvsColorTheme      :: ColorTheme
     } deriving (Eq)
 
 initLiveViewState :: IO (LiveViewState a)
@@ -139,6 +146,7 @@ initLiveViewState = do
                 , lvsMessage         = Nothing
                 , lvsUIThread        = Nothing
                 , lvsMetricsThread   = Nothing
+                , lvsColorTheme      = DarkTheme
                 }
 
 setTopology :: LiveViewBackend a -> TopologyInfo -> IO ()
@@ -169,6 +177,105 @@ captureCounters lvbe trace0 = do
         traceNamedObject tr (mle, LogValue (nameCounter c <> "." <> cn) cv)
         traceCounters tr cs
 
+-------------------------------------------------------------------------------
+-- UI color themes
+-------------------------------------------------------------------------------
+
+cardanoAttr :: A.AttrName
+cardanoAttr = "cardano"
+
+releaseAttr :: A.AttrName
+releaseAttr = "release"
+
+nodeIdAttr :: A.AttrName
+nodeIdAttr = "nodeId"
+
+valueAttr :: A.AttrName
+valueAttr = "value"
+
+keyAttr :: A.AttrName
+keyAttr = "quit"
+
+theBaseAttr :: A.AttrName
+theBaseAttr = A.attrName "theBase"
+
+mempoolDoneAttr, mempoolToDoAttr :: A.AttrName
+mempoolDoneAttr = theBaseAttr <> A.attrName "mempool:done"
+mempoolToDoAttr = theBaseAttr <> A.attrName "mempool:remaining"
+
+memDoneAttr, memToDoAttr :: A.AttrName
+memDoneAttr = theBaseAttr <> A.attrName "mem:done"
+memToDoAttr = theBaseAttr <> A.attrName "mem:remaining"
+
+cpuDoneAttr, cpuToDoAttr :: A.AttrName
+cpuDoneAttr = theBaseAttr <> A.attrName "cpu:done"
+cpuToDoAttr = theBaseAttr <> A.attrName "cpu:remaining"
+
+progressToDoColorLFG
+  , progressToDoColorLBG
+  , progressDoneColorLFG
+  , progressDoneColorLBG
+  , progressToDoColorDFG
+  , progressToDoColorDBG
+  , progressDoneColorDFG
+  , progressDoneColorDBG
+  , darkMainBG
+  :: V.Color
+progressToDoColorLFG = V.white
+progressToDoColorLBG = V.Color240 19
+progressDoneColorLFG = V.white
+progressDoneColorLBG = V.Color240 6
+progressToDoColorDFG = V.black
+progressToDoColorDBG = V.white
+progressDoneColorDFG = V.black
+progressDoneColorDBG = V.Color240 19
+darkMainBG           = V.Color240 0
+
+bold :: V.Attr -> V.Attr
+bold a = V.withStyle a V.bold
+
+lightThemeAttributes :: [(A.AttrName, V.Attr)]
+lightThemeAttributes =
+    [ (cardanoAttr,     bold $ fg V.black)
+    , (releaseAttr,     bold $ fg V.blue)
+    , (nodeIdAttr,      bold $ fg V.blue)
+    , (valueAttr,       bold $ fg V.black)
+    , (keyAttr,         bold $ fg V.magenta)
+    , (mempoolDoneAttr, bold $ progressDoneColorLFG `on` progressDoneColorLBG)
+    , (mempoolToDoAttr, bold $ progressToDoColorLFG `on` progressToDoColorLBG)
+    , (memDoneAttr,     bold $ progressDoneColorLFG `on` progressDoneColorLBG)
+    , (memToDoAttr,     bold $ progressToDoColorLFG `on` progressToDoColorLBG)
+    , (cpuDoneAttr,     bold $ progressDoneColorLFG `on` progressDoneColorLBG)
+    , (cpuToDoAttr,     bold $ progressToDoColorLFG `on` progressToDoColorLBG)
+    ]
+
+darkThemeAttributes :: [(A.AttrName, V.Attr)]
+darkThemeAttributes =
+    [ (cardanoAttr,     bold $ fg V.white)
+    , (releaseAttr,     bold $ fg V.cyan)
+    , (nodeIdAttr,      bold $ fg V.cyan)
+    , (valueAttr,       bold $ fg V.white)
+    , (keyAttr,         bold $ fg V.green)
+    , (mempoolDoneAttr, bold $ progressDoneColorDFG `on` progressDoneColorDBG)
+    , (mempoolToDoAttr, bold $ progressToDoColorDFG `on` progressToDoColorDBG)
+    , (memDoneAttr,     bold $ progressDoneColorDFG `on` progressDoneColorDBG)
+    , (memToDoAttr,     bold $ progressToDoColorDFG `on` progressToDoColorDBG)
+    , (cpuDoneAttr,     bold $ progressDoneColorDFG `on` progressDoneColorDBG)
+    , (cpuToDoAttr,     bold $ progressToDoColorDFG `on` progressToDoColorDBG)
+    ]
+
+lightTheme :: Theme
+lightTheme = newTheme (V.black `on` V.white)
+                      lightThemeAttributes
+
+darkTheme :: Theme
+darkTheme = newTheme (V.white `on` darkMainBG)
+                     darkThemeAttributes
+
+-------------------------------------------------------------------------------
+-- UI drawing
+-------------------------------------------------------------------------------
+
 drawUI :: LiveViewState a -> [Widget ()]
 drawUI p = [mainWidget p]
 
@@ -182,38 +289,24 @@ mainWidget p =
 
 mainContentW :: LiveViewState a -> Widget ()
 mainContentW p =
-    withBorderStyle BS.unicode
+      withBorderStyle BS.unicode
     . B.border $ vBox
         [ headerW
         , hBox [systemStatsW p, nodeInfoW p]
-        , quitMessageW
+        , keysMessageW
         ]
 
-titleAttr :: A.AttrName
-titleAttr = "title"
-
-valueAttr :: A.AttrName
-valueAttr = "value"
-
-qAttr :: A.AttrName
-qAttr = "quit"
-
-attributes :: [(A.AttrName, V.Attr)]
-attributes =
-    [ (titleAttr,    fg V.cyan)
-    , (valueAttr,    V.withStyle (fg V.white) V.bold)
-    , (qAttr,        fg V.green)
-    ]
-
-quitMessageW :: Widget ()
-quitMessageW =
+keysMessageW :: Widget ()
+keysMessageW =
       padBottom (T.Pad 1)
     . padLeft   (T.Pad 2)
     $ hBox [ txt "Press "
-           ,   updateAttrMap (A.applyAttrMappings attributes)
-             . withAttr qAttr
-             $ txt "Q"
-           , txt " to quit"
+           , withAttr keyAttr $ txt "Q"
+           , txt " to quit, "
+           , withAttr keyAttr $ txt "L"
+           , txt "/"
+           , withAttr keyAttr $ txt "D"
+           , txt " to change color theme"
            ]
 
 headerW :: Widget ()
@@ -222,8 +315,7 @@ headerW =
     . padTop   (T.Pad 1)
     . padLeft  (T.Pad 2)
     . padRight (T.Pad 2)
-    $ hBox [   updateAttrMap (A.applyAttrMappings attributes)
-             . withAttr valueAttr
+    $ hBox [   withAttr cardanoAttr
              . padRight (T.Pad 10)
              $ txt "CARDANO SL"
            , txt "release: "
@@ -232,11 +324,9 @@ headerW =
            , nodeIdW
            ]
   where
-    releaseW =   updateAttrMap (A.applyAttrMappings attributes)
-               $ withAttr titleAttr
+    releaseW =   withAttr releaseAttr
                $ txt "Shelley"
-    nodeIdW  =   updateAttrMap (A.applyAttrMappings attributes)
-               $ withAttr titleAttr
+    nodeIdW  =   withAttr nodeIdAttr
                $ txt "0"
 
 systemStatsW :: LiveViewState a -> Widget ()
@@ -302,8 +392,7 @@ nodeInfoLabels =
 
 nodeInfoValues :: LiveViewState a -> Widget ()
 nodeInfoValues lvs =
-      updateAttrMap (A.applyAttrMappings attributes)
-    . withAttr valueAttr
+      withAttr valueAttr
     $ vBox [                    str (lvsVersion lvs)
            ,                    str (take 7 $ lvsCommit lvs) -- Probably we don't need the full commit
            , padTop (T.Pad 1) $ str (lvsUpTime lvs)
@@ -314,33 +403,6 @@ nodeInfoValues lvs =
            , padTop (T.Pad 1) $ str ((show . lvsMaxNetDelay $ lvs) <> " ms")
            ]
 
-theBaseAttr :: A.AttrName
-theBaseAttr = A.attrName "theBase"
-
-mempoolDoneAttr, mempoolToDoAttr :: A.AttrName
-mempoolDoneAttr = theBaseAttr <> A.attrName "mempool:done"
-mempoolToDoAttr = theBaseAttr <> A.attrName "mempool:remaining"
-
-memDoneAttr, memToDoAttr :: A.AttrName
-memDoneAttr = theBaseAttr <> A.attrName "mem:done"
-memToDoAttr = theBaseAttr <> A.attrName "mem:remaining"
-
-cpuDoneAttr, cpuToDoAttr :: A.AttrName
-cpuDoneAttr = theBaseAttr <> A.attrName "cpu:done"
-cpuToDoAttr = theBaseAttr <> A.attrName "cpu:remaining"
-
-theMap :: A.AttrMap
-theMap = A.attrMap V.defAttr
-         [ (theBaseAttr,              bg V.brightBlack  )
-         , (mempoolDoneAttr,          V.red   `on` V.white)
-         , (mempoolToDoAttr,          V.red   `on` V.black)
-         , (memDoneAttr,              V.blue  `on` V.white)
-         , (memToDoAttr,              V.white `on` V.black)
-         , (cpuDoneAttr,              V.red   `on` V.white)
-         , (cpuToDoAttr,              V.red   `on` V.black)
-         , (P.progressIncompleteAttr, fg V.yellow       )
-         ]
-
 eventHandler :: LiveViewState a -> BrickEvent n (LiveViewBackend a) -> EventM n (Next (LiveViewState a))
 eventHandler _   (AppEvent lvBackend) = do
     next <- liftIO . readMVar . getbe $ lvBackend
@@ -349,6 +411,10 @@ eventHandler lvs (VtyEvent e)         =
     case e of
         V.EvKey  (V.KChar 'q') [] -> M.halt     lvs
         V.EvKey  (V.KChar 'Q') [] -> M.halt     lvs
+        V.EvKey  (V.KChar 'd') [] -> M.continue $ lvs { lvsColorTheme = DarkTheme }
+        V.EvKey  (V.KChar 'D') [] -> M.continue $ lvs { lvsColorTheme = DarkTheme }
+        V.EvKey  (V.KChar 'l') [] -> M.continue $ lvs { lvsColorTheme = LightTheme }
+        V.EvKey  (V.KChar 'L') [] -> M.continue $ lvs { lvsColorTheme = LightTheme }
         _                         -> M.continue lvs
 eventHandler lvs _                    = M.halt     lvs
 
@@ -358,5 +424,8 @@ app =
           , M.appChooseCursor = M.showFirstCursor
           , M.appHandleEvent = eventHandler
           , M.appStartEvent = return
-          , M.appAttrMap = const theMap
+          , M.appAttrMap = \lvs ->
+                if lvsColorTheme lvs == DarkTheme
+                then themeToAttrMap darkTheme
+                else themeToAttrMap lightTheme
           }
