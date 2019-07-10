@@ -16,14 +16,14 @@ import qualified Brick.AttrMap as A
 import qualified Brick.Main as M
 import           Brick.Types (Widget)
 import qualified Brick.Types as T
-import           Brick.Util (bg, clamp, fg, on)
+import           Brick.Util (bg, fg, on)
 import qualified Brick.Widgets.Border as B
 import qualified Brick.Widgets.Border.Style as BS
 import qualified Brick.Widgets.Center as C
-import           Brick.Widgets.Core (hBox, hLimitPercent, overrideAttr,
-                                     padBottom, padLeft, padRight, padTop, str,
-                                     txt, updateAttrMap, vBox, vLimitPercent,
-                                     withAttr, withBorderStyle, (<+>), (<=>))
+import           Brick.Widgets.Core (hBox, hLimitPercent, padBottom, padLeft,
+                                     padRight, padTop, str, txt, updateAttrMap,
+                                     vBox, vLimitPercent, withAttr,
+                                     withBorderStyle)
 import qualified Brick.Widgets.ProgressBar as P
 import           Control.Concurrent (threadDelay)
 import qualified Control.Concurrent.Async as Async
@@ -41,7 +41,8 @@ import           Cardano.BM.Counters (readCounters)
 import           Cardano.BM.Data.Backend
 import           Cardano.BM.Data.Counter
 import           Cardano.BM.Data.LogItem (LOContent (LogValue),
-                     PrivacyAnnotation (Confidential), mkLOMeta)
+                                          PrivacyAnnotation (Confidential),
+                                          mkLOMeta)
 import           Cardano.BM.Data.Observable
 import           Cardano.BM.Data.Severity
 import           Cardano.BM.Data.SubTrace
@@ -153,7 +154,7 @@ captureCounters lvbe trace0 = do
         mle <- mkLOMeta Info Confidential
         traceNamedObject tr (mle, LogValue (nameCounter c <> "." <> cn) cv)
         traceCounters tr cs
-        
+
 drawUI :: LiveViewState a -> [Widget ()]
 drawUI p = [mainWidget p]
 
@@ -171,6 +172,7 @@ mainContentW p =
     . B.border $ vBox
         [ headerW
         , hBox [systemStatsW p, nodeInfoW p]
+        , quitMessageW
         ]
 
 titleAttr :: A.AttrName
@@ -179,11 +181,26 @@ titleAttr = "title"
 valueAttr :: A.AttrName
 valueAttr = "value"
 
+qAttr :: A.AttrName
+qAttr = "quit"
+
 borderMappings :: [(A.AttrName, V.Attr)]
 borderMappings =
     [ (titleAttr, fg V.cyan)
     , (valueAttr, fg V.white)
+    , (qAttr,     fg V.green)
     ]
+
+quitMessageW :: Widget ()
+quitMessageW =
+      padBottom (T.Pad 1)
+    . padLeft   (T.Pad 2)
+    $ hBox [ txt "Press "
+           ,   updateAttrMap (A.applyAttrMappings borderMappings)
+             . withAttr qAttr
+             $ txt "Q"
+           , txt " to quit"
+           ]
 
 headerW :: Widget ()
 headerW =
