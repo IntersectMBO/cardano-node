@@ -38,6 +38,7 @@ import           Data.Time.Clock (NominalDiffTime, UTCTime (..), addUTCTime,
                                   diffUTCTime, getCurrentTime)
 import           Data.Time.Format (defaultTimeLocale, formatTime)
 import           Data.Version (showVersion)
+import           Data.Word (Word64)
 import qualified Graphics.Vty as V
 
 import           GitRev (gitRev)
@@ -49,7 +50,7 @@ import           Cardano.BM.Data.Counter
 import           Cardano.BM.Data.LogItem (LOContent (LogValue), LOMeta (..),
                                           LogObject (..),
                                           PrivacyAnnotation (Confidential),
-                                          mkLOMeta)
+                                          mkLOMeta, utc2ns)
 import           Cardano.BM.Data.Observable
 import           Cardano.BM.Data.Severity
 import           Cardano.BM.Data.SubTrace
@@ -83,7 +84,7 @@ instance (FromJSON a) => IsBackend LiveViewBackend a where
             initialVty <- buildVty
             ticker <- Async.async $ forever $ do
                         -- could be replaced by retry if we have TVar-like vars
-                        threadDelay 1000000 -- refresh TUI every 1s
+                        threadDelay 800000 -- refresh TUI every 800 ms
                         Brick.BChan.writeBChan eventChan $ LiveViewBackend mv
             Async.link ticker
             void $ M.customMain initialVty buildVty (Just eventChan) app initState
@@ -98,19 +99,24 @@ instance IsEffectuator LiveViewBackend a where
             LogObject "cardano.node.metrics" meta content ->
                 case content of
                     LogValue "Mem.resident" (PureI bytes) ->
-                        let gbytes = (fromIntegral (bytes * pagesize)) / 1000000000
+                        let mbytes = (fromIntegral (bytes * pagesize)) / 1024 / 1024
                         in
                         modifyMVar_ (getbe lvbe) $ \lvs ->
-                            return $ lvs { lvsMemoryUsageCurr = gbytes
-                                         , lvsMemoryUsageMax = max (lvsMemoryUsageMax lvs) gbytes
+                            return $ lvs { lvsMemoryUsageCurr = mbytes
+                                         , lvsMemoryUsageMax  = max (lvsMemoryUsageMax lvs) mbytes
                                          , lvsUpTime          = diffUTCTime (tstamp meta) (lvsStartTime lvs)
                                          }
                     LogValue "Stat.utime" (PureI ticks) ->
-                        let cputime = (fromIntegral ticks) / (fromIntegral clktck)
+                        let tns = utc2ns (tstamp meta)
                         in
                         modifyMVar_ (getbe lvbe) $ \lvs ->
-                            return $ lvs { lvsCPUUsagePerc = cputime
-                                         , lvsUpTime          = diffUTCTime (tstamp meta) (lvsStartTime lvs)
+                            let tdiff = min 1 $ (fromIntegral (tns - lvsCPUUsageNs lvs)) / 1000000000
+                                cpuperc = (fromIntegral (ticks - lvsCPUUsageLast lvs)) / (fromIntegral clktck) / tdiff
+                            in
+                            return $ lvs { lvsCPUUsagePerc = cpuperc
+                                         , lvsCPUUsageLast = ticks
+                                         , lvsCPUUsageNs   = tns
+                                         , lvsUpTime       = diffUTCTime (tstamp meta) (lvsStartTime lvs)
                                          }
                     _ -> return ()
             _ -> return ()
@@ -129,7 +135,7 @@ data LiveViewState a = LiveViewState
     , lvsBlocksMinted    :: Int
     , lvsTransactions    :: Int
     , lvsPeersConnected  :: Int
-    , lvsMaxNetDelay     :: Int
+    , lvsMaxNetDelay     :: Integer
     , lvsMempool         :: Int
     , lvsMempoolPerc     :: Float
     , lvsCPUUsagePerc    :: Float
@@ -137,6 +143,8 @@ data LiveViewState a = LiveViewState
     , lvsMemoryUsageMax  :: Float
     -- internal state
     , lvsStartTime       :: UTCTime
+    , lvsCPUUsageLast    :: Integer
+    , lvsCPUUsageNs      :: Word64
     , lvsMessage         :: Maybe a
     , lvsUIThread        :: Maybe (Async.Async ())
     , lvsMetricsThread   :: Maybe (Async.Async ())
@@ -161,8 +169,10 @@ initLiveViewState = do
                 , lvsMempoolPerc     = 0.25
                 , lvsCPUUsagePerc    = 0.58
                 , lvsMemoryUsageCurr = 0.0
-                , lvsMemoryUsageMax  = 0.5
+                , lvsMemoryUsageMax  = 0.2
                 , lvsStartTime       = now
+                , lvsCPUUsageLast    = 0
+                , lvsCPUUsageNs      = 10000
                 , lvsMessage         = Nothing
                 , lvsUIThread        = Nothing
                 , lvsMetricsThread   = Nothing
@@ -289,13 +299,13 @@ systemStatsW p =
                  ) $ bar mempoolLabel (lvsMempoolPerc p)
     mempoolLabel = Just $ (show . lvsMempool $ p)
                         ++ " / "
-                        ++ (take 5 $ show $ lvsMempoolPerc p) ++ "%"
+                        ++ (take 5 $ show $ lvsMempoolPerc p * 100) ++ "%"
     memUsageBar = updateAttrMap
                   (A.mapAttrNames [ (memDoneAttr, P.progressCompleteAttr)
                                   , (memToDoAttr, P.progressIncompleteAttr)
                                   ]
                   ) $ bar memLabel lvsMemUsagePerc
-    memLabel = Just $ (take 5 $ show $ lvsMemoryUsageCurr p) ++ "GB / max " ++ (show $ lvsMemoryUsageMax p) ++ "GB"
+    memLabel = Just $ (take 5 $ show $ lvsMemoryUsageCurr p) ++ "MB / max " ++ (take 5 $ show $ lvsMemoryUsageMax p) ++ "MB"
     cpuUsageBar = updateAttrMap
                   (A.mapAttrNames [ (cpuDoneAttr, P.progressCompleteAttr)
                                   , (cpuToDoAttr, P.progressIncompleteAttr)
@@ -303,7 +313,7 @@ systemStatsW p =
                   ) $ bar cpuLabel (lvsCPUUsagePerc p)
     cpuLabel = Just $ (take 5 $ show $ lvsCPUUsagePerc p * 100) ++ "%"
     bar lbl pcntg = P.progressBar lbl pcntg
-    lvsMemUsagePerc = (lvsMemoryUsageCurr p) / (0.2 + (lvsMemoryUsageMax p))
+    lvsMemUsagePerc = (lvsMemoryUsageCurr p) / (max 200 (lvsMemoryUsageMax p))
 
 nodeInfoW :: LiveViewState a -> Widget ()
 nodeInfoW p =
