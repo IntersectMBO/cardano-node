@@ -21,7 +21,7 @@ module Run (
 import           Codec.CBOR.Decoding (Decoder)
 import           Codec.CBOR.Encoding (Encoding)
 import qualified Codec.Serialise as Serialise (decode, encode)
-import           Control.Concurrent (threadDelay)
+import           Codec.SerialiseTerm
 import qualified Control.Concurrent.Async as Async
 import           Control.Exception
 import           Control.Monad
@@ -54,6 +54,7 @@ import qualified Ouroboros.Network.Chain as Chain
 import           Ouroboros.Network.NodeToClient as NodeToClient
 import           Ouroboros.Network.NodeToNode as NodeToNode
 import           Ouroboros.Network.Socket
+import           Ouroboros.Network.Subscription.Common
 
 import           Ouroboros.Network.Protocol.BlockFetch.Codec
 import           Ouroboros.Network.Protocol.ChainSync.Codec
@@ -84,10 +85,19 @@ import           Topology
 import           TraceAcceptor
 import           TxSubmission
 
+
+-- | Peer identifier used in consensus application 
+--
+newtype Peer = Peer { peerAddr :: SockAddr }
+  deriving (Eq, Ord, Show)
+
+instance Condense Peer where
+    condense (Peer sockAddr) = show sockAddr
+
+
 runNode :: NodeCLIArguments -> LoggingLayer -> IO ()
 runNode nodeCli@NodeCLIArguments{..} loggingLayer = do
     let !tr = (llAppendName loggingLayer) "node" (llBasicTrace loggingLayer)
-
     -- If the user asked to submit a transaction, we don't have to spin up a
     -- full node, we simply transmit it and exit.
     case command of
@@ -183,7 +193,7 @@ handleSimpleNode p NodeCLIArguments{..} myNodeAddress (TopologyInfo myNodeId top
           pInfoInitLedger
 
       btime  <- realBlockchainTime registry slotDuration systemStart
-      let nodeParams :: NodeParams IO NodeAddress blk
+      let nodeParams :: NodeParams IO Peer blk
           nodeParams = NodeParams
             { tracer             = tracer
             , mempoolTracer      = contramap show tracer
@@ -203,13 +213,13 @@ handleSimpleNode p NodeCLIArguments{..} myNodeAddress (TopologyInfo myNodeId top
       kernel <- nodeKernel nodeParams
 
       let networkApps :: NetworkApplication
-                           IO NodeAddress
+                           IO Peer
                            ByteString ByteString
                            ByteString ByteString ()
           networkApps =
             consensusNetworkApps
               nullTracer
-              (contramap show tracer) -- nullTracer
+              nullTracer
               kernel
               ProtocolCodecs
                 { pcChainSyncCodec =
@@ -247,7 +257,7 @@ handleSimpleNode p NodeCLIArguments{..} myNodeAddress (TopologyInfo myNodeId top
                                     NodeToNodeVersion
                                     DictVersion
                                     (NetworkApplication
-                                       IO NodeAddress
+                                       IO Peer
                                        ByteString ByteString
                                        ByteString ByteString ())
           networkAppNodeToNode =
@@ -261,7 +271,7 @@ handleSimpleNode p NodeCLIArguments{..} myNodeAddress (TopologyInfo myNodeId top
                                       NodeToClientVersion
                                       DictVersion
                                       (NetworkApplication
-                                         IO NodeAddress
+                                         IO Peer
                                          ByteString ByteString
                                          ByteString ByteString ())
           networkAppNodeToClient =
@@ -280,10 +290,6 @@ handleSimpleNode p NodeCLIArguments{..} myNodeAddress (TopologyInfo myNodeId top
           myLocalAddr     = localSocketAddrInfo myLocalSockPath
       removeStaleLocalSocket myLocalSockPath
 
-      -- TODO: cheap subscription managment, a proper one is on the way.  The
-      -- point is that it only requires 'NetworkApplications' which is a thin
-      -- layer around 'MuxApplication'.
-
       -- serve local clients (including tx submission)
       localServer <-
         forkLinked registry $ do
@@ -296,37 +302,41 @@ handleSimpleNode p NodeCLIArguments{..} myNodeAddress (TopologyInfo myNodeId top
             wait
 
       -- serve downstream nodes
+      connTable <- newConnectionTable
       peerServer <-
         forkLinked registry $ do
-          connTable <- newConnectionTable
           NodeToNode.withServer
             connTable
             myAddr (\(DictVersion _) -> acceptEq)
             (muxResponderNetworkApplication <$> networkAppNodeToNode)
             wait
 
-      -- connect to upstream nodes
-      forM_ (producers nodeSetup) $ \na@(NodeAddress host port) ->
-        forkLinked registry $ do
+      -- ip subscription manager
+      subManager <- forkLinked registry $
+        ipSubscriptionWorker
+          connTable
+          (contramap show tracer)
+          -- IPv4 address
+          (Just $ nodeAddressToSockAddr myNodeAddress)
+          -- no IPv6 address
+          Nothing
+          (const Nothing)
+          (IPSubscriptionTarget {
+              ispIps     = map nodeAddressToSockAddr (producers nodeSetup),
+              ispValency = length (producers nodeSetup)
+            })
+          (\sock -> do
+              sockAddr <- getPeerName sock
+              connectToNode'
+                      (\(DictVersion codec) -> encodeTerm codec)
+                      (\(DictVersion codec) -> decodeTerm codec)
+                      (muxInitiatorNetworkApplication (Peer sockAddr) <$> networkAppNodeToNode) sock)
+          wait
 
-          let io = do
-                addr:_ <- getAddrInfo Nothing (Just host) (Just port)
-                NodeToNode.connectTo
-                      (muxInitiatorNetworkApplication na <$> networkAppNodeToNode)
-                      -- Do not bind to a local port, use ephemeral
-                      -- one.  We cannot bind to port on which the server is
-                      -- already accepting connections.
-                      Nothing
-                      addr
-                  -- TODO: this is purposefully simple, a proper DNS management
-                  -- is on the way in PR #607
-                  `catch` \(_ :: IOException) -> threadDelay 250_000 >> io
+      void $ Async.waitAny [localServer, peerServer, subManager]
 
-          io
-
-      _ <- Async.waitAny [localServer, peerServer]
-      return ()
   where
+
       nid :: Int
       nid = case myNodeId of
               CoreId  n -> n
