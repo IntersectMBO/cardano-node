@@ -17,33 +17,20 @@ import qualified Brick.Main as M
 import           Brick.Types (Widget)
 import qualified Brick.Types as T
 import           Brick.Util (bg, clamp, fg, on)
-import           Brick.Widgets.Core (hBox, hLimitPercent, overrideAttr,
-                                     padBottom, padLeft, padRight, padTop, str,
-                                     updateAttrMap, vBox, vLimitPercent, (<+>),
-                                     (<=>))
-import           Control.Applicative ((<$>))
-
-import           Data.Monoid ((<>))
-import qualified Data.Text as T
-import qualified Graphics.Vty as V
-
-import qualified Brick.AttrMap as A
-import qualified Brick.Main as M
-import           Brick.Types (Widget)
-import           Brick.Util (fg, on)
 import qualified Brick.Widgets.Border as B
 import qualified Brick.Widgets.Border.Style as BS
 import qualified Brick.Widgets.Center as C
-import           Brick.Widgets.Core (hBox, hLimit, str, txt, updateAttrMap,
-                                     vLimit, withAttr, withBorderStyle, (<+>),
-                                     (<=>))
+import           Brick.Widgets.Core (hBox, hLimitPercent, overrideAttr,
+                                     padBottom, padLeft, padRight, padTop, str,
+                                     txt, updateAttrMap, vBox, vLimitPercent,
+                                     withAttr, withBorderStyle, (<+>), (<=>))
 import qualified Brick.Widgets.ProgressBar as P
 import           Control.Concurrent (threadDelay)
 import qualified Control.Concurrent.Async as Async
 import           Control.Concurrent.MVar (MVar, modifyMVar_, newMVar)
 import           Control.Monad (forever, void)
 import           Data.Aeson (FromJSON)
-import           Data.Text (Text, pack)
+import           Data.Text (Text, pack, unpack)
 import           Data.Time.Clock (UTCTime, getCurrentTime)
 import           Data.Version (showVersion)
 import qualified Graphics.Vty as V
@@ -91,11 +78,11 @@ instance IsEffectuator LiveViewBackend a where
 
 data LiveViewState a = LiveViewState
     { lvsQuit            :: Bool
-    , lvsRelease         :: Text
+    , lvsRelease         :: String
     , lvsNodeId          :: Text
-    , lvsVersion         :: Text
-    , lvsCommit          :: Text
-    , lvsUpTime          :: Text
+    , lvsVersion         :: String
+    , lvsCommit          :: String
+    , lvsUpTime          :: String
     , lvsBlockHeight     :: Int
     , lvsBlocksMinted    :: Int
     , lvsTransactions    :: Int
@@ -120,8 +107,8 @@ initLiveViewState = do
                 { lvsQuit            = False
                 , lvsRelease         = "Shelley"
                 , lvsNodeId          = "N/A"
-                , lvsVersion         = pack $ showVersion version
-                , lvsCommit          = gitRev
+                , lvsVersion         = showVersion version
+                , lvsCommit          = unpack gitRev
                 , lvsUpTime          = "00:00:00"
                 , lvsBlockHeight     = 1891
                 , lvsBlocksMinted    = 543
@@ -202,8 +189,8 @@ headerW :: Widget ()
 headerW =
       C.hCenter
     . padTop   (T.Pad 1)
-    . padLeft  (T.Pad 3)
-    . padRight (T.Pad 3)
+    . padLeft  (T.Pad 2)
+    . padRight (T.Pad 2)
     $ hBox [ padRight (T.Pad 10) $ txt "CARDANO SL"
            , txt "release: "
            , releaseW
@@ -221,10 +208,13 @@ headerW =
 systemStatsW :: LiveViewState a -> Widget ()
 systemStatsW p =
       padTop   (T.Pad 2)
-    . padLeft  (T.Pad 3)
-    . padRight (T.Pad 3)
-    $ vBox [ vBox [ padBottom (T.Pad 1) $ txt "Memory pool:"
+    . padLeft  (T.Pad 2)
+    . padRight (T.Pad 2)
+    $ vBox [ vBox [ padBottom (T.Pad 1) $ txt "Mempool:"
                   , padBottom (T.Pad 2) $ memPoolBar
+                  ]
+           , vBox [ padBottom (T.Pad 1) $ txt "Memory usage:"
+                  , padBottom (T.Pad 2) $ memUsageBar
                   ]
            , vBox [ padBottom (T.Pad 1) $ txt "CPU usage:"
                   , padBottom (T.Pad 2) $ cpuUsageBar
@@ -236,17 +226,24 @@ systemStatsW p =
                  (A.mapAttrNames [ (mempoolDoneAttr, P.progressCompleteAttr)
                                  , (mempoolToDoAttr, P.progressIncompleteAttr)
                                  ]
-                 ) $ bar mempoolLabel lvsMempoolPerc
+                 ) $ bar mempoolLabel (lvsMempoolPerc p)
     mempoolLabel = Just $ (show . lvsMempool $ p)
                         ++ " / "
-                        ++ (show . lvsMempoolPerc $ p) ++ "%"
+                        ++ (take 5 $ show $ lvsMempoolPerc p) ++ "%"
+    memUsageBar = updateAttrMap
+                  (A.mapAttrNames [ (memDoneAttr, P.progressCompleteAttr)
+                                  , (memToDoAttr, P.progressIncompleteAttr)
+                                  ]
+                  ) $ bar memLabel lvsMemUsagePerc
+    memLabel = Just $ (show $ lvsMemoryUsageCurr p) ++ "GB / max " ++ (show $ lvsMemoryUsageMax p) ++ "GB"
     cpuUsageBar = updateAttrMap
                   (A.mapAttrNames [ (cpuDoneAttr, P.progressCompleteAttr)
                                   , (cpuToDoAttr, P.progressIncompleteAttr)
                                   ]
-                  ) $ bar cpuLabel lvsCPUUsagePerc
-    cpuLabel = Just $ (show . lvsCPUUsagePerc $ p) ++ "%"
-    bar lbl pcntg = P.progressBar lbl (pcntg p)
+                  ) $ bar cpuLabel (lvsCPUUsagePerc p)
+    cpuLabel = Just $ (take 5 $ show $ lvsCPUUsagePerc p) ++ "%"
+    bar lbl pcntg = P.progressBar lbl pcntg
+    lvsMemUsagePerc = (lvsMemoryUsageCurr p) / (0.2 + (lvsMemoryUsageMax p))
 
 nodeInfoW :: LiveViewState a -> Widget ()
 nodeInfoW p =
@@ -290,6 +287,10 @@ mempoolDoneAttr, mempoolToDoAttr :: A.AttrName
 mempoolDoneAttr = theBaseAttr <> A.attrName "mempool:done"
 mempoolToDoAttr = theBaseAttr <> A.attrName "mempool:remaining"
 
+memDoneAttr, memToDoAttr :: A.AttrName
+memDoneAttr = theBaseAttr <> A.attrName "mem:done"
+memToDoAttr = theBaseAttr <> A.attrName "mem:remaining"
+
 cpuDoneAttr, cpuToDoAttr :: A.AttrName
 cpuDoneAttr = theBaseAttr <> A.attrName "cpu:done"
 cpuToDoAttr = theBaseAttr <> A.attrName "cpu:remaining"
@@ -297,10 +298,12 @@ cpuToDoAttr = theBaseAttr <> A.attrName "cpu:remaining"
 theMap :: A.AttrMap
 theMap = A.attrMap V.defAttr
          [ (theBaseAttr,              bg V.brightBlack  )
-         , (mempoolDoneAttr,          V.red `on` V.white)
-         , (mempoolToDoAttr,          V.red `on` V.black)
-         , (cpuDoneAttr,              V.red `on` V.white)
-         , (cpuToDoAttr,              V.red `on` V.black)
+         , (mempoolDoneAttr,          V.red   `on` V.white)
+         , (mempoolToDoAttr,          V.red   `on` V.black)
+         , (memDoneAttr,              V.blue  `on` V.white)
+         , (memToDoAttr,              V.white `on` V.black)
+         , (cpuDoneAttr,              V.red   `on` V.white)
+         , (cpuToDoAttr,              V.red   `on` V.black)
          , (P.progressIncompleteAttr, fg V.yellow       )
          ]
 

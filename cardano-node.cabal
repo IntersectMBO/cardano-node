@@ -1,5 +1,5 @@
 name:           cardano-node
-version:        0.1.0.0
+version:        3.0.1.87
 description:    The cardano full node
 author:         IOHK
 maintainer:     operations@iohk.io
