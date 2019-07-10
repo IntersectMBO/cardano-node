@@ -58,6 +58,15 @@ import           Ouroboros.Consensus.NodeId
 import           Paths_cardano_node (version)
 import           Topology
 
+-- constants, to be evaluated from host system
+
+-- getconf PAGESIZE 
+pagesize :: Integer
+pagesize = 4096
+
+-- getconf CLK_TCK
+clktck :: Integer
+clktck = 100
 
 type LiveViewMVar a = MVar (LiveViewState a)
 newtype LiveViewBackend a = LiveViewBackend { getbe :: LiveViewMVar a }
@@ -79,11 +88,6 @@ instance (FromJSON a) => IsBackend LiveViewBackend a where
             Async.link ticker
             void $ M.customMain initialVty buildVty (Just eventChan) app initState
         modifyMVar_ mv $ \lvs -> return $ lvs { lvsUIThread = Just thr }
-        -- test changing of state
-        -- _ <- Async.async $ forever $ do
-        --         threadDelay 500000 -- refresh every 0.5s
-        --         modifyMVar_ mv $ \lvs -> do
-        --                 return $ lvs { lvsCPUUsagePerc = lvsCPUUsagePerc lvs + 0.01}
         return $ sharedState
 
     unrealize be = putStrLn $ "unrealize " <> show (typeof be)
@@ -93,9 +97,19 @@ instance IsEffectuator LiveViewBackend a where
         case item of
             LogObject "cardano.node.metrics" meta content ->
                 case content of
-                    LogValue "Mem.size" (PureI bytes) ->
+                    LogValue "Mem.resident" (PureI bytes) ->
+                        let gbytes = (fromIntegral (bytes * pagesize)) / 1000000000
+                        in
                         modifyMVar_ (getbe lvbe) $ \lvs ->
-                            return $ lvs { lvsMemoryUsageCurr = (fromIntegral bytes) / 1000000000
+                            return $ lvs { lvsMemoryUsageCurr = gbytes
+                                         , lvsMemoryUsageMax = max (lvsMemoryUsageMax lvs) gbytes
+                                         , lvsUpTime          = diffUTCTime (tstamp meta) (lvsStartTime lvs)
+                                         }
+                    LogValue "Stat.utime" (PureI ticks) ->
+                        let cputime = (fromIntegral ticks) / (fromIntegral clktck)
+                        in
+                        modifyMVar_ (getbe lvbe) $ \lvs ->
+                            return $ lvs { lvsCPUUsagePerc = cputime
                                          , lvsUpTime          = diffUTCTime (tstamp meta) (lvsStartTime lvs)
                                          }
                     _ -> return ()
@@ -147,7 +161,7 @@ initLiveViewState = do
                 , lvsMempoolPerc     = 0.25
                 , lvsCPUUsagePerc    = 0.58
                 , lvsMemoryUsageCurr = 0.0
-                , lvsMemoryUsageMax  = 4.7
+                , lvsMemoryUsageMax  = 0.5
                 , lvsStartTime       = now
                 , lvsMessage         = Nothing
                 , lvsUIThread        = Nothing
