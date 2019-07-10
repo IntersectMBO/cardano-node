@@ -78,7 +78,7 @@ instance (FromJSON a) => IsBackend LiveViewBackend a where
         -- _ <- Async.async $ forever $ do
         --         threadDelay 500000 -- refresh every 0.5s
         --         modifyMVar_ mv $ \lvs -> do
-        --                 return $ lvs { lvsCPUUsagePerc = lvsCPUUsagePerc lvs + 0.001}
+        --                 return $ lvs { lvsCPUUsagePerc = lvsCPUUsagePerc lvs + 0.01}
         return $ sharedState
 
     unrealize be = putStrLn $ "unrealize " <> show (typeof be)
@@ -121,7 +121,7 @@ initLiveViewState = do
     return $ LiveViewState
                 { lvsQuit            = False
                 , lvsRelease         = "Shelley"
-                , lvsNodeId          = "N/A"
+                , lvsNodeId          = ""
                 , lvsVersion         = showVersion version
                 , lvsCommit          = unpack gitRev
                 , lvsUpTime          = "00:00:00"
@@ -184,7 +184,7 @@ mainContentW :: LiveViewState a -> Widget ()
 mainContentW p =
     withBorderStyle BS.unicode
     . B.border $ vBox
-        [ headerW
+        [ headerW p
         , hBox [systemStatsW p, nodeInfoW p]
         , quitMessageW
         ]
@@ -216,8 +216,8 @@ quitMessageW =
            , txt " to quit"
            ]
 
-headerW :: Widget ()
-headerW =
+headerW :: LiveViewState a -> Widget ()
+headerW p =
       C.hCenter
     . padTop   (T.Pad 1)
     . padLeft  (T.Pad 2)
@@ -237,7 +237,7 @@ headerW =
                $ txt "Shelley"
     nodeIdW  =   updateAttrMap (A.applyAttrMappings attributes)
                $ withAttr titleAttr
-               $ txt "0"
+               $ txt $ lvsNodeId p
 
 systemStatsW :: LiveViewState a -> Widget ()
 systemStatsW p =
