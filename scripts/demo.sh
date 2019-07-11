@@ -2,6 +2,8 @@
 
 #tmux new-session -s 'Demo' -t demo
 
+export TERM=xterm-256color
+
 ALGO="--real-pbft"
 NOW=`date "+%Y-%m-%d 00:00:00"`
 NETARGS="--system-start \"${NOW}\" --slot-duration 2 node -t configuration/simple-topology.json ${ALGO}"
