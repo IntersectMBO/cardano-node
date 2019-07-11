@@ -232,6 +232,9 @@ valueAttr = "value"
 keyAttr :: A.AttrName
 keyAttr = "quit"
 
+barValueAttr :: A.AttrName
+barValueAttr = "barValue"
+
 theBaseAttr :: A.AttrName
 theBaseAttr = A.attrName "theBase"
 
@@ -278,6 +281,7 @@ lightThemeAttributes =
     , (nodeIdAttr,      bold $ fg V.blue)
     , (valueAttr,       bold $ fg V.black)
     , (keyAttr,         bold $ fg V.magenta)
+    , (barValueAttr,    bold $ fg V.black)
     , (mempoolDoneAttr, bold $ progressDoneColorLFG `on` progressDoneColorLBG)
     , (mempoolToDoAttr, bold $ progressToDoColorLFG `on` progressToDoColorLBG)
     , (memDoneAttr,     bold $ progressDoneColorLFG `on` progressDoneColorLBG)
@@ -293,6 +297,7 @@ darkThemeAttributes =
     , (nodeIdAttr,      bold $ fg V.cyan)
     , (valueAttr,       bold $ fg V.white)
     , (keyAttr,         bold $ fg V.white)
+    , (barValueAttr,    bold $ fg V.white)
     , (mempoolDoneAttr, bold $ progressDoneColorDFG `on` progressDoneColorDBG)
     , (mempoolToDoAttr, bold $ progressToDoColorDFG `on` progressToDoColorDBG)
     , (memDoneAttr,     bold $ progressDoneColorDFG `on` progressDoneColorDBG)
@@ -368,13 +373,19 @@ systemStatsW p =
       padTop   (T.Pad 2)
     . padLeft  (T.Pad 2)
     . padRight (T.Pad 2)
-    $ vBox [ vBox [ padBottom (T.Pad 1) $ txt "Mempool:"
+    $ vBox [ vBox [ hBox [ padBottom (T.Pad 1) $ txt "Mempool:"
+                         , withAttr barValueAttr . padLeft T.Max $ str "200"
+                         ]
                   , padBottom (T.Pad 2) $ memPoolBar
                   ]
-           , vBox [ padBottom (T.Pad 1) $ txt "Memory usage:"
+           , vBox [ hBox [ padBottom (T.Pad 1) $ txt "Memory usage:"
+                         , withAttr barValueAttr . padLeft T.Max $ str $ (show $ max (lvsMemoryUsageMax p) 200.0) <> " MB"
+                         ]
                   , padBottom (T.Pad 2) $ memUsageBar
                   ]
-           , vBox [ padBottom (T.Pad 1) $ txt "CPU usage:"
+           , vBox [ hBox [ padBottom (T.Pad 1) $ txt "CPU usage:"
+                         , withAttr barValueAttr . padLeft T.Max $ str "100%"
+                         ]
                   , padBottom (T.Pad 2) $ cpuUsageBar
                   ]
            ]
