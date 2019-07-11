@@ -89,7 +89,7 @@ fromProtocol RealPBFT =
 
 -- Node can be run in two modes.
 data ViewMode =
-    LiveView    -- Live mode with TUI (based on 'ansi-terminal-game').
+    LiveView    -- Live mode with TUI
   | SimpleView  -- Simple mode, just output text.
 
 {-------------------------------------------------------------------------------

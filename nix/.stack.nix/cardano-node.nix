@@ -3,7 +3,7 @@
     flags = {};
     package = {
       specVersion = "1.10";
-      identifier = { name = "cardano-node"; version = "0.1.0.0"; };
+      identifier = { name = "cardano-node"; version = "3.0.1.87"; };
       license = "MIT";
       copyright = "2019 IOHK";
       maintainer = "operations@iohk.io";
@@ -53,7 +53,6 @@
             (hsPkgs.ouroboros-consensus)
             (hsPkgs.typed-protocols-cbor)
             (hsPkgs.aeson)
-            (hsPkgs.ansi-terminal-game)
             (hsPkgs.async)
             (hsPkgs.bytestring)
             (hsPkgs.cborg)
@@ -77,7 +76,7 @@
             (hsPkgs.typed-protocols)
             ] ++ (if system.isWindows
             then [ (hsPkgs.Win32) ]
-            else [ (hsPkgs.unix) ]);
+            else [ (hsPkgs.unix) (hsPkgs.brick) (hsPkgs.vty) ]);
           };
         "wallet-client" = {
           depends = [

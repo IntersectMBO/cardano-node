@@ -15,7 +15,7 @@ setupBackends:
 # if not indicated otherwise, then messages are passed to these backends:
 defaultBackends:
   - KatipBK
-  - TraceForwarderBK
+  #- TraceForwarderBK
 
 # file to forward traced objects
 logOutput: "log-pipe-2"
@@ -75,9 +75,10 @@ options:
       subtrace: NoTrace
     '#messagecounters.katip':
       subtrace: NoTrace
+    '#messagecounters.monitoring':
+      subtrace: NoTrace
   mapBackends:
-    cardano.epoch-validation.benchmark:
-      - AggregationBK
-    '#aggregation.cardano.epoch-validation.benchmark':
-      - EKGViewBK
+    cardano.node.metrics:
+      - kind: UserDefinedBK
+        name: LiveViewBackend
 

@@ -28,7 +28,7 @@ extra-deps:
 
     # Following deps are for cardano-shell
   - git: https://github.com/input-output-hk/cardano-shell
-    commit: 52baef406c82b0e1d8858e35ee5597b51b7df48a
+    commit: 71fb36665338491e92d3ef14c20ae38ad6882c94
 
   - containers-0.5.11.0
   - ekg-prometheus-adapter-0.1.0.4
@@ -39,7 +39,7 @@ extra-deps:
   - tasty-hedgehog-1.0.0.1
     # iohk-monitoring-framework currently not pinned to a release
   - git: https://github.com/input-output-hk/iohk-monitoring-framework
-    commit: e67ac43fc26e3a47ffcf1a10666f2ccd34ce8b1a
+    commit: b2022cf7f5925e486f9e0a31f6f6d02145d5ebda
     subdirs:
       - contra-tracer
       - iohk-monitoring
@@ -63,12 +63,11 @@ extra-deps:
         - typed-protocols
         - typed-protocols-cbor
 
-  # We have to use own fork because of problems with LTS dependencies (QuickCheck 2.12 against 2.13).
-  - git: https://github.com/denisshevchenko/ansi-terminal-game
-    commit: b0d9aba5684d5fc4681fa12afcf0ac9d4db38747
-
-  - linebreak-1.0.0.3@sha256:3152802008e06f8444d364f6e1047b412e3cb692c1382b1657a425d72a0cfd5f
-  - timers-tick-0.4.1.0@sha256:27d345648b8e01fad48adf1dc0e870b19fabb03ccdf3ad0bc5acb57f5da6cb5c
+  - brick-0.47@sha256:4936c50acfdf09620dad5217fb384fc0d59626f75abed8b48250b419ec2ab623
+  - config-ini-0.2.4.0@sha256:38a6d484d471c6fac81445de2eac8c4e8c82760962fca5491ae1c3bfca9c4047
+  - data-clist-0.1.2.2@sha256:4d70add0a200a178853cd37c6469101bac3c36aebb3aa9c503ff225211b1a8c9
+  - text-zipper-0.10.1@sha256:8b73a97a3717a17df9b0a722b178950c476ff2268ca5c583e99d010c94af849e
+  - word-wrap-0.4.1@sha256:f72233b383ef569c557bfd9812cbb8e306c415ce509082c0bd15ee51c0239ccc
 
 flags:
   iohk-monitoring:

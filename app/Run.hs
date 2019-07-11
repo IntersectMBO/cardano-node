@@ -1,3 +1,5 @@
+{-# LANGUAGE BangPatterns        #-}
+{-# LANGUAGE CPP                 #-}
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE GADTs               #-}
 {-# LANGUAGE NamedFieldPuns      #-}
@@ -7,6 +9,10 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 {-# OPTIONS_GHC -Wno-simplifiable-class-constraints #-}
+
+#if !defined(mingw32_HOST_OS)
+#define UNIX
+#endif
 
 module Run (
       runNode
@@ -33,8 +39,12 @@ import           System.IO.Error (isDoesNotExistError)
 
 import           Control.Monad.Class.MonadAsync
 
+import qualified Cardano.BM.Configuration.Model as CM
+import           Cardano.BM.Data.Backend
+import           Cardano.BM.Data.BackendKind (BackendKind (TraceForwarderBK))
 import           Cardano.BM.Data.Tracer (ToLogObject (..))
-import           Cardano.BM.Trace (Trace, appendName)
+import           Cardano.BM.Trace (appendName)
+import           Cardano.Shell.Features.Logging (LoggingLayer (..))
 
 import qualified Ouroboros.Network.AnchoredFragment as AF
 import           Ouroboros.Network.Block
@@ -73,35 +83,48 @@ import           Topology
 import           TraceAcceptor
 import           TxSubmission
 
-runNode :: NodeCLIArguments -> Trace IO Text -> IO ()
-runNode nodeCli@NodeCLIArguments{..} trace = do
+runNode :: NodeCLIArguments -> LoggingLayer -> IO ()
+runNode nodeCli@NodeCLIArguments{..} loggingLayer = do
+    let !tr = (llAppendName loggingLayer) "node" (llBasicTrace loggingLayer)
+
     -- If the user asked to submit a transaction, we don't have to spin up a
     -- full node, we simply transmit it and exit.
     case command of
 
       TxSubmitter topology tx protocol -> do
-        let trace'      = appendName (pack (show (node topology))) trace
+        let trace'      = appendName (pack (show (node topology))) tr
         let tracer      = contramap pack $ toLogObject trace'
         SomeProtocol p  <- fromProtocol protocol
         handleTxSubmission p topology tx tracer
 
       TraceAcceptor -> do
-        let trace'      = appendName "acceptor" trace
+        let trace'      = appendName "acceptor" tr
         let tracer      = contramap pack $ toLogObject trace'
         handleTraceAcceptor tracer
 
       SimpleNode topology myNodeAddress protocol viewMode -> do
-        let trace'      = appendName (pack $ show $ node topology) trace
+        let trace'      = appendName (pack $ show $ node topology) tr
         let tracer      = contramap pack $ toLogObject trace'
         SomeProtocol p  <- fromProtocol protocol
         case viewMode of
           SimpleView -> handleSimpleNode p nodeCli myNodeAddress topology tracer
           LiveView   -> do
+#ifdef UNIX
+            let c = llConfiguration loggingLayer
             -- We run 'handleSimpleNode' as usual and run TUI thread as well.
+            -- turn off logging to the console, only forward it through a pipe to a central logging process
+            CM.setDefaultBackends c [TraceForwarderBK, UserDefinedBK "LiveViewBackend"]
             -- User will see a terminal graphics and will be able to interact with it.
             nodeThread <- Async.async $ handleSimpleNode p nodeCli myNodeAddress topology tracer
-            tuiThread  <- Async.async $ runNodeLiveView topology
-            _ <- Async.waitAny [nodeThread, tuiThread]
+
+            be :: LiveViewBackend Text <- realize c
+            let lvbe = MkBackend { bEffectuate = effectuate be, bUnrealize = unrealize be }
+            llAddBackend loggingLayer lvbe "LiveViewBackend"
+            setTopology be topology
+            captureCounters be tr
+
+            _ <- Async.waitAny [nodeThread]
+#endif
             return ()
 
 -- | Sets up a simple node, which will run the chain sync protocol and block
