@@ -38,21 +38,33 @@ The user can submit transactions to a node which includes them in its local memp
 
 ## Startup of the demonstration
 
-Write the following commands in a terminal:
+Add the next two lines to your $HOME/.tmux.conf file:
 
-1.) enter into a `nix-shell`
-2.) create a `tmux` session
+set-window-option -g mouse on
+set -g default-terminal "tmux-256color" 
+
+In a first terminal start the central logging process:
+
+    `./scripts/trace-acceptor.sh`
+
+In a second terminal:
+
+1.) create a `tmux` session
+
     `tmux new-session -s Demo`
-3.) run the demo script in this new session
+
+2.) run the demo script in this new session
+
     `./scripts/demo.sh`
 
 The window of the terminal will be split into four panes showing the three nodes running and a shell to enter commands for transaction submission, e.g.
 
 ```
-./scripts/submit-tx.sh --bft -n 2 --address a --amount 99
+./scripts/submit-tx.sh --real-pbft -n 2 --address a --amount 99 --txin ababa --txix 0
 
 ```
 The above command will prepare a transaction of amount 99 to address _a_ and sends the transaction for validation and integration into a block to node _2_.
+Increment the last argument '--txix' to send in a new transaction.
 
 
 

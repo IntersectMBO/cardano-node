@@ -1,6 +1,14 @@
 #!/usr/bin/env bash
 
-#tmux new-session -s 'Demo' -t demo
+# add to your ~/.tmux.conf:
+# set-window-option -g mouse on
+# set -g default-terminal "tmux-256color"
+
+# start a tmux session:
+# tmux new-session -s 'Demo' -t demo
+
+# then run this script
+
 
 export TERM=xterm-256color
 
