@@ -19,8 +19,12 @@ import           Control.Monad (forever, void)
 import           Control.Monad.IO.Class (liftIO)
 import           Data.Aeson (FromJSON)
 import           Data.Text (Text, pack, unpack)
-import           Data.Time.Clock (UTCTime, getCurrentTime)
+import           Data.Time.Calendar (Day (..))
+import           Data.Time.Clock (NominalDiffTime, UTCTime (..), addUTCTime,
+                                  diffUTCTime, getCurrentTime)
+import           Data.Time.Format (defaultTimeLocale, formatTime)
 import           Data.Version (showVersion)
+import           Data.Word (Word64)
 
 import qualified Brick.AttrMap as A
 import qualified Brick.BChan as Brick.BChan
@@ -37,19 +41,6 @@ import           Brick.Widgets.Core (hBox, hLimitPercent, padBottom, padLeft,
                                      vBox, vLimitPercent, withAttr,
                                      withBorderStyle)
 import qualified Brick.Widgets.ProgressBar as P
-import           Control.Concurrent (threadDelay)
-import qualified Control.Concurrent.Async as Async
-import           Control.Concurrent.MVar (MVar, modifyMVar_, newMVar, readMVar)
-import           Control.Monad (forever, void)
-import           Control.Monad.IO.Class (liftIO)
-import           Data.Aeson (FromJSON)
-import           Data.Text (Text, pack, unpack)
-import           Data.Time.Calendar (Day (..))
-import           Data.Time.Clock (NominalDiffTime, UTCTime (..), addUTCTime,
-                                  diffUTCTime, getCurrentTime)
-import           Data.Time.Format (defaultTimeLocale, formatTime)
-import           Data.Version (showVersion)
-import           Data.Word (Word64)
 import qualified Graphics.Vty as V
 
 import           Cardano.BM.Counters (readCounters)
@@ -256,6 +247,7 @@ cpuDoneAttr, cpuToDoAttr :: A.AttrName
 cpuDoneAttr = theBaseAttr <> A.attrName "cpu:done"
 cpuToDoAttr = theBaseAttr <> A.attrName "cpu:remaining"
 
+-- Please note that there's no full support of RGB, it's just a terminal. :-)
 progressToDoColorLFG
   , progressToDoColorLBG
   , progressDoneColorLFG
@@ -364,15 +356,12 @@ headerW p =
              . padRight (T.Pad 10)
              $ txt "CARDANO SL"
            , txt "release: "
-           , releaseW
+           ,   withAttr releaseAttr
+             $ str (lvsRelease p)
            , padLeft T.Max $ txt "Node: "
-           , nodeIdW
+           ,   withAttr nodeIdAttr
+             $ txt (lvsNodeId p)
            ]
-  where
-    releaseW =   withAttr releaseAttr
-               $ txt "Shelley"
-    nodeIdW  =   withAttr nodeIdAttr
-               $ txt "0"
 
 systemStatsW :: LiveViewState a -> Widget ()
 systemStatsW p =
