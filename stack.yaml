@@ -28,7 +28,7 @@ extra-deps:
 
     # Following deps are for cardano-shell
   - git: https://github.com/input-output-hk/cardano-shell
-    commit: 71a8257bfea837ddef716d8c81e436aa3273345e
+    commit: 28a327104bd85b62273797866886674f9c4f6c5a
 
   - binary-0.8.7.0
   - containers-0.5.11.0
@@ -56,7 +56,7 @@ extra-deps:
     #Ouroboros-network dependencies
 
   - git: https://github.com/input-output-hk/ouroboros-network
-    commit: ca270835199406a06be590d2391bd87b072e7537
+    commit: 89c9d4024174c3e96c0d8e8cb4d2b3fcdceb8a81
     subdirs:
         - io-sim-classes
         - network-mux

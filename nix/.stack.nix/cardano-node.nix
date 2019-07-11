@@ -20,6 +20,8 @@
           (hsPkgs.base)
           (hsPkgs.bytestring)
           (hsPkgs.canonical-json)
+          (hsPkgs.cborg)
+          (hsPkgs.mtl)
           (hsPkgs.optparse-applicative)
           (hsPkgs.time)
           (hsPkgs.cardano-binary)
