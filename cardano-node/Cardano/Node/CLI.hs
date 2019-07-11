@@ -1,4 +1,5 @@
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 module Cardano.Node.CLI (
   -- * Untyped/typed protocol boundary
