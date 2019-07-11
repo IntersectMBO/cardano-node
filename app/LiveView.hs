@@ -292,7 +292,7 @@ darkThemeAttributes =
     , (releaseAttr,     bold $ fg V.cyan)
     , (nodeIdAttr,      bold $ fg V.cyan)
     , (valueAttr,       bold $ fg V.white)
-    , (keyAttr,         bold $ fg V.green)
+    , (keyAttr,         bold $ fg V.white)
     , (mempoolDoneAttr, bold $ progressDoneColorDFG `on` progressDoneColorDBG)
     , (mempoolToDoAttr, bold $ progressToDoColorDFG `on` progressToDoColorDBG)
     , (memDoneAttr,     bold $ progressDoneColorDFG `on` progressDoneColorDBG)
