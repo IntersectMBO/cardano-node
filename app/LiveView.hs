@@ -440,10 +440,10 @@ nodeInfoValues lvs =
            ]
 
 eventHandler :: LiveViewState a -> BrickEvent n (LiveViewBackend a) -> EventM n (Next (LiveViewState a))
-eventHandler _   (AppEvent lvBackend) = do
+eventHandler prev (AppEvent lvBackend) = do
     next <- liftIO . readMVar . getbe $ lvBackend
-    M.continue next
-eventHandler lvs (VtyEvent e)         =
+    M.continue $ next { lvsColorTheme = lvsColorTheme prev }
+eventHandler lvs  (VtyEvent e)         =
     case e of
         V.EvKey  (V.KChar 'q') [] -> M.halt     lvs
         V.EvKey  (V.KChar 'Q') [] -> M.halt     lvs
@@ -452,7 +452,7 @@ eventHandler lvs (VtyEvent e)         =
         V.EvKey  (V.KChar 'l') [] -> M.continue $ lvs { lvsColorTheme = LightTheme }
         V.EvKey  (V.KChar 'L') [] -> M.continue $ lvs { lvsColorTheme = LightTheme }
         _                         -> M.continue lvs
-eventHandler lvs _                    = M.halt     lvs
+eventHandler lvs  _                    = M.halt lvs
 
 app :: M.App (LiveViewState a) (LiveViewBackend a) ()
 app =
