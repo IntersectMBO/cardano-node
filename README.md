@@ -9,7 +9,7 @@ Integration of the [ledger](https://github.com/input-output-hk/cardano-ledger), 
 
 A CLI utility to support a variety of key material operations (genesis, migration, pretty-printing..) for different system generations.
 
-Detailed documentation in its attendant [README](https://github.com/input-output-hk/cardano-shell/blob/master/app/genesis-tool/README.md).
+Detailed documentation in its attendant [README](app/genesis-tool/README.md).
 
 # Node demonstration
 
