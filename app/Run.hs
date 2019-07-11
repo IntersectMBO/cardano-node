@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns        #-}
 {-# LANGUAGE CPP                 #-}
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE GADTs               #-}
@@ -84,7 +85,7 @@ import           TxSubmission
 
 runNode :: NodeCLIArguments -> LoggingLayer -> IO ()
 runNode nodeCli@NodeCLIArguments{..} loggingLayer = do
-    let tr = (llAppendName loggingLayer) "node" (llBasicTrace loggingLayer)
+    let !tr = (llAppendName loggingLayer) "node" (llBasicTrace loggingLayer)
 
     -- If the user asked to submit a transaction, we don't have to spin up a
     -- full node, we simply transmit it and exit.
@@ -112,13 +113,14 @@ runNode nodeCli@NodeCLIArguments{..} loggingLayer = do
             let c = llConfiguration loggingLayer
             -- We run 'handleSimpleNode' as usual and run TUI thread as well.
             -- turn off logging to the console, only forward it through a pipe to a central logging process
-            CM.setDefaultBackends c [TraceForwarderBK]
+            CM.setDefaultBackends c [TraceForwarderBK, UserDefinedBK "LiveViewBackend"]
             -- User will see a terminal graphics and will be able to interact with it.
             nodeThread <- Async.async $ handleSimpleNode p nodeCli myNodeAddress topology tracer
 
             be :: LiveViewBackend Text <- realize c
             let lvbe = MkBackend { bEffectuate = effectuate be, bUnrealize = unrealize be }
             llAddBackend loggingLayer lvbe "LiveViewBackend"
+            setTopology be topology
             captureCounters be tr
 
             _ <- Async.waitAny [nodeThread]

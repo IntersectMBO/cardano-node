@@ -37,14 +37,29 @@ import           Brick.Widgets.Core (hBox, hLimitPercent, padBottom, padLeft,
                                      vBox, vLimitPercent, withAttr,
                                      withBorderStyle)
 import qualified Brick.Widgets.ProgressBar as P
+import           Control.Concurrent (threadDelay)
+import qualified Control.Concurrent.Async as Async
+import           Control.Concurrent.MVar (MVar, modifyMVar_, newMVar, readMVar)
+import           Control.Monad (forever, void)
+import           Control.Monad.IO.Class (liftIO)
+import           Data.Aeson (FromJSON)
+import           Data.Text (Text, pack, unpack)
+import           Data.Time.Calendar (Day (..))
+import           Data.Time.Clock (NominalDiffTime, UTCTime (..), addUTCTime,
+                                  diffUTCTime, getCurrentTime)
+import           Data.Time.Format (defaultTimeLocale, formatTime)
+import           Data.Version (showVersion)
+import           Data.Word (Word64)
 import qualified Graphics.Vty as V
 
 import           Cardano.BM.Counters (readCounters)
+import           Cardano.BM.Data.Aggregated (Measurable (..))
 import           Cardano.BM.Data.Backend
 import           Cardano.BM.Data.Counter
-import           Cardano.BM.Data.LogItem (LOContent (LogValue),
+import           Cardano.BM.Data.LogItem (LOContent (LogValue), LOMeta (..),
+                                          LogObject (..),
                                           PrivacyAnnotation (Confidential),
-                                          mkLOMeta)
+                                          mkLOMeta, utc2ns)
 import           Cardano.BM.Data.Observable
 import           Cardano.BM.Data.Severity
 import           Cardano.BM.Data.SubTrace
@@ -55,6 +70,15 @@ import           Ouroboros.Consensus.NodeId
 import           Paths_cardano_node (version)
 import           Topology
 
+-- constants, to be evaluated from host system
+
+-- getconf PAGESIZE
+pagesize :: Integer
+pagesize = 4096
+
+-- getconf CLK_TCK
+clktck :: Integer
+clktck = 100
 
 type LiveViewMVar a = MVar (LiveViewState a)
 newtype LiveViewBackend a = LiveViewBackend { getbe :: LiveViewMVar a }
@@ -71,24 +95,42 @@ instance (FromJSON a) => IsBackend LiveViewBackend a where
             initialVty <- buildVty
             ticker <- Async.async $ forever $ do
                         -- could be replaced by retry if we have TVar-like vars
-                        threadDelay 1000000 -- refresh TUI every 1s
+                        threadDelay 800000 -- refresh TUI every 800 ms
                         Brick.BChan.writeBChan eventChan $ LiveViewBackend mv
             Async.link ticker
             void $ M.customMain initialVty buildVty (Just eventChan) app initState
         modifyMVar_ mv $ \lvs -> return $ lvs { lvsUIThread = Just thr }
-        -- test changing of state
-        -- _ <- Async.async $ forever $ do
-        --         threadDelay 500000 -- refresh every 0.5s
-        --         modifyMVar_ mv $ \lvs -> do
-        --                 return $ lvs { lvsCPUUsagePerc = lvsCPUUsagePerc lvs + 0.001}
         return $ sharedState
 
     unrealize be = putStrLn $ "unrealize " <> show (typeof be)
 
 instance IsEffectuator LiveViewBackend a where
-    effectuate lvbe _item = do
-        modifyMVar_ (getbe lvbe) $ \lvs ->
-            return $ lvs { lvsBlockHeight = lvsBlockHeight lvs + 1 }
+    effectuate lvbe item = do
+        case item of
+            LogObject "cardano.node.metrics" meta content ->
+                case content of
+                    LogValue "Mem.resident" (PureI bytes) ->
+                        let mbytes = (fromIntegral (bytes * pagesize)) / 1024 / 1024
+                        in
+                        modifyMVar_ (getbe lvbe) $ \lvs ->
+                            return $ lvs { lvsMemoryUsageCurr = mbytes
+                                         , lvsMemoryUsageMax  = max (lvsMemoryUsageMax lvs) mbytes
+                                         , lvsUpTime          = diffUTCTime (tstamp meta) (lvsStartTime lvs)
+                                         }
+                    LogValue "Stat.utime" (PureI ticks) ->
+                        let tns = utc2ns (tstamp meta)
+                        in
+                        modifyMVar_ (getbe lvbe) $ \lvs ->
+                            let tdiff = min 1 $ (fromIntegral (tns - lvsCPUUsageNs lvs)) / 1000000000
+                                cpuperc = (fromIntegral (ticks - lvsCPUUsageLast lvs)) / (fromIntegral clktck) / tdiff
+                            in
+                            return $ lvs { lvsCPUUsagePerc = cpuperc
+                                         , lvsCPUUsageLast = ticks
+                                         , lvsCPUUsageNs   = tns
+                                         , lvsUpTime       = diffUTCTime (tstamp meta) (lvsStartTime lvs)
+                                         }
+                    _ -> return ()
+            _ -> return ()
 
     handleOverflow _ = return ()
 
@@ -103,12 +145,12 @@ data LiveViewState a = LiveViewState
     , lvsNodeId          :: Text
     , lvsVersion         :: String
     , lvsCommit          :: String
-    , lvsUpTime          :: String
+    , lvsUpTime          :: NominalDiffTime
     , lvsBlockHeight     :: Int
     , lvsBlocksMinted    :: Int
     , lvsTransactions    :: Int
     , lvsPeersConnected  :: Int
-    , lvsMaxNetDelay     :: Int
+    , lvsMaxNetDelay     :: Integer
     , lvsMempool         :: Int
     , lvsMempoolPerc     :: Float
     , lvsCPUUsagePerc    :: Float
@@ -116,6 +158,8 @@ data LiveViewState a = LiveViewState
     , lvsMemoryUsageMax  :: Float
     -- internal state
     , lvsStartTime       :: UTCTime
+    , lvsCPUUsageLast    :: Integer
+    , lvsCPUUsageNs      :: Word64
     , lvsMessage         :: Maybe a
     , lvsUIThread        :: Maybe (Async.Async ())
     , lvsMetricsThread   :: Maybe (Async.Async ())
@@ -124,14 +168,14 @@ data LiveViewState a = LiveViewState
 
 initLiveViewState :: IO (LiveViewState a)
 initLiveViewState = do
-    tstamp <- getCurrentTime
+    now <- getCurrentTime
     return $ LiveViewState
                 { lvsQuit            = False
                 , lvsRelease         = "Shelley"
-                , lvsNodeId          = "N/A"
+                , lvsNodeId          = ""
                 , lvsVersion         = showVersion version
                 , lvsCommit          = unpack gitRev
-                , lvsUpTime          = "00:00:00"
+                , lvsUpTime          = diffUTCTime now now
                 , lvsBlockHeight     = 1891
                 , lvsBlocksMinted    = 543
                 , lvsTransactions    = 1732
@@ -140,9 +184,11 @@ initLiveViewState = do
                 , lvsMempool         = 50
                 , lvsMempoolPerc     = 0.25
                 , lvsCPUUsagePerc    = 0.58
-                , lvsMemoryUsageCurr = 2.1
-                , lvsMemoryUsageMax  = 4.7
-                , lvsStartTime       = tstamp
+                , lvsMemoryUsageCurr = 0.0
+                , lvsMemoryUsageMax  = 0.2
+                , lvsStartTime       = now
+                , lvsCPUUsageLast    = 0
+                , lvsCPUUsageNs      = 10000
                 , lvsMessage         = Nothing
                 , lvsUIThread        = Nothing
                 , lvsMetricsThread   = Nothing
@@ -169,7 +215,6 @@ captureCounters lvbe trace0 = do
                 traceCounters trace cts
 
     modifyMVar_ (getbe lvbe) $ \lvs -> return $ lvs { lvsMetricsThread = Just thr }
-    return ()
     where
     traceCounters _tr [] = return ()
     traceCounters tr (c@(Counter _ct cn cv) : cs) = do
@@ -291,7 +336,7 @@ mainContentW :: LiveViewState a -> Widget ()
 mainContentW p =
       withBorderStyle BS.unicode
     . B.border $ vBox
-        [ headerW
+        [ headerW p
         , hBox [systemStatsW p, nodeInfoW p]
         , keysMessageW
         ]
@@ -309,8 +354,8 @@ keysMessageW =
            , txt " to change color theme"
            ]
 
-headerW :: Widget ()
-headerW =
+headerW :: LiveViewState a -> Widget ()
+headerW p =
       C.hCenter
     . padTop   (T.Pad 1)
     . padLeft  (T.Pad 2)
@@ -353,13 +398,13 @@ systemStatsW p =
                  ) $ bar mempoolLabel (lvsMempoolPerc p)
     mempoolLabel = Just $ (show . lvsMempool $ p)
                         ++ " / "
-                        ++ (take 5 $ show $ lvsMempoolPerc p) ++ "%"
+                        ++ (take 5 $ show $ lvsMempoolPerc p * 100) ++ "%"
     memUsageBar = updateAttrMap
                   (A.mapAttrNames [ (memDoneAttr, P.progressCompleteAttr)
                                   , (memToDoAttr, P.progressIncompleteAttr)
                                   ]
                   ) $ bar memLabel lvsMemUsagePerc
-    memLabel = Just $ (show $ lvsMemoryUsageCurr p) ++ "GB / max " ++ (show $ lvsMemoryUsageMax p) ++ "GB"
+    memLabel = Just $ (take 5 $ show $ lvsMemoryUsageCurr p) ++ "MB / max " ++ (take 5 $ show $ lvsMemoryUsageMax p) ++ "MB"
     cpuUsageBar = updateAttrMap
                   (A.mapAttrNames [ (cpuDoneAttr, P.progressCompleteAttr)
                                   , (cpuToDoAttr, P.progressIncompleteAttr)
@@ -367,7 +412,7 @@ systemStatsW p =
                   ) $ bar cpuLabel (lvsCPUUsagePerc p)
     cpuLabel = Just $ (take 5 $ show $ lvsCPUUsagePerc p * 100) ++ "%"
     bar lbl pcntg = P.progressBar lbl pcntg
-    lvsMemUsagePerc = (lvsMemoryUsageCurr p) / (0.2 + (lvsMemoryUsageMax p))
+    lvsMemUsagePerc = (lvsMemoryUsageCurr p) / (max 200 (lvsMemoryUsageMax p))
 
 nodeInfoW :: LiveViewState a -> Widget ()
 nodeInfoW p =
@@ -394,8 +439,10 @@ nodeInfoValues :: LiveViewState a -> Widget ()
 nodeInfoValues lvs =
       withAttr valueAttr
     $ vBox [                    str (lvsVersion lvs)
-           ,                    str (take 7 $ lvsCommit lvs) -- Probably we don't need the full commit
-           , padTop (T.Pad 1) $ str (lvsUpTime lvs)
+           ,                    str (take 7 $ lvsCommit lvs)
+           , padTop (T.Pad 1) $ str (formatTime defaultTimeLocale "%X" $
+                                        -- NominalDiffTime is not an instance of FormatTime before time-1.9.1
+                                        addUTCTime (lvsUpTime lvs) (UTCTime (ModifiedJulianDay 0) 0))
            , padTop (T.Pad 1) $ str (show . lvsBlockHeight $ lvs)
            ,                    str (show . lvsBlocksMinted $ lvs)
            , padTop (T.Pad 1) $ str (show . lvsTransactions $ lvs)
