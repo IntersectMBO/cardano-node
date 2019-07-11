@@ -12,13 +12,13 @@ setupBackends:
   - KatipBK
   - EKGViewBK
   - EditorBK
-  # - TraceForwarderBK
+  - TraceForwarderBK
 
 # if not indicated otherwise, then messages are passed to these backends:
 defaultBackends:
-  - EditorBK
-  # - KatipBK
-  # - TraceForwarderBK
+  - TraceForwarderBK
+  #- KatipBK
+  #- EditorBK
 
 # file to forward traced objects
 logOutput: "log-pipe-0"
@@ -87,8 +87,7 @@ options:
         - NetStats
         - IOStats
   mapBackends:
-    cardano.epoch-validation.benchmark:
-      - AggregationBK
-    '#aggregation.cardano.epoch-validation.benchmark':
-      - EKGViewBK
+    cardano.node.metrics:
+      - kind: UserDefinedBK
+        name: LiveViewBackend
 
