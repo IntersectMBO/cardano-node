@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 now=`date "+%Y-%m-%d 00:00:00"`
-#CMD="stack exec cardano-node -- "
+#CMD="stack exec --nix cardano-node -- "
 CMD="cabal new-exec cardano-node -- "
 
 set -x
