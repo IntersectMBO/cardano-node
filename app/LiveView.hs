@@ -121,9 +121,12 @@ instance IsEffectuator LiveViewBackend Text where
                                          }
                     _ -> return ()
             LogObject _ _ (LogMessage msg) ->
-                when ("As leader of slot" `isPrefixOf` msg) $
+                when ("As leader of slot" `isPrefixOf` msg) $ do
+                    let (_:_:_:_:slotNo:_) = words $ unpack msg
+                        blockHeight = read slotNo
                     modifyMVar_ (getbe lvbe) $ \lvs ->
                         return $ lvs { lvsBlocksMinted = lvsBlocksMinted lvs + 1
+                                     , lvsBlockHeight  = blockHeight
                                      }
             _ -> return ()
 
