@@ -29,8 +29,7 @@ import           Control.Tracer
 import           Crypto.Random
 import           Data.ByteString.Lazy (ByteString)
 import           Data.Functor.Contravariant (contramap)
-import qualified Data.Map.Strict as M
-import           Data.Maybe
+import qualified Data.List as List
 import           Data.Semigroup ((<>))
 import           Data.Text (Text, pack)
 import           Network.Socket as Socket
@@ -151,15 +150,16 @@ handleSimpleNode :: forall blk. RunDemo blk
                  -> IO ()
 handleSimpleNode p NodeCLIArguments{..} myNodeAddress (TopologyInfo myNodeId topologyFile) tracer = do
     traceWith tracer $ "System started at " <> show systemStart
-    t@(NetworkTopology nodeSetups) <-
+    NetworkTopology nodeSetups <-
       either error id <$> readTopologyFile topologyFile
-    let topology  = toNetworkMap t
-        nodeSetup = fromMaybe (error "node not found.") $
-                          M.lookup myNodeId topology
+
+    let producers' = case List.lookup myNodeAddress $ map (\ns -> (nodeAddress ns, producers ns)) nodeSetups of
+          Just ps -> ps
+          Nothing -> error "handleSimpleNode: own address not found in topology"
 
     traceWith tracer $ "**************************************"
-    traceWith tracer $ "I am Node = " <> show myNodeId
-    traceWith tracer $ "My producers are " <> show (producers nodeSetup)
+    traceWith tracer $ "I am Node = " <> show myNodeAddress
+    traceWith tracer $ "My producers are " <> show producers'
     traceWith tracer $ "**************************************"
 
     let ProtocolInfo{pInfoConfig, pInfoInitLedger, pInfoInitState} =
@@ -328,8 +328,8 @@ handleSimpleNode p NodeCLIArguments{..} myNodeAddress (TopologyInfo myNodeId top
           Nothing
           (const Nothing)
           (IPSubscriptionTarget {
-              ispIps     = map nodeAddressToSockAddr (producers nodeSetup),
-              ispValency = length (producers nodeSetup)
+              ispIps     = map nodeAddressToSockAddr producers',
+              ispValency = length producers'
             })
           (\sock -> do
               remoteAddr <- getPeerName sock
