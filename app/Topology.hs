@@ -7,9 +7,6 @@ module Topology where
 import           Data.Aeson
 import           Data.Aeson.TH
 import qualified Data.ByteString as B
-import           Data.List (foldl')
-import           Data.Map.Strict (Map)
-import qualified Data.Map.Strict as M
 import qualified Data.IP as IP
 import           Data.String.Conv (toS)
 import           Network.Socket
@@ -43,8 +40,7 @@ instance FromJSON NodeAddress where
       <*> v .: "port"
 
 data NodeSetup = NodeSetup {
-    nodeId      :: NodeId  -- TODO: do we need this?
-  , nodeAddress :: NodeAddress
+    nodeAddress :: NodeAddress
   , producers   :: [NodeAddress]
   }
   deriving Show
@@ -58,12 +54,6 @@ data NetworkTopology = NetworkTopology [NodeSetup]
   deriving Show
 
 deriveFromJSON defaultOptions ''NetworkTopology
-
-type NetworkMap = Map NodeId NodeSetup
-
-toNetworkMap :: NetworkTopology -> NetworkMap
-toNetworkMap (NetworkTopology xs) =
-    foldl' (\acc ns -> M.insert (nodeId ns) ns acc) mempty xs
 
 readTopologyFile :: FilePath -> IO (Either String NetworkTopology)
 readTopologyFile topo = do
