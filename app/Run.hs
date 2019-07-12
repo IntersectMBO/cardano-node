@@ -2,11 +2,13 @@
 {-# LANGUAGE CPP                 #-}
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE GADTs               #-}
+{-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE NamedFieldPuns      #-}
 {-# LANGUAGE NumericUnderscores  #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE RecordWildCards     #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications    #-}
 
 {-# OPTIONS_GHC -Wno-simplifiable-class-constraints #-}
 
@@ -30,8 +32,10 @@ import           Crypto.Random
 import           Data.ByteString.Lazy (ByteString)
 import           Data.Functor.Contravariant (contramap)
 import qualified Data.List as List
+import           Data.Proxy (Proxy (..))
 import           Data.Semigroup ((<>))
 import           Data.Text (Text, pack)
+import           Data.Time.Clock (DiffTime, secondsToDiffTime)
 import           Network.Socket as Socket
 import           System.Directory (removeFile)
 import           System.IO.Error (isDoesNotExistError)
@@ -61,21 +65,29 @@ import           Ouroboros.Network.Protocol.Handshake.Type
 import           Ouroboros.Network.Protocol.Handshake.Version
 import           Ouroboros.Network.Protocol.LocalTxSubmission.Codec
 
+import           Ouroboros.Consensus.Block (BlockProtocol)
 import           Ouroboros.Consensus.BlockchainTime
 import           Ouroboros.Consensus.ChainSyncClient (ClockSkew (..))
 import           Ouroboros.Consensus.Demo
 import           Ouroboros.Consensus.Demo.Run
+import           Ouroboros.Consensus.Ledger.Abstract
+import           Ouroboros.Consensus.Ledger.Extended (ExtLedgerState)
 import           Ouroboros.Consensus.Node
 import           Ouroboros.Consensus.NodeId
 import           Ouroboros.Consensus.NodeNetwork
+import           Ouroboros.Consensus.Protocol.Abstract
 import           Ouroboros.Consensus.Util.Condense
 import           Ouroboros.Consensus.Util.Orphans ()
 import           Ouroboros.Consensus.Util.STM
 import           Ouroboros.Consensus.Util.ThreadRegistry
 
 import           Ouroboros.Storage.ChainDB (ChainDB)
-import qualified Ouroboros.Storage.ChainDB as ChainDB hiding (openDB)
-import qualified Ouroboros.Storage.ChainDB.Mock as ChainDB
+import qualified Ouroboros.Storage.ChainDB as ChainDB
+import           Ouroboros.Storage.Common
+import           Ouroboros.Storage.ImmutableDB (ValidationPolicy (..))
+import           Ouroboros.Storage.LedgerDB.DiskPolicy (defaultDiskPolicy)
+import           Ouroboros.Storage.LedgerDB.MemPolicy (defaultMemPolicy)
+import qualified Ouroboros.Storage.LedgerDB.OnDisk as LedgerDB
 
 import           Cardano.Node.CLI
 import           CLI
@@ -188,10 +200,14 @@ handleSimpleNode p NodeCLIArguments{..} myNodeAddress (TopologyInfo myNodeId top
                                proof
           }
 
-      chainDB :: ChainDB IO blk <-
-        ChainDB.openDB
-          pInfoConfig
-          pInfoInitLedger
+      let chainDbArgs = mkChainDbArgs
+                          pInfoConfig
+                          pInfoInitLedger
+                          registry
+                          (CoreNodeId nid)
+                          tracer
+                          slotDuration
+      chainDB :: ChainDB IO blk <- ChainDB.openDB chainDbArgs
 
       btime  <- realBlockchainTime registry slotDuration systemStart
       let nodeParams :: NodeParams IO Peer blk
@@ -346,7 +362,6 @@ handleSimpleNode p NodeCLIArguments{..} myNodeAddress (TopologyInfo myNodeId top
       void $ Async.waitAny [localServer, peerServer, subManager]
 
   where
-
       nid :: Int
       nid = case myNodeId of
               CoreId  n -> n
@@ -383,3 +398,101 @@ removeStaleLocalSocket socketPath =
         if isDoesNotExistError e
           then return ()
           else throwIO e
+
+mkChainDbArgs :: forall blk. RunDemo blk
+              => NodeConfig (BlockProtocol blk)
+              -> ExtLedgerState blk
+              -> ThreadRegistry IO
+              -> CoreNodeId
+              -> Tracer IO String
+              -> SlotLength
+              -> ChainDB.ChainDbArgs IO blk
+mkChainDbArgs cfg initLedger registry (CoreNodeId nid) tracer slotDuration =
+    (ChainDB.defaultArgs dbPath)
+      { ChainDB.cdbBlocksPerFile    = 10
+      , ChainDB.cdbDecodeBlock      = demoDecodeBlock       cfg
+      , ChainDB.cdbDecodeChainState = demoDecodeChainState  (Proxy @blk)
+      , ChainDB.cdbDecodeHash       = demoDecodeHeaderHash
+      , ChainDB.cdbDecodeLedger     = demoDecodeLedgerState cfg
+      , ChainDB.cdbEncodeBlock      = demoEncodeBlock       cfg
+      , ChainDB.cdbEncodeChainState = demoEncodeChainState  (Proxy @blk)
+      , ChainDB.cdbEncodeHash       = demoEncodeHeaderHash
+      , ChainDB.cdbEncodeLedger     = demoEncodeLedgerState cfg
+      , ChainDB.cdbEpochSize        = demoEpochSize         (Proxy @blk)
+      , ChainDB.cdbGenesis          = return initLedger
+      , ChainDB.cdbDiskPolicy       = defaultDiskPolicy secParam slotDiffTime
+      , ChainDB.cdbIsEBB            = \blk -> if demoIsEBB blk
+                                              then Just (blockHash blk)
+                                              else Nothing
+      , ChainDB.cdbMemPolicy        = defaultMemPolicy secParam
+      , ChainDB.cdbNodeConfig       = cfg
+      , ChainDB.cdbThreadRegistry   = registry
+      , ChainDB.cdbTracer           = readableChainDBTracer tracer
+      , ChainDB.cdbValidation       = ValidateMostRecentEpoch
+      , ChainDB.cdbGcDelay          = secondsToDiffTime 10
+      }
+  where
+    dbPath = "db-" <> show nid
+
+    secParam = protocolSecurityParam cfg
+
+    -- TODO cleaner way with subsecond precision
+    slotDiffTime :: DiffTime
+    slotDiffTime = secondsToDiffTime
+      (slotLengthToMillisec slotDuration `div` 1000)
+
+-- Converts the trace events from the ChainDB that we're interested in into
+-- human-readable trace messages.
+readableChainDBTracer
+    :: forall m blk.
+       (Monad m, Condense (HeaderHash blk), ProtocolLedgerView blk)
+    => Tracer m String -> Tracer m (ChainDB.TraceEvent blk)
+readableChainDBTracer tracer = Tracer $ \case
+    ChainDB.TraceAddBlockEvent ev -> case ev of
+      ChainDB.StoreButDontChange   pt -> tr $
+        "Ignoring block: " <> condense pt
+      ChainDB.TryAddToCurrentChain pt -> tr $
+        "Block fits onto the current chain: " <> condense pt
+      ChainDB.TrySwitchToAFork pt _   -> tr $
+        "Block fits onto some fork: " <> condense pt
+      ChainDB.SwitchedToChain _ c     -> tr $
+        "Chain changed, new tip: " <> condense (AF.headPoint c)
+      ChainDB.AddBlockValidation ev' -> case ev' of
+        ChainDB.InvalidBlock err pt -> tr $
+          "Invalid block " <> condense pt <> ": " <> show err
+        _ -> ignore
+      _  -> ignore
+    ChainDB.TraceLedgerEvent ev -> case ev of
+      ChainDB.InitLog ev' -> traceInitLog ev'
+      ChainDB.TookSnapshot snap pt -> tr $
+        "Took ledger snapshot " <> show snap <> " at " <> condense pt
+      ChainDB.DeletedSnapshot snap -> tr $
+        "Deleted old snapshot " <> show snap
+    ChainDB.TraceCopyToImmDBEvent ev -> case ev of
+      ChainDB.CopiedBlockToImmDB pt -> tr $
+        "Copied block " <> condense pt <> " to the ImmutableDB"
+      _ -> ignore
+    ChainDB.TraceGCEvent ev -> case ev of
+      ChainDB.PerformedGC slot       -> tr $
+        "Performed a garbage collection for " <> condense slot
+      _ -> ignore
+    ChainDB.TraceOpenEvent ev -> case ev of
+      ChainDB.OpenedDB immTip tip -> tr $
+        "Opened with immutable tip at " <> condense immTip <>
+        " and tip " <> condense tip
+      _ -> ignore
+    _ -> ignore
+  where
+    tr s = traceWith tracer ("ChainDB | " <> s)
+
+    ignore :: m ()
+    ignore = return ()
+
+    traceInitLog = \case
+      LedgerDB.InitFromGenesis -> tr "Initialised the ledger from genesis"
+      LedgerDB.InitFromSnapshot snap tip -> tr $
+        "Initialised the ledger from snapshot " <> show snap <> " at " <>
+        condense (tipToPoint tip)
+      LedgerDB.InitFailure snap _failure initLog -> do
+          tr $ "Snapshot " <> show snap <> " invalid"
+          traceInitLog initLog
