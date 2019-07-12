@@ -284,6 +284,8 @@ handleSimpleNode p NodeCLIArguments{..} myNodeAddress (TopologyInfo myNodeId top
 
       watchChain registry tracer chainDB
 
+      -- TODO: this should be removed after resolving
+      -- https://github.com/input-output-hk/ouroboros-network/issues/751
       myAddr:_ <- case myNodeAddress of
         NodeAddress host port -> getAddrInfo Nothing (Just host) (Just port)
 
