@@ -154,6 +154,10 @@ data LiveViewState a = LiveViewState
     , lvsCPUUsagePerc    :: Float
     , lvsMemoryUsageCurr :: Float
     , lvsMemoryUsageMax  :: Float
+    , lvsDiskIOCurr      :: Float
+    , lvsDiskIOMax       :: Float
+    , lvsNetworkIOCurr   :: Float
+    , lvsNetworkIOMax    :: Float
     -- internal state
     , lvsStartTime       :: UTCTime
     , lvsCPUUsageLast    :: Integer
@@ -184,6 +188,10 @@ initLiveViewState = do
                 , lvsCPUUsagePerc    = 0.58
                 , lvsMemoryUsageCurr = 0.0
                 , lvsMemoryUsageMax  = 0.2
+                , lvsDiskIOCurr      = 0.0
+                , lvsDiskIOMax       = 50.0
+                , lvsNetworkIOCurr   = 0.0
+                , lvsNetworkIOMax    = 50.0
                 , lvsStartTime       = now
                 , lvsCPUUsageLast    = 0
                 , lvsCPUUsageNs      = 10000
@@ -257,6 +265,14 @@ cpuDoneAttr, cpuToDoAttr :: A.AttrName
 cpuDoneAttr = theBaseAttr <> A.attrName "cpu:done"
 cpuToDoAttr = theBaseAttr <> A.attrName "cpu:remaining"
 
+diskIODoneAttr, diskIOToDoAttr :: A.AttrName
+diskIODoneAttr = theBaseAttr <> A.attrName "diskIO:done"
+diskIOToDoAttr = theBaseAttr <> A.attrName "diskIO:remaining"
+
+networkIODoneAttr, networkIOToDoAttr :: A.AttrName
+networkIODoneAttr = theBaseAttr <> A.attrName "networkIO:done"
+networkIOToDoAttr = theBaseAttr <> A.attrName "networkIO:remaining"
+
 -- Please note that there's no full support of RGB, it's just a terminal. :-)
 progressToDoColorLFG
   , progressToDoColorLBG
@@ -283,34 +299,42 @@ bold a = V.withStyle a V.bold
 
 lightThemeAttributes :: [(A.AttrName, V.Attr)]
 lightThemeAttributes =
-    [ (cardanoAttr,     bold $ fg V.black)
-    , (releaseAttr,     bold $ fg V.blue)
-    , (nodeIdAttr,      bold $ fg V.blue)
-    , (valueAttr,       bold $ fg V.black)
-    , (keyAttr,         bold $ fg V.magenta)
-    , (barValueAttr,    bold $ fg V.black)
-    , (mempoolDoneAttr, bold $ progressDoneColorLFG `on` progressDoneColorLBG)
-    , (mempoolToDoAttr, bold $ progressToDoColorLFG `on` progressToDoColorLBG)
-    , (memDoneAttr,     bold $ progressDoneColorLFG `on` progressDoneColorLBG)
-    , (memToDoAttr,     bold $ progressToDoColorLFG `on` progressToDoColorLBG)
-    , (cpuDoneAttr,     bold $ progressDoneColorLFG `on` progressDoneColorLBG)
-    , (cpuToDoAttr,     bold $ progressToDoColorLFG `on` progressToDoColorLBG)
+    [ (cardanoAttr,       bold $ fg V.black)
+    , (releaseAttr,       bold $ fg V.blue)
+    , (nodeIdAttr,        bold $ fg V.blue)
+    , (valueAttr,         bold $ fg V.black)
+    , (keyAttr,           bold $ fg V.magenta)
+    , (barValueAttr,      bold $ fg V.black)
+    , (mempoolDoneAttr,   bold $ progressDoneColorLFG `on` progressDoneColorLBG)
+    , (mempoolToDoAttr,   bold $ progressToDoColorLFG `on` progressToDoColorLBG)
+    , (memDoneAttr,       bold $ progressDoneColorLFG `on` progressDoneColorLBG)
+    , (memToDoAttr,       bold $ progressToDoColorLFG `on` progressToDoColorLBG)
+    , (cpuDoneAttr,       bold $ progressDoneColorLFG `on` progressDoneColorLBG)
+    , (cpuToDoAttr,       bold $ progressToDoColorLFG `on` progressToDoColorLBG)
+    , (diskIODoneAttr,    bold $ progressToDoColorDFG `on` progressToDoColorDBG)
+    , (diskIOToDoAttr,    bold $ progressToDoColorDFG `on` progressToDoColorDBG)
+    , (networkIODoneAttr, bold $ progressToDoColorDFG `on` progressToDoColorDBG)
+    , (networkIOToDoAttr, bold $ progressToDoColorDFG `on` progressToDoColorDBG)
     ]
 
 darkThemeAttributes :: [(A.AttrName, V.Attr)]
 darkThemeAttributes =
-    [ (cardanoAttr,     bold $ fg V.white)
-    , (releaseAttr,     bold $ fg V.cyan)
-    , (nodeIdAttr,      bold $ fg V.cyan)
-    , (valueAttr,       bold $ fg V.white)
-    , (keyAttr,         bold $ fg V.white)
-    , (barValueAttr,    bold $ fg V.white)
-    , (mempoolDoneAttr, bold $ progressDoneColorDFG `on` progressDoneColorDBG)
-    , (mempoolToDoAttr, bold $ progressToDoColorDFG `on` progressToDoColorDBG)
-    , (memDoneAttr,     bold $ progressDoneColorDFG `on` progressDoneColorDBG)
-    , (memToDoAttr,     bold $ progressToDoColorDFG `on` progressToDoColorDBG)
-    , (cpuDoneAttr,     bold $ progressDoneColorDFG `on` progressDoneColorDBG)
-    , (cpuToDoAttr,     bold $ progressToDoColorDFG `on` progressToDoColorDBG)
+    [ (cardanoAttr,       bold $ fg V.white)
+    , (releaseAttr,       bold $ fg V.cyan)
+    , (nodeIdAttr,        bold $ fg V.cyan)
+    , (valueAttr,         bold $ fg V.white)
+    , (keyAttr,           bold $ fg V.white)
+    , (barValueAttr,      bold $ fg V.white)
+    , (mempoolDoneAttr,   bold $ progressDoneColorDFG `on` progressDoneColorDBG)
+    , (mempoolToDoAttr,   bold $ progressToDoColorDFG `on` progressToDoColorDBG)
+    , (memDoneAttr,       bold $ progressDoneColorDFG `on` progressDoneColorDBG)
+    , (memToDoAttr,       bold $ progressToDoColorDFG `on` progressToDoColorDBG)
+    , (cpuDoneAttr,       bold $ progressDoneColorDFG `on` progressDoneColorDBG)
+    , (cpuToDoAttr,       bold $ progressToDoColorDFG `on` progressToDoColorDBG)
+    , (diskIODoneAttr,    bold $ progressToDoColorDFG `on` progressToDoColorDBG)
+    , (diskIOToDoAttr,    bold $ progressToDoColorDFG `on` progressToDoColorDBG)
+    , (networkIODoneAttr, bold $ progressToDoColorDFG `on` progressToDoColorDBG)
+    , (networkIOToDoAttr, bold $ progressToDoColorDFG `on` progressToDoColorDBG)
     ]
 
 lightTheme :: Theme
@@ -380,20 +404,30 @@ systemStatsW p =
       padTop   (T.Pad 2)
     . padLeft  (T.Pad 2)
     . padRight (T.Pad 2)
-    $ vBox [ vBox [ hBox [ padBottom (T.Pad 1) $ txt "Mempool:"
+    $ vBox [ vBox [ hBox [ txt "Mempool:"
                          , withAttr barValueAttr . padLeft T.Max $ str "200"
                          ]
-                  , padBottom (T.Pad 2) $ memPoolBar
+                  , padBottom (T.Pad 1) $ memPoolBar
                   ]
-           , vBox [ hBox [ padBottom (T.Pad 1) $ txt "Memory usage:"
-                         , withAttr barValueAttr . padLeft T.Max $ str $ (show $ max (lvsMemoryUsageMax p) 200.0) <> " MB"
+           , vBox [ hBox [ txt "Memory usage:"
+                         , withAttr barValueAttr . padLeft T.Max $ str $ (take 5 $ show $ max (lvsMemoryUsageMax p) 200.0) <> " MB"
                          ]
-                  , padBottom (T.Pad 2) $ memUsageBar
+                  , padBottom (T.Pad 1) $ memUsageBar
                   ]
-           , vBox [ hBox [ padBottom (T.Pad 1) $ txt "CPU usage:"
+           , vBox [ hBox [ txt "CPU usage:"
                          , withAttr barValueAttr . padLeft T.Max $ str "100%"
                          ]
-                  , padBottom (T.Pad 2) $ cpuUsageBar
+                  , padBottom (T.Pad 1) $ cpuUsageBar
+                  ]
+           , vBox [ hBox [ txt "Disk I/O:"
+                         , withAttr barValueAttr . padLeft T.Max $ str $ (take 5 $ show $ max (lvsDiskIOMax p) 500.0) <> " MB/s"
+                         ]
+                  , padBottom (T.Pad 1) $ diskIOBar
+                  ]
+           , vBox [ hBox [ txt "Network I/O:"
+                         , withAttr barValueAttr . padLeft T.Max $ str $ (take 5 $ show $ max (lvsNetworkIOMax p) 100.0) <> " MB/s"
+                         ]
+                  , padBottom (T.Pad 1) $ networkIOBar
                   ]
            ]
   where
@@ -411,13 +445,25 @@ systemStatsW p =
                                   , (memToDoAttr, P.progressIncompleteAttr)
                                   ]
                   ) $ bar memLabel lvsMemUsagePerc
-    memLabel = Just $ (take 5 $ show $ lvsMemoryUsageCurr p) ++ "MB / max " ++ (take 5 $ show $ lvsMemoryUsageMax p) ++ "MB"
+    memLabel = Just $ (take 5 $ show $ lvsMemoryUsageCurr p) ++ " MB / max " ++ (take 5 $ show $ lvsMemoryUsageMax p) ++ " MB"
     cpuUsageBar = updateAttrMap
                   (A.mapAttrNames [ (cpuDoneAttr, P.progressCompleteAttr)
                                   , (cpuToDoAttr, P.progressIncompleteAttr)
                                   ]
                   ) $ bar cpuLabel (lvsCPUUsagePerc p)
     cpuLabel = Just $ (take 5 $ show $ lvsCPUUsagePerc p * 100) ++ "%"
+    diskIOBar = updateAttrMap
+                (A.mapAttrNames [ (diskIODoneAttr, P.progressCompleteAttr)
+                                , (diskIOToDoAttr, P.progressIncompleteAttr)
+                                ]
+                ) $ bar diskIOLabel (lvsDiskIOCurr p)
+    diskIOLabel = Just $ (take 5 $ show $ lvsDiskIOCurr p) ++ " MB/s"
+    networkIOBar = updateAttrMap
+                   (A.mapAttrNames [ (networkIODoneAttr, P.progressCompleteAttr)
+                                   , (networkIOToDoAttr, P.progressIncompleteAttr)
+                                   ]
+                   ) $ bar networkIOLabel (lvsNetworkIOCurr p)
+    networkIOLabel = Just $ (take 5 $ show $ lvsNetworkIOCurr p) ++ " MB/s"
     bar lbl pcntg = P.progressBar lbl pcntg
     lvsMemUsagePerc = (lvsMemoryUsageCurr p) / (max 200 (lvsMemoryUsageMax p))
 
