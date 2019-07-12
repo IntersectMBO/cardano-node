@@ -15,10 +15,9 @@ module LiveView (
 import           Control.Concurrent (threadDelay)
 import qualified Control.Concurrent.Async as Async
 import           Control.Concurrent.MVar (MVar, modifyMVar_, newMVar, readMVar)
-import           Control.Monad (forever, void)
+import           Control.Monad (forever, void, when)
 import           Control.Monad.IO.Class (liftIO)
-import           Data.Aeson (FromJSON)
-import           Data.Text (Text, pack, unpack)
+import           Data.Text (Text, isPrefixOf, pack, unpack)
 import           Data.Time.Calendar (Day (..))
 import           Data.Time.Clock (NominalDiffTime, UTCTime (..), addUTCTime,
                                   diffUTCTime, getCurrentTime)
@@ -47,7 +46,7 @@ import           Cardano.BM.Counters (readCounters)
 import           Cardano.BM.Data.Aggregated (Measurable (..))
 import           Cardano.BM.Data.Backend
 import           Cardano.BM.Data.Counter
-import           Cardano.BM.Data.LogItem (LOContent (LogValue), LOMeta (..),
+import           Cardano.BM.Data.LogItem (LOContent (..), LOMeta (..),
                                           LogObject (..),
                                           PrivacyAnnotation (Confidential),
                                           mkLOMeta, utc2ns)
@@ -74,7 +73,7 @@ clktck = 100
 type LiveViewMVar a = MVar (LiveViewState a)
 newtype LiveViewBackend a = LiveViewBackend { getbe :: LiveViewMVar a }
 
-instance (FromJSON a) => IsBackend LiveViewBackend a where
+instance IsBackend LiveViewBackend Text where
     typeof _ = UserDefinedBK "LiveViewBackend"
     realize _ = do
         initState <- initLiveViewState
@@ -95,7 +94,7 @@ instance (FromJSON a) => IsBackend LiveViewBackend a where
 
     unrealize be = putStrLn $ "unrealize " <> show (typeof be)
 
-instance IsEffectuator LiveViewBackend a where
+instance IsEffectuator LiveViewBackend Text where
     effectuate lvbe item = do
         case item of
             LogObject "cardano.node.metrics" meta content ->
@@ -121,6 +120,11 @@ instance IsEffectuator LiveViewBackend a where
                                          , lvsUpTime       = diffUTCTime (tstamp meta) (lvsStartTime lvs)
                                          }
                     _ -> return ()
+            LogObject _ _ (LogMessage msg) ->
+                when ("As leader of slot" `isPrefixOf` msg) $
+                    modifyMVar_ (getbe lvbe) $ \lvs ->
+                        return $ lvs { lvsBlocksMinted = lvsBlocksMinted lvs + 1
+                                     }
             _ -> return ()
 
     handleOverflow _ = return ()
@@ -137,12 +141,12 @@ data LiveViewState a = LiveViewState
     , lvsVersion         :: String
     , lvsCommit          :: String
     , lvsUpTime          :: NominalDiffTime
-    , lvsBlockHeight     :: Int
-    , lvsBlocksMinted    :: Int
-    , lvsTransactions    :: Int
-    , lvsPeersConnected  :: Int
+    , lvsBlockHeight     :: Word64
+    , lvsBlocksMinted    :: Word64
+    , lvsTransactions    :: Word64
+    , lvsPeersConnected  :: Word64
     , lvsMaxNetDelay     :: Integer
-    , lvsMempool         :: Int
+    , lvsMempool         :: Word64
     , lvsMempoolPerc     :: Float
     , lvsCPUUsagePerc    :: Float
     , lvsMemoryUsageCurr :: Float
@@ -168,7 +172,7 @@ initLiveViewState = do
                 , lvsCommit          = unpack gitRev
                 , lvsUpTime          = diffUTCTime now now
                 , lvsBlockHeight     = 1891
-                , lvsBlocksMinted    = 543
+                , lvsBlocksMinted    = 0
                 , lvsTransactions    = 1732
                 , lvsPeersConnected  = 3
                 , lvsMaxNetDelay     = 17
