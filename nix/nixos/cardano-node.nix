@@ -89,11 +89,10 @@ in {
         '';
       };
 
-      producers-peers = mkOption {
-        type = types.listOf types.str;
-        default = [];
+      topology = mkOption {
+        type = types.path;
         description = ''
-          List of peers nodes (addr:port).
+          Cluster topology.
         '';
       };
 
@@ -118,25 +117,9 @@ in {
       description   = "cardano-node node service";
       after         = [ "network.target" ];
       wantedBy = [ "multi-user.target" ];
-      script = let 
-        # TODO: generate logger config:
-        loggerConfig = cfg.logger.config-file;
-
-        topology = builtins.toFile "topology.json" (builtins.toJSON [{
-          nodeId = cfg.node-id;
-          nodeAddress = {
-            addr = cfg.host;
-            port = builtins.toString cfg.port;
-          };
-          producers = map (p: let s = builtins.split ":" p; in {
-            addr = builtins.head s;
-            port = builtins.head (builtins.tail (builtins.tail s));
-          }) cfg.producers-peers;
-        }]);
-
-      in ''
+      script = ''
         START_TIME=${if (cfg.system-start-time != null) then cfg.system-start-time else "`date \"+%Y-%m-%d 00:00:00\"`"}
-        ${cfg.package}/bin/cardano-node --log-config ${cfg.logger.config-file} --system-start "$START_TIME" --slot-duration ${builtins.toString cfg.slot-duration} node --topology ${topology} --${cfg.consensus-protocol} --node-id ${builtins.toString cfg.node-id} --host ${cfg.host} --port ${builtins.toString cfg.port}
+        ${cfg.package}/bin/cardano-node --log-config ${cfg.logger.config-file} --system-start "$START_TIME" --slot-duration ${builtins.toString cfg.slot-duration} node --topology ${cfg.topology} --${cfg.consensus-protocol} --node-id ${builtins.toString cfg.node-id} --host ${cfg.host} --port ${builtins.toString cfg.port}
       '';
       serviceConfig = {
         User = "cardano-node";
