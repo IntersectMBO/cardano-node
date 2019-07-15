@@ -1,5 +1,6 @@
 { config
 , lib
+, pkgs
 , ... }:
 
 with lib;
@@ -36,12 +37,33 @@ in {
         '';
       };
 
-      system-start-time = mkOption {
-        type = types.nullOr types.str;
-        default = null;
-        example = "2018-12-10 15:58:06";
+      genesis-file = mkOption {
+        type = types.path;
         description = ''
-          The start time of the system. Will use current date if not defined.
+          Genesis json file.
+        '';
+      };
+
+      genesis-hash = mkOption {
+        type = types.str;
+        description = ''
+          Hash of the genesis file.
+        '';
+      };
+
+      signing-key = mkOption {
+        type = types.nullOr types.path;
+        default = null;
+        description = ''
+          Signing key
+        '';
+      };
+
+      delegation-certificate = mkOption {
+        type = types.nullOr types.path;
+        default = null;
+        description = ''
+          Delegation certificate.
         '';
       };
 
@@ -65,11 +87,11 @@ in {
         '';
       };
 
-      host = mkOption {
+      host-addr = mkOption {
         type = types.str;
         default = "127.0.0.1";
         description = ''
-          The host name.
+          The host address to bind to.
         '';
       };
 
@@ -89,11 +111,10 @@ in {
         '';
       };
 
-      producers-peers = mkOption {
-        type = types.listOf types.str;
-        default = [];
+      topology = mkOption {
+        type = types.path;
         description = ''
-          List of peers nodes (addr:port).
+          Cluster topology.
         '';
       };
 
@@ -118,26 +139,27 @@ in {
       description   = "cardano-node node service";
       after         = [ "network.target" ];
       wantedBy = [ "multi-user.target" ];
-      script = let 
-        # TODO: generate logger config:
-        loggerConfig = cfg.logger.config-file;
-
-        topology = builtins.toFile "topology.json" (builtins.toJSON [{
-          nodeId = cfg.node-id;
-          nodeAddress = {
-            addr = cfg.host;
-            port = builtins.toString cfg.port;
-          };
-          producers = map (p: let s = builtins.split ":" p; in {
-            addr = builtins.head s;
-            port = builtins.head (builtins.tail (builtins.tail s));
-          }) cfg.producers-peers;
-        }]);
-
-      in ''
-        START_TIME=${if (cfg.system-start-time != null) then cfg.system-start-time else "`date \"+%Y-%m-%d 00:00:00\"`"}
-        ${cfg.package}/bin/cardano-node --log-config ${cfg.logger.config-file} --system-start "$START_TIME" --slot-duration ${builtins.toString cfg.slot-duration} node --topology ${topology} --${cfg.consensus-protocol} --node-id ${builtins.toString cfg.node-id} --host ${cfg.host} --port ${builtins.toString cfg.port}
-      '';
+      script = ''
+        GENESIS_START_TIME=$(${pkgs.jq}/bin/jq '.startTime' < ${cfg.genesis-file})
+        START_TIME=$(date -d @$GENESIS_START_TIME --utc --rfc-3339=seconds)
+        ${cfg.package}/bin/cardano-node \
+          --genesis-file ${cfg.genesis-file} \
+          --genesis-hash ${cfg.genesis-hash} \
+          --log-config ${cfg.logger.config-file} \
+          --system-start "$START_TIME" \
+          --slot-duration ${builtins.toString cfg.slot-duration} \
+          node \
+          --topology ${cfg.topology} \
+          --${cfg.consensus-protocol} \
+          --node-id ${builtins.toString cfg.node-id} \
+          --host-addr ${cfg.host-addr} \
+          --port ${builtins.toString cfg.port} \
+      '' + (if (cfg.signing-key != null) then 
+      ''  --signing-key ${cfg.signing-key} \
+      '' else "")
+         + (if (cfg.delegation-certificate != null) then 
+      ''  --delegation-certificate ${cfg.delegation-certificate} \
+      '' else "");
       serviceConfig = {
         User = "cardano-node";
         Group = "cardano-node";
