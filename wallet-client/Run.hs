@@ -12,13 +12,16 @@ import           Cardano.BM.Data.Tracer (ToLogObject (..))
 import           Cardano.BM.Trace (Trace, appendName)
 import           Ouroboros.Consensus.NodeId (CoreNodeId (..))
 
+import           Cardano.Shell.Constants.Types (CardanoConfiguration (..))
+
 import           CLI
 import           WalletClient
 
-runClient :: CLI -> Trace IO Text -> IO ()
-runClient CLI{..} tracer = do
+runClient :: CLI -> Trace IO Text -> CardanoConfiguration -> IO ()
+runClient CLI{..} tracer cc = do
     let CoreNodeId nid = cliCoreNodeId
     let tracer' = contramap pack . toLogObject $
           appendName ("Wallet " <> pack (show nid)) tracer
-    SomeProtocol p <- fromProtocol cliProtocol
+
+    SomeProtocol p <- fromProtocol cc cliProtocol
     runWalletClient p cliCoreNodeId cliNumCoreNodes tracer'
