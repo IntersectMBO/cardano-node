@@ -53,6 +53,7 @@ import           Cardano.BM.Data.LogItem (LOContent (LogValue), LogObject (..),
 import           Cardano.BM.Data.Severity (Severity (..))
 import           Cardano.BM.Data.Tracer (ToLogObject (..))
 import           Cardano.BM.Trace (Trace, appendName, traceNamedObject)
+import           Cardano.Shell.Constants.Types (CardanoConfiguration (..),)
 import           Cardano.Shell.Features.Logging (LoggingLayer (..))
 
 import qualified Ouroboros.Network.AnchoredFragment as AF
@@ -116,8 +117,8 @@ instance Condense Peer where
     condense (Peer localAddr remoteAddr) = (show localAddr) ++ (show remoteAddr)
 
 
-runNode :: NodeCLIArguments -> LoggingLayer -> IO ()
-runNode nodeCli@NodeCLIArguments{..} loggingLayer = do
+runNode :: NodeCLIArguments -> LoggingLayer -> CardanoConfiguration -> IO ()
+runNode nodeCli@NodeCLIArguments{..} loggingLayer cc = do
     let !tr = (llAppendName loggingLayer) "node" (llBasicTrace loggingLayer)
     -- If the user asked to submit a transaction, we don't have to spin up a
     -- full node, we simply transmit it and exit.
@@ -126,7 +127,7 @@ runNode nodeCli@NodeCLIArguments{..} loggingLayer = do
       TxSubmitter topology tx protocol -> do
         let trace'      = appendName (pack (show (node topology))) tr
         let tracer      = contramap pack $ toLogObject trace'
-        SomeProtocol p  <- fromProtocol protocol
+        SomeProtocol p  <- fromProtocol cc protocol
         handleTxSubmission p topology tx tracer
 
       TraceAcceptor -> do
@@ -136,9 +137,9 @@ runNode nodeCli@NodeCLIArguments{..} loggingLayer = do
 
       SimpleNode topology myNodeAddress protocol viewMode -> do
         let trace'      = appendName (pack $ show $ node topology) tr
-        SomeProtocol p  <- fromProtocol protocol
+        SomeProtocol p  <- fromProtocol cc protocol
         case viewMode of
-          SimpleView -> handleSimpleNode p nodeCli myNodeAddress topology trace'
+          SimpleView -> handleSimpleNode p nodeCli myNodeAddress topology trace' cc
           LiveView   -> do
 #ifdef UNIX
             let c = llConfiguration loggingLayer
@@ -146,7 +147,7 @@ runNode nodeCli@NodeCLIArguments{..} loggingLayer = do
             -- turn off logging to the console, only forward it through a pipe to a central logging process
             CM.setDefaultBackends c [TraceForwarderBK, UserDefinedBK "LiveViewBackend"]
             -- User will see a terminal graphics and will be able to interact with it.
-            nodeThread <- Async.async $ handleSimpleNode p nodeCli myNodeAddress topology trace'
+            nodeThread <- Async.async $ handleSimpleNode p nodeCli myNodeAddress topology trace' cc
 
             be :: LiveViewBackend Text <- realize c
             let lvbe = MkBackend { bEffectuate = effectuate be, bUnrealize = unrealize be }
@@ -156,7 +157,7 @@ runNode nodeCli@NodeCLIArguments{..} loggingLayer = do
 
             void $ Async.waitAny [nodeThread]
 #else
-            handleSimpleNode p nodeCli myNodeAddress topology trace'
+            handleSimpleNode p nodeCli myNodeAddress topology trace' cc
 #endif
 
 -- | Sets up a simple node, which will run the chain sync protocol and block
@@ -168,8 +169,9 @@ handleSimpleNode :: forall blk. (RunNode blk, TraceConstraints blk)
                  -> NodeAddress
                  -> TopologyInfo
                  -> Trace IO Text
+                 -> CardanoConfiguration
                  -> IO ()
-handleSimpleNode p NodeCLIArguments{..} myNodeAddress (TopologyInfo myNodeId topologyFile) trace = do
+handleSimpleNode p NodeCLIArguments{..} myNodeAddress (TopologyInfo myNodeId topologyFile) trace CardanoConfiguration{..} = do
     let tracer = contramap pack $ toLogObject trace
         mempoolTracer = mempoolTraceTransformer $ appendName "mempool" trace
     traceWith tracer $ "System started at " <> show systemStart

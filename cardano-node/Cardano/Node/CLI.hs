@@ -1,6 +1,7 @@
 {-# LANGUAGE ConstraintKinds  #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs            #-}
+{-# LANGUAGE RecordWildCards  #-}
 
 module Cardano.Node.CLI (
   -- * Untyped/typed protocol boundary
@@ -33,6 +34,9 @@ module Cardano.Node.CLI (
 
 import           Prelude
 
+import           Codec.CBOR.Read (deserialiseFromBytes)
+
+import qualified Data.ByteString.Lazy as LB
 import           Data.Foldable (asum)
 import           Data.Semigroup ((<>))
 import           Data.Time (UTCTime)
@@ -45,6 +49,7 @@ import           Ouroboros.Consensus.Block (Header)
 import           Ouroboros.Consensus.BlockchainTime
 import           Ouroboros.Consensus.Demo
 import           Ouroboros.Consensus.Demo.Run
+import           Ouroboros.Consensus.Ledger.Byron
 import           Ouroboros.Consensus.Mempool.API
 import           Ouroboros.Consensus.Node.ProtocolInfo
 import           Ouroboros.Consensus.NodeId (CoreNodeId (..), NodeId (..))
@@ -58,8 +63,20 @@ import           Cardano.Chain.Common
 import           Cardano.Chain.Genesis
 import           Cardano.Crypto.ProtocolMagic
 
-import qualified Test.Cardano.Chain.Genesis.Dummy as Dummy
+import           Cardano.Shell.Lib (GeneralException (..))
+import qualified Cardano.Chain.Genesis as Genesis
+import           Cardano.Crypto (RequiresNetworkMagic (..),
+                                 decodeAbstractHash)
+import qualified Cardano.Crypto.Signing as Signing
+import           Control.Exception
+import           Control.Monad.Except
+import           Cardano.Shell.Constants.Types (CardanoConfiguration (..),
+                                                Core (..),
+                                                StaticKeyMaterial (..),
+                                                Genesis (..),
+                                                RequireNetworkMagic (..))
 
+import qualified Cardano.Node.CanonicalJSON as CanonicalJSON
 
 {-------------------------------------------------------------------------------
   Untyped/typed protocol boundary
@@ -93,28 +110,43 @@ data SomeProtocol where
   SomeProtocol :: (RunDemo blk, TraceConstraints blk)
                => Consensus.Protocol blk -> SomeProtocol
 
-fromProtocol :: Protocol -> IO SomeProtocol
-fromProtocol BFT =
+fromProtocol :: CardanoConfiguration -> Protocol -> IO SomeProtocol
+fromProtocol _ BFT =
     case Consensus.runProtocol p of
       Dict -> return $ SomeProtocol p
   where
     p = ProtocolMockBFT defaultSecurityParam
-fromProtocol Praos =
+fromProtocol _ Praos =
     case Consensus.runProtocol p of
       Dict -> return $ SomeProtocol p
   where
     p = ProtocolMockPraos defaultDemoPraosParams
-fromProtocol MockPBFT =
+fromProtocol _ MockPBFT =
     case Consensus.runProtocol p of
       Dict -> return $ SomeProtocol p
   where
     p = ProtocolMockPBFT defaultDemoPBftParams
-fromProtocol RealPBFT =
+fromProtocol cc@CardanoConfiguration{..} RealPBFT = do
+    let Genesis{..} = coGenesis ccCore
+        genHash = either (throw . ConfigurationError) id $ -- XXX: need a proper error tag
+                  decodeAbstractHash geGenesisHash
+        cvtRNM :: RequireNetworkMagic -> RequiresNetworkMagic
+        cvtRNM NoRequireNetworkMagic = RequiresNoMagic
+        cvtRNM RequireNetworkMagic   = RequiresMagic
+        StaticKeyMaterial{..} = coStaticKeyMaterial ccCore
+        kmoDeserialiseDelegateKey = Signing.SigningKey . snd . either (error . show) id . deserialiseFromBytes Signing.fromCBORXPrv
+    genesisConfig <- either (error . show) id <$> -- XXX: need a proper error tag
+      runExceptT (Genesis.mkConfigFromFile (cvtRNM $ coRequiresNetworkMagic ccCore) geSrc genHash)
+
+    sk  <- kmoDeserialiseDelegateKey <$> LB.readFile skmSigningKeyFile
+    dlg <- either (error . show) id . CanonicalJSON.canonicalDecPre <$> LB.readFile skmDlgCertFile
+
+    let skm = StaticKeyMaterialByronPbft sk dlg
+        p   = ProtocolRealPBFT defaultDemoPBftParams genesisConfig skm
+
     case Consensus.runProtocol p of
-      Dict -> return $ SomeProtocol p
-  where
-    p = ProtocolRealPBFT defaultDemoPBftParams genesisConfig
-    genesisConfig = Dummy.dummyConfig
+      Dict -> do
+        return . SomeProtocol $ p
 
 -- Node can be run in two modes.
 data ViewMode =
