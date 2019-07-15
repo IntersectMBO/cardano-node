@@ -21,7 +21,7 @@ module Run (
 import           Codec.CBOR.Decoding (Decoder)
 import           Codec.CBOR.Encoding (Encoding)
 import qualified Codec.Serialise as Serialise (decode, encode)
-import           Control.Concurrent (threadDelay)
+import           Codec.SerialiseTerm
 import qualified Control.Concurrent.Async as Async
 import           Control.Exception
 import           Control.Monad
@@ -29,8 +29,7 @@ import           Control.Tracer
 import           Crypto.Random
 import           Data.ByteString.Lazy (ByteString)
 import           Data.Functor.Contravariant (contramap)
-import qualified Data.Map.Strict as M
-import           Data.Maybe
+import qualified Data.List as List
 import           Data.Semigroup ((<>))
 import           Data.Text (Text, pack)
 import           Network.Socket as Socket
@@ -53,6 +52,8 @@ import           Ouroboros.Network.Chain (genesisPoint)
 import qualified Ouroboros.Network.Chain as Chain
 import           Ouroboros.Network.NodeToClient as NodeToClient
 import           Ouroboros.Network.NodeToNode as NodeToNode
+import           Ouroboros.Network.Socket
+import           Ouroboros.Network.Subscription.Common
 
 import           Ouroboros.Network.Protocol.BlockFetch.Codec
 import           Ouroboros.Network.Protocol.ChainSync.Codec
@@ -73,7 +74,7 @@ import           Ouroboros.Consensus.Util.STM
 import           Ouroboros.Consensus.Util.ThreadRegistry
 
 import           Ouroboros.Storage.ChainDB (ChainDB)
-import qualified Ouroboros.Storage.ChainDB as ChainDB
+import qualified Ouroboros.Storage.ChainDB as ChainDB hiding (openDB)
 import qualified Ouroboros.Storage.ChainDB.Mock as ChainDB
 
 import           Cardano.Node.CLI
@@ -83,10 +84,20 @@ import           Topology
 import           TraceAcceptor
 import           TxSubmission
 
+
+-- | Peer identifier used in consensus application
+--
+data Peer = Peer { localAddr  :: SockAddr
+                 , remoteAddr :: SockAddr }
+  deriving (Eq, Ord, Show)
+
+instance Condense Peer where
+    condense (Peer localAddr remoteAddr) = (show localAddr) ++ (show remoteAddr)
+
+
 runNode :: NodeCLIArguments -> LoggingLayer -> IO ()
 runNode nodeCli@NodeCLIArguments{..} loggingLayer = do
     let !tr = (llAppendName loggingLayer) "node" (llBasicTrace loggingLayer)
-
     -- If the user asked to submit a transaction, we don't have to spin up a
     -- full node, we simply transmit it and exit.
     case command of
@@ -139,15 +150,16 @@ handleSimpleNode :: forall blk. RunDemo blk
                  -> IO ()
 handleSimpleNode p NodeCLIArguments{..} myNodeAddress (TopologyInfo myNodeId topologyFile) tracer = do
     traceWith tracer $ "System started at " <> show systemStart
-    t@(NetworkTopology nodeSetups) <-
+    NetworkTopology nodeSetups <-
       either error id <$> readTopologyFile topologyFile
-    let topology  = toNetworkMap t
-        nodeSetup = fromMaybe (error "node not found.") $
-                          M.lookup myNodeId topology
+
+    let producers' = case List.lookup myNodeAddress $ map (\ns -> (nodeAddress ns, producers ns)) nodeSetups of
+          Just ps -> ps
+          Nothing -> error "handleSimpleNode: own address not found in topology"
 
     traceWith tracer $ "**************************************"
-    traceWith tracer $ "I am Node = " <> show myNodeId
-    traceWith tracer $ "My producers are " <> show (producers nodeSetup)
+    traceWith tracer $ "I am Node = " <> show myNodeAddress
+    traceWith tracer $ "My producers are " <> show producers'
     traceWith tracer $ "**************************************"
 
     let ProtocolInfo{pInfoConfig, pInfoInitLedger, pInfoInitState} =
@@ -163,7 +175,7 @@ handleSimpleNode p NodeCLIArguments{..} myNodeAddress (TopologyInfo myNodeId top
                     curNo = succ prevBlockNo
 
                     prevHash :: ChainHash blk
-                    prevHash = castHash (pointHash prevPoint)
+                    prevHash = castHash (Block.pointHash prevPoint)
 
                  -- The transactions we get are consistent; the only reason not
                  -- to include all of them would be maximum block size, which
@@ -182,9 +194,12 @@ handleSimpleNode p NodeCLIArguments{..} myNodeAddress (TopologyInfo myNodeId top
           pInfoInitLedger
 
       btime  <- realBlockchainTime registry slotDuration systemStart
-      let nodeParams :: NodeParams IO NodeAddress blk
+      let nodeParams :: NodeParams IO Peer blk
           nodeParams = NodeParams
             { tracer             = tracer
+            , mempoolTracer      = contramap show tracer
+            , decisionTracer     = nullTracer
+            , fetchClientTracer  = nullTracer
             , threadRegistry     = registry
             , maxClockSkew       = ClockSkew 1
             , cfg                = pInfoConfig
@@ -199,7 +214,7 @@ handleSimpleNode p NodeCLIArguments{..} myNodeAddress (TopologyInfo myNodeId top
       kernel <- nodeKernel nodeParams
 
       let networkApps :: NetworkApplication
-                           IO NodeAddress
+                           IO Peer
                            ByteString ByteString
                            ByteString ByteString ()
           networkApps =
@@ -243,7 +258,7 @@ handleSimpleNode p NodeCLIArguments{..} myNodeAddress (TopologyInfo myNodeId top
                                     NodeToNodeVersion
                                     DictVersion
                                     (NetworkApplication
-                                       IO NodeAddress
+                                       IO Peer
                                        ByteString ByteString
                                        ByteString ByteString ())
           networkAppNodeToNode =
@@ -257,7 +272,7 @@ handleSimpleNode p NodeCLIArguments{..} myNodeAddress (TopologyInfo myNodeId top
                                       NodeToClientVersion
                                       DictVersion
                                       (NetworkApplication
-                                         IO NodeAddress
+                                         IO Peer
                                          ByteString ByteString
                                          ByteString ByteString ())
           networkAppNodeToClient =
@@ -269,6 +284,8 @@ handleSimpleNode p NodeCLIArguments{..} myNodeAddress (TopologyInfo myNodeId top
 
       watchChain registry tracer chainDB
 
+      -- TODO: this should be removed after resolving
+      -- https://github.com/input-output-hk/ouroboros-network/issues/751
       myAddr:_ <- case myNodeAddress of
         NodeAddress host port -> getAddrInfo Nothing (Just host) (Just port)
 
@@ -276,49 +293,60 @@ handleSimpleNode p NodeCLIArguments{..} myNodeAddress (TopologyInfo myNodeId top
           myLocalAddr     = localSocketAddrInfo myLocalSockPath
       removeStaleLocalSocket myLocalSockPath
 
-      -- TODO: cheap subscription managment, a proper one is on the way.  The
-      -- point is that it only requires 'NetworkApplications' which is a thin
-      -- layer around 'MuxApplication'.
-
       -- serve local clients (including tx submission)
       localServer <-
-        forkLinked registry $
+        forkLinked registry $ do
+          connTable <- newConnectionTable
           NodeToClient.withServer
+            connTable
             myLocalAddr
             (\(DictVersion _) -> acceptEq)
             (muxLocalResponderNetworkApplication <$> networkAppNodeToClient)
             wait
 
       -- serve downstream nodes
+      connTable <- newConnectionTable
       peerServer <-
-        forkLinked registry $
+        forkLinked registry $ do
           NodeToNode.withServer
+            connTable
             myAddr (\(DictVersion _) -> acceptEq)
             (muxResponderNetworkApplication <$> networkAppNodeToNode)
             wait
 
-      -- connect to upstream nodes
-      forM_ (producers nodeSetup) $ \na@(NodeAddress host port) ->
-        forkLinked registry $ do
+      -- ip subscription manager
+      subManager <- forkLinked registry $
+        ipSubscriptionWorker
+          connTable
+          (contramap show tracer)
+          -- IPv4 address
+          --
+          -- We can't share portnumber with our server since we run separate
+          -- 'MuxInitiatorApplication' and 'MuxResponderApplication'
+          -- applications instead of a 'MuxInitiatorAndResponderApplication'.
+          -- This means we don't utilise full duplex connection.
+          (Just $ Socket.SockAddrInet 0 0)
+          -- no IPv6 address
+          Nothing
+          (const Nothing)
+          (IPSubscriptionTarget {
+              ispIps     = map nodeAddressToSockAddr producers',
+              ispValency = length producers'
+            })
+          (\sock -> do
+              remoteAddr <- getPeerName sock
+              localAddr  <- getSocketName sock
+              connectToNode'
+                      (\(DictVersion codec) -> encodeTerm codec)
+                      (\(DictVersion codec) -> decodeTerm codec)
+                      (muxInitiatorNetworkApplication
+                          (Peer localAddr remoteAddr) <$> networkAppNodeToNode) sock)
+          wait
 
-          let io = do
-                addr:_ <- getAddrInfo Nothing (Just host) (Just port)
-                NodeToNode.connectTo
-                      (muxInitiatorNetworkApplication na <$> networkAppNodeToNode)
-                      -- Do not bind to a local port, use ephemeral
-                      -- one.  We cannot bind to port on which the server is
-                      -- already accepting connections.
-                      Nothing
-                      addr
-                  -- TODO: this is purposefully simple, a proper DNS management
-                  -- is on the way in PR #607
-                  `catch` \(_ :: IOException) -> threadDelay 250_000 >> io
+      void $ Async.waitAny [localServer, peerServer, subManager]
 
-          io
-
-      _ <- Async.waitAny [localServer, peerServer]
-      return ()
   where
+
       nid :: Int
       nid = case myNodeId of
               CoreId  n -> n

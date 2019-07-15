@@ -6,7 +6,7 @@ packages:
 extra-deps:
     # Cardano-ledger dependencies
   - git: https://github.com/input-output-hk/cardano-ledger
-    commit: b81e722c28ed7d65d93c70b43ea744afd95ea1c3
+    commit: 5241971fe563c90ea82b20af344116d46d672835
     subdirs:
       - cardano-ledger
       - cardano-ledger/test
@@ -14,13 +14,13 @@ extra-deps:
       - crypto/test
 
   - git: https://github.com/input-output-hk/cardano-prelude
-    commit: a21f83d9407b2955fbaea4ce8a79b262361112aa
+    commit: d673b92f2a2d9354d102514d0a0fa74f8248b14a
     subdirs:
       - .
       - test
 
   - git: https://github.com/input-output-hk/cardano-base
-    commit: 501d91e426ae84ce0ae056be38bd3db594af9fc2
+    commit: 14f9b09920813447a4060b6810bf17fc4ea35840
     subdirs:
       - binary
       - binary/test
@@ -46,7 +46,7 @@ extra-deps:
 
     # Extracted from cardano-sl since it's quite useful
   - git: https://github.com/input-output-hk/cardano-sl-x509
-    commit: e8bfc1294e088f90e5ae0b4aedbc82ee46ac5ee4
+    commit: ec96c64c665b741c17b4e38f611315bae9b0b054
 
   - git: https://github.com/joelwilliamson/bimap
     commit: 013a0639c222b3f5572ae20ce364815e5d8f2156
@@ -54,7 +54,7 @@ extra-deps:
     #Ouroboros-network dependencies
 
   - git: https://github.com/input-output-hk/ouroboros-network
-    commit: f3f5f4903d88bcbd52496c38046732b22515cec2
+    commit: af06ad8d87336f416d1bf81a89f043e921ef68d4
     subdirs:
         - io-sim-classes
         - network-mux

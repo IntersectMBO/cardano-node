@@ -65,6 +65,7 @@ executable cardano-node
                        TxSubmission
                        Run
                        Topology
+                       Paths_cardano_node
   build-depends:       base
                      , cardano-crypto-class
                      , cardano-crypto-wrapper
@@ -90,6 +91,7 @@ executable cardano-node
                      , directory
                      , file-embed
                      , formatting
+                     , iproute
                      , lens
                      , mtl
                      , network

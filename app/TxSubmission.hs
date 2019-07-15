@@ -17,14 +17,13 @@ module TxSubmission (
 
 import           Data.Void (Void)
 import           Data.ByteString.Lazy (ByteString)
-import qualified Data.Map.Strict as M
 import qualified Data.Set as Set
 import           Options.Applicative
 
 import qualified Codec.Serialise as Serialise (encode, decode)
 import           Network.Socket as Socket
 
-import           Control.Monad (forever, unless)
+import           Control.Monad (forever)
 import           Control.Monad.Class.MonadST
 import           Control.Monad.Class.MonadThrow
 import           Control.Monad.Class.MonadTimer
@@ -109,13 +108,10 @@ handleTxSubmission :: forall blk.
                    -> IO ()
 handleTxSubmission ptcl tinfo mocktx tracer = do
     topoE <- readTopologyFile (topologyFile tinfo)
-    t@(NetworkTopology nodeSetups) <-
+    NetworkTopology nodeSetups <-
       case topoE of
         Left e  -> fail e
         Right t -> return t
-
-    unless (node tinfo `M.member` toNetworkMap t) $
-      fail "Target node not found."
 
     nid <- case node tinfo of
       CoreId nid -> return nid
