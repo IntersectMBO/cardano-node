@@ -58,8 +58,6 @@ import           Cardano.Shell.Features.Logging (LoggingLayer (..))
 import qualified Ouroboros.Network.AnchoredFragment as AF
 import           Ouroboros.Network.Block
 import qualified Ouroboros.Network.Block as Block
-import           Ouroboros.Network.Chain (genesisPoint)
-import qualified Ouroboros.Network.Chain as Chain
 import           Ouroboros.Network.NodeToClient as NodeToClient
 import           Ouroboros.Network.NodeToNode as NodeToNode
 import           Ouroboros.Network.Socket
@@ -312,8 +310,6 @@ handleSimpleNode p NodeCLIArguments{..} myNodeAddress (TopologyInfo myNodeId top
               (DictVersion nodeToClientCodecCBORTerm)
               networkApps
 
-      watchChain registry tracer chainDB
-
       -- TODO: this should be removed after resolving
       -- https://github.com/input-output-hk/ouroboros-network/issues/751
       myAddr:_ <- case myNodeAddress of
@@ -380,21 +376,6 @@ handleSimpleNode p NodeCLIArguments{..} myNodeAddress (TopologyInfo myNodeId top
       nid = case myNodeId of
               CoreId  n -> n
               RelayId _ -> error "Non-core nodes currently not supported"
-
-      watchChain :: ThreadRegistry IO
-                 -> Tracer IO String
-                 -> ChainDB IO blk
-                 -> IO ()
-      watchChain registry tracer' chainDB = onEachChange
-          registry fingerprint initFingerprint
-          (ChainDB.getCurrentChain chainDB) (const logFullChain)
-        where
-          initFingerprint  = (genesisPoint, genesisPoint)
-          fingerprint frag = (AF.headPoint frag, AF.anchorPoint frag)
-          logFullChain = do
-            chain <- ChainDB.toChain chainDB
-            traceWith tracer' $
-              "Updated chain: " <> condense (Chain.toOldestFirst chain)
 
       encodePoint' ::  Point blk -> Encoding
       encodePoint' =
