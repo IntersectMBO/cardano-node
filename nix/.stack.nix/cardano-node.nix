@@ -115,6 +115,7 @@
             (hsPkgs.cardano-node)
             (hsPkgs.cardano-prelude)
             (hsPkgs.contra-tracer)
+            (hsPkgs.filepath)
             (hsPkgs.iohk-monitoring)
             (hsPkgs.pvss)
             (hsPkgs.aeson)

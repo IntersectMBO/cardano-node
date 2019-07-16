@@ -98,10 +98,12 @@ import qualified Ouroboros.Storage.LedgerDB.OnDisk as LedgerDB
 
 import           Cardano.Node.CLI
 import           CLI
-import           LiveView
 import           Topology
 import           TraceAcceptor
 import           TxSubmission
+#ifdef UNIX
+import           LiveView
+#endif
 
 
 -- | Peer identifier used in consensus application
