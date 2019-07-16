@@ -1,9 +1,9 @@
-{-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE GADTs               #-}
 {-# LANGUAGE KindSignatures      #-}
-{-# LANGUAGE RankNTypes          #-}
 {-# LANGUAGE NamedFieldPuns      #-}
+{-# LANGUAGE RankNTypes          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications    #-}
 
@@ -22,12 +22,12 @@ import           Control.Monad.Class.MonadThrow
 import           Control.Monad.Class.MonadTimer
 import           Control.Tracer
 
-import           Ouroboros.Consensus.Demo
-import           Ouroboros.Consensus.Demo.Run
-import           Ouroboros.Consensus.Mempool
-import           Ouroboros.Consensus.NodeId
-import           Ouroboros.Consensus.Protocol.Abstract (NodeConfig)
 import           Ouroboros.Consensus.Block (BlockProtocol)
+import           Ouroboros.Consensus.Mempool
+import           Ouroboros.Consensus.Node.ProtocolInfo
+import           Ouroboros.Consensus.Node.Run
+import           Ouroboros.Consensus.NodeId
+import           Ouroboros.Consensus.Protocol
 
 import           Network.TypedProtocol.Codec
 import           Network.TypedProtocol.Codec.Cbor
@@ -45,9 +45,13 @@ import           Ouroboros.Network.Protocol.ChainSync.Codec
 import           Ouroboros.Network.Protocol.Handshake.Version
 import           Ouroboros.Network.NodeToClient
 
+import           Cardano.Node.CLI (TraceConstraints)
+
 runWalletClient :: forall blk.
-                   RunDemo blk
-                => DemoProtocol blk
+                   ( RunNode blk
+                   , TraceConstraints blk
+                   )
+                => Protocol blk
                 -> CoreNodeId
                 -> NumCoreNodes
                 -> Tracer IO String
@@ -65,6 +69,7 @@ runWalletClient ptcl nid numCoreNodes tracer = do
         localTxSubmissionTracer = contramap show tracer
 
     connectTo
+      (,)
       (muxLocalInitiatorNetworkApplication
         (Proxy :: Proxy blk)
         chainSyncTracer
@@ -74,24 +79,24 @@ runWalletClient ptcl nid numCoreNodes tracer = do
       addr
 
 muxLocalInitiatorNetworkApplication
-  :: forall blk m.
-     (RunDemo blk, MonadST m, MonadThrow m, MonadTimer m)
+  :: forall blk m peer.
+     (RunNode blk, MonadST m, MonadThrow m, MonadTimer m)
   -- TODO: the need of a 'Proxy' is an evidence that blk type is not really
   -- needed here.  The wallet client should use some concrete type of block
   -- from 'cardano-chain'.  This should remove the dependency of this module
   -- from 'ouroboros-consensus'.
   => Proxy blk
-  -> Tracer m (TraceSendRecv (ChainSync blk (Point blk)) DeserialiseFailure)
+  -> Tracer m (TraceSendRecv (ChainSync blk (Point blk)) peer DeserialiseFailure)
   -- ^ tracer which logs all chain-sync messages send and received by the client
   -- (see 'Ouroboros.Network.Protocol.ChainSync.Type' in 'ouroboros-network'
   -- package)
-  -> Tracer m (TraceSendRecv (LocalTxSubmission (GenTx blk) String) DeserialiseFailure)
+  -> Tracer m (TraceSendRecv (LocalTxSubmission (GenTx blk) String) peer DeserialiseFailure)
   -- ^ tracer which logs all local tx submission protocol messages send and
   -- received by the client (see 'Ouroboros.Network.Protocol.LocalTxSubmission.Type'
   -- in 'ouroboros-network' package).
   -> NodeConfig (BlockProtocol blk)
   -> Versions NodeToClientVersion DictVersion
-              (MuxApplication InitiatorApp NodeToClientProtocols
+              (MuxApplication InitiatorApp peer NodeToClientProtocols
                               m ByteString Void Void)
 muxLocalInitiatorNetworkApplication Proxy chainSyncTracer localTxSubmissionTracer pInfoConfig =
     simpleSingletonVersions
@@ -99,12 +104,13 @@ muxLocalInitiatorNetworkApplication Proxy chainSyncTracer localTxSubmissionTrace
       (NodeToClientVersionData { networkMagic = 0 })
       (DictVersion nodeToClientCodecCBORTerm)
 
-  $ MuxInitiatorApplication $ \ptcl -> case ptcl of
+  $ MuxInitiatorApplication $ \peer ptcl -> case ptcl of
       LocalTxSubmissionPtcl -> \channel -> do
         txv <- newEmptyTMVarM @_ @(GenTx blk)
         runPeer
           localTxSubmissionTracer
           localTxSubmissionCodec
+          peer
           channel
           (localTxSubmissionClientPeer
               (txSubmissionClient @(GenTx blk) txv))
@@ -113,6 +119,7 @@ muxLocalInitiatorNetworkApplication Proxy chainSyncTracer localTxSubmissionTrace
         runPeer
           chainSyncTracer
           (localChainSyncCodec @blk pInfoConfig)
+          peer
           channel
           (chainSyncClientPeer chainSyncClient)
 
@@ -177,27 +184,27 @@ chainSyncClient = ChainSyncClient $ pure $
 
 
 localTxSubmissionCodec
-  :: (RunDemo blk, MonadST m)
+  :: (RunNode blk, MonadST m)
   => Codec (LocalTxSubmission (GenTx blk) String)
            DeserialiseFailure m ByteString
 localTxSubmissionCodec =
   codecLocalTxSubmission
-    demoEncodeGenTx
-    demoDecodeGenTx
+    nodeEncodeGenTx
+    nodeDecodeGenTx
     Serialise.encode
     Serialise.decode
 
 localChainSyncCodec
-  :: (RunDemo blk, MonadST m)
+  :: forall blk m. (RunNode blk, MonadST m)
   => NodeConfig (BlockProtocol blk)
   -> Codec (ChainSync blk (Point blk))
            DeserialiseFailure m ByteString
 localChainSyncCodec pInfoConfig =
     codecChainSync
-      (demoEncodeBlock pInfoConfig)
-      (demoDecodeBlock pInfoConfig)
-      (Block.encodePoint demoEncodeHeaderHash)
-      (Block.decodePoint demoDecodeHeaderHash)
+      (nodeEncodeBlock pInfoConfig)
+      (nodeDecodeBlock pInfoConfig)
+      (Block.encodePoint (nodeEncodeHeaderHash (Proxy @blk)))
+      (Block.decodePoint (nodeDecodeHeaderHash (Proxy @blk)))
 
 
 -- | Local unix socket file path over which the client communicates with a core
