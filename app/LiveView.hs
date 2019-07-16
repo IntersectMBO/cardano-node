@@ -128,6 +128,13 @@ instance IsEffectuator LiveViewBackend Text where
                         return $ lvs { lvsBlocksMinted = lvsBlocksMinted lvs + 1
                                      , lvsBlockHeight  = blockHeight
                                      }
+            LogObject _ _ (LogValue "txsInMempool" (PureI txsInMempool)) ->
+                modifyMVar_ (getbe lvbe) $ \lvs -> do
+                        let lvsMempool' = fromIntegral txsInMempool
+                            percentage = fromIntegral lvsMempool' / fromIntegral (lvsMempoolCapacity lvs)
+                        return $ lvs { lvsMempool = lvsMempool'
+                                     , lvsMempoolPerc = percentage
+                                     }
             _ -> return ()
 
     handleOverflow _ = return ()
@@ -158,6 +165,7 @@ data LiveViewState a = LiveViewState
     , lvsStartTime       :: UTCTime
     , lvsCPUUsageLast    :: Integer
     , lvsCPUUsageNs      :: Word64
+    , lvsMempoolCapacity :: Word64
     , lvsMessage         :: Maybe a
     , lvsUIThread        :: Maybe (Async.Async ())
     , lvsMetricsThread   :: Maybe (Async.Async ())
@@ -179,14 +187,15 @@ initLiveViewState = do
                 , lvsTransactions    = 1732
                 , lvsPeersConnected  = 3
                 , lvsMaxNetDelay     = 17
-                , lvsMempool         = 50
-                , lvsMempoolPerc     = 0.25
+                , lvsMempool         = 0
+                , lvsMempoolPerc     = 0.0
                 , lvsCPUUsagePerc    = 0.58
                 , lvsMemoryUsageCurr = 0.0
                 , lvsMemoryUsageMax  = 0.2
                 , lvsStartTime       = now
                 , lvsCPUUsageLast    = 0
                 , lvsCPUUsageNs      = 10000
+                , lvsMempoolCapacity = 200
                 , lvsMessage         = Nothing
                 , lvsUIThread        = Nothing
                 , lvsMetricsThread   = Nothing
@@ -381,7 +390,7 @@ systemStatsW p =
     . padLeft  (T.Pad 2)
     . padRight (T.Pad 2)
     $ vBox [ vBox [ hBox [ padBottom (T.Pad 1) $ txt "Mempool:"
-                         , withAttr barValueAttr . padLeft T.Max $ str "200"
+                         , withAttr barValueAttr . padLeft T.Max . str . show $ lvsMempoolCapacity p
                          ]
                   , padBottom (T.Pad 2) $ memPoolBar
                   ]
