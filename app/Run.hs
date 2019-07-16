@@ -43,10 +43,15 @@ import           System.IO.Error (isDoesNotExistError)
 import           Control.Monad.Class.MonadAsync
 
 import qualified Cardano.BM.Configuration.Model as CM
+import           Cardano.BM.Data.Aggregated (Measurable (PureI))
 import           Cardano.BM.Data.Backend
 import           Cardano.BM.Data.BackendKind (BackendKind (TraceForwarderBK))
+import           Cardano.BM.Data.LogItem (LOContent (LogValue), LogObject (..),
+                                          PrivacyAnnotation (Confidential),
+                                          mkLOMeta)
+import           Cardano.BM.Data.Severity (Severity (..))
 import           Cardano.BM.Data.Tracer (ToLogObject (..))
-import           Cardano.BM.Trace (appendName)
+import           Cardano.BM.Trace (Trace, appendName, traceNamedObject)
 import           Cardano.Shell.Features.Logging (LoggingLayer (..))
 
 import qualified Ouroboros.Network.AnchoredFragment as AF
@@ -72,6 +77,7 @@ import           Ouroboros.Consensus.Demo
 import           Ouroboros.Consensus.Demo.Run
 import           Ouroboros.Consensus.Ledger.Abstract
 import           Ouroboros.Consensus.Ledger.Extended (ExtLedgerState)
+import           Ouroboros.Consensus.Mempool.API (TraceEventMempool (..))
 import           Ouroboros.Consensus.Node
 import           Ouroboros.Consensus.NodeId
 import           Ouroboros.Consensus.NodeNetwork
@@ -127,10 +133,9 @@ runNode nodeCli@NodeCLIArguments{..} loggingLayer = do
 
       SimpleNode topology myNodeAddress protocol viewMode -> do
         let trace'      = appendName (pack $ show $ node topology) tr
-        let tracer      = contramap pack $ toLogObject trace'
         SomeProtocol p  <- fromProtocol protocol
         case viewMode of
-          SimpleView -> handleSimpleNode p nodeCli myNodeAddress topology tracer
+          SimpleView -> handleSimpleNode p nodeCli myNodeAddress topology trace'
           LiveView   -> do
 #ifdef UNIX
             let c = llConfiguration loggingLayer
@@ -138,7 +143,7 @@ runNode nodeCli@NodeCLIArguments{..} loggingLayer = do
             -- turn off logging to the console, only forward it through a pipe to a central logging process
             CM.setDefaultBackends c [TraceForwarderBK, UserDefinedBK "LiveViewBackend"]
             -- User will see a terminal graphics and will be able to interact with it.
-            nodeThread <- Async.async $ handleSimpleNode p nodeCli myNodeAddress topology tracer
+            nodeThread <- Async.async $ handleSimpleNode p nodeCli myNodeAddress topology trace'
 
             be :: LiveViewBackend Text <- realize c
             let lvbe = MkBackend { bEffectuate = effectuate be, bUnrealize = unrealize be }
@@ -158,9 +163,11 @@ handleSimpleNode :: forall blk. RunDemo blk
                  -> NodeCLIArguments
                  -> NodeAddress
                  -> TopologyInfo
-                 -> Tracer IO String
+                 -> Trace IO Text
                  -> IO ()
-handleSimpleNode p NodeCLIArguments{..} myNodeAddress (TopologyInfo myNodeId topologyFile) tracer = do
+handleSimpleNode p NodeCLIArguments{..} myNodeAddress (TopologyInfo myNodeId topologyFile) trace = do
+    let tracer = contramap pack $ toLogObject trace
+        mempoolTracer = mempoolTraceTransformer $ appendName "mempool" trace
     traceWith tracer $ "System started at " <> show systemStart
     NetworkTopology nodeSetups <-
       either error id <$> readTopologyFile topologyFile
@@ -213,7 +220,7 @@ handleSimpleNode p NodeCLIArguments{..} myNodeAddress (TopologyInfo myNodeId top
       let nodeParams :: NodeParams IO Peer blk
           nodeParams = NodeParams
             { tracer             = tracer
-            , mempoolTracer      = contramap show tracer
+            , mempoolTracer      = mempoolTracer
             , decisionTracer     = nullTracer
             , fetchClientTracer  = nullTracer
             , threadRegistry     = registry
@@ -390,6 +397,11 @@ handleSimpleNode p NodeCLIArguments{..} myNodeAddress (TopologyInfo myNodeId top
       decodePoint' =
           Block.decodePoint demoDecodeHeaderHash
 
+      mempoolTraceTransformer :: Tracer IO (LogObject a) -> Tracer IO (TraceEventMempool blk)
+      mempoolTraceTransformer tr = Tracer $ \mempoolEvent -> do
+          let logValue = LogValue "txsInMempool" $ PureI $ fromIntegral $ _txsInMempool mempoolEvent
+          meta <- mkLOMeta Info Confidential
+          traceNamedObject tr (meta, logValue)
 
 removeStaleLocalSocket :: FilePath -> IO ()
 removeStaleLocalSocket socketPath =

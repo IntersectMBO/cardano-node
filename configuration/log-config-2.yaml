@@ -81,4 +81,6 @@ options:
     cardano.node.metrics:
       - kind: UserDefinedBK
         name: LiveViewBackend
-
+    cardano.node.CoreId 2.mempool:
+      - kind: UserDefinedBK
+        name: LiveViewBackend

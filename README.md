@@ -41,7 +41,7 @@ The user can submit transactions to a node which includes them in its local memp
 Add the next two lines to your $HOME/.tmux.conf file:
 
 set-window-option -g mouse on
-set -g default-terminal "tmux-256color" 
+set -g default-terminal "tmux-256color"
 
 In a first terminal start the central logging process:
 
