@@ -107,23 +107,41 @@ instance IsEffectuator LiveViewBackend Text where
                                          , lvsMemoryUsageMax  = max (lvsMemoryUsageMax lvs) mbytes
                                          , lvsUpTime          = diffUTCTime (tstamp meta) (lvsStartTime lvs)
                                          }
+                    LogValue "IO.rchar" (Bytes bytesWereRead) ->
+                        let currentTimeInNs = utc2ns (tstamp meta)
+                        in
+                        modifyMVar_ (getbe lvbe) $ \lvs ->
+                            let timeDiff        = fromIntegral (currentTimeInNs - lvsDiskUsageRNs lvs)
+                                timeDiffInSecs  = timeDiff / 1000000000
+                                bytesDiff       = fromIntegral (bytesWereRead - lvsDiskUsageRLast lvs)
+                                bytesDiffInKB   = bytesDiff / 1024
+                                currentDiskRate = bytesDiffInKB / timeDiffInSecs
+                                maxDiskRate     = max currentDiskRate $ lvsDiskUsageRMax lvs
+                            in
+                            return $ lvs { lvsDiskUsageRCurr = currentDiskRate
+                                         , lvsDiskUsageRPerc = (currentDiskRate / (maxDiskRate / 100.0)) / 100.0
+                                         , lvsDiskUsageRLast = bytesWereRead
+                                         , lvsDiskUsageRNs   = currentTimeInNs
+                                         , lvsDiskUsageRMax  = maxDiskRate
+                                         , lvsUpTime         = diffUTCTime (tstamp meta) (lvsStartTime lvs)
+                                         }
                     LogValue "IO.wchar" (Bytes bytesWereWritten) ->
                         let currentTimeInNs = utc2ns (tstamp meta)
                         in
                         modifyMVar_ (getbe lvbe) $ \lvs ->
-                            let timeDiff        = fromIntegral (currentTimeInNs - lvsDiskUsageNs lvs)
+                            let timeDiff        = fromIntegral (currentTimeInNs - lvsDiskUsageWNs lvs)
                                 timeDiffInSecs  = timeDiff / 1000000000
-                                bytesDiff       = fromIntegral (bytesWereWritten - lvsDiskUsageLast lvs)
+                                bytesDiff       = fromIntegral (bytesWereWritten - lvsDiskUsageWLast lvs)
                                 bytesDiffInKB   = bytesDiff / 1024
                                 currentDiskRate = bytesDiffInKB / timeDiffInSecs
-                                maxDiskRate     = max currentDiskRate $ lvsDiskUsageMax lvs
+                                maxDiskRate     = max currentDiskRate $ lvsDiskUsageWMax lvs
                             in
-                            return $ lvs { lvsDiskUsageCurr = currentDiskRate
-                                         , lvsDiskUsagePerc = (currentDiskRate / (maxDiskRate / 100.0)) / 100.0
-                                         , lvsDiskUsageLast = bytesWereWritten
-                                         , lvsDiskUsageNs   = currentTimeInNs
-                                         , lvsDiskUsageMax  = maxDiskRate
-                                         , lvsUpTime        = diffUTCTime (tstamp meta) (lvsStartTime lvs)
+                            return $ lvs { lvsDiskUsageWCurr = currentDiskRate
+                                         , lvsDiskUsageWPerc = (currentDiskRate / (maxDiskRate / 100.0)) / 100.0
+                                         , lvsDiskUsageWLast = bytesWereWritten
+                                         , lvsDiskUsageWNs   = currentTimeInNs
+                                         , lvsDiskUsageWMax  = maxDiskRate
+                                         , lvsUpTime         = diffUTCTime (tstamp meta) (lvsStartTime lvs)
                                          }
                     LogValue "Stat.utime" (PureI ticks) ->
                         let tns = utc2ns (tstamp meta)
@@ -137,23 +155,41 @@ instance IsEffectuator LiveViewBackend Text where
                                          , lvsCPUUsageNs   = tns
                                          , lvsUpTime       = diffUTCTime (tstamp meta) (lvsStartTime lvs)
                                          }
+                    LogValue "Net.IpExt:InOctets" (Bytes inBytes) ->
+                        let currentTimeInNs = utc2ns (tstamp meta)
+                        in
+                        modifyMVar_ (getbe lvbe) $ \lvs ->
+                            let timeDiff        = fromIntegral (currentTimeInNs - lvsNetworkUsageInNs lvs)
+                                timeDiffInSecs  = timeDiff / 1000000000
+                                bytesDiff       = fromIntegral (inBytes - lvsNetworkUsageInLast lvs)
+                                bytesDiffInKB   = bytesDiff / 1024
+                                currentNetRate  = bytesDiffInKB / timeDiffInSecs
+                                maxNetRate      = max currentNetRate $ lvsNetworkUsageInMax lvs
+                            in
+                            return $ lvs { lvsNetworkUsageInCurr = currentNetRate
+                                         , lvsNetworkUsageInPerc = (currentNetRate / (maxNetRate / 100.0)) / 100.0
+                                         , lvsNetworkUsageInLast = inBytes
+                                         , lvsNetworkUsageInNs   = currentTimeInNs
+                                         , lvsNetworkUsageInMax  = maxNetRate
+                                         , lvsUpTime             = diffUTCTime (tstamp meta) (lvsStartTime lvs)
+                                         }
                     LogValue "Net.IpExt:OutOctets" (Bytes outBytes) ->
                         let currentTimeInNs = utc2ns (tstamp meta)
                         in
                         modifyMVar_ (getbe lvbe) $ \lvs ->
-                            let timeDiff        = fromIntegral (currentTimeInNs - lvsNetworkUsageNs lvs)
+                            let timeDiff        = fromIntegral (currentTimeInNs - lvsNetworkUsageOutNs lvs)
                                 timeDiffInSecs  = timeDiff / 1000000000
-                                bytesDiff       = fromIntegral (outBytes - lvsNetworkUsageLast lvs)
+                                bytesDiff       = fromIntegral (outBytes - lvsNetworkUsageOutLast lvs)
                                 bytesDiffInKB   = bytesDiff / 1024
                                 currentNetRate  = bytesDiffInKB / timeDiffInSecs
-                                maxNetRate      = max currentNetRate $ lvsNetworkUsageMax lvs
+                                maxNetRate      = max currentNetRate $ lvsNetworkUsageOutMax lvs
                             in
-                            return $ lvs { lvsNetworkUsageCurr = currentNetRate
-                                         , lvsNetworkUsagePerc = (currentNetRate / (maxNetRate / 100.0)) / 100.0
-                                         , lvsNetworkUsageLast = outBytes
-                                         , lvsNetworkUsageNs   = currentTimeInNs
-                                         , lvsNetworkUsageMax  = maxNetRate
-                                         , lvsUpTime           = diffUTCTime (tstamp meta) (lvsStartTime lvs)
+                            return $ lvs { lvsNetworkUsageOutCurr = currentNetRate
+                                         , lvsNetworkUsageOutPerc = (currentNetRate / (maxNetRate / 100.0)) / 100.0
+                                         , lvsNetworkUsageOutLast = outBytes
+                                         , lvsNetworkUsageOutNs   = currentTimeInNs
+                                         , lvsNetworkUsageOutMax  = maxNetRate
+                                         , lvsUpTime              = diffUTCTime (tstamp meta) (lvsStartTime lvs)
                                          }
                     _ ->
                         return ()
@@ -182,81 +218,101 @@ data ColorTheme
     deriving (Eq)
 
 data LiveViewState a = LiveViewState
-    { lvsQuit             :: Bool
-    , lvsRelease          :: String
-    , lvsNodeId           :: Text
-    , lvsVersion          :: String
-    , lvsCommit           :: String
-    , lvsUpTime           :: NominalDiffTime
-    , lvsBlockHeight      :: Word64
-    , lvsBlocksMinted     :: Word64
-    , lvsTransactions     :: Word64
-    , lvsPeersConnected   :: Word64
-    , lvsMaxNetDelay      :: Integer
-    , lvsMempool          :: Word64
-    , lvsMempoolPerc      :: Float
-    , lvsCPUUsagePerc     :: Float
-    , lvsMemoryUsageCurr  :: Float
-    , lvsMemoryUsageMax   :: Float
-    , lvsDiskUsagePerc    :: Float
-    , lvsDiskUsageCurr    :: Float
-    , lvsDiskUsageMax     :: Float
-    , lvsNetworkUsagePerc :: Float
-    , lvsNetworkUsageCurr :: Float
-    , lvsNetworkUsageMax  :: Float
+    { lvsQuit                :: Bool
+    , lvsRelease             :: String
+    , lvsNodeId              :: Text
+    , lvsVersion             :: String
+    , lvsCommit              :: String
+    , lvsUpTime              :: NominalDiffTime
+    , lvsBlockHeight         :: Word64
+    , lvsBlocksMinted        :: Word64
+    , lvsTransactions        :: Word64
+    , lvsPeersConnected      :: Word64
+    , lvsMaxNetDelay         :: Integer
+    , lvsMempool             :: Word64
+    , lvsMempoolPerc         :: Float
+    , lvsCPUUsagePerc        :: Float
+    , lvsMemoryUsageCurr     :: Float
+    , lvsMemoryUsageMax      :: Float
+    , lvsDiskUsageRPerc      :: Float
+    , lvsDiskUsageRCurr      :: Float
+    , lvsDiskUsageRMax       :: Float
+    , lvsDiskUsageWPerc      :: Float
+    , lvsDiskUsageWCurr      :: Float
+    , lvsDiskUsageWMax       :: Float
+    , lvsNetworkUsageInPerc  :: Float
+    , lvsNetworkUsageInCurr  :: Float
+    , lvsNetworkUsageInMax   :: Float
+    , lvsNetworkUsageOutPerc :: Float
+    , lvsNetworkUsageOutCurr :: Float
+    , lvsNetworkUsageOutMax  :: Float
     -- internal state
-    , lvsStartTime        :: UTCTime
-    , lvsCPUUsageLast     :: Integer
-    , lvsCPUUsageNs       :: Word64
-    , lvsDiskUsageLast    :: Word64
-    , lvsDiskUsageNs      :: Word64
-    , lvsNetworkUsageLast :: Word64
-    , lvsNetworkUsageNs   :: Word64
-    , lvsMempoolCapacity  :: Word64
-    , lvsMessage          :: Maybe a
-    , lvsUIThread         :: Maybe (Async.Async ())
-    , lvsMetricsThread    :: Maybe (Async.Async ())
-    , lvsColorTheme       :: ColorTheme
+    , lvsStartTime           :: UTCTime
+    , lvsCPUUsageLast        :: Integer
+    , lvsCPUUsageNs          :: Word64
+    , lvsDiskUsageRLast      :: Word64
+    , lvsDiskUsageRNs        :: Word64
+    , lvsDiskUsageWLast      :: Word64
+    , lvsDiskUsageWNs        :: Word64
+    , lvsNetworkUsageInLast  :: Word64
+    , lvsNetworkUsageInNs    :: Word64
+    , lvsNetworkUsageOutLast :: Word64
+    , lvsNetworkUsageOutNs   :: Word64
+    , lvsMempoolCapacity     :: Word64
+    , lvsMessage             :: Maybe a
+    , lvsUIThread            :: Maybe (Async.Async ())
+    , lvsMetricsThread       :: Maybe (Async.Async ())
+    , lvsColorTheme          :: ColorTheme
     } deriving (Eq)
 
 initLiveViewState :: IO (LiveViewState a)
 initLiveViewState = do
     now <- getCurrentTime
     return $ LiveViewState
-                { lvsQuit             = False
-                , lvsRelease          = "Shelley"
-                , lvsNodeId           = ""
-                , lvsVersion          = showVersion version
-                , lvsCommit           = unpack gitRev
-                , lvsUpTime           = diffUTCTime now now
-                , lvsBlockHeight      = 1891
-                , lvsBlocksMinted     = 0
-                , lvsTransactions     = 1732
-                , lvsPeersConnected   = 3
-                , lvsMaxNetDelay      = 17
-                , lvsMempool          = 50
-                , lvsMempoolPerc      = 0.25
-                , lvsCPUUsagePerc     = 0.58
-                , lvsMemoryUsageCurr  = 0.0
-                , lvsMemoryUsageMax   = 0.0
-                , lvsDiskUsagePerc    = 0.0
-                , lvsDiskUsageCurr    = 0.0
-                , lvsDiskUsageMax     = 0.0
-                , lvsNetworkUsagePerc = 0.0
-                , lvsNetworkUsageCurr = 0.0
-                , lvsNetworkUsageMax  = 0.0
-                , lvsStartTime        = now
-                , lvsCPUUsageLast     = 0
-                , lvsCPUUsageNs       = 10000
-                , lvsDiskUsageLast    = 0
-                , lvsDiskUsageNs      = 10000
-                , lvsNetworkUsageLast = 0
-                , lvsNetworkUsageNs   = 10000
-                , lvsMempoolCapacity  = 200
-                , lvsMessage          = Nothing
-                , lvsUIThread         = Nothing
-                , lvsMetricsThread    = Nothing
-                , lvsColorTheme       = DarkTheme
+                { lvsQuit                = False
+                , lvsRelease             = "Shelley"
+                , lvsNodeId              = ""
+                , lvsVersion             = showVersion version
+                , lvsCommit              = unpack gitRev
+                , lvsUpTime              = diffUTCTime now now
+                , lvsBlockHeight         = 1891
+                , lvsBlocksMinted        = 0
+                , lvsTransactions        = 1732
+                , lvsPeersConnected      = 3
+                , lvsMaxNetDelay         = 17
+                , lvsMempool             = 0
+                , lvsMempoolPerc         = 0.0
+                , lvsCPUUsagePerc        = 0.58
+                , lvsMemoryUsageCurr     = 0.0
+                , lvsMemoryUsageMax      = 0.2
+                , lvsDiskUsageRPerc      = 0.0
+                , lvsDiskUsageRCurr      = 0.0
+                , lvsDiskUsageRMax       = 0.0
+                , lvsDiskUsageWPerc      = 0.0
+                , lvsDiskUsageWCurr      = 0.0
+                , lvsDiskUsageWMax       = 0.0
+                , lvsNetworkUsageInPerc  = 0.0
+                , lvsNetworkUsageInCurr  = 0.0
+                , lvsNetworkUsageInMax   = 0.0
+                , lvsNetworkUsageOutPerc = 0.0
+                , lvsNetworkUsageOutCurr = 0.0
+                , lvsNetworkUsageOutMax  = 0.0
+                , lvsStartTime           = now
+                , lvsCPUUsageLast        = 0
+                , lvsCPUUsageNs          = 10000
+                , lvsDiskUsageRLast      = 0
+                , lvsDiskUsageRNs        = 10000
+                , lvsDiskUsageWLast      = 0
+                , lvsDiskUsageWNs        = 10000
+                , lvsNetworkUsageInLast  = 0
+                , lvsNetworkUsageInNs    = 10000
+                , lvsNetworkUsageOutLast = 0
+                , lvsNetworkUsageOutNs   = 10000
+                , lvsMempoolCapacity     = 200
+                , lvsMessage             = Nothing
+                , lvsUIThread            = Nothing
+                , lvsMetricsThread       = Nothing
+                , lvsColorTheme          = DarkTheme
                 }
 
 setTopology :: LiveViewBackend a -> TopologyInfo -> IO ()
@@ -477,15 +533,29 @@ systemStatsW p =
                          ]
                   , padBottom (T.Pad 1) $ cpuUsageBar
                   ]
-           , vBox [ hBox [ txt "Disk usage:"
-                         , withAttr barValueAttr . padLeft T.Max $ str $ (take 5 $ show $ max (lvsDiskUsageMax p) 1.0) <> " KB/s"
+           , hBox [ vBox [ hBox [ txt "Disk R:"
+                                , withAttr barValueAttr . padLeft T.Max $ str $ (take 5 $ show $ max (lvsDiskUsageRMax p) 1.0) <> " KB/s"
+                                ]
+                         , padBottom (T.Pad 1) $ diskUsageRBar
                          ]
-                  , padBottom (T.Pad 1) $ diskIOBar
+                  , padLeft (T.Pad 3) $
+                    vBox [ hBox [ txt "Disk W:"
+                                , withAttr barValueAttr . padLeft T.Max $ str $ (take 5 $ show $ max (lvsDiskUsageWMax p) 1.0) <> " KB/s"
+                                ]
+                         , padBottom (T.Pad 1) $ diskUsageWBar
+                         ]
                   ]
-           , vBox [ hBox [ txt "Network usage:"
-                         , withAttr barValueAttr . padLeft T.Max $ str $ (take 5 $ show $ max (lvsNetworkUsageMax p) 1.0) <> " KB/s"
+           , hBox [ vBox [ hBox [ txt "Network In:"
+                                , withAttr barValueAttr . padLeft T.Max $ str $ (take 5 $ show $ max (lvsNetworkUsageInMax p) 1.0) <> " KB/s"
+                                ]
+                         , padBottom (T.Pad 1) $ networkUsageInBar
                          ]
-                  , padBottom (T.Pad 1) $ networkIOBar
+                  , padLeft (T.Pad 3) $
+                    vBox [ hBox [ txt "Network Out:"
+                                , withAttr barValueAttr . padLeft T.Max $ str $ (take 5 $ show $ max (lvsNetworkUsageOutMax p) 1.0) <> " KB/s"
+                                ]
+                         , padBottom (T.Pad 1) $ networkUsageOutBar
+                         ]
                   ]
            ]
   where
@@ -510,18 +580,35 @@ systemStatsW p =
                                   ]
                   ) $ bar cpuLabel (lvsCPUUsagePerc p)
     cpuLabel = Just $ (take 5 $ show $ lvsCPUUsagePerc p * 100) ++ "%"
-    diskIOBar = updateAttrMap
-                (A.mapAttrNames [ (diskIODoneAttr, P.progressCompleteAttr)
-                                , (diskIOToDoAttr, P.progressIncompleteAttr)
-                                ]
-                ) $ bar diskIOLabel (lvsDiskUsagePerc p)
-    diskIOLabel = Just $ (take 5 $ show $ lvsDiskUsageCurr p) ++ " KB/s"
-    networkIOBar = updateAttrMap
-                   (A.mapAttrNames [ (networkIODoneAttr, P.progressCompleteAttr)
-                                   , (networkIOToDoAttr, P.progressIncompleteAttr)
-                                   ]
-                   ) $ bar networkIOLabel (lvsNetworkUsagePerc p)
-    networkIOLabel = Just $ (take 5 $ show $ lvsNetworkUsageCurr p) ++ " KB/s"
+
+    diskUsageRBar = updateAttrMap
+                    (A.mapAttrNames [ (diskIODoneAttr, P.progressCompleteAttr)
+                                    , (diskIOToDoAttr, P.progressIncompleteAttr)
+                                    ]
+                    ) $ bar diskUsageRLabel (lvsDiskUsageRPerc p)
+    diskUsageRLabel = Just $ (take 5 $ show $ lvsDiskUsageRCurr p) ++ " KB/s"
+
+    diskUsageWBar = updateAttrMap
+                    (A.mapAttrNames [ (diskIODoneAttr, P.progressCompleteAttr)
+                                    , (diskIOToDoAttr, P.progressIncompleteAttr)
+                                    ]
+                    ) $ bar diskUsageWLabel (lvsDiskUsageWPerc p)
+    diskUsageWLabel = Just $ (take 5 $ show $ lvsDiskUsageWCurr p) ++ " KB/s"
+
+    networkUsageInBar = updateAttrMap
+                        (A.mapAttrNames [ (networkIODoneAttr, P.progressCompleteAttr)
+                                        , (networkIOToDoAttr, P.progressIncompleteAttr)
+                                        ]
+                        ) $ bar networkUsageInLabel (lvsNetworkUsageInPerc p)
+    networkUsageInLabel = Just $ (take 5 $ show $ lvsNetworkUsageInCurr p) ++ " KB/s"
+
+    networkUsageOutBar = updateAttrMap
+                         (A.mapAttrNames [ (networkIODoneAttr, P.progressCompleteAttr)
+                                         , (networkIOToDoAttr, P.progressIncompleteAttr)
+                                         ]
+                         ) $ bar networkUsageOutLabel (lvsNetworkUsageOutPerc p)
+    networkUsageOutLabel = Just $ (take 5 $ show $ lvsNetworkUsageOutCurr p) ++ " KB/s"
+
     bar lbl pcntg = P.progressBar lbl pcntg
     lvsMemUsagePerc = (lvsMemoryUsageCurr p) / (max 200 (lvsMemoryUsageMax p))
 
