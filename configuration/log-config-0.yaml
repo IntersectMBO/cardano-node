@@ -10,27 +10,21 @@ rotation:
 # these backends are initialized:
 setupBackends:
   - KatipBK
-  - EKGViewBK
-  - EditorBK
   - TraceForwarderBK
 
 # if not indicated otherwise, then messages are passed to these backends:
 defaultBackends:
-  - TraceForwarderBK
-  #- KatipBK
-  #- EditorBK
+  - KatipBK
+  #- TraceForwarderBK
 
 # file to forward traced objects
 logOutput: "log-pipe-0"
 
 # if wanted, the GUI is listening on this port:
-hasGUI: 12870
+#hasGUI: 12871
 
 # if wanted, the EKG interface is listening on this port:
-hasEKG: 12780
-
-# Prometheus listens on: http://localhost:<port>/metrics
-# hasPrometheus: 12760
+#hasEKG: 12781
 
 # here we set up outputs of logging in 'katip':
 setupScribes:
@@ -78,14 +72,6 @@ options:
       subtrace: NoTrace
     '#messagecounters.monitoring':
       subtrace: NoTrace
-    cardano.benchmark:
-      subtrace: ObservableTraceSelf
-      contents:
-        - GhcRtsStats
-        - MonotonicClock
-        - ProcessStats
-        - NetStats
-        - IOStats
   mapBackends:
     cardano.node.metrics:
       - kind: UserDefinedBK
