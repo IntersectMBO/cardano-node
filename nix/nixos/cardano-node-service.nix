@@ -7,6 +7,7 @@ with lib;
 let
   cfg = config.services.cardano-node;
   envConfig = environments.${cfg.environment};
+  systemdServiceName = "cardano-node${optionalString cfg.instanced "@"}";
 in {
 
   options = {
@@ -19,9 +20,26 @@ in {
           (the blockchain protocols running cardano).
         '';
       };
+      instanced = mkOption {
+        type = types.bool;
+        default = false;
+        description = ''
+          Whether to enable systemd service instancing.
+          For details see https://fedoramagazine.org/systemd-template-unit-files/
+        '';
+      };
       script = mkOption {
         type = types.str;
         default = ''
+          echo "Starting node: ${cfg.package}/bin/cardano-node"
+          echo "   --node-id      ${cfg.nodeId}"
+          echo "   --port         ${cfg.port}"
+          echo "   --genesis-file ${cfg.genesisFile}"
+          echo "   --genesis-hash ${cfg.genesisHash}"
+          echo "   --signing-key  ${cfg.signingKey or "NONE"}"
+          echo "   --delegation-certificate ${cfg.delegationCertificate or "NONE"}"
+          echo "   --topology     ${cfg.topology}"
+          echo "   --log-config   ${cfg.logger.configFile}"
           exec ${cfg.package}/bin/cardano-node \
             --genesis-file ${cfg.genesisFile} \
             --genesis-hash ${cfg.genesisHash} \
@@ -31,9 +49,9 @@ in {
             node \
             --topology ${cfg.topology} \
             --${cfg.consensusProtocol} \
-            --node-id ${builtins.toString cfg.nodeId} \
+            --node-id ${cfg.nodeId} \
             --host-addr ${cfg.hostAddr} \
-            --port ${builtins.toString cfg.port} \
+            --port ${cfg.port} \
             ${lib.optionalString (cfg.pbftThreshold != null) "--pbft-signature-threshold ${cfg.pbftThreshold}"} \
             ${lib.optionalString (cfg.signingKey != null) "--signing-key ${cfg.signingKey}"} \
             ${lib.optionalString (cfg.delegationCertificate != null) "--delegation-certificate ${cfg.delegationCertificate}"} \
@@ -82,7 +100,7 @@ in {
       };
 
       signingKey = mkOption {
-        type = types.nullOr types.path;
+        type = types.nullOr types.str;
         default = null;
         description = ''
           Signing key
@@ -90,7 +108,7 @@ in {
       };
 
       delegationCertificate = mkOption {
-        type = types.nullOr types.path;
+        type = types.nullOr types.str;
         default = null;
         description = ''
           Delegation certificate
@@ -143,16 +161,16 @@ in {
       };
 
       port = mkOption {
-        type = types.int;
-        default = 3001;
+        type = types.str;
+        default = "3001";
         description = ''
           The port number
         '';
       };
 
       nodeId = mkOption {
-        type = types.int;
-        default = 0;
+        type = types.str;
+        default = "0";
         description = ''
           The ID for this node
         '';
@@ -186,7 +204,7 @@ in {
       uid = 10016;
       group = "cardano-node";
     };
-    systemd.services.cardano-node = {
+    systemd.services."${systemdServiceName}" = {
       description   = "cardano-node node service";
       after         = [ "network.target" ];
       wantedBy = [ "multi-user.target" ];
