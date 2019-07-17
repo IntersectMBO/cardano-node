@@ -15,9 +15,9 @@ module LiveView (
 import           Control.Concurrent (threadDelay)
 import qualified Control.Concurrent.Async as Async
 import           Control.Concurrent.MVar (MVar, modifyMVar_, newMVar, readMVar)
-import           Control.Monad (forever, void, when)
+import           Control.Monad (forever, void)
 import           Control.Monad.IO.Class (liftIO)
-import           Data.Text (Text, isPrefixOf, pack, unpack)
+import           Data.Text (Text, pack, unpack)
 import           Data.Time.Calendar (Day (..))
 import           Data.Time.Clock (NominalDiffTime, UTCTime (..), addUTCTime,
                                   diffUTCTime, getCurrentTime)
@@ -194,19 +194,24 @@ instance IsEffectuator LiveViewBackend Text where
                     _ ->
                         return ()
             LogObject _ _ (LogMessage msg) ->
-                when ("As leader of slot" `isPrefixOf` msg) $ do
-                    let (_:_:_:_:slotNo:_) = words $ unpack msg
-                        blockHeight = read slotNo
-                    modifyMVar_ (getbe lvbe) $ \lvs ->
-                        return $ lvs { lvsBlocksMinted = lvsBlocksMinted lvs + 1
-                                     , lvsBlockHeight  = blockHeight
-                                     }
+                case words $ unpack msg of
+                    (_:"As":"leader":"of":"slot":slotNo:_) -> do
+                        let blockHeight = read slotNo
+                        modifyMVar_ (getbe lvbe) $ \lvs ->
+                            return $ lvs { lvsBlocksMinted = lvsBlocksMinted lvs + 1
+                                         , lvsBlockHeight  = blockHeight
+                                         }
+                    _                                      -> return ()
             LogObject _ _ (LogValue "txsInMempool" (PureI txsInMempool)) ->
                 modifyMVar_ (getbe lvbe) $ \lvs -> do
                         let lvsMempool' = fromIntegral txsInMempool
                             percentage = fromIntegral lvsMempool' / fromIntegral (lvsMempoolCapacity lvs)
                         return $ lvs { lvsMempool = lvsMempool'
                                      , lvsMempoolPerc = percentage
+                                     }
+            LogObject _ _ (LogValue "txsProcessed" (PureI txsProcessed)) ->
+                modifyMVar_ (getbe lvbe) $ \lvs -> do
+                        return $ lvs { lvsTransactions = (lvsTransactions lvs) + (fromIntegral txsProcessed)
                                      }
             _ -> return ()
 
@@ -275,9 +280,9 @@ initLiveViewState = do
                 , lvsVersion             = showVersion version
                 , lvsCommit              = unpack gitRev
                 , lvsUpTime              = diffUTCTime now now
-                , lvsBlockHeight         = 1891
+                , lvsBlockHeight         = 0
                 , lvsBlocksMinted        = 0
-                , lvsTransactions        = 1732
+                , lvsTransactions        = 0
                 , lvsPeersConnected      = 3
                 , lvsMaxNetDelay         = 17
                 , lvsMempool             = 0
@@ -628,7 +633,7 @@ nodeInfoLabels =
            , padTop (T.Pad 1) $ txt "uptime:"
            , padTop (T.Pad 1) $ txt "block height:"
            ,                    txt "minted:"
-           , padTop (T.Pad 1) $ txt "transactions:"
+           , padTop (T.Pad 1) $ txt "transactions processed:"
            , padTop (T.Pad 1) $ txt "peers connected:"
            , padTop (T.Pad 1) $ txt "max network delay:"
            ]

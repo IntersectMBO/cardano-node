@@ -409,6 +409,14 @@ handleSimpleNode p NodeCLIArguments{..} myNodeAddress (TopologyInfo myNodeId top
           let logValue = LogValue "txsInMempool" $ PureI $ fromIntegral $ _txsInMempool mempoolEvent
           meta <- mkLOMeta Info Confidential
           traceNamedObject tr (meta, logValue)
+          case mempoolEvent of
+            TraceMempoolAddTxs      txs _ ->
+                let logValue' = LogValue "txsProcessed" $ PureI $ fromIntegral $ length txs in
+                traceNamedObject tr (meta, logValue')
+            TraceMempoolRejectedTxs txs _ ->
+                let logValue' = LogValue "txsProcessed" $ PureI $ fromIntegral $ length txs in
+                traceNamedObject tr (meta, logValue')
+            _                             -> return ()
 
       prefixTip :: TVar IO (Point blk) -> Tracer IO String -> Tracer IO String
       prefixTip varTip tr = Tracer $ \msg -> do
