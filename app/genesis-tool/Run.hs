@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP                 #-}
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE GADTs               #-}
 {-# LANGUAGE LambdaCase          #-}
@@ -11,6 +12,10 @@
 {-# LANGUAGE ViewPatterns        #-}
 
 {-# OPTIONS_GHC -Wno-simplifiable-class-constraints #-}
+
+#if !defined(mingw32_HOST_OS)
+#define UNIX
+#endif
 
 module Run (
     decideKeyMaterialOps
@@ -29,19 +34,24 @@ import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Lazy.Builder as Builder
 import qualified Formatting as F
-import           System.Posix.Files (ownerReadMode, setFileMode)
 import           System.Directory (createDirectory, doesPathExist)
+import           System.FilePath ((</>))
 import           Text.Printf (printf)
+#ifdef UNIX
+import           System.Posix.Files (ownerReadMode, setFileMode)
+#else
+import           System.Directory (emptyPermissions, readable, setPermissions)
+#endif
 
 import qualified Crypto.SCRAPE as Scrape
 
 import           Cardano.Prelude hiding (option)
 
 import qualified Cardano.Chain.Common as CC
-import qualified Cardano.Crypto.Random as CCr
+import           Cardano.Crypto (SigningKey (..))
 import qualified Cardano.Crypto.Hashing as CCr
+import qualified Cardano.Crypto.Random as CCr
 import qualified Cardano.Crypto.Signing as CCr
-import           Cardano.Crypto (SigningKey(..))
 
 import           Cardano.Chain.Genesis
 
@@ -103,7 +113,7 @@ runCommand
     let (genesisData, GeneratedSecrets{..}) = either (error . show) id res
 
     -- Write out (mostly)
-    let genesisJSONFile = outDir <> "/genesis.json"
+    let genesisJSONFile = outDir </> "genesis.json"
     LB.writeFile genesisJSONFile =<< kmoSerialiseGenesis genesisData
 
     writeSecrets outDir "genesis-keys"  "key"  kmoSerialiseGenesisKey   gsDlgIssuersSecrets
@@ -161,6 +171,10 @@ writeSecrets :: FilePath -> String -> String -> (a -> IO LB.ByteString) -> [a] -
 writeSecrets outDir prefix suffix secretOp xs =
   forM_ (zip xs $ [0::Int ..]) $
   \(secret, nr)-> do
-    let filename = outDir <> "/" <> prefix <> "." <> printf "%03d" nr <> "." <> suffix
+    let filename = outDir </> prefix <> "." <> printf "%03d" nr <> "." <> suffix
     secretOp secret >>= LB.writeFile filename
+#ifdef UNIX
     setFileMode                      filename ownerReadMode
+#else
+    setPermissions filename (emptyPermissions {readable = True})
+#endif

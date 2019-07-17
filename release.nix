@@ -44,16 +44,16 @@ iohkLib.nix-tools.release-nix {
   required-name = "cardano-node-required-checks";
   required-targets = jobs: [
     # targets are specified using above nomenclature:
-    #jobs.nix-tools.libs.cardano-node.x86_64-darwin
+    jobs.nix-tools.libs.cardano-node.x86_64-darwin
     jobs.nix-tools.libs.cardano-node.x86_64-linux
-    #jobs.nix-tools.exes.cardano-node.x86_64-darwin
+    jobs.nix-tools.exes.cardano-node.x86_64-darwin
     jobs.nix-tools.exes.cardano-node.x86_64-linux
     jobs.nix-tools.tests.cardano-node.cardano-node-test.x86_64-linux
 
     # windows cross compilation targets
-    #jobs.nix-tools.libs.x86_64-pc-mingw32-cardano-node.x86_64-linux
-    #jobs.nix-tools.exes.x86_64-pc-mingw32-cardano-node.x86_64-linux
-    #jobs.nix-tools.tests.x86_64-pc-mingw32-cardano-node.cardano-node-test.x86_64-linux
+    jobs.nix-tools.libs.x86_64-pc-mingw32-cardano-node.x86_64-linux
+    jobs.nix-tools.exes.x86_64-pc-mingw32-cardano-node.x86_64-linux
+    jobs.nix-tools.tests.x86_64-pc-mingw32-cardano-node.cardano-node-test.x86_64-linux
 
   ];
 }

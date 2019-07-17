@@ -172,6 +172,7 @@ executable genesis-tool
                      , cardano-node
                      , cardano-prelude
                      , contra-tracer
+                     , filepath
                      , iohk-monitoring
                      , pvss
 
