@@ -15,9 +15,12 @@ module LiveView (
 import           Control.Concurrent (threadDelay)
 import qualified Control.Concurrent.Async as Async
 import           Control.Concurrent.MVar (MVar, modifyMVar_, newMVar, readMVar)
-import           Control.Monad (forever, void)
+import           Control.Monad (forever, void, when)
 import           Control.Monad.IO.Class (liftIO)
-import           Data.Text (Text, pack, unpack)
+import           Data.Char (isAlphaNum)
+import           Data.Text (Text, dropAround, isPrefixOf, isSuffixOf, pack,
+                            unpack)
+import qualified Data.Text as T
 import           Data.Time.Calendar (Day (..))
 import           Data.Time.Clock (NominalDiffTime, UTCTime (..), addUTCTime,
                                   diffUTCTime, getCurrentTime)
@@ -193,7 +196,15 @@ instance IsEffectuator LiveViewBackend Text where
                                          }
                     _ ->
                         return ()
-            LogObject _ _ (LogMessage msg) ->
+            LogObject _ _ (LogMessage msg) -> do
+                when ("[" `isPrefixOf` msg) $ do
+                    let pointHashInBrackets = T.take 9 msg
+                    when ("]" `isSuffixOf` pointHashInBrackets) $ do
+                        -- Remove square brackets.
+                        let pointHashOnly = dropAround (not . isAlphaNum) pointHashInBrackets
+                        modifyMVar_ (getbe lvbe) $ \lvs ->
+                            return $ lvs { lvsTipOfChain = pointHashOnly
+                                         }
                 case words $ unpack msg of
                     (_:"As":"leader":"of":"slot":slotNo:_) -> do
                         let blockHeight = read slotNo
@@ -234,6 +245,7 @@ data LiveViewState a = LiveViewState
     , lvsTransactions        :: Word64
     , lvsPeersConnected      :: Word64
     , lvsMaxNetDelay         :: Integer
+    , lvsTipOfChain          :: Text
     , lvsMempool             :: Word64
     , lvsMempoolPerc         :: Float
     , lvsCPUUsagePerc        :: Float
@@ -285,6 +297,7 @@ initLiveViewState = do
                 , lvsTransactions        = 0
                 , lvsPeersConnected      = 3
                 , lvsMaxNetDelay         = 17
+                , lvsTipOfChain          = ""
                 , lvsMempool             = 0
                 , lvsMempoolPerc         = 0.0
                 , lvsCPUUsagePerc        = 0.58
@@ -636,6 +649,7 @@ nodeInfoLabels =
            , padTop (T.Pad 1) $ txt "transactions processed:"
            , padTop (T.Pad 1) $ txt "peers connected:"
            , padTop (T.Pad 1) $ txt "max network delay:"
+           , padTop (T.Pad 1) $ txt "tip of chain:"
            ]
 
 nodeInfoValues :: LiveViewState a -> Widget ()
@@ -651,6 +665,7 @@ nodeInfoValues lvs =
            , padTop (T.Pad 1) $ str (show . lvsTransactions $ lvs)
            , padTop (T.Pad 1) $ str (show . lvsPeersConnected $ lvs)
            , padTop (T.Pad 1) $ str ((show . lvsMaxNetDelay $ lvs) <> " ms")
+           , padTop (T.Pad 1) $ txt (lvsTipOfChain lvs)
            ]
 
 eventHandler :: LiveViewState a -> BrickEvent n (LiveViewBackend a) -> EventM n (Next (LiveViewState a))
