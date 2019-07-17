@@ -154,9 +154,10 @@ runNode nodeCli@NodeCLIArguments{..} loggingLayer = do
             setTopology be topology
             captureCounters be tr
 
-            _ <- Async.waitAny [nodeThread]
+            void $ Async.waitAny [nodeThread]
+#else
+            handleSimpleNode p nodeCli myNodeAddress topology trace'
 #endif
-            return ()
 
 -- | Sets up a simple node, which will run the chain sync protocol and block
 -- fetch protocol, and, if core, will also look at the mempool when trying to
