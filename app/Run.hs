@@ -407,7 +407,7 @@ handleSimpleNode p NodeCLIArguments{..} myNodeAddress (TopologyInfo myNodeId top
           tip <- atomically $ readTVar varTip
           let hash = case pointHash tip of
                 GenesisHash -> "genesis"
-                BlockHash h -> take 4 (condense h)
+                BlockHash h -> take 7 (condense h)
           traceWith tr ("[" <> hash <> "] " <> msg)
 
 removeStaleLocalSocket :: FilePath -> IO ()
