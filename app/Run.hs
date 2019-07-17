@@ -41,6 +41,7 @@ import           System.Directory (removeFile)
 import           System.IO.Error (isDoesNotExistError)
 
 import           Control.Monad.Class.MonadAsync
+import           Control.Monad.Class.MonadSTM
 
 import qualified Cardano.BM.Configuration.Model as CM
 import           Cardano.BM.Data.Aggregated (Measurable (PureI))
@@ -207,19 +208,25 @@ handleSimpleNode p NodeCLIArguments{..} myNodeAddress (TopologyInfo myNodeId top
                                proof
           }
 
+      varTip <- atomically $ newTVar GenesisPoint
       let chainDbArgs = mkChainDbArgs
                           pInfoConfig
                           pInfoInitLedger
                           registry
                           (CoreNodeId nid)
-                          tracer
+                          (prefixTip varTip tracer)
                           slotDuration
       chainDB :: ChainDB IO blk <- ChainDB.openDB chainDbArgs
+
+      -- Watch the tip of the chain and store it in @varTip@ so we can include
+      -- it in trace messages.
+      onEachChange registry id GenesisPoint (ChainDB.getTipPoint chainDB)
+        (atomically . writeTVar varTip)
 
       btime  <- realBlockchainTime registry slotDuration systemStart
       let nodeParams :: NodeParams IO Peer blk
           nodeParams = NodeParams
-            { tracer             = tracer
+            { tracer             = prefixTip varTip tracer
             , mempoolTracer      = mempoolTracer
             , decisionTracer     = nullTracer
             , fetchClientTracer  = nullTracer
@@ -402,6 +409,14 @@ handleSimpleNode p NodeCLIArguments{..} myNodeAddress (TopologyInfo myNodeId top
           let logValue = LogValue "txsInMempool" $ PureI $ fromIntegral $ _txsInMempool mempoolEvent
           meta <- mkLOMeta Info Confidential
           traceNamedObject tr (meta, logValue)
+
+      prefixTip :: TVar IO (Point blk) -> Tracer IO String -> Tracer IO String
+      prefixTip varTip tr = Tracer $ \msg -> do
+          tip <- atomically $ readTVar varTip
+          let hash = case pointHash tip of
+                GenesisHash -> "genesis"
+                BlockHash h -> take 4 (condense h)
+          traceWith tr ("[" <> hash <> "] " <> msg)
 
 removeStaleLocalSocket :: FilePath -> IO ()
 removeStaleLocalSocket socketPath =
