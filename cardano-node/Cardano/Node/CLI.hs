@@ -76,8 +76,6 @@ import           Cardano.Shell.Constants.Types (CardanoConfiguration (..),
                                                 Genesis (..),
                                                 RequireNetworkMagic (..))
 
-import qualified Cardano.Node.CanonicalJSON as CanonicalJSON
-
 {-------------------------------------------------------------------------------
   Untyped/typed protocol boundary
 -------------------------------------------------------------------------------}

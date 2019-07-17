@@ -17,3 +17,5 @@ Available commands:
   pretty-secret-key-public        Pretty-print a secret key's public key and its hash (not a secret).
   migrate-delegate-key-from       Migrate a delegate key from an older version.
 ```
+
+The canned `scripts/genesis.sh` example provides a nice set of defaults.

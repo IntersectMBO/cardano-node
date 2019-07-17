@@ -17,6 +17,7 @@ import           Options.Applicative
 import           Cardano.Crypto.ProtocolMagic
 import           Cardano.Crypto.Signing
 import           Cardano.Chain.Common
+import           Cardano.Chain.Delegation
 import           Cardano.Chain.Genesis
 
 import           Cardano.Node.CLI
@@ -51,6 +52,8 @@ data Command
     !SystemVersion
     !FilePath
     !FilePath
+  | DumpHardcodedGenesis
+    !FilePath
 
 data KeyMaterialOps m
   = KeyMaterialOps
@@ -58,6 +61,7 @@ data KeyMaterialOps m
   , kmoSerialiseDelegateKey      :: SigningKey  -> m LB.ByteString
   , kmoSerialisePoorKey          :: PoorSecret  -> m LB.ByteString
   , kmoSerialiseGenesis          :: GenesisData -> m LB.ByteString
+  , kmoSerialiseDelegationCert   :: Certificate -> m LB.ByteString
   , kmoDeserialiseDelegateKey    :: LB.ByteString -> SigningKey
   }
 
@@ -101,4 +105,7 @@ parseCommand = subparser $ mconcat
       <$> parseSystemVersion
       <*> parseFilePath    "to"                       "Output secret key file."
       <*> parseFilePath    "from"                     "Secret key file to migrate."
+  , command' "dump-hardcoded-genesis"         "Write out a hard-coded genesis." $
+      DumpHardcodedGenesis
+      <$> parseFilePath    "genesis-output-dir"       "A yet-absent directory where genesis JSON file along with secrets shall be placed."
   ]
