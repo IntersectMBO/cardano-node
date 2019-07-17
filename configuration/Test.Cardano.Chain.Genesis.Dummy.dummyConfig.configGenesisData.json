@@ -1,0 +1,114 @@
+{ "bootStakeholders":
+    { "1a1ff7035103d8a9e1e56a4e4e1d0031fb3f31a6a9953137dfe54c67": 1
+    , "281e5ae9e357970a0dd007dc9b21675ab07de3d67ec825d7363621f9": 1
+    , "44283ce5c44e6e00846190ad5fb470c5dbdc674c22df2a3e915c4d71": 1
+    , "5f53e01e1366aeda8811c2a630f0e037077a7b651093d2bdc4ef7200": 1
+    }
+, "heavyDelegation":
+    { "1a1ff7035103d8a9e1e56a4e4e1d0031fb3f31a6a9953137dfe54c67":
+        { "omega": 0
+        , "issuerPk":
+            "o0vbO7uAzTdNtOnLqLAH+pBJyPA7v0BBfGOX7cjkiOpiYPAJ5TfJmYkeip/d5/LjprgOgtO337AqF27AmqYLZQ=="
+        , "delegatePk":
+            "658J6jGjD4EAFNmarORRazQm7Hg96eFeD9Ufiav+3tgzE+2tdiOfG7A2UTE6AmHwKvatL8QI0J+J9w4wZ1sfAQ=="
+        , "cert":
+            "2cb0638a9255921e1444803493413293ebec214116acc19c21041e33bd1de15fc8ce853e56cfacd0fa164d8aa28f9e609b57a59d25985b46455188db5fc5eb07"
+        }
+    , "281e5ae9e357970a0dd007dc9b21675ab07de3d67ec825d7363621f9":
+        { "omega": 0
+        , "issuerPk":
+            "8L6wpU3sx6ru+xAEHk3/ym8DZSqobt66ndqhzloj3Og7sjYRSdmlwdwfJMTXJtyM9KppLxZTKUu7yl+oxoAbcw=="
+        , "delegatePk":
+            "LxQs4CWIxMp3demqmPBMxrI/v/KpscOVwxiXATy0sByGK3idaFpN72k3U/Nxfhk6HGUFQAfcMwEzy0za95BNJw=="
+        , "cert":
+            "2c5bbe9a8c8654b6b9d7419677f7601b4bb26db80f71c3b74f8dd49401758bcb1b55edcfd1c16525097f063dad4028cb32ef72ac77b8bbe7a44fa0e89a493d07"
+        }
+    , "44283ce5c44e6e00846190ad5fb470c5dbdc674c22df2a3e915c4d71":
+        { "omega": 0
+        , "issuerPk":
+            "RAtkkfzMJ8jI160QuxcB9hekAHbLEm/ggW8JNkI2HlEgZCzdAw1s8w6IkD9EYGtfLDb4uUZgPYetUrXkHlhN7A=="
+        , "delegatePk":
+            "ohsV3RtEFD1jeOzKwNulmMRhBG2RLdFxPbcSGbkmJ+xd/2cOALSDahPlydFRjd15sH0PkPE/zTvP4iN8wJr/hA=="
+        , "cert":
+            "5e2454db1d4a7cb49c9b5101b83dba81467ddc02ac003c6b9687c7076b3967dd5247d8474f1499283a54549b828f096ecf637962184d398bdf3264b49032c801"
+        }
+    , "5f53e01e1366aeda8811c2a630f0e037077a7b651093d2bdc4ef7200":
+        { "omega": 0
+        , "issuerPk":
+            "oyGcGsd/FX3Zl98PPt/jE/mo+6Mz/HxaVcHxhrtxh6MrBkBi2U4h0pwaPDhWUo+IgcGzl4xLOqkoB4suojuNUA=="
+        , "delegatePk":
+            "ZcrTBz5bwqSA+6pGfg7D55uJfZt++5XiEY7h03ly3++41DDNIerLdILubwKrr1zinBEBJhJORXlla/S4yERogg=="
+        , "cert":
+            "75bd84bda1e8c4820c1bb3b11809447c2367581db3f99bd16ffba0a105526b95bdcdcc930be61bade35184bb2a29eb036da15254b6b54e06ae938faf60effc04"
+        }
+    }
+, "startTime": -3506716800
+, "nonAvvmBalances":
+    { "37btjrVyb4KAudU38UsW3Ciuqd5Bxtsv67zwQPwFZcBQ5bEG279fxJSQYLgvok8vz7PcBA3RvtdewoQJbLaGKS7KmuYXq4gxeLtpncJeiNQsBxCTqn":
+        "4999999999166"
+    , "2cWKMJemoBahGYHvphuM3cmwhgWZmRzPSRX5xdx11A1aJ168wLgRpD7naamfWk4dfQ28c":
+        "1484999999752500"
+    , "2cWKMJemoBahmiUmBjxRPMqhpcbouRv3JAyBpncSHUt6NHtHi1HPQ9WVKVXkuX9hZZ19r":
+        "1484999999752500"
+    , "37btjrVyb4KBjoSb2aQKyG7gzVn3UfT71MxsNB5yySsUjwtYKSrXUDHN3PHpoXiPwcv9TCzgiDTKFZd5hGiePgyGL3WJiRwLZckN2XiAtPd1uD6G3o":
+        "4999999999166"
+    , "2cWKMJemoBahu5eVQS49ByrycfsaukdWg5QJvia1k94DMZ2p1FVXt3g5PfXGfRy1GsebZ":
+        "1484999999752500"
+    , "37btjrVyb4KBo1FyXHeeGCe6kT9snxH6uMz43aeT6rug2AFb1nYB5Kzg5dB42xhrJePSZGFGp8E3Y6MoxeA1FVtaGdyAcSE2j7qZeEjfFa6cXtC2xv":
+        "4999999999166"
+    , "37btjrVyb4KBtAsGDSnkZdL82EcLuzoffQz3hMG5cEzzraG8Mg6WxE8EJcrzmZe45ALqaQazmhDLJnmeUcvhPq4PWTxYZzsaHtesz1RjXjS2iwsRXr":
+        "4999999999166"
+    , "37btjrVyb4KC73XjJa4UkFyPtrddRdvgS4s1cabxz1CfCWda47zjqZ29Wv7eR2C8FXgVdYjYmjesacDWLTQJpMNh7WX93CXprN6XraMfJqnTtrRGWV":
+        "4999999999166"
+    , "37btjrVyb4KD9CdHLcNR5MTfb8vHUs4WN7QkoGNPo9FaNh5mmEdiCVYTNaXhxjLweh56YnWkUkQSELsWfs9XFdPE4f94cgZ1mBe3Ka29VVAjcC1BWa":
+        "4999999999166"
+    , "37btjrVyb4KDB9cmZtcmCneKC7hn2SewMALeYg8KzzmG7s5BUgBkiPUaooYCdyStvWyZQUqHDnJhk6bLPdhNz3N2s9xxbgcavvv3rrUwo2DRnYVX7p":
+        "4999999999166"
+    , "37btjrVyb4KDTWQ3MvGhBPvpDLUeHQus54WWtAM9D8p7Ep5SwDdikKHZB5bt6tJ1ZfARJqjTxXhsMJ4jMBrWhKUF1FVjzHUUJcnXoTgmvne72egBKE":
+        "4999999999166"
+    , "37btjrVyb4KDd7r8aRqqhiKYa2oRfn6jmSH1gN1FKPV2euDn35VisDQc39RjULfTPHzaGQQKhJU8qjTbGh7Kmcaa8hYEVKwx8sRRVEeNnmWag3ii4q":
+        "4999999999166"
+    , "2cWKMJemoBajTDixXssEZJiybBSBSNAc3iDKG6GDwXxwP4yGLGeBizyHgA4NBqaWUwSeR":
+        "1484999999752500"
+    , "37btjrVyb4KEYNU2eRQnisZap3aJcubMXyQc6854CaAyMi8vRZRhLwh7w2UsS4qFRfJxYwBSKXx3NapYcGDR34SMT7QfHwnpkukYQbUYZsxHKUnhRw":
+        "4999999999166"
+    , "37btjrVyb4KEjxG6XnwcUEsL1YTTae6xU9iJdNZk271b6EBiYi1iLwtx3u79tqKuVu5z6zF81DSPf3KKzh3q6gjU281Ls8TJHzAdRBP8gssRqGiuPq":
+        "4999999999166"
+    , "37btjrVyb4KG1gqSxkT3uddYdjzCKz7nQBaebrqrAMiuoaGHztvBha6xxMkXmZQefAUiGa8L8aTXPq1AhT3YGRPFX2FdkwcRzyjXB3ndE7zP2oBUYc":
+        "4999999999166"
+    }
+, "blockVersionData":
+    { "scriptVersion": 0
+    , "slotDuration": "7000000000"
+    , "maxBlockSize": "2000000"
+    , "maxHeaderSize": "2000000"
+    , "maxTxSize": "4096"
+    , "maxProposalSize": "700"
+    , "mpcThd": "10000000000000"
+    , "heavyDelThd": "5000000000000"
+    , "updateVoteThd": "1000000000000"
+    , "updateProposalThd": "100000000000000"
+    , "updateImplicit": "10"
+    , "softforkRule":
+        { "initThd": "900000000000000"
+        , "minThd": "600000000000000"
+        , "thdDecrement": "50000000000000"
+        }
+    , "txFeePolicy":
+        { "summand": "155381000000000" , "multiplier": "44000000000" }
+    , "unlockStakeEpoch": "18446744073709551615"
+    }
+, "protocolConsts": { "k": 10 , "protocolMagic": 55550001 }
+, "avvmDistr":
+    { "HEiS7YSnHRrLMUBdnp6cojhhjUIYVYlt3fEqD76D4wM=": "100000"
+    , "Opi8QiolOV5w4bdYsuGzTE9OdhUp76PT2Nb54Q30YLw=": "100000"
+    , "TA0As1f4LEFX2bD9KRiBJ2F1t2sdmq8aGlumQcMw3aY=": "100000"
+    , "i7BovgrRyKk6e1T2MuVxM-u0baDIMuR_b4lTuNjcTWs=": "100000"
+    , "mz_-w2QeJ4LPsVLKrW3EHpCkgXQr4tc1xR8BDzvjDFA=": "100000"
+    , "udmswYKP5cQCmPsyTePhuXKrWY3Dg4-b-q_V9xPur3I=": "100000"
+    , "zut2dQ2M2eigElNLq-sTWXzH_j6zIwXEUqGgZzcSguI=": "100000"
+    , "23S_Rn64OjKz2pneoedphee1-hL6LVBTG-dTMZ3RXg8=": "100000"
+    , "3AySap8f_qC12xu80EgNYlc2JD4nJH-KEOHR7rmmLU8=": "100000"
+    , "_8YBLsTWdsU13WavR0l0YYiASuga3jKqG9L2dwM5SfA=": "100000"
+    }
+}
