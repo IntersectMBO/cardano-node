@@ -244,7 +244,6 @@ data LiveViewState a = LiveViewState
     , lvsBlocksMinted        :: Word64
     , lvsTransactions        :: Word64
     , lvsPeersConnected      :: Word64
-    , lvsMaxNetDelay         :: Integer
     , lvsTipOfChain          :: Text
     , lvsMempool             :: Word64
     , lvsMempoolPerc         :: Float
@@ -296,7 +295,6 @@ initLiveViewState = do
                 , lvsBlocksMinted        = 0
                 , lvsTransactions        = 0
                 , lvsPeersConnected      = 3
-                , lvsMaxNetDelay         = 17
                 , lvsTipOfChain          = ""
                 , lvsMempool             = 0
                 , lvsMempoolPerc         = 0.0
@@ -648,7 +646,6 @@ nodeInfoLabels =
            ,                    txt "minted:"
            , padTop (T.Pad 1) $ txt "transactions processed:"
            , padTop (T.Pad 1) $ txt "peers connected:"
-           , padTop (T.Pad 1) $ txt "max network delay:"
            , padTop (T.Pad 1) $ txt "tip of chain:"
            ]
 
@@ -664,7 +661,6 @@ nodeInfoValues lvs =
            ,                    str (show . lvsBlocksMinted $ lvs)
            , padTop (T.Pad 1) $ str (show . lvsTransactions $ lvs)
            , padTop (T.Pad 1) $ str (show . lvsPeersConnected $ lvs)
-           , padTop (T.Pad 1) $ str ((show . lvsMaxNetDelay $ lvs) <> " ms")
            , padTop (T.Pad 1) $ txt (lvsTipOfChain lvs)
            ]
 
