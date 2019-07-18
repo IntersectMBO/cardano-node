@@ -19,6 +19,7 @@ import           Data.Void (Void)
 import           Data.ByteString.Lazy (ByteString)
 import qualified Data.Set as Set
 import           Options.Applicative
+import           Data.Proxy
 
 import qualified Codec.Serialise as Serialise (encode, decode)
 import           Network.Socket as Socket
@@ -32,13 +33,15 @@ import           Control.Tracer
 import           Cardano.Crypto.Hash (ShortHash)
 import qualified Cardano.Crypto.Hash as H
 
-import           Ouroboros.Consensus.Demo
+import           Ouroboros.Consensus.Block (BlockProtocol)
 import           Ouroboros.Consensus.Demo.Run
 import qualified Ouroboros.Consensus.Ledger.Mock as Mock
 import           Ouroboros.Consensus.Mempool
 import           Ouroboros.Consensus.NodeId
-import           Ouroboros.Consensus.Protocol.Abstract (NodeConfig)
-import           Ouroboros.Consensus.Block (BlockProtocol)
+import qualified Ouroboros.Consensus.Protocol as Consensus
+import           Ouroboros.Consensus.Protocol hiding (Protocol)
+import           Ouroboros.Consensus.Node.ProtocolInfo
+import           Ouroboros.Consensus.Node.Run
 import           Ouroboros.Consensus.Util.Condense
 
 import           Network.TypedProtocol.Driver
@@ -101,7 +104,7 @@ parseMockTxOut = (,)
 
 handleTxSubmission :: forall blk.
                       RunDemo blk
-                   => DemoProtocol blk
+                   => Consensus.Protocol blk
                    -> TopologyInfo
                    -> Mock.Tx
                    -> Tracer IO String
@@ -139,6 +142,7 @@ submitTx :: RunDemo blk
          -> IO ()
 submitTx pInfoConfig nodeId tx tracer =
     connectTo
+      (,)
       (muxLocalInitiatorNetworkApplication tracer pInfoConfig tx)
       Nothing
       addr
@@ -146,13 +150,13 @@ submitTx pInfoConfig nodeId tx tracer =
     addr = localSocketAddrInfo (localSocketFilePath nodeId)
 
 muxLocalInitiatorNetworkApplication
-  :: forall blk m.
+  :: forall blk m peer.
      (RunDemo blk, MonadST m, MonadThrow m, MonadTimer m)
   => Tracer m String
   -> NodeConfig (BlockProtocol blk)
   -> GenTx blk
   -> Versions NodeToClientVersion DictVersion
-              (MuxApplication InitiatorApp NodeToClientProtocols
+              (MuxApplication InitiatorApp peer NodeToClientProtocols
                               m ByteString () Void)
 muxLocalInitiatorNetworkApplication tracer pInfoConfig tx =
     simpleSingletonVersions
@@ -160,12 +164,13 @@ muxLocalInitiatorNetworkApplication tracer pInfoConfig tx =
       (NodeToClientVersionData { networkMagic = 0 })
       (DictVersion nodeToClientCodecCBORTerm)
 
-  $ MuxInitiatorApplication $ \ptcl -> case ptcl of
+  $ MuxInitiatorApplication $ \peer ptcl -> case ptcl of
       LocalTxSubmissionPtcl -> \channel -> do
         traceWith tracer ("Submitting transaction: " {-++ show tx-})
         result <- runPeer
                     nullTracer -- (contramap show tracer)
                     localTxSubmissionCodec
+                    peer
                     channel
                     (localTxSubmissionClientPeer
                        (pure (txSubmissionClientSingle tx)))
@@ -177,6 +182,7 @@ muxLocalInitiatorNetworkApplication tracer pInfoConfig tx =
         runPeer
           nullTracer
           (localChainSyncCodec @blk pInfoConfig)
+          peer
           channel
           (chainSyncClientPeer chainSyncClientNull)
 
@@ -207,22 +213,22 @@ localTxSubmissionCodec
            DeserialiseFailure m ByteString
 localTxSubmissionCodec =
   codecLocalTxSubmission
-    demoEncodeGenTx
-    demoDecodeGenTx
+    nodeEncodeGenTx
+    nodeDecodeGenTx
     Serialise.encode
     Serialise.decode
 
 localChainSyncCodec
-  :: (RunDemo blk, MonadST m)
+  :: forall blk m. (RunDemo blk, MonadST m)
   => NodeConfig (BlockProtocol blk)
   -> Codec (ChainSync blk (Point blk))
            DeserialiseFailure m ByteString
 localChainSyncCodec pInfoConfig =
     codecChainSync
-      (demoEncodeBlock pInfoConfig)
-      (demoDecodeBlock pInfoConfig)
-      (Block.encodePoint demoEncodeHeaderHash)
-      (Block.decodePoint demoDecodeHeaderHash)
+      (nodeEncodeBlock pInfoConfig)
+      (nodeDecodeBlock pInfoConfig)
+      (Block.encodePoint (nodeEncodeHeaderHash (Proxy @blk)))
+      (Block.decodePoint (nodeDecodeHeaderHash (Proxy @blk)))
 
 
 localSocketFilePath :: NodeId -> FilePath

@@ -30,6 +30,7 @@ extra-deps:
   - git: https://github.com/input-output-hk/cardano-shell
     commit: 71fb36665338491e92d3ef14c20ae38ad6882c94
 
+  - binary-0.8.7.0
   - containers-0.5.11.0
   - ekg-prometheus-adapter-0.1.0.4
   - prometheus-2.1.1
@@ -54,7 +55,7 @@ extra-deps:
     #Ouroboros-network dependencies
 
   - git: https://github.com/input-output-hk/ouroboros-network
-    commit: af06ad8d87336f416d1bf81a89f043e921ef68d4
+    commit: 01358a48d57d24f3055bb5f7885d9f6517ca3bf1
     subdirs:
         - io-sim-classes
         - network-mux

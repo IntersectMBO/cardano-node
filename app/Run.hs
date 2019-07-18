@@ -68,23 +68,25 @@ import           Ouroboros.Network.Protocol.ChainSync.Codec
 import           Ouroboros.Network.Protocol.Handshake.Type
 import           Ouroboros.Network.Protocol.Handshake.Version
 import           Ouroboros.Network.Protocol.LocalTxSubmission.Codec
+import           Ouroboros.Network.Protocol.TxSubmission.Codec
 
 import           Ouroboros.Consensus.Block (BlockProtocol)
 import           Ouroboros.Consensus.BlockchainTime
 import           Ouroboros.Consensus.ChainSyncClient (ClockSkew (..))
-import           Ouroboros.Consensus.Demo
-import           Ouroboros.Consensus.Demo.Run
 import           Ouroboros.Consensus.Ledger.Abstract
 import           Ouroboros.Consensus.Ledger.Extended (ExtLedgerState)
 import           Ouroboros.Consensus.Mempool.API (TraceEventMempool (..))
-import           Ouroboros.Consensus.Node
+import           Ouroboros.Consensus.Node hiding (TraceConstraints)
+import           Ouroboros.Consensus.Node.ProtocolInfo
+import           Ouroboros.Consensus.Node.Run
 import           Ouroboros.Consensus.NodeId
 import           Ouroboros.Consensus.NodeNetwork
-import           Ouroboros.Consensus.Protocol.Abstract
+import           Ouroboros.Consensus.Protocol hiding (Protocol)
 import           Ouroboros.Consensus.Util.Condense
 import           Ouroboros.Consensus.Util.Orphans ()
 import           Ouroboros.Consensus.Util.STM
 import           Ouroboros.Consensus.Util.ThreadRegistry
+import qualified Ouroboros.Consensus.Protocol as Consensus
 
 import           Ouroboros.Storage.ChainDB (ChainDB)
 import qualified Ouroboros.Storage.ChainDB as ChainDB
@@ -160,8 +162,8 @@ runNode nodeCli@NodeCLIArguments{..} loggingLayer = do
 -- | Sets up a simple node, which will run the chain sync protocol and block
 -- fetch protocol, and, if core, will also look at the mempool when trying to
 -- create a new block.
-handleSimpleNode :: forall blk. RunDemo blk
-                 => DemoProtocol blk
+handleSimpleNode :: forall blk. (RunNode blk, TraceConstraints blk)
+                 => Consensus.Protocol blk
                  -> NodeCLIArguments
                  -> NodeAddress
                  -> TopologyInfo
@@ -201,7 +203,7 @@ handleSimpleNode p NodeCLIArguments{..} myNodeAddress (TopologyInfo myNodeId top
                  -- The transactions we get are consistent; the only reason not
                  -- to include all of them would be maximum block size, which
                  -- we ignore for now.
-                demoForgeBlock pInfoConfig
+                nodeForgeBlock pInfoConfig
                                slot
                                curNo
                                prevHash
@@ -231,6 +233,8 @@ handleSimpleNode p NodeCLIArguments{..} myNodeAddress (TopologyInfo myNodeId top
             , mempoolTracer      = mempoolTracer
             , decisionTracer     = nullTracer
             , fetchClientTracer  = nullTracer
+            , txInboundTracer    = nullTracer
+            , txOutboundTracer   = nullTracer
             , threadRegistry     = registry
             , maxClockSkew       = ClockSkew 1
             , cfg                = pInfoConfig
@@ -238,15 +242,16 @@ handleSimpleNode p NodeCLIArguments{..} myNodeAddress (TopologyInfo myNodeId top
             , btime
             , chainDB
             , callbacks
-            , blockFetchSize     = demoBlockFetchSize
-            , blockMatchesHeader = demoBlockMatchesHeader
+            , blockFetchSize     = nodeBlockFetchSize
+            , blockMatchesHeader = nodeBlockMatchesHeader
+            , maxUnackTxs        = 100 -- TODO
             }
 
       kernel <- nodeKernel nodeParams
 
       let networkApps :: NetworkApplication
                            IO Peer
-                           ByteString ByteString
+                           ByteString ByteString ByteString
                            ByteString ByteString ()
           networkApps =
             consensusNetworkApps
@@ -256,29 +261,36 @@ handleSimpleNode p NodeCLIArguments{..} myNodeAddress (TopologyInfo myNodeId top
               ProtocolCodecs
                 { pcChainSyncCodec =
                     codecChainSync
-                      (demoEncodeHeader pInfoConfig)
-                      (demoDecodeHeader pInfoConfig)
+                      (nodeEncodeHeader pInfoConfig)
+                      (nodeDecodeHeader pInfoConfig)
                        encodePoint'
                        decodePoint'
 
                 , pcBlockFetchCodec =
                     codecBlockFetch
-                      (demoEncodeBlock pInfoConfig)
-                      demoEncodeHeaderHash
-                      (demoDecodeBlock pInfoConfig)
-                      demoDecodeHeaderHash
+                      (nodeEncodeBlock pInfoConfig)
+                      (nodeEncodeHeaderHash (Proxy @blk))
+                      (nodeDecodeBlock pInfoConfig)
+                      (nodeDecodeHeaderHash (Proxy @blk))
+
+                , pcTxSubmissionCodec =
+                    codecTxSubmission
+                      nodeEncodeGenTxId
+                      nodeDecodeGenTxId
+                      nodeEncodeGenTx
+                      nodeDecodeGenTx
 
                 , pcLocalChainSyncCodec =
                     codecChainSync
-                      (demoEncodeBlock pInfoConfig)
-                      (demoDecodeBlock pInfoConfig)
+                      (nodeEncodeBlock pInfoConfig)
+                      (nodeDecodeBlock pInfoConfig)
                        encodePoint'
                        decodePoint'
 
                 , pcLocalTxSubmissionCodec =
                     codecLocalTxSubmission
-                      demoEncodeGenTx
-                      demoDecodeGenTx
+                      nodeEncodeGenTx
+                      nodeDecodeGenTx
                       Serialise.encode
                       Serialise.decode
 
@@ -290,7 +302,7 @@ handleSimpleNode p NodeCLIArguments{..} myNodeAddress (TopologyInfo myNodeId top
                                     DictVersion
                                     (NetworkApplication
                                        IO Peer
-                                       ByteString ByteString
+                                       ByteString ByteString ByteString
                                        ByteString ByteString ())
           networkAppNodeToNode =
             simpleSingletonVersions
@@ -304,7 +316,7 @@ handleSimpleNode p NodeCLIArguments{..} myNodeAddress (TopologyInfo myNodeId top
                                       DictVersion
                                       (NetworkApplication
                                          IO Peer
-                                         ByteString ByteString
+                                         ByteString ByteString ByteString
                                          ByteString ByteString ())
           networkAppNodeToClient =
             simpleSingletonVersions
@@ -329,6 +341,7 @@ handleSimpleNode p NodeCLIArguments{..} myNodeAddress (TopologyInfo myNodeId top
           NodeToClient.withServer
             connTable
             myLocalAddr
+            Peer
             (\(DictVersion _) -> acceptEq)
             (muxLocalResponderNetworkApplication <$> networkAppNodeToClient)
             wait
@@ -339,7 +352,9 @@ handleSimpleNode p NodeCLIArguments{..} myNodeAddress (TopologyInfo myNodeId top
         forkLinked registry $ do
           NodeToNode.withServer
             connTable
-            myAddr (\(DictVersion _) -> acceptEq)
+            myAddr
+            Peer
+            (\(DictVersion _) -> acceptEq)
             (muxResponderNetworkApplication <$> networkAppNodeToNode)
             wait
 
@@ -362,14 +377,11 @@ handleSimpleNode p NodeCLIArguments{..} myNodeAddress (TopologyInfo myNodeId top
               ispIps     = map nodeAddressToSockAddr producers',
               ispValency = length producers'
             })
-          (\sock -> do
-              remoteAddr <- getPeerName sock
-              localAddr  <- getSocketName sock
-              connectToNode'
-                      (\(DictVersion codec) -> encodeTerm codec)
-                      (\(DictVersion codec) -> decodeTerm codec)
-                      (muxInitiatorNetworkApplication
-                          (Peer localAddr remoteAddr) <$> networkAppNodeToNode) sock)
+          (\sock -> connectToNode'
+            (\(DictVersion codec) -> encodeTerm codec)
+            (\(DictVersion codec) -> decodeTerm codec)
+            Peer
+            (muxInitiatorNetworkApplication <$> networkAppNodeToNode) sock)
           wait
 
       void $ Async.waitAny [localServer, peerServer, subManager]
@@ -382,11 +394,11 @@ handleSimpleNode p NodeCLIArguments{..} myNodeAddress (TopologyInfo myNodeId top
 
       encodePoint' ::  Point blk -> Encoding
       encodePoint' =
-          Block.encodePoint demoEncodeHeaderHash
+          Block.encodePoint (nodeEncodeHeaderHash (Proxy @blk))
 
       decodePoint' :: forall s. Decoder s (Point blk)
       decodePoint' =
-          Block.decodePoint demoDecodeHeaderHash
+          Block.decodePoint (nodeDecodeHeaderHash (Proxy @blk))
 
       mempoolTraceTransformer :: Tracer IO (LogObject a) -> Tracer IO (TraceEventMempool blk)
       mempoolTraceTransformer tr = Tracer $ \mempoolEvent -> do
@@ -418,7 +430,7 @@ removeStaleLocalSocket socketPath =
           then return ()
           else throwIO e
 
-mkChainDbArgs :: forall blk. RunDemo blk
+mkChainDbArgs :: forall blk. (RunNode blk, TraceConstraints blk)
               => NodeConfig (BlockProtocol blk)
               -> ExtLedgerState blk
               -> ThreadRegistry IO
@@ -429,18 +441,18 @@ mkChainDbArgs :: forall blk. RunDemo blk
 mkChainDbArgs cfg initLedger registry (CoreNodeId nid) tracer slotDuration =
     (ChainDB.defaultArgs dbPath)
       { ChainDB.cdbBlocksPerFile    = 10
-      , ChainDB.cdbDecodeBlock      = demoDecodeBlock       cfg
-      , ChainDB.cdbDecodeChainState = demoDecodeChainState  (Proxy @blk)
-      , ChainDB.cdbDecodeHash       = demoDecodeHeaderHash
-      , ChainDB.cdbDecodeLedger     = demoDecodeLedgerState cfg
-      , ChainDB.cdbEncodeBlock      = demoEncodeBlock       cfg
-      , ChainDB.cdbEncodeChainState = demoEncodeChainState  (Proxy @blk)
-      , ChainDB.cdbEncodeHash       = demoEncodeHeaderHash
-      , ChainDB.cdbEncodeLedger     = demoEncodeLedgerState cfg
-      , ChainDB.cdbEpochSize        = demoEpochSize         (Proxy @blk)
+      , ChainDB.cdbDecodeBlock      = nodeDecodeBlock       cfg
+      , ChainDB.cdbDecodeChainState = nodeDecodeChainState  (Proxy @blk)
+      , ChainDB.cdbDecodeHash       = nodeDecodeHeaderHash  (Proxy @blk)
+      , ChainDB.cdbDecodeLedger     = nodeDecodeLedgerState cfg
+      , ChainDB.cdbEncodeBlock      = nodeEncodeBlock       cfg
+      , ChainDB.cdbEncodeChainState = nodeEncodeChainState  (Proxy @blk)
+      , ChainDB.cdbEncodeHash       = nodeEncodeHeaderHash  (Proxy @blk)
+      , ChainDB.cdbEncodeLedger     = nodeEncodeLedgerState cfg
+      , ChainDB.cdbEpochSize        = nodeEpochSize         (Proxy @blk)
       , ChainDB.cdbGenesis          = return initLedger
       , ChainDB.cdbDiskPolicy       = defaultDiskPolicy secParam slotDiffTime
-      , ChainDB.cdbIsEBB            = \blk -> if demoIsEBB blk
+      , ChainDB.cdbIsEBB            = \blk -> if nodeIsEBB blk
                                               then Just (blockHash blk)
                                               else Nothing
       , ChainDB.cdbMemPolicy        = defaultMemPolicy secParam

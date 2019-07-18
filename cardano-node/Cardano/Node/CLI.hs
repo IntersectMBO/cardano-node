@@ -1,10 +1,12 @@
-{-# LANGUAGE GADTs #-}
+{-# LANGUAGE ConstraintKinds  #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GADTs            #-}
 
 module Cardano.Node.CLI (
   -- * Untyped/typed protocol boundary
     Protocol(..)
   , SomeProtocol(..)
+  , TraceConstraints
   , ViewMode(..)
   , fromProtocol
   -- * Parsers
@@ -37,11 +39,19 @@ import           Data.Time (UTCTime)
 import           Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import           Options.Applicative
 
+import           Ouroboros.Network.Block (ChainHash, HeaderHash)
+
+import           Ouroboros.Consensus.Block (Header)
 import           Ouroboros.Consensus.BlockchainTime
 import           Ouroboros.Consensus.Demo
 import           Ouroboros.Consensus.Demo.Run
+import           Ouroboros.Consensus.Mempool.API
+import           Ouroboros.Consensus.Node.ProtocolInfo
 import           Ouroboros.Consensus.NodeId (CoreNodeId (..), NodeId (..))
+import           Ouroboros.Consensus.Protocol hiding (Protocol)
 import           Ouroboros.Consensus.Util
+import           Ouroboros.Consensus.Util.Condense
+import qualified Ouroboros.Consensus.Protocol as Consensus
 
 import           Cardano.Binary (Annotated (..))
 import           Cardano.Chain.Common
@@ -61,30 +71,48 @@ data Protocol =
   | MockPBFT
   | RealPBFT
 
+-- | Tracing-related constraints for monitoring purposes.
+--
+-- When you need a 'Show' or 'Condense' instance for more types, just add the
+-- appropriate constraint here. There's no need to modify the consensus
+-- code-base, unless the corresponding instance is missing.
+type TraceConstraints blk =
+    ( Condense blk
+    , Condense [blk]
+    , Condense (ChainHash blk)
+    , Condense (Header blk)
+    , Condense (HeaderHash blk)
+    , Condense (GenTx blk)
+    , Show (ApplyTxErr blk)
+    , Show (GenTx blk)
+    , Show blk
+    )
+
 data SomeProtocol where
-  SomeProtocol :: RunDemo blk => DemoProtocol blk -> SomeProtocol
+  SomeProtocol :: (RunDemo blk, TraceConstraints blk)
+               => Consensus.Protocol blk -> SomeProtocol
 
 fromProtocol :: Protocol -> IO SomeProtocol
 fromProtocol BFT =
-    case runDemo p of
+    case Consensus.runProtocol p of
       Dict -> return $ SomeProtocol p
   where
-    p = DemoBFT defaultSecurityParam
+    p = ProtocolMockBFT defaultSecurityParam
 fromProtocol Praos =
-    case runDemo p of
+    case Consensus.runProtocol p of
       Dict -> return $ SomeProtocol p
   where
-    p = DemoPraos defaultDemoPraosParams
+    p = ProtocolMockPraos defaultDemoPraosParams
 fromProtocol MockPBFT =
-    case runDemo p of
+    case Consensus.runProtocol p of
       Dict -> return $ SomeProtocol p
   where
-    p = DemoMockPBFT defaultDemoPBftParams
+    p = ProtocolMockPBFT defaultDemoPBftParams
 fromProtocol RealPBFT =
-    case runDemo p of
+    case Consensus.runProtocol p of
       Dict -> return $ SomeProtocol p
   where
-    p = DemoRealPBFT defaultDemoPBftParams genesisConfig
+    p = ProtocolRealPBFT defaultDemoPBftParams genesisConfig
     genesisConfig = Dummy.dummyConfig
 
 -- Node can be run in two modes.

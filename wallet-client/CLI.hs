@@ -10,7 +10,7 @@ module CLI
 
 import           Options.Applicative
 
-import           Ouroboros.Consensus.Demo.Run
+import           Ouroboros.Consensus.Node.ProtocolInfo
 import           Ouroboros.Consensus.NodeId (CoreNodeId (..))
 
 import           Cardano.Node.CLI
