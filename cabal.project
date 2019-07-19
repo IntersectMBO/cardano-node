@@ -6,19 +6,19 @@ package cardano-node
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: 501d91e426ae84ce0ae056be38bd3db594af9fc2
+  tag: 6b808ad5506cb097cdf5832e1cd5cad0c83c58d6
   subdir: binary
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: 501d91e426ae84ce0ae056be38bd3db594af9fc2
+  tag: 6b808ad5506cb097cdf5832e1cd5cad0c83c58d6
   subdir: binary/test
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: 501d91e426ae84ce0ae056be38bd3db594af9fc2
+  tag: 6b808ad5506cb097cdf5832e1cd5cad0c83c58d6
   subdir: cardano-crypto-class
 
 source-repository-package
@@ -29,94 +29,94 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger
-  tag: 5241971fe563c90ea82b20af344116d46d672835
+  tag: 7d9fd48f4d8e4cd0658c7839a4d02c44d5706ac7
   subdir: cardano-ledger
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger
-  tag: 5241971fe563c90ea82b20af344116d46d672835
+  tag: 7d9fd48f4d8e4cd0658c7839a4d02c44d5706ac7
   subdir: crypto
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger
-  tag: 5241971fe563c90ea82b20af344116d46d672835
+  tag: 7d9fd48f4d8e4cd0658c7839a4d02c44d5706ac7
   subdir: cardano-ledger/test
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger
-  tag: 5241971fe563c90ea82b20af344116d46d672835
+  tag: 7d9fd48f4d8e4cd0658c7839a4d02c44d5706ac7
   subdir: crypto/test
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-prelude
-  tag: a21f83d9407b2955fbaea4ce8a79b262361112aa
+  tag: 3084f8b8514d93970415e895b241691b80c7b9ee
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-prelude
-  tag: a21f83d9407b2955fbaea4ce8a79b262361112aa
+  tag: 3084f8b8514d93970415e895b241691b80c7b9ee
   subdir: test
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-shell
-  tag: 71fb36665338491e92d3ef14c20ae38ad6882c94
+  tag: 71a8257bfea837ddef716d8c81e436aa3273345e
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-sl-x509
-  tag: e8bfc1294e088f90e5ae0b4aedbc82ee46ac5ee4
+  tag: ec96c64c665b741c17b4e38f611315bae9b0b054
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/iohk-monitoring-framework
   subdir: iohk-monitoring
-  tag: b2022cf7f5925e486f9e0a31f6f6d02145d5ebda
+  tag: bd31cd2f3922010ddb76bb869f29c4e63bb8001b
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/iohk-monitoring-framework
   subdir:   contra-tracer
-  tag: b2022cf7f5925e486f9e0a31f6f6d02145d5ebda
+  tag: bd31cd2f3922010ddb76bb869f29c4e63bb8001b
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: 0fb0db07e8c3fdd60aa8e22492782f2afcf74788
+  tag: ca270835199406a06be590d2391bd87b072e7537
   subdir: ouroboros-network
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: 0fb0db07e8c3fdd60aa8e22492782f2afcf74788
+  tag: ca270835199406a06be590d2391bd87b072e7537
   subdir: ouroboros-consensus
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: 0fb0db07e8c3fdd60aa8e22492782f2afcf74788
+  tag: ca270835199406a06be590d2391bd87b072e7537
   subdir: typed-protocols
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: 0fb0db07e8c3fdd60aa8e22492782f2afcf74788
+  tag: ca270835199406a06be590d2391bd87b072e7537
   subdir: typed-protocols-cbor
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: 0fb0db07e8c3fdd60aa8e22492782f2afcf74788
+  tag: ca270835199406a06be590d2391bd87b072e7537
   subdir: network-mux
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: 0fb0db07e8c3fdd60aa8e22492782f2afcf74788
+  tag: ca270835199406a06be590d2391bd87b072e7537
   subdir: io-sim-classes
 
 source-repository-package

@@ -15,6 +15,7 @@ import           Cardano.Shell.Features.Logging (LoggingCLIArguments (..),
                                                  LoggingLayer (..),
                                                  createLoggingFeature,
                                                  loggingParser)
+import           Cardano.Shell.Configuration.Lib (finaliseCardanoConfiguration)
 import           Cardano.Shell.Lib (runCardanoApplicationWithFeatures)
 import           Cardano.Shell.Presets (mainnetConfiguration)
 import           Cardano.Shell.Types (ApplicationEnvironment (Development),
@@ -49,7 +50,7 @@ opts = info (commandLineParser <**> helper)
 main :: IO ()
 main = do
 
-    let cardanoConfiguration = mainnetConfiguration
+    let Right cardanoConfiguration = finaliseCardanoConfiguration mainnetConfiguration
     cardanoEnvironment  <- initializeCardanoEnvironment
 
     logConfig           <- execParser opts

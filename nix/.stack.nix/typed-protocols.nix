@@ -21,6 +21,7 @@
           (hsPkgs.io-sim-classes)
           (hsPkgs.bytestring)
           (hsPkgs.contra-tracer)
+          (hsPkgs.time)
           ];
         };
       tests = {
@@ -34,6 +35,7 @@
             (hsPkgs.QuickCheck)
             (hsPkgs.tasty)
             (hsPkgs.tasty-quickcheck)
+            (hsPkgs.time)
             ];
           };
         };
@@ -41,8 +43,8 @@
     } // {
     src = (pkgs.lib).mkDefault (pkgs.fetchgit {
       url = "https://github.com/input-output-hk/ouroboros-network";
-      rev = "0fb0db07e8c3fdd60aa8e22492782f2afcf74788";
-      sha256 = "020j2fmr7s8hsgxj2a6n2sbgq6bqp8kisi4c35fj982kpbshidqm";
+      rev = "ca270835199406a06be590d2391bd87b072e7537";
+      sha256 = "031qv7fiyhypgy4myxcllq0xiqlr6w5wlmspa8rc7n1kpm9gz0nq";
       });
     postUnpack = "sourceRoot+=/typed-protocols; echo source root reset to \$sourceRoot";
     }

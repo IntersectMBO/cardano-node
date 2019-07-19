@@ -86,6 +86,7 @@ type TraceConstraints blk =
     , Show (ApplyTxErr blk)
     , Show (GenTx blk)
     , Show blk
+    , Show (Header blk)
     )
 
 data SomeProtocol where

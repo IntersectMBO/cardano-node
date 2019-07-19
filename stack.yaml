@@ -1,4 +1,4 @@
-resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/68648612f916e8adaf6c9ca5fe39bc6712470a6a/snapshot.yaml
+resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/3084f8b8514d93970415e895b241691b80c7b9ee/snapshot.yaml
 
 packages:
   - .
@@ -6,7 +6,7 @@ packages:
 extra-deps:
     # Cardano-ledger dependencies
   - git: https://github.com/input-output-hk/cardano-ledger
-    commit: 5241971fe563c90ea82b20af344116d46d672835
+    commit: 7d9fd48f4d8e4cd0658c7839a4d02c44d5706ac7
     subdirs:
       - cardano-ledger
       - cardano-ledger/test
@@ -14,13 +14,13 @@ extra-deps:
       - crypto/test
 
   - git: https://github.com/input-output-hk/cardano-prelude
-    commit: d673b92f2a2d9354d102514d0a0fa74f8248b14a
+    commit: 3084f8b8514d93970415e895b241691b80c7b9ee
     subdirs:
       - .
       - test
 
   - git: https://github.com/input-output-hk/cardano-base
-    commit: 14f9b09920813447a4060b6810bf17fc4ea35840
+    commit: 6b808ad5506cb097cdf5832e1cd5cad0c83c58d6
     subdirs:
       - binary
       - binary/test
@@ -28,11 +28,12 @@ extra-deps:
 
     # Following deps are for cardano-shell
   - git: https://github.com/input-output-hk/cardano-shell
-    commit: 71fb36665338491e92d3ef14c20ae38ad6882c94
+    commit: 71a8257bfea837ddef716d8c81e436aa3273345e
 
   - binary-0.8.7.0
   - containers-0.5.11.0
   - ekg-prometheus-adapter-0.1.0.4
+  - generic-monoid-0.1.0.0
   - prometheus-2.1.1
   - pvss-0.2.0
   - time-units-1.0.0
@@ -40,7 +41,7 @@ extra-deps:
   - tasty-hedgehog-1.0.0.1
     # iohk-monitoring-framework currently not pinned to a release
   - git: https://github.com/input-output-hk/iohk-monitoring-framework
-    commit: b2022cf7f5925e486f9e0a31f6f6d02145d5ebda
+    commit: bd31cd2f3922010ddb76bb869f29c4e63bb8001b
     subdirs:
       - contra-tracer
       - iohk-monitoring
@@ -55,7 +56,7 @@ extra-deps:
     #Ouroboros-network dependencies
 
   - git: https://github.com/input-output-hk/ouroboros-network
-    commit: 0fb0db07e8c3fdd60aa8e22492782f2afcf74788
+    commit: ca270835199406a06be590d2391bd87b072e7537
     subdirs:
         - io-sim-classes
         - network-mux
