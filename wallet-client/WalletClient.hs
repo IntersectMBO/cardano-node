@@ -32,7 +32,7 @@ import           Ouroboros.Consensus.Protocol
 import           Network.TypedProtocol.Codec
 import           Network.TypedProtocol.Codec.Cbor
 import           Network.TypedProtocol.Driver
-import           Network.Mux.Interface
+import           Ouroboros.Network.Mux
 import           Ouroboros.Network.Block (Point)
 import qualified Ouroboros.Network.Block as Block
 import           Ouroboros.Network.Chain (genesisPoint)
@@ -70,7 +70,7 @@ runWalletClient ptcl nid numCoreNodes tracer = do
 
     connectTo
       (,)
-      (muxLocalInitiatorNetworkApplication
+      (localInitiatorNetworkApplication
         (Proxy :: Proxy blk)
         chainSyncTracer
         localTxSubmissionTracer
@@ -78,7 +78,7 @@ runWalletClient ptcl nid numCoreNodes tracer = do
       Nothing
       addr
 
-muxLocalInitiatorNetworkApplication
+localInitiatorNetworkApplication
   :: forall blk m peer.
      (RunNode blk, MonadST m, MonadThrow m, MonadTimer m)
   -- TODO: the need of a 'Proxy' is an evidence that blk type is not really
@@ -96,15 +96,15 @@ muxLocalInitiatorNetworkApplication
   -- in 'ouroboros-network' package).
   -> NodeConfig (BlockProtocol blk)
   -> Versions NodeToClientVersion DictVersion
-              (MuxApplication InitiatorApp peer NodeToClientProtocols
-                              m ByteString Void Void)
-muxLocalInitiatorNetworkApplication Proxy chainSyncTracer localTxSubmissionTracer pInfoConfig =
+              (OuroborosApplication InitiatorApp peer NodeToClientProtocols
+                                    m ByteString Void Void)
+localInitiatorNetworkApplication Proxy chainSyncTracer localTxSubmissionTracer pInfoConfig =
     simpleSingletonVersions
       NodeToClientV_1
       (NodeToClientVersionData { networkMagic = 0 })
       (DictVersion nodeToClientCodecCBORTerm)
 
-  $ MuxInitiatorApplication $ \peer ptcl -> case ptcl of
+  $ OuroborosInitiatorApplication $ \peer ptcl -> case ptcl of
       LocalTxSubmissionPtcl -> \channel -> do
         txv <- newEmptyTMVarM @_ @(GenTx blk)
         runPeer
@@ -164,12 +164,12 @@ chainSyncClient = ChainSyncClient $ pure $
     SendMsgFindIntersect
       [genesisPoint]
       ClientStIntersect {
-        recvMsgIntersectImproved  = \_ _ -> ChainSyncClient (pure clientStIdle), 
+        recvMsgIntersectImproved  = \_ _ -> ChainSyncClient (pure clientStIdle),
         recvMsgIntersectUnchanged = \  _ -> ChainSyncClient (pure clientStIdle)
       }
   where
     clientStIdle :: ClientStIdle blk (Point blk) m Void
-    clientStIdle = 
+    clientStIdle =
       SendMsgRequestNext clientStNext (pure clientStNext)
 
     clientStNext :: ClientStNext blk (Point blk) m Void

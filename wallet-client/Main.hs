@@ -10,6 +10,7 @@ import           Cardano.Shell.Features.Logging (LoggingCLIArguments (..),
                                                  LoggingLayer (..),
                                                  createLoggingFeature, loggingParser)
 import           Cardano.Prelude hiding (option)
+import           Cardano.Shell.Configuration.Lib (finaliseCardanoConfiguration)
 import           Cardano.Shell.Constants.Types (CardanoConfiguration (..))
 import           Cardano.Shell.Lib (runCardanoApplicationWithFeatures)
 import           Cardano.Shell.Presets (mainnetConfiguration)
@@ -40,11 +41,23 @@ opts = info (commandLineParser <**> helper)
   <> progDesc "Cardano wallet node."
   <> header "Demo client to run.")
 
+
+-- TODO move this to `cardano-shell` and use it in `cardano-node` as well.
+-- Better than a partial pattern match.
+--
+data PartialConfigError = PartialConfigError Text
+  deriving (Eq, Show, Typeable)
+
+instance Exception PartialConfigError
+
 -- | Main function.
 main :: IO ()
 main = do
 
-    let cardanoConfiguration = mainnetConfiguration
+    cardanoConfiguration <-
+      case finaliseCardanoConfiguration mainnetConfiguration of
+        Right cc -> return cc
+        Left err -> throwIO (PartialConfigError err)
     cardanoEnvironment  <- initializeCardanoEnvironment
 
     logConfig           <- execParser opts

@@ -343,7 +343,7 @@ handleSimpleNode p NodeCLIArguments{..} myNodeAddress (TopologyInfo myNodeId top
             myLocalAddr
             Peer
             (\(DictVersion _) -> acceptEq)
-            (muxLocalResponderNetworkApplication <$> networkAppNodeToClient)
+            (localResponderNetworkApplication <$> networkAppNodeToClient)
             wait
 
       -- serve downstream nodes
@@ -355,7 +355,7 @@ handleSimpleNode p NodeCLIArguments{..} myNodeAddress (TopologyInfo myNodeId top
             myAddr
             Peer
             (\(DictVersion _) -> acceptEq)
-            (muxResponderNetworkApplication <$> networkAppNodeToNode)
+            (responderNetworkApplication <$> networkAppNodeToNode)
             wait
 
       -- ip subscription manager
@@ -381,7 +381,7 @@ handleSimpleNode p NodeCLIArguments{..} myNodeAddress (TopologyInfo myNodeId top
             (\(DictVersion codec) -> encodeTerm codec)
             (\(DictVersion codec) -> decodeTerm codec)
             Peer
-            (muxInitiatorNetworkApplication <$> networkAppNodeToNode) sock)
+            (initiatorNetworkApplication <$> networkAppNodeToNode) sock)
           wait
 
       void $ Async.waitAny [localServer, peerServer, subManager]
