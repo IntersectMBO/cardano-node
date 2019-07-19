@@ -30,6 +30,7 @@ test -n "${CMD}" || {
                 echo "ERROR: couldn't find or cabal new-build exe:cardano-node" >&2
                 exit 1
         }
+        CMD=`find dist-newstyle/ -type f -name "cardano-node"`
 }
 #SPECIAL=""
 SPECIAL="--live-view"

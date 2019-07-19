@@ -17,13 +17,15 @@ import           Ouroboros.Consensus.NodeId (CoreNodeId (..))
 
 import           Cardano.Node.CLI
 import           Cardano.Shell.Constants.CLI
-import           Cardano.Shell.Constants.PartialTypes (PartialGenesis (..))
+import           Cardano.Shell.Constants.PartialTypes ( PartialGenesis (..)
+                                                      , PartialStaticKeyMaterial)
 
 data CLI = CLI {
     cliCoreNodeId   :: CoreNodeId,
     cliNumCoreNodes :: NumCoreNodes,
     cliProtocol     :: Protocol,
-    cliGenesis      :: (Last PartialGenesis)
+    cliGenesis      :: Last PartialGenesis,
+    cliKeyMaterial  :: Last PartialStaticKeyMaterial
   }
 
 parseCLI :: Parser CLI
@@ -32,3 +34,4 @@ parseCLI = CLI
     <*> parseNumCoreNodes
     <*> parseProtocol
     <*> (pure <$> configGenesisCLIParser)
+    <*> (pure <$> configStaticKeyMaterialCLIParser)

@@ -13,8 +13,7 @@ import           Cardano.Prelude hiding (option)
 import           Cardano.Shell.Configuration.Lib (finaliseCardanoConfiguration)
 import           Cardano.Shell.Constants.Types (CardanoConfiguration (..))
 import           Cardano.Shell.Lib (GeneralException (..), runCardanoApplicationWithFeatures)
-import           Cardano.Shell.Constants.PartialTypes (PartialCardanoConfiguration (..),
-                                                       PartialCore (..))
+import           Cardano.Shell.Constants.PartialTypes (PartialCardanoConfiguration (..))
 import           Cardano.Shell.Presets (mainnetConfiguration)
 import           Cardano.Shell.Types (ApplicationEnvironment (Development),
                                       CardanoApplication (..),
@@ -22,6 +21,8 @@ import           Cardano.Shell.Types (ApplicationEnvironment (Development),
                                       CardanoFeatureInit (..),
                                       initializeCardanoEnvironment)
 import           Cardano.Prelude (throwIO)
+
+import           Cardano.Node.CLI
 
 import           CLI
 import           Run
@@ -57,15 +58,11 @@ instance Exception PartialConfigError
 main :: IO ()
 main = do
 
-    cardanoConfiguration <-
-      case finaliseCardanoConfiguration mainnetConfiguration of
-        Right cc -> return cc
-        Left err -> throwIO (PartialConfigError err)
     cardanoEnvironment  <- initializeCardanoEnvironment
 
     logConfig           <- execParser opts
 
-    (cardanoFeatures, nodeLayer) <- initializeAllFeatures logConfig cardanoConfiguration cardanoEnvironment
+    (cardanoFeatures, nodeLayer) <- initializeAllFeatures logConfig mainnetConfiguration cardanoEnvironment
 
     let cardanoApplication :: NodeLayer -> CardanoApplication
         cardanoApplication = CardanoApplication . nlRunNode
@@ -76,13 +73,8 @@ initializeAllFeatures :: ArgParser -> PartialCardanoConfiguration -> CardanoEnvi
 initializeAllFeatures (ArgParser logCli cli) partialConfig cardanoEnvironment = do
 
     finalConfig <- either (throwIO . ConfigurationError) pure $
-          finaliseCardanoConfiguration $
-          -- Here we perform merging of layers of configuration, but for now, only in a trivial way,
-          -- just for Cardano.Shell.Constants.Types.Genesis.
-          -- We expect this process to become generic at some point.
-          partialConfig { pccCore =
-                          flip fmap (pccCore partialConfig) $
-                          \x -> x { pcoGenesis = (<>) <$> pcoGenesis x <*> cliGenesis cli }}
+                   finaliseCardanoConfiguration $
+                   mergeConfiguration partialConfig (cliGenesis cli) (cliKeyMaterial cli)
 
     (loggingLayer, loggingFeature) <- createLoggingFeature cardanoEnvironment finalConfig logCli
     (nodeLayer   , nodeFeature)    <- createNodeFeature loggingLayer cli cardanoEnvironment finalConfig

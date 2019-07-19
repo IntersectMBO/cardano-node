@@ -10,8 +10,7 @@ import           Data.Semigroup ((<>))
 import           Options.Applicative
 
 import           Cardano.Prelude hiding (option)
-import           Cardano.Shell.Constants.PartialTypes (PartialCardanoConfiguration (..),
-                                                       PartialCore (..))
+import           Cardano.Shell.Constants.PartialTypes (PartialCardanoConfiguration (..))
 import           Cardano.Shell.Constants.Types (CardanoConfiguration (..))
 import           Cardano.Shell.Features.Logging (LoggingCLIArguments (..),
                                                  LoggingLayer (..),
@@ -25,6 +24,8 @@ import           Cardano.Shell.Types (ApplicationEnvironment (Development),
                                       CardanoEnvironment, CardanoFeature (..),
                                       CardanoFeatureInit (..),
                                       initializeCardanoEnvironment)
+
+import           Cardano.Node.CLI
 
 import           CLI
 import           Run
@@ -52,7 +53,7 @@ opts = info (commandLineParser <**> helper)
 main :: IO ()
 main = do
 
-    let Right cardanoConfiguration = finaliseCardanoConfiguration mainnetConfiguration
+    let cardanoConfiguration = mainnetConfiguration
     cardanoEnvironment  <- initializeCardanoEnvironment
 
     logConfig           <- execParser opts
@@ -68,13 +69,7 @@ initializeAllFeatures :: CLIArguments -> PartialCardanoConfiguration -> CardanoE
 initializeAllFeatures (CLIArguments logCli nodeCli) partialConfig cardanoEnvironment = do
     finalConfig <- either (throwIO . ConfigurationError) pure $
           finaliseCardanoConfiguration $
-          -- Here we perform merging of layers of configuration, but for now, only in a trivial way,
-          -- just for Cardano.Shell.Constants.Types.Genesis.
-          -- We expect this process to become generic at some point.
-          partialConfig { pccCore =
-                          flip fmap (pccCore partialConfig) $
-                          \x -> x { pcoGenesis            = (<>) <$> pcoGenesis            x <*> genesisSpec      nodeCli
-                                  , pcoStaticKeyMaterial  = (<>) <$> pcoStaticKeyMaterial  x <*> keyMaterialSpec  nodeCli }}
+          mergeConfiguration partialConfig (genesisSpec nodeCli) (keyMaterialSpec nodeCli)
 
     (loggingLayer, loggingFeature) <- createLoggingFeature cardanoEnvironment finalConfig logCli
     (nodeLayer   , nodeFeature)    <- createNodeFeature loggingLayer nodeCli cardanoEnvironment finalConfig

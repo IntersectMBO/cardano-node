@@ -1,7 +1,7 @@
 {-# LANGUAGE ConstraintKinds  #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs            #-}
-{-# LANGUAGE RecordWildCards  #-}
+{-# LANGUAGE NamedFieldPuns   #-}
 
 module Cardano.Node.CLI (
   -- * Untyped/typed protocol boundary
@@ -10,6 +10,8 @@ module Cardano.Node.CLI (
   , TraceConstraints
   , ViewMode(..)
   , fromProtocol
+  -- * Configuration
+  , mergeConfiguration
   -- * Parsers
   , parseSystemStart
   , parseSlotDuration
@@ -38,6 +40,7 @@ import           Codec.CBOR.Read (deserialiseFromBytes)
 
 import qualified Data.ByteString.Lazy as LB
 import           Data.Foldable (asum)
+import           Data.Monoid (Last)
 import           Data.Semigroup ((<>))
 import           Data.Time (UTCTime)
 import           Data.Time.Clock.POSIX (posixSecondsToUTCTime)
@@ -63,6 +66,10 @@ import           Cardano.Chain.Common
 import           Cardano.Chain.Genesis
 import           Cardano.Crypto.ProtocolMagic
 
+import           Cardano.Shell.Constants.PartialTypes (PartialCardanoConfiguration (..),
+                                                       PartialCore (..),
+                                                       PartialGenesis (..),
+                                                       PartialStaticKeyMaterial (..) )
 import           Cardano.Shell.Lib (GeneralException (..))
 import qualified Cardano.Chain.Genesis as Genesis
 import           Cardano.Crypto (RequiresNetworkMagic (..),
@@ -126,32 +133,53 @@ fromProtocol _ MockPBFT =
       Dict -> return $ SomeProtocol p
   where
     p = ProtocolMockPBFT defaultDemoPBftParams
-fromProtocol cc@CardanoConfiguration{..} RealPBFT = do
-    let Genesis{..} = coGenesis ccCore
-        genHash = either (throw . ConfigurationError) id $ -- XXX: need a proper error tag
+fromProtocol CardanoConfiguration{ccCore=ccCore@Core{coStaticKeyMaterial}} RealPBFT = do
+    let Genesis{geSrc, geGenesisHash} = coGenesis ccCore
+        genHash = either (throw . ConfigurationError) id $ -- TODO: need a proper error tag
                   decodeAbstractHash geGenesisHash
         cvtRNM :: RequireNetworkMagic -> RequiresNetworkMagic
         cvtRNM NoRequireNetworkMagic = RequiresNoMagic
         cvtRNM RequireNetworkMagic   = RequiresMagic
-        StaticKeyMaterial{..} = coStaticKeyMaterial ccCore
+        StaticKeyMaterial{skmSigningKeyFile, skmDlgCertFile} = coStaticKeyMaterial
         kmoDeserialiseDelegateKey = Signing.SigningKey . snd . either (error . show) id . deserialiseFromBytes Signing.fromCBORXPrv
-    genesisConfig <- either (error . show) id <$> -- XXX: need a proper error tag
+    geneConfig <- either (error . show) id <$> -- TODO: need a proper error tag
       runExceptT (Genesis.mkConfigFromFile (cvtRNM $ coRequiresNetworkMagic ccCore) geSrc genHash)
 
     sk  <- kmoDeserialiseDelegateKey <$> LB.readFile skmSigningKeyFile
     dlg <- either (error . show) id . CanonicalJSON.canonicalDecPre <$> LB.readFile skmDlgCertFile
 
-    let skm = StaticKeyMaterialByronPbft sk dlg
-        p   = ProtocolRealPBFT defaultDemoPBftParams genesisConfig skm
+    let plc = PbftLeaderCredentials sk dlg
+        p   = ProtocolRealPBFT defaultDemoPBftParams geneConfig (pure plc)
 
     case Consensus.runProtocol p of
-      Dict -> do
-        return . SomeProtocol $ p
+      Dict -> return $ SomeProtocol p
 
 -- Node can be run in two modes.
 data ViewMode =
     LiveView    -- Live mode with TUI
   | SimpleView  -- Simple mode, just output text.
+
+{-------------------------------------------------------------------------------
+  Configuration merging
+-------------------------------------------------------------------------------}
+
+-- | Perform merging of layers of configuration, but for now, only in a trivial way,
+--   just for Cardano.Shell.Constants.Types.{Genesis,StaticKeyMaterial}.
+--   We expect this process to become generic at some point.
+mergeConfiguration
+  :: PartialCardanoConfiguration
+  -> Last PartialGenesis
+  -> Last PartialStaticKeyMaterial
+  -> PartialCardanoConfiguration
+mergeConfiguration pcc@PartialCardanoConfiguration{pccCore} pg pskm =
+  pcc { pccCore = updateCore <$> pccCore }
+
+  where updateCore pc@PartialCore{pcoGenesis, pcoStaticKeyMaterial} =
+          -- We need to lift (<>) because we need monoidal operation over Partial*
+          -- constituents, and not the (Last Partial*) ones.
+          pc { pcoGenesis            = liftA2 (<>) pcoGenesis           pg
+             , pcoStaticKeyMaterial  = liftA2 (<>) pcoStaticKeyMaterial pskm
+             }
 
 {-------------------------------------------------------------------------------
   Command parsers
