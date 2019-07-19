@@ -178,7 +178,7 @@ handleSimpleNode p NodeCLIArguments{..} myNodeAddress (TopologyInfo myNodeId top
 
     let producers' = case List.lookup myNodeAddress $ map (\ns -> (nodeAddress ns, producers ns)) nodeSetups of
           Just ps -> ps
-          Nothing -> error "handleSimpleNode: own address not found in topology"
+          Nothing -> error ("handleSimpleNode: own address " ++ show myNodeAddress ++ " not found in topology")
 
     traceWith tracer $ "**************************************"
     traceWith tracer $ "I am Node = " <> show myNodeAddress
@@ -325,11 +325,6 @@ handleSimpleNode p NodeCLIArguments{..} myNodeAddress (TopologyInfo myNodeId top
               (DictVersion nodeToClientCodecCBORTerm)
               networkApps
 
-      -- TODO: this should be removed after resolving
-      -- https://github.com/input-output-hk/ouroboros-network/issues/751
-      myAddr:_ <- case myNodeAddress of
-        NodeAddress host port -> getAddrInfo Nothing (Just host) (Just port)
-
       let myLocalSockPath = localSocketFilePath myNodeId
           myLocalAddr     = localSocketAddrInfo myLocalSockPath
       removeStaleLocalSocket myLocalSockPath
@@ -352,7 +347,7 @@ handleSimpleNode p NodeCLIArguments{..} myNodeAddress (TopologyInfo myNodeId top
         forkLinked registry $ do
           NodeToNode.withServer
             connTable
-            myAddr
+            (nodeAddressInfo myNodeAddress)
             Peer
             (\(DictVersion _) -> acceptEq)
             (responderNetworkApplication <$> networkAppNodeToNode)
@@ -371,7 +366,8 @@ handleSimpleNode p NodeCLIArguments{..} myNodeAddress (TopologyInfo myNodeId top
           -- This means we don't utilise full duplex connection.
           (Just $ Socket.SockAddrInet 0 0)
           -- no IPv6 address
-          Nothing
+          -- | IPv6 address
+          (Just (Socket.SockAddrInet6 0 0 (0, 0, 0, 1) 0))
           (const Nothing)
           (IPSubscriptionTarget {
               ispIps     = map nodeAddressToSockAddr producers',

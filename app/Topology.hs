@@ -1,3 +1,4 @@
+{-# LANGUAGE NamedFieldPuns    #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell   #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
@@ -21,23 +22,46 @@ data TopologyInfo = TopologyInfo {
   , topologyFile :: FilePath
   }
 
--- | IPv4 address with port number
+-- | IPv4 or IPv6 address with port number
 --
--- TODO: this type should be extended to take into account IPv6 addresses.
---
-data NodeAddress = NodeAddress HostName ServiceName
+data NodeAddress = NodeAddress {
+      naHostAddress :: !IP.IP
+    , naPort        :: !PortNumber
+    }
   deriving (Eq, Ord, Show)
 
-nodeAddressToSockAddr :: NodeAddress -> SockAddr
-nodeAddressToSockAddr (NodeAddress addr port) = SockAddrInet (read port) (IP.toHostAddress (read addr))
+nodeAddressToSockAddr
+    :: NodeAddress
+    -> SockAddr
+nodeAddressToSockAddr NodeAddress {naHostAddress, naPort} = case naHostAddress of
+    IP.IPv4 ipv4 -> SockAddrInet  naPort   (IP.toHostAddress  ipv4)
+    IP.IPv6 ipv6 -> SockAddrInet6 naPort 0 (IP.toHostAddress6 ipv6) 0
 
 instance Condense NodeAddress where
-    condense (NodeAddress addr port) = addr ++ ":" ++ show port
+    condense NodeAddress {naHostAddress, naPort}
+      = show naHostAddress ++ ":" ++ show naPort
 
 instance FromJSON NodeAddress where
-    parseJSON = withObject "NodeAddress" $ \v -> NodeAddress
-      <$> v .: "addr"
-      <*> v .: "port"
+    parseJSON = withObject "NodeAddress" $ \v -> do
+      NodeAddress
+      <$> (read <$> v .: "addr")
+      <*> ((fromIntegral :: Int -> PortNumber) <$> v .: "port")
+
+nodeAddressInfo :: NodeAddress -> AddrInfo
+nodeAddressInfo NodeAddress {naHostAddress, naPort}
+    = AddrInfo {
+        addrFlags      = addrFlags defaultHints
+      , addrFamily     = case naHostAddress of
+                          IP.IPv4{} -> AF_INET
+                          IP.IPv6{} -> AF_INET6
+      , addrSocketType = Stream
+      , addrProtocol   = addrProtocol defaultHints
+      , addrAddress    =
+          case naHostAddress of
+            IP.IPv4 ipv4 -> SockAddrInet  naPort   (IP.toHostAddress  ipv4)
+            IP.IPv6 ipv6 -> SockAddrInet6 naPort 0 (IP.toHostAddress6 ipv6) 0
+      , addrCanonName  = Nothing
+    }
 
 data NodeSetup = NodeSetup {
     nodeAddress :: NodeAddress
