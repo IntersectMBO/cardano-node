@@ -8,4 +8,5 @@ dist/
 result*
 launch-*
 .stack-to-nix.cache
+stack.yaml.lock
 /genesis.*

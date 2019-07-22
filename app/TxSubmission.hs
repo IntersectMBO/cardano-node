@@ -46,7 +46,7 @@ import           Ouroboros.Consensus.Util.Condense
 
 import           Network.TypedProtocol.Driver
 import           Network.TypedProtocol.Codec.Cbor
-import           Network.Mux.Interface
+import           Ouroboros.Network.Mux
 import           Ouroboros.Network.Block (Point)
 import qualified Ouroboros.Network.Block as Block
 import           Ouroboros.Network.Protocol.LocalTxSubmission.Type
@@ -143,28 +143,28 @@ submitTx :: RunDemo blk
 submitTx pInfoConfig nodeId tx tracer =
     connectTo
       (,)
-      (muxLocalInitiatorNetworkApplication tracer pInfoConfig tx)
+      (localInitiatorNetworkApplication tracer pInfoConfig tx)
       Nothing
       addr
   where
     addr = localSocketAddrInfo (localSocketFilePath nodeId)
 
-muxLocalInitiatorNetworkApplication
+localInitiatorNetworkApplication
   :: forall blk m peer.
      (RunDemo blk, MonadST m, MonadThrow m, MonadTimer m)
   => Tracer m String
   -> NodeConfig (BlockProtocol blk)
   -> GenTx blk
   -> Versions NodeToClientVersion DictVersion
-              (MuxApplication InitiatorApp peer NodeToClientProtocols
-                              m ByteString () Void)
-muxLocalInitiatorNetworkApplication tracer pInfoConfig tx =
+              (OuroborosApplication InitiatorApp peer NodeToClientProtocols
+                                    m ByteString () Void)
+localInitiatorNetworkApplication tracer pInfoConfig tx =
     simpleSingletonVersions
       NodeToClientV_1
       (NodeToClientVersionData { networkMagic = 0 })
       (DictVersion nodeToClientCodecCBORTerm)
 
-  $ MuxInitiatorApplication $ \peer ptcl -> case ptcl of
+  $ OuroborosInitiatorApplication $ \peer ptcl -> case ptcl of
       LocalTxSubmissionPtcl -> \channel -> do
         traceWith tracer ("Submitting transaction: " {-++ show tx-})
         result <- runPeer
