@@ -149,6 +149,8 @@
           depends = [
             (hsPkgs.base)
             (hsPkgs.contra-tracer)
+            (hsPkgs.cardano-node)
+            (hsPkgs.cardano-shell)
             (hsPkgs.io-sim-classes)
             (hsPkgs.ouroboros-consensus)
             (hsPkgs.ouroboros-network)
