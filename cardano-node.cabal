@@ -82,7 +82,6 @@ executable cardano-node
                      , contra-tracer
                      , io-sim-classes
                      , iohk-monitoring
-                     , network-mux
                      , ouroboros-network
                      , ouroboros-consensus
                      , typed-protocols-cbor
@@ -140,7 +139,6 @@ executable wallet-client
                      , contra-tracer
                      , io-sim-classes
                      , iohk-monitoring
-                     , network-mux
                      , ouroboros-network
                      , ouroboros-consensus
                      , typed-protocols
