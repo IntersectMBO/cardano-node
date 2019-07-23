@@ -50,6 +50,21 @@ in {
         '';
       };
 
+      signing-key = mkOption {
+        type = types.path;
+        description = ''
+          Signing key
+        '';
+      };
+
+      delegation-certificate = mkOption {
+        type = types.nullOr types.path;
+        default = null;
+        description = ''
+          Delegation certificate.
+        '';
+      };
+
       system-start-time = mkOption {
         type = types.nullOr types.str;
         default = null;
@@ -140,11 +155,15 @@ in {
           --system-start "$START_TIME" \
           --slot-duration ${builtins.toString cfg.slot-duration} \
           node \
-          --topology ${cfg.topology} --${cfg.consensus-protocol} \
+          --topology ${cfg.topology} \
+          --${cfg.consensus-protocol} \
           --node-id ${builtins.toString cfg.node-id} \
           --host ${cfg.host} \
-          --port ${builtins.toString cfg.port}
-      '';
+          --port ${builtins.toString cfg.port} \
+          --signing-key ${cfg.signing-key} \
+      '' + (if (cfg.delegation-certificate != null) then 
+      ''  --delegation-certificate ${cfg.delegation-certificate} \
+      '' else "");
       serviceConfig = {
         User = "cardano-node";
         Group = "cardano-node";
