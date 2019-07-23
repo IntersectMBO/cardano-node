@@ -35,7 +35,6 @@ import           Network.TypedProtocol.Driver
 import           Ouroboros.Network.Mux
 import           Ouroboros.Network.Block (Point)
 import qualified Ouroboros.Network.Block as Block
-import           Ouroboros.Network.Chain (genesisPoint)
 import           Ouroboros.Network.Protocol.LocalTxSubmission.Type
 import           Ouroboros.Network.Protocol.LocalTxSubmission.Client
 import           Ouroboros.Network.Protocol.LocalTxSubmission.Codec
@@ -162,7 +161,7 @@ chainSyncClient = ChainSyncClient $ pure $
     -- synchronises from the genesis block.  A real implementation should send
     -- a list of points up to a point which is k blocks deep.
     SendMsgFindIntersect
-      [genesisPoint]
+      [Block.genesisPoint]
       ClientStIntersect {
         recvMsgIntersectImproved  = \_ _ -> ChainSyncClient (pure clientStIdle),
         recvMsgIntersectUnchanged = \  _ -> ChainSyncClient (pure clientStIdle)

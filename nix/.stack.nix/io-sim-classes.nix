@@ -5,7 +5,7 @@
       specVersion = "1.10";
       identifier = { name = "io-sim-classes"; version = "0.1.0.0"; };
       license = "Apache-2.0";
-      copyright = "";
+      copyright = "2019 Input Output (Hong Kong) Ltd.";
       maintainer = "";
       author = "Alexander Vieth, Marcin Szamotulski, Duncan Coutts";
       homepage = "";
@@ -29,8 +29,8 @@
     } // {
     src = (pkgs.lib).mkDefault (pkgs.fetchgit {
       url = "https://github.com/input-output-hk/ouroboros-network";
-      rev = "89c9d4024174c3e96c0d8e8cb4d2b3fcdceb8a81";
-      sha256 = "0i423q7lpbmp5bs11i624yz6r78vk29nwmpsw00zh96pasnvm45q";
+      rev = "8d51fb7701f8e08724caeb97308c3378a6d30227";
+      sha256 = "04blh0k286l9jzdkkgpcswssg114g8hdf49riz5fcpln3zng5nd0";
       });
     postUnpack = "sourceRoot+=/io-sim-classes; echo source root reset to \$sourceRoot";
     }
