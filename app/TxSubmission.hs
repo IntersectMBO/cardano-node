@@ -103,7 +103,9 @@ parseMockTxOut = (,)
 -------------------------------------------------------------------------------}
 
 handleTxSubmission :: forall blk.
-                      RunDemo blk
+                      ( RunDemo blk
+                      , Show (GenTx blk)
+                      )
                    => Consensus.Protocol blk
                    -> TopologyInfo
                    -> Mock.Tx
@@ -134,7 +136,9 @@ handleTxSubmission ptcl tinfo mocktx tracer = do
     submitTx pInfoConfig (node tinfo) tx tracer
 
 
-submitTx :: RunDemo blk
+submitTx :: ( RunDemo blk
+            , Show (GenTx blk)
+            )
          => NodeConfig (BlockProtocol blk)
          -> NodeId
          -> GenTx blk
@@ -151,7 +155,13 @@ submitTx pInfoConfig nodeId tx tracer =
 
 localInitiatorNetworkApplication
   :: forall blk m peer.
-     (RunDemo blk, MonadST m, MonadThrow m, MonadTimer m)
+     ( RunDemo blk
+     , Show peer
+     , Show (GenTx blk)
+     , MonadST m
+     , MonadThrow m
+     , MonadTimer m
+     )
   => Tracer m String
   -> NodeConfig (BlockProtocol blk)
   -> GenTx blk
