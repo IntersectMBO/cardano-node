@@ -26,6 +26,7 @@ module Cardano.Node.CLI (
   , parseFakeAvvmOptions
   , parseK
   , parseProtocolMagic
+  , parseNetworkMagic
   , parseFilePath
   , parseIntegral
   , parseFlag
@@ -290,6 +291,19 @@ parseProtocolMagic :: Parser ProtocolMagic
 parseProtocolMagic =
   flip AProtocolMagic RequiresMagic . flip Annotated () . ProtocolMagicId
   <$> parseIntegral        "protocol-magic"           "The magic number unique to any instance of Cardano."
+
+parseNetworkMagic :: Parser NetworkMagic
+parseNetworkMagic = asum
+    [ flag' NetworkMainOrStage $ mconcat [
+          long "main-or-staging"
+        , help ""
+        ]
+    , option (fmap NetworkTestnet auto) (
+          long "testnet-magic"
+       <> metavar "MAGIC"
+       <> help "The testnet network magic, decibal"
+        )
+    ]
 
 parseFilePath :: String -> String -> Parser FilePath
 parseFilePath optname desc =

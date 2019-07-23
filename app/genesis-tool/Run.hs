@@ -114,11 +114,10 @@ runCommand
 
 runCommand
   KeyMaterialOps{..}
-  (PrettySecretKeyPublic
+  (PrettySigningKeyPublic
     secretPath)
   =
   putStrLn =<< T.unpack . prettySigningKeyPub . kmoDeserialiseDelegateKey <$> LB.readFile secretPath
-  where
 
 runCommand
   toKMO
@@ -139,6 +138,27 @@ runCommand
   dumpGenesis kmo outDir
   (configGenesisData Dummy.dummyConfig)
   $ fromMaybe (error "Hardcoded genesis lacks secrets.") (configGeneratedSecrets Dummy.dummyConfig)  
+
+runCommand
+  KeyMaterialOps{..}
+  (PrintGenesisHash
+    secretPath)
+  =
+  putStrLn =<< F.format CCr.hashHexF . unGenesisHash . snd . either (error . show) id <$> (runExceptT $ readGenesisData secretPath)
+  where
+
+runCommand
+  KeyMaterialOps{..}
+  (PrintSigningKeyAddress
+    networkMagic
+    secretPath)
+  =
+  putStrLn =<< T.unpack . prettyAddress . CC.makeVerKeyAddress networkMagic . CCr.toVerification . kmoDeserialiseDelegateKey <$> LB.readFile secretPath
+  where
+
+{-------------------------------------------------------------------------------
+  Supporting functions
+-------------------------------------------------------------------------------}
 
 dumpGenesis :: KeyMaterialOps IO -> FilePath -> GenesisData -> GeneratedSecrets -> IO ()
 dumpGenesis KeyMaterialOps{..} outDir genesisData GeneratedSecrets{..} = do
@@ -168,6 +188,11 @@ prettySigningKeyPub :: SigningKey -> Text
 prettySigningKeyPub (CCr.toVerification -> vk) = TL.toStrict
                           $  "public key hash: " <> (F.format CCr.hashHexF . CC.addressHash $ vk) <> "\n"
                           <> "     public key: " <> (Builder.toLazyText . CCr.formatFullVerificationKey $ vk)
+
+prettyAddress :: CC.Address -> Text
+prettyAddress addr = TL.toStrict
+                     $  F.format CC.addressF addr <> "\n"
+                     <> F.format CC.addressDetailedF addr
 
 decideKeyMaterialOps :: SystemVersion -> KeyMaterialOps IO
 decideKeyMaterialOps =

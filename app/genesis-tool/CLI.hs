@@ -46,13 +46,18 @@ data Command
     !FakeAvvmOptions
     !LovelacePortion
     !Integer
-  | PrettySecretKeyPublic
+  | PrettySigningKeyPublic
     !FilePath
   | MigrateDelegateKeyFrom
     !SystemVersion
     !FilePath
     !FilePath
   | DumpHardcodedGenesis
+    !FilePath
+  | PrintGenesisHash
+    !FilePath
+  | PrintSigningKeyAddress
+    !NetworkMagic
     !FilePath
 
 data KeyMaterialOps m
@@ -97,8 +102,8 @@ parseCommand = subparser $ mconcat
            (optional $
             parseIntegral  "avvm-balance-factor"      "AVVM balances will be multiplied by this factor (defaults to 1)."))
       <*> parseIntegral    "secret-seed"              "Optionally specify the seed of generation."
-  , command' "pretty-secret-key-public"       "Pretty-print a secret key's public key (not a secret)." $
-      PrettySecretKeyPublic
+  , command' "signing-key-public"             "Pretty-print a signing key's verification key (not a secret)." $
+      PrettySigningKeyPublic
       <$> parseFilePath    "secret"                   "File name of the secret key to pretty-print."
   , command' "migrate-delegate-key-from"      "Migrate a delegate key from an older version." $
       MigrateDelegateKeyFrom
@@ -108,4 +113,11 @@ parseCommand = subparser $ mconcat
   , command' "dump-hardcoded-genesis"         "Write out a hard-coded genesis." $
       DumpHardcodedGenesis
       <$> parseFilePath    "genesis-output-dir"       "A yet-absent directory where genesis JSON file along with secrets shall be placed."
+  , command' "print-genesis-hash"             "Compute hash of a genesis file." $
+      PrintGenesisHash
+      <$> parseFilePath    "genesis-json"             "Genesis JSON file to hash."
+  , command' "signing-key-address"            "Print address of a signing key." $
+      PrintSigningKeyAddress
+      <$> parseNetworkMagic
+      <*> parseFilePath    "secret"                   "Secret key, whose address is to be printed."
   ]
