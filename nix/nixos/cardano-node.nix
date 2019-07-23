@@ -36,6 +36,20 @@ in {
         '';
       };
 
+      genesis-file = mkOption {
+        type = types.path;
+        description = ''
+          Genesis json file.
+        '';
+      };
+
+      genesis-hash = mkOption {
+        type = types.str;
+        description = ''
+          Hash of the genesis file.
+        '';
+      };
+
       system-start-time = mkOption {
         type = types.nullOr types.str;
         default = null;
@@ -119,7 +133,17 @@ in {
       wantedBy = [ "multi-user.target" ];
       script = ''
         START_TIME=${if (cfg.system-start-time != null) then cfg.system-start-time else "`date \"+%Y-%m-%d 00:00:00\"`"}
-        ${cfg.package}/bin/cardano-node --log-config ${cfg.logger.config-file} --system-start "$START_TIME" --slot-duration ${builtins.toString cfg.slot-duration} node --topology ${cfg.topology} --${cfg.consensus-protocol} --node-id ${builtins.toString cfg.node-id} --host ${cfg.host} --port ${builtins.toString cfg.port}
+        ${cfg.package}/bin/cardano-node \
+          --genesis-file ${cfg.genesis-file} \
+          --genesis-hash ${cfg.genesis-hash} \
+          --log-config ${cfg.logger.config-file} \
+          --system-start "$START_TIME" \
+          --slot-duration ${builtins.toString cfg.slot-duration} \
+          node \
+          --topology ${cfg.topology} --${cfg.consensus-protocol} \
+          --node-id ${builtins.toString cfg.node-id} \
+          --host ${cfg.host} \
+          --port ${builtins.toString cfg.port}
       '';
       serviceConfig = {
         User = "cardano-node";
