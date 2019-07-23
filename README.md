@@ -67,6 +67,23 @@ The above command will prepare a transaction of amount 99 to address _a_ and sen
 Increment the last argument '--txix' to send in a new transaction.
 
 
+3.) or you can run
+
+    `./scripts/demo-dns.sh`
+
+    instead of `demo.sh`.  It requires that the addresses `local.iohk.io` and
+    `local6.iohk.io` resolve to `127.0.0.1` and `::1` respectively.  You can
+    use [unbound](https://github.com/NLnetLabs/unbound) dns server.  You can
+    use the following `/etc/unbound/unbound.conf` file:
+    ```
+    server:
+      verbosity: 1
+      local-data: "local.iohk.io A 127.0.0.1"
+      local-data: "local6.iohk.io AAAA ::1"
+    ```
+
+
+
 
 # development
 
