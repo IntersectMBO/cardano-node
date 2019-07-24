@@ -1,5 +1,6 @@
 { config
 , lib
+, pkgs
 , ... }:
 
 with lib;
@@ -62,15 +63,6 @@ in {
         default = null;
         description = ''
           Delegation certificate.
-        '';
-      };
-
-      system-start-time = mkOption {
-        type = types.nullOr types.str;
-        default = null;
-        example = "2018-12-10 15:58:06";
-        description = ''
-          The start time of the system. Will use current date if not defined.
         '';
       };
 
@@ -147,7 +139,8 @@ in {
       after         = [ "network.target" ];
       wantedBy = [ "multi-user.target" ];
       script = ''
-        START_TIME=${if (cfg.system-start-time != null) then cfg.system-start-time else "`date \"+%Y-%m-%d 00:00:00\"`"}
+        GENESIS_START_TIME=$(${pkgs.jq}/bin/jq '.startTime' < ${cfg.genesis-file})
+        START_TIME=$(date -d @$GENESIS_START_TIME --utc --rfc-3339=seconds)
         ${cfg.package}/bin/cardano-node \
           --genesis-file ${cfg.genesis-file} \
           --genesis-hash ${cfg.genesis-hash} \
