@@ -4,8 +4,8 @@
     package = {
       specVersion = "1.10";
       identifier = { name = "cardano-node"; version = "3.0.1.87"; };
-      license = "MIT";
-      copyright = "2019 IOHK";
+      license = "Apache-2.0";
+      copyright = "2019 Input Output (Hong Kong) Ltd.";
       maintainer = "operations@iohk.io";
       author = "IOHK";
       homepage = "";
