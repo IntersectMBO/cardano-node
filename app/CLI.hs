@@ -20,7 +20,9 @@ module CLI (
   ) where
 
 import           Data.Semigroup ((<>))
+import qualified Data.IP as IP
 import           Options.Applicative
+import           Network.Socket (PortNumber)
 
 import           Ouroboros.Consensus.BlockchainTime
 import qualified Ouroboros.Consensus.Ledger.Mock as Mock
@@ -54,31 +56,35 @@ nodeParser = NodeCLIArguments
 parseCommand :: Parser Command
 parseCommand = subparser $ mconcat [
     command' "node" "Run a node." $
-      SimpleNode <$> parseTopologyInfo <*> parseNodeAddress <*> parseProtocol <*> parseViewMode
+      SimpleNode
+        <$> parseTopologyInfo
+        <*> parseNodeAddress
+        <*> parseProtocol
+        <*> parseViewMode
   , command' "submit" "Submit a transaction." $
       TxSubmitter <$> parseTopologyInfo <*> parseMockTx <*> parseProtocol
   , command' "trace-acceptor" "Spawn an acceptor." $
       pure TraceAcceptor
   ]
 
-parseHostName :: Parser String
-parseHostName =
-    option str (
-          long "host"
+parseHostAddr :: Parser IP.IP
+parseHostAddr =
+    option (read <$> str) (
+          long "host-addr"
        <> metavar "HOST-NAME"
-       <> help "The host name"
+       <> help "The ipv6 or ipv4 address"
     )
 
-parsePort :: Parser String
+parsePort :: Parser PortNumber
 parsePort =
-    option str (
+    option ((fromIntegral :: Int -> PortNumber) <$> auto) (
           long "port"
        <> metavar "PORT"
        <> help "The port number"
     )
 
 parseNodeAddress :: Parser NodeAddress
-parseNodeAddress = NodeAddress <$> parseHostName <*> parsePort
+parseNodeAddress = NodeAddress <$> parseHostAddr <*> parsePort
 
 parseTopologyFile :: Parser FilePath
 parseTopologyFile =

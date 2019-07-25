@@ -1,5 +1,16 @@
 #!/usr/bin/env bash
 
+# requires a local dns server which resolves
+# * local6.iohk.io to ::1
+# * local.iohk.io  to 127.0.0.1
+# You can use `unbound` with this configuration put in `/etc/unbound/unbound.conf`
+# ```
+# server:
+#   verbosity: 1
+#   local-data: "local.iohk.io A 127.0.0.1"
+#   local-data: "local6.iohk.io AAAA ::1"
+# ```
+
 # add to your ~/.tmux.conf:
 # set-window-option -g mouse on
 # set -g default-terminal "tmux-256color"
@@ -12,7 +23,7 @@
 
 ALGO="--real-pbft"
 NOW=`date "+%Y-%m-%d 00:00:00"`
-NETARGS="--system-start \"${NOW}\" --slot-duration 2 node -t configuration/simple-topology.json ${ALGO}"
+NETARGS="--system-start \"${NOW}\" --slot-duration 2 node -t configuration/simple-topology-dns.json ${ALGO}"
 #SCR="./scripts/start-node.sh"
 #CMD="stack exec --nix cardano-node --"
 CMD="cabal new-exec cardano-node --"
@@ -26,7 +37,7 @@ function mklogcfg () {
 tmux split-window -h
 tmux split-window -v
 tmux select-pane -t 0
-tmux split-window -v
+# tmux split-window -v
 
 tmux select-pane -t 0
 tmux send-keys "${CMD} $(mklogcfg 0) ${NETARGS} -n 0 --host-addr ${HOST6} --port 3000 --live-view" C-m

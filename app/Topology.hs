@@ -1,3 +1,5 @@
+{-# LANGUAGE BangPatterns      #-}
+{-# LANGUAGE NamedFieldPuns    #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell   #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
@@ -9,6 +11,7 @@ import           Data.Aeson.TH
 import qualified Data.ByteString as B
 import qualified Data.IP as IP
 import           Data.String.Conv (toS)
+import           Text.Read (readMaybe)
 import           Network.Socket
 
 import           Ouroboros.Consensus.NodeId (NodeId(..))
@@ -21,27 +24,88 @@ data TopologyInfo = TopologyInfo {
   , topologyFile :: FilePath
   }
 
--- | IPv4 address with port number
+-- | IPv4 address with a port number.
 --
--- TODO: this type should be extended to take into account IPv6 addresses.
---
-data NodeAddress = NodeAddress HostName ServiceName
+data NodeAddress = NodeAddress {
+      naHostAddress :: !IP.IP
+    , naPort        :: !PortNumber
+    }
   deriving (Eq, Ord, Show)
 
-nodeAddressToSockAddr :: NodeAddress -> SockAddr
-nodeAddressToSockAddr (NodeAddress addr port) = SockAddrInet (read port) (IP.toHostAddress (read addr))
-
 instance Condense NodeAddress where
-    condense (NodeAddress addr port) = addr ++ ":" ++ show port
+    condense NodeAddress {naHostAddress, naPort}
+      = show naHostAddress ++ ":" ++ show naPort
 
 instance FromJSON NodeAddress where
-    parseJSON = withObject "NodeAddress" $ \v -> NodeAddress
+    parseJSON = withObject "NodeAddress" $ \v -> do
+      NodeAddress
+      <$> (read <$> v .: "addr")
+      <*> ((fromIntegral :: Int -> PortNumber) <$> v .: "port")
+
+nodeAddressToSockAddr
+    :: NodeAddress
+    -> SockAddr
+nodeAddressToSockAddr NodeAddress {naHostAddress, naPort} = case naHostAddress of
+    IP.IPv4 ipv4 -> SockAddrInet  naPort   (IP.toHostAddress  ipv4)
+    IP.IPv6 ipv6 -> SockAddrInet6 naPort 0 (IP.toHostAddress6 ipv6) 0
+
+nodeAddressInfo :: NodeAddress -> AddrInfo
+nodeAddressInfo na@NodeAddress {naHostAddress}
+    = AddrInfo {
+        addrFlags      = addrFlags defaultHints
+      , addrFamily     = case naHostAddress of
+                          IP.IPv4{} -> AF_INET
+                          IP.IPv6{} -> AF_INET6
+      , addrSocketType = Stream
+      , addrProtocol   = addrProtocol defaultHints
+      , addrAddress    = nodeAddressToSockAddr na
+      , addrCanonName  = Nothing
+    }
+
+-- | Domain name with port number
+--
+data RemoteAddress = RemoteAddress {
+    raAddress :: !String
+  -- ^ either a dns address or ip address
+  , raPort    :: !PortNumber
+  -- ^ port number of the destination
+  , raValency :: !Int
+  -- ^ if a dns address is given valency governs to how many resolved ip addresses
+  -- should we maintain acctive (hot) connection;
+  -- if an ip address is given valency is used as a boolean value, @0@ means to
+  -- ignore the address;
+  }
+  deriving (Eq, Ord, Show)
+
+
+-- | Parse 'raAddress' field as an IP address; if it parses and the valency is
+-- non zero return corresponding NodeAddress.
+--
+remoteAddressToNodeAddress
+  :: RemoteAddress
+  -> Maybe NodeAddress
+remoteAddressToNodeAddress RemoteAddress {raAddress, raPort, raValency} =
+    case readMaybe raAddress of
+      Nothing -> Nothing
+      Just naHostAddress | raValency /= 0 -> Just (NodeAddress {
+                                                      naHostAddress
+                                                    , naPort = raPort
+                                                    })
+                         | otherwise      -> Nothing
+
+
+instance Condense RemoteAddress where
+    condense RemoteAddress {raAddress, raPort, raValency} = raAddress ++ ":" ++ show raPort ++ " (" ++ show raValency ++ ")"
+
+instance FromJSON RemoteAddress where
+    parseJSON = withObject "RemoteAddress" $ \v -> RemoteAddress
       <$> v .: "addr"
-      <*> v .: "port"
+      <*> ((fromIntegral :: Int -> PortNumber) <$> v .: "port")
+      <*> (v .: "valency")
 
 data NodeSetup = NodeSetup {
-    nodeAddress :: NodeAddress
-  , producers   :: [NodeAddress]
+    nodeAddress :: !NodeAddress
+  , producers   :: ![RemoteAddress]
   }
   deriving Show
 
@@ -58,3 +122,4 @@ deriveFromJSON defaultOptions ''NetworkTopology
 readTopologyFile :: FilePath -> IO (Either String NetworkTopology)
 readTopologyFile topo = do
     eitherDecode . toS <$> B.readFile topo
+

@@ -10,3 +10,7 @@ launch-*
 .stack-to-nix.cache
 stack.yaml.lock
 /genesis.*
+
+/db-[0-9]
+/log-pipe-[0-9]
+/*.socket
