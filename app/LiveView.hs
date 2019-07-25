@@ -10,6 +10,7 @@ module LiveView (
     , effectuate
     , captureCounters
     , setTopology
+    , setNodeThread
     ) where
 
 import           Control.Concurrent (threadDelay)
@@ -278,6 +279,7 @@ data LiveViewState a = LiveViewState
     , lvsMessage             :: Maybe a
     , lvsUIThread            :: Maybe (Async.Async ())
     , lvsMetricsThread       :: Maybe (Async.Async ())
+    , lvsNodeThread          :: Maybe (Async.Async ())
     , lvsColorTheme          :: ColorTheme
     } deriving (Eq)
 
@@ -328,6 +330,7 @@ initLiveViewState = do
                 , lvsMessage             = Nothing
                 , lvsUIThread            = Nothing
                 , lvsMetricsThread       = Nothing
+                , lvsNodeThread          = Nothing
                 , lvsColorTheme          = DarkTheme
                 }
 
@@ -339,6 +342,11 @@ setTopology lvbe (TopologyInfo nodeid _) =
     namenum = case nodeid of
         CoreId num  -> "C" <> pack (show num)
         RelayId num -> "R" <> pack (show num)
+
+setNodeThread :: LiveViewBackend a -> Async.Async () -> IO ()
+setNodeThread lvbe nodeThr =
+    modifyMVar_ (getbe lvbe) $ \lvs ->
+        return $ lvs { lvsNodeThread = Just nodeThr }
 
 captureCounters :: LiveViewBackend a -> Trace IO Text -> IO ()
 captureCounters lvbe trace0 = do
@@ -670,13 +678,17 @@ eventHandler prev (AppEvent lvBackend) = do
     M.continue $ next { lvsColorTheme = lvsColorTheme prev }
 eventHandler lvs  (VtyEvent e)         =
     case e of
-        V.EvKey  (V.KChar 'q') [] -> M.halt     lvs
-        V.EvKey  (V.KChar 'Q') [] -> M.halt     lvs
+        V.EvKey  (V.KChar 'q') [] -> stopNodeThread >> M.halt lvs
+        V.EvKey  (V.KChar 'Q') [] -> stopNodeThread >> M.halt lvs
         V.EvKey  (V.KChar 'd') [] -> M.continue $ lvs { lvsColorTheme = DarkTheme }
         V.EvKey  (V.KChar 'D') [] -> M.continue $ lvs { lvsColorTheme = DarkTheme }
         V.EvKey  (V.KChar 'l') [] -> M.continue $ lvs { lvsColorTheme = LightTheme }
         V.EvKey  (V.KChar 'L') [] -> M.continue $ lvs { lvsColorTheme = LightTheme }
         _                         -> M.continue lvs
+  where
+    stopNodeThread = case lvsNodeThread lvs of
+        Nothing -> return ()
+        Just t  -> liftIO $ Async.cancel t
 eventHandler lvs  _                    = M.halt lvs
 
 app :: M.App (LiveViewState a) (LiveViewBackend a) ()
