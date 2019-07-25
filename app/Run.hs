@@ -119,7 +119,7 @@ instance Condense Peer where
 
 runNode :: NodeCLIArguments -> LoggingLayer -> CardanoConfiguration -> IO ()
 runNode nodeCli@NodeCLIArguments{..} loggingLayer cc = do
-    let !tr = (llAppendName loggingLayer) "node" (llBasicTrace loggingLayer)
+    let !tr = llAppendName loggingLayer "node" (llBasicTrace loggingLayer)
     -- If the user asked to submit a transaction, we don't have to spin up a
     -- full node, we simply transmit it and exit.
     case command of

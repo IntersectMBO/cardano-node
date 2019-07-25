@@ -23,7 +23,7 @@ module CLI (
 import           Data.Semigroup ((<>))
 import           Options.Applicative
 
-import           Cardano.Prelude hiding (option)
+import           Cardano.Prelude hiding (option, (.))
 
 import           Ouroboros.Consensus.BlockchainTime
 import qualified Ouroboros.Consensus.Ledger.Mock as Mock
@@ -41,11 +41,11 @@ import           Cardano.Node.CLI
 -------------------------------------------------------------------------------}
 
 data NodeCLIArguments = NodeCLIArguments {
-    systemStart  :: !SystemStart
-  , slotDuration :: !SlotLength
-  , genesisSpec  :: !(Last PartialGenesis)
-  , keyMaterialSpec :: !(Last PartialStaticKeyMaterial)
-  , command      :: !Command
+    systemStart        :: !SystemStart
+  , slotDuration       :: !SlotLength
+  , genesisSpec        :: !(Last PartialGenesis)
+  , keyMaterialSpec    :: !(Last PartialStaticKeyMaterial)
+  , command            :: !Command
   }
 
 data Command =
@@ -57,8 +57,8 @@ nodeParser :: Parser NodeCLIArguments
 nodeParser = NodeCLIArguments
     <$> parseSystemStart
     <*> parseSlotDuration
-    <*> (pure <$> configGenesisCLIParser)
-    <*> (pure <$> configStaticKeyMaterialCLIParser)
+    <*> (Last . Just <$> configGenesisCLIParser)
+    <*> (Last . Just <$> configStaticKeyMaterialCLIParser)
     <*> parseCommand
 
 parseCommand :: Parser Command

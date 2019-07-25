@@ -8,7 +8,7 @@ module CLI
   , fromProtocol
   ) where
 
-import           Data.Monoid (Last)
+import           Data.Monoid (Last (..))
 
 import           Options.Applicative
 
@@ -33,5 +33,5 @@ parseCLI = CLI
     <$> parseCoreNodeId
     <*> parseNumCoreNodes
     <*> parseProtocol
-    <*> (pure <$> configGenesisCLIParser)
-    <*> (pure <$> configStaticKeyMaterialCLIParser)
+    <*> (Last . Just <$> configGenesisCLIParser)
+    <*> (Last . Just <$> configStaticKeyMaterialCLIParser)

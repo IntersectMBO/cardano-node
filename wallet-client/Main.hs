@@ -72,9 +72,11 @@ main = do
 initializeAllFeatures :: ArgParser -> PartialCardanoConfiguration -> CardanoEnvironment -> IO ([CardanoFeature], NodeLayer)
 initializeAllFeatures (ArgParser logCli cli) partialConfig cardanoEnvironment = do
 
-    finalConfig <- either (throwIO . ConfigurationError) pure $
-                   finaliseCardanoConfiguration $
-                   mergeConfiguration partialConfig (cliGenesis cli) (cliKeyMaterial cli)
+    finalConfig <- case finaliseCardanoConfiguration $
+                        mergeConfiguration partialConfig (cliGenesis cli) (cliKeyMaterial cli)
+                   of
+      Left err -> throwIO $ ConfigurationError err
+      Right x  -> pure x
 
     (loggingLayer, loggingFeature) <- createLoggingFeature cardanoEnvironment finalConfig logCli
     (nodeLayer   , nodeFeature)    <- createNodeFeature loggingLayer cli cardanoEnvironment finalConfig

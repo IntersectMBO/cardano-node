@@ -64,7 +64,6 @@ import qualified Ouroboros.Consensus.Protocol as Consensus
 
 import           Cardano.Binary (Annotated (..))
 import           Cardano.Chain.Common
-import           Cardano.Chain.Genesis
 import           Cardano.Crypto.ProtocolMagic
 
 import           Cardano.Shell.Constants.PartialTypes (PartialCardanoConfiguration (..),
@@ -136,15 +135,18 @@ fromProtocol _ MockPBFT =
     p = ProtocolMockPBFT defaultDemoPBftParams
 fromProtocol CardanoConfiguration{ccCore=ccCore@Core{coStaticKeyMaterial}} RealPBFT = do
     let Genesis{geSrc, geGenesisHash} = coGenesis ccCore
-        genHash = either (throw . ConfigurationError) id $ -- TODO: need a proper error tag
+        genHash = either (throw . ConfigurationError) id $
                   decodeAbstractHash geGenesisHash
         cvtRNM :: RequireNetworkMagic -> RequiresNetworkMagic
         cvtRNM NoRequireNetworkMagic = RequiresNoMagic
         cvtRNM RequireNetworkMagic   = RequiresMagic
         StaticKeyMaterial{skmSigningKeyFile, skmDlgCertFile} = coStaticKeyMaterial
         kmoDeserialiseDelegateKey = Signing.SigningKey . snd . either (error . show) id . deserialiseFromBytes Signing.fromCBORXPrv
-    geneConfig <- either (error . show) id <$> -- TODO: need a proper error tag
-      runExceptT (Genesis.mkConfigFromFile (cvtRNM $ coRequiresNetworkMagic ccCore) geSrc genHash)
+
+    res <- runExceptT (Genesis.mkConfigFromFile (cvtRNM $ coRequiresNetworkMagic ccCore) geSrc genHash)
+    let geneConfig = case res of
+          Left err -> throw err
+          Right x -> x
 
     sk  <- kmoDeserialiseDelegateKey <$> LB.readFile skmSigningKeyFile
     dlg <- either (error . show) id . CanonicalJSON.canonicalDecPre <$> LB.readFile skmDlgCertFile
@@ -154,6 +156,9 @@ fromProtocol CardanoConfiguration{ccCore=ccCore@Core{coStaticKeyMaterial}} RealP
 
     case Consensus.runProtocol p of
       Dict -> return $ SomeProtocol p
+
+-- TODO:  move this to 'cardano-shell'
+instance Exception Genesis.ConfigurationError
 
 -- Node can be run in two modes.
 data ViewMode =
@@ -257,9 +262,9 @@ parseViewMode =
         , help "Live view with TUI."
         ]
 
-parseTestnetBalanceOptions :: Parser TestnetBalanceOptions
+parseTestnetBalanceOptions :: Parser Genesis.TestnetBalanceOptions
 parseTestnetBalanceOptions =
-  TestnetBalanceOptions
+  Genesis.TestnetBalanceOptions
   <$> parseIntegral        "n-poor-addresses"         "Number of poor nodes (with small balance)."
   <*> parseIntegral        "n-delegate-addresses"     "Number of delegate nodes (with huge balance)."
   <*> parseLovelace        "total-balance"            "Total balance owned by these nodes."
@@ -276,9 +281,9 @@ parseLovelacePortion optname desc =
   either (error . show) id . mkLovelacePortion
   <$> parseIntegral optname desc
 
-parseFakeAvvmOptions :: Parser FakeAvvmOptions
+parseFakeAvvmOptions :: Parser Genesis.FakeAvvmOptions
 parseFakeAvvmOptions =
-  FakeAvvmOptions
+  Genesis.FakeAvvmOptions
   <$> parseIntegral        "avvm-entry-count"         "Number of AVVM addresses."
   <*> parseLovelace        "avvm-entry-balance"       "AVVM address."
 
