@@ -82,11 +82,11 @@ import           Ouroboros.Consensus.Node.Run
 import           Ouroboros.Consensus.NodeId
 import           Ouroboros.Consensus.NodeNetwork
 import           Ouroboros.Consensus.Protocol hiding (Protocol)
+import qualified Ouroboros.Consensus.Protocol as Consensus
 import           Ouroboros.Consensus.Util.Condense
 import           Ouroboros.Consensus.Util.Orphans ()
 import           Ouroboros.Consensus.Util.STM
 import           Ouroboros.Consensus.Util.ThreadRegistry
-import qualified Ouroboros.Consensus.Protocol as Consensus
 
 import           Ouroboros.Storage.ChainDB (ChainDB)
 import qualified Ouroboros.Storage.ChainDB as ChainDB
@@ -152,6 +152,7 @@ runNode nodeCli@NodeCLIArguments{..} loggingLayer = do
             let lvbe = MkBackend { bEffectuate = effectuate be, bUnrealize = unrealize be }
             llAddBackend loggingLayer lvbe "LiveViewBackend"
             setTopology be topology
+            setNodeThread be nodeThread
             captureCounters be tr
 
             void $ Async.waitAny [nodeThread]
