@@ -678,13 +678,14 @@ eventHandler prev (AppEvent lvBackend) = do
     M.continue $ next { lvsColorTheme = lvsColorTheme prev }
 eventHandler lvs  (VtyEvent e)         =
     case e of
-        V.EvKey  (V.KChar 'q') [] -> stopNodeThread >> M.halt lvs
-        V.EvKey  (V.KChar 'Q') [] -> stopNodeThread >> M.halt lvs
-        V.EvKey  (V.KChar 'd') [] -> M.continue $ lvs { lvsColorTheme = DarkTheme }
-        V.EvKey  (V.KChar 'D') [] -> M.continue $ lvs { lvsColorTheme = DarkTheme }
-        V.EvKey  (V.KChar 'l') [] -> M.continue $ lvs { lvsColorTheme = LightTheme }
-        V.EvKey  (V.KChar 'L') [] -> M.continue $ lvs { lvsColorTheme = LightTheme }
-        _                         -> M.continue lvs
+        V.EvKey  (V.KChar 'q') []        -> stopNodeThread >> M.halt lvs
+        V.EvKey  (V.KChar 'Q') []        -> stopNodeThread >> M.halt lvs
+        V.EvKey  (V.KChar 'c') [V.MCtrl] -> stopNodeThread >> M.halt lvs
+        V.EvKey  (V.KChar 'd') []        -> M.continue $ lvs { lvsColorTheme = DarkTheme }
+        V.EvKey  (V.KChar 'D') []        -> M.continue $ lvs { lvsColorTheme = DarkTheme }
+        V.EvKey  (V.KChar 'l') []        -> M.continue $ lvs { lvsColorTheme = LightTheme }
+        V.EvKey  (V.KChar 'L') []        -> M.continue $ lvs { lvsColorTheme = LightTheme }
+        _                                -> M.continue lvs
   where
     stopNodeThread = case lvsNodeThread lvs of
         Nothing -> return ()
