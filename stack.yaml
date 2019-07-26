@@ -14,7 +14,7 @@ extra-deps:
       - crypto/test
 
   - git: https://github.com/input-output-hk/cardano-prelude
-    commit: d673b92f2a2d9354d102514d0a0fa74f8248b14a
+    commit: faf5ba333c7e6f1710a355d5af0abbaec696dfd1
     subdirs:
       - .
       - test
@@ -56,10 +56,10 @@ extra-deps:
     #Ouroboros-network dependencies
 
   - git: https://github.com/input-output-hk/ouroboros-network
-    commit: 47899f4cdcd9eeaa4cfd4ec53837854b8baf9fac
+    commit: e97cde0ff1e0740d7a107c611d6a6b1d85061cda
     subdirs:
-        - ouroboros-network
         - ouroboros-consensus
+        - ouroboros-network
         - io-sim-classes
         - network-mux
         - typed-protocols

@@ -24,6 +24,7 @@
           (hsPkgs.cborg)
           (hsPkgs.mtl)
           (hsPkgs.optparse-applicative)
+          (hsPkgs.reflection)
           (hsPkgs.text)
           (hsPkgs.time)
           (hsPkgs.cardano-binary)

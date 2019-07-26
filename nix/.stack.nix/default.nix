@@ -36,8 +36,8 @@
         iohk-monitoring = ./iohk-monitoring.nix;
         cardano-sl-x509 = ./cardano-sl-x509.nix;
         bimap = ./bimap.nix;
-        ouroboros-network = ./ouroboros-network.nix;
         ouroboros-consensus = ./ouroboros-consensus.nix;
+        ouroboros-network = ./ouroboros-network.nix;
         io-sim-classes = ./io-sim-classes.nix;
         network-mux = ./network-mux.nix;
         typed-protocols = ./typed-protocols.nix;
