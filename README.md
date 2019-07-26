@@ -11,9 +11,9 @@ A CLI utility to support a variety of key material operations (genesis, migratio
 
 Detailed documentation in its attendant [README](app/genesis-tool/README.md).
 
-# Node demonstration
+# Shelley Testnet
 
-The demonstration starts up three nodes that are connected to each other and produce blocks according to the algorithm selected (e.g. "BFT").
+The `./scripts/shelley-testnet.sh` script starts up three nodes that are connected via TCP sockets to each other and produce blocks according to the algorithm selected (e.g. "BFT").
 The blocks are shared among the nodes and after verification integrated into a nodes ledger.
 The user can submit transactions to a node which includes them in its local mempool, and eventually in the next block it will create.
 
@@ -36,7 +36,7 @@ The user can submit transactions to a node which includes them in its local memp
 
 ```
 
-## Startup of the demonstration
+## Startup testnet
 
 Add the next two lines to your $HOME/.tmux.conf file:
 
@@ -55,7 +55,7 @@ In a second terminal:
 
 2.) run the demo script in this new session
 
-    `./scripts/demo.sh`
+    `./scripts/shelley-testnet.sh`
 
 The window of the terminal will be split into four panes showing the three nodes running and a shell to enter commands for transaction submission, e.g.
 
@@ -69,9 +69,9 @@ Increment the last argument '--txix' to send in a new transaction.
 
 3.) or you can run
 
-    `./scripts/demo-dns.sh`
+    `./scripts/shelley-testnet-dns.sh`
 
-    instead of `demo.sh`.  It requires that the addresses `local.iohk.io` and
+    instead of `shelley-testnet.sh`.  It requires that the addresses `local.iohk.io` and
     `local6.iohk.io` resolve to `127.0.0.1` and `::1` respectively.  You can
     use [unbound](https://github.com/NLnetLabs/unbound) dns server.  You can
     use the following `/etc/unbound/unbound.conf` file:
