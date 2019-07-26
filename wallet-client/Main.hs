@@ -12,13 +12,17 @@ import           Cardano.Shell.Features.Logging (LoggingCLIArguments (..),
 import           Cardano.Prelude hiding (option)
 import           Cardano.Shell.Configuration.Lib (finaliseCardanoConfiguration)
 import           Cardano.Shell.Constants.Types (CardanoConfiguration (..))
-import           Cardano.Shell.Lib (runCardanoApplicationWithFeatures)
+import           Cardano.Shell.Lib (GeneralException (..), runCardanoApplicationWithFeatures)
+import           Cardano.Shell.Constants.PartialTypes (PartialCardanoConfiguration (..))
 import           Cardano.Shell.Presets (mainnetConfiguration)
 import           Cardano.Shell.Types (ApplicationEnvironment (Development),
                                       CardanoApplication (..),
                                       CardanoEnvironment, CardanoFeature (..),
                                       CardanoFeatureInit (..),
                                       initializeCardanoEnvironment)
+import           Cardano.Prelude (throwIO)
+
+import           Cardano.Node.CLI
 
 import           CLI
 import           Run
@@ -54,26 +58,28 @@ instance Exception PartialConfigError
 main :: IO ()
 main = do
 
-    cardanoConfiguration <-
-      case finaliseCardanoConfiguration mainnetConfiguration of
-        Right cc -> return cc
-        Left err -> throwIO (PartialConfigError err)
     cardanoEnvironment  <- initializeCardanoEnvironment
 
     logConfig           <- execParser opts
 
-    (cardanoFeatures, nodeLayer) <- initializeAllFeatures logConfig cardanoConfiguration cardanoEnvironment
+    (cardanoFeatures, nodeLayer) <- initializeAllFeatures logConfig mainnetConfiguration cardanoEnvironment
 
     let cardanoApplication :: NodeLayer -> CardanoApplication
         cardanoApplication = CardanoApplication . nlRunNode
 
     runCardanoApplicationWithFeatures Development cardanoFeatures (cardanoApplication nodeLayer)
 
-initializeAllFeatures :: ArgParser -> CardanoConfiguration -> CardanoEnvironment -> IO ([CardanoFeature], NodeLayer)
-initializeAllFeatures (ArgParser logCli cli) cardanoConfiguration cardanoEnvironment = do
+initializeAllFeatures :: ArgParser -> PartialCardanoConfiguration -> CardanoEnvironment -> IO ([CardanoFeature], NodeLayer)
+initializeAllFeatures (ArgParser logCli cli) partialConfig cardanoEnvironment = do
 
-    (loggingLayer, loggingFeature) <- createLoggingFeature cardanoEnvironment cardanoConfiguration logCli
-    (nodeLayer   , nodeFeature)    <- createNodeFeature loggingLayer cli cardanoEnvironment cardanoConfiguration
+    finalConfig <- case finaliseCardanoConfiguration $
+                        mergeConfigurationCommonCLI partialConfig (cliCommon cli)
+                   of
+      Left err -> throwIO $ ConfigurationError err
+      Right x  -> pure x
+
+    (loggingLayer, loggingFeature) <- createLoggingFeature cardanoEnvironment finalConfig logCli
+    (nodeLayer   , nodeFeature)    <- createNodeFeature loggingLayer cli cardanoEnvironment finalConfig
 
     -- Here we return all the features.
     let allCardanoFeatures :: [CardanoFeature]
@@ -123,9 +129,9 @@ nodeCardanoFeatureInit = CardanoFeatureInit
     }
   where
     featureStart' :: CardanoEnvironment -> LoggingLayer -> CardanoConfiguration -> CLI -> IO NodeLayer
-    featureStart' _ loggingLayer _ cli = do
+    featureStart' _ loggingLayer cc cli = do
         let tr = llAppendName loggingLayer "wallet" (llBasicTrace loggingLayer)
-        pure $ NodeLayer {nlRunNode = liftIO $ runClient cli tr}
+        pure $ NodeLayer {nlRunNode = liftIO $ runClient cli tr cc}
 
     featureCleanup' :: NodeLayer -> IO ()
     featureCleanup' _ = pure ()

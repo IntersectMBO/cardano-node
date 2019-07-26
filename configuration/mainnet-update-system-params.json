@@ -1,0 +1,10 @@
+{ "uspProtocolVersion":
+  { "pvMajor": 0
+  , "pvMinor": 2
+  , "pvAlt": 0
+  }
+, "uspSoftwareVersion":
+  { "svAppName": "cardano-sl"
+  , "svNumber": 1
+  }
+}

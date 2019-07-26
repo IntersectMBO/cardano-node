@@ -1,4 +1,5 @@
-{-# LANGUAGE GADTs #-}
+{-# LANGUAGE GADTs            #-}
+{-# LANGUAGE NamedFieldPuns   #-}
 
 module CLI (
     -- * Untyped/typed protocol boundary
@@ -37,9 +38,10 @@ import           Cardano.Node.CLI
 -------------------------------------------------------------------------------}
 
 data NodeCLIArguments = NodeCLIArguments {
-    systemStart  :: !SystemStart
-  , slotDuration :: !SlotLength
-  , command      :: !Command
+    systemStart        :: !SystemStart
+  , slotDuration       :: !SlotLength
+  , commonCLI          :: !CommonCLI
+  , command            :: !Command
   }
 
 data Command =
@@ -51,6 +53,7 @@ nodeParser :: Parser NodeCLIArguments
 nodeParser = NodeCLIArguments
     <$> parseSystemStart
     <*> parseSlotDuration
+    <*> parseCommonCLI
     <*> parseCommand
 
 parseCommand :: Parser Command
@@ -77,7 +80,7 @@ parseHostAddr =
 
 parsePort :: Parser PortNumber
 parsePort =
-    option ((fromIntegral :: Int -> PortNumber) <$> auto) (
+    option auto (
           long "port"
        <> metavar "PORT"
        <> help "The port number"

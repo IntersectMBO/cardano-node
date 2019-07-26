@@ -14,7 +14,7 @@ extra-deps:
       - crypto/test
 
   - git: https://github.com/input-output-hk/cardano-prelude
-    commit: 3084f8b8514d93970415e895b241691b80c7b9ee
+    commit: d673b92f2a2d9354d102514d0a0fa74f8248b14a
     subdirs:
       - .
       - test
@@ -28,7 +28,7 @@ extra-deps:
 
     # Following deps are for cardano-shell
   - git: https://github.com/input-output-hk/cardano-shell
-    commit: 71a8257bfea837ddef716d8c81e436aa3273345e
+    commit: 88acdec1b9349c78fef0a9bbad099c369102dae3
 
   - binary-0.8.7.0
   - containers-0.5.11.0
