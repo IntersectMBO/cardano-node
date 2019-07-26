@@ -222,11 +222,11 @@ executable chairman
                      , cardano-node
                      , cardano-shell
                      , io-sim-classes
+                     , network-mux
                      , ouroboros-consensus
                      , ouroboros-network
                      , typed-protocols
                      , typed-protocols-cbor
-                     , cardano-node
 
                      , async
                      , bytestring

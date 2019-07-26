@@ -31,6 +31,8 @@ import           Control.Monad.Class.MonadThrow
 import           Control.Monad.Class.MonadTimer
 import           Control.Tracer
 
+import           Network.Mux.Types (MuxError)
+
 import           Ouroboros.Consensus.Block (BlockProtocol)
 import           Ouroboros.Consensus.Mempool
 import           Ouroboros.Consensus.Node.ProtocolInfo
@@ -102,6 +104,14 @@ runChairman ptcl nids numCoreNodes securityParam maxBlockNo tracer = do
               pInfoConfig)
             Nothing
             (localSocketAddrInfo (localSocketFilePath coreNodeId))
+          `catch` handleMuxError chainsVar coreNodeId
+  where
+    -- catch 'MuxError'; it will be thrown if a node shuts down closing the
+    -- connection.
+    handleMuxError :: ChainsVar IO blk -> CoreNodeId -> MuxError -> IO ()
+    handleMuxError chainsVar coreNodeId err = do
+      traceWith tracer (show err)
+      atomically $ modifyTVar' chainsVar (Map.delete coreNodeId)
 
 
 data ChairmanTrace blk
