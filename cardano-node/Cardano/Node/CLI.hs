@@ -1,6 +1,7 @@
 {-# LANGUAGE ConstraintKinds  #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs            #-}
+{-# LANGUAGE NamedFieldPuns   #-}
 
 module Cardano.Node.CLI (
   -- * Untyped/typed protocol boundary
@@ -9,6 +10,8 @@ module Cardano.Node.CLI (
   , TraceConstraints
   , ViewMode(..)
   , fromProtocol
+  -- * Configuration
+  , mergeConfiguration
   -- * Parsers
   , parseSystemStart
   , parseSlotDuration
@@ -23,6 +26,7 @@ module Cardano.Node.CLI (
   , parseFakeAvvmOptions
   , parseK
   , parseProtocolMagic
+  , parseNetworkMagic
   , parseFilePath
   , parseIntegral
   , parseFlag
@@ -33,7 +37,11 @@ module Cardano.Node.CLI (
 
 import           Prelude
 
+import           Codec.CBOR.Read (deserialiseFromBytes)
+
+import qualified Data.ByteString.Lazy as LB
 import           Data.Foldable (asum)
+import           Data.Monoid (Last)
 import           Data.Semigroup ((<>))
 import           Data.Time (UTCTime)
 import           Data.Time.Clock.POSIX (posixSecondsToUTCTime)
@@ -45,6 +53,7 @@ import           Ouroboros.Consensus.Block (Header)
 import           Ouroboros.Consensus.BlockchainTime
 import           Ouroboros.Consensus.Demo
 import           Ouroboros.Consensus.Demo.Run
+import           Ouroboros.Consensus.Ledger.Byron
 import           Ouroboros.Consensus.Mempool.API
 import           Ouroboros.Consensus.Node.ProtocolInfo
 import           Ouroboros.Consensus.NodeId (CoreNodeId (..), NodeId (..))
@@ -55,11 +64,26 @@ import qualified Ouroboros.Consensus.Protocol as Consensus
 
 import           Cardano.Binary (Annotated (..))
 import           Cardano.Chain.Common
-import           Cardano.Chain.Genesis
 import           Cardano.Crypto.ProtocolMagic
 
-import qualified Test.Cardano.Chain.Genesis.Dummy as Dummy
+import           Cardano.Shell.Constants.PartialTypes (PartialCardanoConfiguration (..),
+                                                       PartialCore (..),
+                                                       PartialGenesis (..),
+                                                       PartialStaticKeyMaterial (..) )
+import           Cardano.Shell.Lib (GeneralException (..))
+import qualified Cardano.Chain.Genesis as Genesis
+import           Cardano.Crypto (RequiresNetworkMagic (..),
+                                 decodeAbstractHash)
+import qualified Cardano.Crypto.Signing as Signing
+import           Control.Exception
+import           Control.Monad.Except
+import           Cardano.Shell.Constants.Types (CardanoConfiguration (..),
+                                                Core (..),
+                                                StaticKeyMaterial (..),
+                                                Genesis (..),
+                                                RequireNetworkMagic (..))
 
+import qualified Cardano.Node.CanonicalJSON as CanonicalJSON
 
 {-------------------------------------------------------------------------------
   Untyped/typed protocol boundary
@@ -93,33 +117,76 @@ data SomeProtocol where
   SomeProtocol :: (RunDemo blk, TraceConstraints blk)
                => Consensus.Protocol blk -> SomeProtocol
 
-fromProtocol :: Protocol -> IO SomeProtocol
-fromProtocol BFT =
+fromProtocol :: CardanoConfiguration -> Protocol -> IO SomeProtocol
+fromProtocol _ BFT =
     case Consensus.runProtocol p of
       Dict -> return $ SomeProtocol p
   where
     p = ProtocolMockBFT defaultSecurityParam
-fromProtocol Praos =
+fromProtocol _ Praos =
     case Consensus.runProtocol p of
       Dict -> return $ SomeProtocol p
   where
     p = ProtocolMockPraos defaultDemoPraosParams
-fromProtocol MockPBFT =
+fromProtocol _ MockPBFT =
     case Consensus.runProtocol p of
       Dict -> return $ SomeProtocol p
   where
     p = ProtocolMockPBFT defaultDemoPBftParams
-fromProtocol RealPBFT =
+fromProtocol CardanoConfiguration{ccCore=ccCore@Core{coStaticKeyMaterial}} RealPBFT = do
+    let Genesis{geSrc, geGenesisHash} = coGenesis ccCore
+        genHash = either (throw . ConfigurationError) id $
+                  decodeAbstractHash geGenesisHash
+        cvtRNM :: RequireNetworkMagic -> RequiresNetworkMagic
+        cvtRNM NoRequireNetworkMagic = RequiresNoMagic
+        cvtRNM RequireNetworkMagic   = RequiresMagic
+        StaticKeyMaterial{skmSigningKeyFile, skmDlgCertFile} = coStaticKeyMaterial
+        kmoDeserialiseDelegateKey = Signing.SigningKey . snd . either (error . show) id . deserialiseFromBytes Signing.fromCBORXPrv
+
+    res <- runExceptT (Genesis.mkConfigFromFile (cvtRNM $ coRequiresNetworkMagic ccCore) geSrc genHash)
+    let geneConfig = case res of
+          Left err -> throw err
+          Right x -> x
+
+    sk  <- kmoDeserialiseDelegateKey <$> LB.readFile skmSigningKeyFile
+    dlg <- either (error . show) id . CanonicalJSON.canonicalDecPre <$> LB.readFile skmDlgCertFile
+
+    let plc = PbftLeaderCredentials sk dlg
+        p   = ProtocolRealPBFT defaultDemoPBftParams geneConfig (pure plc)
+
     case Consensus.runProtocol p of
       Dict -> return $ SomeProtocol p
-  where
-    p = ProtocolRealPBFT defaultDemoPBftParams genesisConfig
-    genesisConfig = Dummy.dummyConfig
+
+-- TODO: consider not throwing this, or wrap it in a local error type here
+-- that has proper error messages.
+instance Exception Genesis.ConfigurationError
 
 -- Node can be run in two modes.
 data ViewMode =
     LiveView    -- Live mode with TUI
   | SimpleView  -- Simple mode, just output text.
+
+{-------------------------------------------------------------------------------
+  Configuration merging
+-------------------------------------------------------------------------------}
+
+-- | Perform merging of layers of configuration, but for now, only in a trivial way,
+--   just for Cardano.Shell.Constants.Types.{Genesis,StaticKeyMaterial}.
+--   We expect this process to become generic at some point.
+mergeConfiguration
+  :: PartialCardanoConfiguration
+  -> Last PartialGenesis
+  -> Last PartialStaticKeyMaterial
+  -> PartialCardanoConfiguration
+mergeConfiguration pcc@PartialCardanoConfiguration{pccCore} pg pskm =
+  pcc { pccCore = updateCore <$> pccCore }
+
+  where updateCore pc@PartialCore{pcoGenesis, pcoStaticKeyMaterial} =
+          -- We need to lift (<>) because we need monoidal operation over Partial*
+          -- constituents, and not the (Last Partial*) ones.
+          pc { pcoGenesis            = liftA2 (<>) pcoGenesis           pg
+             , pcoStaticKeyMaterial  = liftA2 (<>) pcoStaticKeyMaterial pskm
+             }
 
 {-------------------------------------------------------------------------------
   Command parsers
@@ -196,9 +263,9 @@ parseViewMode =
         , help "Live view with TUI."
         ]
 
-parseTestnetBalanceOptions :: Parser TestnetBalanceOptions
+parseTestnetBalanceOptions :: Parser Genesis.TestnetBalanceOptions
 parseTestnetBalanceOptions =
-  TestnetBalanceOptions
+  Genesis.TestnetBalanceOptions
   <$> parseIntegral        "n-poor-addresses"         "Number of poor nodes (with small balance)."
   <*> parseIntegral        "n-delegate-addresses"     "Number of delegate nodes (with huge balance)."
   <*> parseLovelace        "total-balance"            "Total balance owned by these nodes."
@@ -215,9 +282,9 @@ parseLovelacePortion optname desc =
   either (error . show) id . mkLovelacePortion
   <$> parseIntegral optname desc
 
-parseFakeAvvmOptions :: Parser FakeAvvmOptions
+parseFakeAvvmOptions :: Parser Genesis.FakeAvvmOptions
 parseFakeAvvmOptions =
-  FakeAvvmOptions
+  Genesis.FakeAvvmOptions
   <$> parseIntegral        "avvm-entry-count"         "Number of AVVM addresses."
   <*> parseLovelace        "avvm-entry-balance"       "AVVM address."
 
@@ -230,6 +297,19 @@ parseProtocolMagic :: Parser ProtocolMagic
 parseProtocolMagic =
   flip AProtocolMagic RequiresMagic . flip Annotated () . ProtocolMagicId
   <$> parseIntegral        "protocol-magic"           "The magic number unique to any instance of Cardano."
+
+parseNetworkMagic :: Parser NetworkMagic
+parseNetworkMagic = asum
+    [ flag' NetworkMainOrStage $ mconcat [
+          long "main-or-staging"
+        , help ""
+        ]
+    , option (fmap NetworkTestnet auto) (
+          long "testnet-magic"
+       <> metavar "MAGIC"
+       <> help "The testnet network magic, decibal"
+        )
+    ]
 
 parseFilePath :: String -> String -> Parser FilePath
 parseFilePath optname desc =

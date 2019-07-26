@@ -4,6 +4,7 @@ dist-newstyle/
 dist/
 *~
 \#*
+\.#*
 *.swp
 result*
 launch-*

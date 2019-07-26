@@ -28,6 +28,7 @@ import           Codec.CBOR.Read (deserialiseFromBytes)
 import           Codec.CBOR.Write (toLazyByteString)
 import           Control.Monad
 import qualified Data.ByteString.Lazy as LB
+import qualified Data.Map.Strict as Map
 import           Data.Semigroup ((<>))
 import           Data.Text (Text)
 import qualified Data.Text as T
@@ -48,9 +49,11 @@ import qualified Crypto.SCRAPE as Scrape
 import           Cardano.Prelude hiding (option)
 
 import qualified Cardano.Chain.Common as CC
+import           Cardano.Chain.Delegation (Certificate, ACertificate (..))
 import           Cardano.Crypto (SigningKey (..))
-import qualified Cardano.Crypto.Hashing as CCr
+import qualified Test.Cardano.Chain.Genesis.Dummy as Dummy
 import qualified Cardano.Crypto.Random as CCr
+import qualified Cardano.Crypto.Hashing as CCr
 import qualified Cardano.Crypto.Signing as CCr
 
 import           Cardano.Chain.Genesis
@@ -61,25 +64,17 @@ import qualified Byron.Legacy as Legacy
 import           CLI
 
 runCommand :: KeyMaterialOps IO -> Command -> IO ()
-runCommand
-  KeyMaterialOps{..}
-  (Genesis
-    outDir
-    startTime
-    protocolParametersFile
-    blockCount
-    protocolMagic
-    giTestBalance
-    giFakeAvvmBalance
-    giAvvmBalanceFactor
-    giSeed)
-  = do
-
-    exists <- doesPathExist outDir
-    if exists
-      then error $ "Genesis output directory must not already exist: " <> outDir
-      else createDirectory outDir
-
+runCommand kmo@KeyMaterialOps{..}
+           (Genesis
+             outDir
+             startTime
+             protocolParametersFile
+             blockCount
+             protocolMagic
+             giTestBalance
+             giFakeAvvmBalance
+             giAvvmBalanceFactor
+             giSeed) = do
     protoParamsRaw <- LB.readFile protocolParametersFile
     let protocolParameters = either (error . show) id $ canonicalDecPre protoParamsRaw
 
@@ -110,39 +105,84 @@ runCommand
 
     -- Generate (mostly)
     res <- runExceptT $ generateGenesisData startTime genesisSpec
-    let (genesisData, GeneratedSecrets{..}) = either (error . show) id res
+    let (genesisData, generatedSecrets) = either (error . show) id res
 
-    -- Write out (mostly)
-    let genesisJSONFile = outDir </> "genesis.json"
-    LB.writeFile genesisJSONFile =<< kmoSerialiseGenesis genesisData
+    dumpGenesis kmo outDir genesisData generatedSecrets
 
-    writeSecrets outDir "genesis-keys"  "key"  kmoSerialiseGenesisKey   gsDlgIssuersSecrets
-    writeSecrets outDir "delegate-keys" "key"  kmoSerialiseDelegateKey  gsRichSecrets
-    writeSecrets outDir "poor-keys"     "key"  kmoSerialisePoorKey      gsPoorSecrets
-    writeSecrets outDir "avvm-seed"     "seed" (pure . LB.fromStrict)   gsFakeAvvmSeeds
+runCommand KeyMaterialOps{..} (PrettySigningKeyPublic secretPath) =
+    putStrLn =<< T.unpack
+               . prettySigningKeyPub
+               . kmoDeserialiseDelegateKey
+             <$> LB.readFile secretPath
 
-runCommand
-  KeyMaterialOps{..}
-  (PrettySecretKeyPublic
-    secretPath)
-  =
-  putStrLn =<< T.unpack . prettySigningKeyPub . kmoDeserialiseDelegateKey <$> LB.readFile secretPath
-  where
-      prettySigningKeyPub :: SigningKey -> Text
-      prettySigningKeyPub (CCr.toVerification -> vk) = TL.toStrict
-                                $  "public key hash: " <> (F.format CCr.hashHexF . CC.addressHash $ vk) <> "\n"
-                                <> "     public key: " <> (Builder.toLazyText . CCr.formatFullVerificationKey $ vk)
-
-runCommand
-  toKMO
-  (MigrateDelegateKeyFrom
-    fromVer
-    secretPathTo
-    secretPathFrom)
-  =
-  LB.writeFile secretPathTo =<< kmoSerialiseDelegateKey toKMO =<< kmoDeserialiseDelegateKey fromKMO <$> LB.readFile secretPathFrom
+runCommand kmo (MigrateDelegateKeyFrom
+                  fromVer
+                  secretPathTo
+                  secretPathFrom) =
+        LB.writeFile secretPathTo
+    =<< kmoSerialiseDelegateKey kmo
+      . kmoDeserialiseDelegateKey fromKMO
+    =<< LB.readFile secretPathFrom
   where
     fromKMO = decideKeyMaterialOps fromVer
+
+runCommand kmo (DumpHardcodedGenesis outDir) =
+    dumpGenesis kmo outDir
+                (configGenesisData Dummy.dummyConfig)
+                generatedSecrets
+  where
+    Just generatedSecrets = configGeneratedSecrets Dummy.dummyConfig
+
+runCommand KeyMaterialOps{..} (PrintGenesisHash secretPath) =
+    putStrLn . F.format CCr.hashHexF
+             . unGenesisHash
+             . snd . either (error . show) id
+           =<< runExceptT (readGenesisData secretPath)
+
+runCommand KeyMaterialOps{..} (PrintSigningKeyAddress networkMagic secretPath) =
+    putStrLn . T.unpack . prettyAddress
+             . CC.makeVerKeyAddress networkMagic
+             . CCr.toVerification
+             . kmoDeserialiseDelegateKey
+           =<< LB.readFile secretPath
+
+{-------------------------------------------------------------------------------
+  Supporting functions
+-------------------------------------------------------------------------------}
+
+dumpGenesis :: KeyMaterialOps IO -> FilePath -> GenesisData -> GeneratedSecrets -> IO ()
+dumpGenesis KeyMaterialOps{..} outDir genesisData GeneratedSecrets{..} = do
+    exists <- doesPathExist outDir
+    if exists
+      then error $ "Genesis output directory must not already exist: " <> outDir
+      else createDirectory outDir
+
+    let genesisJSONFile = outDir <> "/genesis.json"
+    LB.writeFile genesisJSONFile =<< kmoSerialiseGenesis genesisData
+
+    let dlgCertMap = unGenesisDelegation $ gdHeavyDelegation genesisData
+        isCertForSK :: SigningKey -> Certificate -> Bool
+        isCertForSK sk UnsafeACertificate{..} = delegateVK == CCr.toVerification sk
+        findDelegateCert :: SigningKey -> Certificate
+        findDelegateCert sk =
+          fromMaybe (error . T.unpack $ "Invariant failed: no delegation for key in genesis:\n"<> prettySigningKeyPub sk)
+          . flip find (Map.elems dlgCertMap) . isCertForSK $ sk
+
+    writeSecrets outDir "genesis-keys"       "key"  kmoSerialiseGenesisKey        gsDlgIssuersSecrets
+    writeSecrets outDir "delegate-keys"      "key"  kmoSerialiseDelegateKey       gsRichSecrets
+    writeSecrets outDir "poor-keys"          "key"  kmoSerialisePoorKey           gsPoorSecrets
+    writeSecrets outDir "delegation-cert"    "json" kmoSerialiseDelegationCert    (findDelegateCert <$> gsRichSecrets)
+    writeSecrets outDir "avvm-seed"          "seed" (pure . LB.fromStrict)        gsFakeAvvmSeeds
+
+prettySigningKeyPub :: SigningKey -> Text
+prettySigningKeyPub (CCr.toVerification -> vk) = TL.toStrict
+                          $  "public key hash: " <> (F.format CCr.hashHexF . CC.addressHash $ vk) <> "\n"
+                          <> "     public key: " <> (Builder.toLazyText . CCr.formatFullVerificationKey $ vk)
+
+prettyAddress :: CC.Address -> Text
+prettyAddress addr = TL.toStrict
+                     $  F.format CC.addressF addr <> "\n"
+                     <> F.format CC.addressDetailedF addr
 
 decideKeyMaterialOps :: SystemVersion -> KeyMaterialOps IO
 decideKeyMaterialOps =
@@ -156,6 +196,7 @@ decideKeyMaterialOps =
         <$> CCr.runSecureRandom Scrape.keyPairGenerate
     , kmoSerialisePoorKey             = pure . serialiseSigningKey . poorSecretToKey
     , kmoSerialiseGenesis             = pure . canonicalEncPre
+    , kmoSerialiseDelegationCert      = pure . canonicalEncPre
     , kmoDeserialiseDelegateKey       = Legacy.lrkSigningKey . snd . either (error . show) id . deserialiseFromBytes Legacy.decodeLegacyDelegateKey
     }
   ByronPBFT ->
@@ -164,6 +205,7 @@ decideKeyMaterialOps =
     , kmoSerialiseDelegateKey         = pure . serialiseSigningKey
     , kmoSerialisePoorKey             = pure . serialiseSigningKey . poorSecretToKey
     , kmoSerialiseGenesis             = pure . canonicalEncPre
+    , kmoSerialiseDelegationCert      = pure . canonicalEncPre
     , kmoDeserialiseDelegateKey       = SigningKey . snd . either (error . show) id . deserialiseFromBytes CCr.fromCBORXPrv
     }
 

@@ -1,4 +1,5 @@
-{-# LANGUAGE GADTs #-}
+{-# LANGUAGE GADTs            #-}
+{-# LANGUAGE NamedFieldPuns   #-}
 
 module CLI (
     -- * Untyped/typed protocol boundary
@@ -24,8 +25,13 @@ import qualified Data.IP as IP
 import           Options.Applicative
 import           Network.Socket (PortNumber)
 
+import           Cardano.Prelude hiding (option, (.))
+
 import           Ouroboros.Consensus.BlockchainTime
 import qualified Ouroboros.Consensus.Ledger.Mock as Mock
+
+import           Cardano.Shell.Constants.CLI
+import           Cardano.Shell.Constants.PartialTypes (PartialGenesis (..), PartialStaticKeyMaterial (..))
 
 import           Topology (NodeAddress (..), TopologyInfo (..))
 import           TxSubmission (command', parseMockTx)
@@ -37,9 +43,11 @@ import           Cardano.Node.CLI
 -------------------------------------------------------------------------------}
 
 data NodeCLIArguments = NodeCLIArguments {
-    systemStart  :: !SystemStart
-  , slotDuration :: !SlotLength
-  , command      :: !Command
+    systemStart        :: !SystemStart
+  , slotDuration       :: !SlotLength
+  , genesisSpec        :: !(Last PartialGenesis)
+  , keyMaterialSpec    :: !(Last PartialStaticKeyMaterial)
+  , command            :: !Command
   }
 
 data Command =
@@ -51,6 +59,8 @@ nodeParser :: Parser NodeCLIArguments
 nodeParser = NodeCLIArguments
     <$> parseSystemStart
     <*> parseSlotDuration
+    <*> (Last . Just <$> configGenesisCLIParser)
+    <*> (Last . Just <$> configStaticKeyMaterialCLIParser)
     <*> parseCommand
 
 parseCommand :: Parser Command

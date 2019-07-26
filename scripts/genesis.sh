@@ -15,13 +15,13 @@ not_so_secret=2718281828
 
 systemVersion="$1"; shift || true
 case "$systemVersion" in
-        --byron-legacy | --byron-pbft | --help ) systemVersionPretty=$(echo $systemVersion | cut -c3-);;
+        byron-legacy | byron-pbft | --help ) true;;
         * ) echo "Usage:  $(basename $0) --byron-{legacy,pbft} [GENESIS-TOOL-ARG..]" >&2; exit 1;; esac
 
 set -xe
 cabal new-run --                                      \
       genesis-tool ${systemVersion} genesis           \
-      --genesis-output-dir ./genesis.${systemVersionPretty} \
+      --genesis-output-dir ./genesis.${systemVersion} \
       --start-time "${start_time}"                    \
       --protocol-parameters-file "${protocol_params}" \
       --k 2160                                        \
