@@ -49,6 +49,7 @@ import           Data.Aeson.TH
 import qualified Data.ByteString.Lazy as LB
 import           Data.Foldable (asum)
 import           Data.Monoid (Last (..))
+import           Data.Reflection (give)
 import           Data.Semigroup ((<>))
 import           Data.String (IsString)
 import           Data.Time (UTCTime)
@@ -172,9 +173,16 @@ fromProtocol CardanoConfiguration{ccCore}
             protoV
             softV
             mplc
-
-    case Consensus.runProtocol p of
-      Dict -> return $ SomeProtocol p
+        epochSlots = Genesis.configEpochSlots gc
+        protocolMagicId = Genesis.configProtocolMagicId gc
+    -- EpochSlots, ProtocolMagicId, and GenesisHash must be given by way of
+    -- reflection constraints, even though they are derivable from `p`. That's
+    -- because of the typeclass-based design: these values need to be "static"
+    -- so they are available to instances, so we fake it.
+    return $
+      give epochSlots $
+      give protocolMagicId $
+      give genHash $ SomeProtocol p
 
 readLeaderCredentials :: Genesis.Config -> StaticKeyMaterial -> IO PBftLeaderCredentials
 readLeaderCredentials gc StaticKeyMaterial{skmSigningKeyFile, skmDlgCertFile} = do

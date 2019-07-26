@@ -80,7 +80,7 @@ parseHostAddr =
 
 parsePort :: Parser PortNumber
 parsePort =
-    option ((fromIntegral :: Int -> PortNumber) <$> auto) (
+    option auto (
           long "port"
        <> metavar "PORT"
        <> help "The port number"
