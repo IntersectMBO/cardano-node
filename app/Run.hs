@@ -138,11 +138,11 @@ runNode nodeCli@NodeCLIArguments{..} loggingLayer cc = do
         let tracer      = contramap pack $ toLogObject trace'
         handleTraceAcceptor tracer
 
-      SimpleNode topology myNodeAddress protocol viewMode -> do
+      SimpleNode topology myNodeAddress protocol viewMode traceOptions -> do
         let trace'      = appendName (pack $ show $ node topology) tr
         SomeProtocol p  <- fromProtocol cc protocol
         case viewMode of
-          SimpleView -> handleSimpleNode p nodeCli myNodeAddress topology trace' cc
+          SimpleView -> handleSimpleNode p nodeCli myNodeAddress topology trace' traceOptions cc
           LiveView   -> do
 #ifdef UNIX
             let c = llConfiguration loggingLayer
@@ -150,7 +150,7 @@ runNode nodeCli@NodeCLIArguments{..} loggingLayer cc = do
             -- turn off logging to the console, only forward it through a pipe to a central logging process
             CM.setDefaultBackends c [TraceForwarderBK, UserDefinedBK "LiveViewBackend"]
             -- User will see a terminal graphics and will be able to interact with it.
-            nodeThread <- Async.async $ handleSimpleNode p nodeCli myNodeAddress topology trace' cc
+            nodeThread <- Async.async $ handleSimpleNode p nodeCli myNodeAddress topology trace' traceOptions cc
 
             be :: LiveViewBackend Text <- realize c
             let lvbe = MkBackend { bEffectuate = effectuate be, bUnrealize = unrealize be }
@@ -161,8 +161,16 @@ runNode nodeCli@NodeCLIArguments{..} loggingLayer cc = do
 
             void $ Async.waitAny [nodeThread]
 #else
-            handleSimpleNode p nodeCli myNodeAddress topology trace' cc
+            handleSimpleNode p nodeCli myNodeAddress topology trace' traceOptions cc
 #endif
+
+enableTracer
+  :: (Show a, Applicative m)
+  => Bool
+  -> Tracer m String
+  -> Tracer m a
+enableTracer False = const nullTracer
+enableTracer True  = showTracing
 
 -- | Sets up a simple node, which will run the chain sync protocol and block
 -- fetch protocol, and, if core, will also look at the mempool when trying to
@@ -173,9 +181,23 @@ handleSimpleNode :: forall blk. (RunNode blk, TraceConstraints blk)
                  -> NodeAddress
                  -> TopologyInfo
                  -> Trace IO Text
+                 -> TraceOptions
                  -> CardanoConfiguration
                  -> IO ()
-handleSimpleNode p NodeCLIArguments{..} myNodeAddress (TopologyInfo myNodeId topologyFile) trace CardanoConfiguration{..} = do
+handleSimpleNode p NodeCLIArguments{..}
+                 myNodeAddress
+                 (TopologyInfo myNodeId topologyFile)
+                 trace
+                 traceOptions@TraceOptions
+                    { traceChainSync
+                    , traceTxSubmission
+                    , traceFetchDecisions
+                    , traceFetchClient
+                    , traceTxInbound
+                    , traceTxOutbound
+                    }
+                 CardanoConfiguration{..}
+    = do
     let tracer = contramap pack $ toLogObject trace
         mempoolTracer = mempoolTraceTransformer $ appendName "mempool" trace
     traceWith tracer $ "System started at " <> show systemStart
@@ -219,6 +241,7 @@ handleSimpleNode p NodeCLIArguments{..} myNodeAddress (TopologyInfo myNodeId top
 
       varTip <- atomically $ newTVar GenesisPoint
       let chainDbArgs = mkChainDbArgs
+                          traceOptions
                           pInfoConfig
                           pInfoInitLedger
                           registry
@@ -237,10 +260,10 @@ handleSimpleNode p NodeCLIArguments{..} myNodeAddress (TopologyInfo myNodeId top
           nodeParams = NodeParams
             { tracer             = prefixTip varTip tracer
             , mempoolTracer      = mempoolTracer
-            , decisionTracer     = nullTracer
-            , fetchClientTracer  = nullTracer
-            , txInboundTracer    = nullTracer
-            , txOutboundTracer   = nullTracer
+            , decisionTracer     = enableTracer traceFetchDecisions tracer
+            , fetchClientTracer  = enableTracer traceFetchClient tracer
+            , txInboundTracer    = enableTracer traceTxInbound tracer
+            , txOutboundTracer   = enableTracer traceTxOutbound tracer
             , threadRegistry     = registry
             , maxClockSkew       = ClockSkew 1
             , cfg                = pInfoConfig
@@ -261,8 +284,8 @@ handleSimpleNode p NodeCLIArguments{..} myNodeAddress (TopologyInfo myNodeId top
                            ByteString ByteString ()
           networkApps =
             consensusNetworkApps
-              nullTracer
-              nullTracer
+              (enableTracer traceChainSync tracer)
+              (enableTracer traceTxSubmission tracer)
               kernel
               ProtocolCodecs
                 { pcChainSyncCodec =
@@ -462,14 +485,15 @@ removeStaleLocalSocket socketPath =
           else throwIO e
 
 mkChainDbArgs :: forall blk. (RunNode blk, TraceConstraints blk)
-              => NodeConfig (BlockProtocol blk)
+              => TraceOptions
+              -> NodeConfig (BlockProtocol blk)
               -> ExtLedgerState blk
               -> ThreadRegistry IO
               -> CoreNodeId
               -> Tracer IO String
               -> SlotLength
               -> ChainDB.ChainDbArgs IO blk
-mkChainDbArgs cfg initLedger registry (CoreNodeId nid) tracer slotDuration =
+mkChainDbArgs TraceOptions {traceChainDB} cfg initLedger registry (CoreNodeId nid) tracer slotDuration =
     (ChainDB.defaultArgs dbPath)
       { ChainDB.cdbBlocksPerFile    = 10
       , ChainDB.cdbDecodeBlock      = nodeDecodeBlock       cfg
@@ -489,7 +513,9 @@ mkChainDbArgs cfg initLedger registry (CoreNodeId nid) tracer slotDuration =
       , ChainDB.cdbMemPolicy        = defaultMemPolicy secParam
       , ChainDB.cdbNodeConfig       = cfg
       , ChainDB.cdbThreadRegistry   = registry
-      , ChainDB.cdbTracer           = readableChainDBTracer tracer
+      , ChainDB.cdbTracer           = if traceChainDB
+                                        then contramap show tracer
+                                        else readableChainDBTracer tracer
       , ChainDB.cdbValidation       = ValidateMostRecentEpoch
       , ChainDB.cdbGcDelay          = secondsToDiffTime 10
       }
