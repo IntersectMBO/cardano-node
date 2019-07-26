@@ -24,8 +24,7 @@ data CLI = CLI {
     cliCoreNodeId   :: CoreNodeId,
     cliNumCoreNodes :: NumCoreNodes,
     cliProtocol     :: Protocol,
-    cliGenesis      :: Last PartialGenesis,
-    cliKeyMaterial  :: Last PartialStaticKeyMaterial
+    cliCommon       :: CommonCLI
   }
 
 parseCLI :: Parser CLI
@@ -33,5 +32,4 @@ parseCLI = CLI
     <$> parseCoreNodeId
     <*> parseNumCoreNodes
     <*> parseProtocol
-    <*> (Last . Just <$> configGenesisCLIParser)
-    <*> (Last . Just <$> configStaticKeyMaterialCLIParser)
+    <*> parseCommonCLI

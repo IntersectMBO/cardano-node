@@ -1,7 +1,10 @@
 {-# LANGUAGE ConstraintKinds  #-}
+{-# LANGUAGE DeriveGeneric    #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs            #-}
 {-# LANGUAGE NamedFieldPuns   #-}
+{-# LANGUAGE RecordWildCards  #-}
+{-# LANGUAGE TemplateHaskell  #-}
 
 module Cardano.Node.CLI (
   -- * Untyped/typed protocol boundary
@@ -10,8 +13,10 @@ module Cardano.Node.CLI (
   , TraceConstraints
   , ViewMode(..)
   , fromProtocol
-  -- * Configuration
-  , mergeConfiguration
+  -- * Common CLI
+  , CommonCLI(..)
+  , parseCommonCLI
+  , mergeConfigurationCommonCLI
   -- * Parsers
   , parseSystemStart
   , parseSlotDuration
@@ -39,12 +44,16 @@ import           Prelude
 
 import           Codec.CBOR.Read (deserialiseFromBytes)
 
+import           Data.Aeson
+import           Data.Aeson.TH
 import qualified Data.ByteString.Lazy as LB
 import           Data.Foldable (asum)
-import           Data.Monoid (Last)
+import           Data.Monoid (Last (..))
 import           Data.Semigroup ((<>))
+import           Data.String (IsString)
 import           Data.Time (UTCTime)
 import           Data.Time.Clock.POSIX (posixSecondsToUTCTime)
+import           GHC.Generics
 import           Options.Applicative
 
 import           Ouroboros.Network.Block (ChainHash, HeaderHash)
@@ -66,6 +75,7 @@ import           Cardano.Binary (Annotated (..))
 import           Cardano.Chain.Common
 import           Cardano.Crypto.ProtocolMagic
 
+import           Cardano.Shell.Constants.CLI
 import           Cardano.Shell.Constants.PartialTypes (PartialCardanoConfiguration (..),
                                                        PartialCore (..),
                                                        PartialGenesis (..),
@@ -82,8 +92,10 @@ import           Cardano.Shell.Constants.Types (CardanoConfiguration (..),
                                                 StaticKeyMaterial (..),
                                                 Genesis (..),
                                                 RequireNetworkMagic (..))
+import qualified Cardano.Chain.Update as Update
 
 import qualified Cardano.Node.CanonicalJSON as CanonicalJSON
+
 
 {-------------------------------------------------------------------------------
   Untyped/typed protocol boundary
@@ -133,29 +145,52 @@ fromProtocol _ MockPBFT =
       Dict -> return $ SomeProtocol p
   where
     p = ProtocolMockPBFT defaultDemoPBftParams
-fromProtocol CardanoConfiguration{ccCore=ccCore@Core{coStaticKeyMaterial}} RealPBFT = do
+fromProtocol CardanoConfiguration{ccCore}
+  RealPBFT = do
     let Genesis{geSrc, geGenesisHash} = coGenesis ccCore
         genHash = either (throw . ConfigurationError) id $
                   decodeAbstractHash geGenesisHash
         cvtRNM :: RequireNetworkMagic -> RequiresNetworkMagic
         cvtRNM NoRequireNetworkMagic = RequiresNoMagic
         cvtRNM RequireNetworkMagic   = RequiresMagic
-        StaticKeyMaterial{skmSigningKeyFile, skmDlgCertFile} = coStaticKeyMaterial
-        kmoDeserialiseDelegateKey = Signing.SigningKey . snd . either (error . show) id . deserialiseFromBytes Signing.fromCBORXPrv
 
-    res <- runExceptT (Genesis.mkConfigFromFile (cvtRNM $ coRequiresNetworkMagic ccCore) geSrc genHash)
-    let geneConfig = case res of
+    gcE <- runExceptT (Genesis.mkConfigFromFile (cvtRNM $ coRequiresNetworkMagic ccCore) geSrc genHash)
+    let gc = case gcE of
           Left err -> throw err
-          Right x -> x
+          Right x  -> x
 
-    sk  <- kmoDeserialiseDelegateKey <$> LB.readFile skmSigningKeyFile
-    dlg <- either (error . show) id . CanonicalJSON.canonicalDecPre <$> LB.readFile skmDlgCertFile
+    mplc <- sequence $ readLeaderCredentials gc <$> coStaticKeyMaterial ccCore
 
-    let plc = PbftLeaderCredentials sk dlg
-        p   = ProtocolRealPBFT defaultDemoPBftParams geneConfig (pure plc)
+    usParamsE <- eitherDecode <$> LB.readFile (coUpdateSystemParams ccCore)
+    let UpdateSystemParams protoV softV = case usParamsE of
+          Left err -> error err
+          Right x  -> x
+
+    let p = ProtocolRealPBFT
+            gc
+            (PBftSignatureThreshold <$> coPBftSigThd ccCore)
+            protoV
+            softV
+            mplc
 
     case Consensus.runProtocol p of
       Dict -> return $ SomeProtocol p
+
+readLeaderCredentials :: Genesis.Config -> StaticKeyMaterial -> IO PBftLeaderCredentials
+readLeaderCredentials gc StaticKeyMaterial{skmSigningKeyFile, skmDlgCertFile} = do
+  let deserialiseSigningKey = Signing.SigningKey . snd . either (error . show) id .
+                              deserialiseFromBytes Signing.fromCBORXPrv
+  sk <- deserialiseSigningKey <$> LB.readFile skmSigningKeyFile
+
+  dlgE <- CanonicalJSON.canonicalDecPre <$> LB.readFile skmDlgCertFile
+
+  let plcE = case dlgE of
+               Left  err -> error . show $ err
+               Right dlg -> mkPBftLeaderCredentials gc sk dlg
+
+  case plcE of
+    Left  err -> error . show $ err
+    Right plc -> pure plc
 
 -- TODO: consider not throwing this, or wrap it in a local error type here
 -- that has proper error messages.
@@ -167,25 +202,60 @@ data ViewMode =
   | SimpleView  -- Simple mode, just output text.
 
 {-------------------------------------------------------------------------------
-  Configuration merging
+  Update system params
 -------------------------------------------------------------------------------}
 
--- | Perform merging of layers of configuration, but for now, only in a trivial way,
---   just for Cardano.Shell.Constants.Types.{Genesis,StaticKeyMaterial}.
---   We expect this process to become generic at some point.
-mergeConfiguration
+data UpdateSystemParams =
+  UpdateSystemParams
+  { uspProtocolVersion :: Update.ProtocolVersion
+  , uspSoftwareVersion :: Update.SoftwareVersion
+  } deriving (Generic)
+
+deriveFromJSON defaultOptions ''UpdateSystemParams
+
+{-------------------------------------------------------------------------------
+  Common CLI
+-------------------------------------------------------------------------------}
+
+-- TODO:  this could benefit from using precise types.
+-- Sadly, we'll have to merge this into non-specific CardanoConfiguration.
+-- ..only to recover type precision later.
+-- | CLI Arguments common to all Cardano node flavors
+data CommonCLI = CommonCLI
+  { cliGenesis            :: !(Last PartialGenesis)
+  , cliKeyMaterialSpec    :: !(Last PartialStaticKeyMaterial)
+  , cliPBftSigThd         :: !(Last (Maybe Double))
+  , cliUpdateSystemParams :: !(Last FilePath)
+  }
+
+parseCommonCLI :: Parser CommonCLI
+parseCommonCLI = CommonCLI
+  <$> (Last . Just <$> configGenesisCLIParser)
+  <*> (Last . Just <$> configStaticKeyMaterialCLIParser)
+  <*> lastOption    (option auto $ long "pbft-signature-threshold" <> metavar "DOUBLE"   <> help "The filepath to the genesis file.")
+  <*> lastStrOption               (long "update-system-params"     <> metavar "FILEPATH" <> help "The filepath to the update system parameters JSON file.")
+
+-- | Perform merging of layers of configuration, for now using just CommonCLI.
+--   We expect this process to become more generic at some point.
+mergeConfigurationCommonCLI
   :: PartialCardanoConfiguration
-  -> Last PartialGenesis
-  -> Last PartialStaticKeyMaterial
+  -> CommonCLI
   -> PartialCardanoConfiguration
-mergeConfiguration pcc@PartialCardanoConfiguration{pccCore} pg pskm =
+mergeConfigurationCommonCLI
+  pcc@PartialCardanoConfiguration{pccCore}
+  CommonCLI{..}
+  =
   pcc { pccCore = updateCore <$> pccCore }
 
-  where updateCore pc@PartialCore{pcoGenesis, pcoStaticKeyMaterial} =
+  where updateCore
+          pc@PartialCore
+          {pcoGenesis, pcoStaticKeyMaterial, pcoPBftSigThd, pcoUpdateSystemParams} =
           -- We need to lift (<>) because we need monoidal operation over Partial*
           -- constituents, and not the (Last Partial*) ones.
-          pc { pcoGenesis            = liftA2 (<>) pcoGenesis           pg
-             , pcoStaticKeyMaterial  = liftA2 (<>) pcoStaticKeyMaterial pskm
+          pc { pcoGenesis            = liftA2 (<>) pcoGenesis            cliGenesis
+             , pcoStaticKeyMaterial  = liftA2 (<>) pcoStaticKeyMaterial  cliKeyMaterialSpec
+             , pcoPBftSigThd         =        (<>) pcoPBftSigThd         cliPBftSigThd
+             , pcoUpdateSystemParams =        (<>) pcoUpdateSystemParams cliUpdateSystemParams
              }
 
 {-------------------------------------------------------------------------------
@@ -351,3 +421,10 @@ command' c descr p =
     command c $ info (p <**> helper) $ mconcat [
         progDesc descr
       ]
+
+-- | Lift the parser to an optional @Last@ type.
+lastOption :: Parser a -> Parser (Last a)
+lastOption parser = Last <$> optional parser
+
+lastStrOption :: IsString a => Mod OptionFields a -> Parser (Last a)
+lastStrOption args = Last <$> optional (strOption args)

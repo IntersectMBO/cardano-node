@@ -73,7 +73,7 @@ initializeAllFeatures :: ArgParser -> PartialCardanoConfiguration -> CardanoEnvi
 initializeAllFeatures (ArgParser logCli cli) partialConfig cardanoEnvironment = do
 
     finalConfig <- case finaliseCardanoConfiguration $
-                        mergeConfiguration partialConfig (cliGenesis cli) (cliKeyMaterial cli)
+                        mergeConfigurationCommonCLI partialConfig (cliCommon cli)
                    of
       Left err -> throwIO $ ConfigurationError err
       --TODO: if we're using exceptions for this, then we should use a local
