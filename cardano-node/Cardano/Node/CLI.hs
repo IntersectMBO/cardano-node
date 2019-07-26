@@ -1,6 +1,7 @@
-{-# LANGUAGE ConstraintKinds  #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE GADTs            #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ConstraintKinds   #-}
+{-# LANGUAGE FlexibleContexts  #-}
+{-# LANGUAGE GADTs             #-}
 
 module Cardano.Node.CLI (
   -- * Untyped/typed protocol boundary
@@ -56,6 +57,7 @@ import qualified Ouroboros.Consensus.Protocol as Consensus
 import           Cardano.Binary (Annotated (..))
 import           Cardano.Chain.Common
 import           Cardano.Chain.Genesis
+import           Cardano.Chain.Update
 import           Cardano.Crypto.ProtocolMagic
 
 import qualified Test.Cardano.Chain.Genesis.Dummy as Dummy
@@ -113,8 +115,10 @@ fromProtocol RealPBFT =
     case Consensus.runProtocol p of
       Dict -> return $ SomeProtocol p
   where
-    p = ProtocolRealPBFT defaultDemoPBftParams genesisConfig
+    p = ProtocolRealPBFT genesisConfig Nothing protocolVersion softwareVersion Nothing
     genesisConfig = Dummy.dummyConfig
+    protocolVersion = ProtocolVersion 1 0 0
+    softwareVersion = SoftwareVersion (ApplicationName "cardano-node") 1
 
 -- Node can be run in two modes.
 data ViewMode =

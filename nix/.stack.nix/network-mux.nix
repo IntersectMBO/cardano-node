@@ -5,7 +5,7 @@
       specVersion = "1.10";
       identifier = { name = "network-mux"; version = "0.1.0.0"; };
       license = "Apache-2.0";
-      copyright = "";
+      copyright = "2019 Input Output (Hong Kong) Ltd.";
       maintainer = "duncan@well-typed.com, marcin.szamotulski@iohk.io, marc.fontaine@iohk.io, karl.knutsson@iohk.io, alex@well-typed.com";
       author = "Duncan Coutts, Marc Fontaine, Karl Knutsson, Marcin Szamotulski, Alexander Vieth";
       homepage = "";
@@ -62,8 +62,8 @@
     } // {
     src = (pkgs.lib).mkDefault (pkgs.fetchgit {
       url = "https://github.com/input-output-hk/ouroboros-network";
-      rev = "ca270835199406a06be590d2391bd87b072e7537";
-      sha256 = "031qv7fiyhypgy4myxcllq0xiqlr6w5wlmspa8rc7n1kpm9gz0nq";
+      rev = "47899f4cdcd9eeaa4cfd4ec53837854b8baf9fac";
+      sha256 = "19s6gy5bk7jw8akg7bcfy0k7kycwgfn4syjyn12h718aqjgk1gk9";
       });
     postUnpack = "sourceRoot+=/network-mux; echo source root reset to \$sourceRoot";
     }

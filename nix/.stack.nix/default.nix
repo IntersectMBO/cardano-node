@@ -36,10 +36,10 @@
         iohk-monitoring = ./iohk-monitoring.nix;
         cardano-sl-x509 = ./cardano-sl-x509.nix;
         bimap = ./bimap.nix;
-        io-sim-classes = ./io-sim-classes.nix;
-        network-mux = ./network-mux.nix;
         ouroboros-network = ./ouroboros-network.nix;
         ouroboros-consensus = ./ouroboros-consensus.nix;
+        io-sim-classes = ./io-sim-classes.nix;
+        network-mux = ./network-mux.nix;
         typed-protocols = ./typed-protocols.nix;
         typed-protocols-cbor = ./typed-protocols-cbor.nix;
         cborg = ./cborg.nix;
