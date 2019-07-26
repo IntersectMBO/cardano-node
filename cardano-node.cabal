@@ -4,8 +4,11 @@ description:    The cardano full node
 author:         IOHK
 maintainer:     operations@iohk.io
 copyright:      2019 IOHK
-license:        MIT
-license-file:   LICENSE
+license:        Apache-2.0
+license-files:
+  LICENSE
+  NOTICE
+copyright:      2019 Input Output (Hong Kong) Ltd.
 build-type:     Simple
 cabal-version:  >= 1.10
 extra-source-files: README.md, ChangeLog.md
