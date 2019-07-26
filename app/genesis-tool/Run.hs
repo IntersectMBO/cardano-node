@@ -64,20 +64,17 @@ import qualified Byron.Legacy as Legacy
 import           CLI
 
 runCommand :: KeyMaterialOps IO -> Command -> IO ()
-runCommand
-  kmo@KeyMaterialOps{..}
-  (Genesis
-    outDir
-    startTime
-    protocolParametersFile
-    blockCount
-    protocolMagic
-    giTestBalance
-    giFakeAvvmBalance
-    giAvvmBalanceFactor
-    giSeed)
-  = do
-
+runCommand kmo@KeyMaterialOps{..}
+           (Genesis
+             outDir
+             startTime
+             protocolParametersFile
+             blockCount
+             protocolMagic
+             giTestBalance
+             giFakeAvvmBalance
+             giAvvmBalanceFactor
+             giSeed) = do
     protoParamsRaw <- LB.readFile protocolParametersFile
     let protocolParameters = either (error . show) id $ canonicalDecPre protoParamsRaw
 
@@ -112,49 +109,42 @@ runCommand
 
     dumpGenesis kmo outDir genesisData generatedSecrets
 
-runCommand
-  KeyMaterialOps{..}
-  (PrettySigningKeyPublic
-    secretPath)
-  =
-  putStrLn =<< T.unpack . prettySigningKeyPub . kmoDeserialiseDelegateKey <$> LB.readFile secretPath
+runCommand KeyMaterialOps{..} (PrettySigningKeyPublic secretPath) =
+    putStrLn =<< T.unpack
+               . prettySigningKeyPub
+               . kmoDeserialiseDelegateKey
+             <$> LB.readFile secretPath
 
-runCommand
-  toKMO
-  (MigrateDelegateKeyFrom
-    fromVer
-    secretPathTo
-    secretPathFrom)
-  =
-  LB.writeFile secretPathTo =<< kmoSerialiseDelegateKey toKMO =<< kmoDeserialiseDelegateKey fromKMO <$> LB.readFile secretPathFrom
+runCommand kmo (MigrateDelegateKeyFrom
+                  fromVer
+                  secretPathTo
+                  secretPathFrom) =
+        LB.writeFile secretPathTo
+    =<< kmoSerialiseDelegateKey kmo
+      . kmoDeserialiseDelegateKey fromKMO
+    =<< LB.readFile secretPathFrom
   where
     fromKMO = decideKeyMaterialOps fromVer
 
-runCommand
-  kmo
-  (DumpHardcodedGenesis
-    outDir)
-  =
-  dumpGenesis kmo outDir
-  (configGenesisData Dummy.dummyConfig)
-  $ fromMaybe (error "Hardcoded genesis lacks secrets.") (configGeneratedSecrets Dummy.dummyConfig)  
-
-runCommand
-  KeyMaterialOps{..}
-  (PrintGenesisHash
-    secretPath)
-  =
-  putStrLn =<< F.format CCr.hashHexF . unGenesisHash . snd . either (error . show) id <$> (runExceptT $ readGenesisData secretPath)
+runCommand kmo (DumpHardcodedGenesis outDir) =
+    dumpGenesis kmo outDir
+                (configGenesisData Dummy.dummyConfig)
+                generatedSecrets
   where
+    Just generatedSecrets = configGeneratedSecrets Dummy.dummyConfig
 
-runCommand
-  KeyMaterialOps{..}
-  (PrintSigningKeyAddress
-    networkMagic
-    secretPath)
-  =
-  putStrLn =<< T.unpack . prettyAddress . CC.makeVerKeyAddress networkMagic . CCr.toVerification . kmoDeserialiseDelegateKey <$> LB.readFile secretPath
-  where
+runCommand KeyMaterialOps{..} (PrintGenesisHash secretPath) =
+    putStrLn . F.format CCr.hashHexF
+             . unGenesisHash
+             . snd . either (error . show) id
+           =<< runExceptT (readGenesisData secretPath)
+
+runCommand KeyMaterialOps{..} (PrintSigningKeyAddress networkMagic secretPath) =
+    putStrLn . T.unpack . prettyAddress
+             . CC.makeVerKeyAddress networkMagic
+             . CCr.toVerification
+             . kmoDeserialiseDelegateKey
+           =<< LB.readFile secretPath
 
 {-------------------------------------------------------------------------------
   Supporting functions

@@ -157,7 +157,8 @@ fromProtocol CardanoConfiguration{ccCore=ccCore@Core{coStaticKeyMaterial}} RealP
     case Consensus.runProtocol p of
       Dict -> return $ SomeProtocol p
 
--- TODO:  move this to 'cardano-shell'
+-- TODO: consider not throwing this, or wrap it in a local error type here
+-- that has proper error messages.
 instance Exception Genesis.ConfigurationError
 
 -- Node can be run in two modes.

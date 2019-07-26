@@ -76,6 +76,10 @@ initializeAllFeatures (ArgParser logCli cli) partialConfig cardanoEnvironment = 
                         mergeConfiguration partialConfig (cliGenesis cli) (cliKeyMaterial cli)
                    of
       Left err -> throwIO $ ConfigurationError err
+      --TODO: if we're using exceptions for this, then we should use a local
+      -- excption type, local to this app, that enumerates all the ones we
+      -- are reporting, and has proper formatting of the result.
+      -- It would also require catching at the top level and printing.
       Right x  -> pure x
 
     (loggingLayer, loggingFeature) <- createLoggingFeature cardanoEnvironment finalConfig logCli
