@@ -2,20 +2,31 @@
 
 # cardano-node
 
-Integration of the [ledger](https://github.com/input-output-hk/cardano-ledger), [consensus](https://github.com/input-output-hk/ouroboros-network/tree/master/ouroboros-consensus), [networking](https://github.com/input-output-hk/ouroboros-network/tree/master/ouroboros-network) and [node shell](https://github.com/input-output-hk/cardano-shell) repositories.
-[Logging](https://github.com/input-output-hk/iohk-monitoring-framework) is provided as a [feature](https://github.com/input-output-hk/cardano-shell/blob/master/app/Cardano/Shell/Features/Logging.hs) by the node shell to the other packages.
+Integration of the [ledger](https://github.com/input-output-hk/cardano-ledger),
+[consensus](https://github.com/input-output-hk/ouroboros-network/tree/master/ouroboros-consensus),
+[networking](https://github.com/input-output-hk/ouroboros-network/tree/master/ouroboros-network)
+and [node shell](https://github.com/input-output-hk/cardano-shell)
+repositories.
+[Logging](https://github.com/input-output-hk/iohk-monitoring-framework) is
+provided as
+a [feature](https://github.com/input-output-hk/cardano-shell/blob/master/app/Cardano/Shell/Features/Logging.hs)
+by the node shell to the other packages.
 
 # `genesis-tool`
 
-A CLI utility to support a variety of key material operations (genesis, migration, pretty-printing..) for different system generations.
+A CLI utility to support a variety of key material operations (genesis,
+migration, pretty-printing..) for different system generations.
 
 Detailed documentation in its attendant [README](app/genesis-tool/README.md).
 
 # Shelley Testnet
 
-The `./scripts/shelley-testnet.sh` script starts up three nodes that are connected via TCP sockets to each other and produce blocks according to the algorithm selected (e.g. "BFT").
-The blocks are shared among the nodes and after verification integrated into a nodes ledger.
-The user can submit transactions to a node which includes them in its local mempool, and eventually in the next block it will create.
+The `./scripts/shelley-testnet.sh` script starts up three nodes that are
+connected via TCP sockets to each other and produce blocks according to the
+algorithm selected (e.g. "BFT").  The blocks are shared among the nodes and
+after verification integrated into a nodes ledger.  The user can submit
+transactions to a node which includes them in its local mempool, and eventually
+in the next block it will create.
 
 
 ```
@@ -57,13 +68,15 @@ In a second terminal:
 
     `./scripts/shelley-testnet.sh`
 
-The window of the terminal will be split into four panes showing the three nodes running and a shell to enter commands for transaction submission, e.g.
+The window of the terminal will be split into four panes showing the three
+nodes running and a shell to enter commands for transaction submission, e.g.
 
 ```
 ./scripts/submit-tx.sh --real-pbft -n 2 --address a --amount 99 --txin ababa --txix 0
 
 ```
-The above command will prepare a transaction of amount 99 to address _a_ and sends the transaction for validation and integration into a block to node _2_.
+The above command will prepare a transaction of amount 99 to address _a_ and
+sends the transaction for validation and integration into a block to node _2_.
 Increment the last argument '--txix' to send in a new transaction.
 
 
@@ -71,10 +84,10 @@ Increment the last argument '--txix' to send in a new transaction.
 
     `./scripts/shelley-testnet-dns.sh`
 
-    instead of `shelley-testnet.sh`.  It requires that the addresses `local.iohk.io` and
-    `local6.iohk.io` resolve to `127.0.0.1` and `::1` respectively.  You can
-    use [unbound](https://github.com/NLnetLabs/unbound) dns server.  You can
-    use the following `/etc/unbound/unbound.conf` file:
+    instead of `shelley-testnet.sh`.  It requires that the addresses
+    `local.iohk.io` and `local6.iohk.io` resolve to `127.0.0.1` and `::1`
+    respectively.  You can use [unbound](https://github.com/NLnetLabs/unbound)
+    dns server.  You can use the following `/etc/unbound/unbound.conf` file:
     ```
     server:
       verbosity: 1
