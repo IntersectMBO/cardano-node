@@ -29,6 +29,7 @@ library
                      , cborg
                      , mtl
                      , optparse-applicative
+                     , reflection
                      , text
                      , time
 
