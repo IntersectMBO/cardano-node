@@ -54,7 +54,7 @@ import           Cardano.BM.Data.LogItem (LOContent (LogValue), LogObject (..),
                                           mkLOMeta)
 import           Cardano.BM.Data.Severity (Severity (..))
 import           Cardano.BM.Data.Tracer (ToLogObject (..))
-import           Cardano.BM.Trace (Trace, appendName, traceNamedObject)
+import           Cardano.BM.Trace (appendName, traceNamedObject)
 import           Cardano.Shell.Constants.Types (CardanoConfiguration (..),)
 import           Cardano.Shell.Features.Logging (LoggingLayer (..))
 
@@ -180,7 +180,7 @@ handleSimpleNode :: forall blk. (RunNode blk, TraceConstraints blk)
                  -> NodeCLIArguments
                  -> NodeAddress
                  -> TopologyInfo
-                 -> Trace IO Text
+                 -> Tracer IO (LogObject Text)
                  -> TraceOptions
                  -> CardanoConfiguration
                  -> IO ()
@@ -246,7 +246,7 @@ handleSimpleNode p NodeCLIArguments{..}
                           pInfoInitLedger
                           registry
                           (CoreNodeId nid)
-                          (prefixTip varTip tracer)
+                          (prefixTip varTip $ withName "ChainDB" trace)
                           slotDuration
       chainDB :: ChainDB IO blk <- ChainDB.openDB chainDbArgs
 
@@ -258,12 +258,17 @@ handleSimpleNode p NodeCLIArguments{..}
       btime  <- realBlockchainTime registry slotDuration systemStart
       let nodeParams :: NodeParams IO Peer blk
           nodeParams = NodeParams
-            { tracer             = prefixTip varTip tracer
+            { tracer             = prefixTip varTip
+                                 $ withName "ConsensusNode" trace
             , mempoolTracer      = mempoolTracer
-            , decisionTracer     = enableTracer traceFetchDecisions tracer
-            , fetchClientTracer  = enableTracer traceFetchClient tracer
-            , txInboundTracer    = enableTracer traceTxInbound tracer
-            , txOutboundTracer   = enableTracer traceTxOutbound tracer
+            , decisionTracer     = enableTracer traceFetchDecisions
+                                 $ withName "FetchDecision" trace
+            , fetchClientTracer  = enableTracer traceFetchClient
+                                 $ withName "FetchClient" trace
+            , txInboundTracer    = enableTracer traceTxInbound
+                                 $ withName "TxInbound" trace
+            , txOutboundTracer   = enableTracer traceTxOutbound
+                                 $ withName "TxOutbound" trace
             , threadRegistry     = registry
             , maxClockSkew       = ClockSkew 1
             , cfg                = pInfoConfig
@@ -284,8 +289,8 @@ handleSimpleNode p NodeCLIArguments{..}
                            ByteString ByteString ()
           networkApps =
             consensusNetworkApps
-              (enableTracer traceChainSync tracer)
-              (enableTracer traceTxSubmission tracer)
+              (enableTracer traceChainSync $ withName "ChainSyncProtocol" trace)
+              (enableTracer traceTxSubmission $ withName "TxSubmissionProtocol" trace)
               kernel
               ProtocolCodecs
                 { pcChainSyncCodec =
@@ -387,7 +392,7 @@ handleSimpleNode p NodeCLIArguments{..}
       ipSubscriptions <- forkLinked registry $
         ipSubscriptionWorker
           connTable
-          (contramap show tracer)
+          (contramap show $ withName "IPSubscription" trace)
             -- the comments in dnsSbuscriptionWorker call apply
             (Just (Socket.SockAddrInet 0 0))
             (Just (Socket.SockAddrInet6 0 0 (0, 0, 0, 1) 0))
@@ -412,8 +417,8 @@ handleSimpleNode p NodeCLIArguments{..}
         forkLinked registry $
           dnsSubscriptionWorker
             connTable
-            (contramap show tracer)
-            (contramap show tracer)
+            (contramap show $ withName "DNSSubscription" trace)
+            (contramap show $ withName "DNS" trace)
             -- IPv4 address
             --
             -- We can't share portnumber with our server since we run separate
@@ -475,6 +480,12 @@ handleSimpleNode p NodeCLIArguments{..}
                 GenesisHash -> "genesis"
                 BlockHash h -> take 7 (condense h)
           traceWith tr ("[" <> hash <> "] " <> msg)
+
+
+      withName :: String
+               -> Tracer IO (LogObject Text)
+               -> Tracer IO String
+      withName name tr = contramap pack $ toLogObject $ appendName (pack name) tr
 
 removeStaleLocalSocket :: FilePath -> IO ()
 removeStaleLocalSocket socketPath =
@@ -571,7 +582,7 @@ readableChainDBTracer tracer = Tracer $ \case
       _ -> ignore
     _ -> ignore
   where
-    tr s = traceWith tracer ("ChainDB | " <> s)
+    tr = traceWith tracer
 
     ignore :: m ()
     ignore = return ()
