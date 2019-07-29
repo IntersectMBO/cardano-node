@@ -109,6 +109,7 @@ type TraceConstraints blk =
     , Condense (GenTx blk)
     , Show (ApplyTxErr blk)
     , Show (GenTx blk)
+    , Show (GenTxId blk)
     , Show blk
     , Show (Header blk)
     )
@@ -133,6 +134,7 @@ fromProtocol _ MockPBFT =
       Dict -> return $ SomeProtocol p
   where
     p = ProtocolMockPBFT defaultDemoPBftParams
+{- TODO broken
 fromProtocol CardanoConfiguration{ccCore=ccCore@Core{coStaticKeyMaterial}} RealPBFT = do
     let Genesis{geSrc, geGenesisHash} = coGenesis ccCore
         genHash = either (throw . ConfigurationError) id $
@@ -156,6 +158,7 @@ fromProtocol CardanoConfiguration{ccCore=ccCore@Core{coStaticKeyMaterial}} RealP
 
     case Consensus.runProtocol p of
       Dict -> return $ SomeProtocol p
+-}
 
 -- TODO: consider not throwing this, or wrap it in a local error type here
 -- that has proper error messages.

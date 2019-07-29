@@ -67,6 +67,7 @@ executable cardano-node
                        GitRevFromGit
                        Paths_cardano_node
                        TraceAcceptor
+                       Tracers
                        TxSubmission
                        Run
                        Topology

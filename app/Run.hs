@@ -2,7 +2,6 @@
 {-# LANGUAGE CPP                 #-}
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE GADTs               #-}
-{-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE NamedFieldPuns      #-}
 {-# LANGUAGE NumericUnderscores  #-}
 {-# LANGUAGE OverloadedStrings   #-}
@@ -58,7 +57,6 @@ import           Cardano.BM.Trace (appendName, traceNamedObject)
 import           Cardano.Shell.Constants.Types (CardanoConfiguration (..),)
 import           Cardano.Shell.Features.Logging (LoggingLayer (..))
 
-import qualified Ouroboros.Network.AnchoredFragment as AF
 import           Ouroboros.Network.Block
 import qualified Ouroboros.Network.Block as Block
 import           Ouroboros.Network.NodeToClient as NodeToClient
@@ -77,16 +75,16 @@ import           Ouroboros.Network.Protocol.TxSubmission.Codec
 import           Ouroboros.Consensus.Block (BlockProtocol)
 import           Ouroboros.Consensus.BlockchainTime
 import           Ouroboros.Consensus.ChainSyncClient (ClockSkew (..))
-import           Ouroboros.Consensus.Ledger.Abstract
 import           Ouroboros.Consensus.Ledger.Extended (ExtLedgerState)
 import           Ouroboros.Consensus.Mempool.API (TraceEventMempool (..))
-import           Ouroboros.Consensus.Node hiding (TraceConstraints)
+import           Ouroboros.Consensus.Node
 import           Ouroboros.Consensus.Node.ProtocolInfo
 import           Ouroboros.Consensus.Node.Run
+import qualified Ouroboros.Consensus.Node.Tracers as Node
 import           Ouroboros.Consensus.NodeId
 import           Ouroboros.Consensus.NodeNetwork
-import           Ouroboros.Consensus.Protocol hiding (Protocol)
 import qualified Ouroboros.Consensus.Protocol as Consensus
+import           Ouroboros.Consensus.Protocol hiding (Protocol)
 import           Ouroboros.Consensus.Util.Condense
 import           Ouroboros.Consensus.Util.Orphans ()
 import           Ouroboros.Consensus.Util.STM
@@ -94,16 +92,15 @@ import           Ouroboros.Consensus.Util.ThreadRegistry
 
 import           Ouroboros.Storage.ChainDB (ChainDB)
 import qualified Ouroboros.Storage.ChainDB as ChainDB
-import           Ouroboros.Storage.Common
 import           Ouroboros.Storage.ImmutableDB (ValidationPolicy (..))
 import           Ouroboros.Storage.LedgerDB.DiskPolicy (defaultDiskPolicy)
 import           Ouroboros.Storage.LedgerDB.MemPolicy (defaultMemPolicy)
-import qualified Ouroboros.Storage.LedgerDB.OnDisk as LedgerDB
 
 import           Cardano.Node.CLI
 import           CLI
 import           Topology
 import           TraceAcceptor
+import           Tracers
 import           TxSubmission
 #ifdef UNIX
 import           LiveView
@@ -164,14 +161,6 @@ runNode nodeCli@NodeCLIArguments{..} loggingLayer cc = do
             handleSimpleNode p nodeCli myNodeAddress topology trace' traceOptions cc
 #endif
 
-enableTracer
-  :: (Show a, Applicative m)
-  => Bool
-  -> Tracer m String
-  -> Tracer m a
-enableTracer False = const nullTracer
-enableTracer True  = showTracing
-
 -- | Sets up a simple node, which will run the chain sync protocol and block
 -- fetch protocol, and, if core, will also look at the mempool when trying to
 -- create a new block.
@@ -188,18 +177,22 @@ handleSimpleNode p NodeCLIArguments{..}
                  myNodeAddress
                  (TopologyInfo myNodeId topologyFile)
                  trace
-                 traceOptions@TraceOptions
-                    { traceChainSync
-                    , traceTxSubmission
-                    , traceFetchDecisions
-                    , traceFetchClient
-                    , traceTxInbound
-                    , traceTxOutbound
-                    }
+                 traceOpts
                  CardanoConfiguration{..}
     = do
     let tracer = contramap pack $ toLogObject trace
+        origTracers@Tracers { nodeTracers } =
+            applyTraceOptions traceOpts (humanReadableTracers trace) (verboseTracers trace)
         mempoolTracer = mempoolTraceTransformer $ appendName "mempool" trace
+        tracers = origTracers
+            { nodeTracers = nodeTracers
+                { Node.mempoolTracer = Tracer $ \ev -> do
+                      -- Forward this events to the mempoolTracer too
+                      traceWith (Node.mempoolTracer nodeTracers) ev
+                      traceWith mempoolTracer ev
+                }
+            }
+
     traceWith tracer $ "System started at " <> show systemStart
     NetworkTopology nodeSetups <-
       either error id <$> readTopologyFile topologyFile
@@ -241,12 +234,11 @@ handleSimpleNode p NodeCLIArguments{..}
 
       varTip <- atomically $ newTVar GenesisPoint
       let chainDbArgs = mkChainDbArgs
-                          traceOptions
                           pInfoConfig
                           pInfoInitLedger
                           registry
                           (CoreNodeId nid)
-                          (prefixTip varTip $ withName "ChainDB" trace)
+                          (chainDBTracer tracers)
                           slotDuration
       chainDB :: ChainDB IO blk <- ChainDB.openDB chainDbArgs
 
@@ -258,17 +250,8 @@ handleSimpleNode p NodeCLIArguments{..}
       btime  <- realBlockchainTime registry slotDuration systemStart
       let nodeParams :: NodeParams IO Peer blk
           nodeParams = NodeParams
-            { tracer             = prefixTip varTip
-                                 $ withName "ConsensusNode" trace
-            , mempoolTracer      = mempoolTracer
-            , decisionTracer     = enableTracer traceFetchDecisions
-                                 $ withName "FetchDecision" trace
-            , fetchClientTracer  = enableTracer traceFetchClient
-                                 $ withName "FetchClient" trace
-            , txInboundTracer    = enableTracer traceTxInbound
-                                 $ withName "TxInbound" trace
-            , txOutboundTracer   = enableTracer traceTxOutbound
-                                 $ withName "TxOutbound" trace
+          -- TODO use mempoolTracer
+            { tracers            = nodeTracers
             , threadRegistry     = registry
             , maxClockSkew       = ClockSkew 1
             , cfg                = pInfoConfig
@@ -289,9 +272,8 @@ handleSimpleNode p NodeCLIArguments{..}
                            ByteString ByteString ()
           networkApps =
             consensusNetworkApps
-              (enableTracer traceChainSync $ withName "ChainSyncProtocol" trace)
-              (enableTracer traceTxSubmission $ withName "TxSubmissionProtocol" trace)
               kernel
+              (protocolTracers tracers)
               ProtocolCodecs
                 { pcChainSyncCodec =
                     codecChainSync
@@ -392,7 +374,7 @@ handleSimpleNode p NodeCLIArguments{..}
       ipSubscriptions <- forkLinked registry $
         ipSubscriptionWorker
           connTable
-          (contramap show $ withName "IPSubscription" trace)
+          (contramap show $ withName "IPSubscription" trace) -- TODO tracers
             -- the comments in dnsSbuscriptionWorker call apply
             (Just (Socket.SockAddrInet 0 0))
             (Just (Socket.SockAddrInet6 0 0 (0, 0, 0, 1) 0))
@@ -417,8 +399,8 @@ handleSimpleNode p NodeCLIArguments{..}
         forkLinked registry $
           dnsSubscriptionWorker
             connTable
-            (contramap show $ withName "DNSSubscription" trace)
-            (contramap show $ withName "DNS" trace)
+            (contramap show $ withName "DNSSubscription" trace) -- TODO tracers
+            (contramap show $ withName "DNS" trace) -- TODO tracers
             -- IPv4 address
             --
             -- We can't share portnumber with our server since we run separate
@@ -473,13 +455,14 @@ handleSimpleNode p NodeCLIArguments{..}
                 traceNamedObject tr (meta, logValue')
             _                             -> return ()
 
-      prefixTip :: TVar IO (Point blk) -> Tracer IO String -> Tracer IO String
-      prefixTip varTip tr = Tracer $ \msg -> do
-          tip <- atomically $ readTVar varTip
-          let hash = case pointHash tip of
-                GenesisHash -> "genesis"
-                BlockHash h -> take 7 (condense h)
-          traceWith tr ("[" <> hash <> "] " <> msg)
+      -- TODO incorporate this
+      -- prefixTip :: TVar IO (Point blk) -> Tracer IO String -> Tracer IO String
+      -- prefixTip varTip tr = Tracer $ \msg -> do
+      --     tip <- atomically $ readTVar varTip
+      --     let hash = case pointHash tip of
+      --           GenesisHash -> "genesis"
+      --           BlockHash h -> take 7 (condense h)
+      --     traceWith tr ("[" <> hash <> "] " <> msg)
 
 
       withName :: String
@@ -495,16 +478,15 @@ removeStaleLocalSocket socketPath =
           then return ()
           else throwIO e
 
-mkChainDbArgs :: forall blk. (RunNode blk, TraceConstraints blk)
-              => TraceOptions
-              -> NodeConfig (BlockProtocol blk)
+mkChainDbArgs :: forall blk. RunNode blk
+              => NodeConfig (BlockProtocol blk)
               -> ExtLedgerState blk
               -> ThreadRegistry IO
               -> CoreNodeId
-              -> Tracer IO String
+              -> Tracer IO (ChainDB.TraceEvent blk)
               -> SlotLength
               -> ChainDB.ChainDbArgs IO blk
-mkChainDbArgs TraceOptions {traceChainDB} cfg initLedger registry (CoreNodeId nid) tracer slotDuration =
+mkChainDbArgs cfg initLedger registry (CoreNodeId nid) tracer slotDuration =
     (ChainDB.defaultArgs dbPath)
       { ChainDB.cdbBlocksPerFile    = 10
       , ChainDB.cdbDecodeBlock      = nodeDecodeBlock       cfg
@@ -524,9 +506,7 @@ mkChainDbArgs TraceOptions {traceChainDB} cfg initLedger registry (CoreNodeId ni
       , ChainDB.cdbMemPolicy        = defaultMemPolicy secParam
       , ChainDB.cdbNodeConfig       = cfg
       , ChainDB.cdbThreadRegistry   = registry
-      , ChainDB.cdbTracer           = if traceChainDB
-                                        then contramap show tracer
-                                        else readableChainDBTracer tracer
+      , ChainDB.cdbTracer           = tracer
       , ChainDB.cdbValidation       = ValidateMostRecentEpoch
       , ChainDB.cdbGcDelay          = secondsToDiffTime 10
       }
@@ -540,58 +520,3 @@ mkChainDbArgs TraceOptions {traceChainDB} cfg initLedger registry (CoreNodeId ni
     slotDiffTime = secondsToDiffTime
       (slotLengthToMillisec slotDuration `div` 1000)
 
--- Converts the trace events from the ChainDB that we're interested in into
--- human-readable trace messages.
-readableChainDBTracer
-    :: forall m blk.
-       (Monad m, Condense (HeaderHash blk), ProtocolLedgerView blk)
-    => Tracer m String -> Tracer m (ChainDB.TraceEvent blk)
-readableChainDBTracer tracer = Tracer $ \case
-    ChainDB.TraceAddBlockEvent ev -> case ev of
-      ChainDB.StoreButDontChange   pt -> tr $
-        "Ignoring block: " <> condense pt
-      ChainDB.TryAddToCurrentChain pt -> tr $
-        "Block fits onto the current chain: " <> condense pt
-      ChainDB.TrySwitchToAFork pt _   -> tr $
-        "Block fits onto some fork: " <> condense pt
-      ChainDB.SwitchedToChain _ c     -> tr $
-        "Chain changed, new tip: " <> condense (AF.headPoint c)
-      ChainDB.AddBlockValidation ev' -> case ev' of
-        ChainDB.InvalidBlock err pt -> tr $
-          "Invalid block " <> condense pt <> ": " <> show err
-        _ -> ignore
-      _  -> ignore
-    ChainDB.TraceLedgerEvent ev -> case ev of
-      ChainDB.InitLog ev' -> traceInitLog ev'
-      ChainDB.TookSnapshot snap pt -> tr $
-        "Took ledger snapshot " <> show snap <> " at " <> condense pt
-      ChainDB.DeletedSnapshot snap -> tr $
-        "Deleted old snapshot " <> show snap
-    ChainDB.TraceCopyToImmDBEvent ev -> case ev of
-      ChainDB.CopiedBlockToImmDB pt -> tr $
-        "Copied block " <> condense pt <> " to the ImmutableDB"
-      _ -> ignore
-    ChainDB.TraceGCEvent ev -> case ev of
-      ChainDB.PerformedGC slot       -> tr $
-        "Performed a garbage collection for " <> condense slot
-      _ -> ignore
-    ChainDB.TraceOpenEvent ev -> case ev of
-      ChainDB.OpenedDB immTip tip -> tr $
-        "Opened with immutable tip at " <> condense immTip <>
-        " and tip " <> condense tip
-      _ -> ignore
-    _ -> ignore
-  where
-    tr = traceWith tracer
-
-    ignore :: m ()
-    ignore = return ()
-
-    traceInitLog = \case
-      LedgerDB.InitFromGenesis -> tr "Initialised the ledger from genesis"
-      LedgerDB.InitFromSnapshot snap tip -> tr $
-        "Initialised the ledger from snapshot " <> show snap <> " at " <>
-        condense (tipToPoint tip)
-      LedgerDB.InitFailure snap _failure initLog -> do
-          tr $ "Snapshot " <> show snap <> " invalid"
-          traceInitLog initLog
