@@ -145,6 +145,28 @@
             then [ (hsPkgs.Win32) ]
             else [ (hsPkgs.unix) ]);
           };
+        "chairman" = {
+          depends = [
+            (hsPkgs.base)
+            (hsPkgs.contra-tracer)
+            (hsPkgs.cardano-node)
+            (hsPkgs.cardano-shell)
+            (hsPkgs.io-sim-classes)
+            (hsPkgs.network-mux)
+            (hsPkgs.ouroboros-consensus)
+            (hsPkgs.ouroboros-network)
+            (hsPkgs.typed-protocols)
+            (hsPkgs.typed-protocols-cbor)
+            (hsPkgs.async)
+            (hsPkgs.bytestring)
+            (hsPkgs.containers)
+            (hsPkgs.network)
+            (hsPkgs.optparse-applicative)
+            (hsPkgs.serialise)
+            ] ++ (if system.isWindows
+            then [ (hsPkgs.Win32) ]
+            else [ (hsPkgs.unix) ]);
+          };
         };
       tests = {
         "cardano-node-test" = {

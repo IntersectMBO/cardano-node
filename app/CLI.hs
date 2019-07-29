@@ -1,5 +1,6 @@
-{-# LANGUAGE GADTs            #-}
-{-# LANGUAGE NamedFieldPuns   #-}
+{-# LANGUAGE BangPatterns   #-}
+{-# LANGUAGE GADTs          #-}
+{-# LANGUAGE NamedFieldPuns #-}
 
 module CLI (
     -- * Untyped/typed protocol boundary
