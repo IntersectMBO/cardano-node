@@ -86,11 +86,11 @@ in {
         '';
       };
 
-      host = mkOption {
+      host-addr = mkOption {
         type = types.str;
         default = "127.0.0.1";
         description = ''
-          The host name.
+          The host address to bind to.
         '';
       };
 
@@ -151,7 +151,7 @@ in {
           --topology ${cfg.topology} \
           --${cfg.consensus-protocol} \
           --node-id ${builtins.toString cfg.node-id} \
-          --host ${cfg.host} \
+          --host-addr ${cfg.host-addr} \
           --port ${builtins.toString cfg.port} \
           --signing-key ${cfg.signing-key} \
       '' + (if (cfg.delegation-certificate != null) then 
