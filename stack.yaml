@@ -56,7 +56,7 @@ extra-deps:
     #Ouroboros-network dependencies
 
   - git: https://github.com/input-output-hk/ouroboros-network
-    commit: e97cde0ff1e0740d7a107c611d6a6b1d85061cda
+    commit: d36a401bacbad239db3e24d3a6ba62fcff9857f7
     subdirs:
         - ouroboros-consensus
         - ouroboros-network
