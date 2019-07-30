@@ -44,6 +44,11 @@
           ];
         };
       };
-    } // rec {
-    src = (pkgs.lib).mkDefault ../.././../cardano-ledger/cardano-ledger/test;
+    } // {
+    src = (pkgs.lib).mkDefault (pkgs.fetchgit {
+      url = "https://github.com/input-output-hk/cardano-ledger";
+      rev = "29902b163eb3dad1d6aed1e3efc08ee6258fa9e7";
+      sha256 = "0y0py7rgl4yly2cq0ls5hcgif2bk1a10js0d0grixpvnpwds4l12";
+      });
+    postUnpack = "sourceRoot+=/cardano-ledger/test; echo source root reset to \$sourceRoot";
     }
