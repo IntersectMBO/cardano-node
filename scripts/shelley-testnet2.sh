@@ -22,8 +22,8 @@ ACCARGS=(
         --slot-duration 2
         trace-acceptor
 )
-#SCR="./scripts/start-node.sh"
-#CMD="stack exec --nix cardano-node --"
+# SCR="./scripts/start-node.sh"
+# CMD="stack exec --nix cardano-node --"
 CMD=`find dist-newstyle/ -type f -name "cardano-node"`
 test -n "${CMD}" || {
         cabal new-build exe:cardano-node || {
@@ -32,9 +32,10 @@ test -n "${CMD}" || {
         }
         CMD=`find dist-newstyle/ -type f -name "cardano-node"`
 }
-#SPECIAL=""
+# SPECIAL=""
 SPECIAL="--live-view"
 HOST="127.0.0.1"
+HOST6="::1"
 
 function mklogcfg () {
   echo "--log-config configuration/log-config-${1}.yaml"
@@ -57,9 +58,8 @@ tmux select-pane -t 4
 tmux send-keys "${CMD} $(mklogcfg acceptor) $(mkdlgkey 0) $(mkdlgcert 0) ${ACCARGS[*]}" C-m
 sleep 2
 tmux select-pane -t 0
-tmux send-keys "${CMD} $(mklogcfg 0) $(mkdlgkey 0) $(mkdlgcert 0) ${NETARGS[*]} -n 0 --host ${HOST} --port 3000 ${SPECIAL}" C-m
+tmux send-keys "${CMD} $(mklogcfg 0) $(mkdlgkey 0) $(mkdlgcert 0) ${NETARGS[*]} -n 0 --host-addr ${HOST6} --port 3000 ${SPECIAL}" C-m
 tmux select-pane -t 1
-tmux send-keys "${CMD} $(mklogcfg 1) $(mkdlgkey 1) $(mkdlgcert 1) ${NETARGS[*]} -n 1 --host ${HOST} --port 3001 ${SPECIAL}" C-m
+tmux send-keys "${CMD} $(mklogcfg 1) $(mkdlgkey 1) $(mkdlgcert 1) ${NETARGS[*]} -n 1 --host-addr ${HOST}  --port 3001 ${SPECIAL}" C-m
 tmux select-pane -t 2
-tmux send-keys "${CMD} $(mklogcfg 2) $(mkdlgkey 2) $(mkdlgcert 2) ${NETARGS[*]} -n 2 --host ${HOST} --port 3002 ${SPECIAL}" C-m
-
+tmux send-keys "${CMD} $(mklogcfg 2) $(mkdlgkey 2) $(mkdlgcert 2) ${NETARGS[*]} -n 2 --host-addr ${HOST6} --port 3002 ${SPECIAL}" C-m

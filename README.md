@@ -72,7 +72,7 @@ The window of the terminal will be split into four panes showing the three
 nodes running and a shell to enter commands for transaction submission, e.g.
 
 ```
-./scripts/submit-tx.sh --real-pbft -n 2 --address a --amount 99 --txin ababa --txix 0
+./scripts/submit-tx.sh -n 2 --address a --amount 99 --txin ababa --txix 0
 
 ```
 The above command will prepare a transaction of amount 99 to address _a_ and
