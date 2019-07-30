@@ -302,8 +302,8 @@ chainSyncClient trace coreNodeId chainsVar securityParam maxBlockNo = ChainSyncC
     SendMsgFindIntersect
       [Block.genesisPoint]
       ClientStIntersect {
-        recvMsgIntersectImproved  = \_ _ -> ChainSyncClient (pure $ clientStIdle Nothing),
-        recvMsgIntersectUnchanged = \  _ -> ChainSyncClient (pure $ clientStIdle Nothing)
+        recvMsgIntersectImproved = \_ _ -> ChainSyncClient (pure $ clientStIdle Nothing),
+        recvMsgIntersectNotFound = \  _ -> ChainSyncClient (pure $ clientStIdle Nothing)
       }
   where
     clientStIdle :: Maybe BlockNo

@@ -163,8 +163,8 @@ chainSyncClient = ChainSyncClient $ pure $
     SendMsgFindIntersect
       [Block.genesisPoint]
       ClientStIntersect {
-        recvMsgIntersectImproved  = \_ _ -> ChainSyncClient (pure clientStIdle),
-        recvMsgIntersectUnchanged = \  _ -> ChainSyncClient (pure clientStIdle)
+        recvMsgIntersectImproved = \_ _ -> ChainSyncClient (pure clientStIdle),
+        recvMsgIntersectNotFound = \  _ -> ChainSyncClient (pure clientStIdle)
       }
   where
     clientStIdle :: ClientStIdle blk (Point blk) m Void
