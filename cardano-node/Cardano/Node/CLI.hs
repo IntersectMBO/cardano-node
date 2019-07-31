@@ -58,6 +58,7 @@ import qualified Data.Text as Text
 import           Data.Text (Text)
 import           Data.Time (UTCTime)
 import           Data.Time.Clock.POSIX (posixSecondsToUTCTime)
+import           Formatting (sformat)
 import           Options.Applicative
 
 import           Control.Exception
@@ -82,6 +83,7 @@ import qualified Ouroboros.Consensus.Protocol as Consensus
 
 import           Cardano.Binary (Annotated (..))
 import           Cardano.Chain.Common
+import           Cardano.Chain.UTxO
 import           Cardano.Crypto.ProtocolMagic
 
 import qualified Cardano.Chain.Genesis as Genesis

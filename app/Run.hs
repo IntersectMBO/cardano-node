@@ -75,6 +75,7 @@ import           Ouroboros.Consensus.Ledger.Extended (ExtLedgerState)
 import           Ouroboros.Consensus.Node
 import           Ouroboros.Consensus.Node.ProtocolInfo
 import           Ouroboros.Consensus.Node.Run
+import           Ouroboros.Consensus.Node.Tracers
 import           Ouroboros.Consensus.NodeId
 import           Ouroboros.Consensus.NodeNetwork
 import           Ouroboros.Consensus.Protocol hiding (Protocol)
@@ -160,7 +161,7 @@ runNode nodeCli@NodeCLIArguments{..} loggingLayer cc = do
 -- | Sets up a simple node, which will run the chain sync protocol and block
 -- fetch protocol, and, if core, will also look at the mempool when trying to
 -- create a new block.
-handleSimpleNode :: forall blk. (RunNode blk, TraceConstraints blk)
+handleSimpleNode :: forall blk. (RunNode blk, TraceConstraints blk, Show (GenTxId blk))
                  => Consensus.Protocol blk
                  -> NodeCLIArguments
                  -> NodeAddress
