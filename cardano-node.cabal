@@ -26,8 +26,10 @@ library
                      , bytestring
                      , canonical-json
                      , cborg
+                     , formatting
                      , mtl
                      , optparse-applicative
+                     , text
                      , time
 
                      , cardano-binary
@@ -232,6 +234,7 @@ executable chairman
                      , network
                      , optparse-applicative
                      , serialise
+                     , text
   if os(windows)
      build-depends:    Win32
   else

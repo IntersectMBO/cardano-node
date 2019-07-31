@@ -3,6 +3,7 @@
 {-# LANGUAGE NumericUnderscores #-}
 module Main where
 
+import           Data.Text (Text)
 import           Control.Applicative (some)
 import           Control.Exception (Exception, throwIO)
 import           Control.Concurrent (threadDelay)
@@ -10,12 +11,7 @@ import           Control.Concurrent.Async
 import           Data.Monoid
 import           Options.Applicative
 
-import           Cardano.Shell.Constants.PartialTypes ( PartialGenesis (..)
-                                                      , PartialStaticKeyMaterial (..))
 import           Cardano.Shell.Presets (mainnetConfiguration)
-import           Cardano.Shell.Constants.CLI ( configGenesisCLIParser
-                                             , configStaticKeyMaterialCLIParser
-                                             )
 import           Cardano.Shell.Configuration.Lib (finaliseCardanoConfiguration)
 import           Cardano.Shell.Lib (GeneralException (ConfigurationError))
 
@@ -45,8 +41,10 @@ data ChairmanArgs = ChairmanArgs {
       -- detect progress errors when running 'chain-sync' protocol and we will
       -- be able to remove this option
     , caTimeout         :: !(Maybe Int)
-    , caGenesisSpec     :: !(Last PartialGenesis)
-    , caKeyMaterialSpec :: !(Last PartialStaticKeyMaterial)
+    , caGenesisFile                :: !(Last FilePath)
+    , caGenesisHash                :: !(Last Text)
+    , caStaticKeySigningKeyFile    :: !(Last FilePath)
+    , caStaticKeyDlgCertFile       :: !(Last FilePath)
     }
 
 parseSecurityParam :: Parser SecurityParam
@@ -84,8 +82,26 @@ parseChairmanArgs =
       <*> parseSecurityParam
       <*> optional parseSlots
       <*> optional parseTimeout
-      <*> (Last . Just <$> configGenesisCLIParser)
-      <*> (Last . Just <$> configStaticKeyMaterialCLIParser)
+      <*> lastStrOption
+             ( long "genesis-file"
+            <> metavar "FILEPATH"
+            <> help "The filepath to the genesis file."
+             )
+      <*> lastStrOption
+             ( long "genesis-hash"
+            <> metavar "GENESIS-HASH"
+            <> help "The genesis hash value."
+             )
+      <*> lastStrOption
+             ( long "signing-key"
+            <> metavar "FILEPATH"
+            <> help "Path to the signing key."
+             )
+      <*> lastStrOption
+             ( long "delegation-certificate"
+            <> metavar "FILEPATH"
+            <> help "Path to the delegation certificate."
+             )
 
 opts :: ParserInfo ChairmanArgs
 opts = info (parseChairmanArgs <**> helper)
@@ -105,16 +121,19 @@ main = do
                  , caSecurityParam
                  , caMaxBlockNo
                  , caTimeout
-                 , caGenesisSpec
-                 , caKeyMaterialSpec
+                 , caGenesisFile
+                 , caGenesisHash
+                 , caStaticKeySigningKeyFile
+                 , caStaticKeyDlgCertFile
                  } <- execParser opts
 
     SomeProtocol p
-      <- case finaliseCardanoConfiguration
-                (mergeConfiguration
-                   mainnetConfiguration
-                   caGenesisSpec
-                   caKeyMaterialSpec) of
+      <- case finaliseCardanoConfiguration $
+                mergeConfiguration
+                  mainnetConfiguration
+                  caGenesisFile caGenesisHash
+                  caStaticKeySigningKeyFile
+                  caStaticKeyDlgCertFile of
         Left err -> throwIO (ConfigurationError err)
         Right cc -> fromProtocol cc caProtocol
 

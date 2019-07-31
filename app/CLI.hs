@@ -32,9 +32,6 @@ import           Cardano.Prelude hiding (option, (.))
 import           Ouroboros.Consensus.BlockchainTime
 import qualified Ouroboros.Consensus.Ledger.Mock as Mock
 
-import           Cardano.Shell.Constants.CLI
-import           Cardano.Shell.Constants.PartialTypes (PartialGenesis (..), PartialStaticKeyMaterial (..))
-
 import           Topology (NodeAddress (..), TopologyInfo (..))
 import           TxSubmission (command', parseMockTx)
 
@@ -45,11 +42,13 @@ import           Cardano.Node.CLI
 -------------------------------------------------------------------------------}
 
 data NodeCLIArguments = NodeCLIArguments {
-    systemStart        :: !SystemStart
-  , slotDuration       :: !SlotLength
-  , genesisSpec        :: !(Last PartialGenesis)
-  , keyMaterialSpec    :: !(Last PartialStaticKeyMaterial)
-  , command            :: !Command
+    systemStart                   :: !SystemStart
+  , slotDuration                  :: !SlotLength
+  , cliGenesisFile                :: !(Last FilePath)
+  , cliGenesisHash                :: !(Last Text)
+  , cliStaticKeySigningKeyFile    :: !(Last FilePath)
+  , cliStaticKeyDlgCertFile       :: !(Last FilePath)
+  , command                       :: !Command
   }
 
 
@@ -95,8 +94,26 @@ nodeParser :: Parser NodeCLIArguments
 nodeParser = NodeCLIArguments
     <$> parseSystemStart
     <*> parseSlotDuration
-    <*> (Last . Just <$> configGenesisCLIParser)
-    <*> (Last . Just <$> configStaticKeyMaterialCLIParser)
+    <*> lastStrOption
+           ( long "genesis-file"
+          <> metavar "FILEPATH"
+          <> help "The filepath to the genesis file."
+           )
+    <*> lastStrOption
+           ( long "genesis-hash"
+          <> metavar "GENESIS-HASH"
+          <> help "The genesis hash value."
+           )
+    <*> lastStrOption
+           ( long "signing-key"
+          <> metavar "FILEPATH"
+          <> help "Path to the signing key."
+           )
+    <*> lastStrOption
+           ( long "delegation-certificate"
+          <> metavar "FILEPATH"
+          <> help "Path to the delegation certificate."
+           )
     <*> parseCommand
 
 parseCommand :: Parser Command

@@ -1,7 +1,9 @@
-{-# LANGUAGE ConstraintKinds  #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE GADTs            #-}
-{-# LANGUAGE NamedFieldPuns   #-}
+{-# LANGUAGE ConstraintKinds      #-}
+{-# LANGUAGE FlexibleContexts     #-}
+{-# LANGUAGE FlexibleInstances    #-}
+{-# LANGUAGE GADTs                #-}
+{-# LANGUAGE NamedFieldPuns       #-}
+{-# LANGUAGE OverloadedStrings    #-}
 
 module Cardano.Node.CLI (
   -- * Untyped/typed protocol boundary
@@ -33,6 +35,14 @@ module Cardano.Node.CLI (
   , parseUTCTime
   -- * Generic
   , command'
+  , lastOption
+  , lastAutoOption
+  , lastIntOption
+  , lastDoubleOption
+  , lastBoolOption
+  , lastWordOption
+  , lastTextListOption
+  , lastStrOption
   ) where
 
 import           Prelude
@@ -41,8 +51,10 @@ import           Codec.CBOR.Read (deserialiseFromBytes)
 
 import qualified Data.ByteString.Lazy as LB
 import           Data.Foldable (asum)
-import           Data.Monoid (Last)
+import           Data.Monoid (Last(..))
 import           Data.Semigroup ((<>))
+import           Data.String (IsString)
+import           Data.Text (Text)
 import           Data.Time (UTCTime)
 import           Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import           Options.Applicative
@@ -67,20 +79,16 @@ import           Cardano.Chain.Common
 import           Cardano.Crypto.ProtocolMagic
 
 import           Cardano.Shell.Constants.PartialTypes (PartialCardanoConfiguration (..),
-                                                       PartialCore (..),
-                                                       PartialGenesis (..),
-                                                       PartialStaticKeyMaterial (..) )
+                                                       PartialCore (..))
 import           Cardano.Shell.Lib (GeneralException (..))
 import qualified Cardano.Chain.Genesis as Genesis
-import           Cardano.Crypto (RequiresNetworkMagic (..),
-                                 decodeAbstractHash)
+import qualified Cardano.Chain.Update as Update
+import           Cardano.Crypto (RequiresNetworkMagic (..), decodeAbstractHash)
 import qualified Cardano.Crypto.Signing as Signing
 import           Control.Exception
 import           Control.Monad.Except
 import           Cardano.Shell.Constants.Types (CardanoConfiguration (..),
                                                 Core (..),
-                                                StaticKeyMaterial (..),
-                                                Genesis (..),
                                                 RequireNetworkMagic (..))
 
 import qualified Cardano.Node.CanonicalJSON as CanonicalJSON
@@ -109,6 +117,7 @@ type TraceConstraints blk =
     , Condense (GenTx blk)
     , Show (ApplyTxErr blk)
     , Show (GenTx blk)
+    , Show (GenTxId blk)
     , Show blk
     , Show (Header blk)
     )
@@ -133,26 +142,39 @@ fromProtocol _ MockPBFT =
       Dict -> return $ SomeProtocol p
   where
     p = ProtocolMockPBFT defaultDemoPBftParams
-fromProtocol CardanoConfiguration{ccCore=ccCore@Core{coStaticKeyMaterial}} RealPBFT = do
-    let Genesis{geSrc, geGenesisHash} = coGenesis ccCore
+fromProtocol CardanoConfiguration{ccCore} RealPBFT = do
+    let Core{ coGenesisFile
+            , coGenesisHash
+            , coStaticKeySigningKeyFile
+            , coStaticKeyDlgCertFile
+            } = ccCore
         genHash = either (throw . ConfigurationError) id $
-                  decodeAbstractHash geGenesisHash
+                  decodeAbstractHash coGenesisHash
         cvtRNM :: RequireNetworkMagic -> RequiresNetworkMagic
         cvtRNM NoRequireNetworkMagic = RequiresNoMagic
         cvtRNM RequireNetworkMagic   = RequiresMagic
-        StaticKeyMaterial{skmSigningKeyFile, skmDlgCertFile} = coStaticKeyMaterial
         kmoDeserialiseDelegateKey = Signing.SigningKey . snd . either (error . show) id . deserialiseFromBytes Signing.fromCBORXPrv
 
-    res <- runExceptT (Genesis.mkConfigFromFile (cvtRNM $ coRequiresNetworkMagic ccCore) geSrc genHash)
-    let geneConfig = case res of
+    gcE <- runExceptT (Genesis.mkConfigFromFile (cvtRNM $ coRequiresNetworkMagic ccCore) coGenesisFile genHash)
+    let gc = case gcE of
           Left err -> throw err
           Right x -> x
 
-    sk  <- kmoDeserialiseDelegateKey <$> LB.readFile skmSigningKeyFile
-    dlg <- either (error . show) id . CanonicalJSON.canonicalDecPre <$> LB.readFile skmDlgCertFile
+    sk  <- kmoDeserialiseDelegateKey <$> LB.readFile coStaticKeySigningKeyFile
+    dlgE <- CanonicalJSON.canonicalDecPre <$> LB.readFile coStaticKeyDlgCertFile
 
-    let plc = PbftLeaderCredentials sk dlg
-        p   = ProtocolRealPBFT defaultDemoPBftParams geneConfig (pure plc)
+    let plcE = case dlgE of
+                 Left  err -> error . show $ err
+                 Right dlg -> mkPBftLeaderCredentials gc sk dlg
+
+    let plc = case plcE of
+                Left  err -> error . show $ err
+                Right x   -> x
+        -- TODO:  make configurable via CLI (requires cardano-shell changes)
+        -- These defaults are good for mainnet.
+        defSoftVer  = Update.SoftwareVersion (Update.ApplicationName "cardano-sl") 1
+        defProtoVer = Update.ProtocolVersion 0 2 0
+        p = ProtocolRealPBFT gc Nothing defProtoVer defSoftVer (Just plc)
 
     case Consensus.runProtocol p of
       Dict -> return $ SomeProtocol p
@@ -175,18 +197,25 @@ data ViewMode =
 --   We expect this process to become generic at some point.
 mergeConfiguration
   :: PartialCardanoConfiguration
-  -> Last PartialGenesis
-  -> Last PartialStaticKeyMaterial
+  -> Last FilePath
+  -> Last Text
+  -> Last FilePath
+  -> Last FilePath
   -> PartialCardanoConfiguration
-mergeConfiguration pcc@PartialCardanoConfiguration{pccCore} pg pskm =
-  pcc { pccCore = updateCore <$> pccCore }
-
-  where updateCore pc@PartialCore{pcoGenesis, pcoStaticKeyMaterial} =
-          -- We need to lift (<>) because we need monoidal operation over Partial*
-          -- constituents, and not the (Last Partial*) ones.
-          pc { pcoGenesis            = liftA2 (<>) pcoGenesis           pg
-             , pcoStaticKeyMaterial  = liftA2 (<>) pcoStaticKeyMaterial pskm
-             }
+mergeConfiguration pcc lGenF lGenH lSKF lDlgF =
+  let PartialCore
+        { pcoGenesisFile
+        , pcoGenesisHash
+        , pcoStaticKeySigningKeyFile
+        , pcoStaticKeyDlgCertFile
+        } = pccCore pcc
+  in
+  pcc { pccCore = pccCore pcc <> mempty
+        { pcoGenesisFile             = pcoGenesisFile             <> lGenF
+        , pcoGenesisHash             = pcoGenesisHash             <> lGenH
+        , pcoStaticKeySigningKeyFile = pcoStaticKeySigningKeyFile <> lSKF
+        , pcoStaticKeyDlgCertFile    = pcoStaticKeyDlgCertFile    <> lDlgF
+        }}
 
 {-------------------------------------------------------------------------------
   Command parsers
@@ -351,3 +380,30 @@ command' c descr p =
     command c $ info (p <**> helper) $ mconcat [
         progDesc descr
       ]
+
+-- TODO:  deal with cardano-shell duplication
+-- | Lift the parser to an optional @Last@ type.
+lastOption :: Parser a -> Parser (Last a)
+lastOption parser = Last <$> optional parser
+
+-- | General @Last@ auto option from @Read@ instance.
+lastAutoOption :: Read a => Mod OptionFields a -> Parser (Last a)
+lastAutoOption args = lastOption (option auto args)
+
+lastIntOption :: Mod OptionFields Int -> Parser (Last Int)
+lastIntOption = lastAutoOption
+
+lastDoubleOption :: Mod OptionFields Double -> Parser (Last Double)
+lastDoubleOption = lastAutoOption
+
+lastBoolOption :: Mod OptionFields Bool -> Parser (Last Bool)
+lastBoolOption = lastAutoOption
+
+lastWordOption :: Mod OptionFields Word -> Parser (Last Word)
+lastWordOption = lastAutoOption
+
+lastTextListOption :: Mod OptionFields [Text] -> Parser (Last [Text])
+lastTextListOption = lastAutoOption
+
+lastStrOption :: IsString a => Mod OptionFields a -> Parser (Last a)
+lastStrOption args = Last <$> optional (strOption args)

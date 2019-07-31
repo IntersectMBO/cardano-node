@@ -1,3 +1,4 @@
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes        #-}
@@ -67,8 +68,15 @@ main = do
 
 initializeAllFeatures :: CLIArguments -> PartialCardanoConfiguration -> CardanoEnvironment -> IO ([CardanoFeature], NodeLayer)
 initializeAllFeatures (CLIArguments logCli nodeCli) partialConfig cardanoEnvironment = do
+    let NodeCLIArguments
+          { cliGenesisFile, cliGenesisHash
+          , cliStaticKeySigningKeyFile, cliStaticKeyDlgCertFile
+          } = nodeCli
     finalConfig <- case finaliseCardanoConfiguration $
-                        mergeConfiguration partialConfig (genesisSpec nodeCli) (keyMaterialSpec nodeCli)
+                        mergeConfiguration
+                        partialConfig
+                        cliGenesisFile cliGenesisHash
+                        cliStaticKeySigningKeyFile cliStaticKeyDlgCertFile
                    of
       Left err -> throwIO $ ConfigurationError err
       Right x  -> pure x

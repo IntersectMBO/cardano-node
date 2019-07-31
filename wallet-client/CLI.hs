@@ -9,6 +9,7 @@ module CLI
   ) where
 
 import           Data.Monoid (Last (..))
+import           Data.Text (Text)
 
 import           Options.Applicative
 
@@ -16,16 +17,15 @@ import           Ouroboros.Consensus.Node.ProtocolInfo
 import           Ouroboros.Consensus.NodeId (CoreNodeId (..))
 
 import           Cardano.Node.CLI
-import           Cardano.Shell.Constants.CLI
-import           Cardano.Shell.Constants.PartialTypes ( PartialGenesis (..)
-                                                      , PartialStaticKeyMaterial)
 
-data CLI = CLI {
-    cliCoreNodeId   :: CoreNodeId,
-    cliNumCoreNodes :: NumCoreNodes,
-    cliProtocol     :: Protocol,
-    cliGenesis      :: Last PartialGenesis,
-    cliKeyMaterial  :: Last PartialStaticKeyMaterial
+data CLI = CLI
+  { cliCoreNodeId                 :: CoreNodeId
+  , cliNumCoreNodes               :: NumCoreNodes
+  , cliProtocol                   :: Protocol
+  , cliGenesisFile                :: Last FilePath
+  , cliGenesisHash                :: Last Text
+  , cliStaticKeySigningKeyFile    :: Last FilePath
+  , cliStaticKeyDlgCertFile       :: Last FilePath
   }
 
 parseCLI :: Parser CLI
@@ -33,5 +33,23 @@ parseCLI = CLI
     <$> parseCoreNodeId
     <*> parseNumCoreNodes
     <*> parseProtocol
-    <*> (Last . Just <$> configGenesisCLIParser)
-    <*> (Last . Just <$> configStaticKeyMaterialCLIParser)
+    <*> lastStrOption
+           ( long "genesis-file"
+          <> metavar "FILEPATH"
+          <> help "The filepath to the genesis file."
+           )
+    <*> lastStrOption
+           ( long "genesis-hash"
+          <> metavar "GENESIS-HASH"
+          <> help "The genesis hash value."
+           )
+    <*> lastStrOption
+           ( long "signing-key"
+          <> metavar "FILEPATH"
+          <> help "Path to the signing key."
+           )
+    <*> lastStrOption
+           ( long "delegation-certificate"
+          <> metavar "FILEPATH"
+          <> help "Path to the delegation certificate."
+           )
