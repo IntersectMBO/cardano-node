@@ -15,6 +15,8 @@
         "hedgehog" = (((hackage.hedgehog)."1.0").revisions).default;
         "micro-recursion-schemes" = (((hackage.micro-recursion-schemes)."5.0.2.2").revisions).default;
         "streaming-binary" = (((hackage.streaming-binary)."0.3.0.1").revisions).default;
+        "cborg" = (((hackage.cborg)."0.2.2.0").revisions).default;
+        "canonical-json" = (((hackage.canonical-json)."0.6.0.0").revisions).default;
         "brick" = (((hackage.brick)."0.47").revisions)."4936c50acfdf09620dad5217fb384fc0d59626f75abed8b48250b419ec2ab623";
         "config-ini" = (((hackage.config-ini)."0.2.4.0").revisions)."38a6d484d471c6fac81445de2eac8c4e8c82760962fca5491ae1c3bfca9c4047";
         "data-clist" = (((hackage.data-clist)."0.1.2.2").revisions)."4d70add0a200a178853cd37c6469101bac3c36aebb3aa9c503ff225211b1a8c9";
@@ -42,13 +44,11 @@
         ouroboros-consensus = ./ouroboros-consensus.nix;
         typed-protocols = ./typed-protocols.nix;
         typed-protocols-cbor = ./typed-protocols-cbor.nix;
-        cborg = ./cborg.nix;
         cardano-crypto = ./cardano-crypto.nix;
-        canonical-json = ./canonical-json.nix;
         };
       compiler.version = "8.6.5";
       compiler.nix-name = "ghc865";
       };
-  resolver = "lts-13.28";
+  resolver = "lts-13.26";
   compiler = "ghc-8.6.5";
   }

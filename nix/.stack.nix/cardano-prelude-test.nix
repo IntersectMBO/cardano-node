@@ -42,8 +42,8 @@
     } // {
     src = (pkgs.lib).mkDefault (pkgs.fetchgit {
       url = "https://github.com/input-output-hk/cardano-prelude";
-      rev = "3084f8b8514d93970415e895b241691b80c7b9ee";
-      sha256 = "086l78i7xmaryh03rfklgni02vlfsbdk2pwxf0msrc170lk8vzd4";
+      rev = "8273fe5f00ac03b0c66ef3841c8e957139ee18f2";
+      sha256 = "0ggfi3jxks5c8k3mszd6k0sfvmbvrkkwimln33r501dzj3m283rs";
       });
     postUnpack = "sourceRoot+=/test; echo source root reset to \$sourceRoot";
     }
