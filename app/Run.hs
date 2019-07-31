@@ -1,14 +1,16 @@
-{-# LANGUAGE BangPatterns        #-}
-{-# LANGUAGE CPP                 #-}
-{-# LANGUAGE FlexibleContexts    #-}
-{-# LANGUAGE GADTs               #-}
-{-# LANGUAGE LambdaCase          #-}
-{-# LANGUAGE NamedFieldPuns      #-}
-{-# LANGUAGE NumericUnderscores  #-}
-{-# LANGUAGE OverloadedStrings   #-}
-{-# LANGUAGE RecordWildCards     #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications    #-}
+{-# LANGUAGE BangPatterns         #-}
+{-# LANGUAGE CPP                  #-}
+{-# LANGUAGE FlexibleContexts     #-}
+{-# LANGUAGE GADTs                #-}
+{-# LANGUAGE LambdaCase           #-}
+{-# LANGUAGE NamedFieldPuns       #-}
+{-# LANGUAGE NumericUnderscores   #-}
+{-# LANGUAGE OverloadedStrings    #-}
+{-# LANGUAGE RecordWildCards      #-}
+{-# LANGUAGE ScopedTypeVariables  #-}
+{-# LANGUAGE TypeApplications     #-}
+-- required for 'Show' instance of 'WithTip'
+{-# LANGUAGE UndecidableInstances #-}
 
 {-# OPTIONS_GHC -Wno-simplifiable-class-constraints #-}
 
@@ -20,6 +22,7 @@ module Run (
       runNode
     ) where
 
+import           Codec.CBOR.Read (DeserialiseFailure)
 import           Codec.CBOR.Decoding (Decoder)
 import           Codec.CBOR.Encoding (Encoding)
 import qualified Codec.Serialise as Serialise (decode, encode)
@@ -54,9 +57,11 @@ import           Cardano.BM.Data.LogItem (LOContent (LogValue), LogObject (..),
                                           mkLOMeta)
 import           Cardano.BM.Data.Severity (Severity (..))
 import           Cardano.BM.Data.Tracer (ToLogObject (..))
-import           Cardano.BM.Trace (Trace, appendName, traceNamedObject)
+import           Cardano.BM.Trace (appendName, traceNamedObject)
 import           Cardano.Shell.Constants.Types (CardanoConfiguration (..),)
 import           Cardano.Shell.Features.Logging (LoggingLayer (..))
+
+import           Network.TypedProtocol.Driver (TraceSendRecv)
 
 import qualified Ouroboros.Network.AnchoredFragment as AF
 import           Ouroboros.Network.Block
@@ -66,20 +71,26 @@ import           Ouroboros.Network.NodeToNode as NodeToNode
 import           Ouroboros.Network.Socket
 import           Ouroboros.Network.Subscription.Common
 import           Ouroboros.Network.Subscription.Dns
+import           Ouroboros.Network.TxSubmission.Inbound (TraceTxSubmissionInbound)
+import           Ouroboros.Network.TxSubmission.Outbound (TraceTxSubmissionOutbound)
+import           Ouroboros.Network.BlockFetch.Decision (FetchDecision)
+import           Ouroboros.Network.BlockFetch.ClientState (TraceFetchClientState, TraceLabelPeer)
 
+import           Ouroboros.Network.Protocol.BlockFetch.Type (BlockFetch)
 import           Ouroboros.Network.Protocol.BlockFetch.Codec
+import           Ouroboros.Network.Protocol.ChainSync.Type (ChainSync)
 import           Ouroboros.Network.Protocol.ChainSync.Codec
 import           Ouroboros.Network.Protocol.Handshake.Type
 import           Ouroboros.Network.Protocol.Handshake.Version
 import           Ouroboros.Network.Protocol.LocalTxSubmission.Codec
 import           Ouroboros.Network.Protocol.TxSubmission.Codec
 
-import           Ouroboros.Consensus.Block (BlockProtocol)
+import           Ouroboros.Consensus.Block (BlockProtocol, Header)
 import           Ouroboros.Consensus.BlockchainTime
 import           Ouroboros.Consensus.ChainSyncClient (ClockSkew (..))
 import           Ouroboros.Consensus.Ledger.Abstract
 import           Ouroboros.Consensus.Ledger.Extended (ExtLedgerState)
-import           Ouroboros.Consensus.Mempool.API (TraceEventMempool (..))
+import           Ouroboros.Consensus.Mempool.API (GenTx, GenTxId, TraceEventMempool (..))
 import           Ouroboros.Consensus.Node hiding (TraceConstraints)
 import           Ouroboros.Consensus.Node.ProtocolInfo
 import           Ouroboros.Consensus.Node.Run
@@ -138,11 +149,11 @@ runNode nodeCli@NodeCLIArguments{..} loggingLayer cc = do
         let tracer      = contramap pack $ toLogObject trace'
         handleTraceAcceptor tracer
 
-      SimpleNode topology myNodeAddress protocol viewMode -> do
+      SimpleNode topology myNodeAddress protocol viewMode traceOptions -> do
         let trace'      = appendName (pack $ show $ node topology) tr
         SomeProtocol p  <- fromProtocol cc protocol
         case viewMode of
-          SimpleView -> handleSimpleNode p nodeCli myNodeAddress topology trace' cc
+          SimpleView -> handleSimpleNode p nodeCli myNodeAddress topology trace' (getNodeTraces traceOptions trace') cc
           LiveView   -> do
 #ifdef UNIX
             let c = llConfiguration loggingLayer
@@ -150,7 +161,7 @@ runNode nodeCli@NodeCLIArguments{..} loggingLayer cc = do
             -- turn off logging to the console, only forward it through a pipe to a central logging process
             CM.setDefaultBackends c [TraceForwarderBK, UserDefinedBK "LiveViewBackend"]
             -- User will see a terminal graphics and will be able to interact with it.
-            nodeThread <- Async.async $ handleSimpleNode p nodeCli myNodeAddress topology trace' cc
+            nodeThread <- Async.async $ handleSimpleNode p nodeCli myNodeAddress topology trace' (getNodeTraces traceOptions trace') cc
 
             be :: LiveViewBackend Text <- realize c
             let lvbe = MkBackend { bEffectuate = effectuate be, bUnrealize = unrealize be }
@@ -161,7 +172,7 @@ runNode nodeCli@NodeCLIArguments{..} loggingLayer cc = do
 
             void $ Async.waitAny [nodeThread]
 #else
-            handleSimpleNode p nodeCli myNodeAddress topology trace' cc
+            handleSimpleNode p nodeCli myNodeAddress topology trace' (getNodeTraces traceOptions trace') cc
 #endif
 
 -- | Sets up a simple node, which will run the chain sync protocol and block
@@ -172,12 +183,18 @@ handleSimpleNode :: forall blk. (RunNode blk, TraceConstraints blk)
                  -> NodeCLIArguments
                  -> NodeAddress
                  -> TopologyInfo
-                 -> Trace IO Text
+                 -> Tracer IO (LogObject Text)
+                 -> Traces Peer blk
                  -> CardanoConfiguration
                  -> IO ()
-handleSimpleNode p NodeCLIArguments{..} myNodeAddress (TopologyInfo myNodeId topologyFile) trace CardanoConfiguration{..} = do
+handleSimpleNode p NodeCLIArguments{..}
+                 myNodeAddress
+                 (TopologyInfo myNodeId topologyFile)
+                 trace
+                 nodeTraces
+                 CardanoConfiguration{..}
+    = do
     let tracer = contramap pack $ toLogObject trace
-        mempoolTracer = mempoolTraceTransformer $ appendName "mempool" trace
     traceWith tracer $ "System started at " <> show systemStart
     NetworkTopology nodeSetups <-
       either error id <$> readTopologyFile topologyFile
@@ -223,7 +240,7 @@ handleSimpleNode p NodeCLIArguments{..} myNodeAddress (TopologyInfo myNodeId top
                           pInfoInitLedger
                           registry
                           (CoreNodeId nid)
-                          (prefixTip varTip tracer)
+                          (withTip varTip $ tracerChainDB nodeTraces)
                           slotDuration
       chainDB :: ChainDB IO blk <- ChainDB.openDB chainDbArgs
 
@@ -235,12 +252,13 @@ handleSimpleNode p NodeCLIArguments{..} myNodeAddress (TopologyInfo myNodeId top
       btime  <- realBlockchainTime registry slotDuration systemStart
       let nodeParams :: NodeParams IO Peer blk
           nodeParams = NodeParams
-            { tracer             = prefixTip varTip tracer
-            , mempoolTracer      = mempoolTracer
-            , decisionTracer     = nullTracer
-            , fetchClientTracer  = nullTracer
-            , txInboundTracer    = nullTracer
-            , txOutboundTracer   = nullTracer
+            { tracer             = withTip varTip
+                                    (contramap show $ tracerConsensus nodeTraces)
+            , mempoolTracer      = tracerMempool nodeTraces
+            , decisionTracer     = tracerFetchDecisions nodeTraces
+            , fetchClientTracer  = tracerFetchClient nodeTraces
+            , txInboundTracer    = tracerTxInbound nodeTraces
+            , txOutboundTracer   = tracerTxOutbound nodeTraces
             , threadRegistry     = registry
             , maxClockSkew       = ClockSkew 1
             , cfg                = pInfoConfig
@@ -261,8 +279,8 @@ handleSimpleNode p NodeCLIArguments{..} myNodeAddress (TopologyInfo myNodeId top
                            ByteString ByteString ()
           networkApps =
             consensusNetworkApps
-              nullTracer
-              nullTracer
+              (tracerChainSync nodeTraces)
+              (tracerTxSubmission nodeTraces)
               kernel
               ProtocolCodecs
                 { pcChainSyncCodec =
@@ -364,7 +382,7 @@ handleSimpleNode p NodeCLIArguments{..} myNodeAddress (TopologyInfo myNodeId top
       ipSubscriptions <- forkLinked registry $
         ipSubscriptionWorker
           connTable
-          (contramap show tracer)
+          (contramap show $ traceIpSubscription nodeTraces)
             -- the comments in dnsSbuscriptionWorker call apply
             (Just (Socket.SockAddrInet 0 0))
             (Just (Socket.SockAddrInet6 0 0 (0, 0, 0, 1) 0))
@@ -389,8 +407,8 @@ handleSimpleNode p NodeCLIArguments{..} myNodeAddress (TopologyInfo myNodeId top
         forkLinked registry $
           dnsSubscriptionWorker
             connTable
-            (contramap show tracer)
-            (contramap show tracer)
+            (contramap show $ traceDnsSubscription nodeTraces)
+            (contramap show $ traceDnsResolver nodeTraces)
             -- IPv4 address
             --
             -- We can't share portnumber with our server since we run separate
@@ -431,28 +449,6 @@ handleSimpleNode p NodeCLIArguments{..} myNodeAddress (TopologyInfo myNodeId top
       decodePoint' =
           Block.decodePoint (nodeDecodeHeaderHash (Proxy @blk))
 
-      mempoolTraceTransformer :: Tracer IO (LogObject a) -> Tracer IO (TraceEventMempool blk)
-      mempoolTraceTransformer tr = Tracer $ \mempoolEvent -> do
-          let logValue = LogValue "txsInMempool" $ PureI $ fromIntegral $ _txsInMempool mempoolEvent
-          meta <- mkLOMeta Info Confidential
-          traceNamedObject tr (meta, logValue)
-          case mempoolEvent of
-            TraceMempoolAddTxs      txs _ ->
-                let logValue' = LogValue "txsProcessed" $ PureI $ fromIntegral $ length txs in
-                traceNamedObject tr (meta, logValue')
-            TraceMempoolRejectedTxs txs _ ->
-                let logValue' = LogValue "txsProcessed" $ PureI $ fromIntegral $ length txs in
-                traceNamedObject tr (meta, logValue')
-            _                             -> return ()
-
-      prefixTip :: TVar IO (Point blk) -> Tracer IO String -> Tracer IO String
-      prefixTip varTip tr = Tracer $ \msg -> do
-          tip <- atomically $ readTVar varTip
-          let hash = case pointHash tip of
-                GenesisHash -> "genesis"
-                BlockHash h -> take 7 (condense h)
-          traceWith tr ("[" <> hash <> "] " <> msg)
-
 removeStaleLocalSocket :: FilePath -> IO ()
 removeStaleLocalSocket socketPath =
     removeFile socketPath
@@ -466,7 +462,7 @@ mkChainDbArgs :: forall blk. (RunNode blk, TraceConstraints blk)
               -> ExtLedgerState blk
               -> ThreadRegistry IO
               -> CoreNodeId
-              -> Tracer IO String
+              -> Tracer IO (ChainDB.TraceEvent blk)
               -> SlotLength
               -> ChainDB.ChainDbArgs IO blk
 mkChainDbArgs cfg initLedger registry (CoreNodeId nid) tracer slotDuration =
@@ -489,7 +485,7 @@ mkChainDbArgs cfg initLedger registry (CoreNodeId nid) tracer slotDuration =
       , ChainDB.cdbMemPolicy        = defaultMemPolicy secParam
       , ChainDB.cdbNodeConfig       = cfg
       , ChainDB.cdbThreadRegistry   = registry
-      , ChainDB.cdbTracer           = readableChainDBTracer tracer
+      , ChainDB.cdbTracer           = tracer
       , ChainDB.cdbValidation       = ValidateMostRecentEpoch
       , ChainDB.cdbGcDelay          = secondsToDiffTime 10
       }
@@ -508,53 +504,245 @@ mkChainDbArgs cfg initLedger registry (CoreNodeId nid) tracer slotDuration =
 readableChainDBTracer
     :: forall m blk.
        (Monad m, Condense (HeaderHash blk), ProtocolLedgerView blk)
-    => Tracer m String -> Tracer m (ChainDB.TraceEvent blk)
+    => Tracer m String
+    -> Tracer m (WithTip blk (ChainDB.TraceEvent blk))
 readableChainDBTracer tracer = Tracer $ \case
-    ChainDB.TraceAddBlockEvent ev -> case ev of
-      ChainDB.StoreButDontChange   pt -> tr $
+    WithTip tip (ChainDB.TraceAddBlockEvent ev) -> case ev of
+      ChainDB.StoreButDontChange   pt -> tr $ WithTip tip $
         "Ignoring block: " <> condense pt
-      ChainDB.TryAddToCurrentChain pt -> tr $
+      ChainDB.TryAddToCurrentChain pt -> tr $ WithTip tip $
         "Block fits onto the current chain: " <> condense pt
-      ChainDB.TrySwitchToAFork pt _   -> tr $
+      ChainDB.TrySwitchToAFork pt _   -> tr $ WithTip tip $
         "Block fits onto some fork: " <> condense pt
-      ChainDB.SwitchedToChain _ c     -> tr $
+      ChainDB.SwitchedToChain _ c     -> tr $ WithTip tip $
         "Chain changed, new tip: " <> condense (AF.headPoint c)
       ChainDB.AddBlockValidation ev' -> case ev' of
-        ChainDB.InvalidBlock err pt -> tr $
+        ChainDB.InvalidBlock err pt -> tr $ WithTip tip $
           "Invalid block " <> condense pt <> ": " <> show err
         _ -> ignore
       _  -> ignore
-    ChainDB.TraceLedgerEvent ev -> case ev of
-      ChainDB.InitLog ev' -> traceInitLog ev'
-      ChainDB.TookSnapshot snap pt -> tr $
+    WithTip tip (ChainDB.TraceLedgerEvent ev) -> case ev of
+      ChainDB.InitLog ev' -> traceInitLog tip ev'
+      ChainDB.TookSnapshot snap pt -> tr $ WithTip tip $
         "Took ledger snapshot " <> show snap <> " at " <> condense pt
-      ChainDB.DeletedSnapshot snap -> tr $
+      ChainDB.DeletedSnapshot snap -> tr $ WithTip tip $
         "Deleted old snapshot " <> show snap
-    ChainDB.TraceCopyToImmDBEvent ev -> case ev of
-      ChainDB.CopiedBlockToImmDB pt -> tr $
+    WithTip tip (ChainDB.TraceCopyToImmDBEvent ev) -> case ev of
+      ChainDB.CopiedBlockToImmDB pt -> tr $ WithTip tip $
         "Copied block " <> condense pt <> " to the ImmutableDB"
       _ -> ignore
-    ChainDB.TraceGCEvent ev -> case ev of
-      ChainDB.PerformedGC slot       -> tr $
+    WithTip tip (ChainDB.TraceGCEvent ev) -> case ev of
+      ChainDB.PerformedGC slot       -> tr $ WithTip tip $
         "Performed a garbage collection for " <> condense slot
       _ -> ignore
-    ChainDB.TraceOpenEvent ev -> case ev of
-      ChainDB.OpenedDB immTip tip -> tr $
+    WithTip tip (ChainDB.TraceOpenEvent ev) -> case ev of
+      ChainDB.OpenedDB immTip tip' -> tr $ WithTip tip $
         "Opened with immutable tip at " <> condense immTip <>
-        " and tip " <> condense tip
+        " and tip " <> condense tip'
       _ -> ignore
     _ -> ignore
   where
-    tr s = traceWith tracer ("ChainDB | " <> s)
+    tr :: Show a => WithTip blk a -> m ()
+    tr = traceWith (contramap show tracer)
 
     ignore :: m ()
     ignore = return ()
 
-    traceInitLog = \case
-      LedgerDB.InitFromGenesis -> tr "Initialised the ledger from genesis"
-      LedgerDB.InitFromSnapshot snap tip -> tr $
+    traceInitLog :: Point blk -> LedgerDB.InitLog (Point blk) -> m ()
+    traceInitLog tip = \case
+      LedgerDB.InitFromGenesis -> tr $ WithTip tip "Initialised the ledger from genesis"
+      LedgerDB.InitFromSnapshot snap tip' -> tr $ WithTip tip $
         "Initialised the ledger from snapshot " <> show snap <> " at " <>
-        condense (tipToPoint tip)
+        condense (tipToPoint tip')
       LedgerDB.InitFailure snap _failure initLog -> do
-          tr $ "Snapshot " <> show snap <> " invalid"
-          traceInitLog initLog
+          tr $ WithTip tip $ "Snapshot " <> show snap <> " invalid"
+          traceInitLog tip initLog
+
+data Traces peer blk = Traces {
+    -- | by default we use 'readableChainDB' tracer, if on this it will use more
+    -- verbose tracer
+    --
+      tracerChainDB
+      :: (Tracer IO(WithTip blk (ChainDB.TraceEvent blk)))
+
+    -- | consensus tracer
+    --
+    -- TODO: it should be fixed with #839 ('ouroboros-network')
+    --
+    , tracerConsensus
+      :: (Tracer IO String)
+
+    -- | mempool tracer
+    --
+    , tracerMempool
+      :: (Tracer IO (TraceEventMempool blk))
+
+    -- | trace fetch decisions; it links to 'decisionTracer' in 'NodeParams'
+    --
+
+    , tracerFetchDecisions
+      :: (Tracer IO [TraceLabelPeer peer (FetchDecision [Point (Header blk)])])
+
+    -- | trace fetch client; it links to 'fetchClientTracer' in 'NodeParams'
+    --
+    , tracerFetchClient
+      :: (Tracer IO (TraceLabelPeer peer (TraceFetchClientState (Header blk))))
+
+    -- | trace tx-submission server; it link to 'txInboundTracer' in 'NodeParams'
+    --
+    , tracerTxInbound
+      :: (Tracer IO (TraceTxSubmissionInbound  (GenTxId blk) (GenTx blk)))
+
+    -- | trace tx-submission client; it link to 'txOutboundTracer' in 'NodeParams'
+    --
+    , tracerTxOutbound
+      :: (Tracer IO (TraceTxSubmissionOutbound (GenTxId blk) (GenTx blk)))
+
+    -- | trace chain syn messages
+    --
+    , tracerChainSync
+      :: (Tracer IO (TraceSendRecv (ChainSync (Header blk) (Point blk)) peer DeserialiseFailure))
+
+    -- | trace tx submission messages
+    --
+    , tracerTxSubmission
+      :: (Tracer IO (TraceSendRecv (BlockFetch blk) peer DeserialiseFailure))
+
+    -- | trace ip subscription manager
+    --
+    -- TODO: export types in `ouroboros-network`
+    , traceIpSubscription
+      :: (Tracer IO String)
+
+    -- | trace dns subscription manager
+    --
+    -- TODO: export types in `ouroboros-network`
+    , traceDnsSubscription
+      :: (Tracer IO String)
+
+    -- | trace dns resolution
+    --
+    -- TODO: export types in `ouroboros-network`
+    , traceDnsResolver
+      :: (Tracer IO String)
+    }
+
+-- | Smart constructor of 'NodeTraces'.
+--
+getNodeTraces :: forall peer blk.
+              ( ProtocolLedgerView blk
+              , Show blk
+              , Show (Header blk)
+              , Condense (HeaderHash blk)
+              , Show peer
+              )
+           => TraceOptions
+           -> Tracer IO (LogObject Text)
+           -> Traces peer blk
+getNodeTraces traceOptions tracer = Traces
+    { tracerChainDB
+        = if traceChainDB traceOptions
+            then contramap show tracer'
+            else readableChainDBTracer tracer'
+    , tracerConsensus
+        = tracer'
+    , tracerMempool
+        = mempoolTraceTransformer tracer
+    , tracerChainSync
+        = enableTracer (traceChainSync traceOptions)
+        $ withName "ChainSyncProtocol" tracer
+    , tracerTxSubmission
+        = enableTracer (traceTxSubmission traceOptions)
+        $ withName "TxSubmissionProtocol" tracer
+    , tracerFetchDecisions
+        = enableTracer (traceFetchDecisions traceOptions)
+        $ withName "FetchDecision" tracer
+    , tracerFetchClient
+        = enableTracer (traceFetchClient traceOptions)
+        $ withName "FetchClient" tracer
+    , tracerTxInbound
+        = enableTracer (traceTxInbound traceOptions)
+        $ withName "TxInbound" tracer
+    , tracerTxOutbound
+        = enableTracer (traceTxOutbound traceOptions)
+        $ withName "TxOutbound" tracer
+    , traceIpSubscription
+        = withName "IPSubscription" tracer
+    , traceDnsSubscription
+        = withName "DNSSubscription" tracer
+    , traceDnsResolver
+        = withName "DNSResolver" tracer
+    }
+  where
+    tracer' :: Tracer IO String
+    tracer' = contramap pack $ toLogObject tracer
+
+    enableTracer
+      :: Show a
+      => Bool
+      -> Tracer IO String
+      -> Tracer IO a
+    enableTracer False = const nullTracer
+    enableTracer True  = showTracing
+
+    mempoolTraceTransformer :: Tracer IO (LogObject a)
+                            -> Tracer IO (TraceEventMempool blk)
+    mempoolTraceTransformer tr = Tracer $ \mempoolEvent -> do
+        let logValue = LogValue "txsInMempool" $ PureI $ fromIntegral $ _txsInMempool mempoolEvent
+        meta <- mkLOMeta Info Confidential
+        traceNamedObject tr (meta, logValue)
+        case mempoolEvent of
+          TraceMempoolAddTxs      txs _ ->
+              let logValue' = LogValue "txsProcessed" $ PureI $ fromIntegral $ length txs in
+              traceNamedObject tr (meta, logValue')
+          TraceMempoolRejectedTxs txs _ ->
+              let logValue' = LogValue "txsProcessed" $ PureI $ fromIntegral $ length txs in
+              traceNamedObject tr (meta, logValue')
+          _                             -> return ()
+
+
+
+--
+-- Tracing utils
+--
+
+withName :: String
+         -> Tracer IO (LogObject Text)
+         -> Tracer IO String
+withName name tr = contramap pack $ toLogObject $ appendName (pack name) tr
+
+-- | Tracing wrapper which includes current tip in the logs (thus it requires
+-- it from the context).
+--
+-- TODO: this should be moved to `ouroboros-consensus`.  Running in a seprate
+-- STM transaction we risk reporting  wrong tip.
+--
+data WithTip blk a =
+    WithTip
+      (Point blk)
+      -- ^ current tip point
+      a
+      -- ^ data
+
+instance ( Show a
+         , Condense (HeaderHash blk)
+         ) => Show (WithTip blk a) where
+
+    show (WithTip tip a) = case pointHash tip of
+      GenesisHash -> "[genesis] " ++ show a
+      BlockHash h -> mconcat [ "["
+                             , take 7 (condense h)
+                             , "] "
+                             , show a
+                             ]
+
+
+-- | A way to satisfy tracer which requires current tip.  The tip is read from
+-- a mutable cell.
+--
+withTip :: TVar IO (Point blk)
+        -> Tracer IO (WithTip blk a)
+        -> Tracer IO a
+withTip varTip tr = Tracer $ \msg -> do
+    tip <- atomically $ readTVar varTip
+    traceWith (contramap (WithTip tip) tr) msg
