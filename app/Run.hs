@@ -91,9 +91,10 @@ import           Ouroboros.Consensus.ChainSyncClient (ClockSkew (..))
 import           Ouroboros.Consensus.Ledger.Abstract
 import           Ouroboros.Consensus.Ledger.Extended (ExtLedgerState)
 import           Ouroboros.Consensus.Mempool.API (GenTx, GenTxId, TraceEventMempool (..))
-import           Ouroboros.Consensus.Node hiding (TraceConstraints)
+import           Ouroboros.Consensus.Node
 import           Ouroboros.Consensus.Node.ProtocolInfo
 import           Ouroboros.Consensus.Node.Run
+import           Ouroboros.Consensus.Node.Tracers
 import           Ouroboros.Consensus.NodeId
 import           Ouroboros.Consensus.NodeNetwork
 import           Ouroboros.Consensus.Protocol hiding (Protocol)
@@ -178,7 +179,7 @@ runNode nodeCli@NodeCLIArguments{..} loggingLayer cc = do
 -- | Sets up a simple node, which will run the chain sync protocol and block
 -- fetch protocol, and, if core, will also look at the mempool when trying to
 -- create a new block.
-handleSimpleNode :: forall blk. (RunNode blk, TraceConstraints blk)
+handleSimpleNode :: forall blk. (RunNode blk, TraceConstraints blk, Show (GenTxId blk))
                  => Consensus.Protocol blk
                  -> NodeCLIArguments
                  -> NodeAddress
@@ -252,13 +253,8 @@ handleSimpleNode p NodeCLIArguments{..}
       btime  <- realBlockchainTime registry slotDuration systemStart
       let nodeParams :: NodeParams IO Peer blk
           nodeParams = NodeParams
-            { tracer             = withTip varTip
+            { tracers            = showTracers $ withTip varTip
                                     (contramap show $ tracerConsensus nodeTraces)
-            , mempoolTracer      = tracerMempool nodeTraces
-            , decisionTracer     = tracerFetchDecisions nodeTraces
-            , fetchClientTracer  = tracerFetchClient nodeTraces
-            , txInboundTracer    = tracerTxInbound nodeTraces
-            , txOutboundTracer   = tracerTxOutbound nodeTraces
             , threadRegistry     = registry
             , maxClockSkew       = ClockSkew 1
             , cfg                = pInfoConfig
@@ -279,9 +275,8 @@ handleSimpleNode p NodeCLIArguments{..}
                            ByteString ByteString ()
           networkApps =
             consensusNetworkApps
-              (tracerChainSync nodeTraces)
-              (tracerTxSubmission nodeTraces)
               kernel
+              (showProtocolTracers tracer)
               ProtocolCodecs
                 { pcChainSyncCodec =
                     codecChainSync

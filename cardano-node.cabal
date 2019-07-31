@@ -26,8 +26,10 @@ library
                      , bytestring
                      , canonical-json
                      , cborg
+                     , formatting
                      , mtl
                      , optparse-applicative
+                     , text
                      , time
 
                      , cardano-binary
