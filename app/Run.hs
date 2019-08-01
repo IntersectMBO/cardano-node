@@ -179,7 +179,7 @@ runNode nodeCli@NodeCLIArguments{..} loggingLayer cc = do
 -- | Sets up a simple node, which will run the chain sync protocol and block
 -- fetch protocol, and, if core, will also look at the mempool when trying to
 -- create a new block.
-handleSimpleNode :: forall blk. (RunNode blk, TraceConstraints blk, Show (GenTxId blk))
+handleSimpleNode :: forall blk. (RunNode blk, TraceConstraints blk)
                  => Consensus.Protocol blk
                  -> NodeCLIArguments
                  -> NodeAddress
@@ -253,8 +253,7 @@ handleSimpleNode p NodeCLIArguments{..}
       btime  <- realBlockchainTime registry slotDuration systemStart
       let nodeParams :: NodeParams IO Peer blk
           nodeParams = NodeParams
-            { tracers            = showTracers $ withTip varTip
-                                    (contramap show $ tracerConsensus nodeTraces)
+            { tracers            = toConsensusTracers nodeTraces
             , threadRegistry     = registry
             , maxClockSkew       = ClockSkew 1
             , cfg                = pInfoConfig
@@ -696,6 +695,35 @@ getNodeTraces traceOptions tracer = Traces
               traceNamedObject tr (meta, logValue')
           _                             -> return ()
 
+
+--TODO: there is still a significant mismatch in the sets of tracers here
+toConsensusTracers :: Traces peer blk -> Tracers IO peer blk
+toConsensusTracers Traces {
+                     tracerChainDB        = _ --TODO
+                   , tracerConsensus      = _ --TODO
+                   , tracerMempool
+                   , tracerFetchDecisions
+                   , tracerFetchClient
+                   , tracerTxInbound
+                   , tracerTxOutbound
+                   , tracerChainSync      = _ --TODO
+                   , tracerTxSubmission   = _ --TODO
+                   , traceIpSubscription  = _ --TODO
+                   , traceDnsSubscription = _ --TODO
+                   , traceDnsResolver     = _ --TODO
+                   } =
+    Tracers
+      { chainSyncClientTracer         = nullTracer   --TODO
+      , chainSyncServerTracer         = nullTracer   --TODO
+      , blockFetchDecisionTracer      = tracerFetchDecisions
+      , blockFetchClientTracer        = tracerFetchClient
+      , blockFetchServerTracer        = nullTracer   --TODO
+      , txInboundTracer               = tracerTxInbound
+      , txOutboundTracer              = tracerTxOutbound
+      , localTxSubmissionServerTracer = nullTracer   --TODO
+      , mempoolTracer                 = tracerMempool
+      , forgeTracer                   = nullTracer   --TODO
+      }
 
 
 --
