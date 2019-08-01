@@ -12,7 +12,9 @@ module Cardano.Node.CLI (
   , TraceConstraints
   , ViewMode(..)
   , fromProtocol
-  -- * Configuration
+  -- * Common CLI
+  , CommonCLI(..)
+  , parseCommonCLI
   , mergeConfiguration
   -- * Parsers
   , parseSystemStart
@@ -189,6 +191,45 @@ data ViewMode =
   | SimpleView  -- Simple mode, just output text.
 
 {-------------------------------------------------------------------------------
+  Common CLI
+-------------------------------------------------------------------------------}
+
+-- | CLI Arguments common to all Cardano node flavors
+data CommonCLI = CommonCLI
+  { cliGenesisFile                :: !(Last FilePath)
+  , cliGenesisHash                :: !(Last Text)
+  , cliStaticKeySigningKeyFile    :: !(Last FilePath)
+  , cliStaticKeyDlgCertFile       :: !(Last FilePath)
+  --TODO cliPBftSigThd            :: !(Last Double)
+  --TODO cliUpdate                :: !PartialUpdate
+  }
+
+parseCommonCLI :: Parser CommonCLI
+parseCommonCLI =
+    CommonCLI
+    <$> lastStrOption
+           ( long "genesis-file"
+          <> metavar "FILEPATH"
+          <> help "The filepath to the genesis file."
+           )
+    <*> lastStrOption
+           ( long "genesis-hash"
+          <> metavar "GENESIS-HASH"
+          <> help "The genesis hash value."
+           )
+    <*> lastStrOption
+           ( long "signing-key"
+          <> metavar "FILEPATH"
+          <> help "Path to the signing key."
+           )
+    <*> lastStrOption
+           ( long "delegation-certificate"
+          <> metavar "FILEPATH"
+          <> help "Path to the delegation certificate."
+           )
+
+
+{-------------------------------------------------------------------------------
   Configuration merging
 -------------------------------------------------------------------------------}
 
@@ -197,25 +238,31 @@ data ViewMode =
 --   We expect this process to become generic at some point.
 mergeConfiguration
   :: PartialCardanoConfiguration
-  -> Last FilePath
-  -> Last Text
-  -> Last FilePath
-  -> Last FilePath
+  -> CommonCLI
   -> PartialCardanoConfiguration
-mergeConfiguration pcc lGenF lGenH lSKF lDlgF =
-  let PartialCore
-        { pcoGenesisFile
-        , pcoGenesisHash
-        , pcoStaticKeySigningKeyFile
-        , pcoStaticKeyDlgCertFile
-        } = pccCore pcc
-  in
-  pcc { pccCore = pccCore pcc <> mempty
-        { pcoGenesisFile             = pcoGenesisFile             <> lGenF
-        , pcoGenesisHash             = pcoGenesisHash             <> lGenH
-        , pcoStaticKeySigningKeyFile = pcoStaticKeySigningKeyFile <> lSKF
-        , pcoStaticKeyDlgCertFile    = pcoStaticKeyDlgCertFile    <> lDlgF
-        }}
+mergeConfiguration pcc cli =
+    -- The beauty of this kind of configuration management (using trees of
+    -- monoids) is that we can override individual config elements by simply
+    -- merging an extra partial config on top. That extra partial config is
+    -- built starting from mempty and setting the fields of interest.
+    pcc <> commonCLIToPCC cli
+  where
+    commonCLIToPCC :: CommonCLI -> PartialCardanoConfiguration
+    commonCLIToPCC CommonCLI {
+                     cliGenesisFile
+                   , cliGenesisHash
+                   , cliStaticKeySigningKeyFile
+                   , cliStaticKeyDlgCertFile
+                   } =
+      mempty {
+        pccCore = mempty {
+          pcoGenesisFile             = cliGenesisFile
+        , pcoGenesisHash             = cliGenesisHash
+        , pcoStaticKeySigningKeyFile = cliStaticKeySigningKeyFile
+        , pcoStaticKeyDlgCertFile    = cliStaticKeyDlgCertFile
+       -- TODO: cliPBftSigThd, cliUpdate
+        }
+      }
 
 {-------------------------------------------------------------------------------
   Command parsers

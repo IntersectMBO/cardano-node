@@ -3,12 +3,10 @@
 {-# LANGUAGE NumericUnderscores #-}
 module Main where
 
-import           Data.Text (Text)
 import           Control.Applicative (some)
 import           Control.Exception (Exception, throwIO)
 import           Control.Concurrent (threadDelay)
 import           Control.Concurrent.Async
-import           Data.Monoid
 import           Options.Applicative
 
 import           Cardano.Shell.Presets (mainnetConfiguration)
@@ -41,10 +39,7 @@ data ChairmanArgs = ChairmanArgs {
       -- detect progress errors when running 'chain-sync' protocol and we will
       -- be able to remove this option
     , caTimeout         :: !(Maybe Int)
-    , caGenesisFile                :: !(Last FilePath)
-    , caGenesisHash                :: !(Last Text)
-    , caStaticKeySigningKeyFile    :: !(Last FilePath)
-    , caStaticKeyDlgCertFile       :: !(Last FilePath)
+    , caCommonCLI       :: !CommonCLI
     }
 
 parseSecurityParam :: Parser SecurityParam
@@ -82,26 +77,7 @@ parseChairmanArgs =
       <*> parseSecurityParam
       <*> optional parseSlots
       <*> optional parseTimeout
-      <*> lastStrOption
-             ( long "genesis-file"
-            <> metavar "FILEPATH"
-            <> help "The filepath to the genesis file."
-             )
-      <*> lastStrOption
-             ( long "genesis-hash"
-            <> metavar "GENESIS-HASH"
-            <> help "The genesis hash value."
-             )
-      <*> lastStrOption
-             ( long "signing-key"
-            <> metavar "FILEPATH"
-            <> help "Path to the signing key."
-             )
-      <*> lastStrOption
-             ( long "delegation-certificate"
-            <> metavar "FILEPATH"
-            <> help "Path to the delegation certificate."
-             )
+      <*> parseCommonCLI
 
 opts :: ParserInfo ChairmanArgs
 opts = info (parseChairmanArgs <**> helper)
@@ -121,19 +97,14 @@ main = do
                  , caSecurityParam
                  , caMaxBlockNo
                  , caTimeout
-                 , caGenesisFile
-                 , caGenesisHash
-                 , caStaticKeySigningKeyFile
-                 , caStaticKeyDlgCertFile
+                 , caCommonCLI
                  } <- execParser opts
 
     SomeProtocol p
       <- case finaliseCardanoConfiguration $
                 mergeConfiguration
                   mainnetConfiguration
-                  caGenesisFile caGenesisHash
-                  caStaticKeySigningKeyFile
-                  caStaticKeyDlgCertFile of
+                  caCommonCLI of
         Left err -> throwIO (ConfigurationError err)
         Right cc -> fromProtocol cc caProtocol
 

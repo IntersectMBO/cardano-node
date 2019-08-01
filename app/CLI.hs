@@ -27,8 +27,6 @@ import qualified Data.IP as IP
 import           Options.Applicative
 import           Network.Socket (PortNumber)
 
-import           Cardano.Prelude hiding (option, (.))
-
 import           Ouroboros.Consensus.BlockchainTime
 import qualified Ouroboros.Consensus.Ledger.Mock as Mock
 
@@ -44,10 +42,7 @@ import           Cardano.Node.CLI
 data NodeCLIArguments = NodeCLIArguments {
     systemStart                   :: !SystemStart
   , slotDuration                  :: !SlotLength
-  , cliGenesisFile                :: !(Last FilePath)
-  , cliGenesisHash                :: !(Last Text)
-  , cliStaticKeySigningKeyFile    :: !(Last FilePath)
-  , cliStaticKeyDlgCertFile       :: !(Last FilePath)
+  , commonCLI                     :: !CommonCLI
   , command                       :: !Command
   }
 
@@ -94,26 +89,7 @@ nodeParser :: Parser NodeCLIArguments
 nodeParser = NodeCLIArguments
     <$> parseSystemStart
     <*> parseSlotDuration
-    <*> lastStrOption
-           ( long "genesis-file"
-          <> metavar "FILEPATH"
-          <> help "The filepath to the genesis file."
-           )
-    <*> lastStrOption
-           ( long "genesis-hash"
-          <> metavar "GENESIS-HASH"
-          <> help "The genesis hash value."
-           )
-    <*> lastStrOption
-           ( long "signing-key"
-          <> metavar "FILEPATH"
-          <> help "Path to the signing key."
-           )
-    <*> lastStrOption
-           ( long "delegation-certificate"
-          <> metavar "FILEPATH"
-          <> help "Path to the delegation certificate."
-           )
+    <*> parseCommonCLI
     <*> parseCommand
 
 parseCommand :: Parser Command
