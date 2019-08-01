@@ -163,6 +163,7 @@
             (hsPkgs.network)
             (hsPkgs.optparse-applicative)
             (hsPkgs.serialise)
+            (hsPkgs.text)
             ] ++ (if system.isWindows
             then [ (hsPkgs.Win32) ]
             else [ (hsPkgs.unix) ]);

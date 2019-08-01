@@ -49,17 +49,21 @@ module Cardano.Node.CLI (
 
 import           Prelude
 
-import           Codec.CBOR.Read (deserialiseFromBytes)
-
 import qualified Data.ByteString.Lazy as LB
 import           Data.Foldable (asum)
 import           Data.Monoid (Last(..))
 import           Data.Semigroup ((<>))
 import           Data.String (IsString)
+import qualified Data.Text as Text
 import           Data.Text (Text)
 import           Data.Time (UTCTime)
 import           Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import           Options.Applicative
+
+import           Control.Exception
+import           Control.Monad.Except
+
+import           Codec.CBOR.Read (deserialiseFromBytes, DeserialiseFailure)
 
 import           Ouroboros.Network.Block (ChainHash, HeaderHash)
 
@@ -80,18 +84,17 @@ import           Cardano.Binary (Annotated (..))
 import           Cardano.Chain.Common
 import           Cardano.Crypto.ProtocolMagic
 
-import           Cardano.Shell.Constants.PartialTypes (PartialCardanoConfiguration (..),
-                                                       PartialCore (..))
-import           Cardano.Shell.Lib (GeneralException (..))
 import qualified Cardano.Chain.Genesis as Genesis
 import qualified Cardano.Chain.Update as Update
 import           Cardano.Crypto (RequiresNetworkMagic (..), decodeAbstractHash)
 import qualified Cardano.Crypto.Signing as Signing
-import           Control.Exception
-import           Control.Monad.Except
-import           Cardano.Shell.Constants.Types (CardanoConfiguration (..),
-                                                Core (..),
-                                                RequireNetworkMagic (..))
+
+import           Cardano.Shell.Lib (GeneralException (..))
+import           Cardano.Shell.Constants.PartialTypes as Shell.Config
+                   ( PartialCardanoConfiguration (..), PartialCore (..) )
+import           Cardano.Shell.Constants.Types as Shell.Config
+                   ( CardanoConfiguration (..), Core (..)
+                   , RequireNetworkMagic (..) )
 
 import qualified Cardano.Node.CanonicalJSON as CanonicalJSON
 
@@ -147,39 +150,68 @@ fromProtocol _ MockPBFT =
 fromProtocol CardanoConfiguration{ccCore} RealPBFT = do
     let Core{ coGenesisFile
             , coGenesisHash
-            , coStaticKeySigningKeyFile
-            , coStaticKeyDlgCertFile
             } = ccCore
         genHash = either (throw . ConfigurationError) id $
                   decodeAbstractHash coGenesisHash
         cvtRNM :: RequireNetworkMagic -> RequiresNetworkMagic
         cvtRNM NoRequireNetworkMagic = RequiresNoMagic
         cvtRNM RequireNetworkMagic   = RequiresMagic
-        kmoDeserialiseDelegateKey = Signing.SigningKey . snd . either (error . show) id . deserialiseFromBytes Signing.fromCBORXPrv
 
     gcE <- runExceptT (Genesis.mkConfigFromFile (cvtRNM $ coRequiresNetworkMagic ccCore) coGenesisFile genHash)
     let gc = case gcE of
-          Left err -> throw err
+          Left err -> throw err -- TODO: no no no!
           Right x -> x
 
-    sk  <- kmoDeserialiseDelegateKey <$> LB.readFile coStaticKeySigningKeyFile
-    dlgE <- CanonicalJSON.canonicalDecPre <$> LB.readFile coStaticKeyDlgCertFile
+    optionalLeaderCredentials <- readLeaderCredentials gc ccCore
 
-    let plcE = case dlgE of
-                 Left  err -> error . show $ err
-                 Right dlg -> mkPBftLeaderCredentials gc sk dlg
-
-    let plc = case plcE of
-                Left  err -> error . show $ err
-                Right x   -> x
+    let
         -- TODO:  make configurable via CLI (requires cardano-shell changes)
         -- These defaults are good for mainnet.
         defSoftVer  = Update.SoftwareVersion (Update.ApplicationName "cardano-sl") 1
         defProtoVer = Update.ProtocolVersion 0 2 0
-        p = ProtocolRealPBFT gc Nothing defProtoVer defSoftVer (Just plc)
+        p = ProtocolRealPBFT
+              gc
+              Nothing
+              defProtoVer
+              defSoftVer
+              optionalLeaderCredentials
 
     case Consensus.runProtocol p of
       Dict -> return $ SomeProtocol p
+
+
+readLeaderCredentials :: Genesis.Config
+                      -> Shell.Config.Core
+                      -> IO (Maybe PBftLeaderCredentials)
+readLeaderCredentials gc Shell.Config.Core {
+                           coStaticKeySigningKeyFile = Just signingKeyFile
+                         , coStaticKeyDlgCertFile    = Just delegCertFile
+                         } = do
+    signingKeyFileBytes <- LB.readFile signingKeyFile
+    delegCertFileBytes  <- LB.readFile delegCertFile
+
+    --TODO: review the style of reporting for input validation failures
+    -- If we use throwIO, we should use a local exception type that
+    -- wraps the other structured failures and reports them appropriatly
+    signingKey <- either throwIO return $
+                    deserialiseSigningKey signingKeyFileBytes
+
+    delegCert  <- either (fail . Text.unpack) return $
+                    CanonicalJSON.canonicalDecPre delegCertFileBytes
+
+    either throwIO (return . Just)
+           (mkPBftLeaderCredentials gc signingKey delegCert)
+  where
+    deserialiseSigningKey :: LB.ByteString
+                          -> Either DeserialiseFailure Signing.SigningKey
+    deserialiseSigningKey =
+        fmap (Signing.SigningKey . snd)
+      . deserialiseFromBytes Signing.fromCBORXPrv
+
+--TODO: fail noisily if only one file is specified without the other
+-- since that's obviously a user error.
+readLeaderCredentials gc _ = return Nothing
+
 
 -- TODO: consider not throwing this, or wrap it in a local error type here
 -- that has proper error messages.
@@ -258,11 +290,17 @@ mergeConfiguration pcc cli =
         pccCore = mempty {
           pcoGenesisFile             = cliGenesisFile
         , pcoGenesisHash             = cliGenesisHash
-        , pcoStaticKeySigningKeyFile = cliStaticKeySigningKeyFile
-        , pcoStaticKeyDlgCertFile    = cliStaticKeyDlgCertFile
+        , pcoStaticKeySigningKeyFile = hackMistakenExtraMaybe cliStaticKeySigningKeyFile
+        , pcoStaticKeyDlgCertFile    = hackMistakenExtraMaybe cliStaticKeyDlgCertFile
        -- TODO: cliPBftSigThd, cliUpdate
         }
       }
+      where
+        -- In https://github.com/input-output-hk/cardano-shell/pull/234
+        -- we accidentally introduced an extra unnecessary layer of Maybe
+        -- we can remove this hack once that is resolved.
+        hackMistakenExtraMaybe :: Last a -> Last (Maybe a)
+        hackMistakenExtraMaybe = fmap Just
 
 {-------------------------------------------------------------------------------
   Command parsers
