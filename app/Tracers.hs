@@ -7,14 +7,14 @@
 {-# LANGUAGE UndecidableInstances #-}
 module Tracers
   ( readableChainDBTracer
-  , Traces (..)
-  , getNodeTraces
-  , toConsensusTracers
+  , Tracers (..)
+  , mkTracers
   , withTip
   ) where
 
 import           Codec.CBOR.Read (DeserialiseFailure)
 import           Control.Tracer
+import           Data.Functor.Const (Const (..))
 import           Data.Functor.Contravariant (contramap)
 import           Data.Semigroup ((<>))
 import           Data.Text (Text, pack)
@@ -29,24 +29,15 @@ import           Cardano.BM.Data.Severity (Severity (..))
 import           Cardano.BM.Data.Tracer (ToLogObject (..))
 import           Cardano.BM.Trace (appendName, traceNamedObject)
 
-import           Network.TypedProtocol.Driver (TraceSendRecv)
 
 import qualified Ouroboros.Network.AnchoredFragment as AF
 import           Ouroboros.Network.Block
-import           Ouroboros.Network.BlockFetch.ClientState (TraceFetchClientState,
-                                                           TraceLabelPeer)
-import           Ouroboros.Network.BlockFetch.Decision (FetchDecision)
-import           Ouroboros.Network.TxSubmission.Inbound (TraceTxSubmissionInbound)
-import           Ouroboros.Network.TxSubmission.Outbound (TraceTxSubmissionOutbound)
 
-import           Ouroboros.Network.Protocol.BlockFetch.Type (BlockFetch)
-import           Ouroboros.Network.Protocol.ChainSync.Type (ChainSync)
-
-import           Ouroboros.Consensus.Block (Header)
 import           Ouroboros.Consensus.Ledger.Abstract
-import           Ouroboros.Consensus.Mempool.API (GenTx, GenTxId,
-                                                  TraceEventMempool (..))
-import           Ouroboros.Consensus.Node.Tracers
+import           Ouroboros.Consensus.Mempool.API (TraceEventMempool (..))
+import qualified Ouroboros.Consensus.Node.Tracers as Consensus
+import           Ouroboros.Consensus.NodeNetwork (ProtocolTracers,
+                                                  ProtocolTracers' (..))
 import           Ouroboros.Consensus.Util.Condense
 import           Ouroboros.Consensus.Util.Orphans ()
 
@@ -54,7 +45,9 @@ import qualified Ouroboros.Storage.ChainDB as ChainDB
 import           Ouroboros.Storage.Common
 import qualified Ouroboros.Storage.LedgerDB.OnDisk as LedgerDB
 
-import           CLI
+import           Cardano.Node.CLI (TraceConstraints)
+
+import qualified CLI
 
 
 -- Converts the trace events from the ChainDB that we're interested in into
@@ -100,15 +93,16 @@ readableChainDBTracer tracer = Tracer $ \case
       _ -> ignore
     _ -> ignore
   where
-    tr :: Show a => WithTip blk a -> m ()
-    tr = traceWith (contramap show tracer)
+    tr :: WithTip blk String -> m ()
+    tr = traceWith (contramap (showWithTip id) tracer)
 
     ignore :: m ()
     ignore = return ()
 
     traceInitLog :: Point blk -> LedgerDB.InitLog (Point blk) -> m ()
     traceInitLog tip = \case
-      LedgerDB.InitFromGenesis -> tr $ WithTip tip "Initialised the ledger from genesis"
+      LedgerDB.InitFromGenesis -> tr $
+        WithTip tip ("Initialised the ledger from genesis" :: String)
       LedgerDB.InitFromSnapshot snap tip' -> tr $ WithTip tip $
         "Initialised the ledger from snapshot " <> show snap <> " at " <>
         condense (tipToPoint tip')
@@ -116,120 +110,55 @@ readableChainDBTracer tracer = Tracer $ \case
           tr $ WithTip tip $ "Snapshot " <> show snap <> " invalid"
           traceInitLog tip initLog
 
-data Traces peer blk = Traces {
-    -- | by default we use 'readableChainDB' tracer, if on this it will use more
-    -- verbose tracer
-    --
-      tracerChainDB
-      :: (Tracer IO(WithTip blk (ChainDB.TraceEvent blk)))
+data Tracers peer blk = Tracers {
+      -- | Trace the ChainDB. By default we use 'readableChainDB' tracer but a
+      -- more verbose one can be enabled.
+      chainDBTracer         :: Tracer IO (WithTip blk (ChainDB.TraceEvent blk))
 
-    -- | consensus tracer
-    --
-    -- TODO: it should be fixed with #839 ('ouroboros-network')
-    --
-    , tracerConsensus
-      :: (Tracer IO String)
+      -- | Consensus-specific tracers.
+    , consensusTracers      :: Consensus.Tracers IO peer blk
 
-    -- | mempool tracer
-    --
-    , tracerMempool
-      :: (Tracer IO (TraceEventMempool blk))
+      -- | Tracers for the protocol messages.
+    , protocolTracers       :: ProtocolTracers IO peer blk DeserialiseFailure
 
-    -- | trace fetch decisions; it links to 'decisionTracer' in 'NodeParams'
-    --
+      -- | Trace the IP subscription manager.
+    , ipSubscriptionTracer  :: Tracer IO String
 
-    , tracerFetchDecisions
-      :: (Tracer IO [TraceLabelPeer peer (FetchDecision [Point (Header blk)])])
+      -- | Trace the DNS subscription manager
+    , dnsSubscriptionTracer :: Tracer IO String
 
-    -- | trace fetch client; it links to 'fetchClientTracer' in 'NodeParams'
-    --
-    , tracerFetchClient
-      :: (Tracer IO (TraceLabelPeer peer (TraceFetchClientState (Header blk))))
-
-    -- | trace tx-submission server; it link to 'txInboundTracer' in 'NodeParams'
-    --
-    , tracerTxInbound
-      :: (Tracer IO (TraceTxSubmissionInbound  (GenTxId blk) (GenTx blk)))
-
-    -- | trace tx-submission client; it link to 'txOutboundTracer' in 'NodeParams'
-    --
-    , tracerTxOutbound
-      :: (Tracer IO (TraceTxSubmissionOutbound (GenTxId blk) (GenTx blk)))
-
-    -- | trace chain syn messages
-    --
-    , tracerChainSync
-      :: (Tracer IO (TraceSendRecv (ChainSync (Header blk) (Point blk)) peer DeserialiseFailure))
-
-    -- | trace tx submission messages
-    --
-    , tracerTxSubmission
-      :: (Tracer IO (TraceSendRecv (BlockFetch blk) peer DeserialiseFailure))
-
-    -- | trace ip subscription manager
-    --
-    -- TODO: export types in `ouroboros-network`
-    , traceIpSubscription
-      :: (Tracer IO String)
-
-    -- | trace dns subscription manager
-    --
-    -- TODO: export types in `ouroboros-network`
-    , traceDnsSubscription
-      :: (Tracer IO String)
-
-    -- | trace dns resolution
-    --
-    -- TODO: export types in `ouroboros-network`
-    , traceDnsResolver
-      :: (Tracer IO String)
+      -- | Trace the DNS resolver.
+    , dnsResolverTracer     :: Tracer IO String
     }
 
 -- | Smart constructor of 'NodeTraces'.
 --
-getNodeTraces :: forall peer blk.
+mkTracers :: forall peer blk.
               ( ProtocolLedgerView blk
-              , Show blk
-              , Show (Header blk)
-              , Condense (HeaderHash blk)
+              , TraceConstraints blk
               , Show peer
               )
-           => TraceOptions
+           => CLI.TraceOptions
            -> Tracer IO (LogObject Text)
-           -> Traces peer blk
-getNodeTraces traceOptions tracer = Traces
-    { tracerChainDB
-        = if traceChainDB traceOptions
-            then contramap show tracer'
-            else readableChainDBTracer tracer'
-    , tracerConsensus
-        = tracer'
-    , tracerMempool
-        = mempoolTraceTransformer tracer
-    , tracerChainSync
-        = enableTracer (traceChainSync traceOptions)
-        $ withName "ChainSyncProtocol" tracer
-    , tracerTxSubmission
-        = enableTracer (traceTxSubmission traceOptions)
-        $ withName "TxSubmissionProtocol" tracer
-    , tracerFetchDecisions
-        = enableTracer (traceFetchDecisions traceOptions)
-        $ withName "FetchDecision" tracer
-    , tracerFetchClient
-        = enableTracer (traceFetchClient traceOptions)
-        $ withName "FetchClient" tracer
-    , tracerTxInbound
-        = enableTracer (traceTxInbound traceOptions)
-        $ withName "TxInbound" tracer
-    , tracerTxOutbound
-        = enableTracer (traceTxOutbound traceOptions)
-        $ withName "TxOutbound" tracer
-    , traceIpSubscription
-        = withName "IPSubscription" tracer
-    , traceDnsSubscription
-        = withName "DNSSubscription" tracer
-    , traceDnsResolver
-        = withName "DNSResolver" tracer
+           -> Tracers peer blk
+mkTracers traceOptions tracer = Tracers
+    { chainDBTracer
+        = if CLI.traceChainDB traceOptions
+          then contramap show tracer'
+          else readableChainDBTracer tracer'
+    , consensusTracers
+        = mkConsensusTracers
+    , protocolTracers
+        = mkProtocolsTracers
+    , ipSubscriptionTracer
+        = enableTracer (CLI.traceIpSubscription traceOptions)
+        $ withName "IpSubscription" tracer
+    , dnsSubscriptionTracer
+        = enableTracer (CLI.traceDnsSubscription traceOptions)
+        $ withName "DnsSubscription" tracer
+    , dnsResolverTracer
+        = enableTracer (CLI.traceDnsResolver traceOptions)
+        $ withName "DnsResolver" tracer
     }
   where
     tracer' :: Tracer IO String
@@ -246,46 +175,92 @@ getNodeTraces traceOptions tracer = Traces
     mempoolTraceTransformer :: Tracer IO (LogObject a)
                             -> Tracer IO (TraceEventMempool blk)
     mempoolTraceTransformer tr = Tracer $ \mempoolEvent -> do
-        let logValue = LogValue "txsInMempool" $ PureI $ fromIntegral $ _txsInMempool mempoolEvent
+        let logValue :: LOContent a
+            logValue = LogValue "txsInMempool" $ PureI $ fromIntegral $ _txsInMempool mempoolEvent
         meta <- mkLOMeta Info Confidential
         traceNamedObject tr (meta, logValue)
         case mempoolEvent of
           TraceMempoolAddTxs      txs _ ->
-              let logValue' = LogValue "txsProcessed" $ PureI $ fromIntegral $ length txs in
+              let logValue' :: LOContent a
+                  logValue' = LogValue "txsProcessed" $ PureI $ fromIntegral $ length txs in
               traceNamedObject tr (meta, logValue')
           TraceMempoolRejectedTxs txs _ ->
-              let logValue' = LogValue "txsProcessed" $ PureI $ fromIntegral $ length txs in
+              let logValue' :: LOContent a
+                  logValue' = LogValue "txsProcessed" $ PureI $ fromIntegral $ length txs in
               traceNamedObject tr (meta, logValue')
           _                             -> return ()
 
+    mempoolTracer = Tracer $ \ev -> do
+      traceWith (mempoolTraceTransformer tracer) ev
+      traceWith (enableConsensusTracer Consensus.mempoolTracer
+                $ withName "Mempool" tracer) ev
 
---TODO: there is still a significant mismatch in the sets of tracers here
-toConsensusTracers :: Traces peer blk -> Tracers IO peer blk
-toConsensusTracers Traces {
-                     tracerChainDB        = _ --TODO
-                   , tracerConsensus      = _ --TODO
-                   , tracerMempool
-                   , tracerFetchDecisions
-                   , tracerFetchClient
-                   , tracerTxInbound
-                   , tracerTxOutbound
-                   , tracerChainSync      = _ --TODO
-                   , tracerTxSubmission   = _ --TODO
-                   , traceIpSubscription  = _ --TODO
-                   , traceDnsSubscription = _ --TODO
-                   , traceDnsResolver     = _ --TODO
-                   } =
-    Tracers
-      { chainSyncClientTracer         = nullTracer   --TODO
-      , chainSyncServerTracer         = nullTracer   --TODO
-      , blockFetchDecisionTracer      = tracerFetchDecisions
-      , blockFetchClientTracer        = tracerFetchClient
-      , blockFetchServerTracer        = nullTracer   --TODO
-      , txInboundTracer               = tracerTxInbound
-      , txOutboundTracer              = tracerTxOutbound
-      , localTxSubmissionServerTracer = nullTracer   --TODO
-      , mempoolTracer                 = tracerMempool
-      , forgeTracer                   = nullTracer   --TODO
+    enableConsensusTracer
+      :: Show a
+      => (CLI.ConsensusTraceOptions -> Const Bool b)
+      -> Tracer IO String -> Tracer IO a
+    enableConsensusTracer f = if getConst $ f $ CLI.traceConsensus traceOptions
+      then showTracing
+      else const nullTracer
+
+    mkConsensusTracers :: Consensus.Tracers' peer blk (Tracer IO)
+    mkConsensusTracers = Consensus.Tracers
+      { Consensus.chainSyncClientTracer
+        = enableConsensusTracer Consensus.chainSyncClientTracer
+        $ withName "ChainSyncClient" tracer
+      , Consensus.chainSyncServerTracer
+        = enableConsensusTracer Consensus.chainSyncServerTracer
+        $ withName "ChainSyncServer" tracer
+      , Consensus.blockFetchDecisionTracer
+        = enableConsensusTracer Consensus.blockFetchDecisionTracer
+        $ withName "BlockFetchDecision" tracer
+      , Consensus.blockFetchClientTracer
+        = enableConsensusTracer Consensus.blockFetchClientTracer
+        $ withName "BlockFetchClient" tracer
+      , Consensus.blockFetchServerTracer
+        = enableConsensusTracer Consensus.blockFetchServerTracer
+        $ withName "BlockFetchServer" tracer
+      , Consensus.txInboundTracer
+        = enableConsensusTracer Consensus.txInboundTracer
+        $ withName "TxInbound" tracer
+      , Consensus.txOutboundTracer
+        = enableConsensusTracer Consensus.txOutboundTracer
+        $ withName "TxOutbound" tracer
+      , Consensus.localTxSubmissionServerTracer
+        = enableConsensusTracer Consensus.localTxSubmissionServerTracer
+        $ withName "LocalTxSubmissionServer" tracer
+      , Consensus.mempoolTracer
+        = mempoolTracer
+      , Consensus.forgeTracer
+        = enableConsensusTracer Consensus.forgeTracer
+        $ withName "Forge" tracer
+      }
+
+    enableProtocolTracer
+      :: Show a
+      => (CLI.ProtocolTraceOptions -> Const Bool b)
+      -> Tracer IO String -> Tracer IO a
+    enableProtocolTracer f = if getConst $ f $ CLI.traceProtocols traceOptions
+      then showTracing
+      else const nullTracer
+
+    mkProtocolsTracers :: ProtocolTracers' peer blk DeserialiseFailure (Tracer IO)
+    mkProtocolsTracers = ProtocolTracers
+      { ptChainSyncTracer
+        = enableProtocolTracer ptChainSyncTracer
+        $ withName "ChainSyncProtocol" tracer
+      , ptBlockFetchTracer
+        = enableProtocolTracer ptBlockFetchTracer
+        $ withName "BlockFetchProtocol" tracer
+      , ptTxSubmissionTracer
+        = enableProtocolTracer ptTxSubmissionTracer
+        $ withName "TxSubmissionProtocol" tracer
+      , ptLocalChainSyncTracer
+        = enableProtocolTracer ptLocalChainSyncTracer
+        $ withName "LocalChainSyncProtocol" tracer
+      , ptLocalTxSubmissionTracer
+        = enableProtocolTracer ptLocalTxSubmissionTracer
+        $ withName "LocalTxSubmissionProtocol" tracer
       }
 
 
@@ -311,18 +286,24 @@ data WithTip blk a =
       a
       -- ^ data
 
+showWithTip :: Condense (HeaderHash blk)
+            => (a -> String)
+            -> WithTip blk a
+            -> String
+showWithTip customShow (WithTip tip a) = case pointHash tip of
+    GenesisHash -> "[genesis] " ++ customShow a
+    BlockHash h -> mconcat
+      [ "["
+      , take 7 (condense h)
+      , "] "
+      , customShow a
+      ]
+
 instance ( Show a
          , Condense (HeaderHash blk)
          ) => Show (WithTip blk a) where
 
-    show (WithTip tip a) = case pointHash tip of
-      GenesisHash -> "[genesis] " ++ show a
-      BlockHash h -> mconcat [ "["
-                             , take 7 (condense h)
-                             , "] "
-                             , show a
-                             ]
-
+    show = showWithTip show
 
 -- | A way to satisfy tracer which requires current tip.  The tip is read from
 -- a mutable cell.

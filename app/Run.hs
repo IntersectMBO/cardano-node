@@ -91,7 +91,7 @@ import           Ouroboros.Storage.LedgerDB.DiskPolicy (defaultDiskPolicy)
 import           Ouroboros.Storage.LedgerDB.MemPolicy (defaultMemPolicy)
 
 import           Cardano.Node.CLI
-import           CLI
+import           CLI hiding (TraceOptions (..))
 import           Topology
 import           TraceAcceptor
 import           Tracers
@@ -131,9 +131,11 @@ runNode nodeCli@NodeCLIArguments{..} loggingLayer cc = do
 
       SimpleNode topology myNodeAddress protocol viewMode traceOptions -> do
         let trace'      = appendName (pack $ show $ node topology) tr
+
         SomeProtocol p  <- fromProtocol cc protocol
+        let tracers     = mkTracers traceOptions trace'
         case viewMode of
-          SimpleView -> handleSimpleNode p nodeCli myNodeAddress topology trace' (getNodeTraces traceOptions trace') cc
+          SimpleView -> handleSimpleNode p nodeCli myNodeAddress topology trace' tracers cc
           LiveView   -> do
 #ifdef UNIX
             let c = llConfiguration loggingLayer
@@ -141,7 +143,7 @@ runNode nodeCli@NodeCLIArguments{..} loggingLayer cc = do
             -- turn off logging to the console, only forward it through a pipe to a central logging process
             CM.setDefaultBackends c [TraceForwarderBK, UserDefinedBK "LiveViewBackend"]
             -- User will see a terminal graphics and will be able to interact with it.
-            nodeThread <- Async.async $ handleSimpleNode p nodeCli myNodeAddress topology trace' (getNodeTraces traceOptions trace') cc
+            nodeThread <- Async.async $ handleSimpleNode p nodeCli myNodeAddress topology trace' tracers cc
 
             be :: LiveViewBackend Text <- realize c
             let lvbe = MkBackend { bEffectuate = effectuate be, bUnrealize = unrealize be }
@@ -152,7 +154,7 @@ runNode nodeCli@NodeCLIArguments{..} loggingLayer cc = do
 
             void $ Async.waitAny [nodeThread]
 #else
-            handleSimpleNode p nodeCli myNodeAddress topology trace' (getNodeTraces traceOptions trace') cc
+            handleSimpleNode p nodeCli myNodeAddress topology trace' tracers cc
 #endif
 
 -- | Sets up a simple node, which will run the chain sync protocol and block
@@ -164,7 +166,7 @@ handleSimpleNode :: forall blk. (RunNode blk, TraceConstraints blk)
                  -> NodeAddress
                  -> TopologyInfo
                  -> Tracer IO (LogObject Text)
-                 -> Traces Peer blk
+                 -> Tracers Peer blk
                  -> CardanoConfiguration
                  -> IO ()
 handleSimpleNode p NodeCLIArguments{..}
@@ -220,7 +222,7 @@ handleSimpleNode p NodeCLIArguments{..}
                           pInfoInitLedger
                           registry
                           (CoreNodeId nid)
-                          (withTip varTip $ tracerChainDB nodeTraces)
+                          (withTip varTip $ chainDBTracer nodeTraces)
                           slotDuration
       chainDB :: ChainDB IO blk <- ChainDB.openDB chainDbArgs
 
@@ -232,7 +234,7 @@ handleSimpleNode p NodeCLIArguments{..}
       btime  <- realBlockchainTime registry slotDuration systemStart
       let nodeParams :: NodeParams IO Peer blk
           nodeParams = NodeParams
-            { tracers            = toConsensusTracers nodeTraces
+            { tracers            = consensusTracers nodeTraces
             , threadRegistry     = registry
             , maxClockSkew       = ClockSkew 1
             , cfg                = pInfoConfig
@@ -355,7 +357,7 @@ handleSimpleNode p NodeCLIArguments{..}
       ipSubscriptions <- forkLinked registry $
         ipSubscriptionWorker
           connTable
-          (contramap show $ traceIpSubscription nodeTraces)
+          (contramap show $ ipSubscriptionTracer nodeTraces)
             -- the comments in dnsSbuscriptionWorker call apply
             (Just (Socket.SockAddrInet 0 0))
             (Just (Socket.SockAddrInet6 0 0 (0, 0, 0, 1) 0))
@@ -380,8 +382,8 @@ handleSimpleNode p NodeCLIArguments{..}
         forkLinked registry $
           dnsSubscriptionWorker
             connTable
-            (contramap show $ traceDnsSubscription nodeTraces)
-            (contramap show $ traceDnsResolver nodeTraces)
+            (contramap show $ dnsSubscriptionTracer nodeTraces)
+            (contramap show $ dnsResolverTracer nodeTraces)
             -- IPv4 address
             --
             -- We can't share portnumber with our server since we run separate
