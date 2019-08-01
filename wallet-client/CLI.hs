@@ -8,9 +8,6 @@ module CLI
   , fromProtocol
   ) where
 
-import           Data.Monoid (Last (..))
-rimport           Data.Text (Text)
-
 import           Options.Applicative
 
 import           Ouroboros.Consensus.Node.ProtocolInfo

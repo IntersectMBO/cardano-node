@@ -545,7 +545,7 @@ readableChainDBTracer tracer = Tracer $ \case
 
     traceInitLog :: Point blk -> LedgerDB.InitLog (Point blk) -> m ()
     traceInitLog tip = \case
-      LedgerDB.InitFromGenesis -> tr $ WithTip tip "Initialised the ledger from genesis"
+      LedgerDB.InitFromGenesis -> tr $ WithTip tip ("Initialised the ledger from genesis" :: String)
       LedgerDB.InitFromSnapshot snap tip' -> tr $ WithTip tip $
         "Initialised the ledger from snapshot " <> show snap <> " at " <>
         condense (tipToPoint tip')

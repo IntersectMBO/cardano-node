@@ -27,8 +27,6 @@ import qualified Data.IP as IP
 import           Options.Applicative
 import           Network.Socket (PortNumber)
 
-import           Cardano.Prelude hiding (option, (.))
-
 import           Ouroboros.Consensus.BlockchainTime
 import qualified Ouroboros.Consensus.Ledger.Mock as Mock
 

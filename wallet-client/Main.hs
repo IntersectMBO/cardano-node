@@ -72,10 +72,6 @@ main = do
 
 initializeAllFeatures :: ArgParser -> PartialCardanoConfiguration -> CardanoEnvironment -> IO ([CardanoFeature], NodeLayer)
 initializeAllFeatures (ArgParser logCli cli) partialConfig cardanoEnvironment = do
-    let CLI
-          { cliGenesisFile, cliGenesisHash
-          , cliStaticKeySigningKeyFile, cliStaticKeyDlgCertFile
-          } = cli
     finalConfig <- case finaliseCardanoConfiguration $
                         mergeConfigurationCommonCLI partialConfig (cliCommon cli)
                    of

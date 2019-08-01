@@ -7,15 +7,9 @@ import           Control.Applicative (some)
 import           Control.Exception (Exception, throwIO)
 import           Control.Concurrent (threadDelay)
 import           Control.Concurrent.Async
-import           Data.Monoid
 import           Options.Applicative
 
-import           Cardano.Shell.Constants.PartialTypes ( PartialGenesis (..)
-                                                      , PartialStaticKeyMaterial (..))
 import           Cardano.Shell.Presets (mainnetConfiguration)
-import           Cardano.Shell.Constants.CLI ( configGenesisCLIParser
-                                             , configStaticKeyMaterialCLIParser
-                                             )
 import           Cardano.Shell.Configuration.Lib (finaliseCardanoConfiguration)
 import           Cardano.Shell.Lib (GeneralException (ConfigurationError))
 
@@ -45,8 +39,7 @@ data ChairmanArgs = ChairmanArgs {
       -- detect progress errors when running 'chain-sync' protocol and we will
       -- be able to remove this option
     , caTimeout         :: !(Maybe Int)
-    , caGenesisSpec     :: !(Last PartialGenesis)
-    , caKeyMaterialSpec :: !(Last PartialStaticKeyMaterial)
+    , caCommonCLI       :: !CommonCLI
     }
 
 parseSecurityParam :: Parser SecurityParam
@@ -84,8 +77,7 @@ parseChairmanArgs =
       <*> parseSecurityParam
       <*> optional parseSlots
       <*> optional parseTimeout
-      <*> (Last . Just <$> configGenesisCLIParser)
-      <*> (Last . Just <$> configStaticKeyMaterialCLIParser)
+      <*> parseCommonCLI
 
 opts :: ParserInfo ChairmanArgs
 opts = info (parseChairmanArgs <**> helper)
@@ -105,16 +97,14 @@ main = do
                  , caSecurityParam
                  , caMaxBlockNo
                  , caTimeout
-                 , caGenesisSpec
-                 , caKeyMaterialSpec
+                 , caCommonCLI
                  } <- execParser opts
 
     SomeProtocol p
       <- case finaliseCardanoConfiguration
-                (mergeConfiguration
+                (mergeConfigurationCommonCLI
                    mainnetConfiguration
-                   caGenesisSpec
-                   caKeyMaterialSpec) of
+                   caCommonCLI) of
         Left err -> throwIO (ConfigurationError err)
         Right cc -> fromProtocol cc caProtocol
 

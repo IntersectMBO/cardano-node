@@ -35,7 +35,6 @@ import           Network.TypedProtocol.Driver
 import           Ouroboros.Network.Mux
 import           Ouroboros.Network.Block (Point (..))
 import qualified Ouroboros.Network.Block as Block
-import           Ouroboros.Network.Point (WithOrigin (Origin))
 import           Ouroboros.Network.Protocol.LocalTxSubmission.Type
 import           Ouroboros.Network.Protocol.LocalTxSubmission.Client
 import           Ouroboros.Network.Protocol.LocalTxSubmission.Codec

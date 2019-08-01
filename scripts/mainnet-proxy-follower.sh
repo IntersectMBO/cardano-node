@@ -8,7 +8,6 @@ ARGS=(
         --system-start            "2017-09-23 21:44:51"
         --genesis-file            "configuration/mainnet-genesis.json"
         --genesis-hash            "5f20df933584822601f9e3f8c024eb5eb252fe8cefb24d1317dc3d432e940ebb"
-        --update-system-params    "configuration/mainnet-update-system-params.json"
         node
         --node-id                 "0"
         --topology                "${TOPOLOGY}"

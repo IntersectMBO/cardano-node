@@ -17,12 +17,15 @@
     components = {
       "library" = {
         depends = [
+          (hsPkgs.aeson)
           (hsPkgs.base)
           (hsPkgs.bytestring)
           (hsPkgs.canonical-json)
           (hsPkgs.cborg)
+          (hsPkgs.formatting)
           (hsPkgs.mtl)
           (hsPkgs.optparse-applicative)
+          (hsPkgs.text)
           (hsPkgs.time)
           (hsPkgs.cardano-binary)
           (hsPkgs.cardano-crypto-wrapper)

@@ -89,19 +89,21 @@ import           Cardano.Chain.UTxO
 import           Cardano.Crypto.ProtocolMagic
 
 import           Cardano.Shell.Constants.CLI
-import           Cardano.Shell.Constants.PartialTypes (PartialCardanoConfiguration (..),
-                                                       PartialCore (..))
+import           Cardano.Shell.Constants.PartialTypes ( PartialCardanoConfiguration (..)
+                                                      , PartialCore (..)
+                                                      , PartialUpdate (..))
 import           Cardano.Shell.Lib (GeneralException (..))
 import qualified Cardano.Chain.Genesis as Genesis
 import qualified Cardano.Chain.Update as Update
-import           Cardano.Crypto (RequiresNetworkMagic (..),
-                                 decodeAbstractHash, shortHashF)
+import           Cardano.Crypto ( RequiresNetworkMagic (..)
+                                , decodeAbstractHash, shortHashF)
 import qualified Cardano.Crypto.Signing as Signing
 import           Control.Exception
 import           Control.Monad.Except
-import           Cardano.Shell.Constants.Types (CardanoConfiguration (..),
-                                                Core (..),
-                                                RequireNetworkMagic (..))
+import           Cardano.Shell.Constants.Types ( CardanoConfiguration (..)
+                                               , Core (..), Update (..)
+                                               , RequireNetworkMagic (..)
+                                               , LastKnownBlockVersion (..))
 
 import qualified Cardano.Node.CanonicalJSON as CanonicalJSON
 
@@ -165,50 +167,44 @@ fromProtocol _ MockPBFT =
       Dict -> return $ SomeProtocol p
   where
     p = ProtocolMockPBFT defaultDemoPBftParams
-fromProtocol CardanoConfiguration{ccCore} RealPBFT = do
+fromProtocol CardanoConfiguration{ccCore, ccUpdate} RealPBFT = do
     let Core{ coGenesisFile
             , coGenesisHash
             , coStaticKeySigningKeyFile
             , coStaticKeyDlgCertFile
             , coPBftSigThd
-            , coUpdateSystemParams
             } = ccCore
         genHash = either (throw . ConfigurationError) id $
                   decodeAbstractHash coGenesisHash
         cvtRNM :: RequireNetworkMagic -> RequiresNetworkMagic
         cvtRNM NoRequireNetworkMagic = RequiresNoMagic
         cvtRNM RequireNetworkMagic   = RequiresMagic
-        deserialiseDelegateKey = Signing.SigningKey . snd . either (error . show) id . deserialiseFromBytes Signing.fromCBORXPrv
     gcE <- runExceptT (Genesis.mkConfigFromFile (cvtRNM $ coRequiresNetworkMagic ccCore) coGenesisFile genHash)
     let gc = case gcE of
           Left err -> throw err
           Right x  -> x
 
-    sk  <- kmoDeserialiseDelegateKey <$> LB.readFile coStaticKeySigningKeyFile
-    dlgE <- CanonicalJSON.canonicalDecPre <$> LB.readFile coStaticKeyDlgCertFile
-
-    let plcE = case dlgE of
-                 Left  err -> error . show $ err
-                 Right dlg -> mkPBftLeaderCredentials gc sk dlg
-
     mplc <- sequence $ readLeaderCredentials gc <$>
             liftA2 (,) coStaticKeySigningKeyFile coStaticKeyDlgCertFile
 
-      pure $ (,)
-
-    usParamsE <- eitherDecode <$> LB.readFile coUpdateSystemParams
-    let UpdateSystemParams protoV softV = case usParamsE of
-          Left err -> error err
-          Right x  -> x
-
-    let p = ProtocolRealPBFT
+    let convertProtocolVersion :: LastKnownBlockVersion -> Update.ProtocolVersion
+        convertProtocolVersion (LastKnownBlockVersion x y z) =
+          Update.ProtocolVersion (fromIntegral x) (fromIntegral y) (fromIntegral z)
+        Update{ upApplicationName
+              , upApplicationVersion
+              , upLastKnownBlockVersion
+              } = ccUpdate
+        p = ProtocolRealPBFT
             gc
             (PBftSignatureThreshold <$> coPBftSigThd)
-            protoV
-            softV
+            (convertProtocolVersion upLastKnownBlockVersion)
+            (Update.SoftwareVersion
+              (Update.ApplicationName upApplicationName)
+              (fromIntegral upApplicationVersion))
             mplc
 
-    return $ SomeProtocol p
+    case Consensus.runProtocol p of
+      Dict -> return $ SomeProtocol p
 
 readLeaderCredentials :: Genesis.Config -> (FilePath, FilePath) -> IO PBftLeaderCredentials
 readLeaderCredentials gc (signingKeyFile, dlgCertFile) = do
@@ -239,6 +235,7 @@ data ViewMode =
   Update system params
 -------------------------------------------------------------------------------}
 
+-- TODO:  decide if we want it as a (Dhall) file, entirely, instead of piecemeal.
 data UpdateSystemParams =
   UpdateSystemParams
   { uspProtocolVersion :: Update.ProtocolVersion
@@ -258,22 +255,21 @@ deriveFromJSON defaultOptions ''UpdateSystemParams
 data CommonCLI = CommonCLI
   { cliGenesisFile                :: !(Last FilePath)
   , cliGenesisHash                :: !(Last Text)
-  , cliStaticKeySigningKeyFile    :: !(Last FilePath)
-  , cliStaticKeyDlgCertFile       :: !(Last FilePath)
+  , cliStaticKeySigningKeyFile    :: !(Last (Maybe FilePath))
+  , cliStaticKeyDlgCertFile       :: !(Last (Maybe FilePath))
   , cliPBftSigThd                 :: !(Last (Maybe Double))
-  , cliUpdateSystemParams         :: !(Last FilePath)
+  , cliUpdate                     :: !PartialUpdate
   }
 
 parseCommonCLI :: Parser CommonCLI
 parseCommonCLI = CommonCLI
-  <$> (Last . Just <$> configGenesisCLIParser)
-  <*> (Last . Just <$> configStaticKeyMaterialCLIParser)
-  <*> lastStrOption               (long "genesis-file"             <> metavar "FILEPATH"     <> help "The filepath to the genesis file.")
-  <*> lastStrOption               (long "genesis-hash"             <> metavar "GENESIS-HASH" <> help "The genesis hash value.")
-  <*> lastStrOption               (long "signing-key"              <> metavar "FILEPATH"     <> help "Path to the signing key.")
-  <*> lastStrOption               (long "delegation-certificate"   <> metavar "FILEPATH"     <> help "Path to the delegation certificate.")
-  <*> lastOption    (option auto $ long "pbft-signature-threshold" <> metavar "DOUBLE"       <> help "The filepath to the genesis file.")
-  <*> lastStrOption               (long "update-system-params"     <> metavar "FILEPATH"     <> help "The filepath to the update system parameters JSON file.")
+  <$> lastStrOption                 (long "genesis-file"             <> metavar "FILEPATH"     <> help "The filepath to the genesis file.")
+  <*> lastStrOption                 (long "genesis-hash"             <> metavar "GENESIS-HASH" <> help "The genesis hash value.")
+  <*> ((Just <$>) <$> lastStrOption (long "signing-key"              <> metavar "FILEPATH"     <> help "Path to the signing key."))
+  <*> ((Just <$>) <$> lastStrOption (long "delegation-certificate"   <> metavar "FILEPATH"     <> help "Path to the delegation certificate."))
+  <*> lastOption      (option auto $ long "pbft-signature-threshold" <> metavar "DOUBLE"       <> help "The filepath to the genesis file.")
+  <*> configUpdateCLIParser
+
 
 -- | Perform merging of layers of configuration, for now using just CommonCLI.
 --   We expect this process to become more generic at some point.
@@ -282,24 +278,24 @@ mergeConfigurationCommonCLI
   -> CommonCLI
   -> PartialCardanoConfiguration
 mergeConfigurationCommonCLI
-  pcc@PartialCardanoConfiguration{pccCore}
-  CommonCLI{..}
+  pcc@PartialCardanoConfiguration{pccCore, pccUpdate} CommonCLI{..}
   =
   let PartialCore
         { pcoGenesisFile
         , pcoGenesisHash
         , pcoStaticKeySigningKeyFile
         , pcoStaticKeyDlgCertFile
-        } = pccCore pcc
+        , pcoPBftSigThd
+        } = pccCore
   in
-  pcc { pccCore = pccCore pcc <> mempty
+  pcc { pccCore = pccCore <> mempty
         { pcoGenesisFile             = pcoGenesisFile             <> cliGenesisFile
         , pcoGenesisHash             = pcoGenesisHash             <> cliGenesisHash
         , pcoStaticKeySigningKeyFile = pcoStaticKeySigningKeyFile <> cliStaticKeySigningKeyFile
         , pcoStaticKeyDlgCertFile    = pcoStaticKeyDlgCertFile    <> cliStaticKeyDlgCertFile
         , pcoPBftSigThd              = pcoPBftSigThd              <> cliPBftSigThd
-        , pcoUpdateSystemParams      = pcoUpdateSystemParams      <> cliUpdateSystemParams
-        }}
+        }
+      , pccUpdate = pccUpdate <> cliUpdate}
 
 {-------------------------------------------------------------------------------
   Command parsers
