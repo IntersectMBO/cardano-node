@@ -22,7 +22,8 @@ library
   other-modules:       Paths_cardano_node
 
   build-depends:
-                       base >=4.12 && <5
+                       aeson
+                     , base >=4.12 && <5
                      , bytestring
                      , canonical-json
                      , cborg

@@ -77,10 +77,7 @@ initializeAllFeatures (ArgParser logCli cli) partialConfig cardanoEnvironment = 
           , cliStaticKeySigningKeyFile, cliStaticKeyDlgCertFile
           } = cli
     finalConfig <- case finaliseCardanoConfiguration $
-                        mergeConfiguration
-                        partialConfig
-                        cliGenesisFile cliGenesisHash
-                        cliStaticKeySigningKeyFile cliStaticKeyDlgCertFile
+                        mergeConfigurationCommonCLI partialConfig (cliCommon cli)
                    of
       Left err -> throwIO $ ConfigurationError err
       --TODO: if we're using exceptions for this, then we should use a local

@@ -1,9 +1,12 @@
 {-# LANGUAGE ConstraintKinds      #-}
+{-# LANGUAGE DeriveGeneric        #-}
 {-# LANGUAGE FlexibleContexts     #-}
 {-# LANGUAGE FlexibleInstances    #-}
 {-# LANGUAGE GADTs                #-}
 {-# LANGUAGE NamedFieldPuns       #-}
 {-# LANGUAGE OverloadedStrings    #-}
+{-# LANGUAGE RecordWildCards      #-}
+{-# LANGUAGE TemplateHaskell      #-}
 
 module Cardano.Node.CLI (
   -- * Untyped/typed protocol boundary
@@ -12,8 +15,10 @@ module Cardano.Node.CLI (
   , TraceConstraints
   , ViewMode(..)
   , fromProtocol
-  -- * Configuration
-  , mergeConfiguration
+  -- * Common CLI
+  , CommonCLI(..)
+  , parseCommonCLI
+  , mergeConfigurationCommonCLI
   -- * Parsers
   , parseSystemStart
   , parseSlotDuration
@@ -49,6 +54,8 @@ import           Prelude
 
 import           Codec.CBOR.Read (deserialiseFromBytes)
 
+import           Data.Aeson
+import           Data.Aeson.TH
 import qualified Data.ByteString.Lazy as LB
 import           Data.Foldable (asum)
 import           Data.Monoid (Last(..))
@@ -58,6 +65,7 @@ import           Data.Text (Text, unpack)
 import           Data.Time (UTCTime)
 import           Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import           Formatting (sformat)
+import           GHC.Generics
 import           Options.Applicative
 
 import           Ouroboros.Network.Block (ChainHash, HeaderHash)
@@ -80,6 +88,7 @@ import           Cardano.Chain.Common
 import           Cardano.Chain.UTxO
 import           Cardano.Crypto.ProtocolMagic
 
+import           Cardano.Shell.Constants.CLI
 import           Cardano.Shell.Constants.PartialTypes (PartialCardanoConfiguration (..),
                                                        PartialCore (..))
 import           Cardano.Shell.Lib (GeneralException (..))
@@ -95,6 +104,7 @@ import           Cardano.Shell.Constants.Types (CardanoConfiguration (..),
                                                 RequireNetworkMagic (..))
 
 import qualified Cardano.Node.CanonicalJSON as CanonicalJSON
+
 
 {-------------------------------------------------------------------------------
   Untyped/typed protocol boundary
@@ -160,18 +170,19 @@ fromProtocol CardanoConfiguration{ccCore} RealPBFT = do
             , coGenesisHash
             , coStaticKeySigningKeyFile
             , coStaticKeyDlgCertFile
+            , coPBftSigThd
+            , coUpdateSystemParams
             } = ccCore
         genHash = either (throw . ConfigurationError) id $
                   decodeAbstractHash coGenesisHash
         cvtRNM :: RequireNetworkMagic -> RequiresNetworkMagic
         cvtRNM NoRequireNetworkMagic = RequiresNoMagic
         cvtRNM RequireNetworkMagic   = RequiresMagic
-        kmoDeserialiseDelegateKey = Signing.SigningKey . snd . either (error . show) id . deserialiseFromBytes Signing.fromCBORXPrv
-
+        deserialiseDelegateKey = Signing.SigningKey . snd . either (error . show) id . deserialiseFromBytes Signing.fromCBORXPrv
     gcE <- runExceptT (Genesis.mkConfigFromFile (cvtRNM $ coRequiresNetworkMagic ccCore) coGenesisFile genHash)
     let gc = case gcE of
           Left err -> throw err
-          Right x -> x
+          Right x  -> x
 
     sk  <- kmoDeserialiseDelegateKey <$> LB.readFile coStaticKeySigningKeyFile
     dlgE <- CanonicalJSON.canonicalDecPre <$> LB.readFile coStaticKeyDlgCertFile
@@ -180,17 +191,40 @@ fromProtocol CardanoConfiguration{ccCore} RealPBFT = do
                  Left  err -> error . show $ err
                  Right dlg -> mkPBftLeaderCredentials gc sk dlg
 
-    let plc = case plcE of
-                Left  err -> error . show $ err
-                Right x   -> x
-        -- TODO:  make configurable via CLI (requires cardano-shell changes)
-        -- These defaults are good for mainnet.
-        defSoftVer  = Update.SoftwareVersion (Update.ApplicationName "cardano-sl") 1
-        defProtoVer = Update.ProtocolVersion 0 2 0
-        p = ProtocolRealPBFT gc Nothing defProtoVer defSoftVer (Just plc)
+    mplc <- sequence $ readLeaderCredentials gc <$>
+            liftA2 (,) coStaticKeySigningKeyFile coStaticKeyDlgCertFile
 
-    case Consensus.runProtocol p of
-      Dict -> return $ SomeProtocol p
+      pure $ (,)
+
+    usParamsE <- eitherDecode <$> LB.readFile coUpdateSystemParams
+    let UpdateSystemParams protoV softV = case usParamsE of
+          Left err -> error err
+          Right x  -> x
+
+    let p = ProtocolRealPBFT
+            gc
+            (PBftSignatureThreshold <$> coPBftSigThd)
+            protoV
+            softV
+            mplc
+
+    return $ SomeProtocol p
+
+readLeaderCredentials :: Genesis.Config -> (FilePath, FilePath) -> IO PBftLeaderCredentials
+readLeaderCredentials gc (signingKeyFile, dlgCertFile) = do
+  let deserialiseSigningKey = Signing.SigningKey . snd . either (error . show) id .
+                              deserialiseFromBytes Signing.fromCBORXPrv
+  sk <- deserialiseSigningKey <$> LB.readFile signingKeyFile
+
+  dlgE <- CanonicalJSON.canonicalDecPre <$> LB.readFile dlgCertFile
+
+  let plcE = case dlgE of
+               Left  err -> error . show $ err
+               Right dlg -> mkPBftLeaderCredentials gc sk dlg
+
+  case plcE of
+    Left  err -> error . show $ err
+    Right plc -> pure plc
 
 -- TODO: consider not throwing this, or wrap it in a local error type here
 -- that has proper error messages.
@@ -202,20 +236,55 @@ data ViewMode =
   | SimpleView  -- Simple mode, just output text.
 
 {-------------------------------------------------------------------------------
-  Configuration merging
+  Update system params
 -------------------------------------------------------------------------------}
 
--- | Perform merging of layers of configuration, but for now, only in a trivial way,
---   just for Cardano.Shell.Constants.Types.{Genesis,StaticKeyMaterial}.
---   We expect this process to become generic at some point.
-mergeConfiguration
+data UpdateSystemParams =
+  UpdateSystemParams
+  { uspProtocolVersion :: Update.ProtocolVersion
+  , uspSoftwareVersion :: Update.SoftwareVersion
+  } deriving (Generic)
+
+deriveFromJSON defaultOptions ''UpdateSystemParams
+
+{-------------------------------------------------------------------------------
+  Common CLI
+-------------------------------------------------------------------------------}
+
+-- TODO:  this could benefit from using precise types.
+-- Sadly, we'll have to merge this into non-specific CardanoConfiguration.
+-- ..only to recover type precision later.
+-- | CLI Arguments common to all Cardano node flavors
+data CommonCLI = CommonCLI
+  { cliGenesisFile                :: !(Last FilePath)
+  , cliGenesisHash                :: !(Last Text)
+  , cliStaticKeySigningKeyFile    :: !(Last FilePath)
+  , cliStaticKeyDlgCertFile       :: !(Last FilePath)
+  , cliPBftSigThd                 :: !(Last (Maybe Double))
+  , cliUpdateSystemParams         :: !(Last FilePath)
+  }
+
+parseCommonCLI :: Parser CommonCLI
+parseCommonCLI = CommonCLI
+  <$> (Last . Just <$> configGenesisCLIParser)
+  <*> (Last . Just <$> configStaticKeyMaterialCLIParser)
+  <*> lastStrOption               (long "genesis-file"             <> metavar "FILEPATH"     <> help "The filepath to the genesis file.")
+  <*> lastStrOption               (long "genesis-hash"             <> metavar "GENESIS-HASH" <> help "The genesis hash value.")
+  <*> lastStrOption               (long "signing-key"              <> metavar "FILEPATH"     <> help "Path to the signing key.")
+  <*> lastStrOption               (long "delegation-certificate"   <> metavar "FILEPATH"     <> help "Path to the delegation certificate.")
+  <*> lastOption    (option auto $ long "pbft-signature-threshold" <> metavar "DOUBLE"       <> help "The filepath to the genesis file.")
+  <*> lastStrOption               (long "update-system-params"     <> metavar "FILEPATH"     <> help "The filepath to the update system parameters JSON file.")
+
+-- | Perform merging of layers of configuration, for now using just CommonCLI.
+--   We expect this process to become more generic at some point.
+mergeConfigurationCommonCLI
   :: PartialCardanoConfiguration
-  -> Last FilePath
-  -> Last Text
-  -> Last FilePath
-  -> Last FilePath
+  -> CommonCLI
   -> PartialCardanoConfiguration
-mergeConfiguration pcc lGenF lGenH lSKF lDlgF =
+mergeConfigurationCommonCLI
+  pcc@PartialCardanoConfiguration{pccCore}
+  CommonCLI{..}
+  =
   let PartialCore
         { pcoGenesisFile
         , pcoGenesisHash
@@ -224,10 +293,12 @@ mergeConfiguration pcc lGenF lGenH lSKF lDlgF =
         } = pccCore pcc
   in
   pcc { pccCore = pccCore pcc <> mempty
-        { pcoGenesisFile             = pcoGenesisFile             <> lGenF
-        , pcoGenesisHash             = pcoGenesisHash             <> lGenH
-        , pcoStaticKeySigningKeyFile = pcoStaticKeySigningKeyFile <> lSKF
-        , pcoStaticKeyDlgCertFile    = pcoStaticKeyDlgCertFile    <> lDlgF
+        { pcoGenesisFile             = pcoGenesisFile             <> cliGenesisFile
+        , pcoGenesisHash             = pcoGenesisHash             <> cliGenesisHash
+        , pcoStaticKeySigningKeyFile = pcoStaticKeySigningKeyFile <> cliStaticKeySigningKeyFile
+        , pcoStaticKeyDlgCertFile    = pcoStaticKeyDlgCertFile    <> cliStaticKeyDlgCertFile
+        , pcoPBftSigThd              = pcoPBftSigThd              <> cliPBftSigThd
+        , pcoUpdateSystemParams      = pcoUpdateSystemParams      <> cliUpdateSystemParams
         }}
 
 {-------------------------------------------------------------------------------

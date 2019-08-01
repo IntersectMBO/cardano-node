@@ -44,10 +44,7 @@ import           Cardano.Node.CLI
 data NodeCLIArguments = NodeCLIArguments {
     systemStart                   :: !SystemStart
   , slotDuration                  :: !SlotLength
-  , cliGenesisFile                :: !(Last FilePath)
-  , cliGenesisHash                :: !(Last Text)
-  , cliStaticKeySigningKeyFile    :: !(Last FilePath)
-  , cliStaticKeyDlgCertFile       :: !(Last FilePath)
+  , commonCLI                     :: !CommonCLI
   , command                       :: !Command
   }
 
@@ -94,26 +91,7 @@ nodeParser :: Parser NodeCLIArguments
 nodeParser = NodeCLIArguments
     <$> parseSystemStart
     <*> parseSlotDuration
-    <*> lastStrOption
-           ( long "genesis-file"
-          <> metavar "FILEPATH"
-          <> help "The filepath to the genesis file."
-           )
-    <*> lastStrOption
-           ( long "genesis-hash"
-          <> metavar "GENESIS-HASH"
-          <> help "The genesis hash value."
-           )
-    <*> lastStrOption
-           ( long "signing-key"
-          <> metavar "FILEPATH"
-          <> help "Path to the signing key."
-           )
-    <*> lastStrOption
-           ( long "delegation-certificate"
-          <> metavar "FILEPATH"
-          <> help "Path to the delegation certificate."
-           )
+    <*> parseCommonCLI
     <*> parseCommand
 
 parseCommand :: Parser Command
@@ -141,7 +119,7 @@ parseHostAddr =
 
 parsePort :: Parser PortNumber
 parsePort =
-    option ((fromIntegral :: Int -> PortNumber) <$> auto) (
+    option auto (
           long "port"
        <> metavar "PORT"
        <> help "The port number"

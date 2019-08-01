@@ -73,10 +73,7 @@ initializeAllFeatures (CLIArguments logCli nodeCli) partialConfig cardanoEnviron
           , cliStaticKeySigningKeyFile, cliStaticKeyDlgCertFile
           } = nodeCli
     finalConfig <- case finaliseCardanoConfiguration $
-                        mergeConfiguration
-                        partialConfig
-                        cliGenesisFile cliGenesisHash
-                        cliStaticKeySigningKeyFile cliStaticKeyDlgCertFile
+                        mergeConfigurationCommonCLI partialConfig (commonCLI nodeCli)
                    of
       Left err -> throwIO $ ConfigurationError err
       Right x  -> pure x
