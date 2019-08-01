@@ -462,7 +462,8 @@ mkChainDbArgs :: forall blk. (RunNode blk, TraceConstraints blk)
               -> ChainDB.ChainDbArgs IO blk
 mkChainDbArgs cfg initLedger registry (CoreNodeId nid) tracer slotDuration =
     (ChainDB.defaultArgs dbPath)
-      { ChainDB.cdbBlocksPerFile    = 10
+      { ChainDB.cdbBlocksPerFile    = 1000 --TODO: move definition of default
+                                           -- elsewhere and just use it here.
       , ChainDB.cdbDecodeBlock      = nodeDecodeBlock       cfg
       , ChainDB.cdbDecodeChainState = nodeDecodeChainState  (Proxy @blk)
       , ChainDB.cdbDecodeHash       = nodeDecodeHeaderHash  (Proxy @blk)
