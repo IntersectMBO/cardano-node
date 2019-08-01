@@ -15,6 +15,9 @@ import           Cardano.Prelude
 {-------------------------------------------------------------------------------
   Stolen from: cardano-prelude/test/Test/Cardano/Prelude/Tripping.hs
 -------------------------------------------------------------------------------}
+
+--TODO: these are horrible, meaningless names!
+
 canonicalEncPre
   :: forall a . CanonicalJSON.ToJSON Identity a => a -> LB.ByteString
 canonicalEncPre x =
@@ -31,3 +34,4 @@ canonicalDecPre
 canonicalDecPre bs = do
   eVal <- first toS (CanonicalJSON.parseCanonicalJSON bs)
   first show (CanonicalJSON.fromJSON eVal :: Either SchemaError a)
+--TODO: return the structured error, not Text!

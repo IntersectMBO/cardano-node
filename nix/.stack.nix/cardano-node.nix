@@ -21,8 +21,10 @@
           (hsPkgs.bytestring)
           (hsPkgs.canonical-json)
           (hsPkgs.cborg)
+          (hsPkgs.formatting)
           (hsPkgs.mtl)
           (hsPkgs.optparse-applicative)
+          (hsPkgs.text)
           (hsPkgs.time)
           (hsPkgs.cardano-binary)
           (hsPkgs.cardano-crypto-wrapper)
@@ -161,6 +163,7 @@
             (hsPkgs.network)
             (hsPkgs.optparse-applicative)
             (hsPkgs.serialise)
+            (hsPkgs.text)
             ] ++ (if system.isWindows
             then [ (hsPkgs.Win32) ]
             else [ (hsPkgs.unix) ]);

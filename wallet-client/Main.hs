@@ -1,3 +1,4 @@
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes        #-}
@@ -71,9 +72,8 @@ main = do
 
 initializeAllFeatures :: ArgParser -> PartialCardanoConfiguration -> CardanoEnvironment -> IO ([CardanoFeature], NodeLayer)
 initializeAllFeatures (ArgParser logCli cli) partialConfig cardanoEnvironment = do
-
     finalConfig <- case finaliseCardanoConfiguration $
-                        mergeConfiguration partialConfig (cliGenesis cli) (cliKeyMaterial cli)
+                        mergeConfiguration partialConfig (cliCommon cli)
                    of
       Left err -> throwIO $ ConfigurationError err
       --TODO: if we're using exceptions for this, then we should use a local

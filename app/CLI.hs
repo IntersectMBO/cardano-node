@@ -1,4 +1,3 @@
-{-# LANGUAGE BangPatterns   #-}
 {-# LANGUAGE GADTs          #-}
 {-# LANGUAGE NamedFieldPuns #-}
 
@@ -12,6 +11,8 @@ module CLI (
   , TopologyInfo(..)
   , Command(..)
   , TraceOptions (..)
+  , ConsensusTraceOptions
+  , ProtocolTraceOptions
   , nodeParser
   -- * Handy re-exports
   , execParser
@@ -22,18 +23,16 @@ module CLI (
   , progDesc
   ) where
 
-import           Data.Semigroup ((<>))
+import           Data.Functor.Const (Const (..))
 import qualified Data.IP as IP
-import           Options.Applicative
+import           Data.Semigroup ((<>))
 import           Network.Socket (PortNumber)
-
-import           Cardano.Prelude hiding (option, (.))
+import           Options.Applicative
 
 import           Ouroboros.Consensus.BlockchainTime
 import qualified Ouroboros.Consensus.Ledger.Mock as Mock
-
-import           Cardano.Shell.Constants.CLI
-import           Cardano.Shell.Constants.PartialTypes (PartialGenesis (..), PartialStaticKeyMaterial (..))
+import qualified Ouroboros.Consensus.Node.Tracers as Consensus
+import           Ouroboros.Consensus.NodeNetwork (ProtocolTracers' (..))
 
 import           Topology (NodeAddress (..), TopologyInfo (..))
 import           TxSubmission (command', parseMockTx)
@@ -45,46 +44,58 @@ import           Cardano.Node.CLI
 -------------------------------------------------------------------------------}
 
 data NodeCLIArguments = NodeCLIArguments {
-    systemStart        :: !SystemStart
-  , slotDuration       :: !SlotLength
-  , genesisSpec        :: !(Last PartialGenesis)
-  , keyMaterialSpec    :: !(Last PartialStaticKeyMaterial)
-  , command            :: !Command
+    systemStart  :: !SystemStart
+  , slotDuration :: !SlotLength
+  , commonCLI    :: !CommonCLI
+  , command      :: !Command
   }
 
 
--- | Tracing options.  Each option enables a tracer which adds verbosity to the
--- log output.
---
-data TraceOptions = TraceOptions {
-      traceChainDB        :: !Bool
-    -- ^ by default we use 'readableChainDB' tracer, if on this it will use more
-    -- verbose tracer
-    , traceChainSync      :: !Bool
-    -- ^ trace chain syn messages
-    , traceTxSubmission   :: !Bool
-    -- ^ trace tx submission messages
-    , traceFetchDecisions :: !Bool
-    -- ^ trace fetch decisions; it links to 'decisionTracer' in 'NodeParams'
-    , traceFetchClient    :: !Bool
-    -- ^ trace fetch client; it links to 'fetchClientTracer' in 'NodeParams'
-    , traceTxInbound      :: !Bool
-    -- ^ trace tx-submission server; it link to 'txInboundTracer' in 'NodeParams'
-    , traceTxOutbound     :: !Bool
-    -- ^ trace tx-submission client; it link to 'txOutboundTracer' in 'NodeParams'
-    }
+type ConsensusTraceOptions = Consensus.Tracers' () ()    (Const Bool)
+type ProtocolTraceOptions  = ProtocolTracers'   () () () (Const Bool)
 
+-- | Tracing options. Each option enables a tracer which adds verbosity to the
+-- log output.
+data TraceOptions = TraceOptions
+  { traceChainDB         :: !Bool
+    -- ^ By default we use 'readableChainDB' tracer, if on this it will use
+    -- more verbose tracer
+  , traceConsensus       :: ConsensusTraceOptions
+  , traceProtocols       :: ProtocolTraceOptions
+  , traceIpSubscription  :: !Bool
+  , traceDnsSubscription :: !Bool
+  , traceDnsResolver     :: !Bool
+  }
+
+parseConsensusTraceOptions :: Parser ConsensusTraceOptions
+parseConsensusTraceOptions = Consensus.Tracers
+  <$> (Const <$> parseTraceChainSyncClient)
+  <*> (Const <$> parseTraceChainSyncServer)
+  <*> (Const <$> parseTraceBlockFetchDecisions)
+  <*> (Const <$> parseTraceBlockFetchClient)
+  <*> (Const <$> parseTraceBlockFetchServer)
+  <*> (Const <$> parseTraceTxInbound)
+  <*> (Const <$> parseTraceTxOutbound)
+  <*> (Const <$> parseTraceLocalTxSubmissionServer)
+  <*> (Const <$> parseTraceMempool)
+  <*> (Const <$> parseTraceForge)
+
+parseProtocolTraceOptions :: Parser ProtocolTraceOptions
+parseProtocolTraceOptions = ProtocolTracers
+  <$> (Const <$> parseTraceChainSyncProtocol)
+  <*> (Const <$> parseTraceBlockFetchProtocol)
+  <*> (Const <$> parseTraceTxSubmissionProtocol)
+  <*> (Const <$> parseTraceLocalChainSyncProtocol)
+  <*> (Const <$> parseTraceLocalTxSubmissionProtocol)
 
 parseTraceOptions :: Parser TraceOptions
-parseTraceOptions =
-        TraceOptions
-    <$> parseTraceChainDB
-    <*> parseTraceChainSync
-    <*> parseTraceTxSubmission
-    <*> parseTraceFetchDecisions
-    <*> parseTraceFetchClient
-    <*> parseTraceTxInbound
-    <*> parseTraceTxOutbound
+parseTraceOptions = TraceOptions
+  <$> parseTraceChainDB
+  <*> parseConsensusTraceOptions
+  <*> parseProtocolTraceOptions
+  <*> parseTraceIpSubscription
+  <*> parseTraceDnsSubscription
+  <*> parseTraceDnsResolver
 
 data Command =
     SimpleNode  TopologyInfo NodeAddress Protocol ViewMode TraceOptions
@@ -95,8 +106,7 @@ nodeParser :: Parser NodeCLIArguments
 nodeParser = NodeCLIArguments
     <$> parseSystemStart
     <*> parseSlotDuration
-    <*> (Last . Just <$> configGenesisCLIParser)
-    <*> (Last . Just <$> configStaticKeyMaterialCLIParser)
+    <*> parseCommonCLI
     <*> parseCommand
 
 parseCommand :: Parser Command
@@ -149,47 +159,130 @@ parseTraceChainDB :: Parser Bool
 parseTraceChainDB =
     switch (
          long "trace-chain-db"
-      <> help "Verbose tracer of chain db."
+      <> help "Verbose tracer of ChainDB."
     )
 
-parseTraceChainSync :: Parser Bool
-parseTraceChainSync =
+parseTraceChainSyncClient :: Parser Bool
+parseTraceChainSyncClient  =
     switch (
-         long "trace-chain-sync"
-      <> help "Trace chain sync protocol messages."
+         long "trace-chain-sync-client"
+      <> help "Trace ChainSync client."
     )
 
-parseTraceTxSubmission :: Parser Bool
-parseTraceTxSubmission =
+parseTraceChainSyncServer :: Parser Bool
+parseTraceChainSyncServer  =
     switch (
-         long "trace-tx-submission"
-      <> help "Trace tx-submission protocol messages."
+         long "trace-chain-sync-server"
+      <> help "Trace ChainSync server."
     )
 
-parseTraceFetchDecisions :: Parser Bool
-parseTraceFetchDecisions =
+parseTraceBlockFetchDecisions :: Parser Bool
+parseTraceBlockFetchDecisions =
     switch (
-         long "trace-fetch-decisions"
-      <> help "Trace fetch decisions done by fetch client."
+         long "trace-block-fetch-decisions"
+      <> help "Trace BlockFetch decisions made by the BlockFetch client."
+    )
+parseTraceBlockFetchClient :: Parser Bool
+parseTraceBlockFetchClient  =
+    switch (
+         long "trace-block-fetch-client"
+      <> help "Trace BlockFetch client."
     )
 
-parseTraceFetchClient :: Parser Bool
-parseTraceFetchClient =
+parseTraceBlockFetchServer :: Parser Bool
+parseTraceBlockFetchServer  =
     switch (
-         long "trace-fetch-client"
-      <> help "Trace fetch client."
+         long "trace-block-fetch-server"
+      <> help "Trace BlockFetch server."
     )
 
 parseTraceTxInbound :: Parser Bool
 parseTraceTxInbound =
     switch (
          long "trace-tx-inbound"
-      <> help "Trace tx-submission server (inbound transaction)."
+      <> help "Trace TxSubmission server (inbound transactions)."
     )
 
 parseTraceTxOutbound :: Parser Bool
 parseTraceTxOutbound =
     switch (
          long "trace-tx-outbound"
-      <> help "Trace tx-submission client (outbound transactions)."
+      <> help "Trace TxSubmission client (outbound transactions)."
+    )
+
+parseTraceLocalTxSubmissionServer :: Parser Bool
+parseTraceLocalTxSubmissionServer =
+    switch (
+         long "trace-local-tx-submission-server"
+      <> help "Trace local TxSubmission server."
+    )
+
+parseTraceMempool :: Parser Bool
+parseTraceMempool =
+    switch (
+         long "trace-mempool"
+      <> help "Trace mempool."
+    )
+
+parseTraceForge :: Parser Bool
+parseTraceForge =
+    switch (
+         long "trace-forge"
+      <> help "Trace block forging."
+    )
+
+parseTraceChainSyncProtocol :: Parser Bool
+parseTraceChainSyncProtocol =
+    switch (
+         long "trace-chain-sync-protocol"
+      <> help "Trace ChainSync protocol messages."
+    )
+
+parseTraceBlockFetchProtocol :: Parser Bool
+parseTraceBlockFetchProtocol =
+    switch (
+         long "trace-block-fetch-protocol"
+      <> help "Trace BlockFetch protocol messages."
+    )
+
+parseTraceTxSubmissionProtocol :: Parser Bool
+parseTraceTxSubmissionProtocol =
+    switch (
+         long "trace-tx-submission-protocol"
+      <> help "Trace TxSubmission protocol messages."
+    )
+
+parseTraceLocalChainSyncProtocol :: Parser Bool
+parseTraceLocalChainSyncProtocol =
+    switch (
+         long "trace-local-chain-sync-protocol"
+      <> help "Trace local ChainSync protocol messages."
+    )
+
+parseTraceLocalTxSubmissionProtocol :: Parser Bool
+parseTraceLocalTxSubmissionProtocol =
+    switch (
+         long "trace-local-tx-submission-protocol"
+      <> help "Trace local TxSubmission protocol messages."
+    )
+
+parseTraceIpSubscription :: Parser Bool
+parseTraceIpSubscription =
+    switch (
+         long "trace-ip-subscription"
+      <> help "Trace IP Subscription messages."
+    )
+
+parseTraceDnsSubscription :: Parser Bool
+parseTraceDnsSubscription =
+    switch (
+         long "trace-dns-subscription"
+      <> help "Trace DNS Subscription messages."
+    )
+
+parseTraceDnsResolver :: Parser Bool
+parseTraceDnsResolver =
+    switch (
+         long "trace-dns-resolver"
+      <> help "Trace DNS Resolver messages."
     )

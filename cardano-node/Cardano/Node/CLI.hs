@@ -1,7 +1,9 @@
-{-# LANGUAGE ConstraintKinds  #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE GADTs            #-}
-{-# LANGUAGE NamedFieldPuns   #-}
+{-# LANGUAGE ConstraintKinds      #-}
+{-# LANGUAGE FlexibleContexts     #-}
+{-# LANGUAGE FlexibleInstances    #-}
+{-# LANGUAGE GADTs                #-}
+{-# LANGUAGE NamedFieldPuns       #-}
+{-# LANGUAGE OverloadedStrings    #-}
 
 module Cardano.Node.CLI (
   -- * Untyped/typed protocol boundary
@@ -10,7 +12,9 @@ module Cardano.Node.CLI (
   , TraceConstraints
   , ViewMode(..)
   , fromProtocol
-  -- * Configuration
+  -- * Common CLI
+  , CommonCLI(..)
+  , parseCommonCLI
   , mergeConfiguration
   -- * Parsers
   , parseSystemStart
@@ -33,19 +37,33 @@ module Cardano.Node.CLI (
   , parseUTCTime
   -- * Generic
   , command'
+  , lastOption
+  , lastAutoOption
+  , lastIntOption
+  , lastDoubleOption
+  , lastBoolOption
+  , lastWordOption
+  , lastTextListOption
+  , lastStrOption
   ) where
 
 import           Prelude
 
-import           Codec.CBOR.Read (deserialiseFromBytes)
-
 import qualified Data.ByteString.Lazy as LB
 import           Data.Foldable (asum)
-import           Data.Monoid (Last)
+import           Data.Monoid (Last(..))
 import           Data.Semigroup ((<>))
+import           Data.String (IsString)
+import qualified Data.Text as Text
+import           Data.Text (Text)
 import           Data.Time (UTCTime)
 import           Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import           Options.Applicative
+
+import           Control.Exception
+import           Control.Monad.Except
+
+import           Codec.CBOR.Read (deserialiseFromBytes, DeserialiseFailure)
 
 import           Ouroboros.Network.Block (ChainHash, HeaderHash)
 
@@ -66,22 +84,17 @@ import           Cardano.Binary (Annotated (..))
 import           Cardano.Chain.Common
 import           Cardano.Crypto.ProtocolMagic
 
-import           Cardano.Shell.Constants.PartialTypes (PartialCardanoConfiguration (..),
-                                                       PartialCore (..),
-                                                       PartialGenesis (..),
-                                                       PartialStaticKeyMaterial (..) )
-import           Cardano.Shell.Lib (GeneralException (..))
 import qualified Cardano.Chain.Genesis as Genesis
-import           Cardano.Crypto (RequiresNetworkMagic (..),
-                                 decodeAbstractHash)
+import qualified Cardano.Chain.Update as Update
+import           Cardano.Crypto (RequiresNetworkMagic (..), decodeAbstractHash)
 import qualified Cardano.Crypto.Signing as Signing
-import           Control.Exception
-import           Control.Monad.Except
-import           Cardano.Shell.Constants.Types (CardanoConfiguration (..),
-                                                Core (..),
-                                                StaticKeyMaterial (..),
-                                                Genesis (..),
-                                                RequireNetworkMagic (..))
+
+import           Cardano.Shell.Lib (GeneralException (..))
+import           Cardano.Shell.Constants.PartialTypes as Shell.Config
+                   ( PartialCardanoConfiguration (..), PartialCore (..) )
+import           Cardano.Shell.Constants.Types as Shell.Config
+                   ( CardanoConfiguration (..), Core (..)
+                   , RequireNetworkMagic (..) )
 
 import qualified Cardano.Node.CanonicalJSON as CanonicalJSON
 
@@ -109,6 +122,7 @@ type TraceConstraints blk =
     , Condense (GenTx blk)
     , Show (ApplyTxErr blk)
     , Show (GenTx blk)
+    , Show (GenTxId blk)
     , Show blk
     , Show (Header blk)
     )
@@ -133,29 +147,71 @@ fromProtocol _ MockPBFT =
       Dict -> return $ SomeProtocol p
   where
     p = ProtocolMockPBFT defaultDemoPBftParams
-fromProtocol CardanoConfiguration{ccCore=ccCore@Core{coStaticKeyMaterial}} RealPBFT = do
-    let Genesis{geSrc, geGenesisHash} = coGenesis ccCore
+fromProtocol CardanoConfiguration{ccCore} RealPBFT = do
+    let Core{ coGenesisFile
+            , coGenesisHash
+            } = ccCore
         genHash = either (throw . ConfigurationError) id $
-                  decodeAbstractHash geGenesisHash
+                  decodeAbstractHash coGenesisHash
         cvtRNM :: RequireNetworkMagic -> RequiresNetworkMagic
         cvtRNM NoRequireNetworkMagic = RequiresNoMagic
         cvtRNM RequireNetworkMagic   = RequiresMagic
-        StaticKeyMaterial{skmSigningKeyFile, skmDlgCertFile} = coStaticKeyMaterial
-        kmoDeserialiseDelegateKey = Signing.SigningKey . snd . either (error . show) id . deserialiseFromBytes Signing.fromCBORXPrv
 
-    res <- runExceptT (Genesis.mkConfigFromFile (cvtRNM $ coRequiresNetworkMagic ccCore) geSrc genHash)
-    let geneConfig = case res of
-          Left err -> throw err
+    gcE <- runExceptT (Genesis.mkConfigFromFile (cvtRNM $ coRequiresNetworkMagic ccCore) coGenesisFile genHash)
+    let gc = case gcE of
+          Left err -> throw err -- TODO: no no no!
           Right x -> x
 
-    sk  <- kmoDeserialiseDelegateKey <$> LB.readFile skmSigningKeyFile
-    dlg <- either (error . show) id . CanonicalJSON.canonicalDecPre <$> LB.readFile skmDlgCertFile
+    optionalLeaderCredentials <- readLeaderCredentials gc ccCore
 
-    let plc = PbftLeaderCredentials sk dlg
-        p   = ProtocolRealPBFT defaultDemoPBftParams geneConfig (pure plc)
+    let
+        -- TODO:  make configurable via CLI (requires cardano-shell changes)
+        -- These defaults are good for mainnet.
+        defSoftVer  = Update.SoftwareVersion (Update.ApplicationName "cardano-sl") 1
+        defProtoVer = Update.ProtocolVersion 0 2 0
+        p = ProtocolRealPBFT
+              gc
+              Nothing
+              defProtoVer
+              defSoftVer
+              optionalLeaderCredentials
 
     case Consensus.runProtocol p of
       Dict -> return $ SomeProtocol p
+
+
+readLeaderCredentials :: Genesis.Config
+                      -> Shell.Config.Core
+                      -> IO (Maybe PBftLeaderCredentials)
+readLeaderCredentials gc Shell.Config.Core {
+                           coStaticKeySigningKeyFile = Just signingKeyFile
+                         , coStaticKeyDlgCertFile    = Just delegCertFile
+                         } = do
+    signingKeyFileBytes <- LB.readFile signingKeyFile
+    delegCertFileBytes  <- LB.readFile delegCertFile
+
+    --TODO: review the style of reporting for input validation failures
+    -- If we use throwIO, we should use a local exception type that
+    -- wraps the other structured failures and reports them appropriatly
+    signingKey <- either throwIO return $
+                    deserialiseSigningKey signingKeyFileBytes
+
+    delegCert  <- either (fail . Text.unpack) return $
+                    CanonicalJSON.canonicalDecPre delegCertFileBytes
+
+    either throwIO (return . Just)
+           (mkPBftLeaderCredentials gc signingKey delegCert)
+  where
+    deserialiseSigningKey :: LB.ByteString
+                          -> Either DeserialiseFailure Signing.SigningKey
+    deserialiseSigningKey =
+        fmap (Signing.SigningKey . snd)
+      . deserialiseFromBytes Signing.fromCBORXPrv
+
+--TODO: fail noisily if only one file is specified without the other
+-- since that's obviously a user error.
+readLeaderCredentials gc _ = return Nothing
+
 
 -- TODO: consider not throwing this, or wrap it in a local error type here
 -- that has proper error messages.
@@ -167,6 +223,45 @@ data ViewMode =
   | SimpleView  -- Simple mode, just output text.
 
 {-------------------------------------------------------------------------------
+  Common CLI
+-------------------------------------------------------------------------------}
+
+-- | CLI Arguments common to all Cardano node flavors
+data CommonCLI = CommonCLI
+  { cliGenesisFile                :: !(Last FilePath)
+  , cliGenesisHash                :: !(Last Text)
+  , cliStaticKeySigningKeyFile    :: !(Last FilePath)
+  , cliStaticKeyDlgCertFile       :: !(Last FilePath)
+  --TODO cliPBftSigThd            :: !(Last Double)
+  --TODO cliUpdate                :: !PartialUpdate
+  }
+
+parseCommonCLI :: Parser CommonCLI
+parseCommonCLI =
+    CommonCLI
+    <$> lastStrOption
+           ( long "genesis-file"
+          <> metavar "FILEPATH"
+          <> help "The filepath to the genesis file."
+           )
+    <*> lastStrOption
+           ( long "genesis-hash"
+          <> metavar "GENESIS-HASH"
+          <> help "The genesis hash value."
+           )
+    <*> lastStrOption
+           ( long "signing-key"
+          <> metavar "FILEPATH"
+          <> help "Path to the signing key."
+           )
+    <*> lastStrOption
+           ( long "delegation-certificate"
+          <> metavar "FILEPATH"
+          <> help "Path to the delegation certificate."
+           )
+
+
+{-------------------------------------------------------------------------------
   Configuration merging
 -------------------------------------------------------------------------------}
 
@@ -175,18 +270,37 @@ data ViewMode =
 --   We expect this process to become generic at some point.
 mergeConfiguration
   :: PartialCardanoConfiguration
-  -> Last PartialGenesis
-  -> Last PartialStaticKeyMaterial
+  -> CommonCLI
   -> PartialCardanoConfiguration
-mergeConfiguration pcc@PartialCardanoConfiguration{pccCore} pg pskm =
-  pcc { pccCore = updateCore <$> pccCore }
-
-  where updateCore pc@PartialCore{pcoGenesis, pcoStaticKeyMaterial} =
-          -- We need to lift (<>) because we need monoidal operation over Partial*
-          -- constituents, and not the (Last Partial*) ones.
-          pc { pcoGenesis            = liftA2 (<>) pcoGenesis           pg
-             , pcoStaticKeyMaterial  = liftA2 (<>) pcoStaticKeyMaterial pskm
-             }
+mergeConfiguration pcc cli =
+    -- The beauty of this kind of configuration management (using trees of
+    -- monoids) is that we can override individual config elements by simply
+    -- merging an extra partial config on top. That extra partial config is
+    -- built starting from mempty and setting the fields of interest.
+    pcc <> commonCLIToPCC cli
+  where
+    commonCLIToPCC :: CommonCLI -> PartialCardanoConfiguration
+    commonCLIToPCC CommonCLI {
+                     cliGenesisFile
+                   , cliGenesisHash
+                   , cliStaticKeySigningKeyFile
+                   , cliStaticKeyDlgCertFile
+                   } =
+      mempty {
+        pccCore = mempty {
+          pcoGenesisFile             = cliGenesisFile
+        , pcoGenesisHash             = cliGenesisHash
+        , pcoStaticKeySigningKeyFile = hackMistakenExtraMaybe cliStaticKeySigningKeyFile
+        , pcoStaticKeyDlgCertFile    = hackMistakenExtraMaybe cliStaticKeyDlgCertFile
+       -- TODO: cliPBftSigThd, cliUpdate
+        }
+      }
+      where
+        -- In https://github.com/input-output-hk/cardano-shell/pull/234
+        -- we accidentally introduced an extra unnecessary layer of Maybe
+        -- we can remove this hack once that is resolved.
+        hackMistakenExtraMaybe :: Last a -> Last (Maybe a)
+        hackMistakenExtraMaybe = fmap Just
 
 {-------------------------------------------------------------------------------
   Command parsers
@@ -351,3 +465,30 @@ command' c descr p =
     command c $ info (p <**> helper) $ mconcat [
         progDesc descr
       ]
+
+-- TODO:  deal with cardano-shell duplication
+-- | Lift the parser to an optional @Last@ type.
+lastOption :: Parser a -> Parser (Last a)
+lastOption parser = Last <$> optional parser
+
+-- | General @Last@ auto option from @Read@ instance.
+lastAutoOption :: Read a => Mod OptionFields a -> Parser (Last a)
+lastAutoOption args = lastOption (option auto args)
+
+lastIntOption :: Mod OptionFields Int -> Parser (Last Int)
+lastIntOption = lastAutoOption
+
+lastDoubleOption :: Mod OptionFields Double -> Parser (Last Double)
+lastDoubleOption = lastAutoOption
+
+lastBoolOption :: Mod OptionFields Bool -> Parser (Last Bool)
+lastBoolOption = lastAutoOption
+
+lastWordOption :: Mod OptionFields Word -> Parser (Last Word)
+lastWordOption = lastAutoOption
+
+lastTextListOption :: Mod OptionFields [Text] -> Parser (Last [Text])
+lastTextListOption = lastAutoOption
+
+lastStrOption :: IsString a => Mod OptionFields a -> Parser (Last a)
+lastStrOption args = Last <$> optional (strOption args)
