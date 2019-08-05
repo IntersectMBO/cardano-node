@@ -31,26 +31,40 @@ library
 
   build-depends:
                        base >=4.12 && <5
+                     , async
+                     , binary
                      , bytestring
                      , canonical-json
                      , cborg == 0.2.2.0
+                     , containers
+                     , cryptonite
+                     , directory
+                     , filepath
                      , formatting
+                     , lens
                      , mtl
+                     , network
                      , optparse-applicative
+                     , serialise
                      , text
                      , time
-                     , lens, binary, pvss, cardano-crypto, containers, directory, filepath
 
                      , generic-monoid
 
                      , cardano-binary
+                     , cardano-crypto
                      , cardano-crypto-wrapper
                      , cardano-ledger
                      , cardano-ledger-test
                      , cardano-prelude
                      , cardano-shell
+                     , cborg
+                     , contra-tracer
+                     , io-sim-classes
+                     , iohk-monitoring
                      , ouroboros-consensus
                      , ouroboros-network
+                     , pvss
 
   default-language:    Haskell2010
   default-extensions:  NoImplicitPrelude
