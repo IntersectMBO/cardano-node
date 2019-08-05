@@ -171,7 +171,7 @@ executable wallet-client
      build-depends:    unix
 
 executable genesis-tool
-  hs-source-dirs:      app/genesis-tool
+  hs-source-dirs:      genesis-tool
   main-is:             Main.hs
   default-language:    Haskell2010
   ghc-options:         -threaded
