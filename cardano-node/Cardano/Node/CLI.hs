@@ -5,6 +5,8 @@
 {-# LANGUAGE NamedFieldPuns       #-}
 {-# LANGUAGE OverloadedStrings    #-}
 
+{-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
+
 module Cardano.Node.CLI (
   -- * Untyped/typed protocol boundary
     Protocol(..)
