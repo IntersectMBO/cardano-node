@@ -242,12 +242,14 @@ dumpGenesis KeyMaterialOps{..} outDir genesisData GeneratedSecrets{..} = do
       findDelegateCert sk =
         fromMaybe (throw . NoGenesisDelegationForKey $ prettySigningKeyPub sk)
         . flip find (Map.elems dlgCertMap) . isCertForSK $ sk
+      wOut :: String -> String -> (a -> IO LB.ByteString) -> [a] -> IO ()
+      wOut = writeSecrets outDir
 
-  writeSecrets outDir "genesis-keys"       "key"  kmoSerialiseGenesisKey        gsDlgIssuersSecrets
-  writeSecrets outDir "delegate-keys"      "key"  kmoSerialiseDelegateKey       gsRichSecrets
-  writeSecrets outDir "poor-keys"          "key"  kmoSerialisePoorKey           gsPoorSecrets
-  writeSecrets outDir "delegation-cert"    "json" kmoSerialiseDelegationCert    (findDelegateCert <$> gsRichSecrets)
-  writeSecrets outDir "avvm-seed"          "seed" (pure . LB.fromStrict)        gsFakeAvvmSeeds
+  wOut "genesis-keys"    "key"  kmoSerialiseGenesisKey     gsDlgIssuersSecrets
+  wOut "delegate-keys"   "key"  kmoSerialiseDelegateKey    gsRichSecrets
+  wOut "poor-keys"       "key"  kmoSerialisePoorKey        gsPoorSecrets
+  wOut "delegation-cert" "json" kmoSerialiseDelegationCert (findDelegateCert <$> gsRichSecrets)
+  wOut "avvm-seed"       "seed" (pure . LB.fromStrict)     gsFakeAvvmSeeds
 
 prettySigningKeyPub :: SigningKey -> Text
 prettySigningKeyPub (CCr.toVerification -> vk) = TL.toStrict
