@@ -15,8 +15,11 @@ extra-source-files: README.md, ChangeLog.md
 library
   hs-source-dirs:      cardano-node
 
-  exposed-modules:     Cardano.Node.CanonicalJSON
-  exposed-modules:     Cardano.Node.CLI
+  exposed-modules:     Cardano.GenesisTool.CLI
+                       Cardano.GenesisTool.Run
+                       Cardano.Legacy.Byron
+                       Cardano.Node.CanonicalJSON
+                       Cardano.Node.CLI
                        -- Configuration
                        Cardano.Node.Configuration.CLI
                        Cardano.Node.Configuration.Lib
@@ -36,6 +39,7 @@ library
                      , optparse-applicative
                      , text
                      , time
+                     , lens, binary, pvss, cardano-crypto, containers, directory, filepath
 
                      , generic-monoid
 
@@ -178,48 +182,8 @@ executable genesis-tool
                        -Wall
                        -O2
                        "-with-rtsopts=-T"
-                       -fno-warn-unticked-promoted-constructors
-  other-modules:       CLI
-                     , Run
-                     , Byron.Legacy
   build-depends:       base
-                     , cardano-binary
-                     , cardano-crypto
-                     , cardano-crypto-wrapper
-                     , cardano-ledger
-                     , cardano-ledger-test
                      , cardano-node
-                     , cardano-prelude
-                     , contra-tracer
-                     , filepath
-                     , iohk-monitoring
-                     , pvss
-
-                     , aeson
-                     , aeson-pretty
-                     , async
-                     , binary
-                     , bytestring
-                     , canonical-json
-                     , cborg == 0.2.2.0
-                     , containers
-                     , cryptonite
-                     , directory
-                     , formatting
-                     , lens
-                     , mtl
-                     , network
-                     , optparse-applicative
-                     , serialise
-                     , stm
-                     , string-conv
-                     , text
-                     , time
-                     , typed-protocols
-  if os(windows)
-     build-depends:    Win32
-  else
-     build-depends:    unix
 
 executable chairman
   hs-source-dirs:      chairman

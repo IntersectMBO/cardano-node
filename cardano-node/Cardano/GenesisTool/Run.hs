@@ -6,20 +6,22 @@
 {-# LANGUAGE NoImplicitPrelude   #-}
 {-# LANGUAGE NumericUnderscores  #-}
 {-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE RankNTypes          #-}
 {-# LANGUAGE RecordWildCards     #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications    #-}
 {-# LANGUAGE ViewPatterns        #-}
 
+{-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
 {-# OPTIONS_GHC -Wno-simplifiable-class-constraints #-}
 
 #if !defined(mingw32_HOST_OS)
 #define UNIX
 #endif
 
-module Run (
+module Cardano.GenesisTool.Run (
     decideKeyMaterialOps
-  , runCommand
+  , main
   ) where
 
 import           Prelude (String, error, id)
@@ -35,6 +37,7 @@ import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Lazy.Builder as Builder
 import qualified Formatting as F
+import           Options.Applicative
 import           System.Directory (createDirectory, doesPathExist)
 import           System.FilePath ((</>))
 import           Text.Printf (printf)
@@ -60,8 +63,21 @@ import           Cardano.Chain.Genesis
 
 import           Cardano.Node.CanonicalJSON
 
-import qualified Byron.Legacy as Legacy
-import           CLI
+import qualified Cardano.Legacy.Byron as Legacy
+import           Cardano.GenesisTool.CLI
+
+main :: IO ()
+main = do
+    CLI{..} <- execParser opts
+    runCommand (decideKeyMaterialOps systemVersion) mainCommand
+
+-- | Top level parser with info.
+opts :: ParserInfo CLI
+opts = info (parseCLI <**> helper)
+    ( fullDesc
+    <> progDesc "Cardano genesis tool."
+    <> header "Cardano genesis tool."
+    )
 
 runCommand :: KeyMaterialOps IO -> Command -> IO ()
 runCommand kmo@KeyMaterialOps{..}

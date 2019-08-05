@@ -1,6 +1,8 @@
 {-# LANGUAGE GADTs #-}
 
-module CLI (
+{-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
+
+module Cardano.GenesisTool.CLI (
     -- * CLI
     CLI(..)
   , Command(..)
