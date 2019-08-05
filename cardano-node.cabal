@@ -3,7 +3,6 @@ version:        3.0.1.87
 description:    The cardano full node
 author:         IOHK
 maintainer:     operations@iohk.io
-copyright:      2019 IOHK
 license:        Apache-2.0
 license-files:
   LICENSE
