@@ -29,9 +29,11 @@ import           Prelude (String, error, id)
 import           Codec.CBOR.Read (deserialiseFromBytes)
 import           Codec.CBOR.Write (toLazyByteString)
 import           Control.Monad
+import qualified Data.ByteArray as BA
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.Map.Strict as Map
 import           Data.Semigroup ((<>))
+import qualified Data.ByteString.UTF8 as UTF8
 import           Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
@@ -40,6 +42,7 @@ import qualified Formatting as F
 import           Options.Applicative
 import           System.Directory (createDirectory, doesPathExist)
 import           System.FilePath ((</>))
+import           System.IO (hGetLine, hSetEcho, hFlush, stdout, stdin)
 import           Text.Printf (printf)
 #ifdef UNIX
 import           System.Posix.Files (ownerReadMode, setFileMode)
@@ -58,7 +61,6 @@ import qualified Test.Cardano.Chain.Genesis.Dummy as Dummy
 import qualified Cardano.Crypto.Random as CCr
 import qualified Cardano.Crypto.Hashing as CCr
 import qualified Cardano.Crypto.Signing as CCr
-
 import           Cardano.Chain.Genesis
 
 import           Cardano.Node.CanonicalJSON
@@ -160,9 +162,44 @@ runCommand KeyMaterialOps{..} (PrintSigningKeyAddress networkMagic secretPath) =
            . kmoDeserialiseDelegateKey
            =<< LB.readFile secretPath
 
+runCommand KeyMaterialOps{..}
+           (Keygen outFile disablePassword) = do
+
+  passph <- if disablePassword
+            then pure CCr.emptyPassphrase
+            else readPassword $
+                 "Enter password to encrypt '" <> outFile <> "': "
+
+  (_vk, esk) <- CCr.runSecureRandom $ CCr.safeKeyGen passph
+
+  exists <- doesPathExist outFile
+  when exists $
+    error $ "Key output file must not already exist: " <> outFile
+
+  LB.writeFile outFile
+    =<< (kmoSerialiseDelegateKey $ SigningKey $ CCr.eskPayload esk)
+
 {-------------------------------------------------------------------------------
   Supporting functions
 -------------------------------------------------------------------------------}
+
+readPassword :: String -> IO CCr.PassPhrase
+readPassword prompt = do
+  let readOne :: String -> IO String
+      readOne pr = do
+        hPutStr stdout pr >> hFlush stdout
+        hSetEcho stdout False
+        pp <- hGetLine stdin
+        hSetEcho stdout True
+        hPutStrLn stdout ("" :: String)
+        pure pp
+      loop = do
+        (v1, v2) <- (,) <$> readOne prompt <*> readOne "Repeat to validate: "
+        if v1 == v2
+          then pure v1
+          else hPutStrLn stdout ("Sorry, entered passwords don't match." :: String)
+               >> loop
+  CCr.PassPhrase . BA.convert . UTF8.fromString <$> loop
 
 dumpGenesis :: KeyMaterialOps IO -> FilePath -> GenesisData -> GeneratedSecrets -> IO ()
 dumpGenesis KeyMaterialOps{..} outDir genesisData GeneratedSecrets{..} = do

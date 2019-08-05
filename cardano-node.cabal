@@ -42,12 +42,14 @@ library
                      , filepath
                      , formatting
                      , lens
+                     , memory
                      , mtl
                      , network
                      , optparse-applicative
                      , serialise
                      , text
                      , time
+                     , utf8-string
 
                      , generic-monoid
 

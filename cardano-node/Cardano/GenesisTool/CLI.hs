@@ -61,6 +61,9 @@ data Command
   | PrintSigningKeyAddress
     !NetworkMagic
     !FilePath
+  | Keygen
+    !FilePath
+    !Bool
 
 data KeyMaterialOps m
   = KeyMaterialOps
@@ -122,4 +125,8 @@ parseCommand = subparser $ mconcat
       PrintSigningKeyAddress
       <$> parseNetworkMagic
       <*> parseFilePath    "secret"                   "Secret key, whose address is to be printed."
+  , command' "keygen"                         "Generate a signing key." $
+      Keygen
+      <$> parseFilePath    "secret"                   "Non-existent file to write the secret key to."
+      <*> parseFlag        "no-password"              "Disable password protection."
   ]
