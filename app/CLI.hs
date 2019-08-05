@@ -65,6 +65,8 @@ data TraceOptions = TraceOptions
   , traceIpSubscription  :: !Bool
   , traceDnsSubscription :: !Bool
   , traceDnsResolver     :: !Bool
+  , traceHandshake       :: !Bool
+  -- ^ trace handshake messages
   }
 
 parseConsensusTraceOptions :: Parser ConsensusTraceOptions
@@ -96,6 +98,7 @@ parseTraceOptions = TraceOptions
   <*> parseTraceIpSubscription
   <*> parseTraceDnsSubscription
   <*> parseTraceDnsResolver
+  <*> parseTraceHandshake
 
 data Command =
     SimpleNode  TopologyInfo NodeAddress Protocol ViewMode TraceOptions
@@ -176,12 +179,20 @@ parseTraceChainSyncServer  =
       <> help "Trace ChainSync server."
     )
 
+parseTraceHandshake :: Parser Bool
+parseTraceHandshake =
+    switch (
+         long "trace-handshake"
+      <> help "Trace handshake protocol messages."
+    )
+
 parseTraceBlockFetchDecisions :: Parser Bool
 parseTraceBlockFetchDecisions =
     switch (
          long "trace-block-fetch-decisions"
       <> help "Trace BlockFetch decisions made by the BlockFetch client."
     )
+
 parseTraceBlockFetchClient :: Parser Bool
 parseTraceBlockFetchClient  =
     switch (

@@ -48,6 +48,7 @@ module Cardano.Node.CLI (
   ) where
 
 import           Prelude
+import           GHC.Stack
 
 import qualified Data.ByteString.Lazy as LB
 import           Data.Foldable (asum)
@@ -55,7 +56,7 @@ import           Data.Monoid (Last(..))
 import           Data.Semigroup ((<>))
 import           Data.String (IsString)
 import qualified Data.Text as Text
-import           Data.Text (Text)
+import           Data.Text (Text, unpack)
 import           Data.Time (UTCTime)
 import           Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import           Formatting (sformat)
@@ -88,7 +89,7 @@ import           Cardano.Crypto.ProtocolMagic
 
 import qualified Cardano.Chain.Genesis as Genesis
 import qualified Cardano.Chain.Update as Update
-import           Cardano.Crypto (RequiresNetworkMagic (..), decodeAbstractHash)
+import           Cardano.Crypto (RequiresNetworkMagic (..), decodeAbstractHash, shortHashF)
 import qualified Cardano.Crypto.Signing as Signing
 
 import           Cardano.Shell.Lib (GeneralException (..))
@@ -150,12 +151,13 @@ fromProtocol _ MockPBFT =
   where
     p = ProtocolMockPBFT defaultDemoPBftParams
 fromProtocol CardanoConfiguration{ccCore} RealPBFT = do
+    print ccCore
     let Core{ coGenesisFile
             , coGenesisHash
             } = ccCore
         genHash = either (throw . ConfigurationError) id $
                   decodeAbstractHash coGenesisHash
-        cvtRNM :: RequireNetworkMagic -> RequiresNetworkMagic
+        cvtRNM :: HasCallStack => RequireNetworkMagic -> RequiresNetworkMagic
         cvtRNM NoRequireNetworkMagic = RequiresNoMagic
         cvtRNM RequireNetworkMagic   = RequiresMagic
 

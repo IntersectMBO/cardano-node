@@ -64,7 +64,7 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-shell
-  tag: 455c006e5d1a0c1cf3d31777df24752afcbaab10
+  tag: 33e4d04fafbfe094422a45203dda0900be109439
 
 source-repository-package
   type: git
@@ -86,7 +86,7 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: b982b516b7091001d1549e8c47b21cb0a8041fa4
+  tag: acc729b5b497552969bcbb8b66fa40109aea071e
   subdir: ouroboros-network
 
 source-repository-package

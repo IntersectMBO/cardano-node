@@ -32,5 +32,5 @@ let
   nixTools = import ./nix/nix-tools.nix {};
 in {
   inherit (nixTools) nix-tools;
-  inherit (iohkLib.iohkNix) check-nix-tools check-hydra;
+  inherit (iohkLib.iohkNix) check-nix-tools check-hydra pkgs;
 }

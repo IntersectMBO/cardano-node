@@ -9,6 +9,11 @@ let
    # our packages
   stack-pkgs = import ./.stack.nix/default.nix;
 
+  src = pkgs.lib.cleanSourceWith {
+    src = pkgs.lib.cleanSource ../.;
+    filter = name: type: type != "unknown";
+  };
+
 
   # Build the packageset with module support.
   # We can essentially override anything in the modules
@@ -37,6 +42,9 @@ let
         # This is similar to jailbreakCabal, however it
         # does not require any messing with cabal files.
         packages.katip.doExactConfig = true;
+
+        # Add source filtering to local packages
+        packages.cardano-node.src = src;
       }
     ];
   };

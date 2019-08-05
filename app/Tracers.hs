@@ -5,11 +5,14 @@
 {-# LANGUAGE OverloadedStrings    #-}
 {-# LANGUAGE ScopedTypeVariables  #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE RankNTypes           #-}
+
 module Tracers
   ( readableChainDBTracer
   , Tracers (..)
   , mkTracers
   , withTip
+  , Peer(..)
   ) where
 
 import           Codec.CBOR.Read (DeserialiseFailure)
@@ -48,6 +51,24 @@ import qualified Ouroboros.Storage.LedgerDB.OnDisk as LedgerDB
 import           Cardano.Node.CLI (TraceConstraints)
 
 import qualified CLI
+
+import           Network.TypedProtocol.Driver.ByteLimit (DecoderFailureOrTooMuchInput)
+import qualified Codec.CBOR.Term as CBOR
+import qualified Codec.Serialise as Serialise
+import           Ouroboros.Network.Protocol.Handshake.Type (Handshake)
+import           Network.TypedProtocol.Driver (TraceSendRecv)
+import           Data.Typeable (Typeable)
+import           Network.Socket as Socket
+
+
+-- | Peer identifier used in consensus application
+--
+data Peer = Peer { localAddr  :: SockAddr
+                 , remoteAddr :: SockAddr }
+  deriving (Eq, Ord, Show)
+
+instance Condense Peer where
+    condense (Peer localAddr remoteAddr) = (show localAddr) ++ (show remoteAddr)
 
 
 -- Converts the trace events from the ChainDB that we're interested in into
@@ -129,6 +150,9 @@ data Tracers peer blk = Tracers {
 
       -- | Trace the DNS resolver.
     , dnsResolverTracer     :: Tracer IO String
+
+     -- | trace protocol handshake messages
+    , tracerHandshake       :: forall vNumber . (Ord vNumber, Enum vNumber, Serialise.Serialise vNumber, Typeable vNumber, Show vNumber) => (Tracer IO (TraceSendRecv (Handshake vNumber CBOR.Term) Peer (DecoderFailureOrTooMuchInput DeserialiseFailure)))
     }
 
 -- | Smart constructor of 'NodeTraces'.
@@ -159,6 +183,7 @@ mkTracers traceOptions tracer = Tracers
     , dnsResolverTracer
         = enableTracer (CLI.traceDnsResolver traceOptions)
         $ withName "DnsResolver" tracer
+    , tracerHandshake = enableTracer (CLI.traceHandshake traceOptions) $ withName "Handshake" tracer
     }
   where
     tracer' :: Tracer IO String

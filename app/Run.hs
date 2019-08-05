@@ -8,6 +8,10 @@
 {-# LANGUAGE RecordWildCards     #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications    #-}
+{-# LANGUAGE LambdaCase           #-}
+-- required for 'Show' instance of 'WithTip'
+{-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE RankNTypes           #-}
 
 {-# OPTIONS_GHC -Wno-simplifiable-class-constraints #-}
 
@@ -21,7 +25,6 @@ module Run (
 
 import           Codec.CBOR.Decoding (Decoder)
 import           Codec.CBOR.Encoding (Encoding)
-import qualified Codec.Serialise as Serialise (decode, encode)
 import           Codec.SerialiseTerm
 import qualified Control.Concurrent.Async as Async
 import           Control.Exception
@@ -53,6 +56,7 @@ import           Cardano.BM.Trace (appendName)
 import           Cardano.Shell.Constants.Types (CardanoConfiguration (..))
 import           Cardano.Shell.Features.Logging (LoggingLayer (..))
 
+
 import           Ouroboros.Network.Block
 import qualified Ouroboros.Network.Block as Block
 import           Ouroboros.Network.NodeToClient as NodeToClient
@@ -71,16 +75,15 @@ import           Ouroboros.Network.Protocol.TxSubmission.Codec
 import           Ouroboros.Consensus.Block (BlockProtocol)
 import           Ouroboros.Consensus.BlockchainTime
 import           Ouroboros.Consensus.ChainSyncClient (ClockSkew (..))
+import           Ouroboros.Consensus.Ledger.Byron (GenTxId)
 import           Ouroboros.Consensus.Ledger.Extended (ExtLedgerState)
 import           Ouroboros.Consensus.Node
 import           Ouroboros.Consensus.Node.ProtocolInfo
 import           Ouroboros.Consensus.Node.Run
-import           Ouroboros.Consensus.Node.Tracers
 import           Ouroboros.Consensus.NodeId
 import           Ouroboros.Consensus.NodeNetwork
 import           Ouroboros.Consensus.Protocol hiding (Protocol)
 import qualified Ouroboros.Consensus.Protocol as Consensus
-import           Ouroboros.Consensus.Util.Condense
 import           Ouroboros.Consensus.Util.Orphans ()
 import           Ouroboros.Consensus.Util.STM
 import           Ouroboros.Consensus.Util.ThreadRegistry
@@ -101,15 +104,6 @@ import           TxSubmission
 import           LiveView
 #endif
 
-
--- | Peer identifier used in consensus application
---
-data Peer = Peer { localAddr  :: SockAddr
-                 , remoteAddr :: SockAddr }
-  deriving (Eq, Ord, Show)
-
-instance Condense Peer where
-    condense (Peer localAddr remoteAddr) = (show localAddr) ++ (show remoteAddr)
 
 
 runNode :: NodeCLIArguments -> LoggingLayer -> CardanoConfiguration -> IO ()
@@ -291,8 +285,8 @@ handleSimpleNode p NodeCLIArguments{..}
                     codecLocalTxSubmission
                       nodeEncodeGenTx
                       nodeDecodeGenTx
-                      Serialise.encode
-                      Serialise.decode
+                      (nodeEncodeApplyTxError (Proxy @blk))
+                      (nodeDecodeApplyTxError (Proxy @blk))
 
                 }
               (protocolHandlers nodeParams kernel)
@@ -371,6 +365,7 @@ handleSimpleNode p NodeCLIArguments{..}
               connectToNode'
                 (\(DictVersion codec) -> encodeTerm codec)
                 (\(DictVersion codec) -> decodeTerm codec)
+                (tracerHandshake nodeTraces)
                 Peer
                 (initiatorNetworkApplication <$> networkAppNodeToNode)
                 sock)
@@ -404,6 +399,7 @@ handleSimpleNode p NodeCLIArguments{..}
               connectToNode'
                 (\(DictVersion codec) -> encodeTerm codec)
                 (\(DictVersion codec) -> decodeTerm codec)
+                (tracerHandshake nodeTraces)
                 Peer
                 (initiatorNetworkApplication <$> networkAppNodeToNode)
                 sock)
