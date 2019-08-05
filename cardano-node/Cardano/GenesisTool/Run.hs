@@ -25,25 +25,28 @@ module Cardano.GenesisTool.Run (
   , GenesisToolError (..)
   ) where
 
-import           Prelude (String, error, id)
-import qualified Prelude
+import           Prelude (String, id)
 
 import           Codec.CBOR.Read (DeserialiseFailure, deserialiseFromBytes)
 import           Codec.CBOR.Write (toLazyByteString)
 import           Control.Exception (throw)
 import           Control.Monad
 import qualified Data.ByteArray as BA
+import qualified Data.ByteString as SB
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.Map.Strict as Map
 import           Data.Semigroup ((<>))
+import           Data.String (fromString)
 import qualified Data.ByteString.UTF8 as UTF8
 import           Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
+import qualified Data.Text.Lazy.IO as TL
 import qualified Data.Text.Lazy.Builder as Builder
 import qualified Formatting as F
 import           Options.Applicative
 import           System.Directory (createDirectory, doesPathExist)
+import           System.Exit (ExitCode(..), exitWith)
 import           System.FilePath ((</>))
 import           System.IO (hGetLine, hSetEcho, hFlush, stdout, stdin)
 import           Text.Printf (printf)
@@ -57,15 +60,17 @@ import qualified Crypto.SCRAPE as Scrape
 
 import           Cardano.Prelude hiding (option)
 
+import           Cardano.Binary (Annotated(..), serialize')
 import qualified Cardano.Chain.Common as CC
-import           Cardano.Chain.Delegation (Certificate, ACertificate (..))
+import           Cardano.Chain.Delegation (Certificate, ACertificate (..)
+                                          , mkCertificate, isValid)
 import           Cardano.Crypto (SigningKey (..))
 import qualified Test.Cardano.Chain.Genesis.Dummy as Dummy
 import qualified Cardano.Crypto.Random as CCr
 import qualified Cardano.Crypto.Hashing as CCr
 import qualified Cardano.Crypto.Signing as CCr
 import           Cardano.Chain.Genesis
-
+--Cardano.Crypto.Signing.VerificationKey
 import           Cardano.Node.CanonicalJSON
 
 import qualified Cardano.Legacy.Byron as Legacy
@@ -91,6 +96,9 @@ data GenesisToolError
   | ProtocolParametersParseFailed FilePath Text
   | GenesisReadError GenesisDataError
   | SigningKeyDeserializationFailed FilePath Codec.CBOR.Read.DeserialiseFailure
+  | VerificationKeyDeserializationFailed Text
+  | DlgCertificateDeserializationFailed Text
+    -- TODO:  sadly, VerificationKeyParseError isn't exported from Cardano.Crypto.Signing/*
   -- Inconsistencies
   | DelegationError GenesisDelegationError
   | GenesisSpecError Text
@@ -120,8 +128,8 @@ runCommand kmo@KeyMaterialOps{..}
         canonicalDecPre protoParamsRaw
 
   -- We're relying on the generator to fake AVVM and delegation.
-  mGenesisDelegation <- runExceptT $ mkGenesisDelegation []
-  let genesisDelegation   = either (throw . DelegationError) id mGenesisDelegation
+  mGenesisDlg <- runExceptT $ mkGenesisDelegation []
+  let genesisDelegation   = either (throw . DelegationError) id mGenesisDlg
       genesisAvvmBalances = GenesisAvvmBalances mempty
 
   let mGenesisSpec =
@@ -151,11 +159,10 @@ runCommand kmo@KeyMaterialOps{..}
 
   dumpGenesis kmo outDir genesisData generatedSecrets
 
-runCommand KeyMaterialOps{..} (PrettySigningKeyPublic secretPath) =
+runCommand kmo@KeyMaterialOps{..} (PrettySigningKeyPublic secretPath) =
   putStrLn =<< T.unpack
              . prettySigningKeyPub
-             . kmoDeserialiseDelegateKey
-             <$> LB.readFile secretPath
+             <$> readSigningKey kmo secretPath
 
 runCommand kmo (MigrateDelegateKeyFrom
                   fromVer
@@ -163,8 +170,7 @@ runCommand kmo (MigrateDelegateKeyFrom
                   secretPathFrom) =
         LB.writeFile secretPathTo
     =<< kmoSerialiseDelegateKey kmo
-      . kmoDeserialiseDelegateKey fromKMO
-    =<< LB.readFile secretPathFrom
+    =<< readSigningKey fromKMO secretPathFrom
   where
     fromKMO = decideKeyMaterialOps fromVer
 
@@ -179,12 +185,11 @@ runCommand KeyMaterialOps{..} (PrintGenesisHash secretPath) =
            . snd . either (throw . GenesisReadError) id
            =<< runExceptT (readGenesisData secretPath)
 
-runCommand KeyMaterialOps{..} (PrintSigningKeyAddress networkMagic secretPath) =
+runCommand kmo@KeyMaterialOps{..} (PrintSigningKeyAddress netMagic secPath) =
   putStrLn . T.unpack . prettyAddress
-           . CC.makeVerKeyAddress networkMagic
+           . CC.makeVerKeyAddress netMagic
            . CCr.toVerification
-           . kmoDeserialiseDelegateKey
-           =<< LB.readFile secretPath
+           =<< readSigningKey kmo secPath
 
 runCommand KeyMaterialOps{..}
            (Keygen outFile disablePassword) = do
@@ -196,16 +201,86 @@ runCommand KeyMaterialOps{..}
 
   (_vk, esk) <- CCr.runSecureRandom $ CCr.safeKeyGen passph
 
-  exists <- doesPathExist outFile
-  when exists $
-    throw $ OutputMustNotAlreadyExist outFile
-
-  LB.writeFile outFile
+  ensureNewFileLBS outFile
     =<< (kmoSerialiseDelegateKey $ SigningKey $ CCr.eskPayload esk)
+
+runCommand kmo (ToVerification
+                  secretPath
+                  outFile) = do
+  ensureNewFileText outFile
+    . Builder.toLazyText . CCr.formatFullVerificationKey . CCr.toVerification
+    =<< readSigningKey kmo secretPath
+
+runCommand kmo@KeyMaterialOps{..}
+           (Redelegate protoMagic epoch genesisSF delegateVF outCertF) = do
+  sk <- readSigningKey kmo genesisSF
+  vk <- readVerificationKey delegateVF
+  let signer = CCr.noPassSafeSigner sk
+  -- TODO:  we need to support password-protected secrets.
+
+  let cert = mkCertificate protoMagic signer vk epoch
+  ensureNewFileLBS outCertF =<< kmoSerialiseDelegationCert cert
+
+runCommand KeyMaterialOps{..}
+           (CheckDelegation magic certF issuerVF delegateVF) = do
+  issuerVK'   <- readVerificationKey issuerVF
+  delegateVK' <- readVerificationKey delegateVF
+  cert :: ACertificate ()
+              <- either (throw . DlgCertificateDeserializationFailed) id
+                 . canonicalDecPre <$> LB.readFile certF
+
+  let magic' = Annotated magic (serialize' magic)
+      epoch  = unAnnotated $ aEpoch cert
+      cert'  = cert { aEpoch = Annotated epoch (serialize' epoch) }
+      vk    :: forall r. F.Format r (CCr.VerificationKey -> r)
+      vk     = CCr.fullVerificationKeyF
+      f     :: forall a. F.Format Text a -> a
+      f      = F.sformat
+      issues =
+        [ f("Certificate does not have a valid signature.")
+        | not (isValid magic' cert') ] <>
+
+        [ f("Certificate issuer ".vk." doesn't match expected: ".vk)
+          (issuerVK   cert)   issuerVK'
+        |  issuerVK   cert /= issuerVK' ] <>
+
+        [ f("Certificate delegate ".vk." doesn't match expected: ".vk)
+          (delegateVK cert)   delegateVK'
+        |  delegateVK cert /= delegateVK' ]
+  mapM_ (hPutStrLn stderr) issues
+
+  exitWith $ if null issues then ExitSuccess else ExitFailure 1
 
 {-------------------------------------------------------------------------------
   Supporting functions
 -------------------------------------------------------------------------------}
+
+-- TODO:  we need to support password-protected secrets.
+readSigningKey :: KeyMaterialOps IO -> FilePath -> IO SigningKey
+readSigningKey kmo fp =
+  kmoDeserialiseDelegateKey kmo
+  <$> LB.readFile fp
+
+readVerificationKey :: FilePath -> IO CCr.VerificationKey
+readVerificationKey fp =
+  either (throw . VerificationKeyDeserializationFailed . show) id
+  . CCr.parseFullVerificationKey . fromString . UTF8.toString
+  <$> SB.readFile fp
+
+-- TODO:  we'd be better served with a combination of a temporary file
+--        with an atomic rename.
+ensureNewFile' :: (FilePath -> a -> IO ()) -> FilePath -> a -> IO ()
+ensureNewFile' writer outFile blob = do
+  exists <- doesPathExist outFile
+  when exists $
+    throw $ OutputMustNotAlreadyExist outFile
+  writer outFile blob
+
+ensureNewFileLBS :: FilePath -> LB.ByteString -> IO ()
+ensureNewFileLBS = ensureNewFile' LB.writeFile
+
+ensureNewFileText :: FilePath -> TL.Text -> IO ()
+ensureNewFileText = ensureNewFile' TL.writeFile
 
 readPassword :: String -> IO CCr.PassPhrase
 readPassword prompt = do

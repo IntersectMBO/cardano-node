@@ -20,7 +20,13 @@ Available commands:
                            Migrate a delegate key from an older version.
   dump-hardcoded-genesis   Write out a hard-coded genesis.
   print-genesis-hash       Compute hash of a genesis file.
-.
+  signing-key-address      Print address of a signing key.
+  keygen                   Generate a signing key.
+  to-verification          Extract a verification key in its base64 form.
+  redelegate               Redelegate genesis authority to a different
+                           verification key.
+  check-delegation         Verify that a given certificate constitutes a valid
+                           delegation relationship betwen keys.
 ```
 
 All commands have help available:
@@ -67,6 +73,18 @@ can be dumped by the `dump-hardcoded-genesis` subcommand.
 The `print-genesis-hash` subcommand will compute the genesis hash of a given genesis JSON file.
 That value will be suitable for the `--genesis-hash` option of `cardano-node`.
 
+## Key operations
+
+Note that no key operation currently supports accepting password-protected keys.
+The `keygen` subcommand, though, can generate such keys.
+
+### Signing key generation & verification key extraction
+
+Signing keys can be generated using the `keygen` subcommand, password protection being
+controlled by the `--no-password` flag.
+
+Extracting a verification key out of the signing key is performed by the `to-verification` subcommand.
+
 ## Delegate key migration
 
 In order to continue using a delegate key from the Byron Legacy era in the new implementation,
@@ -76,6 +94,25 @@ it needs to be migrated over, which is done by the `migrate-delegate-key-from` s
 $ cabal new-run -- genesis-tool byron-pbft migrate-delegate-key-from byron-legacy \
                                            --from key0.sk --to key0.pbft
 ```
+
+## Delegation
+
+The `redelegate` subcommand enables generation of delegation certificates,
+given the following inuputs:
+
+   - protocol magic
+   - starting epoch of delegation
+   - delegator signing key
+   - delegate verification key
+
+To check the generated delegation certificate, you can use the `check-delegation` subcommand,
+which would verify:
+
+   - certificatesignature validity
+   - correspondence of the expected issuer/delegate with those on the certificate.
+
+The expected issuer and delegate are supplied through the `--issuer-key` and `--delegate-key`
+options.
 
 ## Signing key queries
 

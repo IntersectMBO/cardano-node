@@ -21,6 +21,7 @@ import           Cardano.Crypto.Signing
 import           Cardano.Chain.Common
 import           Cardano.Chain.Delegation
 import           Cardano.Chain.Genesis
+import           Cardano.Chain.Slotting
 
 import           Cardano.Node.CLI
 
@@ -59,11 +60,26 @@ data Command
   | PrintGenesisHash
     !FilePath
   | PrintSigningKeyAddress
-    !NetworkMagic
+    !NetworkMagic -- TODO:  consider deprecation in favor of ProtocolMagicId,
+                  --        once Byron is out of the picture.
     !FilePath
   | Keygen
     !FilePath
     !Bool
+  | ToVerification
+    !FilePath
+    !FilePath
+  | Redelegate
+    !ProtocolMagicId
+    !EpochNumber
+    !FilePath
+    !FilePath
+    !FilePath
+  | CheckDelegation
+    !ProtocolMagicId
+    !FilePath
+    !FilePath
+    !FilePath
 
 data KeyMaterialOps m
   = KeyMaterialOps
@@ -129,4 +145,22 @@ parseCommand = subparser $ mconcat
       Keygen
       <$> parseFilePath    "secret"                   "Non-existent file to write the secret key to."
       <*> parseFlag        "no-password"              "Disable password protection."
+  , command' "to-verification"                "Extract a verification key in its base64 form." $
+      ToVerification
+      <$> parseFilePath    "secret"                   "Secret key file to extract from."
+      <*> parseFilePath    "to"                       "Non-existent file to write the base64-formatted verification key to."
+  , command' "redelegate"                     "Redelegate genesis authority to a different verification key." $
+      Redelegate
+      <$> parseProtocolMagicId "protocol-magic"
+      <*> (EpochNumber <$>
+           parseIntegral   "since-epoch"              "First epoch of effective delegation.")
+      <*> parseFilePath    "secret"                   "The genesis key to redelegate from."
+      <*> parseFilePath    "delegate-key"             "The operation verification key to delegate to."
+      <*> parseFilePath    "certificate"              "Non-existent file to write the certificate to."
+  , command' "check-delegation"               "Verify that a given certificate constitutes a valid delegation relationship betwen keys." $
+      CheckDelegation
+      <$> parseProtocolMagicId "protocol-magic"
+      <*> parseFilePath    "certificate"              "The certificate embodying delegation to verify."
+      <*> parseFilePath    "issuer-key"               "The genesis key that supposedly delegates."
+      <*> parseFilePath    "delegate-key"             "The operation verification key supposedly delegated to."
   ]
