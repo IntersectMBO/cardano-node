@@ -146,6 +146,7 @@ submitTx :: ( RunDemo blk
          -> IO ()
 submitTx pInfoConfig nodeId tx tracer =
     connectTo
+      nullTracer
       (,)
       (localInitiatorNetworkApplication tracer pInfoConfig tx)
       Nothing

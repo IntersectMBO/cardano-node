@@ -290,8 +290,8 @@ handleSimpleNode p NodeCLIArguments{..}
                     codecLocalTxSubmission
                       nodeEncodeGenTx
                       nodeDecodeGenTx
-                      Serialise.encode
-                      Serialise.decode
+                      (nodeEncodeApplyTxError (Proxy @blk))
+                      (nodeDecodeApplyTxError (Proxy @blk))
 
                 }
               (protocolHandlers nodeParams kernel)
@@ -370,6 +370,7 @@ handleSimpleNode p NodeCLIArguments{..}
               connectToNode'
                 (\(DictVersion codec) -> encodeTerm codec)
                 (\(DictVersion codec) -> decodeTerm codec)
+                nullTracer
                 Peer
                 (initiatorNetworkApplication <$> networkAppNodeToNode)
                 sock)
@@ -403,6 +404,7 @@ handleSimpleNode p NodeCLIArguments{..}
               connectToNode'
                 (\(DictVersion codec) -> encodeTerm codec)
                 (\(DictVersion codec) -> decodeTerm codec)
+                nullTracer
                 Peer
                 (initiatorNetworkApplication <$> networkAppNodeToNode)
                 sock)
