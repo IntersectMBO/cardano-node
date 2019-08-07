@@ -97,8 +97,11 @@ parseSystemVersion = subparser $ mconcat
   ]
 
 parseCommand :: Parser Command
-parseCommand = subparser $ mconcat
-  [ command' "genesis"                        "Perform genesis." $
+parseCommand =
+  subparser
+  (mconcat
+    [ commandGroup "Genesis"
+    , command' "genesis"                        "Perform genesis." $
       Genesis
       <$> parseFilePath    "genesis-output-dir"       "A yet-absent directory where genesis JSON file along with secrets shall be placed."
       <*> parseUTCTime     "start-time"               "Start time of the new cluster to be enshrined in the new genesis."
@@ -109,46 +112,55 @@ parseCommand = subparser $ mconcat
       <*> parseFakeAvvmOptions
       <*> (LovelacePortion . fromInteger . fromMaybe 1 <$>
            (optional $
-            parseIntegral  "avvm-balance-factor"      "AVVM balances will be multiplied by this factor (defaults to 1)."))
+             parseIntegral  "avvm-balance-factor"      "AVVM balances will be multiplied by this factor (defaults to 1)."))
       <*> optional (parseIntegral    "secret-seed"              "Optionally specify the seed of generation.")
-  , command' "signing-key-public"             "Pretty-print a signing key's verification key (not a secret)." $
+    , command' "dump-hardcoded-genesis"         "Write out a hard-coded genesis." $
+      DumpHardcodedGenesis
+      <$> parseFilePath    "genesis-output-dir"       "A yet-absent directory where genesis JSON file along with secrets shall be placed."
+    , command' "print-genesis-hash"             "Compute hash of a genesis file." $
+      PrintGenesisHash
+      <$> parseFilePath    "genesis-json"             "Genesis JSON file to hash."
+    ])
+  <|> subparser
+  (mconcat
+    [ commandGroup "Keys"
+    , command' "keygen"                         "Generate a signing key." $
+      Keygen
+      <$> parseFilePath    "secret"                   "Non-existent file to write the secret key to."
+      <*> parseFlag        "no-password"              "Disable password protection."
+    , command' "to-verification"                "Extract a verification key in its base64 form." $
+      ToVerification
+      <$> parseFilePath    "secret"                   "Secret key file to extract from."
+      <*> parseFilePath    "to"                       "Non-existent file to write the base64-formatted verification key to."
+    , command' "signing-key-public"             "Pretty-print a signing key's verification key (not a secret)." $
       PrettySigningKeyPublic
       <$> parseFilePath    "secret"                   "File name of the secret key to pretty-print."
-  , command' "migrate-delegate-key-from"      "Migrate a delegate key from an older version." $
+    , command' "signing-key-address"            "Print address of a signing key." $
+      PrintSigningKeyAddress
+      <$> parseNetworkMagic
+      <*> parseFilePath    "secret"                   "Secret key, whose address is to be printed."
+    , command' "migrate-delegate-key-from"      "Migrate a delegate key from an older version." $
       MigrateDelegateKeyFrom
       <$> parseSystemVersion
       <*> parseFilePath    "to"                       "Output secret key file."
       <*> parseFilePath    "from"                     "Secret key file to migrate."
-  , command' "dump-hardcoded-genesis"         "Write out a hard-coded genesis." $
-      DumpHardcodedGenesis
-      <$> parseFilePath    "genesis-output-dir"       "A yet-absent directory where genesis JSON file along with secrets shall be placed."
-  , command' "print-genesis-hash"             "Compute hash of a genesis file." $
-      PrintGenesisHash
-      <$> parseFilePath    "genesis-json"             "Genesis JSON file to hash."
-  , command' "signing-key-address"            "Print address of a signing key." $
-      PrintSigningKeyAddress
-      <$> parseNetworkMagic
-      <*> parseFilePath    "secret"                   "Secret key, whose address is to be printed."
-  , command' "keygen"                         "Generate a signing key." $
-      Keygen
-      <$> parseFilePath    "secret"                   "Non-existent file to write the secret key to."
-      <*> parseFlag        "no-password"              "Disable password protection."
-  , command' "to-verification"                "Extract a verification key in its base64 form." $
-      ToVerification
-      <$> parseFilePath    "secret"                   "Secret key file to extract from."
-      <*> parseFilePath    "to"                       "Non-existent file to write the base64-formatted verification key to."
-  , command' "redelegate"                     "Redelegate genesis authority to a different verification key." $
+    
+    ])
+  <|> subparser
+  (mconcat
+    [ commandGroup "Delegation"
+    , command' "redelegate"                     "Redelegate genesis authority to a different verification key." $
       Redelegate
       <$> parseProtocolMagicId "protocol-magic"
       <*> (EpochNumber <$>
-           parseIntegral   "since-epoch"              "First epoch of effective delegation.")
+            parseIntegral   "since-epoch"              "First epoch of effective delegation.")
       <*> parseFilePath    "secret"                   "The genesis key to redelegate from."
       <*> parseFilePath    "delegate-key"             "The operation verification key to delegate to."
       <*> parseFilePath    "certificate"              "Non-existent file to write the certificate to."
-  , command' "check-delegation"               "Verify that a given certificate constitutes a valid delegation relationship betwen keys." $
+    , command' "check-delegation"               "Verify that a given certificate constitutes a valid delegation relationship betwen keys." $
       CheckDelegation
       <$> parseProtocolMagicId "protocol-magic"
       <*> parseFilePath    "certificate"              "The certificate embodying delegation to verify."
       <*> parseFilePath    "issuer-key"               "The genesis key that supposedly delegates."
       <*> parseFilePath    "delegate-key"             "The operation verification key supposedly delegated to."
-  ]
+    ])

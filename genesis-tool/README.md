@@ -13,16 +13,21 @@ The supported commands are (as per excerpt from the tool's `--help`):
 
 ```
 Available commands:
+Genesis
   genesis                  Perform genesis.
-  signing-key-public       Pretty-print a signing key's verification key (not a
-                           secret).
-  migrate-delegate-key-from
-                           Migrate a delegate key from an older version.
   dump-hardcoded-genesis   Write out a hard-coded genesis.
   print-genesis-hash       Compute hash of a genesis file.
-  signing-key-address      Print address of a signing key.
+
+Keys
   keygen                   Generate a signing key.
   to-verification          Extract a verification key in its base64 form.
+  signing-key-public       Pretty-print a signing key's verification key (not a
+                           secret).
+  signing-key-address      Print address of a signing key.
+  migrate-delegate-key-from
+                           Migrate a delegate key from an older version.
+
+Delegation
   redelegate               Redelegate genesis authority to a different
                            verification key.
   check-delegation         Verify that a given certificate constitutes a valid
