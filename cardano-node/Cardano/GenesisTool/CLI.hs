@@ -46,7 +46,7 @@ data Command
     !TestnetBalanceOptions
     !FakeAvvmOptions
     !LovelacePortion
-    !Integer
+    !(Maybe Integer)
   | PrettySigningKeyPublic
     !FilePath
   | MigrateDelegateKeyFrom
@@ -110,7 +110,7 @@ parseCommand = subparser $ mconcat
       <*> (LovelacePortion . fromInteger . fromMaybe 1 <$>
            (optional $
             parseIntegral  "avvm-balance-factor"      "AVVM balances will be multiplied by this factor (defaults to 1)."))
-      <*> parseIntegral    "secret-seed"              "Optionally specify the seed of generation."
+      <*> optional (parseIntegral    "secret-seed"              "Optionally specify the seed of generation.")
   , command' "signing-key-public"             "Pretty-print a signing key's verification key (not a secret)." $
       PrettySigningKeyPublic
       <$> parseFilePath    "secret"                   "File name of the secret key to pretty-print."

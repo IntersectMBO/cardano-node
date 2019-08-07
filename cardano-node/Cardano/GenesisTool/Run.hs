@@ -33,6 +33,7 @@ import           Codec.CBOR.Read (DeserialiseFailure, deserialiseFromBytes)
 import           Codec.CBOR.Write (toLazyByteString)
 import           Control.Exception.Safe (catchIO)
 import           Control.Monad
+import           Data.Bits (shiftL)
 import qualified Data.ByteArray as BA
 import qualified Data.ByteString as SB
 import qualified Data.ByteString.Lazy as LB
@@ -176,6 +177,10 @@ runCommand kmo@KeyMaterialOps{..}
     Left e  -> throwIO $ DelegationError e
     Right x -> pure x
 
+  seed <- case giSeed of
+    Nothing -> CCr.runSecureRandom . CCr.randomNumber $ shiftL 1 32
+    Just x  -> pure x
+
   let genesisAvvmBalances = GenesisAvvmBalances mempty
   let mGenesisSpec =
         mkGenesisSpec
@@ -191,7 +196,7 @@ runCommand kmo@KeyMaterialOps{..}
         giFakeAvvmBalance   -- :: !FakeAvvmOptions
         giAvvmBalanceFactor -- :: !LovelacePortion
         giUseHeavyDlg       -- :: !Bool
-        giSeed              -- :: !Integer
+        seed                -- :: !Integer
       giUseHeavyDlg =
         True                -- Not using delegate keys unsupported.
 

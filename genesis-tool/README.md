@@ -64,9 +64,6 @@ The directory will have the following content:
  - `genesis-keys.*.key`       - --n-delegate-addresses, --total-balance
  - `poor-keys.*.key`          - --n-poor-addresses, --total-balance
 
-NOTE: the seed that determines the generated genesis' content has to be provided manually,
-and is hard-coded in the `scripts/genesis.sh` example.  To be made optional later.
-
 Dummy genesis, that corresponds to `Test.Cardano.Chain.Genesis.Dummy.dummyConfig.configGenesisData`
 can be dumped by the `dump-hardcoded-genesis` subcommand.
 
