@@ -68,6 +68,7 @@ runWalletClient ptcl nid numCoreNodes tracer = do
         localTxSubmissionTracer = contramap show tracer
 
     connectTo
+      nullTracer
       (,)
       (localInitiatorNetworkApplication
         (Proxy :: Proxy blk)

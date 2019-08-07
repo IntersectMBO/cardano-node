@@ -24,7 +24,7 @@ library
                        base >=4.12 && <5
                      , bytestring
                      , canonical-json
-                     , cborg
+                     , cborg == 0.2.2.0
                      , formatting
                      , mtl
                      , optparse-applicative
@@ -91,7 +91,7 @@ executable cardano-node
                      , aeson
                      , async
                      , bytestring
-                     , cborg
+                     , cborg == 0.2.2.0
                      , containers
                      , cryptonite
                      , directory
@@ -187,7 +187,7 @@ executable genesis-tool
                      , binary
                      , bytestring
                      , canonical-json
-                     , cborg
+                     , cborg == 0.2.2.0
                      , containers
                      , cryptonite
                      , directory
