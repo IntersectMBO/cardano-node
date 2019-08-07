@@ -121,6 +121,12 @@ source-repository-package
 
 source-repository-package
   type: git
+  location: https://github.com/well-typed/cborg
+  tag: 992b730ca6fd9c1da191bfecb2b67cabf31b54ad
+  subdir: cborg
+
+source-repository-package
+  type: git
   location: http://github.com/well-typed/canonical-json
   tag: ddfe3593b80b5ceb88842bb7a6f2268df75d2c2f
 

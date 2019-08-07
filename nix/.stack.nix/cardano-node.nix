@@ -21,6 +21,7 @@
           (hsPkgs.bytestring)
           (hsPkgs.canonical-json)
           (hsPkgs.cborg)
+          (hsPkgs.containers)
           (hsPkgs.formatting)
           (hsPkgs.mtl)
           (hsPkgs.optparse-applicative)
@@ -42,6 +43,7 @@
         "cardano-node" = {
           depends = [
             (hsPkgs.base)
+            (hsPkgs.cardano-binary)
             (hsPkgs.cardano-crypto-class)
             (hsPkgs.cardano-crypto-wrapper)
             (hsPkgs.cardano-ledger)

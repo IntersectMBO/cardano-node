@@ -21,7 +21,6 @@ import qualified Data.Set as Set
 import           Options.Applicative
 import           Data.Proxy
 
-import qualified Codec.Serialise as Serialise (encode, decode)
 import           Network.Socket as Socket
 
 import           Control.Monad (forever)
@@ -105,6 +104,7 @@ parseMockTxOut = (,)
 handleTxSubmission :: forall blk.
                       ( RunDemo blk
                       , Show (GenTx blk)
+                      , Show (ApplyTxErr blk)
                       )
                    => Consensus.Protocol blk
                    -> TopologyInfo
@@ -138,6 +138,7 @@ handleTxSubmission ptcl tinfo mocktx tracer = do
 
 submitTx :: ( RunDemo blk
             , Show (GenTx blk)
+            , Show (ApplyTxErr blk)
             )
          => NodeConfig (BlockProtocol blk)
          -> NodeId
@@ -162,6 +163,7 @@ localInitiatorNetworkApplication
      , MonadST m
      , MonadThrow m
      , MonadTimer m
+     , Show (ApplyTxErr blk)
      )
   => Tracer m String
   -> NodeConfig (BlockProtocol blk)
@@ -187,7 +189,7 @@ localInitiatorNetworkApplication tracer pInfoConfig tx =
                        (pure (txSubmissionClientSingle tx)))
         case result of
           Nothing  -> traceWith tracer "Transaction accepted"
-          Just msg -> traceWith tracer ("Transaction rejected: " ++ msg)
+          Just msg -> traceWith tracer ("Transaction rejected: " ++ show msg)
 
       ChainSyncWithBlocksPtcl -> \channel ->
         runPeer
@@ -219,15 +221,16 @@ chainSyncClientNull =
     blockForever = forever (threadDelay 3600)
 
 localTxSubmissionCodec
-  :: (RunDemo blk, MonadST m)
-  => Codec (LocalTxSubmission (GenTx blk) String)
+  :: forall m blk .
+     (RunDemo blk, MonadST m)
+  => Codec (LocalTxSubmission (GenTx blk) (ApplyTxErr blk))
            DeserialiseFailure m ByteString
 localTxSubmissionCodec =
   codecLocalTxSubmission
     nodeEncodeGenTx
     nodeDecodeGenTx
-    Serialise.encode
-    Serialise.decode
+    (nodeEncodeApplyTxError (Proxy @blk))
+    (nodeDecodeApplyTxError (Proxy @blk))
 
 localChainSyncCodec
   :: forall blk m. (RunDemo blk, MonadST m)
