@@ -26,6 +26,7 @@
           (hsPkgs.optparse-applicative)
           (hsPkgs.text)
           (hsPkgs.time)
+          (hsPkgs.generic-monoid)
           (hsPkgs.cardano-binary)
           (hsPkgs.cardano-crypto-wrapper)
           (hsPkgs.cardano-ledger)

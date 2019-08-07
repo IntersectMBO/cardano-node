@@ -17,6 +17,12 @@ library
 
   exposed-modules:     Cardano.Node.CanonicalJSON
   exposed-modules:     Cardano.Node.CLI
+                       -- Configuration
+                       Cardano.Node.Configuration.CLI
+                       Cardano.Node.Configuration.Lib
+                       Cardano.Node.Configuration.PartialTypes
+                       Cardano.Node.Configuration.Types
+                       Cardano.Node.Configuration.Presets
 
   other-modules:       Paths_cardano_node
 
@@ -31,6 +37,8 @@ library
                      , text
                      , time
 
+                     , generic-monoid
+
                      , cardano-binary
                      , cardano-crypto-wrapper
                      , cardano-ledger
@@ -41,13 +49,19 @@ library
                      , ouroboros-network
 
   default-language:    Haskell2010
-  default-extensions:
+  default-extensions:  NoImplicitPrelude
+                       OverloadedStrings
 
   ghc-options:         -Weverything
                        -Wno-implicit-prelude
                        -fno-warn-safe
                        -fno-warn-unsafe
                        -fno-warn-missing-import-lists
+                       -Wincomplete-record-updates
+                       -Wincomplete-uni-patterns
+                       -Wredundant-constraints
+                       -Wpartial-fields
+                       -Wcompat
 
   if os(windows)
      build-depends:    Win32
