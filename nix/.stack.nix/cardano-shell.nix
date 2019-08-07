@@ -47,6 +47,7 @@
             (hsPkgs.base)
             (hsPkgs.cardano-shell)
             (hsPkgs.cardano-prelude)
+            (hsPkgs.pretty-show)
             (hsPkgs.optparse-applicative)
             (hsPkgs.safe-exceptions)
             (hsPkgs.stm)
@@ -118,7 +119,7 @@
     } // {
     src = (pkgs.lib).mkDefault (pkgs.fetchgit {
       url = "https://github.com/input-output-hk/cardano-shell";
-      rev = "2044172cd8856e927860e9b5c731a4343462206e";
-      sha256 = "1ij6cpj7lg26ka90dg5q5n0976kqy2np912zdk4w4hwl9vqy4z4j";
+      rev = "e5e9f9527569c6221717c6834a386559ec3fed29";
+      sha256 = "0wb2ip9hva4pf3iy2qvf06nr63nlcakz9rh9dhvb77cxfyd8wv4j";
       });
     }

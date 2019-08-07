@@ -290,17 +290,11 @@ mergeConfiguration pcc cli =
         pccCore = mempty {
           pcoGenesisFile             = cliGenesisFile
         , pcoGenesisHash             = cliGenesisHash
-        , pcoStaticKeySigningKeyFile = hackMistakenExtraMaybe cliStaticKeySigningKeyFile
-        , pcoStaticKeyDlgCertFile    = hackMistakenExtraMaybe cliStaticKeyDlgCertFile
+        , pcoStaticKeySigningKeyFile = cliStaticKeySigningKeyFile
+        , pcoStaticKeyDlgCertFile    = cliStaticKeyDlgCertFile
        -- TODO: cliPBftSigThd, cliUpdate
         }
       }
-      where
-        -- In https://github.com/input-output-hk/cardano-shell/pull/234
-        -- we accidentally introduced an extra unnecessary layer of Maybe
-        -- we can remove this hack once that is resolved.
-        hackMistakenExtraMaybe :: Last a -> Last (Maybe a)
-        hackMistakenExtraMaybe = fmap Just
 
 {-------------------------------------------------------------------------------
   Command parsers
