@@ -7,19 +7,17 @@ module Cardano.GenesisTool.CLI (
     CLI(..)
   , Command(..)
   , parseCLI
-  , KeyMaterialOps(..)
   , SystemVersion(..)
   ) where
 
-import qualified Data.ByteString.Lazy as LB
+import           Cardano.Prelude
+
 import           Data.Maybe (fromMaybe)
 import           Data.Time (UTCTime)
 import           Options.Applicative
 
 import           Cardano.Crypto.ProtocolMagic
-import           Cardano.Crypto.Signing
 import           Cardano.Chain.Common
-import           Cardano.Chain.Delegation
 import           Cardano.Chain.Genesis
 import           Cardano.Chain.Slotting
 
@@ -80,16 +78,6 @@ data Command
     !FilePath
     !FilePath
     !FilePath
-
-data KeyMaterialOps m
-  = KeyMaterialOps
-  { kmoSerialiseGenesisKey       :: SigningKey  -> m LB.ByteString
-  , kmoSerialiseDelegateKey      :: SigningKey  -> m LB.ByteString
-  , kmoSerialisePoorKey          :: PoorSecret  -> m LB.ByteString
-  , kmoSerialiseGenesis          :: GenesisData -> m LB.ByteString
-  , kmoSerialiseDelegationCert   :: Certificate -> m LB.ByteString
-  , kmoDeserialiseDelegateKey    :: LB.ByteString -> SigningKey
-  }
 
 {-------------------------------------------------------------------------------
   CLI parsers.

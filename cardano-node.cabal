@@ -46,6 +46,7 @@ library
                      , mtl
                      , network
                      , optparse-applicative
+                     , safe-exceptions
                      , serialise
                      , text
                      , time
