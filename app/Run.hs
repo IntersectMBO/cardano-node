@@ -21,7 +21,6 @@ module Run (
 
 import           Codec.CBOR.Decoding (Decoder)
 import           Codec.CBOR.Encoding (Encoding)
-import qualified Codec.Serialise as Serialise (decode, encode)
 import           Codec.SerialiseTerm
 import qualified Control.Concurrent.Async as Async
 import           Control.Exception
@@ -228,7 +227,7 @@ handleSimpleNode p NodeCLIArguments{..}
 
       -- Watch the tip of the chain and store it in @varTip@ so we can include
       -- it in trace messages.
-      onEachChange registry id GenesisPoint (ChainDB.getTipPoint chainDB)
+      onEachChange registry id Nothing (ChainDB.getTipPoint chainDB)
         (atomically . writeTVar varTip)
 
       btime  <- realBlockchainTime registry slotDuration systemStart

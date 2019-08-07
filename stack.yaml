@@ -6,7 +6,7 @@ packages:
 extra-deps:
     # Cardano-ledger dependencies
   - git: https://github.com/input-output-hk/cardano-ledger
-    commit: 7d6cc5d4fd1ce1ca8412b5b68c2ac8fd9b845645
+    commit: d65ccecfc315b7b5447a8548e076d2ee106dbfca
     subdirs:
       - cardano-ledger
       - cardano-ledger/test
@@ -28,7 +28,7 @@ extra-deps:
 
     # Following deps are for cardano-shell
   - git: https://github.com/input-output-hk/cardano-shell
-    commit: 2044172cd8856e927860e9b5c731a4343462206e
+    commit: e5e9f9527569c6221717c6834a386559ec3fed29
 
   - binary-0.8.7.0
   - containers-0.5.11.0
@@ -41,7 +41,7 @@ extra-deps:
   - tasty-hedgehog-1.0.0.1
     # iohk-monitoring-framework currently not pinned to a release
   - git: https://github.com/input-output-hk/iohk-monitoring-framework
-    commit: bd31cd2f3922010ddb76bb869f29c4e63bb8001b
+    commit: 0dae43937d2858b437bfc93f7952ba93b88607e6
     subdirs:
       - contra-tracer
       - iohk-monitoring
@@ -56,7 +56,7 @@ extra-deps:
     #Ouroboros-network dependencies
 
   - git: https://github.com/input-output-hk/ouroboros-network
-    commit: 61a69d7310cc360df788d43814ee40729eaa9340
+    commit: e63bac949b8fabd52dff5eea54063f657bc1bb3f
     subdirs:
         - io-sim-classes
         - network-mux
