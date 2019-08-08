@@ -85,6 +85,7 @@ import           Ouroboros.Consensus.Util.ThreadRegistry
 
 import           Ouroboros.Storage.ChainDB (ChainDB)
 import qualified Ouroboros.Storage.ChainDB as ChainDB
+import           Ouroboros.Storage.EpochInfo (EpochInfo, newEpochInfo)
 import           Ouroboros.Storage.ImmutableDB (ValidationPolicy (..))
 import           Ouroboros.Storage.LedgerDB.DiskPolicy (defaultDiskPolicy)
 import           Ouroboros.Storage.LedgerDB.MemPolicy (defaultMemPolicy)
@@ -216,6 +217,7 @@ handleSimpleNode p NodeCLIArguments{..}
           }
 
       varTip <- atomically $ newTVar GenesisPoint
+      epochInfo <- newEpochInfo $ nodeEpochSize (Proxy @blk)
       let chainDbArgs = mkChainDbArgs
                           pInfoConfig
                           pInfoInitLedger
@@ -223,6 +225,7 @@ handleSimpleNode p NodeCLIArguments{..}
                           (CoreNodeId nid)
                           (withTip varTip $ chainDBTracer nodeTraces)
                           slotDuration
+                          epochInfo
       chainDB :: ChainDB IO blk <- ChainDB.openDB chainDbArgs
 
       -- Watch the tip of the chain and store it in @varTip@ so we can include
@@ -440,8 +443,9 @@ mkChainDbArgs :: forall blk. RunNode blk
               -> CoreNodeId
               -> Tracer IO (ChainDB.TraceEvent blk)
               -> SlotLength
+              -> EpochInfo IO
               -> ChainDB.ChainDbArgs IO blk
-mkChainDbArgs cfg initLedger registry (CoreNodeId nid) tracer slotDuration =
+mkChainDbArgs cfg initLedger registry (CoreNodeId nid) tracer slotDuration epochInfo =
     (ChainDB.defaultArgs dbPath)
       { ChainDB.cdbBlocksPerFile    = 1000 --TODO: move definition of default
                                            -- elsewhere and just use it here.
@@ -453,7 +457,7 @@ mkChainDbArgs cfg initLedger registry (CoreNodeId nid) tracer slotDuration =
       , ChainDB.cdbEncodeChainState = nodeEncodeChainState  (Proxy @blk)
       , ChainDB.cdbEncodeHash       = nodeEncodeHeaderHash  (Proxy @blk)
       , ChainDB.cdbEncodeLedger     = nodeEncodeLedgerState cfg
-      , ChainDB.cdbEpochSize        = nodeEpochSize         (Proxy @blk)
+      , ChainDB.cdbEpochInfo        = epochInfo
       , ChainDB.cdbGenesis          = return initLedger
       , ChainDB.cdbDiskPolicy       = defaultDiskPolicy secParam slotDiffTime
       , ChainDB.cdbIsEBB            = \blk -> if nodeIsEBB blk
