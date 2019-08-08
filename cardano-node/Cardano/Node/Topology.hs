@@ -4,13 +4,15 @@
 {-# LANGUAGE TemplateHaskell   #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Topology where
+module Cardano.Node.Topology where
+
+import           Cardano.Prelude
+import           Prelude (String, read)
 
 import           Data.Aeson
 import           Data.Aeson.TH
 import qualified Data.ByteString as B
 import qualified Data.IP as IP
-import           Data.String.Conv (toS)
 import           Text.Read (readMaybe)
 import           Network.Socket
 

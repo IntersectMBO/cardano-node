@@ -13,9 +13,12 @@
 
 {-# OPTIONS_GHC -Wno-simplifiable-class-constraints #-}
 
-module GitRevFromGit (
+module Cardano.Node.GitRevFromGit (
       gitRevFromGit
     ) where
+
+import           Cardano.Prelude hiding (handleJust)
+import           Prelude (String)
 
 import           Control.Exception.Safe (handleJust)
 import qualified Language.Haskell.TH as TH

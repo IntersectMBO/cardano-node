@@ -13,7 +13,7 @@ import           Options.Applicative
 import           Ouroboros.Consensus.Node.ProtocolInfo
 import           Ouroboros.Consensus.NodeId (CoreNodeId (..))
 
-import           Cardano.Node.CLI
+import           Cardano.Node.ConfigCLI
 
 data CLI = CLI {
     cliCoreNodeId   :: CoreNodeId,

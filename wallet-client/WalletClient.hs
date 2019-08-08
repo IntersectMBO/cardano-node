@@ -44,7 +44,7 @@ import           Ouroboros.Network.Protocol.ChainSync.Codec
 import           Ouroboros.Network.Protocol.Handshake.Version
 import           Ouroboros.Network.NodeToClient
 
-import           Cardano.Node.CLI (TraceConstraints)
+import           Cardano.Node.ConfigCLI (TraceConstraints)
 
 runWalletClient :: forall blk.
                    ( RunNode blk

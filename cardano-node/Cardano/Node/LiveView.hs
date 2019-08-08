@@ -4,7 +4,7 @@
 
 {-# OPTIONS_GHC -Wno-simplifiable-class-constraints #-}
 
-module LiveView (
+module Cardano.Node.LiveView (
       LiveViewBackend (..)
     , realize
     , effectuate
@@ -12,6 +12,9 @@ module LiveView (
     , setTopology
     , setNodeThread
     ) where
+
+import           Cardano.Prelude hiding (on, isPrefixOf)
+import           Prelude (String, read, words)
 
 import           Control.Concurrent (threadDelay)
 import qualified Control.Concurrent.Async as Async
@@ -30,7 +33,7 @@ import           Data.Version (showVersion)
 import           Data.Word (Word64)
 
 import qualified Brick.AttrMap as A
-import qualified Brick.BChan as Brick.BChan
+import qualified Brick.BChan
 import qualified Brick.Main as M
 import           Brick.Themes (Theme, newTheme, themeToAttrMap)
 import           Brick.Types (BrickEvent (..), EventM, Next, Widget)
@@ -59,10 +62,10 @@ import           Cardano.BM.Data.Severity
 import           Cardano.BM.Data.SubTrace
 import           Cardano.BM.Trace
 
-import           GitRev (gitRev)
+import           Cardano.Node.GitRev (gitRev)
 import           Ouroboros.Consensus.NodeId
 import           Paths_cardano_node (version)
-import           Topology
+import           Cardano.Node.Topology
 
 -- constants, to be evaluated from host system
 
@@ -96,7 +99,7 @@ instance IsBackend LiveViewBackend Text where
         modifyMVar_ mv $ \lvs -> return $ lvs { lvsUIThread = Just thr }
         return $ sharedState
 
-    unrealize be = putStrLn $ "unrealize " <> show (typeof be)
+    unrealize be = putStrLn $ T.pack "unrealize " <> show (typeof be)
 
 instance IsEffectuator LiveViewBackend Text where
     effectuate lvbe item = do

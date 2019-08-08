@@ -20,7 +20,7 @@ import           Cardano.Chain.Common
 import           Cardano.Chain.Delegation
 import           Cardano.Chain.Genesis
 
-import           Cardano.Node.CLI
+import           Cardano.Node.ConfigCLI
 
 {-------------------------------------------------------------------------------
 -------------------------------------------------------------------------------}

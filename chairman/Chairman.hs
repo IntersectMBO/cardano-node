@@ -58,7 +58,7 @@ import           Ouroboros.Network.Protocol.ChainSync.Codec
 import           Ouroboros.Network.Protocol.Handshake.Version
 import           Ouroboros.Network.NodeToClient
 
-import           Cardano.Node.CLI (TraceConstraints)
+import           Cardano.Node.ConfigCLI (TraceConstraints)
 
 -- | Run chairman: connect with all the core nodes.  Chairman will store the
 -- forks from a common prefix.  If any of them is longer than the security

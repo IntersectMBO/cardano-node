@@ -28,8 +28,8 @@ import           Cardano.Shell.Types (ApplicationEnvironment (Development),
 
 import           Cardano.Node.CLI
 
-import           CLI
-import           Run
+import           Cardano.Node.ConfigCLI
+import           Cardano.Node.Run
 
 
 -- | The product type of all command line arguments.

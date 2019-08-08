@@ -16,30 +16,58 @@ library
   hs-source-dirs:      cardano-node
 
   exposed-modules:     Cardano.Node.CanonicalJSON
-  exposed-modules:     Cardano.Node.CLI
+                       Cardano.Node.CLI
+                       Cardano.Node.ConfigCLI
                        -- Configuration
                        Cardano.Node.Configuration.CLI
                        Cardano.Node.Configuration.Lib
                        Cardano.Node.Configuration.PartialTypes
                        Cardano.Node.Configuration.Types
                        Cardano.Node.Configuration.Presets
+                       Cardano.Node.GitRev
+                       Cardano.Node.GitRevFromGit
+                       Cardano.Node.Run
+                       Cardano.Node.Topology
+                       Cardano.Node.TraceAcceptor
+                       Cardano.Node.Tracers
+                       Cardano.Node.TxSubmission
+
 
   other-modules:       Paths_cardano_node
 
-  build-depends:
-                       base >=4.12 && <5
+  build-depends:       aeson
+                     , async
+                     , base >=4.12 && <5
+                     , brick
                      , bytestring
                      , canonical-json
-                     , cborg == 0.2.2.0
+                     , cborg
+                     , containers
+                     , contra-tracer
+                     , cryptonite
+                     , directory
+                     , file-embed
                      , formatting
+                     , iproute
+                     , iohk-monitoring
+                     , io-sim-classes
                      , mtl
+                     , network
                      , optparse-applicative
+                     , process
+                     , safe-exceptions
+                     , serialise
+                     , template-haskell
                      , text
                      , time
+                     , typed-protocols
+                     , typed-protocols-cbor
+                     , vty
 
                      , generic-monoid
 
                      , cardano-binary
+                     , cardano-crypto-class
                      , cardano-crypto-wrapper
                      , cardano-ledger
                      , cardano-ledger-test
@@ -67,6 +95,7 @@ library
      build-depends:    Win32
   else
      build-depends:    unix
+     exposed-modules:  Cardano.Node.LiveView
 
 executable cardano-node
   hs-source-dirs:      app
@@ -77,61 +106,19 @@ executable cardano-node
                        -O2
                        "-with-rtsopts=-T"
                        -fno-warn-unticked-promoted-constructors
-  other-modules:       CLI
-                       GitRev
-                       GitRevFromGit
-                       Paths_cardano_node
-                       TraceAcceptor
-                       Tracers
-                       TxSubmission
-                       Run
-                       Topology
-                       Paths_cardano_node
+
   build-depends:       base
-                     , cardano-crypto-class
-                     , cardano-crypto-wrapper
-                     , cardano-ledger
-                     , cardano-ledger-test
                      , cardano-node
                      , cardano-prelude
                      , cardano-shell
-                     , contra-tracer
-                     , io-sim-classes
-                     , iohk-monitoring
-                     , ouroboros-network
-                     , ouroboros-consensus
-                     , typed-protocols-cbor
-
-                     , aeson
-                     , async
-                     , bytestring
-                     , cborg == 0.2.2.0
-                     , containers
-                     , cryptonite
-                     , directory
-                     , file-embed
-                     , formatting
-                     , iproute
-                     , lens
-                     , mtl
-                     , network
                      , optparse-applicative
-                     , process
-                     , serialise
-                     , safe-exceptions
-                     , stm
-                     , string-conv
-                     , template-haskell
-                     , text
-                     , time
-                     , typed-protocols
   if os(windows)
      build-depends:    Win32
   else
      build-depends:    unix
                      , brick
                      , vty
-     other-modules:    LiveView
+
 
 executable wallet-client
   hs-source-dirs:      wallet-client
@@ -183,25 +170,19 @@ executable genesis-tool
                      , Run
                      , Byron.Legacy
   build-depends:       base
-                     , cardano-binary
                      , cardano-crypto
                      , cardano-crypto-wrapper
                      , cardano-ledger
                      , cardano-ledger-test
                      , cardano-node
                      , cardano-prelude
-                     , contra-tracer
                      , filepath
                      , iohk-monitoring
                      , pvss
 
-                     , aeson
-                     , aeson-pretty
-                     , async
                      , binary
                      , bytestring
-                     , canonical-json
-                     , cborg == 0.2.2.0
+                     , cborg
                      , containers
                      , cryptonite
                      , directory

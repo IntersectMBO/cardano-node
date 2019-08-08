@@ -21,6 +21,7 @@ import           Ouroboros.Consensus.Node.ProtocolInfo.Abstract (NumCoreNodes (.
 import           Ouroboros.Consensus.NodeId (CoreNodeId)
 
 import           Cardano.Node.CLI
+import           Cardano.Node.ConfigCLI
 
 import           Chairman (runChairman)
 

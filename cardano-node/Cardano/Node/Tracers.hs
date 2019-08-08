@@ -5,12 +5,15 @@
 {-# LANGUAGE OverloadedStrings    #-}
 {-# LANGUAGE ScopedTypeVariables  #-}
 {-# LANGUAGE UndecidableInstances #-}
-module Tracers
+module Cardano.Node.Tracers
   ( readableChainDBTracer
   , Tracers (..)
   , mkTracers
   , withTip
   ) where
+
+import           Cardano.Prelude hiding (atomically, show)
+import           Prelude (String, Show(..), id)
 
 import           Codec.CBOR.Read (DeserialiseFailure)
 import           Control.Tracer
@@ -45,9 +48,9 @@ import qualified Ouroboros.Storage.ChainDB as ChainDB
 import           Ouroboros.Storage.Common
 import qualified Ouroboros.Storage.LedgerDB.OnDisk as LedgerDB
 
-import           Cardano.Node.CLI (TraceConstraints)
+import           Cardano.Node.ConfigCLI (TraceConstraints)
 
-import qualified CLI
+import qualified Cardano.Node.CLI as CLI
 
 
 -- Converts the trace events from the ChainDB that we're interested in into

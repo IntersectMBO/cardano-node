@@ -1,6 +1,9 @@
-module TraceAcceptor (
+module Cardano.Node.TraceAcceptor (
       handleTraceAcceptor
     ) where
+
+import           Cardano.Prelude
+import           Prelude (String)
 
 import           Control.Concurrent (threadDelay)
 import           Control.Monad (forever)

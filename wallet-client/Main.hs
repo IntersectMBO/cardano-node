@@ -23,7 +23,7 @@ import           Cardano.Shell.Types (ApplicationEnvironment (Development),
                                       initializeCardanoEnvironment)
 import           Cardano.Prelude (throwIO)
 
-import           Cardano.Node.CLI
+import           Cardano.Node.ConfigCLI
 
 import           CLI
 import           Run
