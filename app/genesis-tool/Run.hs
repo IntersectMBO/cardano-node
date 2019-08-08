@@ -129,9 +129,7 @@ runCommand kmo (MigrateDelegateKeyFrom
 runCommand kmo (DumpHardcodedGenesis outDir) =
     dumpGenesis kmo outDir
                 (configGenesisData Dummy.dummyConfig)
-                generatedSecrets
-  where
-    Just generatedSecrets = configGeneratedSecrets Dummy.dummyConfig
+                Dummy.dummyGeneratedSecrets
 
 runCommand KeyMaterialOps{..} (PrintGenesisHash secretPath) =
     putStrLn . F.format CCr.hashHexF

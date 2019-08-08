@@ -1,4 +1,4 @@
-resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/8273fe5f00ac03b0c66ef3841c8e957139ee18f2/snapshot.yaml
+resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/4c48d34fd60991bb1b9168d293cfe31a975d858e/snapshot.yaml
 
 packages:
   - .
@@ -6,7 +6,7 @@ packages:
 extra-deps:
     # Cardano-ledger dependencies
   - git: https://github.com/input-output-hk/cardano-ledger
-    commit: d65ccecfc315b7b5447a8548e076d2ee106dbfca
+    commit: 98d818fb3d4e74dd8d9003e14d97733114d8ddc9
     subdirs:
       - cardano-ledger
       - cardano-ledger/test
@@ -14,13 +14,13 @@ extra-deps:
       - crypto/test
 
   - git: https://github.com/input-output-hk/cardano-prelude
-    commit: 8273fe5f00ac03b0c66ef3841c8e957139ee18f2
+    commit: 4c48d34fd60991bb1b9168d293cfe31a975d858e
     subdirs:
       - .
       - test
 
   - git: https://github.com/input-output-hk/cardano-base
-    commit: 565df9739781db7589c7220a9125ea46a615dd40
+    commit: 1121579803319f01612583fc445c50b0a0ce0424
     subdirs:
       - binary
       - binary/test
@@ -28,7 +28,7 @@ extra-deps:
 
     # Following deps are for cardano-shell
   - git: https://github.com/input-output-hk/cardano-shell
-    commit: e5e9f9527569c6221717c6834a386559ec3fed29
+    commit: 5c4e0b73f209631debd74795fa8cd4c92ed874fb
 
   - binary-0.8.7.0
   - containers-0.5.11.0
@@ -41,7 +41,7 @@ extra-deps:
   - tasty-hedgehog-1.0.0.1
     # iohk-monitoring-framework currently not pinned to a release
   - git: https://github.com/input-output-hk/iohk-monitoring-framework
-    commit: 0dae43937d2858b437bfc93f7952ba93b88607e6
+    commit: 738154f2a491e2bea8e65ae5785a1dcc828abacb
     subdirs:
       - contra-tracer
       - iohk-monitoring
@@ -56,7 +56,7 @@ extra-deps:
     #Ouroboros-network dependencies
 
   - git: https://github.com/input-output-hk/ouroboros-network
-    commit: 2b0f6312ed162759616e99f21804f14cecab6b47
+    commit: ae57f8ddedcd26c2efed5702bc724eb10b038f3a
     subdirs:
         - io-sim-classes
         - network-mux

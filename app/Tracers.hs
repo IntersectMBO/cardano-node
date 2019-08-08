@@ -77,15 +77,15 @@ readableChainDBTracer tracer = Tracer $ \case
         "Replaying ledger from genesis"
       LedgerDB.ReplayFromSnapshot snap tip' _replayTo -> tr $ WithTip tip $
         "Replaying ledger from snapshot " <> show snap <> " at " <>
-        condense (tipToPoint tip')
+        condense tip'
       LedgerDB.ReplayedBlock {} -> ignore
     WithTip tip (ChainDB.TraceLedgerEvent ev) -> case ev of
       LedgerDB.TookSnapshot snap pt -> tr $ WithTip tip $
-        "Took ledger snapshot " <> show snap <> " at " <> condense (tipToPoint pt)
+        "Took ledger snapshot " <> show snap <> " at " <> condense pt
       LedgerDB.DeletedSnapshot snap -> tr $ WithTip tip $
         "Deleted old snapshot " <> show snap
-      LedgerDB.InvalidSnapshot failure -> tr $ WithTip tip $
-        "Invalid snapshot " <> show failure
+      LedgerDB.InvalidSnapshot snap failure -> tr $ WithTip tip $
+        "Invalid snapshot " <> show snap <> show failure
     WithTip tip (ChainDB.TraceCopyToImmDBEvent ev) -> case ev of
       ChainDB.CopiedBlockToImmDB pt -> tr $ WithTip tip $
         "Copied block " <> condense pt <> " to the ImmutableDB"
