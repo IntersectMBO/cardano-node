@@ -12,12 +12,12 @@ provided as
 a [feature](https://github.com/input-output-hk/cardano-shell/blob/master/app/Cardano/Shell/Features/Logging.hs)
 by the node shell to the other packages.
 
-# `genesis-tool`
+# `cardano-cli`
 
 A CLI utility to support a variety of key material operations (genesis,
-migration, pretty-printing..) for different system generations.
+migration, delegation, pretty-printing..) for different system generations.
 
-Detailed documentation in its attendant [README](app/genesis-tool/README.md).
+Detailed documentation in its attendant [README](cardano-cli/README.md).
 
 # Shelley Testnet
 

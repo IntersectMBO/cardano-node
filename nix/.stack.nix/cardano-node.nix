@@ -18,23 +18,41 @@
       "library" = {
         depends = [
           (hsPkgs.base)
+          (hsPkgs.async)
+          (hsPkgs.binary)
           (hsPkgs.bytestring)
           (hsPkgs.canonical-json)
           (hsPkgs.cborg)
+          (hsPkgs.containers)
+          (hsPkgs.cryptonite)
+          (hsPkgs.directory)
+          (hsPkgs.filepath)
           (hsPkgs.formatting)
+          (hsPkgs.lens)
+          (hsPkgs.memory)
           (hsPkgs.mtl)
+          (hsPkgs.network)
           (hsPkgs.optparse-applicative)
+          (hsPkgs.safe-exceptions)
+          (hsPkgs.serialise)
           (hsPkgs.text)
           (hsPkgs.time)
+          (hsPkgs.utf8-string)
           (hsPkgs.generic-monoid)
           (hsPkgs.cardano-binary)
+          (hsPkgs.cardano-crypto)
           (hsPkgs.cardano-crypto-wrapper)
           (hsPkgs.cardano-ledger)
           (hsPkgs.cardano-ledger-test)
           (hsPkgs.cardano-prelude)
           (hsPkgs.cardano-shell)
+          (hsPkgs.cborg)
+          (hsPkgs.contra-tracer)
+          (hsPkgs.io-sim-classes)
+          (hsPkgs.iohk-monitoring)
           (hsPkgs.ouroboros-consensus)
           (hsPkgs.ouroboros-network)
+          (hsPkgs.pvss)
           ] ++ (if system.isWindows
           then [ (hsPkgs.Win32) ]
           else [ (hsPkgs.unix) ]);
@@ -107,45 +125,7 @@
             then [ (hsPkgs.Win32) ]
             else [ (hsPkgs.unix) ]);
           };
-        "genesis-tool" = {
-          depends = [
-            (hsPkgs.base)
-            (hsPkgs.cardano-binary)
-            (hsPkgs.cardano-crypto)
-            (hsPkgs.cardano-crypto-wrapper)
-            (hsPkgs.cardano-ledger)
-            (hsPkgs.cardano-ledger-test)
-            (hsPkgs.cardano-node)
-            (hsPkgs.cardano-prelude)
-            (hsPkgs.contra-tracer)
-            (hsPkgs.filepath)
-            (hsPkgs.iohk-monitoring)
-            (hsPkgs.pvss)
-            (hsPkgs.aeson)
-            (hsPkgs.aeson-pretty)
-            (hsPkgs.async)
-            (hsPkgs.binary)
-            (hsPkgs.bytestring)
-            (hsPkgs.canonical-json)
-            (hsPkgs.cborg)
-            (hsPkgs.containers)
-            (hsPkgs.cryptonite)
-            (hsPkgs.directory)
-            (hsPkgs.formatting)
-            (hsPkgs.lens)
-            (hsPkgs.mtl)
-            (hsPkgs.network)
-            (hsPkgs.optparse-applicative)
-            (hsPkgs.serialise)
-            (hsPkgs.stm)
-            (hsPkgs.string-conv)
-            (hsPkgs.text)
-            (hsPkgs.time)
-            (hsPkgs.typed-protocols)
-            ] ++ (if system.isWindows
-            then [ (hsPkgs.Win32) ]
-            else [ (hsPkgs.unix) ]);
-          };
+        "cardano-cli" = { depends = [ (hsPkgs.base) (hsPkgs.cardano-node) ]; };
         "chairman" = {
           depends = [
             (hsPkgs.base)

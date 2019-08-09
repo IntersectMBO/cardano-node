@@ -37,4 +37,4 @@ args=(
 
 set -xe
 RUNNER=${RUNNER:-cabal new-run --}
-${RUNNER} genesis-tool byron-pbft genesis "${args[@]}" "$@"
+${RUNNER} cardano-cli byron-pbft genesis "${args[@]}" "$@"

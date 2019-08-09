@@ -9,9 +9,10 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications    #-}
 
+{-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
 {-# OPTIONS_GHC -Wno-simplifiable-class-constraints #-}
 
-module Byron.Legacy (
+module Cardano.Legacy.Byron (
       LegacyDelegateKey(..)
     , encodeLegacyDelegateKey
     , decodeLegacyDelegateKey

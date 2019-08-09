@@ -5,6 +5,8 @@
 {-# LANGUAGE NamedFieldPuns       #-}
 {-# LANGUAGE OverloadedStrings    #-}
 
+{-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
+
 module Cardano.Node.CLI (
   -- * Untyped/typed protocol boundary
     Protocol(..)
@@ -30,6 +32,7 @@ module Cardano.Node.CLI (
   , parseFakeAvvmOptions
   , parseK
   , parseProtocolMagic
+  , parseProtocolMagicId
   , parseNetworkMagic
   , parseFilePath
   , parseIntegral
@@ -401,10 +404,15 @@ parseK =
   BlockCount
   <$> parseIntegral        "k"                        "The security parameter of the Ouroboros protocol."
 
+parseProtocolMagicId :: String -> Parser ProtocolMagicId
+parseProtocolMagicId arg =
+  ProtocolMagicId
+  <$> parseIntegral        arg                        "The magic number unique to any instance of Cardano."
+
 parseProtocolMagic :: Parser ProtocolMagic
 parseProtocolMagic =
-  flip AProtocolMagic RequiresMagic . flip Annotated () . ProtocolMagicId
-  <$> parseIntegral        "protocol-magic"           "The magic number unique to any instance of Cardano."
+  flip AProtocolMagic RequiresMagic . flip Annotated ()
+  <$> parseProtocolMagicId "protocol-magic"
 
 parseNetworkMagic :: Parser NetworkMagic
 parseNetworkMagic = asum
