@@ -78,6 +78,7 @@ data Command
     !FilePath
     !FilePath
     !FilePath
+  | SubmitTx
 
 {-------------------------------------------------------------------------------
   CLI parsers.

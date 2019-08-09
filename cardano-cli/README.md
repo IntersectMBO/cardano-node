@@ -100,7 +100,7 @@ $ cabal new-run -- cardano-cli byron-pbft migrate-delegate-key-from byron-legacy
 ## Delegation
 
 The `redelegate` subcommand enables generation of delegation certificates,
-given the following inuputs:
+given the following inputs:
 
    - protocol magic
    - starting epoch of delegation
@@ -110,7 +110,7 @@ given the following inuputs:
 To check the generated delegation certificate, you can use the `check-delegation` subcommand,
 which would verify:
 
-   - certificatesignature validity
+   - certificate signature validity
    - correspondence of the expected issuer/delegate with those on the certificate.
 
 The expected issuer and delegate are supplied through the `--issuer-key` and `--delegate-key`
