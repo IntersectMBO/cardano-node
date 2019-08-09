@@ -26,6 +26,11 @@ library
                        Cardano.Node.Configuration.PartialTypes
                        Cardano.Node.Configuration.Types
                        Cardano.Node.Configuration.Presets
+                       -- Features
+                       Cardano.Node.Features.Logging
+                       -- Conversion
+                       Cardano.Node.Configuration.Conversion
+
 
   other-modules:       Paths_cardano_node
 
@@ -51,9 +56,8 @@ library
                      , text
                      , time
                      , utf8-string
-
+                     , stm
                      , generic-monoid
-
                      , cardano-binary
                      , cardano-crypto
                      , cardano-crypto-wrapper

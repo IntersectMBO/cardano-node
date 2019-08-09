@@ -93,9 +93,9 @@ import           Cardano.Crypto (RequiresNetworkMagic (..), decodeAbstractHash)
 import qualified Cardano.Crypto.Signing as Signing
 
 import           Cardano.Shell.Lib (GeneralException (..))
-import           Cardano.Shell.Constants.PartialTypes as Shell.Config
+import           Cardano.Node.Configuration.PartialTypes as Shell.Config
                    ( PartialCardanoConfiguration (..), PartialCore (..) )
-import           Cardano.Shell.Constants.Types as Shell.Config
+import           Cardano.Node.Configuration.Types as Shell.Config
                    ( CardanoConfiguration (..), Core (..)
                    , RequireNetworkMagic (..) )
 

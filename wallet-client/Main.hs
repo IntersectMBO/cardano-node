@@ -1,4 +1,4 @@
-{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE NamedFieldPuns    #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes        #-}
@@ -7,21 +7,23 @@ module Main (main) where
 
 import           Options.Applicative
 
-import           Cardano.Shell.Features.Logging (LoggingCLIArguments (..),
-                                                 LoggingLayer (..),
-                                                 createLoggingFeature, loggingParser)
+import           Cardano.Node.Configuration.Lib (finaliseCardanoConfiguration)
+import           Cardano.Node.Configuration.Types (CardanoConfiguration (..),
+                                                   CardanoEnvironment (..))
+import           Cardano.Node.Features.Logging (LoggingCLIArguments (..),
+                                                LoggingLayer (..),
+                                                createLoggingFeature,
+                                                loggingParser)
 import           Cardano.Prelude hiding (option)
-import           Cardano.Shell.Configuration.Lib (finaliseCardanoConfiguration)
-import           Cardano.Shell.Constants.Types (CardanoConfiguration (..))
-import           Cardano.Shell.Lib (GeneralException (..), runCardanoApplicationWithFeatures)
-import           Cardano.Shell.Constants.PartialTypes (PartialCardanoConfiguration (..))
-import           Cardano.Shell.Presets (mainnetConfiguration)
-import           Cardano.Shell.Types (ApplicationEnvironment (Development),
-                                      CardanoApplication (..),
-                                      CardanoEnvironment, CardanoFeature (..),
-                                      CardanoFeatureInit (..),
-                                      initializeCardanoEnvironment)
+
+import           Cardano.Node.Configuration.PartialTypes (PartialCardanoConfiguration (..))
+import           Cardano.Node.Configuration.Presets (mainnetConfiguration)
 import           Cardano.Prelude (throwIO)
+import           Cardano.Shell.Lib (GeneralException (..),
+                                    runCardanoApplicationWithFeatures)
+import           Cardano.Shell.Types (CardanoApplication (..),
+                                      CardanoFeature (..),
+                                      CardanoFeatureInit (..))
 
 import           Cardano.Node.CLI
 
@@ -59,7 +61,7 @@ instance Exception PartialConfigError
 main :: IO ()
 main = do
 
-    cardanoEnvironment  <- initializeCardanoEnvironment
+    let cardanoEnvironment = NoEnvironment
 
     logConfig           <- execParser opts
 
@@ -68,7 +70,7 @@ main = do
     let cardanoApplication :: NodeLayer -> CardanoApplication
         cardanoApplication = CardanoApplication . nlRunNode
 
-    runCardanoApplicationWithFeatures Development cardanoFeatures (cardanoApplication nodeLayer)
+    runCardanoApplicationWithFeatures cardanoFeatures (cardanoApplication nodeLayer)
 
 initializeAllFeatures :: ArgParser -> PartialCardanoConfiguration -> CardanoEnvironment -> IO ([CardanoFeature], NodeLayer)
 initializeAllFeatures (ArgParser logCli cli) partialConfig cardanoEnvironment = do
@@ -106,8 +108,7 @@ data NodeLayer = NodeLayer
 -- Node Feature
 --------------------------------
 
--- type NodeCardanoFeature = CardanoFeatureInit LoggingLayer Text NodeLayer
-type NodeCardanoFeature = CardanoFeatureInit LoggingLayer CLI NodeLayer
+type NodeCardanoFeature = CardanoFeatureInit CardanoEnvironment LoggingLayer CardanoConfiguration CLI NodeLayer
 
 
 createNodeFeature :: LoggingLayer -> CLI -> CardanoEnvironment -> CardanoConfiguration -> IO (NodeLayer, CardanoFeature)

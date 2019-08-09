@@ -38,6 +38,7 @@
           (hsPkgs.text)
           (hsPkgs.time)
           (hsPkgs.utf8-string)
+          (hsPkgs.stm)
           (hsPkgs.generic-monoid)
           (hsPkgs.cardano-binary)
           (hsPkgs.cardano-crypto)

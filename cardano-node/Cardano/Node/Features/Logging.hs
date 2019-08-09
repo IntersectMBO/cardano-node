@@ -24,10 +24,10 @@ import           Control.Exception.Safe (MonadCatch)
 import qualified Control.Monad.STM as STM
 import           Options.Applicative
 
-import           Cardano.BM.Data.Backend (Backend)
 import qualified Cardano.BM.Backend.Switchboard as Switchboard
 import           Cardano.BM.Configuration (Configuration)
 import qualified Cardano.BM.Configuration as Config
+import           Cardano.BM.Data.Backend (Backend)
 import           Cardano.BM.Data.LogItem (LOContent (..), LOMeta (..),
                                           LoggerName, mkLOMeta)
 import           Cardano.BM.Data.Severity (Severity (..))
@@ -38,11 +38,12 @@ import           Cardano.BM.Trace (Trace)
 import qualified Cardano.BM.Trace as Trace
 
 import           Cardano.Shell.Lib (GeneralException (..), doesFileExist)
-import           Cardano.Shell.Types (CardanoEnvironment, CardanoFeature (..),
+import           Cardano.Shell.Types (CardanoFeature (..),
                                       CardanoFeatureInit (..),
                                       NoDependency (..))
 
-import           Cardano.Shell.Constants.Types (CardanoConfiguration)
+import           Cardano.Node.Configuration.Types (CardanoConfiguration,
+                                                   CardanoEnvironment)
 
 --------------------------------------------------------------------------------
 -- Loggging feature
@@ -87,7 +88,12 @@ data LoggingLayer = LoggingLayer
 -- Feature
 --------------------------------
 
-type LoggingCardanoFeature = CardanoFeatureInit NoDependency LoggingConfiguration LoggingLayer
+type LoggingCardanoFeature =    CardanoFeatureInit
+                                    CardanoEnvironment
+                                    NoDependency
+                                    CardanoConfiguration
+                                    LoggingConfiguration
+                                    LoggingLayer
 
 -- | CLI specific data structure.
 data LoggingCLIArguments = LoggingCLIArguments
