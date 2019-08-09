@@ -19,10 +19,10 @@
 #define UNIX
 #endif
 
-module Cardano.GenesisTool.Run (
+module Cardano.CLI.Run (
     decideKeyMaterialOps
   , main
-  , GenesisToolError (..)
+  , CliError (..)
   , KeyMaterialOps (..)
   ) where
 
@@ -76,7 +76,7 @@ import           Cardano.Chain.Genesis
 import           Cardano.Node.CanonicalJSON
 
 import qualified Cardano.Legacy.Byron as Legacy
-import           Cardano.GenesisTool.CLI
+import           Cardano.CLI.CLI
 
 main :: IO ()
 main = do
@@ -94,7 +94,7 @@ opts = info (parseCLI <**> helper)
     <> header "Cardano genesis tool."
   )
 
-data GenesisToolError
+data CliError
   -- Basic user errors
   = OutputMustNotAlreadyExist FilePath
   -- Validation errors
@@ -113,7 +113,7 @@ data GenesisToolError
   -- Invariants/assertions -- does it belong here?
   | NoGenesisDelegationForKey Text
 
-instance Show GenesisToolError where
+instance Show CliError where
   show (OutputMustNotAlreadyExist fp)
     = "Output file/directory must not already exist: " <> fp
   show (CertificateValidationErrors fp errs)
@@ -139,7 +139,7 @@ instance Show GenesisToolError where
   show (NoGenesisDelegationForKey key)
     = "Newly-generated genesis doesn't delegate to operational key: " <> T.unpack key
 
-instance Exception GenesisToolError
+instance Exception CliError
 
 -- | Key material operations for a specific system era, e.g.
 --   Byron/Classic, Byron/PBFT etc.

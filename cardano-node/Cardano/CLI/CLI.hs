@@ -2,7 +2,7 @@
 
 {-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
 
-module Cardano.GenesisTool.CLI (
+module Cardano.CLI.CLI (
     -- * CLI
     CLI(..)
   , Command(..)

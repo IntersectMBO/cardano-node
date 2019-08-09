@@ -1,10 +1,10 @@
-# `genesis-tool`
+# `cardano-cli`
 
 A CLI utility to support a variety of key material operations (genesis, migration, pretty-printing..) for different system generations.
 
 The general synopsis is as follows:
  ```
-   genesis-tool SYSTEMVER COMMAND
+   cardano-cli SYSTEMVER COMMAND
 ```
 
 ..where `SYSTEMVER` is one of the supported system generations: `byron-legacy`, `byron-pbft` etc.
@@ -37,8 +37,8 @@ Delegation
 All commands have help available:
 
 ```
-$ cabal new-run -- genesis-tool byron-pbft migrate-delegate-key-from --help
-Usage: genesis-tool migrate-delegate-key-from SYSTEMVER --to FILEPATH
+$ cabal new-run -- cardano-cli byron-pbft migrate-delegate-key-from --help
+Usage: cardano-cli migrate-delegate-key-from SYSTEMVER --to FILEPATH
                                               --from FILEPATH
   Migrate a delegate key from an older version.
 
@@ -93,8 +93,8 @@ In order to continue using a delegate key from the Byron Legacy era in the new i
 it needs to be migrated over, which is done by the `migrate-delegate-key-from` subcommand:
 
 ```
-$ cabal new-run -- genesis-tool byron-pbft migrate-delegate-key-from byron-legacy \
-                                           --from key0.sk --to key0.pbft
+$ cabal new-run -- cardano-cli byron-pbft migrate-delegate-key-from byron-legacy \
+                                          --from key0.sk --to key0.pbft
 ```
 
 ## Delegation
@@ -122,14 +122,14 @@ One can gather information about a signing key's properties through the `signing
 and `signing-key-address` subcommands (the latter requires the network magic):
 
 ```
-$ cabal new-run -- genesis-tool byron-pbft signing-key-public \
-                                           --secret key0.pbft
+$ cabal new-run -- cardano-cli byron-pbft signing-key-public \
+                                          --secret key0.pbft
 public key hash: a2b1af0df8ca764876a45608fae36cf04400ed9f413de2e37d92ce04
      public key: sc4pa1pAriXO7IzMpByKo4cG90HCFD465Iad284uDYz06dHCqBwMHRukReQ90+TA/vQpj4L1YNaLHI7DS0Z2Vg==
 
-$ cabal new-run -- genesis-tool byron-pbft signing-key-address \
-                                           --secret key0.pbft  \
-                                           --testnet-magic 459045235
+$ cabal new-run -- cardano-cli byron-pbft signing-key-address \
+                                          --secret key0.pbft  \
+                                          --testnet-magic 459045235
 2cWKMJemoBakxhXgZSsMteLP9TUvz7owHyEYbUDwKRLsw2UGDrG93gPqmpv1D9ohWNddx
 VerKey address with root e5a3807d99a1807c3f161a1558bcbc45de8392e049682df01809c488, attributes: AddrAttributes { derivation path: {} }
 ```

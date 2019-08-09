@@ -125,7 +125,7 @@
             then [ (hsPkgs.Win32) ]
             else [ (hsPkgs.unix) ]);
           };
-        "genesis-tool" = { depends = [ (hsPkgs.base) (hsPkgs.cardano-node) ]; };
+        "cardano-cli" = { depends = [ (hsPkgs.base) (hsPkgs.cardano-node) ]; };
         "chairman" = {
           depends = [
             (hsPkgs.base)

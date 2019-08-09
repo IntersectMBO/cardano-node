@@ -15,8 +15,8 @@ extra-source-files: README.md, ChangeLog.md
 library
   hs-source-dirs:      cardano-node
 
-  exposed-modules:     Cardano.GenesisTool.CLI
-                       Cardano.GenesisTool.Run
+  exposed-modules:     Cardano.CLI.CLI
+                       Cardano.CLI.Run
                        Cardano.Legacy.Byron
                        Cardano.Node.CanonicalJSON
                        Cardano.Node.CLI
@@ -191,8 +191,8 @@ executable wallet-client
   else
      build-depends:    unix
 
-executable genesis-tool
-  hs-source-dirs:      genesis-tool
+executable cardano-cli
+  hs-source-dirs:      cardano-cli
   main-is:             Main.hs
   default-language:    Haskell2010
   ghc-options:         -threaded
