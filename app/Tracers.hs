@@ -72,12 +72,20 @@ readableChainDBTracer tracer = Tracer $ \case
           "Invalid block " <> condense pt <> ": " <> show err
         _ -> ignore
       _  -> ignore
+    WithTip tip (ChainDB.TraceLedgerReplayEvent ev) -> case ev of
+      LedgerDB.ReplayFromGenesis _replayTo -> tr $ WithTip tip $
+        "Replaying ledger from genesis"
+      LedgerDB.ReplayFromSnapshot snap tip' _replayTo -> tr $ WithTip tip $
+        "Replaying ledger from snapshot " <> show snap <> " at " <>
+        condense (tipToPoint tip')
+      LedgerDB.ReplayedBlock {} -> ignore
     WithTip tip (ChainDB.TraceLedgerEvent ev) -> case ev of
-      ChainDB.InitLog ev' -> traceInitLog tip ev'
-      ChainDB.TookSnapshot snap pt -> tr $ WithTip tip $
-        "Took ledger snapshot " <> show snap <> " at " <> condense pt
-      ChainDB.DeletedSnapshot snap -> tr $ WithTip tip $
+      LedgerDB.TookSnapshot snap pt -> tr $ WithTip tip $
+        "Took ledger snapshot " <> show snap <> " at " <> condense (tipToPoint pt)
+      LedgerDB.DeletedSnapshot snap -> tr $ WithTip tip $
         "Deleted old snapshot " <> show snap
+      LedgerDB.InvalidSnapshot failure -> tr $ WithTip tip $
+        "Invalid snapshot " <> show failure
     WithTip tip (ChainDB.TraceCopyToImmDBEvent ev) -> case ev of
       ChainDB.CopiedBlockToImmDB pt -> tr $ WithTip tip $
         "Copied block " <> condense pt <> " to the ImmutableDB"
@@ -98,17 +106,6 @@ readableChainDBTracer tracer = Tracer $ \case
 
     ignore :: m ()
     ignore = return ()
-
-    traceInitLog :: Point blk -> LedgerDB.InitLog (Point blk) -> m ()
-    traceInitLog tip = \case
-      LedgerDB.InitFromGenesis -> tr $
-        WithTip tip ("Initialised the ledger from genesis" :: String)
-      LedgerDB.InitFromSnapshot snap tip' -> tr $ WithTip tip $
-        "Initialised the ledger from snapshot " <> show snap <> " at " <>
-        condense (tipToPoint tip')
-      LedgerDB.InitFailure snap _failure initLog -> do
-          tr $ WithTip tip $ "Snapshot " <> show snap <> " invalid"
-          traceInitLog tip initLog
 
 data Tracers peer blk = Tracers {
       -- | Trace the ChainDB. By default we use 'readableChainDB' tracer but a
