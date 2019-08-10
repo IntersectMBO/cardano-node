@@ -12,7 +12,7 @@ import           Cardano.BM.Data.Tracer (ToLogObject (..))
 import           Cardano.BM.Trace (Trace, appendName)
 import           Ouroboros.Consensus.NodeId (CoreNodeId (..))
 
-import           Cardano.Shell.Constants.Types (CardanoConfiguration (..))
+import           Cardano.Node.Configuration.Types (CardanoConfiguration (..))
 
 import           CLI
 import           WalletClient

@@ -3,6 +3,7 @@
 
 module Cardano.Node.Configuration.Types
     ( CardanoConfiguration (..)
+    , CardanoEnvironment (..)
     , Core (..)
     -- * specific for @Core@
     , RequireNetworkMagic (..)
@@ -30,6 +31,14 @@ module Cardano.Node.Configuration.Types
     ) where
 
 import           Cardano.Prelude
+
+--------------------------------------------------------------------------------
+-- Cardano Environment
+--------------------------------------------------------------------------------
+
+-- | Just a placeholder for now.
+data CardanoEnvironment = NoEnvironment
+    deriving (Eq, Show)
 
 --------------------------------------------------------------------------------
 -- Cardano Configuration Data Structures

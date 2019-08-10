@@ -1,4 +1,4 @@
-{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE NamedFieldPuns    #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes        #-}
@@ -10,21 +10,21 @@ import           Data.Semigroup ((<>))
 
 import           Options.Applicative
 
+import           Cardano.Node.Configuration.Lib (finaliseCardanoConfiguration)
+import           Cardano.Node.Configuration.PartialTypes (PartialCardanoConfiguration (..))
+import           Cardano.Node.Configuration.Presets (mainnetConfiguration)
+import           Cardano.Node.Configuration.Types (CardanoConfiguration (..),
+                                                   CardanoEnvironment (..))
+import           Cardano.Node.Features.Logging (LoggingCLIArguments (..),
+                                                LoggingLayer (..),
+                                                createLoggingFeature,
+                                                loggingParser)
 import           Cardano.Prelude hiding (option)
-import           Cardano.Shell.Constants.PartialTypes (PartialCardanoConfiguration (..))
-import           Cardano.Shell.Constants.Types (CardanoConfiguration (..))
-import           Cardano.Shell.Features.Logging (LoggingCLIArguments (..),
-                                                 LoggingLayer (..),
-                                                 createLoggingFeature,
-                                                 loggingParser)
-import           Cardano.Shell.Configuration.Lib (finaliseCardanoConfiguration)
-import           Cardano.Shell.Lib (GeneralException (..), runCardanoApplicationWithFeatures)
-import           Cardano.Shell.Presets (mainnetConfiguration)
-import           Cardano.Shell.Types (ApplicationEnvironment (Development),
-                                      CardanoApplication (..),
-                                      CardanoEnvironment, CardanoFeature (..),
-                                      CardanoFeatureInit (..),
-                                      initializeCardanoEnvironment)
+import           Cardano.Shell.Lib (GeneralException (..),
+                                    runCardanoApplicationWithFeatures)
+import           Cardano.Shell.Types (CardanoApplication (..),
+                                      CardanoFeature (..),
+                                      CardanoFeatureInit (..))
 
 import           Cardano.Node.CLI
 
@@ -55,7 +55,7 @@ main :: IO ()
 main = do
 
     let cardanoConfiguration = mainnetConfiguration
-    cardanoEnvironment  <- initializeCardanoEnvironment
+    let cardanoEnvironment   = NoEnvironment
 
     logConfig           <- execParser opts
 
@@ -64,7 +64,7 @@ main = do
     let cardanoApplication :: NodeLayer -> CardanoApplication
         cardanoApplication = CardanoApplication . nlRunNode
 
-    runCardanoApplicationWithFeatures Development cardanoFeatures (cardanoApplication nodeLayer)
+    runCardanoApplicationWithFeatures cardanoFeatures (cardanoApplication nodeLayer)
 
 initializeAllFeatures :: CLIArguments -> PartialCardanoConfiguration -> CardanoEnvironment -> IO ([CardanoFeature], NodeLayer)
 initializeAllFeatures (CLIArguments logCli nodeCli) partialConfig cardanoEnvironment = do
@@ -98,7 +98,7 @@ data NodeLayer = NodeLayer
 -- Node Feature
 --------------------------------
 
-type NodeCardanoFeature = CardanoFeatureInit LoggingLayer NodeCLIArguments NodeLayer
+type NodeCardanoFeature = CardanoFeatureInit CardanoEnvironment LoggingLayer CardanoConfiguration NodeCLIArguments NodeLayer
 
 
 createNodeFeature :: LoggingLayer -> NodeCLIArguments -> CardanoEnvironment -> CardanoConfiguration -> IO (NodeLayer, CardanoFeature)

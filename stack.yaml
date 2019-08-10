@@ -6,7 +6,7 @@ packages:
 extra-deps:
     # Cardano-ledger dependencies
   - git: https://github.com/input-output-hk/cardano-ledger
-    commit: 98d818fb3d4e74dd8d9003e14d97733114d8ddc9
+    commit: 57ad8e9067f0d443eb6d529f0231a1e3ebe1a63a
     subdirs:
       - cardano-ledger
       - cardano-ledger/test
@@ -28,7 +28,7 @@ extra-deps:
 
     # Following deps are for cardano-shell
   - git: https://github.com/input-output-hk/cardano-shell
-    commit: 5c4e0b73f209631debd74795fa8cd4c92ed874fb
+    commit: 9bbfc43e19d96d107128da1b5667fda7303b3440
 
   - binary-0.8.7.0
   - containers-0.5.11.0
