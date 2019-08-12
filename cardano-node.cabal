@@ -18,34 +18,41 @@ library
   exposed-modules:     Cardano.CLI.CLI
                        Cardano.CLI.Run
                        Cardano.Legacy.Byron
-                       Cardano.Node.CanonicalJSON
+                       Cardano.Node.ConfigCLI
                        Cardano.Node.CLI
+                       Cardano.Node.CanonicalJSON
                        -- Configuration
                        Cardano.Node.Configuration.CLI
+                       -- Conversion
+                       Cardano.Node.Configuration.Conversion
                        Cardano.Node.Configuration.Lib
                        Cardano.Node.Configuration.PartialTypes
                        Cardano.Node.Configuration.Types
                        Cardano.Node.Configuration.Presets
                        -- Features
                        Cardano.Node.Features.Logging
-                       -- Conversion
-                       Cardano.Node.Configuration.Conversion
-
+                       Cardano.Node.Topology
+                       Cardano.Node.Tracers
+                       Cardano.Node.TxSubmission
 
   other-modules:       Paths_cardano_node
 
-  build-depends:
-                       base >=4.12 && <5
-                     , async
+  build-depends:       aeson
+                     , base >=4.12 && <5
                      , binary
                      , bytestring
                      , canonical-json
+                     , containers
+                     , contra-tracer
                      , cborg == 0.2.2.0
                      , containers
                      , cryptonite
                      , directory
                      , filepath
                      , formatting
+                     , io-sim-classes
+                     , iohk-monitoring
+                     , iproute
                      , lens
                      , memory
                      , mtl
@@ -53,13 +60,21 @@ library
                      , optparse-applicative
                      , safe-exceptions
                      , serialise
+                     , stm
+                     , string-conv
                      , text
                      , time
+                     , typed-protocols
+                     , typed-protocols-cbor
                      , utf8-string
-                     , stm
+
+
+
+
                      , generic-monoid
                      , cardano-binary
                      , cardano-crypto
+                     , cardano-crypto-class
                      , cardano-crypto-wrapper
                      , cardano-ledger
                      , cardano-ledger-test
@@ -102,54 +117,43 @@ executable cardano-node
                        -O2
                        "-with-rtsopts=-T"
                        -fno-warn-unticked-promoted-constructors
-  other-modules:       CLI
-                       GitRev
+  other-modules:       GitRev
                        GitRevFromGit
                        Paths_cardano_node
                        TraceAcceptor
-                       Tracers
-                       TxSubmission
                        Run
-                       Topology
                        Paths_cardano_node
   build-depends:       base
-                     , cardano-crypto-class
                      , cardano-crypto-wrapper
                      , cardano-ledger
                      , cardano-ledger-test
                      , cardano-node
                      , cardano-prelude
                      , cardano-shell
-                     , contra-tracer
-                     , io-sim-classes
-                     , iohk-monitoring
                      , ouroboros-network
                      , ouroboros-consensus
-                     , typed-protocols-cbor
 
                      , aeson
                      , async
                      , bytestring
                      , cborg == 0.2.2.0
-                     , containers
+                     , contra-tracer
                      , cryptonite
                      , directory
                      , file-embed
                      , formatting
-                     , iproute
+                     , io-sim-classes
+                     , iohk-monitoring
                      , lens
                      , mtl
                      , network
                      , optparse-applicative
                      , process
-                     , serialise
                      , safe-exceptions
                      , stm
-                     , string-conv
                      , template-haskell
                      , text
                      , time
-                     , typed-protocols
   if os(windows)
      build-depends:    Win32
   else

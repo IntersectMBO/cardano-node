@@ -1,7 +1,7 @@
 {-# LANGUAGE GADTs          #-}
 {-# LANGUAGE NamedFieldPuns #-}
 
-module CLI (
+module Cardano.Node.ConfigCLI (
     -- * Untyped/typed protocol boundary
     Protocol(..)
   , SomeProtocol(..)
@@ -23,6 +23,9 @@ module CLI (
   , progDesc
   ) where
 
+import           Cardano.Prelude hiding (option)
+import           Prelude (read)
+
 import           Data.Functor.Const (Const (..))
 import qualified Data.IP as IP
 import           Data.Semigroup ((<>))
@@ -34,8 +37,8 @@ import qualified Ouroboros.Consensus.Ledger.Mock as Mock
 import qualified Ouroboros.Consensus.Node.Tracers as Consensus
 import           Ouroboros.Consensus.NodeNetwork (ProtocolTracers' (..))
 
-import           Topology (NodeAddress (..), TopologyInfo (..))
-import           TxSubmission (command', parseMockTx)
+import           Cardano.Node.Topology (NodeAddress (..), TopologyInfo (..))
+import           Cardano.Node.TxSubmission (command', parseMockTx)
 
 import           Cardano.Node.CLI
 

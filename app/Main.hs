@@ -28,7 +28,7 @@ import           Cardano.Shell.Types (CardanoApplication (..),
 
 import           Cardano.Node.CLI
 
-import           CLI
+import           Cardano.Node.ConfigCLI
 import           Run
 
 
