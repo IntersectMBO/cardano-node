@@ -4,7 +4,10 @@
 {-# LANGUAGE TemplateHaskell   #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Topology where
+module Cardano.Node.Topology where
+
+import           Cardano.Prelude hiding (toS)
+import           Prelude (String, read)
 
 import           Data.Aeson
 import           Data.Aeson.TH
@@ -122,4 +125,3 @@ deriveFromJSON defaultOptions ''NetworkTopology
 readTopologyFile :: FilePath -> IO (Either String NetworkTopology)
 readTopologyFile topo = do
     eitherDecode . toS <$> B.readFile topo
-

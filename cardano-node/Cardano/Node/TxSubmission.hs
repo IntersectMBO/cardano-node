@@ -6,7 +6,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications    #-}
 
-module TxSubmission (
+module Cardano.Node.TxSubmission (
       command'
     , parseMockTx
     , handleTxSubmission
@@ -14,6 +14,8 @@ module TxSubmission (
     , localSocketFilePath
     , localSocketAddrInfo
     ) where
+import           Cardano.Prelude hiding (ByteString, option, threadDelay)
+import           Prelude (String)
 
 import           Data.Void (Void)
 import           Data.ByteString.Lazy (ByteString)
@@ -24,7 +26,7 @@ import           Data.Proxy
 import qualified Codec.Serialise as Serialise (encode, decode)
 import           Network.Socket as Socket
 
-import           Control.Monad (forever)
+import           Control.Monad (fail, forever)
 import           Control.Monad.Class.MonadST
 import           Control.Monad.Class.MonadThrow
 import           Control.Monad.Class.MonadTimer
@@ -61,7 +63,7 @@ import           Ouroboros.Network.NodeToClient
 
 import           Cardano.Node.CLI
 
-import           Topology
+import           Cardano.Node.Topology
 
 {-------------------------------------------------------------------------------
   Parsers for the mock UTxO model

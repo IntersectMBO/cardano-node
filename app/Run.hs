@@ -91,11 +91,11 @@ import           Ouroboros.Storage.LedgerDB.DiskPolicy (defaultDiskPolicy)
 import           Ouroboros.Storage.LedgerDB.MemPolicy (defaultMemPolicy)
 
 import           Cardano.Node.CLI
-import           CLI hiding (TraceOptions (..))
-import           Topology
+import           Cardano.Node.ConfigCLI hiding (TraceOptions (..))
+import           Cardano.Node.Topology
 import           TraceAcceptor
-import           Tracers
-import           TxSubmission
+import           Cardano.Node.Tracers
+import           Cardano.Node.TxSubmission
 #ifdef UNIX
 import           LiveView
 #endif
