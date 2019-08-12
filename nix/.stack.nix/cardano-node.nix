@@ -18,6 +18,7 @@
       "library" = {
         depends = [
           (hsPkgs.aeson)
+          (hsPkgs.async)
           (hsPkgs.base)
           (hsPkgs.binary)
           (hsPkgs.bytestring)
@@ -28,6 +29,7 @@
           (hsPkgs.containers)
           (hsPkgs.cryptonite)
           (hsPkgs.directory)
+          (hsPkgs.file-embed)
           (hsPkgs.filepath)
           (hsPkgs.formatting)
           (hsPkgs.io-sim-classes)
@@ -38,10 +40,12 @@
           (hsPkgs.mtl)
           (hsPkgs.network)
           (hsPkgs.optparse-applicative)
+          (hsPkgs.process)
           (hsPkgs.safe-exceptions)
           (hsPkgs.serialise)
           (hsPkgs.stm)
           (hsPkgs.string-conv)
+          (hsPkgs.template-haskell)
           (hsPkgs.text)
           (hsPkgs.time)
           (hsPkgs.typed-protocols)
@@ -65,7 +69,7 @@
           (hsPkgs.pvss)
           ] ++ (if system.isWindows
           then [ (hsPkgs.Win32) ]
-          else [ (hsPkgs.unix) ]);
+          else [ (hsPkgs.unix) (hsPkgs.brick) (hsPkgs.vty) ]);
         };
       exes = {
         "cardano-node" = {
@@ -80,13 +84,11 @@
             (hsPkgs.ouroboros-network)
             (hsPkgs.ouroboros-consensus)
             (hsPkgs.aeson)
-            (hsPkgs.async)
             (hsPkgs.bytestring)
             (hsPkgs.cborg)
             (hsPkgs.contra-tracer)
             (hsPkgs.cryptonite)
             (hsPkgs.directory)
-            (hsPkgs.file-embed)
             (hsPkgs.formatting)
             (hsPkgs.io-sim-classes)
             (hsPkgs.iohk-monitoring)
@@ -94,15 +96,13 @@
             (hsPkgs.mtl)
             (hsPkgs.network)
             (hsPkgs.optparse-applicative)
-            (hsPkgs.process)
             (hsPkgs.safe-exceptions)
             (hsPkgs.stm)
-            (hsPkgs.template-haskell)
             (hsPkgs.text)
             (hsPkgs.time)
             ] ++ (if system.isWindows
             then [ (hsPkgs.Win32) ]
-            else [ (hsPkgs.unix) (hsPkgs.brick) (hsPkgs.vty) ]);
+            else [ (hsPkgs.unix) ]);
           };
         "wallet-client" = {
           depends = [

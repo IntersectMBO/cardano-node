@@ -15,9 +15,11 @@
 #define UNIX
 #endif
 
-module Run (
+module Cardano.Node.Run (
       runNode
     ) where
+import           Cardano.Prelude hiding (ByteString, atomically, throwIO, wait)
+import           Prelude (id, error)
 
 import           Codec.CBOR.Decoding (Decoder)
 import           Codec.CBOR.Encoding (Encoding)
@@ -93,11 +95,11 @@ import           Ouroboros.Storage.LedgerDB.MemPolicy (defaultMemPolicy)
 import           Cardano.Node.CLI
 import           Cardano.Node.ConfigCLI hiding (TraceOptions (..))
 import           Cardano.Node.Topology
-import           TraceAcceptor
+import           Cardano.Node.TraceAcceptor
 import           Cardano.Node.Tracers
 import           Cardano.Node.TxSubmission
 #ifdef UNIX
-import           LiveView
+import           Cardano.Node.LiveView
 #endif
 
 

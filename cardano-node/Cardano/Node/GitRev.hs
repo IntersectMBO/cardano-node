@@ -13,16 +13,17 @@
 
 {-# OPTIONS_GHC -Wno-simplifiable-class-constraints #-}
 
-module GitRev (
+module Cardano.Node.GitRev (
       gitRev
     ) where
+import           Cardano.Prelude
 
 import           Data.FileEmbed (dummySpaceWith)
 import           Data.Text (Text)
 import qualified Data.Text as T
 import           Data.Text.Encoding (decodeUtf8)
 
-import           GitRevFromGit (gitRevFromGit)
+import           Cardano.Node.GitRevFromGit (gitRevFromGit)
 
 gitRev :: Text
 gitRev | gitRevEmbed /= zeroRev = gitRevEmbed
