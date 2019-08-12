@@ -13,5 +13,6 @@ stack.yaml.lock
 /genesis.*
 
 /db-[0-9]
+/*-db
 /log-pipe-[0-9]
 /*.socket

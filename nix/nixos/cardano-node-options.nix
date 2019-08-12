@@ -8,32 +8,41 @@ let
   cfg = config.services.cardano-node;
 in {
   options = {
-
     services.cardano-node = {
-      enable = mkOption {
-        type = types.bool;
-        default = false;
-        description = ''
-          Enable cardano-node, a node implementing ouroboros protocols
-          (the blockchain protocols running cardano).
-        '';
+      script = mkOption {
+        type = types.str;
+        default = ''
+          GENESIS_START_TIME=$(${pkgs.jq}/bin/jq --raw-output '.startTime' < ${cfg.genesis-file})
+          START_TIME=$(date -d "@$GENESIS_START_TIME" --utc --rfc-3339=seconds)
+          SLOT_DURATION=$(${pkgs.jq}/bin/jq --raw-output '.blockVersionData.slotDuration' < ${cfg.genesis-file})
+          ${cfg.package}/bin/cardano-node \
+            --genesis-file ${cfg.genesis-file} \
+        '' + (if (cfg.genesis-hash != null) then 
+        ''  --genesis-hash ${cfg.genesis-hash} \
+        '' else "") + ''
+            --log-config ${cfg.logger.config-file} \
+            --system-start "$START_TIME" \
+            --slot-duration "$SLOT_DURATION" \
+            node \
+            --topology ${cfg.topology} \
+            --${cfg.consensus-protocol} \
+            --node-id ${builtins.toString cfg.node-id} \
+            --host-addr ${cfg.host-addr} \
+            --port ${builtins.toString cfg.port} \
+        '' + (if (cfg.signing-key != null) then 
+        ''  --signing-key ${cfg.signing-key} \
+        '' else "")
+          + (if (cfg.delegation-certificate != null) then 
+        ''  --delegation-certificate ${cfg.delegation-certificate} \
+        '' else "");
       };
 
       package = mkOption {
         type = types.package;
-        default = (import ../../release.nix {}).nix-tools.exes.cardano-node.x86_64-linux;
+        default = (import ../nix-tools.nix {}).nix-tools.exes.cardano-node;
         defaultText = "cardano-node";
         description = ''
           The cardano-node package that should be used.
-        '';
-      };
-
-      stateDir = mkOption {
-        type = types.str;
-        default = "cardano-node";
-        description = ''
-          Directory below /var/lib to store blockchain data.
-          This directory will be created automatically using systemd's StateDirectory mechanism.
         '';
       };
 
@@ -45,7 +54,8 @@ in {
       };
 
       genesis-hash = mkOption {
-        type = types.str;
+        type = types.nullOr types.str;
+        default = null;
         description = ''
           Hash of the genesis file.
         '';
@@ -68,7 +78,7 @@ in {
       };
 
       consensus-protocol = mkOption {
-        default = "bft";
+        default = "real-pbft";
         type = types.enum ["bft" "praos" "mock-pbft" "real-pbft"];
         description = ''
           Consensus initialy used by the node:
@@ -124,48 +134,6 @@ in {
         description = ''
           Logger configuration file.
         '';
-      };
-    };
-  };
-
-  config = mkIf cfg.enable {
-    users.groups.cardano-node.gid = 10016;
-    users.users.cardano-node = {
-      description = "cardano-node node daemon user";
-      uid = 10016;
-      group = "cardano-node";
-    };
-    systemd.services.cardano-node = {
-      description   = "cardano-node node service";
-      after         = [ "network.target" ];
-      wantedBy = [ "multi-user.target" ];
-      script = ''
-        GENESIS_START_TIME=$(${pkgs.jq}/bin/jq '.startTime' < ${cfg.genesis-file})
-        START_TIME=$(date -d @$GENESIS_START_TIME --utc --rfc-3339=seconds)
-        ${cfg.package}/bin/cardano-node \
-          --genesis-file ${cfg.genesis-file} \
-          --genesis-hash ${cfg.genesis-hash} \
-          --log-config ${cfg.logger.config-file} \
-          --system-start "$START_TIME" \
-          --slot-duration ${builtins.toString cfg.slot-duration} \
-          node \
-          --topology ${cfg.topology} \
-          --${cfg.consensus-protocol} \
-          --node-id ${builtins.toString cfg.node-id} \
-          --host-addr ${cfg.host-addr} \
-          --port ${builtins.toString cfg.port} \
-      '' + (if (cfg.signing-key != null) then 
-      ''  --signing-key ${cfg.signing-key} \
-      '' else "")
-         + (if (cfg.delegation-certificate != null) then 
-      ''  --delegation-certificate ${cfg.delegation-certificate} \
-      '' else "");
-      serviceConfig = {
-        User = "cardano-node";
-        Group = "cardano-node";
-        Restart = "always";
-        WorkingDirectory = "/var/lib/" + cfg.stateDir;
-        StateDirectory = cfg.stateDir;
       };
     };
   };

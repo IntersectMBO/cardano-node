@@ -30,7 +30,17 @@
 let
   iohkLib = import ./nix/lib.nix;
   nixTools = import ./nix/nix-tools.nix {};
+  connect-script = with iohkLib.pkgs; let
+    oldCardano = fetchgit {
+      inherit (builtins.fromJSON (builtins.readFile ./nix/old-cardano-sl-src.json)) url rev sha256;
+    };
+    environments = builtins.removeAttrs (import (oldCardano + "/lib.nix")).environments [ "demo" ];
+  in 
+    callPackage ./nix/launch/connect-to-cluster {
+      inherit environments;
+    };
 in {
+  inherit connect-script;
   inherit (nixTools) nix-tools;
   inherit (iohkLib.iohkNix) check-nix-tools check-hydra pkgs;
 }
