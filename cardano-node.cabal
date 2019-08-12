@@ -31,13 +31,18 @@ library
                        Cardano.Node.Configuration.Presets
                        -- Features
                        Cardano.Node.Features.Logging
+                       Cardano.Node.GitRev
+                       Cardano.Node.GitRevFromGit
+                       Cardano.Node.Run
                        Cardano.Node.Topology
+                       Cardano.Node.TraceAcceptor
                        Cardano.Node.Tracers
                        Cardano.Node.TxSubmission
 
   other-modules:       Paths_cardano_node
 
   build-depends:       aeson
+                     , async
                      , base >=4.12 && <5
                      , binary
                      , bytestring
@@ -48,6 +53,7 @@ library
                      , containers
                      , cryptonite
                      , directory
+                     , file-embed
                      , filepath
                      , formatting
                      , io-sim-classes
@@ -58,10 +64,12 @@ library
                      , mtl
                      , network
                      , optparse-applicative
+                     , process
                      , safe-exceptions
                      , serialise
                      , stm
                      , string-conv
+                     , template-haskell
                      , text
                      , time
                      , typed-protocols
@@ -107,6 +115,9 @@ library
      build-depends:    Win32
   else
      build-depends:    unix
+                     , brick
+                     , vty
+     exposed-modules:  Cardano.Node.LiveView
 
 executable cardano-node
   hs-source-dirs:      app
@@ -117,12 +128,7 @@ executable cardano-node
                        -O2
                        "-with-rtsopts=-T"
                        -fno-warn-unticked-promoted-constructors
-  other-modules:       GitRev
-                       GitRevFromGit
-                       Paths_cardano_node
-                       TraceAcceptor
-                       Run
-                       Paths_cardano_node
+
   build-depends:       base
                      , cardano-crypto-wrapper
                      , cardano-ledger
@@ -134,13 +140,11 @@ executable cardano-node
                      , ouroboros-consensus
 
                      , aeson
-                     , async
                      , bytestring
                      , cborg == 0.2.2.0
                      , contra-tracer
                      , cryptonite
                      , directory
-                     , file-embed
                      , formatting
                      , io-sim-classes
                      , iohk-monitoring
@@ -148,19 +152,14 @@ executable cardano-node
                      , mtl
                      , network
                      , optparse-applicative
-                     , process
                      , safe-exceptions
                      , stm
-                     , template-haskell
                      , text
                      , time
   if os(windows)
      build-depends:    Win32
   else
      build-depends:    unix
-                     , brick
-                     , vty
-     other-modules:    LiveView
 
 executable wallet-client
   hs-source-dirs:      wallet-client

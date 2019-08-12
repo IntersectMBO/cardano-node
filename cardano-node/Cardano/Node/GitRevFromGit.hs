@@ -13,11 +13,13 @@
 
 {-# OPTIONS_GHC -Wno-simplifiable-class-constraints #-}
 
-module GitRevFromGit (
+module Cardano.Node.GitRevFromGit (
       gitRevFromGit
     ) where
 
-import           Control.Exception.Safe (handleJust)
+import           Cardano.Prelude
+import           Prelude (String)
+
 import qualified Language.Haskell.TH as TH
 import           System.Exit (ExitCode (..))
 import           System.IO.Error (ioeGetErrorType, isDoesNotExistErrorType)

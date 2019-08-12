@@ -4,7 +4,7 @@
 
 {-# OPTIONS_GHC -Wno-simplifiable-class-constraints #-}
 
-module LiveView (
+module Cardano.Node.LiveView (
       LiveViewBackend (..)
     , realize
     , effectuate
@@ -12,6 +12,9 @@ module LiveView (
     , setTopology
     , setNodeThread
     ) where
+
+import           Cardano.Prelude hiding (isPrefixOf, on, show)
+import           Prelude (String, words, read, show)
 
 import           Control.Concurrent (threadDelay)
 import qualified Control.Concurrent.Async as Async
@@ -59,7 +62,7 @@ import           Cardano.BM.Data.Severity
 import           Cardano.BM.Data.SubTrace
 import           Cardano.BM.Trace
 
-import           GitRev (gitRev)
+import           Cardano.Node.GitRev (gitRev)
 import           Ouroboros.Consensus.NodeId
 import           Paths_cardano_node (version)
 import           Cardano.Node.Topology
