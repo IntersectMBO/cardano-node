@@ -13,7 +13,6 @@
 ALGO="--real-pbft"
 NOW=`date "+%Y-%m-%d 00:00:00"`
 NETARGS=(
-        --system-start "'${NOW}'"
         --slot-duration 2
         --genesis-file "configuration/Test.Cardano.Chain.Genesis.Dummy.dummyConfig.configGenesisData.json"
         --genesis-hash "fc32ebdf3c9bfa2ebf6bdcac98649f610601ddb266a2a2743e787dc9952a1aeb"

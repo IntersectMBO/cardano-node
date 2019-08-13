@@ -23,7 +23,7 @@
 
 ALGO="--real-pbft"
 NOW=`date "+%Y-%m-%d 00:00:00"`
-NETARGS="--system-start \"${NOW}\" --slot-duration 2 node -t configuration/simple-topology-dns.json ${ALGO}"
+NETARGS="--slot-duration 2 node -t configuration/simple-topology-dns.json ${ALGO}"
 #SCR="./scripts/start-node.sh"
 #CMD="stack exec --nix cardano-node --"
 CMD="cabal new-exec cardano-node --"

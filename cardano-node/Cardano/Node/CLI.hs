@@ -19,7 +19,6 @@ module Cardano.Node.CLI (
   , parseCommonCLI
   , mergeConfiguration
   -- * Parsers
-  , parseSystemStart
   , parseSlotDuration
   , parseProtocol
   , parseNodeId
@@ -302,12 +301,6 @@ mergeConfiguration pcc cli =
 {-------------------------------------------------------------------------------
   Command parsers
 -------------------------------------------------------------------------------}
-
-parseSystemStart :: Parser SystemStart
-parseSystemStart = option (SystemStart <$> auto) $ mconcat [
-      long "system-start"
-    , help "The start time of the system (e.g. \"2018-12-10 15:58:06\""
-    ]
 
 parseSlotDuration :: Parser SlotLength
 parseSlotDuration = option (mkSlotLength <$> auto) $ mconcat [

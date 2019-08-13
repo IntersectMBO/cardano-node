@@ -146,7 +146,6 @@ in {
           --genesis-file ${cfg.genesis-file} \
           --genesis-hash ${cfg.genesis-hash} \
           --log-config ${cfg.logger.config-file} \
-          --system-start "$START_TIME" \
           --slot-duration ${builtins.toString cfg.slot-duration} \
           node \
           --topology ${cfg.topology} \
@@ -154,10 +153,10 @@ in {
           --node-id ${builtins.toString cfg.node-id} \
           --host-addr ${cfg.host-addr} \
           --port ${builtins.toString cfg.port} \
-      '' + (if (cfg.signing-key != null) then 
+      '' + (if (cfg.signing-key != null) then
       ''  --signing-key ${cfg.signing-key} \
       '' else "")
-         + (if (cfg.delegation-certificate != null) then 
+         + (if (cfg.delegation-certificate != null) then
       ''  --delegation-certificate ${cfg.delegation-certificate} \
       '' else "");
       serviceConfig = {

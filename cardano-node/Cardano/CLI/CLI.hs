@@ -145,7 +145,6 @@ parseCommand =
       <$> parseSystemVersion
       <*> parseFilePath    "to"                       "Output secret key file."
       <*> parseFilePath    "from"                     "Secret key file to migrate."
-    
     ])
   <|> subparser
   (mconcat

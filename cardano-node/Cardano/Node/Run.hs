@@ -82,8 +82,9 @@ import           Ouroboros.Consensus.Protocol hiding (Protocol)
 import qualified Ouroboros.Consensus.Protocol as Consensus
 import           Ouroboros.Consensus.Util.Condense
 import           Ouroboros.Consensus.Util.Orphans ()
+import           Ouroboros.Consensus.Util.ResourceRegistry
+import qualified Ouroboros.Consensus.Util.ResourceRegistry as ResourceRegistry
 import           Ouroboros.Consensus.Util.STM
-import           Ouroboros.Consensus.Util.ThreadRegistry
 
 import           Ouroboros.Storage.ChainDB (ChainDB)
 import qualified Ouroboros.Storage.ChainDB as ChainDB
@@ -178,10 +179,15 @@ handleSimpleNode p NodeCLIArguments{..}
                  nodeTraces
                  CardanoConfiguration{..}
     = do
-    let tracer = contramap pack $ toLogObject trace
-    traceWith tracer $ "System started at " <> show systemStart
+
     NetworkTopology nodeSetups <-
       either error id <$> readTopologyFile topologyFile
+
+    let ProtocolInfo{pInfoConfig, pInfoInitLedger, pInfoInitState} =
+          protocolInfo (NumCoreNodes (length nodeSetups)) (CoreNodeId nid) p
+
+    let tracer = contramap pack $ toLogObject trace
+    traceWith tracer $ "System started at " <> (show (nodeStartTime (Proxy @blk) pInfoConfig))
 
     let producers' = case List.lookup myNodeAddress $ map (\ns -> (nodeAddress ns, producers ns)) nodeSetups of
           Just ps -> ps
@@ -192,10 +198,7 @@ handleSimpleNode p NodeCLIArguments{..}
     traceWith tracer $ "My producers are " <> show producers'
     traceWith tracer $ "**************************************"
 
-    let ProtocolInfo{pInfoConfig, pInfoInitLedger, pInfoInitState} =
-          protocolInfo (NumCoreNodes (length nodeSetups)) (CoreNodeId nid) p
-
-    withThreadRegistry $ \registry -> do
+    ResourceRegistry.with $ \registry -> do
 
       let callbacks :: NodeCallbacks IO blk
           callbacks = NodeCallbacks {
@@ -233,13 +236,13 @@ handleSimpleNode p NodeCLIArguments{..}
       -- Watch the tip of the chain and store it in @varTip@ so we can include
       -- it in trace messages.
       onEachChange registry id Nothing (ChainDB.getTipPoint chainDB)
-        (atomically . writeTVar varTip)
+        (\_ tip -> (atomically $ writeTVar varTip tip))
 
-      btime  <- realBlockchainTime registry slotDuration systemStart
+      btime  <- realBlockchainTime registry slotDuration (nodeStartTime (Proxy @blk) pInfoConfig)
       let nodeParams :: NodeParams IO Peer blk
           nodeParams = NodeParams
             { tracers            = consensusTracers nodeTraces
-            , threadRegistry     = registry
+            , registry           = registry
             , maxClockSkew       = ClockSkew 1
             , cfg                = pInfoConfig
             , initState          = pInfoInitState
@@ -441,7 +444,7 @@ removeStaleLocalSocket socketPath =
 mkChainDbArgs :: forall blk. RunNode blk
               => NodeConfig (BlockProtocol blk)
               -> ExtLedgerState blk
-              -> ThreadRegistry IO
+              -> ResourceRegistry IO
               -> CoreNodeId
               -> Tracer IO (ChainDB.TraceEvent blk)
               -> SlotLength
@@ -467,7 +470,7 @@ mkChainDbArgs cfg initLedger registry (CoreNodeId nid) tracer slotDuration epoch
                                               else Nothing
       , ChainDB.cdbMemPolicy        = defaultMemPolicy secParam
       , ChainDB.cdbNodeConfig       = cfg
-      , ChainDB.cdbThreadRegistry   = registry
+      , ChainDB.cdbRegistry         = registry
       , ChainDB.cdbTracer           = tracer
       , ChainDB.cdbValidation       = ValidateMostRecentEpoch
       , ChainDB.cdbGcDelay          = secondsToDiffTime 10

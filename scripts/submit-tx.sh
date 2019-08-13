@@ -26,6 +26,5 @@ ${CMD} \
     --log-config configuration/log-configuration.yaml \
     $(mkdlgkey 0) \
     $(mkdlgcert 0) \
-    --system-start "${NOW}" \
     ${NETARGS[*]} \
            $@

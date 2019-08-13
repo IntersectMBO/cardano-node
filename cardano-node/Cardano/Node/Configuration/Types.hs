@@ -268,9 +268,7 @@ data Block = Block
 
 --- | Top-level Cardano SL node configuration
 data Node = Node
-    { noSystemStartTime                 :: !Integer
-    -- ^ Node system start time.
-    , noSlotLength                      :: !Integer
+    { noSlotLength                      :: !Integer
     -- ^ Slot length time.
     , noNetworkConnectionTimeout        :: !Int
     -- ^ Network connection timeout in milliseconds.
@@ -298,4 +296,3 @@ data Wallet = Wallet
     , thPeriod  :: !Text
     , thBurst   :: !Int
     } deriving (Eq, Show)
-
