@@ -152,6 +152,7 @@ fromProtocol _ MockPBFT =
 fromProtocol CardanoConfiguration{ccCore} RealPBFT = do
     let Core{ coGenesisFile
             , coGenesisHash
+            , coPBftSigThd
             } = ccCore
         genHash = either (throw . ConfigurationError) id $
                   decodeAbstractHash coGenesisHash
@@ -171,9 +172,12 @@ fromProtocol CardanoConfiguration{ccCore} RealPBFT = do
         -- These defaults are good for mainnet.
         defSoftVer  = Update.SoftwareVersion (Update.ApplicationName "cardano-sl") 1
         defProtoVer = Update.ProtocolVersion 0 2 0
+        -- TODO: The plumbing here to make the PBFT options from the
+        -- CardanoConfiguration is subtle, it should have its own function
+        -- to do this, along with other config conversion plumbing:
         p = ProtocolRealPBFT
               gc
-              Nothing
+              (fmap PBftSignatureThreshold coPBftSigThd)
               defProtoVer
               defSoftVer
               optionalLeaderCredentials
@@ -234,7 +238,7 @@ data CommonCLI = CommonCLI
   , cliGenesisHash                :: !(Last Text)
   , cliStaticKeySigningKeyFile    :: !(Last FilePath)
   , cliStaticKeyDlgCertFile       :: !(Last FilePath)
-  --TODO cliPBftSigThd            :: !(Last Double)
+  , cliPBftSigThd                 :: !(Last Double)
   --TODO cliUpdate                :: !PartialUpdate
   }
 
@@ -261,7 +265,11 @@ parseCommonCLI =
           <> metavar "FILEPATH"
           <> help "Path to the delegation certificate."
            )
-
+    <*> lastDoubleOption
+           ( long "pbft-signature-threshold"
+          <> metavar "DOUBLE"
+          <> help "The PBFT signature threshold."
+           )
 
 {-------------------------------------------------------------------------------
   Configuration merging
@@ -287,6 +295,7 @@ mergeConfiguration pcc cli =
                    , cliGenesisHash
                    , cliStaticKeySigningKeyFile
                    , cliStaticKeyDlgCertFile
+                   , cliPBftSigThd
                    } =
       mempty {
         pccCore = mempty {
@@ -294,7 +303,8 @@ mergeConfiguration pcc cli =
         , pcoGenesisHash             = cliGenesisHash
         , pcoStaticKeySigningKeyFile = cliStaticKeySigningKeyFile
         , pcoStaticKeyDlgCertFile    = cliStaticKeyDlgCertFile
-       -- TODO: cliPBftSigThd, cliUpdate
+        , pcoPBftSigThd              = cliPBftSigThd
+       -- TODO: cliUpdate
         }
       }
 
