@@ -12,6 +12,7 @@ NETARGS=(
         --slot-duration 2
         --genesis-file "configuration/Test.Cardano.Chain.Genesis.Dummy.dummyConfig.configGenesisData.json"
         --genesis-hash "fc32ebdf3c9bfa2ebf6bdcac98649f610601ddb266a2a2743e787dc9952a1aeb"
+        --pbft-signature-threshold 0.7
         node
         --topology "configuration/simple-topology.json"
         ${ALGO}

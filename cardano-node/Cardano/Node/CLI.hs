@@ -238,7 +238,7 @@ data CommonCLI = CommonCLI
   , cliGenesisHash                :: !(Last Text)
   , cliStaticKeySigningKeyFile    :: !(Last FilePath)
   , cliStaticKeyDlgCertFile       :: !(Last FilePath)
-  --TODO cliPBftSigThd            :: !(Last Double)
+  , cliPBftSigThd                 :: !(Last Double)
   --TODO cliUpdate                :: !PartialUpdate
   }
 
@@ -265,7 +265,11 @@ parseCommonCLI =
           <> metavar "FILEPATH"
           <> help "Path to the delegation certificate."
            )
-
+    <*> lastDoubleOption
+           ( long "pbft-signature-threshold"
+          <> metavar "DOUBLE"
+          <> help "The PBFT signature threshold."
+           )
 
 {-------------------------------------------------------------------------------
   Configuration merging
@@ -291,6 +295,7 @@ mergeConfiguration pcc cli =
                    , cliGenesisHash
                    , cliStaticKeySigningKeyFile
                    , cliStaticKeyDlgCertFile
+                   , cliPBftSigThd
                    } =
       mempty {
         pccCore = mempty {
@@ -298,7 +303,8 @@ mergeConfiguration pcc cli =
         , pcoGenesisHash             = cliGenesisHash
         , pcoStaticKeySigningKeyFile = cliStaticKeySigningKeyFile
         , pcoStaticKeyDlgCertFile    = cliStaticKeyDlgCertFile
-       -- TODO: cliPBftSigThd, cliUpdate
+        , pcoPBftSigThd              = cliPBftSigThd
+       -- TODO: cliUpdate
         }
       }
 
