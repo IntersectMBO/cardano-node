@@ -88,8 +88,7 @@ mainnetConfiguration =
           }
     , pccNode =
         PartialNode
-            { pnoSystemStartTime                = mempty
-            , pnoSlotLength                     = mempty
+            { pnoSlotLength                     = pure 2
             , pnoNetworkConnectionTimeout       = pure 15000
             , pnoHandshakeTimeout               = pure 30000
             }
@@ -199,8 +198,7 @@ devConfiguration =
           }
     , pccNode =
         PartialNode
-            { pnoSystemStartTime                = mempty
-            , pnoSlotLength                     = mempty
+            { pnoSlotLength                     = pure 2
             , pnoNetworkConnectionTimeout       = pure 15000
             , pnoHandshakeTimeout               = pure 30000
             }
@@ -241,4 +239,3 @@ devConfiguration =
             , pthBurst   = pure 0
             }
     }
-

@@ -131,9 +131,6 @@ finaliseCardanoConfiguration PartialCardanoConfiguration{..} = do
     finaliseNode :: PartialNode -> Either Text Node
     finaliseNode PartialNode{..} = do
 
-        noSystemStartTime               <- lastToEither "Unspecified noSystemStartTime"
-                                            pnoSystemStartTime
-
         noSlotLength                    <- lastToEither "Unspecified noSlotLength"
                                             pnoSlotLength
 
@@ -202,4 +199,3 @@ finaliseCardanoConfiguration PartialCardanoConfiguration{..} = do
         thBurst     <- lastToEither "Unspecified thBurst"   pthBurst
 
         pure Wallet {..}
-

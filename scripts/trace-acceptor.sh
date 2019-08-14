@@ -2,7 +2,7 @@
 
 NOW=`date "+%Y-%m-%d 00:00:00"`
 
-CMD="stack exec --nix cardano-node -- "
+CMD="stack exec cardano-node -- "
 # CMD="./cardano-node.exe -- "
 # CMD="cabal new-exec cardano-node -- "
 
@@ -25,6 +25,5 @@ ${CMD} \
     --log-config configuration/log-config-acceptor.yaml \
     $(mkdlgkey 0) \
     $(mkdlgcert 0) \
-    --system-start "${NOW}" \
     ${NETARGS[*]} \
            $@

@@ -47,8 +47,7 @@ import           Cardano.Node.CLI
 -------------------------------------------------------------------------------}
 
 data NodeCLIArguments = NodeCLIArguments {
-    systemStart  :: !SystemStart
-  , slotDuration :: !SlotLength
+    slotDuration :: !SlotLength
   , commonCLI    :: !CommonCLI
   , command      :: !Command
   }
@@ -107,8 +106,7 @@ data Command =
 
 nodeParser :: Parser NodeCLIArguments
 nodeParser = NodeCLIArguments
-    <$> parseSystemStart
-    <*> parseSlotDuration
+    <$> parseSlotDuration
     <*> parseCommonCLI
     <*> parseCommand
 

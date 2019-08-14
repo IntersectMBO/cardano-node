@@ -65,9 +65,7 @@ data PartialCore = PartialCore
 
 --- | Top-level Cardano SL node configuration
 data PartialNode = PartialNode
-    { pnoSystemStartTime                :: !(Last Integer)
-    -- ^ Node system start time.
-    , pnoSlotLength                     :: !(Last Integer)
+    { pnoSlotLength                     :: !(Last Integer)
     -- ^ Slot length time.
     , pnoNetworkConnectionTimeout       :: !(Last Int)
     -- ^ Network connection timeout in milliseconds.
@@ -198,4 +196,3 @@ data PartialWallet = PartialWallet
     } deriving (Eq, Show, Generic)
     deriving Semigroup via GenericSemigroup PartialWallet
     deriving Monoid    via GenericMonoid PartialWallet
-

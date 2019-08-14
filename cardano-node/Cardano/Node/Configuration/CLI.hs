@@ -193,11 +193,6 @@ configNodeCLIParser :: Parser PartialNode
 configNodeCLIParser =
     PartialNode
         <$> lastIntegerOption
-           ( long "system-start"
-          <> metavar "INTEGER"
-          <> help "Node system start time."
-           )
-        <*> lastIntegerOption
            ( long "slot-length"
           <> metavar "INTEGER"
           <> help "Slot length time."
@@ -436,4 +431,3 @@ configWalletCLIParser =
           <> metavar "TH-BURST"
           <> help "Throttle burst."
            )
-
