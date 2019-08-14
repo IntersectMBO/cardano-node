@@ -39,11 +39,20 @@ setupScribes:
     scName: stdout
     scFormat: ScText
     scRotation: null
+  - scKind: FileSK
+    scFormat: ScText
+    scName: "logs/acceptor.log"
+    scRotation:
+      rpLogLimitBytes: 25000000
+      rpKeepFilesNum:  3
+      rpMaxAgeHours:   24
 
 # if not indicated otherwise, then log output is directed to this:
 defaultScribes:
   - - StdoutSK
     - stdout
+  - - FileSK
+    - "logs/acceptor.log"
 
 # more options which can be passed as key-value pairs:
 options:
