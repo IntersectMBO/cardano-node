@@ -7,7 +7,10 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications    #-}
 
-module WalletClient where
+module Cardano.Wallet.Client where
+
+import           Cardano.Prelude hiding (ByteString, atomically)
+import           Prelude (String)
 
 import           Data.Void (Void)
 import           Data.ByteString.Lazy (ByteString)

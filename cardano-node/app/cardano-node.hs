@@ -4,8 +4,6 @@
 {-# LANGUAGE RankNTypes        #-}
 
 
-module Main (main) where
-
 import           Data.Semigroup ((<>))
 
 import           Options.Applicative
@@ -17,8 +15,8 @@ import           Cardano.Node.Configuration.Types (CardanoConfiguration (..),
                                                    CardanoEnvironment (..))
 import           Cardano.Node.Features.Logging (LoggingCLIArguments (..),
                                                 LoggingLayer (..),
-                                                createLoggingFeature,
-                                                loggingParser)
+                                                createLoggingFeature
+                                                )
 import           Cardano.Prelude hiding (option)
 import           Cardano.Shell.Lib (GeneralException (..),
                                     runCardanoApplicationWithFeatures)
@@ -29,26 +27,9 @@ import           Cardano.Shell.Types (CardanoApplication (..),
 import           Cardano.Node.CLI
 
 import           Cardano.Node.ConfigCLI
+import           Cardano.Node.Parsers (loggingParser)
 import           Cardano.Node.Run
 
-
--- | The product type of all command line arguments.
--- All here being - from all the features.
-data CLIArguments = CLIArguments !LoggingCLIArguments !NodeCLIArguments
-
--- | The product parser for all the CLI arguments.
-commandLineParser :: Parser CLIArguments
-commandLineParser = CLIArguments
-    <$> loggingParser
-    <*> nodeParser
-
--- | Top level parser with info.
-opts :: ParserInfo CLIArguments
-opts = info (commandLineParser <**> helper)
-    (  fullDesc
-    <> progDesc "Cardano demo node."
-    <> header "Demo node to run."
-    )
 
 -- | Main function.
 main :: IO ()
@@ -137,3 +118,22 @@ nodeCardanoFeature nodeCardanoFeature' nodeLayer = CardanoFeature
     , featureStart      = pure ()
     , featureShutdown   = liftIO $ (featureCleanup nodeCardanoFeature') nodeLayer
     }
+
+
+-- | The product type of all command line arguments.
+-- All here being - from all the features.
+data CLIArguments = CLIArguments !LoggingCLIArguments !NodeCLIArguments
+
+-- | The product parser for all the CLI arguments.
+commandLineParser :: Parser CLIArguments
+commandLineParser = CLIArguments
+    <$> loggingParser
+    <*> nodeParser
+
+-- | Top level parser with info.
+opts :: ParserInfo CLIArguments
+opts = info (commandLineParser <**> helper)
+    (  fullDesc
+    <> progDesc "Cardano demo node."
+    <> header "Demo node to run."
+    )

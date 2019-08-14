@@ -1,7 +1,6 @@
 {-# LANGUAGE BangPatterns       #-}
 {-# LANGUAGE NamedFieldPuns     #-}
 {-# LANGUAGE NumericUnderscores #-}
-module Main where
 
 import           Control.Applicative (some)
 import           Control.Exception (Exception, throwIO)
@@ -21,8 +20,42 @@ import           Ouroboros.Consensus.Node.ProtocolInfo.Abstract (NumCoreNodes (.
 import           Ouroboros.Consensus.NodeId (CoreNodeId)
 
 import           Cardano.Node.CLI
+import           Cardano.Node.Parsers (parseCoreNodeId, parseProtocol)
 
-import           Chairman (runChairman)
+import           Cardano.Chairman (runChairman)
+
+main :: IO ()
+main = do
+    ChairmanArgs { caProtocol
+                 , caCoreNodeIds
+                 , caSecurityParam
+                 , caMaxBlockNo
+                 , caTimeout
+                 , caCommonCLI
+                 } <- execParser opts
+
+    SomeProtocol p
+      <- case finaliseCardanoConfiguration $
+                mergeConfiguration
+                  mainnetConfiguration
+                  caCommonCLI of
+        Left err -> throwIO (ConfigurationError err)
+        Right cc -> fromProtocol cc caProtocol
+
+    let run = runChairman p caCoreNodeIds
+                          (NumCoreNodes $ length caCoreNodeIds)
+                          caSecurityParam
+                          caMaxBlockNo
+                          stdoutTracer
+
+    case caTimeout of
+      Nothing      -> run
+      Just timeout ->
+        run
+        `race_`
+        do
+          threadDelay (timeout * 1_000_000)
+          throwIO Timeout
 
 
 data ChairmanArgs = ChairmanArgs {
@@ -89,36 +122,3 @@ data Timeout = Timeout
   deriving Show
 
 instance Exception Timeout
-
-main :: IO ()
-main = do
-    ChairmanArgs { caProtocol
-                 , caCoreNodeIds
-                 , caSecurityParam
-                 , caMaxBlockNo
-                 , caTimeout
-                 , caCommonCLI
-                 } <- execParser opts
-
-    SomeProtocol p
-      <- case finaliseCardanoConfiguration $
-                mergeConfiguration
-                  mainnetConfiguration
-                  caCommonCLI of
-        Left err -> throwIO (ConfigurationError err)
-        Right cc -> fromProtocol cc caProtocol
-
-    let run = runChairman p caCoreNodeIds
-                          (NumCoreNodes $ length caCoreNodeIds)
-                          caSecurityParam
-                          caMaxBlockNo
-                          stdoutTracer
-
-    case caTimeout of
-      Nothing      -> run
-      Just timeout ->
-        run
-        `race_`
-        do
-          threadDelay (timeout * 1_000_000)
-          throwIO Timeout

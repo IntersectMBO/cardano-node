@@ -1,5 +1,5 @@
 packages:
-    ./
+    cardano-node
 
 package cardano-node
 

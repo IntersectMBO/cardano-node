@@ -37,6 +37,7 @@ import qualified Ouroboros.Consensus.Ledger.Mock as Mock
 import qualified Ouroboros.Consensus.Node.Tracers as Consensus
 import           Ouroboros.Consensus.NodeNetwork (ProtocolTracers' (..))
 
+import           Cardano.Node.Parsers (parseNodeId, parseProtocol, parseViewMode)
 import           Cardano.Node.Topology (NodeAddress (..), TopologyInfo (..))
 import           Cardano.Node.TxSubmission (command', parseMockTx)
 
@@ -143,6 +144,22 @@ parsePort =
 
 parseNodeAddress :: Parser NodeAddress
 parseNodeAddress = NodeAddress <$> parseHostAddr <*> parsePort
+
+parseSlotDuration :: Parser SlotLength
+parseSlotDuration = option (mkSlotLength <$> auto) $ mconcat [
+      long "slot-duration"
+    , value (mkSlotLength 5)
+    , help "The slot duration (seconds)"
+    ]
+  where
+    mkSlotLength :: Integer -> SlotLength
+    mkSlotLength = slotLengthFromMillisec . (* 1000)
+
+parseSystemStart :: Parser SystemStart
+parseSystemStart = option (SystemStart <$> auto) $ mconcat [
+      long "system-start"
+    , help "The start time of the system (e.g. \"2018-12-10 15:58:06\""
+    ]
 
 parseTopologyFile :: Parser FilePath
 parseTopologyFile =

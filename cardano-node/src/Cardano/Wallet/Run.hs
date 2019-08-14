@@ -1,9 +1,11 @@
 {-# LANGUAGE RecordWildCards   #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Run
+module Cardano.Wallet.Run
   ( runClient
   ) where
+
+import           Cardano.Prelude
 
 import           Data.Functor.Contravariant (contramap)
 import           Data.Text (Text, pack)
@@ -14,8 +16,8 @@ import           Ouroboros.Consensus.NodeId (CoreNodeId (..))
 
 import           Cardano.Node.Configuration.Types (CardanoConfiguration (..))
 
-import           CLI
-import           WalletClient
+import           Cardano.Wallet.CLI
+import           Cardano.Wallet.Client
 
 runClient :: CLI -> Trace IO Text -> CardanoConfiguration -> IO ()
 runClient CLI{..} tracer cc = do
