@@ -1,4 +1,10 @@
-{ customConfig ? {}, ... }:
+let
+  lib = (import ./lib.nix).pkgs.lib;
+  commitIdFromGitRepo = import ./nix/commit-id.nix { inherit lib; };
+in { customConfig ? {}
+, target ? builtins.currentSystem
+, gitrev ? commitIdFromGitRepo ./.git
+}:
 #
 # The default.nix file. This will generate targets for all
 # buildables (see release.nix for nomenclature, excluding
@@ -28,9 +34,24 @@
 # We will need to import the iohk-nix common lib, which includes
 # the nix-tools tooling.
 let
-  iohkLib = import ./nix/lib.nix;
+  system = if target != "x86_64-windows" then target else builtins.currentSystem;
+  crossSystem = if target == "x86_64-windows" then lib.systems.examples.mingwW64 else null;
+  commonLib = import ./lib.nix;
   nixTools = import ./nix/nix-tools.nix {};
+  # TODO: move environemnts and genesis files from SL somewhere else (network maybe?)
+  oldCardanoRev = (builtins.fromJSON (builtins.readFile ./nix/old-cardano-sl-src.json)).rev;
+  oldCardanoSrc = import ./nix/old-cardano.nix {
+    inherit commonLib;
+  };
+  inherit (commonLib) environments;
+  scripts = import ./nix/scripts.nix {
+    inherit commonLib nixTools customConfig;
+  };
+  # NixOS tests run a proxy and validate it listens
+  #nixosTests = import ./nix/nixos/tests { inherit (commonLib) pkgs; };
+
 in {
   inherit (nixTools) nix-tools;
-  inherit (iohkLib.iohkNix) check-nix-tools check-hydra;
+  inherit (commonLib.iohkNix) check-nix-tools check-hydra;
+  inherit scripts environments;
 }
