@@ -1,19 +1,14 @@
 -- required for 'Show' instance of 'WithTip'
-{-# LANGUAGE ConstraintKinds      #-}
-{-# LANGUAGE FlexibleContexts     #-}
-{-# LANGUAGE LambdaCase           #-}
-{-# LANGUAGE NamedFieldPuns       #-}
-{-# LANGUAGE OverloadedStrings    #-}
-{-# LANGUAGE ScopedTypeVariables  #-}
-{-# LANGUAGE UndecidableInstances #-}
-
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE LambdaCase            #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns        #-}
+{-# LANGUAGE OverloadedStrings     #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE UndecidableInstances  #-}
 module Cardano.Node.Tracers
-  ( ConsensusTraceOptions
-  , ProtocolTraceOptions
-  , readableChainDBTracer
-  , Tracers (..)
-  , TraceConstraints
-  , TraceOptions(..)
+  ( Tracers (..)
   , mkTracers
   , withTip
   ) where
@@ -22,6 +17,7 @@ import           Prelude (String, id, show)
 
 import           Codec.CBOR.Read (DeserialiseFailure)
 import           Control.Tracer
+import           Data.Aeson (ToJSON (..), Value (..), (.=))
 import           Data.Functor.Const (Const (..))
 import           Data.Functor.Contravariant (contramap)
 import           Data.Semigroup ((<>))
@@ -34,7 +30,10 @@ import           Cardano.BM.Data.LogItem (LOContent (LogValue), LogObject (..),
                                           PrivacyAnnotation (Confidential),
                                           mkLOMeta)
 import           Cardano.BM.Data.Severity (Severity (..))
-import           Cardano.BM.Data.Tracer (ToLogObject (..), TracingVerbosity(..))
+import           Cardano.BM.Data.Tracer (ToLogObject (..), ToObject (..),
+                                         TracingVerbosity (..),
+                                         Transformable (..),
+                                         emptyObject, mkObject, trStructured)
 import           Cardano.BM.Trace (appendName, traceNamedObject)
 
 
@@ -54,63 +53,6 @@ import qualified Ouroboros.Storage.ChainDB as ChainDB
 import           Ouroboros.Storage.Common
 import qualified Ouroboros.Storage.LedgerDB.OnDisk as LedgerDB
 
-
--- Converts the trace events from the ChainDB that we're interested in into
--- human-readable trace messages.
-readableChainDBTracer
-    :: forall m blk.
-       (Monad m, Condense (HeaderHash blk), ProtocolLedgerView blk)
-    => Tracer m String
-    -> Tracer m (WithTip blk (ChainDB.TraceEvent blk))
-readableChainDBTracer tracer = Tracer $ \case
-    WithTip tip (ChainDB.TraceAddBlockEvent ev) -> case ev of
-      ChainDB.StoreButDontChange   pt -> tr $ WithTip tip $
-        "Ignoring block: " <> condense pt
-      ChainDB.TryAddToCurrentChain pt -> tr $ WithTip tip $
-        "Block fits onto the current chain: " <> condense pt
-      ChainDB.TrySwitchToAFork pt _   -> tr $ WithTip tip $
-        "Block fits onto some fork: " <> condense pt
-      ChainDB.SwitchedToChain _ c     -> tr $ WithTip tip $
-        "Chain changed, new tip: " <> condense (AF.headPoint c)
-      ChainDB.AddBlockValidation ev' -> case ev' of
-        ChainDB.InvalidBlock err pt -> tr $ WithTip tip $
-          "Invalid block " <> condense pt <> ": " <> show err
-        _ -> ignore
-      _  -> ignore
-    WithTip tip (ChainDB.TraceLedgerReplayEvent ev) -> case ev of
-      LedgerDB.ReplayFromGenesis _replayTo -> tr $ WithTip tip $
-        "Replaying ledger from genesis"
-      LedgerDB.ReplayFromSnapshot snap tip' _replayTo -> tr $ WithTip tip $
-        "Replaying ledger from snapshot " <> show snap <> " at " <>
-        condense tip'
-      LedgerDB.ReplayedBlock {} -> ignore
-    WithTip tip (ChainDB.TraceLedgerEvent ev) -> case ev of
-      LedgerDB.TookSnapshot snap pt -> tr $ WithTip tip $
-        "Took ledger snapshot " <> show snap <> " at " <> condense pt
-      LedgerDB.DeletedSnapshot snap -> tr $ WithTip tip $
-        "Deleted old snapshot " <> show snap
-      LedgerDB.InvalidSnapshot snap failure -> tr $ WithTip tip $
-        "Invalid snapshot " <> show snap <> show failure
-    WithTip tip (ChainDB.TraceCopyToImmDBEvent ev) -> case ev of
-      ChainDB.CopiedBlockToImmDB pt -> tr $ WithTip tip $
-        "Copied block " <> condense pt <> " to the ImmutableDB"
-      _ -> ignore
-    WithTip tip (ChainDB.TraceGCEvent ev) -> case ev of
-      ChainDB.PerformedGC slot       -> tr $ WithTip tip $
-        "Performed a garbage collection for " <> condense slot
-      _ -> ignore
-    WithTip tip (ChainDB.TraceOpenEvent ev) -> case ev of
-      ChainDB.OpenedDB immTip tip' -> tr $ WithTip tip $
-        "Opened with immutable tip at " <> condense immTip <>
-        " and tip " <> condense tip'
-      _ -> ignore
-    _ -> ignore
-  where
-    tr :: WithTip blk String -> m ()
-    tr = traceWith (contramap (showWithTip id) tracer)
-
-    ignore :: m ()
-    ignore = return ()
 
 data Tracers peer blk = Tracers {
       -- | Trace the ChainDB. By default we use 'readableChainDB' tracer but a
@@ -171,6 +113,104 @@ type ProtocolTraceOptions  = ProtocolTracers'   () () () (Const Bool)
 
 -- | Smart constructor of 'NodeTraces'.
 --
+instance (Condense (HeaderHash blk), ProtocolLedgerView blk)
+            => Transformable Text IO (WithTip blk (ChainDB.TraceEvent blk)) where
+    trTransformer = trStructured -- structure required, will call 'toObject'
+instance (Condense (HeaderHash blk), ProtocolLedgerView blk)
+            => ToObject (WithTip blk (ChainDB.TraceEvent blk)) where
+    toObject MinimalVerbosity _ = emptyObject -- no output
+    toObject verb (WithTip tip ev) =
+        mkObject [ "tip" .= showTip tip
+                 , "TraceEvent" .= toObject verb ev
+                 ]
+instance (Condense (HeaderHash blk), ProtocolLedgerView blk)
+            => ToObject (ChainDB.TraceEvent blk) where
+    toObject MinimalVerbosity _ = emptyObject -- no output
+    toObject _ (ChainDB.TraceAddBlockEvent ev) =
+        mkObject [ "kind" .= String "TraceAddBlockEvent"
+                 , "event" .= String (
+                                pack (
+                                  case ev of
+                                    ChainDB.StoreButDontChange   pt ->
+                                      "Ignoring block: " <> condense pt
+                                    ChainDB.TryAddToCurrentChain pt ->
+                                      "Block fits onto the current chain: " <> condense pt
+                                    ChainDB.TrySwitchToAFork pt _   ->
+                                      "Block fits onto some fork: " <> condense pt
+                                    ChainDB.SwitchedToChain _ c     ->
+                                      "Chain changed, new tip: " <> condense (AF.headPoint c)
+                                    ChainDB.AddBlockValidation ev'  -> case ev' of
+                                      ChainDB.InvalidBlock err pt
+                                        -> "Invalid block " <> condense pt <> ": " <> show err
+                                      _ -> "ignore"
+                                    _ -> "ignore"
+                                )
+                              )
+                 ]
+    toObject _ (ChainDB.TraceLedgerReplayEvent ev) =
+        mkObject [ "kind" .= String "TraceLedgerReplayEvent"
+                 , "event" .= String (
+                                pack (
+                                  case ev of
+                                    LedgerDB.ReplayFromGenesis _replayTo ->
+                                      "Replaying ledger from genesis"
+                                    LedgerDB.ReplayFromSnapshot snap tip' _replayTo ->
+                                      "Replaying ledger from snapshot " <> show snap <> " at " <>
+                                      condense tip'
+                                    LedgerDB.ReplayedBlock {} -> "ignore"
+                                )
+                              )
+                 ]
+    toObject _ (ChainDB.TraceLedgerEvent ev) =
+        mkObject [ "kind" .= String "TraceLedgerEvent"
+                 , "event" .= String (
+                                pack (
+                                  case ev of
+                                    LedgerDB.TookSnapshot snap pt ->
+                                      "Took ledger snapshot " <> show snap <> " at " <> condense pt
+                                    LedgerDB.DeletedSnapshot snap ->
+                                      "Deleted old snapshot " <> show snap
+                                    LedgerDB.InvalidSnapshot snap failure ->
+                                      "Invalid snapshot " <> show snap <> show failure
+                                )
+                              )
+                 ]
+    toObject _ (ChainDB.TraceCopyToImmDBEvent ev) =
+        mkObject [ "kind" .= String "TraceCopyToImmDBEvent"
+                 , "event" .= String (
+                                pack (
+                                  case ev of
+                                    ChainDB.CopiedBlockToImmDB pt ->
+                                      "Copied block " <> condense pt <> " to the ImmutableDB"
+                                    _ -> "ignored"
+                                )
+                              )
+                 ]
+    toObject _ (ChainDB.TraceGCEvent ev) =
+        mkObject [ "kind" .= String "TraceGCEvent"
+                 , "event" .= String (
+                                pack (
+                                  case ev of
+                                    ChainDB.PerformedGC slot       ->
+                                      "Performed a garbage collection for " <> condense slot
+                                    _ -> "ignored"
+                                )
+                              )
+                 ]
+    toObject _ (ChainDB.TraceOpenEvent ev) =
+        mkObject [ "kind" .= String "TraceOpenEvent"
+                 , "event" .= String (
+                                pack (
+                                  case ev of
+                                    ChainDB.OpenedDB immTip tip' ->
+                                      "Opened with immutable tip at " <> condense immTip <>
+                                      " and tip " <> condense tip'
+                                    _ -> "ignored"
+                                )
+                              )
+                 ]
+    toObject _verb _ = emptyObject -- no output
+
 mkTracers :: forall peer blk.
               ( ProtocolLedgerView blk
               , TraceConstraints blk
@@ -183,19 +223,19 @@ mkTracers traceOptions tracer = Tracers
     { chainDBTracer
         = if traceChainDB traceOptions
           then contramap show tracer'
-          else readableChainDBTracer tracer'
+          else toLogObject' (CLI.traceVerbosity traceOptions) tracer
     , consensusTracers
         = mkConsensusTracers
     , protocolTracers
         = mkProtocolsTracers
-    , ipSubscriptionTracer
-        = enableTracer (traceIpSubscription traceOptions)
+    , ipSubscriptionTracer  -- TODO
+        = enableTracer (CLI.traceIpSubscription traceOptions)
         $ withName "IpSubscription" tracer
-    , dnsSubscriptionTracer
-        = enableTracer (traceDnsSubscription traceOptions)
+    , dnsSubscriptionTracer  -- TODO
+        = enableTracer (CLI.traceDnsSubscription traceOptions)
         $ withName "DnsSubscription" tracer
-    , dnsResolverTracer
-        = enableTracer (traceDnsResolver traceOptions)
+    , dnsResolverTracer  -- TODO
+        = enableTracer (CLI.traceDnsResolver traceOptions)
         $ withName "DnsResolver" tracer
     }
   where
@@ -217,16 +257,13 @@ mkTracers traceOptions tracer = Tracers
             logValue = LogValue "txsInMempool" $ PureI $ fromIntegral $ _txsInMempool mempoolEvent
         meta <- mkLOMeta Info Confidential
         traceNamedObject tr (meta, logValue)
-        case mempoolEvent of
-          TraceMempoolAddTxs      txs _ ->
-              let logValue' :: LOContent a
-                  logValue' = LogValue "txsProcessed" $ PureI $ fromIntegral $ length txs in
-              traceNamedObject tr (meta, logValue')
-          TraceMempoolRejectedTxs txs _ ->
-              let logValue' :: LOContent a
-                  logValue' = LogValue "txsProcessed" $ PureI $ fromIntegral $ length txs in
-              traceNamedObject tr (meta, logValue')
-          _                             -> return ()
+        let txs = case mempoolEvent of
+                  TraceMempoolAddTxs      txs _ -> txs
+                  TraceMempoolRejectedTxs txs _ -> txs
+                  _                             -> []
+        let logValue' :: LOContent a
+            logValue' = LogValue "txsProcessed" $ PureI $ fromIntegral $ length txs
+        traceNamedObject tr (meta, logValue')
 
     mempoolTracer = Tracer $ \ev -> do
       traceWith (mempoolTraceTransformer tracer) ev
@@ -328,14 +365,14 @@ showWithTip :: Condense (HeaderHash blk)
             => (a -> String)
             -> WithTip blk a
             -> String
-showWithTip customShow (WithTip tip a) = case pointHash tip of
-    GenesisHash -> "[genesis] " ++ customShow a
-    BlockHash h -> mconcat
-      [ "["
-      , take 7 (condense h)
-      , "] "
-      , customShow a
-      ]
+showWithTip customShow (WithTip tip a) = "[" ++ (showTip tip) ++ "] " ++ customShow a
+
+showTip :: Condense (HeaderHash blk)
+        => Point blk
+        -> String
+showTip tip = case pointHash tip of
+    GenesisHash -> "genesis"
+    BlockHash h -> take 7 (condense h)
 
 instance ( Show a
          , Condense (HeaderHash blk)
