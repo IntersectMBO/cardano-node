@@ -16,7 +16,6 @@ module Cardano.Node.Features.Logging
     , LOContent (..)
     -- CLI argument parser
     , LoggingCLIArguments (..)
-    , loggingParser
     ) where
 
 import           Cardano.Prelude hiding (trace)
@@ -99,15 +98,6 @@ type LoggingCardanoFeature =    CardanoFeatureInit
 data LoggingCLIArguments = LoggingCLIArguments
     { logConfigFile :: !FilePath
     }
-
--- | The parser for the logging specific arguments.
-loggingParser :: Parser LoggingCLIArguments
-loggingParser = LoggingCLIArguments
-    <$> strOption
-        ( long "log-config"
-       <> metavar "LOGCONFIG"
-       <> help "Configuration file for logging"
-        )
 
 createLoggingFeature :: CardanoEnvironment -> CardanoConfiguration -> LoggingCLIArguments -> IO (LoggingLayer, CardanoFeature)
 createLoggingFeature cardanoEnvironment cardanoConfiguration (LoggingCLIArguments loggingCLIArguments) = do

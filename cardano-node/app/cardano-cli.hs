@@ -1,88 +1,48 @@
-{-# LANGUAGE GADTs #-}
+{-# LANGUAGE NamedFieldPuns #-}
 
-{-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
+import           Cardano.Prelude hiding (option)
+import           Prelude (String, error, id)
 
-module Cardano.CLI.CLI (
-    -- * CLI
-    CLI(..)
-  , Command(..)
-  , parseCLI
-  , SystemVersion(..)
-  ) where
-
-import           Cardano.Prelude
-
-import           Data.Maybe (fromMaybe)
-import           Data.Time (UTCTime)
-import           Options.Applicative
-
-import           Cardano.Crypto.ProtocolMagic
+import           Cardano.Binary (Annotated (..))
 import           Cardano.Chain.Common
-import           Cardano.Chain.Genesis
-import           Cardano.Chain.Slotting
+import qualified Cardano.Chain.Genesis as Genesis
+import           Cardano.Chain.Slotting (EpochNumber(..))
+import           Cardano.CLI.Run (Command(..), SystemVersion(..), decideKeyMaterialOps, runCommand)
+import           Cardano.Crypto (AProtocolMagic(..), ProtocolMagic(..), ProtocolMagicId(..), RequiresNetworkMagic(..))
+import           Cardano.Node.Parsers (parseNodeId, parseProtocol)
+import           Cardano.Node.CLI (command')
+import           Ouroboros.Consensus.Node.ProtocolInfo.Abstract (NumCoreNodes (..))
 
-import           Cardano.Node.CLI
+import           Data.Time (UTCTime)
+import           Data.Time.Clock.POSIX (posixSecondsToUTCTime)
+import           Options.Applicative
+import           Control.Exception.Safe (catchIO)
+import           System.Exit (ExitCode(..), exitWith)
+
+main :: IO ()
+main = do
+  CLI{mainCommand, systemVersion} <- execParser opts
+  catchIO (runCommand (decideKeyMaterialOps systemVersion) mainCommand) $
+    \err-> do
+      hPutStrLn stderr ("Error:\n" <> show err :: String)
+      exitWith $ ExitFailure 1
+
+-- | Top level parser with info.
+opts :: ParserInfo CLI
+opts = info (parseCLI <**> helper)
+  ( fullDesc
+    <> progDesc "Cardano genesis tool."
+    <> header "Cardano genesis tool."
+  )
 
 {-------------------------------------------------------------------------------
+  CLI parsers & Types
 -------------------------------------------------------------------------------}
 
 data CLI = CLI
   { systemVersion :: SystemVersion
   , mainCommand   :: Command
   }
-
-data SystemVersion
-  = ByronLegacy
-  | ByronPBFT
-  deriving Show
-
-data Command
-  = Genesis
-    !FilePath
-    !UTCTime
-    !FilePath
-    !BlockCount
-    !ProtocolMagic
-    !TestnetBalanceOptions
-    !FakeAvvmOptions
-    !LovelacePortion
-    !(Maybe Integer)
-  | PrettySigningKeyPublic
-    !FilePath
-  | MigrateDelegateKeyFrom
-    !SystemVersion
-    !FilePath
-    !FilePath
-  | DumpHardcodedGenesis
-    !FilePath
-  | PrintGenesisHash
-    !FilePath
-  | PrintSigningKeyAddress
-    !NetworkMagic -- TODO:  consider deprecation in favor of ProtocolMagicId,
-                  --        once Byron is out of the picture.
-    !FilePath
-  | Keygen
-    !FilePath
-    !Bool
-  | ToVerification
-    !FilePath
-    !FilePath
-  | Redelegate
-    !ProtocolMagicId
-    !EpochNumber
-    !FilePath
-    !FilePath
-    !FilePath
-  | CheckDelegation
-    !ProtocolMagicId
-    !FilePath
-    !FilePath
-    !FilePath
-  | SubmitTx
-
-{-------------------------------------------------------------------------------
-  CLI parsers.
--------------------------------------------------------------------------------}
 
 parseCLI :: Parser CLI
 parseCLI = CLI
@@ -164,3 +124,87 @@ parseCommand =
       <*> parseFilePath    "issuer-key"               "The genesis key that supposedly delegates."
       <*> parseFilePath    "delegate-key"             "The operation verification key supposedly delegated to."
     ])
+
+parseTestnetBalanceOptions :: Parser Genesis.TestnetBalanceOptions
+parseTestnetBalanceOptions =
+  Genesis.TestnetBalanceOptions
+  <$> parseIntegral        "n-poor-addresses"         "Number of poor nodes (with small balance)."
+  <*> parseIntegral        "n-delegate-addresses"     "Number of delegate nodes (with huge balance)."
+  <*> parseLovelace        "total-balance"            "Total balance owned by these nodes."
+  <*> parseLovelacePortion "delegate-share"           "Portion of stake owned by all delegates together."
+  <*> parseFlag            "use-hd-addresses"         "Whether generate plain addresses or with hd payload."
+
+parseLovelace :: String -> String -> Parser Lovelace
+parseLovelace optname desc =
+  either (error . show) id . mkLovelace
+  <$> parseIntegral optname desc
+
+parseLovelacePortion :: String -> String -> Parser LovelacePortion
+parseLovelacePortion optname desc =
+  either (error . show) id . mkLovelacePortion
+  <$> parseIntegral optname desc
+
+parseFakeAvvmOptions :: Parser Genesis.FakeAvvmOptions
+parseFakeAvvmOptions =
+  Genesis.FakeAvvmOptions
+  <$> parseIntegral        "avvm-entry-count"         "Number of AVVM addresses."
+  <*> parseLovelace        "avvm-entry-balance"       "AVVM address."
+
+parseK :: Parser BlockCount
+parseK =
+  BlockCount
+  <$> parseIntegral        "k"                        "The security parameter of the Ouroboros protocol."
+
+parseProtocolMagicId :: String -> Parser ProtocolMagicId
+parseProtocolMagicId arg =
+  ProtocolMagicId
+  <$> parseIntegral        arg                        "The magic number unique to any instance of Cardano."
+
+parseProtocolMagic :: Parser ProtocolMagic
+parseProtocolMagic =
+  flip AProtocolMagic RequiresMagic . flip Annotated ()
+  <$> parseProtocolMagicId "protocol-magic"
+
+parseNetworkMagic :: Parser NetworkMagic
+parseNetworkMagic = asum
+    [ flag' NetworkMainOrStage $ mconcat [
+          long "main-or-staging"
+        , help ""
+        ]
+    , option (fmap NetworkTestnet auto) (
+          long "testnet-magic"
+       <> metavar "MAGIC"
+       <> help "The testnet network magic, decibal"
+        )
+    ]
+
+parseFilePath :: String -> String -> Parser FilePath
+parseFilePath optname desc =
+    strOption (
+            long optname
+         <> metavar "FILEPATH"
+         <> help desc
+    )
+
+parseIntegral :: Integral a => String -> String -> Parser a
+parseIntegral optname desc =
+    option (fromInteger <$> auto) (
+            long optname
+         <> metavar "INT"
+         <> help desc
+    )
+
+parseFlag :: String -> String -> Parser Bool
+parseFlag optname desc =
+    flag False True (
+            long optname
+         <> help desc
+    )
+
+parseUTCTime :: String -> String -> Parser UTCTime
+parseUTCTime optname desc =
+    option (posixSecondsToUTCTime . fromInteger <$> auto) (
+            long optname
+         <> metavar "POSIXSECONDS"
+         <> help desc
+    )

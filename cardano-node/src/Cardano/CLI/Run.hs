@@ -21,9 +21,11 @@
 
 module Cardano.CLI.Run (
     decideKeyMaterialOps
-  , main
   , CliError (..)
+  , Command(..)
   , KeyMaterialOps (..)
+  , runCommand
+  , SystemVersion(..)
   ) where
 
 import           Prelude (String)
@@ -31,7 +33,6 @@ import qualified Prelude as Prelude
 
 import           Codec.CBOR.Read (DeserialiseFailure, deserialiseFromBytes)
 import           Codec.CBOR.Write (toLazyByteString)
-import           Control.Exception.Safe (catchIO)
 import           Control.Monad
 import           Data.Bits (shiftL)
 import qualified Data.ByteArray as BA
@@ -49,10 +50,10 @@ import qualified Data.Text.Lazy.Builder as Builder
 import qualified Formatting as F
 import           Options.Applicative
 import           System.Directory (createDirectory, doesPathExist)
-import           System.Exit (ExitCode(..), exitWith)
 import           System.FilePath ((</>))
 import           System.IO (hGetLine, hSetEcho, hFlush, stdout, stdin)
 import           Text.Printf (printf)
+import           Data.Time (UTCTime)
 #ifdef UNIX
 import           System.Posix.Files (ownerReadMode, setFileMode)
 #else
@@ -64,9 +65,11 @@ import qualified Crypto.SCRAPE as Scrape
 import           Cardano.Prelude hiding (option)
 
 import           Cardano.Binary (Annotated(..), serialize')
+import           Cardano.Chain.Common
 import qualified Cardano.Chain.Common as CC
 import           Cardano.Chain.Delegation hiding (epoch)
-import           Cardano.Crypto (SigningKey (..))
+import           Cardano.Chain.Slotting (EpochNumber)
+import           Cardano.Crypto (SigningKey (..), ProtocolMagic, ProtocolMagicId)
 import qualified Test.Cardano.Chain.Genesis.Dummy as Dummy
 import qualified Cardano.Crypto.Random as CCr
 import qualified Cardano.Crypto.Hashing as CCr
@@ -76,23 +79,7 @@ import           Cardano.Chain.Genesis
 import           Cardano.Node.CanonicalJSON
 
 import qualified Cardano.Legacy.Byron as Legacy
-import           Cardano.CLI.CLI
 
-main :: IO ()
-main = do
-  CLI{mainCommand, systemVersion} <- execParser opts
-  catchIO (runCommand (decideKeyMaterialOps systemVersion) mainCommand) $
-    \err-> do
-      hPutStrLn stderr ("Error:\n" <> show err :: String)
-      exitWith $ ExitFailure 1
-
--- | Top level parser with info.
-opts :: ParserInfo CLI
-opts = info (parseCLI <**> helper)
-  ( fullDesc
-    <> progDesc "Cardano genesis tool."
-    <> header "Cardano genesis tool."
-  )
 
 data CliError
   -- Basic user errors
@@ -153,6 +140,51 @@ data KeyMaterialOps m
   , kmoDeserialiseDelegateKey    :: FilePath
                                  -> LB.ByteString -> m SigningKey
   }
+
+data Command
+  = Genesis
+    !FilePath
+    !UTCTime
+    !FilePath
+    !BlockCount
+    !ProtocolMagic
+    !TestnetBalanceOptions
+    !FakeAvvmOptions
+    !LovelacePortion
+    !(Maybe Integer)
+  | PrettySigningKeyPublic
+    !FilePath
+  | MigrateDelegateKeyFrom
+    !SystemVersion
+    !FilePath
+    !FilePath
+  | DumpHardcodedGenesis
+    !FilePath
+  | PrintGenesisHash
+    !FilePath
+  | PrintSigningKeyAddress
+    !NetworkMagic -- TODO:  consider deprecation in favor of ProtocolMagicId,
+                  --        once Byron is out of the picture.
+    !FilePath
+  | Keygen
+    !FilePath
+    !Bool
+  | ToVerification
+    !FilePath
+    !FilePath
+  | Redelegate
+    !ProtocolMagicId
+    !EpochNumber
+    !FilePath
+    !FilePath
+    !FilePath
+  | CheckDelegation
+    !ProtocolMagicId
+    !FilePath
+    !FilePath
+    !FilePath
+  | SubmitTx
+
 
 runCommand :: KeyMaterialOps IO -> Command -> IO ()
 runCommand kmo@KeyMaterialOps{..}
@@ -391,6 +423,11 @@ prettyAddress :: CC.Address -> Text
 prettyAddress addr = TL.toStrict
   $  F.format CC.addressF         addr <> "\n"
   <> F.format CC.addressDetailedF addr
+
+data SystemVersion
+  = ByronLegacy
+  | ByronPBFT
+  deriving Show
 
 decideKeyMaterialOps :: SystemVersion -> KeyMaterialOps IO
 decideKeyMaterialOps =

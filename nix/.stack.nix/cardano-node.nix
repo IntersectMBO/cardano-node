@@ -39,6 +39,7 @@
           (hsPkgs.memory)
           (hsPkgs.mtl)
           (hsPkgs.network)
+          (hsPkgs.network-mux)
           (hsPkgs.optparse-applicative)
           (hsPkgs.process)
           (hsPkgs.safe-exceptions)
@@ -128,7 +129,20 @@
             then [ (hsPkgs.Win32) ]
             else [ (hsPkgs.unix) ]);
           };
-        "cardano-cli" = { depends = [ (hsPkgs.base) (hsPkgs.cardano-node) ]; };
+        "cardano-cli" = {
+          depends = [
+            (hsPkgs.base)
+            (hsPkgs.cardano-binary)
+            (hsPkgs.cardano-crypto-wrapper)
+            (hsPkgs.cardano-ledger)
+            (hsPkgs.cardano-prelude)
+            (hsPkgs.cardano-node)
+            (hsPkgs.optparse-applicative)
+            (hsPkgs.ouroboros-consensus)
+            (hsPkgs.safe-exceptions)
+            (hsPkgs.time)
+            ];
+          };
         "chairman" = {
           depends = [
             (hsPkgs.base)
@@ -136,7 +150,6 @@
             (hsPkgs.cardano-node)
             (hsPkgs.cardano-shell)
             (hsPkgs.io-sim-classes)
-            (hsPkgs.network-mux)
             (hsPkgs.ouroboros-consensus)
             (hsPkgs.ouroboros-network)
             (hsPkgs.typed-protocols)
@@ -145,6 +158,7 @@
             (hsPkgs.bytestring)
             (hsPkgs.containers)
             (hsPkgs.network)
+            (hsPkgs.network-mux)
             (hsPkgs.optparse-applicative)
             (hsPkgs.serialise)
             (hsPkgs.text)
@@ -163,4 +177,4 @@
           };
         };
       };
-    } // rec { src = (pkgs.lib).mkDefault ../.././.; }
+    } // rec { src = (pkgs.lib).mkDefault ../.././cardano-node; }

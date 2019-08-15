@@ -1,6 +1,6 @@
 {-# LANGUAGE GADTs #-}
 
-module CLI
+module Cardano.Wallet.CLI
   ( Protocol (..)
   , CLI (..)
   , parseCLI
@@ -8,12 +8,15 @@ module CLI
   , fromProtocol
   ) where
 
+import           Cardano.Prelude hiding (option)
+
 import           Options.Applicative
 
 import           Ouroboros.Consensus.Node.ProtocolInfo
 import           Ouroboros.Consensus.NodeId (CoreNodeId (..))
 
 import           Cardano.Node.CLI
+import           Cardano.Node.Parsers (parseCoreNodeId, parseProtocol)
 
 data CLI = CLI {
     cliCoreNodeId   :: CoreNodeId,
@@ -28,3 +31,13 @@ parseCLI = CLI
     <*> parseNumCoreNodes
     <*> parseProtocol
     <*> parseCommonCLI
+
+
+parseNumCoreNodes :: Parser NumCoreNodes
+parseNumCoreNodes =
+    option (fmap NumCoreNodes auto) (
+            long "num-core-nodes"
+         <> short 'm'
+         <> metavar "NUM-CORE-NODES"
+         <> help "The number of core nodes"
+    )

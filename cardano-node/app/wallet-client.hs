@@ -3,7 +3,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes        #-}
 
-module Main (main) where
+import           Cardano.Prelude hiding (option)
 
 import           Options.Applicative
 
@@ -12,10 +12,10 @@ import           Cardano.Node.Configuration.Types (CardanoConfiguration (..),
                                                    CardanoEnvironment (..))
 import           Cardano.Node.Features.Logging (LoggingCLIArguments (..),
                                                 LoggingLayer (..),
-                                                createLoggingFeature,
-                                                loggingParser)
-import           Cardano.Prelude hiding (option)
+                                                createLoggingFeature
+                                                )
 
+import           Cardano.Node.Parsers (loggingParser)
 import           Cardano.Node.Configuration.PartialTypes (PartialCardanoConfiguration (..))
 import           Cardano.Node.Configuration.Presets (mainnetConfiguration)
 import           Cardano.Prelude (throwIO)
@@ -27,8 +27,8 @@ import           Cardano.Shell.Types (CardanoApplication (..),
 
 import           Cardano.Node.CLI
 
-import           CLI
-import           Run
+import           Cardano.Wallet.CLI
+import           Cardano.Wallet.Run
 
 -- | The product type of all command line arguments
 data ArgParser = ArgParser !LoggingCLIArguments !CLI

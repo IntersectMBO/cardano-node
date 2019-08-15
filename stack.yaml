@@ -1,7 +1,8 @@
 resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/4c48d34fd60991bb1b9168d293cfe31a975d858e/snapshot.yaml
 
 packages:
-  - .
+  - cardano-node
+
 
 extra-deps:
     # Cardano-ledger dependencies

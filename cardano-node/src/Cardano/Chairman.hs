@@ -10,7 +10,10 @@
 
 {-# LANGUAGE UndecidableInstances #-}
 
-module Chairman (runChairman) where
+module Cardano.Chairman (runChairman) where
+
+import           Cardano.Prelude hiding (ByteString, STM, atomically, catch, show)
+import           Prelude (String, error, foldl1, show)
 
 import           Control.Concurrent.Async (mapConcurrently)
 import           Control.Monad (void)

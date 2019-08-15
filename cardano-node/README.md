@@ -1,3 +1,80 @@
+
+# Shelley Testnet
+
+The `./scripts/shelley-testnet.sh` script starts up three nodes that are
+connected via TCP sockets to each other and produce blocks according to the
+algorithm selected (e.g. "BFT").  The blocks are shared among the nodes and
+after verification integrated into a nodes ledger.  The user can submit
+transactions to a node which includes them in its local mempool, and eventually
+in the next block it will create.
+
+
+```
+
+ +---------+         +---------+
+ |         | <-----> |         |
+ | node 0  |         | node 1  |
+ |         | <-+ +-> |         |
+ +---------+   | |   +---------+
+               v v
+
+            +---------+
+            |         |
+            | node 2  |
+            |         |
+            +---------+
+
+
+```
+
+## Startup testnet
+
+Add the next two lines to your $HOME/.tmux.conf file:
+
+set-window-option -g mouse on
+set -g default-terminal "tmux-256color"
+
+In a first terminal start the central logging process:
+
+    `./scripts/trace-acceptor.sh`
+
+In a second terminal:
+
+1.) create a `tmux` session
+
+    `tmux new-session -s Demo`
+
+2.) run the demo script in this new session
+
+    `./scripts/shelley-testnet.sh`
+
+The window of the terminal will be split into four panes showing the three
+nodes running and a shell to enter commands for transaction submission, e.g.
+
+```
+./scripts/submit-tx.sh -n 2 --address a --amount 99 --txin ababa --txix 0
+
+```
+The above command will prepare a transaction of amount 99 to address _a_ and
+sends the transaction for validation and integration into a block to node _2_.
+Increment the last argument '--txix' to send in a new transaction.
+
+
+3.) or you can run
+
+    `./scripts/shelley-testnet-dns.sh`
+
+    instead of `shelley-testnet.sh`.  It requires that the addresses
+    `local.iohk.io` and `local6.iohk.io` resolve to `127.0.0.1` and `::1`
+    respectively.  You can use [unbound](https://github.com/NLnetLabs/unbound)
+    dns server.  You can use the following `/etc/unbound/unbound.conf` file:
+    ```
+    server:
+      verbosity: 1
+      local-data: "local.iohk.io A 127.0.0.1"
+      local-data: "local6.iohk.io AAAA ::1"
+    ```
+
 # `cardano-cli`
 
 A CLI utility to support a variety of key material operations (genesis, migration, pretty-printing..) for different system generations.
@@ -133,3 +210,17 @@ $ cabal new-run -- cardano-cli byron-pbft signing-key-address \
 2cWKMJemoBakxhXgZSsMteLP9TUvz7owHyEYbUDwKRLsw2UGDrG93gPqmpv1D9ohWNddx
 VerKey address with root e5a3807d99a1807c3f161a1558bcbc45de8392e049682df01809c488, attributes: AddrAttributes { derivation path: {} }
 ```
+
+## Running the wallet client
+
+First you will need to start the core node with which the wallet client will
+communicate.  You can do that with `./script/start-node.sh` (or
+`./script/demo.sh`).  Then run
+
+```
+./scripts/start-wallet.sh --bft -n 0 -m 3
+```
+
+# development
+
+run *ghcid* with: `ghcid -c "cabal new-repl exe:cardano-node --reorder-goals"`
