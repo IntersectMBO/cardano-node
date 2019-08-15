@@ -46,6 +46,9 @@ function mkdlgcert () {
   printf -- "--delegation-certificate configuration/delegation-cert.%03d.json" "$1"
 }
 
+# for acceptor logs:
+mkdir -p logs/
+
 tmux split-window -v
 tmux select-pane -t 0
 tmux split-window -h
