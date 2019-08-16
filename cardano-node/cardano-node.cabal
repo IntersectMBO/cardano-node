@@ -18,7 +18,6 @@ library
   exposed-modules:     Cardano.Chairman
                        Cardano.CLI.Run
                        Cardano.Legacy.Byron
-                       Cardano.Node.ConfigCLI
                        Cardano.Node.CLI
                        Cardano.Node.CanonicalJSON
                        -- Conversion

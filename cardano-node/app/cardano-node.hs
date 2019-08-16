@@ -34,10 +34,10 @@ import           Ouroboros.Consensus.NodeId (NodeId (..))
 import qualified Ouroboros.Consensus.Node.Tracers as Consensus
 
 import           Cardano.Node.CLI
-import           Cardano.Node.ConfigCLI (ConsensusTraceOptions, NodeCLIArguments(..), NodeCommand(..), ProtocolTraceOptions, TraceOptions(..))
 import           Cardano.Node.Parsers (loggingParser, parseProtocol, parseViewMode)
 import           Cardano.Node.Run
 import           Cardano.Node.Topology (NodeAddress (..), TopologyInfo (..))
+import           Cardano.Node.Tracers (ConsensusTraceOptions,  ProtocolTraceOptions, TraceOptions(..))
 
 
 main :: IO ()

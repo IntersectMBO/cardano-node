@@ -93,7 +93,6 @@ import           Ouroboros.Storage.LedgerDB.DiskPolicy (defaultDiskPolicy)
 import           Ouroboros.Storage.LedgerDB.MemPolicy (defaultMemPolicy)
 
 import           Cardano.Node.CLI
-import           Cardano.Node.ConfigCLI
 import           Cardano.Node.Topology
 import           Cardano.Node.TraceAcceptor
 import           Cardano.Node.Tracers
