@@ -161,7 +161,7 @@ mkTracers traceOptions tracer = Tracers
     }
   where
     tracer' :: Tracer IO String
-    tracer' = contramap pack $ toLogObject tracer
+    tracer' = contramap pack $ toLogObject' (CLI.traceVerbosity traceOptions) tracer
 
     enableTracer
       :: Show a

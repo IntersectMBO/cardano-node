@@ -38,6 +38,8 @@ import qualified Ouroboros.Consensus.Node.Tracers as Consensus
 import           Ouroboros.Consensus.NodeNetwork (ProtocolTracers' (..))
 
 import           Cardano.Node.Parsers (parseNodeId, parseProtocol, parseViewMode)
+import           Cardano.BM.Data.Tracer (TracingVerbosity (..))
+
 import           Cardano.Node.Topology (NodeAddress (..), TopologyInfo (..))
 import           Cardano.Node.TxSubmission (command', parseMockTx)
 
@@ -60,7 +62,8 @@ type ProtocolTraceOptions  = ProtocolTracers'   () () () (Const Bool)
 -- | Tracing options. Each option enables a tracer which adds verbosity to the
 -- log output.
 data TraceOptions = TraceOptions
-  { traceChainDB         :: !Bool
+  { traceVerbosity       :: !TracingVerbosity
+  , traceChainDB         :: !Bool
     -- ^ By default we use 'readableChainDB' tracer, if on this it will use
     -- more verbose tracer
   , traceConsensus       :: ConsensusTraceOptions
@@ -93,7 +96,8 @@ parseProtocolTraceOptions = ProtocolTracers
 
 parseTraceOptions :: Parser TraceOptions
 parseTraceOptions = TraceOptions
-  <$> parseTraceChainDB
+  <$> parseTracingVerbosity
+  <*> parseTraceChainDB
   <*> parseConsensusTraceOptions
   <*> parseProtocolTraceOptions
   <*> parseTraceIpSubscription
@@ -172,6 +176,18 @@ parseTopologyFile =
 
 parseTopologyInfo :: Parser TopologyInfo
 parseTopologyInfo = TopologyInfo <$> parseNodeId <*> parseTopologyFile
+
+parseTracingVerbosity :: Parser TracingVerbosity
+parseTracingVerbosity = asum [
+    flag' MinimalVerbosity (long "tracing-verbosity-minimal"
+            <> help "Minimal level of the rendering of captured items")
+    <|>
+    flag' MaximalVerbosity (long "tracing-verbosity-maximal"
+            <> help "Maximal level of the rendering of captured items")
+    <|>
+    flag NormalVerbosity NormalVerbosity (long "tracing-verbosity-normal"
+            <> help "the default level of the rendering of captured items")
+    ]
 
 parseTraceChainDB :: Parser Bool
 parseTraceChainDB =

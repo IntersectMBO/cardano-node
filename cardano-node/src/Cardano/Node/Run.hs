@@ -18,7 +18,7 @@
 module Cardano.Node.Run (
       runNode
     ) where
-import           Cardano.Prelude hiding (ByteString, atomically, throwIO, wait)
+import           Cardano.Prelude hiding (ByteString, atomically, throwIO, trace, wait)
 import           Prelude (id, error)
 
 import           Codec.CBOR.Decoding (Decoder)
@@ -26,7 +26,6 @@ import           Codec.CBOR.Encoding (Encoding)
 import           Codec.SerialiseTerm
 import qualified Control.Concurrent.Async as Async
 import           Control.Exception
-import           Control.Monad
 import           Control.Tracer
 import           Crypto.Random
 import qualified Data.ByteString.Char8 as BSC
@@ -49,7 +48,7 @@ import qualified Cardano.BM.Configuration.Model as CM
 import           Cardano.BM.Data.Backend
 import           Cardano.BM.Data.BackendKind (BackendKind (TraceForwarderBK))
 import           Cardano.BM.Data.LogItem (LogObject (..))
-import           Cardano.BM.Data.Tracer (ToLogObject (..))
+import           Cardano.BM.Data.Tracer (ToLogObject (..), TracingVerbosity (..))
 import           Cardano.BM.Trace (appendName)
 import           Cardano.Node.Configuration.Types (CardanoConfiguration (..))
 import           Cardano.Node.Features.Logging (LoggingLayer (..))
@@ -94,7 +93,7 @@ import           Ouroboros.Storage.LedgerDB.DiskPolicy (defaultDiskPolicy)
 import           Ouroboros.Storage.LedgerDB.MemPolicy (defaultMemPolicy)
 
 import           Cardano.Node.CLI
-import           Cardano.Node.ConfigCLI hiding (TraceOptions (..))
+import           Cardano.Node.ConfigCLI
 import           Cardano.Node.Topology
 import           Cardano.Node.TraceAcceptor
 import           Cardano.Node.Tracers
@@ -134,7 +133,13 @@ runNode nodeCli@NodeCLIArguments{..} loggingLayer cc = do
 
       SimpleNode topology myNodeAddress protocol viewMode traceOptions -> do
         let trace'      = appendName (pack $ show $ node topology) tr
+        let tracer      = contramap pack $ toLogObject trace'
 
+        traceWith tracer $ "tracing verbosity = " ++
+                             case traceVerbosity traceOptions of
+                                 NormalVerbosity -> "normal"
+                                 MinimalVerbosity -> "minimal"
+                                 MaximalVerbosity -> "maximal"
         SomeProtocol p  <- fromProtocol cc protocol
         let tracers     = mkTracers traceOptions trace'
         case viewMode of
@@ -163,7 +168,7 @@ runNode nodeCli@NodeCLIArguments{..} loggingLayer cc = do
 -- | Sets up a simple node, which will run the chain sync protocol and block
 -- fetch protocol, and, if core, will also look at the mempool when trying to
 -- create a new block.
-handleSimpleNode :: forall blk. (RunNode blk, TraceConstraints blk)
+handleSimpleNode :: forall blk. (RunNode blk)
                  => Consensus.Protocol blk
                  -> NodeCLIArguments
                  -> NodeAddress
