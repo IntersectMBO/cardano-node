@@ -23,8 +23,7 @@ library
                        Cardano.Node.CanonicalJSON
                        -- Conversion
                        Cardano.Node.Configuration.Conversion
-                       Cardano.Node.Configuration.Lib
-                       Cardano.Node.Configuration.PartialTypes
+                       Cardano.Node.Configuration.Partial
                        Cardano.Node.Configuration.Types
                        Cardano.Node.Configuration.Presets
                        -- Features
