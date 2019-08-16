@@ -21,8 +21,6 @@ library
                        Cardano.Node.ConfigCLI
                        Cardano.Node.CLI
                        Cardano.Node.CanonicalJSON
-                       -- Configuration
-                       Cardano.Node.Configuration.CLI
                        -- Conversion
                        Cardano.Node.Configuration.Conversion
                        Cardano.Node.Configuration.Lib
@@ -262,7 +260,6 @@ test-suite cardano-node-test
 
   build-depends:
                         base >=4.12 && <5
-                      , cardano-node
                       , cardano-prelude
 
   default-language:     Haskell2010
