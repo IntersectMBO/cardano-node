@@ -13,9 +13,9 @@ NETARGS=(
         --genesis-file "configuration/Test.Cardano.Chain.Genesis.Dummy.dummyConfig.configGenesisData.json"
         --genesis-hash "fc32ebdf3c9bfa2ebf6bdcac98649f610601ddb266a2a2743e787dc9952a1aeb"
         --pbft-signature-threshold 0.7
+        --database-path "db"
         node
         --topology "configuration/simple-topology.json"
-        --database-path "db"
         ${ALGO}
 )
 ACCARGS=(
