@@ -8,9 +8,7 @@
 
 module Cardano.Node.TxSubmission (
       command'
-    , parseMockTx
     , handleTxSubmission
-
     , localSocketFilePath
     , localSocketAddrInfo
     ) where
@@ -64,40 +62,6 @@ import           Ouroboros.Network.NodeToClient
 import           Cardano.Node.CLI
 
 import           Cardano.Node.Topology
-
-{-------------------------------------------------------------------------------
-  Parsers for the mock UTxO model
--------------------------------------------------------------------------------}
-
-parseMockTx :: Parser Mock.Tx
-parseMockTx = mkTx
-    <$> many parseMockTxIn
-    <*> many parseMockTxOut
-  where
-    mkTx :: [Mock.TxIn] -> [Mock.TxOut] -> Mock.Tx
-    mkTx ins = Mock.Tx (Set.fromList ins)
-
-parseMockTxIn :: Parser Mock.TxIn
-parseMockTxIn = (,)
-    <$> strOption (mconcat [
-            long "txin"
-          , help "Hash of the input transaction. Single hex char."
-          ])
-    <*> option auto (mconcat [
-            long "txix"
-          , help "Index of the output in the specified transaction"
-          ])
-
-parseMockTxOut :: Parser Mock.TxOut
-parseMockTxOut = (,)
-    <$> strOption (mconcat [
-            long "address"
-          , help "Address to transfer to"
-          ])
-    <*> option auto (mconcat [
-            long "amount"
-          , help "Amount to transfer"
-          ])
 
 
 {-------------------------------------------------------------------------------

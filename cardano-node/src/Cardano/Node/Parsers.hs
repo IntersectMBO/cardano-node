@@ -1,7 +1,6 @@
 module Cardano.Node.Parsers
   ( loggingParser
   , parseCoreNodeId
-  , parseNodeId
   , parseProtocol
   , parseViewMode
   ) where
@@ -33,15 +32,6 @@ loggingParser = LoggingCLIArguments
        <> metavar "LOGCONFIG"
        <> help "Configuration file for logging"
         )
-
-parseNodeId :: Parser NodeId
-parseNodeId =
-    option (fmap CoreId auto) (
-            long "node-id"
-         <> short 'n'
-         <> metavar "NODE-ID"
-         <> help "The ID for this node"
-    )
 
 parseProtocol :: Parser Protocol
 parseProtocol = asum [

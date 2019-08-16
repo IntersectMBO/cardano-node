@@ -15,6 +15,7 @@ NETARGS=(
         --pbft-signature-threshold 0.7
         node
         --topology "configuration/simple-topology.json"
+        --database-path "db"
         ${ALGO}
 )
 ACCARGS=(

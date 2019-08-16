@@ -7,11 +7,9 @@ import           Cardano.Binary (Annotated (..))
 import           Cardano.Chain.Common
 import qualified Cardano.Chain.Genesis as Genesis
 import           Cardano.Chain.Slotting (EpochNumber(..))
-import           Cardano.CLI.Run (Command(..), SystemVersion(..), decideKeyMaterialOps, runCommand)
-import           Cardano.Crypto (AProtocolMagic(..), ProtocolMagic(..), ProtocolMagicId(..), RequiresNetworkMagic(..))
-import           Cardano.Node.Parsers (parseNodeId, parseProtocol)
+import           Cardano.CLI.Run (ClientCommand(..), SystemVersion(..), decideKeyMaterialOps, runCommand)
+import           Cardano.Crypto (AProtocolMagic(..), ProtocolMagic, ProtocolMagicId(..), RequiresNetworkMagic(..))
 import           Cardano.Node.CLI (command')
-import           Ouroboros.Consensus.Node.ProtocolInfo.Abstract (NumCoreNodes (..))
 
 import           Data.Time (UTCTime)
 import           Data.Time.Clock.POSIX (posixSecondsToUTCTime)
@@ -29,7 +27,7 @@ main = do
 
 -- | Top level parser with info.
 opts :: ParserInfo CLI
-opts = info (parseCLI <**> helper)
+opts = info (parseClient <**> helper)
   ( fullDesc
     <> progDesc "Cardano genesis tool."
     <> header "Cardano genesis tool."
@@ -41,13 +39,13 @@ opts = info (parseCLI <**> helper)
 
 data CLI = CLI
   { systemVersion :: SystemVersion
-  , mainCommand   :: Command
+  , mainCommand   :: ClientCommand
   }
 
-parseCLI :: Parser CLI
-parseCLI = CLI
+parseClient :: Parser CLI
+parseClient = CLI
     <$> parseSystemVersion
-    <*> parseCommand
+    <*> parseClientCommand
 
 parseSystemVersion :: Parser SystemVersion
 parseSystemVersion = subparser $ mconcat
@@ -57,8 +55,8 @@ parseSystemVersion = subparser $ mconcat
   , command' "byron-pbft"   "Byron PBFT mode"   $ pure ByronPBFT
   ]
 
-parseCommand :: Parser Command
-parseCommand =
+parseClientCommand :: Parser ClientCommand
+parseClientCommand =
   subparser
   (mconcat
     [ commandGroup "Genesis"

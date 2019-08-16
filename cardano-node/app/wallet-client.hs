@@ -5,30 +5,27 @@
 
 import           Cardano.Prelude hiding (option)
 
-import           Options.Applicative
-
+import           Cardano.Node.CLI
 import           Cardano.Node.Configuration.Lib (finaliseCardanoConfiguration)
+import           Cardano.Node.Configuration.PartialTypes (PartialCardanoConfiguration (..))
+import           Cardano.Node.Configuration.Presets (mainnetConfiguration)
 import           Cardano.Node.Configuration.Types (CardanoConfiguration (..),
                                                    CardanoEnvironment (..))
 import           Cardano.Node.Features.Logging (LoggingCLIArguments (..),
                                                 LoggingLayer (..),
                                                 createLoggingFeature
                                                 )
-
-import           Cardano.Node.Parsers (loggingParser)
-import           Cardano.Node.Configuration.PartialTypes (PartialCardanoConfiguration (..))
-import           Cardano.Node.Configuration.Presets (mainnetConfiguration)
+import           Cardano.Node.Parsers (loggingParser, parseCoreNodeId, parseProtocol)
 import           Cardano.Prelude (throwIO)
 import           Cardano.Shell.Lib (GeneralException (..),
                                     runCardanoApplicationWithFeatures)
 import           Cardano.Shell.Types (CardanoApplication (..),
                                       CardanoFeature (..),
                                       CardanoFeatureInit (..))
-
-import           Cardano.Node.CLI
-
-import           Cardano.Wallet.CLI
 import           Cardano.Wallet.Run
+import           Ouroboros.Consensus.Node.ProtocolInfo.Abstract (NumCoreNodes (..))
+
+import           Options.Applicative
 
 -- | The product type of all command line arguments
 data ArgParser = ArgParser !LoggingCLIArguments !CLI
@@ -38,7 +35,23 @@ data ArgParser = ArgParser !LoggingCLIArguments !CLI
 commandLineParser :: Parser ArgParser
 commandLineParser = ArgParser
     <$> loggingParser
-    <*> parseCLI
+    <*> parseWalletCLI
+
+parseWalletCLI :: Parser CLI
+parseWalletCLI = CLI
+    <$> parseCoreNodeId
+    <*> parseNumCoreNodes
+    <*> parseProtocol
+    <*> parseCommonCLI
+
+parseNumCoreNodes :: Parser NumCoreNodes
+parseNumCoreNodes =
+    option (fmap NumCoreNodes auto) (
+            long "num-core-nodes"
+         <> short 'm'
+         <> metavar "NUM-CORE-NODES"
+         <> help "The number of core nodes"
+    )
 
 -- | Top level parser with info.
 --
