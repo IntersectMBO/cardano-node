@@ -136,10 +136,10 @@ runNode nodeCli@NodeCLIArguments{..} loggingLayer cc = do
         let tracer      = contramap pack $ toLogObject trace'
 
         traceWith tracer $ "tracing verbosity = " ++
-                             (case (traceVerbosity traceOptions) of
+                             case traceVerbosity traceOptions of
                                  NormalVerbosity -> "normal"
                                  MinimalVerbosity -> "minimal"
-                                 MaximalVerbosity -> "maximal")
+                                 MaximalVerbosity -> "maximal"
         SomeProtocol p  <- fromProtocol cc protocol
         let tracers     = mkTracers traceOptions trace'
         case viewMode of
