@@ -1,4 +1,10 @@
-{ customConfig ? {}, ... }:
+let
+  commonLib = import ./lib.nix;
+  lib = commonLib.pkgs.lib;
+in
+{ customConfig ? {}
+, target ? builtins.currentSystem
+}:
 #
 # The default.nix file. This will generate targets for all
 # buildables (see release.nix for nomenclature, excluding
@@ -28,9 +34,21 @@
 # We will need to import the iohk-nix common lib, which includes
 # the nix-tools tooling.
 let
-  iohkLib = import ./nix/lib.nix;
-  nixTools = import ./nix/nix-tools.nix {};
+  system = if target != "x86_64-windows" then target else builtins.currentSystem;
+  crossSystem = if target == "x86_64-windows" then lib.systems.examples.mingwW64 else null;
+  nixTools = import ./nix/nix-tools.nix { inherit system crossSystem; };
+  inherit (commonLib) environments;
+  scripts = commonLib.pkgs.callPackage ./nix/scripts.nix {
+      inherit commonLib customConfig;
+  };
+  # NixOS tests run a proxy and validate it listens
+  nixosTests = import ./nix/nixos/tests {
+    inherit (commonLib) pkgs;
+    inherit commonLib;
+  };
 in {
+  inherit scripts nixosTests;
   inherit (nixTools) nix-tools;
-  inherit (iohkLib.iohkNix) check-nix-tools check-hydra;
+  inherit (commonLib.iohkNix) check-nix-tools check-hydra;
+  inherit environments;
 }

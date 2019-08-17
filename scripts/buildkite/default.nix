@@ -1,4 +1,4 @@
-with import ../../nix/lib.nix;
+with import ../../lib.nix;
 with pkgs;
 
 let

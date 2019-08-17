@@ -1,0 +1,24 @@
+{ pkgs, commonLib, ... }:
+
+{
+  name = "cardano-node-edge-test";
+  nodes = {
+    machine = { config, pkgs, ... }: {
+      imports = [
+        ../.
+      ];
+      services.cardano-node = {
+        enable = true;
+        port = 3001;
+        inherit (commonLib.environments.staging) genesisFile genesisHash;
+        topology = commonLib.mkEdgeTopology {};
+      };
+    };
+  };
+  testScript = ''
+    startAll
+    $machine->waitForUnit("cardano-node.service");
+    $machine->waitForOpenPort(3001);
+  '';
+
+}

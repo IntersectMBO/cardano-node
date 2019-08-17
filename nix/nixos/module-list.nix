@@ -1,3 +1,4 @@
 [
- ./cardano-node.nix
+ ./cardano-node-options.nix
+ ./cardano-node-service.nix
 ]
