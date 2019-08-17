@@ -22,7 +22,7 @@
 module Cardano.CLI.Run (
     decideKeyMaterialOps
   , CliError (..)
-  , Command(..)
+  , ClientCommand(..)
   , KeyMaterialOps (..)
   , runCommand
   , SystemVersion(..)
@@ -141,7 +141,7 @@ data KeyMaterialOps m
                                  -> LB.ByteString -> m SigningKey
   }
 
-data Command
+data ClientCommand
   = Genesis
     !FilePath
     !UTCTime
@@ -186,7 +186,7 @@ data Command
   | SubmitTx
 
 
-runCommand :: KeyMaterialOps IO -> Command -> IO ()
+runCommand :: KeyMaterialOps IO -> ClientCommand -> IO ()
 runCommand kmo@KeyMaterialOps{..}
          (Genesis
            outDir

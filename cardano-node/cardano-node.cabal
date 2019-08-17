@@ -39,7 +39,6 @@ library
                        Cardano.Node.TraceAcceptor
                        Cardano.Node.Tracers
                        Cardano.Node.TxSubmission
-                       Cardano.Wallet.CLI
                        Cardano.Wallet.Run
                        Cardano.Wallet.Client
 
@@ -147,12 +146,14 @@ executable cardano-node
                      , aeson
                      , bytestring
                      , cborg == 0.2.2.0
+                     , containers
                      , contra-tracer
                      , cryptonite
                      , directory
                      , formatting
                      , io-sim-classes
                      , iohk-monitoring
+                     , iproute
                      , lens
                      , mtl
                      , network

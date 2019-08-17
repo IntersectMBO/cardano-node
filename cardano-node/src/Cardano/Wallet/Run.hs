@@ -2,7 +2,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Cardano.Wallet.Run
-  ( runClient
+  ( CLI(..)
+  , runClient
   ) where
 
 import           Cardano.Prelude
@@ -12,11 +13,11 @@ import           Data.Text (Text, pack)
 
 import           Cardano.BM.Data.Tracer (ToLogObject (..))
 import           Cardano.BM.Trace (Trace, appendName)
+import           Cardano.Node.CLI (CommonCLI, Protocol, SomeProtocol(..), fromProtocol)
+import           Ouroboros.Consensus.Node.ProtocolInfo.Abstract (NumCoreNodes (..))
 import           Ouroboros.Consensus.NodeId (CoreNodeId (..))
 
 import           Cardano.Node.Configuration.Types (CardanoConfiguration (..))
-
-import           Cardano.Wallet.CLI
 import           Cardano.Wallet.Client
 
 runClient :: CLI -> Trace IO Text -> CardanoConfiguration -> IO ()
@@ -27,3 +28,10 @@ runClient CLI{..} tracer cc = do
 
     SomeProtocol p <- fromProtocol cc cliProtocol
     runWalletClient p cliCoreNodeId cliNumCoreNodes tracer'
+
+data CLI = CLI {
+    cliCoreNodeId   :: CoreNodeId,
+    cliNumCoreNodes :: NumCoreNodes,
+    cliProtocol     :: Protocol,
+    cliCommon       :: CommonCLI
+  }

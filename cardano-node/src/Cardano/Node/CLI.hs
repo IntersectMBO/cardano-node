@@ -220,6 +220,7 @@ data CommonCLI = CommonCLI
   , cliStaticKeySigningKeyFile    :: !(Last FilePath)
   , cliStaticKeyDlgCertFile       :: !(Last FilePath)
   , cliPBftSigThd                 :: !(Last Double)
+  , cliDBPath                     :: !(Last FilePath)
   --TODO cliUpdate                :: !PartialUpdate
   }
 
@@ -251,6 +252,12 @@ parseCommonCLI =
           <> metavar "DOUBLE"
           <> help "The PBFT signature threshold."
            )
+    <*> lastStrOption (
+            long "database-path"
+         <> metavar "FILEPATH"
+         <> help "Directory where the state is stored."
+        )
+
 
 {-------------------------------------------------------------------------------
   Configuration merging
@@ -277,17 +284,18 @@ mergeConfiguration pcc cli =
                    , cliStaticKeySigningKeyFile
                    , cliStaticKeyDlgCertFile
                    , cliPBftSigThd
+                   , cliDBPath
                    } =
-      mempty {
-        pccCore = mempty {
-          pcoGenesisFile             = cliGenesisFile
-        , pcoGenesisHash             = cliGenesisHash
-        , pcoStaticKeySigningKeyFile = cliStaticKeySigningKeyFile
-        , pcoStaticKeyDlgCertFile    = cliStaticKeyDlgCertFile
-        , pcoPBftSigThd              = cliPBftSigThd
-       -- TODO: cliUpdate
-        }
-      }
+      mempty { pccCore = mempty
+                    { pcoGenesisFile             = cliGenesisFile
+                    , pcoGenesisHash             = cliGenesisHash
+                    , pcoStaticKeySigningKeyFile = cliStaticKeySigningKeyFile
+                    , pcoStaticKeyDlgCertFile    = cliStaticKeyDlgCertFile
+                    , pcoPBftSigThd              = cliPBftSigThd
+                    -- TODO: cliUpdate
+                    }
+             , pccDBPath = cliDBPath
+             }
 
 
 

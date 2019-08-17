@@ -38,7 +38,7 @@ import           Data.Semigroup ((<>))
 import           Data.Text (Text, pack)
 import           Data.Time.Clock (DiffTime, secondsToDiffTime)
 import           Network.Socket as Socket
-import           System.Directory (removeFile)
+import           System.Directory (canonicalizePath, makeAbsolute, removeFile)
 import           System.IO.Error (isDoesNotExistError)
 
 import           Control.Monad.Class.MonadAsync
@@ -228,6 +228,8 @@ handleSimpleNode p NodeCLIArguments{..}
 
       varTip <- atomically $ newTVar GenesisPoint
       epochInfo <- newEpochInfo $ nodeEpochSize (Proxy @blk)
+      -- Database filepath
+      path <- canonicalizePath =<< makeAbsolute ccDBPath
       let chainDbArgs = mkChainDbArgs
                           pInfoConfig
                           pInfoInitLedger
@@ -236,6 +238,7 @@ handleSimpleNode p NodeCLIArguments{..}
                           (withTip varTip $ chainDBTracer nodeTraces)
                           slotDuration
                           epochInfo
+                          (path <> "-" <> show nid)
       chainDB :: ChainDB IO blk <- ChainDB.openDB chainDbArgs
 
       -- Watch the tip of the chain and store it in @varTip@ so we can include
@@ -454,8 +457,9 @@ mkChainDbArgs :: forall blk. RunNode blk
               -> Tracer IO (ChainDB.TraceEvent blk)
               -> SlotLength
               -> EpochInfo IO
+              -> FilePath
               -> ChainDB.ChainDbArgs IO blk
-mkChainDbArgs cfg initLedger registry (CoreNodeId nid) tracer slotDuration epochInfo =
+mkChainDbArgs cfg initLedger registry (CoreNodeId nid) tracer slotDuration epochInfo dbPath = do
     (ChainDB.defaultArgs dbPath)
       { ChainDB.cdbBlocksPerFile    = 1000 --TODO: move definition of default
                                            -- elsewhere and just use it here.
@@ -481,8 +485,6 @@ mkChainDbArgs cfg initLedger registry (CoreNodeId nid) tracer slotDuration epoch
       , ChainDB.cdbGcDelay          = secondsToDiffTime 10
       }
   where
-    dbPath = "db-" <> show nid
-
     secParam = protocolSecurityParam cfg
 
     -- TODO cleaner way with subsecond precision
