@@ -5,7 +5,7 @@
       specVersion = "1.10";
       identifier = { name = "cardano-node"; version = "3.0.1.87"; };
       license = "Apache-2.0";
-      copyright = "2019 Input Output (Hong Kong) Ltd.";
+      copyright = "";
       maintainer = "operations@iohk.io";
       author = "IOHK";
       homepage = "";
