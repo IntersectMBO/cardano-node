@@ -1,13 +1,19 @@
 -- required for 'Show' instance of 'WithTip'
+{-# LANGUAGE ConstraintKinds      #-}
 {-# LANGUAGE FlexibleContexts     #-}
 {-# LANGUAGE LambdaCase           #-}
 {-# LANGUAGE NamedFieldPuns       #-}
 {-# LANGUAGE OverloadedStrings    #-}
 {-# LANGUAGE ScopedTypeVariables  #-}
 {-# LANGUAGE UndecidableInstances #-}
+
 module Cardano.Node.Tracers
-  ( readableChainDBTracer
+  ( ConsensusTraceOptions
+  , ProtocolTraceOptions
+  , readableChainDBTracer
   , Tracers (..)
+  , TraceConstraints
+  , TraceOptions(..)
   , mkTracers
   , withTip
   ) where
@@ -28,15 +34,16 @@ import           Cardano.BM.Data.LogItem (LOContent (LogValue), LogObject (..),
                                           PrivacyAnnotation (Confidential),
                                           mkLOMeta)
 import           Cardano.BM.Data.Severity (Severity (..))
-import           Cardano.BM.Data.Tracer (ToLogObject (..))
+import           Cardano.BM.Data.Tracer (ToLogObject (..), TracingVerbosity(..))
 import           Cardano.BM.Trace (appendName, traceNamedObject)
 
 
 import qualified Ouroboros.Network.AnchoredFragment as AF
 import           Ouroboros.Network.Block
 
+import           Ouroboros.Consensus.Block (Header)
 import           Ouroboros.Consensus.Ledger.Abstract
-import           Ouroboros.Consensus.Mempool.API (TraceEventMempool (..))
+import           Ouroboros.Consensus.Mempool.API (ApplyTxErr, GenTx, GenTxId, TraceEventMempool (..))
 import qualified Ouroboros.Consensus.Node.Tracers as Consensus
 import           Ouroboros.Consensus.NodeNetwork (ProtocolTracers,
                                                   ProtocolTracers' (..))
@@ -46,10 +53,6 @@ import           Ouroboros.Consensus.Util.Orphans ()
 import qualified Ouroboros.Storage.ChainDB as ChainDB
 import           Ouroboros.Storage.Common
 import qualified Ouroboros.Storage.LedgerDB.OnDisk as LedgerDB
-
-import           Cardano.Node.CLI (TraceConstraints)
-
-import qualified Cardano.Node.ConfigCLI as CLI
 
 
 -- Converts the trace events from the ChainDB that we're interested in into
@@ -130,6 +133,42 @@ data Tracers peer blk = Tracers {
     , dnsResolverTracer     :: Tracer IO String
     }
 
+-- | Tracing-related constraints for monitoring purposes.
+--
+-- When you need a 'Show' or 'Condense' instance for more types, just add the
+-- appropriate constraint here. There's no need to modify the consensus
+-- code-base, unless the corresponding instance is missing.
+type TraceConstraints blk =
+  ( Condense blk
+  , Condense [blk]
+  , Condense (ChainHash blk)
+  , Condense (Header blk)
+  , Condense (HeaderHash blk)
+  , Condense (GenTx blk)
+  , Show (ApplyTxErr blk)
+  , Show (GenTx blk)
+  , Show (GenTxId blk)
+  , Show blk
+  , Show (Header blk)
+  )
+
+-- | Tracing options. Each option enables a tracer which adds verbosity to the
+-- log output.
+data TraceOptions = TraceOptions
+  { traceVerbosity       :: !TracingVerbosity
+  , traceChainDB         :: !Bool
+    -- ^ By default we use 'readableChainDB' tracer, if on this it will use
+    -- more verbose tracer
+  , traceConsensus       :: ConsensusTraceOptions
+  , traceProtocols       :: ProtocolTraceOptions
+  , traceIpSubscription  :: !Bool
+  , traceDnsSubscription :: !Bool
+  , traceDnsResolver     :: !Bool
+  }
+
+type ConsensusTraceOptions = Consensus.Tracers' () ()    (Const Bool)
+type ProtocolTraceOptions  = ProtocolTracers'   () () () (Const Bool)
+
 -- | Smart constructor of 'NodeTraces'.
 --
 mkTracers :: forall peer blk.
@@ -137,12 +176,12 @@ mkTracers :: forall peer blk.
               , TraceConstraints blk
               , Show peer
               )
-           => CLI.TraceOptions
+           => TraceOptions
            -> Tracer IO (LogObject Text)
            -> Tracers peer blk
 mkTracers traceOptions tracer = Tracers
     { chainDBTracer
-        = if CLI.traceChainDB traceOptions
+        = if traceChainDB traceOptions
           then contramap show tracer'
           else readableChainDBTracer tracer'
     , consensusTracers
@@ -150,18 +189,18 @@ mkTracers traceOptions tracer = Tracers
     , protocolTracers
         = mkProtocolsTracers
     , ipSubscriptionTracer
-        = enableTracer (CLI.traceIpSubscription traceOptions)
+        = enableTracer (traceIpSubscription traceOptions)
         $ withName "IpSubscription" tracer
     , dnsSubscriptionTracer
-        = enableTracer (CLI.traceDnsSubscription traceOptions)
+        = enableTracer (traceDnsSubscription traceOptions)
         $ withName "DnsSubscription" tracer
     , dnsResolverTracer
-        = enableTracer (CLI.traceDnsResolver traceOptions)
+        = enableTracer (traceDnsResolver traceOptions)
         $ withName "DnsResolver" tracer
     }
   where
     tracer' :: Tracer IO String
-    tracer' = contramap pack $ toLogObject' (CLI.traceVerbosity traceOptions) tracer
+    tracer' = contramap pack $ toLogObject' (traceVerbosity traceOptions) tracer
 
     enableTracer
       :: Show a
@@ -196,9 +235,9 @@ mkTracers traceOptions tracer = Tracers
 
     enableConsensusTracer
       :: Show a
-      => (CLI.ConsensusTraceOptions -> Const Bool b)
+      => (ConsensusTraceOptions -> Const Bool b)
       -> Tracer IO String -> Tracer IO a
-    enableConsensusTracer f = if getConst $ f $ CLI.traceConsensus traceOptions
+    enableConsensusTracer f = if getConst $ f $ traceConsensus traceOptions
       then showTracing
       else const nullTracer
 
@@ -237,9 +276,9 @@ mkTracers traceOptions tracer = Tracers
 
     enableProtocolTracer
       :: Show a
-      => (CLI.ProtocolTraceOptions -> Const Bool b)
+      => (ProtocolTraceOptions -> Const Bool b)
       -> Tracer IO String -> Tracer IO a
-    enableProtocolTracer f = if getConst $ f $ CLI.traceProtocols traceOptions
+    enableProtocolTracer f = if getConst $ f $ traceProtocols traceOptions
       then showTracing
       else const nullTracer
 

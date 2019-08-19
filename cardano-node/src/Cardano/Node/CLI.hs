@@ -11,7 +11,6 @@ module Cardano.Node.CLI (
   -- * Untyped/typed protocol boundary
     Protocol(..)
   , SomeProtocol(..)
-  , TraceConstraints
   , ViewMode(..)
   , fromProtocol
   -- * Common CLI
@@ -28,6 +27,8 @@ module Cardano.Node.CLI (
   , lastWordOption
   , lastTextListOption
   , lastStrOption
+  , NodeCLIArguments (..)
+  , NodeCommand (..)
   ) where
 
 import           Prelude
@@ -41,7 +42,8 @@ import qualified Data.Text as Text
 import           Data.Text (Text)
 import           Data.Time (UTCTime)
 import           Data.Time.Clock.POSIX (posixSecondsToUTCTime)
-import           Options.Applicative
+import qualified Options.Applicative as OA
+import           Options.Applicative hiding (command)
 
 import           Control.Exception
 import           Control.Monad.Except
@@ -54,6 +56,7 @@ import           Ouroboros.Consensus.Block (Header)
 import           Ouroboros.Consensus.BlockchainTime
 import           Ouroboros.Consensus.Demo
 import           Ouroboros.Consensus.Demo.Run
+import qualified Ouroboros.Consensus.Ledger.Mock as Mock
 import           Ouroboros.Consensus.Ledger.Byron
 import           Ouroboros.Consensus.Mempool.API
 import           Ouroboros.Consensus.Node.ProtocolInfo
@@ -73,11 +76,13 @@ import           Cardano.Crypto (RequiresNetworkMagic (..), decodeAbstractHash)
 import qualified Cardano.Crypto.Signing as Signing
 
 import           Cardano.Shell.Lib (GeneralException (..))
-import           Cardano.Node.Configuration.PartialTypes as Shell.Config
+import           Cardano.Node.Configuration.Partial as Shell.Config
                    ( PartialCardanoConfiguration (..), PartialCore (..) )
 import           Cardano.Node.Configuration.Types as Shell.Config
                    ( CardanoConfiguration (..), Core (..)
                    , RequireNetworkMagic (..) )
+import           Cardano.Node.Topology (NodeAddress (..), TopologyInfo (..))
+import           Cardano.Node.Tracers (TraceConstraints, TraceOptions)
 
 import qualified Cardano.Node.CanonicalJSON as CanonicalJSON
 
@@ -91,24 +96,6 @@ data Protocol =
   | MockPBFT
   | RealPBFT
 
--- | Tracing-related constraints for monitoring purposes.
---
--- When you need a 'Show' or 'Condense' instance for more types, just add the
--- appropriate constraint here. There's no need to modify the consensus
--- code-base, unless the corresponding instance is missing.
-type TraceConstraints blk =
-    ( Condense blk
-    , Condense [blk]
-    , Condense (ChainHash blk)
-    , Condense (Header blk)
-    , Condense (HeaderHash blk)
-    , Condense (GenTx blk)
-    , Show (ApplyTxErr blk)
-    , Show (GenTx blk)
-    , Show (GenTxId blk)
-    , Show blk
-    , Show (Header blk)
-    )
 
 data SomeProtocol where
   SomeProtocol :: (RunDemo blk, TraceConstraints blk)
@@ -305,7 +292,7 @@ mergeConfiguration pcc cli =
 
 command' :: String -> String -> Parser a -> Mod CommandFields a
 command' c descr p =
-    command c $ info (p <**> helper) $ mconcat [
+    OA.command c $ info (p <**> helper) $ mconcat [
         progDesc descr
       ]
 
@@ -335,3 +322,19 @@ lastTextListOption = lastAutoOption
 
 lastStrOption :: IsString a => Mod OptionFields a -> Parser (Last a)
 lastStrOption args = Last <$> optional (strOption args)
+
+
+--------------------------------------------------------------------------------
+-- Node CLI Types
+--------------------------------------------------------------------------------
+
+data NodeCLIArguments = NodeCLIArguments {
+    slotDuration :: !SlotLength
+  , commonCLI    :: !CommonCLI
+  , command      :: !NodeCommand
+  }
+
+data NodeCommand =
+    SimpleNode  TopologyInfo NodeAddress Protocol ViewMode TraceOptions
+  | TxSubmitter TopologyInfo Mock.Tx     Protocol
+  | TraceAcceptor

@@ -13,8 +13,7 @@ import           Network.Socket (PortNumber)
 import           Options.Applicative
 
 import           Cardano.BM.Data.Tracer (TracingVerbosity (..))
-import           Cardano.Node.Configuration.Lib (finaliseCardanoConfiguration)
-import           Cardano.Node.Configuration.PartialTypes (PartialCardanoConfiguration (..))
+import           Cardano.Node.Configuration.Partial (PartialCardanoConfiguration (..), finaliseCardanoConfiguration)
 import           Cardano.Node.Configuration.Presets (mainnetConfiguration)
 import           Cardano.Node.Configuration.Types (CardanoConfiguration (..),
                                                    CardanoEnvironment (..))
@@ -35,10 +34,10 @@ import           Ouroboros.Consensus.NodeId (NodeId (..))
 import qualified Ouroboros.Consensus.Node.Tracers as Consensus
 
 import           Cardano.Node.CLI
-import           Cardano.Node.ConfigCLI (ConsensusTraceOptions, NodeCLIArguments(..), NodeCommand(..), ProtocolTraceOptions, TraceOptions(..))
 import           Cardano.Node.Parsers (loggingParser, parseProtocol, parseViewMode)
 import           Cardano.Node.Run
 import           Cardano.Node.Topology (NodeAddress (..), TopologyInfo (..))
+import           Cardano.Node.Tracers (ConsensusTraceOptions,  ProtocolTraceOptions, TraceOptions(..))
 
 
 main :: IO ()

@@ -9,7 +9,7 @@ import           Control.Concurrent.Async
 import           Options.Applicative
 
 import           Cardano.Node.Configuration.Presets (mainnetConfiguration)
-import           Cardano.Node.Configuration.Lib (finaliseCardanoConfiguration)
+import           Cardano.Node.Configuration.Partial (finaliseCardanoConfiguration)
 import           Cardano.Shell.Lib (GeneralException (ConfigurationError))
 
 import           Control.Tracer (stdoutTracer)

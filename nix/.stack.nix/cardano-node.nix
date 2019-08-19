@@ -171,11 +171,7 @@
         };
       tests = {
         "cardano-node-test" = {
-          depends = [
-            (hsPkgs.base)
-            (hsPkgs.cardano-node)
-            (hsPkgs.cardano-prelude)
-            ];
+          depends = [ (hsPkgs.base) (hsPkgs.cardano-prelude) ];
           };
         };
       };
