@@ -371,7 +371,7 @@ handleSimpleNode p NodeCLIArguments{..}
       ipSubscriptions <- forkLinked registry $
         ipSubscriptionWorker
           connTable
-          (contramap show $ ipSubscriptionTracer nodeTraces)
+          (contramap show $ ipSubscriptionTracer nodeTraces)  -- TODO 
             -- the comments in dnsSbuscriptionWorker call apply
             (Just (Socket.SockAddrInet 0 0))
             (Just (Socket.SockAddrInet6 0 0 (0, 0, 0, 1) 0))
@@ -397,8 +397,8 @@ handleSimpleNode p NodeCLIArguments{..}
         forkLinked registry $
           dnsSubscriptionWorker
             connTable
-            (contramap show $ dnsSubscriptionTracer nodeTraces)
-            (contramap show $ dnsResolverTracer nodeTraces)
+            (contramap show $ dnsSubscriptionTracer nodeTraces)  -- TODO
+            (contramap show $ dnsResolverTracer nodeTraces)      -- TODO
             -- IPv4 address
             --
             -- We can't share portnumber with our server since we run separate

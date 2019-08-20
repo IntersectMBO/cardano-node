@@ -38,6 +38,7 @@ library
                        Cardano.Wallet.Client
 
   other-modules:       Paths_cardano_node
+                       Cardano.Node.ToObjectOrphans
 
   build-depends:       aeson
                      , async
