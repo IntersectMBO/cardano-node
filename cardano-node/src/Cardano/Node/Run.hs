@@ -33,7 +33,8 @@ import           Data.Proxy (Proxy (..))
 import           Data.Semigroup ((<>))
 import           Data.Text (Text, pack)
 import           Network.Socket as Socket
-import           System.Directory (canonicalizePath, makeAbsolute, removeFile)
+import           System.Directory (canonicalizePath, createDirectoryIfMissing, makeAbsolute, removeFile)
+import           System.FilePath ((</>))
 import           System.IO.Error (isDoesNotExistError)
 
 import           Control.Monad.Class.MonadSTM
@@ -45,7 +46,7 @@ import           Cardano.BM.Data.LogItem (LogObject (..))
 import           Cardano.BM.Data.Tracer (ToLogObject (..),
                                          TracingVerbosity (..))
 import           Cardano.BM.Trace (appendName)
-import           Cardano.Node.Configuration.Types (CardanoConfiguration (..))
+import           Cardano.Node.Configuration.Types (CardanoConfiguration (..), Core (..))
 import           Cardano.Node.Features.Logging (LoggingLayer (..))
 
 import           Ouroboros.Network.Block
@@ -178,6 +179,10 @@ handleSimpleNode p NodeCLIArguments{..}
       , "**************************************"
       ]
 
+    -- Socket directory argument
+    socketDir <- canonicalizePath =<< makeAbsolute ccSocketPath
+    createDirectoryIfMissing True socketDir
+
     let ipProducerAddrs  :: [NodeAddress]
         dnsProducerAddrs :: [RemoteAddress]
         (ipProducerAddrs, dnsProducerAddrs) = partitionEithers
@@ -197,7 +202,7 @@ handleSimpleNode p NodeCLIArguments{..}
           | RemoteAddress {raAddress, raPort, raValency} <- dnsProducerAddrs ]
 
         myLocalSockPath :: FilePath
-        myLocalSockPath = localSocketFilePath myNodeId
+        myLocalSockPath = socketDir </> localSocketFilePath myNodeId
 
         myLocalAddr :: AddrInfo
         myLocalAddr = localSocketAddrInfo myLocalSockPath

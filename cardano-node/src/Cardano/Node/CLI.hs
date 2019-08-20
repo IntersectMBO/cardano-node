@@ -34,14 +34,11 @@ module Cardano.Node.CLI (
 import           Prelude
 
 import qualified Data.ByteString.Lazy as LB
-import           Data.Foldable (asum)
 import           Data.Monoid (Last(..))
 import           Data.Semigroup ((<>))
 import           Data.String (IsString)
 import qualified Data.Text as Text
 import           Data.Text (Text)
-import           Data.Time (UTCTime)
-import           Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import qualified Options.Applicative as OA
 import           Options.Applicative hiding (command)
 
@@ -50,25 +47,14 @@ import           Control.Monad.Except
 
 import           Codec.CBOR.Read (deserialiseFromBytes, DeserialiseFailure)
 
-import           Ouroboros.Network.Block (ChainHash, HeaderHash)
-
-import           Ouroboros.Consensus.Block (Header)
 import           Ouroboros.Consensus.BlockchainTime
 import           Ouroboros.Consensus.Demo
 import           Ouroboros.Consensus.Demo.Run
 import qualified Ouroboros.Consensus.Ledger.Mock as Mock
-import           Ouroboros.Consensus.Ledger.Byron
-import           Ouroboros.Consensus.Mempool.API
 import           Ouroboros.Consensus.Node.ProtocolInfo
-import           Ouroboros.Consensus.NodeId (CoreNodeId (..), NodeId (..))
 import           Ouroboros.Consensus.Protocol hiding (Protocol)
 import           Ouroboros.Consensus.Util
-import           Ouroboros.Consensus.Util.Condense
 import qualified Ouroboros.Consensus.Protocol as Consensus
-
-import           Cardano.Binary (Annotated (..))
-import           Cardano.Chain.Common
-import           Cardano.Crypto.ProtocolMagic
 
 import qualified Cardano.Chain.Genesis as Genesis
 import qualified Cardano.Chain.Update as Update
@@ -184,7 +170,7 @@ readLeaderCredentials gc Shell.Config.Core {
 
 --TODO: fail noisily if only one file is specified without the other
 -- since that's obviously a user error.
-readLeaderCredentials gc _ = return Nothing
+readLeaderCredentials _gc _ = return Nothing
 
 
 -- TODO: consider not throwing this, or wrap it in a local error type here
@@ -208,6 +194,7 @@ data CommonCLI = CommonCLI
   , cliStaticKeyDlgCertFile       :: !(Last FilePath)
   , cliPBftSigThd                 :: !(Last Double)
   , cliDBPath                     :: !(Last FilePath)
+  , cliSocketPath                 :: !(Last FilePath)
   --TODO cliUpdate                :: !PartialUpdate
   }
 
@@ -244,6 +231,11 @@ parseCommonCLI =
          <> metavar "FILEPATH"
          <> help "Directory where the state is stored."
         )
+    <*> lastStrOption (
+            long "socket-path"
+         <> metavar "FILEPATH"
+         <> help "The local socket filepath."
+        )
 
 
 {-------------------------------------------------------------------------------
@@ -272,6 +264,7 @@ mergeConfiguration pcc cli =
                    , cliStaticKeyDlgCertFile
                    , cliPBftSigThd
                    , cliDBPath
+                   , cliSocketPath
                    } =
       mempty { pccCore = mempty
                     { pcoGenesisFile             = cliGenesisFile
@@ -282,6 +275,7 @@ mergeConfiguration pcc cli =
                     -- TODO: cliUpdate
                     }
              , pccDBPath = cliDBPath
+             , pccSocketPath = cliSocketPath
              }
 
 
