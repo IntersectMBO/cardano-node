@@ -1,7 +1,5 @@
 {-# LANGUAGE ConstraintKinds      #-}
 {-# LANGUAGE FlexibleContexts     #-}
-{-# LANGUAGE LambdaCase           #-}
-{-# LANGUAGE NamedFieldPuns       #-}
 {-# LANGUAGE OverloadedStrings    #-}
 {-# LANGUAGE ScopedTypeVariables  #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -109,7 +107,6 @@ type ProtocolTraceOptions  = ProtocolTracers'   () () () (Const Bool)
 
 -- | Smart constructor of 'NodeTraces'.
 --
-
 mkTracers :: forall peer blk.
               ( ProtocolLedgerView blk
               , TraceConstraints blk
@@ -159,7 +156,7 @@ mkTracers traceOptions tracer = Tracers
         let txs = case mempoolEvent of
                   TraceMempoolAddTxs      txs0 _ -> txs0
                   TraceMempoolRejectedTxs txs0 _ -> txs0
-                  _                             -> []
+                  _                              -> []
         let logValue' :: LOContent a
             logValue' = LogValue "txsProcessed" $ PureI $ fromIntegral $ length txs
         traceNamedObject tr (meta, logValue')
