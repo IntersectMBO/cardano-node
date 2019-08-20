@@ -1,12 +1,57 @@
 let
-  iohkLib = import ./nix/lib.nix;
+  commonLib = import ./lib.nix;
+  getArchDefault = system: let
+    table = {
+      x86_64-linux = import ./. { target = "x86_64-linux"; };
+      x86_64-darwin = import ./. { target = "x86_64-darwin"; };
+      x86_64-windows = import ./. { target = "x86_64-windows"; };
+    };
+  in table.${system};
+  default = getArchDefault builtins.currentSystem;
+  makeScripts = cluster: let
+    getScript = name: {
+      x86_64-linux = (getArchDefault "x86_64-linux").scripts.${cluster}.${name};
+      x86_64-darwin = (getArchDefault "x86_64-darwin").scripts.${cluster}.${name};
+    };
+  in {
+    node = getScript "node";
+  };
+  # TODO: add docker images
+  #wrapDockerImage = cluster: let
+  #  images = (getArchDefault "x86_64-linux").dockerImages;
+  #  wrapImage = image: commonLib.pkgs.runCommand "${image.name}-hydra" {} ''
+  #    mkdir -pv $out/nix-support/
+  #    cat <<EOF > $out/nix-support/hydra-build-products
+  #    file dockerimage ${image}
+  #    EOF
+  #  '';
+  makeRelease = cluster: {
+    name = cluster;
+    value = {
+      scripts = makeScripts cluster;
+      #dockerImage = wrapDockerImage cluster;
+    };
+  };
 in
-iohkLib.nix-tools.release-nix {
+commonLib.nix-tools.release-nix {
   package-set-path = ./nix/nix-tools.nix;
 
   # packages from our stack.yaml or plan file (via nix/pkgs.nix) we
   # are interested in building on CI via nix-tools.
   packages = [ "cardano-node" ];
+  # TODO: use forEnvironments
+  extraBuilds = let
+    # only build nixos tests for linux
+    default = getArchDefault "x86_64-linux";
+  in {
+    inherit (default) nixosTests;
+  } // (builtins.listToAttrs (map makeRelease [
+    "mainnet"
+    "staging"
+    "shelley_staging_short"
+    "shelley_staging"
+    "testnet"
+  ]));
 
   # The set of jobs we consider crutial for each CI run.
   # if a single one of these fails, the build will be marked

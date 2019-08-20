@@ -16,3 +16,5 @@ stack.yaml.lock
 /db-[0-9]
 /log-pipe-[0-9]
 /*.socket
+launch_*
+state-*
