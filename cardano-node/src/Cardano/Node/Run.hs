@@ -226,7 +226,7 @@ handleSimpleNode p NodeCLIArguments{..}
           }
 
       varTip <- atomically $ newTVar GenesisPoint
-      epochInfo <- newEpochInfo $ nodeEpochSize (Proxy @blk)
+      epochInfo <- newEpochInfo $ nodeEpochSize (Proxy @blk) pInfoConfig
       -- Database filepath
       path <- canonicalizePath =<< makeAbsolute ccDBPath
       let chainDbArgs = mkChainDbArgs
