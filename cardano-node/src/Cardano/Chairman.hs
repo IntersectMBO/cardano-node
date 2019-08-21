@@ -286,8 +286,6 @@ chainSyncClient
      ( MonadSTM   m
      , MonadThrow (STM m)
      , MonadAsync m
-     , MonadTimer m
-     , MonadThrow m
      , HasHeader blk
      , Condense blk
      , Condense (HeaderHash blk)
@@ -298,7 +296,7 @@ chainSyncClient
   -> SecurityParam
   -> Maybe BlockNo
   -> ChainSyncClient blk (Point blk) m ()
-chainSyncClient trace coreNodeId chainsVar securityParam maxBlockNo = ChainSyncClient $ pure $
+chainSyncClient tracer coreNodeId chainsVar securityParam maxBlockNo = ChainSyncClient $ pure $
     -- Notify the core node about the our latest points at which we are
     -- synchronised.  This client is not persistent and thus it just
     -- synchronises from the genesis block.  A real implementation should send
@@ -327,7 +325,7 @@ chainSyncClient trace coreNodeId chainsVar securityParam maxBlockNo = ChainSyncC
           res <- atomically $ do
             addBlock coreNodeId chainsVar blk
             checkAndPrune chainsVar securityParam
-          traceWith trace res
+          traceWith tracer res
           let currentBlockNo = Just (Block.blockNo blk)
           pure $ clientStIdle currentBlockNo
       , recvMsgRollBackward = \point _tip -> ChainSyncClient $ do
@@ -335,33 +333,9 @@ chainSyncClient trace coreNodeId chainsVar securityParam maxBlockNo = ChainSyncC
           res <- atomically $ do
             rollback coreNodeId chainsVar point
             checkAndPrune chainsVar securityParam
-          traceWith trace res
+          traceWith tracer res
           pure $ clientStIdle Nothing
       }
-
---
--- Submission client
---
-
--- | A 'LocalTxSubmissionClient' that submits transactions reading them from
--- a 'TMVar'.  A real implementation should use a better synchronisation
--- primitive.  This demo creates and empty 'TMVar' in
--- 'muxLocalInitiatorNetworkApplication' above and never fills it with a tx.
---
-txSubmissionClient
-  :: forall tx reject m.
-     ( Monad    m
-     , MonadSTM m
-     )
-  => TMVar m tx
-  -> m (LocalTxSubmissionClient tx reject m ())
-txSubmissionClient txv = do
-    tx <- atomically $ readTMVar txv
-    pure $ SendMsgSubmitTx tx $ \mbreject -> do
-      case mbreject of
-        Nothing -> return ()
-        Just _r -> return ()
-      txSubmissionClient txv
 
 --
 -- Client Application
@@ -373,7 +347,6 @@ localInitiatorNetworkApplication
      , Condense blk
      , Condense (HeaderHash blk)
      , MonadAsync m
-     , MonadSTM   m
      , MonadST    m
      , MonadThrow m
      , MonadThrow (STM m)
@@ -404,14 +377,12 @@ localInitiatorNetworkApplication coreNodeId chainsVar securityParam maxBlockNo c
 
   $ OuroborosInitiatorApplication $ \peer ptcl -> case ptcl of
       LocalTxSubmissionPtcl -> \channel -> do
-        txv <- newEmptyTMVarM @_ @(GenTx blk)
         runPeer
           localTxSubmissionTracer
           localTxSubmissionCodec
           peer
           channel
-          (localTxSubmissionClientPeer
-              (txSubmissionClient @(GenTx blk) txv))
+          (localTxSubmissionClientPeer localTxSubmissionClientNull)
 
       ChainSyncWithBlocksPtcl -> \channel ->
         runPeer

@@ -17,14 +17,11 @@ import           Prelude (String)
 
 import           Data.Void (Void)
 import           Data.ByteString.Lazy (ByteString)
-import qualified Data.Set as Set
-import           Options.Applicative
-import           Data.Proxy
 
 import qualified Codec.Serialise as Serialise (encode, decode)
 import           Network.Socket as Socket
 
-import           Control.Monad (fail, forever)
+import           Control.Monad (fail)
 import           Control.Monad.Class.MonadST
 import           Control.Monad.Class.MonadThrow
 import           Control.Monad.Class.MonadTimer
@@ -54,7 +51,7 @@ import           Ouroboros.Network.Protocol.LocalTxSubmission.Client
 import           Ouroboros.Network.Protocol.LocalTxSubmission.Codec
 import           Ouroboros.Network.Protocol.ChainSync.Type (ChainSync)
 import           Ouroboros.Network.Protocol.ChainSync.Client
-                   (ChainSyncClient(..), chainSyncClientPeer)
+                   (chainSyncClientPeer)
 import           Ouroboros.Network.Protocol.ChainSync.Codec
 import           Ouroboros.Network.Protocol.Handshake.Version
 import           Ouroboros.Network.NodeToClient
@@ -123,8 +120,6 @@ submitTx pInfoConfig nodeId tx tracer =
 localInitiatorNetworkApplication
   :: forall blk m peer.
      ( RunDemo blk
-     , Show peer
-     , Show (GenTx blk)
      , MonadST m
      , MonadThrow m
      , MonadTimer m
@@ -150,7 +145,7 @@ localInitiatorNetworkApplication tracer pInfoConfig tx =
                     peer
                     channel
                     (localTxSubmissionClientPeer
-                       (pure (txSubmissionClientSingle tx)))
+                       (txSubmissionClientSingle tx))
         case result of
           Nothing  -> traceWith tracer "Transaction accepted"
           Just msg -> traceWith tracer ("Transaction rejected: " ++ msg)
@@ -172,17 +167,9 @@ txSubmissionClientSingle
      Applicative m
   => tx
   -> LocalTxSubmissionClient tx reject m (Maybe reject)
-txSubmissionClientSingle tx =
-    SendMsgSubmitTx tx $ \mreject ->
+txSubmissionClientSingle tx = LocalTxSubmissionClient $ do
+    pure $ SendMsgSubmitTx tx $ \mreject ->
       pure (SendMsgDone mreject)
-
-chainSyncClientNull
-  :: MonadTimer m
-  => ChainSyncClient blk (Point blk) m a
-chainSyncClientNull =
-    ChainSyncClient blockForever
-  where
-    blockForever = forever (threadDelay 3600)
 
 localTxSubmissionCodec
   :: (RunDemo blk, MonadST m)

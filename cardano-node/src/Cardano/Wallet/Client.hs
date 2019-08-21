@@ -134,18 +134,15 @@ localInitiatorNetworkApplication Proxy chainSyncTracer localTxSubmissionTracer p
 --
 txSubmissionClient
   :: forall tx reject m.
-     ( Monad    m
-     , MonadSTM m
-     )
+     MonadSTM m
   => TMVar m tx
-  -> m (LocalTxSubmissionClient tx reject m Void)
-txSubmissionClient txv = do
-    tx <- atomically $ readTMVar txv
-    pure $ SendMsgSubmitTx tx $ \mbreject -> do
-      case mbreject of
-        Nothing -> return ()
-        Just _r -> return ()
-      txSubmissionClient txv
+  -> LocalTxSubmissionClient tx reject m Void
+txSubmissionClient txv = LocalTxSubmissionClient go
+  where
+    go :: m (LocalTxClientStIdle tx reject m Void)
+    go = do
+      tx <- atomically $ readTMVar txv
+      pure $ SendMsgSubmitTx tx $ \_ -> go
 
 
 -- | 'ChainSyncClient' which traces received blocks and ignores when it
