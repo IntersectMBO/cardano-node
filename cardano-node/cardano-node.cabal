@@ -105,6 +105,7 @@ library
                        -fno-warn-safe
                        -fno-warn-unsafe
                        -fno-warn-missing-import-lists
+                       -Wno-unticked-promoted-constructors
                        -Wincomplete-record-updates
                        -Wincomplete-uni-patterns
                        -Wredundant-constraints
