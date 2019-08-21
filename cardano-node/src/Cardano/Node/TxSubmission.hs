@@ -16,7 +16,12 @@ import           Prelude (String)
 
 import           Data.Void (Void)
 import           Data.ByteString.Lazy (ByteString)
+import qualified Data.ByteString.Lazy as LBS
+import qualified Data.Set as Set
+import           Options.Applicative
+import           Data.Proxy
 
+import qualified Codec.Serialise as Serialise
 import           Network.Socket as Socket
 
 import           Control.Monad (fail)
@@ -30,7 +35,7 @@ import qualified Cardano.Crypto.Hash as H
 
 import           Ouroboros.Consensus.Block (BlockProtocol)
 import           Ouroboros.Consensus.Demo.Run
-import qualified Ouroboros.Consensus.Ledger.Mock as Mock
+import qualified Ouroboros.Consensus.Ledger.Byron as Byron
 import           Ouroboros.Consensus.Mempool
 import           Ouroboros.Consensus.NodeId
 import qualified Ouroboros.Consensus.Protocol as Consensus
@@ -67,10 +72,10 @@ handleTxSubmission :: forall blk.
                       )
                    => Consensus.Protocol blk
                    -> TopologyInfo
-                   -> Mock.Tx
+                   -> GenTx blk
                    -> Tracer IO String
                    -> IO ()
-handleTxSubmission ptcl tinfo mocktx tracer = do
+handleTxSubmission ptcl tinfo tx tracer = do
     topoE <- readTopologyFile (topologyFile tinfo)
     NetworkTopology nodeSetups <-
       case topoE of
@@ -86,11 +91,9 @@ handleTxSubmission ptcl tinfo mocktx tracer = do
                        (CoreNodeId nid)
                        ptcl
 
-        tx :: GenTx blk
-        tx = demoMockTx pInfoConfig mocktx
-
-    traceWith tracer $
-      "The Id for this transaction is: " <> condense (H.hash @ShortHash mocktx)
+    -- TODO:  generalised Tx hash
+    -- traceWith tracer $
+    --   "The Id for this transaction is: " <> condense (H.hash @ShortHash tx)
 
     submitTx pInfoConfig (node tinfo) tx tracer
 

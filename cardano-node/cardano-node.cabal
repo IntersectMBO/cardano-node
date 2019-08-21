@@ -15,9 +15,10 @@ library
   hs-source-dirs:      src
 
   exposed-modules:     Cardano.Chairman
+                       Cardano.CLI.Ops
+                       Cardano.CLI.Run
                        Cardano.Common.CommonCLI
                        Cardano.Common.Protocol
-                       Cardano.CLI.Run
                        Cardano.Legacy.Byron
                        Cardano.Node.CanonicalJSON
                        -- Conversion

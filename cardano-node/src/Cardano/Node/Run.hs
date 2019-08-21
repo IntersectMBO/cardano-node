@@ -115,12 +115,6 @@ runNode nodeCli@NodeCLIArguments{..} loggingLayer cc = do
     -- full node, we simply transmit it and exit.
     case command of
 
-      TxSubmitter topology tx protocol -> do
-        let trace'      = appendName (pack (show (node topology))) tr
-        let tracer      = contramap pack $ toLogObject trace'
-        SomeProtocol p  <- fromProtocol cc protocol
-        handleTxSubmission p topology tx tracer
-
       TraceAcceptor -> do
         let trace'      = appendName "acceptor" tr
         let tracer      = contramap pack $ toLogObject trace'

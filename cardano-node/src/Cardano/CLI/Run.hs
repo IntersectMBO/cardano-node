@@ -1,7 +1,9 @@
+{-# LANGUAGE BangPatterns        #-}
 {-# LANGUAGE CPP                 #-}
+{-# LANGUAGE DeriveGeneric       #-}
 {-# LANGUAGE FlexibleContexts    #-}
+{-# LANGUAGE FlexibleInstances   #-}
 {-# LANGUAGE GADTs               #-}
-{-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE NamedFieldPuns      #-}
 {-# LANGUAGE NoImplicitPrelude   #-}
 {-# LANGUAGE NumericUnderscores  #-}
@@ -9,6 +11,8 @@
 {-# LANGUAGE RankNTypes          #-}
 {-# LANGUAGE RecordWildCards     #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving  #-}
+{-# LANGUAGE StrictData          #-}
 {-# LANGUAGE TypeApplications    #-}
 {-# LANGUAGE ViewPatterns        #-}
 
@@ -20,24 +24,26 @@
 #endif
 
 module Cardano.CLI.Run (
-    decideKeyMaterialOps
-  , CliError (..)
+    CliError (..)
   , ClientCommand(..)
-  , KeyMaterialOps (..)
+  , parseClientCommand
   , runCommand
-  , SystemVersion(..)
   ) where
 
 import           Prelude (String)
 import qualified Prelude as Prelude
 
-import           Codec.CBOR.Read (DeserialiseFailure, deserialiseFromBytes)
+import           Codec.CBOR.Decoding (Decoder)
+import           Codec.CBOR.Read (DeserialiseFailure, IDecode(..), deserialiseFromBytes, deserialiseIncremental)
 import           Codec.CBOR.Write (toLazyByteString)
+import           Codec.Serialise (Serialise(..), deserialise, deserialiseOrFail)
 import           Control.Monad
+import           Control.Tracer
 import           Data.Bits (shiftL)
 import qualified Data.ByteArray as BA
 import qualified Data.ByteString as SB
 import qualified Data.ByteString.Lazy as LB
+import qualified Data.ByteString.Lazy.Internal  as LB
 import qualified Data.Map.Strict as Map
 import           Data.Semigroup ((<>))
 import           Data.String (fromString)
@@ -65,6 +71,7 @@ import qualified Crypto.SCRAPE as Scrape
 import           Cardano.Prelude hiding (option)
 
 import           Cardano.Binary (Annotated(..), serialize')
+import           Cardano.BM.Tracing
 import           Cardano.Chain.Common
 import qualified Cardano.Chain.Common as CC
 import           Cardano.Chain.Delegation hiding (epoch)
@@ -75,71 +82,21 @@ import qualified Cardano.Crypto.Random as CCr
 import qualified Cardano.Crypto.Hashing as CCr
 import qualified Cardano.Crypto.Signing as CCr
 import           Cardano.Chain.Genesis
+import           Ouroboros.Consensus.Ledger.Byron
+import           Ouroboros.Consensus.Ledger.Byron.Config
+import           Ouroboros.Consensus.NodeId
+import           Ouroboros.Consensus.Protocol hiding (Protocol)
+import           Cardano.Chain.Slotting (EpochNumber(..))
+import           Cardano.Node.Configuration.Presets (mainnetConfiguration)
 --Cardano.Crypto.Signing.VerificationKey
+
+import           Cardano.CLI.Ops
 import           Cardano.Node.CanonicalJSON
+import           Cardano.Node.CLI
+import           Cardano.Node.Parsers
+import           Cardano.Node.Topology
+import           Cardano.Node.TxSubmission
 
-import qualified Cardano.Legacy.Byron as Legacy
-
-
-data CliError
-  -- Basic user errors
-  = OutputMustNotAlreadyExist FilePath
-  -- Validation errors
-  | CertificateValidationErrors FilePath [Text]
-  -- Serialization errors
-  | ProtocolParametersParseFailed FilePath Text
-  | GenesisReadError FilePath GenesisDataError
-  | SigningKeyDeserialisationFailed FilePath Codec.CBOR.Read.DeserialiseFailure
-  | VerificationKeyDeserialisationFailed FilePath Text
-  | DlgCertificateDeserialisationFailed FilePath Text
-    -- TODO:  sadly, VerificationKeyParseError isn't exported from Cardano.Crypto.Signing/*
-  -- Inconsistencies
-  | DelegationError GenesisDelegationError
-  | GenesisSpecError Text
-  | GenesisGenerationError GenesisDataGenerationError
-  -- Invariants/assertions -- does it belong here?
-  | NoGenesisDelegationForKey Text
-
-instance Show CliError where
-  show (OutputMustNotAlreadyExist fp)
-    = "Output file/directory must not already exist: " <> fp
-  show (CertificateValidationErrors fp errs)
-    = Prelude.unlines $
-      "Errors while validating certificate '" <> fp <> "':":
-      (("  " <>) . T.unpack <$> errs)
-  show (ProtocolParametersParseFailed fp err)
-    = "Protocol parameters file '" <> fp <> "' read failure: "<> T.unpack err
-  show (GenesisReadError fp err)
-    = "Genesis file '" <> fp <> "' read failure: "<> show err
-  show (SigningKeyDeserialisationFailed fp err)
-    = "Signing key '" <> fp <> "' read failure: "<> show err
-  show (VerificationKeyDeserialisationFailed fp err)
-    = "Verification key '" <> fp <> "' read failure: "<> T.unpack err
-  show (DlgCertificateDeserialisationFailed fp err)
-    = "Delegation certificate '" <> fp <> "' read failure: "<> T.unpack err
-  show (DelegationError err)
-    = "Error while issuing delegation: " <> show err
-  show (GenesisSpecError err)
-    = "Error in genesis specification: " <> T.unpack err
-  show (GenesisGenerationError err)
-    = "Genesis generation failed: " <> show err
-  show (NoGenesisDelegationForKey key)
-    = "Newly-generated genesis doesn't delegate to operational key: " <> T.unpack key
-
-instance Exception CliError
-
--- | Key material operations for a specific system era, e.g.
---   Byron/Classic, Byron/PBFT etc.
-data KeyMaterialOps m
-  = KeyMaterialOps
-  { kmoSerialiseGenesisKey       :: SigningKey    -> m LB.ByteString
-  , kmoSerialiseDelegateKey      :: SigningKey    -> m LB.ByteString
-  , kmoSerialisePoorKey          :: PoorSecret    -> m LB.ByteString
-  , kmoSerialiseGenesis          :: GenesisData   -> m LB.ByteString
-  , kmoSerialiseDelegationCert   :: Certificate   -> m LB.ByteString
-  , kmoDeserialiseDelegateKey    :: FilePath
-                                 -> LB.ByteString -> m SigningKey
-  }
 
 data ClientCommand
   = Genesis
@@ -155,7 +112,7 @@ data ClientCommand
   | PrettySigningKeyPublic
     !FilePath
   | MigrateDelegateKeyFrom
-    !SystemVersion
+    !Protocol
     !FilePath
     !FilePath
   | DumpHardcodedGenesis
@@ -184,10 +141,90 @@ data ClientCommand
     !FilePath
     !FilePath
   | SubmitTx
+    { stTopology :: TopologyInfo
+    , stTx       :: FilePath
+    , stCommon   :: CommonCLI
+    }
 
+parseClientCommand :: Parser ClientCommand
+parseClientCommand =
+  subparser
+  (mconcat
+    [ commandGroup "Genesis"
+    , command' "genesis"                        "Perform genesis." $
+      Genesis
+      <$> parseFilePath    "genesis-output-dir"       "A yet-absent directory where genesis JSON file along with secrets shall be placed."
+      <*> parseUTCTime     "start-time"               "Start time of the new cluster to be enshrined in the new genesis."
+      <*> parseFilePath    "protocol-parameters-file" "JSON file with protocol parameters."
+      <*> parseK
+      <*> parseProtocolMagic
+      <*> parseTestnetBalanceOptions
+      <*> parseFakeAvvmOptions
+      <*> (LovelacePortion . fromInteger . fromMaybe 1 <$>
+           (optional $
+             parseIntegral  "avvm-balance-factor"      "AVVM balances will be multiplied by this factor (defaults to 1)."))
+      <*> optional (parseIntegral    "secret-seed"              "Optionally specify the seed of generation.")
+    , command' "dump-hardcoded-genesis"         "Write out a hard-coded genesis." $
+      DumpHardcodedGenesis
+      <$> parseFilePath    "genesis-output-dir"       "A yet-absent directory where genesis JSON file along with secrets shall be placed."
+    , command' "print-genesis-hash"             "Compute hash of a genesis file." $
+      PrintGenesisHash
+      <$> parseFilePath    "genesis-json"             "Genesis JSON file to hash."
+    ])
+  <|> subparser
+  (mconcat
+    [ commandGroup "Keys"
+    , command' "keygen"                         "Generate a signing key." $
+      Keygen
+      <$> parseFilePath    "secret"                   "Non-existent file to write the secret key to."
+      <*> parseFlag        "no-password"              "Disable password protection."
+    , command' "to-verification"                "Extract a verification key in its base64 form." $
+      ToVerification
+      <$> parseFilePath    "secret"                   "Secret key file to extract from."
+      <*> parseFilePath    "to"                       "Non-existent file to write the base64-formatted verification key to."
+    , command' "signing-key-public"             "Pretty-print a signing key's verification key (not a secret)." $
+      PrettySigningKeyPublic
+      <$> parseFilePath    "secret"                   "File name of the secret key to pretty-print."
+    , command' "signing-key-address"            "Print address of a signing key." $
+      PrintSigningKeyAddress
+      <$> parseNetworkMagic
+      <*> parseFilePath    "secret"                   "Secret key, whose address is to be printed."
+    , command' "migrate-delegate-key-from"      "Migrate a delegate key from an older version." $
+      MigrateDelegateKeyFrom
+      <$> parseProtocol
+      <*> parseFilePath    "to"                       "Output secret key file."
+      <*> parseFilePath    "from"                     "Secret key file to migrate."
+    ])
+  <|> subparser
+  (mconcat
+    [ commandGroup "Delegation"
+    , command' "redelegate"                     "Redelegate genesis authority to a different verification key." $
+      Redelegate
+      <$> parseProtocolMagicId "protocol-magic"
+      <*> (EpochNumber <$>
+            parseIntegral   "since-epoch"              "First epoch of effective delegation.")
+      <*> parseFilePath    "secret"                   "The genesis key to redelegate from."
+      <*> parseFilePath    "delegate-key"             "The operation verification key to delegate to."
+      <*> parseFilePath    "certificate"              "Non-existent file to write the certificate to."
+    , command' "check-delegation"               "Verify that a given certificate constitutes a valid delegation relationship betwen keys." $
+      CheckDelegation
+      <$> parseProtocolMagicId "protocol-magic"
+      <*> parseFilePath    "certificate"              "The certificate embodying delegation to verify."
+      <*> parseFilePath    "issuer-key"               "The genesis key that supposedly delegates."
+      <*> parseFilePath    "delegate-key"             "The operation verification key supposedly delegated to."
+    ])
+  <|> subparser
+  (mconcat
+    [ commandGroup "Transactions"
+    , command' "submit-tx"                      "Submit a raw, signed transaction, in its on-wire representation." $
+      SubmitTx
+      <$> parseTopologyInfo "PBFT node ID to submit Tx to."
+      <*> parseFilePath    "tx"                       "File containing the raw transaction."
+      <*> parseCommonCLI
+    ])
 
-runCommand :: KeyMaterialOps IO -> ClientCommand -> IO ()
-runCommand kmo@KeyMaterialOps{..}
+runCommand :: CLIOps IO -> ClientCommand -> IO ()
+runCommand co@CLIOps{..}
          (Genesis
            outDir
            startTime
@@ -241,29 +278,30 @@ runCommand kmo@KeyMaterialOps{..}
     Left e  -> throwIO $ GenesisGenerationError e
     Right x -> pure x
 
-  dumpGenesis kmo outDir genesisData generatedSecrets
+  dumpGenesis co outDir genesisData generatedSecrets
 
-runCommand kmo@KeyMaterialOps{..} (PrettySigningKeyPublic secretPath) =
+runCommand co@CLIOps{..} (PrettySigningKeyPublic secretPath) =
   putStrLn =<< T.unpack
              . prettySigningKeyPub
-             <$> readSigningKey kmo secretPath
+             <$> readSigningKey co secretPath
 
-runCommand kmo (MigrateDelegateKeyFrom
+runCommand co (MigrateDelegateKeyFrom
                   fromVer
                   secretPathTo
                   secretPathFrom) =
         LB.writeFile secretPathTo
-    =<< kmoSerialiseDelegateKey kmo
-    =<< readSigningKey fromKMO secretPathFrom
+    =<< coSerialiseDelegateKey co
+    =<< flip readSigningKey secretPathFrom
+    =<< fromCO
   where
-    fromKMO = decideKeyMaterialOps fromVer
+    fromCO = decideCLIOps fromVer
 
-runCommand kmo (DumpHardcodedGenesis outDir) =
-  dumpGenesis kmo outDir
+runCommand co (DumpHardcodedGenesis outDir) =
+  dumpGenesis co outDir
               (configGenesisData Dummy.dummyConfig)
               Dummy.dummyGeneratedSecrets
 
-runCommand KeyMaterialOps{..} (PrintGenesisHash fp) = do
+runCommand CLIOps{..} (PrintGenesisHash fp) = do
   gdE <- runExceptT (readGenesisData fp)
   case gdE of
     Left e  -> throwIO $ GenesisReadError fp e
@@ -271,13 +309,13 @@ runCommand KeyMaterialOps{..} (PrintGenesisHash fp) = do
                . unGenesisHash
                $ snd x
 
-runCommand kmo@KeyMaterialOps{..} (PrintSigningKeyAddress netMagic secPath) =
+runCommand co@CLIOps{..} (PrintSigningKeyAddress netMagic secPath) =
   putStrLn . T.unpack . prettyAddress
            . CC.makeVerKeyAddress netMagic
            . CCr.toVerification
-           =<< readSigningKey kmo secPath
+           =<< readSigningKey co secPath
 
-runCommand KeyMaterialOps{..}
+runCommand CLIOps{..}
            (Keygen outFile disablePassword) = do
 
   passph <- if disablePassword
@@ -288,26 +326,26 @@ runCommand KeyMaterialOps{..}
   (_vk, esk) <- CCr.runSecureRandom $ CCr.safeKeyGen passph
 
   ensureNewFileLBS outFile
-    =<< (kmoSerialiseDelegateKey $ SigningKey $ CCr.eskPayload esk)
+    =<< (coSerialiseDelegateKey $ SigningKey $ CCr.eskPayload esk)
 
-runCommand kmo (ToVerification
+runCommand co (ToVerification
                   secretPath
                   outFile) = do
   ensureNewFileText outFile
     . Builder.toLazyText . CCr.formatFullVerificationKey . CCr.toVerification
-    =<< readSigningKey kmo secretPath
+    =<< readSigningKey co secretPath
 
-runCommand kmo@KeyMaterialOps{..}
+runCommand co@CLIOps{..}
            (Redelegate protoMagic epoch genesisSF delegateVF outCertF) = do
-  sk <- readSigningKey kmo genesisSF
+  sk <- readSigningKey co genesisSF
   vk <- readVerificationKey delegateVF
   let signer = CCr.noPassSafeSigner sk
   -- TODO:  we need to support password-protected secrets.
 
   let cert = mkCertificate protoMagic signer vk epoch
-  ensureNewFileLBS outCertF =<< kmoSerialiseDelegationCert cert
+  ensureNewFileLBS outCertF =<< coSerialiseDelegationCert cert
 
-runCommand KeyMaterialOps{..}
+runCommand CLIOps{..}
            (CheckDelegation magic certF issuerVF delegateVF) = do
   issuerVK'   <- readVerificationKey issuerVF
   delegateVK' <- readVerificationKey delegateVF
@@ -337,14 +375,34 @@ runCommand KeyMaterialOps{..}
   unless (null issues) $
     throwIO $ CertificateValidationErrors certF issues
 
+runCommand CLIOps{..}
+           SubmitTx{stTopology, stTx, stCommon} = do
+
+  cc <- mkConfiguration mainnetConfiguration stCommon
+
+  SomeProtocol p <- fromProtocol cc coProtocol
+
+  case p of
+    ProtocolRealPBFT{} -> do
+      txBS <- LB.readFile stTx
+      case deserialiseOrFail txBS of
+        Left  e  -> throwIO $ TxDeserialisationFailed stTx e
+        Right tx -> handleTxSubmission p stTopology tx stdoutTracer
+    x -> throwIO $ ProtocolNotSupported coProtocol
+
+deriving instance Generic (GenTx (ByronBlockOrEBB ByronConfig))
+instance Serialise (GenTx (ByronBlockOrEBB ByronConfig)) where
+  decode = decodeByronGenTx
+  encode = encodeByronGenTx
+
 {-------------------------------------------------------------------------------
   Supporting functions
 -------------------------------------------------------------------------------}
 
 -- TODO:  we need to support password-protected secrets.
-readSigningKey :: KeyMaterialOps IO -> FilePath -> IO SigningKey
-readSigningKey kmo fp =
-  kmoDeserialiseDelegateKey kmo fp =<< LB.readFile fp
+readSigningKey :: CLIOps IO -> FilePath -> IO SigningKey
+readSigningKey co fp =
+  coDeserialiseDelegateKey co fp =<< LB.readFile fp
 
 readVerificationKey :: FilePath -> IO CCr.VerificationKey
 readVerificationKey fp = do
@@ -386,15 +444,15 @@ readPassword prompt = do
                >> loop
   CCr.PassPhrase . BA.convert . UTF8.fromString <$> loop
 
-dumpGenesis :: KeyMaterialOps IO -> FilePath -> GenesisData -> GeneratedSecrets -> IO ()
-dumpGenesis KeyMaterialOps{..} outDir genesisData GeneratedSecrets{..} = do
+dumpGenesis :: CLIOps IO -> FilePath -> GenesisData -> GeneratedSecrets -> IO ()
+dumpGenesis CLIOps{..} outDir genesisData GeneratedSecrets{..} = do
   exists <- doesPathExist outDir
   if exists
     then throwIO $ OutputMustNotAlreadyExist outDir
     else createDirectory outDir
 
   let genesisJSONFile = outDir <> "/genesis.json"
-  LB.writeFile genesisJSONFile =<< kmoSerialiseGenesis genesisData
+  LB.writeFile genesisJSONFile =<< coSerialiseGenesis genesisData
 
   let dlgCertMap = unGenesisDelegation $ gdHeavyDelegation genesisData
       isCertForSK :: SigningKey -> Certificate -> Bool
@@ -408,10 +466,10 @@ dumpGenesis KeyMaterialOps{..} outDir genesisData GeneratedSecrets{..} = do
       wOut = writeSecrets outDir
   dlgCerts <- mapM findDelegateCert gsRichSecrets
 
-  wOut "genesis-keys"    "key"  kmoSerialiseGenesisKey     gsDlgIssuersSecrets
-  wOut "delegate-keys"   "key"  kmoSerialiseDelegateKey    gsRichSecrets
-  wOut "poor-keys"       "key"  kmoSerialisePoorKey        gsPoorSecrets
-  wOut "delegation-cert" "json" kmoSerialiseDelegationCert dlgCerts
+  wOut "genesis-keys"    "key"  coSerialiseGenesisKey     gsDlgIssuersSecrets
+  wOut "delegate-keys"   "key"  coSerialiseDelegateKey    gsRichSecrets
+  wOut "poor-keys"       "key"  coSerialisePoorKey        gsPoorSecrets
+  wOut "delegation-cert" "json" coSerialiseDelegationCert dlgCerts
   wOut "avvm-seed"       "seed" (pure . LB.fromStrict)     gsFakeAvvmSeeds
 
 prettySigningKeyPub :: SigningKey -> Text
@@ -423,42 +481,6 @@ prettyAddress :: CC.Address -> Text
 prettyAddress addr = TL.toStrict
   $  F.format CC.addressF         addr <> "\n"
   <> F.format CC.addressDetailedF addr
-
-data SystemVersion
-  = ByronLegacy
-  | ByronPBFT
-  deriving Show
-
-decideKeyMaterialOps :: SystemVersion -> KeyMaterialOps IO
-decideKeyMaterialOps =
-  let serialiseSigningKey (SigningKey x) = toLazyByteString $ CCr.toCBORXPrv x
-  in \case
-  ByronLegacy ->
-    KeyMaterialOps
-    { kmoSerialiseGenesisKey          = pure . serialiseSigningKey
-    , kmoSerialiseDelegateKey         = \sk->
-        toLazyByteString . Legacy.encodeLegacyDelegateKey . Legacy.LegacyDelegateKey sk
-        <$> CCr.runSecureRandom Scrape.keyPairGenerate
-    , kmoSerialisePoorKey             = pure . serialiseSigningKey . poorSecretToKey
-    , kmoSerialiseGenesis             = pure . canonicalEncPre
-    , kmoSerialiseDelegationCert      = pure . canonicalEncPre
-    , kmoDeserialiseDelegateKey       = \f ->
-        flip (.) (deserialiseFromBytes Legacy.decodeLegacyDelegateKey) $
-        \case Left  e -> throwIO $ SigningKeyDeserialisationFailed f e
-              Right x -> pure . Legacy.lrkSigningKey . snd $ x
-    }
-  ByronPBFT ->
-    KeyMaterialOps
-    { kmoSerialiseGenesisKey          = pure . serialiseSigningKey
-    , kmoSerialiseDelegateKey         = pure . serialiseSigningKey
-    , kmoSerialisePoorKey             = pure . serialiseSigningKey . poorSecretToKey
-    , kmoSerialiseGenesis             = pure . canonicalEncPre
-    , kmoSerialiseDelegationCert      = pure . canonicalEncPre
-    , kmoDeserialiseDelegateKey       = \f ->
-        flip (.) (deserialiseFromBytes CCr.fromCBORXPrv) $
-        \case Left  e -> throwIO $ SigningKeyDeserialisationFailed f e
-              Right x -> pure . SigningKey . snd $ x
-    }
 
 writeSecrets :: FilePath -> String -> String -> (a -> IO LB.ByteString) -> [a] -> IO ()
 writeSecrets outDir prefix suffix secretOp xs =

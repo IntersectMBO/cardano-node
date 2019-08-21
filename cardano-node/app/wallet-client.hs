@@ -14,7 +14,7 @@ import           Cardano.Node.Features.Logging (LoggingCLIArguments (..),
                                                 LoggingLayer (..),
                                                 createLoggingFeature
                                                 )
-import           Cardano.Node.Parsers (loggingParser, parseCoreNodeId, parseProtocol)
+import           Cardano.Node.Parsers (loggingParser, parseCoreNodeId)
 import           Cardano.Prelude (throwIO)
 import           Cardano.Shell.Lib (GeneralException (..),
                                     runCardanoApplicationWithFeatures)
