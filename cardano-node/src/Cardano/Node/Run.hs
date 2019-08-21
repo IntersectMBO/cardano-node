@@ -18,79 +18,51 @@
 module Cardano.Node.Run (
       runNode
     ) where
-import           Cardano.Prelude hiding (ByteString, atomically, throwIO, trace, wait)
-import           Prelude (id, error)
+import           Cardano.Prelude hiding (ByteString, atomically, throwIO, trace,
+                                  wait)
+import           Prelude (error, id, unlines)
 
-import           Codec.CBOR.Decoding (Decoder)
-import           Codec.CBOR.Encoding (Encoding)
-import           Codec.SerialiseTerm
 import qualified Control.Concurrent.Async as Async
 import           Control.Exception
 import           Control.Tracer
-import           Crypto.Random
 import qualified Data.ByteString.Char8 as BSC
-import           Data.ByteString.Lazy (ByteString)
 import           Data.Either (partitionEithers)
 import           Data.Functor.Contravariant (contramap)
 import qualified Data.List as List
 import           Data.Proxy (Proxy (..))
 import           Data.Semigroup ((<>))
 import           Data.Text (Text, pack)
-import           Data.Time.Clock (DiffTime, secondsToDiffTime)
 import           Network.Socket as Socket
 import           System.Directory (canonicalizePath, makeAbsolute, removeFile)
 import           System.IO.Error (isDoesNotExistError)
 
-import           Control.Monad.Class.MonadAsync
 import           Control.Monad.Class.MonadSTM
 
 import qualified Cardano.BM.Configuration.Model as CM
 import           Cardano.BM.Data.Backend
 import           Cardano.BM.Data.BackendKind (BackendKind (TraceForwarderBK))
 import           Cardano.BM.Data.LogItem (LogObject (..))
-import           Cardano.BM.Data.Tracer (ToLogObject (..), TracingVerbosity (..))
+import           Cardano.BM.Data.Tracer (ToLogObject (..),
+                                         TracingVerbosity (..))
 import           Cardano.BM.Trace (appendName)
 import           Cardano.Node.Configuration.Types (CardanoConfiguration (..))
 import           Cardano.Node.Features.Logging (LoggingLayer (..))
 
 import           Ouroboros.Network.Block
-import qualified Ouroboros.Network.Block as Block
-import           Ouroboros.Network.NodeToClient as NodeToClient
-import           Ouroboros.Network.NodeToNode as NodeToNode
-import           Ouroboros.Network.Socket
-import           Ouroboros.Network.Subscription.Common
 import           Ouroboros.Network.Subscription.Dns
 
-import           Ouroboros.Network.Protocol.BlockFetch.Codec
-import           Ouroboros.Network.Protocol.ChainSync.Codec
-import           Ouroboros.Network.Protocol.Handshake.Type
-import           Ouroboros.Network.Protocol.Handshake.Version
-import           Ouroboros.Network.Protocol.LocalTxSubmission.Codec
-import           Ouroboros.Network.Protocol.TxSubmission.Codec
-
-import           Ouroboros.Consensus.Block (BlockProtocol)
-import           Ouroboros.Consensus.BlockchainTime
-import           Ouroboros.Consensus.ChainSyncClient (ClockSkew (..))
-import           Ouroboros.Consensus.Ledger.Extended (ExtLedgerState)
-import           Ouroboros.Consensus.Node
+import           Ouroboros.Consensus.Node (NodeKernel (getChainDB),
+                                           RunNetworkArgs (..),
+                                           RunNode (nodeStartTime))
+import qualified Ouroboros.Consensus.Node as Node (run)
 import           Ouroboros.Consensus.Node.ProtocolInfo
-import           Ouroboros.Consensus.Node.Run
 import           Ouroboros.Consensus.NodeId
-import           Ouroboros.Consensus.NodeNetwork
-import           Ouroboros.Consensus.Protocol hiding (Protocol)
 import qualified Ouroboros.Consensus.Protocol as Consensus
 import           Ouroboros.Consensus.Util.Condense
 import           Ouroboros.Consensus.Util.Orphans ()
-import           Ouroboros.Consensus.Util.ResourceRegistry
-import qualified Ouroboros.Consensus.Util.ResourceRegistry as ResourceRegistry
-import           Ouroboros.Consensus.Util.STM
+import           Ouroboros.Consensus.Util.STM (onEachChange)
 
-import           Ouroboros.Storage.ChainDB (ChainDB)
 import qualified Ouroboros.Storage.ChainDB as ChainDB
-import           Ouroboros.Storage.EpochInfo (EpochInfo, newEpochInfo)
-import           Ouroboros.Storage.ImmutableDB (ValidationPolicy (..))
-import           Ouroboros.Storage.LedgerDB.DiskPolicy (defaultDiskPolicy)
-import           Ouroboros.Storage.LedgerDB.MemPolicy (defaultMemPolicy)
 
 import           Cardano.Node.CLI
 import           Cardano.Node.Topology
@@ -136,7 +108,7 @@ runNode nodeCli@NodeCLIArguments{..} loggingLayer cc = do
 
         traceWith tracer $ "tracing verbosity = " ++
                              case traceVerbosity traceOptions of
-                                 NormalVerbosity -> "normal"
+                                 NormalVerbosity  -> "normal"
                                  MinimalVerbosity -> "minimal"
                                  MaximalVerbosity -> "maximal"
         SomeProtocol p  <- fromProtocol cc protocol
@@ -167,7 +139,7 @@ runNode nodeCli@NodeCLIArguments{..} loggingLayer cc = do
 -- | Sets up a simple node, which will run the chain sync protocol and block
 -- fetch protocol, and, if core, will also look at the mempool when trying to
 -- create a new block.
-handleSimpleNode :: forall blk. (RunNode blk)
+handleSimpleNode :: forall blk. RunNode blk
                  => Consensus.Protocol blk
                  -> NodeCLIArguments
                  -> NodeAddress
@@ -180,265 +152,93 @@ handleSimpleNode p NodeCLIArguments{..}
                  myNodeAddress
                  (TopologyInfo myNodeId topologyFile)
                  trace
-                 nodeTraces
-                 CardanoConfiguration{..}
-    = do
-
+                 nodeTracers
+                 CardanoConfiguration{..} = do
     NetworkTopology nodeSetups <-
       either error id <$> readTopologyFile topologyFile
 
-    let ProtocolInfo{pInfoConfig, pInfoInitLedger, pInfoInitState} =
+    let pInfo@ProtocolInfo{ pInfoConfig = cfg } =
           protocolInfo (NumCoreNodes (length nodeSetups)) (CoreNodeId nid) p
 
     let tracer = contramap pack $ toLogObject trace
-    traceWith tracer $ "System started at " <> (show (nodeStartTime (Proxy @blk) pInfoConfig))
+    traceWith tracer $
+      "System started at " <> show (nodeStartTime (Proxy @blk) cfg)
 
-    let producers' = case List.lookup myNodeAddress $ map (\ns -> (nodeAddress ns, producers ns)) nodeSetups of
+    let producers' = case List.lookup myNodeAddress $
+                          map (\ns -> (nodeAddress ns, producers ns)) nodeSetups of
           Just ps -> ps
-          Nothing -> error ("handleSimpleNode: own address " ++ show myNodeAddress ++ " not found in topology")
+          Nothing -> error $ "handleSimpleNode: own address "
+                          <> show myNodeAddress
+                          <> " not found in topology"
 
-    traceWith tracer $ "**************************************"
-    traceWith tracer $ "I am Node = " <> show myNodeAddress
-    traceWith tracer $ "My producers are " <> show producers'
-    traceWith tracer $ "**************************************"
+    traceWith tracer $ unlines
+      [ "**************************************"
+      , "I am Node "        <> show myNodeAddress
+      , "My producers are " <> show producers'
+      , "**************************************"
+      ]
 
-    ResourceRegistry.with $ \registry -> do
+    let ipProducerAddrs  :: [NodeAddress]
+        dnsProducerAddrs :: [RemoteAddress]
+        (ipProducerAddrs, dnsProducerAddrs) = partitionEithers
+          [ maybe (Right ra) Left $ remoteAddressToNodeAddress ra
+          | ra <- producers' ]
 
-      let callbacks :: NodeCallbacks IO blk
-          callbacks = NodeCallbacks {
-              produceDRG   = drgNew
-            , produceBlock = \proof _l slot prevPoint prevBlockNo txs -> do
-                let curNo :: BlockNo
-                    curNo = succ prevBlockNo
+        ipProducers :: [SockAddr]
+        ipProducers = nodeAddressToSockAddr <$> ipProducerAddrs
 
-                    prevHash :: ChainHash blk
-                    prevHash = castHash (Block.pointHash prevPoint)
-
-                 -- The transactions we get are consistent; the only reason not
-                 -- to include all of them would be maximum block size, which
-                 -- we ignore for now.
-                nodeForgeBlock pInfoConfig
-                               slot
-                               curNo
-                               prevHash
-                               txs
-                               proof
-          }
-
-      varTip <- atomically $ newTVar GenesisPoint
-      epochInfo <- newEpochInfo $ nodeEpochSize (Proxy @blk) pInfoConfig
-      -- Database filepath
-      path <- canonicalizePath =<< makeAbsolute ccDBPath
-      let chainDbArgs = mkChainDbArgs
-                          pInfoConfig
-                          pInfoInitLedger
-                          registry
-                          (CoreNodeId nid)
-                          (withTip varTip $ chainDBTracer nodeTraces)
-                          slotDuration
-                          epochInfo
-                          (path <> "-" <> show nid)
-      chainDB :: ChainDB IO blk <- ChainDB.openDB chainDbArgs
-
-      -- Watch the tip of the chain and store it in @varTip@ so we can include
-      -- it in trace messages.
-      onEachChange registry id Nothing (ChainDB.getTipPoint chainDB)
-        (\_ tip -> (atomically $ writeTVar varTip tip))
-
-      btime  <- realBlockchainTime registry slotDuration (nodeStartTime (Proxy @blk) pInfoConfig)
-      let nodeParams :: NodeParams IO Peer blk
-          nodeParams = NodeParams
-            { tracers            = consensusTracers nodeTraces
-            , registry           = registry
-            , maxClockSkew       = ClockSkew 1
-            , cfg                = pInfoConfig
-            , initState          = pInfoInitState
-            , btime
-            , chainDB
-            , callbacks
-            , blockFetchSize     = nodeBlockFetchSize
-            , blockMatchesHeader = nodeBlockMatchesHeader
-            , maxUnackTxs        = 100 -- TODO
-            }
-
-      kernel <- nodeKernel nodeParams
-
-      let networkApps :: NetworkApplication
-                           IO Peer
-                           ByteString ByteString ByteString
-                           ByteString ByteString ()
-          networkApps =
-            consensusNetworkApps
-              kernel
-              nullProtocolTracers
-              ProtocolCodecs
-                { pcChainSyncCodec =
-                    codecChainSync
-                      (nodeEncodeHeader pInfoConfig)
-                      (nodeDecodeHeader pInfoConfig)
-                       encodePoint'
-                       decodePoint'
-
-                , pcBlockFetchCodec =
-                    codecBlockFetch
-                      (nodeEncodeBlock pInfoConfig)
-                      (nodeEncodeHeaderHash (Proxy @blk))
-                      (nodeDecodeBlock pInfoConfig)
-                      (nodeDecodeHeaderHash (Proxy @blk))
-
-                , pcTxSubmissionCodec =
-                    codecTxSubmission
-                      nodeEncodeGenTxId
-                      nodeDecodeGenTxId
-                      nodeEncodeGenTx
-                      nodeDecodeGenTx
-
-                , pcLocalChainSyncCodec =
-                    codecChainSync
-                      (nodeEncodeBlock pInfoConfig)
-                      (nodeDecodeBlock pInfoConfig)
-                       encodePoint'
-                       decodePoint'
-
-                , pcLocalTxSubmissionCodec =
-                    codecLocalTxSubmission
-                      nodeEncodeGenTx
-                      nodeDecodeGenTx
-                      (nodeEncodeApplyTxError (Proxy @blk))
-                      (nodeDecodeApplyTxError (Proxy @blk))
-
-                }
-              (protocolHandlers nodeParams kernel)
-
-      let networkAppNodeToNode :: Versions
-                                    NodeToNodeVersion
-                                    DictVersion
-                                    (NetworkApplication
-                                       IO Peer
-                                       ByteString ByteString ByteString
-                                       ByteString ByteString ())
-          networkAppNodeToNode =
-            simpleSingletonVersions
-              NodeToNodeV_1
-              (NodeToNodeVersionData { networkMagic = 0 })
-              (DictVersion nodeToNodeCodecCBORTerm)
-              networkApps
-
-      let networkAppNodeToClient :: Versions
-                                      NodeToClientVersion
-                                      DictVersion
-                                      (NetworkApplication
-                                         IO Peer
-                                         ByteString ByteString ByteString
-                                         ByteString ByteString ())
-          networkAppNodeToClient =
-            simpleSingletonVersions
-              NodeToClientV_1
-              (NodeToClientVersionData { networkMagic = 0 })
-              (DictVersion nodeToClientCodecCBORTerm)
-              networkApps
-
-      let myLocalSockPath = localSocketFilePath myNodeId
-          myLocalAddr     = localSocketAddrInfo myLocalSockPath
-      removeStaleLocalSocket myLocalSockPath
-
-      -- serve local clients (including tx submission)
-      localServer <-
-        forkLinked registry $ do
-          connTable <- newConnectionTable
-          NodeToClient.withServer
-            connTable
-            myLocalAddr
-            Peer
-            (\(DictVersion _) -> acceptEq)
-            (localResponderNetworkApplication <$> networkAppNodeToClient)
-            wait
-
-      -- serve downstream nodes
-      connTable <- newConnectionTable
-      peerServer <-
-        forkLinked registry $ do
-          NodeToNode.withServer
-            connTable
-            (nodeAddressInfo myNodeAddress)
-            Peer
-            (\(DictVersion _) -> acceptEq)
-            (responderNetworkApplication <$> networkAppNodeToNode)
-            wait
-
-      let (ipProducers, dnsProducers) = partitionEithers (map (\ra -> maybe (Right ra) Left $ remoteAddressToNodeAddress ra) producers')
-
-      ipSubscriptions <- forkLinked registry $
-        ipSubscriptionWorker
-          connTable
-          (contramap show $ ipSubscriptionTracer nodeTraces)  -- TODO 
-            -- the comments in dnsSbuscriptionWorker call apply
-            (Just (Socket.SockAddrInet 0 0))
-            (Just (Socket.SockAddrInet6 0 0 (0, 0, 0, 1) 0))
-            (const Nothing)
-            (IPSubscriptionTarget {
-                ispIps = nodeAddressToSockAddr `map` ipProducers,
-                ispValency = length ipProducers
-              })
-            (\sock -> do
-              connectToNode'
-                (\(DictVersion codec) -> encodeTerm codec)
-                (\(DictVersion codec) -> decodeTerm codec)
-                nullTracer
-                Peer
-                (initiatorNetworkApplication <$> networkAppNodeToNode)
-                sock)
-            wait
-
-
-      -- dns subscription managers
-      dnsSubscriptions <- forM dnsProducers
-        $ \RemoteAddress {raAddress, raPort, raValency} ->
-        forkLinked registry $
-          dnsSubscriptionWorker
-            connTable
-            (contramap show $ dnsSubscriptionTracer nodeTraces)  -- TODO
-            (contramap show $ dnsResolverTracer nodeTraces)      -- TODO
-            -- IPv4 address
-            --
-            -- We can't share portnumber with our server since we run separate
-            -- 'MuxInitiatorApplication' and 'MuxResponderApplication'
-            -- applications instead of a 'MuxInitiatorAndResponderApplication'.
-            -- This means we don't utilise full duplex connection.
-            (Just (Socket.SockAddrInet 0 0))
-            -- IPv6 address
-            (Just (Socket.SockAddrInet6 0 0 (0, 0, 0, 1) 0))
-            (const Nothing)
-            DnsSubscriptionTarget {
-                dstDomain  = BSC.pack raAddress
+        dnsProducers :: [DnsSubscriptionTarget]
+        dnsProducers =
+          [ DnsSubscriptionTarget
+              { dstDomain  = BSC.pack raAddress
               , dstPort    = raPort
               , dstValency = raValency
               }
-            (\sock ->
-              connectToNode'
-                (\(DictVersion codec) -> encodeTerm codec)
-                (\(DictVersion codec) -> decodeTerm codec)
-                nullTracer
-                Peer
-                (initiatorNetworkApplication <$> networkAppNodeToNode)
-                sock)
-            wait
+          | RemoteAddress {raAddress, raPort, raValency} <- dnsProducerAddrs ]
 
-      void $ Async.waitAny (localServer : peerServer : ipSubscriptions : dnsSubscriptions)
+        myLocalSockPath :: FilePath
+        myLocalSockPath = localSocketFilePath myNodeId
 
+        myLocalAddr :: AddrInfo
+        myLocalAddr = localSocketAddrInfo myLocalSockPath
+
+        runNetworkArgs :: RunNetworkArgs Peer blk
+        runNetworkArgs = RunNetworkArgs
+          { rnaIpSubscriptionTracer  = showTracing $ ipSubscriptionTracer  nodeTracers
+          , rnaDnsSubscriptionTracer = showTracing $ dnsSubscriptionTracer nodeTracers
+          , rnaDnsResolverTracer     = showTracing $ dnsResolverTracer     nodeTracers
+          , rnaMkPeer                = Peer
+          , rnaMyAddr                = nodeAddressInfo myNodeAddress
+          , rnaMyLocalAddr           = myLocalAddr
+          , rnaIpProducers           = ipProducers
+          , rnaDnsProducers          = dnsProducers
+          }
+
+    removeStaleLocalSocket myLocalSockPath
+
+    dbPath <- canonicalizePath =<< makeAbsolute ccDBPath
+
+    varTip <- atomically $ newTVar GenesisPoint
+
+    Node.run
+      (consensusTracers nodeTracers)
+      (withTip varTip $ chainDBTracer nodeTracers)
+      runNetworkArgs
+      (dbPath <> "-" <> show nid)
+      pInfo
+      id -- No ChainDbArgs customisation
+      id -- No NodeParams customisation
+      $ \registry nodeKernel -> do
+        -- Watch the tip of the chain and store it in @varTip@ so we can include
+        -- it in trace messages.
+        let chainDB = getChainDB nodeKernel
+        onEachChange registry id Nothing (ChainDB.getTipPoint chainDB) $ \_ tip ->
+          atomically $ writeTVar varTip tip
   where
       nid :: Int
       nid = case myNodeId of
               CoreId  n -> n
               RelayId _ -> error "Non-core nodes currently not supported"
-
-      encodePoint' ::  Point blk -> Encoding
-      encodePoint' =
-          Block.encodePoint (nodeEncodeHeaderHash (Proxy @blk))
-
-      decodePoint' :: forall s. Decoder s (Point blk)
-      decodePoint' =
-          Block.decodePoint (nodeDecodeHeaderHash (Proxy @blk))
 
 removeStaleLocalSocket :: FilePath -> IO ()
 removeStaleLocalSocket socketPath =
@@ -447,46 +247,3 @@ removeStaleLocalSocket socketPath =
         if isDoesNotExistError e
           then return ()
           else throwIO e
-
-mkChainDbArgs :: forall blk. RunNode blk
-              => NodeConfig (BlockProtocol blk)
-              -> ExtLedgerState blk
-              -> ResourceRegistry IO
-              -> CoreNodeId
-              -> Tracer IO (ChainDB.TraceEvent blk)
-              -> SlotLength
-              -> EpochInfo IO
-              -> FilePath
-              -> ChainDB.ChainDbArgs IO blk
-mkChainDbArgs cfg initLedger registry (CoreNodeId nid) tracer slotDuration epochInfo dbPath = do
-    (ChainDB.defaultArgs dbPath)
-      { ChainDB.cdbBlocksPerFile    = 1000 --TODO: move definition of default
-                                           -- elsewhere and just use it here.
-      , ChainDB.cdbDecodeBlock      = nodeDecodeBlock       cfg
-      , ChainDB.cdbDecodeChainState = nodeDecodeChainState  (Proxy @blk)
-      , ChainDB.cdbDecodeHash       = nodeDecodeHeaderHash  (Proxy @blk)
-      , ChainDB.cdbDecodeLedger     = nodeDecodeLedgerState cfg
-      , ChainDB.cdbEncodeBlock      = nodeEncodeBlock       cfg
-      , ChainDB.cdbEncodeChainState = nodeEncodeChainState  (Proxy @blk)
-      , ChainDB.cdbEncodeHash       = nodeEncodeHeaderHash  (Proxy @blk)
-      , ChainDB.cdbEncodeLedger     = nodeEncodeLedgerState cfg
-      , ChainDB.cdbEpochInfo        = epochInfo
-      , ChainDB.cdbGenesis          = return initLedger
-      , ChainDB.cdbDiskPolicy       = defaultDiskPolicy secParam slotDiffTime
-      , ChainDB.cdbIsEBB            = \blk -> if nodeIsEBB blk
-                                              then Just (blockHash blk)
-                                              else Nothing
-      , ChainDB.cdbMemPolicy        = defaultMemPolicy secParam
-      , ChainDB.cdbNodeConfig       = cfg
-      , ChainDB.cdbRegistry         = registry
-      , ChainDB.cdbTracer           = tracer
-      , ChainDB.cdbValidation       = ValidateMostRecentEpoch
-      , ChainDB.cdbGcDelay          = secondsToDiffTime 10
-      }
-  where
-    secParam = protocolSecurityParam cfg
-
-    -- TODO cleaner way with subsecond precision
-    slotDiffTime :: DiffTime
-    slotDiffTime = secondsToDiffTime
-      (slotLengthToMillisec slotDuration `div` 1000)
