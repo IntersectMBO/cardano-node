@@ -31,6 +31,7 @@ loggingParser = LoggingCLIArguments
         ( long "log-config"
        <> metavar "LOGCONFIG"
        <> help "Configuration file for logging"
+       <> completer (bashCompleter "file")
         )
 
 parseProtocol :: Parser Protocol
