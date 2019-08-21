@@ -54,6 +54,8 @@ data CardanoConfiguration = CardanoConfiguration
     -- ^ The location of the log configuration on the filesystem.
     , ccDBPath              :: !FilePath
     -- ^ The location of the DB on the filesystem.
+    , ccSocketPath          :: !FilePath
+    -- ^ The location of the socket.
     , ccApplicationLockFile :: !FilePath
     -- ^ The location of the application lock file that is used
     -- as a semaphore se we can run just one application
@@ -111,6 +113,7 @@ data Core = Core
     -- ^ Do we require the network byte indicator for mainnet, testnet or staging?
     , coPBftSigThd                  :: !(Maybe Double)
     -- ^ PBFT signature threshold system parameters
+
     } deriving (Eq, Show, Generic)
 
 data Spec = Spec

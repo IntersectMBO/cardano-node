@@ -33,6 +33,7 @@ data PartialCardanoConfiguration = PartialCardanoConfiguration
     { pccLogPath             :: !(Last FilePath)
     , pccLogConfig           :: !(Last FilePath)
     , pccDBPath              :: !(Last FilePath)
+    , pccSocketPath          :: !(Last FilePath)
     , pccApplicationLockFile :: !(Last FilePath)
     , pccCore                :: !PartialCore
     , pccNTP                 :: !PartialNTP
@@ -217,7 +218,7 @@ finaliseCardanoConfiguration PartialCardanoConfiguration{..} = do
     ccLogPath                <- lastToEither "Unspecified ccLogPath"    pccLogPath
     ccLogConfig              <- lastToEither "Unspecified ccLogConfig"  pccLogConfig
     ccDBPath                 <- lastToEither "Unspecified ccDBPath"     pccDBPath
-
+    ccSocketPath             <- lastToEither "Unspecified ccSocketPath" pccSocketPath
     ccApplicationLockFile    <- lastToEither "Unspecified ccApplicationLockFile"
                                     pccApplicationLockFile
 
