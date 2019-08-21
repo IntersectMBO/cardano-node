@@ -3,9 +3,10 @@
 , pkgs
 , ... }:
 
-with lib;
+with import ../../lib.nix;
 let
   cfg = config.services.cardano-node;
+  envConfig = environments.${cfg.environment};
 in {
   options = {
     services.cardano-node = {
@@ -38,8 +39,17 @@ in {
         '';
       };
 
+      environment = mkOption {
+        type = types.enum (builtins.attrNames environments);
+        default = "testnet";
+        description = ''
+          environment node will connect to
+        '';
+      };
+
       genesisFile = mkOption {
         type = types.path;
+        default = envConfig.genesisFile;
         description = ''
           Genesis json file
         '';
@@ -47,7 +57,7 @@ in {
 
       genesisHash = mkOption {
         type = types.nullOr types.str;
-        default = null;
+        default = envConfig.genesisHash;
         description = ''
           Hash of the genesis file
         '';
@@ -55,11 +65,12 @@ in {
 
       pbftThreshold = mkOption {
         type = types.nullOr types.str;
-        default = null;
+        default = envConfig.pbftThreshold or null;
         description = ''
           PBFT Threshold
         '';
       };
+
       signingKey = mkOption {
         type = types.nullOr types.path;
         default = null;
@@ -106,7 +117,7 @@ in {
 
       dbPrefix = mkOption {
         type = types.str;
-        default = "db";
+        default = "db-${cfg.environment}";
         description = ''
           Prefix of database directories inside `stateDir`.
           (eg. for "db", there will be db-0, etc.).
@@ -115,7 +126,7 @@ in {
 
       port = mkOption {
         type = types.int;
-        default = 3000;
+        default = 3001;
         description = ''
           The port number
         '';
@@ -131,6 +142,10 @@ in {
 
       topology = mkOption {
         type = types.path;
+        default = mkEdgeTopology {
+          inherit (cfg) hostAddr nodeId port;
+          edgeHost = envConfig.edgeHost or "127.0.0.1";
+        };
         description = ''
           Cluster topology
         '';
