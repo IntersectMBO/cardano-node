@@ -42,7 +42,7 @@ extra-deps:
   - tasty-hedgehog-1.0.0.1
     # iohk-monitoring-framework currently not pinned to a release
   - git: https://github.com/input-output-hk/iohk-monitoring-framework
-    commit: 695374d78ebb9806343b86049eb5e06d1afd52f7
+    commit: 4ad81798402ce05655b37b31b0b67f444a2f0b91
     subdirs:
       - contra-tracer
       - iohk-monitoring
