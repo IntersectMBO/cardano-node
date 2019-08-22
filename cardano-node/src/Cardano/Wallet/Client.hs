@@ -7,7 +7,9 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications    #-}
 
-module Cardano.Wallet.Client where
+module Cardano.Wallet.Client
+  (runWalletClient)
+where
 
 import           Cardano.Prelude hiding (ByteString, atomically)
 import           Prelude (String)
@@ -16,7 +18,6 @@ import           Data.Void (Void)
 import           Data.ByteString.Lazy (ByteString)
 import           Data.Proxy (Proxy (..))
 
-import qualified Codec.Serialise as Serialise (encode, decode)
 import           Network.Socket as Socket
 
 import           Control.Monad.Class.MonadST
@@ -83,7 +84,11 @@ runWalletClient ptcl nid numCoreNodes tracer = do
 
 localInitiatorNetworkApplication
   :: forall blk m peer.
-     (RunNode blk, MonadST m, MonadThrow m, MonadTimer m)
+     ( RunNode blk
+     , MonadST m
+     , MonadThrow m
+     , MonadTimer m
+     )
   -- TODO: the need of a 'Proxy' is an evidence that blk type is not really
   -- needed here.  The wallet client should use some concrete type of block
   -- from 'cardano-chain'.  This should remove the dependency of this module
@@ -93,7 +98,7 @@ localInitiatorNetworkApplication
   -- ^ tracer which logs all chain-sync messages send and received by the client
   -- (see 'Ouroboros.Network.Protocol.ChainSync.Type' in 'ouroboros-network'
   -- package)
-  -> Tracer m (TraceSendRecv (LocalTxSubmission (GenTx blk) String) peer DeserialiseFailure)
+  -> Tracer m (TraceSendRecv (LocalTxSubmission (GenTx blk) (ApplyTxErr blk)) peer DeserialiseFailure)
   -- ^ tracer which logs all local tx submission protocol messages send and
   -- received by the client (see 'Ouroboros.Network.Protocol.LocalTxSubmission.Type'
   -- in 'ouroboros-network' package).
@@ -184,15 +189,15 @@ chainSyncClient = ChainSyncClient $ pure $
 
 
 localTxSubmissionCodec
-  :: (RunNode blk, MonadST m)
-  => Codec (LocalTxSubmission (GenTx blk) String)
+  :: forall m blk . (RunNode blk, MonadST m)
+  => Codec (LocalTxSubmission (GenTx blk) (ApplyTxErr blk))
            DeserialiseFailure m ByteString
 localTxSubmissionCodec =
   codecLocalTxSubmission
     nodeEncodeGenTx
     nodeDecodeGenTx
-    Serialise.encode
-    Serialise.decode
+    (nodeEncodeApplyTxError (Proxy @blk))
+    (nodeDecodeApplyTxError (Proxy @blk))
 
 localChainSyncCodec
   :: forall blk m. (RunNode blk, MonadST m)

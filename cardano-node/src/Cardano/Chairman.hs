@@ -24,7 +24,6 @@ import           Data.Typeable (Typeable)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 
-import qualified Codec.Serialise as Serialise (encode, decode)
 import           Network.Socket as Socket
 
 import           Control.Monad.Class.MonadAsync
@@ -361,7 +360,7 @@ localInitiatorNetworkApplication
   -- ^ tracer which logs all chain-sync messages send and received by the client
   -- (see 'Ouroboros.Network.Protocol.ChainSync.Type' in 'ouroboros-network'
   -- package)
-  -> Tracer m (TraceSendRecv (LocalTxSubmission (GenTx blk) String) peer DeserialiseFailure)
+  -> Tracer m (TraceSendRecv (LocalTxSubmission (GenTx blk) (ApplyTxErr blk)) peer DeserialiseFailure)
   -- ^ tracer which logs all local tx submission protocol messages send and
   -- received by the client (see 'Ouroboros.Network.Protocol.LocalTxSubmission.Type'
   -- in 'ouroboros-network' package).
@@ -398,15 +397,15 @@ localInitiatorNetworkApplication coreNodeId chainsVar securityParam maxBlockNo c
 --
 
 localTxSubmissionCodec
-  :: (RunNode blk, MonadST m)
-  => Codec (LocalTxSubmission (GenTx blk) String)
+  :: forall m blk . (RunNode blk, MonadST m)
+  => Codec (LocalTxSubmission (GenTx blk) (ApplyTxErr blk))
            DeserialiseFailure m ByteString
 localTxSubmissionCodec =
   codecLocalTxSubmission
     nodeEncodeGenTx
     nodeDecodeGenTx
-    Serialise.encode
-    Serialise.decode
+    (nodeEncodeApplyTxError (Proxy @blk))
+    (nodeDecodeApplyTxError (Proxy @blk))
 
 localChainSyncCodec
   :: forall blk m.
