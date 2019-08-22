@@ -235,7 +235,6 @@ mkTracers :: forall peer blk.
 mkTracers traceOptions tracer = Tracers
     { chainDBTracer
         = if traceChainDB traceOptions
-          -- then contramap show tracer'
           then toLogObject' TextualRepresentation (traceVerbosity traceOptions) tracer
           else toLogObject' StructuredLogging (traceVerbosity traceOptions) tracer
     , consensusTracers
