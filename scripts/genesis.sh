@@ -44,10 +44,11 @@ args=(
 
 set -xe
 RUNNER=${RUNNER:-cabal new-run --}
+
 ${RUNNER} cardano-cli byron-pbft genesis "${args[@]}" "$@"
 
 # move new genesis to configuration
-GENHASH=`${RUNNER} cardano-cli byron-pbft print-genesis-hash --genesis-json "${tmpdir}/genesis.json" | tail -1`
+GENHASH=`${RUNNER} cardano-cli real-pbft print-genesis-hash --genesis-json "${tmpdir}/genesis.json" | tail -1`
 TARGETDIR="${CONFIGDIR}/${GENHASH:0:5}"
 mkdir -vp "${TARGETDIR}"
 cp -iav ${tmpdir}/genesis.json ${TARGETDIR}/
@@ -59,4 +60,3 @@ set -
 echo $GENHASH > ${TARGETDIR}/GENHASH
 echo "genesis created with hash = ${GENHASH}"
 echo "  in directory ${TARGETDIR}"
-
