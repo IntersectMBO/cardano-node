@@ -26,14 +26,13 @@
 module Cardano.CLI.Run (
     CliError (..)
   , ClientCommand(..)
-  , parseClientCommand
   , runCommand
   ) where
 
 import           Prelude (String)
+import           Cardano.Prelude hiding (option)
 
 import           Codec.Serialise (deserialiseOrFail)
-import           Control.Monad
 import           Control.Tracer
 import           Data.Bits (shiftL)
 import qualified Data.ByteArray as BA
@@ -49,7 +48,6 @@ import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Lazy.IO as TL
 import qualified Data.Text.Lazy.Builder as Builder
 import qualified Formatting as F
-import           Options.Applicative
 import           System.Directory (createDirectory, doesPathExist)
 import           System.FilePath ((</>))
 import           System.IO (hGetLine, hSetEcho, hFlush, stdout, stdin)
@@ -61,28 +59,25 @@ import           System.Posix.Files (ownerReadMode, setFileMode)
 import           System.Directory (emptyPermissions, readable, setPermissions)
 #endif
 
-import           Cardano.Prelude hiding (option)
-
 import           Cardano.Binary (Annotated(..), serialize')
 import           Cardano.Chain.Common
-import qualified Cardano.Chain.Common as CC
 import           Cardano.Chain.Delegation hiding (epoch)
-import           Cardano.Chain.Slotting (EpochNumber)
-import           Cardano.Crypto (SigningKey (..), ProtocolMagic, ProtocolMagicId)
-import qualified Test.Cardano.Chain.Genesis.Dummy as Dummy
-import qualified Cardano.Crypto.Random as CCr
-import qualified Cardano.Crypto.Hashing as CCr
-import qualified Cardano.Crypto.Signing as CCr
 import           Cardano.Chain.Genesis
-import           Ouroboros.Consensus.Protocol hiding (Protocol)
 import           Cardano.Chain.Slotting (EpochNumber(..))
+import           Cardano.Crypto (SigningKey (..), ProtocolMagic, ProtocolMagicId)
 import           Cardano.Node.Configuration.Presets (mainnetConfiguration)
+import           Ouroboros.Consensus.Protocol hiding (Protocol)
+import qualified Cardano.Chain.Common as CC
+import qualified Cardano.Crypto.Hashing as CCr
+import qualified Cardano.Crypto.Random as CCr
+import qualified Cardano.Crypto.Signing as CCr
+import qualified Test.Cardano.Chain.Genesis.Dummy as Dummy
 
 import           Cardano.CLI.Ops
+import           Cardano.Common.CommonCLI
+import           Cardano.Common.Protocol
 import           Cardano.Node.CanonicalJSON
-import           Cardano.Node.CLI
 import           Cardano.Node.Orphans ()
-import           Cardano.Node.Parsers
 import           Cardano.Node.Topology
 import           Cardano.Node.TxSubmission
 
@@ -134,83 +129,6 @@ data ClientCommand
     , stTx       :: FilePath
     , stCommon   :: CommonCLI
     }
-
-parseClientCommand :: Parser ClientCommand
-parseClientCommand =
-  subparser
-  (mconcat
-    [ commandGroup "Genesis"
-    , command' "genesis"                        "Perform genesis." $
-      Genesis
-      <$> parseFilePath    "genesis-output-dir"       "A yet-absent directory where genesis JSON file along with secrets shall be placed."
-      <*> parseUTCTime     "start-time"               "Start time of the new cluster to be enshrined in the new genesis."
-      <*> parseFilePath    "protocol-parameters-file" "JSON file with protocol parameters."
-      <*> parseK
-      <*> parseProtocolMagic
-      <*> parseTestnetBalanceOptions
-      <*> parseFakeAvvmOptions
-      <*> (LovelacePortion . fromInteger . fromMaybe 1 <$>
-           (optional $
-             parseIntegral  "avvm-balance-factor"      "AVVM balances will be multiplied by this factor (defaults to 1)."))
-      <*> optional (parseIntegral    "secret-seed"              "Optionally specify the seed of generation.")
-    , command' "dump-hardcoded-genesis"         "Write out a hard-coded genesis." $
-      DumpHardcodedGenesis
-      <$> parseFilePath    "genesis-output-dir"       "A yet-absent directory where genesis JSON file along with secrets shall be placed."
-    , command' "print-genesis-hash"             "Compute hash of a genesis file." $
-      PrintGenesisHash
-      <$> parseFilePath    "genesis-json"             "Genesis JSON file to hash."
-    ])
-  <|> subparser
-  (mconcat
-    [ commandGroup "Keys"
-    , command' "keygen"                         "Generate a signing key." $
-      Keygen
-      <$> parseFilePath    "secret"                   "Non-existent file to write the secret key to."
-      <*> parseFlag        "no-password"              "Disable password protection."
-    , command' "to-verification"                "Extract a verification key in its base64 form." $
-      ToVerification
-      <$> parseFilePath    "secret"                   "Secret key file to extract from."
-      <*> parseFilePath    "to"                       "Non-existent file to write the base64-formatted verification key to."
-    , command' "signing-key-public"             "Pretty-print a signing key's verification key (not a secret)." $
-      PrettySigningKeyPublic
-      <$> parseFilePath    "secret"                   "File name of the secret key to pretty-print."
-    , command' "signing-key-address"            "Print address of a signing key." $
-      PrintSigningKeyAddress
-      <$> parseNetworkMagic
-      <*> parseFilePath    "secret"                   "Secret key, whose address is to be printed."
-    , command' "migrate-delegate-key-from"      "Migrate a delegate key from an older version." $
-      MigrateDelegateKeyFrom
-      <$> parseProtocol
-      <*> parseFilePath    "to"                       "Output secret key file."
-      <*> parseFilePath    "from"                     "Secret key file to migrate."
-    ])
-  <|> subparser
-  (mconcat
-    [ commandGroup "Delegation"
-    , command' "redelegate"                     "Redelegate genesis authority to a different verification key." $
-      Redelegate
-      <$> parseProtocolMagicId "protocol-magic"
-      <*> (EpochNumber <$>
-            parseIntegral   "since-epoch"              "First epoch of effective delegation.")
-      <*> parseFilePath    "secret"                   "The genesis key to redelegate from."
-      <*> parseFilePath    "delegate-key"             "The operation verification key to delegate to."
-      <*> parseFilePath    "certificate"              "Non-existent file to write the certificate to."
-    , command' "check-delegation"               "Verify that a given certificate constitutes a valid delegation relationship betwen keys." $
-      CheckDelegation
-      <$> parseProtocolMagicId "protocol-magic"
-      <*> parseFilePath    "certificate"              "The certificate embodying delegation to verify."
-      <*> parseFilePath    "issuer-key"               "The genesis key that supposedly delegates."
-      <*> parseFilePath    "delegate-key"             "The operation verification key supposedly delegated to."
-    ])
-  <|> subparser
-  (mconcat
-    [ commandGroup "Transactions"
-    , command' "submit-tx"                      "Submit a raw, signed transaction, in its on-wire representation." $
-      SubmitTx
-      <$> parseTopologyInfo "PBFT node ID to submit Tx to."
-      <*> parseFilePath    "tx"                       "File containing the raw transaction."
-      <*> parseCommonCLI
-    ])
 
 runCommand :: CLIOps IO -> ClientCommand -> IO ()
 runCommand co@CLIOps{..}

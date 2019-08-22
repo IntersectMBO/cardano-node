@@ -1,20 +1,27 @@
+{-# LANGUAGE RankNTypes           #-}
+
 {-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
 
 module Cardano.Node.Parsers
   ( loggingParser
   , parseCoreNodeId
   , parseProtocol
+  , parseProtocolAsCommand
+  , parseTopologyInfo
   ) where
 
 
-import           Prelude (String, error, id)
+import           Prelude (String)
+
 import           Cardano.Prelude hiding (option)
 
-import           Cardano.Common.Protocol (Protocol(..))
-import           Cardano.Node.Features.Logging (LoggingCLIArguments(..))
-import           Ouroboros.Consensus.NodeId (CoreNodeId(..))
-
 import           Options.Applicative
+
+import           Cardano.Node.Features.Logging (LoggingCLIArguments(..))
+import           Ouroboros.Consensus.NodeId (NodeId(..), CoreNodeId(..))
+
+import           Cardano.Common.Protocol
+import           Cardano.Node.Topology
 
 -- Common command line parsers
 
@@ -35,6 +42,40 @@ parseNodeId desc =
          <> metavar "NODE-ID"
          <> help desc
     )
+
+parseProtocol :: Parser Protocol
+parseProtocol = asum
+  [ fl ByronLegacy "byron-legacy"
+    "Use the Byron/Ouroboros Classic suite of algorithms"
+
+  , fl BFT "bft"
+    "Use the BFT consensus algorithm"
+
+  , fl Praos "praos"
+    "Use the Praos consensus algorithm"
+
+  , fl MockPBFT "mock-pbft"
+    "Use the Permissive BFT consensus algorithm using a mock ledger"
+
+  , fl RealPBFT "real-pbft"
+    "Use the Permissive BFT consensus algorithm using the real ledger"
+  ]
+  where
+    fl :: forall a. a -> String -> String -> Parser a
+    fl x l h = flag' x $ mconcat [long l, help h]
+
+parseProtocolAsCommand :: Parser Protocol
+parseProtocolAsCommand = subparser $ mconcat
+  [ commandGroup "System version"
+  , metavar "SYSTEMVER"
+  , cmd "byron-legacy" "Byron Legacy mode" $ pure ByronLegacy
+  , cmd "bft"          "BFT mode"          $ pure BFT
+  , cmd "praos"        "Praos mode"        $ pure Praos
+  , cmd "mock-pbft"    "Mock PBFT mode"    $ pure MockPBFT
+  , cmd "real-pbft"    "Real PBFT mode"    $ pure RealPBFT
+  ] where
+  cmd :: forall a. String -> String -> Parser a -> Mod CommandFields a
+  cmd c desc p = command c $ info (p <**> helper) $ mconcat [ progDesc desc ]
 
 parseTopologyInfo :: String -> Parser TopologyInfo
 parseTopologyInfo desc = TopologyInfo <$> parseNodeId desc <*> parseTopologyFile
@@ -57,47 +98,3 @@ loggingParser = LoggingCLIArguments
        <> help "Configuration file for logging"
        <> completer (bashCompleter "file")
         )
-
-parseLovelace :: String -> String -> Parser Lovelace
-parseLovelace optname desc =
-  either (error . show) id . mkLovelace
-  <$> parseIntegral optname desc
-
-parseLovelacePortion :: String -> String -> Parser LovelacePortion
-parseLovelacePortion optname desc =
-  either (error . show) id . mkLovelacePortion
-  <$> parseIntegral optname desc
-
-parseFakeAvvmOptions :: Parser Genesis.FakeAvvmOptions
-parseFakeAvvmOptions =
-  Genesis.FakeAvvmOptions
-  <$> parseIntegral        "avvm-entry-count"         "Number of AVVM addresses."
-  <*> parseLovelace        "avvm-entry-balance"       "AVVM address."
-
-parseK :: Parser BlockCount
-parseK =
-  BlockCount
-  <$> parseIntegral        "k"                        "The security parameter of the Ouroboros protocol."
-
-parseProtocolMagicId :: String -> Parser ProtocolMagicId
-parseProtocolMagicId arg =
-  ProtocolMagicId
-  <$> parseIntegral        arg                        "The magic number unique to any instance of Cardano."
-
-parseProtocolMagic :: Parser ProtocolMagic
-parseProtocolMagic =
-  flip AProtocolMagic RequiresMagic . flip Annotated ()
-  <$> parseProtocolMagicId "protocol-magic"
-
-parseNetworkMagic :: Parser NetworkMagic
-parseNetworkMagic = asum
-    [ flag' NetworkMainOrStage $ mconcat [
-          long "main-or-staging"
-        , help ""
-        ]
-    , option (fmap NetworkTestnet auto) (
-          long "testnet-magic"
-       <> metavar "MAGIC"
-       <> help "The testnet network magic, decibal"
-        )
-    ]

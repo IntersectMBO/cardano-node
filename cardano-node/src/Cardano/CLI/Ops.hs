@@ -30,9 +30,9 @@ import qualified Cardano.Crypto.Signing as CCr
 import           Cardano.Chain.Genesis
 import qualified Crypto.SCRAPE as Scrape
 
+import           Cardano.Common.Protocol
 import qualified Cardano.Legacy.Byron as Legacy
 import           Cardano.Node.CanonicalJSON
-import           Cardano.Node.CLI
 
 
 -- | Generic operations for a specific system era.

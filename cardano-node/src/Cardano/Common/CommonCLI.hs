@@ -1,9 +1,12 @@
 {-# LANGUAGE NamedFieldPuns #-}
 
+{-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
+
 module Cardano.Common.CommonCLI
   ( CommonCLI(..)
   , parseCommonCLI
   , mergeConfiguration
+  , mkConfiguration
    -- * Generic
   , command'
   , lastOption
@@ -22,7 +25,10 @@ import           Prelude
 import           Options.Applicative hiding (command)
 import qualified Options.Applicative as OA
 
-import           Cardano.Node.Configuration.Partial ( PartialCardanoConfiguration (..), PartialCore (..) )
+import           Cardano.Node.Configuration.Types (CardanoConfiguration(..))
+import           Cardano.Node.Configuration.Partial (PartialCardanoConfiguration (..)
+                                                    ,PartialCore (..)
+                                                    ,finaliseCardanoConfiguration)
 
 
 data CommonCLI = CommonCLI
@@ -159,3 +165,18 @@ mergeConfiguration pcc cli =
              , pccDBPath = cliDBPath
              , pccSocketPath = cliSocketPath
              }
+
+-- TODO: if we're using exceptions for this, then we should use a local
+-- excption type, local to this app, that enumerates all the ones we
+-- are reporting, and has proper formatting of the result.
+-- It would also require catching at the top level and printing.
+--
+-- Now, that this is a library function, the proper solution would also
+-- require having a common error type.
+mkConfiguration :: PartialCardanoConfiguration -> CommonCLI -> IO CardanoConfiguration
+mkConfiguration partialConfig cli = 
+    case finaliseCardanoConfiguration $
+         mergeConfiguration partialConfig cli
+    of
+      Left err -> fail $ Prelude.show err
+      Right x  -> pure x

@@ -19,7 +19,6 @@ import           Prelude (String)
 import           Data.Void (Void)
 import           Data.ByteString.Lazy (ByteString)
 
-import qualified Codec.Serialise as Serialise
 import           Network.Socket as Socket
 
 import           Control.Monad (fail)
@@ -47,7 +46,7 @@ import           Ouroboros.Network.Protocol.LocalTxSubmission.Client
 import           Ouroboros.Network.Protocol.LocalTxSubmission.Codec
 import           Ouroboros.Network.Protocol.ChainSync.Type (ChainSync)
 import           Ouroboros.Network.Protocol.ChainSync.Client
-                   (ChainSyncClient(..), chainSyncClientPeer)
+                   (chainSyncClientPeer)
 import           Ouroboros.Network.Protocol.ChainSync.Codec
 import           Ouroboros.Network.Protocol.Handshake.Version
 import           Ouroboros.Network.NodeToClient
@@ -83,10 +82,6 @@ handleTxSubmission ptcl tinfo tx tracer = do
           protocolInfo (NumCoreNodes (length nodeSetups))
                        (CoreNodeId nid)
                        ptcl
-
-    -- TODO:  generalised Tx hash
-    -- traceWith tracer $
-    --   "The Id for this transaction is: " <> condense (H.hash @ShortHash tx)
 
     submitTx pInfoConfig (node tinfo) tx tracer
 

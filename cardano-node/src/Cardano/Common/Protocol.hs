@@ -2,6 +2,9 @@
 {-# LANGUAGE GADTs            #-}
 {-# LANGUAGE NamedFieldPuns   #-}
 
+{-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
+
 module Cardano.Common.Protocol
   ( Protocol(..)
   , SomeProtocol(..)
@@ -11,7 +14,7 @@ module Cardano.Common.Protocol
 
 
 import           Cardano.Prelude
-import           Prelude (fail)
+import           Prelude (error, fail)
 
 import           Codec.CBOR.Read (deserialiseFromBytes, DeserialiseFailure)
 import           Control.Exception hiding (throwIO)
@@ -33,17 +36,20 @@ import qualified Cardano.Node.CanonicalJSON as CanonicalJSON
 import           Cardano.Node.Configuration.Types
                    ( CardanoConfiguration (..), Core (..)
                    , RequireNetworkMagic (..) )
-import           Cardano.Node.Tracers (TraceConstraints, TraceOptions)
+import           Cardano.Node.Tracers (TraceConstraints)
+import           Cardano.Node.Orphans ()
 
 {-------------------------------------------------------------------------------
   Untyped/typed protocol boundary
 -------------------------------------------------------------------------------}
 
 data Protocol =
-    BFT
+    ByronLegacy
+  | BFT
   | Praos
   | MockPBFT
   | RealPBFT
+  deriving Show
 
 
 data SomeProtocol where
@@ -51,6 +57,8 @@ data SomeProtocol where
                => Consensus.Protocol blk -> SomeProtocol
 
 fromProtocol :: CardanoConfiguration -> Protocol -> IO SomeProtocol
+fromProtocol _ ByronLegacy =
+  error "Byron Legacy protocol is not implemented."
 fromProtocol _ BFT =
     case Consensus.runProtocol p of
       Dict -> return $ SomeProtocol p
@@ -101,10 +109,6 @@ fromProtocol CardanoConfiguration{ccCore} RealPBFT = do
 
     case Consensus.runProtocol p of
       Dict -> return $ SomeProtocol p
-
--- TODO: consider not throwing this, or wrap it in a local error type here
--- that has proper error messages.
-instance Exception Genesis.ConfigurationError
 
 readLeaderCredentials :: Genesis.Config
                       -> Core

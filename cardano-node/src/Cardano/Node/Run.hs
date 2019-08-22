@@ -59,7 +59,6 @@ import           Ouroboros.Network.Block
 import           Ouroboros.Network.Subscription.Dns
 
 import           Ouroboros.Consensus.BlockchainTime (SlotLength(..))
-import qualified Ouroboros.Consensus.Ledger.Mock as Mock
 import           Ouroboros.Consensus.Node (NodeKernel (getChainDB),
                                            RunNetworkArgs (..),
                                            RunNode (nodeStartTime))
@@ -101,7 +100,6 @@ data NodeCLIArguments = NodeCLIArguments {
 
 data NodeCommand =
     SimpleNode  TopologyInfo NodeAddress Protocol ViewMode TraceOptions
-  | TxSubmitter TopologyInfo Mock.Tx     Protocol
   | TraceAcceptor
 
 -- Node can be run in two modes.

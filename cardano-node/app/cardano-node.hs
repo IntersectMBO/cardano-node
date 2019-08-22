@@ -30,8 +30,8 @@ import           Ouroboros.Consensus.BlockchainTime (SlotLength(..), slotLengthF
 import           Ouroboros.Consensus.NodeNetwork (ProtocolTracers'(..))
 import qualified Ouroboros.Consensus.Node.Tracers as Consensus
 
-import           Cardano.Common.CommonCLI (command', mergeConfiguration, parseCommonCLI)
-import           Cardano.Node.Parsers (loggingParser, parseProtocol)
+import           Cardano.Common.CommonCLI
+import           Cardano.Node.Parsers
 import           Cardano.Node.Run
 import           Cardano.Node.Topology (NodeAddress (..))
 import           Cardano.Node.Tracers (ConsensusTraceOptions,  ProtocolTraceOptions, TraceOptions(..))

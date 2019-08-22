@@ -31,6 +31,7 @@ import           Control.Monad.Class.MonadAsync
 import           Control.Monad.Class.MonadST
 import           Control.Monad.Class.MonadSTM
 import           Control.Monad.Class.MonadThrow
+import           Control.Monad.Class.MonadTimer
 import           Control.Tracer
 
 import           Network.Mux.Types (MuxError)
@@ -347,6 +348,7 @@ localInitiatorNetworkApplication
      , Condense (HeaderHash blk)
      , MonadAsync m
      , MonadST    m
+     , MonadTimer m
      , MonadThrow m
      , MonadThrow (STM m)
      )
