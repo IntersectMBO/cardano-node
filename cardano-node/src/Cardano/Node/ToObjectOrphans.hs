@@ -1,7 +1,5 @@
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE FlexibleInstances     #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE ScopedTypeVariables   #-}
 {-# LANGUAGE UndecidableInstances  #-}
 {-# OPTIONS_GHC -fno-warn-orphans  #-}
 
@@ -16,11 +14,10 @@ import           Cardano.Prelude hiding (atomically, show)
 import           Prelude (String, show, id)
 
 import           Data.Aeson (Value (..), toJSON, (.=))
-import           Data.Text (Text, pack)
+import           Data.Text (pack)
 import           Cardano.BM.Data.Tracer (ToObject (..),
                                          TracingVerbosity (..),
-                                         Transformable (..),
-                                         emptyObject, mkObject, trStructured)
+                                         emptyObject, mkObject)
 
 import           Ouroboros.Consensus.Ledger.Abstract
 import           Ouroboros.Consensus.Util.Condense
@@ -71,12 +68,7 @@ instance ( Show a
     show = showWithTip show
 
 
-
 -- | instances of @ToObject@
-
-instance (Condense (HeaderHash blk), ProtocolLedgerView blk)
-            => Transformable Text IO (WithTip blk (ChainDB.TraceEvent blk)) where
-    trTransformer = trStructured -- structure required, will call 'toObject'
 
 instance (Condense (HeaderHash blk), ProtocolLedgerView blk)
             => ToObject (WithTip blk (ChainDB.TraceEvent blk)) where
@@ -125,8 +117,20 @@ instance (Condense (HeaderHash blk), ProtocolLedgerView blk)
                 mkObject [ "kind" .= String "TraceAddBlockEvent.AddBlockValidation.InvalidBlock"
                          , "block" .= toObject verb pt
                          , "error" .= show err ]
-            _ -> emptyObject
-        _ -> emptyObject
+            ChainDB.InvalidCandidate c err ->
+                mkObject [ "kind" .= String "TraceAddBlockEvent.AddBlockValidation.InvalidCandidate"
+                         , "block" .= showTip verb (AF.headPoint c)
+                         , "error" .= show err ]
+            ChainDB.ValidCandidate c ->
+                mkObject [ "kind" .= String "TraceAddBlockEvent.AddBlockValidation.ValidCandidate"
+                         , "block" .= showTip verb (AF.headPoint c) ]
+        ChainDB.AddedBlockToVolDB pt     ->
+            mkObject [ "kind" .= String "TraceAddBlockEvent.AddedBlockToVolDB"
+                     , "block" .= toObject verb pt ]
+        ChainDB.ChainChangedInBg c1 c2     ->
+            mkObject [ "kind" .= String "TraceAddBlockEvent.ChainChangedInBg"
+                     , "prev" .= showTip verb (AF.headPoint c1)
+                     , "new" .= showTip verb (AF.headPoint c2) ]
 
     toObject MinimalVerbosity (ChainDB.TraceLedgerReplayEvent _ev) = emptyObject -- no output
     toObject verb (ChainDB.TraceLedgerReplayEvent ev) = case ev of
@@ -156,22 +160,61 @@ instance (Condense (HeaderHash blk), ProtocolLedgerView blk)
         ChainDB.CopiedBlockToImmDB pt ->
             mkObject [ "kind" .= String "TraceCopyToImmDBEvent.CopiedBlockToImmDB"
                      , "slot" .= toObject verb pt ]
-        _ -> emptyObject
+        ChainDB.NoBlocksToCopyToImmDB ->
+            mkObject [ "kind" .= String "TraceCopyToImmDBEvent.NoBlocksToCopyToImmDB" ]
 
     toObject verb (ChainDB.TraceGCEvent ev) = case ev of
         ChainDB.PerformedGC slot ->
             mkObject [ "kind" .= String "TraceGCEvent.PerformedGC"
                      , "slot" .= toObject verb slot ]
-        _ -> emptyObject
+        ChainDB.ScheduledGC slot difft ->
+            mkObject $ [ "kind" .= String "TraceGCEvent.ScheduledGC"
+                       , "slot" .= toObject verb slot ] <>
+                       if verb > MaximalVerbosity
+                       then [ "difft" .= String ((pack . show) difft) ]
+                       else []
 
     toObject verb (ChainDB.TraceOpenEvent ev) = case ev of
         ChainDB.OpenedDB immTip tip' ->
             mkObject [ "kind" .= String "TraceOpenEvent.OpenedDB"
                      , "immtip" .= toObject verb immTip
                      , "tip" .= toObject verb tip' ]
-        _ -> emptyObject
+        ChainDB.ClosedDB immTip tip' ->
+            mkObject [ "kind" .= String "TraceOpenEvent.ClosedDB"
+                     , "immtip" .= toObject verb immTip
+                     , "tip" .= toObject verb tip' ]
+        ChainDB.ReopenedDB immTip tip' ->
+            mkObject [ "kind" .= String "TraceOpenEvent.ReopenedDB"
+                     , "immtip" .= toObject verb immTip
+                     , "tip" .= toObject verb tip' ]
+        ChainDB.OpenedImmDB immTip epoch ->
+            mkObject [ "kind" .= String "TraceOpenEvent.OpenedImmDB"
+                     , "immtip" .= toObject verb immTip
+                     , "epoch" .= String ((pack . show) epoch) ]
+        ChainDB.OpenedVolDB ->
+            mkObject [ "kind" .= String "TraceOpenEvent.OpenedVolDB" ]
+        ChainDB.OpenedLgrDB ->
+            mkObject [ "kind" .= String "TraceOpenEvent.OpenedLgrDB" ]
 
-    toObject _ _ = emptyObject -- no output
+    toObject _verb (ChainDB.TraceReaderEvent ev) = case ev of
+        ChainDB.NewReader readerid ->
+            mkObject [ "kind" .= String "TraceGCEvent.PerformedGC"
+                     , "readerid" .= String ((pack . condense) readerid) ]
+        ChainDB.ReaderNoLongerInMem _ ->
+            mkObject [ "kind" .= String "ReaderNoLongerInMem" ]
+        ChainDB.ReaderSwitchToMem _ _ ->
+            mkObject [ "kind" .= String "ReaderSwitchToMem" ]
+        ChainDB.ReaderNewImmIterator _ _ ->
+            mkObject [ "kind" .= String "ReaderNewImmIterator" ]
+    toObject _verb (ChainDB.TraceInitChainSelEvent ev) = case ev of
+        ChainDB.InitChainSelValidation _ ->
+            mkObject [ "kind" .= String "InitChainSelValidation" ]
+    toObject _verb (ChainDB.TraceIteratorEvent ev) = case ev of
+        ChainDB.StreamFromVolDB _ _ _ ->
+            mkObject [ "kind" .= String "StreamFromVolDB" ]
+        _ -> emptyObject  -- TODO add more iterator events
+    toObject _verb (ChainDB.TraceImmDBEvent _ev) =
+        mkObject [ "kind" .= String "TraceImmDBEvent" ]
 
 instance ToObject LedgerDB.DiskSnapshot where
     toObject MinimalVerbosity snap = toObject NormalVerbosity snap
