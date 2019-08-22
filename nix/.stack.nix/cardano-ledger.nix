@@ -29,6 +29,7 @@
           (hsPkgs.cardano-crypto-wrapper)
           (hsPkgs.cardano-prelude)
           (hsPkgs.containers)
+          (hsPkgs.contra-tracer)
           (hsPkgs.concurrency)
           (hsPkgs.cryptonite)
           (hsPkgs.Cabal)
@@ -65,6 +66,7 @@
             (hsPkgs.cardano-prelude)
             (hsPkgs.cardano-prelude-test)
             (hsPkgs.containers)
+            (hsPkgs.contra-tracer)
             (hsPkgs.cryptonite)
             (hsPkgs.cs-blockchain)
             (hsPkgs.cs-ledger)
@@ -97,6 +99,7 @@
             (hsPkgs.cardano-prelude)
             (hsPkgs.cardano-prelude-test)
             (hsPkgs.containers)
+            (hsPkgs.contra-tracer)
             (hsPkgs.directory)
             (hsPkgs.filepath)
             (hsPkgs.formatting)
@@ -114,8 +117,8 @@
     } // {
     src = (pkgs.lib).mkDefault (pkgs.fetchgit {
       url = "https://github.com/input-output-hk/cardano-ledger";
-      rev = "57ad8e9067f0d443eb6d529f0231a1e3ebe1a63a";
-      sha256 = "1jiqikq5bgjk07b69ca65llh52ccm4h8dg28hkx9dwq1mjzfpg1r";
+      rev = "70515f1aefdbd60d11061b4b370aa5e54a487e56";
+      sha256 = "0q6vc0w2d42rynh8x6q6n3cyjpwq4xj277pjjb16ymkr05a6671a";
       });
     postUnpack = "sourceRoot+=/cardano-ledger; echo source root reset to \$sourceRoot";
     }
