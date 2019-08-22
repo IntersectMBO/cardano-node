@@ -7,8 +7,7 @@
 {-# LANGUAGE TypeApplications    #-}
 
 module Cardano.Node.TxSubmission (
-      command'
-    , handleTxSubmission
+      handleTxSubmission
     , localSocketFilePath
     , localSocketAddrInfo
     ) where
@@ -55,8 +54,6 @@ import           Ouroboros.Network.Protocol.ChainSync.Codec
 import           Ouroboros.Network.Protocol.Handshake.Version
 import           Ouroboros.Network.NodeToClient
 
-import           Cardano.Node.CLI
-
 import           Cardano.Node.Topology
 
 
@@ -66,7 +63,6 @@ import           Cardano.Node.Topology
 
 handleTxSubmission :: forall blk.
                       ( RunDemo blk
-                      , Show (GenTx blk)
                       , Show (ApplyTxErr blk)
                       )
                    => Consensus.Protocol blk
@@ -100,7 +96,6 @@ handleTxSubmission ptcl tinfo mocktx tracer = do
 
 
 submitTx :: ( RunDemo blk
-            , Show (GenTx blk)
             , Show (ApplyTxErr blk)
             )
          => NodeConfig (BlockProtocol blk)

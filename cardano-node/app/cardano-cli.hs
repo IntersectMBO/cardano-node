@@ -8,8 +8,8 @@ import           Cardano.Chain.Common
 import qualified Cardano.Chain.Genesis as Genesis
 import           Cardano.Chain.Slotting (EpochNumber(..))
 import           Cardano.CLI.Run (ClientCommand(..), SystemVersion(..), decideKeyMaterialOps, runCommand)
+import           Cardano.Common.CommonCLI (command')
 import           Cardano.Crypto (AProtocolMagic(..), ProtocolMagic, ProtocolMagicId(..), RequiresNetworkMagic(..))
-import           Cardano.Node.CLI (command')
 
 import           Data.Time (UTCTime)
 import           Data.Time.Clock.POSIX (posixSecondsToUTCTime)

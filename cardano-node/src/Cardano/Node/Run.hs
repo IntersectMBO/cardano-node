@@ -15,9 +15,14 @@
 #define UNIX
 #endif
 
-module Cardano.Node.Run (
-      runNode
-    ) where
+module Cardano.Node.Run
+  ( runNode
+  , NodeCLIArguments(..)
+  , NodeCommand(..)
+  , ViewMode(..)
+  )
+where
+
 import           Cardano.Prelude hiding (ByteString, atomically, throwIO, trace,
                                   wait)
 import           Prelude (error, id, unlines)
@@ -46,12 +51,14 @@ import           Cardano.BM.Data.LogItem (LogObject (..))
 import           Cardano.BM.Data.Tracer (ToLogObject (..),
                                          TracingVerbosity (..))
 import           Cardano.BM.Trace (appendName)
-import           Cardano.Node.Configuration.Types (CardanoConfiguration (..), Core (..))
+import           Cardano.Node.Configuration.Types (CardanoConfiguration (..))
 import           Cardano.Node.Features.Logging (LoggingLayer (..))
 
 import           Ouroboros.Network.Block
 import           Ouroboros.Network.Subscription.Dns
 
+import           Ouroboros.Consensus.BlockchainTime (SlotLength(..))
+import qualified Ouroboros.Consensus.Ledger.Mock as Mock
 import           Ouroboros.Consensus.Node (NodeKernel (getChainDB),
                                            RunNetworkArgs (..),
                                            RunNode (nodeStartTime))
@@ -65,7 +72,8 @@ import           Ouroboros.Consensus.Util.STM (onEachChange)
 
 import qualified Ouroboros.Storage.ChainDB as ChainDB
 
-import           Cardano.Node.CLI
+import           Cardano.Common.CommonCLI (CommonCLI)
+import           Cardano.Common.Protocol (Protocol(..), SomeProtocol(..), fromProtocol)
 import           Cardano.Node.Topology
 import           Cardano.Node.TraceAcceptor
 import           Cardano.Node.Tracers
@@ -84,6 +92,21 @@ data Peer = Peer { localAddr  :: SockAddr
 instance Condense Peer where
     condense (Peer localAddr remoteAddr) = (show localAddr) ++ (show remoteAddr)
 
+data NodeCLIArguments = NodeCLIArguments {
+    slotDuration :: !SlotLength
+  , commonCLI    :: !CommonCLI
+  , command      :: !NodeCommand
+  }
+
+data NodeCommand =
+    SimpleNode  TopologyInfo NodeAddress Protocol ViewMode TraceOptions
+  | TxSubmitter TopologyInfo Mock.Tx     Protocol
+  | TraceAcceptor
+
+-- Node can be run in two modes.
+data ViewMode =
+    LiveView    -- Live mode with TUI
+  | SimpleView  -- Simple mode, just output text.
 
 runNode :: NodeCLIArguments -> LoggingLayer -> CardanoConfiguration -> IO ()
 runNode nodeCli@NodeCLIArguments{..} loggingLayer cc = do

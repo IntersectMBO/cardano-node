@@ -410,7 +410,6 @@ localTxSubmissionCodec =
 localChainSyncCodec
   :: forall blk m.
      ( RunNode blk
-     , MonadAsync m
      , MonadST    m
      )
   => NodeConfig (BlockProtocol blk)

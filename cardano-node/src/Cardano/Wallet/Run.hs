@@ -13,7 +13,9 @@ import           Data.Text (Text, pack)
 
 import           Cardano.BM.Data.Tracer (ToLogObject (..))
 import           Cardano.BM.Trace (Trace, appendName)
-import           Cardano.Node.CLI (CommonCLI, Protocol, SomeProtocol(..), fromProtocol)
+import           Cardano.Common.Protocol(Protocol, SomeProtocol(..), fromProtocol)
+import           Cardano.Common.CommonCLI(CommonCLI)
+
 import           Ouroboros.Consensus.Node.ProtocolInfo.Abstract (NumCoreNodes (..))
 import           Ouroboros.Consensus.NodeId (CoreNodeId (..))
 
