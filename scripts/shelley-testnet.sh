@@ -12,10 +12,11 @@
 
 ALGO="--real-pbft"
 NOW=`date "+%Y-%m-%d 00:00:00"`
+GENHASH="968b0012ac326c048c7b7cc3f143085f820aad051e387156dbcb227d2a7f913f"
 NETARGS=(
         --slot-duration 2
-        --genesis-file "configuration/Test.Cardano.Chain.Genesis.Dummy.dummyConfig.configGenesisData.json"
-        --genesis-hash "fc32ebdf3c9bfa2ebf6bdcac98649f610601ddb266a2a2743e787dc9952a1aeb"
+        --genesis-file "configuration/${GENHASH:0:5}/genesis.json"
+        --genesis-hash "${GENHASH}"
         --pbft-signature-threshold 0.7
         node
         --topology "configuration/simple-topology.json"
@@ -28,9 +29,9 @@ CMD="cabal new-exec cardano-node --"
 
 # SPECIAL=""
 SPECIAL="--live-view"
-VERBOSITY="--tracing-verbosity-minimal" 
+# VERBOSITY="--tracing-verbosity-minimal" 
 # VERBOSITY="--tracing-verbosity-normal" 
-# VERBOSITY="--tracing-verbosity-maximal" 
+VERBOSITY="--tracing-verbosity-maximal" 
 HOST="127.0.0.1"
 HOST6="::1"
 
@@ -38,10 +39,10 @@ function mklogcfg () {
   echo "--log-config configuration/log-config-${1}.yaml"
 }
 function mkdlgkey () {
-  printf -- "--signing-key configuration/delegate-keys.%03d.key" "$1"
+  printf -- "--signing-key configuration/${GENHASH:0:5}/delegate-keys.%03d.key" "$1"
 }
 function mkdlgcert () {
-  printf -- "--delegation-certificate configuration/delegation-cert.%03d.json" "$1"
+  printf -- "--delegation-certificate configuration/${GENHASH:0:5}/delegation-cert.%03d.json" "$1"
 }
 
 # for acceptor logs:
