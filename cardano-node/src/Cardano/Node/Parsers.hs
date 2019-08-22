@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
+
 module Cardano.Node.Parsers
   ( loggingParser
   , parseCoreNodeId

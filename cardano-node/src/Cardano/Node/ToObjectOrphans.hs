@@ -1,7 +1,9 @@
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE UndecidableInstances  #-}
+
 {-# OPTIONS_GHC -fno-warn-orphans  #-}
+{-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
 
 module Cardano.Node.ToObjectOrphans
   (

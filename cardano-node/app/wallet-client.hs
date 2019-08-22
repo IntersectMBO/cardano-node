@@ -15,9 +15,7 @@ import           Cardano.Node.Features.Logging (LoggingCLIArguments (..),
                                                 createLoggingFeature
                                                 )
 import           Cardano.Node.Parsers (loggingParser, parseCoreNodeId)
-import           Cardano.Prelude (throwIO)
-import           Cardano.Shell.Lib (GeneralException (..),
-                                    runCardanoApplicationWithFeatures)
+import           Cardano.Shell.Lib (runCardanoApplicationWithFeatures)
 import           Cardano.Shell.Types (CardanoApplication (..),
                                       CardanoFeature (..),
                                       CardanoFeatureInit (..))
@@ -86,15 +84,7 @@ main = do
 
 initializeAllFeatures :: ArgParser -> PartialCardanoConfiguration -> CardanoEnvironment -> IO ([CardanoFeature], NodeLayer)
 initializeAllFeatures (ArgParser logCli cli) partialConfig cardanoEnvironment = do
-    finalConfig <- case finaliseCardanoConfiguration $
-                        mergeConfiguration partialConfig (cliCommon cli)
-                   of
-      Left err -> throwIO $ ConfigurationError err
-      --TODO: if we're using exceptions for this, then we should use a local
-      -- excption type, local to this app, that enumerates all the ones we
-      -- are reporting, and has proper formatting of the result.
-      -- It would also require catching at the top level and printing.
-      Right x  -> pure x
+    finalConfig <- mkConfiguration partialConfig (cliCommon cli)
 
     (loggingLayer, loggingFeature) <- createLoggingFeature cardanoEnvironment finalConfig logCli
     (nodeLayer   , nodeFeature)    <- createNodeFeature loggingLayer cli cardanoEnvironment finalConfig

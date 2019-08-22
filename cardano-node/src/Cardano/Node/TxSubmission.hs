@@ -6,6 +6,8 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications    #-}
 
+{-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
+
 module Cardano.Node.TxSubmission (
       handleTxSubmission
     , localSocketFilePath
@@ -16,10 +18,6 @@ import           Prelude (String)
 
 import           Data.Void (Void)
 import           Data.ByteString.Lazy (ByteString)
-import qualified Data.ByteString.Lazy as LBS
-import qualified Data.Set as Set
-import           Options.Applicative
-import           Data.Proxy
 
 import qualified Codec.Serialise as Serialise
 import           Network.Socket as Socket
@@ -30,19 +28,14 @@ import           Control.Monad.Class.MonadThrow
 import           Control.Monad.Class.MonadTimer
 import           Control.Tracer
 
-import           Cardano.Crypto.Hash (ShortHash)
-import qualified Cardano.Crypto.Hash as H
-
 import           Ouroboros.Consensus.Block (BlockProtocol)
 import           Ouroboros.Consensus.Demo.Run
-import qualified Ouroboros.Consensus.Ledger.Byron as Byron
 import           Ouroboros.Consensus.Mempool
 import           Ouroboros.Consensus.NodeId
 import qualified Ouroboros.Consensus.Protocol as Consensus
 import           Ouroboros.Consensus.Protocol hiding (Protocol)
 import           Ouroboros.Consensus.Node.ProtocolInfo
 import           Ouroboros.Consensus.Node.Run
-import           Ouroboros.Consensus.Util.Condense
 
 import           Network.TypedProtocol.Driver
 import           Network.TypedProtocol.Codec.Cbor
@@ -54,7 +47,7 @@ import           Ouroboros.Network.Protocol.LocalTxSubmission.Client
 import           Ouroboros.Network.Protocol.LocalTxSubmission.Codec
 import           Ouroboros.Network.Protocol.ChainSync.Type (ChainSync)
 import           Ouroboros.Network.Protocol.ChainSync.Client
-                   (chainSyncClientPeer)
+                   (ChainSyncClient(..), chainSyncClientPeer)
 import           Ouroboros.Network.Protocol.ChainSync.Codec
 import           Ouroboros.Network.Protocol.Handshake.Version
 import           Ouroboros.Network.NodeToClient
@@ -128,7 +121,7 @@ localInitiatorNetworkApplication
   -> NodeConfig (BlockProtocol blk)
   -> GenTx blk
   -> Versions NodeToClientVersion DictVersion
-              (OuroborosApplication InitiatorApp peer NodeToClientProtocols
+              (OuroborosApplication 'InitiatorApp peer NodeToClientProtocols
                                     m ByteString () Void)
 localInitiatorNetworkApplication tracer pInfoConfig tx =
     simpleSingletonVersions

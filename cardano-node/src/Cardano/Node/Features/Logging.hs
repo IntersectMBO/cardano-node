@@ -3,6 +3,8 @@
 {-# LANGUAGE Rank2Types          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
+{-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
+
 module Cardano.Node.Features.Logging
     ( LoggingLayer (..)
     , createLoggingFeature
@@ -21,7 +23,6 @@ module Cardano.Node.Features.Logging
 import           Cardano.Prelude hiding (trace)
 import           Control.Exception.Safe (MonadCatch)
 import qualified Control.Monad.STM as STM
-import           Options.Applicative
 
 import qualified Cardano.BM.Backend.Switchboard as Switchboard
 import           Cardano.BM.Configuration (Configuration)

@@ -2,9 +2,22 @@
 {-# LANGUAGE NamedFieldPuns    #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell   #-}
-{-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Cardano.Node.Topology where
+{-# OPTIONS_GHC -fno-warn-orphans #-}
+{-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
+
+module Cardano.Node.Topology
+  ( TopologyInfo(..)
+  , NodeAddress(..)
+  , nodeAddressToSockAddr
+  , nodeAddressInfo
+  , RemoteAddress(..)
+  , remoteAddressToNodeAddress
+  , NodeSetup(..)
+  , NetworkTopology(..)
+  , readTopologyFile
+  )
+where
 
 import           Cardano.Prelude hiding (toS)
 import           Prelude (String, read)

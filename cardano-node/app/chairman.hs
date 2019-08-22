@@ -9,8 +9,6 @@ import           Control.Concurrent.Async
 import           Options.Applicative
 
 import           Cardano.Node.Configuration.Presets (mainnetConfiguration)
-import           Cardano.Node.Configuration.Partial (finaliseCardanoConfiguration)
-import           Cardano.Shell.Lib (GeneralException (ConfigurationError))
 
 import           Control.Tracer (stdoutTracer)
 
@@ -36,12 +34,8 @@ main = do
                  } <- execParser opts
 
     SomeProtocol p
-      <- case finaliseCardanoConfiguration $
-                mergeConfiguration
-                  mainnetConfiguration
-                  caCommonCLI of
-        Left err -> throwIO (ConfigurationError err)
-        Right cc -> fromProtocol cc caProtocol
+      <- do cc <- mkConfiguration mainnetConfiguration caCommonCLI
+            fromProtocol cc caProtocol
 
     let run = runChairman p caCoreNodeIds
                           (NumCoreNodes $ length caCoreNodeIds)

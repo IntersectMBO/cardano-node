@@ -1,6 +1,5 @@
 {-# LANGUAGE BangPatterns        #-}
 {-# LANGUAGE CPP                 #-}
-{-# LANGUAGE DeriveGeneric       #-}
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE FlexibleInstances   #-}
 {-# LANGUAGE GADTs               #-}
@@ -18,6 +17,7 @@
 
 {-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
 {-# OPTIONS_GHC -Wno-simplifiable-class-constraints #-}
+{-# OPTIONS_GHC -Wno-partial-fields #-}
 
 #if !defined(mingw32_HOST_OS)
 #define UNIX
@@ -31,19 +31,14 @@ module Cardano.CLI.Run (
   ) where
 
 import           Prelude (String)
-import qualified Prelude as Prelude
 
-import           Codec.CBOR.Decoding (Decoder)
-import           Codec.CBOR.Read (DeserialiseFailure, IDecode(..), deserialiseFromBytes, deserialiseIncremental)
-import           Codec.CBOR.Write (toLazyByteString)
-import           Codec.Serialise (Serialise(..), deserialise, deserialiseOrFail)
+import           Codec.Serialise (deserialiseOrFail)
 import           Control.Monad
 import           Control.Tracer
 import           Data.Bits (shiftL)
 import qualified Data.ByteArray as BA
 import qualified Data.ByteString as SB
 import qualified Data.ByteString.Lazy as LB
-import qualified Data.ByteString.Lazy.Internal  as LB
 import qualified Data.Map.Strict as Map
 import           Data.Semigroup ((<>))
 import           Data.String (fromString)
@@ -66,12 +61,9 @@ import           System.Posix.Files (ownerReadMode, setFileMode)
 import           System.Directory (emptyPermissions, readable, setPermissions)
 #endif
 
-import qualified Crypto.SCRAPE as Scrape
-
 import           Cardano.Prelude hiding (option)
 
 import           Cardano.Binary (Annotated(..), serialize')
-import           Cardano.BM.Tracing
 import           Cardano.Chain.Common
 import qualified Cardano.Chain.Common as CC
 import           Cardano.Chain.Delegation hiding (epoch)
@@ -82,17 +74,14 @@ import qualified Cardano.Crypto.Random as CCr
 import qualified Cardano.Crypto.Hashing as CCr
 import qualified Cardano.Crypto.Signing as CCr
 import           Cardano.Chain.Genesis
-import           Ouroboros.Consensus.Ledger.Byron
-import           Ouroboros.Consensus.Ledger.Byron.Config
-import           Ouroboros.Consensus.NodeId
 import           Ouroboros.Consensus.Protocol hiding (Protocol)
 import           Cardano.Chain.Slotting (EpochNumber(..))
 import           Cardano.Node.Configuration.Presets (mainnetConfiguration)
---Cardano.Crypto.Signing.VerificationKey
 
 import           Cardano.CLI.Ops
 import           Cardano.Node.CanonicalJSON
 import           Cardano.Node.CLI
+import           Cardano.Node.Orphans ()
 import           Cardano.Node.Parsers
 import           Cardano.Node.Topology
 import           Cardano.Node.TxSubmission
@@ -388,12 +377,7 @@ runCommand CLIOps{..}
       case deserialiseOrFail txBS of
         Left  e  -> throwIO $ TxDeserialisationFailed stTx e
         Right tx -> handleTxSubmission p stTopology tx stdoutTracer
-    x -> throwIO $ ProtocolNotSupported coProtocol
-
-deriving instance Generic (GenTx (ByronBlockOrEBB ByronConfig))
-instance Serialise (GenTx (ByronBlockOrEBB ByronConfig)) where
-  decode = decodeByronGenTx
-  encode = encodeByronGenTx
+    _ -> throwIO $ ProtocolNotSupported coProtocol
 
 {-------------------------------------------------------------------------------
   Supporting functions

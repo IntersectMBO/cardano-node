@@ -3,6 +3,8 @@
 {-# LANGUAGE DeriveGeneric      #-}
 {-# LANGUAGE RecordWildCards    #-}
 
+{-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
+
 module Cardano.Node.Configuration.Partial
     ( PartialCardanoConfiguration (..)
     , PartialCore (..)

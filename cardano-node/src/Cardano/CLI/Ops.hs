@@ -7,30 +7,25 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications    #-}
 
+{-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
+
 module Cardano.CLI.Ops
   ( CLIOps(..)
   , decideCLIOps
   , CliError(..)
   ) where
 
-import           Prelude (String)
 import qualified Prelude as Prelude
 import           Cardano.Prelude hiding (option)
 
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.Text as T
-import           Options.Applicative
 
-import           Cardano.Binary (Annotated(..), serialize')
-import           Cardano.Chain.Common
-import qualified Cardano.Chain.Common as CC
 import           Cardano.Chain.Delegation hiding (epoch)
-import           Cardano.Chain.Slotting (EpochNumber)
-import           Cardano.Crypto (SigningKey (..), ProtocolMagic, ProtocolMagicId)
+import           Cardano.Crypto (SigningKey (..))
 import           Codec.CBOR.Read (DeserialiseFailure, deserialiseFromBytes)
 import           Codec.CBOR.Write (toLazyByteString)
 import qualified Cardano.Crypto.Random as CCr
-import qualified Cardano.Crypto.Hashing as CCr
 import qualified Cardano.Crypto.Signing as CCr
 import           Cardano.Chain.Genesis
 import qualified Crypto.SCRAPE as Scrape

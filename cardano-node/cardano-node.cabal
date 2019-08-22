@@ -30,6 +30,7 @@ library
                        Cardano.Node.Features.Logging
                        Cardano.Node.GitRev
                        Cardano.Node.GitRevFromGit
+                       Cardano.Node.Orphans
                        Cardano.Node.Parsers
                        Cardano.Node.Run
                        Cardano.Node.Topology
