@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env bash
 
 test "$1" == "--help" && {
         cat <<EOF
@@ -6,10 +6,16 @@ Usage:  $(basename $0) [GENESIS-SUBCMD-ARG..]
 EOF
       echo "" >&2; exit 1; }
 
+umask 077
+
+SCRIPTDIR=$(dirname $0)
+CONFIGDIR="${SCRIPTDIR}/../configuration"
+
 start_future_offset="15 minutes"
 start_time="$(date -d "now + ${start_future_offset}" +%s)"
-protocol_params="$(dirname $0)/protocol-params.json"
+protocol_params="${SCRIPTDIR}/protocol-params.json"
 
+parameter_k=2160
 protocol_magic=459045235
 n_poors=128
 n_delegates=7
@@ -19,11 +25,12 @@ avvm_entries=128
 avvm_entry_balance=10000000000000
 not_so_secret=2718281828
 
+tmpdir="`mktemp`.d"
 args=(
-      --genesis-output-dir           "./genesis.${start_time}"
+      --genesis-output-dir           "${tmpdir}"
       --start-time                   "${start_time}"
       --protocol-parameters-file     "${protocol_params}"
-      --k 2160
+      --k                            ${parameter_k}
       --protocol-magic               ${protocol_magic}
       --n-poor-addresses             ${n_poors}
       --n-delegate-addresses         ${n_delegates}
@@ -38,3 +45,18 @@ args=(
 set -xe
 RUNNER=${RUNNER:-cabal new-run --}
 ${RUNNER} cardano-cli byron-pbft genesis "${args[@]}" "$@"
+
+# move new genesis to configuration
+GENHASH=`${RUNNER} cardano-cli byron-pbft print-genesis-hash --genesis-json "${tmpdir}/genesis.json" | tail -1`
+TARGETDIR="${CONFIGDIR}/${GENHASH:0:5}"
+mkdir -vp "${TARGETDIR}"
+cp -iav ${tmpdir}/genesis.json ${TARGETDIR}/
+cp -iav ${tmpdir}/delegate-keys.*.key ${TARGETDIR}/
+cp -iav ${tmpdir}/delegation-cert.*.json ${TARGETDIR}/
+
+set -
+
+echo $GENHASH > ${TARGETDIR}/GENHASH
+echo "genesis created with hash = ${GENHASH}"
+echo "  in directory ${TARGETDIR}"
+
