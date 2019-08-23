@@ -17,12 +17,19 @@ let
       stateDir = "./";
       # defaults to proxy if env has no relays
       edgeHost = "127.0.0.1";
-      edgePort = 7777;
+      edgePort = 3001;
+      useProxy = false;
+      proxyPort = "7777";
+      proxyHost = "127.0.0.1";
       loggingConfig = ../configuration/log-configuration.yaml;
     };
     config = defaultConfig // envConfig // customConfig;
-    topologyFile = config.topologyFile or commonLib.mkEdgeTopology {
-      inherit (config) hostAddr port nodeId edgeHost edgePort;
+    topologyFile = let
+      edgePort = if config.useProxy then config.proxyPort else config.edgePort;
+      edgeHost = if config.useProxy then config.proxyHost else config.edgeHost;
+    in config.topologyFile or commonLib.mkEdgeTopology {
+      inherit (config) hostAddr port nodeId;
+      inherit edgeHost edgePort;
     };
     serviceConfig = {
       inherit (config)
@@ -36,6 +43,7 @@ let
         hostAddr
         port
         nodeId;
+      dbPrefix = "db-${envConfig.name}";
       logger.configFile = config.loggingConfig;
       topology = topologyFile;
     };
