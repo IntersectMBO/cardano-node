@@ -79,7 +79,7 @@ import           Cardano.Node.TraceAcceptor
 import           Cardano.Node.Tracers
 import           Cardano.Node.TxSubmission
 #ifdef UNIX
-import           Cardano.Node.LiveView
+import           Cardano.Node.TUI.LiveView
 #endif
 
 

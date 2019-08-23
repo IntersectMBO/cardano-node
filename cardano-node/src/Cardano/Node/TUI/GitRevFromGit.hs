@@ -13,7 +13,7 @@
 
 {-# OPTIONS_GHC -Wno-simplifiable-class-constraints #-}
 
-module Cardano.Node.GitRevFromGit (
+module Cardano.Node.TUI.GitRevFromGit (
       gitRevFromGit
     ) where
 

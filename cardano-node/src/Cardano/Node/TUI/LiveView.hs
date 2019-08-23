@@ -5,7 +5,7 @@
 
 {-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
 
-module Cardano.Node.LiveView (
+module Cardano.Node.TUI.LiveView (
       LiveViewBackend (..)
     , realize
     , effectuate
@@ -63,7 +63,7 @@ import           Cardano.BM.Data.Severity
 import           Cardano.BM.Data.SubTrace
 import           Cardano.BM.Trace
 
-import           Cardano.Node.GitRev (gitRev)
+import           Cardano.Node.TUI.GitRev (gitRev)
 import           Ouroboros.Consensus.NodeId
 import           Paths_cardano_node (version)
 import           Cardano.Node.Topology

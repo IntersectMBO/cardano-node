@@ -28,14 +28,14 @@ library
                        Cardano.Node.Configuration.Presets
                        -- Features
                        Cardano.Node.Features.Logging
-                       Cardano.Node.GitRev
-                       Cardano.Node.GitRevFromGit
                        Cardano.Node.Orphans
                        Cardano.Node.Parsers
                        Cardano.Node.Run
                        Cardano.Node.Topology
                        Cardano.Node.TraceAcceptor
                        Cardano.Node.Tracers
+                       Cardano.Node.TUI.GitRev
+                       Cardano.Node.TUI.GitRevFromGit
                        Cardano.Node.TxSubmission
                        Cardano.Wallet.Run
                        Cardano.Wallet.Client
@@ -121,7 +121,7 @@ library
      build-depends:    unix
                      , brick
                      , vty
-     exposed-modules:  Cardano.Node.LiveView
+     exposed-modules:  Cardano.Node.TUI.LiveView
 
 executable cardano-node
   hs-source-dirs:      app
