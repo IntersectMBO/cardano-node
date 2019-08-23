@@ -7,6 +7,8 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications    #-}
 
+{-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
+
 module Cardano.Wallet.Client
   (runWalletClient)
 where
@@ -104,7 +106,7 @@ localInitiatorNetworkApplication
   -- in 'ouroboros-network' package).
   -> NodeConfig (BlockProtocol blk)
   -> Versions NodeToClientVersion DictVersion
-              (OuroborosApplication InitiatorApp peer NodeToClientProtocols
+              (OuroborosApplication 'InitiatorApp peer NodeToClientProtocols
                                     m ByteString Void Void)
 localInitiatorNetworkApplication Proxy chainSyncTracer localTxSubmissionTracer pInfoConfig =
     simpleSingletonVersions

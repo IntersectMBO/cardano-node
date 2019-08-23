@@ -6,6 +6,8 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications    #-}
 
+{-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
+
 module Cardano.Node.TxSubmission (
       handleTxSubmission
     , localSocketFilePath
@@ -25,19 +27,14 @@ import           Control.Monad.Class.MonadThrow
 import           Control.Monad.Class.MonadTimer
 import           Control.Tracer
 
-import           Cardano.Crypto.Hash (ShortHash)
-import qualified Cardano.Crypto.Hash as H
-
 import           Ouroboros.Consensus.Block (BlockProtocol)
 import           Ouroboros.Consensus.Demo.Run
-import qualified Ouroboros.Consensus.Ledger.Mock as Mock
 import           Ouroboros.Consensus.Mempool
 import           Ouroboros.Consensus.NodeId
 import qualified Ouroboros.Consensus.Protocol as Consensus
 import           Ouroboros.Consensus.Protocol hiding (Protocol)
 import           Ouroboros.Consensus.Node.ProtocolInfo
 import           Ouroboros.Consensus.Node.Run
-import           Ouroboros.Consensus.Util.Condense
 
 import           Network.TypedProtocol.Driver
 import           Network.TypedProtocol.Codec.Cbor
@@ -67,10 +64,10 @@ handleTxSubmission :: forall blk.
                       )
                    => Consensus.Protocol blk
                    -> TopologyInfo
-                   -> Mock.Tx
+                   -> GenTx blk
                    -> Tracer IO String
                    -> IO ()
-handleTxSubmission ptcl tinfo mocktx tracer = do
+handleTxSubmission ptcl tinfo tx tracer = do
     topoE <- readTopologyFile (topologyFile tinfo)
     NetworkTopology nodeSetups <-
       case topoE of
@@ -85,12 +82,6 @@ handleTxSubmission ptcl tinfo mocktx tracer = do
           protocolInfo (NumCoreNodes (length nodeSetups))
                        (CoreNodeId nid)
                        ptcl
-
-        tx :: GenTx blk
-        tx = demoMockTx pInfoConfig mocktx
-
-    traceWith tracer $
-      "The Id for this transaction is: " <> condense (H.hash @ShortHash mocktx)
 
     submitTx pInfoConfig (node tinfo) tx tracer
 
@@ -125,7 +116,7 @@ localInitiatorNetworkApplication
   -> NodeConfig (BlockProtocol blk)
   -> GenTx blk
   -> Versions NodeToClientVersion DictVersion
-              (OuroborosApplication InitiatorApp peer NodeToClientProtocols
+              (OuroborosApplication 'InitiatorApp peer NodeToClientProtocols
                                     m ByteString () Void)
 localInitiatorNetworkApplication tracer pInfoConfig tx =
     simpleSingletonVersions

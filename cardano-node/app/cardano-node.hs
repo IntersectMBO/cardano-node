@@ -3,17 +3,17 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes        #-}
 
+module Main (main) where
 
 import           Prelude (read)
 
 import           Data.Semigroup ((<>))
 import qualified Data.IP as IP
-import qualified Data.Set as Set
 import           Network.Socket (PortNumber)
 import           Options.Applicative
 
 import           Cardano.BM.Data.Tracer (TracingVerbosity (..))
-import           Cardano.Node.Configuration.Partial (PartialCardanoConfiguration (..), finaliseCardanoConfiguration)
+import           Cardano.Node.Configuration.Partial (PartialCardanoConfiguration (..))
 import           Cardano.Node.Configuration.Presets (mainnetConfiguration)
 import           Cardano.Node.Configuration.Types (CardanoConfiguration (..),
                                                    CardanoEnvironment (..))
@@ -22,21 +22,18 @@ import           Cardano.Node.Features.Logging (LoggingCLIArguments (..),
                                                 createLoggingFeature
                                                 )
 import           Cardano.Prelude hiding (option)
-import           Cardano.Shell.Lib (GeneralException (..),
-                                    runCardanoApplicationWithFeatures)
+import           Cardano.Shell.Lib (runCardanoApplicationWithFeatures)
 import           Cardano.Shell.Types (CardanoApplication (..),
                                       CardanoFeature (..),
                                       CardanoFeatureInit (..))
 import           Ouroboros.Consensus.BlockchainTime (SlotLength(..), slotLengthFromMillisec)
-import qualified Ouroboros.Consensus.Ledger.Mock as Mock
 import           Ouroboros.Consensus.NodeNetwork (ProtocolTracers'(..))
-import           Ouroboros.Consensus.NodeId (NodeId (..))
 import qualified Ouroboros.Consensus.Node.Tracers as Consensus
 
-import           Cardano.Common.CommonCLI (command', mergeConfiguration, parseCommonCLI)
-import           Cardano.Node.Parsers (loggingParser, parseProtocol)
+import           Cardano.Common.CommonCLI
+import           Cardano.Node.Parsers
 import           Cardano.Node.Run
-import           Cardano.Node.Topology (NodeAddress (..), TopologyInfo (..))
+import           Cardano.Node.Topology (NodeAddress (..))
 import           Cardano.Node.Tracers (ConsensusTraceOptions,  ProtocolTraceOptions, TraceOptions(..))
 
 
@@ -57,11 +54,7 @@ main = do
 
 initializeAllFeatures :: CLIArguments -> PartialCardanoConfiguration -> CardanoEnvironment -> IO ([CardanoFeature], NodeLayer)
 initializeAllFeatures (CLIArguments logCli nodeCli) partialConfig cardanoEnvironment = do
-    finalConfig <- case finaliseCardanoConfiguration $
-                          mergeConfiguration partialConfig (commonCLI nodeCli)
-                   of
-      Left err -> throwIO $ ConfigurationError err
-      Right x  -> pure x
+    finalConfig <- mkConfiguration partialConfig (commonCLI nodeCli)
 
     (loggingLayer, loggingFeature) <- createLoggingFeature cardanoEnvironment finalConfig logCli
     (nodeLayer   , nodeFeature)    <- createNodeFeature loggingLayer nodeCli cardanoEnvironment finalConfig
@@ -184,67 +177,14 @@ parseNodeCommand :: Parser NodeCommand
 parseNodeCommand = subparser $ mconcat [
     command' "node" "Run a node." $
       SimpleNode
-        <$> parseTopologyInfo
+        <$> parseTopologyInfo "PBFT node ID to assume."
         <*> parseNodeAddress
         <*> parseProtocol
         <*> parseViewMode
         <*> parseTraceOptions
-  , command' "submit" "Submit a transaction." $
-      TxSubmitter <$> parseTopologyInfo <*> parseMockTx <*> parseProtocol
   , command' "trace-acceptor" "Spawn an acceptor." $
       pure TraceAcceptor
   ]
-
-parseTopologyInfo :: Parser TopologyInfo
-parseTopologyInfo = TopologyInfo <$> parseNodeId <*> parseTopologyFile
-
-parseNodeId :: Parser NodeId
-parseNodeId =
-    option (fmap CoreId auto) (
-            long "node-id"
-         <> short 'n'
-         <> metavar "NODE-ID"
-         <> help "The ID for this node"
-    )
-
-parseMockTx :: Parser Mock.Tx
-parseMockTx = mkTx
-    <$> many parseMockTxIn
-    <*> many parseMockTxOut
-  where
-    mkTx :: [Mock.TxIn] -> [Mock.TxOut] -> Mock.Tx
-    mkTx ins = Mock.Tx (Set.fromList ins)
-
-parseMockTxIn :: Parser Mock.TxIn
-parseMockTxIn = (,)
-    <$> strOption (mconcat [
-            long "txin"
-          , help "Hash of the input transaction. Single hex char."
-          ])
-    <*> option auto (mconcat [
-            long "txix"
-          , help "Index of the output in the specified transaction"
-          ])
-
-parseMockTxOut :: Parser Mock.TxOut
-parseMockTxOut = (,)
-    <$> strOption (mconcat [
-            long "address"
-          , help "Address to transfer to"
-          ])
-    <*> option auto (mconcat [
-            long "amount"
-          , help "Amount to transfer"
-          ])
-
-parseTopologyFile :: Parser FilePath
-parseTopologyFile =
-    strOption (
-            long "topology"
-         <> short 't'
-         <> metavar "FILEPATH"
-         <> help "The path to a file describing the topology."
-    )
 
 parseNodeAddress :: Parser NodeAddress
 parseNodeAddress = NodeAddress <$> parseHostAddr <*> parsePort

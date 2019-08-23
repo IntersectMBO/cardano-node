@@ -84,7 +84,7 @@ The general synopsis is as follows:
    cardano-cli SYSTEMVER COMMAND
 ```
 
-..where `SYSTEMVER` is one of the supported system generations: `byron-legacy`, `byron-pbft` etc.
+..where `SYSTEMVER` is one of the supported system generations: `byron-legacy`, `real-pbft` etc.
 
 The supported commands are (as per excerpt from the tool's `--help`):
 
@@ -109,12 +109,16 @@ Delegation
                            verification key.
   check-delegation         Verify that a given certificate constitutes a valid
                            delegation relationship betwen keys.
+
+Transactions
+  submit-tx                Submit a raw, signed transaction, in its on-wire
+                           representation.
 ```
 
 All commands have help available:
 
 ```
-$ cabal new-run -- cardano-cli byron-pbft migrate-delegate-key-from --help
+$ cabal new-run -- cardano-cli real-pbft migrate-delegate-key-from --help
 Usage: cardano-cli migrate-delegate-key-from SYSTEMVER --to FILEPATH
                                               --from FILEPATH
   Migrate a delegate key from an older version.
@@ -126,7 +130,7 @@ Available options:
 
 System version
   byron-legacy             Byron Legacy mode
-  byron-pbft               Byron PBFT mode
+  real-pbft                Byron PBFT mode
 
 ```
 
@@ -164,14 +168,33 @@ controlled by the `--no-password` flag.
 
 Extracting a verification key out of the signing key is performed by the `to-verification` subcommand.
 
-## Delegate key migration
+### Delegate key migration
 
 In order to continue using a delegate key from the Byron Legacy era in the new implementation,
 it needs to be migrated over, which is done by the `migrate-delegate-key-from` subcommand:
 
+
 ```
-$ cabal new-run -- cardano-cli byron-pbft migrate-delegate-key-from byron-legacy \
-                                          --from key0.sk --to key0.pbft
+$ cabal new-run -- cardano-cli real-pbft migrate-delegate-key-from byron-legacy \
+                                         --from key0.sk --to key0.pbft
+```
+
+### Signing key queries
+
+One can gather information about a signing key's properties through the `signing-key-public`
+and `signing-key-address` subcommands (the latter requires the network magic):
+
+```
+$ cabal new-run -- cardano-cli real-pbft signing-key-public \
+                                         --secret key0.pbft
+public key hash: a2b1af0df8ca764876a45608fae36cf04400ed9f413de2e37d92ce04
+     public key: sc4pa1pAriXO7IzMpByKo4cG90HCFD465Iad284uDYz06dHCqBwMHRukReQ90+TA/vQpj4L1YNaLHI7DS0Z2Vg==
+
+$ cabal new-run -- cardano-cli real-pbft signing-key-address \
+                                         --secret key0.pbft  \
+                                         --testnet-magic 459045235
+2cWKMJemoBakxhXgZSsMteLP9TUvz7owHyEYbUDwKRLsw2UGDrG93gPqmpv1D9ohWNddx
+VerKey address with root e5a3807d99a1807c3f161a1558bcbc45de8392e049682df01809c488, attributes: AddrAttributes { derivation path: {} }
 ```
 
 ## Delegation
@@ -193,25 +216,15 @@ which would verify:
 The expected issuer and delegate are supplied through the `--issuer-key` and `--delegate-key`
 options.
 
-## Signing key queries
+## Transactions
 
-One can gather information about a signing key's properties through the `signing-key-public`
-and `signing-key-address` subcommands (the latter requires the network magic):
+The `submit-tx` subcommand provides the option of submitting a pre-signed
+transaction, in its raw wire format (see GenTx for Byron transactions).
 
-```
-$ cabal new-run -- cardano-cli byron-pbft signing-key-public \
-                                          --secret key0.pbft
-public key hash: a2b1af0df8ca764876a45608fae36cf04400ed9f413de2e37d92ce04
-     public key: sc4pa1pAriXO7IzMpByKo4cG90HCFD465Iad284uDYz06dHCqBwMHRukReQ90+TA/vQpj4L1YNaLHI7DS0Z2Vg==
+The canned `scripts/submit-tx.sh` script will submit the supplied transaction to a testnet
+launched by `scripts/shelley-testnet*.sh` family of scripts.
 
-$ cabal new-run -- cardano-cli byron-pbft signing-key-address \
-                                          --secret key0.pbft  \
-                                          --testnet-magic 459045235
-2cWKMJemoBakxhXgZSsMteLP9TUvz7owHyEYbUDwKRLsw2UGDrG93gPqmpv1D9ohWNddx
-VerKey address with root e5a3807d99a1807c3f161a1558bcbc45de8392e049682df01809c488, attributes: AddrAttributes { derivation path: {} }
-```
-
-## Running the wallet client
+# Running the wallet client
 
 First you will need to start the core node with which the wallet client will
 communicate.  You can do that with `./script/start-node.sh` (or
@@ -221,6 +234,6 @@ communicate.  You can do that with `./script/start-node.sh` (or
 ./scripts/start-wallet.sh --bft -n 0 -m 3
 ```
 
-# development
+# Development
 
 run *ghcid* with: `ghcid -c "cabal new-repl exe:cardano-node --reorder-goals"`

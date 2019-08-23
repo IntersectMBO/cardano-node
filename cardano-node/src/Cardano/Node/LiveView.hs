@@ -1,8 +1,9 @@
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings     #-}
+{-# LANGUAGE RankNTypes            #-}
 
-{-# OPTIONS_GHC -Wno-simplifiable-class-constraints #-}
+{-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
 
 module Cardano.Node.LiveView (
       LiveViewBackend (..)
@@ -107,7 +108,7 @@ instance IsEffectuator LiveViewBackend Text where
             LogObject "cardano.node.metrics" meta content ->
                 case content of
                     LogValue "Mem.resident" (PureI bytes) ->
-                        let mbytes = (fromIntegral (bytes * pagesize)) / 1024 / 1024
+                        let mbytes = ((fromIntegral (bytes * pagesize)) / 1024 / 1024 :: Float)
                         in
                         modifyMVar_ (getbe lvbe) $ \lvs ->
                             return $ lvs { lvsMemoryUsageCurr = mbytes
@@ -118,9 +119,9 @@ instance IsEffectuator LiveViewBackend Text where
                         let currentTimeInNs = utc2ns (tstamp meta)
                         in
                         modifyMVar_ (getbe lvbe) $ \lvs ->
-                            let timeDiff        = fromIntegral (currentTimeInNs - lvsDiskUsageRNs lvs)
+                            let timeDiff        = fromIntegral (currentTimeInNs - lvsDiskUsageRNs lvs) :: Float
                                 timeDiffInSecs  = timeDiff / 1000000000
-                                bytesDiff       = fromIntegral (bytesWereRead - lvsDiskUsageRLast lvs)
+                                bytesDiff       = fromIntegral (bytesWereRead - lvsDiskUsageRLast lvs) :: Float
                                 bytesDiffInKB   = bytesDiff / 1024
                                 currentDiskRate = bytesDiffInKB / timeDiffInSecs
                                 maxDiskRate     = max currentDiskRate $ lvsDiskUsageRMax lvs
@@ -136,9 +137,9 @@ instance IsEffectuator LiveViewBackend Text where
                         let currentTimeInNs = utc2ns (tstamp meta)
                         in
                         modifyMVar_ (getbe lvbe) $ \lvs ->
-                            let timeDiff        = fromIntegral (currentTimeInNs - lvsDiskUsageWNs lvs)
+                            let timeDiff        = fromIntegral (currentTimeInNs - lvsDiskUsageWNs lvs) :: Float
                                 timeDiffInSecs  = timeDiff / 1000000000
-                                bytesDiff       = fromIntegral (bytesWereWritten - lvsDiskUsageWLast lvs)
+                                bytesDiff       = fromIntegral (bytesWereWritten - lvsDiskUsageWLast lvs) :: Float
                                 bytesDiffInKB   = bytesDiff / 1024
                                 currentDiskRate = bytesDiffInKB / timeDiffInSecs
                                 maxDiskRate     = max currentDiskRate $ lvsDiskUsageWMax lvs
@@ -154,7 +155,7 @@ instance IsEffectuator LiveViewBackend Text where
                         let tns = utc2ns (tstamp meta)
                         in
                         modifyMVar_ (getbe lvbe) $ \lvs ->
-                            let tdiff = min 1 $ (fromIntegral (tns - lvsCPUUsageNs lvs)) / 1000000000
+                            let tdiff = min 1 $ (fromIntegral (tns - lvsCPUUsageNs lvs)) / 1000000000 :: Float
                                 cpuperc = (fromIntegral (ticks - lvsCPUUsageLast lvs)) / (fromIntegral clktck) / tdiff
                             in
                             return $ lvs { lvsCPUUsagePerc = cpuperc
@@ -166,9 +167,9 @@ instance IsEffectuator LiveViewBackend Text where
                         let currentTimeInNs = utc2ns (tstamp meta)
                         in
                         modifyMVar_ (getbe lvbe) $ \lvs ->
-                            let timeDiff        = fromIntegral (currentTimeInNs - lvsNetworkUsageInNs lvs)
+                            let timeDiff        = fromIntegral (currentTimeInNs - lvsNetworkUsageInNs lvs) :: Float
                                 timeDiffInSecs  = timeDiff / 1000000000
-                                bytesDiff       = fromIntegral (inBytes - lvsNetworkUsageInLast lvs)
+                                bytesDiff       = fromIntegral (inBytes - lvsNetworkUsageInLast lvs) :: Float
                                 bytesDiffInKB   = bytesDiff / 1024
                                 currentNetRate  = bytesDiffInKB / timeDiffInSecs
                                 maxNetRate      = max currentNetRate $ lvsNetworkUsageInMax lvs
@@ -184,9 +185,9 @@ instance IsEffectuator LiveViewBackend Text where
                         let currentTimeInNs = utc2ns (tstamp meta)
                         in
                         modifyMVar_ (getbe lvbe) $ \lvs ->
-                            let timeDiff        = fromIntegral (currentTimeInNs - lvsNetworkUsageOutNs lvs)
+                            let timeDiff        = fromIntegral (currentTimeInNs - lvsNetworkUsageOutNs lvs) :: Float
                                 timeDiffInSecs  = timeDiff / 1000000000
-                                bytesDiff       = fromIntegral (outBytes - lvsNetworkUsageOutLast lvs)
+                                bytesDiff       = fromIntegral (outBytes - lvsNetworkUsageOutLast lvs) :: Float
                                 bytesDiffInKB   = bytesDiff / 1024
                                 currentNetRate  = bytesDiffInKB / timeDiffInSecs
                                 maxNetRate      = max currentNetRate $ lvsNetworkUsageOutMax lvs
@@ -211,7 +212,7 @@ instance IsEffectuator LiveViewBackend Text where
                                          }
                 case words $ unpack msg of
                     (_:"As":"leader":"of":"slot":slotNo:_) -> do
-                        let blockHeight = read slotNo
+                        let blockHeight = read slotNo :: Word64
                         modifyMVar_ (getbe lvbe) $ \lvs ->
                             return $ lvs { lvsBlocksMinted = lvsBlocksMinted lvs + 1
                                          , lvsBlockHeight  = blockHeight
@@ -219,8 +220,8 @@ instance IsEffectuator LiveViewBackend Text where
                     _                                      -> return ()
             LogObject _ _ (LogValue "txsInMempool" (PureI txsInMempool)) ->
                 modifyMVar_ (getbe lvbe) $ \lvs -> do
-                        let lvsMempool' = fromIntegral txsInMempool
-                            percentage = fromIntegral lvsMempool' / fromIntegral (lvsMempoolCapacity lvs)
+                        let lvsMempool' = fromIntegral txsInMempool :: Word64
+                            percentage = fromIntegral lvsMempool' / fromIntegral (lvsMempoolCapacity lvs) :: Float
                         return $ lvs { lvsMempool = lvsMempool'
                                      , lvsMempoolPerc = percentage
                                      }
@@ -353,16 +354,17 @@ setNodeThread lvbe nodeThr =
 
 captureCounters :: LiveViewBackend a -> Trace IO Text -> IO ()
 captureCounters lvbe trace0 = do
-    let trace = appendName "metrics" trace0
+    let trace' = appendName "metrics" trace0
         counters = [MemoryStats, ProcessStats, NetStats, IOStats]
     -- start capturing counters on this process
     thr <- Async.async $ forever $ do
                 threadDelay 1000000   -- 1 second
                 cts <- readCounters (ObservableTraceSelf counters)
-                traceCounters trace cts
+                traceCounters trace' cts
 
     modifyMVar_ (getbe lvbe) $ \lvs -> return $ lvs { lvsMetricsThread = Just thr }
     where
+    traceCounters :: forall m a. MonadIO m => Trace m a -> [Counter] -> m ()
     traceCounters _tr [] = return ()
     traceCounters tr (c@(Counter _ct cn cv) : cs) = do
         mle <- mkLOMeta Info Confidential
@@ -587,6 +589,7 @@ systemStatsW p =
            ]
   where
     -- use mapAttrNames
+    memPoolBar :: forall n. Widget n
     memPoolBar = updateAttrMap
                  (A.mapAttrNames [ (mempoolDoneAttr, P.progressCompleteAttr)
                                  , (mempoolToDoAttr, P.progressIncompleteAttr)
@@ -595,12 +598,14 @@ systemStatsW p =
     mempoolLabel = Just $ (show . lvsMempool $ p)
                         ++ " / "
                         ++ (take 5 $ show $ lvsMempoolPerc p * 100) ++ "%"
+    memUsageBar :: forall n. Widget n
     memUsageBar = updateAttrMap
                   (A.mapAttrNames [ (memDoneAttr, P.progressCompleteAttr)
                                   , (memToDoAttr, P.progressIncompleteAttr)
                                   ]
                   ) $ bar memLabel lvsMemUsagePerc
     memLabel = Just $ (take 5 $ show $ lvsMemoryUsageCurr p) ++ " MB / max " ++ (take 5 $ show $ lvsMemoryUsageMax p) ++ " MB"
+    cpuUsageBar :: forall n. Widget n
     cpuUsageBar = updateAttrMap
                   (A.mapAttrNames [ (cpuDoneAttr, P.progressCompleteAttr)
                                   , (cpuToDoAttr, P.progressIncompleteAttr)
@@ -608,6 +613,7 @@ systemStatsW p =
                   ) $ bar cpuLabel (lvsCPUUsagePerc p)
     cpuLabel = Just $ (take 5 $ show $ lvsCPUUsagePerc p * 100) ++ "%"
 
+    diskUsageRBar :: forall n. Widget n
     diskUsageRBar = updateAttrMap
                     (A.mapAttrNames [ (diskIODoneAttr, P.progressCompleteAttr)
                                     , (diskIOToDoAttr, P.progressIncompleteAttr)
@@ -615,6 +621,7 @@ systemStatsW p =
                     ) $ bar diskUsageRLabel (lvsDiskUsageRPerc p)
     diskUsageRLabel = Just $ (take 5 $ show $ lvsDiskUsageRCurr p) ++ " KB/s"
 
+    diskUsageWBar :: forall n. Widget n
     diskUsageWBar = updateAttrMap
                     (A.mapAttrNames [ (diskIODoneAttr, P.progressCompleteAttr)
                                     , (diskIOToDoAttr, P.progressIncompleteAttr)
@@ -622,6 +629,7 @@ systemStatsW p =
                     ) $ bar diskUsageWLabel (lvsDiskUsageWPerc p)
     diskUsageWLabel = Just $ (take 5 $ show $ lvsDiskUsageWCurr p) ++ " KB/s"
 
+    networkUsageInBar :: forall n. Widget n
     networkUsageInBar = updateAttrMap
                         (A.mapAttrNames [ (networkIODoneAttr, P.progressCompleteAttr)
                                         , (networkIOToDoAttr, P.progressIncompleteAttr)
@@ -629,6 +637,7 @@ systemStatsW p =
                         ) $ bar networkUsageInLabel (lvsNetworkUsageInPerc p)
     networkUsageInLabel = Just $ (take 5 $ show $ lvsNetworkUsageInCurr p) ++ " KB/s"
 
+    networkUsageOutBar :: forall n. Widget n
     networkUsageOutBar = updateAttrMap
                          (A.mapAttrNames [ (networkIODoneAttr, P.progressCompleteAttr)
                                          , (networkIOToDoAttr, P.progressIncompleteAttr)
@@ -636,6 +645,7 @@ systemStatsW p =
                          ) $ bar networkUsageOutLabel (lvsNetworkUsageOutPerc p)
     networkUsageOutLabel = Just $ (take 5 $ show $ lvsNetworkUsageOutCurr p) ++ " KB/s"
 
+    bar :: forall n. Maybe String -> Float -> Widget n
     bar lbl pcntg = P.progressBar lbl pcntg
     lvsMemUsagePerc = (lvsMemoryUsageCurr p) / (max 200 (lvsMemoryUsageMax p))
 
@@ -690,6 +700,7 @@ eventHandler lvs  (VtyEvent e)         =
         V.EvKey  (V.KChar 'L') []        -> M.continue $ lvs { lvsColorTheme = LightTheme }
         _                                -> M.continue lvs
   where
+    stopNodeThread :: MonadIO m => m ()
     stopNodeThread = case lvsNodeThread lvs of
         Nothing -> return ()
         Just t  -> liftIO $ Async.cancel t

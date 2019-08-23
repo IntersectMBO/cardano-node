@@ -7,8 +7,9 @@
 {-# LANGUAGE RankNTypes          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications    #-}
-
 {-# LANGUAGE UndecidableInstances #-}
+
+{-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
 
 module Cardano.Chairman (runChairman) where
 
@@ -347,9 +348,9 @@ localInitiatorNetworkApplication
      , Condense (HeaderHash blk)
      , MonadAsync m
      , MonadST    m
+     , MonadTimer m
      , MonadThrow m
      , MonadThrow (STM m)
-     , MonadTimer m
      )
   => CoreNodeId
   -> ChainsVar m blk
@@ -366,7 +367,7 @@ localInitiatorNetworkApplication
   -- in 'ouroboros-network' package).
   -> NodeConfig (BlockProtocol blk)
   -> Versions NodeToClientVersion DictVersion
-              (OuroborosApplication InitiatorApp peer NodeToClientProtocols
+              (OuroborosApplication 'InitiatorApp peer NodeToClientProtocols
                                     m ByteString () Void)
 localInitiatorNetworkApplication coreNodeId chainsVar securityParam maxBlockNo chairmanTracer chainSyncTracer localTxSubmissionTracer pInfoConfig =
     simpleSingletonVersions

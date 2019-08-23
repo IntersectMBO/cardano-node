@@ -8,6 +8,8 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -fno-warn-orphans  #-}
 
+{-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
+
 module Cardano.Node.Tracers
   ( ConsensusTraceOptions
   , ProtocolTraceOptions

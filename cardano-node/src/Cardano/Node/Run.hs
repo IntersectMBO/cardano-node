@@ -10,6 +10,7 @@
 {-# LANGUAGE TypeApplications    #-}
 
 {-# OPTIONS_GHC -Wno-simplifiable-class-constraints #-}
+{-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
 
 #if !defined(mingw32_HOST_OS)
 #define UNIX
@@ -58,7 +59,6 @@ import           Ouroboros.Network.Block
 import           Ouroboros.Network.Subscription.Dns
 
 import           Ouroboros.Consensus.BlockchainTime (SlotLength(..))
-import qualified Ouroboros.Consensus.Ledger.Mock as Mock
 import           Ouroboros.Consensus.Node (NodeKernel (getChainDB),
                                            RunNetworkArgs (..),
                                            RunNode (nodeStartTime))
@@ -100,7 +100,6 @@ data NodeCLIArguments = NodeCLIArguments {
 
 data NodeCommand =
     SimpleNode  TopologyInfo NodeAddress Protocol ViewMode TraceOptions
-  | TxSubmitter TopologyInfo Mock.Tx     Protocol
   | TraceAcceptor
 
 -- Node can be run in two modes.
@@ -114,12 +113,6 @@ runNode nodeCli@NodeCLIArguments{..} loggingLayer cc = do
     -- If the user asked to submit a transaction, we don't have to spin up a
     -- full node, we simply transmit it and exit.
     case command of
-
-      TxSubmitter topology tx protocol -> do
-        let trace'      = appendName (pack (show (node topology))) tr
-        let tracer      = contramap pack $ toLogObject trace'
-        SomeProtocol p  <- fromProtocol cc protocol
-        handleTxSubmission p topology tx tracer
 
       TraceAcceptor -> do
         let trace'      = appendName "acceptor" tr

@@ -3,10 +3,22 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes        #-}
 
+module Main (main) where
+
 import           Cardano.Prelude hiding (option)
 
-import           Cardano.Common.CommonCLI (mergeConfiguration, parseCommonCLI)
-import           Cardano.Node.Configuration.Partial (PartialCardanoConfiguration (..), finaliseCardanoConfiguration)
+import           Control.Tracer
+import           Options.Applicative
+
+import           Cardano.BM.Data.LogItem
+import           Cardano.Shell.Lib (runCardanoApplicationWithFeatures)
+import           Cardano.Shell.Types (CardanoApplication (..),
+                                      CardanoFeature (..),
+                                      CardanoFeatureInit (..))
+import           Ouroboros.Consensus.Node.ProtocolInfo.Abstract (NumCoreNodes (..))
+
+import           Cardano.Common.CommonCLI
+import           Cardano.Node.Configuration.Partial (PartialCardanoConfiguration (..))
 import           Cardano.Node.Configuration.Presets (mainnetConfiguration)
 import           Cardano.Node.Configuration.Types (CardanoConfiguration (..),
                                                    CardanoEnvironment (..))
@@ -14,17 +26,9 @@ import           Cardano.Node.Features.Logging (LoggingCLIArguments (..),
                                                 LoggingLayer (..),
                                                 createLoggingFeature
                                                 )
-import           Cardano.Node.Parsers (loggingParser, parseCoreNodeId, parseProtocol)
-import           Cardano.Prelude (throwIO)
-import           Cardano.Shell.Lib (GeneralException (..),
-                                    runCardanoApplicationWithFeatures)
-import           Cardano.Shell.Types (CardanoApplication (..),
-                                      CardanoFeature (..),
-                                      CardanoFeatureInit (..))
+import           Cardano.Node.Parsers (loggingParser, parseCoreNodeId)
+import           Cardano.Node.Parsers
 import           Cardano.Wallet.Run
-import           Ouroboros.Consensus.Node.ProtocolInfo.Abstract (NumCoreNodes (..))
-
-import           Options.Applicative
 
 -- | The product type of all command line arguments
 data ArgParser = ArgParser !LoggingCLIArguments !CLI
@@ -65,7 +69,7 @@ opts = info (commandLineParser <**> helper)
 -- Better than a partial pattern match.
 --
 data PartialConfigError = PartialConfigError Text
-  deriving (Eq, Show, Typeable)
+  deriving (Eq, Show)
 
 instance Exception PartialConfigError
 
@@ -86,15 +90,7 @@ main = do
 
 initializeAllFeatures :: ArgParser -> PartialCardanoConfiguration -> CardanoEnvironment -> IO ([CardanoFeature], NodeLayer)
 initializeAllFeatures (ArgParser logCli cli) partialConfig cardanoEnvironment = do
-    finalConfig <- case finaliseCardanoConfiguration $
-                        mergeConfiguration partialConfig (cliCommon cli)
-                   of
-      Left err -> throwIO $ ConfigurationError err
-      --TODO: if we're using exceptions for this, then we should use a local
-      -- excption type, local to this app, that enumerates all the ones we
-      -- are reporting, and has proper formatting of the result.
-      -- It would also require catching at the top level and printing.
-      Right x  -> pure x
+    finalConfig <- mkConfiguration partialConfig (cliCommon cli)
 
     (loggingLayer, loggingFeature) <- createLoggingFeature cardanoEnvironment finalConfig logCli
     (nodeLayer   , nodeFeature)    <- createNodeFeature loggingLayer cli cardanoEnvironment finalConfig
@@ -147,7 +143,8 @@ nodeCardanoFeatureInit = CardanoFeatureInit
   where
     featureStart' :: CardanoEnvironment -> LoggingLayer -> CardanoConfiguration -> CLI -> IO NodeLayer
     featureStart' _ loggingLayer cc cli = do
-        let tr = llAppendName loggingLayer "wallet" (llBasicTrace loggingLayer)
+        let tr :: MonadIO m => Tracer m (Cardano.BM.Data.LogItem.LogObject Text)
+            tr = llAppendName loggingLayer "wallet" (llBasicTrace loggingLayer)
         pure $ NodeLayer {nlRunNode = liftIO $ runClient cli tr cc}
 
     featureCleanup' :: NodeLayer -> IO ()
