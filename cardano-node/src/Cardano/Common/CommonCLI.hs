@@ -17,6 +17,7 @@ module Cardano.Common.CommonCLI
   , lastWordOption
   , lastTextListOption
   , lastStrOption
+  , lastFlag
   ) where
 
 import           Cardano.Prelude hiding (option)
@@ -25,7 +26,8 @@ import           Prelude
 import           Options.Applicative hiding (command)
 import qualified Options.Applicative as OA
 
-import           Cardano.Node.Configuration.Types (CardanoConfiguration(..))
+import           Cardano.Node.Configuration.Types (CardanoConfiguration(..)
+                                                  ,RequireNetworkMagic(..))
 import           Cardano.Node.Configuration.Partial (PartialCardanoConfiguration (..)
                                                     ,PartialCore (..)
                                                     ,finaliseCardanoConfiguration)
@@ -37,6 +39,7 @@ data CommonCLI = CommonCLI
   , cliStaticKeySigningKeyFile    :: !(Last FilePath)
   , cliStaticKeyDlgCertFile       :: !(Last FilePath)
   , cliPBftSigThd                 :: !(Last Double)
+  , cliRequiresNetworkMagic       :: !(Last RequireNetworkMagic)
   , cliDBPath                     :: !(Last FilePath)
   , cliSocketPath                 :: !(Last FilePath)
   --TODO cliUpdate                :: !PartialUpdate
@@ -76,6 +79,10 @@ parseCommonCLI =
            ( long "pbft-signature-threshold"
           <> metavar "DOUBLE"
           <> help "The PBFT signature threshold."
+           )
+    <*> lastFlag NoRequireNetworkMagic RequireNetworkMagic
+           ( long "require-network-magic"
+          <> help "Require network magic in transactions."
            )
     <*> lastStrOption (
             long "database-path"
@@ -125,6 +132,9 @@ lastTextListOption = lastAutoOption
 lastStrOption :: IsString a => Mod OptionFields a -> Parser (Last a)
 lastStrOption args = Last <$> optional (strOption args)
 
+lastFlag :: a -> a -> Mod FlagFields a -> Parser (Last a)
+lastFlag def act opts  = Last <$> optional (flag def act opts)
+
 
 {-------------------------------------------------------------------------------
   Configuration merging
@@ -151,6 +161,7 @@ mergeConfiguration pcc cli =
                    , cliStaticKeySigningKeyFile
                    , cliStaticKeyDlgCertFile
                    , cliPBftSigThd
+                   , cliRequiresNetworkMagic
                    , cliDBPath
                    , cliSocketPath
                    } =
@@ -160,6 +171,7 @@ mergeConfiguration pcc cli =
                     , pcoStaticKeySigningKeyFile = cliStaticKeySigningKeyFile
                     , pcoStaticKeyDlgCertFile    = cliStaticKeyDlgCertFile
                     , pcoPBftSigThd              = cliPBftSigThd
+                    , pcoRequiresNetworkMagic    = cliRequiresNetworkMagic
                     -- TODO: cliUpdate
                     }
              , pccDBPath = cliDBPath

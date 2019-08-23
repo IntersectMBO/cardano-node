@@ -22,6 +22,7 @@ NETARGS=(
         --genesis-file "${genesis_file}"
         --genesis-hash "${genesis_hash}"
         --pbft-signature-threshold 0.7
+        --require-network-magic
         --database-path "db"
         node
         --topology "configuration/simple-topology.json"

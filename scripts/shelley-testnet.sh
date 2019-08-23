@@ -18,6 +18,7 @@ NETARGS=(
         --genesis-file "configuration/${GENHASH:0:5}/genesis.json"
         --genesis-hash "${GENHASH}"
         --pbft-signature-threshold 0.7
+        --require-network-magic
         node
         --topology "configuration/simple-topology.json"
         ${ALGO}
