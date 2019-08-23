@@ -4,6 +4,8 @@ module Main (main) where
 import           Cardano.Prelude hiding (option)
 import           Prelude (String, error, id)
 
+import           Control.Arrow
+import qualified Data.List.NonEmpty as NE
 import           Options.Applicative
 
 import           Control.Exception.Safe (catchIO)
@@ -15,6 +17,7 @@ import           Cardano.Binary (Annotated (..))
 import           Cardano.Chain.Common
 import           Cardano.Chain.Genesis
 import           Cardano.Chain.Slotting
+import           Cardano.Chain.UTxO
 import           Cardano.Crypto (AProtocolMagic(..), ProtocolMagic, ProtocolMagicId(..), RequiresNetworkMagic(..))
 
 import           Cardano.Common.CommonCLI
@@ -124,6 +127,13 @@ parseClientCommand =
       <$> parseTopologyInfo "PBFT node ID to submit Tx to."
       <*> parseFilePath    "tx"                       "File containing the raw transaction."
       <*> parseCommonCLI
+    , command' "issue-genesis-utxo-expenditure" "Write a file with a signed transaction, spending genesis UTxO." $
+      SpendGenesisUTxO
+      <$> parseFilePath    "tx"                       "Non-existent file that would contain the new transaction."
+      <*> parseFilePath    "wallet-key"               "Key that has access to all mentioned genesis UTxO inputs."
+      <*> parseAddress     "rich-addr-from"           "Tx source: genesis UTxO richman address (non-HD)."
+      <*> (NE.fromList <$> some parseTxOut)
+      <*> parseCommonCLI
     ])
 
 parseTestnetBalanceOptions :: Parser TestnetBalanceOptions
@@ -208,3 +218,38 @@ parseFlag optname desc =
             long optname
          <> help desc
     )
+
+-- | Here, we hope to get away with the usage of 'error' in a pure expression,
+--   because the CLI-originated values are either used, in which case the error is
+--   unavoidable rather early in the CLI tooling scenario (and especially so, if
+--   the relevant command ADT constructor is strict, like with ClientCommand), or
+--   they are ignored, in which case they are arguably irrelevant.
+--   And we're getting a correct-by-construction value that doesn't need to be
+--   scrutinised later, so that's an abstraction benefit as well.
+cliParseBase58Address :: Text -> Address
+cliParseBase58Address =
+  either (error . ("Bad Base58 address: " <>) . show) id
+  . fromCBORTextAddress
+
+-- | See the rationale for cliParseBase58Address.
+cliParseLovelace :: Word64 -> Lovelace
+cliParseLovelace =
+  either (error . ("Bad Lovelace value: " <>) . show) id
+  . mkLovelace
+
+parseAddress :: String -> String -> Parser Address
+parseAddress opt desc = option (cliParseBase58Address <$> auto)
+  ( long       opt
+    <> metavar "ADDR"
+    <> help    desc
+  )
+
+parseTxOut :: Parser TxOut
+parseTxOut = option (uncurry TxOut
+                     . Control.Arrow.first  cliParseBase58Address
+                     . Control.Arrow.second cliParseLovelace
+                     <$> auto)
+  ( long       "txout"
+    <> metavar "ADDR:LOVELACE"
+    <> help    "Specify a transaction output, as a pair of an address and lovelace."
+  )

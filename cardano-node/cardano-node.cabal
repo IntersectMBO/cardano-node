@@ -78,7 +78,7 @@ library
                      , typed-protocols
                      , typed-protocols-cbor
                      , utf8-string
-
+                     , vector
 
 
 

@@ -52,6 +52,7 @@
           (hsPkgs.typed-protocols)
           (hsPkgs.typed-protocols-cbor)
           (hsPkgs.utf8-string)
+          (hsPkgs.vector)
           (hsPkgs.generic-monoid)
           (hsPkgs.cardano-binary)
           (hsPkgs.cardano-crypto)

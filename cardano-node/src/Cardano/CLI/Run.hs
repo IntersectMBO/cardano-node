@@ -29,24 +29,26 @@ module Cardano.CLI.Run (
   , runCommand
   ) where
 
-import           Prelude (String)
-import           Cardano.Prelude hiding (option)
+import           Prelude (String, error, show)
+import           Cardano.Prelude hiding (option, show, trace)
 
-import           Codec.Serialise (deserialiseOrFail)
+import           Codec.Serialise (serialise, deserialiseOrFail)
 import           Control.Tracer
 import           Data.Bits (shiftL)
 import qualified Data.ByteArray as BA
 import qualified Data.ByteString as SB
 import qualified Data.ByteString.Lazy as LB
+import qualified Data.ByteString.UTF8 as UTF8
 import qualified Data.Map.Strict as Map
+import           Data.Map (Map)
 import           Data.Semigroup ((<>))
 import           Data.String (fromString)
-import qualified Data.ByteString.UTF8 as UTF8
 import           Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Lazy.IO as TL
 import qualified Data.Text.Lazy.Builder as Builder
+import qualified Data.Vector as V
 import qualified Formatting as F
 import           System.Directory (createDirectory, doesPathExist)
 import           System.FilePath ((</>))
@@ -59,18 +61,23 @@ import           System.Posix.Files (ownerReadMode, setFileMode)
 import           System.Directory (emptyPermissions, readable, setPermissions)
 #endif
 
-import           Cardano.Binary (Annotated(..), serialize')
+import           Cardano.Binary (Annotated(..), reAnnotate, serialize')
+import qualified Cardano.Chain.Common as CC.Common
 import           Cardano.Chain.Common
-import           Cardano.Chain.Delegation hiding (epoch)
+import           Cardano.Chain.Delegation hiding (Map, epoch)
 import           Cardano.Chain.Genesis
+import qualified Cardano.Chain.Genesis as CC.Genesis
 import           Cardano.Chain.Slotting (EpochNumber(..))
+import           Cardano.Chain.UTxO
+import qualified Cardano.Chain.UTxO as CC.UTxO
 import           Cardano.Crypto (SigningKey (..), ProtocolMagic, ProtocolMagicId)
+import qualified Cardano.Crypto.Hashing as Crypto
+import qualified Cardano.Crypto.Random as Crypto
+import qualified Cardano.Crypto.Signing as Crypto
 import           Cardano.Node.Configuration.Presets (mainnetConfiguration)
 import           Ouroboros.Consensus.Protocol hiding (Protocol)
-import qualified Cardano.Chain.Common as CC
-import qualified Cardano.Crypto.Hashing as CCr
-import qualified Cardano.Crypto.Random as CCr
-import qualified Cardano.Crypto.Signing as CCr
+import           Ouroboros.Consensus.Ledger.Byron
+import           Ouroboros.Consensus.Ledger.Byron.Config
 import qualified Test.Cardano.Chain.Genesis.Dummy as Dummy
 
 import           Cardano.CLI.Ops
@@ -125,10 +132,15 @@ data ClientCommand
     !FilePath
     !FilePath
   | SubmitTx
-    { stTopology :: TopologyInfo
-    , stTx       :: FilePath
-    , stCommon   :: CommonCLI
-    }
+    TopologyInfo
+    FilePath
+    CommonCLI
+  | SpendGenesisUTxO
+    FilePath
+    FilePath
+    Address
+    (NonEmpty TxOut)
+    CommonCLI
 
 runCommand :: CLIOps IO -> ClientCommand -> IO ()
 runCommand co@CLIOps{..}
@@ -154,7 +166,7 @@ runCommand co@CLIOps{..}
     Right x -> pure x
 
   seed <- case giSeed of
-    Nothing -> CCr.runSecureRandom . CCr.randomNumber $ shiftL 1 32
+    Nothing -> Crypto.runSecureRandom . Crypto.randomNumber $ shiftL 1 32
     Just x  -> pure x
 
   let genesisAvvmBalances = GenesisAvvmBalances mempty
@@ -212,41 +224,41 @@ runCommand CLIOps{..} (PrintGenesisHash fp) = do
   gdE <- runExceptT (readGenesisData fp)
   case gdE of
     Left e  -> throwIO $ GenesisReadError fp e
-    Right x -> putStrLn . F.format CCr.hashHexF
+    Right x -> putStrLn . F.format Crypto.hashHexF
                . unGenesisHash
                $ snd x
 
 runCommand co@CLIOps{..} (PrintSigningKeyAddress netMagic secPath) =
   putStrLn . T.unpack . prettyAddress
-           . CC.makeVerKeyAddress netMagic
-           . CCr.toVerification
+           . CC.Common.makeVerKeyAddress netMagic
+           . Crypto.toVerification
            =<< readSigningKey co secPath
 
 runCommand CLIOps{..}
            (Keygen outFile disablePassword) = do
 
   passph <- if disablePassword
-            then pure CCr.emptyPassphrase
+            then pure Crypto.emptyPassphrase
             else readPassword $
                  "Enter password to encrypt '" <> outFile <> "': "
 
-  (_vk, esk) <- CCr.runSecureRandom $ CCr.safeKeyGen passph
+  (_vk, esk) <- Crypto.runSecureRandom $ Crypto.safeKeyGen passph
 
   ensureNewFileLBS outFile
-    =<< (coSerialiseDelegateKey $ SigningKey $ CCr.eskPayload esk)
+    =<< (coSerialiseDelegateKey $ SigningKey $ Crypto.eskPayload esk)
 
 runCommand co (ToVerification
                   secretPath
                   outFile) = do
   ensureNewFileText outFile
-    . Builder.toLazyText . CCr.formatFullVerificationKey . CCr.toVerification
+    . Builder.toLazyText . Crypto.formatFullVerificationKey . Crypto.toVerification
     =<< readSigningKey co secretPath
 
 runCommand co@CLIOps{..}
            (Redelegate protoMagic epoch genesisSF delegateVF outCertF) = do
   sk <- readSigningKey co genesisSF
   vk <- readVerificationKey delegateVF
-  let signer = CCr.noPassSafeSigner sk
+  let signer = Crypto.noPassSafeSigner sk
   -- TODO:  we need to support password-protected secrets.
 
   let cert = mkCertificate protoMagic signer vk epoch
@@ -264,8 +276,8 @@ runCommand CLIOps{..}
   let magic' = Annotated magic (serialize' magic)
       epoch  = unAnnotated $ aEpoch cert
       cert'  = cert { aEpoch = Annotated epoch (serialize' epoch) }
-      vk    :: forall r. F.Format r (CCr.VerificationKey -> r)
-      vk     = CCr.fullVerificationKeyF
+      vk    :: forall r. F.Format r (Crypto.VerificationKey -> r)
+      vk     = Crypto.fullVerificationKeyF
       f     :: forall a. F.Format Text a -> a
       f      = F.sformat
       issues =
@@ -283,7 +295,7 @@ runCommand CLIOps{..}
     throwIO $ CertificateValidationErrors certF issues
 
 runCommand CLIOps{..}
-           SubmitTx{stTopology, stTx, stCommon} = do
+           (SubmitTx stTopology stTx stCommon) = do
 
   cc <- mkConfiguration mainnetConfiguration stCommon
 
@@ -297,20 +309,93 @@ runCommand CLIOps{..}
         Right tx -> handleTxSubmission p stTopology tx stdoutTracer
     _ -> throwIO $ ProtocolNotSupported coProtocol
 
+runCommand co@CLIOps{..}
+           (SpendGenesisUTxO ctTx ctKey ctGenRichAddr ctOuts ctCommon) = do
+
+  sk <- readSigningKey co ctKey
+
+  cc <- mkConfiguration mainnetConfiguration ctCommon
+
+  SomeProtocol p <- fromProtocol cc coProtocol
+
+  case p of
+    ProtocolRealPBFT gc _ _ _ _ -> do
+      let gentx = txSpendGenesisUTxOByronPBFT gc sk ctGenRichAddr ctOuts
+      putStrLn $ "genesis protocol magic: " <> show (configProtocolMagicId gc)
+      ensureNewFileLBS ctTx (serialise gentx)
+    _ -> throwIO $ ProtocolNotSupported coProtocol
+
 {-------------------------------------------------------------------------------
   Supporting functions
 -------------------------------------------------------------------------------}
+
+txSpendGenesisUTxOByronPBFT :: CC.Genesis.Config -> SigningKey -> Address -> NonEmpty TxOut -> GenTx (ByronBlockOrEBB ByronConfig)
+txSpendGenesisUTxOByronPBFT gc sk genRichAddr outs =
+  let vk         = Crypto.toVerification sk
+      txattrs    = mkAttributes ()
+      tx         = UnsafeTx (pure txIn) outs txattrs
+      txIn      :: CC.UTxO.TxIn
+      txIn       = handleMissingAddr $ fst <$> Map.lookup genRichAddr initialUtxo
+      handleMissingAddr :: Maybe CC.UTxO.TxIn -> CC.UTxO.TxIn
+      handleMissingAddr  = fromMaybe . error
+        $  "\nGenesis richmen UTxO has no address\n"
+        <> (T.unpack $ prettyAddress genRichAddr)
+        <> "\n\nIt has the following, though:\n\n"
+        <> Cardano.Prelude.concat (T.unpack . prettyAddress <$> Map.keys initialUtxo)
+
+      -- UTxO in the genesis block for the rich men
+      initialUtxo :: Map Address (CC.UTxO.TxIn, CC.UTxO.TxOut)
+      initialUtxo =
+            Map.fromList
+          . mapMaybe (\(inp, out) -> mkEntry inp genRichAddr <$> keyMatchesUTxO vk out)
+          . fromCompactTxInTxOutList
+          . Map.toList
+          . CC.UTxO.unUTxO
+          . CC.UTxO.genesisUtxo
+          $ gc
+        where
+          mkEntry :: CC.UTxO.TxIn
+                  -> Address
+                  -> CC.UTxO.TxOut
+                  -> (Address, (CC.UTxO.TxIn, CC.UTxO.TxOut))
+          mkEntry inp addr out = (addr, (inp, out))
+
+      keyMatchesUTxO :: Crypto.VerificationKey -> CC.UTxO.TxOut -> Maybe CC.UTxO.TxOut
+      keyMatchesUTxO key out =
+        if CC.Common.checkVerKeyAddress key (CC.UTxO.txOutAddress out)
+        then Just out else Nothing
+
+      fromCompactTxInTxOutList :: [(CC.UTxO.CompactTxIn, CC.UTxO.CompactTxOut)]
+                               -> [(CC.UTxO.TxIn, CC.UTxO.TxOut)]
+      fromCompactTxInTxOutList =
+          map (bimap CC.UTxO.fromCompactTxIn CC.UTxO.fromCompactTxOut)
+      cheat     :: CC.UTxO.TxWitness
+      cheat      = V.fromList [
+        CC.UTxO.VKWitness
+            vk
+            (Crypto.sign
+              (configProtocolMagicId gc)
+              Crypto.SignTx
+              sk
+              -- Below, we have to cheat to spend a genesis UTxO entry:
+              -- sign ourselves, not the input Tx.
+              -- Ledger knows.
+              (CC.UTxO.TxSigData (Crypto.hash tx))
+              )
+        ]
+      ATxAux atx awit = mkTxAux tx cheat
+  in mkByronTx $ ATxAux (reAnnotate atx) (reAnnotate awit)
 
 -- TODO:  we need to support password-protected secrets.
 readSigningKey :: CLIOps IO -> FilePath -> IO SigningKey
 readSigningKey co fp =
   coDeserialiseDelegateKey co fp =<< LB.readFile fp
 
-readVerificationKey :: FilePath -> IO CCr.VerificationKey
+readVerificationKey :: FilePath -> IO Crypto.VerificationKey
 readVerificationKey fp = do
   vkB <- SB.readFile fp
-  case CCr.parseFullVerificationKey . fromString $ UTF8.toString vkB of
-    Left e -> throwIO . VerificationKeyDeserialisationFailed fp $ show e
+  case Crypto.parseFullVerificationKey . fromString $ UTF8.toString vkB of
+    Left e -> throwIO . VerificationKeyDeserialisationFailed fp $ T.pack $ show e
     Right x -> pure x
 
 -- TODO:  we'd be better served by a combination of a temporary file
@@ -328,7 +413,7 @@ ensureNewFileLBS = ensureNewFile' LB.writeFile
 ensureNewFileText :: FilePath -> TL.Text -> IO ()
 ensureNewFileText = ensureNewFile' TL.writeFile
 
-readPassword :: String -> IO CCr.PassPhrase
+readPassword :: String -> IO Crypto.PassPhrase
 readPassword prompt = do
   let readOne :: String -> IO String
       readOne pr = do
@@ -344,7 +429,7 @@ readPassword prompt = do
           then pure v1
           else hPutStrLn stdout ("Sorry, entered passwords don't match." :: String)
                >> loop
-  CCr.PassPhrase . BA.convert . UTF8.fromString <$> loop
+  Crypto.PassPhrase . BA.convert . UTF8.fromString <$> loop
 
 dumpGenesis :: CLIOps IO -> FilePath -> GenesisData -> GeneratedSecrets -> IO ()
 dumpGenesis CLIOps{..} outDir genesisData GeneratedSecrets{..} = do
@@ -358,7 +443,7 @@ dumpGenesis CLIOps{..} outDir genesisData GeneratedSecrets{..} = do
 
   let dlgCertMap = unGenesisDelegation $ gdHeavyDelegation genesisData
       isCertForSK :: SigningKey -> Certificate -> Bool
-      isCertForSK sk UnsafeACertificate{..} = delegateVK == CCr.toVerification sk
+      isCertForSK sk UnsafeACertificate{..} = delegateVK == Crypto.toVerification sk
       findDelegateCert :: SigningKey -> IO Certificate
       findDelegateCert sk =
         case flip find (Map.elems dlgCertMap) . isCertForSK $ sk of
@@ -375,14 +460,14 @@ dumpGenesis CLIOps{..} outDir genesisData GeneratedSecrets{..} = do
   wOut "avvm-seed"       "seed" (pure . LB.fromStrict)     gsFakeAvvmSeeds
 
 prettySigningKeyPub :: SigningKey -> Text
-prettySigningKeyPub (CCr.toVerification -> vk) = TL.toStrict
-  $  "public key hash: " <> (F.format CCr.hashHexF . CC.addressHash $ vk) <> "\n"
-  <> "     public key: " <> (Builder.toLazyText . CCr.formatFullVerificationKey $ vk)
+prettySigningKeyPub (Crypto.toVerification -> vk) = TL.toStrict
+  $  "public key hash: " <> (F.format Crypto.hashHexF . CC.Common.addressHash $ vk) <> "\n"
+  <> "     public key: " <> (Builder.toLazyText . Crypto.formatFullVerificationKey $ vk)
 
-prettyAddress :: CC.Address -> Text
+prettyAddress :: CC.Common.Address -> Text
 prettyAddress addr = TL.toStrict
-  $  F.format CC.addressF         addr <> "\n"
-  <> F.format CC.addressDetailedF addr
+  $  F.format CC.Common.addressF         addr <> "\n"
+  <> F.format CC.Common.addressDetailedF addr
 
 writeSecrets :: FilePath -> String -> String -> (a -> IO LB.ByteString) -> [a] -> IO ()
 writeSecrets outDir prefix suffix secretOp xs =

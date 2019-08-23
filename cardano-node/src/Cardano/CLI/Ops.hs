@@ -87,6 +87,8 @@ data CliError
   -- Basic user errors
   = OutputMustNotAlreadyExist FilePath
   | ProtocolNotSupported Protocol
+  | NotEnoughTxInputs
+  | NotEnoughTxOutputs
   -- Validation errors
   | CertificateValidationErrors FilePath [Text]
   -- Serialization errors
@@ -107,6 +109,10 @@ data CliError
 instance Show CliError where
   show (OutputMustNotAlreadyExist fp)
     = "Output file/directory must not already exist: " <> fp
+  show NotEnoughTxInputs
+    = "Transactions must have at least one input."
+  show NotEnoughTxOutputs
+    = "Transactions must have at least one output."
   show (ProtocolNotSupported proto)
     = "Unsupported protocol "<> show proto
   show (CertificateValidationErrors fp errs)
