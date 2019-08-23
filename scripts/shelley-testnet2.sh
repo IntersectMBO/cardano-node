@@ -1,17 +1,26 @@
 #!/usr/bin/env bash
 
+set -e
+
 # build first:
 #> cabal new-build --reorder-goals
 
 # create tmux session:
 #> tmux new-session -s 'Demo' -t demo
 
+genesis="968b0"
+genesis_root="configuration/${genesis}"
+genesis_file="${genesis_root}/genesis.json"
+
+cabal new-build "exe:cardano-cli"
+genesis_hash="$(cabal new-exec -- cardano-cli real-pbft print-genesis-hash --genesis-json ${genesis_file})"
+
 ALGO="--real-pbft"
 NOW=`date "+%Y-%m-%d 00:00:00"`
 NETARGS=(
         --slot-duration 2
-        --genesis-file "configuration/Test.Cardano.Chain.Genesis.Dummy.dummyConfig.configGenesisData.json"
-        --genesis-hash "fc32ebdf3c9bfa2ebf6bdcac98649f610601ddb266a2a2743e787dc9952a1aeb"
+        --genesis-file "${genesis_file}"
+        --genesis-hash "${genesis_hash}"
         --pbft-signature-threshold 0.7
         --database-path "db"
         node
@@ -41,10 +50,10 @@ function mklogcfg () {
   echo "--log-config configuration/log-config-${1}.yaml"
 }
 function mkdlgkey () {
-  printf -- "--signing-key configuration/delegate-keys.%03d.key" "$1"
+  printf -- "--signing-key            ${genesis_root}/delegate-keys.%03d.key" "$1"
 }
 function mkdlgcert () {
-  printf -- "--delegation-certificate configuration/delegation-cert.%03d.json" "$1"
+  printf -- "--delegation-certificate ${genesis_root}/delegation-cert.%03d.json" "$1"
 }
 
 # for acceptor logs:
