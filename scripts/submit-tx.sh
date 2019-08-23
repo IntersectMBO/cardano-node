@@ -12,7 +12,7 @@ shift
 #CMD="stack exec --nix cardano-node -- "
 CMD="cabal new-exec cardano-cli -- "
 
-ALGO="--real-pbft"
+ALGO="real-pbft"
 NOW=`date "+%Y-%m-%d 00:00:00"`
 NETARGS=(
         ${ALGO}
