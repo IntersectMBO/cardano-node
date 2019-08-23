@@ -2,15 +2,14 @@ module Cardano.Node.Parsers
   ( loggingParser
   , parseCoreNodeId
   , parseProtocol
-  , parseViewMode
   ) where
 
 
 import           Cardano.Prelude hiding (option)
 
-import           Cardano.Node.CLI (Protocol(..), ViewMode(..))
+import           Cardano.Common.Protocol (Protocol(..))
 import           Cardano.Node.Features.Logging (LoggingCLIArguments(..))
-import           Ouroboros.Consensus.NodeId (CoreNodeId(..), NodeId(..))
+import           Ouroboros.Consensus.NodeId (CoreNodeId(..))
 
 import           Options.Applicative
 
@@ -53,11 +52,3 @@ parseProtocol = asum [
         , help "Use the Permissive BFT consensus algorithm using the real ledger"
         ]
     ]
-
--- Optional flag for live view (with TUI graphics).
-parseViewMode :: Parser ViewMode
-parseViewMode =
-    flag SimpleView LiveView $ mconcat
-        [ long "live-view"
-        , help "Live view with TUI."
-        ]

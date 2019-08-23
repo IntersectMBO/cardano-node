@@ -5,7 +5,7 @@
 
 import           Cardano.Prelude hiding (option)
 
-import           Cardano.Node.CLI
+import           Cardano.Common.CommonCLI (mergeConfiguration, parseCommonCLI)
 import           Cardano.Node.Configuration.Partial (PartialCardanoConfiguration (..), finaliseCardanoConfiguration)
 import           Cardano.Node.Configuration.Presets (mainnetConfiguration)
 import           Cardano.Node.Configuration.Types (CardanoConfiguration (..),

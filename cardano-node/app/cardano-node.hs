@@ -33,8 +33,8 @@ import           Ouroboros.Consensus.NodeNetwork (ProtocolTracers'(..))
 import           Ouroboros.Consensus.NodeId (NodeId (..))
 import qualified Ouroboros.Consensus.Node.Tracers as Consensus
 
-import           Cardano.Node.CLI
-import           Cardano.Node.Parsers (loggingParser, parseProtocol, parseViewMode)
+import           Cardano.Common.CommonCLI (command', mergeConfiguration, parseCommonCLI)
+import           Cardano.Node.Parsers (loggingParser, parseProtocol)
 import           Cardano.Node.Run
 import           Cardano.Node.Topology (NodeAddress (..), TopologyInfo (..))
 import           Cardano.Node.Tracers (ConsensusTraceOptions,  ProtocolTraceOptions, TraceOptions(..))
@@ -427,3 +427,11 @@ parseTraceDnsResolver =
          long "trace-dns-resolver"
       <> help "Trace DNS Resolver messages."
     )
+
+-- Optional flag for live view (with TUI graphics).
+parseViewMode :: Parser ViewMode
+parseViewMode =
+    flag SimpleView LiveView $ mconcat
+        [ long "live-view"
+        , help "Live view with TUI."
+        ]
