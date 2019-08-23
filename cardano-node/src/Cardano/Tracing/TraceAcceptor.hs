@@ -1,4 +1,4 @@
-module Cardano.Node.TraceAcceptor (
+module Cardano.Tracing.TraceAcceptor (
       handleTraceAcceptor
     ) where
 

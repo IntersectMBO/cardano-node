@@ -10,7 +10,7 @@
 
 {-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
 
-module Cardano.Node.Tracers
+module Cardano.Tracing.Tracers
   ( ConsensusTraceOptions
   , ProtocolTraceOptions
   , Tracers (..)
@@ -54,7 +54,7 @@ import           Ouroboros.Consensus.Util.Orphans ()
 import qualified Ouroboros.Storage.ChainDB as ChainDB
 import qualified Ouroboros.Storage.LedgerDB.OnDisk as LedgerDB
 
-import           Cardano.Node.ToObjectOrphans
+import           Cardano.Tracing.ToObjectOrphans
 
 
 data Tracers peer blk = Tracers {

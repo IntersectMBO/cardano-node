@@ -75,8 +75,8 @@ import qualified Ouroboros.Storage.ChainDB as ChainDB
 import           Cardano.Common.CommonCLI (CommonCLI)
 import           Cardano.Common.Protocol (Protocol(..), SomeProtocol(..), fromProtocol)
 import           Cardano.Node.Configuration.Topology
-import           Cardano.Node.TraceAcceptor
-import           Cardano.Node.Tracers
+import           Cardano.Tracing.TraceAcceptor
+import           Cardano.Tracing.Tracers
 import           Cardano.Node.TxSubmission
 #ifdef UNIX
 import           Cardano.Node.TUI.LiveView

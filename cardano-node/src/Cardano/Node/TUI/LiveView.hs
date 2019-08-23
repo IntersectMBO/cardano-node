@@ -66,7 +66,7 @@ import           Cardano.BM.Trace
 import           Cardano.Node.TUI.GitRev (gitRev)
 import           Ouroboros.Consensus.NodeId
 import           Paths_cardano_node (version)
-import           Cardano.Node.Topology
+import           Cardano.Node.Configuration.Topology
 
 -- constants, to be evaluated from host system
 

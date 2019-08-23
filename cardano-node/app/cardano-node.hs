@@ -34,7 +34,7 @@ import           Cardano.Common.CommonCLI
 import           Cardano.Node.Parsers
 import           Cardano.Node.Run
 import           Cardano.Node.Configuration.Topology (NodeAddress (..))
-import           Cardano.Node.Tracers (ConsensusTraceOptions,  ProtocolTraceOptions, TraceOptions(..))
+import           Cardano.Tracing.Tracers (ConsensusTraceOptions,  ProtocolTraceOptions, TraceOptions(..))
 
 
 main :: IO ()
