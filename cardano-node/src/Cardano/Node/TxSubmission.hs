@@ -16,10 +16,11 @@ module Cardano.Node.TxSubmission (
 import           Cardano.Prelude hiding (ByteString, option, threadDelay)
 import           Prelude (String)
 
-import           Data.Void (Void)
 import           Data.ByteString.Lazy (ByteString)
+import           Data.Void (Void)
 
 import           Network.Socket as Socket
+import           System.FilePath ((</>))
 
 import           Control.Monad (fail)
 import           Control.Monad.Class.MonadST
@@ -94,15 +95,16 @@ submitTx :: ( RunDemo blk
          -> GenTx blk
          -> Tracer IO String
          -> IO ()
-submitTx pInfoConfig nodeId tx tracer =
+submitTx pInfoConfig nodeId tx tracer = do
+    -- TODO: get socketDir from CardanoConfiguration
+    socketDir <- pure "./socket/"
+    let addr = localSocketAddrInfo (socketDir </> localSocketFilePath nodeId)
     connectTo
       nullTracer
       (,)
       (localInitiatorNetworkApplication tracer pInfoConfig tx)
       Nothing
       addr
-  where
-    addr = localSocketAddrInfo (localSocketFilePath nodeId)
 
 localInitiatorNetworkApplication
   :: forall blk m peer.
