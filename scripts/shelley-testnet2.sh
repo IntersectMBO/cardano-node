@@ -8,9 +8,11 @@ set -e
 # create tmux session:
 #> tmux new-session -s 'Demo' -t demo
 
-genesis="968b0"
+genesis="33873"
 genesis_root="configuration/${genesis}"
 genesis_file="${genesis_root}/genesis.json"
+if test ! -f "${genesis_file}"
+then echo "ERROR: genesis ${genesis_file} does not exist!">&1; exit 1; fi
 
 cabal new-build "exe:cardano-cli"
 genesis_hash="$(cabal new-exec -- cardano-cli real-pbft print-genesis-hash --genesis-json ${genesis_file})"

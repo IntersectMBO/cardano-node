@@ -12,9 +12,11 @@ shift
 #CMD="stack exec --nix cardano-node -- "
 CMD="cabal new-exec cardano-cli -- "
 
-genesis="968b0"
+genesis="33873"
 genesis_root="configuration/${genesis}"
 genesis_file="${genesis_root}/genesis.json"
+if test ! -f "${genesis_file}"
+then echo "ERROR: genesis ${genesis_file} does not exist!">&1; exit 1; fi
 genesis_hash="$(${CMD} real-pbft print-genesis-hash --genesis-json ${genesis_file})"
 
 ALGO="real-pbft"

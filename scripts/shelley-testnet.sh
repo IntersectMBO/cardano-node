@@ -12,7 +12,7 @@
 
 ALGO="--real-pbft"
 NOW=`date "+%Y-%m-%d 00:00:00"`
-GENHASH="968b0012ac326c048c7b7cc3f143085f820aad051e387156dbcb227d2a7f913f"
+GENHASH="33873aeaf8a47fefc7c2ea3f72e98a04459e07ec3edfb63c9ca709f540f69503"
 NETARGS=(
         --slot-duration 2
         --genesis-file "configuration/${GENHASH:0:5}/genesis.json"
