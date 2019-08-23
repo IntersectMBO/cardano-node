@@ -24,6 +24,7 @@ library
                        -- Conversion
                        Cardano.Node.Configuration.Conversion
                        Cardano.Node.Configuration.Partial
+                       Cardano.Node.Configuration.Topology
                        Cardano.Node.Configuration.Types
                        Cardano.Node.Configuration.Presets
                        -- Features
@@ -31,7 +32,6 @@ library
                        Cardano.Node.Orphans
                        Cardano.Node.Parsers
                        Cardano.Node.Run
-                       Cardano.Node.Topology
                        Cardano.Node.TraceAcceptor
                        Cardano.Node.Tracers
                        Cardano.Node.TUI.GitRev

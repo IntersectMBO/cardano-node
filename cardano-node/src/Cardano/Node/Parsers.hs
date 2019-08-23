@@ -21,7 +21,7 @@ import           Cardano.Node.Features.Logging (LoggingCLIArguments(..))
 import           Ouroboros.Consensus.NodeId (NodeId(..), CoreNodeId(..))
 
 import           Cardano.Common.Protocol
-import           Cardano.Node.Topology
+import           Cardano.Node.Configuration.Topology
 
 -- Common command line parsers
 

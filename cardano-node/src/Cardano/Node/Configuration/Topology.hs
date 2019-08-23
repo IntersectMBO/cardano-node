@@ -6,7 +6,7 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 {-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
 
-module Cardano.Node.Topology
+module Cardano.Node.Configuration.Topology
   ( TopologyInfo(..)
   , NodeAddress(..)
   , nodeAddressToSockAddr
