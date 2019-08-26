@@ -306,7 +306,7 @@ runCommand CLIOps{..}
       txBS <- LB.readFile stTx
       case deserialiseOrFail txBS of
         Left  e  -> throwIO $ TxDeserialisationFailed stTx e
-        Right tx -> handleTxSubmission p stTopology tx stdoutTracer
+        Right tx -> handleTxSubmission cc p stTopology tx stdoutTracer
     _ -> throwIO $ ProtocolNotSupported coProtocol
 
 runCommand co@CLIOps{..}

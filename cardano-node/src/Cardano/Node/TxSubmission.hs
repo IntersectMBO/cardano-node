@@ -20,6 +20,7 @@ import           Data.ByteString.Lazy (ByteString)
 import           Data.Void (Void)
 
 import           Network.Socket as Socket
+import           System.Directory (canonicalizePath, makeAbsolute)
 import           System.FilePath ((</>))
 
 import           Control.Monad (fail)
@@ -53,6 +54,7 @@ import           Ouroboros.Network.Protocol.Handshake.Version
 import           Ouroboros.Network.NodeToClient
 
 import           Cardano.Node.Configuration.Topology
+import           Cardano.Node.Configuration.Types
 
 
 {-------------------------------------------------------------------------------
@@ -63,12 +65,13 @@ handleTxSubmission :: forall blk.
                       ( RunDemo blk
                       , Show (ApplyTxErr blk)
                       )
-                   => Consensus.Protocol blk
+                   => CardanoConfiguration
+                   -> Consensus.Protocol blk
                    -> TopologyInfo
                    -> GenTx blk
                    -> Tracer IO String
                    -> IO ()
-handleTxSubmission ptcl tinfo tx tracer = do
+handleTxSubmission cc ptcl tinfo tx tracer = do
     topoE <- readTopologyFile (topologyFile tinfo)
     NetworkTopology nodeSetups <-
       case topoE of
@@ -84,20 +87,20 @@ handleTxSubmission ptcl tinfo tx tracer = do
                        (CoreNodeId nid)
                        ptcl
 
-    submitTx pInfoConfig (node tinfo) tx tracer
+    submitTx cc pInfoConfig (node tinfo) tx tracer
 
 
 submitTx :: ( RunDemo blk
             , Show (ApplyTxErr blk)
             )
-         => NodeConfig (BlockProtocol blk)
+         => CardanoConfiguration
+         -> NodeConfig (BlockProtocol blk)
          -> NodeId
          -> GenTx blk
          -> Tracer IO String
          -> IO ()
-submitTx pInfoConfig nodeId tx tracer = do
-    -- TODO: get socketDir from CardanoConfiguration
-    socketDir <- pure "./socket/"
+submitTx CardanoConfiguration{ccSocketPath} pInfoConfig nodeId tx tracer = do
+    socketDir <- canonicalizePath =<< makeAbsolute ccSocketPath
     let addr = localSocketAddrInfo (socketDir </> localSocketFilePath nodeId)
     connectTo
       nullTracer
