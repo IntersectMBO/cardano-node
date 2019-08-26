@@ -1,19 +1,20 @@
-{-# LANGUAGE BangPatterns        #-}
-{-# LANGUAGE CPP                 #-}
-{-# LANGUAGE FlexibleContexts    #-}
-{-# LANGUAGE FlexibleInstances   #-}
-{-# LANGUAGE GADTs               #-}
-{-# LANGUAGE NamedFieldPuns      #-}
-{-# LANGUAGE NoImplicitPrelude   #-}
-{-# LANGUAGE NumericUnderscores  #-}
-{-# LANGUAGE OverloadedStrings   #-}
-{-# LANGUAGE RankNTypes          #-}
-{-# LANGUAGE RecordWildCards     #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving  #-}
-{-# LANGUAGE StrictData          #-}
-{-# LANGUAGE TypeApplications    #-}
-{-# LANGUAGE ViewPatterns        #-}
+{-# LANGUAGE BangPatterns               #-}
+{-# LANGUAGE CPP                        #-}
+{-# LANGUAGE FlexibleContexts           #-}
+{-# LANGUAGE FlexibleInstances          #-}
+{-# LANGUAGE GADTs                      #-}
+{-# LANGUAGE GeneralisedNewtypeDeriving #-}
+{-# LANGUAGE NamedFieldPuns             #-}
+{-# LANGUAGE NoImplicitPrelude          #-}
+{-# LANGUAGE NumericUnderscores         #-}
+{-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE RankNTypes                 #-}
+{-# LANGUAGE RecordWildCards            #-}
+{-# LANGUAGE ScopedTypeVariables        #-}
+{-# LANGUAGE StandaloneDeriving         #-}
+{-# LANGUAGE StrictData                 #-}
+{-# LANGUAGE TypeApplications           #-}
+{-# LANGUAGE ViewPatterns               #-}
 
 {-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
 {-# OPTIONS_GHC -Wno-simplifiable-class-constraints #-}
@@ -27,6 +28,17 @@ module Cardano.CLI.Run (
     CliError (..)
   , ClientCommand(..)
   , runCommand
+  --
+  , GenesisFile(..)
+  , NewDirectory(..)
+  , SigningKeyFile(..)
+  , NewSigningKeyFile(..)
+  , VerificationKeyFile(..)
+  , NewVerificationKeyFile(..)
+  , CertificateFile(..)
+  , NewCertificateFile(..)
+  , TxFile(..)
+  , NewTxFile(..)
   ) where
 
 import           Prelude (String, error, show)
@@ -42,7 +54,7 @@ import qualified Data.ByteString.UTF8 as UTF8
 import qualified Data.Map.Strict as Map
 import           Data.Map (Map)
 import           Data.Semigroup ((<>))
-import           Data.String (fromString)
+import           Data.String (IsString, fromString)
 import           Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
@@ -89,55 +101,66 @@ import           Cardano.Node.Configuration.Topology
 import           Cardano.Node.TxSubmission
 
 
+newtype GenesisFile            = GenesisFile            FilePath deriving (Eq, Ord, Show, IsString)
+newtype NewDirectory           = NewDirectory           FilePath deriving (Eq, Ord, Show, IsString)
+newtype SigningKeyFile         = SigningKeyFile         FilePath deriving (Eq, Ord, Show, IsString)
+newtype NewSigningKeyFile      = NewSigningKeyFile      FilePath deriving (Eq, Ord, Show, IsString)
+newtype VerificationKeyFile    = VerificationKeyFile    FilePath deriving (Eq, Ord, Show, IsString)
+newtype NewVerificationKeyFile = NewVerificationKeyFile FilePath deriving (Eq, Ord, Show, IsString)
+newtype CertificateFile        = CertificateFile        FilePath deriving (Eq, Ord, Show, IsString)
+newtype NewCertificateFile     = NewCertificateFile     FilePath deriving (Eq, Ord, Show, IsString)
+newtype TxFile                 = TxFile                 FilePath deriving (Eq, Ord, Show, IsString)
+newtype NewTxFile              = NewTxFile              FilePath deriving (Eq, Ord, Show, IsString)
+
 data ClientCommand
   = Genesis
-    !FilePath
-    !UTCTime
-    !FilePath
-    !BlockCount
-    !ProtocolMagic
-    !TestnetBalanceOptions
-    !FakeAvvmOptions
-    !LovelacePortion
-    !(Maybe Integer)
+    NewDirectory
+    UTCTime
+    FilePath              -- This one is going to be replaced with elementwise CLI args soon,
+    BlockCount            --   so no big gain in newtyping it.
+    ProtocolMagic
+    TestnetBalanceOptions
+    FakeAvvmOptions
+    LovelacePortion
+    (Maybe Integer)
   | PrettySigningKeyPublic
-    !FilePath
+    SigningKeyFile
   | MigrateDelegateKeyFrom
-    !Protocol
-    !FilePath
-    !FilePath
+    Protocol
+    NewSigningKeyFile
+    SigningKeyFile
   | DumpHardcodedGenesis
-    !FilePath
+    NewDirectory
   | PrintGenesisHash
-    !FilePath
+    GenesisFile
   | PrintSigningKeyAddress
-    !NetworkMagic -- TODO:  consider deprecation in favor of ProtocolMagicId,
-                  --        once Byron is out of the picture.
-    !FilePath
+    NetworkMagic         -- TODO:  consider deprecation in favor of ProtocolMagicId,
+                         --        once Byron is out of the picture.
+    SigningKeyFile
   | Keygen
-    !FilePath
-    !Bool
+    NewSigningKeyFile
+    Bool
   | ToVerification
-    !FilePath
-    !FilePath
+    SigningKeyFile
+    NewVerificationKeyFile
   | Redelegate
-    !ProtocolMagicId
-    !EpochNumber
-    !FilePath
-    !FilePath
-    !FilePath
+    ProtocolMagicId
+    EpochNumber
+    SigningKeyFile
+    VerificationKeyFile
+    NewCertificateFile
   | CheckDelegation
-    !ProtocolMagicId
-    !FilePath
-    !FilePath
-    !FilePath
+    ProtocolMagicId
+    CertificateFile
+    VerificationKeyFile
+    VerificationKeyFile
   | SubmitTx
     TopologyInfo
-    FilePath
+    TxFile
     CommonCLI
   | SpendGenesisUTxO
-    FilePath
-    FilePath
+    NewTxFile
+    SigningKeyFile
     Address
     (NonEmpty TxOut)
     CommonCLI
@@ -145,7 +168,7 @@ data ClientCommand
 runCommand :: CLIOps IO -> ClientCommand -> IO ()
 runCommand co@CLIOps{..}
          (Genesis
-           outDir
+           (NewDirectory outDir)
            startTime
            protocolParametersFile
            blockCount
@@ -199,73 +222,76 @@ runCommand co@CLIOps{..}
 
   dumpGenesis co outDir genesisData generatedSecrets
 
-runCommand co@CLIOps{..} (PrettySigningKeyPublic secretPath) =
+runCommand co@CLIOps{..} (PrettySigningKeyPublic skF) =
   putStrLn =<< T.unpack
              . prettySigningKeyPub
-             <$> readSigningKey co secretPath
+             <$> readSigningKey co skF
 
 runCommand co (MigrateDelegateKeyFrom
                   fromVer
-                  secretPathTo
-                  secretPathFrom) =
-        LB.writeFile secretPathTo
+                  (NewSigningKeyFile newKey)
+                  oldKey) =
+        LB.writeFile newKey
     =<< coSerialiseDelegateKey co
-    =<< flip readSigningKey secretPathFrom
+    =<< flip readSigningKey oldKey
     =<< fromCO
   where
     fromCO = decideCLIOps fromVer
 
-runCommand co (DumpHardcodedGenesis outDir) =
-  dumpGenesis co outDir
+runCommand co (DumpHardcodedGenesis (NewDirectory dir)) =
+  dumpGenesis co dir
               (configGenesisData Dummy.dummyConfig)
               Dummy.dummyGeneratedSecrets
 
-runCommand CLIOps{..} (PrintGenesisHash fp) = do
-  gdE <- runExceptT (readGenesisData fp)
+runCommand CLIOps{..} (PrintGenesisHash (GenesisFile genesis)) = do
+  gdE <- runExceptT (readGenesisData genesis)
   case gdE of
-    Left e  -> throwIO $ GenesisReadError fp e
+    Left e  -> throwIO $ GenesisReadError genesis e
     Right x -> putStrLn . F.format Crypto.hashHexF
                . unGenesisHash
                $ snd x
 
-runCommand co@CLIOps{..} (PrintSigningKeyAddress netMagic secPath) =
+runCommand co@CLIOps{..} (PrintSigningKeyAddress netMagic skF) =
   putStrLn . T.unpack . prettyAddress
            . CC.Common.makeVerKeyAddress netMagic
            . Crypto.toVerification
-           =<< readSigningKey co secPath
+           =<< readSigningKey co skF
 
 runCommand CLIOps{..}
-           (Keygen outFile disablePassword) = do
+           (Keygen (NewSigningKeyFile skF) disablePassword) = do
 
   passph <- if disablePassword
             then pure Crypto.emptyPassphrase
             else readPassword $
-                 "Enter password to encrypt '" <> outFile <> "': "
+                 "Enter password to encrypt '" <> skF <> "': "
 
   (_vk, esk) <- Crypto.runSecureRandom $ Crypto.safeKeyGen passph
 
-  ensureNewFileLBS outFile
+  ensureNewFileLBS skF
     =<< (coSerialiseDelegateKey $ SigningKey $ Crypto.eskPayload esk)
 
 runCommand co (ToVerification
-                  secretPath
-                  outFile) = do
-  ensureNewFileText outFile
+                skF (NewVerificationKeyFile vkF)) = do
+  ensureNewFileText vkF
     . Builder.toLazyText . Crypto.formatFullVerificationKey . Crypto.toVerification
-    =<< readSigningKey co secretPath
+    =<< readSigningKey co skF
 
 runCommand co@CLIOps{..}
-           (Redelegate protoMagic epoch genesisSF delegateVF outCertF) = do
-  sk <- readSigningKey co genesisSF
-  vk <- readVerificationKey delegateVF
+           (Redelegate protoMagic epoch
+            skF vkF (NewCertificateFile certF)) = do
+  sk <- readSigningKey co skF
+  vk <- readVerificationKey vkF
   let signer = Crypto.noPassSafeSigner sk
   -- TODO:  we need to support password-protected secrets.
 
   let cert = mkCertificate protoMagic signer vk epoch
-  ensureNewFileLBS outCertF =<< coSerialiseDelegationCert cert
+  ensureNewFileLBS certF =<< coSerialiseDelegationCert cert
 
 runCommand CLIOps{..}
-           (CheckDelegation magic certF issuerVF delegateVF) = do
+           (CheckDelegation magic
+            (CertificateFile certF)
+            issuerVF
+            delegateVF) = do
   issuerVK'   <- readVerificationKey issuerVF
   delegateVK' <- readVerificationKey delegateVF
   certBS      <- LB.readFile certF
@@ -295,7 +321,7 @@ runCommand CLIOps{..}
     throwIO $ CertificateValidationErrors certF issues
 
 runCommand CLIOps{..}
-           (SubmitTx stTopology stTx stCommon) = do
+           (SubmitTx stTopology (TxFile stTx) stCommon) = do
 
   cc <- mkConfiguration mainnetConfiguration stCommon
 
@@ -310,7 +336,8 @@ runCommand CLIOps{..}
     _ -> throwIO $ ProtocolNotSupported coProtocol
 
 runCommand co@CLIOps{..}
-           (SpendGenesisUTxO ctTx ctKey ctGenRichAddr ctOuts ctCommon) = do
+           (SpendGenesisUTxO
+            (NewTxFile ctTx) ctKey ctGenRichAddr ctOuts ctCommon) = do
 
   sk <- readSigningKey co ctKey
 
@@ -387,12 +414,12 @@ txSpendGenesisUTxOByronPBFT gc sk genRichAddr outs =
   in mkByronTx $ ATxAux (reAnnotate atx) (reAnnotate awit)
 
 -- TODO:  we need to support password-protected secrets.
-readSigningKey :: CLIOps IO -> FilePath -> IO SigningKey
-readSigningKey co fp =
+readSigningKey :: CLIOps IO -> SigningKeyFile -> IO SigningKey
+readSigningKey co (SigningKeyFile fp) =
   coDeserialiseDelegateKey co fp =<< LB.readFile fp
 
-readVerificationKey :: FilePath -> IO Crypto.VerificationKey
-readVerificationKey fp = do
+readVerificationKey :: VerificationKeyFile -> IO Crypto.VerificationKey
+readVerificationKey (VerificationKeyFile fp) = do
   vkB <- SB.readFile fp
   case Crypto.parseFullVerificationKey . fromString $ UTF8.toString vkB of
     Left e -> throwIO . VerificationKeyDeserialisationFailed fp $ T.pack $ show e
