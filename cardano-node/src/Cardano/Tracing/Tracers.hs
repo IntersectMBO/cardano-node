@@ -29,6 +29,7 @@ import           Control.Tracer
 import           Data.Functor.Const (Const (..))
 import           Data.Functor.Contravariant (contramap)
 import           Data.Text (Text, pack)
+import qualified Network.Socket as Socket (SockAddr)
 
 import           Cardano.BM.Data.Aggregated (Measurable (PureI))
 import           Cardano.BM.Data.LogItem (LOContent (..), LogObject (..),
@@ -36,7 +37,7 @@ import           Cardano.BM.Data.LogItem (LOContent (..), LogObject (..),
                                           mkLOMeta)
 import           Cardano.BM.Tracing
 import           Cardano.BM.Trace (traceNamedObject)
-import           Cardano.BM.Data.Tracer (trStructured)
+import           Cardano.BM.Data.Tracer (addName, trStructured)
 
 
 import qualified Ouroboros.Network.AnchoredFragment as AF
@@ -50,6 +51,8 @@ import           Ouroboros.Consensus.NodeNetwork (ProtocolTracers,
                                                   ProtocolTracers' (..))
 import           Ouroboros.Consensus.Util.Condense
 import           Ouroboros.Consensus.Util.Orphans ()
+
+import           Ouroboros.Network.Subscription
 
 import qualified Ouroboros.Storage.ChainDB as ChainDB
 import qualified Ouroboros.Storage.LedgerDB.OnDisk as LedgerDB
@@ -67,14 +70,14 @@ data Tracers peer blk = Tracers {
       -- | Tracers for the protocol messages.
     , protocolTracers       :: ProtocolTracers IO peer blk DeserialiseFailure
 
-      -- | Trace the IP subscription manager.
-    , ipSubscriptionTracer  :: Tracer IO String
+      -- | Trace the IP subscription manager (flag '--trace-ip-subscription' will turn on textual output)
+    , ipSubscriptionTracer  :: Tracer IO (WithIPList (SubscriptionTrace Socket.SockAddr))
 
-      -- | Trace the DNS subscription manager
-    , dnsSubscriptionTracer :: Tracer IO String
+      -- | Trace the DNS subscription manager (flag '--trace-dns-subscription' will turn on textual output)
+    , dnsSubscriptionTracer :: Tracer IO (WithDomainName (SubscriptionTrace Socket.SockAddr))
 
-      -- | Trace the DNS resolver.
-    , dnsResolverTracer     :: Tracer IO String
+      -- | Trace the DNS resolver (flag '--trace-dns-resolver' will turn on textual output)
+    , dnsResolverTracer     :: Tracer IO (WithDomainName DnsTrace)
     }
 
 -- | Tracing-related constraints for monitoring purposes.
@@ -116,16 +119,43 @@ type ProtocolTraceOptions  = ProtocolTracers'   () () () (Const Bool)
 -- | tracing to LogObject, either structural or textual
 --
 
+-- transform @SubscriptionTrace@
+instance Transformable Text IO (WithIPList (SubscriptionTrace Socket.SockAddr)) where
+    trTransformer StructuredLogging verb tr = trStructured verb tr
+    trTransformer TextualRepresentation _verb tr = Tracer $ \s ->
+        traceWith tr =<< LogObject <$> pure ""
+                                   <*> (mkLOMeta Debug Public)
+                                   <*> pure (LogMessage $ pack $ show s)
+    trTransformer UserdefinedFormatting verb tr = trStructured verb tr
+
+
+instance Transformable Text IO (WithDomainName (SubscriptionTrace Socket.SockAddr)) where
+    trTransformer StructuredLogging verb tr = trStructured verb tr
+    trTransformer TextualRepresentation _verb tr = Tracer $ \s ->
+        traceWith tr =<< LogObject <$> pure ""
+                                   <*> (mkLOMeta Debug Public)
+                                   <*> pure (LogMessage $ pack $ show s)
+    trTransformer UserdefinedFormatting verb tr = trStructured verb tr
+
+-- transform @DnsTrace@
+instance Transformable Text IO (WithDomainName DnsTrace) where
+    trTransformer StructuredLogging verb tr = trStructured verb tr
+    trTransformer TextualRepresentation _verb tr = Tracer $ \s ->
+        traceWith tr =<< LogObject <$> pure ""
+                                   <*> (mkLOMeta Debug Public)
+                                   <*> pure (LogMessage $ pack $ show s)
+    trTransformer UserdefinedFormatting verb tr = trStructured verb tr
+
+-- transform @TraceEvent@
 instance (Condense (HeaderHash blk), ProtocolLedgerView blk)
             => Transformable Text IO (WithTip blk (ChainDB.TraceEvent blk)) where
     -- structure required, will call 'toObject'
     trTransformer StructuredLogging verb tr = trStructured verb tr
     -- textual output based on the readable ChainDB tracer
     trTransformer TextualRepresentation _verb tr = readableChainDBTracer $ Tracer $ \s ->
-        traceWith tr =<<
-            LogObject <$> pure ""
-                      <*> (mkLOMeta Debug Public)
-                      <*> pure (LogMessage $ pack s)
+        traceWith tr =<< LogObject <$> pure ""
+                                   <*> (mkLOMeta Debug Public)
+                                   <*> pure (LogMessage $ pack s)
     -- user defined formatting of log output
     trTransformer UserdefinedFormatting verb tr = trStructured verb tr
 
@@ -236,31 +266,26 @@ mkTracers :: forall peer blk.
            -> Tracers peer blk
 mkTracers traceOptions tracer = Tracers
     { chainDBTracer
-        = if traceChainDB traceOptions
-          then toLogObject' TextualRepresentation (traceVerbosity traceOptions) tracer
-          else toLogObject' StructuredLogging (traceVerbosity traceOptions) tracer
+        = toLogObject' (tracingFormatting $ traceChainDB traceOptions) tracingVerbosity
+          $ addName "ChainDB" tracer
     , consensusTracers
         = mkConsensusTracers
     , protocolTracers
         = mkProtocolsTracers
-    , ipSubscriptionTracer  -- TODO
-        = enableTracer (traceIpSubscription traceOptions)
-        $ withName "IpSubscription" tracer
-    , dnsSubscriptionTracer  -- TODO
-        = enableTracer (traceDnsSubscription traceOptions)
-        $ withName "DnsSubscription" tracer
-    , dnsResolverTracer  -- TODO
-        = enableTracer (traceDnsResolver traceOptions)
-        $ withName "DnsResolver" tracer
+    , ipSubscriptionTracer
+        = toLogObject' (tracingFormatting $ traceIpSubscription traceOptions) tracingVerbosity
+          $ addName "IpSubscription" tracer
+    , dnsSubscriptionTracer
+        = toLogObject' (tracingFormatting $ traceDnsSubscription traceOptions) tracingVerbosity
+          $ addName "DnsSubscription" tracer
+    , dnsResolverTracer
+        = toLogObject' (tracingFormatting $ traceDnsResolver traceOptions) tracingVerbosity
+          $ addName "DnsResolver" tracer
     }
   where
-    enableTracer
-      :: Show a
-      => Bool
-      -> Tracer IO String
-      -> Tracer IO a
-    enableTracer False = const nullTracer
-    enableTracer True  = showTracing
+    tracingFormatting True  = TextualRepresentation
+    tracingFormatting False = StructuredLogging
+    tracingVerbosity = traceVerbosity traceOptions
 
     mempoolTraceTransformer :: Tracer IO (LogObject a)
                             -> Tracer IO (TraceEventMempool blk)

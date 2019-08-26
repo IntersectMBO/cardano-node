@@ -17,6 +17,8 @@ import           Prelude (String, show, id)
 
 import           Data.Aeson (Value (..), toJSON, (.=))
 import           Data.Text (pack)
+import qualified Network.Socket as Socket (SockAddr)
+
 import           Cardano.BM.Data.Tracer (ToObject (..),
                                          TracingVerbosity (..),
                                          emptyObject, mkObject)
@@ -25,6 +27,8 @@ import           Ouroboros.Consensus.Ledger.Abstract
 import           Ouroboros.Consensus.Util.Condense
 import qualified Ouroboros.Network.AnchoredFragment as AF
 import           Ouroboros.Network.Block
+import           Ouroboros.Network.Subscription.Dns
+import           Ouroboros.Network.Subscription.Ip
 import qualified Ouroboros.Storage.ChainDB as ChainDB
 import qualified Ouroboros.Storage.LedgerDB.OnDisk as LedgerDB
 
@@ -71,6 +75,26 @@ instance ( Show a
 
 
 -- | instances of @ToObject@
+
+instance ToObject (WithIPList (SubscriptionTrace Socket.SockAddr)) where
+    toObject _verb (WithIPList ipv4 ipv6 dests ev) =
+        mkObject [ "kind" .= String "WithIPList SubscriptionTrace"
+                 , "ipv4" .= show ipv4
+                 , "ipv6" .= show ipv6
+                 , "dests" .= show dests
+                 , "event" .= show ev ]
+
+instance ToObject (WithDomainName (SubscriptionTrace Socket.SockAddr)) where
+    toObject _verb (WithDomainName dom ev) =
+        mkObject [ "kind" .= String "SubscriptionTrace"
+                 , "domain" .= show dom
+                 , "event" .= show ev ]
+
+instance ToObject (WithDomainName DnsTrace) where
+    toObject _verb (WithDomainName dom ev) =
+        mkObject [ "kind" .= String "DnsTrace"
+                 , "domain" .= show dom
+                 , "event" .= show ev ]
 
 instance (Condense (HeaderHash blk), ProtocolLedgerView blk)
             => ToObject (WithTip blk (ChainDB.TraceEvent blk)) where

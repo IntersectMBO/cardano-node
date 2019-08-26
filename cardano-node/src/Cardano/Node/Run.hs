@@ -225,9 +225,9 @@ handleSimpleNode p NodeCLIArguments{..}
 
         runNetworkArgs :: RunNetworkArgs Peer blk
         runNetworkArgs = RunNetworkArgs
-          { rnaIpSubscriptionTracer  = showTracing $ ipSubscriptionTracer  nodeTracers
-          , rnaDnsSubscriptionTracer = showTracing $ dnsSubscriptionTracer nodeTracers
-          , rnaDnsResolverTracer     = showTracing $ dnsResolverTracer     nodeTracers
+          { rnaIpSubscriptionTracer  = ipSubscriptionTracer  nodeTracers
+          , rnaDnsSubscriptionTracer = dnsSubscriptionTracer nodeTracers
+          , rnaDnsResolverTracer     = dnsResolverTracer     nodeTracers
           , rnaMkPeer                = Peer
           , rnaMyAddr                = nodeAddressInfo myNodeAddress
           , rnaMyLocalAddr           = myLocalAddr
