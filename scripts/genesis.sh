@@ -20,7 +20,7 @@ protocol_magic=459045235
 n_poors=128
 n_delegates=7
 total_balance=8000000000000000
-delegate_share=2
+delegate_share=900000000000000
 avvm_entries=128
 avvm_entry_balance=10000000000000
 not_so_secret=2718281828
@@ -45,7 +45,7 @@ args=(
 set -xe
 RUNNER=${RUNNER:-cabal new-run --}
 
-${RUNNER} cardano-cli byron-pbft genesis "${args[@]}" "$@"
+${RUNNER} cardano-cli real-pbft genesis "${args[@]}" "$@"
 
 # move new genesis to configuration
 GENHASH=`${RUNNER} cardano-cli real-pbft print-genesis-hash --genesis-json "${tmpdir}/genesis.json" | tail -1`

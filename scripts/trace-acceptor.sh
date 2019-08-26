@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 NOW=`date "+%Y-%m-%d 00:00:00"`
-GENHASH="968b0012ac326c048c7b7cc3f143085f820aad051e387156dbcb227d2a7f913f"
+GENHASH="33873aeaf8a47fefc7c2ea3f72e98a04459e07ec3edfb63c9ca709f540f69503"
 
 # CMD="stack exec cardano-node -- "
 # CMD="./cardano-node.exe -- "

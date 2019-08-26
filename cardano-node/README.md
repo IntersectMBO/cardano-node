@@ -113,6 +113,9 @@ Delegation
 Transactions
   submit-tx                Submit a raw, signed transaction, in its on-wire
                            representation.
+  issue-genesis-utxo-expenditure
+                           Write a file with a signed transaction, spending
+                           genesis UTxO.
 ```
 
 All commands have help available:
@@ -130,8 +133,10 @@ Available options:
 
 System version
   byron-legacy             Byron Legacy mode
-  real-pbft                Byron PBFT mode
-
+  bft                      BFT mode
+  praos                    Praos mode
+  mock-pbft                Mock PBFT mode
+  real-pbft                Real PBFT mode
 ```
 
 ## Genesis operations
@@ -218,11 +223,25 @@ options.
 
 ## Transactions
 
+### Submission
+
 The `submit-tx` subcommand provides the option of submitting a pre-signed
 transaction, in its raw wire format (see GenTx for Byron transactions).
 
 The canned `scripts/submit-tx.sh` script will submit the supplied transaction to a testnet
 launched by `scripts/shelley-testnet*.sh` family of scripts.
+
+### Issuing genesis UTxO expenditure Tx
+
+To make a transaction spending genesis UTxO, you can either use the `issue-genesis-utxo-expenditure`
+subcommand directly, or, again use a canned script that will make a transaction tailored
+for the aforementioned testnet cluster -- `scripts/issue-genesis-utxo-expenditure.sh`.
+
+The script requires the target file name to write the transaction to, and optionally
+allows specifying the target address and lovelace value to send.
+
+The target address defaults to the 1-st richman key (`configuration/delegate-keys.001.key`)
+of the testnet, and lovelace amount is almost the entirety of its funds.
 
 # Running the wallet client
 
