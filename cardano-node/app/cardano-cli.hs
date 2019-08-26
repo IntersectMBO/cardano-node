@@ -59,21 +59,21 @@ parseClientCommand =
     [ commandGroup "Genesis"
     , command' "genesis"                        "Perform genesis." $
       Genesis
-      <$> parseNewDirectory "genesis-output-dir"       "A yet-absent directory where genesis JSON file along with secrets shall be placed."
-      <*> parseUTCTime     "start-time"               "Start time of the new cluster to be enshrined in the new genesis."
-      <*> parseFilePath    "protocol-parameters-file" "JSON file with protocol parameters."
+      <$> parseNewDirectory "genesis-output-dir"                "A yet-absent directory where genesis JSON file along with secrets shall be placed."
+      <*> parseUTCTime     "start-time"                         "Start time of the new cluster to be enshrined in the new genesis."
+      <*> parseFilePath    "protocol-parameters-file"           "JSON file with protocol parameters."
       <*> parseK
       <*> parseProtocolMagic
       <*> parseTestnetBalanceOptions
       <*> parseFakeAvvmOptions
       <*> (LovelacePortion . fromInteger . fromMaybe 1 <$>
            (optional $
-             parseIntegral  "avvm-balance-factor"      "AVVM balances will be multiplied by this factor (defaults to 1)."))
+             parseIntegral  "avvm-balance-factor"               "AVVM balances will be multiplied by this factor (defaults to 1)."))
       <*> optional (parseIntegral    "secret-seed"              "Optionally specify the seed of generation.")
-    , command' "dump-hardcoded-genesis"         "Write out a hard-coded genesis." $
+    , command' "dump-hardcoded-genesis"                         "Write out a hard-coded genesis." $
       DumpHardcodedGenesis
-      <$> parseNewDirectory "genesis-output-dir"       "A yet-absent directory where genesis JSON file along with secrets shall be placed."
-    , command' "print-genesis-hash"             "Compute hash of a genesis file." $
+      <$> parseNewDirectory "genesis-output-dir"                "A yet-absent directory where genesis JSON file along with secrets shall be placed."
+    , command' "print-genesis-hash"                             "Compute hash of a genesis file." $
       PrintGenesisHash
       <$> parseGenesisFile  "genesis-json"
     ])
@@ -83,46 +83,46 @@ parseClientCommand =
     , command' "keygen"                         "Generate a signing key." $
       Keygen
       <$> parseNewSigningKeyFile "secret"
-      <*> parseFlag              "no-password"  "Disable password protection."
-    , command' "to-verification"                "Extract a verification key in its base64 form." $
+      <*> parseFlag              "no-password"                   "Disable password protection."
+    , command' "to-verification"                                 "Extract a verification key in its base64 form." $
       ToVerification
-      <$> parseSigningKeyFile    "secret"       "Signing key file to extract the verification part from."
+      <$> parseSigningKeyFile    "secret"                        "Signing key file to extract the verification part from."
       <*> parseNewVerificationKeyFile "to"
-    , command' "signing-key-public"             "Pretty-print a signing key's verification key (not a secret)." $
+    , command' "signing-key-public"                              "Pretty-print a signing key's verification key (not a secret)." $
       PrettySigningKeyPublic
-      <$> parseSigningKeyFile    "secret"       "Signing key to pretty-print."
-    , command' "signing-key-address"            "Print address of a signing key." $
+      <$> parseSigningKeyFile    "secret"                        "Signing key to pretty-print."
+    , command' "signing-key-address"                             "Print address of a signing key." $
       PrintSigningKeyAddress
       <$> parseNetworkMagic
-      <*> parseSigningKeyFile    "secret"       "Signing key, whose address is to be printed."
-    , command' "migrate-delegate-key-from"      "Migrate a delegate key from an older version." $
+      <*> parseSigningKeyFile    "secret"                        "Signing key, whose address is to be printed."
+    , command' "migrate-delegate-key-from"                       "Migrate a delegate key from an older version." $
       MigrateDelegateKeyFrom
       <$> parseProtocol
       <*> parseNewSigningKeyFile "to"
-      <*> parseSigningKeyFile    "from"         "Signing key file to migrate."
+      <*> parseSigningKeyFile    "from"                          "Signing key file to migrate."
     ])
   <|> subparser
   (mconcat
     [ commandGroup "Delegation"
-    , command' "redelegate"                     "Redelegate genesis authority to a different verification key." $
-      Redelegate
+    , command'                   "issue-delegation-certificate" "Create a delegation certificate allowing the delegator to sign blocks on behalf of the issuer" $
+      IssueDelegationCertificate
       <$> parseProtocolMagicId "protocol-magic"
       <*> (EpochNumber <$>
-            parseIntegral   "since-epoch"              "First epoch of effective delegation.")
-      <*> parseSigningKeyFile      "secret"            " genesis key to redelegate from."
-      <*> parseVerificationKeyFile "delegate-key"      "The operation verification key to delegate to."
+            parseIntegral   "since-epoch"                       "The epoch from which the delegation is valid.")
+      <*> parseSigningKeyFile      "secret"                     "The issuer of the certificate, who delegates their right to sign blocks."
+      <*> parseVerificationKeyFile "delegate-key"               "The delegate, who gains the right to sign block."
       <*> parseNewCertificateFile  "certificate"
-    , command' "check-delegation"               "Verify that a given certificate constitutes a valid delegation relationship betwen keys." $
+    , command' "check-delegation"                               "Verify that a given certificate constitutes a valid delegation relationship betwen keys." $
       CheckDelegation
       <$> parseProtocolMagicId     "protocol-magic"
-      <*> parseCertificateFile     "certificate"       "The certificate embodying delegation to verify."
-      <*> parseVerificationKeyFile "issuer-key"        "The genesis key that supposedly delegates."
-      <*> parseVerificationKeyFile "delegate-key"      "The operation verification key supposedly delegated to."
+      <*> parseCertificateFile     "certificate"                "The certificate embodying delegation to verify."
+      <*> parseVerificationKeyFile "issuer-key"                 "The genesis key that supposedly delegates."
+      <*> parseVerificationKeyFile "delegate-key"               "The operation verification key supposedly delegated to."
     ])
   <|> subparser
   (mconcat
     [ commandGroup "Transactions"
-    , command' "submit-tx"                      "Submit a raw, signed transaction, in its on-wire representation." $
+    , command' "submit-tx"                                      "Submit a raw, signed transaction, in its on-wire representation." $
       SubmitTx
       <$> parseTopologyInfo "PBFT node ID to submit Tx to."
       <*> parseTxFile             "tx"
@@ -130,8 +130,8 @@ parseClientCommand =
     , command' "issue-genesis-utxo-expenditure" "Write a file with a signed transaction, spending genesis UTxO." $
       SpendGenesisUTxO
       <$> parseNewTxFile          "tx"
-      <*> parseSigningKeyFile     "wallet-key"               "Key that has access to all mentioned genesis UTxO inputs."
-      <*> parseAddress     "rich-addr-from"           "Tx source: genesis UTxO richman address (non-HD)."
+      <*> parseSigningKeyFile     "wallet-key"                  "Key that has access to all mentioned genesis UTxO inputs."
+      <*> parseAddress     "rich-addr-from"                     "Tx source: genesis UTxO richman address (non-HD)."
       <*> (NE.fromList <$> some parseTxOut)
       <*> parseCommonCLI
     ])
