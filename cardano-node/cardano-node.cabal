@@ -24,24 +24,24 @@ library
                        -- Conversion
                        Cardano.Node.Configuration.Conversion
                        Cardano.Node.Configuration.Partial
-                       Cardano.Node.Configuration.Types
                        Cardano.Node.Configuration.Presets
+                       Cardano.Node.Configuration.Topology
+                       Cardano.Node.Configuration.Types
                        -- Features
                        Cardano.Node.Features.Logging
-                       Cardano.Node.GitRev
-                       Cardano.Node.GitRevFromGit
                        Cardano.Node.Orphans
                        Cardano.Node.Parsers
                        Cardano.Node.Run
-                       Cardano.Node.Topology
-                       Cardano.Node.TraceAcceptor
-                       Cardano.Node.Tracers
+                       Cardano.Node.TUI.GitRev
+                       Cardano.Node.TUI.GitRevFromGit
                        Cardano.Node.TxSubmission
+                       Cardano.Tracing.TraceAcceptor
+                       Cardano.Tracing.Tracers
                        Cardano.Wallet.Run
                        Cardano.Wallet.Client
 
   other-modules:       Paths_cardano_node
-                       Cardano.Node.ToObjectOrphans
+                       Cardano.Tracing.ToObjectOrphans
 
   build-depends:       aeson
                      , async
@@ -121,7 +121,7 @@ library
      build-depends:    unix
                      , brick
                      , vty
-     exposed-modules:  Cardano.Node.LiveView
+     exposed-modules:  Cardano.Node.TUI.LiveView
 
 executable cardano-node
   hs-source-dirs:      app
@@ -256,9 +256,6 @@ test-suite cardano-node-test
   hs-source-dirs:       test
   main-is:              Spec.hs
   type:                 exitcode-stdio-1.0
-
-  other-modules:
-                        Paths_cardano_node
 
   build-depends:
                         base >=4.12 && <5

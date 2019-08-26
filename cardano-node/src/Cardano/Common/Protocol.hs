@@ -36,7 +36,7 @@ import qualified Cardano.Node.CanonicalJSON as CanonicalJSON
 import           Cardano.Node.Configuration.Types
                    ( CardanoConfiguration (..), Core (..)
                    , RequireNetworkMagic (..) )
-import           Cardano.Node.Tracers (TraceConstraints)
+import           Cardano.Tracing.Tracers (TraceConstraints)
 import           Cardano.Node.Orphans ()
 
 {-------------------------------------------------------------------------------

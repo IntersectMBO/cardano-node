@@ -78,7 +78,7 @@ import           Cardano.Common.CommonCLI
 import           Cardano.Common.Protocol
 import           Cardano.Node.CanonicalJSON
 import           Cardano.Node.Orphans ()
-import           Cardano.Node.Topology
+import           Cardano.Node.Configuration.Topology
 import           Cardano.Node.TxSubmission
 
 
