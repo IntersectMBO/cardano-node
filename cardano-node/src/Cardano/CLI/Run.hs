@@ -332,7 +332,9 @@ runCommand CLIOps{..}
       txBS <- LB.readFile stTx
       case deserialiseOrFail txBS of
         Left  e  -> throwIO $ TxDeserialisationFailed stTx e
-        Right tx -> handleTxSubmission cc p stTopology tx stdoutTracer
+        Right tx@ByronTx{byronTxId} -> do
+          putStrLn $ "transaction hash (TxId): " <> show byronTxId
+          handleTxSubmission cc p stTopology tx stdoutTracer
     _ -> throwIO $ ProtocolNotSupported coProtocol
 
 runCommand co@CLIOps{..}
@@ -347,9 +349,10 @@ runCommand co@CLIOps{..}
 
   case p of
     ProtocolRealPBFT gc _ _ _ _ -> do
-      let gentx = txSpendGenesisUTxOByronPBFT gc sk ctGenRichAddr ctOuts
-      putStrLn $ "genesis protocol magic: " <> show (configProtocolMagicId gc)
-      ensureNewFileLBS ctTx (serialise gentx)
+      let tx@ByronTx{byronTxId} = txSpendGenesisUTxOByronPBFT gc sk ctGenRichAddr ctOuts
+      putStrLn $ "genesis protocol magic:  " <> show (configProtocolMagicId gc)
+      putStrLn $ "transaction hash (TxId): " <> show byronTxId
+      ensureNewFileLBS ctTx (serialise tx)
     _ -> throwIO $ ProtocolNotSupported coProtocol
 
 {-------------------------------------------------------------------------------
