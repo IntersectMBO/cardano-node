@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GADTs                      #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase                 #-}
 {-# LANGUAGE NamedFieldPuns             #-}
 {-# LANGUAGE NoImplicitPrelude          #-}
 {-# LANGUAGE NumericUnderscores         #-}
@@ -18,7 +19,6 @@
 
 {-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
 {-# OPTIONS_GHC -Wno-simplifiable-class-constraints #-}
-{-# OPTIONS_GHC -Wno-partial-fields #-}
 
 #if !defined(mingw32_HOST_OS)
 #define UNIX
@@ -52,6 +52,7 @@ import qualified Data.ByteArray as BA
 import qualified Data.ByteString as SB
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.ByteString.UTF8 as UTF8
+import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
 import           Data.Map (Map)
 import           Data.Semigroup ((<>))
@@ -87,8 +88,12 @@ import           Cardano.Crypto (SigningKey (..), ProtocolMagic, ProtocolMagicId
 import qualified Cardano.Crypto.Hashing as Crypto
 import qualified Cardano.Crypto.Random as Crypto
 import qualified Cardano.Crypto.Signing as Crypto
+import           Cardano.Config.Partial (PartialCardanoConfiguration (..))
+import           Cardano.Config.Types (CardanoConfiguration(..))
 import           Cardano.Node.Configuration.Presets (mainnetConfiguration)
+import           Ouroboros.Consensus.Demo.Run
 import           Ouroboros.Consensus.Protocol hiding (Protocol)
+import qualified Ouroboros.Consensus.Protocol as Consensus
 import           Ouroboros.Consensus.Ledger.Byron
 import           Ouroboros.Consensus.Ledger.Byron.Config
 import qualified Test.Cardano.Chain.Genesis.Dummy as Dummy
@@ -196,12 +201,27 @@ data ClientCommand
   | SubmitTx
     TopologyInfo
     TxFile
+    -- ^ Filepath of transaction to submit.
     CommonCLI
   | SpendGenesisUTxO
     NewTxFile
+    -- ^ Filepath of the newly created transaction.
     SigningKeyFile
+    -- ^ Signing key of genesis UTxO owner.
     Address
+    -- ^ Genesis UTxO address.
     (NonEmpty TxOut)
+    -- ^ Tx output.
+    CommonCLI
+  | SpendUTxO
+    NewTxFile
+    -- ^ Filepath of the newly created transaction.
+    SigningKeyFile
+    -- ^ Signing key of Tx underwriter.
+    (NonEmpty TxIn)
+    -- ^ Inputs available for spending to the Tx underwriter's key.
+    (NonEmpty TxOut)
+    -- ^ Genesis UTxO output Address.
     CommonCLI
 
 runCommand :: CLIOps IO -> ClientCommand -> IO ()
@@ -356,64 +376,115 @@ runCommand CLIOps{..}
   unless (null issues) $
     throwIO $ CertificateValidationErrors certF issues
 
-runCommand CLIOps{..}
-           (SubmitTx stTopology (TxFile stTx) stCommon) = do
-
-  cc <- mkConfiguration mainnetConfiguration stCommon
-
-  SomeProtocol p <- fromProtocol cc coProtocol
-
-  case p of
-    ProtocolRealPBFT{} -> do
+runCommand co (SubmitTx stTopology (TxFile stTx) stCommon) = do
+  withRealPBFT co mainnetConfiguration stCommon $
+    \cc p@(ProtocolRealPBFT _ _ _ _ _) -> do
       txBS <- LB.readFile stTx
       case deserialiseOrFail txBS of
         Left  e  -> throwIO $ TxDeserialisationFailed stTx e
         Right tx@ByronTx{byronTxId} -> do
           putStrLn $ "transaction hash (TxId): " <> show byronTxId
           handleTxSubmission cc p stTopology tx stdoutTracer
-    _ -> throwIO $ ProtocolNotSupported coProtocol
 
 runCommand co@CLIOps{..}
            (SpendGenesisUTxO
             (NewTxFile ctTx) ctKey ctGenRichAddr ctOuts ctCommon) = do
-
-  sk <- readSigningKey co ctKey
-
-  cc <- mkConfiguration mainnetConfiguration ctCommon
-
-  SomeProtocol p <- fromProtocol cc coProtocol
-
-  case p of
-    ProtocolRealPBFT gc _ _ _ _ -> do
+  withRealPBFT co mainnetConfiguration ctCommon $
+    \_cc (ProtocolRealPBFT gc _ _ _ _) -> do
+      sk <- readSigningKey co ctKey
       let tx@ByronTx{byronTxId} = txSpendGenesisUTxOByronPBFT gc sk ctGenRichAddr ctOuts
       putStrLn $ "genesis protocol magic:  " <> show (configProtocolMagicId gc)
       putStrLn $ "transaction hash (TxId): " <> show byronTxId
       ensureNewFileLBS ctTx (serialise tx)
-    _ -> throwIO $ ProtocolNotSupported coProtocol
+
+runCommand co@CLIOps{..}
+           (SpendUTxO
+            (NewTxFile ctTx) ctKey ctIns ctOuts ctCommon) = do
+  withRealPBFT co mainnetConfiguration ctCommon $
+    \_cc (ProtocolRealPBFT gc _ _ _ _) -> do
+      sk <- readSigningKey co ctKey
+      let tx@ByronTx{byronTxId} = txSpendUTxOByronPBFT gc sk ctIns ctOuts
+      putStrLn $ "genesis protocol magic:  " <> show (configProtocolMagicId gc)
+      putStrLn $ "transaction hash (TxId): " <> show byronTxId
+      ensureNewFileLBS ctTx (serialise tx)
 
 {-------------------------------------------------------------------------------
   Supporting functions
 -------------------------------------------------------------------------------}
 
-txSpendGenesisUTxOByronPBFT :: CC.Genesis.Config -> SigningKey -> Address -> NonEmpty TxOut -> GenTx (ByronBlockOrEBB ByronConfig)
-txSpendGenesisUTxOByronPBFT gc sk genRichAddr outs =
-  let vk         = Crypto.toVerification sk
-      txattrs    = mkAttributes ()
-      tx         = UnsafeTx (pure txIn) outs txattrs
-      txIn      :: CC.UTxO.TxIn
-      txIn       = handleMissingAddr $ fst <$> Map.lookup genRichAddr initialUtxo
+-- | Perform an action that expects ProtocolInfo for Byron/PBFT,
+--   with attendant configuration.
+withRealPBFT
+  :: CLIOps IO
+  -> PartialCardanoConfiguration
+  -> CommonCLI
+  -> (RunDemo (ByronBlockOrEBB ByronConfig)
+      => CardanoConfiguration
+      -> Consensus.Protocol (ByronBlockOrEBB ByronConfig)
+      -> IO ())
+  -> IO ()
+withRealPBFT CLIOps{coProtocol} pcc common action = do
+  cc <- mkConfiguration pcc common
+  SomeProtocol p <- fromProtocol cc coProtocol
+  case p of
+    proto@ProtocolRealPBFT{} -> do
+      action cc proto
+    _ -> throwIO $ ProtocolNotSupported coProtocol
+
+signTxId :: ProtocolMagicId -> SigningKey -> TxId -> CC.UTxO.TxInWitness
+signTxId pmid sk txid = CC.UTxO.VKWitness
+  (Crypto.toVerification sk)
+  (Crypto.sign
+    pmid
+    Crypto.SignTx
+    sk
+    (CC.UTxO.TxSigData txid))
+
+txSpendUTxOByronPBFT
+  :: CC.Genesis.Config
+  -> SigningKey
+  -> NonEmpty TxIn
+  -> NonEmpty TxOut
+  -> GenTx (ByronBlockOrEBB ByronConfig)
+txSpendUTxOByronPBFT gc sk ins outs =
+  let txattrs  = mkAttributes ()
+      tx       = UnsafeTx ins outs txattrs
+      wit      = signTxId (configProtocolMagicId gc) sk (Crypto.hash tx)
+      ATxAux atx awit =
+        mkTxAux tx . V.fromList . take (NE.length ins) $ repeat wit
+  in mkByronTx $ ATxAux (reAnnotate atx) (reAnnotate awit)
+
+txSpendGenesisUTxOByronPBFT
+  :: CC.Genesis.Config
+  -> SigningKey
+  -> Address
+  -> NonEmpty TxOut
+  -> GenTx (ByronBlockOrEBB ByronConfig)
+txSpendGenesisUTxOByronPBFT gc sk genAddr outs =
+  let txattrs  = mkAttributes ()
+      tx       = UnsafeTx (pure txIn) outs txattrs
+      txIn    :: CC.UTxO.TxIn
+      txIn     = genesisUTxOTxIn gc sk genAddr
+      wit      = signTxId (configProtocolMagicId gc) sk (Crypto.hash tx) 
+      ATxAux atx awit = mkTxAux tx . V.fromList . pure $ wit
+  in mkByronTx $ ATxAux (reAnnotate atx) (reAnnotate awit)
+
+-- | Given a genesis, and a pair of signing key and address, reconstruct a TxIn
+--   corresponding to the genesis UTxO entry.
+genesisUTxOTxIn :: CC.Genesis.Config -> SigningKey -> Address -> CC.UTxO.TxIn
+genesisUTxOTxIn gc genSk genAddr =
+  let vk         = Crypto.toVerification genSk
       handleMissingAddr :: Maybe CC.UTxO.TxIn -> CC.UTxO.TxIn
       handleMissingAddr  = fromMaybe . error
-        $  "\nGenesis richmen UTxO has no address\n"
-        <> (T.unpack $ prettyAddress genRichAddr)
+        $  "\nGenesis UTxO has no address\n"
+        <> (T.unpack $ prettyAddress genAddr)
         <> "\n\nIt has the following, though:\n\n"
         <> Cardano.Prelude.concat (T.unpack . prettyAddress <$> Map.keys initialUtxo)
 
-      -- UTxO in the genesis block for the rich men
       initialUtxo :: Map Address (CC.UTxO.TxIn, CC.UTxO.TxOut)
       initialUtxo =
             Map.fromList
-          . mapMaybe (\(inp, out) -> mkEntry inp genRichAddr <$> keyMatchesUTxO vk out)
+          . mapMaybe (\(inp, out) -> mkEntry inp genAddr <$> keyMatchesUTxO vk out)
           . fromCompactTxInTxOutList
           . Map.toList
           . CC.UTxO.unUTxO
@@ -435,22 +506,7 @@ txSpendGenesisUTxOByronPBFT gc sk genRichAddr outs =
                                -> [(CC.UTxO.TxIn, CC.UTxO.TxOut)]
       fromCompactTxInTxOutList =
           map (bimap CC.UTxO.fromCompactTxIn CC.UTxO.fromCompactTxOut)
-      cheat     :: CC.UTxO.TxWitness
-      cheat      = V.fromList [
-        CC.UTxO.VKWitness
-            vk
-            (Crypto.sign
-              (configProtocolMagicId gc)
-              Crypto.SignTx
-              sk
-              -- Below, we have to cheat to spend a genesis UTxO entry:
-              -- sign ourselves, not the input Tx.
-              -- Ledger knows.
-              (CC.UTxO.TxSigData (Crypto.hash tx))
-              )
-        ]
-      ATxAux atx awit = mkTxAux tx cheat
-  in mkByronTx $ ATxAux (reAnnotate atx) (reAnnotate awit)
+  in handleMissingAddr $ fst <$> Map.lookup genAddr initialUtxo
 
 -- TODO:  we need to support password-protected secrets.
 readSigningKey :: CLIOps IO -> SigningKeyFile -> IO SigningKey

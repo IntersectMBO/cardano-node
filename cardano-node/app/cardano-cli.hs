@@ -3,31 +3,36 @@
 import           Cardano.Prelude hiding (option)
 import           Prelude (String, error, id)
 
+import           Control.Arrow
+import qualified Data.List.NonEmpty as NE
+import           Data.Text
+import           Data.Time (UTCTime)
+import           Data.Time.Clock.POSIX (posixSecondsToUTCTime)
+import qualified Options.Applicative as Opt
+import           Options.Applicative (Parser, ParserInfo, ParserPrefs, auto,
+                                      commandGroup, flag, flag', help, long,
+                                      metavar, option, showHelpOnEmpty,
+                                      strOption, subparser, value)
+
+import           Control.Exception.Safe (catchIO)
+import           System.Exit (ExitCode (..), exitWith)
+
 import           Cardano.Binary (Annotated (..))
 import           Cardano.Chain.Common
 import           Cardano.Chain.Genesis
 import           Cardano.Chain.Slotting
 import           Cardano.Chain.UTxO
+import           Cardano.Crypto ( AProtocolMagic(..)
+                                , ProtocolMagic
+                                , ProtocolMagicId(..)
+                                , RequiresNetworkMagic(..)
+                                , decodeHash)
+
+import           Cardano.Config.CommonCLI
+import           Cardano.Common.Protocol
+import           Cardano.Node.Parsers
 import           Cardano.CLI.Ops (decideCLIOps)
 import           Cardano.CLI.Run
-import           Cardano.Common.Protocol
-import           Cardano.Config.CommonCLI
-import           Cardano.Crypto (AProtocolMagic (..), ProtocolMagic,
-                                 ProtocolMagicId (..),
-                                 RequiresNetworkMagic (..))
-import           Cardano.Node.Parsers
-
-import           Control.Arrow
-import           Control.Exception.Safe (catchIO)
-import qualified Data.List.NonEmpty as NE
-import           Data.Time (UTCTime)
-import           Data.Time.Clock.POSIX (posixSecondsToUTCTime)
-import           Options.Applicative (Parser, ParserInfo, ParserPrefs, auto,
-                                      commandGroup, flag, flag', help, long,
-                                      metavar, option, showHelpOnEmpty,
-                                      strOption, subparser, value)
-import qualified Options.Applicative as Opt
-import           System.Exit (ExitCode (..), exitWith)
 
 main :: IO ()
 main = do
@@ -228,6 +233,17 @@ parseTxRelatedValues =
                   "rich-addr-from"
                   "Tx source: genesis UTxO richman address (non-HD)."
             <*> (NE.fromList <$> some parseTxOut)
+            <*> parseCommonCLI,
+          command'
+            "issue-utxo-expenditure"
+            "Write a file with a signed transaction, spending normal UTxO."
+            $ SpendUTxO
+            <$> parseNewTxFile "tx"
+            <*> parseSigningKeyFile
+                  "wallet-key"
+                  "Key that has access to all mentioned genesis UTxO inputs."
+            <*> (NE.fromList <$> some parseTxIn)
+            <*> (NE.fromList <$> some parseTxOut)
             <*> parseCommonCLI
           ]
       )
@@ -285,16 +301,16 @@ parseNetworkMagic :: Parser NetworkMagic
 parseNetworkMagic =
   asum
     [ flag' NetworkMainOrStage
-        $ mconcat
-            [ long "main-or-staging",
-              help ""
-              ],
+      $ mconcat
+      [ long "main-or-staging",
+        help ""
+      ],
       option (fmap NetworkTestnet auto)
-        ( long "testnet-magic"
-            <> metavar "MAGIC"
-            <> help "The testnet network magic, decibal"
-          )
-      ]
+      ( long "testnet-magic"
+        <> metavar "MAGIC"
+        <> help "The testnet network magic, decibal"
+      )
+    ]
 
 parseProtocolMagicId :: String -> Parser ProtocolMagicId
 parseProtocolMagicId arg =
@@ -310,17 +326,17 @@ parseUTCTime :: String -> String -> Parser UTCTime
 parseUTCTime optname desc =
   option (posixSecondsToUTCTime . fromInteger <$> auto)
     ( long optname
-        <> metavar "POSIXSECONDS"
-        <> help desc
-      )
+      <> metavar "POSIXSECONDS"
+      <> help desc
+    )
 
 parseFilePath :: String -> String -> Parser FilePath
 parseFilePath optname desc =
   strOption
     ( long optname
-        <> metavar "FILEPATH"
-        <> help desc
-      )
+      <> metavar "FILEPATH"
+      <> help desc
+    )
 
 parseIntegral :: Integral a => String -> String -> Parser a
 parseIntegral optname desc =
@@ -334,17 +350,17 @@ parseIntegralWithDefault :: Integral a => String -> String -> a -> Parser a
 parseIntegralWithDefault optname desc def =
   option (fromInteger <$> auto)
     ( long optname
-        <> metavar "INT"
-        <> help desc
-        <> value def
-      )
+      <> metavar "INT"
+      <> help desc
+      <> value def
+    )
 
 parseFlag :: String -> String -> Parser Bool
 parseFlag optname desc =
   flag False True
     ( long optname
-        <> help desc
-      )
+      <> help desc
+    )
 
 -- | Here, we hope to get away with the usage of 'error' in a pure expression,
 --   because the CLI-originated values are either used, in which case the error is
@@ -356,40 +372,58 @@ parseFlag optname desc =
 cliParseBase58Address :: Text -> Address
 cliParseBase58Address =
   either (error . ("Bad Base58 address: " <>) . show) id
-    . fromCBORTextAddress
+  . fromCBORTextAddress
 
 -- | See the rationale for cliParseBase58Address.
 cliParseLovelace :: Word64 -> Lovelace
 cliParseLovelace =
   either (error . ("Bad Lovelace value: " <>) . show) id
-    . mkLovelace
+  . mkLovelace
+
+-- | See the rationale for cliParseBase58Address.
+cliParseTxId :: String -> TxId
+cliParseTxId =
+  either (error . ("Bad Lovelace value: " <>) . show) id
+  . decodeHash . pack
 
 parseAddress :: String -> String -> Parser Address
 parseAddress opt desc =
   option (cliParseBase58Address <$> auto)
     ( long opt
-        <> metavar "ADDR"
-        <> help desc
-      )
+      <> metavar "ADDR"
+      <> help desc
+    )
+
+parseTxIn :: Parser TxIn
+parseTxIn = 
+  option 
+  ( uncurry TxInUtxo 
+    . Control.Arrow.first cliParseTxId
+    <$> auto
+  )
+  ( long       "txin"
+    <> metavar "(TXID,INDEX)"
+    <> help    "Transaction input is a pair of an UTxO TxId and a zero-based output index."
+  )
 
 parseTxOut :: Parser TxOut
 parseTxOut =
   option
     ( uncurry TxOut
-        . Control.Arrow.first cliParseBase58Address
-        . Control.Arrow.second cliParseLovelace
-        <$> auto
-      )
+      . Control.Arrow.first cliParseBase58Address
+      . Control.Arrow.second cliParseLovelace
+      <$> auto
+    )
     ( long "txout"
-        <> metavar "ADDR:LOVELACE"
-        <> help "Specify a transaction output, as a pair of an address and lovelace."
-      )
+      <> metavar "ADDR:LOVELACE"
+      <> help "Specify a transaction output, as a pair of an address and lovelace."
+    )
 
 parseGenesisFile :: String -> Parser GenesisFile
 parseGenesisFile opt =
   GenesisFile
-    <$> parseFilePath opt
-          "Genesis JSON file."
+  <$> parseFilePath opt
+      "Genesis JSON file."
 
 parseNewDirectory :: String -> String -> Parser NewDirectory
 parseNewDirectory opt desc = NewDirectory <$> parseFilePath opt desc
