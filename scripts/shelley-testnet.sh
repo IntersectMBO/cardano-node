@@ -30,9 +30,9 @@ CMD="cabal new-exec cardano-node --"
 
 # SPECIAL=""
 SPECIAL="--live-view"
-# VERBOSITY="--tracing-verbosity-minimal" 
-# VERBOSITY="--tracing-verbosity-normal" 
-VERBOSITY="--tracing-verbosity-maximal" 
+# VERBOSITY="--tracing-verbosity-minimal"
+# VERBOSITY="--tracing-verbosity-normal"
+VERBOSITY="--tracing-verbosity-maximal"
 HOST="127.0.0.1"
 HOST6="::1"
 

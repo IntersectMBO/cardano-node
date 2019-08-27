@@ -11,21 +11,21 @@ rotation:
 setupBackends:
   - KatipBK
   - kind: TraceAcceptorBK
-    path: log-pipe-0
+    path: logs/log-pipe-0
   - kind: TraceAcceptorBK
-    path: log-pipe-1
+    path: logs/log-pipe-1
   - kind: TraceAcceptorBK
-    path: log-pipe-2
+    path: logs/log-pipe-2
 
 # if not indicated otherwise, then messages are passed to these backends:
 defaultBackends:
   - KatipBK
   - kind: TraceAcceptorBK
-    path: log-pipe-0
+    path: logs/log-pipe-0
   - kind: TraceAcceptorBK
-    path: log-pipe-1
+    path: logs/log-pipe-1
   - kind: TraceAcceptorBK
-    path: log-pipe-2
+    path: logs/log-pipe-2
 
 # if wanted, the GUI is listening on this port:
 #hasGUI: 12872

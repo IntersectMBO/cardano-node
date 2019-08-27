@@ -1,5 +1,9 @@
+{-# LANGUAGE ConstraintKinds       #-}
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE LambdaCase            #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
 {-# LANGUAGE UndecidableInstances  #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans  #-}
@@ -17,14 +21,19 @@ import           Prelude (String, show, id)
 
 import           Data.Aeson (Value (..), toJSON, (.=))
 import           Data.Text (pack)
-import           Cardano.BM.Data.Tracer (ToObject (..),
-                                         TracingVerbosity (..),
-                                         emptyObject, mkObject)
+import qualified Network.Socket as Socket (SockAddr)
+
+import           Cardano.BM.Data.LogItem (LOContent (..), LogObject (..),
+                     mkLOMeta)
+import           Cardano.BM.Tracing
+import           Cardano.BM.Data.Tracer (trStructured, emptyObject, mkObject)
 
 import           Ouroboros.Consensus.Ledger.Abstract
 import           Ouroboros.Consensus.Util.Condense
+import           Ouroboros.Consensus.Util.Orphans ()
 import qualified Ouroboros.Network.AnchoredFragment as AF
 import           Ouroboros.Network.Block
+import           Ouroboros.Network.Subscription
 import qualified Ouroboros.Storage.ChainDB as ChainDB
 import qualified Ouroboros.Storage.LedgerDB.OnDisk as LedgerDB
 
@@ -46,7 +55,7 @@ showWithTip :: Condense (HeaderHash blk)
             => (a -> String)
             -> WithTip blk a
             -> String
-showWithTip customShow (WithTip tip a) = "[" ++ (showTip MinimalVerbosity tip) ++ "] " ++ customShow a
+showWithTip customShow (WithTip tip a) = "[" ++ showTip MinimalVerbosity tip ++ "] " ++ customShow a
 
 showTip :: Condense (HeaderHash blk)
         => TracingVerbosity
@@ -69,8 +78,267 @@ instance ( Show a
 
     show = showWithTip show
 
+instance DefinePrivacyAnnotation (WithIPList (SubscriptionTrace Socket.SockAddr))
+instance DefineSeverity (WithIPList (SubscriptionTrace Socket.SockAddr)) where
+    defineSeverity (WithIPList _ _ _ ev) = case ev of
+        SubscriptionTraceConnectStart _ -> Info
+        SubscriptionTraceConnectEnd _ connectResult -> case connectResult of
+            ConnectSuccess         -> Info
+            ConnectSuccessLast     -> Notice
+            ConnectValencyExceeded -> Warning
+        SubscriptionTraceConnectException _ _ -> Error
+        SubscriptionTraceSocketAllocationException _ _ -> Error
+        SubscriptionTraceConnectCleanup _ -> Debug
+        SubscriptionTraceSubscriptionRunning -> Debug
+        SubscriptionTraceSubscriptionWaiting _ -> Debug
+        SubscriptionTraceSubscriptionFailed -> Error
+        SubscriptionTraceSubscriptionWaitingNewConnection _ -> Notice
+        SubscriptionTraceStart _ -> Debug
+        SubscriptionTraceRestart _ _ _ -> Info
+        SubscriptionTraceConnectionExist _ -> Notice
+        SubscriptionTraceUnsupportedRemoteAddr _ -> Error
+        SubscriptionTraceMissingLocalAddress -> Warning
+        SubscriptionApplicationException _ -> Error
+        SubscriptionTraceAllocateSocket _ -> Debug
+        SubscriptionTraceCloseSocket _ -> Info
+
+instance DefinePrivacyAnnotation (WithDomainName (SubscriptionTrace Socket.SockAddr))
+instance DefineSeverity (WithDomainName (SubscriptionTrace Socket.SockAddr)) where
+    defineSeverity (WithDomainName _ ev) = case ev of
+        SubscriptionTraceConnectStart _ -> Info
+        SubscriptionTraceConnectEnd _ _ -> Info
+        SubscriptionTraceConnectException _ _ -> Error
+        SubscriptionTraceSocketAllocationException _ _ -> Error
+        SubscriptionTraceConnectCleanup _ -> Debug
+        SubscriptionTraceSubscriptionRunning -> Debug
+        SubscriptionTraceSubscriptionWaiting _ -> Debug
+        SubscriptionTraceSubscriptionFailed -> Warning
+        SubscriptionTraceSubscriptionWaitingNewConnection _ -> Debug
+        SubscriptionTraceStart _ -> Debug
+        SubscriptionTraceRestart _ _ _ -> Debug
+        SubscriptionTraceConnectionExist _ -> Info
+        SubscriptionTraceUnsupportedRemoteAddr _ -> Warning
+        SubscriptionTraceMissingLocalAddress -> Warning
+        SubscriptionApplicationException _ -> Error
+        SubscriptionTraceAllocateSocket _ -> Debug
+        SubscriptionTraceCloseSocket _ -> Debug
+
+instance DefinePrivacyAnnotation (WithDomainName DnsTrace)
+instance DefineSeverity (WithDomainName DnsTrace) where
+    defineSeverity (WithDomainName _ ev) = case ev of
+        DnsTraceLookupException _  -> Error
+        DnsTraceLookupAError _     -> Error
+        DnsTraceLookupAAAAError _  -> Error
+        DnsTraceLookupIPv6First    -> Info
+        DnsTraceLookupIPv4First    -> Info
+        DnsTraceLookupAResult _    -> Debug
+        DnsTraceLookupAAAAResult _ -> Debug
+
+instance DefinePrivacyAnnotation (WithTip blk (ChainDB.TraceEvent blk))
+instance DefineSeverity (WithTip blk (ChainDB.TraceEvent blk)) where
+    defineSeverity (WithTip _tip ev) = defineSeverity ev
+
+instance DefineSeverity (ChainDB.TraceEvent blk) where
+    defineSeverity (ChainDB.TraceAddBlockEvent ev) = case ev of
+        ChainDB.StoreButDontChange _ -> Debug
+        ChainDB.TryAddToCurrentChain _ -> Debug
+        ChainDB.TrySwitchToAFork _ _ -> Info
+        ChainDB.SwitchedToChain _ _ -> Notice
+        ChainDB.AddBlockValidation ev' -> case ev' of
+            ChainDB.InvalidBlock _ _ -> Error
+            ChainDB.InvalidCandidate _ _ -> Error
+            ChainDB.ValidCandidate _ -> Notice
+        ChainDB.AddedBlockToVolDB _     -> Debug
+        ChainDB.ChainChangedInBg _ _     -> Info
+
+    defineSeverity (ChainDB.TraceLedgerReplayEvent ev) = case ev of
+        LedgerDB.ReplayFromGenesis _ -> Info
+        LedgerDB.ReplayFromSnapshot _ _ _ -> Info
+        _ -> Debug
+    defineSeverity (ChainDB.TraceLedgerEvent ev) = case ev of
+        LedgerDB.TookSnapshot _ _ -> Info
+        LedgerDB.DeletedSnapshot _ -> Debug
+        LedgerDB.InvalidSnapshot _ _ -> Error
+
+    defineSeverity (ChainDB.TraceCopyToImmDBEvent ev) = case ev of
+        ChainDB.CopiedBlockToImmDB _ -> Info
+        ChainDB.NoBlocksToCopyToImmDB -> Debug
+
+    defineSeverity (ChainDB.TraceGCEvent ev) = case ev of
+        ChainDB.PerformedGC _ -> Debug
+        ChainDB.ScheduledGC _ _ -> Debug
+
+    defineSeverity (ChainDB.TraceOpenEvent ev) = case ev of
+        ChainDB.OpenedDB _ _ -> Info
+        ChainDB.ClosedDB _ _ -> Info
+        ChainDB.ReopenedDB _ _ -> Debug
+        ChainDB.OpenedImmDB _ _ -> Debug
+        ChainDB.OpenedVolDB -> Debug
+        ChainDB.OpenedLgrDB -> Debug
+
+    defineSeverity (ChainDB.TraceReaderEvent ev) = case ev of
+            ChainDB.NewReader _ -> Info
+            ChainDB.ReaderNoLongerInMem _ -> Info
+            ChainDB.ReaderSwitchToMem _ _ -> Info
+            ChainDB.ReaderNewImmIterator _ _ -> Info
+    defineSeverity (ChainDB.TraceInitChainSelEvent ev) = case ev of
+            ChainDB.InitChainSelValidation _ -> Debug
+    defineSeverity (ChainDB.TraceIteratorEvent ev) = case ev of
+            ChainDB.StreamFromVolDB _ _ _ -> Debug
+            _ -> Debug
+    defineSeverity (ChainDB.TraceImmDBEvent _ev) = Debug
+
+-- | instances of @Transformable@
+
+-- transform @SubscriptionTrace@
+instance Transformable Text IO (WithIPList (SubscriptionTrace Socket.SockAddr)) where
+    trTransformer StructuredLogging verb tr = trStructured verb tr
+    trTransformer TextualRepresentation _verb tr = Tracer $ \s ->
+        traceWith tr =<< LogObject <$> pure ""
+                                   <*> mkLOMeta (defineSeverity s) (definePrivacyAnnotation s)
+                                   <*> pure (LogMessage $ pack $ show s)
+    trTransformer UserdefinedFormatting verb tr = trStructured verb tr
+
+
+instance Transformable Text IO (WithDomainName (SubscriptionTrace Socket.SockAddr)) where
+    trTransformer StructuredLogging verb tr = trStructured verb tr
+    trTransformer TextualRepresentation _verb tr = Tracer $ \s ->
+        traceWith tr =<< LogObject <$> pure ""
+                                   <*> mkLOMeta (defineSeverity s) (definePrivacyAnnotation s)
+                                   <*> pure (LogMessage $ pack $ show s)
+    trTransformer UserdefinedFormatting verb tr = trStructured verb tr
+
+-- transform @DnsTrace@
+instance Transformable Text IO (WithDomainName DnsTrace) where
+    trTransformer StructuredLogging verb tr = trStructured verb tr
+    trTransformer TextualRepresentation _verb tr = Tracer $ \s ->
+        traceWith tr =<< LogObject <$> pure ""
+                                   <*> mkLOMeta (defineSeverity s) (definePrivacyAnnotation s)
+                                   <*> pure (LogMessage $ pack $ show s)
+    trTransformer UserdefinedFormatting verb tr = trStructured verb tr
+
+
+
+-- transform @TraceEvent@
+instance (Condense (HeaderHash blk), ProtocolLedgerView blk)
+            => Transformable Text IO (WithTip blk (ChainDB.TraceEvent blk)) where
+    -- structure required, will call 'toObject'
+    trTransformer StructuredLogging verb tr = trStructured verb tr
+    -- textual output based on the readable ChainDB tracer
+    trTransformer TextualRepresentation _verb tr = readableChainDBTracer $ Tracer $ \s ->
+        traceWith tr =<< LogObject <$> pure ""
+                                   <*> mkLOMeta (defineSeverity s) (definePrivacyAnnotation s)
+                                   <*> pure (LogMessage $ pack s)
+    -- user defined formatting of log output
+    trTransformer UserdefinedFormatting verb tr = trStructured verb tr
+
+-- | tracer transformer to text messages for TraceEvents
+-- Converts the trace events from the ChainDB that we're interested in into
+-- human-readable trace messages.
+readableChainDBTracer
+    :: forall m blk.
+       (Monad m, Condense (HeaderHash blk), ProtocolLedgerView blk)
+    => Tracer m String
+    -> Tracer m (WithTip blk (ChainDB.TraceEvent blk))
+readableChainDBTracer tracer = Tracer $ \case
+    WithTip tip (ChainDB.TraceAddBlockEvent ev) -> case ev of
+        ChainDB.StoreButDontChange pt   -> tr $ WithTip tip $
+          "Ignoring block: " <> condense pt
+        ChainDB.TryAddToCurrentChain pt -> tr $ WithTip tip $
+          "Block fits onto the current chain: " <> condense pt
+        ChainDB.TrySwitchToAFork pt _   -> tr $ WithTip tip $
+          "Block fits onto some fork: " <> condense pt
+        ChainDB.SwitchedToChain _ c     -> tr $ WithTip tip $
+          "Chain changed, new tip: " <> condense (AF.headPoint c)
+        ChainDB.AddBlockValidation ev' -> case ev' of
+            ChainDB.InvalidBlock err pt -> tr $ WithTip tip $
+              "Invalid block " <> condense pt <> ": " <> show err
+            ChainDB.InvalidCandidate c err -> tr $ WithTip tip $
+              "Invalid candidate " <> condense (AF.headPoint c) <> ": " <> show err
+            ChainDB.ValidCandidate c -> tr $ WithTip tip $
+              "Valid candidate " <> condense (AF.headPoint c)
+        ChainDB.AddedBlockToVolDB pt     -> tr $ WithTip tip $
+          "Chain added block " <> condense pt
+        ChainDB.ChainChangedInBg c1 c2     -> tr $ WithTip tip $
+          "Chain changed in bg, from " <> condense (AF.headPoint c1) <> " to "  <> condense (AF.headPoint c2)
+    WithTip tip (ChainDB.TraceLedgerReplayEvent ev) -> case ev of
+        LedgerDB.ReplayFromGenesis _replayTo -> tr $ WithTip tip
+          "Replaying ledger from genesis"
+        LedgerDB.ReplayFromSnapshot snap tip' _replayTo -> tr $ WithTip tip $
+          "Replaying ledger from snapshot " <> show snap <> " at " <>
+          condense tip'
+        LedgerDB.ReplayedBlock {} -> pure ()
+    WithTip tip (ChainDB.TraceLedgerEvent ev) -> case ev of
+        LedgerDB.TookSnapshot snap pt -> tr $ WithTip tip $
+          "Took ledger snapshot " <> show snap <> " at " <> condense pt
+        LedgerDB.DeletedSnapshot snap -> tr $ WithTip tip $
+          "Deleted old snapshot " <> show snap
+        LedgerDB.InvalidSnapshot snap failure -> tr $ WithTip tip $
+          "Invalid snapshot " <> show snap <> show failure
+    WithTip tip (ChainDB.TraceCopyToImmDBEvent ev) -> case ev of
+        ChainDB.CopiedBlockToImmDB pt -> tr $ WithTip tip $
+          "Copied block " <> condense pt <> " to the ImmutableDB"
+        ChainDB.NoBlocksToCopyToImmDB -> tr $ WithTip tip
+          "There are no blocks to copy to the ImmutableDB"
+    WithTip tip (ChainDB.TraceGCEvent ev) -> case ev of
+        ChainDB.PerformedGC slot        -> tr $ WithTip tip $
+          "Performed a garbage collection for " <> condense slot
+        ChainDB.ScheduledGC slot _difft -> tr $ WithTip tip $
+          "Scheduled a garbage collection for " <> condense slot
+    WithTip tip (ChainDB.TraceOpenEvent ev) -> case ev of
+        ChainDB.OpenedDB immTip tip' -> tr $ WithTip tip $
+          "Opened db with immutable tip at " <> condense immTip <>
+          " and tip " <> condense tip'
+        ChainDB.ClosedDB immTip tip' -> tr $ WithTip tip $
+          "Closed db with immutable tip at " <> condense immTip <>
+          " and tip " <> condense tip'
+        ChainDB.ReopenedDB immTip tip' -> tr $ WithTip tip $
+          "Reopened db with immutable tip at " <> condense immTip <>
+          " and tip " <> condense tip'
+        ChainDB.OpenedImmDB immTip epoch -> tr $ WithTip tip $
+          "Opened imm db with immutable tip at " <> condense immTip <>
+          " and epoch " <> show epoch
+        ChainDB.OpenedVolDB -> tr $ WithTip tip "Opened vol db"
+        ChainDB.OpenedLgrDB -> tr $ WithTip tip "Opened lgr db"
+    WithTip tip (ChainDB.TraceReaderEvent ev) -> case ev of
+        ChainDB.NewReader readerid -> tr $ WithTip tip $
+          "New reader with id: " <> condense readerid
+        ChainDB.ReaderNoLongerInMem _ -> tr $ WithTip tip "ReaderNoLongerInMem"
+        ChainDB.ReaderSwitchToMem _ _ -> tr $ WithTip tip "ReaderSwitchToMem"
+        ChainDB.ReaderNewImmIterator _ _ -> tr $ WithTip tip "ReaderNewImmIterator"
+    WithTip tip (ChainDB.TraceInitChainSelEvent ev) -> case ev of
+        ChainDB.InitChainSelValidation _ -> tr $ WithTip tip "InitChainSelValidation"
+    WithTip tip (ChainDB.TraceIteratorEvent ev) -> case ev of
+        ChainDB.StreamFromVolDB _ _ _ -> tr $ WithTip tip "StreamFromVolDB"
+        _ -> pure ()  -- TODO add more iterator events
+    WithTip tip (ChainDB.TraceImmDBEvent _ev) -> tr $ WithTip tip "TraceImmDBEvent"
+
+  where
+    tr :: WithTip blk String -> m ()
+    tr = traceWith (contramap (showWithTip id) tracer)
+
 
 -- | instances of @ToObject@
+
+instance ToObject (WithIPList (SubscriptionTrace Socket.SockAddr)) where
+    toObject _verb (WithIPList ipv4 ipv6 dests ev) =
+        mkObject [ "kind" .= String "WithIPList SubscriptionTrace"
+                 , "ipv4" .= show ipv4
+                 , "ipv6" .= show ipv6
+                 , "dests" .= show dests
+                 , "event" .= show ev ]
+
+instance ToObject (WithDomainName (SubscriptionTrace Socket.SockAddr)) where
+    toObject _verb (WithDomainName dom ev) =
+        mkObject [ "kind" .= String "SubscriptionTrace"
+                 , "domain" .= show dom
+                 , "event" .= show ev ]
+
+instance ToObject (WithDomainName DnsTrace) where
+    toObject _verb (WithDomainName dom ev) =
+        mkObject [ "kind" .= String "DnsTrace"
+                 , "domain" .= show dom
+                 , "event" .= show ev ]
 
 instance (Condense (HeaderHash blk), ProtocolLedgerView blk)
             => ToObject (WithTip blk (ChainDB.TraceEvent blk)) where
@@ -172,9 +440,7 @@ instance (Condense (HeaderHash blk), ProtocolLedgerView blk)
         ChainDB.ScheduledGC slot difft ->
             mkObject $ [ "kind" .= String "TraceGCEvent.ScheduledGC"
                        , "slot" .= toObject verb slot ] <>
-                       if verb > MaximalVerbosity
-                       then [ "difft" .= String ((pack . show) difft) ]
-                       else []
+                       [ "difft" .= String ((pack . show) difft) | verb >= MaximalVerbosity]
 
     toObject verb (ChainDB.TraceOpenEvent ev) = case ev of
         ChainDB.OpenedDB immTip tip' ->

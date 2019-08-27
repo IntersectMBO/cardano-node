@@ -18,7 +18,7 @@ defaultBackends:
   #- TraceForwarderBK
 
 # file to forward traced objects
-logOutput: "log-pipe-1"
+logOutput: "logs/log-pipe-1"
 
 # if wanted, the GUI is listening on this port:
 #hasGUI: 12871
