@@ -30,10 +30,10 @@ in the next block it will create.
 ## Startup testnet
 
 Add the next two lines to your $HOME/.tmux.conf file:
-
+```
 set-window-option -g mouse on
 set -g default-terminal "tmux-256color"
-
+```
 In a first terminal start the central logging process:
 
     `./scripts/trace-acceptor.sh`
