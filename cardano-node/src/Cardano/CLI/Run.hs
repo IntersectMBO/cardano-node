@@ -101,16 +101,45 @@ import           Cardano.Node.Configuration.Topology
 import           Cardano.Node.TxSubmission
 
 
-newtype GenesisFile            = GenesisFile            FilePath deriving (Eq, Ord, Show, IsString)
-newtype NewDirectory           = NewDirectory           FilePath deriving (Eq, Ord, Show, IsString)
-newtype SigningKeyFile         = SigningKeyFile         FilePath deriving (Eq, Ord, Show, IsString)
-newtype NewSigningKeyFile      = NewSigningKeyFile      FilePath deriving (Eq, Ord, Show, IsString)
-newtype VerificationKeyFile    = VerificationKeyFile    FilePath deriving (Eq, Ord, Show, IsString)
-newtype NewVerificationKeyFile = NewVerificationKeyFile FilePath deriving (Eq, Ord, Show, IsString)
-newtype CertificateFile        = CertificateFile        FilePath deriving (Eq, Ord, Show, IsString)
-newtype NewCertificateFile     = NewCertificateFile     FilePath deriving (Eq, Ord, Show, IsString)
-newtype TxFile                 = TxFile                 FilePath deriving (Eq, Ord, Show, IsString)
-newtype NewTxFile              = NewTxFile              FilePath deriving (Eq, Ord, Show, IsString)
+newtype GenesisFile =
+  GenesisFile FilePath
+  deriving (Eq, Ord, Show, IsString)
+
+newtype NewDirectory =
+  NewDirectory FilePath
+  deriving (Eq, Ord, Show, IsString)
+
+newtype SigningKeyFile =
+  SigningKeyFile FilePath
+  deriving (Eq, Ord, Show, IsString)
+
+newtype NewSigningKeyFile =
+  NewSigningKeyFile FilePath
+  deriving (Eq, Ord, Show, IsString)
+
+newtype VerificationKeyFile =
+  VerificationKeyFile FilePath
+  deriving (Eq, Ord, Show, IsString)
+
+newtype NewVerificationKeyFile =
+  NewVerificationKeyFile FilePath
+   deriving (Eq, Ord, Show, IsString)
+
+newtype CertificateFile =
+  CertificateFile FilePath
+  deriving (Eq, Ord, Show, IsString)
+
+newtype NewCertificateFile =
+  NewCertificateFile { nFp :: FilePath }
+  deriving (Eq, Ord, Show, IsString)
+
+newtype TxFile =
+  TxFile FilePath
+  deriving (Eq, Ord, Show, IsString)
+
+newtype NewTxFile =
+  NewTxFile FilePath
+  deriving (Eq, Ord, Show, IsString)
 
 data ClientCommand
   = Genesis
@@ -143,17 +172,27 @@ data ClientCommand
   | ToVerification
     SigningKeyFile
     NewVerificationKeyFile
-  | Redelegate
+
+    --- Delegation Related Commands ---
+
+  | IssueDelegationCertificate
     ProtocolMagicId
     EpochNumber
+    -- ^ The epoch from which the delegation is valid.
     SigningKeyFile
+    -- ^ The issuer of the certificate, who delegates their right to sign blocks.
     VerificationKeyFile
+    -- ^ The delegate, who gains the right to sign blocks on behalf of the issuer.
     NewCertificateFile
+    -- ^ Filepath of the newly created delegation certificate.
   | CheckDelegation
     ProtocolMagicId
     CertificateFile
     VerificationKeyFile
     VerificationKeyFile
+
+    -----------------------------------
+
   | SubmitTx
     TopologyInfo
     TxFile
@@ -276,16 +315,13 @@ runCommand co (ToVerification
     . Builder.toLazyText . Crypto.formatFullVerificationKey . Crypto.toVerification
     =<< readSigningKey co skF
 
-runCommand co@CLIOps{..}
-           (Redelegate protoMagic epoch
-            skF vkF (NewCertificateFile certF)) = do
+runCommand co (IssueDelegationCertificate pM epoch skF vkF cFp) = do
   sk <- readSigningKey co skF
   vk <- readVerificationKey vkF
   let signer = Crypto.noPassSafeSigner sk
   -- TODO:  we need to support password-protected secrets.
-
-  let cert = mkCertificate protoMagic signer vk epoch
-  ensureNewFileLBS certF =<< coSerialiseDelegationCert cert
+  let cert = signCertificate pM vk epoch signer
+  ensureNewFileLBS (nFp cFp) =<< (coSerialiseDelegationCert co $ cert)
 
 runCommand CLIOps{..}
            (CheckDelegation magic
@@ -430,18 +466,20 @@ readVerificationKey (VerificationKeyFile fp) = do
 
 -- TODO:  we'd be better served by a combination of a temporary file
 --        with an atomic rename.
-ensureNewFile' :: (FilePath -> a -> IO ()) -> FilePath -> a -> IO ()
-ensureNewFile' writer outFile blob = do
+
+-- | Checks if a path exists and throws and error if it does.
+ensureNewFile :: (FilePath -> a -> IO ()) -> FilePath -> a -> IO ()
+ensureNewFile writer outFile blob = do
   exists <- doesPathExist outFile
   when exists $
     throwIO $ OutputMustNotAlreadyExist outFile
   writer outFile blob
 
 ensureNewFileLBS :: FilePath -> LB.ByteString -> IO ()
-ensureNewFileLBS = ensureNewFile' LB.writeFile
+ensureNewFileLBS = ensureNewFile LB.writeFile
 
 ensureNewFileText :: FilePath -> TL.Text -> IO ()
-ensureNewFileText = ensureNewFile' TL.writeFile
+ensureNewFileText = ensureNewFile TL.writeFile
 
 readPassword :: String -> IO Crypto.PassPhrase
 readPassword prompt = do

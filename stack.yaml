@@ -7,7 +7,7 @@ packages:
 extra-deps:
     # Cardano-ledger dependencies
   - git: https://github.com/input-output-hk/cardano-ledger
-    commit: 70515f1aefdbd60d11061b4b370aa5e54a487e56
+    commit: 8f5ef2af5a46e35f786b967c63d6e114a6da298b
     subdirs:
       - cardano-ledger
       - cardano-ledger/test
@@ -57,7 +57,7 @@ extra-deps:
     #Ouroboros-network dependencies
 
   - git: https://github.com/input-output-hk/ouroboros-network
-    commit: add6c408ca7aa560d4bbb38ca12df577e64ed106
+    commit: 6c0541bd74e7d0995abe6d70910a9a31f3003ecf
     subdirs:
         - io-sim-classes
         - network-mux

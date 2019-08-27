@@ -54,7 +54,8 @@ import           Ouroboros.Network.Protocol.Handshake.Version
 import           Ouroboros.Network.NodeToClient
 
 import           Cardano.Node.Configuration.Topology
-import           Cardano.Node.Configuration.Types
+import           Cardano.Node.Configuration.Types (CardanoConfiguration(..))
+
 
 
 {-------------------------------------------------------------------------------
