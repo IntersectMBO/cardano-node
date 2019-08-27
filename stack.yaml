@@ -42,7 +42,7 @@ extra-deps:
   - tasty-hedgehog-1.0.0.1
     # iohk-monitoring-framework currently not pinned to a release
   - git: https://github.com/input-output-hk/iohk-monitoring-framework
-    commit: a097c292011969154826ffe3e53e4cc72f224abc
+    commit: d23f82ea2aea720aa23295928cb60f04e989285f
     subdirs:
       - contra-tracer
       - iohk-monitoring
@@ -57,7 +57,7 @@ extra-deps:
     #Ouroboros-network dependencies
 
   - git: https://github.com/input-output-hk/ouroboros-network
-    commit: f582ab17e8d58cfc827f6ce3b9efba770fb25e0d
+    commit: 7d1d13a6ca1ccc851b43ce51afc9516bee976b2e
     subdirs:
         - io-sim-classes
         - network-mux
