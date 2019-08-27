@@ -19,6 +19,7 @@ import           Ouroboros.Consensus.NodeId (CoreNodeId)
 
 import           Cardano.Common.CommonCLI
 import           Cardano.Common.Protocol (Protocol, SomeProtocol(..), fromProtocol)
+import           Cardano.Node.Configuration.Types (CardanoConfiguration(..))
 import           Cardano.Node.Parsers (parseCoreNodeId, parseProtocol)
 
 import           Cardano.Chairman (runChairman)
@@ -33,14 +34,15 @@ main = do
                  , caCommonCLI
                  } <- execParser opts
 
-    SomeProtocol p
-      <- do cc <- mkConfiguration mainnetConfiguration caCommonCLI
-            fromProtocol cc caProtocol
+    cc <- mkConfiguration mainnetConfiguration caCommonCLI
+
+    SomeProtocol p <- fromProtocol cc caProtocol
 
     let run = runChairman p caCoreNodeIds
                           (NumCoreNodes $ length caCoreNodeIds)
                           caSecurityParam
                           caMaxBlockNo
+                          (ccSocketPath cc)
                           stdoutTracer
 
     case caTimeout of
