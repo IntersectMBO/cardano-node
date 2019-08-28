@@ -61,6 +61,7 @@
           (hsPkgs.cardano-ledger)
           (hsPkgs.cardano-ledger-test)
           (hsPkgs.cardano-prelude)
+          (hsPkgs.cardano-prelude-test)
           (hsPkgs.cardano-shell)
           (hsPkgs.cborg)
           (hsPkgs.contra-tracer)

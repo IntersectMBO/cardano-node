@@ -15,6 +15,7 @@ module Cardano.Common.Protocol
 
 import           Cardano.Prelude
 import           Prelude (error, fail)
+import           Test.Cardano.Prelude (canonicalDecodePretty)
 
 import           Codec.CBOR.Read (deserialiseFromBytes, DeserialiseFailure)
 import           Control.Exception hiding (throwIO)
@@ -32,7 +33,6 @@ import           Ouroboros.Consensus.Node.ProtocolInfo (PBftLeaderCredentials, P
 import qualified Ouroboros.Consensus.Protocol as Consensus
 import           Ouroboros.Consensus.Util (Dict(..))
 
-import qualified Cardano.Node.CanonicalJSON as CanonicalJSON
 import           Cardano.Node.Configuration.Types
                    ( CardanoConfiguration (..), Core (..)
                    , RequireNetworkMagic (..) )
@@ -127,7 +127,7 @@ readLeaderCredentials gc Core {
                     deserialiseSigningKey signingKeyFileBytes
 
     delegCert  <- either (fail . unpack) return $
-                    CanonicalJSON.canonicalDecPre delegCertFileBytes
+                    canonicalDecodePretty delegCertFileBytes
 
     either throwIO (return . Just)
            (mkPBftLeaderCredentials gc signingKey delegCert)
