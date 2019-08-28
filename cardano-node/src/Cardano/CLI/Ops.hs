@@ -17,6 +17,7 @@ module Cardano.CLI.Ops
 
 import qualified Prelude as Prelude
 import           Cardano.Prelude hiding (option)
+import           Test.Cardano.Prelude (canonicalEncodePretty)
 
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.Text as T
@@ -32,7 +33,6 @@ import qualified Crypto.SCRAPE as Scrape
 
 import           Cardano.Common.Protocol
 import qualified Cardano.Legacy.Byron as Legacy
-import           Cardano.Node.CanonicalJSON
 
 
 -- | Generic operations for a specific system era.
@@ -59,8 +59,8 @@ decideCLIOps coProtocol =
           toLazyByteString . Legacy.encodeLegacyDelegateKey . Legacy.LegacyDelegateKey sk
           <$> CCr.runSecureRandom Scrape.keyPairGenerate
       , coSerialisePoorKey             = pure . serialiseSigningKey . poorSecretToKey
-      , coSerialiseGenesis             = pure . canonicalEncPre
-      , coSerialiseDelegationCert      = pure . canonicalEncPre
+      , coSerialiseGenesis             = pure . canonicalEncodePretty
+      , coSerialiseDelegationCert      = pure . canonicalEncodePretty
       , coDeserialiseDelegateKey       = \f ->
           flip (.) (deserialiseFromBytes Legacy.decodeLegacyDelegateKey) $
           \case Left  e -> throwIO $ SigningKeyDeserialisationFailed f e
@@ -72,8 +72,8 @@ decideCLIOps coProtocol =
       { coSerialiseGenesisKey          = pure . serialiseSigningKey
       , coSerialiseDelegateKey         = pure . serialiseSigningKey
       , coSerialisePoorKey             = pure . serialiseSigningKey . poorSecretToKey
-      , coSerialiseGenesis             = pure . canonicalEncPre
-      , coSerialiseDelegationCert      = pure . canonicalEncPre
+      , coSerialiseGenesis             = pure . canonicalEncodePretty
+      , coSerialiseDelegationCert      = pure . canonicalEncodePretty
       , coDeserialiseDelegateKey       = \f ->
           flip (.) (deserialiseFromBytes CCr.fromCBORXPrv) $
           \case Left  e -> throwIO $ SigningKeyDeserialisationFailed f e

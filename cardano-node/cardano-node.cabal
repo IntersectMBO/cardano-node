@@ -20,7 +20,6 @@ library
                        Cardano.Common.CommonCLI
                        Cardano.Common.Protocol
                        Cardano.Legacy.Byron
-                       Cardano.Node.CanonicalJSON
                        -- Conversion
                        Cardano.Node.Configuration.Conversion
                        Cardano.Node.Configuration.Partial
@@ -90,6 +89,7 @@ library
                      , cardano-ledger
                      , cardano-ledger-test
                      , cardano-prelude
+                     , cardano-prelude-test
                      , cardano-shell
                      , cborg
                      , contra-tracer

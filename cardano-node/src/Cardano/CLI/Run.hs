@@ -43,6 +43,7 @@ module Cardano.CLI.Run (
 
 import           Prelude (String, error, show)
 import           Cardano.Prelude hiding (option, show, trace)
+import           Test.Cardano.Prelude (canonicalDecodePretty)
 
 import           Codec.Serialise (serialise, deserialiseOrFail)
 import           Control.Tracer
@@ -95,7 +96,6 @@ import qualified Test.Cardano.Chain.Genesis.Dummy as Dummy
 import           Cardano.CLI.Ops
 import           Cardano.Common.CommonCLI
 import           Cardano.Common.Protocol
-import           Cardano.Node.CanonicalJSON
 import           Cardano.Node.Orphans ()
 import           Cardano.Node.Configuration.Topology
 import           Cardano.Node.TxSubmission
@@ -217,7 +217,7 @@ runCommand co@CLIOps{..}
            giAvvmBalanceFactor
            giSeed) = do
   protoParamsRaw <- LB.readFile protocolParametersFile
-  protocolParameters <- case canonicalDecPre protoParamsRaw of
+  protocolParameters <- case canonicalDecodePretty protoParamsRaw of
     Left e  -> throwIO $ ProtocolParametersParseFailed protocolParametersFile e
     Right x -> pure x
 
@@ -331,7 +331,7 @@ runCommand CLIOps{..}
   issuerVK'   <- readVerificationKey issuerVF
   delegateVK' <- readVerificationKey delegateVF
   certBS      <- LB.readFile certF
-  cert :: Certificate <- case canonicalDecPre certBS of
+  cert :: Certificate <- case canonicalDecodePretty certBS of
     Left e  -> throwIO $ DlgCertificateDeserialisationFailed certF e
     Right x -> pure x
 
