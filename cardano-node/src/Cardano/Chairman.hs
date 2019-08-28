@@ -24,6 +24,8 @@ import           Data.Void (Void)
 import           Data.Typeable (Typeable)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import           System.Directory (canonicalizePath, createDirectoryIfMissing, makeAbsolute)
+import           System.FilePath ((</>))
 
 import           Network.Socket as Socket
 
@@ -81,12 +83,17 @@ runChairman :: forall blk.
             -- will throw an exception.
             -> Maybe BlockNo
             -- ^ finish after that many blocks, if 'Nothing' run continuously.
+            -> FilePath
+            -- ^ local socket dir
             -> Tracer IO String
             -> IO ()
-runChairman ptcl nids numCoreNodes securityParam maxBlockNo tracer = do
+runChairman ptcl nids numCoreNodes securityParam maxBlockNo sockPath tracer = do
 
     (chainsVar :: ChainsVar IO blk) <- newTVarM
       (Map.fromList $ map (\coreNodeId -> (coreNodeId, AF.Empty Block.GenesisPoint)) nids)
+
+    socketDir <- canonicalizePath =<< makeAbsolute sockPath
+    createDirectoryIfMissing True socketDir
 
     void $ flip mapConcurrently nids $ \coreNodeId ->
         let ProtocolInfo{pInfoConfig} =
@@ -107,7 +114,7 @@ runChairman ptcl nids numCoreNodes securityParam maxBlockNo tracer = do
               nullTracer
               pInfoConfig)
             Nothing
-            (localSocketAddrInfo (localSocketFilePath coreNodeId))
+            (localSocketAddrInfo (localSocketFilePath socketDir coreNodeId))
           `catch` handleMuxError chainsVar coreNodeId
   where
     -- catch 'MuxError'; it will be thrown if a node shuts down closing the
@@ -198,8 +205,8 @@ checkAndPrune chainsVar (SecurityParam securityParam) = do
     chains <- readTVar chainsVar
     case checkAndPrunePure chains of
       Left err -> throwM err
-      Right (res, chains') -> do
-        writeTVar chainsVar $! chains'
+      Right (res, potentialForks) -> do
+        writeTVar chainsVar $! potentialForks
         return res
   where
     checkAndPrunePure :: Map CoreNodeId (AnchoredFragment blk)
@@ -211,7 +218,7 @@ checkAndPrune chainsVar (SecurityParam securityParam) = do
       let tips :: [Point blk]
           tips = map AF.headPoint $ Map.elems chains
 
-          -- find intersection of all the chains; the CLI guarantees that
+          -- Find intersection of all the chains; the CLI guarantees that
           -- there's at least one entry in @chains@, thus @fold1@ is safe here.
           common :: AnchoredFragment blk
           common =
@@ -221,11 +228,13 @@ checkAndPrune chainsVar (SecurityParam securityParam) = do
                   Nothing                  -> AF.Empty Block.GenesisPoint
                   Just (common'', _, _, _) -> common'')
               chains
-
+          -- Oldest common intersection point
           headPoint = AF.headPoint common
 
-          -- remove common chain fragment from all the chains
-          !chains'  =
+          -- Remove common chain fragment from all the chains
+          -- to give potential forks.
+          !potentialForks  =
+            -- When the node has just started the common point will be the genesis point
             if headPoint == Block.GenesisPoint
             then chains
             else (\af -> case AF.intersect af (AF.Empty headPoint) of
@@ -236,21 +245,22 @@ checkAndPrune chainsVar (SecurityParam securityParam) = do
                  )
              <$> chains
 
-      in if minimum (AF.length <$> chains') <= fromIntegral securityParam
+      in if maximum (AF.length <$> potentialForks) <= fromIntegral securityParam
         then if headPoint == Block.GenesisPoint
-          then -- there is no intersection and forks are short;  This
+          then -- There is no intersection and forks are short;  This
                -- might happen when starting and the nodes have not yet
                -- found consensus.
                Right
                  ( NotFoundCommonBlock tips
-                 , chains'
+                 , potentialForks
                  )
           else
-               -- there is an intersection and all forks are short
+               -- There is an intersection and all forks are shorter
+               -- than security parameter k.
                Right ( WitnessedConsensusAt headPoint tips
-                     , chains'
+                     , potentialForks
                      )
-            -- there is a long fork
+            -- There is a long fork i.e a fork longer than security parameter k.
         else Left (NodeMisconduct tips)
 
 -- | Rollback a single block.  If the rollback point is not found, we simply
@@ -427,8 +437,8 @@ localChainSyncCodec pInfoConfig =
 -- | Local unix socket file path over which the client communicates with a core
 -- node.
 --
-localSocketFilePath :: CoreNodeId -> FilePath
-localSocketFilePath (CoreNodeId  n) = "node-core-" ++ show n ++ ".socket"
+localSocketFilePath :: FilePath -> CoreNodeId -> FilePath
+localSocketFilePath dir (CoreNodeId  n) = dir </> "node-core-" ++ show n ++ ".socket"
 
 localSocketAddrInfo :: FilePath -> Socket.AddrInfo
 localSocketAddrInfo socketPath =
