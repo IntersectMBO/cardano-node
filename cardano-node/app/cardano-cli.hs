@@ -72,7 +72,7 @@ parseClientCommand =
       <*> optional (parseIntegral    "secret-seed"              "Optionally specify the seed of generation.")
     , command' "dump-hardcoded-genesis"                         "Write out a hard-coded genesis." $
       DumpHardcodedGenesis
-      <$> parseNewDirectory "genesis-output-dir"                "A yet-absent directory where genesis JSON file along with secrets shall be placed."
+      <$> parseNewDirectory "genesis-output-dir"                "Non-existent directory where the genesis artifacts are to be written."
     , command' "print-genesis-hash"                             "Compute hash of a genesis file." $
       PrintGenesisHash
       <$> parseGenesisFile  "genesis-json"

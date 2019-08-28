@@ -84,59 +84,34 @@ The general synopsis is as follows:
    cardano-cli SYSTEMVER COMMAND
 ```
 
-..where `SYSTEMVER` is one of the supported system generations: `byron-legacy`, `real-pbft` etc.
+NOTE: the exact invocation command depends on the environment.  If you have only
+built `cardano-cli`, without installing it, then you have to prepend `cabal
+new-run -- ` before `cardano-cli`.  We henceforth assume that the necessary
+environment-specific adjustment has been made, so we only mention `cardano-cli`.
 
-The supported commands are (as per excerpt from the tool's `--help`):
-
-```
-Available commands:
-Genesis
-  genesis                  Perform genesis.
-  dump-hardcoded-genesis   Write out a hard-coded genesis.
-  print-genesis-hash       Compute hash of a genesis file.
-
-Keys
-  keygen                   Generate a signing key.
-  to-verification          Extract a verification key in its base64 form.
-  signing-key-public       Pretty-print a signing key's verification key (not a
-                           secret).
-  signing-key-address      Print address of a signing key.
-  migrate-delegate-key-from
-                           Migrate a delegate key from an older version.
-
-Delegation
-  redelegate               Redelegate genesis authority to a different
-                           verification key.
-  check-delegation         Verify that a given certificate constitutes a valid
-                           delegation relationship betwen keys.
-
-Transactions
-  submit-tx                Submit a raw, signed transaction, in its on-wire
-                           representation.
-  issue-genesis-utxo-expenditure
-                           Write a file with a signed transaction, spending
-                           genesis UTxO.
-```
+`SYSTEMVER` is one of the supported system generations: `byron-legacy`, `real-pbft` etc.
+The full list can be seen in the output of `cardano-cli --help`, along with the list of
+supported commands.
 
 All commands have help available:
 
 ```
-$ cabal new-run -- cardano-cli real-pbft migrate-delegate-key-from --help
-Usage: cardano-cli migrate-delegate-key-from SYSTEMVER --to FILEPATH
-                                              --from FILEPATH
+$ cabal new-exec -- cardano-cli real-pbft migrate-delegate-key-from --help
+Usage: cardano-cli real-pbft migrate-delegate-key-from (--byron-legacy | --bft | --praos |
+                                                        --mock-pbft | --real-pbft)
+                                                        --to FILEPATH --from FILEPATH
   Migrate a delegate key from an older version.
 
 Available options:
-  --to FILEPATH            Output secret key file.
-  --from FILEPATH          Secret key file to migrate.
-  -h,--help                Show this help text
-
-System version
-  byron-legacy             Byron Legacy mode
-  bft                      BFT mode
-  praos                    Praos mode
-  mock-pbft                Mock PBFT mode
-  real-pbft                Real PBFT mode
+  --byron-legacy           Use the Byron/Ouroboros Classic suite of algorithms
+  --bft                    Use the BFT consensus algorithm
+  --praos                  Use the Praos consensus algorithm
+  --mock-pbft              Use the Permissive BFT consensus algorithm using a
+                           mock ledger
+  --real-pbft              Use the Permissive BFT consensus algorithm using the
+                           real ledger
+  --to FILEPATH            Non-existent file to write the signing key to.
+  --from FILEPATH          Signing key file to migrate.
 ```
 
 ## Genesis operations
@@ -204,12 +179,12 @@ VerKey address with root e5a3807d99a1807c3f161a1558bcbc45de8392e049682df01809c48
 
 ## Delegation
 
-The `redelegate` subcommand enables generation of delegation certificates,
-given the following inputs:
+The `issue-delegation-certificate` subcommand enables generation of Byron genesis
+delegation certificates, given the following inputs:
 
    - protocol magic
    - starting epoch of delegation
-   - delegator signing key
+   - genesis delegator signing key
    - delegate verification key
 
 To check the generated delegation certificate, you can use the `check-delegation` subcommand,
@@ -247,7 +222,7 @@ of the testnet, and lovelace amount is almost the entirety of its funds.
 
 First you will need to start the core node with which the wallet client will
 communicate.  You can do that with `./script/start-node.sh` (or
-`./script/demo.sh`).  Then run
+`./script/shelley-testnet2.sh`).  Then run
 
 ```
 ./scripts/start-wallet.sh --bft -n 0 -m 3
