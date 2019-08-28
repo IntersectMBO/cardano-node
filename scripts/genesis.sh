@@ -9,7 +9,7 @@ EOF
 umask 077
 
 SCRIPTDIR=$(dirname $0)
-CONFIGDIR="${SCRIPTDIR}/../configuration"
+CONFIGDIR="$(realpath ${SCRIPTDIR}/../configuration)"
 
 start_future_offset="15 minutes"
 start_time="$(date -d "now + ${start_future_offset}" +%s)"
