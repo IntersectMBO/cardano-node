@@ -1,11 +1,12 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia        #-}
 {-# LANGUAGE DeriveGeneric      #-}
+{-# LANGUAGE OverloadedStrings  #-}
 {-# LANGUAGE RecordWildCards    #-}
 
 {-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
 
-module Cardano.Node.Configuration.Partial
+module Cardano.Config.Partial
     ( PartialCardanoConfiguration (..)
     , PartialCore (..)
     , PartialNode (..)
@@ -28,7 +29,7 @@ import           Cardano.Prelude
 
 import           Data.Monoid.Generic
 
-import           Cardano.Node.Configuration.Types
+import           Cardano.Config.Types
 
 -- | Partial @CardanoConfiguration@ configuration.
 data PartialCardanoConfiguration = PartialCardanoConfiguration

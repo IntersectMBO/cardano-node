@@ -1,15 +1,15 @@
-name:           cardano-node
-version:        3.0.1.87
-description:    The cardano full node
-author:         IOHK
-maintainer:     operations@iohk.io
-license:        Apache-2.0
+name:                  cardano-node
+version:               3.0.1.87
+description:           The cardano full node
+author:                IOHK
+maintainer:            operations@iohk.io
+license:               Apache-2.0
 license-files:
   LICENSE
   NOTICE
-build-type:     Simple
-cabal-version:  >= 1.10
-extra-source-files: README.md, ChangeLog.md
+build-type:            Simple
+cabal-version:         >= 1.10
+extra-source-files:    README.md, ChangeLog.md
 
 library
   hs-source-dirs:      src
@@ -17,16 +17,11 @@ library
   exposed-modules:     Cardano.Chairman
                        Cardano.CLI.Ops
                        Cardano.CLI.Run
-                       Cardano.Common.CommonCLI
                        Cardano.Common.Protocol
                        Cardano.Legacy.Byron
-                       -- Conversion
                        Cardano.Node.Configuration.Conversion
-                       Cardano.Node.Configuration.Partial
                        Cardano.Node.Configuration.Presets
                        Cardano.Node.Configuration.Topology
-                       Cardano.Node.Configuration.Types
-                       -- Features
                        Cardano.Node.Features.Logging
                        Cardano.Node.Orphans
                        Cardano.Node.Parsers
@@ -48,6 +43,16 @@ library
                      , binary
                      , bytestring
                      , canonical-json
+                     , cardano-binary
+                     , cardano-config
+                     , cardano-crypto
+                     , cardano-crypto-class
+                     , cardano-crypto-wrapper
+                     , cardano-ledger
+                     , cardano-ledger-test
+                     , cardano-prelude
+                     , cardano-prelude-test
+                     , cardano-shell
                      , containers
                      , contra-tracer
                      , cborg == 0.2.2.0
@@ -66,7 +71,10 @@ library
                      , network
                      , network-mux
                      , optparse-applicative
+                     , ouroboros-consensus
+                     , ouroboros-network
                      , process
+                     , pvss
                      , safe-exceptions
                      , serialise
                      , stm
@@ -78,26 +86,6 @@ library
                      , typed-protocols-cbor
                      , utf8-string
                      , vector
-
-
-
-                     , generic-monoid
-                     , cardano-binary
-                     , cardano-crypto
-                     , cardano-crypto-class
-                     , cardano-crypto-wrapper
-                     , cardano-ledger
-                     , cardano-ledger-test
-                     , cardano-prelude
-                     , cardano-prelude-test
-                     , cardano-shell
-                     , cborg
-                     , contra-tracer
-                     , io-sim-classes
-                     , iohk-monitoring
-                     , ouroboros-consensus
-                     , ouroboros-network
-                     , pvss
 
   default-language:    Haskell2010
   default-extensions:  NoImplicitPrelude
@@ -134,17 +122,15 @@ executable cardano-node
                        -fno-warn-unticked-promoted-constructors
 
   build-depends:       base
+                     , aeson
+                     , bytestring
+                     , cardano-config
                      , cardano-crypto-wrapper
                      , cardano-ledger
                      , cardano-ledger-test
                      , cardano-node
                      , cardano-prelude
                      , cardano-shell
-                     , ouroboros-network
-                     , ouroboros-consensus
-
-                     , aeson
-                     , bytestring
                      , cborg == 0.2.2.0
                      , containers
                      , contra-tracer
@@ -157,6 +143,8 @@ executable cardano-node
                      , lens
                      , mtl
                      , network
+                     , ouroboros-network
+                     , ouroboros-consensus
                      , optparse-applicative
                      , safe-exceptions
                      , stm
@@ -177,6 +165,7 @@ executable wallet-client
                        "-with-rtsopts=-T"
                        -fno-warn-unticked-promoted-constructors
   build-depends:       base
+                     , cardano-config
                      , cardano-ledger
                      , cardano-ledger-test
                      , cardano-node
@@ -209,6 +198,7 @@ executable cardano-cli
                        -O2
                        "-with-rtsopts=-T"
   build-depends:       base
+                     , cardano-config
                      , cardano-binary
                      , cardano-crypto-wrapper
                      , cardano-ledger
@@ -230,23 +220,24 @@ executable chairman
                        "-with-rtsopts=-T"
                        -fno-warn-unticked-promoted-constructors
   build-depends:       base
+                     , async
+                     , bytestring
+                     , cardano-config
+                     , containers
                      , contra-tracer
                      , cardano-node
                      , cardano-shell
                      , io-sim-classes
-                     , ouroboros-consensus
-                     , ouroboros-network
-                     , typed-protocols
-                     , typed-protocols-cbor
-
-                     , async
-                     , bytestring
-                     , containers
                      , network
                      , network-mux
                      , optparse-applicative
+                     , ouroboros-consensus
+                     , ouroboros-network
                      , serialise
                      , text
+                     , typed-protocols
+                     , typed-protocols-cbor
+
   if os(windows)
      build-depends:    Win32
   else

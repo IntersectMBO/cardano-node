@@ -5,7 +5,7 @@ module Cardano.Node.Configuration.Presets
 
 import           Cardano.Prelude
 
-import           Cardano.Node.Configuration.Partial (NodeProtocol (..),
+import           Cardano.Config.Partial (NodeProtocol (..),
                                                           PartialBlock (..),
                                                           PartialCardanoConfiguration (..),
                                                           PartialCertificate (..),

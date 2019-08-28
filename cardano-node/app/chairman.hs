@@ -17,9 +17,9 @@ import           Ouroboros.Consensus.Protocol.Abstract (SecurityParam (..))
 import           Ouroboros.Consensus.Node.ProtocolInfo.Abstract (NumCoreNodes (..))
 import           Ouroboros.Consensus.NodeId (CoreNodeId)
 
-import           Cardano.Common.CommonCLI
+import           Cardano.Config.CommonCLI
 import           Cardano.Common.Protocol (Protocol, SomeProtocol(..), fromProtocol)
-import           Cardano.Node.Configuration.Types (CardanoConfiguration(..))
+import           Cardano.Config.Types (CardanoConfiguration(..))
 import           Cardano.Node.Parsers (parseCoreNodeId, parseProtocol)
 
 import           Cardano.Chairman (runChairman)

@@ -1,8 +1,12 @@
 resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/b83730dccab14111d62144b048084eec7900d091/snapshot.yaml
 
 packages:
+  - cardano-config
   - cardano-node
 
+ghc-options:
+  cardano-config:   -Wall -Werror -fwarn-redundant-constraints
+  cardano-node:     -Wall -Werror -fwarn-redundant-constraints
 
 extra-deps:
     # Cardano-ledger dependencies

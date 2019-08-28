@@ -23,6 +23,7 @@
         "text-zipper" = (((hackage.text-zipper)."0.10.1").revisions)."8b73a97a3717a17df9b0a722b178950c476ff2268ca5c583e99d010c94af849e";
         "word-wrap" = (((hackage.word-wrap)."0.4.1").revisions)."f72233b383ef569c557bfd9812cbb8e306c415ce509082c0bd15ee51c0239ccc";
         } // {
+        cardano-config = ./cardano-config.nix;
         cardano-node = ./cardano-node.nix;
         cardano-ledger = ./cardano-ledger.nix;
         cardano-ledger-test = ./cardano-ledger-test.nix;

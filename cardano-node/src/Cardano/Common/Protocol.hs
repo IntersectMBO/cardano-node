@@ -33,7 +33,7 @@ import           Ouroboros.Consensus.Node.ProtocolInfo (PBftLeaderCredentials, P
 import qualified Ouroboros.Consensus.Protocol as Consensus
 import           Ouroboros.Consensus.Util (Dict(..))
 
-import           Cardano.Node.Configuration.Types
+import           Cardano.Config.Types
                    ( CardanoConfiguration (..), Core (..)
                    , RequireNetworkMagic (..) )
 import           Cardano.Tracing.Tracers (TraceConstraints)
