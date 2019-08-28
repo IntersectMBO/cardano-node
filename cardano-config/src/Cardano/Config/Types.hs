@@ -1,7 +1,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE RecordWildCards #-}
 
-module Cardano.Node.Configuration.Types
+module Cardano.Config.Types
     ( CardanoConfiguration (..)
     , CardanoEnvironment (..)
     , Core (..)

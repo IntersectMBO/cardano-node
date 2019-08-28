@@ -1,7 +1,12 @@
 packages:
+    cardano-config
     cardano-node
 
+package cardano-config
+  ghc-options: -Wall -Werror -fwarn-redundant-constraints
+
 package cardano-node
+  ghc-options: -Wall -Werror -fwarn-redundant-constraints
 
 source-repository-package
   type: git

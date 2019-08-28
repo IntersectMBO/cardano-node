@@ -13,9 +13,9 @@ import           Network.Socket (PortNumber)
 import           Options.Applicative
 
 import           Cardano.BM.Data.Tracer (TracingVerbosity (..))
-import           Cardano.Node.Configuration.Partial (PartialCardanoConfiguration (..))
+import           Cardano.Config.Partial (PartialCardanoConfiguration (..))
 import           Cardano.Node.Configuration.Presets (mainnetConfiguration)
-import           Cardano.Node.Configuration.Types (CardanoConfiguration (..),
+import           Cardano.Config.Types (CardanoConfiguration (..),
                                                    CardanoEnvironment (..))
 import           Cardano.Node.Features.Logging (LoggingCLIArguments (..),
                                                 LoggingLayer (..),
@@ -30,7 +30,7 @@ import           Ouroboros.Consensus.BlockchainTime (SlotLength(..), slotLengthF
 import           Ouroboros.Consensus.NodeNetwork (ProtocolTracers'(..))
 import qualified Ouroboros.Consensus.Node.Tracers as Consensus
 
-import           Cardano.Common.CommonCLI
+import           Cardano.Config.CommonCLI
 import           Cardano.Node.Parsers
 import           Cardano.Node.Run
 import           Cardano.Node.Configuration.Topology (NodeAddress (..))

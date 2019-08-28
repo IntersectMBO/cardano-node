@@ -94,7 +94,7 @@ import           Ouroboros.Consensus.Ledger.Byron.Config
 import qualified Test.Cardano.Chain.Genesis.Dummy as Dummy
 
 import           Cardano.CLI.Ops
-import           Cardano.Common.CommonCLI
+import           Cardano.Config.CommonCLI
 import           Cardano.Common.Protocol
 import           Cardano.Node.Orphans ()
 import           Cardano.Node.Configuration.Topology

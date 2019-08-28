@@ -2,7 +2,7 @@
 
 {-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
 
-module Cardano.Common.CommonCLI
+module Cardano.Config.CommonCLI
   ( CommonCLI(..)
   , parseCommonCLI
   , mergeConfiguration
@@ -26,9 +26,9 @@ import           Prelude
 import           Options.Applicative hiding (command)
 import qualified Options.Applicative as OA
 
-import           Cardano.Node.Configuration.Types (CardanoConfiguration(..)
+import           Cardano.Config.Types (CardanoConfiguration(..)
                                                   ,RequireNetworkMagic(..))
-import           Cardano.Node.Configuration.Partial (PartialCardanoConfiguration (..)
+import           Cardano.Config.Partial (PartialCardanoConfiguration (..)
                                                     ,PartialCore (..)
                                                     ,finaliseCardanoConfiguration)
 
@@ -186,7 +186,7 @@ mergeConfiguration pcc cli =
 -- Now, that this is a library function, the proper solution would also
 -- require having a common error type.
 mkConfiguration :: PartialCardanoConfiguration -> CommonCLI -> IO CardanoConfiguration
-mkConfiguration partialConfig cli = 
+mkConfiguration partialConfig cli =
     case finaliseCardanoConfiguration $
          mergeConfiguration partialConfig cli
     of

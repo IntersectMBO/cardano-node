@@ -42,7 +42,7 @@ import           Cardano.Shell.Types (CardanoFeature (..),
                                       CardanoFeatureInit (..),
                                       NoDependency (..))
 
-import           Cardano.Node.Configuration.Types (CardanoConfiguration,
+import           Cardano.Config.Types (CardanoConfiguration,
                                                    CardanoEnvironment)
 
 --------------------------------------------------------------------------------

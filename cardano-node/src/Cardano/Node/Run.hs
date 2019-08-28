@@ -52,7 +52,7 @@ import           Cardano.BM.Data.LogItem (LogObject (..))
 import           Cardano.BM.Data.Tracer (ToLogObject (..),
                                          TracingVerbosity (..))
 import           Cardano.BM.Trace (appendName)
-import           Cardano.Node.Configuration.Types (CardanoConfiguration (..))
+import           Cardano.Config.Types (CardanoConfiguration (..))
 import           Cardano.Node.Features.Logging (LoggingLayer (..))
 
 import           Ouroboros.Network.Block
@@ -72,7 +72,7 @@ import           Ouroboros.Consensus.Util.STM (onEachChange)
 
 import qualified Ouroboros.Storage.ChainDB as ChainDB
 
-import           Cardano.Common.CommonCLI (CommonCLI)
+import           Cardano.Config.CommonCLI (CommonCLI)
 import           Cardano.Common.Protocol (Protocol(..), SomeProtocol(..), fromProtocol)
 import           Cardano.Node.Configuration.Topology
 import           Cardano.Tracing.TraceAcceptor

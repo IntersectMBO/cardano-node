@@ -20,7 +20,7 @@ import           Cardano.Chain.Slotting
 import           Cardano.Chain.UTxO
 import           Cardano.Crypto (AProtocolMagic(..), ProtocolMagic, ProtocolMagicId(..), RequiresNetworkMagic(..))
 
-import           Cardano.Common.CommonCLI
+import           Cardano.Config.CommonCLI
 import           Cardano.Common.Protocol
 import           Cardano.Node.Parsers
 import           Cardano.CLI.Ops (decideCLIOps)

@@ -14,12 +14,12 @@ import           Data.Text (Text, pack)
 import           Cardano.BM.Data.Tracer (ToLogObject (..))
 import           Cardano.BM.Trace (Trace, appendName)
 import           Cardano.Common.Protocol(Protocol, SomeProtocol(..), fromProtocol)
-import           Cardano.Common.CommonCLI(CommonCLI)
+import           Cardano.Config.CommonCLI(CommonCLI)
 
 import           Ouroboros.Consensus.Node.ProtocolInfo.Abstract (NumCoreNodes (..))
 import           Ouroboros.Consensus.NodeId (CoreNodeId (..))
 
-import           Cardano.Node.Configuration.Types (CardanoConfiguration (..))
+import           Cardano.Config.Types (CardanoConfiguration (..))
 import           Cardano.Wallet.Client
 
 runClient :: CLI -> Trace IO Text -> CardanoConfiguration -> IO ()
