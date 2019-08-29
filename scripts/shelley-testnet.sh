@@ -18,8 +18,7 @@ genesis_file="${genesis_root}/genesis.json"
 if test ! -f "${genesis_file}"
 then echo "ERROR: genesis ${genesis_file} does not exist!">&1; exit 1; fi
 
-
-genesis_hash="$(${RUNNER} cardano-cli --real-pbft print-genesis-hash --genesis-json ${genesis_file})"
+genesis_hash="$(${RUNNER} cardano-cli --log-config configuration/log-configuration.yaml --real-pbft print-genesis-hash --genesis-json ${genesis_file} --socket-path socket/node1.socket)"
 
 ALGO="--real-pbft"
 # SCR="./scripts/start-node.sh"
@@ -54,6 +53,19 @@ function mknetargs () {
                printf -- "--socket-path $1 "
                printf -- "node "
                printf -- "--topology configuration/simple-topology.json "
+               printf -- "--trace-block-fetch-decisions "
+               printf -- "--trace-block-fetch-client "
+               printf -- "--trace-block-fetch-server "
+               printf -- "--trace-tx-inbound "
+               printf -- "--trace-tx-outbound "
+               printf -- "--trace-local-tx-submission-server "
+               printf -- "--trace-mempool "
+               printf -- "--trace-forge "
+               printf -- "--trace-chain-sync-protocol "
+               printf -- "--trace-block-fetch-protocol "
+               printf -- "--trace-tx-submission-protocol "
+               printf -- "--trace-local-chain-sync-protocol "
+               printf -- "--trace-local-tx-submission-protocol "
                printf -- "${ALGO}"
 }
 

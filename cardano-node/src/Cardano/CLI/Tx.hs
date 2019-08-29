@@ -14,6 +14,7 @@ module Cardano.CLI.Tx
   , txSpendUTxOByronPBFT
   , issueUTxOExpenditure
   , nodeSubmitTx
+  , withRealPBFT
   )
 where
 

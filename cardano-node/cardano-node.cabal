@@ -22,6 +22,10 @@ library
                        Cardano.CLI.Ops
                        Cardano.CLI.Run
                        Cardano.CLI.Tx
+                       Cardano.CLI.Tx.BenchmarkingTxSubClient
+                       Cardano.CLI.Tx.BenchmarkingTxSubmission
+                       Cardano.CLI.Tx.BenchmarkingNodeToNode
+                       Cardano.CLI.Tx.Generation
                        Cardano.CLI.Tx.Submission
                        Cardano.Common.LocalSocket
                        Cardano.Common.Orphans

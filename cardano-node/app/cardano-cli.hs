@@ -27,10 +27,15 @@ import           Cardano.Crypto ( AProtocolMagic(..)
                                 , decodeHash)
 
 import           Cardano.Config.CommonCLI
+import           Cardano.Config.Types (CardanoEnvironment (..))
+import           Cardano.Config.Presets (mainnetConfiguration)
+
 import           Cardano.Common.Parsers
 import           Cardano.Common.Protocol
 import           Cardano.CLI.Genesis
 import           Cardano.CLI.Key
+import           Cardano.Config.Logging (LoggingCLIArguments (..),
+                                         createLoggingFeature)
 import           Cardano.CLI.Ops (decideCLIOps)
 import           Cardano.CLI.Run
 
@@ -38,7 +43,13 @@ main :: IO ()
 main = do
   co <- Opt.customExecParser pref opts
   ops <- decideCLIOps (protocol co)
-  cmdRes <- runExceptT . runCommand ops $ mainCommand co
+  -- Initialize logging layer. Particularly, we need it for benchmarking (command 'generate-txs').
+  let cardanoConfiguration = mainnetConfiguration
+  let cardanoEnvironment   = NoEnvironment
+  finalConfig <- mkConfiguration cardanoConfiguration (commonCli co)
+  (loggingLayer, _loggingFeature) <- createLoggingFeature cardanoEnvironment finalConfig (loggingCli co)
+
+  cmdRes <- runExceptT $ runCommand ops (mainCommand co) loggingLayer
   case cmdRes of
     Right _ -> pure ()
     Left err -> do print $ renderCliError err
@@ -60,17 +71,20 @@ opts =
          \ pretty-printing..) for different system generations."
     )
 
-data CLI
-  = CLI
-      { protocol    :: Protocol,
-        mainCommand :: ClientCommand
-        }
+data CLI = CLI
+  { protocol    :: Protocol
+  , mainCommand :: ClientCommand
+  , commonCli   :: CommonCLI
+  , loggingCli  :: LoggingCLIArguments
+  }
 
 parseClient :: Parser CLI
 parseClient =
   CLI
     <$> parseProtocolActual
     <*> parseClientCommand
+    <*> parseCommonCLI
+    <*> loggingParser
 
 parseClientCommand :: Parser ClientCommand
 parseClientCommand =
@@ -250,6 +264,28 @@ parseTxRelatedValues =
                       "Key that has access to all mentioned genesis UTxO inputs."
                 <*> (NE.fromList <$> some parseTxIn)
                 <*> (NE.fromList <$> some parseTxOut)
+                <*> parseCommonCLI,
+          command'
+            "generate-txs"
+            "Launch transactions generator."
+            $ GenerateTxs
+                <$> parseTopologyInfo
+                      "PBFT node ID to submit generated Txs to."
+                <*> parseNumberOfTxs
+                      "num-of-txs"
+                      "Number of transactions generator will create."
+                <*> parseNumberOfOutputsPerTx
+                      "outputs-per-tx"
+                      "Number of outputs in each of transactions."
+                <*> parseFeePerTx
+                      "tx-fee"
+                      "Fee per transaction, in Lovelaces."
+                <*> parseTPSRate
+                      "tps"
+                      "TPS (transaction per second) rate."
+                <*> parseSigningKeysFiles
+                      "sig-key"
+                      "Path to signing key file, for genesis UTxO using by generator."
                 <*> parseCommonCLI
           ]
       )
@@ -475,3 +511,18 @@ parseNewTxFile opt =
   NewTxFile
     <$> parseFilePath opt
           "Non-existent file to write the signed transaction to."
+
+parseNumberOfTxs :: String -> String -> Parser NumberOfTxs
+parseNumberOfTxs opt desc = NumberOfTxs <$> parseIntegral opt desc
+
+parseNumberOfOutputsPerTx :: String -> String -> Parser NumberOfOutputsPerTx
+parseNumberOfOutputsPerTx opt desc = NumberOfOutputsPerTx <$> parseIntegral opt desc
+
+parseFeePerTx :: String -> String -> Parser FeePerTx
+parseFeePerTx opt desc = FeePerTx <$> parseIntegral opt desc
+
+parseTPSRate :: String -> String -> Parser TPSRate
+parseTPSRate opt desc = TPSRate <$> parseIntegral opt desc
+
+parseSigningKeysFiles :: String -> String -> Parser [SigningKeyFile]
+parseSigningKeysFiles opt desc = many $ SigningKeyFile <$> parseFilePath opt desc
