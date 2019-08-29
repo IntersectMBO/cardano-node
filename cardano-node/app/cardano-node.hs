@@ -167,7 +167,7 @@ parseTraceOptions = TraceOptions
 parseTracingGlobal :: Parser Bool
 parseTracingGlobal =
     switch (
-          long "tracing-off"
+         long "tracing-off"
       <> help "Tracing globally turned off."
     )
 

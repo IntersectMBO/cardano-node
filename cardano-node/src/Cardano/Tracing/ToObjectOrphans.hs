@@ -28,13 +28,32 @@ import           Cardano.BM.Data.LogItem (LOContent (..), LogObject (..),
 import           Cardano.BM.Tracing
 import           Cardano.BM.Data.Tracer (trStructured, emptyObject, mkObject)
 
+import           Ouroboros.Consensus.BlockFetchServer
+                     (TraceBlockFetchServerEvent)
+import           Ouroboros.Consensus.ChainSyncClient (TraceChainSyncClientEvent (..))
+import           Ouroboros.Consensus.ChainSyncServer (TraceChainSyncServerEvent)
 import           Ouroboros.Consensus.Ledger.Abstract
+import           Ouroboros.Consensus.Mempool.API (GenTx, GenTxId)
+import qualified Ouroboros.Consensus.Node.Tracers as Consensus
+import           Ouroboros.Consensus.TxSubmission
+                     (TraceLocalTxSubmissionServerEvent (..))
 import           Ouroboros.Consensus.Util.Condense
 import           Ouroboros.Consensus.Util.Orphans ()
+
 import qualified Ouroboros.Network.AnchoredFragment as AF
 import           Ouroboros.Network.Block
+import           Ouroboros.Network.BlockFetch.ClientState
+                     (TraceFetchClientState (..), TraceLabelPeer (..))
+import           Ouroboros.Network.BlockFetch.Decision (FetchDecision)
 import           Ouroboros.Network.Point (WithOrigin (..))
-import           Ouroboros.Network.Subscription
+import           Ouroboros.Network.Subscription (ConnectResult (..), DnsTrace (..),
+                     SubscriptionTrace (..),
+                     WithDomainName (..), WithIPList (..))
+import           Ouroboros.Network.TxSubmission.Inbound
+                     (TraceTxSubmissionInbound)
+import           Ouroboros.Network.TxSubmission.Outbound
+                     (TraceTxSubmissionOutbound)
+
 import qualified Ouroboros.Storage.ChainDB as ChainDB
 import qualified Ouroboros.Storage.LedgerDB.OnDisk as LedgerDB
 
@@ -69,7 +88,7 @@ showTip verb tip =
     ++
     case pointSlot tip of
         Origin -> "(origin)"
-        At slot -> "@" ++ condense slot    
+        At slot -> "@" ++ condense slot
   where
     trim :: [a] -> [a]
     trim = case verb of
@@ -83,6 +102,7 @@ instance ( Show a
 
     show = showWithTip show
 
+-- instances of @DefinePrivacyAnnotation@ and @DefineSeverity@
 instance DefinePrivacyAnnotation (WithIPList (SubscriptionTrace Socket.SockAddr))
 instance DefineSeverity (WithIPList (SubscriptionTrace Socket.SockAddr)) where
     defineSeverity (WithIPList _ _ _ ev) = case ev of
@@ -193,7 +213,90 @@ instance DefineSeverity (ChainDB.TraceEvent blk) where
             _ -> Debug
     defineSeverity (ChainDB.TraceImmDBEvent _ev) = Debug
 
+instance DefinePrivacyAnnotation (TraceChainSyncClientEvent blk)
+instance DefineSeverity (TraceChainSyncClientEvent blk) where
+    defineSeverity (TraceDownloadedHeader _) = Info
+    defineSeverity (TraceRolledBack _) = Info
+    defineSeverity (TraceException _) = Error
+
+instance DefinePrivacyAnnotation (TraceChainSyncServerEvent blk)
+instance DefineSeverity (TraceChainSyncServerEvent blk) where
+    defineSeverity _ = Info
+
+instance DefinePrivacyAnnotation [TraceLabelPeer peer
+                                  (FetchDecision [Point header])]
+instance DefineSeverity [TraceLabelPeer peer
+                         (FetchDecision [Point header])] where
+    defineSeverity [] = Debug
+    defineSeverity _ = Info
+
+instance DefinePrivacyAnnotation (TraceLabelPeer peer
+                                  (TraceFetchClientState header))
+instance DefineSeverity (TraceLabelPeer peer
+                         (TraceFetchClientState header)) where
+    defineSeverity _ = Info
+
+instance DefinePrivacyAnnotation (TraceBlockFetchServerEvent blk)
+instance DefineSeverity (TraceBlockFetchServerEvent blk) where
+    defineSeverity _ = Info
+
+instance DefinePrivacyAnnotation (TraceTxSubmissionInbound
+                                  (GenTxId blk) (GenTx blk))
+instance DefineSeverity (TraceTxSubmissionInbound
+                         (GenTxId blk) (GenTx blk)) where
+    defineSeverity _ = Info
+
+instance DefinePrivacyAnnotation (TraceTxSubmissionOutbound
+                                  (GenTxId blk) (GenTx blk))
+instance DefineSeverity (TraceTxSubmissionOutbound
+                         (GenTxId blk) (GenTx blk)) where
+    defineSeverity _ = Info
+
+instance DefinePrivacyAnnotation (TraceLocalTxSubmissionServerEvent blk)
+instance DefineSeverity (TraceLocalTxSubmissionServerEvent blk) where
+    defineSeverity _ = Info
+
+instance DefinePrivacyAnnotation (Consensus.TraceForgeEvent blk)
+instance DefineSeverity (Consensus.TraceForgeEvent blk) where
+    defineSeverity _ = Info
+
 -- | instances of @Transformable@
+
+-- transform @ChainSyncClient@
+instance Transformable Text IO (TraceChainSyncClientEvent blk) where
+    trTransformer _ verb tr = trStructured verb tr
+
+-- transform @ChainSyncServer@
+instance Transformable Text IO (TraceChainSyncServerEvent blk) where
+    trTransformer _ verb tr = trStructured verb tr
+
+-- transform @BlockFetchDecision@
+instance Show peer => Transformable Text IO [TraceLabelPeer peer
+                                (FetchDecision [Point header])] where
+    trTransformer _ verb tr = trStructured verb tr
+
+-- transform @BlockFetchDecision@
+instance Show peer => Transformable Text IO (TraceLabelPeer peer
+                                (TraceFetchClientState header)) where
+    trTransformer _ verb tr = trStructured verb tr
+
+-- transform @BlockFetchServerEvent@
+instance Transformable Text IO (TraceBlockFetchServerEvent blk) where
+    trTransformer _ verb tr = trStructured verb tr
+
+instance Transformable Text IO (TraceTxSubmissionInbound
+                                (GenTxId blk) (GenTx blk)) where
+    trTransformer _ verb tr = trStructured verb tr
+
+instance Transformable Text IO (TraceTxSubmissionOutbound
+                                (GenTxId blk) (GenTx blk)) where
+    trTransformer _ verb tr = trStructured verb tr
+
+instance Transformable Text IO (TraceLocalTxSubmissionServerEvent blk) where
+    trTransformer _ verb tr = trStructured verb tr
+
+instance Transformable Text IO (Consensus.TraceForgeEvent blk) where
+    trTransformer _ verb tr = trStructured verb tr
 
 -- transform @SubscriptionTrace@
 instance Transformable Text IO (WithIPList (SubscriptionTrace Socket.SockAddr)) where
@@ -221,8 +324,6 @@ instance Transformable Text IO (WithDomainName DnsTrace) where
                                    <*> mkLOMeta (defineSeverity s) (definePrivacyAnnotation s)
                                    <*> pure (LogMessage $ pack $ show s)
     trTransformer UserdefinedFormatting verb tr = trStructured verb tr
-
-
 
 -- transform @TraceEvent@
 instance (Condense (HeaderHash blk), ProtocolLedgerView blk)
@@ -495,3 +596,72 @@ instance ToObject LedgerDB.DiskSnapshot where
     toObject MaximalVerbosity snap =
         mkObject [ "kind" .= String "snapshot"
                  , "snapshot" .= String (pack $ show snap) ]
+
+instance ToObject (TraceChainSyncClientEvent blk) where
+    toObject verb ev =
+        mkObject [ "kind" .= String "ChainSyncClientEvent"
+                 , "event" .= toObject verb ev ]
+
+instance ToObject (TraceChainSyncServerEvent blk) where
+    toObject verb ev =
+        mkObject [ "kind" .= String "ChainSyncServerEvent"
+        , "event" .= toObject verb ev ]
+
+instance Show peer => ToObject [TraceLabelPeer peer
+                         (FetchDecision [Point header])] where
+    toObject MinimalVerbosity lbls = toObject NormalVerbosity lbls
+    toObject NormalVerbosity lbls = mkObject [ "kind" .= String "TraceLabelPeer"
+                                             , "length" .= String (pack $ show $ length lbls) ]
+    toObject MaximalVerbosity [] = emptyObject
+    toObject MaximalVerbosity (lbl : r) = toObject MaximalVerbosity lbl <>
+                                          toObject MaximalVerbosity r
+
+instance Show peer => ToObject (TraceLabelPeer peer
+                        (FetchDecision [Point header])) where
+    toObject verb (TraceLabelPeer peerid a) =
+        mkObject [ "kind" .= String "FetchDecision"
+                 , "peer" .= show peerid
+                 , "decision" .= toObject verb a ]
+
+instance ToObject (FetchDecision [Point header]) where
+    toObject _verb (Left decline) =
+        mkObject [ "kind" .= String "FetchDecision declined"
+                 , "declined" .= String (pack $ show $ decline) ]
+    toObject _verb (Right results) =
+        mkObject [ "kind" .= String "FetchDecision results"
+                 , "length" .= String (pack $ show $ length results) ]
+
+instance Show peer => ToObject (TraceLabelPeer peer
+                        (TraceFetchClientState header)) where
+    toObject verb (TraceLabelPeer peerid a) =
+        mkObject [ "kind" .= String "TraceFetchClientState"
+                 , "peer" .= show peerid
+                 , "state" .= toObject verb a ]
+
+instance ToObject (TraceFetchClientState header) where
+    toObject _verb (AddedFetchRequest {}) =
+        mkObject [ "kind" .= String "AddedFetchRequest" ]
+    toObject _verb (AcknowledgedFetchRequest {}) =
+        mkObject [ "kind" .= String "AcknowledgedFetchRequest" ]
+    toObject _verb (CompletedBlockFetch {}) =
+        mkObject [ "kind" .= String "CompletedBlockFetch" ]
+
+instance ToObject (TraceBlockFetchServerEvent blk) where
+    toObject _verb _ =
+        mkObject [ "kind" .= String "TraceBlockFetchServerEvent" ]
+
+instance ToObject (TraceTxSubmissionInbound (GenTxId blk) (GenTx blk)) where
+    toObject _verb _ =
+        mkObject [ "kind" .= String "TraceTxSubmissionInbound" ]
+
+instance ToObject (TraceTxSubmissionOutbound (GenTxId blk) (GenTx blk)) where
+    toObject _verb _ =
+        mkObject [ "kind" .= String "TraceTxSubmissionOutbound" ]
+
+instance ToObject (TraceLocalTxSubmissionServerEvent blk) where
+    toObject _verb _ =
+        mkObject [ "kind" .= String "TraceLocalTxSubmissionServerEvent" ]
+
+instance ToObject (Consensus.TraceForgeEvent blk) where
+    toObject _verb _ =
+        mkObject [ "kind" .= String "TraceForgeEvent" ]
