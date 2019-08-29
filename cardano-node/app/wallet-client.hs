@@ -3,8 +3,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes        #-}
 
-module Main (main) where
-
 import           Cardano.Prelude hiding (option)
 
 import           Control.Tracer
