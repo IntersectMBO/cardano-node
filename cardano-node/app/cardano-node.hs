@@ -3,8 +3,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes        #-}
 
-module Main (main) where
-
 import           Prelude (read)
 
 import           Data.Semigroup ((<>))
