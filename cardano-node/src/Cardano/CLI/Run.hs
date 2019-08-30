@@ -119,7 +119,7 @@ newtype SigningKeyFile =
   deriving (Eq, Ord, Show, IsString)
 
 newtype NewSigningKeyFile =
-  NewSigningKeyFile FilePath
+  NewSigningKeyFile { nSkFp :: FilePath}
   deriving (Eq, Ord, Show, IsString)
 
 newtype VerificationKeyFile =
@@ -131,7 +131,7 @@ newtype NewVerificationKeyFile =
    deriving (Eq, Ord, Show, IsString)
 
 newtype CertificateFile =
-  CertificateFile FilePath
+  CertificateFile { ceFp :: FilePath }
   deriving (Eq, Ord, Show, IsString)
 
 newtype NewCertificateFile =
@@ -229,23 +229,22 @@ runCommand co@CLIOps{..}
          (Genesis
            (NewDirectory outDir)
            startTime
-           protocolParametersFile
+           pParamsFile
            blockCount
            protocolMagic
            giTestBalance
            giFakeAvvmBalance
            giAvvmBalanceFactor
            giSeed) = do
-  protoParamsRaw <- LB.readFile protocolParametersFile
-  protocolParameters <- case canonicalDecodePretty protoParamsRaw of
-    Left e  -> throwIO $ ProtocolParametersParseFailed protocolParametersFile e
-    Right x -> pure x
+  pParamsRaw <- LB.readFile pParamsFile
+
+  pParams <- eitherThrow
+               (ProtocolParametersParseFailed pParamsFile)
+               (canonicalDecodePretty pParamsRaw)
 
   -- We're relying on the generator to fake AVVM and delegation.
   mGenesisDlg <- runExceptT $ mkGenesisDelegation []
-  genesisDelegation <- case mGenesisDlg of
-    Left e  -> throwIO $ DelegationError e
-    Right x -> pure x
+  genesisDelegation <- eitherThrow DelegationError mGenesisDlg
 
   seed <- case giSeed of
     Nothing -> Crypto.runSecureRandom . Crypto.randomNumber $ shiftL 1 32
@@ -256,7 +255,7 @@ runCommand co@CLIOps{..}
         mkGenesisSpec
         genesisAvvmBalances -- :: !GenesisAvvmBalances
         genesisDelegation   -- :: !GenesisDelegation
-        protocolParameters  -- :: !ProtocolParameters
+        pParams             -- :: !ProtocolParameters
         blockCount          -- :: !BlockCount
         protocolMagic       -- :: !ProtocolMagic
         genesisInitializer  -- :: !GenesisInitializer
@@ -270,32 +269,24 @@ runCommand co@CLIOps{..}
       giUseHeavyDlg =
         True                -- Not using delegate keys unsupported.
 
-  genesisSpec <- case mGenesisSpec of
-    Left e  -> throwIO $ GenesisSpecError e
-    Right x -> pure x
+  genesisSpec <- eitherThrow GenesisSpecError mGenesisSpec
 
   mGData <- runExceptT $ generateGenesisData startTime genesisSpec
-  (genesisData, generatedSecrets) <- case mGData of
-    Left e  -> throwIO $ GenesisGenerationError e
-    Right x -> pure x
+
+  (genesisData, generatedSecrets) <- eitherThrow GenesisGenerationError mGData
 
   dumpGenesis co outDir genesisData generatedSecrets
 
-runCommand co@CLIOps{..} (PrettySigningKeyPublic skF) =
-  putStrLn =<< T.unpack
-             . prettySigningKeyPub
-             <$> readSigningKey co skF
+runCommand co@CLIOps{..} (PrettySigningKeyPublic skF) = do
+  sKey <- readSigningKey co skF
+  putTextLn $ prettySigningKeyPub sKey
 
-runCommand co (MigrateDelegateKeyFrom
-                  fromVer
-                  (NewSigningKeyFile newKey)
-                  oldKey) =
-        LB.writeFile newKey
-    =<< coSerialiseDelegateKey co
-    =<< flip readSigningKey oldKey
-    =<< fromCO
-  where
-    fromCO = decideCLIOps fromVer
+runCommand co (MigrateDelegateKeyFrom protocol newKeyFP oldKey) = do
+  -- Protocol specific operations
+  operations <- decideCLIOps protocol
+  sKey <- readSigningKey operations oldKey
+  newKey <- coSerialiseDelegateKey co sKey
+  LB.writeFile (nSkFp newKeyFP) newKey
 
 runCommand co (DumpHardcodedGenesis (NewDirectory dir)) =
   dumpGenesis co dir
@@ -311,29 +302,28 @@ runCommand CLIOps{..} (PrintGenesisHash (GenesisFile genesis)) = do
                $ snd x
 
 runCommand co@CLIOps{..} (PrintSigningKeyAddress netMagic skF) =
-  putStrLn . T.unpack . prettyAddress
-           . CC.Common.makeVerKeyAddress netMagic
-           . Crypto.toVerification
-           =<< readSigningKey co skF
+  putTextLn . prettyAddress
+            . CC.Common.makeVerKeyAddress netMagic
+            . Crypto.toVerification
+            =<< readSigningKey co skF
 
-runCommand CLIOps{..}
-           (Keygen (NewSigningKeyFile skF) disablePassword) = do
-
+runCommand CLIOps{ coSerialiseDelegateKey } (Keygen skF disablePassword) = do
   passph <- if disablePassword
             then pure Crypto.emptyPassphrase
             else readPassword $
-                 "Enter password to encrypt '" <> skF <> "': "
+                 "Enter password to encrypt '" <> (nSkFp skF) <> "': "
 
   (_vk, esk) <- Crypto.runSecureRandom $ Crypto.safeKeyGen passph
 
-  ensureNewFileLBS skF
+  ensureNewFileLBS (nSkFp skF)
     =<< (coSerialiseDelegateKey $ SigningKey $ Crypto.eskPayload esk)
 
-runCommand co (ToVerification
-                skF (NewVerificationKeyFile vkF)) = do
+runCommand co (ToVerification skF (NewVerificationKeyFile vkF)) = do
+  sKey <- readSigningKey co skF
   ensureNewFileText vkF
-    . Builder.toLazyText . Crypto.formatFullVerificationKey . Crypto.toVerification
-    =<< readSigningKey co skF
+    . Builder.toLazyText
+    . Crypto.formatFullVerificationKey
+    $ Crypto.toVerification sKey
 
 runCommand co (IssueDelegationCertificate pM epoch skF vkF cFp) = do
   sk <- readSigningKey co skF
@@ -343,38 +333,14 @@ runCommand co (IssueDelegationCertificate pM epoch skF vkF cFp) = do
   let cert = signCertificate pM vk epoch signer
   ensureNewFileLBS (nFp cFp) =<< (coSerialiseDelegationCert co $ cert)
 
-runCommand CLIOps{..}
-           (CheckDelegation magic
-            (CertificateFile certF)
-            issuerVF
-            delegateVF) = do
+runCommand CLIOps{..} (CheckDelegation magic certFp issuerVF delegateVF) = do
   issuerVK'   <- readVerificationKey issuerVF
   delegateVK' <- readVerificationKey delegateVF
-  certBS      <- LB.readFile certF
-  cert :: Certificate <- case canonicalDecodePretty certBS of
-    Left e  -> throwIO $ DlgCertificateDeserialisationFailed certF e
-    Right x -> pure x
-
-  let magic' = Annotated magic (serialize' magic)
-      epoch  = unAnnotated $ aEpoch cert
-      cert'  = cert { aEpoch = Annotated epoch (serialize' epoch) }
-      vk    :: forall r. F.Format r (Crypto.VerificationKey -> r)
-      vk     = Crypto.fullVerificationKeyF
-      f     :: forall a. F.Format Text a -> a
-      f      = F.sformat
-      issues =
-        [ f("Certificate does not have a valid signature.")
-        | not (isValid magic' cert') ] <>
-
-        [ f("Certificate issuer ".vk." doesn't match expected: ".vk)
-          (issuerVK   cert)   issuerVK'
-        |  issuerVK   cert /= issuerVK' ] <>
-
-        [ f("Certificate delegate ".vk." doesn't match expected: ".vk)
-          (delegateVK cert)   delegateVK'
-        |  delegateVK cert /= delegateVK' ]
-  unless (null issues) $
-    throwIO $ CertificateValidationErrors certF issues
+  certBS      <- LB.readFile (ceFp certFp)
+  cert :: Certificate <- eitherThrow
+                           (DlgCertificateDeserialisationFailed (ceFp certFp))
+                           (canonicalDecodePretty certBS)
+  certificateValidation magic cert delegateVK' issuerVK' certFp
 
 runCommand co (SubmitTx stTopology (TxFile stTx) stCommon) = do
   withRealPBFT co mainnetConfiguration stCommon $
@@ -465,7 +431,7 @@ txSpendGenesisUTxOByronPBFT gc sk genAddr outs =
       tx       = UnsafeTx (pure txIn) outs txattrs
       txIn    :: CC.UTxO.TxIn
       txIn     = genesisUTxOTxIn gc sk genAddr
-      wit      = signTxId (configProtocolMagicId gc) sk (Crypto.hash tx) 
+      wit      = signTxId (configProtocolMagicId gc) sk (Crypto.hash tx)
       ATxAux atx awit = mkTxAux tx . V.fromList . pure $ wit
   in mkByronTx $ ATxAux (reAnnotate atx) (reAnnotate awit)
 
@@ -474,6 +440,45 @@ txSpendGenesisUTxOByronPBFT gc sk genAddr outs =
 genesisUTxOTxIn :: CC.Genesis.Config -> SigningKey -> Address -> CC.UTxO.TxIn
 genesisUTxOTxIn gc genSk genAddr =
   let vk         = Crypto.toVerification genSk
+certificateValidation
+  :: ProtocolMagicId
+  -> ACertificate a
+  -> Crypto.VerificationKey
+  -> Crypto.VerificationKey
+  -> CertificateFile
+  -> IO ()
+certificateValidation magic cert delegateVK' issuerVK' certFp =
+  let magic' = Annotated magic (serialize' magic)
+      epoch  = unAnnotated $ aEpoch cert
+      cert'  = cert { aEpoch = Annotated epoch (serialize' epoch) }
+      vk    :: forall r. F.Format r (Crypto.VerificationKey -> r)
+      vk     = Crypto.fullVerificationKeyF
+      f     :: forall a. F.Format Text a -> a
+      f      = F.sformat
+      issues =
+        [ f("Certificate does not have a valid signature.")
+        | not (isValid magic' cert') ] <>
+
+        [ f("Certificate issuer ".vk." doesn't match expected: ".vk)
+          (issuerVK   cert)   issuerVK'
+        |  issuerVK   cert /= issuerVK' ] <>
+
+        [ f("Certificate delegate ".vk." doesn't match expected: ".vk)
+          (delegateVK cert)   delegateVK'
+        |  delegateVK cert /= delegateVK' ]
+   in unless (null issues) $ throwIO $ CertificateValidationErrors (ceFp certFp) issues
+
+eitherThrow :: (e -> CliError) -> Either e a ->  IO a
+eitherThrow masker (Left e) = throwIO $ masker e
+eitherThrow _ (Right x) = pure x
+
+txSpendGenesisUTxOByronPBFT :: CC.Genesis.Config -> SigningKey -> Address -> NonEmpty TxOut -> GenTx (ByronBlockOrEBB ByronConfig)
+txSpendGenesisUTxOByronPBFT gc sk genRichAddr outs =
+  let vk         = Crypto.toVerification sk
+      txattrs    = mkAttributes ()
+      tx         = UnsafeTx (pure txIn) outs txattrs
+      txIn      :: CC.UTxO.TxIn
+      txIn       = handleMissingAddr $ fst <$> Map.lookup genRichAddr initialUtxo
       handleMissingAddr :: Maybe CC.UTxO.TxIn -> CC.UTxO.TxIn
       handleMissingAddr  = fromMaybe . error
         $  "\nGenesis UTxO has no address\n"
