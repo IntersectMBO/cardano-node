@@ -126,7 +126,7 @@ mkTracers :: forall peer blk.
            -> Tracers peer blk
 mkTracers traceOptions tracer = Tracers
     { chainDBTracer
-        = annotateSeverity $ filterSeverity (pure Info)  -- filter out everything below this level
+        = annotateSeverity $ filterSeverity (pure . const Info)  -- filter out everything below this level
           $ toLogObject' (tracingFormatting $ traceChainDB traceOptions) tracingVerbosity
           $ addName "ChainDB" tracer
     , consensusTracers
@@ -134,15 +134,15 @@ mkTracers traceOptions tracer = Tracers
     , protocolTracers
         = mkProtocolsTracers
     , ipSubscriptionTracer
-        = annotateSeverity $ filterSeverity (pure Info)  -- filter out everything below this level
+        = annotateSeverity $ filterSeverity (pure . const Info)  -- filter out everything below this level
           $ toLogObject' (tracingFormatting $ traceIpSubscription traceOptions) tracingVerbosity
           $ addName "IpSubscription" tracer
     , dnsSubscriptionTracer
-        = annotateSeverity $ filterSeverity (pure Info)  -- filter out everything below this level
+        = annotateSeverity $ filterSeverity (pure . const Info)  -- filter out everything below this level
           $ toLogObject' (tracingFormatting $ traceDnsSubscription traceOptions) tracingVerbosity
           $ addName "DnsSubscription" tracer
     , dnsResolverTracer
-        = annotateSeverity $ filterSeverity (pure Info)  -- filter out everything below this level
+        = annotateSeverity $ filterSeverity (pure . const Info)  -- filter out everything below this level
           $ toLogObject' (tracingFormatting $ traceDnsResolver traceOptions) tracingVerbosity
           $ addName "DnsResolver" tracer
     }
@@ -188,41 +188,41 @@ mkTracers traceOptions tracer = Tracers
     mkConsensusTracers :: Consensus.Tracers' peer blk (Tracer IO)
     mkConsensusTracers = Consensus.Tracers
       { Consensus.chainSyncClientTracer
-        = annotateSeverity $ filterSeverity (pure Info)  -- filter out everything below this level
+        = annotateSeverity $ filterSeverity (pure . const Info)  -- filter out everything below this level
           $ toLogObject' (tracingFormatting $ hasConsensusTraceFlag Consensus.chainSyncClientTracer) tracingVerbosity
           $ addName "ChainSyncClient" tracer
       , Consensus.chainSyncServerTracer
-        = annotateSeverity $ filterSeverity (pure Info)  -- filter out everything below this level
+        = annotateSeverity $ filterSeverity (pure . const Info)  -- filter out everything below this level
           $ toLogObject' (tracingFormatting $ hasConsensusTraceFlag Consensus.chainSyncServerTracer) tracingVerbosity
           $ addName "ChainSyncServer" tracer
       , Consensus.blockFetchDecisionTracer
-        = annotateSeverity $ filterSeverity (pure Info)  -- filter out everything below this level
+        = annotateSeverity $ filterSeverity (pure . const Info)  -- filter out everything below this level
           $ toLogObject' (tracingFormatting $ hasConsensusTraceFlag Consensus.blockFetchDecisionTracer) tracingVerbosity
           $ addName "BlockFetchDecision" tracer
       , Consensus.blockFetchClientTracer
-        = annotateSeverity $ filterSeverity (pure Info)  -- filter out everything below this level
+        = annotateSeverity $ filterSeverity (pure . const Info)  -- filter out everything below this level
           $ toLogObject' (tracingFormatting $ hasConsensusTraceFlag Consensus.blockFetchClientTracer) tracingVerbosity
           $ addName "BlockFetchClient" tracer
       , Consensus.blockFetchServerTracer
-        = annotateSeverity $ filterSeverity (pure Info)  -- filter out everything below this level
+        = annotateSeverity $ filterSeverity (pure . const Info)  -- filter out everything below this level
           $ toLogObject' (tracingFormatting $ hasConsensusTraceFlag Consensus.blockFetchServerTracer) tracingVerbosity
           $ addName "BlockFetchServer" tracer
       , Consensus.txInboundTracer
-        = annotateSeverity $ filterSeverity (pure Info)  -- filter out everything below this level
+        = annotateSeverity $ filterSeverity (pure . const Info)  -- filter out everything below this level
           $ toLogObject' (tracingFormatting $ hasConsensusTraceFlag Consensus.txInboundTracer) tracingVerbosity
           $ addName "TxInbound" tracer
       , Consensus.txOutboundTracer
-        = annotateSeverity $ filterSeverity (pure Info)  -- filter out everything below this level
+        = annotateSeverity $ filterSeverity (pure . const Info)  -- filter out everything below this level
           $ toLogObject' (tracingFormatting $ hasConsensusTraceFlag Consensus.txOutboundTracer) tracingVerbosity
           $ addName "TxOutbound" tracer
       , Consensus.localTxSubmissionServerTracer
-        = annotateSeverity $ filterSeverity (pure Info)  -- filter out everything below this level
+        = annotateSeverity $ filterSeverity (pure . const Info)  -- filter out everything below this level
           $ toLogObject' (tracingFormatting $ hasConsensusTraceFlag Consensus.localTxSubmissionServerTracer) tracingVerbosity
           $ addName "LocalTxSubmissionServer" tracer
       , Consensus.mempoolTracer
         = mempoolTracer
       , Consensus.forgeTracer
-        = annotateSeverity $ filterSeverity (pure Info)  -- filter out everything below this level
+        = annotateSeverity $ filterSeverity (pure . const Info)  -- filter out everything below this level
           $ toLogObject' (tracingFormatting $ hasConsensusTraceFlag Consensus.forgeTracer) tracingVerbosity
           $ addName "Forge" tracer
       }
