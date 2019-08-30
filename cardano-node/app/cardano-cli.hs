@@ -22,30 +22,34 @@ import           Control.Exception.Safe (catchIO)
 import qualified Data.List.NonEmpty as NE
 import           Data.Time (UTCTime)
 import           Data.Time.Clock.POSIX (posixSecondsToUTCTime)
-import           Options.Applicative (Parser, ParserInfo, auto, commandGroup,
-                                      flag, flag', help, long, metavar, option,
+import           Options.Applicative (Parser, ParserInfo, ParserPrefs, auto,
+                                      commandGroup, flag, flag', help, long,
+                                      metavar, option, showHelpOnEmpty,
                                       strOption, subparser, value)
 import qualified Options.Applicative as Opt
 import           System.Exit (ExitCode (..), exitWith)
 
 main :: IO ()
 main = do
-  CLI {mainCommand, protocol} <- Opt.execParser opts
+  CLI {mainCommand, protocol} <- Opt.customExecParser pref opts
   ops <- decideCLIOps protocol
   catchIO (runCommand ops mainCommand)
     $ \err -> do
       hPutStrLn stderr ("Error:\n" <> show err :: String)
       exitWith $ ExitFailure 1
 
+pref :: ParserPrefs
+pref = Opt.prefs showHelpOnEmpty
+
 opts :: ParserInfo CLI
 opts =
   Opt.info (parseClient <**> Opt.helper)
     ( Opt.fullDesc
-        <> Opt.header
-             "cardano-cli - utility to support a variety of key\
-                  \ operations (genesis generation, migration,\
-                  \ pretty-printing..) for different system generations."
-      )
+    <> Opt.header
+         "cardano-cli - utility to support a variety of key\
+         \ operations (genesis generation, migration,\
+         \ pretty-printing..) for different system generations."
+    )
 
 data CLI
   = CLI
