@@ -206,14 +206,22 @@ transaction, in its raw wire format (see GenTx for Byron transactions).
 The canned `scripts/submit-tx.sh` script will submit the supplied transaction to a testnet
 launched by `scripts/shelley-testnet*.sh` family of scripts.
 
-### Issuing genesis UTxO expenditure Tx
+### Issuing UTxO expenditure (genesis and regular)
 
-To make a transaction spending genesis UTxO, you can either use the `issue-genesis-utxo-expenditure`
-subcommand directly, or, again use a canned script that will make a transaction tailored
-for the aforementioned testnet cluster -- `scripts/issue-genesis-utxo-expenditure.sh`.
+To make a transaction spending UTxO, you can either use the:
 
-The script requires the target file name to write the transaction to, and optionally
-allows specifying the target address and lovelace value to send.
+  - `issue-genesis-utxo-expenditure`, for genesis UTxO
+  - `issue-utxo-expenditure`, for normal UTxO
+  
+subcommands directly, or, again use canned scripts that will make transactions tailored
+for the aforementioned testnet cluster:
+
+  - `scripts/issue-genesis-utxo-expenditure.sh`.
+  - `scripts/issue-utxo-expenditure.sh`.
+
+The script requires the target file name to write the transaction to, input TxId
+(for normal UTxO), and optionally allows specifying the source txin output index,
+source and target signing keys and lovelace value to send.
 
 The target address defaults to the 1-st richman key (`configuration/delegate-keys.001.key`)
 of the testnet, and lovelace amount is almost the entirety of its funds.

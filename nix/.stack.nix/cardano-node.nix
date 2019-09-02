@@ -143,6 +143,7 @@
             (hsPkgs.optparse-applicative)
             (hsPkgs.ouroboros-consensus)
             (hsPkgs.safe-exceptions)
+            (hsPkgs.text)
             (hsPkgs.time)
             ];
           };
