@@ -129,7 +129,9 @@ runNode nodeCli@NodeCLIArguments{..} loggingLayer cc = do
                                  MinimalVerbosity -> "minimal"
                                  MaximalVerbosity -> "maximal"
         SomeProtocol p  <- fromProtocol cc protocol
-        let tracers     = mkTracers traceOptions trace'
+        let tracers     = if tracingGlobalOff traceOptions
+                            then nullTracers
+                            else mkTracers traceOptions trace'
         case viewMode of
           SimpleView -> handleSimpleNode p nodeCli myNodeAddress topology trace' tracers cc
           LiveView   -> do

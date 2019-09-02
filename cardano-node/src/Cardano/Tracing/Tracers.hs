@@ -16,6 +16,7 @@ module Cardano.Tracing.Tracers
   , TraceConstraints
   , TraceOptions(..)
   , mkTracers
+  , nullTracers
   , withTip
   ) where
 
@@ -99,7 +100,8 @@ type TraceConstraints blk =
 -- | Tracing options. Each option enables a tracer which adds verbosity to the
 -- log output.
 data TraceOptions = TraceOptions
-  { traceVerbosity       :: !TracingVerbosity
+  { tracingGlobalOff     :: !Bool
+  , traceVerbosity       :: !TracingVerbosity
   , traceChainDB         :: !Bool
     -- ^ By default we use 'readableChainDB' tracer, if on this it will use
     -- more verbose tracer
@@ -113,6 +115,38 @@ data TraceOptions = TraceOptions
 type ConsensusTraceOptions = Consensus.Tracers' () ()    (Const Bool)
 type ProtocolTraceOptions  = ProtocolTracers'   () () () (Const Bool)
 
+
+nullTracers :: Tracers peer blk
+nullTracers = Tracers {
+      chainDBTracer = nullTracer,
+      consensusTracers = nullConsensusTracers,
+      protocolTracers = nullProtocolsTracers,
+      ipSubscriptionTracer = nullTracer,
+      dnsSubscriptionTracer = nullTracer,
+      dnsResolverTracer = nullTracer
+    }
+  where
+    nullConsensusTracers :: Consensus.Tracers' peer blk (Tracer IO)
+    nullConsensusTracers = Consensus.Tracers {
+        Consensus.chainSyncClientTracer = nullTracer,
+        Consensus.chainSyncServerTracer = nullTracer,
+        Consensus.blockFetchDecisionTracer = nullTracer,
+        Consensus.blockFetchClientTracer = nullTracer,
+        Consensus.blockFetchServerTracer = nullTracer,
+        Consensus.txInboundTracer = nullTracer,
+        Consensus.txOutboundTracer = nullTracer,
+        Consensus.localTxSubmissionServerTracer = nullTracer,
+        Consensus.mempoolTracer = nullTracer,
+        Consensus.forgeTracer = nullTracer
+      }
+    nullProtocolsTracers :: ProtocolTracers' peer blk DeserialiseFailure (Tracer IO)
+    nullProtocolsTracers = ProtocolTracers {
+        ptChainSyncTracer = nullTracer,
+        ptBlockFetchTracer = nullTracer,
+        ptTxSubmissionTracer = nullTracer,
+        ptLocalChainSyncTracer = nullTracer,
+        ptLocalTxSubmissionTracer = nullTracer
+      }
 
 -- | Smart constructor of 'NodeTraces'.
 --

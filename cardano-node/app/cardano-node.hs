@@ -207,13 +207,21 @@ parsePort =
 
 parseTraceOptions :: Parser TraceOptions
 parseTraceOptions = TraceOptions
-  <$> parseTracingVerbosity
+  <$> parseTracingGlobal
+  <*> parseTracingVerbosity
   <*> parseTraceChainDB
   <*> parseConsensusTraceOptions
   <*> parseProtocolTraceOptions
   <*> parseTraceIpSubscription
   <*> parseTraceDnsSubscription
   <*> parseTraceDnsResolver
+
+parseTracingGlobal :: Parser Bool
+parseTracingGlobal =
+    switch (
+         long "tracing-off"
+      <> help "Tracing globally turned off."
+    )
 
 parseTracingVerbosity :: Parser TracingVerbosity
 parseTracingVerbosity = asum [
