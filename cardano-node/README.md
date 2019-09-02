@@ -81,7 +81,7 @@ A CLI utility to support a variety of key material operations (genesis, migratio
 
 The general synopsis is as follows:
  ```
-   cardano-cli SYSTEMVER COMMAND
+   Usage: cardano-cli (--byron-legacy | --real-pbft) (GENESISCMD | KEYCMD | DELEGCMD | TXCMD)
 ```
 
 NOTE: the exact invocation command depends on the environment.  If you have only
@@ -89,25 +89,23 @@ built `cardano-cli`, without installing it, then you have to prepend `cabal
 new-run -- ` before `cardano-cli`.  We henceforth assume that the necessary
 environment-specific adjustment has been made, so we only mention `cardano-cli`.
 
-`SYSTEMVER` is one of the supported system generations: `byron-legacy`, `real-pbft` etc.
-The full list can be seen in the output of `cardano-cli --help`, along with the list of
-supported commands.
+The `--byron-legacy` and `--real-pbft` options immediately preceding the
+subcommand have the role of choosing the set of Cardano algorithms for the purpose
+of subcommand operations.
 
-All commands have help available:
+The subcommands are subdivided in groups, and their full list can be seen in the
+output of `cardano-cli --help`.
+
+All subcommands have help available:
 
 ```
-$ cabal new-exec -- cardano-cli real-pbft migrate-delegate-key-from --help
-Usage: cardano-cli real-pbft migrate-delegate-key-from (--byron-legacy | --bft | --praos |
-                                                        --mock-pbft | --real-pbft)
-                                                        --to FILEPATH --from FILEPATH
-  Migrate a delegate key from an older version.
+$ cabal new-run -- cardano-cli --real-pbft migrate-delegate-key-from --help
+Usage: cardano-cli --real-pbft migrate-delegate-key-from (--byron-legacy | --real-pbft)
+                                                          --to FILEPATH --from FILEPATH
+  Migrate a delegate key from an older system version.
 
 Available options:
   --byron-legacy           Use the Byron/Ouroboros Classic suite of algorithms
-  --bft                    Use the BFT consensus algorithm
-  --praos                  Use the Praos consensus algorithm
-  --mock-pbft              Use the Permissive BFT consensus algorithm using a
-                           mock ledger
   --real-pbft              Use the Permissive BFT consensus algorithm using the
                            real ledger
   --to FILEPATH            Non-existent file to write the signing key to.
@@ -116,25 +114,47 @@ Available options:
 
 ## Genesis operations
 
+### Generation
+
+The genesis generation operations will create a directory that contains:
+
+  `genesis.json`
+  :: The genesis JSON file itself.
+  
+  `avvm-seed.*.seed`
+  :: Ada Voucher Vending Machine seeds (secret). Affected by `--avvm-entry-count` and `--avvm-entry-balance`.
+
+  `delegate-keys.*.key`
+  :: Delegate private keys. Affected by: `--n-delegate-addresses`.
+  
+  `delegation-cert.*.json`
+  :: Delegation certificates. Affected by: `--n-delegate-addresses`.
+
+  `genesis-keys.*.key`
+  :: Genesis stake private keys. Affected by: `--n-delegate-addresses`, `--total-balance`.
+
+  `poor-keys.*.key`
+  :: Non-delegate private keys with genesis UTxO. Affected by: `--n-poor-addresses`, `--total-balance`.
+
+Genesis delegation and related concepts are described in detail in:
+
+  https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/byronLedgerSpec/latest/download-by-type/doc-pdf/ledger-spec
+
 The canned `scripts/genesis.sh` example provides a nice set of defaults and
-illustrates available options.  Running it will produce a `./genesis.${systemStart}` directory,
-where `${systemStart}` will be chosen 15 minutes in the future.
-
-The directory will have the following content:
-
-                            ## Affected by
-
- - `avvm-seed.*.seed`         - --avvm-entry-count and --avvm-entry-balance
- - `delegate-keys.*.key`      - --n-delegate-addresses
- - `delegation-cert.*.json`   - --n-delegate-addresses
- - `genesis-keys.*.key`       - --n-delegate-addresses, --total-balance
- - `poor-keys.*.key`          - --n-poor-addresses, --total-balance
+illustrates available options.  Running it will produce a `./configuration/XXXXX` directory,
+where `XXXXX` will be a 5-character prefix of the genesis hash.
 
 Dummy genesis, that corresponds to `Test.Cardano.Chain.Genesis.Dummy.dummyConfig.configGenesisData`
 can be dumped by the `dump-hardcoded-genesis` subcommand.
 
-The `print-genesis-hash` subcommand will compute the genesis hash of a given genesis JSON file.
-That value will be suitable for the `--genesis-hash` option of `cardano-node`.
+### Hashing
+
+To underscore the identity of the genesis being employed by the node, the latter
+requires hash of the genesis JSON file as a configuration parameter
+(`--genesis-hash`).
+
+This hash can be obtained by the means of the `print-genesis-hash` subcommand --
+in a form expected by the node.
 
 ## Key operations
 
@@ -155,8 +175,8 @@ it needs to be migrated over, which is done by the `migrate-delegate-key-from` s
 
 
 ```
-$ cabal new-run -- cardano-cli real-pbft migrate-delegate-key-from byron-legacy \
-                                         --from key0.sk --to key0.pbft
+$ cabal new-run -- cardano-cli --real-pbft migrate-delegate-key-from byron-legacy \
+                                           --from key0.sk --to key0.pbft
 ```
 
 ### Signing key queries
@@ -165,14 +185,14 @@ One can gather information about a signing key's properties through the `signing
 and `signing-key-address` subcommands (the latter requires the network magic):
 
 ```
-$ cabal new-run -- cardano-cli real-pbft signing-key-public \
-                                         --secret key0.pbft
+$ cabal new-run -- cardano-cli --real-pbft signing-key-public \
+                                           --secret key0.pbft
 public key hash: a2b1af0df8ca764876a45608fae36cf04400ed9f413de2e37d92ce04
      public key: sc4pa1pAriXO7IzMpByKo4cG90HCFD465Iad284uDYz06dHCqBwMHRukReQ90+TA/vQpj4L1YNaLHI7DS0Z2Vg==
 
-$ cabal new-run -- cardano-cli real-pbft signing-key-address \
-                                         --secret key0.pbft  \
-                                         --testnet-magic 459045235
+$ cabal new-run -- cardano-cli --real-pbft signing-key-address \
+                                           --secret key0.pbft  \
+                                           --testnet-magic 459045235
 2cWKMJemoBakxhXgZSsMteLP9TUvz7owHyEYbUDwKRLsw2UGDrG93gPqmpv1D9ohWNddx
 VerKey address with root e5a3807d99a1807c3f161a1558bcbc45de8392e049682df01809c488, attributes: AddrAttributes { derivation path: {} }
 ```

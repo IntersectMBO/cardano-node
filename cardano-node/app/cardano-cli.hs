@@ -65,7 +65,7 @@ data CLI
 parseClient :: Parser CLI
 parseClient =
   CLI
-    <$> parseProtocolAsCommand
+    <$> parseProtocolActual
     <*> parseClientCommand
 
 parseClientCommand :: Parser ClientCommand
