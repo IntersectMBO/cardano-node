@@ -15,6 +15,7 @@ library
   hs-source-dirs:      src
 
   exposed-modules:     Cardano.Chairman
+                       Cardano.CLI.Helpers
                        Cardano.CLI.Ops
                        Cardano.CLI.Run
                        Cardano.Common.Protocol
