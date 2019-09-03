@@ -227,6 +227,8 @@ executable chairman
                      , async
                      , bytestring
                      , cardano-config
+                     , cardano-ledger
+                     , cardano-prelude
                      , containers
                      , contra-tracer
                      , cardano-node
@@ -237,10 +239,13 @@ executable chairman
                      , optparse-applicative
                      , ouroboros-consensus
                      , ouroboros-network
+                     , safe-exceptions
                      , serialise
                      , text
                      , typed-protocols
                      , typed-protocols-cbor
+
+  default-extensions:  NoImplicitPrelude
 
   if os(windows)
      build-depends:    Win32

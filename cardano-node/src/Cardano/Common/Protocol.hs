@@ -7,29 +7,33 @@
 
 module Cardano.Common.Protocol
   ( Protocol(..)
+  , ProtocolExceptions (..)
   , SomeProtocol(..)
   , fromProtocol
   ) where
 
 
 
-import           Cardano.Prelude
-import           Prelude (error, fail)
+import           Cardano.Prelude hiding (show)
+import           Prelude (error, show)
 import           Test.Cardano.Prelude (canonicalDecodePretty)
 
 import           Codec.CBOR.Read (deserialiseFromBytes, DeserialiseFailure)
-import           Control.Exception hiding (throwIO)
 import qualified Data.ByteString.Lazy as LB
 import           Data.Text (unpack)
 
+import           Cardano.Binary (Raw)
 import qualified Cardano.Chain.Genesis as Genesis
 import qualified Cardano.Chain.Update as Update
-import           Cardano.Crypto (RequiresNetworkMagic (..), decodeAbstractHash)
+import           Cardano.Crypto (Hash, RequiresNetworkMagic (..), decodeAbstractHash)
 import qualified Cardano.Crypto.Signing as Signing
-import           Cardano.Shell.Lib (GeneralException (..))
 import           Ouroboros.Consensus.Demo (defaultDemoPBftParams, defaultDemoPraosParams, defaultSecurityParam)
 import           Ouroboros.Consensus.Demo.Run
-import           Ouroboros.Consensus.Node.ProtocolInfo (PBftLeaderCredentials, PBftSignatureThreshold(..), mkPBftLeaderCredentials)
+import           Ouroboros.Consensus.Node.ProtocolInfo ( PBftLeaderCredentials
+                                                       , PBftLeaderCredentialsError
+                                                       , PBftSignatureThreshold(..)
+                                                       , mkPBftLeaderCredentials
+                                                       )
 import qualified Ouroboros.Consensus.Protocol as Consensus
 import           Ouroboros.Consensus.Util (Dict(..))
 
@@ -39,9 +43,9 @@ import           Cardano.Config.Types
                    , RequireNetworkMagic (..) )
 import           Cardano.Tracing.Tracers (TraceConstraints)
 
-{-------------------------------------------------------------------------------
-  Untyped/typed protocol boundary
--------------------------------------------------------------------------------}
+-------------------------------------------------------------------------------
+-- Untyped/typed protocol boundary
+-------------------------------------------------------------------------------
 
 data Protocol =
     ByronLegacy
@@ -50,6 +54,32 @@ data Protocol =
   | MockPBFT
   | RealPBFT
   deriving Show
+
+
+data ProtocolExceptions = AbstractHashDecodeFailure Text
+                        | CanonicalDecodeFailure Text
+                        | PbftLeaderCredentialsFailure PBftLeaderCredentialsError
+                        | SigningKeyDeserializeFailure DeserialiseFailure
+
+instance Exception ProtocolExceptions
+
+instance Show ProtocolExceptions where
+  show (AbstractHashDecodeFailure err) = concat
+    [ "Cardano.Common.Protocol.AbstractHashDecodeFailure: "
+    , unpack err
+    ]
+  show (CanonicalDecodeFailure err) = concat
+    [ "Cardano.Common.Protocol.CanonicalDecodeFailure: "
+    , show err
+    ]
+  show (PbftLeaderCredentialsFailure err) = concat
+    [ "Cardano.Common.Protocol.PbftLeaderCredentialsFailure: "
+    , show err
+    ]
+  show (SigningKeyDeserializeFailure dsF) = concat
+    [ "Cardano.Common.Protocol.SigningKeyDeserializeFailure: "
+    , show dsF
+    ]
 
 
 data SomeProtocol where
@@ -79,16 +109,18 @@ fromProtocol CardanoConfiguration{ccCore} RealPBFT = do
             , coGenesisHash
             , coPBftSigThd
             } = ccCore
-        genHash = either (throw . ConfigurationError) identity $
-                  decodeAbstractHash coGenesisHash
+        genHashE = decodeAbstractHash coGenesisHash :: Either Text (Hash Raw)
         cvtRNM :: RequireNetworkMagic -> RequiresNetworkMagic
         cvtRNM NoRequireNetworkMagic = RequiresNoMagic
         cvtRNM RequireNetworkMagic   = RequiresMagic
 
+    genHash <- case genHashE of
+                 Left err -> throwIO $ AbstractHashDecodeFailure err
+                 Right g -> pure g
     gcE <- runExceptT (Genesis.mkConfigFromFile (cvtRNM $ coRequiresNetworkMagic ccCore) coGenesisFile genHash)
-    let gc = case gcE of
-          Left err -> throw err -- TODO: no no no!
-          Right x -> x
+    gc <- case gcE of
+          Left err -> throwIO err
+          Right x -> pure x
 
     optionalLeaderCredentials <- readLeaderCredentials gc ccCore
 
@@ -110,9 +142,7 @@ fromProtocol CardanoConfiguration{ccCore} RealPBFT = do
     case Consensus.runProtocol p of
       Dict -> return $ SomeProtocol p
 
-readLeaderCredentials :: Genesis.Config
-                      -> Core
-                      -> IO (Maybe PBftLeaderCredentials)
+readLeaderCredentials :: Genesis.Config -> Core -> IO (Maybe PBftLeaderCredentials)
 readLeaderCredentials gc Core {
                            coStaticKeySigningKeyFile = Just signingKeyFile
                          , coStaticKeyDlgCertFile    = Just delegCertFile
@@ -120,16 +150,13 @@ readLeaderCredentials gc Core {
     signingKeyFileBytes <- LB.readFile signingKeyFile
     delegCertFileBytes  <- LB.readFile delegCertFile
 
-    --TODO: review the style of reporting for input validation failures
-    -- If we use throwIO, we should use a local exception type that
-    -- wraps the other structured failures and reports them appropriatly
-    signingKey <- either throwIO return $
+    signingKey <- either (throwIO . SigningKeyDeserializeFailure) return $
                     deserialiseSigningKey signingKeyFileBytes
 
-    delegCert  <- either (fail . unpack) return $
+    delegCert <- either (throwIO . CanonicalDecodeFailure) return $
                     canonicalDecodePretty delegCertFileBytes
 
-    either throwIO (return . Just)
+    either (throwIO . PbftLeaderCredentialsFailure) (return . Just)
            (mkPBftLeaderCredentials gc signingKey delegCert)
   where
     deserialiseSigningKey :: LB.ByteString

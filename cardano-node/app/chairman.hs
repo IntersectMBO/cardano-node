@@ -1,12 +1,15 @@
 {-# LANGUAGE BangPatterns       #-}
 {-# LANGUAGE NamedFieldPuns     #-}
 {-# LANGUAGE NumericUnderscores #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+
+import           Cardano.Prelude hiding (option)
 
 import           Control.Applicative (some)
-import           Control.Exception (Exception, throwIO)
 import           Control.Concurrent (threadDelay)
-import           Control.Concurrent.Async
+import           Control.Exception (Handler(..))
 import           Options.Applicative
+import           System.Exit (exitFailure)
 
 import           Cardano.Config.Presets (mainnetConfiguration)
 
@@ -17,9 +20,11 @@ import           Ouroboros.Consensus.Protocol.Abstract (SecurityParam (..))
 import           Ouroboros.Consensus.Node.ProtocolInfo.Abstract (NumCoreNodes (..))
 import           Ouroboros.Consensus.NodeId (CoreNodeId)
 
+import qualified Cardano.Chain.Genesis as Genesis
 import           Cardano.Config.CommonCLI
-import           Cardano.Common.Protocol (Protocol, SomeProtocol(..), fromProtocol)
 import           Cardano.Config.Types (CardanoConfiguration(..))
+import           Cardano.Common.Orphans ()
+import           Cardano.Common.Protocol (Protocol, ProtocolExceptions(..), SomeProtocol(..), fromProtocol)
 import           Cardano.Common.Parsers (parseCoreNodeId, parseProtocol)
 
 import           Cardano.Chairman (runChairman)
@@ -36,7 +41,8 @@ main = do
 
     cc <- mkConfiguration mainnetConfiguration caCommonCLI
 
-    SomeProtocol p <- fromProtocol cc caProtocol
+    SomeProtocol p <- handleExceptions $ fromProtocol cc caProtocol
+
 
     let run = runChairman p caCoreNodeIds
                           (NumCoreNodes $ length caCoreNodeIds)
@@ -53,6 +59,16 @@ main = do
         do
           threadDelay (timeout * 1_000_000)
           throwIO Timeout
+ where
+  handleExceptions :: IO a -> IO a
+  handleExceptions action = catches action
+    [ Handler (\(e :: Genesis.ConfigurationError) -> output e)
+    , Handler (\(e :: ProtocolExceptions) -> output e)
+    ]
+  -- Output from thrown exxception.
+  output :: a -> IO ()
+  output err = hPutStr stderr ("chairman.hs.fromProtocol: " ++ show err) >> exitFailure
+
 
 
 data ChairmanArgs = ChairmanArgs {
@@ -119,3 +135,11 @@ data Timeout = Timeout
   deriving Show
 
 instance Exception Timeout
+
+--exceptionCatcher :: IO () -> (String -> OperationError) -> IO ()
+--exceptionCatcher action errorConstr = catches
+--  action
+--  [ Handler (\(e :: ProtocolExceptions) -> report . Left . errorConstr $ show e)
+--  , Handler (\(e :: ResultError) -> report . Left . errorConstr $ show e)
+--  , Handler (\(e :: SQLError) -> report . Left . errorConstr $ show e)
+--  ]
