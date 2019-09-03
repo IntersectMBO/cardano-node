@@ -29,8 +29,8 @@ import           Cardano.Crypto ( AProtocolMagic(..)
                                 , decodeHash)
 
 import           Cardano.Config.CommonCLI
+import           Cardano.Common.Parsers
 import           Cardano.Common.Protocol
-import           Cardano.Node.Parsers
 import           Cardano.CLI.Ops (decideCLIOps)
 import           Cardano.CLI.Run
 

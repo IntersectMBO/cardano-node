@@ -15,21 +15,25 @@ library
   hs-source-dirs:      src
 
   exposed-modules:     Cardano.Chairman
+                       Cardano.CLI.Genesis
+                       Cardano.CLI.Key
+                       Cardano.CLI.Legacy.Byron
                        Cardano.CLI.Ops
                        Cardano.CLI.Run
+                       Cardano.CLI.Tx
+                       Cardano.CLI.Tx.Submission
+                       Cardano.Common.LocalSocket
+                       Cardano.Common.Orphans
+                       Cardano.Common.Parsers
                        Cardano.Common.Protocol
-                       Cardano.Legacy.Byron
                        Cardano.Node.Configuration.Conversion
                        Cardano.Node.Configuration.Presets
                        Cardano.Node.Configuration.Topology
                        Cardano.Node.Features.Logging
                        Cardano.Node.Features.Node
-                       Cardano.Node.Orphans
-                       Cardano.Node.Parsers
                        Cardano.Node.Run
                        Cardano.Node.TUI.GitRev
                        Cardano.Node.TUI.GitRevFromGit
-                       Cardano.Node.TxSubmission
                        Cardano.Tracing.TraceAcceptor
                        Cardano.Tracing.Tracers
                        Cardano.Wallet.Run

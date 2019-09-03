@@ -27,7 +27,7 @@ import           Ouroboros.Consensus.NodeNetwork (ProtocolTracers'(..))
 import qualified Ouroboros.Consensus.Node.Tracers as Consensus
 
 import           Cardano.Config.CommonCLI
-import           Cardano.Node.Parsers
+import           Cardano.Common.Parsers
 import           Cardano.Node.Run
 import           Cardano.Node.Configuration.Topology (NodeAddress (..))
 import           Cardano.Tracing.Tracers (ConsensusTraceOptions,  ProtocolTraceOptions, TraceOptions(..))

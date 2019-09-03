@@ -4,7 +4,7 @@
 {-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Node.Orphans
+module Cardano.Common.Orphans
   ()
 where
 

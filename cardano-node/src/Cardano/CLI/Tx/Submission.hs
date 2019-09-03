@@ -8,10 +8,8 @@
 
 {-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
 
-module Cardano.Node.TxSubmission (
+module Cardano.CLI.Tx.Submission (
       handleTxSubmission
-    , localSocketFilePath
-    , localSocketAddrInfo
     ) where
 import           Cardano.Prelude hiding (ByteString, option, threadDelay)
 import           Prelude (String)
@@ -19,7 +17,6 @@ import           Prelude (String)
 import           Data.ByteString.Lazy (ByteString)
 import           Data.Void (Void)
 
-import           Network.Socket as Socket
 import           System.Directory (canonicalizePath, makeAbsolute)
 import           System.FilePath ((</>))
 
@@ -54,6 +51,7 @@ import           Ouroboros.Network.Protocol.Handshake.Version
 import           Ouroboros.Network.NodeToClient
 
 import           Cardano.Node.Configuration.Topology
+import           Cardano.Common.LocalSocket
 import           Cardano.Config.Types (CardanoConfiguration(..))
 
 
@@ -187,18 +185,3 @@ localChainSyncCodec pInfoConfig =
       (nodeDecodeBlock pInfoConfig)
       (Block.encodePoint (nodeEncodeHeaderHash (Proxy @blk)))
       (Block.decodePoint (nodeDecodeHeaderHash (Proxy @blk)))
-
-
-localSocketFilePath :: NodeId -> FilePath
-localSocketFilePath (CoreId  n) = "node-core-" ++ show n ++ ".socket"
-localSocketFilePath (RelayId n) = "node-relay-" ++ show n ++ ".socket"
-
-localSocketAddrInfo :: FilePath -> Socket.AddrInfo
-localSocketAddrInfo socketPath =
-    Socket.AddrInfo
-      []
-      Socket.AF_UNIX
-      Socket.Stream
-      Socket.defaultProtocol
-      (Socket.SockAddrUnix socketPath)
-      Nothing
