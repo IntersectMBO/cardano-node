@@ -102,9 +102,11 @@
             (hsPkgs.cryptonite)
             (hsPkgs.fgl)
             (hsPkgs.fingertree)
+            (hsPkgs.generics-sop)
             (hsPkgs.graphviz)
             (hsPkgs.mtl)
             (hsPkgs.QuickCheck)
+            (hsPkgs.quickcheck-state-machine)
             (hsPkgs.random)
             (hsPkgs.reflection)
             (hsPkgs.serialise)
@@ -113,6 +115,7 @@
             (hsPkgs.tasty-quickcheck)
             (hsPkgs.text)
             (hsPkgs.time)
+            (hsPkgs.tree-diff)
             ];
           };
         "test-storage" = {
@@ -156,8 +159,8 @@
     } // {
     src = (pkgs.lib).mkDefault (pkgs.fetchgit {
       url = "https://github.com/input-output-hk/ouroboros-network";
-      rev = "7d1d13a6ca1ccc851b43ce51afc9516bee976b2e";
-      sha256 = "1jfbvkby34pra7cgqvs0va1nj710fvpyill091k5xvpy222m2kg1";
+      rev = "e664118d72fc58d6afe955fb957c9b05423aaa60";
+      sha256 = "0j10hg0lh0bxicdliwwqrsjwcn8bpvgfgf5j2biwlp94xqrq3gl9";
       });
     postUnpack = "sourceRoot+=/ouroboros-consensus; echo source root reset to \$sourceRoot";
     }
