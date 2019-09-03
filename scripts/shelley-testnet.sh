@@ -28,7 +28,7 @@ NETARGS=(
 # CMD="stack exec --nix cardano-node --"
 CMD="cabal new-exec cardano-node --"
 
-# SPECIAL=""
+# SPECIAL="--tracing-off"
 SPECIAL="--live-view"
 # VERBOSITY="--tracing-verbosity-minimal"
 # VERBOSITY="--tracing-verbosity-normal"
