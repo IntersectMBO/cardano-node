@@ -32,7 +32,7 @@ import           Cardano.Chain.Genesis
 import qualified Crypto.SCRAPE as Scrape
 
 import           Cardano.Common.Protocol
-import qualified Cardano.Legacy.Byron as Legacy
+import qualified Cardano.CLI.Legacy.Byron as Legacy
 
 
 -- | Generic operations for a specific system era.

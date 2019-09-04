@@ -73,11 +73,11 @@ import           Ouroboros.Consensus.Util.STM (onEachChange)
 import qualified Ouroboros.Storage.ChainDB as ChainDB
 
 import           Cardano.Config.CommonCLI (CommonCLI)
+import           Cardano.Common.LocalSocket
 import           Cardano.Common.Protocol (Protocol(..), SomeProtocol(..), fromProtocol)
 import           Cardano.Node.Configuration.Topology
 import           Cardano.Tracing.TraceAcceptor
 import           Cardano.Tracing.Tracers
-import           Cardano.Node.TxSubmission
 #ifdef UNIX
 import           Cardano.Node.TUI.LiveView
 #endif
@@ -110,8 +110,6 @@ data ViewMode =
 runNode :: NodeCLIArguments -> LoggingLayer -> CardanoConfiguration -> IO ()
 runNode nodeCli@NodeCLIArguments{..} loggingLayer cc = do
     let !tr = llAppendName loggingLayer "node" (llBasicTrace loggingLayer)
-    -- If the user asked to submit a transaction, we don't have to spin up a
-    -- full node, we simply transmit it and exit.
     case command of
 
       TraceAcceptor -> do

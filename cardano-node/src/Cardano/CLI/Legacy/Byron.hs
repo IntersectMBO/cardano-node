@@ -12,7 +12,7 @@
 {-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
 {-# OPTIONS_GHC -Wno-simplifiable-class-constraints #-}
 
-module Cardano.Legacy.Byron (
+module Cardano.CLI.Legacy.Byron (
       LegacyDelegateKey(..)
     , encodeLegacyDelegateKey
     , decodeLegacyDelegateKey

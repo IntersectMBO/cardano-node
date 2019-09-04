@@ -2,7 +2,7 @@
 
 {-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
 
-module Cardano.Node.Parsers
+module Cardano.Common.Parsers
   ( loggingParser
   , parseCoreNodeId
   , parseProtocol
