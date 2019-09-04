@@ -18,9 +18,13 @@
       "library" = {
         depends = [
           (hsPkgs.base)
+          (hsPkgs.cardano-shell)
           (hsPkgs.cardano-prelude)
           (hsPkgs.generic-monoid)
+          (hsPkgs.iohk-monitoring)
           (hsPkgs.optparse-applicative)
+          (hsPkgs.safe-exceptions)
+          (hsPkgs.stm)
           ];
         };
       };

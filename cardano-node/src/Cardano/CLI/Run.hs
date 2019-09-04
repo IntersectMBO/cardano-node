@@ -71,7 +71,7 @@ import qualified Cardano.Crypto.Random as Crypto
 import qualified Cardano.Crypto.Signing as Crypto
 import           Cardano.Config.Partial (PartialCardanoConfiguration (..))
 import           Cardano.Config.Types (CardanoConfiguration(..))
-import           Cardano.Node.Configuration.Presets (mainnetConfiguration)
+import           Cardano.Config.Presets (mainnetConfiguration)
 import           Ouroboros.Consensus.Demo.Run
 import           Ouroboros.Consensus.Protocol hiding (Protocol)
 import qualified Ouroboros.Consensus.Protocol as Consensus

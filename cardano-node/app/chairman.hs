@@ -8,7 +8,7 @@ import           Control.Concurrent (threadDelay)
 import           Control.Concurrent.Async
 import           Options.Applicative
 
-import           Cardano.Node.Configuration.Presets (mainnetConfiguration)
+import           Cardano.Config.Presets (mainnetConfiguration)
 
 import           Control.Tracer (stdoutTracer)
 

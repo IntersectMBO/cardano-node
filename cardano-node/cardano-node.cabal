@@ -27,9 +27,7 @@ library
                        Cardano.Common.Parsers
                        Cardano.Common.Protocol
                        Cardano.Node.Configuration.Conversion
-                       Cardano.Node.Configuration.Presets
                        Cardano.Node.Configuration.Topology
-                       Cardano.Node.Features.Logging
                        Cardano.Node.Features.Node
                        Cardano.Node.Run
                        Cardano.Node.TUI.GitRev
