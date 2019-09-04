@@ -19,7 +19,7 @@ let
       edgeHost = "127.0.0.1";
       edgePort = 3001;
       useProxy = false;
-      proxyPort = "7777";
+      proxyPort = 7777;
       proxyHost = "127.0.0.1";
       loggingConfig = ../configuration/log-configuration.yaml;
     };

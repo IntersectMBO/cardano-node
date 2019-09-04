@@ -31,7 +31,7 @@ import           Network.Socket as Socket
 
 import           Control.Monad.Class.MonadAsync
 import           Control.Monad.Class.MonadST
-import           Control.Monad.Class.MonadSTM
+import           Control.Monad.Class.MonadSTM.Strict
 import           Control.Monad.Class.MonadThrow
 import           Control.Monad.Class.MonadTimer
 import           Control.Tracer
@@ -122,7 +122,7 @@ runChairman ptcl nids numCoreNodes securityParam maxBlockNo sockPath tracer = do
     handleMuxError :: ChainsVar IO blk -> CoreNodeId -> MuxError -> IO ()
     handleMuxError chainsVar coreNodeId err = do
       traceWith tracer (show err)
-      atomically $ modifyTVar' chainsVar (Map.delete coreNodeId)
+      atomically $ modifyTVar chainsVar (Map.delete coreNodeId)
 
 
 data ChairmanTrace blk
@@ -153,7 +153,7 @@ instance (Condense blk, Condense (HeaderHash blk)) => Show (ChairmanTrace blk) w
 -- | Shared state between chain-sync clients.  Each chain-sync client will write to the
 -- corresponding entry.
 --
-type ChainsVar m blk = TVar m (Map CoreNodeId (AnchoredFragment blk))
+type ChainsVar m blk = StrictTVar m (Map CoreNodeId (AnchoredFragment blk))
 
 
 -- | Add a single block to the chain.
@@ -168,7 +168,7 @@ addBlock
     -> blk
     -> STM m ()
 addBlock coreNodeId chainsVar blk =
-    modifyTVar' chainsVar (Map.adjust (AF.addBlock blk) coreNodeId)
+    modifyTVar chainsVar (Map.adjust (AF.addBlock blk) coreNodeId)
 
 
 data ChairmanError blk =
@@ -276,7 +276,7 @@ rollback
     -> Point blk
     -> STM m ()
 rollback coreNodeId chainsVar p =
-    modifyTVar' chainsVar (Map.adjust fn coreNodeId)
+    modifyTVar chainsVar (Map.adjust fn coreNodeId)
   where
     fn :: AnchoredFragment blk -> AnchoredFragment blk
     fn cf = case AF.rollback p cf of
