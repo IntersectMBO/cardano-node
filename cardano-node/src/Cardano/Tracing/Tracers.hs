@@ -250,7 +250,7 @@ withName name tr = contramap pack $ toLogObject $ appendName (pack name) tr
 -- | A way to satisfy tracer which requires current tip.  The tip is read from
 -- a mutable cell.
 --
-withTip :: TVar IO (Point blk)
+withTip :: LazyTVar IO (Point blk)
         -> Tracer IO (WithTip blk a)
         -> Tracer IO a
 withTip varTip tr = Tracer $ \msg -> do
