@@ -6,6 +6,7 @@ module Cardano.Common.Parsers
   ( loggingParser
   , parseCoreNodeId
   , parseProtocol
+  , parseProtocolActual
   , parseProtocolAsCommand
   , parseTopologyInfo
   ) where
@@ -43,26 +44,36 @@ parseNodeId desc =
          <> help desc
     )
 
+-- | Flag parser, that returns its argument on success.
+fl :: a -> String -> String -> Parser a
+fl val opt desc = flag' val $ mconcat [long opt, help desc]
+
 parseProtocol :: Parser Protocol
 parseProtocol = asum
   [ fl ByronLegacy "byron-legacy"
-    "Use the Byron/Ouroboros Classic suite of algorithms"
+    "Byron/Ouroboros Classic suite of algorithms"
 
   , fl BFT "bft"
-    "Use the BFT consensus algorithm"
+    "BFT consensus"
 
   , fl Praos "praos"
-    "Use the Praos consensus algorithm"
+    "Praos consensus"
 
   , fl MockPBFT "mock-pbft"
-    "Use the Permissive BFT consensus algorithm using a mock ledger"
+    "Permissive BFT consensus with a mock ledger"
 
   , fl RealPBFT "real-pbft"
-    "Use the Permissive BFT consensus algorithm using the real ledger"
+    "Permissive BFT consensus with a real ledger"
   ]
-  where
-    fl :: forall a. a -> String -> String -> Parser a
-    fl x l h = flag' x $ mconcat [long l, help h]
+
+parseProtocolActual :: Parser Protocol
+parseProtocolActual = asum
+  [ fl ByronLegacy "byron-legacy"
+    "Byron/Ouroboros Classic suite of algorithms"
+
+  , fl RealPBFT "real-pbft"
+    "Permissive BFT consensus with a real ledger"
+  ]
 
 parseProtocolAsCommand :: Parser Protocol
 parseProtocolAsCommand = subparser $ mconcat
