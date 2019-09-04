@@ -17,10 +17,10 @@ import           Ouroboros.Consensus.Node.ProtocolInfo.Abstract (NumCoreNodes (.
 
 import           Cardano.Config.CommonCLI
 import           Cardano.Config.Partial (PartialCardanoConfiguration (..))
-import           Cardano.Node.Configuration.Presets (mainnetConfiguration)
+import           Cardano.Config.Presets (mainnetConfiguration)
 import           Cardano.Config.Types (CardanoConfiguration (..),
                                                    CardanoEnvironment (..))
-import           Cardano.Node.Features.Logging (LoggingCLIArguments (..),
+import           Cardano.Logging (LoggingCLIArguments (..),
                                                 LoggingLayer (..),
                                                 createLoggingFeature
                                                 )

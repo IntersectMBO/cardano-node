@@ -13,8 +13,8 @@ import           Options.Applicative
 import           Cardano.BM.Data.Tracer (TracingVerbosity (..))
 import           Cardano.Config.Partial (PartialCardanoConfiguration (..))
 import           Cardano.Config.Types (CardanoEnvironment (..))
-import           Cardano.Node.Configuration.Presets (mainnetConfiguration)
-import           Cardano.Node.Features.Logging (LoggingCLIArguments (..),
+import           Cardano.Config.Presets (mainnetConfiguration)
+import           Cardano.Logging (LoggingCLIArguments (..),
                                                 createLoggingFeature
                                                 )
 import           Cardano.Node.Features.Node

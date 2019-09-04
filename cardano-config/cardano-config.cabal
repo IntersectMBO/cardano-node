@@ -15,11 +15,18 @@ library
 
   exposed-modules:     Cardano.Config.CommonCLI
                        Cardano.Config.Partial
+                       Cardano.Config.Presets
                        Cardano.Config.Types
+                       Cardano.Logging
 
   build-depends:       base >=4.12 && <4.13
+                     , cardano-shell
                      , cardano-prelude
                      , generic-monoid
+                     , iohk-monitoring
                      , optparse-applicative
+                     , safe-exceptions
+                     , stm
 
   default-language:    Haskell2010
+  default-extensions:  NoImplicitPrelude
