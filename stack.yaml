@@ -11,7 +11,7 @@ ghc-options:
 extra-deps:
     # Cardano-ledger dependencies
   - git: https://github.com/input-output-hk/cardano-ledger
-    commit: 677b9377d4dc541eb3d7ffac079bdab7d489df1f
+    commit: 22363162ee08039ec6158c24a0882c9357e9e35e
     subdirs:
       - cardano-ledger
       - cardano-ledger/test
@@ -25,7 +25,7 @@ extra-deps:
       - test
 
   - git: https://github.com/input-output-hk/cardano-base
-    commit: 48fdef8e2cd9ca4d8745435ebff1916ce3556c70
+    commit: 31aafc8d5c090c4443a12d588c923badac929843
     subdirs:
       - binary
       - binary/test
@@ -61,7 +61,7 @@ extra-deps:
     #Ouroboros-network dependencies
 
   - git: https://github.com/input-output-hk/ouroboros-network
-    commit: fe93af9e1a76ede191c98e458aaec83290607357
+    commit: b4735922f0ba0939ca596a477ce98f86ec2a5b26
     subdirs:
         - io-sim-classes
         - network-mux
