@@ -7,7 +7,7 @@ where
 import           Cardano.Prelude
 
 import           Network.Socket as Socket
-import           Ouroboros.Consensus.NodeId
+import           Ouroboros.Consensus.NodeId (NodeId(..))
 
 
 localSocketFilePath :: NodeId -> FilePath

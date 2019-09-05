@@ -1,5 +1,3 @@
-{-# LANGUAGE NamedFieldPuns #-}
-
 import           Cardano.Prelude hiding (option)
 import           Prelude (String, error, id)
 
@@ -31,14 +29,16 @@ import           Cardano.Crypto ( AProtocolMagic(..)
 import           Cardano.Config.CommonCLI
 import           Cardano.Common.Parsers
 import           Cardano.Common.Protocol
+import           Cardano.CLI.Genesis
+import           Cardano.CLI.Key
 import           Cardano.CLI.Ops (decideCLIOps)
 import           Cardano.CLI.Run
 
 main :: IO ()
 main = do
-  CLI {mainCommand, protocol} <- Opt.customExecParser pref opts
-  ops <- decideCLIOps protocol
-  catchIO (runCommand ops mainCommand)
+  co <- Opt.customExecParser pref opts
+  ops <- decideCLIOps (protocol co)
+  catchIO (runCommand ops (mainCommand co))
     $ \err -> do
       hPutStrLn stderr ("Error:\n" <> show err :: String)
       exitWith $ ExitFailure 1
@@ -76,38 +76,40 @@ parseClientCommand =
     <|> parseTxRelatedValues
 
 -- | Values required to create genesis.
+parseGenesisParameters :: Parser GenesisParameters
+parseGenesisParameters =
+  GenesisParameters
+  <$> parseUTCTime
+      "start-time"
+      "Start time of the new cluster to be enshrined in the new genesis."
+  <*> parseFilePath
+      "protocol-parameters-file"
+      "JSON file with protocol parameters."
+  <*> parseK
+  <*> parseProtocolMagic
+  <*> parseTestnetBalanceOptions
+  <*> parseFakeAvvmOptions
+  <*> parseLovelacePortionWithDefault
+      "avvm-balance-factor"
+      "AVVM balances will be multiplied by this factor (defaults to 1)."
+      1
+  <*> optional
+     ( parseIntegral
+       "secret-seed"
+       "Optionally specify the seed of generation."
+     )
+
 parseGenesisRelatedValues :: Parser ClientCommand
 parseGenesisRelatedValues =
   subparser
     ( mconcat
         [ commandGroup "Genesis related commands.",
-          command' "genesis" "Create genesis."
-            $ Genesis
-            <$> parseNewDirectory
-                  "genesis-output-dir"
-                  "Directory where genesis JSON file\
-                  \ and secrets shall be placed."
-            <*> parseUTCTime
-                  "start-time"
-                  "Start time of the new cluster to be\
-                  \ enshrined in the new genesis."
-            <*> parseFilePath
-                  "protocol-parameters-file"
-                  "JSON file with protocol parameters."
-            <*> parseK
-            <*> parseProtocolMagic
-            <*> parseTestnetBalanceOptions
-            <*> parseFakeAvvmOptions
-            <*> parseLovelacePortionWithDefault
-                  "avvm-balance-factor"
-                  "AVVM balances will be multiplied by\
-                  \ this factor (defaults to 1)."
-                  1
-            <*> optional
-                  ( parseIntegral
-                      "secret-seed"
-                      "Optionally specify the seed of generation."
-                    ),
+          command' "genesis" "Create genesis." $
+          Genesis
+          <$> parseNewDirectory
+              "genesis-output-dir"
+              "Non-existent directory where genesis JSON file and secrets shall be placed."
+          <*> parseGenesisParameters,
           command'
             "dump-hardcoded-genesis"
             "Write out a hard-coded genesis."
@@ -131,7 +133,7 @@ parseKeyRelatedValues =
           command' "keygen" "Generate a signing key."
             $ Keygen
             <$> parseNewSigningKeyFile "secret"
-            <*> parseFlag
+            <*> parseFlag' GetPassword EmptyPassword
                   "no-password"
                   "Disable password protection.",
           command'
@@ -356,11 +358,14 @@ parseIntegralWithDefault optname desc def =
     )
 
 parseFlag :: String -> String -> Parser Bool
-parseFlag optname desc =
-  flag False True
-    ( long optname
-      <> help desc
-    )
+parseFlag = parseFlag' False True
+
+parseFlag' :: a -> a -> String -> String -> Parser a
+parseFlag' def active optname desc =
+  flag def active
+  ( long optname
+    <> help desc
+  )
 
 -- | Here, we hope to get away with the usage of 'error' in a pure expression,
 --   because the CLI-originated values are either used, in which case the error is
@@ -395,9 +400,9 @@ parseAddress opt desc =
     )
 
 parseTxIn :: Parser TxIn
-parseTxIn = 
-  option 
-  ( uncurry TxInUtxo 
+parseTxIn =
+  option
+  ( uncurry TxInUtxo
     . Control.Arrow.first cliParseTxId
     <$> auto
   )

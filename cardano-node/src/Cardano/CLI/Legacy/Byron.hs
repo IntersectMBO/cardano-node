@@ -1,11 +1,9 @@
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE GADTs               #-}
 {-# LANGUAGE LambdaCase          #-}
-{-# LANGUAGE NamedFieldPuns      #-}
 {-# LANGUAGE NoImplicitPrelude   #-}
 {-# LANGUAGE NumericUnderscores  #-}
 {-# LANGUAGE OverloadedStrings   #-}
-{-# LANGUAGE RecordWildCards     #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications    #-}
 
@@ -44,8 +42,8 @@ import           Cardano.Crypto.Signing (SigningKey(..))
 -- Legacy reference: https://github.com/input-output-hk/cardano-sl/blob/release/3.0.1/lib/src/Pos/Util/UserSecret.hs#L189
 data LegacyDelegateKey
   =  LegacyDelegateKey
-  { lrkSigningKey :: SigningKey
-  , lrkVSSKeyPair :: Scrape.KeyPair
+  { lrkSigningKey :: !SigningKey
+  , lrkVSSKeyPair :: !Scrape.KeyPair
   }
 
 -- Stolen from: cardano-sl/binary/src/Pos/Binary/Class/Core.hs
@@ -66,7 +64,9 @@ encodeXPrv :: CC.XPrv -> E.Encoding
 encodeXPrv a = E.encodeBytes $ CC.unXPrv a
 
 decodeXPrv :: D.Decoder s CC.XPrv
-decodeXPrv = toCborError . over _Left T.pack . CC.xprv =<< D.decodeBytesCanonical
+decodeXPrv =
+  toCborError . over _Left T.pack . CC.xprv =<< D.decodeBytesCanonical
+
   where over :: LensLike Identity s t a b -> (a -> b) -> s -> t
         over = coerce
 
@@ -85,9 +85,9 @@ matchSize requestedSize lbl actualSize =
 
 -- Reverse-engineered from cardano-sl legacy codebase.
 encodeLegacyDelegateKey :: LegacyDelegateKey -> E.Encoding
-encodeLegacyDelegateKey LegacyDelegateKey{lrkSigningKey=(SigningKey sk),..}
+encodeLegacyDelegateKey dk@LegacyDelegateKey{lrkSigningKey=(SigningKey sk)}
   =  E.encodeListLen 4
-  <> E.encodeListLen 1 <> encodeBinary lrkVSSKeyPair
+  <> E.encodeListLen 1 <> encodeBinary (lrkVSSKeyPair dk)
   <> E.encodeListLen 1 <> encodeXPrv sk
   <> E.encodeListLenIndef <> E.encodeBreak
   <> E.encodeListLen 0

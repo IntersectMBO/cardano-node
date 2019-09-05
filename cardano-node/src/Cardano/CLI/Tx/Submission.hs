@@ -2,7 +2,6 @@
 {-# LANGUAGE DataKinds           #-}
 {-# LANGUAGE GADTs               #-}
 {-# LANGUAGE RankNTypes          #-}
-{-# LANGUAGE NamedFieldPuns      #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications    #-}
 
@@ -60,6 +59,8 @@ import           Cardano.Config.Types (CardanoConfiguration(..))
   Main logic
 -------------------------------------------------------------------------------}
 
+-- | For a given protocol and configuration, submit the given GenTx to the node
+-- specified by topology info, while using tracer for logging.
 handleTxSubmission :: forall blk.
                       ( RunDemo blk
                       , Show (ApplyTxErr blk)
@@ -81,12 +82,9 @@ handleTxSubmission cc ptcl tinfo tx tracer = do
       CoreId nid -> return nid
       RelayId{}  -> fail "Only core nodes are supported targets"
 
-    let ProtocolInfo{pInfoConfig} =
-          protocolInfo (NumCoreNodes (length nodeSetups))
-                       (CoreNodeId nid)
-                       ptcl
+    let pinfo = protocolInfo (NumCoreNodes (length nodeSetups)) (CoreNodeId nid) ptcl
 
-    submitTx cc pInfoConfig (node tinfo) tx tracer
+    submitTx cc (pInfoConfig pinfo) (node tinfo) tx tracer
 
 
 submitTx :: ( RunDemo blk
@@ -98,13 +96,13 @@ submitTx :: ( RunDemo blk
          -> GenTx blk
          -> Tracer IO String
          -> IO ()
-submitTx CardanoConfiguration{ccSocketPath} pInfoConfig nodeId tx tracer = do
-    socketDir <- canonicalizePath =<< makeAbsolute ccSocketPath
+submitTx cc protoInfoConfig nodeId tx tracer = do
+    socketDir <- canonicalizePath =<< makeAbsolute (ccSocketPath cc)
     let addr = localSocketAddrInfo (socketDir </> localSocketFilePath nodeId)
     connectTo
       nullTracer
       (,)
-      (localInitiatorNetworkApplication tracer pInfoConfig tx)
+      (localInitiatorNetworkApplication tracer protoInfoConfig tx)
       Nothing
       addr
 
@@ -122,7 +120,7 @@ localInitiatorNetworkApplication
   -> Versions NodeToClientVersion DictVersion
               (OuroborosApplication 'InitiatorApp peer NodeToClientProtocols
                                     m ByteString () Void)
-localInitiatorNetworkApplication tracer pInfoConfig tx =
+localInitiatorNetworkApplication tracer protoInfoConfig tx =
     simpleSingletonVersions
       NodeToClientV_1
       (NodeToClientVersionData { networkMagic = 0 })
@@ -145,7 +143,7 @@ localInitiatorNetworkApplication tracer pInfoConfig tx =
       ChainSyncWithBlocksPtcl -> \channel ->
         runPeer
           nullTracer
-          (localChainSyncCodec @blk pInfoConfig)
+          (localChainSyncCodec @blk protoInfoConfig)
           peer
           channel
           (chainSyncClientPeer chainSyncClientNull)
@@ -179,9 +177,9 @@ localChainSyncCodec
   => NodeConfig (BlockProtocol blk)
   -> Codec (ChainSync blk (Point blk))
            DeserialiseFailure m ByteString
-localChainSyncCodec pInfoConfig =
+localChainSyncCodec protoInfoConfig =
     codecChainSync
-      (nodeEncodeBlock pInfoConfig)
-      (nodeDecodeBlock pInfoConfig)
+      (nodeEncodeBlock protoInfoConfig)
+      (nodeDecodeBlock protoInfoConfig)
       (Block.encodePoint (nodeEncodeHeaderHash (Proxy @blk)))
       (Block.decodePoint (nodeDecodeHeaderHash (Proxy @blk)))
