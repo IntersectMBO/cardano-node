@@ -1,5 +1,6 @@
 module Cardano.Common.LocalSocket
-  ( localSocketFilePath
+  ( eitherThrow
+  , localSocketFilePath
   , localSocketAddrInfo
   )
 where
@@ -23,3 +24,7 @@ localSocketAddrInfo socketPath =
       Socket.defaultProtocol
       (Socket.SockAddrUnix socketPath)
       Nothing
+
+eitherThrow :: Exception e => (b -> e) -> Either b a ->  IO a
+eitherThrow masker (Left e) = throwIO $ masker e
+eitherThrow _ (Right x) = pure x

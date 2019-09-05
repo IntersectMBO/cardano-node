@@ -78,7 +78,6 @@ library
                      , ouroboros-network
                      , process
                      , pvss
-                     , safe-exceptions
                      , serialise
                      , stm
                      , string-conv
@@ -239,7 +238,6 @@ executable chairman
                      , optparse-applicative
                      , ouroboros-consensus
                      , ouroboros-network
-                     , safe-exceptions
                      , serialise
                      , text
                      , typed-protocols

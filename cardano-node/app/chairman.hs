@@ -1,5 +1,5 @@
-{-# LANGUAGE BangPatterns       #-}
-{-# LANGUAGE NamedFieldPuns     #-}
+{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -24,7 +24,8 @@ import qualified Cardano.Chain.Genesis as Genesis
 import           Cardano.Config.CommonCLI
 import           Cardano.Config.Types (CardanoConfiguration(..))
 import           Cardano.Common.Orphans ()
-import           Cardano.Common.Protocol (Protocol, ProtocolExceptions(..), SomeProtocol(..), fromProtocol)
+import           Cardano.Common.Protocol
+                   (Protocol, ProtocolExceptions(..), SomeProtocol(..), fromProtocol)
 import           Cardano.Common.Parsers (parseCoreNodeId, parseProtocol)
 
 import           Cardano.Chairman (runChairman)
@@ -61,12 +62,12 @@ main = do
           throwIO Timeout
  where
   handleExceptions :: IO a -> IO a
-  handleExceptions action = catches action
+  handleExceptions frmP = catches frmP
     [ Handler (\(e :: Genesis.ConfigurationError) -> output e)
     , Handler (\(e :: ProtocolExceptions) -> output e)
     ]
-  -- Output from thrown exxception.
-  output :: a -> IO ()
+  -- Output from thrown exception.
+  output :: Show a => a -> IO b
   output err = hPutStr stderr ("chairman.hs.fromProtocol: " ++ show err) >> exitFailure
 
 
@@ -135,11 +136,3 @@ data Timeout = Timeout
   deriving Show
 
 instance Exception Timeout
-
---exceptionCatcher :: IO () -> (String -> OperationError) -> IO ()
---exceptionCatcher action errorConstr = catches
---  action
---  [ Handler (\(e :: ProtocolExceptions) -> report . Left . errorConstr $ show e)
---  , Handler (\(e :: ResultError) -> report . Left . errorConstr $ show e)
---  , Handler (\(e :: SQLError) -> report . Left . errorConstr $ show e)
---  ]
