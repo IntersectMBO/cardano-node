@@ -5,8 +5,9 @@
 
 {-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
 
-module Cardano.Logging
+module Cardano.Config.Logging
   ( LoggingLayer (..)
+  , LoggingConfiguration (..)
   , createLoggingFeature
   -- re-exports
   , Trace

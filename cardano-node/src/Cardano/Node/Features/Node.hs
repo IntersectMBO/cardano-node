@@ -10,7 +10,7 @@ import           Cardano.Prelude
 
 import           Cardano.Config.Types (CardanoConfiguration (..),
                                        CardanoEnvironment (..))
-import           Cardano.Logging (LoggingLayer (..),)
+import           Cardano.Config.Logging (LoggingLayer (..),)
 import           Cardano.Node.Run
 import           Cardano.Shell.Types (CardanoFeature (..))
 
