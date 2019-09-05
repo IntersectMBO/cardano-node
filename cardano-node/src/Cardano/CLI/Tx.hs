@@ -229,6 +229,6 @@ nodeSubmitTx
   -> IO ()
 nodeSubmitTx co topology cc tx =
   withRealPBFT co cc $
-    \p@(Consensus.ProtocolRealPBFT _ _ _ _ _) -> do
+    \p@Consensus.ProtocolRealPBFT{} -> do
       putStrLn $ "transaction hash (TxId): " <> show (byronTxId tx)
       handleTxSubmission cc p topology tx stdoutTracer

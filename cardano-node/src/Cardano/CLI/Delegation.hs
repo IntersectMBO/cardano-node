@@ -59,31 +59,38 @@ checkByronGenesisDelegation
   -> Crypto.VerificationKey
   -> Crypto.VerificationKey
   -> IO ()
-checkByronGenesisDelegation (CertificateFile certF) magic issuerVK' delegateVK'  = do
-  certBS <- LB.readFile certF
-  cert :: CC.Dlg.Certificate <- case canonicalDecodePretty certBS of
+checkByronGenesisDelegation (CertificateFile certF) magic issuer delegate = do
+  ecert <- canonicalDecodePretty <$> LB.readFile certF
+  case ecert of
     Left e -> throwIO $ DlgCertificateDeserialisationFailed certF e
-    Right x -> pure x
+    Right (cert :: Dlg.Certificate) -> do
+      let issues = checkDlgCert cert magic issuer delegate
+      unless (null issues) $
+        throwIO $ CertificateValidationErrors certF issues
 
-  unless (null issues) $
-    throwIO $ CertificateValidationErrors certF issues
-
+checkDlgCert
+  :: Dlg.ACertificate a
+  -> ProtocolMagicId
+  -> Crypto.VerificationKey
+  -> Crypto.VerificationKey -> [Text]
+checkDlgCert cert magic issuerVK' delegateVK' =
+  mconcat $
+  [ [ F.sformat ("Certificate does not have a valid signature.")
+      | not (Dlg.isValid magic' cert')
+    ]
+  , [ F.sformat ("Certificate issuer ".vk." doesn't match expected: ".vk)
+      ( Dlg.issuerVK cert) issuerVK'
+      | Dlg.issuerVK cert /= issuerVK'
+    ]
+  , [ F.sformat ("Certificate delegate ".vk." doesn't match expected: ".vk)
+      ( Dlg.delegateVK cert) delegateVK'
+      | Dlg.delegateVK cert /= delegateVK'
+    ]
+  ]
   where
-    issues =
-      [ f("Certificate does not have a valid signature.")
-      | not (CC.Dlg.isValid magic' cert') ] <>
-
-      [ f("Certificate issuer ".vk." doesn't match expected: ".vk)
-        (CC.Dlg.issuerVK   cert)   issuerVK'
-      |  CC.Dlg.issuerVK   cert /= issuerVK' ] <>
-
-      [ f("Certificate delegate ".vk." doesn't match expected: ".vk)
-        (CC.Dlg.delegateVK cert)   delegateVK'
-      |  CC.Dlg.delegateVK cert /= delegateVK' ]
     magic' = Annotated magic (serialize' magic)
-    cert' = cert { CC.Dlg.aEpoch = Annotated epoch (serialize' epoch) }
-    vk :: F.Format r (Crypto.VerificationKey -> r)
+    epoch = unAnnotated $ Dlg.aEpoch cert
+    cert' = cert { Dlg.aEpoch = Annotated epoch (serialize' epoch) }
+
+    vk :: forall r. F.Format r (Crypto.VerificationKey -> r)
     vk = Crypto.fullVerificationKeyF
-    epoch = unAnnotated $ CC.Dlg.aEpoch cert
-    f :: F.Format Text a -> a
-    f = F.sformat
