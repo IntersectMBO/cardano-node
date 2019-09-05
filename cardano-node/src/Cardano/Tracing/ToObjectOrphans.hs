@@ -33,6 +33,7 @@ import           Ouroboros.Consensus.Util.Condense
 import           Ouroboros.Consensus.Util.Orphans ()
 import qualified Ouroboros.Network.AnchoredFragment as AF
 import           Ouroboros.Network.Block
+import           Ouroboros.Network.Point (WithOrigin (..))
 import           Ouroboros.Network.Subscription
 import qualified Ouroboros.Storage.ChainDB as ChainDB
 import qualified Ouroboros.Storage.LedgerDB.OnDisk as LedgerDB
@@ -65,6 +66,10 @@ showTip verb tip =
     case pointHash tip of
         GenesisHash -> "genesis"
         BlockHash h -> trim $ condense h
+    ++
+    case pointSlot tip of
+        Origin -> "(origin)"
+        At slot -> "@" ++ condense slot    
   where
     trim :: [a] -> [a]
     trim = case verb of
