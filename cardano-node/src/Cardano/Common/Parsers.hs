@@ -18,7 +18,7 @@ import           Cardano.Prelude hiding (option)
 
 import           Options.Applicative
 
-import           Cardano.Logging (LoggingCLIArguments(..))
+import           Cardano.Config.Logging (LoggingCLIArguments(..))
 import           Ouroboros.Consensus.NodeId (NodeId(..), CoreNodeId(..))
 
 import           Cardano.Common.Protocol

@@ -14,7 +14,7 @@ import           Cardano.BM.Data.Tracer (TracingVerbosity (..))
 import           Cardano.Config.Partial (PartialCardanoConfiguration (..))
 import           Cardano.Config.Types (CardanoEnvironment (..))
 import           Cardano.Config.Presets (mainnetConfiguration)
-import           Cardano.Logging (LoggingCLIArguments (..),
+import           Cardano.Config.Logging (LoggingCLIArguments (..),
                                                 createLoggingFeature
                                                 )
 import           Cardano.Node.Features.Node

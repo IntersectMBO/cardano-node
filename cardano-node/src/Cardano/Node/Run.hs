@@ -53,7 +53,7 @@ import           Cardano.BM.Data.Tracer (ToLogObject (..),
                                          TracingVerbosity (..))
 import           Cardano.BM.Trace (appendName)
 import           Cardano.Config.Types (CardanoConfiguration (..))
-import           Cardano.Logging (LoggingLayer (..))
+import           Cardano.Config.Logging (LoggingLayer (..))
 
 import           Ouroboros.Network.Block
 import           Ouroboros.Network.Subscription.Dns

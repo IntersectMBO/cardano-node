@@ -20,7 +20,7 @@ import           Cardano.Config.Partial (PartialCardanoConfiguration (..))
 import           Cardano.Config.Presets (mainnetConfiguration)
 import           Cardano.Config.Types (CardanoConfiguration (..),
                                                    CardanoEnvironment (..))
-import           Cardano.Logging (LoggingCLIArguments (..),
+import           Cardano.Config.Logging (LoggingCLIArguments (..),
                                                 LoggingLayer (..),
                                                 createLoggingFeature
                                                 )

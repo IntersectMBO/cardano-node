@@ -17,7 +17,7 @@ library
                        Cardano.Config.Partial
                        Cardano.Config.Presets
                        Cardano.Config.Types
-                       Cardano.Logging
+                       Cardano.Config.Logging
 
   build-depends:       base >=4.12 && <4.13
                      , cardano-shell
