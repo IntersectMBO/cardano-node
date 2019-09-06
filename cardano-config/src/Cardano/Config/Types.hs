@@ -55,7 +55,7 @@ data CardanoConfiguration = CardanoConfiguration
     , ccDBPath              :: !FilePath
     -- ^ The location of the DB on the filesystem.
     , ccSocketPath          :: !FilePath
-    -- ^ The location of the socket.
+    -- ^ The location of the socket file.
     , ccApplicationLockFile :: !FilePath
     -- ^ The location of the application lock file that is used
     -- as a semaphore se we can run just one application

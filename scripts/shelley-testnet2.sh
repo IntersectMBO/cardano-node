@@ -19,19 +19,9 @@ genesis_hash="$(cabal new-exec -- cardano-cli --real-pbft print-genesis-hash --g
 
 ALGO="--real-pbft"
 NOW=`date "+%Y-%m-%d 00:00:00"`
-NETARGS=(
-        --slot-duration 2
-        --genesis-file "${genesis_file}"
-        --genesis-hash "${genesis_hash}"
-        --pbft-signature-threshold 0.7
-        --require-network-magic
-        --database-path "db"
-        node
-        --topology "configuration/simple-topology.json"
-        ${ALGO}
-)
 ACCARGS=(
         --slot-duration 2
+        --socket-path "socket/node4.socket"
         trace-acceptor
 )
 # SCR="./scripts/start-node.sh"
@@ -59,6 +49,19 @@ function mkdlgcert () {
   printf -- "--delegation-certificate ${genesis_root}/delegation-cert.%03d.json" "$1"
 }
 
+function mknetargs () {
+               printf -- "--slot-duration 2 "
+               printf -- "--genesis-file ${genesis_file} "
+               printf -- "--genesis-hash ${genesis_hash} "
+               printf -- "--pbft-signature-threshold 0.7 "
+               printf -- "--require-network-magic "
+               printf -- "--database-path "db" "
+               printf -- "--socket-path $1 "
+               printf -- "node "
+               printf -- "--topology configuration/simple-topology.json "
+               printf -- "${ALGO}"
+}
+
 # for acceptor logs:
 mkdir -p logs/
 
@@ -75,8 +78,8 @@ tmux select-pane -t 4
 tmux send-keys "cd '${PWD}'; ${CMD} $(mklogcfg acceptor) $(mkdlgkey 0) $(mkdlgcert 0) ${ACCARGS[*]}" C-m
 sleep 2
 tmux select-pane -t 0
-tmux send-keys "cd '${PWD}'; ${CMD} $(mklogcfg 0) $(mkdlgkey 0) $(mkdlgcert 0) ${NETARGS[*]} -n 0 --host-addr ${HOST6} --port 3000 ${SPECIAL}" C-m
+tmux send-keys "cd '${PWD}'; ${CMD} $(mklogcfg 0) $(mkdlgkey 0) $(mkdlgcert 0) $(mknetargs socket/node1.socket) -n 0 --host-addr ${HOST6} --port 3000 ${SPECIAL}" C-m
 tmux select-pane -t 1
-tmux send-keys "cd '${PWD}'; ${CMD} $(mklogcfg 1) $(mkdlgkey 1) $(mkdlgcert 1) ${NETARGS[*]} -n 1 --host-addr ${HOST}  --port 3001 ${SPECIAL}" C-m
+tmux send-keys "cd '${PWD}'; ${CMD} $(mklogcfg 1) $(mkdlgkey 1) $(mkdlgcert 1) $(mknetargs socket/node2.socket) -n 1 --host-addr ${HOST}  --port 3001 ${SPECIAL}" C-m
 tmux select-pane -t 2
-tmux send-keys "cd '${PWD}'; ${CMD} $(mklogcfg 2) $(mkdlgkey 2) $(mkdlgcert 2) ${NETARGS[*]} -n 2 --host-addr ${HOST6} --port 3002 ${SPECIAL}" C-m
+tmux send-keys "cd '${PWD}'; ${CMD} $(mklogcfg 2) $(mkdlgkey 2) $(mkdlgcert 2) $(mknetargs socket/node3.socket) -n 2 --host-addr ${HOST6} --port 3002 ${SPECIAL}" C-m
