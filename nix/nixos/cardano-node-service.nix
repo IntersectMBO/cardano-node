@@ -2,14 +2,36 @@
 , lib
 , ... }:
 
-with import ../../lib.nix;
-with lib;
+with import ../../lib.nix; with lib; with builtins;
 let
   cfg = config.services.cardano-node;
   envConfig = environments.${cfg.environment};
   systemdServiceName = "cardano-node${optionalString cfg.instanced "@"}";
+  mkScript = cfg:
+    let exec = "cardano-node";
+        cmd = builtins.filter (x: x != "") [
+          "${cfg.package}/bin/${exec}"
+          "--genesis-file ${cfg.genesisFile}"
+          "--genesis-hash ${cfg.genesisHash}"
+          "--log-config ${cfg.logger.configFile}"
+          "--database-path ${cfg.stateDir}/${cfg.dbPrefix}"
+          "--socket-dir ${ if (cfg.runtimeDir == null) then "${cfg.stateDir}/socket" else "/run/${cfg.runtimeDir}"}"
+          "node"
+          "--topology ${cfg.topology}"
+          "--${cfg.consensusProtocol}"
+          "--node-id ${toString cfg.nodeId}"
+          "--host-addr ${cfg.hostAddr}"
+          "--port ${toString cfg.port}"
+          "${lib.optionalString (cfg.pbftThreshold != null) "--pbft-signature-threshold ${cfg.pbftThreshold}"}"
+          "${lib.optionalString (cfg.signingKey != null) "--signing-key ${cfg.signingKey}"}"
+          "${lib.optionalString (cfg.delegationCertificate != null) "--delegation-certificate ${cfg.delegationCertificate}"}"
+        ];
+    in ''
+        echo "Starting ${exec}: '' + concatStringsSep "\"\n   echo \"" cmd + ''"
+        echo "..or, once again, in a signle line:"
+        echo "''                   + concatStringsSep " "              cmd + ''"
+        exec ''                    + concatStringsSep " "              cmd;
 in {
-
   options = {
     services.cardano-node = {
       enable = mkOption {
@@ -30,32 +52,7 @@ in {
       };
       script = mkOption {
         type = types.str;
-        default = ''
-          echo "Starting node: ${cfg.package}/bin/cardano-node"
-          echo "   --node-id      ${cfg.nodeId}"
-          echo "   --port         ${cfg.port}"
-          echo "   --genesis-file ${cfg.genesisFile}"
-          echo "   --genesis-hash ${cfg.genesisHash}"
-          echo "   --signing-key  ${cfg.signingKey or "NONE"}"
-          echo "   --delegation-certificate ${cfg.delegationCertificate or "NONE"}"
-          echo "   --topology     ${cfg.topology}"
-          echo "   --log-config   ${cfg.logger.configFile}"
-          exec ${cfg.package}/bin/cardano-node \
-            --genesis-file ${cfg.genesisFile} \
-            --genesis-hash ${cfg.genesisHash} \
-            --log-config ${cfg.logger.configFile} \
-            --database-path ${cfg.stateDir}/${cfg.dbPrefix} \
-            --socket-dir ${ if (cfg.runtimeDir == null) then "${cfg.stateDir}/socket" else "/run/${cfg.runtimeDir}"} \
-            node \
-            --topology ${cfg.topology} \
-            --${cfg.consensusProtocol} \
-            --node-id ${cfg.nodeId} \
-            --host-addr ${cfg.hostAddr} \
-            --port ${cfg.port} \
-            ${lib.optionalString (cfg.pbftThreshold != null) "--pbft-signature-threshold ${cfg.pbftThreshold}"} \
-            ${lib.optionalString (cfg.signingKey != null) "--signing-key ${cfg.signingKey}"} \
-            ${lib.optionalString (cfg.delegationCertificate != null) "--delegation-certificate ${cfg.delegationCertificate}"} \
-        '';
+        default = mkScript cfg;
       };
 
       package = mkOption {
@@ -84,7 +81,7 @@ in {
       };
 
       genesisHash = mkOption {
-        type = types.nullOr types.str;
+        type = types.str;
         default = envConfig.genesisHash;
         description = ''
           Hash of the genesis file
@@ -161,16 +158,16 @@ in {
       };
 
       port = mkOption {
-        type = types.str;
-        default = "3001";
+        type = types.either types.int types.str;
+        default = 3001;
         description = ''
           The port number
         '';
       };
 
       nodeId = mkOption {
-        type = types.str;
-        default = "0";
+        type = types.either types.int types.str;
+        default = 0;
         description = ''
           The ID for this node
         '';
