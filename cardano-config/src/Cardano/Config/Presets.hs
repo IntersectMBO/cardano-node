@@ -34,7 +34,7 @@ mainnetConfiguration =
     , pccLogConfig = pure "./configuration/log-configuration.yaml"
     , pccDBPath = pure "./db/"
     , pccApplicationLockFile = pure ""
-    , pccSocketPath = pure "./socket/"
+    , pccSocketPath = mempty
     , pccCore =
         PartialCore
           { pcoGenesisFile = pure "mainnet-genesis.json"

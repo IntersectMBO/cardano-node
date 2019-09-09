@@ -40,7 +40,7 @@ import           Data.Semigroup ((<>))
 import           Data.Text (Text, pack)
 import           Network.Socket as Socket
 import           System.Directory (canonicalizePath, createDirectoryIfMissing, makeAbsolute, removeFile)
-import           System.FilePath ((</>))
+import           System.FilePath (dropFileName)
 import           System.IO.Error (isDoesNotExistError)
 
 import           Control.Monad.Class.MonadSTM
@@ -196,8 +196,8 @@ handleSimpleNode p NodeCLIArguments{..}
       , "**************************************"
       ]
 
-    -- Socket directory argument
-    socketDir <- canonicalizePath =<< makeAbsolute ccSocketPath
+    -- Socket directory
+    socketDir <- canonicalizePath =<< (makeAbsolute $ dropFileName ccSocketPath)
     createDirectoryIfMissing True socketDir
 
     let ipProducerAddrs  :: [NodeAddress]
@@ -218,11 +218,8 @@ handleSimpleNode p NodeCLIArguments{..}
               }
           | RemoteAddress {raAddress, raPort, raValency} <- dnsProducerAddrs ]
 
-        myLocalSockPath :: FilePath
-        myLocalSockPath = socketDir </> localSocketFilePath myNodeId
-
         myLocalAddr :: AddrInfo
-        myLocalAddr = localSocketAddrInfo myLocalSockPath
+        myLocalAddr = localSocketAddrInfo ccSocketPath
 
         runNetworkArgs :: RunNetworkArgs Peer blk
         runNetworkArgs = RunNetworkArgs
@@ -236,7 +233,7 @@ handleSimpleNode p NodeCLIArguments{..}
           , rnaDnsProducers          = dnsProducers
           }
 
-    removeStaleLocalSocket myLocalSockPath
+    removeStaleLocalSocket ccSocketPath
 
     dbPath <- canonicalizePath =<< makeAbsolute ccDBPath
 
