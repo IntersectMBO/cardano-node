@@ -5,7 +5,7 @@ GENHASH="33873aeaf8a47fefc7c2ea3f72e98a04459e07ec3edfb63c9ca709f540f69503"
 
 # CMD="stack exec cardano-node -- "
 # CMD="./cardano-node.exe -- "
-CMD="cabal new-exec cardano-node -- "
+CMD="cabal new-run exe:cardano-node -- "
 
 NETARGS=(
         --slot-duration 2
