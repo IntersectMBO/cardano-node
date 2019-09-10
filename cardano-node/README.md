@@ -120,13 +120,13 @@ The genesis generation operations will create a directory that contains:
 
   `genesis.json`
   :: The genesis JSON file itself.
-  
+
   `avvm-seed.*.seed`
   :: Ada Voucher Vending Machine seeds (secret). Affected by `--avvm-entry-count` and `--avvm-entry-balance`.
 
   `delegate-keys.*.key`
   :: Delegate private keys. Affected by: `--n-delegate-addresses`.
-  
+
   `delegation-cert.*.json`
   :: Delegation certificates. Affected by: `--n-delegate-addresses`.
 
@@ -135,6 +135,8 @@ The genesis generation operations will create a directory that contains:
 
   `poor-keys.*.key`
   :: Non-delegate private keys with genesis UTxO. Affected by: `--n-poor-addresses`, `--total-balance`.
+
+More details on the Genesis `JSON` file can be found in `docs/GenesisData.md`
 
 Genesis delegation and related concepts are described in detail in:
 
@@ -232,7 +234,7 @@ To make a transaction spending UTxO, you can either use the:
 
   - `issue-genesis-utxo-expenditure`, for genesis UTxO
   - `issue-utxo-expenditure`, for normal UTxO
-  
+
 subcommands directly, or, again use canned scripts that will make transactions tailored
 for the aforementioned testnet cluster:
 
