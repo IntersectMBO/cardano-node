@@ -21,7 +21,7 @@ module Cardano.CLI.Key
 where
 
 import           Prelude (String, show)
-import           Cardano.Prelude hiding (option, show, trace)
+import           Cardano.Prelude hiding (option, show, trace, (%))
 
 import qualified Data.ByteArray as BA
 import qualified Data.ByteString as SB
@@ -30,15 +30,12 @@ import qualified Data.ByteString.UTF8 as UTF8
 import           Data.String (IsString, fromString)
 import           Data.Text (Text)
 import qualified Data.Text as T
-import qualified Data.Text.Lazy as TL
-import qualified Data.Text.Lazy.Builder as Builder
-import qualified Formatting as F
+import           Formatting (build, (%), sformat)
 
 import           System.IO (hSetEcho, hFlush, stdout, stdin)
 
 import qualified Cardano.Chain.Common as Common
 import           Cardano.Crypto (SigningKey(..))
-import qualified Cardano.Crypto.Hashing as Crypto
 import qualified Cardano.Crypto.Random as Crypto
 import qualified Cardano.Crypto.Signing as Crypto
 
@@ -72,9 +69,9 @@ type PasswordPrompt = String
 -- | Print some invariant properties of a public key:
 --   its hash and formatted view.
 prettyPublicKey :: Crypto.VerificationKey -> Text
-prettyPublicKey vk = TL.toStrict
-  $  "public key hash: " <> (F.format Crypto.hashHexF . Common.addressHash $ vk) <> "\n"
-  <> "     public key: " <> (Builder.toLazyText . Crypto.formatFullVerificationKey $ vk)
+prettyPublicKey vk =
+  sformat ("public key hash: "% build %"\n     public key: "%build)
+    (Common.addressHash vk) (Crypto.formatFullVerificationKey vk)
 
 -- TODO:  we need to support password-protected secrets.
 -- | Read signing key from a file.  Throw an error if the file can't be read or

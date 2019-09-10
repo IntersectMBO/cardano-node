@@ -17,7 +17,7 @@ import           Cardano.Prelude hiding (option, show, trace)
 import           Test.Cardano.Prelude (canonicalDecodePretty)
 
 import qualified Data.ByteString.Lazy as LB
-import qualified Formatting as F
+import           Formatting (Format, sformat)
 
 import           Cardano.Binary (Annotated(..), serialize')
 import qualified Cardano.Chain.Delegation as Dlg
@@ -75,14 +75,14 @@ checkDlgCert
   -> Crypto.VerificationKey -> [Text]
 checkDlgCert cert magic issuerVK' delegateVK' =
   mconcat $
-  [ [ F.sformat ("Certificate does not have a valid signature.")
+  [ [ sformat ("Certificate does not have a valid signature.")
       | not (Dlg.isValid magic' cert')
     ]
-  , [ F.sformat ("Certificate issuer ".vk." doesn't match expected: ".vk)
+  , [ sformat ("Certificate issuer ".vkF." doesn't match expected: ".vkF)
       ( Dlg.issuerVK cert) issuerVK'
       | Dlg.issuerVK cert /= issuerVK'
     ]
-  , [ F.sformat ("Certificate delegate ".vk." doesn't match expected: ".vk)
+  , [ sformat ("Certificate delegate ".vkF." doesn't match expected: ".vkF)
       ( Dlg.delegateVK cert) delegateVK'
       | Dlg.delegateVK cert /= delegateVK'
     ]

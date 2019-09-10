@@ -27,9 +27,8 @@ import qualified Data.Map.Strict as Map
 import           Data.String (IsString)
 import           Data.Text (Text)
 import qualified Data.Text as T
-import qualified Data.Text.Lazy as TL
 import qualified Data.Vector as V
-import qualified Formatting as F
+import           Formatting ((%), sformat)
 
 import           Control.Tracer (stdoutTracer)
 
@@ -65,10 +64,12 @@ newtype NewTxFile =
   deriving (Eq, Ord, Show, IsString)
 
 
+-- | Pretty-print an address in its Base58 form, and also
+--   its full structure.
 prettyAddress :: Common.Address -> Text
-prettyAddress addr = TL.toStrict
-  $  F.format Common.addressF         addr <> "\n"
-  <> F.format Common.addressDetailedF addr
+prettyAddress addr = sformat
+  (Common.addressF %"\n"%Common.addressDetailedF)
+  addr addr
 
 readByronTx :: TxFile -> IO (GenTx (ByronBlockOrEBB ByronConfig))
 readByronTx (TxFile fp) = do
