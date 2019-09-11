@@ -79,25 +79,25 @@ parseClientCommand =
 parseGenesisParameters :: Parser GenesisParameters
 parseGenesisParameters =
   GenesisParameters
-  <$> parseUTCTime
-      "start-time"
-      "Start time of the new cluster to be enshrined in the new genesis."
-  <*> parseFilePath
-      "protocol-parameters-file"
-      "JSON file with protocol parameters."
-  <*> parseK
-  <*> parseProtocolMagic
-  <*> parseTestnetBalanceOptions
-  <*> parseFakeAvvmOptions
-  <*> parseLovelacePortionWithDefault
-      "avvm-balance-factor"
-      "AVVM balances will be multiplied by this factor (defaults to 1)."
-      1
-  <*> optional
-     ( parseIntegral
-       "secret-seed"
-       "Optionally specify the seed of generation."
-     )
+    <$> parseUTCTime
+          "start-time"
+          "Start time of the new cluster to be enshrined in the new genesis."
+    <*> parseFilePath
+          "protocol-parameters-file"
+          "JSON file with protocol parameters."
+    <*> parseK
+    <*> parseProtocolMagic
+    <*> parseTestnetBalanceOptions
+    <*> parseFakeAvvmOptions
+    <*> parseLovelacePortionWithDefault
+          "avvm-balance-factor"
+          "AVVM balances will be multiplied by this factor (defaults to 1)."
+          1
+    <*> optional
+        ( parseIntegral
+            "secret-seed"
+            "Optionally specify the seed of generation."
+        )
 
 parseGenesisRelatedValues :: Parser ClientCommand
 parseGenesisRelatedValues =
@@ -106,20 +106,20 @@ parseGenesisRelatedValues =
         [ commandGroup "Genesis related commands.",
           command' "genesis" "Create genesis." $
           Genesis
-          <$> parseNewDirectory
-              "genesis-output-dir"
-              "Non-existent directory where genesis JSON file and secrets shall be placed."
-          <*> parseGenesisParameters,
+            <$> parseNewDirectory
+                "genesis-output-dir"
+                "Non-existent directory where genesis JSON file and secrets shall be placed."
+            <*> parseGenesisParameters,
           command'
             "dump-hardcoded-genesis"
             "Write out a hard-coded genesis."
             $ DumpHardcodedGenesis
-            <$> parseNewDirectory
-                  "genesis-output-dir"
-                  "Non-existent directory where the genesis artifacts are to be written.",
+                <$> parseNewDirectory
+                      "genesis-output-dir"
+                      "Non-existent directory where the genesis artifacts are to be written.",
           command' "print-genesis-hash" "Compute hash of a genesis file."
             $ PrintGenesisHash
-            <$> parseGenesisFile "genesis-json"
+                <$> parseGenesisFile "genesis-json"
           ]
       )
 
@@ -132,41 +132,41 @@ parseKeyRelatedValues =
         [ commandGroup "Keys",
           command' "keygen" "Generate a signing key."
             $ Keygen
-            <$> parseNewSigningKeyFile "secret"
-            <*> parseFlag' GetPassword EmptyPassword
-                  "no-password"
-                  "Disable password protection.",
+                <$> parseNewSigningKeyFile "secret"
+                <*> parseFlag' GetPassword EmptyPassword
+                      "no-password"
+                      "Disable password protection.",
           command'
             "to-verification"
             "Extract a verification key in its base64 form."
             $ ToVerification
-            <$> parseSigningKeyFile
-                  "secret"
-                  "Signing key file to extract the verification part from."
-            <*> parseNewVerificationKeyFile "to",
+                <$> parseSigningKeyFile
+                      "secret"
+                      "Signing key file to extract the verification part from."
+                <*> parseNewVerificationKeyFile "to",
           command'
             "signing-key-public"
             "Pretty-print a signing key's verification key (not a secret)."
             $ PrettySigningKeyPublic
-            <$> parseSigningKeyFile
-                  "secret"
-                  "Signing key to pretty-print.",
+                <$> parseSigningKeyFile
+                      "secret"
+                      "Signing key to pretty-print.",
           command'
             "signing-key-address"
             "Print address of a signing key."
             $ PrintSigningKeyAddress
-            <$> parseNetworkMagic
-            <*> parseSigningKeyFile
-                  "secret"
-                  "Signing key, whose address is to be printed.",
+                <$> parseNetworkMagic
+                <*> parseSigningKeyFile
+                      "secret"
+                      "Signing key, whose address is to be printed.",
           command'
             "migrate-delegate-key-from"
             "Migrate a delegate key from an older version."
             $ MigrateDelegateKeyFrom
-            <$> parseProtocol
-            <*> parseNewSigningKeyFile "to"
-            <*> parseSigningKeyFile "from" "Signing key file to migrate."
-          ]
+                <$> parseProtocol
+                <*> parseNewSigningKeyFile "to"
+                <*> parseSigningKeyFile "from" "Signing key file to migrate."
+        ]
       )
 
 parseDelegationRelatedValues :: Parser ClientCommand
@@ -198,16 +198,16 @@ parseDelegationRelatedValues =
             "Verify that a given certificate constitutes a valid\
             \ delegation relationship between keys."
             $ CheckDelegation
-            <$> parseProtocolMagicId "protocol-magic"
-            <*> parseCertificateFile
-                  "certificate"
-                  "The certificate embodying delegation to verify."
-            <*> parseVerificationKeyFile
-                  "issuer-key"
-                  "The genesis key that supposedly delegates."
-            <*> parseVerificationKeyFile
-                  "delegate-key"
-                  "The operation verification key supposedly delegated to."
+                <$> parseProtocolMagicId "protocol-magic"
+                <*> parseCertificateFile
+                      "certificate"
+                      "The certificate embodying delegation to verify."
+                <*> parseVerificationKeyFile
+                      "issuer-key"
+                      "The genesis key that supposedly delegates."
+                <*> parseVerificationKeyFile
+                      "delegate-key"
+                      "The operation verification key supposedly delegated to."
           ]
       )
 
@@ -220,33 +220,33 @@ parseTxRelatedValues =
             "submit-tx"
             "Submit a raw, signed transaction, in its on-wire representation."
             $ SubmitTx
-            <$> parseTopologyInfo "PBFT node ID to submit Tx to."
-            <*> parseTxFile "tx"
-            <*> parseCommonCLI,
+                <$> parseTopologyInfo "PBFT node ID to submit Tx to."
+                <*> parseTxFile "tx"
+                <*> parseCommonCLI,
           command'
             "issue-genesis-utxo-expenditure"
             "Write a file with a signed transaction, spending genesis UTxO."
             $ SpendGenesisUTxO
-            <$> parseNewTxFile "tx"
-            <*> parseSigningKeyFile
-                  "wallet-key"
-                  "Key that has access to all mentioned genesis UTxO inputs."
-            <*> parseAddress
-                  "rich-addr-from"
-                  "Tx source: genesis UTxO richman address (non-HD)."
-            <*> (NE.fromList <$> some parseTxOut)
-            <*> parseCommonCLI,
+                <$> parseNewTxFile "tx"
+                <*> parseSigningKeyFile
+                      "wallet-key"
+                      "Key that has access to all mentioned genesis UTxO inputs."
+                <*> parseAddress
+                      "rich-addr-from"
+                      "Tx source: genesis UTxO richman address (non-HD)."
+                <*> (NE.fromList <$> some parseTxOut)
+                <*> parseCommonCLI,
           command'
             "issue-utxo-expenditure"
             "Write a file with a signed transaction, spending normal UTxO."
             $ SpendUTxO
-            <$> parseNewTxFile "tx"
-            <*> parseSigningKeyFile
-                  "wallet-key"
-                  "Key that has access to all mentioned genesis UTxO inputs."
-            <*> (NE.fromList <$> some parseTxIn)
-            <*> (NE.fromList <$> some parseTxOut)
-            <*> parseCommonCLI
+                <$> parseNewTxFile "tx"
+                <*> parseSigningKeyFile
+                      "wallet-key"
+                      "Key that has access to all mentioned genesis UTxO inputs."
+                <*> (NE.fromList <$> some parseTxIn)
+                <*> (NE.fromList <$> some parseTxOut)
+                <*> parseCommonCLI
           ]
       )
 
@@ -304,14 +304,14 @@ parseNetworkMagic =
   asum
     [ flag' NetworkMainOrStage
       $ mconcat
-      [ long "main-or-staging",
-        help ""
-      ],
-      option (fmap NetworkTestnet auto)
-      ( long "testnet-magic"
-        <> metavar "MAGIC"
-        <> help "The testnet network magic, decibal"
-      )
+          [ long "main-or-staging",
+            help ""
+          ],
+          option (fmap NetworkTestnet auto)
+          ( long "testnet-magic"
+            <> metavar "MAGIC"
+            <> help "The testnet network magic, decibal"
+          )
     ]
 
 parseProtocolMagicId :: String -> Parser ProtocolMagicId

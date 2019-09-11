@@ -103,6 +103,8 @@ getPassphrase desc = \case
   GetPassword -> readPassword desc
   EmptyPassword -> pure Crypto.emptyPassphrase
 
+-- | Obtain a 'Crypto.PassPhrase' from the standard input.
+--   Terminal echoing is disabled.
 readPassword :: String -> IO Crypto.PassPhrase
 readPassword prompt =
   Crypto.PassPhrase . BA.convert <$> loop

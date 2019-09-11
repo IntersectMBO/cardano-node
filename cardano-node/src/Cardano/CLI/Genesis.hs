@@ -62,56 +62,57 @@ data GenesisParameters = GenesisParameters
   , gpSeed :: !(Maybe Integer)
   }
 
+mkGenesisSpec :: GenesisParameters -> ExceptT CliError IO Genesis.GenesisSpec
+mkGenesisSpec gp = do
+  protoParamsRaw <- lift . LB.readFile $ gpProtocolParamsFile gp
+
+  protocolParameters <- withExceptT
+    (ProtocolParametersParseFailed (gpProtocolParamsFile gp)) $
+    ExceptT . pure $ canonicalDecodePretty protoParamsRaw
+
+  -- We're relying on the generator to fake AVVM and delegation.
+  genesisDelegation <- withExceptT (DelegationError) $
+    Genesis.mkGenesisDelegation []
+
+  seed <- lift . getSeed $ gpSeed gp
+
+  withExceptT GenesisSpecError $
+    ExceptT . pure $ Genesis.mkGenesisSpec
+      (Genesis.GenesisAvvmBalances mempty)
+      genesisDelegation
+      protocolParameters
+      (gpK gp)
+      (gpProtocolMagic gp)
+      (mkGenesisInitialiser True seed)
+
+  where
+    mkGenesisInitialiser :: Bool -> Integer -> Genesis.GenesisInitializer
+    mkGenesisInitialiser useHeavyDlg seed =
+      Genesis.GenesisInitializer
+      (gpTestnetBalance gp)
+      (gpFakeAvvmOptions gp)
+      (gpAvvmBalanceFactor gp)
+      useHeavyDlg
+      seed
+
+    getSeed :: Maybe Integer -> IO Integer
+    getSeed (Just x) = pure x
+    getSeed Nothing  = Crypto.runSecureRandom . Crypto.randomNumber $ shiftL 1 32
+
 -- | Generate a genesis, for given blockchain start time, protocol parameters,
 -- security parameter, protocol magic, testnet balance options, fake AVVM options,
 -- AVVM balance factor and seed.  Throw an error in the following cases: if the
 -- protocol parameters file can't be read or fails parse, if genesis delegation
 -- couldn't be generated, if the parameter-derived genesis specification is wrong,
 -- or if the genesis fails generation.
-mkGenesis :: GenesisParameters -> IO (Genesis.GenesisData, Genesis.GeneratedSecrets)
-mkGenesis gp = do
-  protoParamsRaw <- LB.readFile (gpProtocolParamsFile gp)
-  protocolParameters <- case canonicalDecodePretty protoParamsRaw of
-    Left e -> throwIO $ ProtocolParametersParseFailed (gpProtocolParamsFile gp) e
-    Right x -> pure x
+mkGenesis
+  :: GenesisParameters
+  -> IO (Either CliError (Genesis.GenesisData, Genesis.GeneratedSecrets))
+mkGenesis gp = runExceptT $ do
+  genesisSpec <- mkGenesisSpec gp
 
-  -- We're relying on the generator to fake AVVM and delegation.
-  mGenesisDlg <- runExceptT $ Genesis.mkGenesisDelegation []
-  genesisDelegation <- case mGenesisDlg of
-    Left e -> throwIO $ DelegationError e
-    Right x -> pure x
-
-  seed <- case gpSeed gp of
-    Nothing -> Crypto.runSecureRandom . Crypto.randomNumber $ shiftL 1 32
-    Just x -> pure x
-
-  let genesisAvvmBalances = Genesis.GenesisAvvmBalances mempty
-  let mGenesisSpec =
-        Genesis.mkGenesisSpec
-        genesisAvvmBalances
-        genesisDelegation
-        protocolParameters
-        (gpK gp)
-        (gpProtocolMagic gp)
-        genesisInitializer
-      genesisInitializer =
-        Genesis.GenesisInitializer
-        (gpTestnetBalance gp)
-        (gpFakeAvvmOptions gp)
-        (gpAvvmBalanceFactor gp)
-        useHeavyDlg
-        seed
-      useHeavyDlg =
-        True                -- Not using delegate keys unsupported.
-
-  genesisSpec <- case mGenesisSpec of
-    Left e -> throwIO $ GenesisSpecError e
-    Right x -> pure x
-
-  mGData <- runExceptT $ Genesis.generateGenesisData (gpStartTime gp) genesisSpec
-  case mGData of
-    Left e -> throwIO $ GenesisGenerationError e
-    Right x -> pure x
+  withExceptT GenesisGenerationError $
+    Genesis.generateGenesisData (gpStartTime gp) genesisSpec
 
 -- | Read genesis from a file.  Throw an error if it fails to parse.
 readGenesis :: GenesisFile -> IO (Genesis.GenesisData, Genesis.GenesisHash)
@@ -165,7 +166,7 @@ writeSecrets outDir prefix suffix secretOp xs =
     let filename = outDir </> prefix <> "." <> printf "%03d" nr <> "." <> suffix
     secretOp secret >>= LB.writeFile filename
 #ifdef UNIX
-    setFileMode                      filename ownerReadMode
+    setFileMode    filename ownerReadMode
 #else
     setPermissions filename (emptyPermissions {readable = True})
 #endif

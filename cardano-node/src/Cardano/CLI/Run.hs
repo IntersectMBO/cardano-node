@@ -139,6 +139,10 @@ data ClientCommand
 runCommand :: CLIOps IO -> ClientCommand -> IO ()
 runCommand co (Genesis outDir params) =
   uncurry (dumpGenesis co outDir)
+    =<< \case
+           -- TODO: intermediate step for a wholesale move to ExceptT.
+           Left e -> throwIO e
+           Right x -> pure x
     =<< mkGenesis params
 
 runCommand co (DumpHardcodedGenesis dir) =

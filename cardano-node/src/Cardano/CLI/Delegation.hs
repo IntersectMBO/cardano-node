@@ -88,9 +88,14 @@ checkDlgCert cert magic issuerVK' delegateVK' =
     ]
   ]
   where
+    magic' :: Annotated ProtocolMagicId ByteString
     magic' = Annotated magic (serialize' magic)
+
+    epoch :: EpochNumber
     epoch = unAnnotated $ Dlg.aEpoch cert
+
+    cert' :: Dlg.ACertificate ByteString
     cert' = cert { Dlg.aEpoch = Annotated epoch (serialize' epoch) }
 
-    vk :: forall r. F.Format r (Crypto.VerificationKey -> r)
-    vk = Crypto.fullVerificationKeyF
+    vkF :: forall r. Format r (Crypto.VerificationKey -> r)
+    vkF = Crypto.fullVerificationKeyF

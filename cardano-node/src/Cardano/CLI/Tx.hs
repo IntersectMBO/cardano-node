@@ -18,7 +18,7 @@ module Cardano.CLI.Tx
 where
 
 import           Prelude (error, show)
-import           Cardano.Prelude hiding (option, show, trace)
+import           Cardano.Prelude hiding (option, show, trace, (%))
 
 import           Codec.Serialise (deserialiseOrFail)
 import qualified Data.ByteString.Lazy as LB
@@ -78,8 +78,11 @@ readByronTx (TxFile fp) = do
     Left e -> throwIO $ TxDeserialisationFailed fp e
     Right tx -> pure tx
 
+-- | Given a Tx id, produce a UTxO Tx input witness, by signing it
+--   with respect to a given protocol magic.
 signTxId :: ProtocolMagicId -> SigningKey -> TxId -> UTxO.TxInWitness
-signTxId pmid sk txid = UTxO.VKWitness
+signTxId pmid sk txid =
+  UTxO.VKWitness
   (Crypto.toVerification sk)
   (Crypto.sign
     pmid
@@ -87,45 +90,44 @@ signTxId pmid sk txid = UTxO.VKWitness
     sk
     (UTxO.TxSigData txid))
 
--- | Given a genesis, and a pair of signing key and address, reconstruct a TxIn
---   corresponding to the genesis UTxO entry.
-genesisUTxOTxIn :: Genesis.Config -> SigningKey -> Common.Address -> UTxO.TxIn
-genesisUTxOTxIn gc genSk genAddr =
-  let vk = Crypto.toVerification genSk
-      handleMissingAddr :: Maybe UTxO.TxIn -> UTxO.TxIn
-      handleMissingAddr  = fromMaybe . error
-        $  "\nGenesis UTxO has no address\n"
-        <> (T.unpack $ prettyAddress genAddr)
-        <> "\n\nIt has the following, though:\n\n"
-        <> Cardano.Prelude.concat (T.unpack . prettyAddress <$> Map.keys initialUtxo)
+-- | Given a genesis, and a pair of a genesis public key and address,
+--   reconstruct a TxIn corresponding to the genesis UTxO entry.
+genesisUTxOTxIn :: Genesis.Config -> Crypto.VerificationKey -> Common.Address -> UTxO.TxIn
+genesisUTxOTxIn gc vk genAddr =
+  handleMissingAddr $ fst <$> Map.lookup genAddr initialUtxo
+  where
+    initialUtxo :: Map Common.Address (UTxO.TxIn, UTxO.TxOut)
+    initialUtxo =
+          Map.fromList
+        . mapMaybe (\(inp, out) -> mkEntry inp genAddr <$> keyMatchesUTxO vk out)
+        . fromCompactTxInTxOutList
+        . Map.toList
+        . UTxO.unUTxO
+        . UTxO.genesisUtxo
+        $ gc
+      where
+        mkEntry :: UTxO.TxIn
+                -> Address
+                -> UTxO.TxOut
+                -> (Address, (UTxO.TxIn, UTxO.TxOut))
+        mkEntry inp addr out = (addr, (inp, out))
 
-      initialUtxo :: Map Common.Address (UTxO.TxIn, UTxO.TxOut)
-      initialUtxo =
-            Map.fromList
-          . mapMaybe (\(inp, out) -> mkEntry inp genAddr <$> keyMatchesUTxO vk out)
-          . fromCompactTxInTxOutList
-          . Map.toList
-          . UTxO.unUTxO
-          . UTxO.genesisUtxo
-          $ gc
+    fromCompactTxInTxOutList :: [(UTxO.CompactTxIn, UTxO.CompactTxOut)]
+                             -> [(UTxO.TxIn, UTxO.TxOut)]
+    fromCompactTxInTxOutList =
+        map (bimap UTxO.fromCompactTxIn UTxO.fromCompactTxOut)
 
-        where
-          mkEntry :: UTxO.TxIn
-                  -> Address
-                  -> UTxO.TxOut
-                  -> (Address, (UTxO.TxIn, UTxO.TxOut))
-          mkEntry inp addr out = (addr, (inp, out))
+    keyMatchesUTxO :: Crypto.VerificationKey -> UTxO.TxOut -> Maybe UTxO.TxOut
+    keyMatchesUTxO key out =
+      if Common.checkVerKeyAddress key (UTxO.txOutAddress out)
+      then Just out else Nothing
 
-      keyMatchesUTxO :: Crypto.VerificationKey -> UTxO.TxOut -> Maybe UTxO.TxOut
-      keyMatchesUTxO key out =
-        if Common.checkVerKeyAddress key (UTxO.txOutAddress out)
-        then Just out else Nothing
-
-      fromCompactTxInTxOutList :: [(UTxO.CompactTxIn, UTxO.CompactTxOut)]
-                               -> [(UTxO.TxIn, UTxO.TxOut)]
-      fromCompactTxInTxOutList =
-          map (bimap UTxO.fromCompactTxIn UTxO.fromCompactTxOut)
-  in handleMissingAddr $ fst <$> Map.lookup genAddr initialUtxo
+    handleMissingAddr :: Maybe UTxO.TxIn -> UTxO.TxIn
+    handleMissingAddr  = fromMaybe . error
+      $  "\nGenesis UTxO has no address\n"
+      <> (T.unpack $ prettyAddress genAddr)
+      <> "\n\nIt has the following, though:\n\n"
+      <> Cardano.Prelude.concat (T.unpack . prettyAddress <$> Map.keys initialUtxo)
 
 -- | Perform an action that expects ProtocolInfo for Byron/PBFT,
 --   with attendant configuration.
@@ -162,7 +164,7 @@ txSpendGenesisUTxOByronPBFT gc sk genAddr outs =
     wit = signTxId (configProtocolMagicId gc) sk (Crypto.hash tx)
 
     txIn :: UTxO.TxIn
-    txIn  = genesisUTxOTxIn gc sk genAddr
+    txIn  = genesisUTxOTxIn gc (Crypto.toVerification sk) genAddr
 
     txattrs = Common.mkAttributes ()
 

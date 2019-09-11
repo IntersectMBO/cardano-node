@@ -20,34 +20,36 @@ import           System.Directory (canonicalizePath, makeAbsolute)
 import           System.FilePath ((</>))
 
 import           Control.Monad (fail)
-import           Control.Monad.Class.MonadST
-import           Control.Monad.Class.MonadThrow
-import           Control.Monad.Class.MonadTimer
-import           Control.Tracer
+import           Control.Monad.Class.MonadST (MonadST)
+import           Control.Monad.Class.MonadThrow (MonadThrow)
+import           Control.Monad.Class.MonadTimer (MonadTimer)
+import           Control.Tracer (Tracer, nullTracer, traceWith)
 
 import           Ouroboros.Consensus.Block (BlockProtocol)
-import           Ouroboros.Consensus.Demo.Run
-import           Ouroboros.Consensus.Mempool
-import           Ouroboros.Consensus.NodeId
+import           Ouroboros.Consensus.Demo.Run (RunDemo)
+import           Ouroboros.Consensus.Mempool (ApplyTxErr, GenTx)
+import           Ouroboros.Consensus.NodeId (CoreNodeId(..), NodeId(..))
 import qualified Ouroboros.Consensus.Protocol as Consensus
 import           Ouroboros.Consensus.Protocol hiding (Protocol)
-import           Ouroboros.Consensus.Node.ProtocolInfo
-import           Ouroboros.Consensus.Node.Run
+import           Ouroboros.Consensus.Node.ProtocolInfo ( ProtocolInfo(..)
+                                                       , NumCoreNodes(..)
+                                                       , protocolInfo)
+import qualified Ouroboros.Consensus.Node.Run as Node
 
-import           Network.TypedProtocol.Driver
-import           Network.TypedProtocol.Codec.Cbor
-import           Ouroboros.Network.Mux
+import           Network.TypedProtocol.Driver (runPeer)
+import           Network.TypedProtocol.Codec.Cbor (Codec, DeserialiseFailure)
+import           Ouroboros.Network.Mux (AppType(..), OuroborosApplication(..))
 import           Ouroboros.Network.Block (Point)
 import qualified Ouroboros.Network.Block as Block
-import           Ouroboros.Network.Protocol.LocalTxSubmission.Type
-import           Ouroboros.Network.Protocol.LocalTxSubmission.Client
-import           Ouroboros.Network.Protocol.LocalTxSubmission.Codec
+import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Type as LocalTxSub
+import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Client as LocalTxSub
+import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Codec as LocalTxSub
 import           Ouroboros.Network.Protocol.ChainSync.Type (ChainSync)
-import           Ouroboros.Network.Protocol.ChainSync.Client
-                   (chainSyncClientPeer)
-import           Ouroboros.Network.Protocol.ChainSync.Codec
-import           Ouroboros.Network.Protocol.Handshake.Version
-import           Ouroboros.Network.NodeToClient
+import           Ouroboros.Network.Protocol.ChainSync.Client (chainSyncClientPeer)
+import           Ouroboros.Network.Protocol.ChainSync.Codec (codecChainSync)
+import           Ouroboros.Network.Protocol.Handshake.Version ( Versions
+                                                              , simpleSingletonVersions)
+import qualified Ouroboros.Network.NodeToClient as NodeToClient
 
 import           Cardano.Node.Configuration.Topology
 import           Cardano.Common.LocalSocket
@@ -82,7 +84,8 @@ handleTxSubmission cc ptcl tinfo tx tracer = do
       CoreId nid -> return nid
       RelayId{}  -> fail "Only core nodes are supported targets"
 
-    let pinfo = protocolInfo (NumCoreNodes (length nodeSetups)) (CoreNodeId nid) ptcl
+    let pinfo :: ProtocolInfo blk
+        pinfo = protocolInfo (NumCoreNodes (length nodeSetups)) (CoreNodeId nid) ptcl
 
     submitTx cc (pInfoConfig pinfo) (node tinfo) tx tracer
 
@@ -98,13 +101,12 @@ submitTx :: ( RunDemo blk
          -> IO ()
 submitTx cc protoInfoConfig nodeId tx tracer = do
     socketDir <- canonicalizePath =<< makeAbsolute (ccSocketPath cc)
-    let addr = localSocketAddrInfo (socketDir </> localSocketFilePath nodeId)
-    connectTo
+    NodeToClient.connectTo
       nullTracer
       (,)
       (localInitiatorNetworkApplication tracer protoInfoConfig tx)
       Nothing
-      addr
+      (localSocketAddrInfo (socketDir </> localSocketFilePath nodeId))
 
 localInitiatorNetworkApplication
   :: forall blk m peer.
@@ -117,37 +119,36 @@ localInitiatorNetworkApplication
   => Tracer m String
   -> NodeConfig (BlockProtocol blk)
   -> GenTx blk
-  -> Versions NodeToClientVersion DictVersion
-              (OuroborosApplication 'InitiatorApp peer NodeToClientProtocols
+  -> Versions NodeToClient.NodeToClientVersion NodeToClient.DictVersion
+              (OuroborosApplication 'InitiatorApp peer NodeToClient.NodeToClientProtocols
                                     m ByteString () Void)
 localInitiatorNetworkApplication tracer protoInfoConfig tx =
     simpleSingletonVersions
-      NodeToClientV_1
-      (NodeToClientVersionData { networkMagic = 0 })
-      (DictVersion nodeToClientCodecCBORTerm)
+      NodeToClient.NodeToClientV_1
+      (NodeToClient.NodeToClientVersionData { NodeToClient.networkMagic = 0 })
+      (NodeToClient.DictVersion NodeToClient.nodeToClientCodecCBORTerm)
 
   $ OuroborosInitiatorApplication $ \peer ptcl -> case ptcl of
-      LocalTxSubmissionPtcl -> \channel -> do
+      NodeToClient.LocalTxSubmissionPtcl -> \channel -> do
         traceWith tracer ("Submitting transaction: " {-++ show tx-})
         result <- runPeer
                     nullTracer -- (contramap show tracer)
                     localTxSubmissionCodec
                     peer
                     channel
-                    (localTxSubmissionClientPeer
+                    (LocalTxSub.localTxSubmissionClientPeer
                        (txSubmissionClientSingle tx))
         case result of
           Nothing  -> traceWith tracer "Transaction accepted"
           Just msg -> traceWith tracer ("Transaction rejected: " ++ show msg)
 
-      ChainSyncWithBlocksPtcl -> \channel ->
+      NodeToClient.ChainSyncWithBlocksPtcl -> \channel ->
         runPeer
           nullTracer
           (localChainSyncCodec @blk protoInfoConfig)
           peer
           channel
-          (chainSyncClientPeer chainSyncClientNull)
-
+          (chainSyncClientPeer NodeToClient.chainSyncClientNull)
 
 -- | A 'LocalTxSubmissionClient' that submits exactly one transaction, and then
 -- disconnects, returning the confirmation or rejection.
@@ -156,21 +157,21 @@ txSubmissionClientSingle
   :: forall tx reject m.
      Applicative m
   => tx
-  -> LocalTxSubmissionClient tx reject m (Maybe reject)
-txSubmissionClientSingle tx = LocalTxSubmissionClient $ do
-    pure $ SendMsgSubmitTx tx $ \mreject ->
-      pure (SendMsgDone mreject)
+  -> LocalTxSub.LocalTxSubmissionClient tx reject m (Maybe reject)
+txSubmissionClientSingle tx = LocalTxSub.LocalTxSubmissionClient $ do
+    pure $ LocalTxSub.SendMsgSubmitTx tx $ \mreject ->
+      pure (LocalTxSub.SendMsgDone mreject)
 
 localTxSubmissionCodec
   :: forall m blk . (RunDemo blk, MonadST m)
-  => Codec (LocalTxSubmission (GenTx blk) (ApplyTxErr blk))
+  => Codec (LocalTxSub.LocalTxSubmission (GenTx blk) (ApplyTxErr blk))
            DeserialiseFailure m ByteString
 localTxSubmissionCodec =
-  codecLocalTxSubmission
-    nodeEncodeGenTx
-    nodeDecodeGenTx
-    (nodeEncodeApplyTxError (Proxy @blk))
-    (nodeDecodeApplyTxError (Proxy @blk))
+  LocalTxSub.codecLocalTxSubmission
+    Node.nodeEncodeGenTx
+    Node.nodeDecodeGenTx
+    (Node.nodeEncodeApplyTxError (Proxy @blk))
+    (Node.nodeDecodeApplyTxError (Proxy @blk))
 
 localChainSyncCodec
   :: forall blk m. (RunDemo blk, MonadST m)
@@ -179,7 +180,7 @@ localChainSyncCodec
            DeserialiseFailure m ByteString
 localChainSyncCodec protoInfoConfig =
     codecChainSync
-      (nodeEncodeBlock protoInfoConfig)
-      (nodeDecodeBlock protoInfoConfig)
-      (Block.encodePoint (nodeEncodeHeaderHash (Proxy @blk)))
-      (Block.decodePoint (nodeDecodeHeaderHash (Proxy @blk)))
+      (Node.nodeEncodeBlock protoInfoConfig)
+      (Node.nodeDecodeBlock protoInfoConfig)
+      (Block.encodePoint (Node.nodeEncodeHeaderHash (Proxy @blk)))
+      (Block.decodePoint (Node.nodeDecodeHeaderHash (Proxy @blk)))

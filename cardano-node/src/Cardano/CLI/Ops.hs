@@ -46,10 +46,10 @@ data CLIOps m
   , coProtocol :: Protocol
   }
 
+-- | Supply the corresponding 'CLIOps' for a given system era designator.
 decideCLIOps :: Protocol -> IO (CLIOps IO)
 decideCLIOps protocol =
-  let serialiseSigningKey (SigningKey x) = toLazyByteString $ Crypto.toCBORXPrv x
-  in case protocol of
+  case protocol of
     ByronLegacy ->
       pure CLIOps
       { coSerialiseGenesisKey          = pure . serialiseSigningKey
@@ -82,6 +82,8 @@ decideCLIOps protocol =
       }
     x ->
       throwIO $ ProtocolNotSupported x
+    where
+      serialiseSigningKey (SigningKey x) = toLazyByteString $ Crypto.toCBORXPrv x
 
 -- | Exception type for all errors thrown by the CLI.
 --   Well, almost all, since we don't rethrow the errors from readFile & such.
