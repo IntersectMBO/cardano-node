@@ -1,12 +1,13 @@
-{-# LANGUAGE ConstraintKinds       #-}
-{-# LANGUAGE FlexibleContexts      #-}
-{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE OverloadedStrings     #-}
-{-# LANGUAGE ScopedTypeVariables   #-}
-{-# LANGUAGE UndecidableInstances  #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE UndecidableInstances #-}
 
-{-# OPTIONS_GHC -fno-warn-orphans  #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 {-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
 
 module Cardano.Tracing.Tracers
@@ -111,7 +112,7 @@ data TraceOptions = TraceOptions
   , traceDnsResolver     :: !Bool
   }
 
-type ConsensusTraceOptions = Consensus.Tracers' () ()    (Const Bool)
+type ConsensusTraceOptions = Consensus.Tracers' () () () (Const Bool)
 type ProtocolTraceOptions  = ProtocolTracers'   () () () (Const Bool)
 
 nullTracers :: Tracers peer blk
@@ -124,7 +125,7 @@ nullTracers = Tracers {
       dnsResolverTracer = nullTracer
     }
   where
-    nullConsensusTracers :: Consensus.Tracers' peer blk (Tracer IO)
+    nullConsensusTracers :: Consensus.Tracers' peer blk tip (Tracer IO)
     nullConsensusTracers = Consensus.Tracers {
         Consensus.chainSyncClientTracer = nullTracer,
         Consensus.chainSyncServerTracer = nullTracer,
@@ -148,10 +149,11 @@ nullTracers = Tracers {
 
 -- | Smart constructor of 'NodeTraces'.
 --
-mkTracers :: forall peer blk.
+mkTracers :: forall peer blk tip.
               ( ProtocolLedgerView blk
               , TraceConstraints blk
               , Show peer
+              , tip ~ Point (Header blk)
               )
            => TraceOptions
            -> Tracer IO (LogObject Text)
@@ -209,7 +211,7 @@ mkTracers traceOptions tracer = Tracers
       then showTracing
       else const nullTracer
 
-    mkConsensusTracers :: Consensus.Tracers' peer blk (Tracer IO)
+    mkConsensusTracers :: Consensus.Tracers' peer blk tip (Tracer IO)
     mkConsensusTracers = Consensus.Tracers
       { Consensus.chainSyncClientTracer
         = enableConsensusTracer Consensus.chainSyncClientTracer

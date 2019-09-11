@@ -212,6 +212,8 @@ localChainSyncCodec pInfoConfig =
       (nodeDecodeBlock pInfoConfig)
       (Block.encodePoint (nodeEncodeHeaderHash (Proxy @blk)))
       (Block.decodePoint (nodeDecodeHeaderHash (Proxy @blk)))
+      (Block.encodePoint (nodeEncodeHeaderHash (Proxy @blk)))
+      (Block.decodePoint (nodeDecodeHeaderHash (Proxy @blk)))
 
 
 -- | Local unix socket file path over which the client communicates with a core

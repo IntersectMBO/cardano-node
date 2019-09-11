@@ -185,3 +185,5 @@ localChainSyncCodec pInfoConfig =
       (nodeDecodeBlock pInfoConfig)
       (Block.encodePoint (nodeEncodeHeaderHash (Proxy @blk)))
       (Block.decodePoint (nodeDecodeHeaderHash (Proxy @blk)))
+      (Block.encodePoint (nodeEncodeHeaderHash (Proxy @blk)))
+      (Block.decodePoint (nodeDecodeHeaderHash (Proxy @blk)))
