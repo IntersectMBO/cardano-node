@@ -26,7 +26,7 @@ NETARGS=(
 
 # SCR="./scripts/start-node.sh"
 # CMD="stack exec --nix cardano-node --"
-CMD="cabal new-exec cardano-node --"
+CMD="cabal new-run exe:cardano-node --"
 
 # SPECIAL=""
 SPECIAL="--live-view"

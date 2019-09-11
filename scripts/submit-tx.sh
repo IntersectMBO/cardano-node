@@ -10,7 +10,7 @@ TX="$1"
 shift
 
 #CMD="stack exec --nix cardano-node -- "
-CMD="cabal new-exec cardano-cli -- "
+CMD="cabal new-run exe:cardano-cli -- "
 
 genesis="33873"
 genesis_root="configuration/${genesis}"

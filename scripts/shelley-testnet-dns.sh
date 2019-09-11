@@ -26,7 +26,7 @@ NOW=`date "+%Y-%m-%d 00:00:00"`
 NETARGS="--slot-duration 2 node -t configuration/simple-topology-dns.json ${ALGO}"
 #SCR="./scripts/start-node.sh"
 #CMD="stack exec --nix cardano-node --"
-CMD="cabal new-exec cardano-node --"
+CMD="cabal new-run exe:cardano-node --"
 HOST="127.0.0.1"
 HOST6="::1"
 
