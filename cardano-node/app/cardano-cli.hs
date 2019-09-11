@@ -54,22 +54,22 @@ main = do
     Right _ -> pure ()
     Left err -> do print $ renderCliError err
                    exitFailure
+  where
+    pref :: ParserPrefs
+    pref = Opt.prefs showHelpOnEmpty
 
-renderCliError :: CliError -> String
-renderCliError = show
+    opts :: ParserInfo CLI
+    opts =
+      Opt.info (parseClient <**> Opt.helper)
+        ( Opt.fullDesc
+          <> Opt.header
+          "cardano-cli - utility to support a variety of key\
+          \ operations (genesis generation, migration,\
+          \ pretty-printing..) for different system generations."
+        )
 
-pref :: ParserPrefs
-pref = Opt.prefs showHelpOnEmpty
-
-opts :: ParserInfo CLI
-opts =
-  Opt.info (parseClient <**> Opt.helper)
-    ( Opt.fullDesc
-    <> Opt.header
-         "cardano-cli - utility to support a variety of key\
-         \ operations (genesis generation, migration,\
-         \ pretty-printing..) for different system generations."
-    )
+    renderCliError :: CliError -> String
+    renderCliError = show
 
 data CLI = CLI
   { protocol    :: Protocol

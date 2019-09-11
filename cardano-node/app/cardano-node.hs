@@ -8,7 +8,10 @@ import           Prelude (read)
 import           Data.Semigroup ((<>))
 import qualified Data.IP as IP
 import           Network.Socket (PortNumber)
-import           Options.Applicative
+import           Options.Applicative ( Parser, auto , flag, flag' , help , long
+                                     , metavar , option , str , subparser, switch , value
+                                     )
+import qualified Options.Applicative as Opt
 
 import           Cardano.BM.Data.Tracer (TracingVerbosity (..))
 import           Cardano.Config.Partial (PartialCardanoConfiguration (..))
@@ -32,21 +35,33 @@ import           Cardano.Node.Run
 import           Cardano.Node.Configuration.Topology (NodeAddress (..))
 import           Cardano.Tracing.Tracers (ConsensusTraceOptions,  ProtocolTraceOptions, TraceOptions(..))
 
-
 main :: IO ()
 main = do
+    cliArgs <- Opt.customExecParser pref opts
 
-    let cardanoConfiguration = mainnetConfiguration
-    let cardanoEnvironment   = NoEnvironment
+    (features, nodeLayer) <- initializeAllFeatures cliArgs pcc env
 
-    logConfig           <- execParser opts
+    runCardanoApplicationWithFeatures features (cardanoApplication nodeLayer)
 
-    (cardanoFeatures, nodeLayer) <- initializeAllFeatures logConfig cardanoConfiguration cardanoEnvironment
+    where
+      pcc :: PartialCardanoConfiguration
+      pcc = mainnetConfiguration
 
-    let cardanoApplication :: NodeLayer -> CardanoApplication
-        cardanoApplication = CardanoApplication . nlRunNode
+      env :: CardanoEnvironment
+      env = NoEnvironment
 
-    runCardanoApplicationWithFeatures cardanoFeatures (cardanoApplication nodeLayer)
+      cardanoApplication :: NodeLayer -> CardanoApplication
+      cardanoApplication = CardanoApplication . nlRunNode
+
+      pref :: Opt.ParserPrefs
+      pref = Opt.prefs Opt.showHelpOnEmpty
+
+      opts :: Opt.ParserInfo CLIArguments
+      opts =
+        Opt.info (commandLineParser <**> Opt.helper)
+          ( Opt.fullDesc <>
+            Opt.progDesc "Cardano node."
+          )
 
 initializeAllFeatures
   :: CLIArguments
@@ -59,15 +74,10 @@ initializeAllFeatures (CLIArguments logCli nodeCli) partialConfig cardanoEnviron
     (loggingLayer, loggingFeature) <- createLoggingFeature cardanoEnvironment finalConfig logCli
     (nodeLayer   , nodeFeature)    <- createNodeFeature loggingLayer nodeCli cardanoEnvironment finalConfig
 
-    -- Here we return all the features.
-    let allCardanoFeatures :: [CardanoFeature]
-        allCardanoFeatures =
-            [ loggingFeature
-            , nodeFeature
-            ]
-
-    pure (allCardanoFeatures, nodeLayer)
-
+    pure ([ loggingFeature
+          , nodeFeature
+          ] :: [CardanoFeature]
+         , nodeLayer)
 
 -------------------------------------------------------------------------------
 -- Parsers & Types
@@ -82,14 +92,6 @@ commandLineParser :: Parser CLIArguments
 commandLineParser = CLIArguments
     <$> loggingParser
     <*> nodeParser
-
--- | Top level parser with info.
-opts :: ParserInfo CLIArguments
-opts = info (commandLineParser <**> helper)
-    (  fullDesc
-    <> progDesc "Cardano demo node."
-    <> header "Demo node to run."
-    )
 
 nodeParser :: Parser NodeCLIArguments
 nodeParser = NodeCLIArguments

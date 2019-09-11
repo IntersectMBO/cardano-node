@@ -21,7 +21,7 @@ module Cardano.Config.CommonCLI
   ) where
 
 import           Cardano.Prelude hiding (option)
-import           Prelude
+import qualified Prelude
 
 import           Options.Applicative hiding (command)
 import qualified Options.Applicative as OA
@@ -99,7 +99,7 @@ parseCommonCLI =
   optparse-applicative auxiliary
 -------------------------------------------------------------------------------}
 
-command' :: String -> String -> Parser a -> Mod CommandFields a
+command' :: Prelude.String -> Prelude.String -> Parser a -> Mod CommandFields a
 command' c descr p =
     OA.command c $ info (p <**> helper) $ mconcat [
         progDesc descr
@@ -135,6 +135,12 @@ lastStrOption args = Last <$> optional (strOption args)
 lastFlag :: a -> a -> Mod FlagFields a -> Parser (Last a)
 lastFlag def act opts  = Last <$> optional (flag def act opts)
 
+-- | Mandatory versions of option parsers.
+--   Use these for the cases when presets don't define a default value
+--   for a particular field -- i.e. when the field is set to 'mempty'.
+lastStrOptionM :: IsString a => Mod OptionFields a -> Parser (Last a)
+lastStrOptionM args = Last . Just <$> strOption args
+
 
 {-------------------------------------------------------------------------------
   Configuration merging
@@ -155,27 +161,18 @@ mergeConfiguration pcc cli =
     pcc <> commonCLIToPCC cli
   where
     commonCLIToPCC :: CommonCLI -> PartialCardanoConfiguration
-    commonCLIToPCC CommonCLI {
-                     cliGenesisFile
-                   , cliGenesisHash
-                   , cliStaticKeySigningKeyFile
-                   , cliStaticKeyDlgCertFile
-                   , cliPBftSigThd
-                   , cliRequiresNetworkMagic
-                   , cliDBPath
-                   , cliSocketDir
-                   } =
+    commonCLIToPCC cc =
       mempty { pccCore = mempty
-                    { pcoGenesisFile             = cliGenesisFile
-                    , pcoGenesisHash             = cliGenesisHash
-                    , pcoStaticKeySigningKeyFile = cliStaticKeySigningKeyFile
-                    , pcoStaticKeyDlgCertFile    = cliStaticKeyDlgCertFile
-                    , pcoPBftSigThd              = cliPBftSigThd
-                    , pcoRequiresNetworkMagic    = cliRequiresNetworkMagic
+                    { pcoGenesisFile             = cliGenesisFile cc
+                    , pcoGenesisHash             = cliGenesisHash cc
+                    , pcoStaticKeySigningKeyFile = cliStaticKeySigningKeyFile cc
+                    , pcoStaticKeyDlgCertFile    = cliStaticKeyDlgCertFile cc
+                    , pcoPBftSigThd              = cliPBftSigThd cc
+                    , pcoRequiresNetworkMagic    = cliRequiresNetworkMagic cc
                     -- TODO: cliUpdate
                     }
-             , pccDBPath = cliDBPath
-             , pccSocketDir = cliSocketDir
+             , pccDBPath = cliDBPath cc
+             , pccSocketDir = cliSocketDir cc
              }
 
 -- TODO: if we're using exceptions for this, then we should use a local
@@ -190,5 +187,5 @@ mkConfiguration partialConfig cli =
     case finaliseCardanoConfiguration $
          mergeConfiguration partialConfig cli
     of
-      Left err -> fail $ Prelude.show err
+      Left err -> Prelude.fail $ Prelude.show err
       Right x  -> pure x
