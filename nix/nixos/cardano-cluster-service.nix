@@ -138,10 +138,7 @@ in {
   };
 
   config = mkIf cfg.enable {
-    services.chairman = {
-      enable = true;
-      nodeIds = node-ids;
-    };
+    services.chairman.enable = true;
     services.cardano-node = {
       enable = true;
       instanced = true;
