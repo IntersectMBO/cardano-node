@@ -1,4 +1,4 @@
-resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/b83730dccab14111d62144b048084eec7900d091/snapshot.yaml
+resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/56fadcea03417771f4b3666fd1dfc9bad8df1484/snapshot.yaml
 
 packages:
   - cardano-config
@@ -19,7 +19,7 @@ extra-deps:
       - crypto/test
 
   - git: https://github.com/input-output-hk/cardano-prelude
-    commit: b83730dccab14111d62144b048084eec7900d091
+    commit: 56fadcea03417771f4b3666fd1dfc9bad8df1484
     subdirs:
       - .
       - test
@@ -44,6 +44,7 @@ extra-deps:
   - time-units-1.0.0
   - libsystemd-journal-1.4.4
   - tasty-hedgehog-1.0.0.1
+  - transformers-except-0.1.1
     # iohk-monitoring-framework currently not pinned to a release
   - git: https://github.com/input-output-hk/iohk-monitoring-framework
     commit: c85d57a95d919336afea7e0eff00e834bd6b4b58

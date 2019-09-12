@@ -35,15 +35,16 @@ module Cardano.CLI.Run (
 import           Cardano.Prelude hiding (option, show, trace)
 
 import           Codec.Serialise (serialise)
+import           Control.Monad.Trans.Except (ExceptT)
 import qualified Data.ByteString.Lazy as LB
 import           Data.Semigroup ((<>))
-import qualified Data.Text as T
 import qualified Data.Text.Lazy.IO as TL
 import qualified Data.Text.Lazy.Builder as Builder
 import qualified Formatting as F
 import           System.Directory (doesPathExist)
 
 import qualified Cardano.Chain.Common as Common
+import qualified Cardano.Chain.Delegation as Delegation
 import qualified Cardano.Chain.Genesis as Genesis
 import           Cardano.Chain.Slotting (EpochNumber(..))
 import qualified Cardano.Chain.UTxO as UTxO
@@ -136,76 +137,77 @@ data ClientCommand
     -- ^ Genesis UTxO output Address.
     CommonCLI
 
-runCommand :: CLIOps IO -> ClientCommand -> IO ()
-runCommand co (Genesis outDir params) =
-  uncurry (dumpGenesis co outDir)
-    =<< \case
-           -- TODO: intermediate step for a wholesale move to ExceptT.
-           Left e -> throwIO e
-           Right x -> pure x
-    =<< mkGenesis params
+runCommand :: CLIOps IO -> ClientCommand -> ExceptT CliError IO ()
+runCommand co (Genesis outDir params) = do
+  gen <- mkGenesis params
+  dumpGenesis co outDir `uncurry` gen
 
 runCommand co (DumpHardcodedGenesis dir) =
   dumpGenesis co dir (Genesis.configGenesisData Dummy.dummyConfig) Dummy.dummyGeneratedSecrets
 
-runCommand co (PrettySigningKeyPublic skF) =
-  putStrLn
-    =<< T.unpack . prettyPublicKey . Crypto.toVerification
-    <$> readSigningKey co skF
+runCommand co (PrettySigningKeyPublic skF) = do
+  sK <- readSigningKey co skF
+  liftIO . putTextLn . prettyPublicKey $ Crypto.toVerification sK
 
-runCommand co (MigrateDelegateKeyFrom fromVer (NewSigningKeyFile newKey) oldKey) =
-  ensureNewFileLBS newKey
-    =<< coSerialiseDelegateKey co
-    =<< flip readSigningKey oldKey =<< decideCLIOps fromVer
+runCommand co (MigrateDelegateKeyFrom fromVer (NewSigningKeyFile newKey) oldKey) = do
+  ops <- liftIO $ decideCLIOps fromVer
+  sk <- readSigningKey ops oldKey
+  sDk <- liftIO $ coSerialiseDelegateKey co sk
+  liftIO $ ensureNewFileLBS newKey sDk
 
-runCommand _ (PrintGenesisHash genesis) =
-  putStrLn
-    =<< F.format Crypto.hashHexF . Genesis.unGenesisHash . snd
-    <$> readGenesis genesis
+runCommand _ (PrintGenesisHash genFp) = do
+  eGen <- readGenesis genFp
 
-runCommand co (PrintSigningKeyAddress netMagic skF) =
-  putStrLn
-    =<< T.unpack . prettyAddress . Common.makeVerKeyAddress netMagic . Crypto.toVerification
-    <$> readSigningKey co skF
+  let formatter :: (a, Genesis.GenesisHash)-> Text
+      formatter = F.sformat Crypto.hashHexF . Genesis.unGenesisHash . snd
 
-runCommand co (Keygen (NewSigningKeyFile skF) passReq) =
-  ensureNewFileLBS skF =<< coSerialiseDelegateKey co
-    =<< keygen
-    =<< getPassphrase ("Enter password to encrypt '" <> skF <> "': ") passReq
+  liftIO . putTextLn $ formatter eGen
 
-runCommand co (ToVerification skF (NewVerificationKeyFile vkF)) =
-  ensureNewFile TL.writeFile vkF
-    <$> Builder.toLazyText . Crypto.formatFullVerificationKey . Crypto.toVerification
-    =<< readSigningKey co skF
+runCommand co (PrintSigningKeyAddress netMagic skF) = do
+  sK <- readSigningKey co skF
+  let sKeyAddress = prettyAddress . Common.makeVerKeyAddress netMagic $ Crypto.toVerification sK
+  liftIO $ putTextLn sKeyAddress
 
-runCommand co (IssueDelegationCertificate magic epoch issuerSK delegateVK cert) =
-  ensureNewFileLBS (nFp cert)
-    =<< coSerialiseDelegationCert co
-    =<< issueByronGenesisDelegation magic epoch
-        <$> readSigningKey co issuerSK
-        <*> readVerificationKey delegateVK
+runCommand co (Keygen (NewSigningKeyFile skF) passReq) = do
+  pPhrase <- liftIO $ getPassphrase ("Enter password to encrypt '" <> skF <> "': ") passReq
+  sK <- liftIO $ keygen pPhrase
+  serDk <- liftIO $ coSerialiseDelegateKey co sK
+  liftIO $ ensureNewFileLBS skF serDk
+
+runCommand co (ToVerification skFp (NewVerificationKeyFile vkFp)) = do
+  sk <- readSigningKey co skFp
+  let vKey = Builder.toLazyText . Crypto.formatFullVerificationKey $ Crypto.toVerification sk
+  liftIO $ ensureNewFile TL.writeFile vkFp vKey
+
+runCommand co (IssueDelegationCertificate magic epoch issuerSK delegateVK cert) = do
+  vk <- readVerificationKey delegateVK
+  sk <- readSigningKey co issuerSK
+  let byGenDelCert :: Delegation.Certificate
+      byGenDelCert = issueByronGenesisDelegation magic epoch sk vk
+  sCert <- liftIO $ coSerialiseDelegationCert co byGenDelCert
+  liftIO $ ensureNewFileLBS (nFp cert) sCert
 
 runCommand _ (CheckDelegation magic cert issuerVF delegateVF) = do
   issuerVK <- readVerificationKey issuerVF
   delegateVK <- readVerificationKey delegateVF
-  checkByronGenesisDelegation cert magic issuerVK delegateVK
+  liftIO $ checkByronGenesisDelegation cert magic issuerVK delegateVK
 
 runCommand co (SubmitTx topology fp common) = do
-  cc <- mkConfiguration mainnetConfiguration common
-  tx <- readByronTx fp
-  nodeSubmitTx co topology cc tx
+  cc <- liftIO $ mkConfiguration mainnetConfiguration common
+  tx <- liftIO $ readByronTx fp
+  liftIO $ nodeSubmitTx co topology cc tx
 
 runCommand co (SpendGenesisUTxO (NewTxFile ctTx) ctKey genRichAddr outs common) = do
-  cc <- mkConfiguration mainnetConfiguration common
+  cc <- liftIO $ mkConfiguration mainnetConfiguration common
   sk <- readSigningKey co ctKey
-  ensureNewFileLBS ctTx
-    =<< serialise <$> issueGenesisUTxOExpenditure co genRichAddr outs cc sk
+  tx <- liftIO $ issueGenesisUTxOExpenditure co genRichAddr outs cc sk
+  liftIO . ensureNewFileLBS ctTx $ serialise tx
 
 runCommand co (SpendUTxO (NewTxFile ctTx) ctKey ins outs common) = do
-  cc <- mkConfiguration mainnetConfiguration common
+  cc <- liftIO $ mkConfiguration mainnetConfiguration common
   sk <- readSigningKey co ctKey
-  ensureNewFileLBS ctTx
-    =<< serialise <$> issueUTxOExpenditure co ins outs cc sk
+  gTx <- liftIO $ issueUTxOExpenditure co ins outs cc sk
+  liftIO . ensureNewFileLBS ctTx $ serialise gTx
 
 {-------------------------------------------------------------------------------
   Supporting functions

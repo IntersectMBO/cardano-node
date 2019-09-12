@@ -109,6 +109,14 @@ data CliError
   | GenesisGenerationError !Genesis.GenesisDataGenerationError
   -- Invariants/assertions -- does it belong here?
   | NoGenesisDelegationForKey !Text
+  -- File reading errors
+  | ReadVerificationKeyFailure !FilePath !Text
+  -- ^ An exception was encountered while trying to read
+  -- the verification key file.
+  | ReadSigningKeyFailure !FilePath !Text
+  -- ^ An exception was encountered while trying to read
+  -- the signing key file.
+
 
 instance Show CliError where
   show (OutputMustNotAlreadyExist fp)
@@ -143,5 +151,10 @@ instance Show CliError where
     = "Genesis generation failed: " <> show err
   show (NoGenesisDelegationForKey key)
     = "Newly-generated genesis doesn't delegate to operational key: " <> T.unpack key
-
+  show (ReadVerificationKeyFailure fp expt)
+    = "Exception encountered while trying to read the verification key file at: " <> fp
+       <> "Exception: " <> T.unpack expt
+  show (ReadSigningKeyFailure fp expt)
+    = "Exception encountered while trying to read the signing key file at: " <> fp
+       <> "Exception: " <> T.unpack expt
 instance Exception CliError
