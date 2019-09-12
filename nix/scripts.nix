@@ -70,10 +70,8 @@ let
     cd "state-node-${envConfig.name}"
     ${nodeScript} $@
   '';
-  mkChairmanScript = let
-    chairman-config = {
-      enable = true;
-    };
+  mkChairmanScript = { chairman-config ? { enable = true; } }:
+  let
     cardano-cluster-config = {
       enable = true;
       node-count = 3;

@@ -204,7 +204,6 @@ in {
     systemd.services."${systemdServiceName}" = {
       description   = "cardano-node node service";
       after         = [ "network.target" ];
-      wantedBy = [ "multi-user.target" ];
       script = cfg.script;
       serviceConfig = {
         User = "cardano-node";
@@ -216,6 +215,8 @@ in {
         # This is checked as an assertion below.
         StateDirectory =  lib.removePrefix stateDirBase cfg.stateDir;
       };
+    } // optionalAttrs (! cfg.instanced) {
+      wantedBy = [ "multi-user.target" ];
     };
     assertions = [{
       assertion = lib.hasPrefix stateDirBase cfg.stateDir;

@@ -73,7 +73,7 @@ let
   #  2. small chain length for quick validation
   # genesisUpdatePeriod
   #   :: Seconds Int
-  genesisUpdatePeriod = 300;
+  genesisUpdatePeriod = 600;
 
   # mkFixedGenesisOfDate
   #   :: Date String -> Topology FilePath
@@ -94,7 +94,7 @@ let
       --total-balance                 ${toString args.total_balance}
       --use-hd-addresses
       )
-      ${cardano-node}/bin/cardano-cli --real-pbft genesis "''${args[@]}"
+      ${cardano-node}/bin/cardano-cli --real-pbft --log-config ${../../configuration/log-configuration.yaml} genesis "''${args[@]}"
     '';
 
   ## This value will change every given amount of seconds.
@@ -105,7 +105,7 @@ let
   portBase              = 3001;
   genesisDir            = mkFixedGenesisOfTime (periodicNewsTimestamp genesisUpdatePeriod) defaultGenesisArgs;
   genesisFile           = "${genesisDir}/genesis.json";
-  genesisHash           = ''$(${cardano-node}/bin/cardano-cli --real-pbft print-genesis-hash --genesis-json "${genesisFile}" | tail -1)'';
+  genesisHash           = ''$(${cardano-node}/bin/cardano-cli --real-pbft --log-config ${../../configuration/log-configuration.yaml} print-genesis-hash --genesis-json "${genesisFile}" | tail -1)'';
   signingKey            = ''$(printf "%s/delegate-keys.%03d.key"    $(dirname $2) $1)'';
   delegationCertificate = ''$(printf "%s/delegation-cert.%03d.json" $(dirname $2) $1)'';
   nodeId                = "$1";
@@ -138,7 +138,6 @@ in {
   };
 
   config = mkIf cfg.enable {
-    services.chairman.enable = true;
     services.cardano-node = {
       enable = true;
       instanced = true;
