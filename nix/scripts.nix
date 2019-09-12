@@ -5,6 +5,11 @@ let
   pkgsModule = {
     config._module.args.pkgs = mkDefault pkgs;
   };
+  systemdCompat.options = {
+    systemd.services = mkOption {};
+    assertions = [];
+    users = mkOption {};
+  };
   mkNodeScript = envConfig: let
     defaultConfig = {
       consensusProtocol = "real-pbft";
@@ -49,11 +54,6 @@ let
       topology = topologyFile;
     };
     nodeConf = { config.services.cardano-node = serviceConfig; };
-    systemdCompat.options = {
-      systemd.services = mkOption {};
-      assertions = [];
-      users = mkOption {};
-    };
     nodeScript = (modules.evalModules {
       prefix = [];
       modules = [
@@ -70,8 +70,36 @@ let
     cd "state-node-${envConfig.name}"
     ${nodeScript} $@
   '';
+  mkChairmanScript = let
+    chairman-config = {
+      enable = true;
+    };
+    cardano-cluster-config = {
+      enable = true;
+      node-count = 3;
+    };
+    injectServiceConfigs = {
+      config.services.chairman = chairman-config;
+      config.services.cardano-cluster = cardano-cluster-config;
+    };
+    script = (modules.evalModules {
+      modules = [
+        ./nixos/cardano-node-service.nix
+        ./nixos/cardano-cluster-service.nix
+        ./nixos/chairman-as-a-service.nix
+        injectServiceConfigs
+        pkgsModule
+        systemdCompat
+      ];
+    }).config.services.chairman.script;
+  in pkgs.writeScript "chairman" ''
+    #!${pkgs.runtimeShell}
+    set -euo pipefail
+    ${script} $@
+  '';
   scripts = commonLib.forEnvironments (environment:
   {
     node = mkNodeScript environment;
+    chairman = mkChairmanScript;
   });
 in scripts

@@ -42,6 +42,13 @@ let
 in {
   options = with types; {
     services.chairman = {
+      enable = mkOption {
+        type = types.bool;
+        default = false;
+        description = ''
+          Enable chairman, a consensus checker service.
+        '';
+      };
       script = mkOption {
         type = types.str;
         default = mkChairmanScript (mkChairmanConfig ncfg cfg);

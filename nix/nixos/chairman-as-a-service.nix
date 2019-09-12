@@ -7,19 +7,6 @@ let
   cfg  = config.services.chairman;
   ncfg = config.services.cardano-node;
 in {
-
-  options = {
-    services.chairman = {
-      enable = mkOption {
-        type = types.bool;
-        default = false;
-        description = ''
-          Enable chairman, a consensus checker service.
-        '';
-      };
-    };
-  };
-
   config = mkIf cfg.enable ( let stateDirBase = "/var/lib/"; in {
     systemd.services.chairman =
     let node-services = map (id: "cardano-node@${toString id}.service") cfg.node-ids;

@@ -106,8 +106,8 @@ let
   genesisDir            = mkFixedGenesisOfTime (periodicNewsTimestamp genesisUpdatePeriod) defaultGenesisArgs;
   genesisFile           = "${genesisDir}/genesis.json";
   genesisHash           = ''$(${cardano-node}/bin/cardano-cli --real-pbft print-genesis-hash --genesis-json "${genesisFile}" | tail -1)'';
-  signingKey            = ''$(printf "%s/delegate-keys.%03d.key" $2 $1)'';
-  delegationCertificate = ''$(printf "%s/delegation-cert.%03d.json" $2 $1)'';
+  signingKey            = ''$(printf "%s/delegate-keys.%03d.key"    $(dirname $2) $1)'';
+  delegationCertificate = ''$(printf "%s/delegation-cert.%03d.json" $(dirname $2) $1)'';
   nodeId                = "$1";
   port                  = "$((${toString portBase} + $1))";
   topology = mkFullyConnectedLocalClusterTopology
@@ -145,7 +145,7 @@ in {
       inherit topology genesisFile genesisHash signingKey delegationCertificate nodeId port;
     };
     systemd.services."cardano-node@" = {
-      scriptArgs = "%i ${genesisDir}";
+      scriptArgs = "%i ${ncfg.genesisFile}";
     };
     systemd.services.cardano-cluster =
       let node-services = map (id: "cardano-node@${toString id}.service") node-ids;
@@ -157,7 +157,7 @@ in {
         bindsTo = node-services;
         serviceConfig = {
           Type = "oneshot";
-          ExecStart = "${pkgs.coreutils}/bin/echo Starting cluster of ${toString cfg.node-count} nodes, topology ${topology}";
+          ExecStart = "${pkgs.coreutils}/bin/echo Starting cluster of ${toString cfg.node-count} nodes, topology ${ncfg.topology}";
         };
       };
   };
