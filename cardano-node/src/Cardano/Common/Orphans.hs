@@ -14,7 +14,9 @@ import           GHC.Generics
 
 import qualified Cardano.Chain.Genesis as Genesis
 import           Ouroboros.Consensus.Ledger.Byron
-import           Ouroboros.Consensus.Ledger.Byron.Config
+                 ( ByronBlockOrEBB, GenTx(..)
+                 , decodeByronGenTx, encodeByronGenTx)
+import           Ouroboros.Consensus.Ledger.Byron.Config (ByronConfig)
 
 -- TODO: consider not throwing this, or wrap it in a local error type here
 -- that has proper error messages.

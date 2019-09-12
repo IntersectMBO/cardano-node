@@ -2,7 +2,6 @@
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE GADTs               #-}
 {-# LANGUAGE LambdaCase          #-}
-{-# LANGUAGE NamedFieldPuns      #-}
 {-# LANGUAGE RankNTypes          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications    #-}
@@ -22,13 +21,13 @@ import           Test.Cardano.Prelude (canonicalEncodePretty)
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.Text as T
 
-import           Cardano.Chain.Delegation hiding (epoch)
+import qualified Cardano.Chain.Delegation as Dlg
 import           Cardano.Crypto (SigningKey (..))
 import           Codec.CBOR.Read (DeserialiseFailure, deserialiseFromBytes)
 import           Codec.CBOR.Write (toLazyByteString)
-import qualified Cardano.Crypto.Random as CCr
-import qualified Cardano.Crypto.Signing as CCr
-import           Cardano.Chain.Genesis
+import qualified Cardano.Crypto.Random as Crypto
+import qualified Cardano.Crypto.Signing as Crypto
+import qualified Cardano.Chain.Genesis as Genesis
 import qualified Crypto.SCRAPE as Scrape
 
 import           Cardano.Common.Protocol
@@ -38,73 +37,78 @@ import qualified Cardano.CLI.Legacy.Byron as Legacy
 -- | Generic operations for a specific system era.
 data CLIOps m
   = CLIOps
-  { coSerialiseGenesisKey       :: SigningKey    -> m LB.ByteString
-  , coSerialiseDelegateKey      :: SigningKey    -> m LB.ByteString
-  , coSerialisePoorKey          :: PoorSecret    -> m LB.ByteString
-  , coSerialiseGenesis          :: GenesisData   -> m LB.ByteString
-  , coSerialiseDelegationCert   :: Certificate   -> m LB.ByteString
-  , coDeserialiseDelegateKey    :: FilePath
-                                -> LB.ByteString -> m SigningKey
-  , coProtocol                  :: Protocol
+  { coSerialiseGenesisKey :: SigningKey -> m LB.ByteString
+  , coSerialiseDelegateKey :: SigningKey -> m LB.ByteString
+  , coSerialisePoorKey :: Genesis.PoorSecret -> m LB.ByteString
+  , coSerialiseGenesis :: Genesis.GenesisData -> m LB.ByteString
+  , coSerialiseDelegationCert :: Dlg.Certificate -> m LB.ByteString
+  , coDeserialiseDelegateKey :: FilePath -> LB.ByteString -> m SigningKey
+  , coProtocol :: Protocol
   }
 
+-- | Supply the corresponding 'CLIOps' for a given system era designator.
 decideCLIOps :: Protocol -> IO (CLIOps IO)
-decideCLIOps coProtocol =
-  let serialiseSigningKey (SigningKey x) = toLazyByteString $ CCr.toCBORXPrv x
-  in case coProtocol of
+decideCLIOps protocol =
+  case protocol of
     ByronLegacy ->
       pure CLIOps
       { coSerialiseGenesisKey          = pure . serialiseSigningKey
       , coSerialiseDelegateKey         = \sk->
           toLazyByteString . Legacy.encodeLegacyDelegateKey . Legacy.LegacyDelegateKey sk
-          <$> CCr.runSecureRandom Scrape.keyPairGenerate
-      , coSerialisePoorKey             = pure . serialiseSigningKey . poorSecretToKey
+          <$> Crypto.runSecureRandom Scrape.keyPairGenerate
+      , coSerialisePoorKey             = pure . serialiseSigningKey
+                                              . Genesis.poorSecretToKey
       , coSerialiseGenesis             = pure . canonicalEncodePretty
       , coSerialiseDelegationCert      = pure . canonicalEncodePretty
       , coDeserialiseDelegateKey       = \f ->
           flip (.) (deserialiseFromBytes Legacy.decodeLegacyDelegateKey) $
           \case Left  e -> throwIO $ SigningKeyDeserialisationFailed f e
                 Right x -> pure . Legacy.lrkSigningKey . snd $ x
-      , coProtocol = coProtocol
+      , coProtocol = protocol
       }
     RealPBFT ->
       pure CLIOps
       { coSerialiseGenesisKey          = pure . serialiseSigningKey
       , coSerialiseDelegateKey         = pure . serialiseSigningKey
-      , coSerialisePoorKey             = pure . serialiseSigningKey . poorSecretToKey
+      , coSerialisePoorKey             = pure . serialiseSigningKey
+                                              . Genesis.poorSecretToKey
       , coSerialiseGenesis             = pure . canonicalEncodePretty
       , coSerialiseDelegationCert      = pure . canonicalEncodePretty
       , coDeserialiseDelegateKey       = \f ->
-          flip (.) (deserialiseFromBytes CCr.fromCBORXPrv) $
+          flip (.) (deserialiseFromBytes Crypto.fromCBORXPrv) $
           \case Left  e -> throwIO $ SigningKeyDeserialisationFailed f e
                 Right x -> pure . SigningKey . snd $ x
-      , coProtocol = coProtocol
+      , coProtocol = protocol
       }
     x ->
       throwIO $ ProtocolNotSupported x
+    where
+      serialiseSigningKey (SigningKey x) = toLazyByteString $ Crypto.toCBORXPrv x
 
+-- | Exception type for all errors thrown by the CLI.
+--   Well, almost all, since we don't rethrow the errors from readFile & such.
 data CliError
   -- Basic user errors
-  = OutputMustNotAlreadyExist FilePath
-  | ProtocolNotSupported Protocol
+  = OutputMustNotAlreadyExist !FilePath
+  | ProtocolNotSupported !Protocol
   | NotEnoughTxInputs
   | NotEnoughTxOutputs
   -- Validation errors
-  | CertificateValidationErrors FilePath [Text]
+  | CertificateValidationErrors !FilePath ![Text]
   -- Serialization errors
-  | ProtocolParametersParseFailed FilePath Text
-  | GenesisReadError FilePath GenesisDataError
-  | SigningKeyDeserialisationFailed FilePath DeserialiseFailure
-  | VerificationKeyDeserialisationFailed FilePath Text
-  | DlgCertificateDeserialisationFailed FilePath Text
-  | TxDeserialisationFailed FilePath DeserialiseFailure
+  | ProtocolParametersParseFailed !FilePath !Text
+  | GenesisReadError !FilePath !Genesis.GenesisDataError
+  | SigningKeyDeserialisationFailed !FilePath !DeserialiseFailure
+  | VerificationKeyDeserialisationFailed !FilePath !Text
+  | DlgCertificateDeserialisationFailed !FilePath !Text
+  | TxDeserialisationFailed !FilePath !DeserialiseFailure
   -- TODO:  sadly, VerificationKeyParseError isn't exported from Cardano.Crypto.Signing/*
   -- Inconsistencies
-  | DelegationError GenesisDelegationError
-  | GenesisSpecError Text
-  | GenesisGenerationError GenesisDataGenerationError
+  | DelegationError !Genesis.GenesisDelegationError
+  | GenesisSpecError !Text
+  | GenesisGenerationError !Genesis.GenesisDataGenerationError
   -- Invariants/assertions -- does it belong here?
-  | NoGenesisDelegationForKey Text
+  | NoGenesisDelegationForKey !Text
 
 instance Show CliError where
   show (OutputMustNotAlreadyExist fp)

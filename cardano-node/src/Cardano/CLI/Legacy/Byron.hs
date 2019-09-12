@@ -1,11 +1,9 @@
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE GADTs               #-}
 {-# LANGUAGE LambdaCase          #-}
-{-# LANGUAGE NamedFieldPuns      #-}
 {-# LANGUAGE NoImplicitPrelude   #-}
 {-# LANGUAGE NumericUnderscores  #-}
 {-# LANGUAGE OverloadedStrings   #-}
-{-# LANGUAGE RecordWildCards     #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications    #-}
 
@@ -21,9 +19,8 @@ module Cardano.CLI.Legacy.Byron (
 import qualified Codec.CBOR.Decoding as D
 import qualified Codec.CBOR.Encoding as E
 import           Control.Lens (LensLike, _Left)
-import           Control.Monad
 import qualified Data.Binary as Binary
-import           Data.Coerce
+import           Data.Coerce (coerce)
 import           Data.Semigroup ((<>))
 import           Data.Text (Text)
 import qualified Data.Text as T
@@ -33,10 +30,10 @@ import qualified Crypto.SCRAPE as Scrape
 
 import           Cardano.Prelude hiding (option)
 
-import qualified Cardano.Crypto.Wallet as CC
+import qualified Cardano.Crypto.Wallet as Wallet
 import           Cardano.Crypto.Signing (SigningKey(..))
 
--- LegacyDelegateKey is a subset of the UserSecret's from the legacy codebase:
+-- | LegacyDelegateKey is a subset of the UserSecret's from the legacy codebase:
 -- 1. the VSS keypair must be present
 -- 2. the signing key must be present
 -- 3. the rest must be absent (Nothing)
@@ -44,8 +41,8 @@ import           Cardano.Crypto.Signing (SigningKey(..))
 -- Legacy reference: https://github.com/input-output-hk/cardano-sl/blob/release/3.0.1/lib/src/Pos/Util/UserSecret.hs#L189
 data LegacyDelegateKey
   =  LegacyDelegateKey
-  { lrkSigningKey :: SigningKey
-  , lrkVSSKeyPair :: Scrape.KeyPair
+  { lrkSigningKey :: !SigningKey
+  , lrkVSSKeyPair :: !Scrape.KeyPair
   }
 
 -- Stolen from: cardano-sl/binary/src/Pos/Binary/Class/Core.hs
@@ -62,11 +59,13 @@ decodeBinary = do
             | LB.null bs -> Right res
             | otherwise  -> Left "decodeBinary: unconsumed input"
 
-encodeXPrv :: CC.XPrv -> E.Encoding
-encodeXPrv a = E.encodeBytes $ CC.unXPrv a
+encodeXPrv :: Wallet.XPrv -> E.Encoding
+encodeXPrv a = E.encodeBytes $ Wallet.unXPrv a
 
-decodeXPrv :: D.Decoder s CC.XPrv
-decodeXPrv = toCborError . over _Left T.pack . CC.xprv =<< D.decodeBytesCanonical
+decodeXPrv :: D.Decoder s Wallet.XPrv
+decodeXPrv =
+  toCborError . over _Left T.pack . Wallet.xprv =<< D.decodeBytesCanonical
+
   where over :: LensLike Identity s t a b -> (a -> b) -> s -> t
         over = coerce
 
@@ -83,16 +82,18 @@ matchSize requestedSize lbl actualSize =
   when (actualSize /= requestedSize) $
     cborError (lbl <> " failed the size check. Expected " <> show requestedSize <> ", found " <> show actualSize)
 
--- Reverse-engineered from cardano-sl legacy codebase.
+-- | Encoder for a Byron/Classic signing key.
+--   Lifted from cardano-sl legacy codebase.
 encodeLegacyDelegateKey :: LegacyDelegateKey -> E.Encoding
-encodeLegacyDelegateKey LegacyDelegateKey{lrkSigningKey=(SigningKey sk),..}
+encodeLegacyDelegateKey dk@LegacyDelegateKey{lrkSigningKey=(SigningKey sk)}
   =  E.encodeListLen 4
-  <> E.encodeListLen 1 <> encodeBinary lrkVSSKeyPair
+  <> E.encodeListLen 1 <> encodeBinary (lrkVSSKeyPair dk)
   <> E.encodeListLen 1 <> encodeXPrv sk
   <> E.encodeListLenIndef <> E.encodeBreak
   <> E.encodeListLen 0
 
--- Reverse-engineered from cardano-sl legacy codebase.
+-- | Decoder for a Byron/Classic signing key.
+--   Lifted from cardano-sl legacy codebase.
 decodeLegacyDelegateKey :: D.Decoder s LegacyDelegateKey
 decodeLegacyDelegateKey = do
     enforceSize "UserSecret" 4

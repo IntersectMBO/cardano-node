@@ -15,6 +15,7 @@ library
   hs-source-dirs:      src
 
   exposed-modules:     Cardano.Chairman
+                       Cardano.CLI.Delegation
                        Cardano.CLI.Genesis
                        Cardano.CLI.Key
                        Cardano.CLI.Legacy.Byron

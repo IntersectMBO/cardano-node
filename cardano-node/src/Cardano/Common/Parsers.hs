@@ -84,9 +84,11 @@ parseProtocolAsCommand = subparser $ mconcat
   , cmd "praos"        "Praos mode"        $ pure Praos
   , cmd "mock-pbft"    "Mock PBFT mode"    $ pure MockPBFT
   , cmd "real-pbft"    "Real PBFT mode"    $ pure RealPBFT
-  ] where
-  cmd :: forall a. String -> String -> Parser a -> Mod CommandFields a
-  cmd c desc p = command c $ info (p <**> helper) $ mconcat [ progDesc desc ]
+  ]
+
+  where
+    cmd :: forall a. String -> String -> Parser a -> Mod CommandFields a
+    cmd c desc p = command c $ info (p <**> helper) $ mconcat [ progDesc desc ]
 
 parseTopologyInfo :: String -> Parser TopologyInfo
 parseTopologyInfo desc = TopologyInfo <$> parseNodeId desc <*> parseTopologyFile

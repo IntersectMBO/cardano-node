@@ -28,7 +28,7 @@ import           Cardano.Crypto (RequiresNetworkMagic (..), decodeAbstractHash)
 import qualified Cardano.Crypto.Signing as Signing
 import           Cardano.Shell.Lib (GeneralException (..))
 import           Ouroboros.Consensus.Demo (defaultDemoPBftParams, defaultDemoPraosParams, defaultSecurityParam)
-import           Ouroboros.Consensus.Demo.Run
+import qualified Ouroboros.Consensus.Demo.Run as Demo
 import           Ouroboros.Consensus.Node.ProtocolInfo (PBftLeaderCredentials, PBftSignatureThreshold(..), mkPBftLeaderCredentials)
 import qualified Ouroboros.Consensus.Protocol as Consensus
 import           Ouroboros.Consensus.Util (Dict(..))
@@ -43,6 +43,8 @@ import           Cardano.Tracing.Tracers (TraceConstraints)
   Untyped/typed protocol boundary
 -------------------------------------------------------------------------------}
 
+-- TODO:  we don't want ByronLegacy in Protocol.  Let's wrap Protocol with another
+-- sum type for cases where it's required.
 data Protocol =
     ByronLegacy
   | BFT
@@ -53,44 +55,54 @@ data Protocol =
 
 
 data SomeProtocol where
-  SomeProtocol :: (RunDemo blk, TraceConstraints blk)
+  SomeProtocol :: (Demo.RunDemo blk, TraceConstraints blk)
                => Consensus.Protocol blk -> SomeProtocol
 
 fromProtocol :: CardanoConfiguration -> Protocol -> IO SomeProtocol
+
 fromProtocol _ ByronLegacy =
   error "Byron Legacy protocol is not implemented."
+
 fromProtocol _ BFT =
-    case Consensus.runProtocol p of
-      Dict -> return $ SomeProtocol p
+  case Consensus.runProtocol p of
+    Dict -> return $ SomeProtocol p
+
   where
     p = Consensus.ProtocolMockBFT defaultSecurityParam
+
 fromProtocol _ Praos =
-    case Consensus.runProtocol p of
-      Dict -> return $ SomeProtocol p
+  case Consensus.runProtocol p of
+    Dict -> return $ SomeProtocol p
+
   where
     p = Consensus.ProtocolMockPraos defaultDemoPraosParams
+
 fromProtocol _ MockPBFT =
-    case Consensus.runProtocol p of
-      Dict -> return $ SomeProtocol p
+  case Consensus.runProtocol p of
+    Dict -> return $ SomeProtocol p
+
   where
     p = Consensus.ProtocolMockPBFT defaultDemoPBftParams
-fromProtocol CardanoConfiguration{ccCore} RealPBFT = do
+
+fromProtocol cc RealPBFT = do
     let Core{ coGenesisFile
             , coGenesisHash
             , coPBftSigThd
-            } = ccCore
+            } = ccCore cc
         genHash = either (throw . ConfigurationError) identity $
                   decodeAbstractHash coGenesisHash
         cvtRNM :: RequireNetworkMagic -> RequiresNetworkMagic
         cvtRNM NoRequireNetworkMagic = RequiresNoMagic
         cvtRNM RequireNetworkMagic   = RequiresMagic
 
-    gcE <- runExceptT (Genesis.mkConfigFromFile (cvtRNM $ coRequiresNetworkMagic ccCore) coGenesisFile genHash)
+    gcE <- runExceptT (Genesis.mkConfigFromFile
+                       (cvtRNM $ coRequiresNetworkMagic $ ccCore cc)
+                       coGenesisFile genHash)
     let gc = case gcE of
           Left err -> throw err -- TODO: no no no!
           Right x -> x
 
-    optionalLeaderCredentials <- readLeaderCredentials gc ccCore
+    optionalLeaderCredentials <- readLeaderCredentials gc (ccCore cc)
 
     let
         -- TODO:  make configurable via CLI (requires cardano-shell changes)
@@ -131,6 +143,7 @@ readLeaderCredentials gc Core {
 
     either throwIO (return . Just)
            (mkPBftLeaderCredentials gc signingKey delegCert)
+
   where
     deserialiseSigningKey :: LB.ByteString
                           -> Either DeserialiseFailure Signing.SigningKey
