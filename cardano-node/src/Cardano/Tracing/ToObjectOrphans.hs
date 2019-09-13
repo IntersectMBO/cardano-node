@@ -173,6 +173,7 @@ instance DefineSeverity (ChainDB.TraceEvent blk) where
       ChainDB.InvalidBlock _ _ -> Error
       ChainDB.InvalidCandidate _ _ -> Error
       ChainDB.ValidCandidate _ -> Notice
+      ChainDB.CandidateExceedsRollback _ _ _ -> Error
     ChainDB.AddedBlockToVolDB _     -> Debug
     ChainDB.ChainChangedInBg _ _     -> Info
 
@@ -363,6 +364,8 @@ readableChainDBTracer tracer = Tracer $ \case
         "Invalid candidate " <> condense (AF.headPoint c) <> ": " <> show err
       ChainDB.ValidCandidate c -> tr $ WithTip tip $
         "Valid candidate " <> condense (AF.headPoint c)
+      ChainDB.CandidateExceedsRollback _ _ c -> tr $ WithTip tip $
+        "Exceeds rollback " <> condense (AF.headPoint c)
     ChainDB.AddedBlockToVolDB pt     -> tr $ WithTip tip $
       "Chain added block " <> condense pt
     ChainDB.ChainChangedInBg c1 c2     -> tr $ WithTip tip $
@@ -499,6 +502,11 @@ instance (Condense (HeaderHash blk), ProtocolLedgerView blk)
       ChainDB.ValidCandidate c ->
         mkObject [ "kind" .= String "TraceAddBlockEvent.AddBlockValidation.ValidCandidate"
                  , "block" .= showTip verb (AF.headPoint c) ]
+      ChainDB.CandidateExceedsRollback supported actual c ->
+        mkObject [ "kind" .= String "TraceAddBlockEvent.AddBlockValidation.CandidateExceedsRollback"
+                 , "block" .= showTip verb (AF.headPoint c)
+                 , "supported" .= show supported
+                 , "actual"    .= show actual ]
     ChainDB.AddedBlockToVolDB pt     ->
       mkObject [ "kind" .= String "TraceAddBlockEvent.AddedBlockToVolDB"
                , "block" .= toObject verb pt ]
