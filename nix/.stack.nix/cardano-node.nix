@@ -62,6 +62,8 @@
           (hsPkgs.template-haskell)
           (hsPkgs.text)
           (hsPkgs.time)
+          (hsPkgs.transformers)
+          (hsPkgs.transformers-except)
           (hsPkgs.typed-protocols)
           (hsPkgs.typed-protocols-cbor)
           (hsPkgs.utf8-string)
@@ -145,6 +147,8 @@
             (hsPkgs.safe-exceptions)
             (hsPkgs.text)
             (hsPkgs.time)
+            (hsPkgs.transformers-except)
+            (hsPkgs.transformers)
             ];
           };
         "chairman" = {
