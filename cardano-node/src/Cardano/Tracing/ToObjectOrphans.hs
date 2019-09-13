@@ -171,8 +171,9 @@ instance DefineSeverity (ChainDB.TraceEvent blk) where
     ChainDB.SwitchedToChain _ _ -> Notice
     ChainDB.AddBlockValidation ev' -> case ev' of
       ChainDB.InvalidBlock _ _ -> Error
-      ChainDB.InvalidCandidate _ _ -> Error
+      ChainDB.InvalidCandidate _ -> Error
       ChainDB.ValidCandidate _ -> Notice
+      ChainDB.CandidateExceedsRollback _ _ _ -> Error
     ChainDB.AddedBlockToVolDB _     -> Debug
     ChainDB.ChainChangedInBg _ _     -> Info
 
@@ -213,8 +214,8 @@ instance DefineSeverity (ChainDB.TraceEvent blk) where
     _ -> Debug
   defineSeverity (ChainDB.TraceImmDBEvent _ev) = Debug
 
-instance DefinePrivacyAnnotation (TraceChainSyncClientEvent blk)
-instance DefineSeverity (TraceChainSyncClientEvent blk) where
+instance DefinePrivacyAnnotation (TraceChainSyncClientEvent blk tip)
+instance DefineSeverity (TraceChainSyncClientEvent blk tip) where
   defineSeverity (TraceDownloadedHeader _) = Info
   defineSeverity (TraceRolledBack _) = Info
   defineSeverity (TraceException _) = Error
@@ -263,7 +264,7 @@ instance DefineSeverity (Consensus.TraceForgeEvent blk) where
 -- | instances of @Transformable@
 
 -- transform @ChainSyncClient@
-instance Transformable Text IO (TraceChainSyncClientEvent blk) where
+instance Transformable Text IO (TraceChainSyncClientEvent blk tip) where
   trTransformer _ verb tr = trStructured verb tr
 
 -- transform @ChainSyncServer@
@@ -359,10 +360,12 @@ readableChainDBTracer tracer = Tracer $ \case
     ChainDB.AddBlockValidation ev' -> case ev' of
       ChainDB.InvalidBlock err pt -> tr $ WithTip tip $
         "Invalid block " <> condense pt <> ": " <> show err
-      ChainDB.InvalidCandidate c err -> tr $ WithTip tip $
-        "Invalid candidate " <> condense (AF.headPoint c) <> ": " <> show err
+      ChainDB.InvalidCandidate c -> tr $ WithTip tip $
+        "Invalid candidate " <> condense (AF.headPoint c)
       ChainDB.ValidCandidate c -> tr $ WithTip tip $
         "Valid candidate " <> condense (AF.headPoint c)
+      ChainDB.CandidateExceedsRollback _ _ c -> tr $ WithTip tip $
+        "Exceeds rollback " <> condense (AF.headPoint c)
     ChainDB.AddedBlockToVolDB pt     -> tr $ WithTip tip $
       "Chain added block " <> condense pt
     ChainDB.ChainChangedInBg c1 c2     -> tr $ WithTip tip $
@@ -492,13 +495,17 @@ instance (Condense (HeaderHash blk), ProtocolLedgerView blk)
         mkObject [ "kind" .= String "TraceAddBlockEvent.AddBlockValidation.InvalidBlock"
                  , "block" .= toObject verb pt
                  , "error" .= show err ]
-      ChainDB.InvalidCandidate c err ->
+      ChainDB.InvalidCandidate c ->
         mkObject [ "kind" .= String "TraceAddBlockEvent.AddBlockValidation.InvalidCandidate"
-                 , "block" .= showTip verb (AF.headPoint c)
-                 , "error" .= show err ]
+                 , "block" .= showTip verb (AF.headPoint c) ]
       ChainDB.ValidCandidate c ->
         mkObject [ "kind" .= String "TraceAddBlockEvent.AddBlockValidation.ValidCandidate"
                  , "block" .= showTip verb (AF.headPoint c) ]
+      ChainDB.CandidateExceedsRollback supported actual c ->
+        mkObject [ "kind" .= String "TraceAddBlockEvent.AddBlockValidation.CandidateExceedsRollback"
+                 , "block" .= showTip verb (AF.headPoint c)
+                 , "supported" .= show supported
+                 , "actual"    .= show actual ]
     ChainDB.AddedBlockToVolDB pt     ->
       mkObject [ "kind" .= String "TraceAddBlockEvent.AddedBlockToVolDB"
                , "block" .= toObject verb pt ]
@@ -596,7 +603,7 @@ instance ToObject LedgerDB.DiskSnapshot where
     mkObject [ "kind" .= String "snapshot"
              , "snapshot" .= String (pack $ show snap) ]
 
-instance ToObject (TraceChainSyncClientEvent blk) where
+instance ToObject (TraceChainSyncClientEvent blk tip) where
   toObject verb ev =
     mkObject [ "kind" .= String "ChainSyncClientEvent"
              , "event" .= toObject verb ev ]
@@ -644,6 +651,8 @@ instance ToObject (TraceFetchClientState header) where
     mkObject [ "kind" .= String "AcknowledgedFetchRequest" ]
   toObject _verb (CompletedBlockFetch {}) =
     mkObject [ "kind" .= String "CompletedBlockFetch" ]
+  toObject _verb (CompletedFetchBatch {}) =
+    mkObject [" kind" .= String "CompletedFetchBatch" ]
 
 instance ToObject (TraceBlockFetchServerEvent blk) where
   toObject _verb _ =

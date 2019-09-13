@@ -112,8 +112,8 @@ data TraceOptions = TraceOptions
   , traceDnsResolver     :: !Bool
   }
 
-type ConsensusTraceOptions = Consensus.Tracers' () ()    (Const Bool)
-type ProtocolTraceOptions  = ProtocolTracers'   () () () (Const Bool)
+type ConsensusTraceOptions = Consensus.Tracers' () ()    () (Const Bool)
+type ProtocolTraceOptions  = ProtocolTracers'   () () ()    (Const Bool)
 
 nullTracers :: Tracers peer blk
 nullTracers = Tracers {
@@ -196,7 +196,7 @@ mkTracers traceOptions tracer = Tracers
       -> Bool
     hasConsensusTraceFlag f = getConst $ f $ traceConsensus traceOptions
 
-    mkConsensusTracers :: Consensus.Tracers' peer blk (Tracer IO)
+    mkConsensusTracers :: Consensus.Tracers' peer blk (Point (Header blk)) (Tracer IO)
     mkConsensusTracers = Consensus.Tracers
       { Consensus.chainSyncClientTracer
         = annotateSeverity $ filterSeverity (pure . const Info)  -- filter out everything below this level

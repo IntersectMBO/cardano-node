@@ -230,6 +230,8 @@ handleSimpleNode p NodeCLIArguments{..}
           , rnaMyLocalAddr           = myLocalAddr
           , rnaIpProducers           = ipProducers
           , rnaDnsProducers          = dnsProducers
+          , rnaHandshakeTracer       = nullTracer
+          , rnaHandshakeLocalTracer  = nullTracer
           }
 
     removeStaleLocalSocket ccSocketPath

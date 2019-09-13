@@ -184,3 +184,5 @@ localChainSyncCodec protoInfoConfig =
       (Node.nodeDecodeBlock protoInfoConfig)
       (Block.encodePoint (Node.nodeEncodeHeaderHash (Proxy @blk)))
       (Block.decodePoint (Node.nodeDecodeHeaderHash (Proxy @blk)))
+      (Block.encodePoint (Node.nodeEncodeHeaderHash (Proxy @blk)))
+      (Block.decodePoint (Node.nodeDecodeHeaderHash (Proxy @blk)))
