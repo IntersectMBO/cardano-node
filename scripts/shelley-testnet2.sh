@@ -8,6 +8,8 @@ set -e
 # create tmux session:
 #> tmux new-session -s 'Demo' -t demo
 
+RUNNER=${RUNNER:-cabal new-run -v0 --}
+
 genesis="33873"
 genesis_root="configuration/${genesis}"
 genesis_file="${genesis_root}/genesis.json"
@@ -15,10 +17,9 @@ if test ! -f "${genesis_file}"
 then echo "ERROR: genesis ${genesis_file} does not exist!">&1; exit 1; fi
 
 cabal new-build "exe:cardano-cli"
-genesis_hash="$(cabal new-exec -- cardano-cli --real-pbft print-genesis-hash --genesis-json ${genesis_file})"
+genesis_hash="$(${RUNNER} cardano-cli --real-pbft print-genesis-hash --genesis-json ${genesis_file})"
 
 ALGO="--real-pbft"
-NOW=`date "+%Y-%m-%d 00:00:00"`
 ACCARGS=(
         --slot-duration 2
         --socket-path "socket/node4.socket"
@@ -48,7 +49,7 @@ function mknetargs () {
                printf -- "--genesis-hash ${genesis_hash} "
                printf -- "--pbft-signature-threshold 0.7 "
                printf -- "--require-network-magic "
-               printf -- "--database-path "db" "
+               printf -- "--database-path db "
                printf -- "--socket-path $1 "
                printf -- "node "
                printf -- "--topology configuration/simple-topology.json "

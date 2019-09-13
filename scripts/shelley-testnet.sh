@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -e
+
 # add to your ~/.tmux.conf:
 # set-window-option -g mouse on
 # set -g default-terminal "tmux-256color"
@@ -8,22 +10,18 @@
 # tmux new-session -s 'Demo' -t demo
 
 # then run this script
+RUNNER=${RUNNER:-cabal new-run -v0 --}
 
+genesis="33873"
+genesis_root="configuration/${genesis}"
+genesis_file="${genesis_root}/genesis.json"
+if test ! -f "${genesis_file}"
+then echo "ERROR: genesis ${genesis_file} does not exist!">&1; exit 1; fi
+
+
+genesis_hash="$(${RUNNER} cardano-cli --real-pbft print-genesis-hash --genesis-json ${genesis_file})"
 
 ALGO="--real-pbft"
-NOW=`date "+%Y-%m-%d 00:00:00"`
-GENHASH="33873aeaf8a47fefc7c2ea3f72e98a04459e07ec3edfb63c9ca709f540f69503"
-NETARGS=(
-        --slot-duration 2
-        --genesis-file "configuration/${GENHASH:0:5}/genesis.json"
-        --genesis-hash "${GENHASH}"
-        --pbft-signature-threshold 0.7
-        --require-network-magic
-        node
-        --topology "configuration/simple-topology.json"
-        ${ALGO}
-)
-
 # SCR="./scripts/start-node.sh"
 # CMD="stack exec --nix cardano-node --"
 CMD="cabal new-run exe:cardano-node --"
@@ -40,14 +38,29 @@ function mklogcfg () {
   echo "--log-config configuration/log-config-${1}.yaml"
 }
 function mkdlgkey () {
-  printf -- "--signing-key configuration/${GENHASH:0:5}/delegate-keys.%03d.key" "$1"
+  printf -- "--signing-key            ${genesis_root}/delegate-keys.%03d.key" "$1"
 }
 function mkdlgcert () {
-  printf -- "--delegation-certificate configuration/${GENHASH:0:5}/delegation-cert.%03d.json" "$1"
+  printf -- "--delegation-certificate ${genesis_root}/delegation-cert.%03d.json" "$1"
+}
+
+function mknetargs () {
+               printf -- "--slot-duration 2 "
+               printf -- "--genesis-file ${genesis_file} "
+               printf -- "--genesis-hash ${genesis_hash} "
+               printf -- "--pbft-signature-threshold 0.7 "
+               printf -- "--require-network-magic "
+               printf -- "--database-path db "
+               printf -- "--socket-path $1 "
+               printf -- "node "
+               printf -- "--topology configuration/simple-topology.json "
+               printf -- "${ALGO}"
 }
 
 # for acceptor logs:
 mkdir -p logs/
+
+PWD=$(pwd)
 
 tmux split-window -h
 tmux split-window -v
@@ -55,8 +68,8 @@ tmux select-pane -t 0
 tmux split-window -v
 
 tmux select-pane -t 0
-tmux send-keys "${CMD} $(mklogcfg 0) $(mkdlgkey 0) $(mkdlgcert 0) ${NETARGS[*]} -n 0 --host-addr ${HOST6} --port 3000 ${SPECIAL} ${VERBOSITY}" C-m
+tmux send-keys "cd '${PWD}'; ${CMD} $(mklogcfg 0) $(mkdlgkey 0) $(mkdlgcert 0) $(mknetargs socket/node1.socket) -n 0 --host-addr ${HOST6} --port 3000 ${VERBOSITY}" C-m
 tmux select-pane -t 1
-tmux send-keys "${CMD} $(mklogcfg 1) $(mkdlgkey 1) $(mkdlgcert 1) ${NETARGS[*]} -n 1 --host-addr ${HOST}  --port 3001 ${SPECIAL} ${VERBOSITY}" C-m
+tmux send-keys "cd '${PWD}'; ${CMD} $(mklogcfg 1) $(mkdlgkey 1) $(mkdlgcert 1) $(mknetargs socket/node2.socket) -n 1 --host-addr ${HOST}  --port 3001  ${VERBOSITY}" C-m
 tmux select-pane -t 2
-tmux send-keys "${CMD} $(mklogcfg 2) $(mkdlgkey 2) $(mkdlgcert 2) ${NETARGS[*]} -n 2 --host-addr ${HOST6} --port 3002 ${SPECIAL} ${VERBOSITY}" C-m
+tmux send-keys "cd '${PWD}'; ${CMD} $(mklogcfg 2) $(mkdlgkey 2) $(mkdlgcert 2) $(mknetargs socket/node3.socket) -n 2 --host-addr ${HOST6} --port 3002 ${VERBOSITY}" C-m
