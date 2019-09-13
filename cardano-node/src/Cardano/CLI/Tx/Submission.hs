@@ -17,7 +17,6 @@ import           Data.ByteString.Lazy (ByteString)
 import           Data.Void (Void)
 
 import           System.Directory (canonicalizePath, makeAbsolute)
-import           System.FilePath ((</>))
 
 import           Control.Monad (fail)
 import           Control.Monad.Class.MonadST (MonadST)
@@ -99,14 +98,14 @@ submitTx :: ( RunDemo blk
          -> GenTx blk
          -> Tracer IO String
          -> IO ()
-submitTx cc protoInfoConfig nodeId tx tracer = do
-    socketDir <- canonicalizePath =<< makeAbsolute (ccSocketPath cc)
+submitTx cc protoInfoConfig _nodeId tx tracer = do
+    socketPath <- canonicalizePath =<< makeAbsolute (ccSocketPath cc)
     NodeToClient.connectTo
       nullTracer
       (,)
       (localInitiatorNetworkApplication tracer protoInfoConfig tx)
       Nothing
-      (localSocketAddrInfo (socketDir </> localSocketFilePath nodeId))
+      (localSocketAddrInfo socketPath)
 
 localInitiatorNetworkApplication
   :: forall blk m peer.

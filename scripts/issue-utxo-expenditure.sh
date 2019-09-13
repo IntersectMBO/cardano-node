@@ -1,13 +1,13 @@
 #!/bin/sh
 
-RUNNER=${RUNNER:-cabal new-run exe:cardano-cli --}
+RUNNER=${RUNNER:-cabal new-run -v0 --}
 
 genesis="33873"
 genesis_root="configuration/${genesis}"
 genesis_file="${genesis_root}/genesis.json"
 if test ! -f "${genesis_file}"
 then echo "ERROR: genesis ${genesis_file} does not exist!">&1; exit 1; fi
-genesis_hash="$(${RUNNER} --real-pbft print-genesis-hash --genesis-json ${genesis_file})"
+genesis_hash="$(${RUNNER} cardano-cli --real-pbft print-genesis-hash --genesis-json ${genesis_file})"
 default_from_key="${genesis_root}/delegate-keys.001.key"
 default_to_key="${genesis_root}/delegate-keys.002.key"
 
@@ -40,6 +40,7 @@ args=" --genesis-file        ${genesis_file}
        --wallet-key          ${from_key}
        --txin             (\"${txid}\",${outindex})
        --txout            (\"${addr}\",${lovelace})
+       --socket-path         /dev/null
 "
 set -x
 ${RUNNER} cardano-cli --real-pbft issue-utxo-expenditure ${args}
