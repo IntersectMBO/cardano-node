@@ -43,7 +43,7 @@ args=(
 )
 
 set -xe
-RUNNER=${RUNNER:-cabal new-run --}
+RUNNER=${RUNNER:-cabal new-run -v0 --}
 
 ${RUNNER} cardano-cli --real-pbft genesis "${args[@]}" "$@"
 

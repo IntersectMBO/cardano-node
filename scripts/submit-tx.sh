@@ -10,14 +10,14 @@ TX="$1"
 shift
 
 #CMD="stack exec --nix cardano-node -- "
-CMD="cabal new-run exe:cardano-cli -- "
+CMD="cabal new-run"
 
 genesis="33873"
 genesis_root="configuration/${genesis}"
 genesis_file="${genesis_root}/genesis.json"
 if test ! -f "${genesis_file}"
 then echo "ERROR: genesis ${genesis_file} does not exist!">&1; exit 1; fi
-genesis_hash="$(${CMD} --real-pbft print-genesis-hash --genesis-json ${genesis_file})"
+genesis_hash="$(${CMD} -v0 -- cardano-cli --real-pbft print-genesis-hash --genesis-json ${genesis_file})"
 
 ALGO="real-pbft"
 NOW=`date "+%Y-%m-%d 00:00:00"`
@@ -29,6 +29,7 @@ NETARGS=(
         --topology     "configuration/simple-topology.json"
         --node-id      "0"
         --tx           "$TX"
+        --socket-path  socket/node1.socket
 )
 
 function mkdlgkey () {
@@ -39,6 +40,4 @@ function mkdlgcert () {
 }
 
 set -x
-${CMD} \
-    ${NETARGS[*]} \
-           $@
+${CMD} -- cardano-cli ${NETARGS[*]} "$@"
