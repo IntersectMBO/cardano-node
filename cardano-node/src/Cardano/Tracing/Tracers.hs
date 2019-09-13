@@ -117,12 +117,12 @@ type ProtocolTraceOptions  = ProtocolTracers'   () () () (Const Bool)
 
 nullTracers :: Tracers peer blk
 nullTracers = Tracers {
-      chainDBTracer         = nullTracer,
-      consensusTracers      = Consensus.nullTracers,
-      protocolTracers       = nullProtocolTracers,
-      ipSubscriptionTracer  = nullTracer,
+      chainDBTracer = nullTracer,
+      consensusTracers = Consensus.nullTracers,
+      protocolTracers = nullProtocolTracers,
+      ipSubscriptionTracer = nullTracer,
       dnsSubscriptionTracer = nullTracer,
-      dnsResolverTracer     = nullTracer
+      dnsResolverTracer = nullTracer
     }
 
 -- | Smart constructor of 'NodeTraces'.
