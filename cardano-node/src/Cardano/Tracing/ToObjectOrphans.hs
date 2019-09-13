@@ -651,6 +651,8 @@ instance ToObject (TraceFetchClientState header) where
     mkObject [ "kind" .= String "AcknowledgedFetchRequest" ]
   toObject _verb (CompletedBlockFetch {}) =
     mkObject [ "kind" .= String "CompletedBlockFetch" ]
+  toObject _verb (CompletedFetchBatch {}) =
+    mkObject [" kind" .= String "CompletedFetchBatch" ]
 
 instance ToObject (TraceBlockFetchServerEvent blk) where
   toObject _verb _ =
