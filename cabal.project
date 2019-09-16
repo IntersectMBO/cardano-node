@@ -8,6 +8,7 @@ package cardano-config
 package cardano-node
   ghc-options: -Wall -Werror -fwarn-redundant-constraints
 
+
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
@@ -123,6 +124,11 @@ source-repository-package
   location: https://github.com/input-output-hk/ouroboros-network
   tag: 2ad7dced59caece77b6a5e06914aa37d8a3bba23
   subdir: io-sim-classes
+
+source-repository-package
+  type: git
+  location: https://github.com/joelwilliamson/bimap
+  tag: 013a0639c222b3f5572ae20ce364815e5d8f2156
 
 source-repository-package
   type: git
