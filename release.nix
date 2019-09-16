@@ -1,5 +1,8 @@
 let
   commonLib = import ./lib.nix;
+  disabled = [];
+in { cardano-node ? { outPath = ./.; rev = "abcdef"; }, ... }@args:
+let
   getArchDefault = system: let
     table = {
       x86_64-linux = import ./. { target = "x86_64-linux"; };
