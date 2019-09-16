@@ -23,13 +23,15 @@
           (hsPkgs.asn1-types)
           (hsPkgs.base64-bytestring)
           (hsPkgs.bytestring)
+          (hsPkgs.cardano-prelude)
           (hsPkgs.cryptonite)
           (hsPkgs.data-default-class)
           (hsPkgs.directory)
+          (hsPkgs.exceptions)
           (hsPkgs.filepath)
           (hsPkgs.hourglass)
           (hsPkgs.ip)
-          (hsPkgs.universum)
+          (hsPkgs.text)
           (hsPkgs.unordered-containers)
           (hsPkgs.x509)
           (hsPkgs.x509-store)
@@ -42,8 +44,9 @@
           depends = [
             (hsPkgs.base)
             (hsPkgs.QuickCheck)
+            (hsPkgs.cardano-prelude)
             (hsPkgs.cardano-sl-x509)
-            (hsPkgs.universum)
+            (hsPkgs.exceptions)
             (hsPkgs.hedgehog)
             ];
           };
@@ -52,7 +55,7 @@
     } // {
     src = (pkgs.lib).mkDefault (pkgs.fetchgit {
       url = "https://github.com/input-output-hk/cardano-sl-x509";
-      rev = "ec96c64c665b741c17b4e38f611315bae9b0b054";
-      sha256 = "0jfh07cp9kry7h5xdxy26ddm4zz00fckj3hvg2iqm4gy151s567q";
+      rev = "43a036c5bbe68ca2e9cbe611eab7982e2348fe49";
+      sha256 = "1aw7ns8lv51fjf45k8yzils2j7a6bqzy8hn65kb3z0dn1qsm8x88";
       });
     }

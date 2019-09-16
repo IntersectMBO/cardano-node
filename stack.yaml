@@ -11,7 +11,7 @@ ghc-options:
 extra-deps:
     # Cardano-ledger dependencies
   - git: https://github.com/input-output-hk/cardano-ledger
-    commit: 22363162ee08039ec6158c24a0882c9357e9e35e
+    commit: db1c822f1847e40eb340152b95ab3138a10f92df
     subdirs:
       - cardano-ledger
       - cardano-ledger/test
@@ -25,7 +25,7 @@ extra-deps:
       - test
 
   - git: https://github.com/input-output-hk/cardano-base
-    commit: 31aafc8d5c090c4443a12d588c923badac929843
+    commit: 0e26a4f00324100b4c34f2a9c7606ae03e94d7a2
     subdirs:
       - binary
       - binary/test
@@ -33,7 +33,7 @@ extra-deps:
 
     # Following deps are for cardano-shell
   - git: https://github.com/input-output-hk/cardano-shell
-    commit: 6d74f0f6675ed0b20166f9e162545309ba72944c
+    commit: 18906dd8c109380c4b1fa20ed35100e48135aac3
 
   - binary-0.8.7.0
   - containers-0.5.11.0
@@ -47,14 +47,14 @@ extra-deps:
   - transformers-except-0.1.1
     # iohk-monitoring-framework currently not pinned to a release
   - git: https://github.com/input-output-hk/iohk-monitoring-framework
-    commit: c85d57a95d919336afea7e0eff00e834bd6b4b58
+    commit: e22be186e0b1018260ed7c5166871f82a869b94d
     subdirs:
       - contra-tracer
       - iohk-monitoring
 
     # Extracted from cardano-sl since it's quite useful
   - git: https://github.com/input-output-hk/cardano-sl-x509
-    commit: ec96c64c665b741c17b4e38f611315bae9b0b054
+    commit: 43a036c5bbe68ca2e9cbe611eab7982e2348fe49
 
   - git: https://github.com/joelwilliamson/bimap
     commit: 013a0639c222b3f5572ae20ce364815e5d8f2156
