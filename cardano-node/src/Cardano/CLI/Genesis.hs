@@ -17,6 +17,8 @@ import           Prelude (String)
 import           Cardano.Prelude hiding (option, show, trace)
 import           Test.Cardano.Prelude (canonicalDecodePretty)
 
+import           Control.Monad.Trans.Except (ExceptT)
+import           Control.Monad.Trans.Except.Extra (firstExceptT, left, right)
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.Map.Strict as Map
 import           Data.String (IsString)
@@ -107,20 +109,16 @@ mkGenesisSpec gp = do
 -- or if the genesis fails generation.
 mkGenesis
   :: GenesisParameters
-  -> IO (Either CliError (Genesis.GenesisData, Genesis.GeneratedSecrets))
-mkGenesis gp = runExceptT $ do
+  -> ExceptT CliError IO (Genesis.GenesisData, Genesis.GeneratedSecrets)
+mkGenesis gp = do
   genesisSpec <- mkGenesisSpec gp
 
   withExceptT GenesisGenerationError $
     Genesis.generateGenesisData (gpStartTime gp) genesisSpec
 
--- | Read genesis from a file.  Throw an error if it fails to parse.
-readGenesis :: GenesisFile -> IO (Genesis.GenesisData, Genesis.GenesisHash)
-readGenesis (GenesisFile fp) = do
-  gdE <- runExceptT (Genesis.readGenesisData fp)
-  case gdE of
-    Left e -> throwIO $ GenesisReadError fp e
-    Right x -> pure x
+-- | Read genesis from a file.
+readGenesis :: GenesisFile -> ExceptT CliError IO (Genesis.GenesisData, Genesis.GenesisHash)
+readGenesis (GenesisFile fp) = firstExceptT (GenesisReadError fp) $ Genesis.readGenesisData fp
 
 -- | Write out genesis into a directory that must not yet exist.  An error is
 -- thrown if the directory already exists, or the genesis has delegate keys that
@@ -130,34 +128,39 @@ dumpGenesis
   -> NewDirectory
   -> Genesis.GenesisData
   -> Genesis.GeneratedSecrets
-  -> IO ()
+  -> ExceptT CliError IO ()
 dumpGenesis co (NewDirectory outDir) genesisData gs = do
-  exists <- doesPathExist outDir
+  exists <- liftIO $ doesPathExist outDir
   if exists
-    then throwIO $ OutputMustNotAlreadyExist outDir
-    else createDirectory outDir
+  then left $ OutputMustNotAlreadyExist outDir
+  else liftIO $ createDirectory outDir
 
-  let genesisJSONFile = outDir <> "/genesis.json"
-  LB.writeFile genesisJSONFile =<< coSerialiseGenesis co genesisData
+  liftIO $ LB.writeFile genesisJSONFile =<< coSerialiseGenesis co genesisData
 
-  let dlgCertMap = Genesis.unGenesisDelegation $ Genesis.gdHeavyDelegation genesisData
-      isCertForSK :: SigningKey -> Certificate -> Bool
-      isCertForSK sk cert = delegateVK cert == Crypto.toVerification sk
-      findDelegateCert :: SigningKey -> IO Certificate
-      findDelegateCert sk =
-        case flip find (Map.elems dlgCertMap) . isCertForSK $ sk of
-          Nothing -> throwIO . NoGenesisDelegationForKey
-                     . prettyPublicKey . Crypto.toVerification $ sk
-          Just x  -> pure x
-      wOut :: String -> String -> (a -> IO LB.ByteString) -> [a] -> IO ()
-      wOut = writeSecrets outDir
-  dlgCerts <- mapM findDelegateCert (gsRichSecrets gs)
+  dlgCerts <- mapM findDelegateCert $ gsRichSecrets gs
 
-  wOut "genesis-keys" "key" (coSerialiseGenesisKey co) (gsDlgIssuersSecrets gs)
-  wOut "delegate-keys" "key" (coSerialiseDelegateKey co) (gsRichSecrets gs)
-  wOut "poor-keys" "key" (coSerialisePoorKey co) (gsPoorSecrets gs)
-  wOut "delegation-cert" "json" (coSerialiseDelegationCert co) dlgCerts
-  wOut "avvm-seed" "seed" (pure . LB.fromStrict) (gsFakeAvvmSeeds gs)
+  liftIO $ wOut "genesis-keys" "key" (coSerialiseGenesisKey co) (gsDlgIssuersSecrets gs)
+  liftIO $ wOut "delegate-keys" "key" (coSerialiseDelegateKey co) (gsRichSecrets gs)
+  liftIO $ wOut "poor-keys" "key" (coSerialisePoorKey co) (gsPoorSecrets gs)
+  liftIO $ wOut "delegation-cert" "json" (coSerialiseDelegationCert co) dlgCerts
+  liftIO $ wOut "avvm-seed" "seed" (pure . LB.fromStrict) (gsFakeAvvmSeeds gs)
+ where
+  dlgCertMap :: Map Common.KeyHash Certificate
+  dlgCertMap = Genesis.unGenesisDelegation $ Genesis.gdHeavyDelegation genesisData
+  findDelegateCert :: SigningKey -> ExceptT CliError IO Certificate
+  findDelegateCert sk =
+    case flip find (Map.elems dlgCertMap) . isCertForSK $ sk of
+      Nothing -> left . NoGenesisDelegationForKey
+                 . prettyPublicKey . Crypto.toVerification $ sk
+      Just x  -> right x
+  genesisJSONFile :: FilePath
+  genesisJSONFile = outDir <> "/genesis.json"
+  -- Compare a given 'SigningKey' with a 'Certificate' 'VerificationKey'
+  isCertForSK :: SigningKey -> Certificate -> Bool
+  isCertForSK sk cert = delegateVK cert == Crypto.toVerification sk
+  wOut :: String -> String -> (a -> IO LB.ByteString) -> [a] -> IO ()
+  wOut = writeSecrets outDir
+
 
 writeSecrets :: FilePath -> String -> String -> (a -> IO LB.ByteString) -> [a] -> IO ()
 writeSecrets outDir prefix suffix secretOp xs =

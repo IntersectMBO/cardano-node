@@ -1,7 +1,12 @@
-{-# LANGUAGE CPP                        #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
-{-# LANGUAGE LambdaCase                 #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NoMonomorphismRestriction #-}
+
 {-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
+{-# OPTIONS_GHC -Wno-missing-local-signatures #-}
+
+
 
 module Cardano.CLI.Key
   ( -- * Keys
@@ -23,6 +28,9 @@ where
 import           Prelude (String, show)
 import           Cardano.Prelude hiding (option, show, trace, (%))
 
+import           Control.Monad.Trans.Except (ExceptT)
+import           Control.Monad.Trans.Except.Extra
+                   (firstExceptT, handleIOExceptT, hoistEither)
 import qualified Data.ByteArray as BA
 import qualified Data.ByteString as SB
 import qualified Data.ByteString.Lazy as LB
@@ -76,18 +84,24 @@ prettyPublicKey vk =
 -- TODO:  we need to support password-protected secrets.
 -- | Read signing key from a file.  Throw an error if the file can't be read or
 -- fails to deserialise.
-readSigningKey :: CLIOps IO -> SigningKeyFile -> IO SigningKey
-readSigningKey co (SigningKeyFile fp) =
-  coDeserialiseDelegateKey co fp =<< LB.readFile fp
+readSigningKey :: CLIOps IO -> SigningKeyFile -> ExceptT CliError IO SigningKey
+readSigningKey co (SigningKeyFile fp) = do
+  sK <- handleIOExceptT (ReadSigningKeyFailure fp . T.pack . displayException) $ LB.readFile fp
+
+  -- Signing Key
+  let eSk = liftIO $ (coDeserialiseDelegateKey co) fp sK
+  -- Convert error to 'CliError'
+  firstExceptT (ReadSigningKeyFailure fp) $ eSk
 
 -- | Read verification key from a file.  Throw an error if the file can't be read
 -- or the key fails to deserialise.
-readVerificationKey :: VerificationKeyFile -> IO Crypto.VerificationKey
+readVerificationKey :: VerificationKeyFile -> ExceptT CliError IO Crypto.VerificationKey
 readVerificationKey (VerificationKeyFile fp) = do
-  vkB <- SB.readFile fp
-  case Crypto.parseFullVerificationKey . fromString $ UTF8.toString vkB of
-    Left e -> throwIO . VerificationKeyDeserialisationFailed fp $ T.pack $ show e
-    Right x -> pure x
+  vkB <- handleIOExceptT (ReadVerificationKeyFailure fp . T.pack . displayException) (SB.readFile fp)
+  -- Verification Key
+  let eVk = hoistEither . Crypto.parseFullVerificationKey . fromString $ UTF8.toString vkB
+  -- Convert error to 'CliError'
+  firstExceptT (VerificationKeyDeserialisationFailed fp . T.pack . show) $ eVk
 
 -- | Generate a cryptographically random signing key,
 --   protected with a (potentially empty) passphrase.

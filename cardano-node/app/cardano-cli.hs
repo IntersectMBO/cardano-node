@@ -2,6 +2,7 @@ import           Cardano.Prelude hiding (option)
 import           Prelude (String, error, id)
 
 import           Control.Arrow
+import           Control.Monad.Trans.Except.Extra (runExceptT)
 import qualified Data.List.NonEmpty as NE
 import           Data.Text
 import           Data.Time (UTCTime)
@@ -12,8 +13,7 @@ import           Options.Applicative (Parser, ParserInfo, ParserPrefs, auto,
                                       metavar, option, showHelpOnEmpty,
                                       strOption, subparser, value)
 
-import           Control.Exception.Safe (catchIO)
-import           System.Exit (ExitCode (..), exitWith)
+import           System.Exit (exitFailure)
 
 import           Cardano.Binary (Annotated (..))
 import           Cardano.Chain.Common
@@ -38,10 +38,14 @@ main :: IO ()
 main = do
   co <- Opt.customExecParser pref opts
   ops <- decideCLIOps (protocol co)
-  catchIO (runCommand ops (mainCommand co))
-    $ \err -> do
-      hPutStrLn stderr ("Error:\n" <> show err :: String)
-      exitWith $ ExitFailure 1
+  cmdRes <- runExceptT . runCommand ops $ mainCommand co
+  case cmdRes of
+    Right _ -> pure ()
+    Left err -> do print $ renderCliError err
+                   exitFailure
+
+renderCliError :: CliError -> String
+renderCliError = show
 
 pref :: ParserPrefs
 pref = Opt.prefs showHelpOnEmpty

@@ -86,6 +86,8 @@ library
                      , template-haskell
                      , text
                      , time
+                     , transformers
+                     , transformers-except
                      , typed-protocols
                      , typed-protocols-cbor
                      , utf8-string
@@ -154,6 +156,7 @@ executable cardano-node
                      , stm
                      , text
                      , time
+
   if os(windows)
      build-depends:    Win32
   else
@@ -213,6 +216,9 @@ executable cardano-cli
                      , safe-exceptions
                      , text
                      , time
+                     , transformers-except
+                     , transformers
+
   default-extensions:  NoImplicitPrelude
 
 executable chairman
