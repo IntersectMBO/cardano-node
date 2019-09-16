@@ -5,13 +5,12 @@ GENHASH="33873aeaf8a47fefc7c2ea3f72e98a04459e07ec3edfb63c9ca709f540f69503"
 
 # CMD="stack exec cardano-node -- "
 # CMD="./cardano-node.exe -- "
-CMD="cabal new-run exe:cardano-node -- "
+CMD="cabal new-run exe:trace-acceptor -- "
 
 NETARGS=(
         --slot-duration 2
         --genesis-file "configuration/${GENHASH:0:5}/genesis.json"
         --genesis-hash "${GENHASH}"
-        trace-acceptor
 )
 
 function mkdlgkey () {

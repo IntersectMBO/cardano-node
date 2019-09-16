@@ -30,7 +30,7 @@ data NodeLayer = NodeLayer
 
 createNodeFeature
   :: LoggingLayer
-  -> NodeCLIArguments
+  -> NodeArgs
   -> CardanoEnvironment
   -> CardanoConfiguration
   -> IO (NodeLayer, CardanoFeature)
@@ -58,6 +58,6 @@ createNodeFeature loggingLayer nodeCLI cardanoEnvironment cardanoConfiguration =
 
     pure (nodeLayer, cardanoFeature)
   where
-    createNodeLayer :: CardanoEnvironment -> LoggingLayer -> CardanoConfiguration -> NodeCLIArguments -> IO NodeLayer
-    createNodeLayer _ logLayer cc nodeCli = do
-        pure $ NodeLayer {nlRunNode = liftIO $ runNode nodeCli logLayer cc}
+    createNodeLayer :: CardanoEnvironment -> LoggingLayer -> CardanoConfiguration -> NodeArgs -> IO NodeLayer
+    createNodeLayer _ logLayer cc nodeArgs = do
+        pure $ NodeLayer {nlRunNode = liftIO $ runNode nodeArgs logLayer cc}

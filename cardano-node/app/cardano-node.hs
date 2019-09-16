@@ -1,15 +1,16 @@
-{-# LANGUAGE NamedFieldPuns    #-}
+{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RankNTypes        #-}
+{-# LANGUAGE RankNTypes #-}
 
 import           Prelude (read)
 
 import           Data.Semigroup ((<>))
 import qualified Data.IP as IP
 import           Network.Socket (PortNumber)
-import           Options.Applicative ( Parser, auto , flag, flag' , help , long
-                                     , metavar , option , str , subparser, switch , value
+import           Options.Applicative ( Parser, auto, flag, flag', help, long
+                                     , metavar, option, str, switch
                                      )
 import qualified Options.Applicative as Opt
 
@@ -25,7 +26,6 @@ import           Cardano.Prelude hiding (option)
 import           Cardano.Shell.Lib (runCardanoApplicationWithFeatures)
 import           Cardano.Shell.Types (CardanoApplication (..),
                                       CardanoFeature (..),)
-import           Ouroboros.Consensus.BlockchainTime (SlotLength(..), slotLengthFromMillisec)
 import           Ouroboros.Consensus.NodeNetwork (ProtocolTracers'(..))
 import qualified Ouroboros.Consensus.Node.Tracers as Consensus
 
@@ -68,11 +68,11 @@ initializeAllFeatures
   -> PartialCardanoConfiguration
   -> CardanoEnvironment
   -> IO ([CardanoFeature], NodeLayer)
-initializeAllFeatures (CLIArguments logCli nodeCli) partialConfig cardanoEnvironment = do
-    finalConfig <- mkConfiguration partialConfig (commonCLI nodeCli)
+initializeAllFeatures (CLIArguments logCLI nodeCLI commonCLI) partialConfig cardanoEnvironment = do
+    finalConfig <- mkConfiguration partialConfig commonCLI
 
-    (loggingLayer, loggingFeature) <- createLoggingFeature cardanoEnvironment finalConfig logCli
-    (nodeLayer   , nodeFeature)    <- createNodeFeature loggingLayer nodeCli cardanoEnvironment finalConfig
+    (loggingLayer, loggingFeature) <- createLoggingFeature cardanoEnvironment finalConfig logCLI
+    (nodeLayer   , nodeFeature)    <- createNodeFeature loggingLayer nodeCLI cardanoEnvironment finalConfig
 
     pure ([ loggingFeature
           , nodeFeature
@@ -83,31 +83,23 @@ initializeAllFeatures (CLIArguments logCli nodeCli) partialConfig cardanoEnviron
 -- Parsers & Types
 -------------------------------------------------------------------------------
 
--- | The product type of all command line arguments.
--- All here being - from all the features.
-data CLIArguments = CLIArguments !LoggingCLIArguments !NodeCLIArguments
+data CLIArguments = CLIArguments !LoggingCLIArguments !NodeArgs !CommonCLI
 
 -- | The product parser for all the CLI arguments.
 commandLineParser :: Parser CLIArguments
 commandLineParser = CLIArguments
     <$> loggingParser
-    <*> nodeParser
-
-nodeParser :: Parser NodeCLIArguments
-nodeParser = NodeCLIArguments
-    <$> parseSlotDuration
+    <*> parseNodeArgs
     <*> parseCommonCLI
-    <*> parseNodeCommand
 
-parseSlotDuration :: Parser SlotLength
-parseSlotDuration = option (mkSlotLength <$> auto) $ mconcat [
-      long "slot-duration"
-    , value (mkSlotLength 5)
-    , help "The slot duration (seconds)"
-    ]
-  where
-    mkSlotLength :: Integer -> SlotLength
-    mkSlotLength = slotLengthFromMillisec . (* 1000)
+parseNodeArgs :: Parser NodeArgs
+parseNodeArgs =
+  NodeArgs
+    <$> parseTopologyInfo "PBFT node ID to assume."
+    <*> parseNodeAddress
+    <*> parseProtocol
+    <*> parseViewMode
+    <*> parseTraceOptions
 
 parseTraceBlockFetchClient :: Parser Bool
 parseTraceBlockFetchClient  =
@@ -122,19 +114,6 @@ parseTraceBlockFetchServer  =
          long "trace-block-fetch-server"
       <> help "Trace BlockFetch server."
     )
-
-parseNodeCommand :: Parser NodeCommand
-parseNodeCommand = subparser $ mconcat [
-    command' "node" "Run a node." $
-      SimpleNode
-        <$> parseTopologyInfo "PBFT node ID to assume."
-        <*> parseNodeAddress
-        <*> parseProtocol
-        <*> parseViewMode
-        <*> parseTraceOptions
-  , command' "trace-acceptor" "Spawn an acceptor." $
-      pure TraceAcceptor
-  ]
 
 parseNodeAddress :: Parser NodeAddress
 parseNodeAddress = NodeAddress <$> parseHostAddr <*> parsePort

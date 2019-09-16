@@ -16,7 +16,6 @@ let
           "--log-config ${cfg.logger.configFile}"
           "--database-path ${cfg.stateDir}/${cfg.dbPrefix}"
           "--socket-dir ${ if (cfg.runtimeDir == null) then "${cfg.stateDir}/socket" else "/run/${cfg.runtimeDir}"}"
-          "node"
           "--topology ${cfg.topology}"
           "--${cfg.consensusProtocol}"
           "--node-id ${toString cfg.nodeId}"

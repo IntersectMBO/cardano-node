@@ -14,21 +14,25 @@ library
   hs-source-dirs:      src
 
   exposed-modules:     Cardano.Config.CommonCLI
+                       Cardano.Config.Orphanage
                        Cardano.Config.Partial
                        Cardano.Config.Presets
                        Cardano.Config.Types
                        Cardano.Config.Logging
 
   build-depends:       base >=4.12 && <4.13
+
                      , cardano-shell
                      , cardano-prelude
-                     , generic-monoid
                      , iohk-monitoring
                      , lobemo-backend-aggregation
                      , lobemo-backend-editor
                      , lobemo-backend-ekg
                      , lobemo-backend-monitoring
                      , lobemo-scribe-systemd
+                     , ouroboros-consensus
+
+                     , generic-monoid
                      , optparse-applicative
                      , safe-exceptions
                      , stm
