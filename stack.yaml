@@ -1,4 +1,4 @@
-resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/56fadcea03417771f4b3666fd1dfc9bad8df1484/snapshot.yaml
+resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/d6eda836896e8fa591fb4fff141064191d7e2a76/snapshot.yaml
 
 packages:
   - cardano-config
@@ -36,7 +36,7 @@ extra-deps:
       - crypto/test
 
   - git: https://github.com/input-output-hk/cardano-prelude
-    commit: 56fadcea03417771f4b3666fd1dfc9bad8df1484
+    commit: d6eda836896e8fa591fb4fff141064191d7e2a76
     subdirs:
       - .
       - test
@@ -66,7 +66,7 @@ extra-deps:
     #Ouroboros-network dependencies
 
   - git: https://github.com/input-output-hk/ouroboros-network
-    commit: c14774c532a84df1c010350ed07669dbce8770a2
+    commit: 4e8b88224d35801ebfb782e9759c96ad18de01b5
     subdirs:
         - io-sim-classes
         - network-mux
