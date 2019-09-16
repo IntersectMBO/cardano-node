@@ -92,7 +92,7 @@ mainnetConfiguration =
           }
     , pccNode =
         PartialNode
-          { pnoSlotLength = pure 2
+          { pnoSlotLength = pure 20
           , pnoNetworkConnectionTimeout = pure 15000
           , pnoHandshakeTimeout = pure 30000
           }
