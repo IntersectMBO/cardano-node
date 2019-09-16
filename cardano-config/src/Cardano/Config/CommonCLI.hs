@@ -34,13 +34,13 @@ import           Cardano.Config.Partial (PartialCardanoConfiguration (..)
 
 
 data CommonCLI = CommonCLI
-  { cliGenesisFile                :: !(Last FilePath)
+  { cliDBPath                     :: !(Last FilePath)
+  , cliGenesisFile                :: !(Last FilePath)
   , cliGenesisHash                :: !(Last Text)
-  , cliStaticKeySigningKeyFile    :: !(Last FilePath)
-  , cliStaticKeyDlgCertFile       :: !(Last FilePath)
   , cliPBftSigThd                 :: !(Last Double)
+  , cliStaticKeyDlgCertFile       :: !(Last FilePath)
+  , cliStaticKeySigningKeyFile    :: !(Last FilePath)
   , cliRequiresNetworkMagic       :: !(Last RequireNetworkMagic)
-  , cliDBPath                     :: !(Last FilePath)
   , cliSocketDir                  :: !(Last FilePath)
   --TODO cliUpdate                :: !PartialUpdate
   }
@@ -55,7 +55,12 @@ data CommonCLI = CommonCLI
 parseCommonCLI :: Parser CommonCLI
 parseCommonCLI =
     CommonCLI
-    <$> lastStrOption
+    <$> lastStrOption (
+            long "database-path"
+         <> metavar "FILEPATH"
+         <> help "Directory where the state is stored."
+        )
+    <*> lastStrOption
            ( long "genesis-file"
           <> metavar "FILEPATH"
           <> help "The filepath to the genesis file."
@@ -65,30 +70,25 @@ parseCommonCLI =
           <> metavar "GENESIS-HASH"
           <> help "The genesis hash value."
            )
-    <*> lastStrOption
-           ( long "signing-key"
-          <> metavar "FILEPATH"
-          <> help "Path to the signing key."
+    <*> lastDoubleOption
+           ( long "pbft-signature-threshold"
+          <> metavar "DOUBLE"
+          <> help "The PBFT signature threshold."
            )
     <*> lastStrOption
            ( long "delegation-certificate"
           <> metavar "FILEPATH"
           <> help "Path to the delegation certificate."
            )
-    <*> lastDoubleOption
-           ( long "pbft-signature-threshold"
-          <> metavar "DOUBLE"
-          <> help "The PBFT signature threshold."
+    <*> lastStrOption
+           ( long "signing-key"
+          <> metavar "FILEPATH"
+          <> help "Path to the signing key."
            )
     <*> lastFlag NoRequireNetworkMagic RequireNetworkMagic
            ( long "require-network-magic"
           <> help "Require network magic in transactions."
            )
-    <*> lastStrOption (
-            long "database-path"
-         <> metavar "FILEPATH"
-         <> help "Directory where the state is stored."
-        )
     <*> lastStrOption (
             long "socket-dir"
          <> metavar "FILEPATH"
