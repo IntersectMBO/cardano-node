@@ -193,7 +193,8 @@ parseTraceChainDB =
 parseConsensusTraceOptions :: Parser ConsensusTraceOptions
 parseConsensusTraceOptions = Consensus.Tracers
   <$> (Const <$> parseTraceChainSyncClient)
-  <*> (Const <$> parseTraceChainSyncServer)
+  <*> (Const <$> parseTraceChainSyncHeaderServer)
+  <*> (Const <$> parseTraceChainSyncBlockServer)
   <*> (Const <$> parseTraceBlockFetchDecisions)
   <*> (Const <$> parseTraceBlockFetchClient)
   <*> (Const <$> parseTraceBlockFetchServer)
@@ -217,11 +218,18 @@ parseTraceChainSyncClient  =
       <> help "Trace ChainSync client."
     )
 
-parseTraceChainSyncServer :: Parser Bool
-parseTraceChainSyncServer  =
+parseTraceChainSyncBlockServer :: Parser Bool
+parseTraceChainSyncBlockServer  =
     switch (
-         long "trace-chain-sync-server"
-      <> help "Trace ChainSync server."
+         long "trace-chain-sync-block-server"
+      <> help "Trace ChainSync server (blocks)."
+    )
+
+parseTraceChainSyncHeaderServer :: Parser Bool
+parseTraceChainSyncHeaderServer  =
+    switch (
+         long "trace-chain-sync-header-server"
+      <> help "Trace ChainSync server (headers)."
     )
 
 parseTraceTxInbound :: Parser Bool
