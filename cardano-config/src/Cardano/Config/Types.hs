@@ -32,6 +32,9 @@ module Cardano.Config.Types
 
 import           Cardano.Prelude
 
+import qualified Ouroboros.Consensus.BlockchainTime as Consensus
+
+import           Cardano.Config.Orphanage ()
 
 --------------------------------------------------------------------------------
 -- Cardano Environment
@@ -272,7 +275,7 @@ data Block = Block
 
 --- | Top-level Cardano SL node configuration
 data Node = Node
-    { noSlotLength                      :: !Integer
+    { noSlotLength                      :: !Consensus.SlotLength
     -- ^ Slot length time.
     , noNetworkConnectionTimeout        :: !Int
     -- ^ Network connection timeout in milliseconds.

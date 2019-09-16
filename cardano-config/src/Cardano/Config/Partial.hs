@@ -29,6 +29,8 @@ import           Cardano.Prelude
 
 import           Data.Monoid.Generic
 
+import qualified Ouroboros.Consensus.BlockchainTime as Consensus
+
 import           Cardano.Config.Types
 
 -- | Partial @CardanoConfiguration@ configuration.
@@ -71,7 +73,7 @@ data PartialCore = PartialCore
 
 --- | Top-level Cardano SL node configuration
 data PartialNode = PartialNode
-    { pnoSlotLength                     :: !(Last Integer)
+    { pnoSlotLength                     :: !(Last Consensus.SlotLength)
     -- ^ Slot length time.
     , pnoNetworkConnectionTimeout       :: !(Last Int)
     -- ^ Network connection timeout in milliseconds.

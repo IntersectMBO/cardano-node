@@ -26,11 +26,11 @@ import qualified Prelude
 import           Options.Applicative hiding (command)
 import qualified Options.Applicative as OA
 
+import qualified Ouroboros.Consensus.BlockchainTime as Consensus
+
 import           Cardano.Config.Types (CardanoConfiguration(..)
-                                                  ,RequireNetworkMagic(..))
-import           Cardano.Config.Partial (PartialCardanoConfiguration (..)
-                                                    ,PartialCore (..)
-                                                    ,finaliseCardanoConfiguration)
+                                      ,RequireNetworkMagic(..))
+import           Cardano.Config.Partial
 
 
 data CommonCLI = CommonCLI
@@ -41,6 +41,7 @@ data CommonCLI = CommonCLI
   , cliStaticKeyDlgCertFile       :: !(Last FilePath)
   , cliStaticKeySigningKeyFile    :: !(Last FilePath)
   , cliRequiresNetworkMagic       :: !(Last RequireNetworkMagic)
+  , cliSlotLength                 :: !(Last Consensus.SlotLength)
   , cliSocketDir                  :: !(Last FilePath)
   --TODO cliUpdate                :: !PartialUpdate
   }
@@ -89,11 +90,20 @@ parseCommonCLI =
            ( long "require-network-magic"
           <> help "Require network magic in transactions."
            )
+    <*> ((mkSlotLength <$>)
+         <$> lastAutoOption
+             ( long "slot-duration"
+               <> metavar "SECONDS"
+               <> help "The slot duration (seconds)"
+             ))
     <*> lastStrOption (
             long "socket-dir"
          <> metavar "FILEPATH"
          <> help "Directory with local sockets:  ${dir}/node-{core,relay}-${node-id}.socket"
         )
+  where
+    mkSlotLength :: Integer -> Consensus.SlotLength
+    mkSlotLength = Consensus.slotLengthFromMillisec . (* 1000)
 
 {-------------------------------------------------------------------------------
   optparse-applicative auxiliary
@@ -170,6 +180,9 @@ mergeConfiguration pcc cli =
                     , pcoPBftSigThd              = cliPBftSigThd cc
                     , pcoRequiresNetworkMagic    = cliRequiresNetworkMagic cc
                     -- TODO: cliUpdate
+                    }
+             , pccNode = mempty
+                    { pnoSlotLength              = cliSlotLength cc
                     }
              , pccDBPath = cliDBPath cc
              , pccSocketDir = cliSocketDir cc

@@ -7,6 +7,7 @@ module Cardano.Config.Presets
 
 import           Cardano.Prelude
 
+import           Cardano.Config.Orphanage ()
 import           Cardano.Config.Partial ( NodeProtocol (..)
                                         , PartialBlock (..)
                                         , PartialCardanoConfiguration (..)
