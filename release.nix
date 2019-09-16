@@ -33,8 +33,10 @@ let
     };
   };
 in
-commonLib.nix-tools.release-nix {
+{ cardano-node ? { outPath = ./.; rev = "abcdef"; }, ... }@args:
+(commonLib.nix-tools.release-nix {
   package-set-path = ./nix/nix-tools.nix;
+  _this = cardano-node;
 
   # packages from our stack.yaml or plan file (via nix/pkgs.nix) we
   # are interested in building on CI via nix-tools.
@@ -101,4 +103,4 @@ commonLib.nix-tools.release-nix {
     jobs.nix-tools.tests.x86_64-pc-mingw32-cardano-node.cardano-node-test.x86_64-linux
 
   ];
-}
+} (builtins.removeAttrs args ["cardano-node"]))
