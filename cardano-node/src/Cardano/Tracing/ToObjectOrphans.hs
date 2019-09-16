@@ -28,10 +28,13 @@ import           Cardano.BM.Data.LogItem (LOContent (..), LogObject (..),
 import           Cardano.BM.Tracing
 import           Cardano.BM.Data.Tracer (trStructured, emptyObject, mkObject)
 
+import           Ouroboros.Consensus.Block (SupportedBlock, headerPoint)
 import           Ouroboros.Consensus.BlockFetchServer
                    (TraceBlockFetchServerEvent)
-import           Ouroboros.Consensus.ChainSyncClient (TraceChainSyncClientEvent (..))
-import           Ouroboros.Consensus.ChainSyncServer (TraceChainSyncServerEvent)
+import           Ouroboros.Consensus.ChainSyncClient
+                   (TraceChainSyncClientEvent (..))
+import           Ouroboros.Consensus.ChainSyncServer
+                   (TraceChainSyncServerEvent)
 import           Ouroboros.Consensus.Ledger.Abstract
 import           Ouroboros.Consensus.Mempool.API (GenTx, GenTxId)
 import qualified Ouroboros.Consensus.Node.Tracers as Consensus
@@ -264,7 +267,8 @@ instance DefineSeverity (Consensus.TraceForgeEvent blk) where
 -- | instances of @Transformable@
 
 -- transform @ChainSyncClient@
-instance Transformable Text IO (TraceChainSyncClientEvent blk tip) where
+instance (Condense (HeaderHash blk), ProtocolLedgerView blk, SupportedBlock blk, Show tip)
+          => Transformable Text IO (TraceChainSyncClientEvent blk tip) where
   trTransformer _ verb tr = trStructured verb tr
 
 -- transform @ChainSyncServer@
@@ -603,15 +607,32 @@ instance ToObject LedgerDB.DiskSnapshot where
     mkObject [ "kind" .= String "snapshot"
              , "snapshot" .= String (pack $ show snap) ]
 
-instance ToObject (TraceChainSyncClientEvent blk tip) where
-  toObject verb ev =
-    mkObject [ "kind" .= String "ChainSyncClientEvent"
-             , "event" .= toObject verb ev ]
+instance (Condense (HeaderHash blk), ProtocolLedgerView blk, SupportedBlock blk, Show tip)
+          => ToObject (TraceChainSyncClientEvent blk tip) where
+  toObject verb ev = case ev of
+    TraceDownloadedHeader pt ->
+      mkObject [ "kind" .= String "ChainSyncClientEvent.TraceDownloadedHeader"
+               , "block" .= toObject verb (headerPoint pt) ]
+    TraceRolledBack tip ->
+      mkObject [ "kind" .= String "ChainSyncClientEvent.TraceRolledBack"
+               , "tip" .= toObject verb tip ]
+    TraceException exc ->
+      mkObject [ "kind" .= String "ChainSyncClientEvent.TraceException"
+               , "exception" .= String (pack $ show exc) ]
+
 
 instance ToObject (TraceChainSyncServerEvent blk) where
-  toObject verb ev =
-    mkObject [ "kind" .= String "ChainSyncServerEvent"
-             , "event" .= toObject verb ev ]
+    toObject _ _ev = mkObject [ "kind" .= String "ChainSyncServerEvent" ]
+  -- TODO: not yet exported from ouroboros-network
+  -- toObject verb ev = case ev of
+  --   TraceChainSyncServerIdle ->
+  --     mkObject [ "kind" .= String "ChainSyncServerEvent.TraceChainSyncServerIdle" ]
+  --   TraceChainSyncServerRead pt ->
+  --     mkObject [ "kind" .= String "ChainSyncServerEvent.TraceChainSyncServerRead"
+  --              , "block" .= toObject verb pt ]
+  --   TraceChainSyncServerReadBlocked pt ->
+  --     mkObject [ "kind" .= String "ChainSyncServerEvent.TraceChainSyncServerReadBlocked"
+  --              , "block" .= toObject verb pt ]
 
 instance Show peer => ToObject [TraceLabelPeer peer
                         (FetchDecision [Point header])] where

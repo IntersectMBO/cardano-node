@@ -202,10 +202,14 @@ mkTracers traceOptions tracer = Tracers
         = annotateSeverity $ filterSeverity (pure . const Info)  -- filter out everything below this level
           $ toLogObject' (tracingFormatting $ hasConsensusTraceFlag Consensus.chainSyncClientTracer) tracingVerbosity
           $ addName "ChainSyncClient" tracer
-      , Consensus.chainSyncServerTracer
+      , Consensus.chainSyncServerHeaderTracer
         = annotateSeverity $ filterSeverity (pure . const Info)  -- filter out everything below this level
-          $ toLogObject' (tracingFormatting $ hasConsensusTraceFlag Consensus.chainSyncServerTracer) tracingVerbosity
-          $ addName "ChainSyncServer" tracer
+          $ toLogObject' (tracingFormatting $ hasConsensusTraceFlag Consensus.chainSyncServerHeaderTracer) tracingVerbosity
+          $ addName "ChainSyncHeaderServer" tracer
+      , Consensus.chainSyncServerBlockTracer
+        = annotateSeverity $ filterSeverity (pure . const Info)  -- filter out everything below this level
+          $ toLogObject' (tracingFormatting $ hasConsensusTraceFlag Consensus.chainSyncServerBlockTracer) tracingVerbosity
+          $ addName "ChainSyncBlockServer" tracer
       , Consensus.blockFetchDecisionTracer
         = annotateSeverity $ filterSeverity (pure . const Info)  -- filter out everything below this level
           $ toLogObject' (tracingFormatting $ hasConsensusTraceFlag Consensus.blockFetchDecisionTracer) tracingVerbosity
