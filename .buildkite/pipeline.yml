@@ -22,6 +22,6 @@ steps:
       system: x86_64-linux
 
   - label: 'stack-cabal-sync'
-    command: 'nix-shell --run scripts/buildkite/stack-cabal-sync.sh'
+    command: 'nix-shell scripts/buildkite/stack-cabal-sync.nix --run scripts/buildkite/stack-cabal-sync.sh'
     agents:
       system: x86_64-linux
