@@ -1,4 +1,4 @@
-resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/56fadcea03417771f4b3666fd1dfc9bad8df1484/snapshot.yaml
+resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/d6eda836896e8fa591fb4fff141064191d7e2a76/snapshot.yaml
 
 packages:
   - cardano-config
@@ -9,6 +9,23 @@ ghc-options:
   cardano-node:     -Wall -Werror -fwarn-redundant-constraints
 
 extra-deps:
+  - binary-0.8.7.0
+  - bimap-0.4.0
+  - containers-0.5.11.0
+  - ekg-prometheus-adapter-0.1.0.4
+  - generic-monoid-0.1.0.0
+  - prometheus-2.1.1
+  - pvss-0.2.0
+  - time-units-1.0.0
+  - libsystemd-journal-1.4.4
+  - tasty-hedgehog-1.0.0.1
+  - transformers-except-0.1.1
+  - brick-0.47
+  - config-ini-0.2.4.0
+  - data-clist-0.1.2.2
+  - text-zipper-0.10.1
+  - word-wrap-0.4.1
+
     # Cardano-ledger dependencies
   - git: https://github.com/input-output-hk/cardano-ledger
     commit: db1c822f1847e40eb340152b95ab3138a10f92df
@@ -19,7 +36,7 @@ extra-deps:
       - crypto/test
 
   - git: https://github.com/input-output-hk/cardano-prelude
-    commit: 56fadcea03417771f4b3666fd1dfc9bad8df1484
+    commit: d6eda836896e8fa591fb4fff141064191d7e2a76
     subdirs:
       - .
       - test
@@ -35,16 +52,6 @@ extra-deps:
   - git: https://github.com/input-output-hk/cardano-shell
     commit: 18906dd8c109380c4b1fa20ed35100e48135aac3
 
-  - binary-0.8.7.0
-  - containers-0.5.11.0
-  - ekg-prometheus-adapter-0.1.0.4
-  - generic-monoid-0.1.0.0
-  - prometheus-2.1.1
-  - pvss-0.2.0
-  - time-units-1.0.0
-  - libsystemd-journal-1.4.4
-  - tasty-hedgehog-1.0.0.1
-  - transformers-except-0.1.1
     # iohk-monitoring-framework currently not pinned to a release
   - git: https://github.com/input-output-hk/iohk-monitoring-framework
     commit: e22be186e0b1018260ed7c5166871f82a869b94d
@@ -56,13 +63,10 @@ extra-deps:
   - git: https://github.com/input-output-hk/cardano-sl-x509
     commit: 43a036c5bbe68ca2e9cbe611eab7982e2348fe49
 
-  - git: https://github.com/joelwilliamson/bimap
-    commit: 013a0639c222b3f5572ae20ce364815e5d8f2156
-
     #Ouroboros-network dependencies
 
   - git: https://github.com/input-output-hk/ouroboros-network
-    commit: c14774c532a84df1c010350ed07669dbce8770a2
+    commit: 4e8b88224d35801ebfb782e9759c96ad18de01b5
     subdirs:
         - io-sim-classes
         - network-mux
@@ -70,12 +74,6 @@ extra-deps:
         - ouroboros-consensus
         - typed-protocols
         - typed-protocols-cbor
-
-  - brick-0.47@sha256:4936c50acfdf09620dad5217fb384fc0d59626f75abed8b48250b419ec2ab623
-  - config-ini-0.2.4.0@sha256:38a6d484d471c6fac81445de2eac8c4e8c82760962fca5491ae1c3bfca9c4047
-  - data-clist-0.1.2.2@sha256:4d70add0a200a178853cd37c6469101bac3c36aebb3aa9c503ff225211b1a8c9
-  - text-zipper-0.10.1@sha256:8b73a97a3717a17df9b0a722b178950c476ff2268ca5c583e99d010c94af849e
-  - word-wrap-0.4.1@sha256:f72233b383ef569c557bfd9812cbb8e306c415ce509082c0bd15ee51c0239ccc
 
 flags:
   iohk-monitoring:

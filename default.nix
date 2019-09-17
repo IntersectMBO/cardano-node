@@ -49,6 +49,6 @@ let
 in {
   inherit scripts nixosTests;
   inherit (nixTools) nix-tools;
-  inherit (commonLib.iohkNix) check-nix-tools check-hydra;
+  inherit (commonLib.iohkNix) check-nix-tools check-hydra pkgs;
   inherit environments;
 }
