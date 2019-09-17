@@ -182,6 +182,7 @@
             (hsPkgs.containers)
             (hsPkgs.contra-tracer)
             (hsPkgs.cardano-node)
+            (hsPkgs.cardano-prelude)
             (hsPkgs.cardano-shell)
             (hsPkgs.io-sim-classes)
             (hsPkgs.network)

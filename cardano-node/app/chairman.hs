@@ -1,11 +1,13 @@
 {-# LANGUAGE BangPatterns       #-}
 {-# LANGUAGE NamedFieldPuns     #-}
+{-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE NumericUnderscores #-}
 
+import           Cardano.Prelude hiding (option)
+
 import           Control.Applicative (some)
-import           Control.Exception (Exception, throwIO)
+import           Control.Exception (Exception)
 import           Control.Concurrent (threadDelay)
-import           Control.Concurrent.Async
 import           Options.Applicative
 
 import           Cardano.Config.Presets (mainnetConfiguration)
