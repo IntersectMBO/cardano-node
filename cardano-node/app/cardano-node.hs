@@ -10,7 +10,7 @@ import qualified Data.IP as IP
 import           Data.Semigroup ((<>))
 import           Network.Socket (PortNumber)
 import           Options.Applicative ( Parser, auto, flag, help, long
-                                     , metavar, option, str
+                                     , metavar, option, str, value
                                      )
 import qualified Options.Applicative as Opt
 
@@ -155,12 +155,13 @@ parseNodeArgs =
 parseNodeAddress :: Parser NodeAddress
 parseNodeAddress = NodeAddress <$> parseHostAddr <*> parsePort
 
-parseHostAddr :: Parser IP.IP
+parseHostAddr :: Parser (Maybe IP.IP)
 parseHostAddr =
-    option (read <$> str) (
+    option (Just <$> read <$> str) (
           long "host-addr"
        <> metavar "HOST-NAME"
-       <> help "The ipv6 or ipv4 address"
+       <> help "Optionally limit node to one ipv6 or ipv4 address"
+       <> value Nothing
     )
 
 parsePort :: Parser PortNumber

@@ -151,8 +151,8 @@ handleSimpleNode
     traceWith tracer $
       "System started at " <> show (nodeStartTime (Proxy @blk) cfg)
 
-    let producers' = case List.lookup myNodeAddress $
-                          map (\ns -> (nodeAddress ns, producers ns)) nodeSetups of
+    let producers' = case List.lookup nid $
+                          map (\ns -> (nodeId ns, producers ns)) nodeSetups of
           Just ps -> ps
           Nothing -> error $ "handleSimpleNode: own address "
                           <> show myNodeAddress
@@ -168,6 +168,7 @@ handleSimpleNode
     -- Socket directory
     myLocalAddr <- localSocketAddrInfo myNodeId (ccSocketDir cc) MkdirIfMissing
 
+    addrs <- nodeAddressInfo myNodeAddress
     let ipProducerAddrs  :: [NodeAddress]
         dnsProducerAddrs :: [RemoteAddress]
         (ipProducerAddrs, dnsProducerAddrs) = partitionEithers
@@ -188,7 +189,7 @@ handleSimpleNode
           , rnaMuxTracer             = muxTracer             nodeTracers
           , rnaMuxLocalTracer        = nullTracer
           , rnaMkPeer                = Peer
-          , rnaMyAddr                = nodeAddressInfo myNodeAddress
+          , rnaMyAddrs               = addrs
           , rnaMyLocalAddr           = myLocalAddr
           , rnaIpProducers           = ipProducers
           , rnaDnsProducers          = dnsProducers
