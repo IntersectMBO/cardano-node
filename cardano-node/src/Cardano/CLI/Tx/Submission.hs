@@ -9,6 +9,7 @@
 
 module Cardano.CLI.Tx.Submission (
       handleTxSubmission
+    , submitTx
     ) where
 import           Cardano.Prelude hiding (ByteString, option, threadDelay)
 import           Prelude (String)

@@ -30,9 +30,13 @@ module Cardano.CLI.Run (
   , NewCertificateFile(..)
   , TxFile(..)
   , NewTxFile(..)
+  , NumberOfTxs(..)
+  , NumberOfOutputsPerTx(..)
+  , FeePerTx(..)
+  , TPSRate(..)
   ) where
 
-import           Cardano.Prelude hiding (option, show, trace)
+import           Cardano.Prelude hiding (option, trace)
 
 import           Codec.Serialise (serialise)
 import           Control.Monad.Trans.Except (ExceptT)
@@ -48,22 +52,29 @@ import qualified Cardano.Chain.Delegation as Delegation
 import qualified Cardano.Chain.Genesis as Genesis
 import           Cardano.Chain.Slotting (EpochNumber(..))
 import qualified Cardano.Chain.UTxO as UTxO
+
 import           Cardano.Crypto (ProtocolMagicId)
 import qualified Cardano.Crypto.Hashing as Crypto
 import qualified Cardano.Crypto.Signing as Crypto
+
 import qualified Test.Cardano.Chain.Genesis.Dummy as Dummy
+
+import qualified Ouroboros.Consensus.Protocol as Consensus
 
 import           Cardano.CLI.Delegation
 import           Cardano.CLI.Genesis
 import           Cardano.CLI.Key
 import           Cardano.CLI.Ops
 import           Cardano.CLI.Tx
-import           Cardano.Config.CommonCLI
-import           Cardano.Config.Presets (mainnetConfiguration)
+import           Cardano.CLI.Tx.Generation (NumberOfTxs (..), NumberOfOutputsPerTx (..),
+                                            FeePerTx (..), TPSRate (..),
+                                            genesisBenchmarkRunner)
 import           Cardano.Common.Orphans ()
 import           Cardano.Common.Protocol
-import           Cardano.Node.Configuration.Topology
-
+import           Cardano.Config.CommonCLI
+import           Cardano.Config.Logging (LoggingLayer (..))
+import           Cardano.Config.Presets (mainnetConfiguration)
+import           Cardano.Node.Configuration.Topology (TopologyInfo)
 
 -- | Sub-commands of 'cardano-cli'.
 data ClientCommand
@@ -137,25 +148,36 @@ data ClientCommand
     -- ^ Genesis UTxO output Address.
     CommonCLI
 
-runCommand :: CLIOps IO -> ClientCommand -> ExceptT CliError IO ()
-runCommand co (Genesis outDir params) = do
+    --- Tx Generator Command ----------
+
+  | GenerateTxs
+    TopologyInfo
+    NumberOfTxs
+    NumberOfOutputsPerTx
+    FeePerTx
+    TPSRate
+    [SigningKeyFile]
+    CommonCLI
+
+runCommand :: CLIOps IO -> ClientCommand -> LoggingLayer -> ExceptT CliError IO ()
+runCommand co (Genesis outDir params) _ = do
   gen <- mkGenesis params
   dumpGenesis co outDir `uncurry` gen
 
-runCommand co (DumpHardcodedGenesis dir) =
+runCommand co (DumpHardcodedGenesis dir) _ =
   dumpGenesis co dir (Genesis.configGenesisData Dummy.dummyConfig) Dummy.dummyGeneratedSecrets
 
-runCommand co (PrettySigningKeyPublic skF) = do
+runCommand co (PrettySigningKeyPublic skF) _ = do
   sK <- readSigningKey co skF
   liftIO . putTextLn . prettyPublicKey $ Crypto.toVerification sK
 
-runCommand co (MigrateDelegateKeyFrom fromVer (NewSigningKeyFile newKey) oldKey) = do
+runCommand co (MigrateDelegateKeyFrom fromVer (NewSigningKeyFile newKey) oldKey) _ = do
   ops <- liftIO $ decideCLIOps fromVer
   sk <- readSigningKey ops oldKey
   sDk <- liftIO $ coSerialiseDelegateKey co sk
   liftIO $ ensureNewFileLBS newKey sDk
 
-runCommand _ (PrintGenesisHash genFp) = do
+runCommand _ (PrintGenesisHash genFp) _ = do
   eGen <- readGenesis genFp
 
   let formatter :: (a, Genesis.GenesisHash)-> Text
@@ -163,23 +185,23 @@ runCommand _ (PrintGenesisHash genFp) = do
 
   liftIO . putTextLn $ formatter eGen
 
-runCommand co (PrintSigningKeyAddress netMagic skF) = do
+runCommand co (PrintSigningKeyAddress netMagic skF) _ = do
   sK <- readSigningKey co skF
   let sKeyAddress = prettyAddress . Common.makeVerKeyAddress netMagic $ Crypto.toVerification sK
   liftIO $ putTextLn sKeyAddress
 
-runCommand co (Keygen (NewSigningKeyFile skF) passReq) = do
+runCommand co (Keygen (NewSigningKeyFile skF) passReq) _ = do
   pPhrase <- liftIO $ getPassphrase ("Enter password to encrypt '" <> skF <> "': ") passReq
   sK <- liftIO $ keygen pPhrase
   serDk <- liftIO $ coSerialiseDelegateKey co sK
   liftIO $ ensureNewFileLBS skF serDk
 
-runCommand co (ToVerification skFp (NewVerificationKeyFile vkFp)) = do
+runCommand co (ToVerification skFp (NewVerificationKeyFile vkFp)) _ = do
   sk <- readSigningKey co skFp
   let vKey = Builder.toLazyText . Crypto.formatFullVerificationKey $ Crypto.toVerification sk
   liftIO $ ensureNewFile TL.writeFile vkFp vKey
 
-runCommand co (IssueDelegationCertificate magic epoch issuerSK delegateVK cert) = do
+runCommand co (IssueDelegationCertificate magic epoch issuerSK delegateVK cert) _ = do
   vk <- readVerificationKey delegateVK
   sk <- readSigningKey co issuerSK
   let byGenDelCert :: Delegation.Certificate
@@ -187,27 +209,43 @@ runCommand co (IssueDelegationCertificate magic epoch issuerSK delegateVK cert) 
   sCert <- liftIO $ coSerialiseDelegationCert co byGenDelCert
   liftIO $ ensureNewFileLBS (nFp cert) sCert
 
-runCommand _ (CheckDelegation magic cert issuerVF delegateVF) = do
+runCommand _ (CheckDelegation magic cert issuerVF delegateVF) _ = do
   issuerVK <- readVerificationKey issuerVF
   delegateVK <- readVerificationKey delegateVF
   liftIO $ checkByronGenesisDelegation cert magic issuerVK delegateVK
 
-runCommand co (SubmitTx topology fp common) = do
+runCommand co (SubmitTx topology fp common) _ = do
   cc <- liftIO $ mkConfiguration mainnetConfiguration common
   tx <- liftIO $ readByronTx fp
   liftIO $ nodeSubmitTx co topology cc tx
 
-runCommand co (SpendGenesisUTxO (NewTxFile ctTx) ctKey genRichAddr outs common) = do
+runCommand co (SpendGenesisUTxO (NewTxFile ctTx) ctKey genRichAddr outs common) _ = do
   cc <- liftIO $ mkConfiguration mainnetConfiguration common
   sk <- readSigningKey co ctKey
   tx <- liftIO $ issueGenesisUTxOExpenditure co genRichAddr outs cc sk
   liftIO . ensureNewFileLBS ctTx $ serialise tx
 
-runCommand co (SpendUTxO (NewTxFile ctTx) ctKey ins outs common) = do
+runCommand co (SpendUTxO (NewTxFile ctTx) ctKey ins outs common) _ = do
   cc <- liftIO $ mkConfiguration mainnetConfiguration common
   sk <- readSigningKey co ctKey
   gTx <- liftIO $ issueUTxOExpenditure co ins outs cc sk
   liftIO . ensureNewFileLBS ctTx $ serialise gTx
+
+runCommand co
+           (GenerateTxs topology numOfTxs numOfOutsPerTx feePerTx tps sigKeysFiles common)
+           loggingLayer = do
+  cc <- liftIO $ mkConfiguration mainnetConfiguration common
+  liftIO $ withRealPBFT co cc $
+    \protocol@(Consensus.ProtocolRealPBFT _ _ _ _ _) -> do
+      liftIO $ genesisBenchmarkRunner loggingLayer
+                                      cc
+                                      protocol
+                                      topology
+                                      numOfTxs
+                                      numOfOutsPerTx
+                                      feePerTx
+                                      tps
+                                      [fp | SigningKeyFile fp <- sigKeysFiles]
 
 {-------------------------------------------------------------------------------
   Supporting functions

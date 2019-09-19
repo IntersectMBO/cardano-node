@@ -16,7 +16,8 @@ Print the default, non-HD address of a signing key.
 EOF
 }
 
-${RUNNER} cardano-cli --real-pbft signing-key-address  \
+${RUNNER} cardano-cli --log-config configuration/log-configuration.yaml --real-pbft signing-key-address  \
           --testnet-magic ${proto_magic}             \
           --secret ${key}                            \
+          --socket-path socket/node1.socket          \
         | head -n1 | xargs echo -n
