@@ -181,6 +181,7 @@
             (hsPkgs.cardano-config)
             (hsPkgs.containers)
             (hsPkgs.contra-tracer)
+            (hsPkgs.cardano-ledger)
             (hsPkgs.cardano-node)
             (hsPkgs.cardano-prelude)
             (hsPkgs.cardano-shell)

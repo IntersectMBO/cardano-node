@@ -173,13 +173,12 @@ runCommand co _ _ (MigrateDelegateKeyFrom fromVer (NewSigningKeyFile newKey) old
   sDk <- liftIO $ coSerialiseDelegateKey co sk
   liftIO $ ensureNewFileLBS newKey sDk
 
-runCommand _ _ _ (PrintGenesisHash genFp) = do
-  eGen <- readGenesis genFp
-
-  let formatter :: (a, Genesis.GenesisHash)-> Text
-      formatter = F.sformat Crypto.hashHexF . Genesis.unGenesisHash . snd
-
-  liftIO . putTextLn $ formatter eGen
+runCommand _ _ _ (PrintGenesisHash genFp) =
+  liftIO . putTextLn . formatter
+    =<< readGenesis genFp
+ where
+  formatter :: (a, Genesis.GenesisHash)-> Text
+  formatter = F.sformat Crypto.hashHexF . Genesis.unGenesisHash . snd
 
 runCommand co _ _ (PrintSigningKeyAddress netMagic skF) = do
   sK <- readSigningKey co skF
@@ -210,23 +209,23 @@ runCommand _ _ _ (CheckDelegation magic cert issuerVF delegateVF) = do
   delegateVK <- readVerificationKey delegateVF
   liftIO $ checkByronGenesisDelegation cert magic issuerVK delegateVK
 
-runCommand co cc _ (SubmitTx topology fp) = do
+runCommand _ cc _ (SubmitTx topology fp) = do
   tx <- liftIO $ readByronTx fp
-  liftIO $ nodeSubmitTx co topology cc tx
+  liftIO $ nodeSubmitTx topology cc tx
 
 runCommand co cc _ (SpendGenesisUTxO (NewTxFile ctTx) ctKey genRichAddr outs) = do
   sk <- readSigningKey co ctKey
-  tx <- liftIO $ issueGenesisUTxOExpenditure co genRichAddr outs cc sk
+  tx <- liftIO $ issueGenesisUTxOExpenditure genRichAddr outs cc sk
   liftIO . ensureNewFileLBS ctTx $ serialise tx
 
 runCommand co cc _ (SpendUTxO (NewTxFile ctTx) ctKey ins outs) = do
   sk <- readSigningKey co ctKey
-  gTx <- liftIO $ issueUTxOExpenditure co ins outs cc sk
+  gTx <- liftIO $ issueUTxOExpenditure ins outs cc sk
   liftIO . ensureNewFileLBS ctTx $ serialise gTx
 
-runCommand co cc loggingLayer
+runCommand _ cc loggingLayer
            (GenerateTxs topology numOfTxs numOfOutsPerTx feePerTx tps sigKeysFiles) = do
-  liftIO $ withRealPBFT co cc $
+  liftIO $ withRealPBFT cc $
     \protocol@(Consensus.ProtocolRealPBFT _ _ _ _ _) -> do
       res <- runExceptT $ genesisBenchmarkRunner
                             loggingLayer

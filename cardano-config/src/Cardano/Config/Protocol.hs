@@ -3,6 +3,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RankNTypes       #-}
 
 {-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -10,6 +11,7 @@
 module Cardano.Config.Protocol
   ( Protocol(..)
   , SomeProtocol(..)
+  , withRealPBFT
   , fromProtocol
   ) where
 
@@ -36,6 +38,9 @@ import           Ouroboros.Consensus.Mempool.API (ApplyTxErr, GenTx, GenTxId)
 import           Ouroboros.Consensus.Node.ProtocolInfo (PBftLeaderCredentials,
                                                         PBftSignatureThreshold(..),
                                                          mkPBftLeaderCredentials)
+import           Ouroboros.Consensus.Ledger.Byron.Config (ByronConfig)
+import           Ouroboros.Consensus.Ledger.Byron (ByronBlockOrEBB)
+import           Ouroboros.Consensus.Node.ProtocolInfo (PBftLeaderCredentials, PBftSignatureThreshold(..), mkPBftLeaderCredentials)
 import qualified Ouroboros.Consensus.Protocol as Consensus
 import           Ouroboros.Consensus.Util.Condense
 import           Ouroboros.Consensus.Util (Dict(..))
@@ -67,6 +72,19 @@ type TraceConstraints blk =
   Untyped/typed protocol boundary
 -------------------------------------------------------------------------------}
 
+-- | Perform an action that expects ProtocolInfo for Byron/PBFT,
+--   with attendant configuration.
+withRealPBFT
+  :: CardanoConfiguration
+  -> (Demo.RunDemo (ByronBlockOrEBB ByronConfig)
+      => Consensus.Protocol (ByronBlockOrEBB ByronConfig)
+      -> IO a)
+  -> IO a
+withRealPBFT cc action = do
+  SomeProtocol p <- fromProtocol cc RealPBFT
+  case p of
+    p'@Consensus.ProtocolRealPBFT{} -> action p'
+    _ -> error "Impossible, as long as sanity prevails in these halls."
 
 data SomeProtocol where
   SomeProtocol :: (Demo.RunDemo blk, TraceConstraints blk)

@@ -4,6 +4,7 @@
 {-# LANGUAGE GADTs               #-}
 {-# LANGUAGE KindSignatures      #-}
 {-# LANGUAGE NamedFieldPuns      #-}
+{-# LANGUAGE NumericUnderscores  #-}
 {-# LANGUAGE RankNTypes          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications    #-}
@@ -11,16 +12,20 @@
 
 {-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
 
-module Cardano.Chairman (runChairman) where
+module Cardano.Chairman
+  ( ConsensusValidationMode(..)
+  , runChairman)
+where
 
 import           Cardano.Prelude hiding (ByteString, STM, atomically, catch, show)
-import           Prelude (String, error, foldl1, show)
+import           Prelude (String, error, foldl1, show, unlines)
 
 import           Control.Concurrent.Async (mapConcurrently)
 import           Control.Monad (void)
 import           Data.ByteString.Lazy (ByteString)
 import           Data.Proxy (Proxy (..))
 import           Data.Void (Void)
+import qualified Data.Time as Time
 import           Data.Typeable (Typeable)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -35,6 +40,7 @@ import           Control.Tracer
 import           Network.Mux.Types (MuxError)
 
 import           Ouroboros.Consensus.Block (BlockProtocol)
+import           Ouroboros.Consensus.BlockchainTime (SlotLength(..))
 import           Ouroboros.Consensus.Mempool
 import           Ouroboros.Consensus.Node.ProtocolInfo
 import           Ouroboros.Consensus.Node.Run
@@ -46,10 +52,11 @@ import           Network.TypedProtocol.Codec
 import           Network.TypedProtocol.Codec.Cbor
 import           Network.TypedProtocol.Driver
 import           Ouroboros.Network.Mux
-import           Ouroboros.Network.Block (BlockNo, HasHeader, HeaderHash, Point)
+import           Ouroboros.Network.Block (HasHeader, HeaderHash, Point, SlotNo(..))
 import qualified Ouroboros.Network.Block as Block
 import           Ouroboros.Network.AnchoredFragment (AnchoredFragment)
 import qualified Ouroboros.Network.AnchoredFragment as AF
+import qualified Ouroboros.Network.Point as Point
 import           Ouroboros.Network.Protocol.LocalTxSubmission.Type
 import           Ouroboros.Network.Protocol.LocalTxSubmission.Client hiding (SendMsgDone)
 import           Ouroboros.Network.Protocol.LocalTxSubmission.Codec
@@ -62,6 +69,17 @@ import           Ouroboros.Network.NodeToClient
 import           Cardano.Common.LocalSocket
 import           Cardano.Tracing.Tracers (TraceConstraints)
 
+data ConsensusValidationMode =
+  -- | Define pass/fail as follows:
+  -- - success is having maximum fork length under 'caMaximumForkLength'
+  --   for 'caSlotsWithinTolerance' slots,
+  -- - failure is inability to attain success within 'caTimeout'.
+  MaxForkLengthForSlots
+  { cvmMaximumForkLength :: !Int
+  , cvmSlotsWithinTolerance :: !SlotNo
+  }
+  deriving Show
+
 -- | Run chairman: connect with all the core nodes.  Chairman will store the
 -- forks from a common prefix.  If any of them is longer than the security
 -- parameter it will throw an exception.
@@ -73,21 +91,32 @@ runChairman :: forall blk.
                , TraceConstraints blk
                )
             => Protocol blk
+            -> SlotLength
+            -> Time.UTCTime
             -> [CoreNodeId]
             -> NumCoreNodes
             -> SecurityParam
             -- ^ security parameter, if a fork is deeper than it 'runChairman'
             -- will throw an exception.
-            -> Maybe BlockNo
-            -- ^ finish after that many blocks, if 'Nothing' run continuously.
+            -> Maybe ConsensusValidationMode
+            -- ^ when specifid, terminate successfully when conditions specified by
+            --   'ConsensusValidationMode' hold.
             -> FilePath
             -- ^ local socket dir
             -> Tracer IO String
             -> IO ()
-runChairman ptcl nids numCoreNodes securityParam maxBlockNo socketDir tracer = do
+runChairman ptcl slotLen startTime nids numCoreNodes securityParam consensusValidMode socketDir tracer = do
 
-    (chainsVar :: ChainsVar IO blk) <- newTVarM
-      (Map.fromList $ map (\coreNodeId -> (coreNodeId, AF.Empty Block.GenesisPoint)) nids)
+    now <- Time.getCurrentTime
+    let valid = mkValidation slotLen startTime now nids
+    validVar :: ValidVar IO blk <- newTVarM valid
+    putStrLn $ unlines
+      [ "Start time:            " <> show startTime
+      , "Now:                   " <> show now
+      , "Delta:                 " <> show (now `Time.diffUTCTime` startTime)
+      , "Slot length:           " <> show (getSlotLength slotLen)
+      , "Computed current slot: " <> show (unSlotNo $ vLastConsensusCriteriaViolation valid)
+      ]
 
     addr <- localSocketAddrInfo (CoreId 0) socketDir NoMkdirIfMissing
 
@@ -103,23 +132,25 @@ runChairman ptcl nids numCoreNodes securityParam maxBlockNo socketDir tracer = d
             (,)
             (localInitiatorNetworkApplication
               coreNodeId
-              chainsVar
+              validVar
               securityParam
-              maxBlockNo
+              consensusValidMode
               (showTracing tracer)
               nullTracer
               nullTracer
               pInfoConfig)
             Nothing
             addr
-          `catch` handleMuxError chainsVar coreNodeId
+          `catch` handleMuxError validVar coreNodeId
+           -- The first thread that terminates normally, causes successful exit.
+           >> exitSuccess
   where
     -- catch 'MuxError'; it will be thrown if a node shuts down closing the
     -- connection.
-    handleMuxError :: ChainsVar IO blk -> CoreNodeId -> MuxError -> IO ()
-    handleMuxError chainsVar coreNodeId err = do
+    handleMuxError :: ValidVar IO blk -> CoreNodeId -> MuxError -> IO ()
+    handleMuxError validVar coreNodeId err = do
       traceWith tracer (show err)
-      atomically $ modifyTVar chainsVar (Map.delete coreNodeId)
+      atomically $ modifyTVar validVar (adjustValidationChains $ Map.delete coreNodeId)
 
 
 data ChairmanTrace blk
@@ -129,6 +160,9 @@ data ChairmanTrace blk
   | WitnessedConsensusAt (Point blk) [Point blk]
   -- ^ witness consensus at a given point.  The list is a list of tip points of
   -- each chain.
+  | ValidationSuccess ConsensusValidationMode SlotNo (Validation blk)
+  -- ^ consensus validation with 'ConsensusValidationMode'
+  | Pass String
 
 instance (Condense blk, Condense (HeaderHash blk)) => Show (ChairmanTrace blk) where
     show (NotFoundCommonBlock tips)
@@ -140,18 +174,81 @@ instance (Condense blk, Condense (HeaderHash blk)) => Show (ChairmanTrace blk) w
       , " current tips: "
       , condense tips
       ]
-
+    show (ValidationSuccess vmode slot validation)
+      = mconcat
+      [ "validation success for mode "
+      , show vmode
+      , " after "
+      , show slot
+      , " slots, last violated on slot "
+      , show $ vLastConsensusCriteriaViolation validation
+      ]
+    show (Pass s) = s
 
 --
 -- Shared State, and its API.
 --
 
 
--- | Shared state between chain-sync clients.  Each chain-sync client will write to the
--- corresponding entry.
+-- | Shared state between chain-sync clients.
 --
-type ChainsVar m blk = StrictTVar m (Map CoreNodeId (AnchoredFragment blk))
+data Validation blk = Validation
+  { vLastConsensusCriteriaViolation :: !SlotNo
+    -- ^ This is reset to the current point every time consensus quality
+    -- acceptance criteria is violated (see 'ConsensusValidationMode').
+  , vChains :: Map CoreNodeId (AnchoredFragment blk)
+    -- ^ Each chain-sync client will write to the corresponding entry.
+  }
 
+mkValidation :: HasHeader blk => SlotLength -> Time.UTCTime -> Time.UTCTime -> [CoreNodeId] -> Validation blk
+mkValidation slotDurMs startTime now nids =
+  Validation
+  { vLastConsensusCriteriaViolation = currentSlotNo
+  , vChains = Map.fromList $ map (\coreNodeId -> (coreNodeId, AF.Empty Block.GenesisPoint)) nids
+  } where elapsed :: Time.NominalDiffTime = now `Time.diffUTCTime` startTime
+          -- TODO: use actual, not initial slot length from genesis.
+          currentSlotNo = SlotNo . floor $ elapsed / getSlotLength slotDurMs
+
+-- | Given a consensus validation mode, determine the updated slot number
+--   it was last violated.
+validationLastViolationSlot
+  :: HasHeader blk
+  => ConsensusValidationMode
+  -> SlotNo
+  -> Validation blk
+  -> SlotNo
+validationLastViolationSlot (MaxForkLengthForSlots maxForkLen _) curSlot v
+  | maximum (AF.length <$> vChains v) > maxForkLen
+  = curSlot
+  | otherwise
+  = vLastConsensusCriteriaViolation v
+
+validationSuccess
+  :: ConsensusValidationMode
+  -> SlotNo
+  -> Validation blk
+  -> Bool
+validationSuccess (MaxForkLengthForSlots _ slotsWithinTolerance) curSlot v
+  = slotsWithinTolerance < slotsSinceViolation
+  where slotsSinceViolation = curSlot - vLastConsensusCriteriaViolation v
+
+type ValidVar m blk = StrictTVar m (Validation blk)
+
+adjustValidationChains
+  :: (Map CoreNodeId (AnchoredFragment blk) -> Map CoreNodeId (AnchoredFragment blk))
+  -> (Validation blk -> Validation blk)
+adjustValidationChains f v =
+  v { vChains = f (vChains v) }
+
+adjustValidationChain
+  :: CoreNodeId
+  -> (AnchoredFragment blk -> AnchoredFragment blk)
+  -> (Validation blk -> Validation blk)
+adjustValidationChain nodeId f =
+  adjustValidationChains (Map.adjust f nodeId)
+
+updateViolation :: SlotNo -> (Validation blk -> Validation blk)
+updateViolation x v = v { vLastConsensusCriteriaViolation = x }
 
 -- | Add a single block to the chain.
 --
@@ -161,11 +258,11 @@ addBlock
        , HasHeader blk
        )
     => CoreNodeId
-    -> ChainsVar m blk
+    -> ValidVar m blk
     -> blk
     -> STM m ()
-addBlock coreNodeId chainsVar blk =
-    modifyTVar chainsVar (Map.adjust (AF.addBlock blk) coreNodeId)
+addBlock coreNodeId validVar blk =
+    modifyTVar validVar (adjustValidationChain coreNodeId $ AF.addBlock blk)
 
 
 data ChairmanError blk =
@@ -195,16 +292,17 @@ checkAndPrune
        , Condense blk
        , Condense (HeaderHash blk)
        )
-    => ChainsVar m blk
+    => ValidVar m blk
     -> SecurityParam
     -> STM m (ChairmanTrace blk)
-checkAndPrune chainsVar (SecurityParam securityParam) = do
-    chains <- readTVar chainsVar
-    case checkAndPrunePure chains of
+checkAndPrune validVar (SecurityParam securityParam) = do
+    v <- readTVar validVar
+    case checkAndPrunePure (vChains v) of
       Left err -> throwM err
       Right (res, potentialForks) -> do
-        writeTVar chainsVar $! potentialForks
-        return res
+        let v'  = v  { vChains = potentialForks }
+        writeTVar validVar $! v'
+        pure res
   where
     checkAndPrunePure :: Map CoreNodeId (AnchoredFragment blk)
                  -> Either (ChairmanError blk)
@@ -269,11 +367,11 @@ rollback
        , HasHeader blk
        )
     => CoreNodeId
-    -> ChainsVar m blk
+    -> ValidVar m blk
     -> Point blk
     -> STM m ()
-rollback coreNodeId chainsVar p =
-    modifyTVar chainsVar (Map.adjust fn coreNodeId)
+rollback coreNodeId validVar p =
+    modifyTVar validVar (adjustValidationChain coreNodeId fn)
   where
     fn :: AnchoredFragment blk -> AnchoredFragment blk
     fn cf = case AF.rollback p cf of
@@ -299,11 +397,11 @@ chainSyncClient
      )
   => Tracer m (ChairmanTrace blk)
   -> CoreNodeId
-  -> ChainsVar m blk
+  -> ValidVar m blk
   -> SecurityParam
-  -> Maybe BlockNo
+  -> Maybe ConsensusValidationMode
   -> ChainSyncClient blk (Point blk) m ()
-chainSyncClient tracer coreNodeId chainsVar securityParam maxBlockNo = ChainSyncClient $ pure $
+chainSyncClient tracer coreNodeId validVar securityParam consensusValidMode = ChainSyncClient $ pure $
     -- Notify the core node about the our latest points at which we are
     -- synchronised.  This client is not persistent and thus it just
     -- synchronises from the genesis block.  A real implementation should send
@@ -311,37 +409,49 @@ chainSyncClient tracer coreNodeId chainsVar securityParam maxBlockNo = ChainSync
     SendMsgFindIntersect
       [Block.genesisPoint]
       ClientStIntersect {
-        recvMsgIntersectFound    = \_ _ -> ChainSyncClient (pure $ clientStIdle Nothing),
-        recvMsgIntersectNotFound = \  _ -> ChainSyncClient (pure $ clientStIdle Nothing)
+        recvMsgIntersectFound    = \_ _ -> ChainSyncClient (pure clientStIdle),
+        recvMsgIntersectNotFound = \  _ -> ChainSyncClient (pure clientStIdle)
       }
   where
-    clientStIdle :: Maybe BlockNo
-                 -- current point
-                 -> ClientStIdle blk (Point blk) m ()
-    clientStIdle currentBlockNo =
-      case (currentBlockNo, maxBlockNo) of
-        (Just n, Just m) | n >= m
-                         -> SendMsgDone ()
-        _                -> SendMsgRequestNext clientStNext (pure clientStNext)
+    clientStIdle :: ClientStIdle blk (Point blk) m ()
+    clientStIdle =
+      SendMsgRequestNext clientStNext (pure clientStNext)
+
+    processValidation :: SlotNo -> ConsensusValidationMode -> m (ClientStIdle blk (Point blk) m ())
+    processValidation currentSlot cvm = do
+      v <- atomically $ do
+        v <- readTVar validVar
+        let v' = updateViolation (validationLastViolationSlot cvm currentSlot v) v
+        writeTVar validVar $! v'
+        pure v'
+      traceWith tracer $ ValidationSuccess cvm currentSlot v
+      if validationSuccess cvm currentSlot v
+      then pure $ SendMsgDone ()
+      else pure clientStIdle
 
     clientStNext :: ClientStNext blk (Point blk) m ()
     clientStNext = ClientStNext {
-        recvMsgRollForward = \blk _tip -> ChainSyncClient $ do
+        recvMsgRollForward = \blk tip -> ChainSyncClient $ do
           -- add block & check if there is consensus on immutable chain
           -- trace the decision or error
+          let currentSlot = Point.fromWithOrigin 0 $ Block.pointSlot tip
+          traceWith tracer $ Pass $ "current slot: " <> show currentSlot
           res <- atomically $ do
-            addBlock coreNodeId chainsVar blk
-            checkAndPrune chainsVar securityParam
+            addBlock coreNodeId validVar blk
+            checkAndPrune validVar securityParam
           traceWith tracer res
-          let currentBlockNo = Just (Block.blockNo blk)
-          pure $ clientStIdle currentBlockNo
-      , recvMsgRollBackward = \point _tip -> ChainSyncClient $ do
+          fromMaybe (pure clientStIdle) $
+            processValidation currentSlot <$> consensusValidMode
+      , recvMsgRollBackward = \point tip -> ChainSyncClient $ do
           -- rollback & check
+          let currentSlot = Point.fromWithOrigin 0 $ Block.pointSlot tip
+          traceWith tracer $ Pass $ "current slot: " <> show currentSlot
           res <- atomically $ do
-            rollback coreNodeId chainsVar point
-            checkAndPrune chainsVar securityParam
+            rollback coreNodeId validVar point
+            checkAndPrune validVar securityParam
           traceWith tracer res
-          pure $ clientStIdle Nothing
+          fromMaybe (pure clientStIdle) $
+            processValidation currentSlot <$> consensusValidMode
       }
 
 --
@@ -360,9 +470,9 @@ localInitiatorNetworkApplication
      , MonadThrow (STM m)
      )
   => CoreNodeId
-  -> ChainsVar m blk
+  -> ValidVar m blk
   -> SecurityParam
-  -> Maybe BlockNo
+  -> Maybe ConsensusValidationMode
   -> Tracer m (ChairmanTrace blk)
   -> Tracer m (TraceSendRecv (ChainSync blk (Point blk)) peer DeserialiseFailure)
   -- ^ tracer which logs all chain-sync messages send and received by the client
@@ -376,7 +486,7 @@ localInitiatorNetworkApplication
   -> Versions NodeToClientVersion DictVersion
               (OuroborosApplication 'InitiatorApp peer NodeToClientProtocols
                                     m ByteString () Void)
-localInitiatorNetworkApplication coreNodeId chainsVar securityParam maxBlockNo chairmanTracer chainSyncTracer localTxSubmissionTracer pInfoConfig =
+localInitiatorNetworkApplication coreNodeId validVar securityParam consensusValidMode chairmanTracer chainSyncTracer localTxSubmissionTracer pInfoConfig =
     simpleSingletonVersions
       NodeToClientV_1
       (NodeToClientVersionData { networkMagic = 0 })
@@ -397,7 +507,7 @@ localInitiatorNetworkApplication coreNodeId chainsVar securityParam maxBlockNo c
           (localChainSyncCodec pInfoConfig)
           peer
           channel
-          (chainSyncClientPeer $ chainSyncClient chairmanTracer coreNodeId chainsVar securityParam maxBlockNo)
+          (chainSyncClientPeer $ chainSyncClient chairmanTracer coreNodeId validVar securityParam consensusValidMode)
 
 
 --

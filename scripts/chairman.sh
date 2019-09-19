@@ -23,8 +23,10 @@ test -n "${CMD}" || {
 set -x
 exec cabal new-run exe:chairman -- --real-pbft \
                                 --core-node-id 0 --core-node-id 1 --core-node-id 2 \
-                                -k 10 -s 250 \
-                                -t 1000 \
+                                -k 10 \
+                                --slots-within-tolerance 10 \
+                                --maximum-fork-length 1 \
+                                --timeout 1000 \
                                 --genesis-file "${genesis_file}" \
                                 --genesis-hash "${genesis_hash}" \
                                 --pbft-signature-threshold 0.7 \

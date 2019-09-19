@@ -5,7 +5,8 @@ let chairman-runner = chairmanScript {
         enable     = true;
         k          = 2160;
         timeout    = 300;
-        maxBlockNo = 30;
+        maximum-fork-length = 1;
+        slots-within-tolerance = 30;
       };
     };
 in {

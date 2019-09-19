@@ -11,7 +11,7 @@ let
 
   mkChairmanConfig = nodeConfig: chairmanConfig: {
     inherit (nodeConfig) package genesisFile genesisHash stateDir pbftThreshold consensusProtocol;
-    inherit (chairmanConfig) timeout maxBlockNo k node-ids;
+    inherit (chairmanConfig) timeout maximum-fork-length slots-within-tolerance k node-ids;
   };
   mkScript = cfg:
     let nodeIdArgs = builtins.concatStringsSep " "
@@ -23,7 +23,8 @@ let
           "--${ncfg.consensusProtocol}"
           (nodeIdArgs)
           "--timeout ${toString cfg.timeout}"
-          "--max-block-no ${toString cfg.maxBlockNo}"
+          "--maximum-fork-length ${toString cfg.maximum-fork-length}"
+          "--slots-within-tolerance ${toString cfg.slots-within-tolerance}"
           "--security-param ${toString cfg.k}"
           "--genesis-file ${cfg.genesisFile}"
           "--genesis-hash ${cfg.genesisHash}"
@@ -59,10 +60,15 @@ in {
         default = 360;
         description = ''How long to wait for consensus of maxBlockNo blocks.'';
       };
-      maxBlockNo = mkOption {
+      maximum-fork-length = mkOption {
+        type = int;
+        default = 1;
+        description = ''What is the longest allowed fork that still passes consensus validation.'';
+      };
+      slots-within-tolerance = mkOption {
         type = int;
         default = 5;
-        description = ''How many blocks of consensus should we require before succeeding.'';
+        description = ''How many blocks of forks under threshold length should the cluster deliver for success.'';
       };
       k = mkOption {
         type = int;
