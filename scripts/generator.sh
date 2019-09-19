@@ -7,7 +7,7 @@ genesis_root="configuration/${genesis}"
 genesis_file="${genesis_root}/genesis.json"
 if test ! -f "${genesis_file}"
 then echo "ERROR: genesis ${genesis_file} does not exist!">&1; exit 1; fi
-genesis_hash="$(${CMD} --log-config configuration/log-configuration.yaml --real-pbft print-genesis-hash --genesis-json ${genesis_file} --socket-path socket/node1.socket)"
+genesis_hash="$(${CMD} --log-config configuration/log-configuration.yaml --real-pbft print-genesis-hash --genesis-json ${genesis_file})"
 
 
 NOW=`date "+%Y-%m-%d 00:00:00"`
@@ -38,10 +38,8 @@ function mkdlgcert () {
 set -x
 ${CMD} \
     --log-config configuration/log-configuration.yaml \
-    --socket-path socket/node1.socket \
     ${NETARGS[*]} \
     ${TX_GEN_ARGS[*]} \
     $(mkdlgkey 0) \
     $(mkdlgcert 0) \
-    $@ \
-    --socket-path socket/node1.socket
+    $@

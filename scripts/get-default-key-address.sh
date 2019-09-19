@@ -15,9 +15,10 @@ Usage:  $(basename $0) SIGNING-KEY-FILE"
 Print the default, non-HD address of a signing key.
 EOF
 }
-
-${RUNNER} cardano-cli --log-config configuration/log-configuration.yaml --real-pbft signing-key-address  \
-          --testnet-magic ${proto_magic}             \
-          --secret ${key}                            \
-          --socket-path socket/node1.socket          \
+${RUNNER} cardano-cli \
+          --log-config configuration/log-configuration.yaml \
+          --real-pbft \
+          signing-key-address \
+          --testnet-magic ${proto_magic} \
+          --secret ${key} \
         | head -n1 | xargs echo -n
