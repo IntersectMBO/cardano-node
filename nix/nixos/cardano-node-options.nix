@@ -18,7 +18,7 @@ in {
             --genesis-hash ${cfg.genesisHash} \
             --log-config ${cfg.logger.configFile} \
             --database-path ${cfg.stateDir}/${cfg.dbPrefix} \
-            --socket-dir ${cfg.stateDir}/socket \
+            --socket-dir ${ if (cfg.runtimeDir == null) then "${cfg.stateDir}/socket" else "/run/${cfg.runtimeDir}"} \
             node \
             --topology ${cfg.topology} \
             --${cfg.consensusProtocol} \
@@ -113,6 +113,14 @@ in {
         default = "/var/lib/cardano-node";
         description = ''
           Directory to store blockchain data.
+        '';
+      };
+
+      runtimeDir = mkOption {
+        type = types.nullOr types.str;
+        default = "cardano-node";
+        description = ''
+          Runtime directory relative to /run
         '';
       };
 

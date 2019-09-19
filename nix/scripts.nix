@@ -43,6 +43,7 @@ let
         hostAddr
         port
         nodeId;
+      runtimeDir = null;
       dbPrefix = "db-${envConfig.name}";
       logger.configFile = config.loggingConfig;
       topology = topologyFile;

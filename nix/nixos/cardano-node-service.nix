@@ -36,6 +36,7 @@ in {
         User = "cardano-node";
         Group = "cardano-node";
         Restart = "always";
+        RuntimeDirectory = cfg.runtimeDir;
         WorkingDirectory = cfg.stateDir;
         # This assumes /var/lib/ is a prefix of cfg.stateDir.
         # This is checked as an assertion below.
