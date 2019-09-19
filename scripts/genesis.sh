@@ -26,6 +26,10 @@ avvm_entry_balance=10000000000000
 not_so_secret=2718281828
 
 tmpdir="`mktemp`.d"
+common=(
+        --log-config                 "configuration/log-configuration.yaml"
+        --real-pbft
+)
 args=(
       --genesis-output-dir           "${tmpdir}"
       --start-time                   "${start_time}"
@@ -36,7 +40,7 @@ args=(
       --n-delegate-addresses         ${n_delegates}
       --total-balance                ${total_balance}
       --delegate-share               ${delegate_share}
-      --use-hd-addresses             
+      --use-hd-addresses
       --avvm-entry-count             ${avvm_entries}
       --avvm-entry-balance           ${avvm_entry_balance}
       --secret-seed                  ${not_so_secret}
@@ -45,10 +49,10 @@ args=(
 set -xe
 RUNNER=${RUNNER:-cabal new-run -v0 --}
 
-${RUNNER} cardano-cli --real-pbft genesis "${args[@]}" "$@"
+${RUNNER} cardano-cli "${common[@]}" genesis "${args[@]}" "$@"
 
 # move new genesis to configuration
-GENHASH=`${RUNNER} cardano-cli --real-pbft print-genesis-hash --genesis-json "${tmpdir}/genesis.json" | tail -1`
+GENHASH=`${RUNNER} cardano-cli "${common[@]}" print-genesis-hash --genesis-json "${tmpdir}/genesis.json" | tail -1`
 TARGETDIR="${CONFIGDIR}/${GENHASH:0:5}"
 mkdir -vp "${TARGETDIR}"
 cp -iav ${tmpdir}/genesis.json ${TARGETDIR}/

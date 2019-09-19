@@ -39,9 +39,16 @@ tmux split-window -v
 tmux select-pane -t 0
 # tmux split-window -v
 
+node_args() {
+        id=$1
+        echo -n "--node-id ${id} "
+        echo -n "--port 300${id} "
+        echo -n "--live-view "
+}
+
 tmux select-pane -t 0
-tmux send-keys "${CMD} $(mklogcfg 0) ${NETARGS} -n 0 --host-addr ${HOST6} --port 3000 --live-view" C-m
+tmux send-keys "${CMD} $(mklogcfg 0) ${NETARGS} --host-addr ${HOST6} $(node_args 0)" C-m
 tmux select-pane -t 1
-tmux send-keys "${CMD} $(mklogcfg 1) ${NETARGS} -n 1 --host-addr ${HOST}  --port 3001 --live-view" C-m
+tmux send-keys "${CMD} $(mklogcfg 1) ${NETARGS} --host-addr ${HOST}  $(node_args 1)" C-m
 tmux select-pane -t 2
-tmux send-keys "${CMD} $(mklogcfg 2) ${NETARGS} -n 2 --host-addr ${HOST6} --port 3002 --live-view" C-m
+tmux send-keys "${CMD} $(mklogcfg 2) ${NETARGS} --host-addr ${HOST6} $(node_args 2)" C-m

@@ -29,7 +29,6 @@ import           Cardano.Prelude hiding (ByteString, atomically, throwIO, trace,
 import           Prelude (error, id, unlines)
 
 import qualified Control.Concurrent.Async as Async
-import           Control.Exception
 import           Control.Tracer
 import qualified Data.ByteString.Char8 as BSC
 import           Data.Either (partitionEithers)
@@ -39,9 +38,7 @@ import           Data.Proxy (Proxy (..))
 import           Data.Semigroup ((<>))
 import           Data.Text (Text, pack)
 import           Network.Socket as Socket
-import           System.Directory (canonicalizePath, createDirectoryIfMissing, makeAbsolute, removeFile)
-import           System.FilePath (dropFileName)
-import           System.IO.Error (isDoesNotExistError)
+import           System.Directory (canonicalizePath, makeAbsolute)
 
 import           Control.Monad.Class.MonadSTM
 
@@ -196,8 +193,7 @@ handleSimpleNode p NodeCLIArguments{..}
       ]
 
     -- Socket directory
-    socketDir <- canonicalizePath =<< (makeAbsolute $ dropFileName ccSocketPath)
-    createDirectoryIfMissing True socketDir
+    myLocalAddr <- localSocketAddrInfo myNodeId ccSocketDir MkdirIfMissing
 
     let ipProducerAddrs  :: [NodeAddress]
         dnsProducerAddrs :: [RemoteAddress]
@@ -217,9 +213,6 @@ handleSimpleNode p NodeCLIArguments{..}
               }
           | RemoteAddress {raAddress, raPort, raValency} <- dnsProducerAddrs ]
 
-        myLocalAddr :: AddrInfo
-        myLocalAddr = localSocketAddrInfo ccSocketPath
-
         runNetworkArgs :: RunNetworkArgs Peer blk
         runNetworkArgs = RunNetworkArgs
           { rnaIpSubscriptionTracer  = ipSubscriptionTracer  nodeTracers
@@ -234,7 +227,7 @@ handleSimpleNode p NodeCLIArguments{..}
           , rnaHandshakeLocalTracer  = nullTracer
           }
 
-    removeStaleLocalSocket ccSocketPath
+    removeStaleLocalSocket myNodeId ccSocketDir
 
     dbPath <- canonicalizePath =<< makeAbsolute ccDBPath
 
@@ -259,11 +252,3 @@ handleSimpleNode p NodeCLIArguments{..}
       nid = case myNodeId of
               CoreId  n -> n
               RelayId _ -> error "Non-core nodes currently not supported"
-
-removeStaleLocalSocket :: FilePath -> IO ()
-removeStaleLocalSocket socketPath =
-    removeFile socketPath
-      `catch` \e ->
-        if isDoesNotExistError e
-          then return ()
-          else throwIO e

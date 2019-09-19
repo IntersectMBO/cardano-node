@@ -20,8 +20,6 @@ import           Data.Void (Void)
 import           Data.ByteString.Lazy (ByteString)
 import           Data.Proxy (Proxy (..))
 
-import           Network.Socket as Socket
-
 import           Control.Monad.Class.MonadST
 import           Control.Monad.Class.MonadSTM
 import           Control.Monad.Class.MonadThrow
@@ -50,6 +48,7 @@ import           Ouroboros.Network.Protocol.ChainSync.Codec
 import           Ouroboros.Network.Protocol.Handshake.Version
 import           Ouroboros.Network.NodeToClient
 
+import           Cardano.Common.LocalSocket
 import           Cardano.Tracing.Tracers (TraceConstraints)
 
 runWalletClient :: forall blk.
@@ -57,18 +56,19 @@ runWalletClient :: forall blk.
                    , TraceConstraints blk
                    )
                 => Protocol blk
+                -> FilePath
                 -> CoreNodeId
                 -> NumCoreNodes
                 -> Tracer IO String
                 -> IO ()
-runWalletClient ptcl nid numCoreNodes tracer = do
+runWalletClient ptcl sockDir nid@(CoreNodeId id) numCoreNodes tracer = do
+
+    addr <- localSocketAddrInfo (CoreId id) sockDir NoMkdirIfMissing
 
     let ProtocolInfo{pInfoConfig} =
           protocolInfo numCoreNodes
                        nid
                        ptcl
-
-        addr = localSocketAddrInfo (localSocketFilePath nid)
 
         chainSyncTracer = contramap show tracer
         localTxSubmissionTracer = contramap show tracer
@@ -214,20 +214,3 @@ localChainSyncCodec pInfoConfig =
       (Block.decodePoint (nodeDecodeHeaderHash (Proxy @blk)))
       (Block.encodePoint (nodeEncodeHeaderHash (Proxy @blk)))
       (Block.decodePoint (nodeDecodeHeaderHash (Proxy @blk)))
-
-
--- | Local unix socket file path over which the client communicates with a core
--- node.
---
-localSocketFilePath :: CoreNodeId -> FilePath
-localSocketFilePath (CoreNodeId  n) = "node-core-" ++ show n ++ ".socket"
-
-localSocketAddrInfo :: FilePath -> Socket.AddrInfo
-localSocketAddrInfo socketPath =
-    Socket.AddrInfo
-      []
-      Socket.AF_UNIX
-      Socket.Stream
-      Socket.defaultProtocol
-      (Socket.SockAddrUnix socketPath)
-      Nothing

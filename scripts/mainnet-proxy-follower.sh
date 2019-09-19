@@ -15,4 +15,4 @@ ARGS=(
         --real-pbft
 )
 
-${RUNNER} cardano-node "${ARGS[@]}"
+${RUNNER} exe:cardano-node "${ARGS[@]}"

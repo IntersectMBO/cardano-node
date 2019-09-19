@@ -19,6 +19,8 @@
     startAll
     $machine->waitForUnit("cardano-node.service");
     $machine->waitForOpenPort(3001);
+    $machine->succeed("stat /run/cardano-node");
+    $machine->succeed("stat /run/cardano-node/node-core-0.socket");
   '';
 
 }

@@ -29,7 +29,7 @@ runClient CLI{..} tracer cc = do
           appendName ("Wallet " <> pack (show nid)) tracer
 
     SomeProtocol p <- fromProtocol cc cliProtocol
-    runWalletClient p cliCoreNodeId cliNumCoreNodes tracer'
+    runWalletClient p (ccSocketDir cc) cliCoreNodeId cliNumCoreNodes tracer'
 
 data CLI = CLI {
     cliCoreNodeId   :: CoreNodeId,

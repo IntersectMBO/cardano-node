@@ -42,7 +42,7 @@ main = do
                           (NumCoreNodes $ length caCoreNodeIds)
                           caSecurityParam
                           caMaxBlockNo
-                          (ccSocketPath cc)
+                          (ccSocketDir cc)
                           stdoutTracer
 
     case caTimeout of

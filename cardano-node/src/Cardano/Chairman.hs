@@ -24,10 +24,6 @@ import           Data.Void (Void)
 import           Data.Typeable (Typeable)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import           System.Directory (canonicalizePath, createDirectoryIfMissing, makeAbsolute)
-import           System.FilePath ((</>))
-
-import           Network.Socket as Socket
 
 import           Control.Monad.Class.MonadAsync
 import           Control.Monad.Class.MonadST
@@ -63,6 +59,7 @@ import           Ouroboros.Network.Protocol.ChainSync.Codec
 import           Ouroboros.Network.Protocol.Handshake.Version
 import           Ouroboros.Network.NodeToClient
 
+import           Cardano.Common.LocalSocket
 import           Cardano.Tracing.Tracers (TraceConstraints)
 
 -- | Run chairman: connect with all the core nodes.  Chairman will store the
@@ -87,13 +84,12 @@ runChairman :: forall blk.
             -- ^ local socket dir
             -> Tracer IO String
             -> IO ()
-runChairman ptcl nids numCoreNodes securityParam maxBlockNo sockPath tracer = do
+runChairman ptcl nids numCoreNodes securityParam maxBlockNo socketDir tracer = do
 
     (chainsVar :: ChainsVar IO blk) <- newTVarM
       (Map.fromList $ map (\coreNodeId -> (coreNodeId, AF.Empty Block.GenesisPoint)) nids)
 
-    socketDir <- canonicalizePath =<< makeAbsolute sockPath
-    createDirectoryIfMissing True socketDir
+    addr <- localSocketAddrInfo (CoreId 0) socketDir NoMkdirIfMissing
 
     void $ flip mapConcurrently nids $ \coreNodeId ->
         let ProtocolInfo{pInfoConfig} =
@@ -114,7 +110,7 @@ runChairman ptcl nids numCoreNodes securityParam maxBlockNo sockPath tracer = do
               nullTracer
               pInfoConfig)
             Nothing
-            (localSocketAddrInfo (localSocketFilePath socketDir coreNodeId))
+            addr
           `catch` handleMuxError chainsVar coreNodeId
   where
     -- catch 'MuxError'; it will be thrown if a node shuts down closing the
@@ -434,20 +430,3 @@ localChainSyncCodec pInfoConfig =
       (Block.decodePoint (nodeDecodeHeaderHash (Proxy @blk)))
       (Block.encodePoint (nodeEncodeHeaderHash (Proxy @blk)))
       (Block.decodePoint (nodeDecodeHeaderHash (Proxy @blk)))
-
-
--- | Local unix socket file path over which the client communicates with a core
--- node.
---
-localSocketFilePath :: FilePath -> CoreNodeId -> FilePath
-localSocketFilePath dir (CoreNodeId  n) = dir </> "node-core-" ++ show n ++ ".socket"
-
-localSocketAddrInfo :: FilePath -> Socket.AddrInfo
-localSocketAddrInfo socketPath =
-    Socket.AddrInfo
-      []
-      Socket.AF_UNIX
-      Socket.Stream
-      Socket.defaultProtocol
-      (Socket.SockAddrUnix socketPath)
-      Nothing

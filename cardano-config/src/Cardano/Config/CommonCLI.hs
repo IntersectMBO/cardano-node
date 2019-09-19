@@ -41,7 +41,7 @@ data CommonCLI = CommonCLI
   , cliPBftSigThd                 :: !(Last Double)
   , cliRequiresNetworkMagic       :: !(Last RequireNetworkMagic)
   , cliDBPath                     :: !(Last FilePath)
-  , cliSocketPath                 :: !(Last FilePath)
+  , cliSocketDir                  :: !(Last FilePath)
   --TODO cliUpdate                :: !PartialUpdate
   }
 
@@ -90,9 +90,9 @@ parseCommonCLI =
          <> help "Directory where the state is stored."
         )
     <*> lastStrOption (
-            long "socket-path"
+            long "socket-dir"
          <> metavar "FILEPATH"
-         <> help "The local socket filepath."
+         <> help "Directory with local sockets:  ${dir}/node-{core,relay}-${node-id}.socket"
         )
 
 {-------------------------------------------------------------------------------
@@ -163,7 +163,7 @@ mergeConfiguration pcc cli =
                    , cliPBftSigThd
                    , cliRequiresNetworkMagic
                    , cliDBPath
-                   , cliSocketPath
+                   , cliSocketDir
                    } =
       mempty { pccCore = mempty
                     { pcoGenesisFile             = cliGenesisFile
@@ -175,7 +175,7 @@ mergeConfiguration pcc cli =
                     -- TODO: cliUpdate
                     }
              , pccDBPath = cliDBPath
-             , pccSocketPath = cliSocketPath
+             , pccSocketDir = cliSocketDir
              }
 
 -- TODO: if we're using exceptions for this, then we should use a local

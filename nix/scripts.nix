@@ -43,14 +43,22 @@ let
         hostAddr
         port
         nodeId;
+      runtimeDir = null;
       dbPrefix = "db-${envConfig.name}";
       logger.configFile = config.loggingConfig;
       topology = topologyFile;
     };
     nodeConf = { config.services.cardano-node = serviceConfig; };
+    systemdCompat.options = {
+      systemd.services = mkOption {};
+      assertions = [];
+      users = mkOption {};
+    };
     nodeScript = (modules.evalModules {
+      prefix = [];
       modules = [
-        ./nixos/cardano-node-options.nix
+        ./nixos/cardano-node-service.nix
+        systemdCompat
         nodeConf
         pkgsModule
       ];
