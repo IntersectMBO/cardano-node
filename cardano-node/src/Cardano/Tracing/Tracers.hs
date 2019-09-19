@@ -167,16 +167,16 @@ mkTracers traceOptions tracer = Tracers
     mempoolTraceTransformer :: Tracer IO (LogObject a)
                             -> Tracer IO (TraceEventMempool blk)
     mempoolTraceTransformer tr = Tracer $ \mempoolEvent -> do
+        let (n, tot) = case mempoolEvent of
+                  TraceMempoolAddTxs      txs0 tot0 -> (length txs0, tot0)
+                  TraceMempoolRejectedTxs txs0 tot0 -> (length txs0, tot0)
+                  TraceMempoolRemoveTxs   txs0 tot0 -> (length txs0, tot0)
         let logValue :: LOContent a
-            logValue = LogValue "txsInMempool" $ PureI $ fromIntegral $ _txsInMempool mempoolEvent
+            logValue = LogValue "txsInMempool" $ PureI $ fromIntegral $ tot
         meta <- mkLOMeta Info Confidential
         traceNamedObject tr (meta, logValue)
-        let txs = case mempoolEvent of
-                  TraceMempoolAddTxs      txs0 _ -> txs0
-                  TraceMempoolRejectedTxs txs0 _ -> txs0
-                  _                              -> []
         let logValue' :: LOContent a
-            logValue' = LogValue "txsProcessed" $ PureI $ fromIntegral $ length txs
+            logValue' = LogValue "txsProcessed" $ PureI $ fromIntegral $ n
         traceNamedObject tr (meta, logValue')
 
     mempoolTracer = Tracer $ \ev -> do
