@@ -18,7 +18,7 @@ in {
             --genesis-hash ${cfg.genesisHash} \
             --log-config ${cfg.logger.configFile} \
             --database-path ${cfg.stateDir}/${cfg.dbPrefix} \
-            --socket-path ${cfg.stateDir}/node.socket \
+            --socket-dir ${cfg.stateDir}/socket \
             node \
             --topology ${cfg.topology} \
             --${cfg.consensusProtocol} \
