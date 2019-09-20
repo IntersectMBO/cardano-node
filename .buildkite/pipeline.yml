@@ -25,3 +25,8 @@ steps:
     command: 'nix-shell scripts/buildkite/stack-cabal-sync.nix --run scripts/buildkite/stack-cabal-sync.sh'
     agents:
       system: x86_64-linux
+
+  - label: 'dependencies-at-master'
+    command: 'ci/check-dependencies-merged-to-master.sh'
+    agents:
+      system: x86_64-linux
