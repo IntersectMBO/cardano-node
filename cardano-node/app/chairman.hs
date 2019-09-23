@@ -32,9 +32,12 @@ main = do
                  , caMaxBlockNo
                  , caTimeout
                  , caCommonCLI
+                 , caCommonCLIAdv
                  } <- execParser opts
 
-    cc <- mkConfiguration mainnetConfiguration caCommonCLI
+    cc <- case mkConfiguration mainnetConfiguration caCommonCLI caCommonCLIAdv of
+      Left e -> throwIO e
+      Right x -> pure x
 
     SomeProtocol p <- fromProtocol cc caProtocol
 
@@ -70,6 +73,7 @@ data ChairmanArgs = ChairmanArgs {
       -- be able to remove this option
     , caTimeout         :: !(Maybe Int)
     , caCommonCLI       :: !CommonCLI
+    , caCommonCLIAdv    :: !CommonCLIAdvanced
     }
 
 parseSecurityParam :: Parser SecurityParam
@@ -108,6 +112,7 @@ parseChairmanArgs =
       <*> optional parseSlots
       <*> optional parseTimeout
       <*> parseCommonCLI
+      <*> parseCommonCLIAdvanced
 
 opts :: ParserInfo ChairmanArgs
 opts = info (parseChairmanArgs <**> helper)

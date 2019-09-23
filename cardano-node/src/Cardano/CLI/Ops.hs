@@ -30,6 +30,7 @@ import qualified Cardano.Crypto.Signing as Crypto
 import qualified Cardano.Chain.Genesis as Genesis
 import qualified Crypto.SCRAPE as Scrape
 
+import           Cardano.Config.Types
 import           Cardano.Common.Protocol
 import qualified Cardano.CLI.Legacy.Byron as Legacy
 
@@ -93,7 +94,8 @@ data CliError
   | ProtocolNotSupported !Protocol
   | NotEnoughTxInputs
   | NotEnoughTxOutputs
-  -- Validation errors
+  | ConfigError !ConfigError
+ -- Validation errors
   | CertificateValidationErrors !FilePath ![Text]
   -- Serialization errors
   | ProtocolParametersParseFailed !FilePath !Text
@@ -125,6 +127,8 @@ instance Show CliError where
     = "Transactions must have at least one input."
   show NotEnoughTxOutputs
     = "Transactions must have at least one output."
+  show (ConfigError e)
+    = "Configuration error: " <> show e
   show (ProtocolNotSupported proto)
     = "Unsupported protocol "<> show proto
   show (CertificateValidationErrors fp errs)

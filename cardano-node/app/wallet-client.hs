@@ -44,6 +44,7 @@ parseWalletCLI = CLI
     <*> parseNumCoreNodes
     <*> parseProtocol
     <*> parseCommonCLI
+    <*> parseCommonCLIAdvanced
 
 parseNumCoreNodes :: Parser NumCoreNodes
 parseNumCoreNodes =
@@ -62,15 +63,6 @@ opts = info (commandLineParser <**> helper)
   <> progDesc "Cardano wallet node."
   <> header "Demo client to run.")
 
-
--- TODO move this to `cardano-shell` and use it in `cardano-node` as well.
--- Better than a partial pattern match.
---
-data PartialConfigError = PartialConfigError Text
-  deriving (Eq, Show)
-
-instance Exception PartialConfigError
-
 -- | Main function.
 main :: IO ()
 main = do
@@ -88,7 +80,10 @@ main = do
 
 initializeAllFeatures :: ArgParser -> PartialCardanoConfiguration -> CardanoEnvironment -> IO ([CardanoFeature], NodeLayer)
 initializeAllFeatures (ArgParser logCli cli) partialConfig cardanoEnvironment = do
-    finalConfig <- mkConfiguration partialConfig (cliCommon cli)
+    finalConfig <-
+      case mkConfiguration partialConfig (cliCommon cli) (cliCommonAdv cli) of
+        Left err -> throwIO err
+        Right x -> pure x
 
     (loggingLayer, loggingFeature) <- createLoggingFeature cardanoEnvironment finalConfig logCli
     (nodeLayer   , nodeFeature)    <- createNodeFeature loggingLayer cli cardanoEnvironment finalConfig

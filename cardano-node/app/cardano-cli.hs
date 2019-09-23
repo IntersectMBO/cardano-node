@@ -46,10 +46,13 @@ main = do
   -- Initialize logging layer. Particularly, we need it for benchmarking (command 'generate-txs').
   let cardanoConfiguration = mainnetConfiguration
   let cardanoEnvironment   = NoEnvironment
-  finalConfig <- mkConfiguration cardanoConfiguration (commonCli co)
-  (loggingLayer, _loggingFeature) <- createLoggingFeature cardanoEnvironment finalConfig (loggingCli co)
 
-  cmdRes <- runExceptT $ runCommand ops (mainCommand co) loggingLayer
+  cmdRes <- runExceptT $ do
+    finalConfig <- withExceptT ConfigError $ ExceptT $ pure $
+      mkConfiguration cardanoConfiguration (commonCli co) (commonCliAdv co)
+    (loggingLayer, _loggingFeature) <- liftIO $
+      createLoggingFeature cardanoEnvironment finalConfig (loggingCli co)
+    (runCommand ops finalConfig loggingLayer (mainCommand co) :: ExceptT CliError IO ())
   case cmdRes of
     Right _ -> pure ()
     Left err -> do print $ renderCliError err
@@ -75,6 +78,7 @@ data CLI = CLI
   { protocol    :: Protocol
   , mainCommand :: ClientCommand
   , commonCli   :: CommonCLI
+  , commonCliAdv :: CommonCLIAdvanced
   , loggingCli  :: LoggingCLIArguments
   }
 
@@ -84,6 +88,7 @@ parseClient =
     <$> parseProtocolActual
     <*> parseClientCommand
     <*> parseCommonCLI
+    <*> parseCommonCLIAdvanced
     <*> loggingParser
 
 parseClientCommand :: Parser ClientCommand
@@ -239,8 +244,7 @@ parseTxRelatedValues =
             "Submit a raw, signed transaction, in its on-wire representation."
             $ SubmitTx
                 <$> parseTopologyInfo "PBFT node ID to submit Tx to."
-                <*> parseTxFile "tx"
-                <*> parseCommonCLI,
+                <*> parseTxFile "tx",
           command'
             "issue-genesis-utxo-expenditure"
             "Write a file with a signed transaction, spending genesis UTxO."
@@ -252,8 +256,7 @@ parseTxRelatedValues =
                 <*> parseAddress
                       "rich-addr-from"
                       "Tx source: genesis UTxO richman address (non-HD)."
-                <*> (NE.fromList <$> some parseTxOut)
-                <*> parseCommonCLI,
+                <*> (NE.fromList <$> some parseTxOut),
           command'
             "issue-utxo-expenditure"
             "Write a file with a signed transaction, spending normal UTxO."
@@ -263,8 +266,7 @@ parseTxRelatedValues =
                       "wallet-key"
                       "Key that has access to all mentioned genesis UTxO inputs."
                 <*> (NE.fromList <$> some parseTxIn)
-                <*> (NE.fromList <$> some parseTxOut)
-                <*> parseCommonCLI,
+                <*> (NE.fromList <$> some parseTxOut),
           command'
             "generate-txs"
             "Launch transactions generator."
@@ -286,7 +288,6 @@ parseTxRelatedValues =
                 <*> parseSigningKeysFiles
                       "sig-key"
                       "Path to signing key file, for genesis UTxO using by generator."
-                <*> parseCommonCLI
           ]
       )
 

@@ -25,6 +25,7 @@ module Cardano.Config.Partial
     , finaliseCardanoConfiguration
     ) where
 
+import           Prelude (String)
 import           Cardano.Prelude
 
 import           Data.Monoid.Generic
@@ -206,9 +207,9 @@ data PartialWallet = PartialWallet
     deriving Monoid    via GenericMonoid PartialWallet
 
 
--- | Converting a @Last@ to an @Either@
-lastToEither :: Text -> Last a -> Either Text a
-lastToEither errMsg (Last x) = maybe (Left errMsg) Right x
+-- | Return an error if the @Last@ option is incomplete.
+checkComplete :: String -> Last a -> Either ConfigError a
+checkComplete name (Last x) = maybe (Left $ PartialConfigValue name) Right x
 
 --
 -- The finalise* family of functions are supposed to be called at the very last stage
@@ -217,14 +218,14 @@ lastToEither errMsg (Last x) = maybe (Left errMsg) Right x
 --
 -- NOTE: we should look into applying generic programming and/or TH for this boilerlate.
 --
-finaliseCardanoConfiguration :: PartialCardanoConfiguration -> Either Text CardanoConfiguration
+finaliseCardanoConfiguration :: PartialCardanoConfiguration -> Either ConfigError CardanoConfiguration
 finaliseCardanoConfiguration PartialCardanoConfiguration{..} = do
 
-    ccLogPath                <- lastToEither "Unspecified ccLogPath"    pccLogPath
-    ccLogConfig              <- lastToEither "Unspecified ccLogConfig"  pccLogConfig
-    ccDBPath                 <- lastToEither "Unspecified ccDBPath"     pccDBPath
-    ccSocketDir              <- lastToEither "Unspecified ccSocketPath" pccSocketDir
-    ccApplicationLockFile    <- lastToEither "Unspecified ccApplicationLockFile"
+    ccLogPath                <- checkComplete "ccLogPath"    pccLogPath
+    ccLogConfig              <- checkComplete "ccLogConfig"  pccLogConfig
+    ccDBPath                 <- checkComplete "ccDBPath"     pccDBPath
+    ccSocketDir              <- checkComplete "ccSocketPath" pccSocketDir
+    ccApplicationLockFile    <- checkComplete "ccApplicationLockFile"
                                     pccApplicationLockFile
 
     ccCore                   <- finaliseCore pccCore
@@ -240,25 +241,25 @@ finaliseCardanoConfiguration PartialCardanoConfiguration{..} = do
     pure CardanoConfiguration{..}
   where
     -- | Finalize the @PartialCore@, convert to @Core@.
-    finaliseCore :: PartialCore -> Either Text Core
+    finaliseCore :: PartialCore -> Either ConfigError Core
     finaliseCore PartialCore{..} = do
 
-        coGenesisFile                   <- lastToEither "Unspecified coGenesisFile"
+        coGenesisFile                   <- checkComplete "coGenesisFile"
                                             pcoGenesisFile
 
-        coGenesisHash                   <- lastToEither "Unspecified coGenesisHash"
+        coGenesisHash                   <- checkComplete "coGenesisHash"
                                             pcoGenesisHash
 
         let coNodeId                    = getLast pcoNodeId
         let coNumCoreNodes              = getLast pcoNumCoreNodes
 
-        coNodeProtocol                  <- lastToEither "Unspecified coNodeProtocol"
+        coNodeProtocol                  <- checkComplete "coNodeProtocol"
                                             pcoNodeProtocol
 
         let coStaticKeySigningKeyFile   = getLast pcoStaticKeySigningKeyFile
         let coStaticKeyDlgCertFile      = getLast pcoStaticKeyDlgCertFile
 
-        coRequiresNetworkMagic          <- lastToEither "Unspecified coRequiresNetworkMagic"
+        coRequiresNetworkMagic          <- checkComplete "coRequiresNetworkMagic"
                                             pcoRequiresNetworkMagic
 
         let coPBftSigThd                = getLast pcoPBftSigThd
@@ -267,100 +268,100 @@ finaliseCardanoConfiguration PartialCardanoConfiguration{..} = do
 
 
     -- | Finalize the @PartialTXP@, convert to @TXP@.
-    finaliseTXP :: PartialTXP -> Either Text TXP
+    finaliseTXP :: PartialTXP -> Either ConfigError TXP
     finaliseTXP PartialTXP{..} = do
 
-        txpMemPoolLimitTx           <- lastToEither "Unspecified txpMemPoolLimitTx"
+        txpMemPoolLimitTx           <- checkComplete "txpMemPoolLimitTx"
                                         ptxpMemPoolLimitTx
 
-        txpAssetLockedSrcAddress    <- lastToEither "Unspecified txpAssetLockedSrcAddress"
+        txpAssetLockedSrcAddress    <- checkComplete "txpAssetLockedSrcAddress"
                                         ptxpAssetLockedSrcAddress
 
         pure TXP{..}
 
     -- | Finalize the @PartialUpdate@, convert to @Update@.
-    finaliseUpdate :: PartialUpdate -> Either Text Update
+    finaliseUpdate :: PartialUpdate -> Either ConfigError Update
     finaliseUpdate PartialUpdate{..} = do
 
-        upApplicationName          <- lastToEither "Unspecified upApplicationName"      pupApplicationName
-        upApplicationVersion       <- lastToEither "Unspecified upApplicationVersion"   pupApplicationVersion
+        upApplicationName          <- checkComplete "upApplicationName"      pupApplicationName
+        upApplicationVersion       <- checkComplete "upApplicationVersion"   pupApplicationVersion
         upLastKnownBlockVersion    <- finaliseLastKnownBlockVersion pupLastKnownBlockVersion
 
         pure Update{..}
       where
-        finaliseLastKnownBlockVersion :: PartialLastKnownBlockVersion -> Either Text LastKnownBlockVersion
+        finaliseLastKnownBlockVersion :: PartialLastKnownBlockVersion -> Either ConfigError LastKnownBlockVersion
         finaliseLastKnownBlockVersion PartialLastKnownBlockVersion{..} = do
 
-            lkbvMajor  <- lastToEither "Unspecified lkbvMajor"     plkbvMajor
-            lkbvMinor  <- lastToEither "Unspecified lkbvMinor"     plkbvMinor
-            lkbvAlt    <- lastToEither "Unspecified lkbvAlt"       plkbvAlt
+            lkbvMajor  <- checkComplete "lkbvMajor"     plkbvMajor
+            lkbvMinor  <- checkComplete "lkbvMinor"     plkbvMinor
+            lkbvAlt    <- checkComplete "lkbvAlt"       plkbvAlt
 
             pure LastKnownBlockVersion{..}
 
     -- | Finalize the @PartialNTP@, convert to @NTP@.
-    finaliseNTP :: PartialNTP -> Either Text NTP
+    finaliseNTP :: PartialNTP -> Either ConfigError NTP
     finaliseNTP PartialNTP{..} = do
 
-        ntpResponseTimeout  <- lastToEither "Unspecified ntpResponseTimeout"    pntpResponseTimeout
-        ntpPollDelay        <- lastToEither "Unspecified ntpPollDelay"          pntpPollDelay
-        ntpServers          <- lastToEither "Unspecified ntpServers"            pntpServers
+        ntpResponseTimeout  <- checkComplete "ntpResponseTimeout"    pntpResponseTimeout
+        ntpPollDelay        <- checkComplete "ntpPollDelay"          pntpPollDelay
+        ntpServers          <- checkComplete "ntpServers"            pntpServers
 
         pure NTP{..}
 
     -- | Finalize the @PartialNode@, convert to @Node@.
-    finaliseNode :: PartialNode -> Either Text Node
+    finaliseNode :: PartialNode -> Either ConfigError Node
     finaliseNode PartialNode{..} = do
 
-        noSlotLength                    <- lastToEither "Unspecified noSlotLength"
+        noSlotLength                    <- checkComplete "noSlotLength"
                                             pnoSlotLength
 
-        noNetworkConnectionTimeout      <- lastToEither "Unspecified noNetworkConnectionTimeout"
+        noNetworkConnectionTimeout      <- checkComplete "noNetworkConnectionTimeout"
                                             pnoNetworkConnectionTimeout
 
-        noHandshakeTimeout              <- lastToEither "Unspecified noHandshakeTimeout"
+        noHandshakeTimeout              <- checkComplete "noHandshakeTimeout"
                                             pnoHandshakeTimeout
 
         pure Node{..}
 
     -- | Finalize the @PartialDLG@, convert to @DLG@.
-    finaliseDLG :: PartialDLG -> Either Text DLG
+    finaliseDLG :: PartialDLG -> Either ConfigError DLG
     finaliseDLG PartialDLG{..} = do
 
-        dlgCacheParam           <- lastToEither "Unspecified dlgCacheParam"             pdlgCacheParam
-        dlgMessageCacheTimeout  <- lastToEither "Unspecified dlgMessageCacheTimeout"    pdlgMessageCacheTimeout
+        dlgCacheParam           <- checkComplete "dlgCacheParam"             pdlgCacheParam
+        dlgMessageCacheTimeout  <- checkComplete "dlgMessageCacheTimeout"    pdlgMessageCacheTimeout
 
         pure DLG{..}
 
 
     -- | Finalize the @PartialBlock@, convert to @Block@.
-    finaliseBlock :: PartialBlock -> Either Text Block
+    finaliseBlock :: PartialBlock -> Either ConfigError Block
     finaliseBlock PartialBlock{..} = do
 
-        blNetworkDiameter        <- lastToEither "Unspecified blNetworkDiameter"        pblNetworkDiameter
-        blRecoveryHeadersMessage <- lastToEither "Unspecified blRecoveryHeadersMessage" pblRecoveryHeadersMessage
-        blStreamWindow           <- lastToEither "Unspecified blStreamWindow"           pblStreamWindow
-        blNonCriticalCQBootstrap <- lastToEither "Unspecified blNonCriticalCQBootstrap" pblNonCriticalCQBootstrap
-        blNonCriticalCQ          <- lastToEither "Unspecified blNonCriticalCQ"          pblNonCriticalCQ
-        blCriticalCQ             <- lastToEither "Unspecified blCriticalCQ"             pblCriticalCQ
-        blCriticalCQBootstrap    <- lastToEither "Unspecified blCriticalCQBootstrap"    pblCriticalCQBootstrap
-        blCriticalForkThreshold  <- lastToEither "Unspecified blCriticalForkThreshold"  pblCriticalForkThreshold
-        blFixedTimeCQ            <- lastToEither "Unspecified blFixedTimeCQ"            pblFixedTimeCQ
+        blNetworkDiameter        <- checkComplete "blNetworkDiameter"        pblNetworkDiameter
+        blRecoveryHeadersMessage <- checkComplete "blRecoveryHeadersMessage" pblRecoveryHeadersMessage
+        blStreamWindow           <- checkComplete "blStreamWindow"           pblStreamWindow
+        blNonCriticalCQBootstrap <- checkComplete "blNonCriticalCQBootstrap" pblNonCriticalCQBootstrap
+        blNonCriticalCQ          <- checkComplete "blNonCriticalCQ"          pblNonCriticalCQ
+        blCriticalCQ             <- checkComplete "blCriticalCQ"             pblCriticalCQ
+        blCriticalCQBootstrap    <- checkComplete "blCriticalCQBootstrap"    pblCriticalCQBootstrap
+        blCriticalForkThreshold  <- checkComplete "blCriticalForkThreshold"  pblCriticalForkThreshold
+        blFixedTimeCQ            <- checkComplete "blFixedTimeCQ"            pblFixedTimeCQ
 
         pure Block{..}
 
     -- | Finalize the @PartialCertificate@, convert to @Certificate@.
-    finaliseCertificate :: PartialCertificate -> Either Text Certificate
+    finaliseCertificate :: PartialCertificate -> Either ConfigError Certificate
     finaliseCertificate PartialCertificate{..} = do
 
-        certOrganization    <- lastToEither "Unspecified certOrganization"  pcertOrganization
-        certCommonName      <- lastToEither "Unspecified certCommonName"    pcertCommonName
-        certExpiryDays      <- lastToEither "Unspecified certExpiryDays"    pcertExpiryDays
-        certAltDNS          <- lastToEither "Unspecified certAltDNS"        pcertAltDNS
+        certOrganization    <- checkComplete "certOrganization"  pcertOrganization
+        certCommonName      <- checkComplete "certCommonName"    pcertCommonName
+        certExpiryDays      <- checkComplete "certExpiryDays"    pcertExpiryDays
+        certAltDNS          <- checkComplete "certAltDNS"        pcertAltDNS
 
         pure Certificate{..}
 
     -- | Finalize the @PartialTLS@, convert to @TLS@.
-    finaliseTLS :: PartialTLS -> Either Text TLS
+    finaliseTLS :: PartialTLS -> Either ConfigError TLS
     finaliseTLS PartialTLS{..} = do
 
         tlsCA       <- finaliseCertificate ptlsCA
@@ -370,12 +371,12 @@ finaliseCardanoConfiguration PartialCardanoConfiguration{..} = do
         pure TLS{..}
 
     -- | Finalize the @PartialWallet@, convert to @Wallet@.
-    finaliseWallet :: PartialWallet -> Either Text Wallet
+    finaliseWallet :: PartialWallet -> Either ConfigError Wallet
     finaliseWallet PartialWallet{..} = do
 
-        thEnabled   <- lastToEither "Unspecified thEnabled" pthEnabled
-        thRate      <- lastToEither "Unspecified thRate"    pthRate
-        thPeriod    <- lastToEither "Unspecified thPeriod"  pthPeriod
-        thBurst     <- lastToEither "Unspecified thBurst"   pthBurst
+        thEnabled   <- checkComplete "thEnabled" pthEnabled
+        thRate      <- checkComplete "thRate"    pthRate
+        thPeriod    <- checkComplete "thPeriod"  pthPeriod
+        thBurst     <- checkComplete "thBurst"   pthBurst
 
         pure Wallet {..}

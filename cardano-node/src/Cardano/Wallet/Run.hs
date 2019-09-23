@@ -14,11 +14,11 @@ import           Data.Text (Text, pack)
 import           Cardano.BM.Data.Tracer (ToLogObject (..))
 import           Cardano.BM.Trace (Trace, appendName)
 import           Cardano.Common.Protocol(Protocol, SomeProtocol(..), fromProtocol)
-import           Cardano.Config.CommonCLI(CommonCLI)
 
 import           Ouroboros.Consensus.Node.ProtocolInfo.Abstract (NumCoreNodes (..))
 import           Ouroboros.Consensus.NodeId (CoreNodeId (..))
 
+import           Cardano.Config.CommonCLI
 import           Cardano.Config.Types (CardanoConfiguration (..))
 import           Cardano.Wallet.Client
 
@@ -35,5 +35,6 @@ data CLI = CLI {
     cliCoreNodeId   :: CoreNodeId,
     cliNumCoreNodes :: NumCoreNodes,
     cliProtocol     :: Protocol,
-    cliCommon       :: CommonCLI
+    cliCommon       :: CommonCLI,
+    cliCommonAdv    :: CommonCLIAdvanced
   }

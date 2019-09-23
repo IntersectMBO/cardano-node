@@ -21,9 +21,12 @@ import           Cardano.Tracing.TraceAcceptor (runTraceAcceptor)
 
 main :: IO ()
 main = do
-  (,) commonCLI
-      loggingCLI <- Opt.customExecParser pref opts
-  finalConfig <- mkConfiguration pcc commonCLI
+  (,,) commonCLI
+       commonCLIAdv
+       loggingCLI <- Opt.customExecParser pref opts
+  finalConfig <- case mkConfiguration pcc commonCLI commonCLIAdv of
+                   Left err -> throwIO err
+                   Right x -> pure x
   (,) loggingLayer
       loggingFeature <- createLoggingFeature env finalConfig loggingCLI
 
@@ -41,7 +44,7 @@ main = do
     pref :: Opt.ParserPrefs
     pref = Opt.prefs Opt.showHelpOnEmpty
 
-    opts :: Opt.ParserInfo (CommonCLI, LoggingCLIArguments)
+    opts :: Opt.ParserInfo (CommonCLI, CommonCLIAdvanced, LoggingCLIArguments)
     opts =
       Opt.info (cliParser <**> Opt.helper)
         ( Opt.fullDesc
@@ -51,7 +54,8 @@ main = do
           \ pretty-printing..) for different system generations."
         )
 
-    cliParser :: Parser (CommonCLI, LoggingCLIArguments)
-    cliParser = (,)
+    cliParser :: Parser (CommonCLI, CommonCLIAdvanced, LoggingCLIArguments)
+    cliParser = (,,)
       <$> parseCommonCLI
+      <*> parseCommonCLIAdvanced
       <*> loggingParser

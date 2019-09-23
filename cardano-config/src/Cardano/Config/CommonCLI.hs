@@ -4,7 +4,9 @@
 
 module Cardano.Config.CommonCLI
   ( CommonCLI(..)
+  , CommonCLIAdvanced(..)
   , parseCommonCLI
+  , parseCommonCLIAdvanced
   , mergeConfiguration
   , mkConfiguration
    -- * Generic
@@ -17,6 +19,7 @@ module Cardano.Config.CommonCLI
   , lastWordOption
   , lastTextListOption
   , lastStrOption
+  , lastStrOptionM
   , lastFlag
   ) where
 
@@ -28,21 +31,24 @@ import qualified Options.Applicative as OA
 
 import qualified Ouroboros.Consensus.BlockchainTime as Consensus
 
-import           Cardano.Config.Types (CardanoConfiguration(..)
-                                      ,RequireNetworkMagic(..))
 import           Cardano.Config.Partial
+import           Cardano.Config.Types
 
 
 data CommonCLI = CommonCLI
   { cliDBPath                     :: !(Last FilePath)
   , cliGenesisFile                :: !(Last FilePath)
   , cliGenesisHash                :: !(Last Text)
-  , cliPBftSigThd                 :: !(Last Double)
   , cliStaticKeyDlgCertFile       :: !(Last FilePath)
   , cliStaticKeySigningKeyFile    :: !(Last FilePath)
-  , cliRequiresNetworkMagic       :: !(Last RequireNetworkMagic)
-  , cliSlotLength                 :: !(Last Consensus.SlotLength)
   , cliSocketDir                  :: !(Last FilePath)
+  --TODO cliUpdate                :: !PartialUpdate
+  }
+
+data CommonCLIAdvanced = CommonCLIAdvanced
+  { ccaPBftSigThd                 :: !(Last Double)
+  , ccaRequiresNetworkMagic       :: !(Last RequireNetworkMagic)
+  , ccaSlotLength                 :: !(Last Consensus.SlotLength)
   --TODO cliUpdate                :: !PartialUpdate
   }
 
@@ -51,8 +57,6 @@ data CommonCLI = CommonCLI
 -------------------------------------------------------------------------------}
 
 -- | CLI Arguments common to all Cardano node flavors
-
-
 parseCommonCLI :: Parser CommonCLI
 parseCommonCLI =
     CommonCLI
@@ -71,11 +75,6 @@ parseCommonCLI =
           <> metavar "GENESIS-HASH"
           <> help "The genesis hash value."
            )
-    <*> lastDoubleOption
-           ( long "pbft-signature-threshold"
-          <> metavar "DOUBLE"
-          <> help "The PBFT signature threshold."
-           )
     <*> lastStrOption
            ( long "delegation-certificate"
           <> metavar "FILEPATH"
@@ -86,21 +85,34 @@ parseCommonCLI =
           <> metavar "FILEPATH"
           <> help "Path to the signing key."
            )
+    <*> lastStrOption (
+            long "socket-dir"
+         <> metavar "FILEPATH"
+         <> help "Directory with local sockets:  ${dir}/node-{core,relay}-${node-id}.socket"
+        )
+
+-- | These are advanced options, and so are hidden by default.
+parseCommonCLIAdvanced :: Parser CommonCLIAdvanced
+parseCommonCLIAdvanced =
+    CommonCLIAdvanced
+    <$> lastDoubleOption
+           ( long "pbft-signature-threshold"
+          <> metavar "DOUBLE"
+          <> help "The PBFT signature threshold."
+          <> hidden
+           )
     <*> lastFlag NoRequireNetworkMagic RequireNetworkMagic
            ( long "require-network-magic"
           <> help "Require network magic in transactions."
+          <> hidden
            )
     <*> ((mkSlotLength <$>)
          <$> lastAutoOption
              ( long "slot-duration"
                <> metavar "SECONDS"
                <> help "The slot duration (seconds)"
+               <> hidden
              ))
-    <*> lastStrOption (
-            long "socket-dir"
-         <> metavar "FILEPATH"
-         <> help "Directory with local sockets:  ${dir}/node-{core,relay}-${node-id}.socket"
-        )
   where
     mkSlotLength :: Integer -> Consensus.SlotLength
     mkSlotLength = Consensus.slotLengthFromMillisec . (* 1000)
@@ -162,43 +174,41 @@ lastStrOptionM args = Last . Just <$> strOption args
 mergeConfiguration
   :: PartialCardanoConfiguration
   -> CommonCLI
+  -> CommonCLIAdvanced
   -> PartialCardanoConfiguration
-mergeConfiguration pcc cli =
+mergeConfiguration pcc cli cca =
     -- The beauty of this kind of configuration management (using trees of
     -- monoids) is that we can override individual config elements by simply
     -- merging an extra partial config on top. That extra partial config is
     -- built starting from mempty and setting the fields of interest.
-    pcc <> commonCLIToPCC cli
+    --
+    -- TODO:  see TODO in 'initializeAllFeatures' in 'cardano-node.hs'.
+    pcc <> commonCLIToPCC cli cca
   where
-    commonCLIToPCC :: CommonCLI -> PartialCardanoConfiguration
-    commonCLIToPCC cc =
+    commonCLIToPCC
+      :: CommonCLI -> CommonCLIAdvanced -> PartialCardanoConfiguration
+    commonCLIToPCC cc ca =
       mempty { pccCore = mempty
                     { pcoGenesisFile             = cliGenesisFile cc
                     , pcoGenesisHash             = cliGenesisHash cc
                     , pcoStaticKeySigningKeyFile = cliStaticKeySigningKeyFile cc
                     , pcoStaticKeyDlgCertFile    = cliStaticKeyDlgCertFile cc
-                    , pcoPBftSigThd              = cliPBftSigThd cc
-                    , pcoRequiresNetworkMagic    = cliRequiresNetworkMagic cc
+                    , pcoPBftSigThd              = ccaPBftSigThd ca
+                    , pcoRequiresNetworkMagic    = ccaRequiresNetworkMagic ca
                     -- TODO: cliUpdate
                     }
              , pccNode = mempty
-                    { pnoSlotLength              = cliSlotLength cc
+                    { pnoSlotLength              = ccaSlotLength ca
                     }
              , pccDBPath = cliDBPath cc
              , pccSocketDir = cliSocketDir cc
              }
 
--- TODO: if we're using exceptions for this, then we should use a local
--- excption type, local to this app, that enumerates all the ones we
--- are reporting, and has proper formatting of the result.
--- It would also require catching at the top level and printing.
---
--- Now, that this is a library function, the proper solution would also
--- require having a common error type.
-mkConfiguration :: PartialCardanoConfiguration -> CommonCLI -> IO CardanoConfiguration
-mkConfiguration partialConfig cli =
-    case finaliseCardanoConfiguration $
-         mergeConfiguration partialConfig cli
-    of
-      Left err -> Prelude.fail $ Prelude.show err
-      Right x  -> pure x
+mkConfiguration
+  :: PartialCardanoConfiguration
+  -> CommonCLI
+  -> CommonCLIAdvanced
+  -> Either ConfigError CardanoConfiguration
+mkConfiguration partialConfig cli cca =
+    finaliseCardanoConfiguration $
+    mergeConfiguration partialConfig cli cca

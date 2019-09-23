@@ -38,9 +38,9 @@ import           Cardano.Tracing.Tracers (ConsensusTraceOptions,  ProtocolTraceO
 
 main :: IO ()
 main = do
-    cliArgs <- Opt.execParser opts
+    cli <- Opt.execParser opts
 
-    (features, nodeLayer) <- initializeAllFeatures cliArgs pcc env
+    (features, nodeLayer) <- initializeAllFeatures cli pcc env
 
     runCardanoApplicationWithFeatures features (cardanoApplication nodeLayer)
 
@@ -57,8 +57,9 @@ main = do
       opts :: Opt.ParserInfo CLI
       opts =
         Opt.info (cliParser
-                  <**> helperBrief "help" "Show this help text" cliMainHelp
-                  <**> helperBrief "help-tracing" "Show help for tracing options" cliTracingHelp)
+                  <**> helperBrief "help" "Show this help text" cliHelpMain
+                  <**> helperBrief "help-tracing" "Show help for tracing options" cliHelpTracing
+                  <**> helperBrief "help-advanced" "Show help for advanced options" cliHelpAdvanced)
           ( Opt.fullDesc <>
             Opt.progDesc "Start node of the Cardano blockchain."
           )
@@ -68,25 +69,47 @@ main = do
         [ Opt.long l
         , Opt.help d ]
 
-      cliMainHelp :: String
-      cliMainHelp = renderHelpDoc 80 $
-        parserHelpHeader "cardano-node" cliMainParser
+      cliHelpMain :: String
+      cliHelpMain = renderHelpDoc 80 $
+        parserHelpHeader "cardano-node" cliParserMain
         <$$> ""
-        <$$> parserHelpOptions cliMainParser
+        <$$> parserHelpOptions cliParserMain
 
-      cliTracingHelp :: String
-      cliTracingHelp = renderHelpDoc 80 $
+      cliHelpTracing :: String
+      cliHelpTracing = renderHelpDoc 80 $
         "Additional tracing options:"
         <$$> ""
         <$$> parserHelpOptions cliTracingParser
+
+      cliHelpAdvanced :: String
+      cliHelpAdvanced = renderHelpDoc 80 $
+        "Advanced options:"
+        <$$> ""
+        <$$> parserHelpOptions parseCommonCLIAdvanced
 
 initializeAllFeatures
   :: CLI
   -> PartialCardanoConfiguration
   -> CardanoEnvironment
   -> IO ([CardanoFeature], NodeLayer)
-initializeAllFeatures (CLI (CLIMain nodeCLI logCLI commonCLI) (CLITracing traceCLI)) partialConfig cardanoEnvironment = do
-    finalConfig <- mkConfiguration partialConfig commonCLI
+initializeAllFeatures (CLI (CLIMain nodeCLI logCLI commonCLI) traceCLI commonCLIAdv)
+                      partialConfig cardanoEnvironment = do
+    -- TODO: we have to execute on our decision to implement the
+    -- generalised options monoid (GOM), to serve the purposes of composition
+    -- of the three config layers:  presets, config files and CLI.
+    -- Currently we have a mish-mash (see createNodeFeature accepting both
+    -- 'finalConfig' and nodeCli/traceCLI/advancedCLI. Yuck!
+    --
+    -- Considerations:
+    -- 1. the CLI parser data structures must be grouped to accomodate help sectioning.
+    -- 2. from #1 it follows we either switch all code users to the same structure, or
+    --    we implement conversion (which will need to be maintained).
+    -- 3. we want to enforce a single point where we go from GOM config layers to
+    --    'CardanoConfiguration' -- so the users are not exposed to un-merged layers.
+    --    This is probably the best place for this to happen.
+    finalConfig <- case mkConfiguration partialConfig commonCLI commonCLIAdv of
+      Left e -> throwIO e
+      Right x -> pure x
 
     (loggingLayer, loggingFeature) <- createLoggingFeature cardanoEnvironment finalConfig logCLI
     (nodeLayer   , nodeFeature)    <- createNodeFeature loggingLayer nodeCLI traceCLI cardanoEnvironment finalConfig
@@ -100,26 +123,25 @@ initializeAllFeatures (CLI (CLIMain nodeCLI logCLI commonCLI) (CLITracing traceC
 -- Parsers & Types
 -------------------------------------------------------------------------------
 
-data CLI = CLI !CLIMain !CLITracing
+data CLI = CLI !CLIMain !TraceOptions !CommonCLIAdvanced
 
 data CLIMain = CLIMain !NodeArgs !LoggingCLIArguments !CommonCLI
-
-data CLITracing = CLITracing !TraceOptions
 
 -- | The product parser for all the CLI arguments.
 cliParser :: Parser CLI
 cliParser = CLI
-  <$> cliMainParser
+  <$> cliParserMain
   <*> cliTracingParser
+  <*> parseCommonCLIAdvanced
 
-cliMainParser :: Parser CLIMain
-cliMainParser = CLIMain
+cliParserMain :: Parser CLIMain
+cliParserMain = CLIMain
   <$> parseNodeArgs
   <*> loggingParser
   <*> parseCommonCLI
 
-cliTracingParser :: Parser CLITracing
-cliTracingParser = CLITracing <$> parseTraceOptions Opt.hidden
+cliTracingParser :: Parser TraceOptions
+cliTracingParser = parseTraceOptions Opt.hidden
 
 parseNodeArgs :: Parser NodeArgs
 parseNodeArgs =
@@ -166,8 +188,8 @@ parsePort =
 
 parseTraceOptions :: MParser TraceOptions
 parseTraceOptions m = TraceOptions
-  <$> parseTracingGlobal
-  <*> parseTracingVerbosity
+  <$> parseTracingGlobal m
+  <*> parseTracingVerbosity m
   <*> parseTraceChainDB m
   <*> parseConsensusTraceOptions m
   <*> parseProtocolTraceOptions m
@@ -175,24 +197,30 @@ parseTraceOptions m = TraceOptions
   <*> parseTraceDnsSubscription m
   <*> parseTraceDnsResolver m
 
-parseTracingGlobal :: Parser Bool
-parseTracingGlobal =
-    switch (
-         long "tracing-off"
-      <> help "Tracing globally turned off."
-    )
+parseTracingGlobal :: MParser Bool
+parseTracingGlobal m =
+  switch ( long "tracing-off"
+           <> help "Tracing globally turned off."
+           <> m
+         )
 
-parseTracingVerbosity :: Parser TracingVerbosity
-parseTracingVerbosity = asum [
-    flag' MinimalVerbosity (long "tracing-verbosity-minimal"
-            <> help "Minimal level of the rendering of captured items")
+parseTracingVerbosity :: MParser TracingVerbosity
+parseTracingVerbosity m = asum [
+  flag' MinimalVerbosity (
+      long "tracing-verbosity-minimal"
+        <> help "Minimal level of the rendering of captured items"
+        <> m)
     <|>
-    flag' MaximalVerbosity (long "tracing-verbosity-maximal"
-            <> help "Maximal level of the rendering of captured items")
+  flag' MaximalVerbosity ( 
+      long "tracing-verbosity-maximal"
+        <> help "Maximal level of the rendering of captured items"
+        <> m)
     <|>
-    flag NormalVerbosity NormalVerbosity (long "tracing-verbosity-normal"
-            <> help "the default level of the rendering of captured items")
-    ]
+  flag NormalVerbosity NormalVerbosity (
+      long "tracing-verbosity-normal"
+        <> help "the default level of the rendering of captured items"
+        <> m)
+  ]
 
 parseTraceChainDB :: MParser Bool
 parseTraceChainDB m =

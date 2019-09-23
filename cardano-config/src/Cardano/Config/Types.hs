@@ -2,7 +2,8 @@
 {-# LANGUAGE RecordWildCards #-}
 
 module Cardano.Config.Types
-    ( CardanoConfiguration (..)
+    ( ConfigError(..)
+    , CardanoConfiguration (..)
     , CardanoEnvironment (..)
     , Core (..)
     -- * specific for @Core@
@@ -30,6 +31,7 @@ module Cardano.Config.Types
     , Certificate (..)
     ) where
 
+import           Prelude (String, show)
 import           Cardano.Prelude
 
 import qualified Ouroboros.Consensus.BlockchainTime as Consensus
@@ -43,6 +45,16 @@ import           Cardano.Config.Orphanage ()
 -- | Just a placeholder for now.
 data CardanoEnvironment = NoEnvironment
     deriving (Eq, Show)
+
+-- | Exception type for configuration-related errors.
+data ConfigError
+  = PartialConfigValue !String
+
+instance Show ConfigError where
+  show (PartialConfigValue name)
+    = "Undefined CardanoConfiguration value: " <> name
+
+instance Exception ConfigError
 
 --------------------------------------------------------------------------------
 -- Cardano Configuration Data Structures
