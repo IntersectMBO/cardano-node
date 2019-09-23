@@ -12,15 +12,13 @@ extra-deps:
   - binary-0.8.7.0
   - bimap-0.4.0
   - containers-0.5.11.0
-  - ekg-prometheus-adapter-0.1.0.4
   - generic-monoid-0.1.0.0
-  - prometheus-2.1.1
   - pvss-0.2.0
   - time-units-1.0.0
-  - libsystemd-journal-1.4.4
   - tasty-hedgehog-1.0.0.1
   - transformers-except-0.1.1
   - brick-0.47
+  - libsystemd-journal-1.4.4
   - config-ini-0.2.4.0
   - data-clist-0.1.2.2
   - text-zipper-0.10.1
@@ -54,10 +52,15 @@ extra-deps:
 
     # iohk-monitoring-framework currently not pinned to a release
   - git: https://github.com/input-output-hk/iohk-monitoring-framework
-    commit: e22be186e0b1018260ed7c5166871f82a869b94d
+    commit: 1ebe57df3a76a8ae4e3b5a31a9b85132f71534fc
     subdirs:
       - contra-tracer
       - iohk-monitoring
+      - plugins/backend-aggregation
+      - plugins/backend-editor
+      - plugins/backend-ekg
+      - plugins/backend-monitoring
+      - plugins/scribe-systemd
 
     # Extracted from cardano-sl since it's quite useful
   - git: https://github.com/input-output-hk/cardano-sl-x509
@@ -74,10 +77,6 @@ extra-deps:
         - ouroboros-consensus
         - typed-protocols
         - typed-protocols-cbor
-
-flags:
-  iohk-monitoring:
-    disable-prometheus: true
 
 nix:
   shell-file: nix/stack-shell.nix

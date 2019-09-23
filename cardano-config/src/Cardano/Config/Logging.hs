@@ -1,4 +1,3 @@
-{-# LANGUAGE DeriveGeneric       #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE Rank2Types          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -25,10 +24,14 @@ import           Cardano.Prelude hiding (trace)
 
 import           Control.Exception.Safe (MonadCatch)
 
+import           Cardano.BM.Backend.Aggregation (plugin)
+import           Cardano.BM.Backend.Editor (plugin)
+import           Cardano.BM.Backend.EKGView (plugin)
+import           Cardano.BM.Backend.Monitoring (plugin)
 import qualified Cardano.BM.Backend.Switchboard as Switchboard
 import           Cardano.BM.Configuration (Configuration)
 import qualified Cardano.BM.Configuration as Config
-import           Cardano.BM.Data.Backend (Backend)
+import           Cardano.BM.Data.Backend (Backend, BackendKind)
 import           Cardano.BM.Data.LogItem ( LOContent (..)
                                          , LOMeta (..)
                                          , LoggerName
@@ -37,6 +40,7 @@ import           Cardano.BM.Data.LogItem ( LOContent (..)
 import           Cardano.BM.Data.Severity (Severity (..))
 import qualified Cardano.BM.Observer.Monadic as Monadic
 import qualified Cardano.BM.Observer.STM as Stm
+import           Cardano.BM.Plugin (loadPlugin)
 import           Cardano.BM.Setup (setupTrace_, shutdown)
 import           Cardano.BM.Trace (Trace)
 import qualified Cardano.BM.Trace as Trace
@@ -90,7 +94,7 @@ data LoggingLayer = LoggingLayer
       :: forall a t. (Show a)
       => Trace IO a -> Severity -> Text -> STM (t,[(LOMeta, LOContent a)]) -> IO t
   , llConfiguration :: Configuration
-  , llAddBackend :: Backend Text -> Text -> IO ()
+  , llAddBackend :: Backend Text -> BackendKind -> IO ()
   }
 
 --------------------------------
@@ -124,12 +128,12 @@ createLoggingFeature
       putTextLn "Cannot find the logging configuration file at location."
       throwIO $ FileNotFoundException loggingCLIArguments
 
-    loggingConfiguration <- LoggingConfiguration <$> (Config.setup loggingCLIArguments)
+    loggingConfiguration <- LoggingConfiguration <$> Config.setup loggingCLIArguments
 
     -- we construct the layer
     logCardanoFeat <- loggingCardanoFeatureInit loggingConfiguration
 
-    loggingLayer <- (featureInit logCardanoFeat)
+    loggingLayer <- featureInit logCardanoFeat
                       cardanoEnvironment
                       NoDependency
                       cardanoConfiguration
@@ -148,11 +152,28 @@ loggingCardanoFeatureInit loggingConfiguration = do
     let logConfig = lpConfiguration loggingConfiguration
     (baseTrace, switchBoard) <- setupTrace_ logConfig "cardano"
 
+    Config.getGUIport logConfig >>= \p ->
+        if p > 0
+        then Cardano.BM.Backend.Editor.plugin logConfig baseTrace switchBoard
+                 >>= loadPlugin switchBoard
+        else pure ()
+    Config.getEKGport logConfig >>= \p ->
+        if p > 0
+        then Cardano.BM.Backend.EKGView.plugin logConfig baseTrace switchBoard
+                  >>= loadPlugin switchBoard
+        else pure ()
+
+    Cardano.BM.Backend.Aggregation.plugin logConfig baseTrace switchBoard
+        >>= loadPlugin switchBoard
+    Cardano.BM.Backend.Monitoring.plugin logConfig baseTrace switchBoard
+        >>= loadPlugin switchBoard
+
+
     -- Construct the logging layer.
     let initLogging
           :: CardanoEnvironment -> NoDependency
           -> CardanoConfiguration -> LoggingConfiguration -> IO LoggingLayer
-        initLogging _ _ _ _ = do
+        initLogging _ _ _ _ =
           pure $ LoggingLayer
                    { llBasicTrace = Trace.natTrace liftIO baseTrace
                    , llLogDebug = Trace.logDebug
@@ -185,5 +206,5 @@ createCardanoFeature :: LoggingCardanoFeature -> LoggingLayer -> CardanoFeature
 createCardanoFeature loggingCardanoFeature loggingLayer = CardanoFeature
     { featureName = "LoggingMonitoringFeature"
     , featureStart = liftIO . void $ pure loggingLayer
-    , featureShutdown = liftIO $ (featureCleanup loggingCardanoFeature) loggingLayer
+    , featureShutdown = liftIO $ featureCleanup loggingCardanoFeature loggingLayer
     }

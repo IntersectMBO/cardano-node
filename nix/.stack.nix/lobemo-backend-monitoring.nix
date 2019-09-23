@@ -1,16 +1,16 @@
 { system, compiler, flags, pkgs, hsPkgs, pkgconfPkgs, ... }:
   {
-    flags = { disable-observables = false; performance-test-queue = false; };
+    flags = {};
     package = {
-      specVersion = "1.10";
-      identifier = { name = "iohk-monitoring"; version = "0.1.10.1"; };
+      specVersion = "2.0";
+      identifier = { name = "lobemo-backend-monitoring"; version = "0.1.0.0"; };
       license = "Apache-2.0";
-      copyright = "2018 IOHK";
-      maintainer = "";
-      author = "Alexander Diemand, Andreas Triantafyllos";
-      homepage = "";
+      copyright = "2019 IOHK";
+      maintainer = "operations@iohk.io";
+      author = "Alexander Diemand";
+      homepage = "https://github.com/input-output-hk/iohk-monitoring-framework";
       url = "";
-      synopsis = "logging, benchmarking and monitoring framework";
+      synopsis = "provides a backend implementation for monitoring";
       description = "";
       buildType = "Simple";
       };
@@ -18,36 +18,14 @@
       "library" = {
         depends = [
           (hsPkgs.base)
-          (hsPkgs.contra-tracer)
+          (hsPkgs.iohk-monitoring)
           (hsPkgs.aeson)
-          (hsPkgs.array)
           (hsPkgs.async)
-          (hsPkgs.async-timer)
-          (hsPkgs.attoparsec)
-          (hsPkgs.auto-update)
-          (hsPkgs.base64-bytestring)
-          (hsPkgs.bytestring)
-          (hsPkgs.clock)
-          (hsPkgs.containers)
-          (hsPkgs.contravariant)
-          (hsPkgs.directory)
-          (hsPkgs.filepath)
-          (hsPkgs.katip)
-          (hsPkgs.lens)
-          (hsPkgs.mtl)
-          (hsPkgs.safe)
           (hsPkgs.safe-exceptions)
-          (hsPkgs.scientific)
           (hsPkgs.stm)
-          (hsPkgs.template-haskell)
           (hsPkgs.text)
           (hsPkgs.time)
-          (hsPkgs.time-units)
-          (hsPkgs.transformers)
           (hsPkgs.unordered-containers)
-          (hsPkgs.vector)
-          (hsPkgs.yaml)
-          (hsPkgs.libyaml)
           ] ++ (if system.isWindows
           then [ (hsPkgs.Win32) ]
           else [ (hsPkgs.unix) ]);
@@ -58,6 +36,7 @@
             (hsPkgs.base)
             (hsPkgs.contra-tracer)
             (hsPkgs.iohk-monitoring)
+            (hsPkgs.lobemo-backend-monitoring)
             (hsPkgs.aeson)
             (hsPkgs.array)
             (hsPkgs.async)
@@ -96,5 +75,5 @@
       rev = "1ebe57df3a76a8ae4e3b5a31a9b85132f71534fc";
       sha256 = "0vwl94sda973009746n3l5n8kjlr6fajrazg7sya8plpm4x9v12l";
       });
-    postUnpack = "sourceRoot+=/iohk-monitoring; echo source root reset to \$sourceRoot";
+    postUnpack = "sourceRoot+=/plugins/backend-monitoring; echo source root reset to \$sourceRoot";
     }
