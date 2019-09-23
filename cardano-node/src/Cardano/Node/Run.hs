@@ -83,15 +83,15 @@ data Peer = Peer { localAddr  :: SockAddr
 instance Condense Peer where
     condense (Peer localA remoteA) = (show localA) ++ (show remoteA)
 
-data NodeArgs = NodeArgs !TopologyInfo !NodeAddress !Protocol !ViewMode !TraceOptions
+data NodeArgs = NodeArgs !TopologyInfo !NodeAddress !Protocol !ViewMode
 
 -- Node can be run in two modes.
 data ViewMode =
     LiveView    -- Live mode with TUI
   | SimpleView  -- Simple mode, just output text.
 
-runNode :: NodeArgs -> LoggingLayer -> CardanoConfiguration -> IO ()
-runNode (NodeArgs topology myNodeAddress protocol viewMode traceOptions) loggingLayer cc = do
+runNode :: NodeArgs -> LoggingLayer -> TraceOptions -> CardanoConfiguration -> IO ()
+runNode (NodeArgs topology myNodeAddress protocol viewMode) loggingLayer traceOptions cc = do
     let !tr = llAppendName loggingLayer "node" (llBasicTrace loggingLayer)
     let trace'      = appendName (pack $ show $ node topology) tr
     let tracer      = contramap pack $ toLogObject trace'
