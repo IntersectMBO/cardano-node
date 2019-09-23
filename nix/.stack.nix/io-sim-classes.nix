@@ -1,6 +1,6 @@
 { system, compiler, flags, pkgs, hsPkgs, pkgconfPkgs, ... }:
   {
-    flags = {};
+    flags = { checktvarinvariant = false; };
     package = {
       specVersion = "1.10";
       identifier = { name = "io-sim-classes"; version = "0.1.0.0"; };
@@ -29,8 +29,8 @@
     } // {
     src = (pkgs.lib).mkDefault (pkgs.fetchgit {
       url = "https://github.com/input-output-hk/ouroboros-network";
-      rev = "74a6928ff518dafe4adcd83987b402dc13ba99a3";
-      sha256 = "0jjxm4i9swyz2v3z1q2hm16zv64af9gi0b0wqaf66iiz1m2zrxbv";
+      rev = "1240d823a4916963fb960f946655464ddc4be8aa";
+      sha256 = "04d6fj35s16hrhrnzqr0cib9cnqvd7clpf0wbyarx6g0p63mi66k";
       });
     postUnpack = "sourceRoot+=/io-sim-classes; echo source root reset to \$sourceRoot";
     }
