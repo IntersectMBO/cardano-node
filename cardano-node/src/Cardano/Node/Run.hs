@@ -140,7 +140,7 @@ runNode nodeCli@NodeCLIArguments{..} loggingLayer cc = do
 
             be :: LiveViewBackend Text <- realize c
             let lvbe = MkBackend { bEffectuate = effectuate be, bUnrealize = unrealize be }
-            llAddBackend loggingLayer lvbe "LiveViewBackend"
+            llAddBackend loggingLayer lvbe (UserDefinedBK "LiveViewBackend")
             setTopology be topology
             setNodeThread be nodeThread
             captureCounters be tr

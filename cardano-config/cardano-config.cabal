@@ -24,6 +24,11 @@ library
                      , cardano-prelude
                      , generic-monoid
                      , iohk-monitoring
+                     , lobemo-backend-aggregation
+                     , lobemo-backend-editor
+                     , lobemo-backend-ekg
+                     , lobemo-backend-monitoring
+                     , lobemo-scribe-systemd
                      , optparse-applicative
                      , safe-exceptions
                      , stm

@@ -82,7 +82,7 @@ type LiveViewMVar a = MVar (LiveViewState a)
 newtype LiveViewBackend a = LiveViewBackend { getbe :: LiveViewMVar a }
 
 instance IsBackend LiveViewBackend Text where
-    typeof _ = UserDefinedBK "LiveViewBackend"
+    bekind _ = UserDefinedBK "LiveViewBackend"
     realize _ = do
         initState <- initLiveViewState
         mv <- newMVar initState
@@ -100,10 +100,10 @@ instance IsBackend LiveViewBackend Text where
         modifyMVar_ mv $ \lvs -> return $ lvs { lvsUIThread = Just thr }
         return $ sharedState
 
-    unrealize be = putStrLn $ "unrealize " <> show (typeof be)
+    unrealize be = putStrLn $ "unrealize " <> show (bekind be)
 
 instance IsEffectuator LiveViewBackend Text where
-    effectuate lvbe item = do
+    effectuate lvbe item =
         case item of
             LogObject "cardano.node.metrics" meta content ->
                 case content of
@@ -226,7 +226,7 @@ instance IsEffectuator LiveViewBackend Text where
                                      , lvsMempoolPerc = percentage
                                      }
             LogObject _ _ (LogValue "txsProcessed" (PureI txsProcessed)) ->
-                modifyMVar_ (getbe lvbe) $ \lvs -> do
+                modifyMVar_ (getbe lvbe) $ \lvs ->
                         return $ lvs { lvsTransactions = (lvsTransactions lvs) + (fromIntegral txsProcessed)
                                      }
             _ -> return ()
@@ -597,21 +597,21 @@ systemStatsW p =
                  ) $ bar mempoolLabel (lvsMempoolPerc p)
     mempoolLabel = Just $ (show . lvsMempool $ p)
                         ++ " / "
-                        ++ (take 5 $ show $ lvsMempoolPerc p * 100) ++ "%"
+                        ++ take 5 (show $ lvsMempoolPerc p * 100) ++ "%"
     memUsageBar :: forall n. Widget n
     memUsageBar = updateAttrMap
                   (A.mapAttrNames [ (memDoneAttr, P.progressCompleteAttr)
                                   , (memToDoAttr, P.progressIncompleteAttr)
                                   ]
                   ) $ bar memLabel lvsMemUsagePerc
-    memLabel = Just $ (take 5 $ show $ lvsMemoryUsageCurr p) ++ " MB / max " ++ (take 5 $ show $ lvsMemoryUsageMax p) ++ " MB"
+    memLabel = Just $ take 5 (show $ lvsMemoryUsageCurr p) ++ " MB / max " ++ (take 5 $ show $ lvsMemoryUsageMax p) ++ " MB"
     cpuUsageBar :: forall n. Widget n
     cpuUsageBar = updateAttrMap
                   (A.mapAttrNames [ (cpuDoneAttr, P.progressCompleteAttr)
                                   , (cpuToDoAttr, P.progressIncompleteAttr)
                                   ]
                   ) $ bar cpuLabel (lvsCPUUsagePerc p)
-    cpuLabel = Just $ (take 5 $ show $ lvsCPUUsagePerc p * 100) ++ "%"
+    cpuLabel = Just $ take 5 (show $ lvsCPUUsagePerc p * 100) ++ "%"
 
     diskUsageRBar :: forall n. Widget n
     diskUsageRBar = updateAttrMap
@@ -619,7 +619,7 @@ systemStatsW p =
                                     , (diskIOToDoAttr, P.progressIncompleteAttr)
                                     ]
                     ) $ bar diskUsageRLabel (lvsDiskUsageRPerc p)
-    diskUsageRLabel = Just $ (take 5 $ show $ lvsDiskUsageRCurr p) ++ " KB/s"
+    diskUsageRLabel = Just $ take 5 (show $ lvsDiskUsageRCurr p) ++ " KB/s"
 
     diskUsageWBar :: forall n. Widget n
     diskUsageWBar = updateAttrMap
@@ -627,7 +627,7 @@ systemStatsW p =
                                     , (diskIOToDoAttr, P.progressIncompleteAttr)
                                     ]
                     ) $ bar diskUsageWLabel (lvsDiskUsageWPerc p)
-    diskUsageWLabel = Just $ (take 5 $ show $ lvsDiskUsageWCurr p) ++ " KB/s"
+    diskUsageWLabel = Just $ take 5 (show $ lvsDiskUsageWCurr p) ++ " KB/s"
 
     networkUsageInBar :: forall n. Widget n
     networkUsageInBar = updateAttrMap
@@ -635,7 +635,7 @@ systemStatsW p =
                                         , (networkIOToDoAttr, P.progressIncompleteAttr)
                                         ]
                         ) $ bar networkUsageInLabel (lvsNetworkUsageInPerc p)
-    networkUsageInLabel = Just $ (take 5 $ show $ lvsNetworkUsageInCurr p) ++ " KB/s"
+    networkUsageInLabel = Just $ take 5 (show $ lvsNetworkUsageInCurr p) ++ " KB/s"
 
     networkUsageOutBar :: forall n. Widget n
     networkUsageOutBar = updateAttrMap
@@ -643,11 +643,11 @@ systemStatsW p =
                                          , (networkIOToDoAttr, P.progressIncompleteAttr)
                                          ]
                          ) $ bar networkUsageOutLabel (lvsNetworkUsageOutPerc p)
-    networkUsageOutLabel = Just $ (take 5 $ show $ lvsNetworkUsageOutCurr p) ++ " KB/s"
+    networkUsageOutLabel = Just $ take 5 (show $ lvsNetworkUsageOutCurr p) ++ " KB/s"
 
     bar :: forall n. Maybe String -> Float -> Widget n
     bar lbl pcntg = P.progressBar lbl pcntg
-    lvsMemUsagePerc = (lvsMemoryUsageCurr p) / (max 200 (lvsMemoryUsageMax p))
+    lvsMemUsagePerc = lvsMemoryUsageCurr p / max 200 (lvsMemoryUsageMax p)
 
 nodeInfoW :: LiveViewState a -> Widget ()
 nodeInfoW p =

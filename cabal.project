@@ -80,13 +80,43 @@ source-repository-package
   type: git
   location: https://github.com/input-output-hk/iohk-monitoring-framework
   subdir: iohk-monitoring
-  tag: e22be186e0b1018260ed7c5166871f82a869b94d
+  tag: 1ebe57df3a76a8ae4e3b5a31a9b85132f71534fc
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/iohk-monitoring-framework
   subdir:   contra-tracer
-  tag: e22be186e0b1018260ed7c5166871f82a869b94d
+  tag: 1ebe57df3a76a8ae4e3b5a31a9b85132f71534fc
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/iohk-monitoring-framework
+  subdir:   plugins/scribe-systemd
+  tag: 1ebe57df3a76a8ae4e3b5a31a9b85132f71534fc
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/iohk-monitoring-framework
+  subdir:   plugins/backend-aggregation
+  tag: 1ebe57df3a76a8ae4e3b5a31a9b85132f71534fc
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/iohk-monitoring-framework
+  subdir:   plugins/backend-editor
+  tag: 1ebe57df3a76a8ae4e3b5a31a9b85132f71534fc
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/iohk-monitoring-framework
+  subdir:   plugins/backend-ekg
+  tag: 1ebe57df3a76a8ae4e3b5a31a9b85132f71534fc
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/iohk-monitoring-framework
+  subdir:   plugins/backend-monitoring
+  tag: 1ebe57df3a76a8ae4e3b5a31a9b85132f71534fc
 
 source-repository-package
   type: git
@@ -131,8 +161,7 @@ source-repository-package
 
 constraints:
   ip < 1.5,
-  ekg-prometheus-adapter >= 0.1.0.4,
   hedgehog >= 1.0,
-  libsystemd-journal >= 1.4.4,
   bimap >= 0.4.0,
-  brick >= 0.47
+  brick >= 0.47,
+  libsystemd-journal >= 1.4.4
