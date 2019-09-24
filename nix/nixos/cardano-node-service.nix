@@ -201,6 +201,10 @@ in {
       uid = 10016;
       group = "cardano-node";
     };
+
+    ## TODO:  use http://hackage.haskell.org/package/systemd for:
+    ##   1. only declaring success after we perform meaningful init (local state recovery)
+    ##   2. heartbeat & watchdog functionality
     systemd.services."${systemdServiceName}" = {
       description   = "cardano-node node service";
       after         = [ "network.target" ];
