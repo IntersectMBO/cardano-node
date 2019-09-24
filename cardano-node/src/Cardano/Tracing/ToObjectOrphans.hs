@@ -175,7 +175,7 @@ instance DefineSeverity (ChainDB.TraceEvent blk) where
     ChainDB.AddBlockValidation ev' -> case ev' of
       ChainDB.InvalidBlock _ _ -> Error
       ChainDB.InvalidCandidate _ -> Error
-      ChainDB.ValidCandidate _ -> Notice
+      ChainDB.ValidCandidate _ -> Info
       ChainDB.CandidateExceedsRollback _ _ _ -> Error
     ChainDB.AddedBlockToVolDB _     -> Debug
     ChainDB.ChainChangedInBg _ _     -> Info
@@ -220,7 +220,7 @@ instance DefineSeverity (ChainDB.TraceEvent blk) where
 instance DefinePrivacyAnnotation (TraceChainSyncClientEvent blk tip)
 instance DefineSeverity (TraceChainSyncClientEvent blk tip) where
   defineSeverity (TraceDownloadedHeader _) = Info
-  defineSeverity (TraceRolledBack _) = Info
+  defineSeverity (TraceRolledBack _) = Warning
   defineSeverity (TraceException _) = Error
 
 instance DefinePrivacyAnnotation (TraceChainSyncServerEvent blk)

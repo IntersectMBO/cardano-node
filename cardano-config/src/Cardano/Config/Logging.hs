@@ -109,13 +109,16 @@ type LoggingCardanoFeature = CardanoFeatureInit
                                LoggingLayer
 
 -- | CLI specific data structure.
-data LoggingCLIArguments = LoggingCLIArguments { logConfigFile :: !FilePath }
+data LoggingCLIArguments = LoggingCLIArguments
+  { logConfigFile :: !FilePath
+  , minSeverity   :: !Severity
+  }
 
 createLoggingFeature
   :: CardanoEnvironment -> CardanoConfiguration
   -> LoggingCLIArguments -> IO (LoggingLayer, CardanoFeature)
 createLoggingFeature
-  cardanoEnvironment cardanoConfiguration (LoggingCLIArguments loggingCLIArguments) = do
+  cardanoEnvironment cardanoConfiguration loggingCLIArguments = do
     -- we parse any additional configuration if there is any
     -- We don't know where the user wants to fetch the additional
     -- configuration from, it could be from
@@ -123,12 +126,15 @@ createLoggingFeature
     --
     -- Currently we parse outside the features since we want to have a complete
     -- parser for __every feature__.
-
-    whenM (not <$> doesFileExist loggingCLIArguments) $ do
+    let _logConfigFile = logConfigFile loggingCLIArguments
+    whenM (not <$> doesFileExist _logConfigFile) $ do
       putTextLn "Cannot find the logging configuration file at location."
-      throwIO $ FileNotFoundException loggingCLIArguments
+      throwIO $ FileNotFoundException _logConfigFile
 
-    loggingConfiguration <- LoggingConfiguration <$> Config.setup loggingCLIArguments
+    logConfig <- Config.setup _logConfigFile
+    -- can overwrite
+    Config.setMinSeverity logConfig $ minSeverity loggingCLIArguments
+    let loggingConfiguration = LoggingConfiguration logConfig
 
     -- we construct the layer
     logCardanoFeat <- loggingCardanoFeatureInit loggingConfiguration
