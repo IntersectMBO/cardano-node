@@ -31,6 +31,7 @@ import           Data.Functor.Contravariant (contramap)
 import           Data.List (findIndex)
 import           Data.Text (Text, pack)
 import qualified Network.Socket as Socket (SockAddr)
+import           Network.Mux.Types (WithMuxBearer, MuxTrace)
 
 import           Cardano.BM.Data.Aggregated (Measurable (PureI))
 import           Cardano.BM.Data.LogItem (LOContent (..), LogObject (..),
@@ -54,6 +55,7 @@ import           Ouroboros.Consensus.Util.Condense
 import           Ouroboros.Consensus.Util.Orphans ()
 
 import qualified Ouroboros.Network.AnchoredFragment as AF
+import           Ouroboros.Network.NodeToNode (NodeToNodeProtocols)
 import           Ouroboros.Network.Subscription
 
 import qualified Ouroboros.Storage.ChainDB as ChainDB
@@ -79,6 +81,9 @@ data Tracers peer blk = Tracers {
 
       -- | Trace the DNS resolver (flag '--trace-dns-resolver' will turn on textual output)
     , dnsResolverTracer     :: Tracer IO (WithDomainName DnsTrace)
+
+      -- | Trace the Mux (flag --trace-mux' will turn on textual output)
+    , muxTracer             :: Tracer IO (WithMuxBearer (MuxTrace NodeToNodeProtocols))
     }
 
 -- | Tracing-related constraints for monitoring purposes.
@@ -113,6 +118,7 @@ data TraceOptions = TraceOptions
   , traceIpSubscription  :: !Bool
   , traceDnsSubscription :: !Bool
   , traceDnsResolver     :: !Bool
+  , traceMux             :: !Bool
   }
 
 type ConsensusTraceOptions = Consensus.Tracers' () ()    () (Const Bool)
@@ -125,7 +131,8 @@ nullTracers = Tracers {
       protocolTracers = nullProtocolTracers,
       ipSubscriptionTracer = nullTracer,
       dnsSubscriptionTracer = nullTracer,
-      dnsResolverTracer = nullTracer
+      dnsResolverTracer = nullTracer,
+      muxTracer = nullTracer
     }
 
 -- | Smart constructor of 'NodeTraces'.
@@ -159,6 +166,10 @@ mkTracers traceOptions tracer = Tracers
         = annotateSeverity $ filterSeverity (pure . const (tracingSeverity $ traceDnsResolver traceOptions))
           $ toLogObject' (tracingFormatting $ traceDnsResolver traceOptions) tracingVerbosity
           $ addName "DnsResolver" tracer
+    , muxTracer
+        = annotateSeverity $ filterSeverity (pure . const Info)  -- filter out everything below this level
+          $ toLogObject' (tracingFormatting $ traceMux traceOptions) tracingVerbosity
+          $ addName "Mux" tracer
     }
   where
     tracingFormatting :: Bool -> TracingFormatting
