@@ -15,6 +15,8 @@ with pkgs.lib;
   chairmanScript = (import ../../.. {}).scripts.mainnet.chairman;
 in rec {
   # only tests that port is open since the test can't access network to actually sync
-  cardanoNodeEdge  = callTest ./cardano-node-edge.nix { inherit commonLib; };
+  # cardanoNodeEdge  = callTest ./cardano-node-edge.nix { inherit commonLib; };
+
+  # Subsumes what cardanoNodeEdge does
   chairmansCluster = callTest ./chairmans-cluster.nix { inherit commonLib chairmanScript; };
 }
