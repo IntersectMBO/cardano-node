@@ -7,7 +7,7 @@ genesis_root="configuration/${genesis}"
 genesis_file="${genesis_root}/genesis.json"
 if test ! -f "${genesis_file}"
 then echo "ERROR: genesis ${genesis_file} does not exist!">&1; exit 1; fi
-genesis_hash="$(${RUNNER} cardano-cli --log-config configuration/log-configuration.yaml --real-pbft print-genesis-hash --genesis-json ${genesis_file})"
+genesis_hash="$(${RUNNER} cardano-cli --tracing-off --real-pbft print-genesis-hash --genesis-json ${genesis_file})"
 from_addr="2cWKMJemoBahGYHvphuM3cmwhgWZmRzPSRX5xdx11A1aJ168wLgRpD7naamfWk4dfQ28c"
 from_key="${genesis_root}/delegate-keys.000.key"
 default_to_key="${genesis_root}/delegate-keys.001.key"
@@ -28,12 +28,15 @@ Usage:  $(basename $0) TX-FILE TO-ADDR LOVELACE
 EOF
             exit 1;; esac
 
-args=" --genesis-file        ${genesis_file}
+args=" --tracing-off
+       --real-pbft
+       --genesis-file        ${genesis_file}
        --genesis-hash        ${genesis_hash}
+       issue-genesis-utxo-expenditure
        --tx                  ${tx}
        --wallet-key          ${from_key}
        --rich-addr-from    \"${from_addr}\"
        --txout            (\"${addr}\",${lovelace})
 "
 set -x
-${RUNNER} cardano-cli --log-config configuration/log-configuration.yaml --real-pbft issue-genesis-utxo-expenditure ${args}
+${RUNNER} cardano-cli ${args}
