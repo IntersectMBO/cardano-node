@@ -157,8 +157,7 @@ genesisBenchmarkRunner loggingLayer
 
   -- We have to prepare an initial funds (it's the money we'll send from 'genesisAddress' to
   -- 'sourceAddress'), this will be our very first transaction.
-  prepareInitialFunds benchTracer
-                      lowLevelSubmitTracer
+  prepareInitialFunds lowLevelSubmitTracer
                       cc
                       genesisConfig
                       pInfoConfig
@@ -166,6 +165,7 @@ genesisBenchmarkRunner loggingLayer
                       genesisUtxo
                       genesisAddress
                       sourceAddress
+                      txFee
 
   -- Check if no transactions needed...
   when (rawNumOfTxs > 0) $
@@ -377,8 +377,7 @@ extractGenesisFunds genesisConfig signingKeys =
 -- (latter corresponds to 'targetAddress' here) and "remember" it in 'availableFunds'.
 prepareInitialFunds
   :: RunDemo (ByronBlockOrEBB ByronConfig)
-  => Tracer IO (TraceBenchTxSubmit (Byron.GenTxId (ByronBlockOrEBB ByronConfig)))
-  -> Tracer IO String
+  => Tracer IO String
   -> CardanoConfiguration
   -> CC.Genesis.Config
   -> NodeConfig ByronEBBExtNodeConfig
@@ -386,22 +385,20 @@ prepareInitialFunds
   -> Map Int ((CC.UTxO.TxIn, CC.UTxO.TxOut), Crypto.SigningKey)
   -> CC.Common.Address
   -> CC.Common.Address
+  -> FeePerTx
   -> IO ()
-prepareInitialFunds _tracer
-                    llTracer
+prepareInitialFunds llTracer
                     cc
                     genesisConfig
                     pInfoConfig
                     topologyInfo
                     genesisUtxo
                     genesisAddress
-                    targetAddress = do
-  let (mFunds, _, _initGenTx) = extractInitialFunds pInfoConfig
-                                                    (genesisUtxo Map.! 0) -- corresponds to 'genesisAddress'.
-                                                    targetAddress
-
-  let ((_, _), signingKey) = genesisUtxo Map.! 0
-      outBig = assumeBound $ CC.Common.mkLovelace 863000000000000
+                    targetAddress
+                    (FeePerTx txFee) = do
+  let ((_, out), signingKey) = genesisUtxo Map.! 0 -- Currently there's only 1 element.
+      feePerTx = assumeBound . CC.Common.mkLovelace $ txFee
+      outBig = CC.UTxO.txOutValue out `subLoveLace` feePerTx
       outForBig = CC.UTxO.TxOut
         { CC.UTxO.txOutAddress = targetAddress
         , CC.UTxO.txOutValue   = outBig
@@ -414,33 +411,12 @@ prepareInitialFunds _tracer
                                               (NE.fromList [outForBig])
 
   submitTx cc pInfoConfig (node topologyInfo) genesisTx llTracer
-
-  -- Done, the first transaction 'initGenTx' is submitted,
-  -- now 'sourceAddress' has a lot of money.
-  case mFunds of
-    Nothing             -> return ()
-    Just (txInIndex, _) -> do
-      let txIn  = CC.UTxO.TxInUtxo (Byron.byronTxId genesisTx) txInIndex
-          txOut = outForBig
-      addToAvailableFunds (txIn, txOut)
-    -- Now we can use these money for further transactions.
-
--- | Take the initial funds from a single richhombre to a specific address.
-extractInitialFunds :: NodeConfig ByronEBBExtNodeConfig
-                    -> (TxDetails, Crypto.SigningKey)
-                    -> CC.Common.Address                    -- the address to send the funds
-                    -> ( Maybe (Word32, CC.Common.Lovelace) -- the index and value of 'funds'
-                       , CC.Common.Lovelace                 -- the associated fees
-                       , GenTx (ByronBlockOrEBB cfg)
-                       )
-extractInitialFunds cfg input address =
-  (funds, fees, initGenTx)
- where
-  (funds, fees, _, initGenTx) =
-    mkTransaction cfg
-                  input
-                  (Just address)
-                  (Set.empty :: Set (Int, CC.UTxO.TxOut))
+  -- Done, the first transaction 'initGenTx' is submitted, now 'sourceAddress' has a lot of money.
+  
+  let txIn  = CC.UTxO.TxInUtxo (Byron.byronTxId genesisTx) 0
+      txOut = outForBig
+  addToAvailableFunds (txIn, txOut)
+  -- Now we can use these money for further transactions.
 
 -- | Single input to multiple (in sequence) output transaction (special case for benchmarking).
 mkTransaction
@@ -672,7 +648,6 @@ runBenchmark benchTracer
 
   -- Run generator.
   txGenerator benchTracer
-              cc
               pInfoConfig
               recipientAddress
               sourceKey
@@ -809,7 +784,6 @@ minimalTPSRate (TPSRate tps) = picosecondsToDiffTime timeInPicoSecs
 
 txGenerator
   :: Tracer IO (TraceBenchTxSubmit (Byron.GenTxId (ByronBlockOrEBB ByronConfig)))
-  -> CardanoConfiguration
   -> NodeConfig ByronEBBExtNodeConfig
   -> CC.Common.Address
   -> Crypto.SigningKey
@@ -818,7 +792,6 @@ txGenerator
   -> NumberOfOutputsPerTx
   -> IO ()
 txGenerator benchTracer
-            _cc
             cfg
             recipientAddress
             sourceKey
