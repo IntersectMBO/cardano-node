@@ -13,7 +13,7 @@ import           Cardano.Config.Types (CardanoConfiguration (..),
 import           Cardano.Config.Logging (LoggingLayer (..),)
 import           Cardano.Node.Run
 import           Cardano.Shell.Types (CardanoFeature (..))
-import           Cardano.Tracing.Tracers (TraceOptions(..))
+import           Cardano.Tracing.Tracers
 
 
 -------------------------------------------------------------------------------
@@ -61,6 +61,14 @@ createNodeFeature loggingLayer nodeCLI traceOptions cardanoEnvironment cardanoCo
 
     pure (nodeLayer, cardanoFeature)
   where
-    createNodeLayer :: CardanoEnvironment -> LoggingLayer -> CardanoConfiguration -> NodeArgs -> TraceOptions -> IO NodeLayer
-    createNodeLayer _ logLayer cc nodeArgs traceCLI = do
-        pure $ NodeLayer {nlRunNode = liftIO $ runNode nodeArgs logLayer traceCLI cc}
+    createNodeLayer
+      :: CardanoEnvironment
+      -> LoggingLayer
+      -> CardanoConfiguration
+      -> NodeArgs
+      -> TraceOptions
+      -> IO NodeLayer
+    createNodeLayer _ logLayer cc nodeArgs traceOpts = do
+        pure $ NodeLayer
+          { nlRunNode = liftIO $ runNode nodeArgs logLayer traceOpts cc
+          }
