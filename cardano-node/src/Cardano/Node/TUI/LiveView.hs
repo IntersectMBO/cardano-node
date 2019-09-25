@@ -34,7 +34,7 @@ import           Data.Version (showVersion)
 import           Data.Word (Word64)
 
 import qualified Brick.AttrMap as A
-import qualified Brick.BChan as Brick.BChan
+import qualified Brick.BChan
 import qualified Brick.Main as M
 import           Brick.Themes (Theme, newTheme, themeToAttrMap)
 import           Brick.Types (BrickEvent (..), EventM, Next, Widget)
@@ -199,8 +199,7 @@ instance IsEffectuator LiveViewBackend Text where
                                          , lvsNetworkUsageOutMax  = maxNetRate
                                          , lvsUpTime              = diffUTCTime (tstamp meta) (lvsStartTime lvs)
                                          }
-                    _ ->
-                        return ()
+                    _ -> pure ()
             LogObject _ _ (LogMessage msg) -> do
                 when ("[" `isPrefixOf` msg) $ do
                     let pointHashInBrackets = T.take 9 msg
@@ -227,11 +226,13 @@ instance IsEffectuator LiveViewBackend Text where
                                      }
             LogObject _ _ (LogValue "txsProcessed" (PureI txsProcessed)) ->
                 modifyMVar_ (getbe lvbe) $ \lvs ->
-                        return $ lvs { lvsTransactions = (lvsTransactions lvs) + (fromIntegral txsProcessed)
-                                     }
-            _ -> return ()
+                        return $ lvs { lvsTransactions = (lvsTransactions lvs) + (fromIntegral txsProcessed) }
+            LogObject _ _ (LogValue "slotNum" (PureI slotnum)) ->
+                modifyMVar_ (getbe lvbe) $ \lvs ->
+                        return $ lvs { lvsBlockHeight = fromIntegral slotnum }
+            _ -> pure ()
 
-    handleOverflow _ = return ()
+    handleOverflow _ = pure ()
 
 data ColorTheme
     = DarkTheme
@@ -367,7 +368,7 @@ captureCounters lvbe trace0 = do
     traceCounters :: forall m a. MonadIO m => Trace m a -> [Counter] -> m ()
     traceCounters _tr [] = return ()
     traceCounters tr (c@(Counter _ct cn cv) : cs) = do
-        mle <- mkLOMeta Info Confidential
+        mle <- mkLOMeta Critical Confidential
         traceNamedObject tr (mle, LogValue (nameCounter c <> "." <> cn) cv)
         traceCounters tr cs
 
@@ -550,40 +551,40 @@ systemStatsW p =
     $ vBox [ vBox [ hBox [ padBottom (T.Pad 1) $ txt "Mempool:"
                          , withAttr barValueAttr . padLeft T.Max . str . show $ lvsMempoolCapacity p
                          ]
-                  , padBottom (T.Pad 1) $ memPoolBar
+                  , padBottom (T.Pad 1) memPoolBar
                   ]
            , vBox [ hBox [ txt "Memory usage:"
                          , withAttr barValueAttr . padLeft T.Max $ str $ (take 5 $ show $ max (lvsMemoryUsageMax p) 200.0) <> " MB"
                          ]
-                  , padBottom (T.Pad 1) $ memUsageBar
+                  , padBottom (T.Pad 1) memUsageBar
                   ]
            , vBox [ hBox [ txt "CPU usage:"
                          , withAttr barValueAttr . padLeft T.Max $ str "100%"
                          ]
-                  , padBottom (T.Pad 1) $ cpuUsageBar
+                  , padBottom (T.Pad 1) cpuUsageBar
                   ]
            , hBox [ vBox [ hBox [ txt "Disk R:"
                                 , withAttr barValueAttr . padLeft T.Max $ str $ (take 5 $ show $ max (lvsDiskUsageRMax p) 1.0) <> " KB/s"
                                 ]
-                         , padBottom (T.Pad 1) $ diskUsageRBar
+                         , padBottom (T.Pad 1) diskUsageRBar
                          ]
                   , padLeft (T.Pad 3) $
                     vBox [ hBox [ txt "Disk W:"
                                 , withAttr barValueAttr . padLeft T.Max $ str $ (take 5 $ show $ max (lvsDiskUsageWMax p) 1.0) <> " KB/s"
                                 ]
-                         , padBottom (T.Pad 1) $ diskUsageWBar
+                         , padBottom (T.Pad 1) diskUsageWBar
                          ]
                   ]
            , hBox [ vBox [ hBox [ txt "Network In:"
                                 , withAttr barValueAttr . padLeft T.Max $ str $ (take 5 $ show $ max (lvsNetworkUsageInMax p) 1.0) <> " KB/s"
                                 ]
-                         , padBottom (T.Pad 1) $ networkUsageInBar
+                         , padBottom (T.Pad 1) networkUsageInBar
                          ]
                   , padLeft (T.Pad 3) $
                     vBox [ hBox [ txt "Network Out:"
                                 , withAttr barValueAttr . padLeft T.Max $ str $ (take 5 $ show $ max (lvsNetworkUsageOutMax p) 1.0) <> " KB/s"
                                 ]
-                         , padBottom (T.Pad 1) $ networkUsageOutBar
+                         , padBottom (T.Pad 1) networkUsageOutBar
                          ]
                   ]
            ]
@@ -604,7 +605,7 @@ systemStatsW p =
                                   , (memToDoAttr, P.progressIncompleteAttr)
                                   ]
                   ) $ bar memLabel lvsMemUsagePerc
-    memLabel = Just $ take 5 (show $ lvsMemoryUsageCurr p) ++ " MB / max " ++ (take 5 $ show $ lvsMemoryUsageMax p) ++ " MB"
+    memLabel = Just $ take 5 (show $ lvsMemoryUsageCurr p) ++ " MB / max " ++ take 5 (show $ lvsMemoryUsageMax p) ++ " MB"
     cpuUsageBar :: forall n. Widget n
     cpuUsageBar = updateAttrMap
                   (A.mapAttrNames [ (cpuDoneAttr, P.progressCompleteAttr)

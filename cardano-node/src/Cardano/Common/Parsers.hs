@@ -21,6 +21,7 @@ import           Options.Applicative
 import           Cardano.Config.Logging (LoggingCLIArguments(..))
 import           Ouroboros.Consensus.NodeId (NodeId(..), CoreNodeId(..))
 
+import qualified Cardano.BM.Data.Severity as Log
 import           Cardano.Common.Protocol
 import           Cardano.Node.Configuration.Topology
 
@@ -107,4 +108,11 @@ loggingParser = LoggingCLIArguments
        <> metavar "LOGCONFIG"
        <> help "Configuration file for logging"
        <> completer (bashCompleter "file")
+        )
+    <*> option auto
+        ( long "log-min-severity"
+       <> metavar "SEVERITY"
+       <> help "Limit logging to items with severity at least this severity"
+       <> value Log.Info
+       <> showDefault
         )
