@@ -36,6 +36,7 @@ import           Data.Set (Set)
 import qualified Data.Set as Set
 import           Data.Text (Text)
 import qualified Data.Text as T
+import           Data.Time.Clock (DiffTime, picosecondsToDiffTime)
 import qualified Data.Vector as V
 import           Data.Word (Word32, Word64)
 
@@ -56,6 +57,8 @@ import           Cardano.Config.Logging (LoggingLayer (..), Trace)
 import           Cardano.Config.Types (CardanoConfiguration(..))
 import qualified Cardano.Crypto as Crypto
 import           Cardano.Node.Configuration.Topology (NetworkTopology (..),
+                                                      NodeAddress (..),
+                                                      NodeSetup (..),
                                                       TopologyInfo (..),
                                                       readTopologyFile)
 import           Cardano.CLI.Tx (txSpendGenesisUTxOByronPBFT)
@@ -131,12 +134,15 @@ genesisBenchmarkRunner loggingLayer
                        txFee
                        tpsRate
                        signingKeyFiles = do
-  let (benchTracer, connectTracer, submitTracer, lowLevelSubmitTracer) = createTracers loggingLayer
-
-  ProtocolInfo{pInfoConfig} <- prepareProtocolInfo protocol topologyInfo
-
   when (length signingKeyFiles < 3) $
     error "Tx generator: please provide at least 3 signing key files."
+
+  let (benchTracer, connectTracer, submitTracer, lowLevelSubmitTracer) = createTracers loggingLayer
+
+  (topology, ProtocolInfo{pInfoConfig}) <- prepareProtocolInfo protocol topologyInfo
+
+  -- We have to extract host and port of the node we talk with (based on value of `-n` CLI argument).
+  let targetNodeAddress = getTargetNodeAddress (node topologyInfo) topology
 
   -- 'genesisKey' is for genesis address with initial amount of money (1.4 billion ADA for now).
   -- 'sourceKey' is for source address that we'll use as a source of money for next transactions.
@@ -169,10 +175,10 @@ genesisBenchmarkRunner loggingLayer
                  lowLevelSubmitTracer
                  cc
                  pInfoConfig
-                 sourceAddress
                  sourceKey
                  recipientAddress
                  topologyInfo
+                 targetNodeAddress
                  numOfTxs
                  numOfOutsPerTx
                  txFee
@@ -213,9 +219,9 @@ instance FiscalRecipient Int where
 prepareProtocolInfo
   :: forall blk. Consensus.Protocol blk
   -> TopologyInfo
-  -> IO (ProtocolInfo blk)
+  -> IO (NetworkTopology, ProtocolInfo blk)
 prepareProtocolInfo protocol topologyInfo = do
-  NetworkTopology nodeSetups <- readTopologyFile (topologyFile topologyInfo) >>=
+  topology@(NetworkTopology nodeSetups) <- readTopologyFile (topologyFile topologyInfo) >>=
     \case
       Left e  -> fail e
       Right t -> return t
@@ -225,9 +231,33 @@ prepareProtocolInfo protocol topologyInfo = do
       RelayId{}  -> fail "Only core nodes are supported targets"
       CoreId nid -> return nid
 
-  return $ protocolInfo (NumCoreNodes (length nodeSetups))
+  return ( topology
+         , protocolInfo (NumCoreNodes (length nodeSetups))
                         (CoreNodeId nodeId)
                         protocol
+         )
+
+-- | Since transaction generator is a part of 'cardano-cli' (not 'cardano-node'),
+--   we have to talk to some node (which is a part of a cluster). Since we receive
+--   node's id (from `-n` CLI argument) we can extract corresponding host and port
+--   from topology.
+getTargetNodeAddress
+  :: NodeId
+  -> NetworkTopology
+  -> NodeAddress
+getTargetNodeAddress (CoreId nodeId)  = createNodeAddress nodeId
+getTargetNodeAddress (RelayId nodeId) = createNodeAddress nodeId
+
+createNodeAddress
+  :: Int
+  -> NetworkTopology
+  -> NodeAddress
+createNodeAddress nodeId (NetworkTopology nodeSetups) =
+  case maybeNode of
+    Nothing -> error "Configuration error: topology file doesn't contain an info about node we need!"
+    Just (NodeSetup _ anAddress _) -> anAddress
+ where
+  maybeNode = find (\(NodeSetup nId _ _) -> nodeId == nId) nodeSetups
 
 -----------------------------------------------------------------------------------------
 -- Tracers.
@@ -576,10 +606,10 @@ runBenchmark
   -> Tracer IO String
   -> CardanoConfiguration
   -> NodeConfig ByronEBBExtNodeConfig
-  -> CC.Common.Address
   -> Crypto.SigningKey
   -> CC.Common.Address
   -> TopologyInfo
+  -> NodeAddress
   -> NumberOfTxs
   -> NumberOfOutputsPerTx
   -> FeePerTx
@@ -591,10 +621,10 @@ runBenchmark benchTracer
              lowLevelSubmitTracer
              cc
              pInfoConfig
-             _sourceAddress
              sourceKey
              recipientAddress
              topologyInfo
+             targetNodeAddress
              numOfTxs
              numOfOutsPerTx
              txFee
@@ -618,6 +648,9 @@ runBenchmark benchTracer
   let localAddr :: Maybe Network.Socket.AddrInfo
       localAddr = Nothing
 
+  let targetNodeHost = show $ naHostAddress targetNodeAddress
+      targetNodePort = show $ naPort targetNodeAddress
+
   let hints :: AddrInfo
       hints = defaultHints
         { addrFlags      = [AI_PASSIVE]
@@ -626,14 +659,14 @@ runBenchmark benchTracer
         , addrCanonName  = Nothing
         }
   -- Corresponds to a node 0 (used by default).
-  (remoteAddr:_) <- getAddrInfo (Just hints) (Just "::1") (Just "3000")
+  (remoteAddr:_) <- getAddrInfo (Just hints) (Just targetNodeHost) (Just targetNodePort)
 
   let updROEnv
         :: ROEnv (Byron.GenTxId (ByronBlockOrEBB ByronConfig)) (GenTx (ByronBlockOrEBB ByronConfig))
         -> ROEnv (Byron.GenTxId (ByronBlockOrEBB ByronConfig)) (GenTx (ByronBlockOrEBB ByronConfig))
       updROEnv defaultROEnv =
         ROEnv { targetBacklog     = targetBacklog defaultROEnv
-              , txNumServiceTime  = Nothing
+              , txNumServiceTime  = Just $ minimalTPSRate tpsRate
               , txSizeServiceTime = Nothing
               }
 
@@ -641,13 +674,11 @@ runBenchmark benchTracer
   txGenerator benchTracer
               cc
               pInfoConfig
-              (node topologyInfo)
               recipientAddress
               sourceKey
               txFee
               numOfTxs
               numOfOutsPerTx
-              tpsRate
 
   -- Launch tx submission threads.
   launchTxPeer benchTracer
@@ -769,28 +800,31 @@ createMoreFundCoins llTracer cc pInfoConfig sourceKey (FeePerTx txFee) topologyI
 -- | Work with tx generator thread (for Phase 2).
 -----------------------------------------------------------------------------------------
 
+-- | It represents the earliest time at which another tx will be sent.
+minimalTPSRate :: TPSRate -> DiffTime
+minimalTPSRate (TPSRate tps) = picosecondsToDiffTime timeInPicoSecs
+ where
+  timeInPicoSecs = picosecondsIn1Sec `div` fromIntegral tps
+  picosecondsIn1Sec = 1000000000000 :: Integer
+
 txGenerator
   :: Tracer IO (TraceBenchTxSubmit (Byron.GenTxId (ByronBlockOrEBB ByronConfig)))
   -> CardanoConfiguration
   -> NodeConfig ByronEBBExtNodeConfig
-  -> NodeId
   -> CC.Common.Address
   -> Crypto.SigningKey
   -> FeePerTx
   -> NumberOfTxs
   -> NumberOfOutputsPerTx
-  -> TPSRate
   -> IO ()
 txGenerator benchTracer
             _cc
             cfg
-            _nodeId
             recipientAddress
             sourceKey
             (FeePerTx txFee)
             (NumberOfTxs numOfTransactions)
-            (NumberOfOutputsPerTx numOfOutsPerTx)
-            _tps = do
+            (NumberOfOutputsPerTx numOfOutsPerTx) = do
   traceWith benchTracer . TraceBenchTxSubDebug $ " Prepare to generate, total number of transactions " ++ show numOfTransactions
   forM_ [1 .. numOfTransactions] $ \_ -> do
     -- TODO: currently we take the first available output, but don't check the 'status'.
