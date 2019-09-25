@@ -1,14 +1,18 @@
-{-# LANGUAGE NamedFieldPuns    #-}
+{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RankNTypes        #-}
+{-# LANGUAGE RankNTypes #-}
 
-import           Prelude (read)
+import           Prelude (String, read)
 
 import           Data.Semigroup ((<>))
 import qualified Data.IP as IP
 import           Network.Socket (PortNumber)
-import           Options.Applicative
+import           Options.Applicative ( Parser, auto, flag, flag', help, long
+                                     , metavar, option, str, switch
+                                     )
+import qualified Options.Applicative as Opt
 
 import           Cardano.BM.Data.Tracer (TracingVerbosity (..))
 import           Cardano.Config.Partial (PartialCardanoConfiguration (..))
@@ -22,117 +26,146 @@ import           Cardano.Prelude hiding (option)
 import           Cardano.Shell.Lib (runCardanoApplicationWithFeatures)
 import           Cardano.Shell.Types (CardanoApplication (..),
                                       CardanoFeature (..),)
-import           Ouroboros.Consensus.BlockchainTime (SlotLength(..), slotLengthFromMillisec)
 import           Ouroboros.Consensus.NodeNetwork (ProtocolTracers'(..))
 import qualified Ouroboros.Consensus.Node.Tracers as Consensus
 
 import           Cardano.Config.CommonCLI
+import           Cardano.Common.Help
 import           Cardano.Common.Parsers
 import           Cardano.Node.Run
 import           Cardano.Node.Configuration.Topology (NodeAddress (..))
 import           Cardano.Tracing.Tracers (ConsensusTraceOptions,  ProtocolTraceOptions, TraceOptions(..))
 
-
 main :: IO ()
 main = do
+    cli <- Opt.execParser opts
 
-    let cardanoConfiguration = mainnetConfiguration
-    let cardanoEnvironment   = NoEnvironment
+    (features, nodeLayer) <- initializeAllFeatures cli pcc env
 
-    logConfig           <- execParser opts
+    runCardanoApplicationWithFeatures features (cardanoApplication nodeLayer)
 
-    (cardanoFeatures, nodeLayer) <- initializeAllFeatures logConfig cardanoConfiguration cardanoEnvironment
+    where
+      pcc :: PartialCardanoConfiguration
+      pcc = mainnetConfiguration
 
-    let cardanoApplication :: NodeLayer -> CardanoApplication
-        cardanoApplication = CardanoApplication . nlRunNode
+      env :: CardanoEnvironment
+      env = NoEnvironment
 
-    runCardanoApplicationWithFeatures cardanoFeatures (cardanoApplication nodeLayer)
+      cardanoApplication :: NodeLayer -> CardanoApplication
+      cardanoApplication = CardanoApplication . nlRunNode
+
+      opts :: Opt.ParserInfo CLI
+      opts =
+        Opt.info (cliParser
+                  <**> helperBrief "help" "Show this help text" cliHelpMain
+                  <**> helperBrief "help-tracing" "Show help for tracing options" cliHelpTracing
+                  <**> helperBrief "help-advanced" "Show help for advanced options" cliHelpAdvanced)
+          ( Opt.fullDesc <>
+            Opt.progDesc "Start node of the Cardano blockchain."
+          )
+
+      helperBrief :: String -> String -> String -> Parser (a -> a)
+      helperBrief l d helpText = Opt.abortOption (Opt.InfoMsg helpText) $ mconcat
+        [ Opt.long l
+        , Opt.help d ]
+
+      cliHelpMain :: String
+      cliHelpMain = renderHelpDoc 80 $
+        parserHelpHeader "cardano-node" cliParserMain
+        <$$> ""
+        <$$> parserHelpOptions cliParserMain
+
+      cliHelpTracing :: String
+      cliHelpTracing = renderHelpDoc 80 $
+        "Additional tracing options:"
+        <$$> ""
+        <$$> parserHelpOptions cliTracingParser
+
+      cliHelpAdvanced :: String
+      cliHelpAdvanced = renderHelpDoc 80 $
+        "Advanced options:"
+        <$$> ""
+        <$$> parserHelpOptions parseCommonCLIAdvanced
 
 initializeAllFeatures
-  :: CLIArguments
+  :: CLI
   -> PartialCardanoConfiguration
   -> CardanoEnvironment
   -> IO ([CardanoFeature], NodeLayer)
-initializeAllFeatures (CLIArguments logCli nodeCli) partialConfig cardanoEnvironment = do
-    finalConfig <- mkConfiguration partialConfig (commonCLI nodeCli)
+initializeAllFeatures (CLI (CLIMain nodeCLI logCLI commonCLI) traceCLI commonCLIAdv)
+                      partialConfig cardanoEnvironment = do
+    -- TODO: we have to execute on our decision to implement the
+    -- generalised options monoid (GOM), to serve the purposes of composition
+    -- of the three config layers:  presets, config files and CLI.
+    -- Currently we have a mish-mash (see createNodeFeature accepting both
+    -- 'finalConfig' and nodeCli/traceCLI/advancedCLI. Yuck!
+    --
+    -- Considerations:
+    -- 1. the CLI parser data structures must be grouped to accomodate help sectioning.
+    -- 2. from #1 it follows we either switch all code users to the same structure, or
+    --    we implement conversion (which will need to be maintained).
+    -- 3. we want to enforce a single point where we go from GOM config layers to
+    --    'CardanoConfiguration' -- so the users are not exposed to un-merged layers.
+    --    This is probably the best place for this to happen.
+    finalConfig <- case mkConfiguration partialConfig commonCLI commonCLIAdv of
+      Left e -> throwIO e
+      Right x -> pure x
 
-    (loggingLayer, loggingFeature) <- createLoggingFeature cardanoEnvironment finalConfig logCli
-    (nodeLayer   , nodeFeature)    <- createNodeFeature loggingLayer nodeCli cardanoEnvironment finalConfig
+    (loggingLayer, loggingFeature) <- createLoggingFeature cardanoEnvironment finalConfig logCLI
+    (nodeLayer   , nodeFeature)    <- createNodeFeature loggingLayer nodeCLI traceCLI cardanoEnvironment finalConfig
 
-    -- Here we return all the features.
-    let allCardanoFeatures :: [CardanoFeature]
-        allCardanoFeatures =
-            [ loggingFeature
-            , nodeFeature
-            ]
-
-    pure (allCardanoFeatures, nodeLayer)
-
+    pure ([ loggingFeature
+          , nodeFeature
+          ] :: [CardanoFeature]
+         , nodeLayer)
 
 -------------------------------------------------------------------------------
 -- Parsers & Types
 -------------------------------------------------------------------------------
 
--- | The product type of all command line arguments.
--- All here being - from all the features.
-data CLIArguments = CLIArguments !LoggingCLIArguments !NodeCLIArguments
+data CLI = CLI !CLIMain !TraceOptions !CommonCLIAdvanced
+
+data CLIMain = CLIMain !NodeArgs !LoggingCLIArguments !CommonCLI
 
 -- | The product parser for all the CLI arguments.
-commandLineParser :: Parser CLIArguments
-commandLineParser = CLIArguments
-    <$> loggingParser
-    <*> nodeParser
+cliParser :: Parser CLI
+cliParser = CLI
+  <$> cliParserMain
+  <*> cliTracingParser
+  <*> parseCommonCLIAdvanced
 
--- | Top level parser with info.
-opts :: ParserInfo CLIArguments
-opts = info (commandLineParser <**> helper)
-    (  fullDesc
-    <> progDesc "Cardano demo node."
-    <> header "Demo node to run."
-    )
+cliParserMain :: Parser CLIMain
+cliParserMain = CLIMain
+  <$> parseNodeArgs
+  <*> loggingParser
+  <*> parseCommonCLI
 
-nodeParser :: Parser NodeCLIArguments
-nodeParser = NodeCLIArguments
-    <$> parseSlotDuration
-    <*> parseCommonCLI
-    <*> parseNodeCommand
+cliTracingParser :: Parser TraceOptions
+cliTracingParser = parseTraceOptions Opt.hidden
 
-parseSlotDuration :: Parser SlotLength
-parseSlotDuration = option (mkSlotLength <$> auto) $ mconcat [
-      long "slot-duration"
-    , value (mkSlotLength 5)
-    , help "The slot duration (seconds)"
-    ]
-  where
-    mkSlotLength :: Integer -> SlotLength
-    mkSlotLength = slotLengthFromMillisec . (* 1000)
+parseNodeArgs :: Parser NodeArgs
+parseNodeArgs =
+  NodeArgs
+    <$> parseTopologyInfo "PBFT node ID to assume."
+    <*> parseNodeAddress
+    <*> parseProtocol
+    <*> parseViewMode
 
-parseTraceBlockFetchClient :: Parser Bool
-parseTraceBlockFetchClient  =
+parseTraceBlockFetchClient :: MParser Bool
+parseTraceBlockFetchClient m =
     switch (
          long "trace-block-fetch-client"
       <> help "Trace BlockFetch client."
+      <> m
     )
 
-parseTraceBlockFetchServer :: Parser Bool
-parseTraceBlockFetchServer  =
+parseTraceBlockFetchServer :: MParser Bool
+parseTraceBlockFetchServer m =
     switch (
          long "trace-block-fetch-server"
       <> help "Trace BlockFetch server."
+      <> m
     )
-
-parseNodeCommand :: Parser NodeCommand
-parseNodeCommand = subparser $ mconcat [
-    command' "node" "Run a node." $
-      SimpleNode
-        <$> parseTopologyInfo "PBFT node ID to assume."
-        <*> parseNodeAddress
-        <*> parseProtocol
-        <*> parseViewMode
-        <*> parseTraceOptions
-  , command' "trace-acceptor" "Spawn an acceptor." $
-      pure TraceAcceptor
-  ]
 
 parseNodeAddress :: Parser NodeAddress
 parseNodeAddress = NodeAddress <$> parseHostAddr <*> parsePort
@@ -153,183 +186,209 @@ parsePort =
        <> help "The port number"
     )
 
-parseTraceOptions :: Parser TraceOptions
-parseTraceOptions = TraceOptions
-  <$> parseTracingGlobal
-  <*> parseTracingVerbosity
-  <*> parseTraceChainDB
-  <*> parseConsensusTraceOptions
-  <*> parseProtocolTraceOptions
-  <*> parseTraceIpSubscription
-  <*> parseTraceDnsSubscription
-  <*> parseTraceDnsResolver
+parseTraceOptions :: MParser TraceOptions
+parseTraceOptions m = TraceOptions
+  <$> parseTracingGlobal m
+  <*> parseTracingVerbosity m
+  <*> parseTraceChainDB m
+  <*> parseConsensusTraceOptions m
+  <*> parseProtocolTraceOptions m
+  <*> parseTraceIpSubscription m
+  <*> parseTraceDnsSubscription m
+  <*> parseTraceDnsResolver m
 
-parseTracingGlobal :: Parser Bool
-parseTracingGlobal =
-    switch (
-         long "tracing-off"
-      <> help "Tracing globally turned off."
-    )
+parseTracingGlobal :: MParser Bool
+parseTracingGlobal m =
+  switch ( long "tracing-off"
+           <> help "Tracing globally turned off."
+           <> m
+         )
 
-parseTracingVerbosity :: Parser TracingVerbosity
-parseTracingVerbosity = asum [
-    flag' MinimalVerbosity (long "tracing-verbosity-minimal"
-            <> help "Minimal level of the rendering of captured items")
+parseTracingVerbosity :: MParser TracingVerbosity
+parseTracingVerbosity m = asum [
+  flag' MinimalVerbosity (
+      long "tracing-verbosity-minimal"
+        <> help "Minimal level of the rendering of captured items"
+        <> m)
     <|>
-    flag' MaximalVerbosity (long "tracing-verbosity-maximal"
-            <> help "Maximal level of the rendering of captured items")
+  flag' MaximalVerbosity ( 
+      long "tracing-verbosity-maximal"
+        <> help "Maximal level of the rendering of captured items"
+        <> m)
     <|>
-    flag NormalVerbosity NormalVerbosity (long "tracing-verbosity-normal"
-            <> help "the default level of the rendering of captured items")
-    ]
+  flag NormalVerbosity NormalVerbosity (
+      long "tracing-verbosity-normal"
+        <> help "the default level of the rendering of captured items"
+        <> m)
+  ]
 
-parseTraceChainDB :: Parser Bool
-parseTraceChainDB =
+parseTraceChainDB :: MParser Bool
+parseTraceChainDB m =
     switch (
          long "trace-chain-db"
       <> help "Verbose tracer of ChainDB."
+      <> m
     )
 
-parseConsensusTraceOptions :: Parser ConsensusTraceOptions
-parseConsensusTraceOptions = Consensus.Tracers
-  <$> (Const <$> parseTraceChainSyncClient)
-  <*> (Const <$> parseTraceChainSyncHeaderServer)
-  <*> (Const <$> parseTraceChainSyncBlockServer)
-  <*> (Const <$> parseTraceBlockFetchDecisions)
-  <*> (Const <$> parseTraceBlockFetchClient)
-  <*> (Const <$> parseTraceBlockFetchServer)
-  <*> (Const <$> parseTraceTxInbound)
-  <*> (Const <$> parseTraceTxOutbound)
-  <*> (Const <$> parseTraceLocalTxSubmissionServer)
-  <*> (Const <$> parseTraceMempool)
-  <*> (Const <$> parseTraceForge)
+parseConsensusTraceOptions :: (forall a b. Opt.Mod a b) -> Parser ConsensusTraceOptions
+parseConsensusTraceOptions m = Consensus.Tracers
+  <$> (Const <$> parseTraceChainSyncClient m)
+  <*> (Const <$> parseTraceChainSyncHeaderServer m)
+  <*> (Const <$> parseTraceChainSyncBlockServer m)
+  <*> (Const <$> parseTraceBlockFetchDecisions m)
+  <*> (Const <$> parseTraceBlockFetchClient m)
+  <*> (Const <$> parseTraceBlockFetchServer m)
+  <*> (Const <$> parseTraceTxInbound m)
+  <*> (Const <$> parseTraceTxOutbound m)
+  <*> (Const <$> parseTraceLocalTxSubmissionServer m)
+  <*> (Const <$> parseTraceMempool m)
+  <*> (Const <$> parseTraceForge m)
 
-parseTraceBlockFetchDecisions :: Parser Bool
-parseTraceBlockFetchDecisions =
+type MParser a = (forall b c. Opt.Mod b c) -> Parser a
+
+parseTraceBlockFetchDecisions :: MParser Bool
+parseTraceBlockFetchDecisions m =
     switch (
          long "trace-block-fetch-decisions"
       <> help "Trace BlockFetch decisions made by the BlockFetch client."
+      <> m
     )
 
-parseTraceChainSyncClient :: Parser Bool
-parseTraceChainSyncClient  =
+parseTraceChainSyncClient :: MParser Bool
+parseTraceChainSyncClient m =
     switch (
          long "trace-chain-sync-client"
       <> help "Trace ChainSync client."
+      <> m
     )
 
-parseTraceChainSyncBlockServer :: Parser Bool
-parseTraceChainSyncBlockServer  =
+parseTraceChainSyncBlockServer :: MParser Bool
+parseTraceChainSyncBlockServer m =
     switch (
          long "trace-chain-sync-block-server"
       <> help "Trace ChainSync server (blocks)."
+      <> m
     )
 
-parseTraceChainSyncHeaderServer :: Parser Bool
-parseTraceChainSyncHeaderServer  =
+parseTraceChainSyncHeaderServer :: MParser Bool
+parseTraceChainSyncHeaderServer m =
     switch (
          long "trace-chain-sync-header-server"
       <> help "Trace ChainSync server (headers)."
+      <> m
     )
 
-parseTraceTxInbound :: Parser Bool
-parseTraceTxInbound =
+parseTraceTxInbound :: MParser Bool
+parseTraceTxInbound m =
     switch (
          long "trace-tx-inbound"
       <> help "Trace TxSubmission server (inbound transactions)."
+      <> m
     )
 
-parseTraceTxOutbound :: Parser Bool
-parseTraceTxOutbound =
+parseTraceTxOutbound :: MParser Bool
+parseTraceTxOutbound m =
     switch (
          long "trace-tx-outbound"
       <> help "Trace TxSubmission client (outbound transactions)."
+      <> m
     )
 
-parseTraceLocalTxSubmissionServer :: Parser Bool
-parseTraceLocalTxSubmissionServer =
+parseTraceLocalTxSubmissionServer :: MParser Bool
+parseTraceLocalTxSubmissionServer m =
     switch (
          long "trace-local-tx-submission-server"
       <> help "Trace local TxSubmission server."
+      <> m
     )
 
-parseTraceMempool :: Parser Bool
-parseTraceMempool =
+parseTraceMempool :: MParser Bool
+parseTraceMempool m =
     switch (
          long "trace-mempool"
       <> help "Trace mempool."
+      <> m
     )
 
-parseTraceForge :: Parser Bool
-parseTraceForge =
+parseTraceForge :: MParser Bool
+parseTraceForge m =
     switch (
          long "trace-forge"
       <> help "Trace block forging."
+      <> m
     )
 
-parseTraceChainSyncProtocol :: Parser Bool
-parseTraceChainSyncProtocol =
+parseTraceChainSyncProtocol :: MParser Bool
+parseTraceChainSyncProtocol m =
     switch (
          long "trace-chain-sync-protocol"
       <> help "Trace ChainSync protocol messages."
+      <> m
     )
 
-parseTraceBlockFetchProtocol :: Parser Bool
-parseTraceBlockFetchProtocol =
+parseTraceBlockFetchProtocol :: MParser Bool
+parseTraceBlockFetchProtocol m =
     switch (
          long "trace-block-fetch-protocol"
       <> help "Trace BlockFetch protocol messages."
+      <> m
     )
 
-parseTraceTxSubmissionProtocol :: Parser Bool
-parseTraceTxSubmissionProtocol =
+parseTraceTxSubmissionProtocol :: MParser Bool
+parseTraceTxSubmissionProtocol m =
     switch (
          long "trace-tx-submission-protocol"
       <> help "Trace TxSubmission protocol messages."
+      <> m
     )
 
-parseTraceLocalChainSyncProtocol :: Parser Bool
-parseTraceLocalChainSyncProtocol =
+parseTraceLocalChainSyncProtocol :: MParser Bool
+parseTraceLocalChainSyncProtocol m =
     switch (
          long "trace-local-chain-sync-protocol"
       <> help "Trace local ChainSync protocol messages."
+      <> m
     )
 
-parseTraceLocalTxSubmissionProtocol :: Parser Bool
-parseTraceLocalTxSubmissionProtocol =
+parseTraceLocalTxSubmissionProtocol :: MParser Bool
+parseTraceLocalTxSubmissionProtocol m =
     switch (
          long "trace-local-tx-submission-protocol"
       <> help "Trace local TxSubmission protocol messages."
+      <> m
     )
 
 
-parseProtocolTraceOptions :: Parser ProtocolTraceOptions
-parseProtocolTraceOptions = ProtocolTracers
-  <$> (Const <$> parseTraceChainSyncProtocol)
-  <*> (Const <$> parseTraceBlockFetchProtocol)
-  <*> (Const <$> parseTraceTxSubmissionProtocol)
-  <*> (Const <$> parseTraceLocalChainSyncProtocol)
-  <*> (Const <$> parseTraceLocalTxSubmissionProtocol)
+parseProtocolTraceOptions :: MParser ProtocolTraceOptions
+parseProtocolTraceOptions m = ProtocolTracers
+  <$> (Const <$> parseTraceChainSyncProtocol m)
+  <*> (Const <$> parseTraceBlockFetchProtocol m)
+  <*> (Const <$> parseTraceTxSubmissionProtocol m)
+  <*> (Const <$> parseTraceLocalChainSyncProtocol m)
+  <*> (Const <$> parseTraceLocalTxSubmissionProtocol m)
 
-parseTraceIpSubscription :: Parser Bool
-parseTraceIpSubscription =
+parseTraceIpSubscription :: MParser Bool
+parseTraceIpSubscription m =
     switch (
          long "trace-ip-subscription"
       <> help "Trace IP Subscription messages."
+      <> m
     )
 
-parseTraceDnsSubscription :: Parser Bool
-parseTraceDnsSubscription =
+parseTraceDnsSubscription :: MParser Bool
+parseTraceDnsSubscription m =
     switch (
          long "trace-dns-subscription"
       <> help "Trace DNS Subscription messages."
+      <> m
     )
 
-parseTraceDnsResolver :: Parser Bool
-parseTraceDnsResolver =
+parseTraceDnsResolver :: MParser Bool
+parseTraceDnsResolver m =
     switch (
          long "trace-dns-resolver"
       <> help "Trace DNS Resolver messages."
+      <> m
     )
 
 -- Optional flag for live view (with TUI graphics).

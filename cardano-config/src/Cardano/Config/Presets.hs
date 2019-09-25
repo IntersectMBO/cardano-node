@@ -7,6 +7,7 @@ module Cardano.Config.Presets
 
 import           Cardano.Prelude
 
+import           Cardano.Config.Orphanage ()
 import           Cardano.Config.Partial ( NodeProtocol (..)
                                         , PartialBlock (..)
                                         , PartialCardanoConfiguration (..)
@@ -92,7 +93,7 @@ mainnetConfiguration =
           }
     , pccNode =
         PartialNode
-          { pnoSlotLength = pure 2
+          { pnoSlotLength = pure 20
           , pnoNetworkConnectionTimeout = pure 15000
           , pnoHandshakeTimeout = pure 30000
           }

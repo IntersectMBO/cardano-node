@@ -2,10 +2,8 @@
 {-# LANGUAGE CPP                 #-}
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE GADTs               #-}
-{-# LANGUAGE NamedFieldPuns      #-}
 {-# LANGUAGE NumericUnderscores  #-}
 {-# LANGUAGE OverloadedStrings   #-}
-{-# LANGUAGE RecordWildCards     #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications    #-}
 
@@ -18,8 +16,7 @@
 
 module Cardano.Node.Run
   ( runNode
-  , NodeCLIArguments(..)
-  , NodeCommand(..)
+  , NodeArgs(..)
   , ViewMode(..)
   )
 where
@@ -55,7 +52,6 @@ import           Cardano.Config.Logging (LoggingLayer (..))
 import           Ouroboros.Network.Block
 import           Ouroboros.Network.Subscription.Dns
 
-import           Ouroboros.Consensus.BlockchainTime (SlotLength(..))
 import           Ouroboros.Consensus.Node (NodeKernel (getChainDB),
                                            RunNetworkArgs (..),
                                            RunNode (nodeStartTime))
@@ -69,11 +65,9 @@ import           Ouroboros.Consensus.Util.STM (onEachChange)
 
 import qualified Ouroboros.Storage.ChainDB as ChainDB
 
-import           Cardano.Config.CommonCLI (CommonCLI)
 import           Cardano.Common.LocalSocket
 import           Cardano.Common.Protocol (Protocol(..), SomeProtocol(..), fromProtocol)
 import           Cardano.Node.Configuration.Topology
-import           Cardano.Tracing.TraceAcceptor
 import           Cardano.Tracing.Tracers
 #ifdef UNIX
 import           Cardano.Node.TUI.LiveView
@@ -87,67 +81,51 @@ data Peer = Peer { localAddr  :: SockAddr
   deriving (Eq, Ord, Show)
 
 instance Condense Peer where
-    condense (Peer localAddr remoteAddr) = (show localAddr) ++ (show remoteAddr)
+    condense (Peer localA remoteA) = (show localA) ++ (show remoteA)
 
-data NodeCLIArguments = NodeCLIArguments {
-    slotDuration :: !SlotLength
-  , commonCLI    :: !CommonCLI
-  , command      :: !NodeCommand
-  }
-
-data NodeCommand =
-    SimpleNode  TopologyInfo NodeAddress Protocol ViewMode TraceOptions
-  | TraceAcceptor
+data NodeArgs = NodeArgs !TopologyInfo !NodeAddress !Protocol !ViewMode
 
 -- Node can be run in two modes.
 data ViewMode =
     LiveView    -- Live mode with TUI
   | SimpleView  -- Simple mode, just output text.
 
-runNode :: NodeCLIArguments -> LoggingLayer -> CardanoConfiguration -> IO ()
-runNode nodeCli@NodeCLIArguments{..} loggingLayer cc = do
+runNode :: NodeArgs -> LoggingLayer -> TraceOptions -> CardanoConfiguration -> IO ()
+runNode (NodeArgs topology myNodeAddress protocol viewMode) loggingLayer traceOptions cc = do
     let !tr = llAppendName loggingLayer "node" (llBasicTrace loggingLayer)
-    case command of
+    let trace'      = appendName (pack $ show $ node topology) tr
+    let tracer      = contramap pack $ toLogObject trace'
 
-      TraceAcceptor -> do
-        let trace'      = appendName "acceptor" tr
-        let tracer      = contramap pack $ toLogObject trace'
-        handleTraceAcceptor tracer
-
-      SimpleNode topology myNodeAddress protocol viewMode traceOptions -> do
-        let trace'      = appendName (pack $ show $ node topology) tr
-        let tracer      = contramap pack $ toLogObject trace'
-
-        traceWith tracer $ "tracing verbosity = " ++
-                             case traceVerbosity traceOptions of
-                                 NormalVerbosity  -> "normal"
-                                 MinimalVerbosity -> "minimal"
-                                 MaximalVerbosity -> "maximal"
-        SomeProtocol p  <- fromProtocol cc protocol
-        let tracers     = if tracingGlobalOff traceOptions
-                            then nullTracers
-                            else mkTracers traceOptions trace'
-        case viewMode of
-          SimpleView -> handleSimpleNode p nodeCli myNodeAddress topology trace' tracers cc
-          LiveView   -> do
+    traceWith tracer $ "tracing verbosity = " ++
+                         case traceVerbosity traceOptions of
+                             NormalVerbosity  -> "normal"
+                             MinimalVerbosity -> "minimal"
+                             MaximalVerbosity -> "maximal"
+    SomeProtocol p  <- fromProtocol cc protocol
+    let tracers     = if tracingGlobalOff traceOptions
+                        then nullTracers
+                        else mkTracers traceOptions trace'
+    case viewMode of
+      SimpleView -> handleSimpleNode p myNodeAddress topology trace' tracers cc
+      LiveView   -> do
 #ifdef UNIX
-            let c = llConfiguration loggingLayer
-            -- We run 'handleSimpleNode' as usual and run TUI thread as well.
-            -- turn off logging to the console, only forward it through a pipe to a central logging process
-            CM.setDefaultBackends c [TraceForwarderBK, UserDefinedBK "LiveViewBackend"]
-            -- User will see a terminal graphics and will be able to interact with it.
-            nodeThread <- Async.async $ handleSimpleNode p nodeCli myNodeAddress topology trace' tracers cc
+        let c = llConfiguration loggingLayer
+        -- We run 'handleSimpleNode' as usual and run TUI thread as well.
+        -- turn off logging to the console, only forward it through a pipe to a central logging process
+        CM.setDefaultBackends c [TraceForwarderBK, UserDefinedBK "LiveViewBackend"]
+        -- User will see a terminal graphics and will be able to interact with it.
+        nodeThread <- Async.async $ handleSimpleNode p myNodeAddress topology trace' tracers cc
 
-            be :: LiveViewBackend Text <- realize c
-            let lvbe = MkBackend { bEffectuate = effectuate be, bUnrealize = unrealize be }
-            llAddBackend loggingLayer lvbe (UserDefinedBK "LiveViewBackend")
-            setTopology be topology
-            setNodeThread be nodeThread
-            captureCounters be tr
+        be :: LiveViewBackend Text <- realize c
+        let lvbe = MkBackend { bEffectuate = effectuate be, bUnrealize = unrealize be }
+        llAddBackend loggingLayer lvbe (UserDefinedBK "LiveViewBackend")
+        setTopology be topology
+        setNodeThread be nodeThread
+        captureCounters be tr
 
-            void $ Async.waitAny [nodeThread]
+        void $ Async.waitAny [nodeThread]
 #else
-            handleSimpleNode p nodeCli myNodeAddress topology trace' tracers cc
+        handleSimpleNode p myNodeAddress topology trace' tracers cc
 #endif
 
 -- | Sets up a simple node, which will run the chain sync protocol and block
@@ -155,21 +133,16 @@ runNode nodeCli@NodeCLIArguments{..} loggingLayer cc = do
 -- create a new block.
 handleSimpleNode :: forall blk. RunNode blk
                  => Consensus.Protocol blk
-                 -> NodeCLIArguments
                  -> NodeAddress
                  -> TopologyInfo
                  -> Tracer IO (LogObject Text)
                  -> Tracers Peer blk
                  -> CardanoConfiguration
                  -> IO ()
-handleSimpleNode p NodeCLIArguments{..}
-                 myNodeAddress
-                 (TopologyInfo myNodeId topologyFile)
-                 trace
-                 nodeTracers
-                 CardanoConfiguration{..} = do
+handleSimpleNode
+  p myNodeAddress (TopologyInfo myNodeId topoFile) trace nodeTracers cc = do
     NetworkTopology nodeSetups <-
-      either error id <$> readTopologyFile topologyFile
+      either error id <$> readTopologyFile topoFile
 
     let pInfo@ProtocolInfo{ pInfoConfig = cfg } =
           protocolInfo (NumCoreNodes (length nodeSetups)) (CoreNodeId nid) p
@@ -193,7 +166,7 @@ handleSimpleNode p NodeCLIArguments{..}
       ]
 
     -- Socket directory
-    myLocalAddr <- localSocketAddrInfo myNodeId ccSocketDir MkdirIfMissing
+    myLocalAddr <- localSocketAddrInfo myNodeId (ccSocketDir cc) MkdirIfMissing
 
     let ipProducerAddrs  :: [NodeAddress]
         dnsProducerAddrs :: [RemoteAddress]
@@ -205,13 +178,7 @@ handleSimpleNode p NodeCLIArguments{..}
         ipProducers = nodeAddressToSockAddr <$> ipProducerAddrs
 
         dnsProducers :: [DnsSubscriptionTarget]
-        dnsProducers =
-          [ DnsSubscriptionTarget
-              { dstDomain  = BSC.pack raAddress
-              , dstPort    = raPort
-              , dstValency = raValency
-              }
-          | RemoteAddress {raAddress, raPort, raValency} <- dnsProducerAddrs ]
+        dnsProducers = producerSubscription <$> dnsProducerAddrs
 
         runNetworkArgs :: RunNetworkArgs Peer blk
         runNetworkArgs = RunNetworkArgs
@@ -227,9 +194,17 @@ handleSimpleNode p NodeCLIArguments{..}
           , rnaHandshakeLocalTracer  = nullTracer
           }
 
-    removeStaleLocalSocket myNodeId ccSocketDir
+        producerSubscription :: RemoteAddress -> DnsSubscriptionTarget
+        producerSubscription ra =
+          DnsSubscriptionTarget
+          { dstDomain  = BSC.pack (raAddress ra)
+          , dstPort    = raPort ra
+          , dstValency = raValency ra
+          }
 
-    dbPath <- canonicalizePath =<< makeAbsolute ccDBPath
+    removeStaleLocalSocket myNodeId (ccSocketDir cc)
+
+    dbPath <- canonicalizePath =<< makeAbsolute (ccDBPath cc)
 
     varTip <- atomically $ newTVar GenesisPoint
 

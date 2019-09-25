@@ -30,7 +30,6 @@ parseCoreNodeId :: Parser CoreNodeId
 parseCoreNodeId =
     option (fmap CoreNodeId auto) (
             long "core-node-id"
-         <> short 'n'
          <> metavar "CORE-NODE-ID"
          <> help "The ID of the core node to which this client is connected."
     )
@@ -39,7 +38,6 @@ parseNodeId :: String -> Parser NodeId
 parseNodeId desc =
     option (fmap CoreId auto) (
             long "node-id"
-         <> short 'n'
          <> metavar "NODE-ID"
          <> help desc
     )
@@ -97,7 +95,6 @@ parseTopologyFile :: Parser FilePath
 parseTopologyFile =
     strOption (
             long "topology"
-         <> short 't'
          <> metavar "FILEPATH"
          <> help "The path to a file describing the topology."
     )
