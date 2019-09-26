@@ -44,6 +44,7 @@ import           Cardano.BM.Data.Tracer (WithSeverity (..), addName,
 import           Ouroboros.Network.Block
 
 import           Ouroboros.Consensus.Block (Header)
+import           Ouroboros.Consensus.ChainSync (Tip)
 import           Ouroboros.Consensus.Ledger.Abstract
 import           Ouroboros.Consensus.Mempool.API (ApplyTxErr, GenTx, GenTxId, TraceEventMempool (..))
 import qualified Ouroboros.Consensus.Node.Tracers as Consensus
@@ -230,7 +231,7 @@ mkTracers traceOptions tracer = Tracers
       -> Bool
     hasConsensusTraceFlag f = getConst $ f $ traceConsensus traceOptions
 
-    mkConsensusTracers :: Consensus.Tracers' peer blk (Point (Header blk)) (Tracer IO)
+    mkConsensusTracers :: Consensus.Tracers' peer blk (Tip blk) (Tracer IO)
     mkConsensusTracers = Consensus.Tracers
       { Consensus.chainSyncClientTracer
         = annotateSeverity $ filterSeverity (pure . const (tracingSeverity $ hasConsensusTraceFlag Consensus.chainSyncClientTracer))

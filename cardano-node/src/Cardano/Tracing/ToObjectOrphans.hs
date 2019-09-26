@@ -223,8 +223,8 @@ instance DefineSeverity (TraceChainSyncClientEvent blk tip) where
   defineSeverity (TraceRolledBack _) = Warning
   defineSeverity (TraceException _) = Error
 
-instance DefinePrivacyAnnotation (TraceChainSyncServerEvent blk)
-instance DefineSeverity (TraceChainSyncServerEvent blk) where
+instance DefinePrivacyAnnotation (TraceChainSyncServerEvent blk b)
+instance DefineSeverity (TraceChainSyncServerEvent blk b) where
   defineSeverity _ = Info
 
 instance DefinePrivacyAnnotation [TraceLabelPeer peer
@@ -272,7 +272,7 @@ instance (Condense (HeaderHash blk), ProtocolLedgerView blk, SupportedBlock blk,
   trTransformer _ verb tr = trStructured verb tr
 
 -- transform @ChainSyncServer@
-instance Transformable Text IO (TraceChainSyncServerEvent blk) where
+instance Transformable Text IO (TraceChainSyncServerEvent blk b) where
   trTransformer _ verb tr = trStructured verb tr
 
 -- transform @BlockFetchDecision@
@@ -621,7 +621,7 @@ instance (Condense (HeaderHash blk), ProtocolLedgerView blk, SupportedBlock blk,
                , "exception" .= String (pack $ show exc) ]
 
 
-instance ToObject (TraceChainSyncServerEvent blk) where
+instance ToObject (TraceChainSyncServerEvent blk b) where
     toObject _ _ev = mkObject [ "kind" .= String "ChainSyncServerEvent" ]
   -- TODO: not yet exported from ouroboros-network
   -- toObject verb ev = case ev of
