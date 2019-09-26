@@ -9,8 +9,8 @@ module Cardano.Config.Logging
   ( LoggingLayer (..)
   , TraceOptions (..)
   , LoggingFlag (..)
-  , ConsensusTraceOptions (..)
-  , ProtocolTraceOptions (..)
+  , ConsensusTraceOptions
+  , ProtocolTraceOptions
   , LoggingConfiguration (..)
   , createLoggingFeature
   , loggingCLIConfiguration
@@ -26,13 +26,10 @@ module Cardano.Config.Logging
   , LoggingCLIArguments (..)
   ) where
 
-import           Prelude (error)
 import           Cardano.Prelude hiding (trace)
 
 import qualified Control.Concurrent.Async as Async
 import           Control.Exception.Safe (MonadCatch)
-import           Options.Applicative
-import qualified Options.Applicative as Opt
 
 import           Cardano.BM.Backend.Aggregation (plugin)
 import           Cardano.BM.Backend.Editor (plugin)
@@ -57,7 +54,6 @@ import           Cardano.BM.Plugin (loadPlugin)
 import           Cardano.BM.Setup (setupTrace_, shutdown)
 import           Cardano.BM.Trace (Trace, appendName, traceNamedObject)
 import qualified Cardano.BM.Trace as Trace
-import           Cardano.BM.Tracing (TracingVerbosity)
 import           Cardano.Shell.Lib (GeneralException (..), doesFileExist)
 import           Cardano.Shell.Types ( CardanoFeature (..),
                      CardanoFeatureInit (..), NoDependency (..))
@@ -183,11 +179,11 @@ createLoggingFeature
     -- Currently we parse outside the features since we want to have a complete
     -- parser for __every feature__.
 
-    (,) disabled
+    (,) disabled'
       loggingConfiguration <- loggingCLIConfiguration loggingCLIArgs
 
     -- we construct the layer
-    logCardanoFeat <- loggingCardanoFeatureInit disabled loggingConfiguration
+    logCardanoFeat <- loggingCardanoFeatureInit disabled' loggingConfiguration
 
     loggingLayer <- featureInit logCardanoFeat
                       cardanoEnvironment
@@ -203,11 +199,12 @@ createLoggingFeature
 
 -- | Initialize `LoggingCardanoFeature`
 loggingCardanoFeatureInit :: LoggingFlag -> LoggingConfiguration -> IO LoggingCardanoFeature
-loggingCardanoFeatureInit disabled conf = do
+loggingCardanoFeatureInit disabled' conf = do
+
   let logConfig = lpConfiguration conf
   (baseTrace, switchBoard) <- setupTrace_ logConfig "cardano"
 
-  let trace = case disabled of
+  let trace = case disabled' of
                 LoggingEnabled -> baseTrace
                 LoggingDisabled -> Trace.nullTracer
 
@@ -238,21 +235,21 @@ loggingCardanoFeatureInit disabled conf = do
         -> CardanoConfiguration -> LoggingConfiguration -> IO LoggingLayer
       initLogging _ _ _ _ =
         pure $ LoggingLayer
-                  { llBasicTrace = Trace.natTrace liftIO trace
-                  , llLogDebug = Trace.logDebug
-                  , llLogInfo = Trace.logInfo
-                  , llLogNotice = Trace.logNotice
-                  , llLogWarning = Trace.logWarning
-                  , llLogError = Trace.logError
-                  , llAppendName = Trace.appendName
-                  , llBracketMonadIO = Monadic.bracketObserveIO logConfig
-                  , llBracketMonadM = Monadic.bracketObserveM logConfig
-                  , llBracketMonadX = Monadic.bracketObserveX logConfig
-                  , llBracketStmIO = Stm.bracketObserveIO logConfig
-                  , llBracketStmLogIO = Stm.bracketObserveLogIO logConfig
-                  , llConfiguration = logConfig
-                  , llAddBackend = Switchboard.addExternalBackend switchBoard
-                  }
+                 { llBasicTrace = Trace.natTrace liftIO trace
+                 , llLogDebug = Trace.logDebug
+                 , llLogInfo = Trace.logInfo
+                 , llLogNotice = Trace.logNotice
+                 , llLogWarning = Trace.logWarning
+                 , llLogError = Trace.logError
+                 , llAppendName = Trace.appendName
+                 , llBracketMonadIO = Monadic.bracketObserveIO logConfig
+                 , llBracketMonadM = Monadic.bracketObserveM logConfig
+                 , llBracketMonadX = Monadic.bracketObserveX logConfig
+                 , llBracketStmIO = Stm.bracketObserveIO logConfig
+                 , llBracketStmLogIO = Stm.bracketObserveLogIO logConfig
+                 , llConfiguration = logConfig
+                 , llAddBackend = Switchboard.addExternalBackend switchBoard
+                 }
 
   -- Cleanup function which shuts down the switchboard.
   let cleanupLogging :: LoggingLayer -> IO ()

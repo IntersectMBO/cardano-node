@@ -6,6 +6,9 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
+{-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
+{-# OPTIONS_GHC -Wno-missed-specialisations #-}
+
 module Cardano.CLI.Tx.Generation
   ( NumberOfTxs(..)
   , NumberOfOutputsPerTx(..)
