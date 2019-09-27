@@ -27,6 +27,7 @@
           (hsPkgs.lobemo-backend-monitoring)
           (hsPkgs.lobemo-scribe-systemd)
           (hsPkgs.ouroboros-consensus)
+          (hsPkgs.async)
           (hsPkgs.generic-monoid)
           (hsPkgs.optparse-applicative)
           (hsPkgs.safe-exceptions)

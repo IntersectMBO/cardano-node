@@ -164,8 +164,8 @@ mkTracers traceOptions tracer = Tracers
     tracingFormatting True  = TextualRepresentation
     tracingFormatting False = StructuredLogging
     tracingSeverity :: Bool -> Severity
-    tracingSeverity True  = Debug
-    tracingSeverity False = Info
+    tracingSeverity True  = Debug    -- if tracer flag is set
+    tracingSeverity False = Info     -- min. serverity (default)
     tracingVerbosity :: TracingVerbosity
     tracingVerbosity = traceVerbosity traceOptions
 

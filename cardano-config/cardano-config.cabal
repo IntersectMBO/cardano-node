@@ -32,6 +32,7 @@ library
                      , lobemo-scribe-systemd
                      , ouroboros-consensus
 
+                     , async
                      , generic-monoid
                      , optparse-applicative
                      , safe-exceptions

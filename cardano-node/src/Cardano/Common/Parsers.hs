@@ -116,3 +116,7 @@ loggingParser = LoggingCLIArguments
        <> value Log.Info
        <> showDefault
         )
+    <*> switch
+        ( long "log-metrics"
+       <> help "Log a number of metrics about this node"
+        )

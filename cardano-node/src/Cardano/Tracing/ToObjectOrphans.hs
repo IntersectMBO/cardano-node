@@ -190,7 +190,7 @@ instance DefineSeverity (ChainDB.TraceEvent blk) where
     LedgerDB.InvalidSnapshot _ _ -> Error
 
   defineSeverity (ChainDB.TraceCopyToImmDBEvent ev) = case ev of
-    ChainDB.CopiedBlockToImmDB _ -> Info
+    ChainDB.CopiedBlockToImmDB _ -> Notice
     ChainDB.NoBlocksToCopyToImmDB -> Debug
 
   defineSeverity (ChainDB.TraceGCEvent ev) = case ev of
