@@ -107,8 +107,8 @@ instance IsEffectuator LiveViewBackend Text where
         case item of
             LogObject "cardano.node.metrics" meta content ->
                 case content of
-                    LogValue "Mem.resident" (PureI bytes) ->
-                        let mbytes = ((fromIntegral (bytes * pagesize)) / 1024 / 1024 :: Float)
+                    LogValue "Mem.resident" (PureI pages) ->
+                        let mbytes = fromIntegral (pages * pagesize) / 1024 / 1024 :: Float
                         in
                         modifyMVar_ (getbe lvbe) $ \lvs ->
                             return $ lvs { lvsMemoryUsageCurr = mbytes
