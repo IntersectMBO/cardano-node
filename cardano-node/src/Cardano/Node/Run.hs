@@ -192,6 +192,8 @@ handleSimpleNode
           , rnaDnsProducers          = dnsProducers
           , rnaHandshakeTracer       = nullTracer
           , rnaHandshakeLocalTracer  = nullTracer
+          , rnaMuxTracer             = nullTracer
+          , rnaMuxLocalTracer        = nullTracer
           }
 
         producerSubscription :: RemoteAddress -> DnsSubscriptionTarget

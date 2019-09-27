@@ -101,6 +101,7 @@ submitTx cc protoInfoConfig nodeId tx tracer = do
     socketPath <- localSocketAddrInfo nodeId (ccSocketDir cc) NoMkdirIfMissing
     NodeToClient.connectTo
       nullTracer
+      nullTracer
       (,)
       (localInitiatorNetworkApplication tracer protoInfoConfig tx)
       Nothing

@@ -75,6 +75,7 @@ runWalletClient ptcl sockDir nid@(CoreNodeId id) numCoreNodes tracer = do
 
     connectTo
       nullTracer
+      nullTracer
       (,)
       (localInitiatorNetworkApplication
         (Proxy :: Proxy blk)
