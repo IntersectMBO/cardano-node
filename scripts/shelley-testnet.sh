@@ -50,7 +50,6 @@ function mknetargs () {
                printf -- "--pbft-signature-threshold 0.7 "
                printf -- "--require-network-magic "
                printf -- "--database-path db "
-               printf -- "node "
                printf -- "--topology configuration/simple-topology.json "
                printf -- "--trace-block-fetch-decisions "
                printf -- "--trace-block-fetch-client "
@@ -79,8 +78,8 @@ tmux select-pane -t 0
 tmux split-window -v
 
 tmux select-pane -t 0
-tmux send-keys "cd '${PWD}'; ${CMD} $(mklogcfg 0) $(mkdlgkey 0) $(mkdlgcert 0) $(mknetargs) -n 0 --host-addr ${HOST6} --port 3000 ${VERBOSITY}" C-m
+tmux send-keys "cd '${PWD}'; ${CMD} $(mklogcfg 0) $(mkdlgkey 0) $(mkdlgcert 0) $(mknetargs) --node-id 0 --host-addr ${HOST6} --port 3000 ${VERBOSITY}" C-m
 tmux select-pane -t 1
-tmux send-keys "cd '${PWD}'; ${CMD} $(mklogcfg 1) $(mkdlgkey 1) $(mkdlgcert 1) $(mknetargs) -n 1 --host-addr ${HOST}  --port 3001 ${VERBOSITY}" C-m
+tmux send-keys "cd '${PWD}'; ${CMD} $(mklogcfg 1) $(mkdlgkey 1) $(mkdlgcert 1) $(mknetargs) --node-id 1 --host-addr ${HOST}  --port 3001 ${VERBOSITY}" C-m
 tmux select-pane -t 2
-tmux send-keys "cd '${PWD}'; ${CMD} $(mklogcfg 2) $(mkdlgkey 2) $(mkdlgcert 2) $(mknetargs) -n 2 --host-addr ${HOST6} --port 3002 ${VERBOSITY}" C-m
+tmux send-keys "cd '${PWD}'; ${CMD} $(mklogcfg 2) $(mkdlgkey 2) $(mkdlgcert 2) $(mknetargs) --node-id 2 --host-addr ${HOST6} --port 3002 ${VERBOSITY}" C-m
