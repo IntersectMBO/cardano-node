@@ -99,6 +99,7 @@ runChairman ptcl nids numCoreNodes securityParam maxBlockNo socketDir tracer = d
 
         in connectTo
             nullTracer
+            nullTracer
             (,)
             (localInitiatorNetworkApplication
               coreNodeId

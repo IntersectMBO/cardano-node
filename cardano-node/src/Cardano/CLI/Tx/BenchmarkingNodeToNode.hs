@@ -66,7 +66,7 @@ benchmarkConnectTxSubmit
   -- ^ the particular txSubmission peer
   -> m ()
 benchmarkConnectTxSubmit trs nc localAddr remoteAddr myTxSubClient = do
-  NtN.connectTo (trSendRecvConnect trs) (,) peerMultiplex localAddr remoteAddr
+  NtN.connectTo nullTracer (trSendRecvConnect trs) (,) peerMultiplex localAddr remoteAddr
  where
   myCodecs :: ProtocolCodecs blk DeserialiseFailure m
                 ByteString ByteString ByteString ByteString ByteString
