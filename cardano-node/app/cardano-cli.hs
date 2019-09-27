@@ -124,67 +124,65 @@ parseGenesisParameters =
 
 parseGenesisRelatedValues :: Parser ClientCommand
 parseGenesisRelatedValues =
-  subparser
-    ( mconcat
-        [ commandGroup "Genesis related commands",
-          metavar "Genesis related commands",
-          command' "genesis" "Create genesis." $
-          Genesis
+  subparser $ mconcat
+    [ commandGroup "Genesis related commands"
+    , metavar "Genesis related commands"
+    , command' "genesis" "Create genesis."
+      $ Genesis
+          <$> parseNewDirectory
+              "genesis-output-dir"
+              "Non-existent directory where genesis JSON file and secrets shall be placed."
+          <*> parseGenesisParameters
+    , command'
+        "dump-hardcoded-genesis"
+        "Write out a hard-coded genesis."
+        $ DumpHardcodedGenesis
             <$> parseNewDirectory
-                "genesis-output-dir"
-                "Non-existent directory where genesis JSON file and secrets shall be placed."
-            <*> parseGenesisParameters,
-          command'
-            "dump-hardcoded-genesis"
-            "Write out a hard-coded genesis."
-            $ DumpHardcodedGenesis
-                <$> parseNewDirectory
-                      "genesis-output-dir"
-                      "Non-existent directory where the genesis artifacts are to be written.",
-          command' "print-genesis-hash" "Compute hash of a genesis file."
-            $ PrintGenesisHash
-                <$> parseGenesisFile "genesis-json"
-          ]
-      )
+                  "genesis-output-dir"
+                  "Non-existent directory where the genesis artifacts are to be written."
+    , command' "print-genesis-hash" "Compute hash of a genesis file."
+        $ PrintGenesisHash
+            <$> parseGenesisFile "genesis-json"
+    ]
+
 
 -- | Values required to create keys and perform
 -- transformation on keys.
 parseKeyRelatedValues :: Parser ClientCommand
 parseKeyRelatedValues =
-  subparser
-    ( mconcat
-        [ commandGroup "Key related commands",
-          metavar "Key related commands",
-          command' "keygen" "Generate a signing key."
+  subparser $ mconcat
+        [ commandGroup "Key related commands"
+        , metavar "Key related commands"
+        , command' "keygen" "Generate a signing key."
             $ Keygen
                 <$> parseNewSigningKeyFile "secret"
                 <*> parseFlag' GetPassword EmptyPassword
                       "no-password"
-                      "Disable password protection.",
-          command'
+                      "Disable password protection."
+        , command'
             "to-verification"
             "Extract a verification key in its base64 form."
             $ ToVerification
                 <$> parseSigningKeyFile
                       "secret"
                       "Signing key file to extract the verification part from."
-                <*> parseNewVerificationKeyFile "to",
-          command'
+                <*> parseNewVerificationKeyFile "to"
+        , command'
             "signing-key-public"
             "Pretty-print a signing key's verification key (not a secret)."
             $ PrettySigningKeyPublic
                 <$> parseSigningKeyFile
                       "secret"
-                      "Signing key to pretty-print.",
-          command'
+                      "Signing key to pretty-print."
+        , command'
             "signing-key-address"
             "Print address of a signing key."
             $ PrintSigningKeyAddress
                 <$> parseNetworkMagic
                 <*> parseSigningKeyFile
                       "secret"
-                      "Signing key, whose address is to be printed.",
-          command'
+                      "Signing key, whose address is to be printed."
+        , command'
             "migrate-delegate-key-from"
             "Migrate a delegate key from an older version."
             $ MigrateDelegateKeyFrom
@@ -192,108 +190,106 @@ parseKeyRelatedValues =
                 <*> parseNewSigningKeyFile "to"
                 <*> parseSigningKeyFile "from" "Signing key file to migrate."
         ]
-      )
+
 
 parseDelegationRelatedValues :: Parser ClientCommand
 parseDelegationRelatedValues =
-  subparser
-    ( mconcat
-        [ commandGroup "Delegation related commands",
-          metavar "Delegation related commands",
-          command'
-            "issue-delegation-certificate"
-            "Create a delegation certificate allowing the\
-            \ delegator to sign blocks on behalf of the issuer"
-            $ IssueDelegationCertificate
+  subparser $ mconcat
+    [ commandGroup "Delegation related commands"
+    , metavar "Delegation related commands"
+    , command'
+        "issue-delegation-certificate"
+        "Create a delegation certificate allowing the\
+        \ delegator to sign blocks on behalf of the issuer"
+        $ IssueDelegationCertificate
+        <$> parseProtocolMagicId "protocol-magic"
+        <*> ( EpochNumber
+                <$> parseIntegral
+                      "since-epoch"
+                      "The epoch from which the delegation is valid."
+              )
+        <*> parseSigningKeyFile
+              "secret"
+              "The issuer of the certificate, who delegates\
+              \ their right to sign blocks."
+        <*> parseVerificationKeyFile
+              "delegate-key"
+              "The delegate, who gains the right to sign block."
+        <*> parseNewCertificateFile "certificate"
+    , command'
+        "check-delegation"
+        "Verify that a given certificate constitutes a valid\
+        \ delegation relationship between keys."
+        $ CheckDelegation
             <$> parseProtocolMagicId "protocol-magic"
-            <*> ( EpochNumber
-                    <$> parseIntegral
-                          "since-epoch"
-                          "The epoch from which the delegation is valid."
-                  )
-            <*> parseSigningKeyFile
-                  "secret"
-                  "The issuer of the certificate, who delegates\
-                  \ their right to sign blocks."
+            <*> parseCertificateFile
+                  "certificate"
+                  "The certificate embodying delegation to verify."
+            <*> parseVerificationKeyFile
+                  "issuer-key"
+                  "The genesis key that supposedly delegates."
             <*> parseVerificationKeyFile
                   "delegate-key"
-                  "The delegate, who gains the right to sign block."
-            <*> parseNewCertificateFile "certificate",
-          command'
-            "check-delegation"
-            "Verify that a given certificate constitutes a valid\
-            \ delegation relationship between keys."
-            $ CheckDelegation
-                <$> parseProtocolMagicId "protocol-magic"
-                <*> parseCertificateFile
-                      "certificate"
-                      "The certificate embodying delegation to verify."
-                <*> parseVerificationKeyFile
-                      "issuer-key"
-                      "The genesis key that supposedly delegates."
-                <*> parseVerificationKeyFile
-                      "delegate-key"
-                      "The operation verification key supposedly delegated to."
-          ]
-      )
+                  "The operation verification key supposedly delegated to."
+      ]
+
 
 parseTxRelatedValues :: Parser ClientCommand
 parseTxRelatedValues =
-  subparser
-    ( mconcat
-        [ commandGroup "Transaction related commands",
-          metavar "Transaction related commands",
-          command'
-            "submit-tx"
-            "Submit a raw, signed transaction, in its on-wire representation."
-            $ SubmitTx
-                <$> parseTopologyInfo "PBFT node ID to submit Tx to."
-                <*> parseTxFile "tx",
-          command'
-            "issue-genesis-utxo-expenditure"
-            "Write a file with a signed transaction, spending genesis UTxO."
-            $ SpendGenesisUTxO
-                <$> parseNewTxFile "tx"
-                <*> parseSigningKeyFile
-                      "wallet-key"
-                      "Key that has access to all mentioned genesis UTxO inputs."
-                <*> parseAddress
-                      "rich-addr-from"
-                      "Tx source: genesis UTxO richman address (non-HD)."
-                <*> (NE.fromList <$> some parseTxOut),
-          command'
-            "issue-utxo-expenditure"
-            "Write a file with a signed transaction, spending normal UTxO."
-            $ SpendUTxO
-                <$> parseNewTxFile "tx"
-                <*> parseSigningKeyFile
-                      "wallet-key"
-                      "Key that has access to all mentioned genesis UTxO inputs."
-                <*> (NE.fromList <$> some parseTxIn)
-                <*> (NE.fromList <$> some parseTxOut),
-          command'
-            "generate-txs"
-            "Launch transactions generator."
-            $ GenerateTxs
-                <$> parseTopologyInfo
-                      "PBFT node ID to submit generated Txs to."
-                <*> parseNumberOfTxs
-                      "num-of-txs"
-                      "Number of transactions generator will create."
-                <*> parseNumberOfOutputsPerTx
-                      "outputs-per-tx"
-                      "Number of outputs in each of transactions."
-                <*> parseFeePerTx
-                      "tx-fee"
-                      "Fee per transaction, in Lovelaces."
-                <*> parseTPSRate
-                      "tps"
-                      "TPS (transaction per second) rate."
-                <*> parseSigningKeysFiles
-                      "sig-key"
-                      "Path to signing key file, for genesis UTxO using by generator."
-          ]
-      )
+  subparser $ mconcat
+    [ commandGroup "Transaction related commands"
+    , metavar "Transaction related commands"
+    , command'
+        "submit-tx"
+        "Submit a raw, signed transaction, in its on-wire representation."
+        $ SubmitTx
+            <$> parseTopologyInfo "PBFT node ID to submit Tx to."
+            <*> parseTxFile "tx"
+    , command'
+        "issue-genesis-utxo-expenditure"
+        "Write a file with a signed transaction, spending genesis UTxO."
+        $ SpendGenesisUTxO
+            <$> parseNewTxFile "tx"
+            <*> parseSigningKeyFile
+                  "wallet-key"
+                  "Key that has access to all mentioned genesis UTxO inputs."
+            <*> parseAddress
+                  "rich-addr-from"
+                  "Tx source: genesis UTxO richman address (non-HD)."
+            <*> (NE.fromList <$> some parseTxOut)
+    , command'
+        "issue-utxo-expenditure"
+        "Write a file with a signed transaction, spending normal UTxO."
+        $ SpendUTxO
+            <$> parseNewTxFile "tx"
+            <*> parseSigningKeyFile
+                  "wallet-key"
+                  "Key that has access to all mentioned genesis UTxO inputs."
+            <*> (NE.fromList <$> some parseTxIn)
+            <*> (NE.fromList <$> some parseTxOut)
+    , command'
+        "generate-txs"
+        "Launch transactions generator."
+        $ GenerateTxs
+            <$> parseTopologyInfo
+                  "PBFT node ID to submit generated Txs to."
+            <*> parseNumberOfTxs
+                  "num-of-txs"
+                  "Number of transactions generator will create."
+            <*> parseNumberOfOutputsPerTx
+                  "outputs-per-tx"
+                  "Number of outputs in each of transactions."
+            <*> parseFeePerTx
+                  "tx-fee"
+                  "Fee per transaction, in Lovelaces."
+            <*> parseTPSRate
+                  "tps"
+                  "TPS (transaction per second) rate."
+            <*> parseSigningKeysFiles
+                  "sig-key"
+                  "Path to signing key file, for genesis UTxO using by generator."
+      ]
+
 
 parseTestnetBalanceOptions :: Parser TestnetBalanceOptions
 parseTestnetBalanceOptions =
@@ -346,18 +342,15 @@ parseK =
 
 parseNetworkMagic :: Parser NetworkMagic
 parseNetworkMagic =
-  asum
-    [ flag' NetworkMainOrStage
-      $ mconcat
-          [ long "main-or-staging",
-            help ""
-          ],
-          option (fmap NetworkTestnet auto)
-          ( long "testnet-magic"
-            <> metavar "MAGIC"
-            <> help "The testnet network magic, decibal"
-          )
-    ]
+  asum [ flag' NetworkMainOrStage $ mconcat
+           [ long "main-or-staging"
+           , help ""
+           ]
+       , option (fmap NetworkTestnet auto)
+           $ long "testnet-magic"
+             <> metavar "MAGIC"
+             <> help "The testnet network magic, decibal"
+       ]
 
 parseProtocolMagicId :: String -> Parser ProtocolMagicId
 parseProtocolMagicId arg =
@@ -372,45 +365,31 @@ parseProtocolMagic =
 parseUTCTime :: String -> String -> Parser UTCTime
 parseUTCTime optname desc =
   option (posixSecondsToUTCTime . fromInteger <$> auto)
-    ( long optname
-      <> metavar "POSIXSECONDS"
-      <> help desc
-    )
+    $ long optname <> metavar "POSIXSECONDS" <> help desc
+
 
 parseFilePath :: String -> String -> Parser FilePath
 parseFilePath optname desc =
-  strOption
-    ( long optname
-      <> metavar "FILEPATH"
-      <> help desc
-    )
+  strOption $ long optname <> metavar "FILEPATH" <> help desc
+
 
 parseIntegral :: Integral a => String -> String -> Parser a
-parseIntegral optname desc =
-  option (fromInteger <$> auto)
-    ( long optname
-        <> metavar "INT"
-        <> help desc
-      )
+parseIntegral optname desc = option (fromInteger <$> auto)
+  $ long optname <> metavar "INT" <> help desc
+
 
 parseIntegralWithDefault :: Integral a => String -> String -> a -> Parser a
-parseIntegralWithDefault optname desc def =
-  option (fromInteger <$> auto)
-    ( long optname
-      <> metavar "INT"
-      <> help desc
-      <> value def
-    )
+parseIntegralWithDefault optname desc def = option (fromInteger <$> auto)
+ $ long optname <> metavar "INT" <> help desc <> value def
+
 
 parseFlag :: String -> String -> Parser Bool
 parseFlag = parseFlag' False True
 
 parseFlag' :: a -> a -> String -> String -> Parser a
 parseFlag' def active optname desc =
-  flag def active
-  ( long optname
-    <> help desc
-  )
+  flag def active $ long optname <> help desc
+
 
 -- | Here, we hope to get away with the usage of 'error' in a pure expression,
 --   because the CLI-originated values are either used, in which case the error is
@@ -439,10 +418,8 @@ cliParseTxId =
 parseAddress :: String -> String -> Parser Address
 parseAddress opt desc =
   option (cliParseBase58Address <$> auto)
-    ( long opt
-      <> metavar "ADDR"
-      <> help desc
-    )
+    $ long opt <> metavar "ADDR" <> help desc
+
 
 parseTxIn :: Parser TxIn
 parseTxIn =
@@ -451,10 +428,10 @@ parseTxIn =
     . Control.Arrow.first cliParseTxId
     <$> auto
   )
-  ( long       "txin"
+  $ long "txin"
     <> metavar "(TXID,INDEX)"
-    <> help    "Transaction input is a pair of an UTxO TxId and a zero-based output index."
-  )
+    <> help "Transaction input is a pair of an UTxO TxId and a zero-based output index."
+
 
 parseTxOut :: Parser TxOut
 parseTxOut =
@@ -464,16 +441,14 @@ parseTxOut =
       . Control.Arrow.second cliParseLovelace
       <$> auto
     )
-    ( long "txout"
+    $ long "txout"
       <> metavar "ADDR:LOVELACE"
       <> help "Specify a transaction output, as a pair of an address and lovelace."
-    )
+
 
 parseGenesisFile :: String -> Parser GenesisFile
 parseGenesisFile opt =
-  GenesisFile
-  <$> parseFilePath opt
-      "Genesis JSON file."
+  GenesisFile <$> parseFilePath opt "Genesis JSON file."
 
 parseNewDirectory :: String -> String -> Parser NewDirectory
 parseNewDirectory opt desc = NewDirectory <$> parseFilePath opt desc
@@ -484,8 +459,7 @@ parseSigningKeyFile opt desc = SigningKeyFile <$> parseFilePath opt desc
 parseNewSigningKeyFile :: String -> Parser NewSigningKeyFile
 parseNewSigningKeyFile opt =
   NewSigningKeyFile
-    <$> parseFilePath opt
-          "Non-existent file to write the signing key to."
+    <$> parseFilePath opt "Non-existent file to write the signing key to."
 
 parseVerificationKeyFile :: String -> String -> Parser VerificationKeyFile
 parseVerificationKeyFile opt desc = VerificationKeyFile <$> parseFilePath opt desc
@@ -493,8 +467,7 @@ parseVerificationKeyFile opt desc = VerificationKeyFile <$> parseFilePath opt de
 parseNewVerificationKeyFile :: String -> Parser NewVerificationKeyFile
 parseNewVerificationKeyFile opt =
   NewVerificationKeyFile
-    <$> parseFilePath opt
-          "Non-existent file to write the verification key to."
+    <$> parseFilePath opt "Non-existent file to write the verification key to."
 
 parseCertificateFile :: String -> String -> Parser CertificateFile
 parseCertificateFile opt desc = CertificateFile <$> parseFilePath opt desc
@@ -502,20 +475,17 @@ parseCertificateFile opt desc = CertificateFile <$> parseFilePath opt desc
 parseNewCertificateFile :: String -> Parser NewCertificateFile
 parseNewCertificateFile opt =
   NewCertificateFile
-    <$> parseFilePath opt
-          "Non-existent file to write the certificate to."
+    <$> parseFilePath opt "Non-existent file to write the certificate to."
 
 parseTxFile :: String -> Parser TxFile
 parseTxFile opt =
   TxFile
-    <$> parseFilePath opt
-          "File containing the signed transaction."
+    <$> parseFilePath opt "File containing the signed transaction."
 
 parseNewTxFile :: String -> Parser NewTxFile
 parseNewTxFile opt =
   NewTxFile
-    <$> parseFilePath opt
-          "Non-existent file to write the signed transaction to."
+    <$> parseFilePath opt "Non-existent file to write the signed transaction to."
 
 parseNumberOfTxs :: String -> String -> Parser NumberOfTxs
 parseNumberOfTxs opt desc = NumberOfTxs <$> parseIntegral opt desc
