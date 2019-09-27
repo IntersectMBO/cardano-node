@@ -7,7 +7,7 @@ genesis_root="configuration/${genesis}"
 genesis_file="${genesis_root}/genesis.json"
 if test ! -f "${genesis_file}"
 then echo "ERROR: genesis ${genesis_file} does not exist!">&1; exit 1; fi
-genesis_hash="$(${RUNNER} cardano-cli --log-config configuration/log-configuration.yaml --real-pbft print-genesis-hash --genesis-json ${genesis_file})"
+genesis_hash="$(${RUNNER} cardano-cli --tracing-off --real-pbft print-genesis-hash --genesis-json ${genesis_file})"
 default_from_key="${genesis_root}/delegate-keys.001.key"
 default_to_key="${genesis_root}/delegate-keys.002.key"
 
@@ -34,12 +34,15 @@ EOF
 
 addr=$(scripts/get-default-key-address.sh ${to_key})
 
-args=" --genesis-file        ${genesis_file}
+args=" --tracing-off
+       --real-pbft
+       --genesis-file        ${genesis_file}
        --genesis-hash        ${genesis_hash}
+       issue-utxo-expenditure
        --tx                  ${tx}
        --wallet-key          ${from_key}
        --txin             (\"${txid}\",${outindex})
        --txout            (\"${addr}\",${lovelace})
 "
 set -x
-${RUNNER} cardano-cli --real-pbft --log-config configuration/log-configuration.yaml issue-utxo-expenditure ${args}
+${RUNNER} cardano-cli ${args}

@@ -9,7 +9,7 @@ if test ! -f "${genesis_file}"
 then echo "ERROR: genesis ${genesis_file} does not exist!">&1; exit 1; fi
 
 cabal new-build "exe:cardano-cli"
-genesis_hash="$(cabal new-run -v0 exe:cardano-cli -- --real-pbft --log-config configuration/log-configuration.yaml print-genesis-hash --genesis-json ${genesis_file})"
+genesis_hash="$(cabal new-run -v0 exe:cardano-cli -- --real-pbft --tracing-off print-genesis-hash --genesis-json ${genesis_file})"
 
 CMD=`find dist-newstyle/ -type f -name "cardano-node"`
 test -n "${CMD}" || {

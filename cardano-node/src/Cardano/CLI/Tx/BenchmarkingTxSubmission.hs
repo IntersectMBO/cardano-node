@@ -4,6 +4,8 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
+{-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
+
 module Cardano.CLI.Tx.BenchmarkingTxSubmission
   ( ROEnv(..)
   , RPCTxSubmission(..)

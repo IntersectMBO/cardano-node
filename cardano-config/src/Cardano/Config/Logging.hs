@@ -1,13 +1,19 @@
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE Rank2Types          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TupleSections #-}
 
 {-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
 
 module Cardano.Config.Logging
   ( LoggingLayer (..)
+  , TraceOptions (..)
+  , LoggingFlag (..)
+  , ConsensusTraceOptions
+  , ProtocolTraceOptions
   , LoggingConfiguration (..)
   , createLoggingFeature
+  , loggingCLIConfiguration
   -- re-exports
   , Trace
   , Configuration
@@ -33,6 +39,7 @@ import qualified Cardano.BM.Backend.Switchboard as Switchboard
 import           Cardano.BM.Configuration (Configuration)
 import qualified Cardano.BM.Configuration as Config
 import           Cardano.BM.Counters (readCounters)
+import qualified Cardano.BM.Configuration.Model as Config
 import           Cardano.BM.Data.Backend (Backend, BackendKind)
 import           Cardano.BM.Data.Counter
 import           Cardano.BM.Data.LogItem ( LOContent (..), LOMeta (..),
@@ -40,6 +47,7 @@ import           Cardano.BM.Data.LogItem ( LOContent (..), LOMeta (..),
 import           Cardano.BM.Data.Observable
 import           Cardano.BM.Data.Severity (Severity (..))
 import           Cardano.BM.Data.SubTrace
+import           Cardano.BM.Data.Tracer (TracingVerbosity (..))
 import qualified Cardano.BM.Observer.Monadic as Monadic
 import qualified Cardano.BM.Observer.STM as Stm
 import           Cardano.BM.Plugin (loadPlugin)
@@ -49,6 +57,8 @@ import qualified Cardano.BM.Trace as Trace
 import           Cardano.Shell.Lib (GeneralException (..), doesFileExist)
 import           Cardano.Shell.Types ( CardanoFeature (..),
                      CardanoFeatureInit (..), NoDependency (..))
+import qualified Ouroboros.Consensus.Node.Tracers as Consensus
+import           Ouroboros.Consensus.NodeNetwork (ProtocolTracers'(..))
 
 import           Cardano.Config.Types (CardanoConfiguration, CardanoEnvironment)
 
@@ -61,9 +71,27 @@ import           Cardano.Config.Types (CardanoConfiguration, CardanoEnvironment)
 --------------------------------
 
 data LoggingConfiguration = LoggingConfiguration
-  { lpConfiguration :: !Configuration
-  , recordMetrics   :: !Bool
+  { lpConfiguration      :: !Configuration
+  , recordMetrics        :: !Bool
   }
+
+-- | Detailed tracing options. Each option enables a tracer
+--   which verbosity to the log output.
+data TraceOptions = TraceOptions
+  { traceVerbosity       :: !TracingVerbosity
+  , traceChainDB         :: !Bool
+    -- ^ By default we use 'readableChainDB' tracer, if on this it will use
+    -- more verbose tracer
+  , traceConsensus       :: ConsensusTraceOptions
+  , traceProtocols       :: ProtocolTraceOptions
+  , traceIpSubscription  :: !Bool
+  , traceDnsSubscription :: !Bool
+  , traceDnsResolver     :: !Bool
+  , traceMux             :: !Bool
+  }
+
+type ConsensusTraceOptions = Consensus.Tracers' () ()    () (Const Bool)
+type ProtocolTraceOptions  = ProtocolTracers'   () () ()    (Const Bool)
 
 --------------------------------
 -- Layer
@@ -111,71 +139,93 @@ type LoggingCardanoFeature = CardanoFeatureInit
 
 -- | CLI specific data structure.
 data LoggingCLIArguments = LoggingCLIArguments
-  { logConfigFile  :: !FilePath
-  , minSeverity    :: !Severity
+  { logConfigFile :: !(Maybe FilePath)
+  , minSeverity :: !Severity
   , captureMetrics :: !Bool
   }
+
+data LoggingFlag = LoggingEnabled | LoggingDisabled
+  deriving (Eq, Show)
+
+-- | Interpret main logging CLI controls into a tuple of:
+--   - a designation of whether logging was disabled,
+--   - a valid 'LoggingConfiguration' (still necessary, even if logging was disabled)
+loggingCLIConfiguration :: LoggingCLIArguments -> IO (LoggingFlag, LoggingConfiguration)
+loggingCLIConfiguration  lca@LoggingCLIArguments{logConfigFile = Nothing} =
+  (LoggingDisabled,)
+  <$> (LoggingConfiguration
+        <$> Config.empty
+        <*> pure (captureMetrics lca))
+loggingCLIConfiguration lca@LoggingCLIArguments{logConfigFile = Just fp} = do
+
+  whenM (not <$> doesFileExist fp) $ do
+    putTextLn "Cannot find the logging configuration file at location."
+    throwIO $ FileNotFoundException fp
+
+  config <- Config.setup fp
+  Config.setMinSeverity config (minSeverity lca)
+  pure (LoggingEnabled, LoggingConfiguration config (captureMetrics lca))
 
 createLoggingFeature
   :: CardanoEnvironment -> CardanoConfiguration
   -> LoggingCLIArguments -> IO (LoggingLayer, CardanoFeature)
-createLoggingFeature cardanoEnvironment cardanoConfiguration loggingCLIArguments = do
-  -- we parse any additional configuration if there is any
-  -- We don't know where the user wants to fetch the additional
-  -- configuration from, it could be from
-  -- the filesystem, so we give him the most flexible/powerful context, @IO@.
-  --
-  -- Currently we parse outside the features since we want to have a complete
-  -- parser for __every feature__.
-  let _logConfigFile = logConfigFile loggingCLIArguments
-  whenM (not <$> doesFileExist _logConfigFile) $ do
-    putTextLn "Cannot find the logging configuration file at location."
-    throwIO $ FileNotFoundException _logConfigFile
+createLoggingFeature
+  cardanoEnvironment cardanoConfiguration loggingCLIArgs = do
+    -- we parse any additional configuration if there is any
+    -- We don't know where the user wants to fetch the additional
+    -- configuration from, it could be from
+    -- the filesystem, so we give him the most flexible/powerful context, @IO@.
+    --
+    -- Currently we parse outside the features since we want to have a complete
+    -- parser for __every feature__.
 
-  logConfig <- Config.setup _logConfigFile
-  -- can overwrite minimum severity from config file
-  Config.setMinSeverity logConfig $ minSeverity loggingCLIArguments
-  let loggingConfiguration = LoggingConfiguration logConfig (captureMetrics loggingCLIArguments)
+    (,) disabled'
+      loggingConfiguration <- loggingCLIConfiguration loggingCLIArgs
 
-  -- we construct the layer
-  logCardanoFeat <- loggingCardanoFeatureInit loggingConfiguration
+    -- we construct the layer
+    logCardanoFeat <- loggingCardanoFeatureInit disabled' loggingConfiguration
 
-  loggingLayer <- featureInit logCardanoFeat
-                    cardanoEnvironment
-                    NoDependency
-                    cardanoConfiguration
-                    loggingConfiguration
+    loggingLayer <- featureInit logCardanoFeat
+                      cardanoEnvironment
+                      NoDependency
+                      cardanoConfiguration
+                      loggingConfiguration
 
-  -- we construct the cardano feature
-  let cardanoFeature = createCardanoFeature logCardanoFeat loggingLayer
+    -- we construct the cardano feature
+    let cardanoFeature = createCardanoFeature logCardanoFeat loggingLayer
 
-  -- we return both
-  pure (loggingLayer, cardanoFeature)
+    -- we return both
+    pure (loggingLayer, cardanoFeature)
 
 -- | Initialize `LoggingCardanoFeature`
-loggingCardanoFeatureInit :: LoggingConfiguration -> IO LoggingCardanoFeature
-loggingCardanoFeatureInit loggingConfiguration = do
-  let logConfig = lpConfiguration loggingConfiguration
+loggingCardanoFeatureInit :: LoggingFlag -> LoggingConfiguration -> IO LoggingCardanoFeature
+loggingCardanoFeatureInit disabled' conf = do
+
+  let logConfig = lpConfiguration conf
   (baseTrace, switchBoard) <- setupTrace_ logConfig "cardano"
+
+  let trace = case disabled' of
+                LoggingEnabled -> baseTrace
+                LoggingDisabled -> Trace.nullTracer
 
   Config.getGUIport logConfig >>= \p ->
       if p > 0
-      then Cardano.BM.Backend.Editor.plugin logConfig baseTrace switchBoard
-                >>= loadPlugin switchBoard
+      then Cardano.BM.Backend.Editor.plugin logConfig trace switchBoard
+               >>= loadPlugin switchBoard
       else pure ()
   Config.getEKGport logConfig >>= \p ->
       if p > 0
-      then Cardano.BM.Backend.EKGView.plugin logConfig baseTrace switchBoard
+      then Cardano.BM.Backend.EKGView.plugin logConfig trace switchBoard
                 >>= loadPlugin switchBoard
       else pure ()
 
-  Cardano.BM.Backend.Aggregation.plugin logConfig baseTrace switchBoard
+  Cardano.BM.Backend.Aggregation.plugin logConfig trace switchBoard
       >>= loadPlugin switchBoard
-  Cardano.BM.Backend.Monitoring.plugin logConfig baseTrace switchBoard
+  Cardano.BM.Backend.Monitoring.plugin logConfig trace switchBoard
       >>= loadPlugin switchBoard
 
   -- record node metrics
-  if recordMetrics loggingConfiguration
+  if recordMetrics conf
     then startCapturingMetrics baseTrace
     else pure ()
 
@@ -185,21 +235,21 @@ loggingCardanoFeatureInit loggingConfiguration = do
         -> CardanoConfiguration -> LoggingConfiguration -> IO LoggingLayer
       initLogging _ _ _ _ =
         pure $ LoggingLayer
-                  { llBasicTrace = Trace.natTrace liftIO baseTrace
-                  , llLogDebug = Trace.logDebug
-                  , llLogInfo = Trace.logInfo
-                  , llLogNotice = Trace.logNotice
-                  , llLogWarning = Trace.logWarning
-                  , llLogError = Trace.logError
-                  , llAppendName = Trace.appendName
-                  , llBracketMonadIO = Monadic.bracketObserveIO logConfig
-                  , llBracketMonadM = Monadic.bracketObserveM logConfig
-                  , llBracketMonadX = Monadic.bracketObserveX logConfig
-                  , llBracketStmIO = Stm.bracketObserveIO logConfig
-                  , llBracketStmLogIO = Stm.bracketObserveLogIO logConfig
-                  , llConfiguration = logConfig
-                  , llAddBackend = Switchboard.addExternalBackend switchBoard
-                  }
+                 { llBasicTrace = Trace.natTrace liftIO trace
+                 , llLogDebug = Trace.logDebug
+                 , llLogInfo = Trace.logInfo
+                 , llLogNotice = Trace.logNotice
+                 , llLogWarning = Trace.logWarning
+                 , llLogError = Trace.logError
+                 , llAppendName = Trace.appendName
+                 , llBracketMonadIO = Monadic.bracketObserveIO logConfig
+                 , llBracketMonadM = Monadic.bracketObserveM logConfig
+                 , llBracketMonadX = Monadic.bracketObserveX logConfig
+                 , llBracketStmIO = Stm.bracketObserveIO logConfig
+                 , llBracketStmLogIO = Stm.bracketObserveLogIO logConfig
+                 , llConfiguration = logConfig
+                 , llAddBackend = Switchboard.addExternalBackend switchBoard
+                 }
 
   -- Cleanup function which shuts down the switchboard.
   let cleanupLogging :: LoggingLayer -> IO ()

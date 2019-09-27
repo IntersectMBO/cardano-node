@@ -60,8 +60,8 @@ import           Ouroboros.Network.Subscription
 
 import qualified Ouroboros.Storage.ChainDB as ChainDB
 
+import           Cardano.Config.Logging
 import           Cardano.Tracing.ToObjectOrphans
-
 
 data Tracers peer blk = Tracers {
       -- | Trace the ChainDB (flag '--trace-chain-db' will turn on textual output)
@@ -104,25 +104,6 @@ type TraceConstraints blk =
   , Show blk
   , Show (Header blk)
   )
-
--- | Tracing options. Each option enables a tracer which adds verbosity to the
--- log output.
-data TraceOptions = TraceOptions
-  { tracingGlobalOff     :: !Bool
-  , traceVerbosity       :: !TracingVerbosity
-  , traceChainDB         :: !Bool
-    -- ^ By default we use 'readableChainDB' tracer, if on this it will use
-    -- more verbose tracer
-  , traceConsensus       :: ConsensusTraceOptions
-  , traceProtocols       :: ProtocolTraceOptions
-  , traceIpSubscription  :: !Bool
-  , traceDnsSubscription :: !Bool
-  , traceDnsResolver     :: !Bool
-  , traceMux             :: !Bool
-  }
-
-type ConsensusTraceOptions = Consensus.Tracers' () ()    () (Const Bool)
-type ProtocolTraceOptions  = ProtocolTracers'   () () ()    (Const Bool)
 
 nullTracers :: Tracers peer blk
 nullTracers = Tracers {
