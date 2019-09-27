@@ -126,7 +126,8 @@ parseGenesisRelatedValues :: Parser ClientCommand
 parseGenesisRelatedValues =
   subparser
     ( mconcat
-        [ commandGroup "Genesis related commands.",
+        [ commandGroup "Genesis related commands",
+          metavar "Genesis related commands",
           command' "genesis" "Create genesis." $
           Genesis
             <$> parseNewDirectory
@@ -152,7 +153,8 @@ parseKeyRelatedValues :: Parser ClientCommand
 parseKeyRelatedValues =
   subparser
     ( mconcat
-        [ commandGroup "Keys",
+        [ commandGroup "Key related commands",
+          metavar "Key related commands",
           command' "keygen" "Generate a signing key."
             $ Keygen
                 <$> parseNewSigningKeyFile "secret"
@@ -196,7 +198,8 @@ parseDelegationRelatedValues :: Parser ClientCommand
 parseDelegationRelatedValues =
   subparser
     ( mconcat
-        [ commandGroup "Delegation",
+        [ commandGroup "Delegation related commands",
+          metavar "Delegation related commands",
           command'
             "issue-delegation-certificate"
             "Create a delegation certificate allowing the\
@@ -238,7 +241,8 @@ parseTxRelatedValues :: Parser ClientCommand
 parseTxRelatedValues =
   subparser
     ( mconcat
-        [ commandGroup "Transactions",
+        [ commandGroup "Transaction related commands",
+          metavar "Transaction related commands",
           command'
             "submit-tx"
             "Submit a raw, signed transaction, in its on-wire representation."
