@@ -115,7 +115,8 @@ instance FromJSON RemoteAddress where
       <*> (v .: "valency")
 
 data NodeSetup = NodeSetup
-  { nodeAddress :: !NodeAddress
+  { nodeId :: !Int
+  , nodeAddress :: !NodeAddress
   , producers :: ![RemoteAddress]
   } deriving Show
 

@@ -97,8 +97,8 @@ submitTx :: ( RunDemo blk
          -> GenTx blk
          -> Tracer IO String
          -> IO ()
-submitTx cc protoInfoConfig nodeId tx tracer = do
-    socketPath <- localSocketAddrInfo nodeId (ccSocketDir cc) NoMkdirIfMissing
+submitTx cc protoInfoConfig nId tx tracer = do
+    socketPath <- localSocketAddrInfo nId (ccSocketDir cc) NoMkdirIfMissing
     NodeToClient.connectTo
       nullTracer
       nullTracer
