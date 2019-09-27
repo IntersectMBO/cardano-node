@@ -196,6 +196,7 @@ parseTraceOptions m = TraceOptions
   <*> parseTraceIpSubscription m
   <*> parseTraceDnsSubscription m
   <*> parseTraceDnsResolver m
+  <*> parseTraceMux m
 
 parseTracingGlobal :: MParser Bool
 parseTracingGlobal m =
@@ -388,6 +389,14 @@ parseTraceDnsResolver m =
     switch (
          long "trace-dns-resolver"
       <> help "Trace DNS Resolver messages."
+      <> m
+    )
+
+parseTraceMux :: MParser Bool
+parseTraceMux m =
+    switch (
+         long "trace-mux"
+      <> help "Trace Mux Events"
       <> m
     )
 

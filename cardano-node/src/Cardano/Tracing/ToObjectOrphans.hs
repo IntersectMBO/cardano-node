@@ -22,6 +22,7 @@ import           Prelude (String, show, id)
 import           Data.Aeson (Value (..), toJSON, (.=))
 import           Data.Text (pack)
 import qualified Network.Socket as Socket (SockAddr)
+import           Network.Mux.Types (WithMuxBearer (..), MuxTrace (..))
 
 import           Cardano.BM.Data.LogItem (LOContent (..), LogObject (..),
                    mkLOMeta)
@@ -161,6 +162,25 @@ instance DefineSeverity (WithDomainName DnsTrace) where
     DnsTraceLookupIPv4First    -> Info
     DnsTraceLookupAResult _    -> Debug
     DnsTraceLookupAAAAResult _ -> Debug
+
+instance DefinePrivacyAnnotation (WithMuxBearer (MuxTrace ptcl))
+instance DefineSeverity (WithMuxBearer (MuxTrace ptcl)) where
+  defineSeverity (WithMuxBearer _ ev) = case ev of
+    MuxTraceRecvHeaderStart      -> Debug
+    MuxTraceRecvHeaderEnd _      -> Debug
+    MuxTraceRecvPayloadStart _   -> Debug
+    MuxTraceRecvPayloadEnd _     -> Debug
+    MuxTraceRecvStart _          -> Debug
+    MuxTraceRecvEnd _            -> Debug
+    MuxTraceSendStart _          -> Debug
+    MuxTraceSendEnd              -> Debug
+    MuxTraceStateChange _ _      -> Info
+    MuxTraceCleanExit _          -> Info
+    MuxTraceExceptionExit _ _    -> Info
+    MuxTraceChannelRecvStart _   -> Debug
+    MuxTraceChannelRecvEnd _ _   -> Debug
+    MuxTraceChannelSendStart _ _ -> Debug
+    MuxTraceChannelSendEnd _     -> Debug
 
 instance DefinePrivacyAnnotation (WithTip blk (ChainDB.TraceEvent blk))
 instance DefineSeverity (WithTip blk (ChainDB.TraceEvent blk)) where
@@ -330,6 +350,15 @@ instance Transformable Text IO (WithDomainName DnsTrace) where
                                <*> pure (LogMessage $ pack $ show s)
   trTransformer UserdefinedFormatting verb tr = trStructured verb tr
 
+-- transform @MuxTrace@
+instance Show ptcl => Transformable Text IO (WithMuxBearer (MuxTrace ptcl)) where
+  trTransformer StructuredLogging verb tr = trStructured verb tr
+  trTransformer TextualRepresentation _verb tr = Tracer $ \s ->
+    traceWith tr =<< LogObject <$> pure ""
+                               <*> mkLOMeta (defineSeverity s) (definePrivacyAnnotation s)
+                               <*> pure (LogMessage $ pack $ show s)
+  trTransformer UserdefinedFormatting verb tr = trStructured verb tr
+
 -- transform @TraceEvent@
 instance (Condense (HeaderHash blk), ProtocolLedgerView blk)
             => Transformable Text IO (WithTip blk (ChainDB.TraceEvent blk)) where
@@ -451,6 +480,12 @@ instance ToObject (WithDomainName DnsTrace) where
   toObject _verb (WithDomainName dom ev) =
     mkObject [ "kind" .= String "DnsTrace"
              , "domain" .= show dom
+             , "event" .= show ev ]
+
+instance Show ptcl => ToObject (WithMuxBearer (MuxTrace ptcl)) where
+  toObject _verb (WithMuxBearer b ev) =
+    mkObject [ "kind" .= String "MuxTrace"
+             , "bearer" .= show b
              , "event" .= show ev ]
 
 instance (Condense (HeaderHash blk), ProtocolLedgerView blk)
