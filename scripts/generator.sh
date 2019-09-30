@@ -13,9 +13,9 @@ genesis_hash="$(${CMD} --log-config configuration/log-configuration.yaml --real-
 NOW=`date "+%Y-%m-%d 00:00:00"`
 NETARGS=(
         --real-pbft
-        generate-txs
         --genesis-file  "${genesis_file}"
         --genesis-hash  "${genesis_hash}"
+        generate-txs
         --topology      "configuration/simple-topology.json"
 )
 TX_GEN_ARGS=(
@@ -38,8 +38,8 @@ function mkdlgcert () {
 set -x
 ${CMD} \
     --log-config configuration/log-configuration.yaml \
-    ${NETARGS[*]} \
-    ${TX_GEN_ARGS[*]} \
     $(mkdlgkey 0) \
     $(mkdlgcert 0) \
+    ${NETARGS[*]} \
+    ${TX_GEN_ARGS[*]} \
     $@
