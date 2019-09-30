@@ -240,8 +240,8 @@ instance DefineSeverity (ChainDB.TraceEvent blk) where
 instance DefinePrivacyAnnotation (TraceChainSyncClientEvent blk tip)
 instance DefineSeverity (TraceChainSyncClientEvent blk tip) where
   defineSeverity (TraceDownloadedHeader _) = Info
-  defineSeverity (TraceRolledBack _) = Warning
-  defineSeverity (TraceException _) = Error
+  defineSeverity (TraceRolledBack _) = Notice
+  defineSeverity (TraceException _) = Warning
 
 instance DefinePrivacyAnnotation (TraceChainSyncServerEvent blk b)
 instance DefineSeverity (TraceChainSyncServerEvent blk b) where
