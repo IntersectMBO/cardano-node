@@ -6,11 +6,13 @@
 {-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
 
 module Cardano.Node.Configuration.Topology
-  ( TopologyInfo(..)
+  ( TopologyError(..)
+  , TopologyInfo(..)
   , NetworkTopology(..)
   , NodeAddress(..)
   , NodeSetup(..)
   , RemoteAddress(..)
+  , createNodeAddress
   , nodeAddressInfo
   , nodeAddressToSockAddr
   , readTopologyFile
@@ -34,12 +36,15 @@ import           Network.Socket
 import           Ouroboros.Consensus.NodeId (NodeId(..))
 import           Ouroboros.Consensus.Util.Condense (Condense (..))
 
+
+newtype TopologyError = NodeIdNotFoundInToplogyFile FilePath deriving Show
+
 -- | A data structure bundling together a node identifier and the path to
 -- the topology file.
 data TopologyInfo = TopologyInfo
   { node :: NodeId
   , topologyFile :: FilePath
-  }
+  } deriving Show
 
 -- | IPv4 address with a port number.
 data NodeAddress = NodeAddress
@@ -129,6 +134,25 @@ data NetworkTopology = NetworkTopology [NodeSetup]
   deriving Show
 
 deriveFromJSON defaultOptions ''NetworkTopology
+
+-- | Creates a 'NodeAddress' if it exists in a given 'NetworkTopology'.
+createNodeAddress
+  :: NodeId
+  -> NetworkTopology
+  -> FilePath
+  -> Either TopologyError NodeAddress
+createNodeAddress _nodeId (NetworkTopology nodeSetups) fp =
+  case maybeNode of
+    Nothing -> Left $ NodeIdNotFoundInToplogyFile fp
+    Just (NodeSetup _ anAddress _) -> Right anAddress
+ where
+  idInt :: Int
+  idInt = case _nodeId of
+            CoreId i -> i
+            RelayId i -> i
+  -- Search 'NetworkTopology' for a given 'NodeId'
+  maybeNode :: Maybe NodeSetup
+  maybeNode = find (\(NodeSetup nId _ _) -> idInt == nId) nodeSetups
 
 readTopologyFile :: FilePath -> IO (Either String NetworkTopology)
 readTopologyFile topo = do
