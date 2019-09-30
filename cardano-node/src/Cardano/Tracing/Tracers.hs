@@ -45,7 +45,6 @@ import           Cardano.BM.Data.Tracer (WithSeverity (..), addName,
 import           Ouroboros.Network.Block
 
 import           Ouroboros.Consensus.Block (Header)
-import           Ouroboros.Consensus.ChainSync (Tip)
 import           Ouroboros.Consensus.Ledger.Abstract
 import           Ouroboros.Consensus.Mempool.API (ApplyTxErr, GenTx, GenTxId, TraceEventMempool (..))
 import qualified Ouroboros.Consensus.Node.Tracers as Consensus
@@ -55,6 +54,7 @@ import           Ouroboros.Consensus.Util.Condense
 import           Ouroboros.Consensus.Util.Orphans ()
 
 import qualified Ouroboros.Network.AnchoredFragment as AF
+import           Ouroboros.Network.Block (Tip)
 import           Ouroboros.Network.NodeToNode (NodeToNodeProtocols)
 import           Ouroboros.Network.Subscription
 
