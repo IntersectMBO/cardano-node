@@ -63,6 +63,7 @@ import qualified Test.Cardano.Chain.Genesis.Dummy as Dummy
 import qualified Ouroboros.Consensus.Protocol as Consensus
 
 import           Cardano.CLI.Delegation
+import           Cardano.CLI.Delegation.PoolRegistry
 import           Cardano.CLI.Genesis
 import           Cardano.CLI.Key
 import           Cardano.CLI.Ops
@@ -155,6 +156,14 @@ data ClientCommand
     TPSRate
     [SigningKeyFile]
 
+    --- Stake pool registry validation ----------
+
+  | ValidateSubmission
+    RegistryRoot
+    -- ^ Root directory of the registry.
+    SubmissionFile
+    -- ^ File scrutinised as a submission.
+
 runCommand :: CLIOps IO -> CardanoConfiguration -> LoggingLayer -> ClientCommand -> ExceptT CliError IO ()
 runCommand co _ _ (Genesis outDir params) = do
   gen <- mkGenesis params
@@ -243,6 +252,9 @@ runCommand co cc loggingLayer
         Left err -> panic . T.pack $ show err
         --TODO: remove panic by making withRealPBFT use exceptT
         Right _ -> pure ()
+
+runCommand _ _ _ (ValidateSubmission root submission) =
+  void $ validateRegistrySubmission root submission
 
 {-------------------------------------------------------------------------------
   Supporting functions

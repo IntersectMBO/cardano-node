@@ -16,6 +16,7 @@ library
 
   exposed-modules:     Cardano.Chairman
                        Cardano.CLI.Delegation
+                       Cardano.CLI.Delegation.PoolRegistry
                        Cardano.CLI.Genesis
                        Cardano.CLI.Key
                        Cardano.CLI.Legacy.Byron
@@ -49,6 +50,7 @@ library
   build-depends:       aeson
                      , async
                      , base >=4.12 && <5
+                     , bech32
                      , binary
                      , bytestring
                      , canonical-json
@@ -79,12 +81,14 @@ library
                      , mtl
                      , network
                      , network-mux
+                     , network-uri
                      , optparse-applicative
                      , ouroboros-consensus
                      , ouroboros-network
                      , process
                      , pvss
                      , safe-exceptions
+                     , scientific
                      , serialise
                      , stm
                      , string-conv
@@ -95,6 +99,7 @@ library
                      , transformers-except
                      , typed-protocols
                      , typed-protocols-cbor
+                     , unordered-containers
                      , utf8-string
                      , vector
 

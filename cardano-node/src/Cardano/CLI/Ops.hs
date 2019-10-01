@@ -97,6 +97,7 @@ data CliError
   | ConfigError !ConfigError
   -- Validation errors
   | CertificateValidationErrors !FilePath ![Text]
+  | PoolRegistryValidationErrors !FilePath ![Text]
   -- Serialization errors
   | ProtocolParametersParseFailed !FilePath !Text
   | GenesisReadError !FilePath !Genesis.GenesisDataError
@@ -135,6 +136,10 @@ instance Show CliError where
     = Prelude.unlines $
       "Errors while validating certificate '" <> fp <> "':":
       (("  " <>) . T.unpack <$> errs)
+  show (PoolRegistryValidationErrors fp errs)
+    = Prelude.unlines $
+      "Errors while validating stake pool registry submission in '" <> fp <> "':":
+      (T.unpack <$> errs)
   show (ProtocolParametersParseFailed fp err)
     = "Protocol parameters file '" <> fp <> "' read failure: "<> T.unpack err
   show (GenesisReadError fp err)

@@ -32,6 +32,7 @@ import           Cardano.Config.Presets (mainnetConfiguration)
 
 import           Cardano.Common.Parsers
 import           Cardano.Common.Protocol
+import           Cardano.CLI.Delegation.PoolRegistry
 import           Cardano.CLI.Genesis
 import           Cardano.CLI.Key
 import           Cardano.Config.Logging (LoggingCLIArguments (..),
@@ -55,7 +56,7 @@ main = do
     (runCommand ops finalConfig loggingLayer (mainCommand co) :: ExceptT CliError IO ())
   case cmdRes of
     Right _ -> pure ()
-    Left err -> do print $ renderCliError err
+    Left err -> do putStrLn $ renderCliError err
                    exitFailure
   where
     pref :: ParserPrefs
@@ -97,6 +98,7 @@ parseClientCommand =
     <|> parseKeyRelatedValues
     <|> parseDelegationRelatedValues
     <|> parseTxRelatedValues
+    <|> parseMiscCommands
 
 -- | Values required to create genesis.
 parseGenesisParameters :: Parser GenesisParameters
@@ -289,6 +291,21 @@ parseTxRelatedValues =
                   "sig-key"
                   "Path to signing key file, for genesis UTxO using by generator."
       ]
+
+parseMiscCommands :: Parser ClientCommand
+parseMiscCommands =
+  subparser $ mconcat
+    [ commandGroup "Miscellaneous commands"
+    , metavar "Miscellaneous commands"
+    , command' "validate-registry-submission" "Validate testnet stake pool registry submission."
+      $ ValidateSubmission
+          <$> (RegistryRoot <$> parseFilePath
+                "registry-root"
+                "Root directory of the testnet stake pool registry.")
+          <*> (SubmissionFile <$> parseFilePath
+                "registry-submission"
+                "File to scrutinise for registry submission.")
+    ]
 
 
 parseTestnetBalanceOptions :: Parser TestnetBalanceOptions
