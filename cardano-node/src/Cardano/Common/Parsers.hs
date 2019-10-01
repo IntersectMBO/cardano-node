@@ -13,7 +13,7 @@ module Cardano.Common.Parsers
   ) where
 
 
-import           Prelude (String, error)
+import           Prelude (String)
 
 import           Cardano.Prelude hiding (option)
 
@@ -106,34 +106,12 @@ parseTopologyFile =
          <> help "The path to a file describing the topology."
     )
 
--- | A parser that requires either:
---   --tracing-off, or
---   --log-config FILEPATH
---   The idea is that we either supply tracing configuration,
---   or explicitly disable tracing -- no shaky middle ground.
+-- | A parser disables logging if --log-config is not supplied.
 loggingParser :: Parser LoggingCLIArguments
-loggingParser = decide
-  <$> ((Left <$>
-        switch
-        ( long "tracing-off"
-          <> help "Tracing globally turned off."))
-       <|>
-       (Right <$>
-        parseLoggingCLIArgumentsInternal))
+loggingParser =
+  fromMaybe muteLoggingCLIArguments
+    <$> optional parseLoggingCLIArgumentsInternal
   where
-    decide :: Either Bool LoggingCLIArguments -> LoggingCLIArguments
-    -- This branch should never trigger, because:
-    -- 1. 'switch' can only parse to 'False', if the flag is not supplied,
-    -- 2. if the flag is not supplied, we'll never get a Left, because
-    --    that parser's branch wouldn't be triggered -- instead,
-    --    the '<|>' operator above  would make 'optparse-applicative' insist
-    --    on having a 'Right'.
-    decide (Left False) = error "If this happens, report a bug in 'optparse-applicative'."
-    decide (Left True) = muteLoggingCLIArguments
-    decide (Right lca) = lca
-
-    -- This one isn't exposed, because we want to preserve the invariant,
-    -- that --tracing-off makes other options unavailable.
     parseLoggingCLIArgumentsInternal :: Parser LoggingCLIArguments
     parseLoggingCLIArgumentsInternal =
       LoggingCLIArguments
@@ -153,7 +131,7 @@ loggingParser = decide
          ( long "log-metrics"
            <> help "Log a number of metrics about this node")
 
-    -- This is the value returned by the parser, when --tracing-off is supplied.
+    -- This is the value returned by the parser, when --log-config is omitted.
     muteLoggingCLIArguments :: LoggingCLIArguments
     muteLoggingCLIArguments =
       LoggingCLIArguments

@@ -16,7 +16,6 @@ Print the default, non-HD address of a signing key.
 EOF
 }
 ${RUNNER} cardano-cli \
-          --tracing-off \
           --real-pbft \
           signing-key-address \
           --testnet-magic ${proto_magic} \
