@@ -95,7 +95,7 @@ data CliError
   | NotEnoughTxInputs
   | NotEnoughTxOutputs
   | ConfigError !ConfigError
- -- Validation errors
+  -- Validation errors
   | CertificateValidationErrors !FilePath ![Text]
   -- Serialization errors
   | ProtocolParametersParseFailed !FilePath !Text

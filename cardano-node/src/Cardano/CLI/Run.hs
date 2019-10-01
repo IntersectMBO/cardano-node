@@ -42,6 +42,7 @@ import           Codec.Serialise (serialise)
 import           Control.Monad.Trans.Except (ExceptT)
 import qualified Data.ByteString.Lazy as LB
 import           Data.Semigroup ((<>))
+import qualified Data.Text as T
 import qualified Data.Text.Lazy.IO as TL
 import qualified Data.Text.Lazy.Builder as Builder
 import qualified Formatting as F
@@ -227,15 +228,21 @@ runCommand co cc loggingLayer
            (GenerateTxs topology numOfTxs numOfOutsPerTx feePerTx tps sigKeysFiles) = do
   liftIO $ withRealPBFT co cc $
     \protocol@(Consensus.ProtocolRealPBFT _ _ _ _ _) -> do
-      liftIO $ genesisBenchmarkRunner loggingLayer
-                                      cc
-                                      protocol
-                                      topology
-                                      numOfTxs
-                                      numOfOutsPerTx
-                                      feePerTx
-                                      tps
-                                      [fp | SigningKeyFile fp <- sigKeysFiles]
+      res <- runExceptT $ genesisBenchmarkRunner
+                            loggingLayer
+                            cc
+                            protocol
+                            topology
+                            numOfTxs
+                            numOfOutsPerTx
+                            feePerTx
+                            tps
+                            [fp | SigningKeyFile fp <- sigKeysFiles]
+
+      case res of
+        Left err -> panic . T.pack $ show err
+        --TODO: remove panic by making withRealPBFT use exceptT
+        Right _ -> pure ()
 
 {-------------------------------------------------------------------------------
   Supporting functions

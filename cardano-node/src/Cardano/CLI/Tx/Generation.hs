@@ -17,18 +17,25 @@ module Cardano.CLI.Tx.Generation
   , genesisBenchmarkRunner
   ) where
 
-import           Prelude
+import           Cardano.Prelude
+import           Prelude (String)
 
 import           Codec.CBOR.Read (deserialiseFromBytes)
-import           Control.Concurrent.Async as Async
 import qualified Control.Concurrent.STM as STM
 import qualified Control.Concurrent.STM.TVar as TVar
+import           Control.Exception (IOException)
+import qualified Control.Exception as Exception
 import           Control.Monad (forM_, mapM, when)
 import qualified Control.Monad.Class.MonadSTM as MSTM
-
+import           Control.Monad.Trans.Except (ExceptT)
+import           Control.Monad.Trans.Except.Extra (firstExceptT,
+                                                   hoistEither,
+                                                   left, newExceptT,
+                                                   right)
 import           Data.Bifunctor (bimap)
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy as LB
+import           Data.Either (isLeft)
 import           Data.Foldable (find, foldl', foldr, toList)
 import           Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.List.NonEmpty as NE
@@ -42,7 +49,6 @@ import qualified Data.Text as T
 import           Data.Time.Clock (DiffTime, picosecondsToDiffTime)
 import qualified Data.Vector as V
 import           Data.Word (Word32, Word64)
-
 import           Network.Socket (AddrInfo (..),
                      AddrInfoFlag (..), Family (..), SocketType (Stream),
                      addrFamily,addrFlags, addrSocketType, defaultHints,
@@ -61,8 +67,9 @@ import           Cardano.Config.Types (CardanoConfiguration(..))
 import qualified Cardano.Crypto as Crypto
 import           Cardano.Node.Configuration.Topology (NetworkTopology (..),
                                                       NodeAddress (..),
-                                                      NodeSetup (..),
+                                                      TopologyError(..),
                                                       TopologyInfo (..),
+                                                      createNodeAddress,
                                                       readTopologyFile)
 import           Cardano.CLI.Tx (txSpendGenesisUTxOByronPBFT)
 import           Cardano.CLI.Tx.BenchmarkingTxSubmission (ROEnv (..),
@@ -110,6 +117,17 @@ newtype TPSRate =
   TPSRate Int
   deriving (Eq, Ord, Show)
 
+data TxGenError = CurrentlyCannotSendTxToRelayNode FilePath
+                -- ^ Relay nodes cannot currently be transaction recipients.
+                | InsufficientFundsForRecipientTx
+                | TargetNodeAddressError TopologyError
+                -- ^ Error occurred while creating the target node address.
+                | TopologyFileReadError String
+                | NeedMinimumThreeSigningKeyFiles [FilePath]
+                -- ^ Need at least 3 signing key files.
+                | SecretKeyDeserialiseError String
+                | SecretKeyReadError String
+                deriving Show
 -----------------------------------------------------------------------------------------
 -- | Genesis benchmark runner (we call it in 'Run.runNode').
 --
@@ -127,7 +145,7 @@ genesisBenchmarkRunner
   -> FeePerTx
   -> TPSRate
   -> [FilePath]
-  -> IO ()
+  -> ExceptT TxGenError IO ()
 genesisBenchmarkRunner loggingLayer
                        cc
                        protocol@(Consensus.ProtocolRealPBFT genesisConfig _ _ _ _)
@@ -138,14 +156,16 @@ genesisBenchmarkRunner loggingLayer
                        tpsRate
                        signingKeyFiles = do
   when (length signingKeyFiles < 3) $
-    error "Tx generator: please provide at least 3 signing key files."
+    left $ NeedMinimumThreeSigningKeyFiles signingKeyFiles
 
   let (benchTracer, connectTracer, submitTracer, lowLevelSubmitTracer) = createTracers loggingLayer
 
-  (topology, ProtocolInfo{pInfoConfig}) <- prepareProtocolInfo protocol topologyInfo
+  (topologyFromFile, ProtocolInfo{pInfoConfig}) <- prepareProtocolInfo protocol topologyInfo
 
-  -- We have to extract host and port of the node we talk with (based on value of `-n` CLI argument).
-  let targetNodeAddress = getTargetNodeAddress (node topologyInfo) topology
+  -- We have to extract host and port of the node we talk
+  -- with (based on value of `-n` CLI argument) from the topology file.
+  let eitherNodeAddress = createNodeAddress (node topologyInfo) topologyFromFile (topologyFile topologyInfo)
+  targetNodeAddress <- firstExceptT TargetNodeAddressError . hoistEither $ eitherNodeAddress
 
   -- 'genesisKey' is for genesis address with initial amount of money (1.4 billion ADA for now).
   -- 'sourceKey' is for source address that we'll use as a source of money for next transactions.
@@ -160,15 +180,16 @@ genesisBenchmarkRunner loggingLayer
 
   -- We have to prepare an initial funds (it's the money we'll send from 'genesisAddress' to
   -- 'sourceAddress'), this will be our very first transaction.
-  prepareInitialFunds lowLevelSubmitTracer
-                      cc
-                      genesisConfig
-                      pInfoConfig
-                      topologyInfo
-                      genesisUtxo
-                      genesisAddress
-                      sourceAddress
-                      txFee
+  liftIO $ prepareInitialFunds
+             lowLevelSubmitTracer
+             cc
+             genesisConfig
+             pInfoConfig
+             topologyInfo
+             genesisUtxo
+             genesisAddress
+             sourceAddress
+             txFee
 
   -- Check if no transactions needed...
   when (rawNumOfTxs > 0) $
@@ -222,45 +243,20 @@ instance FiscalRecipient Int where
 prepareProtocolInfo
   :: forall blk. Consensus.Protocol blk
   -> TopologyInfo
-  -> IO (NetworkTopology, ProtocolInfo blk)
+  -> ExceptT TxGenError IO (NetworkTopology, ProtocolInfo blk)
 prepareProtocolInfo protocol topologyInfo = do
-  topology@(NetworkTopology nodeSetups) <- readTopologyFile (topologyFile topologyInfo) >>=
-    \case
-      Left e  -> fail e
-      Right t -> return t
-
+  let topologyfile = readTopologyFile (topologyFile topologyInfo)
+  t@(NetworkTopology nodeSetups) <- firstExceptT TopologyFileReadError . newExceptT $ topologyfile
   nodeId <-
     case node topologyInfo of
-      RelayId{}  -> fail "Only core nodes are supported targets"
+      RelayId{}  -> left . CurrentlyCannotSendTxToRelayNode $ topologyFile topologyInfo
       CoreId nid -> return nid
 
-  return ( topology
+  return ( t
          , protocolInfo (NumCoreNodes (length nodeSetups))
                         (CoreNodeId nodeId)
                         protocol
          )
-
--- | Since transaction generator is a part of 'cardano-cli' (not 'cardano-node'),
---   we have to talk to some node (which is a part of a cluster). Since we receive
---   node's id (from `-n` CLI argument) we can extract corresponding host and port
---   from topology.
-getTargetNodeAddress
-  :: NodeId
-  -> NetworkTopology
-  -> NodeAddress
-getTargetNodeAddress (CoreId nodeId)  = createNodeAddress nodeId
-getTargetNodeAddress (RelayId nodeId) = createNodeAddress nodeId
-
-createNodeAddress
-  :: Int
-  -> NetworkTopology
-  -> NodeAddress
-createNodeAddress nodeId (NetworkTopology nodeSetups) =
-  case maybeNode of
-    Nothing -> error "Configuration error: topology file doesn't contain an info about node we need!"
-    Just (NodeSetup _ anAddress _) -> anAddress
- where
-  maybeNode = find (\(NodeSetup nId _ _) -> nodeId == nId) nodeSetups
 
 -----------------------------------------------------------------------------------------
 -- Tracers.
@@ -311,15 +307,18 @@ createTracers loggingLayer =
 
 -- | We take files with secret keys and create signing keys from them,
 --   we need it to be able to spend money from corresponding addresses.
-prepareSigningKeys :: [FilePath] -> IO [Crypto.SigningKey]
-prepareSigningKeys =
-  mapM $ \file -> kmoDeserialiseDelegateKey <$> LB.readFile file
- where
-  kmoDeserialiseDelegateKey =
-    Crypto.SigningKey
-    . snd
-    . either (error . show) id
-    . deserialiseFromBytes Crypto.fromCBORXPrv
+prepareSigningKeys :: [FilePath] -> ExceptT TxGenError IO [Crypto.SigningKey]
+prepareSigningKeys skeys = do
+  bsList <- liftIO $ mapM readSecretKey skeys
+  when (any isLeft bsList) $
+    left . SecretKeyReadError . show $ filter isLeft bsList
+
+  let desKeys = map (deserialiseFromBytes Crypto.fromCBORXPrv) $ rights bsList
+
+  when (any isLeft desKeys) $
+    left . SecretKeyDeserialiseError . show . (fmap . fmap) fst $ filter isLeft desKeys
+
+  pure . map (Crypto.SigningKey . snd) $ rights desKeys
 
 mkAddressForKey
   :: NodeConfig ByronEBBExtNodeConfig
@@ -332,6 +331,16 @@ mkAddressForKey _pInfoConfig =
   -- script 'issue-genesis-utxo-expenditure.sh'.
   networkMagic = CC.Common.NetworkTestnet 459045235
 
+readSecretKey :: FilePath -> IO (Either String LB.ByteString)
+readSecretKey skFp = do
+  eBs <- Exception.try $ LB.readFile skFp
+  case eBs of
+    Left e -> pure . Left $ handler e
+    Right lbs -> pure $ Right lbs
+ where
+  handler :: IOException -> String
+  handler e = "Cardano.CLI.Tx.Generation.readSecretKey: "
+              ++ displayException e
 -----------------------------------------------------------------------------------------
 -- Extract access to the Genesis funds.
 -----------------------------------------------------------------------------------------
@@ -415,7 +424,7 @@ prepareInitialFunds llTracer
 
   submitTx cc pInfoConfig (node topologyInfo) genesisTx llTracer
   -- Done, the first transaction 'initGenTx' is submitted, now 'sourceAddress' has a lot of money.
-  
+
   let txIn  = CC.UTxO.TxInUtxo (Byron.byronTxId genesisTx) 0
       txOut = outForBig
   addToAvailableFunds (txIn, txOut)
@@ -425,15 +434,18 @@ prepareInitialFunds llTracer
 mkTransaction
   :: (FiscalRecipient r)
   => NodeConfig ByronEBBExtNodeConfig
-  -> (TxDetails, Crypto.SigningKey)       -- TxIn, TxOut that will be used as
-                                          -- input and the key to spend the
-                                          -- associated value
-  -> Maybe CC.Common.Address              -- the address to associate with the 'change',
-                                          -- if different from that of the first argument
-  -> Set (r, CC.UTxO.TxOut)               -- each recipient and their payment details
-  -> ( Maybe (Word32, CC.Common.Lovelace) -- the 'change' index and value (if any)
-     , CC.Common.Lovelace                 -- the associated fees
-     , Map r Word32                       -- the offset map in the transaction below
+  -> (TxDetails, Crypto.SigningKey)
+  -- ^ TxIn, TxOut that will be used as
+  -- input and the key to spend the
+  -- associated value
+  -> Maybe CC.Common.Address
+  -- ^ The address to associate with the 'change',
+  -- if different from that of the first argument
+  -> Set (r, CC.UTxO.TxOut)
+  -- ^ Each recipient and their payment details
+  -> ( Maybe (Word32, CC.Common.Lovelace) -- The 'change' index and value (if any)
+     , CC.Common.Lovelace                 -- The associated fees
+     , Map r Word32                       -- The offset map in the transaction below
      , GenTx (ByronBlockOrEBB cfg)
      )
 mkTransaction cfg ((txinFrom, txoutFrom), signingKey) mChangeAddress payments =
@@ -450,6 +462,7 @@ mkTransaction cfg ((txinFrom, txoutFrom), signingKey) mChangeAddress payments =
   changeValue   = inpValue `subLoveLace` (totalOutValue `addLovelace` fees)
 
       -- change the order of comparisons first check emptiness of txouts AND remove appendr after
+
   (txOutputs, mChange) =
     if (CC.Common.unsafeGetLovelace changeValue) > 0
     then
@@ -460,10 +473,10 @@ mkTransaction cfg ((txinFrom, txoutFrom), signingKey) mChangeAddress payments =
                                     }
           changeIndex   = fromIntegral $ length txOuts -- 0-based index
       in
-        (appendr txOuts (changeTxOut :| []), Just (changeIndex, changeValue))
+          (appendr txOuts (changeTxOut :| []), Just (changeIndex, changeValue))
     else
       case txOuts of
-        []                 -> error "change is zero and txouts is empty"
+        []                 -> panic "change is zero and txouts is empty"
         txout0: txoutsRest -> (txout0 :| txoutsRest, Nothing)
 
   -- TxOuts of recipients are placed at the first positions
@@ -517,7 +530,7 @@ generalizeTx (WithEBBNodeConfig config) tx signingKey =
 
 assumeBound :: Either CC.Common.LovelaceError CC.Common.Lovelace
             -> CC.Common.Lovelace
-assumeBound (Left err) = error ("TxGeneration: " ++ show err)
+assumeBound (Left err) = panic $ T.pack ("TxGeneration: " ++ show err)
 assumeBound (Right ll) = ll
 
 subLoveLace :: CC.Common.Lovelace -> CC.Common.Lovelace -> CC.Common.Lovelace
@@ -551,9 +564,9 @@ addToAvailableFunds txDetails = do
 findAvailablefunds
   :: CC.Common.Lovelace      -- with at least this associated value
   -> (SettledStatus -> Bool) -- predicate for selecting on status
-  -> IO (Maybe FundValueStatus)
-findAvailablefunds valueThreshold predStatus =
-  STM.atomically $ do
+  -> ExceptT TxGenError IO FundValueStatus
+findAvailablefunds valueThreshold predStatus = do
+  mFVS <- liftIO . STM.atomically $ do
     funds <- TVar.readTVar availableFunds
     case find predFVS (Set.toList funds) of
       Nothing                  -> return Nothing
@@ -561,6 +574,9 @@ findAvailablefunds valueThreshold predStatus =
         -- Remove it from set of available funds (to prevent double spending).
         TVar.modifyTVar' availableFunds (Set.delete fundValueStatus)
         return j
+  case mFVS of
+    Nothing -> left InsufficientFundsForRecipientTx
+    Just fvs -> right fvs
  where
   -- Find the first tx output that contains sufficient amount of money.
   predFVS :: FundValueStatus -> Bool
@@ -593,7 +609,7 @@ runBenchmark
   -> NumberOfOutputsPerTx
   -> FeePerTx
   -> TPSRate
-  -> IO ()
+  -> ExceptT TxGenError IO ()
 runBenchmark benchTracer
              connectTracer
              submitTracer
@@ -608,16 +624,19 @@ runBenchmark benchTracer
              numOfOutsPerTx
              txFee
              tpsRate = do
-  traceWith benchTracer . TraceBenchTxSubDebug $ "******* Tx generator, phase 1: make enough available UTxO entries *******"
-  createMoreFundCoins lowLevelSubmitTracer
-                        cc
-                        pInfoConfig
-                        sourceKey
-                        txFee
-                        topologyInfo
-                        numOfTxs
+  liftIO . traceWith benchTracer . TraceBenchTxSubDebug
+    $ "******* Tx generator, phase 1: make enough available UTxO entries *******"
+  createMoreFundCoins
+    lowLevelSubmitTracer
+    cc
+    pInfoConfig
+    sourceKey
+    txFee
+    topologyInfo
+    numOfTxs
 
-  traceWith benchTracer . TraceBenchTxSubDebug $ "******* Tx generator, phase 2: pay to recipients *******"
+  liftIO . traceWith benchTracer . TraceBenchTxSubDebug
+    $ "******* Tx generator, phase 2: pay to recipients *******"
   let benchmarkTracers :: BenchmarkTxSubmitTracers IO (ByronBlockOrEBB ByronConfig)
       benchmarkTracers = BenchmarkTracers
                            { trSendRecvConnect      = connectTracer
@@ -638,7 +657,7 @@ runBenchmark benchTracer
         , addrCanonName  = Nothing
         }
   -- Corresponds to a node 0 (used by default).
-  (remoteAddr:_) <- getAddrInfo (Just hints) (Just targetNodeHost) (Just targetNodePort)
+  (remoteAddr:_) <- liftIO $ getAddrInfo (Just hints) (Just targetNodeHost) (Just targetNodePort)
 
   let updROEnv
         :: ROEnv (Byron.GenTxId (ByronBlockOrEBB ByronConfig)) (GenTx (ByronBlockOrEBB ByronConfig))
@@ -659,14 +678,15 @@ runBenchmark benchTracer
               numOfOutsPerTx
 
   -- Launch tx submission threads.
-  launchTxPeer benchTracer
-               benchmarkTracers
-               txSubmissionTerm
-               pInfoConfig
-               localAddr
-               remoteAddr
-               updROEnv
-               txsForSubmission
+  liftIO $ launchTxPeer
+             benchTracer
+             benchmarkTracers
+             txSubmissionTerm
+             pInfoConfig
+             localAddr
+             remoteAddr
+             updROEnv
+             txsForSubmission
 
 -- | At this moment 'sourceAddress' contains a huge amount of money (lets call it A).
 --   Now we have to split this amount to N equal parts, as a result we'll have
@@ -682,7 +702,7 @@ createMoreFundCoins
   -> FeePerTx
   -> TopologyInfo
   -> NumberOfTxs
-  -> IO ()
+  -> ExceptT TxGenError IO ()
 createMoreFundCoins llTracer cc pInfoConfig sourceKey (FeePerTx txFee) topologyInfo (NumberOfTxs numOfTxs) = do
   let feePerTx              = assumeBound . CC.Common.mkLovelace $ txFee
       numSplittingTxOuts    = numOfTxs -- number of splitting txout entries
@@ -693,39 +713,34 @@ createMoreFundCoins llTracer cc pInfoConfig sourceKey (FeePerTx txFee) topologyI
   -- 'FundValueStatus' in 'availableFunds', and it definitely contains a
   -- huge amount of money, so we can pick any amount.
   let someMoney = assumeBound . CC.Common.mkLovelace $ 10000000 -- 10 ADA
-  findAvailablefunds someMoney (const True) >>=
-    \case
-      Nothing ->
-        error "Impossible happened: cannot find the single output in 'availableFunds'!"
-      Just FundValueStatus{txDetails} -> do
-        let sourceAddress = CC.UTxO.txOutAddress . snd $ txDetails
-            sourceValue   = CC.UTxO.txOutValue   . snd $ txDetails
-            -- Split the funds to 'numSplittingTxOuts' equal parts, subtracting the possible fees.
-            -- a safe number for fees is numSplittingTxOuts * feePerTx.
-            splittedValue = assumeBound . CC.Common.mkLovelace $
-                              ceiling (
-                                ((fromIntegral (CC.Common.unsafeGetLovelace sourceValue)) :: Double)
-                                / ((fromIntegral numSplittingTxOuts) :: Double)
-                              ) - CC.Common.unsafeGetLovelace feePerTx
-            -- The same output for all splitting transaction: send the same 'splittedValue'
-            -- to the same 'sourceAddress'.
-            !txOut        = CC.UTxO.TxOut
-                              { CC.UTxO.txOutAddress = sourceAddress
-                              , CC.UTxO.txOutValue   = splittedValue
-                              }
-            -- Create and sign splitting txs.
-            splittingTxs  = createSplittingTxs pInfoConfig
-                                                   (txDetails, sourceKey)
-                                                   numSplittingTxOuts
-                                                   numOutsPerSplittingTx
-                                                   42
-                                                   txOut
-                                                   []
-
-        forM_ splittingTxs $ \(tx, txDetailsList) -> do
-          submitTx cc pInfoConfig (node topologyInfo) tx llTracer
-          -- Update available fundValueStatus to reuse the numSplittingTxOuts TxOuts.
-          forM_ txDetailsList addToAvailableFunds
+  fvs <- findAvailablefunds someMoney (const True)
+  let sourceAddress = CC.UTxO.txOutAddress . snd $ txDetails fvs
+      sourceValue   = CC.UTxO.txOutValue   . snd $ txDetails fvs
+      -- Split the funds to 'numSplittingTxOuts' equal parts, subtracting the possible fees.
+      -- a safe number for fees is numSplittingTxOuts * feePerTx.
+      splittedValue = assumeBound . CC.Common.mkLovelace $
+                        ceiling (
+                          ((fromIntegral (CC.Common.unsafeGetLovelace sourceValue)) :: Double)
+                          / ((fromIntegral numSplittingTxOuts) :: Double)
+                        ) - CC.Common.unsafeGetLovelace feePerTx
+      -- The same output for all splitting transaction: send the same 'splittedValue'
+      -- to the same 'sourceAddress'.
+      !txOut        = CC.UTxO.TxOut
+                        { CC.UTxO.txOutAddress = sourceAddress
+                        , CC.UTxO.txOutValue   = splittedValue
+                        }
+      -- Create and sign splitting txs.
+      splittingTxs  = createSplittingTxs pInfoConfig
+                                             (txDetails fvs, sourceKey)
+                                             numSplittingTxOuts
+                                             numOutsPerSplittingTx
+                                             42
+                                             txOut
+                                             []
+  liftIO $ forM_ splittingTxs $ \(tx, txDetailsList) -> do
+    submitTx cc pInfoConfig (node topologyInfo) tx llTracer
+    -- Update available fundValueStatus to reuse the numSplittingTxOuts TxOuts.
+    forM_ txDetailsList addToAvailableFunds
  where
   -- create txs which split the funds to numTxOuts equal parts
   createSplittingTxs
@@ -793,7 +808,7 @@ txGenerator
   -> FeePerTx
   -> NumberOfTxs
   -> NumberOfOutputsPerTx
-  -> IO ()
+  -> ExceptT TxGenError IO ()
 txGenerator benchTracer
             cfg
             recipientAddress
@@ -801,25 +816,23 @@ txGenerator benchTracer
             (FeePerTx txFee)
             (NumberOfTxs numOfTransactions)
             (NumberOfOutputsPerTx numOfOutsPerTx) = do
-  traceWith benchTracer . TraceBenchTxSubDebug $ " Prepare to generate, total number of transactions " ++ show numOfTransactions
+  liftIO . traceWith benchTracer . TraceBenchTxSubDebug
+    $ " Prepare to generate, total number of transactions " ++ show numOfTransactions
   forM_ [1 .. numOfTransactions] $ \_ -> do
     -- TODO: currently we take the first available output, but don't check the 'status'.
     -- Later it should be changed: we have to use outputs from 'Seen' transactions only.
-    findAvailablefunds totalValue (const True) >>=
-      \case
-        Nothing ->
-          error "Cannot find sufficient amount for recipient's tx!"
-        Just FundValueStatus{txDetails} -> do
-          let txIn = (txDetails, sourceKey)
-          let (_, _, _, tx :: GenTx (ByronBlockOrEBB ByronConfig)) = mkTransaction cfg
-                                                                                   txIn
-                                                                                   (Just addressForChange)
-                                                                                   recipients
-          -- Write newly generated tx in the list.
-          -- It will be handled by 'bulkSubmission' function.
-          writeTxInList tx
+    fvs <- findAvailablefunds totalValue (const True)
+    let txIn = (txDetails fvs, sourceKey)
+    let (_, _, _, tx :: GenTx (ByronBlockOrEBB ByronConfig)) = mkTransaction cfg
+                                                                             txIn
+                                                                             (Just addressForChange)
+                                                                             recipients
+    -- Write newly generated tx in the list.
+    -- It will be handled by 'bulkSubmission' function.
+    liftIO $ writeTxInList tx
 
-  traceWith benchTracer . TraceBenchTxSubDebug $ " Done, " ++ show numOfTransactions ++ " were generated and written in a list."
+    liftIO . traceWith benchTracer . TraceBenchTxSubDebug
+      $ " Done, " ++ show numOfTransactions ++ " were generated and written in a list."
  where
   -- Num of recipients is equal to 'numOuts', so we think of
   -- recipients as the people we're going to pay to.
