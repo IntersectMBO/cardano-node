@@ -49,6 +49,7 @@
         ouroboros-consensus = ./ouroboros-consensus.nix;
         typed-protocols = ./typed-protocols.nix;
         typed-protocols-cbor = ./typed-protocols-cbor.nix;
+        bech32 = ./bech32.nix;
         cardano-crypto = ./cardano-crypto.nix;
         };
       compiler.version = "8.6.5";

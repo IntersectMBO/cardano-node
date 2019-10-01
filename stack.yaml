@@ -80,5 +80,10 @@ extra-deps:
         - typed-protocols
         - typed-protocols-cbor
 
+  - git: https://github.com/input-output-hk/bech32
+    commit: 6e6b5f2ff8a61265ff0fa12b5c01614f9c747d92
+    subdirs:
+      - .
+
 nix:
   shell-file: nix/stack-shell.nix
