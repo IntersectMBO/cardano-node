@@ -23,6 +23,7 @@
           (hsPkgs.cardano-binary)
           (hsPkgs.cardano-prelude)
           (hsPkgs.cryptonite)
+          (hsPkgs.deepseq)
           (hsPkgs.memory)
           (hsPkgs.reflection)
           (hsPkgs.vector)
@@ -47,8 +48,8 @@
     } // {
     src = (pkgs.lib).mkDefault (pkgs.fetchgit {
       url = "https://github.com/input-output-hk/cardano-base";
-      rev = "ccbc085f1ebdde706feb7955fdebb33260dc5e32";
-      sha256 = "0c6qrpch9pc8sir89ddrr1hllm1yksviyw9d4m46x7xbqsby9dcv";
+      rev = "d8da018e13e4d7a9b5372a00926dcdc48c5ad2c7";
+      sha256 = "1yly8v8plaiyfz3p74vsq2qnq3pjb1vizyacfsdijw41mnqynmaa";
       });
     postUnpack = "sourceRoot+=/cardano-crypto-class; echo source root reset to \$sourceRoot";
     }
