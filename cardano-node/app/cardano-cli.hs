@@ -55,7 +55,7 @@ main = do
     (runCommand ops finalConfig loggingLayer (mainCommand co) :: ExceptT CliError IO ())
   case cmdRes of
     Right _ -> pure ()
-    Left err -> do print $ renderCliError err
+    Left err -> do putStrLn $ renderCliError err
                    exitFailure
   where
     pref :: ParserPrefs
