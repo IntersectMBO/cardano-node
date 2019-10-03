@@ -4,13 +4,13 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 
-import           Prelude (String, read)
+import           Prelude (String)
 
 import qualified Data.IP as IP
 import           Data.Semigroup ((<>))
 import           Network.Socket (PortNumber)
-import           Options.Applicative ( Parser, auto, flag, help, long
-                                     , metavar, option, str, value
+import           Options.Applicative ( Parser, auto, eitherReader, flag,
+                                       help, long, metavar, option
                                      )
 import qualified Options.Applicative as Opt
 
@@ -28,7 +28,8 @@ import           Cardano.Shell.Types (CardanoApplication (..),
 
 import           Cardano.Config.CommonCLI
 import           Cardano.Common.Help
-import           Cardano.Common.Parsers
+import           Cardano.Common.CommandLineParsers
+import           Cardano.Common.Parsers (parseIP)
 import           Cardano.Node.Run
 import           Cardano.Node.Configuration.Topology (NodeAddress (..))
 import           Cardano.Tracing.Tracers
@@ -155,13 +156,12 @@ parseNodeArgs =
 parseNodeAddress :: Parser NodeAddress
 parseNodeAddress = NodeAddress <$> parseHostAddr <*> parsePort
 
-parseHostAddr :: Parser (Maybe IP.IP)
+parseHostAddr :: Parser IP.IP
 parseHostAddr =
-    option (Just <$> read <$> str) (
+    option (eitherReader parseIP) (
           long "host-addr"
        <> metavar "HOST-NAME"
        <> help "Optionally limit node to one ipv6 or ipv4 address"
-       <> value Nothing
     )
 
 parsePort :: Parser PortNumber

@@ -27,6 +27,7 @@ library
                        Cardano.CLI.Tx.BenchmarkingNodeToNode
                        Cardano.CLI.Tx.Generation
                        Cardano.CLI.Tx.Submission
+                       Cardano.Common.CommandLineParsers
                        Cardano.Common.Help
                        Cardano.Common.LocalSocket
                        Cardano.Common.Orphans
@@ -47,6 +48,7 @@ library
                        Cardano.Tracing.ToObjectOrphans
 
   build-depends:       aeson
+                     , appar
                      , async
                      , base >=4.12 && <5
                      , binary

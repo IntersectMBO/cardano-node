@@ -1,363 +1,153 @@
-{-# LANGUAGE RankNTypes           #-}
-
-{-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
-
 module Cardano.Common.Parsers
-  ( loggingParser
-  , parseCoreNodeId
-  , parseProtocol
-  , parseProtocolActual
-  , parseProtocolAsCommand
-  , parseTopologyInfo
-  , parseTraceOptions
+  ( parseIP
+  , parseSlotNumber
   ) where
 
+import Cardano.Prelude hiding (check)
+import Prelude (String)
 
-import           Prelude (String)
+import           Data.Char (digitToInt)
+import           Data.IP
+import qualified Data.IP as IP
+import qualified Data.Text as T
+import qualified Text.Appar.String as A
 
-import           Cardano.Prelude hiding (option)
+-------------------------------------------------------------------------------
+-- IP parsers: Taken from http://hackage.haskell.org/package/iproute-1.7.7/docs/Data-IP.html
+-------------------------------------------------------------------------------
 
-import           Options.Applicative
-import qualified Options.Applicative as Opt
+parseIP :: String -> Either String IP
+parseIP cs =
+  case A.runParser ip4 cs of
+    (Just ip,_) -> Right $ IPv4 ip
+    (Nothing,_) -> case A.runParser ip6 cs of
+                     (Just ip,_) -> Right $ IPv6 ip
+                     (Nothing,_) -> Left $ "IP parsing error: " <> cs
 
-import           Cardano.BM.Data.Tracer (TracingVerbosity (..))
-import           Cardano.Config.Logging (LoggingCLIArguments(..))
-import           Ouroboros.Consensus.NodeId (NodeId(..), CoreNodeId(..))
-import           Ouroboros.Consensus.NodeNetwork (ProtocolTracers'(..))
-import qualified Ouroboros.Consensus.Node.Tracers as Consensus
+parseSlotNumber :: String -> Either String Int
+parseSlotNumber str =
+  case A.runParser slotNumber str of
+    (Nothing,rest) -> Left rest
+    (Just [slotNum],_) -> Right slotNum
+    (Just slotNums,_) -> Left $ "Slot number parse error:\n  "
+                              <> "Parsed values: " <> show slotNums
 
-import qualified Cardano.BM.Data.Severity as Log
-import           Cardano.Config.Logging
-import           Cardano.Common.Protocol
-import           Cardano.Node.Configuration.Topology
+-------------------------------------------------------------------------------
+-- IPv4 Parser
+-------------------------------------------------------------------------------
 
--- Common command line parsers
+dig :: A.Parser Int
+dig = 0 <$ A.char '0'
+  <|> toInt <$> A.oneOf ['1'..'9'] <*> many A.digit
+ where
+  toInt :: Char -> String -> Int
+  toInt n ns = foldl' (\x y -> x * 10 + y) 0 . map digitToInt $ n : ns
 
-parseCoreNodeId :: Parser CoreNodeId
-parseCoreNodeId =
-    option (fmap CoreNodeId auto) (
-            long "core-node-id"
-         <> metavar "CORE-NODE-ID"
-         <> help "The ID of the core node to which this client is connected."
-    )
+ip4 :: A.Parser IPv4
+ip4 = skipSpaces >> IP.toIPv4 <$> ip4'
 
-parseNodeId :: String -> Parser NodeId
-parseNodeId desc =
-    option (fmap CoreId auto) (
-            long "node-id"
-         <> metavar "NODE-ID"
-         <> help desc
-    )
+ip4' :: A.Parser [Int]
+ip4' = do
+  as <- dig `A.sepBy1` A.char '.'
+  check as
+  return as
+ where
+  test :: String -> Int -> A.MkParser String ()
+  test errmsg adr = when (adr < 0 || 255 < adr) (panic $ T.pack errmsg)
+  check :: [Int] -> A.MkParser String ()
+  check as = do
+    let errmsg :: String
+        errmsg = "IPv4 address"
+    when (length as /= 4) (panic $ T.pack errmsg)
+    mapM_ (test errmsg) as
 
--- | Flag parser, that returns its argument on success.
-fl :: a -> String -> String -> Parser a
-fl val opt desc = flag' val $ mconcat [long opt, help desc]
+-------------------------------------------------------------------------------
+-- IPv6 Parser (RFC 4291)
+-------------------------------------------------------------------------------
 
-parseProtocol :: Parser Protocol
-parseProtocol = asum
-  [ fl ByronLegacy "byron-legacy"
-    "Byron/Ouroboros Classic suite of algorithms"
+hex :: A.Parser Int
+hex = do
+  ns <- some A.hexDigit
+  check ns
+  let ms = map digitToInt ns
+      val = foldl' (\x y -> x * 16 + y) 0 ms
+  return val
+ where
+  check :: String -> A.MkParser String ()
+  check ns = when (length ns > 4) (panic $ T.pack "IPv6 address -- more than 4 hex")
 
-  , fl BFT "bft"
-    "BFT consensus"
+colon2 :: A.Parser ()
+colon2 = void $ A.string "::"
 
-  , fl Praos "praos"
-    "Praos consensus"
+format :: [Int] -> [Int] -> A.Parser [Int]
+format bs1 bs2 = do
+  let len1 = length bs1
+      len2 = length bs2
+  when (len1 > 7) (panic $ T.pack "IPv6 address1")
+  when (len2 > 7) (panic $ T.pack "IPv6 address2")
+  let len = 8 - len1 - len2
+  when (len <= 0) (panic $ T.pack "IPv6 address3")
+  let spring :: [Int]
+      spring = replicate len 0
+  return $ bs1 ++ spring ++ bs2
 
-  , fl MockPBFT "mock-pbft"
-    "Permissive BFT consensus with a mock ledger"
+ip6 :: A.Parser IPv6
+ip6 = skipSpaces >> toIPv6 <$> ip6'
 
-  , fl RealPBFT "real-pbft"
-    "Permissive BFT consensus with a real ledger"
-  ]
+ip6' :: A.Parser [Int]
+ip6' = ip4Embedded
+  <|> do colon2
+         bs <- A.option [] hexcolon
+         format [] bs
+  <|> A.try ( do rs <- hexcolon
+                 check rs
+                 return rs
+            )
+  <|> do bs1 <- hexcolon2
+         bs2 <- A.option [] hexcolon
+         format bs1 bs2
+ where
+  hexcolon :: A.Parser [Int]
+  hexcolon = hex `A.sepBy1` A.char ':'
+  hexcolon2 :: A.Parser [Int]
+  hexcolon2 = A.manyTill (hex <* A.char ':') (A.char ':')
+  check :: [Int] -> A.MkParser String ()
+  check bs = when (length bs /= 8) (panic $ T.pack "IPv6 address4")
 
-parseProtocolActual :: Parser Protocol
-parseProtocolActual = asum
-  [ fl ByronLegacy "byron-legacy"
-    "Byron/Ouroboros Classic suite of algorithms"
+ip4Embedded :: A.Parser [Int]
+ip4Embedded =
+      A.try ( do colon2
+                 bs <- beforeEmbedded
+                 embedded <- ip4'
+                 format [] (bs ++ ip4ToIp6 embedded)
+            )
+      -- matches 2001:db8::192.0.2.1
+  <|> A.try ( do bs1 <- A.manyTill (A.try $ hex <* A.char ':') (A.char ':')
+                 bs2 <- A.option [] beforeEmbedded
+                 embedded <- ip4'
+                 format bs1 $ bs2 ++ ip4ToIp6 embedded
+            )
+      -- matches 2001:db8:11e:c00:aa:bb:192.0.2.1
+  <|> A.try ( do bs <- beforeEmbedded
+                 embedded <- ip4'
+                 let rs = bs ++ ip4ToIp6 embedded
+                 check rs
+                 return rs
+            )
+ where
+  beforeEmbedded :: A.Parser [Int]
+  beforeEmbedded = A.many $ A.try $ hex <* A.char ':'
+  ip4ToIp6 :: [Int] -> [Int]
+  ip4ToIp6 [a,b,c,d] = [ a `shiftL` 8 .|. b
+                       , c `shiftL` 8 .|. d
+                       ]
+  ip4ToIp6 _ = panic $ T.pack "ip4ToIp6"
+  check :: [Int] -> A.MkParser String ()
+  check bs = when (length bs /= 8) (panic $ T.pack "IPv6 address4")
 
-  , fl RealPBFT "real-pbft"
-    "Permissive BFT consensus with a real ledger"
-  ]
+skipSpaces :: A.Parser ()
+skipSpaces = void $ many (A.char ' ')
 
-parseProtocolAsCommand :: Parser Protocol
-parseProtocolAsCommand = subparser $ mconcat
-  [ commandGroup "System version"
-  , metavar "SYSTEMVER"
-  , cmd "byron-legacy" "Byron Legacy mode" $ pure ByronLegacy
-  , cmd "bft"          "BFT mode"          $ pure BFT
-  , cmd "praos"        "Praos mode"        $ pure Praos
-  , cmd "mock-pbft"    "Mock PBFT mode"    $ pure MockPBFT
-  , cmd "real-pbft"    "Real PBFT mode"    $ pure RealPBFT
-  ]
-
-  where
-    cmd :: forall a. String -> String -> Parser a -> Mod CommandFields a
-    cmd c desc p = command c $ info (p <**> helper) $ mconcat [ progDesc desc ]
-
-parseTopologyInfo :: String -> Parser TopologyInfo
-parseTopologyInfo desc = TopologyInfo <$> parseNodeId desc <*> parseTopologyFile
-
-parseTopologyFile :: Parser FilePath
-parseTopologyFile =
-    strOption (
-            long "topology"
-         <> metavar "FILEPATH"
-         <> help "The path to a file describing the topology."
-    )
-
--- | A parser disables logging if --log-config is not supplied.
-loggingParser :: Parser LoggingCLIArguments
-loggingParser =
-  fromMaybe muteLoggingCLIArguments
-    <$> optional parseLoggingCLIArgumentsInternal
-  where
-    parseLoggingCLIArgumentsInternal :: Parser LoggingCLIArguments
-    parseLoggingCLIArgumentsInternal =
-      LoggingCLIArguments
-        <$> (Just
-             <$> strOption
-              ( long "log-config"
-                <> metavar "LOGCONFIG"
-                <> help "Configuration file for logging"
-                <> completer (bashCompleter "file")))
-        <*> option auto
-         ( long "log-min-severity"
-           <> metavar "SEVERITY"
-           <> help "Limit logging to items with severity at least this severity"
-           <> value Log.Info
-           <> showDefault)
-        <*> switch
-         ( long "log-metrics"
-           <> help "Log a number of metrics about this node")
-
-    -- This is the value returned by the parser, when --log-config is omitted.
-    muteLoggingCLIArguments :: LoggingCLIArguments
-    muteLoggingCLIArguments =
-      LoggingCLIArguments
-      Nothing
-      Log.Emergency
-      False
-
--- | The parser for the logging specific arguments.
-parseTraceOptions :: MParser TraceOptions
-parseTraceOptions m = TraceOptions
-  <$> parseTracingVerbosity m
-  <*> parseTraceChainDB m
-  <*> parseConsensusTraceOptions m
-  <*> parseProtocolTraceOptions m
-  <*> parseTraceIpSubscription m
-  <*> parseTraceDnsSubscription m
-  <*> parseTraceDnsResolver m
-  <*> parseTraceMux m
-
-parseTraceBlockFetchClient :: MParser Bool
-parseTraceBlockFetchClient m =
-    switch (
-         long "trace-block-fetch-client"
-      <> help "Trace BlockFetch client."
-      <> m
-    )
-
-parseTraceBlockFetchServer :: MParser Bool
-parseTraceBlockFetchServer m =
-    switch (
-         long "trace-block-fetch-server"
-      <> help "Trace BlockFetch server."
-      <> m
-    )
-
-parseTracingVerbosity :: MParser TracingVerbosity
-parseTracingVerbosity m = asum [
-  flag' MinimalVerbosity (
-      long "tracing-verbosity-minimal"
-        <> help "Minimal level of the rendering of captured items"
-        <> m)
-    <|>
-  flag' MaximalVerbosity ( 
-      long "tracing-verbosity-maximal"
-        <> help "Maximal level of the rendering of captured items"
-        <> m)
-    <|>
-  flag NormalVerbosity NormalVerbosity (
-      long "tracing-verbosity-normal"
-        <> help "the default level of the rendering of captured items"
-        <> m)
-  ]
-
-parseTraceChainDB :: MParser Bool
-parseTraceChainDB m =
-    switch (
-         long "trace-chain-db"
-      <> help "Verbose tracer of ChainDB."
-      <> m
-    )
-
-parseConsensusTraceOptions :: (forall a b. Opt.Mod a b) -> Parser ConsensusTraceOptions
-parseConsensusTraceOptions m = Consensus.Tracers
-  <$> (Const <$> parseTraceChainSyncClient m)
-  <*> (Const <$> parseTraceChainSyncHeaderServer m)
-  <*> (Const <$> parseTraceChainSyncBlockServer m)
-  <*> (Const <$> parseTraceBlockFetchDecisions m)
-  <*> (Const <$> parseTraceBlockFetchClient m)
-  <*> (Const <$> parseTraceBlockFetchServer m)
-  <*> (Const <$> parseTraceTxInbound m)
-  <*> (Const <$> parseTraceTxOutbound m)
-  <*> (Const <$> parseTraceLocalTxSubmissionServer m)
-  <*> (Const <$> parseTraceMempool m)
-  <*> (Const <$> parseTraceForge m)
-
-type MParser a = (forall b c. Opt.Mod b c) -> Parser a
-
-parseTraceBlockFetchDecisions :: MParser Bool
-parseTraceBlockFetchDecisions m =
-    switch (
-         long "trace-block-fetch-decisions"
-      <> help "Trace BlockFetch decisions made by the BlockFetch client."
-      <> m
-    )
-
-parseTraceChainSyncClient :: MParser Bool
-parseTraceChainSyncClient m =
-    switch (
-         long "trace-chain-sync-client"
-      <> help "Trace ChainSync client."
-      <> m
-    )
-
-parseTraceChainSyncBlockServer :: MParser Bool
-parseTraceChainSyncBlockServer m =
-    switch (
-         long "trace-chain-sync-block-server"
-      <> help "Trace ChainSync server (blocks)."
-      <> m
-    )
-
-parseTraceChainSyncHeaderServer :: MParser Bool
-parseTraceChainSyncHeaderServer m =
-    switch (
-         long "trace-chain-sync-header-server"
-      <> help "Trace ChainSync server (headers)."
-      <> m
-    )
-
-parseTraceTxInbound :: MParser Bool
-parseTraceTxInbound m =
-    switch (
-         long "trace-tx-inbound"
-      <> help "Trace TxSubmission server (inbound transactions)."
-      <> m
-    )
-
-parseTraceTxOutbound :: MParser Bool
-parseTraceTxOutbound m =
-    switch (
-         long "trace-tx-outbound"
-      <> help "Trace TxSubmission client (outbound transactions)."
-      <> m
-    )
-
-parseTraceLocalTxSubmissionServer :: MParser Bool
-parseTraceLocalTxSubmissionServer m =
-    switch (
-         long "trace-local-tx-submission-server"
-      <> help "Trace local TxSubmission server."
-      <> m
-    )
-
-parseTraceMempool :: MParser Bool
-parseTraceMempool m =
-    switch (
-         long "trace-mempool"
-      <> help "Trace mempool."
-      <> m
-    )
-
-parseTraceForge :: MParser Bool
-parseTraceForge m =
-    switch (
-         long "trace-forge"
-      <> help "Trace block forging."
-      <> m
-    )
-
-parseTraceChainSyncProtocol :: MParser Bool
-parseTraceChainSyncProtocol m =
-    switch (
-         long "trace-chain-sync-protocol"
-      <> help "Trace ChainSync protocol messages."
-      <> m
-    )
-
-parseTraceBlockFetchProtocol :: MParser Bool
-parseTraceBlockFetchProtocol m =
-    switch (
-         long "trace-block-fetch-protocol"
-      <> help "Trace BlockFetch protocol messages."
-      <> m
-    )
-
-parseTraceTxSubmissionProtocol :: MParser Bool
-parseTraceTxSubmissionProtocol m =
-    switch (
-         long "trace-tx-submission-protocol"
-      <> help "Trace TxSubmission protocol messages."
-      <> m
-    )
-
-parseTraceLocalChainSyncProtocol :: MParser Bool
-parseTraceLocalChainSyncProtocol m =
-    switch (
-         long "trace-local-chain-sync-protocol"
-      <> help "Trace local ChainSync protocol messages."
-      <> m
-    )
-
-parseTraceLocalTxSubmissionProtocol :: MParser Bool
-parseTraceLocalTxSubmissionProtocol m =
-    switch (
-         long "trace-local-tx-submission-protocol"
-      <> help "Trace local TxSubmission protocol messages."
-      <> m
-    )
-
-
-parseProtocolTraceOptions :: MParser ProtocolTraceOptions
-parseProtocolTraceOptions m = ProtocolTracers
-  <$> (Const <$> parseTraceChainSyncProtocol m)
-  <*> (Const <$> parseTraceBlockFetchProtocol m)
-  <*> (Const <$> parseTraceTxSubmissionProtocol m)
-  <*> (Const <$> parseTraceLocalChainSyncProtocol m)
-  <*> (Const <$> parseTraceLocalTxSubmissionProtocol m)
-
-parseTraceIpSubscription :: MParser Bool
-parseTraceIpSubscription m =
-    switch (
-         long "trace-ip-subscription"
-      <> help "Trace IP Subscription messages."
-      <> m
-    )
-
-parseTraceDnsSubscription :: MParser Bool
-parseTraceDnsSubscription m =
-    switch (
-         long "trace-dns-subscription"
-      <> help "Trace DNS Subscription messages."
-      <> m
-    )
-
-parseTraceDnsResolver :: MParser Bool
-parseTraceDnsResolver m =
-    switch (
-         long "trace-dns-resolver"
-      <> help "Trace DNS Resolver messages."
-      <> m
-    )
-
-parseTraceMux :: MParser Bool
-parseTraceMux m =
-    switch (
-         long "trace-mux"
-      <> help "Trace Mux Events"
-      <> m
-    )
+slotNumber :: A.Parser [Int]
+slotNumber = do skipSpaces
+                (map digitToInt <$> A.manyTill A.digit A.space)

@@ -15,7 +15,7 @@ module Cardano.Node.TUI.LiveView (
     ) where
 
 import           Cardano.Prelude hiding (isPrefixOf, on, show)
-import           Prelude (String, words, read, show)
+import           Prelude (String, words, show)
 
 import           Control.Concurrent (threadDelay)
 import qualified Control.Concurrent.Async as Async
@@ -63,6 +63,7 @@ import           Cardano.BM.Data.Severity
 import           Cardano.BM.Data.SubTrace
 import           Cardano.BM.Trace
 
+import           Cardano.Common.Parsers (parseSlotNumber)
 import           Cardano.Node.TUI.GitRev (gitRev)
 import           Ouroboros.Consensus.NodeId
 import           Paths_cardano_node (version)
@@ -211,7 +212,9 @@ instance IsEffectuator LiveViewBackend Text where
                                          }
                 case words $ unpack msg of
                     (_:"As":"leader":"of":"slot":slotNo:_) -> do
-                        let blockHeight = read slotNo :: Word64
+                        let blockHeight = case parseSlotNumber slotNo of
+                                            Left err -> panic $ pack err
+                                            Right sn -> fromIntegral sn :: Word64
                         modifyMVar_ (getbe lvbe) $ \lvs ->
                             return $ lvs { lvsBlocksMinted = lvsBlocksMinted lvs + 1
                                          , lvsBlockHeight  = blockHeight

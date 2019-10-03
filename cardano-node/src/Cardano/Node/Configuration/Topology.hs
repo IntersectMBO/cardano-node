@@ -21,10 +21,11 @@ module Cardano.Node.Configuration.Topology
 where
 
 import           Cardano.Prelude hiding (toS)
-import           Prelude (String, read)
+import           Prelude (String)
 
 import           Control.Exception (IOException)
 import qualified Control.Exception as Exception
+import           Control.Monad (fail)
 import           Data.Aeson
 import           Data.Aeson.TH
 import qualified Data.ByteString as BS
@@ -32,6 +33,8 @@ import qualified Data.IP as IP
 import           Data.String.Conv (toS)
 import           Text.Read (readMaybe)
 import           Network.Socket
+
+import           Cardano.Common.Parsers (parseIP)
 
 import           Ouroboros.Consensus.NodeId (NodeId(..))
 import           Ouroboros.Consensus.Util.Condense (Condense (..))
@@ -48,7 +51,7 @@ data TopologyInfo = TopologyInfo
 
 -- | IPv4 address with a port number.
 data NodeAddress = NodeAddress
-  { naHostAddress :: !(Maybe IP.IP)
+  { naHostAddress :: !IP.IP
   , naPort :: !PortNumber
   } deriving (Eq, Ord, Show)
 
@@ -57,16 +60,18 @@ instance Condense NodeAddress where
 
 instance FromJSON NodeAddress where
   parseJSON = withObject "NodeAddress" $ \v -> do
-    NodeAddress
-      <$> (Just <$> read <$> v .: "addr")
-      <*> ((fromIntegral :: Int -> PortNumber) <$> v .: "port")
+    ipAddr <- v .: "addr"
+    case parseIP ipAddr of
+      Left err -> fail err
+      Right ip -> NodeAddress
+                    <$> pure ip
+                    <*> ((fromIntegral :: Int -> PortNumber) <$> v .: "port")
 
 nodeAddressToSockAddr :: NodeAddress -> SockAddr
 nodeAddressToSockAddr (NodeAddress addr port) =
   case addr of
-    Just (IP.IPv4 ipv4) -> SockAddrInet port $ IP.toHostAddress ipv4
-    Just (IP.IPv6 ipv6) -> SockAddrInet6 port 0 (IP.toHostAddress6 ipv6) 0
-    Nothing             -> SockAddrInet port 0 -- Could also be any IPv6 addr
+    (IP.IPv4 ipv4) -> SockAddrInet port $ IP.toHostAddress ipv4
+    (IP.IPv6 ipv6) -> SockAddrInet6 port 0 (IP.toHostAddress6 ipv6) 0
 
 nodeAddressInfo :: NodeAddress -> IO [AddrInfo]
 nodeAddressInfo (NodeAddress hostAddr port) = do
@@ -74,7 +79,7 @@ nodeAddressInfo (NodeAddress hostAddr port) = do
                 addrFlags = [AI_PASSIVE, AI_ADDRCONFIG]
               , addrSocketType = Stream
               }
-  getAddrInfo (Just hints) (fmap show hostAddr) (Just $ show port)
+  getAddrInfo (Just hints) (fmap show $ Just hostAddr) (Just $ show port)
 
 -- | Domain name with port number
 --
@@ -100,7 +105,7 @@ remoteAddressToNodeAddress (RemoteAddress addrStr port val) =
   case readMaybe addrStr of
     Nothing -> Nothing
     Just addr -> if val /= 0
-                 then Just $ NodeAddress (Just addr) port
+                 then Just $ NodeAddress addr port
                  else Nothing
 
 

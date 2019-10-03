@@ -16,7 +16,7 @@ import           Cardano.Shell.Types (CardanoApplication (..))
 import           Cardano.Config.CommonCLI
 import           Cardano.Config.Partial
 import           Cardano.Config.Types
-import           Cardano.Common.Parsers
+import           Cardano.Common.CommandLineParsers
 import           Cardano.Tracing.TraceAcceptor (runTraceAcceptor)
 
 main :: IO ()
@@ -32,7 +32,7 @@ main = do
 
   let cardanoApplication =
         CardanoApplication . liftIO $ runTraceAcceptor loggingLayer
-        
+
   runCardanoApplicationWithFeatures [loggingFeature] cardanoApplication
   where
     pcc :: PartialCardanoConfiguration

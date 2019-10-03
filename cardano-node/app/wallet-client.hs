@@ -24,8 +24,7 @@ import           Cardano.Config.Logging (LoggingCLIArguments (..),
                                                 LoggingLayer (..),
                                                 createLoggingFeature
                                                 )
-import           Cardano.Common.Parsers (loggingParser, parseCoreNodeId)
-import           Cardano.Common.Parsers
+import           Cardano.Common.CommandLineParsers
 import           Cardano.Wallet.Run
 
 -- | The product type of all command line arguments
