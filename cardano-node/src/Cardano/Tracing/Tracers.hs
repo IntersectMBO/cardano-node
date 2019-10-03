@@ -21,14 +21,13 @@ module Cardano.Tracing.Tracers
   ) where
 
 import           Cardano.Prelude hiding (atomically, show)
-import           Prelude (String, read, tail)
+import           Prelude (String)
 
 import           Codec.CBOR.Read (DeserialiseFailure)
 import           Control.Monad.Class.MonadSTM
 import           Control.Tracer
 import           Data.Functor.Const (Const (..))
 import           Data.Functor.Contravariant (contramap)
-import           Data.List (findIndex)
 import           Data.Text (Text, pack)
 import qualified Network.Socket as Socket (SockAddr)
 import           Network.Mux.Types (WithMuxBearer, MuxTrace)
@@ -56,6 +55,7 @@ import           Ouroboros.Consensus.Util.Orphans ()
 import qualified Ouroboros.Network.AnchoredFragment as AF
 import           Ouroboros.Network.Block (Tip)
 import           Ouroboros.Network.NodeToNode (NodeToNodeProtocols)
+import           Ouroboros.Network.Point (withOriginToMaybe)
 import           Ouroboros.Network.Subscription
 
 import qualified Ouroboros.Storage.ChainDB as ChainDB
@@ -176,18 +176,16 @@ mkTracers traceOptions tracer = Tracers
           case ev' of
               (ChainDB.TraceAddBlockEvent ev) -> case ev of
                   ChainDB.SwitchedToChain _ c -> do
-                      let tip = showTip NormalVerbosity (AF.headPoint c)
-                      case findIndex (=='@') tip of
-                        Just pos -> do
-                          let tippair = splitAt pos tip
-                              -- phash = fst tippair
-                              slotnum = tail $ snd tippair
-                              logValue :: LOContent a
-                              logValue = LogValue "slotNum" $ PureI $ read slotnum
-                          meta <- mkLOMeta Critical Confidential
-                          let tr' = appendName "slotNum" tr
-                          traceNamedObject tr' (meta, logValue)
-                        Nothing -> pure ()
+                    case withOriginToMaybe . pointSlot $ AF.headPoint c of
+                      Nothing -> pure () -- We are at genesis block.
+                      Just slotNum -> do let sNum :: Integer
+                                             sNum = fromIntegral $ unSlotNo slotNum
+                                             logValue :: LOContent a
+                                             logValue = LogValue "slotNum" . PureI $ sNum
+                                         -- phash = fst tippair
+                                         meta <- mkLOMeta Critical Confidential
+                                         let tr' = appendName "slotNum" tr
+                                         traceNamedObject tr' (meta, logValue)
                   _ -> pure ()
               _ -> pure ()
 
