@@ -83,6 +83,10 @@ data Peer = Peer { localAddr  :: SockAddr
 instance Condense Peer where
     condense (Peer localA remoteA) = (show localA) ++ (show remoteA)
 
+instance NoUnexpectedThunks Peer where
+    showTypeOf _ = "Peer"
+    whnfNoUnexpectedThunks _ctxt _act = return NoUnexpectedThunks
+
 data NodeArgs = NodeArgs !TopologyInfo !NodeAddress !Protocol !ViewMode
 
 -- Node can be run in two modes.
