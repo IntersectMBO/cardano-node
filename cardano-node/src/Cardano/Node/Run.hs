@@ -160,11 +160,13 @@ handleSimpleNode
           Just ps -> ps
           Nothing -> error $ "handleSimpleNode: own address "
                           <> show myNodeAddress
+                          <> ", Node Id "
+                          <> show nid
                           <> " not found in topology"
 
     traceWith tracer $ unlines
       [ "**************************************"
-      , "I am Node "        <> show myNodeAddress
+      , "I am Node "        <> show myNodeAddress <> " Id: " <> show nid
       , "My producers are " <> show producers'
       , "**************************************"
       ]
