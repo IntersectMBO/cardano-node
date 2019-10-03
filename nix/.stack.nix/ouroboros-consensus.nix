@@ -25,7 +25,6 @@
           (hsPkgs.io-sim-classes)
           (hsPkgs.contra-tracer)
           (hsPkgs.cardano-ledger-test)
-          (hsPkgs.base16-bytestring)
           (hsPkgs.bifunctors)
           (hsPkgs.bimap)
           (hsPkgs.bytestring)
@@ -88,6 +87,8 @@
         "test-consensus" = {
           depends = [
             (hsPkgs.base)
+            (hsPkgs.base16-bytestring)
+            (hsPkgs.bytestring)
             (hsPkgs.cardano-binary)
             (hsPkgs.cardano-crypto-class)
             (hsPkgs.cardano-crypto-wrapper)
@@ -134,6 +135,7 @@
             (hsPkgs.ouroboros-consensus)
             (hsPkgs.io-sim-classes)
             (hsPkgs.io-sim)
+            (hsPkgs.base16-bytestring)
             (hsPkgs.bifunctors)
             (hsPkgs.binary)
             (hsPkgs.bytestring)
@@ -166,8 +168,8 @@
     } // {
     src = (pkgs.lib).mkDefault (pkgs.fetchgit {
       url = "https://github.com/input-output-hk/ouroboros-network";
-      rev = "f0ee20c41c242bf26587b94d941e3d1afbca0bad";
-      sha256 = "11ch7msjlm57a2kbxn1gnps4q58lj9dpfszynbnfnxz2y0hb3xvg";
+      rev = "6cbde599eba87edf983c620fd8a9ed4015c9b50a";
+      sha256 = "0pqhradp9g5vcyrsh7ywy0wdzy8j8i6gdphscslfaa2sk5ai1n45";
       });
     postUnpack = "sourceRoot+=/ouroboros-consensus; echo source root reset to \$sourceRoot";
     }
