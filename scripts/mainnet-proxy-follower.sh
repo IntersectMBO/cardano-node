@@ -1,4 +1,6 @@
-#!/bin/sh
+#!/usr/bin/env bash
+
+set -e
 
 RUNNER=${RUNNER:-cabal new-run --}
 TOPOLOGY=${TOPOLOGY:-"configuration/topology-proxy-follower.json"}
