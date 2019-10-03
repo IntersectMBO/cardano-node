@@ -17,7 +17,7 @@ genesis_root="configuration/${genesis}"
 genesis_file="${genesis_root}/genesis.json"
 if test ! -f "${genesis_file}"
 then echo "ERROR: genesis ${genesis_file} does not exist!">&1; exit 1; fi
-genesis_hash="$(${CMD} -v0 -- cardano-cli --tracing-off --real-pbft print-genesis-hash --genesis-json ${genesis_file})"
+genesis_hash="$(${CMD} -v0 -- cardano-cli --real-pbft print-genesis-hash --genesis-json ${genesis_file})"
 
 ALGO="real-pbft"
 NOW=`date "+%Y-%m-%d 00:00:00"`

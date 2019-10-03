@@ -6,6 +6,7 @@ dist/
 \#*
 \.#*
 *.swp
+.dir-locals.el
 result*
 launch-*
 .stack-to-nix.cache
