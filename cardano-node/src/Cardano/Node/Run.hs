@@ -83,6 +83,10 @@ data Peer = Peer { localAddr  :: SockAddr
 instance Condense Peer where
     condense (Peer localA remoteA) = (show localA) ++ (show remoteA)
 
+instance NoUnexpectedThunks Peer where
+    showTypeOf _ = "Peer"
+    whnfNoUnexpectedThunks _ctxt _act = return NoUnexpectedThunks
+
 data NodeArgs = NodeArgs !TopologyInfo !NodeAddress !Protocol !ViewMode
 
 -- Node can be run in two modes.
@@ -151,16 +155,18 @@ handleSimpleNode
     traceWith tracer $
       "System started at " <> show (nodeStartTime (Proxy @blk) cfg)
 
-    let producers' = case List.lookup myNodeAddress $
-                          map (\ns -> (nodeAddress ns, producers ns)) nodeSetups of
+    let producers' = case List.lookup nid $
+                          map (\ns -> (nodeId ns, producers ns)) nodeSetups of
           Just ps -> ps
           Nothing -> error $ "handleSimpleNode: own address "
                           <> show myNodeAddress
+                          <> ", Node Id "
+                          <> show nid
                           <> " not found in topology"
 
     traceWith tracer $ unlines
       [ "**************************************"
-      , "I am Node "        <> show myNodeAddress
+      , "I am Node "        <> show myNodeAddress <> " Id: " <> show nid
       , "My producers are " <> show producers'
       , "**************************************"
       ]
@@ -168,6 +174,7 @@ handleSimpleNode
     -- Socket directory
     myLocalAddr <- localSocketAddrInfo myNodeId (ccSocketDir cc) MkdirIfMissing
 
+    addrs <- nodeAddressInfo myNodeAddress
     let ipProducerAddrs  :: [NodeAddress]
         dnsProducerAddrs :: [RemoteAddress]
         (ipProducerAddrs, dnsProducerAddrs) = partitionEithers
@@ -188,7 +195,7 @@ handleSimpleNode
           , rnaMuxTracer             = muxTracer             nodeTracers
           , rnaMuxLocalTracer        = nullTracer
           , rnaMkPeer                = Peer
-          , rnaMyAddr                = nodeAddressInfo myNodeAddress
+          , rnaMyAddrs               = addrs
           , rnaMyLocalAddr           = myLocalAddr
           , rnaIpProducers           = ipProducers
           , rnaDnsProducers          = dnsProducers

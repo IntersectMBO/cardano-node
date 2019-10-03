@@ -27,7 +27,7 @@ let
         nodeAddress = { inherit addr port; };
         producers = map mkPeer (remove port ports);
       };
-    in toFile "topology.yaml" (toJSON (imap mkNodeTopo ports));
+    in toFile "topology.yaml" (toJSON (imap0 mkNodeTopo ports));
 
   ## Note how some values are literal strings, and some integral.
   ## This is an important detail.

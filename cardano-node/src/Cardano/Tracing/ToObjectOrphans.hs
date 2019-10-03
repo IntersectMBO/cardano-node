@@ -240,6 +240,7 @@ instance DefineSeverity (ChainDB.TraceEvent blk) where
 instance DefinePrivacyAnnotation (TraceChainSyncClientEvent blk tip)
 instance DefineSeverity (TraceChainSyncClientEvent blk tip) where
   defineSeverity (TraceDownloadedHeader _) = Info
+  defineSeverity (TraceFoundIntersection _ _ _) = Info
   defineSeverity (TraceRolledBack _) = Notice
   defineSeverity (TraceException _) = Warning
 
@@ -654,7 +655,8 @@ instance (Condense (HeaderHash blk), ProtocolLedgerView blk, SupportedBlock blk,
     TraceException exc ->
       mkObject [ "kind" .= String "ChainSyncClientEvent.TraceException"
                , "exception" .= String (pack $ show exc) ]
-
+    TraceFoundIntersection _ _ _ ->
+      mkObject [ "kind" .= String "ChainSyncClientEvent.TraceFoundIntersection" ]
 
 instance ToObject (TraceChainSyncServerEvent blk b) where
     toObject _ _ev = mkObject [ "kind" .= String "ChainSyncServerEvent" ]

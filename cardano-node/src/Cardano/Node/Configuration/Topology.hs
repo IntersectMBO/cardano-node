@@ -48,7 +48,7 @@ data TopologyInfo = TopologyInfo
 
 -- | IPv4 address with a port number.
 data NodeAddress = NodeAddress
-  { naHostAddress :: !IP.IP
+  { naHostAddress :: !(Maybe IP.IP)
   , naPort :: !PortNumber
   } deriving (Eq, Ord, Show)
 
@@ -58,27 +58,23 @@ instance Condense NodeAddress where
 instance FromJSON NodeAddress where
   parseJSON = withObject "NodeAddress" $ \v -> do
     NodeAddress
-      <$> (read <$> v .: "addr")
+      <$> (Just <$> read <$> v .: "addr")
       <*> ((fromIntegral :: Int -> PortNumber) <$> v .: "port")
 
 nodeAddressToSockAddr :: NodeAddress -> SockAddr
 nodeAddressToSockAddr (NodeAddress addr port) =
   case addr of
-    IP.IPv4 ipv4 -> SockAddrInet port $ IP.toHostAddress ipv4
-    IP.IPv6 ipv6 -> SockAddrInet6 port 0 (IP.toHostAddress6 ipv6) 0
+    Just (IP.IPv4 ipv4) -> SockAddrInet port $ IP.toHostAddress ipv4
+    Just (IP.IPv6 ipv6) -> SockAddrInet6 port 0 (IP.toHostAddress6 ipv6) 0
+    Nothing             -> SockAddrInet port 0 -- Could also be any IPv6 addr
 
-nodeAddressInfo :: NodeAddress -> AddrInfo
-nodeAddressInfo na@(NodeAddress hostAddr _) =
-  AddrInfo
-    { addrFlags = addrFlags defaultHints
-    , addrFamily = case hostAddr of
-                     IP.IPv4 _ -> AF_INET
-                     IP.IPv6 _ -> AF_INET6
-    , addrSocketType = Stream
-    , addrProtocol = addrProtocol defaultHints
-    , addrAddress = nodeAddressToSockAddr na
-    , addrCanonName = Nothing
-    }
+nodeAddressInfo :: NodeAddress -> IO [AddrInfo]
+nodeAddressInfo (NodeAddress hostAddr port) = do
+  let hints = defaultHints {
+                addrFlags = [AI_PASSIVE, AI_ADDRCONFIG]
+              , addrSocketType = Stream
+              }
+  getAddrInfo (Just hints) (fmap show hostAddr) (Just $ show port)
 
 -- | Domain name with port number
 --
@@ -104,7 +100,7 @@ remoteAddressToNodeAddress (RemoteAddress addrStr port val) =
   case readMaybe addrStr of
     Nothing -> Nothing
     Just addr -> if val /= 0
-                 then Just $ NodeAddress addr port
+                 then Just $ NodeAddress (Just addr) port
                  else Nothing
 
 

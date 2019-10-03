@@ -1,6 +1,6 @@
 { system, compiler, flags, pkgs, hsPkgs, pkgconfPkgs, ... }:
   {
-    flags = {};
+    flags = { checktvarinvariant = false; };
     package = {
       specVersion = "1.10";
       identifier = { name = "ouroboros-consensus"; version = "0.1.0.0"; };
@@ -103,6 +103,7 @@
             (hsPkgs.containers)
             (hsPkgs.contra-tracer)
             (hsPkgs.cryptonite)
+            (hsPkgs.deepseq)
             (hsPkgs.fgl)
             (hsPkgs.fingertree)
             (hsPkgs.generics-sop)
@@ -139,6 +140,7 @@
             (hsPkgs.cereal)
             (hsPkgs.containers)
             (hsPkgs.contra-tracer)
+            (hsPkgs.deepseq)
             (hsPkgs.directory)
             (hsPkgs.fingertree)
             (hsPkgs.generics-sop)
@@ -164,8 +166,8 @@
     } // {
     src = (pkgs.lib).mkDefault (pkgs.fetchgit {
       url = "https://github.com/input-output-hk/ouroboros-network";
-      rev = "04336ee89d74c9ef839ad54ab9cd2f3e07a39696";
-      sha256 = "0vxa5jj00pmldwg9drxljijphj48vjh5nc8jkfc6bzv987ddjxrm";
+      rev = "f0ee20c41c242bf26587b94d941e3d1afbca0bad";
+      sha256 = "11ch7msjlm57a2kbxn1gnps4q58lj9dpfszynbnfnxz2y0hb3xvg";
       });
     postUnpack = "sourceRoot+=/ouroboros-consensus; echo source root reset to \$sourceRoot";
     }
