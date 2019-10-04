@@ -19,7 +19,8 @@ NETARGS=(
 )
 TX_GEN_ARGS=(
         --num-of-txs     1000
-        --outputs-per-tx 1
+        --inputs-per-tx  2
+        --outputs-per-tx 2
         --tx-fee         1000000
         --tps            10
         --add-tx-size    100
