@@ -18,6 +18,7 @@
       "library" = {
         depends = [
           (hsPkgs.aeson)
+          (hsPkgs.appar)
           (hsPkgs.async)
           (hsPkgs.base)
           (hsPkgs.binary)
