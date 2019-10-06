@@ -646,7 +646,9 @@ runBenchmark benchTracer
   let localAddr :: Maybe Network.Socket.AddrInfo
       localAddr = Nothing
 
-  let targetNodeHost = show $ naHostAddress targetNodeAddress
+  let targetNodeHost = maybe (panic "Target node's IP-address is undefined!")
+                             show
+                             $ naHostAddress targetNodeAddress
       targetNodePort = show $ naPort targetNodeAddress
 
   let hints :: AddrInfo
