@@ -35,7 +35,7 @@ import           Ouroboros.Consensus.BlockFetchServer
 import           Ouroboros.Consensus.ChainSyncClient
                    (TraceChainSyncClientEvent (..))
 import           Ouroboros.Consensus.ChainSyncServer
-                   (TraceChainSyncServerEvent)
+                   (TraceChainSyncServerEvent(..))
 import           Ouroboros.Consensus.Ledger.Abstract
 import           Ouroboros.Consensus.Mempool.API (GenTx, GenTxId)
 import qualified Ouroboros.Consensus.Node.Tracers as Consensus
@@ -293,7 +293,7 @@ instance (Condense (HeaderHash blk), ProtocolLedgerView blk, SupportedBlock blk,
   trTransformer _ verb tr = trStructured verb tr
 
 -- transform @ChainSyncServer@
-instance Transformable Text IO (TraceChainSyncServerEvent blk b) where
+instance StandardHash blk => Transformable Text IO (TraceChainSyncServerEvent blk b) where
   trTransformer _ verb tr = trStructured verb tr
 
 -- transform @BlockFetchDecision@
@@ -658,22 +658,18 @@ instance (Condense (HeaderHash blk), ProtocolLedgerView blk, SupportedBlock blk,
     TraceFoundIntersection _ _ _ ->
       mkObject [ "kind" .= String "ChainSyncClientEvent.TraceFoundIntersection" ]
 
-instance ToObject (TraceChainSyncServerEvent blk b) where
-    toObject _ _ev = mkObject [ "kind" .= String "ChainSyncServerEvent" ]
-  -- TODO: not yet exported from ouroboros-network
-  -- toObject verb ev = case ev of
-  --   TraceChainSyncServerIdle ->
-  --     mkObject [ "kind" .= String "ChainSyncServerEvent.TraceChainSyncServerIdle" ]
-  --   TraceChainSyncServerRead pt ->
-  --     mkObject [ "kind" .= String "ChainSyncServerEvent.TraceChainSyncServerRead"
-  --              , "block" .= toObject verb pt ]
-  --   TraceChainSyncServerReadBlocked pt ->
-  --     mkObject [ "kind" .= String "ChainSyncServerEvent.TraceChainSyncServerReadBlocked"
-  --              , "block" .= toObject verb pt ]
+instance StandardHash blk => ToObject (TraceChainSyncServerEvent blk b) where
+    toObject _ ev = case ev of
+      TraceChainSyncServerRead tip _ ->
+        mkObject [ "kind" .= String "ChainSyncServerEvent.TraceChainSyncServerRead"
+                 , "block" .= (String (pack . show $ tipPoint tip)) ]
+      TraceChainSyncServerReadBlocked tip _ ->
+        mkObject [ "kind" .= String "ChainSyncServerEvent.TraceChainSyncServerReadBlocked"
+                 , "block" .= (String (pack . show $ tipPoint tip)) ]
 
 instance Show peer => ToObject [TraceLabelPeer peer
                         (FetchDecision [Point header])] where
-  toObject MinimalVerbosity lbls = toObject NormalVerbosity lbls
+  toObject MinimalVerbosity _ = emptyObject
   toObject NormalVerbosity lbls = mkObject [ "kind" .= String "TraceLabelPeer"
                                            , "length" .= String (pack $ show $ length lbls) ]
   toObject MaximalVerbosity [] = emptyObject
