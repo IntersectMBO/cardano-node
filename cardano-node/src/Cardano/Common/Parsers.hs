@@ -26,7 +26,6 @@ import           Ouroboros.Consensus.NodeId (NodeId(..), CoreNodeId(..))
 import           Ouroboros.Consensus.NodeNetwork (ProtocolTracers'(..))
 import qualified Ouroboros.Consensus.Node.Tracers as Consensus
 
-import qualified Cardano.BM.Data.Severity as Log
 import           Cardano.Config.Logging
 import           Cardano.Common.Protocol
 import           Cardano.Node.Configuration.Topology
@@ -121,12 +120,6 @@ loggingParser =
                 <> metavar "LOGCONFIG"
                 <> help "Configuration file for logging"
                 <> completer (bashCompleter "file")))
-        <*> option auto
-         ( long "log-min-severity"
-           <> metavar "SEVERITY"
-           <> help "Limit logging to items with severity at least this severity"
-           <> value Log.Info
-           <> showDefault)
         <*> switch
          ( long "log-metrics"
            <> help "Log a number of metrics about this node")
@@ -136,7 +129,6 @@ loggingParser =
     muteLoggingCLIArguments =
       LoggingCLIArguments
       Nothing
-      Log.Emergency
       False
 
 -- | The parser for the logging specific arguments.
@@ -174,7 +166,7 @@ parseTracingVerbosity m = asum [
         <> help "Minimal level of the rendering of captured items"
         <> m)
     <|>
-  flag' MaximalVerbosity ( 
+  flag' MaximalVerbosity (
       long "tracing-verbosity-maximal"
         <> help "Maximal level of the rendering of captured items"
         <> m)

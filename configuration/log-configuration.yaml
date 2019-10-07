@@ -76,4 +76,3 @@ options:
       - AggregationBK
     '#aggregation.cardano.epoch-validation.benchmark':
       - EKGViewBK
-

@@ -10,5 +10,4 @@ CMD="cabal new-run exe:trace-acceptor -- "
 set -x
 ${CMD} \
     --log-config ${BASEDIR}/launch_mainnet.d/log-config-acceptor.yaml \
-    --log-min-severity Debug \
            $@

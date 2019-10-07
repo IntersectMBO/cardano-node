@@ -140,7 +140,6 @@ type LoggingCardanoFeature = CardanoFeatureInit
 -- | CLI specific data structure.
 data LoggingCLIArguments = LoggingCLIArguments
   { logConfigFile :: !(Maybe FilePath)
-  , minSeverity :: !Severity
   , captureMetrics :: !Bool
   }
 
@@ -163,7 +162,6 @@ loggingCLIConfiguration lca@LoggingCLIArguments{logConfigFile = Just fp} = do
     throwIO $ FileNotFoundException fp
 
   config <- Config.setup fp
-  Config.setMinSeverity config (minSeverity lca)
   pure (LoggingEnabled, LoggingConfiguration config (captureMetrics lca))
 
 createLoggingFeature
