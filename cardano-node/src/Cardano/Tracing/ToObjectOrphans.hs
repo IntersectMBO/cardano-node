@@ -115,72 +115,72 @@ instance DefineSeverity (WithIPList (SubscriptionTrace Socket.SockAddr)) where
       ConnectSuccess         -> Info
       ConnectSuccessLast     -> Notice
       ConnectValencyExceeded -> Warning
-    SubscriptionTraceConnectException _ _ -> Error
-    SubscriptionTraceSocketAllocationException _ _ -> Error
-    SubscriptionTraceConnectCleanup _ -> Debug
+    SubscriptionTraceConnectException {} -> Error
+    SubscriptionTraceSocketAllocationException {} -> Error
+    SubscriptionTraceConnectCleanup {} -> Debug
     SubscriptionTraceSubscriptionRunning -> Debug
-    SubscriptionTraceSubscriptionWaiting _ -> Debug
+    SubscriptionTraceSubscriptionWaiting {} -> Debug
     SubscriptionTraceSubscriptionFailed -> Error
-    SubscriptionTraceSubscriptionWaitingNewConnection _ -> Notice
-    SubscriptionTraceStart _ -> Debug
-    SubscriptionTraceRestart _ _ _ -> Info
-    SubscriptionTraceConnectionExist _ -> Notice
-    SubscriptionTraceUnsupportedRemoteAddr _ -> Error
+    SubscriptionTraceSubscriptionWaitingNewConnection {} -> Notice
+    SubscriptionTraceStart {} -> Debug
+    SubscriptionTraceRestart {} -> Info
+    SubscriptionTraceConnectionExist {} -> Notice
+    SubscriptionTraceUnsupportedRemoteAddr {} -> Error
     SubscriptionTraceMissingLocalAddress -> Warning
-    SubscriptionApplicationException _ -> Error
-    SubscriptionTraceAllocateSocket _ -> Debug
-    SubscriptionTraceCloseSocket _ -> Info
+    SubscriptionApplicationException {} -> Error
+    SubscriptionTraceAllocateSocket {} -> Debug
+    SubscriptionTraceCloseSocket {} -> Info
 
 instance DefinePrivacyAnnotation (WithDomainName (SubscriptionTrace Socket.SockAddr))
 instance DefineSeverity (WithDomainName (SubscriptionTrace Socket.SockAddr)) where
   defineSeverity (WithDomainName _ ev) = case ev of
-    SubscriptionTraceConnectStart _ -> Info
-    SubscriptionTraceConnectEnd _ _ -> Info
-    SubscriptionTraceConnectException _ _ -> Error
-    SubscriptionTraceSocketAllocationException _ _ -> Error
-    SubscriptionTraceConnectCleanup _ -> Debug
+    SubscriptionTraceConnectStart {} -> Info
+    SubscriptionTraceConnectEnd {} -> Info
+    SubscriptionTraceConnectException {} -> Error
+    SubscriptionTraceSocketAllocationException {} -> Error
+    SubscriptionTraceConnectCleanup {} -> Debug
     SubscriptionTraceSubscriptionRunning -> Debug
-    SubscriptionTraceSubscriptionWaiting _ -> Debug
+    SubscriptionTraceSubscriptionWaiting {} -> Debug
     SubscriptionTraceSubscriptionFailed -> Warning
-    SubscriptionTraceSubscriptionWaitingNewConnection _ -> Debug
-    SubscriptionTraceStart _ -> Debug
-    SubscriptionTraceRestart _ _ _ -> Debug
-    SubscriptionTraceConnectionExist _ -> Info
-    SubscriptionTraceUnsupportedRemoteAddr _ -> Warning
+    SubscriptionTraceSubscriptionWaitingNewConnection {} -> Debug
+    SubscriptionTraceStart {} -> Debug
+    SubscriptionTraceRestart {} -> Debug
+    SubscriptionTraceConnectionExist {} -> Info
+    SubscriptionTraceUnsupportedRemoteAddr {} -> Warning
     SubscriptionTraceMissingLocalAddress -> Warning
-    SubscriptionApplicationException _ -> Error
-    SubscriptionTraceAllocateSocket _ -> Debug
-    SubscriptionTraceCloseSocket _ -> Debug
+    SubscriptionApplicationException {} -> Error
+    SubscriptionTraceAllocateSocket {} -> Debug
+    SubscriptionTraceCloseSocket {} -> Debug
 
 instance DefinePrivacyAnnotation (WithDomainName DnsTrace)
 instance DefineSeverity (WithDomainName DnsTrace) where
   defineSeverity (WithDomainName _ ev) = case ev of
-    DnsTraceLookupException _  -> Error
-    DnsTraceLookupAError _     -> Error
-    DnsTraceLookupAAAAError _  -> Error
-    DnsTraceLookupIPv6First    -> Info
-    DnsTraceLookupIPv4First    -> Info
-    DnsTraceLookupAResult _    -> Debug
-    DnsTraceLookupAAAAResult _ -> Debug
+    DnsTraceLookupException {} -> Error
+    DnsTraceLookupAError {} -> Error
+    DnsTraceLookupAAAAError {} -> Error
+    DnsTraceLookupIPv6First -> Info
+    DnsTraceLookupIPv4First -> Info
+    DnsTraceLookupAResult {} -> Debug
+    DnsTraceLookupAAAAResult {} -> Debug
 
 instance DefinePrivacyAnnotation (WithMuxBearer (MuxTrace ptcl))
 instance DefineSeverity (WithMuxBearer (MuxTrace ptcl)) where
   defineSeverity (WithMuxBearer _ ev) = case ev of
     MuxTraceRecvHeaderStart      -> Debug
-    MuxTraceRecvHeaderEnd _      -> Debug
-    MuxTraceRecvPayloadStart _   -> Debug
-    MuxTraceRecvPayloadEnd _     -> Debug
-    MuxTraceRecvStart _          -> Debug
-    MuxTraceRecvEnd _            -> Debug
-    MuxTraceSendStart _          -> Debug
+    MuxTraceRecvHeaderEnd {}     -> Debug
+    MuxTraceRecvPayloadStart {}  -> Debug
+    MuxTraceRecvPayloadEnd {}    -> Debug
+    MuxTraceRecvStart {}         -> Debug
+    MuxTraceRecvEnd {}           -> Debug
+    MuxTraceSendStart {}         -> Debug
     MuxTraceSendEnd              -> Debug
-    MuxTraceStateChange _ _      -> Info
-    MuxTraceCleanExit _          -> Info
-    MuxTraceExceptionExit _ _    -> Info
-    MuxTraceChannelRecvStart _   -> Debug
-    MuxTraceChannelRecvEnd _ _   -> Debug
-    MuxTraceChannelSendStart _ _ -> Debug
-    MuxTraceChannelSendEnd _     -> Debug
+    MuxTraceStateChange {}       -> Info
+    MuxTraceCleanExit {}         -> Info
+    MuxTraceExceptionExit {}     -> Info
+    MuxTraceChannelRecvStart {}  -> Debug
+    MuxTraceChannelRecvEnd {}    -> Debug
+    MuxTraceChannelSendStart {}  -> Debug
+    MuxTraceChannelSendEnd {}    -> Debug
 
 instance DefinePrivacyAnnotation (WithTip blk (ChainDB.TraceEvent blk))
 instance DefineSeverity (WithTip blk (ChainDB.TraceEvent blk)) where
@@ -188,52 +188,52 @@ instance DefineSeverity (WithTip blk (ChainDB.TraceEvent blk)) where
 
 instance DefineSeverity (ChainDB.TraceEvent blk) where
   defineSeverity (ChainDB.TraceAddBlockEvent ev) = case ev of
-    ChainDB.StoreButDontChange _ -> Debug
-    ChainDB.TryAddToCurrentChain _ -> Debug
-    ChainDB.TrySwitchToAFork _ _ -> Info
-    ChainDB.SwitchedToChain _ _ -> Notice
+    ChainDB.StoreButDontChange {} -> Debug
+    ChainDB.TryAddToCurrentChain {} -> Debug
+    ChainDB.TrySwitchToAFork {} -> Info
+    ChainDB.SwitchedToChain {} -> Notice
     ChainDB.AddBlockValidation ev' -> case ev' of
-      ChainDB.InvalidBlock _ _ -> Error
-      ChainDB.InvalidCandidate _ -> Error
-      ChainDB.ValidCandidate _ -> Info
-      ChainDB.CandidateExceedsRollback _ _ _ -> Error
+      ChainDB.InvalidBlock {} -> Error
+      ChainDB.InvalidCandidate {} -> Error
+      ChainDB.ValidCandidate {} -> Info
+      ChainDB.CandidateExceedsRollback {} -> Error
     ChainDB.AddedBlockToVolDB {} -> Debug
     ChainDB.ChainChangedInBg {} -> Info
 
   defineSeverity (ChainDB.TraceLedgerReplayEvent ev) = case ev of
-    LedgerDB.ReplayFromGenesis _ -> Info
-    LedgerDB.ReplayFromSnapshot _ _ _ -> Info
+    LedgerDB.ReplayFromGenesis {} -> Info
+    LedgerDB.ReplayFromSnapshot {} -> Info
     _ -> Debug
   defineSeverity (ChainDB.TraceLedgerEvent ev) = case ev of
-    LedgerDB.TookSnapshot _ _ -> Info
-    LedgerDB.DeletedSnapshot _ -> Debug
-    LedgerDB.InvalidSnapshot _ _ -> Error
+    LedgerDB.TookSnapshot {} -> Info
+    LedgerDB.DeletedSnapshot {} -> Debug
+    LedgerDB.InvalidSnapshot {} -> Error
 
   defineSeverity (ChainDB.TraceCopyToImmDBEvent ev) = case ev of
-    ChainDB.CopiedBlockToImmDB _ -> Notice
+    ChainDB.CopiedBlockToImmDB {} -> Notice
     ChainDB.NoBlocksToCopyToImmDB -> Debug
 
   defineSeverity (ChainDB.TraceGCEvent ev) = case ev of
-    ChainDB.PerformedGC _ -> Debug
-    ChainDB.ScheduledGC _ _ -> Debug
+    ChainDB.PerformedGC {} -> Debug
+    ChainDB.ScheduledGC {} -> Debug
 
   defineSeverity (ChainDB.TraceOpenEvent ev) = case ev of
-    ChainDB.OpenedDB _ _ -> Info
-    ChainDB.ClosedDB _ _ -> Info
-    ChainDB.ReopenedDB _ _ -> Debug
-    ChainDB.OpenedImmDB _ _ -> Debug
+    ChainDB.OpenedDB {} -> Info
+    ChainDB.ClosedDB {} -> Info
+    ChainDB.ReopenedDB {} -> Debug
+    ChainDB.OpenedImmDB {} -> Debug
     ChainDB.OpenedVolDB -> Debug
     ChainDB.OpenedLgrDB -> Debug
 
   defineSeverity (ChainDB.TraceReaderEvent ev) = case ev of
-    ChainDB.NewReader _ -> Info
-    ChainDB.ReaderNoLongerInMem _ -> Info
-    ChainDB.ReaderSwitchToMem _ _ -> Info
-    ChainDB.ReaderNewImmIterator _ _ -> Info
+    ChainDB.NewReader {} -> Info
+    ChainDB.ReaderNoLongerInMem {} -> Info
+    ChainDB.ReaderSwitchToMem {} -> Info
+    ChainDB.ReaderNewImmIterator {} -> Info
   defineSeverity (ChainDB.TraceInitChainSelEvent ev) = case ev of
-    ChainDB.InitChainSelValidation _ -> Debug
+    ChainDB.InitChainSelValidation {} -> Debug
   defineSeverity (ChainDB.TraceIteratorEvent ev) = case ev of
-    ChainDB.StreamFromVolDB _ _ _ -> Debug
+    ChainDB.StreamFromVolDB {} -> Debug
     _ -> Debug
   defineSeverity (ChainDB.TraceImmDBEvent _ev) = Debug
 
