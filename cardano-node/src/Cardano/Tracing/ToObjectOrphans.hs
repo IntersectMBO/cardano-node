@@ -197,8 +197,8 @@ instance DefineSeverity (ChainDB.TraceEvent blk) where
       ChainDB.InvalidCandidate _ -> Error
       ChainDB.ValidCandidate _ -> Info
       ChainDB.CandidateExceedsRollback _ _ _ -> Error
-    ChainDB.AddedBlockToVolDB _     -> Debug
-    ChainDB.ChainChangedInBg _ _     -> Info
+    ChainDB.AddedBlockToVolDB {} -> Debug
+    ChainDB.ChainChangedInBg {} -> Info
 
   defineSeverity (ChainDB.TraceLedgerReplayEvent ev) = case ev of
     LedgerDB.ReplayFromGenesis _ -> Info
@@ -400,7 +400,7 @@ readableChainDBTracer tracer = Tracer $ \case
         "Valid candidate " <> condense (AF.headPoint c)
       ChainDB.CandidateExceedsRollback _ _ c -> tr $ WithTip tip $
         "Exceeds rollback " <> condense (AF.headPoint c)
-    ChainDB.AddedBlockToVolDB pt     -> tr $ WithTip tip $
+    ChainDB.AddedBlockToVolDB pt _ _ -> tr $ WithTip tip $
       "Chain added block " <> condense pt
     ChainDB.ChainChangedInBg c1 c2     -> tr $ WithTip tip $
       "Chain changed in bg, from " <> condense (AF.headPoint c1) <> " to "  <> condense (AF.headPoint c2)
@@ -546,9 +546,10 @@ instance (Condense (HeaderHash blk), ProtocolLedgerView blk)
                  , "block" .= showTip verb (AF.headPoint c)
                  , "supported" .= show supported
                  , "actual"    .= show actual ]
-    ChainDB.AddedBlockToVolDB pt     ->
+    ChainDB.AddedBlockToVolDB pt (BlockNo bn) _ ->
       mkObject [ "kind" .= String "TraceAddBlockEvent.AddedBlockToVolDB"
-               , "block" .= toObject verb pt ]
+               , "block" .= toObject verb pt
+               , "blockNo" .= show bn ]
     ChainDB.ChainChangedInBg c1 c2     ->
       mkObject [ "kind" .= String "TraceAddBlockEvent.ChainChangedInBg"
                , "prev" .= showTip verb (AF.headPoint c1)
