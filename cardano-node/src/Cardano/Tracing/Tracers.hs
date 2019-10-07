@@ -183,7 +183,7 @@ mkTracers traceOptions tracer = Tracers
                                              logValue :: LOContent a
                                              logValue = LogValue "slotNum" . PureI $ sNum
                                          -- phash = fst tippair
-                                         meta <- mkLOMeta Critical Confidential
+                                         meta <- mkLOMeta Debug Confidential
                                          let tr' = appendName "slotNum" tr
                                          traceNamedObject tr' (meta, logValue)
                   _ -> pure ()
