@@ -11,8 +11,6 @@ set -e
 ALGO="--real-pbft"
 # CMD="stack exec --nix cardano-node --"
 CMD="cabal new-run --"
-HOST="127.0.0.1"
-HOST6="::1"
 # EXTRA="--live-view"
 EXTRA=""
 
@@ -34,8 +32,8 @@ tmux select-pane -t 4
 tmux send-keys "cd '${PWD}'; ${CMD} trace-acceptor $(acceptorargs)" C-m
 sleep 2
 tmux select-pane -t 0
-tmux send-keys "cd '${PWD}'; ${CMD} exe:cardano-node $(nodeargs 0 "${ALGO} ${EXTRA}") --host-addr ${HOST6}" C-m
+tmux send-keys "cd '${PWD}'; ${CMD} exe:cardano-node $(nodeargs 0 "${ALGO} ${EXTRA}")" C-m
 tmux select-pane -t 1
-tmux send-keys "cd '${PWD}'; ${CMD} exe:cardano-node $(nodeargs 1 "${ALGO} ${EXTRA}") --host-addr ${HOST} " C-m
+tmux send-keys "cd '${PWD}'; ${CMD} exe:cardano-node $(nodeargs 1 "${ALGO} ${EXTRA}")" C-m
 tmux select-pane -t 2
-tmux send-keys "cd '${PWD}'; ${CMD} exe:cardano-node $(nodeargs 2 "${ALGO} ${EXTRA}") --host-addr ${HOST6}" C-m
+tmux send-keys "cd '${PWD}'; ${CMD} exe:cardano-node $(nodeargs 2 "${ALGO} ${EXTRA}")" C-m

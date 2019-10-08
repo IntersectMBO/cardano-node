@@ -11,7 +11,7 @@ umask 077
 SCRIPTDIR=$(dirname $0)
 CONFIGDIR="$(realpath ${SCRIPTDIR}/../configuration)"
 
-start_future_offset="15 minutes"
+start_future_offset="1 minute"
 start_time="$(date -d "now + ${start_future_offset}" +%s)"
 protocol_params="${SCRIPTDIR}/protocol-params.json"
 
