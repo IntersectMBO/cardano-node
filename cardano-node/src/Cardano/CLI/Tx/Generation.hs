@@ -37,6 +37,7 @@ import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy as LB
 import           Data.Either (isLeft)
 import           Data.Foldable (find, foldl', foldr, toList)
+import qualified Data.IP as IP
 import           Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.List.NonEmpty as NE
 import           Data.Maybe (Maybe (..), fromMaybe, listToMaybe, mapMaybe)
@@ -646,15 +647,18 @@ runBenchmark benchTracer
   let localAddr :: Maybe Network.Socket.AddrInfo
       localAddr = Nothing
 
-  let targetNodeHost = maybe (panic "Target node's IP-address is undefined!")
-                             show
-                             $ naHostAddress targetNodeAddress
-      targetNodePort = show $ naPort targetNodeAddress
+  let (anAddrFamily, targetNodeHost) =
+        case naHostAddress targetNodeAddress of
+          Just (IP.IPv4 ipv4) -> (AF_INET,  show ipv4)
+          Just (IP.IPv6 ipv6) -> (AF_INET6, show ipv6)
+          Nothing -> panic "Target node's IP-address is undefined!"
+
+  let targetNodePort = show $ naPort targetNodeAddress
 
   let hints :: AddrInfo
       hints = defaultHints
         { addrFlags      = [AI_PASSIVE]
-        , addrFamily     = AF_INET6
+        , addrFamily     = anAddrFamily
         , addrSocketType = Stream
         , addrCanonName  = Nothing
         }
