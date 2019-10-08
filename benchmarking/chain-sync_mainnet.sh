@@ -12,7 +12,6 @@ exec ${NODE} \
   --genesis-file ${BASEDIR}/../configuration/mainnet-genesis.json \
   --genesis-hash 5f20df933584822601f9e3f8c024eb5eb252fe8cefb24d1317dc3d432e940ebb \
   --log-config ${BASEDIR}/launch_mainnet.d/log-configuration.yaml \
-  --log-min-severity Notice \
   --log-metrics \
   --database-path .//db-mainnet \
   --socket-dir socket \
