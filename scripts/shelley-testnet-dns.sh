@@ -27,8 +27,6 @@ NETARGS="--slot-duration 2 --topology configuration/simple-topology-dns.json ${A
 #SCR="./scripts/start-node.sh"
 #CMD="stack exec --nix cardano-node --"
 CMD="cabal new-run exe:cardano-node --"
-HOST="127.0.0.1"
-HOST6="::1"
 
 function mklogcfg () {
   echo "--log-config configuration/log-config-${1}.yaml"
@@ -47,8 +45,8 @@ node_args() {
 }
 
 tmux select-pane -t 0
-tmux send-keys "${CMD} $(mklogcfg 0) ${NETARGS} --host-addr ${HOST6} $(node_args 0)" C-m
+tmux send-keys "${CMD} $(mklogcfg 0) ${NETARGS} $(node_args 0)" C-m
 tmux select-pane -t 1
-tmux send-keys "${CMD} $(mklogcfg 1) ${NETARGS} --host-addr ${HOST}  $(node_args 1)" C-m
+tmux send-keys "${CMD} $(mklogcfg 1) ${NETARGS} $(node_args 1)" C-m
 tmux select-pane -t 2
-tmux send-keys "${CMD} $(mklogcfg 2) ${NETARGS} --host-addr ${HOST6} $(node_args 2)" C-m
+tmux send-keys "${CMD} $(mklogcfg 2) ${NETARGS} $(node_args 2)" C-m
