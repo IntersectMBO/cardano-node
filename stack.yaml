@@ -51,6 +51,7 @@ extra-deps:
     commit: 6d1e522d0268a855fdd31d8fbbec1a88fad11a15
     subdirs:
       - cardano-shell
+      - cardano-launcher
 
     # iohk-monitoring-framework currently not pinned to a release
   - git: https://github.com/input-output-hk/iohk-monitoring-framework

@@ -51,4 +51,5 @@ in {
   inherit (nixTools) nix-tools;
   inherit (commonLib.iohkNix) check-nix-tools check-hydra pkgs;
   inherit environments;
+  daedalus-bridge = import ./daedalus-bridge.nix { inherit (nixTools) nix-tools; inherit (commonLib) pkgs; inherit target; };
 }

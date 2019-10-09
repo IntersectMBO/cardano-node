@@ -35,6 +35,7 @@
         cardano-binary-test = ./cardano-binary-test.nix;
         cardano-crypto-class = ./cardano-crypto-class.nix;
         cardano-shell = ./cardano-shell.nix;
+        cardano-launcher = ./cardano-launcher.nix;
         contra-tracer = ./contra-tracer.nix;
         iohk-monitoring = ./iohk-monitoring.nix;
         lobemo-backend-aggregation = ./lobemo-backend-aggregation.nix;

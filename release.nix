@@ -47,6 +47,7 @@ in
     default = getArchDefault "x86_64-linux";
   in {
     inherit (default) nixosTests;
+    daedalus-bridge = commonLib.pkgs.lib.mapAttrs (key: _: (getArchDefault key).daedalus-bridge) { x86_64-windows = 1; x86_64-linux = 1; x86_64-darwin = 1; };
   } // (builtins.listToAttrs (map makeRelease [
     "mainnet"
     "staging"
