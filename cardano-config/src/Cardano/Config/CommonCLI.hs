@@ -7,9 +7,7 @@ module Cardano.Config.CommonCLI
   ( CommonCLI(..)
   , CommonCLIAdvanced(..)
   , parseCommonCLI
-  , parseCommonCLI'
   , parseCommonCLIAdvanced
-  , parseCommonCLIAdvanced'
   , mergeConfiguration
   , mkConfiguration
    -- * Generic
@@ -24,6 +22,16 @@ module Cardano.Config.CommonCLI
   , lastStrOption
   , lastStrOptionM
   , lastFlag
+  , parseDbPath
+  , parseDelegationeCert
+  , parseGenesisHash
+  , parseGenesisPath
+  , parsePbftSigThreshold
+  , parseRequireNetworkMagic
+  , parseSigningKey
+  , parseSlotLength
+  , parseSocketDir
+
   ) where
 
 import           Cardano.Prelude hiding (option)
@@ -59,48 +67,52 @@ data CommonCLIAdvanced = CommonCLIAdvanced
   Common CLI
 -------------------------------------------------------------------------------}
 
+parseDbPath :: Parser (Last FilePath)
+parseDbPath =
+  lastStrOption
+    ( long "database-path"
+        <> metavar "FILEPATH"
+        <> help "Directory where the state is stored."
+    )
+parseGenesisPath :: Parser (Last FilePath)
+parseGenesisPath =
+  lastStrOption
+    ( long "genesis-file"
+        <> metavar "FILEPATH"
+        <> help "The filepath to the genesis file."
+    )
 
-parseCommonCLI' :: Parser PartialCardanoConfiguration
-parseCommonCLI' = do
-   dbPath  <- lastStrOption
-                ( long "database-path"
-                <> metavar "FILEPATH"
-                <> help "Directory where the state is stored."
-                )
-   genPath <- lastStrOption
-                ( long "genesis-file"
-                <> metavar "FILEPATH"
-                <> help "The filepath to the genesis file."
-                )
-   genHash <- lastStrOption
-                ( long "genesis-hash"
-                <> metavar "GENESIS-HASH"
-                <> help "The genesis hash value."
-                )
-   delCert <- lastStrOption
-                ( long "delegation-certificate"
-                <> metavar "FILEPATH"
-                <> help "Path to the delegation certificate."
-                )
-   sKey <- lastStrOption
-             ( long "signing-key"
-             <> metavar "FILEPATH"
-             <> help "Path to the signing key."
-             )
-   socketDir <- lastStrOption
-                  ( long "socket-dir"
-                  <> metavar "FILEPATH"
-                  <> help "Directory with local sockets:\
-                          \  ${dir}/node-{core,relay}-${node-id}.socket"
-                  )
-   pure $ mempty { pccDBPath = dbPath
-                 , pccSocketDir = socketDir
-                 , pccCore = mempty { pcoGenesisFile = genPath
-                                    , pcoGenesisHash = genHash
-                                    , pcoStaticKeyDlgCertFile = delCert
-                                    , pcoStaticKeySigningKeyFile = sKey
-                                    }
-                 }
+parseGenesisHash :: Parser (Last Text)
+parseGenesisHash =
+  lastStrOption
+    ( long "genesis-hash"
+        <> metavar "GENESIS-HASH"
+        <> help "The genesis hash value."
+    )
+parseDelegationeCert :: Parser (Last FilePath)
+parseDelegationeCert =
+  lastStrOption
+    ( long "delegation-certificate"
+        <> metavar "FILEPATH"
+        <> help "Path to the delegation certificate."
+    )
+
+parseSigningKey :: Parser (Last FilePath)
+parseSigningKey =
+  lastStrOption
+    ( long "signing-key"
+        <> metavar "FILEPATH"
+        <> help "Path to the signing key."
+    )
+
+parseSocketDir :: Parser (Last FilePath)
+parseSocketDir =
+  lastStrOption
+    ( long "socket-dir"
+        <> metavar "FILEPATH"
+        <> help "Directory with local sockets:\
+                \  ${dir}/node-{core,relay}-${node-id}.socket"
+    )
 
 -- | CLI Arguments common to all Cardano node flavors
 parseCommonCLI :: Parser CommonCLI
@@ -137,35 +149,33 @@ parseCommonCLI =
          <> help "Directory with local sockets:  ${dir}/node-{core,relay}-${node-id}.socket"
         )
 
-parseCommonCLIAdvanced' :: Parser PartialCardanoConfiguration
-parseCommonCLIAdvanced' = do
-    pbftSigThresh <- lastDoubleOption
-                       ( long "pbft-signature-threshold"
-                       <> metavar "DOUBLE"
-                       <> help "The PBFT signature threshold."
-                       <> hidden
-                       )
-    reqNetMagic <- lastFlag NoRequireNetworkMagic RequireNetworkMagic
-                     ( long "require-network-magic"
-                     <> help "Require network magic in transactions."
-                     <> hidden
-                     )
-    slotDur <- lastAutoOption
-                        ( long "slot-duration"
+parsePbftSigThreshold :: Parser (Last Double)
+parsePbftSigThreshold =
+  lastDoubleOption
+    ( long "pbft-signature-threshold"
+        <> metavar "DOUBLE"
+        <> help "The PBFT signature threshold."
+        <> hidden
+    )
+parseRequireNetworkMagic :: Parser (Last RequireNetworkMagic)
+parseRequireNetworkMagic =
+  lastFlag NoRequireNetworkMagic RequireNetworkMagic
+    ( long "require-network-magic"
+        <> help "Require network magic in transactions."
+        <> hidden
+    )
+parseSlotLength :: Parser (Last Consensus.SlotLength)
+parseSlotLength = do
+  slotDurInteger <- lastAutoOption
+                      ( long "slot-duration"
                           <> metavar "SECONDS"
                           <> help "The slot duration (seconds)"
                           <> hidden
-                        )
-    pure $ mempty { pccCore = mempty { pcoPBftSigThd = pbftSigThresh
-                                     , pcoRequiresNetworkMagic = reqNetMagic
-                                     }
-                  , pccNode = mempty { pnoSlotLength = mkSlotLength <$> slotDur }
-
-                  }
-  where
-    mkSlotLength :: Integer -> Consensus.SlotLength
-    mkSlotLength = Consensus.slotLengthFromMillisec . (* 1000)
-
+                      )
+  pure $ mkSlotLength <$> slotDurInteger
+ where
+  mkSlotLength :: Integer -> Consensus.SlotLength
+  mkSlotLength sI = Consensus.slotLengthFromMillisec $ 1000 * sI
 
 -- | These are advanced options, and so are hidden by default.
 parseCommonCLIAdvanced :: Parser CommonCLIAdvanced
@@ -247,6 +257,7 @@ lastStrOptionM args = Last . Just <$> strOption args
 -- | Perform merging of layers of configuration, but for now, only in a trivial way,
 --   just for Cardano.Shell.Constants.Types.{Genesis,StaticKeyMaterial}.
 --   We expect this process to become generic at some point.
+-- TODO: To remove
 mergeConfiguration
   :: PartialCardanoConfiguration
   -> CommonCLI
@@ -280,11 +291,12 @@ mergeConfiguration pcc cli cca =
              , pccSocketDir = cliSocketDir cc
              }
 
+-- TODO: To remove
 mkConfiguration
   :: PartialCardanoConfiguration
   -> CommonCLI
   -> CommonCLIAdvanced
   -> Either ConfigError CardanoConfiguration
 mkConfiguration partialConfig cli cca =
-    finaliseCardanoConfiguration $
+    mkCardanoConfiguration $
     mergeConfiguration partialConfig cli cca

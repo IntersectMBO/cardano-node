@@ -1,36 +1,39 @@
+{-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 
+import           Cardano.Prelude hiding (option)
 import           Prelude (String, read)
 
 import qualified Data.IP as IP
 import           Data.Semigroup ((<>))
 import           Network.Socket (PortNumber)
 import           Options.Applicative ( Parser, auto, flag, help, long
-                                     , metavar, option, str, value
-                                     )
+                                     , metavar, option, str, value)
 import qualified Options.Applicative as Opt
 
-import           Cardano.Config.Partial (PartialCardanoConfiguration (..), finaliseCardanoConfiguration)
-import           Cardano.Config.Types (CardanoEnvironment (..))
-import           Cardano.Config.Presets (mainnetConfiguration)
-import           Cardano.Config.Logging (LoggingCLIArguments (..),
-                                                createLoggingFeature
-                                                )
-import           Cardano.Node.Features.Node
-import           Cardano.Prelude hiding (option)
 import           Cardano.Shell.Lib (runCardanoApplicationWithFeatures)
 import           Cardano.Shell.Types (CardanoApplication (..),
                                       CardanoFeature (..),)
+import qualified Ouroboros.Consensus.BlockchainTime as Consensus
 
-import           Cardano.Config.CommonCLI
 import           Cardano.Common.Help
 import           Cardano.Common.Parsers
+import           Cardano.Common.Protocol
+import           Cardano.Config.CommonCLI
+import           Cardano.Config.Logging (LoggingCLIArguments (..),
+                                         createLoggingFeature)
+import           Cardano.Config.Partial (PartialCardanoConfiguration (..),
+                                         PartialCore (..), PartialNode (..),
+                                         mkCardanoConfiguration)
+import           Cardano.Config.Presets (mainnetConfiguration)
+import           Cardano.Config.Types (CardanoEnvironment (..), RequireNetworkMagic)
+import           Cardano.Node.Configuration.Topology (NodeAddress (..), TopologyInfo)
+import           Cardano.Node.Features.Node
 import           Cardano.Node.Run
-import           Cardano.Node.Configuration.Topology (NodeAddress (..))
 import           Cardano.Tracing.Tracers
 
 main :: IO ()
@@ -53,7 +56,8 @@ main = do
 
       opts :: Opt.ParserInfo NodeCLI
       opts =
-        Opt.info (cliParser
+        Opt.info (nodeCliParser
+                  <**> helperBrief "help" "Show this help text" nodeCliHelpMain
                   <**> helperBrief "help-tracing" "Show help for tracing options" cliHelpTracing
                   <**> helperBrief "help-advanced" "Show help for advanced options" cliHelpAdvanced)
           ( Opt.fullDesc <>
@@ -64,6 +68,12 @@ main = do
       helperBrief l d helpText = Opt.abortOption (Opt.InfoMsg helpText) $ mconcat
         [ Opt.long l
         , Opt.help d ]
+
+      nodeCliHelpMain :: String
+      nodeCliHelpMain = renderHelpDoc 80 $
+        parserHelpHeader "cardano-node" nodeCliParser
+        <$$> ""
+        <$$> parserHelpOptions nodeCliParser
 
       cliHelpTracing :: String
       cliHelpTracing = renderHelpDoc 80 $
@@ -82,25 +92,27 @@ initializeAllFeatures
   -> PartialCardanoConfiguration
   -> CardanoEnvironment
   -> IO ([CardanoFeature], NodeLayer)
-initializeAllFeatures (NodeCLI nodeCLI logCLI commonCLI traceOpts commonCLIAdv)
-                      partialConfig cardanoEnvironment = do
-    -- Considerations:
-    -- 1. the CLI parser data structures must be grouped to accomodate help sectioning.
-    -- 2. from #1 it follows we either switch all code users to the same structure, or
-    --    we implement conversion (which will need to be maintained).
-    -- 3. we want to enforce a single point where we go from GOM config layers to
-    --    'CardanoConfiguration' -- so the users are not exposed to un-merged layers.
-    --    This is probably the best place for this to happen.
-    finalConfig <- case finaliseCardanoConfiguration $ partialConfig <> commonCLI <> commonCLIAdv of
+initializeAllFeatures (NodeCLI topInfo nodeAddr protocol vMode logCLI traceOpts parsedPcc)
+                      partialConfigPreset cardanoEnvironment = do
+
+    -- `partialConfigPreset` and `parsedPcc` are merged then checked here using
+    -- the partial options monoid approach.
+    -- https://medium.com/@jonathangfischoff/the-partial-options-monoid-pattern-31914a71fc67
+    finalConfig <- case mkCardanoConfiguration $ partialConfigPreset <> parsedPcc of
                      Left e -> throwIO e
                      Right x -> pure x
 
     (loggingLayer, loggingFeature) <- createLoggingFeature cardanoEnvironment finalConfig logCLI
     (nodeLayer   , nodeFeature)    <-
       createNodeFeature
-        loggingLayer nodeCLI
+        loggingLayer
+        topInfo
+        nodeAddr
+        protocol
+        vMode
         traceOpts
-        cardanoEnvironment finalConfig
+        cardanoEnvironment
+        finalConfig
 
     pure ([ loggingFeature
           , nodeFeature
@@ -111,27 +123,76 @@ initializeAllFeatures (NodeCLI nodeCLI logCLI commonCLI traceOpts commonCLIAdv)
 -- Parsers & Types
 -------------------------------------------------------------------------------
 
-data NodeCLI = NodeCLI !NodeArgs !LoggingCLIArguments !PartialCardanoConfiguration !TraceOptions !PartialCardanoConfiguration
+-- TODO: Condense `NodeCLI` into one big `PartialCardanoConfiguration`
+data NodeCLI = NodeCLI
+                !TopologyInfo
+                !NodeAddress
+                !Protocol
+                !ViewMode
+                !LoggingCLIArguments
+                !TraceOptions
+                !PartialCardanoConfiguration
 
 -- | The product parser for all the CLI arguments.
-cliParser :: Parser NodeCLI
-cliParser = NodeCLI
-  <$> parseNodeArgs
-  <*> loggingParser
-  <*> parseCommonCLI'
-  <*> cliTracingParser
-  <*> parseCommonCLIAdvanced'
+nodeCliParser :: Parser NodeCLI
+nodeCliParser = do
+  topInfo <- parseTopologyInfo "PBFT node ID to assume."
+  nAddr <- parseNodeAddress
+  ptcl <- parseProtocol
+  vMode <- parseViewMode
+  logCliArgs <- loggingParser
+  dbPath <- parseDbPath
+  genPath <- parseGenesisPath
+  genHash <- parseGenesisHash
+  delCert <- parseDelegationeCert
+  sKey <- parseSigningKey
+  socketDir <- parseSocketDir
+  traceOptions <- cliTracingParser
+  pbftSigThresh <- parsePbftSigThreshold
+  reqNetMagic <- parseRequireNetworkMagic
+  slotLength <- parseSlotLength
+
+  pure $ NodeCLI topInfo nAddr ptcl vMode logCliArgs traceOptions
+         (createPcc dbPath socketDir genPath genHash delCert
+                   sKey pbftSigThresh reqNetMagic slotLength)
+ where
+  -- This merges the command line parsed values into one `PartialCardanoconfiguration`.
+  createPcc
+    :: Last FilePath
+    -> Last FilePath
+    -> Last FilePath
+    -> Last Text
+    -> Last FilePath
+    -> Last FilePath
+    -> Last Double
+    -> Last RequireNetworkMagic
+    -> Last Consensus.SlotLength
+    -> PartialCardanoConfiguration
+  createPcc
+    dbPath
+    socketDir
+    genPath
+    genHash
+    delCert
+    sKey
+    pbftSigThresh
+    reqNetMagic
+    slotLength = mempty { pccDBPath = dbPath
+                        , pccSocketDir = socketDir
+                        , pccCore = mempty { pcoGenesisFile = genPath
+                                           , pcoGenesisHash = genHash
+                                           , pcoStaticKeyDlgCertFile = delCert
+                                           , pcoStaticKeySigningKeyFile = sKey
+                                           , pcoPBftSigThd = pbftSigThresh
+                                           , pcoRequiresNetworkMagic = reqNetMagic
+                                           }
+                        , pccNode = mempty { pnoSlotLength = slotLength }
+                        }
+
+
 
 cliTracingParser :: Parser TraceOptions
 cliTracingParser = parseTraceOptions Opt.hidden
-
-parseNodeArgs :: Parser NodeArgs
-parseNodeArgs =
-  NodeArgs
-    <$> parseTopologyInfo "PBFT node ID to assume."
-    <*> parseNodeAddress
-    <*> parseProtocol
-    <*> parseViewMode
 
 parseNodeAddress :: Parser NodeAddress
 parseNodeAddress = NodeAddress <$> parseHostAddr <*> parsePort

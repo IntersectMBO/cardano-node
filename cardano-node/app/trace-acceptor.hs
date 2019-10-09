@@ -32,7 +32,7 @@ main = do
 
   let cardanoApplication =
         CardanoApplication . liftIO $ runTraceAcceptor loggingLayer
-        
+
   runCardanoApplicationWithFeatures [loggingFeature] cardanoApplication
   where
     pcc :: PartialCardanoConfiguration
@@ -46,7 +46,7 @@ main = do
 
     opts :: Opt.ParserInfo (CommonCLI, CommonCLIAdvanced, LoggingCLIArguments)
     opts =
-      Opt.info (cliParser <**> Opt.helper)
+      Opt.info (nodeCliParser <**> Opt.helper)
         ( Opt.fullDesc
           <> Opt.header
           "trace-acceptor - utility to support a variety of key\
@@ -54,8 +54,8 @@ main = do
           \ pretty-printing..) for different system generations."
         )
 
-    cliParser :: Parser (CommonCLI, CommonCLIAdvanced, LoggingCLIArguments)
-    cliParser = (,,)
+    nodeCliParser :: Parser (CommonCLI, CommonCLIAdvanced, LoggingCLIArguments)
+    nodeCliParser = (,,)
       <$> parseCommonCLI
       <*> parseCommonCLIAdvanced
       <*> loggingParser

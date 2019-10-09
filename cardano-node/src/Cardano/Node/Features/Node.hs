@@ -8,9 +8,11 @@ module Cardano.Node.Features.Node
 
 import           Cardano.Prelude
 
+import           Cardano.Common.Protocol (Protocol)
 import           Cardano.Config.Types (CardanoConfiguration (..),
                                        CardanoEnvironment (..))
 import           Cardano.Config.Logging (LoggingLayer (..),)
+import           Cardano.Node.Configuration.Topology (NodeAddress, TopologyInfo)
 import           Cardano.Node.Run
 import           Cardano.Shell.Types (CardanoFeature (..))
 import           Cardano.Tracing.Tracers
@@ -31,12 +33,16 @@ data NodeLayer = NodeLayer
 
 createNodeFeature
   :: LoggingLayer
-  -> NodeArgs
+  -> TopologyInfo
+  -> NodeAddress
+  -> Protocol
+  -> ViewMode
   -> TraceOptions
   -> CardanoEnvironment
   -> CardanoConfiguration
   -> IO (NodeLayer, CardanoFeature)
-createNodeFeature loggingLayer nodeCLI traceOptions cardanoEnvironment cardanoConfiguration = do
+createNodeFeature loggingLayer topInfo nAddr protocol vMode traceOptions
+                  cardanoEnvironment cardanoConfiguration = do
     -- we parse any additional configuration if there is any
     -- We don't know where the user wants to fetch the additional
     -- configuration from, it could be from the filesystem, so
@@ -47,7 +53,10 @@ createNodeFeature loggingLayer nodeCLI traceOptions cardanoEnvironment cardanoCo
                    cardanoEnvironment
                    loggingLayer
                    cardanoConfiguration
-                   nodeCLI
+                   topInfo
+                   nAddr
+                   protocol
+                   vMode
                    traceOptions
 
     -- Construct the cardano feature
@@ -65,10 +74,14 @@ createNodeFeature loggingLayer nodeCLI traceOptions cardanoEnvironment cardanoCo
       :: CardanoEnvironment
       -> LoggingLayer
       -> CardanoConfiguration
-      -> NodeArgs
+      -> TopologyInfo
+      -> NodeAddress
+      -> Protocol
+      -> ViewMode
       -> TraceOptions
       -> IO NodeLayer
-    createNodeLayer _ logLayer cc nodeArgs traceOpts = do
+    createNodeLayer _ logLayer cc topologyInfo nodeAddr ptcl viewMode traceOpts = do
         pure $ NodeLayer
-          { nlRunNode = liftIO $ runNode nodeArgs logLayer traceOpts cc
+          { nlRunNode = liftIO $ runNode topologyInfo nodeAddr ptcl
+                                         viewMode logLayer traceOpts cc
           }
