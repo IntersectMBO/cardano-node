@@ -161,23 +161,41 @@ genesisBenchmarkRunner loggingLayer
 
   let (benchTracer, connectTracer, submitTracer, lowLevelSubmitTracer) = createTracers loggingLayer
 
+  liftIO . traceWith benchTracer . TraceBenchTxSubDebug
+    $ "******* Tx generator, tracers are ready *******"
+
   (topologyFromFile, ProtocolInfo{pInfoConfig}) <- prepareProtocolInfo protocol topologyInfo
+
+  liftIO . traceWith benchTracer . TraceBenchTxSubDebug
+    $ "******* Tx generator, protocol info and topology are ready *******"
 
   -- We have to extract host and port of the node we talk
   -- with (based on value of `-n` CLI argument) from the topology file.
   let eitherNodeAddress = createNodeAddress (node topologyInfo) topologyFromFile (topologyFile topologyInfo)
   targetNodeAddress <- firstExceptT TargetNodeAddressError . hoistEither $ eitherNodeAddress
 
+  liftIO . traceWith benchTracer . TraceBenchTxSubDebug
+    $ "******* Tx generator, target node's address is ready *******"
+
   -- 'genesisKey' is for genesis address with initial amount of money (1.4 billion ADA for now).
   -- 'sourceKey' is for source address that we'll use as a source of money for next transactions.
   -- 'recepientKey' is for recipient address that we'll use as an output for next transactions.
   (genesisKey:sourceKey:recepientKey:_) <- prepareSigningKeys signingKeyFiles
 
+  liftIO . traceWith benchTracer . TraceBenchTxSubDebug
+    $ "******* Tx generator, signing keys are ready *******"
+
   let genesisUtxo = extractGenesisFunds genesisConfig [genesisKey]
+
+  liftIO . traceWith benchTracer . TraceBenchTxSubDebug
+    $ "******* Tx generator, genesis UTxO is ready *******"
 
   let genesisAddress   = mkAddressForKey pInfoConfig genesisKey
       sourceAddress    = mkAddressForKey pInfoConfig sourceKey
       recipientAddress = mkAddressForKey pInfoConfig recepientKey
+
+  liftIO . traceWith benchTracer . TraceBenchTxSubDebug
+    $ "******* Tx generator, addresses are ready *******"
 
   -- We have to prepare an initial funds (it's the money we'll send from 'genesisAddress' to
   -- 'sourceAddress'), this will be our very first transaction.
@@ -191,6 +209,9 @@ genesisBenchmarkRunner loggingLayer
              genesisAddress
              sourceAddress
              txFee
+
+  liftIO . traceWith benchTracer . TraceBenchTxSubDebug
+    $ "******* Tx generator, initial funds are prepared (sent to sourceAddress) *******"
 
   -- Check if no transactions needed...
   when (rawNumOfTxs > 0) $
@@ -682,6 +703,9 @@ runBenchmark benchTracer
               txFee
               numOfTxs
               numOfOutsPerTx
+
+  liftIO . traceWith benchTracer . TraceBenchTxSubDebug
+    $ "******* Tx generator, launch submission threads... *******"
 
   -- Launch tx submission threads.
   liftIO $ launchTxPeer
