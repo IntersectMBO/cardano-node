@@ -1,3 +1,4 @@
+{-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE NamedFieldPuns #-}
 
 {-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
@@ -6,7 +7,9 @@ module Cardano.Config.CommonCLI
   ( CommonCLI(..)
   , CommonCLIAdvanced(..)
   , parseCommonCLI
+  , parseCommonCLI'
   , parseCommonCLIAdvanced
+  , parseCommonCLIAdvanced'
   , mergeConfiguration
   , mkConfiguration
    -- * Generic
@@ -56,6 +59,49 @@ data CommonCLIAdvanced = CommonCLIAdvanced
   Common CLI
 -------------------------------------------------------------------------------}
 
+
+parseCommonCLI' :: Parser PartialCardanoConfiguration
+parseCommonCLI' = do
+   dbPath  <- lastStrOption
+                ( long "database-path"
+                <> metavar "FILEPATH"
+                <> help "Directory where the state is stored."
+                )
+   genPath <- lastStrOption
+                ( long "genesis-file"
+                <> metavar "FILEPATH"
+                <> help "The filepath to the genesis file."
+                )
+   genHash <- lastStrOption
+                ( long "genesis-hash"
+                <> metavar "GENESIS-HASH"
+                <> help "The genesis hash value."
+                )
+   delCert <- lastStrOption
+                ( long "delegation-certificate"
+                <> metavar "FILEPATH"
+                <> help "Path to the delegation certificate."
+                )
+   sKey <- lastStrOption
+             ( long "signing-key"
+             <> metavar "FILEPATH"
+             <> help "Path to the signing key."
+             )
+   socketDir <- lastStrOption
+                  ( long "socket-dir"
+                  <> metavar "FILEPATH"
+                  <> help "Directory with local sockets:\
+                          \  ${dir}/node-{core,relay}-${node-id}.socket"
+                  )
+   pure $ mempty { pccDBPath = dbPath
+                 , pccSocketDir = socketDir
+                 , pccCore = mempty { pcoGenesisFile = genPath
+                                    , pcoGenesisHash = genHash
+                                    , pcoStaticKeyDlgCertFile = delCert
+                                    , pcoStaticKeySigningKeyFile = sKey
+                                    }
+                 }
+
 -- | CLI Arguments common to all Cardano node flavors
 parseCommonCLI :: Parser CommonCLI
 parseCommonCLI =
@@ -90,6 +136,36 @@ parseCommonCLI =
          <> metavar "FILEPATH"
          <> help "Directory with local sockets:  ${dir}/node-{core,relay}-${node-id}.socket"
         )
+
+parseCommonCLIAdvanced' :: Parser PartialCardanoConfiguration
+parseCommonCLIAdvanced' = do
+    pbftSigThresh <- lastDoubleOption
+                       ( long "pbft-signature-threshold"
+                       <> metavar "DOUBLE"
+                       <> help "The PBFT signature threshold."
+                       <> hidden
+                       )
+    reqNetMagic <- lastFlag NoRequireNetworkMagic RequireNetworkMagic
+                     ( long "require-network-magic"
+                     <> help "Require network magic in transactions."
+                     <> hidden
+                     )
+    slotDur <- lastAutoOption
+                        ( long "slot-duration"
+                          <> metavar "SECONDS"
+                          <> help "The slot duration (seconds)"
+                          <> hidden
+                        )
+    pure $ mempty { pccCore = mempty { pcoPBftSigThd = pbftSigThresh
+                                     , pcoRequiresNetworkMagic = reqNetMagic
+                                     }
+                  , pccNode = mempty { pnoSlotLength = mkSlotLength <$> slotDur }
+
+                  }
+  where
+    mkSlotLength :: Integer -> Consensus.SlotLength
+    mkSlotLength = Consensus.slotLengthFromMillisec . (* 1000)
+
 
 -- | These are advanced options, and so are hidden by default.
 parseCommonCLIAdvanced :: Parser CommonCLIAdvanced

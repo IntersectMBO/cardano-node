@@ -14,7 +14,7 @@ import           Options.Applicative ( Parser, auto, flag, help, long
                                      )
 import qualified Options.Applicative as Opt
 
-import           Cardano.Config.Partial (PartialCardanoConfiguration (..))
+import           Cardano.Config.Partial (PartialCardanoConfiguration (..), finaliseCardanoConfiguration)
 import           Cardano.Config.Types (CardanoEnvironment (..))
 import           Cardano.Config.Presets (mainnetConfiguration)
 import           Cardano.Config.Logging (LoggingCLIArguments (..),
@@ -51,10 +51,9 @@ main = do
       cardanoApplication :: NodeLayer -> CardanoApplication
       cardanoApplication = CardanoApplication . nlRunNode
 
-      opts :: Opt.ParserInfo CLI
+      opts :: Opt.ParserInfo NodeCLI
       opts =
         Opt.info (cliParser
-                  <**> helperBrief "help" "Show this help text" cliHelpMain
                   <**> helperBrief "help-tracing" "Show help for tracing options" cliHelpTracing
                   <**> helperBrief "help-advanced" "Show help for advanced options" cliHelpAdvanced)
           ( Opt.fullDesc <>
@@ -65,12 +64,6 @@ main = do
       helperBrief l d helpText = Opt.abortOption (Opt.InfoMsg helpText) $ mconcat
         [ Opt.long l
         , Opt.help d ]
-
-      cliHelpMain :: String
-      cliHelpMain = renderHelpDoc 80 $
-        parserHelpHeader "cardano-node" cliParserMain
-        <$$> ""
-        <$$> parserHelpOptions cliParserMain
 
       cliHelpTracing :: String
       cliHelpTracing = renderHelpDoc 80 $
@@ -85,18 +78,12 @@ main = do
         <$$> parserHelpOptions parseCommonCLIAdvanced
 
 initializeAllFeatures
-  :: CLI
+  :: NodeCLI
   -> PartialCardanoConfiguration
   -> CardanoEnvironment
   -> IO ([CardanoFeature], NodeLayer)
-initializeAllFeatures (CLI (CLIMain nodeCLI logCLI commonCLI) traceOpts commonCLIAdv)
+initializeAllFeatures (NodeCLI nodeCLI logCLI commonCLI traceOpts commonCLIAdv)
                       partialConfig cardanoEnvironment = do
-    -- TODO: we have to execute on our decision to implement the
-    -- generalised options monoid (GOM), to serve the purposes of composition
-    -- of the three config layers:  presets, config files and CLI.
-    -- Currently we have a mish-mash (see createNodeFeature accepting both
-    -- 'finalConfig' and nodeCli/traceCLI/advancedCLI). Yuck!
-    --
     -- Considerations:
     -- 1. the CLI parser data structures must be grouped to accomodate help sectioning.
     -- 2. from #1 it follows we either switch all code users to the same structure, or
@@ -104,9 +91,9 @@ initializeAllFeatures (CLI (CLIMain nodeCLI logCLI commonCLI) traceOpts commonCL
     -- 3. we want to enforce a single point where we go from GOM config layers to
     --    'CardanoConfiguration' -- so the users are not exposed to un-merged layers.
     --    This is probably the best place for this to happen.
-    finalConfig <- case mkConfiguration partialConfig commonCLI commonCLIAdv of
-      Left e -> throwIO e
-      Right x -> pure x
+    finalConfig <- case finaliseCardanoConfiguration $ partialConfig <> commonCLI <> commonCLIAdv of
+                     Left e -> throwIO e
+                     Right x -> pure x
 
     (loggingLayer, loggingFeature) <- createLoggingFeature cardanoEnvironment finalConfig logCLI
     (nodeLayer   , nodeFeature)    <-
@@ -124,25 +111,19 @@ initializeAllFeatures (CLI (CLIMain nodeCLI logCLI commonCLI) traceOpts commonCL
 -- Parsers & Types
 -------------------------------------------------------------------------------
 
-data CLI = CLI !CLIMain !TraceOptions !CommonCLIAdvanced
-
-data CLIMain = CLIMain !NodeArgs !LoggingCLIArguments !CommonCLI
+data NodeCLI = NodeCLI !NodeArgs !LoggingCLIArguments !PartialCardanoConfiguration !TraceOptions !PartialCardanoConfiguration
 
 -- | The product parser for all the CLI arguments.
-cliParser :: Parser CLI
-cliParser = CLI
-  <$> cliParserMain
+cliParser :: Parser NodeCLI
+cliParser = NodeCLI
+  <$> parseNodeArgs
+  <*> loggingParser
+  <*> parseCommonCLI'
   <*> cliTracingParser
-  <*> parseCommonCLIAdvanced
+  <*> parseCommonCLIAdvanced'
 
 cliTracingParser :: Parser TraceOptions
 cliTracingParser = parseTraceOptions Opt.hidden
-
-cliParserMain :: Parser CLIMain
-cliParserMain = CLIMain
-  <$> parseNodeArgs
-  <*> loggingParser
-  <*> parseCommonCLI
 
 parseNodeArgs :: Parser NodeArgs
 parseNodeArgs =
