@@ -22,6 +22,7 @@ let
       stateDir = "./";
       # defaults to proxy if env has no relays
       edgeHost = "127.0.0.1";
+      edgeNodes = [];
       edgePort = 3001;
       useProxy = false;
       proxyPort = 7777;
@@ -32,9 +33,10 @@ let
     topologyFile = let
       edgePort = if config.useProxy then config.proxyPort else config.edgePort;
       edgeHost = if config.useProxy then config.proxyHost else config.edgeHost;
+      edgeNodes = if config.useProxy then [] else config.edgeNodes;
     in config.topologyFile or commonLib.mkEdgeTopology {
       inherit (config) hostAddr port nodeId;
-      inherit edgeHost edgePort;
+      inherit edgeNodes edgeHost edgePort;
     };
     serviceConfig = {
       inherit (config)

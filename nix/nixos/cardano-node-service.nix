@@ -175,8 +175,8 @@ in {
       topology = mkOption {
         type = types.path;
         default = mkEdgeTopology {
-          inherit (cfg) hostAddr nodeId port;
-          edgeHost = envConfig.edgeHost or "127.0.0.1";
+          inherit (cfg) nodeId port;
+          inherit (envConfig) edgeNodes;
         };
         description = ''
           Cluster topology
