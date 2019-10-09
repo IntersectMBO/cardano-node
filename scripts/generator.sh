@@ -2,13 +2,12 @@
 
 CMD="cabal new-run -v0 -- cardano-cli "
 
-genesis="33873"
+genesis="b0109"
 genesis_root="configuration/${genesis}"
 genesis_file="${genesis_root}/genesis.json"
 if test ! -f "${genesis_file}"
 then echo "ERROR: genesis ${genesis_file} does not exist!">&1; exit 1; fi
-genesis_hash="$(${CMD} --log-config configuration/log-configuration.yaml --real-pbft print-genesis-hash --genesis-json ${genesis_file})"
-
+genesis_hash="b010944818186e0f1e4094d41b0612240f61908a5a262080c0be5d63ebd4766b"
 
 NOW=`date "+%Y-%m-%d 00:00:00"`
 NETARGS=(
