@@ -16,7 +16,6 @@
 
 module Cardano.Node.Run
   ( runNode
-  , NodeArgs(..)
   , ViewMode(..)
   )
 where
@@ -87,15 +86,22 @@ instance NoUnexpectedThunks Peer where
     showTypeOf _ = "Peer"
     whnfNoUnexpectedThunks _ctxt _act = return NoUnexpectedThunks
 
-data NodeArgs = NodeArgs !TopologyInfo !NodeAddress !Protocol !ViewMode
 
 -- Node can be run in two modes.
 data ViewMode =
     LiveView    -- Live mode with TUI
   | SimpleView  -- Simple mode, just output text.
 
-runNode :: NodeArgs -> LoggingLayer -> TraceOptions -> CardanoConfiguration -> IO ()
-runNode (NodeArgs topology myNodeAddress protocol viewMode) loggingLayer traceOptions cc = do
+runNode
+  :: TopologyInfo
+  -> NodeAddress
+  -> Protocol
+  -> ViewMode
+  -> LoggingLayer
+  -> TraceOptions
+  -> CardanoConfiguration
+  -> IO ()
+runNode topology myNodeAddress protocol viewMode loggingLayer traceOptions cc = do
     let !tr = llAppendName loggingLayer "node" (llBasicTrace loggingLayer)
     let trace'      = appendName (pack $ show $ node topology) tr
     let tracer      = contramap pack $ toLogObject trace'

@@ -22,7 +22,7 @@ module Cardano.Config.Partial
     -- * re-exports
     , RequireNetworkMagic (..)
     , NodeProtocol (..)
-    , finaliseCardanoConfiguration
+    , mkCardanoConfiguration
     ) where
 
 import           Prelude (String)
@@ -208,58 +208,56 @@ data PartialWallet = PartialWallet
 
 
 -- | Return an error if the @Last@ option is incomplete.
-checkComplete :: String -> Last a -> Either ConfigError a
-checkComplete name (Last x) = maybe (Left $ PartialConfigValue name) Right x
+mkComplete :: String -> Last a -> Either ConfigError a
+mkComplete name (Last x) = maybe (Left $ PartialConfigValue name) Right x
 
---
--- The finalise* family of functions are supposed to be called at the very last stage
--- in the partial options monoid approach, after all the parametrisation layers have been merged,
--- and we're intending to use the resultant config -- they ensure that all values are defined.
---
--- NOTE: we should look into applying generic programming and/or TH for this boilerlate.
---
-finaliseCardanoConfiguration :: PartialCardanoConfiguration -> Either ConfigError CardanoConfiguration
-finaliseCardanoConfiguration PartialCardanoConfiguration{..} = do
+-- This utilizes the mk* family of functions to make sure we have all
+-- the required configuration values which then allows us to create a
+-- 'CardanoConfiguration' value. This is called at the last stage of the
+-- Partial Options Monoid approach.
+-- https://medium.com/@jonathangfischoff/the-partial-options-monoid-pattern-31914a71fc67
+mkCardanoConfiguration :: PartialCardanoConfiguration -> Either ConfigError CardanoConfiguration
+mkCardanoConfiguration PartialCardanoConfiguration{..} = do
 
-    ccLogPath                <- checkComplete "ccLogPath"    pccLogPath
-    ccLogConfig              <- checkComplete "ccLogConfig"  pccLogConfig
-    ccDBPath                 <- checkComplete "ccDBPath"     pccDBPath
-    ccSocketDir              <- checkComplete "ccSocketPath" pccSocketDir
-    ccApplicationLockFile    <- checkComplete "ccApplicationLockFile"
+    ccLogPath                <- mkComplete "ccLogPath"    pccLogPath
+    ccLogConfig              <- mkComplete "ccLogConfig"  pccLogConfig
+    ccDBPath                 <- mkComplete "ccDBPath"     pccDBPath
+    ccSocketDir              <- mkComplete "ccSocketPath" pccSocketDir
+    ccApplicationLockFile    <- mkComplete "ccApplicationLockFile"
                                     pccApplicationLockFile
 
-    ccCore                   <- finaliseCore pccCore
-    ccNTP                    <- finaliseNTP pccNTP
-    ccUpdate                 <- finaliseUpdate pccUpdate
-    ccTXP                    <- finaliseTXP pccTXP
-    ccDLG                    <- finaliseDLG pccDLG
-    ccBlock                  <- finaliseBlock pccBlock
-    ccNode                   <- finaliseNode pccNode
-    ccTLS                    <- finaliseTLS pccTLS
-    ccWallet                 <- finaliseWallet pccWallet
+    ccCore                   <- mkCore pccCore
+    ccNTP                    <- mkNTP pccNTP
+    ccUpdate                 <- mkUpdate pccUpdate
+    ccTXP                    <- mkTXP pccTXP
+    ccDLG                    <- mkDLG pccDLG
+    ccBlock                  <- mkBlock pccBlock
+    ccNode                   <- mkNode pccNode
+    ccTLS                    <- mkTLS pccTLS
+    ccWallet                 <- mkWallet pccWallet
 
     pure CardanoConfiguration{..}
   where
     -- | Finalize the @PartialCore@, convert to @Core@.
-    finaliseCore :: PartialCore -> Either ConfigError Core
-    finaliseCore PartialCore{..} = do
+    mkCore :: PartialCore -> Either ConfigError Core
+    mkCore PartialCore{..} = do
 
-        coGenesisFile                   <- checkComplete "coGenesisFile"
+        coGenesisFile                   <- mkComplete "coGenesisFile"
                                             pcoGenesisFile
 
-        coGenesisHash                   <- checkComplete "coGenesisHash"
+        coGenesisHash                   <- mkComplete "coGenesisHash"
                                             pcoGenesisHash
 
         let coNodeId                    = getLast pcoNodeId
         let coNumCoreNodes              = getLast pcoNumCoreNodes
 
-        coNodeProtocol                  <- checkComplete "coNodeProtocol"
+        coNodeProtocol                  <- mkComplete "coNodeProtocol"
                                             pcoNodeProtocol
 
         let coStaticKeySigningKeyFile   = getLast pcoStaticKeySigningKeyFile
         let coStaticKeyDlgCertFile      = getLast pcoStaticKeyDlgCertFile
 
-        coRequiresNetworkMagic          <- checkComplete "coRequiresNetworkMagic"
+        coRequiresNetworkMagic          <- mkComplete "coRequiresNetworkMagic"
                                             pcoRequiresNetworkMagic
 
         let coPBftSigThd                = getLast pcoPBftSigThd
@@ -268,115 +266,115 @@ finaliseCardanoConfiguration PartialCardanoConfiguration{..} = do
 
 
     -- | Finalize the @PartialTXP@, convert to @TXP@.
-    finaliseTXP :: PartialTXP -> Either ConfigError TXP
-    finaliseTXP PartialTXP{..} = do
+    mkTXP :: PartialTXP -> Either ConfigError TXP
+    mkTXP PartialTXP{..} = do
 
-        txpMemPoolLimitTx           <- checkComplete "txpMemPoolLimitTx"
+        txpMemPoolLimitTx           <- mkComplete "txpMemPoolLimitTx"
                                         ptxpMemPoolLimitTx
 
-        txpAssetLockedSrcAddress    <- checkComplete "txpAssetLockedSrcAddress"
+        txpAssetLockedSrcAddress    <- mkComplete "txpAssetLockedSrcAddress"
                                         ptxpAssetLockedSrcAddress
 
         pure TXP{..}
 
     -- | Finalize the @PartialUpdate@, convert to @Update@.
-    finaliseUpdate :: PartialUpdate -> Either ConfigError Update
-    finaliseUpdate PartialUpdate{..} = do
+    mkUpdate :: PartialUpdate -> Either ConfigError Update
+    mkUpdate PartialUpdate{..} = do
 
-        upApplicationName          <- checkComplete "upApplicationName"      pupApplicationName
-        upApplicationVersion       <- checkComplete "upApplicationVersion"   pupApplicationVersion
-        upLastKnownBlockVersion    <- finaliseLastKnownBlockVersion pupLastKnownBlockVersion
+        upApplicationName          <- mkComplete "upApplicationName"      pupApplicationName
+        upApplicationVersion       <- mkComplete "upApplicationVersion"   pupApplicationVersion
+        upLastKnownBlockVersion    <- mkLastKnownBlockVersion pupLastKnownBlockVersion
 
         pure Update{..}
       where
-        finaliseLastKnownBlockVersion :: PartialLastKnownBlockVersion -> Either ConfigError LastKnownBlockVersion
-        finaliseLastKnownBlockVersion PartialLastKnownBlockVersion{..} = do
+        mkLastKnownBlockVersion :: PartialLastKnownBlockVersion -> Either ConfigError LastKnownBlockVersion
+        mkLastKnownBlockVersion PartialLastKnownBlockVersion{..} = do
 
-            lkbvMajor  <- checkComplete "lkbvMajor"     plkbvMajor
-            lkbvMinor  <- checkComplete "lkbvMinor"     plkbvMinor
-            lkbvAlt    <- checkComplete "lkbvAlt"       plkbvAlt
+            lkbvMajor  <- mkComplete "lkbvMajor"     plkbvMajor
+            lkbvMinor  <- mkComplete "lkbvMinor"     plkbvMinor
+            lkbvAlt    <- mkComplete "lkbvAlt"       plkbvAlt
 
             pure LastKnownBlockVersion{..}
 
     -- | Finalize the @PartialNTP@, convert to @NTP@.
-    finaliseNTP :: PartialNTP -> Either ConfigError NTP
-    finaliseNTP PartialNTP{..} = do
+    mkNTP :: PartialNTP -> Either ConfigError NTP
+    mkNTP PartialNTP{..} = do
 
-        ntpResponseTimeout  <- checkComplete "ntpResponseTimeout"    pntpResponseTimeout
-        ntpPollDelay        <- checkComplete "ntpPollDelay"          pntpPollDelay
-        ntpServers          <- checkComplete "ntpServers"            pntpServers
+        ntpResponseTimeout  <- mkComplete "ntpResponseTimeout"    pntpResponseTimeout
+        ntpPollDelay        <- mkComplete "ntpPollDelay"          pntpPollDelay
+        ntpServers          <- mkComplete "ntpServers"            pntpServers
 
         pure NTP{..}
 
     -- | Finalize the @PartialNode@, convert to @Node@.
-    finaliseNode :: PartialNode -> Either ConfigError Node
-    finaliseNode PartialNode{..} = do
+    mkNode :: PartialNode -> Either ConfigError Node
+    mkNode PartialNode{..} = do
 
-        noSlotLength                    <- checkComplete "noSlotLength"
+        noSlotLength                    <- mkComplete "noSlotLength"
                                             pnoSlotLength
 
-        noNetworkConnectionTimeout      <- checkComplete "noNetworkConnectionTimeout"
+        noNetworkConnectionTimeout      <- mkComplete "noNetworkConnectionTimeout"
                                             pnoNetworkConnectionTimeout
 
-        noHandshakeTimeout              <- checkComplete "noHandshakeTimeout"
+        noHandshakeTimeout              <- mkComplete "noHandshakeTimeout"
                                             pnoHandshakeTimeout
 
         pure Node{..}
 
     -- | Finalize the @PartialDLG@, convert to @DLG@.
-    finaliseDLG :: PartialDLG -> Either ConfigError DLG
-    finaliseDLG PartialDLG{..} = do
+    mkDLG :: PartialDLG -> Either ConfigError DLG
+    mkDLG PartialDLG{..} = do
 
-        dlgCacheParam           <- checkComplete "dlgCacheParam"             pdlgCacheParam
-        dlgMessageCacheTimeout  <- checkComplete "dlgMessageCacheTimeout"    pdlgMessageCacheTimeout
+        dlgCacheParam           <- mkComplete "dlgCacheParam"             pdlgCacheParam
+        dlgMessageCacheTimeout  <- mkComplete "dlgMessageCacheTimeout"    pdlgMessageCacheTimeout
 
         pure DLG{..}
 
 
     -- | Finalize the @PartialBlock@, convert to @Block@.
-    finaliseBlock :: PartialBlock -> Either ConfigError Block
-    finaliseBlock PartialBlock{..} = do
+    mkBlock :: PartialBlock -> Either ConfigError Block
+    mkBlock PartialBlock{..} = do
 
-        blNetworkDiameter        <- checkComplete "blNetworkDiameter"        pblNetworkDiameter
-        blRecoveryHeadersMessage <- checkComplete "blRecoveryHeadersMessage" pblRecoveryHeadersMessage
-        blStreamWindow           <- checkComplete "blStreamWindow"           pblStreamWindow
-        blNonCriticalCQBootstrap <- checkComplete "blNonCriticalCQBootstrap" pblNonCriticalCQBootstrap
-        blNonCriticalCQ          <- checkComplete "blNonCriticalCQ"          pblNonCriticalCQ
-        blCriticalCQ             <- checkComplete "blCriticalCQ"             pblCriticalCQ
-        blCriticalCQBootstrap    <- checkComplete "blCriticalCQBootstrap"    pblCriticalCQBootstrap
-        blCriticalForkThreshold  <- checkComplete "blCriticalForkThreshold"  pblCriticalForkThreshold
-        blFixedTimeCQ            <- checkComplete "blFixedTimeCQ"            pblFixedTimeCQ
+        blNetworkDiameter        <- mkComplete "blNetworkDiameter"        pblNetworkDiameter
+        blRecoveryHeadersMessage <- mkComplete "blRecoveryHeadersMessage" pblRecoveryHeadersMessage
+        blStreamWindow           <- mkComplete "blStreamWindow"           pblStreamWindow
+        blNonCriticalCQBootstrap <- mkComplete "blNonCriticalCQBootstrap" pblNonCriticalCQBootstrap
+        blNonCriticalCQ          <- mkComplete "blNonCriticalCQ"          pblNonCriticalCQ
+        blCriticalCQ             <- mkComplete "blCriticalCQ"             pblCriticalCQ
+        blCriticalCQBootstrap    <- mkComplete "blCriticalCQBootstrap"    pblCriticalCQBootstrap
+        blCriticalForkThreshold  <- mkComplete "blCriticalForkThreshold"  pblCriticalForkThreshold
+        blFixedTimeCQ            <- mkComplete "blFixedTimeCQ"            pblFixedTimeCQ
 
         pure Block{..}
 
     -- | Finalize the @PartialCertificate@, convert to @Certificate@.
-    finaliseCertificate :: PartialCertificate -> Either ConfigError Certificate
-    finaliseCertificate PartialCertificate{..} = do
+    mkCertificate :: PartialCertificate -> Either ConfigError Certificate
+    mkCertificate PartialCertificate{..} = do
 
-        certOrganization    <- checkComplete "certOrganization"  pcertOrganization
-        certCommonName      <- checkComplete "certCommonName"    pcertCommonName
-        certExpiryDays      <- checkComplete "certExpiryDays"    pcertExpiryDays
-        certAltDNS          <- checkComplete "certAltDNS"        pcertAltDNS
+        certOrganization    <- mkComplete "certOrganization"  pcertOrganization
+        certCommonName      <- mkComplete "certCommonName"    pcertCommonName
+        certExpiryDays      <- mkComplete "certExpiryDays"    pcertExpiryDays
+        certAltDNS          <- mkComplete "certAltDNS"        pcertAltDNS
 
         pure Certificate{..}
 
     -- | Finalize the @PartialTLS@, convert to @TLS@.
-    finaliseTLS :: PartialTLS -> Either ConfigError TLS
-    finaliseTLS PartialTLS{..} = do
+    mkTLS :: PartialTLS -> Either ConfigError TLS
+    mkTLS PartialTLS{..} = do
 
-        tlsCA       <- finaliseCertificate ptlsCA
-        tlsServer   <- finaliseCertificate ptlsServer
-        tlsClients  <- finaliseCertificate ptlsClients
+        tlsCA       <- mkCertificate ptlsCA
+        tlsServer   <- mkCertificate ptlsServer
+        tlsClients  <- mkCertificate ptlsClients
 
         pure TLS{..}
 
     -- | Finalize the @PartialWallet@, convert to @Wallet@.
-    finaliseWallet :: PartialWallet -> Either ConfigError Wallet
-    finaliseWallet PartialWallet{..} = do
+    mkWallet :: PartialWallet -> Either ConfigError Wallet
+    mkWallet PartialWallet{..} = do
 
-        thEnabled   <- checkComplete "thEnabled" pthEnabled
-        thRate      <- checkComplete "thRate"    pthRate
-        thPeriod    <- checkComplete "thPeriod"  pthPeriod
-        thBurst     <- checkComplete "thBurst"   pthBurst
+        thEnabled   <- mkComplete "thEnabled" pthEnabled
+        thRate      <- mkComplete "thRate"    pthRate
+        thPeriod    <- mkComplete "thPeriod"  pthPeriod
+        thBurst     <- mkComplete "thBurst"   pthBurst
 
         pure Wallet {..}
