@@ -12,7 +12,7 @@ import           Cardano.Common.Protocol (Protocol)
 import           Cardano.Config.Types (CardanoConfiguration (..),
                                        CardanoEnvironment (..))
 import           Cardano.Config.Logging (LoggingLayer (..),)
-import           Cardano.Node.Configuration.Topology (NodeAddress, TopologyInfo)
+import           Cardano.Config.Topology (NodeAddress)
 import           Cardano.Node.Run
 import           Cardano.Shell.Types (CardanoFeature (..))
 import           Cardano.Tracing.Tracers
@@ -33,7 +33,6 @@ data NodeLayer = NodeLayer
 
 createNodeFeature
   :: LoggingLayer
-  -> TopologyInfo
   -> NodeAddress
   -> Protocol
   -> ViewMode
@@ -41,7 +40,7 @@ createNodeFeature
   -> CardanoEnvironment
   -> CardanoConfiguration
   -> IO (NodeLayer, CardanoFeature)
-createNodeFeature loggingLayer topInfo nAddr protocol vMode traceOptions
+createNodeFeature loggingLayer nAddr protocol vMode traceOptions
                   cardanoEnvironment cardanoConfiguration = do
     -- we parse any additional configuration if there is any
     -- We don't know where the user wants to fetch the additional
@@ -53,7 +52,6 @@ createNodeFeature loggingLayer topInfo nAddr protocol vMode traceOptions
                    cardanoEnvironment
                    loggingLayer
                    cardanoConfiguration
-                   topInfo
                    nAddr
                    protocol
                    vMode
@@ -74,14 +72,13 @@ createNodeFeature loggingLayer topInfo nAddr protocol vMode traceOptions
       :: CardanoEnvironment
       -> LoggingLayer
       -> CardanoConfiguration
-      -> TopologyInfo
       -> NodeAddress
       -> Protocol
       -> ViewMode
       -> TraceOptions
       -> IO NodeLayer
-    createNodeLayer _ logLayer cc topologyInfo nodeAddr ptcl viewMode traceOpts = do
+    createNodeLayer _ logLayer cc nodeAddr ptcl viewMode traceOpts = do
         pure $ NodeLayer
-          { nlRunNode = liftIO $ runNode topologyInfo nodeAddr ptcl
+          { nlRunNode = liftIO $ runNode nodeAddr ptcl
                                          viewMode logLayer traceOpts cc
           }

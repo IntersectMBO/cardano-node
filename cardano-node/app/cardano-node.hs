@@ -31,7 +31,7 @@ import           Cardano.Config.Partial (PartialCardanoConfiguration (..),
                                          mkCardanoConfiguration)
 import           Cardano.Config.Presets (mainnetConfiguration)
 import           Cardano.Config.Types (CardanoEnvironment (..), RequireNetworkMagic)
-import           Cardano.Node.Configuration.Topology (NodeAddress (..), TopologyInfo)
+import           Cardano.Config.Topology (NodeAddress (..), TopologyInfo)
 import           Cardano.Node.Features.Node
 import           Cardano.Node.Run
 import           Cardano.Tracing.Tracers
@@ -92,7 +92,7 @@ initializeAllFeatures
   -> PartialCardanoConfiguration
   -> CardanoEnvironment
   -> IO ([CardanoFeature], NodeLayer)
-initializeAllFeatures (NodeCLI topInfo nodeAddr protocol vMode logCLI traceOpts parsedPcc)
+initializeAllFeatures (NodeCLI nodeAddr protocol vMode logCLI traceOpts parsedPcc)
                       partialConfigPreset cardanoEnvironment = do
 
     -- `partialConfigPreset` and `parsedPcc` are merged then checked here using
@@ -106,7 +106,6 @@ initializeAllFeatures (NodeCLI topInfo nodeAddr protocol vMode logCLI traceOpts 
     (nodeLayer   , nodeFeature)    <-
       createNodeFeature
         loggingLayer
-        topInfo
         nodeAddr
         protocol
         vMode
@@ -125,7 +124,6 @@ initializeAllFeatures (NodeCLI topInfo nodeAddr protocol vMode logCLI traceOpts 
 
 -- TODO: Condense `NodeCLI` into one big `PartialCardanoConfiguration`
 data NodeCLI = NodeCLI
-                !TopologyInfo
                 !NodeAddress
                 !Protocol
                 !ViewMode
@@ -136,7 +134,7 @@ data NodeCLI = NodeCLI
 -- | The product parser for all the CLI arguments.
 nodeCliParser :: Parser NodeCLI
 nodeCliParser = do
-  topInfo <- parseTopologyInfo "PBFT node ID to assume."
+  topInfo <- lastOption $ parseTopologyInfo "PBFT node ID to assume."
   nAddr <- parseNodeAddress
   ptcl <- parseProtocol
   vMode <- parseViewMode
@@ -152,14 +150,15 @@ nodeCliParser = do
   reqNetMagic <- parseRequireNetworkMagic
   slotLength <- parseSlotLength
 
-  pure $ NodeCLI topInfo nAddr ptcl vMode logCliArgs traceOptions
-         (createPcc dbPath socketDir genPath genHash delCert
+  pure $ NodeCLI nAddr ptcl vMode logCliArgs traceOptions
+         (createPcc dbPath socketDir topInfo genPath genHash delCert
                    sKey pbftSigThresh reqNetMagic slotLength)
  where
   -- This merges the command line parsed values into one `PartialCardanoconfiguration`.
   createPcc
     :: Last FilePath
     -> Last FilePath
+    -> Last TopologyInfo
     -> Last FilePath
     -> Last Text
     -> Last FilePath
@@ -171,6 +170,7 @@ nodeCliParser = do
   createPcc
     dbPath
     socketDir
+    topInfo
     genPath
     genHash
     delCert
@@ -179,6 +179,7 @@ nodeCliParser = do
     reqNetMagic
     slotLength = mempty { pccDBPath = dbPath
                         , pccSocketDir = socketDir
+                        , pccTopologyInfo = topInfo
                         , pccCore = mempty { pcoGenesisFile = genPath
                                            , pcoGenesisHash = genHash
                                            , pcoStaticKeyDlgCertFile = delCert

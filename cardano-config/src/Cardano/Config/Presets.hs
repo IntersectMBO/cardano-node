@@ -35,6 +35,7 @@ mainnetConfiguration =
     , pccLogConfig = pure "./configuration/log-configuration.yaml"
     , pccDBPath = pure "./db/"
     , pccApplicationLockFile = pure ""
+    , pccTopologyInfo = pure $ TopologyInfo (RelayId 0) "./configuration/simple-topology.json"
     , pccSocketDir = pure "./socket/"
     , pccCore =
         PartialCore
@@ -147,6 +148,7 @@ devConfiguration =
     , pccLogConfig = pure "./log-config.yaml"
     , pccSocketDir = pure "./socket/"
     , pccApplicationLockFile = pure ""
+    , pccTopologyInfo = pure $ TopologyInfo (RelayId 0) "./configuration/simple-topology.json"
     , pccCore =
         PartialCore
           { pcoGenesisFile = pure "testnet-genesis.json"

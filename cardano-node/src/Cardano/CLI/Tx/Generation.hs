@@ -63,7 +63,7 @@ import qualified Cardano.Chain.UTxO as CC.UTxO
 import           Cardano.Config.Logging (LoggingLayer (..), Trace)
 import           Cardano.Config.Types (CardanoConfiguration(..))
 import qualified Cardano.Crypto as Crypto
-import           Cardano.Node.Configuration.Topology (NetworkTopology (..),
+import           Cardano.Config.Topology (NetworkTopology (..),
                                                       NodeAddress (..),
                                                       TopologyError(..),
                                                       TopologyInfo (..),

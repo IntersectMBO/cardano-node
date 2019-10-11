@@ -33,6 +33,7 @@ import           Data.Monoid.Generic
 import qualified Ouroboros.Consensus.BlockchainTime as Consensus
 
 import           Cardano.Config.Types
+import           Cardano.Config.Topology
 
 -- | Partial @CardanoConfiguration@ configuration.
 data PartialCardanoConfiguration = PartialCardanoConfiguration
@@ -41,6 +42,7 @@ data PartialCardanoConfiguration = PartialCardanoConfiguration
     , pccDBPath              :: !(Last FilePath)
     , pccSocketDir           :: !(Last FilePath)
     , pccApplicationLockFile :: !(Last FilePath)
+    , pccTopologyInfo        :: !(Last TopologyInfo)
     , pccCore                :: !PartialCore
     , pccNTP                 :: !PartialNTP
     , pccUpdate              :: !PartialUpdate
@@ -226,6 +228,7 @@ mkCardanoConfiguration PartialCardanoConfiguration{..} = do
     ccApplicationLockFile    <- mkComplete "ccApplicationLockFile"
                                     pccApplicationLockFile
 
+    ccTopologyInfo           <- mkComplete "ccTopologyInfo" pccTopologyInfo
     ccCore                   <- mkCore pccCore
     ccNTP                    <- mkNTP pccNTP
     ccUpdate                 <- mkUpdate pccUpdate

@@ -74,7 +74,7 @@ import           Cardano.Common.Orphans ()
 import           Cardano.Common.Protocol
 import           Cardano.Config.Types
 import           Cardano.Config.Logging (LoggingLayer (..))
-import           Cardano.Node.Configuration.Topology (TopologyInfo)
+import           Cardano.Config.Topology (TopologyInfo)
 
 -- | Sub-commands of 'cardano-cli'.
 data ClientCommand

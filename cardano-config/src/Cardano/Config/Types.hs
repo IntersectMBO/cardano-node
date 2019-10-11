@@ -37,6 +37,7 @@ import           Cardano.Prelude
 import qualified Ouroboros.Consensus.BlockchainTime as Consensus
 
 import           Cardano.Config.Orphanage ()
+import           Cardano.Config.Topology
 
 --------------------------------------------------------------------------------
 -- Cardano Environment
@@ -75,6 +76,9 @@ data CardanoConfiguration = CardanoConfiguration
     -- ^ The location of the application lock file that is used
     -- as a semaphore se we can run just one application
     -- instance at a time.
+
+    , ccTopologyInfo        :: !TopologyInfo
+    -- ^ The network topology.
     , ccCore                :: !Core
     , ccNTP                 :: !NTP
     , ccUpdate              :: !Update

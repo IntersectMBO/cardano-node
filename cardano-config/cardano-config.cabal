@@ -14,28 +14,32 @@ library
   hs-source-dirs:      src
 
   exposed-modules:     Cardano.Config.CommonCLI
+                       Cardano.Config.Logging
                        Cardano.Config.Orphanage
                        Cardano.Config.Partial
                        Cardano.Config.Presets
+                       Cardano.Config.Topology
                        Cardano.Config.Types
-                       Cardano.Config.Logging
 
   build-depends:       base >=4.12 && <4.13
-
+                     , aeson
+                     , async
+                     , bytestring
                      , cardano-shell
                      , cardano-prelude
+                     , generic-monoid
                      , iohk-monitoring
                      , lobemo-backend-aggregation
                      , lobemo-backend-editor
                      , lobemo-backend-ekg
                      , lobemo-backend-monitoring
                      , lobemo-scribe-systemd
-                     , ouroboros-consensus
-
-                     , async
-                     , generic-monoid
+                     , network
                      , optparse-applicative
+                     , ouroboros-consensus
+                     , iproute
                      , safe-exceptions
+                     , string-conv
                      , stm
 
   default-language:    Haskell2010

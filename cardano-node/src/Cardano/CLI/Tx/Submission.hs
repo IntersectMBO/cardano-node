@@ -49,7 +49,7 @@ import           Ouroboros.Network.Protocol.Handshake.Version ( Versions
                                                               , simpleSingletonVersions)
 import qualified Ouroboros.Network.NodeToClient as NodeToClient
 
-import           Cardano.Node.Configuration.Topology
+import           Cardano.Config.Topology
 import           Cardano.Common.LocalSocket
 import           Cardano.Config.Types (CardanoConfiguration(..))
 

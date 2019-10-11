@@ -52,7 +52,7 @@ import           Cardano.CLI.Ops
 import           Cardano.CLI.Tx.Submission
 import           Cardano.Common.Protocol
 import           Cardano.Config.Types (CardanoConfiguration(..))
-import           Cardano.Node.Configuration.Topology
+import           Cardano.Config.Topology
 
 
 newtype TxFile =
