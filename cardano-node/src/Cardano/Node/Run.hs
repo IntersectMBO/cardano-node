@@ -93,14 +93,13 @@ data ViewMode =
   | SimpleView  -- Simple mode, just output text.
 
 runNode
-  :: NodeAddress
-  -> Protocol
+  :: Protocol
   -> ViewMode
   -> LoggingLayer
   -> TraceOptions
   -> CardanoConfiguration
   -> IO ()
-runNode myNodeAddress protocol viewMode loggingLayer traceOptions cc = do
+runNode protocol viewMode loggingLayer traceOptions cc = do
     let !tr = llAppendName loggingLayer "node" (llBasicTrace loggingLayer)
     let trace'      = appendName (pack $ show $ node $ ccTopologyInfo cc) tr
     let tracer      = contramap pack $ toLogObject trace'
@@ -115,7 +114,7 @@ runNode myNodeAddress protocol viewMode loggingLayer traceOptions cc = do
     let tracers     = mkTracers traceOptions trace'
 
     case viewMode of
-      SimpleView -> handleSimpleNode p myNodeAddress trace' tracers cc
+      SimpleView -> handleSimpleNode p trace' tracers cc
       LiveView   -> do
 #ifdef UNIX
         let c = llConfiguration loggingLayer
@@ -123,7 +122,7 @@ runNode myNodeAddress protocol viewMode loggingLayer traceOptions cc = do
         -- turn off logging to the console, only forward it through a pipe to a central logging process
         CM.setDefaultBackends c [TraceForwarderBK, UserDefinedBK "LiveViewBackend"]
         -- User will see a terminal graphics and will be able to interact with it.
-        nodeThread <- Async.async $ handleSimpleNode p myNodeAddress trace' tracers cc
+        nodeThread <- Async.async $ handleSimpleNode p trace' tracers cc
 
         be :: LiveViewBackend Text <- realize c
         let lvbe = MkBackend { bEffectuate = effectuate be, bUnrealize = unrealize be }
@@ -134,7 +133,7 @@ runNode myNodeAddress protocol viewMode loggingLayer traceOptions cc = do
 
         void $ Async.waitAny [nodeThread]
 #else
-        handleSimpleNode p myNodeAddress trace' tracers cc
+        handleSimpleNode p trace' tracers cc
 #endif
 
 -- | Sets up a simple node, which will run the chain sync protocol and block
@@ -142,13 +141,11 @@ runNode myNodeAddress protocol viewMode loggingLayer traceOptions cc = do
 -- create a new block.
 handleSimpleNode :: forall blk. RunNode blk
                  => Consensus.Protocol blk
-                 -> NodeAddress
                  -> Tracer IO (LogObject Text)
                  -> Tracers Peer blk
                  -> CardanoConfiguration
                  -> IO ()
-handleSimpleNode
-  p myNodeAddress trace nodeTracers cc = do
+handleSimpleNode p trace nodeTracers cc = do
     NetworkTopology nodeSetups <-
       either error id <$> readTopologyFile (topologyFile $ ccTopologyInfo cc)
 
@@ -163,14 +160,14 @@ handleSimpleNode
                           map (\ns -> (nodeId ns, producers ns)) nodeSetups of
           Just ps -> ps
           Nothing -> error $ "handleSimpleNode: own address "
-                          <> show myNodeAddress
+                          <> show (ccNodeAddress cc)
                           <> ", Node Id "
                           <> show nid
                           <> " not found in topology"
 
     traceWith tracer $ unlines
       [ "**************************************"
-      , "I am Node "        <> show myNodeAddress <> " Id: " <> show nid
+      , "I am Node "        <> show (ccNodeAddress cc) <> " Id: " <> show nid
       , "My producers are " <> show producers'
       , "**************************************"
       ]
@@ -178,7 +175,7 @@ handleSimpleNode
     -- Socket directory
     myLocalAddr <- localSocketAddrInfo (node $ ccTopologyInfo cc) (ccSocketDir cc) MkdirIfMissing
 
-    addrs <- nodeAddressInfo myNodeAddress
+    addrs <- nodeAddressInfo $ ccNodeAddress cc
     let ipProducerAddrs  :: [NodeAddress]
         dnsProducerAddrs :: [RemoteAddress]
         (ipProducerAddrs, dnsProducerAddrs) = partitionEithers

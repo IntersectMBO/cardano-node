@@ -79,6 +79,8 @@ data CardanoConfiguration = CardanoConfiguration
 
     , ccTopologyInfo        :: !TopologyInfo
     -- ^ The network topology.
+    , ccNodeAddress         :: !NodeAddress
+    -- ^ The node ip address and port number.
     , ccCore                :: !Core
     , ccNTP                 :: !NTP
     , ccUpdate              :: !Update

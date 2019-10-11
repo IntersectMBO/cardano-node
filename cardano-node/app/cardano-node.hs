@@ -92,7 +92,7 @@ initializeAllFeatures
   -> PartialCardanoConfiguration
   -> CardanoEnvironment
   -> IO ([CardanoFeature], NodeLayer)
-initializeAllFeatures (NodeCLI nodeAddr protocol vMode logCLI traceOpts parsedPcc)
+initializeAllFeatures (NodeCLI protocol vMode logCLI traceOpts parsedPcc)
                       partialConfigPreset cardanoEnvironment = do
 
     -- `partialConfigPreset` and `parsedPcc` are merged then checked here using
@@ -106,7 +106,6 @@ initializeAllFeatures (NodeCLI nodeAddr protocol vMode logCLI traceOpts parsedPc
     (nodeLayer   , nodeFeature)    <-
       createNodeFeature
         loggingLayer
-        nodeAddr
         protocol
         vMode
         traceOpts
@@ -124,7 +123,6 @@ initializeAllFeatures (NodeCLI nodeAddr protocol vMode logCLI traceOpts parsedPc
 
 -- TODO: Condense `NodeCLI` into one big `PartialCardanoConfiguration`
 data NodeCLI = NodeCLI
-                !NodeAddress
                 !Protocol
                 !ViewMode
                 !LoggingCLIArguments
@@ -135,7 +133,7 @@ data NodeCLI = NodeCLI
 nodeCliParser :: Parser NodeCLI
 nodeCliParser = do
   topInfo <- lastOption $ parseTopologyInfo "PBFT node ID to assume."
-  nAddr <- parseNodeAddress
+  nAddr <- lastOption parseNodeAddress
   ptcl <- parseProtocol
   vMode <- parseViewMode
   logCliArgs <- loggingParser
@@ -150,8 +148,8 @@ nodeCliParser = do
   reqNetMagic <- parseRequireNetworkMagic
   slotLength <- parseSlotLength
 
-  pure $ NodeCLI nAddr ptcl vMode logCliArgs traceOptions
-         (createPcc dbPath socketDir topInfo genPath genHash delCert
+  pure $ NodeCLI ptcl vMode logCliArgs traceOptions
+         (createPcc dbPath socketDir topInfo nAddr genPath genHash delCert
                    sKey pbftSigThresh reqNetMagic slotLength)
  where
   -- This merges the command line parsed values into one `PartialCardanoconfiguration`.
@@ -159,6 +157,7 @@ nodeCliParser = do
     :: Last FilePath
     -> Last FilePath
     -> Last TopologyInfo
+    -> Last NodeAddress
     -> Last FilePath
     -> Last Text
     -> Last FilePath
@@ -171,6 +170,7 @@ nodeCliParser = do
     dbPath
     socketDir
     topInfo
+    nAddr
     genPath
     genHash
     delCert
@@ -178,6 +178,7 @@ nodeCliParser = do
     pbftSigThresh
     reqNetMagic
     slotLength = mempty { pccDBPath = dbPath
+                        , pccNodeAddress = nAddr
                         , pccSocketDir = socketDir
                         , pccTopologyInfo = topInfo
                         , pccCore = mempty { pcoGenesisFile = genPath
