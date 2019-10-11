@@ -33,11 +33,10 @@ import           Formatting ((%), sformat)
 
 import           Control.Tracer (stdoutTracer)
 
-import           Cardano.Binary (reAnnotate)
 import           Cardano.Chain.Common (Address)
 import qualified Cardano.Chain.Common as Common
 import           Cardano.Chain.Genesis as Genesis
-import           Cardano.Chain.UTxO ( ATxAux(..), mkTxAux
+import           Cardano.Chain.UTxO ( mkTxAux, annotateTxAux
                                     , Tx(..), TxId, TxIn, TxOut)
 import qualified Cardano.Chain.UTxO as UTxO
 import           Cardano.Crypto (SigningKey(..), ProtocolMagicId)
@@ -154,12 +153,8 @@ txSpendGenesisUTxOByronPBFT
   -> NonEmpty TxOut
   -> GenTx (ByronBlockOrEBB ByronConfig)
 txSpendGenesisUTxOByronPBFT gc sk genAddr outs =
-  Byron.mkByronTx $ ATxAux (reAnnotate atx) (reAnnotate awit)
-
+    Byron.mkByronTx $ annotateTxAux $ mkTxAux tx (pure wit)
   where
-    ATxAux atx awit =
-      mkTxAux tx . V.fromList . pure $ wit
-
     tx = UnsafeTx (pure txIn) outs txattrs
 
     wit = signTxId (configProtocolMagicId gc) sk (Crypto.hash tx)
@@ -195,11 +190,9 @@ txSpendUTxOByronPBFT
   -> NonEmpty TxOut
   -> GenTx (ByronBlockOrEBB ByronConfig)
 txSpendUTxOByronPBFT gc sk ins outs =
-  Byron.mkByronTx $ ATxAux (reAnnotate atx) (reAnnotate awit)
-
+    Byron.mkByronTx $ annotateTxAux $ mkTxAux tx wits
   where
-    ATxAux atx awit =
-      mkTxAux tx . V.fromList . take (NE.length ins) $ repeat wit
+    wits = V.fromList . take (NE.length ins) . repeat $ wit
 
     tx = UnsafeTx ins outs txattrs
 

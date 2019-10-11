@@ -33,7 +33,6 @@ import           Control.Monad.Trans.Except.Extra (firstExceptT,
                                                    left, newExceptT,
                                                    right)
 import           Data.Bifunctor (bimap)
-import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy as LB
 import           Data.Either (isLeft)
 import           Data.Foldable (find, foldl', foldr, toList)
@@ -48,7 +47,6 @@ import qualified Data.Set as Set
 import           Data.Text (Text)
 import qualified Data.Text as T
 import           Data.Time.Clock (DiffTime, picosecondsToDiffTime)
-import qualified Data.Vector as V
 import           Data.Word (Word32, Word64)
 import           Network.Socket (AddrInfo (..),
                      AddrInfoFlag (..), Family (..), SocketType (Stream),
@@ -57,7 +55,6 @@ import           Network.Socket (AddrInfo (..),
 
 import           System.IO.Unsafe (unsafePerformIO)
 
-import           Cardano.Binary (Annotated (..), ToCBOR (..), reAnnotate)
 import           Cardano.BM.Data.Tracer (ToLogObject (..))
 import           Cardano.BM.Trace (appendName)
 import qualified Cardano.Chain.Common as CC.Common
@@ -527,15 +524,10 @@ generalizeTx
   -> Crypto.SigningKey -- signingKey for spending the input
   -> GenTx (ByronBlockOrEBB cfg)
 generalizeTx (WithEBBNodeConfig config) tx signingKey =
-  Byron.mkByronTx $ CC.UTxO.ATxAux (annotate tx) (annotate witness)
+  Byron.mkByronTx $ CC.UTxO.annotateTxAux $ CC.UTxO.mkTxAux tx witness
  where
-  annotate
-    :: forall a. ToCBOR a
-    => a
-    -> Annotated a ByteString
-  annotate x = reAnnotate $ Annotated x ()
-  witness = V.fromList
-    [ CC.UTxO.VKWitness
+  witness = pure $
+      CC.UTxO.VKWitness
         (Crypto.toVerification signingKey)
         (Crypto.sign
           (Crypto.getProtocolMagicId . pbftProtocolMagic . encNodeConfigExt $ config)
@@ -544,7 +536,6 @@ generalizeTx (WithEBBNodeConfig config) tx signingKey =
           signingKey
           (CC.UTxO.TxSigData (Crypto.hash tx))
         )
-    ]
 
 -----------------------------------------------------------------------------------------
 -- Helpers for work with lovelaces.
