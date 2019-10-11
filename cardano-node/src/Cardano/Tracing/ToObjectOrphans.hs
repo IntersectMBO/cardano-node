@@ -293,7 +293,7 @@ instance (Condense (HeaderHash blk), ProtocolLedgerView blk, SupportedBlock blk,
   trTransformer _ verb tr = trStructured verb tr
 
 -- transform @ChainSyncServer@
-instance StandardHash blk => Transformable Text IO (TraceChainSyncServerEvent blk b) where
+instance (Condense (HeaderHash blk), Condense b) => Transformable Text IO (TraceChainSyncServerEvent blk b) where
   trTransformer _ verb tr = trStructured verb tr
 
 -- transform @BlockFetchDecision@
@@ -659,14 +659,25 @@ instance (Condense (HeaderHash blk), ProtocolLedgerView blk, SupportedBlock blk,
     TraceFoundIntersection _ _ _ ->
       mkObject [ "kind" .= String "ChainSyncClientEvent.TraceFoundIntersection" ]
 
-instance StandardHash blk => ToObject (TraceChainSyncServerEvent blk b) where
-    toObject _ ev = case ev of
-      TraceChainSyncServerRead tip _ ->
-        mkObject [ "kind" .= String "ChainSyncServerEvent.TraceChainSyncServerRead"
-                 , "block" .= (String (pack . show $ tipPoint tip)) ]
-      TraceChainSyncServerReadBlocked tip _ ->
-        mkObject [ "kind" .= String "ChainSyncServerEvent.TraceChainSyncServerReadBlocked"
-                 , "block" .= (String (pack . show $ tipPoint tip)) ]
+instance (Condense (HeaderHash blk), Condense b) => ToObject (TraceChainSyncServerEvent blk b) where
+    toObject verb ev = case ev of
+      TraceChainSyncServerRead tip (AddBlock hdr) ->
+        mkObject [ "kind" .= String "ChainSyncServerEvent.TraceChainSyncServerRead.AddBlock"
+                 , "tip" .= (String (pack . showTip verb $ tipPoint tip))
+                 , "addedBlock" .= (String (pack $ condense hdr)) ]
+      TraceChainSyncServerRead tip (RollBack pt) ->
+        mkObject [ "kind" .= String "ChainSyncServerEvent.TraceChainSyncServerRead.RollBack"
+                 , "tip" .= (String (pack . showTip verb $ tipPoint tip))
+                 , "rolledBackBlock" .= (String (pack $ showTip verb pt)) ]
+      TraceChainSyncServerReadBlocked tip (AddBlock hdr) ->
+        mkObject [ "kind" .= String "ChainSyncServerEvent.TraceChainSyncServerReadBlocked.AddBlock"
+                 , "tip" .= (String (pack . showTip verb $ tipPoint tip))
+                 , "addedBlock" .= (String (pack $ condense hdr)) ]
+      TraceChainSyncServerReadBlocked tip (RollBack pt) ->
+        mkObject [ "kind" .= String "ChainSyncServerEvent.TraceChainSyncServerReadBlocked.RollBack"
+                 , "tip" .= (String (pack . showTip verb $ tipPoint tip))
+                 , "rolledBackBlock" .= (String (pack $ showTip verb pt)) ]
+
 
 instance Show peer => ToObject [TraceLabelPeer peer
                         (FetchDecision [Point header])] where
