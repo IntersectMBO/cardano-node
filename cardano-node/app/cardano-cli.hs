@@ -31,7 +31,7 @@ import           Cardano.Config.Types (CardanoEnvironment (..))
 import           Cardano.Config.Presets (mainnetConfiguration)
 
 import           Cardano.Common.Parsers
-import           Cardano.Common.Protocol
+import           Cardano.Config.Protocol
 import           Cardano.CLI.Genesis
 import           Cardano.CLI.Key
 import           Cardano.Config.Logging (LoggingCLIArguments (..),

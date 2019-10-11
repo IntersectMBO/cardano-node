@@ -1,11 +1,13 @@
+{-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE GADTs            #-}
-{-# LANGUAGE NamedFieldPuns   #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 {-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Common.Protocol
+module Cardano.Config.Protocol
   ( Protocol(..)
   , SomeProtocol(..)
   , fromProtocol
@@ -27,31 +29,43 @@ import qualified Cardano.Chain.Update as Update
 import           Cardano.Crypto (RequiresNetworkMagic (..), decodeAbstractHash)
 import qualified Cardano.Crypto.Signing as Signing
 import           Cardano.Shell.Lib (GeneralException (..))
+import           Ouroboros.Consensus.Block (Header)
 import           Ouroboros.Consensus.Demo (defaultDemoPBftParams, defaultDemoPraosParams, defaultSecurityParam)
 import qualified Ouroboros.Consensus.Demo.Run as Demo
-import           Ouroboros.Consensus.Node.ProtocolInfo (PBftLeaderCredentials, PBftSignatureThreshold(..), mkPBftLeaderCredentials)
+import           Ouroboros.Consensus.Mempool.API (ApplyTxErr, GenTx, GenTxId)
+import           Ouroboros.Consensus.Node.ProtocolInfo (PBftLeaderCredentials,
+                                                        PBftSignatureThreshold(..),
+                                                         mkPBftLeaderCredentials)
 import qualified Ouroboros.Consensus.Protocol as Consensus
+import           Ouroboros.Consensus.Util.Condense
 import           Ouroboros.Consensus.Util (Dict(..))
+import           Ouroboros.Network.Block
 
-import           Cardano.Common.Orphans ()
 import           Cardano.Config.Types
                    ( CardanoConfiguration (..), Core (..)
-                   , RequireNetworkMagic (..) )
-import           Cardano.Tracing.Tracers (TraceConstraints)
+                   , Protocol (..),  RequireNetworkMagic (..) )
+
+-- TODO: consider not throwing this, or wrap it in a local error type here
+-- that has proper error messages.
+instance Exception Genesis.ConfigurationError
+
+type TraceConstraints blk =
+    ( Condense blk
+    , Condense [blk]
+    , Condense (ChainHash blk)
+    , Condense (Header blk)
+    , Condense (HeaderHash blk)
+    , Condense (GenTx blk)
+    , Show (ApplyTxErr blk)
+    , Show (GenTx blk)
+    , Show (GenTxId blk)
+    , Show blk
+    , Show (Header blk)
+    )
 
 {-------------------------------------------------------------------------------
   Untyped/typed protocol boundary
 -------------------------------------------------------------------------------}
-
--- TODO:  we don't want ByronLegacy in Protocol.  Let's wrap Protocol with another
--- sum type for cases where it's required.
-data Protocol =
-    ByronLegacy
-  | BFT
-  | Praos
-  | MockPBFT
-  | RealPBFT
-  deriving Show
 
 
 data SomeProtocol where

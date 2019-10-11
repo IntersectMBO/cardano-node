@@ -71,7 +71,7 @@ import           Cardano.CLI.Tx.Generation (NumberOfTxs (..), NumberOfOutputsPer
                                             FeePerTx (..), TPSRate (..),
                                             genesisBenchmarkRunner)
 import           Cardano.Common.Orphans ()
-import           Cardano.Common.Protocol
+import           Cardano.Config.Protocol
 import           Cardano.Config.Types
 import           Cardano.Config.Logging (LoggingLayer (..))
 import           Cardano.Config.Topology (TopologyInfo)

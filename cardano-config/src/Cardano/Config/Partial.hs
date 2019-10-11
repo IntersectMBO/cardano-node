@@ -44,6 +44,7 @@ data PartialCardanoConfiguration = PartialCardanoConfiguration
     , pccApplicationLockFile :: !(Last FilePath)
     , pccTopologyInfo        :: !(Last TopologyInfo)
     , pccNodeAddress         :: !(Last NodeAddress)
+    , pccProtocol            :: !(Last Protocol)
     , pccCore                :: !PartialCore
     , pccNTP                 :: !PartialNTP
     , pccUpdate              :: !PartialUpdate
@@ -231,6 +232,7 @@ mkCardanoConfiguration PartialCardanoConfiguration{..} = do
 
     ccTopologyInfo           <- mkComplete "ccTopologyInfo" pccTopologyInfo
     ccNodeAddress            <- mkComplete "ccNodeAddress" pccNodeAddress
+    ccProtocol               <- mkComplete "ccProtocol" pccProtocol
     ccCore                   <- mkCore pccCore
     ccNTP                    <- mkNTP pccNTP
     ccUpdate                 <- mkUpdate pccUpdate

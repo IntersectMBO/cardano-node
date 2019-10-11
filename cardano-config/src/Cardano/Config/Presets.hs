@@ -37,6 +37,7 @@ mainnetConfiguration =
     , pccApplicationLockFile = pure ""
     , pccTopologyInfo = pure $ TopologyInfo (RelayId 0) "./configuration/simple-topology.json"
     , pccNodeAddress = pure $ NodeAddress Nothing 7000
+    , pccProtocol = pure ByronLegacy
     , pccSocketDir = pure "./socket/"
     , pccCore =
         PartialCore
@@ -151,6 +152,7 @@ devConfiguration =
     , pccApplicationLockFile = pure ""
     , pccTopologyInfo = pure $ TopologyInfo (RelayId 0) "./configuration/simple-topology.json"
     , pccNodeAddress = pure $ NodeAddress Nothing 7000
+    , pccProtocol = pure ByronLegacy
     , pccCore =
         PartialCore
           { pcoGenesisFile = pure "testnet-genesis.json"

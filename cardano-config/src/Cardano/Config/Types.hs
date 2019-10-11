@@ -19,6 +19,7 @@ module Cardano.Config.Types
     , SoftForkRule (..)
     , TxFeePolicy (..)
     , TxSizeLinear (..)
+    , Protocol (..)
     , ProtocolConstants (..)
     , NTP (..)
     , Update (..)
@@ -81,6 +82,8 @@ data CardanoConfiguration = CardanoConfiguration
     -- ^ The network topology.
     , ccNodeAddress         :: !NodeAddress
     -- ^ The node ip address and port number.
+    , ccProtocol            :: !Protocol
+    -- ^ The selected protocol.
     , ccCore                :: !Core
     , ccNTP                 :: !NTP
     , ccUpdate              :: !Update
@@ -222,6 +225,15 @@ data TxSizeLinear = TxSizeLinear
     { txsA :: !Word64
     , txsB :: !Word64
     } deriving (Eq, Show)
+
+-- TODO:  we don't want ByronLegacy in Protocol.  Let's wrap Protocol with another
+-- sum type for cases where it's required.
+data Protocol = ByronLegacy
+              | BFT
+              | Praos
+              | MockPBFT
+              | RealPBFT
+              deriving (Eq, Show)
 
 data ProtocolConstants = ProtocolConstants
     { prK             :: !Word64

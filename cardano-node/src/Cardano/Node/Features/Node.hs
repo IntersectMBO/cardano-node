@@ -8,7 +8,6 @@ module Cardano.Node.Features.Node
 
 import           Cardano.Prelude
 
-import           Cardano.Common.Protocol (Protocol)
 import           Cardano.Config.Types (CardanoConfiguration (..),
                                        CardanoEnvironment (..))
 import           Cardano.Config.Logging (LoggingLayer (..),)
@@ -32,13 +31,12 @@ data NodeLayer = NodeLayer
 
 createNodeFeature
   :: LoggingLayer
-  -> Protocol
   -> ViewMode
   -> TraceOptions
   -> CardanoEnvironment
   -> CardanoConfiguration
   -> IO (NodeLayer, CardanoFeature)
-createNodeFeature loggingLayer protocol vMode traceOptions
+createNodeFeature loggingLayer vMode traceOptions
                   cardanoEnvironment cardanoConfiguration = do
     -- we parse any additional configuration if there is any
     -- We don't know where the user wants to fetch the additional
@@ -50,7 +48,6 @@ createNodeFeature loggingLayer protocol vMode traceOptions
                    cardanoEnvironment
                    loggingLayer
                    cardanoConfiguration
-                   protocol
                    vMode
                    traceOptions
 
@@ -69,11 +66,10 @@ createNodeFeature loggingLayer protocol vMode traceOptions
       :: CardanoEnvironment
       -> LoggingLayer
       -> CardanoConfiguration
-      -> Protocol
       -> ViewMode
       -> TraceOptions
       -> IO NodeLayer
-    createNodeLayer _ logLayer cc ptcl viewMode traceOpts = do
+    createNodeLayer _ logLayer cc viewMode traceOpts = do
         pure $ NodeLayer
-          { nlRunNode = liftIO $ runNode ptcl viewMode logLayer traceOpts cc
+          { nlRunNode = liftIO $ runNode viewMode logLayer traceOpts cc
           }

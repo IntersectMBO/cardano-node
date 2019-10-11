@@ -6,6 +6,11 @@ module Cardano.Common.Parsers
   ( loggingParser
   , parseCoreNodeId
   , parseProtocol
+  , parseProtocolBFT
+  , parseProtocolByron
+  , parseProtocolMockPBFT
+  , parseProtocolPraos
+  , parseProtocolRealPBFT
   , parseProtocolActual
   , parseProtocolAsCommand
   , parseTopologyInfo
@@ -26,7 +31,7 @@ import           Ouroboros.Consensus.NodeId (NodeId(..), CoreNodeId(..))
 import           Ouroboros.Consensus.NodeNetwork (ProtocolTracers'(..))
 import qualified Ouroboros.Consensus.Node.Tracers as Consensus
 
-import           Cardano.Common.Protocol
+import           Cardano.Config.Protocol
 import           Cardano.Config.Logging
 import           Cardano.Config.Topology
 
@@ -49,33 +54,69 @@ parseNodeId desc =
     )
 
 -- | Flag parser, that returns its argument on success.
-fl :: a -> String -> String -> Parser a
-fl val opt desc = flag' val $ mconcat [long opt, help desc]
+flagParser :: a -> String -> String -> Parser a
+flagParser val opt desc = flag' val $ mconcat [long opt, help desc]
 
 parseProtocol :: Parser Protocol
 parseProtocol = asum
-  [ fl ByronLegacy "byron-legacy"
+  [ flagParser ByronLegacy "byron-legacy"
     "Byron/Ouroboros Classic suite of algorithms"
-
-  , fl BFT "bft"
+  , flagParser BFT "bft"
     "BFT consensus"
-
-  , fl Praos "praos"
+  , flagParser Praos "praos"
     "Praos consensus"
-
-  , fl MockPBFT "mock-pbft"
+  , flagParser MockPBFT "mock-pbft"
     "Permissive BFT consensus with a mock ledger"
-
-  , fl RealPBFT "real-pbft"
+  , flagParser RealPBFT "real-pbft"
     "Permissive BFT consensus with a real ledger"
   ]
 
-parseProtocolActual :: Parser Protocol
-parseProtocolActual = asum
-  [ fl ByronLegacy "byron-legacy"
+parseProtocolByron :: Parser (Last Protocol)
+parseProtocolByron =
+  flagParser
+    (Last $ Just ByronLegacy)
+    "byron-legacy"
     "Byron/Ouroboros Classic suite of algorithms"
 
-  , fl RealPBFT "real-pbft"
+
+parseProtocolBFT :: Parser (Last Protocol)
+parseProtocolBFT =
+  flagParser
+    (Last $ Just BFT)
+    "bft"
+    "BFT consensus"
+
+
+parseProtocolPraos :: Parser (Last Protocol)
+parseProtocolPraos =
+  flagParser
+    (Last $ Just Praos)
+    "praos"
+    "Praos consensus"
+
+
+parseProtocolMockPBFT :: Parser (Last Protocol)
+parseProtocolMockPBFT =
+  flagParser
+    (Last $ Just MockPBFT)
+    "mock-pbft"
+    "Permissive BFT consensus with a mock ledger"
+
+
+parseProtocolRealPBFT :: Parser (Last Protocol)
+parseProtocolRealPBFT =
+  flagParser
+    (Last $ Just RealPBFT)
+    "real-pbft"
+    "Permissive BFT consensus with a real ledger"
+
+
+parseProtocolActual :: Parser Protocol
+parseProtocolActual = asum
+  [ flagParser ByronLegacy "byron-legacy"
+    "Byron/Ouroboros Classic suite of algorithms"
+
+  , flagParser RealPBFT "real-pbft"
     "Permissive BFT consensus with a real ledger"
   ]
 

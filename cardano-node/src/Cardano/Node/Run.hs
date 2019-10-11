@@ -65,7 +65,7 @@ import           Ouroboros.Consensus.Util.STM (onEachChange)
 import qualified Ouroboros.Storage.ChainDB as ChainDB
 
 import           Cardano.Common.LocalSocket
-import           Cardano.Common.Protocol (Protocol(..), SomeProtocol(..), fromProtocol)
+import           Cardano.Config.Protocol (SomeProtocol(..), fromProtocol)
 import           Cardano.Config.Topology
 import           Cardano.Tracing.Tracers
 #ifdef UNIX
@@ -93,13 +93,12 @@ data ViewMode =
   | SimpleView  -- Simple mode, just output text.
 
 runNode
-  :: Protocol
-  -> ViewMode
+  :: ViewMode
   -> LoggingLayer
   -> TraceOptions
   -> CardanoConfiguration
   -> IO ()
-runNode protocol viewMode loggingLayer traceOptions cc = do
+runNode viewMode loggingLayer traceOptions cc = do
     let !tr = llAppendName loggingLayer "node" (llBasicTrace loggingLayer)
     let trace'      = appendName (pack $ show $ node $ ccTopologyInfo cc) tr
     let tracer      = contramap pack $ toLogObject trace'
@@ -109,7 +108,7 @@ runNode protocol viewMode loggingLayer traceOptions cc = do
                              NormalVerbosity  -> "normal"
                              MinimalVerbosity -> "minimal"
                              MaximalVerbosity -> "maximal"
-    SomeProtocol p  <- fromProtocol cc protocol
+    SomeProtocol p  <- fromProtocol cc $ ccProtocol cc
 
     let tracers     = mkTracers traceOptions trace'
 
