@@ -79,13 +79,13 @@ main = do
     runCardanoApplicationWithFeatures cardanoFeatures (cardanoApplication nodeLayer)
 
 initializeAllFeatures :: ArgParser -> PartialCardanoConfiguration -> CardanoEnvironment -> IO ([CardanoFeature], NodeLayer)
-initializeAllFeatures (ArgParser logCli cli) partialConfig cardanoEnvironment = do
+initializeAllFeatures (ArgParser _ cli) partialConfig cardanoEnvironment = do
     finalConfig <-
       case mkConfiguration partialConfig (cliCommon cli) (cliCommonAdv cli) of
         Left err -> throwIO err
         Right x -> pure x
 
-    (loggingLayer, loggingFeature) <- createLoggingFeature cardanoEnvironment finalConfig logCli
+    (loggingLayer, loggingFeature) <- createLoggingFeature cardanoEnvironment finalConfig
     (nodeLayer   , nodeFeature)    <- createNodeFeature loggingLayer cli cardanoEnvironment finalConfig
 
     -- Here we return all the features.

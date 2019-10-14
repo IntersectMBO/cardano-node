@@ -43,6 +43,7 @@ mainnetConfiguration =
     , pccNodeAddress = pure $ NodeAddress Nothing 7000
     , pccProtocol = pure ByronLegacy
     , pccViewMode = pure LiveView
+    , pccLogMetrics = pure True
     , pccSocketDir = pure "./socket/"
     , pccCore =
         PartialCore
@@ -159,6 +160,7 @@ devConfiguration =
     , pccNodeAddress = pure $ NodeAddress Nothing 7000
     , pccProtocol = pure ByronLegacy
     , pccViewMode = pure LiveView
+    , pccLogMetrics = pure True
     , pccCore =
         PartialCore
           { pcoGenesisFile = pure "testnet-genesis.json"

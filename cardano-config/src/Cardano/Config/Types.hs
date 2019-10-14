@@ -68,7 +68,7 @@ instance Exception ConfigError
 data CardanoConfiguration = CardanoConfiguration
     { ccLogPath             :: !FilePath
     -- ^ The location of the log files on the filesystem.
-    , ccLogConfig           :: !FilePath
+    , ccLogConfig           :: !(Maybe FilePath)
     -- ^ The location of the log configuration on the filesystem.
     , ccDBPath              :: !FilePath
     -- ^ The location of the DB on the filesystem.
@@ -87,6 +87,8 @@ data CardanoConfiguration = CardanoConfiguration
     -- ^ The selected protocol.
     , ccViewMode            :: !ViewMode
     -- ^ View mode of the TUI
+    , ccLogMetrics          :: !Bool
+    -- ^ Flag to capture log metrics or not.
     , ccCore                :: !Core
     , ccNTP                 :: !NTP
     , ccUpdate              :: !Update

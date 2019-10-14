@@ -28,7 +28,11 @@ main = do
                    Left err -> throwIO err
                    Right x -> pure x
   (,) loggingLayer
-      loggingFeature <- createLoggingFeature env finalConfig loggingCLI
+      loggingFeature <- createLoggingFeature
+                          env
+                          finalConfig { ccLogConfig = logConfigFile loggingCLI
+                                      , ccLogMetrics = captureMetrics loggingCLI
+                                      }
 
   let cardanoApplication =
         CardanoApplication . liftIO $ runTraceAcceptor loggingLayer

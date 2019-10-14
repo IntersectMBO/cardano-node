@@ -5,6 +5,8 @@
 module Cardano.Common.Parsers
   ( loggingParser
   , parseCoreNodeId
+  , parseLogConfigFile
+  , parseLogMetrics
   , parseProtocol
   , parseProtocolBFT
   , parseProtocolByron
@@ -145,6 +147,21 @@ parseTopologyFile =
          <> metavar "FILEPATH"
          <> help "The path to a file describing the topology."
     )
+parseLogConfigFile :: Parser FilePath
+parseLogConfigFile =
+  strOption
+    ( long "log-config"
+    <> metavar "LOGCONFIG"
+    <> help "Configuration file for logging"
+    <> completer (bashCompleter "file")
+    )
+
+parseLogMetrics :: Parser (Last Bool)
+parseLogMetrics =
+  (Last . Just) <$> switch
+                      ( long "log-metrics"
+                      <> help "Log a number of metrics about this node"
+                      )
 
 -- | A parser disables logging if --log-config is not supplied.
 loggingParser :: Parser LoggingCLIArguments

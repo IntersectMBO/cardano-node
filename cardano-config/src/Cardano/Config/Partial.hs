@@ -46,6 +46,7 @@ data PartialCardanoConfiguration = PartialCardanoConfiguration
     , pccNodeAddress         :: !(Last NodeAddress)
     , pccProtocol            :: !(Last Protocol)
     , pccViewMode            :: !(Last ViewMode)
+    , pccLogMetrics          :: !(Last Bool)
     , pccCore                :: !PartialCore
     , pccNTP                 :: !PartialNTP
     , pccUpdate              :: !PartialUpdate
@@ -225,7 +226,7 @@ mkCardanoConfiguration :: PartialCardanoConfiguration -> Either ConfigError Card
 mkCardanoConfiguration PartialCardanoConfiguration{..} = do
 
     ccLogPath                <- mkComplete "ccLogPath"    pccLogPath
-    ccLogConfig              <- mkComplete "ccLogConfig"  pccLogConfig
+    let ccLogConfig          = getLast pccLogConfig
     ccDBPath                 <- mkComplete "ccDBPath"     pccDBPath
     ccSocketDir              <- mkComplete "ccSocketPath" pccSocketDir
     ccApplicationLockFile    <- mkComplete "ccApplicationLockFile"
@@ -235,6 +236,7 @@ mkCardanoConfiguration PartialCardanoConfiguration{..} = do
     ccNodeAddress            <- mkComplete "ccNodeAddress" pccNodeAddress
     ccProtocol               <- mkComplete "ccProtocol" pccProtocol
     ccViewMode               <- mkComplete "ccViewMode" pccViewMode
+    ccLogMetrics             <- mkComplete "ccLogMetrics" pccLogMetrics
     ccCore                   <- mkCore pccCore
     ccNTP                    <- mkNTP pccNTP
     ccUpdate                 <- mkUpdate pccUpdate
