@@ -45,6 +45,7 @@ data PartialCardanoConfiguration = PartialCardanoConfiguration
     , pccTopologyInfo        :: !(Last TopologyInfo)
     , pccNodeAddress         :: !(Last NodeAddress)
     , pccProtocol            :: !(Last Protocol)
+    , pccViewMode            :: !(Last ViewMode)
     , pccCore                :: !PartialCore
     , pccNTP                 :: !PartialNTP
     , pccUpdate              :: !PartialUpdate
@@ -233,6 +234,7 @@ mkCardanoConfiguration PartialCardanoConfiguration{..} = do
     ccTopologyInfo           <- mkComplete "ccTopologyInfo" pccTopologyInfo
     ccNodeAddress            <- mkComplete "ccNodeAddress" pccNodeAddress
     ccProtocol               <- mkComplete "ccProtocol" pccProtocol
+    ccViewMode               <- mkComplete "ccViewMode" pccViewMode
     ccCore                   <- mkCore pccCore
     ccNTP                    <- mkNTP pccNTP
     ccUpdate                 <- mkUpdate pccUpdate

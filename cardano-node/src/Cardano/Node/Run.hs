@@ -45,7 +45,7 @@ import           Cardano.BM.Data.LogItem (LogObject (..))
 import           Cardano.BM.Data.Tracer (ToLogObject (..),
                                          TracingVerbosity (..))
 import           Cardano.BM.Trace (appendName)
-import           Cardano.Config.Types (CardanoConfiguration (..))
+import           Cardano.Config.Types (CardanoConfiguration (..), ViewMode (..))
 import           Cardano.Config.Logging (LoggingLayer (..))
 
 import           Ouroboros.Network.Block
@@ -87,18 +87,12 @@ instance NoUnexpectedThunks Peer where
     whnfNoUnexpectedThunks _ctxt _act = return NoUnexpectedThunks
 
 
--- Node can be run in two modes.
-data ViewMode =
-    LiveView    -- Live mode with TUI
-  | SimpleView  -- Simple mode, just output text.
-
 runNode
-  :: ViewMode
-  -> LoggingLayer
+  :: LoggingLayer
   -> TraceOptions
   -> CardanoConfiguration
   -> IO ()
-runNode viewMode loggingLayer traceOptions cc = do
+runNode loggingLayer traceOptions cc = do
     let !tr = llAppendName loggingLayer "node" (llBasicTrace loggingLayer)
     let trace'      = appendName (pack $ show $ node $ ccTopologyInfo cc) tr
     let tracer      = contramap pack $ toLogObject trace'
@@ -112,7 +106,7 @@ runNode viewMode loggingLayer traceOptions cc = do
 
     let tracers     = mkTracers traceOptions trace'
 
-    case viewMode of
+    case ccViewMode cc of
       SimpleView -> handleSimpleNode p trace' tracers cc
       LiveView   -> do
 #ifdef UNIX

@@ -92,7 +92,7 @@ initializeAllFeatures
   -> PartialCardanoConfiguration
   -> CardanoEnvironment
   -> IO ([CardanoFeature], NodeLayer)
-initializeAllFeatures (NodeCLI vMode logCLI traceOpts parsedPcc)
+initializeAllFeatures (NodeCLI logCLI traceOpts parsedPcc)
                       partialConfigPreset cardanoEnvironment = do
 
     -- `partialConfigPreset` and `parsedPcc` are merged then checked here using
@@ -106,7 +106,6 @@ initializeAllFeatures (NodeCLI vMode logCLI traceOpts parsedPcc)
     (nodeLayer   , nodeFeature)    <-
       createNodeFeature
         loggingLayer
-        vMode
         traceOpts
         cardanoEnvironment
         finalConfig
@@ -122,7 +121,6 @@ initializeAllFeatures (NodeCLI vMode logCLI traceOpts parsedPcc)
 
 -- TODO: Condense `NodeCLI` into one big `PartialCardanoConfiguration`
 data NodeCLI = NodeCLI
-                !ViewMode
                 !LoggingCLIArguments
                 !TraceOptions
                 !PartialCardanoConfiguration
@@ -151,8 +149,8 @@ nodeCliParser = do
   reqNetMagic <- parseRequireNetworkMagic
   slotLength <- parseSlotLength
 
-  pure $ NodeCLI vMode logCliArgs traceOptions
-         (createPcc dbPath socketDir topInfo nAddr ptcl genPath genHash delCert
+  pure $ NodeCLI logCliArgs traceOptions
+         (createPcc dbPath socketDir topInfo nAddr ptcl vMode genPath genHash delCert
                    sKey pbftSigThresh reqNetMagic slotLength)
  where
   -- This merges the command line parsed values into one `PartialCardanoconfiguration`.
@@ -162,6 +160,7 @@ nodeCliParser = do
     -> Last TopologyInfo
     -> Last NodeAddress
     -> Last Protocol
+    -> Last ViewMode
     -> Last FilePath
     -> Last Text
     -> Last FilePath
@@ -176,6 +175,7 @@ nodeCliParser = do
     topInfo
     nAddr
     ptcl
+    vMode
     genPath
     genHash
     delCert
@@ -187,6 +187,7 @@ nodeCliParser = do
                         , pccSocketDir = socketDir
                         , pccTopologyInfo = topInfo
                         , pccProtocol = ptcl
+                        , pccViewMode = vMode
                         , pccCore = mempty { pcoGenesisFile = genPath
                                            , pcoGenesisHash = genHash
                                            , pcoStaticKeyDlgCertFile = delCert
@@ -223,9 +224,9 @@ parsePort =
     )
 
 -- Optional flag for live view (with TUI graphics).
-parseViewMode :: Parser ViewMode
+parseViewMode :: Parser (Last ViewMode)
 parseViewMode =
-    flag SimpleView LiveView $ mconcat
+    flag (Last $ Just SimpleView) (Last $ Just LiveView) $ mconcat
         [ long "live-view"
         , help "Live view with TUI."
         ]

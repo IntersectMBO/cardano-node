@@ -7,6 +7,8 @@ module Cardano.Config.Presets
 
 import           Cardano.Prelude
 
+import           Ouroboros.Consensus.NodeId
+
 import           Cardano.Config.Orphanage ()
 import           Cardano.Config.Partial ( NodeProtocol (..)
                                         , PartialBlock (..)
@@ -23,6 +25,8 @@ import           Cardano.Config.Partial ( NodeProtocol (..)
                                         , PartialWallet (..)
                                         , RequireNetworkMagic (..)
                                         )
+import           Cardano.Config.Topology (NodeAddress(..), TopologyInfo(..))
+import           Cardano.Config.Types (Protocol(..), ViewMode(..))
 
 --------------------------------------------------------------------------------
 -- Cardano Mainnet Configuration
@@ -38,6 +42,7 @@ mainnetConfiguration =
     , pccTopologyInfo = pure $ TopologyInfo (RelayId 0) "./configuration/simple-topology.json"
     , pccNodeAddress = pure $ NodeAddress Nothing 7000
     , pccProtocol = pure ByronLegacy
+    , pccViewMode = pure LiveView
     , pccSocketDir = pure "./socket/"
     , pccCore =
         PartialCore
@@ -153,6 +158,7 @@ devConfiguration =
     , pccTopologyInfo = pure $ TopologyInfo (RelayId 0) "./configuration/simple-topology.json"
     , pccNodeAddress = pure $ NodeAddress Nothing 7000
     , pccProtocol = pure ByronLegacy
+    , pccViewMode = pure LiveView
     , pccCore =
         PartialCore
           { pcoGenesisFile = pure "testnet-genesis.json"

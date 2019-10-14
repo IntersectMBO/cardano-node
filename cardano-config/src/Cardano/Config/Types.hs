@@ -28,6 +28,7 @@ module Cardano.Config.Types
     , Block (..)
     , Node (..)
     , TLS (..)
+    , ViewMode (..)
     , Wallet (..)
     , Certificate (..)
     ) where
@@ -84,6 +85,8 @@ data CardanoConfiguration = CardanoConfiguration
     -- ^ The node ip address and port number.
     , ccProtocol            :: !Protocol
     -- ^ The selected protocol.
+    , ccViewMode            :: !ViewMode
+    -- ^ View mode of the TUI
     , ccCore                :: !Core
     , ccNTP                 :: !NTP
     , ccUpdate              :: !Update
@@ -325,6 +328,11 @@ data Certificate = Certificate
     , certExpiryDays   :: !Int
     , certAltDNS       :: ![Text]
     } deriving (Eq, Show)
+
+-- Node can be run in two modes.
+data ViewMode = LiveView    -- Live mode with TUI
+              | SimpleView  -- Simple mode, just output text.
+              deriving (Eq, Show)
 
 -- | Wallet rate-limiting/throttling parameters
 data Wallet = Wallet

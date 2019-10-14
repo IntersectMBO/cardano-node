@@ -31,12 +31,11 @@ data NodeLayer = NodeLayer
 
 createNodeFeature
   :: LoggingLayer
-  -> ViewMode
   -> TraceOptions
   -> CardanoEnvironment
   -> CardanoConfiguration
   -> IO (NodeLayer, CardanoFeature)
-createNodeFeature loggingLayer vMode traceOptions
+createNodeFeature loggingLayer traceOptions
                   cardanoEnvironment cardanoConfiguration = do
     -- we parse any additional configuration if there is any
     -- We don't know where the user wants to fetch the additional
@@ -48,7 +47,6 @@ createNodeFeature loggingLayer vMode traceOptions
                    cardanoEnvironment
                    loggingLayer
                    cardanoConfiguration
-                   vMode
                    traceOptions
 
     -- Construct the cardano feature
@@ -66,10 +64,9 @@ createNodeFeature loggingLayer vMode traceOptions
       :: CardanoEnvironment
       -> LoggingLayer
       -> CardanoConfiguration
-      -> ViewMode
       -> TraceOptions
       -> IO NodeLayer
-    createNodeLayer _ logLayer cc viewMode traceOpts = do
+    createNodeLayer _ logLayer cc traceOpts = do
         pure $ NodeLayer
-          { nlRunNode = liftIO $ runNode viewMode logLayer traceOpts cc
+          { nlRunNode = liftIO $ runNode logLayer traceOpts cc
           }
