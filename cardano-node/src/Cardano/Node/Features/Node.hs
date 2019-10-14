@@ -13,8 +13,6 @@ import           Cardano.Config.Types (CardanoConfiguration (..),
 import           Cardano.Config.Logging (LoggingLayer (..),)
 import           Cardano.Node.Run
 import           Cardano.Shell.Types (CardanoFeature (..))
-import           Cardano.Tracing.Tracers
-
 
 -------------------------------------------------------------------------------
 -- Layer
@@ -31,12 +29,10 @@ data NodeLayer = NodeLayer
 
 createNodeFeature
   :: LoggingLayer
-  -> TraceOptions
   -> CardanoEnvironment
   -> CardanoConfiguration
   -> IO (NodeLayer, CardanoFeature)
-createNodeFeature loggingLayer traceOptions
-                  cardanoEnvironment cardanoConfiguration = do
+createNodeFeature loggingLayer cardanoEnvironment cardanoConfiguration = do
     -- we parse any additional configuration if there is any
     -- We don't know where the user wants to fetch the additional
     -- configuration from, it could be from the filesystem, so
@@ -47,7 +43,6 @@ createNodeFeature loggingLayer traceOptions
                    cardanoEnvironment
                    loggingLayer
                    cardanoConfiguration
-                   traceOptions
 
     -- Construct the cardano feature
     let cardanoFeature :: CardanoFeature
@@ -64,9 +59,8 @@ createNodeFeature loggingLayer traceOptions
       :: CardanoEnvironment
       -> LoggingLayer
       -> CardanoConfiguration
-      -> TraceOptions
       -> IO NodeLayer
-    createNodeLayer _ logLayer cc traceOpts = do
+    createNodeLayer _ logLayer cc = do
         pure $ NodeLayer
-          { nlRunNode = liftIO $ runNode logLayer traceOpts cc
+          { nlRunNode = liftIO $ runNode logLayer cc
           }

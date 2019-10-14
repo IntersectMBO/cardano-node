@@ -9,7 +9,7 @@ import           Cardano.Prelude
 
 import           Ouroboros.Consensus.NodeId
 
-import           Cardano.Config.Orphanage ()
+import           Cardano.Config.Defaults (traceOptionsDefault)
 import           Cardano.Config.Partial ( NodeProtocol (..)
                                         , PartialBlock (..)
                                         , PartialCardanoConfiguration (..)
@@ -44,6 +44,7 @@ mainnetConfiguration =
     , pccProtocol = pure ByronLegacy
     , pccViewMode = pure LiveView
     , pccLogMetrics = pure True
+    , pccTraceOptions = pure traceOptionsDefault
     , pccSocketDir = pure "./socket/"
     , pccCore =
         PartialCore
@@ -161,6 +162,7 @@ devConfiguration =
     , pccProtocol = pure ByronLegacy
     , pccViewMode = pure LiveView
     , pccLogMetrics = pure True
+    , pccTraceOptions = pure traceOptionsDefault
     , pccCore =
         PartialCore
           { pcoGenesisFile = pure "testnet-genesis.json"

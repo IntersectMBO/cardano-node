@@ -91,7 +91,7 @@ initializeAllFeatures
   -> PartialCardanoConfiguration
   -> CardanoEnvironment
   -> IO ([CardanoFeature], NodeLayer)
-initializeAllFeatures (NodeCLI traceOpts parsedPcc)
+initializeAllFeatures (NodeCLI parsedPcc)
                       partialConfigPreset cardanoEnvironment = do
 
     -- `partialConfigPreset` and `parsedPcc` are merged then checked here using
@@ -105,7 +105,6 @@ initializeAllFeatures (NodeCLI traceOpts parsedPcc)
     (nodeLayer   , nodeFeature)    <-
       createNodeFeature
         loggingLayer
-        traceOpts
         cardanoEnvironment
         finalConfig
 
@@ -118,10 +117,7 @@ initializeAllFeatures (NodeCLI traceOpts parsedPcc)
 -- Parsers & Types
 -------------------------------------------------------------------------------
 
--- TODO: Condense `NodeCLI` into one big `PartialCardanoConfiguration`
-data NodeCLI = NodeCLI
-                !TraceOptions
-                !PartialCardanoConfiguration
+data NodeCLI = NodeCLI !PartialCardanoConfiguration
 
 -- | The product parser for all the CLI arguments.
 nodeCliParser :: Parser NodeCLI
@@ -148,10 +144,10 @@ nodeCliParser = do
   reqNetMagic <- parseRequireNetworkMagic
   slotLength <- parseSlotLength
 
-  pure $ NodeCLI traceOptions
+  pure $ NodeCLI
          (createPcc dbPath socketDir topInfo nAddr ptcl logConfigFp vMode
                     logMetrics genPath genHash delCert sKey pbftSigThresh
-                    reqNetMagic slotLength)
+                    reqNetMagic traceOptions slotLength)
  where
   -- This merges the command line parsed values into one `PartialCardanoconfiguration`.
   createPcc
@@ -169,6 +165,7 @@ nodeCliParser = do
     -> Last FilePath
     -> Last Double
     -> Last RequireNetworkMagic
+    -> Last TraceOptions
     -> Last Consensus.SlotLength
     -> PartialCardanoConfiguration
   createPcc
@@ -186,6 +183,7 @@ nodeCliParser = do
     sKey
     pbftSigThresh
     reqNetMagic
+    traceOptions
     slotLength = mempty { pccDBPath = dbPath
                         , pccNodeAddress = nAddr
                         , pccSocketDir = socketDir
@@ -202,12 +200,13 @@ nodeCliParser = do
                                            , pcoRequiresNetworkMagic = reqNetMagic
                                            }
                         , pccNode = mempty { pnoSlotLength = slotLength }
+                        , pccTraceOptions = traceOptions
                         }
 
 
 
-cliTracingParser :: Parser TraceOptions
-cliTracingParser = parseTraceOptions Opt.hidden
+cliTracingParser :: Parser (Last TraceOptions)
+cliTracingParser = Last . Just <$> parseTraceOptions Opt.hidden
 
 parseNodeAddress :: Parser NodeAddress
 parseNodeAddress = NodeAddress <$> parseHostAddr <*> parsePort

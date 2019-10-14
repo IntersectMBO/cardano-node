@@ -45,8 +45,8 @@ import           Cardano.BM.Data.LogItem (LogObject (..))
 import           Cardano.BM.Data.Tracer (ToLogObject (..),
                                          TracingVerbosity (..))
 import           Cardano.BM.Trace (appendName)
-import           Cardano.Config.Types (CardanoConfiguration (..), ViewMode (..))
 import           Cardano.Config.Logging (LoggingLayer (..))
+import           Cardano.Config.Types (CardanoConfiguration (..), ViewMode (..))
 
 import           Ouroboros.Network.Block
 import           Ouroboros.Network.Subscription.Dns
@@ -89,22 +89,21 @@ instance NoUnexpectedThunks Peer where
 
 runNode
   :: LoggingLayer
-  -> TraceOptions
   -> CardanoConfiguration
   -> IO ()
-runNode loggingLayer traceOptions cc = do
+runNode loggingLayer cc = do
     let !tr = llAppendName loggingLayer "node" (llBasicTrace loggingLayer)
     let trace'      = appendName (pack $ show $ node $ ccTopologyInfo cc) tr
     let tracer      = contramap pack $ toLogObject trace'
 
     traceWith tracer $ "tracing verbosity = " ++
-                         case traceVerbosity traceOptions of
-                             NormalVerbosity  -> "normal"
+                         case traceVerbosity $ ccTraceOptions cc of
+                             NormalVerbosity -> "normal"
                              MinimalVerbosity -> "minimal"
                              MaximalVerbosity -> "maximal"
     SomeProtocol p  <- fromProtocol cc $ ccProtocol cc
 
-    let tracers     = mkTracers traceOptions trace'
+    let tracers     = mkTracers (ccTraceOptions cc) trace'
 
     case ccViewMode cc of
       SimpleView -> handleSimpleNode p trace' tracers cc

@@ -31,16 +31,19 @@ module Cardano.Config.Types
     , ViewMode (..)
     , Wallet (..)
     , Certificate (..)
+    , TraceOptions (..)
+    , ConsensusTraceOptions
+    , ProtocolTraceOptions
     ) where
 
 import           Prelude (String, show)
 import           Cardano.Prelude
 
+import           Cardano.BM.Data.Tracer (TracingVerbosity (..))
 import qualified Ouroboros.Consensus.BlockchainTime as Consensus
 
-import           Cardano.Config.Orphanage ()
 import           Cardano.Config.Topology
-
+import           Cardano.Config.Orphanage
 --------------------------------------------------------------------------------
 -- Cardano Environment
 --------------------------------------------------------------------------------
@@ -78,7 +81,8 @@ data CardanoConfiguration = CardanoConfiguration
     -- ^ The location of the application lock file that is used
     -- as a semaphore se we can run just one application
     -- instance at a time.
-
+    , ccTraceOptions        :: !TraceOptions
+    -- ^ Tracer options
     , ccTopologyInfo        :: !TopologyInfo
     -- ^ The network topology.
     , ccNodeAddress         :: !NodeAddress
@@ -343,3 +347,18 @@ data Wallet = Wallet
     , thPeriod  :: !Text
     , thBurst   :: !Int
     } deriving (Eq, Show)
+
+-- | Detailed tracing options. Each option enables a tracer
+--   which verbosity to the log output.
+data TraceOptions = TraceOptions
+  { traceVerbosity       :: !TracingVerbosity
+  , traceChainDB         :: !Bool
+    -- ^ By default we use 'readableChainDB' tracer, if on this it will use
+    -- more verbose tracer
+  , traceConsensus       :: ConsensusTraceOptions
+  , traceProtocols       :: ProtocolTraceOptions
+  , traceIpSubscription  :: !Bool
+  , traceDnsSubscription :: !Bool
+  , traceDnsResolver     :: !Bool
+  , traceMux             :: !Bool
+  } deriving (Eq, Show)

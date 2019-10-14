@@ -36,7 +36,6 @@ function mkdlgcert () {
 
 set -x
 ${CMD} \
-    --log-config configuration/log-configuration.yaml \
     $(mkdlgkey 0) \
     $(mkdlgcert 0) \
     ${NETARGS[*]} \

@@ -7,10 +7,7 @@
 
 module Cardano.Config.Logging
   ( LoggingLayer (..)
-  , TraceOptions (..)
   , LoggingFlag (..)
-  , ConsensusTraceOptions
-  , ProtocolTraceOptions
   , LoggingConfiguration (..)
   , createLoggingFeature
   , loggingCLIConfiguration
@@ -47,7 +44,6 @@ import           Cardano.BM.Data.LogItem ( LOContent (..), LOMeta (..),
 import           Cardano.BM.Data.Observable
 import           Cardano.BM.Data.Severity (Severity (..))
 import           Cardano.BM.Data.SubTrace
-import           Cardano.BM.Data.Tracer (TracingVerbosity (..))
 import qualified Cardano.BM.Observer.Monadic as Monadic
 import qualified Cardano.BM.Observer.STM as Stm
 import           Cardano.BM.Plugin (loadPlugin)
@@ -57,8 +53,6 @@ import qualified Cardano.BM.Trace as Trace
 import           Cardano.Shell.Lib (GeneralException (..), doesFileExist)
 import           Cardano.Shell.Types ( CardanoFeature (..),
                      CardanoFeatureInit (..), NoDependency (..))
-import qualified Ouroboros.Consensus.Node.Tracers as Consensus
-import           Ouroboros.Consensus.NodeNetwork (ProtocolTracers'(..))
 
 import           Cardano.Config.Types (CardanoConfiguration(..), CardanoEnvironment)
 
@@ -74,24 +68,6 @@ data LoggingConfiguration = LoggingConfiguration
   { lpConfiguration      :: !Configuration
   , recordMetrics        :: !Bool
   }
-
--- | Detailed tracing options. Each option enables a tracer
---   which verbosity to the log output.
-data TraceOptions = TraceOptions
-  { traceVerbosity       :: !TracingVerbosity
-  , traceChainDB         :: !Bool
-    -- ^ By default we use 'readableChainDB' tracer, if on this it will use
-    -- more verbose tracer
-  , traceConsensus       :: ConsensusTraceOptions
-  , traceProtocols       :: ProtocolTraceOptions
-  , traceIpSubscription  :: !Bool
-  , traceDnsSubscription :: !Bool
-  , traceDnsResolver     :: !Bool
-  , traceMux             :: !Bool
-  }
-
-type ConsensusTraceOptions = Consensus.Tracers' () ()    () (Const Bool)
-type ProtocolTraceOptions  = ProtocolTracers'   () () ()    (Const Bool)
 
 --------------------------------
 -- Layer

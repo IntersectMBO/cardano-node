@@ -14,6 +14,7 @@ library
   hs-source-dirs:      src
 
   exposed-modules:     Cardano.Config.CommonCLI
+                       Cardano.Config.Defaults
                        Cardano.Config.Logging
                        Cardano.Config.Orphanage
                        Cardano.Config.Partial
@@ -32,6 +33,7 @@ library
                      , cardano-prelude-test
                      , cardano-shell
                      , cborg
+                     , contra-tracer
                      , generic-monoid
                      , iohk-monitoring
                      , lobemo-backend-aggregation

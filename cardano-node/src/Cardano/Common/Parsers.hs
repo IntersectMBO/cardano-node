@@ -33,9 +33,10 @@ import           Ouroboros.Consensus.NodeId (NodeId(..), CoreNodeId(..))
 import           Ouroboros.Consensus.NodeNetwork (ProtocolTracers'(..))
 import qualified Ouroboros.Consensus.Node.Tracers as Consensus
 
+import           Cardano.Config.Orphanage
 import           Cardano.Config.Protocol
-import           Cardano.Config.Logging
 import           Cardano.Config.Topology
+import           Cardano.Config.Types (TraceOptions(..))
 
 -- Common command line parsers
 

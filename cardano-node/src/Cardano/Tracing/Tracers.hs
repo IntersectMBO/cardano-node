@@ -60,7 +60,8 @@ import           Ouroboros.Network.Subscription
 
 import qualified Ouroboros.Storage.ChainDB as ChainDB
 
-import           Cardano.Config.Logging
+import           Cardano.Config.Orphanage
+import           Cardano.Config.Types
 import           Cardano.Tracing.ToObjectOrphans
 
 data Tracers peer blk = Tracers {

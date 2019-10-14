@@ -47,6 +47,7 @@ data PartialCardanoConfiguration = PartialCardanoConfiguration
     , pccProtocol            :: !(Last Protocol)
     , pccViewMode            :: !(Last ViewMode)
     , pccLogMetrics          :: !(Last Bool)
+    , pccTraceOptions        :: !(Last TraceOptions)
     , pccCore                :: !PartialCore
     , pccNTP                 :: !PartialNTP
     , pccUpdate              :: !PartialUpdate
@@ -237,6 +238,7 @@ mkCardanoConfiguration PartialCardanoConfiguration{..} = do
     ccProtocol               <- mkComplete "ccProtocol" pccProtocol
     ccViewMode               <- mkComplete "ccViewMode" pccViewMode
     ccLogMetrics             <- mkComplete "ccLogMetrics" pccLogMetrics
+    ccTraceOptions           <- mkComplete "ccTraceOptions" pccTraceOptions
     ccCore                   <- mkCore pccCore
     ccNTP                    <- mkNTP pccNTP
     ccUpdate                 <- mkUpdate pccUpdate
