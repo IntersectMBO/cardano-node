@@ -27,6 +27,7 @@ not_so_secret=2718281828
 
 tmpdir="`mktemp`.d"
 common=(
+        --log-config                 "configuration/log-configuration.yaml"
         --real-pbft
 )
 args=(
