@@ -49,6 +49,8 @@ import           Cardano.Config.Types (CardanoConfiguration (..))
 import           Cardano.Config.Logging (LoggingLayer (..))
 
 import           Ouroboros.Network.Block
+import           Ouroboros.Network.NodeToClient (NodeToClientVersionData (..))
+import           Ouroboros.Network.NodeToNode (NodeToNodeVersionData (..))
 import           Ouroboros.Network.Subscription.Dns
 
 import           Ouroboros.Consensus.Node (NodeKernel (getChainDB),
@@ -195,18 +197,20 @@ handleSimpleNode
 
         runNetworkArgs :: RunNetworkArgs Peer blk
         runNetworkArgs = RunNetworkArgs
-          { rnaIpSubscriptionTracer  = ipSubscriptionTracer  nodeTracers
-          , rnaDnsSubscriptionTracer = dnsSubscriptionTracer nodeTracers
-          , rnaDnsResolverTracer     = dnsResolverTracer     nodeTracers
-          , rnaMuxTracer             = muxTracer             nodeTracers
-          , rnaMuxLocalTracer        = nullTracer
-          , rnaMkPeer                = Peer
-          , rnaMyAddrs               = addrs
-          , rnaMyLocalAddr           = myLocalAddr
-          , rnaIpProducers           = ipProducers
-          , rnaDnsProducers          = dnsProducers
-          , rnaHandshakeTracer       = nullTracer
-          , rnaHandshakeLocalTracer  = nullTracer
+          { rnaIpSubscriptionTracer    = ipSubscriptionTracer  nodeTracers
+          , rnaDnsSubscriptionTracer   = dnsSubscriptionTracer nodeTracers
+          , rnaDnsResolverTracer       = dnsResolverTracer     nodeTracers
+          , rnaMuxTracer               = muxTracer             nodeTracers
+          , rnaMuxLocalTracer          = nullTracer
+          , rnaMkPeer                  = Peer
+          , rnaMyAddrs                 = addrs
+          , rnaMyLocalAddr             = myLocalAddr
+          , rnaIpProducers             = ipProducers
+          , rnaDnsProducers            = dnsProducers
+          , rnaHandshakeTracer         = nullTracer
+          , rnaHandshakeLocalTracer    = nullTracer
+          , rnaNodeToNodeVersionData   = NodeToNodeVersionData 1
+          , rnaNodeToClientVersionData = NodeToClientVersionData 1
           }
 
         producerSubscription :: RemoteAddress -> DnsSubscriptionTarget

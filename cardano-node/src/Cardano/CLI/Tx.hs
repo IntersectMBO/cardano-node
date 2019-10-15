@@ -23,12 +23,10 @@ import           Cardano.Prelude hiding (option, show, trace, (%))
 
 import           Codec.Serialise (deserialiseOrFail)
 import qualified Data.ByteString.Lazy as LB
-import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
 import           Data.String (IsString)
 import           Data.Text (Text)
 import qualified Data.Text as T
-import qualified Data.Vector as V
 import           Formatting ((%), sformat)
 
 import           Control.Tracer (stdoutTracer)
@@ -36,6 +34,7 @@ import           Control.Tracer (stdoutTracer)
 import           Cardano.Chain.Common (Address)
 import qualified Cardano.Chain.Common as Common
 import           Cardano.Chain.Genesis as Genesis
+import qualified Cardano.Chain.MempoolPayload as CC.Mempool
 import           Cardano.Chain.UTxO ( mkTxAux, annotateTxAux
                                     , Tx(..), TxId, TxIn, TxOut)
 import qualified Cardano.Chain.UTxO as UTxO
@@ -44,7 +43,8 @@ import qualified Cardano.Crypto.Hashing as Crypto
 import qualified Cardano.Crypto.Signing as Crypto
 import qualified Ouroboros.Consensus.Demo.Run as Demo
 import qualified Ouroboros.Consensus.Ledger.Byron as Byron
-import           Ouroboros.Consensus.Ledger.Byron (GenTx(..), ByronBlockOrEBB)
+import           Ouroboros.Consensus.Ledger.Byron ( GenTx(..), GenTxId(..)
+                                                  , ByronBlockOrEBB)
 import           Ouroboros.Consensus.Ledger.Byron.Config (ByronConfig)
 import qualified Ouroboros.Consensus.Protocol as Consensus
 
@@ -144,6 +144,15 @@ withRealPBFT co cc action = do
     proto@Consensus.ProtocolRealPBFT{} -> action proto
     _ -> throwIO $ ProtocolNotSupported (coProtocol co)
 
+-- | Return an id of GenTx.
+byronGenTxId
+  :: GenTx (ByronBlockOrEBB ByronConfig)
+  -> GenTxId (ByronBlockOrEBB ByronConfig)
+byronGenTxId (ByronTx txId _) = ByronTxId txId
+byronGenTxId (ByronDlg certId _) = ByronDlgId certId
+byronGenTxId (ByronUpdateProposal upId _) = ByronUpdateProposalId upId
+byronGenTxId (ByronUpdateVote voteId _) = ByronUpdateVoteId voteId
+
 -- | Generate a transaction spending genesis UTxO at a given address,
 --   to given outputs, signed by the given key.
 txSpendGenesisUTxOByronPBFT
@@ -153,7 +162,8 @@ txSpendGenesisUTxOByronPBFT
   -> NonEmpty TxOut
   -> GenTx (ByronBlockOrEBB ByronConfig)
 txSpendGenesisUTxOByronPBFT gc sk genAddr outs =
-    Byron.mkByronTx $ annotateTxAux $ mkTxAux tx (pure wit)
+    Byron.mkByronGenTx
+      $ CC.Mempool.MempoolTx $ annotateTxAux $ mkTxAux tx (pure wit)
   where
     tx = UnsafeTx (pure txIn) outs txattrs
 
@@ -178,7 +188,7 @@ issueGenesisUTxOExpenditure co genRichAddr outs cc sk = do
     \(Consensus.ProtocolRealPBFT gc _ _ _ _)-> do
       let tx = txSpendGenesisUTxOByronPBFT gc sk genRichAddr outs
       putStrLn $ "genesis protocol magic:  " <> show (configProtocolMagicId gc)
-      putStrLn $ "transaction hash (TxId): " <> show (byronTxId tx)
+      putStrLn $ "transaction hash (TxId): " <> show (byronGenTxId tx)
       pure tx
 
 -- | Generate a transaction from given Tx inputs to outputs,
@@ -190,10 +200,9 @@ txSpendUTxOByronPBFT
   -> NonEmpty TxOut
   -> GenTx (ByronBlockOrEBB ByronConfig)
 txSpendUTxOByronPBFT gc sk ins outs =
-    Byron.mkByronTx $ annotateTxAux $ mkTxAux tx wits
+    Byron.mkByronGenTx
+      $ CC.Mempool.MempoolTx $ annotateTxAux $ mkTxAux tx (pure wit)
   where
-    wits = V.fromList . take (NE.length ins) . repeat $ wit
-
     tx = UnsafeTx ins outs txattrs
 
     wit = signTxId (configProtocolMagicId gc) sk (Crypto.hash tx)
@@ -214,7 +223,7 @@ issueUTxOExpenditure co ins outs cc key = do
     \(Consensus.ProtocolRealPBFT gc _ _ _ _)-> do
       let tx = txSpendUTxOByronPBFT gc key ins outs
       putStrLn $ "genesis protocol magic:  " <> show (configProtocolMagicId gc)
-      putStrLn $ "transaction hash (TxId): " <> show (byronTxId tx)
+      putStrLn $ "transaction hash (TxId): " <> show (byronGenTxId tx)
       pure tx
 
 -- | Submit a transaction to a node specified by topology info.
@@ -227,5 +236,5 @@ nodeSubmitTx
 nodeSubmitTx co topology cc tx =
   withRealPBFT co cc $
     \p@Consensus.ProtocolRealPBFT{} -> do
-      putStrLn $ "transaction hash (TxId): " <> show (byronTxId tx)
+      putStrLn $ "transaction hash (TxId): " <> show (byronGenTxId tx)
       handleTxSubmission cc p topology tx stdoutTracer

@@ -59,6 +59,7 @@ import           Cardano.BM.Data.Tracer (ToLogObject (..))
 import           Cardano.BM.Trace (appendName)
 import qualified Cardano.Chain.Common as CC.Common
 import qualified Cardano.Chain.Genesis as CC.Genesis
+import qualified Cardano.Chain.MempoolPayload as CC.Mempool
 import qualified Cardano.Chain.UTxO as CC.UTxO
 import           Cardano.Config.Logging (LoggingLayer (..), Trace)
 import           Cardano.Config.Types (CardanoConfiguration(..))
@@ -444,10 +445,18 @@ prepareInitialFunds llTracer
   submitTx cc pInfoConfig (node topologyInfo) genesisTx llTracer
   -- Done, the first transaction 'initGenTx' is submitted, now 'sourceAddress' has a lot of money.
 
-  let txIn  = CC.UTxO.TxInUtxo (Byron.byronTxId genesisTx) 0
+  let txIn  = CC.UTxO.TxInUtxo (getTxIdFromGenTx genesisTx) 0
       txOut = outForBig
   addToAvailableFunds (txIn, txOut)
   -- Now we can use these money for further transactions.
+
+-- | Get 'TxId' from 'GenTx'. Since we generate transactions by ourselves -
+--   we definitely know that it's 'ByronTx' only.
+getTxIdFromGenTx
+  :: GenTx (ByronBlockOrEBB cfg)
+  -> CC.UTxO.TxId
+getTxIdFromGenTx (ByronTx txId _) = txId
+getTxIdFromGenTx _ = panic "Impossible happened: generated transaction is not a ByronTx!"
 
 -- | Single input to multiple (in sequence) output transaction (special case for benchmarking).
 mkTransaction
@@ -524,7 +533,8 @@ generalizeTx
   -> Crypto.SigningKey -- signingKey for spending the input
   -> GenTx (ByronBlockOrEBB cfg)
 generalizeTx (WithEBBNodeConfig config) tx signingKey =
-  Byron.mkByronTx $ CC.UTxO.annotateTxAux $ CC.UTxO.mkTxAux tx witness
+  Byron.mkByronGenTx $
+    CC.Mempool.MempoolTx $ CC.UTxO.annotateTxAux $ CC.UTxO.mkTxAux tx witness
  where
   witness = pure $
       CC.UTxO.VKWitness
@@ -785,7 +795,7 @@ createMoreFundCoins llTracer cc pInfoConfig sourceKey (FeePerTx txFee) topologyI
                                                                details
                                                                Nothing
                                                                outs
-            !txId = Byron.byronTxId genTx
+            !txId = getTxIdFromGenTx genTx
             txDetailsList = (flip map) (Map.toList outIndices) $
                 \(_, txInIndex) ->
                   let !txIn  = CC.UTxO.TxInUtxo txId txInIndex
@@ -794,7 +804,7 @@ createMoreFundCoins llTracer cc pInfoConfig sourceKey (FeePerTx txFee) topologyI
           case mFunds of
             Nothing                 -> reverse $ (genTx, txDetailsList) : acc
             Just (txInIndex, value) ->
-              let !txInChange  = CC.UTxO.TxInUtxo (Byron.byronTxId genTx) txInIndex
+              let !txInChange  = CC.UTxO.TxInUtxo (getTxIdFromGenTx genTx) txInIndex
                   !txOutChange = CC.UTxO.TxOut
                                    { CC.UTxO.txOutAddress = sourceAddress
                                    , CC.UTxO.txOutValue   = value
