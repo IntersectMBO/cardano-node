@@ -13,7 +13,6 @@ extra-deps:
   - bimap-0.4.0
   - containers-0.5.11.0
   - generic-monoid-0.1.0.0
-  - pvss-0.2.0
   - time-units-1.0.0
   - tasty-hedgehog-1.0.0.1
   - transformers-except-0.1.1

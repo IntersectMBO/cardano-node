@@ -25,10 +25,8 @@ import qualified Cardano.Chain.Delegation as Dlg
 import           Cardano.Crypto (SigningKey (..))
 import           Codec.CBOR.Read (DeserialiseFailure, deserialiseFromBytes)
 import           Codec.CBOR.Write (toLazyByteString)
-import qualified Cardano.Crypto.Random as Crypto
 import qualified Cardano.Crypto.Signing as Crypto
 import qualified Cardano.Chain.Genesis as Genesis
-import qualified Crypto.SCRAPE as Scrape
 
 import           Cardano.Config.Types
 import           Cardano.Common.Protocol
@@ -54,9 +52,8 @@ decideCLIOps protocol =
     ByronLegacy ->
       pure CLIOps
       { coSerialiseGenesisKey          = pure . serialiseSigningKey
-      , coSerialiseDelegateKey         = \sk->
-          toLazyByteString . Legacy.encodeLegacyDelegateKey . Legacy.LegacyDelegateKey sk
-          <$> Crypto.runSecureRandom Scrape.keyPairGenerate
+      , coSerialiseDelegateKey         = \sk ->
+          pure . toLazyByteString . Legacy.encodeLegacyDelegateKey $ Legacy.LegacyDelegateKey sk
       , coSerialisePoorKey             = pure . serialiseSigningKey
                                               . Genesis.poorSecretToKey
       , coSerialiseGenesis             = pure . canonicalEncodePretty

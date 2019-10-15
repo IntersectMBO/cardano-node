@@ -16,19 +16,15 @@ module Cardano.CLI.Legacy.Byron (
     , decodeLegacyDelegateKey
     ) where
 
+import           Cardano.Prelude hiding (option)
+
 import qualified Codec.CBOR.Decoding as D
 import qualified Codec.CBOR.Encoding as E
 import           Control.Lens (LensLike, _Left)
-import qualified Data.Binary as Binary
 import           Data.Coerce (coerce)
 import           Data.Semigroup ((<>))
 import           Data.Text (Text)
 import qualified Data.Text as T
-import qualified Data.ByteString.Lazy as LB
-
-import qualified Crypto.SCRAPE as Scrape
-
-import           Cardano.Prelude hiding (option)
 
 import qualified Cardano.Crypto.Wallet as Wallet
 import           Cardano.Crypto.Signing (SigningKey(..))
@@ -39,25 +35,7 @@ import           Cardano.Crypto.Signing (SigningKey(..))
 -- 3. the rest must be absent (Nothing)
 --
 -- Legacy reference: https://github.com/input-output-hk/cardano-sl/blob/release/3.0.1/lib/src/Pos/Util/UserSecret.hs#L189
-data LegacyDelegateKey
-  =  LegacyDelegateKey
-  { lrkSigningKey :: !SigningKey
-  , lrkVSSKeyPair :: !Scrape.KeyPair
-  }
-
--- Stolen from: cardano-sl/binary/src/Pos/Binary/Class/Core.hs
-encodeBinary :: Binary.Binary a => a -> E.Encoding
-encodeBinary = E.encodeBytes . LB.toStrict . Binary.encode
-
--- Stolen from: cardano-sl/binary/src/Pos/Binary/Class/Core.hs
-decodeBinary :: Binary.Binary a => D.Decoder s a
-decodeBinary = do
-    x <- D.decodeBytesCanonical
-    toCborError $ case Binary.decodeOrFail (LB.fromStrict x) of
-        Left (_, _, err) -> Left (T.pack err)
-        Right (bs, _, res)
-            | LB.null bs -> Right res
-            | otherwise  -> Left "decodeBinary: unconsumed input"
+data LegacyDelegateKey =  LegacyDelegateKey { lrkSigningKey :: !SigningKey}
 
 encodeXPrv :: Wallet.XPrv -> E.Encoding
 encodeXPrv a = E.encodeBytes $ Wallet.unXPrv a
@@ -85,9 +63,9 @@ matchSize requestedSize lbl actualSize =
 -- | Encoder for a Byron/Classic signing key.
 --   Lifted from cardano-sl legacy codebase.
 encodeLegacyDelegateKey :: LegacyDelegateKey -> E.Encoding
-encodeLegacyDelegateKey dk@LegacyDelegateKey{lrkSigningKey=(SigningKey sk)}
+encodeLegacyDelegateKey (LegacyDelegateKey (SigningKey sk))
   =  E.encodeListLen 4
-  <> E.encodeListLen 1 <> encodeBinary (lrkVSSKeyPair dk)
+  <> E.encodeListLen 1 <> E.encodeBytes "vss deprecated"
   <> E.encodeListLen 1 <> encodeXPrv sk
   <> E.encodeListLenIndef <> E.encodeBreak
   <> E.encodeListLen 0
@@ -97,9 +75,9 @@ encodeLegacyDelegateKey dk@LegacyDelegateKey{lrkSigningKey=(SigningKey sk)}
 decodeLegacyDelegateKey :: D.Decoder s LegacyDelegateKey
 decodeLegacyDelegateKey = do
     enforceSize "UserSecret" 4
-    vss  <- do
+    _    <- do
       enforceSize "vss" 1
-      decodeBinary
+      D.decodeBytes
     pkey <- do
       enforceSize "pkey" 1
       SigningKey <$> decodeXPrv
@@ -108,4 +86,4 @@ decodeLegacyDelegateKey = do
       D.decodeSequenceLenIndef (flip (:)) [] reverse D.decodeNull
     _    <- do
       enforceSize "wallet" 0
-    pure $ LegacyDelegateKey pkey vss
+    pure $ LegacyDelegateKey pkey

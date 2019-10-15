@@ -49,7 +49,6 @@ library
   build-depends:       aeson
                      , async
                      , base >=4.12 && <5
-                     , binary
                      , bytestring
                      , canonical-json
                      , cardano-binary
@@ -83,7 +82,6 @@ library
                      , ouroboros-consensus
                      , ouroboros-network
                      , process
-                     , pvss
                      , safe-exceptions
                      , serialise
                      , stm
