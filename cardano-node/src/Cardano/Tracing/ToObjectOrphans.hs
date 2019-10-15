@@ -109,7 +109,7 @@ instance ( Show a
 -- instances of @DefinePrivacyAnnotation@ and @DefineSeverity@
 instance DefinePrivacyAnnotation (WithIPList (SubscriptionTrace Socket.SockAddr))
 instance DefineSeverity (WithIPList (SubscriptionTrace Socket.SockAddr)) where
-  defineSeverity (WithIPList _ _ _ ev) = case ev of
+  defineSeverity (WithIPList _ _ ev) = case ev of
     SubscriptionTraceConnectStart _ -> Info
     SubscriptionTraceConnectEnd _ connectResult -> case connectResult of
       ConnectSuccess         -> Info
@@ -464,10 +464,9 @@ readableChainDBTracer tracer = Tracer $ \case
 -- | instances of @ToObject@
 
 instance ToObject (WithIPList (SubscriptionTrace Socket.SockAddr)) where
-  toObject _verb (WithIPList ipv4 ipv6 dests ev) =
+  toObject _verb (WithIPList localAddresses dests ev) =
     mkObject [ "kind" .= String "WithIPList SubscriptionTrace"
-             , "ipv4" .= show ipv4
-             , "ipv6" .= show ipv6
+             , "localAddresses" .= show localAddresses
              , "dests" .= show dests
              , "event" .= show ev ]
 
