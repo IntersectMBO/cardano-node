@@ -122,37 +122,37 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: 815278131bd5ab070199712e167659c472b466ce
+  tag: 56c5a85133810e2bb53f8278a95a757fffaa4a86
   subdir: ouroboros-network
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: 815278131bd5ab070199712e167659c472b466ce
+  tag: 56c5a85133810e2bb53f8278a95a757fffaa4a86
   subdir: ouroboros-consensus
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: 815278131bd5ab070199712e167659c472b466ce
+  tag: 56c5a85133810e2bb53f8278a95a757fffaa4a86
   subdir: typed-protocols
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: 815278131bd5ab070199712e167659c472b466ce
+  tag: 56c5a85133810e2bb53f8278a95a757fffaa4a86
   subdir: typed-protocols-cbor
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: 815278131bd5ab070199712e167659c472b466ce
+  tag: 56c5a85133810e2bb53f8278a95a757fffaa4a86
   subdir: network-mux
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: 815278131bd5ab070199712e167659c472b466ce
+  tag: 56c5a85133810e2bb53f8278a95a757fffaa4a86
   subdir: io-sim-classes
 
 source-repository-package

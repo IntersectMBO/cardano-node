@@ -29,7 +29,7 @@ import           Ouroboros.Consensus.Block (BlockProtocol)
 import           Ouroboros.Consensus.Mempool.API (GenTxId, GenTx)
 import           Ouroboros.Consensus.Node.Run (RunNode)
 import           Ouroboros.Consensus.NodeNetwork (ProtocolCodecs(..), protocolCodecs)
-import           Ouroboros.Consensus.Protocol.Abstract (NodeConfig)
+import           Ouroboros.Consensus.Protocol.Abstract (NodeConfig, protocolNetworkMagic)
 import           Ouroboros.Network.Mux (OuroborosApplication(..))
 import qualified Ouroboros.Network.NodeToNode as NtN
 import           Ouroboros.Network.Protocol.BlockFetch.Client (BlockFetchClient(..), blockFetchClientPeer)
@@ -84,7 +84,7 @@ benchmarkConnectTxSubmit trs nc localAddr remoteAddr myTxSubClient = do
   peerMultiplex =
     simpleSingletonVersions
       NtN.NodeToNodeV_1
-      (NtN.NodeToNodeVersionData { NtN.networkMagic = 0})
+      (NtN.NodeToNodeVersionData { NtN.networkMagic = protocolNetworkMagic nc})
       (NtN.DictVersion NtN.nodeToNodeCodecCBORTerm)
       $ OuroborosInitiatorApplication $ \peer ptcl ->
           case ptcl of

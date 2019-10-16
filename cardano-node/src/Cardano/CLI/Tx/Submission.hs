@@ -124,7 +124,8 @@ localInitiatorNetworkApplication
 localInitiatorNetworkApplication tracer protoInfoConfig tx =
     simpleSingletonVersions
       NodeToClient.NodeToClientV_1
-      (NodeToClient.NodeToClientVersionData { NodeToClient.networkMagic = 0 })
+      (NodeToClient.NodeToClientVersionData
+        { NodeToClient.networkMagic = protocolNetworkMagic protoInfoConfig })
       (NodeToClient.DictVersion NodeToClient.nodeToClientCodecCBORTerm)
 
   $ OuroborosInitiatorApplication $ \peer ptcl -> case ptcl of
