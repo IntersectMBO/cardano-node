@@ -109,7 +109,7 @@ instance ( Show a
 -- instances of @DefinePrivacyAnnotation@ and @DefineSeverity@
 instance DefinePrivacyAnnotation (WithIPList (SubscriptionTrace Socket.SockAddr))
 instance DefineSeverity (WithIPList (SubscriptionTrace Socket.SockAddr)) where
-  defineSeverity (WithIPList _ _ _ ev) = case ev of
+  defineSeverity (WithIPList _ _ ev) = case ev of
     SubscriptionTraceConnectStart _ -> Info
     SubscriptionTraceConnectEnd _ connectResult -> case connectResult of
       ConnectSuccess         -> Info
@@ -166,21 +166,25 @@ instance DefineSeverity (WithDomainName DnsTrace) where
 instance DefinePrivacyAnnotation (WithMuxBearer (MuxTrace ptcl))
 instance DefineSeverity (WithMuxBearer (MuxTrace ptcl)) where
   defineSeverity (WithMuxBearer _ ev) = case ev of
-    MuxTraceRecvHeaderStart      -> Debug
-    MuxTraceRecvHeaderEnd {}     -> Debug
-    MuxTraceRecvPayloadStart {}  -> Debug
-    MuxTraceRecvPayloadEnd {}    -> Debug
-    MuxTraceRecvStart {}         -> Debug
-    MuxTraceRecvEnd {}           -> Debug
-    MuxTraceSendStart {}         -> Debug
-    MuxTraceSendEnd              -> Debug
-    MuxTraceStateChange {}       -> Info
-    MuxTraceCleanExit {}         -> Info
-    MuxTraceExceptionExit {}     -> Info
-    MuxTraceChannelRecvStart {}  -> Debug
-    MuxTraceChannelRecvEnd {}    -> Debug
-    MuxTraceChannelSendStart {}  -> Debug
-    MuxTraceChannelSendEnd {}    -> Debug
+    MuxTraceRecvHeaderStart        -> Debug
+    MuxTraceRecvHeaderEnd {}       -> Debug
+    MuxTraceRecvPayloadStart {}    -> Debug
+    MuxTraceRecvPayloadEnd {}      -> Debug
+    MuxTraceRecvStart {}           -> Debug
+    MuxTraceRecvEnd {}             -> Debug
+    MuxTraceSendStart {}           -> Debug
+    MuxTraceSendEnd                -> Debug
+    MuxTraceStateChange {}         -> Info
+    MuxTraceCleanExit {}           -> Info
+    MuxTraceExceptionExit {}       -> Info
+    MuxTraceChannelRecvStart {}    -> Debug
+    MuxTraceChannelRecvEnd {}      -> Debug
+    MuxTraceChannelSendStart {}    -> Debug
+    MuxTraceChannelSendEnd {}      -> Debug
+    MuxTraceHandshakeStart         -> Debug
+    MuxTraceHandshakeEnd           -> Debug
+    MuxTraceHandshakeClientError _ -> Error
+    MuxTraceHandshakeServerError _ -> Error
 
 instance DefinePrivacyAnnotation (WithTip blk (ChainDB.TraceEvent blk))
 instance DefineSeverity (WithTip blk (ChainDB.TraceEvent blk)) where
@@ -464,10 +468,9 @@ readableChainDBTracer tracer = Tracer $ \case
 -- | instances of @ToObject@
 
 instance ToObject (WithIPList (SubscriptionTrace Socket.SockAddr)) where
-  toObject _verb (WithIPList ipv4 ipv6 dests ev) =
+  toObject _verb (WithIPList localAddresses dests ev) =
     mkObject [ "kind" .= String "WithIPList SubscriptionTrace"
-             , "ipv4" .= show ipv4
-             , "ipv6" .= show ipv6
+             , "localAddresses" .= show localAddresses
              , "dests" .= show dests
              , "event" .= show ev ]
 
@@ -719,6 +722,10 @@ instance ToObject (TraceFetchClientState header) where
     mkObject [ "kind" .= String "CompletedBlockFetch" ]
   toObject _verb (CompletedFetchBatch {}) =
     mkObject [" kind" .= String "CompletedFetchBatch" ]
+  toObject _verb (StartedFetchBatch {}) =
+    mkObject [" kind" .= String "StartedFetchBatch" ]
+  toObject _verb (RejectedFetchBatch {}) =
+    mkObject [" kind" .= String "RejectedFetchBatch" ]
 
 instance ToObject (TraceBlockFetchServerEvent blk) where
   toObject _verb _ =
