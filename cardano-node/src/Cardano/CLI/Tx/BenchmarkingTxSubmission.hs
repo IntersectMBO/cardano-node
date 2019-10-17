@@ -22,7 +22,7 @@ import           Control.Exception (assert)
 import           Control.Monad.Class.MonadSTM (MonadSTM, LazyTMVar, LazyTVar,
                                                atomically, putTMVar, readTVar,
                                                retry, takeTMVar, tryTakeTMVar)
-import           Control.Monad.Class.MonadTime (MonadTime(..), addTime, diffTime)
+import           Control.Monad.Class.MonadTime (MonadTime(..), addTime, diffTime, Time)
 import           Control.Monad.Class.MonadTimer (MonadTimer, threadDelay)
 import qualified Data.Sequence as Seq
 import qualified Data.Set as Set
@@ -295,7 +295,7 @@ defaultROEnv = ROEnv
 data RWEnv m txid tx = RWEnv
   { terminating     :: Bool
   , activityState   :: ActivityState
-  , proceedAfter    :: Time m
+  , proceedAfter    :: Time
   , availableOp     :: Maybe (Int, LazyTMVar m (Maybe [(txid, TxSubmit.TxSizeInBytes)]))
   -- ^ the window and the response action
   , inFlight
