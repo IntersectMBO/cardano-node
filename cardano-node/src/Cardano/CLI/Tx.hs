@@ -43,7 +43,7 @@ import qualified Cardano.Crypto.Hashing as Crypto
 import qualified Cardano.Crypto.Signing as Crypto
 import qualified Ouroboros.Consensus.Demo.Run as Demo
 import qualified Ouroboros.Consensus.Ledger.Byron as Byron
-import           Ouroboros.Consensus.Ledger.Byron ( GenTx(..),ByronBlockOrEBB)
+import           Ouroboros.Consensus.Ledger.Byron (GenTx(..), ByronBlockOrEBB)
 import           Ouroboros.Consensus.Ledger.Byron.Config (ByronConfig)
 import qualified Ouroboros.Consensus.Protocol as Consensus
 import           Ouroboros.Consensus.Mempool.API (txId)
