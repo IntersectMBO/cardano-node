@@ -6,10 +6,10 @@
 {-# LANGUAGE RankNTypes #-}
 
 import           Cardano.Prelude hiding (option)
-import           Prelude (String, read)
+import           Prelude (String)
 
-import qualified Data.IP as IP
 import           Data.Semigroup ((<>))
+import qualified Net.IP as IP
 import           Network.Socket (PortNumber)
 import           Options.Applicative ( Parser, auto, flag, help, long
                                      , metavar, option, str, value)
@@ -213,7 +213,7 @@ parseNodeAddress = NodeAddress <$> parseHostAddr <*> parsePort
 
 parseHostAddr :: Parser (Maybe IP.IP)
 parseHostAddr =
-    option (Just <$> read <$> str) (
+    option (IP.decode <$> str) (
           long "host-addr"
        <> metavar "HOST-NAME"
        <> help "Optionally limit node to one ipv6 or ipv4 address"

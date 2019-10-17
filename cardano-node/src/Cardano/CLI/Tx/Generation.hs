@@ -38,7 +38,6 @@ import           Data.Bifunctor (bimap)
 import qualified Data.ByteString.Lazy as LB
 import           Data.Either (isLeft)
 import           Data.Foldable (find, foldl', foldr, toList)
-import qualified Data.IP as IP
 import           Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.List.NonEmpty as NE
 import           Data.Maybe (Maybe (..), fromMaybe, listToMaybe, mapMaybe)
@@ -50,6 +49,9 @@ import           Data.Text (Text)
 import qualified Data.Text as T
 import           Data.Time.Clock (DiffTime, picosecondsToDiffTime)
 import           Data.Word (Word8, Word32, Word64)
+import           Net.IP (case_)
+import qualified Net.IPv4 as IP4
+import qualified Net.IPv6 as IP6
 import           Network.Socket (AddrInfo (..),
                      AddrInfoFlag (..), Family (..), SocketType (Stream),
                      addrFamily,addrFlags, addrSocketType, defaultHints,
@@ -744,8 +746,10 @@ runBenchmark benchTracer
 
   let (anAddrFamily, targetNodeHost) =
         case naHostAddress targetNodeAddress of
-          Just (IP.IPv4 ipv4) -> (AF_INET,  show ipv4)
-          Just (IP.IPv6 ipv6) -> (AF_INET6, show ipv6)
+          Just ip -> case_
+                     (\ipv4 -> (AF_INET, toS $ IP4.encode ipv4))
+                     (\ipv6 -> (AF_INET6, toS $ IP6.encode ipv6))
+                     ip
           Nothing -> panic "Target node's IP-address is undefined!"
 
   let targetNodePort = show $ naPort targetNodeAddress

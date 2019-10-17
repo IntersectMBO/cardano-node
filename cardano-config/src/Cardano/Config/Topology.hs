@@ -21,16 +21,17 @@ module Cardano.Config.Topology
 where
 
 import           Cardano.Prelude hiding (toS)
-import           Prelude (String, read)
+import           Prelude (String)
 
 import           Control.Exception (IOException)
 import qualified Control.Exception as Exception
 import           Data.Aeson
 import           Data.Aeson.TH
 import qualified Data.ByteString as BS
-import qualified Data.IP as IP
 import           Data.String.Conv (toS)
-import           Text.Read (readMaybe)
+import qualified Net.IP as IP
+import qualified Net.IPv4 as IP4
+import qualified Net.IPv6 as IP6
 import           Network.Socket
 
 import           Ouroboros.Consensus.NodeId (NodeId(..))
@@ -58,15 +59,16 @@ instance Condense NodeAddress where
 instance FromJSON NodeAddress where
   parseJSON = withObject "NodeAddress" $ \v -> do
     NodeAddress
-      <$> (Just <$> read <$> v .: "addr")
+      <$> (IP.decode <$> v .: "addr")
       <*> ((fromIntegral :: Int -> PortNumber) <$> v .: "port")
 
 nodeAddressToSockAddr :: NodeAddress -> SockAddr
 nodeAddressToSockAddr (NodeAddress addr port) =
   case addr of
-    Just (IP.IPv4 ipv4) -> SockAddrInet port $ IP.toHostAddress ipv4
-    Just (IP.IPv6 ipv6) -> SockAddrInet6 port 0 (IP.toHostAddress6 ipv6) 0
-    Nothing             -> SockAddrInet port 0 -- Could also be any IPv6 addr
+    Just ip -> IP.case_ (\ipv4 -> SockAddrInet port (tupleToHostAddress $ IP4.toOctets ipv4))
+                        (\ipv6 -> SockAddrInet6 port 0 (IP6.toWord32s ipv6) 0)
+                        ip
+    Nothing -> SockAddrInet port 0 -- Could also be any IPv6 addr
 
 nodeAddressInfo :: NodeAddress -> IO [AddrInfo]
 nodeAddressInfo (NodeAddress hostAddr port) = do
@@ -96,12 +98,11 @@ data RemoteAddress = RemoteAddress
 -- non zero return corresponding NodeAddress.
 --
 remoteAddressToNodeAddress:: RemoteAddress-> Maybe NodeAddress
-remoteAddressToNodeAddress (RemoteAddress addrStr port val) =
-  case readMaybe addrStr of
+remoteAddressToNodeAddress (RemoteAddress _ _ 0) = Nothing
+remoteAddressToNodeAddress (RemoteAddress addrStr port _) =
+  case IP.decode $ toS addrStr of
     Nothing -> Nothing
-    Just addr -> if val /= 0
-                 then Just $ NodeAddress (Just addr) port
-                 else Nothing
+    Just ip -> Just $ NodeAddress (Just ip) port
 
 
 instance Condense RemoteAddress where

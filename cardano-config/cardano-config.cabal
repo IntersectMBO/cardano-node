@@ -36,6 +36,7 @@ library
                      , contra-tracer
                      , generic-monoid
                      , iohk-monitoring
+                     , ip
                      , lobemo-backend-aggregation
                      , lobemo-backend-editor
                      , lobemo-backend-ekg

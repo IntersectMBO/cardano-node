@@ -70,7 +70,7 @@ library
                      , formatting
                      , io-sim-classes
                      , iohk-monitoring
-                     , iproute
+                     , ip
                      , lens
                      , memory
                      , mtl
@@ -146,7 +146,7 @@ executable cardano-node
                      , formatting
                      , io-sim-classes
                      , iohk-monitoring
-                     , iproute
+                     , ip
                      , lens
                      , mtl
                      , network
@@ -187,7 +187,6 @@ executable trace-acceptor
                      , typed-protocols-cbor
 
                      , bytestring
-                     , iproute
                      , network
                      , optparse-applicative
                      , serialise
@@ -242,6 +241,7 @@ executable cardano-cli
                      , cardano-ledger
                      , cardano-prelude
                      , cardano-node
+                     , ip
                      , optparse-applicative
                      , ouroboros-consensus
                      , safe-exceptions
