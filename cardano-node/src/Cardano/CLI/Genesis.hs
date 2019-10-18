@@ -13,12 +13,13 @@ module Cardano.CLI.Genesis
   )
 where
 
-import           Prelude (String)
+import           Prelude (String, show)
 import           Cardano.Prelude hiding (option, show, trace)
 import           Test.Cardano.Prelude (canonicalDecodePretty)
 
 import           Control.Monad.Trans.Except (ExceptT)
-import           Control.Monad.Trans.Except.Extra (firstExceptT, left, right)
+import           Control.Monad.Trans.Except.Extra (hoistEither, firstExceptT,
+                                                   left, right)
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.Map.Strict as Map
 import           Data.String (IsString)
@@ -37,6 +38,7 @@ import qualified Cardano.Chain.Common as Common
 import           Cardano.Chain.Delegation hiding (Map, epoch)
 import qualified Cardano.Chain.Genesis as Genesis
 import           Cardano.Chain.Genesis (GeneratedSecrets(..))
+import           Cardano.Config.Protocol (Protocol(..))
 import           Cardano.Crypto (SigningKey (..))
 import qualified Cardano.Crypto as Crypto
 
@@ -124,26 +126,26 @@ readGenesis (GenesisFile fp) = firstExceptT (GenesisReadError fp) $ Genesis.read
 -- thrown if the directory already exists, or the genesis has delegate keys that
 -- are not delegated to.
 dumpGenesis
-  :: CLIOps IO
+  :: Protocol
   -> NewDirectory
   -> Genesis.GenesisData
   -> Genesis.GeneratedSecrets
   -> ExceptT CliError IO ()
-dumpGenesis co (NewDirectory outDir) genesisData gs = do
+dumpGenesis ptcl (NewDirectory outDir) genesisData gs = do
   exists <- liftIO $ doesPathExist outDir
   if exists
   then left $ OutputMustNotAlreadyExist outDir
   else liftIO $ createDirectory outDir
-
-  liftIO $ LB.writeFile genesisJSONFile =<< coSerialiseGenesis co genesisData
+  genesis <- hoistEither $ serialiseGenesis ptcl genesisData
+  liftIO $ LB.writeFile genesisJSONFile genesis
 
   dlgCerts <- mapM findDelegateCert $ gsRichSecrets gs
 
-  liftIO $ wOut "genesis-keys" "key" (coSerialiseGenesisKey co) (gsDlgIssuersSecrets gs)
-  liftIO $ wOut "delegate-keys" "key" (coSerialiseDelegateKey co) (gsRichSecrets gs)
-  liftIO $ wOut "poor-keys" "key" (coSerialisePoorKey co) (gsPoorSecrets gs)
-  liftIO $ wOut "delegation-cert" "json" (coSerialiseDelegationCert co) dlgCerts
-  liftIO $ wOut "avvm-seed" "seed" (pure . LB.fromStrict) (gsFakeAvvmSeeds gs)
+  liftIO $ wOut "genesis-keys" "key" (pure . serialiseSigningKey' ptcl) (gsDlgIssuersSecrets gs)
+  liftIO $ wOut "delegate-keys" "key" (serialiseDelegateKey ptcl) (gsRichSecrets gs)
+  liftIO $ wOut "poor-keys" "key" (pure . serialisePoorKey ptcl) (gsPoorSecrets gs)
+  liftIO $ wOut "delegation-cert" "json" (pure . serialiseDelegationCert ptcl) dlgCerts
+  liftIO $ wOut "avvm-seed" "seed" (pure . (Right <$> LB.fromStrict)) (gsFakeAvvmSeeds gs)
  where
   dlgCertMap :: Map Common.KeyHash Certificate
   dlgCertMap = Genesis.unGenesisDelegation $ Genesis.gdHeavyDelegation genesisData
@@ -158,16 +160,19 @@ dumpGenesis co (NewDirectory outDir) genesisData gs = do
   -- Compare a given 'SigningKey' with a 'Certificate' 'VerificationKey'
   isCertForSK :: SigningKey -> Certificate -> Bool
   isCertForSK sk cert = delegateVK cert == Crypto.toVerification sk
-  wOut :: String -> String -> (a -> IO LB.ByteString) -> [a] -> IO ()
+  wOut :: String -> String -> (a -> IO (Either CliError LB.ByteString)) -> [a] -> IO ()
   wOut = writeSecrets outDir
 
 
-writeSecrets :: FilePath -> String -> String -> (a -> IO LB.ByteString) -> [a] -> IO ()
+writeSecrets :: FilePath -> String -> String -> (a -> IO (Either CliError LB.ByteString)) -> [a] -> IO ()
 writeSecrets outDir prefix suffix secretOp xs =
   forM_ (zip xs $ [0::Int ..]) $
   \(secret, nr)-> do
     let filename = outDir </> prefix <> "." <> printf "%03d" nr <> "." <> suffix
-    secretOp secret >>= LB.writeFile filename
+    result <- secretOp secret
+    case result of
+      Left cliError -> panic . toS $ show cliError
+      Right bs -> LB.writeFile filename bs
 #ifdef UNIX
     setFileMode    filename ownerReadMode
 #else

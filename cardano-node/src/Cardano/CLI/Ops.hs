@@ -11,6 +11,11 @@
 module Cardano.CLI.Ops
   ( CLIOps(..)
   , decideCLIOps
+  , serialiseDelegationCert
+  , serialiseDelegateKey
+  , serialiseGenesis
+  , serialisePoorKey
+  , serialiseSigningKey'
   , CliError(..)
   ) where
 
@@ -20,6 +25,7 @@ import           Test.Cardano.Prelude (canonicalEncodePretty)
 
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.Text as T
+import qualified Text.JSON.Canonical as CanonicalJSON
 
 import qualified Cardano.Chain.Delegation as Dlg
 import           Cardano.Crypto (SigningKey (..))
@@ -28,6 +34,7 @@ import           Codec.CBOR.Write (toLazyByteString)
 import qualified Cardano.Crypto.Signing as Crypto
 import qualified Cardano.Chain.Genesis as Genesis
 
+import           Cardano.Config.Protocol (Protocol(..))
 import           Cardano.Config.Types
 import qualified Cardano.CLI.Legacy.Byron as Legacy
 
@@ -81,6 +88,37 @@ decideCLIOps protocol =
       throwIO $ ProtocolNotSupported x
     where
       serialiseSigningKey (SigningKey x) = toLazyByteString $ Crypto.toCBORXPrv x
+
+serialiseDelegationCert :: CanonicalJSON.ToJSON Identity a => Protocol -> a -> Either CliError LB.ByteString
+serialiseDelegationCert ByronLegacy dlgCert = pure $ canonicalEncodePretty dlgCert
+serialiseDelegationCert RealPBFT dlgCert = pure $ canonicalEncodePretty dlgCert
+serialiseDelegationCert ptcl _ = Left $ ProtocolNotSupported ptcl
+
+
+serialiseDelegateKey :: Protocol -> SigningKey -> IO (Either CliError LB.ByteString)
+serialiseDelegateKey ByronLegacy sk = pure
+                                    . toLazyByteString
+                                    . Legacy.encodeLegacyDelegateKey
+                                    . Legacy.LegacyDelegateKey sk
+                                    <$> Crypto.runSecureRandom Scrape.keyPairGenerate
+serialiseDelegateKey RealPBFT sk = pure $ serialiseSigningKey' RealPBFT sk
+serialiseDelegateKey ptcl _ = pure . Left $ ProtocolNotSupported ptcl
+
+serialiseGenesis ::  Protocol -> Genesis.GenesisData -> Either CliError LB.ByteString
+serialiseGenesis ByronLegacy gData = pure $ canonicalEncodePretty gData
+serialiseGenesis RealPBFT gData = pure $ canonicalEncodePretty gData
+serialiseGenesis ptcl _ = Left $ ProtocolNotSupported ptcl
+
+serialisePoorKey :: Protocol -> Genesis.PoorSecret -> Either CliError LB.ByteString
+serialisePoorKey ByronLegacy ps = serialiseSigningKey' ByronLegacy $ Genesis.poorSecretToKey ps
+serialisePoorKey RealPBFT ps = serialiseSigningKey' RealPBFT $ Genesis.poorSecretToKey ps
+serialisePoorKey ptcl _ = Left $ ProtocolNotSupported ptcl
+
+
+serialiseSigningKey' :: Protocol -> SigningKey -> Either CliError LB.ByteString
+serialiseSigningKey' ByronLegacy (SigningKey k) = pure . toLazyByteString $ Crypto.toCBORXPrv k
+serialiseSigningKey' RealPBFT (SigningKey k) = pure . toLazyByteString $ Crypto.toCBORXPrv k
+serialiseSigningKey' ptcl _ = Left $ ProtocolNotSupported ptcl
 
 -- | Exception type for all errors thrown by the CLI.
 --   Well, almost all, since we don't rethrow the errors from readFile & such.
