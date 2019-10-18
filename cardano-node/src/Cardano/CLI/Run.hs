@@ -163,12 +163,12 @@ data ClientCommand
     [SigningKeyFile]
 
 runCommand :: CLIOps IO -> CardanoConfiguration -> LoggingLayer -> ClientCommand -> ExceptT CliError IO ()
-runCommand co _ _ (Genesis outDir params) = do
+runCommand _ cc _ (Genesis outDir params) = do
   gen <- mkGenesis params
-  dumpGenesis co outDir `uncurry` gen
+  dumpGenesis (ccProtocol cc) outDir `uncurry` gen
 
-runCommand co _ _ (DumpHardcodedGenesis dir) =
-  dumpGenesis co dir (Genesis.configGenesisData Dummy.dummyConfig) Dummy.dummyGeneratedSecrets
+runCommand _ cc _ (DumpHardcodedGenesis dir) =
+  dumpGenesis (ccProtocol cc) dir (Genesis.configGenesisData Dummy.dummyConfig) Dummy.dummyGeneratedSecrets
 
 runCommand co _ _ (PrettySigningKeyPublic skF) = do
   sK <- readSigningKey co skF
