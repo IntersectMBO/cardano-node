@@ -6,7 +6,6 @@
         "bimap" = (((hackage.bimap)."0.4.0").revisions).default;
         "containers" = (((hackage.containers)."0.5.11.0").revisions).default;
         "generic-monoid" = (((hackage.generic-monoid)."0.1.0.0").revisions).default;
-        "pvss" = (((hackage.pvss)."0.2.0").revisions).default;
         "time-units" = (((hackage.time-units)."1.0.0").revisions).default;
         "tasty-hedgehog" = (((hackage.tasty-hedgehog)."1.0.0.1").revisions).default;
         "transformers-except" = (((hackage.transformers-except)."0.1.1").revisions).default;
