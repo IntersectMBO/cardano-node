@@ -45,8 +45,8 @@ import           Cardano.BM.Data.LogItem (LogObject (..))
 import           Cardano.BM.Data.Tracer (ToLogObject (..),
                                          TracingVerbosity (..))
 import           Cardano.BM.Trace (appendName)
-import           Cardano.Config.Types (CardanoConfiguration (..))
 import           Cardano.Config.Logging (LoggingLayer (..))
+import           Cardano.Config.Types (CardanoConfiguration (..), ViewMode (..))
 
 import           Ouroboros.Network.Block
 import           Ouroboros.Network.Subscription.Dns
@@ -65,8 +65,8 @@ import           Ouroboros.Consensus.Util.STM (onEachChange)
 import qualified Ouroboros.Storage.ChainDB as ChainDB
 
 import           Cardano.Common.LocalSocket
-import           Cardano.Common.Protocol (Protocol(..), SomeProtocol(..), fromProtocol)
-import           Cardano.Node.Configuration.Topology
+import           Cardano.Config.Protocol (SomeProtocol(..), fromProtocol)
+import           Cardano.Config.Topology
 import           Cardano.Tracing.Tracers
 #ifdef UNIX
 import           Cardano.Node.TUI.LiveView
@@ -87,36 +87,26 @@ instance NoUnexpectedThunks Peer where
     whnfNoUnexpectedThunks _ctxt _act = return NoUnexpectedThunks
 
 
--- Node can be run in two modes.
-data ViewMode =
-    LiveView    -- Live mode with TUI
-  | SimpleView  -- Simple mode, just output text.
-
 runNode
-  :: TopologyInfo
-  -> NodeAddress
-  -> Protocol
-  -> ViewMode
-  -> LoggingLayer
-  -> TraceOptions
+  :: LoggingLayer
   -> CardanoConfiguration
   -> IO ()
-runNode topology myNodeAddress protocol viewMode loggingLayer traceOptions cc = do
+runNode loggingLayer cc = do
     let !tr = llAppendName loggingLayer "node" (llBasicTrace loggingLayer)
-    let trace'      = appendName (pack $ show $ node topology) tr
+    let trace'      = appendName (pack $ show $ node $ ccTopologyInfo cc) tr
     let tracer      = contramap pack $ toLogObject trace'
 
     traceWith tracer $ "tracing verbosity = " ++
-                         case traceVerbosity traceOptions of
-                             NormalVerbosity  -> "normal"
+                         case traceVerbosity $ ccTraceOptions cc of
+                             NormalVerbosity -> "normal"
                              MinimalVerbosity -> "minimal"
                              MaximalVerbosity -> "maximal"
-    SomeProtocol p  <- fromProtocol cc protocol
+    SomeProtocol p  <- fromProtocol cc $ ccProtocol cc
 
-    let tracers     = mkTracers traceOptions trace'
+    let tracers     = mkTracers (ccTraceOptions cc) trace'
 
-    case viewMode of
-      SimpleView -> handleSimpleNode p myNodeAddress topology trace' tracers cc
+    case ccViewMode cc of
+      SimpleView -> handleSimpleNode p trace' tracers cc
       LiveView   -> do
 #ifdef UNIX
         let c = llConfiguration loggingLayer
@@ -124,18 +114,18 @@ runNode topology myNodeAddress protocol viewMode loggingLayer traceOptions cc = 
         -- turn off logging to the console, only forward it through a pipe to a central logging process
         CM.setDefaultBackends c [TraceForwarderBK, UserDefinedBK "LiveViewBackend"]
         -- User will see a terminal graphics and will be able to interact with it.
-        nodeThread <- Async.async $ handleSimpleNode p myNodeAddress topology trace' tracers cc
+        nodeThread <- Async.async $ handleSimpleNode p trace' tracers cc
 
         be :: LiveViewBackend Text <- realize c
         let lvbe = MkBackend { bEffectuate = effectuate be, bUnrealize = unrealize be }
         llAddBackend loggingLayer lvbe (UserDefinedBK "LiveViewBackend")
-        setTopology be topology
+        setTopology be $ ccTopologyInfo cc
         setNodeThread be nodeThread
         captureCounters be tr
 
         void $ Async.waitAny [nodeThread]
 #else
-        handleSimpleNode p myNodeAddress topology trace' tracers cc
+        handleSimpleNode p trace' tracers cc
 #endif
 
 -- | Sets up a simple node, which will run the chain sync protocol and block
@@ -143,16 +133,13 @@ runNode topology myNodeAddress protocol viewMode loggingLayer traceOptions cc = 
 -- create a new block.
 handleSimpleNode :: forall blk. RunNode blk
                  => Consensus.Protocol blk
-                 -> NodeAddress
-                 -> TopologyInfo
                  -> Tracer IO (LogObject Text)
                  -> Tracers Peer blk
                  -> CardanoConfiguration
                  -> IO ()
-handleSimpleNode
-  p myNodeAddress (TopologyInfo myNodeId topoFile) trace nodeTracers cc = do
+handleSimpleNode p trace nodeTracers cc = do
     NetworkTopology nodeSetups <-
-      either error id <$> readTopologyFile topoFile
+      either error id <$> readTopologyFile (topologyFile $ ccTopologyInfo cc)
 
     let pInfo@ProtocolInfo{ pInfoConfig = cfg } =
           protocolInfo (NumCoreNodes (length nodeSetups)) (CoreNodeId nid) p
@@ -165,22 +152,22 @@ handleSimpleNode
                           map (\ns -> (nodeId ns, producers ns)) nodeSetups of
           Just ps -> ps
           Nothing -> error $ "handleSimpleNode: own address "
-                          <> show myNodeAddress
+                          <> show (ccNodeAddress cc)
                           <> ", Node Id "
                           <> show nid
                           <> " not found in topology"
 
     traceWith tracer $ unlines
       [ "**************************************"
-      , "I am Node "        <> show myNodeAddress <> " Id: " <> show nid
+      , "I am Node "        <> show (ccNodeAddress cc) <> " Id: " <> show nid
       , "My producers are " <> show producers'
       , "**************************************"
       ]
 
     -- Socket directory
-    myLocalAddr <- localSocketAddrInfo myNodeId (ccSocketDir cc) MkdirIfMissing
+    myLocalAddr <- localSocketAddrInfo (node $ ccTopologyInfo cc) (ccSocketDir cc) MkdirIfMissing
 
-    addrs <- nodeAddressInfo myNodeAddress
+    addrs <- nodeAddressInfo $ ccNodeAddress cc
     let ipProducerAddrs  :: [NodeAddress]
         dnsProducerAddrs :: [RemoteAddress]
         (ipProducerAddrs, dnsProducerAddrs) = partitionEithers
@@ -217,7 +204,7 @@ handleSimpleNode
           , dstValency = raValency ra
           }
 
-    removeStaleLocalSocket myNodeId (ccSocketDir cc)
+    removeStaleLocalSocket (node $ ccTopologyInfo cc) (ccSocketDir cc)
 
     dbPath <- canonicalizePath =<< makeAbsolute (ccDBPath cc)
 
@@ -239,6 +226,6 @@ handleSimpleNode
           atomically $ writeTVar varTip tip
   where
       nid :: Int
-      nid = case myNodeId of
+      nid = case node $ ccTopologyInfo cc of
               CoreId  n -> n
               RelayId _ -> error "Non-core nodes currently not supported"

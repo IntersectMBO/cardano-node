@@ -7,7 +7,9 @@ module Cardano.Config.Presets
 
 import           Cardano.Prelude
 
-import           Cardano.Config.Orphanage ()
+import           Ouroboros.Consensus.NodeId
+
+import           Cardano.Config.Defaults (traceOptionsDefault)
 import           Cardano.Config.Partial ( NodeProtocol (..)
                                         , PartialBlock (..)
                                         , PartialCardanoConfiguration (..)
@@ -23,6 +25,8 @@ import           Cardano.Config.Partial ( NodeProtocol (..)
                                         , PartialWallet (..)
                                         , RequireNetworkMagic (..)
                                         )
+import           Cardano.Config.Topology (NodeAddress(..), TopologyInfo(..))
+import           Cardano.Config.Types (Protocol(..), ViewMode(..))
 
 --------------------------------------------------------------------------------
 -- Cardano Mainnet Configuration
@@ -35,6 +39,12 @@ mainnetConfiguration =
     , pccLogConfig = pure "./configuration/log-configuration.yaml"
     , pccDBPath = pure "./db/"
     , pccApplicationLockFile = pure ""
+    , pccTopologyInfo = pure $ TopologyInfo (RelayId 0) "./configuration/simple-topology.json"
+    , pccNodeAddress = pure $ NodeAddress Nothing 7000
+    , pccProtocol = pure ByronLegacy
+    , pccViewMode = pure LiveView
+    , pccLogMetrics = pure True
+    , pccTraceOptions = pure traceOptionsDefault
     , pccSocketDir = pure "./socket/"
     , pccCore =
         PartialCore
@@ -147,6 +157,12 @@ devConfiguration =
     , pccLogConfig = pure "./log-config.yaml"
     , pccSocketDir = pure "./socket/"
     , pccApplicationLockFile = pure ""
+    , pccTopologyInfo = pure $ TopologyInfo (RelayId 0) "./configuration/simple-topology.json"
+    , pccNodeAddress = pure $ NodeAddress Nothing 7000
+    , pccProtocol = pure ByronLegacy
+    , pccViewMode = pure LiveView
+    , pccLogMetrics = pure True
+    , pccTraceOptions = pure traceOptionsDefault
     , pccCore =
         PartialCore
           { pcoGenesisFile = pure "testnet-genesis.json"

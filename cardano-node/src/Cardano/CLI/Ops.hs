@@ -31,7 +31,6 @@ import qualified Cardano.Chain.Genesis as Genesis
 import qualified Crypto.SCRAPE as Scrape
 
 import           Cardano.Config.Types
-import           Cardano.Common.Protocol
 import qualified Cardano.CLI.Legacy.Byron as Legacy
 
 

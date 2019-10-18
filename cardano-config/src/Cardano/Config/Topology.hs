@@ -5,7 +5,7 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 {-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
 
-module Cardano.Node.Configuration.Topology
+module Cardano.Config.Topology
   ( TopologyError(..)
   , TopologyInfo(..)
   , NetworkTopology(..)
@@ -44,7 +44,7 @@ newtype TopologyError = NodeIdNotFoundInToplogyFile FilePath deriving Show
 data TopologyInfo = TopologyInfo
   { node :: NodeId
   , topologyFile :: FilePath
-  } deriving Show
+  } deriving (Eq, Show)
 
 -- | IPv4 address with a port number.
 data NodeAddress = NodeAddress

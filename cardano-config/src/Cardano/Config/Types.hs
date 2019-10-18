@@ -19,6 +19,7 @@ module Cardano.Config.Types
     , SoftForkRule (..)
     , TxFeePolicy (..)
     , TxSizeLinear (..)
+    , Protocol (..)
     , ProtocolConstants (..)
     , NTP (..)
     , Update (..)
@@ -27,17 +28,22 @@ module Cardano.Config.Types
     , Block (..)
     , Node (..)
     , TLS (..)
+    , ViewMode (..)
     , Wallet (..)
     , Certificate (..)
+    , TraceOptions (..)
+    , ConsensusTraceOptions
+    , ProtocolTraceOptions
     ) where
 
 import           Prelude (String, show)
 import           Cardano.Prelude
 
+import           Cardano.BM.Data.Tracer (TracingVerbosity (..))
 import qualified Ouroboros.Consensus.BlockchainTime as Consensus
 
-import           Cardano.Config.Orphanage ()
-
+import           Cardano.Config.Topology
+import           Cardano.Config.Orphanage
 --------------------------------------------------------------------------------
 -- Cardano Environment
 --------------------------------------------------------------------------------
@@ -65,7 +71,7 @@ instance Exception ConfigError
 data CardanoConfiguration = CardanoConfiguration
     { ccLogPath             :: !FilePath
     -- ^ The location of the log files on the filesystem.
-    , ccLogConfig           :: !FilePath
+    , ccLogConfig           :: !(Maybe FilePath)
     -- ^ The location of the log configuration on the filesystem.
     , ccDBPath              :: !FilePath
     -- ^ The location of the DB on the filesystem.
@@ -75,6 +81,18 @@ data CardanoConfiguration = CardanoConfiguration
     -- ^ The location of the application lock file that is used
     -- as a semaphore se we can run just one application
     -- instance at a time.
+    , ccTraceOptions        :: !TraceOptions
+    -- ^ Tracer options
+    , ccTopologyInfo        :: !TopologyInfo
+    -- ^ The network topology.
+    , ccNodeAddress         :: !NodeAddress
+    -- ^ The node ip address and port number.
+    , ccProtocol            :: !Protocol
+    -- ^ The selected protocol.
+    , ccViewMode            :: !ViewMode
+    -- ^ View mode of the TUI
+    , ccLogMetrics          :: !Bool
+    -- ^ Flag to capture log metrics or not.
     , ccCore                :: !Core
     , ccNTP                 :: !NTP
     , ccUpdate              :: !Update
@@ -217,6 +235,15 @@ data TxSizeLinear = TxSizeLinear
     , txsB :: !Word64
     } deriving (Eq, Show)
 
+-- TODO:  we don't want ByronLegacy in Protocol.  Let's wrap Protocol with another
+-- sum type for cases where it's required.
+data Protocol = ByronLegacy
+              | BFT
+              | Praos
+              | MockPBFT
+              | RealPBFT
+              deriving (Eq, Show)
+
 data ProtocolConstants = ProtocolConstants
     { prK             :: !Word64
     -- ^ Security parameter from the paper.
@@ -308,6 +335,11 @@ data Certificate = Certificate
     , certAltDNS       :: ![Text]
     } deriving (Eq, Show)
 
+-- Node can be run in two modes.
+data ViewMode = LiveView    -- Live mode with TUI
+              | SimpleView  -- Simple mode, just output text.
+              deriving (Eq, Show)
+
 -- | Wallet rate-limiting/throttling parameters
 data Wallet = Wallet
     { thEnabled :: !Bool
@@ -315,3 +347,18 @@ data Wallet = Wallet
     , thPeriod  :: !Text
     , thBurst   :: !Int
     } deriving (Eq, Show)
+
+-- | Detailed tracing options. Each option enables a tracer
+--   which verbosity to the log output.
+data TraceOptions = TraceOptions
+  { traceVerbosity       :: !TracingVerbosity
+  , traceChainDB         :: !Bool
+    -- ^ By default we use 'readableChainDB' tracer, if on this it will use
+    -- more verbose tracer
+  , traceConsensus       :: ConsensusTraceOptions
+  , traceProtocols       :: ProtocolTraceOptions
+  , traceIpSubscription  :: !Bool
+  , traceDnsSubscription :: !Bool
+  , traceDnsResolver     :: !Bool
+  , traceMux             :: !Bool
+  } deriving (Eq, Show)

@@ -13,7 +13,7 @@ import           Data.Text (Text, pack)
 
 import           Cardano.BM.Data.Tracer (ToLogObject (..))
 import           Cardano.BM.Trace (Trace, appendName)
-import           Cardano.Common.Protocol(Protocol, SomeProtocol(..), fromProtocol)
+import           Cardano.Config.Protocol(Protocol, SomeProtocol(..), fromProtocol)
 
 import           Ouroboros.Consensus.Node.ProtocolInfo.Abstract (NumCoreNodes (..))
 import           Ouroboros.Consensus.NodeId (CoreNodeId (..))

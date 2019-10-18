@@ -50,9 +50,10 @@ import qualified Ouroboros.Consensus.Protocol as Consensus
 
 import           Cardano.CLI.Ops
 import           Cardano.CLI.Tx.Submission
-import           Cardano.Common.Protocol
+import           Cardano.Common.Orphans ()
+import           Cardano.Config.Protocol
 import           Cardano.Config.Types (CardanoConfiguration(..))
-import           Cardano.Node.Configuration.Topology
+import           Cardano.Config.Topology
 
 
 newtype TxFile =

@@ -31,9 +31,7 @@ library
                        Cardano.Common.LocalSocket
                        Cardano.Common.Orphans
                        Cardano.Common.Parsers
-                       Cardano.Common.Protocol
                        Cardano.Node.Configuration.Conversion
-                       Cardano.Node.Configuration.Topology
                        Cardano.Node.Features.Node
                        Cardano.Node.Run
                        Cardano.Node.TUI.GitRev

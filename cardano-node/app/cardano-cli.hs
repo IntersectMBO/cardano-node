@@ -27,15 +27,16 @@ import           Cardano.Crypto ( AProtocolMagic(..)
                                 , decodeHash)
 
 import           Cardano.Config.CommonCLI
-import           Cardano.Config.Types (CardanoEnvironment (..))
+import           Cardano.Config.Types (CardanoEnvironment (..),
+                                       CardanoConfiguration(..))
 import           Cardano.Config.Presets (mainnetConfiguration)
 
 import           Cardano.Common.Parsers
-import           Cardano.Common.Protocol
+import           Cardano.Config.Logging
+import           Cardano.Config.Protocol
 import           Cardano.CLI.Genesis
 import           Cardano.CLI.Key
-import           Cardano.Config.Logging (LoggingCLIArguments (..),
-                                         createLoggingFeature)
+import           Cardano.Config.Logging (createLoggingFeature)
 import           Cardano.CLI.Ops (decideCLIOps)
 import           Cardano.CLI.Run
 
@@ -51,7 +52,7 @@ main = do
     finalConfig <- withExceptT ConfigError $ ExceptT $ pure $
       mkConfiguration cardanoConfiguration (commonCli co) (commonCliAdv co)
     (loggingLayer, _loggingFeature) <- liftIO $
-      createLoggingFeature cardanoEnvironment finalConfig (loggingCli co)
+      createLoggingFeature cardanoEnvironment (finalConfig {ccLogConfig = logConfigFile $ loggingCli co})
     (runCommand ops finalConfig loggingLayer (mainCommand co) :: ExceptT CliError IO ())
   case cmdRes of
     Right _ -> pure ()

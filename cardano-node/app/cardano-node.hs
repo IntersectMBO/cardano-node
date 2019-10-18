@@ -22,16 +22,15 @@ import qualified Ouroboros.Consensus.BlockchainTime as Consensus
 
 import           Cardano.Common.Help
 import           Cardano.Common.Parsers
-import           Cardano.Common.Protocol
+import           Cardano.Config.Protocol
 import           Cardano.Config.CommonCLI
-import           Cardano.Config.Logging (LoggingCLIArguments (..),
-                                         createLoggingFeature)
+import           Cardano.Config.Logging (createLoggingFeature)
 import           Cardano.Config.Partial (PartialCardanoConfiguration (..),
                                          PartialCore (..), PartialNode (..),
                                          mkCardanoConfiguration)
 import           Cardano.Config.Presets (mainnetConfiguration)
 import           Cardano.Config.Types (CardanoEnvironment (..), RequireNetworkMagic)
-import           Cardano.Node.Configuration.Topology (NodeAddress (..), TopologyInfo)
+import           Cardano.Config.Topology (NodeAddress (..), TopologyInfo)
 import           Cardano.Node.Features.Node
 import           Cardano.Node.Run
 import           Cardano.Tracing.Tracers
@@ -92,7 +91,7 @@ initializeAllFeatures
   -> PartialCardanoConfiguration
   -> CardanoEnvironment
   -> IO ([CardanoFeature], NodeLayer)
-initializeAllFeatures (NodeCLI topInfo nodeAddr protocol vMode logCLI traceOpts parsedPcc)
+initializeAllFeatures (NodeCLI parsedPcc)
                       partialConfigPreset cardanoEnvironment = do
 
     -- `partialConfigPreset` and `parsedPcc` are merged then checked here using
@@ -102,15 +101,10 @@ initializeAllFeatures (NodeCLI topInfo nodeAddr protocol vMode logCLI traceOpts 
                      Left e -> throwIO e
                      Right x -> pure x
 
-    (loggingLayer, loggingFeature) <- createLoggingFeature cardanoEnvironment finalConfig logCLI
+    (loggingLayer, loggingFeature) <- createLoggingFeature cardanoEnvironment finalConfig
     (nodeLayer   , nodeFeature)    <-
       createNodeFeature
         loggingLayer
-        topInfo
-        nodeAddr
-        protocol
-        vMode
-        traceOpts
         cardanoEnvironment
         finalConfig
 
@@ -123,24 +117,22 @@ initializeAllFeatures (NodeCLI topInfo nodeAddr protocol vMode logCLI traceOpts 
 -- Parsers & Types
 -------------------------------------------------------------------------------
 
--- TODO: Condense `NodeCLI` into one big `PartialCardanoConfiguration`
-data NodeCLI = NodeCLI
-                !TopologyInfo
-                !NodeAddress
-                !Protocol
-                !ViewMode
-                !LoggingCLIArguments
-                !TraceOptions
-                !PartialCardanoConfiguration
+data NodeCLI = NodeCLI !PartialCardanoConfiguration
 
 -- | The product parser for all the CLI arguments.
 nodeCliParser :: Parser NodeCLI
 nodeCliParser = do
-  topInfo <- parseTopologyInfo "PBFT node ID to assume."
-  nAddr <- parseNodeAddress
-  ptcl <- parseProtocol
+  topInfo <- lastOption $ parseTopologyInfo "PBFT node ID to assume."
+  nAddr <- lastOption parseNodeAddress
+  ptcl <- ( parseProtocolBFT
+          <|> parseProtocolByron
+          <|> parseProtocolMockPBFT
+          <|> parseProtocolPraos
+          <|> parseProtocolRealPBFT
+          )
   vMode <- parseViewMode
-  logCliArgs <- loggingParser
+  logConfigFp <- lastOption parseLogConfigFile
+  logMetrics <- parseLogMetrics
   dbPath <- parseDbPath
   genPath <- parseGenesisPath
   genHash <- parseGenesisHash
@@ -152,33 +144,54 @@ nodeCliParser = do
   reqNetMagic <- parseRequireNetworkMagic
   slotLength <- parseSlotLength
 
-  pure $ NodeCLI topInfo nAddr ptcl vMode logCliArgs traceOptions
-         (createPcc dbPath socketDir genPath genHash delCert
-                   sKey pbftSigThresh reqNetMagic slotLength)
+  pure $ NodeCLI
+         (createPcc dbPath socketDir topInfo nAddr ptcl logConfigFp vMode
+                    logMetrics genPath genHash delCert sKey pbftSigThresh
+                    reqNetMagic traceOptions slotLength)
  where
   -- This merges the command line parsed values into one `PartialCardanoconfiguration`.
   createPcc
     :: Last FilePath
     -> Last FilePath
+    -> Last TopologyInfo
+    -> Last NodeAddress
+    -> Last Protocol
+    -> Last FilePath
+    -> Last ViewMode
+    -> Last Bool
     -> Last FilePath
     -> Last Text
     -> Last FilePath
     -> Last FilePath
     -> Last Double
     -> Last RequireNetworkMagic
+    -> Last TraceOptions
     -> Last Consensus.SlotLength
     -> PartialCardanoConfiguration
   createPcc
     dbPath
     socketDir
+    topInfo
+    nAddr
+    ptcl
+    logConfigFp
+    vMode
+    logMetrics
     genPath
     genHash
     delCert
     sKey
     pbftSigThresh
     reqNetMagic
+    traceOptions
     slotLength = mempty { pccDBPath = dbPath
+                        , pccNodeAddress = nAddr
                         , pccSocketDir = socketDir
+                        , pccTopologyInfo = topInfo
+                        , pccProtocol = ptcl
+                        , pccViewMode = vMode
+                        , pccLogConfig = logConfigFp
+                        , pccLogMetrics = logMetrics
                         , pccCore = mempty { pcoGenesisFile = genPath
                                            , pcoGenesisHash = genHash
                                            , pcoStaticKeyDlgCertFile = delCert
@@ -187,12 +200,13 @@ nodeCliParser = do
                                            , pcoRequiresNetworkMagic = reqNetMagic
                                            }
                         , pccNode = mempty { pnoSlotLength = slotLength }
+                        , pccTraceOptions = traceOptions
                         }
 
 
 
-cliTracingParser :: Parser TraceOptions
-cliTracingParser = parseTraceOptions Opt.hidden
+cliTracingParser :: Parser (Last TraceOptions)
+cliTracingParser = Last . Just <$> parseTraceOptions Opt.hidden
 
 parseNodeAddress :: Parser NodeAddress
 parseNodeAddress = NodeAddress <$> parseHostAddr <*> parsePort
@@ -215,9 +229,9 @@ parsePort =
     )
 
 -- Optional flag for live view (with TUI graphics).
-parseViewMode :: Parser ViewMode
+parseViewMode :: Parser (Last ViewMode)
 parseViewMode =
-    flag SimpleView LiveView $ mconcat
+    flag (Last $ Just SimpleView) (Last $ Just LiveView) $ mconcat
         [ long "live-view"
         , help "Live view with TUI."
         ]

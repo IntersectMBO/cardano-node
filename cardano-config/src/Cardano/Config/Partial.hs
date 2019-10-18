@@ -33,6 +33,7 @@ import           Data.Monoid.Generic
 import qualified Ouroboros.Consensus.BlockchainTime as Consensus
 
 import           Cardano.Config.Types
+import           Cardano.Config.Topology
 
 -- | Partial @CardanoConfiguration@ configuration.
 data PartialCardanoConfiguration = PartialCardanoConfiguration
@@ -41,6 +42,12 @@ data PartialCardanoConfiguration = PartialCardanoConfiguration
     , pccDBPath              :: !(Last FilePath)
     , pccSocketDir           :: !(Last FilePath)
     , pccApplicationLockFile :: !(Last FilePath)
+    , pccTopologyInfo        :: !(Last TopologyInfo)
+    , pccNodeAddress         :: !(Last NodeAddress)
+    , pccProtocol            :: !(Last Protocol)
+    , pccViewMode            :: !(Last ViewMode)
+    , pccLogMetrics          :: !(Last Bool)
+    , pccTraceOptions        :: !(Last TraceOptions)
     , pccCore                :: !PartialCore
     , pccNTP                 :: !PartialNTP
     , pccUpdate              :: !PartialUpdate
@@ -220,12 +227,18 @@ mkCardanoConfiguration :: PartialCardanoConfiguration -> Either ConfigError Card
 mkCardanoConfiguration PartialCardanoConfiguration{..} = do
 
     ccLogPath                <- mkComplete "ccLogPath"    pccLogPath
-    ccLogConfig              <- mkComplete "ccLogConfig"  pccLogConfig
+    let ccLogConfig          = getLast pccLogConfig
     ccDBPath                 <- mkComplete "ccDBPath"     pccDBPath
     ccSocketDir              <- mkComplete "ccSocketPath" pccSocketDir
     ccApplicationLockFile    <- mkComplete "ccApplicationLockFile"
                                     pccApplicationLockFile
 
+    ccTopologyInfo           <- mkComplete "ccTopologyInfo" pccTopologyInfo
+    ccNodeAddress            <- mkComplete "ccNodeAddress" pccNodeAddress
+    ccProtocol               <- mkComplete "ccProtocol" pccProtocol
+    ccViewMode               <- mkComplete "ccViewMode" pccViewMode
+    ccLogMetrics             <- mkComplete "ccLogMetrics" pccLogMetrics
+    ccTraceOptions           <- mkComplete "ccTraceOptions" pccTraceOptions
     ccCore                   <- mkCore pccCore
     ccNTP                    <- mkNTP pccNTP
     ccUpdate                 <- mkUpdate pccUpdate

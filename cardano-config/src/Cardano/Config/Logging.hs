@@ -7,10 +7,7 @@
 
 module Cardano.Config.Logging
   ( LoggingLayer (..)
-  , TraceOptions (..)
   , LoggingFlag (..)
-  , ConsensusTraceOptions
-  , ProtocolTraceOptions
   , LoggingConfiguration (..)
   , createLoggingFeature
   , loggingCLIConfiguration
@@ -47,7 +44,6 @@ import           Cardano.BM.Data.LogItem ( LOContent (..), LOMeta (..),
 import           Cardano.BM.Data.Observable
 import           Cardano.BM.Data.Severity (Severity (..))
 import           Cardano.BM.Data.SubTrace
-import           Cardano.BM.Data.Tracer (TracingVerbosity (..))
 import qualified Cardano.BM.Observer.Monadic as Monadic
 import qualified Cardano.BM.Observer.STM as Stm
 import           Cardano.BM.Plugin (loadPlugin)
@@ -57,10 +53,8 @@ import qualified Cardano.BM.Trace as Trace
 import           Cardano.Shell.Lib (GeneralException (..), doesFileExist)
 import           Cardano.Shell.Types ( CardanoFeature (..),
                      CardanoFeatureInit (..), NoDependency (..))
-import qualified Ouroboros.Consensus.Node.Tracers as Consensus
-import           Ouroboros.Consensus.NodeNetwork (ProtocolTracers'(..))
 
-import           Cardano.Config.Types (CardanoConfiguration, CardanoEnvironment)
+import           Cardano.Config.Types (CardanoConfiguration(..), CardanoEnvironment)
 
 --------------------------------------------------------------------------------
 -- Loggging feature
@@ -74,24 +68,6 @@ data LoggingConfiguration = LoggingConfiguration
   { lpConfiguration      :: !Configuration
   , recordMetrics        :: !Bool
   }
-
--- | Detailed tracing options. Each option enables a tracer
---   which verbosity to the log output.
-data TraceOptions = TraceOptions
-  { traceVerbosity       :: !TracingVerbosity
-  , traceChainDB         :: !Bool
-    -- ^ By default we use 'readableChainDB' tracer, if on this it will use
-    -- more verbose tracer
-  , traceConsensus       :: ConsensusTraceOptions
-  , traceProtocols       :: ProtocolTraceOptions
-  , traceIpSubscription  :: !Bool
-  , traceDnsSubscription :: !Bool
-  , traceDnsResolver     :: !Bool
-  , traceMux             :: !Bool
-  }
-
-type ConsensusTraceOptions = Consensus.Tracers' () ()    () (Const Bool)
-type ProtocolTraceOptions  = ProtocolTracers'   () () ()    (Const Bool)
 
 --------------------------------
 -- Layer
@@ -149,26 +125,23 @@ data LoggingFlag = LoggingEnabled | LoggingDisabled
 -- | Interpret main logging CLI controls into a tuple of:
 --   - a designation of whether logging was disabled,
 --   - a valid 'LoggingConfiguration' (still necessary, even if logging was disabled)
-loggingCLIConfiguration :: LoggingCLIArguments -> IO (LoggingFlag, LoggingConfiguration)
-loggingCLIConfiguration  lca@LoggingCLIArguments{logConfigFile = Nothing} =
-  (LoggingDisabled,)
-  <$> (LoggingConfiguration
-        <$> Config.empty
-        <*> pure (captureMetrics lca))
-loggingCLIConfiguration lca@LoggingCLIArguments{logConfigFile = Just fp} = do
+loggingCLIConfiguration :: Maybe FilePath -> Bool -> IO (LoggingFlag, LoggingConfiguration)
+loggingCLIConfiguration Nothing captureMetrics' = do
+  emptyConfig <- Config.empty
+  pure (LoggingDisabled, LoggingConfiguration emptyConfig captureMetrics')
+loggingCLIConfiguration (Just fp) captureMetrics' = do
 
   whenM (not <$> doesFileExist fp) $ do
     putTextLn "Cannot find the logging configuration file at location."
     throwIO $ FileNotFoundException fp
 
   config <- Config.setup fp
-  pure (LoggingEnabled, LoggingConfiguration config (captureMetrics lca))
+  pure (LoggingEnabled, LoggingConfiguration config captureMetrics')
 
 createLoggingFeature
-  :: CardanoEnvironment -> CardanoConfiguration
-  -> LoggingCLIArguments -> IO (LoggingLayer, CardanoFeature)
+  :: CardanoEnvironment -> CardanoConfiguration -> IO (LoggingLayer, CardanoFeature)
 createLoggingFeature
-  cardanoEnvironment cardanoConfiguration loggingCLIArgs = do
+  cardanoEnvironment cc = do
     -- we parse any additional configuration if there is any
     -- We don't know where the user wants to fetch the additional
     -- configuration from, it could be from
@@ -177,8 +150,9 @@ createLoggingFeature
     -- Currently we parse outside the features since we want to have a complete
     -- parser for __every feature__.
 
-    (,) disabled'
-      loggingConfiguration <- loggingCLIConfiguration loggingCLIArgs
+    (disabled', loggingConfiguration) <- loggingCLIConfiguration
+                                           (ccLogConfig cc)
+                                           (ccLogMetrics cc)
 
     -- we construct the layer
     logCardanoFeat <- loggingCardanoFeatureInit disabled' loggingConfiguration
@@ -186,7 +160,7 @@ createLoggingFeature
     loggingLayer <- featureInit logCardanoFeat
                       cardanoEnvironment
                       NoDependency
-                      cardanoConfiguration
+                      cc
                       loggingConfiguration
 
     -- we construct the cardano feature
