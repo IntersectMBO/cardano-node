@@ -141,8 +141,8 @@ dumpGenesis ptcl (NewDirectory outDir) genesisData gs = do
 
   dlgCerts <- mapM findDelegateCert $ gsRichSecrets gs
 
-  liftIO $ wOut "genesis-keys" "key" (pure . serialiseSigningKey' ptcl) (gsDlgIssuersSecrets gs)
-  liftIO $ wOut "delegate-keys" "key" (serialiseDelegateKey ptcl) (gsRichSecrets gs)
+  liftIO $ wOut "genesis-keys" "key" (pure . serialiseSigningKey ptcl) (gsDlgIssuersSecrets gs)
+  liftIO $ wOut "delegate-keys" "key" (pure . serialiseDelegateKey ptcl) (gsRichSecrets gs)
   liftIO $ wOut "poor-keys" "key" (pure . serialisePoorKey ptcl) (gsPoorSecrets gs)
   liftIO $ wOut "delegation-cert" "json" (pure . serialiseDelegationCert ptcl) dlgCerts
   liftIO $ wOut "avvm-seed" "seed" (pure . (Right <$> LB.fromStrict)) (gsFakeAvvmSeeds gs)
