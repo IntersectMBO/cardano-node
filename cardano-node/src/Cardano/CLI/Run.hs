@@ -42,6 +42,7 @@ import           Cardano.Prelude hiding (option, trace)
 
 import           Codec.Serialise (serialise)
 import           Control.Monad.Trans.Except (ExceptT)
+import           Control.Monad.Trans.Except.Extra (hoistEither, newExceptT)
 import qualified Data.ByteString.Lazy as LB
 import           Data.Semigroup ((<>))
 import qualified Data.Text as T
@@ -170,14 +171,13 @@ runCommand _ cc _ (Genesis outDir params) = do
 runCommand _ cc _ (DumpHardcodedGenesis dir) =
   dumpGenesis (ccProtocol cc) dir (Genesis.configGenesisData Dummy.dummyConfig) Dummy.dummyGeneratedSecrets
 
-runCommand co _ _ (PrettySigningKeyPublic skF) = do
-  sK <- readSigningKey co skF
+runCommand _ cc _ (PrettySigningKeyPublic skF) = do
+  sK <- readSigningKey (ccProtocol cc) skF
   liftIO . putTextLn . prettyPublicKey $ Crypto.toVerification sK
 
-runCommand co _ _ (MigrateDelegateKeyFrom fromVer (NewSigningKeyFile newKey) oldKey) = do
-  ops <- liftIO $ decideCLIOps fromVer
-  sk <- readSigningKey ops oldKey
-  sDk <- liftIO $ coSerialiseDelegateKey co sk
+runCommand _ cc _ (MigrateDelegateKeyFrom _ (NewSigningKeyFile newKey) oldKey) = do
+  sk <- readSigningKey (ccProtocol cc) oldKey
+  sDk <- newExceptT $ serialiseDelegateKey (ccProtocol cc) sk
   liftIO $ ensureNewFileLBS newKey sDk
 
 runCommand _ _ _ (PrintGenesisHash genFp) = do
@@ -188,8 +188,8 @@ runCommand _ _ _ (PrintGenesisHash genFp) = do
 
   liftIO . putTextLn $ formatter eGen
 
-runCommand co _ _ (PrintSigningKeyAddress netMagic skF) = do
-  sK <- readSigningKey co skF
+runCommand _ cc _ (PrintSigningKeyAddress netMagic skF) = do
+  sK <- readSigningKey (ccProtocol cc) skF
   let sKeyAddress = prettyAddress . Common.makeVerKeyAddress netMagic $ Crypto.toVerification sK
   liftIO $ putTextLn sKeyAddress
 
@@ -199,17 +199,17 @@ runCommand co _ _ (Keygen (NewSigningKeyFile skF) passReq) = do
   serDk <- liftIO $ coSerialiseDelegateKey co sK
   liftIO $ ensureNewFileLBS skF serDk
 
-runCommand co _ _ (ToVerification skFp (NewVerificationKeyFile vkFp)) = do
-  sk <- readSigningKey co skFp
+runCommand _ cc _ (ToVerification skFp (NewVerificationKeyFile vkFp)) = do
+  sk <- readSigningKey (ccProtocol cc) skFp
   let vKey = Builder.toLazyText . Crypto.formatFullVerificationKey $ Crypto.toVerification sk
   liftIO $ ensureNewFile TL.writeFile vkFp vKey
 
-runCommand co _ _ (IssueDelegationCertificate magic epoch issuerSK delegateVK cert) = do
+runCommand _ cc _ (IssueDelegationCertificate magic epoch issuerSK delegateVK cert) = do
   vk <- readVerificationKey delegateVK
-  sk <- readSigningKey co issuerSK
+  sk <- readSigningKey (ccProtocol cc) issuerSK
   let byGenDelCert :: Delegation.Certificate
       byGenDelCert = issueByronGenesisDelegation magic epoch sk vk
-  sCert <- liftIO $ coSerialiseDelegationCert co byGenDelCert
+  sCert <- hoistEither $ serialiseDelegationCert (ccProtocol cc) byGenDelCert
   liftIO $ ensureNewFileLBS (nFp cert) sCert
 
 runCommand _ _ _ (CheckDelegation magic cert issuerVF delegateVF) = do
@@ -222,12 +222,12 @@ runCommand co cc _ (SubmitTx topology fp) = do
   liftIO $ nodeSubmitTx co topology cc tx
 
 runCommand co cc _ (SpendGenesisUTxO (NewTxFile ctTx) ctKey genRichAddr outs) = do
-  sk <- readSigningKey co ctKey
+  sk <- readSigningKey (ccProtocol cc) ctKey
   tx <- liftIO $ issueGenesisUTxOExpenditure co genRichAddr outs cc sk
   liftIO . ensureNewFileLBS ctTx $ serialise tx
 
 runCommand co cc _ (SpendUTxO (NewTxFile ctTx) ctKey ins outs) = do
-  sk <- readSigningKey co ctKey
+  sk <- readSigningKey (ccProtocol cc) ctKey
   gTx <- liftIO $ issueUTxOExpenditure co ins outs cc sk
   liftIO . ensureNewFileLBS ctTx $ serialise gTx
 

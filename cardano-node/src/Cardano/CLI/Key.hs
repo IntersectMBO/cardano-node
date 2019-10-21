@@ -43,6 +43,7 @@ import           Formatting (build, (%), sformat)
 import           System.IO (hSetEcho, hFlush, stdout, stdin)
 
 import qualified Cardano.Chain.Common as Common
+import           Cardano.Config.Protocol
 import           Cardano.Crypto (SigningKey(..))
 import qualified Cardano.Crypto.Random as Crypto
 import qualified Cardano.Crypto.Signing as Crypto
@@ -84,14 +85,12 @@ prettyPublicKey vk =
 -- TODO:  we need to support password-protected secrets.
 -- | Read signing key from a file.  Throw an error if the file can't be read or
 -- fails to deserialise.
-readSigningKey :: CLIOps IO -> SigningKeyFile -> ExceptT CliError IO SigningKey
-readSigningKey co (SigningKeyFile fp) = do
+readSigningKey :: Protocol -> SigningKeyFile -> ExceptT CliError IO SigningKey
+readSigningKey ptcl (SigningKeyFile fp) = do
   sK <- handleIOExceptT (ReadSigningKeyFailure fp . T.pack . displayException) $ LB.readFile fp
 
   -- Signing Key
-  let eSk = liftIO $ (coDeserialiseDelegateKey co) fp sK
-  -- Convert error to 'CliError'
-  firstExceptT (ReadSigningKeyFailure fp) $ eSk
+  hoistEither $ deserialiseDelegateKey ptcl fp sK
 
 -- | Read verification key from a file.  Throw an error if the file can't be read
 -- or the key fails to deserialise.
