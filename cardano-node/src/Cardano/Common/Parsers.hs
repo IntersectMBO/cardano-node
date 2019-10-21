@@ -13,7 +13,6 @@ module Cardano.Common.Parsers
   , parseProtocolMockPBFT
   , parseProtocolPraos
   , parseProtocolRealPBFT
-  , parseProtocolActual
   , parseProtocolAsCommand
   , parseTopologyInfo
   , parseTraceOptions
@@ -112,16 +111,6 @@ parseProtocolRealPBFT =
     (Last $ Just RealPBFT)
     "real-pbft"
     "Permissive BFT consensus with a real ledger"
-
-
-parseProtocolActual :: Parser Protocol
-parseProtocolActual = asum
-  [ flagParser ByronLegacy "byron-legacy"
-    "Byron/Ouroboros Classic suite of algorithms"
-
-  , flagParser RealPBFT "real-pbft"
-    "Permissive BFT consensus with a real ledger"
-  ]
 
 parseProtocolAsCommand :: Parser Protocol
 parseProtocolAsCommand = subparser $ mconcat

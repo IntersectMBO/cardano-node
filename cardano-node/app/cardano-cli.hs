@@ -1,3 +1,5 @@
+{-# LANGUAGE ApplicativeDo #-}
+
 import           Cardano.Prelude hiding (option)
 import           Prelude (String, error, id)
 
@@ -33,7 +35,7 @@ import           Cardano.Config.Presets (mainnetConfiguration)
 
 import           Cardano.Common.Parsers
 import           Cardano.Config.Logging
-import           Cardano.Config.Protocol
+import           Cardano.Config.Partial (PartialCardanoConfiguration(..))
 import           Cardano.CLI.Genesis
 import           Cardano.CLI.Key
 import           Cardano.Config.Logging (createLoggingFeature)
@@ -43,14 +45,16 @@ import           Cardano.CLI.Run
 main :: IO ()
 main = do
   co <- Opt.customExecParser pref opts
-  ops <- decideCLIOps (protocol co)
+
   -- Initialize logging layer. Particularly, we need it for benchmarking (command 'generate-txs').
-  let cardanoConfiguration = mainnetConfiguration
+  let cardanoConfiguration :: PartialCardanoConfiguration
+      cardanoConfiguration = mainnetConfiguration
   let cardanoEnvironment   = NoEnvironment
 
   cmdRes <- runExceptT $ do
     finalConfig <- withExceptT ConfigError $ ExceptT $ pure $
-      mkConfiguration cardanoConfiguration (commonCli co) (commonCliAdv co)
+      mkConfiguration (cardanoConfiguration <> partialConfig co) (commonCli co) (commonCliAdv co)
+    ops <- liftIO $ decideCLIOps (ccProtocol finalConfig)
     (loggingLayer, _loggingFeature) <- liftIO $
       createLoggingFeature cardanoEnvironment (finalConfig {ccLogConfig = logConfigFile $ loggingCli co})
     (runCommand ops finalConfig loggingLayer (mainCommand co) :: ExceptT CliError IO ())
@@ -76,7 +80,7 @@ main = do
     renderCliError = show
 
 data CLI = CLI
-  { protocol    :: Protocol
+  { partialConfig :: PartialCardanoConfiguration
   , mainCommand :: ClientCommand
   , commonCli   :: CommonCLI
   , commonCliAdv :: CommonCLIAdvanced
@@ -84,13 +88,13 @@ data CLI = CLI
   }
 
 parseClient :: Parser CLI
-parseClient =
-  CLI
-    <$> parseProtocolActual
-    <*> parseClientCommand
-    <*> parseCommonCLI
-    <*> parseCommonCLIAdvanced
-    <*> loggingParser
+parseClient = do
+  ptcl <- (parseProtocolByron <|> parseProtocolRealPBFT)
+  cCom <- parseClientCommand
+  comCli <- parseCommonCLI
+  comCliAdv <- parseCommonCLIAdvanced
+  logging <- loggingParser
+  pure $ CLI (mempty {pccProtocol = ptcl}) cCom comCli comCliAdv logging
 
 parseClientCommand :: Parser ClientCommand
 parseClientCommand =
