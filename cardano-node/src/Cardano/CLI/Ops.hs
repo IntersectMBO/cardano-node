@@ -11,6 +11,7 @@
 module Cardano.CLI.Ops
   ( CLIOps(..)
   , decideCLIOps
+  , deserialiseDelegateKey
   , serialiseDelegationCert
   , serialiseDelegateKey
   , serialiseGenesis
@@ -88,6 +89,17 @@ decideCLIOps protocol =
       throwIO $ ProtocolNotSupported x
     where
       serialiseSigningKey (SigningKey x) = toLazyByteString $ Crypto.toCBORXPrv x
+
+deserialiseDelegateKey :: Protocol -> FilePath -> LB.ByteString -> Either CliError SigningKey
+deserialiseDelegateKey ByronLegacy fp delSkey =
+  case deserialiseFromBytes Legacy.decodeLegacyDelegateKey delSkey of
+    Left deSerFail -> Left $ SigningKeyDeserialisationFailed fp deSerFail
+    Right (_, Legacy.LegacyDelegateKey sKey _) -> pure sKey
+deserialiseDelegateKey RealPBFT fp delSkey =
+  case deserialiseFromBytes Crypto.fromCBORXPrv delSkey of
+    Left deSerFail -> Left $ SigningKeyDeserialisationFailed fp deSerFail
+    Right (_, sKey) -> Right $ SigningKey sKey
+deserialiseDelegateKey ptcl _ _ = Left $ ProtocolNotSupported ptcl
 
 serialiseDelegationCert :: CanonicalJSON.ToJSON Identity a => Protocol -> a -> Either CliError LB.ByteString
 serialiseDelegationCert ByronLegacy dlgCert = pure $ canonicalEncodePretty dlgCert
