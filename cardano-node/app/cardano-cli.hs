@@ -37,13 +37,11 @@ import           Cardano.Config.Protocol
 import           Cardano.CLI.Genesis
 import           Cardano.CLI.Key
 import           Cardano.Config.Logging (createLoggingFeature)
-import           Cardano.CLI.Ops (decideCLIOps)
 import           Cardano.CLI.Run
 
 main :: IO ()
 main = do
   co <- Opt.customExecParser pref opts
-  ops <- decideCLIOps (protocol co)
   -- Initialize logging layer. Particularly, we need it for benchmarking (command 'generate-txs').
   let cardanoConfiguration = mainnetConfiguration
   let cardanoEnvironment   = NoEnvironment
@@ -52,8 +50,10 @@ main = do
     finalConfig <- withExceptT ConfigError $ ExceptT $ pure $
       mkConfiguration cardanoConfiguration (commonCli co) (commonCliAdv co)
     (loggingLayer, _loggingFeature) <- liftIO $
-      createLoggingFeature cardanoEnvironment (finalConfig {ccLogConfig = logConfigFile $ loggingCli co})
-    (runCommand ops finalConfig loggingLayer (mainCommand co) :: ExceptT CliError IO ())
+      createLoggingFeature cardanoEnvironment (finalConfig { ccLogConfig = logConfigFile $ loggingCli co
+                                                           , ccProtocol = protocol co
+                                                           })
+    (runCommand finalConfig loggingLayer (mainCommand co) :: ExceptT CliError IO ())
   case cmdRes of
     Right _ -> pure ()
     Left err -> do putStrLn $ renderCliError err
