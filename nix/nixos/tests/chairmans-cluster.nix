@@ -3,7 +3,7 @@
 let chairman-runner = chairmanScript {
       chairman-config = {
         enable     = true;
-        k          = 2160;
+        k          = 36;
         timeout    = 300;
         maximum-fork-length = 1;
         slots-within-tolerance = 30;

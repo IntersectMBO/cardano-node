@@ -39,7 +39,7 @@ let
     maxTxSize = "4096";
     mpcThd = "20000000000000";
     scriptVersion = 0;
-    slotDuration = "20000";
+    slotDuration = "1000";
     softforkRule = {
         initThd = "900000000000000";
         minThd = "600000000000000";
@@ -57,7 +57,7 @@ let
 
   defaultGenesisArgs = {
     protocol_params_file  = toFile "genesis-protocol-params.json" (toJSON defaultGenesisProtocolParams);
-    k                     = 2160;
+    k                     = 36;
     protocol_magic        = 314159265;
     n_poors               = 128;
     n_delegates           = 3;
