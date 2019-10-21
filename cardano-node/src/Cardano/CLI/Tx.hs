@@ -135,7 +135,7 @@ genesisUTxOTxIn gc vk genAddr =
 --   with attendant configuration.
 withRealPBFT
   :: CardanoConfiguration
-  -> (Demo.RunDemo (ByronBlockOrEBB ByronConfig)
+  -> (RunNode (ByronBlockOrEBB ByronConfig)
       => Consensus.Protocol (ByronBlockOrEBB ByronConfig)
       -> IO a)
   -> IO a

@@ -21,7 +21,6 @@ import           Cardano.Chain.Slotting
 import           Cardano.Chain.UTxO
 import           Cardano.CLI.Genesis
 import           Cardano.CLI.Key
-import           Cardano.CLI.Ops (decideCLIOps)
 import           Cardano.CLI.Run
 import           Cardano.Common.Parsers
 import           Cardano.Config.CommonCLI
@@ -31,8 +30,7 @@ import           Cardano.Config.Partial (PartialCardanoConfiguration (..),
                                          mkCardanoConfiguration)
 import           Cardano.Config.Presets (mainnetConfiguration)
 import           Cardano.Config.Protocol (Protocol)
-import           Cardano.Config.Types (CardanoConfiguration (..),
-                                       CardanoEnvironment (..),
+import           Cardano.Config.Types (CardanoEnvironment (..),
                                        RequireNetworkMagic)
 import           Cardano.Crypto ( AProtocolMagic(..)
                                 , ProtocolMagic
@@ -40,15 +38,6 @@ import           Cardano.Crypto ( AProtocolMagic(..)
                                 , RequiresNetworkMagic(..)
                                 , decodeHash)
 import qualified Ouroboros.Consensus.BlockchainTime as Consensus
-
-
-import           Cardano.Common.Parsers
-import           Cardano.Config.Logging
-import           Cardano.Config.Protocol
-import           Cardano.CLI.Genesis
-import           Cardano.CLI.Key
-import           Cardano.Config.Logging (createLoggingFeature)
-import           Cardano.CLI.Run
 
 main :: IO ()
 main = do
@@ -62,11 +51,8 @@ main = do
   cmdRes <- runExceptT $ do
     finalConfig <- withExceptT ConfigError $ ExceptT $ pure $
                      mkCardanoConfiguration $ cardanoConfiguration <> partialConfig co
-    ops <- liftIO $ decideCLIOps (ccProtocol finalConfig)
     (loggingLayer, _loggingFeature) <- liftIO $
-      createLoggingFeature cardanoEnvironment (finalConfig { ccLogConfig = logConfigFile $ loggingCli co
-                                                           , ccProtocol = protocol co
-                                                           })
+      createLoggingFeature cardanoEnvironment finalConfig
     (runCommand finalConfig loggingLayer (mainCommand co) :: ExceptT CliError IO ())
   case cmdRes of
     Right _ -> pure ()

@@ -42,7 +42,7 @@ import           Cardano.Prelude hiding (option, trace)
 
 import           Codec.Serialise (serialise)
 import           Control.Monad.Trans.Except (ExceptT)
-import           Control.Monad.Trans.Except.Extra (hoistEither, newExceptT)
+import           Control.Monad.Trans.Except.Extra (hoistEither)
 import qualified Data.ByteString.Lazy as LB
 import           Data.Semigroup ((<>))
 import qualified Data.Text as T
@@ -177,7 +177,7 @@ runCommand cc _ (PrettySigningKeyPublic skF) = do
 
 runCommand cc _ (MigrateDelegateKeyFrom _ (NewSigningKeyFile newKey) oldKey) = do
   sk <- readSigningKey (ccProtocol cc) oldKey
-  sDk <- newExceptT $ serialiseDelegateKey (ccProtocol cc) sk
+  sDk <- hoistEither $ serialiseDelegateKey (ccProtocol cc) sk
   liftIO $ ensureNewFileLBS newKey sDk
 
 runCommand _ _ (PrintGenesisHash genFp) = do
@@ -196,7 +196,7 @@ runCommand cc _ (PrintSigningKeyAddress netMagic skF) = do
 runCommand cc _ (Keygen (NewSigningKeyFile skF) passReq) = do
   pPhrase <- liftIO $ getPassphrase ("Enter password to encrypt '" <> skF <> "': ") passReq
   sK <- liftIO $ keygen pPhrase
-  serDk <- newExceptT $ serialiseDelegateKey (ccProtocol cc) sK
+  serDk <- hoistEither $ serialiseDelegateKey (ccProtocol cc) sK
   liftIO $ ensureNewFileLBS skF serDk
 
 runCommand cc _ (ToVerification skFp (NewVerificationKeyFile vkFp)) = do
