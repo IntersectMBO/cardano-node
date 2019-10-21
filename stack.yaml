@@ -34,7 +34,7 @@ extra-deps:
       - crypto/test
 
   - git: https://github.com/input-output-hk/cardano-prelude
-    commit: 001ec3576ef3bda04cf5bcccdd9a00991835d1a7
+    commit: 599d27a05597f96b9bfffa7920806fa638dcea10
     subdirs:
       - .
       - test
