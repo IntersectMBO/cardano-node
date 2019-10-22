@@ -13,7 +13,6 @@ setupBackends:
   - AggregationBK
   - KatipBK
   - EKGViewBK
-  #- EditorBK
 
 # if not indicated otherwise, then messages are passed to these backends:
 defaultBackends:
@@ -22,8 +21,8 @@ defaultBackends:
 # file to forward traced objects
 logOutput: "log-pipe-0"
 
-# if wanted, the GUI is listening on this port:
-hasGUI: 13787
+# if wanted, Prometheus "metrics" are presented on http://localhost:13789/metrics
+hasPrometheus: 13789
 
 # if wanted, the EKG interface is listening on this port:
 hasEKG: 13788
@@ -77,14 +76,20 @@ options:
       subtrace: NoTrace
     '#messagecounters.ekgview':
       subtrace: NoTrace
+    '#messagecounters.katip':
+      subtrace: NoTrace
     '#messagecounters.switchboard':
-      subtrace: Neutral
+      subtrace: NoTrace
+    cardano.node-metrics:
+      subtrace: NoTrace
   mapBackends:
     cardano.epoch-validation.benchmark:
       - AggregationBK
-    '#aggregation.cardano.epoch-validation.benchmark':
+    'cardano.node.peers.BlockFetchDecision':
+      - kind: UserDefinedBK
+        name: LiveViewBackend
+    'cardano.node.metrics.ChainDB':
       - EKGViewBK
-    'cardano.node.CoreId 0.slotNum.ChainDB':
       - kind: UserDefinedBK
         name: LiveViewBackend
     cardano.node.metrics:

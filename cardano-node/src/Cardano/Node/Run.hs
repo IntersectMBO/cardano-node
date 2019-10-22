@@ -44,7 +44,6 @@ import           Cardano.BM.Data.BackendKind (BackendKind (TraceForwarderBK))
 import           Cardano.BM.Data.LogItem (LogObject (..))
 import           Cardano.BM.Data.Tracer (ToLogObject (..),
                                          TracingVerbosity (..))
-import           Cardano.BM.Trace (appendName)
 import           Cardano.Config.Logging (LoggingLayer (..))
 import           Cardano.Config.Types (CardanoConfiguration (..), ViewMode (..))
 
@@ -92,9 +91,8 @@ runNode
   -> CardanoConfiguration
   -> IO ()
 runNode loggingLayer cc = do
-    let !tr = llAppendName loggingLayer "node" (llBasicTrace loggingLayer)
-    let trace'      = appendName (pack $ show $ node $ ccTopologyInfo cc) tr
-    let tracer      = contramap pack $ toLogObject trace'
+    let !trace = llAppendName loggingLayer "node" (llBasicTrace loggingLayer)
+    let tracer      = contramap pack $ toLogObject trace
 
     traceWith tracer $ "tracing verbosity = " ++
                          case traceVerbosity $ ccTraceOptions cc of
@@ -103,10 +101,10 @@ runNode loggingLayer cc = do
                              MaximalVerbosity -> "maximal"
     SomeProtocol p  <- fromProtocol cc $ ccProtocol cc
 
-    let tracers     = mkTracers (ccTraceOptions cc) trace'
+    let tracers     = mkTracers (ccTraceOptions cc) trace
 
     case ccViewMode cc of
-      SimpleView -> handleSimpleNode p trace' tracers cc
+      SimpleView -> handleSimpleNode p trace tracers cc
       LiveView   -> do
 #ifdef UNIX
         let c = llConfiguration loggingLayer
@@ -114,18 +112,18 @@ runNode loggingLayer cc = do
         -- turn off logging to the console, only forward it through a pipe to a central logging process
         CM.setDefaultBackends c [TraceForwarderBK, UserDefinedBK "LiveViewBackend"]
         -- User will see a terminal graphics and will be able to interact with it.
-        nodeThread <- Async.async $ handleSimpleNode p trace' tracers cc
+        nodeThread <- Async.async $ handleSimpleNode p trace tracers cc
 
         be :: LiveViewBackend Text <- realize c
         let lvbe = MkBackend { bEffectuate = effectuate be, bUnrealize = unrealize be }
         llAddBackend loggingLayer lvbe (UserDefinedBK "LiveViewBackend")
         setTopology be $ ccTopologyInfo cc
         setNodeThread be nodeThread
-        captureCounters be tr
+        captureCounters be trace
 
         void $ Async.waitAny [nodeThread]
 #else
-        handleSimpleNode p trace' tracers cc
+        handleSimpleNode p trace tracers cc
 #endif
 
 -- | Sets up a simple node, which will run the chain sync protocol and block

@@ -104,43 +104,55 @@ source-repository-package
   type: git
   location: https://github.com/input-output-hk/iohk-monitoring-framework
   subdir: iohk-monitoring
-  tag: 1ebe57df3a76a8ae4e3b5a31a9b85132f71534fc
+  tag: bea0e079fc32ed316ce352d17d14199a680e3f6c
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/iohk-monitoring-framework
   subdir:   contra-tracer
-  tag: 1ebe57df3a76a8ae4e3b5a31a9b85132f71534fc
+  tag: bea0e079fc32ed316ce352d17d14199a680e3f6c
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/iohk-monitoring-framework
   subdir:   plugins/scribe-systemd
-  tag: 1ebe57df3a76a8ae4e3b5a31a9b85132f71534fc
+  tag: bea0e079fc32ed316ce352d17d14199a680e3f6c
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/iohk-monitoring-framework
   subdir:   plugins/backend-aggregation
-  tag: 1ebe57df3a76a8ae4e3b5a31a9b85132f71534fc
+  tag: bea0e079fc32ed316ce352d17d14199a680e3f6c
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/iohk-monitoring-framework
   subdir:   plugins/backend-editor
-  tag: 1ebe57df3a76a8ae4e3b5a31a9b85132f71534fc
+  tag: bea0e079fc32ed316ce352d17d14199a680e3f6c
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/iohk-monitoring-framework
   subdir:   plugins/backend-ekg
-  tag: 1ebe57df3a76a8ae4e3b5a31a9b85132f71534fc
+  tag: bea0e079fc32ed316ce352d17d14199a680e3f6c
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/iohk-monitoring-framework
   subdir:   plugins/backend-monitoring
-  tag: 1ebe57df3a76a8ae4e3b5a31a9b85132f71534fc
+  tag: bea0e079fc32ed316ce352d17d14199a680e3f6c
+
+-- dependencies of iohk-monitoring
+source-repository-package
+  type: git
+  location: https://github.com/CodiePP/ekg-prometheus-adapter
+  tag: 1a258b6df7d9807d4c4ff3e99722223d31a2c320
+
+source-repository-package
+  type: git
+  location: https://github.com/Soostone/katip.git
+  tag: cf60f0e14640ae9702c111bb51aeca7eed50ad48
+  subdir: katip
 
 source-repository-package
   type: git

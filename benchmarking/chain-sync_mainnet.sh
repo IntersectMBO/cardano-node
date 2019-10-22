@@ -15,7 +15,7 @@ exec ${NODE} \
   --log-metrics \
   --database-path .//db-mainnet \
   --socket-dir socket \
-  --topology ${BASEDIR}/launch_mainnet.d/topology.yaml \
+  --topology ${BASEDIR}/launch_mainnet.d/topology-local.yaml \
   --real-pbft \
   --node-id 0 \
   --host-addr 127.0.0.1 \

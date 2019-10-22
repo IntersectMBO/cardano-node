@@ -15,17 +15,14 @@ module Cardano.Node.TUI.LiveView (
     ) where
 
 import           Cardano.Prelude hiding (isPrefixOf, on, show)
-import           Prelude (String, words, read, show)
+import           Prelude (String, show)
 
 import           Control.Concurrent (threadDelay)
 import qualified Control.Concurrent.Async as Async
 import           Control.Concurrent.MVar (MVar, modifyMVar_, newMVar, readMVar)
-import           Control.Monad (forever, void, when)
+import           Control.Monad (forever, void)
 import           Control.Monad.IO.Class (liftIO)
-import           Data.Char (isAlphaNum)
-import           Data.Text (Text, dropAround, isPrefixOf, isSuffixOf, pack,
-                            unpack)
-import qualified Data.Text as T
+import           Data.Text (Text, pack, unpack)
 import           Data.Time.Calendar (Day (..))
 import           Data.Time.Clock (NominalDiffTime, UTCTime (..), addUTCTime,
                                   diffUTCTime, getCurrentTime)
@@ -98,7 +95,7 @@ instance IsBackend LiveViewBackend Text where
             Async.link ticker
             void $ M.customMain initialVty buildVty (Just eventChan) app initState
         modifyMVar_ mv $ \lvs -> return $ lvs { lvsUIThread = Just thr }
-        return $ sharedState
+        return sharedState
 
     unrealize be = putStrLn $ "unrealize " <> show (bekind be)
 
@@ -200,23 +197,6 @@ instance IsEffectuator LiveViewBackend Text where
                                          , lvsUpTime              = diffUTCTime (tstamp meta) (lvsStartTime lvs)
                                          }
                     _ -> pure ()
-            LogObject _ _ (LogMessage msg) -> do
-                when ("[" `isPrefixOf` msg) $ do
-                    let pointHashInBrackets = T.take 9 msg
-                    when ("]" `isSuffixOf` pointHashInBrackets) $ do
-                        -- Remove square brackets.
-                        let pointHashOnly = dropAround (not . isAlphaNum) pointHashInBrackets
-                        modifyMVar_ (getbe lvbe) $ \lvs ->
-                            return $ lvs { lvsTipOfChain = pointHashOnly
-                                         }
-                case words $ unpack msg of
-                    (_:"As":"leader":"of":"slot":slotNo:_) -> do
-                        let blockHeight = read slotNo :: Word64
-                        modifyMVar_ (getbe lvbe) $ \lvs ->
-                            return $ lvs { lvsBlocksMinted = lvsBlocksMinted lvs + 1
-                                         , lvsBlockHeight  = blockHeight
-                                         }
-                    _                                      -> return ()
             LogObject _ _ (LogValue "txsInMempool" (PureI txsInMempool)) ->
                 modifyMVar_ (getbe lvbe) $ \lvs -> do
                         let lvsMempool' = fromIntegral txsInMempool :: Word64
@@ -224,12 +204,24 @@ instance IsEffectuator LiveViewBackend Text where
                         return $ lvs { lvsMempool = lvsMempool'
                                      , lvsMempoolPerc = percentage
                                      }
+            LogObject _ _ (LogValue "density" (PureD density)) ->
+                modifyMVar_ (getbe lvbe) $ \lvs ->
+                        return $ lvs { lvsChainDensity = 0.05 + density * 100.0 }
+            LogObject _ _ (LogValue "connectedPeers" (PureI npeers)) ->
+                modifyMVar_ (getbe lvbe) $ \lvs ->
+                        return $ lvs { lvsPeersConnected = fromIntegral npeers }
             LogObject _ _ (LogValue "txsProcessed" (PureI txsProcessed)) ->
                 modifyMVar_ (getbe lvbe) $ \lvs ->
-                        return $ lvs { lvsTransactions = (lvsTransactions lvs) + (fromIntegral txsProcessed) }
-            LogObject _ _ (LogValue "slotNum" (PureI slotnum)) ->
+                        return $ lvs { lvsTransactions = lvsTransactions lvs + fromIntegral txsProcessed }
+            LogObject _ _ (LogValue "blockNum" (PureI slotnum)) ->
                 modifyMVar_ (getbe lvbe) $ \lvs ->
-                        return $ lvs { lvsBlockHeight = fromIntegral slotnum }
+                        return $ lvs { lvsBlockNum = fromIntegral slotnum }
+            LogObject _ _ (LogValue "slotInEpoch" (PureI slotnum)) ->
+                modifyMVar_ (getbe lvbe) $ \lvs ->
+                        return $ lvs { lvsSlotNum = fromIntegral slotnum }
+            LogObject _ _ (LogValue "epoch" (PureI epoch)) ->
+                modifyMVar_ (getbe lvbe) $ \lvs ->
+                        return $ lvs { lvsEpoch = fromIntegral epoch }
             _ -> pure ()
 
     handleOverflow _ = pure ()
@@ -246,11 +238,13 @@ data LiveViewState a = LiveViewState
     , lvsVersion             :: String
     , lvsCommit              :: String
     , lvsUpTime              :: NominalDiffTime
-    , lvsBlockHeight         :: Word64
+    , lvsEpoch               :: Word64
+    , lvsSlotNum             :: Word64
+    , lvsBlockNum            :: Word64
+    , lvsChainDensity        :: Double
     , lvsBlocksMinted        :: Word64
     , lvsTransactions        :: Word64
     , lvsPeersConnected      :: Word64
-    , lvsTipOfChain          :: Text
     , lvsMempool             :: Word64
     , lvsMempoolPerc         :: Float
     , lvsCPUUsagePerc        :: Float
@@ -298,11 +292,13 @@ initLiveViewState = do
                 , lvsVersion             = showVersion version
                 , lvsCommit              = unpack gitRev
                 , lvsUpTime              = diffUTCTime now now
-                , lvsBlockHeight         = 0
+                , lvsEpoch               = 0
+                , lvsSlotNum             = 0
+                , lvsBlockNum            = 0
+                , lvsChainDensity        = 0.0
                 , lvsBlocksMinted        = 0
                 , lvsTransactions        = 0
-                , lvsPeersConnected      = 3
-                , lvsTipOfChain          = ""
+                , lvsPeersConnected      = 0
                 , lvsMempool             = 0
                 , lvsMempoolPerc         = 0.0
                 , lvsCPUUsagePerc        = 0.58
@@ -664,11 +660,11 @@ nodeInfoLabels =
     $ vBox [                    txt "version:"
            ,                    txt "commit:"
            , padTop (T.Pad 1) $ txt "uptime:"
-           , padTop (T.Pad 1) $ txt "block height:"
-           ,                    txt "minted:"
+           , padTop (T.Pad 1) $ txt "epoch / slot:"
+           ,                    txt "block number:"
+           ,                    txt "chain density:"
            , padTop (T.Pad 1) $ txt "transactions processed:"
            , padTop (T.Pad 1) $ txt "peers connected:"
-           , padTop (T.Pad 1) $ txt "tip of chain:"
            ]
 
 nodeInfoValues :: LiveViewState a -> Widget ()
@@ -679,11 +675,11 @@ nodeInfoValues lvs =
            , padTop (T.Pad 1) $ str (formatTime defaultTimeLocale "%X" $
                                         -- NominalDiffTime is not an instance of FormatTime before time-1.9.1
                                         addUTCTime (lvsUpTime lvs) (UTCTime (ModifiedJulianDay 0) 0))
-           , padTop (T.Pad 1) $ str (show . lvsBlockHeight $ lvs)
-           ,                    str (show . lvsBlocksMinted $ lvs)
+           , padTop (T.Pad 1) $ str $ show (lvsEpoch lvs) ++ " / " ++ show (lvsSlotNum lvs)
+           ,                    str (show . lvsBlockNum $ lvs)
+           ,                    str $ (take 5 . show . lvsChainDensity $ lvs) ++ " %"
            , padTop (T.Pad 1) $ str (show . lvsTransactions $ lvs)
            , padTop (T.Pad 1) $ str (show . lvsPeersConnected $ lvs)
-           , padTop (T.Pad 1) $ txt (lvsTipOfChain lvs)
            ]
 
 eventHandler :: LiveViewState a -> BrickEvent n (LiveViewBackend a) -> EventM n (Next (LiveViewState a))
