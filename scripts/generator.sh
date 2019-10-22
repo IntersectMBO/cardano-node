@@ -22,6 +22,7 @@ TX_GEN_ARGS=(
         --outputs-per-tx 1
         --tx-fee         1000000
         --tps            10
+        --add-tx-size    100
         --sig-key        "${genesis_root}/delegate-keys.000.key"
         --sig-key        "${genesis_root}/delegate-keys.001.key"
         --sig-key        "${genesis_root}/delegate-keys.002.key"

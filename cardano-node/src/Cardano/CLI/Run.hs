@@ -34,6 +34,7 @@ module Cardano.CLI.Run (
   , NumberOfOutputsPerTx(..)
   , FeePerTx(..)
   , TPSRate(..)
+  , TxAdditionalSize(..)
   ) where
 
 import           Cardano.Prelude hiding (option, trace)
@@ -68,7 +69,7 @@ import           Cardano.CLI.Key
 import           Cardano.CLI.Ops
 import           Cardano.CLI.Tx
 import           Cardano.CLI.Tx.Generation (NumberOfTxs (..), NumberOfOutputsPerTx (..),
-                                            FeePerTx (..), TPSRate (..),
+                                            FeePerTx (..), TPSRate (..), TxAdditionalSize (..),
                                             genesisBenchmarkRunner)
 import           Cardano.Common.Orphans ()
 import           Cardano.Config.Protocol
@@ -153,6 +154,7 @@ data ClientCommand
     NumberOfOutputsPerTx
     FeePerTx
     TPSRate
+    (Maybe TxAdditionalSize)
     [SigningKeyFile]
 
 runCommand :: CLIOps IO -> CardanoConfiguration -> LoggingLayer -> ClientCommand -> ExceptT CliError IO ()
@@ -225,7 +227,13 @@ runCommand co cc _ (SpendUTxO (NewTxFile ctTx) ctKey ins outs) = do
   liftIO . ensureNewFileLBS ctTx $ serialise gTx
 
 runCommand co cc loggingLayer
-           (GenerateTxs topology numOfTxs numOfOutsPerTx feePerTx tps sigKeysFiles) = do
+           (GenerateTxs topology
+                        numOfTxs
+                        numOfOutsPerTx
+                        feePerTx
+                        tps
+                        txAdditionalSize
+                        sigKeysFiles) = do
   liftIO $ withRealPBFT co cc $
     \protocol@(Consensus.ProtocolRealPBFT _ _ _ _ _) -> do
       res <- runExceptT $ genesisBenchmarkRunner
@@ -237,6 +245,7 @@ runCommand co cc loggingLayer
                             numOfOutsPerTx
                             feePerTx
                             tps
+                            txAdditionalSize
                             [fp | SigningKeyFile fp <- sigKeysFiles]
 
       case res of

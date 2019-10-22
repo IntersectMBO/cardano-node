@@ -14,6 +14,7 @@ module Cardano.CLI.Tx.Generation
   , NumberOfOutputsPerTx(..)
   , FeePerTx(..)
   , TPSRate(..)
+  , TxAdditionalSize(..)
   , genesisBenchmarkRunner
   ) where
 
@@ -47,7 +48,7 @@ import qualified Data.Set as Set
 import           Data.Text (Text)
 import qualified Data.Text as T
 import           Data.Time.Clock (DiffTime, picosecondsToDiffTime)
-import           Data.Word (Word32, Word64)
+import           Data.Word (Word8, Word32, Word64)
 import           Network.Socket (AddrInfo (..),
                      AddrInfoFlag (..), Family (..), SocketType (Stream),
                      addrFamily,addrFlags, addrSocketType, defaultHints,
@@ -115,6 +116,19 @@ newtype TPSRate =
   TPSRate Int
   deriving (Eq, Ord, Show)
 
+-- | This parameter specifies additional size (in bytes) of transaction.
+--   Since 1 transaction is ([input] + [output] + attributes), its size
+--   is defined by its inputs and outputs. We want to have an ability to
+--   increase transaction's size without increasing the number of inputs/
+--   outputs. Such a big transaction will give us more real-world results
+--   of benchmarking.
+--   Technically this parameter specifies the size of attribute we'll
+--   add to transaction (by default attributes are empty, so if this
+--   parameter is skipped, attributes will remain empty).
+newtype TxAdditionalSize =
+  TxAdditionalSize Int
+  deriving (Eq, Ord, Show)
+
 data TxGenError = CurrentlyCannotSendTxToRelayNode FilePath
                 -- ^ Relay nodes cannot currently be transaction recipients.
                 | InsufficientFundsForRecipientTx
@@ -142,6 +156,7 @@ genesisBenchmarkRunner
   -> NumberOfOutputsPerTx
   -> FeePerTx
   -> TPSRate
+  -> Maybe TxAdditionalSize
   -> [FilePath]
   -> ExceptT TxGenError IO ()
 genesisBenchmarkRunner loggingLayer
@@ -152,6 +167,7 @@ genesisBenchmarkRunner loggingLayer
                        numOfOutsPerTx
                        txFee
                        tpsRate
+                       txAdditionalSize
                        signingKeyFiles = do
   when (length signingKeyFiles < 3) $
     left $ NeedMinimumThreeSigningKeyFiles signingKeyFiles
@@ -226,6 +242,7 @@ genesisBenchmarkRunner loggingLayer
                  numOfOutsPerTx
                  txFee
                  tpsRate
+                 txAdditionalSize
 
 {-------------------------------------------------------------------------------
   Main logic
@@ -462,12 +479,14 @@ mkTransaction
   -- if different from that of the first argument
   -> Set (r, CC.UTxO.TxOut)
   -- ^ Each recipient and their payment details
+  -> Maybe TxAdditionalSize
+  -- ^ Optional size of additional binary blob in transaction (as 'txAttributes')
   -> ( Maybe (Word32, CC.Common.Lovelace) -- The 'change' index and value (if any)
      , CC.Common.Lovelace                 -- The associated fees
      , Map r Word32                       -- The offset map in the transaction below
      , GenTx (ByronBlockOrEBB cfg)
      )
-mkTransaction cfg ((txinFrom, txoutFrom), signingKey) mChangeAddress payments =
+mkTransaction cfg ((txinFrom, txoutFrom), signingKey) mChangeAddress payments txAdditionalSize =
   (mChange, fees, offsetMap, genTx)
  where
   paymentsList = toList payments
@@ -507,10 +526,48 @@ mkTransaction cfg ((txinFrom, txoutFrom), signingKey) mChangeAddress payments =
   tx = CC.UTxO.UnsafeTx
          { CC.UTxO.txInputs     = txinFrom :| []
          , CC.UTxO.txOutputs    = txOutputs
-         , CC.UTxO.txAttributes = CC.Common.mkAttributes ()
+         , CC.UTxO.txAttributes = createTxAttributes txAdditionalSize
          }
 
   genTx = generalizeTx cfg tx signingKey
+
+-- | If this transaction should contain additional binary blob -
+--   we have to create attributes of the corresponding size.
+--   TxAttributes contains a map from 1-byte integer to arbitrary bytes which
+--   will be used as a binary blob to increase the size of the transaction.
+createTxAttributes
+  :: Maybe TxAdditionalSize
+  -> CC.UTxO.TxAttributes
+createTxAttributes txAdditionalSize =
+  case txAdditionalSize of
+    Nothing -> emptyAttributes
+    Just (TxAdditionalSize size) -> blobAttributes size
+ where
+  emptyAttributes :: CC.UTxO.TxAttributes
+  emptyAttributes = CC.Common.mkAttributes ()
+
+  blobAttributes :: Int -> CC.UTxO.TxAttributes
+  blobAttributes aSize =
+    emptyAttributes {
+      CC.Common.attrRemain = CC.Common.UnparsedFields $
+        Map.singleton k $ LB.replicate (finalSize aSize) byte
+    }
+
+  k :: Word8
+  k = 1 -- Arbitrary key.
+
+  -- Fill an attribute by the same arbitrary byte in each element.
+  byte :: Word8
+  byte = 0
+
+  sizeOfKey :: Int
+  sizeOfKey = 1
+
+  -- Please note that actual binary size of attributes will be a little bit
+  -- bigger than the size defined by user (via CLI argument), because size of
+  -- singleton 'Map k v' isn't equal to the size of ('k' + 'v').
+  finalSize :: Int -> Int64
+  finalSize userDefinedSize = fromIntegral (userDefinedSize - sizeOfKey)
 
 -- | Append a non-empty list to a list.
 -- > appendr [1,2,3] (4 :| [5]) == 1 :| [2,3,4,5]
@@ -622,6 +679,7 @@ runBenchmark
   -> NumberOfOutputsPerTx
   -> FeePerTx
   -> TPSRate
+  -> Maybe TxAdditionalSize
   -> ExceptT TxGenError IO ()
 runBenchmark benchTracer
              connectTracer
@@ -636,7 +694,8 @@ runBenchmark benchTracer
              numOfTxs
              numOfOutsPerTx
              txFee
-             tpsRate = do
+             tpsRate
+             txAdditionalSize = do
   liftIO . traceWith benchTracer . TraceBenchTxSubDebug
     $ "******* Tx generator, phase 1: make enough available UTxO entries *******"
   createMoreFundCoins
@@ -694,6 +753,7 @@ runBenchmark benchTracer
               txFee
               numOfTxs
               numOfOutsPerTx
+              txAdditionalSize
 
   liftIO . traceWith benchTracer . TraceBenchTxSubDebug
     $ "******* Tx generator, launch submission threads... *******"
@@ -785,6 +845,7 @@ createMoreFundCoins llTracer cc pInfoConfig sourceKey (FeePerTx txFee) topologyI
                                                                details
                                                                Nothing
                                                                outs
+                                                               Nothing
             !txId = Byron.byronTxId genTx
             txDetailsList = (flip map) (Map.toList outIndices) $
                 \(_, txInIndex) ->
@@ -829,6 +890,7 @@ txGenerator
   -> FeePerTx
   -> NumberOfTxs
   -> NumberOfOutputsPerTx
+  -> Maybe TxAdditionalSize
   -> ExceptT TxGenError IO ()
 txGenerator benchTracer
             cfg
@@ -836,7 +898,8 @@ txGenerator benchTracer
             sourceKey
             (FeePerTx txFee)
             (NumberOfTxs numOfTransactions)
-            (NumberOfOutputsPerTx numOfOutsPerTx) = do
+            (NumberOfOutputsPerTx numOfOutsPerTx)
+            txAdditionalSize = do
   liftIO . traceWith benchTracer . TraceBenchTxSubDebug
     $ " Prepare to generate, total number of transactions " ++ show numOfTransactions
   forM_ [1 .. numOfTransactions] $ \_ -> do
@@ -848,6 +911,7 @@ txGenerator benchTracer
                                                                              txIn
                                                                              (Just addressForChange)
                                                                              recipients
+                                                                             txAdditionalSize
     -- Write newly generated tx in the list.
     -- It will be handled by 'bulkSubmission' function.
     liftIO $ writeTxInList tx

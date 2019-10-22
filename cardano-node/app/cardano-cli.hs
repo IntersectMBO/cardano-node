@@ -286,6 +286,11 @@ parseTxRelatedValues =
             <*> parseTPSRate
                   "tps"
                   "TPS (transaction per second) rate."
+            <*> optional (
+                  parseTxAdditionalSize
+                    "add-tx-size"
+                    "Additional size of transaction, in bytes."
+                )
             <*> parseSigningKeysFiles
                   "sig-key"
                   "Path to signing key file, for genesis UTxO using by generator."
@@ -499,6 +504,9 @@ parseFeePerTx opt desc = FeePerTx <$> parseIntegral opt desc
 
 parseTPSRate :: String -> String -> Parser TPSRate
 parseTPSRate opt desc = TPSRate <$> parseIntegral opt desc
+
+parseTxAdditionalSize :: String -> String -> Parser TxAdditionalSize
+parseTxAdditionalSize opt desc = TxAdditionalSize <$> parseIntegral opt desc
 
 parseSigningKeysFiles :: String -> String -> Parser [SigningKeyFile]
 parseSigningKeysFiles opt desc = many $ SigningKeyFile <$> parseFilePath opt desc
