@@ -31,6 +31,7 @@ module Cardano.CLI.Run (
   , TxFile(..)
   , NewTxFile(..)
   , NumberOfTxs(..)
+  , NumberOfInputsPerTx(..)
   , NumberOfOutputsPerTx(..)
   , FeePerTx(..)
   , TPSRate(..)
@@ -68,8 +69,11 @@ import           Cardano.CLI.Genesis
 import           Cardano.CLI.Key
 import           Cardano.CLI.Ops
 import           Cardano.CLI.Tx
-import           Cardano.CLI.Tx.Generation (NumberOfTxs (..), NumberOfOutputsPerTx (..),
-                                            FeePerTx (..), TPSRate (..), TxAdditionalSize (..),
+import           Cardano.CLI.Tx.Generation (NumberOfTxs (..),
+                                            NumberOfInputsPerTx (..),
+                                            NumberOfOutputsPerTx (..),
+                                            FeePerTx (..), TPSRate (..),
+                                            TxAdditionalSize (..),
                                             genesisBenchmarkRunner)
 import           Cardano.Common.Orphans ()
 import           Cardano.Config.Protocol
@@ -151,6 +155,7 @@ data ClientCommand
   | GenerateTxs
     TopologyInfo
     NumberOfTxs
+    NumberOfInputsPerTx
     NumberOfOutputsPerTx
     FeePerTx
     TPSRate
@@ -229,6 +234,7 @@ runCommand co cc _ (SpendUTxO (NewTxFile ctTx) ctKey ins outs) = do
 runCommand co cc loggingLayer
            (GenerateTxs topology
                         numOfTxs
+                        numOfInsPerTx
                         numOfOutsPerTx
                         feePerTx
                         tps
@@ -242,6 +248,7 @@ runCommand co cc loggingLayer
                             protocol
                             topology
                             numOfTxs
+                            numOfInsPerTx
                             numOfOutsPerTx
                             feePerTx
                             tps

@@ -277,6 +277,9 @@ parseTxRelatedValues =
             <*> parseNumberOfTxs
                   "num-of-txs"
                   "Number of transactions generator will create."
+            <*> parseNumberOfInputsPerTx
+                  "inputs-per-tx"
+                  "Number of inputs in each of transactions."
             <*> parseNumberOfOutputsPerTx
                   "outputs-per-tx"
                   "Number of outputs in each of transactions."
@@ -495,6 +498,9 @@ parseNewTxFile opt =
 
 parseNumberOfTxs :: String -> String -> Parser NumberOfTxs
 parseNumberOfTxs opt desc = NumberOfTxs <$> parseIntegral opt desc
+
+parseNumberOfInputsPerTx :: String -> String -> Parser NumberOfInputsPerTx
+parseNumberOfInputsPerTx opt desc = NumberOfInputsPerTx <$> parseIntegral opt desc
 
 parseNumberOfOutputsPerTx :: String -> String -> Parser NumberOfOutputsPerTx
 parseNumberOfOutputsPerTx opt desc = NumberOfOutputsPerTx <$> parseIntegral opt desc

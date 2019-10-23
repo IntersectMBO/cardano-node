@@ -11,6 +11,7 @@
 
 module Cardano.CLI.Tx.Generation
   ( NumberOfTxs(..)
+  , NumberOfInputsPerTx(..)
   , NumberOfOutputsPerTx(..)
   , FeePerTx(..)
   , TPSRate(..)
@@ -26,7 +27,7 @@ import qualified Control.Concurrent.STM as STM
 import qualified Control.Concurrent.STM.TVar as TVar
 import           Control.Exception (IOException)
 import qualified Control.Exception as Exception
-import           Control.Monad (forM_, mapM, when)
+import           Control.Monad (forM, forM_, mapM, when)
 import qualified Control.Monad.Class.MonadSTM as MSTM
 import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT,
@@ -105,6 +106,10 @@ newtype NumberOfTxs =
   NumberOfTxs Word64
   deriving (Eq, Ord, Show)
 
+newtype NumberOfInputsPerTx =
+  NumberOfInputsPerTx Int
+  deriving (Eq, Ord, Show)
+
 newtype NumberOfOutputsPerTx =
   NumberOfOutputsPerTx Int
   deriving (Eq, Ord, Show)
@@ -154,6 +159,7 @@ genesisBenchmarkRunner
   -> Consensus.Protocol (ByronBlockOrEBB ByronConfig)
   -> TopologyInfo
   -> NumberOfTxs
+  -> NumberOfInputsPerTx
   -> NumberOfOutputsPerTx
   -> FeePerTx
   -> TPSRate
@@ -165,6 +171,7 @@ genesisBenchmarkRunner loggingLayer
                        protocol@(Consensus.ProtocolRealPBFT genesisConfig _ _ _ _)
                        topologyInfo
                        numOfTxs@(NumberOfTxs rawNumOfTxs)
+                       numOfInsPerTx
                        numOfOutsPerTx
                        txFee
                        tpsRate
@@ -240,6 +247,7 @@ genesisBenchmarkRunner loggingLayer
                  topologyInfo
                  targetNodeAddress
                  numOfTxs
+                 numOfInsPerTx
                  numOfOutsPerTx
                  txFee
                  tpsRate
@@ -475,14 +483,13 @@ getTxIdFromGenTx
 getTxIdFromGenTx (ByronTx txId _) = txId
 getTxIdFromGenTx _ = panic "Impossible happened: generated transaction is not a ByronTx!"
 
--- | Single input to multiple (in sequence) output transaction (special case for benchmarking).
+-- | One or more inputs -> one or more outputs.
 mkTransaction
   :: (FiscalRecipient r)
   => NodeConfig ByronEBBExtNodeConfig
-  -> (TxDetails, Crypto.SigningKey)
-  -- ^ TxIn, TxOut that will be used as
-  -- input and the key to spend the
-  -- associated value
+  -> NonEmpty (TxDetails, Crypto.SigningKey)
+  -- ^ Non-empty list of (TxIn, TxOut) that will be used as
+  -- inputs and the key to spend the associated value
   -> Maybe CC.Common.Address
   -- ^ The address to associate with the 'change',
   -- if different from that of the first argument
@@ -495,9 +502,11 @@ mkTransaction
      , Map r Word32                       -- The offset map in the transaction below
      , GenTx (ByronBlockOrEBB cfg)
      )
-mkTransaction cfg ((txinFrom, txoutFrom), signingKey) mChangeAddress payments txAdditionalSize =
+mkTransaction cfg inputs mChangeAddress payments txAdditionalSize =
   (mChange, fees, offsetMap, genTx)
  where
+  -- Take the first input to get signingKey and txoutFrom value.
+  ((_, txoutFrom), signingKey) = NE.head inputs
   paymentsList = toList payments
   txOuts       = map snd paymentsList
 
@@ -531,9 +540,12 @@ mkTransaction cfg ((txinFrom, txoutFrom), signingKey) mChangeAddress payments tx
                                      paymentsList
                                      [0..]
 
+  -- Take all actual inputs.
+  pureInputs = NE.map (\((txIn, _), _) -> txIn) inputs
+
   tx :: CC.UTxO.Tx
   tx = CC.UTxO.UnsafeTx
-         { CC.UTxO.txInputs     = txinFrom :| []
+         { CC.UTxO.txInputs     = pureInputs
          , CC.UTxO.txOutputs    = txOutputs
          , CC.UTxO.txAttributes = createTxAttributes txAdditionalSize
          }
@@ -686,6 +698,7 @@ runBenchmark
   -> TopologyInfo
   -> NodeAddress
   -> NumberOfTxs
+  -> NumberOfInputsPerTx
   -> NumberOfOutputsPerTx
   -> FeePerTx
   -> TPSRate
@@ -702,6 +715,7 @@ runBenchmark benchTracer
              topologyInfo
              targetNodeAddress
              numOfTxs
+             numOfInsPerTx
              numOfOutsPerTx
              txFee
              tpsRate
@@ -716,6 +730,7 @@ runBenchmark benchTracer
     txFee
     topologyInfo
     numOfTxs
+    numOfInsPerTx
 
   liftIO . traceWith benchTracer . TraceBenchTxSubDebug
     $ "******* Tx generator, phase 2: pay to recipients *******"
@@ -762,6 +777,7 @@ runBenchmark benchTracer
               sourceKey
               txFee
               numOfTxs
+              numOfInsPerTx
               numOfOutsPerTx
               txAdditionalSize
 
@@ -793,10 +809,19 @@ createMoreFundCoins
   -> FeePerTx
   -> TopologyInfo
   -> NumberOfTxs
+  -> NumberOfInputsPerTx
   -> ExceptT TxGenError IO ()
-createMoreFundCoins llTracer cc pInfoConfig sourceKey (FeePerTx txFee) topologyInfo (NumberOfTxs numOfTxs) = do
+createMoreFundCoins llTracer
+                    cc
+                    pInfoConfig
+                    sourceKey
+                    (FeePerTx txFee)
+                    topologyInfo
+                    (NumberOfTxs numOfTxs)
+                    (NumberOfInputsPerTx numOfInsPerTx) = do
   let feePerTx              = assumeBound . CC.Common.mkLovelace $ txFee
-      numSplittingTxOuts    = numOfTxs -- number of splitting txout entries
+      -- The number of splitting txout entries (corresponds to the number of all inputs we will need).
+      numSplittingTxOuts    = numOfTxs * (fromIntegral numOfInsPerTx)
       numOutsPerSplittingTx = 60 :: Word64 -- near the upper bound so as not to exceed the tx size limit
 
   -- Now we have to find the first output with sufficient amount of money.
@@ -852,7 +877,7 @@ createMoreFundCoins llTracer cc pInfoConfig sourceKey (FeePerTx txFee) topologyI
             outs = Set.fromList $ zip [identityIndex .. identityIndex + (fromIntegral numOutsPerInitTx) - 1]
                                       (repeat txOut)
             (mFunds, _fees, outIndices, genTx) = mkTransaction config
-                                                               details
+                                                               (details :| [])
                                                                Nothing
                                                                outs
                                                                Nothing
@@ -899,6 +924,7 @@ txGenerator
   -> Crypto.SigningKey
   -> FeePerTx
   -> NumberOfTxs
+  -> NumberOfInputsPerTx
   -> NumberOfOutputsPerTx
   -> Maybe TxAdditionalSize
   -> ExceptT TxGenError IO ()
@@ -908,6 +934,7 @@ txGenerator benchTracer
             sourceKey
             (FeePerTx txFee)
             (NumberOfTxs numOfTransactions)
+            (NumberOfInputsPerTx numOfInsPerTx)
             (NumberOfOutputsPerTx numOfOutsPerTx)
             txAdditionalSize = do
   liftIO . traceWith benchTracer . TraceBenchTxSubDebug
@@ -915,10 +942,15 @@ txGenerator benchTracer
   forM_ [1 .. numOfTransactions] $ \_ -> do
     -- TODO: currently we take the first available output, but don't check the 'status'.
     -- Later it should be changed: we have to use outputs from 'Seen' transactions only.
-    fvs <- findAvailablefunds totalValue (const True)
-    let txIn = (txDetails fvs, sourceKey)
+
+    -- We take as many available inputs as we need (because we already have sufficient
+    -- numbers of inputs after splitting phase).
+    txInputs <- forM [1 .. numOfInsPerTx] $ \_ -> do
+      fvs <- findAvailablefunds totalValue (const True)
+      return (txDetails fvs, sourceKey)
+
     let (_, _, _, tx :: GenTx (ByronBlockOrEBB ByronConfig)) = mkTransaction cfg
-                                                                             txIn
+                                                                             (NE.fromList txInputs)
                                                                              (Just addressForChange)
                                                                              recipients
                                                                              txAdditionalSize
