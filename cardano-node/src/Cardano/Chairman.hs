@@ -46,7 +46,7 @@ import           Network.TypedProtocol.Codec
 import           Network.TypedProtocol.Codec.Cbor
 import           Network.TypedProtocol.Driver
 import           Ouroboros.Network.Mux
-import           Ouroboros.Network.Block (BlockNo, HasHeader, HeaderHash, Point)
+import           Ouroboros.Network.Block (BlockNo, HasHeader, HeaderHash, Point, Tip)
 import qualified Ouroboros.Network.Block as Block
 import           Ouroboros.Network.AnchoredFragment (AnchoredFragment)
 import qualified Ouroboros.Network.AnchoredFragment as AF
@@ -302,7 +302,7 @@ chainSyncClient
   -> ChainsVar m blk
   -> SecurityParam
   -> Maybe BlockNo
-  -> ChainSyncClient blk (Point blk) m ()
+  -> ChainSyncClient blk (Tip blk) m ()
 chainSyncClient tracer coreNodeId chainsVar securityParam maxBlockNo = ChainSyncClient $ pure $
     -- Notify the core node about the our latest points at which we are
     -- synchronised.  This client is not persistent and thus it just
@@ -317,14 +317,14 @@ chainSyncClient tracer coreNodeId chainsVar securityParam maxBlockNo = ChainSync
   where
     clientStIdle :: Maybe BlockNo
                  -- current point
-                 -> ClientStIdle blk (Point blk) m ()
+                 -> ClientStIdle blk (Tip blk) m ()
     clientStIdle currentBlockNo =
       case (currentBlockNo, maxBlockNo) of
         (Just n, Just m) | n >= m
                          -> SendMsgDone ()
         _                -> SendMsgRequestNext clientStNext (pure clientStNext)
 
-    clientStNext :: ClientStNext blk (Point blk) m ()
+    clientStNext :: ClientStNext blk (Tip blk) m ()
     clientStNext = ClientStNext {
         recvMsgRollForward = \blk _tip -> ChainSyncClient $ do
           -- add block & check if there is consensus on immutable chain
@@ -364,7 +364,7 @@ localInitiatorNetworkApplication
   -> SecurityParam
   -> Maybe BlockNo
   -> Tracer m (ChairmanTrace blk)
-  -> Tracer m (TraceSendRecv (ChainSync blk (Point blk)) peer DeserialiseFailure)
+  -> Tracer m (TraceSendRecv (ChainSync blk (Tip blk)) peer DeserialiseFailure)
   -- ^ tracer which logs all chain-sync messages send and received by the client
   -- (see 'Ouroboros.Network.Protocol.ChainSync.Type' in 'ouroboros-network'
   -- package)
@@ -421,7 +421,7 @@ localChainSyncCodec
      , MonadST    m
      )
   => NodeConfig (BlockProtocol blk)
-  -> Codec (ChainSync blk (Point blk))
+  -> Codec (ChainSync blk (Tip blk))
            DeserialiseFailure m ByteString
 localChainSyncCodec pInfoConfig =
     codecChainSync
@@ -429,5 +429,5 @@ localChainSyncCodec pInfoConfig =
       (nodeDecodeBlock pInfoConfig)
       (Block.encodePoint (nodeEncodeHeaderHash (Proxy @blk)))
       (Block.decodePoint (nodeDecodeHeaderHash (Proxy @blk)))
-      (Block.encodePoint (nodeEncodeHeaderHash (Proxy @blk)))
-      (Block.decodePoint (nodeDecodeHeaderHash (Proxy @blk)))
+      (Block.encodeTip   (nodeEncodeHeaderHash (Proxy @blk)))
+      (Block.decodeTip   (nodeDecodeHeaderHash (Proxy @blk)))
