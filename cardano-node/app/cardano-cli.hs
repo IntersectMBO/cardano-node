@@ -31,11 +31,13 @@ import           Cardano.Crypto ( AProtocolMagic(..)
 import           Cardano.Config.CommonCLI
 import           Cardano.Config.Types (CardanoEnvironment (..),
                                        CardanoConfiguration(..))
+import           Cardano.Config.Partial (PartialCardanoConfiguration (..),
+                                         PartialCore (..))
 import           Cardano.Config.Presets (mainnetConfiguration)
+import           Cardano.Config.Protocol (Protocol)
 
 import           Cardano.Common.Parsers
 import           Cardano.Config.Logging
-import           Cardano.Config.Partial (PartialCardanoConfiguration(..))
 import           Cardano.CLI.Genesis
 import           Cardano.CLI.Key
 import           Cardano.Config.Logging (createLoggingFeature)
@@ -52,8 +54,9 @@ main = do
   let cardanoEnvironment   = NoEnvironment
 
   cmdRes <- runExceptT $ do
+    let emptyCommonCli = CommonCLI (Last Nothing) (Last Nothing) (Last Nothing) (Last Nothing) (Last Nothing) (Last Nothing)
     finalConfig <- withExceptT ConfigError $ ExceptT $ pure $
-      mkConfiguration (cardanoConfiguration <> partialConfig co) (commonCli co) (commonCliAdv co)
+      mkConfiguration (cardanoConfiguration <> partialConfig co) emptyCommonCli (commonCliAdv co)
     ops <- liftIO $ decideCLIOps (ccProtocol finalConfig)
     (loggingLayer, _loggingFeature) <- liftIO $
       createLoggingFeature cardanoEnvironment (finalConfig {ccLogConfig = logConfigFile $ loggingCli co})
@@ -82,7 +85,6 @@ main = do
 data CLI = CLI
   { partialConfig :: PartialCardanoConfiguration
   , mainCommand :: ClientCommand
-  , commonCli   :: CommonCLI
   , commonCliAdv :: CommonCLIAdvanced
   , loggingCli  :: LoggingCLIArguments
   }
@@ -90,11 +92,44 @@ data CLI = CLI
 parseClient :: Parser CLI
 parseClient = do
   ptcl <- (parseProtocolByron <|> parseProtocolRealPBFT)
-  cCom <- parseClientCommand
-  comCli <- parseCommonCLI
+  cmd <- parseClientCommand
+  dbPath <- parseDbPath
+  genPath <- parseGenesisPath
+  genHash <- parseGenesisHash
+  delCert <- parseDelegationeCert
+  sKey <- parseSigningKey
+  socketDir <- parseSocketDir
   comCliAdv <- parseCommonCLIAdvanced
   logging <- loggingParser
-  pure $ CLI (mempty {pccProtocol = ptcl}) cCom comCli comCliAdv logging
+  pure $ CLI (createPcc ptcl dbPath genPath genHash delCert sKey socketDir) cmd comCliAdv logging
+ where
+  -- This merges the command line parsed values into one `PartialCardanoconfiguration`.
+  createPcc
+    :: Last Protocol
+    -> Last FilePath -- Db Path
+    -> Last FilePath -- Genesis Path
+    -> Last Text -- Genesis Hash
+    -> Last FilePath -- Deleg cert
+    -> Last FilePath -- Signing Key
+    -> Last FilePath -- Socket dir
+    -> PartialCardanoConfiguration
+  createPcc
+    ptcl
+    dbPath
+    genPath
+    genHash
+    delCert
+    sKey
+    socketDir = mempty { pccDBPath = dbPath
+                       , pccProtocol = ptcl
+                       , pccSocketDir = socketDir
+                       , pccCore = mempty { pcoGenesisFile = genPath
+                                          , pcoGenesisHash = genHash
+                                          , pcoStaticKeyDlgCertFile = delCert
+                                          , pcoStaticKeySigningKeyFile = sKey
+                                          }
+                       }
+
 
 parseClientCommand :: Parser ClientCommand
 parseClientCommand =
