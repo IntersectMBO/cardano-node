@@ -48,8 +48,8 @@
     } // {
     src = (pkgs.lib).mkDefault (pkgs.fetchgit {
       url = "https://github.com/input-output-hk/cardano-base";
-      rev = "64bb761664c9ca8a52a0023dc1a92c9b5b884497";
-      sha256 = "1cqmyr4q5jpalxffzqr5clafr0zz7mzi3k57nxf0d519kilwhfdc";
+      rev = "5c575d46afbfe333de0ccba70b084db8302abf42";
+      sha256 = "1v1q20fjb6klcdhl9mhpvd10j6vc7biwk91dgyfp6ld7xvj2703x";
       });
     postUnpack = "sourceRoot+=/cardano-crypto-class; echo source root reset to \$sourceRoot";
     }

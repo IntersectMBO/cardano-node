@@ -19,6 +19,7 @@
         depends = [
           (hsPkgs.base)
           (hsPkgs.base16-bytestring)
+          (hsPkgs.bimap)
           (hsPkgs.bytestring)
           (hsPkgs.cardano-binary)
           (hsPkgs.cardano-binary-test)
@@ -30,12 +31,19 @@
           (hsPkgs.cardano-prelude-test)
           (hsPkgs.containers)
           (hsPkgs.cryptonite)
+          (hsPkgs.cs-blockchain)
+          (hsPkgs.cs-ledger)
           (hsPkgs.directory)
           (hsPkgs.filepath)
           (hsPkgs.formatting)
+          (hsPkgs.generic-monoid)
           (hsPkgs.hedgehog)
+          (hsPkgs.lens)
           (hsPkgs.mtl)
           (hsPkgs.optparse-applicative)
+          (hsPkgs.resourcet)
+          (hsPkgs.small-steps)
+          (hsPkgs.streaming)
           (hsPkgs.tasty)
           (hsPkgs.tasty-hedgehog)
           (hsPkgs.text)
@@ -47,8 +55,8 @@
     } // {
     src = (pkgs.lib).mkDefault (pkgs.fetchgit {
       url = "https://github.com/input-output-hk/cardano-ledger";
-      rev = "a1de5b52c32255464564a6c5a8a9e474086e3875";
-      sha256 = "1426q6x4wbllimy4v6dgj36mj4cha14rkfn6jhscamhgmaxphcqr";
+      rev = "181f69af290412abecefc07e1b26e77a453755ff";
+      sha256 = "05f3sz25jnxa45ycy4irx68spa0m39q79ryxjsz5ih877lf6p5gy";
       });
     postUnpack = "sourceRoot+=/cardano-ledger/test; echo source root reset to \$sourceRoot";
     }
