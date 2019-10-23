@@ -194,6 +194,7 @@ handleSimpleNode p trace nodeTracers cc = do
           , rnaDnsProducers          = dnsProducers
           , rnaHandshakeTracer       = nullTracer
           , rnaHandshakeLocalTracer  = nullTracer
+          , rnaNetworkMagic          = Consensus.protocolNetworkMagic cfg
           }
 
         producerSubscription :: RemoteAddress -> DnsSubscriptionTarget

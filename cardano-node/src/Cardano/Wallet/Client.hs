@@ -112,7 +112,7 @@ localInitiatorNetworkApplication
 localInitiatorNetworkApplication Proxy chainSyncTracer localTxSubmissionTracer pInfoConfig =
     simpleSingletonVersions
       NodeToClientV_1
-      (NodeToClientVersionData { networkMagic = 0 })
+      (NodeToClientVersionData { networkMagic = protocolNetworkMagic pInfoConfig })
       (DictVersion nodeToClientCodecCBORTerm)
 
   $ OuroborosInitiatorApplication $ \peer ptcl -> case ptcl of

@@ -1,6 +1,6 @@
 { system, compiler, flags, pkgs, hsPkgs, pkgconfPkgs, ... }:
   {
-    flags = { checktvarinvariant = false; };
+    flags = {};
     package = {
       specVersion = "1.10";
       identifier = { name = "ouroboros-consensus"; version = "0.1.0.0"; };
@@ -92,6 +92,7 @@
             (hsPkgs.cardano-binary)
             (hsPkgs.cardano-crypto-class)
             (hsPkgs.cardano-crypto-wrapper)
+            (hsPkgs.cardano-crypto-test)
             (hsPkgs.cardano-ledger)
             (hsPkgs.cardano-ledger-test)
             (hsPkgs.cardano-prelude)
@@ -101,6 +102,7 @@
             (hsPkgs.ouroboros-consensus)
             (hsPkgs.io-sim-classes)
             (hsPkgs.io-sim)
+            (hsPkgs.cborg)
             (hsPkgs.containers)
             (hsPkgs.contra-tracer)
             (hsPkgs.cryptonite)
@@ -109,6 +111,7 @@
             (hsPkgs.fingertree)
             (hsPkgs.generics-sop)
             (hsPkgs.graphviz)
+            (hsPkgs.hedgehog-quickcheck)
             (hsPkgs.mtl)
             (hsPkgs.QuickCheck)
             (hsPkgs.quickcheck-state-machine)
@@ -139,6 +142,7 @@
             (hsPkgs.bifunctors)
             (hsPkgs.binary)
             (hsPkgs.bytestring)
+            (hsPkgs.cborg)
             (hsPkgs.cereal)
             (hsPkgs.containers)
             (hsPkgs.contra-tracer)
@@ -146,6 +150,7 @@
             (hsPkgs.directory)
             (hsPkgs.fingertree)
             (hsPkgs.generics-sop)
+            (hsPkgs.hashable)
             (hsPkgs.mtl)
             (hsPkgs.pretty-show)
             (hsPkgs.QuickCheck)
@@ -168,8 +173,8 @@
     } // {
     src = (pkgs.lib).mkDefault (pkgs.fetchgit {
       url = "https://github.com/input-output-hk/ouroboros-network";
-      rev = "e3a2401aa324afe1287c89d827a92f2e784a3da0";
-      sha256 = "13rg7xsxc9gl80n0gbazb3nw38vga7k4682xppzpz11mcj5kxrr1";
+      rev = "5144b4494602fcdeb3bbcb926eb2ea2f530ccb94";
+      sha256 = "1hm2dkvwvs24mvah0ifwcy1iayq3vixc9dmazr3sqb70kri40mpn";
       });
     postUnpack = "sourceRoot+=/ouroboros-consensus; echo source root reset to \$sourceRoot";
     }

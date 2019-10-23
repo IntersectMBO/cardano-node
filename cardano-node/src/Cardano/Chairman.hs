@@ -379,7 +379,7 @@ localInitiatorNetworkApplication
 localInitiatorNetworkApplication coreNodeId chainsVar securityParam maxBlockNo chairmanTracer chainSyncTracer localTxSubmissionTracer pInfoConfig =
     simpleSingletonVersions
       NodeToClientV_1
-      (NodeToClientVersionData { networkMagic = 0 })
+      (NodeToClientVersionData (protocolNetworkMagic pInfoConfig))
       (DictVersion nodeToClientCodecCBORTerm)
 
   $ OuroborosInitiatorApplication $ \peer ptcl -> case ptcl of
