@@ -163,8 +163,8 @@ instance DefineSeverity (WithDomainName DnsTrace) where
     DnsTraceLookupAResult {} -> Debug
     DnsTraceLookupAAAAResult {} -> Debug
 
-instance DefinePrivacyAnnotation (WithMuxBearer (MuxTrace ptcl))
-instance DefineSeverity (WithMuxBearer (MuxTrace ptcl)) where
+instance DefinePrivacyAnnotation (WithMuxBearer peer (MuxTrace ptcl))
+instance DefineSeverity (WithMuxBearer peer (MuxTrace ptcl)) where
   defineSeverity (WithMuxBearer _ ev) = case ev of
     MuxTraceRecvHeaderStart        -> Debug
     MuxTraceRecvHeaderEnd {}       -> Debug
@@ -356,7 +356,8 @@ instance Transformable Text IO (WithDomainName DnsTrace) where
   trTransformer UserdefinedFormatting verb tr = trStructured verb tr
 
 -- transform @MuxTrace@
-instance Show ptcl => Transformable Text IO (WithMuxBearer (MuxTrace ptcl)) where
+instance (Show ptcl, Show peer)
+           => Transformable Text IO (WithMuxBearer peer (MuxTrace ptcl)) where
   trTransformer StructuredLogging verb tr = trStructured verb tr
   trTransformer TextualRepresentation _verb tr = Tracer $ \s ->
     traceWith tr =<< LogObject <$> pure ""
@@ -486,7 +487,8 @@ instance ToObject (WithDomainName DnsTrace) where
              , "domain" .= show dom
              , "event" .= show ev ]
 
-instance Show ptcl => ToObject (WithMuxBearer (MuxTrace ptcl)) where
+instance (Show ptcl, Show peer)
+      => ToObject (WithMuxBearer peer (MuxTrace ptcl)) where
   toObject _verb (WithMuxBearer b ev) =
     mkObject [ "kind" .= String "MuxTrace"
              , "bearer" .= show b
