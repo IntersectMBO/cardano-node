@@ -2,7 +2,7 @@
 
 RUNNER=${RUNNER:-cabal new-run -v0 --}
 
-genesis="33873"
+genesis="b0109"
 genesis_root="configuration/${genesis}"
 genesis_file="${genesis_root}/genesis.json"
 if test ! -f "${genesis_file}"
