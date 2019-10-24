@@ -1,5 +1,3 @@
-{-# LANGUAGE ApplicativeDo #-}
-
 import           Cardano.Prelude hiding (option)
 import           Prelude (String, error, id)
 
@@ -27,14 +25,14 @@ import           Cardano.CLI.Ops (decideCLIOps)
 import           Cardano.CLI.Run
 import           Cardano.Common.Parsers
 import           Cardano.Config.CommonCLI
-import           Cardano.Config.Logging (LoggingCLIArguments, createLoggingFeature,
-                                         logConfigFile)
+import           Cardano.Config.Logging (createLoggingFeature)
 import           Cardano.Config.Partial (PartialCardanoConfiguration (..),
-                                         PartialCore (..), PartialNode (..))
+                                         PartialCore (..), PartialNode (..),
+                                         mkCardanoConfiguration)
 import           Cardano.Config.Presets (mainnetConfiguration)
 import           Cardano.Config.Protocol (Protocol)
-import           Cardano.Config.Types (CardanoEnvironment (..),
-                                       CardanoConfiguration(..),
+import           Cardano.Config.Types (CardanoConfiguration (..),
+                                       CardanoEnvironment (..),
                                        RequireNetworkMagic)
 import           Cardano.Crypto ( AProtocolMagic(..)
                                 , ProtocolMagic
@@ -52,16 +50,15 @@ main = do
   -- Initialize logging layer. Particularly, we need it for benchmarking (command 'generate-txs').
   let cardanoConfiguration :: PartialCardanoConfiguration
       cardanoConfiguration = mainnetConfiguration
-  let cardanoEnvironment   = NoEnvironment
+      cardanoEnvironment :: CardanoEnvironment
+      cardanoEnvironment = NoEnvironment
 
   cmdRes <- runExceptT $ do
-    let emptyCommonCli = CommonCLI (Last Nothing) (Last Nothing) (Last Nothing) (Last Nothing) (Last Nothing) (Last Nothing)
-    let emptyAdvancedCli = CommonCLIAdvanced (Last Nothing) (Last Nothing) (Last Nothing)
     finalConfig <- withExceptT ConfigError $ ExceptT $ pure $
-      mkConfiguration (cardanoConfiguration <> partialConfig co) emptyCommonCli emptyAdvancedCli
+                     mkCardanoConfiguration $ cardanoConfiguration <> partialConfig co
     ops <- liftIO $ decideCLIOps (ccProtocol finalConfig)
     (loggingLayer, _loggingFeature) <- liftIO $
-      createLoggingFeature cardanoEnvironment (finalConfig {ccLogConfig = logConfigFile $ loggingCli co})
+      createLoggingFeature cardanoEnvironment finalConfig
     (runCommand ops finalConfig loggingLayer (mainCommand co) :: ExceptT CliError IO ())
   case cmdRes of
     Right _ -> pure ()
@@ -87,37 +84,49 @@ main = do
 data CLI = CLI
   { partialConfig :: PartialCardanoConfiguration
   , mainCommand :: ClientCommand
-  , loggingCli  :: LoggingCLIArguments
   }
 
 parseClient :: Parser CLI
 parseClient = do
-  ptcl <- (parseProtocolByron <|> parseProtocolRealPBFT)
-  cmd <- parseClientCommand
-  dbPath <- parseDbPath
-  genPath <- parseGenesisPath
-  genHash <- parseGenesisHash
-  delCert <- parseDelegationeCert
-  sKey <- parseSigningKey
-  socketDir <- parseSocketDir
-  logging <- loggingParser
-  pbftSigThresh <- parsePbftSigThreshold
-  reqNetMagic <- parseRequireNetworkMagic
-  slotLength <- parseSlotLength
-  pure $ CLI (createPcc ptcl dbPath genPath genHash delCert sKey socketDir pbftSigThresh reqNetMagic slotLength) cmd logging
+  let pConfig = createPcc
+                  <$> (parseProtocolByron <|> parseProtocolRealPBFT)
+                  <*> parseDbPath
+                  <*> parseGenesisPath
+                  <*> parseGenesisHash
+                  <*> parseDelegationeCert
+                  <*> parseSigningKey
+                  <*> parseSocketDir
+                  <*> parsePbftSigThreshold
+                  <*> parseRequireNetworkMagic
+                  <*> parseSlotLength
+                  <*> lastOption parseLogConfigFile
+                  <*> parseLogMetrics
+
+  CLI <$> pConfig <*> parseClientCommand
  where
   -- This merges the command line parsed values into one `PartialCardanoconfiguration`.
   createPcc
     :: Last Protocol
-    -> Last FilePath -- Db Path
-    -> Last FilePath -- Genesis Path
-    -> Last Text -- Genesis Hash
-    -> Last FilePath -- Deleg cert
-    -> Last FilePath -- Signing Key
-    -> Last FilePath -- Socket dir
+    -> Last FilePath
+    -- ^ Db Path
+    -> Last FilePath
+    -- ^ Genesis Path
+    -> Last Text
+    -- ^ Genesis Hash
+    -> Last FilePath
+    -- ^ Delegation certificate
+    -> Last FilePath
+    -- ^ Signing Key
+    -> Last FilePath
+    -- ^ Socket dir
     -> Last Double
+    -- ^ PBFT Signature Threshold
     -> Last RequireNetworkMagic
     -> Last Consensus.SlotLength
+    -> Last FilePath
+    -- ^ Log Configuration Path
+    -> Last Bool
+    -- ^ Capture Log Metrics
     -> PartialCardanoConfiguration
   createPcc
     ptcl
@@ -129,9 +138,13 @@ parseClient = do
     socketDir
     pbftSigThresh
     reqNetMagic
-    slotLength = mempty { pccDBPath = dbPath
+    slotLength
+    logConfigFp
+    logMetrics = mempty { pccDBPath = dbPath
                         , pccProtocol = ptcl
                         , pccSocketDir = socketDir
+                        , pccLogConfig = logConfigFp
+                        , pccLogMetrics = logMetrics
                         , pccCore = mempty { pcoGenesisFile = genPath
                                            , pcoGenesisHash = genHash
                                            , pcoStaticKeyDlgCertFile = delCert
