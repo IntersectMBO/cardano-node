@@ -53,7 +53,7 @@ import           Ouroboros.Network.Subscription.Dns
 
 import           Ouroboros.Consensus.Node (NodeKernel (getChainDB),
                                            RunNetworkArgs (..),
-                                           RunNode (nodeStartTime))
+                                           RunNode (nodeNetworkMagic, nodeStartTime))
 import qualified Ouroboros.Consensus.Node as Node (run)
 import           Ouroboros.Consensus.Node.ProtocolInfo
 import           Ouroboros.Consensus.NodeId
@@ -194,7 +194,7 @@ handleSimpleNode p trace nodeTracers cc = do
           , rnaDnsProducers          = dnsProducers
           , rnaHandshakeTracer       = nullTracer
           , rnaHandshakeLocalTracer  = nullTracer
-          , rnaNetworkMagic          = Consensus.protocolNetworkMagic cfg
+          , rnaNetworkMagic          = nodeNetworkMagic (Proxy @blk) cfg
           }
 
         producerSubscription :: RemoteAddress -> DnsSubscriptionTarget
