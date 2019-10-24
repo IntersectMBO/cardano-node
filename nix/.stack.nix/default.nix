@@ -5,7 +5,11 @@
         "binary" = (((hackage.binary)."0.8.7.0").revisions).default;
         "bimap" = (((hackage.bimap)."0.4.0").revisions).default;
         "containers" = (((hackage.containers)."0.5.11.0").revisions).default;
+        "ekg-prometheus-adapter" = (((hackage.ekg-prometheus-adapter)."0.1.0.4").revisions).default;
         "generic-monoid" = (((hackage.generic-monoid)."0.1.0.0").revisions).default;
+        "gray-code" = (((hackage.gray-code)."0.3.1").revisions).default;
+        "moo" = (((hackage.moo)."1.2").revisions).default;
+        "prometheus" = (((hackage.prometheus)."2.1.2").revisions).default;
         "time-units" = (((hackage.time-units)."1.0.0").revisions).default;
         "tasty-hedgehog" = (((hackage.tasty-hedgehog)."1.0.0.1").revisions).default;
         "transformers-except" = (((hackage.transformers-except)."0.1.1").revisions).default;
@@ -14,6 +18,7 @@
         "config-ini" = (((hackage.config-ini)."0.2.4.0").revisions).default;
         "data-clist" = (((hackage.data-clist)."0.1.2.2").revisions).default;
         "text-zipper" = (((hackage.text-zipper)."0.10.1").revisions).default;
+        "Unique" = (((hackage.Unique)."0.4.7.6").revisions).default;
         "word-wrap" = (((hackage.word-wrap)."0.4.1").revisions).default;
         "base58-bytestring" = (((hackage.base58-bytestring)."0.1.0").revisions).default;
         "hedgehog" = (((hackage.hedgehog)."1.0").revisions).default;
@@ -28,12 +33,16 @@
         cardano-ledger-test = ./cardano-ledger-test.nix;
         cardano-crypto-wrapper = ./cardano-crypto-wrapper.nix;
         cardano-crypto-test = ./cardano-crypto-test.nix;
+        small-steps = ./small-steps.nix;
+        cs-ledger = ./cs-ledger.nix;
+        cs-blockchain = ./cs-blockchain.nix;
         cardano-prelude = ./cardano-prelude.nix;
         cardano-prelude-test = ./cardano-prelude-test.nix;
         cardano-binary = ./cardano-binary.nix;
         cardano-binary-test = ./cardano-binary-test.nix;
         cardano-crypto-class = ./cardano-crypto-class.nix;
         cardano-shell = ./cardano-shell.nix;
+        goblins = ./goblins.nix;
         contra-tracer = ./contra-tracer.nix;
         iohk-monitoring = ./iohk-monitoring.nix;
         lobemo-backend-aggregation = ./lobemo-backend-aggregation.nix;

@@ -1,4 +1,4 @@
-resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/001ec3576ef3bda04cf5bcccdd9a00991835d1a7/snapshot.yaml
+resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/ad19158c7599bc5d50fe7cb0111a1488a139a381/snapshot.yaml
 
 packages:
   - cardano-config
@@ -12,7 +12,11 @@ extra-deps:
   - binary-0.8.7.0
   - bimap-0.4.0
   - containers-0.5.11.0
+  - ekg-prometheus-adapter-0.1.0.4
   - generic-monoid-0.1.0.0
+  - gray-code-0.3.1
+  - moo-1.2
+  - prometheus-2.1.2
   - time-units-1.0.0
   - tasty-hedgehog-1.0.0.1
   - transformers-except-0.1.1
@@ -21,16 +25,27 @@ extra-deps:
   - config-ini-0.2.4.0
   - data-clist-0.1.2.2
   - text-zipper-0.10.1
+  - Unique-0.4.7.6
   - word-wrap-0.4.1
 
     # Cardano-ledger dependencies
   - git: https://github.com/input-output-hk/cardano-ledger
-    commit: a1de5b52c32255464564a6c5a8a9e474086e3875
+    commit: 181f69af290412abecefc07e1b26e77a453755ff
     subdirs:
       - cardano-ledger
       - cardano-ledger/test
       - crypto
       - crypto/test
+
+  - git: https://github.com/input-output-hk/cardano-ledger-specs
+    commit: ffb39c870d4873b8501b9df05101d9c9b3e84a39
+    subdirs:
+      # small-steps
+      - byron/semantics/executable-spec
+      # cs-ledger
+      - byron/ledger/executable-spec
+      # cs-blockchain
+      - byron/chain/executable-spec
 
   - git: https://github.com/input-output-hk/cardano-prelude
     commit: ad19158c7599bc5d50fe7cb0111a1488a139a381
@@ -39,7 +54,7 @@ extra-deps:
       - test
 
   - git: https://github.com/input-output-hk/cardano-base
-    commit: 64bb761664c9ca8a52a0023dc1a92c9b5b884497
+    commit: 5c575d46afbfe333de0ccba70b084db8302abf42
     subdirs:
       - binary
       - binary/test
@@ -47,9 +62,13 @@ extra-deps:
 
     # Following deps are for cardano-shell
   - git: https://github.com/input-output-hk/cardano-shell
-    commit: 6d1e522d0268a855fdd31d8fbbec1a88fad11a15
+    commit: 8abae427c44f0b447117f78e2c1f5006dac2edf8
     subdirs:
       - cardano-shell
+
+    # Needed for `cardano-ledger-specs`
+  - git: https://github.com/input-output-hk/goblins
+    commit: 26d35ad52fe9ade3391532dbfeb2f416f07650bc
 
     # iohk-monitoring-framework currently not pinned to a release
   - git: https://github.com/input-output-hk/iohk-monitoring-framework
