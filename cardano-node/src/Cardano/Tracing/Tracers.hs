@@ -84,7 +84,7 @@ data Tracers peer blk = Tracers {
     , dnsResolverTracer     :: Tracer IO (WithDomainName DnsTrace)
 
       -- | Trace the Mux (flag --trace-mux' will turn on textual output)
-    , muxTracer             :: Tracer IO (WithMuxBearer (MuxTrace NodeToNodeProtocols))
+    , muxTracer             :: Tracer IO (WithMuxBearer peer (MuxTrace NodeToNodeProtocols))
     }
 
 -- | Tracing-related constraints for monitoring purposes.

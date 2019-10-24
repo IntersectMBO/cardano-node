@@ -19,6 +19,7 @@ import qualified Codec.CBOR.Term as CBOR
 import           Codec.Serialise (DeserialiseFailure)
 import           Control.Monad.Class.MonadTimer (MonadTimer, threadDelay)
 import           Data.ByteString.Lazy (ByteString)
+import           Data.Proxy (Proxy (..))
 import           Network.Mux.Interface (AppType(InitiatorApp))
 import           Network.Socket (AddrInfo, SockAddr)
 import           Network.TypedProtocol.Driver (TraceSendRecv, runPeer)
@@ -27,9 +28,9 @@ import           Network.TypedProtocol.Driver.ByteLimit (DecoderFailureOrTooMuch
 import           Control.Tracer (Tracer, nullTracer)
 import           Ouroboros.Consensus.Block (BlockProtocol)
 import           Ouroboros.Consensus.Mempool.API (GenTxId, GenTx)
-import           Ouroboros.Consensus.Node.Run (RunNode)
+import           Ouroboros.Consensus.Node.Run (RunNode, nodeNetworkMagic)
 import           Ouroboros.Consensus.NodeNetwork (ProtocolCodecs(..), protocolCodecs)
-import           Ouroboros.Consensus.Protocol.Abstract (NodeConfig, protocolNetworkMagic)
+import           Ouroboros.Consensus.Protocol.Abstract (NodeConfig)
 import           Ouroboros.Network.Mux (OuroborosApplication(..))
 import qualified Ouroboros.Network.NodeToNode as NtN
 import           Ouroboros.Network.Protocol.BlockFetch.Client (BlockFetchClient(..), blockFetchClientPeer)
@@ -84,7 +85,7 @@ benchmarkConnectTxSubmit trs nc localAddr remoteAddr myTxSubClient = do
   peerMultiplex =
     simpleSingletonVersions
       NtN.NodeToNodeV_1
-      (NtN.NodeToNodeVersionData { NtN.networkMagic = protocolNetworkMagic nc})
+      (NtN.NodeToNodeVersionData { NtN.networkMagic = nodeNetworkMagic (Proxy @blk) nc})
       (NtN.DictVersion NtN.nodeToNodeCodecCBORTerm)
       $ OuroborosInitiatorApplication $ \peer ptcl ->
           case ptcl of
