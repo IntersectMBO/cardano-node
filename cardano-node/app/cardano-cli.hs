@@ -14,7 +14,6 @@ import           Options.Applicative (Parser, ParserInfo, ParserPrefs, auto,
                                       commandGroup, flag, flag', help, long,
                                       metavar, option, showHelpOnEmpty,
                                       strOption, subparser, value)
-
 import           System.Exit (exitFailure)
 
 import           Cardano.Binary (Annotated (..))
@@ -22,27 +21,29 @@ import           Cardano.Chain.Common
 import           Cardano.Chain.Genesis
 import           Cardano.Chain.Slotting
 import           Cardano.Chain.UTxO
+import           Cardano.CLI.Genesis
+import           Cardano.CLI.Key
+import           Cardano.CLI.Ops (decideCLIOps)
+import           Cardano.CLI.Run
+import           Cardano.Common.Parsers
+import           Cardano.Config.CommonCLI
+import           Cardano.Config.Logging (LoggingCLIArguments, createLoggingFeature,
+                                         logConfigFile)
+import           Cardano.Config.Partial (PartialCardanoConfiguration (..),
+                                         PartialCore (..), PartialNode (..))
+import           Cardano.Config.Presets (mainnetConfiguration)
+import           Cardano.Config.Protocol (Protocol)
+import           Cardano.Config.Types (CardanoEnvironment (..),
+                                       CardanoConfiguration(..),
+                                       RequireNetworkMagic)
 import           Cardano.Crypto ( AProtocolMagic(..)
                                 , ProtocolMagic
                                 , ProtocolMagicId(..)
                                 , RequiresNetworkMagic(..)
                                 , decodeHash)
+import qualified Ouroboros.Consensus.BlockchainTime as Consensus
 
-import           Cardano.Config.CommonCLI
-import           Cardano.Config.Types (CardanoEnvironment (..),
-                                       CardanoConfiguration(..))
-import           Cardano.Config.Partial (PartialCardanoConfiguration (..),
-                                         PartialCore (..))
-import           Cardano.Config.Presets (mainnetConfiguration)
-import           Cardano.Config.Protocol (Protocol)
 
-import           Cardano.Common.Parsers
-import           Cardano.Config.Logging
-import           Cardano.CLI.Genesis
-import           Cardano.CLI.Key
-import           Cardano.Config.Logging (createLoggingFeature)
-import           Cardano.CLI.Ops (decideCLIOps)
-import           Cardano.CLI.Run
 
 main :: IO ()
 main = do
@@ -55,8 +56,9 @@ main = do
 
   cmdRes <- runExceptT $ do
     let emptyCommonCli = CommonCLI (Last Nothing) (Last Nothing) (Last Nothing) (Last Nothing) (Last Nothing) (Last Nothing)
+    let emptyAdvancedCli = CommonCLIAdvanced (Last Nothing) (Last Nothing) (Last Nothing)
     finalConfig <- withExceptT ConfigError $ ExceptT $ pure $
-      mkConfiguration (cardanoConfiguration <> partialConfig co) emptyCommonCli (commonCliAdv co)
+      mkConfiguration (cardanoConfiguration <> partialConfig co) emptyCommonCli emptyAdvancedCli
     ops <- liftIO $ decideCLIOps (ccProtocol finalConfig)
     (loggingLayer, _loggingFeature) <- liftIO $
       createLoggingFeature cardanoEnvironment (finalConfig {ccLogConfig = logConfigFile $ loggingCli co})
@@ -85,7 +87,6 @@ main = do
 data CLI = CLI
   { partialConfig :: PartialCardanoConfiguration
   , mainCommand :: ClientCommand
-  , commonCliAdv :: CommonCLIAdvanced
   , loggingCli  :: LoggingCLIArguments
   }
 
@@ -99,9 +100,11 @@ parseClient = do
   delCert <- parseDelegationeCert
   sKey <- parseSigningKey
   socketDir <- parseSocketDir
-  comCliAdv <- parseCommonCLIAdvanced
   logging <- loggingParser
-  pure $ CLI (createPcc ptcl dbPath genPath genHash delCert sKey socketDir) cmd comCliAdv logging
+  pbftSigThresh <- parsePbftSigThreshold
+  reqNetMagic <- parseRequireNetworkMagic
+  slotLength <- parseSlotLength
+  pure $ CLI (createPcc ptcl dbPath genPath genHash delCert sKey socketDir pbftSigThresh reqNetMagic slotLength) cmd logging
  where
   -- This merges the command line parsed values into one `PartialCardanoconfiguration`.
   createPcc
@@ -112,6 +115,9 @@ parseClient = do
     -> Last FilePath -- Deleg cert
     -> Last FilePath -- Signing Key
     -> Last FilePath -- Socket dir
+    -> Last Double
+    -> Last RequireNetworkMagic
+    -> Last Consensus.SlotLength
     -> PartialCardanoConfiguration
   createPcc
     ptcl
@@ -120,15 +126,21 @@ parseClient = do
     genHash
     delCert
     sKey
-    socketDir = mempty { pccDBPath = dbPath
-                       , pccProtocol = ptcl
-                       , pccSocketDir = socketDir
-                       , pccCore = mempty { pcoGenesisFile = genPath
-                                          , pcoGenesisHash = genHash
-                                          , pcoStaticKeyDlgCertFile = delCert
-                                          , pcoStaticKeySigningKeyFile = sKey
-                                          }
-                       }
+    socketDir
+    pbftSigThresh
+    reqNetMagic
+    slotLength = mempty { pccDBPath = dbPath
+                        , pccProtocol = ptcl
+                        , pccSocketDir = socketDir
+                        , pccCore = mempty { pcoGenesisFile = genPath
+                                           , pcoGenesisHash = genHash
+                                           , pcoStaticKeyDlgCertFile = delCert
+                                           , pcoStaticKeySigningKeyFile = sKey
+                                           , pcoPBftSigThd = pbftSigThresh
+                                           , pcoRequiresNetworkMagic = reqNetMagic
+                                           }
+                        , pccNode = mempty { pnoSlotLength = slotLength }
+                        }
 
 
 parseClientCommand :: Parser ClientCommand
