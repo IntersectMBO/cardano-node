@@ -13,8 +13,6 @@ module Cardano.Common.Parsers
   , parseProtocolMockPBFT
   , parseProtocolPraos
   , parseProtocolRealPBFT
-  , parseProtocolActual
-  , parseProtocolAsCommand
   , parseTopologyInfo
   , parseTraceOptions
   ) where
@@ -113,30 +111,6 @@ parseProtocolRealPBFT =
     "real-pbft"
     "Permissive BFT consensus with a real ledger"
 
-
-parseProtocolActual :: Parser Protocol
-parseProtocolActual = asum
-  [ flagParser ByronLegacy "byron-legacy"
-    "Byron/Ouroboros Classic suite of algorithms"
-
-  , flagParser RealPBFT "real-pbft"
-    "Permissive BFT consensus with a real ledger"
-  ]
-
-parseProtocolAsCommand :: Parser Protocol
-parseProtocolAsCommand = subparser $ mconcat
-  [ commandGroup "System version"
-  , metavar "SYSTEMVER"
-  , cmd "byron-legacy" "Byron Legacy mode" $ pure ByronLegacy
-  , cmd "bft"          "BFT mode"          $ pure BFT
-  , cmd "praos"        "Praos mode"        $ pure Praos
-  , cmd "mock-pbft"    "Mock PBFT mode"    $ pure MockPBFT
-  , cmd "real-pbft"    "Real PBFT mode"    $ pure RealPBFT
-  ]
-
-  where
-    cmd :: forall a. String -> String -> Parser a -> Mod CommandFields a
-    cmd c desc p = command c $ info (p <**> helper) $ mconcat [ progDesc desc ]
 
 parseTopologyInfo :: String -> Parser TopologyInfo
 parseTopologyInfo desc = TopologyInfo <$> parseNodeId desc <*> parseTopologyFile

@@ -12,7 +12,6 @@ import           Options.Applicative (Parser, ParserInfo, ParserPrefs, auto,
                                       commandGroup, flag, flag', help, long,
                                       metavar, option, showHelpOnEmpty,
                                       strOption, subparser, value)
-
 import           System.Exit (exitFailure)
 
 import           Cardano.Binary (Annotated (..))
@@ -20,39 +19,46 @@ import           Cardano.Chain.Common
 import           Cardano.Chain.Genesis
 import           Cardano.Chain.Slotting
 import           Cardano.Chain.UTxO
+import           Cardano.CLI.Genesis
+import           Cardano.CLI.Key
+import           Cardano.CLI.Ops (decideCLIOps)
+import           Cardano.CLI.Run
+import           Cardano.Common.Parsers
+import           Cardano.Config.CommonCLI
+import           Cardano.Config.Logging (createLoggingFeature)
+import           Cardano.Config.Partial (PartialCardanoConfiguration (..),
+                                         PartialCore (..), PartialNode (..),
+                                         mkCardanoConfiguration)
+import           Cardano.Config.Presets (mainnetConfiguration)
+import           Cardano.Config.Protocol (Protocol)
+import           Cardano.Config.Types (CardanoConfiguration (..),
+                                       CardanoEnvironment (..),
+                                       RequireNetworkMagic)
 import           Cardano.Crypto ( AProtocolMagic(..)
                                 , ProtocolMagic
                                 , ProtocolMagicId(..)
                                 , RequiresNetworkMagic(..)
                                 , decodeHash)
+import qualified Ouroboros.Consensus.BlockchainTime as Consensus
 
-import           Cardano.Config.CommonCLI
-import           Cardano.Config.Types (CardanoEnvironment (..),
-                                       CardanoConfiguration(..))
-import           Cardano.Config.Presets (mainnetConfiguration)
 
-import           Cardano.Common.Parsers
-import           Cardano.Config.Logging
-import           Cardano.Config.Protocol
-import           Cardano.CLI.Genesis
-import           Cardano.CLI.Key
-import           Cardano.Config.Logging (createLoggingFeature)
-import           Cardano.CLI.Ops (decideCLIOps)
-import           Cardano.CLI.Run
 
 main :: IO ()
 main = do
   co <- Opt.customExecParser pref opts
-  ops <- decideCLIOps (protocol co)
+
   -- Initialize logging layer. Particularly, we need it for benchmarking (command 'generate-txs').
-  let cardanoConfiguration = mainnetConfiguration
-  let cardanoEnvironment   = NoEnvironment
+  let cardanoConfiguration :: PartialCardanoConfiguration
+      cardanoConfiguration = mainnetConfiguration
+      cardanoEnvironment :: CardanoEnvironment
+      cardanoEnvironment = NoEnvironment
 
   cmdRes <- runExceptT $ do
     finalConfig <- withExceptT ConfigError $ ExceptT $ pure $
-      mkConfiguration cardanoConfiguration (commonCli co) (commonCliAdv co)
+                     mkCardanoConfiguration $ cardanoConfiguration <> partialConfig co
+    ops <- liftIO $ decideCLIOps (ccProtocol finalConfig)
     (loggingLayer, _loggingFeature) <- liftIO $
-      createLoggingFeature cardanoEnvironment (finalConfig {ccLogConfig = logConfigFile $ loggingCli co})
+      createLoggingFeature cardanoEnvironment finalConfig
     (runCommand ops finalConfig loggingLayer (mainCommand co) :: ExceptT CliError IO ())
   case cmdRes of
     Right _ -> pure ()
@@ -76,21 +82,79 @@ main = do
     renderCliError = show
 
 data CLI = CLI
-  { protocol    :: Protocol
+  { partialConfig :: PartialCardanoConfiguration
   , mainCommand :: ClientCommand
-  , commonCli   :: CommonCLI
-  , commonCliAdv :: CommonCLIAdvanced
-  , loggingCli  :: LoggingCLIArguments
   }
 
 parseClient :: Parser CLI
-parseClient =
-  CLI
-    <$> parseProtocolActual
-    <*> parseClientCommand
-    <*> parseCommonCLI
-    <*> parseCommonCLIAdvanced
-    <*> loggingParser
+parseClient = do
+  let pConfig = createPcc
+                  <$> (parseProtocolByron <|> parseProtocolRealPBFT)
+                  <*> parseDbPath
+                  <*> parseGenesisPath
+                  <*> parseGenesisHash
+                  <*> parseDelegationeCert
+                  <*> parseSigningKey
+                  <*> parseSocketDir
+                  <*> parsePbftSigThreshold
+                  <*> parseRequireNetworkMagic
+                  <*> parseSlotLength
+                  <*> lastOption parseLogConfigFile
+                  <*> parseLogMetrics
+
+  CLI <$> pConfig <*> parseClientCommand
+ where
+  -- This merges the command line parsed values into one `PartialCardanoconfiguration`.
+  createPcc
+    :: Last Protocol
+    -> Last FilePath
+    -- ^ Db Path
+    -> Last FilePath
+    -- ^ Genesis Path
+    -> Last Text
+    -- ^ Genesis Hash
+    -> Last FilePath
+    -- ^ Delegation certificate
+    -> Last FilePath
+    -- ^ Signing Key
+    -> Last FilePath
+    -- ^ Socket dir
+    -> Last Double
+    -- ^ PBFT Signature Threshold
+    -> Last RequireNetworkMagic
+    -> Last Consensus.SlotLength
+    -> Last FilePath
+    -- ^ Log Configuration Path
+    -> Last Bool
+    -- ^ Capture Log Metrics
+    -> PartialCardanoConfiguration
+  createPcc
+    ptcl
+    dbPath
+    genPath
+    genHash
+    delCert
+    sKey
+    socketDir
+    pbftSigThresh
+    reqNetMagic
+    slotLength
+    logConfigFp
+    logMetrics = mempty { pccDBPath = dbPath
+                        , pccProtocol = ptcl
+                        , pccSocketDir = socketDir
+                        , pccLogConfig = logConfigFp
+                        , pccLogMetrics = logMetrics
+                        , pccCore = mempty { pcoGenesisFile = genPath
+                                           , pcoGenesisHash = genHash
+                                           , pcoStaticKeyDlgCertFile = delCert
+                                           , pcoStaticKeySigningKeyFile = sKey
+                                           , pcoPBftSigThd = pbftSigThresh
+                                           , pcoRequiresNetworkMagic = reqNetMagic
+                                           }
+                        , pccNode = mempty { pnoSlotLength = slotLength }
+                        }
+
 
 parseClientCommand :: Parser ClientCommand
 parseClientCommand =
