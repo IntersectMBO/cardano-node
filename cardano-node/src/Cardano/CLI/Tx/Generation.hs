@@ -84,7 +84,6 @@ import           Cardano.CLI.Tx.BenchmarkingNodeToNode (BenchmarkTxSubmitTracers
 import           Cardano.CLI.Tx.BenchmarkingTxSubClient
 import           Control.Tracer (Tracer, contramap, traceWith)
 
-import           Ouroboros.Consensus.Demo.Run (RunDemo)
 import           Ouroboros.Consensus.Node.Run (RunNode)
 import Ouroboros.Consensus.Block(BlockProtocol)
 import           Ouroboros.Consensus.Ledger.Byron.Config (ByronConfig,
@@ -153,7 +152,7 @@ data TxGenError = CurrentlyCannotSendTxToRelayNode FilePath
 --   amount of funds for disbursment.
 -----------------------------------------------------------------------------------------
 genesisBenchmarkRunner
-  :: RunDemo (ByronBlockOrEBB ByronConfig)
+  :: RunNode (ByronBlockOrEBB ByronConfig)
   => LoggingLayer
   -> CardanoConfiguration
   -> Consensus.Protocol (ByronBlockOrEBB ByronConfig)
@@ -433,7 +432,7 @@ extractGenesisFunds genesisConfig signingKeys =
 -- Prepare and submit our first transaction: send money from 'initialAddress' to 'sourceAddress'
 -- (latter corresponds to 'targetAddress' here) and "remember" it in 'availableFunds'.
 prepareInitialFunds
-  :: RunDemo (ByronBlockOrEBB ByronConfig)
+  :: RunNode (ByronBlockOrEBB ByronConfig)
   => Tracer IO String
   -> CardanoConfiguration
   -> CC.Genesis.Config
@@ -686,7 +685,7 @@ findAvailablefunds valueThreshold predStatus = do
 --   So if one Cardano tx contains 10 outputs (with addresses of 10 recipients),
 --   we have 1 Cardano tx and 10 fiscal txs.
 runBenchmark
-  :: RunDemo (ByronBlockOrEBB ByronConfig)
+  :: RunNode (ByronBlockOrEBB ByronConfig)
   => Tracer IO (TraceBenchTxSubmit (Byron.GenTxId (ByronBlockOrEBB ByronConfig)))
   -> Tracer IO SendRecvConnect
   -> Tracer IO (SendRecvTxSubmission (ByronBlockOrEBB ByronConfig))
@@ -801,7 +800,7 @@ runBenchmark benchTracer
 --   E.g. (1 entry * 1000 ADA) -> (10 entries * 100 ADA).
 --   Technically all splitting transactions will send money back to 'sourceAddress'.
 createMoreFundCoins
-  :: RunDemo (ByronBlockOrEBB ByronConfig)
+  :: RunNode (ByronBlockOrEBB ByronConfig)
   => Tracer IO String
   -> CardanoConfiguration
   -> NodeConfig ByronEBBExtNodeConfig

@@ -24,15 +24,15 @@ import           Control.Monad.Class.MonadTimer (MonadTimer)
 import           Control.Tracer (Tracer, nullTracer, traceWith)
 
 import           Ouroboros.Consensus.Block (BlockProtocol)
-import           Ouroboros.Consensus.Demo.Run (RunDemo)
 import           Ouroboros.Consensus.Mempool (ApplyTxErr, GenTx)
-import           Ouroboros.Consensus.NodeId (CoreNodeId(..), NodeId(..))
-import qualified Ouroboros.Consensus.Protocol as Consensus
-import           Ouroboros.Consensus.Protocol hiding (Protocol)
 import           Ouroboros.Consensus.Node.ProtocolInfo ( ProtocolInfo(..)
                                                        , NumCoreNodes(..)
                                                        , protocolInfo)
+import           Ouroboros.Consensus.Node.Run (RunNode)
 import qualified Ouroboros.Consensus.Node.Run as Node
+import           Ouroboros.Consensus.NodeId (CoreNodeId(..), NodeId(..))
+import qualified Ouroboros.Consensus.Protocol as Consensus
+import           Ouroboros.Consensus.Protocol hiding (Protocol)
 
 import           Network.TypedProtocol.Driver (runPeer)
 import           Network.TypedProtocol.Codec.Cbor (Codec, DeserialiseFailure)
@@ -62,7 +62,7 @@ import           Cardano.Config.Types (CardanoConfiguration(..))
 -- | For a given protocol and configuration, submit the given GenTx to the node
 -- specified by topology info, while using tracer for logging.
 handleTxSubmission :: forall blk.
-                      ( RunDemo blk
+                      ( RunNode blk
                       , Show (ApplyTxErr blk)
                       )
                    => CardanoConfiguration
@@ -88,7 +88,7 @@ handleTxSubmission cc ptcl tinfo tx tracer = do
     submitTx cc (pInfoConfig pinfo) (node tinfo) tx tracer
 
 
-submitTx :: ( RunDemo blk
+submitTx :: ( RunNode blk
             , Show (ApplyTxErr blk)
             )
          => CardanoConfiguration
@@ -109,7 +109,7 @@ submitTx cc protoInfoConfig nId tx tracer = do
 
 localInitiatorNetworkApplication
   :: forall blk m peer.
-     ( RunDemo blk
+     ( RunNode blk
      , MonadST m
      , MonadThrow m
      , MonadTimer m
@@ -163,7 +163,7 @@ txSubmissionClientSingle tx = LocalTxSub.LocalTxSubmissionClient $ do
       pure (LocalTxSub.SendMsgDone mreject)
 
 localTxSubmissionCodec
-  :: forall m blk . (RunDemo blk, MonadST m)
+  :: forall m blk . (RunNode blk, MonadST m)
   => Codec (LocalTxSub.LocalTxSubmission (GenTx blk) (ApplyTxErr blk))
            DeserialiseFailure m ByteString
 localTxSubmissionCodec =
@@ -174,7 +174,7 @@ localTxSubmissionCodec =
     (Node.nodeDecodeApplyTxError (Proxy @blk))
 
 localChainSyncCodec
-  :: forall blk m. (RunDemo blk, MonadST m)
+  :: forall blk m. (RunNode blk, MonadST m)
   => NodeConfig (BlockProtocol blk)
   -> Codec (ChainSync blk (Point blk))
            DeserialiseFailure m ByteString

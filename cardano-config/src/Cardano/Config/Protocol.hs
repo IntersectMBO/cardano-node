@@ -29,16 +29,19 @@ import qualified Cardano.Chain.Update as Update
 import           Cardano.Crypto (RequiresNetworkMagic (..), decodeAbstractHash)
 import qualified Cardano.Crypto.Signing as Signing
 import           Cardano.Shell.Lib (GeneralException (..))
+
 import           Ouroboros.Consensus.Block (Header)
-import           Ouroboros.Consensus.Demo (defaultDemoPBftParams, defaultDemoPraosParams, defaultSecurityParam)
-import qualified Ouroboros.Consensus.Demo.Run as Demo
 import           Ouroboros.Consensus.Mempool.API (ApplyTxErr, GenTx, GenTxId)
 import           Ouroboros.Consensus.Node.ProtocolInfo (PBftLeaderCredentials,
                                                         PBftSignatureThreshold(..),
                                                          mkPBftLeaderCredentials)
+import           Ouroboros.Consensus.Node.Run (RunNode)
+import           Ouroboros.Consensus.Protocol (SecurityParam (..),
+                                               PraosParams (..),
+                                               PBftParams (..))
 import qualified Ouroboros.Consensus.Protocol as Consensus
-import           Ouroboros.Consensus.Util.Condense
 import           Ouroboros.Consensus.Util (Dict(..))
+import           Ouroboros.Consensus.Util.Condense
 import           Ouroboros.Network.Block
 
 import           Cardano.Config.Types
@@ -68,8 +71,11 @@ type TraceConstraints blk =
 -------------------------------------------------------------------------------}
 
 
+mockSecurityParam :: SecurityParam
+mockSecurityParam = SecurityParam 5
+
 data SomeProtocol where
-  SomeProtocol :: (Demo.RunDemo blk, TraceConstraints blk)
+  SomeProtocol :: (RunNode blk, TraceConstraints blk)
                => Consensus.Protocol blk -> SomeProtocol
 
 fromProtocol :: CardanoConfiguration -> Protocol -> IO SomeProtocol
@@ -82,21 +88,33 @@ fromProtocol _ BFT =
     Dict -> return $ SomeProtocol p
 
   where
-    p = Consensus.ProtocolMockBFT defaultSecurityParam
+    p = Consensus.ProtocolMockBFT mockSecurityParam
 
 fromProtocol _ Praos =
   case Consensus.runProtocol p of
     Dict -> return $ SomeProtocol p
 
   where
-    p = Consensus.ProtocolMockPraos defaultDemoPraosParams
+    p = Consensus.ProtocolMockPraos PraosParams {
+        praosSecurityParam = mockSecurityParam
+      , praosSlotsPerEpoch = 3
+      , praosLeaderF       = 0.5
+      , praosLifetimeKES   = 1000000
+      }
+
 
 fromProtocol _ MockPBFT =
   case Consensus.runProtocol p of
     Dict -> return $ SomeProtocol p
 
   where
-    p = Consensus.ProtocolMockPBFT defaultDemoPBftParams
+    p = Consensus.ProtocolMockPBFT PBftParams {
+        pbftSecurityParam      = mockSecurityParam
+      , pbftNumNodes           = numNodes
+      , pbftSignatureThreshold = (1.0 / fromIntegral numNodes) + 0.1
+      }
+    numNodes = 3
+
 
 fromProtocol cc RealPBFT = do
     let Core{ coGenesisFile
