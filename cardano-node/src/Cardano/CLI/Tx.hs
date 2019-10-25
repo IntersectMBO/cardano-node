@@ -41,12 +41,13 @@ import qualified Cardano.Chain.UTxO as UTxO
 import           Cardano.Crypto (SigningKey(..), ProtocolMagicId)
 import qualified Cardano.Crypto.Hashing as Crypto
 import qualified Cardano.Crypto.Signing as Crypto
-import qualified Ouroboros.Consensus.Demo.Run as Demo
+
 import qualified Ouroboros.Consensus.Ledger.Byron as Byron
 import           Ouroboros.Consensus.Ledger.Byron (GenTx(..), ByronBlockOrEBB)
 import           Ouroboros.Consensus.Ledger.Byron.Config (ByronConfig)
 import qualified Ouroboros.Consensus.Protocol as Consensus
 import           Ouroboros.Consensus.Mempool.API (txId)
+import           Ouroboros.Consensus.Node.Run (RunNode)
 
 import           Cardano.CLI.Ops
 import           Cardano.CLI.Tx.Submission
@@ -135,7 +136,7 @@ genesisUTxOTxIn gc vk genAddr =
 withRealPBFT
   :: CLIOps IO
   -> CardanoConfiguration
-  -> (Demo.RunDemo (ByronBlockOrEBB ByronConfig)
+  -> (RunNode (ByronBlockOrEBB ByronConfig)
       => Consensus.Protocol (ByronBlockOrEBB ByronConfig)
       -> IO a)
   -> IO a
