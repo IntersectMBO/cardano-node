@@ -24,7 +24,9 @@ for x in ${stack_to_nix_pins}
 do
         name=$(basename -s .nix $x)
         eval "case '$name' in 'default' | ${match_local_packages_case_pattern} ) continue; esac"
-        url=$(grep 'url =' $x | cut -d'"' -f2 | xargs echo | sed s'/^http:/https:/')
+        url=$(grep 'url =' $x | cut -d'"' -f2 | xargs echo |
+              sed s'/^http:/https:/' |
+              sed s'/\.git$//')
         rev=$(grep 'rev =' $x | cut -d'"' -f2)
         query="${url}/branch_commits/${rev}"
         echo -n "${name}: "
