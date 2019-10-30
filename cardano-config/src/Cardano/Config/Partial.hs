@@ -42,6 +42,7 @@ data PartialCardanoConfiguration = PartialCardanoConfiguration
     , pccDBPath              :: !(Last FilePath)
     , pccSocketDir           :: !(Last FilePath)
     , pccApplicationLockFile :: !(Last FilePath)
+    , pccMigrationDir        :: !(Last FilePath)
     , pccTopologyInfo        :: !(Last TopologyInfo)
     , pccNodeAddress         :: !(Last NodeAddress)
     , pccProtocol            :: !(Last Protocol)
@@ -232,7 +233,7 @@ mkCardanoConfiguration PartialCardanoConfiguration{..} = do
     ccSocketDir              <- mkComplete "ccSocketPath" pccSocketDir
     ccApplicationLockFile    <- mkComplete "ccApplicationLockFile"
                                     pccApplicationLockFile
-
+    ccMigrationDir           <- mkComplete "ccMigrationDir" pccMigrationDir
     ccTopologyInfo           <- mkComplete "ccTopologyInfo" pccTopologyInfo
     ccNodeAddress            <- mkComplete "ccNodeAddress" pccNodeAddress
     ccProtocol               <- mkComplete "ccProtocol" pccProtocol

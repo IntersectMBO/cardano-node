@@ -81,6 +81,8 @@ data CardanoConfiguration = CardanoConfiguration
     -- ^ The location of the application lock file that is used
     -- as a semaphore se we can run just one application
     -- instance at a time.
+    , ccMigrationDir        :: !FilePath
+    -- ^ Migration directory for the cardano-explorer
     , ccTraceOptions        :: !TraceOptions
     -- ^ Tracer options
     , ccTopologyInfo        :: !TopologyInfo
