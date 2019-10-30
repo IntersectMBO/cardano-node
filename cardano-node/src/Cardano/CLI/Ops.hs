@@ -9,8 +9,12 @@
 {-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
 
 module Cardano.CLI.Ops
-  ( CLIOps(..)
-  , decideCLIOps
+  ( deserialiseDelegateKey
+  , serialiseDelegationCert
+  , serialiseDelegateKey
+  , serialiseGenesis
+  , serialisePoorKey
+  , serialiseSigningKey
   , CliError(..)
   ) where
 
@@ -20,67 +24,57 @@ import           Test.Cardano.Prelude (canonicalEncodePretty)
 
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.Text as T
+import qualified Text.JSON.Canonical as CanonicalJSON
 
-import qualified Cardano.Chain.Delegation as Dlg
 import           Cardano.Crypto (SigningKey (..))
 import           Codec.CBOR.Read (DeserialiseFailure, deserialiseFromBytes)
 import           Codec.CBOR.Write (toLazyByteString)
 import qualified Cardano.Crypto.Signing as Crypto
 import qualified Cardano.Chain.Genesis as Genesis
 
+import           Cardano.Config.Protocol (Protocol(..))
 import           Cardano.Config.Types
 import qualified Cardano.CLI.Legacy.Byron as Legacy
 
 
--- | Generic operations for a specific system era.
-data CLIOps m
-  = CLIOps
-  { coSerialiseGenesisKey :: SigningKey -> m LB.ByteString
-  , coSerialiseDelegateKey :: SigningKey -> m LB.ByteString
-  , coSerialisePoorKey :: Genesis.PoorSecret -> m LB.ByteString
-  , coSerialiseGenesis :: Genesis.GenesisData -> m LB.ByteString
-  , coSerialiseDelegationCert :: Dlg.Certificate -> m LB.ByteString
-  , coDeserialiseDelegateKey :: FilePath -> LB.ByteString -> m SigningKey
-  , coProtocol :: Protocol
-  }
+deserialiseDelegateKey :: Protocol -> FilePath -> LB.ByteString -> Either CliError SigningKey
+deserialiseDelegateKey ByronLegacy fp delSkey =
+  case deserialiseFromBytes Legacy.decodeLegacyDelegateKey delSkey of
+    Left deSerFail -> Left $ SigningKeyDeserialisationFailed fp deSerFail
+    Right (_, Legacy.LegacyDelegateKey sKey ) -> pure sKey
+deserialiseDelegateKey RealPBFT fp delSkey =
+  case deserialiseFromBytes Crypto.fromCBORXPrv delSkey of
+    Left deSerFail -> Left $ SigningKeyDeserialisationFailed fp deSerFail
+    Right (_, sKey) -> Right $ SigningKey sKey
+deserialiseDelegateKey ptcl _ _ = Left $ ProtocolNotSupported ptcl
 
--- | Supply the corresponding 'CLIOps' for a given system era designator.
-decideCLIOps :: Protocol -> IO (CLIOps IO)
-decideCLIOps protocol =
-  case protocol of
-    ByronLegacy ->
-      pure CLIOps
-      { coSerialiseGenesisKey          = pure . serialiseSigningKey
-      , coSerialiseDelegateKey         = \sk ->
-          pure . toLazyByteString . Legacy.encodeLegacyDelegateKey $ Legacy.LegacyDelegateKey sk
-      , coSerialisePoorKey             = pure . serialiseSigningKey
-                                              . Genesis.poorSecretToKey
-      , coSerialiseGenesis             = pure . canonicalEncodePretty
-      , coSerialiseDelegationCert      = pure . canonicalEncodePretty
-      , coDeserialiseDelegateKey       = \f ->
-          flip (.) (deserialiseFromBytes Legacy.decodeLegacyDelegateKey) $
-          \case Left  e -> throwIO $ SigningKeyDeserialisationFailed f e
-                Right x -> pure . Legacy.lrkSigningKey . snd $ x
-      , coProtocol = protocol
-      }
-    RealPBFT ->
-      pure CLIOps
-      { coSerialiseGenesisKey          = pure . serialiseSigningKey
-      , coSerialiseDelegateKey         = pure . serialiseSigningKey
-      , coSerialisePoorKey             = pure . serialiseSigningKey
-                                              . Genesis.poorSecretToKey
-      , coSerialiseGenesis             = pure . canonicalEncodePretty
-      , coSerialiseDelegationCert      = pure . canonicalEncodePretty
-      , coDeserialiseDelegateKey       = \f ->
-          flip (.) (deserialiseFromBytes Crypto.fromCBORXPrv) $
-          \case Left  e -> throwIO $ SigningKeyDeserialisationFailed f e
-                Right x -> pure . SigningKey . snd $ x
-      , coProtocol = protocol
-      }
-    x ->
-      throwIO $ ProtocolNotSupported x
-    where
-      serialiseSigningKey (SigningKey x) = toLazyByteString $ Crypto.toCBORXPrv x
+serialiseDelegationCert :: CanonicalJSON.ToJSON Identity a => Protocol -> a -> Either CliError LB.ByteString
+serialiseDelegationCert ByronLegacy dlgCert = pure $ canonicalEncodePretty dlgCert
+serialiseDelegationCert RealPBFT dlgCert = pure $ canonicalEncodePretty dlgCert
+serialiseDelegationCert ptcl _ = Left $ ProtocolNotSupported ptcl
+
+serialiseDelegateKey :: Protocol -> SigningKey -> Either CliError LB.ByteString
+serialiseDelegateKey ByronLegacy sk = pure
+                                    . toLazyByteString
+                                    . Legacy.encodeLegacyDelegateKey
+                                    $ Legacy.LegacyDelegateKey sk
+serialiseDelegateKey RealPBFT sk = serialiseSigningKey RealPBFT sk
+serialiseDelegateKey ptcl _ = Left $ ProtocolNotSupported ptcl
+
+serialiseGenesis ::  Protocol -> Genesis.GenesisData -> Either CliError LB.ByteString
+serialiseGenesis ByronLegacy gData = pure $ canonicalEncodePretty gData
+serialiseGenesis RealPBFT gData = pure $ canonicalEncodePretty gData
+serialiseGenesis ptcl _ = Left $ ProtocolNotSupported ptcl
+
+serialisePoorKey :: Protocol -> Genesis.PoorSecret -> Either CliError LB.ByteString
+serialisePoorKey ByronLegacy ps = serialiseSigningKey ByronLegacy $ Genesis.poorSecretToKey ps
+serialisePoorKey RealPBFT ps = serialiseSigningKey RealPBFT $ Genesis.poorSecretToKey ps
+serialisePoorKey ptcl _ = Left $ ProtocolNotSupported ptcl
+
+serialiseSigningKey :: Protocol -> SigningKey -> Either CliError LB.ByteString
+serialiseSigningKey ByronLegacy (SigningKey k) = pure . toLazyByteString $ Crypto.toCBORXPrv k
+serialiseSigningKey RealPBFT (SigningKey k) = pure . toLazyByteString $ Crypto.toCBORXPrv k
+serialiseSigningKey ptcl _ = Left $ ProtocolNotSupported ptcl
 
 -- | Exception type for all errors thrown by the CLI.
 --   Well, almost all, since we don't rethrow the errors from readFile & such.

@@ -134,17 +134,16 @@ genesisUTxOTxIn gc vk genAddr =
 -- | Perform an action that expects ProtocolInfo for Byron/PBFT,
 --   with attendant configuration.
 withRealPBFT
-  :: CLIOps IO
-  -> CardanoConfiguration
+  :: CardanoConfiguration
   -> (RunNode (ByronBlockOrEBB ByronConfig)
       => Consensus.Protocol (ByronBlockOrEBB ByronConfig)
       -> IO a)
   -> IO a
-withRealPBFT co cc action = do
-  SomeProtocol p <- fromProtocol cc (coProtocol co)
+withRealPBFT cc action = do
+  SomeProtocol p <- fromProtocol cc (ccProtocol cc)
   case p of
     proto@Consensus.ProtocolRealPBFT{} -> action proto
-    _ -> throwIO $ ProtocolNotSupported (coProtocol co)
+    _ -> throwIO $ ProtocolNotSupported (ccProtocol cc)
 
 -- | Generate a transaction spending genesis UTxO at a given address,
 --   to given outputs, signed by the given key.
@@ -170,14 +169,13 @@ txSpendGenesisUTxOByronPBFT gc sk genAddr outs =
 -- | Generate a transaction spending genesis UTxO at a given address,
 --   to given outputs, signed by the given key.
 issueGenesisUTxOExpenditure
-  :: CLIOps IO
-  -> Address
+  :: Address
   -> NonEmpty TxOut
   -> CardanoConfiguration
   -> Crypto.SigningKey
   -> IO (GenTx (ByronBlockOrEBB ByronConfig))
-issueGenesisUTxOExpenditure co genRichAddr outs cc sk = do
-  withRealPBFT co cc $
+issueGenesisUTxOExpenditure genRichAddr outs cc sk = do
+  withRealPBFT cc $
     \(Consensus.ProtocolRealPBFT gc _ _ _ _)-> do
       let tx = txSpendGenesisUTxOByronPBFT gc sk genRichAddr outs
       putStrLn $ "genesis protocol magic:  " <> show (configProtocolMagicId gc)
@@ -205,14 +203,13 @@ txSpendUTxOByronPBFT gc sk ins outs =
 -- | Generate a transaction from given Tx inputs to outputs,
 --   signed by the given key.
 issueUTxOExpenditure
-  :: CLIOps IO
-  -> NonEmpty TxIn
+  :: NonEmpty TxIn
   -> NonEmpty TxOut
   -> CardanoConfiguration
   -> Crypto.SigningKey
   -> IO (GenTx (ByronBlockOrEBB ByronConfig))
-issueUTxOExpenditure co ins outs cc key = do
-  withRealPBFT co cc $
+issueUTxOExpenditure ins outs cc key = do
+  withRealPBFT cc $
     \(Consensus.ProtocolRealPBFT gc _ _ _ _)-> do
       let tx = txSpendUTxOByronPBFT gc key ins outs
       putStrLn $ "genesis protocol magic:  " <> show (configProtocolMagicId gc)
@@ -221,13 +218,12 @@ issueUTxOExpenditure co ins outs cc key = do
 
 -- | Submit a transaction to a node specified by topology info.
 nodeSubmitTx
-  :: CLIOps IO
-  -> TopologyInfo
+  :: TopologyInfo
   -> CardanoConfiguration
   -> GenTx (ByronBlockOrEBB ByronConfig)
   -> IO ()
-nodeSubmitTx co topology cc tx =
-  withRealPBFT co cc $
+nodeSubmitTx topology cc tx =
+  withRealPBFT cc $
     \p@Consensus.ProtocolRealPBFT{} -> do
       putStrLn $ "transaction hash (TxId): " <> show (txId tx)
       handleTxSubmission cc p topology tx stdoutTracer

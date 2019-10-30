@@ -21,7 +21,6 @@ import           Cardano.Chain.Slotting
 import           Cardano.Chain.UTxO
 import           Cardano.CLI.Genesis
 import           Cardano.CLI.Key
-import           Cardano.CLI.Ops (decideCLIOps)
 import           Cardano.CLI.Run
 import           Cardano.Common.Parsers
 import           Cardano.Config.CommonCLI
@@ -31,8 +30,7 @@ import           Cardano.Config.Partial (PartialCardanoConfiguration (..),
                                          mkCardanoConfiguration)
 import           Cardano.Config.Presets (mainnetConfiguration)
 import           Cardano.Config.Protocol (Protocol)
-import           Cardano.Config.Types (CardanoConfiguration (..),
-                                       CardanoEnvironment (..),
+import           Cardano.Config.Types (CardanoEnvironment (..),
                                        RequireNetworkMagic)
 import           Cardano.Crypto ( AProtocolMagic(..)
                                 , ProtocolMagic
@@ -41,12 +39,9 @@ import           Cardano.Crypto ( AProtocolMagic(..)
                                 , decodeHash)
 import qualified Ouroboros.Consensus.BlockchainTime as Consensus
 
-
-
 main :: IO ()
 main = do
   co <- Opt.customExecParser pref opts
-
   -- Initialize logging layer. Particularly, we need it for benchmarking (command 'generate-txs').
   let cardanoConfiguration :: PartialCardanoConfiguration
       cardanoConfiguration = mainnetConfiguration
@@ -56,10 +51,9 @@ main = do
   cmdRes <- runExceptT $ do
     finalConfig <- withExceptT ConfigError $ ExceptT $ pure $
                      mkCardanoConfiguration $ cardanoConfiguration <> partialConfig co
-    ops <- liftIO $ decideCLIOps (ccProtocol finalConfig)
     (loggingLayer, _loggingFeature) <- liftIO $
       createLoggingFeature cardanoEnvironment finalConfig
-    (runCommand ops finalConfig loggingLayer (mainCommand co) :: ExceptT CliError IO ())
+    (runCommand finalConfig loggingLayer (mainCommand co) :: ExceptT CliError IO ())
   case cmdRes of
     Right _ -> pure ()
     Left err -> do putStrLn $ renderCliError err
