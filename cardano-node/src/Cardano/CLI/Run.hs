@@ -175,9 +175,10 @@ runCommand cc _ (PrettySigningKeyPublic skF) = do
   sK <- readSigningKey (ccProtocol cc) skF
   liftIO . putTextLn . prettyPublicKey $ Crypto.toVerification sK
 
-runCommand cc _ (MigrateDelegateKeyFrom _ (NewSigningKeyFile newKey) oldKey) = do
-  sk <- readSigningKey (ccProtocol cc) oldKey
-  sDk <- hoistEither $ serialiseDelegateKey (ccProtocol cc) sk
+runCommand cc _ (MigrateDelegateKeyFrom oldPtcl (NewSigningKeyFile newKey) oldKey) = do
+  sk <- readSigningKey oldPtcl oldKey
+  let newPtcl = ccProtocol cc
+  sDk <- hoistEither $ serialiseDelegateKey newPtcl sk
   liftIO $ ensureNewFileLBS newKey sDk
 
 runCommand _ _ (PrintGenesisHash genFp) = do
