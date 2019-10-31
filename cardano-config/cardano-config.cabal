@@ -47,9 +47,11 @@ library
                      , ouroboros-network
                      , iproute
                      , safe-exceptions
+                     , scientific
                      , string-conv
                      , stm
                      , text
+                     , yaml
 
   default-language:    Haskell2010
   default-extensions:  NoImplicitPrelude

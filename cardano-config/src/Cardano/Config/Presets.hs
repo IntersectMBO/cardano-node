@@ -25,7 +25,8 @@ import           Cardano.Config.Partial ( NodeProtocol (..)
                                         , PartialWallet (..)
                                         , RequireNetworkMagic (..)
                                         )
-import           Cardano.Config.Topology (NodeAddress(..), TopologyInfo(..))
+import           Cardano.Config.Topology (NodeAddress(..), NodeHostAddress(..),
+                                          TopologyInfo(..))
 import           Cardano.Config.Types (Protocol(..), ViewMode(..))
 
 --------------------------------------------------------------------------------
@@ -40,7 +41,7 @@ mainnetConfiguration =
     , pccDBPath = pure "./db/"
     , pccApplicationLockFile = pure ""
     , pccTopologyInfo = pure $ TopologyInfo (RelayId 0) "./configuration/simple-topology.json"
-    , pccNodeAddress = pure $ NodeAddress Nothing 7000
+    , pccNodeAddress = pure $ NodeAddress (NodeHostAddress Nothing) 7000
     , pccProtocol = pure ByronLegacy
     , pccViewMode = pure LiveView
     , pccLogMetrics = pure True
@@ -158,7 +159,7 @@ devConfiguration =
     , pccSocketDir = pure "./socket/"
     , pccApplicationLockFile = pure ""
     , pccTopologyInfo = pure $ TopologyInfo (RelayId 0) "./configuration/simple-topology.json"
-    , pccNodeAddress = pure $ NodeAddress Nothing 7000
+    , pccNodeAddress = pure $ NodeAddress (NodeHostAddress Nothing) 7000
     , pccProtocol = pure ByronLegacy
     , pccViewMode = pure LiveView
     , pccLogMetrics = pure True

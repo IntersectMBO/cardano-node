@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 
 module Cardano.Config.Types
@@ -6,6 +6,7 @@ module Cardano.Config.Types
     , CardanoConfiguration (..)
     , CardanoEnvironment (..)
     , Core (..)
+    , NodeConfiguration (..)
     -- * specific for @Core@
     , RequireNetworkMagic (..)
     , NodeProtocol (..)
@@ -34,13 +35,21 @@ module Cardano.Config.Types
     , TraceOptions (..)
     , ConsensusTraceOptions
     , ProtocolTraceOptions
+    , parseNodeConfiguration
     ) where
 
 import           Prelude (String, show)
 import           Cardano.Prelude
 
+import           Data.Aeson
+import qualified Data.Text as T
+import           Data.Yaml (decodeFileThrow)
+
 import           Cardano.BM.Data.Tracer (TracingVerbosity (..))
+import           Cardano.Crypto.ProtocolMagic (RequiresNetworkMagic)
 import qualified Ouroboros.Consensus.BlockchainTime as Consensus
+import           Ouroboros.Consensus.BlockchainTime (slotLengthFromMillisec)
+import           Ouroboros.Consensus.NodeId (NodeId(..))
 
 import           Cardano.Config.Topology
 import           Cardano.Config.Orphanage
@@ -104,12 +113,129 @@ data CardanoConfiguration = CardanoConfiguration
     , ccWallet              :: !Wallet
     } deriving (Eq, Show)
 
+
+data NodeConfiguration =
+    NodeConfiguration
+      { ncProtocol :: Protocol
+      , ncNodeId :: NodeId
+      , ncNodeAddress :: NodeAddress
+      , ncGenesisHash :: Text
+      , ncNumCoreNodes :: Maybe Int
+      , ncReqNetworkMagc :: RequiresNetworkMagic
+      , ncPbftSignatureThresh :: Maybe Double
+      , ncNTP :: NTP
+      , ncUpdate :: Update
+      , ncTXP :: TXP
+      , ncDLG :: DLG
+      , ncBlock :: Block
+      , ncNode :: Node
+      , ncTLS :: TLS
+      , ncWallet :: Wallet
+      } deriving (Show)
+
+instance FromJSON NodeConfiguration where
+    parseJSON = withObject "NodeConfiguration" $ \v -> do
+                  nId <- v .: "NodeId"
+                  nodeHostAddr <- v .: "NodeHostAddress"
+                  nodePort <- v .: "NodePort"
+                  ptcl <- v .: "Protocol"
+                  genesisHash <- v .: "GenesisHash"
+                  numCoreNode <- v .:? "NumCoreNodes"
+                  rNetworkMagic <- v .: "RequiresNetworkMagic"
+                  pbftSignatureThresh <- v .:? "PBftSignatureThreshold"
+
+                  -- Network Time Parameters
+                  respTimeout <- v .: "ResponseTimeout"
+                  pollDelay <- v .: "PollDelay"
+                  servers <- v .: "Servers"
+
+                  -- Update Parameters
+                  appName <- v .: "ApplicationName"
+                  appVersion <- v .: "ApplicationVersion"
+                  lkBlkVersionMajor <- v .: "LastKnownBlockVersion-Major"
+                  lkBlkVersionMinor <- v .: "LastKnownBlockVersion-Minor"
+                  lkBlkVersionAlt <- v .: "LastKnownBlockVersion-Alt"
+
+                  memPoolTxSizeLim <- v .: "MemPoolLimitTx"
+                  assetLockedSrcAddr <- v .: "AssetLockedSrcAddress"
+
+                  cacheParam <- v .: "CacheParameter"
+                  msgCacheTimeout <- v .: "MessageCacheTimeout"
+
+                  -- Block
+                  netDiameter <- v .: "NetworkDiameter"
+                  recHeadersMsg <- v .: "RecoveryHeadersMessage"
+                  streamWindow <- v .: "StreamWindow"
+                  nonCritCQBootstrp <- v .: "NonCriticalCQBootstrap"
+                  nonCritCQ <- v .: "NonCriticalCQ"
+                  critCQbootstrp <- v .: "CriticalCQBootstrap"
+                  critCQ <- v .: "CriticalCQ"
+                  critForkThresh <- v .: "CriticalForkThreshold"
+                  fixedTimeCQ <- v .: "FixedTimeCQ"
+
+                  slotLength <- v .: "SlotLength"
+                  netConnTimeout <- v .: "NetworkConnectionTimeout"
+                  handshakeTimeout <- v .: "HandshakeTimeout"
+
+                  -- Certificates
+                  caPrg <- v .: "CA-Organization"
+                  caCommonName <- v .: "CA-CommonName"
+                  caExpDays <- v .: "CA-ExpiryDays"
+                  caAltDns <- v .: "CA-AltDNS"
+                  serverPrg <- v .: "Server-Organization"
+                  serverCommonName <- v .: "Server-CommonName"
+                  serverExpDays <- v .: "Server-ExpiryDays"
+                  serverAltDns <- v .: "Server-AltDNS"
+                  walletPrg <- v .: "Wallet-Organization"
+                  walletCommonName <- v .: "Wallet-CommonName"
+                  walletExpDays <- v .: "Wallet-ExpiryDays"
+                  walletAltDns <- v .: "Wallet-AltDNS"
+
+                  -- Wallet
+                  throttleEnabled <- v .: "Enabled"
+                  throttleRate <- v .: "Rate"
+                  throttlePeriod <- v .: "Period"
+                  throttleBurst <- v .: "Burst"
+                  pure $ NodeConfiguration
+                           ptcl
+                           nId
+                           (NodeAddress nodeHostAddr nodePort)
+                           genesisHash
+                           numCoreNode
+                           rNetworkMagic
+                           pbftSignatureThresh
+                           (NTP respTimeout pollDelay servers)
+                           (Update appName appVersion (LastKnownBlockVersion
+                                                         lkBlkVersionMajor
+                                                         lkBlkVersionMinor
+                                                         lkBlkVersionAlt))
+                           (TXP memPoolTxSizeLim assetLockedSrcAddr)
+                           (DLG cacheParam msgCacheTimeout)
+                           (Block netDiameter recHeadersMsg streamWindow
+                                  nonCritCQBootstrp nonCritCQ critCQbootstrp
+                                  critCQ critForkThresh fixedTimeCQ)
+                           (Node (slotLengthFromMillisec slotLength)
+                                  netConnTimeout
+                                  handshakeTimeout
+                           )
+                           (TLS
+                              (Certificate caPrg caCommonName caExpDays caAltDns)
+                              (Certificate serverPrg serverCommonName serverExpDays serverAltDns)
+                              (Certificate walletPrg walletCommonName walletExpDays walletAltDns)
+                           )
+                           (Wallet throttleEnabled throttleRate throttlePeriod throttleBurst)
+
+
+parseNodeConfiguration :: FilePath -> IO NodeConfiguration
+parseNodeConfiguration fp = decodeFileThrow fp
+
+
 -- | Do we require network magic or not?
 -- Network magic allows the differentiation from mainnet and testnet.
 data RequireNetworkMagic
     = RequireNetworkMagic
     | NoRequireNetworkMagic
-    deriving (Eq, Show, Generic)
+    deriving (Eq, Show)
 
 -- | The type of the protocol being run on the node.
 data NodeProtocol
@@ -117,7 +243,7 @@ data NodeProtocol
     | PraosProtocol
     | MockPBFTProtocol
     | RealPBFTProtocol
-    deriving (Eq, Show, Generic)
+    deriving (Eq, Show)
 
 -- | Core configuration.
 -- For now, we only store the path to the genesis file(s) and their hash.
@@ -132,11 +258,11 @@ data Core = Core
     -- ^ Genesis source file JSON.
     , coGenesisHash                 :: !Text
     -- ^ Genesis previous block hash.
-    , coNodeId                      :: !(Maybe Int)
+    , coNodeId                      :: !(Maybe Int) -- TODO: Remove!
     -- ^ Core node ID, the number of the node.
     , coNumCoreNodes                :: !(Maybe Int)
     -- ^ The number of the core nodes.
-    , coNodeProtocol                :: !NodeProtocol
+    , coNodeProtocol                :: !NodeProtocol -- TODO: Remove!
     -- ^ The type of protocol run on the node.
     , coStaticKeySigningKeyFile     :: !(Maybe FilePath)
     -- ^ Static key signing file.
@@ -147,7 +273,7 @@ data Core = Core
     , coPBftSigThd                  :: !(Maybe Double)
     -- ^ PBFT signature threshold system parameters
 
-    } deriving (Eq, Show, Generic)
+    } deriving (Eq, Show)
 
 data Spec = Spec
     { spInitializer       :: !Initializer
@@ -243,6 +369,22 @@ data Protocol = ByronLegacy
               | MockPBFT
               | RealPBFT
               deriving (Eq, Show)
+
+instance FromJSON Protocol where
+  parseJSON (String str) = case str of
+                            "ByronLegacy" -> pure ByronLegacy
+                            "BFT" -> pure BFT
+                            "Praos" -> pure Praos
+                            "MockPBFT" -> pure MockPBFT
+                            "RealPBFT" -> pure RealPBFT
+                            ptcl -> panic $ "Parsing of Protocol: "
+                                          <> ptcl <> " failed. "
+                                          <> ptcl <> " is not a valid protocol"
+  parseJSON invalid  = panic $ "Parsing of Protocol failed due to type mismatch. "
+                             <> "Encountered: " <> (T.pack $ Prelude.show invalid)
+
+
+
 
 data ProtocolConstants = ProtocolConstants
     { prK             :: !Word64
