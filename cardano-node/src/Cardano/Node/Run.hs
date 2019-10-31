@@ -20,8 +20,7 @@ module Cardano.Node.Run
   )
 where
 
-import           Cardano.Prelude hiding (ByteString, atomically, throwIO, trace,
-                                  wait)
+import           Cardano.Prelude hiding (ByteString, atomically, trace)
 import           Prelude (error, id, unlines)
 
 import qualified Control.Concurrent.Async as Async
@@ -43,7 +42,7 @@ import           Cardano.BM.Data.Backend
 import           Cardano.BM.Data.BackendKind (BackendKind (TraceForwarderBK))
 import           Cardano.BM.Data.LogItem (LogObject (..))
 import           Cardano.BM.Data.Tracer (ToLogObject (..),
-                                         TracingVerbosity (..))
+                     TracingVerbosity (..), setHostname)
 import           Cardano.Config.Logging (LoggingLayer (..))
 import           Cardano.Config.Types (CardanoConfiguration (..), ViewMode (..))
 
@@ -51,8 +50,8 @@ import           Ouroboros.Network.Block
 import           Ouroboros.Network.Subscription.Dns
 
 import           Ouroboros.Consensus.Node (NodeKernel (getChainDB),
-                                           RunNetworkArgs (..),
-                                           RunNode (nodeNetworkMagic, nodeStartTime))
+                     RunNetworkArgs (..),
+                     RunNode (nodeNetworkMagic, nodeStartTime))
 import qualified Ouroboros.Consensus.Node as Node (run)
 import           Ouroboros.Consensus.Node.ProtocolInfo
 import           Ouroboros.Consensus.NodeId
@@ -91,8 +90,9 @@ runNode
   -> CardanoConfiguration
   -> IO ()
 runNode loggingLayer cc = do
-    let !trace = llAppendName loggingLayer "node" (llBasicTrace loggingLayer)
-    let tracer      = contramap pack $ toLogObject trace
+    let !trace = setHostname (pack $ show $ node $ ccTopologyInfo cc) $
+                 llAppendName loggingLayer "node" (llBasicTrace loggingLayer)
+    let tracer = contramap pack $ toLogObject trace
 
     traceWith tracer $ "tracing verbosity = " ++
                          case traceVerbosity $ ccTraceOptions cc of
