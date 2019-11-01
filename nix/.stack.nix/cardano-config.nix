@@ -30,6 +30,7 @@
           (hsPkgs.contra-tracer)
           (hsPkgs.generic-monoid)
           (hsPkgs.iohk-monitoring)
+          (hsPkgs.ip)
           (hsPkgs.lobemo-backend-aggregation)
           (hsPkgs.lobemo-backend-editor)
           (hsPkgs.lobemo-backend-ekg)
