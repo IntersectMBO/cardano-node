@@ -13,8 +13,6 @@ set -e
 # CMD="stack exec --nix --"
 CMD="cabal new-run --"
 
-. $(dirname $0)/lib-node.sh
-
 # VERBOSITY="--tracing-verbosity-minimal"
 # VERBOSITY="--tracing-verbosity-normal"
 VERBOSITY="--tracing-verbosity-maximal"
@@ -39,6 +37,8 @@ EXTRA="
 "
 
 . $(dirname $0)/lib-node.sh
+
+sleep 2
 
 # for acceptor logs:
 mkdir -p logs/

@@ -80,13 +80,23 @@ options:
       subtrace: NoTrace
     '#messagecounters.aggregation':
       subtrace: NoTrace
+    'cardano.#messagecounters.aggregation':
+      subtrace: NoTrace
     '#messagecounters.ekgview':
+      subtrace: NoTrace
+    'cardano.#messagecounters.ekgview':
       subtrace: NoTrace
     '#messagecounters.switchboard':
       subtrace: NoTrace
+    'cardano.#messagecounters.switchboard':
+      subtrace: NoTrace
     '#messagecounters.katip':
       subtrace: NoTrace
+    'cardano.#messagecounters.katip':
+      subtrace: NoTrace
     '#messagecounters.monitoring':
+      subtrace: NoTrace
+    'cardano.#messagecounters.monitoring':
       subtrace: NoTrace
   mapBackends:
     cardano.epoch-validation.benchmark:
