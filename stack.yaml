@@ -12,16 +12,13 @@ extra-deps:
   - binary-0.8.7.0
   - bimap-0.4.0
   - containers-0.5.11.0
-  - ekg-prometheus-adapter-0.1.0.4
   - generic-monoid-0.1.0.0
   - gray-code-0.3.1
   - moo-1.2
-  - prometheus-2.1.2
   - time-units-1.0.0
   - tasty-hedgehog-1.0.0.1
   - transformers-except-0.1.1
   - brick-0.47
-  - libsystemd-journal-1.4.4
   - config-ini-0.2.4.0
   - data-clist-0.1.2.2
   - text-zipper-0.10.1
@@ -72,7 +69,7 @@ extra-deps:
 
     # iohk-monitoring-framework currently not pinned to a release
   - git: https://github.com/input-output-hk/iohk-monitoring-framework
-    commit: 1ebe57df3a76a8ae4e3b5a31a9b85132f71534fc
+    commit: bea0e079fc32ed316ce352d17d14199a680e3f6c
     subdirs:
       - contra-tracer
       - iohk-monitoring
@@ -81,6 +78,16 @@ extra-deps:
       - plugins/backend-ekg
       - plugins/backend-monitoring
       - plugins/scribe-systemd
+
+    # dependencies of iohk-monitoring
+  - prometheus-2.1.2
+  - libsystemd-journal-1.4.4
+  - git: https://github.com/CodiePP/ekg-prometheus-adapter
+    commit: 1a258b6df7d9807d4c4ff3e99722223d31a2c320
+  - git: https://github.com/Soostone/katip.git
+    commit: cf60f0e14640ae9702c111bb51aeca7eed50ad48
+    subdirs:
+      - katip
 
     # Extracted from cardano-sl since it's quite useful
   - git: https://github.com/input-output-hk/cardano-sl-x509
