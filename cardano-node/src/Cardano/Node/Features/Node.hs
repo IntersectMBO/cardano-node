@@ -9,7 +9,8 @@ module Cardano.Node.Features.Node
 import           Cardano.Prelude
 
 import           Cardano.Config.Types (CardanoConfiguration (..),
-                                       CardanoEnvironment (..))
+                                       CardanoEnvironment (..),
+                                       NodeConfiguration)
 import           Cardano.Config.Logging (LoggingLayer (..),)
 import           Cardano.Node.Run
 import           Cardano.Shell.Types (CardanoFeature (..))
@@ -31,8 +32,9 @@ createNodeFeature
   :: LoggingLayer
   -> CardanoEnvironment
   -> CardanoConfiguration
+  -> NodeConfiguration
   -> IO (NodeLayer, CardanoFeature)
-createNodeFeature loggingLayer cardanoEnvironment cardanoConfiguration = do
+createNodeFeature loggingLayer cardanoEnvironment cardanoConfiguration nodeConfiguration = do
     -- we parse any additional configuration if there is any
     -- We don't know where the user wants to fetch the additional
     -- configuration from, it could be from the filesystem, so
@@ -43,6 +45,7 @@ createNodeFeature loggingLayer cardanoEnvironment cardanoConfiguration = do
                    cardanoEnvironment
                    loggingLayer
                    cardanoConfiguration
+                   nodeConfiguration
 
     -- Construct the cardano feature
     let cardanoFeature :: CardanoFeature
@@ -59,8 +62,9 @@ createNodeFeature loggingLayer cardanoEnvironment cardanoConfiguration = do
       :: CardanoEnvironment
       -> LoggingLayer
       -> CardanoConfiguration
+      -> NodeConfiguration
       -> IO NodeLayer
-    createNodeLayer _ logLayer cc = do
+    createNodeLayer _ logLayer cc nc = do
         pure $ NodeLayer
-          { nlRunNode = liftIO $ runNode logLayer cc
+          { nlRunNode = liftIO $ runNode logLayer cc nc
           }

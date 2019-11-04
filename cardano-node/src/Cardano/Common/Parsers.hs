@@ -4,6 +4,7 @@
 
 module Cardano.Common.Parsers
   ( loggingParser
+  , parseConfigFile
   , parseCoreNodeId
   , parseLogConfigFile
   , parseLogMetrics
@@ -37,6 +38,15 @@ import           Cardano.Config.Topology
 import           Cardano.Config.Types (TraceOptions(..))
 
 -- Common command line parsers
+
+parseConfigFile :: Parser (Last FilePath)
+parseConfigFile =
+  (Last . Just) <$> strOption
+    ( long "config-yaml"
+    <> metavar "NODE-CONFIGURATION"
+    <> help "Configuration file for the cardano-node"
+    <> completer (bashCompleter "file")
+    )
 
 parseCoreNodeId :: Parser CoreNodeId
 parseCoreNodeId =
