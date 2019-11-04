@@ -28,7 +28,8 @@ import           Cardano.Config.Partial (PartialCardanoConfiguration (..),
                                          PartialCore (..), PartialNode (..),
                                          mkCardanoConfiguration)
 import           Cardano.Config.Presets (mainnetConfiguration)
-import           Cardano.Config.Types (CardanoEnvironment (..), RequireNetworkMagic)
+import           Cardano.Config.Types (CardanoEnvironment (..), RequireNetworkMagic,
+                                       parseNodeConfiguration)
 import           Cardano.Config.Topology (NodeAddress (..), NodeHostAddress(..), TopologyInfo)
 import           Cardano.Node.Features.Node
 import           Cardano.Node.Run
@@ -90,7 +91,7 @@ initializeAllFeatures
   -> PartialCardanoConfiguration
   -> CardanoEnvironment
   -> IO ([CardanoFeature], NodeLayer)
-initializeAllFeatures (NodeCLI parsedPcc)
+initializeAllFeatures (NodeCLI parsedPcc (ConfigYamlFilePath ncFp))
                       partialConfigPreset cardanoEnvironment = do
 
     -- `partialConfigPreset` and `parsedPcc` are merged then checked here using
@@ -101,11 +102,14 @@ initializeAllFeatures (NodeCLI parsedPcc)
                      Right x -> pure x
 
     (loggingLayer, loggingFeature) <- createLoggingFeature cardanoEnvironment finalConfig
+
+    nodeConfig <- parseNodeConfiguration ncFp
     (nodeLayer   , nodeFeature)    <-
       createNodeFeature
         loggingLayer
         cardanoEnvironment
         finalConfig
+        nodeConfig
 
     pure ([ loggingFeature
           , nodeFeature
@@ -116,7 +120,12 @@ initializeAllFeatures (NodeCLI parsedPcc)
 -- Parsers & Types
 -------------------------------------------------------------------------------
 
-data NodeCLI = NodeCLI !PartialCardanoConfiguration
+data NodeCLI = NodeCLI !PartialCardanoConfiguration  !ConfigYamlFilePath
+
+-- | Filepath of the configuration yaml file. This file determines
+-- all the configuration settings required for the cardano node
+-- (logging, tracing, protocol, slot length etc)
+newtype ConfigYamlFilePath = ConfigYamlFilePath FilePath
 
 -- | The product parser for all the CLI arguments.
 nodeCliParser :: Parser NodeCLI
@@ -143,10 +152,13 @@ nodeCliParser = do
   reqNetMagic <- parseRequireNetworkMagic
   slotLength <- parseSlotLength
 
+  nodeConfigFp <- parseConfigFile
+
   pure $ NodeCLI
          (createPcc dbPath socketDir topInfo nAddr ptcl logConfigFp vMode
                     logMetrics genPath genHash delCert sKey pbftSigThresh
                     reqNetMagic traceOptions slotLength)
+         (ConfigYamlFilePath $ fromMaybe (panic "No configuration yaml filepath supplied") (getLast nodeConfigFp))
  where
   -- This merges the command line parsed values into one `PartialCardanoconfiguration`.
   createPcc

@@ -13,6 +13,7 @@ ARGS=(
         --topology                "${TOPOLOGY}"
         --port                    "7776"
         --real-pbft
+        --config                  "configuration/log-configuration.yaml"
 )
 
 ${RUNNER} exe:cardano-node "${ARGS[@]}"

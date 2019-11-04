@@ -45,7 +45,7 @@ import           Cardano.BM.Data.LogItem (LogObject (..))
 import           Cardano.BM.Data.Tracer (ToLogObject (..),
                      TracingVerbosity (..), setHostname)
 import           Cardano.Config.Logging (LoggingLayer (..))
-import           Cardano.Config.Types (CardanoConfiguration (..), ViewMode (..))
+import           Cardano.Config.Types (NodeConfiguration (..), ViewMode (..))
 
 import           Ouroboros.Network.Block
 import           Ouroboros.Network.Subscription.Dns
@@ -66,6 +66,7 @@ import qualified Ouroboros.Storage.ChainDB as ChainDB
 import           Cardano.Common.LocalSocket
 import           Cardano.Config.Protocol (SomeProtocol(..), fromProtocol)
 import           Cardano.Config.Topology
+import           Cardano.Config.Types (CardanoConfiguration(..))
 import           Cardano.Tracing.Tracers
 #ifdef UNIX
 import           Cardano.Node.TUI.LiveView
@@ -89,6 +90,7 @@ instance NoUnexpectedThunks Peer where
 runNode
   :: LoggingLayer
   -> CardanoConfiguration
+  -> NodeConfiguration
   -> IO ()
 runNode loggingLayer cc = do
     hn <- hostname
@@ -101,12 +103,12 @@ runNode loggingLayer cc = do
                              NormalVerbosity -> "normal"
                              MinimalVerbosity -> "minimal"
                              MaximalVerbosity -> "maximal"
-    SomeProtocol p  <- fromProtocol cc $ ccProtocol cc
+    SomeProtocol p  <- fromProtocol cc $ ncProtocol nc
 
     let tracers     = mkTracers (ccTraceOptions cc) trace
 
     case ccViewMode cc of
-      SimpleView -> handleSimpleNode p trace tracers cc
+      SimpleView -> handleSimpleNode p trace tracers cc nc
       LiveView   -> do
 #ifdef UNIX
         let c = llConfiguration loggingLayer
@@ -114,7 +116,7 @@ runNode loggingLayer cc = do
         -- turn off logging to the console, only forward it through a pipe to a central logging process
         CM.setDefaultBackends c [TraceForwarderBK, UserDefinedBK "LiveViewBackend"]
         -- User will see a terminal graphics and will be able to interact with it.
-        nodeThread <- Async.async $ handleSimpleNode p trace tracers cc
+        nodeThread <- Async.async $ handleSimpleNode p trace tracers cc nc
 
         be :: LiveViewBackend Text <- realize c
         let lvbe = MkBackend { bEffectuate = effectuate be, bUnrealize = unrealize be }
@@ -125,7 +127,7 @@ runNode loggingLayer cc = do
 
         void $ Async.waitAny [nodeThread]
 #else
-        handleSimpleNode p trace tracers cc
+        handleSimpleNode p trace tracers nc
 #endif
   where
     hostname = do
@@ -140,8 +142,9 @@ handleSimpleNode :: forall blk. RunNode blk
                  -> Tracer IO (LogObject Text)
                  -> Tracers Peer blk
                  -> CardanoConfiguration
+                 -> NodeConfiguration
                  -> IO ()
-handleSimpleNode p trace nodeTracers cc = do
+handleSimpleNode p trace nodeTracers cc nc = do
     NetworkTopology nodeSetups <-
       either error id <$> readTopologyFile (topologyFile $ ccTopologyInfo cc)
 
@@ -156,14 +159,14 @@ handleSimpleNode p trace nodeTracers cc = do
                           map (\ns -> (nodeId ns, producers ns)) nodeSetups of
           Just ps -> ps
           Nothing -> error $ "handleSimpleNode: own address "
-                          <> show (ccNodeAddress cc)
+                          <> show (ncNodeAddress nc)
                           <> ", Node Id "
                           <> show nid
                           <> " not found in topology"
 
     traceWith tracer $ unlines
       [ "**************************************"
-      , "I am Node "        <> show (ccNodeAddress cc) <> " Id: " <> show nid
+      , "I am Node "        <> show (ncNodeAddress nc) <> " Id: " <> show nid
       , "My producers are " <> show producers'
       , "**************************************"
       ]
@@ -171,7 +174,7 @@ handleSimpleNode p trace nodeTracers cc = do
     -- Socket directory
     myLocalAddr <- localSocketAddrInfo (node $ ccTopologyInfo cc) (ccSocketDir cc) MkdirIfMissing
 
-    addrs <- nodeAddressInfo $ ccNodeAddress cc
+    addrs <- nodeAddressInfo $ ncNodeAddress nc
     let ipProducerAddrs  :: [NodeAddress]
         dnsProducerAddrs :: [RemoteAddress]
         (ipProducerAddrs, dnsProducerAddrs) = partitionEithers
