@@ -3,7 +3,7 @@
     flags = {};
     package = {
       specVersion = "1.10";
-      identifier = { name = "cardano-node"; version = "3.0.1.87"; };
+      identifier = { name = "cardano-node"; version = "1.0.0"; };
       license = "Apache-2.0";
       copyright = "";
       maintainer = "operations@iohk.io";
