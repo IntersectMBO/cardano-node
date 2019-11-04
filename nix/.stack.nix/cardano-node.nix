@@ -66,6 +66,7 @@
           (hsPkgs.typed-protocols-cbor)
           (hsPkgs.utf8-string)
           (hsPkgs.vector)
+          (hsPkgs.yaml)
           ] ++ (if system.isWindows
           then [ (hsPkgs.Win32) ]
           else [ (hsPkgs.unix) (hsPkgs.brick) (hsPkgs.vty) ]);
