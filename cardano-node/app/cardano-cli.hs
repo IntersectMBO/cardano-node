@@ -215,7 +215,7 @@ parseKeyRelatedValues =
         , command' "keygen" "Generate a signing key."
             $ Keygen
                 <$> parseNewSigningKeyFile "secret"
-                <*> parseFlag' GetPassword EmptyPassword
+                <*> parseFlag GetPassword EmptyPassword
                       "no-password"
                       "Disable password protection."
         , command'
@@ -450,11 +450,8 @@ parseIntegralWithDefault optname desc def = option (fromInteger <$> auto)
  $ long optname <> metavar "INT" <> help desc <> value def
 
 
-parseFlag :: String -> String -> Parser Bool
-parseFlag = parseFlag' False True
-
-parseFlag' :: a -> a -> String -> String -> Parser a
-parseFlag' def active optname desc =
+parseFlag :: a -> a -> String -> String -> Parser a
+parseFlag def active optname desc =
   flag def active $ long optname <> help desc
 
 
