@@ -2,9 +2,8 @@
 
 RUNNER=${RUNNER:-cabal new-run -v0 --}
 
-genesis="c0c75"
-genesis_root="configuration/${genesis}"
-genesis_file="${genesis_root}/genesis.json"
+. $(dirname $0)/lib-node.sh
+
 proto_magic="$(jq '.protocolConsts | .protocolMagic' "${genesis_file}")"
 
 key="$1"

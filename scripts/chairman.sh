@@ -2,14 +2,7 @@
 
 set -e
 
-genesis="c0c75"
-genesis_root="configuration/${genesis}"
-genesis_file="${genesis_root}/genesis.json"
-if test ! -f "${genesis_file}"
-then echo "ERROR: genesis ${genesis_file} does not exist!">&1; exit 1; fi
-
-cabal new-build "exe:cardano-cli"
-genesis_hash="$(cabal new-run -v0 exe:cardano-cli -- --real-pbft print-genesis-hash --genesis-json ${genesis_file})"
+. $(dirname $0)/lib-node.sh
 
 CMD=`find dist-newstyle/ -type f -name "cardano-node"`
 test -n "${CMD}" || {
