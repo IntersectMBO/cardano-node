@@ -108,6 +108,7 @@ data CliError
   | ReadSigningKeyFailure !FilePath !Text
   -- ^ An exception was encountered while trying to read
   -- the signing key file.
+  | InvariantViolation !Prelude.String
 
 
 instance Show CliError where
@@ -151,4 +152,6 @@ instance Show CliError where
   show (ReadSigningKeyFailure fp expt)
     = "Exception encountered while trying to read the signing key file at: " <> fp
        <> "Exception: " <> T.unpack expt
+  show (InvariantViolation err)
+    = "Internal invariant violated: " <> err
 instance Exception CliError
