@@ -2,7 +2,7 @@
 
 set -e
 
-genesis="b0109"
+genesis="c0c75"
 genesis_root="configuration/${genesis}"
 genesis_file="${genesis_root}/genesis.json"
 if test ! -f "${genesis_file}"
