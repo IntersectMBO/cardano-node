@@ -8,9 +8,8 @@ module Cardano.Node.Features.Node
 
 import           Cardano.Prelude
 
-import           Cardano.Config.Types (CardanoConfiguration (..),
-                                       CardanoEnvironment (..),
-                                       NodeConfiguration)
+import           Cardano.Config.Types (CardanoEnvironment (..),
+                                       NodeConfiguration, NodeCLI(..))
 import           Cardano.Config.Logging (LoggingLayer (..),)
 import           Cardano.Node.Run
 import           Cardano.Shell.Types (CardanoFeature (..))
@@ -31,10 +30,10 @@ data NodeLayer = NodeLayer
 createNodeFeature
   :: LoggingLayer
   -> CardanoEnvironment
-  -> CardanoConfiguration
   -> NodeConfiguration
+  -> NodeCLI
   -> IO (NodeLayer, CardanoFeature)
-createNodeFeature loggingLayer cardanoEnvironment cardanoConfiguration nodeConfiguration = do
+createNodeFeature loggingLayer cardanoEnvironment nodeConfiguration nCli = do
     -- we parse any additional configuration if there is any
     -- We don't know where the user wants to fetch the additional
     -- configuration from, it could be from the filesystem, so
@@ -44,8 +43,8 @@ createNodeFeature loggingLayer cardanoEnvironment cardanoConfiguration nodeConfi
     nodeLayer <- createNodeLayer
                    cardanoEnvironment
                    loggingLayer
-                   cardanoConfiguration
                    nodeConfiguration
+                   nCli
 
     -- Construct the cardano feature
     let cardanoFeature :: CardanoFeature
@@ -61,10 +60,10 @@ createNodeFeature loggingLayer cardanoEnvironment cardanoConfiguration nodeConfi
     createNodeLayer
       :: CardanoEnvironment
       -> LoggingLayer
-      -> CardanoConfiguration
       -> NodeConfiguration
+      -> NodeCLI
       -> IO NodeLayer
-    createNodeLayer _ logLayer cc nc = do
+    createNodeLayer _ logLayer nc nCli' = do
         pure $ NodeLayer
-          { nlRunNode = liftIO $ runNode logLayer cc nc
+          { nlRunNode = liftIO $ runNode logLayer nc nCli'
           }

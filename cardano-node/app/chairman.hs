@@ -2,10 +2,11 @@
 {-# LANGUAGE NamedFieldPuns     #-}
 {-# LANGUAGE NumericUnderscores #-}
 
+import           Cardano.Prelude hiding (option)
+
 import           Control.Applicative (some)
-import           Control.Exception (Exception, throwIO)
+import           Control.Exception (Exception)
 import           Control.Concurrent (threadDelay)
-import           Control.Concurrent.Async
 import           Options.Applicative
 
 import           Cardano.Config.Presets (mainnetConfiguration)
@@ -19,9 +20,9 @@ import           Ouroboros.Consensus.NodeId (CoreNodeId)
 
 import           Cardano.Config.CommonCLI
 import           Cardano.Config.Protocol (Protocol, SomeProtocol(..), fromProtocol)
-import           Cardano.Config.Types (CardanoConfiguration(..))
-import           Cardano.Common.Parsers (parseCoreNodeId, parseProtocol)
-
+import           Cardano.Config.Types (CardanoConfiguration(..), ConfigYamlFilePath(..),
+                                       NodeCLI(..), parseNodeConfiguration)
+import           Cardano.Common.Parsers (nodeCliParser, parseCoreNodeId, parseProtocol)
 import           Cardano.Chairman (runChairman)
 
 main :: IO ()
@@ -33,13 +34,16 @@ main = do
                  , caTimeout
                  , caCommonCLI
                  , caCommonCLIAdv
+                 , caNodeCLI
                  } <- execParser opts
 
     cc <- case mkConfiguration mainnetConfiguration caCommonCLI caCommonCLIAdv of
       Left e -> throwIO e
       Right x -> pure x
 
-    SomeProtocol p <- fromProtocol cc caProtocol
+
+    nc <- liftIO . parseNodeConfiguration . unConfigPath $ configFp caNodeCLI
+    SomeProtocol p <- fromProtocol nc caNodeCLI caProtocol
 
     let run = runChairman p caCoreNodeIds
                           (NumCoreNodes $ length caCoreNodeIds)
@@ -74,6 +78,7 @@ data ChairmanArgs = ChairmanArgs {
     , caTimeout         :: !(Maybe Int)
     , caCommonCLI       :: !CommonCLI
     , caCommonCLIAdv    :: !CommonCLIAdvanced
+    , caNodeCLI         :: !(NodeCLI)
     }
 
 parseSecurityParam :: Parser SecurityParam
@@ -113,6 +118,7 @@ parseChairmanArgs =
       <*> optional parseTimeout
       <*> parseCommonCLI
       <*> parseCommonCLIAdvanced
+      <*> nodeCliParser
 
 opts :: ParserInfo ChairmanArgs
 opts = info (parseChairmanArgs <**> helper)

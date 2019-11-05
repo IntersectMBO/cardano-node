@@ -1,13 +1,18 @@
-{-# LANGUAGE RankNTypes           #-}
+{-# LANGUAGE ApplicativeDo #-}
+{-# LANGUAGE RankNTypes #-}
 
 {-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
 
 module Cardano.Common.Parsers
-  ( loggingParser
+  ( cliTracingParser
+  , loggingParser
+  , nodeCliParser
   , parseConfigFile
   , parseCoreNodeId
-  , parseLogConfigFile
-  , parseLogMetrics
+  , parseDbPath
+  , parseLogConfigFileLast
+  , parseLogMetricsLast
+  , parseLogOutputFile
   , parseProtocol
   , parseProtocolBFT
   , parseProtocolByron
@@ -32,20 +37,66 @@ import           Ouroboros.Consensus.NodeId (NodeId(..), CoreNodeId(..))
 import           Ouroboros.Consensus.NodeNetwork (ProtocolTracers'(..))
 import qualified Ouroboros.Consensus.Node.Tracers as Consensus
 
+import           Cardano.Config.CommonCLI
 import           Cardano.Config.Orphanage
 import           Cardano.Config.Protocol
 import           Cardano.Config.Topology
-import           Cardano.Config.Types (TraceOptions(..))
+import           Cardano.Config.Types (ConfigYamlFilePath(..), DbFile(..),
+                                       DelegationCertFile(..), GenesisFile (..),
+                                       MiscellaneousFilepaths(..),
+                                       NodeCLI(..), SigningKeyFile(..), SocketFile(..),
+                                       TraceOptions(..), TopologyFile(..))
 
 -- Common command line parsers
 
-parseConfigFile :: Parser (Last FilePath)
+cliTracingParser :: Parser (Last TraceOptions)
+cliTracingParser = Last . Just <$> parseTraceOptions Opt.hidden
+
+-- | The product parser for all the CLI arguments.
+nodeCliParser :: Parser NodeCLI
+nodeCliParser = do
+  -- Filepaths
+  topFp <- parseTopologyFile
+  dbFp <- parseDbPath
+  genFp <- parseGenesisPath
+  delCertFp <- optional parseDelegationCert
+  sKeyFp <- optional parseSigningKey
+  socketFp <- parseSocketDir
+
+  -- NodeConfiguration filepath
+  nodeConfigFp <- parseConfigFile
+
+  -- TraceOptions
+  traceOptions <- cliTracingParser
+
+
+  pure $ NodeCLI
+           (MiscellaneousFilepaths
+              (TopologyFile topFp)
+              (DbFile dbFp)
+              (GenesisFile genFp)
+              (DelegationCertFile <$> delCertFp)
+              (SigningKeyFile <$> sKeyFp)
+              (SocketFile socketFp)
+            )
+           (ConfigYamlFilePath nodeConfigFp)
+           (fromMaybe (panic "Cardano.Common.Parsers: Trace Options were not specified") $ getLast traceOptions)
+
+parseConfigFile :: Parser FilePath
 parseConfigFile =
-  (Last . Just) <$> strOption
+  strOption
     ( long "config"
     <> metavar "NODE-CONFIGURATION"
     <> help "Configuration file for the cardano-node"
     <> completer (bashCompleter "file")
+    )
+
+parseDbPath :: Parser FilePath
+parseDbPath =
+  strOption
+    ( long "database-path"
+    <> metavar "FILEPATH"
+    <> help "Directory where the state is stored."
     )
 
 parseCoreNodeId :: Parser CoreNodeId
@@ -132,21 +183,30 @@ parseTopologyFile =
          <> metavar "FILEPATH"
          <> help "The path to a file describing the topology."
     )
-parseLogConfigFile :: Parser FilePath
-parseLogConfigFile =
+parseLogOutputFile :: Parser FilePath
+parseLogOutputFile =
   strOption
+    ( long "log-output"
+    <> metavar "FILEPATH"
+    <> help "Logging output file"
+    <> completer (bashCompleter "file")
+    )
+
+parseLogConfigFileLast :: Parser (Last FilePath)
+parseLogConfigFileLast =
+  lastStrOption
     ( long "log-config"
     <> metavar "LOGCONFIG"
     <> help "Configuration file for logging"
     <> completer (bashCompleter "file")
     )
 
-parseLogMetrics :: Parser (Last Bool)
-parseLogMetrics =
-  (Last . Just) <$> switch
-                      ( long "log-metrics"
-                      <> help "Log a number of metrics about this node"
-                      )
+parseLogMetricsLast :: Parser (Last Bool)
+parseLogMetricsLast =
+ Last . Just <$> switch
+   ( long "log-metrics"
+   <> help "Log a number of metrics about this node"
+   )
 
 -- | A parser disables logging if --log-config is not supplied.
 loggingParser :: Parser LoggingCLIArguments

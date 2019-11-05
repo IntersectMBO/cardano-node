@@ -64,7 +64,7 @@ import qualified Cardano.Chain.Genesis as CC.Genesis
 import qualified Cardano.Chain.MempoolPayload as CC.Mempool
 import qualified Cardano.Chain.UTxO as CC.UTxO
 import           Cardano.Config.Logging (LoggingLayer (..), Trace)
-import           Cardano.Config.Types (CardanoConfiguration(..))
+import           Cardano.Config.Types (NodeCLI(..))
 import qualified Cardano.Crypto as Crypto
 import           Cardano.Config.Topology (NetworkTopology (..),
                                           NodeAddress (..),
@@ -155,7 +155,7 @@ data TxGenError = CurrentlyCannotSendTxToRelayNode FilePath
 genesisBenchmarkRunner
   :: RunNode (ByronBlockOrEBB ByronConfig)
   => LoggingLayer
-  -> CardanoConfiguration
+  -> NodeCLI
   -> Consensus.Protocol (ByronBlockOrEBB ByronConfig)
   -> TopologyInfo
   -> NumberOfTxs
@@ -167,7 +167,7 @@ genesisBenchmarkRunner
   -> [FilePath]
   -> ExceptT TxGenError IO ()
 genesisBenchmarkRunner loggingLayer
-                       cc
+                       nCli
                        protocol@(Consensus.ProtocolRealPBFT genesisConfig _ _ _ _)
                        topologyInfo
                        numOfTxs@(NumberOfTxs rawNumOfTxs)
@@ -222,7 +222,7 @@ genesisBenchmarkRunner loggingLayer
   -- 'sourceAddress'), this will be our very first transaction.
   liftIO $ prepareInitialFunds
              lowLevelSubmitTracer
-             cc
+             nCli
              genesisConfig
              pInfoConfig
              topologyInfo
@@ -240,7 +240,7 @@ genesisBenchmarkRunner loggingLayer
                  connectTracer
                  submitTracer
                  lowLevelSubmitTracer
-                 cc
+                 nCli
                  pInfoConfig
                  sourceKey
                  recipientAddress
@@ -435,7 +435,7 @@ extractGenesisFunds genesisConfig signingKeys =
 prepareInitialFunds
   :: RunNode (ByronBlockOrEBB ByronConfig)
   => Tracer IO String
-  -> CardanoConfiguration
+  -> NodeCLI
   -> CC.Genesis.Config
   -> NodeConfig ByronEBBExtNodeConfig
   -> TopologyInfo
@@ -445,7 +445,7 @@ prepareInitialFunds
   -> FeePerTx
   -> IO ()
 prepareInitialFunds llTracer
-                    cc
+                    nCli
                     genesisConfig
                     pInfoConfig
                     topologyInfo
@@ -467,7 +467,7 @@ prepareInitialFunds llTracer
                                               genesisAddress
                                               (NE.fromList [outForBig])
 
-  submitTx cc pInfoConfig (node topologyInfo) genesisTx llTracer
+  submitTx nCli pInfoConfig (node topologyInfo) genesisTx llTracer
   -- Done, the first transaction 'initGenTx' is submitted, now 'sourceAddress' has a lot of money.
 
   let txIn  = CC.UTxO.TxInUtxo (getTxIdFromGenTx genesisTx) 0
@@ -691,7 +691,7 @@ runBenchmark
   -> Tracer IO SendRecvConnect
   -> Tracer IO (SendRecvTxSubmission (ByronBlockOrEBB ByronConfig))
   -> Tracer IO String
-  -> CardanoConfiguration
+  -> NodeCLI
   -> NodeConfig ByronEBBExtNodeConfig
   -> Crypto.SigningKey
   -> CC.Common.Address
@@ -708,7 +708,7 @@ runBenchmark benchTracer
              connectTracer
              submitTracer
              lowLevelSubmitTracer
-             cc
+             nCli
              pInfoConfig
              sourceKey
              recipientAddress
@@ -724,7 +724,7 @@ runBenchmark benchTracer
     $ "******* Tx generator, phase 1: make enough available UTxO entries *******"
   createMoreFundCoins
     lowLevelSubmitTracer
-    cc
+    nCli
     pInfoConfig
     sourceKey
     txFee
@@ -803,7 +803,7 @@ runBenchmark benchTracer
 createMoreFundCoins
   :: RunNode (ByronBlockOrEBB ByronConfig)
   => Tracer IO String
-  -> CardanoConfiguration
+  -> NodeCLI
   -> NodeConfig ByronEBBExtNodeConfig
   -> Crypto.SigningKey
   -> FeePerTx
@@ -812,7 +812,7 @@ createMoreFundCoins
   -> NumberOfInputsPerTx
   -> ExceptT TxGenError IO ()
 createMoreFundCoins llTracer
-                    cc
+                    nCli
                     pInfoConfig
                     sourceKey
                     (FeePerTx txFee)
@@ -854,7 +854,7 @@ createMoreFundCoins llTracer
                                              txOut
                                              []
   liftIO $ forM_ splittingTxs $ \(tx, txDetailsList) -> do
-    submitTx cc pInfoConfig (node topologyInfo) tx llTracer
+    submitTx nCli pInfoConfig (node topologyInfo) tx llTracer
     -- Update available fundValueStatus to reuse the numSplittingTxOuts TxOuts.
     forM_ txDetailsList addToAvailableFunds
  where

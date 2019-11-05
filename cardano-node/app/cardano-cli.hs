@@ -24,13 +24,13 @@ import           Cardano.CLI.Key
 import           Cardano.CLI.Run
 import           Cardano.Common.Parsers
 import           Cardano.Config.CommonCLI
-import           Cardano.Config.Logging (createLoggingFeature)
+import           Cardano.Config.Logging (createLoggingFeatureCLI)
 import           Cardano.Config.Partial (PartialCardanoConfiguration (..),
                                          PartialCore (..), PartialNode (..),
                                          mkCardanoConfiguration)
 import           Cardano.Config.Presets (mainnetConfiguration)
 import           Cardano.Config.Protocol (Protocol)
-import           Cardano.Config.Types (CardanoEnvironment (..),
+import           Cardano.Config.Types (CardanoEnvironment (..), GenesisFile(..),
                                        RequireNetworkMagic)
 import           Cardano.Crypto ( AProtocolMagic(..)
                                 , ProtocolMagic
@@ -52,8 +52,9 @@ main = do
     finalConfig <- withExceptT ConfigError $ ExceptT $ pure $
                      mkCardanoConfiguration $ cardanoConfiguration <> partialConfig co
     (loggingLayer, _loggingFeature) <- liftIO $
-      createLoggingFeature cardanoEnvironment finalConfig
-    (runCommand finalConfig loggingLayer (mainCommand co) :: ExceptT CliError IO ())
+      createLoggingFeatureCLI cardanoEnvironment finalConfig
+    runCommand finalConfig loggingLayer $ mainCommand co
+
   case cmdRes of
     Right _ -> pure ()
     Left err -> do putStrLn $ renderCliError err
@@ -84,17 +85,17 @@ parseClient :: Parser CLI
 parseClient = do
   let pConfig = createPcc
                   <$> (parseProtocolByron <|> parseProtocolRealPBFT)
-                  <*> parseDbPath
-                  <*> parseGenesisPath
-                  <*> parseGenesisHash
-                  <*> parseDelegationeCert
-                  <*> parseSigningKey
-                  <*> parseSocketDir
-                  <*> parsePbftSigThreshold
-                  <*> parseRequireNetworkMagic
-                  <*> parseSlotLength
-                  <*> lastOption parseLogConfigFile
-                  <*> parseLogMetrics
+                  <*> parseDbPathLast
+                  <*> parseGenesisPathLast
+                  <*> parseGenesisHashLast
+                  <*> parseDelegationCertLast
+                  <*> parseSigningKeyLast
+                  <*> parseSocketDirLast
+                  <*> parsePbftSigThresholdLast
+                  <*> parseRequireNetworkMagicLast
+                  <*> parseSlotLengthLast
+                  <*> parseLogConfigFileLast
+                  <*> parseLogMetricsLast
 
   CLI <$> pConfig <*> parseClientCommand
  where
@@ -304,6 +305,7 @@ parseTxRelatedValues =
         $ SubmitTx
             <$> parseTopologyInfo "PBFT node ID to submit Tx to."
             <*> parseTxFile "tx"
+            <*> nodeCliParser
     , command'
         "issue-genesis-utxo-expenditure"
         "Write a file with a signed transaction, spending genesis UTxO."
@@ -316,6 +318,8 @@ parseTxRelatedValues =
                   "rich-addr-from"
                   "Tx source: genesis UTxO richman address (non-HD)."
             <*> (NE.fromList <$> some parseTxOut)
+            <*> nodeCliParser
+
     , command'
         "issue-utxo-expenditure"
         "Write a file with a signed transaction, spending normal UTxO."
@@ -326,6 +330,7 @@ parseTxRelatedValues =
                   "Key that has access to all mentioned genesis UTxO inputs."
             <*> (NE.fromList <$> some parseTxIn)
             <*> (NE.fromList <$> some parseTxOut)
+            <*> nodeCliParser
     , command'
         "generate-txs"
         "Launch transactions generator."
@@ -355,6 +360,7 @@ parseTxRelatedValues =
             <*> parseSigningKeysFiles
                   "sig-key"
                   "Path to signing key file, for genesis UTxO using by generator."
+            <*> nodeCliParser
       ]
 
 

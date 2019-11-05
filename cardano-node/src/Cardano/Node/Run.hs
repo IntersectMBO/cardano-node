@@ -45,7 +45,8 @@ import           Cardano.BM.Data.LogItem (LogObject (..))
 import           Cardano.BM.Data.Tracer (ToLogObject (..),
                      TracingVerbosity (..), setHostname)
 import           Cardano.Config.Logging (LoggingLayer (..))
-import           Cardano.Config.Types (NodeConfiguration (..), ViewMode (..))
+import           Cardano.Config.Types (MiscellaneousFilepaths(..),
+                                       NodeConfiguration (..), ViewMode (..))
 
 import           Ouroboros.Network.Block
 import           Ouroboros.Network.Subscription.Dns
@@ -66,7 +67,8 @@ import qualified Ouroboros.Storage.ChainDB as ChainDB
 import           Cardano.Common.LocalSocket
 import           Cardano.Config.Protocol (SomeProtocol(..), fromProtocol)
 import           Cardano.Config.Topology
-import           Cardano.Config.Types (CardanoConfiguration(..))
+import           Cardano.Config.Types (DbFile(..), NodeCLI(..),
+                                       SocketFile(..), TopologyFile(..))
 import           Cardano.Tracing.Tracers
 #ifdef UNIX
 import           Cardano.Node.TUI.LiveView
@@ -89,26 +91,26 @@ instance NoUnexpectedThunks Peer where
 
 runNode
   :: LoggingLayer
-  -> CardanoConfiguration
   -> NodeConfiguration
+  -> NodeCLI
   -> IO ()
-runNode loggingLayer cc = do
+runNode loggingLayer nc nCli = do
     hn <- hostname
     let !trace = setHostname hn $
                  llAppendName loggingLayer "node" (llBasicTrace loggingLayer)
     let tracer = contramap pack $ toLogObject trace
 
     traceWith tracer $ "tracing verbosity = " ++
-                         case traceVerbosity $ ccTraceOptions cc of
+                         case traceVerbosity $ traceOpts nCli of
                              NormalVerbosity -> "normal"
                              MinimalVerbosity -> "minimal"
                              MaximalVerbosity -> "maximal"
-    SomeProtocol p  <- fromProtocol cc $ ncProtocol nc
+    SomeProtocol p  <- fromProtocol nc nCli $ ncProtocol nc
 
-    let tracers     = mkTracers (ccTraceOptions cc) trace
+    let tracers     = mkTracers (traceOpts nCli) trace
 
-    case ccViewMode cc of
-      SimpleView -> handleSimpleNode p trace tracers cc nc
+    case ncViewMode nc of
+      SimpleView -> handleSimpleNode p trace tracers nCli nc
       LiveView   -> do
 #ifdef UNIX
         let c = llConfiguration loggingLayer
@@ -116,18 +118,18 @@ runNode loggingLayer cc = do
         -- turn off logging to the console, only forward it through a pipe to a central logging process
         CM.setDefaultBackends c [TraceForwarderBK, UserDefinedBK "LiveViewBackend"]
         -- User will see a terminal graphics and will be able to interact with it.
-        nodeThread <- Async.async $ handleSimpleNode p trace tracers cc nc
+        nodeThread <- Async.async $ handleSimpleNode p trace tracers nCli nc
 
         be :: LiveViewBackend Text <- realize c
         let lvbe = MkBackend { bEffectuate = effectuate be, bUnrealize = unrealize be }
         llAddBackend loggingLayer lvbe (UserDefinedBK "LiveViewBackend")
-        setTopology be $ ccTopologyInfo cc
+        setTopology be (ncNodeId nc)
         setNodeThread be nodeThread
         captureCounters be trace
 
         void $ Async.waitAny [nodeThread]
 #else
-        handleSimpleNode p trace tracers nc
+        handleSimpleNode p trace tracers nCli nc
 #endif
   where
     hostname = do
@@ -141,12 +143,12 @@ handleSimpleNode :: forall blk. RunNode blk
                  => Consensus.Protocol blk
                  -> Tracer IO (LogObject Text)
                  -> Tracers Peer blk
-                 -> CardanoConfiguration
+                 -> NodeCLI
                  -> NodeConfiguration
                  -> IO ()
-handleSimpleNode p trace nodeTracers cc nc = do
+handleSimpleNode p trace nodeTracers nCli nc = do
     NetworkTopology nodeSetups <-
-      either error id <$> readTopologyFile (topologyFile $ ccTopologyInfo cc)
+      either error id <$> readTopologyFile (unTopology . topFile $ mscFp nCli)
 
     let pInfo@ProtocolInfo{ pInfoConfig = cfg } =
           protocolInfo (NumCoreNodes (length nodeSetups)) (CoreNodeId nid) p
@@ -172,7 +174,10 @@ handleSimpleNode p trace nodeTracers cc nc = do
       ]
 
     -- Socket directory
-    myLocalAddr <- localSocketAddrInfo (node $ ccTopologyInfo cc) (ccSocketDir cc) MkdirIfMissing
+    myLocalAddr <- localSocketAddrInfo
+                     (ncNodeId nc)
+                     (unSocket . socketFile $ mscFp nCli)
+                     MkdirIfMissing
 
     addrs <- nodeAddressInfo $ ncNodeAddress nc
     let ipProducerAddrs  :: [NodeAddress]
@@ -212,9 +217,9 @@ handleSimpleNode p trace nodeTracers cc nc = do
           , dstValency = raValency ra
           }
 
-    removeStaleLocalSocket (node $ ccTopologyInfo cc) (ccSocketDir cc)
+    removeStaleLocalSocket (ncNodeId nc) (unSocket . socketFile $ mscFp nCli)
 
-    dbPath <- canonicalizePath =<< makeAbsolute (ccDBPath cc)
+    dbPath <- canonicalizePath =<< makeAbsolute (unDB . dBFile $ mscFp nCli)
 
     varTip <- atomically $ newTVar GenesisPoint
 
@@ -234,6 +239,6 @@ handleSimpleNode p trace nodeTracers cc nc = do
           atomically $ writeTVar varTip tip
   where
       nid :: Int
-      nid = case node $ ccTopologyInfo cc of
+      nid = case ncNodeId nc of
               CoreId  n -> n
               RelayId _ -> error "Non-core nodes currently not supported"

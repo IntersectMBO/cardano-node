@@ -5,7 +5,6 @@
 
 module Cardano.CLI.Genesis
   ( NewDirectory(..)
-  , GenesisFile(..)
   , GenesisParameters(..)
   , mkGenesis
   , readGenesis
@@ -44,14 +43,11 @@ import qualified Cardano.Crypto as Crypto
 
 import           Cardano.CLI.Key
 import           Cardano.CLI.Ops
+import           Cardano.Config.Types (GenesisFile(..))
 
 
 newtype NewDirectory =
   NewDirectory FilePath
-  deriving (Eq, Ord, Show, IsString)
-
-newtype GenesisFile =
-  GenesisFile FilePath
   deriving (Eq, Ord, Show, IsString)
 
 -- | Parameters required for generation of new genesis.
@@ -64,7 +60,7 @@ data GenesisParameters = GenesisParameters
   , gpFakeAvvmOptions :: !Genesis.FakeAvvmOptions
   , gpAvvmBalanceFactor :: !Common.LovelacePortion
   , gpSeed :: !(Maybe Integer)
-  }
+  } deriving Show
 
 mkGenesisSpec :: GenesisParameters -> ExceptT CliError IO Genesis.GenesisSpec
 mkGenesisSpec gp = do

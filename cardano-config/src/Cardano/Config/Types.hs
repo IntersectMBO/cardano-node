@@ -1,12 +1,22 @@
+{-# LANGUAGE GeneralisedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 
 module Cardano.Config.Types
-    ( ConfigError(..)
+    ( ConfigError (..)
+    , ConfigYamlFilePath (..)
     , CardanoConfiguration (..)
     , CardanoEnvironment (..)
     , Core (..)
+    , DbFile (..)
+    , DelegationCertFile (..)
+    , GenesisFile (..)
+    , MiscellaneousFilepaths (..)
+    , NodeCLI (..)
     , NodeConfiguration (..)
+    , SigningKeyFile (..)
+    , SocketFile (..)
+    , TopologyFile( ..)
     -- * specific for @Core@
     , RequireNetworkMagic (..)
     , NodeProtocol (..)
@@ -113,6 +123,51 @@ data CardanoConfiguration = CardanoConfiguration
     , ccWallet              :: !Wallet
     } deriving (Eq, Show)
 
+data NodeCLI = NodeCLI
+    { mscFp :: !MiscellaneousFilepaths
+    , configFp :: !ConfigYamlFilePath
+    , traceOpts :: !TraceOptions
+    } deriving Show
+
+-- | Filepath of the configuration yaml file. This file determines
+-- all the configuration settings required for the cardano node
+-- (logging, tracing, protocol, slot length etc)
+newtype ConfigYamlFilePath = ConfigYamlFilePath
+  { unConfigPath :: FilePath }
+  deriving Show
+
+data MiscellaneousFilepaths = MiscellaneousFilepaths
+  { topFile :: !TopologyFile
+  , dBFile :: !DbFile
+  , genesisFile :: !GenesisFile
+  , delegCertFile :: !(Maybe DelegationCertFile)
+  , signKeyFile :: !(Maybe SigningKeyFile)
+  , socketFile :: !SocketFile
+  } deriving Show
+
+newtype TopologyFile = TopologyFile
+  { unTopology :: FilePath }
+  deriving Show
+
+newtype DbFile = DbFile
+  { unDB :: FilePath }
+  deriving Show
+
+newtype GenesisFile = GenesisFile
+  { unGenesisFile :: FilePath }
+  deriving (Eq, Ord, Show, IsString)
+
+newtype DelegationCertFile = DelegationCertFile
+  { unDelegationCert :: FilePath }
+  deriving Show
+
+newtype SocketFile = SocketFile
+  { unSocket :: FilePath }
+  deriving Show
+
+newtype SigningKeyFile = SigningKeyFile
+  { unSigningKey ::  FilePath }
+  deriving (Eq, Ord, Show, IsString)
 
 data NodeConfiguration =
     NodeConfiguration
@@ -121,8 +176,11 @@ data NodeConfiguration =
       , ncNodeAddress :: NodeAddress
       , ncGenesisHash :: Text
       , ncNumCoreNodes :: Maybe Int
-      , ncReqNetworkMagc :: RequiresNetworkMagic
+      , ncReqNetworkMagic :: RequiresNetworkMagic
       , ncPbftSignatureThresh :: Maybe Double
+      , ncLoggingSwitch :: Bool
+      , ncLogMetrics :: Bool
+      , ncViewMode :: ViewMode
       , ncNTP :: NTP
       , ncUpdate :: Update
       , ncTXP :: TXP
@@ -143,6 +201,9 @@ instance FromJSON NodeConfiguration where
                   numCoreNode <- v .:? "NumCoreNodes"
                   rNetworkMagic <- v .: "RequiresNetworkMagic"
                   pbftSignatureThresh <- v .:? "PBftSignatureThreshold"
+                  loggingSwitch <- v .: "TurnOnLogging"
+                  vMode <- v .: "ViewMode"
+                  logMetrics <- v .: "TurnOnLogMetrics"
 
                   -- Network Time Parameters
                   respTimeout <- v .: "ResponseTimeout"
@@ -204,6 +265,9 @@ instance FromJSON NodeConfiguration where
                            numCoreNode
                            rNetworkMagic
                            pbftSignatureThresh
+                           loggingSwitch
+                           logMetrics
+                           vMode
                            (NTP respTimeout pollDelay servers)
                            (Update appName appVersion (LastKnownBlockVersion
                                                          lkBlkVersionMajor
@@ -481,6 +545,16 @@ data Certificate = Certificate
 data ViewMode = LiveView    -- Live mode with TUI
               | SimpleView  -- Simple mode, just output text.
               deriving (Eq, Show)
+
+instance FromJSON ViewMode where
+  parseJSON (String str) = case str of
+                            "LiveView" -> pure LiveView
+                            "SimpleView" -> pure SimpleView
+                            view -> panic $ "Parsing of ViewMode: "
+                                          <> view <> " failed. "
+                                          <> view <> " is not a valid view mode"
+  parseJSON invalid  = panic $ "Parsing of ViewMode failed due to type mismatch. "
+                             <> "Encountered: " <> (T.pack $ Prelude.show invalid)
 
 -- | Wallet rate-limiting/throttling parameters
 data Wallet = Wallet

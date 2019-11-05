@@ -2,7 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Cardano.Wallet.Run
-  ( CLI(..)
+  ( WalletCLI(..)
   , runClient
   ) where
 
@@ -19,22 +19,25 @@ import           Ouroboros.Consensus.Node.ProtocolInfo.Abstract (NumCoreNodes (.
 import           Ouroboros.Consensus.NodeId (CoreNodeId (..))
 
 import           Cardano.Config.CommonCLI
-import           Cardano.Config.Types (CardanoConfiguration (..))
+import           Cardano.Config.Types (ConfigYamlFilePath(..), MiscellaneousFilepaths(..),
+                                       NodeCLI(..), SocketFile(..), parseNodeConfiguration)
 import           Cardano.Wallet.Client
 
-runClient :: CLI -> Trace IO Text -> CardanoConfiguration -> IO ()
-runClient CLI{..} tracer cc = do
+runClient :: WalletCLI -> Trace IO Text -> IO ()
+runClient WalletCLI{..} tracer = do
     let CoreNodeId nid = cliCoreNodeId
     let tracer' = contramap pack . toLogObject $
           appendName ("Wallet " <> pack (show nid)) tracer
+    nc <- parseNodeConfiguration . unConfigPath $ configFp cliNodeCLI
+    SomeProtocol p <- fromProtocol nc cliNodeCLI cliProtocol
+    let socketDir = unSocket . socketFile $ mscFp cliNodeCLI
+    runWalletClient p socketDir cliCoreNodeId cliNumCoreNodes tracer'
 
-    SomeProtocol p <- fromProtocol cc cliProtocol
-    runWalletClient p (ccSocketDir cc) cliCoreNodeId cliNumCoreNodes tracer'
-
-data CLI = CLI {
+data WalletCLI = WalletCLI {
     cliCoreNodeId   :: CoreNodeId,
     cliNumCoreNodes :: NumCoreNodes,
     cliProtocol     :: Protocol,
     cliCommon       :: CommonCLI,
-    cliCommonAdv    :: CommonCLIAdvanced
+    cliCommonAdv    :: CommonCLIAdvanced,
+    cliNodeCLI      :: NodeCLI
   }
