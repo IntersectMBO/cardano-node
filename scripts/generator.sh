@@ -2,12 +2,7 @@
 
 CMD="cabal new-run -v0 -- cardano-cli "
 
-genesis="c0c75"
-genesis_root="configuration/${genesis}"
-genesis_file="${genesis_root}/genesis.json"
-if test ! -f "${genesis_file}"
-then echo "ERROR: genesis ${genesis_file} does not exist!">&1; exit 1; fi
-genesis_hash="c0c757817d86660accdc45b9d18c1274d51d6427b92995944d014e0ff056cb3e"
+. $(dirname $0)/lib-node.sh
 
 NOW=`date "+%Y-%m-%d 00:00:00"`
 NETARGS=(
