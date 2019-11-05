@@ -46,7 +46,6 @@ import qualified Ouroboros.Consensus.Ledger.Byron as Byron
 import           Ouroboros.Consensus.Ledger.Byron (GenTx(..), ByronBlockOrEBB)
 import           Ouroboros.Consensus.Ledger.Byron.Config (ByronConfig)
 import qualified Ouroboros.Consensus.Protocol as Consensus
-import           Ouroboros.Consensus.Mempool.API (txId)
 import           Ouroboros.Consensus.Node.Run (RunNode)
 
 import           Cardano.CLI.Ops
@@ -177,10 +176,13 @@ issueGenesisUTxOExpenditure
 issueGenesisUTxOExpenditure genRichAddr outs cc sk = do
   withRealPBFT cc $
     \(Consensus.ProtocolRealPBFT gc _ _ _ _)-> do
-      let tx = txSpendGenesisUTxOByronPBFT gc sk genRichAddr outs
-      putStrLn $ "genesis protocol magic:  " <> show (configProtocolMagicId gc)
-      putStrLn $ "transaction hash (TxId): " <> show (txId tx)
-      pure tx
+      case txSpendGenesisUTxOByronPBFT gc sk genRichAddr outs of
+        tx@(ByronTx txid _) -> do
+          putStrLn $ sformat ("TxId: "%Crypto.hashHexF) txid
+          pure tx
+        x ->
+          throwIO $ InvariantViolation $
+          "Invariant violation:  a non-ByronTx GenTx out of 'txSpendUTxOByronPBFT': " <> show x
 
 -- | Generate a transaction from given Tx inputs to outputs,
 --   signed by the given key.
@@ -211,10 +213,13 @@ issueUTxOExpenditure
 issueUTxOExpenditure ins outs cc key = do
   withRealPBFT cc $
     \(Consensus.ProtocolRealPBFT gc _ _ _ _)-> do
-      let tx = txSpendUTxOByronPBFT gc key ins outs
-      putStrLn $ "genesis protocol magic:  " <> show (configProtocolMagicId gc)
-      putStrLn $ "transaction hash (TxId): " <> show (txId tx)
-      pure tx
+      case txSpendUTxOByronPBFT gc key ins outs of
+        tx@(ByronTx txid _) -> do
+          putStrLn $ sformat ("TxId: "%Crypto.hashHexF) txid
+          pure tx
+        x ->
+          throwIO $ InvariantViolation $
+          "Invariant violation:  a non-ByronTx GenTx out of 'txSpendUTxOByronPBFT': " <> show x
 
 -- | Submit a transaction to a node specified by topology info.
 nodeSubmitTx
@@ -222,8 +227,10 @@ nodeSubmitTx
   -> CardanoConfiguration
   -> GenTx (ByronBlockOrEBB ByronConfig)
   -> IO ()
-nodeSubmitTx topology cc tx =
+nodeSubmitTx topology cc gentx =
   withRealPBFT cc $
-    \p@Consensus.ProtocolRealPBFT{} -> do
-      putStrLn $ "transaction hash (TxId): " <> show (txId tx)
-      handleTxSubmission cc p topology tx stdoutTracer
+  \p@Consensus.ProtocolRealPBFT{} -> do
+    case gentx of
+      ByronTx txid _ -> putStrLn $ sformat ("TxId: "%Crypto.hashHexF) txid
+      _ -> pure ()
+    handleTxSubmission cc p topology gentx stdoutTracer
