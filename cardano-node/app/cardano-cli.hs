@@ -373,9 +373,9 @@ parseTestnetBalanceOptions =
     <*> parseLovelacePortion
           "delegate-share"
           "Portion of stake owned by all delegates together."
-    <*> parseFlag
-          "use-hd-addresses"
-          "Whether generate plain addresses or with hd payload."
+    <*> pure False -- no longer allow HD addresses
+                   -- if this works ok, support will be
+                   -- removed from the ledger library too
 
 parseLovelace :: String -> String -> Parser Lovelace
 parseLovelace optname desc =

@@ -40,7 +40,6 @@ args=(
       --n-delegate-addresses         ${n_delegates}
       --total-balance                ${total_balance}
       --delegate-share               ${delegate_share}
-      --use-hd-addresses
       --avvm-entry-count             ${avvm_entries}
       --avvm-entry-balance           ${avvm_entry_balance}
       --secret-seed                  ${not_so_secret}

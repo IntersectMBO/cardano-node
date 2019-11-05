@@ -92,7 +92,6 @@ let
       --protocol-parameters-file     "${args.protocol_params_file}"
       --secret-seed                   ${toString args.secret_seed}
       --total-balance                 ${toString args.total_balance}
-      --use-hd-addresses
       )
       ${cardano-node}/bin/cardano-cli --real-pbft --log-config ${../../configuration/log-configuration.yaml} genesis "''${args[@]}"
     '';
