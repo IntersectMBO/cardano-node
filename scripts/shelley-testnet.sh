@@ -20,7 +20,6 @@ ALGO="--real-pbft"
 
 # EXTRA=""
 EXTRA="
-  --live-view
   --trace-block-fetch-decisions
   --trace-block-fetch-client
   --trace-block-fetch-server

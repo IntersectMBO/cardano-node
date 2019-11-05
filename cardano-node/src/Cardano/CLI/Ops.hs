@@ -110,7 +110,6 @@ data CliError
   -- the signing key file.
   | InvariantViolation !Prelude.String
 
-
 instance Show CliError where
   show (OutputMustNotAlreadyExist fp)
     = "Output file/directory must not already exist: " <> fp

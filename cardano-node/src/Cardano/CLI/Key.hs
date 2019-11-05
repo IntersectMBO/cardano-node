@@ -10,9 +10,8 @@
 
 module Cardano.CLI.Key
   ( -- * Keys
-    SigningKeyFile(..)
+    VerificationKeyFile(..)
   , NewSigningKeyFile(..)
-  , VerificationKeyFile(..)
   , NewVerificationKeyFile(..)
   , prettyPublicKey
   , readSigningKey
@@ -44,16 +43,13 @@ import           System.IO (hSetEcho, hFlush, stdout, stdin)
 
 import qualified Cardano.Chain.Common as Common
 import           Cardano.Config.Protocol
+import           Cardano.Config.Types (SigningKeyFile(..))
 import           Cardano.Crypto (SigningKey(..))
 import qualified Cardano.Crypto.Random as Crypto
 import qualified Cardano.Crypto.Signing as Crypto
 
 import           Cardano.CLI.Ops
 
-
-newtype SigningKeyFile =
-  SigningKeyFile FilePath
-  deriving (Eq, Ord, Show, IsString)
 
 newtype NewSigningKeyFile =
   NewSigningKeyFile FilePath

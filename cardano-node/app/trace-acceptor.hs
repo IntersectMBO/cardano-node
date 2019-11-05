@@ -2,53 +2,35 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 import           Data.Semigroup ((<>))
-import           Options.Applicative (Parser)
 import qualified Options.Applicative as Opt
 
-import           Cardano.Config.Presets (mainnetConfiguration)
-import           Cardano.Config.Logging (LoggingCLIArguments (..),
-                                                createLoggingFeature
-                                                )
+import           Cardano.Config.Logging (createLoggingFeature)
 import           Cardano.Prelude hiding (option)
 import           Cardano.Shell.Lib (runCardanoApplicationWithFeatures)
 import           Cardano.Shell.Types (CardanoApplication (..))
 
-import           Cardano.Config.CommonCLI
-import           Cardano.Config.Partial
 import           Cardano.Config.Types
-import           Cardano.Common.Parsers
+import           Cardano.Common.Parsers (nodeCliParser)
 import           Cardano.Tracing.TraceAcceptor (runTraceAcceptor)
 
 main :: IO ()
 main = do
-  (,,) commonCLI
-       commonCLIAdv
-       loggingCLI <- Opt.customExecParser pref opts
-  finalConfig <- case mkConfiguration pcc commonCLI commonCLIAdv of
-                   Left err -> throwIO err
-                   Right x -> pure x
+  nCli <- Opt.customExecParser pref opts
   (,) loggingLayer
-      loggingFeature <- createLoggingFeature
-                          env
-                          finalConfig { ccLogConfig = logConfigFile loggingCLI
-                                      , ccLogMetrics = captureMetrics loggingCLI
-                                      }
+      loggingFeature <- createLoggingFeature env nCli
 
   let cardanoApplication =
         CardanoApplication . liftIO $ runTraceAcceptor loggingLayer
 
   runCardanoApplicationWithFeatures [loggingFeature] cardanoApplication
   where
-    pcc :: PartialCardanoConfiguration
-    pcc = mainnetConfiguration
-
     env :: CardanoEnvironment
     env = NoEnvironment
 
     pref :: Opt.ParserPrefs
     pref = Opt.prefs Opt.showHelpOnEmpty
 
-    opts :: Opt.ParserInfo (CommonCLI, CommonCLIAdvanced, LoggingCLIArguments)
+    opts :: Opt.ParserInfo NodeCLI
     opts =
       Opt.info (nodeCliParser <**> Opt.helper)
         ( Opt.fullDesc
@@ -57,9 +39,3 @@ main = do
           \ operations (genesis generation, migration,\
           \ pretty-printing..) for different system generations."
         )
-
-    nodeCliParser :: Parser (CommonCLI, CommonCLIAdvanced, LoggingCLIArguments)
-    nodeCliParser = (,,)
-      <$> parseCommonCLI
-      <*> parseCommonCLIAdvanced
-      <*> loggingParser

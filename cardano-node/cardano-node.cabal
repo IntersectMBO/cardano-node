@@ -265,6 +265,7 @@ executable chairman
                      , async
                      , bytestring
                      , cardano-config
+                     , cardano-prelude
                      , containers
                      , contra-tracer
                      , cardano-node
@@ -279,6 +280,8 @@ executable chairman
                      , text
                      , typed-protocols
                      , typed-protocols-cbor
+
+  default-extensions:   NoImplicitPrelude
 
   if os(windows)
      build-depends:    Win32

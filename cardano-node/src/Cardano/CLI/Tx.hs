@@ -52,7 +52,7 @@ import           Cardano.CLI.Ops
 import           Cardano.CLI.Tx.Submission
 import           Cardano.Common.Orphans ()
 import           Cardano.Config.Protocol
-import           Cardano.Config.Types (CardanoConfiguration(..))
+import           Cardano.Config.Types (NodeCLI, NodeConfiguration(..))
 import           Cardano.Config.Topology
 
 
@@ -133,16 +133,17 @@ genesisUTxOTxIn gc vk genAddr =
 -- | Perform an action that expects ProtocolInfo for Byron/PBFT,
 --   with attendant configuration.
 withRealPBFT
-  :: CardanoConfiguration
+  :: NodeConfiguration
+  -> NodeCLI
   -> (RunNode (ByronBlockOrEBB ByronConfig)
       => Consensus.Protocol (ByronBlockOrEBB ByronConfig)
       -> IO a)
   -> IO a
-withRealPBFT cc action = do
-  SomeProtocol p <- fromProtocol cc (ccProtocol cc)
+withRealPBFT nc nCli action = do
+  SomeProtocol p <- fromProtocol nc nCli $ ncProtocol nc
   case p of
     proto@Consensus.ProtocolRealPBFT{} -> action proto
-    _ -> throwIO $ ProtocolNotSupported (ccProtocol cc)
+    _ -> throwIO $ ProtocolNotSupported (ncProtocol nc)
 
 -- | Generate a transaction spending genesis UTxO at a given address,
 --   to given outputs, signed by the given key.
@@ -170,11 +171,12 @@ txSpendGenesisUTxOByronPBFT gc sk genAddr outs =
 issueGenesisUTxOExpenditure
   :: Address
   -> NonEmpty TxOut
-  -> CardanoConfiguration
+  -> NodeConfiguration
+  -> NodeCLI
   -> Crypto.SigningKey
   -> IO (GenTx (ByronBlockOrEBB ByronConfig))
-issueGenesisUTxOExpenditure genRichAddr outs cc sk = do
-  withRealPBFT cc $
+issueGenesisUTxOExpenditure genRichAddr outs nc nCli sk = do
+  withRealPBFT nc nCli $
     \(Consensus.ProtocolRealPBFT gc _ _ _ _)-> do
       case txSpendGenesisUTxOByronPBFT gc sk genRichAddr outs of
         tx@(ByronTx txid _) -> do
@@ -207,11 +209,12 @@ txSpendUTxOByronPBFT gc sk ins outs =
 issueUTxOExpenditure
   :: NonEmpty TxIn
   -> NonEmpty TxOut
-  -> CardanoConfiguration
+  -> NodeConfiguration
+  -> NodeCLI
   -> Crypto.SigningKey
   -> IO (GenTx (ByronBlockOrEBB ByronConfig))
-issueUTxOExpenditure ins outs cc key = do
-  withRealPBFT cc $
+issueUTxOExpenditure ins outs nc nCli key = do
+  withRealPBFT nc nCli $
     \(Consensus.ProtocolRealPBFT gc _ _ _ _)-> do
       case txSpendUTxOByronPBFT gc key ins outs of
         tx@(ByronTx txid _) -> do
@@ -224,13 +227,14 @@ issueUTxOExpenditure ins outs cc key = do
 -- | Submit a transaction to a node specified by topology info.
 nodeSubmitTx
   :: TopologyInfo
-  -> CardanoConfiguration
+  -> NodeConfiguration
+  -> NodeCLI
   -> GenTx (ByronBlockOrEBB ByronConfig)
   -> IO ()
-nodeSubmitTx topology cc gentx =
-  withRealPBFT cc $
+nodeSubmitTx topology nc nCli gentx =
+  withRealPBFT nc nCli $
   \p@Consensus.ProtocolRealPBFT{} -> do
     case gentx of
       ByronTx txid _ -> putStrLn $ sformat ("TxId: "%Crypto.hashHexF) txid
       _ -> pure ()
-    handleTxSubmission cc p topology gentx stdoutTracer
+    handleTxSubmission nCli p topology gentx stdoutTracer
