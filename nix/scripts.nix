@@ -27,6 +27,7 @@ let
       proxyPort = 7777;
       proxyHost = "127.0.0.1";
       loggingConfig = ../configuration/log-configuration.yaml;
+      loggingExtras = null;
     };
     config = defaultConfig // envConfig // customConfig;
     topologyFile = let
@@ -51,6 +52,7 @@ let
       runtimeDir = null;
       dbPrefix = "db-${envConfig.name}";
       logger.configFile = config.loggingConfig;
+      logger.extras = config.loggingExtras;
       topology = topologyFile;
     };
     nodeConf = { config.services.cardano-node = serviceConfig; };
