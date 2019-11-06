@@ -133,7 +133,7 @@ loggingCLIConfiguration mfp captureMetrics' =
       Nothing ->
         fmap (LoggingDisabled,) $ LoggingConfiguration <$> Config.empty <*> pure captureMetrics'
       Just fp -> do
-        fmap (LoggingDisabled,) $ LoggingConfiguration <$> readConfig fp <*> pure captureMetrics'
+        fmap (LoggingEnabled,) $ LoggingConfiguration <$> readConfig fp <*> pure captureMetrics'
   where
     readConfig :: FilePath -> IO Configuration
     readConfig fp =
