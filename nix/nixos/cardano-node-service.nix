@@ -24,6 +24,7 @@ let
           "${lib.optionalString (cfg.pbftThreshold != null) "--pbft-signature-threshold ${cfg.pbftThreshold}"}"
           "${lib.optionalString (cfg.signingKey != null) "--signing-key ${cfg.signingKey}"}"
           "${lib.optionalString (cfg.delegationCertificate != null) "--delegation-certificate ${cfg.delegationCertificate}"}"
+          "${lib.optionalString (cfg.logger.extras != null) "${cfg.logger.extras}"}"
         ];
     in ''
         echo "Starting ${exec}: '' + concatStringsSep "\"\n   echo \"" cmd + ''"
@@ -188,6 +189,13 @@ in {
         default = ../../configuration/log-configuration.yaml;
         description = ''
           Logger configuration file
+        '';
+      };
+      logger.extras = mkOption {
+        type = types.nullOr types.str;
+        default = null;
+        description = ''
+          Logging extra arguments
         '';
       };
     };
