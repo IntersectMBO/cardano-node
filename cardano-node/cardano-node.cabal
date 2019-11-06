@@ -67,6 +67,7 @@ library
                      , file-embed
                      , filepath
                      , formatting
+                     , hostname
                      , io-sim-classes
                      , iohk-monitoring
                      , iproute

@@ -20,7 +20,7 @@ module Cardano.Node.Run
   )
 where
 
-import           Cardano.Prelude hiding (ByteString, atomically, trace)
+import           Cardano.Prelude hiding (ByteString, atomically, take, trace)
 import           Prelude (error, id, unlines)
 
 import qualified Control.Concurrent.Async as Async
@@ -31,8 +31,9 @@ import           Data.Functor.Contravariant (contramap)
 import qualified Data.List as List
 import           Data.Proxy (Proxy (..))
 import           Data.Semigroup ((<>))
-import           Data.Text (Text, pack)
+import           Data.Text (Text, breakOn, pack, take)
 import           Network.Socket as Socket
+import           Network.HostName (getHostName)
 import           System.Directory (canonicalizePath, makeAbsolute)
 
 import           Control.Monad.Class.MonadSTM
@@ -90,7 +91,8 @@ runNode
   -> CardanoConfiguration
   -> IO ()
 runNode loggingLayer cc = do
-    let !trace = setHostname (pack $ show $ node $ ccTopologyInfo cc) $
+    hn <- hostname
+    let !trace = setHostname hn $
                  llAppendName loggingLayer "node" (llBasicTrace loggingLayer)
     let tracer = contramap pack $ toLogObject trace
 
@@ -125,6 +127,10 @@ runNode loggingLayer cc = do
 #else
         handleSimpleNode p trace tracers cc
 #endif
+  where
+    hostname = do
+      hn0 <- pack <$> getHostName
+      return $ take 8 $ fst $ breakOn "." hn0
 
 -- | Sets up a simple node, which will run the chain sync protocol and block
 -- fetch protocol, and, if core, will also look at the mempool when trying to
