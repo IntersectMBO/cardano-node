@@ -303,8 +303,7 @@ parseTxRelatedValues =
         "submit-tx"
         "Submit a raw, signed transaction, in its on-wire representation."
         $ SubmitTx
-            <$> parseTopologyInfo "PBFT node ID to submit Tx to."
-            <*> parseTxFile "tx"
+            <$> parseTxFile "tx"
             <*> nodeCliParser
     , command'
         "issue-genesis-utxo-expenditure"
@@ -335,9 +334,7 @@ parseTxRelatedValues =
         "generate-txs"
         "Launch transactions generator."
         $ GenerateTxs
-            <$> parseTopologyInfo
-                  "PBFT node ID to submit generated Txs to."
-            <*> parseNumberOfTxs
+            <$> parseNumberOfTxs
                   "num-of-txs"
                   "Number of transactions generator will create."
             <*> parseNumberOfInputsPerTx
