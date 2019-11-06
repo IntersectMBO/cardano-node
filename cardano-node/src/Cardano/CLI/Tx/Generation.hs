@@ -67,11 +67,12 @@ import           Cardano.Config.Logging (LoggingLayer (..), Trace)
 import           Cardano.Config.Types (CardanoConfiguration(..))
 import qualified Cardano.Crypto as Crypto
 import           Cardano.Config.Topology (NetworkTopology (..),
-                                                      NodeAddress (..),
-                                                      TopologyError(..),
-                                                      TopologyInfo (..),
-                                                      createNodeAddress,
-                                                      readTopologyFile)
+                                          NodeAddress (..),
+                                          NodeHostAddress(..),
+                                          TopologyError(..),
+                                          TopologyInfo (..),
+                                          createNodeAddress,
+                                          readTopologyFile)
 import           Cardano.CLI.Tx (txSpendGenesisUTxOByronPBFT)
 import           Cardano.CLI.Tx.BenchmarkingTxSubmission (ROEnv (..),
                                                           TraceBenchTxSubmit (..),
@@ -743,7 +744,7 @@ runBenchmark benchTracer
       localAddr = Nothing
 
   let (anAddrFamily, targetNodeHost) =
-        case naHostAddress targetNodeAddress of
+        case getAddress $ naHostAddress targetNodeAddress of
           Just (IP.IPv4 ipv4) -> (AF_INET,  show ipv4)
           Just (IP.IPv6 ipv6) -> (AF_INET6, show ipv6)
           Nothing -> panic "Target node's IP-address is undefined!"

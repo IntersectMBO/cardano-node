@@ -8,7 +8,6 @@
 import           Cardano.Prelude hiding (option)
 import           Prelude (String, read)
 
-import qualified Data.IP as IP
 import           Data.Semigroup ((<>))
 import           Network.Socket (PortNumber)
 import           Options.Applicative ( Parser, auto, flag, help, long
@@ -30,7 +29,7 @@ import           Cardano.Config.Partial (PartialCardanoConfiguration (..),
                                          mkCardanoConfiguration)
 import           Cardano.Config.Presets (mainnetConfiguration)
 import           Cardano.Config.Types (CardanoEnvironment (..), RequireNetworkMagic)
-import           Cardano.Config.Topology (NodeAddress (..), TopologyInfo)
+import           Cardano.Config.Topology (NodeAddress (..), NodeHostAddress(..), TopologyInfo)
 import           Cardano.Node.Features.Node
 import           Cardano.Node.Run
 import           Cardano.Tracing.Tracers
@@ -211,13 +210,13 @@ cliTracingParser = Last . Just <$> parseTraceOptions Opt.hidden
 parseNodeAddress :: Parser NodeAddress
 parseNodeAddress = NodeAddress <$> parseHostAddr <*> parsePort
 
-parseHostAddr :: Parser (Maybe IP.IP)
+parseHostAddr :: Parser NodeHostAddress
 parseHostAddr =
-    option (Just <$> read <$> str) (
+    option (NodeHostAddress . Just <$> read <$> str) (
           long "host-addr"
        <> metavar "HOST-NAME"
        <> help "Optionally limit node to one ipv6 or ipv4 address"
-       <> value Nothing
+       <> (value $ NodeHostAddress Nothing)
     )
 
 parsePort :: Parser PortNumber

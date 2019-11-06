@@ -31,7 +31,6 @@ library
                        Cardano.Common.LocalSocket
                        Cardano.Common.Orphans
                        Cardano.Common.Parsers
-                       Cardano.Node.Configuration.Conversion
                        Cardano.Node.Features.Node
                        Cardano.Node.Run
                        Cardano.Node.TUI.GitRev
@@ -93,6 +92,7 @@ library
                      , typed-protocols-cbor
                      , utf8-string
                      , vector
+                     , yaml
 
   default-language:    Haskell2010
   default-extensions:  NoImplicitPrelude

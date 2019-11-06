@@ -41,9 +41,11 @@
           (hsPkgs.ouroboros-network)
           (hsPkgs.iproute)
           (hsPkgs.safe-exceptions)
+          (hsPkgs.scientific)
           (hsPkgs.string-conv)
           (hsPkgs.stm)
           (hsPkgs.text)
+          (hsPkgs.yaml)
           ];
         };
       };
