@@ -20,6 +20,12 @@ exec cabal new-run exe:chairman -- --real-pbft \
                                 -t 1000 \
                                 --genesis-file "${genesis_file}" \
                                 --genesis-hash "${genesis_hash}" \
+                                --socket-dir "./socket/" \
                                 --pbft-signature-threshold 0.7 \
                                 --require-network-magic \
-                                --database-path "db"
+                                --database-path "db" \
+                                --topology configuration/simple-topology.json \
+                                --database-path ./db/ \
+                                --genesis-file ${genesis_file} \
+                                --socket-dir "./socket/" \
+                                --config-yaml "configuration/log-config-0.yaml"

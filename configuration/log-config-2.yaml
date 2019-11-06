@@ -92,8 +92,6 @@ options:
       - kind: UserDefinedBK
         name: LiveViewBackend
 
-
-
 ##########################################################
 ############### Cardano Node Configuration ###############
 ##########################################################
@@ -103,7 +101,7 @@ NodeId: 2
 NodeHostAddress: ''
 NodePort: 3002
 Protocol: RealPBFT
-GenesisHash: b010944818186e0f1e4094d41b0612240f61908a5a262080c0be5d63ebd4766b
+GenesisHash: c0c757817d86660accdc45b9d18c1274d51d6427b92995944d014e0ff056cb3e
 NumCoreNodes: 1
 RequiresNetworkMagic: RequiresMagic
 PBftSignatureThreshold: 0.7

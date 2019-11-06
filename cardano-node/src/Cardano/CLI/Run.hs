@@ -79,10 +79,12 @@ import           Cardano.CLI.Tx.Generation (NumberOfTxs (..),
 import           Cardano.Common.Orphans ()
 import           Cardano.Config.Protocol
 import           Cardano.Config.Types (CardanoConfiguration(..), ConfigYamlFilePath(..),
-                                       GenesisFile(..), NodeCLI(..), NodeConfiguration(..),
-                                       SigningKeyFile(..), parseNodeConfiguration)
+                                       GenesisFile(..), MiscellaneousFilepaths(..),
+                                       NodeCLI(..), NodeConfiguration(..),
+                                       SigningKeyFile(..), TopologyFile(..),
+                                       parseNodeConfiguration)
 import           Cardano.Config.Logging (LoggingLayer (..))
-import           Cardano.Config.Topology (TopologyInfo)
+import           Cardano.Config.Topology (TopologyInfo(..))
 
 -- | Sub-commands of 'cardano-cli'.
 data ClientCommand
@@ -131,7 +133,6 @@ data ClientCommand
     -----------------------------------
 
   | SubmitTx
-    TopologyInfo
     TxFile
     NodeCLI
     -- ^ Filepath of transaction to submit.
@@ -159,7 +160,6 @@ data ClientCommand
     --- Tx Generator Command ----------
 
   | GenerateTxs
-    TopologyInfo
     NumberOfTxs
     NumberOfInputsPerTx
     NumberOfOutputsPerTx
@@ -225,10 +225,11 @@ runCommand _ _(CheckDelegation magic cert issuerVF delegateVF) = do
   delegateVK <- readVerificationKey delegateVF
   liftIO $ checkByronGenesisDelegation cert magic issuerVK delegateVK
 
-runCommand _ _(SubmitTx topology fp nCli) = do
+runCommand _ _(SubmitTx fp nCli) = do
   nc <- liftIO . parseNodeConfiguration . unConfigPath $ configFp nCli
+  let topologyFp = unTopology . topFile $ mscFp nCli
   tx <- liftIO $ readByronTx fp
-  liftIO $ nodeSubmitTx topology nc nCli tx
+  liftIO $ nodeSubmitTx (TopologyInfo (ncNodeId nc) topologyFp) nc nCli tx
 
 runCommand _ _(SpendGenesisUTxO (NewTxFile ctTx) ctKey genRichAddr outs nCli) = do
   nc <- liftIO . parseNodeConfiguration . unConfigPath $ configFp nCli
@@ -243,8 +244,7 @@ runCommand _ _ (SpendUTxO (NewTxFile ctTx) ctKey ins outs nCli) = do
   liftIO . ensureNewFileLBS ctTx $ serialise gTx
 
 runCommand _ loggingLayer
-           (GenerateTxs topology
-                        numOfTxs
+           (GenerateTxs numOfTxs
                         numOfInsPerTx
                         numOfOutsPerTx
                         feePerTx
@@ -253,13 +253,15 @@ runCommand _ loggingLayer
                         sigKeysFiles
                         nCli) = do
   nc <- liftIO . parseNodeConfiguration . unConfigPath $ configFp nCli
+
   liftIO $ withRealPBFT nc nCli $
     \protocol@(Consensus.ProtocolRealPBFT _ _ _ _ _) -> do
+      let topologyFp = unTopology . topFile $ mscFp nCli
       res <- runExceptT $ genesisBenchmarkRunner
                             loggingLayer
                             nCli
                             protocol
-                            topology
+                            (TopologyInfo (ncNodeId nc) topologyFp)
                             numOfTxs
                             numOfInsPerTx
                             numOfOutsPerTx
