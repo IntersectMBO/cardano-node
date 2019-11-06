@@ -50,11 +50,13 @@ import           Cardano.BM.Plugin (loadPlugin)
 import           Cardano.BM.Setup (setupTrace_, shutdown)
 import           Cardano.BM.Trace (Trace, appendName, traceNamedObject)
 import qualified Cardano.BM.Trace as Trace
-import           Cardano.Shell.Lib (GeneralException (..), doesFileExist)
+import           Cardano.Shell.Lib (GeneralException (..))
 import           Cardano.Shell.Types ( CardanoFeature (..),
                      CardanoFeatureInit (..), NoDependency (..))
 
 import           Cardano.Config.Types (CardanoConfiguration(..), CardanoEnvironment)
+
+import           Control.Exception (IOException, catch)
 
 --------------------------------------------------------------------------------
 -- Loggging feature
@@ -126,17 +128,18 @@ data LoggingFlag = LoggingEnabled | LoggingDisabled
 --   - a designation of whether logging was disabled,
 --   - a valid 'LoggingConfiguration' (still necessary, even if logging was disabled)
 loggingCLIConfiguration :: Maybe FilePath -> Bool -> IO (LoggingFlag, LoggingConfiguration)
-loggingCLIConfiguration Nothing captureMetrics' = do
-  emptyConfig <- Config.empty
-  pure (LoggingDisabled, LoggingConfiguration emptyConfig captureMetrics')
-loggingCLIConfiguration (Just fp) captureMetrics' = do
-
-  whenM (not <$> doesFileExist fp) $ do
-    putTextLn "Cannot find the logging configuration file at location."
-    throwIO $ FileNotFoundException fp
-
-  config <- Config.setup fp
-  pure (LoggingEnabled, LoggingConfiguration config captureMetrics')
+loggingCLIConfiguration mfp captureMetrics' =
+    case mfp of
+      Nothing ->
+        fmap (LoggingDisabled,) $ LoggingConfiguration <$> Config.empty <*> pure captureMetrics'
+      Just fp -> do
+        fmap (LoggingDisabled,) $ LoggingConfiguration <$> readConfig fp <*> pure captureMetrics'
+  where
+    readConfig :: FilePath -> IO Configuration
+    readConfig fp =
+      catch (Config.setup fp) $ \(_ :: IOException) -> do
+        putTextLn "Cannot find the logging configuration file at location."
+        throwIO $ FileNotFoundException fp
 
 createLoggingFeature
   :: CardanoEnvironment -> CardanoConfiguration -> IO (LoggingLayer, CardanoFeature)
