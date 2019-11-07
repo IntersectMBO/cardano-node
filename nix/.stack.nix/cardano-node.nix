@@ -178,6 +178,7 @@
             (hsPkgs.async)
             (hsPkgs.bytestring)
             (hsPkgs.cardano-config)
+            (hsPkgs.cardano-prelude)
             (hsPkgs.containers)
             (hsPkgs.contra-tracer)
             (hsPkgs.cardano-node)
