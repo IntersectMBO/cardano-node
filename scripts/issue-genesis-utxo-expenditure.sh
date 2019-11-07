@@ -2,12 +2,8 @@
 
 RUNNER=${RUNNER:-cabal new-run -v0 --}
 
-genesis="b0109"
-genesis_root="configuration/${genesis}"
-genesis_file="${genesis_root}/genesis.json"
-if test ! -f "${genesis_file}"
-then echo "ERROR: genesis ${genesis_file} does not exist!">&1; exit 1; fi
-genesis_hash="$(${RUNNER} cardano-cli --real-pbft print-genesis-hash --genesis-json ${genesis_file})"
+. $(dirname $0)/lib-node.sh
+
 from_addr="2cWKMJemoBain3UWCzSY5wZvcf8uQ2MAaSy8hedrwpqsbYCm4QnBgPn3cEH7KF3X7DKoZ"
 from_key="${genesis_root}/delegate-keys.000.key"
 default_to_key="${genesis_root}/delegate-keys.001.key"
