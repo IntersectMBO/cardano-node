@@ -19,6 +19,7 @@
         "word-wrap" = (((hackage.word-wrap)."0.4.1").revisions).default;
         "prometheus" = (((hackage.prometheus)."2.1.2").revisions).default;
         "libsystemd-journal" = (((hackage.libsystemd-journal)."1.4.4").revisions).default;
+        "katip" = (((hackage.katip)."0.8.3.0").revisions).default;
         "base58-bytestring" = (((hackage.base58-bytestring)."0.1.0").revisions).default;
         "hedgehog" = (((hackage.hedgehog)."1.0").revisions).default;
         "micro-recursion-schemes" = (((hackage.micro-recursion-schemes)."5.0.2.2").revisions).default;
@@ -50,7 +51,6 @@
         lobemo-backend-monitoring = ./lobemo-backend-monitoring.nix;
         lobemo-scribe-systemd = ./lobemo-scribe-systemd.nix;
         ekg-prometheus-adapter = ./ekg-prometheus-adapter.nix;
-        katip = ./katip.nix;
         cardano-sl-x509 = ./cardano-sl-x509.nix;
         io-sim-classes = ./io-sim-classes.nix;
         network-mux = ./network-mux.nix;

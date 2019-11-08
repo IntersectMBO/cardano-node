@@ -102,7 +102,7 @@ instance IsBackend LiveViewBackend Text where
 instance IsEffectuator LiveViewBackend Text where
     effectuate lvbe item =
         case item of
-            LogObject "cardano.node.metrics" meta content ->
+            LogObject ["cardano","node","metrics"] meta content ->
                 case content of
                     LogValue "Mem.resident" (PureI pages) ->
                         let mbytes = fromIntegral (pages * pagesize) / 1024 / 1024 :: Float
