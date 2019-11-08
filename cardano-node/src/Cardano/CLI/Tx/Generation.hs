@@ -10,7 +10,8 @@
 {-# OPTIONS_GHC -Wno-missed-specialisations #-}
 
 module Cardano.CLI.Tx.Generation
-  ( NumberOfTxs(..)
+  ( TargetNodeId(..)
+  , NumberOfTxs(..)
   , NumberOfInputsPerTx(..)
   , NumberOfOutputsPerTx(..)
   , FeePerTx(..)
@@ -39,6 +40,7 @@ import qualified Data.ByteString.Lazy as LB
 import           Data.Either (isLeft)
 import           Data.Foldable (find, foldl', foldr, toList)
 import qualified Data.IP as IP
+import           Data.List ((!!), last)
 import           Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.List.NonEmpty as NE
 import           Data.Maybe (Maybe (..), fromMaybe, listToMaybe, mapMaybe)
@@ -97,6 +99,10 @@ import qualified Ouroboros.Consensus.Ledger.Byron as Byron
 import           Ouroboros.Consensus.Protocol.Abstract (NodeConfig)
 import           Ouroboros.Consensus.Protocol.PBFT (pbftExtConfig)
 
+newtype TargetNodeId =
+  TargetNodeId Int
+  deriving (Eq, Ord, Show)
+
 newtype NumberOfTxs =
   NumberOfTxs Word64
   deriving (Eq, Ord, Show)
@@ -136,6 +142,8 @@ data TxGenError = CurrentlyCannotSendTxToRelayNode FilePath
                 | TargetNodeAddressError TopologyError
                 -- ^ Error occurred while creating the target node address.
                 | TopologyFileReadError String
+                | NeedMinimumOneTargetNodeId [TargetNodeId]
+                -- ^ Need at least 1 target node id.
                 | NeedMinimumThreeSigningKeyFiles [FilePath]
                 -- ^ Need at least 3 signing key files.
                 | SecretKeyDeserialiseError String
@@ -152,6 +160,7 @@ genesisBenchmarkRunner
   -> NodeCLI
   -> Consensus.Protocol ByronBlock
   -> TopologyInfo
+  -> [TargetNodeId]
   -> NumberOfTxs
   -> NumberOfInputsPerTx
   -> NumberOfOutputsPerTx
@@ -164,6 +173,7 @@ genesisBenchmarkRunner loggingLayer
                        nCli
                        protocol@(Consensus.ProtocolRealPBFT genesisConfig _ _ _ _)
                        topologyInfo
+                       targetNodeIds
                        numOfTxs@(NumberOfTxs rawNumOfTxs)
                        numOfInsPerTx
                        numOfOutsPerTx
@@ -174,6 +184,9 @@ genesisBenchmarkRunner loggingLayer
   when (length signingKeyFiles < 3) $
     left $ NeedMinimumThreeSigningKeyFiles signingKeyFiles
 
+  when (null targetNodeIds) $
+    left $ NeedMinimumOneTargetNodeId targetNodeIds
+
   let (benchTracer, connectTracer, submitTracer, lowLevelSubmitTracer) = createTracers loggingLayer
 
   liftIO . traceWith benchTracer . TraceBenchTxSubDebug
@@ -182,12 +195,14 @@ genesisBenchmarkRunner loggingLayer
   liftIO . traceWith benchTracer . TraceBenchTxSubDebug
     $ "******* Tx generator, protocol info and topology are ready *******"
 
-  -- We have to extract host and port of the node we talk
-  -- with (based on value of `-n` CLI argument) from the topology file.
+  -- We have to extract host and port of the nodes we want to talk with
+  -- (based on values of `--target-node-id` CLI argument) from the topology file.
   toplogy <- firstExceptT TopologyFileReadError . newExceptT $
     readTopologyFile (topologyFile topologyInfo)
-  let eitherNodeAddress = createNodeAddress (node topologyInfo) toplogy (topologyFile topologyInfo)
-  targetNodeAddress <- firstExceptT TargetNodeAddressError . hoistEither $ eitherNodeAddress
+  targetNodeAddresses <- forM targetNodeIds $ \(TargetNodeId targetNodeId) -> do
+    let eitherNodeAddress = createNodeAddress (CoreId targetNodeId) topology (topologyFile topologyInfo)
+    targetNodeAddress <- firstExceptT TargetNodeAddressError . hoistEither $ eitherNodeAddress
+    return targetNodeAddress
 
   liftIO . traceWith benchTracer . TraceBenchTxSubDebug
     $ "******* Tx generator, target node's address is ready *******"
@@ -240,7 +255,7 @@ genesisBenchmarkRunner loggingLayer
                  sourceKey
                  recipientAddress
                  topologyInfo
-                 targetNodeAddress
+                 targetNodeAddresses
                  numOfTxs
                  numOfInsPerTx
                  numOfOutsPerTx
@@ -671,7 +686,7 @@ runBenchmark
   -> Crypto.SigningKey
   -> CC.Common.Address
   -> TopologyInfo
-  -> NodeAddress
+  -> [NodeAddress]
   -> NumberOfTxs
   -> NumberOfInputsPerTx
   -> NumberOfOutputsPerTx
@@ -688,7 +703,7 @@ runBenchmark benchTracer
              sourceKey
              recipientAddress
              topologyInfo
-             targetNodeAddress
+             targetNodeAddresses
              numOfTxs
              numOfInsPerTx
              numOfOutsPerTx
@@ -718,23 +733,25 @@ runBenchmark benchTracer
   let localAddr :: Maybe Network.Socket.AddrInfo
       localAddr = Nothing
 
-  let (anAddrFamily, targetNodeHost) =
-        case getAddress $ naHostAddress targetNodeAddress of
-          Just (IP.IPv4 ipv4) -> (AF_INET,  show ipv4)
-          Just (IP.IPv6 ipv6) -> (AF_INET6, show ipv6)
-          Nothing -> panic "Target node's IP-address is undefined!"
+  remoteAddresses <- forM targetNodeAddresses $ \targetNodeAddress -> do
+    let (anAddrFamily, targetNodeHost) =
+          case getAddress $ naHostAddress targetNodeAddress of
+            Just (IP.IPv4 ipv4) -> (AF_INET,  show ipv4)
+            Just (IP.IPv6 ipv6) -> (AF_INET6, show ipv6)
+            Nothing -> panic "Target node's IP-address is undefined!"
 
-  let targetNodePort = show $ naPort targetNodeAddress
+    let targetNodePort = show $ naPort targetNodeAddress
 
-  let hints :: AddrInfo
-      hints = defaultHints
-        { addrFlags      = [AI_PASSIVE]
-        , addrFamily     = anAddrFamily
-        , addrSocketType = Stream
-        , addrCanonName  = Nothing
-        }
-  -- Corresponds to a node 0 (used by default).
-  (remoteAddr:_) <- liftIO $ getAddrInfo (Just hints) (Just targetNodeHost) (Just targetNodePort)
+    let hints :: AddrInfo
+        hints = defaultHints
+          { addrFlags      = [AI_PASSIVE]
+          , addrFamily     = anAddrFamily
+          , addrSocketType = Stream
+          , addrCanonName  = Nothing
+          }
+
+    (remoteAddr:_) <- liftIO $ getAddrInfo (Just hints) (Just targetNodeHost) (Just targetNodePort)
+    return remoteAddr
 
   let updROEnv
         :: ROEnv (Byron.GenTxId ByronBlock) (GenTx ByronBlock)
@@ -751,6 +768,7 @@ runBenchmark benchTracer
               recipientAddress
               sourceKey
               txFee
+              (length targetNodeAddresses)
               numOfTxs
               numOfInsPerTx
               numOfOutsPerTx
@@ -759,16 +777,23 @@ runBenchmark benchTracer
   liftIO . traceWith benchTracer . TraceBenchTxSubDebug
     $ "******* Tx generator, launch submission threads... *******"
 
-  -- Launch tx submission threads.
-  liftIO $ launchTxPeer
-             benchTracer
-             benchmarkTracers
-             txSubmissionTerm
-             pInfoConfig
-             localAddr
-             remoteAddr
-             updROEnv
-             txsForSubmission
+  liftIO $ do
+    txsLists <- STM.atomically $ STM.takeTMVar txsListsForTargetNodes
+    let targetNodesAddrsAndTxsLists = zip remoteAddresses txsLists
+    allAsyncs <- forM targetNodesAddrsAndTxsLists $ \(remoteAddr, txsList) -> do
+      -- Launch connection and submission threads for a peer
+      -- (corresponding to one target node).
+      launchTxPeer benchTracer
+                   benchmarkTracers
+                   txSubmissionTerm
+                   pInfoConfig
+                   localAddr
+                   remoteAddr
+                   updROEnv
+                   txsList
+    let allAsyncs' = intercalate [] [[c, s] | (c, s) <- allAsyncs]
+    -- Just wait for all threads to complete.
+    mapM_ (void . wait) allAsyncs'
 
 -- | At this moment 'sourceAddress' contains a huge amount of money (lets call it A).
 --   Now we have to split this amount to N equal parts, as a result we'll have
@@ -897,6 +922,7 @@ txGenerator
   -> CC.Common.Address
   -> Crypto.SigningKey
   -> FeePerTx
+  -> Int
   -> NumberOfTxs
   -> NumberOfInputsPerTx
   -> NumberOfOutputsPerTx
@@ -907,13 +933,21 @@ txGenerator benchTracer
             recipientAddress
             sourceKey
             (FeePerTx txFee)
+            numOfTargetNodes
             (NumberOfTxs numOfTransactions)
             (NumberOfInputsPerTx numOfInsPerTx)
             (NumberOfOutputsPerTx numOfOutsPerTx)
             txAdditionalSize = do
   liftIO . traceWith benchTracer . TraceBenchTxSubDebug
     $ " Prepare to generate, total number of transactions " ++ show numOfTransactions
-  forM_ [1 .. numOfTransactions] $ \_ -> do
+
+  -- Prepare a number of lists for transactions, for all target nodes.
+  -- Later we'll write generated transactions in these lists,
+  -- and they will be received and submitted by 'bulkSubmission' function.
+  forM_ [1 .. numOfTargetNodes] $ \_ ->
+    liftIO $ addTxsListForTargetNode txsForSubmission
+
+  txs <- forM [1 .. numOfTransactions] $ \_ -> do
     -- TODO: currently we take the first available output, but don't check the 'status'.
     -- Later it should be changed: we have to use outputs from 'Seen' transactions only.
 
@@ -928,12 +962,28 @@ txGenerator benchTracer
                                                                              (Just addressForChange)
                                                                              recipients
                                                                              txAdditionalSize
-    -- Write newly generated tx in the list.
-    -- It will be handled by 'bulkSubmission' function.
-    liftIO $ writeTxInList tx
+    return tx
 
-    liftIO . traceWith benchTracer . TraceBenchTxSubDebug
-      $ " Done, " ++ show numOfTransactions ++ " were generated and written in a list."
+  -- Now we have to split all transactions to parts for every target node.
+  -- These parts will be written to corresponding lists and submitted to the node.
+  let numOfTxsForOneTargetNode = (fromIntegral numOfTransactions) `div` numOfTargetNodes
+      subLists = divListToSublists txs numOfTxsForOneTargetNode
+      subListsAndIndices = zip subLists [0 .. numOfTargetNodes - 1]
+  forM_ subListsAndIndices $ \(txsForOneTargetNode, nodeIx) ->
+    -- Write newly generated txs in the list for particular node.
+    -- These txs will be handled by 'bulkSubmission' function and will be sent to
+    -- corresponding target node.
+    liftIO $ writeTxsInListForTargetNode txsForOneTargetNode nodeIx
+
+  -- It's possible that we have a remaining transactions, in the latest sublist
+  -- (if 'numOfTransactions' cannot be divided by 'numOfTargetNodes'). In this case
+  -- just send these transactions to the first node. TODO: should we change this behaviour?
+  when (length subLists > numOfTargetNodes) $ do
+    let stillUnsentTxs = last subLists
+    liftIO $ writeTxsInListForTargetNode stillUnsentTxs 0
+
+  liftIO . traceWith benchTracer . TraceBenchTxSubDebug
+    $ " Done, " ++ show numOfTransactions ++ " were generated and written in a list."
  where
   -- Num of recipients is equal to 'numOuts', so we think of
   -- recipients as the people we're going to pay to.
@@ -951,6 +1001,18 @@ txGenerator benchTracer
   -- Send possible change to the same 'recipientAddress'.
   addressForChange = recipientAddress
 
+-- | Takes a list 'L' and a number 'D'. Returns a list of sublists which contains
+--   parts of 'L' with length that is equal to 'D'. Remaining part (if exists) will
+--   be stored as last sublist. For example:
+--   >>> divListToSublists [0 .. 7] 3 = [[0 .. 2], [3 .. 5], [6 .. 7]]
+--   >>> divListToSublists [0 .. 8] 3 = [[0 .. 2], [3 .. 5], [6 .. 8]]
+--   >>> divListToSublists [0 .. 9] 3 = [[0 .. 2], [3 .. 5], [6 .. 8], [9]]
+divListToSublists :: [a] -> Int -> [[a]]
+divListToSublists [] _ = []
+divListToSublists l  d =
+  let (subl, remain) = splitAt d l
+  in subl : divListToSublists remain d
+
 ---------------------------------------------------------------------------------------------------
 -- TVar for submitter termination.
 ---------------------------------------------------------------------------------------------------
@@ -966,17 +1028,38 @@ txSubmissionTerm = unsafePerformIO $ STM.newTVarIO False
 -- Txs for submission.
 ---------------------------------------------------------------------------------------------------
 
+-- | Creates a list of 'TMVar's with lists of transactions for submitting.
+--   The number of these lists corresponds to the number of target nodes.
+txsListsForTargetNodes :: forall tx . MSTM.LazyTMVar IO [MSTM.LazyTMVar IO [tx]]
+txsListsForTargetNodes = unsafePerformIO $ STM.newTMVarIO []
+
+-- | Adds a list for transactions, for particular target node.
+addTxsListForTargetNode :: forall tx . MSTM.LazyTMVar IO [tx] -> IO ()
+addTxsListForTargetNode listForOneTargetNode = STM.atomically $
+  STM.tryTakeTMVar txsListsForTargetNodes >>=
+    \case
+      Nothing      -> STM.putTMVar txsListsForTargetNodes [listForOneTargetNode]
+      Just curList -> STM.putTMVar txsListsForTargetNodes $ curList ++ [listForOneTargetNode]
+
+-- | Writes list of generated transactions to the list, for particular target node.
+--   For example, if we have 3 target nodes and write txs to the list 0,
+--   these txs will later be sent to the first target node.
+writeTxsInListForTargetNode :: forall tx . [tx] -> Int -> IO ()
+writeTxsInListForTargetNode txs listIndex = STM.atomically $ do
+  txsLists <- STM.takeTMVar txsListsForTargetNodes
+  -- We shouldn't check 'listIndex' - we control both list and index, it cannot be out-of-range.
+  let txsListForTargetNode = txsLists !! listIndex
+  STM.tryTakeTMVar txsListForTargetNode >>=
+    \case
+      Nothing      -> STM.putTMVar txsListForTargetNode txs
+      Just txsList -> STM.putTMVar txsListForTargetNode $ txsList ++ txs
+  -- Put updated content back.
+  STM.putTMVar txsListsForTargetNodes txsLists
+
 -- | Generator is producing transactions and writes them in the list.
 --   Later sumbitter is reading and submitting these transactions.
 txsForSubmission :: forall tx . MSTM.LazyTMVar IO [tx]
 txsForSubmission = unsafePerformIO $ STM.newTMVarIO []
-
-writeTxInList :: forall tx . tx -> IO ()
-writeTxInList tx = STM.atomically $
-  STM.tryTakeTMVar txsForSubmission >>=
-    \case
-      Nothing      -> STM.putTMVar txsForSubmission [tx]
-      Just curList -> STM.putTMVar txsForSubmission $ curList ++ [tx]
 
 -- | To get higher performance we need to hide latency of getting and
 -- forwarding (in sufficient numbers) transactions.
@@ -1008,10 +1091,8 @@ launchTxPeer
   -> MSTM.LazyTMVar m [tx]
   -- give this peer 1 or more transactions, empty list
   -- signifies stop this peer
-  -> m ()
+  -> m (Async (), Async ())
 launchTxPeer tr1 tr2 termTM nc localAddr remoteAddr updROEnv txInChan = do
   tmv <- MSTM.newEmptyTMVarM
-  remoteA <- async $ benchmarkConnectTxSubmit tr2 nc localAddr remoteAddr (txSubmissionClient tmv)
-  txEngA <- async $ bulkSubmission updROEnv tr1 termTM txInChan tmv
-  _ <- waitBoth remoteA txEngA
-  pure ()
+  (,) <$> (async $ benchmarkConnectTxSubmit tr2 nc localAddr remoteAddr (txSubmissionClient tmv))
+      <*> (async $ bulkSubmission updROEnv tr1 termTM txInChan tmv)

@@ -30,6 +30,7 @@ module Cardano.CLI.Run (
   , NewCertificateFile(..)
   , TxFile(..)
   , NewTxFile(..)
+  , TargetNodeId(..)
   , NumberOfTxs(..)
   , NumberOfInputsPerTx(..)
   , NumberOfOutputsPerTx(..)
@@ -70,7 +71,8 @@ import           Cardano.CLI.Genesis
 import           Cardano.CLI.Key
 import           Cardano.CLI.Ops
 import           Cardano.CLI.Tx
-import           Cardano.CLI.Tx.Generation (NumberOfTxs (..),
+import           Cardano.CLI.Tx.Generation (TargetNodeId (..),
+                                            NumberOfTxs (..),
                                             NumberOfInputsPerTx (..),
                                             NumberOfOutputsPerTx (..),
                                             FeePerTx (..), TPSRate (..),
@@ -160,6 +162,8 @@ data ClientCommand
     --- Tx Generator Command ----------
 
   | GenerateTxs
+    TopologyInfo
+    [TargetNodeId]
     NumberOfTxs
     NumberOfInputsPerTx
     NumberOfOutputsPerTx
@@ -244,7 +248,9 @@ runCommand _ _ (SpendUTxO (NewTxFile ctTx) ctKey ins outs nCli) = do
   liftIO . ensureNewFileLBS ctTx $ serialise gTx
 
 runCommand _ loggingLayer
-           (GenerateTxs numOfTxs
+           (GenerateTxs topology
+                        targetNodeIds
+                        numOfTxs
                         numOfInsPerTx
                         numOfOutsPerTx
                         feePerTx
@@ -262,6 +268,7 @@ runCommand _ loggingLayer
                             nCli
                             protocol
                             (TopologyInfo (ncNodeId nc) topologyFp)
+                            targetNodeIds
                             numOfTxs
                             numOfInsPerTx
                             numOfOutsPerTx
