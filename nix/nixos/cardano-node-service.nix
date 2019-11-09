@@ -25,7 +25,7 @@ let
           "${lib.optionalString (cfg.signingKey != null) "--signing-key ${cfg.signingKey}"}"
           "${lib.optionalString (cfg.delegationCertificate != null) "--delegation-certificate ${cfg.delegationCertificate}"}"
           "${lib.optionalString (cfg.logger.extras != null) "${cfg.logger.extras}"}"
-        ];
+        ] ++ cfg.extraOptions;
     in ''
         echo "Starting ${exec}: '' + concatStringsSep "\"\n   echo \"" cmd + ''"
         echo "..or, once again, in a signle line:"
@@ -53,6 +53,11 @@ in {
       script = mkOption {
         type = types.str;
         default = mkScript cfg;
+      };
+      extraOptions = mkOption {
+        type = types.listOf types.str;
+        default = [];
+        description = "extra command line arguments for cardano-node";
       };
 
       package = mkOption {
