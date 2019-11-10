@@ -40,14 +40,17 @@ import           Ouroboros.Consensus.Protocol (SecurityParam (..),
                                                PraosParams (..),
                                                PBftParams (..))
 import qualified Ouroboros.Consensus.Protocol as Consensus
+import qualified Ouroboros.Consensus.Ledger.Byron        as Consensus
+import qualified Ouroboros.Consensus.Ledger.Byron.Config as Consensus
 import           Ouroboros.Consensus.Util (Dict(..))
 import           Ouroboros.Consensus.Util.Condense
 import           Ouroboros.Network.Block
 
 import           Cardano.Config.Types
-                   (DelegationCertFile (..), GenesisFile (..), MiscellaneousFilepaths (..),
-                    NodeCLI (..), NodeConfiguration (..), Protocol (..),
-                    SigningKeyFile (..))
+                   (DelegationCertFile (..), GenesisFile (..),
+                    MiscellaneousFilepaths (..), NodeCLI (..),
+                    NodeConfiguration (..), LastKnownBlockVersion (..),
+                    Update (..), Protocol (..), SigningKeyFile (..))
 
 -- TODO: consider not throwing this, or wrap it in a local error type here
 -- that has proper error messages.
@@ -136,23 +139,43 @@ fromProtocol nc nCli RealPBFT = do
 
     optionalLeaderCredentials <- readLeaderCredentials gc nCli
 
-    let
-        -- TODO:  make configurable via CLI (requires cardano-shell changes)
-        -- These defaults are good for mainnet.
-        defSoftVer  = Update.SoftwareVersion (Update.ApplicationName "cardano-sl") 1
-        defProtoVer = Update.ProtocolVersion 0 2 0
-        -- TODO: The plumbing here to make the PBFT options from the
-        -- CardanoConfiguration is subtle, it should have its own function
-        -- to do this, along with other config conversion plumbing:
-        p = Consensus.ProtocolRealPBFT
-              gc
-              (PBftSignatureThreshold <$> ncPbftSignatureThresh nc)
-              defProtoVer
-              defSoftVer
-              optionalLeaderCredentials
+    let p = protocolConfigRealPbft nc gc optionalLeaderCredentials
 
     case Consensus.runProtocol p of
       Dict -> return $ SomeProtocol p
+
+
+-- | The plumbing to select and convert the appropriate configuration subset
+-- for the 'RealPBFT' protocol.
+--
+protocolConfigRealPbft :: NodeConfiguration
+                       -> Genesis.Config
+                       -> Maybe PBftLeaderCredentials
+                       -> Consensus.Protocol (Consensus.ByronBlockOrEBB
+                                                Consensus.ByronConfig)
+protocolConfigRealPbft NodeConfiguration {
+                         ncPbftSignatureThresh,
+                         ncUpdate = Update {
+                           upApplicationName,
+                           upApplicationVersion,
+                           upLastKnownBlockVersion
+                         }
+                       }
+                       genesis leaderCredentials =
+    Consensus.ProtocolRealPBFT
+      genesis
+      (PBftSignatureThreshold <$> ncPbftSignatureThresh)
+      (convertProtocolVersion upLastKnownBlockVersion)
+      (Update.SoftwareVersion (Update.ApplicationName upApplicationName)
+                              (toEnum upApplicationVersion))
+      leaderCredentials
+  where
+    convertProtocolVersion
+      LastKnownBlockVersion {lkbvMajor, lkbvMinor, lkbvAlt} =
+      Update.ProtocolVersion (toEnum lkbvMajor)
+                             (toEnum lkbvMinor)
+                             (toEnum lkbvAlt)
+
 
 readLeaderCredentials :: Genesis.Config
                       -> NodeCLI
