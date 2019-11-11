@@ -161,14 +161,14 @@ handleSimpleNode p trace nodeTracers nCli nc = do
                           map (\ns -> (nodeId ns, producers ns)) nodeSetups of
           Just ps -> ps
           Nothing -> error $ "handleSimpleNode: own address "
-                          <> show (ncNodeAddress nc)
+                          <> show (nodeAddr nCli)
                           <> ", Node Id "
                           <> show nid
                           <> " not found in topology"
 
     traceWith tracer $ unlines
       [ "**************************************"
-      , "I am Node "        <> show (ncNodeAddress nc) <> " Id: " <> show nid
+      , "I am Node "        <> show (nodeAddr nCli) <> " Id: " <> show nid
       , "My producers are " <> show producers'
       , "**************************************"
       ]
@@ -179,7 +179,7 @@ handleSimpleNode p trace nodeTracers nCli nc = do
                      (unSocket . socketFile $ mscFp nCli)
                      MkdirIfMissing
 
-    addrs <- nodeAddressInfo $ ncNodeAddress nc
+    addrs <- nodeAddressInfo $ nodeAddr nCli
     let ipProducerAddrs  :: [NodeAddress]
         dnsProducerAddrs :: [RemoteAddress]
         (ipProducerAddrs, dnsProducerAddrs) = partitionEithers

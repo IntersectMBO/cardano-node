@@ -11,4 +11,5 @@ ${CMD} \
     --genesis-file "configuration/mainnet-genesis.json" \
     --socket-dir "./socket" \
     --config "configuration/log-config-acceptor.yaml" \
+    --port 1234 \
     $@

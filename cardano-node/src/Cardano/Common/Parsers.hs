@@ -28,6 +28,7 @@ import           Prelude (String)
 
 import           Cardano.Prelude hiding (option)
 
+import           Network.Socket (PortNumber)
 import           Options.Applicative
 import qualified Options.Applicative as Opt
 
@@ -63,6 +64,8 @@ nodeCliParser = do
   sKeyFp <- optional parseSigningKey
   socketFp <- parseSocketDir
 
+  -- Node Address
+  nAddress <- parseNodeAddress
   -- NodeConfiguration filepath
   nodeConfigFp <- parseConfigFile
 
@@ -79,6 +82,7 @@ nodeCliParser = do
               (SigningKeyFile <$> sKeyFp)
               (SocketFile socketFp)
             )
+           nAddress
            (ConfigYamlFilePath nodeConfigFp)
            (fromMaybe (panic "Cardano.Common.Parsers: Trace Options were not specified") $ getLast traceOptions)
 
@@ -113,6 +117,26 @@ parseNodeId desc =
             long "node-id"
          <> metavar "NODE-ID"
          <> help desc
+    )
+
+parseNodeAddress :: Parser NodeAddress
+parseNodeAddress = NodeAddress <$> parseHostAddr <*> parsePort
+
+parseHostAddr :: Parser NodeHostAddress
+parseHostAddr =
+    option (NodeHostAddress . readMaybe <$> str) (
+          long "host-addr"
+       <> metavar "HOST-NAME"
+       <> help "Optionally limit node to one ipv6 or ipv4 address"
+       <> (value $ NodeHostAddress Nothing)
+    )
+
+parsePort :: Parser PortNumber
+parsePort =
+    option ((fromIntegral :: Int -> PortNumber) <$> auto) (
+          long "port"
+       <> metavar "PORT"
+       <> help "The port number"
     )
 
 -- | Flag parser, that returns its argument on success.

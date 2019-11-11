@@ -29,6 +29,7 @@ function acceptorargs() {
         nodecfg acceptor
         dlgkey 0
         dlgcert 0
+        printf -- "--port 1234"
 }
 
 function nodeargs () {
@@ -38,4 +39,5 @@ function nodeargs () {
         dlgkey $1
         dlgcert $1
         printf -- "${extra} "
+        printf -- "--port 300$1 "
 }

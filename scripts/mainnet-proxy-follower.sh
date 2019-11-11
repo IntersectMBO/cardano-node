@@ -11,6 +11,7 @@ ARGS=(
         --topology                "${TOPOLOGY}"
         --socket-dir              "./socket/"
         --config                  "./configuration/mainnet-proxy-follower.yaml"
+        --port                    7776
 )
 
 ${RUNNER} exe:cardano-node "${ARGS[@]}"
