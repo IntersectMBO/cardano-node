@@ -50,7 +50,8 @@ import           Ouroboros.Consensus.Node.Run (RunNode)
 import           Cardano.CLI.Ops
 import           Cardano.CLI.Tx.Submission
 import           Cardano.Config.Protocol
-import           Cardano.Config.Types (NodeCLI, NodeConfiguration(..))
+import           Cardano.Config.Types (MiscellaneousFilepaths(..), NodeCLI(..),
+                                       NodeConfiguration(..))
 import           Cardano.Config.Topology
 import           Cardano.Common.Orphans ()
 
@@ -139,7 +140,17 @@ withRealPBFT
       -> IO a)
   -> IO a
 withRealPBFT nc nCli action = do
-  SomeProtocol p <- fromProtocol nc nCli
+  SomeProtocol p <- fromProtocol
+                      (ncGenesisHash nc)
+                      (ncNodeId nc)
+                      (ncNumCoreNodes nc)
+                      (genesisFile $ mscFp nCli)
+                      (ncReqNetworkMagic nc)
+                      (ncPbftSignatureThresh nc)
+                      (delegCertFile $ mscFp nCli)
+                      (signKeyFile $ mscFp nCli)
+                      (ncUpdate nc)
+                      (ncProtocol nc)
   case p of
     proto@Consensus.ProtocolRealPBFT{} -> action proto
     _ -> throwIO $ ProtocolNotSupported (ncProtocol nc)

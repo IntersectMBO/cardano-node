@@ -22,15 +22,13 @@ import           Prelude (error, fail)
 import           Test.Cardano.Prelude (canonicalDecodePretty)
 
 import           Codec.CBOR.Read (deserialiseFromBytes, DeserialiseFailure)
-import           Control.Exception hiding (throwIO)
 import qualified Data.ByteString.Lazy as LB
 import           Data.Text (unpack)
 
 import qualified Cardano.Chain.Genesis as Genesis
 import qualified Cardano.Chain.Update as Update
-import           Cardano.Crypto (decodeAbstractHash)
+import           Cardano.Crypto (RequiresNetworkMagic, decodeHash)
 import qualified Cardano.Crypto.Signing as Signing
-import           Cardano.Shell.Lib (GeneralException (..))
 
 import           Ouroboros.Consensus.Block (Header)
 import           Ouroboros.Consensus.Mempool.API (ApplyTxErr, GenTx, GenTxId)
@@ -51,9 +49,8 @@ import           Ouroboros.Network.Block
 
 import           Cardano.Config.Types
                    (DelegationCertFile (..), GenesisFile (..),
-                    MiscellaneousFilepaths (..), NodeCLI (..),
-                    NodeConfiguration (..), LastKnownBlockVersion (..),
-                    Update (..), Protocol (..), SigningKeyFile (..))
+                    LastKnownBlockVersion (..), Update (..),
+                    Protocol (..), SigningKeyFile (..))
 
 -- TODO: consider not throwing this, or wrap it in a local error type here
 -- that has proper error messages.
@@ -90,63 +87,72 @@ mockSecurityParam = SecurityParam 5
 -- 'CardanoConfiguration', a 'MissingNodeInfo' exception is thrown.
 mockSomeProtocol
   :: (RunNode blk, TraceConstraints blk)
-  => NodeConfiguration
+  => NodeId
+  -> Maybe Int
+  -- ^ Number of core nodes
   -> (CoreNodeId -> NumCoreNodes -> Consensus.Protocol blk)
   -> IO SomeProtocol
-mockSomeProtocol nc mkConsensusProtocol =  do
-    (cid, numCoreNodes) <- either throwIO return $ extractNodeInfo nc
+mockSomeProtocol nId mNumCoreNodes mkConsensusProtocol =  do
+    (cid, numCoreNodes) <- either throwIO return $ extractNodeInfo nId mNumCoreNodes
     let p = mkConsensusProtocol cid numCoreNodes
     case Consensus.runProtocol p of
       Dict -> return $ SomeProtocol p
-
-
 
 data SomeProtocol where
   SomeProtocol :: (RunNode blk, TraceConstraints blk)
                => Consensus.Protocol blk -> SomeProtocol
 
-fromProtocol :: NodeConfiguration
-             -> NodeCLI
-             -> IO SomeProtocol
-fromProtocol nc nCli = case ncProtocol nc of
-  ByronLegacy ->
-    error "Byron Legacy protocol is not implemented."
-
-  BFT         -> mockSomeProtocol nc $ \cid numCoreNodes ->
+fromProtocol
+  :: Text
+  -> NodeId
+  -> Maybe Int
+  -- ^ Number of core nodes
+  -> GenesisFile
+  -> RequiresNetworkMagic
+  -> Maybe Double
+  -> Maybe DelegationCertFile
+  -> Maybe SigningKeyFile
+  -> Update
+  -> Protocol
+  -> IO SomeProtocol
+fromProtocol _ _ _ _ _ _ _ _ _ ByronLegacy =
+  error "Byron Legacy protocol is not implemented."
+fromProtocol _ nId mNumCoreNodes _ _ _ _ _ _ BFT =
+  mockSomeProtocol nId mNumCoreNodes $ \cid numCoreNodes ->
     Consensus.ProtocolMockBFT numCoreNodes cid mockSecurityParam
-
-  Praos       -> mockSomeProtocol nc $ \cid numCoreNodes ->
+fromProtocol _ nId mNumCoreNodes _ _ _ _ _ _ Praos =
+  mockSomeProtocol nId mNumCoreNodes $ \cid numCoreNodes ->
     Consensus.ProtocolMockPraos numCoreNodes cid PraosParams {
         praosSecurityParam = mockSecurityParam
       , praosSlotsPerEpoch = 3
       , praosLeaderF       = 0.5
       , praosLifetimeKES   = 1000000
-      }
-
-  MockPBFT    -> mockSomeProtocol nc $ \cid numCoreNodes@(NumCoreNodes numNodes) ->
-    Consensus.ProtocolMockPBFT numCoreNodes cid PBftParams {
-        pbftSecurityParam      = mockSecurityParam
-      , pbftNumNodes           = fromIntegral numNodes
-      , pbftSignatureThreshold = (1.0 / fromIntegral numNodes) + 0.1
-      }
-
-  RealPBFT    -> do
-    let NodeConfiguration { ncGenesisHash } = nc
-        genHash = either (throw . ConfigurationError) identity $
-                  decodeAbstractHash ncGenesisHash
+    }
+fromProtocol _ nId mNumCoreNodes _ _ _ _ _ _ MockPBFT =
+  mockSomeProtocol nId mNumCoreNodes $ \cid numCoreNodes@(NumCoreNodes numNodes) ->
+    Consensus.ProtocolMockPBFT numCoreNodes cid
+      PBftParams { pbftSecurityParam      = mockSecurityParam
+                 , pbftNumNodes           = fromIntegral numNodes
+                 , pbftSignatureThreshold = (1.0 / fromIntegral numNodes) + 0.1
+                 }
+fromProtocol gHash _ _ genFile nMagic sigThresh delCertFp sKeyFp update RealPBFT = do
+    let genHash = either panic identity $ decodeHash gHash
 
     gcE <- runExceptT (Genesis.mkConfigFromFile
-                       (ncReqNetworkMagic nc)
-                       (unGenesisFile . genesisFile $ mscFp nCli)
+                       nMagic
+                       (unGenesisFile genFile)
                        genHash
                       )
     let gc = case gcE of
-          Left err -> throw err -- TODO: no no no!
-          Right x -> x
+            Left err -> panic $ show err
+            Right x -> x
 
-    optionalLeaderCredentials <- readLeaderCredentials gc nCli
+    optionalLeaderCredentials <- readLeaderCredentials
+                                   gc
+                                   delCertFp
+                                   sKeyFp
 
-    let p = protocolConfigRealPbft nc gc optionalLeaderCredentials
+    let p = protocolConfigRealPbft update sigThresh gc optionalLeaderCredentials
 
     case Consensus.runProtocol p of
       Dict -> return $ SomeProtocol p
@@ -155,25 +161,20 @@ fromProtocol nc nCli = case ncProtocol nc of
 -- | The plumbing to select and convert the appropriate configuration subset
 -- for the 'RealPBFT' protocol.
 --
-protocolConfigRealPbft :: NodeConfiguration
+protocolConfigRealPbft :: Update
+                       -> Maybe Double
                        -> Genesis.Config
                        -> Maybe PBftLeaderCredentials
                        -> Consensus.Protocol Consensus.ByronBlock
-protocolConfigRealPbft NodeConfiguration {
-                         ncPbftSignatureThresh,
-                         ncUpdate = Update {
-                           upApplicationName,
-                           upApplicationVersion,
-                           upLastKnownBlockVersion
-                         }
-                       }
+protocolConfigRealPbft (Update appName appVer lastKnownBlockVersion)
+                       pbftSignatureThresh
                        genesis leaderCredentials =
     Consensus.ProtocolRealPBFT
       genesis
-      (PBftSignatureThreshold <$> ncPbftSignatureThresh)
-      (convertProtocolVersion upLastKnownBlockVersion)
-      (Update.SoftwareVersion (Update.ApplicationName upApplicationName)
-                              (toEnum upApplicationVersion))
+      (PBftSignatureThreshold <$> pbftSignatureThresh)
+      (convertProtocolVersion lastKnownBlockVersion)
+      (Update.SoftwareVersion (Update.ApplicationName appName)
+                              (toEnum appVer))
       leaderCredentials
   where
     convertProtocolVersion
@@ -184,11 +185,10 @@ protocolConfigRealPbft NodeConfiguration {
 
 
 readLeaderCredentials :: Genesis.Config
-                      -> NodeCLI
+                      -> Maybe DelegationCertFile
+                      -> Maybe SigningKeyFile
                       -> IO (Maybe PBftLeaderCredentials)
-readLeaderCredentials gc nCli = do
-  let mDelCertFp = delegCertFile $ mscFp nCli
-  let mSKeyFp = signKeyFile $ mscFp nCli
+readLeaderCredentials gc mDelCertFp mSKeyFp = do
   case (mDelCertFp, mSKeyFp) of
     (Nothing, Nothing) -> pure Nothing
     (Just _, Nothing) -> panic "Signing key filepath not specified"
@@ -221,11 +221,12 @@ data MissingNodeInfo
   deriving (Show, Exception)
 
 extractNodeInfo
-  :: NodeConfiguration
+  :: NodeId
+  -> Maybe Int
   -> Either MissingNodeInfo (CoreNodeId, NumCoreNodes)
-extractNodeInfo NodeConfiguration { ncNodeId, ncNumCoreNodes } = do
+extractNodeInfo mNodeId ncNumCoreNodes  = do
 
-    coreNodeId   <- case ncNodeId of
+    coreNodeId   <- case mNodeId of
       CoreId coreNodeId -> pure coreNodeId
       _                 -> Left MissingCoreNodeId
     numCoreNodes <- maybe (Left MissingNumCoreNodes) Right ncNumCoreNodes
