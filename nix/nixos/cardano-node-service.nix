@@ -151,9 +151,9 @@ in {
 
       configFile = mkOption {
         type = types.path;
-        default = ../../configuration/log-configuration.yaml;
+        default = envConfig.configFile;
         description = ''
-          Logger configuration file
+          Configuration file
         '';
       };
     };
