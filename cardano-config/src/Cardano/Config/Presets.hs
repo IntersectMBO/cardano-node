@@ -23,11 +23,11 @@ import           Cardano.Config.Partial ( NodeProtocol (..)
                                         , PartialTXP (..)
                                         , PartialUpdate (..)
                                         , PartialWallet (..)
-                                        , RequireNetworkMagic (..)
                                         )
 import           Cardano.Config.Topology (NodeAddress(..), NodeHostAddress(..),
                                           TopologyInfo(..))
 import           Cardano.Config.Types (Protocol(..), ViewMode(..))
+import           Cardano.Crypto (RequiresNetworkMagic(..))
 
 --------------------------------------------------------------------------------
 -- Cardano Mainnet Configuration
@@ -40,7 +40,7 @@ mainnetConfiguration =
     , pccLogConfig = pure "./configuration/log-configuration.yaml"
     , pccDBPath = pure "./db/"
     , pccApplicationLockFile = pure ""
-    , pccTopologyInfo = pure $ TopologyInfo (RelayId 0) "./configuration/simple-topology.json"
+    , pccTopologyInfo = pure $ TopologyInfo (CoreId 0) "./configuration/simple-topology.json"
     , pccNodeAddress = pure $ NodeAddress (NodeHostAddress Nothing) 7000
     , pccProtocol = pure ByronLegacy
     , pccViewMode = pure LiveView
@@ -56,7 +56,7 @@ mainnetConfiguration =
           , pcoNodeProtocol = pure BFTProtocol
           , pcoStaticKeySigningKeyFile = mempty
           , pcoStaticKeyDlgCertFile = mempty
-          , pcoRequiresNetworkMagic = pure NoRequireNetworkMagic
+          , pcoRequiresNetworkMagic = pure RequiresNoMagic
           , pcoPBftSigThd = mempty
           }
     , pccNTP =
@@ -158,7 +158,7 @@ devConfiguration =
     , pccLogConfig = pure "./log-config.yaml"
     , pccSocketDir = pure "./socket/"
     , pccApplicationLockFile = pure ""
-    , pccTopologyInfo = pure $ TopologyInfo (RelayId 0) "./configuration/simple-topology.json"
+    , pccTopologyInfo = pure $ TopologyInfo (CoreId 0) "./configuration/simple-topology.json"
     , pccNodeAddress = pure $ NodeAddress (NodeHostAddress Nothing) 7000
     , pccProtocol = pure ByronLegacy
     , pccViewMode = pure LiveView
@@ -173,7 +173,7 @@ devConfiguration =
           , pcoNodeProtocol = pure BFTProtocol
           , pcoStaticKeySigningKeyFile = mempty
           , pcoStaticKeyDlgCertFile = mempty
-          , pcoRequiresNetworkMagic = pure RequireNetworkMagic
+          , pcoRequiresNetworkMagic = pure RequiresMagic
           , pcoPBftSigThd = mempty
           }
     , pccNTP =

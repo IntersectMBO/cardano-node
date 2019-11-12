@@ -13,6 +13,7 @@ module Cardano.Common.Parsers
   , parseLogConfigFileLast
   , parseLogMetricsLast
   , parseLogOutputFile
+  , parseNodeId
   , parseProtocol
   , parseProtocolBFT
   , parseProtocolByron

@@ -25,11 +25,14 @@ module Cardano.Config.CommonCLI
   , parseDbPathLast
   , parseDelegationCert
   , parseDelegationCertLast
+  , parseGenesisHash
   , parseGenesisHashLast
   , parseGenesisPath
   , parseGenesisPathLast
+  , parsePbftSigThreshold
   , parsePbftSigThresholdLast
-  , parseRequireNetworkMagicLast
+  , parseRequiresNetworkMagic
+  , parseRequiresNetworkMagicLast
   , parseSigningKey
   , parseSlotLengthLast
   , parseSocketDir
@@ -45,6 +48,7 @@ import qualified Prelude
 import           Options.Applicative hiding (command)
 import qualified Options.Applicative as OA
 
+import           Cardano.Crypto (RequiresNetworkMagic(..))
 import qualified Ouroboros.Consensus.BlockchainTime as Consensus
 
 import           Cardano.Config.Partial
@@ -63,7 +67,7 @@ data CommonCLI = CommonCLI
 
 data CommonCLIAdvanced = CommonCLIAdvanced
   { ccaPBftSigThd                 :: !(Last Double)
-  , ccaRequiresNetworkMagic       :: !(Last RequireNetworkMagic)
+  , ccaRequiresNetworkMagic       :: !(Last RequiresNetworkMagic)
   , ccaSlotLength                 :: !(Last Consensus.SlotLength)
   --TODO cliUpdate                :: !PartialUpdate
   }
@@ -93,6 +97,14 @@ parseGenesisPathLast =
     ( long "genesis-file"
         <> metavar "FILEPATH"
         <> help "The filepath to the genesis file."
+    )
+
+parseGenesisHash :: Parser Text
+parseGenesisHash =
+  strOption
+    ( long "genesis-hash"
+        <> metavar "GENESIS-HASH"
+        <> help "The genesis hash value."
     )
 
 parseGenesisHashLast :: Parser (Last Text)
@@ -187,6 +199,16 @@ parseCommonCLI =
          <> help "Directory with local sockets:  ${dir}/node-{core,relay}-${node-id}.socket"
         )
 
+parsePbftSigThreshold :: Parser (Maybe Double)
+parsePbftSigThreshold =
+  optional $ option auto
+    ( long "pbft-signature-threshold"
+        <> metavar "DOUBLE"
+        <> help "The PBFT signature threshold."
+        <> hidden
+    )
+
+
 parsePbftSigThresholdLast :: Parser (Last Double)
 parsePbftSigThresholdLast =
   lastDoubleOption
@@ -195,9 +217,18 @@ parsePbftSigThresholdLast =
         <> help "The PBFT signature threshold."
         <> hidden
     )
-parseRequireNetworkMagicLast :: Parser (Last RequireNetworkMagic)
-parseRequireNetworkMagicLast =
-  lastFlag NoRequireNetworkMagic RequireNetworkMagic
+
+parseRequiresNetworkMagic :: Parser RequiresNetworkMagic
+parseRequiresNetworkMagic =
+  flag RequiresNoMagic RequiresMagic
+    ( long "require-network-magic"
+        <> help "Require network magic in transactions."
+        <> hidden
+    )
+
+parseRequiresNetworkMagicLast :: Parser (Last RequiresNetworkMagic)
+parseRequiresNetworkMagicLast =
+  lastFlag RequiresNoMagic RequiresMagic
     ( long "require-network-magic"
         <> help "Require network magic in transactions."
         <> hidden
@@ -225,7 +256,7 @@ parseCommonCLIAdvanced =
           <> help "The PBFT signature threshold."
           <> hidden
            )
-    <*> lastFlag NoRequireNetworkMagic RequireNetworkMagic
+    <*> lastFlag RequiresNoMagic RequiresMagic
            ( long "require-network-magic"
           <> help "Require network magic in transactions."
           <> hidden

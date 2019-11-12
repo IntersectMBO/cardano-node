@@ -38,7 +38,7 @@ import qualified Cardano.Chain.MempoolPayload as CC.Mempool
 import           Cardano.Chain.UTxO ( mkTxAux, annotateTxAux
                                     , Tx(..), TxId, TxIn, TxOut)
 import qualified Cardano.Chain.UTxO as UTxO
-import           Cardano.Crypto (SigningKey(..), ProtocolMagicId)
+import           Cardano.Crypto (SigningKey(..), ProtocolMagicId, RequiresNetworkMagic)
 import qualified Cardano.Crypto.Hashing as Crypto
 import qualified Cardano.Crypto.Signing as Crypto
 
@@ -46,12 +46,13 @@ import qualified Ouroboros.Consensus.Ledger.Byron as Byron
 import           Ouroboros.Consensus.Ledger.Byron (GenTx(..), ByronBlock)
 import qualified Ouroboros.Consensus.Protocol as Consensus
 import           Ouroboros.Consensus.Node.Run (RunNode)
+import           Ouroboros.Consensus.NodeId
 
 import           Cardano.CLI.Ops
 import           Cardano.CLI.Tx.Submission
 import           Cardano.Config.Protocol
-import           Cardano.Config.Types (MiscellaneousFilepaths(..), NodeCLI(..),
-                                       NodeConfiguration(..))
+import           Cardano.Config.Types (DelegationCertFile, GenesisFile,
+                                       SigningKeyFile, SocketFile, Update)
 import           Cardano.Config.Topology
 import           Cardano.Common.Orphans ()
 
@@ -133,27 +134,35 @@ genesisUTxOTxIn gc vk genAddr =
 -- | Perform an action that expects ProtocolInfo for Byron/PBFT,
 --   with attendant configuration.
 withRealPBFT
-  :: NodeConfiguration
-  -> NodeCLI
+  :: Text
+  -> Maybe NodeId
+  -> Maybe Int
+  -> GenesisFile
+  -> RequiresNetworkMagic
+  -> (Maybe Double)
+  -> Maybe DelegationCertFile
+  -> Maybe SigningKeyFile
+  -> Update
+  -> Protocol
   -> (RunNode ByronBlock
-      => Consensus.Protocol ByronBlock
-      -> IO a)
+        => Consensus.Protocol ByronBlock
+        -> IO a)
   -> IO a
-withRealPBFT nc nCli action = do
+withRealPBFT gHash nId mNumNodes genFile nMagic sigThresh delCertFp sKeyFp update ptcl action = do
   SomeProtocol p <- fromProtocol
-                      (ncGenesisHash nc)
-                      (ncNodeId nc)
-                      (ncNumCoreNodes nc)
-                      (genesisFile $ mscFp nCli)
-                      (ncReqNetworkMagic nc)
-                      (ncPbftSignatureThresh nc)
-                      (delegCertFile $ mscFp nCli)
-                      (signKeyFile $ mscFp nCli)
-                      (ncUpdate nc)
-                      (ncProtocol nc)
+                      gHash
+                      nId
+                      mNumNodes
+                      genFile
+                      nMagic
+                      sigThresh
+                      delCertFp
+                      sKeyFp
+                      update
+                      ptcl
   case p of
     proto@Consensus.ProtocolRealPBFT{} -> action proto
-    _ -> throwIO $ ProtocolNotSupported (ncProtocol nc)
+    _ -> throwIO $ ProtocolNotSupported ptcl
 
 -- | Generate a transaction spending genesis UTxO at a given address,
 --   to given outputs, signed by the given key.
@@ -181,20 +190,42 @@ txSpendGenesisUTxOByronPBFT gc sk genAddr outs =
 issueGenesisUTxOExpenditure
   :: Address
   -> NonEmpty TxOut
-  -> NodeConfiguration
-  -> NodeCLI
+  -> Text
+  -> NodeId
+  -> Maybe Int
+  -- ^ Number of core nodes.
+  -> GenesisFile
+  -> RequiresNetworkMagic
+  -> Maybe Double
+  -> Maybe DelegationCertFile
+  -> Maybe SigningKeyFile
+  -> Update
+  -> Protocol
   -> Crypto.SigningKey
   -> IO (GenTx ByronBlock)
-issueGenesisUTxOExpenditure genRichAddr outs nc nCli sk = do
-  withRealPBFT nc nCli $
-    \(Consensus.ProtocolRealPBFT gc _ _ _ _)-> do
-      case txSpendGenesisUTxOByronPBFT gc sk genRichAddr outs of
-        tx@(ByronTx txid _) -> do
-          putStrLn $ sformat ("TxId: "%Crypto.hashHexF) txid
-          pure tx
-        x ->
-          throwIO $ InvariantViolation $
-          "Invariant violation:  a non-ByronTx GenTx out of 'txSpendUTxOByronPBFT': " <> show x
+issueGenesisUTxOExpenditure
+  genRichAddr
+  outs
+  gHash
+  nId
+  mNumCoreNodes
+  genFile
+  nMagic
+  sigThresh
+  delCertFp
+  sKeyFp
+  update
+  ptcl
+  sk =
+    withRealPBFT gHash (Just nId) mNumCoreNodes genFile nMagic sigThresh delCertFp sKeyFp update ptcl
+      $ \(Consensus.ProtocolRealPBFT gc _ _ _ _)-> do
+          case txSpendGenesisUTxOByronPBFT gc sk genRichAddr outs of
+            tx@(ByronTx txid _) -> do
+              putStrLn $ sformat ("TxId: "%Crypto.hashHexF) txid
+              pure tx
+            x ->
+              throwIO $ InvariantViolation $
+              "Invariant violation:  a non-ByronTx GenTx out of 'txSpendUTxOByronPBFT': " <> show x
 
 -- | Generate a transaction from given Tx inputs to outputs,
 --   signed by the given key.
@@ -219,32 +250,77 @@ txSpendUTxOByronPBFT gc sk ins outs =
 issueUTxOExpenditure
   :: NonEmpty TxIn
   -> NonEmpty TxOut
-  -> NodeConfiguration
-  -> NodeCLI
+  -> Text
+  -> NodeId
+  -> Maybe Int
+  -- ^ Number of core nodes.
+  -> GenesisFile
+  -> RequiresNetworkMagic
+  -> Maybe Double
+  -> Maybe DelegationCertFile
+  -> Maybe SigningKeyFile
+  -> Update
+  -> Protocol
   -> Crypto.SigningKey
   -> IO (GenTx ByronBlock)
-issueUTxOExpenditure ins outs nc nCli key = do
-  withRealPBFT nc nCli $
-    \(Consensus.ProtocolRealPBFT gc _ _ _ _)-> do
-      case txSpendUTxOByronPBFT gc key ins outs of
-        tx@(ByronTx txid _) -> do
-          putStrLn $ sformat ("TxId: "%Crypto.hashHexF) txid
-          pure tx
-        x ->
-          throwIO $ InvariantViolation $
-          "Invariant violation:  a non-ByronTx GenTx out of 'txSpendUTxOByronPBFT': " <> show x
+issueUTxOExpenditure
+  ins
+  outs
+  gHash
+  nId
+  mNumCoreNodes
+  genFile
+  nMagic
+  sigThresh
+  delCertFp
+  sKeyFp
+  update
+  ptcl
+  key = do
+    withRealPBFT gHash (Just nId) mNumCoreNodes genFile nMagic sigThresh delCertFp sKeyFp update ptcl $
+      \(Consensus.ProtocolRealPBFT gc _ _ _ _)-> do
+        case txSpendUTxOByronPBFT gc key ins outs of
+          tx@(ByronTx txid _) -> do
+            putStrLn $ sformat ("TxId: "%Crypto.hashHexF) txid
+            pure tx
+          x ->
+            throwIO $ InvariantViolation $
+            "Invariant violation:  a non-ByronTx GenTx out of 'txSpendUTxOByronPBFT': " <> show x
 
 -- | Submit a transaction to a node specified by topology info.
 nodeSubmitTx
   :: TopologyInfo
-  -> NodeConfiguration
-  -> NodeCLI
+  -> Text
+  -> NodeId
+  -> Maybe Int
+  -- ^ Number of core nodes
+  -> GenesisFile
+  -> RequiresNetworkMagic
+  -> Maybe Double
+  -> Maybe DelegationCertFile
+  -> Maybe SigningKeyFile
+  -> SocketFile
+  -> Update
+  -> Protocol
   -> GenTx ByronBlock
   -> IO ()
-nodeSubmitTx topology nc nCli gentx =
-  withRealPBFT nc nCli $
-  \p@Consensus.ProtocolRealPBFT{} -> do
-    case gentx of
-      ByronTx txid _ -> putStrLn $ sformat ("TxId: "%Crypto.hashHexF) txid
-      _ -> pure ()
-    handleTxSubmission nCli p topology gentx stdoutTracer
+nodeSubmitTx
+  topology
+  gHash
+  nId
+  mNumCoreNodes
+  genFile
+  nMagic
+  sigThresh
+  delCertFp
+  sKeyFp
+  socketFp
+  update
+  ptcl
+  gentx =
+    withRealPBFT gHash (Just nId) mNumCoreNodes genFile nMagic sigThresh delCertFp sKeyFp update ptcl $
+      \p@Consensus.ProtocolRealPBFT{} -> do
+        case gentx of
+          ByronTx txid _ -> putStrLn $ sformat ("TxId: "%Crypto.hashHexF) txid
+          _ -> pure ()
+        handleTxSubmission socketFp p topology gentx stdoutTracer

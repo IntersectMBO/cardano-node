@@ -87,7 +87,7 @@ mockSecurityParam = SecurityParam 5
 -- 'CardanoConfiguration', a 'MissingNodeInfo' exception is thrown.
 mockSomeProtocol
   :: (RunNode blk, TraceConstraints blk)
-  => NodeId
+  => Maybe NodeId
   -> Maybe Int
   -- ^ Number of core nodes
   -> (CoreNodeId -> NumCoreNodes -> Consensus.Protocol blk)
@@ -104,7 +104,7 @@ data SomeProtocol where
 
 fromProtocol
   :: Text
-  -> NodeId
+  -> Maybe NodeId
   -> Maybe Int
   -- ^ Number of core nodes
   -> GenesisFile
@@ -221,13 +221,13 @@ data MissingNodeInfo
   deriving (Show, Exception)
 
 extractNodeInfo
-  :: NodeId
+  :: Maybe NodeId
   -> Maybe Int
   -> Either MissingNodeInfo (CoreNodeId, NumCoreNodes)
 extractNodeInfo mNodeId ncNumCoreNodes  = do
 
     coreNodeId   <- case mNodeId of
-      CoreId coreNodeId -> pure coreNodeId
-      _                 -> Left MissingCoreNodeId
+                      Just (CoreId coreNodeId) -> pure coreNodeId
+                      _ -> Left MissingCoreNodeId
     numCoreNodes <- maybe (Left MissingNumCoreNodes) Right ncNumCoreNodes
     return (CoreNodeId coreNodeId , NumCoreNodes numCoreNodes)
