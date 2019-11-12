@@ -140,7 +140,7 @@ in {
     services.cardano-node = {
       enable = true;
       instanced = true;
-      inherit topology genesisFile genesisHash signingKey delegationCertificate nodeId port;
+      inherit topology genesisFile signingKey delegationCertificate nodeId port;
     };
     systemd.services."cardano-node@" = {
       scriptArgs = "%i ${ncfg.genesisFile}";
