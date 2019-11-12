@@ -12,12 +12,10 @@ let
   };
   mkNodeScript = envConfig: let
     defaultConfig = {
-      consensusProtocol = "real-pbft";
       hostAddr = "127.0.0.1";
       port = 3001;
       signingKey = null;
       delegationCertificate = null;
-      pbftThreshold = null;
       nodeId = 0;
       stateDir = "./";
       # defaults to proxy if env has no relays
@@ -26,8 +24,6 @@ let
       useProxy = false;
       proxyPort = 7777;
       proxyHost = "127.0.0.1";
-      loggingConfig = ../configuration/log-configuration.yaml;
-      loggingExtras = null;
     };
     config = defaultConfig // envConfig // customConfig;
     topologyFile = let
@@ -40,19 +36,15 @@ let
     serviceConfig = {
       inherit (config)
         genesisFile
-        genesisHash
         stateDir
         signingKey
         delegationCertificate
-        consensusProtocol
-        pbftThreshold
         hostAddr
         port
+        configFile
         nodeId;
       runtimeDir = null;
       dbPrefix = "db-${envConfig.name}";
-      logger.configFile = config.loggingConfig;
-      logger.extras = config.loggingExtras;
       topology = topologyFile;
     };
     nodeConf = { config.services.cardano-node = serviceConfig; };

@@ -11,20 +11,13 @@ let
     let exec = "cardano-node";
         cmd = builtins.filter (x: x != "") [
           "${cfg.package}/bin/${exec}"
+          "--config-yaml ${cfg.configFile}"
           "--genesis-file ${cfg.genesisFile}"
-          "--genesis-hash ${cfg.genesisHash}"
-          "--log-config ${cfg.logger.configFile}"
           "--database-path ${cfg.stateDir}/${cfg.dbPrefix}"
           "--socket-dir ${ if (cfg.runtimeDir == null) then "${cfg.stateDir}/socket" else "/run/${cfg.runtimeDir}"}"
           "--topology ${cfg.topology}"
-          "--${cfg.consensusProtocol}"
-          "--node-id ${toString cfg.nodeId}"
-          "--host-addr ${cfg.hostAddr}"
-          "--port ${toString cfg.port}"
-          "${lib.optionalString (cfg.pbftThreshold != null) "--pbft-signature-threshold ${cfg.pbftThreshold}"}"
           "${lib.optionalString (cfg.signingKey != null) "--signing-key ${cfg.signingKey}"}"
           "${lib.optionalString (cfg.delegationCertificate != null) "--delegation-certificate ${cfg.delegationCertificate}"}"
-          "${lib.optionalString (cfg.logger.extras != null) "${cfg.logger.extras}"}"
         ];
     in ''
         echo "Starting ${exec}: '' + concatStringsSep "\"\n   echo \"" cmd + ''"
@@ -80,22 +73,6 @@ in {
         '';
       };
 
-      genesisHash = mkOption {
-        type = types.str;
-        default = envConfig.genesisHash;
-        description = ''
-          Hash of the genesis file
-        '';
-      };
-
-      pbftThreshold = mkOption {
-        type = types.nullOr types.str;
-        default = envConfig.pbftThreshold or null;
-        description = ''
-          PBFT Threshold
-        '';
-      };
-
       signingKey = mkOption {
         type = types.nullOr types.str;
         default = null;
@@ -109,18 +86,6 @@ in {
         default = null;
         description = ''
           Delegation certificate
-        '';
-      };
-
-      consensusProtocol = mkOption {
-        default = "real-pbft";
-        type = types.enum ["bft" "praos" "mock-pbft" "real-pbft"];
-        description = ''
-          Consensus initialy used by the node:
-            - bft: BFT consensus algorithm
-            - praos: Praos consensus algorithm
-            - mock-pbft: Permissive BFT consensus algorithm using a mock ledger
-            - real-pbft: Permissive BFT consensus algorithm using the real ledger
         '';
       };
 
@@ -184,18 +149,11 @@ in {
         '';
       };
 
-      logger.configFile = mkOption {
+      configFile = mkOption {
         type = types.path;
         default = ../../configuration/log-configuration.yaml;
         description = ''
           Logger configuration file
-        '';
-      };
-      logger.extras = mkOption {
-        type = types.nullOr types.str;
-        default = null;
-        description = ''
-          Logging extra arguments
         '';
       };
     };
