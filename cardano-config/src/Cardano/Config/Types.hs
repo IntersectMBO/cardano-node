@@ -187,7 +187,6 @@ data NodeConfiguration =
       , ncDLG :: DLG
       , ncBlock :: Block
       , ncNode :: Node
-      , ncTLS :: TLS
       , ncWallet :: Wallet
       } deriving (Show)
 
@@ -236,20 +235,6 @@ instance FromJSON NodeConfiguration where
                   netConnTimeout <- v .: "NetworkConnectionTimeout"
                   handshakeTimeout <- v .: "HandshakeTimeout"
 
-                  -- Certificates
-                  caPrg <- v .: "CA-Organization"
-                  caCommonName <- v .: "CA-CommonName"
-                  caExpDays <- v .: "CA-ExpiryDays"
-                  caAltDns <- v .: "CA-AltDNS"
-                  serverPrg <- v .: "Server-Organization"
-                  serverCommonName <- v .: "Server-CommonName"
-                  serverExpDays <- v .: "Server-ExpiryDays"
-                  serverAltDns <- v .: "Server-AltDNS"
-                  walletPrg <- v .: "Wallet-Organization"
-                  walletCommonName <- v .: "Wallet-CommonName"
-                  walletExpDays <- v .: "Wallet-ExpiryDays"
-                  walletAltDns <- v .: "Wallet-AltDNS"
-
                   -- Wallet
                   throttleEnabled <- v .: "Enabled"
                   throttleRate <- v .: "Rate"
@@ -278,11 +263,6 @@ instance FromJSON NodeConfiguration where
                            (Node (slotLengthFromMillisec slotLength)
                                   netConnTimeout
                                   handshakeTimeout
-                           )
-                           (TLS
-                              (Certificate caPrg caCommonName caExpDays caAltDns)
-                              (Certificate serverPrg serverCommonName serverExpDays serverAltDns)
-                              (Certificate walletPrg walletCommonName walletExpDays walletAltDns)
                            )
                            (Wallet throttleEnabled throttleRate throttlePeriod throttleBurst)
 

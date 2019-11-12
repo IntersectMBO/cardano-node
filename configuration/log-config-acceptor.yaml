@@ -156,28 +156,6 @@ SlotLength: 20000
 NetworkConnectionTimeout: 15000
 HandshakeTimeout: 30000
 
-#####       Certificates       #####
-
-
-CA-Organization: "Input Output HK"
-CA-CommonName: "Cardano SL Self-Signed Root CA"
-CA-ExpiryDays: 3600
-CA-AltDNS: []
-
-Server-Organization: "Input Output HK"
-Server-CommonName: "Cardano SL Server"
-Server-ExpiryDays: 3600
-Server-AltDNS: [ "localhost"
-               , "localhost.localdomain"
-               , "127.0.0.1"
-               , "::1"
-               ]
-
-Wallet-Organization: "Input Output HK"
-Wallet-CommonName: "Daedalus Wallet"
-Wallet-ExpiryDays: 3600
-Wallet-AltDNS: []
-
 Enabled: False
 Rate: 0
 Period: ''
