@@ -10,8 +10,6 @@ import           Control.Exception (Exception)
 import           Control.Concurrent (threadDelay)
 import           Options.Applicative
 
-import           Cardano.Config.Presets (mainnetConfiguration)
-
 import           Control.Tracer (stdoutTracer)
 
 import           Ouroboros.Network.Block (BlockNo)
@@ -20,10 +18,10 @@ import           Ouroboros.Consensus.NodeId (CoreNodeId)
 
 import           Cardano.Config.CommonCLI
 import           Cardano.Config.Protocol (SomeProtocol(..), fromProtocol)
-import           Cardano.Config.Types (CardanoConfiguration(..), ConfigYamlFilePath(..),
-                                       MiscellaneousFilepaths(..), NodeCLI(..), NodeConfiguration(..),
-                                       parseNodeConfiguration)
-import           Cardano.Common.Parsers (nodeCliParser, parseCoreNodeId)
+import           Cardano.Config.Types (ConfigYamlFilePath(..), DelegationCertFile(..),
+                                       GenesisFile (..), NodeConfiguration(..),
+                                       SigningKeyFile(..), SocketFile(..), parseNodeConfiguration)
+import           Cardano.Common.Parsers (parseConfigFile, parseCoreNodeId)
 import           Cardano.Chairman (runChairman)
 
 main :: IO ()
@@ -32,32 +30,30 @@ main = do
                  , caSecurityParam
                  , caMaxBlockNo
                  , caTimeout
-                 , caCommonCLI
-                 , caCommonCLIAdv
-                 , caNodeCLI
+                 , caGenesisFile
+                 , caSocketDir
+                 , caConfigYaml
+                 , caSigningKeyFp
+                 , caDelegationCertFp
                  } <- execParser opts
 
-    cc <- case mkConfiguration mainnetConfiguration caCommonCLI caCommonCLIAdv of
-      Left e -> throwIO e
-      Right x -> pure x
-
-    nc <- liftIO . parseNodeConfiguration . unConfigPath $ configFp caNodeCLI
+    nc <- liftIO . parseNodeConfiguration $ unConfigPath caConfigYaml
     SomeProtocol p <- fromProtocol
                         (ncGenesisHash nc)
                         (ncNodeId nc)
                         (ncNumCoreNodes nc)
-                        (genesisFile $ mscFp caNodeCLI)
+                        (caGenesisFile)
                         (ncReqNetworkMagic nc)
                         (ncPbftSignatureThresh nc)
-                        (delegCertFile $ mscFp caNodeCLI)
-                        (signKeyFile $ mscFp caNodeCLI)
+                        (caDelegationCertFp)
+                        (caSigningKeyFp)
                         (ncUpdate nc)
                         (ncProtocol nc)
 
     let run = runChairman p caCoreNodeIds
                           caSecurityParam
                           caMaxBlockNo
-                          (ccSocketDir cc)
+                          (unSocket caSocketDir)
                           stdoutTracer
 
     case caTimeout of
@@ -85,9 +81,11 @@ data ChairmanArgs = ChairmanArgs {
       -- detect progress errors when running 'chain-sync' protocol and we will
       -- be able to remove this option
     , caTimeout         :: !(Maybe Int)
-    , caCommonCLI       :: !CommonCLI
-    , caCommonCLIAdv    :: !CommonCLIAdvanced
-    , caNodeCLI         :: !(NodeCLI)
+    , caGenesisFile :: !GenesisFile
+    , caSocketDir :: !SocketFile
+    , caConfigYaml :: !ConfigYamlFilePath
+    , caSigningKeyFp :: !(Maybe SigningKeyFile)
+    , caDelegationCertFp :: !(Maybe DelegationCertFile)
     }
 
 parseSecurityParam :: Parser SecurityParam
@@ -124,9 +122,11 @@ parseChairmanArgs =
       <*> parseSecurityParam
       <*> optional parseSlots
       <*> optional parseTimeout
-      <*> parseCommonCLI
-      <*> parseCommonCLIAdvanced
-      <*> nodeCliParser
+      <*> (GenesisFile <$> parseGenesisPath)
+      <*> (SocketFile <$> parseSocketDir)
+      <*> (ConfigYamlFilePath <$> parseConfigFile)
+      <*> (optional $ SigningKeyFile <$> parseSigningKey)
+      <*> (optional $ DelegationCertFile <$> parseDelegationCert)
 
 opts :: ParserInfo ChairmanArgs
 opts = info (parseChairmanArgs <**> helper)

@@ -125,6 +125,7 @@ data ClientCommand
     TxFile
     -- ^ Filepath of transaction to submit.
     TopologyInfo
+    NodeId
   | SpendGenesisUTxO
     NewTxFile
     -- ^ Filepath of the newly created transaction.
@@ -216,12 +217,12 @@ runCommand _ _(CheckDelegation magic cert issuerVF delegateVF) = do
 runCommand
   (CardanoConfiguration{ccCore, ccProtocol, ccSocketDir, ccUpdate})
   _
-  (SubmitTx fp topology) = do
+  (SubmitTx fp topology nid) = do
     tx <- liftIO $ readByronTx fp
     liftIO $ nodeSubmitTx
                topology
                (coGenesisHash ccCore)
-               (CoreId $ fromMaybe (panic "Node Id not specified") (coNodeId ccCore))
+               (nid)
                (coNumCoreNodes ccCore)
                (GenesisFile $ coGenesisFile ccCore)
                (coRequiresNetworkMagic ccCore)

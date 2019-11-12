@@ -22,9 +22,6 @@ NETARGS=(
         --genesis-hash "${genesis_hash}"
         submit-tx
         --topology      "configuration/simple-topology.json"
-        --genesis-file  "${genesis_file}"
-        --database-path "./db/"
-        --socket-dir    "./socket/"
         --node-id      "0"
         --tx           "$TX"
 )
