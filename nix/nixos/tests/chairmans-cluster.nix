@@ -26,6 +26,7 @@ in {
     $machine->waitForOpenPort(3001);
     $machine->waitForOpenPort(3002);
     $machine->waitForOpenPort(3003);
+    $machine->succeed("netstat -pltn | systemd-cat --identifier=netstat --priority=crit");
     $machine->succeed("${chairman-runner} 2>&1 | systemd-cat --identifier=chairman --priority=crit");
   '';
 

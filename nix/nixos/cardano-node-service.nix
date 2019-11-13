@@ -7,25 +7,26 @@ let
   cfg = config.services.cardano-node;
   envConfig = environments.${cfg.environment};
   systemdServiceName = "cardano-node${optionalString cfg.instanced "@"}";
+  nodeConfig = (import cfg.configFile) { inherit cfg; };
+  configFile = toFile "config.json" (toJSON nodeConfig);
   mkScript = cfg:
     let exec = "cardano-node";
         cmd = builtins.filter (x: x != "") [
           "${cfg.package}/bin/${exec}"
           "--genesis-file ${cfg.genesisFile}"
-          "--genesis-hash ${cfg.genesisHash}"
-          "--log-config ${cfg.logger.configFile}"
+          "--config ${configFile}"
           "--database-path ${cfg.stateDir}/${cfg.dbPrefix}"
           "--socket-dir ${ if (cfg.runtimeDir == null) then "${cfg.stateDir}/socket" else "/run/${cfg.runtimeDir}"}"
           "--topology ${cfg.topology}"
-          "--${cfg.consensusProtocol}"
-          "--node-id ${toString cfg.nodeId}"
+          # "--${cfg.consensusProtocol}"
+          # "--node-id ${toString cfg.nodeId}"
           "--host-addr ${cfg.hostAddr}"
           "--port ${toString cfg.port}"
           "${lib.optionalString (cfg.pbftThreshold != null) "--pbft-signature-threshold ${cfg.pbftThreshold}"}"
           "${lib.optionalString (cfg.signingKey != null) "--signing-key ${cfg.signingKey}"}"
           "${lib.optionalString (cfg.delegationCertificate != null) "--delegation-certificate ${cfg.delegationCertificate}"}"
-          "${lib.optionalString (cfg.logger.extras != null) "${cfg.logger.extras}"}"
-        ] ++ cfg.extraOptions;
+          "${cfg.extraArgs}"
+        ];
     in ''
         echo "Starting ${exec}: '' + concatStringsSep "\"\n   echo \"" cmd + ''"
         echo "..or, once again, in a signle line:"
@@ -189,19 +190,15 @@ in {
         '';
       };
 
-      logger.configFile = mkOption {
+      configFile = mkOption {
         type = types.path;
-        default = ../../configuration/log-configuration.yaml;
-        description = ''
-          Logger configuration file
-        '';
+        default = ../../configuration/default-node-config.nix;
+        description = ''Node's configuration file, as a Nix expression.'';
       };
-      logger.extras = mkOption {
-        type = types.nullOr types.str;
-        default = null;
-        description = ''
-          Logging extra arguments
-        '';
+      extraArgs = mkOption {
+        type = types.str;
+        default = "";
+        description = ''Extra CLI args for 'cardano-node'.'';
       };
     };
   };

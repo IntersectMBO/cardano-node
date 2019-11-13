@@ -104,7 +104,20 @@ let
   portBase              = 3001;
   genesisDir            = mkFixedGenesisOfTime (periodicNewsTimestamp genesisUpdatePeriod) defaultGenesisArgs;
   genesisFile           = "${genesisDir}/genesis.json";
-  genesisHash           = ''$(${cardano-node}/bin/cardano-cli --real-pbft --log-config ${../../configuration/log-configuration.yaml} print-genesis-hash --genesis-json "${genesisFile}" | tail -1)'';
+  ## genesisHash
+  ##   :: FilePath (Genesis a) -> FilePath GenesisHash
+  genesisHash = genesisFile:
+    pkgs.runCommand "genesis-hash" {}
+    ''
+      args=(
+      --real-pbft
+      --log-config ${../../configuration/log-configuration.yaml}
+      print-genesis-hash
+      --genesis-json "${genesisFile}"
+      )
+      ${cardano-node}/bin/cardano-cli "''${args[@]}" | egrep '^[0-9a-f]{64,64}$' | xargs echo -n > $out
+    '';
+  genesisHashValue      = readFile (genesisHash genesisFile);
   signingKey            = ''$(printf "%s/delegate-keys.%03d.key"    $(dirname $2) $1)'';
   delegationCertificate = ''$(printf "%s/delegation-cert.%03d.json" $(dirname $2) $1)'';
   nodeId                = "$1";
@@ -140,8 +153,10 @@ in {
     services.cardano-node = {
       enable = true;
       instanced = true;
-      inherit topology genesisFile genesisHash signingKey delegationCertificate nodeId port;
+      genesisHash = genesisHashValue;
+      inherit topology genesisFile signingKey delegationCertificate nodeId port;
     };
+    services.chairman.genesisHash = genesisHashValue;
     systemd.services."cardano-node@" = {
       scriptArgs = "%i ${ncfg.genesisFile}";
     };
