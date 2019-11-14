@@ -33,7 +33,6 @@
           (hsPkgs.cardano-ledger)
           (hsPkgs.cardano-prelude)
           (hsPkgs.cborg)
-          (hsPkgs.constraints)
           (hsPkgs.containers)
           (hsPkgs.cryptonite)
           (hsPkgs.deepseq)
@@ -45,7 +44,6 @@
           (hsPkgs.mtl)
           (hsPkgs.network)
           (hsPkgs.pipes)
-          (hsPkgs.reflection)
           (hsPkgs.serialise)
           (hsPkgs.stm)
           (hsPkgs.text)
@@ -54,7 +52,7 @@
           (hsPkgs.vector)
           ] ++ (if system.isWindows
           then [ (hsPkgs.Win32) ]
-          else [ (hsPkgs.unix) ]);
+          else [ (hsPkgs.unix) (hsPkgs.unix-bytestring) ]);
         };
       exes = {
         "byron-db-converter" = {
@@ -73,11 +71,22 @@
             (hsPkgs.ouroboros-consensus)
             (hsPkgs.path)
             (hsPkgs.path-io)
-            (hsPkgs.reflection)
             (hsPkgs.resourcet)
             (hsPkgs.streaming)
             (hsPkgs.text)
             (hsPkgs.time)
+            ];
+          };
+        "analyse-db" = {
+          depends = [
+            (hsPkgs.base)
+            (hsPkgs.cardano-binary)
+            (hsPkgs.cardano-crypto-wrapper)
+            (hsPkgs.cardano-ledger)
+            (hsPkgs.mtl)
+            (hsPkgs.optparse-applicative)
+            (hsPkgs.ouroboros-consensus)
+            (hsPkgs.ouroboros-network)
             ];
           };
         };
@@ -114,7 +123,6 @@
             (hsPkgs.QuickCheck)
             (hsPkgs.quickcheck-state-machine)
             (hsPkgs.random)
-            (hsPkgs.reflection)
             (hsPkgs.serialise)
             (hsPkgs.tasty)
             (hsPkgs.tasty-hunit)
@@ -154,7 +162,6 @@
             (hsPkgs.QuickCheck)
             (hsPkgs.quickcheck-state-machine)
             (hsPkgs.random)
-            (hsPkgs.reflection)
             (hsPkgs.serialise)
             (hsPkgs.tasty)
             (hsPkgs.tasty-hunit)
@@ -171,8 +178,8 @@
     } // {
     src = (pkgs.lib).mkDefault (pkgs.fetchgit {
       url = "https://github.com/input-output-hk/ouroboros-network";
-      rev = "97500309e161627141605f82b01cddc5f6feea11";
-      sha256 = "00zyxckzl6ad1vjk0dlsyv2dqkhv5z18ch3nlxjv8sl7n18rjjfn";
+      rev = "0bd53a1f1992a17ab78d0f5dabad3e777a52de05";
+      sha256 = "17vdkiixzzni3bzqhryi2jd58znsrqvyn0hr8vplavb90ygz78a2";
       });
     postUnpack = "sourceRoot+=/ouroboros-consensus; echo source root reset to \$sourceRoot";
     }
