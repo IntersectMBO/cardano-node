@@ -1,6 +1,7 @@
-{-# LANGUAGE BangPatterns       #-}
-{-# LANGUAGE NamedFieldPuns     #-}
+{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NumericUnderscores #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 import           Cardano.Prelude hiding (option)
 
@@ -59,7 +60,9 @@ main = do
         `race_`
         do
           threadDelay (timeout * 1_000_000)
-          throwIO Timeout
+          putTextLn $ "Failing with timeout, after "<> show timeout <>"seconds."
+          exitFailure
+
 
 
 data ChairmanArgs = ChairmanArgs {
