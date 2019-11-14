@@ -332,7 +332,7 @@ instance Transformable Text IO (Consensus.TraceForgeEvent blk) where
 instance Transformable Text IO (WithIPList (SubscriptionTrace Socket.SockAddr)) where
   trTransformer StructuredLogging verb tr = trStructured verb tr
   trTransformer TextualRepresentation _verb tr = Tracer $ \s ->
-    traceWith tr =<< LogObject <$> pure ""
+    traceWith tr =<< LogObject <$> pure mempty
                                <*> mkLOMeta (defineSeverity s) (definePrivacyAnnotation s)
                                <*> pure (LogMessage $ pack $ show s)
   trTransformer UserdefinedFormatting verb tr = trStructured verb tr
@@ -341,7 +341,7 @@ instance Transformable Text IO (WithIPList (SubscriptionTrace Socket.SockAddr)) 
 instance Transformable Text IO (WithDomainName (SubscriptionTrace Socket.SockAddr)) where
   trTransformer StructuredLogging verb tr = trStructured verb tr
   trTransformer TextualRepresentation _verb tr = Tracer $ \s ->
-    traceWith tr =<< LogObject <$> pure ""
+    traceWith tr =<< LogObject <$> pure mempty
                                <*> mkLOMeta (defineSeverity s) (definePrivacyAnnotation s)
                                <*> pure (LogMessage $ pack $ show s)
   trTransformer UserdefinedFormatting verb tr = trStructured verb tr
@@ -350,7 +350,7 @@ instance Transformable Text IO (WithDomainName (SubscriptionTrace Socket.SockAdd
 instance Transformable Text IO (WithDomainName DnsTrace) where
   trTransformer StructuredLogging verb tr = trStructured verb tr
   trTransformer TextualRepresentation _verb tr = Tracer $ \s ->
-    traceWith tr =<< LogObject <$> pure ""
+    traceWith tr =<< LogObject <$> pure mempty
                                <*> mkLOMeta (defineSeverity s) (definePrivacyAnnotation s)
                                <*> pure (LogMessage $ pack $ show s)
   trTransformer UserdefinedFormatting verb tr = trStructured verb tr
@@ -360,7 +360,7 @@ instance (Show ptcl, Show peer)
            => Transformable Text IO (WithMuxBearer peer (MuxTrace ptcl)) where
   trTransformer StructuredLogging verb tr = trStructured verb tr
   trTransformer TextualRepresentation _verb tr = Tracer $ \s ->
-    traceWith tr =<< LogObject <$> pure ""
+    traceWith tr =<< LogObject <$> pure mempty
                                <*> mkLOMeta (defineSeverity s) (definePrivacyAnnotation s)
                                <*> pure (LogMessage $ pack $ show s)
   trTransformer UserdefinedFormatting verb tr = trStructured verb tr
@@ -372,7 +372,7 @@ instance (Condense (HeaderHash blk), ProtocolLedgerView blk)
   trTransformer StructuredLogging verb tr = trStructured verb tr
   -- textual output based on the readable ChainDB tracer
   trTransformer TextualRepresentation _verb tr = readableChainDBTracer $ Tracer $ \s ->
-    traceWith tr =<< LogObject <$> pure ""
+    traceWith tr =<< LogObject <$> pure mempty
                                <*> mkLOMeta (defineSeverity s) (definePrivacyAnnotation s)
                                <*> pure (LogMessage $ pack s)
   -- user defined formatting of log output
