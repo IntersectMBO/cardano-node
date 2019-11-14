@@ -6,6 +6,8 @@ let chairman-runner = chairmanScript {
         k          = 2160;
         timeout    = 300;
         maxBlockNo = 30;
+        topology = commonLib.mkEdgeTopology {};
+
       };
     };
 in {

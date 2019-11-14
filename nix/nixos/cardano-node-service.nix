@@ -7,8 +7,8 @@ let
   cfg = config.services.cardano-node;
   envConfig = environments.${cfg.environment};
   systemdServiceName = "cardano-node${optionalString cfg.instanced "@"}";
-  nodeConfig = (import cfg.configFile) { inherit cfg; };
   configFile = toFile "config.json" (toJSON nodeConfig);
+  nodeConfig = (import cfg.configFile) { inherit cfg; };
   mkScript = cfg:
     let exec = "cardano-node";
         cmd = builtins.filter (x: x != "") [
