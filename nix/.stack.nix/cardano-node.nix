@@ -41,6 +41,7 @@
           (hsPkgs.file-embed)
           (hsPkgs.filepath)
           (hsPkgs.formatting)
+          (hsPkgs.hostname)
           (hsPkgs.io-sim-classes)
           (hsPkgs.iohk-monitoring)
           (hsPkgs.iproute)
