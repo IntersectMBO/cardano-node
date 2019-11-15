@@ -52,7 +52,7 @@ import           Ouroboros.Consensus.Util.Condense
 import           Ouroboros.Consensus.Util.Orphans ()
 
 import qualified Ouroboros.Network.AnchoredFragment as AF
-import           Ouroboros.Network.Block (ChainHash, HeaderHash, Point, Tip,
+import           Ouroboros.Network.Block (HeaderHash, Point, Tip,
                      blockNo, unBlockNo, unSlotNo)
 import           Ouroboros.Network.BlockFetch.Decision (FetchDecision)
 import           Ouroboros.Network.BlockFetch.ClientState (TraceLabelPeer (..))
@@ -97,7 +97,6 @@ data Tracers peer blk = Tracers {
 type TraceConstraints blk =
   ( Condense blk
   , Condense [blk]
-  , Condense (ChainHash blk)
   , Condense (Header blk)
   , Condense (HeaderHash blk)
   , Condense (GenTx blk)

@@ -1,4 +1,5 @@
 {-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE NamedFieldPuns #-}
@@ -32,16 +33,17 @@ import           Cardano.Shell.Lib (GeneralException (..))
 
 import           Ouroboros.Consensus.Block (Header)
 import           Ouroboros.Consensus.Mempool.API (ApplyTxErr, GenTx, GenTxId)
-import           Ouroboros.Consensus.Node.ProtocolInfo (PBftLeaderCredentials,
+import           Ouroboros.Consensus.Node.ProtocolInfo (NumCoreNodes (..),
+                                                        PBftLeaderCredentials,
                                                         PBftSignatureThreshold(..),
                                                          mkPBftLeaderCredentials)
+import           Ouroboros.Consensus.NodeId (CoreNodeId (..), NodeId (..))
 import           Ouroboros.Consensus.Node.Run (RunNode)
 import           Ouroboros.Consensus.Protocol (SecurityParam (..),
                                                PraosParams (..),
                                                PBftParams (..))
 import qualified Ouroboros.Consensus.Protocol as Consensus
 import qualified Ouroboros.Consensus.Ledger.Byron        as Consensus
-import qualified Ouroboros.Consensus.Ledger.Byron.Config as Consensus
 import           Ouroboros.Consensus.Util (Dict(..))
 import           Ouroboros.Consensus.Util.Condense
 import           Ouroboros.Network.Block
@@ -78,55 +80,55 @@ type TraceConstraints blk =
 mockSecurityParam :: SecurityParam
 mockSecurityParam = SecurityParam 5
 
+-- | Helper for creating a 'SomeProtocol' for a mock protocol that needs the
+-- 'CoreNodeId' and NumCoreNodes'. If one of them is missing from the
+-- 'CardanoConfiguration', a 'MissingNodeInfo' exception is thrown.
+mockSomeProtocol
+  :: (RunNode blk, TraceConstraints blk)
+  => NodeConfiguration
+  -> (CoreNodeId -> NumCoreNodes -> Consensus.Protocol blk)
+  -> IO SomeProtocol
+mockSomeProtocol nc mkConsensusProtocol =  do
+    (cid, numCoreNodes) <- either throwIO return $ extractNodeInfo nc
+    let p = mkConsensusProtocol cid numCoreNodes
+    case Consensus.runProtocol p of
+      Dict -> return $ SomeProtocol p
+
+
+
 data SomeProtocol where
   SomeProtocol :: (RunNode blk, TraceConstraints blk)
                => Consensus.Protocol blk -> SomeProtocol
 
-fromProtocol
-  :: NodeConfiguration
-  -> NodeCLI
-  -> Protocol
-  -> IO SomeProtocol
+fromProtocol :: NodeConfiguration
+             -> NodeCLI
+             -> IO SomeProtocol
+fromProtocol nc nCli = case ncProtocol nc of
+  ByronLegacy ->
+    error "Byron Legacy protocol is not implemented."
 
-fromProtocol _ _ ByronLegacy =
-  error "Byron Legacy protocol is not implemented."
+  BFT         -> mockSomeProtocol nc $ \cid numCoreNodes ->
+    Consensus.ProtocolMockBFT numCoreNodes cid mockSecurityParam
 
-fromProtocol _ _ BFT =
-  case Consensus.runProtocol p of
-    Dict -> return $ SomeProtocol p
-
-  where
-    p = Consensus.ProtocolMockBFT mockSecurityParam
-
-fromProtocol _ _ Praos =
-  case Consensus.runProtocol p of
-    Dict -> return $ SomeProtocol p
-
-  where
-    p = Consensus.ProtocolMockPraos PraosParams {
+  Praos       -> mockSomeProtocol nc $ \cid numCoreNodes ->
+    Consensus.ProtocolMockPraos numCoreNodes cid PraosParams {
         praosSecurityParam = mockSecurityParam
       , praosSlotsPerEpoch = 3
       , praosLeaderF       = 0.5
       , praosLifetimeKES   = 1000000
       }
 
-
-fromProtocol _ _ MockPBFT =
-  case Consensus.runProtocol p of
-    Dict -> return $ SomeProtocol p
-
-  where
-    p = Consensus.ProtocolMockPBFT PBftParams {
+  MockPBFT    -> mockSomeProtocol nc $ \cid numCoreNodes@(NumCoreNodes numNodes) ->
+    Consensus.ProtocolMockPBFT numCoreNodes cid PBftParams {
         pbftSecurityParam      = mockSecurityParam
-      , pbftNumNodes           = numNodes
+      , pbftNumNodes           = fromIntegral numNodes
       , pbftSignatureThreshold = (1.0 / fromIntegral numNodes) + 0.1
       }
-    numNodes = 3
 
-
-fromProtocol nc nCli RealPBFT = do
-    let genHash = either (throw . ConfigurationError) identity $
-                  decodeAbstractHash (ncGenesisHash nc)
+  RealPBFT    -> do
+    let NodeConfiguration { ncGenesisHash } = nc
+        genHash = either (throw . ConfigurationError) identity $
+                  decodeAbstractHash ncGenesisHash
 
     gcE <- runExceptT (Genesis.mkConfigFromFile
                        (ncReqNetworkMagic nc)
@@ -151,8 +153,7 @@ fromProtocol nc nCli RealPBFT = do
 protocolConfigRealPbft :: NodeConfiguration
                        -> Genesis.Config
                        -> Maybe PBftLeaderCredentials
-                       -> Consensus.Protocol (Consensus.ByronBlockOrEBB
-                                                Consensus.ByronConfig)
+                       -> Consensus.Protocol Consensus.ByronBlock
 protocolConfigRealPbft NodeConfiguration {
                          ncPbftSignatureThresh,
                          ncUpdate = Update {
@@ -207,3 +208,20 @@ readLeaderCredentials gc nCli = do
     deserialiseSigningKey =
         fmap (Signing.SigningKey . snd)
       . deserialiseFromBytes Signing.fromCBORXPrv
+
+-- | Info missing from the config needed to run a protocol
+data MissingNodeInfo
+  = MissingCoreNodeId
+  | MissingNumCoreNodes
+  deriving (Show, Exception)
+
+extractNodeInfo
+  :: NodeConfiguration
+  -> Either MissingNodeInfo (CoreNodeId, NumCoreNodes)
+extractNodeInfo NodeConfiguration { ncNodeId, ncNumCoreNodes } = do
+
+    coreNodeId   <- case ncNodeId of
+      CoreId coreNodeId -> pure coreNodeId
+      _                 -> Left MissingCoreNodeId
+    numCoreNodes <- maybe (Left MissingNumCoreNodes) Right ncNumCoreNodes
+    return (CoreNodeId coreNodeId , NumCoreNodes numCoreNodes)

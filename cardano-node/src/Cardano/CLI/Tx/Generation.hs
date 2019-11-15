@@ -66,8 +66,7 @@ import qualified Cardano.Chain.UTxO as CC.UTxO
 import           Cardano.Config.Logging (LoggingLayer (..), Trace)
 import           Cardano.Config.Types (NodeCLI(..))
 import qualified Cardano.Crypto as Crypto
-import           Cardano.Config.Topology (NetworkTopology (..),
-                                          NodeAddress (..),
+import           Cardano.Config.Topology (NodeAddress (..),
                                           NodeHostAddress(..),
                                           TopologyError(..),
                                           TopologyInfo (..),
@@ -87,20 +86,16 @@ import           Control.Tracer (Tracer, contramap, traceWith)
 
 import           Ouroboros.Consensus.Node.Run (RunNode)
 import Ouroboros.Consensus.Block(BlockProtocol)
-import           Ouroboros.Consensus.Ledger.Byron.Config (ByronConfig,
-                                                          ByronEBBExtNodeConfig,
-                                                          pbftProtocolMagic)
-import           Ouroboros.Consensus.NodeId (CoreNodeId (..), NodeId (..))
-import           Ouroboros.Consensus.Node.ProtocolInfo (NumCoreNodes (..),
-                                                        ProtocolInfo (..),
+import           Ouroboros.Consensus.Ledger.Byron.Config (pbftProtocolMagic)
+import           Ouroboros.Consensus.Node.ProtocolInfo (ProtocolInfo (..),
                                                         protocolInfo)
 import qualified Ouroboros.Consensus.Protocol as Consensus
-import           Ouroboros.Consensus.Ledger.Byron (ByronBlockOrEBB (..),
-                                                   GenTx (..))
+import           Ouroboros.Consensus.Ledger.Byron (ByronBlock (..),
+                                                   GenTx (..),
+                                                   ByronConsensusProtocol)
 import qualified Ouroboros.Consensus.Ledger.Byron as Byron
 import           Ouroboros.Consensus.Protocol.Abstract (NodeConfig)
-import           Ouroboros.Consensus.Protocol.ExtNodeConfig (encNodeConfigExt)
-import           Ouroboros.Consensus.Protocol.WithEBBs (NodeConfig (WithEBBNodeConfig))
+import           Ouroboros.Consensus.Protocol.PBFT (pbftExtConfig)
 
 newtype NumberOfTxs =
   NumberOfTxs Word64
@@ -153,10 +148,9 @@ data TxGenError = CurrentlyCannotSendTxToRelayNode FilePath
 --   amount of funds for disbursment.
 -----------------------------------------------------------------------------------------
 genesisBenchmarkRunner
-  :: RunNode (ByronBlockOrEBB ByronConfig)
-  => LoggingLayer
+  :: LoggingLayer
   -> NodeCLI
-  -> Consensus.Protocol (ByronBlockOrEBB ByronConfig)
+  -> Consensus.Protocol ByronBlock
   -> TopologyInfo
   -> NumberOfTxs
   -> NumberOfInputsPerTx
@@ -185,14 +179,14 @@ genesisBenchmarkRunner loggingLayer
   liftIO . traceWith benchTracer . TraceBenchTxSubDebug
     $ "******* Tx generator, tracers are ready *******"
 
-  (topologyFromFile, ProtocolInfo{pInfoConfig}) <- prepareProtocolInfo protocol topologyInfo
-
   liftIO . traceWith benchTracer . TraceBenchTxSubDebug
     $ "******* Tx generator, protocol info and topology are ready *******"
 
   -- We have to extract host and port of the node we talk
   -- with (based on value of `-n` CLI argument) from the topology file.
-  let eitherNodeAddress = createNodeAddress (node topologyInfo) topologyFromFile (topologyFile topologyInfo)
+  toplogy <- firstExceptT TopologyFileReadError . newExceptT $
+    readTopologyFile (topologyFile topologyInfo)
+  let eitherNodeAddress = createNodeAddress (node topologyInfo) toplogy (topologyFile topologyInfo)
   targetNodeAddress <- firstExceptT TargetNodeAddressError . hoistEither $ eitherNodeAddress
 
   liftIO . traceWith benchTracer . TraceBenchTxSubDebug
@@ -211,7 +205,8 @@ genesisBenchmarkRunner loggingLayer
   liftIO . traceWith benchTracer . TraceBenchTxSubDebug
     $ "******* Tx generator, genesis UTxO is ready *******"
 
-  let genesisAddress   = mkAddressForKey pInfoConfig genesisKey
+  let ProtocolInfo{pInfoConfig} = protocolInfo protocol
+      genesisAddress   = mkAddressForKey pInfoConfig genesisKey
       sourceAddress    = mkAddressForKey pInfoConfig sourceKey
       recipientAddress = mkAddressForKey pInfoConfig recepientKey
 
@@ -285,33 +280,15 @@ class (Ord r) => FiscalRecipient r where
 
 instance FiscalRecipient Int where
 
-prepareProtocolInfo
-  :: forall blk. Consensus.Protocol blk
-  -> TopologyInfo
-  -> ExceptT TxGenError IO (NetworkTopology, ProtocolInfo blk)
-prepareProtocolInfo protocol topologyInfo = do
-  let topologyfile = readTopologyFile (topologyFile topologyInfo)
-  t@(NetworkTopology nodeSetups) <- firstExceptT TopologyFileReadError . newExceptT $ topologyfile
-  nodeId <-
-    case node topologyInfo of
-      RelayId{}  -> left . CurrentlyCannotSendTxToRelayNode $ topologyFile topologyInfo
-      CoreId nid -> return nid
-
-  return ( t
-         , protocolInfo (NumCoreNodes (length nodeSetups))
-                        (CoreNodeId nodeId)
-                        protocol
-         )
-
 -----------------------------------------------------------------------------------------
 -- Tracers.
 -----------------------------------------------------------------------------------------
 
 createTracers
   :: LoggingLayer
-  -> ( Tracer IO (TraceBenchTxSubmit (Byron.GenTxId (ByronBlockOrEBB ByronConfig)))
+  -> ( Tracer IO (TraceBenchTxSubmit (Byron.GenTxId ByronBlock))
      , Tracer IO SendRecvConnect
-     , Tracer IO (SendRecvTxSubmission (ByronBlockOrEBB ByronConfig))
+     , Tracer IO (SendRecvTxSubmission ByronBlock)
      , Tracer IO String
      )
 createTracers loggingLayer =
@@ -326,9 +303,9 @@ createTracers loggingLayer =
   tr' :: Trace IO Text
   tr' = appendName "generate-txs" tr
 
-  trBenchTotext :: TraceBenchTxSubmit (Byron.GenTxId (ByronBlockOrEBB ByronConfig)) -> Text
+  trBenchTotext :: TraceBenchTxSubmit (Byron.GenTxId ByronBlock) -> Text
   trBenchTotext = T.pack . show
-  benchTracer :: Tracer IO (TraceBenchTxSubmit (Byron.GenTxId (ByronBlockOrEBB ByronConfig)))
+  benchTracer :: Tracer IO (TraceBenchTxSubmit (Byron.GenTxId ByronBlock))
   benchTracer = contramap trBenchTotext (toLogObject (appendName "benchmark" tr'))
 
   trConnectTotext :: SendRecvConnect -> Text
@@ -336,9 +313,9 @@ createTracers loggingLayer =
   connectTracer :: Tracer IO SendRecvConnect
   connectTracer = contramap trConnectTotext (toLogObject (appendName "connect" tr'))
 
-  trSubmitTotext :: SendRecvTxSubmission (ByronBlockOrEBB ByronConfig) -> Text
+  trSubmitTotext :: SendRecvTxSubmission ByronBlock -> Text
   trSubmitTotext = T.pack . show
-  submitTracer :: Tracer IO (SendRecvTxSubmission (ByronBlockOrEBB ByronConfig))
+  submitTracer :: Tracer IO (SendRecvTxSubmission ByronBlock)
   submitTracer = contramap trSubmitTotext (toLogObject (appendName "submit" tr'))
 
   trStringTotext :: String -> Text
@@ -366,7 +343,7 @@ prepareSigningKeys skeys = do
   pure . map (Crypto.SigningKey . snd) $ rights desKeys
 
 mkAddressForKey
-  :: NodeConfig ByronEBBExtNodeConfig
+  :: NodeConfig ByronConsensusProtocol
   -> Crypto.SigningKey
   -> CC.Common.Address
 mkAddressForKey _pInfoConfig =
@@ -433,11 +410,10 @@ extractGenesisFunds genesisConfig signingKeys =
 -- Prepare and submit our first transaction: send money from 'initialAddress' to 'sourceAddress'
 -- (latter corresponds to 'targetAddress' here) and "remember" it in 'availableFunds'.
 prepareInitialFunds
-  :: RunNode (ByronBlockOrEBB ByronConfig)
-  => Tracer IO String
+  :: Tracer IO String
   -> NodeCLI
   -> CC.Genesis.Config
-  -> NodeConfig ByronEBBExtNodeConfig
+  -> NodeConfig ByronConsensusProtocol
   -> TopologyInfo
   -> Map Int ((CC.UTxO.TxIn, CC.UTxO.TxOut), Crypto.SigningKey)
   -> CC.Common.Address
@@ -461,7 +437,7 @@ prepareInitialFunds llTracer
         , CC.UTxO.txOutValue   = outBig
         }
 
-  let genesisTx :: GenTx (ByronBlockOrEBB ByronConfig)
+  let genesisTx :: GenTx ByronBlock
       genesisTx = txSpendGenesisUTxOByronPBFT genesisConfig
                                               signingKey
                                               genesisAddress
@@ -478,7 +454,7 @@ prepareInitialFunds llTracer
 -- | Get 'TxId' from 'GenTx'. Since we generate transactions by ourselves -
 --   we definitely know that it's 'ByronTx' only.
 getTxIdFromGenTx
-  :: GenTx (ByronBlockOrEBB cfg)
+  :: GenTx ByronBlock
   -> CC.UTxO.TxId
 getTxIdFromGenTx (ByronTx txId _) = txId
 getTxIdFromGenTx _ = panic "Impossible happened: generated transaction is not a ByronTx!"
@@ -486,7 +462,7 @@ getTxIdFromGenTx _ = panic "Impossible happened: generated transaction is not a 
 -- | One or more inputs -> one or more outputs.
 mkTransaction
   :: (FiscalRecipient r)
-  => NodeConfig ByronEBBExtNodeConfig
+  => NodeConfig ByronConsensusProtocol
   -> NonEmpty (TxDetails, Crypto.SigningKey)
   -- ^ Non-empty list of (TxIn, TxOut) that will be used as
   -- inputs and the key to spend the associated value
@@ -500,7 +476,7 @@ mkTransaction
   -> ( Maybe (Word32, CC.Common.Lovelace) -- The 'change' index and value (if any)
      , CC.Common.Lovelace                 -- The associated fees
      , Map r Word32                       -- The offset map in the transaction below
-     , GenTx (ByronBlockOrEBB cfg)
+     , GenTx ByronBlock
      )
 mkTransaction cfg inputs mChangeAddress payments txAdditionalSize =
   (mChange, fees, offsetMap, genTx)
@@ -597,19 +573,19 @@ appendr l nel = foldr NE.cons nel l
 
 -- | Annotate and sign transaction before submitting.
 generalizeTx
-  :: NodeConfig ByronEBBExtNodeConfig
+  :: NodeConfig ByronConsensusProtocol
   -> CC.UTxO.Tx
   -> Crypto.SigningKey -- signingKey for spending the input
-  -> GenTx (ByronBlockOrEBB cfg)
-generalizeTx (WithEBBNodeConfig config) tx signingKey =
-  Byron.mkByronGenTx $
+  -> GenTx ByronBlock
+generalizeTx config tx signingKey =
+  Byron.fromMempoolPayload $
     CC.Mempool.MempoolTx $ CC.UTxO.annotateTxAux $ CC.UTxO.mkTxAux tx witness
  where
   witness = pure $
       CC.UTxO.VKWitness
         (Crypto.toVerification signingKey)
         (Crypto.sign
-          (Crypto.getProtocolMagicId . pbftProtocolMagic . encNodeConfigExt $ config)
+          (Crypto.getProtocolMagicId . pbftProtocolMagic . pbftExtConfig $ config)
           -- provide ProtocolMagicId so as not to calculate it every time
           Crypto.SignTx
           signingKey
@@ -686,13 +662,12 @@ findAvailablefunds valueThreshold predStatus = do
 --   So if one Cardano tx contains 10 outputs (with addresses of 10 recipients),
 --   we have 1 Cardano tx and 10 fiscal txs.
 runBenchmark
-  :: RunNode (ByronBlockOrEBB ByronConfig)
-  => Tracer IO (TraceBenchTxSubmit (Byron.GenTxId (ByronBlockOrEBB ByronConfig)))
+  :: Tracer IO (TraceBenchTxSubmit (Byron.GenTxId ByronBlock))
   -> Tracer IO SendRecvConnect
-  -> Tracer IO (SendRecvTxSubmission (ByronBlockOrEBB ByronConfig))
+  -> Tracer IO (SendRecvTxSubmission ByronBlock)
   -> Tracer IO String
   -> NodeCLI
-  -> NodeConfig ByronEBBExtNodeConfig
+  -> NodeConfig ByronConsensusProtocol
   -> Crypto.SigningKey
   -> CC.Common.Address
   -> TopologyInfo
@@ -734,7 +709,7 @@ runBenchmark benchTracer
 
   liftIO . traceWith benchTracer . TraceBenchTxSubDebug
     $ "******* Tx generator, phase 2: pay to recipients *******"
-  let benchmarkTracers :: BenchmarkTxSubmitTracers IO (ByronBlockOrEBB ByronConfig)
+  let benchmarkTracers :: BenchmarkTxSubmitTracers IO ByronBlock
       benchmarkTracers = BenchmarkTracers
                            { trSendRecvConnect      = connectTracer
                            , trSendRecvTxSubmission = submitTracer
@@ -762,8 +737,8 @@ runBenchmark benchTracer
   (remoteAddr:_) <- liftIO $ getAddrInfo (Just hints) (Just targetNodeHost) (Just targetNodePort)
 
   let updROEnv
-        :: ROEnv (Byron.GenTxId (ByronBlockOrEBB ByronConfig)) (GenTx (ByronBlockOrEBB ByronConfig))
-        -> ROEnv (Byron.GenTxId (ByronBlockOrEBB ByronConfig)) (GenTx (ByronBlockOrEBB ByronConfig))
+        :: ROEnv (Byron.GenTxId ByronBlock) (GenTx ByronBlock)
+        -> ROEnv (Byron.GenTxId ByronBlock) (GenTx ByronBlock)
       updROEnv defaultROEnv =
         ROEnv { targetBacklog     = targetBacklog defaultROEnv
               , txNumServiceTime  = Just $ minimalTPSRate tpsRate
@@ -801,10 +776,9 @@ runBenchmark benchTracer
 --   E.g. (1 entry * 1000 ADA) -> (10 entries * 100 ADA).
 --   Technically all splitting transactions will send money back to 'sourceAddress'.
 createMoreFundCoins
-  :: RunNode (ByronBlockOrEBB ByronConfig)
-  => Tracer IO String
+  :: Tracer IO String
   -> NodeCLI
-  -> NodeConfig ByronEBBExtNodeConfig
+  -> NodeConfig ByronConsensusProtocol
   -> Crypto.SigningKey
   -> FeePerTx
   -> TopologyInfo
@@ -860,14 +834,14 @@ createMoreFundCoins llTracer
  where
   -- create txs which split the funds to numTxOuts equal parts
   createSplittingTxs
-    :: NodeConfig ByronEBBExtNodeConfig
+    :: NodeConfig ByronConsensusProtocol
     -> (TxDetails, Crypto.SigningKey)
     -> Word64
     -> Word64
     -> Int
     -> CC.UTxO.TxOut
-    -> [(GenTx (ByronBlockOrEBB cfg), [TxDetails])]
-    -> [(GenTx (ByronBlockOrEBB cfg), [TxDetails])]
+    -> [(GenTx ByronBlock, [TxDetails])]
+    -> [(GenTx ByronBlock, [TxDetails])]
   createSplittingTxs config details numTxOuts maxOutsPerInitTx identityIndex txOut acc
     | numTxOuts <= 0 = reverse acc
     | otherwise =
@@ -918,8 +892,8 @@ minimalTPSRate (TPSRate tps) = picosecondsToDiffTime timeInPicoSecs
   picosecondsIn1Sec = 1000000000000 :: Integer
 
 txGenerator
-  :: Tracer IO (TraceBenchTxSubmit (Byron.GenTxId (ByronBlockOrEBB ByronConfig)))
-  -> NodeConfig ByronEBBExtNodeConfig
+  :: Tracer IO (TraceBenchTxSubmit (Byron.GenTxId ByronBlock))
+  -> NodeConfig ByronConsensusProtocol
   -> CC.Common.Address
   -> Crypto.SigningKey
   -> FeePerTx
@@ -949,7 +923,7 @@ txGenerator benchTracer
       fvs <- findAvailablefunds totalValue (const True)
       return (txDetails fvs, sourceKey)
 
-    let (_, _, _, tx :: GenTx (ByronBlockOrEBB ByronConfig)) = mkTransaction cfg
+    let (_, _, _, tx :: GenTx ByronBlock) = mkTransaction cfg
                                                                              (NE.fromList txInputs)
                                                                              (Just addressForChange)
                                                                              recipients

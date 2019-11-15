@@ -105,7 +105,7 @@ runNode loggingLayer nc nCli = do
                              NormalVerbosity -> "normal"
                              MinimalVerbosity -> "minimal"
                              MaximalVerbosity -> "maximal"
-    SomeProtocol p  <- fromProtocol nc nCli $ ncProtocol nc
+    SomeProtocol p  <- fromProtocol nc nCli
 
     let tracers     = mkTracers (traceOpts nCli) trace
 
@@ -150,8 +150,7 @@ handleSimpleNode p trace nodeTracers nCli nc = do
     NetworkTopology nodeSetups <-
       either error id <$> readTopologyFile (unTopology . topFile $ mscFp nCli)
 
-    let pInfo@ProtocolInfo{ pInfoConfig = cfg } =
-          protocolInfo (NumCoreNodes (length nodeSetups)) (CoreNodeId nid) p
+    let pInfo@ProtocolInfo{ pInfoConfig = cfg } = protocolInfo p
 
     let tracer = contramap pack $ toLogObject trace
     traceWith tracer $

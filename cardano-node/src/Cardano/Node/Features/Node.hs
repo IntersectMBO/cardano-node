@@ -8,8 +8,7 @@ module Cardano.Node.Features.Node
 
 import           Cardano.Prelude
 
-import           Cardano.Config.Types (CardanoEnvironment (..),
-                                       NodeConfiguration, NodeCLI(..))
+import           Cardano.Config.Types (CardanoEnvironment, NodeConfiguration, CardanoEnvironment, NodeCLI(..))
 import           Cardano.Config.Logging (LoggingLayer (..),)
 import           Cardano.Node.Run
 import           Cardano.Shell.Types (CardanoFeature (..))
@@ -33,18 +32,16 @@ createNodeFeature
   -> NodeConfiguration
   -> NodeCLI
   -> IO (NodeLayer, CardanoFeature)
-createNodeFeature loggingLayer cardanoEnvironment nodeConfiguration nCli = do
+createNodeFeature loggingLayer _ nc nCli = do
     -- we parse any additional configuration if there is any
     -- We don't know where the user wants to fetch the additional
     -- configuration from, it could be from the filesystem, so
     -- we give him the most flexible/powerful context, @IO@.
 
     -- Construct the node layer
-    nodeLayer <- createNodeLayer
-                   cardanoEnvironment
-                   loggingLayer
-                   nodeConfiguration
-                   nCli
+    let nodeLayer = NodeLayer {
+                        nlRunNode = liftIO $ runNode loggingLayer nc nCli
+                      }
 
     -- Construct the cardano feature
     let cardanoFeature :: CardanoFeature
@@ -56,14 +53,3 @@ createNodeFeature loggingLayer cardanoEnvironment nodeConfiguration nCli = do
            }
 
     pure (nodeLayer, cardanoFeature)
-  where
-    createNodeLayer
-      :: CardanoEnvironment
-      -> LoggingLayer
-      -> NodeConfiguration
-      -> NodeCLI
-      -> IO NodeLayer
-    createNodeLayer _ logLayer nc nCli' = do
-        pure $ NodeLayer
-          { nlRunNode = liftIO $ runNode logLayer nc nCli'
-          }

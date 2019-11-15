@@ -17,7 +17,6 @@ import           Prelude (String)
 import           Data.ByteString.Lazy (ByteString)
 import           Data.Void (Void)
 
-import           Control.Monad (fail)
 import           Control.Monad.Class.MonadST (MonadST)
 import           Control.Monad.Class.MonadThrow (MonadThrow)
 import           Control.Monad.Class.MonadTimer (MonadTimer)
@@ -26,11 +25,10 @@ import           Control.Tracer (Tracer, nullTracer, traceWith)
 import           Ouroboros.Consensus.Block (BlockProtocol)
 import           Ouroboros.Consensus.Mempool (ApplyTxErr, GenTx)
 import           Ouroboros.Consensus.Node.ProtocolInfo ( ProtocolInfo(..)
-                                                       , NumCoreNodes(..)
                                                        , protocolInfo)
 import           Ouroboros.Consensus.Node.Run (RunNode)
 import qualified Ouroboros.Consensus.Node.Run as Node
-import           Ouroboros.Consensus.NodeId (CoreNodeId(..), NodeId(..))
+import           Ouroboros.Consensus.NodeId (NodeId(..))
 import qualified Ouroboros.Consensus.Protocol as Consensus
 import           Ouroboros.Consensus.Protocol hiding (Protocol)
 
@@ -74,18 +72,8 @@ handleTxSubmission :: forall blk.
                    -> Tracer IO String
                    -> IO ()
 handleTxSubmission nCli ptcl tinfo tx tracer = do
-    topoE <- readTopologyFile (topologyFile tinfo)
-    NetworkTopology nodeSetups <-
-      case topoE of
-        Left e  -> fail e
-        Right t -> return t
-
-    nid <- case node tinfo of
-      CoreId nid -> return nid
-      RelayId{}  -> fail "Only core nodes are supported targets"
-
     let pinfo :: ProtocolInfo blk
-        pinfo = protocolInfo (NumCoreNodes (length nodeSetups)) (CoreNodeId nid) ptcl
+        pinfo = protocolInfo ptcl
 
     submitTx nCli (pInfoConfig pinfo) (node tinfo) tx tracer
 

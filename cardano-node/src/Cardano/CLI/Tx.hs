@@ -43,17 +43,16 @@ import qualified Cardano.Crypto.Hashing as Crypto
 import qualified Cardano.Crypto.Signing as Crypto
 
 import qualified Ouroboros.Consensus.Ledger.Byron as Byron
-import           Ouroboros.Consensus.Ledger.Byron (GenTx(..), ByronBlockOrEBB)
-import           Ouroboros.Consensus.Ledger.Byron.Config (ByronConfig)
+import           Ouroboros.Consensus.Ledger.Byron (GenTx(..), ByronBlock)
 import qualified Ouroboros.Consensus.Protocol as Consensus
 import           Ouroboros.Consensus.Node.Run (RunNode)
 
 import           Cardano.CLI.Ops
 import           Cardano.CLI.Tx.Submission
-import           Cardano.Common.Orphans ()
 import           Cardano.Config.Protocol
 import           Cardano.Config.Types (NodeCLI, NodeConfiguration(..))
 import           Cardano.Config.Topology
+import           Cardano.Common.Orphans ()
 
 
 newtype TxFile =
@@ -72,7 +71,7 @@ prettyAddress addr = sformat
   (Common.addressF %"\n"%Common.addressDetailedF)
   addr addr
 
-readByronTx :: TxFile -> IO (GenTx (ByronBlockOrEBB ByronConfig))
+readByronTx :: TxFile -> IO (GenTx ByronBlock)
 readByronTx (TxFile fp) = do
   txBS <- LB.readFile fp
   case deserialiseOrFail txBS of
@@ -135,12 +134,12 @@ genesisUTxOTxIn gc vk genAddr =
 withRealPBFT
   :: NodeConfiguration
   -> NodeCLI
-  -> (RunNode (ByronBlockOrEBB ByronConfig)
-      => Consensus.Protocol (ByronBlockOrEBB ByronConfig)
+  -> (RunNode ByronBlock
+      => Consensus.Protocol ByronBlock
       -> IO a)
   -> IO a
 withRealPBFT nc nCli action = do
-  SomeProtocol p <- fromProtocol nc nCli $ ncProtocol nc
+  SomeProtocol p <- fromProtocol nc nCli
   case p of
     proto@Consensus.ProtocolRealPBFT{} -> action proto
     _ -> throwIO $ ProtocolNotSupported (ncProtocol nc)
@@ -152,9 +151,9 @@ txSpendGenesisUTxOByronPBFT
   -> SigningKey
   -> Address
   -> NonEmpty TxOut
-  -> GenTx (ByronBlockOrEBB ByronConfig)
+  -> GenTx ByronBlock
 txSpendGenesisUTxOByronPBFT gc sk genAddr outs =
-    Byron.mkByronGenTx
+    Byron.fromMempoolPayload
       $ CC.Mempool.MempoolTx $ annotateTxAux $ mkTxAux tx (pure wit)
   where
     tx = UnsafeTx (pure txIn) outs txattrs
@@ -174,7 +173,7 @@ issueGenesisUTxOExpenditure
   -> NodeConfiguration
   -> NodeCLI
   -> Crypto.SigningKey
-  -> IO (GenTx (ByronBlockOrEBB ByronConfig))
+  -> IO (GenTx ByronBlock)
 issueGenesisUTxOExpenditure genRichAddr outs nc nCli sk = do
   withRealPBFT nc nCli $
     \(Consensus.ProtocolRealPBFT gc _ _ _ _)-> do
@@ -193,9 +192,9 @@ txSpendUTxOByronPBFT
   -> SigningKey
   -> NonEmpty TxIn
   -> NonEmpty TxOut
-  -> GenTx (ByronBlockOrEBB ByronConfig)
+  -> GenTx ByronBlock
 txSpendUTxOByronPBFT gc sk ins outs =
-    Byron.mkByronGenTx
+    Byron.fromMempoolPayload
       $ CC.Mempool.MempoolTx $ annotateTxAux $ mkTxAux tx (pure wit)
   where
     tx = UnsafeTx ins outs txattrs
@@ -212,7 +211,7 @@ issueUTxOExpenditure
   -> NodeConfiguration
   -> NodeCLI
   -> Crypto.SigningKey
-  -> IO (GenTx (ByronBlockOrEBB ByronConfig))
+  -> IO (GenTx ByronBlock)
 issueUTxOExpenditure ins outs nc nCli key = do
   withRealPBFT nc nCli $
     \(Consensus.ProtocolRealPBFT gc _ _ _ _)-> do
@@ -229,7 +228,7 @@ nodeSubmitTx
   :: TopologyInfo
   -> NodeConfiguration
   -> NodeCLI
-  -> GenTx (ByronBlockOrEBB ByronConfig)
+  -> GenTx ByronBlock
   -> IO ()
 nodeSubmitTx topology nc nCli gentx =
   withRealPBFT nc nCli $

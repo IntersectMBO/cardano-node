@@ -58,17 +58,13 @@ runWalletClient :: forall blk.
                 => Protocol blk
                 -> FilePath
                 -> CoreNodeId
-                -> NumCoreNodes
                 -> Tracer IO String
                 -> IO ()
-runWalletClient ptcl sockDir nid@(CoreNodeId id) numCoreNodes tracer = do
+runWalletClient ptcl sockDir (CoreNodeId id) tracer = do
 
     addr <- localSocketAddrInfo (CoreId id) sockDir NoMkdirIfMissing
 
-    let ProtocolInfo{pInfoConfig} =
-          protocolInfo numCoreNodes
-                       nid
-                       ptcl
+    let ProtocolInfo{pInfoConfig} = protocolInfo ptcl
 
         chainSyncTracer = contramap show tracer
         localTxSubmissionTracer = contramap show tracer
