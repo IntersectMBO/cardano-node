@@ -6,6 +6,8 @@ let chairman-runner = chairmanScript {
         k          = 2160;
         timeout    = 300;
         maxBlockNo = 30;
+        topology = commonLib.mkEdgeTopology {};
+
       };
     };
 in {
@@ -26,6 +28,7 @@ in {
     $machine->waitForOpenPort(3001);
     $machine->waitForOpenPort(3002);
     $machine->waitForOpenPort(3003);
+    $machine->succeed("netstat -pltn | systemd-cat --identifier=netstat --priority=crit");
     $machine->succeed("${chairman-runner} 2>&1 | systemd-cat --identifier=chairman --priority=crit");
   '';
 

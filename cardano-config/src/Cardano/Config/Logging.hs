@@ -10,6 +10,7 @@ module Cardano.Config.Logging
   , LoggingFlag (..)
   , LoggingConfiguration (..)
   , createLoggingFeature
+  , createLoggingFeatureCLI
   , loggingCLIConfiguration
   -- re-exports
   , Trace
@@ -26,6 +27,7 @@ module Cardano.Config.Logging
 import           Cardano.Prelude hiding (trace)
 
 import qualified Control.Concurrent.Async as Async
+import           Control.Exception (IOException, catch)
 import           Control.Exception.Safe (MonadCatch)
 
 import           Cardano.BM.Backend.Aggregation (plugin)
@@ -51,12 +53,12 @@ import           Cardano.BM.Setup (setupTrace_, shutdown)
 import           Cardano.BM.Trace (Trace, appendName, traceNamedObject)
 import qualified Cardano.BM.Trace as Trace
 import           Cardano.Shell.Lib (GeneralException (..))
-import           Cardano.Shell.Types ( CardanoFeature (..),
-                     CardanoFeatureInit (..), NoDependency (..))
+import           Cardano.Shell.Types (CardanoFeature (..))
 
-import           Cardano.Config.Types (CardanoConfiguration(..), CardanoEnvironment)
+import           Cardano.Config.Types (CardanoConfiguration(..), ConfigYamlFilePath(..),
+                                       CardanoEnvironment, NodeCLI(..), NodeConfiguration(..),
+                                       parseNodeConfiguration)
 
-import           Control.Exception (IOException, catch)
 
 --------------------------------------------------------------------------------
 -- Loggging feature
@@ -108,13 +110,6 @@ data LoggingLayer = LoggingLayer
 -- Feature
 --------------------------------
 
-type LoggingCardanoFeature = CardanoFeatureInit
-                               CardanoEnvironment
-                               NoDependency
-                               CardanoConfiguration
-                               LoggingConfiguration
-                               LoggingLayer
-
 -- | CLI specific data structure.
 data LoggingCLIArguments = LoggingCLIArguments
   { logConfigFile :: !(Maybe FilePath)
@@ -141,10 +136,30 @@ loggingCLIConfiguration mfp captureMetrics' =
         putTextLn "Cannot find the logging configuration file at location."
         throwIO $ FileNotFoundException fp
 
-createLoggingFeature
+createLoggingFeatureCLI
   :: CardanoEnvironment -> CardanoConfiguration -> IO (LoggingLayer, CardanoFeature)
+createLoggingFeatureCLI _ cc = do
+    (disabled', loggingConfiguration) <- loggingCLIConfiguration
+                                           (ccLogConfig cc)
+                                           (ccLogMetrics cc)
+
+    -- we construct the layer
+    (loggingLayer, cleanUpLogging) <- loggingCardanoFeatureInit disabled' loggingConfiguration
+
+
+    -- we construct the cardano feature
+    let cardanoFeature = CardanoFeature
+                            { featureName = "LoggingMonitoringFeature"
+                            , featureStart = liftIO . void $ pure loggingLayer
+                            , featureShutdown = liftIO $ cleanUpLogging loggingLayer
+                            }
+
+    -- we return both
+    pure (loggingLayer, cardanoFeature)
+
 createLoggingFeature
-  cardanoEnvironment cc = do
+  :: CardanoEnvironment -> NodeCLI -> IO (LoggingLayer, CardanoFeature)
+createLoggingFeature _ nCli = do
     -- we parse any additional configuration if there is any
     -- We don't know where the user wants to fetch the additional
     -- configuration from, it could be from
@@ -152,28 +167,29 @@ createLoggingFeature
     --
     -- Currently we parse outside the features since we want to have a complete
     -- parser for __every feature__.
+    nc <- parseNodeConfiguration . unConfigPath $ configFp nCli
+    let logConfigFp = if ncLoggingSwitch nc then Just . unConfigPath $ configFp nCli else Nothing
 
     (disabled', loggingConfiguration) <- loggingCLIConfiguration
-                                           (ccLogConfig cc)
-                                           (ccLogMetrics cc)
+                                           logConfigFp
+                                           (ncLogMetrics nc)
 
     -- we construct the layer
-    logCardanoFeat <- loggingCardanoFeatureInit disabled' loggingConfiguration
+    (loggingLayer, cleanUpLogging) <- loggingCardanoFeatureInit disabled' loggingConfiguration
 
-    loggingLayer <- featureInit logCardanoFeat
-                      cardanoEnvironment
-                      NoDependency
-                      cc
-                      loggingConfiguration
 
     -- we construct the cardano feature
-    let cardanoFeature = createCardanoFeature logCardanoFeat loggingLayer
+    let cardanoFeature = CardanoFeature
+                            { featureName = "LoggingMonitoringFeature"
+                            , featureStart = liftIO . void $ pure loggingLayer
+                            , featureShutdown = liftIO $ cleanUpLogging loggingLayer
+                            }
 
     -- we return both
     pure (loggingLayer, cardanoFeature)
 
 -- | Initialize `LoggingCardanoFeature`
-loggingCardanoFeatureInit :: LoggingFlag -> LoggingConfiguration -> IO LoggingCardanoFeature
+loggingCardanoFeatureInit :: LoggingFlag -> LoggingConfiguration -> IO (LoggingLayer, LoggingLayer -> IO())
 loggingCardanoFeatureInit disabled' conf = do
 
   let logConfig = lpConfiguration conf
@@ -206,10 +222,9 @@ loggingCardanoFeatureInit disabled' conf = do
 
   -- Construct the logging layer.
   let initLogging
-        :: CardanoEnvironment -> NoDependency
-        -> CardanoConfiguration -> LoggingConfiguration -> IO LoggingLayer
-      initLogging _ _ _ _ =
-        pure $ LoggingLayer
+        :: LoggingLayer
+      initLogging =
+              LoggingLayer
                  { llBasicTrace = Trace.natTrace liftIO trace
                  , llLogDebug = Trace.logDebug
                  , llLogInfo = Trace.logInfo
@@ -230,20 +245,7 @@ loggingCardanoFeatureInit disabled' conf = do
   let cleanupLogging :: LoggingLayer -> IO ()
       cleanupLogging _ = shutdown switchBoard
 
-  pure $ CardanoFeatureInit
-      { featureType = "LoggingMonitoringFeature"
-      , featureInit = initLogging
-      , featureCleanup = cleanupLogging
-      }
-
--- | Create `CardanoFeature`
-createCardanoFeature :: LoggingCardanoFeature -> LoggingLayer -> CardanoFeature
-createCardanoFeature loggingCardanoFeature loggingLayer =
-  CardanoFeature
-    { featureName = "LoggingMonitoringFeature"
-    , featureStart = liftIO . void $ pure loggingLayer
-    , featureShutdown = liftIO $ featureCleanup loggingCardanoFeature loggingLayer
-    }
+  pure (initLogging, cleanupLogging)
 
 startCapturingMetrics :: Trace IO Text -> IO ()
 startCapturingMetrics trace0 = do

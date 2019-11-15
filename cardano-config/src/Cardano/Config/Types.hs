@@ -1,12 +1,22 @@
+{-# LANGUAGE GeneralisedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 
 module Cardano.Config.Types
-    ( ConfigError(..)
+    ( ConfigError (..)
+    , ConfigYamlFilePath (..)
     , CardanoConfiguration (..)
     , CardanoEnvironment (..)
     , Core (..)
+    , DbFile (..)
+    , DelegationCertFile (..)
+    , GenesisFile (..)
+    , MiscellaneousFilepaths (..)
+    , NodeCLI (..)
     , NodeConfiguration (..)
+    , SigningKeyFile (..)
+    , SocketFile (..)
+    , TopologyFile( ..)
     -- * specific for @Core@
     , RequireNetworkMagic (..)
     , NodeProtocol (..)
@@ -113,36 +123,84 @@ data CardanoConfiguration = CardanoConfiguration
     , ccWallet              :: !Wallet
     } deriving (Eq, Show)
 
+data NodeCLI = NodeCLI
+    { mscFp :: !MiscellaneousFilepaths
+    , nodeAddr :: !NodeAddress
+    , configFp :: !ConfigYamlFilePath
+    , traceOpts :: !TraceOptions
+    } deriving Show
+
+-- | Filepath of the configuration yaml file. This file determines
+-- all the configuration settings required for the cardano node
+-- (logging, tracing, protocol, slot length etc)
+newtype ConfigYamlFilePath = ConfigYamlFilePath
+  { unConfigPath :: FilePath }
+  deriving Show
+
+data MiscellaneousFilepaths = MiscellaneousFilepaths
+  { topFile :: !TopologyFile
+  , dBFile :: !DbFile
+  , genesisFile :: !GenesisFile
+  , delegCertFile :: !(Maybe DelegationCertFile)
+  , signKeyFile :: !(Maybe SigningKeyFile)
+  , socketFile :: !SocketFile
+  } deriving Show
+
+newtype TopologyFile = TopologyFile
+  { unTopology :: FilePath }
+  deriving Show
+
+newtype DbFile = DbFile
+  { unDB :: FilePath }
+  deriving Show
+
+newtype GenesisFile = GenesisFile
+  { unGenesisFile :: FilePath }
+  deriving (Eq, Ord, Show, IsString)
+
+newtype DelegationCertFile = DelegationCertFile
+  { unDelegationCert :: FilePath }
+  deriving Show
+
+newtype SocketFile = SocketFile
+  { unSocket :: FilePath }
+  deriving Show
+
+newtype SigningKeyFile = SigningKeyFile
+  { unSigningKey ::  FilePath }
+  deriving (Eq, Ord, Show, IsString)
 
 data NodeConfiguration =
     NodeConfiguration
       { ncProtocol :: Protocol
       , ncNodeId :: NodeId
-      , ncNodeAddress :: NodeAddress
       , ncGenesisHash :: Text
       , ncNumCoreNodes :: Maybe Int
-      , ncReqNetworkMagc :: RequiresNetworkMagic
+      , ncReqNetworkMagic :: RequiresNetworkMagic
       , ncPbftSignatureThresh :: Maybe Double
+      , ncLoggingSwitch :: Bool
+      , ncLogMetrics :: Bool
+      , ncViewMode :: ViewMode
       , ncNTP :: NTP
       , ncUpdate :: Update
       , ncTXP :: TXP
       , ncDLG :: DLG
       , ncBlock :: Block
       , ncNode :: Node
-      , ncTLS :: TLS
       , ncWallet :: Wallet
       } deriving (Show)
 
 instance FromJSON NodeConfiguration where
     parseJSON = withObject "NodeConfiguration" $ \v -> do
                   nId <- v .: "NodeId"
-                  nodeHostAddr <- v .: "NodeHostAddress"
-                  nodePort <- v .: "NodePort"
                   ptcl <- v .: "Protocol"
                   genesisHash <- v .: "GenesisHash"
                   numCoreNode <- v .:? "NumCoreNodes"
                   rNetworkMagic <- v .: "RequiresNetworkMagic"
                   pbftSignatureThresh <- v .:? "PBftSignatureThreshold"
+                  loggingSwitch <- v .: "TurnOnLogging"
+                  vMode <- v .: "ViewMode"
+                  logMetrics <- v .: "TurnOnLogMetrics"
 
                   -- Network Time Parameters
                   respTimeout <- v .: "ResponseTimeout"
@@ -177,20 +235,6 @@ instance FromJSON NodeConfiguration where
                   netConnTimeout <- v .: "NetworkConnectionTimeout"
                   handshakeTimeout <- v .: "HandshakeTimeout"
 
-                  -- Certificates
-                  caPrg <- v .: "CA-Organization"
-                  caCommonName <- v .: "CA-CommonName"
-                  caExpDays <- v .: "CA-ExpiryDays"
-                  caAltDns <- v .: "CA-AltDNS"
-                  serverPrg <- v .: "Server-Organization"
-                  serverCommonName <- v .: "Server-CommonName"
-                  serverExpDays <- v .: "Server-ExpiryDays"
-                  serverAltDns <- v .: "Server-AltDNS"
-                  walletPrg <- v .: "Wallet-Organization"
-                  walletCommonName <- v .: "Wallet-CommonName"
-                  walletExpDays <- v .: "Wallet-ExpiryDays"
-                  walletAltDns <- v .: "Wallet-AltDNS"
-
                   -- Wallet
                   throttleEnabled <- v .: "Enabled"
                   throttleRate <- v .: "Rate"
@@ -199,11 +243,13 @@ instance FromJSON NodeConfiguration where
                   pure $ NodeConfiguration
                            ptcl
                            nId
-                           (NodeAddress nodeHostAddr nodePort)
                            genesisHash
                            numCoreNode
                            rNetworkMagic
                            pbftSignatureThresh
+                           loggingSwitch
+                           logMetrics
+                           vMode
                            (NTP respTimeout pollDelay servers)
                            (Update appName appVersion (LastKnownBlockVersion
                                                          lkBlkVersionMajor
@@ -217,11 +263,6 @@ instance FromJSON NodeConfiguration where
                            (Node (slotLengthFromMillisec slotLength)
                                   netConnTimeout
                                   handshakeTimeout
-                           )
-                           (TLS
-                              (Certificate caPrg caCommonName caExpDays caAltDns)
-                              (Certificate serverPrg serverCommonName serverExpDays serverAltDns)
-                              (Certificate walletPrg walletCommonName walletExpDays walletAltDns)
                            )
                            (Wallet throttleEnabled throttleRate throttlePeriod throttleBurst)
 
@@ -481,6 +522,16 @@ data Certificate = Certificate
 data ViewMode = LiveView    -- Live mode with TUI
               | SimpleView  -- Simple mode, just output text.
               deriving (Eq, Show)
+
+instance FromJSON ViewMode where
+  parseJSON (String str) = case str of
+                            "LiveView" -> pure LiveView
+                            "SimpleView" -> pure SimpleView
+                            view -> panic $ "Parsing of ViewMode: "
+                                          <> view <> " failed. "
+                                          <> view <> " is not a valid view mode"
+  parseJSON invalid  = panic $ "Parsing of ViewMode failed due to type mismatch. "
+                             <> "Encountered: " <> (T.pack $ Prelude.show invalid)
 
 -- | Wallet rate-limiting/throttling parameters
 data Wallet = Wallet

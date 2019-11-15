@@ -51,8 +51,6 @@ let
         nodeId;
       runtimeDir = null;
       dbPrefix = "db-${envConfig.name}";
-      logger.configFile = config.loggingConfig;
-      logger.extras = config.loggingExtras;
       topology = topologyFile;
     };
     nodeConf = { config.services.cardano-node = serviceConfig; };

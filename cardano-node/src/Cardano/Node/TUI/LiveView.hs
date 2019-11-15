@@ -63,7 +63,6 @@ import           Cardano.BM.Trace
 import           Cardano.Node.TUI.GitRev (gitRev)
 import           Ouroboros.Consensus.NodeId
 import           Paths_cardano_node (version)
-import           Cardano.Config.Topology
 
 -- constants, to be evaluated from host system
 
@@ -335,8 +334,8 @@ initLiveViewState = do
                 , lvsColorTheme          = DarkTheme
                 }
 
-setTopology :: LiveViewBackend a -> TopologyInfo -> IO ()
-setTopology lvbe (TopologyInfo nodeid _) =
+setTopology :: LiveViewBackend a -> NodeId -> IO ()
+setTopology lvbe nodeid =
     modifyMVar_ (getbe lvbe) $ \lvs ->
         return $ lvs { lvsNodeId = namenum }
   where

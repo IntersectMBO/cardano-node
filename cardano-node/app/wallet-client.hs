@@ -11,15 +11,11 @@ import           Options.Applicative
 import           Cardano.BM.Data.LogItem
 import           Cardano.Shell.Lib (runCardanoApplicationWithFeatures)
 import           Cardano.Shell.Types (CardanoApplication (..),
-                                      CardanoFeature (..),
-                                      CardanoFeatureInit (..))
+                                      CardanoFeature (..))
 import           Ouroboros.Consensus.Node.ProtocolInfo.Abstract (NumCoreNodes (..))
 
 import           Cardano.Config.CommonCLI
-import           Cardano.Config.Partial (PartialCardanoConfiguration (..))
-import           Cardano.Config.Presets (mainnetConfiguration)
-import           Cardano.Config.Types (CardanoConfiguration (..),
-                                                   CardanoEnvironment (..))
+import           Cardano.Config.Types (CardanoEnvironment (..))
 import           Cardano.Config.Logging (LoggingCLIArguments (..),
                                                 LoggingLayer (..),
                                                 createLoggingFeature
@@ -29,22 +25,23 @@ import           Cardano.Common.Parsers
 import           Cardano.Wallet.Run
 
 -- | The product type of all command line arguments
-data ArgParser = ArgParser !LoggingCLIArguments !CLI
+data ArgParser = ArgParser !LoggingCLIArguments !WalletCLI
 
--- | The product parser for all the CLI arguments.
+-- | The product parser for all the WalletCLI arguments.
 --
 commandLineParser :: Parser ArgParser
 commandLineParser = ArgParser
     <$> loggingParser
     <*> parseWalletCLI
 
-parseWalletCLI :: Parser CLI
-parseWalletCLI = CLI
+parseWalletCLI :: Parser WalletCLI
+parseWalletCLI = WalletCLI
     <$> parseCoreNodeId
     <*> parseNumCoreNodes
     <*> parseProtocol
     <*> parseCommonCLI
     <*> parseCommonCLIAdvanced
+    <*> nodeCliParser
 
 parseNumCoreNodes :: Parser NumCoreNodes
 parseNumCoreNodes =
@@ -71,22 +68,17 @@ main = do
 
     logConfig           <- execParser opts
 
-    (cardanoFeatures, nodeLayer) <- initializeAllFeatures logConfig mainnetConfiguration cardanoEnvironment
+    (cardanoFeatures, nodeLayer) <- initializeAllFeatures logConfig cardanoEnvironment
 
     let cardanoApplication :: NodeLayer -> CardanoApplication
         cardanoApplication = CardanoApplication . nlRunNode
 
     runCardanoApplicationWithFeatures cardanoFeatures (cardanoApplication nodeLayer)
 
-initializeAllFeatures :: ArgParser -> PartialCardanoConfiguration -> CardanoEnvironment -> IO ([CardanoFeature], NodeLayer)
-initializeAllFeatures (ArgParser _ cli) partialConfig cardanoEnvironment = do
-    finalConfig <-
-      case mkConfiguration partialConfig (cliCommon cli) (cliCommonAdv cli) of
-        Left err -> throwIO err
-        Right x -> pure x
-
-    (loggingLayer, loggingFeature) <- createLoggingFeature cardanoEnvironment finalConfig
-    (nodeLayer   , nodeFeature)    <- createNodeFeature loggingLayer cli cardanoEnvironment finalConfig
+initializeAllFeatures :: ArgParser  -> CardanoEnvironment -> IO ([CardanoFeature], NodeLayer)
+initializeAllFeatures (ArgParser _ cli) cardanoEnvironment = do
+    (loggingLayer, loggingFeature) <- createLoggingFeature cardanoEnvironment $ cliNodeCLI cli
+    (nodeLayer   , nodeFeature)    <- createNodeFeature loggingLayer cli cardanoEnvironment
 
     -- Here we return all the features.
     let allCardanoFeatures :: [CardanoFeature]
@@ -109,44 +101,28 @@ data NodeLayer = NodeLayer
 -- Node Feature
 --------------------------------
 
-type NodeCardanoFeature = CardanoFeatureInit CardanoEnvironment LoggingLayer CardanoConfiguration CLI NodeLayer
-
-
-createNodeFeature :: LoggingLayer -> CLI -> CardanoEnvironment -> CardanoConfiguration -> IO (NodeLayer, CardanoFeature)
-createNodeFeature loggingLayer cli cardanoEnvironment cardanoConfiguration = do
+createNodeFeature :: LoggingLayer -> WalletCLI -> CardanoEnvironment -> IO (NodeLayer, CardanoFeature)
+createNodeFeature loggingLayer cli cardanoEnvironment = do
     -- we parse any additional configuration if there is any
     -- We don't know where the user wants to fetch the additional configuration from, it could be from
     -- the filesystem, so we give him the most flexible/powerful context, @IO@.
 
     -- we construct the layer
-    nodeLayer <- (featureInit nodeCardanoFeatureInit) cardanoEnvironment loggingLayer cardanoConfiguration cli
+    nodeLayer <- featureStart' cardanoEnvironment loggingLayer cli
 
     -- we construct the cardano feature
-    let cardanoFeature = nodeCardanoFeature nodeCardanoFeatureInit nodeLayer
+    let cardanoFeature = CardanoFeature
+                           { featureName       = "NodeFeature"
+                           , featureStart      = pure ()
+                           , featureShutdown   = pure ()
+                           }
 
     -- we return both
     pure (nodeLayer, cardanoFeature)
 
-nodeCardanoFeatureInit :: NodeCardanoFeature
-nodeCardanoFeatureInit = CardanoFeatureInit
-    { featureType    = "NodeFeature"
-    , featureInit    = featureStart'
-    , featureCleanup = featureCleanup'
-    }
   where
-    featureStart' :: CardanoEnvironment -> LoggingLayer -> CardanoConfiguration -> CLI -> IO NodeLayer
-    featureStart' _ loggingLayer cc cli = do
+    featureStart' :: CardanoEnvironment -> LoggingLayer -> WalletCLI -> IO NodeLayer
+    featureStart' _ loggingLayer' walletCli = do
         let tr :: MonadIO m => Tracer m (Cardano.BM.Data.LogItem.LogObject Text)
-            tr = llAppendName loggingLayer "wallet" (llBasicTrace loggingLayer)
-        pure $ NodeLayer {nlRunNode = liftIO $ runClient cli tr cc}
-
-    featureCleanup' :: NodeLayer -> IO ()
-    featureCleanup' _ = pure ()
-
-
-nodeCardanoFeature :: NodeCardanoFeature -> NodeLayer -> CardanoFeature
-nodeCardanoFeature nodeCardanoFeature' nodeLayer = CardanoFeature
-    { featureName       = featureType nodeCardanoFeature'
-    , featureStart      = pure ()
-    , featureShutdown   = liftIO $ (featureCleanup nodeCardanoFeature') nodeLayer
-    }
+            tr = llAppendName loggingLayer "wallet" (llBasicTrace loggingLayer')
+        pure $ NodeLayer {nlRunNode = liftIO $ runClient walletCli tr}

@@ -8,7 +8,6 @@ set -e
 # create tmux session:
 #> tmux new-session -s 'Demo' -t demo
 
-ALGO="--real-pbft"
 # CMD="stack exec --nix cardano-node --"
 CMD="cabal new-run --"
 # EXTRA="--live-view"
@@ -32,8 +31,8 @@ tmux select-pane -t 4
 tmux send-keys "cd '${PWD}'; ${CMD} trace-acceptor $(acceptorargs)" C-m
 sleep 2
 tmux select-pane -t 0
-tmux send-keys "cd '${PWD}'; ${CMD} exe:cardano-node $(nodeargs 0 "${ALGO} ${EXTRA}")" C-m
+tmux send-keys "cd '${PWD}'; ${CMD} exe:cardano-node $(nodeargs 0 " ${EXTRA}")" C-m
 tmux select-pane -t 1
-tmux send-keys "cd '${PWD}'; ${CMD} exe:cardano-node $(nodeargs 1 "${ALGO} ${EXTRA}")" C-m
+tmux send-keys "cd '${PWD}'; ${CMD} exe:cardano-node $(nodeargs 1 " ${EXTRA}")" C-m
 tmux select-pane -t 2
-tmux send-keys "cd '${PWD}'; ${CMD} exe:cardano-node $(nodeargs 2 "${ALGO} ${EXTRA}")" C-m
+tmux send-keys "cd '${PWD}'; ${CMD} exe:cardano-node $(nodeargs 2 " ${EXTRA}")" C-m

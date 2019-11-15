@@ -22,15 +22,20 @@ module Cardano.Config.CommonCLI
   , lastStrOption
   , lastStrOptionM
   , lastFlag
-  , parseDbPath
-  , parseDelegationeCert
-  , parseGenesisHash
+  , parseDbPathLast
+  , parseDelegationCert
+  , parseDelegationCertLast
+  , parseGenesisHashLast
   , parseGenesisPath
-  , parsePbftSigThreshold
-  , parseRequireNetworkMagic
+  , parseGenesisPathLast
+  , parsePbftSigThresholdLast
+  , parseRequireNetworkMagicLast
   , parseSigningKey
-  , parseSlotLength
+  , parseSlotLengthLast
   , parseSocketDir
+  , parseSocketDirLast
+  -- Last Parsers
+  , parseSigningKeyLast
 
   ) where
 
@@ -67,46 +72,79 @@ data CommonCLIAdvanced = CommonCLIAdvanced
   Common CLI
 -------------------------------------------------------------------------------}
 
-parseDbPath :: Parser (Last FilePath)
-parseDbPath =
+parseDbPathLast :: Parser (Last FilePath)
+parseDbPathLast =
   lastStrOption
     ( long "database-path"
         <> metavar "FILEPATH"
         <> help "Directory where the state is stored."
     )
-parseGenesisPath :: Parser (Last FilePath)
+parseGenesisPath :: Parser FilePath
 parseGenesisPath =
+  strOption
+    ( long "genesis-file"
+        <> metavar "FILEPATH"
+        <> help "The filepath to the genesis file."
+    )
+
+parseGenesisPathLast :: Parser (Last FilePath)
+parseGenesisPathLast =
   lastStrOption
     ( long "genesis-file"
         <> metavar "FILEPATH"
         <> help "The filepath to the genesis file."
     )
 
-parseGenesisHash :: Parser (Last Text)
-parseGenesisHash =
+parseGenesisHashLast :: Parser (Last Text)
+parseGenesisHashLast =
   lastStrOption
     ( long "genesis-hash"
         <> metavar "GENESIS-HASH"
         <> help "The genesis hash value."
     )
-parseDelegationeCert :: Parser (Last FilePath)
-parseDelegationeCert =
+parseDelegationCert :: Parser FilePath
+parseDelegationCert =
+  strOption
+    ( long "delegation-certificate"
+        <> metavar "FILEPATH"
+        <> help "Path to the delegation certificate."
+    )
+
+parseDelegationCertLast :: Parser (Last FilePath)
+parseDelegationCertLast =
   lastStrOption
     ( long "delegation-certificate"
         <> metavar "FILEPATH"
         <> help "Path to the delegation certificate."
     )
 
-parseSigningKey :: Parser (Last FilePath)
-parseSigningKey =
+parseSigningKeyLast :: Parser (Last FilePath)
+parseSigningKeyLast =
   lastStrOption
     ( long "signing-key"
         <> metavar "FILEPATH"
         <> help "Path to the signing key."
     )
 
-parseSocketDir :: Parser (Last FilePath)
+parseSigningKey :: Parser FilePath
+parseSigningKey =
+  strOption
+    ( long "signing-key"
+        <> metavar "FILEPATH"
+        <> help "Path to the signing key."
+    )
+
+parseSocketDir :: Parser FilePath
 parseSocketDir =
+  strOption
+    ( long "socket-dir"
+        <> metavar "FILEPATH"
+        <> help "Directory with local sockets:\
+                \  ${dir}/node-{core,relay}-${node-id}.socket"
+    )
+
+parseSocketDirLast :: Parser (Last FilePath)
+parseSocketDirLast =
   lastStrOption
     ( long "socket-dir"
         <> metavar "FILEPATH"
@@ -149,23 +187,23 @@ parseCommonCLI =
          <> help "Directory with local sockets:  ${dir}/node-{core,relay}-${node-id}.socket"
         )
 
-parsePbftSigThreshold :: Parser (Last Double)
-parsePbftSigThreshold =
+parsePbftSigThresholdLast :: Parser (Last Double)
+parsePbftSigThresholdLast =
   lastDoubleOption
     ( long "pbft-signature-threshold"
         <> metavar "DOUBLE"
         <> help "The PBFT signature threshold."
         <> hidden
     )
-parseRequireNetworkMagic :: Parser (Last RequireNetworkMagic)
-parseRequireNetworkMagic =
+parseRequireNetworkMagicLast :: Parser (Last RequireNetworkMagic)
+parseRequireNetworkMagicLast =
   lastFlag NoRequireNetworkMagic RequireNetworkMagic
     ( long "require-network-magic"
         <> help "Require network magic in transactions."
         <> hidden
     )
-parseSlotLength :: Parser (Last Consensus.SlotLength)
-parseSlotLength = do
+parseSlotLengthLast :: Parser (Last Consensus.SlotLength)
+parseSlotLengthLast = do
   slotDurInteger <- lastAutoOption
                       ( long "slot-duration"
                           <> metavar "SECONDS"

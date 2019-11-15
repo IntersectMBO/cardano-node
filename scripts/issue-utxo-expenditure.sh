@@ -38,6 +38,10 @@ args=" --real-pbft
        --wallet-key          ${from_key}
        --txin             (\"${txid}\",${outindex})
        --txout            (\"${addr}\",${lovelace})
+       --topology            configuration/simple-topology.json
+       --genesis-file        \"${genesis_file}\"
+       --database-path       ./db/
+       --socket-dir          ./socket/
 "
 set -x
 ${RUNNER} cardano-cli ${args}

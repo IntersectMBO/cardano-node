@@ -11,6 +11,10 @@ NETARGS=(
         --genesis-hash  "${genesis_hash}"
         generate-txs
         --topology      "configuration/simple-topology.json"
+        --genesis-file  "${genesis_file}"
+        --database-path "./db/"
+        --socket-dir    "./socket/"
+
 )
 TX_GEN_ARGS=(
         --num-of-txs     1000

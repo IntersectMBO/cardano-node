@@ -9,5 +9,10 @@ CMD="cabal new-run exe:trace-acceptor -- "
 
 set -x
 ${CMD} \
-    --log-config ${BASEDIR}/launch_mainnet.d/log-config-acceptor.yaml \
+    --config ${BASEDIR}/launch_mainnet.d/log-config-acceptor.yaml \
+    --topology "./configuration/simple-topology.json" \
+    --database-path "./db/" \
+    --genesis-file "configuration/mainnet-genesis.json" \
+    --socket-dir "./socket" \
+    --port 1234 \
            $@
