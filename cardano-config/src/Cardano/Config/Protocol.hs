@@ -12,6 +12,7 @@ module Cardano.Config.Protocol
   ( Protocol(..)
   , SomeProtocol(..)
   , fromProtocol
+  , TraceConstraints
   ) where
 
 
@@ -58,10 +59,14 @@ import           Cardano.Config.Types
 -- that has proper error messages.
 instance Exception Genesis.ConfigurationError
 
+-- | Tracing-related constraints for monitoring purposes.
+--
+-- When you need a 'Show' or 'Condense' instance for more types, just add the
+-- appropriate constraint here. There's no need to modify the consensus
+-- code-base, unless the corresponding instance is missing.
 type TraceConstraints blk =
     ( Condense blk
     , Condense [blk]
-    , Condense (ChainHash blk)
     , Condense (Header blk)
     , Condense (HeaderHash blk)
     , Condense (GenTx blk)

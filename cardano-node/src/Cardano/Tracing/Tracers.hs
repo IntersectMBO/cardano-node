@@ -44,15 +44,14 @@ import           Cardano.BM.Data.Tracer (WithSeverity (..), addName,
 
 import           Ouroboros.Consensus.Block (Header)
 import           Ouroboros.Consensus.Ledger.Abstract
-import           Ouroboros.Consensus.Mempool.API (ApplyTxErr, GenTx, GenTxId, TraceEventMempool (..))
+import           Ouroboros.Consensus.Mempool.API (TraceEventMempool (..))
 import qualified Ouroboros.Consensus.Node.Tracers as Consensus
 import           Ouroboros.Consensus.NodeNetwork (ProtocolTracers,
                      ProtocolTracers' (..), nullProtocolTracers)
-import           Ouroboros.Consensus.Util.Condense
 import           Ouroboros.Consensus.Util.Orphans ()
 
 import qualified Ouroboros.Network.AnchoredFragment as AF
-import           Ouroboros.Network.Block (HeaderHash, Point, Tip,
+import           Ouroboros.Network.Block (Point, Tip,
                      blockNo, unBlockNo, unSlotNo)
 import           Ouroboros.Network.BlockFetch.Decision (FetchDecision)
 import           Ouroboros.Network.BlockFetch.ClientState (TraceLabelPeer (..))
@@ -63,6 +62,7 @@ import           Ouroboros.Network.Subscription
 import qualified Ouroboros.Storage.ChainDB as ChainDB
 
 import           Cardano.Config.Orphanage
+import           Cardano.Config.Protocol (TraceConstraints)
 import           Cardano.Config.Types
 import           Cardano.Tracing.ToObjectOrphans
 
@@ -88,24 +88,6 @@ data Tracers peer blk = Tracers {
       -- | Trace the Mux (flag --trace-mux' will turn on textual output)
     , muxTracer             :: Tracer IO (WithMuxBearer peer (MuxTrace NodeToNodeProtocols))
     }
-
--- | Tracing-related constraints for monitoring purposes.
---
--- When you need a 'Show' or 'Condense' instance for more types, just add the
--- appropriate constraint here. There's no need to modify the consensus
--- code-base, unless the corresponding instance is missing.
-type TraceConstraints blk =
-  ( Condense blk
-  , Condense [blk]
-  , Condense (Header blk)
-  , Condense (HeaderHash blk)
-  , Condense (GenTx blk)
-  , Show (ApplyTxErr blk)
-  , Show (GenTx blk)
-  , Show (GenTxId blk)
-  , Show blk
-  , Show (Header blk)
-  )
 
 nullTracers :: Tracers peer blk
 nullTracers = Tracers {
