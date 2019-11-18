@@ -12,7 +12,6 @@ import           Cardano.BM.Data.LogItem
 import           Cardano.Shell.Lib (runCardanoApplicationWithFeatures)
 import           Cardano.Shell.Types (CardanoApplication (..),
                                       CardanoFeature (..))
-import           Ouroboros.Consensus.Node.ProtocolInfo.Abstract (NumCoreNodes (..))
 
 import           Cardano.Config.CommonCLI
 import           Cardano.Config.Types (CardanoEnvironment (..))
@@ -20,8 +19,7 @@ import           Cardano.Config.Logging (LoggingCLIArguments (..),
                                                 LoggingLayer (..),
                                                 createLoggingFeature
                                                 )
-import           Cardano.Common.Parsers (loggingParser, parseCoreNodeId)
-import           Cardano.Common.Parsers
+import           Cardano.Common.Parsers (loggingParser, parseCoreNodeId, nodeCliParser)
 import           Cardano.Wallet.Run
 
 -- | The product type of all command line arguments
@@ -37,20 +35,9 @@ commandLineParser = ArgParser
 parseWalletCLI :: Parser WalletCLI
 parseWalletCLI = WalletCLI
     <$> parseCoreNodeId
-    <*> parseNumCoreNodes
-    <*> parseProtocol
     <*> parseCommonCLI
     <*> parseCommonCLIAdvanced
     <*> nodeCliParser
-
-parseNumCoreNodes :: Parser NumCoreNodes
-parseNumCoreNodes =
-    option (fmap NumCoreNodes auto) (
-            long "num-core-nodes"
-         <> short 'm'
-         <> metavar "NUM-CORE-NODES"
-         <> help "The number of core nodes"
-    )
 
 -- | Top level parser with info.
 --

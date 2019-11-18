@@ -74,7 +74,6 @@ runChairman :: forall blk.
                )
             => Protocol blk
             -> [CoreNodeId]
-            -> NumCoreNodes
             -> SecurityParam
             -- ^ security parameter, if a fork is deeper than it 'runChairman'
             -- will throw an exception.
@@ -84,7 +83,7 @@ runChairman :: forall blk.
             -- ^ local socket dir
             -> Tracer IO String
             -> IO ()
-runChairman ptcl nids numCoreNodes securityParam maxBlockNo socketDir tracer = do
+runChairman ptcl nids securityParam maxBlockNo socketDir tracer = do
 
     (chainsVar :: ChainsVar IO blk) <- newTVarM
       (Map.fromList $ map (\coreNodeId -> (coreNodeId, AF.Empty Block.GenesisPoint)) nids)
@@ -92,10 +91,7 @@ runChairman ptcl nids numCoreNodes securityParam maxBlockNo socketDir tracer = d
     addr <- localSocketAddrInfo (CoreId 0) socketDir NoMkdirIfMissing
 
     void $ flip mapConcurrently nids $ \coreNodeId ->
-        let ProtocolInfo{pInfoConfig} =
-              protocolInfo numCoreNodes
-                           coreNodeId
-                           ptcl
+        let ProtocolInfo{pInfoConfig} = protocolInfo ptcl
 
         in connectTo
             nullTracer

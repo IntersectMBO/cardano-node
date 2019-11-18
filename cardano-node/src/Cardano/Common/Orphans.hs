@@ -9,14 +9,11 @@ module Cardano.Common.Orphans
 where
 
 import           Codec.Serialise (Serialise(..))
-import           GHC.Generics
 
 import           Ouroboros.Consensus.Ledger.Byron
-                 ( ByronBlockOrEBB, GenTx(..)
+                 ( ByronBlock, GenTx(..)
                  , decodeByronGenTx, encodeByronGenTx)
-import           Ouroboros.Consensus.Ledger.Byron.Config (ByronConfig)
 
-deriving instance Generic (GenTx (ByronBlockOrEBB ByronConfig))
-instance Serialise (GenTx (ByronBlockOrEBB ByronConfig)) where
+instance Serialise (GenTx ByronBlock) where
   decode = decodeByronGenTx
   encode = encodeByronGenTx

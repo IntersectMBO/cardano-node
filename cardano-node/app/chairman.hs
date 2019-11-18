@@ -15,20 +15,18 @@ import           Control.Tracer (stdoutTracer)
 
 import           Ouroboros.Network.Block (BlockNo)
 import           Ouroboros.Consensus.Protocol.Abstract (SecurityParam (..))
-import           Ouroboros.Consensus.Node.ProtocolInfo.Abstract (NumCoreNodes (..))
 import           Ouroboros.Consensus.NodeId (CoreNodeId)
 
 import           Cardano.Config.CommonCLI
-import           Cardano.Config.Protocol (Protocol, SomeProtocol(..), fromProtocol)
-import           Cardano.Config.Types (CardanoConfiguration(..), ConfigYamlFilePath(..),
+import           Cardano.Config.Protocol (SomeProtocol(..), fromProtocol)
+import           Cardano.Config.Types (CardanoConfiguration (..), ConfigYamlFilePath(..),
                                        NodeCLI(..), parseNodeConfiguration)
-import           Cardano.Common.Parsers (nodeCliParser, parseCoreNodeId, parseProtocol)
+import           Cardano.Common.Parsers (nodeCliParser, parseCoreNodeId)
 import           Cardano.Chairman (runChairman)
 
 main :: IO ()
 main = do
-    ChairmanArgs { caProtocol
-                 , caCoreNodeIds
+    ChairmanArgs { caCoreNodeIds
                  , caSecurityParam
                  , caMaxBlockNo
                  , caTimeout
@@ -41,12 +39,10 @@ main = do
       Left e -> throwIO e
       Right x -> pure x
 
-
     nc <- liftIO . parseNodeConfiguration . unConfigPath $ configFp caNodeCLI
-    SomeProtocol p <- fromProtocol nc caNodeCLI caProtocol
+    SomeProtocol p <- fromProtocol nc caNodeCLI
 
     let run = runChairman p caCoreNodeIds
-                          (NumCoreNodes $ length caCoreNodeIds)
                           caSecurityParam
                           caMaxBlockNo
                           (ccSocketDir cc)
@@ -63,8 +59,7 @@ main = do
 
 
 data ChairmanArgs = ChairmanArgs {
-      caProtocol        :: !Protocol
-    , caCoreNodeIds     :: ![CoreNodeId]
+      caCoreNodeIds     :: ![CoreNodeId]
     , caSecurityParam   :: !SecurityParam
       -- | stop after seeing given block number
     , caMaxBlockNo      :: !(Maybe BlockNo)
@@ -111,8 +106,7 @@ parseTimeout =
 parseChairmanArgs :: Parser ChairmanArgs
 parseChairmanArgs =
     ChairmanArgs
-      <$> parseProtocol
-      <*> some parseCoreNodeId
+      <$> some parseCoreNodeId
       <*> parseSecurityParam
       <*> optional parseSlots
       <*> optional parseTimeout

@@ -14,7 +14,7 @@ test -n "${CMD}" || {
 }
 
 set -x
-exec cabal new-run exe:chairman -- --real-pbft \
+exec cabal new-run exe:chairman -- \
                                 --core-node-id 0 --core-node-id 1 --core-node-id 2 \
                                 -k 10 -s 250 \
                                 -t 1000 \
