@@ -4,6 +4,7 @@ let
 in
 { customConfig ? {}
 , target ? builtins.currentSystem
+, interactive ? false
 }:
 #
 # The default.nix file. This will generate targets for all
@@ -44,7 +45,7 @@ let
   # NixOS tests run a proxy and validate it listens
   nixosTests = import ./nix/nixos/tests {
     inherit (commonLib) pkgs;
-    inherit commonLib;
+    inherit commonLib interactive;
   };
 in {
   inherit scripts nixosTests;
