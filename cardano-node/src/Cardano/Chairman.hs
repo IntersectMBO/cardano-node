@@ -151,7 +151,6 @@ createConnection
       addr
     `catch` handleMuxError tracer chainsVar coreNodeId
 
-
 data ChairmanTrace blk
   = NotFoundCommonBlock [Point blk]
   -- ^ the common block was not found, present list of head points.  Might be
