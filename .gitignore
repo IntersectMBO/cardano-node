@@ -17,3 +17,4 @@ stack.yaml.lock
 /db-[0-9]
 launch_*
 state-*
+/cluster*.log*
