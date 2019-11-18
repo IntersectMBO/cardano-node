@@ -21,6 +21,7 @@ exec ${NODE} \
   --trace-forge \
    \
  $@
+ &
 
 # this will render the events in textual format
 #  --trace-chain-db \
@@ -40,3 +41,16 @@ exec ${NODE} \
 #  --trace-ip-subscription \
 #  --trace-dns-subscription \
 #  --trace-dns-resolver \
+
+NODEPID=$!
+
+SLOTLIMIT="24000"
+
+tail -F state-node-mainnet/node-0.log | grep --line-buffered -e '.*:cardano.node.ChainDB:.*TraceCopyToImmDBEvent.CopiedBlockToImmDB.*"tip":"[a-z0-9]*@'${SLOTLIMIT} | {
+
+  read a
+  echo "got: $a"
+  echo "killing $NODEPID"
+  kill $NODEPID
+  
+}

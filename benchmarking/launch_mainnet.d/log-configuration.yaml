@@ -3,13 +3,12 @@ minSeverity: Notice
 
 # global file rotation settings:
 rotation:
-  rpLogLimitBytes: 5000000
+  rpLogLimitBytes: 50000000
   rpKeepFilesNum:  10
   rpMaxAgeHours:   24
 
 # these backends are initialized:
 setupBackends:
-  - TraceForwarderBK
   - AggregationBK
   - KatipBK
   - EKGViewBK
@@ -31,9 +30,6 @@ hasEKG: 13788
 setupScribes:
   - scKind: FileSK
     scName: "node-0.log"
-    scFormat: ScText
-  - scKind: StdoutSK
-    scName: stdout
     scFormat: ScText
 
 # if not indicated otherwise, then log output is directed to this:
@@ -86,6 +82,10 @@ options:
     cardano.epoch-validation.benchmark:
       - AggregationBK
     'cardano.node.peers.BlockFetchDecision':
+      - kind: UserDefinedBK
+        name: LiveViewBackend
+    'cardano.node.ChainDB':
+      - KatipBK
       - kind: UserDefinedBK
         name: LiveViewBackend
     'cardano.node.metrics.ChainDB':
