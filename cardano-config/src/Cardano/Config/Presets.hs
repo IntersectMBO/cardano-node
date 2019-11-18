@@ -7,6 +7,7 @@ module Cardano.Config.Presets
 
 import           Cardano.Prelude
 
+import qualified Cardano.Chain.Update as Update
 import           Ouroboros.Consensus.NodeId
 
 import           Cardano.Config.Defaults (traceOptionsDefault)
@@ -71,7 +72,7 @@ mainnetConfiguration =
           }
     , pccUpdate =
         PartialUpdate
-          { pupApplicationName = pure "cardano-sl"
+          { pupApplicationName = pure (Update.ApplicationName "cardano-sl")
           , pupApplicationVersion = pure 1
           , pupLastKnownBlockVersion =
               PartialLastKnownBlockVersion
@@ -188,7 +189,7 @@ devConfiguration =
           }
     , pccUpdate =
         PartialUpdate
-          { pupApplicationName = pure "cardano-sl"
+          { pupApplicationName = pure (Update.ApplicationName "cardano-sl")
           , pupApplicationVersion = pure 0
           , pupLastKnownBlockVersion =
               PartialLastKnownBlockVersion

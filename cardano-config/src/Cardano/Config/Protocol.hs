@@ -140,9 +140,9 @@ fromProtocol nc nCli = case ncProtocol nc of
                        (unGenesisFile . genesisFile $ mscFp nCli)
                        genHash
                       )
-    let gc = case gcE of
-          Left err -> throw err -- TODO: no no no!
-          Right x -> x
+    gc <- case gcE of
+      Left err -> throwIO err
+      Right x -> pure x
 
     optionalLeaderCredentials <- readLeaderCredentials gc nCli
 
