@@ -143,9 +143,9 @@ fromProtocol gHash _ _ genFile nMagic sigThresh delCertFp sKeyFp update RealPBFT
                        (unGenesisFile genFile)
                        genHash
                       )
-    let gc = case gcE of
-            Left err -> panic $ show err
-            Right x -> x
+    gc <- case gcE of
+      Left err -> panic $ show err
+      Right x -> pure x
 
     optionalLeaderCredentials <- readLeaderCredentials
                                    gc

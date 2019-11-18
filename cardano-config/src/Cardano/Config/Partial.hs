@@ -29,6 +29,7 @@ import           Cardano.Prelude
 
 import           Data.Monoid.Generic
 
+import qualified Cardano.Chain.Update as Update
 import qualified Ouroboros.Consensus.BlockchainTime as Consensus
 
 import           Cardano.Config.Types
@@ -116,9 +117,9 @@ data PartialTXP = PartialTXP
 
 -- | Partial @Update@ configuration.
 data PartialUpdate = PartialUpdate
-    { pupApplicationName       :: !(Last Text)
+    { pupApplicationName       :: !(Last Update.ApplicationName)
     -- ^ Update application name.
-    , pupApplicationVersion    :: !(Last Int)
+    , pupApplicationVersion    :: !(Last Update.NumSoftwareVersion)
     -- ^ Update application version.
     , pupLastKnownBlockVersion :: !PartialLastKnownBlockVersion
     -- ^ Update last known block version.
@@ -128,11 +129,11 @@ data PartialUpdate = PartialUpdate
 
 -- | Partial @LastKnownBlockVersion@ configuration.
 data PartialLastKnownBlockVersion = PartialLastKnownBlockVersion
-    { plkbvMajor :: !(Last Int)
+    { plkbvMajor :: !(Last Word16)
     -- ^ Last known block version major.
-    , plkbvMinor :: !(Last Int)
+    , plkbvMinor :: !(Last Word16)
     -- ^ Last known block version minor.
-    , plkbvAlt   :: !(Last Int)
+    , plkbvAlt   :: !(Last Word8)
     -- ^ Last known block version alternative.
     } deriving (Eq, Show, Generic)
     deriving Semigroup via GenericSemigroup PartialLastKnownBlockVersion

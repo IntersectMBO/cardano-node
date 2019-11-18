@@ -54,6 +54,7 @@ import           Data.Aeson
 import qualified Data.Text as T
 import           Data.Yaml (decodeFileThrow)
 
+import qualified Cardano.Chain.Update as Update
 import           Cardano.BM.Data.Tracer (TracingVerbosity (..))
 import           Cardano.Crypto.ProtocolMagic (RequiresNetworkMagic)
 import qualified Ouroboros.Consensus.BlockchainTime as Consensus
@@ -431,21 +432,23 @@ data NTP = NTP
     , ntpServers         :: ![Text]
     } deriving (Eq, Show)
 
+-- TODO: migrate to Update.SoftwareVersion
 data Update = Update
-    { upApplicationName       :: !Text
+    { upApplicationName       :: !Update.ApplicationName
     -- ^ Update application name.
-    , upApplicationVersion    :: !Int
-    -- ^ Update application version.
+    , upApplicationVersion    :: !Update.NumSoftwareVersion
+    -- application version.
     , upLastKnownBlockVersion :: !LastKnownBlockVersion
     -- ^ Update last known block version.
     } deriving (Eq, Show)
 
+-- TODO: migrate to Update.ProtocolVersion
 data LastKnownBlockVersion = LastKnownBlockVersion
-    { lkbvMajor :: !Int
+    { lkbvMajor :: !Word16
     -- ^ Last known block version major.
-    , lkbvMinor :: !Int
+    , lkbvMinor :: !Word16
     -- ^ Last known block version minor.
-    , lkbvAlt   :: !Int
+    , lkbvAlt   :: !Word8
     -- ^ Last known block version alternative.
     } deriving (Eq, Show)
 

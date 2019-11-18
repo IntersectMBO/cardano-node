@@ -12,9 +12,8 @@ import           Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import           Network.Socket (PortNumber)
 import qualified Options.Applicative as Opt
 import           Options.Applicative (Parser, ParserInfo, ParserPrefs, auto,
-                                      commandGroup, flag, flag', help, long,
-                                      metavar, option, showHelpOnEmpty,
-                                      strOption, subparser, value)
+                                      commandGroup, flag', help, long,
+                                      metavar, option, showHelpOnEmpty, subparser)
 import           System.Exit (exitFailure)
 import           Text.Read (readMaybe)
 
@@ -446,7 +445,6 @@ parseUTCTime optname desc =
   option (posixSecondsToUTCTime . fromInteger <$> auto)
     $ long optname <> metavar "POSIXSECONDS" <> help desc
 
-
 parseFilePath :: String -> String -> Parser FilePath
 parseFilePath optname desc =
   strOption $ long optname <> metavar "FILEPATH" <> help desc
@@ -478,7 +476,6 @@ parseTargetNodeAddress optname desc =
     $ long optname
       <> metavar "(HOST,PORT)"
       <> help desc
-
 
 -- | Here, we hope to get away with the usage of 'error' in a pure expression,
 --   because the CLI-originated values are either used, in which case the error is

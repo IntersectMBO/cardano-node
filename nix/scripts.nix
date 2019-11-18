@@ -2,6 +2,7 @@
 with commonLib.pkgs.lib;
 let
   pkgs = commonLib.pkgs;
+  svcLib = import ./nixos/svclib.nix { inherit pkgs; };
   pkgsModule = {
     config._module.args.pkgs = mkDefault pkgs;
   };
@@ -53,6 +54,7 @@ let
       runtimeDir = null;
       dbPrefix = "db-${envConfig.name}";
       topology = topologyFile;
+      nodeConfigFile = "${__toFile "config-${toString config.nodeId}.json" (__toJSON (svcLib.mkNodeConfig config config.nodeId))}";
     };
     nodeConf = { config.services.cardano-node = serviceConfig; };
     nodeScript = (modules.evalModules {
@@ -71,34 +73,9 @@ let
     cd "state-node-${envConfig.name}"
     ${nodeScript} $@
   '';
-  mkChairmanScript = { chairman-config ? { enable = true; } }:
-  let
-    cardano-cluster-config = {
-      enable = true;
-      node-count = 3;
-    };
-    injectServiceConfigs = {
-      config.services.chairman = chairman-config;
-      config.services.cardano-cluster = cardano-cluster-config;
-    };
-    script = (modules.evalModules {
-      modules = [
-        ./nixos/cardano-node-service.nix
-        ./nixos/cardano-cluster-service.nix
-        ./nixos/chairman-as-a-service.nix
-        injectServiceConfigs
-        pkgsModule
-        systemdCompat
-      ];
-    }).config.services.chairman.script;
-  in pkgs.writeScript "chairman" ''
-    #!${pkgs.runtimeShell}
-    set -euo pipefail
-    ${script} $@
-  '';
   scripts = commonLib.forEnvironments (environment:
   {
     node = mkNodeScript environment;
-    chairman = mkChairmanScript;
+    chairman = svcLib.mkChairmanScript;
   });
 in scripts
