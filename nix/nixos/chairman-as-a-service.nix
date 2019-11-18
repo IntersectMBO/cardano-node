@@ -6,14 +6,13 @@ with import ../../lib.nix; with lib; with builtins;
 let
   cfg  = config.services.chairman;
   ncfg = config.services.cardano-node;
-  ccfg      = config.services.cardano-cluster;
   envConfig = environments.${cfg.environment};
   configFile = toFile "config.json" (toJSON nodeConfig);
   nodeConfig = ncfg.nodeConfig // { GenesisHash = ncfg.genesisHash; };
 
   mkChairmanConfig = nodeConfig: chairmanConfig: {
-    inherit (nodeConfig) package genesisFile stateDir;
-    inherit (chairmanConfig) timeout maxBlockNo k node-ids topology dbPrefix;
+    inherit (nodeConfig) package genesisFile genesisHash stateDir pbftThreshold consensusProtocol;
+    inherit (chairmanConfig) timeout maxBlockNo k slot-length node-ids topology dbPrefix;
   };
   mkScript = cfg:
     let nodeIdArgs = builtins.concatStringsSep " "
@@ -28,7 +27,8 @@ let
           "--max-block-no ${toString cfg.maxBlockNo}"
           "--security-param ${toString cfg.k}"
           "--genesis-file ${cfg.genesisFile}"
-          "--genesis-hash ${ncfg.genesisHash}"
+          "--genesis-hash ${cfg.genesisHash}"
+          "--slot-duration ${toString cfg.slot-length}"
           "--socket-dir ${ if (ncfg.runtimeDir == null) then "${ncfg.stateDir}/socket" else "/run/${ncfg.runtimeDir}"}"
           "--topology ${cfg.topology}"
           "--port 1234"
@@ -38,10 +38,15 @@ let
           "--config ${configFile}"
         ];
     in ''
+        set +e
         echo "Starting ${exec}: '' + concatStringsSep "\"\n   echo \"" cmd + ''"
-        echo "..or, once again, in a signle line:"
+        echo "..or, once again, in a single line:"
         echo "''                   + concatStringsSep " "              cmd + ''"
-        exec ''                    + concatStringsSep " "              cmd;
+        ''                    + concatStringsSep " "              cmd + ''
+
+        status=$?
+        echo chairman returned status: $status
+        exit $status'';
 in {
   options = with types; {
     services.chairman = {
@@ -58,7 +63,6 @@ in {
       };
       node-ids = mkOption {
         type = listOf int;
-        default = range 0 (ccfg.node-count - 1);
         description = ''Node IDs to watch.'';
       };
       timeout = mkOption {
@@ -112,6 +116,11 @@ in {
         description = ''
           Hash of the genesis file
         '';
+      };
+      slot-length = mkOption {
+        type = int;
+        default = 20;
+        description = ''Duration of a slot, in seconds.'';
       };
     };
   };

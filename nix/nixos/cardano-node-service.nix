@@ -17,15 +17,21 @@ let
           "--database-path ${cfg.stateDir}/${cfg.dbPrefix}"
           "--socket-dir ${ if (cfg.runtimeDir == null) then "${cfg.stateDir}/socket" else "/run/${cfg.runtimeDir}"}"
           "--topology ${cfg.topology}"
-          # "--${cfg.consensusProtocol}"
-          # "--node-id ${toString cfg.nodeId}"
           "--host-addr ${cfg.hostAddr}"
           "--port ${toString cfg.port}"
           "${lib.optionalString (cfg.signingKey != null) "--signing-key ${cfg.signingKey}"}"
           "${lib.optionalString (cfg.delegationCertificate != null) "--delegation-certificate ${cfg.delegationCertificate}"}"
+          "${lib.optionalString (cfg.logger.extras != null) "${cfg.logger.extras}"}"
+
+          "--${cfg.consensusProtocol}"
+          "${lib.optionalString (cfg.pbftThreshold != null)  "--pbft-signature-threshold ${cfg.pbftThreshold}"}"
+          "${lib.optionalString (cfg.protover-major != null) "--protover-major ${toString cfg.protover-major}"}"
+          "${lib.optionalString (cfg.protover-minor != null) "--protover-minor ${toString cfg.protover-minor}"}"
+          "${lib.optionalString (cfg.protover-alt   != null) "--protover-alt   ${toString cfg.protover-alt}"}"
           "${cfg.extraArgs}"
         ];
     in ''
+        choice() { i=$1; shift; eval "echo \''${$((i + 1))}"; }
         echo "Starting ${exec}: '' + concatStringsSep "\"\n   echo \"" cmd + ''"
         echo "..or, once again, in a signle line:"
         echo "''                   + concatStringsSep " "              cmd + ''"
@@ -120,7 +126,7 @@ in {
         default = "real-pbft";
         type = types.enum ["bft" "praos" "mock-pbft" "real-pbft"];
         description = ''
-          Consensus initialy used by the node:
+          Consensus initially used by the node:
             - bft: BFT consensus algorithm
             - praos: Praos consensus algorithm
             - mock-pbft: Permissive BFT consensus algorithm using a mock ledger
@@ -197,6 +203,19 @@ in {
         type = types.str;
         default = "";
         description = ''Extra CLI args for 'cardano-node'.'';
+      };
+
+      protover-major = mkOption {
+        type = types.nullOr types.int;
+        default = null;
+      };
+      protover-minor = mkOption {
+        type = types.nullOr types.int;
+        default = null;
+      };
+      protover-alt = mkOption {
+        type = types.nullOr types.int;
+        default = null;
       };
     };
   };

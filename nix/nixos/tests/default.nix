@@ -1,6 +1,10 @@
-{ pkgs ? (import <nixpkgs> {}), commonLib, supportedSystems ? [ "x86_64-linux" ] }:
+{ pkgs ? (import <nixpkgs> {})
+, commonLib
+, supportedSystems ? [ "x86_64-linux" ]
+, interactive ? false
+}:
 
- with pkgs;
+with pkgs;
 with pkgs.lib;
 
  let
@@ -12,11 +16,12 @@ with pkgs.lib;
     inherit system;
   } // args);
   callTest = fn: args: forAllSystems (system: hydraJob (importTest fn args system));
-  chairmanScript = (import ../../.. {}).scripts.mainnet.chairman;
 in rec {
   # only tests that port is open since the test can't access network to actually sync
   # cardanoNodeEdge  = callTest ./cardano-node-edge.nix { inherit commonLib; };
 
   # Subsumes what cardanoNodeEdge does
-  chairmansCluster = callTest ./chairmans-cluster.nix { inherit commonLib chairmanScript; };
+  chairmansCluster = callTest ./chairmans-cluster.nix {
+    inherit commonLib interactive;
+  };
 }
