@@ -1,0 +1,102 @@
+nodes:
+
+# First the 7 cores, in 4 regions
+#
+# a: eu-central-1 (Frankfurt) IOHK
+# b: ap-northeast-1 (Tokyo) Emurgo
+# c: ap-southeast-1 (Singapore) CF
+# d: us-east-2 (Ohio) IOHK
+#
+# AZs:
+#
+# - eu: a,b,c
+# - us: a,b,c
+# - ap-north: a,b
+# - ap-south: a,c
+
+  'c-a-1':
+    region: eu-central-1
+    zone: eu-central-1a
+    type: core
+    host: c-a-1.cardano
+    port: 3001
+    static-routes: [['c-a-2'], ['c-b-1'], ['c-b-2']]
+    org: IOHK
+
+  'c-a-2':
+    region: eu-central-1
+    zone: eu-central-1b
+    type: core
+    host: c-a-2.cardano
+    port: 3002
+    static-routes: [['c-b-1'], ['c-b-2'], ['c-a-1'], ['proxy']]
+    org: IOHK
+
+  'c-b-1':
+    region: ap-northeast-1
+    zone: ap-northeast-1a
+    type: core
+    host: c-b-1.cardano
+    port: 3003
+    static-routes: [['c-b-2'], ['c-a-1'], ['c-a-2']]
+    org: Emurgo
+
+  'c-b-2':
+    region: ap-northeast-1
+    zone: ap-northeast-1c
+    type: core
+    host: c-b-2.cardano
+    port: 3004
+    static-routes: [['c-a-1'], ['c-a-2'], ['c-b-1']]
+    org: Emurgo
+
+  'c-c-1':
+    region: ap-southeast-1
+    zone: ap-southeast-1a
+    type: core
+    host: c-c-1.cardano
+    port: 3005
+    static-routes: [['c-d-1', 'c-a-1'], ['c-c-2'], ['proxy']]
+    org: CF
+
+  'c-c-2':
+    region: ap-southeast-1
+    zone: ap-southeast-1b
+    type: core
+    host: c-c-2.cardano
+    port: 3006
+    static-routes: [['c-b-2', 'c-b-1'], ['c-c-1'], ['proxy']]
+    org: CF
+
+  'c-d-1':
+    region: us-east-2
+    zone: us-east-2a
+    type: core
+    host: c-d-1.cardano
+    port: 3007
+    static-routes: [['c-a-1', 'c-a-2'], ['c-b-1', 'c-b-2'], ['c-c-1', 'c-c-2'], ['proxy']]
+    org: IOHK
+
+# now the 7 relays, in the same 3 regions
+
+  'r-a-1':
+    region: eu-central-1
+    zone: eu-central-1a
+    type: relay
+    org: IOHK
+    host: r-a-1.cardano
+    port: 3008
+    static-routes: [['r-a-1']] # [['c-a-2'], ['proxy']]
+    kademlia: false
+    public: false
+
+  'proxy':
+    region: eu-central-1
+    zone: eu-central-1a
+    type: relay
+    org: IOHK
+    host: proxy.cardano
+    port: 5555
+    static-routes: [['c-a-2']]
+    kademlia: false
+    public: false
