@@ -14,10 +14,10 @@ NETARGS=(
         --genesis-file  "${genesis_file}"
         --database-path "./db/"
         --socket-dir    "./socket/"
-
+        --config        "configuration/log-config-0.yaml"
+        --port          3003
 )
 TX_GEN_ARGS=(
-        --node-id        0
         --num-of-txs     10000
         --inputs-per-tx  1
         --outputs-per-tx 1
