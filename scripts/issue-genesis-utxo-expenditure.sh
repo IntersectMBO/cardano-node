@@ -3,11 +3,11 @@
 RUNNER=${RUNNER:-cabal new-run -v0 --}
 
 genesis_hash="c0c757817d86660accdc45b9d18c1274d51d6427b92995944d014e0ff056cb3e"
-genesis_file="/home/shevchenko/Code/cardano-node/configuration/c0c75/genesis.json"
+genesis_file="${genesis_root}/genesis.json"
 
 from_addr="2cWKMJemoBain3UWCzSY5wZvcf8uQ2MAaSy8hedrwpqsbYCm4QnBgPn3cEH7KF3X7DKoZ"
-from_key="/home/shevchenko/Code/cardano-node/configuration/c0c75/delegate-keys.000.key"
-default_to_key="/home/shevchenko/Code/cardano-node/configuration/c0c75/delegate-keys.001.key"
+from_key="${genesis_root}/delegate-keys.000.key"
+default_to_key="${genesis_root}/delegate-keys.001.key"
 
 ## rob the bank
 default_lovelace="863000000000000"

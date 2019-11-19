@@ -4,7 +4,7 @@ RUNNER=${RUNNER:-cabal new-run -v0 --}
 
 # . $(dirname $0)/lib-node.sh
 
-genesis_file="/home/shevchenko/Code/cardano-node/configuration/c0c75/genesis.json"
+genesis_file="${genesis_root}/genesis.json"
 proto_magic="$(jq '.protocolConsts | .protocolMagic' "${genesis_file}")"
 
 key="$1"
