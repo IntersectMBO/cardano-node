@@ -172,15 +172,13 @@ protocolConfigRealPbft NodeConfiguration {
       genesis
       (PBftSignatureThreshold <$> ncPbftSignatureThresh)
       (convertProtocolVersion upLastKnownBlockVersion)
-      (Update.SoftwareVersion (Update.ApplicationName upApplicationName)
-                              (toEnum upApplicationVersion))
+      (Update.SoftwareVersion upApplicationName
+                              upApplicationVersion)
       leaderCredentials
   where
     convertProtocolVersion
       LastKnownBlockVersion {lkbvMajor, lkbvMinor, lkbvAlt} =
-      Update.ProtocolVersion (toEnum lkbvMajor)
-                             (toEnum lkbvMinor)
-                             (toEnum lkbvAlt)
+      Update.ProtocolVersion lkbvMajor lkbvMinor lkbvAlt
 
 
 readLeaderCredentials :: Genesis.Config

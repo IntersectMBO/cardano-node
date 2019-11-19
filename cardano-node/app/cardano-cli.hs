@@ -215,7 +215,7 @@ parseKeyRelatedValues =
         , command' "keygen" "Generate a signing key."
             $ Keygen
                 <$> parseNewSigningKeyFile "secret"
-                <*> parseFlag GetPassword EmptyPassword
+                <*> parseFlag' GetPassword EmptyPassword
                       "no-password"
                       "Disable password protection."
         , command'

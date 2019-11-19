@@ -16,9 +16,7 @@ module Cardano.Common.Parsers
   , parseIntegral
   , parseIntegralWithDefault
   , parseLastKnownBlockVersion
-  , parseLogConfigFile
   , parseLogConfigFileLast
-  , parseLogMetrics
   , parseLogMetricsLast
   , parseLogOutputFile
   , parseProtocol
