@@ -20,11 +20,6 @@ import           Cardano.Common.Parsers
 import           Cardano.Config.CommonCLI (parseCommonCLIAdvanced)
 import           Cardano.Config.Logging (createLoggingFeature)
 import           Cardano.Config.Types
-import           Cardano.Config.Partial
-import           Cardano.Config.Presets (mainnetConfiguration)
-import           Cardano.Config.Topology
-                 ( NodeAddress (..), NodeHostAddress (..)
-                 , TopologyInfo)
 import           Cardano.Node.Features.Node
 
 main :: IO ()

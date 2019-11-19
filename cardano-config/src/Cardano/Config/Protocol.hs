@@ -179,10 +179,7 @@ protocolConfigRealPbft (Update appName appVer lastKnownBlockVersion)
   where
     convertProtocolVersion
       LastKnownBlockVersion {lkbvMajor, lkbvMinor, lkbvAlt} =
-      Update.ProtocolVersion (toEnum lkbvMajor)
-                             (toEnum lkbvMinor)
-                             (toEnum lkbvAlt)
-
+      Update.ProtocolVersion lkbvMajor lkbvMinor lkbvAlt
 
 readLeaderCredentials :: Genesis.Config
                       -> Maybe DelegationCertFile

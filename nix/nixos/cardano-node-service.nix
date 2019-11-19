@@ -21,7 +21,6 @@ let
           "--port ${toString cfg.port}"
           "${lib.optionalString (cfg.signingKey != null) "--signing-key ${cfg.signingKey}"}"
           "${lib.optionalString (cfg.delegationCertificate != null) "--delegation-certificate ${cfg.delegationCertificate}"}"
-          "${lib.optionalString (cfg.logger.extras != null) "${cfg.logger.extras}"}"
 
           "--${cfg.consensusProtocol}"
           "${lib.optionalString (cfg.pbftThreshold != null)  "--pbft-signature-threshold ${cfg.pbftThreshold}"}"
