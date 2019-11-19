@@ -13,7 +13,7 @@
 
 module Cardano.Chairman (runChairman) where
 
-import           Cardano.Prelude hiding (ByteString, STM, atomically, catch, show)
+import           Cardano.Prelude hiding (ByteString, STM, atomically, catch, option, show)
 import           Prelude (String, error, foldl1, show)
 
 import           Control.Concurrent.Async (mapConcurrently)
@@ -88,34 +88,68 @@ runChairman ptcl nids securityParam maxBlockNo socketDir tracer = do
     (chainsVar :: ChainsVar IO blk) <- newTVarM
       (Map.fromList $ map (\coreNodeId -> (coreNodeId, AF.Empty Block.GenesisPoint)) nids)
 
-    addr <- localSocketAddrInfo (CoreId 0) socketDir NoMkdirIfMissing
-
     void $ flip mapConcurrently nids $ \coreNodeId ->
         let ProtocolInfo{pInfoConfig} = protocolInfo ptcl
 
-        in connectTo
-            nullTracer
-            nullTracer
-            (,)
-            (localInitiatorNetworkApplication
-              coreNodeId
-              chainsVar
-              securityParam
-              maxBlockNo
-              (showTracing tracer)
-              nullTracer
-              nullTracer
-              pInfoConfig)
-            Nothing
-            addr
-          `catch` handleMuxError chainsVar coreNodeId
-  where
-    -- catch 'MuxError'; it will be thrown if a node shuts down closing the
-    -- connection.
-    handleMuxError :: ChainsVar IO blk -> CoreNodeId -> MuxError -> IO ()
-    handleMuxError chainsVar coreNodeId err = do
-      traceWith tracer (show err)
-      atomically $ modifyTVar chainsVar (Map.delete coreNodeId)
+        in createConnection
+             coreNodeId
+             chainsVar
+             securityParam
+             maxBlockNo
+             tracer
+             pInfoConfig
+             socketDir
+
+-- catch 'MuxError'; it will be thrown if a node shuts down closing the
+-- connection.
+handleMuxError
+  :: Tracer IO String
+  -> ChainsVar IO blk
+  -> CoreNodeId
+  -> MuxError
+  -> IO ()
+handleMuxError tracer chainsVar coreNodeId err = do
+  traceWith tracer (show err)
+  atomically $ modifyTVar chainsVar (Map.delete coreNodeId)
+
+createConnection
+  :: forall blk.
+     ( RunNode blk
+     , Condense blk
+     , Condense (HeaderHash blk))
+  => CoreNodeId
+  -> ChainsVar IO blk
+  -> SecurityParam
+  -> Maybe BlockNo
+  -> Tracer IO String
+  -> NodeConfig (BlockProtocol blk)
+  -> FilePath
+  -> IO ()
+createConnection
+  coreNodeId
+  chainsVar
+  securityParam
+  maxBlockNo
+  tracer
+  pInfoConfig
+  socketDir = do
+    addr <- localSocketAddrInfo (fromCoreNodeId coreNodeId) socketDir NoMkdirIfMissing
+    connectTo
+      nullTracer
+      nullTracer
+      (,)
+      (localInitiatorNetworkApplication
+        coreNodeId
+        chainsVar
+        securityParam
+        maxBlockNo
+        (showTracing tracer)
+        nullTracer
+        nullTracer
+        pInfoConfig)
+      Nothing
+      addr
+    `catch` handleMuxError tracer chainsVar coreNodeId
 
 
 data ChairmanTrace blk

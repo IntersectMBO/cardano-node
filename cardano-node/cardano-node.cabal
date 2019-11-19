@@ -282,7 +282,7 @@ executable chairman
                      , typed-protocols
                      , typed-protocols-cbor
 
-  default-extensions:   NoImplicitPrelude
+  default-extensions:  NoImplicitPrelude
 
   if os(windows)
      build-depends:    Win32
