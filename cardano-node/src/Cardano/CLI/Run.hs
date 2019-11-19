@@ -162,7 +162,6 @@ data ClientCommand
     --- Tx Generator Command ----------
 
   | GenerateTxs
-    TopologyInfo
     [TargetNodeId]
     NumberOfTxs
     NumberOfInputsPerTx
@@ -248,8 +247,7 @@ runCommand _ _ (SpendUTxO (NewTxFile ctTx) ctKey ins outs nCli) = do
   liftIO . ensureNewFileLBS ctTx $ serialise gTx
 
 runCommand _ loggingLayer
-           (GenerateTxs topology
-                        targetNodeIds
+           (GenerateTxs targetNodeIds
                         numOfTxs
                         numOfInsPerTx
                         numOfOutsPerTx

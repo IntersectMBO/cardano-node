@@ -334,9 +334,7 @@ parseTxRelatedValues =
         "generate-txs"
         "Launch transactions generator."
         $ GenerateTxs
-            <$> parseTopologyInfo
-                  "PBFT node ID to submit generated Txs to."
-            <*> parseTargetNodeIds
+            <$> parseTargetNodeIds
                   "target-node-id"
                   "Identifiers of nodes transactions will be sent to."
             <*> parseNumberOfTxs

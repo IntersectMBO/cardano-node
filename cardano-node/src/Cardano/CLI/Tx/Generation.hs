@@ -91,6 +91,7 @@ import Ouroboros.Consensus.Block(BlockProtocol)
 import           Ouroboros.Consensus.Ledger.Byron.Config (pbftProtocolMagic)
 import           Ouroboros.Consensus.Node.ProtocolInfo (ProtocolInfo (..),
                                                         protocolInfo)
+import           Ouroboros.Consensus.NodeId (NodeId (..))
 import qualified Ouroboros.Consensus.Protocol as Consensus
 import           Ouroboros.Consensus.Ledger.Byron (ByronBlock (..),
                                                    GenTx (..),
@@ -197,7 +198,7 @@ genesisBenchmarkRunner loggingLayer
 
   -- We have to extract host and port of the nodes we want to talk with
   -- (based on values of `--target-node-id` CLI argument) from the topology file.
-  toplogy <- firstExceptT TopologyFileReadError . newExceptT $
+  topology <- firstExceptT TopologyFileReadError . newExceptT $
     readTopologyFile (topologyFile topologyInfo)
   targetNodeAddresses <- forM targetNodeIds $ \(TargetNodeId targetNodeId) -> do
     let eitherNodeAddress = createNodeAddress (CoreId targetNodeId) topology (topologyFile topologyInfo)
