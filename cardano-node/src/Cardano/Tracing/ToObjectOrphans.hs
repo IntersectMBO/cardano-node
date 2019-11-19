@@ -62,6 +62,7 @@ import           Ouroboros.Network.TxSubmission.Outbound
                    (TraceTxSubmissionOutbound)
 
 import qualified Ouroboros.Storage.ChainDB as ChainDB
+import           Ouroboros.Storage.Common (EpochNo (..))
 import qualified Ouroboros.Storage.LedgerDB.OnDisk as LedgerDB
 
 
@@ -235,7 +236,7 @@ instance DefineSeverity (ChainDB.TraceEvent blk) where
   defineSeverity (ChainDB.TraceLedgerReplayEvent ev) = case ev of
     LedgerDB.ReplayFromGenesis {} -> Info
     LedgerDB.ReplayFromSnapshot {} -> Info
-    _ -> Debug
+    LedgerDB.ReplayedBlock {} -> Info
   defineSeverity (ChainDB.TraceLedgerEvent ev) = case ev of
     LedgerDB.TookSnapshot {} -> Info
     LedgerDB.DeletedSnapshot {} -> Debug
@@ -253,9 +254,9 @@ instance DefineSeverity (ChainDB.TraceEvent blk) where
     ChainDB.OpenedDB {} -> Info
     ChainDB.ClosedDB {} -> Info
     ChainDB.ReopenedDB {} -> Debug
-    ChainDB.OpenedImmDB {} -> Debug
-    ChainDB.OpenedVolDB -> Debug
-    ChainDB.OpenedLgrDB -> Debug
+    ChainDB.OpenedImmDB {} -> Info
+    ChainDB.OpenedVolDB -> Info
+    ChainDB.OpenedLgrDB -> Info
 
   defineSeverity (ChainDB.TraceReaderEvent ev) = case ev of
     ChainDB.NewReader {} -> Info
@@ -475,7 +476,8 @@ readableChainDBTracer tracer = Tracer $ \case
     LedgerDB.ReplayFromSnapshot snap tip' _replayTo -> tr $ WithTip tip $
       "Replaying ledger from snapshot " <> show snap <> " at " <>
         condense tip'
-    LedgerDB.ReplayedBlock {} -> pure ()
+    LedgerDB.ReplayedBlock _r (epochno, slotno) _replayTo -> tr $ WithTip tip $
+      "Replayed block: " <> show (unSlotNo slotno) <> " in epoch: " <> show (unEpochNo epochno)
   WithTip tip (ChainDB.TraceLedgerEvent ev) -> case ev of
     LedgerDB.TookSnapshot snap pt -> tr $ WithTip tip $
       "Took ledger snapshot " <> show snap <> " at " <> condense pt
@@ -658,7 +660,10 @@ instance (Condense (HeaderHash blk), ProtocolLedgerView blk)
       mkObject [ "kind" .= String "TraceLedgerReplayEvent.ReplayFromSnapshot"
                , "snapshot" .= toObject verb snap
                , "tip" .= show tip' ]
-    _ -> emptyObject
+    LedgerDB.ReplayedBlock _ (epochno, slotno) _replayTo ->
+      mkObject [ "kind" .= String "TraceLedgerReplayEvent.ReplayedBlock"
+               , "epoch" .= show (unEpochNo epochno)
+               , "slot" .= show (unSlotNo slotno) ]
 
   toObject MinimalVerbosity (ChainDB.TraceLedgerEvent _ev) = emptyObject -- no output
   toObject verb (ChainDB.TraceLedgerEvent ev) = case ev of
