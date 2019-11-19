@@ -334,7 +334,10 @@ parseTxRelatedValues =
         "generate-txs"
         "Launch transactions generator."
         $ GenerateTxs
-            <$> parseNumberOfTxs
+            <$> parseTargetNodeIds
+                  "target-node-id"
+                  "Identifiers of nodes transactions will be sent to."
+            <*> parseNumberOfTxs
                   "num-of-txs"
                   "Number of transactions generator will create."
             <*> parseNumberOfInputsPerTx
@@ -553,6 +556,9 @@ parseNewTxFile :: String -> Parser NewTxFile
 parseNewTxFile opt =
   NewTxFile
     <$> parseFilePath opt "Non-existent file to write the signed transaction to."
+
+parseTargetNodeIds :: String -> String -> Parser [TargetNodeId]
+parseTargetNodeIds opt desc = many $ TargetNodeId <$> parseIntegral opt desc
 
 parseNumberOfTxs :: String -> String -> Parser NumberOfTxs
 parseNumberOfTxs opt desc = NumberOfTxs <$> parseIntegral opt desc
