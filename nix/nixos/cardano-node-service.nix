@@ -22,12 +22,12 @@ let
           # "--node-id ${toString cfg.nodeId}"
           "--host-addr ${cfg.hostAddr}"
           "--port ${toString cfg.port}"
-          "${lib.optionalString (cfg.pbftThreshold != null) "--pbft-signature-threshold ${cfg.pbftThreshold}"}"
           "${lib.optionalString (cfg.signingKey != null) "--signing-key ${cfg.signingKey}"}"
           "${lib.optionalString (cfg.delegationCertificate != null) "--delegation-certificate ${cfg.delegationCertificate}"}"
           "${cfg.extraArgs}"
         ];
     in ''
+        choice() { i=$1; shift; eval "echo \''${$((i + 1))}"; }
         echo "Starting ${exec}: '' + concatStringsSep "\"\n   echo \"" cmd + ''"
         echo "..or, once again, in a signle line:"
         echo "''                   + concatStringsSep " "              cmd + ''"
@@ -188,7 +188,7 @@ in {
       };
 
       topology = mkOption {
-        type = types.path;
+        type = types.string;
         default = mkEdgeTopology {
           inherit (cfg) hostAddr nodeId port;
           edgeHost = envConfig.edgeHost or "127.0.0.1";

@@ -10,10 +10,11 @@ let
   node-ids = range 0 (cfg.node-count - 1);
   cardano-node = ncfg.package;
 
-  # mkFullyConnectedLocalClusterTopology
-  #   :: Address String -> Port String -> Int -> Int -> Topology FilePath
-  mkFullyConnectedLocalClusterTopology =
+  # mkFullyConnectedLocalNodeSetup
+  #   :: Address String -> Port String -> Port String -> Int -> Int -> Topology FilePath
+  mkFullyConnectedLocalNodeSetup =
     { hostAddr
+    , port
     , portBase
     , node-count
     , valency ? 1
@@ -22,12 +23,11 @@ let
       addr = hostAddr;
       ports = map (x: portBase + x) (range 0 (node-count - 1));
       mkPeer = port: { inherit addr port valency; };
-      mkNodeTopo = nodeId: port: {
-        inherit nodeId;
+      mkNodeTopo = port: {
         nodeAddress = { inherit addr port; };
         producers = map mkPeer (remove port ports);
       };
-    in toFile "topology.yaml" (toJSON (imap0 mkNodeTopo ports));
+    in toFile "topology.yaml" (toJSON (mkNodeTopo port));
 
   ## Note how some values are literal strings, and some integral.
   ## This is an important detail.
@@ -122,11 +122,12 @@ let
   delegationCertificate = ''$(printf "%s/delegation-cert.%03d.json" $(dirname $2) $1)'';
   nodeId                = "$1";
   port                  = "$((${toString portBase} + $1))";
-  topology = mkFullyConnectedLocalClusterTopology
+  mkNetworkConfig = port: mkFullyConnectedLocalNodeSetup
     { inherit (cfg)  node-count;
       inherit (ncfg) hostAddr;
-      inherit portBase;
+      inherit port portBase;
     };
+  network-configs = map mkNetworkConfig (range portBase (portBase + cfg.node-count - 1));
 in {
   options = with types; {
 
@@ -154,7 +155,8 @@ in {
       enable = true;
       instanced = true;
       genesisHash = genesisHashValue;
-      inherit topology genesisFile signingKey delegationCertificate nodeId port;
+      inherit genesisFile signingKey delegationCertificate nodeId port;
+      topology = ''$(choice "$1" ${concatStringsSep " " network-configs})'';
     };
     services.chairman.genesisHash = genesisHashValue;
     systemd.services."cardano-node@" = {

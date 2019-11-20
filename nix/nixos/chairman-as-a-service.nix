@@ -22,7 +22,6 @@ let
         exec = "chairman";
         cmd = builtins.filter (x: x != "") [
           "${ncfg.package}/bin/chairman"
-          "--${ncfg.consensusProtocol}"
           (nodeIdArgs)
           "--timeout ${toString cfg.timeout}"
           "--database-path ${cfg.stateDir}/${cfg.dbPrefix}"
