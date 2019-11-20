@@ -18,8 +18,6 @@ function dlgcert () {
         printf -- "--delegation-certificate ${genesis_root}/delegation-cert.%03d.json " "$1"
 }
 function commonargs() {
-        printf -- "--topology configuration/simple-topology.json "
-        printf -- "--database-path ./db/ "
         printf -- "--genesis-file ${genesis_file} "
         printf -- "--socket-dir ./socket/ "
 }
@@ -29,7 +27,9 @@ function acceptorargs() {
         nodecfg acceptor
         dlgkey 0
         dlgcert 0
-        printf -- "--port 1234"
+        printf -- "--port 1234 "
+        printf -- "--topology configuration/simple-topology-0.json "
+        printf -- "--database-path ./db/ "
 }
 
 function nodeargs () {
@@ -39,5 +39,7 @@ function nodeargs () {
         dlgkey $1
         dlgcert $1
         printf -- "${extra} "
+        printf -- "--database-path ./db/db-$1/ "
         printf -- "--port 300$1 "
+        printf -- "--topology configuration/simple-topology-$1.json "
 }

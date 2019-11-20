@@ -10,7 +10,7 @@ CMD="cabal new-run exe:trace-acceptor -- "
 set -x
 ${CMD} \
     --config ${BASEDIR}/launch_mainnet.d/log-config-acceptor.yaml \
-    --topology "./configuration/simple-topology.json" \
+    --topology "./configuration/simple-topology-0.json" \
     --database-path "./db/" \
     --genesis-file "configuration/mainnet-genesis.json" \
     --socket-dir "./socket" \

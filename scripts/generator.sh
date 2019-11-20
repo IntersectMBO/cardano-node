@@ -10,7 +10,7 @@ NETARGS=(
         --genesis-file  "${genesis_file}"
         --genesis-hash  "${genesis_hash}"
         generate-txs
-        --topology      "configuration/simple-topology.json"
+        --topology      "configuration/simple-topology-0.json"
         --genesis-file  "${genesis_file}"
         --database-path "./db/"
         --socket-dir    "./socket/"

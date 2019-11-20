@@ -25,7 +25,7 @@ exec cabal new-run exe:chairman -- \
                                 --pbft-signature-threshold 0.7 \
                                 --require-network-magic \
                                 --database-path "db" \
-                                --topology configuration/simple-topology.json \
+                                --topology configuration/simple-topology-0.json \
                                 --database-path ./db/ \
                                 --genesis-file ${genesis_file} \
                                 --socket-dir "./socket/" \

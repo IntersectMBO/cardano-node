@@ -6,7 +6,7 @@ CMD="cabal new-run exe:trace-acceptor -- "
 #TODO: Confirm if db path is necessary for trace acceptor
 set -x
 ${CMD} \
-    --topology "./configuration/simple-topology.json" \
+    --topology "./configuration/simple-topology-0.json" \
     --database-path "./db/" \
     --genesis-file "configuration/mainnet-genesis.json" \
     --socket-dir "./socket" \

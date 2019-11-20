@@ -38,7 +38,7 @@ args=" --real-pbft
        --wallet-key          ${from_key}
        --txin             (\"${txid}\",${outindex})
        --txout            (\"${addr}\",${lovelace})
-       --topology            configuration/simple-topology.json
+       --topology            configuration/simple-topology-0.json
        --genesis-file        \"${genesis_file}\"
        --database-path       ./db/
        --socket-dir          ./socket/
