@@ -2,6 +2,7 @@
 with commonLib.pkgs.lib;
 let
   pkgs = commonLib.pkgs;
+  localLib = import ../lib.nix;
   svcLib = import ./nixos/svclib.nix { inherit pkgs; };
   pkgsModule = {
     config._module.args.pkgs = mkDefault pkgs;
@@ -27,8 +28,8 @@ let
       useProxy = false;
       proxyPort = 7777;
       proxyHost = "127.0.0.1";
-      nodeConfig = import ../configuration/default-node-config.nix;
       loggingExtras = null;
+      nodeConfig = envConfig.nodeConfig or localLib.environments.mainnet.nodeConfig;
     };
     config = defaultConfig // envConfig // customConfig;
     topologyFile = let

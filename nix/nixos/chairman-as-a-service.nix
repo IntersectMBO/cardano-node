@@ -1,18 +1,17 @@
 { config
 , lib
+, pkgs
 , ... }:
 
 with import ../../lib.nix; with lib; with builtins;
 let
   cfg  = config.services.chairman;
   ncfg = config.services.cardano-node;
+  svcLib = (import ./svclib.nix { inherit pkgs cardano-node; });
   envConfig = environments.${cfg.environment};
-  configFile = toFile "config.json" (toJSON nodeConfig);
-  nodeConfig = ncfg.nodeConfig // { GenesisHash = ncfg.genesisHash; };
-
   mkChairmanConfig = nodeConfig: chairmanConfig: {
     inherit (nodeConfig) package genesisFile genesisHash stateDir pbftThreshold consensusProtocol;
-    inherit (chairmanConfig) timeout maxBlockNo k slot-length node-ids;
+    inherit (chairmanConfig) timeout maxBlockNo k slot-length node-ids nodeConfigFile nodeConfig timeoutIsSuccess;
   };
   mkScript = cfg:
     let nodeIdArgs = builtins.concatStringsSep " "
@@ -26,15 +25,9 @@ let
           "--max-block-no ${toString cfg.maxBlockNo}"
           "--security-param ${toString cfg.k}"
           "--genesis-file ${cfg.genesisFile}"
-          "--genesis-hash ${cfg.genesisHash}"
-          "--slot-duration ${toString cfg.slot-length}"
           "--socket-dir ${if (ncfg.runtimeDir == null) then "${ncfg.stateDir}/socket" else "/run/${ncfg.runtimeDir}"}"
-          "--genesis-file ${cfg.genesisFile}"
-          "--config ${configFile}"
-          ## ..temporary stubs
-          "--database-path /dev/null"
-          "--port 1234"
-          "--topology /dev/null"
+          "--config ${cfg.nodeConfigFile}"
+          "${optionalString cfg.timeoutIsSuccess "--timeout-is-success"}"
         ];
     in ''
         set +e
@@ -76,10 +69,20 @@ in {
           environment node will connect to
         '';
       };
+      timeoutIsSuccess = mkOption {
+        type = types.bool;
+        default = true;
+        description = ''Consider timing out as success.'';
+      };
       nodeConfig = mkOption {
         type = types.attrs;
-        default = import ../../configuration/default-node-config.nix;
-        description = ''Node's configuration file, as a Nix expression.'';
+        default = envConfig.nodeConfig;
+        description = ''Internal representation of the config.'';
+      };
+      nodeConfigFile = mkOption {
+        type = types.str;
+        default = "${toFile "config-0.json" (toJSON (svcLib.mkNodeConfig cfg 0))}";
+        description = ''Actual configuration file (shell expression).'';
       };
       maxBlockNo = mkOption {
         type = int;

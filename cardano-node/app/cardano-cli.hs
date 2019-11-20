@@ -445,26 +445,6 @@ parseUTCTime optname desc =
   option (posixSecondsToUTCTime . fromInteger <$> auto)
     $ long optname <> metavar "POSIXSECONDS" <> help desc
 
-parseFilePath :: String -> String -> Parser FilePath
-parseFilePath optname desc =
-  strOption $ long optname <> metavar "FILEPATH" <> help desc
-
-
-parseIntegral :: Integral a => String -> String -> Parser a
-parseIntegral optname desc = option (fromInteger <$> auto)
-  $ long optname <> metavar "INT" <> help desc
-
-
-parseIntegralWithDefault :: Integral a => String -> String -> a -> Parser a
-parseIntegralWithDefault optname desc def = option (fromInteger <$> auto)
- $ long optname <> metavar "INT" <> help desc <> value def
-
-
-parseFlag :: a -> a -> String -> String -> Parser a
-parseFlag def active optname desc =
-  flag def active $ long optname <> help desc
-
-
 parseTargetNodeAddress :: String -> String -> Parser NodeAddress
 parseTargetNodeAddress optname desc =
   option

@@ -173,8 +173,7 @@ protocolConfigRealPbft (Update appName appVer lastKnownBlockVersion)
       genesis
       (PBftSignatureThreshold <$> pbftSignatureThresh)
       (convertProtocolVersion lastKnownBlockVersion)
-      (Update.SoftwareVersion (Update.ApplicationName appName)
-                              (toEnum appVer))
+      (Update.SoftwareVersion appName appVer)
       leaderCredentials
   where
     convertProtocolVersion

@@ -1,6 +1,17 @@
 { pkgs, cardano-node ? pkgs.cardano-node }:
 with builtins; with pkgs.lib;
 let
+
+  ## mkNodeConfig
+  ##   :: NodeId Int -> ServiceConfig AttrSet -> NodeConfig AttrSet
+  mkNodeConfig = cfg: NodeId:
+    cfg.nodeConfig //
+    { inherit NodeId; } //
+    (optionalAttrs (cfg.protover-major != null) { LastKnownBlockVersion-Major = cfg.protover-major; }) //
+    (optionalAttrs (cfg.protover-minor != null) { LastKnownBlockVersion-Minor = cfg.protover-minor; }) //
+    (optionalAttrs (cfg.protover-alt   != null) { LastKnownBlockVersion-Alt   = cfg.protover-alt;   }) //
+    (optionalAttrs (cfg.genesisHash != null) { GenesisHash = cfg.genesisHash; });
+
   ## mkFullyConnectedLocalClusterTopology
   ##   :: String Address -> String Port -> Int PortNo -> Int Valency
   ##   -> Topology FilePath
@@ -19,7 +30,7 @@ let
         nodeAddress = { inherit addr port; };
         producers = map mkPeer (remove port ports);
       };
-    in toFile "topology.yaml" (toJSON (imap0 mkNodeTopo ports));
+    in toFile "topology.json" (toJSON (imap0 mkNodeTopo ports));
 
   ## mkFullyConnectedLocalClusterTopology
   ##   :: String Address -> String Port -> Int PortNo -> Int Valency
@@ -242,7 +253,6 @@ let
     }:
     let
       topology = [{
-        nodeId = 0;
         nodeAddress = {
           addr = hostAddr;
           port = nodePort;
@@ -293,5 +303,6 @@ in
   toVerification
   mkProxyFollowerTopology
   mkProxyScript
+  mkNodeConfig
   ;
 }

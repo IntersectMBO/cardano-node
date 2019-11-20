@@ -21,7 +21,7 @@ import           Cardano.Config.Protocol (SomeProtocol(..), fromProtocol)
 import           Cardano.Config.Types (ConfigYamlFilePath(..), DelegationCertFile(..),
                                        GenesisFile (..), NodeConfiguration(..),
                                        SigningKeyFile(..), SocketFile(..), parseNodeConfiguration)
-import           Cardano.Common.Parsers (parseConfigFile, parseCoreNodeId)
+import           Cardano.Common.Parsers
 import           Cardano.Chairman (runChairman)
 
 main :: IO ()
@@ -30,6 +30,7 @@ main = do
                  , caSecurityParam
                  , caMaxBlockNo
                  , caTimeout
+                 , caTimeoutType
                  , caGenesisFile
                  , caSocketDir
                  , caConfigYaml
@@ -63,10 +64,15 @@ main = do
         `race_`
         do
           threadDelay (timeout * 1_000_000)
-          putTextLn $ "Failing with timeout, after "<> show timeout <>"seconds."
-          exitFailure
+          putTextLn $ show caTimeoutType <> " after "<> show timeout <>"seconds."
+          case caTimeoutType of
+            SuccessTimeout -> exitSuccess
+            FailureTimeout -> exitFailure
 
-
+data TimeoutType
+  = SuccessTimeout
+  | FailureTimeout
+  deriving (Eq, Show)
 
 data ChairmanArgs = ChairmanArgs {
       caCoreNodeIds     :: ![CoreNodeId]
@@ -81,6 +87,7 @@ data ChairmanArgs = ChairmanArgs {
       -- detect progress errors when running 'chain-sync' protocol and we will
       -- be able to remove this option
     , caTimeout         :: !(Maybe Int)
+    , caTimeoutType :: !TimeoutType
     , caGenesisFile :: !GenesisFile
     , caSocketDir :: !SocketFile
     , caConfigYaml :: !ConfigYamlFilePath
@@ -122,6 +129,8 @@ parseChairmanArgs =
       <*> parseSecurityParam
       <*> optional parseSlots
       <*> optional parseTimeout
+      <*> parseFlag' FailureTimeout SuccessTimeout
+          "timeout-is-success" "Exit successfully on timeout."
       <*> (GenesisFile <$> parseGenesisPath)
       <*> (SocketFile <$> parseSocketDir)
       <*> (ConfigYamlFilePath <$> parseConfigFile)

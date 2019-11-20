@@ -70,6 +70,7 @@ in {
   };
   testScript = ''
     startAll
+    $machine->succeed("mkdir -p /var/lib/cardano-node");
     $machine->succeed("chown -R cardano-node.cardano-node /var/lib/cardano-node");
     $machine->succeed("lscpu | systemd-cat --identifier=lscpu --priority=crit");
     $machine->succeed("date +%s | systemd-cat --identifier=timekeeper --priority=crit");
@@ -83,10 +84,8 @@ in {
     $machine->waitUntilSucceeds("nc -z 127.1.0.5 3005");
     $machine->waitUntilSucceeds("nc -z 127.1.0.6 3006");
     $machine->waitUntilSucceeds("nc -z 127.1.0.7 3007");
-    # $machine->waitUntilSucceeds("nc -z 127.1.0.8 3008");
     $machine->waitUntilSucceeds("nc -z 127.1.0.9 5555");
     $machine->waitUntilSucceeds("nc -z 127.1.0.9 7777");
-    # $machine->succeed("bash -c 'tail -n 100 -f /var/lib/cardano-node/c-a-1/node.json | systemd-cat --identifier=json-c-a-1 --priority=crit' &");
     $machine->succeed("ip r l                      | systemd-cat --identifier=routing");
     $machine->succeed("cat /etc/resolv.conf        | systemd-cat --identifier=resolv");
     $machine->succeed("netstat -pltn | grep LISTEN | systemd-cat --identifier=netstat");
