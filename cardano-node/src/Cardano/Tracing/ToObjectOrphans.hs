@@ -170,9 +170,9 @@ instance DefineSeverity (WithDomainName DnsTrace) where
 instance DefinePrivacyAnnotation (WithAddr Socket.SockAddr ErrorPolicyTrace)
 instance DefineSeverity (WithAddr Socket.SockAddr ErrorPolicyTrace) where
   defineSeverity (WithAddr _ ev) = case ev of
-    ErrorPolicySuspendPeer {} -> Debug
-    ErrorPolicySuspendConsumer {} -> Debug
-    ErrorPolicyLocalNodeError {} -> Debug
+    ErrorPolicySuspendPeer {} -> Warning -- peer misbehaved
+    ErrorPolicySuspendConsumer {} -> Notice -- peer temporarily not useful
+    ErrorPolicyLocalNodeError {} -> Error
     ErrorPolicyResumePeer {} -> Debug
     ErrorPolicyKeepSuspended {} -> Debug
     ErrorPolicyResumeConsumer {} -> Debug
