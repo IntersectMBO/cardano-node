@@ -14,6 +14,7 @@ stack.yaml.lock
 /genesis.*
 /logs
 
+/db
 /db-[0-9]
 launch_*
 state-*
