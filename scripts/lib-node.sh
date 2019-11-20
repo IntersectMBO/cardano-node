@@ -1,6 +1,6 @@
 set -x
 
-genesis_hash="c0c757817d86660accdc45b9d18c1274d51d6427b92995944d014e0ff056cb3e"
+genesis_hash="1c1cf538d599170f4ed8a4cf8fcb3ef2e530e30a6de15e74b4088c002797972e"
 
 genesis="$(echo ${genesis_hash} | cut -c-5 | xargs echo -n)"
 genesis_root="configuration/${genesis}"
