@@ -30,7 +30,7 @@ deriving instance Num Consensus.SlotLength
 
 deriving instance Show TracingVerbosity
 
-type ConsensusTraceOptions = ConsensusTracers.Tracers' () ()    () (Const Bool)
+type ConsensusTraceOptions = ConsensusTracers.Tracers' () ()    (Const Bool)
 deriving instance Eq ConsensusTraceOptions
 deriving instance Show ConsensusTraceOptions
 

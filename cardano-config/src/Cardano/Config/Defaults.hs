@@ -44,5 +44,6 @@ traceOptionsDefault =
     , traceIpSubscription = True
     , traceDnsSubscription = True
     , traceDnsResolver = True
+    , traceErrorPolicy = True
     , traceMux = True
     }

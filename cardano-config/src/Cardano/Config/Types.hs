@@ -553,5 +553,6 @@ data TraceOptions = TraceOptions
   , traceIpSubscription  :: !Bool
   , traceDnsSubscription :: !Bool
   , traceDnsResolver     :: !Bool
+  , traceErrorPolicy     :: !Bool
   , traceMux             :: !Bool
   } deriving (Eq, Show)

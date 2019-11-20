@@ -50,6 +50,8 @@ import           Ouroboros.Network.BlockFetch.ClientState
                    (TraceFetchClientState (..), TraceLabelPeer (..))
 import           Ouroboros.Network.BlockFetch.Decision (FetchDecision)
 import           Ouroboros.Network.Point (WithOrigin (..))
+import           Ouroboros.Network.NodeToNode
+                   (WithAddr(..), ErrorPolicyTrace(..))
 import           Ouroboros.Network.Subscription (ConnectResult (..), DnsTrace (..),
                    SubscriptionTrace (..),
                    WithDomainName (..), WithIPList (..))
@@ -117,7 +119,8 @@ instance DefineSeverity (WithIPList (SubscriptionTrace Socket.SockAddr)) where
       ConnectValencyExceeded -> Warning
     SubscriptionTraceConnectException {} -> Error
     SubscriptionTraceSocketAllocationException {} -> Error
-    SubscriptionTraceConnectCleanup {} -> Debug
+    SubscriptionTraceTryConnectToPeer {} -> Info
+    SubscriptionTraceSkippingPeer {} -> Info
     SubscriptionTraceSubscriptionRunning -> Debug
     SubscriptionTraceSubscriptionWaiting {} -> Debug
     SubscriptionTraceSubscriptionFailed -> Error
@@ -127,7 +130,7 @@ instance DefineSeverity (WithIPList (SubscriptionTrace Socket.SockAddr)) where
     SubscriptionTraceConnectionExist {} -> Notice
     SubscriptionTraceUnsupportedRemoteAddr {} -> Error
     SubscriptionTraceMissingLocalAddress -> Warning
-    SubscriptionApplicationException {} -> Error
+    SubscriptionTraceApplicationException {} -> Error
     SubscriptionTraceAllocateSocket {} -> Debug
     SubscriptionTraceCloseSocket {} -> Info
 
@@ -138,7 +141,8 @@ instance DefineSeverity (WithDomainName (SubscriptionTrace Socket.SockAddr)) whe
     SubscriptionTraceConnectEnd {} -> Info
     SubscriptionTraceConnectException {} -> Error
     SubscriptionTraceSocketAllocationException {} -> Error
-    SubscriptionTraceConnectCleanup {} -> Debug
+    SubscriptionTraceTryConnectToPeer {} -> Info
+    SubscriptionTraceSkippingPeer {} -> Info
     SubscriptionTraceSubscriptionRunning -> Debug
     SubscriptionTraceSubscriptionWaiting {} -> Debug
     SubscriptionTraceSubscriptionFailed -> Warning
@@ -148,7 +152,7 @@ instance DefineSeverity (WithDomainName (SubscriptionTrace Socket.SockAddr)) whe
     SubscriptionTraceConnectionExist {} -> Info
     SubscriptionTraceUnsupportedRemoteAddr {} -> Warning
     SubscriptionTraceMissingLocalAddress -> Warning
-    SubscriptionApplicationException {} -> Error
+    SubscriptionTraceApplicationException {} -> Error
     SubscriptionTraceAllocateSocket {} -> Debug
     SubscriptionTraceCloseSocket {} -> Debug
 
@@ -162,6 +166,20 @@ instance DefineSeverity (WithDomainName DnsTrace) where
     DnsTraceLookupIPv4First -> Info
     DnsTraceLookupAResult {} -> Debug
     DnsTraceLookupAAAAResult {} -> Debug
+
+instance DefinePrivacyAnnotation (WithAddr Socket.SockAddr ErrorPolicyTrace)
+instance DefineSeverity (WithAddr Socket.SockAddr ErrorPolicyTrace) where
+  defineSeverity (WithAddr _ ev) = case ev of
+    ErrorPolicySuspendPeer {} -> Debug
+    ErrorPolicySuspendConsumer {} -> Debug
+    ErrorPolicyLocalNodeError {} -> Debug
+    ErrorPolicyResumePeer {} -> Debug
+    ErrorPolicyKeepSuspended {} -> Debug
+    ErrorPolicyResumeConsumer {} -> Debug
+    ErrorPolicyResumeProducer {} -> Debug
+    ErrorPolicyUnhandledApplicationException {} -> Error
+    ErrorPolicyUnhandledConnectionException {} -> Error
+    ErrorPolicyAccept {} -> Error
 
 instance DefinePrivacyAnnotation (WithMuxBearer peer (MuxTrace ptcl))
 instance DefineSeverity (WithMuxBearer peer (MuxTrace ptcl)) where
@@ -241,8 +259,8 @@ instance DefineSeverity (ChainDB.TraceEvent blk) where
     _ -> Debug
   defineSeverity (ChainDB.TraceImmDBEvent _ev) = Debug
 
-instance DefinePrivacyAnnotation (TraceChainSyncClientEvent blk tip)
-instance DefineSeverity (TraceChainSyncClientEvent blk tip) where
+instance DefinePrivacyAnnotation (TraceChainSyncClientEvent blk)
+instance DefineSeverity (TraceChainSyncClientEvent blk) where
   defineSeverity (TraceDownloadedHeader _) = Info
   defineSeverity (TraceFoundIntersection _ _ _) = Info
   defineSeverity (TraceRolledBack _) = Notice
@@ -292,8 +310,8 @@ instance DefineSeverity (Consensus.TraceForgeEvent blk) where
 -- | instances of @Transformable@
 
 -- transform @ChainSyncClient@
-instance (Condense (HeaderHash blk), ProtocolLedgerView blk, SupportedBlock blk, Show tip)
-          => Transformable Text IO (TraceChainSyncClientEvent blk tip) where
+instance (Condense (HeaderHash blk), ProtocolLedgerView blk, SupportedBlock blk)
+          => Transformable Text IO (TraceChainSyncClientEvent blk) where
   trTransformer _ verb tr = trStructured verb tr
 
 -- transform @ChainSyncServer@
@@ -348,6 +366,15 @@ instance Transformable Text IO (WithDomainName (SubscriptionTrace Socket.SockAdd
 
 -- transform @DnsTrace@
 instance Transformable Text IO (WithDomainName DnsTrace) where
+  trTransformer StructuredLogging verb tr = trStructured verb tr
+  trTransformer TextualRepresentation _verb tr = Tracer $ \s ->
+    traceWith tr =<< LogObject <$> pure mempty
+                               <*> mkLOMeta (defineSeverity s) (definePrivacyAnnotation s)
+                               <*> pure (LogMessage $ pack $ show s)
+  trTransformer UserdefinedFormatting verb tr = trStructured verb tr
+
+-- transform @ErrorPolicyTrace@
+instance Transformable Text IO (WithAddr Socket.SockAddr ErrorPolicyTrace) where
   trTransformer StructuredLogging verb tr = trStructured verb tr
   trTransformer TextualRepresentation _verb tr = Tracer $ \s ->
     traceWith tr =<< LogObject <$> pure mempty
@@ -485,6 +512,12 @@ instance ToObject (WithDomainName DnsTrace) where
   toObject _verb (WithDomainName dom ev) =
     mkObject [ "kind" .= String "DnsTrace"
              , "domain" .= show dom
+             , "event" .= show ev ]
+
+instance ToObject (WithAddr Socket.SockAddr ErrorPolicyTrace) where
+  toObject _verb (WithAddr addr ev) =
+    mkObject [ "kind" .= String "ErrorPolicyTrace"
+             , "address" .= show addr
              , "event" .= show ev ]
 
 instance (Show ptcl, Show peer)
@@ -649,8 +682,8 @@ instance ToObject LedgerDB.DiskSnapshot where
     mkObject [ "kind" .= String "snapshot"
              , "snapshot" .= String (pack $ show snap) ]
 
-instance (Condense (HeaderHash blk), ProtocolLedgerView blk, SupportedBlock blk, Show tip)
-          => ToObject (TraceChainSyncClientEvent blk tip) where
+instance (Condense (HeaderHash blk), ProtocolLedgerView blk, SupportedBlock blk)
+          => ToObject (TraceChainSyncClientEvent blk) where
   toObject verb ev = case ev of
     TraceDownloadedHeader pt ->
       mkObject [ "kind" .= String "ChainSyncClientEvent.TraceDownloadedHeader"

@@ -51,11 +51,12 @@ import           Ouroboros.Consensus.NodeNetwork (ProtocolTracers,
 import           Ouroboros.Consensus.Util.Orphans ()
 
 import qualified Ouroboros.Network.AnchoredFragment as AF
-import           Ouroboros.Network.Block (Point, Tip,
+import           Ouroboros.Network.Block (Point,
                      blockNo, unBlockNo, unSlotNo)
 import           Ouroboros.Network.BlockFetch.Decision (FetchDecision)
 import           Ouroboros.Network.BlockFetch.ClientState (TraceLabelPeer (..))
-import           Ouroboros.Network.NodeToNode (NodeToNodeProtocols)
+import           Ouroboros.Network.NodeToNode (NodeToNodeProtocols,
+                     WithAddr, ErrorPolicyTrace)
 import           Ouroboros.Network.Point (fromWithOrigin)
 import           Ouroboros.Network.Subscription
 
@@ -85,6 +86,9 @@ data Tracers peer blk = Tracers {
       -- | Trace the DNS resolver (flag '--trace-dns-resolver' will turn on textual output)
     , dnsResolverTracer     :: Tracer IO (WithDomainName DnsTrace)
 
+      -- | Trace error policy resolution (flag '--trace-error-policy' will turn on textual output)
+    , errorPolicyTracer     :: Tracer IO (WithAddr Socket.SockAddr ErrorPolicyTrace)
+
       -- | Trace the Mux (flag --trace-mux' will turn on textual output)
     , muxTracer             :: Tracer IO (WithMuxBearer peer (MuxTrace NodeToNodeProtocols))
     }
@@ -97,6 +101,7 @@ nullTracers = Tracers {
       ipSubscriptionTracer = nullTracer,
       dnsSubscriptionTracer = nullTracer,
       dnsResolverTracer = nullTracer,
+      errorPolicyTracer = nullTracer,
       muxTracer = nullTracer
     }
 
@@ -131,6 +136,10 @@ mkTracers traceOptions tracer = Tracers
         = annotateSeverity $ filterSeverity (pure . const (tracingSeverity $ traceDnsResolver traceOptions))
           $ toLogObject' (tracingFormatting $ traceDnsResolver traceOptions) tracingVerbosity
           $ addName "DnsResolver" tracer
+    , errorPolicyTracer
+        = annotateSeverity $ filterSeverity (pure . const (tracingSeverity $ traceErrorPolicy traceOptions))
+          $ toLogObject' (tracingFormatting $ traceErrorPolicy traceOptions) tracingVerbosity
+          $ addName "ErrorPolicy" tracer
     , muxTracer
         = annotateSeverity $ filterSeverity (pure . const Info)  -- filter out everything below this level
           $ toLogObject' (tracingFormatting $ traceMux traceOptions) tracingVerbosity
@@ -220,7 +229,7 @@ mkTracers traceOptions tracer = Tracers
       -> Bool
     hasConsensusTraceFlag f = getConst $ f $ traceConsensus traceOptions
 
-    mkConsensusTracers :: Consensus.Tracers' peer blk (Tip blk) (Tracer IO)
+    mkConsensusTracers :: Consensus.Tracers' peer blk (Tracer IO)
     mkConsensusTracers = Consensus.Tracers
       { Consensus.chainSyncClientTracer
         = annotateSeverity $ filterSeverity (pure . const (tracingSeverity $ hasConsensusTraceFlag Consensus.chainSyncClientTracer))

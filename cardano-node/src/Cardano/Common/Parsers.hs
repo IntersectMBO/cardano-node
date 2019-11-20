@@ -268,6 +268,7 @@ parseTraceOptions m = TraceOptions
   <*> parseTraceIpSubscription m
   <*> parseTraceDnsSubscription m
   <*> parseTraceDnsResolver m
+  <*> parseTraceErrorPolicy m
   <*> parseTraceMux m
 
 parseTraceBlockFetchClient :: MParser Bool
@@ -470,6 +471,14 @@ parseTraceDnsResolver m =
     switch (
          long "trace-dns-resolver"
       <> help "Trace DNS Resolver messages."
+      <> m
+    )
+
+parseTraceErrorPolicy :: MParser Bool
+parseTraceErrorPolicy m =
+    switch (
+         long "trace-error-policy"
+      <> help "Trace error policy resolution."
       <> m
     )
 

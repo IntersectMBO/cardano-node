@@ -196,6 +196,7 @@ handleSimpleNode p trace nodeTracers nCli nc = do
           { rnaIpSubscriptionTracer  = ipSubscriptionTracer  nodeTracers
           , rnaDnsSubscriptionTracer = dnsSubscriptionTracer nodeTracers
           , rnaDnsResolverTracer     = dnsResolverTracer     nodeTracers
+          , rnaErrorPolicyTracer     = errorPolicyTracer     nodeTracers
           , rnaMuxTracer             = muxTracer             nodeTracers
           , rnaMuxLocalTracer        = nullTracer
           , rnaMkPeer                = Peer
