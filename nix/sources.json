@@ -11,16 +11,28 @@
         "url": "https://github.com/hercules-ci/gitignore/archive/f9e996052b5af4032fe6150bba4a6fe4f7b9d698.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
+    "haskell.nix": {
+        "branch": "master",
+        "description": "Alternative Haskell Infrastructure for Nixpkgs",
+        "homepage": "https://input-output-hk.github.io/haskell.nix",
+        "owner": "input-output-hk",
+        "repo": "haskell.nix",
+        "rev": "3ae2303b14bdebd00437b0e995af2d0eb21abafe",
+        "sha256": "0dk6541kwfyc5sp5h1vfk6zl4ghln4i2zqkaijbjwv8bnixnm6wl",
+        "type": "tarball",
+        "url": "https://github.com/input-output-hk/haskell.nix/archive/3ae2303b14bdebd00437b0e995af2d0eb21abafe.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
     "iohk-nix": {
         "branch": "master",
         "description": "nix scripts shared across projects",
         "homepage": null,
         "owner": "input-output-hk",
         "repo": "iohk-nix",
-        "rev": "e12f82182c342a3f14e3bda9d525b3868b65c0b0",
-        "sha256": "073vflscq305cwfk5h2aqk9hy5kh94ivb5mxxbmpimpxiawi3b46",
+        "rev": "69a27518f30732ffad93a7576c0f43e01101e31a",
+        "sha256": "0lx7plw2dpf8v2ywr2ngzkj1nykpzppbhkhk42313mzi3w4hx0y7",
         "type": "tarball",
-        "url": "https://github.com/input-output-hk/iohk-nix/archive/e12f82182c342a3f14e3bda9d525b3868b65c0b0.tar.gz",
+        "url": "https://github.com/input-output-hk/iohk-nix/archive/69a27518f30732ffad93a7576c0f43e01101e31a.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "niv": {

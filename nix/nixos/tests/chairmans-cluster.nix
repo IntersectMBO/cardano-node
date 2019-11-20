@@ -1,19 +1,9 @@
-{ pkgs, commonLib, chairmanScript, ... }:
+{ pkgs, commonLib, ... }:
 
-let chairman-runner = chairmanScript {
-      chairman-config = {
-        enable     = true;
-        k          = 2160;
-        timeout    = 300;
-        maxBlockNo = 30;
-        topology = commonLib.mkEdgeTopology {};
-
-      };
-    };
-in {
+{
   name = "chairmans-cluster-test";
   nodes = {
-    machine = { config, pkgs, ... }: {
+    machine = { lib, config, pkgs, ... }: {
       imports = [
         ../.
       ];
@@ -21,6 +11,14 @@ in {
         enable = true;
         node-count = 3; ## This must match nixos/scripts.nix:mkChairmanScript
       };
+      services.chairman = {
+        enable = true;
+        k          = 2160;
+        timeout    = 300;
+        maxBlockNo = 30;
+        topology = commonLib.mkEdgeTopology {};
+      };
+      systemd.services.chairman.wantedBy = lib.mkForce [];
     };
   };
   testScript = ''
@@ -29,7 +27,10 @@ in {
     $machine->waitForOpenPort(3002);
     $machine->waitForOpenPort(3003);
     $machine->succeed("netstat -pltn | systemd-cat --identifier=netstat --priority=crit");
-    $machine->succeed("${chairman-runner} 2>&1 | systemd-cat --identifier=chairman --priority=crit");
+    $machine->systemctl("start chairman.service");
+    $machine->sleep(30);
+    $machine->requireActiveUnit("chairman.service");
+
   '';
 
 }

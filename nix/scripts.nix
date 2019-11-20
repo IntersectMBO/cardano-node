@@ -17,7 +17,6 @@ let
       port = 3001;
       signingKey = null;
       delegationCertificate = null;
-      pbftThreshold = null;
       nodeId = 0;
       stateDir = "./";
       # defaults to proxy if env has no relays
@@ -27,7 +26,7 @@ let
       useProxy = false;
       proxyPort = 7777;
       proxyHost = "127.0.0.1";
-      loggingConfig = ../configuration/log-configuration.yaml;
+      nodeConfig = import ../configuration/default-node-config.nix;
       loggingExtras = null;
     };
     config = defaultConfig // envConfig // customConfig;
@@ -47,9 +46,9 @@ let
         signingKey
         delegationCertificate
         consensusProtocol
-        pbftThreshold
         hostAddr
         port
+        nodeConfig
         nodeId;
       runtimeDir = null;
       dbPrefix = "db-${envConfig.name}";
