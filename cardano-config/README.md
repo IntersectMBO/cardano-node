@@ -1,3 +1,3 @@
 # Cardano Configuration
 
-This package exposes the types and functions necessary to create a `CardanoConfiguration`.
+This package exposes the types and functions necessary to configure the `cardano-node`.

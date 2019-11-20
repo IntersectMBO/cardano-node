@@ -34,11 +34,6 @@ Add the next two lines to your $HOME/.tmux.conf file:
 set-window-option -g mouse on
 set -g default-terminal "tmux-256color"
 ```
-In a first terminal start the central logging process:
-
-    `./scripts/trace-acceptor.sh`
-
-In a second terminal:
 
 1.) create a `tmux` session
 
@@ -248,16 +243,29 @@ source and target signing keys and lovelace value to send.
 The target address defaults to the 1-st richman key (`configuration/delegate-keys.001.key`)
 of the testnet, and lovelace amount is almost the entirety of its funds.
 
-# Running the wallet client
-
-First you will need to start the core node with which the wallet client will
-communicate.  You can do that with `./script/start-node.sh` (or
-`./script/shelley-testnet2.sh`).  Then run
-
-```
-./scripts/start-wallet.sh --bft -n 0 -m 3
-```
-
 # Development
 
 run *ghcid* with: `ghcid -c "cabal new-repl exe:cardano-node --reorder-goals"`
+
+# `cardano-node`
+
+
+- The cardano-node is the top level for the node and
+  aggregates the other components from other packages: consensus, ledger and
+  networking, with configuration, CLI, logging and monitoring.
+
+- The node no longer incorporates wallet or explorer functionality. The wallet
+  backend and explorer backend are separate components that run in separate
+  external processes that communicate with the node via local IPC.
+
+
+The general synopsis is as follows:
+```
+Usage: cardano-node --topology FILEPATH --database-path FILEPATH
+                    --genesis-file FILEPATH [--delegation-certificate FILEPATH]
+                    [--signing-key FILEPATH] --socket-dir FILEPATH
+                    [--host-addr HOST-NAME] --port PORT
+                    --config NODE-CONFIGURATION [--help] [--help-tracing]
+                    [--help-advanced]
+  Start node of the Cardano blockchain.
+```
