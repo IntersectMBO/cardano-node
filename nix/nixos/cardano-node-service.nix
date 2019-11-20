@@ -5,7 +5,7 @@
 with import ../../lib.nix; with lib; with builtins;
 let
   cfg = config.services.cardano-node;
-  envConfig = environments.${cfg.environment};
+  envConfig = cfg.environments.${cfg.environment};
   systemdServiceName = "cardano-node${optionalString cfg.instanced "@"}";
   configFile = toFile "config.json" (toJSON nodeConfig);
   nodeConfig = (import cfg.configFile) { inherit cfg; };
@@ -70,8 +70,16 @@ in {
         '';
       };
 
+      environments = mkOption {
+        type = types.attrs;
+        default = environments;
+        description = ''
+          environment node will connect to
+        '';
+      };
+
       environment = mkOption {
-        type = types.enum (builtins.attrNames environments);
+        type = types.enum (builtins.attrNames cfg.environments);
         default = "testnet";
         description = ''
           environment node will connect to
