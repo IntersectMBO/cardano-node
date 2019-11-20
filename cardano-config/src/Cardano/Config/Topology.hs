@@ -6,17 +6,13 @@
 {-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
 
 module Cardano.Config.Topology
-  ( TopologyError(..)
-  , TopologyInfo(..)
-  , NetworkTopology(..)
-  , NodeAddress(..)
+  ( NodeAddress(..)
   , NodeHostAddress(..)
   , NodeSetup(..)
   , RemoteAddress(..)
-  , createNodeAddress
   , nodeAddressInfo
   , nodeAddressToSockAddr
-  , readTopologyFile
+  , readNodeSetup
   , remoteAddressToNodeAddress
   )
 where
@@ -38,15 +34,6 @@ import           Network.Socket
 import           Ouroboros.Consensus.NodeId (NodeId(..))
 import           Ouroboros.Consensus.Util.Condense (Condense (..))
 
-
-newtype TopologyError = NodeIdNotFoundInToplogyFile FilePath deriving Show
-
--- | A data structure bundling together a node identifier and the path to
--- the topology file.
-data TopologyInfo = TopologyInfo
-  { node :: NodeId
-  , topologyFile :: FilePath
-  } deriving (Eq, Show)
 
 -- | IPv4 address with a port number.
 data NodeAddress = NodeAddress
@@ -108,14 +95,13 @@ data RemoteAddress = RemoteAddress
 -- | Parse 'raAddress' field as an IP address; if it parses and the valency is
 -- non zero return corresponding NodeAddress.
 --
-remoteAddressToNodeAddress:: RemoteAddress-> Maybe NodeAddress
+remoteAddressToNodeAddress :: RemoteAddress -> Maybe NodeAddress
 remoteAddressToNodeAddress (RemoteAddress addrStr port val) =
   case readMaybe addrStr of
     Nothing -> Nothing
     Just addr -> if val /= 0
                  then Just $ NodeAddress (NodeHostAddress $ Just addr) port
                  else Nothing
-
 
 instance Condense RemoteAddress where
   condense (RemoteAddress addr port val) =
@@ -129,47 +115,22 @@ instance FromJSON RemoteAddress where
       <*> (v .: "valency")
 
 data NodeSetup = NodeSetup
-  { nodeId :: !Int
-  , nodeAddress :: !NodeAddress
+  { nodeAddress :: !NodeAddress
   , producers :: ![RemoteAddress]
-  } deriving Show
+  } deriving (Show)
 
 instance FromJSON NodeId where
   parseJSON v = CoreId <$> parseJSON v
 
 deriveFromJSON defaultOptions ''NodeSetup
 
-data NetworkTopology = NetworkTopology [NodeSetup]
-  deriving Show
-
-deriveFromJSON defaultOptions ''NetworkTopology
-
--- | Creates a 'NodeAddress' if it exists in a given 'NetworkTopology'.
-createNodeAddress
-  :: NodeId
-  -> NetworkTopology
-  -> FilePath
-  -> Either TopologyError NodeAddress
-createNodeAddress _nodeId (NetworkTopology nodeSetups) fp =
-  case maybeNode of
-    Nothing -> Left $ NodeIdNotFoundInToplogyFile fp
-    Just (NodeSetup _ anAddress _) -> Right anAddress
- where
-  idInt :: Int
-  idInt = case _nodeId of
-            CoreId i -> i
-            RelayId i -> i
-  -- Search 'NetworkTopology' for a given 'NodeId'
-  maybeNode :: Maybe NodeSetup
-  maybeNode = find (\(NodeSetup nId _ _) -> idInt == nId) nodeSetups
-
-readTopologyFile :: FilePath -> IO (Either String NetworkTopology)
-readTopologyFile topo = do
-  eBs <- Exception.try $ BS.readFile topo
+readNodeSetup :: FilePath -> IO (Either String NodeSetup)
+readNodeSetup f = do
+  eBs <- Exception.try $ BS.readFile f
   case eBs of
     Left e -> pure . Left $ handler e
     Right bs -> pure . eitherDecode $ toS bs
  where
   handler :: IOException -> String
-  handler e = "Cardano.Node.Configuration.Topology.readTopologyFile: "
+  handler e = "Cardano.Node.Configuration.Topology.readNodeSetup: "
               ++ displayException e

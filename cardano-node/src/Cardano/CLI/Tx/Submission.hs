@@ -8,8 +8,7 @@
 {-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
 
 module Cardano.CLI.Tx.Submission (
-      handleTxSubmission
-    , submitTx
+      submitTx
     ) where
 import           Cardano.Prelude hiding (ByteString, option, threadDelay)
 import           Prelude (String)
@@ -24,12 +23,9 @@ import           Control.Tracer (Tracer, nullTracer, traceWith)
 
 import           Ouroboros.Consensus.Block (BlockProtocol)
 import           Ouroboros.Consensus.Mempool (ApplyTxErr, GenTx)
-import           Ouroboros.Consensus.Node.ProtocolInfo ( ProtocolInfo(..)
-                                                       , protocolInfo)
 import           Ouroboros.Consensus.Node.Run (RunNode)
 import qualified Ouroboros.Consensus.Node.Run as Node
 import           Ouroboros.Consensus.NodeId (NodeId(..))
-import qualified Ouroboros.Consensus.Protocol as Consensus
 import           Ouroboros.Consensus.Protocol hiding (Protocol)
 
 import           Network.TypedProtocol.Driver (runPeer)
@@ -47,7 +43,6 @@ import           Ouroboros.Network.Protocol.Handshake.Version ( Versions
                                                               , simpleSingletonVersions)
 import qualified Ouroboros.Network.NodeToClient as NodeToClient
 
-import           Cardano.Config.Topology
 import           Cardano.Common.LocalSocket
 import           Cardano.Config.Types (MiscellaneousFilepaths(..),
                                        NodeCLI(..),  SocketFile(..))
@@ -58,25 +53,6 @@ import           Cardano.Config.Types (MiscellaneousFilepaths(..),
 {-------------------------------------------------------------------------------
   Main logic
 -------------------------------------------------------------------------------}
-
--- | For a given protocol and configuration, submit the given GenTx to the node
--- specified by topology info, while using tracer for logging.
-handleTxSubmission :: forall blk.
-                      ( RunNode blk
-                      , Show (ApplyTxErr blk)
-                      )
-                   => NodeCLI
-                   -> Consensus.Protocol blk
-                   -> TopologyInfo
-                   -> GenTx blk
-                   -> Tracer IO String
-                   -> IO ()
-handleTxSubmission nCli ptcl tinfo tx tracer = do
-    let pinfo :: ProtocolInfo blk
-        pinfo = protocolInfo ptcl
-
-    submitTx nCli (pInfoConfig pinfo) (node tinfo) tx tracer
-
 
 submitTx :: ( RunNode blk
             , Show (ApplyTxErr blk)

@@ -19,7 +19,6 @@ module Cardano.Common.Parsers
   , parseProtocolMockPBFT
   , parseProtocolPraos
   , parseProtocolRealPBFT
-  , parseTopologyInfo
   , parseTraceOptions
   ) where
 
@@ -34,7 +33,7 @@ import qualified Options.Applicative as Opt
 
 import           Cardano.BM.Data.Tracer (TracingVerbosity (..))
 import           Cardano.Config.Logging (LoggingCLIArguments(..))
-import           Ouroboros.Consensus.NodeId (NodeId(..), CoreNodeId(..))
+import           Ouroboros.Consensus.NodeId (CoreNodeId(..))
 import           Ouroboros.Consensus.NodeNetwork (ProtocolTracers'(..))
 import qualified Ouroboros.Consensus.Node.Tracers as Consensus
 
@@ -109,14 +108,6 @@ parseCoreNodeId =
             long "core-node-id"
          <> metavar "CORE-NODE-ID"
          <> help "The ID of the core node to which this client is connected."
-    )
-
-parseNodeId :: String -> Parser NodeId
-parseNodeId desc =
-    option (fmap CoreId auto) (
-            long "node-id"
-         <> metavar "NODE-ID"
-         <> help desc
     )
 
 parseNodeAddress :: Parser NodeAddress
@@ -196,10 +187,6 @@ parseProtocolRealPBFT =
     "real-pbft"
     "Permissive BFT consensus with a real ledger"
 
-
-parseTopologyInfo :: String -> Parser TopologyInfo
-parseTopologyInfo desc = TopologyInfo <$> parseNodeId desc <*> parseTopologyFile
-
 parseTopologyFile :: Parser FilePath
 parseTopologyFile =
     strOption (
@@ -207,6 +194,7 @@ parseTopologyFile =
          <> metavar "FILEPATH"
          <> help "The path to a file describing the topology."
     )
+
 parseLogOutputFile :: Parser FilePath
 parseLogOutputFile =
   strOption

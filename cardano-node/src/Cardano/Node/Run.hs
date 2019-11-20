@@ -28,7 +28,6 @@ import           Control.Tracer
 import qualified Data.ByteString.Char8 as BSC
 import           Data.Either (partitionEithers)
 import           Data.Functor.Contravariant (contramap)
-import qualified Data.List as List
 import           Data.Proxy (Proxy (..))
 import           Data.Semigroup ((<>))
 import           Data.Text (Text, breakOn, pack, take)
@@ -56,7 +55,6 @@ import           Ouroboros.Consensus.Node (NodeKernel (getChainDB),
                      RunNode (nodeNetworkMagic, nodeStartTime))
 import qualified Ouroboros.Consensus.Node as Node (run)
 import           Ouroboros.Consensus.Node.ProtocolInfo
-import           Ouroboros.Consensus.NodeId
 import qualified Ouroboros.Consensus.Protocol as Consensus
 import           Ouroboros.Consensus.Util.Condense
 import           Ouroboros.Consensus.Util.Orphans ()
@@ -147,8 +145,8 @@ handleSimpleNode :: forall blk. RunNode blk
                  -> NodeConfiguration
                  -> IO ()
 handleSimpleNode p trace nodeTracers nCli nc = do
-    NetworkTopology nodeSetups <-
-      either error id <$> readTopologyFile (unTopology . topFile $ mscFp nCli)
+    nodeSetup <-
+      either error id <$> readNodeSetup (unTopology . topFile $ mscFp nCli)
 
     let pInfo@ProtocolInfo{ pInfoConfig = cfg } = protocolInfo p
 
@@ -156,18 +154,11 @@ handleSimpleNode p trace nodeTracers nCli nc = do
     traceWith tracer $
       "System started at " <> show (nodeStartTime (Proxy @blk) cfg)
 
-    let producers' = case List.lookup nid $
-                          map (\ns -> (nodeId ns, producers ns)) nodeSetups of
-          Just ps -> ps
-          Nothing -> error $ "handleSimpleNode: own address "
-                          <> show (nodeAddr nCli)
-                          <> ", Node Id "
-                          <> show nid
-                          <> " not found in topology"
+    let producers' = producers nodeSetup
 
     traceWith tracer $ unlines
       [ "**************************************"
-      , "I am Node "        <> show (nodeAddr nCli) <> " Id: " <> show nid
+      , "I am Node "        <> show (nodeAddr nCli)
       , "My producers are " <> show producers'
       , "**************************************"
       ]
@@ -227,7 +218,7 @@ handleSimpleNode p trace nodeTracers nCli nc = do
       (consensusTracers nodeTracers)
       (withTip varTip $ chainDBTracer nodeTracers)
       runNetworkArgs
-      (dbPath <> "-" <> show nid)
+      dbPath
       pInfo
       id -- No ChainDbArgs customisation
       id -- No NodeParams customisation
@@ -237,8 +228,3 @@ handleSimpleNode p trace nodeTracers nCli nc = do
         let chainDB = getChainDB nodeKernel
         onEachChange registry id Nothing (ChainDB.getTipPoint chainDB) $ \tip ->
           atomically $ writeTVar varTip tip
-  where
-      nid :: Int
-      nid = case ncNodeId nc of
-              CoreId  n -> n
-              RelayId _ -> error "Non-core nodes currently not supported"

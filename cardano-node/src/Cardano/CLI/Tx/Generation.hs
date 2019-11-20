@@ -32,7 +32,6 @@ import           Control.Monad (forM, forM_, mapM, when)
 import qualified Control.Monad.Class.MonadSTM as MSTM
 import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT,
-                                                   hoistEither,
                                                    left, newExceptT,
                                                    right)
 import           Data.Bifunctor (bimap)
@@ -43,7 +42,7 @@ import qualified Data.IP as IP
 import           Data.List ((!!), last)
 import           Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.List.NonEmpty as NE
-import           Data.Maybe (Maybe (..), fromMaybe, listToMaybe, mapMaybe)
+import           Data.Maybe (Maybe (..), catMaybes, fromMaybe, listToMaybe, mapMaybe)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Set (Set)
@@ -67,13 +66,12 @@ import qualified Cardano.Chain.MempoolPayload as CC.Mempool
 import qualified Cardano.Chain.UTxO as CC.UTxO
 import           Cardano.Config.Logging (LoggingLayer (..), Trace)
 import           Cardano.Config.Types (NodeCLI(..))
+import           Cardano.Config.Topology (NodeSetup(..))
 import qualified Cardano.Crypto as Crypto
 import           Cardano.Config.Topology (NodeAddress (..),
                                           NodeHostAddress(..),
-                                          TopologyError(..),
-                                          TopologyInfo (..),
-                                          createNodeAddress,
-                                          readTopologyFile)
+                                          readNodeSetup,
+                                          remoteAddressToNodeAddress)
 import           Cardano.CLI.Tx (txSpendGenesisUTxOByronPBFT)
 import           Cardano.CLI.Tx.BenchmarkingTxSubmission (ROEnv (..),
                                                           TraceBenchTxSubmit (..),
@@ -140,7 +138,6 @@ newtype TxAdditionalSize =
 data TxGenError = CurrentlyCannotSendTxToRelayNode FilePath
                 -- ^ Relay nodes cannot currently be transaction recipients.
                 | InsufficientFundsForRecipientTx
-                | TargetNodeAddressError TopologyError
                 -- ^ Error occurred while creating the target node address.
                 | TopologyFileReadError String
                 | NeedMinimumOneTargetNodeId [TargetNodeId]
@@ -160,7 +157,8 @@ genesisBenchmarkRunner
   :: LoggingLayer
   -> NodeCLI
   -> Consensus.Protocol ByronBlock
-  -> TopologyInfo
+  -> FilePath
+  -> NodeId
   -> [TargetNodeId]
   -> NumberOfTxs
   -> NumberOfInputsPerTx
@@ -173,7 +171,8 @@ genesisBenchmarkRunner
 genesisBenchmarkRunner loggingLayer
                        nCli
                        protocol@(Consensus.ProtocolRealPBFT genesisConfig _ _ _ _)
-                       topologyInfo
+                       nodeSetupFile
+                       preparationPhaseNodeId
                        targetNodeIds
                        numOfTxs@(NumberOfTxs rawNumOfTxs)
                        numOfInsPerTx
@@ -196,14 +195,9 @@ genesisBenchmarkRunner loggingLayer
   liftIO . traceWith benchTracer . TraceBenchTxSubDebug
     $ "******* Tx generator, protocol info and topology are ready *******"
 
-  -- We have to extract host and port of the nodes we want to talk with
-  -- (based on values of `--target-node-id` CLI argument) from the topology file.
-  topology <- firstExceptT TopologyFileReadError . newExceptT $
-    readTopologyFile (topologyFile topologyInfo)
-  targetNodeAddresses <- forM targetNodeIds $ \(TargetNodeId targetNodeId) -> do
-    let eitherNodeAddress = createNodeAddress (CoreId targetNodeId) topology (topologyFile topologyInfo)
-    targetNodeAddress <- firstExceptT TargetNodeAddressError . hoistEither $ eitherNodeAddress
-    return targetNodeAddress
+  -- Extract hosts/ports of the nodes we'd like to converse with.
+  nodeSetup <- firstExceptT TopologyFileReadError . newExceptT $ readNodeSetup nodeSetupFile
+  let targetNodeAddresses = catMaybes $ remoteAddressToNodeAddress <$> producers nodeSetup
 
   liftIO . traceWith benchTracer . TraceBenchTxSubDebug
     $ "******* Tx generator, target node's address is ready *******"
@@ -236,7 +230,7 @@ genesisBenchmarkRunner loggingLayer
              nCli
              genesisConfig
              pInfoConfig
-             topologyInfo
+             preparationPhaseNodeId
              genesisUtxo
              genesisAddress
              sourceAddress
@@ -255,7 +249,7 @@ genesisBenchmarkRunner loggingLayer
                  pInfoConfig
                  sourceKey
                  recipientAddress
-                 topologyInfo
+                 preparationPhaseNodeId
                  targetNodeAddresses
                  numOfTxs
                  numOfInsPerTx
@@ -430,7 +424,7 @@ prepareInitialFunds
   -> NodeCLI
   -> CC.Genesis.Config
   -> NodeConfig ByronConsensusProtocol
-  -> TopologyInfo
+  -> NodeId
   -> Map Int ((CC.UTxO.TxIn, CC.UTxO.TxOut), Crypto.SigningKey)
   -> CC.Common.Address
   -> CC.Common.Address
@@ -440,7 +434,7 @@ prepareInitialFunds llTracer
                     nCli
                     genesisConfig
                     pInfoConfig
-                    topologyInfo
+                    targetNodeId
                     genesisUtxo
                     genesisAddress
                     targetAddress
@@ -459,7 +453,7 @@ prepareInitialFunds llTracer
                                               genesisAddress
                                               (NE.fromList [outForBig])
 
-  submitTx nCli pInfoConfig (node topologyInfo) genesisTx llTracer
+  submitTx nCli pInfoConfig targetNodeId genesisTx llTracer
   -- Done, the first transaction 'initGenTx' is submitted, now 'sourceAddress' has a lot of money.
 
   let txIn  = CC.UTxO.TxInUtxo (getTxIdFromGenTx genesisTx) 0
@@ -686,7 +680,7 @@ runBenchmark
   -> NodeConfig ByronConsensusProtocol
   -> Crypto.SigningKey
   -> CC.Common.Address
-  -> TopologyInfo
+  -> NodeId
   -> [NodeAddress]
   -> NumberOfTxs
   -> NumberOfInputsPerTx
@@ -703,7 +697,7 @@ runBenchmark benchTracer
              pInfoConfig
              sourceKey
              recipientAddress
-             topologyInfo
+             preparationPhaseNodeId
              targetNodeAddresses
              numOfTxs
              numOfInsPerTx
@@ -719,7 +713,7 @@ runBenchmark benchTracer
     pInfoConfig
     sourceKey
     txFee
-    topologyInfo
+    preparationPhaseNodeId
     numOfTxs
     numOfInsPerTx
 
@@ -807,7 +801,7 @@ createMoreFundCoins
   -> NodeConfig ByronConsensusProtocol
   -> Crypto.SigningKey
   -> FeePerTx
-  -> TopologyInfo
+  -> NodeId
   -> NumberOfTxs
   -> NumberOfInputsPerTx
   -> ExceptT TxGenError IO ()
@@ -816,7 +810,7 @@ createMoreFundCoins llTracer
                     pInfoConfig
                     sourceKey
                     (FeePerTx txFee)
-                    topologyInfo
+                    preparationPhaseNodeId
                     (NumberOfTxs numOfTxs)
                     (NumberOfInputsPerTx numOfInsPerTx) = do
   let feePerTx              = assumeBound . CC.Common.mkLovelace $ txFee
@@ -854,7 +848,7 @@ createMoreFundCoins llTracer
                                              txOut
                                              []
   liftIO $ forM_ splittingTxs $ \(tx, txDetailsList) -> do
-    submitTx nCli pInfoConfig (node topologyInfo) tx llTracer
+    submitTx nCli pInfoConfig preparationPhaseNodeId tx llTracer
     -- Update available fundValueStatus to reuse the numSplittingTxOuts TxOuts.
     forM_ txDetailsList addToAvailableFunds
  where

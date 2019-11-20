@@ -44,14 +44,16 @@ import qualified Cardano.Crypto.Signing as Crypto
 
 import qualified Ouroboros.Consensus.Ledger.Byron as Byron
 import           Ouroboros.Consensus.Ledger.Byron (GenTx(..), ByronBlock)
-import qualified Ouroboros.Consensus.Protocol as Consensus
+import           Ouroboros.Consensus.Node.ProtocolInfo ( ProtocolInfo(..)
+                                                       , protocolInfo)
 import           Ouroboros.Consensus.Node.Run (RunNode)
+import           Ouroboros.Consensus.NodeId (NodeId(..))
+import qualified Ouroboros.Consensus.Protocol as Consensus
 
 import           Cardano.CLI.Ops
 import           Cardano.CLI.Tx.Submission
 import           Cardano.Config.Protocol
 import           Cardano.Config.Types (NodeCLI, NodeConfiguration(..))
-import           Cardano.Config.Topology
 import           Cardano.Common.Orphans ()
 
 
@@ -223,17 +225,18 @@ issueUTxOExpenditure ins outs nc nCli key = do
           throwIO $ InvariantViolation $
           "Invariant violation:  a non-ByronTx GenTx out of 'txSpendUTxOByronPBFT': " <> show x
 
--- | Submit a transaction to a node specified by topology info.
+-- | Submit a transaction to a node specified by node setup,
+--   using the local submission protocol.
 nodeSubmitTx
-  :: TopologyInfo
+  :: NodeId
   -> NodeConfiguration
   -> NodeCLI
   -> GenTx ByronBlock
   -> IO ()
-nodeSubmitTx topology nc nCli gentx =
+nodeSubmitTx targetNodeId nc nCli gentx =
   withRealPBFT nc nCli $
   \p@Consensus.ProtocolRealPBFT{} -> do
     case gentx of
       ByronTx txid _ -> putStrLn $ sformat ("TxId: "%Crypto.hashHexF) txid
       _ -> pure ()
-    handleTxSubmission nCli p topology gentx stdoutTracer
+    submitTx nCli (pInfoConfig (protocolInfo p)) targetNodeId gentx stdoutTracer

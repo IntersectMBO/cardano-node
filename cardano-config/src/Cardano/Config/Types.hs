@@ -102,8 +102,8 @@ data CardanoConfiguration = CardanoConfiguration
     -- instance at a time.
     , ccTraceOptions        :: !TraceOptions
     -- ^ Tracer options
-    , ccTopologyInfo        :: !TopologyInfo
-    -- ^ The network topology.
+    , ccNodeSetup           :: !FilePath
+    -- ^ Location of the node's network setup file.
     , ccNodeAddress         :: !NodeAddress
     -- ^ The node ip address and port number.
     , ccProtocol            :: !Protocol

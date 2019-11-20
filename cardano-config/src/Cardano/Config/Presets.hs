@@ -7,8 +7,6 @@ module Cardano.Config.Presets
 
 import           Cardano.Prelude
 
-import           Ouroboros.Consensus.NodeId
-
 import           Cardano.Config.Defaults (traceOptionsDefault)
 import           Cardano.Config.Partial ( NodeProtocol (..)
                                         , PartialBlock (..)
@@ -25,8 +23,7 @@ import           Cardano.Config.Partial ( NodeProtocol (..)
                                         , PartialWallet (..)
                                         , RequireNetworkMagic (..)
                                         )
-import           Cardano.Config.Topology (NodeAddress(..), NodeHostAddress(..),
-                                          TopologyInfo(..))
+import           Cardano.Config.Topology (NodeAddress(..), NodeHostAddress(..))
 import           Cardano.Config.Types (Protocol(..), ViewMode(..))
 
 --------------------------------------------------------------------------------
@@ -40,7 +37,7 @@ mainnetConfiguration =
     , pccLogConfig = pure "./configuration/log-configuration.yaml"
     , pccDBPath = pure "./db/"
     , pccApplicationLockFile = pure ""
-    , pccTopologyInfo = pure $ TopologyInfo (RelayId 0) "./configuration/simple-topology.json"
+    , pccNodeSetup = pure $ "./configuration/simple-topology-0.json"
     , pccNodeAddress = pure $ NodeAddress (NodeHostAddress Nothing) 7000
     , pccProtocol = pure ByronLegacy
     , pccViewMode = pure LiveView
@@ -158,7 +155,7 @@ devConfiguration =
     , pccLogConfig = pure "./log-config.yaml"
     , pccSocketDir = pure "./socket/"
     , pccApplicationLockFile = pure ""
-    , pccTopologyInfo = pure $ TopologyInfo (RelayId 0) "./configuration/simple-topology.json"
+    , pccNodeSetup = pure $ "./configuration/simple-topology-0.json"
     , pccNodeAddress = pure $ NodeAddress (NodeHostAddress Nothing) 7000
     , pccProtocol = pure ByronLegacy
     , pccViewMode = pure LiveView

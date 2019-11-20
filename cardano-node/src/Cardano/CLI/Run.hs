@@ -64,6 +64,7 @@ import qualified Cardano.Crypto.Signing as Crypto
 
 import qualified Test.Cardano.Chain.Genesis.Dummy as Dummy
 
+import           Ouroboros.Consensus.NodeId (NodeId(..))
 import qualified Ouroboros.Consensus.Protocol as Consensus
 
 import           Cardano.CLI.Delegation
@@ -86,7 +87,6 @@ import           Cardano.Config.Types (CardanoConfiguration(..), ConfigYamlFileP
                                        SigningKeyFile(..), TopologyFile(..),
                                        parseNodeConfiguration)
 import           Cardano.Config.Logging (LoggingLayer (..))
-import           Cardano.Config.Topology (TopologyInfo(..))
 
 -- | Sub-commands of 'cardano-cli'.
 data ClientCommand
@@ -230,9 +230,8 @@ runCommand _ _(CheckDelegation magic cert issuerVF delegateVF) = do
 
 runCommand _ _(SubmitTx fp nCli) = do
   nc <- liftIO . parseNodeConfiguration . unConfigPath $ configFp nCli
-  let topologyFp = unTopology . topFile $ mscFp nCli
   tx <- liftIO $ readByronTx fp
-  liftIO $ nodeSubmitTx (TopologyInfo (ncNodeId nc) topologyFp) nc nCli tx
+  liftIO $ nodeSubmitTx (ncNodeId nc) nc nCli tx
 
 runCommand _ _(SpendGenesisUTxO (NewTxFile ctTx) ctKey genRichAddr outs nCli) = do
   nc <- liftIO . parseNodeConfiguration . unConfigPath $ configFp nCli
@@ -265,7 +264,8 @@ runCommand _ loggingLayer
                             loggingLayer
                             nCli
                             protocol
-                            (TopologyInfo (ncNodeId nc) topologyFp)
+                            topologyFp
+                            (CoreId 0)
                             targetNodeIds
                             numOfTxs
                             numOfInsPerTx
