@@ -22,8 +22,6 @@ module Cardano.Config.Logging
   , mkLOMeta
   , LOMeta (..)
   , LOContent (..)
-  -- CLI argument parser
-  , LoggingCLIArguments (..)
   ) where
 
 import           Cardano.Prelude hiding (trace)
@@ -60,8 +58,9 @@ import qualified Cardano.BM.Trace as Trace
 import           Cardano.Shell.Lib (GeneralException (..))
 import           Cardano.Shell.Types (CardanoFeature (..))
 
-import           Cardano.Config.Types (ConfigYamlFilePath(..), CardanoEnvironment,
-                   NodeCLI(..), NodeConfiguration(..), parseNodeConfiguration)
+import           Cardano.Config.Types (ConfigYamlFilePath (..), CardanoEnvironment,
+                                       NodeMockCLI (..), NodeProtocolMode (..),
+                                       NodeConfiguration (..), NodeCLI (..),parseNodeConfiguration)
 
 
 --------------------------------------------------------------------------------
@@ -114,11 +113,6 @@ data LoggingLayer = LoggingLayer
 -- Feature
 --------------------------------
 
--- | CLI specific data structure.
-data LoggingCLIArguments = LoggingCLIArguments
-  { logConfigFile :: !(Maybe FilePath)
-  , captureMetrics :: !Bool
-  }
 
 data LoggingFlag = LoggingEnabled | LoggingDisabled
   deriving (Eq, Show)
@@ -174,17 +168,13 @@ createLoggingFeatureCLI _ mLogConfig captureLogMetrics = do
 
 -- | Create logging feature for `cardano-node`
 createLoggingFeature
-  :: CardanoEnvironment -> NodeCLI -> IO (LoggingLayer, CardanoFeature)
-createLoggingFeature _ nCli = do
-    -- we parse any additional configuration if there is any
-    -- We don't know where the user wants to fetch the additional
-    -- configuration from, it could be from
-    -- the filesystem, so we give him the most flexible/powerful context, @IO@.
-    --
-    -- Currently we parse outside the features since we want to have a complete
-    -- parser for __every feature__.
-    nc <- parseNodeConfiguration . unConfigPath $ configFp nCli
-    let logConfigFp = if ncLoggingSwitch nc then Just . unConfigPath $ configFp nCli else Nothing
+  :: CardanoEnvironment -> NodeProtocolMode -> IO (LoggingLayer, CardanoFeature)
+createLoggingFeature _ nodeProtocolMode = do
+
+    configYamlFp <- pure $ getConfigYaml nodeProtocolMode
+
+    nc <- parseNodeConfiguration $ unConfigPath configYamlFp
+    let logConfigFp = if ncLoggingSwitch nc then Just $ unConfigPath configYamlFp else Nothing
 
     (disabled', loggingConfiguration) <- loggingCLIConfiguration
                                            logConfigFp
@@ -203,6 +193,10 @@ createLoggingFeature _ nCli = do
 
     -- we return both
     pure (loggingLayer, cardanoFeature)
+ where
+  getConfigYaml :: NodeProtocolMode -> ConfigYamlFilePath
+  getConfigYaml (RealProtocolMode (NodeCLI _ _ _ rConfigFp _ )) = rConfigFp
+  getConfigYaml (MockProtocolMode (NodeMockCLI _ _ _ mConfigFp _)) = mConfigFp
 
 -- | Initialize `LoggingCardanoFeature`
 loggingCardanoFeatureInit :: LoggingFlag -> LoggingConfiguration -> IO (LoggingLayer, LoggingLayer -> IO())

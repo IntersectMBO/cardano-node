@@ -8,7 +8,7 @@ module Cardano.Node.Features.Node
 
 import           Cardano.Prelude
 
-import           Cardano.Config.Types (CardanoEnvironment, NodeConfiguration, CardanoEnvironment, NodeCLI(..))
+import           Cardano.Config.Types (CardanoEnvironment, NodeConfiguration, CardanoEnvironment, NodeMockCLI(..))
 import           Cardano.Config.Logging (LoggingLayer (..),)
 import           Cardano.Node.Run
 import           Cardano.Shell.Types (CardanoFeature (..))
@@ -30,7 +30,7 @@ createNodeFeature
   :: LoggingLayer
   -> CardanoEnvironment
   -> NodeConfiguration
-  -> NodeCLI
+  -> NodeMockCLI
   -> IO (NodeLayer, CardanoFeature)
 createNodeFeature loggingLayer _ nc nCli = do
     -- we parse any additional configuration if there is any

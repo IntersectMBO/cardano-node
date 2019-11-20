@@ -36,8 +36,8 @@ runClient (WalletCLI config delegCertFile gHash gFile sKeyFile socketFp) tracer 
     eSomeProtocol <- runExceptT $ fromProtocol
                                     gHash
                                     (ncNodeId nc)
-                                    (fromIntegral <$> ncNumCoreNodes nc)
-                                    gFile
+                                    (ncNumCoreNodes nc)
+                                    (Just gFile)
                                     (ncReqNetworkMagic nc)
                                     (ncPbftSignatureThresh nc)
                                     delegCertFile

@@ -25,24 +25,25 @@ import           Cardano.Node.Features.Node
 main :: IO ()
 main = toplevelExceptionHandler $ do
 
-    cli <- Opt.execParser opts
+    cli <- Opt.customExecParser p opts
 
     (features, nodeLayer) <- initializeAllFeatures cli env
 
     runCardanoApplicationWithFeatures features (cardanoApplication nodeLayer)
 
     where
+      p = Opt.prefs Opt.showHelpOnEmpty
+
       env :: CardanoEnvironment
       env = NoEnvironment
 
       cardanoApplication :: NodeLayer -> CardanoApplication
       cardanoApplication = CardanoApplication . nlRunNode
 
-      opts :: Opt.ParserInfo NodeCLI
+      opts :: Opt.ParserInfo NodeProtocolMode
       opts =
-        Opt.info (nodeCliParser
-                    <**> helperBrief "help" "Show this help text" nodeCliHelpMain
-                 )
+        Opt.info (nodeProtocolModeParser
+                    <**> helperBrief "help" "Show this help text" nodeCliHelpMain)
 
           ( Opt.fullDesc <>
             Opt.progDesc "Start node of the Cardano blockchain."
@@ -55,18 +56,34 @@ main = toplevelExceptionHandler $ do
 
       nodeCliHelpMain :: String
       nodeCliHelpMain = renderHelpDoc 80 $
-        parserHelpHeader "cardano-node" nodeCliParser
+        parserHelpHeader "cardano-node" nodeProtocolModeParser
         <$$> ""
-        <$$> parserHelpOptions nodeCliParser
+        <$$> parserHelpOptions nodeProtocolModeParser
 
 
 initializeAllFeatures
-  :: NodeCLI
+  :: NodeProtocolMode
   -> CardanoEnvironment
   -> IO ([CardanoFeature], NodeLayer)
-initializeAllFeatures nCli@NodeCLI { configFp = ncFp }
+initializeAllFeatures nCli@(RealProtocolMode nC@NodeCLI { configFp = ncFp })
                        cardanoEnvironment = do
+  (loggingLayer, loggingFeature) <- createLoggingFeature cardanoEnvironment nCli
 
+  nodeConfig <- parseNodeConfiguration $ unConfigPath ncFp
+  (nodeLayer   , nodeFeature)    <-
+    createNodeFeature
+      loggingLayer
+      cardanoEnvironment
+      nodeConfig
+      nC
+
+  pure ([ loggingFeature
+        , nodeFeature
+        ] :: [CardanoFeature]
+       , nodeLayer)
+
+initializeAllFeatures nCli@(MockProtocolMode nC@NodeMockCLI { mockConfigFp = ncFp })
+                       cardanoEnvironment = do
     (loggingLayer, loggingFeature) <- createLoggingFeature cardanoEnvironment nCli
 
     nodeConfig <- parseNodeConfiguration $ unConfigPath ncFp
@@ -75,7 +92,7 @@ initializeAllFeatures nCli@NodeCLI { configFp = ncFp }
         loggingLayer
         cardanoEnvironment
         nodeConfig
-        nCli
+        nC
 
     pure ([ loggingFeature
           , nodeFeature

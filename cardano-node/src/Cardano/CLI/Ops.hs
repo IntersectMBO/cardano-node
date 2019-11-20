@@ -209,9 +209,9 @@ withRealPBFT gHash genFile nMagic sigThresh delCertFp sKeyFp update ptcl action 
                       FromProtocolError
                       $ fromProtocol
                           gHash
-                          Nothing
-                          Nothing
-                          genFile
+                          nId
+                          mNumNodes
+                          (Just genFile)
                           nMagic
                           sigThresh
                           delCertFp
