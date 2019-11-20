@@ -70,6 +70,7 @@ in {
   };
   testScript = ''
     startAll
+    $machine->succeed("mkdir -p /var/lib/cardano-node");
     $machine->succeed("chown -R cardano-node.cardano-node /var/lib/cardano-node");
     $machine->succeed("lscpu | systemd-cat --identifier=lscpu --priority=crit");
     $machine->succeed("date +%s | systemd-cat --identifier=timekeeper --priority=crit");

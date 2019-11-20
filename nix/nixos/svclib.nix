@@ -1,6 +1,14 @@
 { pkgs, cardano-node ? pkgs.cardano-node }:
 with builtins; with pkgs.lib;
-let
+  let
+
+  ## mkNodeConfig
+  ##   :: NodeId Int -> ServiceConfig AttrSet -> NodeConfig AttrSet
+  mkNodeConfig = cfg: NodeId:
+    cfg.nodeConfig //
+    { inherit NodeId; } //
+    (optionalAttrs (cfg.genesisHash != null) { GenesisHash = cfg.genesisHash; });
+
   ## mkFullyConnectedLocalClusterTopology
   ##   :: String Address -> String Port -> Int PortNo -> Int Valency
   ##   -> Topology FilePath
@@ -242,7 +250,6 @@ let
     }:
     let
       topology = [{
-        nodeId = 0;
         nodeAddress = {
           addr = hostAddr;
           port = nodePort;
@@ -293,5 +300,6 @@ in
   toVerification
   mkProxyFollowerTopology
   mkProxyScript
+  mkNodeConfig
   ;
 }

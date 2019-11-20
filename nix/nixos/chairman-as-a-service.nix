@@ -29,9 +29,11 @@ let
           "--genesis-hash ${cfg.genesisHash}"
           "--slot-duration ${toString cfg.slot-length}"
           "--socket-dir ${if (ncfg.runtimeDir == null) then "${ncfg.stateDir}/socket" else "/run/${ncfg.runtimeDir}"}"
+          "--socket-dir ${if (ncfg.runtimeDir == null) then "${ncfg.stateDir}/socket" else "/run/${ncfg.runtimeDir}"}"
           "--genesis-file ${cfg.genesisFile}"
           "--config ${configFile}"
           ## ..temporary stubs
+          "--database-path /dev/null"
           "--database-path /dev/null"
           "--port 1234"
           "--topology /dev/null"

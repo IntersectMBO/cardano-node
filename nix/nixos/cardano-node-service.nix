@@ -1,40 +1,39 @@
 { config
 , lib
+, pkgs
 , ... }:
 
 with import ../../lib.nix; with lib; with builtins;
 let
   cfg = config.services.cardano-node;
+  svcLib = (import ./svclib.nix { inherit pkgs cardano-node; });
   envConfig = cfg.environments.${cfg.environment};
   systemdServiceName = "cardano-node${optionalString cfg.instanced "@"}";
-  configFile = toFile "config.json" (toJSON (cfg.nodeConfig // (optionalAttrs (cfg.genesisHash != null) { GenesisHash = cfg.genesisHash; })));
   mkScript = cfg:
     let exec = "cardano-node";
         cmd = builtins.filter (x: x != "") [
           "${cfg.package}/bin/${exec}"
           "--genesis-file ${cfg.genesisFile}"
-          "--config ${configFile}"
-          "--database-path ${cfg.stateDir}/${cfg.dbPrefix}"
-          "--socket-dir ${ if (cfg.runtimeDir == null) then "${cfg.stateDir}/socket" else "/run/${cfg.runtimeDir}"}"
+          "--config ${cfg.nodeConfigFile}"
+          "--database-path ${cfg.databasePath}"
+          "--socket-dir ${if (cfg.runtimeDir == null) then "${cfg.stateDir}/socket" else "/run/${cfg.runtimeDir}"}"
           "--topology ${cfg.topology}"
           "--host-addr ${cfg.hostAddr}"
           "--port ${toString cfg.port}"
-          "${lib.optionalString (cfg.signingKey != null) "--signing-key ${cfg.signingKey}"}"
-          "${lib.optionalString (cfg.delegationCertificate != null) "--delegation-certificate ${cfg.delegationCertificate}"}"
-
-          "--${cfg.consensusProtocol}"
-          "${lib.optionalString (cfg.pbftThreshold != null)  "--pbft-signature-threshold ${cfg.pbftThreshold}"}"
-          "${lib.optionalString (cfg.protover-major != null) "--protover-major ${toString cfg.protover-major}"}"
-          "${lib.optionalString (cfg.protover-minor != null) "--protover-minor ${toString cfg.protover-minor}"}"
-          "${lib.optionalString (cfg.protover-alt   != null) "--protover-alt   ${toString cfg.protover-alt}"}"
+          "${lib.optionalString (cfg.signingKey != null)
+            "--signing-key ${cfg.signingKey}"}"
+          "${lib.optionalString (cfg.delegationCertificate != null)
+            "--delegation-certificate ${cfg.delegationCertificate}"}"
           "${cfg.extraArgs}"
         ];
     in ''
         choice() { i=$1; shift; eval "echo \''${$((i + 1))}"; }
         echo "Starting ${exec}: '' + concatStringsSep "\"\n   echo \"" cmd + ''"
-        echo "..or, once again, in a signle line:"
+        echo "..or, once again, in a single line:"
         echo "''                   + concatStringsSep " "              cmd + ''"
-        exec ''                    + concatStringsSep " "              cmd;
+        ls -l ${if (cfg.runtimeDir == null) then "${cfg.stateDir}/socket" else "/run/${cfg.runtimeDir}"} || true
+        ${pkgs.nettools}/bin/netstat -pltn
+        ${pkgs.strace}/bin/strace -f -s128 -ebind -- ''                    + concatStringsSep " "              cmd;
 in {
   options = {
     services.cardano-node = {
@@ -157,6 +156,12 @@ in {
         '';
       };
 
+      databasePath = mkOption {
+        type = types.str;
+        default = "${cfg.stateDir}/${cfg.dbPrefix}";
+        description = ''Node database path.'';
+      };
+
       dbPrefix = mkOption {
         type = types.str;
         default = "db-${cfg.environment}";
@@ -175,7 +180,7 @@ in {
       };
 
       nodeId = mkOption {
-        type = types.either types.int types.str;
+        type = types.int;
         default = 0;
         description = ''
           The ID for this node
@@ -196,8 +201,15 @@ in {
       nodeConfig = mkOption {
         type = types.attrs;
         default = envConfig.nodeConfig;
-        description = ''Node's configuration'';
+        description = ''Internal representation of the config.'';
       };
+
+      nodeConfigFile = mkOption {
+        type = types.str;
+        default = "${toFile "config-${toString NodeId}.json" (toJSON (svcLib.mkNodeConfig cfg cfg.nodeId))}";
+        description = ''Actual configuration file (shell expression).'';
+      };
+
       extraArgs = mkOption {
         type = types.str;
         default = "";
