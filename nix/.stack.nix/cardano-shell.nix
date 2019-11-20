@@ -25,7 +25,6 @@
           (hsPkgs.cardano-prelude)
           (hsPkgs.concurrency)
           (hsPkgs.containers)
-          (hsPkgs.directory)
           (hsPkgs.formatting)
           (hsPkgs.process)
           (hsPkgs.QuickCheck)
@@ -51,8 +50,6 @@
             (hsPkgs.base)
             (hsPkgs.cardano-shell)
             (hsPkgs.cardano-prelude)
-            (hsPkgs.process)
-            (hsPkgs.yaml)
             (hsPkgs.QuickCheck)
             (hsPkgs.quickcheck-state-machine)
             (hsPkgs.tree-diff)
@@ -64,8 +61,8 @@
     } // {
     src = (pkgs.lib).mkDefault (pkgs.fetchgit {
       url = "https://github.com/input-output-hk/cardano-shell";
-      rev = "8abae427c44f0b447117f78e2c1f5006dac2edf8";
-      sha256 = "1j4nnsiagvv1yqfr4h9ailnnd7iw62vim1w7bc0sb5blngfjgvjr";
+      rev = "f700afeb24163332dc00306508ca410b7873521d";
+      sha256 = "07qfhqygzngscvk6dxc9jd6aasid8cmnqw5xs612lspvz9pj80m2";
       });
     postUnpack = "sourceRoot+=/cardano-shell; echo source root reset to \$sourceRoot";
     }
