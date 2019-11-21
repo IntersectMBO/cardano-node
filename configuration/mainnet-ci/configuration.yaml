@@ -14898,7 +14898,7 @@ mainnet_ci: &mainnet_ci
           unlockStakeEpoch: 9999999999999999999 # we're starting in OBFT mode
         protocolConstants:
           <<: *mainnet_base_protocolConstants
-          k: 10
+          k: 2160
     requiresNetworkMagic: RequiresNoMagic
   txValidationRules:
     attribResrictEpoch: 2
@@ -14913,7 +14913,7 @@ mainnet_ci_full: &mainnet_ci_full
       <<: *mainnet_ci_genesis
       src:
         file: genesis.json
-        hash: ec4fafee43d64b009eaae5353290167250b70694528ebbd479619673128e9cc2
+        hash: 12da51c484b5310fe26ca06ab24b94b323cde3698a0a50cb3f212abd08c2731e
   update:
     <<: *mainnet_base_update
     applicationName: cardano-sl

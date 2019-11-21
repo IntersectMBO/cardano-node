@@ -169,7 +169,7 @@
     , "unlockStakeEpoch": "9999999999999999999"
     }
 , "protocolConsts":
-    { "k": 10
+    { "k": 2160
     , "protocolMagic": 10000000
     , "vssMaxTTL": 6
     , "vssMinTTL": 2
