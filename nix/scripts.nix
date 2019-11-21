@@ -17,25 +17,26 @@ let
       port = 3001;
       signingKey = null;
       delegationCertificate = null;
-      pbftThreshold = null;
       nodeId = 0;
       stateDir = "./";
       # defaults to proxy if env has no relays
       edgeHost = "127.0.0.1";
+      edgeNodes = [];
       edgePort = 3001;
       useProxy = false;
       proxyPort = 7777;
       proxyHost = "127.0.0.1";
-      loggingConfig = ../configuration/log-configuration.yaml;
+      nodeConfig = import ../configuration/default-node-config.nix;
       loggingExtras = null;
     };
     config = defaultConfig // envConfig // customConfig;
     topologyFile = let
       edgePort = if config.useProxy then config.proxyPort else config.edgePort;
       edgeHost = if config.useProxy then config.proxyHost else config.edgeHost;
+      edgeNodes = if config.useProxy then [] else config.edgeNodes;
     in config.topologyFile or commonLib.mkEdgeTopology {
       inherit (config) hostAddr port nodeId;
-      inherit edgeHost edgePort;
+      inherit edgeNodes edgeHost edgePort;
     };
     serviceConfig = {
       inherit (config)
@@ -45,9 +46,9 @@ let
         signingKey
         delegationCertificate
         consensusProtocol
-        pbftThreshold
         hostAddr
         port
+        nodeConfig
         nodeId;
       runtimeDir = null;
       dbPrefix = "db-${envConfig.name}";

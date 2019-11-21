@@ -9,10 +9,10 @@ let
   ccfg      = config.services.cardano-cluster;
   envConfig = environments.${cfg.environment};
   configFile = toFile "config.json" (toJSON nodeConfig);
-  nodeConfig = (import ncfg.configFile) { inherit cfg; };
+  nodeConfig = ncfg.nodeConfig // { GenesisHash = ncfg.genesisHash; };
 
   mkChairmanConfig = nodeConfig: chairmanConfig: {
-    inherit (nodeConfig) package genesisFile genesisHash stateDir pbftThreshold consensusProtocol;
+    inherit (nodeConfig) package genesisFile stateDir;
     inherit (chairmanConfig) timeout maxBlockNo k node-ids topology dbPrefix;
   };
   mkScript = cfg:
@@ -20,28 +20,22 @@ let
                        (map (i: "--core-node-id ${toString i}")
                          cfg.node-ids);
         exec = "chairman";
-        cmd = builtins.filter (x: x != "") [
+        cmd = [
           "${ncfg.package}/bin/chairman"
-          "--${ncfg.consensusProtocol}"
           (nodeIdArgs)
           "--timeout ${toString cfg.timeout}"
           "--database-path ${cfg.stateDir}/${cfg.dbPrefix}"
           "--max-block-no ${toString cfg.maxBlockNo}"
           "--security-param ${toString cfg.k}"
           "--genesis-file ${cfg.genesisFile}"
-          "--genesis-hash ${cfg.genesisHash}"
+          "--genesis-hash ${ncfg.genesisHash}"
           "--socket-dir ${ if (ncfg.runtimeDir == null) then "${ncfg.stateDir}/socket" else "/run/${ncfg.runtimeDir}"}"
-          "${lib.optionalString (cfg.pbftThreshold != null) "--pbft-signature-threshold ${cfg.pbftThreshold}"}"
           "--topology ${cfg.topology}"
           "--port 1234"
           "--database-path ${cfg.stateDir}/${cfg.dbPrefix}"
           "--genesis-file ${cfg.genesisFile}"
           "--socket-dir ${ if (ncfg.runtimeDir == null) then "${ncfg.stateDir}/socket" else "/run/${ncfg.runtimeDir}"}"
           "--config ${configFile}"
-
-
-
-
         ];
     in ''
         echo "Starting ${exec}: '' + concatStringsSep "\"\n   echo \"" cmd + ''"
@@ -97,9 +91,9 @@ in {
           environment node will connect to
         '';
       };
-      configFile = mkOption {
-        type = types.path;
-        default = ../../configuration/default-node-config.nix;
+      nodeConfig = mkOption {
+        type = types.attrs;
+        default = import ../../configuration/default-node-config.nix;
         description = ''Node's configuration file, as a Nix expression.'';
       };
       maxBlockNo = mkOption {

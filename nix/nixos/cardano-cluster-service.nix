@@ -152,6 +152,7 @@ in {
   config = mkIf cfg.enable {
     services.cardano-node = {
       enable = true;
+      nodeConfig = import ../../configuration/default-node-config.nix;
       instanced = true;
       genesisHash = genesisHashValue;
       inherit topology genesisFile signingKey delegationCertificate nodeId port;

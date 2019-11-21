@@ -1,5 +1,3 @@
-{ cfg
-}:
 {
   minSeverity = "Debug";
   rotation = {
@@ -78,7 +76,6 @@
   };
   NodeId = 0;
   Protocol = "RealPBFT";
-  GenesisHash = cfg.genesisHash;
   NumCoreNodes = 1;
   RequiresNetworkMagic = "RequiresMagic";
   PBftSignatureThreshold = 0.7;

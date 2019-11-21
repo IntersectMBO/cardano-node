@@ -7,8 +7,7 @@ let
   cfg = config.services.cardano-node;
   envConfig = cfg.environments.${cfg.environment};
   systemdServiceName = "cardano-node${optionalString cfg.instanced "@"}";
-  configFile = toFile "config.json" (toJSON nodeConfig);
-  nodeConfig = (import cfg.configFile) { inherit cfg; };
+  configFile = toFile "config.json" (toJSON (cfg.nodeConfig // (optionalAttrs (cfg.genesisHash != null) { GenesisHash = cfg.genesisHash; })));
   mkScript = cfg:
     let exec = "cardano-node";
         cmd = builtins.filter (x: x != "") [
@@ -22,7 +21,6 @@ let
           # "--node-id ${toString cfg.nodeId}"
           "--host-addr ${cfg.hostAddr}"
           "--port ${toString cfg.port}"
-          "${lib.optionalString (cfg.pbftThreshold != null) "--pbft-signature-threshold ${cfg.pbftThreshold}"}"
           "${lib.optionalString (cfg.signingKey != null) "--signing-key ${cfg.signingKey}"}"
           "${lib.optionalString (cfg.delegationCertificate != null) "--delegation-certificate ${cfg.delegationCertificate}"}"
           "${cfg.extraArgs}"
@@ -95,18 +93,10 @@ in {
       };
 
       genesisHash = mkOption {
-        type = types.str;
-        default = envConfig.genesisHash;
+        type = types.nullOr types.str;
+        default = null;
         description = ''
           Hash of the genesis file
-        '';
-      };
-
-      pbftThreshold = mkOption {
-        type = types.nullOr types.str;
-        default = envConfig.pbftThreshold or null;
-        description = ''
-          PBFT Threshold
         '';
       };
 
@@ -190,18 +180,18 @@ in {
       topology = mkOption {
         type = types.path;
         default = mkEdgeTopology {
-          inherit (cfg) hostAddr nodeId port;
-          edgeHost = envConfig.edgeHost or "127.0.0.1";
+          inherit (cfg) nodeId port;
+          inherit (envConfig) edgeNodes;
         };
         description = ''
           Cluster topology
         '';
       };
 
-      configFile = mkOption {
-        type = types.path;
-        default = ../../configuration/default-node-config.nix;
-        description = ''Node's configuration file, as a Nix expression.'';
+      nodeConfig = mkOption {
+        type = types.attrs;
+        default = envConfig.nodeConfig;
+        description = ''Node's configuration'';
       };
       extraArgs = mkOption {
         type = types.str;
