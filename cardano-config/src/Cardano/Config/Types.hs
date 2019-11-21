@@ -117,7 +117,7 @@ data NodeConfiguration =
     NodeConfiguration
       { ncProtocol :: Protocol
       , ncNodeId :: Maybe NodeId
-      , ncNumCoreNodes :: Maybe Int
+      , ncNumCoreNodes :: Maybe Word64
       , ncReqNetworkMagic :: RequiresNetworkMagic
       , ncPbftSignatureThresh :: Maybe Double
       , ncLoggingSwitch :: Bool

@@ -70,8 +70,10 @@ import           Ouroboros.Storage.ImmutableDB (ValidationPolicy (..))
 import           Cardano.Common.LocalSocket
 import           Cardano.Config.Protocol (SomeProtocol(..), fromProtocol)
 import           Cardano.Config.Topology
-import           Cardano.Config.Types (DbFile(..), NodeMockCLI(..),
-                                       SocketFile(..), TopologyFile(..))
+import           Cardano.Config.Types (ConfigYamlFilePath(..), DbFile(..), NodeMockCLI(..),
+                                       NodeProtocolMode (..), NodeCLI(..),
+                                       SocketFile(..), TopologyFile(..),
+                                       parseNodeConfiguration)
 import           Cardano.Tracing.Tracers
 #ifdef UNIX
 import           Cardano.Node.TUI.LiveView
@@ -80,29 +82,36 @@ import           Cardano.Node.TUI.LiveView
 
 runNode
   :: LoggingLayer
-  -> NodeConfiguration
-  -> NodeMockCLI
+  -> NodeProtocolMode
   -> IO ()
-runNode loggingLayer nc nCli = do
+runNode loggingLayer npm = do
     hn <- hostname
     let !trace = setHostname hn $
                  llAppendName loggingLayer "node" (llBasicTrace loggingLayer)
     let tracer = contramap pack $ toLogObject trace
 
+    (mscFp', configFp', genHash') <-
+        case npm of
+          MockProtocolMode (NodeMockCLI mMscFp genHash _ configYaml _) ->
+            pure (mMscFp, configYaml, genHash)
+          RealProtocolMode (NodeCLI rMscFp genHash _ configYaml _) ->
+            pure (rMscFp, configYaml, genHash)
+
+    nc <- parseNodeConfiguration $ unConfigPath configFp'
     traceWith tracer $ "tracing verbosity = " ++
                          case traceVerbosity $ ncTraceOptions nc of
                              NormalVerbosity -> "normal"
                              MinimalVerbosity -> "minimal"
                              MaximalVerbosity -> "maximal"
     eitherSomeProtocol <- runExceptT $ fromProtocol
-                                         (mockGenesisHash nCli)
+                                         genHash'
                                          (ncNodeId nc)
                                          (ncNumCoreNodes nc)
-                                         (genesisFile $ mockMscFp nCli)
+                                         (genesisFile mscFp')
                                          (ncReqNetworkMagic nc)
                                          (ncPbftSignatureThresh nc)
-                                         (delegCertFile $ mockMscFp nCli)
-                                         (signKeyFile $ mockMscFp nCli)
+                                         (delegCertFile mscFp')
+                                         (signKeyFile mscFp')
                                          (ncUpdate nc)
                                          (ncProtocol nc)
 
@@ -114,7 +123,7 @@ runNode loggingLayer nc nCli = do
     tracers <- mkTracers (ncTraceOptions nc) trace
 
     case ncViewMode nc of
-      SimpleView -> handleSimpleNode p trace tracers nCli nc (const $ pure ())
+      SimpleView -> handleSimpleNode p trace tracers npm (const $ pure ())
       LiveView   -> do
 #ifdef UNIX
         let c = llConfiguration loggingLayer
@@ -130,13 +139,13 @@ runNode loggingLayer nc nCli = do
         captureCounters be trace
 
         -- User will see a terminal graphics and will be able to interact with it.
-        nodeThread <- Async.async $ handleSimpleNode p trace tracers nCli nc
+        nodeThread <- Async.async $ handleSimpleNode p trace tracers npm
                        (setNodeKernel be)
         setNodeThread be nodeThread
 
         void $ Async.waitAny [nodeThread]
 #else
-        handleSimpleNode p trace tracers nCli nc (const $ pure ())
+        handleSimpleNode p trace tracers npm (const $ pure ())
 #endif
   where
     hostname = do
@@ -146,149 +155,242 @@ runNode loggingLayer nc nCli = do
 -- | Sets up a simple node, which will run the chain sync protocol and block
 -- fetch protocol, and, if core, will also look at the mempool when trying to
 -- create a new block.
+
 handleSimpleNode
   :: forall blk. RunNode blk
   => Consensus.Protocol blk
   -> Tracer IO (LogObject Text)
   -> Tracers ConnectionId blk
-  -> NodeMockCLI
-  -> NodeConfiguration
+  -> NodeProtocolMode
   -> (NodeKernel IO ConnectionId blk -> IO ())
   -- ^ Called on the 'NodeKernel' after creating it, but before the network
   -- layer is initialised.  This implies this function must not block,
   -- otherwise the node won't actually start.
   -> IO ()
-handleSimpleNode p trace nodeTracers nCli nc onKernel = do
-    NetworkTopology nodeSetups <-
-      either error id <$> readTopologyFile (unTopology . topFile $ mockMscFp nCli)
+handleSimpleNode p trace nodeTracers npm onKernel = do
+  case npm of
+    -- Run a node using a real protocol
+    RealProtocolMode (NodeCLI rMscFp _ rNodeAddr config runDBValidation) -> do
+      nc <- parseNodeConfiguration $ unConfigPath config
+      let pInfo@ProtocolInfo{ pInfoConfig = cfg } = protocolInfo p
 
-    let pInfo@ProtocolInfo{ pInfoConfig = cfg } = protocolInfo p
+      hn <- getHostName
+      -- Tracing
+      let tracer = contramap pack $ toLogObject trace
 
-    let tracer = contramap pack $ toLogObject trace
-    traceWith tracer $
-      "System started at " <> show (nodeStartTime (Proxy @blk) cfg)
+      traceWith tracer $
+        "System started at " <> show (nodeStartTime (Proxy @blk) cfg)
 
-    let producers' = case List.lookup nid $
-                          map (\ns -> (nodeId ns, producers ns)) nodeSetups of
-          Just ps -> ps
-          Nothing -> error $ "handleSimpleNode: own address "
-                          <> show (mockNodeAddr nCli)
-                          <> ", Node Id "
-                          <> show nid
-                          <> " not found in topology"
+      traceWith tracer $ unlines
+        [ "**************************************"
+        , "Hostname: " <> hn
+        , "My producers are "
+        , "**************************************"
+        ]
 
-    traceWith tracer $ unlines
-      [ "**************************************"
-      , "I am Node "        <> show (mockNodeAddr nCli) <> " Id: " <> show nid
-      , "My producers are " <> show producers'
-      , "**************************************"
-      ]
 
-    -- Socket directory
-    myLocalAddr <- localSocketAddrInfo
-                     (ncNodeId nc)
-                     (unSocket . socketFile $ mockMscFp nCli)
-                     MkdirIfMissing
+      -- Socket directory
+      myLocalAddr <- localSocketAddrInfo
+                       Nothing
+                       (unSocket $ socketFile rMscFp)
+                       MkdirIfMissing
 
-    addrs <- nodeAddressInfo $ mockNodeAddr nCli
-    let ipProducerAddrs  :: [NodeAddress]
-        dnsProducerAddrs :: [RemoteAddress]
-        (ipProducerAddrs, dnsProducerAddrs) = partitionEithers
-          [ maybe (Right ra) Left $ remoteAddressToNodeAddress ra
-          | ra <- producers' ]
+      addrs <- nodeAddressInfo rNodeAddr
 
-        ipProducers :: IPSubscriptionTarget
-        ipProducers =
-          let ips = nodeAddressToSockAddr <$> ipProducerAddrs
-          in IPSubscriptionTarget {
-                ispIps     = ips,
-                ispValency = length ips
-              }
+      let ipProducerAddrs  :: [NodeAddress]
+          dnsProducerAddrs :: [RemoteAddress]
+          (ipProducerAddrs, dnsProducerAddrs) = partitionEithers
+            [ maybe (Right ra) Left $ remoteAddressToNodeAddress ra
+            | ra <- [RemoteAddress "18.185.45.45" 3001 1] ]
+          ipProducers :: IPSubscriptionTarget
+          ipProducers =
+            let ips = nodeAddressToSockAddr <$> ipProducerAddrs
+            in IPSubscriptionTarget {
+                  ispIps     = ips,
+                  ispValency = length ips
+                }
 
-        dnsProducers :: [DnsSubscriptionTarget]
-        dnsProducers = producerSubscription <$> dnsProducerAddrs
+          dnsProducers :: [DnsSubscriptionTarget]
+          dnsProducers = producerSubscription <$> dnsProducerAddrs
 
-        producerSubscription :: RemoteAddress -> DnsSubscriptionTarget
-        producerSubscription ra =
-          DnsSubscriptionTarget
-          { dstDomain  = BSC.pack (raAddress ra)
-          , dstPort    = raPort ra
-          , dstValency = raValency ra
-          }
 
-        diffusionTracers :: DiffusionTracers
-        diffusionTracers = DiffusionTracers
-          { dtIpSubscriptionTracer  = ipSubscriptionTracer  nodeTracers
-          , dtDnsSubscriptionTracer = dnsSubscriptionTracer nodeTracers
-          , dtDnsResolverTracer     = dnsResolverTracer     nodeTracers
-          , dtErrorPolicyTracer     = errorPolicyTracer     nodeTracers
-          , dtMuxTracer             = muxTracer             nodeTracers
-          , dtMuxLocalTracer        = nullTracer
-          , dtHandshakeTracer       = nullTracer
-          , dtHandshakeLocalTracer  = nullTracer
-          }
+          producerSubscription :: RemoteAddress -> DnsSubscriptionTarget
+          producerSubscription ra =
+            DnsSubscriptionTarget
+            { dstDomain  = BSC.pack (raAddress ra)
+            , dstPort    = raPort ra
+            , dstValency = raValency ra
+            }
+          diffusionTracers :: DiffusionTracers
+          diffusionTracers = DiffusionTracers
+            { dtIpSubscriptionTracer  = ipSubscriptionTracer  nodeTracers
+            , dtDnsSubscriptionTracer = dnsSubscriptionTracer nodeTracers
+            , dtDnsResolverTracer     = dnsResolverTracer     nodeTracers
+            , dtErrorPolicyTracer     = errorPolicyTracer     nodeTracers
+            , dtMuxTracer             = muxTracer             nodeTracers
+            , dtMuxLocalTracer        = nullTracer
+            , dtHandshakeTracer       = nullTracer
+            , dtHandshakeLocalTracer  = nullTracer
+            }
 
-        diffusionArguments :: DiffusionArguments
-        diffusionArguments = DiffusionArguments
-          { daAddresses             = addrs
-          , daLocalAddress          = myLocalAddr
-          , daIpProducers           = ipProducers
-          , daDnsProducers          = dnsProducers
-          }
+          diffusionArguments :: DiffusionArguments
+          diffusionArguments = DiffusionArguments
+            { daAddresses             = addrs
+            , daLocalAddress          = myLocalAddr
+            , daIpProducers           = ipProducers
+            , daDnsProducers          = dnsProducers
+            }
 
-    removeStaleLocalSocket (ncNodeId nc) (unSocket . socketFile $ mockMscFp nCli)
+      removeStaleLocalSocket Nothing (unSocket $ socketFile rMscFp)
+      dbPath <- canonicalizePath =<< makeAbsolute (unDB $ dBFile rMscFp)
+      varTip <- atomically $ newTVar GenesisPoint
 
-    dbPath <- canonicalizePath =<< makeAbsolute (unDB . dBFile $ mockMscFp nCli)
+      when runDBValidation $
+        traceWith tracer "Performing DB validation"
 
-    varTip <- atomically $ newTVar GenesisPoint
+      Node.run
+        (consensusTracers nodeTracers)
+        (withTip varTip $ chainDBTracer nodeTracers)
+        diffusionTracers
+        diffusionArguments
+        (nodeNetworkMagic (Proxy @blk) cfg)
+        dbPath
+        pInfo
+        (isProducer nc)
+        (customiseChainDbArgs runDBValidation)
+        id -- No NodeParams customisation
+        $ \registry nodeKernel -> do
+          -- Watch the tip of the chain and store it in @varTip@ so we can include
+          -- it in trace messages.
+          let chainDB = getChainDB nodeKernel
+          void $ onEachChange registry id Nothing
+                              (ChainDB.getTipPoint chainDB) $ \tip ->
+            atomically $ writeTVar varTip tip
+          onKernel nodeKernel
+    MockProtocolMode (NodeMockCLI mMscFp _ mockNodeAddress cfgYaml runDBValidation) -> do
+      nc <- parseNodeConfiguration $ unConfigPath cfgYaml
+      NetworkTopology nodeSetups <- either error id <$> readTopologyFile (unTopology $ topFile mMscFp)
 
-    when (mockValidateDB nCli) $
-      traceWith tracer "Performing DB validation"
+      let pInfo@ProtocolInfo{ pInfoConfig = cfg } = protocolInfo p
 
-    Node.run
-      (consensusTracers nodeTracers)
-      (withTip varTip $ chainDBTracer nodeTracers)
-      diffusionTracers
-      diffusionArguments
-      (nodeNetworkMagic (Proxy @blk) cfg)
-      (dbPath <> "-" <> show nid)
-      pInfo
-      isProducer
-      customiseChainDbArgs
-      id -- No NodeParams customisation
-      $ \registry nodeKernel -> do
-        -- Watch the tip of the chain and store it in @varTip@ so we can include
-        -- it in trace messages.
-        let chainDB = getChainDB nodeKernel
-        void $ onEachChange registry id Nothing
-                            (ChainDB.getTipPoint chainDB) $ \tip ->
-          atomically $ writeTVar varTip tip
-        onKernel nodeKernel
+      -- Tracing
+      let tracer = contramap pack $ toLogObject trace
+      traceWith tracer $ "System started at " <> show (nodeStartTime (Proxy @blk) cfg)
+
+      let producersList = map (\ns -> (nodeId ns, producers ns)) nodeSetups
+
+      let producers' = case (List.lookup (nid nc) producersList) of
+                         Just ps ->  ps
+                         Nothing -> error $ "handleSimpleNode: own address "
+                                       <> show mockNodeAddress
+                                       <> ", Node Id "
+                                       <> show (nid nc)
+                                       <> " not found in topology"
+
+       ----------------------------------------------
+
+      traceWith tracer $ unlines
+        [ "**************************************"
+        , "I am Node "        <> show mockNodeAddress <> " Id: " <> show (nid nc)
+        , "My producers are " <> show producers'
+        , "**************************************"
+        ]
+
+      -- Socket directory
+      myLocalAddr <- localSocketAddrInfo
+                        (ncNodeId nc)
+                        (unSocket $ socketFile mMscFp)
+                        MkdirIfMissing
+
+      addrs <- nodeAddressInfo mockNodeAddress
+      let ipProducerAddrs  :: [NodeAddress]
+          dnsProducerAddrs :: [RemoteAddress]
+          (ipProducerAddrs, dnsProducerAddrs) = partitionEithers
+            [ maybe (Right ra) Left $ remoteAddressToNodeAddress ra
+            | ra <- producers' ]
+          ipProducers :: IPSubscriptionTarget
+          ipProducers =
+            let ips = nodeAddressToSockAddr <$> ipProducerAddrs
+            in IPSubscriptionTarget {
+                  ispIps     = ips,
+                  ispValency = length ips
+                }
+          dnsProducers :: [DnsSubscriptionTarget]
+          dnsProducers = producerSubscription <$> dnsProducerAddrs
+
+          producerSubscription :: RemoteAddress -> DnsSubscriptionTarget
+          producerSubscription ra =
+            DnsSubscriptionTarget
+            { dstDomain  = BSC.pack (raAddress ra)
+            , dstPort    = raPort ra
+            , dstValency = raValency ra
+            }
+          diffusionTracers :: DiffusionTracers
+          diffusionTracers = DiffusionTracers
+            { dtIpSubscriptionTracer  = ipSubscriptionTracer  nodeTracers
+            , dtDnsSubscriptionTracer = dnsSubscriptionTracer nodeTracers
+            , dtDnsResolverTracer     = dnsResolverTracer     nodeTracers
+            , dtErrorPolicyTracer     = errorPolicyTracer     nodeTracers
+            , dtMuxTracer             = muxTracer             nodeTracers
+            , dtMuxLocalTracer        = nullTracer
+            , dtHandshakeTracer       = nullTracer
+            , dtHandshakeLocalTracer  = nullTracer
+            }
+
+          diffusionArguments :: DiffusionArguments
+          diffusionArguments = DiffusionArguments
+            { daAddresses             = addrs
+            , daLocalAddress          = myLocalAddr
+            , daIpProducers           = ipProducers
+            , daDnsProducers          = dnsProducers
+            }
+
+      removeStaleLocalSocket (ncNodeId nc) (unSocket $ socketFile mMscFp)
+      dbPath <- canonicalizePath =<< makeAbsolute (unDB $ dBFile mMscFp)
+
+      varTip <- atomically $ newTVar GenesisPoint
+      Node.run
+        (consensusTracers nodeTracers)
+        (withTip varTip $ chainDBTracer nodeTracers)
+        diffusionTracers
+        diffusionArguments
+        (nodeNetworkMagic (Proxy @blk) cfg)
+        (dbPath <> "-" <> show (nid nc))
+        pInfo
+        (isProducer nc)
+        (customiseChainDbArgs runDBValidation)
+        id -- No NodeParams customisation
+        $ \registry nodeKernel -> do
+          -- Watch the tip of the chain and store it in @varTip@ so we can include
+          -- it in trace messages.
+          let chainDB = getChainDB nodeKernel
+          void $ onEachChange registry id Nothing
+                              (ChainDB.getTipPoint chainDB) $ \tip ->
+            atomically $ writeTVar varTip tip
+          onKernel nodeKernel
   where
-    nid :: Word64
-    nid = case ncNodeId nc of
-            Just (CoreId  (CoreNodeId n)) -> n
-            Just (RelayId _) -> error "Non-core nodes currently not supported"
-            Nothing -> 999
+   nid :: NodeConfiguration -> Word64
+   nid nc = case ncNodeId nc of
+           Just (CoreId (CoreNodeId n)) -> n
+           Just (RelayId _) -> panic $ "Cardano.Node.Run.nid: "
+                                     <> "Non-core nodes currently not supported"
+           Nothing -> panic $ "Cardano.Node.Run.nid: "
+                            <> "Please specify a NodeId in your configuration .yaml file"
 
-    customiseChainDbArgs :: ChainDB.ChainDbArgs IO blk
-                         -> ChainDB.ChainDbArgs IO blk
-    customiseChainDbArgs args = args
-      { ChainDB.cdbValidation = if mockValidateDB nCli
-          then ValidateAllEpochs
-          else ValidateMostRecentEpoch
-      }
-
-    isProducer :: IsProducer
-    isProducer = case p of
-      -- For the real protocol, look at the leader credentials
-      Consensus.ProtocolRealPBFT _ _ _ _ mbLeaderCredentials
-        | Just _ <- mbLeaderCredentials
-        -> IsProducer
-        | otherwise
-        -> IsNotProducer
-
-      -- For mock protocols, look at the NodeId
-      _ -> case ncNodeId nc of
-             Just (CoreId _) -> IsProducer
-             _               -> IsNotProducer
+   customiseChainDbArgs :: Bool
+                        -> ChainDB.ChainDbArgs IO blk
+                        -> ChainDB.ChainDbArgs IO blk
+   customiseChainDbArgs runValid args = args
+     { ChainDB.cdbValidation = if runValid
+         then ValidateAllEpochs
+         else ValidateMostRecentEpoch
+     }
+   isProducer :: NodeConfiguration -> IsProducer
+   isProducer nc = case p of
+    -- For the real protocol, look at the leader credentials
+    Consensus.ProtocolRealPBFT _ _ _ _ (Just _) -> IsProducer
+    Consensus.ProtocolRealPBFT _ _ _ _ Nothing -> IsNotProducer
+    -- For mock protocols, look at the NodeId
+    _ -> case ncNodeId nc of
+           Just (CoreId _) -> IsProducer
+           _               -> IsNotProducer

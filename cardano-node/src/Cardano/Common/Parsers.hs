@@ -5,7 +5,9 @@
 
 module Cardano.Common.Parsers
   ( nodeMockParser
+  , nodeMockProtocolModeParser
   , nodeProtocolModeParser
+  , nodeRealParser
   , parseConfigFile
   , parseCoreNodeId
   , parseDbPath
@@ -265,10 +267,3 @@ parseLogOutputFile =
     <> help "Logging output file"
     <> completer (bashCompleter "file")
     )
-
-parseLogMetricsLast :: Parser (Last Bool)
-parseLogMetricsLast =
- Last . Just <$> switch
-   ( long "log-metrics"
-   <> help "Log a number of metrics about this node"
-   )

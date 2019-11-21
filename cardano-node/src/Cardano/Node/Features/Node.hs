@@ -8,7 +8,9 @@ module Cardano.Node.Features.Node
 
 import           Cardano.Prelude
 
-import           Cardano.Config.Types (CardanoEnvironment, NodeConfiguration, CardanoEnvironment, NodeMockCLI(..))
+import           Cardano.Config.Types (CardanoEnvironment,
+                                       CardanoEnvironment,
+                                       NodeProtocolMode (..))
 import           Cardano.Config.Logging (LoggingLayer (..),)
 import           Cardano.Node.Run
 import           Cardano.Shell.Types (CardanoFeature (..))
@@ -29,10 +31,9 @@ data NodeLayer = NodeLayer
 createNodeFeature
   :: LoggingLayer
   -> CardanoEnvironment
-  -> NodeConfiguration
-  -> NodeMockCLI
+  -> NodeProtocolMode
   -> IO (NodeLayer, CardanoFeature)
-createNodeFeature loggingLayer _ nc nCli = do
+createNodeFeature loggingLayer _ npm = do
     -- we parse any additional configuration if there is any
     -- We don't know where the user wants to fetch the additional
     -- configuration from, it could be from the filesystem, so
@@ -40,7 +41,7 @@ createNodeFeature loggingLayer _ nc nCli = do
 
     -- Construct the node layer
     let nodeLayer = NodeLayer {
-                        nlRunNode = liftIO $ runNode loggingLayer nc nCli
+                        nlRunNode = liftIO $ runNode loggingLayer npm
                       }
 
     -- Construct the cardano feature
