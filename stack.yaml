@@ -24,6 +24,7 @@ extra-deps:
   - text-zipper-0.10.1
   - Unique-0.4.7.6
   - word-wrap-0.4.1
+  - statistics-linreg-0.3
 
     # Cardano-ledger dependencies
   - git: https://github.com/input-output-hk/cardano-ledger
