@@ -179,30 +179,33 @@ instance DefineSeverity (WithAddr Socket.SockAddr ErrorPolicyTrace) where
     ErrorPolicyResumeProducer {} -> Debug
     ErrorPolicyUnhandledApplicationException {} -> Error
     ErrorPolicyUnhandledConnectionException {} -> Error
-    ErrorPolicyAccept {} -> Error
+    ErrorPolicyAcceptException {} -> Error
 
 instance DefinePrivacyAnnotation (WithMuxBearer peer (MuxTrace ptcl))
 instance DefineSeverity (WithMuxBearer peer (MuxTrace ptcl)) where
   defineSeverity (WithMuxBearer _ ev) = case ev of
-    MuxTraceRecvHeaderStart        -> Debug
-    MuxTraceRecvHeaderEnd {}       -> Debug
-    MuxTraceRecvPayloadStart {}    -> Debug
-    MuxTraceRecvPayloadEnd {}      -> Debug
-    MuxTraceRecvStart {}           -> Debug
-    MuxTraceRecvEnd {}             -> Debug
-    MuxTraceSendStart {}           -> Debug
-    MuxTraceSendEnd                -> Debug
-    MuxTraceStateChange {}         -> Info
-    MuxTraceCleanExit {}           -> Info
-    MuxTraceExceptionExit {}       -> Info
-    MuxTraceChannelRecvStart {}    -> Debug
-    MuxTraceChannelRecvEnd {}      -> Debug
-    MuxTraceChannelSendStart {}    -> Debug
-    MuxTraceChannelSendEnd {}      -> Debug
-    MuxTraceHandshakeStart         -> Debug
-    MuxTraceHandshakeEnd           -> Debug
-    MuxTraceHandshakeClientError _ -> Error
-    MuxTraceHandshakeServerError _ -> Error
+    MuxTraceRecvHeaderStart          -> Debug
+    MuxTraceRecvHeaderEnd {}         -> Debug
+    MuxTraceRecvPayloadStart {}      -> Debug
+    MuxTraceRecvPayloadEnd {}        -> Debug
+    MuxTraceRecvStart {}             -> Debug
+    MuxTraceRecvEnd {}               -> Debug
+    MuxTraceSendStart {}             -> Debug
+    MuxTraceSendEnd                  -> Debug
+    MuxTraceStateChange {}           -> Info
+    MuxTraceCleanExit {}             -> Info
+    MuxTraceExceptionExit {}         -> Info
+    MuxTraceChannelRecvStart {}      -> Debug
+    MuxTraceChannelRecvEnd {}        -> Debug
+    MuxTraceChannelSendStart {}      -> Debug
+    MuxTraceChannelSendEnd {}        -> Debug
+    MuxTraceHandshakeStart           -> Debug
+    MuxTraceHandshakeClientEnd {}    -> Debug
+    MuxTraceHandshakeServerEnd       -> Debug
+    MuxTraceHandshakeClientError {}  -> Error
+    MuxTraceHandshakeServerError {}  -> Error
+    MuxTraceRecvDeltaQObservation {} -> Debug
+    MuxTraceRecvDeltaQSample {}      -> Info
 
 instance DefinePrivacyAnnotation (WithTip blk (ChainDB.TraceEvent blk))
 instance DefineSeverity (WithTip blk (ChainDB.TraceEvent blk)) where

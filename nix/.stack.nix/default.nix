@@ -17,6 +17,7 @@
         "text-zipper" = (((hackage.text-zipper)."0.10.1").revisions).default;
         "Unique" = (((hackage.Unique)."0.4.7.6").revisions).default;
         "word-wrap" = (((hackage.word-wrap)."0.4.1").revisions).default;
+        "statistics-linreg" = (((hackage.statistics-linreg)."0.3").revisions).default;
         "prometheus" = (((hackage.prometheus)."2.1.2").revisions).default;
         "libsystemd-journal" = (((hackage.libsystemd-journal)."1.4.4").revisions).default;
         "katip" = (((hackage.katip)."0.8.3.0").revisions).default;

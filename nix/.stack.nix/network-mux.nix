@@ -6,8 +6,8 @@
       identifier = { name = "network-mux"; version = "0.1.0.0"; };
       license = "Apache-2.0";
       copyright = "2019 Input Output (Hong Kong) Ltd.";
-      maintainer = "duncan@well-typed.com, marcin.szamotulski@iohk.io, marc.fontaine@iohk.io, karl.knutsson@iohk.io, alex@well-typed.com";
-      author = "Duncan Coutts, Marc Fontaine, Karl Knutsson, Marcin Szamotulski, Alexander Vieth";
+      maintainer = "duncan@well-typed.com, marcin.szamotulski@iohk.io, marc.fontaine@iohk.io, karl.knutsson@iohk.io, alex@well-typed.com, neil.davies@pnsol.com";
+      author = "Duncan Coutts, Marc Fontaine, Karl Knutsson, Marcin Szamotulski, Alexander Vieth, Neil Davies";
       homepage = "";
       url = "";
       synopsis = "Multiplexing library";
@@ -25,8 +25,11 @@
           (hsPkgs.binary)
           (hsPkgs.bytestring)
           (hsPkgs.cborg)
+          (hsPkgs.containers)
           (hsPkgs.network)
           (hsPkgs.process)
+          (hsPkgs.statistics-linreg)
+          (hsPkgs.vector)
           (hsPkgs.time)
           ];
         };
@@ -62,8 +65,8 @@
     } // {
     src = (pkgs.lib).mkDefault (pkgs.fetchgit {
       url = "https://github.com/input-output-hk/ouroboros-network";
-      rev = "babf1a855e6bc745321b2516837f5cac174b6943";
-      sha256 = "1vsrb3c9y9s5b3i1pqmv2m2ifs6wlcksn8nxpcfxvcgcmnvscz01";
+      rev = "72866f3e08adad890e2b29303c01bd047c692b0f";
+      sha256 = "0xjbcm4i3187qgylgcz2ymxx6s8aiwrl5q0k97vbj64xvn4iqb9q";
       });
     postUnpack = "sourceRoot+=/network-mux; echo source root reset to \$sourceRoot";
     }

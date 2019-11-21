@@ -30,9 +30,9 @@ tmux split-window -v
 tmux select-pane -t 4
 tmux send-keys "cd '${PWD}'; ${CMD} trace-acceptor $(acceptorargs)" C-m
 sleep 2
-tmux select-pane -t 0
-tmux send-keys "cd '${PWD}'; ${CMD} exe:cardano-node $(nodeargs 0 " ${EXTRA}")" C-m
 tmux select-pane -t 1
-tmux send-keys "cd '${PWD}'; ${CMD} exe:cardano-node $(nodeargs 1 " ${EXTRA}")" C-m
+tmux send-keys "cd '${PWD}'; ${CMD} exe:cardano-node $(nodeargs 0 " ${EXTRA}")" C-m
 tmux select-pane -t 2
+tmux send-keys "cd '${PWD}'; ${CMD} exe:cardano-node $(nodeargs 1 " ${EXTRA}")" C-m
+tmux select-pane -t 3
 tmux send-keys "cd '${PWD}'; ${CMD} exe:cardano-node $(nodeargs 2 " ${EXTRA}")" C-m
