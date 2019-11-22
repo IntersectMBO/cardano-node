@@ -51,7 +51,9 @@ cp -iav ${tmpdir}/genesis.json ${TARGETDIR}/
 cp -iav ${tmpdir}/delegate-keys.*.key ${TARGETDIR}/
 cp -iav ${tmpdir}/delegation-cert.*.json ${TARGETDIR}/
 
-rm ${CONFIGDIR}/latest-genesis
+if [ -d ${CONFIGDIR}/latest-genesis ]; then
+  rm ${CONFIGDIR}/latest-genesis
+fi
 ln -sf ${GENHASH:0:5} ${CONFIGDIR}/latest-genesis
 
 set -
