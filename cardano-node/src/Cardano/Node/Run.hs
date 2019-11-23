@@ -40,7 +40,7 @@ import           Control.Monad.Class.MonadSTM
 
 import qualified Cardano.BM.Configuration.Model as CM
 import           Cardano.BM.Data.Backend
-import           Cardano.BM.Data.BackendKind (BackendKind (TraceForwarderBK))
+import           Cardano.BM.Data.BackendKind (BackendKind (..))
 import           Cardano.BM.Data.LogItem (LogObject (..))
 import           Cardano.BM.Data.Tracer (ToLogObject (..),
                      TracingVerbosity (..), setHostname)
@@ -116,7 +116,7 @@ runNode loggingLayer nc nCli = do
         let c = llConfiguration loggingLayer
         -- We run 'handleSimpleNode' as usual and run TUI thread as well.
         -- turn off logging to the console, only forward it through a pipe to a central logging process
-        CM.setDefaultBackends c [TraceForwarderBK, UserDefinedBK "LiveViewBackend"]
+        CM.setDefaultBackends c [KatipBK, TraceForwarderBK, UserDefinedBK "LiveViewBackend"]
         -- User will see a terminal graphics and will be able to interact with it.
         nodeThread <- Async.async $ handleSimpleNode p trace tracers nCli nc
 

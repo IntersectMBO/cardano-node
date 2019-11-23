@@ -7,16 +7,7 @@ create_new_genesis=0
 clean_explorer_db=1
 run_cluster_nodes=1
 run_explorer=1
-run_tx_generator=0
-
-# the number of transactions to enter into the chain
-numtx=1000
-
-# the transactions are sent to these nodes
-targetnodes="0 1 2"
-
-# add bytes of data to every transaction
-addsizetx=0
+run_tx_generator=1
 
 
 ### >>>>>> do not change anything below this point
@@ -28,78 +19,88 @@ if [ ! -d cardano-explorer.git ]; then
 fi
 
 BASEDIR=$(realpath $(dirname $0))
+
+# clean
+if [ -d db ]; then rm -rf db; fi
+if [ -d logs ]; then rm -rf logs; fi
+if [ -d socket ]; then rm -rf socket; fi
+if [ -d db-0 ]; then rm -rf db-0; fi
+if [ -d db-1 ]; then rm -rf db-1; fi
+if [ -d db-2 ]; then rm -rf db-2; fi
+
+# mk dirs
 mkdir -p db logs socket
 
-# exit on first error
-set -e
 
-
-# generate new genesis
+# 1) generate new genesis
 if [ $create_new_genesis -eq 1 ]; then
   ./genesis.sh
+  read -p "Continue? (y|n)" answ
+  case $answ in
+    [Nn]) exit 1;;
+    * ) echo continuing;;
+  esac
 fi
 
 
-# prepare SQL database
+# 2) prepare SQL database
 # (assuming user 'cexplorer' has been defined in the database system)
-. configuration/psql-settings.sh
 
-psql -d postgres -c "DROP DATABASE cexplorer;" || echo "DB missing"
-psql -d postgres -c "CREATE DATABASE cexplorer OWNER=cexplorer;"
-
-
-# run cluster in tmux
-if [ $run_cluster_nodes -eq 1 ]; then
-  tmux new-s -s Cluster3Node "./run-3node-cluster.sh" 
+if [ $clean_explorer_db -eq 1 ]; then
+  { . configuration/psql-settings.sh
+    psql -d postgres -c "DROP DATABASE cexplorer;" || echo "DB missing"
+    psql -d postgres -c "CREATE DATABASE cexplorer OWNER=cexplorer;" || echo "ignored"
+    read -p "Continue? (y|n)" answ
+    case $answ in
+      [Nn]) exit 1;;
+      * ) echo continuing;;
+    esac
+  }
 fi
 
-exit 0
+
+# 3) run cluster in tmux
+if [ $run_cluster_nodes -eq 1 ]; then
+  tmux select-window -t :0
+  tmux new-window -n Nodes "./run-3node-cluster.sh; $SHELL"
+  sleep 1
+  tmux set-window-option remain-on-exit on
+fi
 
 
-# run transaction generator (parallel)
-{
-  if [ $run_tx_generator -eq 1]; then
-    sleep 15
-    echo "running tx generator"
-    cabal new-run exe:
-  fi
-} &
+# 4) run transaction generator
+if [ $run_tx_generator -eq 1 ]; then
+  tmux select-window -t :0
+  tmux new-window -n TxGen "./run_tx_generator.sh; $SHELL" 
+  sleep 1
+  tmux set-window-option remain-on-exit on
+fi
 
 
-# run explorer (parallel)
-{
-  if [ $run_explorer -eq 1]; then
-    sleep 14
-    echo "running explorer"
-    GENESISHASH=`cat configuration/latest-genesis/GENHASH`
-    GENESISJSON="configuration/latest-genesis/genesis.json"
-    cd cardano-explorer.git
-    EXPLORER="cabal new-run exe:cardano-explorer-node -- "
-    exec ${EXPLORER} \
-      --genesis-hash ${GENESISHASH}\
-      --genesis-file ${GENESISJSON} \
-      --log-config ${BASEDIR}/cardano-explorer.git/log-configuration.yaml \
-      --socket-path ${BASEDIR}/socket/node-0.socket \
-      --schema-dir ${BASEDIR}/cardano-explorer.git/schema
-      --network pbftbm
-  fi
-} &
+# 5) run explorer
+if [ $run_explorer -eq 1 ]; then
+  tmux select-window -t :0
+  tmux new-window -n Explorer "./run_explorer.sh; $SHELL"
+  sleep 1
+  tmux set-window-option remain-on-exit on
+fi
 
 
 # wait for transactions
-sleep 30
-echo "waiting for transactions..."
-
-# analyse benchmark run
-sleep 5
-echo "analyse data"
-
-echo "TPS - transactions per second"
-echo "TBPS - transaction bytes per second"
-echo "number of slots total"
-echo "number of slots per node"
-echo "number of missed slots"
-echo "distribution of block size in transactions"
-echo "distribution of block size in bytes"
-echo "distribution of seconds between blocks"
+tmux select-window -t :0
+tmux new-window -n Analysis "\
+  echo 'waiting for transactions...'\
+  sleep 30\
+  echo 'analyse data'\
+  echo 'TPS - transactions per second'\
+  echo 'TBPS - transaction bytes per second'\
+  echo 'number of slots total'\
+  echo 'number of slots per node'\
+  echo 'number of missed slots'\
+  echo 'distribution of block size in transactions'\
+  echo 'distribution of block size in bytes'\
+  echo 'distribution of seconds between blocks' \
+  $SHELL"
+sleep 1
+tmux set-window-option remain-on-exit on
 
