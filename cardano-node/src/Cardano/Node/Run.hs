@@ -50,6 +50,7 @@ import           Cardano.Config.Types (MiscellaneousFilepaths(..),
 
 import           Ouroboros.Network.Block
 import           Ouroboros.Network.Subscription.Dns
+import           Ouroboros.Network.NodeToNode (ConnectionId (..))
 
 import           Ouroboros.Consensus.Node (NodeKernel (getChainDB),
                      RunNetworkArgs (..),
@@ -58,7 +59,6 @@ import qualified Ouroboros.Consensus.Node as Node (run)
 import           Ouroboros.Consensus.Node.ProtocolInfo
 import           Ouroboros.Consensus.NodeId
 import qualified Ouroboros.Consensus.Protocol as Consensus
-import           Ouroboros.Consensus.Util.Condense
 import           Ouroboros.Consensus.Util.Orphans ()
 import           Ouroboros.Consensus.Util.STM (onEachChange)
 
@@ -73,20 +73,6 @@ import           Cardano.Tracing.Tracers
 #ifdef UNIX
 import           Cardano.Node.TUI.LiveView
 #endif
-
-
--- | Peer identifier used in consensus application
---
-data Peer = Peer { localAddr  :: SockAddr
-                 , remoteAddr :: SockAddr }
-  deriving (Eq, Ord, Show)
-
-instance Condense Peer where
-    condense (Peer localA remoteA) = (show localA) ++ (show remoteA)
-
-instance NoUnexpectedThunks Peer where
-    showTypeOf _ = "Peer"
-    whnfNoUnexpectedThunks _ctxt _act = return NoUnexpectedThunks
 
 
 runNode
@@ -142,7 +128,7 @@ runNode loggingLayer nc nCli = do
 handleSimpleNode :: forall blk. RunNode blk
                  => Consensus.Protocol blk
                  -> Tracer IO (LogObject Text)
-                 -> Tracers Peer blk
+                 -> Tracers ConnectionId blk
                  -> NodeCLI
                  -> NodeConfiguration
                  -> IO ()
@@ -191,7 +177,7 @@ handleSimpleNode p trace nodeTracers nCli nc = do
         dnsProducers :: [DnsSubscriptionTarget]
         dnsProducers = producerSubscription <$> dnsProducerAddrs
 
-        runNetworkArgs :: RunNetworkArgs Peer blk
+        runNetworkArgs :: RunNetworkArgs blk
         runNetworkArgs = RunNetworkArgs
           { rnaIpSubscriptionTracer  = ipSubscriptionTracer  nodeTracers
           , rnaDnsSubscriptionTracer = dnsSubscriptionTracer nodeTracers
@@ -199,7 +185,6 @@ handleSimpleNode p trace nodeTracers nCli nc = do
           , rnaErrorPolicyTracer     = errorPolicyTracer     nodeTracers
           , rnaMuxTracer             = muxTracer             nodeTracers
           , rnaMuxLocalTracer        = nullTracer
-          , rnaMkPeer                = Peer
           , rnaMyAddrs               = addrs
           , rnaMyLocalAddr           = myLocalAddr
           , rnaIpProducers           = ipProducers

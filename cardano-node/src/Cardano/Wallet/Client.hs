@@ -70,9 +70,10 @@ runWalletClient ptcl sockDir (CoreNodeId id) tracer = do
         localTxSubmissionTracer = contramap show tracer
 
     connectTo
-      nullTracer
-      nullTracer
-      (,)
+      NetworkConnectTracers {
+          nctMuxTracer       = nullTracer,
+          nctHandshakeTracer = nullTracer
+        }
       (localInitiatorNetworkApplication
         (Proxy :: Proxy blk)
         chainSyncTracer

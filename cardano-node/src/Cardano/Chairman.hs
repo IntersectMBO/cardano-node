@@ -135,9 +135,10 @@ createConnection
   socketDir = do
     addr <- localSocketAddrInfo (fromCoreNodeId coreNodeId) socketDir NoMkdirIfMissing
     connectTo
-      nullTracer
-      nullTracer
-      (,)
+      NetworkConnectTracers {
+          nctMuxTracer       = nullTracer,
+          nctHandshakeTracer = nullTracer
+        }
       (localInitiatorNetworkApplication
         coreNodeId
         chainsVar
