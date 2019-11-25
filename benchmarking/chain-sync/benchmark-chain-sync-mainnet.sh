@@ -14,24 +14,11 @@ if [ -d db-mainnet-0 ]; then
 fi
 rm node-0*
 
-set -euo pipefail
+#set -euo pipefail
 
 ulimit -t $CPU_TIME_LIMIT
 
 date --iso-8601=seconds > STARTTIME
-
-#SLOTLIMIT="500000"
-#{ tail -F node-0.log | grep --line-buffered -e '.*:cardano.node.ChainDB:.*TraceCopyToImmDBEvent.CopiedBlockToImmDB.*"tip":"[a-z0-9]*@'${SLOTLIMIT} | {
-#
-#  read a
-#  echo "got: $a"
-#  NODEPID=`ps x | grep cardano-node | grep 7777 | cut -d ' ' -f 2`
-#  echo "killing $NODEPID"
-#  date --iso-8601=seconds > STOPTIME
-#  kill $NODEPID
-#  exit 0
-#  }
-#} &
 
 NODE="cabal new-run exe:cardano-node -- "
 

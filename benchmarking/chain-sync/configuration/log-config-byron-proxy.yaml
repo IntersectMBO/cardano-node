@@ -1,5 +1,5 @@
 # global filter; messages must have at least this severity to pass:
-minSeverity: Notice
+minSeverity: Info
 
 # these backends are initialized:
 setupBackends:
