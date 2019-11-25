@@ -243,6 +243,8 @@ executable cardano-cli
                      , cardano-ledger
                      , cardano-prelude
                      , cardano-node
+                     , iproute
+                     , network
                      , optparse-applicative
                      , ouroboros-consensus
                      , safe-exceptions

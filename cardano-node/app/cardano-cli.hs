@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 import           Cardano.Prelude hiding (option)
 import           Prelude (String, error, id)
 
@@ -7,12 +9,14 @@ import qualified Data.List.NonEmpty as NE
 import           Data.Text
 import           Data.Time (UTCTime)
 import           Data.Time.Clock.POSIX (posixSecondsToUTCTime)
+import           Network.Socket (PortNumber)
 import qualified Options.Applicative as Opt
 import           Options.Applicative (Parser, ParserInfo, ParserPrefs, auto,
                                       commandGroup, flag, flag', help, long,
                                       metavar, option, showHelpOnEmpty,
                                       strOption, subparser, value)
 import           System.Exit (exitFailure)
+import           Text.Read (readMaybe)
 
 import           Cardano.Binary (Annotated (..))
 import           Cardano.Chain.Common
@@ -30,6 +34,7 @@ import           Cardano.Config.Partial (PartialCardanoConfiguration (..),
                                          mkCardanoConfiguration)
 import           Cardano.Config.Presets (mainnetConfiguration)
 import           Cardano.Config.Protocol (Protocol)
+import           Cardano.Config.Topology (NodeAddress (..), NodeHostAddress (..))
 import           Cardano.Config.Types (CardanoEnvironment (..), GenesisFile(..),
                                        RequireNetworkMagic)
 import           Cardano.Crypto ( AProtocolMagic(..)
@@ -334,9 +339,12 @@ parseTxRelatedValues =
         "generate-txs"
         "Launch transactions generator."
         $ GenerateTxs
-            <$> parseTargetNodeIds
-                  "target-node-id"
-                  "Identifiers of nodes transactions will be sent to."
+            <$> (NE.fromList <$> some (
+                  parseTargetNodeAddress
+                    "target-node"
+                    "host and port of the node transactions will be sent to."
+                  )
+                )
             <*> parseNumberOfTxs
                   "num-of-txs"
                   "Number of transactions generator will create."
@@ -461,6 +469,19 @@ parseFlag def active optname desc =
   flag def active $ long optname <> help desc
 
 
+parseTargetNodeAddress :: String -> String -> Parser NodeAddress
+parseTargetNodeAddress optname desc =
+  option
+    ( uncurry NodeAddress
+      . Control.Arrow.first cliParseHostAddress
+      . Control.Arrow.second cliParsePort
+      <$> auto
+    )
+    $ long optname
+      <> metavar "(HOST,PORT)"
+      <> help desc
+
+
 -- | Here, we hope to get away with the usage of 'error' in a pure expression,
 --   because the CLI-originated values are either used, in which case the error is
 --   unavoidable rather early in the CLI tooling scenario (and especially so, if
@@ -484,6 +505,13 @@ cliParseTxId :: String -> TxId
 cliParseTxId =
   either (error . ("Bad Lovelace value: " <>) . show) id
   . decodeHash . pack
+
+cliParseHostAddress :: String -> NodeHostAddress
+cliParseHostAddress = NodeHostAddress . Just .
+  maybe (error "Bad host of target node") id . readMaybe
+
+cliParsePort :: Word16 -> PortNumber
+cliParsePort = fromIntegral
 
 parseAddress :: String -> String -> Parser Address
 parseAddress opt desc =
@@ -557,9 +585,6 @@ parseNewTxFile opt =
   NewTxFile
     <$> parseFilePath opt "Non-existent file to write the signed transaction to."
 
-parseTargetNodeIds :: String -> String -> Parser [TargetNodeId]
-parseTargetNodeIds opt desc = many $ TargetNodeId <$> parseIntegral opt desc
-
 parseNumberOfTxs :: String -> String -> Parser NumberOfTxs
 parseNumberOfTxs opt desc = NumberOfTxs <$> parseIntegral opt desc
 
@@ -579,4 +604,4 @@ parseTxAdditionalSize :: String -> String -> Parser TxAdditionalSize
 parseTxAdditionalSize opt desc = TxAdditionalSize <$> parseIntegral opt desc
 
 parseSigningKeysFiles :: String -> String -> Parser [SigningKeyFile]
-parseSigningKeysFiles opt desc = many $ SigningKeyFile <$> parseFilePath opt desc
+parseSigningKeysFiles opt desc = some $ SigningKeyFile <$> parseFilePath opt desc

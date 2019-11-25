@@ -10,8 +10,7 @@
 {-# OPTIONS_GHC -Wno-missed-specialisations #-}
 
 module Cardano.CLI.Tx.Generation
-  ( TargetNodeId(..)
-  , NumberOfTxs(..)
+  ( NumberOfTxs(..)
   , NumberOfInputsPerTx(..)
   , NumberOfOutputsPerTx(..)
   , FeePerTx(..)
@@ -31,10 +30,7 @@ import qualified Control.Exception as Exception
 import           Control.Monad (forM, forM_, mapM, when)
 import qualified Control.Monad.Class.MonadSTM as MSTM
 import           Control.Monad.Trans.Except (ExceptT)
-import           Control.Monad.Trans.Except.Extra (firstExceptT,
-                                                   hoistEither,
-                                                   left, newExceptT,
-                                                   right)
+import           Control.Monad.Trans.Except.Extra (left, right)
 import           Data.Bifunctor (bimap)
 import qualified Data.ByteString.Lazy as LB
 import           Data.Either (isLeft)
@@ -69,11 +65,7 @@ import           Cardano.Config.Logging (LoggingLayer (..), Trace)
 import           Cardano.Config.Types (NodeCLI(..))
 import qualified Cardano.Crypto as Crypto
 import           Cardano.Config.Topology (NodeAddress (..),
-                                          NodeHostAddress(..),
-                                          TopologyError(..),
-                                          TopologyInfo (..),
-                                          createNodeAddress,
-                                          readTopologyFile)
+                                          NodeHostAddress(..)) 
 import           Cardano.CLI.Tx (txSpendGenesisUTxOByronPBFT)
 import           Cardano.CLI.Tx.BenchmarkingTxSubmission (ROEnv (..),
                                                           TraceBenchTxSubmit (..),
@@ -91,18 +83,14 @@ import Ouroboros.Consensus.Block(BlockProtocol)
 import           Ouroboros.Consensus.Ledger.Byron.Config (pbftProtocolMagic)
 import           Ouroboros.Consensus.Node.ProtocolInfo (ProtocolInfo (..),
                                                         protocolInfo)
-import           Ouroboros.Consensus.NodeId (NodeId (..))
 import qualified Ouroboros.Consensus.Protocol as Consensus
 import           Ouroboros.Consensus.Ledger.Byron (ByronBlock (..),
                                                    GenTx (..),
                                                    ByronConsensusProtocol)
 import qualified Ouroboros.Consensus.Ledger.Byron as Byron
+import           Ouroboros.Consensus.NodeId (NodeId (..))
 import           Ouroboros.Consensus.Protocol.Abstract (NodeConfig)
 import           Ouroboros.Consensus.Protocol.PBFT (pbftExtConfig)
-
-newtype TargetNodeId =
-  TargetNodeId Int
-  deriving (Eq, Ord, Show)
 
 newtype NumberOfTxs =
   NumberOfTxs Word64
@@ -140,11 +128,7 @@ newtype TxAdditionalSize =
 data TxGenError = CurrentlyCannotSendTxToRelayNode FilePath
                 -- ^ Relay nodes cannot currently be transaction recipients.
                 | InsufficientFundsForRecipientTx
-                | TargetNodeAddressError TopologyError
                 -- ^ Error occurred while creating the target node address.
-                | TopologyFileReadError String
-                | NeedMinimumOneTargetNodeId [TargetNodeId]
-                -- ^ Need at least 1 target node id.
                 | NeedMinimumThreeSigningKeyFiles [FilePath]
                 -- ^ Need at least 3 signing key files.
                 | SecretKeyDeserialiseError String
@@ -160,8 +144,7 @@ genesisBenchmarkRunner
   :: LoggingLayer
   -> NodeCLI
   -> Consensus.Protocol ByronBlock
-  -> TopologyInfo
-  -> [TargetNodeId]
+  -> NonEmpty NodeAddress
   -> NumberOfTxs
   -> NumberOfInputsPerTx
   -> NumberOfOutputsPerTx
@@ -173,8 +156,7 @@ genesisBenchmarkRunner
 genesisBenchmarkRunner loggingLayer
                        nCli
                        protocol@(Consensus.ProtocolRealPBFT genesisConfig _ _ _ _)
-                       topologyInfo
-                       targetNodeIds
+                       targetNodeAddresses
                        numOfTxs@(NumberOfTxs rawNumOfTxs)
                        numOfInsPerTx
                        numOfOutsPerTx
@@ -185,28 +167,10 @@ genesisBenchmarkRunner loggingLayer
   when (length signingKeyFiles < 3) $
     left $ NeedMinimumThreeSigningKeyFiles signingKeyFiles
 
-  when (null targetNodeIds) $
-    left $ NeedMinimumOneTargetNodeId targetNodeIds
-
   let (benchTracer, connectTracer, submitTracer, lowLevelSubmitTracer) = createTracers loggingLayer
 
   liftIO . traceWith benchTracer . TraceBenchTxSubDebug
     $ "******* Tx generator, tracers are ready *******"
-
-  liftIO . traceWith benchTracer . TraceBenchTxSubDebug
-    $ "******* Tx generator, protocol info and topology are ready *******"
-
-  -- We have to extract host and port of the nodes we want to talk with
-  -- (based on values of `--target-node-id` CLI argument) from the topology file.
-  topology <- firstExceptT TopologyFileReadError . newExceptT $
-    readTopologyFile (topologyFile topologyInfo)
-  targetNodeAddresses <- forM targetNodeIds $ \(TargetNodeId targetNodeId) -> do
-    let eitherNodeAddress = createNodeAddress (CoreId targetNodeId) topology (topologyFile topologyInfo)
-    targetNodeAddress <- firstExceptT TargetNodeAddressError . hoistEither $ eitherNodeAddress
-    return targetNodeAddress
-
-  liftIO . traceWith benchTracer . TraceBenchTxSubDebug
-    $ "******* Tx generator, target node's address is ready *******"
 
   -- 'genesisKey' is for genesis address with initial amount of money (1.4 billion ADA for now).
   -- 'sourceKey' is for source address that we'll use as a source of money for next transactions.
@@ -236,7 +200,6 @@ genesisBenchmarkRunner loggingLayer
              nCli
              genesisConfig
              pInfoConfig
-             topologyInfo
              genesisUtxo
              genesisAddress
              sourceAddress
@@ -255,7 +218,6 @@ genesisBenchmarkRunner loggingLayer
                  pInfoConfig
                  sourceKey
                  recipientAddress
-                 topologyInfo
                  targetNodeAddresses
                  numOfTxs
                  numOfInsPerTx
@@ -430,7 +392,6 @@ prepareInitialFunds
   -> NodeCLI
   -> CC.Genesis.Config
   -> NodeConfig ByronConsensusProtocol
-  -> TopologyInfo
   -> Map Int ((CC.UTxO.TxIn, CC.UTxO.TxOut), Crypto.SigningKey)
   -> CC.Common.Address
   -> CC.Common.Address
@@ -440,7 +401,6 @@ prepareInitialFunds llTracer
                     nCli
                     genesisConfig
                     pInfoConfig
-                    topologyInfo
                     genesisUtxo
                     genesisAddress
                     targetAddress
@@ -459,7 +419,7 @@ prepareInitialFunds llTracer
                                               genesisAddress
                                               (NE.fromList [outForBig])
 
-  submitTx nCli pInfoConfig (node topologyInfo) genesisTx llTracer
+  submitTx nCli pInfoConfig (CoreId 0) genesisTx llTracer
   -- Done, the first transaction 'initGenTx' is submitted, now 'sourceAddress' has a lot of money.
 
   let txIn  = CC.UTxO.TxInUtxo (getTxIdFromGenTx genesisTx) 0
@@ -686,8 +646,7 @@ runBenchmark
   -> NodeConfig ByronConsensusProtocol
   -> Crypto.SigningKey
   -> CC.Common.Address
-  -> TopologyInfo
-  -> [NodeAddress]
+  -> NonEmpty NodeAddress
   -> NumberOfTxs
   -> NumberOfInputsPerTx
   -> NumberOfOutputsPerTx
@@ -703,7 +662,6 @@ runBenchmark benchTracer
              pInfoConfig
              sourceKey
              recipientAddress
-             topologyInfo
              targetNodeAddresses
              numOfTxs
              numOfInsPerTx
@@ -719,7 +677,6 @@ runBenchmark benchTracer
     pInfoConfig
     sourceKey
     txFee
-    topologyInfo
     numOfTxs
     numOfInsPerTx
 
@@ -769,7 +726,7 @@ runBenchmark benchTracer
               recipientAddress
               sourceKey
               txFee
-              (length targetNodeAddresses)
+              (NE.length targetNodeAddresses)
               numOfTxs
               numOfInsPerTx
               numOfOutsPerTx
@@ -780,7 +737,7 @@ runBenchmark benchTracer
 
   liftIO $ do
     txsLists <- STM.atomically $ STM.takeTMVar txsListsForTargetNodes
-    let targetNodesAddrsAndTxsLists = zip remoteAddresses txsLists
+    let targetNodesAddrsAndTxsLists = zip (NE.toList remoteAddresses) txsLists
     allAsyncs <- forM targetNodesAddrsAndTxsLists $ \(remoteAddr, txsList) -> do
       -- Launch connection and submission threads for a peer
       -- (corresponding to one target node).
@@ -807,7 +764,6 @@ createMoreFundCoins
   -> NodeConfig ByronConsensusProtocol
   -> Crypto.SigningKey
   -> FeePerTx
-  -> TopologyInfo
   -> NumberOfTxs
   -> NumberOfInputsPerTx
   -> ExceptT TxGenError IO ()
@@ -816,7 +772,6 @@ createMoreFundCoins llTracer
                     pInfoConfig
                     sourceKey
                     (FeePerTx txFee)
-                    topologyInfo
                     (NumberOfTxs numOfTxs)
                     (NumberOfInputsPerTx numOfInsPerTx) = do
   let feePerTx              = assumeBound . CC.Common.mkLovelace $ txFee
@@ -854,7 +809,7 @@ createMoreFundCoins llTracer
                                              txOut
                                              []
   liftIO $ forM_ splittingTxs $ \(tx, txDetailsList) -> do
-    submitTx nCli pInfoConfig (node topologyInfo) tx llTracer
+    submitTx nCli pInfoConfig (CoreId 0) tx llTracer
     -- Update available fundValueStatus to reuse the numSplittingTxOuts TxOuts.
     forM_ txDetailsList addToAvailableFunds
  where

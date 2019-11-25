@@ -30,7 +30,6 @@ module Cardano.CLI.Run (
   , NewCertificateFile(..)
   , TxFile(..)
   , NewTxFile(..)
-  , TargetNodeId(..)
   , NumberOfTxs(..)
   , NumberOfInputsPerTx(..)
   , NumberOfOutputsPerTx(..)
@@ -71,8 +70,7 @@ import           Cardano.CLI.Genesis
 import           Cardano.CLI.Key
 import           Cardano.CLI.Ops
 import           Cardano.CLI.Tx
-import           Cardano.CLI.Tx.Generation (TargetNodeId (..),
-                                            NumberOfTxs (..),
+import           Cardano.CLI.Tx.Generation (NumberOfTxs (..),
                                             NumberOfInputsPerTx (..),
                                             NumberOfOutputsPerTx (..),
                                             FeePerTx (..), TPSRate (..),
@@ -86,7 +84,7 @@ import           Cardano.Config.Types (CardanoConfiguration(..), ConfigYamlFileP
                                        SigningKeyFile(..), TopologyFile(..),
                                        parseNodeConfiguration)
 import           Cardano.Config.Logging (LoggingLayer (..))
-import           Cardano.Config.Topology (TopologyInfo(..))
+import           Cardano.Config.Topology (NodeAddress(..), TopologyInfo(..))
 
 -- | Sub-commands of 'cardano-cli'.
 data ClientCommand
@@ -162,7 +160,7 @@ data ClientCommand
     --- Tx Generator Command ----------
 
   | GenerateTxs
-    [TargetNodeId]
+    (NonEmpty NodeAddress)
     NumberOfTxs
     NumberOfInputsPerTx
     NumberOfOutputsPerTx
@@ -247,7 +245,7 @@ runCommand _ _ (SpendUTxO (NewTxFile ctTx) ctKey ins outs nCli) = do
   liftIO . ensureNewFileLBS ctTx $ serialise gTx
 
 runCommand _ loggingLayer
-           (GenerateTxs targetNodeIds
+           (GenerateTxs targetNodeAddresses
                         numOfTxs
                         numOfInsPerTx
                         numOfOutsPerTx
@@ -260,13 +258,11 @@ runCommand _ loggingLayer
 
   liftIO $ withRealPBFT nc nCli $
     \protocol@(Consensus.ProtocolRealPBFT _ _ _ _ _) -> do
-      let topologyFp = unTopology . topFile $ mscFp nCli
       res <- runExceptT $ genesisBenchmarkRunner
                             loggingLayer
                             nCli
                             protocol
-                            (TopologyInfo (ncNodeId nc) topologyFp)
-                            targetNodeIds
+                            targetNodeAddresses
                             numOfTxs
                             numOfInsPerTx
                             numOfOutsPerTx

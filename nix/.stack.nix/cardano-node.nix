@@ -164,6 +164,8 @@
             (hsPkgs.cardano-ledger)
             (hsPkgs.cardano-prelude)
             (hsPkgs.cardano-node)
+            (hsPkgs.iproute)
+            (hsPkgs.network)
             (hsPkgs.optparse-applicative)
             (hsPkgs.ouroboros-consensus)
             (hsPkgs.safe-exceptions)
