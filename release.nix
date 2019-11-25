@@ -103,6 +103,6 @@ in
     jobs.nix-tools.tests.x86_64-pc-mingw32-cardano-node.cardano-node-test.x86_64-linux
 
     # Chairman consensus test TODO: fix the chairman test
-    #jobs.nixosTests.chairmansCluster.x86_64-linux
+    jobs.nixosTests.chairmansCluster.x86_64-linux
   ];
 } (builtins.removeAttrs args ["cardano-node"]))
