@@ -71,7 +71,7 @@ fi
 # 4) run transaction generator
 if [ $run_tx_generator -eq 1 ]; then
   tmux select-window -t :0
-  tmux new-window -n TxGen "./run_tx_generator.sh; $SHELL" 
+  tmux new-window -n TxGen "sleep 10; ./run_tx_generator.sh; $SHELL" 
   sleep 1
   tmux set-window-option remain-on-exit on
 fi
@@ -80,7 +80,7 @@ fi
 # 5) run explorer
 if [ $run_explorer -eq 1 ]; then
   tmux select-window -t :0
-  tmux new-window -n Explorer "./run_explorer.sh; $SHELL"
+  tmux new-window -n Explorer "sleep 5; ./run_explorer.sh; $SHELL"
   sleep 1
   tmux set-window-option remain-on-exit on
 fi

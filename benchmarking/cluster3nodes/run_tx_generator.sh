@@ -15,6 +15,8 @@ sed -i 's/^GenesisHash: .*$/GenesisHash: '${GENESISHASH}'/' ${CONFIGFILE}
 # arguments
 TARGETNODES=`for N in $targetnodes; do echo -n "--target-node-id $N "; done`
 
+echo "$TARGETNODES"
+
 GENERATOR="cabal new-run exe:cardano-cli -- "
 exec ${GENERATOR} \
   --log-config ${CONFIGFILE} \
