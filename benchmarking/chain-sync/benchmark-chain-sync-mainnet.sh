@@ -39,7 +39,7 @@ exec ${NODE} \
   --genesis-file ${BASEDIR}/../../configuration/mainnet-genesis.json \
   --config ${BASEDIR}/configuration/log-configuration.yaml \
   --database-path .//db-mainnet \
-  --socket-dir socket \
+  --socket-dir /tmp/socket-bm-chain-sync \
   --topology ${BASEDIR}/configuration/topology-local.yaml \
   --host-addr 127.0.0.1 \
   --port 7777 \
@@ -49,6 +49,7 @@ exec ${NODE} \
    \
  $@
 
+#  --socket-dir ${BASEDIR}/${DATADIR}/socket \
 # this will render the events in textual format
 #  --trace-chain-db \
 

@@ -2,6 +2,8 @@
 This is a benchmark for syncing the mainnet chain from an external or local node.
 
 In case you choose to sync from a local node, make sure that 'cardano-byron-proxy' is running and listening on port 7777 of localhost.
+The script `./prepare-byron-proxy.sh` updates the code of the byron-proxy and compiles it using 'cabal'.
+Then, run the local proxy with the script `./launch_mainnet_proxy.sh`.
 
 Run the benchmark using the script './benchmark-chain-sync-mainnet.sh'
 
