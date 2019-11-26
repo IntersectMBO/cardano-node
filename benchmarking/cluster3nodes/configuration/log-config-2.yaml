@@ -1,16 +1,16 @@
 # global filter; messages must have at least this severity to pass:
-minSeverity: Debug
+minSeverity: Info
 
 # global file rotation settings:
 rotation:
-  rpLogLimitBytes: 5000000
+  rpLogLimitBytes: 25000000
   rpKeepFilesNum:  10
   rpMaxAgeHours:   24
 
 # these backends are initialized:
 setupBackends:
   - KatipBK
-    #- TraceForwarderBK
+  #- TraceForwarderBK
 
 # if not indicated otherwise, then messages are passed to these backends:
 defaultBackends:
@@ -21,16 +21,16 @@ defaultBackends:
 #logOutput: "logs/log-pipe-2"
 
 # if wanted, the GUI is listening on this port:
-#hasGUI: 12872
+#hasGUI: 12871
 
 # if wanted, the EKG interface is listening on this port:
-#hasEKG: 12782
+#hasEKG: 12781
 
 # here we set up outputs of logging in 'katip':
 setupScribes:
   - scKind: FileSK
     scName: "logs/node-2.log"
-    scFormat: ScText
+    scFormat: ScJson
 
 # if not indicated otherwise, then log output is directed to this:
 defaultScribes:
@@ -66,17 +66,13 @@ options:
       # Change the `subtrace` value to `Neutral` in order to log
       # `UTxO`-related messages during epoch validation.
       subtrace: NoTrace
-    '#messagecounters.aggregation':
-      subtrace: NoTrace
     'cardano.#messagecounters.aggregation':
       subtrace: NoTrace
-    '#messagecounters.ekgview':
+    'cardano.#messagecounters.ekgview':
       subtrace: NoTrace
-    '#messagecounters.switchboard':
+    'cardano.#messagecounters.switchboard':
       subtrace: NoTrace
-    '#messagecounters.katip':
-      subtrace: NoTrace
-    '#messagecounters.monitoring':
+    'cardano.#messagecounters.katip':
       subtrace: NoTrace
     'cardano.#messagecounters.monitoring':
       subtrace: NoTrace
@@ -102,7 +98,7 @@ options:
 
 NodeId: 2
 Protocol: RealPBFT
-GenesisHash: c0c757817d86660accdc45b9d18c1274d51d6427b92995944d014e0ff056cb3e
+GenesisHash: 210e8d1833ab7972e786d5fc330169c2527c8b92ddf22e2528524e789365fdac
 NumCoreNodes: 1
 RequiresNetworkMagic: RequiresMagic
 PBftSignatureThreshold: 0.7

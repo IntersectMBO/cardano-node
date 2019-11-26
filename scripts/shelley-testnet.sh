@@ -54,8 +54,8 @@ tmux select-pane -t 4
 tmux send-keys "cd '${PWD}'; ${CMD} trace-acceptor $(acceptorargs)" C-m
 sleep 2
 tmux select-pane -t 1
-tmux send-keys "cd '${PWD}'; ${CMD} exe:cardano-node $(nodeargs 0 "${ALGO} $(echo -n ${EXTRA})") > /tmp/NODE0" C-m
+tmux send-keys "cd '${PWD}'; ${CMD} exe:cardano-node $(nodeargs 0 "${ALGO} $(echo -n ${EXTRA})") " C-m
 tmux select-pane -t 2
-tmux send-keys "cd '${PWD}'; ${CMD} exe:cardano-node $(nodeargs 1 "${ALGO} $(echo -n ${EXTRA})") > /tmp/NODE1" C-m
+tmux send-keys "cd '${PWD}'; ${CMD} exe:cardano-node $(nodeargs 1 "${ALGO} $(echo -n ${EXTRA})") " C-m
 tmux select-pane -t 3
-tmux send-keys "cd '${PWD}'; ${CMD} exe:cardano-node $(nodeargs 2 "${ALGO} $(echo -n ${EXTRA})") > /tmp/NODE2" C-m
+tmux send-keys "cd '${PWD}'; ${CMD} exe:cardano-node $(nodeargs 2 "${ALGO} $(echo -n ${EXTRA})") " C-m

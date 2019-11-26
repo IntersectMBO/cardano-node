@@ -1,0 +1,24 @@
+
+## preparation
+
+### database
+
+* access authentication
+
+get the credentials how to connect to a PostgreSQL instance (version 9.x or 10.x).
+
+add them to the file `configuration/pgpass`.
+
+example:
+```
+localhost:5432:*:cexplorer:verysecure
+```
+
+* database user
+
+the database `cexplorer` will be created as the user `cexplorer`.
+
+make sure this user exists in the database you are connecting to, and it has the right to create new databases.
+(created using a `CREATE USER` command)
+
+

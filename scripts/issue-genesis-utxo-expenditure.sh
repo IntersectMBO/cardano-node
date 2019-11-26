@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env bash
 
 RUNNER=${RUNNER:-cabal new-run -v0 --}
 
@@ -33,10 +33,6 @@ args=" --real-pbft
        --wallet-key          ${from_key}
        --rich-addr-from    \"${from_addr}\"
        --txout            (\"${addr}\",${lovelace})
-       --topology            configuration/simple-topology.json
-       --genesis-file       \"${genesis_file}\"
-       --database-path       ./db/
-       --socket-dir          ./socket/
-"
+     "
 set -x
 ${RUNNER} cardano-cli ${args}

@@ -10,12 +10,6 @@ NETARGS=(
         --genesis-file  "${genesis_file}"
         --genesis-hash  "${genesis_hash}"
         generate-txs
-        --topology      "configuration/simple-topology.json"
-        --genesis-file  "${genesis_file}"
-        --database-path "./db/"
-        --socket-dir    "./socket/"
-        --config        "configuration/log-config-0.yaml"
-        --port          3003
 )
 TX_GEN_ARGS=(
         --num-of-txs     10000

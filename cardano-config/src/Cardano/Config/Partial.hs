@@ -20,7 +20,6 @@ module Cardano.Config.Partial
     , PartialCertificate (..)
     , PartialWallet (..)
     -- * re-exports
-    , RequireNetworkMagic (..)
     , NodeProtocol (..)
     , mkCardanoConfiguration
     ) where
@@ -34,6 +33,7 @@ import qualified Ouroboros.Consensus.BlockchainTime as Consensus
 
 import           Cardano.Config.Types
 import           Cardano.Config.Topology
+import           Cardano.Crypto (RequiresNetworkMagic)
 
 -- | Partial @CardanoConfiguration@ configuration.
 data PartialCardanoConfiguration = PartialCardanoConfiguration
@@ -73,7 +73,7 @@ data PartialCore = PartialCore
     -- ^ The type of protocol run on the node.
     , pcoStaticKeySigningKeyFile    :: !(Last FilePath)
     , pcoStaticKeyDlgCertFile       :: !(Last FilePath)
-    , pcoRequiresNetworkMagic       :: !(Last RequireNetworkMagic)
+    , pcoRequiresNetworkMagic       :: !(Last RequiresNetworkMagic)
     , pcoPBftSigThd                 :: !(Last Double)
     } deriving (Eq, Show, Generic)
     deriving Semigroup via GenericSemigroup PartialCore
