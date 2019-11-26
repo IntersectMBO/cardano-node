@@ -26,8 +26,17 @@ localSocketFilePath (RelayId n) = "node-relay-" ++ show n ++ ".socket"
 
 -- | Provide an AF_UNIX address for a socket situated in 'socketDir', with its name
 --   derived from the node ID.  When 'mkdir' is 'MkdirIfMissing', the directory is created.
-localSocketAddrInfo :: NodeId -> FilePath -> MkdirIfMissing -> IO Socket.AddrInfo
-localSocketAddrInfo nodeId socketDir mkdir = do
+localSocketAddrInfo :: Maybe NodeId -> FilePath -> MkdirIfMissing -> IO Socket.AddrInfo
+localSocketAddrInfo Nothing socketPath _ = do
+  pure $
+    Socket.AddrInfo
+      []
+      Socket.AF_UNIX
+      Socket.Stream
+      Socket.defaultProtocol
+      (Socket.SockAddrUnix socketPath)
+      Nothing
+localSocketAddrInfo (Just nodeId) socketDir mkdir = do
   dir <- canonicalizePath =<< makeAbsolute socketDir
   when (mkdir == MkdirIfMissing)
     $ createDirectoryIfMissing True dir
@@ -41,8 +50,14 @@ localSocketAddrInfo nodeId socketDir mkdir = do
       Nothing
 
 -- | Remove the socket established with 'localSocketAddrInfo'.
-removeStaleLocalSocket :: NodeId -> FilePath -> IO ()
-removeStaleLocalSocket nodeId socketDir = do
+removeStaleLocalSocket :: Maybe NodeId -> FilePath -> IO ()
+removeStaleLocalSocket Nothing socketFp = do
+  removeFile socketFp
+    `catch` \e ->
+      if isDoesNotExistError e
+        then return ()
+        else throwIO e
+removeStaleLocalSocket (Just nodeId) socketDir = do
   dir <- canonicalizePath =<< makeAbsolute socketDir
   removeFile (dir </> localSocketFilePath nodeId)
     `catch` \e ->

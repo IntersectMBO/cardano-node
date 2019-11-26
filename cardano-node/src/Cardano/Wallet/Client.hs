@@ -62,7 +62,7 @@ runWalletClient :: forall blk.
                 -> IO ()
 runWalletClient ptcl sockDir (CoreNodeId id) tracer = do
 
-    addr <- localSocketAddrInfo (CoreId id) sockDir NoMkdirIfMissing
+    addr <- localSocketAddrInfo (Just $ CoreId id) sockDir NoMkdirIfMissing
 
     let ProtocolInfo{pInfoConfig} = protocolInfo ptcl
 

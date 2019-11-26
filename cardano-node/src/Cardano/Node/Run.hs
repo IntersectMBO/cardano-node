@@ -105,7 +105,17 @@ runNode loggingLayer nc nCli = do
                              NormalVerbosity -> "normal"
                              MinimalVerbosity -> "minimal"
                              MaximalVerbosity -> "maximal"
-    SomeProtocol p  <- fromProtocol nc nCli
+    SomeProtocol p  <- fromProtocol
+                         (ncGenesisHash nc)
+                         (ncNodeId nc)
+                         (ncNumCoreNodes nc)
+                         (genesisFile $ mscFp nCli)
+                         (ncReqNetworkMagic nc)
+                         (ncPbftSignatureThresh nc)
+                         (delegCertFile $ mscFp nCli)
+                         (signKeyFile $ mscFp nCli)
+                         (ncUpdate nc)
+                         (ncProtocol nc)
 
     let tracers     = mkTracers (traceOpts nCli) trace
 
@@ -123,7 +133,8 @@ runNode loggingLayer nc nCli = do
         be :: LiveViewBackend Text <- realize c
         let lvbe = MkBackend { bEffectuate = effectuate be, bUnrealize = unrealize be }
         llAddBackend loggingLayer lvbe (UserDefinedBK "LiveViewBackend")
-        setTopology be (ncNodeId nc)
+        let nId = fromMaybe (panic "LiveView not possible for real protocols as yet") (ncNodeId nc)
+        setTopology be nId
         setNodeThread be nodeThread
         captureCounters be trace
 
@@ -240,5 +251,6 @@ handleSimpleNode p trace nodeTracers nCli nc = do
   where
       nid :: Int
       nid = case ncNodeId nc of
-              CoreId  n -> n
-              RelayId _ -> error "Non-core nodes currently not supported"
+              Just (CoreId  n) -> n
+              Just (RelayId _) -> error "Non-core nodes currently not supported"
+              Nothing -> 999

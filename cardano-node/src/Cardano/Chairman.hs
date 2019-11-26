@@ -133,7 +133,7 @@ createConnection
   tracer
   pInfoConfig
   socketDir = do
-    addr <- localSocketAddrInfo (fromCoreNodeId coreNodeId) socketDir NoMkdirIfMissing
+    addr <- localSocketAddrInfo (Just $ fromCoreNodeId coreNodeId) socketDir NoMkdirIfMissing
     connectTo
       nullTracer
       nullTracer
