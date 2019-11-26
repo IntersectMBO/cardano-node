@@ -3,14 +3,14 @@ minSeverity: Debug
 
 # global file rotation settings:
 rotation:
-  rpLogLimitBytes: 5000000
+  rpLogLimitBytes: 25000000
   rpKeepFilesNum:  10
   rpMaxAgeHours:   24
 
 # these backends are initialized:
 setupBackends:
   - KatipBK
-    #- TraceForwarderBK
+  #- TraceForwarderBK
 
 # if not indicated otherwise, then messages are passed to these backends:
 defaultBackends:
@@ -18,35 +18,36 @@ defaultBackends:
   #- TraceForwarderBK
 
 # file to forward traced objects
-#logOutput: "logs/log-pipe-2"
+#logOutput: "logs/log-pipe-0"
 
 # if wanted, the GUI is listening on this port:
-#hasGUI: 12872
+#hasGUI: 12871
 
 # if wanted, the EKG interface is listening on this port:
-#hasEKG: 12782
+#hasEKG: 12781
 
 # here we set up outputs of logging in 'katip':
 setupScribes:
   - scKind: FileSK
-    scName: "logs/node-2.log"
+    scName: "logs/generator.log"
+    scFormat: ScJson
+  - scKind: StdoutSK
+    scName: stdout
     scFormat: ScText
+    scRotation: null
 
 # if not indicated otherwise, then log output is directed to this:
 defaultScribes:
   - - FileSK
-    - "logs/node-2.log"
+    - "logs/generator.log"
+  - - StdoutSK
+    - stdout
 
 # more options which can be passed as key-value pairs:
 options:
   cfokey:
     value: "Release-1.0.0"
   mapSubtrace:
-    benchmark:
-      contents:
-        - GhcRtsStats
-        - MonotonicClock
-      subtrace: ObservableTrace
     '#ekgview':
       contents:
       - - tag: Contains
@@ -66,19 +67,15 @@ options:
       # Change the `subtrace` value to `Neutral` in order to log
       # `UTxO`-related messages during epoch validation.
       subtrace: NoTrace
-    '#messagecounters.aggregation':
+    'messagecounters.aggregation':
       subtrace: NoTrace
-    'cardano.#messagecounters.aggregation':
-      subtrace: NoTrace
-    '#messagecounters.ekgview':
+    'messagecounters.ekgview':
       subtrace: NoTrace
     '#messagecounters.switchboard':
       subtrace: NoTrace
     '#messagecounters.katip':
       subtrace: NoTrace
     '#messagecounters.monitoring':
-      subtrace: NoTrace
-    'cardano.#messagecounters.monitoring':
       subtrace: NoTrace
   mapBackends:
     cardano.node.metrics.ChainDB:
@@ -94,21 +91,20 @@ options:
     cardano.node.peers.BlockFetchDecision:
       - kind: UserDefinedBK
         name: LiveViewBackend
-
 ##########################################################
 ############### Cardano Node Configuration ###############
 ##########################################################
 
 
-NodeId: 2
+NodeId: 99
 Protocol: RealPBFT
-GenesisHash: c0c757817d86660accdc45b9d18c1274d51d6427b92995944d014e0ff056cb3e
+GenesisHash: 210e8d1833ab7972e786d5fc330169c2527c8b92ddf22e2528524e789365fdac
 NumCoreNodes: 1
 RequiresNetworkMagic: RequiresMagic
 PBftSignatureThreshold: 0.7
 TurnOnLogging: True
-ViewMode: LiveView
-TurnOnLogMetrics: False
+ViewMode: SimpleView
+TurnOnLogMetrics: True
 
 ##### Network Time Parameters #####
 

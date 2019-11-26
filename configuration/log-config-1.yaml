@@ -10,7 +10,7 @@ rotation:
 # these backends are initialized:
 setupBackends:
   - KatipBK
-  - TraceForwarderBK
+    #- TraceForwarderBK
 
 # if not indicated otherwise, then messages are passed to these backends:
 defaultBackends:
@@ -18,7 +18,7 @@ defaultBackends:
   #- TraceForwarderBK
 
 # file to forward traced objects
-logOutput: "logs/log-pipe-1"
+#logOutput: "logs/log-pipe-1"
 
 # if wanted, the GUI is listening on this port:
 #hasGUI: 12871
@@ -28,15 +28,14 @@ logOutput: "logs/log-pipe-1"
 
 # here we set up outputs of logging in 'katip':
 setupScribes:
-  - scKind: StdoutSK
-    scName: stdout
+  - scKind: FileSK
+    scName: "logs/node-1.log"
     scFormat: ScText
-    scRotation: null
 
 # if not indicated otherwise, then log output is directed to this:
 defaultScribes:
-  - - StdoutSK
-    - stdout
+  - - FileSK
+    - "logs/node-1.log"
 
 # more options which can be passed as key-value pairs:
 options:
@@ -62,13 +61,17 @@ options:
       # Change the `subtrace` value to `Neutral` in order to log
       # `UTxO`-related messages during epoch validation.
       subtrace: NoTrace
+    '#messagecounters.aggregation':
+      subtrace: NoTrace
     'cardano.#messagecounters.aggregation':
       subtrace: NoTrace
-    'cardano.#messagecounters.ekgview':
+    '#messagecounters.ekgview':
       subtrace: NoTrace
-    'cardano.#messagecounters.switchboard':
+    '#messagecounters.switchboard':
       subtrace: NoTrace
-    'cardano.#messagecounters.katip':
+    '#messagecounters.katip':
+      subtrace: NoTrace
+    '#messagecounters.monitoring':
       subtrace: NoTrace
     'cardano.#messagecounters.monitoring':
       subtrace: NoTrace
@@ -100,7 +103,7 @@ NumCoreNodes: 1
 RequiresNetworkMagic: RequiresMagic
 PBftSignatureThreshold: 0.7
 TurnOnLogging: True
-ViewMode: SimpleView
+ViewMode: LiveView
 TurnOnLogMetrics: False
 
 ##### Network Time Parameters #####

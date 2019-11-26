@@ -1,0 +1,9 @@
+pgpass
+logs/
+db/
+db-0/
+db-1/
+db-2/
+socket/
+cardano-explorer.git/
+configuration/[0-9a-z][0-9a-z][0-9a-z][0-9a-z][0-9a-z]/
