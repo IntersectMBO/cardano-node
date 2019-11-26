@@ -19,7 +19,7 @@ import           Cardano.Prelude (MonadIO, Word16, Seq, StateT,
                                   toList, unless, when)
 
 import           Control.Exception (assert)
-import           Control.Monad.Class.MonadSTM (MonadSTM, LazyTMVar, LazyTVar,
+import           Control.Monad.Class.MonadSTM (MonadSTM, TMVar, TVar,
                                                atomically, putTMVar, readTVar,
                                                retry, takeTMVar, tryTakeTMVar)
 import           Control.Monad.Class.MonadTime (MonadTime(..), addTime, diffTime, Time)
@@ -54,12 +54,12 @@ bulkSubmission
   => (ROEnv txid tx -> ROEnv txid tx)
   -- changes to default settings
   -> Tracer m (TraceBenchTxSubmit txid)
-  -> LazyTVar m Bool
+  -> TVar m Bool
   -- Set to True to indicate subsystem should terminate
-  -> LazyTMVar m [tx]
+  -> TMVar m [tx]
   -- non-empty list of transactions to be forwarded,
   -- empty list indicates terminating
-  -> LazyTMVar m (RPCTxSubmission m txid tx)
+  -> TMVar m (RPCTxSubmission m txid tx)
   -- the RPC variable shared with
   -- `TxSubmit.TxSubmission` local peer
   -> m ()
@@ -296,7 +296,7 @@ data RWEnv m txid tx = RWEnv
   { terminating     :: Bool
   , activityState   :: ActivityState
   , proceedAfter    :: Time
-  , availableOp     :: Maybe (Int, LazyTMVar m (Maybe [(txid, TxSubmit.TxSizeInBytes)]))
+  , availableOp     :: Maybe (Int, TMVar m (Maybe [(txid, TxSubmit.TxSizeInBytes)]))
   -- ^ the window and the response action
   , inFlight
   , notYetSent      :: Seq (txid, tx,  TxSubmit.TxSizeInBytes)
@@ -316,20 +316,20 @@ defaultRWEnv = do
 
 -- | RPC interaction with `TxSubmit.TxSubmission`
 data RPCTxSubmission m txid tx
-  = RPCRequestTxIdsPromptly (Word16, Word16) (LazyTMVar m [(txid, TxSubmit.TxSizeInBytes)])
+  = RPCRequestTxIdsPromptly (Word16, Word16) (TMVar m [(txid, TxSubmit.TxSizeInBytes)])
   -- ^ Request contains the acknowledged number and the size of the
   --   open window. Response contains the list of transactions (that
   --   can be empty - see the `TxSubmit.TxSubmission` description of
   --   `TxSubmit.StBlockingStyle` for more details). A prompt response
   --   is expected.
-  |  RPCRequestTxIds (Word16, Word16) (LazyTMVar m (Maybe [(txid, TxSubmit.TxSizeInBytes)]))
+  |  RPCRequestTxIds (Word16, Word16) (TMVar m (Maybe [(txid, TxSubmit.TxSizeInBytes)]))
   -- ^ Request contains the acknowledged number and the size of the
   --   open window. Response contains the list of transactions (that
   --   can not be empty - see the `TxSubmit.TxSubmission` description
   --   of `TxSubmit.StBlockingStyle` for more details); `Nothing`
   --   indicates no more transaction submissions and a clean
   --   shutdown. A prompt response is not expected.
-  | RPCRequestTxs [txid] (LazyTMVar m [tx])
+  | RPCRequestTxs [txid] (TMVar m [tx])
   -- ^ Request contains the list of transaction identifiers which are
   --   returned in the response.
 

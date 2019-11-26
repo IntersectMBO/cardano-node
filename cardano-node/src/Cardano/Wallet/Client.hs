@@ -140,7 +140,7 @@ localInitiatorNetworkApplication Proxy chainSyncTracer localTxSubmissionTracer p
 txSubmissionClient
   :: forall tx reject m.
      MonadSTM m
-  => LazyTMVar m tx
+  => TMVar m tx
   -> LocalTxSubmissionClient tx reject m Void
 txSubmissionClient txv = LocalTxSubmissionClient go
   where

@@ -9,7 +9,7 @@ module Cardano.CLI.Tx.BenchmarkingTxSubClient
 
 import           Prelude
 
-import           Control.Monad.Class.MonadSTM (LazyTMVar, MonadSTM, atomically,
+import           Control.Monad.Class.MonadSTM (TMVar, MonadSTM, atomically,
                                                newEmptyTMVarM, putTMVar, takeTMVar)
 import           Data.List.NonEmpty (fromList)
 
@@ -27,7 +27,7 @@ txSubmissionClient
      ( MonadSTM m
      , txid ~ GenTxId block
      , tx ~ GenTx block)
-  => LazyTMVar m (RPCTxSubmission m txid tx)
+  => TMVar m (RPCTxSubmission m txid tx)
   -> TxSubmissionClient txid tx m ()
 txSubmissionClient tmvReq =
   TxSubmissionClient $ pure client

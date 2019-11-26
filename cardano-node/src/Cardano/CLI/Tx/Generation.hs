@@ -973,7 +973,7 @@ divListToSublists l  d =
 -- TVar for submitter termination.
 ---------------------------------------------------------------------------------------------------
 
-txSubmissionTerm :: MSTM.LazyTVar IO Bool
+txSubmissionTerm :: MSTM.TVar IO Bool
 txSubmissionTerm = unsafePerformIO $ STM.newTVarIO False
 
 -- stopTxSubmission :: IO ()
@@ -986,11 +986,11 @@ txSubmissionTerm = unsafePerformIO $ STM.newTVarIO False
 
 -- | Creates a list of 'TMVar's with lists of transactions for submitting.
 --   The number of these lists corresponds to the number of target nodes.
-txsListsForTargetNodes :: forall tx . MSTM.LazyTMVar IO [MSTM.LazyTMVar IO [tx]]
+txsListsForTargetNodes :: forall tx . MSTM.TMVar IO [MSTM.TMVar IO [tx]]
 txsListsForTargetNodes = unsafePerformIO $ STM.newTMVarIO []
 
 -- | Adds a list for transactions, for particular target node.
-addTxsListForTargetNode :: forall tx . MSTM.LazyTMVar IO [tx] -> IO ()
+addTxsListForTargetNode :: forall tx . MSTM.TMVar IO [tx] -> IO ()
 addTxsListForTargetNode listForOneTargetNode = STM.atomically $
   STM.tryTakeTMVar txsListsForTargetNodes >>=
     \case
@@ -1014,7 +1014,7 @@ writeTxsInListForTargetNode txs listIndex = STM.atomically $ do
 
 -- | Generator is producing transactions and writes them in the list.
 --   Later sumbitter is reading and submitting these transactions.
-txsForSubmission :: forall tx . MSTM.LazyTMVar IO [tx]
+txsForSubmission :: forall tx . MSTM.TMVar IO [tx]
 txsForSubmission = unsafePerformIO $ STM.newTMVarIO []
 
 -- | To get higher performance we need to hide latency of getting and
@@ -1033,7 +1033,7 @@ launchTxPeer
   -- tracer for lower level connection and details of
   -- protocol interactisn, intended for debugging
   -- associated issues.
-  -> MSTM.LazyTVar m Bool
+  -> MSTM.TVar m Bool
   -- a "global" stop variable, set to True to force shutdown
   -> NodeConfig (Ouroboros.Consensus.Block.BlockProtocol block)
   -- the configuration
@@ -1044,7 +1044,7 @@ launchTxPeer
   -> (ROEnv txid tx -> ROEnv txid tx)
   -- modifications to the submission engine enviroment to
   -- control rate etc
-  -> MSTM.LazyTMVar m [tx]
+  -> MSTM.TMVar m [tx]
   -- give this peer 1 or more transactions, empty list
   -- signifies stop this peer
   -> m (Async (), Async ())
