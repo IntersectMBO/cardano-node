@@ -13,7 +13,7 @@ GENESISJSON="${CONFIGDIR}/latest-genesis/genesis.json"
 sed -i 's/^GenesisHash: .*$/GenesisHash: '${GENESISHASH}'/' ${CONFIGFILE}
 
 # arguments
-TARGETNODES=`for N in $targetnodes; do echo -n "--target-node-id $N "; done`
+TARGETNODES=`for N in $targetnodes; do echo -n "--target-node (\"127.0.0.1\",$((3000+$N))) "; done`
 
 echo "$TARGETNODES"
 
@@ -28,7 +28,7 @@ exec ${GENERATOR} \
   generate-txs \
   --genesis-file ${GENESISJSON} \
   --topology ${CONFIGDIR}/simple-topology.json \
-  --socket-dir ${BASEDIR}/socket \
+  --socket-dir /tmp/cluster3nodes-socket \
   --database-path ${BASEDIR}/db \
   --port 3003 \
   --config ${CONFIGFILE} \

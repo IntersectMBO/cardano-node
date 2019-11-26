@@ -31,10 +31,6 @@ setupScribes:
   - scKind: FileSK
     scName: "logs/node-1.log"
     scFormat: ScJson
-  - scKind: StdoutSK
-    scName: stdout
-    scFormat: ScText
-    scRotation: null
 
 # if not indicated otherwise, then log output is directed to this:
 defaultScribes:
@@ -98,7 +94,7 @@ options:
 
 NodeId: 1
 Protocol: RealPBFT
-GenesisHash: bc1951cdb1688d07d6620c69db138d7acfe97ffe755348a160c50fd9d3be064d
+GenesisHash: 210e8d1833ab7972e786d5fc330169c2527c8b92ddf22e2528524e789365fdac
 NumCoreNodes: 1
 RequiresNetworkMagic: RequiresMagic
 PBftSignatureThreshold: 0.7

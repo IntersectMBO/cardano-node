@@ -3,7 +3,7 @@
 ### parameters
 
 # process
-create_new_genesis=0
+create_new_genesis=1
 clean_explorer_db=1
 run_cluster_nodes=1
 run_explorer=1
@@ -29,7 +29,7 @@ if [ -d db-1 ]; then rm -rf db-1; fi
 if [ -d db-2 ]; then rm -rf db-2; fi
 
 # mk dirs
-mkdir -p db logs socket
+mkdir -p db logs
 
 
 # 1) generate new genesis

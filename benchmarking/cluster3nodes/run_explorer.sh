@@ -18,6 +18,6 @@ EXPLORER="cabal new-run exe:cardano-explorer-node -- "
 exec ${EXPLORER} \
   --genesis-file ${GENESISJSON} \
   --config ${CONFIGFILE} \
-  --socket-path ${BASEDIR}/socket/node-core-0.socket \
+  --socket-path /tmp/cluster3nodes-socket/node-core-0.socket \
   --schema-dir ${BASEDIR}/cardano-explorer.git/schema \
 

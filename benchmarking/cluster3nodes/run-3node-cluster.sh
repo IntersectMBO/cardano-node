@@ -59,7 +59,7 @@ function commonargs() {
         printf -- "--topology configuration/simple-topology.json "
         printf -- "--database-path ./db/ "
         printf -- "--genesis-file ${genesis_file} "
-        printf -- "--socket-dir ./socket/ "
+        printf -- "--socket-dir /tmp/cluster3nodes-socket/ "
 }
 
 function nodeargs () {
