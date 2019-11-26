@@ -1,56 +1,52 @@
 # global filter; messages must have at least this severity to pass:
-minSeverity: Debug
+minSeverity: Notice
 
 # global file rotation settings:
 rotation:
-  rpLogLimitBytes: 5000000
-  rpKeepFilesNum:  10
+  rpLogLimitBytes: 50000000
+  rpKeepFilesNum:  100
   rpMaxAgeHours:   24
 
 # these backends are initialized:
 setupBackends:
+  - AggregationBK
   - KatipBK
-  - kind: TraceAcceptorBK
-    path: log-pipe-0
+  - EKGViewBK
 
 # if not indicated otherwise, then messages are passed to these backends:
 defaultBackends:
   - KatipBK
-  - kind: TraceAcceptorBK
-    path: log-pipe-0
 
-# if wanted, the GUI is listening on this port:
-#hasGUI: 12872
+# file to forward traced objects
+logOutput: "log-pipe-0"
+
+# if wanted, Prometheus "metrics" are presented on http://localhost:13789/metrics
+hasPrometheus: 13789
 
 # if wanted, the EKG interface is listening on this port:
-#hasEKG: 12782
+hasEKG: 13788
 
 # here we set up outputs of logging in 'katip':
 setupScribes:
-  - scKind: StdoutSK
-    scName: stdout
-    scFormat: ScText
-    scRotation: null
   - scKind: FileSK
+    scName: "node-0.log"
     scFormat: ScText
-    scName: "node.log"
-    scRotation:
-      rpLogLimitBytes: 25000000
-      rpKeepFilesNum:  10
-      rpMaxAgeHours:   24
 
 # if not indicated otherwise, then log output is directed to this:
 defaultScribes:
-  - - StdoutSK
-    - stdout
   - - FileSK
-    - "node.log"
+    - "node-0.log"
 
 # more options which can be passed as key-value pairs:
 options:
   cfokey:
     value: "Release-1.0.0"
   mapSubtrace:
+    benchmark:
+      contents:
+        - GhcRtsStats
+        - MonotonicClock
+      subtrace: ObservableTrace
     '#ekgview':
       contents:
       - - tag: Contains
@@ -72,37 +68,47 @@ options:
       subtrace: NoTrace
     '#messagecounters.aggregation':
       subtrace: NoTrace
-    '#messagecounters.ekgview':
+    '#messagecounters.monitoring':
       subtrace: NoTrace
-    '#messagecounters.switchboard':
+    '#messagecounters.ekgview':
       subtrace: NoTrace
     '#messagecounters.katip':
       subtrace: NoTrace
-    '#messagecounters.monitoring':
+    '#messagecounters.switchboard':
       subtrace: NoTrace
-      #    cardano.node.metrics:
-      #      subtrace: NoTrace
+    cardano.node-metrics:
+      subtrace: NoTrace
   mapBackends:
     cardano.epoch-validation.benchmark:
       - AggregationBK
-    '#aggregation.cardano.epoch-validation.benchmark':
+    'cardano.node.peers.BlockFetchDecision':
+      - kind: UserDefinedBK
+        name: LiveViewBackend
+    'cardano.node.ChainDB':
+      - KatipBK
+      - kind: UserDefinedBK
+        name: LiveViewBackend
+    'cardano.node.metrics.ChainDB':
       - EKGViewBK
-
+      - kind: UserDefinedBK
+        name: LiveViewBackend
+    cardano.node.metrics:
+      - kind: UserDefinedBK
+        name: LiveViewBackend
 ##########################################################
 ############### Cardano Node Configuration ###############
 ##########################################################
 
 
-NodeId: 4
+NodeId: 0
 Protocol: RealPBFT
 GenesisHash: 5f20df933584822601f9e3f8c024eb5eb252fe8cefb24d1317dc3d432e940ebb
 NumCoreNodes: 1
 RequiresNetworkMagic: RequiresNoMagic
 PBftSignatureThreshold: 0.5
 TurnOnLogging: True
-ViewMode: SimpleView
-TurnOnLogMetrics: False
-
+ViewMode: LiveView
+TurnOnLogMetrics: True
 ##### Network Time Parameters #####
 
 ResponseTimeout: 30000000

@@ -1,0 +1,2 @@
+wallet:
+  relays: [[{ host: relays.cardano-mainnet.iohk.io }]]
