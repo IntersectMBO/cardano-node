@@ -23,6 +23,30 @@
         "url": "https://github.com/input-output-hk/haskell.nix/archive/3ae2303b14bdebd00437b0e995af2d0eb21abafe.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
+    "cardano-byron-proxy": {
+        "branch": "master",
+        "description": "A bydirectional proxy between the Shelly and Byron versions of the Cardano network",
+        "homepage": null,
+        "owner": "input-output-hk",
+        "repo": "cardano-byron-proxy",
+        "rev": "b78ad28f1b225c0b311d37ea932950b3d483b333",
+        "sha256": "170aanjpb0sacn622bv5ij94j0mgysk4j9dflq6gjwnlc7gqnlfs",
+        "type": "tarball",
+        "url": "https://github.com/input-output-hk/cardano-byron-proxy/archive/b78ad28f1b225c0b311d37ea932950b3d483b333.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
+    "cardano-sl": {
+        "branch": "develop",
+        "description": "Cryptographic currency implementing Ouroboros PoS protocol",
+        "homepage": "",
+        "owner": "input-output-hk",
+        "repo": "cardano-sl",
+        "rev": "d0cc2e6336e3c57771c775cafe831bc83db303d3",
+        "sha256": "1l0af54ivqs26ibsl4nih8800b99f99r1y33wcrnby28mjsph8s2",
+        "type": "tarball",
+        "url": "https://github.com/input-output-hk/cardano-sl/archive/d0cc2e6336e3c57771c775cafe831bc83db303d3.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
     "iohk-nix": {
         "branch": "master",
         "description": "nix scripts shared across projects",

@@ -5,173 +5,277 @@
 
 with lib; with builtins;
 let
-  cfg = config.services.cardano-cluster;
+  ### Service configs
+  ccfg = config.services.cardano-cluster;
   ncfg = config.services.cardano-node;
-  node-ids = range 0 (cfg.node-count - 1);
-  cardano-node = ncfg.package;
+  pcfg = config.services.byron-proxy;
+  lcfg = config.services.cardano-node-legacy;
 
-  # mkFullyConnectedLocalClusterTopology
-  #   :: Address String -> Port String -> Int -> Int -> Topology FilePath
-  mkFullyConnectedLocalClusterTopology =
-    { hostAddr
-    , portBase
-    , node-count
-    , valency ? 1
-    }:
-    let
-      addr = hostAddr;
-      ports = map (x: portBase + x) (range 0 (node-count - 1));
-      mkPeer = port: { inherit addr port valency; };
-      mkNodeTopo = nodeId: port: {
-        inherit nodeId;
-        nodeAddress = { inherit addr port; };
-        producers = map mkPeer (remove port ports);
-      };
-    in toFile "topology.yaml" (toJSON (imap0 mkNodeTopo ports));
+in let
+  ### Packages and Nix libs
+  cardano-node          = ncfg.package;
+  cardano-sl-pkgs       = import ccfg.cardano-sl-src { gitrev = ccfg.cardano-sl-src.rev; };
+  svcLib                = (import ../svclib.nix { inherit pkgs cardano-node; });
 
-  ## Note how some values are literal strings, and some integral.
-  ## This is an important detail.
-  defaultGenesisProtocolParams = {
-    heavyDelThd = "300000000000";
-    maxBlockSize = "2000000";
-    maxHeaderSize = "2000000";
-    maxProposalSize = "700";
-    maxTxSize = "4096";
-    mpcThd = "20000000000000";
-    scriptVersion = 0;
-    slotDuration = "20000";
-    softforkRule = {
-        initThd = "900000000000000";
-        minThd = "600000000000000";
-        thdDecrement = "50000000000000";
+in let
+  ### Node enumeration
+  inherit (ccfg)
+    legacy-node-count
+    shelley-node-count;
+  total-node-count      = legacy-node-count + shelley-node-count;
+  legacy-relay-id       = 7;
+  legacy-node-ids       = range 0                     (legacy-node-count - 1);
+  legacy-node-ids-str   = map toString legacy-node-ids;
+  first-shelley-node-id = legacy-node-count;
+  shelley-node-ids      = range first-shelley-node-id (total-node-count  - 1);
+  shelley-node-ids-str  = map toString shelley-node-ids;
+  legacy-enabled        = legacy-node-count != 0;
+  shelley-enabled       = shelley-node-count != 0;
+
+in let
+  ### Addresses & ports
+  addr-fn               = id: "127.1.0.${toString (id + 1)}";
+  port-base             = 3001;
+  first-shelley-node-port = port-base + first-shelley-node-id;
+  legacy-port           = "$((${toString port-base} + $1))"; # 3000;
+  shelley-port          = "$((${toString port-base} + $1))"; # 3001;
+  proxy-addr            = "127.1.0.9";
+  proxy-port-byron      = 5555;
+  proxy-port-shelley    = 7777;
+
+in let
+  ### Names and topologies
+  legacy-topology       = svcLib.mkLegacyTopology
+    { c-a-1 = { port = 3001;
+                static-routes = [ [ "c-a-2" ] [ "c-b-1" ] [ "c-b-2" ] ];
+              };
+      c-a-2 = { port = 3002;
+                static-routes = [ [ "c-b-1" ] [ "c-b-2" ] [ "c-a-1" ] [ "proxy" ] ];
+              };
+      c-b-1 = { port = 3003;
+                static-routes = [ [ "c-b-2" ] [ "c-a-1" ] [ "c-a-2" ] ];
+              };
+      c-b-2 = { port = 3004;
+                static-routes = [ [ "c-a-1" ] [ "c-a-2" ] [ "c-b-1" ] ];
+              };
+      c-c-1 = { port = 3005;
+                static-routes = [ [ "c-d-1" "c-a-1" ] [ "c-c-2" ] [ "proxy" ] ];
+              };
+      c-c-2 = { port = 3006;
+                static-routes = [ [ "c-b-2" "c-b-1" ] [ "c-c-1" ] [ "proxy" ] ];
+              };
+      c-d-1 = { port = 3007;
+                static-routes = [ [ "c-a-1" "c-a-2" ] [ "c-b-1" "c-b-2" ] [ "c-c-1" "c-c-2" ] [ "proxy" ] ];
+              };
+      proxy = { port = 5555;
+                static-routes = [ [ "c-a-2" ] ];
+                type = "relay";
+              };
     };
-    txFeePolicy = {
-        multiplier = "43946000000";
-        summand = "155381000000000";
+  configuration-key     = "mainnet_ci_full";
+  ## the below is hard-coded to the names from the above
+  topology-core-names   = [ "c-a-1" "c-a-2" "c-b-1" "c-b-2" "c-c-1" "c-c-2" "c-d-1" ];
+  legacy-core-names     = take legacy-node-count topology-core-names;
+  shelley-core-names    = take shelley-node-count (drop legacy-node-count topology-core-names);
+  legacy-relay-name     = "r-a-1";
+  all-legacy-names      = topology-core-names ++ [legacy-relay-name];
+  legacy-name-shexpr    = ''$(choice "$1" ${concatStringsSep " " all-legacy-names})'';
+
+in let
+  ### Genesis & state dirs
+  genesis-dir           = ccfg.genesis-dir;
+  genesisFile           = "${genesis-dir}/genesis.json";
+  genesis-hash          = readFile (svcLib.genesisHash genesisFile);
+  node-root-dir         = "/var/lib/cardano-node";
+  shelley-state-dir     = "${node-root-dir}/${legacy-name-shexpr}";
+  shelley-database-paths = map (i: "${node-root-dir}/db-${i}") shelley-node-ids-str;
+  database-path-shexpr  = ''$(choice "$1" ${concatStringsSep " " legacy-node-ids-str} ${concatStringsSep " " shelley-database-paths})'';
+
+in let
+  ### Secrets
+  legacy-sig-keys       = map (i: "${genesis-dir}/key${i}.sk")
+                          legacy-node-ids-str;
+  legacy-sig-key-shexpr = ''$(choice "$1" ${concatStringsSep " " legacy-sig-keys} ${concatStringsSep " " shelley-node-ids-str})'';
+  migrated-pbft-keys    = map (i: svcLib.leakDelegateSigningKey "${genesis-dir}/key${i}.sk")
+                          shelley-node-ids-str;
+  ## WARNING:  don't reuse without understanding security implications. -- sk
+  pbft-sig-key-shexpr   = ''$(choice "$1" ${concatStringsSep " " legacy-node-ids-str} ${concatStringsSep " " migrated-pbft-keys})'';
+
+in let
+  ### Delegation certs
+  pbft-ver-keys         = map svcLib.toVerification migrated-pbft-keys;
+  delegate-certs        = map (pk: svcLib.extractDelegateCertificate genesisFile (readFile pk))
+                          pbft-ver-keys;
+  pbft-cert-shexpr      = ''$(choice "$1" ${concatStringsSep " " legacy-node-ids-str} ${concatStringsSep " " delegate-certs})'';
+
+in let
+  ### Topology
+  shelley-topology      = svcLib.mkFullyConnectedLocalClusterTopologyWithProxy
+    { inherit proxy-addr addr-fn port-base;
+      proxy-port   = proxy-port-shelley;
+      node-id-base = legacy-node-count;
+      node-count   = shelley-node-count;
     };
-    unlockStakeEpoch = "18446744073709551615";
-    updateImplicit = "10000";
-    updateProposalThd = "100000000000000";
-    updateVoteThd = "1000000000000";
+  mkProxyShelleyPeer    =
+    { name, port }:
+    "[${name}.cardano]:${toString port}";
+  mkProxyLegacyPeer     =
+    { name, port }:
+    "[{ host: ${name}.cardano, port: ${toString port} }]";
+  proxy-shelley-peers   =
+    optional shelley-enabled { name = elemAt shelley-core-names 0; port = first-shelley-node-port; };
+  proxy-legacy-peers    =
+    optional  legacy-enabled { name = legacy-relay-name;           port = legacy-port; };
+
+in let
+  ### Config
+  node-config-overlay   = {
+    hasEKG        = null;
+    hasGUI        = null;
+    hasGraylog    = null;
+    hasPrometheus = null;
   };
-
-  defaultGenesisArgs = {
-    protocol_params_file  = toFile "genesis-protocol-params.json" (toJSON defaultGenesisProtocolParams);
-    k                     = 2160;
-    protocol_magic        = 314159265;
-    n_poors               = 128;
-    n_delegates           = 3;
-    total_balance         = 8000000000000000;
-    delegate_share        = 900000000000000;
-    avvm_entries          = 128;
-    avvm_entry_balance    = 10000000000000;
-    secret_seed           = 271828182;
-  };
-
-  # We need this to have a balance of:
-  #  1. moderate amount of rebuilds
-  #  2. small chain length for quick validation
-  # genesisUpdatePeriod
-  #   :: Seconds Int
-  genesisUpdatePeriod = 600;
-
-  # mkFixedGenesisOfDate
-  #   :: Date String -> Topology FilePath
-  mkFixedGenesisOfTime = start_time: args:
-    pkgs.runCommand "genesis-of-${start_time}" {} ''
-      args=(
-      --genesis-output-dir         "''${out}"
-      --start-time                    ${start_time}
-      --avvm-entry-balance            ${toString args.avvm_entry_balance}
-      --avvm-entry-count              ${toString args.avvm_entries}
-      --delegate-share                ${toString args.delegate_share}
-      --k                             ${toString args.k}
-      --n-delegate-addresses          ${toString args.n_delegates}
-      --n-poor-addresses              ${toString args.n_poors}
-      --protocol-magic                ${toString args.protocol_magic}
-      --protocol-parameters-file     "${args.protocol_params_file}"
-      --secret-seed                   ${toString args.secret_seed}
-      --total-balance                 ${toString args.total_balance}
-      )
-      ${cardano-node}/bin/cardano-cli --real-pbft --log-config ${../../configuration/log-configuration.yaml} genesis "''${args[@]}"
-    '';
-
-  ## This value will change every given amount of seconds.
-  periodicNewsTimestamp = period:
-    toString ((builtins.currentTime / period) * period);
-in
-let
-  portBase              = 3001;
-  genesisDir            = mkFixedGenesisOfTime (periodicNewsTimestamp genesisUpdatePeriod) defaultGenesisArgs;
-  genesisFile           = "${genesisDir}/genesis.json";
-  ## genesisHash
-  ##   :: FilePath (Genesis a) -> FilePath GenesisHash
-  genesisHash = genesisFile:
-    pkgs.runCommand "genesis-hash" {}
-    ''
-      args=(
-      --real-pbft
-      --log-config ${../../configuration/log-configuration.yaml}
-      print-genesis-hash
-      --genesis-json "${genesisFile}"
-      )
-      ${cardano-node}/bin/cardano-cli "''${args[@]}" | egrep '^[0-9a-f]{64,64}$' | xargs echo -n > $out
-    '';
-  genesisHashValue      = readFile (genesisHash genesisFile);
-  signingKey            = ''$(printf "%s/delegate-keys.%03d.key"    $(dirname $2) $1)'';
-  delegationCertificate = ''$(printf "%s/delegation-cert.%03d.json" $(dirname $2) $1)'';
-  nodeId                = "$1";
-  port                  = "$((${toString portBase} + $1))";
-  topology = mkFullyConnectedLocalClusterTopology
-    { inherit (cfg)  node-count;
-      inherit (ncfg) hostAddr;
-      inherit portBase;
-    };
+  shelley-configs       = map (i: toFile "config-${toString i}.json" (toJSON (svcLib.mkNodeConfig ncfg i // node-config-overlay)))
+                              shelley-node-ids;
+  config-shexpr         = ''$(choice "$1" ${concatStringsSep " " legacy-node-ids-str} ${concatStringsSep " " shelley-configs})'';
 in {
+  ###
+  ### Cluster configuration options:
+  ###
   options = with types; {
-
     services.cardano-cluster = {
       enable = mkOption {
         type = bool;
         default = false;
         description = ''
-          Enable cardano-node, a node implementing ouroboros protocols
-          (the blockchain protocols running cardano).
+          Enable cardano-node, a node implementing a consensus protocol from the Ouroboros family.
         '';
       };
-      node-count = mkOption {
+      legacy-node-count = mkOption {
+        type = int;
+        default = 0;
+        description = ''
+          Size of the cluster's Byron Legacy segment.
+        '';
+      };
+      shelley-node-count = mkOption {
         type = int;
         default = 3;
         description = ''
-          Number of nodes in cluster.
+          Size of the cluster's Shelley segment.
         '';
+      };
+      genesis-dir = mkOption {
+        type = str;
+        description = ''Directory with: 1) genesis.json, 2) legacy keys in key{N}.sk.'';
+      };
+      system-start = mkOption {
+        type = int;
+        default = 1000000000; # Corresponds to mainnet-ci genesis.
+      };
+      slot-length = mkOption {
+        type = int;
+        default = 2;
+        description = ''
+          Slot length
+        '';
+      };
+      cardano-sl-config = mkOption {
+        type = path;
+        description = "Configuration files of 'cardano-sl'.";
+      };
+      cardano-sl-src = mkOption {
+        type = path;
+        default = (import ../sources.nix).cardano-sl;
+        description = "Source of 'cardano-sl'.";
       };
     };
   };
 
-  config = mkIf cfg.enable {
+  ###
+  ### Configure cluster's constituent services:
+  ###
+  config = mkIf ccfg.enable {
+    services.chairman = {
+      node-ids              = shelley-node-ids;
+      inherit (ccfg) slot-length;
+      nodeConfigFile        = builtins.elemAt shelley-configs 0;
+      timeoutIsSuccess      = true;
+    };
     services.cardano-node = {
-      enable = true;
-      nodeConfig = import ../../configuration/default-node-config.nix;
-      instanced = true;
-      genesisHash = genesisHashValue;
-      inherit topology genesisFile signingKey delegationCertificate nodeId port;
+      enable                = shelley-enabled;
+      instanced             = true;
+      topology              = shelley-topology;
+      port                  = toString shelley-port;
+      hostAddr              = "127.1.0.$((1 + $1))";
+      inherit genesisFile;
+      genesisHash           = genesis-hash;
+      delegationCertificate = pbft-cert-shexpr;
+      signingKey            = pbft-sig-key-shexpr;
+      runtimeDir            = null;
+      nodeConfigFile        = config-shexpr;
+      databasePath          = database-path-shexpr;
+      environment           = "mainnet";
+      protover-major        = 0;
+      protover-minor        = 0;
+      protover-alt          = 0;
     };
-    services.chairman.genesisHash = genesisHashValue;
+    services.byron-proxy = {
+      enable                = true;
+      environment           = "mainnet";
+      topologyFile          = legacy-topology;
+      proxyHost             = proxy-addr;
+      proxyPort             = proxy-port-shelley;
+      nodeId                = "proxy";
+      listen                = "${proxy-addr}:${toString proxy-port-byron}";
+      address               = "proxy.cardano:${toString proxy-port-byron}";
+      script                = svcLib.mkProxyScript {
+        cfg              = pcfg;
+        cardanoConfig    = ccfg.cardano-sl-config;
+        configurationKey = "mainnet_ci_full";
+        producers        = map mkProxyShelleyPeer proxy-shelley-peers;
+      };
+    };
+    services.cardano-node-legacy = {
+      enable                = legacy-enabled;
+      instanced             = true;
+      topologyYaml          = legacy-topology;
+      configurationKey      = configuration-key;
+      systemStart           = ccfg.system-start;
+      port                  = legacy-port;
+      publicIP              = null;
+      privateIP             = "127.1.0.$((1 + $1))";
+      name                  = legacy-name-shexpr;
+      keyFile               = legacy-sig-key-shexpr;
+      nodeIndex             = 0;          ## doesn't really matter
+      nodeType              = "core";     ## ...
+      cardanoConfig         = ccfg.cardano-sl-config;
+      source                = ccfg.cardano-sl-src;
+    };
+
     systemd.services."cardano-node@" = {
-      scriptArgs = "%i ${ncfg.genesisFile}";
+      scriptArgs = "%i ${genesisFile}";
     };
+
     systemd.services.cardano-cluster =
-      let node-services = map (id: "cardano-node@${toString id}.service") node-ids;
+      let shelley-services = map (i:        "cardano-node@${i}.service") shelley-node-ids-str;
+          legacy-services  = map (i: "cardano-node-legacy@${i}.service") (legacy-node-ids-str
+                                                                           ++ [(toString legacy-relay-id)]);
       in {
         description = "Cluster of cardano nodes.";
-        requiredBy = [ "multi-user.target" ];
         enable  = true;
-        after   = node-services;
-        bindsTo = node-services;
+        after   = shelley-services ++ legacy-services;
+        bindsTo = shelley-services ++ legacy-services;
         serviceConfig = {
           Type = "oneshot";
-          ExecStart = "${pkgs.coreutils}/bin/echo Starting cluster of ${toString cfg.node-count} nodes, topology ${ncfg.topology}";
+          ExecStart = "${pkgs.coreutils}/bin/echo Starting a mixed cluster of ${toString shelley-node-count} Shelley nodes & ${toString (legacy-node-count + 1)} Legacy nodes;  topologies: Shelley ${shelley-topology}, Legacy ${legacy-topology}";
+          User = "cardano-node";
+          Group = "cardano-node";
+          RuntimeDirectory = node-root-dir;
+          WorkingDirectory = node-root-dir;
+          # This assumes /var/lib/ is a prefix of cfg.stateDir.
+          # This is checked as an assertion below.
+          StateDirectory   = node-root-dir;
         };
       };
   };

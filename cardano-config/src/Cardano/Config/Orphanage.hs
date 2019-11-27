@@ -20,6 +20,7 @@ import           Data.Scientific (coefficient)
 import qualified Data.Text as T
 
 import           Cardano.BM.Data.Tracer (TracingVerbosity(..))
+import qualified Cardano.Chain.Update as Update
 import qualified Ouroboros.Consensus.BlockchainTime as Consensus
 import qualified Ouroboros.Consensus.Node.Tracers as ConsensusTracers
 import           Ouroboros.Consensus.NodeNetwork (ProtocolTracers'(..))
@@ -46,3 +47,9 @@ instance FromJSON PortNumber where
                                                   <> " is not a valid port number."
   parseJSON invalid  = panic $ "Parsing of port number failed due to type mismatch. "
                              <> "Encountered: " <> (T.pack $ Prelude.show invalid)
+
+instance FromJSON Update.ApplicationName where
+  parseJSON (String x) = pure $ Update.ApplicationName x
+  parseJSON invalid  =
+    panic $ "Parsing of application name failed due to type mismatch. "
+    <> "Encountered: " <> (T.pack $ Prelude.show invalid)

@@ -143,9 +143,9 @@ fromProtocol gHash _ _ genFile nMagic sigThresh delCertFp sKeyFp update RealPBFT
                        (unGenesisFile genFile)
                        genHash
                       )
-    let gc = case gcE of
-            Left err -> panic $ show err
-            Right x -> x
+    gc <- case gcE of
+      Left err -> panic $ show err
+      Right x -> pure x
 
     optionalLeaderCredentials <- readLeaderCredentials
                                    gc
@@ -173,16 +173,12 @@ protocolConfigRealPbft (Update appName appVer lastKnownBlockVersion)
       genesis
       (PBftSignatureThreshold <$> pbftSignatureThresh)
       (convertProtocolVersion lastKnownBlockVersion)
-      (Update.SoftwareVersion (Update.ApplicationName appName)
-                              (toEnum appVer))
+      (Update.SoftwareVersion appName appVer)
       leaderCredentials
   where
     convertProtocolVersion
       LastKnownBlockVersion {lkbvMajor, lkbvMinor, lkbvAlt} =
-      Update.ProtocolVersion (toEnum lkbvMajor)
-                             (toEnum lkbvMinor)
-                             (toEnum lkbvAlt)
-
+      Update.ProtocolVersion lkbvMajor lkbvMinor lkbvAlt
 
 readLeaderCredentials :: Genesis.Config
                       -> Maybe DelegationCertFile

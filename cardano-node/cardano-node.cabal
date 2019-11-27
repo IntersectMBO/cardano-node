@@ -272,6 +272,7 @@ executable chairman
                      , containers
                      , contra-tracer
                      , cardano-node
+                     , cardano-prelude
                      , cardano-shell
                      , io-sim-classes
                      , network

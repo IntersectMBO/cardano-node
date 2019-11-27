@@ -12,9 +12,8 @@ import           Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import           Network.Socket (PortNumber)
 import qualified Options.Applicative as Opt
 import           Options.Applicative (Parser, ParserInfo, ParserPrefs, auto,
-                                      commandGroup, flag, flag', help, long,
-                                      metavar, option, showHelpOnEmpty,
-                                      strOption, subparser, value)
+                                      commandGroup, flag', help, long,
+                                      metavar, option, showHelpOnEmpty, subparser)
 import           System.Exit (exitFailure)
 import           Text.Read (readMaybe)
 
@@ -220,7 +219,7 @@ parseKeyRelatedValues =
         , command' "keygen" "Generate a signing key."
             $ Keygen
                 <$> parseNewSigningKeyFile "secret"
-                <*> parseFlag GetPassword EmptyPassword
+                <*> parseFlag' GetPassword EmptyPassword
                       "no-password"
                       "Disable password protection."
         , command'
@@ -446,27 +445,6 @@ parseUTCTime optname desc =
   option (posixSecondsToUTCTime . fromInteger <$> auto)
     $ long optname <> metavar "POSIXSECONDS" <> help desc
 
-
-parseFilePath :: String -> String -> Parser FilePath
-parseFilePath optname desc =
-  strOption $ long optname <> metavar "FILEPATH" <> help desc
-
-
-parseIntegral :: Integral a => String -> String -> Parser a
-parseIntegral optname desc = option (fromInteger <$> auto)
-  $ long optname <> metavar "INT" <> help desc
-
-
-parseIntegralWithDefault :: Integral a => String -> String -> a -> Parser a
-parseIntegralWithDefault optname desc def = option (fromInteger <$> auto)
- $ long optname <> metavar "INT" <> help desc <> value def
-
-
-parseFlag :: a -> a -> String -> String -> Parser a
-parseFlag def active optname desc =
-  flag def active $ long optname <> help desc
-
-
 parseTargetNodeAddress :: String -> String -> Parser NodeAddress
 parseTargetNodeAddress optname desc =
   option
@@ -478,7 +456,6 @@ parseTargetNodeAddress optname desc =
     $ long optname
       <> metavar "(HOST,PORT)"
       <> help desc
-
 
 -- | Here, we hope to get away with the usage of 'error' in a pure expression,
 --   because the CLI-originated values are either used, in which case the error is

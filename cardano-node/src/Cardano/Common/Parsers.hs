@@ -10,6 +10,12 @@ module Cardano.Common.Parsers
   , parseConfigFile
   , parseCoreNodeId
   , parseDbPath
+  , parseFilePath
+  , parseFlag
+  , parseFlag'
+  , parseIntegral
+  , parseIntegralWithDefault
+  , parseLastKnownBlockVersion
   , parseLogConfigFileLast
   , parseLogMetricsLast
   , parseLogOutputFile
@@ -41,13 +47,11 @@ import qualified Ouroboros.Consensus.Node.Tracers as Consensus
 
 import           Cardano.Config.CommonCLI
 import           Cardano.Config.Orphanage
+import           Cardano.Config.Partial
+                 ( PartialLastKnownBlockVersion(..))
 import           Cardano.Config.Protocol
 import           Cardano.Config.Topology
-import           Cardano.Config.Types (ConfigYamlFilePath(..), DbFile(..),
-                                       DelegationCertFile(..), GenesisFile (..),
-                                       MiscellaneousFilepaths(..),
-                                       NodeCLI(..), SigningKeyFile(..), SocketFile(..),
-                                       TraceOptions(..), TopologyFile(..))
+import           Cardano.Config.Types
 
 -- Common command line parsers
 
@@ -104,6 +108,30 @@ parseDbPath =
     <> help "Directory where the state is stored."
     )
 
+-- Common command line parsers
+
+lastly :: Parser a -> Parser (Last a)
+lastly = (Last <$>) . optional
+
+parseFilePath :: String -> String -> Parser FilePath
+parseFilePath optname desc =
+  strOption $ long optname <> metavar "FILEPATH" <> help desc
+
+parseIntegral :: Integral a => String -> String -> Parser a
+parseIntegral optname desc = option (fromInteger <$> auto)
+  $ long optname <> metavar "INT" <> help desc
+
+parseIntegralWithDefault :: Integral a => String -> String -> a -> Parser a
+parseIntegralWithDefault optname desc def = option (fromInteger <$> auto)
+ $ long optname <> metavar "INT" <> help desc <> value def
+
+parseFlag :: String -> String -> Parser Bool
+parseFlag = parseFlag' False True
+
+parseFlag' :: a -> a -> String -> String -> Parser a
+parseFlag' def active optname desc =
+  flag def active $ long optname <> help desc
+
 parseCoreNodeId :: Parser CoreNodeId
 parseCoreNodeId =
     option (fmap CoreNodeId auto) (
@@ -157,6 +185,13 @@ parseProtocol = asum
   , flagParser RealPBFT "real-pbft"
     "Permissive BFT consensus with a real ledger"
   ]
+
+parseLastKnownBlockVersion :: Parser PartialLastKnownBlockVersion
+parseLastKnownBlockVersion =
+  PartialLastKnownBlockVersion
+    <$> lastly (parseIntegral "protover-major" "Protocol version:  major component")
+    <*> lastly (parseIntegral "protover-minor" "Protocol version:  minor component")
+    <*> lastly (parseIntegral "protover-alt"   "Protocol version:  alt component")
 
 parseProtocolByron :: Parser (Last Protocol)
 parseProtocolByron =

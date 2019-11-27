@@ -75,8 +75,10 @@ type PasswordPrompt = String
 --   its hash and formatted view.
 prettyPublicKey :: Crypto.VerificationKey -> Text
 prettyPublicKey vk =
-  sformat ("public key hash: "% build %"\n     public key: "%build)
-    (Common.addressHash vk) (Crypto.formatFullVerificationKey vk)
+  sformat (  "    public key hash: "% build %
+           "\npublic key (base64): "% Crypto.fullVerificationKeyF %
+           "\n   public key (hex): "% Crypto.fullVerificationKeyHexF)
+    (Common.addressHash vk) vk vk
 
 -- TODO:  we need to support password-protected secrets.
 -- | Read signing key from a file.  Throw an error if the file can't be read or
