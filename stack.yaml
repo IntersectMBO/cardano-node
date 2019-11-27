@@ -5,8 +5,8 @@ packages:
   - cardano-node
 
 ghc-options:
-  cardano-config:   -Wall -Werror -fwarn-redundant-constraints
-  cardano-node:     -Wall -Werror -fwarn-redundant-constraints
+  cardano-config:   -Wall -fwarn-redundant-constraints
+  cardano-node:     -Wall -fwarn-redundant-constraints
 
 extra-deps:
   - binary-0.8.7.0

@@ -38,6 +38,8 @@ let
         # does not require any messing with cabal files.
         packages.katip.doExactConfig = true;
         packages.ekg.components.library.enableSeparateDataOutput = true;
+        packages.cardano-node.configureFlags = [ "--ghc-option=-Werror" ];
+        packages.cardano-config.configureFlags = [ "--ghc-option=-Werror" ];
       }
     ];
   };
