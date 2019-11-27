@@ -23,7 +23,9 @@ where
 import           Cardano.Prelude hiding (ByteString, atomically, take, trace)
 import           Prelude (error, id, unlines)
 
+#ifdef UNIX
 import qualified Control.Concurrent.Async as Async
+#endif
 import           Control.Tracer
 import qualified Data.ByteString.Char8 as BSC
 import           Data.Either (partitionEithers)
@@ -38,9 +40,11 @@ import           System.Directory (canonicalizePath, makeAbsolute)
 
 import           Control.Monad.Class.MonadSTM
 
+#ifdef UNIX
 import qualified Cardano.BM.Configuration.Model as CM
 import           Cardano.BM.Data.Backend
 import           Cardano.BM.Data.BackendKind (BackendKind (..))
+#endif
 import           Cardano.BM.Data.LogItem (LogObject (..))
 import           Cardano.BM.Data.Tracer (ToLogObject (..),
                      TracingVerbosity (..), setHostname)
