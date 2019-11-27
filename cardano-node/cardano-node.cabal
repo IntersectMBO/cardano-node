@@ -60,7 +60,7 @@ library
                      , cardano-shell
                      , containers
                      , contra-tracer
-                     , cborg == 0.2.2.0
+                     , cborg >= 0.2.2 && < 0.3
                      , containers
                      , cryptonite
                      , directory
@@ -139,7 +139,7 @@ executable cardano-node
                      , cardano-node
                      , cardano-prelude
                      , cardano-shell
-                     , cborg == 0.2.2.0
+                     , cborg >= 0.2.2 && < 0.3
                      , containers
                      , contra-tracer
                      , cryptonite
