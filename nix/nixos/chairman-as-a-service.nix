@@ -7,7 +7,7 @@ with import ../../lib.nix; with lib; with builtins;
 let
   cfg  = config.services.chairman;
   ncfg = config.services.cardano-node;
-  svcLib = (import ./svclib.nix { inherit pkgs cardano-node; });
+  svcLib = (import ../svclib.nix { inherit pkgs cardano-node; });
   envConfig = environments.${cfg.environment};
   mkChairmanConfig = nodeConfig: chairmanConfig: {
     inherit (nodeConfig) package genesisFile genesisHash stateDir pbftThreshold consensusProtocol;

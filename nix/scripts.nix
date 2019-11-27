@@ -3,7 +3,7 @@ with commonLib.pkgs.lib;
 let
   pkgs = commonLib.pkgs;
   localLib = import ../lib.nix;
-  svcLib = import ./nixos/svclib.nix { inherit pkgs; };
+  svcLib = import ./svclib.nix { inherit pkgs; };
   pkgsModule = {
     config._module.args.pkgs = mkDefault pkgs;
   };

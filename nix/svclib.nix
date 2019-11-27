@@ -126,7 +126,7 @@ let
     pkgs.runCommand "genesis-of-${start_time}" {} ''
       args=(
       --real-pbft
-      --log-config ${../../configuration/log-configuration.yaml}
+      --log-config ${../configuration/log-configuration.yaml}
       genesis
       --genesis-output-dir         "''${out}"
       --start-time                    ${start_time}
@@ -170,7 +170,7 @@ let
     pkgs.runCommand "migrated-leaked-secret-key.sk" {} ''
       args=(
       --real-pbft
-      --log-config ${../../configuration/log-configuration.yaml}
+      --log-config ${../configuration/log-configuration.yaml}
       migrate-delegate-key-from --byron-legacy
       --from ${byronLegacySK}
       --to $out
@@ -184,7 +184,7 @@ let
     pkgs.runCommand "key.pub" {} ''
       args=(
       --real-pbft
-      --log-config ${../../configuration/log-configuration.yaml}
+      --log-config ${../configuration/log-configuration.yaml}
       signing-key-public
       --secret ${pbftSK}
       )
@@ -209,7 +209,7 @@ let
     ''
       args=(
       --real-pbft
-      --log-config ${../../configuration/log-configuration.yaml}
+      --log-config ${../configuration/log-configuration.yaml}
       print-genesis-hash
       --genesis-json "${genesisFile}"
       )
@@ -226,7 +226,7 @@ let
         enable = true;
         legacy-node-count = 4;
         shelley-node-count = 3;
-        genesis-dir = "${../../configuration/b0109}";
+        genesis-dir = "${../configuration/b0109}";
       }
     ## NOTE:  we do the above defaulting, so the following works, FWIW
     ##    nix-build -A scripts.mainnet.chairman
@@ -246,11 +246,11 @@ let
     };
     script = (modules.evalModules {
       modules = [
-        ((import ../sources.nix).cardano-byron-proxy + "/nix/nixos")
-        ./cardano-cluster-service.nix
-        ./cardano-node-legacy-service.nix
-        ./cardano-node-service.nix
-        ./chairman-as-a-service.nix
+        ((import ./sources.nix).cardano-byron-proxy + "/nix/nixos")
+        ./nixos/cardano-cluster-service.nix
+        ./nixos/cardano-node-legacy-service.nix
+        ./nixos/cardano-node-service.nix
+        ./nixos/chairman-as-a-service.nix
         injectServiceConfigs
         pkgsModule
         systemdCompat

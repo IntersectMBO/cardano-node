@@ -5,7 +5,7 @@
 
 with pkgs.lib;
 let
-  svcLib          = import ../svclib.nix { pkgs = commonLib.pkgs; };
+  svcLib          = import ../../svclib.nix { pkgs = commonLib.pkgs; };
   byron-proxy-src = (import ../../sources.nix).cardano-byron-proxy;
   cardano-sl-src  = (import ../../sources.nix).cardano-sl;
   # byron-proxy-src = ../../../../cardano-byron-proxy;
