@@ -200,7 +200,7 @@ instance DefineSeverity (WithMuxBearer peer (MuxTrace ptcl)) where
     MuxTraceChannelSendStart {}      -> Debug
     MuxTraceChannelSendEnd {}        -> Debug
     MuxTraceHandshakeStart           -> Debug
-    MuxTraceHandshakeClientEnd {}    -> Debug
+    MuxTraceHandshakeClientEnd {}    -> Info
     MuxTraceHandshakeServerEnd       -> Debug
     MuxTraceHandshakeClientError {}  -> Error
     MuxTraceHandshakeServerError {}  -> Error
