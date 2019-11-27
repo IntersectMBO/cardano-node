@@ -45,7 +45,33 @@ in let
 
 in let
   ### Names and topologies
-  legacy-topology       = ../../configuration/mainnet-ci/topology-mainnet-ci.yaml;
+  legacy-topology       = svcLib.mkLegacyTopology
+    { c-a-1 = { port = 3001;
+                static-routes = [ [ "c-a-2" ] [ "c-b-1" ] [ "c-b-2" ] ];
+              };
+      c-a-2 = { port = 3002;
+                static-routes = [ [ "c-b-1" ] [ "c-b-2" ] [ "c-a-1" ] [ "proxy" ] ];
+              };
+      c-b-1 = { port = 3003;
+                static-routes = [ [ "c-b-2" ] [ "c-a-1" ] [ "c-a-2" ] ];
+              };
+      c-b-2 = { port = 3004;
+                static-routes = [ [ "c-a-1" ] [ "c-a-2" ] [ "c-b-1" ] ];
+              };
+      c-c-1 = { port = 3005;
+                static-routes = [ [ "c-d-1" "c-a-1" ] [ "c-c-2" ] [ "proxy" ] ];
+              };
+      c-c-2 = { port = 3006;
+                static-routes = [ [ "c-b-2" "c-b-1" ] [ "c-c-1" ] [ "proxy" ] ];
+              };
+      c-d-1 = { port = 3007;
+                static-routes = [ [ "c-a-1" "c-a-2" ] [ "c-b-1" "c-b-2" ] [ "c-c-1" "c-c-2" ] [ "proxy" ] ];
+              };
+      proxy = { port = 5555;
+                static-routes = [ [ "c-a-2" ] ];
+                type = "relay";
+              };
+    };
   configuration-key     = "mainnet_ci_full";
   ## the below is hard-coded to the names from the above
   topology-core-names   = [ "c-a-1" "c-a-2" "c-b-1" "c-b-2" "c-c-1" "c-c-2" "c-d-1" ];

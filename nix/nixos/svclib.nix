@@ -7,9 +7,9 @@ let
   mkNodeConfig = cfg: NodeId:
     cfg.nodeConfig //
     { inherit NodeId; } //
-    (optionalAttrs (cfg.protover-major != null) { LastKnownBlockVersion-Major = cfg.protover-major; }) //
-    (optionalAttrs (cfg.protover-minor != null) { LastKnownBlockVersion-Minor = cfg.protover-minor; }) //
-    (optionalAttrs (cfg.protover-alt   != null) { LastKnownBlockVersion-Alt   = cfg.protover-alt;   }) //
+    (optionalAttrs (cfg.protover-major or null != null) { LastKnownBlockVersion-Major = cfg.protover-major; }) //
+    (optionalAttrs (cfg.protover-minor or null != null) { LastKnownBlockVersion-Minor = cfg.protover-minor; }) //
+    (optionalAttrs (cfg.protover-alt   or null != null) { LastKnownBlockVersion-Alt   = cfg.protover-alt;   }) //
     (optionalAttrs (cfg.genesisHash != null) { GenesisHash = cfg.genesisHash; });
 
   ## mkFullyConnectedLocalClusterTopology
@@ -32,6 +32,25 @@ let
       };
     in toFile "topology.json" (toJSON (imap0 mkNodeTopo ports));
 
+  ## mkLegacyTopology
+  ##   :: Map (NodeName String) NodeSpec
+  ##   -> Topology FilePath
+  mkLegacyTopology =
+    topoSpec:
+    let
+      mkTopo =
+        {
+          nodes = mapAttrs (name: { port, static-routes, type ? "core", public ? false }: {
+            inherit port type public static-routes;
+            host = "${name}.cardano";
+            kademlia = false;
+            region = "eu-central-1";
+            zone = "eu-central-1a";
+            org = "IOHK";
+          }) topoSpec;
+        };
+    in toFile "legacy-topology.json" (toJSON (mkTopo));
+  
   ## mkFullyConnectedLocalClusterTopology
   ##   :: String Address -> String Port -> Int PortNo -> Int Valency
   ##   -> Topology FilePath
@@ -294,6 +313,7 @@ in
 { inherit
   mkFullyConnectedLocalClusterTopology
   mkFullyConnectedLocalClusterTopologyWithProxy
+  mkLegacyTopology
   mkPeriodicGenesisDir
   defaultGenesisArgs
   leakDelegateSigningKey
