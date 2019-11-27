@@ -21,7 +21,7 @@ import           Control.Monad.Class.MonadTimer (MonadTimer, threadDelay)
 import           Data.ByteString.Lazy (ByteString)
 import           Data.Proxy (Proxy (..))
 import           Network.Mux.Interface (AppType(InitiatorApp))
-import           Network.Socket (AddrInfo, SockAddr)
+import           Network.Socket (AddrInfo)
 import           Network.TypedProtocol.Driver (TraceSendRecv, runPeer)
 import           Network.TypedProtocol.Driver.ByteLimit (DecoderFailureOrTooMuchInput)
 
@@ -32,6 +32,7 @@ import           Ouroboros.Consensus.Node.Run (RunNode, nodeNetworkMagic)
 import           Ouroboros.Consensus.NodeNetwork (ProtocolCodecs(..), protocolCodecs)
 import           Ouroboros.Consensus.Protocol.Abstract (NodeConfig)
 import           Ouroboros.Network.Mux (OuroborosApplication(..))
+import           Ouroboros.Network.NodeToNode (NetworkConnectTracers (..))
 import qualified Ouroboros.Network.NodeToNode as NtN
 import           Ouroboros.Network.Protocol.BlockFetch.Client (BlockFetchClient(..), blockFetchClientPeer)
 import           Ouroboros.Network.Protocol.ChainSync.Client (chainSyncClientNull, chainSyncClientPeer)
@@ -41,11 +42,11 @@ import           Ouroboros.Network.Protocol.TxSubmission.Client (TxSubmissionCli
 import           Ouroboros.Network.Protocol.TxSubmission.Type as TS (TxSubmission)
 
 type SendRecvConnect = TraceSendRecv (Handshake NtN.NodeToNodeVersion CBOR.Term)
-                                     (SockAddr,SockAddr)
+                                     NtN.ConnectionId
                                      (DecoderFailureOrTooMuchInput DeserialiseFailure)
 
 type SendRecvTxSubmission blk = TraceSendRecv (TxSubmission (GenTxId blk) (GenTx blk))
-                                              (SockAddr,SockAddr)
+                                              NtN.ConnectionId
                                               DeserialiseFailure
 
 data BenchmarkTxSubmitTracers m blk = BenchmarkTracers
@@ -67,7 +68,14 @@ benchmarkConnectTxSubmit
   -- ^ the particular txSubmission peer
   -> m ()
 benchmarkConnectTxSubmit trs nc localAddr remoteAddr myTxSubClient = do
-  NtN.connectTo nullTracer (trSendRecvConnect trs) (,) peerMultiplex localAddr remoteAddr
+  NtN.connectTo
+    NetworkConnectTracers {
+        nctMuxTracer       = nullTracer,
+        nctHandshakeTracer = trSendRecvConnect trs
+      }
+    peerMultiplex
+    localAddr
+    remoteAddr
  where
   myCodecs :: ProtocolCodecs blk DeserialiseFailure m
                 ByteString ByteString ByteString ByteString ByteString
@@ -76,7 +84,7 @@ benchmarkConnectTxSubmit trs nc localAddr remoteAddr myTxSubClient = do
   peerMultiplex :: Versions NtN.NodeToNodeVersion NtN.DictVersion
               (OuroborosApplication
                  'InitiatorApp
-                 (SockAddr, SockAddr)
+                 NtN.ConnectionId
                  NtN.NodeToNodeProtocols
                  m
                  ByteString

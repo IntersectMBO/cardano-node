@@ -45,6 +45,7 @@ import           Ouroboros.Network.Protocol.ChainSync.Client (chainSyncClientPee
 import           Ouroboros.Network.Protocol.ChainSync.Codec (codecChainSync)
 import           Ouroboros.Network.Protocol.Handshake.Version ( Versions
                                                               , simpleSingletonVersions)
+import           Ouroboros.Network.NodeToClient (NetworkConnectTracers (..))
 import qualified Ouroboros.Network.NodeToClient as NodeToClient
 
 import           Cardano.Config.Topology
@@ -88,9 +89,10 @@ submitTx :: ( RunNode blk
 submitTx socketFp protoInfoConfig nId tx tracer = do
     socketPath <- localSocketAddrInfo (Just nId) (unSocket $ socketFp) NoMkdirIfMissing
     NodeToClient.connectTo
-      nullTracer
-      nullTracer
-      (,)
+      NetworkConnectTracers {
+          nctMuxTracer       = nullTracer,
+          nctHandshakeTracer = nullTracer
+        }
       (localInitiatorNetworkApplication tracer protoInfoConfig tx)
       Nothing
       socketPath

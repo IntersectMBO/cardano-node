@@ -203,6 +203,10 @@ mkTracers traceOptions tracer = Tracers
                   TraceMempoolAddTxs      txs0 tot0 -> (length txs0, tot0)
                   TraceMempoolRejectedTxs txs0 tot0 -> (length txs0, tot0)
                   TraceMempoolRemoveTxs   txs0 tot0 -> (length txs0, tot0)
+                  TraceMempoolManuallyRemovedTxs txs0 txs1 tot0
+                                                    -> ( length txs0 + length txs1
+                                                       , tot0
+                                                       )
             logValue1, logValue2 :: LOContent a
             logValue1 = LogValue "txsInMempool" $ PureI $ fromIntegral tot
             logValue2 = LogValue "txsProcessed" $ PureI $ fromIntegral n
@@ -353,7 +357,7 @@ withName name tr = contramap pack $ toLogObject $ appendName (pack name) tr
 -- | A way to satisfy tracer which requires current tip.  The tip is read from
 -- a mutable cell.
 --
-withTip :: LazyTVar IO (Point blk)
+withTip :: TVar IO (Point blk)
         -> Tracer IO (WithTip blk a)
         -> Tracer IO a
 withTip varTip tr = Tracer $ \msg -> do

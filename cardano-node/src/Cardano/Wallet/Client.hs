@@ -70,9 +70,10 @@ runWalletClient ptcl sockDir (CoreNodeId id) tracer = do
         localTxSubmissionTracer = contramap show tracer
 
     connectTo
-      nullTracer
-      nullTracer
-      (,)
+      NetworkConnectTracers {
+          nctMuxTracer       = nullTracer,
+          nctHandshakeTracer = nullTracer
+        }
       (localInitiatorNetworkApplication
         (Proxy :: Proxy blk)
         chainSyncTracer
@@ -139,7 +140,7 @@ localInitiatorNetworkApplication Proxy chainSyncTracer localTxSubmissionTracer p
 txSubmissionClient
   :: forall tx reject m.
      MonadSTM m
-  => LazyTMVar m tx
+  => TMVar m tx
   -> LocalTxSubmissionClient tx reject m Void
 txSubmissionClient txv = LocalTxSubmissionClient go
   where
