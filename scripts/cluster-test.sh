@@ -34,8 +34,30 @@ do case "$1" in
            --cls ) echo -en "\ec";; * ) break;; esac; shift; done
 ###
 ###
-logfile="cluster.$(date +%s).$(git rev-parse HEAD | cut -c-16).log"
+mnemonic="$(nix-shell -p diceware --run 'diceware --no-caps --num 2 --wordlist en_eff -d-')"
+timestamp="$(date +%s)"
+commit="$(git rev-parse HEAD | cut -c-16)"
+if git diff --quiet --exit-code
+then status=pristine
+else status=modified
+fi
+
+logfile="cluster.${timestamp}.${commit}.${status}.${mnemonic}.log"
 rm -f cluster.log
 ln -s ${logfile} cluster.log
+announce() {
+        cat <<EOF
+###
+###  Logfile:   ${logfile}
+###  Commit:    $(git log -n1 --pretty=format:"%Cblue%H %Cred%cd %Creset%s")
+###  Checkout:  ${status}
+###
+###  Mnemonic:  ${mnemonic}
+###
+EOF
+}
+announce
+trap announce EXIT
+
 nix-build -A nixosTests.chairmansCluster --show-trace --arg interactive true "$@" 2>&1 |
         tee ${logfile}
