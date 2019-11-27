@@ -21,18 +21,13 @@ GENERATOR="cabal new-run exe:cardano-cli -- "
 exec ${GENERATOR} \
   --log-config ${CONFIGFILE} \
   --signing-key ${CONFIGDIR}/latest-genesis/delegate-keys.000.key \
+  --database-path ${BASEDIR}/db \
   --delegation-certificate ${CONFIGDIR}/latest-genesis/delegation-cert.000.json \
   --genesis-file ${GENESISJSON} \
   --genesis-hash ${GENESISHASH} \
+  --socket-dir /tmp/cluster3nodes-socket \
   --real-pbft \
   generate-txs \
-  --genesis-file ${GENESISJSON} \
-  --topology ${CONFIGDIR}/simple-topology.json \
-  --socket-dir /tmp/cluster3nodes-socket \
-  --database-path ${BASEDIR}/db \
-  --port 3003 \
-  --config ${CONFIGFILE} \
-  \
   --num-of-txs $numtx \
   --add-tx-size $addsizetx \
   --inputs-per-tx $inputstx \
@@ -42,6 +37,7 @@ exec ${GENERATOR} \
   --sig-key ${CONFIGDIR}/latest-genesis/delegate-keys.000.key \
   --sig-key ${CONFIGDIR}/latest-genesis/delegate-keys.001.key \
   --sig-key ${CONFIGDIR}/latest-genesis/delegate-keys.002.key \
+  --node-id 0 \
   ${TARGETNODES}
 
 
