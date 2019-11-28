@@ -30,10 +30,9 @@ let
         choice() { i=$1; shift; eval "echo \''${$((i + 1))}"; }
         echo "Starting ${exec}: '' + concatStringsSep "\"\n   echo \"" cmd + ''"
         echo "..or, once again, in a single line:"
-        echo "''                   + concatStringsSep " "              cmd + ''"
+        echo "''                   + toString                          cmd + ''"
         ls -l ${if (cfg.runtimeDir == null) then "${cfg.stateDir}/socket" else "/run/${cfg.runtimeDir}"} || true
-        ${pkgs.nettools}/bin/netstat -pltn
-        ${pkgs.strace}/bin/strace -f -s128 -ebind -- ''                    + concatStringsSep " "              cmd;
+        ''                         + toString                          cmd;
 in {
   options = {
     services.cardano-node = {
