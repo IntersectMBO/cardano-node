@@ -24,8 +24,7 @@ let
             "--signing-key ${cfg.signingKey}"}"
           "${lib.optionalString (cfg.delegationCertificate != null)
             "--delegation-certificate ${cfg.delegationCertificate}"}"
-          "${cfg.extraArgs}"
-        ];
+        ] ++ cfg.extraArgs;
     in ''
         choice() { i=$1; shift; eval "echo \''${$((i + 1))}"; }
         echo "Starting ${exec}: '' + concatStringsSep "\"\n   echo \"" cmd + ''"
@@ -188,7 +187,7 @@ in {
 
       topology = mkOption {
         type = types.path;
-        default = mkEdgeTopology {
+        default = localLib.mkEdgeTopology {
           inherit (cfg) nodeId port;
           inherit (envConfig) edgeNodes;
         };
@@ -210,8 +209,8 @@ in {
       };
 
       extraArgs = mkOption {
-        type = types.str;
-        default = "";
+        type = types.listOf types.str;
+        default = [];
         description = ''Extra CLI args for 'cardano-node'.'';
       };
 
