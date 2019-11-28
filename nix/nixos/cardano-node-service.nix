@@ -7,7 +7,7 @@ with lib; with builtins;
 let
   localLib = import ../../lib.nix;
   cfg = config.services.cardano-node;
-  svcLib = (import ../svclib.nix { inherit pkgs cardano-node; });
+  svcLib = (import ../svclib.nix { inherit pkgs; cardano-node = pkgs.cardano-node; });
   envConfig = cfg.environments.${cfg.environment}; systemdServiceName = "cardano-node${optionalString cfg.instanced "@"}";
   mkScript = cfg:
     let exec = "cardano-node";
@@ -24,8 +24,7 @@ let
             "--signing-key ${cfg.signingKey}"}"
           "${lib.optionalString (cfg.delegationCertificate != null)
             "--delegation-certificate ${cfg.delegationCertificate}"}"
-          "${cfg.extraArgs}"
-        ];
+        ] ++ cfg.extraArgs;
     in ''
         choice() { i=$1; shift; eval "echo \''${$((i + 1))}"; }
         echo "Starting ${exec}: '' + concatStringsSep "\"\n   echo \"" cmd + ''"
@@ -55,11 +54,6 @@ in {
       script = mkOption {
         type = types.str;
         default = mkScript cfg;
-      };
-      extraOptions = mkOption {
-        type = types.listOf types.str;
-        default = [];
-        description = "extra command line arguments for cardano-node";
       };
 
       package = mkOption {
@@ -188,7 +182,7 @@ in {
 
       topology = mkOption {
         type = types.path;
-        default = mkEdgeTopology {
+        default = localLib.mkEdgeTopology {
           inherit (cfg) nodeId port;
           inherit (envConfig) edgeNodes;
         };
@@ -210,8 +204,8 @@ in {
       };
 
       extraArgs = mkOption {
-        type = types.str;
-        default = "";
+        type = types.listOf types.str;
+        default = [];
         description = ''Extra CLI args for 'cardano-node'.'';
       };
 
