@@ -37,7 +37,10 @@ in {
     machine = { lib, config, pkgs, ... }: {
       imports = [
         (byron-proxy-src + "/nix/nixos")
-        ../.
+        ../cardano-node-service.nix
+        ../cardano-node-legacy-service.nix
+        ../chairman-as-a-service.nix
+        ../cardano-cluster-service.nix
       ];
       virtualisation.memorySize = 2048;
       virtualisation.diskSize   = 2048;

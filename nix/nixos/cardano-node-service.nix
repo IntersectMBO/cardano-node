@@ -7,7 +7,7 @@ with lib; with builtins;
 let
   localLib = import ../../lib.nix;
   cfg = config.services.cardano-node;
-  svcLib = (import ../svclib.nix { inherit pkgs cardano-node; });
+  svcLib = (import ../svclib.nix { inherit pkgs; cardano-node = pkgs.cardano-node; });
   envConfig = cfg.environments.${cfg.environment}; systemdServiceName = "cardano-node${optionalString cfg.instanced "@"}";
   mkScript = cfg:
     let exec = "cardano-node";
