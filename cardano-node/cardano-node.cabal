@@ -128,6 +128,7 @@ executable cardano-node
                        -rtsopts
                        "-with-rtsopts=-T"
                        -fno-warn-unticked-promoted-constructors
+                       -rtsopts
 
   build-depends:       base
                      , aeson
