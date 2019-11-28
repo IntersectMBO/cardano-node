@@ -9,7 +9,7 @@ import           Cardano.Shell.Types (CardanoFeature (..))
 
 import           Cardano.Config.Types ( CardanoEnvironment, ConfigYamlFilePath(..)
                                       , DelegationCertFile , GenesisFile, NodeConfiguration(..)
-                                      , SigningKeyFile, SocketFile, parseNodeConfiguration)
+                                      , SigningKeyFile, SocketPath, parseNodeConfiguration)
 import           Cardano.Config.Logging ( LoggingLayer (..), loggingCardanoFeatureInit
                                         , loggingCLIConfiguration)
 
@@ -50,7 +50,7 @@ data WalletCLI = WalletCLI
   , waGenesisHash :: !Text
   , waGenesisFile :: !GenesisFile
   , waSignKeyFile :: !(Maybe SigningKeyFile)
-  , waSocketFile :: !SocketFile
+  , waSocketFile :: !SocketPath
   -- Socket Directory. Will be changed in
   -- an upcoming PR to an actual socket filepath.
   }

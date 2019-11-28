@@ -44,8 +44,8 @@ function commonargs() {
         printf -- "--topology configuration/simple-topology.json "
         printf -- "--database-path ./db/ "
         printf -- "--genesis-file ${genesis_file} "
-        printf -- "--genesis-hash ${genesis_hash} "
-        printf -- "--socket-dir /tmp/cluster3nodes-socket/ "
+        printf -- "--genesis-hash ${genesis_hash}"
+        printf -- "--socket-path /tmp/cluster3nodes-socket/ "
 }
 
 function nodeargs () {

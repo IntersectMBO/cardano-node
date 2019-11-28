@@ -62,6 +62,7 @@ import           Ouroboros.Network.Protocol.Handshake.Version
 import           Ouroboros.Network.NodeToClient
 
 import           Cardano.Common.LocalSocket
+import           Cardano.Config.Types (SocketPath)
 import           Cardano.Tracing.Tracers (TraceConstraints)
 
 -- | Run chairman: connect with all the core nodes.  Chairman will store the
@@ -81,7 +82,7 @@ runChairman :: forall blk.
             -- will throw an exception.
             -> Maybe BlockNo
             -- ^ finish after that many blocks, if 'Nothing' run continuously.
-            -> FilePath
+            -> SocketPath
             -- ^ local socket dir
             -> Tracer IO String
             -> IO ()
@@ -127,7 +128,7 @@ createConnection
   -> Maybe BlockNo
   -> Tracer IO String
   -> NodeConfig (BlockProtocol blk)
-  -> FilePath
+  -> SocketPath
   -> IO ()
 createConnection
   coreNodeId
@@ -136,8 +137,8 @@ createConnection
   maxBlockNo
   tracer
   pInfoConfig
-  socketDir = do
-    addr <- localSocketAddrInfo (Just $ fromCoreNodeId coreNodeId) socketDir NoMkdirIfMissing
+  socketFp = do
+    addr <- localSocketAddrInfo socketFp
     connectTo
       NetworkConnectTracers {
           nctMuxTracer       = nullTracer,

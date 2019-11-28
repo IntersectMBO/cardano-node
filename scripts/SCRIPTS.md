@@ -26,7 +26,7 @@
 - <span><b>issue-utxo-expenditure.sh</b></span> <br/> Write a file with a transaction spending a
          normal UTxO entry, given a key owning it
 - <span><b>mainnet.sh</b></span> <br/> Run a node against Cardano Mainnet
-- <span><b>shelley-testnet2.sh</b></span> <br/> Start a dev cluster with 3 nodes,
+- <span><b>shelley-testnet-live.sh</b></span> <br/> Start a dev cluster with 3 nodes,
          with neat curses-based UI (run from tmux)
 - <span><b>shelley-testnet-dns.sh</b></span> <br/> Start a dev cluster with 3 nodes (run from tmux)
 - <span><b>shelley-testnet.sh</b></span> <br/> Start a dev cluster with 3 nodes, with

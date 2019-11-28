@@ -29,7 +29,7 @@ function commonargs() {
         printf -- "--database-path ${root}/db/ "
         printf -- "--genesis-file ${genesis_file} "
         printf -- "--genesis-hash ${genesis_hash} "
-        printf -- "--socket-dir ${root}/socket/$1 "
+        printf -- "--socket-path ${root}/socket/$1 "
 }
 
 function nodeargs () {

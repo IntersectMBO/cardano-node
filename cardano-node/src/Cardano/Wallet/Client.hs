@@ -49,6 +49,7 @@ import           Ouroboros.Network.Protocol.Handshake.Version
 import           Ouroboros.Network.NodeToClient
 
 import           Cardano.Common.LocalSocket
+import           Cardano.Config.Types (SocketPath)
 import           Cardano.Tracing.Tracers (TraceConstraints)
 
 runWalletClient :: forall blk.
@@ -56,13 +57,13 @@ runWalletClient :: forall blk.
                    , TraceConstraints blk
                    )
                 => Protocol blk
-                -> FilePath
+                -> SocketPath
                 -> CoreNodeId
                 -> Tracer IO String
                 -> IO ()
-runWalletClient ptcl sockDir nid tracer = do
+runWalletClient ptcl sockFp (CoreNodeId _) tracer = do
 
-    addr <- localSocketAddrInfo (Just (CoreId nid)) sockDir NoMkdirIfMissing
+    addr <- localSocketAddrInfo sockFp
 
     let ProtocolInfo{pInfoConfig} = protocolInfo ptcl
 

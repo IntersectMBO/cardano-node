@@ -17,7 +17,7 @@ let
           "--genesis-hash ${cfg.genesisHash}"
           "--config ${cfg.nodeConfigFile}"
           "--database-path ${cfg.databasePath}"
-          "--socket-dir ${if (cfg.runtimeDir == null) then "${cfg.stateDir}/socket" else "/run/${cfg.runtimeDir}"}"
+          "--socket-path ${if (cfg.runtimeDir == null) then "${cfg.stateDir}/socket" else "/run/${cfg.runtimeDir}"}"
           "--topology ${cfg.topology}"
           "--host-addr ${cfg.hostAddr}"
           "--port ${toString cfg.port}"

@@ -45,7 +45,7 @@ import           Ouroboros.Network.NodeToClient (NetworkConnectTracers (..))
 import qualified Ouroboros.Network.NodeToClient as NodeToClient
 
 import           Cardano.Common.LocalSocket
-import           Cardano.Config.Types (SocketFile(..))
+import           Cardano.Config.Types (SocketPath(..))
 
 
 
@@ -57,14 +57,14 @@ import           Cardano.Config.Types (SocketFile(..))
 submitTx :: ( RunNode blk
             , Show (ApplyTxErr blk)
             )
-         => SocketFile
+         => SocketPath
          -> NodeConfig (BlockProtocol blk)
          -> NodeId
          -> GenTx blk
          -> Tracer IO String
          -> IO ()
-submitTx socketFp protoInfoConfig nId tx tracer = do
-    socketPath <- localSocketAddrInfo (Just nId) (unSocket $ socketFp) NoMkdirIfMissing
+submitTx socketFp protoInfoConfig _ tx tracer = do
+    socketPath <- localSocketAddrInfo socketFp
     NodeToClient.connectTo
       NetworkConnectTracers {
           nctMuxTracer       = nullTracer,

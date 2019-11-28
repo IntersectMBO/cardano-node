@@ -47,7 +47,7 @@ The general synopsis is as follows:
 
 Usage: cardano-node --topology FILEPATH --database-path FILEPATH
                     --genesis-file FILEPATH [--delegation-certificate FILEPATH]
-                    [--signing-key FILEPATH] --socket-dir FILEPATH
+                    [--signing-key FILEPATH] --socket-path FILEPATH
                     [--host-addr HOST-NAME] --port PORT
                     --config NODE-CONFIGURATION [--help] [--help-tracing]
                     [--help-advanced]
@@ -63,7 +63,7 @@ Usage: cardano-node --topology FILEPATH --database-path FILEPATH
 
 `--signing-key` - Optional path to the signing key.
 
-`--socket-dir` - Path to the socket directory.
+`--socket-path` - Path to the socket directory.
 
 `--host-addr` - Optionally specify your node's IPv4 or IPv6 address.
 

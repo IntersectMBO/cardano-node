@@ -25,7 +25,7 @@ exec ${GENERATOR} \
   --delegation-certificate ${CONFIGDIR}/latest-genesis/delegation-cert.000.json \
   --genesis-file ${GENESISJSON} \
   --genesis-hash ${GENESISHASH} \
-  --socket-dir /tmp/cluster3nodes-socket \
+  --socket-path /tmp/cluster3nodes-socket \
   --real-pbft \
   --num-of-txs $numtx \
   --add-tx-size $addsizetx \
