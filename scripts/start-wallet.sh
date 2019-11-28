@@ -11,7 +11,7 @@ genesis_file="${genesis_root}/genesis.json"
 
 ${WALLET} \
     --config ${configuration}/log-config-0.yaml \
-    --socket-dir ${root}/socket/ \
+    --socket-path ./socket/wallet-socket \
     --genesis-json ${genesis_file} \
     --genesis-hash ${genesis_hash} \
     $@

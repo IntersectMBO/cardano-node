@@ -17,7 +17,6 @@ NOW=`date "+%Y-%m-%d 00:00:00"`
 NETARGS=(
         submit-tx
         --tx           "$TX"
-        --node-id      "0"
         --${ALGO}
         --genesis-file "${genesis_file}"
         --genesis-hash "${genesis_hash}"

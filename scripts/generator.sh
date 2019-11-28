@@ -9,7 +9,7 @@ NETARGS=(
         --config "configuration/log-configuration.yaml"
         --genesis-file  "${genesis_file}"
         --genesis-hash  "${genesis_hash}"
-        --socket-dir    "./socket/"
+        --socket-path    "./socket/0"
 
 )
 TX_GEN_ARGS=(
