@@ -24,8 +24,7 @@ let
             "--signing-key ${cfg.signingKey}"}"
           "${lib.optionalString (cfg.delegationCertificate != null)
             "--delegation-certificate ${cfg.delegationCertificate}"}"
-          "${cfg.extraArgs}"
-        ];
+        ] ++ cfg.extraOptions;
     in ''
         choice() { i=$1; shift; eval "echo \''${$((i + 1))}"; }
         echo "Starting ${exec}: '' + concatStringsSep "\"\n   echo \"" cmd + ''"
@@ -207,12 +206,6 @@ in {
         type = types.str;
         default = "${toFile "config-${toString cfg.nodeId}.json" (toJSON (svcLib.mkNodeConfig cfg cfg.nodeId))}";
         description = ''Actual configuration file (shell expression).'';
-      };
-
-      extraArgs = mkOption {
-        type = types.str;
-        default = "";
-        description = ''Extra CLI args for 'cardano-node'.'';
       };
 
       protover-major = mkOption {
