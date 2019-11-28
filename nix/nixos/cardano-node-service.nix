@@ -55,11 +55,6 @@ in {
         type = types.str;
         default = mkScript cfg;
       };
-      extraOptions = mkOption {
-        type = types.listOf types.str;
-        default = [];
-        description = "extra command line arguments for cardano-node";
-      };
 
       package = mkOption {
         type = types.package;
