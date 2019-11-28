@@ -76,6 +76,7 @@ in {
     $machine->succeed("date +%s | systemd-cat --identifier=timekeeper --priority=crit");
     $machine->succeed("cat /proc/sys/net/ipv4/tcp_syn_retries | systemd-cat --identifier tcp_syn_retries");
     $machine->succeed("bash -c 'tcpdump -i lo tcp and port 5555 2>&1 | systemd-cat --identifier=proxy-tcpdump --priority=crit' &");
+    $machine->succeed("{ now=\$(date +%s); if test 1000000000 -gt \$now; then echo 'Waiting until 1000000000'; sleep \$((1000000000 - now)); fi; } | systemd-cat --identifier=wait-until-1000000000");
     $machine->succeed("systemctl start cardano-cluster || true");
     $machine->waitUntilSucceeds("nc -z 127.1.0.1 3001");
     $machine->waitUntilSucceeds("nc -z 127.1.0.2 3002");
