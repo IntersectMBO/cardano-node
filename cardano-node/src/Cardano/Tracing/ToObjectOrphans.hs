@@ -350,7 +350,7 @@ instance Transformable Text IO (TraceTxSubmissionOutbound
 instance Transformable Text IO (TraceLocalTxSubmissionServerEvent blk) where
   trTransformer _ verb tr = trStructured verb tr
 
-instance Transformable Text IO (TraceForgeEvent blk) where
+instance ProtocolLedgerView blk => Transformable Text IO (TraceForgeEvent blk) where
   trTransformer _ verb tr = trStructured verb tr
 
 -- transform @SubscriptionTrace@
@@ -785,30 +785,32 @@ instance ToObject (TraceLocalTxSubmissionServerEvent blk) where
   toObject _verb _ =
     mkObject [ "kind" .= String "TraceLocalTxSubmissionServerEvent" ]
 
-instance ToObject (TraceForgeEvent blk) where
+instance ProtocolLedgerView blk => ToObject (TraceForgeEvent blk) where
   toObject _verb (TraceForgeEvent slotNo _) =
     mkObject
-        [ "kind" .= String "TraceForgeEvent"
-        , "slot" .= toJSON (unSlotNo slotNo)
+        [ "kind"    .= String "TraceForgeEvent"
+        , "slot"    .= toJSON (unSlotNo slotNo)
         ]
-  toObject _verb (TraceCouldNotForge slotNo _) =
+  toObject _verb (TraceCouldNotForge slotNo anachronyFailure) =
     mkObject
-        [ "kind" .= String "TraceCouldNotForge"
-        , "slot" .= toJSON (unSlotNo slotNo)
+        [ "kind"    .= String "TraceCouldNotForge"
+        , "slot"    .= toJSON (unSlotNo slotNo)
+        , "reason"  .= show anachronyFailure
         ]
   toObject _verb (TraceAdoptedBlock slotNo _) =
     mkObject
-        [ "kind" .= String "TraceAdoptedBlock"
-        , "slot" .= toJSON (unSlotNo slotNo)
+        [ "kind"    .= String "TraceAdoptedBlock"
+        , "slot"    .= toJSON (unSlotNo slotNo)
         ]
   toObject _verb (TraceDidntAdoptBlock slotNo _) =
     mkObject
-        [ "kind" .= String "TraceDidntAdoptBlock"
-        , "slot" .= toJSON (unSlotNo slotNo)
+        [ "kind"    .= String "TraceDidntAdoptBlock"
+        , "slot"    .= toJSON (unSlotNo slotNo)
         ]
-  toObject _verb (TraceForgedInvalidBlock slotNo _ _) =
+  toObject _verb (TraceForgedInvalidBlock slotNo _ invalidBlockReason) =
     mkObject
-        [ "kind" .= String "TraceForgedInvalidBlock"
-        , "slot" .= toJSON (unSlotNo slotNo)
+        [ "kind"    .= String "TraceForgedInvalidBlock"
+        , "slot"    .= toJSON (unSlotNo slotNo)
+        , "reason"  .= show invalidBlockReason
         ]
 
