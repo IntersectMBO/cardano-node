@@ -38,7 +38,7 @@ import           Ouroboros.Consensus.ChainSyncServer
                    (TraceChainSyncServerEvent(..))
 import           Ouroboros.Consensus.Ledger.Abstract
 import           Ouroboros.Consensus.Mempool.API (GenTx, GenTxId)
-import qualified Ouroboros.Consensus.Node.Tracers as Consensus
+import           Ouroboros.Consensus.Node.Tracers (TraceForgeEvent (..))
 import           Ouroboros.Consensus.TxSubmission
                    (TraceLocalTxSubmissionServerEvent (..))
 import           Ouroboros.Consensus.Util.Condense
@@ -306,9 +306,13 @@ instance DefinePrivacyAnnotation (TraceLocalTxSubmissionServerEvent blk)
 instance DefineSeverity (TraceLocalTxSubmissionServerEvent blk) where
   defineSeverity _ = Info
 
-instance DefinePrivacyAnnotation (Consensus.TraceForgeEvent blk)
-instance DefineSeverity (Consensus.TraceForgeEvent blk) where
-  defineSeverity _ = Info
+instance DefinePrivacyAnnotation (TraceForgeEvent blk)
+instance DefineSeverity (TraceForgeEvent blk) where
+  defineSeverity (TraceForgeEvent {})           = Info
+  defineSeverity (TraceCouldNotForge {})        = Warning
+  defineSeverity (TraceAdoptedBlock {})         = Info
+  defineSeverity (TraceDidntAdoptBlock {})      = Warning
+  defineSeverity (TraceForgedInvalidBlock {})   = Alert
 
 -- | instances of @Transformable@
 
@@ -346,7 +350,7 @@ instance Transformable Text IO (TraceTxSubmissionOutbound
 instance Transformable Text IO (TraceLocalTxSubmissionServerEvent blk) where
   trTransformer _ verb tr = trStructured verb tr
 
-instance Transformable Text IO (Consensus.TraceForgeEvent blk) where
+instance ProtocolLedgerView blk => Transformable Text IO (TraceForgeEvent blk) where
   trTransformer _ verb tr = trStructured verb tr
 
 -- transform @SubscriptionTrace@
@@ -781,6 +785,32 @@ instance ToObject (TraceLocalTxSubmissionServerEvent blk) where
   toObject _verb _ =
     mkObject [ "kind" .= String "TraceLocalTxSubmissionServerEvent" ]
 
-instance ToObject (Consensus.TraceForgeEvent blk) where
-  toObject _verb _ =
-    mkObject [ "kind" .= String "TraceForgeEvent" ]
+instance ProtocolLedgerView blk => ToObject (TraceForgeEvent blk) where
+  toObject _verb (TraceForgeEvent slotNo _) =
+    mkObject
+        [ "kind"    .= String "TraceForgeEvent"
+        , "slot"    .= toJSON (unSlotNo slotNo)
+        ]
+  toObject _verb (TraceCouldNotForge slotNo anachronyFailure) =
+    mkObject
+        [ "kind"    .= String "TraceCouldNotForge"
+        , "slot"    .= toJSON (unSlotNo slotNo)
+        , "reason"  .= show anachronyFailure
+        ]
+  toObject _verb (TraceAdoptedBlock slotNo _) =
+    mkObject
+        [ "kind"    .= String "TraceAdoptedBlock"
+        , "slot"    .= toJSON (unSlotNo slotNo)
+        ]
+  toObject _verb (TraceDidntAdoptBlock slotNo _) =
+    mkObject
+        [ "kind"    .= String "TraceDidntAdoptBlock"
+        , "slot"    .= toJSON (unSlotNo slotNo)
+        ]
+  toObject _verb (TraceForgedInvalidBlock slotNo _ invalidBlockReason) =
+    mkObject
+        [ "kind"    .= String "TraceForgedInvalidBlock"
+        , "slot"    .= toJSON (unSlotNo slotNo)
+        , "reason"  .= show invalidBlockReason
+        ]
+
