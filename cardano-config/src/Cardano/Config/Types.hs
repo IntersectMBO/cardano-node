@@ -128,6 +128,7 @@ data NodeCLI = NodeCLI
     , nodeAddr :: !NodeAddress
     , configFp :: !ConfigYamlFilePath
     , traceOpts :: !TraceOptions
+    , validateDB :: !Bool
     } deriving Show
 
 -- | Filepath of the configuration yaml file. This file determines
