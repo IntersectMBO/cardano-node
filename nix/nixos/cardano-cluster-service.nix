@@ -79,7 +79,7 @@ in let
   shelley-core-names    = take shelley-node-count (drop legacy-node-count topology-core-names);
   legacy-relay-name     = "r-a-1";
   all-legacy-names      = topology-core-names ++ [legacy-relay-name];
-  legacy-name-shexpr    = ''$(choice "$1" ${concatStringsSep " " all-legacy-names})'';
+  legacy-name-shexpr    = ''$(choice "$1" ${toString all-legacy-names})'';
 
 in let
   ### Genesis & state dirs
@@ -89,24 +89,24 @@ in let
   node-root-dir         = "/var/lib/cardano-node";
   shelley-state-dir     = "${node-root-dir}/${legacy-name-shexpr}";
   shelley-database-paths = map (i: "${node-root-dir}/db-${i}") shelley-node-ids-str;
-  database-path-shexpr  = ''$(choice "$1" ${concatStringsSep " " legacy-node-ids-str} ${concatStringsSep " " shelley-database-paths})'';
+  database-path-shexpr  = ''$(choice "$1" ${toString legacy-node-ids-str} ${toString shelley-database-paths})'';
 
 in let
   ### Secrets
   legacy-sig-keys       = map (i: "${genesis-dir}/key${i}.sk")
                           legacy-node-ids-str;
-  legacy-sig-key-shexpr = ''$(choice "$1" ${concatStringsSep " " legacy-sig-keys} ${concatStringsSep " " shelley-node-ids-str})'';
+  legacy-sig-key-shexpr = ''$(choice "$1" ${toString legacy-sig-keys} ${toString shelley-node-ids-str})'';
   migrated-pbft-keys    = map (i: svcLib.leakDelegateSigningKey "${genesis-dir}/key${i}.sk")
                           shelley-node-ids-str;
   ## WARNING:  don't reuse without understanding security implications. -- sk
-  pbft-sig-key-shexpr   = ''$(choice "$1" ${concatStringsSep " " legacy-node-ids-str} ${concatStringsSep " " migrated-pbft-keys})'';
+  pbft-sig-key-shexpr   = ''$(choice "$1" ${toString legacy-node-ids-str} ${toString migrated-pbft-keys})'';
 
 in let
   ### Delegation certs
   pbft-ver-keys         = map svcLib.toVerification migrated-pbft-keys;
   delegate-certs        = map (pk: svcLib.extractDelegateCertificate genesisFile (readFile pk))
                           pbft-ver-keys;
-  pbft-cert-shexpr      = ''$(choice "$1" ${concatStringsSep " " legacy-node-ids-str} ${concatStringsSep " " delegate-certs})'';
+  pbft-cert-shexpr      = ''$(choice "$1" ${toString legacy-node-ids-str} ${toString delegate-certs})'';
 
 in let
   ### Topology
@@ -137,7 +137,7 @@ in let
   };
   shelley-configs       = map (i: toFile "config-${toString i}.json" (toJSON (svcLib.mkNodeConfig ncfg i // node-config-overlay)))
                               shelley-node-ids;
-  config-shexpr         = ''$(choice "$1" ${concatStringsSep " " legacy-node-ids-str} ${concatStringsSep " " shelley-configs})'';
+  config-shexpr         = ''$(choice "$1" ${toString legacy-node-ids-str} ${toString shelley-configs})'';
 in {
   ###
   ### Cluster configuration options:

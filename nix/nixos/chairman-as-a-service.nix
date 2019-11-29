@@ -14,7 +14,7 @@ let
     inherit (chairmanConfig) timeout maxBlockNo k slot-length node-ids nodeConfigFile nodeConfig timeoutIsSuccess;
   };
   mkScript = cfg:
-    let nodeIdArgs = builtins.concatStringsSep " "
+    let nodeIdArgs = builtins.toString
                        (map (i: "--core-node-id ${toString i}")
                          cfg.node-ids);
         exec = "chairman";
@@ -33,8 +33,8 @@ let
         set +e
         echo "Starting ${exec}: '' + concatStringsSep "\"\n   echo \"" cmd + ''"
         echo "..or, once again, in a single line:"
-        echo "''                   + concatStringsSep " "              cmd + ''"
-        ''                         + concatStringsSep " "              cmd + ''
+        echo "''                   + toString                          cmd + ''"
+        ''                         + toString                          cmd + ''
 
         status=$?
         echo chairman returned status: $status
