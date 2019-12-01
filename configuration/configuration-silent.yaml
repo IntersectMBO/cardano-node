@@ -1,0 +1,122 @@
+# global filter; messages must have at least this severity to pass:
+minSeverity: Warning
+
+# global file rotation settings:
+rotation:
+  rpLogLimitBytes: 5000000
+  rpKeepFilesNum:  10
+  rpMaxAgeHours:   24
+
+# these backends are initialized:
+setupBackends:
+  - KatipBK
+
+# if not indicated otherwise, then messages are passed to these backends:
+defaultBackends:
+  - KatipBK
+
+# if wanted, the GUI is listening on this port:
+# hasGUI: 12787
+
+# if wanted, the EKG interface is listening on this port:
+# hasEKG: 12788
+
+# here we set up outputs of logging in 'katip':
+setupScribes:
+  - scKind: DevNullSK
+    scName: devnull
+  - scKind: StdoutSK
+    scName: stdout
+    scFormat: ScText
+    scRotation: null
+
+# if not indicated otherwise, then log output is directed to this:
+defaultScribes:
+  - - DevNullSK
+    - devnull
+
+# more options which can be passed as key-value pairs:
+options:
+  cfokey:
+    value: "Release-1.0.0"
+  mapSubtrace:
+    '#messagecounters.aggregation':
+      subtrace: NoTrace
+    '#messagecounters.ekgview':
+      subtrace: NoTrace
+    '#messagecounters.switchboard':
+      subtrace: NoTrace
+    '#messagecounters.katip':
+      subtrace: NoTrace
+    '#messagecounters.monitoring':
+      subtrace: NoTrace
+  mapBackends:
+    cardano.node.metrics.ChainDB:
+      - EKGViewBK
+      - kind: UserDefinedBK
+        name: LiveViewBackend
+    cardano.node.metrics:
+      - kind: UserDefinedBK
+        name: LiveViewBackend
+    cardano.node.BlockFetchDecision:
+      - kind: UserDefinedBK
+        name: LiveViewBackend
+    cardano.node.peers.BlockFetchDecision:
+      - kind: UserDefinedBK
+        name: LiveViewBackend
+
+##########################################################
+############### Cardano Node Configuration ###############
+##########################################################
+
+
+NodeId: 0
+Protocol: RealPBFT
+GenesisHash: 5f20df933584822601f9e3f8c024eb5eb252fe8cefb24d1317dc3d432e940ebb
+NumCoreNodes: 1
+RequiresNetworkMagic: RequiresNoMagic
+PBftSignatureThreshold: 0.5
+TurnOnLogging: True
+ViewMode: SimpleView
+TurnOnLogMetrics: False
+##### Network Time Parameters #####
+
+ResponseTimeout: 30000000
+PollDelay: 1800000000
+Servers: [ "0.pool.ntp.org"
+         , "2.pool.ntp.org"
+         , "3.pool.ntp.org"
+         ]
+
+#####    Update Parameters    #####
+
+ApplicationName: cardano-sl
+ApplicationVersion: 1
+LastKnownBlockVersion-Major: 0
+LastKnownBlockVersion-Minor: 2
+LastKnownBlockVersion-Alt: 0
+
+MemPoolLimitTx: 200
+AssetLockedSrcAddress: []
+
+CacheParameter: 500
+MessageCacheTimeout: 30
+
+NetworkDiameter: 18
+RecoveryHeadersMessage: 2200
+StreamWindow: 2048
+NonCriticalCQBootstrap: 0.95
+NonCriticalCQ: 0.8
+CriticalCQBootstrap: 0.8888
+CriticalCQ: 0.654321
+CriticalForkThreshold: 3
+FixedTimeCQ: 3600
+
+SlotLength: 20000
+NetworkConnectionTimeout: 15000
+HandshakeTimeout: 30000
+
+Enabled: False
+Rate: 0
+Period: ''
+Burst: 0
