@@ -126,9 +126,8 @@ executable cardano-node
   ghc-options:         -threaded
                        -Wall
                        -rtsopts
-                       "-with-rtsopts=-T"
+                       "-with-rtsopts=-T -I0"
                        -fno-warn-unticked-promoted-constructors
-                       -rtsopts
 
   build-depends:       base
                      , aeson
