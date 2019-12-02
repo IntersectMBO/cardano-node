@@ -351,12 +351,7 @@ instance Transformable Text IO (TraceLocalTxSubmissionServerEvent blk) where
   trTransformer _ verb tr = trStructured verb tr
 
 instance (Show blk, ProtocolLedgerView blk) => Transformable Text IO (TraceForgeEvent blk) where
-  trTransformer StructuredLogging verb tr = trStructured verb tr
-  trTransformer TextualRepresentation _verb tr = Tracer $ \s ->
-    traceWith tr =<< LogObject <$> pure mempty
-                               <*> mkLOMeta (defineSeverity s) (definePrivacyAnnotation s)
-                               <*> pure (LogMessage $ pack $ show s)
-  trTransformer UserdefinedFormatting verb tr = trStructured verb tr
+  trTransformer _ verb tr = trStructured verb tr
 
 -- transform @SubscriptionTrace@
 instance Transformable Text IO (WithIPList (SubscriptionTrace Socket.SockAddr)) where
@@ -800,7 +795,7 @@ instance ProtocolLedgerView blk => ToObject (TraceForgeEvent blk) where
     mkObject
         [ "kind"    .= String "TraceCouldNotForge"
         , "slot"    .= toJSON (unSlotNo slotNo)
-        , "reason"  .= show anachronyFailure
+        , "reason"  .= String (toS $ show anachronyFailure)
         ]
   toObject _verb (TraceAdoptedBlock slotNo _) =
     mkObject
@@ -816,6 +811,6 @@ instance ProtocolLedgerView blk => ToObject (TraceForgeEvent blk) where
     mkObject
         [ "kind"    .= String "TraceForgedInvalidBlock"
         , "slot"    .= toJSON (unSlotNo slotNo)
-        , "reason"  .= show invalidBlockReason
+        , "reason"  .= String (toS $ show invalidBlockReason)
         ]
 
