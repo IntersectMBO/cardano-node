@@ -21,8 +21,7 @@
          spending a genesis UTxO entry, given a key owning it
     - issue-utxo-expenditure.sh :: Write a file with a transaction spending a
          normal UTxO entry, given a key owning it
-    - mainnet-proxy-follower.sh :: Run a node against the Byron Proxy connected to
-         Cardano Mainnet
+    - mainnet.sh :: Run a node against Cardano Mainnet
     - shelley-testnet2.sh :: Start a dev cluster with 3 nodes and an acceptor,
          with neat curses-based UI (run from tmux)
     - shelley-testnet-dns.sh :: Start a dev cluster with 3 nodes (run from tmux)
