@@ -126,7 +126,7 @@ let
     pkgs.runCommand "genesis-of-${start_time}" {} ''
       args=(
       --real-pbft
-      --log-config ${../configuration/log-configuration.yaml}
+      --log-config ${../configuration/configuration-silent.yaml}
       genesis
       --genesis-output-dir         "''${out}"
       --start-time                    ${start_time}
@@ -170,7 +170,7 @@ let
     pkgs.runCommand "migrated-leaked-secret-key.sk" {} ''
       args=(
       --real-pbft
-      --log-config ${../configuration/log-configuration.yaml}
+      --log-config ${../configuration/configuration-silent.yaml}
       migrate-delegate-key-from --byron-legacy
       --from ${byronLegacySK}
       --to $out
@@ -184,7 +184,7 @@ let
     pkgs.runCommand "key.pub" {} ''
       args=(
       --real-pbft
-      --log-config ${../configuration/log-configuration.yaml}
+      --log-config ${../configuration/configuration-silent.yaml}
       signing-key-public
       --secret ${pbftSK}
       )
@@ -209,7 +209,7 @@ let
     ''
       args=(
       --real-pbft
-      --log-config ${../configuration/log-configuration.yaml}
+      --log-config ${../configuration/configuration-silent.yaml}
       print-genesis-hash
       --genesis-json "${genesisFile}"
       )

@@ -11,8 +11,13 @@ umask 077
 SCRIPTDIR=$(dirname $0)
 CONFIGDIR="$(realpath ${SCRIPTDIR}/../configuration)"
 
+DATE=date
+OS=$(uname -s)
+if [ "$OS" = "Darwin" ]; then
+  DATE=gdate
+fi
 start_future_offset="1 minute"
-start_time="$(date -d "now + ${start_future_offset}" +%s)"
+start_time="$(${DATE} -d "now + ${start_future_offset}" +%s)"
 protocol_params="${SCRIPTDIR}/protocol-params.json"
 
 parameter_k=2160
@@ -27,7 +32,7 @@ not_so_secret=2718281828
 
 tmpdir="`mktemp`.d"
 common=(
-        --log-config                 "${CONFIGDIR}/log-configuration.yaml"
+        --log-config                 "${CONFIGDIR}/configuration-silent.yaml"
         --real-pbft
 )
 args=(
