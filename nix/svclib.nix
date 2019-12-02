@@ -188,7 +188,7 @@ let
       signing-key-public
       --secret ${pbftSK}
       )
-      ${cardano-node}/bin/cardano-cli "''${args[@]}" | tail -n -2 | head -n 1 | cut -d: -f2 | xargs echo -n > $out
+      ${cardano-node}/bin/cardano-cli "''${args[@]}" | fgrep 'public key (base64):' | cut -d: -f2 | xargs echo -n > $out
     '';
 
   ## extractDelegateCertificate

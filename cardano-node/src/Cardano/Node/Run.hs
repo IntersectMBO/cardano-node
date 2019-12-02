@@ -34,7 +34,6 @@ import qualified Data.List as List
 import           Data.Proxy (Proxy (..))
 import           Data.Semigroup ((<>))
 import           Data.Text (Text, breakOn, pack, take)
-import           Network.Socket as Socket
 import           Network.HostName (getHostName)
 import           System.Directory (canonicalizePath, makeAbsolute)
 
@@ -53,11 +52,10 @@ import           Cardano.Config.Types (MiscellaneousFilepaths(..),
                                        NodeConfiguration (..), ViewMode (..))
 
 import           Ouroboros.Network.Block
-import           Ouroboros.Network.Subscription.Dns
-import           Ouroboros.Network.NodeToNode (ConnectionId (..))
 
 import           Ouroboros.Consensus.Node (NodeKernel (getChainDB),
-                     RunNetworkArgs (..),
+                     ConnectionId (..), DiffusionTracers (..), DiffusionArguments (..),
+                     DnsSubscriptionTarget (..), IPSubscriptionTarget (..),
                      RunNode (nodeNetworkMagic, nodeStartTime))
 import qualified Ouroboros.Consensus.Node as Node (run)
 import           Ouroboros.Consensus.Node.ProtocolInfo
@@ -186,35 +184,43 @@ handleSimpleNode p trace nodeTracers nCli nc = do
           [ maybe (Right ra) Left $ remoteAddressToNodeAddress ra
           | ra <- producers' ]
 
-        ipProducers :: [SockAddr]
-        ipProducers = nodeAddressToSockAddr <$> ipProducerAddrs
-
+        ipProducers :: IPSubscriptionTarget
+        ipProducers =
+          let ips = nodeAddressToSockAddr <$> ipProducerAddrs
+          in IPSubscriptionTarget {
+                ispIps     = ips,
+                ispValency = length ips
+              }
+              
         dnsProducers :: [DnsSubscriptionTarget]
         dnsProducers = producerSubscription <$> dnsProducerAddrs
-
-        runNetworkArgs :: RunNetworkArgs blk
-        runNetworkArgs = RunNetworkArgs
-          { rnaIpSubscriptionTracer  = ipSubscriptionTracer  nodeTracers
-          , rnaDnsSubscriptionTracer = dnsSubscriptionTracer nodeTracers
-          , rnaDnsResolverTracer     = dnsResolverTracer     nodeTracers
-          , rnaErrorPolicyTracer     = errorPolicyTracer     nodeTracers
-          , rnaMuxTracer             = muxTracer             nodeTracers
-          , rnaMuxLocalTracer        = nullTracer
-          , rnaMyAddrs               = addrs
-          , rnaMyLocalAddr           = myLocalAddr
-          , rnaIpProducers           = ipProducers
-          , rnaDnsProducers          = dnsProducers
-          , rnaHandshakeTracer       = nullTracer
-          , rnaHandshakeLocalTracer  = nullTracer
-          , rnaNetworkMagic          = nodeNetworkMagic (Proxy @blk) cfg
-          }
-
+        
         producerSubscription :: RemoteAddress -> DnsSubscriptionTarget
         producerSubscription ra =
           DnsSubscriptionTarget
           { dstDomain  = BSC.pack (raAddress ra)
           , dstPort    = raPort ra
           , dstValency = raValency ra
+          }
+
+        diffusionTracers :: DiffusionTracers
+        diffusionTracers = DiffusionTracers
+          { dtIpSubscriptionTracer  = ipSubscriptionTracer  nodeTracers
+          , dtDnsSubscriptionTracer = dnsSubscriptionTracer nodeTracers
+          , dtDnsResolverTracer     = dnsResolverTracer     nodeTracers
+          , dtErrorPolicyTracer     = errorPolicyTracer     nodeTracers
+          , dtMuxTracer             = muxTracer             nodeTracers
+          , dtMuxLocalTracer        = nullTracer
+          , dtHandshakeTracer       = nullTracer
+          , dtHandshakeLocalTracer  = nullTracer
+          }
+
+        diffusionArguments :: DiffusionArguments
+        diffusionArguments = DiffusionArguments
+          { daAddresses             = addrs
+          , daLocalAddress          = myLocalAddr
+          , daIpProducers           = ipProducers
+          , daDnsProducers          = dnsProducers
           }
 
     removeStaleLocalSocket (ncNodeId nc) (unSocket . socketFile $ mscFp nCli)
@@ -226,7 +232,9 @@ handleSimpleNode p trace nodeTracers nCli nc = do
     Node.run
       (consensusTracers nodeTracers)
       (withTip varTip $ chainDBTracer nodeTracers)
-      runNetworkArgs
+      diffusionTracers
+      diffusionArguments
+      (nodeNetworkMagic (Proxy @blk) cfg)
       (dbPath <> "-" <> show nid)
       pInfo
       id -- No ChainDbArgs customisation

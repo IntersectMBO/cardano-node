@@ -23,6 +23,7 @@ import           Cardano.Prelude
 import           Prelude (String)
 
 import           Codec.CBOR.Read (deserialiseFromBytes)
+import           Control.Concurrent (threadDelay)
 import qualified Control.Concurrent.STM as STM
 import qualified Control.Concurrent.STM.TVar as TVar
 import           Control.Exception (IOException)
@@ -680,6 +681,9 @@ runBenchmark benchTracer
     numOfTxs
     numOfInsPerTx
 
+  -- sleep for 20 s; subsequent txs enter new block
+  liftIO $ threadDelay (20*1000*1000)
+
   liftIO . traceWith benchTracer . TraceBenchTxSubDebug
     $ "******* Tx generator, phase 2: pay to recipients *******"
   let benchmarkTracers :: BenchmarkTxSubmitTracers IO ByronBlock
@@ -738,7 +742,7 @@ runBenchmark benchTracer
   liftIO $ do
     txsLists <- STM.atomically $ STM.takeTMVar txsListsForTargetNodes
     let targetNodesAddrsAndTxsLists = zip (NE.toList remoteAddresses) txsLists
-    allAsyncs <- forM targetNodesAddrsAndTxsLists $ \(remoteAddr, txsList) -> do
+    allAsyncs <- forM targetNodesAddrsAndTxsLists $ \(remoteAddr, txsList) ->
       -- Launch connection and submission threads for a peer
       -- (corresponding to one target node).
       launchTxPeer benchTracer
