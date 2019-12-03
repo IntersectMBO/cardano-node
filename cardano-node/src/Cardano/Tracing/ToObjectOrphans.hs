@@ -350,7 +350,7 @@ instance Transformable Text IO (TraceTxSubmissionOutbound
 instance Transformable Text IO (TraceLocalTxSubmissionServerEvent blk) where
   trTransformer _ verb tr = trStructured verb tr
 
-instance (Show blk, ProtocolLedgerView blk) => Transformable Text IO (TraceForgeEvent blk) where
+instance (ProtocolLedgerView blk) => Transformable Text IO (TraceForgeEvent blk) where
   trTransformer _ verb tr = trStructured verb tr
 
 -- transform @SubscriptionTrace@
