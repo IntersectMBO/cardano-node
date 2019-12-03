@@ -49,7 +49,7 @@ runClient (WalletCLI config delegCertFile gHash gFile sKeyFile socketFp) tracer 
                         Left err -> (putTextLn $ renderError err) >> exitFailure
                         Right (SomeProtocol p) -> pure $ SomeProtocol p
 
-    runWalletClient p socketFp coreNodeId tracer'
+    runWalletClient p socketFp tracer'
 
 renderError :: ProtocolInstantiationError -> Text
 renderError = pack . show

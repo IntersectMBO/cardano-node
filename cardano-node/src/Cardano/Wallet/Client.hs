@@ -30,7 +30,6 @@ import           Ouroboros.Consensus.Block (BlockProtocol)
 import           Ouroboros.Consensus.Mempool
 import           Ouroboros.Consensus.Node.ProtocolInfo
 import           Ouroboros.Consensus.Node.Run
-import           Ouroboros.Consensus.NodeId
 import           Ouroboros.Consensus.Protocol
 
 import           Network.TypedProtocol.Codec
@@ -58,10 +57,9 @@ runWalletClient :: forall blk.
                    )
                 => Protocol blk
                 -> SocketPath
-                -> CoreNodeId
                 -> Tracer IO String
                 -> IO ()
-runWalletClient ptcl sockFp (CoreNodeId _) tracer = do
+runWalletClient ptcl sockFp tracer = do
 
     addr <- localSocketAddrInfo sockFp
 

@@ -70,7 +70,7 @@ import           Cardano.Config.Types ( CardanoEnvironment(..), DelegationCertFi
                                       , NodeConfiguration(..), SigningKeyFile(..)
                                       , SocketPath(..), Update(..)
                                       , parseNodeConfiguration)
-import           Cardano.Config.Topology (NodeAddress(..), TopologyInfo(..))
+import           Cardano.Config.Topology (NodeAddress(..))
 
 -- | Sub-commands of 'cardano-cli'.
 data ClientCommand
@@ -137,11 +137,11 @@ data ClientCommand
   | SubmitTx
     TxFile
     -- ^ Filepath of transaction to submit.
-    TopologyInfo
     Protocol
     GenesisFile
     Text
     SocketPath
+    -- ^ Socket path of target node.
   | SpendGenesisUTxO
     Protocol
     GenesisFile
@@ -238,21 +238,21 @@ runCommand (CheckDelegation magic cert issuerVF delegateVF) = do
   delegateVK <- readVerificationKey delegateVF
   liftIO $ checkByronGenesisDelegation cert magic issuerVK delegateVK
 
-runCommand (SubmitTx fp topology ptcl genFile genHash socketDir) = do
+runCommand (SubmitTx fp ptcl genFile genHash socketPath) = do
     -- Default update value
     let update = Update (ApplicationName "cardano-sl") 1 $ LastKnownBlockVersion 0 2 0
     tx <- liftIO $ readByronTx fp
     firstExceptT
       NodeSubmitTxError
       $ nodeSubmitTx
-          topology
           genHash
+          Nothing
           genFile
           RequiresNoMagic
           Nothing
           Nothing
           Nothing
-          socketDir
+          socketPath
           update
           ptcl
           tx

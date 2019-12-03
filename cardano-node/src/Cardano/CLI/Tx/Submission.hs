@@ -27,6 +27,8 @@ import           Ouroboros.Consensus.Node.Run (RunNode)
 import qualified Ouroboros.Consensus.Node.Run as Node
 import           Ouroboros.Consensus.NodeId (NodeId(..))
 import           Ouroboros.Consensus.Protocol (NodeConfig)
+import qualified Ouroboros.Consensus.Protocol as Consensus
+import           Ouroboros.Consensus.Protocol hiding (Protocol)
 
 import           Network.TypedProtocol.Driver (runPeer)
 import           Network.TypedProtocol.Codec.Cbor (Codec, DeserialiseFailure)
@@ -59,12 +61,11 @@ submitTx :: ( RunNode blk
             )
          => SocketPath
          -> NodeConfig (BlockProtocol blk)
-         -> NodeId
          -> GenTx blk
          -> Tracer IO String
          -> IO ()
-submitTx socketFp protoInfoConfig _ tx tracer = do
-    socketPath <- localSocketAddrInfo socketFp
+submitTx targetSocketFp protoInfoConfig tx tracer = do
+    targetSocketFp' <- localSocketAddrInfo targetSocketFp
     NodeToClient.connectTo
       NetworkConnectTracers {
           nctMuxTracer       = nullTracer,
@@ -72,7 +73,7 @@ submitTx socketFp protoInfoConfig _ tx tracer = do
         }
       (localInitiatorNetworkApplication tracer protoInfoConfig tx)
       Nothing
-      socketPath
+      targetSocketFp'
 
 localInitiatorNetworkApplication
   :: forall blk m peer.
