@@ -1,3 +1,103 @@
+<p align="center">
+  <big><strong>Cardano Node</strong></big>
+</p>
+
+![alt text](https://github.com/input-output-hk/cardano-node/blob/media/Cardano-ADA.png?raw=true)
+
+<p align="center">
+  <a href="https://github.com/input-output-hk/cardano-node/releases"><img src="https://img.shields.io/github/release-pre/input-output-hk/cardano-node.svg?style=for-the-badge" /></a>
+  <a href="https://buildkite.com/input-output-hk/cardano-node"><img src="https://img.shields.io/buildkite/a978cbb4def7018be3d0a004127da356f4db32f1c318c1a48a/master?label=BUILD&style=for-the-badge"/></a>
+</p>
+
+<hr/>
+
+- The cardano-node is the top level for the node and
+  aggregates the other components from other packages: consensus, ledger and
+  networking, with configuration, CLI, logging and monitoring.
+
+- The node no longer incorporates wallet or explorer functionality. The wallet
+  backend and explorer backend are separate components that run in separate
+  external processes that communicate with the node via local IPC.
+
+## How to build
+
+### Stack
+Use [Haskell Stack - Version 2.1.3](https://haskellstack.org/) to build this project:
+
+```
+$ cd cardano-node
+$ stack build
+```
+
+## Cabal
+
+Use [Cabal - Version 3.0](https://www.haskell.org/cabal/) to build this project:
+
+```
+$ cd cardano-node
+$ cabal build
+```
+
+## Cardano Node CLI
+
+This refers to the client that is used for running a node.
+
+The general synopsis is as follows:
+```
+
+Usage: cardano-node --topology FILEPATH --database-path FILEPATH
+                    --genesis-file FILEPATH [--delegation-certificate FILEPATH]
+                    [--signing-key FILEPATH] --socket-dir FILEPATH
+                    [--host-addr HOST-NAME] --port PORT
+                    --config NODE-CONFIGURATION [--help] [--help-tracing]
+                    [--help-advanced]
+  Start node of the Cardano blockchain.
+```
+`--topology` - Filepath to a topology file describing which peers the node should connect to.
+
+`--database-path` - Path to the blockchain database.
+
+`--genesis-file` - Path to the genesis file of the chain you are connecting to.
+
+`--delegation-certificate` - Optional path to the delegation certificate. The delegation certificate allows the delegator (the issuer of said certificate) to give his/her own block signing rights to somebody else (the delegatee). The delegatee can then sign blocks on behalf of the delegator.
+
+`--signing-key` - Optional path to the signing key.
+
+`--socket-dir` - Path to the socket directory.
+
+`--host-addr` - Optionally specify your node's IPv4 or IPv6 address.
+
+`--port` - Specify which port to assign to the node.
+
+`--config` - Specify the filepath to the config `.yaml` file. This file is responsible for all the other node's required settings. See examples in `configuration` (e.g. `log-config-0.yaml`).
+
+
+## Configuration `.yaml` files
+
+The `--config` flag points to a `.yaml` file that is responsible to configuring the logging & other important settings for the node.
+Some of the more important settings are as follows:
+
+`NodeId: 0`  -- Soon to be removed from config file. Used to identify nodes in local clusters.
+
+`Protocol: RealPBFT` -- Protocol the node will execute
+
+`RequiresNetworkMagic`: RequiresNoMagic -- Used to distinguish between mainnet (`RequiresNoMagic`) and testnets (`RequiresMagic`)
+
+`ViewMode: SimpleView` -- Choose between SimpleView or LiveView
+
+
+## Logging
+
+Logs are output to the `log/` dir.
+
+
+## Connect to mainnet
+
+Run `./scripts/mainnet.sh`
+
+This script connects to several IOHK nodes on mainnet.
+
+
 
 # Shelley Testnet
 
@@ -43,19 +143,21 @@ set -g default-terminal "tmux-256color"
 
     `./scripts/shelley-testnet.sh`
 
-The window of the terminal will be split into four panes showing the three
-nodes running and a shell to enter commands for transaction submission, e.g.
+## Submit a tx to the testnet
+
+Following the instructions above, the window of the terminal will be split into four panes.
+Three of the panes showing the nodes running and a shell to enter commands for transaction submission, e.g.
 
 ```
-./scripts/submit-tx.sh -n 2 --address a --amount 99 --txin ababa --txix 0
-
+./scripts/submit-tx.sh generated-tx-file
 ```
-The above command will prepare a transaction of amount 99 to address _a_ and
-sends the transaction for validation and integration into a block to node _2_.
-Increment the last argument '--txix' to send in a new transaction.
+The `submit-tx.sh` script by default sends the transaction to node with node id 0.
 
+See cardano-cli's Transactions section for instructions on how to generate a tx.
 
-3.) or you can run
+## Startup testnet with dns
+
+You can run
 
     `./scripts/shelley-testnet-dns.sh`
 
@@ -76,12 +178,12 @@ A CLI utility to support a variety of key material operations (genesis, migratio
 
 The general synopsis is as follows:
  ```
-   Usage: cardano-cli (--byron-legacy | --real-pbft) (GENESISCMD | KEYCMD | DELEGCMD | TXCMD)
+   Usage: cardano-cli (--byron-legacy | --real-pbft) (Genesis Related CMDs | Key Related CMDs | Delegations related CMDs | Tx related CMDs)
 ```
 
 NOTE: the exact invocation command depends on the environment.  If you have only
 built `cardano-cli`, without installing it, then you have to prepend `cabal
-new-run -- ` before `cardano-cli`.  We henceforth assume that the necessary
+run -- ` before `cardano-cli`.  We henceforth assume that the necessary
 environment-specific adjustment has been made, so we only mention `cardano-cli`.
 
 The `--byron-legacy` and `--real-pbft` options immediately preceding the
@@ -94,15 +196,17 @@ output of `cardano-cli --help`.
 All subcommands have help available:
 
 ```
-$ cabal new-run -- cardano-cli --real-pbft migrate-delegate-key-from --help
+$ cabal run -- cardano-cli --real-pbft migrate-delegate-key-from --help
 Usage: cardano-cli --real-pbft migrate-delegate-key-from (--byron-legacy | --real-pbft)
                                                           --to FILEPATH --from FILEPATH
   Migrate a delegate key from an older system version.
 
 Available options:
-  --byron-legacy           Use the Byron/Ouroboros Classic suite of algorithms
-  --real-pbft              Use the Permissive BFT consensus algorithm using the
-                           real ledger
+  --byron-legacy           Byron/Ouroboros Classic suite of algorithms
+  --bft                    BFT consensus
+  --praos                  Praos consensus
+  --mock-pbft              Permissive BFT consensus with a mock ledger
+  --real-pbft              Permissive BFT consensus with a real ledger
   --to FILEPATH            Non-existent file to write the signing key to.
   --from FILEPATH          Signing key file to migrate.
 ```
@@ -141,9 +245,6 @@ The canned `scripts/genesis.sh` example provides a nice set of defaults and
 illustrates available options.  Running it will produce a `./configuration/XXXXX` directory,
 where `XXXXX` will be a 5-character prefix of the genesis hash.
 
-Dummy genesis, that corresponds to `Test.Cardano.Chain.Genesis.Dummy.dummyConfig.configGenesisData`
-can be dumped by the `dump-hardcoded-genesis` subcommand.
-
 ### Hashing
 
 To underscore the identity of the genesis being employed by the node, the latter
@@ -172,7 +273,7 @@ it needs to be migrated over, which is done by the `migrate-delegate-key-from` s
 
 
 ```
-$ cabal new-run -- cardano-cli --real-pbft migrate-delegate-key-from byron-legacy \
+$ cabal run -- cardano-cli --real-pbft migrate-delegate-key-from byron-legacy \
                                            --from key0.sk --to key0.pbft
 ```
 
@@ -182,12 +283,12 @@ One can gather information about a signing key's properties through the `signing
 and `signing-key-address` subcommands (the latter requires the network magic):
 
 ```
-$ cabal new-run -- cardano-cli --real-pbft signing-key-public \
+$ cabal run -- cardano-cli --real-pbft signing-key-public \
                                            --secret key0.pbft
 public key hash: a2b1af0df8ca764876a45608fae36cf04400ed9f413de2e37d92ce04
      public key: sc4pa1pAriXO7IzMpByKo4cG90HCFD465Iad284uDYz06dHCqBwMHRukReQ90+TA/vQpj4L1YNaLHI7DS0Z2Vg==
 
-$ cabal new-run -- cardano-cli --real-pbft signing-key-address \
+$ cabal run -- cardano-cli --real-pbft signing-key-address \
                                            --secret key0.pbft  \
                                            --testnet-magic 459045235
 2cWKMJemoBakxhXgZSsMteLP9TUvz7owHyEYbUDwKRLsw2UGDrG93gPqmpv1D9ohWNddx
@@ -245,27 +346,4 @@ of the testnet, and lovelace amount is almost the entirety of its funds.
 
 # Development
 
-run *ghcid* with: `ghcid -c "cabal new-repl exe:cardano-node --reorder-goals"`
-
-# `cardano-node`
-
-
-- The cardano-node is the top level for the node and
-  aggregates the other components from other packages: consensus, ledger and
-  networking, with configuration, CLI, logging and monitoring.
-
-- The node no longer incorporates wallet or explorer functionality. The wallet
-  backend and explorer backend are separate components that run in separate
-  external processes that communicate with the node via local IPC.
-
-
-The general synopsis is as follows:
-```
-Usage: cardano-node --topology FILEPATH --database-path FILEPATH
-                    --genesis-file FILEPATH [--delegation-certificate FILEPATH]
-                    [--signing-key FILEPATH] --socket-dir FILEPATH
-                    [--host-addr HOST-NAME] --port PORT
-                    --config NODE-CONFIGURATION [--help] [--help-tracing]
-                    [--help-advanced]
-  Start node of the Cardano blockchain.
-```
+run *ghcid* with: `ghcid -c "cabal repl exe:cardano-node --reorder-goals"`
