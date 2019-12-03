@@ -65,6 +65,7 @@ import           Ouroboros.Consensus.Util.Orphans ()
 import           Ouroboros.Consensus.Util.STM (onEachChange)
 
 import qualified Ouroboros.Storage.ChainDB as ChainDB
+import           Ouroboros.Storage.ImmutableDB (ValidationPolicy (..))
 
 import           Cardano.Common.LocalSocket
 import           Cardano.Config.Protocol (SomeProtocol(..), fromProtocol)
@@ -229,6 +230,9 @@ handleSimpleNode p trace nodeTracers nCli nc = do
 
     varTip <- atomically $ newTVar GenesisPoint
 
+    when (validateDB nCli) $
+      traceWith tracer "Performing DB validation"
+
     Node.run
       (consensusTracers nodeTracers)
       (withTip varTip $ chainDBTracer nodeTracers)
@@ -237,7 +241,7 @@ handleSimpleNode p trace nodeTracers nCli nc = do
       (nodeNetworkMagic (Proxy @blk) cfg)
       (dbPath <> "-" <> show nid)
       pInfo
-      id -- No ChainDbArgs customisation
+      customiseChainDbArgs
       id -- No NodeParams customisation
       $ \registry nodeKernel -> do
         -- Watch the tip of the chain and store it in @varTip@ so we can include
@@ -246,8 +250,16 @@ handleSimpleNode p trace nodeTracers nCli nc = do
         onEachChange registry id Nothing (ChainDB.getTipPoint chainDB) $ \tip ->
           atomically $ writeTVar varTip tip
   where
-      nid :: Int
-      nid = case ncNodeId nc of
-              Just (CoreId  n) -> n
-              Just (RelayId _) -> error "Non-core nodes currently not supported"
-              Nothing -> 999
+    nid :: Int
+    nid = case ncNodeId nc of
+            Just (CoreId  n) -> n
+            Just (RelayId _) -> error "Non-core nodes currently not supported"
+            Nothing -> 999
+
+    customiseChainDbArgs :: ChainDB.ChainDbArgs IO blk
+                         -> ChainDB.ChainDbArgs IO blk
+    customiseChainDbArgs args = args
+      { ChainDB.cdbValidation = if validateDB nCli
+          then ValidateAllEpochs
+          else ValidateMostRecentEpoch
+      }

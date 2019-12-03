@@ -77,19 +77,22 @@ nodeCliParser = do
   -- TraceOptions
   traceOptions <- cliTracingParser
 
+  validate <- parseValidateDB
 
-  pure $ NodeCLI
-           (MiscellaneousFilepaths
-              (TopologyFile topFp)
-              (DbFile dbFp)
-              (GenesisFile genFp)
-              (DelegationCertFile <$> delCertFp)
-              (SigningKeyFile <$> sKeyFp)
-              (SocketFile socketFp)
-            )
-           nAddress
-           (ConfigYamlFilePath nodeConfigFp)
-           (fromMaybe (panic "Cardano.Common.Parsers: Trace Options were not specified") $ getLast traceOptions)
+  pure NodeCLI
+    { mscFp = MiscellaneousFilepaths
+      { topFile = TopologyFile topFp
+      , dBFile = DbFile dbFp
+      , genesisFile = GenesisFile genFp
+      , delegCertFile = DelegationCertFile <$> delCertFp
+      , signKeyFile = SigningKeyFile <$> sKeyFp
+      , socketFile = SocketFile socketFp
+      }
+    , nodeAddr = nAddress
+    , configFp = ConfigYamlFilePath nodeConfigFp
+    , traceOpts = fromMaybe (panic "Cardano.Common.Parsers: Trace Options were not specified") $ getLast traceOptions
+    , validateDB = validate
+    }
 
 parseConfigFile :: Parser FilePath
 parseConfigFile =
@@ -166,6 +169,13 @@ parsePort =
           long "port"
        <> metavar "PORT"
        <> help "The port number"
+    )
+
+parseValidateDB :: Parser Bool
+parseValidateDB =
+    switch (
+         long "validate-db"
+      <> help "Validate all on-disk database files"
     )
 
 -- | Flag parser, that returns its argument on success.

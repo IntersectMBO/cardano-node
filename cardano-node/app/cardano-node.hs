@@ -77,7 +77,7 @@ initializeAllFeatures
   :: NodeCLI
   -> CardanoEnvironment
   -> IO ([CardanoFeature], NodeLayer)
-initializeAllFeatures nCli@(NodeCLI _ _ ncFp _)
+initializeAllFeatures nCli@NodeCLI { configFp = ncFp }
                        cardanoEnvironment = do
 
     (loggingLayer, loggingFeature) <- createLoggingFeature cardanoEnvironment nCli
