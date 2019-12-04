@@ -1,7 +1,7 @@
-{-# LANGUAGE NamedFieldPuns    #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RankNTypes        #-}
+{-# LANGUAGE RankNTypes #-}
 
 import           Cardano.Prelude hiding (option)
 
@@ -19,7 +19,7 @@ import           Cardano.Config.Logging (LoggingCLIArguments (..),
                                                 LoggingLayer (..),
                                                 createLoggingFeature
                                                 )
-import           Cardano.Common.Parsers (loggingParser, parseCoreNodeId, nodeCliParser)
+import           Cardano.Common.Parsers (loggingParser, nodeCliParser)
 import           Cardano.Wallet.Run
 
 -- | The product type of all command line arguments
@@ -34,10 +34,8 @@ commandLineParser = ArgParser
 
 parseWalletCLI :: Parser WalletCLI
 parseWalletCLI = WalletCLI
-    <$> parseCoreNodeId
-    <*> parseCommonCLI
-    <*> parseCommonCLIAdvanced
-    <*> nodeCliParser
+    <$> nodeCliParser
+    <*> parseGenesisHash
 
 -- | Top level parser with info.
 --
@@ -64,7 +62,7 @@ main = do
 
 initializeAllFeatures :: ArgParser  -> CardanoEnvironment -> IO ([CardanoFeature], NodeLayer)
 initializeAllFeatures (ArgParser _ cli) cardanoEnvironment = do
-    (loggingLayer, loggingFeature) <- createLoggingFeature cardanoEnvironment $ cliNodeCLI cli
+    (loggingLayer, loggingFeature) <- createLoggingFeature cardanoEnvironment $ waNodeCli cli
     (nodeLayer   , nodeFeature)    <- createNodeFeature loggingLayer cli cardanoEnvironment
 
     -- Here we return all the features.

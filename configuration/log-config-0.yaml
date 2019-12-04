@@ -96,7 +96,6 @@ options:
 
 NodeId: 0
 Protocol: RealPBFT
-GenesisHash: c0c757817d86660accdc45b9d18c1274d51d6427b92995944d014e0ff056cb3e
 NumCoreNodes: 1
 RequiresNetworkMagic: RequiresMagic
 PBftSignatureThreshold: 0.7

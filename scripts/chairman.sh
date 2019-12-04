@@ -19,5 +19,6 @@ exec cabal new-run exe:chairman -- \
                                 -k 10 -s 250 \
                                 -t 1000 \
                                 --genesis-file "${genesis_file}" \
+                                --genesis-hash "${genesis_hash}" \
                                 --socket-dir "./socket/" \
                                 --config "configuration/log-config-0.yaml"

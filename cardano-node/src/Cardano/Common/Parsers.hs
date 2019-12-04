@@ -69,6 +69,8 @@ nodeCliParser = do
   sKeyFp <- optional parseSigningKey
   socketFp <- parseSocketDir
 
+  genHash <- parseGenesisHash
+
   -- Node Address
   nAddress <- parseNodeAddress
   -- NodeConfiguration filepath
@@ -88,6 +90,7 @@ nodeCliParser = do
       , signKeyFile = SigningKeyFile <$> sKeyFp
       , socketFile = SocketFile socketFp
       }
+    , genesisHash = genHash
     , nodeAddr = nAddress
     , configFp = ConfigYamlFilePath nodeConfigFp
     , traceOpts = fromMaybe (panic "Cardano.Common.Parsers: Trace Options were not specified") $ getLast traceOptions

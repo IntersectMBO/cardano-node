@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards   #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Cardano.Wallet.Run
@@ -15,37 +15,36 @@ import           Cardano.BM.Data.Tracer (ToLogObject (..))
 import           Cardano.BM.Trace (Trace, appendName)
 import           Cardano.Config.Protocol(SomeProtocol(..), fromProtocol)
 
-import           Ouroboros.Consensus.NodeId (CoreNodeId (..))
+import           Ouroboros.Consensus.NodeId (CoreNodeId (..), NodeId (..))
 
-import           Cardano.Config.CommonCLI
 import           Cardano.Config.Types (ConfigYamlFilePath(..), MiscellaneousFilepaths(..),
                                        NodeCLI(..), NodeConfiguration(..), SocketFile(..),
                                        parseNodeConfiguration)
 import           Cardano.Wallet.Client
 
 runClient :: WalletCLI -> Trace IO Text -> IO ()
-runClient WalletCLI{..} tracer = do
-    let CoreNodeId nid = cliCoreNodeId
+runClient WalletCLI{ waNodeCli , waGenesisHash} tracer = do
+    nc <- parseNodeConfiguration . unConfigPath $ configFp waNodeCli
+    let coreNodeId = case ncNodeId nc of
+                       Nothing -> panic "Cardano.Wallet.Run.runClient: NodeId not specified"
+                       Just (CoreId num) -> CoreNodeId num
+                       Just (RelayId _) -> panic "Cardano.Wallet.Run.runClient: Relay nodes not supported"
     let tracer' = contramap pack . toLogObject $
-          appendName ("Wallet " <> pack (show nid)) tracer
-    nc <- parseNodeConfiguration . unConfigPath $ configFp cliNodeCLI
+          appendName ("Wallet " <> pack (show coreNodeId)) tracer
     SomeProtocol p <- fromProtocol
-                        (ncGenesisHash nc)
+                        waGenesisHash
                         (ncNodeId nc)
                         (ncNumCoreNodes nc)
-                        (genesisFile $ mscFp cliNodeCLI)
+                        (genesisFile $ mscFp waNodeCli)
                         (ncReqNetworkMagic nc)
                         (ncPbftSignatureThresh nc)
-                        (delegCertFile $ mscFp cliNodeCLI)
-                        (signKeyFile $ mscFp cliNodeCLI)
+                        (delegCertFile $ mscFp waNodeCli)
+                        (signKeyFile $ mscFp waNodeCli)
                         (ncUpdate nc)
                         (ncProtocol nc)
-    let socketDir = unSocket . socketFile $ mscFp cliNodeCLI
-    runWalletClient p socketDir cliCoreNodeId tracer'
+    let socketDir = unSocket . socketFile $ mscFp waNodeCli
+    runWalletClient p socketDir coreNodeId tracer'
 
-data WalletCLI = WalletCLI {
-    cliCoreNodeId   :: CoreNodeId,
-    cliCommon       :: CommonCLI,
-    cliCommonAdv    :: CommonCLIAdvanced,
-    cliNodeCLI      :: NodeCLI
-  }
+data WalletCLI = WalletCLI { waNodeCli :: !NodeCLI
+                           , waGenesisHash :: !Text
+                           }

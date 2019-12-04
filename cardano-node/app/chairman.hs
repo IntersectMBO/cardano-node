@@ -32,6 +32,7 @@ main = do
                  , caTimeout
                  , caTimeoutType
                  , caGenesisFile
+                 , caGenesisHash
                  , caSocketDir
                  , caConfigYaml
                  , caSigningKeyFp
@@ -40,7 +41,7 @@ main = do
 
     nc <- liftIO . parseNodeConfiguration $ unConfigPath caConfigYaml
     SomeProtocol p <- fromProtocol
-                        (ncGenesisHash nc)
+                        caGenesisHash
                         (ncNodeId nc)
                         (ncNumCoreNodes nc)
                         (caGenesisFile)
@@ -89,6 +90,7 @@ data ChairmanArgs = ChairmanArgs {
     , caTimeout         :: !(Maybe Int)
     , caTimeoutType :: !TimeoutType
     , caGenesisFile :: !GenesisFile
+    , caGenesisHash :: !Text
     , caSocketDir :: !SocketFile
     , caConfigYaml :: !ConfigYamlFilePath
     , caSigningKeyFp :: !(Maybe SigningKeyFile)
@@ -132,6 +134,7 @@ parseChairmanArgs =
       <*> parseFlag' FailureTimeout SuccessTimeout
           "timeout-is-success" "Exit successfully on timeout."
       <*> (GenesisFile <$> parseGenesisPath)
+      <*> parseGenesisHash
       <*> (SocketFile <$> parseSocketDir)
       <*> (ConfigYamlFilePath <$> parseConfigFile)
       <*> (optional $ SigningKeyFile <$> parseSigningKey)
