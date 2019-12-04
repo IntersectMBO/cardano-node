@@ -2,14 +2,16 @@
 
 if [ -e configuration/GenesisFiles/ ]
 then
-    echo "configuration/GenesisFiles/GENHASH exists, continuing..."
+    :
 else
     echo "configuration/GenesisFiles/GENHASH does not exist"
-	/bin/bash ./scripts/genesis.sh
+	./scripts/genesis.sh
 fi
 
 
-RUNNER=${RUNNER:-cabal new-run -v0 --}
+
+RUNNER=${RUNNER:-cabal run -v0 --}
+
 
 genesis_hash="$(echo $(<configuration/GenesisFiles/GENHASH))"
 genesis_root="../cardano-node/configuration/GenesisFiles"

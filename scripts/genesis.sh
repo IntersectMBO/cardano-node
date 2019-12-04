@@ -51,7 +51,7 @@ args=(
 )
 
 set -xe
-RUNNER=${RUNNER:-cabal new-run -v0 --}
+RUNNER=${RUNNER:-cabal run -v0 --}
 
 ${RUNNER} cardano-cli "${common[@]}" genesis "${args[@]}" "$@"
 
