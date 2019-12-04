@@ -2,7 +2,6 @@
 
 NetworkName: mainnet
 RequiresNetworkMagic: RequiresNoMagic
-GenesisHash: 210e8d1833ab7972e786d5fc330169c2527c8b92ddf22e2528524e789365fdac
 EnableLogMetrics: False
 EnableLogging: True
 
@@ -106,4 +105,3 @@ options:
       - AggregationBK
     '#aggregation.cardano.epoch-validation.benchmark':
       - EKGViewBK
-
