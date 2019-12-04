@@ -1,15 +1,25 @@
 #!/usr/bin/env bash
 
+if [ -e configuration/GenesisFiles/ ]
+then
+    echo "configuration/GenesisFiles/GENHASH exists, continuing..."
+else
+    echo "configuration/GenesisFiles/GENHASH does not exist"
+	/bin/bash ./scripts/genesis.sh
+fi
+
+
 RUNNER=${RUNNER:-cabal new-run -v0 --}
 
-genesis_hash="c0c757817d86660accdc45b9d18c1274d51d6427b92995944d014e0ff056cb3e"
+genesis_hash="$(echo $(<configuration/GenesisFiles/GENHASH))"
+genesis_root="../cardano-node/configuration/GenesisFiles"
 genesis_file="${genesis_root}/genesis.json"
 
 from_addr="2cWKMJemoBain3UWCzSY5wZvcf8uQ2MAaSy8hedrwpqsbYCm4QnBgPn3cEH7KF3X7DKoZ"
 from_key="${genesis_root}/delegate-keys.000.key"
 default_to_key="${genesis_root}/delegate-keys.001.key"
 
-## rob the bank
+## ADA to be spent
 default_lovelace="863000000000000"
 
 case $# in
