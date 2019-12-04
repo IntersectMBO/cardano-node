@@ -137,11 +137,11 @@ set -g default-terminal "tmux-256color"
 
 1.) create a `tmux` session
 
-    `tmux new-session -s Demo`
+`tmux new-session -s Demo`
 
 2.) run the demo script in this new session
 
-    `./scripts/shelley-testnet.sh`
+`./scripts/shelley-testnet.sh`
 
 ## Submit a tx to the testnet
 
@@ -157,20 +157,20 @@ See cardano-cli's Transactions section for instructions on how to generate a tx.
 
 ## Startup testnet with dns
 
-You can run
+You can run: 
 
-    `./scripts/shelley-testnet-dns.sh`
+`./scripts/shelley-testnet-dns.sh` 
 
-    instead of `shelley-testnet.sh`.  It requires that the addresses
-    `local.iohk.io` and `local6.iohk.io` resolve to `127.0.0.1` and `::1`
-    respectively.  You can use [unbound](https://github.com/NLnetLabs/unbound)
-    dns server.  You can use the following `/etc/unbound/unbound.conf` file:
-    ```
-    server:
-      verbosity: 1
-      local-data: "local.iohk.io A 127.0.0.1"
-      local-data: "local6.iohk.io AAAA ::1"
-    ```
+instead of `shelley-testnet.sh`.  
+It requires that the addresses `local.iohk.io` and `local6.iohk.io` resolve to `127.0.0.1` and `::1` respectively.  
+
+You can use [unbound](https://github.com/NLnetLabs/unbound) dns server. You can use the following `/etc/unbound/unbound.conf` file:
+```
+server:
+  verbosity: 1
+  local-data: "local.iohk.io A 127.0.0.1"
+  local-data: "local6.iohk.io AAAA ::1"
+```
 
 # `cardano-cli`
 
