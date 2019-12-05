@@ -192,10 +192,10 @@ handleSimpleNode p trace nodeTracers nCli nc = do
                 ispIps     = ips,
                 ispValency = length ips
               }
-              
+
         dnsProducers :: [DnsSubscriptionTarget]
         dnsProducers = producerSubscription <$> dnsProducerAddrs
-        
+
         producerSubscription :: RemoteAddress -> DnsSubscriptionTarget
         producerSubscription ra =
           DnsSubscriptionTarget
@@ -263,3 +263,4 @@ handleSimpleNode p trace nodeTracers nCli nc = do
           then ValidateAllEpochs
           else ValidateMostRecentEpoch
       }
+

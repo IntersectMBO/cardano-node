@@ -16,6 +16,7 @@ import           Cardano.Shell.Types (CardanoApplication (..),
                                       CardanoFeature (..),)
 
 import           Cardano.Common.Help
+import           Cardano.Common.TopHandler
 import           Cardano.Common.Parsers
 import           Cardano.Config.CommonCLI (parseCommonCLIAdvanced)
 import           Cardano.Config.Logging (createLoggingFeature)
@@ -23,7 +24,8 @@ import           Cardano.Config.Types
 import           Cardano.Node.Features.Node
 
 main :: IO ()
-main = do
+main = toplevelExceptionHandler $ do
+
     cli <- Opt.execParser opts
 
     (features, nodeLayer) <- initializeAllFeatures cli env
