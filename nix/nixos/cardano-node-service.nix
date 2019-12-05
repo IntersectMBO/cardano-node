@@ -14,6 +14,7 @@ let
         cmd = builtins.filter (x: x != "") [
           "${cfg.package}/bin/${exec}"
           "--genesis-file ${cfg.genesisFile}"
+          "--genesis-hash ${cfg.genesisHash}"
           "--config ${cfg.nodeConfigFile}"
           "--database-path ${cfg.databasePath}"
           "--socket-dir ${if (cfg.runtimeDir == null) then "${cfg.stateDir}/socket" else "/run/${cfg.runtimeDir}"}"

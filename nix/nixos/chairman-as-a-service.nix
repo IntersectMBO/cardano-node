@@ -25,6 +25,7 @@ let
           "--max-block-no ${toString cfg.maxBlockNo}"
           "--security-param ${toString cfg.k}"
           "--genesis-file ${cfg.genesisFile}"
+          "--genesis-hash ${cfg.genesisHash}"
           "--socket-dir ${if (ncfg.runtimeDir == null) then "${ncfg.stateDir}/socket" else "/run/${ncfg.runtimeDir}"}"
           "--config ${cfg.nodeConfigFile}"
           "${optionalString cfg.timeoutIsSuccess "--timeout-is-success"}"
