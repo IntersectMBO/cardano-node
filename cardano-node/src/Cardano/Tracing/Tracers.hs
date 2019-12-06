@@ -200,9 +200,9 @@ mkTracers traceOptions tracer = Tracers
     mempoolTraceTransformer tr = Tracer $ \mempoolEvent -> do
         let tr' = appendName "metrics" tr
             (n, tot) = case mempoolEvent of
-                  TraceMempoolAddTxs      txs0 tot0 -> (length txs0, tot0)
-                  TraceMempoolRejectedTxs txs0 tot0 -> (length txs0, tot0)
-                  TraceMempoolRemoveTxs   txs0 tot0 -> (length txs0, tot0)
+                  TraceMempoolAddTxs      txs0 tot0 _ -> (length txs0, tot0)
+                  TraceMempoolRejectedTxs txs0 tot0 _ -> (length txs0, tot0)
+                  TraceMempoolRemoveTxs   txs0 tot0  _-> (length txs0, tot0)
                   TraceMempoolManuallyRemovedTxs txs0 txs1 tot0
                                                     -> ( length txs0 + length txs1
                                                        , tot0

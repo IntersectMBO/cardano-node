@@ -313,8 +313,8 @@ instance DefinePrivacyAnnotation (TraceLocalTxSubmissionServerEvent blk)
 instance DefineSeverity (TraceLocalTxSubmissionServerEvent blk) where
   defineSeverity _ = Info
 
-instance DefinePrivacyAnnotation (TraceForgeEvent blk)
-instance DefineSeverity (TraceForgeEvent blk) where
+instance DefinePrivacyAnnotation (TraceForgeEvent blk tx)
+instance DefineSeverity (TraceForgeEvent blk tx) where
   defineSeverity (TraceForgeEvent {})           = Info
   defineSeverity (TraceCouldNotForge {})        = Warning
   defineSeverity (TraceAdoptedBlock {})         = Info
@@ -357,7 +357,7 @@ instance Transformable Text IO (TraceTxSubmissionOutbound
 instance Transformable Text IO (TraceLocalTxSubmissionServerEvent blk) where
   trTransformer _ verb tr = trStructured verb tr
 
-instance (Show blk, ProtocolLedgerView blk) => Transformable Text IO (TraceForgeEvent blk) where
+instance (Show blk, Show tx, ProtocolLedgerView blk) => Transformable Text IO (TraceForgeEvent blk tx) where
   trTransformer StructuredLogging verb tr = trStructured verb tr
   trTransformer TextualRepresentation _verb tr = Tracer $ \s ->
     traceWith tr =<< LogObject <$> pure mempty
@@ -835,7 +835,7 @@ instance ToObject (TraceLocalTxSubmissionServerEvent blk) where
   toObject _verb _ =
     mkObject [ "kind" .= String "TraceLocalTxSubmissionServerEvent" ]
 
-instance ProtocolLedgerView blk => ToObject (TraceForgeEvent blk) where
+instance ProtocolLedgerView blk => ToObject (TraceForgeEvent blk tx) where
   toObject _verb (TraceForgeEvent slotNo _) =
     mkObject
         [ "kind"    .= String "TraceForgeEvent"
@@ -847,7 +847,7 @@ instance ProtocolLedgerView blk => ToObject (TraceForgeEvent blk) where
         , "slot"    .= toJSON (unSlotNo slotNo)
         , "reason"  .= show anachronyFailure
         ]
-  toObject _verb (TraceAdoptedBlock slotNo _) =
+  toObject _verb (TraceAdoptedBlock slotNo _blk _txs _time) =
     mkObject
         [ "kind"    .= String "TraceAdoptedBlock"
         , "slot"    .= toJSON (unSlotNo slotNo)
