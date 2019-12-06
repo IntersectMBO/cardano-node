@@ -36,7 +36,7 @@ extra-deps:
       - crypto/test
 
   - git: https://github.com/input-output-hk/cardano-ledger-specs
-    commit: b404d58efb9e372305073d4ee5a660a89bb435f4
+    commit: f9f902091aec25d52dd3590980a9b2a8447bbcc5
     subdirs:
       # small-steps
       - byron/semantics/executable-spec
@@ -52,7 +52,7 @@ extra-deps:
       - test
 
   - git: https://github.com/input-output-hk/cardano-base
-    commit: 057d8a9a3e751f88fc7677df5713c5ecc47a37c4
+    commit: 468d9b79ae3ac28f5f2cbb3ce52623a69923c4ef
     subdirs:
       - binary
       - binary/test
@@ -60,7 +60,7 @@ extra-deps:
 
     # Following deps are for cardano-shell
   - git: https://github.com/input-output-hk/cardano-shell
-    commit: 4d26bcefc0edcd99154c85170ef028775c6dd1e0
+    commit: bc3563c952d9f3635e1c76749b86b0a24f7e4b83
     subdirs:
       - cardano-shell
 
@@ -70,7 +70,7 @@ extra-deps:
 
     # iohk-monitoring-framework currently not pinned to a release
   - git: https://github.com/input-output-hk/iohk-monitoring-framework
-    commit: 4956b32f039579a0e7e4fd10793f65b4c77d9044
+    commit: b4643defabb23b3d78f4b690a01bb6a41a3cd203
     subdirs:
       - contra-tracer
       - iohk-monitoring
@@ -94,7 +94,7 @@ extra-deps:
     #Ouroboros-network dependencies
 
   - git: https://github.com/input-output-hk/ouroboros-network
-    commit: bb5ef891587789166e8f292a221e6ba63e0c573e
+    commit: 28d657017913755e3fa5a51a152744c0e6b38be6
     subdirs:
         - io-sim-classes
         - network-mux

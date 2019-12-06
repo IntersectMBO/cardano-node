@@ -33,6 +33,7 @@ protocolTraceDefault =
     (Const True)
     (Const True)
     (Const True)
+    (Const True)
 
 traceOptionsDefault :: TraceOptions
 traceOptionsDefault =
