@@ -295,6 +295,9 @@ mkTracers traceOptions tracer = Tracers
       , ptBlockFetchTracer
         = enableProtocolTracer ptBlockFetchTracer
         $ withName "BlockFetchProtocol" tracer
+      , ptBlockFetchSerialisedTracer
+        = enableProtocolTracer ptBlockFetchSerialisedTracer
+        $ withName "BlockFetchProtocol" tracer
       , ptTxSubmissionTracer
         = enableProtocolTracer ptTxSubmissionTracer
         $ withName "TxSubmissionProtocol" tracer

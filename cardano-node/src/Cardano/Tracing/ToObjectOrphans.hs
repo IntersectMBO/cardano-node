@@ -21,6 +21,7 @@ import           Prelude (String, show, id)
 
 import           Data.Aeson (Value (..), toJSON, (.=))
 import           Data.Text (pack)
+import qualified Data.List.NonEmpty as NonEmpty
 import qualified Network.Socket as Socket (SockAddr)
 import           Network.Mux.Types (WithMuxBearer (..), MuxTrace (..))
 
@@ -213,6 +214,10 @@ instance DefineSeverity (WithTip blk (ChainDB.TraceEvent blk)) where
 
 instance DefineSeverity (ChainDB.TraceEvent blk) where
   defineSeverity (ChainDB.TraceAddBlockEvent ev) = case ev of
+    ChainDB.IgnoreBlockOlderThanK {} -> Info
+    ChainDB.IgnoreBlockAlreadyInVolDB {} -> Info
+    ChainDB.IgnoreInvalidBlock {} -> Info
+    ChainDB.BlockInTheFuture {} -> Info
     ChainDB.StoreButDontChange {} -> Debug
     ChainDB.TryAddToCurrentChain {} -> Debug
     ChainDB.TrySwitchToAFork {} -> Info
@@ -224,6 +229,8 @@ instance DefineSeverity (ChainDB.TraceEvent blk) where
       ChainDB.CandidateExceedsRollback {} -> Error
     ChainDB.AddedBlockToVolDB {} -> Debug
     ChainDB.ChainChangedInBg {} -> Info
+    ChainDB.ScheduledChainSelection {} -> Debug
+    ChainDB.RunningScheduledChainSelection {} -> Debug
 
   defineSeverity (ChainDB.TraceLedgerReplayEvent ev) = case ev of
     LedgerDB.ReplayFromGenesis {} -> Info
@@ -427,6 +434,14 @@ readableChainDBTracer
   -> Tracer m (WithTip blk (ChainDB.TraceEvent blk))
 readableChainDBTracer tracer = Tracer $ \case
   WithTip tip (ChainDB.TraceAddBlockEvent ev) -> case ev of
+    ChainDB.IgnoreBlockOlderThanK pt -> tr $ WithTip tip $
+      "Ignoring block older than K: " <> condense pt
+    ChainDB.IgnoreBlockAlreadyInVolDB pt -> tr $ WithTip tip $
+      "Ignoring block already in DB: " <> condense pt
+    ChainDB.IgnoreInvalidBlock pt _reason -> tr $ WithTip tip $
+      "Ignoring previously seen invalid block: " <> condense pt
+    ChainDB.BlockInTheFuture pt slot -> tr $ WithTip tip $
+      "Ignoring block from future: " <> condense pt <> ", slot " <> condense slot
     ChainDB.StoreButDontChange pt   -> tr $ WithTip tip $
       "Ignoring block: " <> condense pt
     ChainDB.TryAddToCurrentChain pt -> tr $ WithTip tip $
@@ -448,6 +463,12 @@ readableChainDBTracer tracer = Tracer $ \case
       "Chain added block " <> condense pt
     ChainDB.ChainChangedInBg c1 c2     -> tr $ WithTip tip $
       "Chain changed in bg, from " <> condense (AF.headPoint c1) <> " to "  <> condense (AF.headPoint c2)
+    ChainDB.ScheduledChainSelection pt slot _n -> tr $ WithTip tip $
+      "Chain selection scheduled for future: " <> condense pt
+                                  <> ", slot " <> condense slot
+    ChainDB.RunningScheduledChainSelection pts slot _n -> tr $ WithTip tip $
+      "Running scheduled chain selection: " <> condense (NonEmpty.toList pts)
+                               <> ", slot " <> condense slot
   WithTip tip (ChainDB.TraceLedgerReplayEvent ev) -> case ev of
     LedgerDB.ReplayFromGenesis _replayTo -> tr $ WithTip tip
       "Replaying ledger from genesis"
@@ -568,6 +589,20 @@ instance (Condense (HeaderHash blk), ProtocolLedgerView blk)
 instance (Condense (HeaderHash blk), ProtocolLedgerView blk)
       => ToObject (ChainDB.TraceEvent blk) where
   toObject verb (ChainDB.TraceAddBlockEvent ev) = case ev of
+    ChainDB.IgnoreBlockOlderThanK pt ->
+      mkObject [ "kind" .= String "TraceAddBlockEvent.IgnoreBlockOlderThanK"
+               , "block" .= toObject verb pt ]
+    ChainDB.IgnoreBlockAlreadyInVolDB pt ->
+      mkObject [ "kind" .= String "TraceAddBlockEvent.IgnoreBlockAlreadyInVolDB"
+               , "block" .= toObject verb pt ]
+    ChainDB.IgnoreInvalidBlock pt reason ->
+      mkObject [ "kind" .= String "TraceAddBlockEvent.IgnoreInvalidBlock"
+               , "block" .= toObject verb pt
+               , "reason" .= show reason ]
+    ChainDB.BlockInTheFuture pt slot ->
+      mkObject [ "kind" .= String "TraceAddBlockEvent.BlockInTheFuture"
+               , "block" .= toObject verb pt
+               , "slot" .= toObject verb slot ]
     ChainDB.StoreButDontChange pt ->
       mkObject [ "kind" .= String "TraceAddBlockEvent.StoreButDontChange"
                , "block" .= toObject verb pt ]
@@ -604,6 +639,16 @@ instance (Condense (HeaderHash blk), ProtocolLedgerView blk)
       mkObject [ "kind" .= String "TraceAddBlockEvent.ChainChangedInBg"
                , "prev" .= showTip verb (AF.headPoint c1)
                , "new" .= showTip verb (AF.headPoint c2) ]
+    ChainDB.ScheduledChainSelection pt slot n ->
+      mkObject [ "kind" .= String "TraceAddBlockEvent.ScheduledChainSelection"
+               , "block" .= toObject verb pt
+               , "slot" .= toObject verb slot
+               , "scheduled" .= n ]
+    ChainDB.RunningScheduledChainSelection pts slot n ->
+      mkObject [ "kind" .= String "TraceAddBlockEvent.RunningScheduledChainSelection"
+               , "blocks" .= map (toObject verb) (NonEmpty.toList pts)
+               , "slot" .= toObject verb slot
+               , "scheduled" .= n ]
 
   toObject MinimalVerbosity (ChainDB.TraceLedgerReplayEvent _ev) = emptyObject -- no output
   toObject verb (ChainDB.TraceLedgerReplayEvent ev) = case ev of
