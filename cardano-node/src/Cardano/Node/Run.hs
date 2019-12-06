@@ -95,7 +95,7 @@ runNode loggingLayer nc nCli = do
                              MinimalVerbosity -> "minimal"
                              MaximalVerbosity -> "maximal"
     SomeProtocol p  <- fromProtocol
-                         (ncGenesisHash nc)
+                         (genesisHash nCli)
                          (ncNodeId nc)
                          (ncNumCoreNodes nc)
                          (genesisFile $ mscFp nCli)
@@ -192,10 +192,10 @@ handleSimpleNode p trace nodeTracers nCli nc = do
                 ispIps     = ips,
                 ispValency = length ips
               }
-              
+
         dnsProducers :: [DnsSubscriptionTarget]
         dnsProducers = producerSubscription <$> dnsProducerAddrs
-        
+
         producerSubscription :: RemoteAddress -> DnsSubscriptionTarget
         producerSubscription ra =
           DnsSubscriptionTarget

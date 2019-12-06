@@ -51,13 +51,13 @@ args=(
 )
 
 set -xe
-RUNNER=${RUNNER:-cabal new-run -v0 --}
+RUNNER=${RUNNER:-cabal run -v0 --}
 
 ${RUNNER} cardano-cli "${common[@]}" genesis "${args[@]}" "$@"
 
 # move new genesis to configuration
 GENHASH=`${RUNNER} cardano-cli "${common[@]}" print-genesis-hash --genesis-json "${tmpdir}/genesis.json" | tail -1`
-TARGETDIR="${CONFIGDIR}/${GENHASH:0:5}"
+TARGETDIR="${CONFIGDIR}/GenesisFiles"
 mkdir -vp "${TARGETDIR}"
 cp -iav ${tmpdir}/genesis.json ${TARGETDIR}/
 cp -iav ${tmpdir}/delegate-keys.*.key ${TARGETDIR}/

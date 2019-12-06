@@ -9,7 +9,7 @@ set -e
 #> tmux new-session -s 'Demo' -t demo
 
 # CMD="stack exec --nix cardano-node --"
-CMD="cabal new-run --"
+CMD="cabal run --"
 # EXTRA="--live-view"
 EXTRA=""
 

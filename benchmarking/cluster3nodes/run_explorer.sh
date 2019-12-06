@@ -20,4 +20,3 @@ exec ${EXPLORER} \
   --config ${CONFIGFILE} \
   --socket-path /tmp/cluster3nodes-socket/node-core-0.socket \
   --schema-dir ${BASEDIR}/cardano-explorer.git/schema \
-

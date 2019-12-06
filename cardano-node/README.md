@@ -135,11 +135,15 @@ set-window-option -g mouse on
 set -g default-terminal "tmux-256color"
 ```
 
-1.) create a `tmux` session
+1.) Generate the necessary genesis files by running
+
+    `./scripts/genesis.sh`
+
+2.) create a `tmux` session
 
 `tmux new-session -s Demo`
 
-2.) run the demo script in this new session
+3.) run the demo script in this new session
 
 `./scripts/shelley-testnet.sh`
 

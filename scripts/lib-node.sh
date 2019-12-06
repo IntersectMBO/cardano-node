@@ -1,9 +1,6 @@
-set -x
 
-genesis_hash="c0c757817d86660accdc45b9d18c1274d51d6427b92995944d014e0ff056cb3e"
-
-genesis="$(echo ${genesis_hash} | cut -c-5 | xargs echo -n)"
-genesis_root="configuration/${genesis}"
+genesis_hash=`cat configuration/GenesisFiles/GENHASH`
+genesis_root="configuration/GenesisFiles"
 genesis_file="${genesis_root}/genesis.json"
 if test ! -f "${genesis_file}"
 then echo "ERROR: genesis ${genesis_file} does not exist!">&1; exit 1; fi
@@ -21,7 +18,8 @@ function commonargs() {
         printf -- "--topology configuration/simple-topology.json "
         printf -- "--database-path ./db/ "
         printf -- "--genesis-file ${genesis_file} "
-        printf -- "--socket-dir ./socket/ "
+        printf -- "--genesis-hash ${genesis_hash} "
+        printf -- "--socket-dir ./socket/$1 "
 }
 
 function acceptorargs() {

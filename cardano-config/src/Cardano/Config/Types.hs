@@ -125,6 +125,7 @@ data CardanoConfiguration = CardanoConfiguration
 
 data NodeCLI = NodeCLI
     { mscFp :: !MiscellaneousFilepaths
+    , genesisHash :: !Text
     , nodeAddr :: !NodeAddress
     , configFp :: !ConfigYamlFilePath
     , traceOpts :: !TraceOptions
@@ -175,7 +176,6 @@ data NodeConfiguration =
     NodeConfiguration
       { ncProtocol :: Protocol
       , ncNodeId :: Maybe NodeId
-      , ncGenesisHash :: Text
       , ncNumCoreNodes :: Maybe Int
       , ncReqNetworkMagic :: RequiresNetworkMagic
       , ncPbftSignatureThresh :: Maybe Double
@@ -195,7 +195,6 @@ instance FromJSON NodeConfiguration where
     parseJSON = withObject "NodeConfiguration" $ \v -> do
                   nId <- v .:? "NodeId"
                   ptcl <- v .: "Protocol"
-                  genesisHash <- v .: "GenesisHash"
                   numCoreNode <- v .:? "NumCoreNodes"
                   rNetworkMagic <- v .: "RequiresNetworkMagic"
                   pbftSignatureThresh <- v .:? "PBftSignatureThreshold"
@@ -244,7 +243,6 @@ instance FromJSON NodeConfiguration where
                   pure $ NodeConfiguration
                            ptcl
                            nId
-                           genesisHash
                            numCoreNode
                            rNetworkMagic
                            pbftSignatureThresh

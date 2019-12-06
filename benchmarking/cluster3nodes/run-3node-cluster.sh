@@ -46,7 +46,7 @@ genesis_hash=$(cat ${genesis_root}/GENHASH)
 ### prep cli arguments
 
 function nodecfg () {
-        sed -i 's/^GenesisHash: .*$/GenesisHash: '${genesis_hash}'/' configuration/log-config-${1}.yaml 
+        sed -i 's/^GenesisHash: .*$/GenesisHash: '${genesis_hash}'/' configuration/log-config-${1}.yaml
         printf -- "--config configuration/log-config-${1}.yaml "
 }
 function dlgkey () {
@@ -59,6 +59,7 @@ function commonargs() {
         printf -- "--topology configuration/simple-topology.json "
         printf -- "--database-path ./db/ "
         printf -- "--genesis-file ${genesis_file} "
+        printf -- "--genesis-hash ${genesis_hash}"
         printf -- "--socket-dir /tmp/cluster3nodes-socket/ "
 }
 
@@ -84,4 +85,3 @@ tmux select-pane -t 1
 tmux send-keys "cd '${BASEPATH}'; ${CMD} exe:cardano-node $(nodeargs 1 "$(echo -n ${EXTRA})") " C-m
 tmux select-pane -t 2
 tmux send-keys "cd '${BASEPATH}'; ${CMD} exe:cardano-node $(nodeargs 2 "$(echo -n ${EXTRA})") " C-m
-
