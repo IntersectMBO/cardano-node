@@ -236,6 +236,11 @@ in {
         producers        = map mkProxyShelleyPeer proxy-shelley-peers;
       };
     };
+    systemd.services.byron-proxy = {
+      ## Prevent automatic start, so it's subject to the synchronous start arrangements.
+      after                 = mkForce [];
+      wantedBy              = mkForce [];
+    };
     services.cardano-node-legacy = {
       enable                = legacy-enabled;
       instanced             = true;
@@ -264,8 +269,8 @@ in {
       in {
         description = "Cluster of cardano nodes.";
         enable  = true;
-        after   = shelley-services ++ legacy-services;
-        bindsTo = shelley-services ++ legacy-services;
+        after   = shelley-services ++ legacy-services ++ ["byron-proxy.service"];
+        bindsTo = shelley-services ++ legacy-services ++ ["byron-proxy.service"];
         serviceConfig = {
           Type = "oneshot";
           ExecStart = "${pkgs.coreutils}/bin/echo Starting a mixed cluster of ${toString shelley-node-count} Shelley nodes & ${toString (legacy-node-count + 1)} Legacy nodes;  topologies: Shelley ${shelley-topology}, Legacy ${legacy-topology}";
