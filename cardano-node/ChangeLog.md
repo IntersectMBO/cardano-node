@@ -2,7 +2,7 @@
 
 ## Unreleased changes
 
-## cardano-node 1.1.0
+## 1.1.0 -- December 2019
 
 ### node changes
 - Updated to latest consensus and network versions
@@ -35,7 +35,7 @@
 - Documented wire format of the local transaction submission protocol.
 - Added infrastructure to support size and time limits in mini-protocol driver.
 
-## cardano-node 1.0.0
+## 1.0.0 -- November 2019
 
 - Complete rewrite compared to previous cardano-sl series.
 
