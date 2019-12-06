@@ -25,6 +25,7 @@ import           Cardano.Chain.UTxO
 import           Cardano.CLI.Genesis
 import           Cardano.CLI.Key
 import           Cardano.CLI.Run
+import           Cardano.Common.TopHandler
 import           Cardano.Common.Parsers
 import           Cardano.Config.CommonCLI
 import           Cardano.Config.Logging (createLoggingFeatureCLI)
@@ -43,7 +44,8 @@ import           Cardano.Crypto ( AProtocolMagic(..)
 import qualified Ouroboros.Consensus.BlockchainTime as Consensus
 
 main :: IO ()
-main = do
+main = toplevelExceptionHandler $ do
+
   co <- Opt.customExecParser pref opts
   -- Initialize logging layer. Particularly, we need it for benchmarking (command 'generate-txs').
   let cardanoConfiguration :: PartialCardanoConfiguration
