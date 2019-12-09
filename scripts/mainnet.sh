@@ -2,7 +2,7 @@
 
 set -e
 
-RUNNER=${RUNNER:-cabal new-run --}
+RUNNER=${RUNNER:-cabal v2-run --}
 TOPOLOGY=${TOPOLOGY:-"configuration/mainnet-topology.json"}
 
 ARGS=(

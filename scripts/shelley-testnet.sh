@@ -11,7 +11,7 @@ set -e
 
 # then run this script
 # CMD="stack exec --nix --"
-CMD="cabal new-run --"
+CMD="cabal v2-run --"
 
 # VERBOSITY="--tracing-verbosity-minimal"
 # VERBOSITY="--tracing-verbosity-normal"

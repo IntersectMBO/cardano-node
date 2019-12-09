@@ -200,7 +200,7 @@ output of `cardano-cli --help`.
 All subcommands have help available:
 
 ```
-$ cabal run -- cardano-cli --real-pbft migrate-delegate-key-from --help
+$ cabal v2-run -- cardano-cli --real-pbft migrate-delegate-key-from --help
 Usage: cardano-cli --real-pbft migrate-delegate-key-from (--byron-legacy | --real-pbft)
                                                           --to FILEPATH --from FILEPATH
   Migrate a delegate key from an older system version.
@@ -277,7 +277,7 @@ it needs to be migrated over, which is done by the `migrate-delegate-key-from` s
 
 
 ```
-$ cabal run -- cardano-cli --real-pbft migrate-delegate-key-from byron-legacy \
+$ cabal v2-run -- cardano-cli --real-pbft migrate-delegate-key-from byron-legacy \
                                            --from key0.sk --to key0.pbft
 ```
 
@@ -287,12 +287,12 @@ One can gather information about a signing key's properties through the `signing
 and `signing-key-address` subcommands (the latter requires the network magic):
 
 ```
-$ cabal run -- cardano-cli --real-pbft signing-key-public \
+$ cabal v2-run -- cardano-cli --real-pbft signing-key-public \
                                            --secret key0.pbft
 public key hash: a2b1af0df8ca764876a45608fae36cf04400ed9f413de2e37d92ce04
      public key: sc4pa1pAriXO7IzMpByKo4cG90HCFD465Iad284uDYz06dHCqBwMHRukReQ90+TA/vQpj4L1YNaLHI7DS0Z2Vg==
 
-$ cabal run -- cardano-cli --real-pbft signing-key-address \
+$ cabal v2-run -- cardano-cli --real-pbft signing-key-address \
                                            --secret key0.pbft  \
                                            --testnet-magic 459045235
 2cWKMJemoBakxhXgZSsMteLP9TUvz7owHyEYbUDwKRLsw2UGDrG93gPqmpv1D9ohWNddx
@@ -350,4 +350,4 @@ of the testnet, and lovelace amount is almost the entirety of its funds.
 
 # Development
 
-run *ghcid* with: `ghcid -c "cabal repl exe:cardano-node --reorder-goals"`
+run *ghcid* with: `ghcid -c "cabal v2-repl exe:cardano-node --reorder-goals"`

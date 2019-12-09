@@ -10,7 +10,7 @@ TX="$1"
 shift
 
 #CMD="stack exec --nix cardano-node -- "
-CMD="cabal new-run"
+CMD="cabal v2-run"
 
 . $(dirname $0)/lib-node.sh
 

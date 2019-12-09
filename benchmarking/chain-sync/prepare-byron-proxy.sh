@@ -12,6 +12,6 @@ git submodule update --init --remote ${TARGETDIR}
 
 cd ${TARGETDIR}
 
-cabal new-build all
+cabal v2-build all
 
 cd ${BASEDIR}

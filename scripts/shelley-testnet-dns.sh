@@ -26,7 +26,7 @@ NOW=`date "+%Y-%m-%d 00:00:00"`
 NETARGS="--slot-duration 2 --topology configuration/simple-topology-dns.json ${ALGO}"
 #SCR="./scripts/start-node.sh"
 #CMD="stack exec --nix cardano-node --"
-CMD="cabal new-run exe:cardano-node --"
+CMD="cabal v2-run exe:cardano-node --"
 
 function mklogcfg () {
   echo "--log-config configuration/log-config-${1}.yaml"

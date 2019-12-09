@@ -9,6 +9,6 @@ git clone -b master ${GITURL} cardano-explorer.git
 
 cd cardano-explorer.git
 
-cabal new-build all
+cabal v2-build all
 
 
