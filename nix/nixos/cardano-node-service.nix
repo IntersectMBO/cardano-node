@@ -91,8 +91,8 @@ in {
       };
 
       genesisHash = mkOption {
-        type = types.nullOr types.str;
-        default = null;
+        type = types.str;
+        default = envConfig.genesisHash;
         description = ''
           Hash of the genesis file
         '';
