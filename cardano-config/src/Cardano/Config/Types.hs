@@ -113,14 +113,8 @@ data CardanoConfiguration = CardanoConfiguration
     , ccLogMetrics          :: !Bool
     -- ^ Flag to capture log metrics or not.
     , ccCore                :: !Core
-    , ccNTP                 :: !NTP
     , ccUpdate              :: !Update
-    , ccTXP                 :: !TXP
-    , ccDLG                 :: !DLG
-    , ccBlock               :: !Block
     , ccNode                :: !Node
-    , ccTLS                 :: !TLS
-    , ccWallet              :: !Wallet
     } deriving (Eq, Show)
 
 data NodeCLI = NodeCLI

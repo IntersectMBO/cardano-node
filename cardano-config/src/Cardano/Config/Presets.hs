@@ -12,18 +12,11 @@ import           Ouroboros.Consensus.NodeId
 
 import           Cardano.Config.Defaults (traceOptionsDefault)
 import           Cardano.Config.Partial ( NodeProtocol (..)
-                                        , PartialBlock (..)
                                         , PartialCardanoConfiguration (..)
-                                        , PartialCertificate (..)
                                         , PartialCore (..)
-                                        , PartialDLG (..)
                                         , PartialLastKnownBlockVersion (..)
-                                        , PartialNTP (..)
                                         , PartialNode (..)
-                                        , PartialTLS (..)
-                                        , PartialTXP (..)
                                         , PartialUpdate (..)
-                                        , PartialWallet (..)
                                         )
 import           Cardano.Config.Topology (NodeAddress(..), NodeHostAddress(..),
                                           TopologyInfo(..))
@@ -60,16 +53,6 @@ mainnetConfiguration =
           , pcoRequiresNetworkMagic = pure RequiresNoMagic
           , pcoPBftSigThd = mempty
           }
-    , pccNTP =
-        PartialNTP
-          { pntpResponseTimeout = pure 30000000
-          , pntpPollDelay = pure 1800000000
-          , pntpServers = pure
-              [ "0.pool.ntp.org"
-              , "2.pool.ntp.org"
-              , "3.pool.ntp.org"
-              ]
-          }
     , pccUpdate =
         PartialUpdate
           { pupApplicationName = pure (Update.ApplicationName "cardano-sl")
@@ -81,69 +64,11 @@ mainnetConfiguration =
                   , plkbvAlt = pure 0
                   }
           }
-    , pccTXP =
-        PartialTXP
-          { ptxpMemPoolLimitTx = pure 200
-          , ptxpAssetLockedSrcAddress = pure []
-          }
-    , pccDLG =
-        PartialDLG
-          { pdlgCacheParam = pure 500
-          , pdlgMessageCacheTimeout = pure 30
-          }
-    , pccBlock =
-        PartialBlock
-          { pblNetworkDiameter = pure 18
-          , pblRecoveryHeadersMessage = pure 2200
-          , pblStreamWindow = pure 2048
-          , pblNonCriticalCQBootstrap = pure 0.95
-          , pblNonCriticalCQ = pure 0.8
-          , pblCriticalCQBootstrap = pure 0.8888
-          , pblCriticalCQ = pure 0.654321
-          , pblCriticalForkThreshold = pure 3
-          , pblFixedTimeCQ = pure 3600
-          }
     , pccNode =
         PartialNode
           { pnoSlotLength = pure 20
           , pnoNetworkConnectionTimeout = pure 15000
           , pnoHandshakeTimeout = pure 30000
-          }
-    , pccTLS =
-        PartialTLS
-          { ptlsCA =
-              PartialCertificate
-                { pcertOrganization = pure "Input Output HK"
-                , pcertCommonName = pure "Cardano SL Self-Signed Root CA"
-                , pcertExpiryDays = pure 3600
-                , pcertAltDNS = pure []
-                }
-          , ptlsServer =
-              PartialCertificate
-                { pcertOrganization = pure "Input Output HK"
-                , pcertCommonName = pure "Cardano SL Server Node"
-                , pcertExpiryDays = pure 3600
-                , pcertAltDNS = pure
-                    [ "localhost"
-                    , "localhost.localdomain"
-                    , "127.0.0.1"
-                    , "::1"
-                    ]
-                }
-          , ptlsClients =
-              PartialCertificate
-                { pcertOrganization = pure "Input Output HK"
-                , pcertCommonName = pure "Daedalus Wallet"
-                , pcertExpiryDays = pure 3600
-                , pcertAltDNS = pure []
-                }
-          }
-    , pccWallet =
-        PartialWallet
-          { pthEnabled = pure False
-          , pthRate = pure 0
-          , pthPeriod = pure ""
-          , pthBurst = pure 0
           }
     }
 
@@ -177,16 +102,6 @@ devConfiguration =
           , pcoRequiresNetworkMagic = pure RequiresMagic
           , pcoPBftSigThd = mempty
           }
-    , pccNTP =
-        PartialNTP
-          { pntpResponseTimeout = pure 30000000
-          , pntpPollDelay = pure 1800000000
-          , pntpServers = pure
-              [ "0.pool.ntp.org"
-              , "2.pool.ntp.org"
-              , "3.pool.ntp.org"
-              ]
-          }
     , pccUpdate =
         PartialUpdate
           { pupApplicationName = pure (Update.ApplicationName "cardano-sl")
@@ -198,68 +113,10 @@ devConfiguration =
                 , plkbvAlt = pure 0
                 }
           }
-    , pccTXP =
-        PartialTXP
-          { ptxpMemPoolLimitTx = pure 200
-          , ptxpAssetLockedSrcAddress = pure []
-          }
-    , pccDLG =
-        PartialDLG
-          { pdlgCacheParam = pure 500
-          , pdlgMessageCacheTimeout = pure 30
-          }
-    , pccBlock =
-        PartialBlock
-          { pblNetworkDiameter = pure 3
-          , pblRecoveryHeadersMessage = pure 20
-          , pblStreamWindow = pure 2048
-          , pblNonCriticalCQBootstrap = pure 0.95
-          , pblNonCriticalCQ = pure 0.8
-          , pblCriticalCQBootstrap = pure 0.8888
-          , pblCriticalCQ = pure 0.654321
-          , pblCriticalForkThreshold = pure 2
-          , pblFixedTimeCQ = pure 10
-          }
     , pccNode =
         PartialNode
           { pnoSlotLength = pure 2
           , pnoNetworkConnectionTimeout = pure 15000
           , pnoHandshakeTimeout = pure 30000
-          }
-    , pccTLS =
-        PartialTLS
-          { ptlsCA =
-              PartialCertificate
-                { pcertOrganization = pure "Input Output HK"
-                , pcertCommonName = pure "Cardano SL Self-Signed Root CA"
-                , pcertExpiryDays = pure 3650
-                , pcertAltDNS = pure []
-                }
-          , ptlsServer =
-              PartialCertificate
-                { pcertOrganization = pure "Input Output HK"
-                , pcertCommonName = pure "Cardano SL Server Node"
-                , pcertExpiryDays = pure 365
-                , pcertAltDNS = pure
-                    [ "localhost"
-                    , "localhost.localdomain"
-                    , "127.0.0.1"
-                    , "::1"
-                    ]
-                }
-          , ptlsClients =
-              PartialCertificate
-                { pcertOrganization = pure "Input Output HK"
-                , pcertCommonName = pure "Daedalus Wallet"
-                , pcertExpiryDays = pure 365
-                , pcertAltDNS = pure []
-                }
-          }
-    , pccWallet =
-        PartialWallet
-          { pthEnabled = pure False
-          , pthRate = pure 0
-          , pthPeriod = pure ""
-          , pthBurst = pure 0
           }
     }
