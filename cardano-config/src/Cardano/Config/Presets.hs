@@ -18,7 +18,6 @@ import           Cardano.Config.Partial ( NodeProtocol (..)
                                         , PartialLastKnownBlockVersion (..)
                                         , PartialNTP (..)
                                         , PartialNode (..)
-                                        , PartialTXP (..)
                                         , PartialUpdate (..)
                                         )
 import           Cardano.Config.Topology (NodeAddress(..), NodeHostAddress(..),
@@ -76,11 +75,6 @@ mainnetConfiguration =
                   , plkbvMinor = pure 2
                   , plkbvAlt = pure 0
                   }
-          }
-    , pccTXP =
-        PartialTXP
-          { ptxpMemPoolLimitTx = pure 200
-          , ptxpAssetLockedSrcAddress = pure []
           }
     , pccDLG =
         PartialDLG
@@ -145,11 +139,6 @@ devConfiguration =
                 , plkbvMinor = pure 0
                 , plkbvAlt = pure 0
                 }
-          }
-    , pccTXP =
-        PartialTXP
-          { ptxpMemPoolLimitTx = pure 200
-          , ptxpAssetLockedSrcAddress = pure []
           }
     , pccDLG =
         PartialDLG

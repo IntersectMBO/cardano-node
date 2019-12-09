@@ -13,7 +13,6 @@ module Cardano.Config.Partial
     , PartialNTP (..)
     , PartialUpdate (..)
     , PartialLastKnownBlockVersion (..)
-    , PartialTXP (..)
     , PartialDLG (..)
     -- * re-exports
     , NodeProtocol (..)
@@ -48,7 +47,6 @@ data PartialCardanoConfiguration = PartialCardanoConfiguration
     , pccCore                :: !PartialCore
     , pccNTP                 :: !PartialNTP
     , pccUpdate              :: !PartialUpdate
-    , pccTXP                 :: !PartialTXP
     , pccDLG                 :: !PartialDLG
     , pccNode                :: !PartialNode
     } deriving (Eq, Show, Generic)
@@ -96,17 +94,6 @@ data PartialNTP = PartialNTP
     } deriving (Eq, Show, Generic)
     deriving Semigroup via GenericSemigroup PartialNTP
     deriving Monoid    via GenericMonoid PartialNTP
-
--- | Partial @TXP@ configuration.
-data PartialTXP = PartialTXP
-    { ptxpMemPoolLimitTx        :: !(Last Int)
-    -- ^ Limit on the number of transactions that can be stored in the mem pool.
-    , ptxpAssetLockedSrcAddress :: !(Last [Text])
-    -- ^ Set of source address which are asset-locked. Transactions which
-    -- use these addresses as transaction inputs will be silently dropped.
-    } deriving (Eq, Show, Generic)
-    deriving Semigroup via GenericSemigroup PartialTXP
-    deriving Monoid    via GenericMonoid PartialTXP
 
 -- | Partial @Update@ configuration.
 data PartialUpdate = PartialUpdate
@@ -171,7 +158,6 @@ mkCardanoConfiguration PartialCardanoConfiguration{..} = do
     ccCore                   <- mkCore pccCore
     ccNTP                    <- mkNTP pccNTP
     ccUpdate                 <- mkUpdate pccUpdate
-    ccTXP                    <- mkTXP pccTXP
     ccDLG                    <- mkDLG pccDLG
     ccNode                   <- mkNode pccNode
 
@@ -202,19 +188,6 @@ mkCardanoConfiguration PartialCardanoConfiguration{..} = do
         let coPBftSigThd                = getLast pcoPBftSigThd
 
         pure Core{..}
-
-
-    -- | Finalize the @PartialTXP@, convert to @TXP@.
-    mkTXP :: PartialTXP -> Either ConfigError TXP
-    mkTXP PartialTXP{..} = do
-
-        txpMemPoolLimitTx           <- mkComplete "txpMemPoolLimitTx"
-                                        ptxpMemPoolLimitTx
-
-        txpAssetLockedSrcAddress    <- mkComplete "txpAssetLockedSrcAddress"
-                                        ptxpAssetLockedSrcAddress
-
-        pure TXP{..}
 
     -- | Finalize the @PartialUpdate@, convert to @Update@.
     mkUpdate :: PartialUpdate -> Either ConfigError Update
