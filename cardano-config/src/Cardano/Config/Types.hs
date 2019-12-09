@@ -113,7 +113,6 @@ data CardanoConfiguration = CardanoConfiguration
     , ccLogMetrics          :: !Bool
     -- ^ Flag to capture log metrics or not.
     , ccCore                :: !Core
-    , ccNTP                 :: !NTP
     , ccUpdate              :: !Update
     , ccNode                :: !Node
     } deriving (Eq, Show)

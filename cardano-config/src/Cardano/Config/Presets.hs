@@ -15,7 +15,6 @@ import           Cardano.Config.Partial ( NodeProtocol (..)
                                         , PartialCardanoConfiguration (..)
                                         , PartialCore (..)
                                         , PartialLastKnownBlockVersion (..)
-                                        , PartialNTP (..)
                                         , PartialNode (..)
                                         , PartialUpdate (..)
                                         )
@@ -53,16 +52,6 @@ mainnetConfiguration =
           , pcoStaticKeyDlgCertFile = mempty
           , pcoRequiresNetworkMagic = pure RequiresNoMagic
           , pcoPBftSigThd = mempty
-          }
-    , pccNTP =
-        PartialNTP
-          { pntpResponseTimeout = pure 30000000
-          , pntpPollDelay = pure 1800000000
-          , pntpServers = pure
-              [ "0.pool.ntp.org"
-              , "2.pool.ntp.org"
-              , "3.pool.ntp.org"
-              ]
           }
     , pccUpdate =
         PartialUpdate
@@ -112,16 +101,6 @@ devConfiguration =
           , pcoStaticKeyDlgCertFile = mempty
           , pcoRequiresNetworkMagic = pure RequiresMagic
           , pcoPBftSigThd = mempty
-          }
-    , pccNTP =
-        PartialNTP
-          { pntpResponseTimeout = pure 30000000
-          , pntpPollDelay = pure 1800000000
-          , pntpServers = pure
-              [ "0.pool.ntp.org"
-              , "2.pool.ntp.org"
-              , "3.pool.ntp.org"
-              ]
           }
     , pccUpdate =
         PartialUpdate

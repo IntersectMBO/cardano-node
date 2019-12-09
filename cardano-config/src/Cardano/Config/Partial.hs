@@ -10,7 +10,6 @@ module Cardano.Config.Partial
     ( PartialCardanoConfiguration (..)
     , PartialCore (..)
     , PartialNode (..)
-    , PartialNTP (..)
     , PartialUpdate (..)
     , PartialLastKnownBlockVersion (..)
     -- * re-exports
@@ -44,7 +43,6 @@ data PartialCardanoConfiguration = PartialCardanoConfiguration
     , pccLogMetrics          :: !(Last Bool)
     , pccTraceOptions        :: !(Last TraceOptions)
     , pccCore                :: !PartialCore
-    , pccNTP                 :: !PartialNTP
     , pccUpdate              :: !PartialUpdate
     , pccNode                :: !PartialNode
     } deriving (Eq, Show, Generic)
@@ -80,18 +78,6 @@ data PartialNode = PartialNode
     } deriving (Eq, Show, Generic)
     deriving Semigroup via GenericSemigroup PartialNode
     deriving Monoid    via GenericMonoid PartialNode
-
--- | Partial @NTP@ configuration.
-data PartialNTP = PartialNTP
-    { pntpResponseTimeout :: !(Last Int)
-    -- ^ NTP response timeout.
-    , pntpPollDelay       :: !(Last Int)
-    -- ^ NTP poll delay.
-    , pntpServers         :: !(Last [Text])
-    -- ^ A list of NTP servers.
-    } deriving (Eq, Show, Generic)
-    deriving Semigroup via GenericSemigroup PartialNTP
-    deriving Monoid    via GenericMonoid PartialNTP
 
 -- | Partial @Update@ configuration.
 data PartialUpdate = PartialUpdate
@@ -143,7 +129,6 @@ mkCardanoConfiguration PartialCardanoConfiguration{..} = do
     ccLogMetrics             <- mkComplete "ccLogMetrics" pccLogMetrics
     ccTraceOptions           <- mkComplete "ccTraceOptions" pccTraceOptions
     ccCore                   <- mkCore pccCore
-    ccNTP                    <- mkNTP pccNTP
     ccUpdate                 <- mkUpdate pccUpdate
     ccNode                   <- mkNode pccNode
 
@@ -193,16 +178,6 @@ mkCardanoConfiguration PartialCardanoConfiguration{..} = do
             lkbvAlt    <- mkComplete "lkbvAlt"       plkbvAlt
 
             pure LastKnownBlockVersion{..}
-
-    -- | Finalize the @PartialNTP@, convert to @NTP@.
-    mkNTP :: PartialNTP -> Either ConfigError NTP
-    mkNTP PartialNTP{..} = do
-
-        ntpResponseTimeout  <- mkComplete "ntpResponseTimeout"    pntpResponseTimeout
-        ntpPollDelay        <- mkComplete "ntpPollDelay"          pntpPollDelay
-        ntpServers          <- mkComplete "ntpServers"            pntpServers
-
-        pure NTP{..}
 
     -- | Finalize the @PartialNode@, convert to @Node@.
     mkNode :: PartialNode -> Either ConfigError Node
