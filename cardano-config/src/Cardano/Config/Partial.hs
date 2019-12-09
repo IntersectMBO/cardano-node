@@ -18,7 +18,6 @@ module Cardano.Config.Partial
     , PartialBlock (..)
     , PartialTLS (..)
     , PartialCertificate (..)
-    , PartialWallet (..)
     -- * re-exports
     , NodeProtocol (..)
     , mkCardanoConfiguration
@@ -57,7 +56,6 @@ data PartialCardanoConfiguration = PartialCardanoConfiguration
     , pccBlock               :: !PartialBlock
     , pccNode                :: !PartialNode
     , pccTLS                 :: !PartialTLS
-    , pccWallet              :: !PartialWallet
     } deriving (Eq, Show, Generic)
     deriving Semigroup via GenericSemigroup PartialCardanoConfiguration
     deriving Monoid    via GenericMonoid PartialCardanoConfiguration
@@ -200,20 +198,6 @@ data PartialCertificate = PartialCertificate
     deriving Semigroup via GenericSemigroup PartialCertificate
     deriving Monoid    via GenericMonoid PartialCertificate
 
--- | Partial @Wallet@ configuration.
-data PartialWallet = PartialWallet
-    { pthEnabled :: !(Last Bool)
-    -- ^ Is throttle enabled?
-    , pthRate    :: !(Last Int)
-    -- ^ Throttle rate.
-    , pthPeriod  :: !(Last Text)
-    -- ^ Throttle period.
-    , pthBurst   :: !(Last Int)
-    -- ^ Throttle burst.
-    } deriving (Eq, Show, Generic)
-    deriving Semigroup via GenericSemigroup PartialWallet
-    deriving Monoid    via GenericMonoid PartialWallet
-
 
 -- | Return an error if the @Last@ option is incomplete.
 mkComplete :: String -> Last a -> Either ConfigError a
@@ -248,7 +232,6 @@ mkCardanoConfiguration PartialCardanoConfiguration{..} = do
     ccBlock                  <- mkBlock pccBlock
     ccNode                   <- mkNode pccNode
     ccTLS                    <- mkTLS pccTLS
-    ccWallet                 <- mkWallet pccWallet
 
     pure CardanoConfiguration{..}
   where
@@ -381,14 +364,3 @@ mkCardanoConfiguration PartialCardanoConfiguration{..} = do
         tlsClients  <- mkCertificate ptlsClients
 
         pure TLS{..}
-
-    -- | Finalize the @PartialWallet@, convert to @Wallet@.
-    mkWallet :: PartialWallet -> Either ConfigError Wallet
-    mkWallet PartialWallet{..} = do
-
-        thEnabled   <- mkComplete "thEnabled" pthEnabled
-        thRate      <- mkComplete "thRate"    pthRate
-        thPeriod    <- mkComplete "thPeriod"  pthPeriod
-        thBurst     <- mkComplete "thBurst"   pthBurst
-
-        pure Wallet {..}

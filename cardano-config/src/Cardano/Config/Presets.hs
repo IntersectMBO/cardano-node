@@ -23,7 +23,6 @@ import           Cardano.Config.Partial ( NodeProtocol (..)
                                         , PartialTLS (..)
                                         , PartialTXP (..)
                                         , PartialUpdate (..)
-                                        , PartialWallet (..)
                                         )
 import           Cardano.Config.Topology (NodeAddress(..), NodeHostAddress(..),
                                           TopologyInfo(..))
@@ -138,13 +137,6 @@ mainnetConfiguration =
                 , pcertAltDNS = pure []
                 }
           }
-    , pccWallet =
-        PartialWallet
-          { pthEnabled = pure False
-          , pthRate = pure 0
-          , pthPeriod = pure ""
-          , pthBurst = pure 0
-          }
     }
 
 --------------------------------------------------------------------------------
@@ -255,11 +247,5 @@ devConfiguration =
                 , pcertAltDNS = pure []
                 }
           }
-    , pccWallet =
-        PartialWallet
-          { pthEnabled = pure False
-          , pthRate = pure 0
-          , pthPeriod = pure ""
-          , pthBurst = pure 0
-          }
+
     }

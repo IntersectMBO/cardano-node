@@ -8,8 +8,6 @@ module Cardano.Config.CommonCLI
   , CommonCLIAdvanced(..)
   , parseCommonCLI
   , parseCommonCLIAdvanced
-  , mergeConfiguration
-  , mkConfiguration
    -- * Generic
   , command'
   , lastOption
@@ -50,9 +48,6 @@ import qualified Options.Applicative as OA
 
 import           Cardano.Crypto (RequiresNetworkMagic(..))
 import qualified Ouroboros.Consensus.BlockchainTime as Consensus
-
-import           Cardano.Config.Partial
-import           Cardano.Config.Types
 
 
 data CommonCLI = CommonCLI
@@ -317,55 +312,3 @@ lastFlag def act opts  = Last <$> optional (flag def act opts)
 --   for a particular field -- i.e. when the field is set to 'mempty'.
 lastStrOptionM :: IsString a => Mod OptionFields a -> Parser (Last a)
 lastStrOptionM args = Last . Just <$> strOption args
-
-
-{-------------------------------------------------------------------------------
-  Configuration merging
--------------------------------------------------------------------------------}
-
--- | Perform merging of layers of configuration, but for now, only in a trivial way,
---   just for Cardano.Shell.Constants.Types.{Genesis,StaticKeyMaterial}.
---   We expect this process to become generic at some point.
--- TODO: To remove
-mergeConfiguration
-  :: PartialCardanoConfiguration
-  -> CommonCLI
-  -> CommonCLIAdvanced
-  -> PartialCardanoConfiguration
-mergeConfiguration pcc cli cca =
-    -- The beauty of this kind of configuration management (using trees of
-    -- monoids) is that we can override individual config elements by simply
-    -- merging an extra partial config on top. That extra partial config is
-    -- built starting from mempty and setting the fields of interest.
-    --
-    -- TODO:  see TODO in 'initializeAllFeatures' in 'cardano-node.hs'.
-    pcc <> commonCLIToPCC cli cca
-  where
-    commonCLIToPCC
-      :: CommonCLI -> CommonCLIAdvanced -> PartialCardanoConfiguration
-    commonCLIToPCC cc ca =
-      mempty { pccCore = mempty
-                    { pcoGenesisFile             = cliGenesisFile cc
-                    , pcoGenesisHash             = cliGenesisHash cc
-                    , pcoStaticKeySigningKeyFile = cliStaticKeySigningKeyFile cc
-                    , pcoStaticKeyDlgCertFile    = cliStaticKeyDlgCertFile cc
-                    , pcoPBftSigThd              = ccaPBftSigThd ca
-                    , pcoRequiresNetworkMagic    = ccaRequiresNetworkMagic ca
-                    -- TODO: cliUpdate
-                    }
-             , pccNode = mempty
-                    { pnoSlotLength              = ccaSlotLength ca
-                    }
-             , pccDBPath = cliDBPath cc
-             , pccSocketDir = cliSocketDir cc
-             }
-
--- TODO: To remove
-mkConfiguration
-  :: PartialCardanoConfiguration
-  -> CommonCLI
-  -> CommonCLIAdvanced
-  -> Either ConfigError CardanoConfiguration
-mkConfiguration partialConfig cli cca =
-    mkCardanoConfiguration $
-    mergeConfiguration partialConfig cli cca
