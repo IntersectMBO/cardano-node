@@ -1,28 +1,4 @@
 {
-    "gitignore": {
-        "branch": "master",
-        "description": "Nix function for filtering local git sources",
-        "homepage": "",
-        "owner": "hercules-ci",
-        "repo": "gitignore",
-        "rev": "f9e996052b5af4032fe6150bba4a6fe4f7b9d698",
-        "sha256": "0jrh5ghisaqdd0vldbywags20m2cxpkbbk5jjjmwaw0gr8nhsafv",
-        "type": "tarball",
-        "url": "https://github.com/hercules-ci/gitignore/archive/f9e996052b5af4032fe6150bba4a6fe4f7b9d698.tar.gz",
-        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
-    },
-    "haskell.nix": {
-        "branch": "master",
-        "description": "Alternative Haskell Infrastructure for Nixpkgs",
-        "homepage": "https://input-output-hk.github.io/haskell.nix",
-        "owner": "input-output-hk",
-        "repo": "haskell.nix",
-        "rev": "3ae2303b14bdebd00437b0e995af2d0eb21abafe",
-        "sha256": "0dk6541kwfyc5sp5h1vfk6zl4ghln4i2zqkaijbjwv8bnixnm6wl",
-        "type": "tarball",
-        "url": "https://github.com/input-output-hk/haskell.nix/archive/3ae2303b14bdebd00437b0e995af2d0eb21abafe.tar.gz",
-        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
-    },
     "cardano-byron-proxy": {
         "branch": "master",
         "description": "A bydirectional proxy between the Shelly and Byron versions of the Cardano network",
@@ -47,16 +23,40 @@
         "url": "https://github.com/input-output-hk/cardano-sl/archive/d0cc2e6336e3c57771c775cafe831bc83db303d3.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
-    "iohk-nix": {
+    "gitignore": {
         "branch": "master",
+        "description": "Nix function for filtering local git sources",
+        "homepage": "",
+        "owner": "hercules-ci",
+        "repo": "gitignore",
+        "rev": "f9e996052b5af4032fe6150bba4a6fe4f7b9d698",
+        "sha256": "0jrh5ghisaqdd0vldbywags20m2cxpkbbk5jjjmwaw0gr8nhsafv",
+        "type": "tarball",
+        "url": "https://github.com/hercules-ci/gitignore/archive/f9e996052b5af4032fe6150bba4a6fe4f7b9d698.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
+    "haskell.nix": {
+        "branch": "master",
+        "description": "Alternative Haskell Infrastructure for Nixpkgs",
+        "homepage": "https://input-output-hk.github.io/haskell.nix",
+        "owner": "input-output-hk",
+        "repo": "haskell.nix",
+        "rev": "3ae2303b14bdebd00437b0e995af2d0eb21abafe",
+        "sha256": "0dk6541kwfyc5sp5h1vfk6zl4ghln4i2zqkaijbjwv8bnixnm6wl",
+        "type": "tarball",
+        "url": "https://github.com/input-output-hk/haskell.nix/archive/3ae2303b14bdebd00437b0e995af2d0eb21abafe.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
+    "iohk-nix": {
+        "branch": "monitoring-config-changes",
         "description": "nix scripts shared across projects",
         "homepage": null,
         "owner": "input-output-hk",
         "repo": "iohk-nix",
-        "rev": "c7528276b837efedb02653161d4609bf16fe578c",
-        "sha256": "02bhj7aajv7qm3wdch1sjwwaa9h8ck8l74fp1fsb99sc3l4yn8wc",
+        "rev": "b1423273cc26f9547908bc21f5df614dfa45d0fe",
+        "sha256": "00wmknccpifbmybr55xnn0y139w86yw37jqygym8n71p0xp2880h",
         "type": "tarball",
-        "url": "https://github.com/input-output-hk/iohk-nix/archive/c7528276b837efedb02653161d4609bf16fe578c.tar.gz",
+        "url": "https://github.com/input-output-hk/iohk-nix/archive/b1423273cc26f9547908bc21f5df614dfa45d0fe.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "niv": {
