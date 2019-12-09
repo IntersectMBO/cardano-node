@@ -16,8 +16,6 @@ module Cardano.Config.Partial
     , PartialTXP (..)
     , PartialDLG (..)
     , PartialBlock (..)
-    , PartialTLS (..)
-    , PartialCertificate (..)
     -- * re-exports
     , NodeProtocol (..)
     , mkCardanoConfiguration
@@ -55,7 +53,6 @@ data PartialCardanoConfiguration = PartialCardanoConfiguration
     , pccDLG                 :: !PartialDLG
     , pccBlock               :: !PartialBlock
     , pccNode                :: !PartialNode
-    , pccTLS                 :: !PartialTLS
     } deriving (Eq, Show, Generic)
     deriving Semigroup via GenericSemigroup PartialCardanoConfiguration
     deriving Monoid    via GenericMonoid PartialCardanoConfiguration
@@ -172,33 +169,6 @@ data PartialBlock = PartialBlock
     deriving Semigroup via GenericSemigroup PartialBlock
     deriving Monoid    via GenericMonoid PartialBlock
 
--- | Partial @TLS@ configuration.
-data PartialTLS = PartialTLS
-    { ptlsCA      :: !PartialCertificate
-    -- ^ Certificate Authoritiy certificate.
-    , ptlsServer  :: !PartialCertificate
-    -- ^ Server certificate.
-    , ptlsClients :: !PartialCertificate
-    -- ^ Client certificate.
-    } deriving (Eq, Show, Generic)
-    deriving Semigroup via GenericSemigroup PartialTLS
-    deriving Monoid    via GenericMonoid PartialTLS
-
--- | Partial @Certificate@ configuration.
-data PartialCertificate = PartialCertificate
-    { pcertOrganization :: !(Last Text)
-    -- ^ Certificate organization.
-    , pcertCommonName   :: !(Last Text)
-    -- ^ Certificate common name.
-    , pcertExpiryDays   :: !(Last Int)
-    -- ^ Certificate days of expiration.
-    , pcertAltDNS       :: !(Last [Text])
-    -- ^ Certificate alternative DNS.
-    } deriving (Eq, Show, Generic)
-    deriving Semigroup via GenericSemigroup PartialCertificate
-    deriving Monoid    via GenericMonoid PartialCertificate
-
-
 -- | Return an error if the @Last@ option is incomplete.
 mkComplete :: String -> Last a -> Either ConfigError a
 mkComplete name (Last x) = maybe (Left $ PartialConfigValue name) Right x
@@ -231,7 +201,6 @@ mkCardanoConfiguration PartialCardanoConfiguration{..} = do
     ccDLG                    <- mkDLG pccDLG
     ccBlock                  <- mkBlock pccBlock
     ccNode                   <- mkNode pccNode
-    ccTLS                    <- mkTLS pccTLS
 
     pure CardanoConfiguration{..}
   where
@@ -343,24 +312,3 @@ mkCardanoConfiguration PartialCardanoConfiguration{..} = do
         blFixedTimeCQ            <- mkComplete "blFixedTimeCQ"            pblFixedTimeCQ
 
         pure Block{..}
-
-    -- | Finalize the @PartialCertificate@, convert to @Certificate@.
-    mkCertificate :: PartialCertificate -> Either ConfigError Certificate
-    mkCertificate PartialCertificate{..} = do
-
-        certOrganization    <- mkComplete "certOrganization"  pcertOrganization
-        certCommonName      <- mkComplete "certCommonName"    pcertCommonName
-        certExpiryDays      <- mkComplete "certExpiryDays"    pcertExpiryDays
-        certAltDNS          <- mkComplete "certAltDNS"        pcertAltDNS
-
-        pure Certificate{..}
-
-    -- | Finalize the @PartialTLS@, convert to @TLS@.
-    mkTLS :: PartialTLS -> Either ConfigError TLS
-    mkTLS PartialTLS{..} = do
-
-        tlsCA       <- mkCertificate ptlsCA
-        tlsServer   <- mkCertificate ptlsServer
-        tlsClients  <- mkCertificate ptlsClients
-
-        pure TLS{..}

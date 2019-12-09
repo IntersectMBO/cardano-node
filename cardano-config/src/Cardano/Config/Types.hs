@@ -119,7 +119,6 @@ data CardanoConfiguration = CardanoConfiguration
     , ccDLG                 :: !DLG
     , ccBlock               :: !Block
     , ccNode                :: !Node
-    , ccTLS                 :: !TLS
     } deriving (Eq, Show)
 
 data NodeCLI = NodeCLI

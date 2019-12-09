@@ -14,13 +14,11 @@ import           Cardano.Config.Defaults (traceOptionsDefault)
 import           Cardano.Config.Partial ( NodeProtocol (..)
                                         , PartialBlock (..)
                                         , PartialCardanoConfiguration (..)
-                                        , PartialCertificate (..)
                                         , PartialCore (..)
                                         , PartialDLG (..)
                                         , PartialLastKnownBlockVersion (..)
                                         , PartialNTP (..)
                                         , PartialNode (..)
-                                        , PartialTLS (..)
                                         , PartialTXP (..)
                                         , PartialUpdate (..)
                                         )
@@ -108,35 +106,6 @@ mainnetConfiguration =
           , pnoNetworkConnectionTimeout = pure 15000
           , pnoHandshakeTimeout = pure 30000
           }
-    , pccTLS =
-        PartialTLS
-          { ptlsCA =
-              PartialCertificate
-                { pcertOrganization = pure "Input Output HK"
-                , pcertCommonName = pure "Cardano SL Self-Signed Root CA"
-                , pcertExpiryDays = pure 3600
-                , pcertAltDNS = pure []
-                }
-          , ptlsServer =
-              PartialCertificate
-                { pcertOrganization = pure "Input Output HK"
-                , pcertCommonName = pure "Cardano SL Server Node"
-                , pcertExpiryDays = pure 3600
-                , pcertAltDNS = pure
-                    [ "localhost"
-                    , "localhost.localdomain"
-                    , "127.0.0.1"
-                    , "::1"
-                    ]
-                }
-          , ptlsClients =
-              PartialCertificate
-                { pcertOrganization = pure "Input Output HK"
-                , pcertCommonName = pure "Daedalus Wallet"
-                , pcertExpiryDays = pure 3600
-                , pcertAltDNS = pure []
-                }
-          }
     }
 
 --------------------------------------------------------------------------------
@@ -218,34 +187,4 @@ devConfiguration =
           , pnoNetworkConnectionTimeout = pure 15000
           , pnoHandshakeTimeout = pure 30000
           }
-    , pccTLS =
-        PartialTLS
-          { ptlsCA =
-              PartialCertificate
-                { pcertOrganization = pure "Input Output HK"
-                , pcertCommonName = pure "Cardano SL Self-Signed Root CA"
-                , pcertExpiryDays = pure 3650
-                , pcertAltDNS = pure []
-                }
-          , ptlsServer =
-              PartialCertificate
-                { pcertOrganization = pure "Input Output HK"
-                , pcertCommonName = pure "Cardano SL Server Node"
-                , pcertExpiryDays = pure 365
-                , pcertAltDNS = pure
-                    [ "localhost"
-                    , "localhost.localdomain"
-                    , "127.0.0.1"
-                    , "::1"
-                    ]
-                }
-          , ptlsClients =
-              PartialCertificate
-                { pcertOrganization = pure "Input Output HK"
-                , pcertCommonName = pure "Daedalus Wallet"
-                , pcertExpiryDays = pure 365
-                , pcertAltDNS = pure []
-                }
-          }
-
     }
