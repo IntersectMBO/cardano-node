@@ -117,7 +117,6 @@ data CardanoConfiguration = CardanoConfiguration
     , ccUpdate              :: !Update
     , ccTXP                 :: !TXP
     , ccDLG                 :: !DLG
-    , ccBlock               :: !Block
     , ccNode                :: !Node
     } deriving (Eq, Show)
 

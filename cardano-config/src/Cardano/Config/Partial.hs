@@ -15,7 +15,6 @@ module Cardano.Config.Partial
     , PartialLastKnownBlockVersion (..)
     , PartialTXP (..)
     , PartialDLG (..)
-    , PartialBlock (..)
     -- * re-exports
     , NodeProtocol (..)
     , mkCardanoConfiguration
@@ -51,7 +50,6 @@ data PartialCardanoConfiguration = PartialCardanoConfiguration
     , pccUpdate              :: !PartialUpdate
     , pccTXP                 :: !PartialTXP
     , pccDLG                 :: !PartialDLG
-    , pccBlock               :: !PartialBlock
     , pccNode                :: !PartialNode
     } deriving (Eq, Show, Generic)
     deriving Semigroup via GenericSemigroup PartialCardanoConfiguration
@@ -145,30 +143,6 @@ data PartialDLG = PartialDLG
     deriving Semigroup via GenericSemigroup PartialDLG
     deriving Monoid    via GenericMonoid PartialDLG
 
--- | Partial @Block@ configuration.
-data PartialBlock = PartialBlock
-    { pblNetworkDiameter        :: !(Last Int)
-      -- ^Estimated time needed to broadcast message from one node to all other nodes.
-    , pblRecoveryHeadersMessage :: !(Last Int)
-      -- ^Maximum amount of headers node can put into headers message while in "after offline" or "recovery" mode.
-    , pblStreamWindow           :: !(Last Int)
-      -- ^ Number of blocks to have inflight
-    , pblNonCriticalCQBootstrap :: !(Last Double)
-      -- ^ If chain quality in bootstrap era is less than this value, non critical misbehavior will be reported.
-    , pblNonCriticalCQ          :: !(Last Double)
-      -- ^ If chain quality after bootstrap era is less than this value, non critical misbehavior will be reported.
-    , pblCriticalCQ             :: !(Last Double)
-      -- ^ If chain quality after bootstrap era is less than this value, critical misbehavior will be reported.
-    , pblCriticalCQBootstrap    :: !(Last Double)
-      -- ^ If chain quality in bootstrap era is less than this value, critical misbehavior will be reported.
-    , pblCriticalForkThreshold  :: !(Last Int)
-      -- ^ Number of blocks such that if so many blocks are rolled back, it requires immediate reaction.
-    , pblFixedTimeCQ            :: !(Last Int)
-      -- ^ Chain quality will be also calculated for this amount of seconds.
-    } deriving (Eq, Show, Generic)
-    deriving Semigroup via GenericSemigroup PartialBlock
-    deriving Monoid    via GenericMonoid PartialBlock
-
 -- | Return an error if the @Last@ option is incomplete.
 mkComplete :: String -> Last a -> Either ConfigError a
 mkComplete name (Last x) = maybe (Left $ PartialConfigValue name) Right x
@@ -199,7 +173,6 @@ mkCardanoConfiguration PartialCardanoConfiguration{..} = do
     ccUpdate                 <- mkUpdate pccUpdate
     ccTXP                    <- mkTXP pccTXP
     ccDLG                    <- mkDLG pccDLG
-    ccBlock                  <- mkBlock pccBlock
     ccNode                   <- mkNode pccNode
 
     pure CardanoConfiguration{..}
@@ -295,20 +268,3 @@ mkCardanoConfiguration PartialCardanoConfiguration{..} = do
         dlgMessageCacheTimeout  <- mkComplete "dlgMessageCacheTimeout"    pdlgMessageCacheTimeout
 
         pure DLG{..}
-
-
-    -- | Finalize the @PartialBlock@, convert to @Block@.
-    mkBlock :: PartialBlock -> Either ConfigError Block
-    mkBlock PartialBlock{..} = do
-
-        blNetworkDiameter        <- mkComplete "blNetworkDiameter"        pblNetworkDiameter
-        blRecoveryHeadersMessage <- mkComplete "blRecoveryHeadersMessage" pblRecoveryHeadersMessage
-        blStreamWindow           <- mkComplete "blStreamWindow"           pblStreamWindow
-        blNonCriticalCQBootstrap <- mkComplete "blNonCriticalCQBootstrap" pblNonCriticalCQBootstrap
-        blNonCriticalCQ          <- mkComplete "blNonCriticalCQ"          pblNonCriticalCQ
-        blCriticalCQ             <- mkComplete "blCriticalCQ"             pblCriticalCQ
-        blCriticalCQBootstrap    <- mkComplete "blCriticalCQBootstrap"    pblCriticalCQBootstrap
-        blCriticalForkThreshold  <- mkComplete "blCriticalForkThreshold"  pblCriticalForkThreshold
-        blFixedTimeCQ            <- mkComplete "blFixedTimeCQ"            pblFixedTimeCQ
-
-        pure Block{..}

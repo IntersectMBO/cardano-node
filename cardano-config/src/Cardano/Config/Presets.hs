@@ -12,7 +12,6 @@ import           Ouroboros.Consensus.NodeId
 
 import           Cardano.Config.Defaults (traceOptionsDefault)
 import           Cardano.Config.Partial ( NodeProtocol (..)
-                                        , PartialBlock (..)
                                         , PartialCardanoConfiguration (..)
                                         , PartialCore (..)
                                         , PartialDLG (..)
@@ -88,18 +87,6 @@ mainnetConfiguration =
           { pdlgCacheParam = pure 500
           , pdlgMessageCacheTimeout = pure 30
           }
-    , pccBlock =
-        PartialBlock
-          { pblNetworkDiameter = pure 18
-          , pblRecoveryHeadersMessage = pure 2200
-          , pblStreamWindow = pure 2048
-          , pblNonCriticalCQBootstrap = pure 0.95
-          , pblNonCriticalCQ = pure 0.8
-          , pblCriticalCQBootstrap = pure 0.8888
-          , pblCriticalCQ = pure 0.654321
-          , pblCriticalForkThreshold = pure 3
-          , pblFixedTimeCQ = pure 3600
-          }
     , pccNode =
         PartialNode
           { pnoSlotLength = pure 20
@@ -168,18 +155,6 @@ devConfiguration =
         PartialDLG
           { pdlgCacheParam = pure 500
           , pdlgMessageCacheTimeout = pure 30
-          }
-    , pccBlock =
-        PartialBlock
-          { pblNetworkDiameter = pure 3
-          , pblRecoveryHeadersMessage = pure 20
-          , pblStreamWindow = pure 2048
-          , pblNonCriticalCQBootstrap = pure 0.95
-          , pblNonCriticalCQ = pure 0.8
-          , pblCriticalCQBootstrap = pure 0.8888
-          , pblCriticalCQ = pure 0.654321
-          , pblCriticalForkThreshold = pure 2
-          , pblFixedTimeCQ = pure 10
           }
     , pccNode =
         PartialNode
