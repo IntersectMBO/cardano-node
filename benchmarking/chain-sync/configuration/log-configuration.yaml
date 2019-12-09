@@ -21,7 +21,9 @@ defaultBackends:
 logOutput: "log-pipe-0"
 
 # if wanted, Prometheus "metrics" are presented on http://localhost:13789/metrics
-hasPrometheus: 13789
+hasPrometheus: 
+  - "localhost"
+  - 13789
 
 # if wanted, the EKG interface is listening on this port:
 hasEKG: 13788
