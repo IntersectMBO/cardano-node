@@ -13,7 +13,7 @@ if [ -z "${TMUX}" ]; then
   exit 1
 fi
 
-CMD="cabal new-run --"
+CMD="cabal v2-run --"
 
 # VERBOSITY="--tracing-verbosity-minimal"
 # VERBOSITY="--tracing-verbosity-normal"

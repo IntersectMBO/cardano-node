@@ -20,7 +20,7 @@ ulimit -t $CPU_TIME_LIMIT
 
 date --iso-8601=seconds > STARTTIME
 
-NODE="cabal new-run exe:cardano-node -- "
+NODE="cabal v2-run exe:cardano-node -- "
 
 exec ${NODE} \
   --genesis-file ${BASEDIR}/../../configuration/mainnet-genesis.json \

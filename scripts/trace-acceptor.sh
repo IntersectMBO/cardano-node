@@ -2,7 +2,7 @@
 
 # CMD="stack exec trace-acceptor-node -- "
 # CMD="./trace-acceptor.exe -- "
-CMD="cabal new-run exe:trace-acceptor -- "
+CMD="cabal v2-run exe:trace-acceptor -- "
 #TODO: Confirm if db path is necessary for trace acceptor
 set -x
 ${CMD} \

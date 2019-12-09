@@ -9,7 +9,7 @@ else
 fi
 
 
-RUNNER=${RUNNER:-cabal new-run -v0 --}
+RUNNER=${RUNNER:-cabal v2-run -v0 --}
 
 # . $(dirname $0)/lib-node.sh
 

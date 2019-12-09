@@ -3,13 +3,13 @@
 set -e
 
 # build first:
-#> cabal new-build --reorder-goals
+#> cabal v2-build --reorder-goals
 
 # create tmux session:
 #> tmux new-session -s 'Demo' -t demo
 
 # CMD="stack exec --nix cardano-node --"
-CMD="cabal run --"
+CMD="cabal v2-run --"
 # EXTRA="--live-view"
 EXTRA=""
 

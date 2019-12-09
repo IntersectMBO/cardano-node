@@ -17,7 +17,7 @@ TARGETNODES=`for N in $targetnodes; do echo -n "--target-node (\"127.0.0.1\",$((
 
 echo "$TARGETNODES"
 
-GENERATOR="cabal new-run exe:cardano-cli -- "
+GENERATOR="cabal v2-run exe:cardano-cli -- "
 exec ${GENERATOR} \
   --log-config ${CONFIGFILE} \
   --signing-key ${CONFIGDIR}/latest-genesis/delegate-keys.000.key \

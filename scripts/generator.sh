@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-CMD="cabal new-run -v0 -- cardano-cli "
+CMD="cabal v2-run -v0 -- cardano-cli "
 
 . $(dirname $0)/lib-node.sh
 
