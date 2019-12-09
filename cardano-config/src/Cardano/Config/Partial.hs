@@ -13,7 +13,6 @@ module Cardano.Config.Partial
     , PartialNTP (..)
     , PartialUpdate (..)
     , PartialLastKnownBlockVersion (..)
-    , PartialDLG (..)
     -- * re-exports
     , NodeProtocol (..)
     , mkCardanoConfiguration
@@ -47,7 +46,6 @@ data PartialCardanoConfiguration = PartialCardanoConfiguration
     , pccCore                :: !PartialCore
     , pccNTP                 :: !PartialNTP
     , pccUpdate              :: !PartialUpdate
-    , pccDLG                 :: !PartialDLG
     , pccNode                :: !PartialNode
     } deriving (Eq, Show, Generic)
     deriving Semigroup via GenericSemigroup PartialCardanoConfiguration
@@ -119,17 +117,6 @@ data PartialLastKnownBlockVersion = PartialLastKnownBlockVersion
     deriving Semigroup via GenericSemigroup PartialLastKnownBlockVersion
     deriving Monoid    via GenericMonoid PartialLastKnownBlockVersion
 
--- | Partial @DLG@ configuration.
-data PartialDLG = PartialDLG
-    { pdlgCacheParam          :: !(Last Int)
-      -- ^ This value parameterizes size of cache used in Delegation.
-      -- Not bytes, but number of elements.
-    , pdlgMessageCacheTimeout :: !(Last Int)
-      -- ^ Interval we ignore cached messages for if it's sent again.
-    } deriving (Eq, Show, Generic)
-    deriving Semigroup via GenericSemigroup PartialDLG
-    deriving Monoid    via GenericMonoid PartialDLG
-
 -- | Return an error if the @Last@ option is incomplete.
 mkComplete :: String -> Last a -> Either ConfigError a
 mkComplete name (Last x) = maybe (Left $ PartialConfigValue name) Right x
@@ -158,7 +145,6 @@ mkCardanoConfiguration PartialCardanoConfiguration{..} = do
     ccCore                   <- mkCore pccCore
     ccNTP                    <- mkNTP pccNTP
     ccUpdate                 <- mkUpdate pccUpdate
-    ccDLG                    <- mkDLG pccDLG
     ccNode                   <- mkNode pccNode
 
     pure CardanoConfiguration{..}
@@ -232,12 +218,3 @@ mkCardanoConfiguration PartialCardanoConfiguration{..} = do
                                             pnoHandshakeTimeout
 
         pure Node{..}
-
-    -- | Finalize the @PartialDLG@, convert to @DLG@.
-    mkDLG :: PartialDLG -> Either ConfigError DLG
-    mkDLG PartialDLG{..} = do
-
-        dlgCacheParam           <- mkComplete "dlgCacheParam"             pdlgCacheParam
-        dlgMessageCacheTimeout  <- mkComplete "dlgMessageCacheTimeout"    pdlgMessageCacheTimeout
-
-        pure DLG{..}

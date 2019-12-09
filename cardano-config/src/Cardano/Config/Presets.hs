@@ -14,7 +14,6 @@ import           Cardano.Config.Defaults (traceOptionsDefault)
 import           Cardano.Config.Partial ( NodeProtocol (..)
                                         , PartialCardanoConfiguration (..)
                                         , PartialCore (..)
-                                        , PartialDLG (..)
                                         , PartialLastKnownBlockVersion (..)
                                         , PartialNTP (..)
                                         , PartialNode (..)
@@ -76,11 +75,6 @@ mainnetConfiguration =
                   , plkbvAlt = pure 0
                   }
           }
-    , pccDLG =
-        PartialDLG
-          { pdlgCacheParam = pure 500
-          , pdlgMessageCacheTimeout = pure 30
-          }
     , pccNode =
         PartialNode
           { pnoSlotLength = pure 20
@@ -139,11 +133,6 @@ devConfiguration =
                 , plkbvMinor = pure 0
                 , plkbvAlt = pure 0
                 }
-          }
-    , pccDLG =
-        PartialDLG
-          { pdlgCacheParam = pure 500
-          , pdlgMessageCacheTimeout = pure 30
           }
     , pccNode =
         PartialNode
