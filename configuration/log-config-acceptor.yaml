@@ -99,10 +99,16 @@ options:
     'cardano.#messagecounters.monitoring':
       subtrace: NoTrace
   mapBackends:
-    cardano.epoch-validation.benchmark:
-      - AggregationBK
-    '#aggregation.cardano.epoch-validation.benchmark':
+    cardano.node.metrics.ChainDB:
       - EKGViewBK
+      - kind: UserDefinedBK
+        name: LiveViewBackend
+    cardano.node.metrics:
+      - kind: UserDefinedBK
+        name: LiveViewBackend
+    cardano.node.peers.BlockFetchDecision:
+      - kind: UserDefinedBK
+        name: LiveViewBackend
 
 ##########################################################
 ############### Cardano Node Configuration ###############

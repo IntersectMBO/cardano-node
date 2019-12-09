@@ -1,16 +1,16 @@
 # global filter; messages must have at least this severity to pass:
-minSeverity: Debug
+minSeverity: Notice
 
 # global file rotation settings:
 rotation:
-  rpLogLimitBytes: 5000000
+  rpLogLimitBytes: 50000000
   rpKeepFilesNum:  10
   rpMaxAgeHours:   24
 
 # these backends are initialized:
 setupBackends:
-  - AggregationBK
   - KatipBK
+  # - AggregationBK
   # - EditorBK
   # - EKGViewBK
 
@@ -26,15 +26,15 @@ defaultBackends:
 
 # here we set up outputs of logging in 'katip':
 setupScribes:
-  - scKind: StdoutSK
-    scName: stdout
+  - scKind: FileSK
+    scName: "logs/mainnet.log"
     scFormat: ScText
-    scRotation: null
 
 # if not indicated otherwise, then log output is directed to this:
 defaultScribes:
-  - - StdoutSK
-    - stdout
+  - - FileSK
+    - "logs/mainnet.log"
+    #  - - DevNullSK
 
 # more options which can be passed as key-value pairs:
 options:
@@ -71,11 +71,23 @@ options:
       subtrace: NoTrace
     '#messagecounters.switchboard':
       subtrace: NoTrace
+    '#messagecounters.monitoring':
+      subtrace: NoTrace
+    '#messagecounters.katip':
+      subtrace: NoTrace
   mapBackends:
-    cardano.epoch-validation.benchmark:
-      - AggregationBK
-    '#aggregation.cardano.epoch-validation.benchmark':
+    cardano.node.metrics.ChainDB:
       - EKGViewBK
+      - kind: UserDefinedBK
+        name: LiveViewBackend
+        #    cardano.node-metrics:
+        #      - DevNullBK
+    cardano.node.metrics:
+      - kind: UserDefinedBK
+        name: LiveViewBackend
+    cardano.node.peers.BlockFetchDecision:
+      - kind: UserDefinedBK
+        name: LiveViewBackend
 
 ##########################################################
 ############### Cardano Node Configuration ###############
@@ -88,7 +100,8 @@ NumCoreNodes: 1
 RequiresNetworkMagic: RequiresNoMagic
 PBftSignatureThreshold: 0.7
 TurnOnLogging: True
-ViewMode: SimpleView
+#ViewMode: SimpleView
+ViewMode: LiveView
 TurnOnLogMetrics: True
 ##### Network Time Parameters #####
 
