@@ -38,7 +38,7 @@ $ cd cardano-node
 $ cabal build
 ```
 
-## Cardano Node CLI
+# `cardano-node`
 
 This refers to the client that is used for running a node.
 
@@ -91,90 +91,9 @@ Some of the more important settings are as follows:
 Logs are output to the `log/` dir.
 
 
-## Connect to mainnet
+## Scripts
 
-Run `./scripts/mainnet.sh`
-
-This script connects to several IOHK nodes on mainnet.
-
-
-
-# Shelley Testnet
-
-The `./scripts/shelley-testnet.sh` script starts up three nodes that are
-connected via TCP sockets to each other and produce blocks according to the
-algorithm selected (e.g. "BFT").  The blocks are shared among the nodes and
-after verification integrated into a nodes ledger.  The user can submit
-transactions to a node which includes them in its local mempool, and eventually
-in the next block it will create.
-
-
-```
-
- +---------+         +---------+
- |         | <-----> |         |
- | node 0  |         | node 1  |
- |         | <-+ +-> |         |
- +---------+   | |   +---------+
-               v v
-
-            +---------+
-            |         |
-            | node 2  |
-            |         |
-            +---------+
-
-
-```
-
-## Startup testnet
-
-Add the next two lines to your $HOME/.tmux.conf file:
-```
-set-window-option -g mouse on
-set -g default-terminal "tmux-256color"
-```
-
-1.) Generate the necessary genesis files by running
-
-    `./scripts/genesis.sh`
-
-2.) create a `tmux` session
-
-`tmux new-session -s Demo`
-
-3.) run the demo script in this new session
-
-`./scripts/shelley-testnet.sh`
-
-## Submit a tx to the testnet
-
-Following the instructions above, the window of the terminal will be split into four panes.
-Three of the panes showing the nodes running and a shell to enter commands for transaction submission, e.g.
-
-```
-./scripts/submit-tx.sh generated-tx-file
-```
-The `submit-tx.sh` script by default sends the transaction to node with node id 0.
-
-See cardano-cli's Transactions section for instructions on how to generate a tx.
-
-## Startup testnet with dns
-
-You can run: 
-
-`./scripts/shelley-testnet-dns.sh` 
-
-instead of `shelley-testnet.sh`.  
-It requires that the addresses `local.iohk.io` and `local6.iohk.io` resolve to `127.0.0.1` and `::1` respectively.  
-
-You can use [unbound](https://github.com/NLnetLabs/unbound) dns server. You can use the following `/etc/unbound/unbound.conf` file:
-```
-server:
-  verbosity: 1
-  local-data: "local.iohk.io A 127.0.0.1"
-  local-data: "local6.iohk.io AAAA ::1"
-```
+Please see `scripts/README.md` for information on the various scripts.
 
 # `cardano-cli`
 
