@@ -98,7 +98,7 @@ createNodeFeature loggingLayer cli cardanoEnvironment = do
     -- we construct the cardano feature
     let cardanoFeature = CardanoFeature
                            { featureName       = "NodeFeature"
-                           , featureStart      = pure ()
+                           , featureStart      = void $ pure nodeLayer
                            , featureShutdown   = pure ()
                            }
 

@@ -37,7 +37,7 @@ import           Network.TypedProtocol.Codec
 import           Network.TypedProtocol.Codec.Cbor
 import           Network.TypedProtocol.Driver
 import           Ouroboros.Network.Mux
-import           Ouroboros.Network.Block (Point)
+import           Ouroboros.Network.Block (Tip)
 import qualified Ouroboros.Network.Block as Block
 import           Ouroboros.Network.Protocol.LocalTxSubmission.Type
 import           Ouroboros.Network.Protocol.LocalTxSubmission.Client
@@ -94,7 +94,7 @@ localInitiatorNetworkApplication
   -- from 'cardano-chain'.  This should remove the dependency of this module
   -- from 'ouroboros-consensus'.
   => Proxy blk
-  -> Tracer m (TraceSendRecv (ChainSync blk (Point blk)) peer DeserialiseFailure)
+  -> Tracer m (TraceSendRecv (ChainSync blk (Tip blk)) peer DeserialiseFailure)
   -- ^ tracer which logs all chain-sync messages send and received by the client
   -- (see 'Ouroboros.Network.Protocol.ChainSync.Type' in 'ouroboros-network'
   -- package)
@@ -160,7 +160,7 @@ txSubmissionClient txv = LocalTxSubmissionClient go
 --
 chainSyncClient
   :: forall blk m. MonadTimer m
-  => ChainSyncClient blk (Point blk) m Void
+  => ChainSyncClient blk (Tip blk) m Void
 chainSyncClient = ChainSyncClient $ pure $
     -- Notify the core node about the our latest points at which we are
     -- synchronised.  This client is not persistent and thus it just
@@ -173,11 +173,11 @@ chainSyncClient = ChainSyncClient $ pure $
         recvMsgIntersectNotFound = \  _ -> ChainSyncClient (pure clientStIdle)
       }
   where
-    clientStIdle :: ClientStIdle blk (Point blk) m Void
+    clientStIdle :: ClientStIdle blk (Tip blk) m Void
     clientStIdle =
       SendMsgRequestNext clientStNext (pure clientStNext)
 
-    clientStNext :: ClientStNext blk (Point blk) m Void
+    clientStNext :: ClientStNext blk (Tip blk) m Void
     clientStNext = ClientStNext {
         recvMsgRollForward = \_blk _tip -> ChainSyncClient $ do
           pure clientStIdle
@@ -202,7 +202,7 @@ localTxSubmissionCodec =
 localChainSyncCodec
   :: forall blk m. (RunNode blk, MonadST m)
   => NodeConfig (BlockProtocol blk)
-  -> Codec (ChainSync blk (Point blk))
+  -> Codec (ChainSync blk (Tip blk))
            DeserialiseFailure m ByteString
 localChainSyncCodec pInfoConfig =
     codecChainSync
@@ -210,5 +210,5 @@ localChainSyncCodec pInfoConfig =
       (nodeDecodeBlock pInfoConfig)
       (Block.encodePoint (nodeEncodeHeaderHash (Proxy @blk)))
       (Block.decodePoint (nodeDecodeHeaderHash (Proxy @blk)))
-      (Block.encodePoint (nodeEncodeHeaderHash (Proxy @blk)))
-      (Block.decodePoint (nodeDecodeHeaderHash (Proxy @blk)))
+      (Block.encodeTip (nodeEncodeHeaderHash (Proxy @blk)))
+      (Block.decodeTip (nodeDecodeHeaderHash (Proxy @blk)))
