@@ -13,37 +13,15 @@ import           Cardano.Shell.Lib (runCardanoApplicationWithFeatures)
 import           Cardano.Shell.Types (CardanoApplication (..),
                                       CardanoFeature (..))
 
+import           Cardano.Common.Parsers ( parseConfigFile, parseGenesisFile
+                                        , parseSocketDir)
 import           Cardano.Config.CommonCLI
-import           Cardano.Config.Types (CardanoEnvironment (..))
-import           Cardano.Config.Logging (LoggingCLIArguments (..),
-                                                LoggingLayer (..),
-                                                createLoggingFeature
-                                                )
-import           Cardano.Common.Parsers (loggingParser, nodeCliParser)
+import           Cardano.Config.Types ( CardanoEnvironment (..), ConfigYamlFilePath (..)
+                                      , DelegationCertFile(..), SigningKeyFile (..)
+                                      , SocketFile (..))
+import           Cardano.Config.Logging (LoggingLayer (..))
+import           Cardano.Wallet.Logging (WalletCLI(..), createLoggingFeatureWallet)
 import           Cardano.Wallet.Run
-
--- | The product type of all command line arguments
-data ArgParser = ArgParser !LoggingCLIArguments !WalletCLI
-
--- | The product parser for all the WalletCLI arguments.
---
-commandLineParser :: Parser ArgParser
-commandLineParser = ArgParser
-    <$> loggingParser
-    <*> parseWalletCLI
-
-parseWalletCLI :: Parser WalletCLI
-parseWalletCLI = WalletCLI
-    <$> nodeCliParser
-    <*> parseGenesisHash
-
--- | Top level parser with info.
---
-opts :: ParserInfo ArgParser
-opts = info (commandLineParser <**> helper)
-  ( fullDesc
-  <> progDesc "Cardano wallet node."
-  <> header "Demo client to run.")
 
 -- | Main function.
 main :: IO ()
@@ -60,10 +38,27 @@ main = do
 
     runCardanoApplicationWithFeatures cardanoFeatures (cardanoApplication nodeLayer)
 
-initializeAllFeatures :: ArgParser  -> CardanoEnvironment -> IO ([CardanoFeature], NodeLayer)
-initializeAllFeatures (ArgParser _ cli) cardanoEnvironment = do
-    (loggingLayer, loggingFeature) <- createLoggingFeature cardanoEnvironment $ waNodeCli cli
-    (nodeLayer   , nodeFeature)    <- createNodeFeature loggingLayer cli cardanoEnvironment
+-- | Top level parser with info.
+--
+opts :: ParserInfo WalletCLI
+opts = info (parseWalletCLI <**> helper)
+  ( fullDesc
+  <> progDesc "Cardano wallet node."
+  <> header "Demo client to run.")
+
+parseWalletCLI :: Parser WalletCLI
+parseWalletCLI = WalletCLI
+    <$> (ConfigYamlFilePath <$> parseConfigFile)
+    <*> optional (DelegationCertFile <$> parseDelegationCert)
+    <*> parseGenesisHash
+    <*> parseGenesisFile "genesis-json"
+    <*> optional (SigningKeyFile <$> parseSigningKey)
+    <*> (SocketFile <$> parseSocketDir)
+
+initializeAllFeatures :: WalletCLI  -> CardanoEnvironment -> IO ([CardanoFeature], NodeLayer)
+initializeAllFeatures wCli cardanoEnvironment = do
+    (loggingLayer, loggingFeature) <- createLoggingFeatureWallet cardanoEnvironment wCli
+    (nodeLayer   , nodeFeature)    <- createNodeFeature loggingLayer wCli cardanoEnvironment
 
     -- Here we return all the features.
     let allCardanoFeatures :: [CardanoFeature]

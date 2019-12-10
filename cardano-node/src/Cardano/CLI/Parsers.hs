@@ -46,7 +46,7 @@ import           Cardano.Chain.Slotting (EpochNumber(..))
 import           Cardano.Chain.UTxO (TxId, TxIn(..), TxOut(..))
 import           Cardano.Config.CommonCLI
 import           Cardano.Config.Topology (NodeAddress(..), NodeHostAddress(..))
-import           Cardano.Config.Types (GenesisFile(..), SigningKeyFile(..))
+import           Cardano.Config.Types (SigningKeyFile(..))
 import qualified Ouroboros.Consensus.BlockchainTime  as Consensus
 import           Cardano.Crypto (RequiresNetworkMagic(..), decodeHash)
 import           Cardano.Crypto.ProtocolMagic ( AProtocolMagic(..), ProtocolMagic
@@ -164,10 +164,6 @@ parseFakeAvvmOptions =
 
 parseFeePerTx :: String -> String -> Parser FeePerTx
 parseFeePerTx opt desc = FeePerTx <$> parseIntegral opt desc
-
-parseGenesisFile :: String -> Parser GenesisFile
-parseGenesisFile opt =
-  GenesisFile <$> parseFilePath opt "Genesis JSON file."
 
 parseGenesisHashLast :: Parser (Last Text)
 parseGenesisHashLast =
