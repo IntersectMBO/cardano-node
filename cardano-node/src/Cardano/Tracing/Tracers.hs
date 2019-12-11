@@ -1,6 +1,7 @@
 {-# LANGUAGE ConstraintKinds       #-}
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE GADTs                 #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns        #-}
 {-# LANGUAGE OverloadedStrings     #-}
@@ -69,6 +70,8 @@ import           Cardano.Config.Protocol (TraceConstraints)
 import           Cardano.Config.Types
 import           Cardano.Tracing.ToObjectOrphans
 
+import           Control.Tracer.Transformers
+
 data Tracers peer blk = Tracers {
       -- | Trace the ChainDB (flag '--trace-chain-db' will turn on textual output)
       chainDBTracer         :: Tracer IO (WithTip blk (ChainDB.TraceEvent blk))
@@ -106,6 +109,7 @@ nullTracers = Tracers {
       errorPolicyTracer = nullTracer,
       muxTracer = nullTracer
     }
+
 
 -- | Smart constructor of 'NodeTraces'.
 --

@@ -40,6 +40,7 @@ library
                        Cardano.Tracing.Tracers
                        Cardano.Wallet.Run
                        Cardano.Wallet.Client
+                       Control.Tracer.Transformers
 
   other-modules:       Paths_cardano_node
                        Cardano.Tracing.ToObjectOrphans
