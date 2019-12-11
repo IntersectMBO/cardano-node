@@ -10,6 +10,7 @@
 
 module Cardano.Config.Protocol
   ( Protocol(..)
+  , ProtocolInstantiationError(..)
   , SomeProtocol(..)
   , fromProtocol
   , TraceConstraints
@@ -114,6 +115,7 @@ data ProtocolInstantiationError =
   | PbftError PBftLeaderCredentialsError
   | SigningKeyDeserialiseFailure DeserialiseFailure
   | SigningKeyFilepathNotSpecified
+  deriving Show
 
 fromProtocol
   :: Text

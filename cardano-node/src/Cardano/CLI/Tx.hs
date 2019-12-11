@@ -14,7 +14,6 @@ module Cardano.CLI.Tx
   , txSpendUTxOByronPBFT
   , issueUTxOExpenditure
   , nodeSubmitTx
-  , withRealPBFT
   )
 where
 
@@ -22,6 +21,7 @@ import           Prelude (error, show)
 import           Cardano.Prelude hiding (option, show, trace, (%))
 
 import           Codec.Serialise (deserialiseOrFail)
+import           Control.Monad.Trans.Except.Extra (left, right)
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.Map.Strict as Map
 import           Data.String (IsString)
@@ -45,7 +45,6 @@ import qualified Cardano.Crypto.Signing as Crypto
 import qualified Ouroboros.Consensus.Ledger.Byron as Byron
 import           Ouroboros.Consensus.Ledger.Byron (GenTx(..), ByronBlock)
 import qualified Ouroboros.Consensus.Protocol as Consensus
-import           Ouroboros.Consensus.Node.Run (RunNode)
 import           Ouroboros.Consensus.NodeId
 
 import           Cardano.CLI.Ops
@@ -131,39 +130,6 @@ genesisUTxOTxIn gc vk genAddr =
       <> "\n\nIt has the following, though:\n\n"
       <> Cardano.Prelude.concat (T.unpack . prettyAddress <$> Map.keys initialUtxo)
 
--- | Perform an action that expects ProtocolInfo for Byron/PBFT,
---   with attendant configuration.
-withRealPBFT
-  :: Text
-  -> Maybe NodeId
-  -> Maybe Int
-  -> GenesisFile
-  -> RequiresNetworkMagic
-  -> Maybe Double
-  -> Maybe DelegationCertFile
-  -> Maybe SigningKeyFile
-  -> Update
-  -> Protocol
-  -> (RunNode ByronBlock
-        => Consensus.Protocol ByronBlock
-        -> IO a)
-  -> IO a
-withRealPBFT gHash nId mNumNodes genFile nMagic sigThresh delCertFp sKeyFp update ptcl action = do
-  SomeProtocol p <- fromProtocol
-                      gHash
-                      nId
-                      mNumNodes
-                      genFile
-                      nMagic
-                      sigThresh
-                      delCertFp
-                      sKeyFp
-                      update
-                      ptcl
-  case p of
-    proto@Consensus.ProtocolRealPBFT{} -> action proto
-    _ -> throwIO $ ProtocolNotSupported ptcl
-
 -- | Generate a transaction spending genesis UTxO at a given address,
 --   to given outputs, signed by the given key.
 txSpendGenesisUTxOByronPBFT
@@ -202,7 +168,7 @@ issueGenesisUTxOExpenditure
   -> Update
   -> Protocol
   -> Crypto.SigningKey
-  -> IO (GenTx ByronBlock)
+  -> ExceptT RealPBFTError IO (GenTx ByronBlock)
 issueGenesisUTxOExpenditure
   genRichAddr
   outs
@@ -222,10 +188,11 @@ issueGenesisUTxOExpenditure
           case txSpendGenesisUTxOByronPBFT gc sk genRichAddr outs of
             tx@(ByronTx txid _) -> do
               putStrLn $ sformat ("TxId: "%Crypto.hashHexF) txid
-              pure tx
-            x ->
-              throwIO $ InvariantViolation $
-              "Invariant violation:  a non-ByronTx GenTx out of 'txSpendUTxOByronPBFT': " <> show x
+              right tx
+            x -> left . InvariantViolation
+                      . T.pack
+                      $ "A non-ByronTx GenTx out of 'txSpendUTxOByronPBFT': "
+                      <> show x
 
 -- | Generate a transaction from given Tx inputs to outputs,
 --   signed by the given key.
@@ -262,7 +229,7 @@ issueUTxOExpenditure
   -> Update
   -> Protocol
   -> Crypto.SigningKey
-  -> IO (GenTx ByronBlock)
+  -> ExceptT RealPBFTError IO (GenTx ByronBlock)
 issueUTxOExpenditure
   ins
   outs
@@ -284,8 +251,10 @@ issueUTxOExpenditure
             putStrLn $ sformat ("TxId: "%Crypto.hashHexF) txid
             pure tx
           x ->
-            throwIO $ InvariantViolation $
-            "Invariant violation:  a non-ByronTx GenTx out of 'txSpendUTxOByronPBFT': " <> show x
+            left . InvariantViolation
+                 . T.pack
+                 $ "A non-ByronTx GenTx out of 'txSpendUTxOByronPBFT': "
+                 <> show x
 
 -- | Submit a transaction to a node specified by topology info.
 nodeSubmitTx
@@ -303,7 +272,7 @@ nodeSubmitTx
   -> Update
   -> Protocol
   -> GenTx ByronBlock
-  -> IO ()
+  -> ExceptT RealPBFTError IO ()
 nodeSubmitTx
   topology
   gHash
@@ -320,7 +289,10 @@ nodeSubmitTx
   gentx =
     withRealPBFT gHash (Just nId) mNumCoreNodes genFile nMagic sigThresh delCertFp sKeyFp update ptcl $
       \p@Consensus.ProtocolRealPBFT{} -> do
-        case gentx of
-          ByronTx txid _ -> putStrLn $ sformat ("TxId: "%Crypto.hashHexF) txid
-          _ -> pure ()
-        handleTxSubmission socketFp p topology gentx stdoutTracer
+        _ <- case gentx of
+               ByronTx txid _ -> pure . putTextLn
+                                      $ sformat ("TxId: "%Crypto.hashHexF) txid
+               otherTxType -> left . TransactionTypeNotHandledYet
+                                   . T.pack $ show otherTxType
+        -- TODO: Update handleTxSubmission to use `ExceptT`
+        liftIO $ handleTxSubmission socketFp p topology gentx stdoutTracer

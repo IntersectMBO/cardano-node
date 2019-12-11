@@ -107,7 +107,7 @@ runNode loggingLayer nc nCli = do
                                          (ncProtocol nc)
 
     SomeProtocol p <- case eitherSomeProtocol of
-                        Left err -> putTextLn . pack $ show err >> exitFailure
+                        Left err -> (putTextLn . pack $ show err) >> exitFailure
                         Right (SomeProtocol p) -> pure $ SomeProtocol p
 
     let tracers     = mkTracers (traceOpts nCli) trace

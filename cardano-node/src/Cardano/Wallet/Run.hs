@@ -18,6 +18,7 @@ import           Cardano.Config.Protocol(SomeProtocol(..), fromProtocol)
 
 import           Ouroboros.Consensus.NodeId (CoreNodeId (..), NodeId (..))
 
+import           Cardano.Config.Protocol (ProtocolInstantiationError)
 import           Cardano.Config.Types (ConfigYamlFilePath(..), MiscellaneousFilepaths(..),
                                        NodeCLI(..), NodeConfiguration(..), SocketFile(..),
                                        parseNodeConfiguration)
@@ -47,7 +48,7 @@ runClient WalletCLI{ waNodeCli , waGenesisHash} tracer = do
                                     (ncProtocol nc)
 
     SomeProtocol p <- case eSomeProtocol of
-                        Left err -> putTextLn renderError >> exitFailure
+                        Left err -> (putTextLn $ renderError err) >> exitFailure
                         Right (SomeProtocol p) -> pure $ SomeProtocol p
 
     let socketDir = unSocket . socketFile $ mscFp waNodeCli

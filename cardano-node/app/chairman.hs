@@ -4,7 +4,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 import           Cardano.Prelude hiding (option)
-import           Prelude (show)
 
 import           Control.Applicative (some)
 import           Control.Exception (Exception)
@@ -20,7 +19,8 @@ import           Ouroboros.Consensus.Protocol.Abstract (SecurityParam (..))
 import           Ouroboros.Consensus.NodeId (CoreNodeId)
 
 import           Cardano.Config.CommonCLI
-import           Cardano.Config.Protocol (SomeProtocol(..), fromProtocol)
+import           Cardano.Config.Protocol ( ProtocolInstantiationError
+                                         , SomeProtocol(..), fromProtocol)
 import           Cardano.Config.Types (ConfigYamlFilePath(..), DelegationCertFile(..),
                                        GenesisFile (..), NodeConfiguration(..),
                                        SigningKeyFile(..), SocketFile(..), parseNodeConfiguration)
@@ -54,10 +54,11 @@ main = do
                                  (caSigningKeyFp)
                                  (ncUpdate nc)
                                  (ncProtocol nc)
-    case frmPtclRes of
-      Right (SomeProtocol p) -> pure (SomeProtocol p)
-      Left err -> do putTextLn $ renderPtclInstantiationErr err
-                     exitFailure
+
+    SomeProtocol p <- case frmPtclRes of
+                        Right (SomeProtocol p) -> pure (SomeProtocol p)
+                        Left err -> do putTextLn $ renderPtclInstantiationErr err
+                                       exitFailure
 
     let run = runChairman p caCoreNodeIds
                           caSecurityParam
@@ -78,7 +79,7 @@ main = do
             FailureTimeout -> exitFailure
 
 renderPtclInstantiationErr :: ProtocolInstantiationError -> Text
-renderPtclInstantiationErr pie = pack . show
+renderPtclInstantiationErr = pack . show
 
 data TimeoutType
   = SuccessTimeout
