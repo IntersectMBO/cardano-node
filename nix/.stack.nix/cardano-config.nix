@@ -45,6 +45,8 @@
           (hsPkgs.string-conv)
           (hsPkgs.stm)
           (hsPkgs.text)
+          (hsPkgs.transformers)
+          (hsPkgs.transformers-except)
           (hsPkgs.yaml)
           ];
         };
