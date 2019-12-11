@@ -1,4 +1,4 @@
-{ pkgs, cardano-node ? pkgs.cardano-node }:
+{ pkgs, cardano-node ? (import ./nix/nix-tools.nix {}).nix-tools.exes.cardano-node }:
 with builtins; with pkgs.lib;
 let
 
