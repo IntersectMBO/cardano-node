@@ -104,43 +104,43 @@ source-repository-package
   type: git
   location: https://github.com/input-output-hk/iohk-monitoring-framework
   subdir: iohk-monitoring
-  tag: b4643defabb23b3d78f4b690a01bb6a41a3cd203
+  tag: b310a4f0b7a80b54edfb094afd3def9eab035f46
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/iohk-monitoring-framework
   subdir:   contra-tracer
-  tag: b4643defabb23b3d78f4b690a01bb6a41a3cd203
+  tag: b310a4f0b7a80b54edfb094afd3def9eab035f46
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/iohk-monitoring-framework
   subdir:   plugins/scribe-systemd
-  tag: b4643defabb23b3d78f4b690a01bb6a41a3cd203
+  tag: b310a4f0b7a80b54edfb094afd3def9eab035f46
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/iohk-monitoring-framework
   subdir:   plugins/backend-aggregation
-  tag: b4643defabb23b3d78f4b690a01bb6a41a3cd203
+  tag: b310a4f0b7a80b54edfb094afd3def9eab035f46
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/iohk-monitoring-framework
   subdir:   plugins/backend-editor
-  tag: b4643defabb23b3d78f4b690a01bb6a41a3cd203
+  tag: b310a4f0b7a80b54edfb094afd3def9eab035f46
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/iohk-monitoring-framework
   subdir:   plugins/backend-ekg
-  tag: b4643defabb23b3d78f4b690a01bb6a41a3cd203
+  tag: b310a4f0b7a80b54edfb094afd3def9eab035f46
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/iohk-monitoring-framework
   subdir:   plugins/backend-monitoring
-  tag: b4643defabb23b3d78f4b690a01bb6a41a3cd203
+  tag: b310a4f0b7a80b54edfb094afd3def9eab035f46
 
 -- dependencies of iohk-monitoring
 source-repository-package
