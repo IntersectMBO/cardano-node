@@ -95,10 +95,10 @@ Protocol: RealPBFT
 NumCoreNodes: 1
 RequiresNetworkMagic: RequiresNoMagic
 PBftSignatureThreshold: 0.7
-TurnOnLogging: False
-ViewMode: SimpleView
-#ViewMode: LiveView
-TurnOnLogMetrics: False
+TurnOnLogging: True
+#ViewMode: SimpleView
+ViewMode: LiveView
+TurnOnLogMetrics: True
 ##### Network Time Parameters #####
 
 ResponseTimeout: 30000000
