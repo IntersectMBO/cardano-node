@@ -139,7 +139,7 @@ withRealPBFT
   -> Maybe Int
   -> GenesisFile
   -> RequiresNetworkMagic
-  -> (Maybe Double)
+  -> Maybe Double
   -> Maybe DelegationCertFile
   -> Maybe SigningKeyFile
   -> Update
