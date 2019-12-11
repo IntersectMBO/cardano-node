@@ -3,16 +3,13 @@ minSeverity: Notice
 
 # global file rotation settings:
 rotation:
-  rpLogLimitBytes: 50000000
-  rpKeepFilesNum:  10
+  rpLogLimitBytes: 5000000
+  rpKeepFilesNum:  3
   rpMaxAgeHours:   24
 
 # these backends are initialized:
 setupBackends:
   - KatipBK
-  # - AggregationBK
-  # - EditorBK
-  # - EKGViewBK
 
 # if not indicated otherwise, then messages are passed to these backends:
 defaultBackends:
@@ -34,7 +31,6 @@ setupScribes:
 defaultScribes:
   - - FileSK
     - "logs/mainnet.log"
-    #  - - DevNullSK
 
 # more options which can be passed as key-value pairs:
 options:
@@ -99,10 +95,10 @@ Protocol: RealPBFT
 NumCoreNodes: 1
 RequiresNetworkMagic: RequiresNoMagic
 PBftSignatureThreshold: 0.7
-TurnOnLogging: True
-#ViewMode: SimpleView
-ViewMode: LiveView
-TurnOnLogMetrics: True
+TurnOnLogging: False
+ViewMode: SimpleView
+#ViewMode: LiveView
+TurnOnLogMetrics: False
 ##### Network Time Parameters #####
 
 ResponseTimeout: 30000000
