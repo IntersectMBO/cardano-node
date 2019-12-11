@@ -10,6 +10,7 @@ import           Cardano.Prelude
 
 import           Data.Functor.Contravariant (contramap)
 import           Data.Text (Text, pack)
+import           System.Exit (exitFailure)
 
 import           Cardano.BM.Data.Tracer (ToLogObject (..))
 import           Cardano.BM.Trace (Trace, appendName)
@@ -29,22 +30,31 @@ runClient WalletCLI{ waNodeCli , waGenesisHash} tracer = do
                        Nothing -> panic "Cardano.Wallet.Run.runClient: NodeId not specified"
                        Just (CoreId num) -> CoreNodeId num
                        Just (RelayId _) -> panic "Cardano.Wallet.Run.runClient: Relay nodes not supported"
+
     let tracer' = contramap pack . toLogObject $
           appendName ("Wallet " <> pack (show coreNodeId)) tracer
-    SomeProtocol p <- fromProtocol
-                        waGenesisHash
-                        (ncNodeId nc)
-                        (ncNumCoreNodes nc)
-                        (genesisFile $ mscFp waNodeCli)
-                        (ncReqNetworkMagic nc)
-                        (ncPbftSignatureThresh nc)
-                        (delegCertFile $ mscFp waNodeCli)
-                        (signKeyFile $ mscFp waNodeCli)
-                        (ncUpdate nc)
-                        (ncProtocol nc)
+
+    eSomeProtocol <- runExceptT $ fromProtocol
+                                    waGenesisHash
+                                    (ncNodeId nc)
+                                    (ncNumCoreNodes nc)
+                                    (genesisFile $ mscFp waNodeCli)
+                                    (ncReqNetworkMagic nc)
+                                    (ncPbftSignatureThresh nc)
+                                    (delegCertFile $ mscFp waNodeCli)
+                                    (signKeyFile $ mscFp waNodeCli)
+                                    (ncUpdate nc)
+                                    (ncProtocol nc)
+
+    SomeProtocol p <- case eSomeProtocol of
+                        Left err -> putTextLn renderError >> exitFailure
+                        Right (SomeProtocol p) -> pure $ SomeProtocol p
+
     let socketDir = unSocket . socketFile $ mscFp waNodeCli
     runWalletClient p socketDir coreNodeId tracer'
 
 data WalletCLI = WalletCLI { waNodeCli :: !NodeCLI
                            , waGenesisHash :: !Text
                            }
+renderError :: ProtocolInstantiationError -> Text
+renderError = pack . show
