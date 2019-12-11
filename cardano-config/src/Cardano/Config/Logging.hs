@@ -252,9 +252,9 @@ startCapturingMetrics trace0 = do
   let trace = appendName "node-metrics" trace0
       counters = [MemoryStats, ProcessStats, NetStats, IOStats]
   _ <- Async.async $ forever $ do
-              threadDelay 30000000   -- 30 seconds
               cts <- readCounters (ObservableTraceSelf counters)
               traceCounters trace cts
+              threadDelay 30000000   -- 30 seconds
   pure ()
  where
   traceCounters :: forall m a. MonadIO m => Trace m a -> [Counter] -> m ()
