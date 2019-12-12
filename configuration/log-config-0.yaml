@@ -139,8 +139,3 @@ FixedTimeCQ: 3600
 SlotLength: 20000
 NetworkConnectionTimeout: 15000
 HandshakeTimeout: 30000
-
-Enabled: False
-Rate: 0
-Period: ''
-Burst: 0

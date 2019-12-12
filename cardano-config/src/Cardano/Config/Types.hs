@@ -39,7 +39,6 @@ module Cardano.Config.Types
     , Node (..)
     , TLS (..)
     , ViewMode (..)
-    , Wallet (..)
     , Certificate (..)
     , TraceOptions (..)
     , ConsensusTraceOptions
@@ -182,7 +181,6 @@ data NodeConfiguration =
       , ncDLG :: DLG
       , ncBlock :: Block
       , ncNode :: Node
-      , ncWallet :: Wallet
       } deriving (Show)
 
 instance FromJSON NodeConfiguration where
@@ -228,12 +226,6 @@ instance FromJSON NodeConfiguration where
                   slotLength <- v .: "SlotLength"
                   netConnTimeout <- v .: "NetworkConnectionTimeout"
                   handshakeTimeout <- v .: "HandshakeTimeout"
-
-                  -- Wallet
-                  throttleEnabled <- v .: "Enabled"
-                  throttleRate <- v .: "Rate"
-                  throttlePeriod <- v .: "Period"
-                  throttleBurst <- v .: "Burst"
                   pure $ NodeConfiguration
                            ptcl
                            nId
@@ -257,7 +249,6 @@ instance FromJSON NodeConfiguration where
                                   netConnTimeout
                                   handshakeTimeout
                            )
-                           (Wallet throttleEnabled throttleRate throttlePeriod throttleBurst)
 
 
 parseNodeConfiguration :: FilePath -> IO NodeConfiguration
@@ -519,14 +510,6 @@ instance FromJSON ViewMode where
                                           <> view <> " is not a valid view mode"
   parseJSON invalid  = panic $ "Parsing of ViewMode failed due to type mismatch. "
                              <> "Encountered: " <> (T.pack $ Prelude.show invalid)
-
--- | Wallet rate-limiting/throttling parameters
-data Wallet = Wallet
-    { thEnabled :: !Bool
-    , thRate    :: !Int
-    , thPeriod  :: !Text
-    , thBurst   :: !Int
-    } deriving (Eq, Show)
 
 -- | Detailed tracing options. Each option enables a tracer
 --   which verbosity to the log output.

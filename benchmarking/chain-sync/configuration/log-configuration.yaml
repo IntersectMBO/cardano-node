@@ -166,8 +166,3 @@ Wallet-Organization: "Input Output HK"
 Wallet-CommonName: "Daedalus Wallet"
 Wallet-ExpiryDays: 3600
 Wallet-AltDNS: []
-
-Enabled: False
-Rate: 0
-Period: ''
-Burst: 0
