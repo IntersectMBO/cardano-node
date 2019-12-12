@@ -51,6 +51,8 @@ library
                      , string-conv
                      , stm
                      , text
+                     , transformers
+                     , transformers-except
                      , yaml
 
   default-language:    Haskell2010

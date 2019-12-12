@@ -10,6 +10,7 @@
 
 module Cardano.Config.Protocol
   ( Protocol(..)
+  , ProtocolInstantiationError(..)
   , SomeProtocol(..)
   , fromProtocol
   , TraceConstraints
@@ -18,12 +19,13 @@ module Cardano.Config.Protocol
 
 
 import           Cardano.Prelude
-import           Prelude (error, fail)
 import           Test.Cardano.Prelude (canonicalDecodePretty)
 
 import           Codec.CBOR.Read (deserialiseFromBytes, DeserialiseFailure)
+import           Control.Monad.Trans.Except (ExceptT)
+import           Control.Monad.Trans.Except.Extra ( bimapExceptT, firstExceptT
+                                                  , hoistEither, left)
 import qualified Data.ByteString.Lazy as LB
-import           Data.Text (unpack)
 
 import qualified Cardano.Chain.Genesis as Genesis
 import qualified Cardano.Chain.Update as Update
@@ -34,6 +36,7 @@ import           Ouroboros.Consensus.Block (Header)
 import           Ouroboros.Consensus.Mempool.API (ApplyTxErr, GenTx, GenTxId)
 import           Ouroboros.Consensus.Node.ProtocolInfo (NumCoreNodes (..),
                                                         PBftLeaderCredentials,
+                                                        PBftLeaderCredentialsError,
                                                         PBftSignatureThreshold(..),
                                                          mkPBftLeaderCredentials)
 import           Ouroboros.Consensus.NodeId (CoreNodeId (..), NodeId (..))
@@ -91,9 +94,9 @@ mockSomeProtocol
   -> Maybe Int
   -- ^ Number of core nodes
   -> (CoreNodeId -> NumCoreNodes -> Consensus.Protocol blk)
-  -> IO SomeProtocol
+  -> Either ProtocolInstantiationError SomeProtocol
 mockSomeProtocol nId mNumCoreNodes mkConsensusProtocol =  do
-    (cid, numCoreNodes) <- either throwIO return $ extractNodeInfo nId mNumCoreNodes
+    (cid, numCoreNodes) <- extractNodeInfo nId mNumCoreNodes
     let p = mkConsensusProtocol cid numCoreNodes
     case Consensus.runProtocol p of
       Dict -> return $ SomeProtocol p
@@ -101,6 +104,18 @@ mockSomeProtocol nId mNumCoreNodes mkConsensusProtocol =  do
 data SomeProtocol where
   SomeProtocol :: (RunNode blk, TraceConstraints blk)
                => Consensus.Protocol blk -> SomeProtocol
+
+data ProtocolInstantiationError =
+    ByronLegacyProtocolNotImplemented
+  | CanonicalDecodeFailure Text
+  | DelegationCertificateFilepathNotSpecified
+  | LedgerConfigError Genesis.ConfigurationError
+  | MissingCoreNodeId
+  | MissingNumCoreNodes
+  | PbftError PBftLeaderCredentialsError
+  | SigningKeyDeserialiseFailure DeserialiseFailure
+  | SigningKeyFilepathNotSpecified
+  deriving Show
 
 fromProtocol
   :: Text
@@ -114,14 +129,14 @@ fromProtocol
   -> Maybe SigningKeyFile
   -> Update
   -> Protocol
-  -> IO SomeProtocol
+  -> ExceptT ProtocolInstantiationError IO SomeProtocol
 fromProtocol _ _ _ _ _ _ _ _ _ ByronLegacy =
-  error "Byron Legacy protocol is not implemented."
+  left ByronLegacyProtocolNotImplemented
 fromProtocol _ nId mNumCoreNodes _ _ _ _ _ _ BFT =
-  mockSomeProtocol nId mNumCoreNodes $ \cid numCoreNodes ->
+  hoistEither $ mockSomeProtocol nId mNumCoreNodes $ \cid numCoreNodes ->
     Consensus.ProtocolMockBFT numCoreNodes cid mockSecurityParam
 fromProtocol _ nId mNumCoreNodes _ _ _ _ _ _ Praos =
-  mockSomeProtocol nId mNumCoreNodes $ \cid numCoreNodes ->
+  hoistEither $ mockSomeProtocol nId mNumCoreNodes $ \cid numCoreNodes ->
     Consensus.ProtocolMockPraos numCoreNodes cid PraosParams {
         praosSecurityParam = mockSecurityParam
       , praosSlotsPerEpoch = 3
@@ -129,7 +144,7 @@ fromProtocol _ nId mNumCoreNodes _ _ _ _ _ _ Praos =
       , praosLifetimeKES   = 1000000
     }
 fromProtocol _ nId mNumCoreNodes _ _ _ _ _ _ MockPBFT =
-  mockSomeProtocol nId mNumCoreNodes $ \cid numCoreNodes@(NumCoreNodes numNodes) ->
+  hoistEither $ mockSomeProtocol nId mNumCoreNodes $ \cid numCoreNodes@(NumCoreNodes numNodes) ->
     Consensus.ProtocolMockPBFT numCoreNodes cid
       PBftParams { pbftSecurityParam      = mockSecurityParam
                  , pbftNumNodes           = fromIntegral numNodes
@@ -138,14 +153,10 @@ fromProtocol _ nId mNumCoreNodes _ _ _ _ _ _ MockPBFT =
 fromProtocol gHash _ _ genFile nMagic sigThresh delCertFp sKeyFp update RealPBFT = do
     let genHash = either panic identity $ decodeHash gHash
 
-    gcE <- runExceptT (Genesis.mkConfigFromFile
-                       nMagic
-                       (unGenesisFile genFile)
-                       genHash
-                      )
-    gc <- case gcE of
-      Left err -> panic $ show err
-      Right x -> pure x
+    gc <- firstExceptT LedgerConfigError $ Genesis.mkConfigFromFile
+             nMagic
+             (unGenesisFile genFile)
+             genHash
 
     optionalLeaderCredentials <- readLeaderCredentials
                                    gc
@@ -183,25 +194,25 @@ protocolConfigRealPbft (Update appName appVer lastKnownBlockVersion)
 readLeaderCredentials :: Genesis.Config
                       -> Maybe DelegationCertFile
                       -> Maybe SigningKeyFile
-                      -> IO (Maybe PBftLeaderCredentials)
-readLeaderCredentials gc mDelCertFp mSKeyFp = do
+                      -> ExceptT ProtocolInstantiationError IO (Maybe PBftLeaderCredentials)
+readLeaderCredentials gc mDelCertFp mSKeyFp =
   case (mDelCertFp, mSKeyFp) of
     (Nothing, Nothing) -> pure Nothing
-    (Just _, Nothing) -> panic "Signing key filepath not specified"
-    (Nothing, Just _) -> panic "Delegation certificate filepath not specified"
+    (Just _, Nothing) -> left SigningKeyFilepathNotSpecified
+    (Nothing, Just _) -> left DelegationCertificateFilepathNotSpecified
     (Just delegCertFile, Just signingKeyFile) -> do
-         signingKeyFileBytes <- LB.readFile $ unSigningKey signingKeyFile
-         delegCertFileBytes <- LB.readFile $ unDelegationCert delegCertFile
+         signingKeyFileBytes <- liftIO . LB.readFile $ unSigningKey signingKeyFile
+         delegCertFileBytes <- liftIO . LB.readFile $ unDelegationCert delegCertFile
+         signingKey <- firstExceptT SigningKeyDeserialiseFailure
+                         . hoistEither
+                         $ deserialiseSigningKey signingKeyFileBytes
+         delegCert  <- firstExceptT CanonicalDecodeFailure
+                         . hoistEither
+                         $ canonicalDecodePretty delegCertFileBytes
 
-         --TODO: review the style of reporting for input validation failures
-         -- If we use throwIO, we should use a local exception type that
-         -- wraps the other structured failures and reports them appropriatly
-         signingKey <- either throwIO return $
-                         deserialiseSigningKey signingKeyFileBytes
-         delegCert  <- either (fail . unpack) return $
-                         canonicalDecodePretty delegCertFileBytes
-         either throwIO (return . Just)
-                (mkPBftLeaderCredentials gc signingKey delegCert)
+         bimapExceptT PbftError Just
+           . hoistEither
+           $ mkPBftLeaderCredentials gc signingKey delegCert
 
   where
     deserialiseSigningKey :: LB.ByteString
@@ -210,16 +221,10 @@ readLeaderCredentials gc mDelCertFp mSKeyFp = do
         fmap (Signing.SigningKey . snd)
       . deserialiseFromBytes Signing.fromCBORXPrv
 
--- | Info missing from the config needed to run a protocol
-data MissingNodeInfo
-  = MissingCoreNodeId
-  | MissingNumCoreNodes
-  deriving (Show, Exception)
-
 extractNodeInfo
   :: Maybe NodeId
   -> Maybe Int
-  -> Either MissingNodeInfo (CoreNodeId, NumCoreNodes)
+  -> Either ProtocolInstantiationError (CoreNodeId, NumCoreNodes)
 extractNodeInfo mNodeId ncNumCoreNodes  = do
 
     coreNodeId   <- case mNodeId of

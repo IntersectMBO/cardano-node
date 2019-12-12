@@ -8,8 +8,10 @@ import           Cardano.Prelude hiding (option)
 import           Control.Applicative (some)
 import           Control.Exception (Exception)
 import           Control.Concurrent (threadDelay)
+import           Data.Text (pack)
 import           Options.Applicative
 
+import           Control.Monad.Trans.Except.Extra (runExceptT)
 import           Control.Tracer (stdoutTracer)
 
 import           Ouroboros.Network.Block (BlockNo)
@@ -17,7 +19,8 @@ import           Ouroboros.Consensus.Protocol.Abstract (SecurityParam (..))
 import           Ouroboros.Consensus.NodeId (CoreNodeId)
 
 import           Cardano.Config.CommonCLI
-import           Cardano.Config.Protocol (SomeProtocol(..), fromProtocol)
+import           Cardano.Config.Protocol ( ProtocolInstantiationError
+                                         , SomeProtocol(..), fromProtocol)
 import           Cardano.Config.Types (ConfigYamlFilePath(..), DelegationCertFile(..),
                                        GenesisFile (..), NodeConfiguration(..),
                                        SigningKeyFile(..), SocketFile(..), parseNodeConfiguration)
@@ -40,17 +43,22 @@ main = do
                  } <- execParser opts
 
     nc <- liftIO . parseNodeConfiguration $ unConfigPath caConfigYaml
-    SomeProtocol p <- fromProtocol
-                        caGenesisHash
-                        (ncNodeId nc)
-                        (ncNumCoreNodes nc)
-                        (caGenesisFile)
-                        (ncReqNetworkMagic nc)
-                        (ncPbftSignatureThresh nc)
-                        (caDelegationCertFp)
-                        (caSigningKeyFp)
-                        (ncUpdate nc)
-                        (ncProtocol nc)
+    frmPtclRes <- runExceptT $ fromProtocol
+                                 caGenesisHash
+                                 (ncNodeId nc)
+                                 (ncNumCoreNodes nc)
+                                 (caGenesisFile)
+                                 (ncReqNetworkMagic nc)
+                                 (ncPbftSignatureThresh nc)
+                                 (caDelegationCertFp)
+                                 (caSigningKeyFp)
+                                 (ncUpdate nc)
+                                 (ncProtocol nc)
+
+    SomeProtocol p <- case frmPtclRes of
+                        Right (SomeProtocol p) -> pure (SomeProtocol p)
+                        Left err -> do putTextLn $ renderPtclInstantiationErr err
+                                       exitFailure
 
     let run = runChairman p caCoreNodeIds
                           caSecurityParam
@@ -69,6 +77,9 @@ main = do
           case caTimeoutType of
             SuccessTimeout -> exitSuccess
             FailureTimeout -> exitFailure
+
+renderPtclInstantiationErr :: ProtocolInstantiationError -> Text
+renderPtclInstantiationErr = pack . show
 
 data TimeoutType
   = SuccessTimeout

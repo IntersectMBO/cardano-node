@@ -195,6 +195,7 @@
             (hsPkgs.ouroboros-network)
             (hsPkgs.serialise)
             (hsPkgs.text)
+            (hsPkgs.transformers-except)
             (hsPkgs.typed-protocols)
             (hsPkgs.typed-protocols-cbor)
             ] ++ (if system.isWindows

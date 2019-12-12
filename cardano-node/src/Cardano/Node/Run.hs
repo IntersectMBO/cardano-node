@@ -94,17 +94,21 @@ runNode loggingLayer nc nCli = do
                              NormalVerbosity -> "normal"
                              MinimalVerbosity -> "minimal"
                              MaximalVerbosity -> "maximal"
-    SomeProtocol p  <- fromProtocol
-                         (genesisHash nCli)
-                         (ncNodeId nc)
-                         (ncNumCoreNodes nc)
-                         (genesisFile $ mscFp nCli)
-                         (ncReqNetworkMagic nc)
-                         (ncPbftSignatureThresh nc)
-                         (delegCertFile $ mscFp nCli)
-                         (signKeyFile $ mscFp nCli)
-                         (ncUpdate nc)
-                         (ncProtocol nc)
+    eitherSomeProtocol <- runExceptT $ fromProtocol
+                                         (genesisHash nCli)
+                                         (ncNodeId nc)
+                                         (ncNumCoreNodes nc)
+                                         (genesisFile $ mscFp nCli)
+                                         (ncReqNetworkMagic nc)
+                                         (ncPbftSignatureThresh nc)
+                                         (delegCertFile $ mscFp nCli)
+                                         (signKeyFile $ mscFp nCli)
+                                         (ncUpdate nc)
+                                         (ncProtocol nc)
+
+    SomeProtocol p <- case eitherSomeProtocol of
+                        Left err -> (putTextLn . pack $ show err) >> exitFailure
+                        Right (SomeProtocol p) -> pure $ SomeProtocol p
 
     let tracers     = mkTracers (traceOpts nCli) trace
 
@@ -263,4 +267,3 @@ handleSimpleNode p trace nodeTracers nCli nc = do
           then ValidateAllEpochs
           else ValidateMostRecentEpoch
       }
-
