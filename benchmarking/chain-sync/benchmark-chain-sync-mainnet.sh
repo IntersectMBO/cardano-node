@@ -30,7 +30,7 @@ exec ${NODE} \
   --socket-dir /tmp/socket-bm-chain-sync \
   --topology ${BASEDIR}/configuration/topology-local.yaml \
   --host-addr 127.0.0.1 \
-  --port 7777 \
+  --port 7778 \
   --tracing-verbosity-maximal \
   --trace-mempool \
   --trace-forge \
