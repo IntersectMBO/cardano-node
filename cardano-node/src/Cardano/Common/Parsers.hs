@@ -43,7 +43,6 @@ import           Cardano.BM.Data.Tracer (TracingVerbosity (..))
 import           Cardano.Config.Logging (LoggingCLIArguments(..))
 import           Ouroboros.Consensus.NodeId (NodeId(..), CoreNodeId(..))
 import           Ouroboros.Consensus.NodeNetwork (ProtocolTracers'(..))
-import qualified Ouroboros.Consensus.Node.Tracers as Consensus
 
 import           Cardano.Config.CommonCLI
 import           Cardano.Config.Orphanage
@@ -312,7 +311,20 @@ parseTraceOptions :: MParser TraceOptions
 parseTraceOptions m = TraceOptions
   <$> parseTracingVerbosity m
   <*> parseTraceChainDB m
-  <*> parseConsensusTraceOptions m
+
+  -- Consensus Trace Options --
+  <*> parseTraceChainSyncClient m
+  <*> parseTraceChainSyncHeaderServer m
+  <*> parseTraceChainSyncBlockServer m
+  <*> parseTraceBlockFetchDecisions m
+  <*> parseTraceBlockFetchClient m
+  <*> parseTraceBlockFetchServer m
+  <*> parseTraceTxInbound m
+  <*> parseTraceTxOutbound m
+  <*> parseTraceLocalTxSubmissionServer m
+  <*> parseTraceMempool m
+  <*> parseTraceForge m
+  --------------------------
   <*> parseProtocolTraceOptions m
   <*> parseTraceIpSubscription m
   <*> parseTraceDnsSubscription m
@@ -361,20 +373,6 @@ parseTraceChainDB m =
       <> help "Verbose tracer of ChainDB."
       <> m
     )
-
-parseConsensusTraceOptions :: (forall a b. Opt.Mod a b) -> Parser ConsensusTraceOptions
-parseConsensusTraceOptions m = Consensus.Tracers
-  <$> (Const <$> parseTraceChainSyncClient m)
-  <*> (Const <$> parseTraceChainSyncHeaderServer m)
-  <*> (Const <$> parseTraceChainSyncBlockServer m)
-  <*> (Const <$> parseTraceBlockFetchDecisions m)
-  <*> (Const <$> parseTraceBlockFetchClient m)
-  <*> (Const <$> parseTraceBlockFetchServer m)
-  <*> (Const <$> parseTraceTxInbound m)
-  <*> (Const <$> parseTraceTxOutbound m)
-  <*> (Const <$> parseTraceLocalTxSubmissionServer m)
-  <*> (Const <$> parseTraceMempool m)
-  <*> (Const <$> parseTraceForge m)
 
 type MParser a = (forall b c. Opt.Mod b c) -> Parser a
 

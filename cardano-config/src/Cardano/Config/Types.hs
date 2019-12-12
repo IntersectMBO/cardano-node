@@ -27,7 +27,6 @@ module Cardano.Config.Types
     , Node (..)
     , ViewMode (..)
     , TraceOptions (..)
-    , ConsensusTraceOptions
     , ProtocolTraceOptions
     , parseNodeConfiguration
     ) where
@@ -325,15 +324,28 @@ instance FromJSON ViewMode where
 -- | Detailed tracing options. Each option enables a tracer
 --   which verbosity to the log output.
 data TraceOptions = TraceOptions
-  { traceVerbosity       :: !TracingVerbosity
-  , traceChainDB         :: !Bool
+  { traceVerbosity :: !TracingVerbosity
+  , traceChainDB :: !Bool
     -- ^ By default we use 'readableChainDB' tracer, if on this it will use
     -- more verbose tracer
-  , traceConsensus       :: ConsensusTraceOptions
-  , traceProtocols       :: ProtocolTraceOptions
-  , traceIpSubscription  :: !Bool
+
+    -- Consensus Tracers --
+  , traceChainSyncClient :: !Bool
+  , traceChainSyncHeaderServer :: !Bool
+  , traceChainSyncBlockServer :: !Bool
+  , traceBlockFetchDecisions :: !Bool
+  , traceBlockFetchClient :: !Bool
+  , traceBlockFetchServer :: !Bool
+  , traceTxInbound :: !Bool
+  , traceTxOutbound :: !Bool
+  , traceLocalTxSubmissionServer :: !Bool
+  , traceMempool :: !Bool
+  , traceForge :: !Bool
+    -----------------------
+  , traceProtocols :: ProtocolTraceOptions
+  , traceIpSubscription :: !Bool
   , traceDnsSubscription :: !Bool
-  , traceDnsResolver     :: !Bool
-  , traceErrorPolicy     :: !Bool
-  , traceMux             :: !Bool
+  , traceDnsResolver :: !Bool
+  , traceErrorPolicy :: !Bool
+  , traceMux :: !Bool
   } deriving (Eq, Show)
