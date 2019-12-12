@@ -1,10 +1,11 @@
-{-# LANGUAGE DataKinds           #-}
-{-# LANGUAGE FlexibleContexts    #-}
-{-# LANGUAGE GADTs               #-}
-{-# LANGUAGE LambdaCase          #-}
-{-# LANGUAGE RankNTypes          #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications    #-}
+{-# LANGUAGE TypeApplications #-}
 
 {-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
 
@@ -15,24 +16,33 @@ module Cardano.CLI.Ops
   , serialiseGenesis
   , serialisePoorKey
   , serialiseSigningKey
+  , withRealPBFT
   , CliError(..)
+  , RealPBFTError(..)
+  , TxGenError(..)
   ) where
 
 import qualified Prelude as Prelude
 import           Cardano.Prelude hiding (option)
+import           Control.Monad.Trans.Except.Extra (firstExceptT, left)
 import           Test.Cardano.Prelude (canonicalEncodePretty)
 
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.Text as T
 import qualified Text.JSON.Canonical as CanonicalJSON
 
-import           Cardano.Crypto (SigningKey (..))
+import           Cardano.Crypto (RequiresNetworkMagic, SigningKey (..))
 import           Codec.CBOR.Read (DeserialiseFailure, deserialiseFromBytes)
 import           Codec.CBOR.Write (toLazyByteString)
 import qualified Cardano.Crypto.Signing as Crypto
 import qualified Cardano.Chain.Genesis as Genesis
+import           Ouroboros.Consensus.Ledger.Byron (ByronBlock)
+import           Ouroboros.Consensus.Node.Run (RunNode)
+import           Ouroboros.Consensus.NodeId (NodeId)
+import qualified Ouroboros.Consensus.Protocol as Consensus
 
-import           Cardano.Config.Protocol (Protocol(..))
+import           Cardano.Config.Protocol ( Protocol(..), ProtocolInstantiationError
+                                         , SomeProtocol(..), fromProtocol)
 import           Cardano.Config.Types
 import qualified Cardano.CLI.Legacy.Byron as Legacy
 
@@ -98,7 +108,10 @@ data CliError
   -- Inconsistencies
   | DelegationError !Genesis.GenesisDelegationError
   | GenesisSpecError !Text
+  | GenerateTxsError !RealPBFTError
   | GenesisGenerationError !Genesis.GenesisDataGenerationError
+  | IssueUtxoError !RealPBFTError
+  | NodeSubmitTxError !RealPBFTError
   -- Invariants/assertions -- does it belong here?
   | NoGenesisDelegationForKey !Text
   -- File reading errors
@@ -106,9 +119,7 @@ data CliError
   -- ^ An exception was encountered while trying to read
   -- the verification key file.
   | ReadSigningKeyFailure !FilePath !Text
-  -- ^ An exception was encountered while trying to read
-  -- the signing key file.
-  | InvariantViolation !Prelude.String
+  | SpendGenesisUTxOError !RealPBFTError
 
 instance Show CliError where
   show (OutputMustNotAlreadyExist fp)
@@ -139,10 +150,18 @@ instance Show CliError where
     = "Transaction file '" <> fp <> "' read failure: "<> show err
   show (DelegationError err)
     = "Error while issuing delegation: " <> show err
+  show (GenerateTxsError err)
+    = "Error in GenerateTxs command: " <> (T.unpack $ show err)
+  show (NodeSubmitTxError err)
+    = "Error in SubmitTx command: " <> (T.unpack $ show err)
+  show (SpendGenesisUTxOError err)
+    = "Error in SpendGenesisUTxO command: " <> (T.unpack $ show err)
   show (GenesisSpecError err)
     = "Error in genesis specification: " <> T.unpack err
   show (GenesisGenerationError err)
-    = "Genesis generation failed: " <> show err
+    = "Genesis generation failed in mkGenesis: " <> show err
+  show (IssueUtxoError err)
+    = "Error SpendUTxO command: " <> (T.unpack $ show err)
   show (NoGenesisDelegationForKey key)
     = "Newly-generated genesis doesn't delegate to operational key: " <> T.unpack key
   show (ReadVerificationKeyFailure fp expt)
@@ -151,6 +170,59 @@ instance Show CliError where
   show (ReadSigningKeyFailure fp expt)
     = "Exception encountered while trying to read the signing key file at: " <> fp
        <> "Exception: " <> T.unpack expt
-  show (InvariantViolation err)
-    = "Internal invariant violated: " <> err
+
 instance Exception CliError
+
+data RealPBFTError =
+    IncorrectProtocolSpecified !Protocol
+  | FromProtocolError !ProtocolInstantiationError
+  | GenesisBenchmarkRunnerError !TxGenError
+  | InvariantViolation !Text
+  | TransactionTypeNotHandledYet !Text
+  deriving Show
+
+data TxGenError =
+    CurrentlyCannotSendTxToRelayNode !FilePath
+  -- ^ Relay nodes cannot currently be transaction recipients.
+  | InsufficientFundsForRecipientTx
+  -- ^ Error occurred while creating the target node address.
+  | NeedMinimumThreeSigningKeyFiles ![FilePath]
+  -- ^ Need at least 3 signing key files.
+  | SecretKeyDeserialiseError !Text
+  | SecretKeyReadError !Text
+  deriving Show
+
+-- | Perform an action that expects ProtocolInfo for Byron/PBFT,
+--   with attendant configuration.
+withRealPBFT
+  :: Text
+  -> Maybe NodeId
+  -> Maybe Int
+  -> GenesisFile
+  -> RequiresNetworkMagic
+  -> Maybe Double
+  -> Maybe DelegationCertFile
+  -> Maybe SigningKeyFile
+  -> Update
+  -> Protocol
+  -> (RunNode ByronBlock
+        => Consensus.Protocol ByronBlock
+        -> ExceptT RealPBFTError IO a)
+  -> ExceptT RealPBFTError IO a
+withRealPBFT gHash nId mNumNodes genFile nMagic sigThresh delCertFp sKeyFp update ptcl action = do
+  SomeProtocol p <- firstExceptT
+                      FromProtocolError
+                      $ fromProtocol
+                          gHash
+                          nId
+                          mNumNodes
+                          genFile
+                          nMagic
+                          sigThresh
+                          delCertFp
+                          sKeyFp
+                          update
+                          ptcl
+  case p of
+    proto@Consensus.ProtocolRealPBFT{} -> action proto
+    _ -> left $ IncorrectProtocolSpecified ptcl

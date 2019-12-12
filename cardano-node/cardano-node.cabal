@@ -283,6 +283,7 @@ executable chairman
                      , ouroboros-network
                      , serialise
                      , text
+                     , transformers-except
                      , typed-protocols
                      , typed-protocols-cbor
 
