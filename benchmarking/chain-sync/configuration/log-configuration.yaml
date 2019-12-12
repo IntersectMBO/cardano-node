@@ -125,8 +125,6 @@ LastKnownBlockVersion-Major: 0
 LastKnownBlockVersion-Minor: 2
 LastKnownBlockVersion-Alt: 0
 
-MemPoolLimitTx: 200
-AssetLockedSrcAddress: []
 
 
 

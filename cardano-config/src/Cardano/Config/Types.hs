@@ -33,7 +33,6 @@ module Cardano.Config.Types
     , ProtocolConstants (..)
     , NTP (..)
     , Update (..)
-    , TXP (..)
     , Block (..)
     , Node (..)
     , TLS (..)
@@ -175,7 +174,6 @@ data NodeConfiguration =
       , ncViewMode :: ViewMode
       , ncNTP :: NTP
       , ncUpdate :: Update
-      , ncTXP :: TXP
       } deriving (Show)
 
 instance FromJSON NodeConfiguration where
@@ -201,9 +199,6 @@ instance FromJSON NodeConfiguration where
                   lkBlkVersionMinor <- v .: "LastKnownBlockVersion-Minor"
                   lkBlkVersionAlt <- v .: "LastKnownBlockVersion-Alt"
 
-                  memPoolTxSizeLim <- v .: "MemPoolLimitTx"
-                  assetLockedSrcAddr <- v .: "AssetLockedSrcAddress"
-
                   pure $ NodeConfiguration
                            ptcl
                            nId
@@ -218,8 +213,6 @@ instance FromJSON NodeConfiguration where
                                                          lkBlkVersionMajor
                                                          lkBlkVersionMinor
                                                          lkBlkVersionAlt))
-                           (TXP memPoolTxSizeLim assetLockedSrcAddr)
-
 
 
 parseNodeConfiguration :: FilePath -> IO NodeConfiguration
@@ -405,14 +398,6 @@ data LastKnownBlockVersion = LastKnownBlockVersion
     -- ^ Last known block version minor.
     , lkbvAlt   :: !Word8
     -- ^ Last known block version alternative.
-    } deriving (Eq, Show)
-
-data TXP = TXP
-    { txpMemPoolLimitTx        :: !Int
-    -- ^ Limit on the number of transactions that can be stored in the mem pool.
-    , txpAssetLockedSrcAddress :: ![Text]
-    -- ^ Set of source address which are asset-locked. Transactions which
-    -- use these addresses as transaction inputs will be silently dropped.
     } deriving (Eq, Show)
 
 data Block = Block
