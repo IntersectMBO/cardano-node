@@ -18,11 +18,7 @@ module Cardano.Config.Types
     , SocketFile (..)
     , TopologyFile( ..)
     -- * specific for @Core@
-    , NodeProtocol (..)
-    , Spec (..)
-    , Initializer (..)
     -- * rest
-    , TestBalance (..)
     , FakeAvvmBalance (..)
     , BlockVersionData (..)
     , LastKnownBlockVersion (..)
@@ -211,14 +207,6 @@ instance FromJSON NodeConfiguration where
 parseNodeConfiguration :: FilePath -> IO NodeConfiguration
 parseNodeConfiguration fp = decodeFileThrow fp
 
--- | The type of the protocol being run on the node.
-data NodeProtocol
-    = BFTProtocol
-    | PraosProtocol
-    | MockPBFTProtocol
-    | RealPBFTProtocol
-    deriving (Eq, Show)
-
 -- | Core configuration.
 -- For now, we only store the path to the genesis file(s) and their hash.
 -- The rest is in the hands of the modules/features that need to use it.
@@ -236,8 +224,6 @@ data Core = Core
     -- ^ Core node ID, the number of the node.
     , coNumCoreNodes                :: !(Maybe Int)
     -- ^ The number of the core nodes.
-    , coNodeProtocol                :: !NodeProtocol -- TODO: Remove!
-    -- ^ The type of protocol run on the node.
     , coStaticKeySigningKeyFile     :: !(Maybe FilePath)
     -- ^ Static key signing file.
     , coStaticKeyDlgCertFile        :: !(Maybe FilePath)
@@ -247,47 +233,6 @@ data Core = Core
     , coPBftSigThd                  :: !(Maybe Double)
     -- ^ PBFT signature threshold system parameters
 
-    } deriving (Eq, Show)
-
-data Spec = Spec
-    { spInitializer       :: !Initializer
-      -- ^ Other data which depend on genesis type.
-    , spBlockVersionData  :: !BlockVersionData
-      -- ^ Genesis 'BlockVersionData'.
-    , spProtocolConstants :: !ProtocolConstants
-      -- ^ Other constants which affect consensus.
-    , spFTSSeed           :: !Text
-      -- ^ Seed for FTS for 0-th epoch.
-    , spHeavyDelegation   :: !Text
-      -- ^ Genesis state of heavyweight delegation.
-    , spAVVMDistr         :: !Text
-      -- ^ Genesis data describes avvm utxo.
-    } deriving (Eq, Show)
-
--- | This data type contains various options presense of which depends
--- on whether we want genesis for mainnet or testnet.
-data Initializer = Initializer
-    { inTestBalance       :: !TestBalance
-    , inFakeAvvmBalance   :: !FakeAvvmBalance
-    , inAVVMBalanceFactor :: !Word64
-    , inUseHeavyDlg       :: !Bool
-    , inSeed              :: !Integer
-      -- ^ Seed to use to generate secret data. It's used only in
-      -- testnet, shouldn't be used for anything important.
-    } deriving (Eq, Show)
-
--- | These options determine balances of nodes specific for testnet.
-data TestBalance = TestBalance
-    { tePoors          :: !Word
-      -- ^ Number of poor nodes (with small balance).
-    , teRichmen        :: !Word
-      -- ^ Number of rich nodes (with huge balance).
-    , teRichmenShare   :: !Double
-      -- ^ Portion of stake owned by all richmen together.
-    , teUseHDAddresses :: !Bool
-      -- ^ Whether generate plain addresses or with hd payload.
-    , teTotalBalance   :: !Word64
-      -- ^ Total balance owned by these nodes.
     } deriving (Eq, Show)
 
 -- | These options determines balances of fake AVVM nodes which didn't

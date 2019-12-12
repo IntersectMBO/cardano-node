@@ -13,7 +13,6 @@ module Cardano.Config.Partial
     , PartialUpdate (..)
     , PartialLastKnownBlockVersion (..)
     -- * re-exports
-    , NodeProtocol (..)
     , mkCardanoConfiguration
     ) where
 
@@ -57,8 +56,6 @@ data PartialCore = PartialCore
     -- ^ Core node ID, the number of the node.
     , pcoNumCoreNodes               :: !(Last Int)
     -- ^ The number of the core nodes.
-    , pcoNodeProtocol               :: !(Last NodeProtocol)
-    -- ^ The type of protocol run on the node.
     , pcoStaticKeySigningKeyFile    :: !(Last FilePath)
     , pcoStaticKeyDlgCertFile       :: !(Last FilePath)
     , pcoRequiresNetworkMagic       :: !(Last RequiresNetworkMagic)
@@ -147,8 +144,6 @@ mkCardanoConfiguration PartialCardanoConfiguration{..} = do
         let coNodeId                    = getLast pcoNodeId
         let coNumCoreNodes              = getLast pcoNumCoreNodes
 
-        coNodeProtocol                  <- mkComplete "coNodeProtocol"
-                                            pcoNodeProtocol
 
         let coStaticKeySigningKeyFile   = getLast pcoStaticKeySigningKeyFile
         let coStaticKeyDlgCertFile      = getLast pcoStaticKeyDlgCertFile
