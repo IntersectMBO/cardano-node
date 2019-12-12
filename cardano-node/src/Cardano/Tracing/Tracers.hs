@@ -141,7 +141,8 @@ mkTracers traceOptions tracer = do
 
   pure Tracers
     { chainDBTracer
-        = annotateSeverity $ filterSeverity (pure . const (tracingSeverity $ traceChainDB traceOptions))
+        = tracerOnOff (traceChainDB traceOptions)
+          $ annotateSeverity
           $ teeTraceChainTip (tracingFormatting $ traceChainDB traceOptions) tracingVerbosity
           $ addName "ChainDB" tracer
     , consensusTracers
@@ -149,23 +150,28 @@ mkTracers traceOptions tracer = do
     , protocolTracers
         = mkProtocolsTracers
     , ipSubscriptionTracer
-        = annotateSeverity
+        = tracerOnOff (traceIpSubscription traceOptions)
+          $ annotateSeverity
           $ toLogObject' (tracingFormatting $ traceIpSubscription traceOptions) tracingVerbosity
           $ addName "IpSubscription" tracer
     , dnsSubscriptionTracer
-        = annotateSeverity $ filterSeverity (pure . const (tracingSeverity $ traceDnsSubscription traceOptions))
+        = tracerOnOff (traceDnsSubscription traceOptions)
+          $ annotateSeverity
           $ toLogObject' (tracingFormatting $ traceDnsSubscription traceOptions) tracingVerbosity
           $ addName "DnsSubscription" tracer
     , dnsResolverTracer
-        = annotateSeverity $ filterSeverity (pure . const (tracingSeverity $ traceDnsResolver traceOptions))
+        = tracerOnOff (traceDnsResolver traceOptions)
+          $ annotateSeverity $ filterSeverity (pure . const (tracingSeverity $ traceDnsResolver traceOptions))
           $ toLogObject' (tracingFormatting $ traceDnsResolver traceOptions) tracingVerbosity
           $ addName "DnsResolver" tracer
     , errorPolicyTracer
-        = annotateSeverity $ filterSeverity (pure . const (tracingSeverity $ traceErrorPolicy traceOptions))
+        = tracerOnOff (traceErrorPolicy traceOptions)
+          $ annotateSeverity
           $ toLogObject' (tracingFormatting $ traceErrorPolicy traceOptions) tracingVerbosity
           $ addName "ErrorPolicy" tracer
     , muxTracer
-        = annotateSeverity $ filterSeverity (pure . const Info)  -- filter out everything below this level
+        =  tracerOnOff (traceMux traceOptions)
+          $ annotateSeverity $ filterSeverity (pure . const Info)  -- filter out everything below this level
           $ toLogObject' (tracingFormatting $ traceMux traceOptions) tracingVerbosity
           $ addName "Mux" tracer
     }
