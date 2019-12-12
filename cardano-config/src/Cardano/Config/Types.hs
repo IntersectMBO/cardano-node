@@ -34,7 +34,6 @@ module Cardano.Config.Types
     , NTP (..)
     , Update (..)
     , TXP (..)
-    , DLG (..)
     , Block (..)
     , Node (..)
     , TLS (..)
@@ -177,7 +176,6 @@ data NodeConfiguration =
       , ncNTP :: NTP
       , ncUpdate :: Update
       , ncTXP :: TXP
-      , ncDLG :: DLG
       } deriving (Show)
 
 instance FromJSON NodeConfiguration where
@@ -206,9 +204,6 @@ instance FromJSON NodeConfiguration where
                   memPoolTxSizeLim <- v .: "MemPoolLimitTx"
                   assetLockedSrcAddr <- v .: "AssetLockedSrcAddress"
 
-                  cacheParam <- v .: "CacheParameter"
-                  msgCacheTimeout <- v .: "MessageCacheTimeout"
-
                   pure $ NodeConfiguration
                            ptcl
                            nId
@@ -224,7 +219,6 @@ instance FromJSON NodeConfiguration where
                                                          lkBlkVersionMinor
                                                          lkBlkVersionAlt))
                            (TXP memPoolTxSizeLim assetLockedSrcAddr)
-                           (DLG cacheParam msgCacheTimeout)
 
 
 
@@ -419,14 +413,6 @@ data TXP = TXP
     , txpAssetLockedSrcAddress :: ![Text]
     -- ^ Set of source address which are asset-locked. Transactions which
     -- use these addresses as transaction inputs will be silently dropped.
-    } deriving (Eq, Show)
-
-data DLG = DLG
-    { dlgCacheParam          :: !Int
-      -- ^ This value parameterizes size of cache used in Delegation.
-      -- Not bytes, but number of elements.
-    , dlgMessageCacheTimeout :: !Int
-      -- ^ Interval we ignore cached messages for if it's sent again.
     } deriving (Eq, Show)
 
 data Block = Block

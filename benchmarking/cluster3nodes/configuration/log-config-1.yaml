@@ -120,6 +120,3 @@ LastKnownBlockVersion-Alt: 0
 
 MemPoolLimitTx: 200
 AssetLockedSrcAddress: []
-
-CacheParameter: 500
-MessageCacheTimeout: 30
