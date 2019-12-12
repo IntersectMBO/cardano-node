@@ -122,7 +122,3 @@ CriticalCQBootstrap: 0.8888
 CriticalCQ: 0.654321
 CriticalForkThreshold: 3
 FixedTimeCQ: 3600
-
-SlotLength: 20000
-NetworkConnectionTimeout: 15000
-HandshakeTimeout: 30000

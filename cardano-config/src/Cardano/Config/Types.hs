@@ -57,7 +57,6 @@ import qualified Cardano.Chain.Update as Update
 import           Cardano.BM.Data.Tracer (TracingVerbosity (..))
 import           Cardano.Crypto.ProtocolMagic (RequiresNetworkMagic)
 import qualified Ouroboros.Consensus.BlockchainTime as Consensus
-import           Ouroboros.Consensus.BlockchainTime (slotLengthFromMillisec)
 import           Ouroboros.Consensus.NodeId (NodeId(..))
 
 import           Cardano.Config.Topology
@@ -180,7 +179,6 @@ data NodeConfiguration =
       , ncTXP :: TXP
       , ncDLG :: DLG
       , ncBlock :: Block
-      , ncNode :: Node
       } deriving (Show)
 
 instance FromJSON NodeConfiguration where
@@ -223,9 +221,6 @@ instance FromJSON NodeConfiguration where
                   critForkThresh <- v .: "CriticalForkThreshold"
                   fixedTimeCQ <- v .: "FixedTimeCQ"
 
-                  slotLength <- v .: "SlotLength"
-                  netConnTimeout <- v .: "NetworkConnectionTimeout"
-                  handshakeTimeout <- v .: "HandshakeTimeout"
                   pure $ NodeConfiguration
                            ptcl
                            nId
@@ -245,10 +240,7 @@ instance FromJSON NodeConfiguration where
                            (Block netDiameter recHeadersMsg streamWindow
                                   nonCritCQBootstrp nonCritCQ critCQbootstrp
                                   critCQ critForkThresh fixedTimeCQ)
-                           (Node (slotLengthFromMillisec slotLength)
-                                  netConnTimeout
-                                  handshakeTimeout
-                           )
+
 
 
 parseNodeConfiguration :: FilePath -> IO NodeConfiguration
