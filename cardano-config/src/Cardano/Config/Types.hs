@@ -19,21 +19,13 @@ module Cardano.Config.Types
     , TopologyFile( ..)
     -- * specific for @Core@
     -- * rest
-    , FakeAvvmBalance (..)
-    , BlockVersionData (..)
     , LastKnownBlockVersion (..)
-    , SoftForkRule (..)
-    , TxFeePolicy (..)
-    , TxSizeLinear (..)
     , Protocol (..)
-    , ProtocolConstants (..)
     , NTP (..)
     , Update (..)
     , Block (..)
     , Node (..)
-    , TLS (..)
     , ViewMode (..)
-    , Certificate (..)
     , TraceOptions (..)
     , ConsensusTraceOptions
     , ProtocolTraceOptions
@@ -235,51 +227,6 @@ data Core = Core
 
     } deriving (Eq, Show)
 
--- | These options determines balances of fake AVVM nodes which didn't
--- really go through vending, but pretend they did.
-data FakeAvvmBalance = FakeAvvmBalance
-    { faCount      :: !Word
-    , faOneBalance :: !Word64
-    } deriving (Eq, Show)
-
--- | If we require options to automatically restart a module.
-data ModuleAutoRestart
-    = ModuleRestart
-    | ModuleNoRestart
-    deriving (Eq, Show)
-
-data BlockVersionData = BlockVersionData
-    { bvdScriptVersion     :: !Word16
-    , bvdSlotDuration      :: !Int
-    , bvdMaxBlockSize      :: !Natural
-    , bvdMaxHeaderSize     :: !Natural
-    , bvdMaxTxSize         :: !Natural
-    , bvdMaxProposalSize   :: !Natural
-    , bvdMpcThd            :: !Word64
-    , bvdHeavyDelThd       :: !Word64
-    , bvdUpdateVoteThd     :: !Word64
-    , bvdUpdateProposalThd :: !Word64
-    , bvdUpdateImplicit    :: !Word64
-    , bvdSoftforkRule      :: !SoftForkRule
-    , bvdTXFeePolicy       :: !TxFeePolicy
-    , bvdUnlockStakeEpoch  :: !Word64
-    } deriving (Eq, Show)
-
-data SoftForkRule = SoftForkRule
-    { sfrInitThd      :: !Word64
-    , sfrMinThd       :: !Word64
-    , sfrThdDecrement :: !Word64
-    } deriving (Eq, Show)
-
-data TxFeePolicy = TxFeePolicy
-    { txfTXSizeLinear :: !TxSizeLinear
-    } deriving (Eq, Show)
-
-data TxSizeLinear = TxSizeLinear
-    { txsA :: !Word64
-    , txsB :: !Word64
-    } deriving (Eq, Show)
-
 -- TODO:  we don't want ByronLegacy in Protocol.  Let's wrap Protocol with another
 -- sum type for cases where it's required.
 data Protocol = ByronLegacy
@@ -302,15 +249,6 @@ instance FromJSON Protocol where
   parseJSON invalid  = panic $ "Parsing of Protocol failed due to type mismatch. "
                              <> "Encountered: " <> (T.pack $ Prelude.show invalid)
 
-
-
-
-data ProtocolConstants = ProtocolConstants
-    { prK             :: !Word64
-    -- ^ Security parameter from the paper.
-    , prProtocolMagic :: !Word32
-    -- ^ Magic constant for separating real/testnet.
-    } deriving (Eq, Show)
 
 data NTP = NTP
     { ntpResponseTimeout :: !Int
@@ -367,19 +305,6 @@ data Node = Node
     -- ^ Network connection timeout in milliseconds.
     , noHandshakeTimeout                :: !Int
     -- ^ Protocol acknowledgement timeout in milliseconds.
-    } deriving (Eq, Show)
-
-data TLS = TLS
-    { tlsCA      :: !Certificate
-    , tlsServer  :: !Certificate
-    , tlsClients :: !Certificate
-    } deriving (Eq, Show)
-
-data Certificate = Certificate
-    { certOrganization :: !Text
-    , certCommonName   :: !Text
-    , certExpiryDays   :: !Int
-    , certAltDNS       :: ![Text]
     } deriving (Eq, Show)
 
 -- Node can be run in two modes.
