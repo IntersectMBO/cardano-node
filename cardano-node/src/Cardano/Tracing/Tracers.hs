@@ -5,6 +5,7 @@
 {-# LANGUAGE NamedFieldPuns        #-}
 {-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE TupleSections         #-}
 {-# LANGUAGE UndecidableInstances  #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans  #-}
@@ -44,7 +45,8 @@ import           Cardano.BM.Data.Tracer (WithSeverity (..), addName,
 
 import           Ouroboros.Consensus.Block (Header)
 import           Ouroboros.Consensus.Ledger.Abstract
-import           Ouroboros.Consensus.Mempool.API (TraceEventMempool (..))
+import           Ouroboros.Consensus.Mempool.API
+                    (GenTx, TraceEventMempool (..))
 import qualified Ouroboros.Consensus.Node.Tracers as Consensus
 import           Ouroboros.Consensus.NodeNetwork (ProtocolTracers,
                      ProtocolTracers' (..), nullProtocolTracers)
@@ -221,6 +223,34 @@ mkTracers traceOptions tracer = Tracers
       traceWith (enableConsensusTracer Consensus.mempoolTracer
                 $ withName "Mempool" tracer) ev
 
+    teeForge
+      :: TracingFormatting
+      -> TracingVerbosity
+      -> Trace IO Text
+      -> Tracer IO (WithSeverity (Consensus.TraceForgeEvent blk (GenTx blk)))
+    teeForge tform tverb tr = Tracer $ \ev -> do
+      traceWith (teeForge' tr) ev
+      traceWith (toLogObject' tform tverb tr) ev
+
+    teeForge'
+      :: Trace IO Text
+      -> Tracer IO (WithSeverity (Consensus.TraceForgeEvent blk (GenTx blk)))
+    teeForge' tr =
+      Tracer $ \(WithSeverity _ ev) -> do
+        meta <- mkLOMeta Critical Confidential
+        traceNamedObject (appendName "metrics" tr) . (meta,) $
+          case ev of
+            Consensus.TraceForgeEvent    slot _ ->
+              LogValue "forgedSlotLast" $ PureI $ fromIntegral $ unSlotNo slot
+            Consensus.TraceCouldNotForge slot _ ->
+              LogValue "couldNotForgeSlotLast" $ PureI $ fromIntegral $ unSlotNo slot
+            Consensus.TraceAdoptedBlock slot _ _ _ ->
+              LogValue "adoptedSlotLast" $ PureI $ fromIntegral $ unSlotNo slot
+            Consensus.TraceDidntAdoptBlock slot _ ->
+              LogValue "notAdoptedSlotLast" $ PureI $ fromIntegral $ unSlotNo slot
+            Consensus.TraceForgedInvalidBlock slot _ _ ->
+              LogValue "forgedInvalidSlotLast" $ PureI $ fromIntegral $ unSlotNo slot
+
     enableConsensusTracer
       :: Show a
       => (ConsensusTraceOptions -> Const Bool b)
@@ -275,7 +305,7 @@ mkTracers traceOptions tracer = Tracers
         = mempoolTracer
       , Consensus.forgeTracer
         = annotateSeverity $ filterSeverity (pure . const (tracingSeverity $ hasConsensusTraceFlag Consensus.forgeTracer))
-          $ toLogObject' (tracingFormatting $ hasConsensusTraceFlag Consensus.forgeTracer) tracingVerbosity
+          $ teeForge (tracingFormatting $ hasConsensusTraceFlag Consensus.forgeTracer) tracingVerbosity
           $ addName "Forge" tracer
       }
 
