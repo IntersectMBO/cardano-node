@@ -90,14 +90,7 @@ PBftSignatureThreshold: 0.7
 TurnOnLogging: True
 ViewMode: SimpleView
 TurnOnLogMetrics: True
-##### Network Time Parameters #####
 
-ResponseTimeout: 30000000
-PollDelay: 1800000000
-Servers: [ "0.pool.ntp.org"
-         , "2.pool.ntp.org"
-         , "3.pool.ntp.org"
-         ]
 
 #####    Update Parameters    #####
 

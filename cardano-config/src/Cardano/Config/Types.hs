@@ -172,7 +172,6 @@ data NodeConfiguration =
       , ncLoggingSwitch :: Bool
       , ncLogMetrics :: Bool
       , ncViewMode :: ViewMode
-      , ncNTP :: NTP
       , ncUpdate :: Update
       } deriving (Show)
 
@@ -186,11 +185,6 @@ instance FromJSON NodeConfiguration where
                   loggingSwitch <- v .: "TurnOnLogging"
                   vMode <- v .: "ViewMode"
                   logMetrics <- v .: "TurnOnLogMetrics"
-
-                  -- Network Time Parameters
-                  respTimeout <- v .: "ResponseTimeout"
-                  pollDelay <- v .: "PollDelay"
-                  servers <- v .: "Servers"
 
                   -- Update Parameters
                   appName <- v .: "ApplicationName"
@@ -208,7 +202,6 @@ instance FromJSON NodeConfiguration where
                            loggingSwitch
                            logMetrics
                            vMode
-                           (NTP respTimeout pollDelay servers)
                            (Update appName appVersion (LastKnownBlockVersion
                                                          lkBlkVersionMajor
                                                          lkBlkVersionMinor
