@@ -140,13 +140,3 @@ AssetLockedSrcAddress: []
 
 CacheParameter: 500
 MessageCacheTimeout: 30
-
-NetworkDiameter: 18
-RecoveryHeadersMessage: 2200
-StreamWindow: 2048
-NonCriticalCQBootstrap: 0.95
-NonCriticalCQ: 0.8
-CriticalCQBootstrap: 0.8888
-CriticalCQ: 0.654321
-CriticalForkThreshold: 3
-FixedTimeCQ: 3600

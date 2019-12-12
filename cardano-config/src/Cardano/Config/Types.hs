@@ -178,7 +178,6 @@ data NodeConfiguration =
       , ncUpdate :: Update
       , ncTXP :: TXP
       , ncDLG :: DLG
-      , ncBlock :: Block
       } deriving (Show)
 
 instance FromJSON NodeConfiguration where
@@ -210,17 +209,6 @@ instance FromJSON NodeConfiguration where
                   cacheParam <- v .: "CacheParameter"
                   msgCacheTimeout <- v .: "MessageCacheTimeout"
 
-                  -- Block
-                  netDiameter <- v .: "NetworkDiameter"
-                  recHeadersMsg <- v .: "RecoveryHeadersMessage"
-                  streamWindow <- v .: "StreamWindow"
-                  nonCritCQBootstrp <- v .: "NonCriticalCQBootstrap"
-                  nonCritCQ <- v .: "NonCriticalCQ"
-                  critCQbootstrp <- v .: "CriticalCQBootstrap"
-                  critCQ <- v .: "CriticalCQ"
-                  critForkThresh <- v .: "CriticalForkThreshold"
-                  fixedTimeCQ <- v .: "FixedTimeCQ"
-
                   pure $ NodeConfiguration
                            ptcl
                            nId
@@ -237,9 +225,6 @@ instance FromJSON NodeConfiguration where
                                                          lkBlkVersionAlt))
                            (TXP memPoolTxSizeLim assetLockedSrcAddr)
                            (DLG cacheParam msgCacheTimeout)
-                           (Block netDiameter recHeadersMsg streamWindow
-                                  nonCritCQBootstrp nonCritCQ critCQbootstrp
-                                  critCQ critForkThresh fixedTimeCQ)
 
 
 
