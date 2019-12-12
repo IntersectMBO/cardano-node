@@ -117,28 +117,3 @@ ApplicationVersion: 1
 LastKnownBlockVersion-Major: 0
 LastKnownBlockVersion-Minor: 2
 LastKnownBlockVersion-Alt: 0
-
-
-
-
-#####       Certificates       #####
-
-
-CA-Organization: "Input Output HK"
-CA-CommonName: "Cardano SL Self-Signed Root CA"
-CA-ExpiryDays: 3600
-CA-AltDNS: []
-
-Server-Organization: "Input Output HK"
-Server-CommonName: "Cardano SL Server"
-Server-ExpiryDays: 3600
-Server-AltDNS: [ "localhost"
-               , "localhost.localdomain"
-               , "127.0.0.1"
-               , "::1"
-               ]
-
-Wallet-Organization: "Input Output HK"
-Wallet-CommonName: "Daedalus Wallet"
-Wallet-ExpiryDays: 3600
-Wallet-AltDNS: []
