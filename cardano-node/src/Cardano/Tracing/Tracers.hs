@@ -28,7 +28,7 @@ import           Prelude (String)
 import           Codec.CBOR.Read (DeserialiseFailure)
 import           Control.Monad.Class.MonadSTM
 import           Control.Tracer
-import           Control.Tracer.Transformers.Synopsizer (Synopsized (..), mkSynopsizer)
+import           Control.Tracer.Transformers.Synopsizer (mkSynopsizer)
 import           Data.Functor.Const (Const (..))
 import           Data.Functor.Contravariant (contramap)
 import           Data.Text (Text, pack)
@@ -39,6 +39,7 @@ import           Cardano.BM.Data.Aggregated (Measurable (..))
 import           Cardano.BM.Data.LogItem (LOContent (..), LogObject (..),
                                           PrivacyAnnotation (Confidential),
                                           mkLOMeta)
+import           Cardano.BM.Data.Trace (liftSynopsized)
 import           Cardano.BM.Tracing
 import           Cardano.BM.Trace (traceNamedObject)
 import           Cardano.BM.Data.Tracer (WithSeverity (..), addName,
@@ -141,10 +142,15 @@ mkTracers traceOptions tracer = do
       <*> (counting $ liftCounting staticMetaCC name "didnt-adopt" tracer)
       <*> (counting $ liftCounting staticMetaCC name "forged-invalid" tracer)
 
+  -- predicate to decide when to print elided messages
+  let resetTest :: (Int, a) -> a -> Bool
+      resetTest (count, _first) _last = count >= 100
+  synopser :: Tracer IO (LogObject Text) <- mkSynopsizer resetTest (liftSynopsized tracer)
+
   pure Tracers
     { chainDBTracer
         = annotateSeverity $ filterSeverity (pure . const (tracingSeverity $ traceChainDB traceOptions))
-          $ teeTraceChainTip (tracingFormatting $ traceChainDB traceOptions) tracingVerbosity
+          $ teeTraceChainTip (tracingFormatting $ traceChainDB traceOptions) tracingVerbosity synopser
           $ addName "ChainDB" tracer
     , consensusTracers
         = mkConsensusTracers forgeTracers
@@ -184,26 +190,15 @@ mkTracers traceOptions tracer = do
     teeTraceChainTip :: TracingFormatting
                      -> TracingVerbosity
                      -> Tracer IO (LogObject Text)
+                     -> Tracer IO (LogObject Text)
                      -> Tracer IO (WithSeverity (WithTip blk (ChainDB.TraceEvent blk)))
-    teeTraceChainTip tform tverb tr = Tracer $ \ev -> do
+    teeTraceChainTip tform tverb synopser tr = Tracer $ \ev -> do
         traceWith (teeTraceChainTip' tr) ev
-        -- traceWith (selectivelyTransform tform tverb tr) ev
-        traceWith (selectivelyTransform $ toLogObject' tform tverb tr) ev
-    selectivelyTransform :: Tracer IO (WithSeverity (WithTip blk (ChainDB.TraceEvent blk)))
-                         -> Tracer IO (WithSeverity (WithTip blk (ChainDB.TraceEvent blk)))
-    selectivelyTransform tr = do
-      let resetTest :: (Int, a) -> a -> Bool
-          resetTest (count, _first) _last = count >= 10
-          tr' :: Tracer IO (Synopsized (WithSeverity (WithTip blk (ChainDB.TraceEvent blk))))
-          tr' = Tracer $ \case
-                            (One traced) -> traceWith tr traced
-                            (Many _count _first last) -> traceWith tr last
-      synopser <- mkSynopsizer resetTest tr'
-      Tracer $ \ev@(WithSeverity _ (WithTip _tip ev')) ->
-        case ev' of
-            (ChainDB.TraceLedgerReplayEvent _) ->
-                 traceWith synopser ev
-            _ -> traceWith tr ev
+        flip traceWith ev $ fanning $ \(WithSeverity _ (WithTip _ ev')) ->
+          toLogObject' tform tverb  $
+            case ev' of
+              (ChainDB.TraceLedgerReplayEvent _) -> synopser
+              _ -> tr
 
     teeTraceChainTip' :: Tracer IO (LogObject Text)
                       -> Tracer IO (WithSeverity (WithTip blk (ChainDB.TraceEvent blk)))
