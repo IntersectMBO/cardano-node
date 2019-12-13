@@ -5,6 +5,7 @@
 {-# LANGUAGE NamedFieldPuns        #-}
 {-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE TupleSections         #-}
 {-# LANGUAGE UndecidableInstances  #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans  #-}
@@ -44,7 +45,8 @@ import           Cardano.BM.Data.Tracer (WithSeverity (..), addName,
 
 import           Ouroboros.Consensus.Block (Header)
 import           Ouroboros.Consensus.Ledger.Abstract
-import           Ouroboros.Consensus.Mempool.API (TraceEventMempool (..))
+import           Ouroboros.Consensus.Mempool.API
+                    (GenTx, TraceEventMempool (..))
 import qualified Ouroboros.Consensus.Node.Tracers as Consensus
 import           Ouroboros.Consensus.NodeNetwork (ProtocolTracers,
                      ProtocolTracers' (..), nullProtocolTracers)
@@ -66,6 +68,8 @@ import           Cardano.Config.Orphanage
 import           Cardano.Config.Protocol (TraceConstraints)
 import           Cardano.Config.Types
 import           Cardano.Tracing.ToObjectOrphans
+
+import           Control.Tracer.Transformers
 
 data Tracers peer blk = Tracers {
       -- | Trace the ChainDB (flag '--trace-chain-db' will turn on textual output)
@@ -93,6 +97,14 @@ data Tracers peer blk = Tracers {
     , muxTracer             :: Tracer IO (WithMuxBearer peer (MuxTrace NodeToNodeProtocols))
     }
 
+data ForgeTracers = ForgeTracers
+  { ftForged :: Trace IO Text
+  , ftCouldNotForge :: Trace IO Text
+  , ftAdopted :: Trace IO Text
+  , ftDidntAdoptBlock :: Trace IO Text
+  , ftForgedInvalid :: Trace IO Text
+  }
+
 nullTracers :: Tracers peer blk
 nullTracers = Tracers {
       chainDBTracer = nullTracer,
@@ -113,15 +125,27 @@ mkTracers :: forall peer blk.
               , Show peer
               )
            => TraceOptions
-           -> Tracer IO (LogObject Text)
-           -> Tracers peer blk
-mkTracers traceOptions tracer = Tracers
+           -> Trace IO Text
+           -> IO (Tracers peer blk)
+mkTracers traceOptions tracer = do
+  -- We probably don't want to pay the extra IO cost per-counter-increment. -- sk
+  staticMetaCC <- mkLOMeta Critical Confidential
+  let name :: [Text] = ["metrics", "Forge"]
+  forgeTracers <-
+    ForgeTracers
+      <$> (counting $ liftCounting staticMetaCC name "forged" tracer)
+      <*> (counting $ liftCounting staticMetaCC name "could-not-forge" tracer)
+      <*> (counting $ liftCounting staticMetaCC name "adopted" tracer)
+      <*> (counting $ liftCounting staticMetaCC name "didnt-adopt" tracer)
+      <*> (counting $ liftCounting staticMetaCC name "forged-invalid" tracer)
+
+  pure Tracers
     { chainDBTracer
         = annotateSeverity $ filterSeverity (pure . const (tracingSeverity $ traceChainDB traceOptions))
           $ teeTraceChainTip (tracingFormatting $ traceChainDB traceOptions) tracingVerbosity
           $ addName "ChainDB" tracer
     , consensusTracers
-        = mkConsensusTracers
+        = mkConsensusTracers forgeTracers
     , protocolTracers
         = mkProtocolsTracers
     , ipSubscriptionTracer
@@ -221,6 +245,42 @@ mkTracers traceOptions tracer = Tracers
       traceWith (enableConsensusTracer Consensus.mempoolTracer
                 $ withName "Mempool" tracer) ev
 
+    teeForge
+      :: ForgeTracers
+      -> TracingFormatting
+      -> TracingVerbosity
+      -> Trace IO Text
+      -> Tracer IO (WithSeverity (Consensus.TraceForgeEvent blk (GenTx blk)))
+    teeForge ft tform tverb tr = Tracer $ \ev -> do
+      traceWith (teeForge' tr) ev
+      flip traceWith ev $ fanning $ \(WithSeverity _ e) ->
+        case e of
+          Consensus.TraceForgeEvent{} -> teeForge' (ftForged ft)
+          Consensus.TraceCouldNotForge{} -> teeForge' (ftCouldNotForge ft)
+          Consensus.TraceAdoptedBlock{} -> teeForge' (ftAdopted ft)
+          Consensus.TraceDidntAdoptBlock{} -> teeForge' (ftDidntAdoptBlock ft)
+          Consensus.TraceForgedInvalidBlock{} -> teeForge' (ftForgedInvalid ft)
+      traceWith (toLogObject' tform tverb tr) ev
+
+    teeForge'
+      :: Trace IO Text
+      -> Tracer IO (WithSeverity (Consensus.TraceForgeEvent blk (GenTx blk)))
+    teeForge' tr =
+      Tracer $ \(WithSeverity _ ev) -> do
+        meta <- mkLOMeta Critical Confidential
+        traceNamedObject (appendName "metrics" tr) . (meta,) $
+          case ev of
+            Consensus.TraceForgeEvent    slot _ ->
+              LogValue "forgedSlotLast" $ PureI $ fromIntegral $ unSlotNo slot
+            Consensus.TraceCouldNotForge slot _ ->
+              LogValue "couldNotForgeSlotLast" $ PureI $ fromIntegral $ unSlotNo slot
+            Consensus.TraceAdoptedBlock slot _ _ _ ->
+              LogValue "adoptedSlotLast" $ PureI $ fromIntegral $ unSlotNo slot
+            Consensus.TraceDidntAdoptBlock slot _ ->
+              LogValue "notAdoptedSlotLast" $ PureI $ fromIntegral $ unSlotNo slot
+            Consensus.TraceForgedInvalidBlock slot _ _ ->
+              LogValue "forgedInvalidSlotLast" $ PureI $ fromIntegral $ unSlotNo slot
+
     enableConsensusTracer
       :: Show a
       => (ConsensusTraceOptions -> Const Bool b)
@@ -233,8 +293,8 @@ mkTracers traceOptions tracer = Tracers
       -> Bool
     hasConsensusTraceFlag f = getConst $ f $ traceConsensus traceOptions
 
-    mkConsensusTracers :: Consensus.Tracers' peer blk (Tracer IO)
-    mkConsensusTracers = Consensus.Tracers
+    mkConsensusTracers :: ForgeTracers -> Consensus.Tracers' peer blk (Tracer IO)
+    mkConsensusTracers forgeTracers = Consensus.Tracers
       { Consensus.chainSyncClientTracer
         = annotateSeverity $ filterSeverity (pure . const (tracingSeverity $ hasConsensusTraceFlag Consensus.chainSyncClientTracer))
           $ toLogObject' (tracingFormatting $ hasConsensusTraceFlag Consensus.chainSyncClientTracer) tracingVerbosity
@@ -275,7 +335,7 @@ mkTracers traceOptions tracer = Tracers
         = mempoolTracer
       , Consensus.forgeTracer
         = annotateSeverity $ filterSeverity (pure . const (tracingSeverity $ hasConsensusTraceFlag Consensus.forgeTracer))
-          $ toLogObject' (tracingFormatting $ hasConsensusTraceFlag Consensus.forgeTracer) tracingVerbosity
+          $ teeForge forgeTracers (tracingFormatting $ hasConsensusTraceFlag Consensus.forgeTracer) tracingVerbosity
           $ addName "Forge" tracer
       }
 

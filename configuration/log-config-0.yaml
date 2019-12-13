@@ -24,7 +24,11 @@ defaultBackends:
 #hasGUI: 12871
 
 # if wanted, the EKG interface is listening on this port:
-#hasEKG: 12781
+hasEKG: 12781
+
+hasPrometheus:
+  - "127.0.0.1"
+  - 13788
 
 # here we set up outputs of logging in 'katip':
 setupScribes:
@@ -80,15 +84,22 @@ options:
       - EKGViewBK
       - kind: UserDefinedBK
         name: LiveViewBackend
+    cardano.node.metrics.Forge:
+      - EKGViewBK
+    cardano.node.metrics.Mempool:
+      - EKGViewBK
     cardano.node.metrics:
+      - EKGViewBK
       - kind: UserDefinedBK
         name: LiveViewBackend
-    cardano.node.BlockFetchDecision:
+    cardano.node.peers:
+      - EKGViewBK
+    cardano.node.BlockFetchDecision.peers:
+      - EKGViewBK
       - kind: UserDefinedBK
         name: LiveViewBackend
-    cardano.node.peers.BlockFetchDecision:
-      - kind: UserDefinedBK
-        name: LiveViewBackend
+
+
 ##########################################################
 ############### Cardano Node Configuration ###############
 ##########################################################
@@ -101,7 +112,7 @@ RequiresNetworkMagic: RequiresMagic
 PBftSignatureThreshold: 0.7
 TurnOnLogging: True
 ViewMode: LiveView
-TurnOnLogMetrics: False
+TurnOnLogMetrics: True
 
 
 

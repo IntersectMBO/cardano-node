@@ -110,7 +110,7 @@ runNode loggingLayer nc nCli = do
                         Left err -> (putTextLn . pack $ show err) >> exitFailure
                         Right (SomeProtocol p) -> pure $ SomeProtocol p
 
-    let tracers     = mkTracers (traceOpts nCli) trace
+    tracers <- mkTracers (traceOpts nCli) trace
 
     case ncViewMode nc of
       SimpleView -> handleSimpleNode p trace tracers nCli nc
