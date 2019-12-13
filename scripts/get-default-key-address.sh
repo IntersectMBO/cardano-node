@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env bash
 
 RUNNER=${RUNNER:-cabal v2-run -v0 --}
 
