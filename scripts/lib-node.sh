@@ -8,7 +8,7 @@ then if test -x ./scripts/genesis.sh
      fi
 fi
 
-genesis_hash=`cat ${genesis_root}/GENHASH`
+genesis_hash="cat ${genesis_root}/GENHASH"
 
 if test ! -f "${genesis_file}"
 then echo "ERROR: genesis ${genesis_file} does not exist!">&1; exit 1; fi
