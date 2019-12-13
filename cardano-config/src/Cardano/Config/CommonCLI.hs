@@ -4,12 +4,7 @@
 {-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
 
 module Cardano.Config.CommonCLI
-  ( CommonCLI(..)
-  , CommonCLIAdvanced(..)
-  , parseCommonCLI
-  , parseCommonCLIAdvanced
-   -- * Generic
-  , command'
+  ( command'
   , lastOption
   , lastAutoOption
   , lastIntOption
@@ -49,23 +44,6 @@ import qualified Options.Applicative as OA
 import           Cardano.Crypto (RequiresNetworkMagic(..))
 import qualified Ouroboros.Consensus.BlockchainTime as Consensus
 
-
-data CommonCLI = CommonCLI
-  { cliDBPath                     :: !(Last FilePath)
-  , cliGenesisFile                :: !(Last FilePath)
-  , cliGenesisHash                :: !(Last Text)
-  , cliStaticKeyDlgCertFile       :: !(Last FilePath)
-  , cliStaticKeySigningKeyFile    :: !(Last FilePath)
-  , cliSocketDir                  :: !(Last FilePath)
-  --TODO cliUpdate                :: !PartialUpdate
-  }
-
-data CommonCLIAdvanced = CommonCLIAdvanced
-  { ccaPBftSigThd                 :: !(Last Double)
-  , ccaRequiresNetworkMagic       :: !(Last RequiresNetworkMagic)
-  , ccaSlotLength                 :: !(Last Consensus.SlotLength)
-  --TODO cliUpdate                :: !PartialUpdate
-  }
 
 {-------------------------------------------------------------------------------
   Common CLI
@@ -159,40 +137,6 @@ parseSocketDirLast =
                 \  ${dir}/node-{core,relay}-${node-id}.socket"
     )
 
--- | CLI Arguments common to all Cardano node flavors
-parseCommonCLI :: Parser CommonCLI
-parseCommonCLI =
-    CommonCLI
-    <$> lastStrOption (
-            long "database-path"
-         <> metavar "FILEPATH"
-         <> help "Directory where the state is stored."
-        )
-    <*> lastStrOption
-           ( long "genesis-file"
-          <> metavar "FILEPATH"
-          <> help "The filepath to the genesis file."
-           )
-    <*> lastStrOption
-           ( long "genesis-hash"
-          <> metavar "GENESIS-HASH"
-          <> help "The genesis hash value."
-           )
-    <*> lastStrOption
-           ( long "delegation-certificate"
-          <> metavar "FILEPATH"
-          <> help "Path to the delegation certificate."
-           )
-    <*> lastStrOption
-           ( long "signing-key"
-          <> metavar "FILEPATH"
-          <> help "Path to the signing key."
-           )
-    <*> lastStrOption (
-            long "socket-dir"
-         <> metavar "FILEPATH"
-         <> help "Directory with local sockets:  ${dir}/node-{core,relay}-${node-id}.socket"
-        )
 
 parsePbftSigThreshold :: Parser (Maybe Double)
 parsePbftSigThreshold =
@@ -240,32 +184,6 @@ parseSlotLengthLast = do
  where
   mkSlotLength :: Integer -> Consensus.SlotLength
   mkSlotLength sI = Consensus.slotLengthFromMillisec $ 1000 * sI
-
--- | These are advanced options, and so are hidden by default.
-parseCommonCLIAdvanced :: Parser CommonCLIAdvanced
-parseCommonCLIAdvanced =
-    CommonCLIAdvanced
-    <$> lastDoubleOption
-           ( long "pbft-signature-threshold"
-          <> metavar "DOUBLE"
-          <> help "The PBFT signature threshold."
-          <> hidden
-           )
-    <*> lastFlag RequiresNoMagic RequiresMagic
-           ( long "require-network-magic"
-          <> help "Require network magic in transactions."
-          <> hidden
-           )
-    <*> ((mkSlotLength <$>)
-         <$> lastAutoOption
-             ( long "slot-duration"
-               <> metavar "SECONDS"
-               <> help "The slot duration (seconds)"
-               <> hidden
-             ))
-  where
-    mkSlotLength :: Integer -> Consensus.SlotLength
-    mkSlotLength = Consensus.slotLengthFromMillisec . (* 1000)
 
 {-------------------------------------------------------------------------------
   optparse-applicative auxiliary

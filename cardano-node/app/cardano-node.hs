@@ -18,7 +18,6 @@ import           Cardano.Shell.Types (CardanoApplication (..),
 import           Cardano.Common.Help
 import           Cardano.Common.TopHandler
 import           Cardano.Common.Parsers
-import           Cardano.Config.CommonCLI (parseCommonCLIAdvanced)
 import           Cardano.Config.Logging (createLoggingFeature)
 import           Cardano.Config.Types
 import           Cardano.Node.Features.Node
@@ -44,7 +43,6 @@ main = toplevelExceptionHandler $ do
         Opt.info (nodeCliParser
                     <**> helperBrief "help" "Show this help text" nodeCliHelpMain
                     <**> helperBrief "help-tracing" "Show help for tracing options" cliHelpTracing
-                    <**> helperBrief "help-advanced" "Show help for advanced options" cliHelpAdvanced
                  )
 
           ( Opt.fullDesc <>
@@ -68,11 +66,7 @@ main = toplevelExceptionHandler $ do
         <$$> ""
         <$$> parserHelpOptions cliTracingParser
 
-      cliHelpAdvanced :: String
-      cliHelpAdvanced = renderHelpDoc 80 $
-        "Advanced options:"
-        <$$> ""
-        <$$> parserHelpOptions parseCommonCLIAdvanced
+
 
 
 initializeAllFeatures
