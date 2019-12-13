@@ -18,26 +18,14 @@ module Cardano.Config.Types
     , SocketFile (..)
     , TopologyFile( ..)
     -- * specific for @Core@
-    , NodeProtocol (..)
-    , Spec (..)
-    , Initializer (..)
     -- * rest
-    , TestBalance (..)
-    , FakeAvvmBalance (..)
-    , BlockVersionData (..)
     , LastKnownBlockVersion (..)
-    , SoftForkRule (..)
-    , TxFeePolicy (..)
-    , TxSizeLinear (..)
     , Protocol (..)
-    , ProtocolConstants (..)
     , NTP (..)
     , Update (..)
     , Block (..)
     , Node (..)
-    , TLS (..)
     , ViewMode (..)
-    , Certificate (..)
     , TraceOptions (..)
     , ConsensusTraceOptions
     , ProtocolTraceOptions
@@ -211,14 +199,6 @@ instance FromJSON NodeConfiguration where
 parseNodeConfiguration :: FilePath -> IO NodeConfiguration
 parseNodeConfiguration fp = decodeFileThrow fp
 
--- | The type of the protocol being run on the node.
-data NodeProtocol
-    = BFTProtocol
-    | PraosProtocol
-    | MockPBFTProtocol
-    | RealPBFTProtocol
-    deriving (Eq, Show)
-
 -- | Core configuration.
 -- For now, we only store the path to the genesis file(s) and their hash.
 -- The rest is in the hands of the modules/features that need to use it.
@@ -236,8 +216,6 @@ data Core = Core
     -- ^ Core node ID, the number of the node.
     , coNumCoreNodes                :: !(Maybe Int)
     -- ^ The number of the core nodes.
-    , coNodeProtocol                :: !NodeProtocol -- TODO: Remove!
-    -- ^ The type of protocol run on the node.
     , coStaticKeySigningKeyFile     :: !(Maybe FilePath)
     -- ^ Static key signing file.
     , coStaticKeyDlgCertFile        :: !(Maybe FilePath)
@@ -247,92 +225,6 @@ data Core = Core
     , coPBftSigThd                  :: !(Maybe Double)
     -- ^ PBFT signature threshold system parameters
 
-    } deriving (Eq, Show)
-
-data Spec = Spec
-    { spInitializer       :: !Initializer
-      -- ^ Other data which depend on genesis type.
-    , spBlockVersionData  :: !BlockVersionData
-      -- ^ Genesis 'BlockVersionData'.
-    , spProtocolConstants :: !ProtocolConstants
-      -- ^ Other constants which affect consensus.
-    , spFTSSeed           :: !Text
-      -- ^ Seed for FTS for 0-th epoch.
-    , spHeavyDelegation   :: !Text
-      -- ^ Genesis state of heavyweight delegation.
-    , spAVVMDistr         :: !Text
-      -- ^ Genesis data describes avvm utxo.
-    } deriving (Eq, Show)
-
--- | This data type contains various options presense of which depends
--- on whether we want genesis for mainnet or testnet.
-data Initializer = Initializer
-    { inTestBalance       :: !TestBalance
-    , inFakeAvvmBalance   :: !FakeAvvmBalance
-    , inAVVMBalanceFactor :: !Word64
-    , inUseHeavyDlg       :: !Bool
-    , inSeed              :: !Integer
-      -- ^ Seed to use to generate secret data. It's used only in
-      -- testnet, shouldn't be used for anything important.
-    } deriving (Eq, Show)
-
--- | These options determine balances of nodes specific for testnet.
-data TestBalance = TestBalance
-    { tePoors          :: !Word
-      -- ^ Number of poor nodes (with small balance).
-    , teRichmen        :: !Word
-      -- ^ Number of rich nodes (with huge balance).
-    , teRichmenShare   :: !Double
-      -- ^ Portion of stake owned by all richmen together.
-    , teUseHDAddresses :: !Bool
-      -- ^ Whether generate plain addresses or with hd payload.
-    , teTotalBalance   :: !Word64
-      -- ^ Total balance owned by these nodes.
-    } deriving (Eq, Show)
-
--- | These options determines balances of fake AVVM nodes which didn't
--- really go through vending, but pretend they did.
-data FakeAvvmBalance = FakeAvvmBalance
-    { faCount      :: !Word
-    , faOneBalance :: !Word64
-    } deriving (Eq, Show)
-
--- | If we require options to automatically restart a module.
-data ModuleAutoRestart
-    = ModuleRestart
-    | ModuleNoRestart
-    deriving (Eq, Show)
-
-data BlockVersionData = BlockVersionData
-    { bvdScriptVersion     :: !Word16
-    , bvdSlotDuration      :: !Int
-    , bvdMaxBlockSize      :: !Natural
-    , bvdMaxHeaderSize     :: !Natural
-    , bvdMaxTxSize         :: !Natural
-    , bvdMaxProposalSize   :: !Natural
-    , bvdMpcThd            :: !Word64
-    , bvdHeavyDelThd       :: !Word64
-    , bvdUpdateVoteThd     :: !Word64
-    , bvdUpdateProposalThd :: !Word64
-    , bvdUpdateImplicit    :: !Word64
-    , bvdSoftforkRule      :: !SoftForkRule
-    , bvdTXFeePolicy       :: !TxFeePolicy
-    , bvdUnlockStakeEpoch  :: !Word64
-    } deriving (Eq, Show)
-
-data SoftForkRule = SoftForkRule
-    { sfrInitThd      :: !Word64
-    , sfrMinThd       :: !Word64
-    , sfrThdDecrement :: !Word64
-    } deriving (Eq, Show)
-
-data TxFeePolicy = TxFeePolicy
-    { txfTXSizeLinear :: !TxSizeLinear
-    } deriving (Eq, Show)
-
-data TxSizeLinear = TxSizeLinear
-    { txsA :: !Word64
-    , txsB :: !Word64
     } deriving (Eq, Show)
 
 -- TODO:  we don't want ByronLegacy in Protocol.  Let's wrap Protocol with another
@@ -357,15 +249,6 @@ instance FromJSON Protocol where
   parseJSON invalid  = panic $ "Parsing of Protocol failed due to type mismatch. "
                              <> "Encountered: " <> (T.pack $ Prelude.show invalid)
 
-
-
-
-data ProtocolConstants = ProtocolConstants
-    { prK             :: !Word64
-    -- ^ Security parameter from the paper.
-    , prProtocolMagic :: !Word32
-    -- ^ Magic constant for separating real/testnet.
-    } deriving (Eq, Show)
 
 data NTP = NTP
     { ntpResponseTimeout :: !Int
@@ -422,19 +305,6 @@ data Node = Node
     -- ^ Network connection timeout in milliseconds.
     , noHandshakeTimeout                :: !Int
     -- ^ Protocol acknowledgement timeout in milliseconds.
-    } deriving (Eq, Show)
-
-data TLS = TLS
-    { tlsCA      :: !Certificate
-    , tlsServer  :: !Certificate
-    , tlsClients :: !Certificate
-    } deriving (Eq, Show)
-
-data Certificate = Certificate
-    { certOrganization :: !Text
-    , certCommonName   :: !Text
-    , certExpiryDays   :: !Int
-    , certAltDNS       :: ![Text]
     } deriving (Eq, Show)
 
 -- Node can be run in two modes.

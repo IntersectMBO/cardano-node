@@ -11,8 +11,7 @@ import qualified Cardano.Chain.Update as Update
 import           Ouroboros.Consensus.NodeId
 
 import           Cardano.Config.Defaults (traceOptionsDefault)
-import           Cardano.Config.Partial ( NodeProtocol (..)
-                                        , PartialCardanoConfiguration (..)
+import           Cardano.Config.Partial ( PartialCardanoConfiguration (..)
                                         , PartialCore (..)
                                         , PartialLastKnownBlockVersion (..)
                                         , PartialNode (..)
@@ -47,7 +46,6 @@ mainnetConfiguration =
           , pcoGenesisHash = pure "5f20df933584822601f9e3f8c024eb5eb252fe8cefb24d1317dc3d432e940ebb"
           , pcoNodeId = mempty
           , pcoNumCoreNodes = mempty
-          , pcoNodeProtocol = pure BFTProtocol
           , pcoStaticKeySigningKeyFile = mempty
           , pcoStaticKeyDlgCertFile = mempty
           , pcoRequiresNetworkMagic = pure RequiresNoMagic
@@ -96,7 +94,6 @@ devConfiguration =
           , pcoGenesisHash = pure "7f141ea26e189c9cb09e2473f6499561011d5d3c90dd642fde859ce02282a3ae"
           , pcoNodeId = mempty
           , pcoNumCoreNodes = mempty
-          , pcoNodeProtocol = pure BFTProtocol
           , pcoStaticKeySigningKeyFile = mempty
           , pcoStaticKeyDlgCertFile = mempty
           , pcoRequiresNetworkMagic = pure RequiresMagic
