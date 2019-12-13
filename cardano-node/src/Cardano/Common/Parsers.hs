@@ -326,10 +326,8 @@ parseTraceOptions m = TraceOptions
 
   -- Protocol Tracing Options --
   <*> parseTraceChainSyncProtocol m
-  -- There's two variants of the block fetch tracer and for now
-  -- at least we'll set them both together from the same flags.
   <*> parseTraceBlockFetchProtocol m
-  <*> parseTraceBlockFetchProtocol m
+  <*> parseTraceBlockFetchProtocolSerialised m
   <*> parseTraceTxSubmissionProtocol m
   <*> parseTraceLocalChainSyncProtocol m
   <*> parseTraceLocalTxSubmissionProtocol m
@@ -470,6 +468,15 @@ parseTraceBlockFetchProtocol m =
     switch (
          long "trace-block-fetch-protocol"
       <> help "Trace BlockFetch protocol messages."
+      <> m
+    )
+
+
+parseTraceBlockFetchProtocolSerialised :: MParser Bool
+parseTraceBlockFetchProtocolSerialised m =
+    switch (
+         long "trace-block-fetch-protocol-serialised"
+      <> help "Serialised Trace BlockFetch protocol messages."
       <> m
     )
 

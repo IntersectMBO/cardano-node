@@ -347,7 +347,7 @@ data TraceOptions = TraceOptions
     -- There's two variants of the block fetch tracer and for now
     -- at least we'll set them both together from the same flags.
   , traceBlockFetchProtocol :: !Bool
-  , traceBlockFetchProtocol' :: !Bool
+  , traceBlockFetchProtocolSerialised :: !Bool
   , traceTxSubmissionProtocol :: !Bool
   , traceLocalChainSyncProtocol :: !Bool
   , traceLocalTxSubmissionProtocol :: !Bool

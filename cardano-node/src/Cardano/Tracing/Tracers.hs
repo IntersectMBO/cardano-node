@@ -345,7 +345,7 @@ mkTracers traceOptions tracer = do
         = tracerOnOff (traceBlockFetchProtocol traceOpts)
         $ showTracing $ withName "BlockFetchProtocol" tracer
       , ptBlockFetchSerialisedTracer
-        = tracerOnOff (traceBlockFetchProtocol traceOpts)
+        = tracerOnOff (traceBlockFetchProtocolSerialised traceOpts)
         $ showTracing $ withName "BlockFetchProtocol" tracer
       , ptTxSubmissionTracer
         = tracerOnOff (traceTxSubmissionProtocol traceOpts)
