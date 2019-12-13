@@ -26,6 +26,7 @@ library
                        Cardano.CLI.Tx.BenchmarkingTxSubmission
                        Cardano.CLI.Tx.BenchmarkingNodeToNode
                        Cardano.CLI.Tx.Generation
+                       Cardano.CLI.Parsers
                        Cardano.CLI.Tx.Submission
                        Cardano.Common.Help
                        Cardano.Common.LocalSocket

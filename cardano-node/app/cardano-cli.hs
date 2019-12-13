@@ -24,10 +24,10 @@ import           Cardano.Chain.Slotting
 import           Cardano.Chain.UTxO
 import           Cardano.CLI.Genesis
 import           Cardano.CLI.Key
+import           Cardano.CLI.Parsers
 import           Cardano.CLI.Run
 import           Cardano.Common.TopHandler
 import           Cardano.Common.Parsers
-import           Cardano.Config.CommonCLI
 import           Cardano.Config.Logging (createLoggingFeatureCLI)
 import           Cardano.Config.Partial (PartialCardanoConfiguration (..),
                                          PartialCore (..), PartialNode (..),
