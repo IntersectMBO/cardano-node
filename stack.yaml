@@ -75,6 +75,7 @@ extra-deps:
     subdirs:
       - contra-tracer
       - iohk-monitoring
+      - tracer-transformers
       - plugins/backend-aggregation
       - plugins/backend-editor
       - plugins/backend-ekg

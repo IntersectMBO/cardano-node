@@ -28,6 +28,7 @@ import           Prelude (String)
 import           Codec.CBOR.Read (DeserialiseFailure)
 import           Control.Monad.Class.MonadSTM
 import           Control.Tracer
+import           Control.Tracer.Transformers.Synopsizer (Synopsized (..), mkSynopsizer)
 import           Data.Functor.Const (Const (..))
 import           Data.Functor.Contravariant (contramap)
 import           Data.Text (Text, pack)
@@ -186,29 +187,46 @@ mkTracers traceOptions tracer = do
                      -> Tracer IO (WithSeverity (WithTip blk (ChainDB.TraceEvent blk)))
     teeTraceChainTip tform tverb tr = Tracer $ \ev -> do
         traceWith (teeTraceChainTip' tr) ev
-        traceWith (toLogObject' tform tverb tr) ev
+        -- traceWith (selectivelyTransform tform tverb tr) ev
+        traceWith (selectivelyTransform $ toLogObject' tform tverb tr) ev
+    selectivelyTransform :: Tracer IO (WithSeverity (WithTip blk (ChainDB.TraceEvent blk)))
+                         -> Tracer IO (WithSeverity (WithTip blk (ChainDB.TraceEvent blk)))
+    selectivelyTransform tr = do
+      let resetTest :: (Int, a) -> a -> Bool
+          resetTest (count, _first) _last = count >= 10
+          tr' :: Tracer IO (Synopsized (WithSeverity (WithTip blk (ChainDB.TraceEvent blk))))
+          tr' = Tracer $ \case
+                            (One traced) -> traceWith tr traced
+                            (Many _count _first last) -> traceWith tr last
+      synopser <- mkSynopsizer resetTest tr'
+      Tracer $ \ev@(WithSeverity _ (WithTip _tip ev')) ->
+        case ev' of
+            (ChainDB.TraceLedgerReplayEvent _) ->
+                 traceWith synopser ev
+            _ -> traceWith tr ev
+
     teeTraceChainTip' :: Tracer IO (LogObject Text)
                       -> Tracer IO (WithSeverity (WithTip blk (ChainDB.TraceEvent blk)))
     teeTraceChainTip' tr =
-        Tracer $ \(WithSeverity _ (WithTip _tip ev')) ->
-          case ev' of
-              (ChainDB.TraceAddBlockEvent ev) -> case ev of
-                  ChainDB.SwitchedToChain _ c -> do
-                      meta <- mkLOMeta Critical Confidential
-                      let tr' = appendName "metrics" tr
-                          ChainInformation { slots, blocks, density } = chainInformation c
-                          epochSlots :: Word64 = 21600  -- TODO
-                      traceNamedObject tr' (meta, LogValue "density" . PureD $ fromRational density)
-                      traceNamedObject tr' (meta, LogValue "slotNum" . PureI $ fromIntegral slots)
-                      traceNamedObject tr' (meta, LogValue "blockNum" . PureI $ fromIntegral blocks)
-                      traceNamedObject tr' (meta, LogValue "slotInEpoch" . PureI $ fromIntegral (slots `rem` epochSlots))
-                      traceNamedObject tr' (meta, LogValue "epoch" . PureI $ fromIntegral (slots `div` epochSlots))
-                  _ -> pure ()
-              _ -> pure ()
+      Tracer $ \(WithSeverity _ (WithTip _tip ev')) ->
+        case ev' of
+            (ChainDB.TraceAddBlockEvent ev) -> case ev of
+                ChainDB.SwitchedToChain _ c -> do
+                    meta <- mkLOMeta Critical Confidential
+                    let tr' = appendName "metrics" tr
+                        ChainInformation { slots, blocks, density } = chainInformation c
+                        epochSlots :: Word64 = 21600  -- TODO
+                    traceNamedObject tr' (meta, LogValue "density" . PureD $ fromRational density)
+                    traceNamedObject tr' (meta, LogValue "slotNum" . PureI $ fromIntegral slots)
+                    traceNamedObject tr' (meta, LogValue "blockNum" . PureI $ fromIntegral blocks)
+                    traceNamedObject tr' (meta, LogValue "slotInEpoch" . PureI $ fromIntegral (slots `rem` epochSlots))
+                    traceNamedObject tr' (meta, LogValue "epoch" . PureI $ fromIntegral (slots `div` epochSlots))
+                _ -> pure ()
+            _ -> pure ()
     teeTraceBlockFetchDecision :: TracingFormatting
-        -> TracingVerbosity
-        -> Tracer IO (LogObject Text)
-        -> Tracer IO (WithSeverity [TraceLabelPeer peer (FetchDecision [Point (Header blk)])])
+                               -> TracingVerbosity
+                               -> Tracer IO (LogObject Text)
+                               -> Tracer IO (WithSeverity [TraceLabelPeer peer (FetchDecision [Point (Header blk)])])
     teeTraceBlockFetchDecision tform tverb tr = Tracer $ \ev -> do
       traceWith (teeTraceBlockFetchDecision' tr) ev
       traceWith (toLogObject' tform tverb tr) ev
