@@ -2,6 +2,7 @@
 
 NetworkName: mainnet
 RequiresNetworkMagic: RequiresNoMagic
+GenesisHash: 5fbffc20a6ee41093a0f6a44e6110b66a69c7cc591c714075a6c537c360e32b6
 EnableLogMetrics: False
 EnableLogging: True
 
