@@ -59,12 +59,12 @@ ${RUNNER} cardano-cli "${common[@]}" genesis "${args[@]}" "$@"
 GENHASH=`${RUNNER} cardano-cli "${common[@]}" print-genesis-hash --genesis-json "${tmpdir}/genesis.json" | tail -1`
 TARGETDIR="${CONFIGDIR}/genesis"
 mkdir -vp "${TARGETDIR}"
-cp -iav ${tmpdir}/genesis.json ${TARGETDIR}/
-cp -iav ${tmpdir}/delegate-keys.*.key ${TARGETDIR}/
-cp -iav ${tmpdir}/delegation-cert.*.json ${TARGETDIR}/
+cp -iav ${tmpdir}/genesis.json "${TARGETDIR}"/
+cp -iav ${tmpdir}/delegate-keys.*.key "${TARGETDIR}"/
+cp -iav ${tmpdir}/delegation-cert.*.json "${TARGETDIR}"/
 
 set -
 
-echo $GENHASH > ${TARGETDIR}/GENHASH
+echo $GENHASH > "${TARGETDIR}"/GENHASH
 echo "genesis created with hash = ${GENHASH}"
 echo "  in directory ${TARGETDIR}"
