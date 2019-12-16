@@ -13,7 +13,6 @@ module Cardano.CLI.Run (
   --
   , NewDirectory(..)
   , SigningKeyFile(..)
-  , NewSigningKeyFile(..)
   , VerificationKeyFile(..)
   , NewVerificationKeyFile(..)
   , CertificateFile(..)
