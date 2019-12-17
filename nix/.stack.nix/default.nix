@@ -42,6 +42,7 @@
         cardano-binary = ./cardano-binary.nix;
         cardano-binary-test = ./cardano-binary-test.nix;
         cardano-crypto-class = ./cardano-crypto-class.nix;
+        cardano-slotting = ./cardano-slotting.nix;
         cardano-shell = ./cardano-shell.nix;
         goblins = ./goblins.nix;
         contra-tracer = ./contra-tracer.nix;
