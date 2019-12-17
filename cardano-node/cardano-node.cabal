@@ -26,6 +26,7 @@ library
                        Cardano.CLI.Tx.BenchmarkingTxSubmission
                        Cardano.CLI.Tx.BenchmarkingNodeToNode
                        Cardano.CLI.Tx.Generation
+                       Cardano.CLI.Parsers
                        Cardano.CLI.Tx.Submission
                        Cardano.Common.Help
                        Cardano.Common.LocalSocket
@@ -40,6 +41,7 @@ library
                        Cardano.Tracing.Tracers
                        Cardano.Wallet.Run
                        Cardano.Wallet.Client
+                       Control.Tracer.Transformers
 
   other-modules:       Paths_cardano_node
                        Cardano.Tracing.ToObjectOrphans
@@ -285,6 +287,7 @@ executable chairman
                      , ouroboros-network
                      , serialise
                      , text
+                     , transformers-except
                      , typed-protocols
                      , typed-protocols-cbor
 

@@ -1,7 +1,15 @@
-
-genesis_hash=`cat configuration/GenesisFiles/GENHASH`
-genesis_root="configuration/GenesisFiles"
+genesis_root="$(realpath configuration/genesis)"
 genesis_file="${genesis_root}/genesis.json"
+
+if test ! -f "${genesis_file}"
+then if test -x ./scripts/genesis.sh
+     then ./scripts/genesis.sh
+     else echo "ERROR: could not locate genesis generator!">&1; exit 1
+     fi
+fi
+
+genesis_hash=`cat "${genesis_root}/GENHASH"`
+
 if test ! -f "${genesis_file}"
 then echo "ERROR: genesis ${genesis_file} does not exist!">&1; exit 1; fi
 
@@ -27,7 +35,7 @@ function acceptorargs() {
         nodecfg acceptor
         dlgkey 0
         dlgcert 0
-        printf -- "--port 1234"
+        printf -- "--port 1234 "
 }
 
 function nodeargs () {

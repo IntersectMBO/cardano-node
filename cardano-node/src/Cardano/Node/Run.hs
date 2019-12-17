@@ -94,24 +94,23 @@ runNode loggingLayer nc nCli = do
                              NormalVerbosity -> "normal"
                              MinimalVerbosity -> "minimal"
                              MaximalVerbosity -> "maximal"
-    SomeProtocol p  <- fromProtocol
-                         (genesisHash nCli)
-                         (ncNodeId nc)
-                         (ncNumCoreNodes nc)
-                         (genesisFile $ mscFp nCli)
-                         (ncReqNetworkMagic nc)
-                         (ncPbftSignatureThresh nc)
-                         (delegCertFile $ mscFp nCli)
-                         (signKeyFile $ mscFp nCli)
-                         (ncUpdate nc)
-                         (ncProtocol nc)
+    eitherSomeProtocol <- runExceptT $ fromProtocol
+                                         (genesisHash nCli)
+                                         (ncNodeId nc)
+                                         (ncNumCoreNodes nc)
+                                         (genesisFile $ mscFp nCli)
+                                         (ncReqNetworkMagic nc)
+                                         (ncPbftSignatureThresh nc)
+                                         (delegCertFile $ mscFp nCli)
+                                         (signKeyFile $ mscFp nCli)
+                                         (ncUpdate nc)
+                                         (ncProtocol nc)
 
-    -- The outcomes we want to measure, the outcome extractor
-    -- for measuring the time it takes a transaction to get into
-    -- a block.
-    -- txsOutcomeExtractor <- mkOutcomeExtractor
+    SomeProtocol p <- case eitherSomeProtocol of
+                        Left err -> (putTextLn . pack $ show err) >> exitFailure
+                        Right (SomeProtocol p) -> pure $ SomeProtocol p
 
-    let tracers     = mkTracers (traceOpts nCli) trace
+    tracers <- mkTracers (traceOpts nCli) trace
 
     case ncViewMode nc of
       SimpleView -> handleSimpleNode p trace tracers nCli nc
@@ -268,4 +267,3 @@ handleSimpleNode p trace nodeTracers nCli nc = do
           then ValidateAllEpochs
           else ValidateMostRecentEpoch
       }
-

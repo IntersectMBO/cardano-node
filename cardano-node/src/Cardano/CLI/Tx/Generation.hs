@@ -16,6 +16,7 @@ module Cardano.CLI.Tx.Generation
   , FeePerTx(..)
   , TPSRate(..)
   , TxAdditionalSize(..)
+  , TxGenError
   , genesisBenchmarkRunner
   ) where
 
@@ -67,6 +68,7 @@ import           Cardano.Config.Types (SocketFile)
 import qualified Cardano.Crypto as Crypto
 import           Cardano.Config.Topology (NodeAddress (..),
                                           NodeHostAddress(..))
+import           Cardano.CLI.Ops
 import           Cardano.CLI.Tx (txSpendGenesisUTxOByronPBFT)
 import           Cardano.CLI.Tx.BenchmarkingTxSubmission (ROEnv (..),
                                                           TraceBenchTxSubmit (..),
@@ -126,15 +128,6 @@ newtype TxAdditionalSize =
   TxAdditionalSize Int
   deriving (Eq, Ord, Show)
 
-data TxGenError = CurrentlyCannotSendTxToRelayNode FilePath
-                -- ^ Relay nodes cannot currently be transaction recipients.
-                | InsufficientFundsForRecipientTx
-                -- ^ Error occurred while creating the target node address.
-                | NeedMinimumThreeSigningKeyFiles [FilePath]
-                -- ^ Need at least 3 signing key files.
-                | SecretKeyDeserialiseError String
-                | SecretKeyReadError String
-                deriving Show
 -----------------------------------------------------------------------------------------
 -- | Genesis benchmark runner (we call it in 'Run.runNode').
 --

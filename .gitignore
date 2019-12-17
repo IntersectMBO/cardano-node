@@ -1,5 +1,5 @@
 .stack-work/
-.ghc.environment.x86_64-linux-8.6.5
+.ghc.environment.*
 dist-newstyle/
 dist/
 *~
@@ -7,14 +7,14 @@ dist/
 \.#*
 *.swp
 .dir-locals.el
-result*
-launch-*
+/result*
+/launch-*
 .stack-to-nix.cache
 stack.yaml.lock
 /genesis.*
 /logs
 
 /db-[0-9]
-launch_*
-state-*
+/launch_*
+/state-*
 /cluster*.log*

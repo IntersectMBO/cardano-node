@@ -16,7 +16,6 @@ module Cardano.Common.Parsers
   , parseIntegral
   , parseIntegralWithDefault
   , parseLastKnownBlockVersion
-  , parseLogConfigFileLast
   , parseLogMetricsLast
   , parseLogOutputFile
   , parseNodeId
@@ -26,6 +25,7 @@ module Cardano.Common.Parsers
   , parseProtocolMockPBFT
   , parseProtocolPraos
   , parseProtocolRealPBFT
+  , parseSocketDir
   , parseTopologyInfo
   , parseTraceOptions
   ) where
@@ -174,6 +174,15 @@ parsePort =
        <> help "The port number"
     )
 
+parseSocketDir :: Parser FilePath
+parseSocketDir =
+  strOption
+    ( long "socket-dir"
+        <> metavar "FILEPATH"
+        <> help "Directory with local sockets:\
+                \  ${dir}/node-{core,relay}-${node-id}.socket"
+    )
+
 parseValidateDB :: Parser Bool
 parseValidateDB =
     switch (
@@ -262,15 +271,6 @@ parseLogOutputFile =
     ( long "log-output"
     <> metavar "FILEPATH"
     <> help "Logging output file"
-    <> completer (bashCompleter "file")
-    )
-
-parseLogConfigFileLast :: Parser (Last FilePath)
-parseLogConfigFileLast =
-  lastStrOption
-    ( long "log-config"
-    <> metavar "LOGCONFIG"
-    <> help "Configuration file for logging"
     <> completer (bashCompleter "file")
     )
 

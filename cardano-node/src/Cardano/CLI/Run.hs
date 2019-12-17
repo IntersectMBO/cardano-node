@@ -13,7 +13,6 @@ module Cardano.CLI.Run (
   --
   , NewDirectory(..)
   , SigningKeyFile(..)
-  , NewSigningKeyFile(..)
   , VerificationKeyFile(..)
   , NewVerificationKeyFile(..)
   , CertificateFile(..)
@@ -32,10 +31,9 @@ import           Cardano.Prelude hiding (option, trace)
 
 import           Codec.Serialise (serialise)
 import           Control.Monad.Trans.Except (ExceptT)
-import           Control.Monad.Trans.Except.Extra (hoistEither)
+import           Control.Monad.Trans.Except.Extra (hoistEither, firstExceptT)
 import qualified Data.ByteString.Lazy as LB
 import           Data.Semigroup ((<>))
-import qualified Data.Text as T
 import qualified Data.Text.Lazy.IO as TL
 import qualified Data.Text.Lazy.Builder as Builder
 import qualified Formatting as F
@@ -219,39 +217,42 @@ runCommand
   _
   (SubmitTx fp topology nid) = do
     tx <- liftIO $ readByronTx fp
-    liftIO $ nodeSubmitTx
-               topology
-               (coGenesisHash ccCore)
-               (nid)
-               (coNumCoreNodes ccCore)
-               (GenesisFile $ coGenesisFile ccCore)
-               (coRequiresNetworkMagic ccCore)
-               (coPBftSigThd ccCore)
-               (DelegationCertFile <$> (coStaticKeyDlgCertFile ccCore))
-               (SigningKeyFile <$> (coStaticKeySigningKeyFile ccCore))
-               (SocketFile ccSocketDir)
-               ccUpdate
-               ccProtocol
-               tx
+    firstExceptT
+      NodeSubmitTxError
+      $ nodeSubmitTx
+          topology
+          (coGenesisHash ccCore)
+          (nid)
+          (coNumCoreNodes ccCore)
+          (GenesisFile $ coGenesisFile ccCore)
+          (coRequiresNetworkMagic ccCore)
+          (coPBftSigThd ccCore)
+          (DelegationCertFile <$> (coStaticKeyDlgCertFile ccCore))
+          (SigningKeyFile <$> (coStaticKeySigningKeyFile ccCore))
+          (SocketFile ccSocketDir)
+          ccUpdate
+          ccProtocol
+          tx
 runCommand
   CardanoConfiguration{ccCore, ccProtocol, ccUpdate}
   _
   (SpendGenesisUTxO (NewTxFile ctTx) ctKey genRichAddr outs) = do
     sk <- readSigningKey ccProtocol ctKey
-    tx <- liftIO $ issueGenesisUTxOExpenditure
-                     genRichAddr
-                     outs
-                     (coGenesisHash ccCore)
-                     (CoreId $ fromMaybe (panic "Node Id not specified") (coNodeId ccCore))
-                     (coNumCoreNodes ccCore)
-                     (GenesisFile $ coGenesisFile ccCore)
-                     (coRequiresNetworkMagic ccCore)
-                     (coPBftSigThd ccCore)
-                     (DelegationCertFile <$> (coStaticKeyDlgCertFile ccCore))
-                     (SigningKeyFile <$> (coStaticKeySigningKeyFile ccCore))
-                     ccUpdate
-                     ccProtocol
-                     sk
+    tx <- firstExceptT SpendGenesisUTxOError
+            $ issueGenesisUTxOExpenditure
+                genRichAddr
+                outs
+                (coGenesisHash ccCore)
+                (CoreId $ fromMaybe (panic "Node Id not specified") (coNodeId ccCore))
+                (coNumCoreNodes ccCore)
+                (GenesisFile $ coGenesisFile ccCore)
+                (coRequiresNetworkMagic ccCore)
+                (coPBftSigThd ccCore)
+                (DelegationCertFile <$> (coStaticKeyDlgCertFile ccCore))
+                (SigningKeyFile <$> (coStaticKeySigningKeyFile ccCore))
+                ccUpdate
+                ccProtocol
+                sk
     liftIO . ensureNewFileLBS ctTx $ serialise tx
 
 runCommand
@@ -259,20 +260,22 @@ runCommand
   _
   (SpendUTxO (NewTxFile ctTx) ctKey ins outs) = do
     sk <- readSigningKey ccProtocol ctKey
-    gTx <- liftIO $ issueUTxOExpenditure
-                      ins
-                      outs
-                      (coGenesisHash ccCore)
-                      (CoreId $ fromMaybe (panic "Node Id not specified") (coNodeId ccCore))
-                      (coNumCoreNodes ccCore)
-                      (GenesisFile $ coGenesisFile ccCore)
-                      (coRequiresNetworkMagic ccCore)
-                      (coPBftSigThd ccCore)
-                      (DelegationCertFile <$> (coStaticKeyDlgCertFile ccCore))
-                      (SigningKeyFile <$> (coStaticKeySigningKeyFile ccCore))
-                      ccUpdate
-                      ccProtocol
-                      sk
+    gTx <- firstExceptT
+             IssueUtxoError
+             $ issueUTxOExpenditure
+                 ins
+                 outs
+                 (coGenesisHash ccCore)
+                 (CoreId $ fromMaybe (panic "Node Id not specified") (coNodeId ccCore))
+                 (coNumCoreNodes ccCore)
+                 (GenesisFile $ coGenesisFile ccCore)
+                 (coRequiresNetworkMagic ccCore)
+                 (coPBftSigThd ccCore)
+                 (DelegationCertFile <$> (coStaticKeyDlgCertFile ccCore))
+                 (SigningKeyFile <$> (coStaticKeySigningKeyFile ccCore))
+                 ccUpdate
+                 ccProtocol
+                 sk
     liftIO . ensureNewFileLBS ctTx $ serialise gTx
 
 runCommand
@@ -287,35 +290,32 @@ runCommand
                txAdditionalSize
                sigKeysFiles
                nodeId) = do
-  liftIO $ withRealPBFT
-             (coGenesisHash ccCore)
-             (Just nodeId)
-             (coNumCoreNodes ccCore)
-             (GenesisFile $coGenesisFile ccCore)
-             (coRequiresNetworkMagic ccCore)
-             (coPBftSigThd ccCore)
-             (DelegationCertFile <$> coStaticKeyDlgCertFile ccCore)
-             (SigningKeyFile <$> coStaticKeySigningKeyFile ccCore)
-             ccUpdate
-             ccProtocol $
-    \protocol@(Consensus.ProtocolRealPBFT _ _ _ _ _) -> do
-      res <- runExceptT $ genesisBenchmarkRunner
-                            loggingLayer
-                            (SocketFile ccSocketDir)
-                            protocol
-                            targetNodeAddresses
-                            numOfTxs
-                            numOfInsPerTx
-                            numOfOutsPerTx
-                            feePerTx
-                            tps
-                            txAdditionalSize
-                            [fp | SigningKeyFile fp <- sigKeysFiles]
-
-      case res of
-        Left err -> panic . T.pack $ show err
-        --TODO: remove panic by making withRealPBFT use exceptT
-        Right _ -> pure ()
+  firstExceptT
+    GenerateTxsError
+    $  withRealPBFT
+         (coGenesisHash ccCore)
+         (Just nodeId)
+         (coNumCoreNodes ccCore)
+         (GenesisFile $coGenesisFile ccCore)
+         (coRequiresNetworkMagic ccCore)
+         (coPBftSigThd ccCore)
+         (DelegationCertFile <$> coStaticKeyDlgCertFile ccCore)
+         (SigningKeyFile <$> coStaticKeySigningKeyFile ccCore)
+         ccUpdate
+         ccProtocol $ \protocol@(Consensus.ProtocolRealPBFT _ _ _ _ _) ->
+                        firstExceptT GenesisBenchmarkRunnerError
+                          $ genesisBenchmarkRunner
+                               loggingLayer
+                               (SocketFile ccSocketDir)
+                               protocol
+                               targetNodeAddresses
+                               numOfTxs
+                               numOfInsPerTx
+                               numOfOutsPerTx
+                               feePerTx
+                               tps
+                               txAdditionalSize
+                               [fp | SigningKeyFile fp <- sigKeysFiles]
 
 {-------------------------------------------------------------------------------
   Supporting functions
