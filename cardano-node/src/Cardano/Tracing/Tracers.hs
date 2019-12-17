@@ -38,7 +38,7 @@ import           Cardano.BM.Data.LogItem (LOContent (..), LogObject (..),
 import           Cardano.BM.Tracing
 import           Cardano.BM.Trace (traceNamedObject)
 import           Cardano.BM.Data.Tracer (WithSeverity (..), addName,
-                     annotateSeverity, filterSeverity)
+                     annotateSeverity)
 import           Cardano.BM.Data.Transformers
 
 import           Ouroboros.Consensus.Block (Header)
@@ -140,7 +140,7 @@ mkTracers traceOptions tracer = do
     { chainDBTracer
         = tracerOnOff (traceChainDB traceOptions)
           $ annotateSeverity
-          $ teeTraceChainTip (tracingFormatting $ traceChainDB traceOptions) tracingVerbosity
+          $ teeTraceChainTip StructuredLogging tracingVerbosity
           $ addName "ChainDB" tracer
     , consensusTracers
         = mkConsensusTracers forgeTracers traceOptions
@@ -149,27 +149,27 @@ mkTracers traceOptions tracer = do
     , ipSubscriptionTracer
         = tracerOnOff (traceIpSubscription traceOptions)
           $ annotateSeverity
-          $ toLogObject' (tracingFormatting $ traceIpSubscription traceOptions) tracingVerbosity
+          $ toLogObject' StructuredLogging tracingVerbosity
           $ addName "IpSubscription" tracer
     , dnsSubscriptionTracer
         = tracerOnOff (traceDnsSubscription traceOptions)
           $ annotateSeverity
-          $ toLogObject' (tracingFormatting $ traceDnsSubscription traceOptions) tracingVerbosity
+          $ toLogObject' StructuredLogging tracingVerbosity
           $ addName "DnsSubscription" tracer
     , dnsResolverTracer
         = tracerOnOff (traceDnsResolver traceOptions)
-          $ annotateSeverity $ filterSeverity (pure . const (tracingSeverity $ traceDnsResolver traceOptions))
-          $ toLogObject' (tracingFormatting $ traceDnsResolver traceOptions) tracingVerbosity
+          $ annotateSeverity
+          $ toLogObject' StructuredLogging tracingVerbosity
           $ addName "DnsResolver" tracer
     , errorPolicyTracer
         = tracerOnOff (traceErrorPolicy traceOptions)
           $ annotateSeverity
-          $ toLogObject' (tracingFormatting $ traceErrorPolicy traceOptions) tracingVerbosity
+          $ toLogObject' StructuredLogging tracingVerbosity
           $ addName "ErrorPolicy" tracer
     , muxTracer
         =  tracerOnOff (traceMux traceOptions)
-          $ annotateSeverity $ filterSeverity (pure . const Info)  -- filter out everything below this level
-          $ toLogObject' (tracingFormatting $ traceMux traceOptions) tracingVerbosity
+          $ annotateSeverity
+          $ toLogObject' StructuredLogging tracingVerbosity
           $ addName "Mux" tracer
     }
   where
@@ -177,12 +177,6 @@ mkTracers traceOptions tracer = do
     tracerOnOff :: Bool -> Tracer IO a -> Tracer IO a
     tracerOnOff False _ = nullTracer
     tracerOnOff True tracer' = tracer'
-    tracingFormatting :: Bool -> TracingFormatting
-    tracingFormatting True  = TextualRepresentation
-    tracingFormatting False = StructuredLogging
-    tracingSeverity :: Bool -> Severity
-    tracingSeverity True  = Debug    -- if tracer flag is set
-    tracingSeverity False = Info     -- min. serverity (default)
     tracingVerbosity :: TracingVerbosity
     tracingVerbosity = traceVerbosity traceOptions
 
