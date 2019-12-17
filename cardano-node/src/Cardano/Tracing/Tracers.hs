@@ -29,6 +29,7 @@ import           Codec.CBOR.Read (DeserialiseFailure)
 import           Control.Monad.Class.MonadSTM
 import           Control.Tracer
 import           Control.Tracer.Transformers.Synopsizer (mkSynopsizer)
+import           Data.Functor ((<&>))
 import           Data.Functor.Const (Const (..))
 import           Data.Functor.Contravariant (contramap)
 import           Data.Text (Text, pack)
@@ -39,7 +40,6 @@ import           Cardano.BM.Data.Aggregated (Measurable (..))
 import           Cardano.BM.Data.LogItem (LOContent (..), LogObject (..),
                                           PrivacyAnnotation (Confidential),
                                           mkLOMeta)
-import           Cardano.BM.Data.Trace (liftSynopsized)
 import           Cardano.BM.Tracing
 import           Cardano.BM.Trace (traceNamedObject)
 import           Cardano.BM.Data.Tracer (WithSeverity (..), addName,
@@ -130,53 +130,40 @@ mkTracers :: forall peer blk.
            => TraceOptions
            -> Trace IO Text
            -> IO (Tracers peer blk)
-mkTracers traceOptions tracer = do
-  -- We probably don't want to pay the extra IO cost per-counter-increment. -- sk
-  staticMetaCC <- mkLOMeta Critical Confidential
-  let name :: [Text] = ["metrics", "Forge"]
-  forgeTracers <-
-    ForgeTracers
-      <$> (counting $ liftCounting staticMetaCC name "forged" tracer)
-      <*> (counting $ liftCounting staticMetaCC name "could-not-forge" tracer)
-      <*> (counting $ liftCounting staticMetaCC name "adopted" tracer)
-      <*> (counting $ liftCounting staticMetaCC name "didnt-adopt" tracer)
-      <*> (counting $ liftCounting staticMetaCC name "forged-invalid" tracer)
-
-  -- predicate to decide when to print elided messages
-  let resetTest :: (Int, a) -> a -> Bool
-      resetTest (count, _first) _last = count >= 100
-  synopser :: Tracer IO (LogObject Text) <- mkSynopsizer resetTest (liftSynopsized tracer)
-
-  pure Tracers
-    { chainDBTracer
-        = annotateSeverity $ filterSeverity (pure . const (tracingSeverity $ traceChainDB traceOptions))
-          $ teeTraceChainTip (tracingFormatting $ traceChainDB traceOptions) tracingVerbosity synopser
-          $ addName "ChainDB" tracer
-    , consensusTracers
-        = mkConsensusTracers forgeTracers
-    , protocolTracers
-        = mkProtocolsTracers
-    , ipSubscriptionTracer
-        = annotateSeverity $ filterSeverity (pure . const (tracingSeverity $ traceIpSubscription traceOptions))
-          $ toLogObject' (tracingFormatting $ traceIpSubscription traceOptions) tracingVerbosity
-          $ addName "IpSubscription" tracer
-    , dnsSubscriptionTracer
-        = annotateSeverity $ filterSeverity (pure . const (tracingSeverity $ traceDnsSubscription traceOptions))
-          $ toLogObject' (tracingFormatting $ traceDnsSubscription traceOptions) tracingVerbosity
-          $ addName "DnsSubscription" tracer
-    , dnsResolverTracer
-        = annotateSeverity $ filterSeverity (pure . const (tracingSeverity $ traceDnsResolver traceOptions))
-          $ toLogObject' (tracingFormatting $ traceDnsResolver traceOptions) tracingVerbosity
-          $ addName "DnsResolver" tracer
-    , errorPolicyTracer
-        = annotateSeverity $ filterSeverity (pure . const (tracingSeverity $ traceErrorPolicy traceOptions))
-          $ toLogObject' (tracingFormatting $ traceErrorPolicy traceOptions) tracingVerbosity
-          $ addName "ErrorPolicy" tracer
-    , muxTracer
-        = annotateSeverity $ filterSeverity (pure . const Info)  -- filter out everything below this level
-          $ toLogObject' (tracingFormatting $ traceMux traceOptions) tracingVerbosity
-          $ addName "Mux" tracer
-    }
+mkTracers traceOptions tracer =
+  Tracers
+    <$> ((addName "ChainDB" tracer
+           & teeTraceChainTip (tracingFormatting $ traceChainDB traceOptions) tracingVerbosity)
+          <&>
+          annotateSeverity
+          . filterSeverity (pure . const (tracingSeverity $ traceChainDB traceOptions)))
+    <*> mkConsensusTracers
+    <*> pure mkProtocolsTracers
+    <*> pure
+        (addName "IpSubscription" tracer
+          & toLogObject' (tracingFormatting $ traceIpSubscription traceOptions) tracingVerbosity
+          & filterSeverity (pure . const (tracingSeverity $ traceIpSubscription traceOptions))
+          & annotateSeverity )
+    <*> pure
+        (addName "DnsSubscription" tracer
+          & toLogObject' (tracingFormatting $ traceDnsSubscription traceOptions) tracingVerbosity
+          & filterSeverity (pure . const (tracingSeverity $ traceDnsSubscription traceOptions))
+          & annotateSeverity)
+    <*> pure
+        (addName "DnsResolver" tracer
+          & toLogObject' (tracingFormatting $ traceDnsResolver traceOptions) tracingVerbosity
+          & filterSeverity (pure . const (tracingSeverity $ traceDnsResolver traceOptions))
+          & annotateSeverity)
+    <*> pure
+        (addName "ErrorPolicy" tracer
+          & toLogObject' (tracingFormatting $ traceErrorPolicy traceOptions) tracingVerbosity
+          & filterSeverity (pure . const (tracingSeverity $ traceErrorPolicy traceOptions))
+          & annotateSeverity)
+    <*> pure
+        (addName "Mux" tracer
+          & toLogObject' (tracingFormatting $ traceMux traceOptions) tracingVerbosity
+          & filterSeverity (pure . const Info)
+          & annotateSeverity) -- filter out everything below this level
   where
     tracingFormatting :: Bool -> TracingFormatting
     tracingFormatting True  = TextualRepresentation
@@ -190,9 +177,14 @@ mkTracers traceOptions tracer = do
     teeTraceChainTip :: TracingFormatting
                      -> TracingVerbosity
                      -> Tracer IO (LogObject Text)
-                     -> Tracer IO (LogObject Text)
-                     -> Tracer IO (WithSeverity (WithTip blk (ChainDB.TraceEvent blk)))
-    teeTraceChainTip tform tverb synopser tr = Tracer $ \ev -> do
+                     -> IO (Tracer IO (WithSeverity (WithTip blk (ChainDB.TraceEvent blk))))
+    teeTraceChainTip tform tverb tr = do
+      -- predicate to decide when to print elided messages
+      let resetTest :: (Int, a) -> a -> Bool
+          resetTest (count, _first) _last = count >= 100
+      synopser :: Tracer IO (LogObject Text) <- mkSynopsizer resetTest (liftSynopsized tracer)
+
+      pure . Tracer $ \ev -> do
         traceWith (teeTraceChainTip' tr) ev
         flip traceWith ev $ fanning $ \(WithSeverity _ (WithTip _ ev')) ->
           toLogObject' tform tverb  $
@@ -307,51 +299,73 @@ mkTracers traceOptions tracer = do
       -> Bool
     hasConsensusTraceFlag f = getConst $ f $ traceConsensus traceOptions
 
-    mkConsensusTracers :: ForgeTracers -> Consensus.Tracers' peer blk (Tracer IO)
-    mkConsensusTracers forgeTracers = Consensus.Tracers
-      { Consensus.chainSyncClientTracer
-        = annotateSeverity $ filterSeverity (pure . const (tracingSeverity $ hasConsensusTraceFlag Consensus.chainSyncClientTracer))
-          $ toLogObject' (tracingFormatting $ hasConsensusTraceFlag Consensus.chainSyncClientTracer) tracingVerbosity
-          $ addName "ChainSyncClient" tracer
-      , Consensus.chainSyncServerHeaderTracer
-        = annotateSeverity $ filterSeverity (pure . const (tracingSeverity $ hasConsensusTraceFlag Consensus.chainSyncServerHeaderTracer))
-          $ toLogObject' (tracingFormatting $ hasConsensusTraceFlag Consensus.chainSyncServerHeaderTracer) tracingVerbosity
-          $ addName "ChainSyncHeaderServer" tracer
-      , Consensus.chainSyncServerBlockTracer
-        = annotateSeverity $ filterSeverity (pure . const (tracingSeverity $ hasConsensusTraceFlag Consensus.chainSyncServerBlockTracer))
-          $ toLogObject' (tracingFormatting $ hasConsensusTraceFlag Consensus.chainSyncServerBlockTracer) tracingVerbosity
-          $ addName "ChainSyncBlockServer" tracer
-      , Consensus.blockFetchDecisionTracer
-        = annotateSeverity $ filterSeverity (pure . const (tracingSeverity $ hasConsensusTraceFlag Consensus.blockFetchDecisionTracer))
-          $ teeTraceBlockFetchDecision (tracingFormatting $ hasConsensusTraceFlag Consensus.blockFetchDecisionTracer) tracingVerbosity
-          $ addName "BlockFetchDecision" tracer
-      , Consensus.blockFetchClientTracer
-        = annotateSeverity $ filterSeverity (pure . const (tracingSeverity $ hasConsensusTraceFlag Consensus.blockFetchClientTracer))
-          $ toLogObject' (tracingFormatting $ hasConsensusTraceFlag Consensus.blockFetchClientTracer) tracingVerbosity
-          $ addName "BlockFetchClient" tracer
-      , Consensus.blockFetchServerTracer
-        = annotateSeverity $ filterSeverity (pure . const (tracingSeverity $ hasConsensusTraceFlag Consensus.blockFetchServerTracer))
-          $ toLogObject' (tracingFormatting $ hasConsensusTraceFlag Consensus.blockFetchServerTracer) tracingVerbosity
-          $ addName "BlockFetchServer" tracer
-      , Consensus.txInboundTracer
-        = annotateSeverity $ filterSeverity (pure . const (tracingSeverity $ hasConsensusTraceFlag Consensus.txInboundTracer))
-          $ toLogObject' (tracingFormatting $ hasConsensusTraceFlag Consensus.txInboundTracer) tracingVerbosity
-          $ addName "TxInbound" tracer
-      , Consensus.txOutboundTracer
-        = annotateSeverity $ filterSeverity (pure . const (tracingSeverity $ hasConsensusTraceFlag Consensus.txOutboundTracer))
-          $ toLogObject' (tracingFormatting $ hasConsensusTraceFlag Consensus.txOutboundTracer) tracingVerbosity
-          $ addName "TxOutbound" tracer
-      , Consensus.localTxSubmissionServerTracer
-        = annotateSeverity $ filterSeverity (pure . const (tracingSeverity $ hasConsensusTraceFlag Consensus.localTxSubmissionServerTracer))
-          $ toLogObject' (tracingFormatting $ hasConsensusTraceFlag Consensus.localTxSubmissionServerTracer) tracingVerbosity
-          $ addName "LocalTxSubmissionServer" tracer
-      , Consensus.mempoolTracer
-        = mempoolTracer
-      , Consensus.forgeTracer
-        = annotateSeverity $ filterSeverity (pure . const (tracingSeverity $ hasConsensusTraceFlag Consensus.forgeTracer))
-          $ teeForge forgeTracers (tracingFormatting $ hasConsensusTraceFlag Consensus.forgeTracer) tracingVerbosity
-          $ addName "Forge" tracer
-      }
+    mkConsensusTracers :: IO (Consensus.Tracers' peer blk (Tracer IO))
+    mkConsensusTracers = do
+      -- We probably don't want to pay the extra IO cost per-counter-increment. -- sk
+      staticMetaCC <- mkLOMeta Critical Confidential
+      let logName :: [Text] = ["metrics", "Forge"]
+          mkTrace :: Text -> IO (Trace IO Text)
+          mkTrace name = counting (liftCounting staticMetaCC logName name tracer)
+      forgeTracers <-
+        ForgeTracers
+          <$> mkTrace "forged"
+          <*> mkTrace "could-not-forge"
+          <*> mkTrace "adopted"
+          <*> mkTrace "didnt-adopt"
+          <*> mkTrace "forged-invalid"
+
+      Consensus.Tracers
+        <$> pure
+            (addName "ChainSyncClient" tracer
+              & toLogObject' (tracingFormatting $ hasConsensusTraceFlag Consensus.chainSyncClientTracer) tracingVerbosity
+              & filterSeverity (pure . const (tracingSeverity $ hasConsensusTraceFlag Consensus.chainSyncClientTracer))
+              & annotateSeverity)
+        <*> pure
+            (addName "ChainSyncHeaderServer" tracer
+              & toLogObject' (tracingFormatting $ hasConsensusTraceFlag Consensus.chainSyncServerHeaderTracer) tracingVerbosity
+              & filterSeverity (pure . const (tracingSeverity $ hasConsensusTraceFlag Consensus.chainSyncServerHeaderTracer))
+              & annotateSeverity)
+        <*> pure
+            (addName "ChainSyncBlockServer" tracer
+              & toLogObject' (tracingFormatting $ hasConsensusTraceFlag Consensus.chainSyncServerBlockTracer) tracingVerbosity
+              & filterSeverity (pure . const (tracingSeverity $ hasConsensusTraceFlag Consensus.chainSyncServerBlockTracer))
+              & annotateSeverity)
+        <*> pure
+            (addName "BlockFetchDecision" tracer
+              & teeTraceBlockFetchDecision (tracingFormatting $ hasConsensusTraceFlag Consensus.blockFetchDecisionTracer) tracingVerbosity
+              & filterSeverity (pure . const (tracingSeverity $ hasConsensusTraceFlag Consensus.blockFetchDecisionTracer))
+              & annotateSeverity)
+        <*> pure
+            (addName "BlockFetchClient" tracer
+              & toLogObject' (tracingFormatting $ hasConsensusTraceFlag Consensus.blockFetchClientTracer) tracingVerbosity
+              & filterSeverity (pure . const (tracingSeverity $ hasConsensusTraceFlag Consensus.blockFetchClientTracer))
+              & annotateSeverity)
+        <*> pure
+            (addName "BlockFetchServer" tracer
+              & toLogObject' (tracingFormatting $ hasConsensusTraceFlag Consensus.blockFetchServerTracer) tracingVerbosity
+              & filterSeverity (pure . const (tracingSeverity $ hasConsensusTraceFlag Consensus.blockFetchServerTracer))
+              & annotateSeverity)
+        <*> pure
+            (addName "TxInbound" tracer
+              & toLogObject' (tracingFormatting $ hasConsensusTraceFlag Consensus.txInboundTracer) tracingVerbosity
+              & filterSeverity (pure . const (tracingSeverity $ hasConsensusTraceFlag Consensus.txInboundTracer))
+              & annotateSeverity)
+        <*> pure
+            (addName "TxOutbound" tracer
+              & toLogObject' (tracingFormatting $ hasConsensusTraceFlag Consensus.txOutboundTracer) tracingVerbosity
+              & filterSeverity (pure . const (tracingSeverity $ hasConsensusTraceFlag Consensus.txOutboundTracer))
+              & annotateSeverity)
+        <*> pure
+            (addName "LocalTxSubmissionServer" tracer
+              & toLogObject' (tracingFormatting $ hasConsensusTraceFlag Consensus.localTxSubmissionServerTracer) tracingVerbosity
+              & filterSeverity (pure . const (tracingSeverity $ hasConsensusTraceFlag Consensus.localTxSubmissionServerTracer))
+              & annotateSeverity)
+        <*> pure mempoolTracer
+        <*> pure
+            (addName "Forge" tracer
+              & teeForge forgeTracers (tracingFormatting $ hasConsensusTraceFlag Consensus.forgeTracer) tracingVerbosity
+              & filterSeverity (pure . const (tracingSeverity $ hasConsensusTraceFlag Consensus.forgeTracer))
+              & annotateSeverity)
 
     enableProtocolTracer
       :: Show a
