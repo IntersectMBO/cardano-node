@@ -106,6 +106,11 @@ runNode loggingLayer nc nCli = do
                          (ncUpdate nc)
                          (ncProtocol nc)
 
+    -- The outcomes we want to measure, the outcome extractor
+    -- for measuring the time it takes a transaction to get into
+    -- a block.
+    -- txsOutcomeExtractor <- mkOutcomeExtractor
+
     let tracers     = mkTracers (traceOpts nCli) trace
 
     case ncViewMode nc of

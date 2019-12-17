@@ -43,6 +43,7 @@ library
 
   other-modules:       Paths_cardano_node
                        Cardano.Tracing.ToObjectOrphans
+                       Cardano.Tracing.MicroBenchmarking
 
   build-depends:       aeson
                      , async
@@ -90,6 +91,7 @@ library
                      , time
                      , transformers
                      , transformers-except
+                     , tracer-transformers
                      , typed-protocols
                      , typed-protocols-cbor
                      , utf8-string

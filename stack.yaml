@@ -70,7 +70,7 @@ extra-deps:
 
     # iohk-monitoring-framework currently not pinned to a release
   - git: https://github.com/input-output-hk/iohk-monitoring-framework
-    commit: b4643defabb23b3d78f4b690a01bb6a41a3cd203
+    commit: b310a4f0b7a80b54edfb094afd3def9eab035f46
     subdirs:
       - contra-tracer
       - iohk-monitoring
@@ -79,6 +79,7 @@ extra-deps:
       - plugins/backend-ekg
       - plugins/backend-monitoring
       - plugins/scribe-systemd
+      - tracer-transformers
 
     # dependencies of iohk-monitoring
   - prometheus-2.1.2

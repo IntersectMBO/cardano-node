@@ -6,6 +6,7 @@
 {-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
 {-# LANGUAGE UndecidableInstances  #-}
+{-# LANGUAGE StandaloneDeriving    #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans  #-}
 {-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
@@ -24,9 +25,10 @@ module Cardano.Tracing.Tracers
 import           Cardano.Prelude hiding (atomically)
 import           Prelude (String)
 
-import           Codec.CBOR.Read (DeserialiseFailure)
 import           Control.Monad.Class.MonadSTM
 import           Control.Tracer
+
+import           Codec.CBOR.Read (DeserialiseFailure)
 import           Data.Functor.Const (Const (..))
 import           Data.Functor.Contravariant (contramap)
 import           Data.Text (Text, pack)
@@ -48,6 +50,7 @@ import           Ouroboros.Consensus.Mempool.API (TraceEventMempool (..))
 import qualified Ouroboros.Consensus.Node.Tracers as Consensus
 import           Ouroboros.Consensus.NodeNetwork (ProtocolTracers,
                      ProtocolTracers' (..), nullProtocolTracers)
+import           Ouroboros.Consensus.Mempool.API (GenTx, GenTxId)
 import           Ouroboros.Consensus.Util.Orphans ()
 
 import qualified Ouroboros.Network.AnchoredFragment as AF
@@ -66,6 +69,7 @@ import           Cardano.Config.Orphanage
 import           Cardano.Config.Protocol (TraceConstraints)
 import           Cardano.Config.Types
 import           Cardano.Tracing.ToObjectOrphans
+import           Cardano.Tracing.MicroBenchmarking
 
 data Tracers peer blk = Tracers {
       -- | Trace the ChainDB (flag '--trace-chain-db' will turn on textual output)
@@ -207,19 +211,38 @@ mkTracers traceOptions tracer = Tracers
                                                     -> ( length txs0 + length txs1
                                                        , tot0
                                                        )
-            logValue1, logValue2 :: LOContent a
+            logValue1 :: LOContent a
             logValue1 = LogValue "txsInMempool" $ PureI $ fromIntegral tot
+
+            logValue2 :: LOContent a
             logValue2 = LogValue "txsProcessed" $ PureI $ fromIntegral n
+
         meta <- mkLOMeta Critical Confidential
+
         traceNamedObject tr (meta, logValue1)
         traceNamedObject tr' (meta, logValue1)
+
         traceNamedObject tr (meta, logValue2)
         traceNamedObject tr' (meta, logValue2)
 
+
+    mempoolTracer :: Tracer IO (TraceEventMempool blk)
     mempoolTracer = Tracer $ \ev -> do
       traceWith (mempoolTraceTransformer tracer) ev
+      traceWith (measureTxsStart tracer) ev
       traceWith (enableConsensusTracer Consensus.mempoolTracer
                 $ withName "Mempool" tracer) ev
+
+    forgeTracer :: Tracer IO (Consensus.TraceForgeEvent blk (GenTx blk))
+    forgeTracer = Tracer $ \ev -> do
+        traceWith (measureTxsEnd tracer) ev
+        traceWith consensusForgeTracer ev
+      where
+        -- The consensus tracer.
+        consensusForgeTracer = annotateSeverity $ filterSeverity (pure . const (tracingSeverity $ hasConsensusTraceFlag Consensus.forgeTracer))
+          $ toLogObject' (tracingFormatting $ hasConsensusTraceFlag Consensus.forgeTracer) tracingVerbosity
+          $ addName "Forge" tracer
+
 
     enableConsensusTracer
       :: Show a
@@ -274,9 +297,7 @@ mkTracers traceOptions tracer = Tracers
       , Consensus.mempoolTracer
         = mempoolTracer
       , Consensus.forgeTracer
-        = annotateSeverity $ filterSeverity (pure . const (tracingSeverity $ hasConsensusTraceFlag Consensus.forgeTracer))
-          $ toLogObject' (tracingFormatting $ hasConsensusTraceFlag Consensus.forgeTracer) tracingVerbosity
-          $ addName "Forge" tracer
+        = forgeTracer
       }
 
     enableProtocolTracer
@@ -309,6 +330,9 @@ mkTracers traceOptions tracer = Tracers
         $ withName "LocalTxSubmissionProtocol" tracer
       }
 
+--instance Transformable Transformable Text IO (MeasureTxs blk) where
+--  trTransformer _ verb tr = trStructured verb tr
+
 -- | get information about a chain fragment
 
 data ChainInformation = ChainInformation {
@@ -321,10 +345,11 @@ data ChainInformation = ChainInformation {
 
 chainInformation :: forall block . AF.HasHeader block
                  => AF.AnchoredFragment block -> ChainInformation
-chainInformation frag = ChainInformation {
-                          slots = slotN,
-                          blocks = blockN,
-                          density = calcDensity blockD slotD }
+chainInformation frag = ChainInformation
+    { slots     = slotN
+    , blocks    = blockN
+    , density   = calcDensity blockD slotD
+    }
   where
     calcDensity :: Word64 -> Word64 -> Rational
     calcDensity bl sl
