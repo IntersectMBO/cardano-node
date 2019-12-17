@@ -1,12 +1,14 @@
 #!/usr/bin/env bash
+set -x
 
 # >> cpu time limit in seconds
-CPU_TIME_LIMIT=3600
+CPU_TIME_LIMIT=10
 
-BASEDIR=`pwd`
+BASEDIR=$(dirname $(realpath $0))
 
-DATADIR=state-node-mainnet
+DATADIR=$(realpath state-node-mainnet)
 mkdir -p $DATADIR
+rm -f ${DATADIR}/*.log
 cd $DATADIR
 
 if [ -d db-mainnet-0 ]; then
@@ -16,17 +18,16 @@ rm node-0*
 
 #set -euo pipefail
 
-ulimit -t $CPU_TIME_LIMIT
-
-date --iso-8601=seconds > STARTTIME
-
 NODE="cabal v2-run exe:cardano-node -- "
 
-exec ${NODE} \
+( date --iso-8601=seconds > STARTTIME
+  ulimit -t $CPU_TIME_LIMIT;
+
+  ${NODE} \
   --genesis-file ${BASEDIR}/../../configuration/mainnet-genesis.json \
   --genesis-hash "5f20df933584822601f9e3f8c024eb5eb252fe8cefb24d1317dc3d432e940ebb" \
   --config ${BASEDIR}/configuration/log-configuration.yaml \
-  --database-path .//db-mainnet \
+  --database-path ./db-mainnet \
   --socket-dir /tmp/socket-bm-chain-sync \
   --topology ${BASEDIR}/configuration/topology-local.yaml \
   --host-addr 127.0.0.1 \
@@ -35,7 +36,15 @@ exec ${NODE} \
   --trace-mempool \
   --trace-forge \
    \
- $@
+  $@
+)
+reset
+
+cat >&2 <<EOF
+Node exhausted time ulimit..
+
+Analysing logs.
+EOF
 
 #  --socket-dir ${BASEDIR}/${DATADIR}/socket \
 # this will render the events in textual format
@@ -57,4 +66,4 @@ exec ${NODE} \
 #  --trace-dns-subscription \
 #  --trace-dns-resolver \
 
-../analyse-logs.sh
+${BASEDIR}/analyse-logs.sh "${DATADIR}"
