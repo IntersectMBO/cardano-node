@@ -1,11 +1,11 @@
-{-# LANGUAGE LambdaCase             #-}
-{-# LANGUAGE FlexibleInstances      #-}
-{-# LANGUAGE StandaloneDeriving     #-}
-{-# LANGUAGE MultiParamTypeClasses  #-}
-{-# LANGUAGE UndecidableInstances   #-}
-{-# LANGUAGE FlexibleContexts       #-}
-{-# LANGUAGE TypeFamilies           #-}
-{-# LANGUAGE AllowAmbiguousTypes    #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE AllowAmbiguousTypes #-}
 
 module Cardano.Tracing.MicroBenchmarking
     ( MeasureTxs (..)
