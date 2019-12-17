@@ -42,6 +42,7 @@ import           Cardano.BM.Tracing
 import           Cardano.BM.Trace (traceNamedObject)
 import           Cardano.BM.Data.Tracer (WithSeverity (..), addName,
                      annotateSeverity, filterSeverity)
+import           Cardano.BM.Data.Transformers
 
 import           Ouroboros.Consensus.Block (Header)
 import           Ouroboros.Consensus.Ledger.Abstract
