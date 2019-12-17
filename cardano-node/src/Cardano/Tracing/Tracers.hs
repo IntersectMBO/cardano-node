@@ -1,6 +1,8 @@
 {-# LANGUAGE ConstraintKinds       #-}
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE GADTs                 #-}
+{-# LANGUAGE LambdaCase            #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns        #-}
 {-# LANGUAGE OverloadedStrings     #-}
@@ -136,7 +138,8 @@ mkTracers traceOptions tracer =
            & teeTraceChainTip (tracingFormatting $ traceChainDB traceOptions) tracingVerbosity)
           <&>
           annotateSeverity
-          . filterSeverity (pure . const (tracingSeverity $ traceChainDB traceOptions)))
+          . filterSeverity (pure . const (tracingSeverity $ traceChainDB traceOptions))
+          . stripSeverity)
     <*> mkConsensusTracers
     <*> pure mkProtocolsTracers
     <*> pure
@@ -165,6 +168,8 @@ mkTracers traceOptions tracer =
           & filterSeverity (pure . const Info)
           & annotateSeverity) -- filter out everything below this level
   where
+    stripSeverity :: Tracer m a -> Tracer m (WithSeverity a)
+    stripSeverity = contramap (\(WithSeverity _ x) -> x)
     tracingFormatting :: Bool -> TracingFormatting
     tracingFormatting True  = TextualRepresentation
     tracingFormatting False = StructuredLogging
@@ -177,25 +182,26 @@ mkTracers traceOptions tracer =
     teeTraceChainTip :: TracingFormatting
                      -> TracingVerbosity
                      -> Tracer IO (LogObject Text)
-                     -> IO (Tracer IO (WithSeverity (WithTip blk (ChainDB.TraceEvent blk))))
+                     -> IO (Tracer IO (WithTip blk (ChainDB.TraceEvent blk)))
     teeTraceChainTip tform tverb tr = do
-      -- predicate to decide when to print elided messages
-      let resetTest :: (Int, a) -> a -> Bool
-          resetTest (count, _first) _last = count >= 100
-      synopser :: Tracer IO (LogObject Text) <- mkSynopsizer resetTest (liftSynopsized tracer)
+      synopser <- mkSynopsizer resetTest (toLogObject' tform tverb tr)
 
       pure . Tracer $ \ev -> do
-        traceWith (teeTraceChainTip' tr) ev
-        flip traceWith ev $ fanning $ \(WithSeverity _ (WithTip _ ev')) ->
-          toLogObject' tform tverb  $
-            case ev' of
-              (ChainDB.TraceLedgerReplayEvent _) -> synopser
-              _ -> tr
+        traceWith (switchedToChainTrace tr) ev
+        traceWith synopser ev
+     where
+      resetTest :: a ~ WithTip blk (ChainDB.TraceEvent blk)
+                => (Int, a) -> a -> Bool
+      resetTest (count, _) las = count >= 100 || not (isTraceLedgerReplayEvent las)
+      isTraceLedgerReplayEvent :: WithTip blk (ChainDB.TraceEvent blk) -> Bool
+      isTraceLedgerReplayEvent = \case
+        (WithTip _ ChainDB.TraceLedgerReplayEvent{}) -> True
+        _ -> False
 
-    teeTraceChainTip' :: Tracer IO (LogObject Text)
-                      -> Tracer IO (WithSeverity (WithTip blk (ChainDB.TraceEvent blk)))
-    teeTraceChainTip' tr =
-      Tracer $ \(WithSeverity _ (WithTip _tip ev')) ->
+    switchedToChainTrace :: Tracer IO (LogObject Text)
+                      -> Tracer IO (WithTip blk (ChainDB.TraceEvent blk))
+    switchedToChainTrace tr =
+      Tracer $ \(WithTip _tip ev') ->
         case ev' of
             (ChainDB.TraceAddBlockEvent ev) -> case ev of
                 ChainDB.SwitchedToChain _ c -> do
