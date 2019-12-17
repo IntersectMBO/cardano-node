@@ -47,12 +47,12 @@
         goblins = ./goblins.nix;
         contra-tracer = ./contra-tracer.nix;
         iohk-monitoring = ./iohk-monitoring.nix;
+        tracer-transformers = ./tracer-transformers.nix;
         lobemo-backend-aggregation = ./lobemo-backend-aggregation.nix;
         lobemo-backend-editor = ./lobemo-backend-editor.nix;
         lobemo-backend-ekg = ./lobemo-backend-ekg.nix;
         lobemo-backend-monitoring = ./lobemo-backend-monitoring.nix;
         lobemo-scribe-systemd = ./lobemo-scribe-systemd.nix;
-        tracer-transformers = ./tracer-transformers.nix;
         ekg-prometheus-adapter = ./ekg-prometheus-adapter.nix;
         cardano-sl-x509 = ./cardano-sl-x509.nix;
         io-sim-classes = ./io-sim-classes.nix;

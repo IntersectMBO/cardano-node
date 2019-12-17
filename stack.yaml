@@ -81,7 +81,6 @@ extra-deps:
       - plugins/backend-ekg
       - plugins/backend-monitoring
       - plugins/scribe-systemd
-      - tracer-transformers
 
     # dependencies of iohk-monitoring
   - prometheus-2.1.2
