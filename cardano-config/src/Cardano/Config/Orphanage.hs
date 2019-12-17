@@ -26,7 +26,6 @@ import qualified Ouroboros.Consensus.Node.Tracers as ConsensusTracers
 import           Ouroboros.Consensus.NodeNetwork (ProtocolTracers'(..))
 
 
-deriving instance Eq Consensus.SlotLength
 deriving instance Num Consensus.SlotLength
 
 deriving instance Show TracingVerbosity
