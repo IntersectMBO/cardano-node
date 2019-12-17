@@ -33,6 +33,7 @@ import           Cardano.Crypto (RequiresNetworkMagic, decodeHash)
 import qualified Cardano.Crypto.Signing as Signing
 
 import           Ouroboros.Consensus.Block (Header)
+import           Ouroboros.Consensus.BlockchainTime (slotLengthFromSec)
 import           Ouroboros.Consensus.Mempool.API (ApplyTxErr, GenTx, GenTxId)
 import           Ouroboros.Consensus.Node.ProtocolInfo (NumCoreNodes (..),
                                                         PBftLeaderCredentials,
@@ -85,6 +86,9 @@ type TraceConstraints blk =
 mockSecurityParam :: SecurityParam
 mockSecurityParam = SecurityParam 5
 
+mockSlotLength :: Consensus.SlotLength
+mockSlotLength = slotLengthFromSec 20
+
 -- | Helper for creating a 'SomeProtocol' for a mock protocol that needs the
 -- 'CoreNodeId' and NumCoreNodes'. If one of them is missing from the
 -- 'CardanoConfiguration', a 'MissingNodeInfo' exception is thrown.
@@ -134,7 +138,7 @@ fromProtocol _ _ _ _ _ _ _ _ _ ByronLegacy =
   left ByronLegacyProtocolNotImplemented
 fromProtocol _ nId mNumCoreNodes _ _ _ _ _ _ BFT =
   hoistEither $ mockSomeProtocol nId mNumCoreNodes $ \cid numCoreNodes ->
-    Consensus.ProtocolMockBFT numCoreNodes cid mockSecurityParam
+    Consensus.ProtocolMockBFT numCoreNodes cid mockSecurityParam mockSlotLength
 fromProtocol _ nId mNumCoreNodes _ _ _ _ _ _ Praos =
   hoistEither $ mockSomeProtocol nId mNumCoreNodes $ \cid numCoreNodes ->
     Consensus.ProtocolMockPraos numCoreNodes cid PraosParams {
@@ -142,6 +146,7 @@ fromProtocol _ nId mNumCoreNodes _ _ _ _ _ _ Praos =
       , praosSlotsPerEpoch = 3
       , praosLeaderF       = 0.5
       , praosLifetimeKES   = 1000000
+      , praosSlotLength    = slotLengthFromSec 2
     }
 fromProtocol _ nId mNumCoreNodes _ _ _ _ _ _ MockPBFT =
   hoistEither $ mockSomeProtocol nId mNumCoreNodes $ \cid numCoreNodes@(NumCoreNodes numNodes) ->
@@ -149,6 +154,7 @@ fromProtocol _ nId mNumCoreNodes _ _ _ _ _ _ MockPBFT =
       PBftParams { pbftSecurityParam      = mockSecurityParam
                  , pbftNumNodes           = fromIntegral numNodes
                  , pbftSignatureThreshold = (1.0 / fromIntegral numNodes) + 0.1
+                 , pbftSlotLength         = mockSlotLength
                  }
 fromProtocol gHash _ _ genFile nMagic sigThresh delCertFp sKeyFp update RealPBFT = do
     let genHash = either panic identity $ decodeHash gHash
