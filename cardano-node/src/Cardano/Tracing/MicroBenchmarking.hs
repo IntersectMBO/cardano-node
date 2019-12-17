@@ -7,14 +7,17 @@
 {-# LANGUAGE TypeFamilies           #-}
 {-# LANGUAGE AllowAmbiguousTypes    #-}
 
-module Cardano.Tracing.MicroBenchmarking where
+module Cardano.Tracing.MicroBenchmarking
+    ( MeasureTxs (..)
+    , measureTxsStart
+    , measureTxsEnd
+    ) where
 
 import           Cardano.Prelude
 
 import           Control.Monad.Class.MonadTime (Time, DiffTime, diffTime)
 
-import           Data.List (intersectBy)
-import           Data.Aeson (Value (..), toJSON, (.=))
+import           Data.Aeson (Value (..), (.=))
 
 import           Cardano.BM.Data.LogItem
 import           Cardano.BM.Data.Tracer
@@ -25,7 +28,7 @@ import           Control.Tracer.Transformers.ObserveOutcome
 import           Ouroboros.Network.Block (SlotNo)
 
 import           Ouroboros.Consensus.Ledger.Abstract (ProtocolLedgerView)
-import           Ouroboros.Consensus.Mempool.API (GenTx, GenTxId, TraceEventMempool(..))
+import           Ouroboros.Consensus.Mempool.API (GenTx, TraceEventMempool(..))
 import           Ouroboros.Consensus.Node.Tracers (TraceForgeEvent (..))
 
 -- | Definition of the measurement datatype for the transactions.
@@ -47,7 +50,6 @@ instance (Monad m, Eq (GenTx blk)) => Outcome m (MeasureTxs blk) where
     classifyObservable = pure . \case
       MeasureTxsTimeStart {}    -> OutcomeStarts
       MeasureTxsTimeStop  {}    -> OutcomeEnds
-      _                         -> OutcomeOther
 
     --captureObservableValue :: a -> m (IntermediateValue a)
     captureObservableValue (MeasureTxsTimeStart txs _ time) =
@@ -69,9 +71,9 @@ instance (Monad m, Eq (GenTx blk)) => Outcome m (MeasureTxs blk) where
         computeIntermediateValues [] _  = []
         computeIntermediateValues _ []  = []
         --[ (x, y) | x@(xTx, _) <- xs, y@(yTx, _) <- ys, xTx == yTx ]
-        computeIntermediateValues xs ys = do
-            x@(xTx, _) <- xs
-            y@(yTx, _) <- ys
+        computeIntermediateValues xs' ys' = do
+            x@(xTx, _) <- xs'
+            y@(yTx, _) <- ys'
             guard (xTx == yTx)
             return (x, y)
 
@@ -94,7 +96,7 @@ instance DefineSeverity (MeasureTxs blk) where
 
 -- TODO(KS): Clarify the structure of the type.
 instance ToObject (MeasureTxs blk) where
-  toObject _verb (MeasureTxsTimeStart blocks totalTxs timeAdded) =
+  toObject _verb _ =
     mkObject [ "kind"       .= String "MeasureTxsTimeStart"
              ]
 
@@ -104,10 +106,9 @@ measureTxsStart :: Tracer IO (LogObject Text) -> Tracer IO (TraceEventMempool bl
 measureTxsStart tracer = measureTxsStartInter $ toLogObject tracer
   where
     measureTxsStartInter :: Tracer IO (MeasureTxs blk) -> Tracer IO (TraceEventMempool blk)
-    measureTxsStartInter trace = Tracer $ \event -> do
-        let newEvent =  case event of
-                            (TraceMempoolAddTxs txs totalNum time) -> MeasureTxsTimeStart txs totalNum time
-        traceWith trace newEvent
+    measureTxsStartInter tracer' = Tracer $ \case
+        TraceMempoolAddTxs txs totalNum time    -> traceWith tracer' (MeasureTxsTimeStart txs totalNum time)
+        _                                       -> pure ()
 
 -- | Transformer for the end of the transaction, when the transaction was added to the
 -- block and the block was forged.
@@ -115,8 +116,7 @@ measureTxsEnd :: Tracer IO (LogObject Text) -> Tracer IO (TraceForgeEvent blk (G
 measureTxsEnd tracer = measureTxsEndInter $ toLogObject tracer
   where
     measureTxsEndInter :: Tracer IO (MeasureTxs blk) -> Tracer IO (TraceForgeEvent blk (GenTx blk))
-    measureTxsEndInter trace = Tracer $ \event -> do
-        let newEvent =  case event of
-                            (TraceAdoptedBlock slotNo blk txs time) -> MeasureTxsTimeStop slotNo blk txs time
-        traceWith trace newEvent
+    measureTxsEndInter tracer' = Tracer $ \case
+        TraceAdoptedBlock slotNo blk txs time   -> traceWith tracer' (MeasureTxsTimeStop slotNo blk txs time)
+        _                                       -> pure ()
 

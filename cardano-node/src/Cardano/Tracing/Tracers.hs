@@ -7,7 +7,6 @@
 {-# LANGUAGE ScopedTypeVariables   #-}
 {-# LANGUAGE TupleSections         #-}
 {-# LANGUAGE UndecidableInstances  #-}
-{-# LANGUAGE StandaloneDeriving    #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans  #-}
 {-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
@@ -52,7 +51,6 @@ import           Ouroboros.Consensus.Mempool.API
 import qualified Ouroboros.Consensus.Node.Tracers as Consensus
 import           Ouroboros.Consensus.NodeNetwork (ProtocolTracers,
                      ProtocolTracers' (..), nullProtocolTracers)
-import           Ouroboros.Consensus.Mempool.API (GenTx, GenTxId)
 import           Ouroboros.Consensus.Util.Orphans ()
 
 import qualified Ouroboros.Network.AnchoredFragment as AF
@@ -393,9 +391,6 @@ mkTracers traceOptions tracer = do
         = enableProtocolTracer ptLocalTxSubmissionTracer
         $ withName "LocalTxSubmissionProtocol" tracer
       }
-
---instance Transformable Transformable Text IO (MeasureTxs blk) where
---  trTransformer _ verb tr = trStructured verb tr
 
 -- | get information about a chain fragment
 
