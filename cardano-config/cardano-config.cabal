@@ -17,7 +17,6 @@ library
                        Cardano.Config.Defaults
                        Cardano.Config.Logging
                        Cardano.Config.Orphanage
-                       Cardano.Config.Presets
                        Cardano.Config.Protocol
                        Cardano.Config.Topology
                        Cardano.Config.Types
