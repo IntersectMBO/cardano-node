@@ -14,9 +14,6 @@ import           Cardano.CLI.Run
 import           Cardano.Common.TopHandler
 import           Cardano.Common.Parsers
 import           Cardano.Config.Logging (createLoggingFeatureCLI)
-import           Cardano.Config.Partial (PartialCardanoConfiguration (..),
-                                         PartialCore (..), PartialNode (..),
-                                         mkCardanoConfiguration)
 import           Cardano.Config.Presets (mainnetConfiguration)
 import           Cardano.Config.Protocol (Protocol)
 import           Cardano.Config.Types (CardanoEnvironment (..))

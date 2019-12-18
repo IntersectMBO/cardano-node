@@ -56,9 +56,8 @@ import qualified Cardano.BM.Trace as Trace
 import           Cardano.Shell.Lib (GeneralException (..))
 import           Cardano.Shell.Types (CardanoFeature (..))
 
-import           Cardano.Config.Types (CardanoConfiguration(..), ConfigYamlFilePath(..),
-                                       CardanoEnvironment, NodeCLI(..), NodeConfiguration(..),
-                                       parseNodeConfiguration)
+import           Cardano.Config.Types (ConfigYamlFilePath(..), CardanoEnvironment,
+                   NodeCLI(..), NodeConfiguration(..), parseNodeConfiguration)
 
 
 --------------------------------------------------------------------------------

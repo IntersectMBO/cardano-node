@@ -45,8 +45,7 @@ import           Cardano.Config.Logging (LoggingCLIArguments(..))
 import           Ouroboros.Consensus.NodeId (NodeId(..), CoreNodeId(..))
 
 import           Cardano.Config.CommonCLI
-import           Cardano.Config.Partial
-                 ( PartialLastKnownBlockVersion(..))
+import           Cardano.Config.Orphanage
 import           Cardano.Config.Protocol
 import           Cardano.Config.Topology
 import           Cardano.Config.Types

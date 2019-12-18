@@ -10,13 +10,7 @@ import           Cardano.Prelude
 import qualified Cardano.Chain.Update as Update
 import           Ouroboros.Consensus.NodeId
 
-import           Cardano.Config.Defaults (muteTracing)
-import           Cardano.Config.Partial ( PartialCardanoConfiguration (..)
-                                        , PartialCore (..)
-                                        , PartialLastKnownBlockVersion (..)
-                                        , PartialNode (..)
-                                        , PartialUpdate (..)
-                                        )
+import           Cardano.Config.Defaults (traceOptionsDefault)
 import           Cardano.Config.Topology (NodeAddress(..), NodeHostAddress(..),
                                           TopologyInfo(..))
 import           Cardano.Config.Types (Protocol(..), ViewMode(..))
