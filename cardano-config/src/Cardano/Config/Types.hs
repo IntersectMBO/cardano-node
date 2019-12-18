@@ -27,8 +27,6 @@ module Cardano.Config.Types
     , Node (..)
     , ViewMode (..)
     , TraceOptions (..)
-    , ConsensusTraceOptions
-    , ProtocolTraceOptions
     , parseNodeConfiguration
     ) where
 
@@ -46,7 +44,7 @@ import qualified Ouroboros.Consensus.BlockchainTime as Consensus
 import           Ouroboros.Consensus.NodeId (NodeId(..))
 
 import           Cardano.Config.Topology
-import           Cardano.Config.Orphanage
+import           Cardano.Config.Orphanage ()
 --------------------------------------------------------------------------------
 -- Cardano Environment
 --------------------------------------------------------------------------------
@@ -325,15 +323,39 @@ instance FromJSON ViewMode where
 -- | Detailed tracing options. Each option enables a tracer
 --   which verbosity to the log output.
 data TraceOptions = TraceOptions
-  { traceVerbosity       :: !TracingVerbosity
-  , traceChainDB         :: !Bool
+  { traceVerbosity :: !TracingVerbosity
+  , traceChainDB :: !Bool
     -- ^ By default we use 'readableChainDB' tracer, if on this it will use
     -- more verbose tracer
-  , traceConsensus       :: ConsensusTraceOptions
-  , traceProtocols       :: ProtocolTraceOptions
-  , traceIpSubscription  :: !Bool
+
+    -- Consensus Tracers --
+  , traceChainSyncClient :: !Bool
+  , traceChainSyncHeaderServer :: !Bool
+  , traceChainSyncBlockServer :: !Bool
+  , traceBlockFetchDecisions :: !Bool
+  , traceBlockFetchClient :: !Bool
+  , traceBlockFetchServer :: !Bool
+  , traceTxInbound :: !Bool
+  , traceTxOutbound :: !Bool
+  , traceLocalTxSubmissionServer :: !Bool
+  , traceMempool :: !Bool
+  , traceForge :: !Bool
+    -----------------------
+
+    -- Protocol Tracers --
+  , traceChainSyncProtocol :: !Bool
+    -- There's two variants of the block fetch tracer and for now
+    -- at least we'll set them both together from the same flags.
+  , traceBlockFetchProtocol :: !Bool
+  , traceBlockFetchProtocolSerialised :: !Bool
+  , traceTxSubmissionProtocol :: !Bool
+  , traceLocalChainSyncProtocol :: !Bool
+  , traceLocalTxSubmissionProtocol :: !Bool
+  , traceIpSubscription :: !Bool
+    -----------------------
+
   , traceDnsSubscription :: !Bool
-  , traceDnsResolver     :: !Bool
-  , traceErrorPolicy     :: !Bool
-  , traceMux             :: !Bool
+  , traceDnsResolver :: !Bool
+  , traceErrorPolicy :: !Bool
+  , traceMux :: !Bool
   } deriving (Eq, Show)

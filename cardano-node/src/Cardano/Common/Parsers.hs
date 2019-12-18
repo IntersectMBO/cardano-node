@@ -42,11 +42,8 @@ import qualified Options.Applicative as Opt
 import           Cardano.BM.Data.Tracer (TracingVerbosity (..))
 import           Cardano.Config.Logging (LoggingCLIArguments(..))
 import           Ouroboros.Consensus.NodeId (NodeId(..), CoreNodeId(..))
-import           Ouroboros.Consensus.NodeNetwork (ProtocolTracers'(..))
-import qualified Ouroboros.Consensus.Node.Tracers as Consensus
 
 import           Cardano.Config.CommonCLI
-import           Cardano.Config.Orphanage
 import           Cardano.Config.Partial
                  ( PartialLastKnownBlockVersion(..))
 import           Cardano.Config.Protocol
@@ -312,8 +309,30 @@ parseTraceOptions :: MParser TraceOptions
 parseTraceOptions m = TraceOptions
   <$> parseTracingVerbosity m
   <*> parseTraceChainDB m
-  <*> parseConsensusTraceOptions m
-  <*> parseProtocolTraceOptions m
+
+  -- Consensus Trace Options --
+  <*> parseTraceChainSyncClient m
+  <*> parseTraceChainSyncHeaderServer m
+  <*> parseTraceChainSyncBlockServer m
+  <*> parseTraceBlockFetchDecisions m
+  <*> parseTraceBlockFetchClient m
+  <*> parseTraceBlockFetchServer m
+  <*> parseTraceTxInbound m
+  <*> parseTraceTxOutbound m
+  <*> parseTraceLocalTxSubmissionServer m
+  <*> parseTraceMempool m
+  <*> parseTraceForge m
+  -----------------------------
+
+  -- Protocol Tracing Options --
+  <*> parseTraceChainSyncProtocol m
+  <*> parseTraceBlockFetchProtocol m
+  <*> parseTraceBlockFetchProtocolSerialised m
+  <*> parseTraceTxSubmissionProtocol m
+  <*> parseTraceLocalChainSyncProtocol m
+  <*> parseTraceLocalTxSubmissionProtocol m
+  ------------------------------
+
   <*> parseTraceIpSubscription m
   <*> parseTraceDnsSubscription m
   <*> parseTraceDnsResolver m
@@ -361,20 +380,6 @@ parseTraceChainDB m =
       <> help "Verbose tracer of ChainDB."
       <> m
     )
-
-parseConsensusTraceOptions :: (forall a b. Opt.Mod a b) -> Parser ConsensusTraceOptions
-parseConsensusTraceOptions m = Consensus.Tracers
-  <$> (Const <$> parseTraceChainSyncClient m)
-  <*> (Const <$> parseTraceChainSyncHeaderServer m)
-  <*> (Const <$> parseTraceChainSyncBlockServer m)
-  <*> (Const <$> parseTraceBlockFetchDecisions m)
-  <*> (Const <$> parseTraceBlockFetchClient m)
-  <*> (Const <$> parseTraceBlockFetchServer m)
-  <*> (Const <$> parseTraceTxInbound m)
-  <*> (Const <$> parseTraceTxOutbound m)
-  <*> (Const <$> parseTraceLocalTxSubmissionServer m)
-  <*> (Const <$> parseTraceMempool m)
-  <*> (Const <$> parseTraceForge m)
 
 type MParser a = (forall b c. Opt.Mod b c) -> Parser a
 
@@ -466,6 +471,15 @@ parseTraceBlockFetchProtocol m =
       <> m
     )
 
+
+parseTraceBlockFetchProtocolSerialised :: MParser Bool
+parseTraceBlockFetchProtocolSerialised m =
+    switch (
+         long "trace-block-fetch-protocol-serialised"
+      <> help "Serialised Trace BlockFetch protocol messages."
+      <> m
+    )
+
 parseTraceTxSubmissionProtocol :: MParser Bool
 parseTraceTxSubmissionProtocol m =
     switch (
@@ -489,18 +503,6 @@ parseTraceLocalTxSubmissionProtocol m =
       <> help "Trace local TxSubmission protocol messages."
       <> m
     )
-
-
-parseProtocolTraceOptions :: MParser ProtocolTraceOptions
-parseProtocolTraceOptions m = ProtocolTracers
-  <$> (Const <$> parseTraceChainSyncProtocol m)
-      -- There's two variants of the block fetch tracer and for now
-      -- at least we'll set them both together from the same flags.
-  <*> (Const <$> parseTraceBlockFetchProtocol m)
-  <*> (Const <$> parseTraceBlockFetchProtocol m)
-  <*> (Const <$> parseTraceTxSubmissionProtocol m)
-  <*> (Const <$> parseTraceLocalChainSyncProtocol m)
-  <*> (Const <$> parseTraceLocalTxSubmissionProtocol m)
 
 parseTraceIpSubscription :: MParser Bool
 parseTraceIpSubscription m =

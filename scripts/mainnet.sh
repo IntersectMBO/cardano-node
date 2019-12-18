@@ -13,6 +13,20 @@ ARGS=(
         --socket-dir              "./socket/"
         --config                  "./configuration/configuration-mainnet.yaml"
         --port                    7776
+
+        --trace-block-fetch-decisions
+        --trace-block-fetch-client
+        --trace-block-fetch-server
+        --trace-tx-inbound
+        --trace-tx-outbound
+        --trace-local-tx-submission-server
+        --trace-mempool
+        --trace-forge
+        --trace-chain-sync-protocol
+        --trace-block-fetch-protocol
+        --trace-tx-submission-protocol
+        --trace-local-chain-sync-protocol
+        --trace-local-tx-submission-protocol
 )
 
 ${RUNNER} exe:cardano-node "${ARGS[@]}"
