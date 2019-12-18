@@ -327,7 +327,7 @@ instance (Condense (HeaderHash blk), ProtocolLedgerView blk, SupportedBlock blk)
   trTransformer _ verb tr = trStructured verb tr
 
 -- transform @ChainSyncServer@
-instance (Condense (HeaderHash blk), Condense b) => Transformable Text IO (TraceChainSyncServerEvent blk b) where
+instance Condense (HeaderHash blk) => Transformable Text IO (TraceChainSyncServerEvent blk b) where
   trTransformer _ verb tr = trStructured verb tr
 
 -- transform @BlockFetchDecision@
@@ -752,7 +752,7 @@ instance (Condense (HeaderHash blk), ProtocolLedgerView blk, SupportedBlock blk)
     TraceFoundIntersection _ _ _ ->
       mkObject [ "kind" .= String "ChainSyncClientEvent.TraceFoundIntersection" ]
 
-instance (Condense (HeaderHash blk), Condense b) => ToObject (TraceChainSyncServerEvent blk b) where
+instance Condense (HeaderHash blk) => ToObject (TraceChainSyncServerEvent blk b) where
     toObject verb ev = case ev of
       TraceChainSyncServerRead tip (AddBlock hdr) ->
         mkObject [ "kind" .= String "ChainSyncServerEvent.TraceChainSyncServerRead.AddBlock"

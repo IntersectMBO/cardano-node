@@ -6,6 +6,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE NamedFieldPuns #-}
 
 module Cardano.Tracing.MicroBenchmarking
     ( MeasureTxs (..)
@@ -28,12 +29,13 @@ import           Control.Tracer.Transformers.ObserveOutcome
 import           Ouroboros.Network.Block (SlotNo)
 
 import           Ouroboros.Consensus.Ledger.Abstract (ProtocolLedgerView)
-import           Ouroboros.Consensus.Mempool.API (GenTx, TraceEventMempool(..))
+import           Ouroboros.Consensus.Mempool.API (GenTx, TraceEventMempool(..)
+                                                 ,MempoolSize(..))
 import           Ouroboros.Consensus.Node.Tracers (TraceForgeEvent (..))
 
 -- | Definition of the measurement datatype for the transactions.
 data MeasureTxs blk
-    = MeasureTxsTimeStart [GenTx blk] Word Time
+    = MeasureTxsTimeStart [GenTx blk] Word Word Time  -- num txs, total size in bytes
     | MeasureTxsTimeStop SlotNo blk [GenTx blk] Time
 
 deriving instance (ProtocolLedgerView blk, Eq blk, Eq (GenTx blk)) => Eq (MeasureTxs blk)
@@ -52,7 +54,7 @@ instance (Monad m, Eq (GenTx blk)) => Outcome m (MeasureTxs blk) where
       MeasureTxsTimeStop  {}    -> OutcomeEnds
 
     --captureObservableValue :: a -> m (IntermediateValue a)
-    captureObservableValue (MeasureTxsTimeStart txs _ time) =
+    captureObservableValue (MeasureTxsTimeStart txs _ _ time) =
         pure [(tx, time) | tx <- txs]
 
     captureObservableValue (MeasureTxsTimeStop _sloNo _blk txs time) =
@@ -107,8 +109,16 @@ measureTxsStart tracer = measureTxsStartInter $ toLogObject tracer
   where
     measureTxsStartInter :: Tracer IO (MeasureTxs blk) -> Tracer IO (TraceEventMempool blk)
     measureTxsStartInter tracer' = Tracer $ \case
-        TraceMempoolAddTxs txs totalNum time    -> traceWith tracer' (MeasureTxsTimeStart txs totalNum time)
-        _                                       -> pure ()
+        TraceMempoolAddTxs txs MempoolSize{msNumTxs,msNumBytes} time ->
+            traceWith tracer' measureTxsEvent
+          where
+            measureTxsEvent = MeasureTxsTimeStart
+                                txs
+                                (fromIntegral msNumTxs)
+                                (fromIntegral msNumBytes)
+                                time
+
+        _ -> pure ()
 
 -- | Transformer for the end of the transaction, when the transaction was added to the
 -- block and the block was forged.

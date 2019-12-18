@@ -40,7 +40,8 @@ import           Cardano.Common.Parsers
 import           Cardano.Binary (Annotated(..))
 import           Cardano.Chain.Common ( Address(..), BlockCount(..), Lovelace
                                       , LovelacePortion(..), NetworkMagic(..)
-                                      , fromCBORTextAddress, mkLovelace, mkLovelacePortion)
+                                      , decodeAddressBase58
+                                      , mkLovelace, mkLovelacePortion)
 import           Cardano.Chain.Genesis (FakeAvvmOptions(..), TestnetBalanceOptions(..))
 import           Cardano.Chain.Slotting (EpochNumber(..))
 import           Cardano.Chain.UTxO (TxId, TxIn(..), TxOut(..))
@@ -69,7 +70,7 @@ cliParseLovelace =
 cliParseBase58Address :: Text -> Address
 cliParseBase58Address =
   either (panic . ("Bad Base58 address: " <>) . show) identity
-  . fromCBORTextAddress
+  . decodeAddressBase58
 
 cliParseHostAddress :: String -> NodeHostAddress
 cliParseHostAddress = NodeHostAddress . Just .
@@ -449,9 +450,6 @@ parseTestnetBalanceOptions =
     <*> parseLovelacePortion
           "delegate-share"
           "Portion of stake owned by all delegates together."
-    <*> pure False -- no longer allow HD addresses
-                   -- if this works ok, support will be
-                   -- removed from the ledger library too
 
 parseTPSRate :: String -> String -> Parser TPSRate
 parseTPSRate opt desc = TPSRate <$> parseIntegral opt desc

@@ -104,8 +104,7 @@ readVerificationKey (VerificationKeyFile fp) = do
 --   protected with a (potentially empty) passphrase.
 keygen :: Crypto.PassPhrase -> IO SigningKey
 keygen passphrase =
-  Crypto.runSecureRandom (Crypto.safeKeyGen passphrase)
-  <&> SigningKey . Crypto.eskPayload . snd
+  snd <$> Crypto.runSecureRandom (Crypto.safeKeyGen passphrase)
 
 -- | Get a passphrase from the standard input,
 --   depending on whether it's required.

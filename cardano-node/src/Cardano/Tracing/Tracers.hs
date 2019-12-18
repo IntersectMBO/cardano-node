@@ -42,10 +42,12 @@ import           Cardano.BM.Data.Tracer (WithSeverity (..), addName,
                      annotateSeverity)
 import           Cardano.BM.Data.Transformers
 
+import           Ouroboros.Consensus.BlockchainTime (SystemStart (..),
+                     TraceBlockchainTimeEvent (..))
 import           Ouroboros.Consensus.Block (Header)
 import           Ouroboros.Consensus.Ledger.Abstract
 import           Ouroboros.Consensus.Mempool.API
-                    (GenTx, TraceEventMempool (..))
+                    (GenTx, TraceEventMempool (..), MempoolSize (..))
 import qualified Ouroboros.Consensus.Node.Tracers as Consensus
 import           Ouroboros.Consensus.NodeNetwork (ProtocolTracers,
                      ProtocolTracers' (..), nullProtocolTracers)
@@ -240,7 +242,7 @@ mkTracers traceOptions tracer = do
                                                        , tot0
                                                        )
             logValue1 :: LOContent a
-            logValue1 = LogValue "txsInMempool" $ PureI $ fromIntegral tot
+            logValue1 = LogValue "txsInMempool" $ PureI $ fromIntegral (msNumTxs tot)
 
             logValue2 :: LOContent a
             logValue2 = LogValue "txsProcessed" $ PureI $ fromIntegral n
@@ -350,12 +352,22 @@ mkTracers traceOptions tracer = do
         = tracerOnOff (traceMempool traceOpts) $ mempoolTracer
       , Consensus.forgeTracer
         = forgeTracer forgeTracers traceOpts
+      , Consensus.blockchainTimeTracer
+        = Tracer $ \ev ->
+            traceWith (toLogObject tracer) (readableTraceBlockchainTimeEvent ev)
       }
 
+    readableTraceBlockchainTimeEvent :: TraceBlockchainTimeEvent -> Text
+    readableTraceBlockchainTimeEvent ev = case ev of
+        TraceStartTimeInTheFuture (SystemStart start) toWait ->
+          "Waiting " <> show toWait <> " until genesis start time at " <> show start
 
     mkProtocolsTracers :: TraceOptions -> ProtocolTracers' peer blk DeserialiseFailure (Tracer IO)
     mkProtocolsTracers traceOpts = ProtocolTracers
       { ptChainSyncTracer
+        = tracerOnOff (traceChainSyncProtocol traceOpts)
+        $ showTracing $ withName "ChainSyncProtocol" tracer
+      , ptChainSyncSerialisedTracer
         = tracerOnOff (traceChainSyncProtocol traceOpts)
         $ showTracing $ withName "ChainSyncProtocol" tracer
       , ptBlockFetchTracer
