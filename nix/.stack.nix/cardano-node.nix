@@ -61,6 +61,7 @@
           (hsPkgs.template-haskell)
           (hsPkgs.text)
           (hsPkgs.time)
+          (hsPkgs.tracer-transformers)
           (hsPkgs.transformers)
           (hsPkgs.transformers-except)
           (hsPkgs.tracer-transformers)

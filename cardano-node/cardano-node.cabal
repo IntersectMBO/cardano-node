@@ -41,7 +41,6 @@ library
                        Cardano.Tracing.Tracers
                        Cardano.Wallet.Run
                        Cardano.Wallet.Client
-                       Control.Tracer.Transformers
 
   other-modules:       Paths_cardano_node
                        Cardano.Tracing.ToObjectOrphans
@@ -91,6 +90,7 @@ library
                      , template-haskell
                      , text
                      , time
+                     , tracer-transformers
                      , transformers
                      , transformers-except
                      , tracer-transformers
