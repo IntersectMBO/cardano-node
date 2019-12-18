@@ -73,27 +73,44 @@ import           Cardano.Config.Topology (NodeAddress(..), TopologyInfo(..))
 
 -- | Sub-commands of 'cardano-cli'.
 data ClientCommand
-  = Genesis
+  =
+  --- Genesis Related Commands ---
+    Genesis
     NewDirectory
     GenesisParameters
-  | PrettySigningKeyPublic
-    SigningKeyFile
-  | MigrateDelegateKeyFrom
     Protocol
-    NewSigningKeyFile
-    SigningKeyFile
   | PrintGenesisHash
     GenesisFile
-  | PrintSigningKeyAddress
-    Common.NetworkMagic  -- TODO:  consider deprecation in favor of ProtocolMagicId,
-                         --        once Byron is out of the picture.
-    SigningKeyFile
+
+  --- Key Related Commands ---
   | Keygen
+    Protocol
     NewSigningKeyFile
     PasswordRequirement
   | ToVerification
+    Protocol
     SigningKeyFile
     NewVerificationKeyFile
+
+  | PrettySigningKeyPublic
+    Protocol
+    SigningKeyFile
+
+  | MigrateDelegateKeyFrom
+    Protocol
+    -- ^ Old protocol
+    SigningKeyFile
+    -- ^ Old key
+    Protocol
+    -- ^ New protocol
+    NewSigningKeyFile
+    -- ^ New Key
+
+  | PrintSigningKeyAddress
+    Protocol
+    Common.NetworkMagic  -- TODO:  consider deprecation in favor of ProtocolMagicId,
+                         --        once Byron is out of the picture.
+    SigningKeyFile
 
     --- Delegation Related Commands ---
 
@@ -152,19 +169,16 @@ data ClientCommand
     [SigningKeyFile]
     NodeId
    deriving Show
-
 runCommand :: ClientCommand -> ExceptT CliError IO ()
-runCommand (Genesis outDir params) = do
+runCommand (Genesis outDir params ptcl) = do
   gen <- mkGenesis params
-  dumpGenesis (ccProtocol cc) outDir `uncurry` gen
+  dumpGenesis ptcl outDir `uncurry` gen
 
-runCommand (PrettySigningKeyPublic skF) = do
-  sK <- readSigningKey (ccProtocol cc) skF
+runCommand (PrettySigningKeyPublic ptcl skF) = do
+  sK <- readSigningKey ptcl skF
   liftIO . putTextLn . prettyPublicKey $ Crypto.toVerification sK
-
-runCommand (MigrateDelegateKeyFrom oldPtcl (NewSigningKeyFile newKey) oldKey) = do
+runCommand (MigrateDelegateKeyFrom oldPtcl oldKey newPtcl (NewSigningKeyFile newKey)) = do
   sk <- readSigningKey oldPtcl oldKey
-  let newPtcl = ccProtocol cc
   sDk <- hoistEither $ serialiseDelegateKey newPtcl sk
   liftIO $ ensureNewFileLBS newKey sDk
 
@@ -176,19 +190,19 @@ runCommand (PrintGenesisHash genFp) = do
 
   liftIO . putTextLn $ formatter eGen
 
-runCommand (PrintSigningKeyAddress netMagic skF) = do
-  sK <- readSigningKey (ccProtocol cc) skF
+runCommand (PrintSigningKeyAddress ptcl netMagic skF) = do
+  sK <- readSigningKey ptcl skF
   let sKeyAddress = prettyAddress . Common.makeVerKeyAddress netMagic $ Crypto.toVerification sK
   liftIO $ putTextLn sKeyAddress
 
-runCommand (Keygen (NewSigningKeyFile skF) passReq) = do
+runCommand (Keygen ptcl (NewSigningKeyFile skF) passReq) = do
   pPhrase <- liftIO $ getPassphrase ("Enter password to encrypt '" <> skF <> "': ") passReq
   sK <- liftIO $ keygen pPhrase
-  serDk <- hoistEither $ serialiseDelegateKey (ccProtocol cc) sK
+  serDk <- hoistEither $ serialiseDelegateKey ptcl sK
   liftIO $ ensureNewFileLBS skF serDk
 
-runCommand (ToVerification skFp (NewVerificationKeyFile vkFp)) = do
-  sk <- readSigningKey (ccProtocol cc) skFp
+runCommand (ToVerification ptcl skFp (NewVerificationKeyFile vkFp)) = do
+  sk <- readSigningKey ptcl skFp
   let vKey = Builder.toLazyText . Crypto.formatFullVerificationKey $ Crypto.toVerification sk
   liftIO $ ensureNewFile TL.writeFile vkFp vKey
 

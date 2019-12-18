@@ -217,6 +217,7 @@ parseGenesisRelatedValues =
               "genesis-output-dir"
               "Non-existent directory where genesis JSON file and secrets shall be placed."
           <*> parseGenesisParameters
+          <*> parseProtocol
     , command' "print-genesis-hash" "Compute hash of a genesis file."
         $ PrintGenesisHash
             <$> parseGenesisFile "genesis-json"
@@ -248,7 +249,8 @@ parseKeyRelatedValues =
         , metavar "Key related commands"
         , command' "keygen" "Generate a signing key."
             $ Keygen
-                <$> parseNewSigningKeyFile "secret"
+                <$> parseProtocol
+                <*> parseNewSigningKeyFile "secret"
                 <*> parseFlag' GetPassword EmptyPassword
                       "no-password"
                       "Disable password protection."
@@ -256,7 +258,8 @@ parseKeyRelatedValues =
             "to-verification"
             "Extract a verification key in its base64 form."
             $ ToVerification
-                <$> parseSigningKeyFile
+                <$> parseProtocol
+                <*> parseSigningKeyFile
                       "secret"
                       "Signing key file to extract the verification part from."
                 <*> parseNewVerificationKeyFile "to"
@@ -264,14 +267,16 @@ parseKeyRelatedValues =
             "signing-key-public"
             "Pretty-print a signing key's verification key (not a secret)."
             $ PrettySigningKeyPublic
-                <$> parseSigningKeyFile
+                <$> parseProtocol
+                <*> parseSigningKeyFile
                       "secret"
                       "Signing key to pretty-print."
         , command'
             "signing-key-address"
             "Print address of a signing key."
             $ PrintSigningKeyAddress
-                <$> parseNetworkMagic
+                <$> parseProtocol
+                <*> parseNetworkMagic
                 <*> parseSigningKeyFile
                       "secret"
                       "Signing key, whose address is to be printed."
@@ -279,9 +284,10 @@ parseKeyRelatedValues =
             "migrate-delegate-key-from"
             "Migrate a delegate key from an older version."
             $ MigrateDelegateKeyFrom
-                <$> parseProtocol
-                <*> parseNewSigningKeyFile "to"
+                <$> parseProtocol -- Old protocol
                 <*> parseSigningKeyFile "from" "Signing key file to migrate."
+                <*> parseProtocol -- New protocol
+                <*> parseNewSigningKeyFile "to"
         ]
 
 parseLovelace :: String -> String -> Parser Lovelace
