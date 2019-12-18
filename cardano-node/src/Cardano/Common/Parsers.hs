@@ -52,8 +52,14 @@ import           Cardano.Config.Types
 
 -- Common command line parsers
 
+-- | Help hidden in order to reduce help output of `cardano-node`.
+cliTracingParserHiddenHelp :: Parser (Last TraceOptions)
+cliTracingParserHiddenHelp = Last . Just <$> parseTraceOptions Opt.internal
+
+-- | Help not hidden
 cliTracingParser :: Parser (Last TraceOptions)
-cliTracingParser = Last . Just <$> parseTraceOptions Opt.hidden
+cliTracingParser = Last . Just <$> parseTraceOptions mempty
+
 
 -- | The product parser for all the CLI arguments.
 nodeCliParser :: Parser NodeCLI
@@ -74,7 +80,7 @@ nodeCliParser = do
   nodeConfigFp <- parseConfigFile
 
   -- TraceOptions
-  traceOptions <- cliTracingParser
+  traceOptions <- cliTracingParserHiddenHelp
 
   validate <- parseValidateDB
 
