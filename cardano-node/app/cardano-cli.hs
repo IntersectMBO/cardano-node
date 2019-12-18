@@ -34,15 +34,7 @@ main = toplevelExceptionHandler $ do
       cardanoEnvironment :: CardanoEnvironment
       cardanoEnvironment = NoEnvironment
 
-  cmdRes <- runExceptT $ do
-    finalConfig <- withExceptT ConfigError $ ExceptT $ pure $
-                     mkCardanoConfiguration $ cardanoConfiguration <> partialConfig co
-    (loggingLayer, loggingFeature) <- liftIO $
-      createLoggingFeatureCLI cardanoEnvironment finalConfig
-
-    runCommand finalConfig loggingLayer $ mainCommand co
-
-    liftIO $ featureShutdown loggingFeature
+  cmdRes <- runExceptT . runCommand $ mainCommand co
 
   case cmdRes of
     Right _ -> pure ()
@@ -54,7 +46,7 @@ main = toplevelExceptionHandler $ do
 
     opts :: ParserInfo CLI
     opts =
-      Opt.info (parseClient <**> Opt.helper)
+      Opt.info (parseClientCommand <**> Opt.helper)
         ( Opt.fullDesc
           <> Opt.header
           "cardano-cli - utility to support a variety of key\
@@ -65,84 +57,11 @@ main = toplevelExceptionHandler $ do
     renderCliError :: CliError -> String
     renderCliError = show
 
-data CLI = CLI
-  { partialConfig :: PartialCardanoConfiguration
-  , mainCommand :: ClientCommand
-  }
-
-parseClient :: Parser CLI
-parseClient = do
-  let pConfig = createPcc
-                  <$> (parseProtocolByron <|> parseProtocolRealPBFT)
-                  <*> parseDbPathLast
-                  <*> parseGenesisPathLast
-                  <*> parseGenesisHashLast
-                  <*> parseDelegationCertLast
-                  <*> parseSigningKeyLast
-                  <*> parseSocketDirLast
-                  <*> parsePbftSigThresholdLast
-                  <*> parseRequiresNetworkMagicLast
-                  <*> parseSlotLengthLast
-                  <*> parseLogConfigFileLast
-                  <*> parseLogMetricsLast
-
-  CLI <$> pConfig <*> parseClientCommand
- where
-  -- This merges the command line parsed values into one `PartialCardanoconfiguration`.
-  createPcc
-    :: Last Protocol
-    -> Last FilePath
-    -- ^ Db Path
-    -> Last FilePath
-    -- ^ Genesis Path
-    -> Last Text
-    -- ^ Genesis Hash
-    -> Last FilePath
-    -- ^ Delegation certificate
-    -> Last FilePath
-    -- ^ Signing Key
-    -> Last FilePath
-    -- ^ Socket dir
-    -> Last Double
-    -- ^ PBFT Signature Threshold
-    -> Last RequiresNetworkMagic
-    -> Last Consensus.SlotLength
-    -> Last FilePath
-    -- ^ Log Configuration Path
-    -> Last Bool
-    -- ^ Capture Log Metrics
-    -> PartialCardanoConfiguration
-  createPcc
-    ptcl
-    dbPath
-    genPath
-    genHash
-    delCert
-    sKey
-    socketDir
-    pbftSigThresh
-    reqNetMagic
-    slotLength
-    logConfigFp
-    logMetrics = mempty { pccDBPath = dbPath
-                        , pccProtocol = ptcl
-                        , pccSocketDir = socketDir
-                        , pccLogConfig = logConfigFp
-                        , pccLogMetrics = logMetrics
-                        , pccCore = mempty { pcoGenesisFile = genPath
-                                           , pcoGenesisHash = genHash
-                                           , pcoStaticKeyDlgCertFile = delCert
-                                           , pcoStaticKeySigningKeyFile = sKey
-                                           , pcoPBftSigThd = pbftSigThresh
-                                           , pcoRequiresNetworkMagic = reqNetMagic
-                                           }
-                        , pccNode = mempty { pnoSlotLength = slotLength }
-                        }
-
+data CLI = CLI { mainCommand :: ClientCommand }
 
 parseClientCommand :: Parser ClientCommand
 parseClientCommand =
-  parseGenesisRelatedValues
-    <|> parseKeyRelatedValues
-    <|> parseDelegationRelatedValues
-    <|> parseTxRelatedValues
+  CLI <$> parseGenesisRelatedValues
+      <|> parseKeyRelatedValues
+      <|> parseDelegationRelatedValues
+      <|> parseTxRelatedValues

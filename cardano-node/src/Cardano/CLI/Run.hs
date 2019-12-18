@@ -153,22 +153,22 @@ data ClientCommand
     NodeId
    deriving Show
 
-runCommand :: CardanoConfiguration -> LoggingLayer -> ClientCommand -> ExceptT CliError IO ()
-runCommand cc _ (Genesis outDir params) = do
+runCommand :: ClientCommand -> ExceptT CliError IO ()
+runCommand (Genesis outDir params) = do
   gen <- mkGenesis params
   dumpGenesis (ccProtocol cc) outDir `uncurry` gen
 
-runCommand cc _ (PrettySigningKeyPublic skF) = do
+runCommand (PrettySigningKeyPublic skF) = do
   sK <- readSigningKey (ccProtocol cc) skF
   liftIO . putTextLn . prettyPublicKey $ Crypto.toVerification sK
 
-runCommand cc _ (MigrateDelegateKeyFrom oldPtcl (NewSigningKeyFile newKey) oldKey) = do
+runCommand (MigrateDelegateKeyFrom oldPtcl (NewSigningKeyFile newKey) oldKey) = do
   sk <- readSigningKey oldPtcl oldKey
   let newPtcl = ccProtocol cc
   sDk <- hoistEither $ serialiseDelegateKey newPtcl sk
   liftIO $ ensureNewFileLBS newKey sDk
 
-runCommand _ _ (PrintGenesisHash genFp) = do
+runCommand (PrintGenesisHash genFp) = do
   eGen <- readGenesis genFp
 
   let formatter :: (a, Genesis.GenesisHash)-> Text
@@ -176,23 +176,23 @@ runCommand _ _ (PrintGenesisHash genFp) = do
 
   liftIO . putTextLn $ formatter eGen
 
-runCommand cc _ (PrintSigningKeyAddress netMagic skF) = do
+runCommand (PrintSigningKeyAddress netMagic skF) = do
   sK <- readSigningKey (ccProtocol cc) skF
   let sKeyAddress = prettyAddress . Common.makeVerKeyAddress netMagic $ Crypto.toVerification sK
   liftIO $ putTextLn sKeyAddress
 
-runCommand cc _ (Keygen (NewSigningKeyFile skF) passReq) = do
+runCommand (Keygen (NewSigningKeyFile skF) passReq) = do
   pPhrase <- liftIO $ getPassphrase ("Enter password to encrypt '" <> skF <> "': ") passReq
   sK <- liftIO $ keygen pPhrase
   serDk <- hoistEither $ serialiseDelegateKey (ccProtocol cc) sK
   liftIO $ ensureNewFileLBS skF serDk
 
-runCommand cc _ (ToVerification skFp (NewVerificationKeyFile vkFp)) = do
+runCommand (ToVerification skFp (NewVerificationKeyFile vkFp)) = do
   sk <- readSigningKey (ccProtocol cc) skFp
   let vKey = Builder.toLazyText . Crypto.formatFullVerificationKey $ Crypto.toVerification sk
   liftIO $ ensureNewFile TL.writeFile vkFp vKey
 
-runCommand cc _ (IssueDelegationCertificate magic epoch issuerSK delegateVK cert) = do
+runCommand (IssueDelegationCertificate magic epoch issuerSK delegateVK cert) = do
   vk <- readVerificationKey delegateVK
   sk <- readSigningKey (ccProtocol cc) issuerSK
   let byGenDelCert :: Delegation.Certificate
@@ -200,15 +200,12 @@ runCommand cc _ (IssueDelegationCertificate magic epoch issuerSK delegateVK cert
   sCert <- hoistEither $ serialiseDelegationCert (ccProtocol cc) byGenDelCert
   liftIO $ ensureNewFileLBS (nFp cert) sCert
 
-runCommand _ _(CheckDelegation magic cert issuerVF delegateVF) = do
+runCommand (CheckDelegation magic cert issuerVF delegateVF) = do
   issuerVK <- readVerificationKey issuerVF
   delegateVK <- readVerificationKey delegateVF
   liftIO $ checkByronGenesisDelegation cert magic issuerVK delegateVK
 
-runCommand
-  (CardanoConfiguration{ccCore, ccProtocol, ccSocketDir, ccUpdate})
-  _
-  (SubmitTx fp topology nid) = do
+runCommand (SubmitTx fp topology nid) = do
     tx <- liftIO $ readByronTx fp
     firstExceptT
       NodeSubmitTxError
@@ -226,10 +223,7 @@ runCommand
           ccUpdate
           ccProtocol
           tx
-runCommand
-  CardanoConfiguration{ccCore, ccProtocol, ccUpdate}
-  _
-  (SpendGenesisUTxO (NewTxFile ctTx) ctKey genRichAddr outs) = do
+runCommand (SpendGenesisUTxO (NewTxFile ctTx) ctKey genRichAddr outs) = do
     sk <- readSigningKey ccProtocol ctKey
     tx <- firstExceptT SpendGenesisUTxOError
             $ issueGenesisUTxOExpenditure
@@ -248,10 +242,7 @@ runCommand
                 sk
     liftIO . ensureNewFileLBS ctTx $ serialise tx
 
-runCommand
-  CardanoConfiguration{ccCore, ccProtocol, ccUpdate}
-  _
-  (SpendUTxO (NewTxFile ctTx) ctKey ins outs) = do
+runCommand (SpendUTxO (NewTxFile ctTx) ctKey ins outs) = do
     sk <- readSigningKey ccProtocol ctKey
     gTx <- firstExceptT
              IssueUtxoError
@@ -271,10 +262,7 @@ runCommand
                  sk
     liftIO . ensureNewFileLBS ctTx $ serialise gTx
 
-runCommand
-  CardanoConfiguration{ccCore, ccProtocol, ccSocketDir, ccUpdate}
-  loggingLayer
-  (GenerateTxs targetNodeAddresses
+runCommand (GenerateTxs targetNodeAddresses
                numOfTxs
                numOfInsPerTx
                numOfOutsPerTx
