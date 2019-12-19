@@ -36,8 +36,8 @@
     } // {
     src = (pkgs.lib).mkDefault (pkgs.fetchgit {
       url = "https://github.com/input-output-hk/iohk-monitoring-framework";
-      rev = "bfd5c6df5ccb0b8d9fd9288396541385c1dd9cdb";
-      sha256 = "0wss51j5ffan1bb00hv2m812458pri2yj7hlm8qlr2lf3359q3jf";
+      rev = "156391afaafca6b00d027fb9c03e1bd7a1f03003";
+      sha256 = "1g76sy52rfzl9gisn0rk5kh0vb5d3xnnyrb3ln6izswwc3r2d289";
       });
     postUnpack = "sourceRoot+=/plugins/scribe-systemd; echo source root reset to \$sourceRoot";
     }
