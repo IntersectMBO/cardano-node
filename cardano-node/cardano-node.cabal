@@ -246,6 +246,7 @@ executable cardano-cli
                      , cardano-ledger
                      , cardano-prelude
                      , cardano-node
+                     , cardano-shell
                      , iproute
                      , network
                      , optparse-applicative

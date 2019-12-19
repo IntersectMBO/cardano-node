@@ -126,10 +126,21 @@ loggingCLIConfiguration :: Maybe FilePath -> Bool -> IO (LoggingFlag, LoggingCon
 loggingCLIConfiguration mfp captureMetrics' =
     case mfp of
       Nothing ->
-        fmap (LoggingDisabled,) $ LoggingConfiguration <$> Config.empty <*> pure captureMetrics'
+        fmap (LoggingDisabled,) $ LoggingConfiguration <$> basicConfig <*> pure captureMetrics'
       Just fp -> do
         fmap (LoggingEnabled,) $ LoggingConfiguration <$> readConfig fp <*> pure captureMetrics'
   where
+    basicConfig :: IO Configuration
+    basicConfig = do
+      c <- Config.empty
+      Config.setSubTrace c "#messagecounters" $ Just NoTrace
+      Config.setSubTrace c "cardano.#messagecounters" $ Just NoTrace
+      Config.setSubTrace c "cardano.#messagecounters.switchboard" $ Just NoTrace
+      Config.setSubTrace c "cardano.#messagecounters.katip" $ Just NoTrace
+      Config.setSubTrace c "cardano.#messagecounters.aggregation" $ Just NoTrace
+      Config.setSubTrace c "cardano.#messagecounters.ekgview" $ Just NoTrace
+      Config.setSubTrace c "cardano.#messagecounters.monitoring" $ Just NoTrace
+      return c
     readConfig :: FilePath -> IO Configuration
     readConfig fp =
       catch (Config.setup fp) $ \(_ :: IOException) -> do

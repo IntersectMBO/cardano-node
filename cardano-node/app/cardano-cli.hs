@@ -21,6 +21,7 @@ import           Cardano.Config.Presets (mainnetConfiguration)
 import           Cardano.Config.Protocol (Protocol)
 import           Cardano.Config.Types (CardanoEnvironment (..))
 import           Cardano.Crypto (RequiresNetworkMagic(..))
+import           Cardano.Shell.Types (CardanoFeature (..))
 import qualified Ouroboros.Consensus.BlockchainTime as Consensus
 
 main :: IO ()
@@ -36,9 +37,12 @@ main = toplevelExceptionHandler $ do
   cmdRes <- runExceptT $ do
     finalConfig <- withExceptT ConfigError $ ExceptT $ pure $
                      mkCardanoConfiguration $ cardanoConfiguration <> partialConfig co
-    (loggingLayer, _loggingFeature) <- liftIO $
+    (loggingLayer, loggingFeature) <- liftIO $
       createLoggingFeatureCLI cardanoEnvironment finalConfig
+
     runCommand finalConfig loggingLayer $ mainCommand co
+
+    liftIO $ featureShutdown loggingFeature
 
   case cmdRes of
     Right _ -> pure ()
