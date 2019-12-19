@@ -154,12 +154,6 @@ source-repository-package
   subdir:   tracer-transformers
   tag: 156391afaafca6b00d027fb9c03e1bd7a1f03003
 
-source-repository-package
-  type: git
-  location: https://github.com/input-output-hk/iohk-monitoring-framework
-  subdir:   tracer-transformers
-  tag: 156391afaafca6b00d027fb9c03e1bd7a1f03003
-
 -- dependencies of iohk-monitoring
 source-repository-package
   type: git

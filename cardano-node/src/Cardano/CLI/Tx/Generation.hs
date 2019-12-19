@@ -55,8 +55,6 @@ import           Network.Socket (AddrInfo (..),
                      addrFamily,addrFlags, addrSocketType, defaultHints,
                      getAddrInfo)
 
-import           System.IO.Unsafe (unsafePerformIO)
-
 import           Cardano.BM.Data.Tracer (ToLogObject (..))
 import           Cardano.BM.Trace (appendName)
 import qualified Cardano.Chain.Common as CC.Common
@@ -187,6 +185,9 @@ genesisBenchmarkRunner loggingLayer
   liftIO . traceWith benchTracer . TraceBenchTxSubDebug
     $ "******* Tx generator, addresses are ready *******"
 
+  -- Set of available tx outputs (for new transactions).
+  availableFunds :: TVar.TVar AvailableFunds <- liftIO $ TVar.newTVarIO Set.empty
+
   -- We have to prepare an initial funds (it's the money we'll send from 'genesisAddress' to
   -- 'sourceAddress'), this will be our very first transaction.
   liftIO $ prepareInitialFunds
@@ -198,6 +199,7 @@ genesisBenchmarkRunner loggingLayer
              genesisAddress
              sourceAddress
              txFee
+             availableFunds
 
   liftIO . traceWith benchTracer . TraceBenchTxSubDebug
     $ "******* Tx generator, initial funds are prepared (sent to sourceAddress) *******"
@@ -219,6 +221,7 @@ genesisBenchmarkRunner loggingLayer
                  txFee
                  tpsRate
                  txAdditionalSize
+                 availableFunds
 
 {-------------------------------------------------------------------------------
   Main logic
@@ -390,6 +393,7 @@ prepareInitialFunds
   -> CC.Common.Address
   -> CC.Common.Address
   -> FeePerTx
+  -> TVar.TVar AvailableFunds
   -> IO ()
 prepareInitialFunds llTracer
                     socketFp
@@ -398,7 +402,8 @@ prepareInitialFunds llTracer
                     genesisUtxo
                     genesisAddress
                     targetAddress
-                    (FeePerTx txFee) = do
+                    (FeePerTx txFee)
+                    availableFunds = do
   let ((_, out), signingKey) = genesisUtxo Map.! 0 -- Currently there's only 1 element.
       feePerTx = assumeBound . CC.Common.mkLovelace $ txFee
       outBig = CC.UTxO.txOutValue out `subLoveLace` feePerTx
@@ -418,7 +423,7 @@ prepareInitialFunds llTracer
 
   let txIn  = CC.UTxO.TxInUtxo (getTxIdFromGenTx genesisTx) 0
       txOut = outForBig
-  addToAvailableFunds (txIn, txOut)
+  addToAvailableFunds availableFunds (txIn, txOut)
   -- Now we can use these money for further transactions.
 
 -- | Get 'TxId' from 'GenTx'. Since we generate transactions by ourselves -
@@ -582,15 +587,12 @@ addLovelace a b = assumeBound $ CC.Common.addLovelace a b
 --   with it atomically. There to support potential multithreaded use.
 -----------------------------------------------------------------------------------------
 
--- | Set of available tx outputs (for new transactions).
-availableFunds :: TVar.TVar AvailableFunds
-availableFunds = unsafePerformIO $ TVar.newTVarIO Set.empty
-
 -- | Add to the available funds.
 addToAvailableFunds
-  :: TxDetails
+  :: TVar.TVar AvailableFunds
+  -> TxDetails
   -> IO ()
-addToAvailableFunds txDetails = do
+addToAvailableFunds availableFunds txDetails = do
   let fundValueStatus = FundValueStatus
                           { status    = Unknown
                           , txDetails = txDetails
@@ -600,10 +602,11 @@ addToAvailableFunds txDetails = do
 
 -- | Find a source of available funds, removing it from the availableFunds.
 findAvailablefunds
-  :: CC.Common.Lovelace      -- with at least this associated value
+  :: TVar.TVar AvailableFunds
+  -> CC.Common.Lovelace      -- with at least this associated value
   -> (SettledStatus -> Bool) -- predicate for selecting on status
   -> ExceptT TxGenError IO FundValueStatus
-findAvailablefunds valueThreshold predStatus = do
+findAvailablefunds availableFunds valueThreshold predStatus = do
   mFVS <- liftIO . STM.atomically $ do
     funds <- TVar.readTVar availableFunds
     case find predFVS (Set.toList funds) of
@@ -647,6 +650,7 @@ runBenchmark
   -> FeePerTx
   -> TPSRate
   -> Maybe TxAdditionalSize
+  -> TVar.TVar AvailableFunds
   -> ExceptT TxGenError IO ()
 runBenchmark benchTracer
              connectTracer
@@ -662,7 +666,8 @@ runBenchmark benchTracer
              numOfOutsPerTx
              txFee
              tpsRate
-             txAdditionalSize = do
+             txAdditionalSize
+             availableFunds = do
   liftIO . traceWith benchTracer . TraceBenchTxSubDebug
     $ "******* Tx generator, phase 1: make enough available UTxO entries *******"
   createMoreFundCoins
@@ -673,6 +678,7 @@ runBenchmark benchTracer
     txFee
     numOfTxs
     numOfInsPerTx
+    availableFunds
 
   -- sleep for 20 s; subsequent txs enter new block
   liftIO $ threadDelay (20*1000*1000)
@@ -717,6 +723,10 @@ runBenchmark benchTracer
               , txSizeServiceTime = Nothing
               }
 
+  -- List of 'TMVar's with lists of transactions for submitting.
+  -- The number of these lists corresponds to the number of target nodes.
+  txsListsForTargetNodes :: MSTM.TMVar IO [MSTM.TMVar IO [GenTx ByronBlock]] <- liftIO $ STM.newTMVarIO []
+
   -- Run generator.
   txGenerator benchTracer
               pInfoConfig
@@ -728,9 +738,14 @@ runBenchmark benchTracer
               numOfInsPerTx
               numOfOutsPerTx
               txAdditionalSize
+              availableFunds
+              txsListsForTargetNodes
 
   liftIO . traceWith benchTracer . TraceBenchTxSubDebug
     $ "******* Tx generator, launch submission threads... *******"
+
+  -- TVar for termination.
+  txSubmissionTerm :: MSTM.TVar IO Bool <- liftIO $ STM.newTVarIO False
 
   liftIO $ do
     txsLists <- STM.atomically $ STM.takeTMVar txsListsForTargetNodes
@@ -763,6 +778,7 @@ createMoreFundCoins
   -> FeePerTx
   -> NumberOfTxs
   -> NumberOfInputsPerTx
+  -> TVar.TVar AvailableFunds
   -> ExceptT TxGenError IO ()
 createMoreFundCoins llTracer
                     socketFp
@@ -770,7 +786,8 @@ createMoreFundCoins llTracer
                     sourceKey
                     (FeePerTx txFee)
                     (NumberOfTxs numOfTxs)
-                    (NumberOfInputsPerTx numOfInsPerTx) = do
+                    (NumberOfInputsPerTx numOfInsPerTx)
+                    availableFunds = do
   let feePerTx              = assumeBound . CC.Common.mkLovelace $ txFee
       -- The number of splitting txout entries (corresponds to the number of all inputs we will need).
       numSplittingTxOuts    = numOfTxs * (fromIntegral numOfInsPerTx)
@@ -781,7 +798,7 @@ createMoreFundCoins llTracer
   -- 'FundValueStatus' in 'availableFunds', and it definitely contains a
   -- huge amount of money, so we can pick any amount.
   let someMoney = assumeBound . CC.Common.mkLovelace $ 10000000 -- 10 ADA
-  fvs <- findAvailablefunds someMoney (const True)
+  fvs <- findAvailablefunds availableFunds someMoney (const True)
   let sourceAddress = CC.UTxO.txOutAddress . snd $ txDetails fvs
       sourceValue   = CC.UTxO.txOutValue   . snd $ txDetails fvs
       -- Split the funds to 'numSplittingTxOuts' equal parts, subtracting the possible fees.
@@ -808,7 +825,7 @@ createMoreFundCoins llTracer
   liftIO $ forM_ splittingTxs $ \(tx, txDetailsList) -> do
     submitTx socketFp pInfoConfig (CoreId 0) tx llTracer
     -- Update available fundValueStatus to reuse the numSplittingTxOuts TxOuts.
-    forM_ txDetailsList addToAvailableFunds
+    forM_ txDetailsList (addToAvailableFunds availableFunds)
  where
   -- create txs which split the funds to numTxOuts equal parts
   createSplittingTxs
@@ -880,6 +897,8 @@ txGenerator
   -> NumberOfInputsPerTx
   -> NumberOfOutputsPerTx
   -> Maybe TxAdditionalSize
+  -> TVar.TVar AvailableFunds
+  -> MSTM.TMVar IO [MSTM.TMVar IO [GenTx ByronBlock]]
   -> ExceptT TxGenError IO ()
 txGenerator benchTracer
             cfg
@@ -890,15 +909,21 @@ txGenerator benchTracer
             (NumberOfTxs numOfTransactions)
             (NumberOfInputsPerTx numOfInsPerTx)
             (NumberOfOutputsPerTx numOfOutsPerTx)
-            txAdditionalSize = do
+            txAdditionalSize
+            availableFunds
+            txsListsForTargetNodes = do
   liftIO . traceWith benchTracer . TraceBenchTxSubDebug
     $ " Prepare to generate, total number of transactions " ++ show numOfTransactions
+
+  -- Generator is producing transactions and writes them in the list.
+  -- Later sumbitter is reading and submitting these transactions.
+  txsForSubmission :: MSTM.TMVar IO [GenTx ByronBlock] <- liftIO $ STM.newTMVarIO []
 
   -- Prepare a number of lists for transactions, for all target nodes.
   -- Later we'll write generated transactions in these lists,
   -- and they will be received and submitted by 'bulkSubmission' function.
   forM_ [1 .. numOfTargetNodes] $ \_ ->
-    liftIO $ addTxsListForTargetNode txsForSubmission
+    liftIO $ addTxsListForTargetNode txsListsForTargetNodes txsForSubmission
 
   txs <- forM [1 .. numOfTransactions] $ \_ -> do
     -- TODO: currently we take the first available output, but don't check the 'status'.
@@ -907,14 +932,14 @@ txGenerator benchTracer
     -- We take as many available inputs as we need (because we already have sufficient
     -- numbers of inputs after splitting phase).
     txInputs <- forM [1 .. numOfInsPerTx] $ \_ -> do
-      fvs <- findAvailablefunds totalValue (const True)
+      fvs <- findAvailablefunds availableFunds totalValue (const True)
       return (txDetails fvs, sourceKey)
 
     let (_, _, _, tx :: GenTx ByronBlock) = mkTransaction cfg
-                                                                             (NE.fromList txInputs)
-                                                                             (Just addressForChange)
-                                                                             recipients
-                                                                             txAdditionalSize
+                                                          (NE.fromList txInputs)
+                                                          (Just addressForChange)
+                                                          recipients
+                                                          txAdditionalSize
     return tx
 
   -- Now we have to split all transactions to parts for every target node.
@@ -926,14 +951,14 @@ txGenerator benchTracer
     -- Write newly generated txs in the list for particular node.
     -- These txs will be handled by 'bulkSubmission' function and will be sent to
     -- corresponding target node.
-    liftIO $ writeTxsInListForTargetNode txsForOneTargetNode nodeIx
+    liftIO $ writeTxsInListForTargetNode txsListsForTargetNodes txsForOneTargetNode nodeIx
 
   -- It's possible that we have a remaining transactions, in the latest sublist
   -- (if 'numOfTransactions' cannot be divided by 'numOfTargetNodes'). In this case
   -- just send these transactions to the first node. TODO: should we change this behaviour?
   when (length subLists > numOfTargetNodes) $ do
     let stillUnsentTxs = last subLists
-    liftIO $ writeTxsInListForTargetNode stillUnsentTxs 0
+    liftIO $ writeTxsInListForTargetNode txsListsForTargetNodes stillUnsentTxs 0
 
   liftIO . traceWith benchTracer . TraceBenchTxSubDebug
     $ " Done, " ++ show numOfTransactions ++ " were generated and written in a list."
@@ -967,28 +992,16 @@ divListToSublists l  d =
   in subl : divListToSublists remain d
 
 ---------------------------------------------------------------------------------------------------
--- TVar for submitter termination.
----------------------------------------------------------------------------------------------------
-
-txSubmissionTerm :: MSTM.TVar IO Bool
-txSubmissionTerm = unsafePerformIO $ STM.newTVarIO False
-
--- stopTxSubmission :: IO ()
--- stopTxSubmission = STM.atomically $
---     STM.modifyTVar' txSubmissionTerm (const True)
-
----------------------------------------------------------------------------------------------------
 -- Txs for submission.
 ---------------------------------------------------------------------------------------------------
 
--- | Creates a list of 'TMVar's with lists of transactions for submitting.
---   The number of these lists corresponds to the number of target nodes.
-txsListsForTargetNodes :: forall tx . MSTM.TMVar IO [MSTM.TMVar IO [tx]]
-txsListsForTargetNodes = unsafePerformIO $ STM.newTMVarIO []
 
 -- | Adds a list for transactions, for particular target node.
-addTxsListForTargetNode :: forall tx . MSTM.TMVar IO [tx] -> IO ()
-addTxsListForTargetNode listForOneTargetNode = STM.atomically $
+addTxsListForTargetNode
+  :: MSTM.TMVar IO [MSTM.TMVar IO [GenTx ByronBlock]]
+  -> MSTM.TMVar IO [GenTx ByronBlock]
+  -> IO ()
+addTxsListForTargetNode txsListsForTargetNodes listForOneTargetNode = STM.atomically $
   STM.tryTakeTMVar txsListsForTargetNodes >>=
     \case
       Nothing      -> STM.putTMVar txsListsForTargetNodes [listForOneTargetNode]
@@ -997,8 +1010,12 @@ addTxsListForTargetNode listForOneTargetNode = STM.atomically $
 -- | Writes list of generated transactions to the list, for particular target node.
 --   For example, if we have 3 target nodes and write txs to the list 0,
 --   these txs will later be sent to the first target node.
-writeTxsInListForTargetNode :: forall tx . [tx] -> Int -> IO ()
-writeTxsInListForTargetNode txs listIndex = STM.atomically $ do
+writeTxsInListForTargetNode
+  :: MSTM.TMVar IO [MSTM.TMVar IO [GenTx ByronBlock]]
+  -> [GenTx ByronBlock]
+  -> Int
+  -> IO ()
+writeTxsInListForTargetNode txsListsForTargetNodes txs listIndex = STM.atomically $ do
   txsLists <- STM.takeTMVar txsListsForTargetNodes
   -- We shouldn't check 'listIndex' - we control both list and index, it cannot be out-of-range.
   let txsListForTargetNode = txsLists !! listIndex
@@ -1008,11 +1025,6 @@ writeTxsInListForTargetNode txs listIndex = STM.atomically $ do
       Just txsList -> STM.putTMVar txsListForTargetNode $ txsList ++ txs
   -- Put updated content back.
   STM.putTMVar txsListsForTargetNodes txsLists
-
--- | Generator is producing transactions and writes them in the list.
---   Later sumbitter is reading and submitting these transactions.
-txsForSubmission :: forall tx . MSTM.TMVar IO [tx]
-txsForSubmission = unsafePerformIO $ STM.newTMVarIO []
 
 -- | To get higher performance we need to hide latency of getting and
 -- forwarding (in sufficient numbers) transactions.

@@ -166,6 +166,7 @@
             (hsPkgs.cardano-ledger)
             (hsPkgs.cardano-prelude)
             (hsPkgs.cardano-node)
+            (hsPkgs.cardano-shell)
             (hsPkgs.iproute)
             (hsPkgs.network)
             (hsPkgs.optparse-applicative)

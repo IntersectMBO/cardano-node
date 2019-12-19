@@ -1,5 +1,5 @@
 module Cardano.Config.Defaults
-  ( traceOptionsDefault
+  ( muteTracing
   ) where
 
 import           Cardano.Prelude
@@ -7,44 +7,32 @@ import           Cardano.Prelude
 import           Cardano.Config.Types
 
 import           Cardano.BM.Data.Tracer (TracingVerbosity (..))
-import qualified Ouroboros.Consensus.Node.Tracers as ConsensusTracers
-import           Ouroboros.Consensus.NodeNetwork (ProtocolTracers'(..))
 
-consensusTraceDefault :: ConsensusTraceOptions
-consensusTraceDefault =
-  ConsensusTracers.Tracers
-    (Const True)
-    (Const True)
-    (Const True)
-    (Const True)
-    (Const True)
-    (Const True)
-    (Const True)
-    (Const True)
-    (Const True)
-    (Const True)
-    (Const True)
 
-protocolTraceDefault :: ProtocolTraceOptions
-protocolTraceDefault =
-  ProtocolTracers
-    (Const True)
-    (Const True)
-    (Const True)
-    (Const True)
-    (Const True)
-    (Const True)
-
-traceOptionsDefault :: TraceOptions
-traceOptionsDefault =
-  TraceOptions
-    { traceVerbosity = NormalVerbosity
-    , traceChainDB = True
-    , traceConsensus = consensusTraceDefault
-    , traceProtocols = protocolTraceDefault
-    , traceIpSubscription = True
-    , traceDnsSubscription = True
-    , traceDnsResolver = True
-    , traceErrorPolicy = True
-    , traceMux = True
-    }
+muteTracing :: TraceOptions
+muteTracing = TraceOptions
+  { traceVerbosity = NormalVerbosity
+  , traceChainDB = False
+  , traceChainSyncClient = False
+  , traceChainSyncHeaderServer = False
+  , traceChainSyncBlockServer = False
+  , traceBlockFetchDecisions = False
+  , traceBlockFetchClient = False
+  , traceBlockFetchServer = False
+  , traceTxInbound = False
+  , traceTxOutbound = False
+  , traceLocalTxSubmissionServer = False
+  , traceMempool = False
+  , traceForge = False
+  , traceChainSyncProtocol = False
+  , traceBlockFetchProtocol = False
+  , traceBlockFetchProtocolSerialised = False
+  , traceTxSubmissionProtocol = False
+  , traceLocalChainSyncProtocol = False
+  , traceLocalTxSubmissionProtocol = False
+  , traceIpSubscription = False
+  , traceDnsSubscription = False
+  , traceDnsResolver = False
+  , traceErrorPolicy = False
+  , traceMux = False
+  }
