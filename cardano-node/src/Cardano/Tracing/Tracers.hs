@@ -27,7 +27,6 @@ import           Control.Monad.Class.MonadSTM
 import           Control.Tracer
 
 import           Codec.CBOR.Read (DeserialiseFailure)
-import           Data.Functor.Const (Const (..))
 import           Data.Functor.Contravariant (contramap)
 import           Data.Text (Text, pack)
 import qualified Network.Socket as Socket (SockAddr)
