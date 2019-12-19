@@ -23,9 +23,10 @@ module Cardano.Tracing.Tracers
 import           Cardano.Prelude hiding (atomically)
 import           Prelude (String)
 
-import           Codec.CBOR.Read (DeserialiseFailure)
 import           Control.Monad.Class.MonadSTM
 import           Control.Tracer
+
+import           Codec.CBOR.Read (DeserialiseFailure)
 import           Data.Functor.Contravariant (contramap)
 import           Data.Text (Text, pack)
 import qualified Network.Socket as Socket (SockAddr)
@@ -65,6 +66,7 @@ import qualified Ouroboros.Storage.ChainDB as ChainDB
 import           Cardano.Config.Protocol (TraceConstraints)
 import           Cardano.Config.Types
 import           Cardano.Tracing.ToObjectOrphans
+import           Cardano.Tracing.MicroBenchmarking
 
 import           Control.Tracer.Transformers
 
@@ -135,6 +137,11 @@ mkTracers traceOptions tracer = do
       <*> (counting $ liftCounting staticMetaCC name "adopted" tracer)
       <*> (counting $ liftCounting staticMetaCC name "didnt-adopt" tracer)
       <*> (counting $ liftCounting staticMetaCC name "forged-invalid" tracer)
+
+  -- The outcomes we want to measure, the outcome extractor
+  -- for measuring the time it takes a transaction to get into
+  -- a block.
+  -- txsOutcomeExtractor <- mkOutcomeExtractor
 
   pure Tracers
     { chainDBTracer
@@ -232,18 +239,37 @@ mkTracers traceOptions tracer = do
                                                     -> ( length txs0 + length txs1
                                                        , tot0
                                                        )
-            logValue1, logValue2 :: LOContent a
+            logValue1 :: LOContent a
             logValue1 = LogValue "txsInMempool" $ PureI $ fromIntegral tot
+
+            logValue2 :: LOContent a
             logValue2 = LogValue "txsProcessed" $ PureI $ fromIntegral n
+
         meta <- mkLOMeta Critical Confidential
+
         traceNamedObject tr (meta, logValue1)
         traceNamedObject tr' (meta, logValue1)
+
         traceNamedObject tr (meta, logValue2)
         traceNamedObject tr' (meta, logValue2)
 
+
+    mempoolTracer :: Tracer IO (TraceEventMempool blk)
     mempoolTracer = Tracer $ \ev -> do
       traceWith (mempoolTraceTransformer tracer) ev
+      traceWith (measureTxsStart tracer) ev
       traceWith (showTracing $ withName "Mempool" tracer) ev
+
+    forgeTracer :: ForgeTracers -> TraceOptions -> Tracer IO (Consensus.TraceForgeEvent blk (GenTx blk))
+    forgeTracer forgeTracers traceOpts = Tracer $ \ev -> do
+        traceWith (measureTxsEnd tracer) ev
+        traceWith (consensusForgeTracer) ev
+      where
+        -- The consensus tracer.
+        consensusForgeTracer = tracerOnOff (traceForge traceOpts)
+          $ annotateSeverity
+          $ teeForge forgeTracers StructuredLogging tracingVerbosity
+          $ addName "Forge" tracer
 
     teeForge
       :: ForgeTracers
@@ -323,10 +349,7 @@ mkTracers traceOptions tracer = do
       , Consensus.mempoolTracer
         = tracerOnOff (traceMempool traceOpts) $ mempoolTracer
       , Consensus.forgeTracer
-        = tracerOnOff (traceForge traceOpts)
-          $ annotateSeverity
-          $ teeForge forgeTracers StructuredLogging tracingVerbosity
-          $ addName "Forge" tracer
+        = forgeTracer forgeTracers traceOpts
       }
 
 
@@ -364,10 +387,11 @@ data ChainInformation = ChainInformation {
 
 chainInformation :: forall block . AF.HasHeader block
                  => AF.AnchoredFragment block -> ChainInformation
-chainInformation frag = ChainInformation {
-                          slots = slotN,
-                          blocks = blockN,
-                          density = calcDensity blockD slotD }
+chainInformation frag = ChainInformation
+    { slots     = slotN
+    , blocks    = blockN
+    , density   = calcDensity blockD slotD
+    }
   where
     calcDensity :: Word64 -> Word64 -> Rational
     calcDensity bl sl

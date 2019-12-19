@@ -10,8 +10,7 @@
 {-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
 
 module Cardano.Tracing.ToObjectOrphans
-  (
-    WithTip (..)
+  ( WithTip (..)
   , showTip
   , showWithTip
   ) where
@@ -63,7 +62,6 @@ import           Ouroboros.Network.TxSubmission.Outbound
 
 import qualified Ouroboros.Storage.ChainDB as ChainDB
 import qualified Ouroboros.Storage.LedgerDB.OnDisk as LedgerDB
-
 
 -- | Tracing wrapper which includes current tip in the logs (thus it requires
 -- it from the context).
@@ -863,4 +861,5 @@ instance ProtocolLedgerView blk => ToObject (TraceForgeEvent blk tx) where
         , "slot"    .= toJSON (unSlotNo slotNo)
         , "reason"  .= show invalidBlockReason
         ]
+
 

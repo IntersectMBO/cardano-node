@@ -64,6 +64,7 @@
           (hsPkgs.tracer-transformers)
           (hsPkgs.transformers)
           (hsPkgs.transformers-except)
+          (hsPkgs.tracer-transformers)
           (hsPkgs.typed-protocols)
           (hsPkgs.typed-protocols-cbor)
           (hsPkgs.utf8-string)
