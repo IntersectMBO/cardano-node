@@ -12,23 +12,11 @@ import           System.Exit (exitFailure)
 import           Cardano.CLI.Parsers
 import           Cardano.CLI.Run
 import           Cardano.Common.TopHandler
-import           Cardano.Common.Parsers
-import           Cardano.Config.Logging (createLoggingFeatureCLI)
-import           Cardano.Config.Protocol (Protocol)
-import           Cardano.Config.Types (CardanoEnvironment (..))
-import           Cardano.Crypto (RequiresNetworkMagic(..))
-import           Cardano.Shell.Types (CardanoFeature (..))
-import qualified Ouroboros.Consensus.BlockchainTime as Consensus
 
 main :: IO ()
 main = toplevelExceptionHandler $ do
 
   co <- Opt.customExecParser pref opts
-  -- Initialize logging layer. Particularly, we need it for benchmarking (command 'generate-txs').
-  let cardanoConfiguration :: PartialCardanoConfiguration
-      cardanoConfiguration = mainnetConfiguration
-      cardanoEnvironment :: CardanoEnvironment
-      cardanoEnvironment = NoEnvironment
 
   cmdRes <- runExceptT . runCommand $ mainCommand co
 
@@ -55,9 +43,10 @@ main = toplevelExceptionHandler $ do
 
 data CLI = CLI { mainCommand :: ClientCommand }
 
-parseClientCommand :: Parser ClientCommand
+parseClientCommand :: Parser CLI
 parseClientCommand =
-  CLI <$> parseGenesisRelatedValues
-      <|> parseKeyRelatedValues
-      <|> parseDelegationRelatedValues
-      <|> parseTxRelatedValues
+  CLI <$> (   parseGenesisRelatedValues
+          <|> parseKeyRelatedValues
+          <|> parseDelegationRelatedValues
+          <|> parseTxRelatedValues
+          )
