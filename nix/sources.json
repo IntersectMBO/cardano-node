@@ -5,10 +5,10 @@
         "homepage": null,
         "owner": "input-output-hk",
         "repo": "cardano-byron-proxy",
-        "rev": "b78ad28f1b225c0b311d37ea932950b3d483b333",
-        "sha256": "170aanjpb0sacn622bv5ij94j0mgysk4j9dflq6gjwnlc7gqnlfs",
+        "rev": "d742b40b8645385d44265ddd450f43e0865c172a",
+        "sha256": "18xs6a96bk76n7sckzjqc8qa6h9dj6pv5c4zzbk58k899xnivsvz",
         "type": "tarball",
-        "url": "https://github.com/input-output-hk/cardano-byron-proxy/archive/b78ad28f1b225c0b311d37ea932950b3d483b333.tar.gz",
+        "url": "https://github.com/input-output-hk/cardano-byron-proxy/archive/d742b40b8645385d44265ddd450f43e0865c172a.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "cardano-sl": {

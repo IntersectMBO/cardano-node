@@ -56,7 +56,7 @@ import           Ouroboros.Network.Block
 import           Ouroboros.Consensus.Node (NodeKernel (getChainDB),
                      ConnectionId (..), DiffusionTracers (..), DiffusionArguments (..),
                      DnsSubscriptionTarget (..), IPSubscriptionTarget (..),
-                     RunNode (nodeNetworkMagic, nodeStartTime))
+                     RunNode (nodeNetworkMagic, nodeStartTime), IsProducer (..))
 import qualified Ouroboros.Consensus.Node as Node (run)
 import           Ouroboros.Consensus.Node.ProtocolInfo
 import           Ouroboros.Consensus.NodeId
@@ -245,6 +245,7 @@ handleSimpleNode p trace nodeTracers nCli nc = do
       (nodeNetworkMagic (Proxy @blk) cfg)
       (dbPath <> "-" <> show nid)
       pInfo
+      isProducer
       customiseChainDbArgs
       id -- No NodeParams customisation
       $ \registry nodeKernel -> do
@@ -267,3 +268,17 @@ handleSimpleNode p trace nodeTracers nCli nc = do
           then ValidateAllEpochs
           else ValidateMostRecentEpoch
       }
+
+    isProducer :: IsProducer
+    isProducer = case p of
+      -- For the real protocol, look at the leader credentials
+      Consensus.ProtocolRealPBFT _ _ _ _ mbLeaderCredentials
+        | Just _ <- mbLeaderCredentials
+        -> IsProducer
+        | otherwise
+        -> IsNotProducer
+
+      -- For mock protocols, look at the NodeId
+      _ -> case ncNodeId nc of
+             Just (CoreId _) -> IsProducer
+             _               -> IsNotProducer

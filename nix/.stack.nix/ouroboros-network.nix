@@ -36,6 +36,7 @@
           (hsPkgs.fingertree)
           (hsPkgs.iproute)
           (hsPkgs.network)
+          (hsPkgs.psqueues)
           (hsPkgs.serialise)
           (hsPkgs.stm)
           (hsPkgs.time)
@@ -89,6 +90,7 @@
             (hsPkgs.mtl)
             (hsPkgs.network-mux)
             (hsPkgs.network)
+            (hsPkgs.psqueues)
             (hsPkgs.ouroboros-network-testing)
             (hsPkgs.pipes)
             (hsPkgs.process)
@@ -136,8 +138,8 @@
     } // {
     src = (pkgs.lib).mkDefault (pkgs.fetchgit {
       url = "https://github.com/input-output-hk/ouroboros-network";
-      rev = "602856e08e0ebe9d63751185d39580d3b22989c1";
-      sha256 = "1frmr2szqipfxnny8d1h18564dwssach5liy9i4vcg1dpjzfdph6";
+      rev = "cc5b89ae36da2c2584c3a633b8d75344e2e5e734";
+      sha256 = "083by550rr3n31b2cwhrqnqlr8x6n1k19arrj3q9mz3mbl4al4wx";
       });
     postUnpack = "sourceRoot+=/ouroboros-network; echo source root reset to \$sourceRoot";
     }
