@@ -111,7 +111,7 @@ RequiresNetworkMagic: RequiresMagic
 PBftSignatureThreshold: 0.7
 TurnOnLogging: True
 ViewMode: LiveView
-TurnOnLogMetrics: True
+TurnOnLogMetrics: False
 
 
 

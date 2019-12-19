@@ -10,8 +10,21 @@ set -e
 
 # CMD="stack exec --nix cardano-node --"
 CMD="cabal v2-run --"
-# EXTRA="--live-view"
-EXTRA=""
+
+EXTRA="--trace-block-fetch-client \
+       --trace-chain-sync-protocol \
+       --trace-block-fetch-protocol \
+       --trace-block-fetch-server \
+       --trace-chain-sync-header-server \
+       --trace-tx-inbound \
+       --trace-tx-outbound \
+       --trace-local-tx-submission-server \
+       --trace-local-chain-sync-protocol \
+       --trace-tx-submission-protocol \
+       --trace-local-tx-submission-protocol \
+       --trace-ip-subscription \
+       --trace-dns-subscription \
+       --trace-dns-resolver"
 
 . $(dirname $0)/lib-node.sh
 
