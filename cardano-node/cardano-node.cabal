@@ -39,8 +39,10 @@ library
                        Cardano.Node.TUI.GitRevFromGit
                        Cardano.Tracing.TraceAcceptor
                        Cardano.Tracing.Tracers
-                       Cardano.Wallet.Run
                        Cardano.Wallet.Client
+                       Cardano.Wallet.Logging
+                       Cardano.Wallet.Run
+
 
   other-modules:       Paths_cardano_node
                        Cardano.Tracing.ToObjectOrphans

@@ -13,7 +13,7 @@ import qualified Options.Applicative as Opt
 
 import           Cardano.Shell.Lib (runCardanoApplicationWithFeatures)
 import           Cardano.Shell.Types (CardanoApplication (..),
-                                      CardanoFeature (..),)
+                                      CardanoFeature (..))
 
 import           Cardano.Common.Help
 import           Cardano.Common.TopHandler

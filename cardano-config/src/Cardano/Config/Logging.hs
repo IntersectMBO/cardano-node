@@ -11,6 +11,7 @@ module Cardano.Config.Logging
   , LoggingConfiguration (..)
   , createLoggingFeature
   , createLoggingFeatureCLI
+  , loggingCardanoFeatureInit
   , loggingCLIConfiguration
   -- re-exports
   , Trace

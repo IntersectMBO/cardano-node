@@ -13,6 +13,7 @@ module Cardano.Common.Parsers
   , parseFilePath
   , parseFlag
   , parseFlag'
+  , parseGenesisFile
   , parseIntegral
   , parseIntegralWithDefault
   , parseLastKnownBlockVersion
@@ -116,6 +117,11 @@ parseDbPath =
     <> metavar "FILEPATH"
     <> help "Directory where the state is stored."
     )
+
+
+parseGenesisFile :: String -> Parser GenesisFile
+parseGenesisFile opt =
+  GenesisFile <$> parseFilePath opt "Genesis JSON file."
 
 -- Common command line parsers
 
