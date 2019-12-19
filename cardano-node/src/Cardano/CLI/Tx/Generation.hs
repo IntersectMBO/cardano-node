@@ -26,7 +26,6 @@ import           Prelude (String)
 import           Codec.CBOR.Read (deserialiseFromBytes)
 import           Control.Concurrent (threadDelay)
 import qualified Control.Concurrent.STM as STM
-import qualified Control.Concurrent.STM.TVar as TVar
 import           Control.Exception (IOException)
 import qualified Control.Exception as Exception
 import           Control.Monad (forM, forM_, mapM, when)
@@ -185,21 +184,17 @@ genesisBenchmarkRunner loggingLayer
   liftIO . traceWith benchTracer . TraceBenchTxSubDebug
     $ "******* Tx generator, addresses are ready *******"
 
-  -- Set of available tx outputs (for new transactions).
-  availableFunds :: TVar.TVar AvailableFunds <- liftIO $ TVar.newTVarIO Set.empty
-
   -- We have to prepare an initial funds (it's the money we'll send from 'genesisAddress' to
   -- 'sourceAddress'), this will be our very first transaction.
-  liftIO $ prepareInitialFunds
-             lowLevelSubmitTracer
-             socketFp
-             genesisConfig
-             pInfoConfig
-             genesisUtxo
-             genesisAddress
-             sourceAddress
-             txFee
-             availableFunds
+  fundsWithGenesisMoney <- liftIO $
+    prepareInitialFunds lowLevelSubmitTracer
+                        socketFp
+                        genesisConfig
+                        pInfoConfig
+                        genesisUtxo
+                        genesisAddress
+                        sourceAddress
+                        txFee
 
   liftIO . traceWith benchTracer . TraceBenchTxSubDebug
     $ "******* Tx generator, initial funds are prepared (sent to sourceAddress) *******"
@@ -221,7 +216,7 @@ genesisBenchmarkRunner loggingLayer
                  txFee
                  tpsRate
                  txAdditionalSize
-                 availableFunds
+                 fundsWithGenesisMoney
 
 {-------------------------------------------------------------------------------
   Main logic
@@ -393,8 +388,7 @@ prepareInitialFunds
   -> CC.Common.Address
   -> CC.Common.Address
   -> FeePerTx
-  -> TVar.TVar AvailableFunds
-  -> IO ()
+  -> IO AvailableFunds
 prepareInitialFunds llTracer
                     socketFp
                     genesisConfig
@@ -402,8 +396,7 @@ prepareInitialFunds llTracer
                     genesisUtxo
                     genesisAddress
                     targetAddress
-                    (FeePerTx txFee)
-                    availableFunds = do
+                    (FeePerTx txFee) = do
   let ((_, out), signingKey) = genesisUtxo Map.! 0 -- Currently there's only 1 element.
       feePerTx = assumeBound . CC.Common.mkLovelace $ txFee
       outBig = CC.UTxO.txOutValue out `subLoveLace` feePerTx
@@ -423,8 +416,13 @@ prepareInitialFunds llTracer
 
   let txIn  = CC.UTxO.TxInUtxo (getTxIdFromGenTx genesisTx) 0
       txOut = outForBig
-  addToAvailableFunds availableFunds (txIn, txOut)
-  -- Now we can use these money for further transactions.
+
+  -- Form availableFunds with a single value, it will be used for further (splitting) transactions.
+  let genesisTxValueStatus = FundValueStatus
+                               { status    = Unknown
+                               , txDetails = (txIn, txOut)
+                               }
+  return $ Set.singleton genesisTxValueStatus
 
 -- | Get 'TxId' from 'GenTx'. Since we generate transactions by ourselves -
 --   we definitely know that it's 'ByronTx' only.
@@ -583,49 +581,6 @@ addLovelace :: CC.Common.Lovelace -> CC.Common.Lovelace -> CC.Common.Lovelace
 addLovelace a b = assumeBound $ CC.Common.addLovelace a b
 
 -----------------------------------------------------------------------------------------
--- | Work with funds. We store a set of tx information in a 'TVar' to be able to work
---   with it atomically. There to support potential multithreaded use.
------------------------------------------------------------------------------------------
-
--- | Add to the available funds.
-addToAvailableFunds
-  :: TVar.TVar AvailableFunds
-  -> TxDetails
-  -> IO ()
-addToAvailableFunds availableFunds txDetails = do
-  let fundValueStatus = FundValueStatus
-                          { status    = Unknown
-                          , txDetails = txDetails
-                          }
-  STM.atomically $
-    TVar.modifyTVar' availableFunds (Set.insert fundValueStatus)
-
--- | Find a source of available funds, removing it from the availableFunds.
-findAvailablefunds
-  :: TVar.TVar AvailableFunds
-  -> CC.Common.Lovelace      -- with at least this associated value
-  -> (SettledStatus -> Bool) -- predicate for selecting on status
-  -> ExceptT TxGenError IO FundValueStatus
-findAvailablefunds availableFunds valueThreshold predStatus = do
-  mFVS <- liftIO . STM.atomically $ do
-    funds <- TVar.readTVar availableFunds
-    case find predFVS (Set.toList funds) of
-      Nothing                  -> return Nothing
-      j@(Just fundValueStatus) -> do
-        -- Remove it from set of available funds (to prevent double spending).
-        TVar.modifyTVar' availableFunds (Set.delete fundValueStatus)
-        return j
-  case mFVS of
-    Nothing -> left InsufficientFundsForRecipientTx
-    Just fvs -> right fvs
- where
-  -- Find the first tx output that contains sufficient amount of money.
-  predFVS :: FundValueStatus -> Bool
-  predFVS FundValueStatus{status, txDetails} =
-       predStatus status
-    && (CC.UTxO.txOutValue . snd $ txDetails) >= valueThreshold
-
------------------------------------------------------------------------------------------
 -- | Run benchmark using top level tracers..
 -----------------------------------------------------------------------------------------
 
@@ -650,7 +605,7 @@ runBenchmark
   -> FeePerTx
   -> TPSRate
   -> Maybe TxAdditionalSize
-  -> TVar.TVar AvailableFunds
+  -> AvailableFunds
   -> ExceptT TxGenError IO ()
 runBenchmark benchTracer
              connectTracer
@@ -667,18 +622,18 @@ runBenchmark benchTracer
              txFee
              tpsRate
              txAdditionalSize
-             availableFunds = do
+             fundsWithGenesisMoney = do
   liftIO . traceWith benchTracer . TraceBenchTxSubDebug
     $ "******* Tx generator, phase 1: make enough available UTxO entries *******"
-  createMoreFundCoins
-    lowLevelSubmitTracer
-    socketFp
-    pInfoConfig
-    sourceKey
-    txFee
-    numOfTxs
-    numOfInsPerTx
-    availableFunds
+  fundsWithSufficientCoins <-
+      createMoreFundCoins lowLevelSubmitTracer
+                          socketFp
+                          pInfoConfig
+                          sourceKey
+                          txFee
+                          numOfTxs
+                          numOfInsPerTx
+                          fundsWithGenesisMoney
 
   -- sleep for 20 s; subsequent txs enter new block
   liftIO $ threadDelay (20*1000*1000)
@@ -738,7 +693,7 @@ runBenchmark benchTracer
               numOfInsPerTx
               numOfOutsPerTx
               txAdditionalSize
-              availableFunds
+              fundsWithSufficientCoins
               txsListsForTargetNodes
 
   liftIO . traceWith benchTracer . TraceBenchTxSubDebug
@@ -778,8 +733,8 @@ createMoreFundCoins
   -> FeePerTx
   -> NumberOfTxs
   -> NumberOfInputsPerTx
-  -> TVar.TVar AvailableFunds
-  -> ExceptT TxGenError IO ()
+  -> AvailableFunds
+  -> ExceptT TxGenError IO AvailableFunds
 createMoreFundCoins llTracer
                     socketFp
                     pInfoConfig
@@ -787,7 +742,7 @@ createMoreFundCoins llTracer
                     (FeePerTx txFee)
                     (NumberOfTxs numOfTxs)
                     (NumberOfInputsPerTx numOfInsPerTx)
-                    availableFunds = do
+                    fundsWithGenesisMoney = do
   let feePerTx              = assumeBound . CC.Common.mkLovelace $ txFee
       -- The number of splitting txout entries (corresponds to the number of all inputs we will need).
       numSplittingTxOuts    = numOfTxs * (fromIntegral numOfInsPerTx)
@@ -796,11 +751,10 @@ createMoreFundCoins llTracer
   -- Now we have to find the first output with sufficient amount of money.
   -- But since we made only one single transaction, there is only one
   -- 'FundValueStatus' in 'availableFunds', and it definitely contains a
-  -- huge amount of money, so we can pick any amount.
-  let someMoney = assumeBound . CC.Common.mkLovelace $ 10000000 -- 10 ADA
-  fvs <- findAvailablefunds availableFunds someMoney (const True)
-  let sourceAddress = CC.UTxO.txOutAddress . snd $ txDetails fvs
-      sourceValue   = CC.UTxO.txOutValue   . snd $ txDetails fvs
+  -- huge amount of money.
+  let genesisTxDetails = txDetails $ (Set.toList fundsWithGenesisMoney) !! 0
+      sourceAddress = CC.UTxO.txOutAddress . snd $ genesisTxDetails
+      sourceValue   = CC.UTxO.txOutValue   . snd $ genesisTxDetails
       -- Split the funds to 'numSplittingTxOuts' equal parts, subtracting the possible fees.
       -- a safe number for fees is numSplittingTxOuts * feePerTx.
       splittedValue = assumeBound . CC.Common.mkLovelace $
@@ -816,16 +770,19 @@ createMoreFundCoins llTracer
                         }
       -- Create and sign splitting txs.
       splittingTxs  = createSplittingTxs pInfoConfig
-                                             (txDetails fvs, sourceKey)
-                                             numSplittingTxOuts
-                                             numOutsPerSplittingTx
-                                             42
-                                             txOut
-                                             []
-  liftIO $ forM_ splittingTxs $ \(tx, txDetailsList) -> do
+                                         (genesisTxDetails, sourceKey)
+                                         numSplittingTxOuts
+                                         numOutsPerSplittingTx
+                                         42
+                                         txOut
+                                         []
+  -- Submit all splitting transactions sequentially.
+  liftIO $ forM_ splittingTxs $ \(tx, _) ->
     submitTx socketFp pInfoConfig (CoreId 0) tx llTracer
-    -- Update available fundValueStatus to reuse the numSplittingTxOuts TxOuts.
-    forM_ txDetailsList (addToAvailableFunds availableFunds)
+
+  -- Re-create availableFunds with information about all splitting transactions
+  -- (it will be used for main transactions).
+  right $ reCreateAvailableFunds splittingTxs
  where
   -- create txs which split the funds to numTxOuts equal parts
   createSplittingTxs
@@ -874,6 +831,18 @@ createMoreFundCoins llTracer
                                    (identityIndex + fromIntegral numOutsPerInitTx)
                                    txOut
                                    ((genTx, txDetailsList) : acc)
+  reCreateAvailableFunds
+    :: [(GenTx ByronBlock, [TxDetails])]
+    -> AvailableFunds
+  reCreateAvailableFunds splittingTxs =
+    Set.fromList $
+      [ FundValueStatus { status    = Unknown
+                        , txDetails = txDetails
+                        }
+      | txDetails <- allTxDetails
+      ]
+   where
+    allTxDetails = concat $ map snd splittingTxs
 
 -----------------------------------------------------------------------------------------
 -- | Work with tx generator thread (for Phase 2).
@@ -897,7 +866,7 @@ txGenerator
   -> NumberOfInputsPerTx
   -> NumberOfOutputsPerTx
   -> Maybe TxAdditionalSize
-  -> TVar.TVar AvailableFunds
+  -> AvailableFunds
   -> MSTM.TMVar IO [MSTM.TMVar IO [GenTx ByronBlock]]
   -> ExceptT TxGenError IO ()
 txGenerator benchTracer
@@ -910,7 +879,7 @@ txGenerator benchTracer
             (NumberOfInputsPerTx numOfInsPerTx)
             (NumberOfOutputsPerTx numOfOutsPerTx)
             txAdditionalSize
-            availableFunds
+            fundsWithSufficientCoins
             txsListsForTargetNodes = do
   liftIO . traceWith benchTracer . TraceBenchTxSubDebug
     $ " Prepare to generate, total number of transactions " ++ show numOfTransactions
@@ -925,22 +894,7 @@ txGenerator benchTracer
   forM_ [1 .. numOfTargetNodes] $ \_ ->
     liftIO $ addTxsListForTargetNode txsListsForTargetNodes txsForSubmission
 
-  txs <- forM [1 .. numOfTransactions] $ \_ -> do
-    -- TODO: currently we take the first available output, but don't check the 'status'.
-    -- Later it should be changed: we have to use outputs from 'Seen' transactions only.
-
-    -- We take as many available inputs as we need (because we already have sufficient
-    -- numbers of inputs after splitting phase).
-    txInputs <- forM [1 .. numOfInsPerTx] $ \_ -> do
-      fvs <- findAvailablefunds availableFunds totalValue (const True)
-      return (txDetails fvs, sourceKey)
-
-    let (_, _, _, tx :: GenTx ByronBlock) = mkTransaction cfg
-                                                          (NE.fromList txInputs)
-                                                          (Just addressForChange)
-                                                          recipients
-                                                          txAdditionalSize
-    return tx
+  txs <- createMainTxs numOfTransactions numOfInsPerTx fundsWithSufficientCoins
 
   -- Now we have to split all transactions to parts for every target node.
   -- These parts will be written to corresponding lists and submitted to the node.
@@ -978,6 +932,53 @@ txGenerator benchTracer
   txFeeInLovelaces = assumeBound . CC.Common.mkLovelace $ txFee
   -- Send possible change to the same 'recipientAddress'.
   addressForChange = recipientAddress
+
+  -- Create all main transactions, using available funds.
+  createMainTxs
+    :: Word64
+    -> Int
+    -> AvailableFunds
+    -> ExceptT TxGenError IO [GenTx ByronBlock]
+  createMainTxs 0 _ _ = right []
+  createMainTxs txsNum insNumPerTx funds = do
+    (txInputs, updatedFunds) <- getTxInputs insNumPerTx funds
+    let (_, _, _, tx :: GenTx ByronBlock) = mkTransaction cfg
+                                                          (NE.fromList txInputs)
+                                                          (Just addressForChange)
+                                                          recipients
+                                                          txAdditionalSize
+    (tx :) <$> createMainTxs (txsNum - 1) insNumPerTx updatedFunds
+
+  -- Get inputs for one main transaction, using available funds.
+  getTxInputs
+    :: Int
+    -> AvailableFunds
+    -> ExceptT TxGenError IO ( [(TxDetails, Crypto.SigningKey)]
+                             , AvailableFunds
+                             )
+  getTxInputs 0 funds = right ([], funds)
+  getTxInputs insNumPerTx funds = do
+    (fvs, updatedFunds) <- findAvailableFunds funds totalValue (const True)
+    (inputs, updatedFunds') <- getTxInputs (insNumPerTx - 1) updatedFunds
+    right ((txDetails fvs, sourceKey) : inputs, updatedFunds')
+
+  -- Find a source of available funds, removing it from the availableFunds
+  -- for preventing of double spending.
+  findAvailableFunds
+    :: AvailableFunds          -- funds we are trying to find in
+    -> CC.Common.Lovelace      -- with at least this associated value
+    -> (SettledStatus -> Bool) -- predicate for selecting on status
+    -> ExceptT TxGenError IO (FundValueStatus, AvailableFunds)
+  findAvailableFunds funds valueThreshold predStatus =
+    case find predFVS (Set.toList funds) of
+      Nothing    -> left InsufficientFundsForRecipientTx
+      Just found -> right (found, Set.delete found funds)
+   where
+    -- Find the first tx output that contains sufficient amount of money.
+    predFVS :: FundValueStatus -> Bool
+    predFVS FundValueStatus{status, txDetails} =
+         predStatus status
+      && (CC.UTxO.txOutValue . snd $ txDetails) >= valueThreshold
 
 -- | Takes a list 'L' and a number 'D'. Returns a list of sublists which contains
 --   parts of 'L' with length that is equal to 'D'. Remaining part (if exists) will
