@@ -2,6 +2,42 @@
 
 ## Unreleased changes
 
+## 1.2.0 -- December 2019
+
+### node changes
+- Update to latest dependencies (consensus, ledger, logging etc)
+- More monitoring counters/statistics, including Prometheus output (#366)
+- Remove unused legacy and wallet configuration fields (code and confg files)
+- Improve README files
+- Hide tracing options from default `--help` command
+- Fix flakeyness in logging setup & shutdown
+- Stop message counter messages from appearing in log files
+- Refactor CLI and config parser code.
+
+### consensus changes
+- Improve chain sync serving performance by binary streaming of headers (#1330)
+- Much more reliable detection of disk corruption in epoch files (#290, #1253)
+- Limit the size of forged blocks (#686)
+- Change mempool capacity from number of transactions to size in bytes (#974)
+- Set node's default mempool capacity to 2x the mainnet block size
+- Avoid logging messages about block forging for nodes that do not forge
+- Allow starting before genesis start time by waiting, and log message
+- Fix a number of bugs related to EBBs, found by QC tests
+- Improved the QC test case generators to cover EBBs better
+- Fix a memory retention bug and make thunk detection tests pass
+- Use file locks for the chain DB (#1266)
+- Get the slot length from the genesis file (#1345)
+
+### ledger changes
+- Remove support for HD addresses (not needed by the ledger, just wallets)
+- Remove unnecessary SafeSigner abstraction
+- Remove unnecessary EncryptedSigningKey
+- Remove dependency on scrypt
+- Add tests for isRedeemAddress, improve address encoding/decoding
+
+### #network changes
+- Added initial peer-to-peer governor with QC tests. Not yet used.
+
 ## 1.1.0 -- December 2019
 
 ### node changes
