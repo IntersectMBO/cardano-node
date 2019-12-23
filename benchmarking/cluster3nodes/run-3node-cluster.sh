@@ -19,22 +19,7 @@ CMD="cabal v2-run --"
 # VERBOSITY="--tracing-verbosity-normal"
 VERBOSITY="--tracing-verbosity-maximal"
 
-# EXTRA=""
-EXTRA="
-  --trace-block-fetch-decisions
-  --trace-block-fetch-client
-  --trace-block-fetch-server
-  --trace-tx-inbound
-  --trace-tx-outbound
-  --trace-local-tx-submission-server
-  --trace-mempool
-  --trace-forge
-  --trace-chain-sync-protocol
-  --trace-block-fetch-protocol
-  --trace-tx-submission-protocol
-  --trace-local-chain-sync-protocol
-  --trace-local-tx-submission-protocol
-"
+EXTRA=""
 
 BASEPATH=$(realpath $(dirname $0))
 
