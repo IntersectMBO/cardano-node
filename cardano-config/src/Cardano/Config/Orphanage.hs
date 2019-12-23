@@ -25,6 +25,15 @@ deriving instance Num Consensus.SlotLength
 
 deriving instance Show TracingVerbosity
 
+instance FromJSON TracingVerbosity where
+  parseJSON (String str) = case str of
+    "MinimalVerbosity" -> pure MinimalVerbosity
+    "MaximalVerbosity" -> pure MaximalVerbosity
+    "NormalVerbosity" -> pure NormalVerbosity
+    err -> panic $ "Parsing of TracingVerbosity failed, "
+                 <> err <> " is not a valid TracingVerbosity"
+  parseJSON invalid  = panic $ "Parsing of TracingVerbosity failed due to type mismatch. "
+                             <> "Encountered: " <> (T.pack $ Prelude.show invalid)
 
 instance FromJSON PortNumber where
   parseJSON (Number portNum) = case readMaybe . show $ coefficient portNum of

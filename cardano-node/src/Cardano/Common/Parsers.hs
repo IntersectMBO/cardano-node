@@ -53,10 +53,6 @@ import           Cardano.Config.Types
 
 -- Common command line parsers
 
--- | Help hidden in order to reduce help output of `cardano-node`.
-cliTracingParserHiddenHelp :: Parser (Last TraceOptions)
-cliTracingParserHiddenHelp = Last . Just <$> parseTraceOptions Opt.internal
-
 -- | Help not hidden
 cliTracingParser :: Parser (Last TraceOptions)
 cliTracingParser = Last . Just <$> parseTraceOptions mempty
@@ -77,11 +73,9 @@ nodeCliParser = do
 
   -- Node Address
   nAddress <- parseNodeAddress
+
   -- NodeConfiguration filepath
   nodeConfigFp <- parseConfigFile
-
-  -- TraceOptions
-  traceOptions <- cliTracingParserHiddenHelp
 
   validate <- parseValidateDB
 
@@ -97,7 +91,6 @@ nodeCliParser = do
     , genesisHash = genHash
     , nodeAddr = nAddress
     , configFp = ConfigYamlFilePath nodeConfigFp
-    , traceOpts = fromMaybe (panic "Cardano.Common.Parsers: Trace Options were not specified") $ getLast traceOptions
     , validateDB = validate
     }
 

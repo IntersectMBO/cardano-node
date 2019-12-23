@@ -104,7 +104,6 @@ data NodeCLI = NodeCLI
     , genesisHash :: !Text
     , nodeAddr :: !NodeAddress
     , configFp :: !ConfigYamlFilePath
-    , traceOpts :: !TraceOptions
     , validateDB :: !Bool
     } deriving Show
 
@@ -157,6 +156,7 @@ data NodeConfiguration =
       , ncPbftSignatureThresh :: Maybe Double
       , ncLoggingSwitch :: Bool
       , ncLogMetrics :: Bool
+      , ncTraceOptions :: TraceOptions
       , ncViewMode :: ViewMode
       , ncUpdate :: Update
       } deriving (Show)
@@ -179,6 +179,33 @@ instance FromJSON NodeConfiguration where
                   lkBlkVersionMinor <- v .: "LastKnownBlockVersion-Minor"
                   lkBlkVersionAlt <- v .: "LastKnownBlockVersion-Alt"
 
+                  -- Trace Options
+                  tOptions <- TraceOptions
+                                <$> v .: "TracingVerbosity"
+                                <*> v .: "TraceBlockFetchClient"
+                                <*> v .: "TraceBlockFetchDecisions"
+                                <*> v .: "TraceBlockFetchProtocol"
+                                <*> v .: "TraceBlockFetchProtocolSerialised"
+                                <*> v .: "TraceBlockFetchServer"
+                                <*> v .: "TraceChainDb"
+                                <*> v .: "TraceChainSyncClient"
+                                <*> v .: "TraceChainSyncBlockServer"
+                                <*> v .: "TraceChainSyncHeaderServer"
+                                <*> v .: "TraceChainSyncProtocol"
+                                <*> v .: "TraceDNSResolver"
+                                <*> v .: "TraceDNSSubscription"
+                                <*> v .: "TraceErrorPolicy"
+                                <*> v .: "TraceForge"
+                                <*> v .: "TraceIpSubscription"
+                                <*> v .: "TraceLocalChainSyncProtocol"
+                                <*> v .: "TraceLocalTxSubmissionProtocol"
+                                <*> v .: "TraceLocalTxSubmissionServer"
+                                <*> v .: "TraceMempool"
+                                <*> v .: "TraceMux"
+                                <*> v .: "TraceTxInbound"
+                                <*> v .: "TraceTxOutbound"
+                                <*> v .: "TraceTxSubmissionProtocol"
+
                   pure $ NodeConfiguration
                            ptcl
                            nId
@@ -187,6 +214,7 @@ instance FromJSON NodeConfiguration where
                            pbftSignatureThresh
                            loggingSwitch
                            logMetrics
+                           tOptions
                            vMode
                            (Update appName appVersion (LastKnownBlockVersion
                                                          lkBlkVersionMajor
