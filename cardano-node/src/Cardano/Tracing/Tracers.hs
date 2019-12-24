@@ -207,29 +207,38 @@ mkTracers traceOptions tracer = do
                           -> Tracer IO (LogObject Text)
                           -> Tracer IO (WithSeverity (WithTip blk (ChainDB.TraceEvent blk)))
     teeTraceChainTipElide tform tverb elided tr = Tracer $ \case
-      ev@(WithSeverity _s (WithTip _t (ChainDB.TraceLedgerReplayEvent _evr))) ->
+      ev@(WithSeverity sev (WithTip _t (ChainDB.TraceLedgerReplayEvent _evr))) ->
           modifyMVar_ elided $ \(old, count) ->
+            case old of
+              Nothing -> do
+                traceWith (toLogObject' tform tverb tr) ev
+                return (Just ev, 1)
+              e@(Just ev') ->
+                if ev `isEquivalent` ev'
+                  then
+                    return (e, count + 1)
+                  else do
+                    meta <- mkLOMeta sev Confidential
+                    traceNamedObject tr (meta, LogValue "messages elided in total" (PureI count)) 
+                    traceWith (toLogObject' tform tverb tr) ev
+                    return (Nothing, 0)
+      ev -> do
+        modifyMVar_ elided $ \(old, count) ->
           case old of
-            Nothing -> do
-              traceWith (toLogObject' tform tverb tr) ev
-              return (Just ev, 1)
-            e@(Just ev') ->
-              if ev `isEquivalent` ev'
-                then do
-                  meta <- mkLOMeta Info Confidential
-                  traceNamedObject tr (meta, LogValue "elided" (PureI count))
-                  return (e, count + 1)
-                else do
-                  meta <- mkLOMeta Info Confidential
-                  traceNamedObject tr (meta, LogValue "elided in total" (PureI count)) 
-                  traceWith (toLogObject' tform tverb tr) ev
-                  return (Nothing, 0)
-      ev@(WithSeverity _s (WithTip _t _ev)) -> traceWith (toLogObject' tform tverb tr) ev
+            Nothing ->
+              return (Nothing, 0)
+            (Just ev'@(WithSeverity sev (WithTip _ _))) -> do
+              meta <- mkLOMeta sev Confidential
+              traceWith (toLogObject' tform tverb tr) ev'
+              traceNamedObject tr (meta, LogValue "messages elided in total" (PureI count)) 
+              return (Nothing, 0)
+        traceWith (toLogObject' tform tverb tr) ev
 
     isEquivalent :: WithSeverity (WithTip blk (ChainDB.TraceEvent blk))
                  -> WithSeverity (WithTip blk (ChainDB.TraceEvent blk)) -> Bool
+    -- equivalent by type and the same severity
     isEquivalent (WithSeverity s1 (WithTip _tip1 (ChainDB.TraceLedgerReplayEvent _ev1)))
-                 (WithSeverity s2 (WithTip _tip2 (ChainDB.TraceLedgerReplayEvent _ev2))) = s1 == s2 -- && ev1 == ev2
+                 (WithSeverity s2 (WithTip _tip2 (ChainDB.TraceLedgerReplayEvent _ev2))) = s1 == s2
     isEquivalent _ _ = False
 
     teeTraceChainTip' :: Tracer IO (LogObject Text)
