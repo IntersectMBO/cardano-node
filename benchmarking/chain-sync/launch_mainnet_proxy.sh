@@ -11,7 +11,10 @@ set -euo pipefail
 
 cd ${TARGETDIR}
 
-cabal v2-run exe:cardano-byron-proxy -- \
+RUNNER="cabal v2-run exe:cardano-byron-proxy --"
+RUNNER="stack --nix exec cardano-byron-proxy --"
+
+${RUNNER} \
   +RTS -T -RTS \
   --database-path state-proxy-mainnet/db \
   --index-path state-proxy-mainnet/index \

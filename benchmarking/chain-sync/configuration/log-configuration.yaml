@@ -1,5 +1,5 @@
 # global filter; messages must have at least this severity to pass:
-minSeverity: Notice
+minSeverity: Debug
 
 # global file rotation settings:
 rotation:
@@ -68,6 +68,8 @@ options:
       # Change the `subtrace` value to `Neutral` in order to log
       # `UTxO`-related messages during epoch validation.
       subtrace: NoTrace
+    'cardano.#messagecounters':
+      subtrace: NoTrace
     '#messagecounters.aggregation':
       subtrace: NoTrace
     '#messagecounters.monitoring':
@@ -84,17 +86,15 @@ options:
     cardano.epoch-validation.benchmark:
       - AggregationBK
     'cardano.node.peers.BlockFetchDecision':
+      - EKGViewBK
       - kind: UserDefinedBK
         name: LiveViewBackend
     'cardano.node.ChainDB':
       - KatipBK
       - kind: UserDefinedBK
         name: LiveViewBackend
-    'cardano.node.metrics.ChainDB':
-      - EKGViewBK
-      - kind: UserDefinedBK
-        name: LiveViewBackend
     cardano.node.metrics:
+      - EKGViewBK
       - kind: UserDefinedBK
         name: LiveViewBackend
 ##########################################################
