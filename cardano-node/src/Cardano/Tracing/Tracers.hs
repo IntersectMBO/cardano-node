@@ -1,7 +1,6 @@
 {-# LANGUAGE ConstraintKinds       #-}
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE FlexibleInstances     #-}
-{-# LANGUAGE LambdaCase            #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns        #-}
 {-# LANGUAGE OverloadedStrings     #-}
@@ -37,6 +36,7 @@ import           Cardano.BM.Data.Aggregated (Measurable (..))
 import           Cardano.BM.Data.LogItem (LOContent (..), LogObject (..),
                                           PrivacyAnnotation (Confidential),
                                           mkLOMeta)
+import           Cardano.BM.ElidingTracer
 import           Cardano.BM.Tracing
 import           Cardano.BM.Trace (traceNamedObject)
 import           Cardano.BM.Data.Tracer (WithSeverity (..), addName,
@@ -119,6 +119,21 @@ nullTracers = Tracers {
       muxTracer = nullTracer
     }
 
+
+instance ElidingTracer
+  (WithSeverity (WithTip blk (ChainDB.TraceEvent blk))) where
+  -- equivalent by type and severity
+  isEquivalent (WithSeverity s1 (WithTip _tip1 (ChainDB.TraceLedgerReplayEvent _ev1)))
+                (WithSeverity s2 (WithTip _tip2 (ChainDB.TraceLedgerReplayEvent _ev2))) = s1 == s2
+  isEquivalent (WithSeverity s1 (WithTip _tip1 (ChainDB.TraceGCEvent _ev1)))
+                (WithSeverity s2 (WithTip _tip2 (ChainDB.TraceGCEvent _ev2))) = s1 == s2
+  isEquivalent _ _ = False
+  -- the types to be elided
+  doelide (WithSeverity _ (WithTip _ (ChainDB.TraceLedgerReplayEvent _))) = True
+  doelide (WithSeverity _ (WithTip _ (ChainDB.TraceGCEvent _))) = True
+  doelide _ = False
+  
+
 -- | Smart constructor of 'NodeTraces'.
 --
 mkTracers :: forall peer blk.
@@ -146,7 +161,7 @@ mkTracers traceOptions tracer = do
   -- a block.
   -- txsOutcomeExtractor <- mkOutcomeExtractor
 
-  elided <- newMVar (Nothing, 0)
+  elided <- newstate  -- for eliding messages in ChainDB tracer
 
   pure Tracers
     { chainDBTracer
@@ -194,52 +209,18 @@ mkTracers traceOptions tracer = do
 
     teeTraceChainTip :: TracingFormatting
                      -> TracingVerbosity
-                     -> MVar (Maybe (WithSeverity (WithTip blk (ChainDB.TraceEvent blk))), Integer)
+                     -> MVar (Maybe (WithSeverity (WithTip blk (ChainDB.TraceEvent blk))), Int)
                      -> Tracer IO (LogObject Text)
                      -> Tracer IO (WithSeverity (WithTip blk (ChainDB.TraceEvent blk)))
     teeTraceChainTip tform tverb elided tr = Tracer $ \ev -> do
         traceWith (teeTraceChainTip' tr) ev
         traceWith (teeTraceChainTipElide tform tverb elided tr) ev
-        
     teeTraceChainTipElide :: TracingFormatting
                           -> TracingVerbosity
-                          -> MVar (Maybe (WithSeverity (WithTip blk (ChainDB.TraceEvent blk))), Integer)
+                          -> MVar (Maybe (WithSeverity (WithTip blk (ChainDB.TraceEvent blk))), Int)
                           -> Tracer IO (LogObject Text)
                           -> Tracer IO (WithSeverity (WithTip blk (ChainDB.TraceEvent blk)))
-    teeTraceChainTipElide tform tverb elided tr = Tracer $ \case
-      ev@(WithSeverity sev (WithTip _t (ChainDB.TraceLedgerReplayEvent _evr))) ->
-          modifyMVar_ elided $ \(old, count) ->
-            case old of
-              Nothing -> do
-                traceWith (toLogObject' tform tverb tr) ev
-                return (Just ev, 1)
-              e@(Just ev') ->
-                if ev `isEquivalent` ev'
-                  then
-                    return (e, count + 1)
-                  else do
-                    meta <- mkLOMeta sev Confidential
-                    traceNamedObject tr (meta, LogValue "messages elided in total" (PureI count)) 
-                    traceWith (toLogObject' tform tverb tr) ev
-                    return (Nothing, 0)
-      ev -> do
-        modifyMVar_ elided $ \(old, count) ->
-          case old of
-            Nothing ->
-              return (Nothing, 0)
-            (Just ev'@(WithSeverity sev (WithTip _ _))) -> do
-              meta <- mkLOMeta sev Confidential
-              traceWith (toLogObject' tform tverb tr) ev'
-              traceNamedObject tr (meta, LogValue "messages elided in total" (PureI count)) 
-              return (Nothing, 0)
-        traceWith (toLogObject' tform tverb tr) ev
-
-    isEquivalent :: WithSeverity (WithTip blk (ChainDB.TraceEvent blk))
-                 -> WithSeverity (WithTip blk (ChainDB.TraceEvent blk)) -> Bool
-    -- equivalent by type and the same severity
-    isEquivalent (WithSeverity s1 (WithTip _tip1 (ChainDB.TraceLedgerReplayEvent _ev1)))
-                 (WithSeverity s2 (WithTip _tip2 (ChainDB.TraceLedgerReplayEvent _ev2))) = s1 == s2
-    isEquivalent _ _ = False
+    teeTraceChainTipElide = elideToLogObject
 
     teeTraceChainTip' :: Tracer IO (LogObject Text)
                       -> Tracer IO (WithSeverity (WithTip blk (ChainDB.TraceEvent blk)))
