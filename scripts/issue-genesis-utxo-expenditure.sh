@@ -24,11 +24,10 @@ Usage:  $(basename $0) TX-FILE TO-ADDR LOVELACE
 EOF
             exit 1;; esac
 
-args=" --real-pbft
+args=" issue-genesis-utxo-expenditure
+       --real-pbft
        --genesis-file        ${genesis_file}
        --genesis-hash        ${genesis_hash}
-       --log-config ${configuration}/log-configuration.yaml
-       issue-genesis-utxo-expenditure
        --tx                  ${tx}
        --wallet-key          ${from_key}
        --rich-addr-from    \"${from_addr}\"

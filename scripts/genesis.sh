@@ -31,10 +31,6 @@ avvm_entry_balance=10000000000000
 not_so_secret=2718281828
 
 tmpdir="`mktemp`.d"
-common=(
-        --log-config                 "${configuration}/configuration-silent.yaml"
-        --real-pbft
-)
 args=(
       --genesis-output-dir           "${tmpdir}"
       --start-time                   "${start_time}"
@@ -47,15 +43,16 @@ args=(
       --delegate-share               ${delegate_share}
       --avvm-entry-count             ${avvm_entries}
       --avvm-entry-balance           ${avvm_entry_balance}
+      --real-pbft
       --secret-seed                  ${not_so_secret}
 )
 
 set -xe
 
-${CLI} "${common[@]}" genesis "${args[@]}" "$@"
+${CLI} genesis "${args[@]}" "$@"
 
 # move new genesis to configuration
-GENHASH=`${CLI} "${common[@]}" print-genesis-hash --genesis-json "${tmpdir}/genesis.json" | tail -1`
+GENHASH=`${CLI} print-genesis-hash --genesis-json "${tmpdir}/genesis.json" | tail -1`
 TARGETDIR="${configuration}/genesis"
 mkdir -vp "${TARGETDIR}"
 cp -iav ${tmpdir}/genesis.json "${TARGETDIR}"/

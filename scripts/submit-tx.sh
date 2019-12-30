@@ -15,21 +15,16 @@ CLI="$(executable_runner cardano-cli)"
 ALGO="real-pbft"
 NOW=`date "+%Y-%m-%d 00:00:00"`
 NETARGS=(
+        submit-tx
+        --tx           "$TX"
+        --node-id      "0"
         --${ALGO}
         --genesis-file "${genesis_file}"
         --genesis-hash "${genesis_hash}"
-        submit-tx
-        --topology      "${configuration}/simple-topology.json"
-        --node-id      "0"
-        --tx           "$TX"
+        --socket-dir   "./socket/"
+        --topology     "${configuration}/simple-topology.json"
 )
 
-function mkdlgkey () {
-  printf -- "--signing-key            ${genesis_root}/delegate-keys.%03d.key"    "$1"
-}
-function mkdlgcert () {
-  printf -- "--delegation-certificate ${genesis_root}/delegation-cert.%03d.json" "$1"
-}
 
 set -x
-${CLI} --log-config ${configuration}/log-configuration.yaml ${NETARGS[*]} "$@"
+${CLI} ${NETARGS[*]} "$@"
