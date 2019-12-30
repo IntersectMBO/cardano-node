@@ -101,7 +101,7 @@ A CLI utility to support a variety of key material operations (genesis, migratio
 
 The general synopsis is as follows:
  ```
-   Usage: cardano-cli (--byron-legacy | --real-pbft) (Genesis Related CMDs | Key Related CMDs | Delegations related CMDs | Tx related CMDs)
+   Usage: cardano-cli (Genesis Related CMDs | Key Related CMDs | Delegation related CMDs | Tx related CMDs)
 ```
 
 NOTE: the exact invocation command depends on the environment.  If you have only
@@ -109,20 +109,20 @@ built `cardano-cli`, without installing it, then you have to prepend `cabal
 run -- ` before `cardano-cli`.  We henceforth assume that the necessary
 environment-specific adjustment has been made, so we only mention `cardano-cli`.
 
-The `--byron-legacy` and `--real-pbft` options immediately preceding the
-subcommand have the role of choosing the set of Cardano algorithms for the purpose
-of subcommand operations.
-
 The subcommands are subdivided in groups, and their full list can be seen in the
 output of `cardano-cli --help`.
 
 All subcommands have help available:
 
 ```
-$ cabal v2-run -- cardano-cli --real-pbft migrate-delegate-key-from --help
-Usage: cardano-cli --real-pbft migrate-delegate-key-from (--byron-legacy | --real-pbft)
-                                                          --to FILEPATH --from FILEPATH
-  Migrate a delegate key from an older system version.
+$ cabal v2-run -- cardano-cli migrate-delegate-key-from --help
+Usage: cardano-cli migrate-delegate-key-from (--byron-legacy | --bft | --praos |
+                                               --mock-pbft | --real-pbft)
+                                             --from FILEPATH
+                                             (--byron-legacy | --bft | --praos |
+                                               --mock-pbft | --real-pbft)
+                                             --to FILEPATH
+  Migrate a delegate key from an older version.
 
 Available options:
   --byron-legacy           Byron/Ouroboros Classic suite of algorithms
@@ -130,8 +130,14 @@ Available options:
   --praos                  Praos consensus
   --mock-pbft              Permissive BFT consensus with a mock ledger
   --real-pbft              Permissive BFT consensus with a real ledger
-  --to FILEPATH            Non-existent file to write the signing key to.
   --from FILEPATH          Signing key file to migrate.
+  --byron-legacy           Byron/Ouroboros Classic suite of algorithms
+  --bft                    BFT consensus
+  --praos                  Praos consensus
+  --mock-pbft              Permissive BFT consensus with a mock ledger
+  --real-pbft              Permissive BFT consensus with a real ledger
+  --to FILEPATH            Non-existent file to write the signing key to.
+  -h,--help                Show this help text
 ```
 
 ## Genesis operations
@@ -196,8 +202,8 @@ it needs to be migrated over, which is done by the `migrate-delegate-key-from` s
 
 
 ```
-$ cabal v2-run -- cardano-cli --real-pbft migrate-delegate-key-from byron-legacy \
-                                           --from key0.sk --to key0.pbft
+$ cabal v2-run -- cardano-cli migrate-delegate-key-from
+--byron-legacy --from key0.sk  --real-pbft --to key0.pbft
 ```
 
 ### Signing key queries
@@ -206,14 +212,13 @@ One can gather information about a signing key's properties through the `signing
 and `signing-key-address` subcommands (the latter requires the network magic):
 
 ```
-$ cabal v2-run -- cardano-cli --real-pbft signing-key-public \
-                                           --secret key0.pbft
+$ cabal v2-run -- cardano-cli signing-key-public --real-pbft --secret key0.pbft
+
 public key hash: a2b1af0df8ca764876a45608fae36cf04400ed9f413de2e37d92ce04
      public key: sc4pa1pAriXO7IzMpByKo4cG90HCFD465Iad284uDYz06dHCqBwMHRukReQ90+TA/vQpj4L1YNaLHI7DS0Z2Vg==
 
-$ cabal v2-run -- cardano-cli --real-pbft signing-key-address \
-                                           --secret key0.pbft  \
-                                           --testnet-magic 459045235
+$ cabal v2-run -- cardano-cli signing-key-address --real-pbft --secret key0.pbft --testnet-magic 459045235
+
 2cWKMJemoBakxhXgZSsMteLP9TUvz7owHyEYbUDwKRLsw2UGDrG93gPqmpv1D9ohWNddx
 VerKey address with root e5a3807d99a1807c3f161a1558bcbc45de8392e049682df01809c488, attributes: AddrAttributes { derivation path: {} }
 ```
