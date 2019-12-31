@@ -132,7 +132,12 @@ instance ElidingTracer
   doelide (WithSeverity _ (WithTip _ (ChainDB.TraceLedgerReplayEvent _))) = True
   doelide (WithSeverity _ (WithTip _ (ChainDB.TraceGCEvent _))) = True
   doelide _ = False
-  
+  conteliding _tform _tverb _tr _ (Nothing, _count) = return (Nothing, 0)
+  conteliding _tform _tverb tr ev (_old, count) = do
+      when (count > 0 && count `mod` 100 == 0) $ do  -- report every 100th elided message
+          meta <- mkLOMeta (defineSeverity ev) (definePrivacyAnnotation ev)
+          traceNamedObject tr (meta, LogValue "messages elided so far" (PureI $ toInteger count))
+      return (Just ev, count + 1)
 
 -- | Smart constructor of 'NodeTraces'.
 --
