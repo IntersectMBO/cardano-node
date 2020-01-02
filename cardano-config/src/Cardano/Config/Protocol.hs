@@ -33,7 +33,9 @@ import           Cardano.Crypto (RequiresNetworkMagic, decodeHash)
 import qualified Cardano.Crypto.Signing as Signing
 
 import           Ouroboros.Consensus.Block (Header)
-import           Ouroboros.Consensus.BlockchainTime (slotLengthFromSec)
+import           Ouroboros.Consensus.BlockchainTime
+                   (SlotLength, slotLengthFromSec,
+                    SlotLengths, singletonSlotLengths)
 import           Ouroboros.Consensus.Mempool.API (ApplyTxErr, GenTx, GenTxId)
 import           Ouroboros.Consensus.Node.ProtocolInfo (NumCoreNodes (..),
                                                         PBftLeaderCredentials,
@@ -86,8 +88,11 @@ type TraceConstraints blk =
 mockSecurityParam :: SecurityParam
 mockSecurityParam = SecurityParam 5
 
-mockSlotLength :: Consensus.SlotLength
+mockSlotLength :: SlotLength
 mockSlotLength = slotLengthFromSec 20
+
+mockSlotLengths :: SlotLengths
+mockSlotLengths = singletonSlotLengths mockSlotLength
 
 -- | Helper for creating a 'SomeProtocol' for a mock protocol that needs the
 -- 'CoreNodeId' and NumCoreNodes'. If one of them is missing from the
@@ -138,7 +143,7 @@ fromProtocol _ _ _ _ _ _ _ _ _ ByronLegacy =
   left ByronLegacyProtocolNotImplemented
 fromProtocol _ nId mNumCoreNodes _ _ _ _ _ _ BFT =
   hoistEither $ mockSomeProtocol nId mNumCoreNodes $ \cid numCoreNodes ->
-    Consensus.ProtocolMockBFT numCoreNodes cid mockSecurityParam mockSlotLength
+    Consensus.ProtocolMockBFT numCoreNodes cid mockSecurityParam mockSlotLengths
 fromProtocol _ nId mNumCoreNodes _ _ _ _ _ _ Praos =
   hoistEither $ mockSomeProtocol nId mNumCoreNodes $ \cid numCoreNodes ->
     Consensus.ProtocolMockPraos numCoreNodes cid PraosParams {
