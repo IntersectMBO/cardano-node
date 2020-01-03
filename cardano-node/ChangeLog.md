@@ -2,6 +2,13 @@
 
 ## Unreleased changes
 
+## 1.3.0 -- January 2020
+
+### node changes
+### consensus changes
+### ledger changes
+### network changes
+
 ## 1.2.0 -- December 2019
 
 ### node changes
