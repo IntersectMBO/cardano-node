@@ -252,7 +252,8 @@ handleSimpleNode p trace nodeTracers nCli nc = do
         -- Watch the tip of the chain and store it in @varTip@ so we can include
         -- it in trace messages.
         let chainDB = getChainDB nodeKernel
-        onEachChange registry id Nothing (ChainDB.getTipPoint chainDB) $ \tip ->
+        void $ onEachChange registry id Nothing
+                            (ChainDB.getTipPoint chainDB) $ \tip ->
           atomically $ writeTVar varTip tip
   where
     nid :: Int
