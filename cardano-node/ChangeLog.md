@@ -5,9 +5,21 @@
 ## 1.3.0 -- January 2020
 
 ### node changes
+- Update to latest dependencies (consensus, ledger, logging etc)
+
 ### consensus changes
+- Add initial support for multiple slot lengths (for hard forks) (#282, #1385)
+- Do chain selection based only on the latest header in each chain (#1227)
+- Significant performance improvements in serving headers and blocks (#1378)
+- Snapshot ledger state on shutdown to avoid long restart times (1388)
+- Fix garbage collection of previously applied points in the ledger DB (#1381)
+- Fix unnecessary memory retention in the volatile DB indices (#1379)
+
 ### ledger changes
+- Update to latest version of cardano-ledger-specs
+
 ### network changes
+- None
 
 ## 1.2.0 -- December 2019
 
