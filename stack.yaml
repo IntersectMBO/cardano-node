@@ -28,7 +28,7 @@ extra-deps:
 
     # Cardano-ledger dependencies
   - git: https://github.com/input-output-hk/cardano-ledger
-    commit: a773ba71eb9a6fb91dda2cdf6c41b2280f2acf7d
+    commit: d1b4f6520692d7478d81b050385e0a9b71a0c62b
     subdirs:
       - cardano-ledger
       - cardano-ledger/test
@@ -36,7 +36,7 @@ extra-deps:
       - crypto/test
 
   - git: https://github.com/input-output-hk/cardano-ledger-specs
-    commit: d8e06467844f8612b167f25214f243e02560468b
+    commit: bcba1d2d10004f1ce14c5c53478f656deffd4c38
     subdirs:
       # small-steps
       - byron/semantics/executable-spec
