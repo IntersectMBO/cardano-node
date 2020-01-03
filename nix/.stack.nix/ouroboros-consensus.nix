@@ -49,6 +49,7 @@
           (hsPkgs.mmorph)
           (hsPkgs.mtl)
           (hsPkgs.network)
+          (hsPkgs.psqueues)
           (hsPkgs.serialise)
           (hsPkgs.stm)
           (hsPkgs.streaming)
@@ -190,8 +191,8 @@
     } // {
     src = (pkgs.lib).mkDefault (pkgs.fetchgit {
       url = "https://github.com/input-output-hk/ouroboros-network";
-      rev = "1ba18b908f6b6389ceefebd58d78e6c34e4528bf";
-      sha256 = "0px1q8r59917mj8dimq0pmcfzp8jsikaiahsyrbhgs5jpkxnmg03";
+      rev = "408f3a3fc8be601075ee2bacdb7b7b9ebac9d2c2";
+      sha256 = "0hc8p7h60wq4xp43pl7rqn94lra7gy51z3h6jjqvy6lj4bcfrp65";
       });
     postUnpack = "sourceRoot+=/ouroboros-consensus; echo source root reset to \$sourceRoot";
     }
