@@ -59,7 +59,6 @@ library
                      , cardano-crypto-class
                      , cardano-crypto-wrapper
                      , cardano-ledger
-                     , cardano-ledger-test
                      , cardano-prelude
                      , cardano-prelude-test
                      , cardano-shell
@@ -142,7 +141,6 @@ executable cardano-node
                      , cardano-config
                      , cardano-crypto-wrapper
                      , cardano-ledger
-                     , cardano-ledger-test
                      , cardano-node
                      , cardano-prelude
                      , cardano-shell
@@ -213,7 +211,6 @@ executable wallet-client
   build-depends:       base
                      , cardano-config
                      , cardano-ledger
-                     , cardano-ledger-test
                      , cardano-node
                      , cardano-prelude
                      , cardano-shell

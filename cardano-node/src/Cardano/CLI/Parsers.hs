@@ -217,13 +217,6 @@ parseGenesisRelatedValues =
               "genesis-output-dir"
               "Non-existent directory where genesis JSON file and secrets shall be placed."
           <*> parseGenesisParameters
-    , command'
-        "dump-hardcoded-genesis"
-        "Write out a hard-coded genesis."
-        $ DumpHardcodedGenesis
-            <$> parseNewDirectory
-                  "genesis-output-dir"
-                  "Non-existent directory where the genesis artifacts are to be written."
     , command' "print-genesis-hash" "Compute hash of a genesis file."
         $ PrintGenesisHash
             <$> parseGenesisFile "genesis-json"
