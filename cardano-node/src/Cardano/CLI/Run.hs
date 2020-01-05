@@ -49,8 +49,6 @@ import           Cardano.Crypto (ProtocolMagicId)
 import qualified Cardano.Crypto.Hashing as Crypto
 import qualified Cardano.Crypto.Signing as Crypto
 
-import qualified Test.Cardano.Chain.Genesis.Dummy as Dummy
-
 import           Ouroboros.Consensus.NodeId
 import qualified Ouroboros.Consensus.Protocol as Consensus
 
@@ -84,8 +82,6 @@ data ClientCommand
     Protocol
     NewSigningKeyFile
     SigningKeyFile
-  | DumpHardcodedGenesis
-    NewDirectory
   | PrintGenesisHash
     GenesisFile
   | PrintSigningKeyAddress
@@ -161,9 +157,6 @@ runCommand :: CardanoConfiguration -> LoggingLayer -> ClientCommand -> ExceptT C
 runCommand cc _ (Genesis outDir params) = do
   gen <- mkGenesis params
   dumpGenesis (ccProtocol cc) outDir `uncurry` gen
-
-runCommand cc _ (DumpHardcodedGenesis dir) =
-  dumpGenesis (ccProtocol cc) dir (Genesis.configGenesisData Dummy.dummyConfig) Dummy.dummyGeneratedSecrets
 
 runCommand cc _ (PrettySigningKeyPublic skF) = do
   sK <- readSigningKey (ccProtocol cc) skF
