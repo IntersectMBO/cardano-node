@@ -11,7 +11,8 @@ set -e
 
 # then run this script
 # CMD="stack exec --nix --"
-CMD="cabal v2-run --"
+CMD="cabal v2-run exe:cardano-node --"
+CMD="stack exec cardano-node --"
 
 # VERBOSITY="--tracing-verbosity-minimal"
 # VERBOSITY="--tracing-verbosity-normal"
@@ -38,24 +39,21 @@ EXTRA="
 
 sleep 2
 
-# for acceptor logs:
+# for logs:
 mkdir -p logs/
 
 PWD=$(pwd)
 
-tmux split-window -v
-tmux select-pane -t 0
+#tmux split-window -v
+#tmux select-pane -t 0
 tmux split-window -h
 tmux split-window -v
 tmux select-pane -t 0
 tmux split-window -v
 
-tmux select-pane -t 4
-tmux send-keys "cd '${PWD}'; ${CMD} trace-acceptor $(acceptorargs)" C-m
-sleep 2
 tmux select-pane -t 1
-tmux send-keys "cd '${PWD}'; ${CMD} exe:cardano-node $(nodeargs 0 "${ALGO} $(echo -n ${EXTRA})") " C-m
+tmux send-keys "cd '${PWD}'; ${CMD} $(nodeargs 0 "${ALGO} $(echo -n ${EXTRA})") " C-m
 tmux select-pane -t 2
-tmux send-keys "cd '${PWD}'; ${CMD} exe:cardano-node $(nodeargs 1 "${ALGO} $(echo -n ${EXTRA})") " C-m
+tmux send-keys "cd '${PWD}'; ${CMD} $(nodeargs 1 "${ALGO} $(echo -n ${EXTRA})") " C-m
 tmux select-pane -t 3
-tmux send-keys "cd '${PWD}'; ${CMD} exe:cardano-node $(nodeargs 2 "${ALGO} $(echo -n ${EXTRA})") " C-m
+tmux send-keys "cd '${PWD}'; ${CMD} $(nodeargs 2 "${ALGO} $(echo -n ${EXTRA})") " C-m

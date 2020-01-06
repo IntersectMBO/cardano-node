@@ -26,17 +26,15 @@
 - <span><b>issue-utxo-expenditure.sh</b></span> <br/> Write a file with a transaction spending a
          normal UTxO entry, given a key owning it
 - <span><b>mainnet.sh</b></span> <br/> Run a node against Cardano Mainnet
-- <span><b>shelley-testnet2.sh</b></span> <br/> Start a dev cluster with 3 nodes and an acceptor,
+- <span><b>shelley-testnet2.sh</b></span> <br/> Start a dev cluster with 3 nodes,
          with neat curses-based UI (run from tmux)
 - <span><b>shelley-testnet-dns.sh</b></span> <br/> Start a dev cluster with 3 nodes (run from tmux)
-- <span><b>shelley-testnet.sh</b></span> <br/> Start a dev cluster with 3 nodes and an acceptor, with
+- <span><b>shelley-testnet.sh</b></span> <br/> Start a dev cluster with 3 nodes, with
          basic logging (run from tmux)
 - <span><b>start-node.sh</b></span> <br/> Basic individual node startup script
 - <span><b>start-wallet.sh</b></span> <br/> Start a basic wallet client
 - <span><b>submit-tx.sh</b></span> <br/> Submit a transaction file made by `issue-*-expenditure.sh`
                       family of scripts
-- <span><b>trace-acceptor.sh</b></span> <br/> Start a trace acceptor, to be used by nodes
-
 
 
 # Shelley Testnet
