@@ -9,14 +9,17 @@ DATADIR=state-node-mainnet
 mkdir -p $DATADIR
 cd $DATADIR
 
-#if [ -d db-mainnet-0 ]; then
-#  rm -rf db-mainnet-0
-#fi
-#rm node-0*
+# remove blockchain
+if [ -d db-mainnet-0 ]; then
+  rm -rf db-mainnet-0
+fi
+
+# remove old log files
+rm node-0*
 
 #set -euo pipefail
 
-#ulimit -t $CPU_TIME_LIMIT
+ulimit -t $CPU_TIME_LIMIT
 
 date --iso-8601=seconds > STARTTIME
 
