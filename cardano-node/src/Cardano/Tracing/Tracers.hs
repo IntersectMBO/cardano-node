@@ -36,6 +36,7 @@ import           Cardano.BM.Data.Aggregated (Measurable (..))
 import           Cardano.BM.Data.LogItem (LOContent (..), LogObject (..),
                                           PrivacyAnnotation (Confidential),
                                           mkLOMeta)
+import           Cardano.BM.ElidingTracer
 import           Cardano.BM.Tracing
 import           Cardano.BM.Trace (traceNamedObject)
 import           Cardano.BM.Data.Tracer (WithSeverity (..), addName,
@@ -118,6 +119,26 @@ nullTracers = Tracers {
       muxTracer = nullTracer
     }
 
+
+instance ElidingTracer
+  (WithSeverity (WithTip blk (ChainDB.TraceEvent blk))) where
+  -- equivalent by type and severity
+  isEquivalent (WithSeverity s1 (WithTip _tip1 (ChainDB.TraceLedgerReplayEvent _ev1)))
+                (WithSeverity s2 (WithTip _tip2 (ChainDB.TraceLedgerReplayEvent _ev2))) = s1 == s2
+  isEquivalent (WithSeverity s1 (WithTip _tip1 (ChainDB.TraceGCEvent _ev1)))
+                (WithSeverity s2 (WithTip _tip2 (ChainDB.TraceGCEvent _ev2))) = s1 == s2
+  isEquivalent _ _ = False
+  -- the types to be elided
+  doelide (WithSeverity _ (WithTip _ (ChainDB.TraceLedgerReplayEvent _))) = True
+  doelide (WithSeverity _ (WithTip _ (ChainDB.TraceGCEvent _))) = True
+  doelide _ = False
+  conteliding _tform _tverb _tr _ (Nothing, _count) = return (Nothing, 0)
+  conteliding _tform _tverb tr ev (_old, count) = do
+      when (count > 0 && count `mod` 100 == 0) $ do  -- report every 100th elided message
+          meta <- mkLOMeta (defineSeverity ev) (definePrivacyAnnotation ev)
+          traceNamedObject tr (meta, LogValue "messages elided so far" (PureI $ toInteger count))
+      return (Just ev, count + 1)
+
 -- | Smart constructor of 'NodeTraces'.
 --
 mkTracers :: forall peer blk.
@@ -145,11 +166,13 @@ mkTracers traceOptions tracer = do
   -- a block.
   -- txsOutcomeExtractor <- mkOutcomeExtractor
 
+  elided <- newstate  -- for eliding messages in ChainDB tracer
+
   pure Tracers
     { chainDBTracer
         = tracerOnOff (traceChainDB traceOptions)
           $ annotateSeverity
-          $ teeTraceChainTip StructuredLogging tracingVerbosity
+          $ teeTraceChainTip StructuredLogging tracingVerbosity elided
           $ addName "ChainDB" tracer
     , consensusTracers
         = mkConsensusTracers forgeTracers traceOptions
@@ -191,11 +214,19 @@ mkTracers traceOptions tracer = do
 
     teeTraceChainTip :: TracingFormatting
                      -> TracingVerbosity
+                     -> MVar (Maybe (WithSeverity (WithTip blk (ChainDB.TraceEvent blk))), Int)
                      -> Tracer IO (LogObject Text)
                      -> Tracer IO (WithSeverity (WithTip blk (ChainDB.TraceEvent blk)))
-    teeTraceChainTip tform tverb tr = Tracer $ \ev -> do
+    teeTraceChainTip tform tverb elided tr = Tracer $ \ev -> do
         traceWith (teeTraceChainTip' tr) ev
-        traceWith (toLogObject' tform tverb tr) ev
+        traceWith (teeTraceChainTipElide tform tverb elided tr) ev
+    teeTraceChainTipElide :: TracingFormatting
+                          -> TracingVerbosity
+                          -> MVar (Maybe (WithSeverity (WithTip blk (ChainDB.TraceEvent blk))), Int)
+                          -> Tracer IO (LogObject Text)
+                          -> Tracer IO (WithSeverity (WithTip blk (ChainDB.TraceEvent blk)))
+    teeTraceChainTipElide = elideToLogObject
+
     teeTraceChainTip' :: Tracer IO (LogObject Text)
                       -> Tracer IO (WithSeverity (WithTip blk (ChainDB.TraceEvent blk)))
     teeTraceChainTip' tr =

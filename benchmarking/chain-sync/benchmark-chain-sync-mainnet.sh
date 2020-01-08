@@ -9,9 +9,12 @@ DATADIR=state-node-mainnet
 mkdir -p $DATADIR
 cd $DATADIR
 
+# remove blockchain
 if [ -d db-mainnet-0 ]; then
   rm -rf db-mainnet-0
 fi
+
+# remove old log files
 rm node-0*
 
 #set -euo pipefail
@@ -21,6 +24,7 @@ ulimit -t $CPU_TIME_LIMIT
 date --iso-8601=seconds > STARTTIME
 
 NODE="cabal v2-run exe:cardano-node -- "
+NODE="stack --nix exec cardano-node -- "
 
 exec ${NODE} \
   --genesis-file ${BASEDIR}/../../configuration/mainnet-genesis.json \
@@ -32,7 +36,9 @@ exec ${NODE} \
   --host-addr 127.0.0.1 \
   --port 7778 \
   --tracing-verbosity-maximal \
+  --trace-block-fetch-decisions \
   --trace-mempool \
+  --trace-chain-db \
   --trace-forge \
    \
  $@
