@@ -37,7 +37,6 @@ library
                        Cardano.Node.Run
                        Cardano.Node.TUI.GitRev
                        Cardano.Node.TUI.GitRevFromGit
-                       Cardano.Tracing.TraceAcceptor
                        Cardano.Tracing.Tracers
                        Cardano.Wallet.Client
                        Cardano.Wallet.Logging
@@ -168,36 +167,6 @@ executable cardano-node
      build-depends:    Win32
   else
      build-depends:    unix
-
-executable trace-acceptor
-  hs-source-dirs:      app
-  main-is:             trace-acceptor.hs
-  default-language:    Haskell2010
-  ghc-options:         -threaded
-                       -Wall
-                       -rtsopts
-                       "-with-rtsopts=-T"
-                       -fno-warn-unticked-promoted-constructors
-
-  build-depends:       base
-                     , cardano-config
-                     , cardano-node
-                     , cardano-prelude
-                     , cardano-shell
-                     , contra-tracer
-                     , io-sim-classes
-                     , iohk-monitoring
-                     , ouroboros-network
-                     , ouroboros-consensus
-                     , typed-protocols
-                     , typed-protocols-cbor
-
-                     , bytestring
-                     , iproute
-                     , network
-                     , optparse-applicative
-                     , serialise
-                     , text
 
 executable wallet-client
   hs-source-dirs:      app

@@ -12,9 +12,12 @@ dist/
 .stack-to-nix.cache
 stack.yaml.lock
 /genesis.*
-/logs
+logs/
 
 /db-[0-9]
 /launch_*
 /state-*
 /cluster*.log*
+
+/benchmarking/chain-sync/state-node-mainnet/
+

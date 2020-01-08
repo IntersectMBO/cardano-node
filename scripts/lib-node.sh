@@ -30,14 +30,6 @@ function commonargs() {
         printf -- "--socket-dir ./socket/$1 "
 }
 
-function acceptorargs() {
-        commonargs
-        nodecfg acceptor
-        dlgkey 0
-        dlgcert 0
-        printf -- "--port 1234 "
-}
-
 function nodeargs () {
         local extra="$2"
         commonargs

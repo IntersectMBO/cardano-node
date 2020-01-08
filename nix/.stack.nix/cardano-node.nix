@@ -108,28 +108,6 @@
             then [ (hsPkgs.Win32) ]
             else [ (hsPkgs.unix) ]);
           };
-        "trace-acceptor" = {
-          depends = [
-            (hsPkgs.base)
-            (hsPkgs.cardano-config)
-            (hsPkgs.cardano-node)
-            (hsPkgs.cardano-prelude)
-            (hsPkgs.cardano-shell)
-            (hsPkgs.contra-tracer)
-            (hsPkgs.io-sim-classes)
-            (hsPkgs.iohk-monitoring)
-            (hsPkgs.ouroboros-network)
-            (hsPkgs.ouroboros-consensus)
-            (hsPkgs.typed-protocols)
-            (hsPkgs.typed-protocols-cbor)
-            (hsPkgs.bytestring)
-            (hsPkgs.iproute)
-            (hsPkgs.network)
-            (hsPkgs.optparse-applicative)
-            (hsPkgs.serialise)
-            (hsPkgs.text)
-            ];
-          };
         "wallet-client" = {
           depends = [
             (hsPkgs.base)

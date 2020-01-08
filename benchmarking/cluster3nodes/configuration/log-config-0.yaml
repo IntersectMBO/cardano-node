@@ -10,15 +10,10 @@ rotation:
 # these backends are initialized:
 setupBackends:
   - KatipBK
-  #- TraceForwarderBK
 
 # if not indicated otherwise, then messages are passed to these backends:
 defaultBackends:
   - KatipBK
-  #- TraceForwarderBK
-
-# file to forward traced objects
-#logOutput: "logs/log-pipe-0"
 
 # if wanted, the GUI is listening on this port:
 #hasGUI: 12871
@@ -60,16 +55,6 @@ options:
     'cardano.epoch-validation.utxo-stats':
       # Change the `subtrace` value to `Neutral` in order to log
       # `UTxO`-related messages during epoch validation.
-      subtrace: NoTrace
-    'cardano.#messagecounters.aggregation':
-      subtrace: NoTrace
-    'cardano.#messagecounters.ekgview':
-      subtrace: NoTrace
-    'cardano.#messagecounters.switchboard':
-      subtrace: NoTrace
-    'cardano.#messagecounters.katip':
-      subtrace: NoTrace
-    'cardano.#messagecounters.monitoring':
       subtrace: NoTrace
   mapBackends:
     cardano.node.metrics.ChainDB:
