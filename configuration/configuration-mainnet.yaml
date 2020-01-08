@@ -61,16 +61,6 @@ options:
       # Change the `subtrace` value to `Neutral` in order to log
       # `UTxO`-related messages during epoch validation.
       subtrace: NoTrace
-    '#messagecounters.aggregation':
-      subtrace: NoTrace
-    '#messagecounters.ekgview':
-      subtrace: NoTrace
-    '#messagecounters.switchboard':
-      subtrace: NoTrace
-    '#messagecounters.katip':
-      subtrace: NoTrace
-    '#messagecounters.monitoring':
-      subtrace: NoTrace
   mapBackends:
     cardano.node.metrics.ChainDB:
       - EKGViewBK

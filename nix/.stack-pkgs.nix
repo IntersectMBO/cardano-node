@@ -37,9 +37,9 @@
         cardano-crypto = ./.stack.nix/cardano-crypto.nix;
         canonical-json = ./.stack.nix/canonical-json.nix;
         };
-      compiler.version = "8.6.4";
-      compiler.nix-name = "ghc864";
+      compiler.version = "8.6.5";
+      compiler.nix-name = "ghc865";
       };
   resolver = "lts-13.16";
-  compiler = "ghc-8.6.4";
+  compiler = "ghc-8.6.5";
   }

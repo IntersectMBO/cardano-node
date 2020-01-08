@@ -34,13 +34,6 @@ defaultScribes:
 
 # more options which can be passed as key-value pairs:
 options:
-  mapSubtrace:
-    '#messagecounters.switchboard':
-      subtrace: NoTrace
-    '#messagecounters.ekgview':
-      subtrace: NoTrace
-    '#messagecounters.katip':
-      subtrace: NoTrace
   mapBackends:
     'byron-proxy.db.block count':
       - EKGViewBK

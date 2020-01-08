@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # >> cpu time limit in seconds
-CPU_TIME_LIMIT=3600
+CPU_TIME_LIMIT=$((1*60*60))
 
 BASEDIR=`pwd`
 
