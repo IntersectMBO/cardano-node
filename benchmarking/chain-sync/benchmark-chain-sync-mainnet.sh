@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# >> cpu time limit in seconds
+# >> time limit in seconds
 CPU_TIME_LIMIT=3600
 
 BASEDIR=`pwd`
@@ -16,13 +16,11 @@ rm node-0*
 
 #set -euo pipefail
 
-ulimit -t $CPU_TIME_LIMIT
-
 date --iso-8601=seconds > STARTTIME
 
 NODE="cabal v2-run exe:cardano-node -- "
 
-exec ${NODE} \
+exec timeout $CPU_TIME_LIMIT ${NODE} \
   --genesis-file ${BASEDIR}/../../configuration/mainnet-genesis.json \
   --genesis-hash "5f20df933584822601f9e3f8c024eb5eb252fe8cefb24d1317dc3d432e940ebb" \
   --config ${BASEDIR}/configuration/log-configuration.yaml \
