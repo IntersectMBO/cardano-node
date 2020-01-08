@@ -29,9 +29,15 @@ let
       proxyPort = 7777;
       proxyHost = "127.0.0.1";
       loggingExtras = null;
-      nodeConfig = envConfig.nodeConfig or localLib.environments.mainnet.nodeConfig;
-    };
-    config = defaultConfig // envConfig // customConfig;
+    } // (builtins.removeAttrs envConfig ["nodeConfig"]);
+
+    nodeConfig = (envConfig.nodeConfig or localLib.environments.mainnet.nodeConfig)
+      // (customConfig.nodeConfig or {});
+
+    config = defaultConfig
+      // (builtins.removeAttrs customConfig ["nodeConfig"])
+      // { inherit nodeConfig; };
+
     topologyFile = let
       edgePort = if config.useProxy then config.proxyPort else config.edgePort;
       edgeHost = if config.useProxy then config.proxyHost else config.edgeHost;
