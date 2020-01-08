@@ -32,6 +32,8 @@ exec timeout $CPU_TIME_LIMIT ${NODE} \
   --tracing-verbosity-maximal \
   --trace-mempool \
   --trace-forge \
+  --trace-block-fetch-decisions \
+  --trace-chain-db \
    \
  $@
 
