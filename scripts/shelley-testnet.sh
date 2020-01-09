@@ -10,9 +10,6 @@ set -e
 # tmux new-session -s 'Demo' -t demo
 
 # then run this script
-# CMD="stack exec --nix --"
-CMD="cabal v2-run exe:cardano-node --"
-CMD="stack exec cardano-node --"
 
 # VERBOSITY="--tracing-verbosity-minimal"
 # VERBOSITY="--tracing-verbosity-normal"
@@ -36,6 +33,8 @@ EXTRA="
 "
 
 . $(dirname $0)/lib-node.sh
+
+CMD="$(executable_runner cardano-node)"
 
 sleep 2
 

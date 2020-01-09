@@ -8,10 +8,6 @@ set -e
 # create tmux session:
 #> tmux new-session -s 'Demo' -t demo
 
-# CMD="stack exec --nix cardano-node --"
-CMD="cabal v2-run -- exe:cardano-node"
-CMD="stack exec -- cardano-node"
-
 # EXTRA="--live-view"
 EXTRA="
   --trace-block-fetch-decisions
@@ -31,6 +27,8 @@ EXTRA="
 "
 
 . $(dirname $0)/lib-node.sh
+
+CMD="$(executable_runner cardano-node)"
 
 # for logs:
 mkdir -p logs/
