@@ -11,7 +11,7 @@ root="$(realpath $(dirname $0)/..)"
 configuration="${root}/configuration"
 scripts="${root}/scripts"
 
-default_mode='stack'
+default_mode='cabal'
 mode='default'
 while test -n "$1"
 do case "$1" in
