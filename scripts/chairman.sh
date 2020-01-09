@@ -12,5 +12,5 @@ ${CHAIRMAN} \
         -t 1000 \
         --genesis-file "${genesis_file}" \
         --genesis-hash "${genesis_hash}" \
-        --socket-dir "./socket/" \
+        --socket-dir "${root}/socket/" \
         --config "${configuration}/log-config-0.yaml"

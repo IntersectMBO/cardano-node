@@ -26,7 +26,7 @@ NOW=`date "+%Y-%m-%d 00:00:00"`
 NETARGS="--slot-duration 2 --topology configuration/simple-topology-dns.json ${ALGO}"
 #SCR="./scripts/start-node.sh"
 
-. $(dirname $0)/lib-mode.sh
+. $(dirname $0)/lib.sh
 NODE="$(executable_runner cardano-node)"
 
 function mklogcfg () {

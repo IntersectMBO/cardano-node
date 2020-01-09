@@ -18,4 +18,5 @@ ${CLI} \
         signing-key-address \
         --testnet-magic ${proto_magic} \
         --secret ${key} \
+        --log-config ${configuration}/log-configuration.yaml \
         | head -n1 | xargs echo -n

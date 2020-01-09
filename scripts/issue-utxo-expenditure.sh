@@ -27,7 +27,7 @@ Usage:  $(basename $0) TX-FILE IN-TXID IN-INDEX FROM-KEY-FILE TO-KEY-FILE LOVELA
 EOF
             exit 1;; esac
 
-addr=$(scripts/get-default-key-address.sh ${to_key})
+addr=$(${scripts}/get-default-key-address.sh ${to_key})
 
 args=" --real-pbft
        --genesis-file        ${genesis_file}

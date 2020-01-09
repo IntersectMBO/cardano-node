@@ -1,4 +1,4 @@
-. $(dirname $0)/lib-mode.sh
+. $(dirname $0)/lib.sh
 
 genesis_root="${configuration}/genesis"
 genesis_file="${genesis_root}/genesis.json"
