@@ -2,7 +2,9 @@
 
 set -e
 
-RUNNER=${RUNNER:-cabal v2-run --}
+. $(dirname $0)/lib-mode.sh
+NODE="$(executable_runner cardano-node)"
+
 TOPOLOGY=${TOPOLOGY:-"configuration/mainnet-topology.json"}
 
 ARGS=(
@@ -29,4 +31,4 @@ ARGS=(
         --trace-local-tx-submission-protocol
 )
 
-${RUNNER} exe:cardano-node "${ARGS[@]}"
+${NODE} "${ARGS[@]}"

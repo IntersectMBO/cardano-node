@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 
-RUNNER=${RUNNER:-cabal v2-run -v0 --}
-
 . $(dirname $0)/lib-node.sh
+CLI="$(executable_quiet_runner cardano-cli)"
 
 default_from_key="${genesis_root}/delegate-keys.001.key"
 default_to_key="${genesis_root}/delegate-keys.002.key"
@@ -40,4 +39,4 @@ args=" --real-pbft
        --txout            (\"${addr}\",${lovelace})
 "
 set -x
-${RUNNER} cardano-cli ${args}
+${CLI} ${args}

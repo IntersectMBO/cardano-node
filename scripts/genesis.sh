@@ -8,8 +8,9 @@ EOF
 
 umask 077
 
-SCRIPTDIR=$(dirname $0)
 CONFIGDIR="$(realpath ${SCRIPTDIR}/../configuration)"
+. $(dirname $0)/lib-mode.sh
+CLI="$(executable_quiet_runner cardano-cli)"
 
 DATE=date
 OS=$(uname -s)
@@ -51,13 +52,12 @@ args=(
 )
 
 set -xe
-RUNNER=${RUNNER:-cabal v2-run -v0 --}
 
-${RUNNER} cardano-cli "${common[@]}" genesis "${args[@]}" "$@"
+${CLI} "${common[@]}" genesis "${args[@]}" "$@"
 
 # move new genesis to configuration
-GENHASH=`${RUNNER} cardano-cli "${common[@]}" print-genesis-hash --genesis-json "${tmpdir}/genesis.json" | tail -1`
 TARGETDIR="${CONFIGDIR}/genesis"
+GENHASH=`${CLI} "${common[@]}" print-genesis-hash --genesis-json "${tmpdir}/genesis.json" | tail -1`
 mkdir -vp "${TARGETDIR}"
 cp -iav ${tmpdir}/genesis.json "${TARGETDIR}"/
 cp -iav ${tmpdir}/delegate-keys.*.key "${TARGETDIR}"/

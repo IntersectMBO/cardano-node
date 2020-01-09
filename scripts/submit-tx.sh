@@ -9,10 +9,8 @@ EOF
 TX="$1"
 shift
 
-#CMD="stack exec --nix cardano-node -- "
-CMD="cabal v2-run"
-
 . $(dirname $0)/lib-node.sh
+CLI="$(executable_runner cardano-cli)"
 
 ALGO="real-pbft"
 NOW=`date "+%Y-%m-%d 00:00:00"`
@@ -34,4 +32,4 @@ function mkdlgcert () {
 }
 
 set -x
-${CMD} -- cardano-cli --log-config configuration/log-configuration.yaml ${NETARGS[*]} "$@"
+${CLI} --log-config configuration/log-configuration.yaml ${NETARGS[*]} "$@"
