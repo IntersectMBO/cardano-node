@@ -278,6 +278,9 @@ mkTracers traceOptions tracer = do
             logValue2 :: LOContent a
             logValue2 = LogValue "txsProcessed" $ PureI $ fromIntegral n
 
+            logValue3 :: LOContent a
+            logValue3 = LogValue "mempoolBytes" $ PureI $ fromIntegral (msNumBytes tot)
+
         meta <- mkLOMeta Critical Confidential
 
         traceNamedObject tr (meta, logValue1)
@@ -286,6 +289,8 @@ mkTracers traceOptions tracer = do
         traceNamedObject tr (meta, logValue2)
         traceNamedObject tr' (meta, logValue2)
 
+        traceNamedObject tr (meta, logValue3)
+        traceNamedObject tr' (meta, logValue3)
 
     mempoolTracer :: Tracer IO (TraceEventMempool blk)
     mempoolTracer = Tracer $ \ev -> do
