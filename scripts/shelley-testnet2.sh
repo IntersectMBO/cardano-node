@@ -8,10 +8,6 @@ set -e
 # create tmux session:
 #> tmux new-session -s 'Demo' -t demo
 
-# CMD="stack exec --nix cardano-node --"
-CMD="cabal v2-run -- exe:cardano-node"
-CMD="stack exec -- cardano-node"
-
 # EXTRA="--live-view"
 EXTRA="
   --trace-block-fetch-decisions
@@ -31,6 +27,7 @@ EXTRA="
 "
 
 . $(dirname $0)/lib-node.sh
+NODE="$(executable_runner cardano-node)"
 
 # for logs:
 mkdir -p logs/
@@ -45,9 +42,9 @@ tmux select-pane -t 0
 tmux split-window -v
 
 tmux select-pane -t 1
-tmux send-keys "cd '${PWD}'; ${CMD} $(nodeargs 0 "${ALGO} $(echo -n ${EXTRA})") " C-m
+tmux send-keys "cd '${PWD}'; ${NODE} $(nodeargs 0 "${ALGO} $(echo -n ${EXTRA})") " C-m
 tmux select-pane -t 2
-tmux send-keys "cd '${PWD}'; ${CMD} $(nodeargs 1 "${ALGO} $(echo -n ${EXTRA})") " C-m
+tmux send-keys "cd '${PWD}'; ${NODE} $(nodeargs 1 "${ALGO} $(echo -n ${EXTRA})") " C-m
 tmux select-pane -t 3
-tmux send-keys "cd '${PWD}'; ${CMD} $(nodeargs 2 "${ALGO} $(echo -n ${EXTRA})") " C-m
+tmux send-keys "cd '${PWD}'; ${NODE} $(nodeargs 2 "${ALGO} $(echo -n ${EXTRA})") " C-m
 

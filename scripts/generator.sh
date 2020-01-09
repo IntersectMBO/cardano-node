@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 
-CMD="cabal v2-run -v0 -- cardano-cli "
-
 . $(dirname $0)/lib-node.sh
+CLI="$(executable_quiet_runner cardano-cli)"
 
 NOW=`date "+%Y-%m-%d 00:00:00"`
 NETARGS=(
@@ -32,8 +31,8 @@ function mkdlgcert () {
 }
 
 set -x
-${CMD} \
-    --log-config configuration/log-configuration.yaml \
+${CLI} \
+    --log-config ${configuration}/log-configuration.yaml \
     $(mkdlgkey 0) \
     $(mkdlgcert 0) \
     ${NETARGS[*]} \

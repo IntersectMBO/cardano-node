@@ -9,10 +9,8 @@ EOF
 TX="$1"
 shift
 
-#CMD="stack exec --nix cardano-node -- "
-CMD="cabal v2-run"
-
 . $(dirname $0)/lib-node.sh
+CLI="$(executable_runner cardano-cli)"
 
 ALGO="real-pbft"
 NOW=`date "+%Y-%m-%d 00:00:00"`
@@ -21,7 +19,7 @@ NETARGS=(
         --genesis-file "${genesis_file}"
         --genesis-hash "${genesis_hash}"
         submit-tx
-        --topology      "configuration/simple-topology.json"
+        --topology      "${configuration}/simple-topology.json"
         --node-id      "0"
         --tx           "$TX"
 )
@@ -34,4 +32,4 @@ function mkdlgcert () {
 }
 
 set -x
-${CMD} -- cardano-cli --log-config configuration/log-configuration.yaml ${NETARGS[*]} "$@"
+${CLI} --log-config ${configuration}/log-configuration.yaml ${NETARGS[*]} "$@"

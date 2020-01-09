@@ -8,8 +8,8 @@ EOF
 
 umask 077
 
-SCRIPTDIR=$(dirname $0)
-CONFIGDIR="$(realpath ${SCRIPTDIR}/../configuration)"
+. $(dirname $0)/lib.sh
+CLI="$(executable_quiet_runner cardano-cli)"
 
 DATE=date
 OS=$(uname -s)
@@ -18,7 +18,7 @@ if [ "$OS" = "Darwin" ]; then
 fi
 start_future_offset="1 minute"
 start_time="$(${DATE} -d "now + ${start_future_offset}" +%s)"
-protocol_params="${SCRIPTDIR}/protocol-params.json"
+protocol_params="${scripts}/protocol-params.json"
 
 parameter_k=2160
 protocol_magic=459045235
@@ -32,7 +32,7 @@ not_so_secret=2718281828
 
 tmpdir="`mktemp`.d"
 common=(
-        --log-config                 "${CONFIGDIR}/configuration-silent.yaml"
+        --log-config                 "${configuration}/configuration-silent.yaml"
         --real-pbft
 )
 args=(
@@ -51,13 +51,12 @@ args=(
 )
 
 set -xe
-RUNNER=${RUNNER:-cabal v2-run -v0 --}
 
-${RUNNER} cardano-cli "${common[@]}" genesis "${args[@]}" "$@"
+${CLI} "${common[@]}" genesis "${args[@]}" "$@"
 
 # move new genesis to configuration
-GENHASH=`${RUNNER} cardano-cli "${common[@]}" print-genesis-hash --genesis-json "${tmpdir}/genesis.json" | tail -1`
-TARGETDIR="${CONFIGDIR}/genesis"
+GENHASH=`${CLI} "${common[@]}" print-genesis-hash --genesis-json "${tmpdir}/genesis.json" | tail -1`
+TARGETDIR="${configuration}/genesis"
 mkdir -vp "${TARGETDIR}"
 cp -iav ${tmpdir}/genesis.json "${TARGETDIR}"/
 cp -iav ${tmpdir}/delegate-keys.*.key "${TARGETDIR}"/
