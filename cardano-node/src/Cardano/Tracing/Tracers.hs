@@ -6,6 +6,7 @@
 {-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
 {-# LANGUAGE TupleSections         #-}
+{-# LANGUAGE TypeApplications      #-}
 {-# LANGUAGE UndecidableInstances  #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans  #-}
@@ -29,6 +30,7 @@ import           Control.Tracer
 import           Codec.CBOR.Read (DeserialiseFailure)
 import           Data.Functor.Contravariant (contramap)
 import           Data.Text (Text, pack)
+import           Network.Mux.Types (MuxTrace, WithMuxBearer)
 import qualified Network.Socket as Socket (SockAddr)
 import           Network.Mux (WithMuxBearer, MuxTrace)
 
@@ -40,24 +42,24 @@ import           Cardano.BM.ElidingTracer
 import           Cardano.BM.Tracing
 import           Cardano.BM.Trace (traceNamedObject)
 import           Cardano.BM.Data.Tracer (WithSeverity (..), addName,
-                     annotateSeverity)
+                                         annotateSeverity)
 import           Cardano.BM.Data.Transformers
+import           Cardano.BM.Trace (traceNamedObject)
+import           Cardano.BM.Tracing
 
-import           Ouroboros.Consensus.BlockchainTime (SystemStart (..),
-                     TraceBlockchainTimeEvent (..))
 import           Ouroboros.Consensus.Block (Header)
+import           Ouroboros.Consensus.BlockchainTime (SystemStart (..), TraceBlockchainTimeEvent (..))
 import           Ouroboros.Consensus.Ledger.Abstract
-import           Ouroboros.Consensus.Mempool.API
-                    (GenTx, TraceEventMempool (..), MempoolSize (..))
+import           Ouroboros.Consensus.Mempool.API (GenTx, MempoolSize (..),
+                                                  TraceEventMempool (..))
 import qualified Ouroboros.Consensus.Node.Tracers as Consensus
 import           Ouroboros.Consensus.NodeNetwork (ProtocolTracers,
-                     ProtocolTracers' (..), nullProtocolTracers)
+                                                  ProtocolTracers' (..),
+                                                  nullProtocolTracers)
 import           Ouroboros.Consensus.Util.Orphans ()
 
 import qualified Ouroboros.Network.AnchoredFragment as AF
-import           Ouroboros.Network.Block (Point,
-                     blockNo, unBlockNo, unSlotNo)
-import           Ouroboros.Network.BlockFetch.Decision (FetchDecision)
+import           Ouroboros.Network.Block (Point, blockNo, unBlockNo, unSlotNo)
 import           Ouroboros.Network.BlockFetch.ClientState (TraceLabelPeer (..))
 import           Ouroboros.Network.NodeToNode (WithAddr, ErrorPolicyTrace)
 import           Ouroboros.Network.Point (fromWithOrigin)
@@ -65,12 +67,16 @@ import           Ouroboros.Network.Subscription
 
 import qualified Ouroboros.Storage.ChainDB as ChainDB
 
+import           Ouroboros.Consensus.Node (RunNode (..))
+
 import           Cardano.Config.Protocol (TraceConstraints)
 import           Cardano.Config.Types
-import           Cardano.Tracing.ToObjectOrphans
 import           Cardano.Tracing.MicroBenchmarking
+import           Cardano.Tracing.ToObjectOrphans
 
 import           Control.Tracer.Transformers
+import           Control.Tracer.Transformers.ObserveOutcome (Outcome, OutcomeEnhancedTracer,
+                                                             mkOutcomeExtractor)
 
 data Tracers peer blk = Tracers
   { -- | Trace the ChainDB
@@ -167,7 +173,7 @@ mkTracers traceOptions tracer = do
   -- The outcomes we want to measure, the outcome extractor
   -- for measuring the time it takes a transaction to get into
   -- a block.
-  -- txsOutcomeExtractor <- mkOutcomeExtractor
+  --txsOutcomeExtractor <- mkOutcomeExtractor @_ @(MeasureTxs blk)
 
   elided <- newstate  -- for eliding messages in ChainDB tracer
 
@@ -202,7 +208,7 @@ mkTracers traceOptions tracer = do
           $ toLogObject' StructuredLogging tracingVerbosity
           $ addName "ErrorPolicy" tracer
     , muxTracer
-        =  tracerOnOff (traceMux traceOptions)
+        = tracerOnOff (traceMux traceOptions)
           $ annotateSeverity
           $ toLogObject' StructuredLogging tracingVerbosity
           $ addName "Mux" tracer
@@ -210,7 +216,7 @@ mkTracers traceOptions tracer = do
   where
     -- Turn on/off a tracer depending on what was parsed from the command line.
     tracerOnOff :: Bool -> Tracer IO a -> Tracer IO a
-    tracerOnOff False _ = nullTracer
+    tracerOnOff False _      = nullTracer
     tracerOnOff True tracer' = tracer'
     tracingVerbosity :: TracingVerbosity
     tracingVerbosity = traceVerbosity traceOptions
@@ -301,7 +307,10 @@ mkTracers traceOptions tracer = do
       traceWith (measureTxsStart tracer) ev
       traceWith (showTracing $ withName "Mempool" tracer) ev
 
-    forgeTracer :: ForgeTracers -> TraceOptions -> Tracer IO (Consensus.TraceForgeEvent blk (GenTx blk))
+    forgeTracer
+        :: ForgeTracers
+        -> TraceOptions
+        -> Tracer IO (Consensus.TraceForgeEvent blk (GenTx blk))
     forgeTracer forgeTracers traceOpts = Tracer $ \ev -> do
         traceWith (measureTxsEnd tracer) ev
         traceWith (consensusForgeTracer) ev
@@ -474,7 +483,7 @@ chainInformation frag = ChainInformation
     blockN = unBlockNo $ fromMaybe 1 (AF.headBlockNo frag)
     firstBlock = case unBlockNo . blockNo <$> AF.last frag of
       -- Empty fragment, no blocks. We have that @blocks = 1 - 1 = 0@
-      Left _ -> 1
+      Left _  -> 1
       -- The oldest block is the genesis EBB with block number 0,
       -- don't let it contribute to the number of blocks
       Right 0 -> 1
