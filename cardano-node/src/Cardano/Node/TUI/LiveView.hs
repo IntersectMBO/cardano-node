@@ -203,6 +203,13 @@ instance IsEffectuator LiveViewBackend Text where
                         return $ lvs { lvsMempool = lvsMempool'
                                      , lvsMempoolPerc = percentage
                                      }
+            LogObject _ _ (LogValue "mempoolBytes" (PureI mempoolBytes)) ->
+                modifyMVar_ (getbe lvbe) $ \lvs -> do
+                        let lvsMempoolBytes' = fromIntegral mempoolBytes :: Word64
+                            percentage = fromIntegral lvsMempoolBytes' / fromIntegral (lvsMempoolCapacityBytes lvs) :: Float
+                        return $ lvs { lvsMempoolBytes = lvsMempoolBytes'
+                                     , lvsMempoolBytesPerc = percentage
+                                     }
             LogObject _ _ (LogValue "density" (PureD density)) ->
                 modifyMVar_ (getbe lvbe) $ \lvs ->
                         return $ lvs { lvsChainDensity = 0.05 + density * 100.0 }
@@ -246,6 +253,8 @@ data LiveViewState a = LiveViewState
     , lvsPeersConnected      :: Word64
     , lvsMempool             :: Word64
     , lvsMempoolPerc         :: Float
+    , lvsMempoolBytes        :: Word64
+    , lvsMempoolBytesPerc    :: Float
     , lvsCPUUsagePerc        :: Float
     , lvsMemoryUsageCurr     :: Float
     , lvsMemoryUsageMax      :: Float
@@ -274,6 +283,7 @@ data LiveViewState a = LiveViewState
     , lvsNetworkUsageOutLast :: Word64
     , lvsNetworkUsageOutNs   :: Word64
     , lvsMempoolCapacity     :: Word64
+    , lvsMempoolCapacityBytes :: Word64
     , lvsMessage             :: Maybe a
     , lvsUIThread            :: Maybe (Async.Async ())
     , lvsMetricsThread       :: Maybe (Async.Async ())
@@ -284,6 +294,11 @@ data LiveViewState a = LiveViewState
 initLiveViewState :: IO (LiveViewState a)
 initLiveViewState = do
     now <- getCurrentTime
+
+    let -- TODO:  obtain from configuration
+        mempoolCapacity = 200 :: Word64
+        maxBytesPerTx = 4096 :: Word64
+
     return $ LiveViewState
                 { lvsQuit                = False
                 , lvsRelease             = "Shelley"
@@ -300,6 +315,8 @@ initLiveViewState = do
                 , lvsPeersConnected      = 0
                 , lvsMempool             = 0
                 , lvsMempoolPerc         = 0.0
+                , lvsMempoolBytes        = 0
+                , lvsMempoolBytesPerc    = 0.0
                 , lvsCPUUsagePerc        = 0.58
                 , lvsMemoryUsageCurr     = 0.0
                 , lvsMemoryUsageMax      = 0.2
@@ -326,7 +343,8 @@ initLiveViewState = do
                 , lvsNetworkUsageInNs    = 10000
                 , lvsNetworkUsageOutLast = 0
                 , lvsNetworkUsageOutNs   = 10000
-                , lvsMempoolCapacity     = 200
+                , lvsMempoolCapacity     = mempoolCapacity
+                , lvsMempoolCapacityBytes = mempoolCapacity * maxBytesPerTx
                 , lvsMessage             = Nothing
                 , lvsUIThread            = Nothing
                 , lvsMetricsThread       = Nothing
@@ -540,13 +558,18 @@ headerW p =
 
 systemStatsW :: LiveViewState a -> Widget ()
 systemStatsW p =
-      padTop   (T.Pad 2)
+      padTop   (T.Pad 1)
     . padLeft  (T.Pad 2)
     . padRight (T.Pad 2)
-    $ vBox [ vBox [ hBox [ padBottom (T.Pad 1) $ txt "Mempool:"
+    $ vBox [ vBox [ hBox [ txt "Mempool txs:"
                          , withAttr barValueAttr . padLeft T.Max . str . show $ lvsMempoolCapacity p
                          ]
                   , padBottom (T.Pad 1) memPoolBar
+                  ]
+           , vBox [ hBox [ txt "Mempool bytes:"
+                         , withAttr barValueAttr . padLeft T.Max . str . show $ lvsMempoolCapacityBytes p
+                         ]
+                  , padBottom (T.Pad 1) memPoolBytesBar
                   ]
            , vBox [ hBox [ txt "Memory usage:"
                          , withAttr barValueAttr . padLeft T.Max $ str $ (take 5 $ show $ max (lvsMemoryUsageMax p) 200.0) <> " MB"
@@ -594,6 +617,15 @@ systemStatsW p =
     mempoolLabel = Just $ (show . lvsMempool $ p)
                         ++ " / "
                         ++ take 5 (show $ lvsMempoolPerc p * 100) ++ "%"
+    memPoolBytesBar :: forall n. Widget n
+    memPoolBytesBar = updateAttrMap
+                 (A.mapAttrNames [ (mempoolDoneAttr, P.progressCompleteAttr)
+                                 , (mempoolToDoAttr, P.progressIncompleteAttr)
+                                 ]
+                 ) $ bar mempoolBytesLabel (lvsMempoolBytesPerc p)
+    mempoolBytesLabel = Just $ (show . lvsMempoolBytes $ p)
+                        ++ " / "
+                        ++ take 5 (show $ lvsMempoolBytesPerc p * 100) ++ "%"
     memUsageBar :: forall n. Widget n
     memUsageBar = updateAttrMap
                   (A.mapAttrNames [ (memDoneAttr, P.progressCompleteAttr)
