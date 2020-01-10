@@ -30,17 +30,11 @@ setupScribes:
   - scKind: FileSK
     scName: "logs/node-0.log"
     scFormat: ScText
-  - scKind: StdoutSK
-    scName: stdout
-    scFormat: ScText
-    scRotation: null
 
 # if not indicated otherwise, then log output is directed to this:
 defaultScribes:
   - - FileSK
     - "logs/node-0.log"
-  - - StdoutSK
-    - stdout
 
 # more options which can be passed as key-value pairs:
 options:
@@ -98,7 +92,7 @@ NumCoreNodes: 1
 RequiresNetworkMagic: RequiresMagic
 PBftSignatureThreshold: 0.7
 TurnOnLogging: True
-ViewMode: SimpleView
+ViewMode: LiveView
 TurnOnLogMetrics: True
 
 

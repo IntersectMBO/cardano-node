@@ -16,7 +16,7 @@ if test ! -f "${genesis_file}"
 then echo "ERROR: genesis ${genesis_file} does not exist!">&1; exit 1; fi
 
 function nodecfg () {
-        printf -- "--config ${configuration}/log-config-${1}.yaml "
+        printf -- "--config ${configuration}/log-config-${1}${2}.yaml "
 }
 function dlgkey () {
         printf -- "--signing-key            ${genesis_root}/delegate-keys.%03d.key " "$1"
@@ -33,11 +33,13 @@ function commonargs() {
 }
 
 function nodeargs () {
-        local extra="$2"
+        local id="$1"
+        local flavor="$2"
+        local extra="$3"
         commonargs
-        nodecfg $1
-        dlgkey $1
-        dlgcert $1
+        nodecfg $id $flavor
+        dlgkey $id
+        dlgcert $id
         printf -- "${extra} "
         printf -- "--port 300$1 "
 }

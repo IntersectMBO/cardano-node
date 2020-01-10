@@ -8,7 +8,6 @@ set -e
 # create tmux session:
 #> tmux new-session -s 'Demo' -t demo
 
-# EXTRA="--live-view"
 EXTRA="
   --trace-block-fetch-decisions
   --trace-block-fetch-client
@@ -42,9 +41,8 @@ tmux select-pane -t 0
 tmux split-window -v
 
 tmux select-pane -t 1
-tmux send-keys "cd '${PWD}'; ${NODE} $(nodeargs 0 "${ALGO} $(echo -n ${EXTRA})") " C-m
+tmux send-keys "cd '${PWD}'; ${NODE} $(nodeargs 0 '.liveview' "${ALGO} $(echo -n ${EXTRA})") " C-m
 tmux select-pane -t 2
-tmux send-keys "cd '${PWD}'; ${NODE} $(nodeargs 1 "${ALGO} $(echo -n ${EXTRA})") " C-m
+tmux send-keys "cd '${PWD}'; ${NODE} $(nodeargs 1 '.liveview' "${ALGO} $(echo -n ${EXTRA})") " C-m
 tmux select-pane -t 3
-tmux send-keys "cd '${PWD}'; ${NODE} $(nodeargs 2 "${ALGO} $(echo -n ${EXTRA})") " C-m
-
+tmux send-keys "cd '${PWD}'; ${NODE} $(nodeargs 2 '.liveview' "${ALGO} $(echo -n ${EXTRA})") " C-m
