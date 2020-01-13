@@ -818,11 +818,11 @@ instance ToObject (TraceFetchClientState header) where
   toObject _verb (CompletedBlockFetch {}) =
     mkObject [ "kind" .= String "CompletedBlockFetch" ]
   toObject _verb (CompletedFetchBatch {}) =
-    mkObject [" kind" .= String "CompletedFetchBatch" ]
+    mkObject [ "kind" .= String "CompletedFetchBatch" ]
   toObject _verb (StartedFetchBatch {}) =
-    mkObject [" kind" .= String "StartedFetchBatch" ]
+    mkObject [ "kind" .= String "StartedFetchBatch" ]
   toObject _verb (RejectedFetchBatch {}) =
-    mkObject [" kind" .= String "RejectedFetchBatch" ]
+    mkObject [ "kind" .= String "RejectedFetchBatch" ]
 
 instance ToObject (TraceBlockFetchServerEvent blk) where
   toObject _verb _ =
@@ -873,5 +873,3 @@ instance ProtocolLedgerView blk => ToObject (TraceForgeEvent blk tx) where
         , "slot"    .= toJSON (unSlotNo slotNo)
         , "reason"  .= show invalidBlockReason
         ]
-
-
