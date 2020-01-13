@@ -16,9 +16,10 @@ module Cardano.Tracing.MicroBenchmarking
 
 import           Cardano.Prelude
 
-import           Control.Monad.Class.MonadTime (Time, DiffTime, diffTime)
+import           Control.Monad.Class.MonadTime (Time (..), DiffTime, diffTime)
 
 import           Data.Aeson (Value (..), (.=))
+import qualified Data.Time.Clock as Time
 
 import           Cardano.BM.Data.LogItem
 import           Cardano.BM.Data.Tracer
@@ -102,6 +103,11 @@ instance ToObject (MeasureTxs blk) where
     mkObject [ "kind"       .= String "MeasureTxsTimeStart"
              ]
 
+-- | Temporary to hold the types in place until the next PR:
+-- TODO(KS): Remove this and the time in the next PR.
+notime :: Time
+notime = Time . Time.picosecondsToDiffTime $ 0
+
 -- | Transformer for the start of the transaction, when the transaction was added
 -- to the mempool.
 measureTxsStart :: Tracer IO (LogObject Text) -> Tracer IO (TraceEventMempool blk)
@@ -109,14 +115,14 @@ measureTxsStart tracer = measureTxsStartInter $ toLogObject tracer
   where
     measureTxsStartInter :: Tracer IO (MeasureTxs blk) -> Tracer IO (TraceEventMempool blk)
     measureTxsStartInter tracer' = Tracer $ \case
-        TraceMempoolAddTxs txs MempoolSize{msNumTxs,msNumBytes} time ->
+        TraceMempoolAddTxs txs MempoolSize{msNumTxs,msNumBytes} ->
             traceWith tracer' measureTxsEvent
           where
             measureTxsEvent = MeasureTxsTimeStart
                                 txs
                                 (fromIntegral msNumTxs)
                                 (fromIntegral msNumBytes)
-                                time
+                                notime
 
         _ -> pure ()
 
@@ -127,6 +133,6 @@ measureTxsEnd tracer = measureTxsEndInter $ toLogObject tracer
   where
     measureTxsEndInter :: Tracer IO (MeasureTxs blk) -> Tracer IO (TraceForgeEvent blk (GenTx blk))
     measureTxsEndInter tracer' = Tracer $ \case
-        TraceAdoptedBlock slotNo blk txs time   -> traceWith tracer' (MeasureTxsTimeStop slotNo blk txs time)
-        _                                       -> pure ()
+        TraceAdoptedBlock slotNo blk txs    -> traceWith tracer' (MeasureTxsTimeStop slotNo blk txs notime)
+        _                                   -> pure ()
 

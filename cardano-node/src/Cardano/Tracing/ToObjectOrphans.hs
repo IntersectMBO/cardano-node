@@ -316,6 +316,7 @@ instance DefineSeverity (TraceLocalTxSubmissionServerEvent blk) where
 instance DefinePrivacyAnnotation (TraceForgeEvent blk tx)
 instance DefineSeverity (TraceForgeEvent blk tx) where
   defineSeverity (TraceForgeEvent {})           = Info
+  defineSeverity (TraceForgeAboutToLead {})     = Info
   defineSeverity (TraceCouldNotForge {})        = Warning
   defineSeverity (TraceAdoptedBlock {})         = Info
   defineSeverity (TraceDidntAdoptBlock {})      = Warning
@@ -845,13 +846,18 @@ instance ProtocolLedgerView blk => ToObject (TraceForgeEvent blk tx) where
         [ "kind"    .= String "TraceForgeEvent"
         , "slot"    .= toJSON (unSlotNo slotNo)
         ]
+  toObject _verb (TraceForgeAboutToLead slotNo) =
+    mkObject
+        [ "kind"    .= String "TraceForgeAboutToLead"
+        , "slot"    .= toJSON (unSlotNo slotNo)
+        ]
   toObject _verb (TraceCouldNotForge slotNo anachronyFailure) =
     mkObject
         [ "kind"    .= String "TraceCouldNotForge"
         , "slot"    .= toJSON (unSlotNo slotNo)
         , "reason"  .= show anachronyFailure
         ]
-  toObject _verb (TraceAdoptedBlock slotNo _blk _txs _time) =
+  toObject _verb (TraceAdoptedBlock slotNo _blk _txs) =
     mkObject
         [ "kind"    .= String "TraceAdoptedBlock"
         , "slot"    .= toJSON (unSlotNo slotNo)
