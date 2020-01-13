@@ -101,6 +101,7 @@ data Tracers peer blk = Tracers {
 
 data ForgeTracers = ForgeTracers
   { ftForged :: Trace IO Text
+  , ftForgeAboutToLead :: Trace IO Text
   , ftCouldNotForge :: Trace IO Text
   , ftAdopted :: Trace IO Text
   , ftDidntAdoptBlock :: Trace IO Text
@@ -156,6 +157,7 @@ mkTracers traceOptions tracer = do
   forgeTracers <-
     ForgeTracers
       <$> (counting $ liftCounting staticMetaCC name "forged" tracer)
+      <*> (counting $ liftCounting staticMetaCC name "forge-about-to-lead" tracer)
       <*> (counting $ liftCounting staticMetaCC name "could-not-forge" tracer)
       <*> (counting $ liftCounting staticMetaCC name "adopted" tracer)
       <*> (counting $ liftCounting staticMetaCC name "didnt-adopt" tracer)
@@ -265,9 +267,9 @@ mkTracers traceOptions tracer = do
     mempoolTraceTransformer tr = Tracer $ \mempoolEvent -> do
         let tr' = appendName "metrics" tr
             (n, tot) = case mempoolEvent of
-                  TraceMempoolAddTxs      txs0 tot0 _ -> (length txs0, tot0)
-                  TraceMempoolRejectedTxs txs0 tot0 _ -> (length txs0, tot0)
-                  TraceMempoolRemoveTxs   txs0 tot0  _-> (length txs0, tot0)
+                  TraceMempoolAddTxs      txs0 tot0 -> (length txs0, tot0)
+                  TraceMempoolRejectedTxs txs0 tot0 -> (length txs0, tot0)
+                  TraceMempoolRemoveTxs   txs0 tot0 -> (length txs0, tot0)
                   TraceMempoolManuallyRemovedTxs txs0 txs1 tot0
                                                     -> ( length txs0 + length txs1
                                                        , tot0
@@ -315,6 +317,7 @@ mkTracers traceOptions tracer = do
       flip traceWith ev $ fanning $ \(WithSeverity _ e) ->
         case e of
           Consensus.TraceForgeEvent{} -> teeForge' (ftForged ft)
+          Consensus.TraceForgeAboutToLead{} -> teeForge' (ftForgeAboutToLead ft)
           Consensus.TraceCouldNotForge{} -> teeForge' (ftCouldNotForge ft)
           Consensus.TraceAdoptedBlock{} -> teeForge' (ftAdopted ft)
           Consensus.TraceDidntAdoptBlock{} -> teeForge' (ftDidntAdoptBlock ft)
@@ -331,9 +334,11 @@ mkTracers traceOptions tracer = do
           case ev of
             Consensus.TraceForgeEvent    slot _ ->
               LogValue "forgedSlotLast" $ PureI $ fromIntegral $ unSlotNo slot
+            Consensus.TraceForgeAboutToLead slot ->
+              LogValue "aboutToLeadSlotLast" $ PureI $ fromIntegral $ unSlotNo slot
             Consensus.TraceCouldNotForge slot _ ->
               LogValue "couldNotForgeSlotLast" $ PureI $ fromIntegral $ unSlotNo slot
-            Consensus.TraceAdoptedBlock slot _ _ _ ->
+            Consensus.TraceAdoptedBlock slot _ _ ->
               LogValue "adoptedSlotLast" $ PureI $ fromIntegral $ unSlotNo slot
             Consensus.TraceDidntAdoptBlock slot _ ->
               LogValue "notAdoptedSlotLast" $ PureI $ fromIntegral $ unSlotNo slot
