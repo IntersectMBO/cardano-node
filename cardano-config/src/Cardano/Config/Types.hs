@@ -104,7 +104,6 @@ data NodeCLI = NodeCLI
     , genesisHash :: !Text
     , nodeAddr :: !NodeAddress
     , configFp :: !ConfigYamlFilePath
-    , traceOpts :: !TraceOptions
     , validateDB :: !Bool
     } deriving Show
 
@@ -157,6 +156,7 @@ data NodeConfiguration =
       , ncPbftSignatureThresh :: Maybe Double
       , ncLoggingSwitch :: Bool
       , ncLogMetrics :: Bool
+      , ncTraceOptions :: TraceOptions
       , ncViewMode :: ViewMode
       , ncUpdate :: Update
       } deriving (Show)
@@ -179,6 +179,33 @@ instance FromJSON NodeConfiguration where
                   lkBlkVersionMinor <- v .: "LastKnownBlockVersion-Minor"
                   lkBlkVersionAlt <- v .: "LastKnownBlockVersion-Alt"
 
+                  -- Trace Options
+                  tOptions <- TraceOptions
+                                <$> v .: "TracingVerbosity"
+                                <*> v .: "TraceBlockFetchClient"
+                                <*> v .: "TraceBlockFetchDecisions"
+                                <*> v .: "TraceBlockFetchProtocol"
+                                <*> v .: "TraceBlockFetchProtocolSerialised"
+                                <*> v .: "TraceBlockFetchServer"
+                                <*> v .: "TraceChainDb"
+                                <*> v .: "TraceChainSyncClient"
+                                <*> v .: "TraceChainSyncBlockServer"
+                                <*> v .: "TraceChainSyncHeaderServer"
+                                <*> v .: "TraceChainSyncProtocol"
+                                <*> v .: "TraceDNSResolver"
+                                <*> v .: "TraceDNSSubscription"
+                                <*> v .: "TraceErrorPolicy"
+                                <*> v .: "TraceForge"
+                                <*> v .: "TraceIpSubscription"
+                                <*> v .: "TraceLocalChainSyncProtocol"
+                                <*> v .: "TraceLocalTxSubmissionProtocol"
+                                <*> v .: "TraceLocalTxSubmissionServer"
+                                <*> v .: "TraceMempool"
+                                <*> v .: "TraceMux"
+                                <*> v .: "TraceTxInbound"
+                                <*> v .: "TraceTxOutbound"
+                                <*> v .: "TraceTxSubmissionProtocol"
+
                   pure $ NodeConfiguration
                            ptcl
                            nId
@@ -187,6 +214,7 @@ instance FromJSON NodeConfiguration where
                            pbftSignatureThresh
                            loggingSwitch
                            logMetrics
+                           tOptions
                            vMode
                            (Update appName appVersion (LastKnownBlockVersion
                                                          lkBlkVersionMajor
@@ -324,38 +352,27 @@ instance FromJSON ViewMode where
 --   which verbosity to the log output.
 data TraceOptions = TraceOptions
   { traceVerbosity :: !TracingVerbosity
-  , traceChainDB :: !Bool
-    -- ^ By default we use 'readableChainDB' tracer, if on this it will use
-    -- more verbose tracer
-
-    -- Consensus Tracers --
-  , traceChainSyncClient :: !Bool
-  , traceChainSyncHeaderServer :: !Bool
-  , traceChainSyncBlockServer :: !Bool
-  , traceBlockFetchDecisions :: !Bool
   , traceBlockFetchClient :: !Bool
-  , traceBlockFetchServer :: !Bool
-  , traceTxInbound :: !Bool
-  , traceTxOutbound :: !Bool
-  , traceLocalTxSubmissionServer :: !Bool
-  , traceMempool :: !Bool
-  , traceForge :: !Bool
-    -----------------------
-
-    -- Protocol Tracers --
-  , traceChainSyncProtocol :: !Bool
-    -- There's two variants of the block fetch tracer and for now
-    -- at least we'll set them both together from the same flags.
+  , traceBlockFetchDecisions :: !Bool
   , traceBlockFetchProtocol :: !Bool
   , traceBlockFetchProtocolSerialised :: !Bool
-  , traceTxSubmissionProtocol :: !Bool
+  , traceBlockFetchServer :: !Bool
+  , traceChainDB :: !Bool
+  , traceChainSyncClient :: !Bool
+  , traceChainSyncBlockServer :: !Bool
+  , traceChainSyncHeaderServer :: !Bool
+  , traceChainSyncProtocol :: !Bool
+  , traceDnsResolver :: !Bool
+  , traceDnsSubscription :: !Bool
+  , traceErrorPolicy :: !Bool
+  , traceForge :: !Bool
+  , traceIpSubscription :: !Bool
   , traceLocalChainSyncProtocol :: !Bool
   , traceLocalTxSubmissionProtocol :: !Bool
-  , traceIpSubscription :: !Bool
-    -----------------------
-
-  , traceDnsSubscription :: !Bool
-  , traceDnsResolver :: !Bool
-  , traceErrorPolicy :: !Bool
+  , traceLocalTxSubmissionServer :: !Bool
+  , traceMempool :: !Bool
   , traceMux :: !Bool
+  , traceTxInbound :: !Bool
+  , traceTxOutbound :: !Bool
+  , traceTxSubmissionProtocol :: !Bool
   } deriving (Eq, Show)

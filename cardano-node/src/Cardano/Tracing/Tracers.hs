@@ -73,31 +73,24 @@ import           Cardano.Tracing.MicroBenchmarking
 
 import           Control.Tracer.Transformers
 
-data Tracers peer blk = Tracers {
-      -- | Trace the ChainDB (flag '--trace-chain-db' will turn on textual output)
-      chainDBTracer         :: Tracer IO (WithTip blk (ChainDB.TraceEvent blk))
-
-      -- | Consensus-specific tracers.
-    , consensusTracers      :: Consensus.Tracers IO peer blk
-
-      -- | Tracers for the protocol messages.
-    , protocolTracers       :: ProtocolTracers IO peer blk DeserialiseFailure
-
-      -- | Trace the IP subscription manager (flag '--trace-ip-subscription' will turn on textual output)
-    , ipSubscriptionTracer  :: Tracer IO (WithIPList (SubscriptionTrace Socket.SockAddr))
-
-      -- | Trace the DNS subscription manager (flag '--trace-dns-subscription' will turn on textual output)
-    , dnsSubscriptionTracer :: Tracer IO (WithDomainName (SubscriptionTrace Socket.SockAddr))
-
-      -- | Trace the DNS resolver (flag '--trace-dns-resolver' will turn on textual output)
-    , dnsResolverTracer     :: Tracer IO (WithDomainName DnsTrace)
-
-      -- | Trace error policy resolution (flag '--trace-error-policy' will turn on textual output)
-    , errorPolicyTracer     :: Tracer IO (WithAddr Socket.SockAddr ErrorPolicyTrace)
-
-      -- | Trace the Mux (flag --trace-mux' will turn on textual output)
-    , muxTracer             :: Tracer IO (WithMuxBearer peer (MuxTrace NodeToNodeProtocols))
-    }
+data Tracers peer blk = Tracers
+  { -- | Trace the ChainDB
+    chainDBTracer :: Tracer IO (WithTip blk (ChainDB.TraceEvent blk))
+    -- | Consensus-specific tracers.
+  , consensusTracers :: Consensus.Tracers IO peer blk
+    -- | Tracers for the protocol messages.
+  , protocolTracers :: ProtocolTracers IO peer blk DeserialiseFailure
+    -- | Trace the IP subscription manager
+  , ipSubscriptionTracer :: Tracer IO (WithIPList (SubscriptionTrace Socket.SockAddr))
+    -- | Trace the DNS subscription manager
+  , dnsSubscriptionTracer :: Tracer IO (WithDomainName (SubscriptionTrace Socket.SockAddr))
+    -- | Trace the DNS resolver
+  , dnsResolverTracer :: Tracer IO (WithDomainName DnsTrace)
+    -- | Trace error policy resolution
+  , errorPolicyTracer :: Tracer IO (WithAddr Socket.SockAddr ErrorPolicyTrace)
+    -- | Trace the Mux
+  , muxTracer :: Tracer IO (WithMuxBearer peer (MuxTrace NodeToNodeProtocols))
+  }
 
 data ForgeTracers = ForgeTracers
   { ftForged :: Trace IO Text
@@ -109,16 +102,16 @@ data ForgeTracers = ForgeTracers
   }
 
 nullTracers :: Tracers peer blk
-nullTracers = Tracers {
-      chainDBTracer = nullTracer,
-      consensusTracers = Consensus.nullTracers,
-      protocolTracers = nullProtocolTracers,
-      ipSubscriptionTracer = nullTracer,
-      dnsSubscriptionTracer = nullTracer,
-      dnsResolverTracer = nullTracer,
-      errorPolicyTracer = nullTracer,
-      muxTracer = nullTracer
-    }
+nullTracers = Tracers
+  { chainDBTracer = nullTracer
+  , consensusTracers = Consensus.nullTracers
+  , protocolTracers = nullProtocolTracers
+  , ipSubscriptionTracer = nullTracer
+  , dnsSubscriptionTracer = nullTracer
+  , dnsResolverTracer = nullTracer
+  , errorPolicyTracer = nullTracer
+  , muxTracer = nullTracer
+  }
 
 
 instance ElidingTracer
@@ -142,14 +135,15 @@ instance ElidingTracer
 
 -- | Smart constructor of 'NodeTraces'.
 --
-mkTracers :: forall peer blk.
-              ( ProtocolLedgerView blk
-              , TraceConstraints blk
-              , Show peer
-              )
-           => TraceOptions
-           -> Trace IO Text
-           -> IO (Tracers peer blk)
+mkTracers
+  :: forall peer blk.
+     ( ProtocolLedgerView blk
+     , TraceConstraints blk
+     , Show peer
+     )
+  => TraceOptions
+  -> Trace IO Text
+  -> IO (Tracers peer blk)
 mkTracers traceOptions tracer = do
   -- We probably don't want to pay the extra IO cost per-counter-increment. -- sk
   staticMetaCC <- mkLOMeta Critical Confidential
@@ -430,10 +424,10 @@ mkTracers traceOptions tracer = do
 
 -- | get information about a chain fragment
 
-data ChainInformation = ChainInformation {
-    slots :: Word64,
-    blocks :: Word64,
-    density :: Rational
+data ChainInformation = ChainInformation
+  { slots :: Word64
+  , blocks :: Word64
+  , density :: Rational
     -- ^ the actual number of blocks created over the maximum
     -- expected number of blocks that could be created
   }
@@ -471,18 +465,14 @@ chainInformation frag = ChainInformation
 -- Tracing utils
 --
 
-withName :: String
-         -> Tracer IO (LogObject Text)
-         -> Tracer IO String
+withName :: String -> Tracer IO (LogObject Text) -> Tracer IO String
 withName name tr = contramap pack $ toLogObject $ appendName (pack name) tr
 
 
 -- | A way to satisfy tracer which requires current tip.  The tip is read from
 -- a mutable cell.
 --
-withTip :: TVar IO (Point blk)
-        -> Tracer IO (WithTip blk a)
-        -> Tracer IO a
+withTip :: TVar IO (Point blk) -> Tracer IO (WithTip blk a) -> Tracer IO a
 withTip varTip tr = Tracer $ \msg -> do
     tip <- atomically $ readTVar varTip
     traceWith (contramap (WithTip tip) tr) msg

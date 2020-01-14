@@ -35,32 +35,9 @@ exec ${NODE} \
   --topology ${BASEDIR}/configuration/topology-local.yaml \
   --host-addr 127.0.0.1 \
   --port 7778 \
-  --tracing-verbosity-maximal \
-  --trace-block-fetch-decisions \
-  --trace-mempool \
-  --trace-chain-db \
-  --trace-forge \
    \
  $@
 
 #  --socket-dir ${BASEDIR}/${DATADIR}/socket \
-# this will render the events in textual format
-#  --trace-chain-db \
-
-#  --trace-block-fetch-client \
-#  --trace-chain-sync-protocol \
-#  --trace-block-fetch-protocol \
-#  --trace-block-fetch-decisions \
-#  --trace-block-fetch-server \
-#  --trace-chain-sync-header-server \
-#  --trace-tx-inbound \
-#  --trace-tx-outbound \
-#  --trace-local-tx-submission-server \
-#  --trace-local-chain-sync-protocol \
-#  --trace-tx-submission-protocol \
-#  --trace-local-tx-submission-protocol \
-#  --trace-ip-subscription \
-#  --trace-dns-subscription \
-#  --trace-dns-resolver \
 
 ../analyse-logs.sh

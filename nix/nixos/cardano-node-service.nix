@@ -25,11 +25,6 @@ let
             "--signing-key ${cfg.signingKey}"}"
           "${lib.optionalString (cfg.delegationCertificate != null)
             "--delegation-certificate ${cfg.delegationCertificate}"}"
-          "--tracing-verbosity-${cfg.tracingVerbosity}"
-          "--trace-block-fetch-decisions"
-          "--trace-chain-db"
-          "--trace-mempool"
-          "--trace-forge"
         ] ++ cfg.extraArgs;
     in ''
         choice() { i=$1; shift; eval "echo \''${$((i + 1))}"; }
@@ -195,11 +190,6 @@ in {
         description = ''
           Cluster topology
         '';
-      };
-
-      tracingVerbosity = mkOption {
-        type = types.enum [ "minimal" "normal" "maximal" ];
-        default = "normal";
       };
 
       nodeConfig = mkOption {

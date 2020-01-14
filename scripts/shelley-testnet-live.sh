@@ -8,22 +8,7 @@ set -e
 # create tmux session:
 #> tmux new-session -s 'Demo' -t demo
 
-EXTRA="
-  --trace-block-fetch-decisions
-  --trace-block-fetch-client
-  --trace-block-fetch-server
-  --trace-chain-db
-  --trace-tx-inbound
-  --trace-tx-outbound
-  --trace-local-tx-submission-server
-  --trace-mempool
-  --trace-forge
-  --trace-chain-sync-protocol
-  --trace-block-fetch-protocol
-  --trace-tx-submission-protocol
-  --trace-local-chain-sync-protocol
-  --trace-local-tx-submission-protocol
-"
+EXTRA=""
 
 . $(dirname $0)/lib-node.sh
 NODE="$(executable_runner cardano-node)"

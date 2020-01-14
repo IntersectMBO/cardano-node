@@ -99,3 +99,79 @@ ApplicationVersion: 1
 LastKnownBlockVersion-Major: 0
 LastKnownBlockVersion-Minor: 2
 LastKnownBlockVersion-Alt: 0
+
+#####         Tracing         #####
+
+# MinimalVerbosity: Minimal level of the rendering of captured items
+# MaximalVerbosity: Maximal level of the rendering of captured items
+# NormalVerbosity: the default level of the rendering of captured items
+TracingVerbosity: NormalVerbosity
+
+# Trace BlockFetch client.
+TraceBlockFetchClient: True
+
+# Trace BlockFetch decisions made by the BlockFetch client.
+TraceBlockFetchDecisions: True
+
+# Trace BlockFetch protocol messages.
+TraceBlockFetchProtocol: True
+
+# Serialised Trace BlockFetch protocol messages.
+TraceBlockFetchProtocolSerialised: False
+
+# Trace BlockFetch server.
+TraceBlockFetchServer: True
+
+# Verbose tracer of ChainDB
+TraceChainDb: False
+
+# Trace ChainSync client.
+TraceChainSyncClient: False
+
+# Trace ChainSync server (blocks).
+TraceChainSyncBlockServer: False
+
+# Trace ChainSync server (headers)
+TraceChainSyncHeaderServer: False
+
+# Trace ChainSync protocol messages.
+TraceChainSyncProtocol: True
+
+# Trace DNS Resolver messages.
+TraceDNSResolver: False
+
+# Trace DNS Subscription messages.
+TraceDNSSubscription: False
+
+# Trace error policy resolution.
+TraceErrorPolicy: False
+
+# Trace block forging.
+TraceForge: True
+
+# Trace IP Subscription messages.
+TraceIpSubscription: False
+
+# Trace local ChainSync protocol messages.
+TraceLocalChainSyncProtocol: True
+
+# Trace local TxSubmission protocol messages.
+TraceLocalTxSubmissionProtocol: True
+
+# Trace local TxSubmission server.
+TraceLocalTxSubmissionServer: True
+
+# Trace mempool.
+TraceMempool: True
+
+# Trace Mux Events
+TraceMux: True
+
+# Trace TxSubmission server (inbound transactions).
+TraceTxInbound: True
+
+# Trace TxSubmission client (outbound transactions).
+TraceTxOutbound: True
+
+# Trace TxSubmission protocol messages.
+TraceTxSubmissionProtocol: True

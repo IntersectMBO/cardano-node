@@ -42,7 +42,6 @@ main = toplevelExceptionHandler $ do
       opts =
         Opt.info (nodeCliParser
                     <**> helperBrief "help" "Show this help text" nodeCliHelpMain
-                    <**> helperBrief "help-tracing" "Show help for tracing options" cliHelpTracing
                  )
 
           ( Opt.fullDesc <>
@@ -59,14 +58,6 @@ main = toplevelExceptionHandler $ do
         parserHelpHeader "cardano-node" nodeCliParser
         <$$> ""
         <$$> parserHelpOptions nodeCliParser
-
-      cliHelpTracing :: String
-      cliHelpTracing = renderHelpDoc 80 $
-        "Additional tracing options:"
-        <$$> ""
-        <$$> parserHelpOptions cliTracingParser
-
-
 
 
 initializeAllFeatures

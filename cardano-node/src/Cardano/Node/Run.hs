@@ -90,7 +90,7 @@ runNode loggingLayer nc nCli = do
     let tracer = contramap pack $ toLogObject trace
 
     traceWith tracer $ "tracing verbosity = " ++
-                         case traceVerbosity $ traceOpts nCli of
+                         case traceVerbosity $ ncTraceOptions nc of
                              NormalVerbosity -> "normal"
                              MinimalVerbosity -> "minimal"
                              MaximalVerbosity -> "maximal"
@@ -110,7 +110,7 @@ runNode loggingLayer nc nCli = do
                         Left err -> (putTextLn . pack $ show err) >> exitFailure
                         Right (SomeProtocol p) -> pure $ SomeProtocol p
 
-    tracers <- mkTracers (traceOpts nCli) trace
+    tracers <- mkTracers (ncTraceOptions nc) trace
 
     case ncViewMode nc of
       SimpleView -> handleSimpleNode p trace tracers nCli nc
