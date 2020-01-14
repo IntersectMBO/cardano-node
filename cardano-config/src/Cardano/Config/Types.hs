@@ -45,6 +45,8 @@ import           Ouroboros.Consensus.NodeId (NodeId(..))
 
 import           Cardano.Config.Topology
 import           Cardano.Config.Orphanage ()
+import           Cardano.Crypto (RequiresNetworkMagic(..))
+
 --------------------------------------------------------------------------------
 -- Cardano Environment
 --------------------------------------------------------------------------------
@@ -164,20 +166,20 @@ data NodeConfiguration =
 instance FromJSON NodeConfiguration where
     parseJSON = withObject "NodeConfiguration" $ \v -> do
                   nId <- v .:? "NodeId"
-                  ptcl <- v .: "Protocol"
+                  ptcl <- v .: "Protocol" .!= RealPBFT
                   numCoreNode <- v .:? "NumCoreNodes"
-                  rNetworkMagic <- v .: "RequiresNetworkMagic"
+                  rNetworkMagic <- v .:? "RequiresNetworkMagic" .!= RequiresNoMagic
                   pbftSignatureThresh <- v .:? "PBftSignatureThreshold"
-                  loggingSwitch <- v .: "TurnOnLogging"
-                  vMode <- v .: "ViewMode"
-                  logMetrics <- v .: "TurnOnLogMetrics"
+                  loggingSwitch <- v .:? "TurnOnLogging" .!= True
+                  vMode <- v .:? "ViewMode" .!= LiveView
+                  logMetrics <- v .:? "TurnOnLogMetrics" .!= True
 
                   -- Update Parameters
-                  appName <- v .: "ApplicationName"
-                  appVersion <- v .: "ApplicationVersion"
-                  lkBlkVersionMajor <- v .: "LastKnownBlockVersion-Major"
-                  lkBlkVersionMinor <- v .: "LastKnownBlockVersion-Minor"
-                  lkBlkVersionAlt <- v .: "LastKnownBlockVersion-Alt"
+                  appName <- v .:? "ApplicationName" .!= Update.ApplicationName "cardano-sl"
+                  appVersion <- v .:? "ApplicationVersion" .!= 1
+                  lkBlkVersionMajor <- v .:? "LastKnownBlockVersion-Major" .!= 0
+                  lkBlkVersionMinor <- v .:? "LastKnownBlockVersion-Minor" .!= 2
+                  lkBlkVersionAlt <- v .:? "LastKnownBlockVersion-Alt" .!= 0
 
                   pure $ NodeConfiguration
                            ptcl
