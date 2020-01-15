@@ -28,11 +28,11 @@ let
         ] ++ cfg.extraArgs;
     in ''
         choice() { i=$1; shift; eval "echo \''${$((i + 1))}"; }
-        echo "Starting ${exec}: '' + concatStringsSep "\"\n   echo \"" cmd + ''"
+        echo "Starting ${exec}: ${concatStringsSep "\"\n   echo \"" cmd}"
         echo "..or, once again, in a single line:"
-        echo "''                   + toString                          cmd + ''"
+        echo "${toString cmd}"
         ls -l ${if (cfg.runtimeDir == null) then "${cfg.stateDir}/socket" else "/run/${cfg.runtimeDir}"} || true
-        ''                         + toString                          cmd;
+        exec ${toString cmd}'';
 in {
   options = {
     services.cardano-node = {
