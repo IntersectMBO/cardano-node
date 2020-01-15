@@ -56,9 +56,8 @@ import qualified Cardano.BM.Trace as Trace
 import           Cardano.Shell.Lib (GeneralException (..))
 import           Cardano.Shell.Types (CardanoFeature (..))
 
-import           Cardano.Config.Types (CardanoConfiguration(..), ConfigYamlFilePath(..),
-                                       CardanoEnvironment, NodeCLI(..), NodeConfiguration(..),
-                                       parseNodeConfiguration)
+import           Cardano.Config.Types (ConfigYamlFilePath(..), CardanoEnvironment,
+                   NodeCLI(..), NodeConfiguration(..), parseNodeConfiguration)
 
 
 --------------------------------------------------------------------------------
@@ -143,14 +142,19 @@ loggingCLIConfiguration mfp captureMetrics' =
         throwIO $ FileNotFoundException fp
 
 createLoggingFeatureCLI
-  :: CardanoEnvironment -> CardanoConfiguration -> IO (LoggingLayer, CardanoFeature)
-createLoggingFeatureCLI _ cc = do
+  :: CardanoEnvironment
+  -> Maybe FilePath
+  -> Bool
+  -> IO (LoggingLayer, CardanoFeature)
+createLoggingFeatureCLI _ mLogConfig captureLogMetrics = do
     (disabled', loggingConfiguration) <- loggingCLIConfiguration
-                                           (ccLogConfig cc)
-                                           (ccLogMetrics cc)
+                                           mLogConfig
+                                           captureLogMetrics
 
     -- we construct the layer
-    (loggingLayer, cleanUpLogging) <- loggingCardanoFeatureInit disabled' loggingConfiguration
+    (loggingLayer, cleanUpLogging) <- loggingCardanoFeatureInit
+                                        disabled'
+                                        loggingConfiguration
 
 
     -- we construct the cardano feature

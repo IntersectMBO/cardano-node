@@ -44,8 +44,9 @@ import qualified Cardano.Chain.Delegation as Delegation
 import qualified Cardano.Chain.Genesis as Genesis
 import           Cardano.Chain.Slotting (EpochNumber(..))
 import qualified Cardano.Chain.UTxO as UTxO
+import           Cardano.Chain.Update (ApplicationName(..))
 
-import           Cardano.Crypto (ProtocolMagicId)
+import           Cardano.Crypto (ProtocolMagicId, RequiresNetworkMagic(..))
 import qualified Cardano.Crypto.Hashing as Crypto
 import qualified Cardano.Crypto.Signing as Crypto
 
@@ -65,39 +66,55 @@ import           Cardano.CLI.Tx.Generation (NumberOfTxs (..),
                                             genesisBenchmarkRunner)
 import           Cardano.Common.Orphans ()
 import           Cardano.Config.Protocol
-import           Cardano.Config.Types (CardanoConfiguration(..), Core(..),
-                                       DelegationCertFile(..), GenesisFile(..),
-                                       SigningKeyFile(..), SocketFile(..))
-import           Cardano.Config.Logging (LoggingLayer (..))
+import           Cardano.Config.Types
+import           Cardano.Config.Logging (createLoggingFeatureCLI)
 import           Cardano.Config.Topology (NodeAddress(..), TopologyInfo(..))
 
 -- | Sub-commands of 'cardano-cli'.
 data ClientCommand
-  = Genesis
+  =
+  --- Genesis Related Commands ---
+    Genesis
     NewDirectory
     GenesisParameters
-  | PrettySigningKeyPublic
-    SigningKeyFile
-  | MigrateDelegateKeyFrom
     Protocol
-    NewSigningKeyFile
-    SigningKeyFile
   | PrintGenesisHash
     GenesisFile
-  | PrintSigningKeyAddress
-    Common.NetworkMagic  -- TODO:  consider deprecation in favor of ProtocolMagicId,
-                         --        once Byron is out of the picture.
-    SigningKeyFile
+
+  --- Key Related Commands ---
   | Keygen
+    Protocol
     NewSigningKeyFile
     PasswordRequirement
   | ToVerification
+    Protocol
     SigningKeyFile
     NewVerificationKeyFile
+
+  | PrettySigningKeyPublic
+    Protocol
+    SigningKeyFile
+
+  | MigrateDelegateKeyFrom
+    Protocol
+    -- ^ Old protocol
+    SigningKeyFile
+    -- ^ Old key
+    Protocol
+    -- ^ New protocol
+    NewSigningKeyFile
+    -- ^ New Key
+
+  | PrintSigningKeyAddress
+    Protocol
+    Common.NetworkMagic  -- TODO:  consider deprecation in favor of ProtocolMagicId,
+                         --        once Byron is out of the picture.
+    SigningKeyFile
 
     --- Delegation Related Commands ---
 
   | IssueDelegationCertificate
+    Protocol
     ProtocolMagicId
     EpochNumber
     -- ^ The epoch from which the delegation is valid.
@@ -119,8 +136,14 @@ data ClientCommand
     TxFile
     -- ^ Filepath of transaction to submit.
     TopologyInfo
-    NodeId
+    Protocol
+    GenesisFile
+    Text
+    SocketFile
   | SpendGenesisUTxO
+    Protocol
+    GenesisFile
+    Text
     NewTxFile
     -- ^ Filepath of the newly created transaction.
     SigningKeyFile
@@ -130,6 +153,9 @@ data ClientCommand
     (NonEmpty UTxO.TxOut)
     -- ^ Tx output.
   | SpendUTxO
+    Protocol
+    GenesisFile
+    Text
     NewTxFile
     -- ^ Filepath of the newly created transaction.
     SigningKeyFile
@@ -142,6 +168,15 @@ data ClientCommand
     --- Tx Generator Command ----------
 
   | GenerateTxs
+    FilePath
+    -- ^ Configuration yaml
+    SigningKeyFile
+    DelegationCertFile
+    GenesisFile
+    Text
+    -- ^ Genesis hash
+    SocketFile
+    Protocol
     (NonEmpty NodeAddress)
     NumberOfTxs
     NumberOfInputsPerTx
@@ -152,23 +187,20 @@ data ClientCommand
     [SigningKeyFile]
     NodeId
    deriving Show
-
-runCommand :: CardanoConfiguration -> LoggingLayer -> ClientCommand -> ExceptT CliError IO ()
-runCommand cc _ (Genesis outDir params) = do
+runCommand :: ClientCommand -> ExceptT CliError IO ()
+runCommand (Genesis outDir params ptcl) = do
   gen <- mkGenesis params
-  dumpGenesis (ccProtocol cc) outDir `uncurry` gen
+  dumpGenesis ptcl outDir `uncurry` gen
 
-runCommand cc _ (PrettySigningKeyPublic skF) = do
-  sK <- readSigningKey (ccProtocol cc) skF
+runCommand (PrettySigningKeyPublic ptcl skF) = do
+  sK <- readSigningKey ptcl skF
   liftIO . putTextLn . prettyPublicKey $ Crypto.toVerification sK
-
-runCommand cc _ (MigrateDelegateKeyFrom oldPtcl (NewSigningKeyFile newKey) oldKey) = do
+runCommand (MigrateDelegateKeyFrom oldPtcl oldKey newPtcl (NewSigningKeyFile newKey)) = do
   sk <- readSigningKey oldPtcl oldKey
-  let newPtcl = ccProtocol cc
   sDk <- hoistEither $ serialiseDelegateKey newPtcl sk
   liftIO $ ensureNewFileLBS newKey sDk
 
-runCommand _ _ (PrintGenesisHash genFp) = do
+runCommand (PrintGenesisHash genFp) = do
   eGen <- readGenesis genFp
 
   let formatter :: (a, Genesis.GenesisHash)-> Text
@@ -176,105 +208,104 @@ runCommand _ _ (PrintGenesisHash genFp) = do
 
   liftIO . putTextLn $ formatter eGen
 
-runCommand cc _ (PrintSigningKeyAddress netMagic skF) = do
-  sK <- readSigningKey (ccProtocol cc) skF
+runCommand (PrintSigningKeyAddress ptcl netMagic skF) = do
+  sK <- readSigningKey ptcl skF
   let sKeyAddress = prettyAddress . Common.makeVerKeyAddress netMagic $ Crypto.toVerification sK
   liftIO $ putTextLn sKeyAddress
 
-runCommand cc _ (Keygen (NewSigningKeyFile skF) passReq) = do
+runCommand (Keygen ptcl (NewSigningKeyFile skF) passReq) = do
   pPhrase <- liftIO $ getPassphrase ("Enter password to encrypt '" <> skF <> "': ") passReq
   sK <- liftIO $ keygen pPhrase
-  serDk <- hoistEither $ serialiseDelegateKey (ccProtocol cc) sK
+  serDk <- hoistEither $ serialiseDelegateKey ptcl sK
   liftIO $ ensureNewFileLBS skF serDk
 
-runCommand cc _ (ToVerification skFp (NewVerificationKeyFile vkFp)) = do
-  sk <- readSigningKey (ccProtocol cc) skFp
+runCommand (ToVerification ptcl skFp (NewVerificationKeyFile vkFp)) = do
+  sk <- readSigningKey ptcl skFp
   let vKey = Builder.toLazyText . Crypto.formatFullVerificationKey $ Crypto.toVerification sk
   liftIO $ ensureNewFile TL.writeFile vkFp vKey
 
-runCommand cc _ (IssueDelegationCertificate magic epoch issuerSK delegateVK cert) = do
+runCommand (IssueDelegationCertificate ptcl magic epoch issuerSK delegateVK cert) = do
   vk <- readVerificationKey delegateVK
-  sk <- readSigningKey (ccProtocol cc) issuerSK
+  sk <- readSigningKey ptcl issuerSK
   let byGenDelCert :: Delegation.Certificate
       byGenDelCert = issueByronGenesisDelegation magic epoch sk vk
-  sCert <- hoistEither $ serialiseDelegationCert (ccProtocol cc) byGenDelCert
+  sCert <- hoistEither $ serialiseDelegationCert ptcl byGenDelCert
   liftIO $ ensureNewFileLBS (nFp cert) sCert
 
-runCommand _ _(CheckDelegation magic cert issuerVF delegateVF) = do
+runCommand (CheckDelegation magic cert issuerVF delegateVF) = do
   issuerVK <- readVerificationKey issuerVF
   delegateVK <- readVerificationKey delegateVF
   liftIO $ checkByronGenesisDelegation cert magic issuerVK delegateVK
 
-runCommand
-  (CardanoConfiguration{ccCore, ccProtocol, ccSocketDir, ccUpdate})
-  _
-  (SubmitTx fp topology nid) = do
+runCommand (SubmitTx fp topology ptcl genFile genHash socketDir) = do
+    -- Default update value
+    let update = Update (ApplicationName "cardano-sl") 1 $ LastKnownBlockVersion 0 2 0
     tx <- liftIO $ readByronTx fp
     firstExceptT
       NodeSubmitTxError
       $ nodeSubmitTx
           topology
-          (coGenesisHash ccCore)
-          (nid)
-          (coNumCoreNodes ccCore)
-          (GenesisFile $ coGenesisFile ccCore)
-          (coRequiresNetworkMagic ccCore)
-          (coPBftSigThd ccCore)
-          (DelegationCertFile <$> (coStaticKeyDlgCertFile ccCore))
-          (SigningKeyFile <$> (coStaticKeySigningKeyFile ccCore))
-          (SocketFile ccSocketDir)
-          ccUpdate
-          ccProtocol
+          genHash
+          Nothing
+          genFile
+          RequiresNoMagic
+          Nothing
+          Nothing
+          Nothing
+          socketDir
+          update
+          ptcl
           tx
-runCommand
-  CardanoConfiguration{ccCore, ccProtocol, ccUpdate}
-  _
-  (SpendGenesisUTxO (NewTxFile ctTx) ctKey genRichAddr outs) = do
-    sk <- readSigningKey ccProtocol ctKey
+runCommand (SpendGenesisUTxO ptcl genFile genHash (NewTxFile ctTx) ctKey genRichAddr outs) = do
+    sk <- readSigningKey ptcl ctKey
+    -- Default update value
+    let update = Update (ApplicationName "cardano-sl") 1 $ LastKnownBlockVersion 0 2 0
     tx <- firstExceptT SpendGenesisUTxOError
             $ issueGenesisUTxOExpenditure
                 genRichAddr
                 outs
-                (coGenesisHash ccCore)
-                (CoreId $ fromMaybe (panic "Node Id not specified") (coNodeId ccCore))
-                (coNumCoreNodes ccCore)
-                (GenesisFile $ coGenesisFile ccCore)
-                (coRequiresNetworkMagic ccCore)
-                (coPBftSigThd ccCore)
-                (DelegationCertFile <$> (coStaticKeyDlgCertFile ccCore))
-                (SigningKeyFile <$> (coStaticKeySigningKeyFile ccCore))
-                ccUpdate
-                ccProtocol
+                genHash
+                Nothing
+                genFile
+                RequiresNoMagic
+                Nothing
+                Nothing
+                Nothing
+                update
+                ptcl
                 sk
     liftIO . ensureNewFileLBS ctTx $ serialise tx
 
-runCommand
-  CardanoConfiguration{ccCore, ccProtocol, ccUpdate}
-  _
-  (SpendUTxO (NewTxFile ctTx) ctKey ins outs) = do
-    sk <- readSigningKey ccProtocol ctKey
+runCommand (SpendUTxO ptcl genFile genHash (NewTxFile ctTx) ctKey ins outs) = do
+    sk <- readSigningKey ptcl ctKey
+    -- Default update value
+    let update = Update (ApplicationName "cardano-sl") 1 $ LastKnownBlockVersion 0 2 0
     gTx <- firstExceptT
              IssueUtxoError
              $ issueUTxOExpenditure
                  ins
                  outs
-                 (coGenesisHash ccCore)
-                 (CoreId $ fromMaybe (panic "Node Id not specified") (coNodeId ccCore))
-                 (coNumCoreNodes ccCore)
-                 (GenesisFile $ coGenesisFile ccCore)
-                 (coRequiresNetworkMagic ccCore)
-                 (coPBftSigThd ccCore)
-                 (DelegationCertFile <$> (coStaticKeyDlgCertFile ccCore))
-                 (SigningKeyFile <$> (coStaticKeySigningKeyFile ccCore))
-                 ccUpdate
-                 ccProtocol
+                 genHash
+                 Nothing
+                 genFile
+                 RequiresNoMagic
+                 Nothing
+                 Nothing
+                 Nothing
+                 update
+                 ptcl
                  sk
     liftIO . ensureNewFileLBS ctTx $ serialise gTx
 
-runCommand
-  CardanoConfiguration{ccCore, ccProtocol, ccSocketDir, ccUpdate}
-  loggingLayer
-  (GenerateTxs targetNodeAddresses
+runCommand (GenerateTxs
+               logConfigFp
+               signingKey
+               delegCert
+               genFile
+               genHash
+               socketDir
+               ptcl
+               targetNodeAddresses
                numOfTxs
                numOfInsPerTx
                numOfOutsPerTx
@@ -283,23 +314,33 @@ runCommand
                txAdditionalSize
                sigKeysFiles
                nodeId) = do
+  -- Default update value
+  let update = Update (ApplicationName "cardano-sl") 1 $ LastKnownBlockVersion 0 2 0
+
+  -- Logging layer
+  nc <- liftIO $ parseNodeConfiguration logConfigFp
+  (loggingLayer, _) <- liftIO $ createLoggingFeatureCLI
+                                  NoEnvironment
+                                  (Just logConfigFp)
+                                  (ncLogMetrics nc)
+
   firstExceptT
     GenerateTxsError
     $  withRealPBFT
-         (coGenesisHash ccCore)
+         genHash
          (Just nodeId)
-         (coNumCoreNodes ccCore)
-         (GenesisFile $coGenesisFile ccCore)
-         (coRequiresNetworkMagic ccCore)
-         (coPBftSigThd ccCore)
-         (DelegationCertFile <$> coStaticKeyDlgCertFile ccCore)
-         (SigningKeyFile <$> coStaticKeySigningKeyFile ccCore)
-         ccUpdate
-         ccProtocol $ \protocol@(Consensus.ProtocolRealPBFT _ _ _ _ _) ->
+         Nothing
+         genFile
+         RequiresNoMagic
+         Nothing
+         (Just delegCert)
+         (Just signingKey)
+         update
+         ptcl $ \protocol@(Consensus.ProtocolRealPBFT _ _ _ _ _) ->
                         firstExceptT GenesisBenchmarkRunnerError
                           $ genesisBenchmarkRunner
                                loggingLayer
-                               (SocketFile ccSocketDir)
+                               socketDir
                                protocol
                                targetNodeAddresses
                                numOfTxs

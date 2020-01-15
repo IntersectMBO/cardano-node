@@ -19,15 +19,14 @@ echo "$TARGETNODES"
 
 GENERATOR="cabal v2-run exe:cardano-cli -- "
 exec ${GENERATOR} \
-  --log-config ${CONFIGFILE} \
+  generate-txs \
+  --config ${CONFIGFILE} \
   --signing-key ${CONFIGDIR}/latest-genesis/delegate-keys.000.key \
-  --database-path ${BASEDIR}/db \
   --delegation-certificate ${CONFIGDIR}/latest-genesis/delegation-cert.000.json \
   --genesis-file ${GENESISJSON} \
   --genesis-hash ${GENESISHASH} \
   --socket-dir /tmp/cluster3nodes-socket \
   --real-pbft \
-  generate-txs \
   --num-of-txs $numtx \
   --add-tx-size $addsizetx \
   --inputs-per-tx $inputstx \
@@ -39,5 +38,3 @@ exec ${GENERATOR} \
   --sig-key ${CONFIGDIR}/latest-genesis/delegate-keys.002.key \
   --node-id 0 \
   ${TARGETNODES}
-
-

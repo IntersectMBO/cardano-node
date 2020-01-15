@@ -15,7 +15,6 @@ module Cardano.Common.Parsers
   , parseGenesisFile
   , parseIntegral
   , parseIntegralWithDefault
-  , parseLastKnownBlockVersion
   , parseLogMetricsLast
   , parseLogOutputFile
   , parseNodeId
@@ -41,8 +40,6 @@ import           Cardano.Config.Logging (LoggingCLIArguments(..))
 import           Ouroboros.Consensus.NodeId (NodeId(..), CoreNodeId(..))
 
 import           Cardano.Config.CommonCLI
-import           Cardano.Config.Partial
-                 ( PartialLastKnownBlockVersion(..))
 import           Cardano.Config.Protocol
 import           Cardano.Config.Topology
 import           Cardano.Config.Types
@@ -108,9 +105,6 @@ parseGenesisFile opt =
   GenesisFile <$> parseFilePath opt "Genesis JSON file."
 
 -- Common command line parsers
-
-lastly :: Parser a -> Parser (Last a)
-lastly = (Last <$>) . optional
 
 parseFilePath :: String -> String -> Parser FilePath
 parseFilePath optname desc =
@@ -185,7 +179,7 @@ parseValidateDB =
 
 -- | Flag parser, that returns its argument on success.
 flagParser :: a -> String -> String -> Parser a
-flagParser val opt desc = flag' val $ mconcat [long opt, help desc]
+flagParser val opt desc = flag' val $ long opt <> help desc
 
 parseProtocol :: Parser Protocol
 parseProtocol = asum
@@ -200,13 +194,6 @@ parseProtocol = asum
   , flagParser RealPBFT "real-pbft"
     "Permissive BFT consensus with a real ledger"
   ]
-
-parseLastKnownBlockVersion :: Parser PartialLastKnownBlockVersion
-parseLastKnownBlockVersion =
-  PartialLastKnownBlockVersion
-    <$> lastly (parseIntegral "protover-major" "Protocol version:  major component")
-    <*> lastly (parseIntegral "protover-minor" "Protocol version:  minor component")
-    <*> lastly (parseIntegral "protover-alt"   "Protocol version:  alt component")
 
 parseProtocolByron :: Parser (Last Protocol)
 parseProtocolByron =

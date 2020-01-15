@@ -13,10 +13,8 @@ Usage:  $(basename $0) SIGNING-KEY-FILE"
 Print the default, non-HD address of a signing key.
 EOF
 }
-${CLI} \
-        --real-pbft \
-        signing-key-address \
-        --testnet-magic ${proto_magic} \
-        --secret ${key} \
-        --log-config ${configuration}/log-configuration.yaml \
+${CLI} signing-key-address \
+          --real-pbft \
+          --testnet-magic ${proto_magic} \
+          --secret ${key} \
         | head -n1 | xargs echo -n

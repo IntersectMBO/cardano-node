@@ -50,7 +50,7 @@ let
           }) topoSpec;
         };
     in toFile "legacy-topology.json" (toJSON (mkTopo));
-  
+
   ## mkFullyConnectedLocalClusterTopology
   ##   :: String Address -> String Port -> Int PortNo -> Int Valency
   ##   -> Topology FilePath
@@ -125,8 +125,6 @@ let
   mkFixedGenesisOfTime = start_time: args:
     pkgs.runCommand "genesis-of-${start_time}" {} ''
       args=(
-      --real-pbft
-      --log-config ${../configuration/configuration-silent.yaml}
       genesis
       --genesis-output-dir         "''${out}"
       --start-time                    ${start_time}
@@ -138,6 +136,7 @@ let
       --n-poor-addresses              ${toString args.n_poors}
       --protocol-magic                ${toString args.protocol_magic}
       --protocol-parameters-file     "${args.protocol_params_file}"
+      --real-pbft
       --secret-seed                   ${toString args.secret_seed}
       --total-balance                 ${toString args.total_balance}
       --use-hd-addresses
@@ -169,10 +168,10 @@ let
   leakDelegateSigningKey = byronLegacySK:
     pkgs.runCommand "migrated-leaked-secret-key.sk" {} ''
       args=(
-      --real-pbft
-      --log-config ${../configuration/configuration-silent.yaml}
-      migrate-delegate-key-from --byron-legacy
+      migrate-delegate-key-from
+      --byron-legacy
       --from ${byronLegacySK}
+      --real-pbft
       --to $out
       )
       ${cardano-node}/bin/cardano-cli "''${args[@]}"
@@ -183,9 +182,8 @@ let
   toVerification = pbftSK:
     pkgs.runCommand "key.pub" {} ''
       args=(
-      --real-pbft
-      --log-config ${../configuration/configuration-silent.yaml}
       signing-key-public
+      --real-pbft
       --secret ${pbftSK}
       )
       ${cardano-node}/bin/cardano-cli "''${args[@]}" | fgrep 'public key (base64):' | cut -d: -f2 | xargs echo -n > $out
@@ -208,8 +206,6 @@ let
     pkgs.runCommand "genesis-hash" {}
     ''
       args=(
-      --real-pbft
-      --log-config ${../configuration/configuration-silent.yaml}
       print-genesis-hash
       --genesis-json "${genesisFile}"
       )

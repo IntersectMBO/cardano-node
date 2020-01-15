@@ -47,7 +47,8 @@ import           Cardano.Chain.Slotting (EpochNumber(..))
 import           Cardano.Chain.UTxO (TxId, TxIn(..), TxOut(..))
 import           Cardano.Config.CommonCLI
 import           Cardano.Config.Topology (NodeAddress(..), NodeHostAddress(..))
-import           Cardano.Config.Types (SigningKeyFile(..))
+import           Cardano.Config.Types ( DelegationCertFile(..), GenesisFile(..), SigningKeyFile(..)
+                                      , SocketFile(..))
 import qualified Ouroboros.Consensus.BlockchainTime  as Consensus
 import           Cardano.Crypto (RequiresNetworkMagic(..), decodeHash)
 import           Cardano.Crypto.ProtocolMagic ( AProtocolMagic(..), ProtocolMagic
@@ -125,7 +126,8 @@ parseDelegationRelatedValues =
         "Create a delegation certificate allowing the\
         \ delegator to sign blocks on behalf of the issuer"
         $ IssueDelegationCertificate
-        <$> parseProtocolMagicId "protocol-magic"
+        <$> parseProtocol
+        <*> parseProtocolMagicId "protocol-magic"
         <*> ( EpochNumber
                 <$> parseIntegral
                       "since-epoch"
@@ -217,6 +219,7 @@ parseGenesisRelatedValues =
               "genesis-output-dir"
               "Non-existent directory where genesis JSON file and secrets shall be placed."
           <*> parseGenesisParameters
+          <*> parseProtocol
     , command' "print-genesis-hash" "Compute hash of a genesis file."
         $ PrintGenesisHash
             <$> parseGenesisFile "genesis-json"
@@ -248,7 +251,8 @@ parseKeyRelatedValues =
         , metavar "Key related commands"
         , command' "keygen" "Generate a signing key."
             $ Keygen
-                <$> parseNewSigningKeyFile "secret"
+                <$> parseProtocol
+                <*> parseNewSigningKeyFile "secret"
                 <*> parseFlag' GetPassword EmptyPassword
                       "no-password"
                       "Disable password protection."
@@ -256,7 +260,8 @@ parseKeyRelatedValues =
             "to-verification"
             "Extract a verification key in its base64 form."
             $ ToVerification
-                <$> parseSigningKeyFile
+                <$> parseProtocol
+                <*> parseSigningKeyFile
                       "secret"
                       "Signing key file to extract the verification part from."
                 <*> parseNewVerificationKeyFile "to"
@@ -264,14 +269,16 @@ parseKeyRelatedValues =
             "signing-key-public"
             "Pretty-print a signing key's verification key (not a secret)."
             $ PrettySigningKeyPublic
-                <$> parseSigningKeyFile
+                <$> parseProtocol
+                <*> parseSigningKeyFile
                       "secret"
                       "Signing key to pretty-print."
         , command'
             "signing-key-address"
             "Print address of a signing key."
             $ PrintSigningKeyAddress
-                <$> parseNetworkMagic
+                <$> parseProtocol
+                <*> parseNetworkMagic
                 <*> parseSigningKeyFile
                       "secret"
                       "Signing key, whose address is to be printed."
@@ -279,9 +286,10 @@ parseKeyRelatedValues =
             "migrate-delegate-key-from"
             "Migrate a delegate key from an older version."
             $ MigrateDelegateKeyFrom
-                <$> parseProtocol
-                <*> parseNewSigningKeyFile "to"
+                <$> parseProtocol -- Old protocol
                 <*> parseSigningKeyFile "from" "Signing key file to migrate."
+                <*> parseProtocol -- New protocol
+                <*> parseNewSigningKeyFile "to"
         ]
 
 parseLovelace :: String -> String -> Parser Lovelace
@@ -489,12 +497,18 @@ parseTxRelatedValues =
         $ SubmitTx
             <$> parseTxFile "tx"
             <*> parseTopologyInfo "Target node that will receive the transaction"
-            <*> parseNodeId "Node Id of target node"
+            <*> parseProtocol
+            <*> (GenesisFile <$> parseGenesisPath)
+            <*> parseGenesisHash
+            <*> (SocketFile <$> parseSocketDir)
     , command'
         "issue-genesis-utxo-expenditure"
         "Write a file with a signed transaction, spending genesis UTxO."
         $ SpendGenesisUTxO
-            <$> parseNewTxFile "tx"
+            <$> parseProtocol
+            <*> (GenesisFile <$> parseGenesisPath)
+            <*> parseGenesisHash
+            <*> parseNewTxFile "tx"
             <*> parseSigningKeyFile
                   "wallet-key"
                   "Key that has access to all mentioned genesis UTxO inputs."
@@ -507,7 +521,10 @@ parseTxRelatedValues =
         "issue-utxo-expenditure"
         "Write a file with a signed transaction, spending normal UTxO."
         $ SpendUTxO
-            <$> parseNewTxFile "tx"
+            <$> parseProtocol
+            <*> (GenesisFile <$> parseGenesisPath)
+            <*> parseGenesisHash
+            <*> parseNewTxFile "tx"
             <*> parseSigningKeyFile
                   "wallet-key"
                   "Key that has access to all mentioned genesis UTxO inputs."
@@ -517,7 +534,14 @@ parseTxRelatedValues =
         "generate-txs"
         "Launch transactions generator."
         $ GenerateTxs
-            <$> (NE.fromList <$> some (
+            <$> parseConfigFile
+            <*> parseSigningKeyFile "signing-key" "Signing key file."
+            <*> (DelegationCertFile <$> parseDelegationCert)
+            <*> (GenesisFile <$> parseGenesisPath)
+            <*> parseGenesisHash
+            <*> (SocketFile <$> parseSocketDir)
+            <*> parseProtocol
+            <*> (NE.fromList <$> some (
                   parseTargetNodeAddress
                     "target-node"
                     "host and port of the node transactions will be sent to."

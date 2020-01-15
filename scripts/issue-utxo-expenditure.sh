@@ -29,10 +29,10 @@ EOF
 
 addr=$(${scripts}/get-default-key-address.sh ${to_key})
 
-args=" --real-pbft
+args=" issue-utxo-expenditure
+       --real-pbft
        --genesis-file        ${genesis_file}
        --genesis-hash        ${genesis_hash}
-       issue-utxo-expenditure
        --tx                  ${tx}
        --wallet-key          ${from_key}
        --txin             (\"${txid}\",${outindex})
