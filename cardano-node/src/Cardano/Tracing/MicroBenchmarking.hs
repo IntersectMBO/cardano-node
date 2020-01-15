@@ -184,8 +184,8 @@ measureBlockForgeStart tracer = measureBlockForgeStartInter $ toLogObject tracer
   where
     measureBlockForgeStartInter :: Tracer IO (MeasureBlockForging blk) -> Tracer IO (TraceForgeEvent blk (GenTx blk))
     measureBlockForgeStartInter tracer' = Tracer $ \case
-        TraceForgeAboutToLead slotNo    -> traceWith tracer' $ MeasureBlockTimeStart slotNo
-        _                               -> pure ()
+        TraceNodeIsLeader slotNo    -> traceWith tracer' $ MeasureBlockTimeStart slotNo
+        _                           -> pure ()
 
 -- | Transformer for the end of the block forge, when the block was created/forged.
 measureBlockForgeEnd :: Tracer IO (LogObject Text) -> Tracer IO (TraceForgeEvent blk (GenTx blk))
@@ -193,7 +193,7 @@ measureBlockForgeEnd tracer = measureTxsEndInter $ toLogObject tracer
   where
     measureTxsEndInter :: Tracer IO (MeasureBlockForging blk) -> Tracer IO (TraceForgeEvent blk (GenTx blk))
     measureTxsEndInter tracer' = Tracer $ \case
-        TraceForgeEvent slotNo blk mempoolSize
+        TraceForgedBlock slotNo blk mempoolSize
             -> traceWith tracer' (MeasureBlockTimeStop slotNo blk mempoolSize)
         _   -> pure ()
 

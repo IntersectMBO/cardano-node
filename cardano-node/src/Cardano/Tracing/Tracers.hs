@@ -30,7 +30,7 @@ import           Control.Tracer
 import           Codec.CBOR.Read (DeserialiseFailure)
 import           Data.Functor.Contravariant (contramap)
 import           Data.Text (Text, pack)
-import           Network.Mux.Types (MuxTrace, WithMuxBearer)
+import           Network.Mux (MuxTrace, WithMuxBearer)
 import qualified Network.Socket as Socket (SockAddr)
 import           Network.Mux (WithMuxBearer, MuxTrace)
 
@@ -44,8 +44,6 @@ import           Cardano.BM.Trace (traceNamedObject)
 import           Cardano.BM.Data.Tracer (WithSeverity (..), addName,
                                          annotateSeverity)
 import           Cardano.BM.Data.Transformers
-import           Cardano.BM.Trace (traceNamedObject)
-import           Cardano.BM.Tracing
 
 import           Ouroboros.Consensus.Block (Header)
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..), TraceBlockchainTimeEvent (..))
@@ -60,6 +58,7 @@ import           Ouroboros.Consensus.Util.Orphans ()
 
 import qualified Ouroboros.Network.AnchoredFragment as AF
 import           Ouroboros.Network.Block (Point, blockNo, unBlockNo, unSlotNo)
+import           Ouroboros.Network.BlockFetch.Decision (FetchDecision)
 import           Ouroboros.Network.BlockFetch.ClientState (TraceLabelPeer (..))
 import           Ouroboros.Network.NodeToNode (WithAddr, ErrorPolicyTrace)
 import           Ouroboros.Network.Point (fromWithOrigin)
@@ -67,16 +66,12 @@ import           Ouroboros.Network.Subscription
 
 import qualified Ouroboros.Storage.ChainDB as ChainDB
 
-import           Ouroboros.Consensus.Node (RunNode (..))
-
 import           Cardano.Config.Protocol (TraceConstraints)
 import           Cardano.Config.Types
 import           Cardano.Tracing.MicroBenchmarking
 import           Cardano.Tracing.ToObjectOrphans
 
 import           Control.Tracer.Transformers
-import           Control.Tracer.Transformers.ObserveOutcome (Outcome, OutcomeEnhancedTracer,
-                                                             mkOutcomeExtractor)
 
 data Tracers peer blk = Tracers
   { -- | Trace the ChainDB
@@ -98,16 +93,15 @@ data Tracers peer blk = Tracers
   }
 
 data ForgeTracers = ForgeTracers
-  { ftAdopted :: Trace IO Text
-  , ftCheckLeadership :: Trace IO Text
-  , ftDidntAdoptBlock :: Trace IO Text
+  { ftForged :: Trace IO Text
   , ftForgeAboutToLead :: Trace IO Text
-  , ftForged :: Trace IO Text
-  , ftForgedInvalid :: Trace IO Text
-  , ftFromFuture :: Trace IO Text
-  , ftNotLeader :: Trace IO Text
-  , ftNoLedgerState :: Trace IO Text
-  , ftNoLedgerView :: Trace IO Text
+  , ftCouldNotForge :: Trace IO Text
+  , ftAdopted :: Trace IO Text
+  , ftDidntAdoptBlock :: Trace IO Text
+  , ftForgedInvalid   :: Trace IO Text
+  , ftTraceNodeNotLeader  :: Trace IO Text
+  , ftTraceBlockFromFuture :: Trace IO Text
+  , ftTraceNodeIsLeader :: Trace IO Text
   }
 
 nullTracers :: Tracers peer blk
@@ -159,16 +153,15 @@ mkTracers traceOptions tracer = do
   let name :: [Text] = ["metrics", "Forge"]
   forgeTracers <-
     ForgeTracers
-      <$> (counting $ liftCounting staticMetaCC name "adopted" tracer)
-      <*> (counting $ liftCounting staticMetaCC name "check-leadership" tracer)
-      <*> (counting $ liftCounting staticMetaCC name "didnt-adopt" tracer)
+      <$> (counting $ liftCounting staticMetaCC name "forged" tracer)
       <*> (counting $ liftCounting staticMetaCC name "forge-about-to-lead" tracer)
-      <*> (counting $ liftCounting staticMetaCC name "forged" tracer)
+      <*> (counting $ liftCounting staticMetaCC name "could-not-forge" tracer)
+      <*> (counting $ liftCounting staticMetaCC name "adopted" tracer)
+      <*> (counting $ liftCounting staticMetaCC name "didnt-adopt" tracer)
       <*> (counting $ liftCounting staticMetaCC name "forged-invalid" tracer)
+      <*> (counting $ liftCounting staticMetaCC name "node-not-leader" tracer)
       <*> (counting $ liftCounting staticMetaCC name "block-from-future" tracer)
-      <*> (counting $ liftCounting staticMetaCC name "not-leader" tracer)
-      <*> (counting $ liftCounting staticMetaCC name "no-ledger-state" tracer)
-      <*> (counting $ liftCounting staticMetaCC name "no-ledger-view" tracer)
+      <*> (counting $ liftCounting staticMetaCC name "node-is-leader" tracer)
 
   -- The outcomes we want to measure, the outcome extractor
   -- for measuring the time it takes a transaction to get into
@@ -331,16 +324,16 @@ mkTracers traceOptions tracer = do
       traceWith (teeForge' tr) ev
       flip traceWith ev $ fanning $ \(WithSeverity _ e) ->
         case e of
-          Consensus.TraceAdoptedBlock{} -> teeForge' (ftAdopted ft)
-          Consensus.TraceBlockFromFuture{} -> teeForge' (ftFromFuture ft)
-          Consensus.TraceDidntAdoptBlock{} -> teeForge' (ftDidntAdoptBlock ft)
           Consensus.TraceForgedBlock{} -> teeForge' (ftForged ft)
+          Consensus.TraceStartLeadershipCheck{} -> teeForge' (ftForgeAboutToLead ft)
+          Consensus.TraceNoLedgerState{} -> teeForge' (ftCouldNotForge ft)
+          Consensus.TraceNoLedgerView{} -> teeForge' (ftCouldNotForge ft)
+          Consensus.TraceAdoptedBlock{} -> teeForge' (ftAdopted ft)
+          Consensus.TraceDidntAdoptBlock{} -> teeForge' (ftDidntAdoptBlock ft)
           Consensus.TraceForgedInvalidBlock{} -> teeForge' (ftForgedInvalid ft)
-          Consensus.TraceNodeIsLeader{} -> teeForge' (ftForgeAboutToLead ft)
-          Consensus.TraceNodeNotLeader{} -> teeForge' (ftNotLeader ft)
-          Consensus.TraceNoLedgerState{} -> teeForge' (ftNoLedgerState ft)
-          Consensus.TraceNoLedgerView{} -> teeForge' (ftNoLedgerView ft)
-          Consensus.TraceStartLeadershipCheck{} -> teeForge' (ftCheckLeadership ft)
+          Consensus.TraceNodeNotLeader{} -> teeForge' (ftTraceNodeNotLeader ft)
+          Consensus.TraceBlockFromFuture{} -> teeForge' (ftTraceBlockFromFuture ft)
+          Consensus.TraceNodeIsLeader{} -> teeForge' (ftTraceNodeIsLeader ft)
 
       traceWith (toLogObject' tform tverb tr) ev
 
@@ -352,26 +345,26 @@ mkTracers traceOptions tracer = do
         meta <- mkLOMeta Critical Confidential
         traceNamedObject (appendName "metrics" tr) . (meta,) $
           case ev of
+            Consensus.TraceForgedBlock   slot _ _ ->
+              LogValue "forgedSlotLast" $ PureI $ fromIntegral $ unSlotNo slot
+            Consensus.TraceStartLeadershipCheck slot ->
+              LogValue "aboutToLeadSlotLast" $ PureI $ fromIntegral $ unSlotNo slot
+            Consensus.TraceNoLedgerState slot _ ->
+              LogValue "couldNotForgeSlotLast" $ PureI $ fromIntegral $ unSlotNo slot
+            Consensus.TraceNoLedgerView slot _ ->
+              LogValue "couldNotForgeSlotLast" $ PureI $ fromIntegral $ unSlotNo slot
             Consensus.TraceAdoptedBlock slot _ _ ->
               LogValue "adoptedSlotLast" $ PureI $ fromIntegral $ unSlotNo slot
-            Consensus.TraceBlockFromFuture slot _ ->
-              LogValue "blockFromFutureSlotLast" $ PureI $ fromIntegral $ unSlotNo slot
             Consensus.TraceDidntAdoptBlock slot _ ->
               LogValue "notAdoptedSlotLast" $ PureI $ fromIntegral $ unSlotNo slot
-            Consensus.TraceForgedBlock slot _ _ ->
-              LogValue "forgedSlotLast" $ PureI $ fromIntegral $ unSlotNo slot
             Consensus.TraceForgedInvalidBlock slot _ _ ->
               LogValue "forgedInvalidSlotLast" $ PureI $ fromIntegral $ unSlotNo slot
-            Consensus.TraceNodeIsLeader slot ->
-              LogValue "aboutToLeadSlotLast" $ PureI $ fromIntegral $ unSlotNo slot
             Consensus.TraceNodeNotLeader slot ->
-              LogValue "nodeIsNotLeaderSlotLast" $ PureI $ fromIntegral $ unSlotNo slot
-            Consensus.TraceNoLedgerState slot _ ->
-              LogValue "noLedgerStateSlotLast" $ PureI $ fromIntegral $ unSlotNo slot
-            Consensus.TraceNoLedgerView slot _ ->
-              LogValue "noLedgerViewSlotLast" $ PureI $ fromIntegral $ unSlotNo slot
-            Consensus.TraceStartLeadershipCheck slot ->
-              LogValue "startLeadershipCheckSlotLast" $ PureI $ fromIntegral $ unSlotNo slot
+              LogValue "nodeNotLeader" $ PureI $ fromIntegral $ unSlotNo slot
+            Consensus.TraceBlockFromFuture slot _slotNo ->
+              LogValue "blockFromFuture" $ PureI $ fromIntegral $ unSlotNo slot
+            Consensus.TraceNodeIsLeader slot ->
+              LogValue "nodeIsLeader" $ PureI $ fromIntegral $ unSlotNo slot
 
     mkConsensusTracers :: ForgeTracers -> TraceOptions -> Consensus.Tracers' peer blk (Tracer IO)
     mkConsensusTracers forgeTracers traceOpts = Consensus.Tracers

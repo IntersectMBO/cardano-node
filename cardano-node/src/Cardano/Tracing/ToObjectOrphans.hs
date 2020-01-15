@@ -315,16 +315,16 @@ instance DefineSeverity (TraceLocalTxSubmissionServerEvent blk) where
 
 instance DefinePrivacyAnnotation (TraceForgeEvent blk tx)
 instance DefineSeverity (TraceForgeEvent blk tx) where
-  defineSeverity (TraceAdoptedBlock {})         = Info
-  defineSeverity (TraceBlockFromFuture {})      = Warning
-  defineSeverity (TraceDidntAdoptBlock {})      = Warning
-  defineSeverity (TraceForgedBlock {})          = Info
-  defineSeverity (TraceForgedInvalidBlock {})   = Alert
-  defineSeverity (TraceNodeIsLeader {})         = Info
-  defineSeverity (TraceNodeNotLeader {})        = Info
-  defineSeverity (TraceNoLedgerState {})        = Warning
-  defineSeverity (TraceNoLedgerView {})         = Warning
-  defineSeverity (TraceStartLeadershipCheck {}) = Info
+  defineSeverity TraceForgedBlock {}            = Info
+  defineSeverity TraceStartLeadershipCheck {}   = Info
+  defineSeverity TraceNodeNotLeader {}          = Info
+  defineSeverity TraceNodeIsLeader {}           = Info
+  defineSeverity TraceNoLedgerState {}          = Warning
+  defineSeverity TraceNoLedgerView {}           = Warning
+  defineSeverity TraceBlockFromFuture {}        = Warning
+  defineSeverity TraceAdoptedBlock {}           = Info
+  defineSeverity TraceDidntAdoptBlock {}        = Warning
+  defineSeverity TraceForgedInvalidBlock {}     = Alert
 
 -- | instances of @Transformable@
 
@@ -845,30 +845,39 @@ instance ToObject (TraceLocalTxSubmissionServerEvent blk) where
     mkObject [ "kind" .= String "TraceLocalTxSubmissionServerEvent" ]
 
 instance ProtocolLedgerView blk => ToObject (TraceForgeEvent blk tx) where
-  toObject _verb (TraceAdoptedBlock slotNo _blk _txs) =
-    mkObject
-        [ "kind"    .= String "TraceAdoptedBlock"
-        , "slot"    .= toJSON (unSlotNo slotNo)
-        ]
-  toObject _verb (TraceBlockFromFuture currentSlot tip) =
-    mkObject
-        [ "kind" .= String "TraceBlockFromFuture"
-        , "current slot" .= toJSON (unSlotNo currentSlot)
-        , "tip" .= toJSON (unSlotNo tip)
-        ]
-  toObject _verb (TraceDidntAdoptBlock slotNo _) =
-    mkObject
-        [ "kind"    .= String "TraceDidntAdoptBlock"
-        , "slot"    .= toJSON (unSlotNo slotNo)
-        ]
   toObject _verb (TraceForgedBlock slotNo _ _) =
     mkObject
         [ "kind"    .= String "TraceForgedBlock"
         , "slot"    .= toJSON (unSlotNo slotNo)
         ]
-  toObject _verb (TraceForgedInvalidBlock slotNo _ _) =
+  toObject _verb (TraceStartLeadershipCheck slotNo) =
     mkObject
-        [ "kind"    .= String "TraceForgedInvalidBlock"
+        [ "kind"    .= String "TraceStartLeadershipCheck"
+        , "slot"    .= toJSON (unSlotNo slotNo)
+        ]
+  toObject _verb (TraceNoLedgerState slotNo _pointNo) =
+    mkObject
+        [ "kind"    .= String "TraceNoLedgerState"
+        , "slot"    .= toJSON (unSlotNo slotNo)
+        ]
+  toObject _verb (TraceNoLedgerView slotNo _anachronyFailure) =
+    mkObject
+        [ "kind"    .= String "TraceNoLedgerView"
+        , "slot"    .= toJSON (unSlotNo slotNo)
+        ]
+  toObject _verb (TraceNodeIsLeader slotNo) =
+    mkObject
+        [ "kind"    .= String "TraceNodeIsLeader"
+        , "slot"    .= toJSON (unSlotNo slotNo)
+        ]
+  toObject _verb (TraceNodeNotLeader slotNo) =
+    mkObject
+        [ "kind"    .= String "TraceNodeNotLeader"
+        , "slot"    .= toJSON (unSlotNo slotNo)
+        ]
+  toObject _verb (TraceBlockFromFuture slotNo anachronyFailure) =
+    mkObject
+        [ "kind"    .= String "TraceBlockFromFuture"
         , "slot"    .= toJSON (unSlotNo slotNo)
         ]
   toObject _verb (TraceNodeIsLeader slotNo) =
