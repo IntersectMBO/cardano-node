@@ -89,7 +89,7 @@ NodeId: 1
 Protocol: RealPBFT
 NumCoreNodes: 1
 RequiresNetworkMagic: RequiresMagic
-PBftSignatureThreshold: 0.7
+PBftSignatureThreshold:
 TurnOnLogging: True
 ViewMode: LiveView
 TurnOnLogMetrics: True

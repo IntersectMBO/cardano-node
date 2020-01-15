@@ -97,7 +97,7 @@ Protocol: ByronLegacy
 GenesisHash: f556e11e70d071629c84401ea8e18b7158dc045ebe29c40e80c18eca5bab3adb
 NumCoreNodes: 1
 RequiresNetworkMagic: RequiresNoMagic
-PBftSignatureThreshold: 0.5
+PBftSignatureThreshold:
 
 ##### Network Time Parameters #####
 
