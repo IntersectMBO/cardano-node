@@ -22,7 +22,7 @@ import           Data.Aeson (Value (..), toJSON, (.=))
 import           Data.Text (pack)
 import qualified Data.List.NonEmpty as NonEmpty
 import qualified Network.Socket as Socket (SockAddr)
-import           Network.Mux.Types (WithMuxBearer (..), MuxTrace (..))
+import           Network.Mux (WithMuxBearer (..), MuxTrace (..))
 
 import           Cardano.BM.Data.LogItem (LOContent (..), LogObject (..),
                    mkLOMeta)
@@ -181,8 +181,8 @@ instance DefineSeverity (WithAddr Socket.SockAddr ErrorPolicyTrace) where
     ErrorPolicyUnhandledConnectionException {} -> Error
     ErrorPolicyAcceptException {} -> Error
 
-instance DefinePrivacyAnnotation (WithMuxBearer peer (MuxTrace ptcl))
-instance DefineSeverity (WithMuxBearer peer (MuxTrace ptcl)) where
+instance DefinePrivacyAnnotation (WithMuxBearer peer MuxTrace)
+instance DefineSeverity (WithMuxBearer peer MuxTrace) where
   defineSeverity (WithMuxBearer _ ev) = case ev of
     MuxTraceRecvHeaderStart          -> Debug
     MuxTraceRecvHeaderEnd {}         -> Debug
@@ -192,7 +192,7 @@ instance DefineSeverity (WithMuxBearer peer (MuxTrace ptcl)) where
     MuxTraceRecvEnd {}               -> Debug
     MuxTraceSendStart {}             -> Debug
     MuxTraceSendEnd                  -> Debug
-    MuxTraceStateChange {}           -> Info
+    MuxTraceState {}                 -> Info
     MuxTraceCleanExit {}             -> Info
     MuxTraceExceptionExit {}         -> Info
     MuxTraceChannelRecvStart {}      -> Debug
@@ -315,12 +315,16 @@ instance DefineSeverity (TraceLocalTxSubmissionServerEvent blk) where
 
 instance DefinePrivacyAnnotation (TraceForgeEvent blk tx)
 instance DefineSeverity (TraceForgeEvent blk tx) where
-  defineSeverity (TraceForgeEvent {})           = Info
-  defineSeverity (TraceForgeAboutToLead {})     = Info
-  defineSeverity (TraceCouldNotForge {})        = Warning
   defineSeverity (TraceAdoptedBlock {})         = Info
+  defineSeverity (TraceBlockFromFuture {})      = Warning
   defineSeverity (TraceDidntAdoptBlock {})      = Warning
+  defineSeverity (TraceForgedBlock {})          = Info
   defineSeverity (TraceForgedInvalidBlock {})   = Alert
+  defineSeverity (TraceNodeIsLeader {})         = Info
+  defineSeverity (TraceNodeNotLeader {})        = Info
+  defineSeverity (TraceNoLedgerState {})        = Warning
+  defineSeverity (TraceNoLedgerView {})         = Warning
+  defineSeverity (TraceStartLeadershipCheck {}) = Info
 
 -- | instances of @Transformable@
 
@@ -403,8 +407,8 @@ instance Transformable Text IO (WithAddr Socket.SockAddr ErrorPolicyTrace) where
   trTransformer UserdefinedFormatting verb tr = trStructured verb tr
 
 -- transform @MuxTrace@
-instance (Show ptcl, Show peer)
-           => Transformable Text IO (WithMuxBearer peer (MuxTrace ptcl)) where
+instance (Show peer)
+           => Transformable Text IO (WithMuxBearer peer MuxTrace) where
   trTransformer StructuredLogging verb tr = trStructured verb tr
   trTransformer TextualRepresentation _verb tr = Tracer $ \s ->
     traceWith tr =<< LogObject <$> pure mempty
@@ -555,8 +559,8 @@ instance ToObject (WithAddr Socket.SockAddr ErrorPolicyTrace) where
              , "address" .= show addr
              , "event" .= show ev ]
 
-instance (Show ptcl, Show peer)
-      => ToObject (WithMuxBearer peer (MuxTrace ptcl)) where
+instance (Show peer)
+      => ToObject (WithMuxBearer peer MuxTrace) where
   toObject _verb (WithMuxBearer b ev) =
     mkObject [ "kind" .= String "MuxTrace"
              , "bearer" .= show b
@@ -841,35 +845,54 @@ instance ToObject (TraceLocalTxSubmissionServerEvent blk) where
     mkObject [ "kind" .= String "TraceLocalTxSubmissionServerEvent" ]
 
 instance ProtocolLedgerView blk => ToObject (TraceForgeEvent blk tx) where
-  toObject _verb (TraceForgeEvent slotNo _) =
-    mkObject
-        [ "kind"    .= String "TraceForgeEvent"
-        , "slot"    .= toJSON (unSlotNo slotNo)
-        ]
-  toObject _verb (TraceForgeAboutToLead slotNo) =
-    mkObject
-        [ "kind"    .= String "TraceForgeAboutToLead"
-        , "slot"    .= toJSON (unSlotNo slotNo)
-        ]
-  toObject _verb (TraceCouldNotForge slotNo anachronyFailure) =
-    mkObject
-        [ "kind"    .= String "TraceCouldNotForge"
-        , "slot"    .= toJSON (unSlotNo slotNo)
-        , "reason"  .= show anachronyFailure
-        ]
   toObject _verb (TraceAdoptedBlock slotNo _blk _txs) =
     mkObject
         [ "kind"    .= String "TraceAdoptedBlock"
         , "slot"    .= toJSON (unSlotNo slotNo)
+        ]
+  toObject _verb (TraceBlockFromFuture currentSlot tip) =
+    mkObject
+        [ "kind" .= String "TraceBlockFromFuture"
+        , "current slot" .= toJSON (unSlotNo currentSlot)
+        , "tip" .= toJSON (unSlotNo tip)
         ]
   toObject _verb (TraceDidntAdoptBlock slotNo _) =
     mkObject
         [ "kind"    .= String "TraceDidntAdoptBlock"
         , "slot"    .= toJSON (unSlotNo slotNo)
         ]
-  toObject _verb (TraceForgedInvalidBlock slotNo _ invalidBlockReason) =
+  toObject _verb (TraceForgedBlock slotNo _ _) =
+    mkObject
+        [ "kind"    .= String "TraceForgedBlock"
+        , "slot"    .= toJSON (unSlotNo slotNo)
+        ]
+  toObject _verb (TraceForgedInvalidBlock slotNo _ _) =
     mkObject
         [ "kind"    .= String "TraceForgedInvalidBlock"
         , "slot"    .= toJSON (unSlotNo slotNo)
-        , "reason"  .= show invalidBlockReason
+        ]
+  toObject _verb (TraceNodeIsLeader slotNo) =
+    mkObject
+        [ "kind"    .= String "TraceNodeIsLeader"
+        , "slot"    .= toJSON (unSlotNo slotNo)
+        ]
+  toObject _verb (TraceNodeNotLeader slotNo) =
+    mkObject
+        [ "kind"    .= String "TraceNodeNotLeader"
+        , "slot"    .= toJSON (unSlotNo slotNo)
+        ]
+  toObject _verb (TraceNoLedgerState slotNo _blk) =
+    mkObject
+        [ "kind"    .= String "TraceNoLedgerState"
+        , "slot"    .= toJSON (unSlotNo slotNo)
+        ]
+  toObject _verb (TraceNoLedgerView slotNo _) =
+    mkObject
+        [ "kind"    .= String "TraceNoLedgerView"
+        , "slot"    .= toJSON (unSlotNo slotNo)
+        ]
+  toObject _verb (TraceStartLeadershipCheck slotNo) =
+    mkObject
+        [ "kind"    .= String "TraceStartLeadershipCheck"
+        , "slot"    .= toJSON (unSlotNo slotNo)
         ]
