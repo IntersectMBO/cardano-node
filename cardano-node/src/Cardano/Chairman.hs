@@ -34,7 +34,7 @@ import           Control.Monad.Class.MonadThrow
 import           Control.Monad.Class.MonadTimer
 import           Control.Tracer
 
-import           Network.Mux.Types (MuxError)
+import           Network.Mux (MuxError)
 
 import           Ouroboros.Consensus.Block (BlockProtocol, GetHeader (..))
 import           Ouroboros.Consensus.Mempool
