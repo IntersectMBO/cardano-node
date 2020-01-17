@@ -141,6 +141,7 @@ loggingCLIConfiguration mfp captureMetrics' =
         putTextLn "Cannot find the logging configuration file at location."
         throwIO $ FileNotFoundException fp
 
+-- | Create logging feature for `cardano-cli`
 createLoggingFeatureCLI
   :: CardanoEnvironment
   -> Maybe FilePath
@@ -167,6 +168,7 @@ createLoggingFeatureCLI _ mLogConfig captureLogMetrics = do
     -- we return both
     pure (loggingLayer, cardanoFeature)
 
+-- | Create logging feature for `cardano-node`
 createLoggingFeature
   :: CardanoEnvironment -> NodeCLI -> IO (LoggingLayer, CardanoFeature)
 createLoggingFeature _ nCli = do
