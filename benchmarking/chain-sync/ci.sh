@@ -6,11 +6,11 @@ set -euo pipefail
 BASEDIR="$(dirname $0)"
 
 # >> cpu time limit in seconds
-CPU_TIME_LIMIT=$((1*60*60))
+TIME_LIMIT=$((60*60))
 
 CLUSTER="$1"
 
-LOG_CONFIG="$(yj < $BASEDIR/configuration/log-configuration.yaml)"
+LOG_CONFIG="$(yj < $BASEDIR/configuration/log-config-ci.yaml)"
 
 CUSTOM_CONFIG="{nodeConfig = builtins.fromJSON ''$LOG_CONFIG'';}"
 
@@ -18,8 +18,6 @@ nix build --out-link ./launch_node -f $BASEDIR/../.. scripts.$CLUSTER.node --arg
 
 rm -rf "./state-node-$CLUSTER"
 
-ulimit -t $CPU_TIME_LIMIT
-
-./launch_node || true
+timeout ${TIME_LIMIT} ./launch_node || true
 
 $BASEDIR/analyse-logs.sh | tee benchmark-results.log
