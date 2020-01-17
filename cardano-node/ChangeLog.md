@@ -1,6 +1,40 @@
 # Changelog for cardano-node
 
-## Unreleased changes
+## 1.4.0 -- January 2020
+
+### node changes
+- Move configuration of tracers from CLI to the config file (#474)
+- Move support for trace forwarding into a logging plugin (#454)
+- Make the launcher scripts able to be used with nix, cabal or stack (#458)
+- Fix non-liveview mode in shelley-testnet.sh script (#459)
+- Elide repeated log messages (#445)
+- Simplify cardano-cli interface (#476)
+- Remove unneeded cardano-cli dump-hardcoded-genesis subcommand (#451)
+- Remove dependency on cardano-ledger-test (#451)
+- Remove message counters from config files (#454)
+- Add the mempool size metric to the console live view (#457)
+- Update scripts and README
+
+### consensus changes
+- Limit forged block size based on current limits from the ledger state (#1400, #1363)
+- Add ability to get recent ledger states, for local query protocol (#1440, #1446)
+- Refactor block forging code (#786, #1445)
+- Fix rare bug in block forging (due to unavoidable race condition) (#1437, #1459)
+- Fix a case of dubious async exception handling in chain DB (#1452, #1453)
+- Additional tests to better cover EBBs in combination with PBFT consensus. (#1353)
+- Various tidying up in the consensus QC tests. (#1401)
+- Allow disabling assertions for production builds (#1248)
+- Add support to get mempool snapshot size for use in system benchmarks (#1431)
+- Adjustments to tracing in block forging for system benchmarks (#1432)
+
+### ledger changes
+- Relax the validation rule for on-chain registered software versions to better
+  match the legacy implementation. This fixes validation of the testnet.
+
+### network changes
+- Significant refactoring of network-mux package (#1247)
+- Reduce CPU cost of sending over the mux (approx 10%) (#1420, #1434)
+- Simplify IOSim's Async representation (#1394)
 
 ## 1.3.0 -- January 2020
 
