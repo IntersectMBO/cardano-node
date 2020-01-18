@@ -32,7 +32,6 @@ import           Data.Functor.Contravariant (contramap)
 import           Data.Text (Text, pack)
 import           Network.Mux (MuxTrace, WithMuxBearer)
 import qualified Network.Socket as Socket (SockAddr)
-import           Network.Mux (WithMuxBearer, MuxTrace)
 
 import           Cardano.BM.Data.Aggregated (Measurable (..))
 import           Cardano.BM.Data.LogItem (LOContent (..), LogObject (..),
@@ -306,6 +305,8 @@ mkTracers traceOptions tracer = do
         -> Tracer IO (Consensus.TraceForgeEvent blk (GenTx blk))
     forgeTracer forgeTracers traceOpts = Tracer $ \ev -> do
         traceWith (measureTxsEnd tracer) ev
+        traceWith (measureBlockForgeStart tracer) ev
+        traceWith (measureBlockForgeEnd tracer) ev
         traceWith (consensusForgeTracer) ev
       where
         -- The consensus tracer.

@@ -21,7 +21,7 @@ import           Cardano.Prelude
 
 import           Control.Monad.Class.MonadTime (DiffTime, Time (..), diffTime)
 
-import           Data.Aeson (Value (..), (.=))
+import           Data.Aeson (Value (..), (.=), toJSON)
 import qualified Data.Time.Clock as Time
 
 import           Data.Time.Clock.System (getSystemTime, systemToTAITime)
@@ -33,7 +33,7 @@ import           Cardano.BM.Data.Tracer
 
 import           Control.Tracer.Transformers.ObserveOutcome
 
-import           Ouroboros.Network.Block (SlotNo)
+import           Ouroboros.Network.Block (SlotNo (..))
 
 import           Ouroboros.Consensus.Ledger.Abstract (ProtocolLedgerView)
 import           Ouroboros.Consensus.Mempool.API (GenTx, GenTxId, ApplyTx (..), MempoolSize (..),
@@ -59,14 +59,20 @@ instance DefinePrivacyAnnotation (MeasureTxs blk)
 instance DefineSeverity (MeasureTxs blk) where
   defineSeverity _ = Info
 
--- TODO(KS): Clarify the structure of the type.
+-- TODO(KS): Time will be removed.
 instance ToObject (MeasureTxs blk) where
-  toObject _verb _ =
-    mkObject [ "kind"       .= String "MeasureTxsTimeStart"
-             ]
+  toObject _verb (MeasureTxsTimeStart _txs mempoolNumTxs mempoolNumBytes _time) =
+    mkObject
+      [ "kind"              .= String "MeasureTxsTimeStart"
+      , "mempoolNumTxs"     .= toJSON mempoolNumTxs
+      , "mempoolNumBytes"   .= toJSON mempoolNumBytes
+      ]
+  toObject _verb (MeasureTxsTimeStop slotNo _blk _txs _time) =
+    mkObject
+      [ "kind"              .= String "MeasureTxsTimeStop"
+      , "slot"              .= toJSON (unSlotNo slotNo)
+      ]
 
-
--- | Temporary to hold the types in place until the next PR:
 -- TODO(KS): Remove this and the time in the next PR.
 notime :: Time
 notime = Time . Time.picosecondsToDiffTime $ 0
@@ -171,11 +177,19 @@ instance DefinePrivacyAnnotation (MeasureBlockForging blk)
 instance DefineSeverity (MeasureBlockForging blk) where
   defineSeverity _ = Info
 
--- TODO(KS): Clarify the structure of the type.
 instance ToObject (MeasureBlockForging blk) where
-  toObject _verb _ =
-    mkObject [ "kind"       .= String "MeasureBlockForging"
-             ]
+  toObject _verb (MeasureBlockTimeStart slotNo) =
+    mkObject
+      [ "kind"              .= String "MeasureBlockTimeStart"
+      , "slot"              .= toJSON (unSlotNo slotNo)
+      ]
+  toObject _verb (MeasureBlockTimeStop slotNo _blk mempoolSize) =
+    mkObject
+      [ "kind"              .= String "MeasureBlockTimeStop"
+      , "slot"              .= toJSON (unSlotNo slotNo)
+      , "mempoolNumTxs"     .= toJSON (msNumTxs mempoolSize)
+      , "mempoolNumBytes"   .= toJSON (msNumBytes mempoolSize)
+      ]
 
 -- | Transformer for the start of the block forge, when the current slot is the slot of the
 -- node and the protocol starts.

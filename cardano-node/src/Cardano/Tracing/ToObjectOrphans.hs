@@ -845,39 +845,30 @@ instance ToObject (TraceLocalTxSubmissionServerEvent blk) where
     mkObject [ "kind" .= String "TraceLocalTxSubmissionServerEvent" ]
 
 instance ProtocolLedgerView blk => ToObject (TraceForgeEvent blk tx) where
+  toObject _verb (TraceAdoptedBlock slotNo _blk _txs) =
+    mkObject
+        [ "kind"    .= String "TraceAdoptedBlock"
+        , "slot"    .= toJSON (unSlotNo slotNo)
+        ]
+  toObject _verb (TraceBlockFromFuture currentSlot tip) =
+    mkObject
+        [ "kind" .= String "TraceBlockFromFuture"
+        , "current slot" .= toJSON (unSlotNo currentSlot)
+        , "tip" .= toJSON (unSlotNo tip)
+        ]
+  toObject _verb (TraceDidntAdoptBlock slotNo _) =
+    mkObject
+        [ "kind"    .= String "TraceDidntAdoptBlock"
+        , "slot"    .= toJSON (unSlotNo slotNo)
+        ]
   toObject _verb (TraceForgedBlock slotNo _ _) =
     mkObject
         [ "kind"    .= String "TraceForgedBlock"
         , "slot"    .= toJSON (unSlotNo slotNo)
         ]
-  toObject _verb (TraceStartLeadershipCheck slotNo) =
+  toObject _verb (TraceForgedInvalidBlock slotNo _ _) =
     mkObject
-        [ "kind"    .= String "TraceStartLeadershipCheck"
-        , "slot"    .= toJSON (unSlotNo slotNo)
-        ]
-  toObject _verb (TraceNoLedgerState slotNo _pointNo) =
-    mkObject
-        [ "kind"    .= String "TraceNoLedgerState"
-        , "slot"    .= toJSON (unSlotNo slotNo)
-        ]
-  toObject _verb (TraceNoLedgerView slotNo _anachronyFailure) =
-    mkObject
-        [ "kind"    .= String "TraceNoLedgerView"
-        , "slot"    .= toJSON (unSlotNo slotNo)
-        ]
-  toObject _verb (TraceNodeIsLeader slotNo) =
-    mkObject
-        [ "kind"    .= String "TraceNodeIsLeader"
-        , "slot"    .= toJSON (unSlotNo slotNo)
-        ]
-  toObject _verb (TraceNodeNotLeader slotNo) =
-    mkObject
-        [ "kind"    .= String "TraceNodeNotLeader"
-        , "slot"    .= toJSON (unSlotNo slotNo)
-        ]
-  toObject _verb (TraceBlockFromFuture slotNo anachronyFailure) =
-    mkObject
-        [ "kind"    .= String "TraceBlockFromFuture"
+        [ "kind"    .= String "TraceForgedInvalidBlock"
         , "slot"    .= toJSON (unSlotNo slotNo)
         ]
   toObject _verb (TraceNodeIsLeader slotNo) =
