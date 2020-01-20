@@ -24,15 +24,10 @@ import           Data.Text (pack)
 import           Cardano.BM.Data.LogItem (LOContent (..), LogObject (..),
                    mkLOMeta)
 import           Cardano.BM.Tracing
-import           Cardano.BM.Data.Tracer (trStructured, emptyObject, mkObject)
+import           Cardano.BM.Data.Tracer (trStructured, mkObject)
 
-import           Ouroboros.Consensus.Block (SupportedBlock, headerPoint)
 import           Ouroboros.Consensus.BlockFetchServer
                    (TraceBlockFetchServerEvent)
-import           Ouroboros.Consensus.ChainSyncClient
-                   (TraceChainSyncClientEvent (..))
-import           Ouroboros.Consensus.ChainSyncServer
-                   (TraceChainSyncServerEvent(..))
 import           Ouroboros.Consensus.Ledger.Abstract
 import           Ouroboros.Consensus.Mempool.API (GenTx, GenTxId)
 import           Ouroboros.Consensus.Node.Tracers (TraceForgeEvent (..))
@@ -42,9 +37,6 @@ import           Ouroboros.Consensus.Util.Condense
 import           Ouroboros.Consensus.Util.Orphans ()
 
 import           Ouroboros.Network.Block
-import           Ouroboros.Network.BlockFetch.ClientState
-                   (TraceFetchClientState (..), TraceLabelPeer (..))
-import           Ouroboros.Network.BlockFetch.Decision (FetchDecision)
 import           Ouroboros.Network.Point (WithOrigin (..))
 import           Ouroboros.Network.TxSubmission.Inbound
                    (TraceTxSubmissionInbound)
@@ -97,31 +89,6 @@ instance ( Show a
 
   show = showWithTip show
 
-
-instance DefinePrivacyAnnotation (TraceChainSyncClientEvent blk)
-instance DefineSeverity (TraceChainSyncClientEvent blk) where
-  defineSeverity (TraceDownloadedHeader _) = Info
-  defineSeverity (TraceFoundIntersection _ _ _) = Info
-  defineSeverity (TraceRolledBack _) = Notice
-  defineSeverity (TraceException _) = Warning
-
-instance DefinePrivacyAnnotation (TraceChainSyncServerEvent blk b)
-instance DefineSeverity (TraceChainSyncServerEvent blk b) where
-  defineSeverity _ = Info
-
-instance DefinePrivacyAnnotation [TraceLabelPeer peer
-                                  (FetchDecision [Point header])]
-instance DefineSeverity [TraceLabelPeer peer
-                         (FetchDecision [Point header])] where
-  defineSeverity [] = Debug
-  defineSeverity _ = Info
-
-instance DefinePrivacyAnnotation (TraceLabelPeer peer
-                                  (TraceFetchClientState header))
-instance DefineSeverity (TraceLabelPeer peer
-                         (TraceFetchClientState header)) where
-  defineSeverity _ = Info
-
 instance DefinePrivacyAnnotation (TraceBlockFetchServerEvent blk)
 instance DefineSeverity (TraceBlockFetchServerEvent blk) where
   defineSeverity _ = Info
@@ -156,25 +123,6 @@ instance DefineSeverity (TraceForgeEvent blk tx) where
   defineSeverity TraceForgedInvalidBlock {}     = Alert
 
 -- | instances of @Transformable@
-
--- transform @ChainSyncClient@
-instance (Condense (HeaderHash blk), ProtocolLedgerView blk, SupportedBlock blk)
-          => Transformable Text IO (TraceChainSyncClientEvent blk) where
-  trTransformer _ verb tr = trStructured verb tr
-
--- transform @ChainSyncServer@
-instance Condense (HeaderHash blk) => Transformable Text IO (TraceChainSyncServerEvent blk b) where
-  trTransformer _ verb tr = trStructured verb tr
-
--- transform @BlockFetchDecision@
-instance Show peer => Transformable Text IO [TraceLabelPeer peer
-                                (FetchDecision [Point header])] where
-  trTransformer _ verb tr = trStructured verb tr
-
--- transform @BlockFetchDecision@
-instance Show peer => Transformable Text IO (TraceLabelPeer peer
-                                (TraceFetchClientState header)) where
-  trTransformer _ verb tr = trStructured verb tr
 
 -- transform @BlockFetchServerEvent@
 instance Transformable Text IO (TraceBlockFetchServerEvent blk) where
@@ -218,86 +166,6 @@ instance ToObject LedgerDB.DiskSnapshot where
   toObject MaximalVerbosity snap =
     mkObject [ "kind" .= String "snapshot"
              , "snapshot" .= String (pack $ show snap) ]
-
-instance (Condense (HeaderHash blk), ProtocolLedgerView blk, SupportedBlock blk)
-          => ToObject (TraceChainSyncClientEvent blk) where
-  toObject verb ev = case ev of
-    TraceDownloadedHeader pt ->
-      mkObject [ "kind" .= String "ChainSyncClientEvent.TraceDownloadedHeader"
-               , "block" .= toObject verb (headerPoint pt) ]
-    TraceRolledBack tip ->
-      mkObject [ "kind" .= String "ChainSyncClientEvent.TraceRolledBack"
-               , "tip" .= toObject verb tip ]
-    TraceException exc ->
-      mkObject [ "kind" .= String "ChainSyncClientEvent.TraceException"
-               , "exception" .= String (pack $ show exc) ]
-    TraceFoundIntersection _ _ _ ->
-      mkObject [ "kind" .= String "ChainSyncClientEvent.TraceFoundIntersection" ]
-
-instance Condense (HeaderHash blk) => ToObject (TraceChainSyncServerEvent blk b) where
-    toObject verb ev = case ev of
-      TraceChainSyncServerRead tip (AddBlock hdr) ->
-        mkObject [ "kind" .= String "ChainSyncServerEvent.TraceChainSyncServerRead.AddBlock"
-                 , "tip" .= (String (pack . showTip verb $ tipPoint tip))
-                 , "addedBlock" .= (String (pack $ condense hdr)) ]
-      TraceChainSyncServerRead tip (RollBack pt) ->
-        mkObject [ "kind" .= String "ChainSyncServerEvent.TraceChainSyncServerRead.RollBack"
-                 , "tip" .= (String (pack . showTip verb $ tipPoint tip))
-                 , "rolledBackBlock" .= (String (pack $ showTip verb pt)) ]
-      TraceChainSyncServerReadBlocked tip (AddBlock hdr) ->
-        mkObject [ "kind" .= String "ChainSyncServerEvent.TraceChainSyncServerReadBlocked.AddBlock"
-                 , "tip" .= (String (pack . showTip verb $ tipPoint tip))
-                 , "addedBlock" .= (String (pack $ condense hdr)) ]
-      TraceChainSyncServerReadBlocked tip (RollBack pt) ->
-        mkObject [ "kind" .= String "ChainSyncServerEvent.TraceChainSyncServerReadBlocked.RollBack"
-                 , "tip" .= (String (pack . showTip verb $ tipPoint tip))
-                 , "rolledBackBlock" .= (String (pack $ showTip verb pt)) ]
-
-
-instance Show peer => ToObject [TraceLabelPeer peer
-                        (FetchDecision [Point header])] where
-  toObject MinimalVerbosity _ = emptyObject
-  toObject NormalVerbosity lbls = mkObject [ "kind" .= String "TraceLabelPeer"
-                                           , "length" .= String (pack $ show $ length lbls) ]
-  toObject MaximalVerbosity [] = emptyObject
-  toObject MaximalVerbosity (lbl : r) = toObject MaximalVerbosity lbl <>
-                                        toObject MaximalVerbosity r
-
-instance Show peer => ToObject (TraceLabelPeer peer
-                        (FetchDecision [Point header])) where
-  toObject verb (TraceLabelPeer peerid a) =
-    mkObject [ "kind" .= String "FetchDecision"
-             , "peer" .= show peerid
-             , "decision" .= toObject verb a ]
-
-instance ToObject (FetchDecision [Point header]) where
-  toObject _verb (Left decline) =
-    mkObject [ "kind" .= String "FetchDecision declined"
-             , "declined" .= String (pack $ show $ decline) ]
-  toObject _verb (Right results) =
-    mkObject [ "kind" .= String "FetchDecision results"
-             , "length" .= String (pack $ show $ length results) ]
-
-instance Show peer => ToObject (TraceLabelPeer peer
-                        (TraceFetchClientState header)) where
-  toObject verb (TraceLabelPeer peerid a) =
-    mkObject [ "kind" .= String "TraceFetchClientState"
-             , "peer" .= show peerid
-             , "state" .= toObject verb a ]
-
-instance ToObject (TraceFetchClientState header) where
-  toObject _verb (AddedFetchRequest {}) =
-    mkObject [ "kind" .= String "AddedFetchRequest" ]
-  toObject _verb (AcknowledgedFetchRequest {}) =
-    mkObject [ "kind" .= String "AcknowledgedFetchRequest" ]
-  toObject _verb (CompletedBlockFetch {}) =
-    mkObject [ "kind" .= String "CompletedBlockFetch" ]
-  toObject _verb (CompletedFetchBatch {}) =
-    mkObject [ "kind" .= String "CompletedFetchBatch" ]
-  toObject _verb (StartedFetchBatch {}) =
-    mkObject [ "kind" .= String "StartedFetchBatch" ]
-  toObject _verb (RejectedFetchBatch {}) =
-    mkObject [ "kind" .= String "RejectedFetchBatch" ]
 
 instance ToObject (TraceBlockFetchServerEvent blk) where
   toObject _verb _ =
