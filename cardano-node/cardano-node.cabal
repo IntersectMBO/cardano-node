@@ -48,9 +48,11 @@ library
                        Cardano.Tracing.ToObjectOrphans.ChainSyncEventTrace
                        Cardano.Tracing.ToObjectOrphans.DnsTrace
                        Cardano.Tracing.ToObjectOrphans.ErrorPolicyTrace
+                       Cardano.Tracing.ToObjectOrphans.ForgeEventTrace
+                       Cardano.Tracing.ToObjectOrphans.LabelPeerTrace
                        Cardano.Tracing.ToObjectOrphans.MuxTrace
                        Cardano.Tracing.ToObjectOrphans.SubscriptionTrace
-                       Cardano.Tracing.ToObjectOrphans.LabelPeerTrace
+                       Cardano.Tracing.ToObjectOrphans.TxSubmissionTrace
                        Cardano.Tracing.ToObjectOrphans
                        Cardano.Tracing.MicroBenchmarking
 
