@@ -20,8 +20,6 @@ import           Prelude (String, show, id)
 
 import           Data.Aeson (Value (..), toJSON, (.=))
 import           Data.Text (pack)
-import qualified Network.Socket as Socket (SockAddr)
-import           Network.Mux (WithMuxBearer (..), MuxTrace (..))
 
 import           Cardano.BM.Data.LogItem (LOContent (..), LogObject (..),
                    mkLOMeta)
@@ -48,10 +46,6 @@ import           Ouroboros.Network.BlockFetch.ClientState
                    (TraceFetchClientState (..), TraceLabelPeer (..))
 import           Ouroboros.Network.BlockFetch.Decision (FetchDecision)
 import           Ouroboros.Network.Point (WithOrigin (..))
-import           Ouroboros.Network.NodeToNode
-                   (WithAddr(..), ErrorPolicyTrace(..))
-import           Ouroboros.Network.Subscription (DnsTrace (..),
-                   WithDomainName (..))
 import           Ouroboros.Network.TxSubmission.Inbound
                    (TraceTxSubmissionInbound)
 import           Ouroboros.Network.TxSubmission.Outbound
@@ -102,59 +96,6 @@ instance ( Show a
          ) => Show (WithTip blk a) where
 
   show = showWithTip show
-
-
-
-instance DefinePrivacyAnnotation (WithDomainName DnsTrace)
-instance DefineSeverity (WithDomainName DnsTrace) where
-  defineSeverity (WithDomainName _ ev) = case ev of
-    DnsTraceLookupException {} -> Error
-    DnsTraceLookupAError {} -> Error
-    DnsTraceLookupAAAAError {} -> Error
-    DnsTraceLookupIPv6First -> Info
-    DnsTraceLookupIPv4First -> Info
-    DnsTraceLookupAResult {} -> Debug
-    DnsTraceLookupAAAAResult {} -> Debug
-
-instance DefinePrivacyAnnotation (WithAddr Socket.SockAddr ErrorPolicyTrace)
-instance DefineSeverity (WithAddr Socket.SockAddr ErrorPolicyTrace) where
-  defineSeverity (WithAddr _ ev) = case ev of
-    ErrorPolicySuspendPeer {} -> Warning -- peer misbehaved
-    ErrorPolicySuspendConsumer {} -> Notice -- peer temporarily not useful
-    ErrorPolicyLocalNodeError {} -> Error
-    ErrorPolicyResumePeer {} -> Debug
-    ErrorPolicyKeepSuspended {} -> Debug
-    ErrorPolicyResumeConsumer {} -> Debug
-    ErrorPolicyResumeProducer {} -> Debug
-    ErrorPolicyUnhandledApplicationException {} -> Error
-    ErrorPolicyUnhandledConnectionException {} -> Error
-    ErrorPolicyAcceptException {} -> Error
-
-instance DefinePrivacyAnnotation (WithMuxBearer peer MuxTrace)
-instance DefineSeverity (WithMuxBearer peer MuxTrace) where
-  defineSeverity (WithMuxBearer _ ev) = case ev of
-    MuxTraceRecvHeaderStart          -> Debug
-    MuxTraceRecvHeaderEnd {}         -> Debug
-    MuxTraceRecvPayloadStart {}      -> Debug
-    MuxTraceRecvPayloadEnd {}        -> Debug
-    MuxTraceRecvStart {}             -> Debug
-    MuxTraceRecvEnd {}               -> Debug
-    MuxTraceSendStart {}             -> Debug
-    MuxTraceSendEnd                  -> Debug
-    MuxTraceState {}                 -> Info
-    MuxTraceCleanExit {}             -> Info
-    MuxTraceExceptionExit {}         -> Info
-    MuxTraceChannelRecvStart {}      -> Debug
-    MuxTraceChannelRecvEnd {}        -> Debug
-    MuxTraceChannelSendStart {}      -> Debug
-    MuxTraceChannelSendEnd {}        -> Debug
-    MuxTraceHandshakeStart           -> Debug
-    MuxTraceHandshakeClientEnd {}    -> Info
-    MuxTraceHandshakeServerEnd       -> Debug
-    MuxTraceHandshakeClientError {}  -> Error
-    MuxTraceHandshakeServerError {}  -> Error
-    MuxTraceRecvDeltaQObservation {} -> Debug
-    MuxTraceRecvDeltaQSample {}      -> Info
 
 
 instance DefinePrivacyAnnotation (TraceChainSyncClientEvent blk)
@@ -258,57 +199,7 @@ instance (Show blk, Show tx, ProtocolLedgerView blk) => Transformable Text IO (T
                                <*> pure (LogMessage $ pack $ show s)
   trTransformer UserdefinedFormatting verb tr = trStructured verb tr
 
-
-
--- transform @DnsTrace@
-instance Transformable Text IO (WithDomainName DnsTrace) where
-  trTransformer StructuredLogging verb tr = trStructured verb tr
-  trTransformer TextualRepresentation _verb tr = Tracer $ \s ->
-    traceWith tr =<< LogObject <$> pure mempty
-                               <*> mkLOMeta (defineSeverity s) (definePrivacyAnnotation s)
-                               <*> pure (LogMessage $ pack $ show s)
-  trTransformer UserdefinedFormatting verb tr = trStructured verb tr
-
--- transform @ErrorPolicyTrace@
-instance Transformable Text IO (WithAddr Socket.SockAddr ErrorPolicyTrace) where
-  trTransformer StructuredLogging verb tr = trStructured verb tr
-  trTransformer TextualRepresentation _verb tr = Tracer $ \s ->
-    traceWith tr =<< LogObject <$> pure mempty
-                               <*> mkLOMeta (defineSeverity s) (definePrivacyAnnotation s)
-                               <*> pure (LogMessage $ pack $ show s)
-  trTransformer UserdefinedFormatting verb tr = trStructured verb tr
-
--- transform @MuxTrace@
-instance (Show peer)
-           => Transformable Text IO (WithMuxBearer peer MuxTrace) where
-  trTransformer StructuredLogging verb tr = trStructured verb tr
-  trTransformer TextualRepresentation _verb tr = Tracer $ \s ->
-    traceWith tr =<< LogObject <$> pure mempty
-                               <*> mkLOMeta (defineSeverity s) (definePrivacyAnnotation s)
-                               <*> pure (LogMessage $ pack $ show s)
-  trTransformer UserdefinedFormatting verb tr = trStructured verb tr
-
 -- | instances of @ToObject@
-
-instance ToObject (WithDomainName DnsTrace) where
-  toObject _verb (WithDomainName dom ev) =
-    mkObject [ "kind" .= String "DnsTrace"
-             , "domain" .= show dom
-             , "event" .= show ev ]
-
-instance ToObject (WithAddr Socket.SockAddr ErrorPolicyTrace) where
-  toObject _verb (WithAddr addr ev) =
-    mkObject [ "kind" .= String "ErrorPolicyTrace"
-             , "address" .= show addr
-             , "event" .= show ev ]
-
-instance (Show peer)
-      => ToObject (WithMuxBearer peer MuxTrace) where
-  toObject _verb (WithMuxBearer b ev) =
-    mkObject [ "kind" .= String "MuxTrace"
-             , "bearer" .= show b
-             , "event" .= show ev ]
-
 instance ToObject SlotNo where
   toObject _verb slot =
     mkObject [ "kind" .= String "SlotNo"

@@ -45,6 +45,9 @@ library
 
   other-modules:       Paths_cardano_node
                        Cardano.Tracing.ToObjectOrphans.ChainDBTrace
+                       Cardano.Tracing.ToObjectOrphans.DnsTrace
+                       Cardano.Tracing.ToObjectOrphans.ErrorPolicyTrace
+                       Cardano.Tracing.ToObjectOrphans.MuxTrace
                        Cardano.Tracing.ToObjectOrphans.SubscriptionTrace
                        Cardano.Tracing.ToObjectOrphans
                        Cardano.Tracing.MicroBenchmarking
