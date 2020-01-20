@@ -210,6 +210,12 @@ in {
         description = ''Extra CLI args for 'cardano-node'.'';
       };
 
+      tracingVerbosity = mkOption {
+        type = types.str;
+        default = envConfig.tracingVerbosity;
+        description = ''verbosity level of structured representation of traced values.'';
+      };
+
       protover-major = mkOption {
         type = types.nullOr types.int;
         default = null;

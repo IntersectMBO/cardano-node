@@ -29,6 +29,7 @@ let
       proxyPort = 7777;
       proxyHost = "127.0.0.1";
       loggingExtras = null;
+      tracingVerbosity = "normal";
     } // (builtins.removeAttrs envConfig ["nodeConfig"]);
 
     nodeConfig = (envConfig.nodeConfig or localLib.environments.mainnet.nodeConfig)
@@ -57,7 +58,8 @@ let
         hostAddr
         port
         nodeConfig
-        nodeId;
+        nodeId
+        tracingVerbosity;
       runtimeDir = null;
       dbPrefix = "db-${envConfig.name}";
       topology = topologyFile;

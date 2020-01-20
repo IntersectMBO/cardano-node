@@ -18,6 +18,7 @@ logs/
 /launch_*
 /state-*
 /cluster*.log*
+/benchmark*.log*
 
 /benchmarking/chain-sync/state-node-mainnet/
 
