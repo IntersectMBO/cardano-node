@@ -67,6 +67,9 @@ import qualified Ouroboros.Storage.ChainDB as ChainDB
 
 import           Cardano.Config.Protocol (TraceConstraints)
 import           Cardano.Config.Types
+import           Cardano.Tracing.ToObjectOrphans.ChainDBTrace ()
+import           Cardano.Tracing.ToObjectOrphans.SubscriptionTrace ()
+import           Cardano.Tracing.ToObjectOrphans
 import           Cardano.Tracing.MicroBenchmarking
 import           Cardano.Tracing.ToObjectOrphans
 
