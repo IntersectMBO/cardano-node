@@ -15,15 +15,9 @@ module Cardano.Common.Parsers
   , parseGenesisFile
   , parseIntegral
   , parseIntegralWithDefault
-  , parseLogMetricsLast
   , parseLogOutputFile
   , parseNodeId
   , parseProtocol
-  , parseProtocolBFT
-  , parseProtocolByron
-  , parseProtocolMockPBFT
-  , parseProtocolPraos
-  , parseProtocolRealPBFT
   , parseSocketDir
   , parseTopologyInfo
   ) where
@@ -195,46 +189,6 @@ parseProtocol = asum
     "Permissive BFT consensus with a real ledger"
   ]
 
-parseProtocolByron :: Parser (Last Protocol)
-parseProtocolByron =
-  flagParser
-    (Last $ Just ByronLegacy)
-    "byron-legacy"
-    "Byron/Ouroboros Classic suite of algorithms"
-
-
-parseProtocolBFT :: Parser (Last Protocol)
-parseProtocolBFT =
-  flagParser
-    (Last $ Just BFT)
-    "bft"
-    "BFT consensus"
-
-
-parseProtocolPraos :: Parser (Last Protocol)
-parseProtocolPraos =
-  flagParser
-    (Last $ Just Praos)
-    "praos"
-    "Praos consensus"
-
-
-parseProtocolMockPBFT :: Parser (Last Protocol)
-parseProtocolMockPBFT =
-  flagParser
-    (Last $ Just MockPBFT)
-    "mock-pbft"
-    "Permissive BFT consensus with a mock ledger"
-
-
-parseProtocolRealPBFT :: Parser (Last Protocol)
-parseProtocolRealPBFT =
-  flagParser
-    (Last $ Just RealPBFT)
-    "real-pbft"
-    "Permissive BFT consensus with a real ledger"
-
-
 parseTopologyInfo :: String -> Parser TopologyInfo
 parseTopologyInfo desc = TopologyInfo <$> parseNodeId desc <*> parseTopologyFile
 
@@ -253,13 +207,6 @@ parseLogOutputFile =
     <> help "Logging output file"
     <> completer (bashCompleter "file")
     )
-
-parseLogMetricsLast :: Parser (Last Bool)
-parseLogMetricsLast =
- Last . Just <$> switch
-   ( long "log-metrics"
-   <> help "Log a number of metrics about this node"
-   )
 
 -- | A parser disables logging if --log-config is not supplied.
 loggingParser :: Parser LoggingCLIArguments

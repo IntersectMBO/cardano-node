@@ -94,7 +94,6 @@ data CliError
   | ProtocolNotSupported !Protocol
   | NotEnoughTxInputs
   | NotEnoughTxOutputs
-  | ConfigError !ConfigError
   -- Validation errors
   | CertificateValidationErrors !FilePath ![Text]
   -- Serialization errors
@@ -128,8 +127,6 @@ instance Show CliError where
     = "Transactions must have at least one input."
   show NotEnoughTxOutputs
     = "Transactions must have at least one output."
-  show (ConfigError e)
-    = "Configuration error: " <> show e
   show (ProtocolNotSupported proto)
     = "Unsupported protocol "<> show proto
   show (CertificateValidationErrors fp errs)

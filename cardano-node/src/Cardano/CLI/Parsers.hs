@@ -2,21 +2,11 @@
 
 module Cardano.CLI.Parsers
   ( command'
-  , parseLogConfigFileLast
-  , parseDbPathLast
-  , parseDelegationCertLast
   , parseDelegationRelatedValues
-  , parseGenesisHashLast
   , parseGenesisParameters
-  , parseGenesisPathLast
   , parseGenesisRelatedValues
   , parseKeyRelatedValues
-  , parsePbftSigThresholdLast
-  , parseRequiresNetworkMagicLast
   , parseRequiresNetworkMagic
-  , parseSigningKeyLast
-  , parseSlotLengthLast
-  , parseSocketDirLast
   , parseTxRelatedValues
   ) where
 
@@ -49,7 +39,6 @@ import           Cardano.Config.CommonCLI
 import           Cardano.Config.Topology (NodeAddress(..), NodeHostAddress(..))
 import           Cardano.Config.Types ( DelegationCertFile(..), GenesisFile(..), SigningKeyFile(..)
                                       , SocketFile(..))
-import qualified Ouroboros.Consensus.BlockchainTime  as Consensus
 import           Cardano.Crypto (RequiresNetworkMagic(..), decodeHash)
 import           Cardano.Crypto.ProtocolMagic ( AProtocolMagic(..), ProtocolMagic
                                               , ProtocolMagicId(..))
@@ -99,22 +88,6 @@ parseAddress opt desc =
 
 parseCertificateFile :: String -> String -> Parser CertificateFile
 parseCertificateFile opt desc = CertificateFile <$> parseFilePath opt desc
-
-parseDbPathLast :: Parser (Last FilePath)
-parseDbPathLast =
-  lastStrOption
-    ( long "database-path"
-        <> metavar "FILEPATH"
-        <> help "Directory where the state is stored."
-    )
-
-parseDelegationCertLast :: Parser (Last FilePath)
-parseDelegationCertLast =
-  lastStrOption
-    ( long "delegation-certificate"
-        <> metavar "FILEPATH"
-        <> help "Path to the delegation certificate."
-    )
 
 parseDelegationRelatedValues :: Parser ClientCommand
 parseDelegationRelatedValues =
@@ -168,14 +141,6 @@ parseFakeAvvmOptions =
 parseFeePerTx :: String -> String -> Parser FeePerTx
 parseFeePerTx opt desc = FeePerTx <$> parseIntegral opt desc
 
-parseGenesisHashLast :: Parser (Last Text)
-parseGenesisHashLast =
-  lastStrOption
-    ( long "genesis-hash"
-        <> metavar "GENESIS-HASH"
-        <> help "The genesis hash value."
-    )
-
 -- | Values required to create genesis.
 parseGenesisParameters :: Parser GenesisParameters
 parseGenesisParameters =
@@ -200,14 +165,6 @@ parseGenesisParameters =
             "Optionally specify the seed of generation."
         )
 
-parseGenesisPathLast :: Parser (Last FilePath)
-parseGenesisPathLast =
-  lastStrOption
-    ( long "genesis-file"
-        <> metavar "FILEPATH"
-        <> help "The filepath to the genesis file."
-    )
-
 parseGenesisRelatedValues :: Parser ClientCommand
 parseGenesisRelatedValues =
   subparser $ mconcat
@@ -229,15 +186,6 @@ parseK :: Parser BlockCount
 parseK =
   BlockCount
     <$> parseIntegral "k" "The security parameter of the Ouroboros protocol."
-
-parseLogConfigFileLast :: Parser (Last FilePath)
-parseLogConfigFileLast =
-  lastStrOption
-    ( long "log-config"
-    <> metavar "LOGCONFIG"
-    <> help "Configuration file for logging"
-    <> completer (bashCompleter "file")
-    )
 
 parseNewDirectory :: String -> String -> Parser NewDirectory
 parseNewDirectory opt desc = NewDirectory <$> parseFilePath opt desc
@@ -357,28 +305,10 @@ parseProtocolMagicId arg =
   ProtocolMagicId
     <$> parseIntegral arg "The magic number unique to any instance of Cardano."
 
-parsePbftSigThresholdLast :: Parser (Last Double)
-parsePbftSigThresholdLast =
-  lastDoubleOption
-    ( long "pbft-signature-threshold"
-        <> metavar "DOUBLE"
-        <> help "The PBFT signature threshold."
-        <> hidden
-    )
-
 parseProtocolMagic :: Parser ProtocolMagic
 parseProtocolMagic =
   flip AProtocolMagic RequiresMagic . flip Annotated ()
     <$> parseProtocolMagicId "protocol-magic"
-
-parseRequiresNetworkMagicLast :: Parser (Last RequiresNetworkMagic)
-parseRequiresNetworkMagicLast =
-  lastFlag RequiresNoMagic RequiresMagic
-    ( long "require-network-magic"
-        <> help "Require network magic in transactions."
-        <> hidden
-    )
-
 
 parseRequiresNetworkMagic :: Parser RequiresNetworkMagic
 parseRequiresNetworkMagic =
@@ -393,36 +323,6 @@ parseSigningKeyFile opt desc = SigningKeyFile <$> parseFilePath opt desc
 
 parseSigningKeysFiles :: String -> String -> Parser [SigningKeyFile]
 parseSigningKeysFiles opt desc = some $ SigningKeyFile <$> parseFilePath opt desc
-
-parseSigningKeyLast :: Parser (Last FilePath)
-parseSigningKeyLast =
-  lastStrOption
-    ( long "signing-key"
-        <> metavar "FILEPATH"
-        <> help "Path to the signing key."
-    )
-
-parseSlotLengthLast :: Parser (Last Consensus.SlotLength)
-parseSlotLengthLast = do
-  slotDurInteger <- lastAutoOption
-                      ( long "slot-duration"
-                          <> metavar "SECONDS"
-                          <> help "The slot duration (seconds)"
-                          <> hidden
-                      )
-  pure $ mkSlotLength <$> slotDurInteger
- where
-  mkSlotLength :: Integer -> Consensus.SlotLength
-  mkSlotLength sI = Consensus.slotLengthFromMillisec $ 1000 * sI
-
-parseSocketDirLast :: Parser (Last FilePath)
-parseSocketDirLast =
-  lastStrOption
-    ( long "socket-dir"
-        <> metavar "FILEPATH"
-        <> help "Directory with local sockets:\
-                \  ${dir}/node-{core,relay}-${node-id}.socket"
-    )
 
 parseTargetNodeAddress :: String -> String -> Parser NodeAddress
 parseTargetNodeAddress optname desc =

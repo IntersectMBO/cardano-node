@@ -3,34 +3,26 @@
 {-# LANGUAGE RecordWildCards #-}
 
 module Cardano.Config.Types
-    ( ConfigError (..)
-    , ConfigYamlFilePath (..)
-    , CardanoConfiguration (..)
+    ( ConfigYamlFilePath (..)
     , CardanoEnvironment (..)
-    , Core (..)
     , DbFile (..)
     , DelegationCertFile (..)
     , GenesisFile (..)
+    , LastKnownBlockVersion (..)
     , MiscellaneousFilepaths (..)
     , NodeCLI (..)
     , NodeConfiguration (..)
+    , Protocol (..)
     , SigningKeyFile (..)
     , SocketFile (..)
-    , TopologyFile( ..)
-    -- * specific for @Core@
-    -- * rest
-    , LastKnownBlockVersion (..)
-    , Protocol (..)
-    , NTP (..)
-    , Update (..)
-    , Block (..)
-    , Node (..)
-    , ViewMode (..)
+    , TopologyFile (..)
     , TraceOptions (..)
+    , Update (..)
+    , ViewMode (..)
     , parseNodeConfiguration
     ) where
 
-import           Prelude (String, show)
+import           Prelude (show)
 import           Cardano.Prelude
 
 import           Data.Aeson
@@ -40,7 +32,6 @@ import           Data.Yaml (decodeFileThrow)
 import qualified Cardano.Chain.Update as Update
 import           Cardano.BM.Data.Tracer (TracingVerbosity (..))
 import           Cardano.Crypto.ProtocolMagic (RequiresNetworkMagic)
-import qualified Ouroboros.Consensus.BlockchainTime as Consensus
 import           Ouroboros.Consensus.NodeId (NodeId(..))
 
 import           Cardano.Config.Topology
@@ -53,51 +44,9 @@ import           Cardano.Config.Orphanage ()
 data CardanoEnvironment = NoEnvironment
     deriving (Eq, Show)
 
--- | Exception type for configuration-related errors.
-data ConfigError
-  = PartialConfigValue !String
-
-instance Show ConfigError where
-  show (PartialConfigValue name)
-    = "Undefined CardanoConfiguration value: " <> name
-
-instance Exception ConfigError
-
 --------------------------------------------------------------------------------
 -- Cardano Configuration Data Structures
 --------------------------------------------------------------------------------
--- | The basic configuration structure. It should contain all the required
--- configuration parameters for the modules to work.
-
-data CardanoConfiguration = CardanoConfiguration
-    { ccLogPath             :: !FilePath
-    -- ^ The location of the log files on the filesystem.
-    , ccLogConfig           :: !(Maybe FilePath)
-    -- ^ The location of the log configuration on the filesystem.
-    , ccDBPath              :: !FilePath
-    -- ^ The location of the DB on the filesystem.
-    , ccSocketDir           :: !FilePath
-    -- ^ Directory with local sockets:  ${dir}/node-{core,relay}-${node-id}.socket.
-    , ccApplicationLockFile :: !FilePath
-    -- ^ The location of the application lock file that is used
-    -- as a semaphore se we can run just one application
-    -- instance at a time.
-    , ccTraceOptions        :: !TraceOptions
-    -- ^ Tracer options
-    , ccTopologyInfo        :: !TopologyInfo
-    -- ^ The network topology.
-    , ccNodeAddress         :: !NodeAddress
-    -- ^ The node ip address and port number.
-    , ccProtocol            :: !Protocol
-    -- ^ The selected protocol.
-    , ccViewMode            :: !ViewMode
-    -- ^ View mode of the TUI
-    , ccLogMetrics          :: !Bool
-    -- ^ Flag to capture log metrics or not.
-    , ccCore                :: !Core
-    , ccUpdate              :: !Update
-    , ccNode                :: !Node
-    } deriving (Eq, Show)
 
 data NodeCLI = NodeCLI
     { mscFp :: !MiscellaneousFilepaths
@@ -225,34 +174,6 @@ instance FromJSON NodeConfiguration where
 parseNodeConfiguration :: FilePath -> IO NodeConfiguration
 parseNodeConfiguration fp = decodeFileThrow fp
 
--- | Core configuration.
--- For now, we only store the path to the genesis file(s) and their hash.
--- The rest is in the hands of the modules/features that need to use it.
--- The info flow is:
--- __genesis config ---> genesis file__
--- And separately:
--- __genesis file ---> runtime config ---> running node__
--- __static config ---> ...__
-data Core = Core
-    { coGenesisFile                 :: !FilePath
-    -- ^ Genesis source file JSON.
-    , coGenesisHash                 :: !Text
-    -- ^ Genesis previous block hash.
-    , coNodeId                      :: !(Maybe Int) -- TODO: Remove!
-    -- ^ Core node ID, the number of the node.
-    , coNumCoreNodes                :: !(Maybe Int)
-    -- ^ The number of the core nodes.
-    , coStaticKeySigningKeyFile     :: !(Maybe FilePath)
-    -- ^ Static key signing file.
-    , coStaticKeyDlgCertFile        :: !(Maybe FilePath)
-    -- ^ Static key delegation certificate.
-    , coRequiresNetworkMagic        :: !RequiresNetworkMagic
-    -- ^ Do we require the network byte indicator for mainnet, testnet or staging?
-    , coPBftSigThd                  :: !(Maybe Double)
-    -- ^ PBFT signature threshold system parameters
-
-    } deriving (Eq, Show)
-
 -- TODO:  we don't want ByronLegacy in Protocol.  Let's wrap Protocol with another
 -- sum type for cases where it's required.
 data Protocol = ByronLegacy
@@ -275,13 +196,6 @@ instance FromJSON Protocol where
   parseJSON invalid  = panic $ "Parsing of Protocol failed due to type mismatch. "
                              <> "Encountered: " <> (T.pack $ Prelude.show invalid)
 
-
-data NTP = NTP
-    { ntpResponseTimeout :: !Int
-    , ntpPollDelay       :: !Int
-    , ntpServers         :: ![Text]
-    } deriving (Eq, Show)
-
 -- TODO: migrate to Update.SoftwareVersion
 data Update = Update
     { upApplicationName       :: !Update.ApplicationName
@@ -300,37 +214,6 @@ data LastKnownBlockVersion = LastKnownBlockVersion
     -- ^ Last known block version minor.
     , lkbvAlt   :: !Word8
     -- ^ Last known block version alternative.
-    } deriving (Eq, Show)
-
-data Block = Block
-    { blNetworkDiameter        :: !Int
-      -- ^Estimated time needed to broadcast message from one node to all other nodes.
-    , blRecoveryHeadersMessage :: !Int
-      -- ^Maximum amount of headers node can put into headers message while in "after offline" or "recovery" mode.
-    , blStreamWindow           :: !Int
-      -- ^ Number of blocks to have inflight
-    , blNonCriticalCQBootstrap :: !Double
-      -- ^ If chain quality in bootstrap era is less than this value, non critical misbehavior will be reported.
-    , blNonCriticalCQ          :: !Double
-      -- ^ If chain quality after bootstrap era is less than this value, non critical misbehavior will be reported.
-    , blCriticalCQ             :: !Double
-      -- ^ If chain quality after bootstrap era is less than this value, critical misbehavior will be reported.
-    , blCriticalCQBootstrap    :: !Double
-      -- ^ If chain quality in bootstrap era is less than this value, critical misbehavior will be reported.
-    , blCriticalForkThreshold  :: !Int
-      -- ^ Number of blocks such that if so many blocks are rolled back, it requires immediate reaction.
-    , blFixedTimeCQ            :: !Int
-      -- ^ Chain quality will be also calculated for this amount of seconds.
-    } deriving (Eq, Show)
-
---- | Top-level Cardano SL node configuration
-data Node = Node
-    { noSlotLength                      :: !Consensus.SlotLength
-    -- ^ Slot length time.
-    , noNetworkConnectionTimeout        :: !Int
-    -- ^ Network connection timeout in milliseconds.
-    , noHandshakeTimeout                :: !Int
-    -- ^ Protocol acknowledgement timeout in milliseconds.
     } deriving (Eq, Show)
 
 -- Node can be run in two modes.

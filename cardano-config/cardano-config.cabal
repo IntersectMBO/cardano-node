@@ -14,7 +14,6 @@ library
   hs-source-dirs:      src
 
   exposed-modules:     Cardano.Config.CommonCLI
-                       Cardano.Config.Defaults
                        Cardano.Config.Logging
                        Cardano.Config.Orphanage
                        Cardano.Config.Protocol

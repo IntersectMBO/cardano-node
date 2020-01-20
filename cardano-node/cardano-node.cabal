@@ -61,7 +61,6 @@ library
                      , cardano-prelude
                      , cardano-prelude-test
                      , cardano-shell
-                     , containers
                      , contra-tracer
                      , cborg >= 0.2.2 && < 0.3
                      , containers
@@ -134,34 +133,12 @@ executable cardano-node
                        "-with-rtsopts=-T -I0"
                        -fno-warn-unticked-promoted-constructors
 
-  build-depends:       base
-                     , aeson
-                     , bytestring
+  build-depends:       base >=4.12 && <5
                      , cardano-config
-                     , cardano-crypto-wrapper
-                     , cardano-ledger
                      , cardano-node
                      , cardano-prelude
                      , cardano-shell
-                     , cborg >= 0.2.2 && < 0.3
-                     , containers
-                     , contra-tracer
-                     , cryptonite
-                     , directory
-                     , formatting
-                     , io-sim-classes
-                     , iohk-monitoring
-                     , iproute
-                     , lens
-                     , mtl
-                     , network
-                     , ouroboros-network
-                     , ouroboros-consensus
                      , optparse-applicative
-                     , safe-exceptions
-                     , stm
-                     , text
-                     , time
 
   if os(windows)
      build-depends:    Win32
@@ -177,7 +154,8 @@ executable wallet-client
                        -rtsopts
                        "-with-rtsopts=-T"
                        -fno-warn-unticked-promoted-constructors
-  build-depends:       base
+  build-depends:       base >=4.12 && <5
+                     , bytestring
                      , cardano-config
                      , cardano-ledger
                      , cardano-node
@@ -186,16 +164,13 @@ executable wallet-client
                      , contra-tracer
                      , io-sim-classes
                      , iohk-monitoring
+                     , optparse-applicative
                      , ouroboros-network
                      , ouroboros-consensus
+                     , text
                      , typed-protocols
                      , typed-protocols-cbor
 
-                     , bytestring
-                     , network
-                     , optparse-applicative
-                     , serialise
-                     , text
   if os(windows)
      build-depends:    Win32
   else
@@ -209,23 +184,11 @@ executable cardano-cli
                        -Wall
                        -rtsopts
                        "-with-rtsopts=-T"
-  build-depends:       base
-                     , cardano-config
-                     , cardano-binary
-                     , cardano-crypto-wrapper
-                     , cardano-ledger
+  build-depends:       base >=4.12 && <5
                      , cardano-prelude
                      , cardano-node
-                     , cardano-shell
-                     , iproute
-                     , network
                      , optparse-applicative
-                     , ouroboros-consensus
-                     , safe-exceptions
-                     , text
-                     , time
                      , transformers-except
-                     , transformers
 
   default-extensions:  NoImplicitPrelude
 
@@ -238,23 +201,19 @@ executable chairman
                        -rtsopts
                        "-with-rtsopts=-T"
                        -fno-warn-unticked-promoted-constructors
-  build-depends:       base
+  build-depends:       base >=4.12 && <5
                      , async
                      , bytestring
                      , cardano-config
                      , cardano-prelude
-                     , containers
                      , contra-tracer
                      , cardano-node
                      , cardano-prelude
-                     , cardano-shell
                      , io-sim-classes
-                     , network
                      , network-mux
                      , optparse-applicative
                      , ouroboros-consensus
                      , ouroboros-network
-                     , serialise
                      , text
                      , transformers-except
                      , typed-protocols
