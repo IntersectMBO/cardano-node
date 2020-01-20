@@ -9,7 +9,7 @@
 {-# OPTIONS_GHC -fno-warn-orphans  #-}
 {-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
 
-module Cardano.Tracing.ToObjectOrphans
+module Cardano.Tracing.ToObjectOrphans.ConsensusToObjectOrphans
   ( WithTip (..)
   , showTip
   , showWithTip
@@ -22,10 +22,8 @@ import           Data.Aeson (Value (..), toJSON, (.=))
 import           Data.Text (pack)
 
 import           Cardano.BM.Tracing
-import           Cardano.BM.Data.Tracer (trStructured, mkObject)
+import           Cardano.BM.Data.Tracer (mkObject)
 
-import           Ouroboros.Consensus.BlockFetchServer
-                   (TraceBlockFetchServerEvent)
 import           Ouroboros.Consensus.Ledger.Abstract
 import           Ouroboros.Consensus.Util.Condense
 import           Ouroboros.Consensus.Util.Orphans ()
@@ -78,16 +76,6 @@ instance ( Show a
 
   show = showWithTip show
 
-instance DefinePrivacyAnnotation (TraceBlockFetchServerEvent blk)
-instance DefineSeverity (TraceBlockFetchServerEvent blk) where
-  defineSeverity _ = Info
-
--- | instances of @Transformable@
-
--- transform @BlockFetchServerEvent@
-instance Transformable Text IO (TraceBlockFetchServerEvent blk) where
-  trTransformer _ verb tr = trStructured verb tr
-
 -- | instances of @ToObject@
 instance ToObject SlotNo where
   toObject _verb slot =
@@ -107,7 +95,3 @@ instance ToObject LedgerDB.DiskSnapshot where
   toObject MaximalVerbosity snap =
     mkObject [ "kind" .= String "snapshot"
              , "snapshot" .= String (pack $ show snap) ]
-
-instance ToObject (TraceBlockFetchServerEvent blk) where
-  toObject _verb _ =
-    mkObject [ "kind" .= String "TraceBlockFetchServerEvent" ]

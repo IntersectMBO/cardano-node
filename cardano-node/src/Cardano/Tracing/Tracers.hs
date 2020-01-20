@@ -67,8 +67,10 @@ import qualified Ouroboros.Storage.ChainDB as ChainDB
 
 import           Cardano.Config.Protocol (TraceConstraints)
 import           Cardano.Config.Types
+import           Cardano.Tracing.ToObjectOrphans.BlockFetchServerEventTrace ()
 import           Cardano.Tracing.ToObjectOrphans.ChainDBTrace ()
 import           Cardano.Tracing.ToObjectOrphans.ChainSyncEventTrace ()
+import           Cardano.Tracing.ToObjectOrphans.ConsensusToObjectOrphans
 import           Cardano.Tracing.ToObjectOrphans.DnsTrace ()
 import           Cardano.Tracing.ToObjectOrphans.ErrorPolicyTrace ()
 import           Cardano.Tracing.ToObjectOrphans.ForgeEventTrace ()
@@ -76,7 +78,6 @@ import           Cardano.Tracing.ToObjectOrphans.LabelPeerTrace ()
 import           Cardano.Tracing.ToObjectOrphans.MuxTrace ()
 import           Cardano.Tracing.ToObjectOrphans.SubscriptionTrace ()
 import           Cardano.Tracing.ToObjectOrphans.TxSubmissionTrace ()
-import           Cardano.Tracing.ToObjectOrphans
 import           Cardano.Tracing.MicroBenchmarking
 
 import           Control.Tracer.Transformers

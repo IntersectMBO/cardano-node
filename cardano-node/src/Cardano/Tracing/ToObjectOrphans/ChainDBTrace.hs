@@ -11,13 +11,13 @@
 
 module Cardano.Tracing.ToObjectOrphans.ChainDBTrace () where
 
-import Cardano.Tracing.ToObjectOrphans
-
 import           Cardano.Prelude hiding (show)
 import           Prelude (String, show)
 
 import           Data.Aeson hiding (Error)
 import qualified Data.List.NonEmpty as NonEmpty
+
+import           Cardano.Tracing.ToObjectOrphans.ConsensusToObjectOrphans
 
 import           Cardano.BM.Data.LogItem (LOContent (..), LogObject(..))
 import           Cardano.BM.Data.Tracer ( TracingVerbosity(..), definePrivacyAnnotation

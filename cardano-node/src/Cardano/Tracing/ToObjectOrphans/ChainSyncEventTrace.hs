@@ -11,7 +11,7 @@ import           Prelude (show)
 
 import           Data.Aeson hiding (Error)
 
-import           Cardano.Tracing.ToObjectOrphans
+import           Cardano.Tracing.ToObjectOrphans.ConsensusToObjectOrphans
 
 import           Cardano.BM.Data.Tracer ( mkObject, trStructured)
 import           Cardano.BM.Tracing ( DefinePrivacyAnnotation

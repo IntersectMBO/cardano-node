@@ -44,8 +44,10 @@ library
 
 
   other-modules:       Paths_cardano_node
+                       Cardano.Tracing.ToObjectOrphans.BlockFetchServerEventTrace
                        Cardano.Tracing.ToObjectOrphans.ChainDBTrace
                        Cardano.Tracing.ToObjectOrphans.ChainSyncEventTrace
+                       Cardano.Tracing.ToObjectOrphans.ConsensusToObjectOrphans
                        Cardano.Tracing.ToObjectOrphans.DnsTrace
                        Cardano.Tracing.ToObjectOrphans.ErrorPolicyTrace
                        Cardano.Tracing.ToObjectOrphans.ForgeEventTrace
@@ -53,7 +55,6 @@ library
                        Cardano.Tracing.ToObjectOrphans.MuxTrace
                        Cardano.Tracing.ToObjectOrphans.SubscriptionTrace
                        Cardano.Tracing.ToObjectOrphans.TxSubmissionTrace
-                       Cardano.Tracing.ToObjectOrphans
                        Cardano.Tracing.MicroBenchmarking
 
   build-depends:       aeson
