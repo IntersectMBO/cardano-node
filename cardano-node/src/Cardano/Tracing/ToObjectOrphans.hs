@@ -315,16 +315,16 @@ instance DefineSeverity (TraceLocalTxSubmissionServerEvent blk) where
 
 instance DefinePrivacyAnnotation (TraceForgeEvent blk tx)
 instance DefineSeverity (TraceForgeEvent blk tx) where
-  defineSeverity (TraceAdoptedBlock {})         = Info
-  defineSeverity (TraceBlockFromFuture {})      = Warning
-  defineSeverity (TraceDidntAdoptBlock {})      = Warning
-  defineSeverity (TraceForgedBlock {})          = Info
-  defineSeverity (TraceForgedInvalidBlock {})   = Alert
-  defineSeverity (TraceNodeIsLeader {})         = Info
-  defineSeverity (TraceNodeNotLeader {})        = Info
-  defineSeverity (TraceNoLedgerState {})        = Warning
-  defineSeverity (TraceNoLedgerView {})         = Warning
-  defineSeverity (TraceStartLeadershipCheck {}) = Info
+  defineSeverity TraceForgedBlock {}            = Info
+  defineSeverity TraceStartLeadershipCheck {}   = Info
+  defineSeverity TraceNodeNotLeader {}          = Info
+  defineSeverity TraceNodeIsLeader {}           = Info
+  defineSeverity TraceNoLedgerState {}          = Warning
+  defineSeverity TraceNoLedgerView {}           = Warning
+  defineSeverity TraceBlockFromFuture {}        = Warning
+  defineSeverity TraceAdoptedBlock {}           = Info
+  defineSeverity TraceDidntAdoptBlock {}        = Warning
+  defineSeverity TraceForgedInvalidBlock {}     = Alert
 
 -- | instances of @Transformable@
 
