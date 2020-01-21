@@ -4,6 +4,7 @@
 {-# LANGUAGE LambdaCase            #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns        #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
 {-# LANGUAGE StandaloneDeriving    #-}
 {-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE UndecidableInstances  #-}
@@ -15,17 +16,18 @@ module Cardano.Tracing.MicroBenchmarking
     , MeasureBlockForging (..)
     , measureBlockForgeStart
     , measureBlockForgeEnd
+    -- * Re-exports so we localize the changes
+    , Outcome (..)
+    , OutcomeEnhancedTracer
+    , mkOutcomeExtractor
     ) where
 
 import           Cardano.Prelude
 
-import           Control.Monad.Class.MonadTime (DiffTime, Time (..), diffTime)
+import           Control.Monad.Class.MonadTime (DiffTime, Time (..), diffTime,
+                                                getMonotonicTime)
 
-import           Data.Aeson (Value (..), (.=), toJSON)
-import qualified Data.Time.Clock as Time
-
-import           Data.Time.Clock.System (getSystemTime, systemToTAITime)
-import           Data.Time.Clock.TAI (AbsoluteTime, diffAbsoluteTime)
+import           Data.Aeson (Value (..), toJSON, (.=))
 
 import           Cardano.BM.Data.LogItem
 import           Cardano.BM.Data.Severity (Severity (..))
@@ -36,7 +38,8 @@ import           Control.Tracer.Transformers.ObserveOutcome
 import           Ouroboros.Network.Block (SlotNo (..))
 
 import           Ouroboros.Consensus.Ledger.Abstract (ProtocolLedgerView)
-import           Ouroboros.Consensus.Mempool.API (GenTx, GenTxId, ApplyTx (..), MempoolSize (..),
+import           Ouroboros.Consensus.Mempool.API (ApplyTx (..), GenTx, GenTxId,
+                                                  MempoolSize (..),
                                                   TraceEventMempool (..), txId)
 import           Ouroboros.Consensus.Node.Tracers (TraceForgeEvent (..))
 
@@ -61,49 +64,55 @@ instance DefineSeverity (MeasureTxs blk) where
 
 -- TODO(KS): Time will be removed.
 instance ToObject (MeasureTxs blk) where
-  toObject _verb (MeasureTxsTimeStart _txs mempoolNumTxs mempoolNumBytes _time) =
+  toObject _verb (MeasureTxsTimeStart _txs mempoolNumTxs mempoolNumBytes time) =
     mkObject
       [ "kind"              .= String "MeasureTxsTimeStart"
       , "mempoolNumTxs"     .= toJSON mempoolNumTxs
       , "mempoolNumBytes"   .= toJSON mempoolNumBytes
+      , "time"              .= toJSON (show time :: Text)
       ]
-  toObject _verb (MeasureTxsTimeStop slotNo _blk _txs _time) =
+  toObject _verb (MeasureTxsTimeStop slotNo _blk _txs time) =
     mkObject
       [ "kind"              .= String "MeasureTxsTimeStop"
       , "slot"              .= toJSON (unSlotNo slotNo)
+      , "time"              .= toJSON (show time :: Text)
       ]
-
--- TODO(KS): Remove this and the time in the next PR.
-notime :: Time
-notime = Time . Time.picosecondsToDiffTime $ 0
 
 -- | Transformer for the start of the transaction, when the transaction was added
 -- to the mempool.
-measureTxsStart :: Tracer IO (LogObject Text) -> Tracer IO (TraceEventMempool blk)
+measureTxsStart :: forall blk. Tracer IO (LogObject Text) -> Tracer IO (TraceEventMempool blk)
 measureTxsStart tracer = measureTxsStartInter $ toLogObject tracer
   where
     measureTxsStartInter :: Tracer IO (MeasureTxs blk) -> Tracer IO (TraceEventMempool blk)
     measureTxsStartInter tracer' = Tracer $ \case
-        TraceMempoolAddTxs txs MempoolSize{msNumTxs,msNumBytes} ->
-            traceWith tracer' measureTxsEvent
+        TraceMempoolAddTxs txs MempoolSize{msNumTxs, msNumBytes} ->
+            traceWith tracer' =<< measureTxsEvent
           where
+            measureTxsEvent :: IO (MeasureTxs blk)
             measureTxsEvent = MeasureTxsTimeStart
                                 txs
                                 (fromIntegral msNumTxs)
                                 (fromIntegral msNumBytes)
-                                notime
+                                <$> getMonotonicTime
 
+        -- The rest of the constructors.
         _ -> pure ()
 
 -- | Transformer for the end of the transaction, when the transaction was added to the
 -- block and the block was forged.
-measureTxsEnd :: Tracer IO (LogObject Text) -> Tracer IO (TraceForgeEvent blk (GenTx blk))
+measureTxsEnd :: forall blk. Tracer IO (LogObject Text) -> Tracer IO (TraceForgeEvent blk (GenTx blk))
 measureTxsEnd tracer = measureTxsEndInter $ toLogObject tracer
   where
     measureTxsEndInter :: Tracer IO (MeasureTxs blk) -> Tracer IO (TraceForgeEvent blk (GenTx blk))
     measureTxsEndInter tracer' = Tracer $ \case
-        TraceAdoptedBlock slotNo blk txs    -> traceWith tracer' (MeasureTxsTimeStop slotNo blk txs notime)
-        _                                   -> pure ()
+        TraceAdoptedBlock slotNo blk txs    ->
+            traceWith tracer' =<< measureTxsEvent
+          where
+            measureTxsEvent :: IO (MeasureTxs blk)
+            measureTxsEvent = MeasureTxsTimeStop slotNo blk txs <$> getMonotonicTime
+
+        -- The rest of the constructors.
+        _ -> pure ()
 
 -- Any Monad m, could be Identity in this case where we have all the data beforehand.
 -- The result of this operation is the list of transactions that _made it in the block_
@@ -136,8 +145,7 @@ instance (Monad m, ApplyTx blk) => Outcome m (MeasureTxs blk) where
         -- | Here we filter and match all the transactions that made it into
         -- a block.
         computeIntermediateValues
-            :: Eq (GenTxId blk)
-            => [(GenTxId blk, Time)]
+            :: [(GenTxId blk, Time)]
             -> [(GenTxId blk, Time)]
             -> [((GenTxId blk, Time), (GenTxId blk, Time))]
         computeIntermediateValues [] _  = []
@@ -164,8 +172,8 @@ instance (Monad m, ApplyTx blk) => Outcome m (MeasureTxs blk) where
 
 -- | Definition of the measurement datatype for the block forge time.
 data MeasureBlockForging blk
-    = MeasureBlockTimeStart !SlotNo
-    | MeasureBlockTimeStop !SlotNo blk !MempoolSize
+    = MeasureBlockTimeStart !SlotNo  !Time
+    | MeasureBlockTimeStop !SlotNo blk !MempoolSize !Time
 
 deriving instance (ProtocolLedgerView blk, Eq blk, Eq (GenTx blk)) => Eq (MeasureBlockForging blk)
 deriving instance (ProtocolLedgerView blk, Show blk, Show (GenTx blk)) => Show (MeasureBlockForging blk)
@@ -178,17 +186,19 @@ instance DefineSeverity (MeasureBlockForging blk) where
   defineSeverity _ = Info
 
 instance ToObject (MeasureBlockForging blk) where
-  toObject _verb (MeasureBlockTimeStart slotNo) =
+  toObject _verb (MeasureBlockTimeStart slotNo time) =
     mkObject
       [ "kind"              .= String "MeasureBlockTimeStart"
       , "slot"              .= toJSON (unSlotNo slotNo)
+      , "time"              .= toJSON (show time :: Text)
       ]
-  toObject _verb (MeasureBlockTimeStop slotNo _blk mempoolSize) =
+  toObject _verb (MeasureBlockTimeStop slotNo _blk mempoolSize time) =
     mkObject
       [ "kind"              .= String "MeasureBlockTimeStop"
       , "slot"              .= toJSON (unSlotNo slotNo)
       , "mempoolNumTxs"     .= toJSON (msNumTxs mempoolSize)
       , "mempoolNumBytes"   .= toJSON (msNumBytes mempoolSize)
+      , "time"              .= toJSON (show time :: Text)
       ]
 
 -- | Transformer for the start of the block forge, when the current slot is the slot of the
@@ -198,8 +208,9 @@ measureBlockForgeStart tracer = measureBlockForgeStartInter $ toLogObject tracer
   where
     measureBlockForgeStartInter :: Tracer IO (MeasureBlockForging blk) -> Tracer IO (TraceForgeEvent blk (GenTx blk))
     measureBlockForgeStartInter tracer' = Tracer $ \case
-        TraceNodeIsLeader slotNo    -> traceWith tracer' $ MeasureBlockTimeStart slotNo
-        _                           -> pure ()
+        TraceNodeIsLeader slotNo
+            -> traceWith tracer' =<< (MeasureBlockTimeStart slotNo <$> getMonotonicTime)
+        _ -> pure ()
 
 -- | Transformer for the end of the block forge, when the block was created/forged.
 measureBlockForgeEnd :: Tracer IO (LogObject Text) -> Tracer IO (TraceForgeEvent blk (GenTx blk))
@@ -208,14 +219,14 @@ measureBlockForgeEnd tracer = measureTxsEndInter $ toLogObject tracer
     measureTxsEndInter :: Tracer IO (MeasureBlockForging blk) -> Tracer IO (TraceForgeEvent blk (GenTx blk))
     measureTxsEndInter tracer' = Tracer $ \case
         TraceForgedBlock slotNo blk mempoolSize
-            -> traceWith tracer' (MeasureBlockTimeStop slotNo blk mempoolSize)
+            -> traceWith tracer' =<< (MeasureBlockTimeStop slotNo blk mempoolSize <$> getMonotonicTime)
         _   -> pure ()
 
 
 -- | The outcome for the block forging time. It's a @Maybe@ since
 -- the slot number might not be equal from when we start the measurement.
-instance (MonadIO m) => Outcome m (MeasureBlockForging blk) where
-    type IntermediateValue  (MeasureBlockForging blk)    = (SlotNo, AbsoluteTime, MempoolSize)
+instance (Monad m) => Outcome m (MeasureBlockForging blk) where
+    type IntermediateValue  (MeasureBlockForging blk)    = (SlotNo, Time, MempoolSize)
     type OutcomeMetric      (MeasureBlockForging blk)    = Maybe (SlotNo, DiffTime, MempoolSize)
 
     --classifyObservable     :: a -> m OutcomeProgressionStatus
@@ -224,16 +235,14 @@ instance (MonadIO m) => Outcome m (MeasureBlockForging blk) where
       MeasureBlockTimeStop  {}    -> OutcomeEnds
 
     --captureObservableValue :: a -> m (IntermediateValue a)
-    captureObservableValue (MeasureBlockTimeStart slotNo) = do
-        systemTime <- systemToTAITime <$> liftIO getSystemTime
-        pure (slotNo, systemTime, mempty)
+    captureObservableValue (MeasureBlockTimeStart slotNo time) =
+        pure (slotNo, time, mempty)
 
-    captureObservableValue (MeasureBlockTimeStop slotNo _blk mempoolSize) = do
-        systemTime <- systemToTAITime <$> liftIO getSystemTime
-        pure (slotNo, systemTime, mempoolSize)
+    captureObservableValue (MeasureBlockTimeStop slotNo _blk mempoolSize time) =
+        pure (slotNo, time, mempoolSize)
 
     --computeOutcomeMetric   :: a -> IntermediateValue a -> IntermediateValue a -> m (OutcomeMetric a)
     computeOutcomeMetric _ (startSlot, absTimeStart, _) (stopSlot, absTimeStop, mempoolSize)
-        | startSlot == stopSlot = pure $ Just (startSlot, (diffAbsoluteTime absTimeStop absTimeStart), mempoolSize)
+        | startSlot == stopSlot = pure $ Just (startSlot, (diffTime absTimeStop absTimeStart), mempoolSize)
         | otherwise             = pure Nothing
 
