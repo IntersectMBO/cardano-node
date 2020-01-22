@@ -28,6 +28,7 @@ import           Control.Monad.Class.MonadTime (DiffTime, Time (..), diffTime,
                                                 getMonotonicTime)
 
 import           Data.Aeson (Value (..), toJSON, (.=))
+import           Data.Time.Clock (diffTimeToPicoseconds)
 
 import           Cardano.BM.Data.LogItem
 import           Cardano.BM.Data.Severity (Severity (..))
@@ -64,18 +65,18 @@ instance DefineSeverity (MeasureTxs blk) where
 
 -- TODO(KS): Time will be removed.
 instance ToObject (MeasureTxs blk) where
-  toObject _verb (MeasureTxsTimeStart _txs mempoolNumTxs mempoolNumBytes time) =
+  toObject _verb (MeasureTxsTimeStart _txs mempoolNumTxs mempoolNumBytes (Time time)) =
     mkObject
       [ "kind"              .= String "MeasureTxsTimeStart"
       , "mempoolNumTxs"     .= toJSON mempoolNumTxs
       , "mempoolNumBytes"   .= toJSON mempoolNumBytes
-      , "time"              .= toJSON (show time :: Text)
+      , "time(ps)"          .= toJSON (diffTimeToPicoseconds time)
       ]
-  toObject _verb (MeasureTxsTimeStop slotNo _blk _txs time) =
+  toObject _verb (MeasureTxsTimeStop slotNo _blk _txs (Time time)) =
     mkObject
       [ "kind"              .= String "MeasureTxsTimeStop"
       , "slot"              .= toJSON (unSlotNo slotNo)
-      , "time"              .= toJSON (show time :: Text)
+      , "time(ps)"          .= toJSON (diffTimeToPicoseconds time)
       ]
 
 -- | Transformer for the start of the transaction, when the transaction was added
@@ -186,19 +187,19 @@ instance DefineSeverity (MeasureBlockForging blk) where
   defineSeverity _ = Info
 
 instance ToObject (MeasureBlockForging blk) where
-  toObject _verb (MeasureBlockTimeStart slotNo time) =
+  toObject _verb (MeasureBlockTimeStart slotNo (Time time)) =
     mkObject
       [ "kind"              .= String "MeasureBlockTimeStart"
       , "slot"              .= toJSON (unSlotNo slotNo)
-      , "time"              .= toJSON (show time :: Text)
+      , "time(ps)"          .= toJSON (diffTimeToPicoseconds time)
       ]
-  toObject _verb (MeasureBlockTimeStop slotNo _blk mempoolSize time) =
+  toObject _verb (MeasureBlockTimeStop slotNo _blk mempoolSize (Time time)) =
     mkObject
       [ "kind"              .= String "MeasureBlockTimeStop"
       , "slot"              .= toJSON (unSlotNo slotNo)
       , "mempoolNumTxs"     .= toJSON (msNumTxs mempoolSize)
       , "mempoolNumBytes"   .= toJSON (msNumBytes mempoolSize)
-      , "time"              .= toJSON (show time :: Text)
+      , "time(ps)"          .= toJSON (diffTimeToPicoseconds time)
       ]
 
 -- | Transformer for the start of the block forge, when the current slot is the slot of the
