@@ -166,6 +166,7 @@ mkTracers traceOptions tracer = do
   -- for measuring the time it takes a transaction to get into
   -- a block.
   --txsOutcomeExtractor <- mkOutcomeExtractor @_ @(MeasureTxs blk)
+  --blockForgeOutcomeExtractor <- mkOutcomeExtractor @_ @(MeasureBlockForging blk)
 
   elided <- newstate  -- for eliding messages in ChainDB tracer
 
@@ -367,7 +368,8 @@ mkTracers traceOptions tracer = do
             Consensus.TraceNodeIsLeader slot ->
               LogValue "nodeIsLeader" $ PureI $ fromIntegral $ unSlotNo slot
 
-    mkConsensusTracers :: ForgeTracers -> TraceOptions -> Consensus.Tracers' peer blk (Tracer IO)
+    mkConsensusTracers
+        :: ForgeTracers -> TraceOptions -> Consensus.Tracers' peer blk (Tracer IO)
     mkConsensusTracers forgeTracers traceOpts = Consensus.Tracers
       { Consensus.chainSyncClientTracer
         = tracerOnOff (traceChainSyncClient traceOpts)
