@@ -1,4 +1,6 @@
-. $(dirname $0)/lib.sh
+root="${1:-$(dirname $0)/..}"
+
+. "${root}"/scripts/lib.sh "${root}"
 
 genesis_root="${configuration}/genesis"
 genesis_file="${genesis_root}/genesis.json"

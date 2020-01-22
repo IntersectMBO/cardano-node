@@ -31,6 +31,7 @@ default.nix-tools._raw.shellFor {
     ghcid.components.exes.ghcid
   ]) ++
   (with default.nix-tools._raw._config._module.args.pkgs; [
+    screen
     tmux
   ]);
 } // { inherit devops; }

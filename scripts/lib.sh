@@ -7,7 +7,7 @@ Usage:
 EOF
 }
 
-root="$(realpath $(dirname $0)/..)"
+root="${1:-$(realpath $(dirname $0)/..)}"
 configuration="${root}/configuration"
 scripts="${root}/scripts"
 
