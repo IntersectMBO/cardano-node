@@ -26,10 +26,8 @@ let
       addr = host-addr;
       ports = map (x: port-base + x) (range 0 (node-count - 1));
       mkPeer = port: { inherit addr port valency; };
-      mkNodeTopo = nodeId: port: {
-        inherit nodeId;
-        nodeAddress = { inherit addr port; };
-        producers = map mkPeer (remove port ports);
+      mkNodeTopo = port : {
+        Producers =  map mkPeer (remove port ports);
       };
     in toFile "topology.json" (toJSON (imap0 mkNodeTopo ports));
 
@@ -68,13 +66,10 @@ let
       ## we choose not to spread ports for this topology
       shelley-ids = range                      node-id-base (node-id-base + node-count - 1);
       mkPeer = id: { inherit valency; port = port-base + id; addr = addr-fn id; };
-      mkShelleyNode = id: {
-        nodeId = id;
-        nodeAddress = { port = port-base + id; addr = addr-fn id; };
-        producers = map (mkPeer) (remove id shelley-ids) ++
-                    [ { inherit valency; port = proxy-port; addr = proxy-addr; } ];
+      mkShelleyNode = {
+        Producers = map (mkPeer) (remove id shelley-ids);
       };
-      topology = map mkShelleyNode shelley-ids;
+      topology = mkShelleyNode;
     in toFile "topology.yaml" (toJSON topology);
 
   # Note how some values are literal strings, and some integral.

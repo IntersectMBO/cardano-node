@@ -25,10 +25,7 @@ import           Ouroboros.Consensus.Block (BlockProtocol)
 import           Ouroboros.Consensus.Mempool (ApplyTxErr, GenTx)
 import           Ouroboros.Consensus.Node.Run (RunNode)
 import qualified Ouroboros.Consensus.Node.Run as Node
-import           Ouroboros.Consensus.NodeId (NodeId(..))
 import           Ouroboros.Consensus.Protocol (NodeConfig)
-import qualified Ouroboros.Consensus.Protocol as Consensus
-import           Ouroboros.Consensus.Protocol hiding (Protocol)
 
 import           Network.TypedProtocol.Driver (runPeer)
 import           Network.TypedProtocol.Codec.Cbor (Codec, DeserialiseFailure)

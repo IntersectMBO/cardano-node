@@ -60,15 +60,15 @@
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "iohk-nix": {
-        "branch": "haskell-overhaul",
+        "branch": "master",
         "description": "nix scripts shared across projects",
         "homepage": null,
         "owner": "input-output-hk",
         "repo": "iohk-nix",
-        "rev": "df6b4c782594aed5956b59e12de342a026170b8a",
-        "sha256": "0v53b8pksi99rjj5xdvv5v8dbryy2y7l7bbvzy64qq03v648kdhf",
+        "rev": "40fc58f0f1cb0f9de24d8df3144a8cd8f2e3a775",
+        "sha256": "1h3d1gmjfxbwrdszj1ciqlbn646fy687w940fs4gx2bc12j39acb",
         "type": "tarball",
-        "url": "https://github.com/input-output-hk/iohk-nix/archive/df6b4c782594aed5956b59e12de342a026170b8a.tar.gz",
+        "url": "https://github.com/input-output-hk/iohk-nix/archive/40fc58f0f1cb0f9de24d8df3144a8cd8f2e3a775.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "niv": {
