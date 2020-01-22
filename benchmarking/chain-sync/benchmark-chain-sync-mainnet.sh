@@ -25,13 +25,15 @@ date --iso-8601=seconds > STARTTIME
 
 if [[ $1 == 'stack' ]]; then
   NODE="stack --nix exec cardano-node -- "
+  ARGUMENTS=${@:2}
 elif [[ $1 == 'cabal' ]]; then
   NODE="cabal v2-run exe:cardano-node -- "
+  ARGUMENTS=${@:2}
 else
   # Default to stack
   NODE="stack --nix exec cardano-node -- "
+  ARGUMENTS=$@
 fi
-
 
 exec ${NODE} \
   --genesis-file ${BASEDIR}/../../configuration/mainnet-genesis.json \
@@ -43,7 +45,7 @@ exec ${NODE} \
   --host-addr 127.0.0.1 \
   --port 7778 \
    \
- $@
+  $ARGUMENTS
 
 #  --socket-dir ${BASEDIR}/${DATADIR}/socket \
 
