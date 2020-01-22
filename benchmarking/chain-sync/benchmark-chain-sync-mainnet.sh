@@ -23,8 +23,15 @@ ulimit -t $CPU_TIME_LIMIT
 
 date --iso-8601=seconds > STARTTIME
 
-NODE="cabal v2-run exe:cardano-node -- "
-NODE="stack --nix exec cardano-node -- "
+if [[ $1 == 'stack' ]]; then
+  NODE="stack --nix exec cardano-node -- "
+elif [[ $1 == 'cabal' ]]; then
+  NODE="cabal v2-run exe:cardano-node -- "
+else
+  # Default to stack
+  NODE="stack --nix exec cardano-node -- "
+fi
+
 
 exec ${NODE} \
   --genesis-file ${BASEDIR}/../../configuration/mainnet-genesis.json \
