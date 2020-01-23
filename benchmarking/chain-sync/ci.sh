@@ -1,6 +1,11 @@
 #!/usr/bin/env nix-shell
 #!nix-shell -i bash -p yj
 
+if [ $# -lt 1 ]; then
+  echo "call: $0 mainnet|testnet"
+  exit 1
+fi
+
 set -euo pipefail
 
 BASEDIR="$(dirname $0)"
