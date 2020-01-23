@@ -110,49 +110,49 @@ source-repository-package
   type: git
   location: https://github.com/input-output-hk/iohk-monitoring-framework
   subdir: iohk-monitoring
-  tag: ffbb4897928f3e7e4df78fe0b8b48d406a89b7ef
+  tag: 096646a3064c6edf2d1e74f9eb5f491ee396ea9d
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/iohk-monitoring-framework
   subdir:   contra-tracer
-  tag: ffbb4897928f3e7e4df78fe0b8b48d406a89b7ef
+  tag: 096646a3064c6edf2d1e74f9eb5f491ee396ea9d
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/iohk-monitoring-framework
   subdir:   plugins/scribe-systemd
-  tag: ffbb4897928f3e7e4df78fe0b8b48d406a89b7ef
+  tag: 096646a3064c6edf2d1e74f9eb5f491ee396ea9d
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/iohk-monitoring-framework
   subdir:   plugins/backend-aggregation
-  tag: ffbb4897928f3e7e4df78fe0b8b48d406a89b7ef
+  tag: 096646a3064c6edf2d1e74f9eb5f491ee396ea9d
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/iohk-monitoring-framework
   subdir:   plugins/backend-editor
-  tag: ffbb4897928f3e7e4df78fe0b8b48d406a89b7ef
+  tag: 096646a3064c6edf2d1e74f9eb5f491ee396ea9d
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/iohk-monitoring-framework
   subdir:   plugins/backend-ekg
-  tag: ffbb4897928f3e7e4df78fe0b8b48d406a89b7ef
+  tag: 096646a3064c6edf2d1e74f9eb5f491ee396ea9d
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/iohk-monitoring-framework
   subdir:   plugins/backend-monitoring
-  tag: ffbb4897928f3e7e4df78fe0b8b48d406a89b7ef
+  tag: 096646a3064c6edf2d1e74f9eb5f491ee396ea9d
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/iohk-monitoring-framework
   subdir:   tracer-transformers
-  tag: ffbb4897928f3e7e4df78fe0b8b48d406a89b7ef
+  tag: 096646a3064c6edf2d1e74f9eb5f491ee396ea9d
 
 -- dependencies of iohk-monitoring
 source-repository-package
