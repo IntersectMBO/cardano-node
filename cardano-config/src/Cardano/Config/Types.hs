@@ -132,30 +132,30 @@ instance FromJSON NodeConfiguration where
 
                   -- Trace Options
                   tOptions <- TraceOptions
-                                <$> v .: "TracingVerbosity"
-                                <*> v .: "TraceBlockFetchClient"
-                                <*> v .: "TraceBlockFetchDecisions"
-                                <*> v .: "TraceBlockFetchProtocol"
-                                <*> v .: "TraceBlockFetchProtocolSerialised"
-                                <*> v .: "TraceBlockFetchServer"
-                                <*> v .: "TraceChainDb"
-                                <*> v .: "TraceChainSyncClient"
-                                <*> v .: "TraceChainSyncBlockServer"
-                                <*> v .: "TraceChainSyncHeaderServer"
-                                <*> v .: "TraceChainSyncProtocol"
-                                <*> v .: "TraceDNSResolver"
-                                <*> v .: "TraceDNSSubscription"
-                                <*> v .: "TraceErrorPolicy"
-                                <*> v .: "TraceForge"
-                                <*> v .: "TraceIpSubscription"
-                                <*> v .: "TraceLocalChainSyncProtocol"
-                                <*> v .: "TraceLocalTxSubmissionProtocol"
-                                <*> v .: "TraceLocalTxSubmissionServer"
-                                <*> v .: "TraceMempool"
-                                <*> v .: "TraceMux"
-                                <*> v .: "TraceTxInbound"
-                                <*> v .: "TraceTxOutbound"
-                                <*> v .: "TraceTxSubmissionProtocol"
+                                <$> v .:? "TracingVerbosity" .!= NormalVerbosity
+                                <*> v .:? "TraceBlockFetchClient" .!= False
+                                <*> v .:? "TraceBlockFetchDecisions" .!= True
+                                <*> v .:? "TraceBlockFetchProtocol" .!= False
+                                <*> v .:? "TraceBlockFetchProtocolSerialised" .!= False
+                                <*> v .:? "TraceBlockFetchServer" .!= False
+                                <*> v .:? "TraceChainDb" .!= True
+                                <*> v .:? "TraceChainSyncClient" .!= True
+                                <*> v .:? "TraceChainSyncBlockServer" .!= False
+                                <*> v .:? "TraceChainSyncHeaderServer" .!= False
+                                <*> v .:? "TraceChainSyncProtocol" .!= False
+                                <*> v .:? "TraceDNSResolver" .!= False
+                                <*> v .:? "TraceDNSSubscription" .!= True
+                                <*> v .:? "TraceErrorPolicy" .!= True
+                                <*> v .:? "TraceForge" .!= True
+                                <*> v .:? "TraceIpSubscription" .!= True
+                                <*> v .:? "TraceLocalChainSyncProtocol" .!= False
+                                <*> v .:? "TraceLocalTxSubmissionProtocol" .!= False
+                                <*> v .:? "TraceLocalTxSubmissionServer" .!= False
+                                <*> v .:? "TraceMempool" .!= True
+                                <*> v .:? "TraceMux" .!= True
+                                <*> v .:? "TraceTxInbound" .!= False
+                                <*> v .:? "TraceTxOutbound" .!= False
+                                <*> v .:? "TraceTxSubmissionProtocol" .!= False
 
                   pure $ NodeConfiguration
                            ptcl

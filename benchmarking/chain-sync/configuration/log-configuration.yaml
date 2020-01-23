@@ -1,24 +1,19 @@
 # global filter; messages must have at least this severity to pass:
-minSeverity: Debug
+minSeverity: Info
 
 # global file rotation settings:
 rotation:
   rpLogLimitBytes: 50000000
-  rpKeepFilesNum:  100
+  rpKeepFilesNum:  10
   rpMaxAgeHours:   24
 
 # these backends are initialized:
 setupBackends:
-  - AggregationBK
   - KatipBK
-  - EKGViewBK
 
 # if not indicated otherwise, then messages are passed to these backends:
 defaultBackends:
   - KatipBK
-
-# file to forward traced objects
-logOutput: "log-pipe-0"
 
 # if wanted, Prometheus "metrics" are presented on http://localhost:13789/metrics
 hasPrometheus:
@@ -119,7 +114,7 @@ TracingVerbosity: MaximalVerbosity
 TraceBlockFetchClient: False
 
 # Trace BlockFetch decisions made by the BlockFetch client.
-TraceBlockFetchDecisions: False
+TraceBlockFetchDecisions: True
 
 # Trace BlockFetch protocol messages.
 TraceBlockFetchProtocol: False
@@ -131,7 +126,7 @@ TraceBlockFetchProtocolSerialised: False
 TraceBlockFetchServer: False
 
 # Verbose tracer of ChainDB
-TraceChainDb: False
+TraceChainDb: True
 
 # Trace ChainSync client.
 TraceChainSyncClient: False
