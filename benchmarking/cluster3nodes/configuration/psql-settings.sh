@@ -5,9 +5,8 @@ if [ -z "${BASEDIR}" -o ! -d "${BASEDIR}" ]; then
   exit 1
 fi
 
-export PGDATABAES=cexplorer
+export PGDATABASE=cexplorer
 export PGUSER=cexplorer
 export PGHOST=localhost
 export PGPORT=5432
 export PGPASSFILE=${BASEDIR}/configuration/pgpass
-
