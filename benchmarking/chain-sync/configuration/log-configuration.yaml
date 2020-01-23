@@ -38,6 +38,8 @@ setupScribes:
 defaultScribes:
   - - FileSK
     - "node-0.log"
+  - - JournalSK
+    - "cardano"
 
 # more options which can be passed as key-value pairs:
 options:

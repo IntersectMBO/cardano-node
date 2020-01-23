@@ -76,10 +76,6 @@ options:
     cardano.node.peers.BlockFetchDecision:
       - kind: UserDefinedBK
         name: LiveViewBackend
-  mapScribes:
-    cardano:
-      - JournalSK
-      - StdoutSK
 
 ##########################################################
 ############### Cardano Node Configuration ###############
