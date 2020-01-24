@@ -85,7 +85,7 @@ options:
 ############### Cardano Node Configuration ###############
 ##########################################################
 
-NodeId: 1
+NodeId:
 Protocol: RealPBFT
 NumCoreNodes: 1
 RequiresNetworkMagic: RequiresMagic

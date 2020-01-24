@@ -77,7 +77,7 @@ Usage: cardano-node --topology FILEPATH --database-path FILEPATH
 The `--config` flag points to a `.yaml` file that is responsible to configuring the logging & other important settings for the node.
 Some of the more important settings are as follows:
 
-`NodeId: 0`  -- Soon to be removed from config file. Used to identify nodes in local clusters.
+`NodeId: 0`  -- Used in mock protocols only to differentiate nodes.
 
 `Protocol: RealPBFT` -- Protocol the node will execute
 

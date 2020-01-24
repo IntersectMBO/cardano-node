@@ -97,7 +97,7 @@ options:
 ##########################################################
 
 
-NodeId: 2
+NodeId:
 Protocol: RealPBFT
 NumCoreNodes: 1
 RequiresNetworkMagic: RequiresMagic
