@@ -15,6 +15,7 @@ extra-deps:
   - generic-monoid-0.1.0.0
   - gray-code-0.3.1
   - moo-1.2
+  - network-3.1.0.1
   - time-units-1.0.0
   - tasty-hedgehog-1.0.0.1
   - transformers-except-0.1.1

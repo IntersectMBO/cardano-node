@@ -42,12 +42,8 @@ import           Ouroboros.Network.Protocol.TxSubmission.Client (TxSubmissionCli
 import           Ouroboros.Network.Protocol.TxSubmission.Type as TS (TxSubmission)
 
 type SendRecvConnect = TraceSendRecv (Handshake NtN.NodeToNodeVersion CBOR.Term)
-                                     NtN.ConnectionId
-                                     (DecoderFailureOrTooMuchInput DeserialiseFailure)
 
 type SendRecvTxSubmission blk = TraceSendRecv (TxSubmission (GenTxId blk) (GenTx blk))
-                                              NtN.ConnectionId
-                                              DeserialiseFailure
 
 data BenchmarkTxSubmitTracers m blk = BenchmarkTracers
   { trSendRecvConnect      :: Tracer m SendRecvConnect
