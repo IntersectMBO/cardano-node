@@ -194,7 +194,7 @@ data TxGenError =
 withRealPBFT
   :: Text
   -> Maybe NodeId
-  -> Maybe Int
+  -> Maybe Word64
   -> GenesisFile
   -> RequiresNetworkMagic
   -> Maybe Double
