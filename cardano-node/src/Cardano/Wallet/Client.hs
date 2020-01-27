@@ -60,9 +60,9 @@ runWalletClient :: forall blk.
                 -> CoreNodeId
                 -> Tracer IO String
                 -> IO ()
-runWalletClient ptcl sockDir (CoreNodeId id) tracer = do
+runWalletClient ptcl sockDir nid tracer = do
 
-    addr <- localSocketAddrInfo (Just $ CoreId id) sockDir NoMkdirIfMissing
+    addr <- localSocketAddrInfo (Just (CoreId nid)) sockDir NoMkdirIfMissing
 
     let ProtocolInfo{pInfoConfig} = protocolInfo ptcl
 
@@ -94,11 +94,11 @@ localInitiatorNetworkApplication
   -- from 'cardano-chain'.  This should remove the dependency of this module
   -- from 'ouroboros-consensus'.
   => Proxy blk
-  -> Tracer m (TraceSendRecv (ChainSync blk (Tip blk)) peer DeserialiseFailure)
+  -> Tracer m (TraceSendRecv (ChainSync blk (Tip blk)))
   -- ^ tracer which logs all chain-sync messages send and received by the client
   -- (see 'Ouroboros.Network.Protocol.ChainSync.Type' in 'ouroboros-network'
   -- package)
-  -> Tracer m (TraceSendRecv (LocalTxSubmission (GenTx blk) (ApplyTxErr blk)) peer DeserialiseFailure)
+  -> Tracer m (TraceSendRecv (LocalTxSubmission (GenTx blk) (ApplyTxErr blk)))
   -- ^ tracer which logs all local tx submission protocol messages send and
   -- received by the client (see 'Ouroboros.Network.Protocol.LocalTxSubmission.Type'
   -- in 'ouroboros-network' package).
@@ -112,13 +112,12 @@ localInitiatorNetworkApplication Proxy chainSyncTracer localTxSubmissionTracer p
       (NodeToClientVersionData { networkMagic = nodeNetworkMagic (Proxy @blk) pInfoConfig })
       (DictVersion nodeToClientCodecCBORTerm)
 
-  $ OuroborosInitiatorApplication $ \peer ptcl -> case ptcl of
+  $ OuroborosInitiatorApplication $ \_peer ptcl -> case ptcl of
       LocalTxSubmissionPtcl -> \channel -> do
         txv <- newEmptyTMVarM @_ @(GenTx blk)
         runPeer
           localTxSubmissionTracer
           localTxSubmissionCodec
-          peer
           channel
           (localTxSubmissionClientPeer
               (txSubmissionClient @(GenTx blk) txv))
@@ -127,7 +126,6 @@ localInitiatorNetworkApplication Proxy chainSyncTracer localTxSubmissionTracer p
         runPeer
           chainSyncTracer
           (localChainSyncCodec @blk pInfoConfig)
-          peer
           channel
           (chainSyncClientPeer chainSyncClient)
 

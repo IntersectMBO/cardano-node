@@ -11,25 +11,25 @@ package cardano-node
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: 0fcb3a306e96ce36fca75d62792c55ab1de871ea
+  tag: eed4fc484366214831576eef0c7fe90d1d08c78b
   subdir: binary
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: 0fcb3a306e96ce36fca75d62792c55ab1de871ea
+  tag: eed4fc484366214831576eef0c7fe90d1d08c78b
   subdir: binary/test
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: 0fcb3a306e96ce36fca75d62792c55ab1de871ea
+  tag: eed4fc484366214831576eef0c7fe90d1d08c78b
   subdir: cardano-crypto-class
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: 0fcb3a306e96ce36fca75d62792c55ab1de871ea
+  tag: eed4fc484366214831576eef0c7fe90d1d08c78b
   subdir: slotting
 
 source-repository-package
@@ -40,43 +40,43 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger
-  tag: 3f4cc020d452e0af4b42208fe4a8cea8f1d710b5
+  tag: c62e2eeba5756898cbf59732fccd6a83a4065c18
   subdir: cardano-ledger
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger
-  tag: 3f4cc020d452e0af4b42208fe4a8cea8f1d710b5
+  tag: c62e2eeba5756898cbf59732fccd6a83a4065c18
   subdir: crypto
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger
-  tag: 3f4cc020d452e0af4b42208fe4a8cea8f1d710b5
+  tag: c62e2eeba5756898cbf59732fccd6a83a4065c18
   subdir: cardano-ledger/test
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger
-  tag: 3f4cc020d452e0af4b42208fe4a8cea8f1d710b5
+  tag: c62e2eeba5756898cbf59732fccd6a83a4065c18
   subdir: crypto/test
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger-specs
-  tag: 2aa807f4a4b6fd0ae0a511289586a2c2d18b56fb
+  tag: 356f177e551f4d78c7159abf0d9993fa4b0072d2
   subdir: byron/chain/executable-spec
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger-specs
-  tag: 2aa807f4a4b6fd0ae0a511289586a2c2d18b56fb
+  tag: 356f177e551f4d78c7159abf0d9993fa4b0072d2
   subdir: byron/ledger/executable-spec
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger-specs
-  tag: 2aa807f4a4b6fd0ae0a511289586a2c2d18b56fb
+  tag: 356f177e551f4d78c7159abf0d9993fa4b0072d2
   subdir: byron/semantics/executable-spec
 
 source-repository-package
@@ -163,37 +163,37 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: ac6ac3f302c800f397a59d91bbfb29477379f0c2
+  tag: 99c5747db01e2eeea25478424d65d90e785544bd
   subdir: ouroboros-network
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: ac6ac3f302c800f397a59d91bbfb29477379f0c2
+  tag: 99c5747db01e2eeea25478424d65d90e785544bd
   subdir: ouroboros-consensus
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: ac6ac3f302c800f397a59d91bbfb29477379f0c2
+  tag: 99c5747db01e2eeea25478424d65d90e785544bd
   subdir: typed-protocols
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: ac6ac3f302c800f397a59d91bbfb29477379f0c2
+  tag: 99c5747db01e2eeea25478424d65d90e785544bd
   subdir: typed-protocols-cbor
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: ac6ac3f302c800f397a59d91bbfb29477379f0c2
+  tag: 99c5747db01e2eeea25478424d65d90e785544bd
   subdir: network-mux
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: ac6ac3f302c800f397a59d91bbfb29477379f0c2 
+  tag: 99c5747db01e2eeea25478424d65d90e785544bd
   subdir: io-sim-classes
 
 source-repository-package

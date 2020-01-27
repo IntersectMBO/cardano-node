@@ -246,7 +246,6 @@ runCommand (SubmitTx fp topology ptcl genFile genHash socketDir) = do
       $ nodeSubmitTx
           topology
           genHash
-          Nothing
           genFile
           RequiresNoMagic
           Nothing
@@ -265,7 +264,6 @@ runCommand (SpendGenesisUTxO ptcl genFile genHash (NewTxFile ctTx) ctKey genRich
                 genRichAddr
                 outs
                 genHash
-                Nothing
                 genFile
                 RequiresNoMagic
                 Nothing
@@ -286,7 +284,6 @@ runCommand (SpendUTxO ptcl genFile genHash (NewTxFile ctTx) ctKey ins outs) = do
                  ins
                  outs
                  genHash
-                 Nothing
                  genFile
                  RequiresNoMagic
                  Nothing
@@ -313,7 +310,7 @@ runCommand (GenerateTxs
                tps
                txAdditionalSize
                sigKeysFiles
-               nodeId) = do
+               _nodeId) = do
   -- Default update value
   let update = Update (ApplicationName "cardano-sl") 1 $ LastKnownBlockVersion 0 2 0
 
@@ -328,8 +325,6 @@ runCommand (GenerateTxs
     GenerateTxsError
     $  withRealPBFT
          genHash
-         (Just nodeId)
-         Nothing
          genFile
          RequiresNoMagic
          Nothing

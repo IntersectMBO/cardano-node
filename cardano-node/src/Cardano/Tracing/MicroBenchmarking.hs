@@ -39,9 +39,9 @@ import           Control.Tracer.Transformers.ObserveOutcome
 import           Ouroboros.Network.Block (SlotNo (..))
 
 import           Ouroboros.Consensus.Ledger.Abstract (ProtocolLedgerView)
-import           Ouroboros.Consensus.Mempool.API (ApplyTx (..), GenTx, GenTxId,
-                                                  MempoolSize (..),
-                                                  TraceEventMempool (..), txId)
+import           Ouroboros.Consensus.Mempool.API
+                   (ApplyTx (..), GenTx, GenTxId, HasTxId (..),
+                    MempoolSize (..), TraceEventMempool (..), txId)
 import           Ouroboros.Consensus.Node.Tracers (TraceForgeEvent (..))
 
 --------------------------------------------------------------------------------
@@ -118,7 +118,7 @@ measureTxsEnd tracer = measureTxsEndInter $ toLogObject tracer
 -- Any Monad m, could be Identity in this case where we have all the data beforehand.
 -- The result of this operation is the list of transactions that _made it in the block_
 -- and the time it took them to get into the block.
-instance (Monad m, ApplyTx blk) => Outcome m (MeasureTxs blk) where
+instance (Monad m, ApplyTx blk, HasTxId (GenTx blk)) => Outcome m (MeasureTxs blk) where
     type IntermediateValue  (MeasureTxs blk)    = [(GenTx blk, Time)]
     type OutcomeMetric      (MeasureTxs blk)    = [(GenTxId blk, DiffTime)]
 

@@ -20,10 +20,9 @@ import           Codec.Serialise (DeserialiseFailure)
 import           Control.Monad.Class.MonadTimer (MonadTimer, threadDelay)
 import           Data.ByteString.Lazy (ByteString)
 import           Data.Proxy (Proxy (..))
-import           Network.Mux (AppType(InitiatorApp))
+import           Network.Mux (AppType(InitiatorApp), WithMuxBearer)
 import           Network.Socket (AddrInfo)
 import           Network.TypedProtocol.Driver (TraceSendRecv, runPeer)
-import           Network.TypedProtocol.Driver.ByteLimit (DecoderFailureOrTooMuchInput)
 
 import           Control.Tracer (Tracer, nullTracer)
 import           Ouroboros.Consensus.Block (BlockProtocol)
@@ -41,13 +40,13 @@ import           Ouroboros.Network.Protocol.Handshake.Version (Versions, simpleS
 import           Ouroboros.Network.Protocol.TxSubmission.Client (TxSubmissionClient, txSubmissionClientPeer)
 import           Ouroboros.Network.Protocol.TxSubmission.Type as TS (TxSubmission)
 
-type SendRecvConnect = TraceSendRecv (Handshake NtN.NodeToNodeVersion CBOR.Term)
-                                     NtN.ConnectionId
-                                     (DecoderFailureOrTooMuchInput DeserialiseFailure)
+type SendRecvConnect = WithMuxBearer
+                         NtN.ConnectionId
+                         (TraceSendRecv (Handshake
+                                           NtN.NodeToNodeVersion
+                                           CBOR.Term))
 
 type SendRecvTxSubmission blk = TraceSendRecv (TxSubmission (GenTxId blk) (GenTx blk))
-                                              NtN.ConnectionId
-                                              DeserialiseFailure
 
 data BenchmarkTxSubmitTracers m blk = BenchmarkTracers
   { trSendRecvConnect      :: Tracer m SendRecvConnect
@@ -96,18 +95,18 @@ benchmarkConnectTxSubmit trs nc localAddr remoteAddr myTxSubClient = do
       NtN.NodeToNodeV_1
       (NtN.NodeToNodeVersionData { NtN.networkMagic = nodeNetworkMagic (Proxy @blk) nc})
       (NtN.DictVersion NtN.nodeToNodeCodecCBORTerm)
-      $ OuroborosInitiatorApplication $ \peer ptcl ->
+      $ OuroborosInitiatorApplication $ \_peer ptcl ->
           case ptcl of
             NtN.ChainSyncWithHeadersPtcl -> \channel ->
-              runPeer nullTracer (pcChainSyncCodec myCodecs) peer channel
+              runPeer nullTracer (pcChainSyncCodec myCodecs) channel
                                  (chainSyncClientPeer chainSyncClientNull)
             NtN.BlockFetchPtcl           -> \channel ->
-              runPeer nullTracer (pcBlockFetchCodec myCodecs)  peer channel
+              runPeer nullTracer (pcBlockFetchCodec myCodecs) channel
                                  (blockFetchClientPeer blockFetchClientNull)
             NtN.TxSubmissionPtcl         -> \channel ->
               runPeer (trSendRecvTxSubmission trs)
                       (pcTxSubmissionCodec myCodecs)
-                      peer channel
+                      channel
                       (txSubmissionClientPeer myTxSubClient)
 
 -- the null block fetch client

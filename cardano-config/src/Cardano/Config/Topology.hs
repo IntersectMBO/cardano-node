@@ -35,7 +35,8 @@ import qualified Data.Text as T
 import           Text.Read (readMaybe)
 import           Network.Socket
 
-import           Ouroboros.Consensus.NodeId (NodeId(..))
+import           Ouroboros.Consensus.NodeId ( NodeId(..)
+                                            , CoreNodeId (..))
 import           Ouroboros.Consensus.Util.Condense (Condense (..))
 
 
@@ -129,13 +130,13 @@ instance FromJSON RemoteAddress where
       <*> (v .: "valency")
 
 data NodeSetup = NodeSetup
-  { nodeId :: !Int
+  { nodeId :: !Word64
   , nodeAddress :: !NodeAddress
   , producers :: ![RemoteAddress]
   } deriving Show
 
 instance FromJSON NodeId where
-  parseJSON v = CoreId <$> parseJSON v
+  parseJSON v = CoreId . CoreNodeId <$> parseJSON v
 
 deriveFromJSON defaultOptions ''NodeSetup
 
@@ -155,9 +156,9 @@ createNodeAddress _nodeId (NetworkTopology nodeSetups) fp =
     Nothing -> Left $ NodeIdNotFoundInToplogyFile fp
     Just (NodeSetup _ anAddress _) -> Right anAddress
  where
-  idInt :: Int
+  idInt :: Word64
   idInt = case _nodeId of
-            CoreId i -> i
+            CoreId (CoreNodeId i) -> i
             RelayId i -> i
   -- Search 'NetworkTopology' for a given 'NodeId'
   maybeNode :: Maybe NodeSetup

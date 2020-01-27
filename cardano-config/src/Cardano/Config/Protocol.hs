@@ -100,7 +100,7 @@ mockSlotLengths = singletonSlotLengths mockSlotLength
 mockSomeProtocol
   :: (RunNode blk, TraceConstraints blk)
   => Maybe NodeId
-  -> Maybe Int
+  -> Maybe Word64
   -- ^ Number of core nodes
   -> (CoreNodeId -> NumCoreNodes -> Consensus.Protocol blk)
   -> Either ProtocolInstantiationError SomeProtocol
@@ -129,7 +129,7 @@ data ProtocolInstantiationError =
 fromProtocol
   :: Text
   -> Maybe NodeId
-  -> Maybe Int
+  -> Maybe Word64
   -- ^ Number of core nodes
   -> GenesisFile
   -> RequiresNetworkMagic
@@ -155,12 +155,13 @@ fromProtocol _ nId mNumCoreNodes _ _ _ _ _ _ Praos =
     }
 fromProtocol _ nId mNumCoreNodes _ _ _ _ _ _ MockPBFT =
   hoistEither $ mockSomeProtocol nId mNumCoreNodes $ \cid numCoreNodes@(NumCoreNodes numNodes) ->
-    Consensus.ProtocolMockPBFT numCoreNodes cid
+    Consensus.ProtocolMockPBFT
       PBftParams { pbftSecurityParam      = mockSecurityParam
-                 , pbftNumNodes           = fromIntegral numNodes
+                 , pbftNumNodes           = numCoreNodes
                  , pbftSignatureThreshold = (1.0 / fromIntegral numNodes) + 0.1
                  , pbftSlotLength         = mockSlotLength
                  }
+      cid
 fromProtocol gHash _ _ genFile nMagic sigThresh delCertFp sKeyFp update RealPBFT = do
     let genHash = either panic identity $ decodeHash gHash
 
@@ -234,7 +235,7 @@ readLeaderCredentials gc mDelCertFp mSKeyFp =
 
 extractNodeInfo
   :: Maybe NodeId
-  -> Maybe Int
+  -> Maybe Word64
   -> Either ProtocolInstantiationError (CoreNodeId, NumCoreNodes)
 extractNodeInfo mNodeId ncNumCoreNodes  = do
 
@@ -242,4 +243,4 @@ extractNodeInfo mNodeId ncNumCoreNodes  = do
                       Just (CoreId coreNodeId) -> pure coreNodeId
                       _ -> Left MissingCoreNodeId
     numCoreNodes <- maybe (Left MissingNumCoreNodes) Right ncNumCoreNodes
-    return (CoreNodeId coreNodeId , NumCoreNodes numCoreNodes)
+    return (coreNodeId , NumCoreNodes numCoreNodes)

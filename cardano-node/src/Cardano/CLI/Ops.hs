@@ -38,7 +38,6 @@ import qualified Cardano.Crypto.Signing as Crypto
 import qualified Cardano.Chain.Genesis as Genesis
 import           Ouroboros.Consensus.Ledger.Byron (ByronBlock)
 import           Ouroboros.Consensus.Node.Run (RunNode)
-import           Ouroboros.Consensus.NodeId (NodeId)
 import qualified Ouroboros.Consensus.Protocol as Consensus
 
 import           Cardano.Config.Protocol ( Protocol(..), ProtocolInstantiationError
@@ -193,8 +192,6 @@ data TxGenError =
 --   with attendant configuration.
 withRealPBFT
   :: Text
-  -> Maybe NodeId
-  -> Maybe Int
   -> GenesisFile
   -> RequiresNetworkMagic
   -> Maybe Double
@@ -206,13 +203,13 @@ withRealPBFT
         => Consensus.Protocol ByronBlock
         -> ExceptT RealPBFTError IO a)
   -> ExceptT RealPBFTError IO a
-withRealPBFT gHash nId mNumNodes genFile nMagic sigThresh delCertFp sKeyFp update ptcl action = do
+withRealPBFT gHash genFile nMagic sigThresh delCertFp sKeyFp update ptcl action = do
   SomeProtocol p <- firstExceptT
                       FromProtocolError
                       $ fromProtocol
                           gHash
-                          nId
-                          mNumNodes
+                          Nothing
+                          Nothing
                           genFile
                           nMagic
                           sigThresh

@@ -84,11 +84,12 @@ import           Ouroboros.Consensus.Ledger.Byron.Config (pbftProtocolMagic)
 import           Ouroboros.Consensus.Node.ProtocolInfo (ProtocolInfo (..),
                                                         protocolInfo)
 import qualified Ouroboros.Consensus.Protocol as Consensus
+import qualified Ouroboros.Consensus.Mempool as Mempool
 import           Ouroboros.Consensus.Ledger.Byron (ByronBlock (..),
                                                    GenTx (..),
                                                    ByronConsensusProtocol)
 import qualified Ouroboros.Consensus.Ledger.Byron as Byron
-import           Ouroboros.Consensus.NodeId (NodeId (..))
+import           Ouroboros.Consensus.NodeId (NodeId (..), CoreNodeId(..))
 import           Ouroboros.Consensus.Protocol.Abstract (NodeConfig)
 import           Ouroboros.Consensus.Protocol.PBFT (pbftExtConfig)
 
@@ -256,7 +257,7 @@ instance FiscalRecipient Int where
 
 createTracers
   :: LoggingLayer
-  -> ( Tracer IO (TraceBenchTxSubmit (Byron.GenTxId ByronBlock))
+  -> ( Tracer IO (TraceBenchTxSubmit (Mempool.GenTxId ByronBlock))
      , Tracer IO SendRecvConnect
      , Tracer IO (SendRecvTxSubmission ByronBlock)
      , Tracer IO String
@@ -273,9 +274,9 @@ createTracers loggingLayer =
   tr' :: Trace IO Text
   tr' = appendName "generate-txs" tr
 
-  trBenchTotext :: TraceBenchTxSubmit (Byron.GenTxId ByronBlock) -> Text
+  trBenchTotext :: TraceBenchTxSubmit (Mempool.GenTxId ByronBlock) -> Text
   trBenchTotext = T.pack . show
-  benchTracer :: Tracer IO (TraceBenchTxSubmit (Byron.GenTxId ByronBlock))
+  benchTracer :: Tracer IO (TraceBenchTxSubmit (Mempool.GenTxId ByronBlock))
   benchTracer = contramap trBenchTotext (toLogObject (appendName "benchmark" tr'))
 
   trConnectTotext :: SendRecvConnect -> Text
@@ -411,7 +412,7 @@ prepareInitialFunds llTracer
                                               genesisAddress
                                               (NE.fromList [outForBig])
 
-  submitTx socketFp pInfoConfig (CoreId 0) genesisTx llTracer
+  submitTx socketFp pInfoConfig (CoreId (CoreNodeId 0)) genesisTx llTracer
   -- Done, the first transaction 'initGenTx' is submitted, now 'sourceAddress' has a lot of money.
 
   let txIn  = CC.UTxO.TxInUtxo (getTxIdFromGenTx genesisTx) 0
@@ -599,7 +600,7 @@ addLovelace a b = assumeBound $ CC.Common.addLovelace a b
 --   So if one Cardano tx contains 10 outputs (with addresses of 10 recipients),
 --   we have 1 Cardano tx and 10 fiscal txs.
 runBenchmark
-  :: Tracer IO (TraceBenchTxSubmit (Byron.GenTxId ByronBlock))
+  :: Tracer IO (TraceBenchTxSubmit (Mempool.GenTxId ByronBlock))
   -> Tracer IO SendRecvConnect
   -> Tracer IO (SendRecvTxSubmission ByronBlock)
   -> Tracer IO String
@@ -679,8 +680,8 @@ runBenchmark benchTracer
     return remoteAddr
 
   let updROEnv
-        :: ROEnv (Byron.GenTxId ByronBlock) (GenTx ByronBlock)
-        -> ROEnv (Byron.GenTxId ByronBlock) (GenTx ByronBlock)
+        :: ROEnv (Mempool.GenTxId ByronBlock) (GenTx ByronBlock)
+        -> ROEnv (Mempool.GenTxId ByronBlock) (GenTx ByronBlock)
       updROEnv defaultROEnv =
         ROEnv { targetBacklog     = targetBacklog defaultROEnv
               , txNumServiceTime  = Just $ minimalTPSRate tpsRate
@@ -787,7 +788,7 @@ createMoreFundCoins llTracer
                                          []
   -- Submit all splitting transactions sequentially.
   liftIO $ forM_ splittingTxs $ \(tx, _) ->
-    submitTx socketFp pInfoConfig (CoreId 0) tx llTracer
+    submitTx socketFp pInfoConfig (CoreId (CoreNodeId 0)) tx llTracer
 
   -- Re-create availableFunds with information about all splitting transactions
   -- (it will be used for main transactions).
@@ -866,7 +867,7 @@ minimalTPSRate (TPSRate tps) = picosecondsToDiffTime timeInPicoSecs
   picosecondsIn1Sec = 1000000000000 :: Integer
 
 txGenerator
-  :: Tracer IO (TraceBenchTxSubmit (Byron.GenTxId ByronBlock))
+  :: Tracer IO (TraceBenchTxSubmit (Mempool.GenTxId ByronBlock))
   -> NodeConfig ByronConsensusProtocol
   -> CC.Common.Address
   -> Crypto.SigningKey
@@ -1045,7 +1046,7 @@ launchTxPeer
   :: forall m block txid tx.
      ( RunNode block
      , m ~ IO
-     , txid ~ Byron.GenTxId block
+     , txid ~ Mempool.GenTxId block
      , tx ~ GenTx block
      )
   => Tracer m (TraceBenchTxSubmit txid)
