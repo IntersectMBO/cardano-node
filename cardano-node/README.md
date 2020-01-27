@@ -244,6 +244,16 @@ options.
 
 ## Transactions
 
+### Creation
+
+Transactions can be created via the  `issue-genesis-utxo-expenditure` & `issue-utxo-expenditure` commands.
+
+The easiest way to create a transaction is via the `scripts/issue-genesis-utxo-expenditure.sh` script as follows:
+
+`./scripts/issue-genesis-utxo-expenditure.sh transaction_file`
+
+This will run `scripts/genesis.sh` if you do not have a genesis file and will create a tx file with the name `transaction_file`. The script `scripts/issue-genesis-utxo-expenditure.sh` has defaults for all the requirements of the `issue-genesis-utxo-expenditure` command.
+
 ### Submission
 
 The `submit-tx` subcommand provides the option of submitting a pre-signed
