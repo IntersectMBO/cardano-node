@@ -32,6 +32,9 @@ setupScribes:
 defaultScribes:
   - - StdoutSK
     - stdout
+# for output to 'journald' add this scribe:
+#  - - JournalSK
+#    - cardano
 
 # more options which can be passed as key-value pairs:
 options:
