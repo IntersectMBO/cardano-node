@@ -11,7 +11,15 @@ build-type:            Simple
 cabal-version:         >= 1.10
 extra-source-files:    README.md, ChangeLog.md
 
+Flag unexpected_thunks
+  Description:   Turn on unexpected thunks checks
+  Default:       False
+
 library
+
+  if flag(unexpected_thunks)
+    cpp-options: -DUNEXPECTED_THUNKS
+
   hs-source-dirs:      src
 
   exposed-modules:     Cardano.Chairman
@@ -51,6 +59,8 @@ library
                      , async
                      , base >=4.12 && <5
                      , bytestring
+                     , deepseq
+                     , strict-concurrency
                      , canonical-json
                      , cardano-binary
                      , cardano-config

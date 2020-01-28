@@ -1,6 +1,6 @@
 { system, compiler, flags, pkgs, hsPkgs, pkgconfPkgs, ... }:
   {
-    flags = {};
+    flags = { unexpected_thunks = false; };
     package = {
       specVersion = "1.10";
       identifier = { name = "cardano-node"; version = "1.4.0"; };
@@ -21,6 +21,8 @@
           (hsPkgs.async)
           (hsPkgs.base)
           (hsPkgs.bytestring)
+          (hsPkgs.deepseq)
+          (hsPkgs.strict-concurrency)
           (hsPkgs.canonical-json)
           (hsPkgs.cardano-binary)
           (hsPkgs.cardano-config)
