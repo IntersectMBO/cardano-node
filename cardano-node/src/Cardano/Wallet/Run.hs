@@ -14,7 +14,7 @@ import           Cardano.BM.Data.Tracer (ToLogObject (..))
 import           Cardano.BM.Trace (Trace, appendName)
 import           Cardano.Config.Protocol(SomeProtocol(..), fromProtocol)
 
-import           Ouroboros.Consensus.NodeId (CoreNodeId (..), NodeId (..))
+import           Ouroboros.Consensus.NodeId (NodeId (..))
 
 import           Cardano.Config.Protocol (ProtocolInstantiationError)
 import           Cardano.Config.Types ( ConfigYamlFilePath(..), NodeConfiguration(..)
@@ -27,7 +27,7 @@ runClient (WalletCLI config delegCertFile gHash gFile sKeyFile socketFp) tracer 
     nc <- parseNodeConfiguration $ unConfigPath config
     let coreNodeId = case ncNodeId nc of
                        Nothing -> panic "Cardano.Wallet.Run.srunClient: NodeId not specified"
-                       Just (CoreId num) -> CoreNodeId num
+                       Just (CoreId nid) -> nid
                        Just (RelayId _) -> panic "Cardano.Wallet.Run.runClient: Relay nodes not supported"
 
     let tracer' = contramap pack . toLogObject $
@@ -36,7 +36,7 @@ runClient (WalletCLI config delegCertFile gHash gFile sKeyFile socketFp) tracer 
     eSomeProtocol <- runExceptT $ fromProtocol
                                     gHash
                                     (ncNodeId nc)
-                                    (ncNumCoreNodes nc)
+                                    (fromIntegral <$> ncNumCoreNodes nc)
                                     gFile
                                     (ncReqNetworkMagic nc)
                                     (ncPbftSignatureThresh nc)

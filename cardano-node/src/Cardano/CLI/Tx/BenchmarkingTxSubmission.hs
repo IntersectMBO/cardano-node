@@ -50,6 +50,7 @@ bulkSubmission
      ( MonadIO m, MonadSTM m, MonadTime m, MonadTimer m
      , Ord txid
      , Mempool.ApplyTx blk
+     , Mempool.HasTxId tx
      , tx ~ Mempool.GenTx blk, txid ~ Mempool.GenTxId blk)
   => (ROEnv txid tx -> ROEnv txid tx)
   -- changes to default settings
