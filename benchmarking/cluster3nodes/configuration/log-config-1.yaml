@@ -119,7 +119,7 @@ TraceBlockFetchProtocolSerialised: False
 TraceBlockFetchServer: True
 
 # Verbose tracer of ChainDB
-TraceChainDb: False
+TraceChainDb: True
 
 # Trace ChainSync client.
 TraceChainSyncClient: False
