@@ -129,7 +129,7 @@ parseCoreNodeId =
 
 parseNodeId :: String -> Parser NodeId
 parseNodeId desc =
-    option (fmap CoreId auto) (
+    option (fmap (CoreId . CoreNodeId) auto) (
             long "node-id"
          <> metavar "NODE-ID"
          <> help desc

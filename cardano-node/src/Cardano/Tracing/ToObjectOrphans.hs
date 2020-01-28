@@ -515,8 +515,7 @@ readableChainDBTracer tracer = Tracer $ \case
     ChainDB.OpenedVolDB -> tr $ WithTip tip "Opened vol db"
     ChainDB.OpenedLgrDB -> tr $ WithTip tip "Opened lgr db"
   WithTip tip (ChainDB.TraceReaderEvent ev) -> case ev of
-    ChainDB.NewReader readerid -> tr $ WithTip tip $
-      "New reader with id: " <> condense readerid
+    ChainDB.NewReader -> tr $ WithTip tip $ "New reader was created"
     ChainDB.ReaderNoLongerInMem _ -> tr $ WithTip tip "ReaderNoLongerInMem"
     ChainDB.ReaderSwitchToMem _ _ -> tr $ WithTip tip "ReaderSwitchToMem"
     ChainDB.ReaderNewImmIterator _ _ -> tr $ WithTip tip "ReaderNewImmIterator"
@@ -722,15 +721,14 @@ instance (Condense (HeaderHash blk), ProtocolLedgerView blk)
       mkObject [ "kind" .= String "TraceOpenEvent.OpenedLgrDB" ]
 
   toObject _verb (ChainDB.TraceReaderEvent ev) = case ev of
-    ChainDB.NewReader readerid ->
-      mkObject [ "kind" .= String "TraceGCEvent.PerformedGC"
-               , "readerid" .= String ((pack . condense) readerid) ]
+    ChainDB.NewReader ->
+      mkObject [ "kind" .= String "TraceReaderEvent.NewReader" ]
     ChainDB.ReaderNoLongerInMem _ ->
-      mkObject [ "kind" .= String "ReaderNoLongerInMem" ]
+      mkObject [ "kind" .= String "TraceReaderEvent.ReaderNoLongerInMem" ]
     ChainDB.ReaderSwitchToMem _ _ ->
-      mkObject [ "kind" .= String "ReaderSwitchToMem" ]
+      mkObject [ "kind" .= String "TraceReaderEvent.ReaderSwitchToMem" ]
     ChainDB.ReaderNewImmIterator _ _ ->
-      mkObject [ "kind" .= String "ReaderNewImmIterator" ]
+      mkObject [ "kind" .= String "TraceReaderEvent.ReaderNewImmIterator" ]
   toObject _verb (ChainDB.TraceInitChainSelEvent ev) = case ev of
     ChainDB.InitChainSelValidation _ ->
       mkObject [ "kind" .= String "InitChainSelValidation" ]

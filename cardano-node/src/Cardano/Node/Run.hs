@@ -97,7 +97,7 @@ runNode loggingLayer nc nCli = do
     eitherSomeProtocol <- runExceptT $ fromProtocol
                                          (genesisHash nCli)
                                          (ncNodeId nc)
-                                         (ncNumCoreNodes nc)
+                                         (fromIntegral <$> ncNumCoreNodes nc)
                                          (genesisFile $ mscFp nCli)
                                          (ncReqNetworkMagic nc)
                                          (ncPbftSignatureThresh nc)
@@ -265,9 +265,9 @@ handleSimpleNode p trace nodeTracers nCli nc onKernel = do
           atomically $ writeTVar varTip tip
         onKernel nodeKernel
   where
-    nid :: Int
+    nid :: Word64
     nid = case ncNodeId nc of
-            Just (CoreId  n) -> n
+            Just (CoreId  (CoreNodeId n)) -> n
             Just (RelayId _) -> error "Non-core nodes currently not supported"
             Nothing -> 999
 

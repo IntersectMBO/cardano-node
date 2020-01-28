@@ -46,7 +46,7 @@ main = do
     frmPtclRes <- runExceptT $ fromProtocol
                                  caGenesisHash
                                  (ncNodeId nc)
-                                 (ncNumCoreNodes nc)
+                                 (fromIntegral <$> ncNumCoreNodes nc)
                                  (caGenesisFile)
                                  (ncReqNetworkMagic nc)
                                  (ncPbftSignatureThresh nc)

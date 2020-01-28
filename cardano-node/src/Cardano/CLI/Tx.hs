@@ -156,8 +156,6 @@ issueGenesisUTxOExpenditure
   :: Address
   -> NonEmpty TxOut
   -> Text
-  -> Maybe Int
-  -- ^ Number of core nodes.
   -> GenesisFile
   -> RequiresNetworkMagic
   -> Maybe Double
@@ -171,7 +169,6 @@ issueGenesisUTxOExpenditure
   genRichAddr
   outs
   gHash
-  mNumCoreNodes
   genFile
   nMagic
   sigThresh
@@ -180,7 +177,7 @@ issueGenesisUTxOExpenditure
   update
   ptcl
   sk =
-    withRealPBFT gHash Nothing mNumCoreNodes genFile nMagic sigThresh delCertFp sKeyFp update ptcl
+    withRealPBFT gHash genFile nMagic sigThresh delCertFp sKeyFp update ptcl
       $ \(Consensus.ProtocolRealPBFT gc _ _ _ _)-> do
           case txSpendGenesisUTxOByronPBFT gc sk genRichAddr outs of
             tx@(ByronTx txid _) -> do
@@ -215,8 +212,6 @@ issueUTxOExpenditure
   :: NonEmpty TxIn
   -> NonEmpty TxOut
   -> Text
-  -> Maybe Int
-  -- ^ Number of core nodes.
   -> GenesisFile
   -> RequiresNetworkMagic
   -> Maybe Double
@@ -230,7 +225,6 @@ issueUTxOExpenditure
   ins
   outs
   gHash
-  mNumCoreNodes
   genFile
   nMagic
   sigThresh
@@ -239,7 +233,7 @@ issueUTxOExpenditure
   update
   ptcl
   key = do
-    withRealPBFT gHash Nothing mNumCoreNodes genFile nMagic sigThresh delCertFp sKeyFp update ptcl $
+    withRealPBFT gHash genFile nMagic sigThresh delCertFp sKeyFp update ptcl $
       \(Consensus.ProtocolRealPBFT gc _ _ _ _)-> do
         case txSpendUTxOByronPBFT gc key ins outs of
           tx@(ByronTx txid _) -> do
@@ -255,8 +249,6 @@ issueUTxOExpenditure
 nodeSubmitTx
   :: TopologyInfo
   -> Text
-  -> Maybe Int
-  -- ^ Number of core nodes
   -> GenesisFile
   -> RequiresNetworkMagic
   -> Maybe Double
@@ -270,7 +262,6 @@ nodeSubmitTx
 nodeSubmitTx
   topology
   gHash
-  mNumCoreNodes
   genFile
   nMagic
   sigThresh
@@ -280,7 +271,7 @@ nodeSubmitTx
   update
   ptcl
   gentx =
-    withRealPBFT gHash Nothing mNumCoreNodes genFile nMagic sigThresh delCertFp sKeyFp update ptcl $
+    withRealPBFT gHash genFile nMagic sigThresh delCertFp sKeyFp update ptcl $
       \p@Consensus.ProtocolRealPBFT{} -> do
         _ <- case gentx of
                ByronTx txid _ -> pure . putTextLn
