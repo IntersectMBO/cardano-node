@@ -29,7 +29,7 @@ extra-deps:
 
     # Cardano-ledger dependencies
   - git: https://github.com/input-output-hk/cardano-ledger
-    commit: 3f4cc020d452e0af4b42208fe4a8cea8f1d710b5
+    commit: c62e2eeba5756898cbf59732fccd6a83a4065c18
     subdirs:
       - cardano-ledger
       - cardano-ledger/test
@@ -37,7 +37,7 @@ extra-deps:
       - crypto/test
 
   - git: https://github.com/input-output-hk/cardano-ledger-specs
-    commit: 2aa807f4a4b6fd0ae0a511289586a2c2d18b56fb
+    commit: 356f177e551f4d78c7159abf0d9993fa4b0072d2
     subdirs:
       # small-steps
       - byron/semantics/executable-spec
@@ -53,7 +53,7 @@ extra-deps:
       - test
 
   - git: https://github.com/input-output-hk/cardano-base
-    commit: 0fcb3a306e96ce36fca75d62792c55ab1de871ea
+    commit: eed4fc484366214831576eef0c7fe90d1d08c78b
     subdirs:
       - binary
       - binary/test
@@ -97,7 +97,7 @@ extra-deps:
     #Ouroboros-network dependencies
 
   - git: https://github.com/input-output-hk/ouroboros-network
-    commit: 1dac815eeec8132a9068fb66b9883d3a3d7a633c
+    commit: 99c5747db01e2eeea25478424d65d90e785544bd
     subdirs:
         - io-sim-classes
         - network-mux
