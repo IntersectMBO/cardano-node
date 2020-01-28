@@ -7,12 +7,3 @@ steps:
       - "benchmark-results.log"
     agents:
       system: x86_64-linux
-
-  - label: 'Chain-sync benchmark Testnet'
-    command:
-      - ./benchmarking/chain-sync/ci.sh testnet
-    timeout_in_minutes: 65
-    artifact_paths:
-      - "benchmark-results.log"
-    agents:
-      system: x86_64-linux
