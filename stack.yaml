@@ -9,23 +9,29 @@ ghc-options:
   cardano-node:     -Wall -fwarn-redundant-constraints
 
 extra-deps:
+  - brick-0.47
   - binary-0.8.7.0
   - bimap-0.4.0
+  - clock-0.8
+  - config-ini-0.2.4.0
   - containers-0.5.11.0
+  - data-clist-0.1.2.2
   - generic-monoid-0.1.0.0
   - gray-code-0.3.1
+  - io-streams-1.5.1.0
+  - io-streams-haproxy-1.0.1.0
   - moo-1.2
-  - network-3.1.0.1
+  - network-3.1.0.0
+  - snap-core-1.0.4.0
+  - snap-server-1.1.1.1
+  - statistics-linreg-0.3
   - time-units-1.0.0
   - tasty-hedgehog-1.0.0.1
   - transformers-except-0.1.1
-  - brick-0.47
-  - config-ini-0.2.4.0
-  - data-clist-0.1.2.2
   - text-zipper-0.10.1
   - Unique-0.4.7.6
   - word-wrap-0.4.1
-  - statistics-linreg-0.3
+  - websockets-0.12.6.1
 
     # Cardano-ledger dependencies
   - git: https://github.com/input-output-hk/cardano-ledger
