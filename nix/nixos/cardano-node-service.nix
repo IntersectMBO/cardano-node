@@ -5,9 +5,9 @@
 
 with lib; with builtins;
 let
-  localLib = import ../../lib.nix {};
+  commonLib = import ../../lib.nix {};
   cfg = config.services.cardano-node;
-  svcLib = (import ../svclib.nix { inherit pkgs; cardano-node = pkgs.cardano-node; });
+  inherit (commonLib) svcLib;
   envConfig = cfg.environments.${cfg.environment}; systemdServiceName = "cardano-node${optionalString cfg.instanced "@"}";
   mkScript = cfg:
     let exec = "cardano-node";
@@ -59,7 +59,7 @@ in {
 
       package = mkOption {
         type = types.package;
-        default = (import ../nix-tools.nix {}).nix-tools.exes.cardano-node;
+        default = commonLib.haskellPackages.cardano-node.components.all;
         defaultText = "cardano-node";
         description = ''
           The cardano-node package that should be used
@@ -68,7 +68,7 @@ in {
 
       environments = mkOption {
         type = types.attrs;
-        default = localLib.environments;
+        default = commonLib.environments;
         description = ''
           environment node will connect to
         '';
@@ -183,7 +183,7 @@ in {
 
       topology = mkOption {
         type = types.path;
-        default = localLib.mkEdgeTopology {
+        default = commonLib.mkEdgeTopology {
           inherit (cfg) nodeId port;
           inherit (envConfig) edgeNodes;
         };

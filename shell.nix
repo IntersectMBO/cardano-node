@@ -1,14 +1,14 @@
-{ withHoogle ? true
-, profiling ? false
-, localLib ? import ./lib.nix { inherit profiling; }
+{ commonLib ? import ./lib.nix {}
+, withHoogle ? false
 }:
 let
-  pkgs = localLib.iohkNix.pkgs;
-  default = import ./default.nix {};
+  pkgs = commonLib.pkgs;
+  default = import ./. { inherit withHoogle; };
+  shell = default.shell;
   devops = pkgs.stdenv.mkDerivation {
     name = "devops-shell";
     buildInputs = [
-      localLib.niv
+      commonLib.niv
     ];
     shellHook = ''
       echo "DevOps Tools" \
@@ -22,22 +22,5 @@ let
       "
     '';
   };
-  haskell-nix-src = builtins.fetchTarball https://github.com/input-output-hk/haskell.nix/archive/master.tar.gz;
-  haskell-nix = (import (haskell-nix-src + "/nixpkgs") (import haskell-nix-src)).haskell-nix;
-in
-default.nix-tools._raw.shellFor {
-  packages    = ps: with ps; [ cardano-node ];
-  withHoogle  = withHoogle;
-  buildInputs =
-  (with default.nix-tools._raw; [
-    cabal-install.components.exes.cabal
-    ghcid.components.exes.ghcid
-  ]) ++
-  (with default.nix-tools._raw._config._module.args.pkgs; [
-    (haskell-nix.hackage-package {
-      name = "eventlog2html";
-      version = "0.6.0";
-    }).components.exes.eventlog2html
-    tmux
-  ]);
-} // { inherit devops; }
+# TODO: switch back to default.nix shell when it works
+in default.shell // { inherit devops; }
