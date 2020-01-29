@@ -1,20 +1,46 @@
+{ system ? builtins.currentSystem
+, crossSystem ? null
+, config ? {}
+, overlays ? []
+}:
+
 let
   sources = import ./nix/sources.nix;
-  pkgs' = import sources.nixpkgs {};
-  nixTools = import ./nix/nix-tools.nix {};
-  haskellNixJson = let
-    src = sources."haskell.nix";
-  in __toJSON {
-    inherit (sources."haskell.nix") rev sha256;
-    url = "https://github.com/${src.owner}/${src.repo}";
+  iohkNix = import sources.iohk-nix {
+    sourcesOverride = sources;
   };
-  iohkNix = import sources.iohk-nix { haskellNixJsonOverride = pkgs'.writeText "haskell-nix.json" haskellNixJson; };
-  pkgs = iohkNix.pkgs;
-  svcLib = import ./nix/svclib.nix { inherit pkgs; cardano-node = nixTools.nix-tools.exes.cardano-node; };
+  haskellNix = import sources."haskell.nix";
+  args = haskellNix // {
+    inherit system crossSystem;
+    overlays = (haskellNix.overlays or []) ++ overlays;
+    config = (haskellNix.config or {}) // config;
+  };
+  nixpkgs = import sources.nixpkgs;
+  pkgs = nixpkgs args;
+  haskellPackages = import ./nix/pkgs.nix {
+    inherit pkgs;
+    src = ./.;
+  };
+  # TODO: add haskellPackages and fix svclib
+  svcLib = import ./nix/svclib.nix { inherit pkgs; cardano-node = haskellPackages.cardano-node.components.all; };
   lib = pkgs.lib;
   niv = (import sources.niv {}).niv;
-in lib // iohkNix.cardanoLib // svcLib // {
-  inherit iohkNix pkgs;
-  inherit (iohkNix) nix-tools;
-  inherit niv;
+  isCardanoNode = with lib; package:
+    (package.isHaskell or false) &&
+      ((hasPrefix "cardano-node" package.identifier.name) ||
+       (elem package.identifier.name [ "text-class" "bech32" ]));
+  filterCardanoPackages = pkgs.lib.filterAttrs (_: package: isCardanoNode package);
+  getPackageChecks = pkgs.lib.mapAttrs (_: package: package.checks);
+in lib // iohkNix.cardanoLib // {
+  inherit (pkgs.haskell-nix.haskellLib) collectComponents;
+  inherit
+    niv
+    sources
+    haskellPackages
+    pkgs
+    iohkNix
+    svcLib
+    isCardanoNode
+    getPackageChecks
+    filterCardanoPackages;
 }

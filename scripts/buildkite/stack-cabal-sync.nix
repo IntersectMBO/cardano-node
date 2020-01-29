@@ -1,7 +1,7 @@
 { system ? builtins.currentSystem }:
 
 let
-  self = import ../.. { target = system; };
+  self = import ../../lib.nix { inherit system; };
   pkgs = self.pkgs;
   repo-tool-src = pkgs.fetchFromGitHub {
     owner = "input-output-hk";

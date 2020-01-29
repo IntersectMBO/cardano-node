@@ -1,9 +1,7 @@
 { commonLib, customConfig }:
 with commonLib.pkgs.lib;
 let
-  pkgs = commonLib.pkgs;
-  localLib = import ../lib.nix;
-  svcLib = import ./svclib.nix { inherit pkgs; };
+  inherit (commonLib) svcLib pkgs;
   pkgsModule = {
     config._module.args.pkgs = mkDefault pkgs;
   };
@@ -32,7 +30,7 @@ let
       tracingVerbosity = "normal";
     } // (builtins.removeAttrs envConfig ["nodeConfig"]);
 
-    nodeConfig = (envConfig.nodeConfig or localLib.environments.mainnet.nodeConfig)
+    nodeConfig = (envConfig.nodeConfig or commonLib.environments.mainnet.nodeConfig)
       // (customConfig.nodeConfig or {});
 
     config = defaultConfig
