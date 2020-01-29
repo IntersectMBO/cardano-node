@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP                 #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE Rank2Types          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -50,6 +51,9 @@ import           Cardano.BM.Data.SubTrace
 import qualified Cardano.BM.Observer.Monadic as Monadic
 import qualified Cardano.BM.Observer.STM as Stm
 import           Cardano.BM.Plugin (loadPlugin)
+#if defined(linux_HOST_OS)
+import           Cardano.BM.Scribe.Systemd (plugin)
+#endif
 import           Cardano.BM.Setup (setupTrace_, shutdown)
 import           Cardano.BM.Trace (Trace, appendName, traceNamedObject)
 import qualified Cardano.BM.Trace as Trace
@@ -226,6 +230,11 @@ loggingCardanoFeatureInit disabled' conf = do
       >>= loadPlugin switchBoard
   Cardano.BM.Backend.Monitoring.plugin logConfig trace switchBoard
       >>= loadPlugin switchBoard
+
+#if defined(linux_HOST_OS)
+  Cardano.BM.Scribe.Systemd.plugin logConfig trace switchBoard "cardano"
+    >>= loadPlugin switchBoard
+#endif
 
   -- record node metrics
   if recordMetrics conf
