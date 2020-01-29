@@ -35,28 +35,40 @@
         "url": "https://github.com/hercules-ci/gitignore/archive/f9e996052b5af4032fe6150bba4a6fe4f7b9d698.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
-    "haskell.nix": {
+    "hackage.nix": {
         "branch": "master",
+        "description": "Automatically generated Nix expressions for Hackage",
+        "homepage": "",
+        "owner": "input-output-hk",
+        "repo": "hackage.nix",
+        "rev": "3c95c2c481ca909ecdb85354348482edf924df3a",
+        "sha256": "0sk5810bs6w51vq2501bbbx2adcf4ygkw0x3w014l7kpds6fvxpy",
+        "type": "tarball",
+        "url": "https://github.com/input-output-hk/hackage.nix/archive/3c95c2c481ca909ecdb85354348482edf924df3a.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
+    "haskell.nix": {
+        "branch": "worktree-fix",
         "description": "Alternative Haskell Infrastructure for Nixpkgs",
         "homepage": "https://input-output-hk.github.io/haskell.nix",
         "owner": "input-output-hk",
         "repo": "haskell.nix",
-        "rev": "3ae2303b14bdebd00437b0e995af2d0eb21abafe",
-        "sha256": "0dk6541kwfyc5sp5h1vfk6zl4ghln4i2zqkaijbjwv8bnixnm6wl",
+        "rev": "5ca7a834f101f8059e53bf9c8b4b6a703a18bb41",
+        "sha256": "0nsaw3y4zqih1wb7zllhj26x5y191q3l4zaliwnlvaw38wgiqwwz",
         "type": "tarball",
-        "url": "https://github.com/input-output-hk/haskell.nix/archive/3ae2303b14bdebd00437b0e995af2d0eb21abafe.tar.gz",
+        "url": "https://github.com/input-output-hk/haskell.nix/archive/5ca7a834f101f8059e53bf9c8b4b6a703a18bb41.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "iohk-nix": {
-        "branch": "master",
+        "branch": "haskell-overhaul",
         "description": "nix scripts shared across projects",
         "homepage": null,
         "owner": "input-output-hk",
         "repo": "iohk-nix",
-        "rev": "4e47de68bcb7cb15efc42bada9e3ad63cef11635",
-        "sha256": "04f9gaxj5i29i6rz9q242rpw5r4i9nz6lsgjp090mh6k9hwj632c",
+        "rev": "fca549c6b76f320db83e6f0f4f4ebfd32b35d1a0",
+        "sha256": "1b9c2wrav2n78bzmw2748lcdb7x9gigjplyid1gf455narchxkl8",
         "type": "tarball",
-        "url": "https://github.com/input-output-hk/iohk-nix/archive/4e47de68bcb7cb15efc42bada9e3ad63cef11635.tar.gz",
+        "url": "https://github.com/input-output-hk/iohk-nix/archive/fca549c6b76f320db83e6f0f4f4ebfd32b35d1a0.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "niv": {
@@ -72,15 +84,15 @@
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "nixpkgs": {
-        "branch": "iohk-19.03",
+        "branch": "release-19.03",
         "description": "Nix Packages collection",
         "homepage": null,
-        "owner": "input-output-hk",
+        "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "5bd4c4ea6804b54683ef2b802d970ae473e1b658",
-        "sha256": "12gah6y1lkkgvvdgswyzsqyvxvsvljn61vpy606sy37yfgkc1a63",
+        "rev": "c7f0659e03467cd74c4f4608f99a62c4ac15b414",
+        "sha256": "0kjbgnjl3w0s4hfvm86crbzh2h6s7fl5vx0xpbg34rdx6zccb73d",
         "type": "tarball",
-        "url": "https://github.com/input-output-hk/nixpkgs/archive/5bd4c4ea6804b54683ef2b802d970ae473e1b658.tar.gz",
+        "url": "https://github.com/NixOS/nixpkgs/archive/c7f0659e03467cd74c4f4608f99a62c4ac15b414.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     }
 }

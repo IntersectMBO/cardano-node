@@ -11,11 +11,6 @@ steps:
     agents:
       system: x86_64-linux
 
-  - label: 'nix-tools'
-    command: 'nix-build -A check-nix-tools -o check-nix-tools.sh && ./check-nix-tools.sh'
-    agents:
-      system: x86_64-linux
-
   - label: 'release.nix'
     command: 'nix-build -A check-hydra -o check-hydra.sh && ./check-hydra.sh'
     agents:

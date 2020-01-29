@@ -1,13 +1,13 @@
-{ withHoogle ? true
-, localLib ? import ./lib.nix
+{ commonLib ? import ./lib.nix {}
 }:
 let
-  pkgs = localLib.iohkNix.pkgs;
-  default = import ./default.nix {};
+  pkgs = commonLib.pkgs;
+  default = import ./. {};
+  shell = default.shell;
   devops = pkgs.stdenv.mkDerivation {
     name = "devops-shell";
     buildInputs = [
-      localLib.niv
+      commonLib.niv
     ];
     shellHook = ''
       echo "DevOps Tools" \
@@ -21,16 +21,5 @@ let
       "
     '';
   };
-in
-default.nix-tools._raw.shellFor {
-  packages    = ps: with ps; [ cardano-node ];
-  withHoogle  = withHoogle;
-  buildInputs =
-  (with default.nix-tools._raw; [
-    cabal-install.components.exes.cabal
-    ghcid.components.exes.ghcid
-  ]) ++
-  (with default.nix-tools._raw._config._module.args.pkgs; [
-    tmux
-  ]);
-} // { inherit devops; }
+# TODO: switch back to default.nix shell when it works
+in devops // { inherit devops; }

@@ -1,10 +1,51 @@
+############################################################################
+#
+# Hydra release jobset.
+#
+# The purpose of this file is to select jobs defined in default.nix and map
+# them to all supported build platforms.
+#
+############################################################################
+
+# The project sources
+{ cardano-node ? { outPath = ./.; rev = "abcdef"; }
+
+# Function arguments to pass to the project
+, projectArgs ? {
+    config = { allowUnfree = false; inHydra = true; };
+    gitrev = cardano-node.rev;
+  }
+
+# The systems that the jobset will be built for.
+, supportedSystems ? [ "x86_64-linux" "x86_64-darwin" ]
+
+# The systems used for cross-compiling
+, supportedCrossSystems ? [ "x86_64-linux" ]
+
+# A Hydra option
+, scrubJobs ? true
+
+# Import IOHK common nix lib
+, commonLib ? import ./lib.nix {}
+
+}:
+
+with (import commonLib.iohkNix.release-lib) {
+  inherit (commonLib) pkgs;
+  inherit supportedSystems supportedCrossSystems scrubJobs projectArgs;
+  packageSet = import cardano-node;
+  gitrev = cardano-node.rev;
+};
+
+with pkgs.lib;
+
 let
-  commonLib = import ./lib.nix;
+  nixosTests = (import ./. {}).nixosTests;
   getArchDefault = system: let
     table = {
-      x86_64-linux = import ./. { target = "x86_64-linux"; };
-      x86_64-darwin = import ./. { target = "x86_64-darwin"; };
-      x86_64-windows = import ./. { target = "x86_64-windows"; };
+      x86_64-linux = import ./. { system = "x86_64-linux"; };
+      x86_64-darwin = import ./. { system = "x86_64-darwin"; };
+      x86_64-windows = import ./. { system = "x86_64-linux"; crossSystem = "x86_64-windows"; };
     };
   in table.${system};
   default = getArchDefault builtins.currentSystem;
@@ -32,21 +73,11 @@ let
       #dockerImage = wrapDockerImage cluster;
     };
   };
-in
-{ cardano-node ? { outPath = ./.; rev = "abcdef"; }, ... }@args:
-(commonLib.nix-tools.release-nix {
-  package-set-path = ./nix/nix-tools.nix;
-  _this = cardano-node;
-
-  # packages from our stack.yaml or plan file (via nix/pkgs.nix) we
-  # are interested in building on CI via nix-tools.
-  packages = [ "cardano-node" ];
-  # TODO: use forEnvironments
   extraBuilds = let
     # only build nixos tests for linux
     default = getArchDefault "x86_64-linux";
   in {
-    inherit (default) nixosTests;
+    inherit nixosTests;
   } // (builtins.listToAttrs (map makeRelease [
     "mainnet"
     "staging"
@@ -55,54 +86,32 @@ in
     "testnet"
   ]));
 
-  # The set of jobs we consider crutial for each CI run.
-  # if a single one of these fails, the build will be marked
-  # as failed.
-  #
-  # The names can be looked up on hydra when in doubt.
-  #
-  # custom jobs will follow their name as set forth in
-  # other-packages.
-  #
-  # nix-tools packages are prefixed with `nix-tools` and
-  # follow the following naming convention:
-  #
-  #   namespace                      optional cross compilation prefix                 build machine
-  #   .-------.                              .-----------------.                .--------------------------.
-  #   nix-tools.{libs,exes,tests,benchmarks}.{x86_64-pc-mingw-,}$pkg.$component.{x86_64-linux,x86_64-darwin}
-  #             '--------------------------'                    '-------------'
-  #                 component type                          cabal pkg and component*
-  #
-  # * note that for `libs`, $component is empty, as cabal only
-  #   provides a single library for packages right now.
-  # * note that for `exes`, $component is also empty, because it
-  #   it provides all exes under a single result directory.
-  #   To  specify a single executable component to build, use
-  #   `cexes` as component type.
-  #
-  # Example:
-  #
-  #   nix-tools.libs.ouroboros-consensus.x86_64-darwin -- will build the ouroboros-consensus library on and for macOS
-  #   nix-tools.libs.x86_64-pc-mingw32-ouroboros-network.x86_64-linux -- will build the ouroboros-network library on linux for windows.
-  #   nix-tools.tests.ouroboros-consensus.test-crypto.x86_64-linux -- will build and run the test-crypto from the
-  #                                                          ouroboros-consensus package on linux.
+  testsSupportedSystems = [ "x86_64-linux" "x86_64-darwin" ];
+  # Recurse through an attrset, returning all test derivations in a list.
+  collectTests' = ds: filter (d: elem d.system testsSupportedSystems) (collect isDerivation ds);
+  # Adds the package name to the test derivations for windows-testing-bundle.nix
+  # (passthru.identifier.name does not survive mapTestOn)
+  collectTests = ds: concatLists (
+    mapAttrsToList (packageName: package:
+      map (drv: drv // { inherit packageName; }) (collectTests' package)
+    ) ds);
 
-  # The required jobs that must pass for ci not to fail:
-  required-name = "cardano-node-required-checks";
-  required-targets = jobs: [
-    # targets are specified using above nomenclature:
-    jobs.nix-tools.libs.cardano-node.x86_64-darwin
-    jobs.nix-tools.libs.cardano-node.x86_64-linux
-    jobs.nix-tools.exes.cardano-node.x86_64-darwin
-    jobs.nix-tools.exes.cardano-node.x86_64-linux
-    jobs.nix-tools.tests.cardano-node.cardano-node-test.x86_64-linux
+  inherit (systems.examples) mingwW64 musl64;
 
-    # windows cross compilation targets
-    jobs.nix-tools.libs.x86_64-pc-mingw32-cardano-node.x86_64-linux
-    jobs.nix-tools.exes.x86_64-pc-mingw32-cardano-node.x86_64-linux
-    jobs.nix-tools.tests.x86_64-pc-mingw32-cardano-node.cardano-node-test.x86_64-linux
+  jobs = {
+    native = mapTestOn (__trace (__toJSON (packagePlatforms project)) (packagePlatforms project));
+    "${mingwW64.config}" = mapTestOnCross mingwW64 (packagePlatformsCross project);
+    musl64 = mapTestOnCross musl64 (packagePlatformsCross project);
+  } // extraBuilds // (mkRequiredJob (
+      collectTests jobs.native.tests ++
+      collectTests jobs.native.benchmarks ++ [
+      jobs.native.cardano-node.x86_64-darwin
+      jobs.native.cardano-node.x86_64-linux
+      # windows cross compilation targets
+      #jobs.x86_64-pc-mingw32-cardano-node.x86_64-linux
 
-    # Chairman consensus test TODO: fix the chairman test
-    jobs.nixosTests.chairmansCluster.x86_64-linux
-  ];
-} (builtins.removeAttrs args ["cardano-node"]))
+      # Chairman consensus test TODO: fix the chairman test
+      jobs.nixosTests.chairmansCluster.x86_64-linux
+    ]));
+
+in jobs
