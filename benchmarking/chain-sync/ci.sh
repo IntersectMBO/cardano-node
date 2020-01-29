@@ -9,9 +9,10 @@ fi
 set -euo pipefail
 
 BASEDIR="$(dirname $0)"
+HOURS="$2"
 
 # >> cpu time limit in seconds
-TIME_LIMIT=$((60*60))
+TIME_LIMIT=$((${HOURS}*60*60))
 
 CLUSTER="$1"
 
@@ -25,4 +26,4 @@ rm -rf "./state-node-$CLUSTER"
 
 timeout ${TIME_LIMIT} ./launch_node || true
 
-$BASEDIR/analyse-logs.sh | tee benchmark-results.log
+$BASEDIR/analyse-logs.sh ${CLUSTER} | tee benchmark-full-sync-results.log

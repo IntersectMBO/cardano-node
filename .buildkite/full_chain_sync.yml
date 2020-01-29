@@ -1,0 +1,18 @@
+steps:
+  - label: 'Chain-sync benchmark Mainnet'
+    command:
+      - ./benchmarking/chain-sync/ci.sh mainnet 6
+    timeout_in_minutes: 370
+    artifact_paths:
+      - "benchmark-full-sync-results.log"
+    agents:
+      system: x86_64-linux
+
+  - label: 'Chain-sync benchmark Testnet'
+    command:
+      - ./benchmarking/chain-sync/ci.sh testnet 6
+    timeout_in_minutes: 370
+    artifact_paths:
+      - "benchmark-full-sync-results.log"
+    agents:
+      system: x86_64-linux
