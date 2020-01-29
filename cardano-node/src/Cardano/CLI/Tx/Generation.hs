@@ -454,24 +454,31 @@ mkTransaction
 mkTransaction cfg inputs mChangeAddress payments txAdditionalSize =
   (mChange, fees, offsetMap, genTx)
  where
-  -- Take the first input to get signingKey and txoutFrom value.
-  ((_, txoutFrom), signingKey) = NE.head inputs
-  paymentsList = toList payments
-  txOuts       = map snd paymentsList
+  -- Each input contains the same 'signingKey' and the same 'txOutAddress',
+  -- so pick the first one.
+  ((_, firstTxOutFrom), signingKey) = NE.head inputs
+  -- Take all txoutFrom's.
+  allTxOutFrom  = NE.map (snd . fst) inputs
 
-  inpValue      = CC.UTxO.txOutValue txoutFrom
+  paymentsList  = toList payments
+  txOuts        = map snd paymentsList
+
+  totalInpValue = foldl' (\s txoutFrom -> s `addLovelace` CC.UTxO.txOutValue txoutFrom)
+                         (assumeBound $ CC.Common.mkLovelace 0)
+                         allTxOutFrom
+
   totalOutValue = foldl' (\s txout -> s `addLovelace` CC.UTxO.txOutValue txout)
                          (assumeBound $ CC.Common.mkLovelace 0)
                          txOuts
   fees          = assumeBound $ CC.Common.mkLovelace 1000000
-  changeValue   = inpValue `subLoveLace` (totalOutValue `addLovelace` fees)
+  changeValue   = totalInpValue `subLoveLace` (totalOutValue `addLovelace` fees)
 
       -- change the order of comparisons first check emptiness of txouts AND remove appendr after
 
   (txOutputs, mChange) =
     if (CC.Common.unsafeGetLovelace changeValue) > 0
     then
-      let changeAddress = fromMaybe (CC.UTxO.txOutAddress txoutFrom) mChangeAddress
+      let changeAddress = fromMaybe (CC.UTxO.txOutAddress firstTxOutFrom) mChangeAddress
           changeTxOut   = CC.UTxO.TxOut {
                                       CC.UTxO.txOutAddress = changeAddress
                                     , CC.UTxO.txOutValue   = changeValue
