@@ -446,12 +446,14 @@ mkTransaction
   -- ^ Each recipient and their payment details
   -> Maybe TxAdditionalSize
   -- ^ Optional size of additional binary blob in transaction (as 'txAttributes')
+  -> Word64
+  -- ^ Tx fee.
   -> ( Maybe (Word32, CC.Common.Lovelace) -- The 'change' index and value (if any)
      , CC.Common.Lovelace                 -- The associated fees
      , Map r Word32                       -- The offset map in the transaction below
      , GenTx ByronBlock
      )
-mkTransaction cfg inputs mChangeAddress payments txAdditionalSize =
+mkTransaction cfg inputs mChangeAddress payments txAdditionalSize txFee =
   (mChange, fees, offsetMap, genTx)
  where
   -- Each input contains the same 'signingKey' and the same 'txOutAddress',
@@ -470,7 +472,7 @@ mkTransaction cfg inputs mChangeAddress payments txAdditionalSize =
   totalOutValue = foldl' (\s txout -> s `addLovelace` CC.UTxO.txOutValue txout)
                          (assumeBound $ CC.Common.mkLovelace 0)
                          txOuts
-  fees          = assumeBound $ CC.Common.mkLovelace 1000000
+  fees          = assumeBound $ CC.Common.mkLovelace txFee
   changeValue   = totalInpValue `subLoveLace` (totalOutValue `addLovelace` fees)
 
       -- change the order of comparisons first check emptiness of txouts AND remove appendr after
@@ -814,6 +816,7 @@ createMoreFundCoins llTracer
                                                                Nothing
                                                                outs
                                                                Nothing
+                                                               txFee
             !txId = getTxIdFromGenTx genTx
             txDetailsList = (flip map) (Map.toList outIndices) $
                 \(_, txInIndex) ->
@@ -954,6 +957,7 @@ txGenerator benchTracer
                                                           (Just addressForChange)
                                                           recipients
                                                           txAdditionalSize
+                                                          txFee
     (tx :) <$> createMainTxs (txsNum - 1) insNumPerTx updatedFunds
 
   -- Get inputs for one main transaction, using available funds.
