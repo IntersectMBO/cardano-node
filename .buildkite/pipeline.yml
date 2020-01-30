@@ -11,6 +11,11 @@ steps:
     agents:
       system: x86_64-linux
 
+  - label: 'cabal-project-checksum'
+    command: 'nix-build lib.nix -A iohkNix.checkCabalProject -o check-cabal-project.sh && ./check-cabal-project.sh'
+    agents:
+      system: x86_64-linux
+
   - label: 'release.nix'
     command: 'nix-build -A check-hydra -o check-hydra.sh && ./check-hydra.sh'
     agents:
