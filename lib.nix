@@ -1,7 +1,8 @@
+{ ... }@args:
 let
   sources = import ./nix/sources.nix;
   pkgs' = import sources.nixpkgs {};
-  nixTools = import ./nix/nix-tools.nix {};
+  nixTools = import ./nix/nix-tools.nix args;
   haskellNixJson = let
     src = sources."haskell.nix";
   in __toJSON {

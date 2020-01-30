@@ -1,6 +1,7 @@
 { pkgs ? import <nixpkgs> {}
 , iohk-extras ? {}
 , iohk-module ? {}
+, profiling ? false
 , haskell
 , ...
 }:
@@ -40,6 +41,7 @@ let
         packages.ekg.components.library.enableSeparateDataOutput = true;
         packages.cardano-node.configureFlags = [ "--ghc-option=-Werror" ];
         packages.cardano-config.configureFlags = [ "--ghc-option=-Werror" ];
+        enableLibraryProfiling = profiling;
       }
     ];
   };

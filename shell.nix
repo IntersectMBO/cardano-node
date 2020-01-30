@@ -1,5 +1,6 @@
 { withHoogle ? true
-, localLib ? import ./lib.nix
+, profiling ? false
+, localLib ? import ./lib.nix { inherit profiling; }
 }:
 let
   pkgs = localLib.iohkNix.pkgs;

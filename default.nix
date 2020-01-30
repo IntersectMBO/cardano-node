@@ -1,10 +1,7 @@
-let
-  commonLib = import ./lib.nix;
-  lib = commonLib.pkgs.lib;
-in
 { customConfig ? {}
 , target ? builtins.currentSystem
 , interactive ? false
+, profiling ? false
 }:
 #
 # The default.nix file. This will generate targets for all
@@ -35,6 +32,8 @@ in
 # We will need to import the iohk-nix common lib, which includes
 # the nix-tools tooling.
 let
+  commonLib = import ./lib.nix { inherit profiling; };
+  lib = commonLib.pkgs.lib;
   system = if target != "x86_64-windows" then target else builtins.currentSystem;
   crossSystem = if target == "x86_64-windows" then lib.systems.examples.mingwW64 else null;
   nixTools = import ./nix/nix-tools.nix { inherit system crossSystem; };
