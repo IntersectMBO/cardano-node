@@ -1,5 +1,5 @@
 let
-  commonLib = import ./lib.nix;
+  commonLib = import ./lib.nix {};
   getArchDefault = system: let
     table = {
       x86_64-linux = import ./. { target = "x86_64-linux"; };

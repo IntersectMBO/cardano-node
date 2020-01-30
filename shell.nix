@@ -1,5 +1,6 @@
 { withHoogle ? true
-, localLib ? import ./lib.nix
+, profiling ? false
+, localLib ? import ./lib.nix { inherit profiling; }
 }:
 let
   pkgs = localLib.iohkNix.pkgs;
@@ -21,6 +22,8 @@ let
       "
     '';
   };
+  haskell-nix-src = builtins.fetchTarball https://github.com/input-output-hk/haskell.nix/archive/master.tar.gz;
+  haskell-nix = (import (haskell-nix-src + "/nixpkgs") (import haskell-nix-src)).haskell-nix;
 in
 default.nix-tools._raw.shellFor {
   packages    = ps: with ps; [ cardano-node ];
@@ -31,6 +34,10 @@ default.nix-tools._raw.shellFor {
     ghcid.components.exes.ghcid
   ]) ++
   (with default.nix-tools._raw._config._module.args.pkgs; [
+    (haskell-nix.hackage-package {
+      name = "eventlog2html";
+      version = "0.6.0";
+    }).components.exes.eventlog2html
     tmux
   ]);
 } // { inherit devops; }

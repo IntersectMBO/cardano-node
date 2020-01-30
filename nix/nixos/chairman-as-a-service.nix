@@ -3,7 +3,7 @@
 , pkgs
 , ... }:
 
-with import ../../lib.nix; with lib; with builtins;
+with import ../../lib.nix {}; with lib; with builtins;
 let
   cfg  = config.services.chairman;
   ncfg = config.services.cardano-node;
