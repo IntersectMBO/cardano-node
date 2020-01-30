@@ -446,32 +446,41 @@ mkTransaction
   -- ^ Each recipient and their payment details
   -> Maybe TxAdditionalSize
   -- ^ Optional size of additional binary blob in transaction (as 'txAttributes')
+  -> Word64
+  -- ^ Tx fee.
   -> ( Maybe (Word32, CC.Common.Lovelace) -- The 'change' index and value (if any)
      , CC.Common.Lovelace                 -- The associated fees
      , Map r Word32                       -- The offset map in the transaction below
      , GenTx ByronBlock
      )
-mkTransaction cfg inputs mChangeAddress payments txAdditionalSize =
+mkTransaction cfg inputs mChangeAddress payments txAdditionalSize txFee =
   (mChange, fees, offsetMap, genTx)
  where
-  -- Take the first input to get signingKey and txoutFrom value.
-  ((_, txoutFrom), signingKey) = NE.head inputs
-  paymentsList = toList payments
-  txOuts       = map snd paymentsList
+  -- Each input contains the same 'signingKey' and the same 'txOutAddress',
+  -- so pick the first one.
+  ((_, firstTxOutFrom), signingKey) = NE.head inputs
+  -- Take all txoutFrom's.
+  allTxOutFrom  = NE.map (snd . fst) inputs
 
-  inpValue      = CC.UTxO.txOutValue txoutFrom
+  paymentsList  = toList payments
+  txOuts        = map snd paymentsList
+
+  totalInpValue = foldl' (\s txoutFrom -> s `addLovelace` CC.UTxO.txOutValue txoutFrom)
+                         (assumeBound $ CC.Common.mkLovelace 0)
+                         allTxOutFrom
+
   totalOutValue = foldl' (\s txout -> s `addLovelace` CC.UTxO.txOutValue txout)
                          (assumeBound $ CC.Common.mkLovelace 0)
                          txOuts
-  fees          = assumeBound $ CC.Common.mkLovelace 1000000
-  changeValue   = inpValue `subLoveLace` (totalOutValue `addLovelace` fees)
+  fees          = assumeBound $ CC.Common.mkLovelace txFee
+  changeValue   = totalInpValue `subLoveLace` (totalOutValue `addLovelace` fees)
 
       -- change the order of comparisons first check emptiness of txouts AND remove appendr after
 
   (txOutputs, mChange) =
     if (CC.Common.unsafeGetLovelace changeValue) > 0
     then
-      let changeAddress = fromMaybe (CC.UTxO.txOutAddress txoutFrom) mChangeAddress
+      let changeAddress = fromMaybe (CC.UTxO.txOutAddress firstTxOutFrom) mChangeAddress
           changeTxOut   = CC.UTxO.TxOut {
                                       CC.UTxO.txOutAddress = changeAddress
                                     , CC.UTxO.txOutValue   = changeValue
@@ -807,6 +816,7 @@ createMoreFundCoins llTracer
                                                                Nothing
                                                                outs
                                                                Nothing
+                                                               txFee
             !txId = getTxIdFromGenTx genTx
             txDetailsList = (flip map) (Map.toList outIndices) $
                 \(_, txInIndex) ->
@@ -947,6 +957,7 @@ txGenerator benchTracer
                                                           (Just addressForChange)
                                                           recipients
                                                           txAdditionalSize
+                                                          txFee
     (tx :) <$> createMainTxs (txsNum - 1) insNumPerTx updatedFunds
 
   -- Get inputs for one main transaction, using available funds.
