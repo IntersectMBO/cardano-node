@@ -106,34 +106,37 @@ runNode loggingLayer nc nCli = do
                                          (ncUpdate nc)
                                          (ncProtocol nc)
 
-    SomeProtocol p <- case eitherSomeProtocol of
-                        Left err -> (putTextLn . pack $ show err) >> exitFailure
-                        Right (SomeProtocol p) -> pure $ SomeProtocol p
+    SomeProtocol (p :: Consensus.Protocol blk) <-
+      case eitherSomeProtocol of
+        Left err -> (putTextLn . pack $ show err) >> exitFailure
+        Right (SomeProtocol p) -> pure $ SomeProtocol p
 
     tracers <- mkTracers (ncTraceOptions nc) trace
 
     case ncViewMode nc of
-      SimpleView -> handleSimpleNode p trace tracers nCli nc
+      SimpleView -> handleSimpleNode p trace tracers nCli nc (const $ pure ())
       LiveView   -> do
 #ifdef UNIX
         let c = llConfiguration loggingLayer
         -- We run 'handleSimpleNode' as usual and run TUI thread as well.
         -- turn off logging to the console, only forward it through a pipe to a central logging process
         CM.setDefaultBackends c [KatipBK, TraceForwarderBK, UserDefinedBK "LiveViewBackend"]
-        -- User will see a terminal graphics and will be able to interact with it.
-        nodeThread <- Async.async $ handleSimpleNode p trace tracers nCli nc
 
-        be :: LiveViewBackend Text <- realize c
+        be :: LiveViewBackend blk Text <- realize c
         let lvbe = MkBackend { bEffectuate = effectuate be, bUnrealize = unrealize be }
         llAddBackend loggingLayer lvbe (UserDefinedBK "LiveViewBackend")
         let nId = fromMaybe (panic "LiveView not possible for real protocols as yet") (ncNodeId nc)
         setTopology be nId
-        setNodeThread be nodeThread
         captureCounters be trace
+
+        -- User will see a terminal graphics and will be able to interact with it.
+        nodeThread <- Async.async $ handleSimpleNode p trace tracers nCli nc
+                       (setNodeKernel be)
+        setNodeThread be nodeThread
 
         void $ Async.waitAny [nodeThread]
 #else
-        handleSimpleNode p trace tracers nCli nc
+        handleSimpleNode p trace tracers nCli nc (const $ pure ())
 #endif
   where
     hostname = do
@@ -143,14 +146,19 @@ runNode loggingLayer nc nCli = do
 -- | Sets up a simple node, which will run the chain sync protocol and block
 -- fetch protocol, and, if core, will also look at the mempool when trying to
 -- create a new block.
-handleSimpleNode :: forall blk. RunNode blk
-                 => Consensus.Protocol blk
-                 -> Tracer IO (LogObject Text)
-                 -> Tracers ConnectionId blk
-                 -> NodeCLI
-                 -> NodeConfiguration
-                 -> IO ()
-handleSimpleNode p trace nodeTracers nCli nc = do
+handleSimpleNode
+  :: forall blk. RunNode blk
+  => Consensus.Protocol blk
+  -> Tracer IO (LogObject Text)
+  -> Tracers ConnectionId blk
+  -> NodeCLI
+  -> NodeConfiguration
+  -> (NodeKernel IO ConnectionId blk -> IO ())
+  -- ^ Called on the 'NodeKernel' after creating it, but before the network
+  -- layer is initialised.  This implies this function must not block,
+  -- otherwise the node won't actually start.
+  -> IO ()
+handleSimpleNode p trace nodeTracers nCli nc onKernel = do
     NetworkTopology nodeSetups <-
       either error id <$> readTopologyFile (unTopology . topFile $ mscFp nCli)
 
@@ -255,6 +263,7 @@ handleSimpleNode p trace nodeTracers nCli nc = do
         void $ onEachChange registry id Nothing
                             (ChainDB.getTipPoint chainDB) $ \tip ->
           atomically $ writeTVar varTip tip
+        onKernel nodeKernel
   where
     nid :: Int
     nid = case ncNodeId nc of

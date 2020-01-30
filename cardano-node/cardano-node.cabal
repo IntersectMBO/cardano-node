@@ -71,6 +71,7 @@ library
                      , cardano-prelude
                      , cardano-prelude-test
                      , cardano-shell
+                     , cardano-slotting
                      , contra-tracer
                      , cborg >= 0.2.2 && < 0.3
                      , containers

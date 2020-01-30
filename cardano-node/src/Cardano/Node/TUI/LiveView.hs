@@ -1,12 +1,15 @@
 {-# LANGUAGE BangPatterns          #-}
+{-# LANGUAGE CPP                   #-}
 {-# LANGUAGE DataKinds             #-}
 {-# LANGUAGE DeriveAnyClass        #-}
+{-# LANGUAGE DeriveFunctor         #-}
+{-# LANGUAGE DeriveFoldable        #-}
 {-# LANGUAGE DeriveGeneric         #-}
+{-# LANGUAGE DeriveTraversable     #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE RankNTypes            #-}
-{-# LANGUAGE CPP                   #-}
 
 {-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
@@ -17,6 +20,7 @@ module Cardano.Node.TUI.LiveView (
     , captureCounters
     , setTopology
     , setNodeThread
+    , setNodeKernel
     ) where
 
 import           Cardano.Prelude hiding (isPrefixOf, modifyMVar_, newMVar, on,
@@ -30,6 +34,9 @@ import           Control.Concurrent.MVar.Strict (MVar, modifyMVar_, newMVar, rea
 import           Control.DeepSeq (rwhnf)
 import           Control.Monad (forever, void)
 import           Control.Monad.IO.Class (liftIO)
+import qualified Control.Monad.Class.MonadSTM.Strict as STM
+import qualified Data.Map.Strict as Map
+import qualified Data.Set as Set
 import           Data.Text (Text, pack, unpack)
 import           Data.Time.Calendar (Day (..))
 import           Data.Time.Clock (NominalDiffTime, UTCTime (..), addUTCTime,
@@ -37,6 +44,7 @@ import           Data.Time.Clock (NominalDiffTime, UTCTime (..), addUTCTime,
 import           Data.Time.Format (defaultTimeLocale, formatTime)
 import           Data.Version (showVersion)
 import           Data.Word (Word64)
+import           Numeric (showFFloat)
 
 import qualified Brick.AttrMap as A
 import qualified Brick.BChan
@@ -69,8 +77,17 @@ import           Cardano.BM.Data.SubTrace
 import           Cardano.BM.Trace
 
 import           Cardano.Node.TUI.GitRev (gitRev)
+import           Cardano.Slotting.Slot (unSlotNo)
+import qualified Ouroboros.Network.AnchoredFragment as Net
+import qualified Ouroboros.Network.Block as Net
+import           Ouroboros.Consensus.Block (GetHeader(..))
+import           Ouroboros.Consensus.Node (NodeKernel(..), ConnectionId(..))
 import           Ouroboros.Consensus.NodeId
+import qualified Ouroboros.Network.BlockFetch.ClientState as Net
+import qualified Ouroboros.Network.BlockFetch.ClientRegistry as Net
 import           Paths_cardano_node (version)
+
+import           Text.Printf (printf)
 
 -- constants, to be evaluated from host system
 
@@ -82,7 +99,7 @@ pagesize = 4096
 clktck :: Integer
 clktck = 100
 
-instance NoUnexpectedThunks a => NoUnexpectedThunks (LiveViewBackend a) where
+instance NoUnexpectedThunks a => NoUnexpectedThunks (LiveViewBackend blk a) where
   showTypeOf _ = "LiveViewBackend"
   whnfNoUnexpectedThunks ctxt liveViewBackend = do
     let liveViewMVar = getbe liveViewBackend
@@ -91,16 +108,22 @@ instance NoUnexpectedThunks a => NoUnexpectedThunks (LiveViewBackend a) where
     putMVar liveViewMVar a
     return result
 
-type LiveViewMVar a = MVar (LiveViewState a)
-newtype LiveViewBackend a = LiveViewBackend { getbe :: LiveViewMVar a }
+type LiveViewMVar blk a = MVar (LiveViewState blk a)
+newtype LiveViewBackend blk a = LiveViewBackend { getbe :: LiveViewMVar blk a }
 
 data ColorTheme
     = DarkTheme
     | LightTheme
     deriving (Eq, Generic, NoUnexpectedThunks, NFData)
 
-data LiveViewState a = LiveViewState
-    { lvsRelease              :: !String
+data Screen
+    = MainView
+    | Peers
+    deriving (Generic, NoUnexpectedThunks, NFData)
+
+data LiveViewState blk a = LiveViewState
+    { lvsScreen               :: !Screen
+    , lvsRelease              :: !String
     , lvsNodeId               :: !Text
     , lvsVersion              :: !String
     , lvsCommit               :: !String
@@ -146,11 +169,34 @@ data LiveViewState a = LiveViewState
     , lvsMempoolCapacity      :: !Word64
     , lvsMempoolCapacityBytes :: !Word64
     , lvsMessage              :: !(Maybe a)
+    -- Async threads.
     , lvsUIThread             :: !LiveViewThread
     , lvsMetricsThread        :: !LiveViewThread
     , lvsNodeThread           :: !LiveViewThread
+
+    , lvsNodeKernel           :: !(SMaybe (LVNodeKernel blk))
+    , lvsPeers                :: [LVPeer blk]
     , lvsColorTheme           :: !ColorTheme
-    } deriving (Eq, Generic, NoUnexpectedThunks, NFData)
+    } deriving (Generic, NFData, NoUnexpectedThunks)
+
+data SMaybe a
+  = SNothing
+  | SJust !a
+  deriving (Foldable, Functor, Generic, NFData, NoUnexpectedThunks, Traversable)
+
+fromSMaybe :: a -> SMaybe a -> a
+fromSMaybe x SNothing = x
+fromSMaybe _ (SJust x) = x
+
+data LVNodeKernel blk = LVNodeKernel
+  { getNodeKernel :: !(NodeKernel IO ConnectionId blk) }
+  deriving (Generic)
+
+instance NoUnexpectedThunks (LVNodeKernel blk) where
+    whnfNoUnexpectedThunks _ _ = pure NoUnexpectedThunks
+
+instance NFData (LVNodeKernel blk) where
+    rnf _ = ()
 
 -- | Type wrapper to simplify derivations.
 newtype LiveViewThread = LiveViewThread
@@ -163,7 +209,7 @@ instance NoUnexpectedThunks LiveViewThread where
 instance NFData LiveViewThread where
     rnf = rwhnf
 
-instance IsBackend LiveViewBackend Text where
+instance IsBackend (LiveViewBackend blk) Text where
     bekind _ = UserDefinedBK "LiveViewBackend"
     realize _ = do
         !initState <- initLiveViewState
@@ -204,7 +250,7 @@ checkForUnexpectedThunks context unexpectedThunks = do
 checkForUnexpectedThunks _context _unexpectedThunks = pure ()
 #endif
 
-instance IsEffectuator LiveViewBackend Text where
+instance IsEffectuator (LiveViewBackend blk) Text where
     effectuate lvbe item = do
         -- Check for unexpected thunks
         checkForUnexpectedThunks ["IsEffectuator LiveViewBackend"] lvbe
@@ -295,10 +341,9 @@ instance IsEffectuator LiveViewBackend Text where
                                          }
 
                     LogValue "Net.IpExt:InOctets" (Bytes inBytes) ->
-                        let currentTimeInNs = utc2ns (tstamp meta)
-                        in
                         modifyMVar_ (getbe lvbe) $ \lvs -> do
-                            let timeDiff        = fromIntegral (currentTimeInNs - lvsNetworkUsageInNs lvs) :: Float
+                            let currentTimeInNs = utc2ns (tstamp meta)
+                                timeDiff        = fromIntegral (currentTimeInNs - lvsNetworkUsageInNs lvs) :: Float
                                 timeDiffInSecs  = timeDiff / 1000000000
                                 bytesDiff       = fromIntegral (inBytes - lvsNetworkUsageInLast lvs) :: Float
                                 bytesDiffInKB   = bytesDiff / 1024
@@ -308,13 +353,33 @@ instance IsEffectuator LiveViewBackend Text where
                             -- Check for unexpected thunks
                             checkForUnexpectedThunks ["Net.IpExt:InOctets LiveViewBackend"] lvs
 
+                            peers <- fromSMaybe mempty <$> sequence (extractPeers . getNodeKernel <$> lvsNodeKernel lvs)
+
                             return $ lvs { lvsNetworkUsageInCurr = currentNetRate
                                          , lvsNetworkUsageInPerc = (currentNetRate / (maxNetRate / 100.0)) / 100.0
                                          , lvsNetworkUsageInLast = inBytes
                                          , lvsNetworkUsageInNs   = currentTimeInNs
                                          , lvsNetworkUsageInMax  = maxNetRate
                                          , lvsUpTime             = diffUTCTime (tstamp meta) (lvsStartTime lvs)
+                                         , lvsPeers              = peers
                                          }
+                          where
+                            tuple3pop :: (a, b, c) -> (a, b)
+                            tuple3pop (a, b, _) = (a, b)
+
+                            getCandidates
+                              :: STM.StrictTVar IO (Map peer (STM.StrictTVar IO (Net.AnchoredFragment (Header blk))))
+                              -> STM.STM IO (Map peer (Net.AnchoredFragment (Header blk)))
+                            getCandidates var = STM.readTVar var >>= traverse STM.readTVar
+
+                            extractPeers :: NodeKernel IO ConnectionId blk -> IO [LVPeer blk]
+                            extractPeers kernel = do
+                              peerStates <- fmap tuple3pop <$> (atomically . (>>= traverse Net.readFetchClientState) . Net.readFetchClientsStateVars . getFetchClientRegistry $ kernel)
+                              candidates <- atomically . getCandidates . getNodeCandidates $ kernel
+
+                              pure $ Map.elems . flip Map.mapMaybeWithKey candidates $
+                                \cid af -> Map.lookup cid peerStates <&>
+                                \(status, inflight) -> LVPeer cid af status inflight
 
                     LogValue "Net.IpExt:OutOctets" (Bytes outBytes) ->
                         let currentTimeInNs = utc2ns (tstamp meta)
@@ -414,7 +479,7 @@ instance IsEffectuator LiveViewBackend Text where
 
     handleOverflow _ = pure ()
 
-initLiveViewState :: IO (LiveViewState a)
+initLiveViewState :: IO (LiveViewState blk a)
 initLiveViewState = do
     now <- getCurrentTime
 
@@ -423,7 +488,8 @@ initLiveViewState = do
         !maxBytesPerTx      = 4096 :: Word64
 
     return $ LiveViewState
-                { lvsRelease                = "Shelley"
+                { lvsScreen                 = MainView
+                , lvsRelease                = "Byron"
                 , lvsNodeId                 = ""
                 , lvsVersion                = showVersion version
                 , lvsCommit                 = unpack gitRev
@@ -468,15 +534,15 @@ initLiveViewState = do
                 , lvsMempoolCapacity        = mempoolCapacity
                 , lvsMempoolCapacityBytes   = mempoolCapacity * maxBytesPerTx
                 , lvsMessage                = Nothing
-                -- Async threads.
                 , lvsUIThread               = LiveViewThread Nothing
                 , lvsMetricsThread          = LiveViewThread Nothing
                 , lvsNodeThread             = LiveViewThread Nothing
-
+                , lvsNodeKernel             = SNothing
+                , lvsPeers                  = mempty
                 , lvsColorTheme             = DarkTheme
                 }
 
-setTopology :: NFData a => LiveViewBackend a -> NodeId -> IO ()
+setTopology :: NFData a => LiveViewBackend blk a -> NodeId -> IO ()
 setTopology lvbe nodeid =
     modifyMVar_ (getbe lvbe) $ \lvs ->
         return $ lvs { lvsNodeId = namenum }
@@ -485,12 +551,17 @@ setTopology lvbe nodeid =
         CoreId num  -> "C" <> pack (show num)
         RelayId num -> "R" <> pack (show num)
 
-setNodeThread :: NFData a => LiveViewBackend a -> Async.Async () -> IO ()
+setNodeThread :: NFData a => LiveViewBackend blk a -> Async.Async () -> IO ()
 setNodeThread lvbe nodeThr =
   modifyMVar_ (getbe lvbe) $ \lvs ->
       return $ lvs { lvsNodeThread = LiveViewThread $ Just nodeThr }
 
-captureCounters :: NFData a => LiveViewBackend a -> Trace IO Text -> IO ()
+setNodeKernel :: NFData a => LiveViewBackend blk a -> NodeKernel IO ConnectionId blk -> IO ()
+setNodeKernel lvbe nodeKern =
+    modifyMVar_ (getbe lvbe) $ \lvs ->
+        return $ lvs { lvsNodeKernel = SJust (LVNodeKernel nodeKern) }
+
+captureCounters :: NFData a => LiveViewBackend blk a -> Trace IO Text -> IO ()
 captureCounters lvbe trace0 = do
     let trace' = appendName "metrics" trace0
         counters = [MemoryStats, ProcessStats, NetStats, IOStats]
@@ -631,40 +702,101 @@ darkTheme = newTheme (V.white `on` darkMainBG)
 -- UI drawing
 -------------------------------------------------------------------------------
 
-drawUI :: LiveViewState a -> [Widget ()]
-drawUI p = [mainWidget p]
+data LVPeer blk =
+  LVPeer
+  !ConnectionId
+  !(Net.AnchoredFragment (Header blk))
+  !(Net.PeerFetchStatus (Header blk))
+  !(Net.PeerFetchInFlight (Header blk))
+  deriving (Generic)
 
-mainWidget :: LiveViewState a -> Widget ()
-mainWidget p =
-      C.hCenter
-    . C.vCenter
-    . hLimitPercent 96
-    . vLimitPercent 96
-    $ mainContentW p
+instance NoUnexpectedThunks (LVPeer blk) where
+    whnfNoUnexpectedThunks _ _ = pure NoUnexpectedThunks
 
-mainContentW :: LiveViewState a -> Widget ()
-mainContentW p =
-      withBorderStyle BS.unicode
-    . B.border $ vBox
-        [ headerW p
-        , hBox [systemStatsW p, nodeInfoW p]
-        , keysMessageW
-        ]
+instance NFData (LVPeer blk) where
+    rnf _ = ()
+
+ppPeer :: LVPeer blk -> Text
+ppPeer (LVPeer cid _af status inflight) =
+  pack $ printf "%-15s %-8s %s" (ppCid cid) (ppStatus status) (ppInFlight inflight)
+ where
+   ppCid :: ConnectionId -> String
+   ppCid = takeWhile (/= ':') . show . remoteAddress
+
+   ppInFlight :: Net.PeerFetchInFlight header -> String
+   ppInFlight f = printf
+     "%5s  %3d  %5d  %6d"
+     (ppMaxSlotNo $ Net.peerFetchMaxSlotNo f)
+     (Net.peerFetchReqsInFlight f)
+     (Set.size $ Net.peerFetchBlocksInFlight f)
+     (Net.peerFetchBytesInFlight f)
+
+   ppMaxSlotNo :: Net.MaxSlotNo -> String
+   ppMaxSlotNo Net.NoMaxSlotNo = "???"
+   ppMaxSlotNo (Net.MaxSlotNo x) = show (unSlotNo x)
+
+   ppStatus :: Net.PeerFetchStatus header -> String
+   ppStatus Net.PeerFetchStatusShutdown      = "shutdown"
+   ppStatus Net.PeerFetchStatusAberrant      = "aberrant"
+   ppStatus Net.PeerFetchStatusBusy          = "fetching"
+   ppStatus (Net.PeerFetchStatusReady _blks) = "ready"
+
+drawUI :: LiveViewState blk a -> [Widget ()]
+drawUI p = case lvsScreen p of
+  MainView -> [withBorder . withHeaderFooter p . withSideBar p $ systemStatsW p]
+  Peers -> [withBorder . withHeaderFooter p . withSideBar p $ peerListContentW p]
+ where
+   withBorder :: Widget () -> Widget ()
+   withBorder
+     = C.hCenter . C.vCenter
+     . hLimitPercent 96 . vLimitPercent 96
+     . withBorderStyle BS.unicode . B.border
+
+   withHeaderFooter :: LiveViewState blk a -> Widget () -> Widget ()
+   withHeaderFooter lvs
+     = vBox
+     . (headerW lvs:)
+     . (:[keysMessageW])
+
+   withSideBar :: LiveViewState blk a -> Widget () -> Widget ()
+   withSideBar lvs
+     = hBox
+     . (:[nodeInfoW lvs])
+
+peerListContentW :: LiveViewState blk a -> Widget ()
+peerListContentW lvs
+  = padLeft   (T.Pad 1)
+  . padRight  (T.Pad 1)
+  . padBottom (T.Pad 1)
+  . padTop    (T.Pad 1)
+  . vBox
+  . ([ txt "Known peers"
+       & padBottom (T.Pad 1)
+     , txt . pack $ printf "%-15s %-8s %-5s  %-10s"
+       ("Address" :: String) ("Status" :: String) ("Slot" :: String) ("In flight:" :: String)
+     , (txt . pack $ printf "%31s Reqs Blocks   Bytes" ("" :: String))
+       & padBottom (T.Pad 1)
+     ] <>)
+  $ txt . ppPeer <$> lvsPeers lvs
 
 keysMessageW :: Widget ()
 keysMessageW =
       padBottom (T.Pad 1)
-    . padLeft   (T.Pad 2)
+    . padLeft   (T.Pad 1)
     $ hBox [ txt "Press "
            , withAttr keyAttr $ txt "Q"
            , txt " to quit, "
            , withAttr keyAttr $ txt "L"
            , txt "/"
            , withAttr keyAttr $ txt "D"
-           , txt " to change color theme"
+           , txt " to change color theme, "
+           , withAttr keyAttr $ txt "P"
+           , txt " for peer list, "
+           , withAttr keyAttr $ txt "Esc"
+           , txt " return to main screen"
            ]
 
-headerW :: LiveViewState a -> Widget ()
+headerW :: LiveViewState blk a -> Widget ()
 headerW p =
       C.hCenter
     . padTop   (T.Pad 1)
@@ -672,7 +804,7 @@ headerW p =
     . padRight (T.Pad 2)
     $ hBox [   withAttr cardanoAttr
              . padRight (T.Pad 10)
-             $ txt "CARDANO SL"
+             $ txt "CARDANO"
            , txt "release: "
            ,   withAttr releaseAttr
              $ str (lvsRelease p)
@@ -681,23 +813,27 @@ headerW p =
              $ txt (lvsNodeId p)
            ]
 
-systemStatsW :: LiveViewState a -> Widget ()
+systemStatsW :: LiveViewState blk a -> Widget ()
 systemStatsW p =
       padTop   (T.Pad 1)
-    . padLeft  (T.Pad 2)
-    . padRight (T.Pad 2)
-    $ vBox [ vBox [ hBox [ txt "Mempool txs:"
-                         , withAttr barValueAttr . padLeft T.Max . str . show $ lvsMempoolCapacity p
+    . padLeft  (T.Pad 1)
+    . padRight (T.Pad 1)
+    $ vBox [ hBox [ vBox [ hBox [ txt "Mempool (KB):"
+                                , withAttr barValueAttr . padLeft T.Max . str .
+                                  show . (floor :: Float -> Int) . (/ 1024) . fromIntegral $ lvsMempoolCapacityBytes p
+
+                                ]
+                         , padBottom (T.Pad 1) memPoolBytesBar
                          ]
-                  , padBottom (T.Pad 1) memPoolBar
-                  ]
-           , vBox [ hBox [ txt "Mempool bytes:"
-                         , withAttr barValueAttr . padLeft T.Max . str . show $ lvsMempoolCapacityBytes p
+                  , padLeft (T.Pad 2) $
+                    vBox [ hBox [ txt "Mempool (Txs):"
+                                , withAttr barValueAttr . padLeft T.Max . str . show $ lvsMempoolCapacity p
+                                ]
+                         , padBottom (T.Pad 1) memPoolBar
                          ]
-                  , padBottom (T.Pad 1) memPoolBytesBar
                   ]
            , vBox [ hBox [ txt "Memory usage:"
-                         , withAttr barValueAttr . padLeft T.Max $ str $ (take 5 $ show $ max (lvsMemoryUsageMax p) 200.0) <> " MB"
+                         , withAttr barValueAttr . padLeft T.Max $ str $ withOneDecimal (max (lvsMemoryUsageMax p) 200.0) <> " MB"
                          ]
                   , padBottom (T.Pad 1) memUsageBar
                   ]
@@ -707,25 +843,25 @@ systemStatsW p =
                   , padBottom (T.Pad 1) cpuUsageBar
                   ]
            , hBox [ vBox [ hBox [ txt "Disk R:"
-                                , withAttr barValueAttr . padLeft T.Max $ str $ (take 5 $ show $ max (lvsDiskUsageRMax p) 1.0) <> " KB/s"
+                                , withAttr barValueAttr . padLeft T.Max $ str $ withOneDecimal (max (lvsDiskUsageRMax p) 1.0) <> " KB/s"
                                 ]
                          , padBottom (T.Pad 1) diskUsageRBar
                          ]
                   , padLeft (T.Pad 3) $
                     vBox [ hBox [ txt "Disk W:"
-                                , withAttr barValueAttr . padLeft T.Max $ str $ (take 5 $ show $ max (lvsDiskUsageWMax p) 1.0) <> " KB/s"
+                                , withAttr barValueAttr . padLeft T.Max $ str $ withOneDecimal (max (lvsDiskUsageWMax p) 1.0) <> " KB/s"
                                 ]
                          , padBottom (T.Pad 1) diskUsageWBar
                          ]
                   ]
            , hBox [ vBox [ hBox [ txt "Network In:"
-                                , withAttr barValueAttr . padLeft T.Max $ str $ (take 5 $ show $ max (lvsNetworkUsageInMax p) 1.0) <> " KB/s"
+                                , withAttr barValueAttr . padLeft T.Max $ str $ withOneDecimal (max (lvsNetworkUsageInMax p) 1.0) <> " KB/s"
                                 ]
                          , padBottom (T.Pad 1) networkUsageInBar
                          ]
                   , padLeft (T.Pad 3) $
                     vBox [ hBox [ txt "Network Out:"
-                                , withAttr barValueAttr . padLeft T.Max $ str $ (take 5 $ show $ max (lvsNetworkUsageOutMax p) 1.0) <> " KB/s"
+                                , withAttr barValueAttr . padLeft T.Max $ str $ withOneDecimal (max (lvsNetworkUsageOutMax p) 1.0) <> " KB/s"
                                 ]
                          , padBottom (T.Pad 1) networkUsageOutBar
                          ]
@@ -741,7 +877,7 @@ systemStatsW p =
                  ) $ bar mempoolLabel (lvsMempoolPerc p)
     mempoolLabel = Just $ (show . lvsMempool $ p)
                         ++ " / "
-                        ++ take 5 (show $ lvsMempoolPerc p * 100) ++ "%"
+                        ++ withOneDecimal (lvsMempoolPerc p * 100) ++ "%"
     memPoolBytesBar :: forall n. Widget n
     memPoolBytesBar = updateAttrMap
                  (A.mapAttrNames [ (mempoolDoneAttr, P.progressCompleteAttr)
@@ -750,21 +886,21 @@ systemStatsW p =
                  ) $ bar mempoolBytesLabel (lvsMempoolBytesPerc p)
     mempoolBytesLabel = Just $ (show . lvsMempoolBytes $ p)
                         ++ " / "
-                        ++ take 5 (show $ lvsMempoolBytesPerc p * 100) ++ "%"
+                        ++ withOneDecimal (lvsMempoolBytesPerc p * 100) ++ "%"
     memUsageBar :: forall n. Widget n
     memUsageBar = updateAttrMap
                   (A.mapAttrNames [ (memDoneAttr, P.progressCompleteAttr)
                                   , (memToDoAttr, P.progressIncompleteAttr)
                                   ]
                   ) $ bar memLabel lvsMemUsagePerc
-    memLabel = Just $ take 5 (show $ lvsMemoryUsageCurr p) ++ " MB / max " ++ take 5 (show $ lvsMemoryUsageMax p) ++ " MB"
+    memLabel = Just $ withOneDecimal (lvsMemoryUsageCurr p) ++ " MB / max " ++ withOneDecimal (lvsMemoryUsageMax p) ++ " MB"
     cpuUsageBar :: forall n. Widget n
     cpuUsageBar = updateAttrMap
                   (A.mapAttrNames [ (cpuDoneAttr, P.progressCompleteAttr)
                                   , (cpuToDoAttr, P.progressIncompleteAttr)
                                   ]
                   ) $ bar cpuLabel (lvsCPUUsagePerc p)
-    cpuLabel = Just $ take 5 (show $ lvsCPUUsagePerc p * 100) ++ "%"
+    cpuLabel = Just $ withOneDecimal (lvsCPUUsagePerc p * 100) ++ "%"
 
     diskUsageRBar :: forall n. Widget n
     diskUsageRBar = updateAttrMap
@@ -772,7 +908,7 @@ systemStatsW p =
                                     , (diskIOToDoAttr, P.progressIncompleteAttr)
                                     ]
                     ) $ bar diskUsageRLabel (lvsDiskUsageRPerc p)
-    diskUsageRLabel = Just $ take 5 (show $ lvsDiskUsageRCurr p) ++ " KB/s"
+    diskUsageRLabel = Just $ withOneDecimal (lvsDiskUsageRCurr p) ++ " KB/s"
 
     diskUsageWBar :: forall n. Widget n
     diskUsageWBar = updateAttrMap
@@ -780,7 +916,7 @@ systemStatsW p =
                                     , (diskIOToDoAttr, P.progressIncompleteAttr)
                                     ]
                     ) $ bar diskUsageWLabel (lvsDiskUsageWPerc p)
-    diskUsageWLabel = Just $ take 5 (show $ lvsDiskUsageWCurr p) ++ " KB/s"
+    diskUsageWLabel = Just $ withOneDecimal (lvsDiskUsageWCurr p) ++ " KB/s"
 
     networkUsageInBar :: forall n. Widget n
     networkUsageInBar = updateAttrMap
@@ -788,7 +924,7 @@ systemStatsW p =
                                         , (networkIOToDoAttr, P.progressIncompleteAttr)
                                         ]
                         ) $ bar networkUsageInLabel (lvsNetworkUsageInPerc p)
-    networkUsageInLabel = Just $ take 5 (show $ lvsNetworkUsageInCurr p) ++ " KB/s"
+    networkUsageInLabel = Just $ withOneDecimal (lvsNetworkUsageInCurr p) ++ " KB/s"
 
     networkUsageOutBar :: forall n. Widget n
     networkUsageOutBar = updateAttrMap
@@ -796,17 +932,20 @@ systemStatsW p =
                                          , (networkIOToDoAttr, P.progressIncompleteAttr)
                                          ]
                          ) $ bar networkUsageOutLabel (lvsNetworkUsageOutPerc p)
-    networkUsageOutLabel = Just $ take 5 (show $ lvsNetworkUsageOutCurr p) ++ " KB/s"
+    networkUsageOutLabel = Just $ withOneDecimal (lvsNetworkUsageOutCurr p) ++ " KB/s"
 
     bar :: forall n. Maybe String -> Float -> Widget n
-    bar lbl pcntg = P.progressBar lbl pcntg
+    bar = P.progressBar
     lvsMemUsagePerc = lvsMemoryUsageCurr p / max 200 (lvsMemoryUsageMax p)
 
-nodeInfoW :: LiveViewState a -> Widget ()
+withOneDecimal :: (RealFloat f, Show f) => f -> String
+withOneDecimal = flip (showFFloat (Just 1)) ""
+
+nodeInfoW :: LiveViewState blk a -> Widget ()
 nodeInfoW p =
       padTop    (T.Pad 2)
-    . padLeft   (T.Pad 3)
-    . padRight  (T.Pad 3)
+    . padLeft   (T.Pad 1)
+    . padRight  (T.Pad 2)
     . padBottom (T.Pad 2)
     $ hBox [nodeInfoLabels, nodeInfoValues p]
 
@@ -819,11 +958,11 @@ nodeInfoLabels =
            , padTop (T.Pad 1) $ txt "epoch / slot:"
            ,                    txt "block number:"
            ,                    txt "chain density:"
-           , padTop (T.Pad 1) $ txt "transactions processed:"
-           , padTop (T.Pad 1) $ txt "peers connected:"
+           , padTop (T.Pad 1) $ txt "TXs processed:"
+           , padTop (T.Pad 1) $ txt "peers:"
            ]
 
-nodeInfoValues :: LiveViewState a -> Widget ()
+nodeInfoValues :: LiveViewState blk a -> Widget ()
 nodeInfoValues lvs =
       withAttr valueAttr
     $ vBox [                    str (lvsVersion lvs)
@@ -833,15 +972,18 @@ nodeInfoValues lvs =
                                         addUTCTime (lvsUpTime lvs) (UTCTime (ModifiedJulianDay 0) 0))
            , padTop (T.Pad 1) $ str $ show (lvsEpoch lvs) ++ " / " ++ show (lvsSlotNum lvs)
            ,                    str (show . lvsBlockNum $ lvs)
-           ,                    str $ (take 5 . show . lvsChainDensity $ lvs) ++ " %"
+           ,                    str $ withOneDecimal (lvsChainDensity lvs) ++ " %"
            , padTop (T.Pad 1) $ str (show . lvsTransactions $ lvs)
            , padTop (T.Pad 1) $ str (show . lvsPeersConnected $ lvs)
            ]
 
-eventHandler :: NFData a => LiveViewState a -> BrickEvent n (LiveViewBackend a) -> EventM n (Next (LiveViewState a))
+eventHandler :: NFData a => LiveViewState blk a -> BrickEvent n (LiveViewBackend blk a) -> EventM n (Next (LiveViewState blk a))
 eventHandler prev (AppEvent lvBackend) = do
     next <- liftIO . readMVar . getbe $ lvBackend
-    M.continue $ next { lvsColorTheme = lvsColorTheme prev }
+    M.continue $ next
+      { lvsColorTheme = lvsColorTheme prev
+      , lvsScreen = lvsScreen prev
+      }
 eventHandler lvs  (VtyEvent e)         =
     case e of
         V.EvKey  (V.KChar 'q') []        -> stopNodeThread >> M.halt lvs
@@ -851,6 +993,8 @@ eventHandler lvs  (VtyEvent e)         =
         V.EvKey  (V.KChar 'D') []        -> M.continue $ lvs { lvsColorTheme = DarkTheme }
         V.EvKey  (V.KChar 'l') []        -> M.continue $ lvs { lvsColorTheme = LightTheme }
         V.EvKey  (V.KChar 'L') []        -> M.continue $ lvs { lvsColorTheme = LightTheme }
+        V.EvKey  (V.KChar 'p') []        -> M.continue $ lvs { lvsScreen = Peers }
+        V.EvKey  V.KEsc        []        -> M.continue $ lvs { lvsScreen = MainView }
         _                                -> M.continue lvs
   where
     stopNodeThread :: MonadIO m => m ()
@@ -860,7 +1004,7 @@ eventHandler lvs  (VtyEvent e)         =
         Just t  -> liftIO $ Async.cancel t
 eventHandler lvs  _                    = M.halt lvs
 
-app :: NFData a => M.App (LiveViewState a) (LiveViewBackend a) ()
+app :: NFData a => M.App (LiveViewState blk a) (LiveViewBackend blk a) ()
 app =
     M.App { M.appDraw = drawUI
           , M.appChooseCursor = M.showFirstCursor
