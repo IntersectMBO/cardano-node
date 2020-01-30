@@ -48,15 +48,15 @@
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "haskell.nix": {
-        "branch": "master",
+        "branch": "use-host-arch",
         "description": "Alternative Haskell Infrastructure for Nixpkgs",
         "homepage": "https://input-output-hk.github.io/haskell.nix",
         "owner": "input-output-hk",
         "repo": "haskell.nix",
-        "rev": "032157cfe8929a1f3afe243bb9a74c179d0e27cd",
-        "sha256": "1s6waigcn18526av2ykz6c1dmrl8cwby3xbqhz3gkdiip2hcah94",
+        "rev": "6cb9ea28bbe68e635b17b1f71234bc188e54e8fd",
+        "sha256": "18f9him7vp807h28xs8spwwsyshq8lihc6w5gmkbb9mzs21rqkzk",
         "type": "tarball",
-        "url": "https://github.com/input-output-hk/haskell.nix/archive/032157cfe8929a1f3afe243bb9a74c179d0e27cd.tar.gz",
+        "url": "https://github.com/input-output-hk/haskell.nix/archive/6cb9ea28bbe68e635b17b1f71234bc188e54e8fd.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "iohk-nix": {
