@@ -6,6 +6,7 @@
 , customConfig ? {}
 , interactive ? false
 , gitrev ? commonLib.iohkNix.commitIdFromGitRepoOrZero ./.git
+, withHoogle ? true
 }:
 
 let
@@ -33,21 +34,33 @@ let
     # `benchmarks` are only built, not run.
     benchmarks = collectComponents "benchmarks" isCardanoNode haskellPackages;
 
-    # TODO: fix the shell
-    #shell = haskellPackages.shellFor {
-    #  name = "cardano-node";
-    #  packages = ps: with ps; [
-    #    cardano-node-cli
-    #    cardano-node
-    #  ];
-    #  buildInputs = (with pkgs.haskell-nix.haskellPackages; [
-    #      weeder.components.exes.weeder
-    #      hlint.components.exes.hlint
-    #    ])
-    #    ++ [ pkgs.pkgconfig pkgs.sqlite-interactive
-    #         pkgs.cabal-install ];
-    #  meta.platforms = pkgs.lib.platforms.unix;
-    #};
+    shell = haskellPackages.shellFor {
+
+      packages = ps: with ps; [
+        haskellPackages.cardano-node
+        haskellPackages.cardano-config
+      ];
+
+      # Builds a Hoogle documentation index of all dependencies,
+      # and provides a "hoogle" command to search the index.
+      inherit withHoogle;
+
+      # You might want some extra tools in the shell (optional).
+      buildInputs = (with haskellPackages; [
+        #weeder.components.exes.weeder
+        #hlint.components.exes.hlint
+        #cabal-install.components.exes.cabal
+        #ghcid.components.exes.ghcid
+      ]) ++ (with pkgs; [
+        pkgconfig
+        sqlite-interactive
+        tmux
+      ]);
+
+      # Prevents cabal from choosing alternate plans, so that
+      # *all* dependencies are provided by Nix.
+      exactDeps = true;
+    };
 
   };
 

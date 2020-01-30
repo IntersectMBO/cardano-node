@@ -41,6 +41,7 @@ with pkgs.lib;
 
 let
   nixosTests = (import ./. {}).nixosTests;
+  shell = (import ./. {}).shell;
   getArchDefault = system: let
     table = {
       x86_64-linux = import ./. { system = "x86_64-linux"; };
@@ -77,7 +78,7 @@ let
     # only build nixos tests for linux
     default = getArchDefault "x86_64-linux";
   in {
-    inherit nixosTests;
+    inherit nixosTests shell;
   } // (builtins.listToAttrs (map makeRelease [
     "mainnet"
     "staging"

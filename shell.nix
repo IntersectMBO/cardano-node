@@ -1,8 +1,9 @@
 { commonLib ? import ./lib.nix {}
+, withHoogle ? false
 }:
 let
   pkgs = commonLib.pkgs;
-  default = import ./. {};
+  default = import ./. { inherit withHoogle; };
   shell = default.shell;
   devops = pkgs.stdenv.mkDerivation {
     name = "devops-shell";
@@ -22,4 +23,4 @@ let
     '';
   };
 # TODO: switch back to default.nix shell when it works
-in devops // { inherit devops; }
+in default.shell // { inherit devops; }

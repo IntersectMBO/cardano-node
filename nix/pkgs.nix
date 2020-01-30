@@ -22,7 +22,7 @@ let
   recRecurseIntoAttrs = with pkgs; pred: x: if pred x then recurseIntoAttrs (lib.mapAttrs (n: v: if n == "buildPackages" then v else recRecurseIntoAttrs pred v) x) else x;
   pkgSet = recRecurseIntoAttrs (x: with pkgs; lib.isAttrs x && !lib.isDerivation x)
     # we are only intersted in listing the project packages
-    (pkgs.haskell-nix.haskellLib.selectProjectPackages
+    (pkgs.lib.filterAttrs (with pkgs.haskell-nix.haskellLib; (n: p: p != null && (isLocalPackage p && isProjectPackage p) || n == "shellFor"))
       # from our project which is based on a cabal project.
       (pkgs.haskell-nix.cabalProject {
           src = pkgs.haskell-nix.haskellLib.cleanGit { inherit src; };
