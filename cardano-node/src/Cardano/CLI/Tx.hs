@@ -29,7 +29,7 @@ import           Data.Text (Text)
 import qualified Data.Text as T
 import           Formatting ((%), sformat)
 
-import           Control.Tracer (stdoutTracer)
+import           Control.Tracer (traceWith, stdoutTracer)
 
 import           Cardano.Chain.Common (Address)
 import qualified Cardano.Chain.Common as Common
@@ -45,6 +45,9 @@ import qualified Cardano.Crypto.Signing as Crypto
 import qualified Ouroboros.Consensus.Ledger.Byron as Byron
 import           Ouroboros.Consensus.Ledger.Byron (GenTx(..), ByronBlock)
 import qualified Ouroboros.Consensus.Protocol as Consensus
+import           Ouroboros.Consensus.Node.ProtocolInfo (protocolInfo, pInfoConfig)
+import qualified Ouroboros.Consensus.Mempool as Consensus
+import           Ouroboros.Consensus.Util.Condense (condense)
 
 import           Cardano.CLI.Ops
 import           Cardano.CLI.Tx.Submission
@@ -272,11 +275,11 @@ nodeSubmitTx
   ptcl
   gentx =
     withRealPBFT gHash genFile nMagic sigThresh delCertFp sKeyFp update ptcl $
-      \p@Consensus.ProtocolRealPBFT{} -> do
-        _ <- case gentx of
-               ByronTx txid _ -> pure . putTextLn
-                                      $ sformat ("TxId: "%Crypto.hashHexF) txid
-               otherTxType -> left . TransactionTypeNotHandledYet
-                                   . T.pack $ show otherTxType
-        -- TODO: Update handleTxSubmission to use `ExceptT`
-        liftIO $ handleTxSubmission socketFp p topology gentx stdoutTracer
+      \p@Consensus.ProtocolRealPBFT{} -> liftIO $ do
+        -- TODO: Update submitGenTx to use `ExceptT`
+        traceWith stdoutTracer ("TxId: " ++ condense (Consensus.txId gentx))
+        submitTx socketFp
+                 (pInfoConfig (protocolInfo p))
+                 (node topology)
+                 gentx
+                 stdoutTracer
