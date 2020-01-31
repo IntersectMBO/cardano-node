@@ -1,3 +1,5 @@
+index-state: 2020-01-31T00:00:00Z
+
 packages:
     cardano-config
     cardano-node
@@ -255,4 +257,7 @@ constraints:
   brick >= 0.47,
   libsystemd-journal >= 1.4.4
 
-index-state: 2020-01-31T00:00:00Z
+allow-newer: katip:Win32
+
+package comonad
+  flags: -test-doctests
