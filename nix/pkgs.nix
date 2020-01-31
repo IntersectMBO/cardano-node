@@ -29,14 +29,18 @@ let
           src = pkgs.haskell-nix.haskellLib.cleanGit { inherit src; };
           ghc = pkgs.haskell-nix.compiler.${haskellCompiler};
           modules = [
+
              {
               # Packages we wish to ignore version bounds of.
               # This is similar to jailbreakCabal, however it
               # does not require any messing with cabal files.
+              doCheck = false;
               packages.katip.doExactConfig = true;
               packages.ekg.components.library.enableSeparateDataOutput = true;
               packages.cardano-node.configureFlags = [ "--ghc-option=-Werror" ];
+              packages.cardano-node.doCheck = true;
               packages.cardano-config.configureFlags = [ "--ghc-option=-Werror" ];
+              packages.cardano-config.doCheck = true;
               enableLibraryProfiling = profiling;
             }
           ];
