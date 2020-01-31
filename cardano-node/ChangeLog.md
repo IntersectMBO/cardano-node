@@ -1,5 +1,15 @@
 # Changelog for cardano-node
 
+## 1.5.0 -- January 2020
+
+### node changes
+
+### consensus changes
+
+### ledger changes
+
+### network changes
+
 ## 1.4.0 -- January 2020
 
 ### node changes
