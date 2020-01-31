@@ -66,7 +66,7 @@ import qualified Cardano.Crypto as Crypto
 import           Cardano.Config.Topology (NodeAddress (..),
                                           NodeHostAddress(..))
 import           Cardano.CLI.Ops
-import           Cardano.CLI.Tx (txSpendGenesisUTxOByronPBFT)
+import           Cardano.CLI.Tx (txSpendGenesisUTxOByronPBFT, normalByronTxToGenTx)
 import           Cardano.CLI.Tx.BenchmarkingTxSubmission (ROEnv (..),
                                                           TraceBenchTxSubmit (..),
                                                           bulkSubmission)
@@ -407,7 +407,8 @@ prepareInitialFunds llTracer
         }
 
   let genesisTx :: GenTx ByronBlock
-      genesisTx = txSpendGenesisUTxOByronPBFT genesisConfig
+      genesisTx = normalByronTxToGenTx $
+                  txSpendGenesisUTxOByronPBFT genesisConfig
                                               signingKey
                                               genesisAddress
                                               (NE.fromList [outForBig])

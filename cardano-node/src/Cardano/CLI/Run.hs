@@ -29,7 +29,6 @@ module Cardano.CLI.Run (
 
 import           Cardano.Prelude hiding (option, trace)
 
-import           Codec.Serialise (serialise)
 import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (hoistEither, firstExceptT)
 import qualified Data.ByteString.Lazy as LB
@@ -272,7 +271,7 @@ runCommand (SpendGenesisUTxO ptcl genFile genHash (NewTxFile ctTx) ctKey genRich
                 update
                 ptcl
                 sk
-    liftIO . ensureNewFileLBS ctTx $ serialise tx
+    liftIO . ensureNewFileLBS ctTx $ toCborTxAux tx
 
 runCommand (SpendUTxO ptcl genFile genHash (NewTxFile ctTx) ctKey ins outs) = do
     sk <- readSigningKey ptcl ctKey
@@ -292,7 +291,7 @@ runCommand (SpendUTxO ptcl genFile genHash (NewTxFile ctTx) ctKey ins outs) = do
                  update
                  ptcl
                  sk
-    liftIO . ensureNewFileLBS ctTx $ serialise gTx
+    liftIO . ensureNewFileLBS ctTx $ toCborTxAux gTx
 
 runCommand (GenerateTxs
                logConfigFp

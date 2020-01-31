@@ -9,32 +9,38 @@ module Cardano.CLI.Tx
   , NewTxFile(..)
   , prettyAddress
   , readByronTx
+  , normalByronTxToGenTx
   , txSpendGenesisUTxOByronPBFT
   , issueGenesisUTxOExpenditure
   , txSpendUTxOByronPBFT
   , issueUTxOExpenditure
   , nodeSubmitTx
+
+    --TODO: remove when they are exported from the ledger
+  , fromCborTxAux
+  , toCborTxAux
   )
 where
 
-import           Prelude (error, show)
-import           Cardano.Prelude hiding (option, show, trace, (%))
+import           Prelude (error)
+import           Cardano.Prelude hiding (option, trace, (%))
 
-import           Codec.Serialise (deserialiseOrFail)
-import           Control.Monad.Trans.Except.Extra (left, right)
+import           Control.Monad.Trans.Except.Extra (right)
 import qualified Data.ByteString.Lazy as LB
+import qualified Data.ByteString as B
 import qualified Data.Map.Strict as Map
 import           Data.String (IsString)
 import           Data.Text (Text)
 import qualified Data.Text as T
 import           Formatting ((%), sformat)
 
-import           Control.Tracer (stdoutTracer)
+import           Control.Tracer (traceWith, stdoutTracer)
+
+import qualified Cardano.Binary as Binary
 
 import           Cardano.Chain.Common (Address)
 import qualified Cardano.Chain.Common as Common
 import           Cardano.Chain.Genesis as Genesis
-import qualified Cardano.Chain.MempoolPayload as CC.Mempool
 import           Cardano.Chain.UTxO ( mkTxAux, annotateTxAux
                                     , Tx(..), TxId, TxIn, TxOut)
 import qualified Cardano.Chain.UTxO as UTxO
@@ -45,6 +51,9 @@ import qualified Cardano.Crypto.Signing as Crypto
 import qualified Ouroboros.Consensus.Ledger.Byron as Byron
 import           Ouroboros.Consensus.Ledger.Byron (GenTx(..), ByronBlock)
 import qualified Ouroboros.Consensus.Protocol as Consensus
+import           Ouroboros.Consensus.Node.ProtocolInfo (protocolInfo, pInfoConfig)
+import qualified Ouroboros.Consensus.Mempool as Consensus
+import           Ouroboros.Consensus.Util.Condense (condense)
 
 import           Cardano.CLI.Ops
 import           Cardano.CLI.Tx.Submission
@@ -74,9 +83,14 @@ prettyAddress addr = sformat
 readByronTx :: TxFile -> IO (GenTx ByronBlock)
 readByronTx (TxFile fp) = do
   txBS <- LB.readFile fp
-  case deserialiseOrFail txBS of
+  case fromCborTxAux txBS of
     Left e -> throwIO $ TxDeserialisationFailed fp e
-    Right tx -> pure tx
+    Right tx -> pure (normalByronTxToGenTx tx)
+
+-- | The 'GenTx' is all the kinds of transactions that can be submitted
+-- and \"normal\" Byron transactions are just one of the kinds.
+normalByronTxToGenTx :: UTxO.ATxAux ByteString -> GenTx ByronBlock
+normalByronTxToGenTx tx' = Byron.ByronTx (Byron.byronIdTx tx') tx'
 
 -- | Given a Tx id, produce a UTxO Tx input witness, by signing it
 --   with respect to a given protocol magic.
@@ -136,10 +150,9 @@ txSpendGenesisUTxOByronPBFT
   -> SigningKey
   -> Address
   -> NonEmpty TxOut
-  -> GenTx ByronBlock
+  -> UTxO.ATxAux ByteString
 txSpendGenesisUTxOByronPBFT gc sk genAddr outs =
-    Byron.fromMempoolPayload
-      $ CC.Mempool.MempoolTx $ annotateTxAux $ mkTxAux tx (pure wit)
+    annotateTxAux $ mkTxAux tx (pure wit)
   where
     tx = UnsafeTx (pure txIn) outs txattrs
 
@@ -164,7 +177,7 @@ issueGenesisUTxOExpenditure
   -> Update
   -> Protocol
   -> Crypto.SigningKey
-  -> ExceptT RealPBFTError IO (GenTx ByronBlock)
+  -> ExceptT RealPBFTError IO (UTxO.ATxAux ByteString)
 issueGenesisUTxOExpenditure
   genRichAddr
   outs
@@ -179,14 +192,9 @@ issueGenesisUTxOExpenditure
   sk =
     withRealPBFT gHash genFile nMagic sigThresh delCertFp sKeyFp update ptcl
       $ \(Consensus.ProtocolRealPBFT gc _ _ _ _)-> do
-          case txSpendGenesisUTxOByronPBFT gc sk genRichAddr outs of
-            tx@(ByronTx txid _) -> do
-              putStrLn $ sformat ("TxId: "%Crypto.hashHexF) txid
-              right tx
-            x -> left . InvariantViolation
-                      . T.pack
-                      $ "A non-ByronTx GenTx out of 'txSpendUTxOByronPBFT': "
-                      <> show x
+          let tx = txSpendGenesisUTxOByronPBFT gc sk genRichAddr outs
+          traceWith stdoutTracer ("TxId: " ++ condense (Byron.byronIdTx tx))
+          right tx
 
 -- | Generate a transaction from given Tx inputs to outputs,
 --   signed by the given key.
@@ -195,10 +203,9 @@ txSpendUTxOByronPBFT
   -> SigningKey
   -> NonEmpty TxIn
   -> NonEmpty TxOut
-  -> GenTx ByronBlock
+  -> UTxO.ATxAux ByteString
 txSpendUTxOByronPBFT gc sk ins outs =
-    Byron.fromMempoolPayload
-      $ CC.Mempool.MempoolTx $ annotateTxAux $ mkTxAux tx (pure wit)
+    annotateTxAux $ mkTxAux tx (pure wit)
   where
     tx = UnsafeTx ins outs txattrs
 
@@ -220,7 +227,7 @@ issueUTxOExpenditure
   -> Update
   -> Protocol
   -> Crypto.SigningKey
-  -> ExceptT RealPBFTError IO (GenTx ByronBlock)
+  -> ExceptT RealPBFTError IO (UTxO.ATxAux ByteString)
 issueUTxOExpenditure
   ins
   outs
@@ -235,15 +242,9 @@ issueUTxOExpenditure
   key = do
     withRealPBFT gHash genFile nMagic sigThresh delCertFp sKeyFp update ptcl $
       \(Consensus.ProtocolRealPBFT gc _ _ _ _)-> do
-        case txSpendUTxOByronPBFT gc key ins outs of
-          tx@(ByronTx txid _) -> do
-            putStrLn $ sformat ("TxId: "%Crypto.hashHexF) txid
-            pure tx
-          x ->
-            left . InvariantViolation
-                 . T.pack
-                 $ "A non-ByronTx GenTx out of 'txSpendUTxOByronPBFT': "
-                 <> show x
+        let tx = txSpendUTxOByronPBFT gc key ins outs
+        traceWith stdoutTracer ("TxId: " ++ condense (Byron.byronIdTx tx))
+        pure tx
 
 -- | Submit a transaction to a node specified by topology info.
 nodeSubmitTx
@@ -272,11 +273,25 @@ nodeSubmitTx
   ptcl
   gentx =
     withRealPBFT gHash genFile nMagic sigThresh delCertFp sKeyFp update ptcl $
-      \p@Consensus.ProtocolRealPBFT{} -> do
-        _ <- case gentx of
-               ByronTx txid _ -> pure . putTextLn
-                                      $ sformat ("TxId: "%Crypto.hashHexF) txid
-               otherTxType -> left . TransactionTypeNotHandledYet
-                                   . T.pack $ show otherTxType
-        -- TODO: Update handleTxSubmission to use `ExceptT`
-        liftIO $ handleTxSubmission socketFp p topology gentx stdoutTracer
+      \p@Consensus.ProtocolRealPBFT{} -> liftIO $ do
+        -- TODO: Update submitGenTx to use `ExceptT`
+        traceWith stdoutTracer ("TxId: " ++ condense (Consensus.txId gentx))
+        submitTx socketFp
+                 (pInfoConfig (protocolInfo p))
+                 (node topology)
+                 gentx
+                 stdoutTracer
+
+--TODO: remove these local definitions when the updated ledger lib is available
+fromCborTxAux :: LB.ByteString ->  Either Binary.DecoderError (UTxO.ATxAux B.ByteString)
+fromCborTxAux lbs =
+    fmap (annotationBytes lbs)
+      $ Binary.decodeFullDecoder "Cardano.Chain.UTxO.TxAux.fromCborTxAux"
+                                 Binary.fromCBOR lbs
+  where
+    annotationBytes :: Functor f => LB.ByteString -> f Binary.ByteSpan -> f B.ByteString
+    annotationBytes bytes = fmap (LB.toStrict . Binary.slice bytes)
+
+toCborTxAux :: UTxO.ATxAux ByteString -> LB.ByteString
+toCborTxAux = LB.fromStrict . UTxO.aTaAnnotation -- The ByteString anotation is the CBOR encoded version.
+
