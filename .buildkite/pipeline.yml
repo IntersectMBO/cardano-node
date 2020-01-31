@@ -1,32 +1,33 @@
 steps:
-  - label: 'stack rebuild'
-    env:
-      STACK_ROOT: "/build/cardano-node.stack"
-    command:
-      - "rm -rf /build/cardano-node"
-      - "cp -R . /build/cardano-node"
-      - "cd /build/cardano-node"
-      - "nix-build scripts/buildkite -o stack-rebuild"
-      - "./stack-rebuild"
+  #- label: 'stack rebuild'
+  #  env:
+  #    STACK_ROOT: "/build/cardano-node.stack"
+  #  command:
+  #    - "rm -rf /build/cardano-node"
+  #    - "cp -R . /build/cardano-node"
+  #    - "cd /build/cardano-node"
+  #    - "nix-build scripts/buildkite -o stack-rebuild"
+  #    - "./stack-rebuild"
+  #  agents:
+  #    system: x86_64-linux
+
+  - label: 'check-cabal-project'
+    command: 'nix-build lib.nix -A iohkNix.checkCabalProject -o check-cabal-project.sh && ./check-cabal-project.sh'
     agents:
       system: x86_64-linux
 
-  - label: 'nix-tools'
-    command: 'nix-build -A check-nix-tools -o check-nix-tools.sh && ./check-nix-tools.sh'
-    agents:
-      system: x86_64-linux
-
-  - label: 'release.nix'
-    command: 'nix-build -A check-hydra -o check-hydra.sh && ./check-hydra.sh'
-    agents:
-      system: x86_64-linux
+#  - label: 'release.nix'
+#    command: 'nix-build -A check-hydra -o check-hydra.sh && ./check-hydra.sh'
+#    agents:
+#      system: x86_64-linux
 
   - label: 'stack-cabal-sync'
     command: 'nix-shell scripts/buildkite/stack-cabal-sync.nix --run scripts/buildkite/stack-cabal-sync.sh'
     agents:
       system: x86_64-linux
 
-  - label: 'dependencies-at-master'
-    command: 'ci/check-dependencies-merged-to-master.sh'
-    agents:
-      system: x86_64-linux
+# FIXME:
+#  - label: 'dependencies-at-master'
+#    command: 'ci/check-dependencies-merged-to-master.sh'
+#    agents:
+#      system: x86_64-linux

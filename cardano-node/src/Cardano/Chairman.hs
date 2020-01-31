@@ -368,11 +368,11 @@ localInitiatorNetworkApplication
   -> SecurityParam
   -> Maybe BlockNo
   -> Tracer m (ChairmanTrace blk)
-  -> Tracer m (TraceSendRecv (ChainSync blk (Tip blk)) peer DeserialiseFailure)
+  -> Tracer m (TraceSendRecv (ChainSync blk (Tip blk)))
   -- ^ tracer which logs all chain-sync messages send and received by the client
   -- (see 'Ouroboros.Network.Protocol.ChainSync.Type' in 'ouroboros-network'
   -- package)
-  -> Tracer m (TraceSendRecv (LocalTxSubmission (GenTx blk) (ApplyTxErr blk)) peer DeserialiseFailure)
+  -> Tracer m (TraceSendRecv (LocalTxSubmission (GenTx blk) (ApplyTxErr blk)))
   -- ^ tracer which logs all local tx submission protocol messages send and
   -- received by the client (see 'Ouroboros.Network.Protocol.LocalTxSubmission.Type'
   -- in 'ouroboros-network' package).
@@ -386,12 +386,11 @@ localInitiatorNetworkApplication coreNodeId chainsVar securityParam maxBlockNo c
       (NodeToClientVersionData (nodeNetworkMagic (Proxy @blk) pInfoConfig))
       (DictVersion nodeToClientCodecCBORTerm)
 
-  $ OuroborosInitiatorApplication $ \peer ptcl -> case ptcl of
+  $ OuroborosInitiatorApplication $ \_peer ptcl -> case ptcl of
       LocalTxSubmissionPtcl -> \channel -> do
         runPeer
           localTxSubmissionTracer
           localTxSubmissionCodec
-          peer
           channel
           (localTxSubmissionClientPeer localTxSubmissionClientNull)
 
@@ -399,7 +398,6 @@ localInitiatorNetworkApplication coreNodeId chainsVar securityParam maxBlockNo c
         runPeer
           chainSyncTracer
           (localChainSyncCodec pInfoConfig)
-          peer
           channel
           (chainSyncClientPeer $ chainSyncClient chairmanTracer coreNodeId chainsVar securityParam maxBlockNo)
 

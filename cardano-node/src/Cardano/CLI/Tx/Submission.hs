@@ -118,13 +118,12 @@ localInitiatorNetworkApplication tracer protoInfoConfig tx =
         { NodeToClient.networkMagic = Node.nodeNetworkMagic (Proxy @blk) protoInfoConfig })
       (NodeToClient.DictVersion NodeToClient.nodeToClientCodecCBORTerm)
 
-  $ OuroborosInitiatorApplication $ \peer ptcl -> case ptcl of
+  $ OuroborosInitiatorApplication $ \_peer ptcl -> case ptcl of
       NodeToClient.LocalTxSubmissionPtcl -> \channel -> do
         traceWith tracer ("Submitting transaction: " {-++ show tx-})
         result <- runPeer
                     nullTracer -- (contramap show tracer)
                     localTxSubmissionCodec
-                    peer
                     channel
                     (LocalTxSub.localTxSubmissionClientPeer
                        (txSubmissionClientSingle tx))
@@ -136,7 +135,6 @@ localInitiatorNetworkApplication tracer protoInfoConfig tx =
         runPeer
           nullTracer
           (localChainSyncCodec @blk protoInfoConfig)
-          peer
           channel
           (chainSyncClientPeer NodeToClient.chainSyncClientNull)
 
