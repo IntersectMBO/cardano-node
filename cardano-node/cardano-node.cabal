@@ -141,7 +141,7 @@ executable cardano-node
   ghc-options:         -threaded
                        -Wall
                        -rtsopts
-                       "-with-rtsopts=-T -I0"
+                       "-with-rtsopts=-T -I0 -N2 -A16m"
                        -fno-warn-unticked-promoted-constructors
 
   build-depends:       base >=4.12 && <5
