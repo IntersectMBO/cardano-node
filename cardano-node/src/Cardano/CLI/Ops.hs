@@ -32,6 +32,7 @@ import qualified Data.Text as T
 import qualified Text.JSON.Canonical as CanonicalJSON
 
 import           Cardano.Crypto (RequiresNetworkMagic, SigningKey (..))
+import           Cardano.Binary (DecoderError)
 import           Codec.CBOR.Read (DeserialiseFailure, deserialiseFromBytes)
 import           Codec.CBOR.Write (toLazyByteString)
 import qualified Cardano.Crypto.Signing as Crypto
@@ -101,7 +102,7 @@ data CliError
   | SigningKeyDeserialisationFailed !FilePath !DeserialiseFailure
   | VerificationKeyDeserialisationFailed !FilePath !Text
   | DlgCertificateDeserialisationFailed !FilePath !Text
-  | TxDeserialisationFailed !FilePath !DeserialiseFailure
+  | TxDeserialisationFailed !FilePath !DecoderError
   -- TODO:  sadly, VerificationKeyParseError isn't exported from Cardano.Crypto.Signing/*
   -- Inconsistencies
   | DelegationError !Genesis.GenesisDelegationError
