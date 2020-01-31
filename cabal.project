@@ -254,3 +254,5 @@ constraints:
   bimap >= 0.4.0,
   brick >= 0.47,
   libsystemd-journal >= 1.4.4
+
+index-state: 2020-01-31T00:00:00Z
