@@ -151,6 +151,7 @@ instance FromJSON NodeConfiguration where
                                 <*> v .:? "TraceLocalChainSyncProtocol" .!= False
                                 <*> v .:? "TraceLocalTxSubmissionProtocol" .!= False
                                 <*> v .:? "TraceLocalTxSubmissionServer" .!= False
+                                <*> v .:? "TraceLocalStateQueryProtocol" .!= False
                                 <*> v .:? "TraceMempool" .!= True
                                 <*> v .:? "TraceMux" .!= True
                                 <*> v .:? "TraceTxInbound" .!= False
@@ -255,6 +256,7 @@ data TraceOptions = TraceOptions
   , traceLocalChainSyncProtocol :: !Bool
   , traceLocalTxSubmissionProtocol :: !Bool
   , traceLocalTxSubmissionServer :: !Bool
+  , traceLocalStateQueryProtocol :: !Bool
   , traceMempool :: !Bool
   , traceMux :: !Bool
   , traceTxInbound :: !Bool

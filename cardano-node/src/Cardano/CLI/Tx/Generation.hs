@@ -91,7 +91,7 @@ import           Ouroboros.Consensus.Ledger.Byron (ByronBlock (..),
 import qualified Ouroboros.Consensus.Ledger.Byron as Byron
 import           Ouroboros.Consensus.NodeId (NodeId (..), CoreNodeId(..))
 import           Ouroboros.Consensus.Protocol.Abstract (NodeConfig)
-import           Ouroboros.Consensus.Protocol.PBFT (pbftExtConfig)
+import           Ouroboros.Consensus.Protocol.ExtConfig (extNodeConfig)
 
 newtype NumberOfTxs =
   NumberOfTxs Word64
@@ -568,7 +568,7 @@ generalizeTx config tx signingKey =
       CC.UTxO.VKWitness
         (Crypto.toVerification signingKey)
         (Crypto.sign
-          (Crypto.getProtocolMagicId . pbftProtocolMagic . pbftExtConfig $ config)
+          (Crypto.getProtocolMagicId . pbftProtocolMagic . extNodeConfig $ config)
           -- provide ProtocolMagicId so as not to calculate it every time
           Crypto.SignTx
           signingKey

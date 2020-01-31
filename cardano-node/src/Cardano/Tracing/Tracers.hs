@@ -141,6 +141,7 @@ mkTracers
   :: forall peer blk.
      ( ProtocolLedgerView blk
      , TraceConstraints blk
+     , ShowQuery (Query blk)
      , Show peer
      )
   => TraceOptions
@@ -445,6 +446,9 @@ mkTracers traceOptions tracer = do
       , ptLocalTxSubmissionTracer
         = tracerOnOff (traceLocalTxSubmissionProtocol traceOpts)
         $ showTracing $ withName "LocalTxSubmissionProtocol" tracer
+      , ptLocalStateQueryTracer
+        = tracerOnOff (traceLocalStateQueryProtocol traceOpts)
+        $ showTracing $ withName "LocalStateQueryProtocol" tracer
       }
 
 -- | get information about a chain fragment

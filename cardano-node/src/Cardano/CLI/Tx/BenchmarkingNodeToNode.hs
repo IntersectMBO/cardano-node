@@ -78,7 +78,7 @@ benchmarkConnectTxSubmit trs nc localAddr remoteAddr myTxSubClient = do
  where
   myCodecs :: ProtocolCodecs blk DeserialiseFailure m
                 ByteString ByteString ByteString ByteString ByteString
-                ByteString ByteString
+                ByteString ByteString ByteString
   myCodecs  = protocolCodecs nc
 
   peerMultiplex :: Versions NtN.NodeToNodeVersion NtN.DictVersion
