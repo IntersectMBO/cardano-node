@@ -3,12 +3,47 @@
 ## 1.5.0 -- January 2020
 
 ### node changes
+- Eliminate a space leak by replacing the Prometheus monitoring backend (#491)
+- Change cardano-cli transaction format to be the raw chain format (#529)
+- Add checks to prevent space leaks in the node console "live view" (#500)
+- Improve bulk sync performance by adjusting default RTS options (#506)
+- Adjust the default set of enabled tracers (#494)
+- Allow logging output to journald on Linux (#502)
+- Show network status information in the the node console "live view" (#493)
+- Set PBFT signature threshold to the default value in the config files (#452)
+- Blank fields in config files use default values (#453)
+- Add tracers for the benchmarking of block forging (#464)
+- Remove unused code in the configuration and CLI code (#482)
+- Improve documentation of transaction creation (#497)
+- Improvements to the benchmarking transaction generator (#505)
 
 ### consensus changes
+- Implement consensus support for local state query protocol (#1366, #1507)
+- Set default mempool size as twice the max block size (#1467, #1468)
+- Fix an EBB-related bug in the chain DB iterators (#1435, #1475)
+- Correct the implementation PBFT window check to match specification (#1480)
+- Correct the size calculation of Byron txs in the mempool (#1535, #1540)
+- Improve the node shutdown to close things in the right order (#1470, #1488)
+- Optimise adding blocks to the chain DB (#1398)
+- Better ledger DB snapshot policy for faster node startup (#1264, #1456, #1518)
+- Add conformance testing against ledger executable spec (#1425, #1503, #1517)
+- Make the components within the chain DB share a common API (#1372, #1471)
+- Refactor consensus protocol type classes (#1527, #1534)
+- Internal refactoring (#1497)
+- Improve error messages referring to chain DB files (##305, #1529)
+- Improvements to test code (#1180, #745, #1479, #1523, #1537)
 
 ### ledger changes
+- none
 
 ### network changes
+- Add Windows IOCP-based async I/O for sockets and named pipes (#738, #1423)
+- Update to network-3.1 library, and related libraries (#1423)
+- Simplify tracing in the typed protocol drivers (#1481)
+- Refactor the network mux library (#1494)
+- Reorganise ouroboros-network modules (#1519)
+- Make the maximum concurrency in block fetch configurable (#1525)
+- Improve syncing performance by avoiding concurrent block fetch for now (#1525)
 
 ## 1.4.0 -- January 2020
 
