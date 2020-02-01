@@ -13,7 +13,7 @@ import           System.FilePath ((</>))
 import           System.IO.Error (isDoesNotExistError)
 import           Network.Socket as Socket
 
-import           Ouroboros.Consensus.NodeId (NodeId(..))
+import           Ouroboros.Consensus.NodeId (NodeId(..), CoreNodeId(..))
 
 data MkdirIfMissing
   = MkdirIfMissing
@@ -21,8 +21,8 @@ data MkdirIfMissing
   deriving (Eq, Show)
 
 localSocketFilePath :: NodeId -> FilePath
-localSocketFilePath (CoreId  n) = "node-core-" ++ show n ++ ".socket"
-localSocketFilePath (RelayId n) = "node-relay-" ++ show n ++ ".socket"
+localSocketFilePath (CoreId (CoreNodeId n)) = "node-core-"  ++ show (n :: Word64) ++ ".socket"
+localSocketFilePath (RelayId n)             = "node-relay-" ++ show (n :: Word64) ++ ".socket"
 
 -- | Provide an AF_UNIX address for a socket situated in 'socketDir', with its name
 --   derived from the node ID.  When 'mkdir' is 'MkdirIfMissing', the directory is created.
