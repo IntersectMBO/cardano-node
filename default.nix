@@ -1,6 +1,7 @@
 { system ? builtins.currentSystem
 , crossSystem ? null
 , config ? {}
+, sourcesOverride ? {}
 , profiling ? false
 , commonLib ? import ./lib.nix { inherit system crossSystem config profiling; }
 , pkgs ? commonLib.pkgs
@@ -12,7 +13,7 @@
 
 let
   lib = commonLib.pkgs.lib;
-  inherit (commonLib) environments haskellPackages;
+  inherit (commonLib) environments haskellPackages niv;
   cardano-node = haskellPackages.cardano-node.components.exes.cardano-node;
 
   scripts = commonLib.pkgs.callPackage ./nix/scripts.nix {
@@ -30,6 +31,7 @@ let
   self = with commonLib; {
     inherit scripts nixosTests environments cardano-node;
 
+    allHaskellPackages = haskellPackages;
     haskellPackages = projectHaskellPackages;
     inherit (iohkNix) check-hydra;
 
@@ -42,30 +44,46 @@ let
 
     shell = haskellPackages.shellFor {
 
-      #packages = ps: with ps; [
-      #  haskellPackages.cardano-node
-      #  haskellPackages.cardano-config
-      #];
+      packages = ps: with ps; [
+        ps.cardano-node
+        ps.cardano-config
+        ps.cardano-sl-x509
+        ps.ekg-prometheus-adapter
+        ps.ouroboros-consensus
+        ps.ouroboros-network
+      ];
 
       # Builds a Hoogle documentation index of all dependencies,
       # and provides a "hoogle" command to search the index.
       inherit withHoogle;
 
       # You might want some extra tools in the shell (optional).
-      buildInputs = (with haskellPackages; [
-        #weeder.components.exes.weeder
-        #hlint.components.exes.hlint
-        #cabal-install.components.exes.cabal
-        #ghcid.components.exes.ghcid
-      ]) ++ (with pkgs; [
+      buildInputs = (with pkgs; [
+        cabal-install
+        ghcid
+        hlint
+        pkgs.haskellPackages.weeder
+        nix
+        niv
         pkgconfig
         sqlite-interactive
         tmux
+        git
+        iohkNix.stack-hpc-coveralls
+        openssl
+        libffi
+        gmp
+        zlib
+        systemd
+        pkgs.haskellPackages.happy
       ]);
 
       # Prevents cabal from choosing alternate plans, so that
       # *all* dependencies are provided by Nix.
       exactDeps = true;
+
+      # https://github.com/commercialhaskell/stack/issues/5008
+      STACK_IN_NIX_SHELL = true;
     };
 
   };

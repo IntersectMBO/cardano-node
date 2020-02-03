@@ -1,15 +1,15 @@
 steps:
-  #- label: 'stack rebuild'
-  #  env:
-  #    STACK_ROOT: "/build/cardano-node.stack"
-  #  command:
-  #    - "rm -rf /build/cardano-node"
-  #    - "cp -R . /build/cardano-node"
-  #    - "cd /build/cardano-node"
-  #    - "nix-build scripts/buildkite -o stack-rebuild"
-  #    - "./stack-rebuild"
-  #  agents:
-  #    system: x86_64-linux
+  - label: 'stack rebuild'
+    env:
+      STACK_ROOT: "/build/cardano-node.stack"
+    command:
+      - "rm -rf /build/cardano-node"
+      - "cp -R . /build/cardano-node"
+      - "cd /build/cardano-node"
+      - "nix-build scripts/buildkite -o stack-rebuild"
+      - "./stack-rebuild"
+    agents:
+      system: x86_64-linux
 
   - label: 'check-cabal-project'
     command: 'nix-build lib.nix -A iohkNix.checkCabalProject -o check-cabal-project.sh && ./check-cabal-project.sh'
