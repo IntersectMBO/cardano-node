@@ -108,8 +108,9 @@ let
       collectTests jobs.native.benchmarks ++ [
       jobs.native.cardano-node.x86_64-darwin
       jobs.native.cardano-node.x86_64-linux
+      (map (cluster: jobs.${cluster}.scripts.node.x86_64-linux) [ "mainnet" "testnet" "staging" ])
       # windows cross compilation targets
-      #jobs.x86_64-pc-mingw32-cardano-node.x86_64-linux
+      #jobs.x86_64-pc-mingw32.cardano-node.x86_64-linux
 
       # Chairman consensus test TODO: fix the chairman test
       jobs.nixosTests.chairmansCluster.x86_64-linux

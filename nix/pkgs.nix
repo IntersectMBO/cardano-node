@@ -49,7 +49,7 @@ let
               # Packages we wish to ignore version bounds of.
               # This is similar to jailbreakCabal, however it
               # does not require any messing with cabal files.
-              doCheck = false;
+              #doCheck = false;
               packages.katip.doExactConfig = true;
               packages.ekg.components.library.enableSeparateDataOutput = true;
               packages.cardano-node.configureFlags = [ "--ghc-option=-Werror" ];
