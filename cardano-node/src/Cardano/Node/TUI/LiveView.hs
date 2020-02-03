@@ -553,7 +553,7 @@ setTopology lvbe (MockProtocolMode (NodeMockCLI _ _ _ cfgYaml _)) = do
   modifyMVar_ (getbe lvbe) $ \lvs ->
     return $ lvs { lvsNodeId = namenum (ncNodeId nc) }
  where
-  namenum (Just (CoreId num)) = "C" <> pack (show num)
+  namenum (Just (CoreId (CoreNodeId num))) = "C" <> pack (show num)
   namenum (Just (RelayId num)) = "R" <> pack (show num)
   namenum Nothing = panic $ "Cardano.Node.TUI.LiveView.namenum: "
                           <> "Mock protocols require a NodeId value in the configuration .yaml file"
