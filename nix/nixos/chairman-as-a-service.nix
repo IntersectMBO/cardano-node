@@ -7,7 +7,8 @@ with import ../../lib.nix {}; with lib; with builtins;
 let
   cfg  = config.services.chairman;
   ncfg = config.services.cardano-node;
-  svcLib = (import ../svclib.nix { inherit pkgs cardano-node; });
+  chairman = haskellPackages.cardano-node.components.exes.chairman;
+  svcLib = (import ../svclib.nix { inherit pkgs; });
   envConfig = environments.${cfg.environment};
   mkChairmanConfig = nodeConfig: chairmanConfig: {
     inherit (nodeConfig) package genesisFile genesisHash stateDir pbftThreshold consensusProtocol;
@@ -19,7 +20,7 @@ let
                          cfg.node-ids);
         exec = "chairman";
         cmd = [
-          "${ncfg.package}/bin/chairman"
+          "${chairman}/bin/chairman"
           (nodeIdArgs)
           "--timeout ${toString cfg.timeout}"
           "--max-block-no ${toString cfg.maxBlockNo}"

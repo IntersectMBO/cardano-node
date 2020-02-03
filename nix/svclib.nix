@@ -1,6 +1,7 @@
-{ pkgs, cardano-node ? (import ../lib.nix {}).haskellPackages.cardano-node.components.all }:
+{ pkgs, cardano-node-packages ? (import ../lib.nix {}).haskellPackages.cardano-node.components.exes }:
 with builtins; with pkgs.lib;
 let
+  cardano-cli-bin = "${cardano-node-packages.cardano-cli}/bin/cardano-cli";
 
   ## mkNodeConfig
   ##   :: NodeId Int -> ServiceConfig AttrSet -> NodeConfig AttrSet
@@ -141,7 +142,7 @@ let
       --total-balance                 ${toString args.total_balance}
       --use-hd-addresses
       )
-      ${cardano-node}/bin/cardano-cli "''${args[@]}"
+      ${cardano-cli-bin} "''${args[@]}"
     '';
 
   # This value will change every given amount of seconds.
@@ -174,7 +175,7 @@ let
       --real-pbft
       --to $out
       )
-      ${cardano-node}/bin/cardano-cli "''${args[@]}"
+      ${cardano-cli-bin} "''${args[@]}"
     '';
 
   ## toVerification
@@ -186,7 +187,7 @@ let
       --real-pbft
       --secret ${pbftSK}
       )
-      ${cardano-node}/bin/cardano-cli "''${args[@]}" | fgrep 'public key (base64):' | cut -d: -f2 | xargs echo -n > $out
+      ${cardano-cli-bin} "''${args[@]}" | fgrep 'public key (base64):' | cut -d: -f2 | xargs echo -n > $out
     '';
 
   ## extractDelegateCertificate
@@ -209,7 +210,7 @@ let
       print-genesis-hash
       --genesis-json "${genesisFile}"
       )
-      ${cardano-node}/bin/cardano-cli "''${args[@]}" | egrep '^[0-9a-f]{64,64}$' | xargs echo -n > $out
+      ${cardano-cli-bin} "''${args[@]}" | egrep '^[0-9a-f]{64,64}$' | xargs echo -n > $out
     '';
 
   ## mkChairmanScript
