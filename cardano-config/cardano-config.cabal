@@ -20,7 +20,7 @@ library
                        Cardano.Config.Topology
                        Cardano.Config.Types
 
-  build-depends:       base >=4.12 && <5
+  build-depends:       base >=4.12 && <4.13
                      , aeson
                      , async
                      , bytestring

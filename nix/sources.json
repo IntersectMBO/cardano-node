@@ -60,15 +60,15 @@
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "iohk-nix": {
-        "branch": "update-nixpkgs-haskell-nix",
+        "branch": "master",
         "description": "nix scripts shared across projects",
         "homepage": null,
         "owner": "input-output-hk",
         "repo": "iohk-nix",
-        "rev": "cd82104c21da8bd448ea480e45ad4ddb4cd34c16",
-        "sha256": "0r522d80n6qy92fghb70psl0hfqa0l8f1lnqa8vwf31dmbdq0n7q",
+        "rev": "40fc58f0f1cb0f9de24d8df3144a8cd8f2e3a775",
+        "sha256": "1h3d1gmjfxbwrdszj1ciqlbn646fy687w940fs4gx2bc12j39acb",
         "type": "tarball",
-        "url": "https://github.com/input-output-hk/iohk-nix/archive/cd82104c21da8bd448ea480e45ad4ddb4cd34c16.tar.gz",
+        "url": "https://github.com/input-output-hk/iohk-nix/archive/40fc58f0f1cb0f9de24d8df3144a8cd8f2e3a775.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "niv": {

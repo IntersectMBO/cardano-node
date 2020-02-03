@@ -1,5 +1,4 @@
-resolver: lts-14.22
-compiler: ghc-8.6.5
+resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/00487726c4bc21b4744e59d913334ebfeac7d68e/snapshot.yaml
 
 packages:
   - cardano-config
@@ -9,25 +8,7 @@ ghc-options:
   cardano-config:   -Wall -fwarn-redundant-constraints
   cardano-node:     -Wall -fwarn-redundant-constraints
 
-allow-newer: true
-
 extra-deps:
-  - git: https://github.com/angerman/cardano-crypto
-    commit: 614c89c92d16d2d4a41792c40b988129b40cd085
-
-  - QuickCheck-2.12.6.1
-  - quickcheck-instances-0.3.19
-  - hspec-2.7.0
-  - hspec-core-2.7.0
-  - hspec-discover-2.7.0
-  - text-1.2.4.0
-  - base58-bytestring-0.1.0
-  # Waiting on Stackage release
-  - hedgehog-1.0.2
-  - micro-recursion-schemes-5.0.2.2
-  - streaming-binary-0.3.0.1
-  - cborg-0.2.2.1
-  - canonical-json-0.6.0.0
   - brick-0.47
   - binary-0.8.7.0
   - bimap-0.4.0
@@ -40,12 +21,12 @@ extra-deps:
   - io-streams-1.5.1.0
   - io-streams-haproxy-1.0.1.0
   - moo-1.2
-  - network-3.1.1.1
-  - snap-core-1.0.4.1
+  - network-3.1.0.0
+  - snap-core-1.0.4.0
   - snap-server-1.1.1.1
   - statistics-linreg-0.3
   - time-units-1.0.0
-  - tasty-hedgehog-1.0.0.2
+  - tasty-hedgehog-1.0.0.1
   - transformers-except-0.1.1
   - text-zipper-0.10.1
   - Unique-0.4.7.6
@@ -124,7 +105,6 @@ extra-deps:
   - git: https://github.com/input-output-hk/ouroboros-network
     commit: 398004e1403367cc2a25c639eb6349d473e51b2d
     subdirs:
-        - io-sim
         - io-sim-classes
         - network-mux
         - ouroboros-network
