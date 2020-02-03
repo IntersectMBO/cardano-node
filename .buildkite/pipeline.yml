@@ -16,10 +16,11 @@ steps:
     agents:
       system: x86_64-linux
 
-  - label: 'release.nix'
-    command: 'nix-build -A check-hydra -o check-hydra.sh && ./check-hydra.sh'
-    agents:
-      system: x86_64-linux
+  # TODO: fix darwin false positives
+  #- label: 'release.nix'
+  #  command: 'nix-build -A check-hydra -o check-hydra.sh && ./check-hydra.sh'
+  #  agents:
+  #    system: x86_64-linux
 
   - label: 'stack-cabal-sync'
     command: 'nix-shell scripts/buildkite/stack-cabal-sync.nix --run scripts/buildkite/stack-cabal-sync.sh'
