@@ -2,22 +2,19 @@
 , crossSystem ? null
 , config ? {}
 , overlays ? []
+, sourcesOverride ? {}
 , profiling ? false
 }:
 
 let
-  sources = import ./nix/sources.nix;
+  # use default stable nixpkgs from iohk-nix instead of our own:
+  sources = removeAttrs (import ./nix/sources.nix) [ "nixpkgs" ] // sourcesOverride;
   iohkNix = import sources.iohk-nix {
+    inherit config system crossSystem;
     sourcesOverride = sources;
+    nixpkgsOverlays = overlays;
   };
-  haskellNix = import sources."haskell.nix";
-  args = haskellNix // {
-    inherit system crossSystem;
-    overlays = (haskellNix.overlays or []) ++ overlays;
-    config = (haskellNix.config or {}) // config;
-  };
-  nixpkgs = import sources.nixpkgs;
-  pkgs = nixpkgs args;
+  pkgs = iohkNix.pkgs;
   haskellPackages = import ./nix/pkgs.nix {
     inherit pkgs profiling;
     src = ./.;
@@ -25,23 +22,21 @@ let
   # TODO: add haskellPackages and fix svclib
   svcLib = import ./nix/svclib.nix { inherit pkgs; cardano-node-packages = haskellPackages.cardano-node.components.exes; };
   lib = pkgs.lib;
-  niv = (import sources.niv {}).niv;
-  isCardanoNode = with lib; package:
-    (package.isHaskell or false) &&
-      ((hasPrefix "cardano-node" package.identifier.name) ||
-       (elem package.identifier.name [ "text-class" "bech32" ]));
-  filterCardanoPackages = pkgs.lib.filterAttrs (_: package: isCardanoNode package);
-  getPackageChecks = pkgs.lib.mapAttrs (_: package: package.checks);
+
+  collectChecks = lib.mapAttrsRecursiveCond (p: !(lib.isDerivation p))
+    (_: p: if (lib.isAttrs p) then pkgs.haskell-nix.haskellLib.check p else p);
+
+  collectComponents' = group: pkgs.haskell-nix.haskellLib.collectComponents group (_:true);
+
 in lib // iohkNix.cardanoLib // {
-  inherit (pkgs.haskell-nix.haskellLib) collectComponents;
+  inherit (pkgs.haskell-nix.haskellLib) collectComponents selectProjectPackages;
+  inherit (iohkNix) niv;
   inherit
-    niv
     sources
     haskellPackages
     pkgs
     iohkNix
     svcLib
-    isCardanoNode
-    getPackageChecks
-    filterCardanoPackages;
+    collectChecks
+    collectComponents';
 }

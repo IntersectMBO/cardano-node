@@ -104,7 +104,7 @@ let
     # TODO: fix broken evals
     #musl64 = mapTestOnCross musl64 (packagePlatformsCross project);
   } // extraBuilds // (mkRequiredJob (
-      collectTests jobs.native.tests ++
+      collectTests jobs.native.checks.tests ++
       collectTests jobs.native.benchmarks ++ [
       jobs.native.cardano-node.x86_64-darwin
       jobs.native.cardano-node.x86_64-linux
