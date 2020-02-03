@@ -24,14 +24,12 @@ let
     inherit commonLib interactive;
   };
 
-  recRecurseIntoAttrs = with pkgs; pred: x: if pred x then recurseIntoAttrs (lib.mapAttrs (n: v: if n == "buildPackages" then v else recRecurseIntoAttrs pred v) x) else x;
-  projectHaskellPackages = recRecurseIntoAttrs (x: with pkgs; lib.isAttrs x && !lib.isDerivation x)
-    # we are only intersted in listing the project packages
-    (pkgs.lib.filterAttrs (with pkgs.haskell-nix.haskellLib; (n: p: p != null && (isLocalPackage p && isProjectPackage p) || n == "shellFor"))
-      haskellPackages);
+  # we are only intersted in listing the project packages
+  projectHaskellPackages = pkgs.haskell-nix.haskellLib.selectProjectPackages haskellPackages;
 
   self = with commonLib; {
     inherit scripts nixosTests environments cardano-node;
+
     haskellPackages = projectHaskellPackages;
     inherit (iohkNix) check-hydra;
 
@@ -59,7 +57,6 @@ let
         #hlint.components.exes.hlint
         #cabal-install.components.exes.cabal
         #ghcid.components.exes.ghcid
-        pkgs.haskellPackages.terminfo
       ]) ++ (with pkgs; [
         pkgconfig
         sqlite-interactive

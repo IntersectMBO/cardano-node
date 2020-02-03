@@ -23,7 +23,7 @@ let
     src = ./.;
   };
   # TODO: add haskellPackages and fix svclib
-  svcLib = import ./nix/svclib.nix { inherit pkgs; cardano-node = haskellPackages.cardano-node.components.all; };
+  svcLib = import ./nix/svclib.nix { inherit pkgs; cardano-node-packages = haskellPackages.cardano-node.components.exes; };
   lib = pkgs.lib;
   niv = (import sources.niv {}).niv;
   isCardanoNode = with lib; package:

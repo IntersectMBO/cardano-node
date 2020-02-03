@@ -59,7 +59,7 @@ in {
 
       package = mkOption {
         type = types.package;
-        default = commonLib.haskellPackages.cardano-node.components.all;
+        default = commonLib.haskellPackages.cardano-node.components.exes.cardano-node;
         defaultText = "cardano-node";
         description = ''
           The cardano-node package that should be used
