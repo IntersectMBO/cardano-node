@@ -10,14 +10,14 @@ let
   inherit (commonLib) svcLib;
   envConfig = cfg.environments.${cfg.environment}; systemdServiceName = "cardano-node${optionalString cfg.instanced "@"}";
   mkScript = cfg:
-    let exec = "cardano-node";
+    let exec = "cardano-node run";
         cmd = builtins.filter (x: x != "") [
           "${cfg.package}/bin/${exec}"
           "--genesis-file ${cfg.genesisFile}"
           "--genesis-hash ${cfg.genesisHash}"
           "--config ${cfg.nodeConfigFile}"
           "--database-path ${cfg.databasePath}"
-          "--socket-dir ${if (cfg.runtimeDir == null) then "${cfg.stateDir}/socket" else "/run/${cfg.runtimeDir}"}"
+          "--socket-path ${if (cfg.runtimeDir == null) then "${cfg.stateDir}/socket" else "/run/${cfg.runtimeDir}"}"
           "--topology ${cfg.topology}"
           "--host-addr ${cfg.hostAddr}"
           "--port ${toString cfg.port}"
@@ -183,8 +183,8 @@ in {
 
       topology = mkOption {
         type = types.path;
-        default = commonLib.mkEdgeTopology {
-          inherit (cfg) nodeId port;
+        default = localLib.mkEdgeTopology {
+          inherit (cfg) port;
           inherit (envConfig) edgeNodes;
         };
         description = ''

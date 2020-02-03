@@ -37,8 +37,7 @@ import           Cardano.Chain.Slotting (EpochNumber(..))
 import           Cardano.Chain.UTxO (TxId, TxIn(..), TxOut(..))
 import           Cardano.Config.CommonCLI
 import           Cardano.Config.Topology (NodeAddress(..), NodeHostAddress(..))
-import           Cardano.Config.Types ( DelegationCertFile(..), GenesisFile(..), SigningKeyFile(..)
-                                      , SocketFile(..))
+import           Cardano.Config.Types ( DelegationCertFile(..), GenesisFile(..), SigningKeyFile(..))
 import           Cardano.Crypto (RequiresNetworkMagic(..), decodeHash)
 import           Cardano.Crypto.ProtocolMagic ( AProtocolMagic(..), ProtocolMagic
                                               , ProtocolMagicId(..))
@@ -396,11 +395,10 @@ parseTxRelatedValues =
         "Submit a raw, signed transaction, in its on-wire representation."
         $ SubmitTx
             <$> parseTxFile "tx"
-            <*> parseTopologyInfo "Target node that will receive the transaction"
             <*> parseProtocol
             <*> (GenesisFile <$> parseGenesisPath)
             <*> parseGenesisHash
-            <*> (SocketFile <$> parseSocketDir)
+            <*> parseSocketPath "Socket of target node"
     , command'
         "issue-genesis-utxo-expenditure"
         "Write a file with a signed transaction, spending genesis UTxO."
@@ -439,7 +437,7 @@ parseTxRelatedValues =
             <*> (DelegationCertFile <$> parseDelegationCert)
             <*> (GenesisFile <$> parseGenesisPath)
             <*> parseGenesisHash
-            <*> (SocketFile <$> parseSocketDir)
+            <*> parseSocketPath "Path to a cardano-node socket"
             <*> parseProtocol
             <*> (NE.fromList <$> some (
                   parseTargetNodeAddress
@@ -470,7 +468,6 @@ parseTxRelatedValues =
             <*> parseSigningKeysFiles
                   "sig-key"
                   "Path to signing key file, for genesis UTxO using by generator."
-            <*> parseNodeId "Node Id of target node"
       ]
 
 

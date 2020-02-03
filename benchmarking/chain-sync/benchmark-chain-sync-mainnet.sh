@@ -39,7 +39,7 @@ exec ${NODE} \
   --genesis-hash "5f20df933584822601f9e3f8c024eb5eb252fe8cefb24d1317dc3d432e940ebb" \
   --config ${BASEDIR}/configuration/log-configuration.yaml \
   --database-path .//db-mainnet \
-  --socket-dir /tmp/socket-bm-chain-sync \
+  --socket-path /tmp/socket-bm-chain-sync \
   --topology ${BASEDIR}/configuration/topology-local.yaml \
   --host-addr 127.0.0.1 \
   --port 7778 \

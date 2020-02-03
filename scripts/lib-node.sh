@@ -25,18 +25,18 @@ function dlgcert () {
         printf -- "--delegation-certificate ${genesis_root}/delegation-cert.%03d.json " "$1"
 }
 function commonargs() {
-        printf -- "--topology ${configuration}/simple-topology.json "
-        printf -- "--database-path ${root}/db/ "
+        printf -- "--topology ${configuration}/realPBFT/simple-topology-real-pbft-node-$1.json "
+        printf -- "--database-path ${root}/db/db-$1 "
         printf -- "--genesis-file ${genesis_file} "
         printf -- "--genesis-hash ${genesis_hash} "
-        printf -- "--socket-dir ${root}/socket/$1 "
+        printf -- "--socket-path ${root}/socket/$1 "
 }
 
 function nodeargs () {
         local id="$1"
         local flavor="$2"
         local extra="$3"
-        commonargs
+        commonargs $id
         nodecfg $id $flavor
         dlgkey $id
         dlgcert $id

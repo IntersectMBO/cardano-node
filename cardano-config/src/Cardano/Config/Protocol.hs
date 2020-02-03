@@ -131,7 +131,7 @@ fromProtocol
   -> Maybe NodeId
   -> Maybe Word64
   -- ^ Number of core nodes
-  -> GenesisFile
+  -> Maybe GenesisFile
   -> RequiresNetworkMagic
   -> Maybe Double
   -> Maybe DelegationCertFile
@@ -162,8 +162,11 @@ fromProtocol _ nId mNumCoreNodes _ _ _ _ _ _ MockPBFT =
                  , pbftSlotLength         = mockSlotLength
                  }
       cid
-fromProtocol gHash _ _ genFile nMagic sigThresh delCertFp sKeyFp update RealPBFT = do
+fromProtocol gHash _ _ mGenFile nMagic sigThresh delCertFp sKeyFp update RealPBFT = do
     let genHash = either panic identity $ decodeHash gHash
+        genFile = fromMaybe (panic $ "Cardano.Config.Protocol.fromProtocol: "
+                                   <> "Genesis file not specified"
+                            ) mGenFile
 
     gc <- firstExceptT LedgerConfigError $ Genesis.mkConfigFromFile
              nMagic

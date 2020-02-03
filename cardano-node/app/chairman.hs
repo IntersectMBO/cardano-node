@@ -23,7 +23,7 @@ import           Cardano.Config.Protocol ( ProtocolInstantiationError
                                          , SomeProtocol(..), fromProtocol)
 import           Cardano.Config.Types (ConfigYamlFilePath(..), DelegationCertFile(..),
                                        GenesisFile (..), NodeConfiguration(..),
-                                       SigningKeyFile(..), SocketFile(..), parseNodeConfiguration)
+                                       SigningKeyFile(..), SocketPath(..), parseNodeConfiguration)
 import           Cardano.Common.Parsers
 import           Cardano.Chairman (runChairman)
 
@@ -46,8 +46,8 @@ main = do
     frmPtclRes <- runExceptT $ fromProtocol
                                  caGenesisHash
                                  (ncNodeId nc)
-                                 (fromIntegral <$> ncNumCoreNodes nc)
-                                 (caGenesisFile)
+                                 (ncNumCoreNodes nc)
+                                 (Just caGenesisFile)
                                  (ncReqNetworkMagic nc)
                                  (ncPbftSignatureThresh nc)
                                  (caDelegationCertFp)
@@ -63,7 +63,7 @@ main = do
     let run = runChairman p caCoreNodeIds
                           caSecurityParam
                           caMaxBlockNo
-                          (unSocket caSocketDir)
+                          caSocketDir
                           stdoutTracer
 
     case caTimeout of
@@ -102,7 +102,7 @@ data ChairmanArgs = ChairmanArgs {
     , caTimeoutType :: !TimeoutType
     , caGenesisFile :: !GenesisFile
     , caGenesisHash :: !Text
-    , caSocketDir :: !SocketFile
+    , caSocketDir :: !SocketPath
     , caConfigYaml :: !ConfigYamlFilePath
     , caSigningKeyFp :: !(Maybe SigningKeyFile)
     , caDelegationCertFp :: !(Maybe DelegationCertFile)
@@ -146,7 +146,7 @@ parseChairmanArgs =
           "timeout-is-success" "Exit successfully on timeout."
       <*> (GenesisFile <$> parseGenesisPath)
       <*> parseGenesisHash
-      <*> (SocketFile <$> parseSocketDir)
+      <*> parseSocketPath "Path to a cardano-node socket"
       <*> (ConfigYamlFilePath <$> parseConfigFile)
       <*> (optional $ SigningKeyFile <$> parseSigningKey)
       <*> (optional $ DelegationCertFile <$> parseDelegationCert)

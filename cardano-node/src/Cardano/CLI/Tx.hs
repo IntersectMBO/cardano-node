@@ -59,8 +59,7 @@ import           Cardano.CLI.Ops
 import           Cardano.CLI.Tx.Submission
 import           Cardano.Config.Protocol
 import           Cardano.Config.Types (DelegationCertFile, GenesisFile,
-                                       SigningKeyFile, SocketFile, Update)
-import           Cardano.Config.Topology
+                                       SigningKeyFile, SocketPath, Update)
 import           Cardano.Common.Orphans ()
 
 
@@ -248,27 +247,29 @@ issueUTxOExpenditure
 
 -- | Submit a transaction to a node specified by topology info.
 nodeSubmitTx
-  :: TopologyInfo
-  -> Text
+  :: Text
+  -- ^ Genesis hash.
+  -> Maybe Int
+  -- ^ Number of core nodes.
   -> GenesisFile
   -> RequiresNetworkMagic
   -> Maybe Double
   -> Maybe DelegationCertFile
   -> Maybe SigningKeyFile
-  -> SocketFile
+  -> SocketPath
   -> Update
   -> Protocol
   -> GenTx ByronBlock
   -> ExceptT RealPBFTError IO ()
 nodeSubmitTx
-  topology
   gHash
+  _mNumCoreNodes
   genFile
   nMagic
   sigThresh
   delCertFp
   sKeyFp
-  socketFp
+  targetSocketFp
   update
   ptcl
   gentx =
@@ -276,9 +277,8 @@ nodeSubmitTx
       \p@Consensus.ProtocolRealPBFT{} -> liftIO $ do
         -- TODO: Update submitGenTx to use `ExceptT`
         traceWith stdoutTracer ("TxId: " ++ condense (Consensus.txId gentx))
-        submitTx socketFp
+        submitTx targetSocketFp
                  (pInfoConfig (protocolInfo p))
-                 (node topology)
                  gentx
                  stdoutTracer
 
@@ -294,4 +294,3 @@ fromCborTxAux lbs =
 
 toCborTxAux :: UTxO.ATxAux ByteString -> LB.ByteString
 toCborTxAux = LB.fromStrict . UTxO.aTaAnnotation -- The ByteString anotation is the CBOR encoded version.
-

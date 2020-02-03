@@ -49,7 +49,6 @@ import           Cardano.Crypto (ProtocolMagicId, RequiresNetworkMagic(..))
 import qualified Cardano.Crypto.Hashing as Crypto
 import qualified Cardano.Crypto.Signing as Crypto
 
-import           Ouroboros.Consensus.NodeId
 import qualified Ouroboros.Consensus.Protocol as Consensus
 
 import           Cardano.CLI.Delegation
@@ -65,9 +64,13 @@ import           Cardano.CLI.Tx.Generation (NumberOfTxs (..),
                                             genesisBenchmarkRunner)
 import           Cardano.Common.Orphans ()
 import           Cardano.Config.Protocol
-import           Cardano.Config.Types
 import           Cardano.Config.Logging (createLoggingFeatureCLI)
-import           Cardano.Config.Topology (NodeAddress(..), TopologyInfo(..))
+import           Cardano.Config.Types ( CardanoEnvironment(..), DelegationCertFile(..)
+                                      , GenesisFile(..), LastKnownBlockVersion(..)
+                                      , NodeConfiguration(..), SigningKeyFile(..)
+                                      , SocketPath(..), Update(..)
+                                      , parseNodeConfiguration)
+import           Cardano.Config.Topology (NodeAddress(..))
 
 -- | Sub-commands of 'cardano-cli'.
 data ClientCommand
@@ -134,11 +137,11 @@ data ClientCommand
   | SubmitTx
     TxFile
     -- ^ Filepath of transaction to submit.
-    TopologyInfo
     Protocol
     GenesisFile
     Text
-    SocketFile
+    SocketPath
+    -- ^ Socket path of target node.
   | SpendGenesisUTxO
     Protocol
     GenesisFile
@@ -174,7 +177,7 @@ data ClientCommand
     GenesisFile
     Text
     -- ^ Genesis hash
-    SocketFile
+    SocketPath
     Protocol
     (NonEmpty NodeAddress)
     NumberOfTxs
@@ -184,7 +187,6 @@ data ClientCommand
     TPSRate
     (Maybe TxAdditionalSize)
     [SigningKeyFile]
-    NodeId
    deriving Show
 runCommand :: ClientCommand -> ExceptT CliError IO ()
 runCommand (Genesis outDir params ptcl) = do
@@ -236,21 +238,21 @@ runCommand (CheckDelegation magic cert issuerVF delegateVF) = do
   delegateVK <- readVerificationKey delegateVF
   liftIO $ checkByronGenesisDelegation cert magic issuerVK delegateVK
 
-runCommand (SubmitTx fp topology ptcl genFile genHash socketDir) = do
+runCommand (SubmitTx fp ptcl genFile genHash socketPath) = do
     -- Default update value
     let update = Update (ApplicationName "cardano-sl") 1 $ LastKnownBlockVersion 0 2 0
     tx <- liftIO $ readByronTx fp
     firstExceptT
       NodeSubmitTxError
       $ nodeSubmitTx
-          topology
           genHash
+          Nothing
           genFile
           RequiresNoMagic
           Nothing
           Nothing
           Nothing
-          socketDir
+          socketPath
           update
           ptcl
           tx
@@ -299,7 +301,7 @@ runCommand (GenerateTxs
                delegCert
                genFile
                genHash
-               socketDir
+               socketFp
                ptcl
                targetNodeAddresses
                numOfTxs
@@ -308,8 +310,7 @@ runCommand (GenerateTxs
                feePerTx
                tps
                txAdditionalSize
-               sigKeysFiles
-               _nodeId) = do
+               sigKeysFiles) = do
   -- Default update value
   let update = Update (ApplicationName "cardano-sl") 1 $ LastKnownBlockVersion 0 2 0
 
@@ -334,7 +335,7 @@ runCommand (GenerateTxs
                         firstExceptT GenesisBenchmarkRunnerError
                           $ genesisBenchmarkRunner
                                loggingLayer
-                               socketDir
+                               socketFp
                                protocol
                                targetNodeAddresses
                                numOfTxs

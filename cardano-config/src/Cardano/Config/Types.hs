@@ -10,13 +10,15 @@ module Cardano.Config.Types
     , GenesisFile (..)
     , LastKnownBlockVersion (..)
     , MiscellaneousFilepaths (..)
-    , NodeCLI (..)
     , NodeConfiguration (..)
     , Protocol (..)
+    , NodeMockCLI (..)
+    , NodeCLI (..)
+    , NodeProtocolMode (..)
     , SigningKeyFile (..)
-    , SocketFile (..)
     , TopologyFile (..)
     , TraceOptions (..)
+    , SocketPath (..)
     , Update (..)
     , ViewMode (..)
     , parseNodeConfiguration
@@ -56,7 +58,20 @@ data NodeCLI = NodeCLI
     , nodeAddr :: !NodeAddress
     , configFp :: !ConfigYamlFilePath
     , validateDB :: !Bool
+    }
+
+data NodeMockCLI = NodeMockCLI
+    { mockMscFp :: !MiscellaneousFilepaths
+    , mockGenesisHash :: !Text
+    , mockNodeAddr :: !NodeAddress
+    , mockConfigFp :: !ConfigYamlFilePath
+    , mockValidateDB :: !Bool
     } deriving Show
+
+-- | Mock protocols requires different parameters to real protocols.
+-- Therefore we distinguish this at the top level on the command line.
+data NodeProtocolMode = MockProtocolMode NodeMockCLI
+                      | RealProtocolMode NodeCLI
 
 -- | Filepath of the configuration yaml file. This file determines
 -- all the configuration settings required for the cardano node
@@ -68,10 +83,10 @@ newtype ConfigYamlFilePath = ConfigYamlFilePath
 data MiscellaneousFilepaths = MiscellaneousFilepaths
   { topFile :: !TopologyFile
   , dBFile :: !DbFile
-  , genesisFile :: !GenesisFile
+  , genesisFile :: !(Maybe GenesisFile)
   , delegCertFile :: !(Maybe DelegationCertFile)
   , signKeyFile :: !(Maybe SigningKeyFile)
-  , socketFile :: !SocketFile
+  , socketFile :: !SocketPath
   } deriving Show
 
 newtype TopologyFile = TopologyFile
@@ -90,7 +105,7 @@ newtype DelegationCertFile = DelegationCertFile
   { unDelegationCert :: FilePath }
   deriving Show
 
-newtype SocketFile = SocketFile
+data SocketPath = SocketFile
   { unSocket :: FilePath }
   deriving Show
 
@@ -102,7 +117,7 @@ data NodeConfiguration =
     NodeConfiguration
       { ncProtocol :: Protocol
       , ncNodeId :: Maybe NodeId
-      , ncNumCoreNodes :: Maybe Int
+      , ncNumCoreNodes :: Maybe Word64
       , ncReqNetworkMagic :: RequiresNetworkMagic
       , ncPbftSignatureThresh :: Maybe Double
       , ncLoggingSwitch :: Bool

@@ -41,16 +41,16 @@ function dlgcert () {
         printf -- "--delegation-certificate ${genesis_root}/delegation-cert.%03d.json " "$1"
 }
 function commonargs() {
-        printf -- "--topology configuration/simple-topology.json "
-        printf -- "--database-path ./db/ "
+        printf -- "--topology configuration/simple-topology-real-pbft-node-$1.json "
+        printf -- "--database-path ./db-$1/ "
         printf -- "--genesis-file ${genesis_file} "
         printf -- "--genesis-hash ${genesis_hash} "
-        printf -- "--socket-dir /tmp/cluster3nodes-socket/ "
+        printf -- "--socket-path /tmp/cluster3nodes-socket/$1 "
 }
 
 function nodeargs () {
         local extra="$2"
-        commonargs
+        commonargs $1
         nodecfg $1
         dlgkey $1
         dlgcert $1
@@ -65,8 +65,8 @@ tmux select-pane -t 0
 
 # start nodes
 tmux select-pane -t 0
-tmux send-keys "cd '${BASEPATH}'; ${CMD} exe:cardano-node $(nodeargs 0 "$(echo -n ${EXTRA})") " C-m
+tmux send-keys "cd '${BASEPATH}'; ${CMD} exe:cardano-node run $(nodeargs 0 "$(echo -n ${EXTRA})") " C-m
 tmux select-pane -t 1
-tmux send-keys "cd '${BASEPATH}'; ${CMD} exe:cardano-node $(nodeargs 1 "$(echo -n ${EXTRA})") " C-m
+tmux send-keys "cd '${BASEPATH}'; ${CMD} exe:cardano-node run $(nodeargs 1 "$(echo -n ${EXTRA})") " C-m
 tmux select-pane -t 2
-tmux send-keys "cd '${BASEPATH}'; ${CMD} exe:cardano-node $(nodeargs 2 "$(echo -n ${EXTRA})") " C-m
+tmux send-keys "cd '${BASEPATH}'; ${CMD} exe:cardano-node run $(nodeargs 2 "$(echo -n ${EXTRA})") " C-m

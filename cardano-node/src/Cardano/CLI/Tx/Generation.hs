@@ -61,7 +61,7 @@ import qualified Cardano.Chain.Genesis as CC.Genesis
 import qualified Cardano.Chain.MempoolPayload as CC.Mempool
 import qualified Cardano.Chain.UTxO as CC.UTxO
 import           Cardano.Config.Logging (LoggingLayer (..), Trace)
-import           Cardano.Config.Types (SocketFile)
+import           Cardano.Config.Types (SocketPath)
 import qualified Cardano.Crypto as Crypto
 import           Cardano.Config.Topology (NodeAddress (..),
                                           NodeHostAddress(..))
@@ -89,7 +89,6 @@ import           Ouroboros.Consensus.Ledger.Byron (ByronBlock (..),
                                                    GenTx (..),
                                                    ByronConsensusProtocol)
 import qualified Ouroboros.Consensus.Ledger.Byron as Byron
-import           Ouroboros.Consensus.NodeId (NodeId (..), CoreNodeId(..))
 import           Ouroboros.Consensus.Protocol.Abstract (NodeConfig)
 import           Ouroboros.Consensus.Protocol.ExtConfig (extNodeConfig)
 
@@ -134,7 +133,7 @@ newtype TxAdditionalSize =
 -----------------------------------------------------------------------------------------
 genesisBenchmarkRunner
   :: LoggingLayer
-  -> SocketFile
+  -> SocketPath
   -> Consensus.Protocol ByronBlock
   -> NonEmpty NodeAddress
   -> NumberOfTxs
@@ -382,7 +381,7 @@ extractGenesisFunds genesisConfig signingKeys =
 -- (latter corresponds to 'targetAddress' here) and "remember" it in 'availableFunds'.
 prepareInitialFunds
   :: Tracer IO String
-  -> SocketFile
+  -> SocketPath
   -> CC.Genesis.Config
   -> NodeConfig ByronConsensusProtocol
   -> Map Int ((CC.UTxO.TxIn, CC.UTxO.TxOut), Crypto.SigningKey)
@@ -413,7 +412,7 @@ prepareInitialFunds llTracer
                                               genesisAddress
                                               (NE.fromList [outForBig])
 
-  submitTx socketFp pInfoConfig (CoreId (CoreNodeId 0)) genesisTx llTracer
+  submitTx socketFp pInfoConfig genesisTx llTracer
   -- Done, the first transaction 'initGenTx' is submitted, now 'sourceAddress' has a lot of money.
 
   let txIn  = CC.UTxO.TxInUtxo (getTxIdFromGenTx genesisTx) 0
@@ -605,7 +604,7 @@ runBenchmark
   -> Tracer IO SendRecvConnect
   -> Tracer IO (SendRecvTxSubmission ByronBlock)
   -> Tracer IO String
-  -> SocketFile
+  -> SocketPath
   -> NodeConfig ByronConsensusProtocol
   -> Crypto.SigningKey
   -> CC.Common.Address
@@ -738,7 +737,7 @@ runBenchmark benchTracer
 --   Technically all splitting transactions will send money back to 'sourceAddress'.
 createMoreFundCoins
   :: Tracer IO String
-  -> SocketFile
+  -> SocketPath
   -> NodeConfig ByronConsensusProtocol
   -> Crypto.SigningKey
   -> FeePerTx
@@ -789,7 +788,7 @@ createMoreFundCoins llTracer
                                          []
   -- Submit all splitting transactions sequentially.
   liftIO $ forM_ splittingTxs $ \(tx, _) ->
-    submitTx socketFp pInfoConfig (CoreId (CoreNodeId 0)) tx llTracer
+    submitTx socketFp pInfoConfig tx llTracer
 
   -- Re-create availableFunds with information about all splitting transactions
   -- (it will be used for main transactions).

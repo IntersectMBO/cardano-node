@@ -211,7 +211,7 @@ withRealPBFT gHash genFile nMagic sigThresh delCertFp sKeyFp update ptcl action 
                           gHash
                           Nothing
                           Nothing
-                          genFile
+                          (Just genFile)
                           nMagic
                           sigThresh
                           delCertFp

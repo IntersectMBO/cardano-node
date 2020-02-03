@@ -25,7 +25,6 @@ import           Ouroboros.Consensus.Block (BlockProtocol)
 import           Ouroboros.Consensus.Mempool (ApplyTxErr, GenTx)
 import           Ouroboros.Consensus.Node.Run (RunNode)
 import qualified Ouroboros.Consensus.Node.Run as Node
-import           Ouroboros.Consensus.NodeId (NodeId(..))
 import           Ouroboros.Consensus.Protocol (NodeConfig)
 
 import           Network.TypedProtocol.Driver (runPeer)
@@ -45,7 +44,7 @@ import           Ouroboros.Network.NodeToClient (NetworkConnectTracers (..))
 import qualified Ouroboros.Network.NodeToClient as NodeToClient
 
 import           Cardano.Common.LocalSocket
-import           Cardano.Config.Types (SocketFile(..))
+import           Cardano.Config.Types (SocketPath(..))
 
 
 
@@ -57,14 +56,13 @@ import           Cardano.Config.Types (SocketFile(..))
 submitTx :: ( RunNode blk
             , Show (ApplyTxErr blk)
             )
-         => SocketFile
+         => SocketPath
          -> NodeConfig (BlockProtocol blk)
-         -> NodeId
          -> GenTx blk
          -> Tracer IO String
          -> IO ()
-submitTx socketFp protoInfoConfig nId tx tracer = do
-    socketPath <- localSocketAddrInfo (Just nId) (unSocket $ socketFp) NoMkdirIfMissing
+submitTx targetSocketFp protoInfoConfig tx tracer = do
+    targetSocketFp' <- localSocketAddrInfo targetSocketFp
     NodeToClient.connectTo
       NetworkConnectTracers {
           nctMuxTracer       = nullTracer,
@@ -72,7 +70,7 @@ submitTx socketFp protoInfoConfig nId tx tracer = do
         }
       (localInitiatorNetworkApplication tracer protoInfoConfig tx)
       Nothing
-      socketPath
+      targetSocketFp'
 
 localInitiatorNetworkApplication
   :: forall blk m peer.

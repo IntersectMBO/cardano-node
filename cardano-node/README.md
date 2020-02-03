@@ -47,7 +47,7 @@ The general synopsis is as follows:
 
 Usage: cardano-node --topology FILEPATH --database-path FILEPATH
                     --genesis-file FILEPATH [--delegation-certificate FILEPATH]
-                    [--signing-key FILEPATH] --socket-dir FILEPATH
+                    [--signing-key FILEPATH] --socket-path FILEPATH
                     [--host-addr HOST-NAME] --port PORT
                     --config NODE-CONFIGURATION [--help] [--help-tracing]
                     [--help-advanced]
@@ -63,7 +63,7 @@ Usage: cardano-node --topology FILEPATH --database-path FILEPATH
 
 `--signing-key` - Optional path to the signing key.
 
-`--socket-dir` - Path to the socket directory.
+`--socket-path` - Path to the socket file.
 
 `--host-addr` - Optionally specify your node's IPv4 or IPv6 address.
 
@@ -77,7 +77,7 @@ Usage: cardano-node --topology FILEPATH --database-path FILEPATH
 The `--config` flag points to a `.yaml` file that is responsible to configuring the logging & other important settings for the node.
 Some of the more important settings are as follows:
 
-`NodeId: 0`  -- Soon to be removed from config file. Used to identify nodes in local clusters.
+`NodeId: 0`  -- Used in mock protocols only to differentiate nodes.
 
 `Protocol: RealPBFT` -- Protocol the node will execute
 

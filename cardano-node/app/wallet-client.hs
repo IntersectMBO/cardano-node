@@ -13,12 +13,10 @@ import           Cardano.Shell.Lib (runCardanoApplicationWithFeatures)
 import           Cardano.Shell.Types (CardanoApplication (..),
                                       CardanoFeature (..))
 
-import           Cardano.Common.Parsers ( parseConfigFile, parseGenesisFile
-                                        , parseSocketDir)
+import           Cardano.Common.Parsers (parseConfigFile, parseGenesisFile, parseSocketPath)
 import           Cardano.Config.CommonCLI
 import           Cardano.Config.Types ( CardanoEnvironment (..), ConfigYamlFilePath (..)
-                                      , DelegationCertFile(..), SigningKeyFile (..)
-                                      , SocketFile (..))
+                                      , DelegationCertFile(..), SigningKeyFile (..))
 import           Cardano.Config.Logging (LoggingLayer (..))
 import           Cardano.Wallet.Logging (WalletCLI(..), createLoggingFeatureWallet)
 import           Cardano.Wallet.Run
@@ -53,7 +51,7 @@ parseWalletCLI = WalletCLI
     <*> parseGenesisHash
     <*> parseGenesisFile "genesis-json"
     <*> optional (SigningKeyFile <$> parseSigningKey)
-    <*> (SocketFile <$> parseSocketDir)
+    <*> parseSocketPath "Path to a cardano-node socket."
 
 initializeAllFeatures :: WalletCLI  -> CardanoEnvironment -> IO ([CardanoFeature], NodeLayer)
 initializeAllFeatures wCli cardanoEnvironment = do

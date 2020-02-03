@@ -42,7 +42,7 @@ let
       edgeHost = if config.useProxy then config.proxyHost else config.edgeHost;
       edgeNodes = if config.useProxy then [] else config.edgeNodes;
     in config.topologyFile or commonLib.mkEdgeTopology {
-      inherit (config) hostAddr port nodeId;
+      inherit (config) hostAddr port;
       inherit edgeNodes edgeHost edgePort;
     };
     serviceConfig = {

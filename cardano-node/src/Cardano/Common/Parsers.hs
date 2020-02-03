@@ -4,8 +4,10 @@
 {-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
 
 module Cardano.Common.Parsers
-  ( loggingParser
-  , nodeCliParser
+  ( nodeMockParser
+  , nodeMockProtocolModeParser
+  , nodeProtocolModeParser
+  , nodeRealParser
   , parseConfigFile
   , parseCoreNodeId
   , parseDbPath
@@ -18,7 +20,7 @@ module Cardano.Common.Parsers
   , parseLogOutputFile
   , parseNodeId
   , parseProtocol
-  , parseSocketDir
+  , parseSocketPath
   , parseTopologyInfo
   ) where
 
@@ -30,7 +32,6 @@ import           Cardano.Prelude hiding (option)
 import           Network.Socket (PortNumber)
 import           Options.Applicative
 
-import           Cardano.Config.Logging (LoggingCLIArguments(..))
 import           Ouroboros.Consensus.NodeId (NodeId(..), CoreNodeId(..))
 
 import           Cardano.Config.CommonCLI
@@ -40,16 +41,73 @@ import           Cardano.Config.Types
 
 -- Common command line parsers
 
--- | The product parser for all the CLI arguments.
-nodeCliParser :: Parser NodeCLI
-nodeCliParser = do
+nodeProtocolModeParser  :: Parser NodeProtocolMode
+nodeProtocolModeParser = nodeRealProtocolModeParser <|> nodeMockProtocolModeParser
+
+nodeMockProtocolModeParser :: Parser NodeProtocolMode
+nodeMockProtocolModeParser = subparser
+                           (  commandGroup "Execute node with a mock protocol."
+                           <> metavar "run-mock"
+                           <> command "run-mock"
+                                (MockProtocolMode
+                                  <$> info
+                                        (nodeMockParser <**> helper)
+                                        (progDesc "Execute node with a mock protocol."))
+                           )
+nodeRealProtocolModeParser :: Parser NodeProtocolMode
+nodeRealProtocolModeParser = subparser
+                           (  commandGroup "Execute node with a real protocol."
+                           <> metavar "run"
+                           <> command "run"
+                                (RealProtocolMode
+                                  <$> info
+                                        (nodeRealParser <**> helper)
+                                        (progDesc "Execute node with a real protocol." ))
+                           )
+
+-- | The mock protocol parser.
+nodeMockParser :: Parser NodeMockCLI
+nodeMockParser = do
   -- Filepaths
   topFp <- parseTopologyFile
   dbFp <- parseDbPath
-  genFp <- parseGenesisPath
+  socketFp <- parseSocketPath "Path to a cardano-node socket"
+
+  genHash <- parseGenesisHash
+
+  -- NodeConfiguration filepath
+  nodeConfigFp <- parseConfigFile
+
+  -- Node Address
+  nAddress <- parseNodeAddress
+
+  validate <- parseValidateDB
+
+  pure $ NodeMockCLI
+           { mockMscFp = MiscellaneousFilepaths
+             { topFile = TopologyFile topFp
+             , dBFile = DbFile dbFp
+             , genesisFile = Nothing
+             , delegCertFile = Nothing
+             , signKeyFile = Nothing
+             , socketFile = socketFp
+             }
+           , mockGenesisHash = genHash
+           , mockNodeAddr = nAddress
+           , mockConfigFp = ConfigYamlFilePath nodeConfigFp
+           , mockValidateDB = validate
+           }
+
+-- | The real protocol parser.
+nodeRealParser :: Parser NodeCLI
+nodeRealParser = do
+  -- Filepaths
+  topFp <- parseTopologyFile
+  dbFp <- parseDbPath
+  genFp <- optional parseGenesisPath
   delCertFp <- optional parseDelegationCert
   sKeyFp <- optional parseSigningKey
-  socketFp <- parseSocketDir
+  socketFp <- parseSocketPath "Path to a cardano-node socket"
 
   genHash <- parseGenesisHash
 
@@ -65,16 +123,18 @@ nodeCliParser = do
     { mscFp = MiscellaneousFilepaths
       { topFile = TopologyFile topFp
       , dBFile = DbFile dbFp
-      , genesisFile = GenesisFile genFp
+      , genesisFile = GenesisFile <$> genFp
       , delegCertFile = DelegationCertFile <$> delCertFp
       , signKeyFile = SigningKeyFile <$> sKeyFp
-      , socketFile = SocketFile socketFp
+      , socketFile = socketFp
       }
     , genesisHash = genHash
     , nodeAddr = nAddress
     , configFp = ConfigYamlFilePath nodeConfigFp
     , validateDB = validate
     }
+
+
 
 parseConfigFile :: Parser FilePath
 parseConfigFile =
@@ -155,15 +215,6 @@ parsePort =
        <> help "The port number"
     )
 
-parseSocketDir :: Parser FilePath
-parseSocketDir =
-  strOption
-    ( long "socket-dir"
-        <> metavar "FILEPATH"
-        <> help "Directory with local sockets:\
-                \  ${dir}/node-{core,relay}-${node-id}.socket"
-    )
-
 parseValidateDB :: Parser Bool
 parseValidateDB =
     switch (
@@ -189,6 +240,15 @@ parseProtocol = asum
     "Permissive BFT consensus with a real ledger"
   ]
 
+parseSocketPath :: Text -> Parser SocketPath
+parseSocketPath helpMessage =
+  SocketFile <$> strOption
+    ( long "socket-path"
+        <> (help $ toS helpMessage)
+        <> completer (bashCompleter "file")
+        <> metavar "FILEPATH"
+    )
+
 parseTopologyInfo :: String -> Parser TopologyInfo
 parseTopologyInfo desc = TopologyInfo <$> parseNodeId desc <*> parseTopologyFile
 
@@ -207,29 +267,3 @@ parseLogOutputFile =
     <> help "Logging output file"
     <> completer (bashCompleter "file")
     )
-
--- | A parser disables logging if --log-config is not supplied.
-loggingParser :: Parser LoggingCLIArguments
-loggingParser =
-  fromMaybe muteLoggingCLIArguments
-    <$> optional parseLoggingCLIArgumentsInternal
-  where
-    parseLoggingCLIArgumentsInternal :: Parser LoggingCLIArguments
-    parseLoggingCLIArgumentsInternal =
-      LoggingCLIArguments
-        <$> (Just
-             <$> strOption
-              ( long "log-config"
-                <> metavar "LOGCONFIG"
-                <> help "Configuration file for logging"
-                <> completer (bashCompleter "file")))
-        <*> switch
-         ( long "log-metrics"
-           <> help "Log a number of metrics about this node")
-
-    -- This is the value returned by the parser, when --log-config is omitted.
-    muteLoggingCLIArguments :: LoggingCLIArguments
-    muteLoggingCLIArguments =
-      LoggingCLIArguments
-      Nothing
-      False

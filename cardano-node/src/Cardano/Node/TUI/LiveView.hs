@@ -76,6 +76,8 @@ import           Cardano.BM.Data.Severity
 import           Cardano.BM.Data.SubTrace
 import           Cardano.BM.Trace
 
+import           Cardano.Config.Topology
+import           Cardano.Config.Types
 import           Cardano.Node.TUI.GitRev (gitRev)
 import           Cardano.Slotting.Slot (unSlotNo)
 import qualified Ouroboros.Network.AnchoredFragment as Net
@@ -542,14 +544,19 @@ initLiveViewState = do
                 , lvsColorTheme             = DarkTheme
                 }
 
-setTopology :: NFData a => LiveViewBackend blk a -> NodeId -> IO ()
-setTopology lvbe nodeid =
-    modifyMVar_ (getbe lvbe) $ \lvs ->
-        return $ lvs { lvsNodeId = namenum }
-  where
-    namenum = case nodeid of
-        CoreId num  -> "C" <> pack (show num)
-        RelayId num -> "R" <> pack (show num)
+setTopology :: NFData a => LiveViewBackend blk a -> NodeProtocolMode -> IO ()
+setTopology lvbe (RealProtocolMode (NodeCLI _ _ nAddress _ _)) =
+  modifyMVar_ (getbe lvbe) $ \lvs ->
+    return $ lvs { lvsNodeId = pack $ "Port: " <> (show $ naPort nAddress) }
+setTopology lvbe (MockProtocolMode (NodeMockCLI _ _ _ cfgYaml _)) = do
+  nc <- parseNodeConfiguration $ unConfigPath cfgYaml
+  modifyMVar_ (getbe lvbe) $ \lvs ->
+    return $ lvs { lvsNodeId = namenum (ncNodeId nc) }
+ where
+  namenum (Just (CoreId num)) = "C" <> pack (show num)
+  namenum (Just (RelayId num)) = "R" <> pack (show num)
+  namenum Nothing = panic $ "Cardano.Node.TUI.LiveView.namenum: "
+                          <> "Mock protocols require a NodeId value in the configuration .yaml file"
 
 setNodeThread :: NFData a => LiveViewBackend blk a -> Async.Async () -> IO ()
 setNodeThread lvbe nodeThr =
