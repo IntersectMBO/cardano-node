@@ -175,10 +175,8 @@ data ClientCommand
     SigningKeyFile
     DelegationCertFile
     GenesisFile
-    Text
     -- ^ Genesis hash
     SocketPath
-    Protocol
     (NonEmpty NodeAddress)
     NumberOfTxs
     NumberOfInputsPerTx
@@ -300,9 +298,7 @@ runCommand (GenerateTxs
                signingKey
                delegCert
                genFile
-               genHash
                socketFp
-               ptcl
                targetNodeAddresses
                numOfTxs
                numOfInsPerTx
@@ -313,38 +309,40 @@ runCommand (GenerateTxs
                sigKeysFiles) = do
   -- Default update value
   let update = Update (ApplicationName "cardano-sl") 1 $ LastKnownBlockVersion 0 2 0
+  nc <- liftIO $ parseNodeConfiguration logConfigFp
 
   -- Logging layer
-  nc <- liftIO $ parseNodeConfiguration logConfigFp
   (loggingLayer, _) <- liftIO $ createLoggingFeatureCLI
                                   NoEnvironment
                                   (Just logConfigFp)
                                   (ncLogMetrics nc)
 
+  (_, Genesis.GenesisHash gHash) <- readGenesis genFile
+  let genHash = F.sformat Crypto.hashHexF gHash
   firstExceptT
     GenerateTxsError
     $  withRealPBFT
          genHash
          genFile
-         RequiresNoMagic
+         (ncReqNetworkMagic nc)
          Nothing
          (Just delegCert)
          (Just signingKey)
          update
-         ptcl $ \protocol@(Consensus.ProtocolRealPBFT _ _ _ _ _) ->
-                        firstExceptT GenesisBenchmarkRunnerError
-                          $ genesisBenchmarkRunner
-                               loggingLayer
-                               socketFp
-                               protocol
-                               targetNodeAddresses
-                               numOfTxs
-                               numOfInsPerTx
-                               numOfOutsPerTx
-                               feePerTx
-                               tps
-                               txAdditionalSize
-                               [fp | SigningKeyFile fp <- sigKeysFiles]
+         (ncProtocol nc) $ \protocol@(Consensus.ProtocolRealPBFT _ _ _ _ _) ->
+                             firstExceptT GenesisBenchmarkRunnerError
+                               $ genesisBenchmarkRunner
+                                    loggingLayer
+                                    socketFp
+                                    protocol
+                                    targetNodeAddresses
+                                    numOfTxs
+                                    numOfInsPerTx
+                                    numOfOutsPerTx
+                                    feePerTx
+                                    tps
+                                    txAdditionalSize
+                                    [fp | SigningKeyFile fp <- sigKeysFiles]
 
 {-------------------------------------------------------------------------------
   Supporting functions

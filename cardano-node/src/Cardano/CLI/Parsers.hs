@@ -2,6 +2,7 @@
 
 module Cardano.CLI.Parsers
   ( command'
+  , parseBenchmarkingCommands
   , parseDelegationRelatedValues
   , parseGenesisParameters
   , parseGenesisRelatedValues
@@ -84,6 +85,52 @@ parseAddress :: String -> String -> Parser Address
 parseAddress opt desc =
   option (cliParseBase58Address <$> auto)
     $ long opt <> metavar "ADDR" <> help desc
+
+parseBenchmarkingCommands :: Parser ClientCommand
+parseBenchmarkingCommands =
+  subparser $ mconcat
+    [ commandGroup "Benchmarking related commands"
+    , metavar "Benchmarking related commands"
+    , command'
+        "generate-txs"
+        "Launch transactions generator."
+        $ GenerateTxs
+            <$> parseConfigFile
+            <*> parseSigningKeyFile "signing-key" "Signing key file."
+            <*> (DelegationCertFile <$> parseDelegationCert)
+            <*> (GenesisFile <$> parseGenesisPath)
+            <*> parseSocketPath "Path to a cardano-node socket"
+            <*> (NE.fromList <$> some (
+                  parseTargetNodeAddress
+                    "target-node"
+                    "host and port of the node transactions will be sent to."
+                  )
+                )
+            <*> parseNumberOfTxs
+                  "num-of-txs"
+                  "Number of transactions generator will create."
+            <*> parseNumberOfInputsPerTx
+                  "inputs-per-tx"
+                  "Number of inputs in each of transactions."
+            <*> parseNumberOfOutputsPerTx
+                  "outputs-per-tx"
+                  "Number of outputs in each of transactions."
+            <*> parseFeePerTx
+                  "tx-fee"
+                  "Fee per transaction, in Lovelaces."
+            <*> parseTPSRate
+                  "tps"
+                  "TPS (transaction per second) rate."
+            <*> optional (
+                  parseTxAdditionalSize
+                    "add-tx-size"
+                    "Additional size of transaction, in bytes."
+                )
+            <*> parseSigningKeysFiles
+                  "sig-key"
+                  "Path to signing key file, for genesis UTxO using by generator."
+     ]
+
 
 parseCertificateFile :: String -> String -> Parser CertificateFile
 parseCertificateFile opt desc = CertificateFile <$> parseFilePath opt desc
@@ -428,46 +475,6 @@ parseTxRelatedValues =
                   "Key that has access to all mentioned genesis UTxO inputs."
             <*> (NE.fromList <$> some parseTxIn)
             <*> (NE.fromList <$> some parseTxOut)
-    , command'
-        "generate-txs"
-        "Launch transactions generator."
-        $ GenerateTxs
-            <$> parseConfigFile
-            <*> parseSigningKeyFile "signing-key" "Signing key file."
-            <*> (DelegationCertFile <$> parseDelegationCert)
-            <*> (GenesisFile <$> parseGenesisPath)
-            <*> parseGenesisHash
-            <*> parseSocketPath "Path to a cardano-node socket"
-            <*> parseProtocol
-            <*> (NE.fromList <$> some (
-                  parseTargetNodeAddress
-                    "target-node"
-                    "host and port of the node transactions will be sent to."
-                  )
-                )
-            <*> parseNumberOfTxs
-                  "num-of-txs"
-                  "Number of transactions generator will create."
-            <*> parseNumberOfInputsPerTx
-                  "inputs-per-tx"
-                  "Number of inputs in each of transactions."
-            <*> parseNumberOfOutputsPerTx
-                  "outputs-per-tx"
-                  "Number of outputs in each of transactions."
-            <*> parseFeePerTx
-                  "tx-fee"
-                  "Fee per transaction, in Lovelaces."
-            <*> parseTPSRate
-                  "tps"
-                  "TPS (transaction per second) rate."
-            <*> optional (
-                  parseTxAdditionalSize
-                    "add-tx-size"
-                    "Additional size of transaction, in bytes."
-                )
-            <*> parseSigningKeysFiles
-                  "sig-key"
-                  "Path to signing key file, for genesis UTxO using by generator."
       ]
 
 
