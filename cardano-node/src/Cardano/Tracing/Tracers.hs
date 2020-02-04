@@ -297,9 +297,14 @@ mkTracers traceOptions tracer = do
 
     mempoolTracer :: Tracer IO (TraceEventMempool blk)
     mempoolTracer = Tracer $ \ev -> do
-      traceWith (mempoolTraceTransformer tracer) ev
-      traceWith (measureTxsStart tracer) ev
-      traceWith (showTracing $ withName "Mempool" tracer) ev
+        traceWith (mempoolTraceTransformer tracer) ev
+        traceWith (measureTxsStart tracer) ev
+        traceWith mpTracer ev
+      where
+        mpTracer :: Tracer IO (TraceEventMempool blk)
+        mpTracer = annotateSeverity
+          $ toLogObject' StructuredLogging tracingVerbosity
+          $ addName "Mempool" tracer
 
     forgeTracer
         :: ForgeTracers
