@@ -36,7 +36,8 @@ import           Ouroboros.Consensus.Block (Header)
 import           Ouroboros.Consensus.BlockchainTime
                    (SlotLength, slotLengthFromSec,
                     SlotLengths, singletonSlotLengths)
-import           Ouroboros.Consensus.Mempool.API (ApplyTxErr, GenTx, GenTxId)
+import           Ouroboros.Consensus.Mempool.API (ApplyTxErr, GenTx, GenTxId,
+                                                  HasTxId, TxId)
 import           Ouroboros.Consensus.Node.ProtocolInfo (NumCoreNodes (..),
                                                         PBftLeaderCredentials,
                                                         PBftLeaderCredentialsError,
@@ -73,11 +74,13 @@ type TraceConstraints blk =
     , Condense (Header blk)
     , Condense (HeaderHash blk)
     , Condense (GenTx blk)
+    , HasTxId (GenTx blk)
     , Show (ApplyTxErr blk)
     , Show (GenTx blk)
     , Show (GenTxId blk)
     , Show blk
     , Show (Header blk)
+    , Show (TxId (GenTx blk))
     )
 
 {-------------------------------------------------------------------------------
