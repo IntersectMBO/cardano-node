@@ -64,6 +64,7 @@ import           Ouroboros.Network.Point (fromWithOrigin)
 import           Ouroboros.Network.Subscription
 
 import qualified Ouroboros.Storage.ChainDB as ChainDB
+import qualified Ouroboros.Storage.LedgerDB.OnDisk as LedgerDB
 
 import           Cardano.Config.Protocol (TraceConstraints)
 import           Cardano.Config.Types
@@ -116,13 +117,24 @@ nullTracers = Tracers
   }
 
 
+indexGCType :: ChainDB.TraceGCEvent a -> Int
+indexGCType ChainDB.ScheduledGC{} = 1
+indexGCType ChainDB.PerformedGC{} = 2
+
+indexReplType :: ChainDB.TraceLedgerReplayEvent a -> Int
+indexReplType LedgerDB.ReplayFromGenesis{} = 1
+indexReplType LedgerDB.ReplayFromSnapshot{} = 2
+indexReplType LedgerDB.ReplayedBlock{} = 3
+
 instance ElidingTracer
   (WithSeverity (WithTip blk (ChainDB.TraceEvent blk))) where
   -- equivalent by type and severity
-  isEquivalent (WithSeverity s1 (WithTip _tip1 (ChainDB.TraceLedgerReplayEvent _ev1)))
-                (WithSeverity s2 (WithTip _tip2 (ChainDB.TraceLedgerReplayEvent _ev2))) = s1 == s2
-  isEquivalent (WithSeverity s1 (WithTip _tip1 (ChainDB.TraceGCEvent _ev1)))
-                (WithSeverity s2 (WithTip _tip2 (ChainDB.TraceGCEvent _ev2))) = s1 == s2
+  isEquivalent (WithSeverity s1 (WithTip _tip1 (ChainDB.TraceLedgerReplayEvent ev1)))
+                (WithSeverity s2 (WithTip _tip2 (ChainDB.TraceLedgerReplayEvent ev2))) = s1 == s2 &&
+                  indexReplType ev1 == indexReplType ev2
+  isEquivalent (WithSeverity s1 (WithTip _tip1 (ChainDB.TraceGCEvent ev1)))
+                (WithSeverity s2 (WithTip _tip2 (ChainDB.TraceGCEvent ev2))) = s1 == s2 &&
+                  indexGCType ev1 == indexGCType ev2
   isEquivalent _ _ = False
   -- the types to be elided
   doelide (WithSeverity _ (WithTip _ (ChainDB.TraceLedgerReplayEvent _))) = True
