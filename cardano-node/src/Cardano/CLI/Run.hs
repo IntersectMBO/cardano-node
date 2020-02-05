@@ -139,13 +139,11 @@ data ClientCommand
     -- ^ Filepath of transaction to submit.
     Protocol
     GenesisFile
-    Text
     SocketPath
     -- ^ Socket path of target node.
   | SpendGenesisUTxO
     Protocol
     GenesisFile
-    Text
     NewTxFile
     -- ^ Filepath of the newly created transaction.
     SigningKeyFile
@@ -157,7 +155,6 @@ data ClientCommand
   | SpendUTxO
     Protocol
     GenesisFile
-    Text
     NewTxFile
     -- ^ Filepath of the newly created transaction.
     SigningKeyFile
@@ -236,10 +233,12 @@ runCommand (CheckDelegation magic cert issuerVF delegateVF) = do
   delegateVK <- readVerificationKey delegateVF
   liftIO $ checkByronGenesisDelegation cert magic issuerVK delegateVK
 
-runCommand (SubmitTx fp ptcl genFile genHash socketPath) = do
+runCommand (SubmitTx fp ptcl genFile socketPath) = do
     -- Default update value
     let update = Update (ApplicationName "cardano-sl") 1 $ LastKnownBlockVersion 0 2 0
     tx <- liftIO $ readByronTx fp
+    genHash <- getGenesisHash genFile
+
     firstExceptT
       NodeSubmitTxError
       $ nodeSubmitTx
@@ -254,10 +253,13 @@ runCommand (SubmitTx fp ptcl genFile genHash socketPath) = do
           update
           ptcl
           tx
-runCommand (SpendGenesisUTxO ptcl genFile genHash (NewTxFile ctTx) ctKey genRichAddr outs) = do
+runCommand (SpendGenesisUTxO ptcl genFile (NewTxFile ctTx) ctKey genRichAddr outs) = do
     sk <- readSigningKey ptcl ctKey
     -- Default update value
     let update = Update (ApplicationName "cardano-sl") 1 $ LastKnownBlockVersion 0 2 0
+
+    genHash <- getGenesisHash genFile
+
     tx <- firstExceptT SpendGenesisUTxOError
             $ issueGenesisUTxOExpenditure
                 genRichAddr
@@ -273,10 +275,13 @@ runCommand (SpendGenesisUTxO ptcl genFile genHash (NewTxFile ctTx) ctKey genRich
                 sk
     liftIO . ensureNewFileLBS ctTx $ toCborTxAux tx
 
-runCommand (SpendUTxO ptcl genFile genHash (NewTxFile ctTx) ctKey ins outs) = do
+runCommand (SpendUTxO ptcl genFile (NewTxFile ctTx) ctKey ins outs) = do
     sk <- readSigningKey ptcl ctKey
     -- Default update value
     let update = Update (ApplicationName "cardano-sl") 1 $ LastKnownBlockVersion 0 2 0
+
+    genHash <- getGenesisHash genFile
+
     gTx <- firstExceptT
              IssueUtxoError
              $ issueUTxOExpenditure
@@ -317,8 +322,8 @@ runCommand (GenerateTxs
                                   (Just logConfigFp)
                                   (ncLogMetrics nc)
 
-  (_, Genesis.GenesisHash gHash) <- readGenesis genFile
-  let genHash = F.sformat Crypto.hashHexF gHash
+  genHash <- getGenesisHash genFile
+
   firstExceptT
     GenerateTxsError
     $  withRealPBFT
@@ -360,3 +365,8 @@ ensureNewFile writer outFile blob = do
 
 ensureNewFileLBS :: FilePath -> LB.ByteString -> IO ()
 ensureNewFileLBS = ensureNewFile LB.writeFile
+
+getGenesisHash :: GenesisFile -> ExceptT CliError IO Text
+getGenesisHash genFile = do
+  (_, Genesis.GenesisHash gHash) <- readGenesis genFile
+  return $ F.sformat Crypto.hashHexF gHash

@@ -19,7 +19,6 @@ NETARGS=(
         --tx           "$TX"
         --${ALGO}
         --genesis-file "${genesis_file}"
-        --genesis-hash "${genesis_hash}"
 )
 
 

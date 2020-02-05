@@ -444,7 +444,6 @@ parseTxRelatedValues =
             <$> parseTxFile "tx"
             <*> parseProtocol
             <*> (GenesisFile <$> parseGenesisPath)
-            <*> parseGenesisHash
             <*> parseSocketPath "Socket of target node"
     , command'
         "issue-genesis-utxo-expenditure"
@@ -452,7 +451,6 @@ parseTxRelatedValues =
         $ SpendGenesisUTxO
             <$> parseProtocol
             <*> (GenesisFile <$> parseGenesisPath)
-            <*> parseGenesisHash
             <*> parseNewTxFile "tx"
             <*> parseSigningKeyFile
                   "wallet-key"
@@ -468,7 +466,6 @@ parseTxRelatedValues =
         $ SpendUTxO
             <$> parseProtocol
             <*> (GenesisFile <$> parseGenesisPath)
-            <*> parseGenesisHash
             <*> parseNewTxFile "tx"
             <*> parseSigningKeyFile
                   "wallet-key"

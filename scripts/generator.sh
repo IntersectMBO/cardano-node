@@ -30,9 +30,9 @@ function mkdlgcert () {
   printf -- "--delegation-certificate ${genesis_root}/delegation-cert.%03d.json" "$1"
 }
 
-##function targetnode () {
-##      printf -- "--target-node (\"127.0.0.1\",$((3000))) "
-##}
+#function targetnode () {
+#      printf -- "--target-node (\"127.0.0.1\",$((3000))) "
+#}
 
 set -x
 ${CLI} \
