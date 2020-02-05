@@ -42,8 +42,6 @@ library
                        Cardano.Node.Features.Node
                        Cardano.Node.Run
                        Cardano.Node.Submission
-                       Cardano.Node.TUI.GitRev
-                       Cardano.Node.TUI.GitRevFromGit
                        Cardano.Node.TxSubClient
                        Cardano.Tracing.Tracers
                        Cardano.Wallet.Client
