@@ -127,6 +127,12 @@ source-repository-package
 
 source-repository-package
   type: git
+  location: https://github.com/well-typed/cborg
+  tag: 42a83192749774268337258f4f94c97584b80ca6
+  subdir: cborg
+
+source-repository-package
+  type: git
   location: https://github.com/input-output-hk/goblins
   tag: 26d35ad52fe9ade3391532dbfeb2f416f07650bc
   --sha256: 17p5x0hj6c67jkdqx0cysqlwq2zs2l87azihn1alzajy9ak6ii0b

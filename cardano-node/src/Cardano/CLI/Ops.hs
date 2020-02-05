@@ -15,7 +15,7 @@ module Cardano.CLI.Ops
   , deserialiseDelegateKey
   , getGenesisHash
   , getLocalTip
-  , validateCBOR
+  , pPrintCBOR
   , readCBOR
   , readGenesis
   , serialiseDelegationCert
@@ -23,6 +23,7 @@ module Cardano.CLI.Ops
   , serialiseGenesis
   , serialisePoorKey
   , serialiseSigningKey
+  , validateCBOR
   , withRealPBFT
   , CliError(..)
   , RealPBFTError(..)
@@ -34,10 +35,12 @@ import           Cardano.Prelude hiding (catch, option, show)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, left)
 import           Test.Cardano.Prelude (canonicalEncodePretty)
 
+import           Codec.CBOR.Pretty (prettyHexEnc)
 import           Codec.CBOR.Read (DeserialiseFailure, deserialiseFromBytes)
+import           Codec.CBOR.Term (decodeTerm, encodeTerm)
 import           Codec.CBOR.Write (toLazyByteString)
 import           Control.Monad.Trans.Except.Extra
-                   (handleIOExceptT, hoistEither, secondExceptT)
+                   (handleIOExceptT, hoistEither, right, secondExceptT)
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.Text as T
 import qualified Formatting as F
@@ -157,6 +160,13 @@ validateCBOR cborObject bs =
         $ decodeCBOR CBORTxByron bs (fromCBOR :: Decoder s Update.Proposal)
       liftIO $ putTextLn "Valid Byron update proposal."
 
+pPrintCBOR :: LByteString -> ExceptT CliError IO ()
+pPrintCBOR bs = do
+  case deserialiseFromBytes decodeTerm bs of
+    Left err -> left $ CBORPrettyPrintError err
+    Right (_, decodedVal) -> do liftIO . putTextLn . toS . prettyHexEnc $ encodeTerm decodedVal
+                                right ()
+
 readCBOR :: FilePath -> ExceptT CliError IO LByteString
 readCBOR fp =
   handleIOExceptT
@@ -195,6 +205,7 @@ serialiseSigningKey ptcl _ = Left $ ProtocolNotSupported ptcl
 --   Well, almost all, since we don't rethrow the errors from readFile & such.
 data CliError
   = CBORDecodingError DecoderError
+  | CBORPrettyPrintError DeserialiseFailure
   | CertificateValidationErrors !FilePath ![Text]
   | DelegationError !Genesis.GenesisDelegationError
   | DlgCertificateDeserialisationFailed !FilePath !Text
@@ -223,6 +234,8 @@ data CliError
 
 instance Show CliError where
   show (CBORDecodingError e)
+    = "Error with CBOR decoding: " <> show e
+  show (CBORPrettyPrintError e)
     = "Error with CBOR decoding: " <> show e
   show (CertificateValidationErrors fp errs)
     = unlines $

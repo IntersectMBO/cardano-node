@@ -144,13 +144,13 @@ parseBenchmarkingCommands =
 parseCBORObject :: Parser CBORObject
 parseCBORObject = asum
   [ flagParser CBORBlockByron "byron-block"
-    "The CBOR file is a byron era block."
-  , flagParser CBORDelegationCertificateByron "byron-delegation-cert"
-    "The CBOR file is a byron era delegation certificate."
-  , flagParser CBORUpdateProposalByron "byron-update-proposal"
-    "The CBOR file is a byron era update proposal."
+    "The CBOR file is a byron era block"
+  , flagParser CBORDelegationCertificateByron "byron-delegation-certificate"
+    "The CBOR file is a byron era delegation certificate"
   , flagParser CBORTxByron "byron-tx"
     "The CBOR file is a byron era tx"
+  , flagParser CBORUpdateProposalByron "byron-update-proposal"
+    "The CBOR file is a byron era update proposal"
   ]
 
 parseCertificateFile :: String -> String -> Parser CertificateFile
@@ -390,10 +390,15 @@ parseMiscellaneous = subparser $ mconcat
   , metavar "Miscellaneous commands"
   , command'
       "validate-cbor"
-      "Validate a CBOR blockchain object"
+      "Validate a CBOR blockchain object."
       $ ValidateCBOR
           <$> parseCBORObject
-          <*> parseFilePath "filepath" "Filepath of CBOR file"
+          <*> parseFilePath "filepath" "Filepath of CBOR file."
+  , command'
+      "pretty-print-cbor"
+      "Pretty print a CBOR file."
+      $ PrettyPrintCBOR
+          <$> parseFilePath "filepath" "Filepath of CBOR file."
   ]
 
 parseNumberOfInputsPerTx :: String -> String -> Parser NumberOfInputsPerTx

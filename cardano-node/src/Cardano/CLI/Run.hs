@@ -198,7 +198,8 @@ data ClientCommand
     CBORObject
     -- ^ Type of the CBOR object
     FilePath
-
+  | PrettyPrintCBOR
+    FilePath
    deriving Show
 
 
@@ -213,6 +214,10 @@ runCommand (GetLocalNodeTip configFp gFile sockPath) = withIOManagerE $ \iocp ->
 runCommand (ValidateCBOR cborObject fp) = do
   bs <- readCBOR fp
   validateCBOR cborObject bs
+
+runCommand (PrettyPrintCBOR fp) = do
+  bs <- readCBOR fp
+  pPrintCBOR bs
 
 runCommand (PrettySigningKeyPublic ptcl skF) = do
   sK <- readSigningKey ptcl skF
