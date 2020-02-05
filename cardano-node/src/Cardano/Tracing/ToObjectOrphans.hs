@@ -37,7 +37,7 @@ import           Ouroboros.Consensus.ChainSyncClient
 import           Ouroboros.Consensus.ChainSyncServer
                    (TraceChainSyncServerEvent(..))
 import           Ouroboros.Consensus.Ledger.Abstract
-import           Ouroboros.Consensus.Mempool.API (GenTx, GenTxId)
+import           Ouroboros.Consensus.Mempool.API (GenTx, GenTxId, HasTxId, TxId, txId)
 import           Ouroboros.Consensus.Node.Tracers (TraceForgeEvent (..))
 import           Ouroboros.Consensus.TxSubmission
                    (TraceLocalTxSubmissionServerEvent (..))
@@ -319,12 +319,12 @@ instance DefineSeverity (TraceForgeEvent blk tx) where
   defineSeverity TraceStartLeadershipCheck {}   = Info
   defineSeverity TraceNodeNotLeader {}          = Info
   defineSeverity TraceNodeIsLeader {}           = Info
-  defineSeverity TraceNoLedgerState {}          = Warning
-  defineSeverity TraceNoLedgerView {}           = Warning
-  defineSeverity TraceBlockFromFuture {}        = Warning
+  defineSeverity TraceNoLedgerState {}          = Error
+  defineSeverity TraceNoLedgerView {}           = Error
+  defineSeverity TraceBlockFromFuture {}        = Error
   defineSeverity TraceAdoptedBlock {}           = Info
-  defineSeverity TraceDidntAdoptBlock {}        = Warning
-  defineSeverity TraceForgedInvalidBlock {}     = Alert
+  defineSeverity TraceDidntAdoptBlock {}        = Error
+  defineSeverity TraceForgedInvalidBlock {}     = Error
 
 -- | instances of @Transformable@
 
@@ -362,7 +362,8 @@ instance Transformable Text IO (TraceTxSubmissionOutbound
 instance Transformable Text IO (TraceLocalTxSubmissionServerEvent blk) where
   trTransformer _ verb tr = trStructured verb tr
 
-instance (Show blk, Show tx, ProtocolLedgerView blk) => Transformable Text IO (TraceForgeEvent blk tx) where
+instance (Condense (HeaderHash blk), Show (TxId tx), HasTxId tx, Show blk, Show tx, ProtocolLedgerView blk)
+           => Transformable Text IO (TraceForgeEvent blk tx) where
   trTransformer StructuredLogging verb tr = trStructured verb tr
   trTransformer TextualRepresentation _verb tr = Tracer $ \s ->
     traceWith tr =<< LogObject <$> pure mempty
@@ -842,11 +843,20 @@ instance ToObject (TraceLocalTxSubmissionServerEvent blk) where
   toObject _verb _ =
     mkObject [ "kind" .= String "TraceLocalTxSubmissionServerEvent" ]
 
-instance ProtocolLedgerView blk => ToObject (TraceForgeEvent blk tx) where
-  toObject _verb (TraceAdoptedBlock slotNo _blk _txs) =
+instance (HasTxId tx, ProtocolLedgerView blk, Condense (HeaderHash blk), Show (TxId tx))
+           => ToObject (TraceForgeEvent blk tx) where
+  toObject MaximalVerbosity (TraceAdoptedBlock slotNo blk txs) =
     mkObject
         [ "kind"    .= String "TraceAdoptedBlock"
         , "slot"    .= toJSON (unSlotNo slotNo)
+        , "block hash" .=  (condense $ blockHash blk)
+        , "tx ids" .= (show $ map txId txs)
+        ]
+  toObject _verb (TraceAdoptedBlock slotNo blk _txs) =
+    mkObject
+        [ "kind"    .= String "TraceAdoptedBlock"
+        , "slot"    .= toJSON (unSlotNo slotNo)
+        , "block hash" .=  (condense $ blockHash blk)
         ]
   toObject _verb (TraceBlockFromFuture currentSlot tip) =
     mkObject
