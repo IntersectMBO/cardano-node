@@ -34,6 +34,8 @@ let
     inherit (haskellPackages.cardano-node.components.exes)
       cardano-node;
 
+    inherit (pkgs.iohkNix) checkCabalProject;
+
     # `tests` are the test suites which have been built.
     tests = collectComponents' "tests" haskellPackages;
     # `benchmarks` (only built, not run).

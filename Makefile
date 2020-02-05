@@ -8,6 +8,9 @@ help: ## Print documentation
 stylish-haskell: ## Apply stylish-haskell on all *.hs files
 	@find . -type f -name "*.hs" -not -path '.git' -not -path '*.stack-work*' -print0 | xargs -0 stylish-haskell -i
 
+cabal-hashes:
+	$$(nix-build default.nix -A checkCabalProject --no-out-link)
+
 ghci: ## Run repl
 	@stack ghci $(PROJECT_NAME):lib --haddock-deps --ghci-options=-fobject-code --nix
 
@@ -27,4 +30,4 @@ test-ghcid: ## Run ghcid on test suites
 test-ghcid-nix: ## Run ghcid on test suites with Nix
 	@ghcid --command="stack ghci --test --main-is $(PROJECT_NAME):test:$(PROJECT_NAME)-test --nix -j$(NUM_PROC)"
 
-.PHONY: stylish-haskell ghcid ghcid-test run-test test-ghci test-ghcid help
+.PHONY: stylish-haskell cabal-hashes ghcid ghcid-test run-test test-ghci test-ghcid help
