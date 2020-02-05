@@ -1,4 +1,4 @@
-resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/c40175657bc8134e0561d9b6e6334728c19112e4/snapshot.yaml
+resolver: lts-14.22
 compiler: ghc-8.6.5
 
 packages:
@@ -6,8 +6,8 @@ packages:
   - cardano-node
 
 ghc-options:
-  cardano-config:   -Wall -Werror -fwarn-redundant-constraints
-  cardano-node:     -Wall -Werror -fwarn-redundant-constraints
+  cardano-config:   -Wall -fwarn-redundant-constraints
+  cardano-node:     -Wall -fwarn-redundant-constraints
 
 allow-newer: true
 
@@ -51,7 +51,6 @@ extra-deps:
   - Unique-0.4.7.6
   - word-wrap-0.4.1
   - websockets-0.12.6.1
-  - th-lift-instances-0.1.14
 
     # Cardano-ledger dependencies
   - git: https://github.com/input-output-hk/cardano-ledger
@@ -98,7 +97,7 @@ extra-deps:
 
     # iohk-monitoring-framework currently not pinned to a release
   - git: https://github.com/input-output-hk/iohk-monitoring-framework
-    commit: 0388b876b63c137839b8a25570c9818a6b53ee47
+    commit: 02c714e56ba0d0704ab4f7bbe6d71661d1c026c9
     subdirs:
       - contra-tracer
       - iohk-monitoring
@@ -113,6 +112,8 @@ extra-deps:
   - prometheus-2.1.2
   - libsystemd-journal-1.4.4
   - katip-0.8.3.0
+  - git: https://github.com/CodiePP/ekg-prometheus-adapter
+    commit: 1a258b6df7d9807d4c4ff3e99722223d31a2c320
 
     # Extracted from cardano-sl since it's quite useful
   - git: https://github.com/input-output-hk/cardano-sl-x509
