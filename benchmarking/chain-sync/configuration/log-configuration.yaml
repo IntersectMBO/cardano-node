@@ -36,8 +36,8 @@ defaultScribes:
 
 # more options which can be passed as key-value pairs:
 options:
-  cfokey:
-    value: "Release-1.0.0"
+  era:
+    value: "Byron"
   mapSubtrace:
     benchmark:
       contents:
