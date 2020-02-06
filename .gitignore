@@ -1,5 +1,8 @@
 .stack-work/
 .ghc.environment.*
+/cabal.project.diff
+/cabal.project.local
+/cabal.project.old
 dist-newstyle/
 dist/
 *~
@@ -14,6 +17,7 @@ stack.yaml.lock
 /genesis.*
 logs/
 
+/db
 /db-[0-9]
 /launch_*
 /state-*
