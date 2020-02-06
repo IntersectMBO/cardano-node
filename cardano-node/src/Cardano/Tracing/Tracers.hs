@@ -462,7 +462,8 @@ mkTracers traceOptions tracer = do
         $ showTracing $ withName "BlockFetchProtocol" tracer
       , ptTxSubmissionTracer
         = tracerOnOff (traceTxSubmissionProtocol traceOpts)
-        $ showTracing $ withName "TxSubmissionProtocol" tracer
+        $ toLogObject' StructuredLogging tracingVerbosity
+        $ addName "TxSubmissionProtocol" tracer
       , ptLocalChainSyncTracer
         = tracerOnOff (traceLocalChainSyncProtocol traceOpts)
         $ showTracing $ withName "LocalChainSyncProtocol" tracer
