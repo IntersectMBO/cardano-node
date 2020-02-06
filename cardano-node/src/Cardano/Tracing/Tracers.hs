@@ -263,9 +263,9 @@ mkTracers traceOptions tracer = do
           let tr' = appendName "peers" tr
           traceNamedObject tr' (meta, LogValue "connectedPeers" . PureI $ fromIntegral $ length peers)
 
-    mempoolTraceTransformer :: Tracer IO (LogObject a)
-                            -> Tracer IO (TraceEventMempool blk)
-    mempoolTraceTransformer tr = Tracer $ \mempoolEvent -> do
+    mempoolMetricsTraceTransformer :: Tracer IO (LogObject a)
+                                   -> Tracer IO (TraceEventMempool blk)
+    mempoolMetricsTraceTransformer tr = Tracer $ \mempoolEvent -> do
         let tr' = appendName "metrics" tr
             (n, tot) = case mempoolEvent of
                   TraceMempoolAddTxs      txs0 tot0 -> (length txs0, tot0)
@@ -297,9 +297,14 @@ mkTracers traceOptions tracer = do
 
     mempoolTracer :: Tracer IO (TraceEventMempool blk)
     mempoolTracer = Tracer $ \ev -> do
-      traceWith (mempoolTraceTransformer tracer) ev
-      traceWith (measureTxsStart tracer) ev
-      traceWith (showTracing $ withName "Mempool" tracer) ev
+        traceWith (mempoolMetricsTraceTransformer tracer) ev
+        traceWith (measureTxsStart tracer) ev
+        traceWith mpTracer ev
+      where
+        mpTracer :: Tracer IO (TraceEventMempool blk)
+        mpTracer = annotateSeverity
+          $ toLogObject' StructuredLogging tracingVerbosity
+          $ addName "Mempool" tracer
 
     forgeTracer
         :: ForgeTracers

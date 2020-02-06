@@ -37,7 +37,8 @@ import           Ouroboros.Consensus.ChainSyncClient
 import           Ouroboros.Consensus.ChainSyncServer
                    (TraceChainSyncServerEvent(..))
 import           Ouroboros.Consensus.Ledger.Abstract
-import           Ouroboros.Consensus.Mempool.API (GenTx, GenTxId, HasTxId, TxId, txId)
+import           Ouroboros.Consensus.Mempool.API (ApplyTxErr, GenTx, GenTxId,
+                   HasTxId, TraceEventMempool (..), TxId, txId)
 import           Ouroboros.Consensus.Node.Tracers (TraceForgeEvent (..))
 import           Ouroboros.Consensus.TxSubmission
                    (TraceLocalTxSubmissionServerEvent (..))
@@ -313,6 +314,10 @@ instance DefinePrivacyAnnotation (TraceLocalTxSubmissionServerEvent blk)
 instance DefineSeverity (TraceLocalTxSubmissionServerEvent blk) where
   defineSeverity _ = Info
 
+instance DefinePrivacyAnnotation (TraceEventMempool blk)
+instance DefineSeverity (TraceEventMempool blk) where
+  defineSeverity _ = Info
+
 instance DefinePrivacyAnnotation (TraceForgeEvent blk tx)
 instance DefineSeverity (TraceForgeEvent blk tx) where
   defineSeverity TraceForgedBlock {}            = Info
@@ -370,6 +375,10 @@ instance (Condense (HeaderHash blk), Show (TxId tx), HasTxId tx, Show blk, Show 
                                <*> mkLOMeta (defineSeverity s) (definePrivacyAnnotation s)
                                <*> pure (LogMessage $ pack $ show s)
   trTransformer UserdefinedFormatting verb tr = trStructured verb tr
+
+instance (Show (GenTx blk), Show (GenTxId blk), Show (ApplyTxErr blk))
+      => Transformable Text IO (TraceEventMempool blk) where
+  trTransformer _ verb tr = trStructured verb tr
 
 -- transform @SubscriptionTrace@
 instance Transformable Text IO (WithIPList (SubscriptionTrace Socket.SockAddr)) where
@@ -903,4 +912,32 @@ instance (HasTxId tx, ProtocolLedgerView blk, Condense (HeaderHash blk), Show (T
     mkObject
         [ "kind"    .= String "TraceStartLeadershipCheck"
         , "slot"    .= toJSON (unSlotNo slotNo)
+        ]
+
+instance (Show (GenTx blk), Show (GenTxId blk), Show (ApplyTxErr blk))
+      => ToObject (TraceEventMempool blk) where
+  toObject _verb (TraceMempoolAddTxs txs mpSz) =
+    mkObject
+        [ "kind" .= String "TraceMempoolAddTxs"
+        , "txsAdded" .= String (pack $ show $ txs)
+        , "mempoolSize" .= String (pack $ show $ mpSz)
+        ]
+  toObject _verb (TraceMempoolRejectedTxs txAndErrs mpSz) =
+    mkObject
+        [ "kind" .= String "TraceMempoolRejectedTxs"
+        , "txsRejected" .= String (pack $ show $ txAndErrs)
+        , "mempoolSize" .= String (pack $ show $ mpSz)
+        ]
+  toObject _verb (TraceMempoolRemoveTxs txs mpSz) =
+    mkObject
+        [ "kind" .= String "TraceMempoolRemoveTxs"
+        , "txsRemoved" .= String (pack $ show $ txs)
+        , "mempoolSize" .= String (pack $ show $ mpSz)
+        ]
+  toObject _verb (TraceMempoolManuallyRemovedTxs txs0 txs1 mpSz) =
+    mkObject
+        [ "kind" .= String "TraceMempoolManuallyRemovedTxs"
+        , "txsManuallyRemoved" .= String (pack $ show $ txs0)
+        , "txsNoLongerValidRemoved" .= String (pack $ show $ txs1)
+        , "mempoolSize" .= String (pack $ show $ mpSz)
         ]
