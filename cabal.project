@@ -181,13 +181,6 @@ source-repository-package
   --sha256: 04vlz0v90klfcjy5kc4725z8d1mr19ndb0ah23b7l1n6gm8v4hj9
   subdir:   tracer-transformers
 
--- dependencies of iohk-monitoring
-source-repository-package
-  type: git
-  location: https://github.com/CodiePP/ekg-prometheus-adapter
-  tag: 1a258b6df7d9807d4c4ff3e99722223d31a2c320
-  --sha256: 0jzr1afb4vanhcc2gzlybzr0jnh66cap8kh00fkd4c22882jqkh8
-
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
