@@ -6,7 +6,8 @@ where
 
 import           Cardano.Prelude
 
-import           System.Directory (removeFile)
+import           System.Directory (createDirectoryIfMissing, removeFile)
+import           System.FilePath (takeDirectory)
 import           System.IO.Error (isDoesNotExistError)
 import           Network.Socket as Socket
 
@@ -17,6 +18,7 @@ import           Cardano.Config.Types (SocketPath(..))
 --   derived from the node ID.  When 'mkdir' is 'MkdirIfMissing', the directory is created.
 localSocketAddrInfo :: SocketPath -> IO Socket.AddrInfo
 localSocketAddrInfo (SocketFile fp) = do
+  createDirectoryIfMissing True $ takeDirectory fp
   pure $
     Socket.AddrInfo
       []

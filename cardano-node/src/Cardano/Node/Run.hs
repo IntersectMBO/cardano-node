@@ -407,7 +407,7 @@ readRealNodeTopology fp = do
    handler e =  Left . pack $ show e
 
 extractFilePathsAndGenHash
-  :: NodeProtocolMode -> (MiscellaneousFilepaths ,ConfigYamlFilePath, Text)
+  :: NodeProtocolMode -> (MiscellaneousFilepaths, ConfigYamlFilePath, Text)
 extractFilePathsAndGenHash npm =
   case npm of
     MockProtocolMode (NodeMockCLI mMscFp genHash _ configYaml _) ->
