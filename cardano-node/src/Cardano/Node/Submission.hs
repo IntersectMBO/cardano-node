@@ -7,7 +7,7 @@
 
 {-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
 
-module Cardano.CLI.Tx.Submission (
+module Cardano.Node.Submission (
       submitTx
     ) where
 import           Cardano.Prelude hiding (ByteString, option, threadDelay)

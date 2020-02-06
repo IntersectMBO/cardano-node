@@ -23,19 +23,17 @@ library
   hs-source-dirs:      src
 
   exposed-modules:     Cardano.Chairman
+                       Cardano.CLI.Benchmarking.Tx.Generation
+                       Cardano.CLI.Benchmarking.Tx.NodeToNode
+                       Cardano.CLI.Benchmarking.Tx.TxSubmission
                        Cardano.CLI.Delegation
                        Cardano.CLI.Genesis
                        Cardano.CLI.Key
                        Cardano.CLI.Legacy.Byron
                        Cardano.CLI.Ops
+                       Cardano.CLI.Parsers
                        Cardano.CLI.Run
                        Cardano.CLI.Tx
-                       Cardano.CLI.Tx.BenchmarkingTxSubClient
-                       Cardano.CLI.Tx.BenchmarkingTxSubmission
-                       Cardano.CLI.Tx.BenchmarkingNodeToNode
-                       Cardano.CLI.Tx.Generation
-                       Cardano.CLI.Parsers
-                       Cardano.CLI.Tx.Submission
                        Cardano.Common.Help
                        Cardano.Common.LocalSocket
                        Cardano.Common.Orphans
@@ -43,8 +41,10 @@ library
                        Cardano.Common.TopHandler
                        Cardano.Node.Features.Node
                        Cardano.Node.Run
+                       Cardano.Node.Submission
                        Cardano.Node.TUI.GitRev
                        Cardano.Node.TUI.GitRevFromGit
+                       Cardano.Node.TxSubClient
                        Cardano.Tracing.Tracers
                        Cardano.Wallet.Client
                        Cardano.Wallet.Logging

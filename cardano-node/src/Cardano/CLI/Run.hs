@@ -57,21 +57,25 @@ import           Cardano.CLI.Genesis
 import           Cardano.CLI.Key
 import           Cardano.CLI.Ops
 import           Cardano.CLI.Tx
-import           Cardano.CLI.Tx.Generation (NumberOfTxs (..),
-                                            NumberOfInputsPerTx (..),
-                                            NumberOfOutputsPerTx (..),
-                                            FeePerTx (..), TPSRate (..),
-                                            TxAdditionalSize (..),
-                                            ExplorerAPIEnpoint (..),
-                                            genesisBenchmarkRunner)
+import           Cardano.CLI.Benchmarking.Tx.Generation
+                   ( ExplorerAPIEnpoint (..)
+                   , NumberOfTxs (..)
+                   , NumberOfInputsPerTx (..)
+                   , NumberOfOutputsPerTx (..)
+                   , FeePerTx (..), TPSRate (..)
+                   , TxAdditionalSize (..)
+                   , genesisBenchmarkRunner
+                   )
 import           Cardano.Common.Orphans ()
 import           Cardano.Config.Protocol
 import           Cardano.Config.Logging (createLoggingFeatureCLI)
-import           Cardano.Config.Types ( CardanoEnvironment(..), DelegationCertFile(..)
-                                      , GenesisFile(..), LastKnownBlockVersion(..)
-                                      , NodeConfiguration(..), SigningKeyFile(..)
-                                      , SocketPath(..), Update(..)
-                                      , parseNodeConfiguration)
+import           Cardano.Config.Types
+                   ( CardanoEnvironment(..), DelegationCertFile(..)
+                   , GenesisFile(..), LastKnownBlockVersion(..)
+                   , NodeConfiguration(..), SigningKeyFile(..)
+                   , SocketPath(..), Update(..)
+                   , parseNodeConfiguration
+                   )
 import           Cardano.Config.Topology (NodeAddress(..))
 
 -- | Sub-commands of 'cardano-cli'.

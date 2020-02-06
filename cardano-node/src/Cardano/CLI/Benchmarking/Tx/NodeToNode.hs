@@ -5,7 +5,7 @@
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Cardano.CLI.Tx.BenchmarkingNodeToNode
+module Cardano.CLI.Benchmarking.Tx.NodeToNode
   ( BenchmarkTxSubmitTracers (..)
   , SendRecvConnect
   , SendRecvTxSubmission

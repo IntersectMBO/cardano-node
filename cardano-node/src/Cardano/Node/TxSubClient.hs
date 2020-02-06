@@ -3,7 +3,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Cardano.CLI.Tx.BenchmarkingTxSubClient
+module Cardano.Node.TxSubClient
   ( txSubmissionClient
   ) where
 
@@ -13,7 +13,7 @@ import           Control.Monad.Class.MonadSTM (TMVar, MonadSTM, atomically,
                                                newEmptyTMVarM, putTMVar, takeTMVar)
 import           Data.List.NonEmpty (fromList)
 
-import           Cardano.CLI.Tx.BenchmarkingTxSubmission (RPCTxSubmission(..))
+import           Cardano.CLI.Benchmarking.Tx.TxSubmission (RPCTxSubmission(..))
 import           Ouroboros.Consensus.Mempool.API (GenTxId, GenTx)
 import           Ouroboros.Network.Protocol.TxSubmission.Client (ClientStIdle(..),
                                                                  ClientStTxs(..),
