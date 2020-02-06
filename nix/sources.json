@@ -23,64 +23,16 @@
         "url": "https://github.com/input-output-hk/cardano-sl/archive/d0cc2e6336e3c57771c775cafe831bc83db303d3.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
-    "gitignore": {
-        "branch": "master",
-        "description": "Nix function for filtering local git sources",
-        "homepage": "",
-        "owner": "hercules-ci",
-        "repo": "gitignore",
-        "rev": "f9e996052b5af4032fe6150bba4a6fe4f7b9d698",
-        "sha256": "0jrh5ghisaqdd0vldbywags20m2cxpkbbk5jjjmwaw0gr8nhsafv",
-        "type": "tarball",
-        "url": "https://github.com/hercules-ci/gitignore/archive/f9e996052b5af4032fe6150bba4a6fe4f7b9d698.tar.gz",
-        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
-    },
-    "hackage.nix": {
-        "branch": "master",
-        "description": "Automatically generated Nix expressions for Hackage",
-        "homepage": "",
-        "owner": "input-output-hk",
-        "repo": "hackage.nix",
-        "rev": "3c95c2c481ca909ecdb85354348482edf924df3a",
-        "sha256": "0sk5810bs6w51vq2501bbbx2adcf4ygkw0x3w014l7kpds6fvxpy",
-        "type": "tarball",
-        "url": "https://github.com/input-output-hk/hackage.nix/archive/3c95c2c481ca909ecdb85354348482edf924df3a.tar.gz",
-        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
-    },
-    "haskell.nix": {
-        "branch": "master",
-        "description": "Alternative Haskell Infrastructure for Nixpkgs",
-        "homepage": "https://input-output-hk.github.io/haskell.nix",
-        "owner": "input-output-hk",
-        "repo": "haskell.nix",
-        "rev": "fb49ef450107d23134b45b81f96a34b3c0a8c8cd",
-        "sha256": "1kxdwkc4lxfkfz22b4ghmf9nhafpyja167dmdq75wvj1xjadx2hd",
-        "type": "tarball",
-        "url": "https://github.com/input-output-hk/haskell.nix/archive/fb49ef450107d23134b45b81f96a34b3c0a8c8cd.tar.gz",
-        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
-    },
     "iohk-nix": {
         "branch": "master",
         "description": "nix scripts shared across projects",
         "homepage": null,
         "owner": "input-output-hk",
         "repo": "iohk-nix",
-        "rev": "493582154fbbe03563056a263bff729c3a8cee1c",
-        "sha256": "064pa40w1j72kxbp99ca31hi88hdpy10vk8i6g35ii10242qw2b5",
+        "rev": "e3a8e3cb74917e1313143b7abd7cc67c28678c6f",
+        "sha256": "0ih5fp9rj5ps2x2n41nhfbq2h3p6vj8jglva448j71ywqkz5vjr6",
         "type": "tarball",
-        "url": "https://github.com/input-output-hk/iohk-nix/archive/493582154fbbe03563056a263bff729c3a8cee1c.tar.gz",
-        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
-    },
-    "niv": {
-        "branch": "iohk",
-        "description": "Easy dependency management for Nix projects",
-        "homepage": "https://github.com/nmattia/niv",
-        "owner": "input-output-hk",
-        "repo": "niv",
-        "rev": "c25268460b72cea5b7294354ab019997530a6f3d",
-        "sha256": "1fgq1nkycm54f431h6wflh6rr7xsq3q2fq9drbgra2fnrsyn65ll",
-        "type": "tarball",
-        "url": "https://github.com/input-output-hk/niv/archive/c25268460b72cea5b7294354ab019997530a6f3d.tar.gz",
+        "url": "https://github.com/input-output-hk/iohk-nix/archive/e3a8e3cb74917e1313143b7abd7cc67c28678c6f.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "nixpkgs": {
@@ -89,10 +41,10 @@
         "homepage": null,
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "f618cfbf4544b09088cbbb6004cfc84dd432e20c",
-        "sha256": "1272psriz048bc1ab4vjkd0qq942kifalraq0j9km62cgza1mf5h",
+        "rev": "ea553d8c67c6a718448da50826ff5b6916dc9c59",
+        "sha256": "0g9smv36sk42rfyzi8wyq2wl11c5l0qaldij1zjdj60s57cl3wgj",
         "type": "tarball",
-        "url": "https://github.com/NixOS/nixpkgs/archive/f618cfbf4544b09088cbbb6004cfc84dd432e20c.tar.gz",
+        "url": "https://github.com/NixOS/nixpkgs/archive/ea553d8c67c6a718448da50826ff5b6916dc9c59.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     }
 }

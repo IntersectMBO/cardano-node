@@ -1,8 +1,8 @@
 
-with import ../lib.nix {};
+with import ./. {};
 
-pkgs.haskell.lib.buildStackProject {
-  name = "cardano-node-stack-env";
+haskell.lib.buildStackProject {
+  name = "stack-env";
   buildInputs = with pkgs; [ zlib openssl gmp libffi git systemd haskellPackages.happy ];
-  ghc = (import ../shell.nix {}).ghc;
+  ghc = (import ../shell.nix {inherit pkgs;}).ghc;
 }

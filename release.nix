@@ -25,13 +25,16 @@
 # A Hydra option
 , scrubJobs ? true
 
-# Import IOHK common nix lib
-, commonLib ? import ./lib.nix {}
+# Dependencies overrides
+, sourcesOverride ? {}
+
+# Import pkgs, including IOHK common nix lib
+, pkgs ? import ./nix { inherit sourcesOverride; }
 
 }:
 
-with (import commonLib.iohkNix.release-lib) {
-  inherit (commonLib) pkgs;
+with (import pkgs.iohkNix.release-lib) {
+  inherit pkgs;
   inherit supportedSystems supportedCrossSystems scrubJobs projectArgs;
   packageSet = import cardano-node;
   gitrev = cardano-node.rev;
@@ -60,7 +63,7 @@ let
   # TODO: add docker images
   #wrapDockerImage = cluster: let
   #  images = (getArchDefault "x86_64-linux").dockerImages;
-  #  wrapImage = image: commonLib.pkgs.runCommand "${image.name}-hydra" {} ''
+  #  wrapImage = image: pkgs.runCommand "${image.name}-hydra" {} ''
   #    mkdir -pv $out/nix-support/
   #    cat <<EOF > $out/nix-support/hydra-build-products
   #    file dockerimage ${image}
@@ -104,7 +107,7 @@ let
     # TODO: fix broken evals
     #musl64 = mapTestOnCross musl64 (packagePlatformsCross project);
   } // extraBuilds // (mkRequiredJob (
-      collectTests jobs.native.checks.tests ++
+      collectTests jobs.native.checks ++
       collectTests jobs.native.benchmarks ++ [
       jobs.native.cardano-node.x86_64-darwin
       jobs.native.cardano-node.x86_64-linux
@@ -112,7 +115,6 @@ let
       # windows cross compilation targets
       #jobs.x86_64-pc-mingw32.cardano-node.x86_64-linux
 
-      # Chairman consensus test TODO: fix the chairman test
       jobs.nixosTests.chairmansCluster.x86_64-linux
     ]));
 

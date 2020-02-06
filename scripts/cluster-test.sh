@@ -59,5 +59,5 @@ EOF
 announce
 trap announce EXIT
 
-nix-build -A nixosTests.chairmansCluster --show-trace --arg interactive true "$@" 2>&1 |
+nix-build -A nixosTests.chairmansCluster --show-trace --arg config '{ interactive = true; }' "$@" 2>&1 |
         tee ${logfile}

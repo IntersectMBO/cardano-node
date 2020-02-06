@@ -1,8 +1,7 @@
 { system ? builtins.currentSystem }:
 
 let
-  self = import ../../lib.nix { inherit system; };
-  pkgs = self.pkgs;
+  pkgs = import ../../nix { inherit system; };
   repo-tool-src = pkgs.fetchFromGitHub {
     owner = "input-output-hk";
     repo = "cardano-repo-tool";

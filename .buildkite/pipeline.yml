@@ -12,7 +12,7 @@ steps:
       system: x86_64-linux
 
   - label: 'check-cabal-project'
-    command: 'nix-build lib.nix -A iohkNix.checkCabalProject -o check-cabal-project.sh && ./check-cabal-project.sh'
+    command: 'nix-build ./nix -A iohkNix.checkCabalProject -o check-cabal-project.sh && ./check-cabal-project.sh'
     agents:
       system: x86_64-linux
 

@@ -1,4 +1,4 @@
-{ pkgs, cardano-node-packages ? (import ../lib.nix {}).haskellPackages.cardano-node.components.exes }:
+{ pkgs, cardano-node-packages ? pkgs.cardanoNodeHaskellPackages.cardano-node.components.exes }:
 with builtins; with pkgs.lib;
 let
   cardano-cli-bin = "${cardano-node-packages.cardano-cli}/bin/cardano-cli";
