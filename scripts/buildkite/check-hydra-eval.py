@@ -31,9 +31,10 @@ while hydra_eval.status_code != 200:
         exit(1)
 
 hydra_eval_data = json.loads(hydra_eval.text)
+errormsg = hydra_eval_data["errormsg"]
 
-if hydra_eval_data.errormsg != "":
-    print(f"An error occurred in evaluation:\n{hydra_eval_data.errormsg}")
+if errormsg != "":
+    print(f"An error occurred in evaluation:\n{errormsg}")
     exit(1)
 
 exit(0)
