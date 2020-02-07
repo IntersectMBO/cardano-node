@@ -15,7 +15,7 @@ in let
   ### Packages and Nix libs
   cardano-node          = ncfg.package;
   cardano-sl-pkgs       = import ccfg.cardano-sl-src { gitrev = ccfg.cardano-sl-src.rev; };
-  svcLib                = (import ../svclib.nix { inherit pkgs; });
+  svcLib                = pkgs.svcLib;
 
 in let
   ### Node enumeration

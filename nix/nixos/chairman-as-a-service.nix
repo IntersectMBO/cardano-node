@@ -3,12 +3,12 @@
 , pkgs
 , ... }:
 
-with import ../../lib.nix {}; with lib; with builtins;
+with pkgs.commonLib; with lib; with builtins;
 let
+  inherit (pkgs) svcLib;
   cfg  = config.services.chairman;
   ncfg = config.services.cardano-node;
-  chairman = haskellPackages.cardano-node.components.exes.chairman;
-  svcLib = (import ../svclib.nix { inherit pkgs; });
+  chairman = pkgs.cardanoNodeHaskellPackages.cardano-node.components.exes.chairman;
   envConfig = environments.${cfg.environment};
   mkChairmanConfig = nodeConfig: chairmanConfig: {
     inherit (nodeConfig) package genesisFile genesisHash stateDir pbftThreshold consensusProtocol;

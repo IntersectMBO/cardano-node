@@ -1,13 +1,13 @@
 { pkgs
-, commonLib
-, interactive ? false
+, config
+, interactive ? config.interactive or false
 , ... }:
 
 with pkgs.lib;
 let
-  svcLib          = import ../../svclib.nix { pkgs = commonLib.pkgs; };
-  byron-proxy-src = (import ../../sources.nix).cardano-byron-proxy;
-  cardano-sl-src  = (import ../../sources.nix).cardano-sl;
+  inherit (pkgs) svcLib pkgsOverlays sources;
+  byron-proxy-src = sources.cardano-byron-proxy;
+  cardano-sl-src  = sources.cardano-sl;
   # byron-proxy-src = ../../../../cardano-byron-proxy;
   # cardano-sl-src  = ../../../../cardano-sl;
   cardano-sl-config = pkgs.runCommand "cardano-sl-config" {} ''
@@ -35,6 +35,7 @@ in {
   name = "chairmans-cluster-test";
   nodes = {
     machine = { lib, config, pkgs, ... }: {
+      nixpkgs.overlays = pkgsOverlays;
       imports = [
         (byron-proxy-src + "/nix/nixos")
         ../cardano-node-service.nix

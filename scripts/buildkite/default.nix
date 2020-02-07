@@ -1,5 +1,4 @@
-with import ../../lib.nix {};
-with pkgs;
+with import ../../nix {};
 
 let
   stack-hpc-coveralls = iohkNix.stack-hpc-coveralls;

@@ -1,7 +1,10 @@
-{ commonLib, customConfig }:
-with commonLib.pkgs.lib;
+{ pkgs
+, config
+, customConfig ? config.scriptCustom or {}
+ }:
+with pkgs.commonLib;
 let
-  inherit (commonLib) svcLib pkgs;
+  inherit (pkgs) svcLib;
   pkgsModule = {
     config._module.args.pkgs = mkDefault pkgs;
   };
@@ -41,7 +44,7 @@ let
       edgePort = if config.useProxy then config.proxyPort else config.edgePort;
       edgeHost = if config.useProxy then config.proxyHost else config.edgeHost;
       edgeNodes = if config.useProxy then [] else config.edgeNodes;
-    in config.topologyFile or commonLib.mkEdgeTopology {
+    in config.topologyFile or mkEdgeTopology {
       inherit (config) hostAddr port;
       inherit edgeNodes edgeHost edgePort;
     };
@@ -80,7 +83,7 @@ let
     cd "state-node-${envConfig.name}"
     ${nodeScript} $@
   '';
-  scripts = commonLib.forEnvironments (environment:
+  scripts = forEnvironments (environment:
   {
     node = mkNodeScript environment;
     chairman = svcLib.mkChairmanScript;

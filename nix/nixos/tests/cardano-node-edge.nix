@@ -1,9 +1,10 @@
-{ pkgs, commonLib, ... }:
-
+{ pkgs, ... }:
+with pkgs;
 {
   name = "cardano-node-edge-test";
   nodes = {
     machine = { config, pkgs, ... }: {
+      nixpkgs.overlays = pkgsOverlays;
       imports = [
         ../.
       ];

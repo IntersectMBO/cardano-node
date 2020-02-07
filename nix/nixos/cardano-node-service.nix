@@ -5,9 +5,9 @@
 
 with lib; with builtins;
 let
-  commonLib = import ../../lib.nix {};
+  localPkgs = import ../. {};
   cfg = config.services.cardano-node;
-  inherit (commonLib) svcLib;
+  inherit (localPkgs) svcLib commonLib cardanoNodeHaskellPackages;
   envConfig = cfg.environments.${cfg.environment}; systemdServiceName = "cardano-node${optionalString cfg.instanced "@"}";
   mkScript = cfg:
     let exec = "cardano-node run";
@@ -59,7 +59,7 @@ in {
 
       package = mkOption {
         type = types.package;
-        default = commonLib.haskellPackages.cardano-node.components.exes.cardano-node;
+        default = cardanoNodeHaskellPackages.cardano-node.components.exes.cardano-node;
         defaultText = "cardano-node";
         description = ''
           The cardano-node package that should be used
