@@ -14,7 +14,7 @@ BUILDKITE_REPO = os.getenv("BUILDKITE_PIPELINE_NAME", None)
 
 hydra_pr_url = f"{HYDRA_BASE_URL}/jobset/Cardano/{BUILDKITE_REPO}-pr-{BUILDKITE_PR}"
 
-if not BUILDKITE_PR:
+if BUILDKITE_PR == "false":
     print("Please open a PR for hydra to evaluate")
     exit(1)
 else:
