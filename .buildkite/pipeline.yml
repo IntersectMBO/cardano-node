@@ -1,15 +1,15 @@
 steps:
-  - label: 'stack rebuild'
-    env:
-      STACK_ROOT: "/build/cardano-node.stack"
-    command:
-      - "rm -rf /build/cardano-node"
-      - "cp -R . /build/cardano-node"
-      - "cd /build/cardano-node"
-      - "nix-build scripts/buildkite -o stack-rebuild"
-      - "./stack-rebuild"
-    agents:
-      system: x86_64-linux
+  - label: 'slow-ci-builds'
+    trigger: cardano-node-slow-ci
+    async: true
+    build:
+      message: "${BUILDKITE_MESSAGE}"
+      commit: "${BUILDKITE_COMMIT}"
+      branch: "${BUILDKITE_BRANCH}"
+      env:
+        BUILDKITE_PULL_REQUEST: "${BUILDKITE_PULL_REQUEST}"
+        BUILDKITE_PULL_REQUEST_BASE_BRANCH: "${BUILDKITE_PULL_REQUEST_BASE_BRANCH}"
+        BUILDKITE_PULL_REQUEST_REPO: "${BUILDKITE_PULL_REQUEST_REPO}"
 
   - label: 'check-cabal-project'
     command: 'nix-build ./nix -A iohkNix.checkCabalProject -o check-cabal-project.sh && ./check-cabal-project.sh'
