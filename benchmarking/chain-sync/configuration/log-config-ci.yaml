@@ -20,11 +20,16 @@ setupScribes:
   - scKind: FileSK
     scName: "node-0.log"
     scFormat: ScText
+  - scKind: FileSK
+    scName: "node-0.json"
+    scFormat: ScJson
 
 # if not indicated otherwise, then log output is directed to this:
 defaultScribes:
   - - FileSK
     - "node-0.log"
+  - - FileSK
+    - "node-0.json"
 
 # more options which can be passed as key-value pairs:
 options:
