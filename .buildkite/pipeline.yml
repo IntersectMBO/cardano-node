@@ -2,6 +2,9 @@ steps:
   - label: 'slow-ci-builds'
     trigger: cardano-node-slow-ci
     async: true
+    build:
+      commit: "${BUILDKITE_COMMIT}"
+      branch: "${BUILDKITE_BRANCH}"
 
   - label: 'check-cabal-project'
     command: 'nix-build ./nix -A iohkNix.checkCabalProject -o check-cabal-project.sh && ./check-cabal-project.sh'
