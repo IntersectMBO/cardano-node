@@ -17,10 +17,10 @@ steps:
       system: x86_64-linux
 
 # FIXME, waiting for https://github.com/input-output-hk/haskell.nix/pull/426
-- label: 'hydra-eval-errors'
-  command: 'nix-shell -p curl jq scripts/buildkite/check-hydra-eval.sh'
-  agents:
-    system: x86_64-linux
+  - label: 'hydra-eval-errors'
+    command: 'scripts/buildkite/check-hydra-eval.py'
+    agents:
+      system: x86_64-linux
 
   - label: 'stack-cabal-sync'
     command: 'nix-shell scripts/buildkite/stack-cabal-sync.nix --run scripts/buildkite/stack-cabal-sync.sh'
