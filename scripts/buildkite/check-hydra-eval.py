@@ -17,6 +17,8 @@ hydra_pr_url = f"{HYDRA_BASE_URL}/jobset/Cardano/{BUILDKITE_REPO}-pr-{BUILDKITE_
 if not BUILDKITE_PR:
     print("Please open a PR for hydra to evaluate")
     exit(1)
+else:
+    print(f"PR: {BUILDKITE_PR}")
 
 hydra_eval = requests.get(hydra_pr_url, headers={"Content-Type": "application/json"})
 
