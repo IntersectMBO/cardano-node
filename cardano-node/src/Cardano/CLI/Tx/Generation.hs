@@ -16,6 +16,7 @@ module Cardano.CLI.Tx.Generation
   , FeePerTx(..)
   , TPSRate(..)
   , TxAdditionalSize(..)
+  , ExplorerAPIEnpoint(..)
   , TxGenError
   , genesisBenchmarkRunner
   ) where
@@ -49,6 +50,11 @@ import           Data.Text (Text)
 import qualified Data.Text as T
 import           Data.Time.Clock (DiffTime, picosecondsToDiffTime)
 import           Data.Word (Word8, Word32, Word64)
+import           Network.HTTP.Client (Request (..), RequestBody (..),
+                     defaultManagerSettings, httpLbs,
+                     newManager, parseRequest, responseBody,
+                     responseStatus)
+import           Network.HTTP.Types.Status (statusCode)
 import           Network.Socket (AddrInfo (..),
                      AddrInfoFlag (..), Family (..), SocketType (Stream),
                      addrFamily,addrFlags, addrSocketType, defaultHints,
@@ -58,7 +64,7 @@ import           Cardano.BM.Data.Tracer (ToLogObject (..))
 import           Cardano.BM.Trace (appendName)
 import qualified Cardano.Chain.Common as CC.Common
 import qualified Cardano.Chain.Genesis as CC.Genesis
-import qualified Cardano.Chain.MempoolPayload as CC.Mempool
+-- import qualified Cardano.Chain.MempoolPayload as CC.Mempool
 import qualified Cardano.Chain.UTxO as CC.UTxO
 import           Cardano.Config.Logging (LoggingLayer (..), Trace)
 import           Cardano.Config.Types (SocketPath)
@@ -66,7 +72,8 @@ import qualified Cardano.Crypto as Crypto
 import           Cardano.Config.Topology (NodeAddress (..),
                                           NodeHostAddress(..))
 import           Cardano.CLI.Ops
-import           Cardano.CLI.Tx (txSpendGenesisUTxOByronPBFT, normalByronTxToGenTx)
+import           Cardano.CLI.Tx (txSpendGenesisUTxOByronPBFT, toCborTxAux,
+                     normalByronTxToGenTx)
 import           Cardano.CLI.Tx.BenchmarkingTxSubmission (ROEnv (..),
                                                           TraceBenchTxSubmit (..),
                                                           bulkSubmission)
@@ -88,7 +95,7 @@ import qualified Ouroboros.Consensus.Mempool as Mempool
 import           Ouroboros.Consensus.Ledger.Byron (ByronBlock (..),
                                                    GenTx (..),
                                                    ByronConsensusProtocol)
-import qualified Ouroboros.Consensus.Ledger.Byron as Byron
+-- import qualified Ouroboros.Consensus.Ledger.Byron as Byron
 import           Ouroboros.Consensus.Protocol.Abstract (NodeConfig)
 import           Ouroboros.Consensus.Protocol.ExtConfig (extNodeConfig)
 
@@ -125,6 +132,14 @@ newtype TxAdditionalSize =
   TxAdditionalSize Int
   deriving (Eq, Ord, Show)
 
+-- | This parameter specifies Explorer's API endpoint we use to submit
+--   transaction. This parameter is an optional one, and if it's defined -
+--   generator won't submit transactions to 'ouroboros-network', instead it
+--   will submit transactions to that endpoint, using POST-request.
+newtype ExplorerAPIEnpoint =
+  ExplorerAPIEnpoint String
+  deriving (Eq, Ord, Show)
+
 -----------------------------------------------------------------------------------------
 -- | Genesis benchmark runner (we call it in 'Run.runNode').
 --
@@ -142,6 +157,7 @@ genesisBenchmarkRunner
   -> FeePerTx
   -> TPSRate
   -> Maybe TxAdditionalSize
+  -> Maybe ExplorerAPIEnpoint
   -> [FilePath]
   -> ExceptT TxGenError IO ()
 genesisBenchmarkRunner loggingLayer
@@ -154,6 +170,7 @@ genesisBenchmarkRunner loggingLayer
                        txFee
                        tpsRate
                        txAdditionalSize
+                       explorerAPIEndpoint
                        signingKeyFiles = do
   when (length signingKeyFiles < 3) $
     left $ NeedMinimumThreeSigningKeyFiles signingKeyFiles
@@ -187,7 +204,8 @@ genesisBenchmarkRunner loggingLayer
   -- We have to prepare an initial funds (it's the money we'll send from 'genesisAddress' to
   -- 'sourceAddress'), this will be our very first transaction.
   fundsWithGenesisMoney <- liftIO $
-    prepareInitialFunds lowLevelSubmitTracer
+    prepareInitialFunds benchTracer
+                        lowLevelSubmitTracer
                         socketFp
                         genesisConfig
                         pInfoConfig
@@ -195,6 +213,7 @@ genesisBenchmarkRunner loggingLayer
                         genesisAddress
                         sourceAddress
                         txFee
+                        explorerAPIEndpoint
 
   liftIO . traceWith benchTracer . TraceBenchTxSubDebug
     $ "******* Tx generator, initial funds are prepared (sent to sourceAddress) *******"
@@ -216,6 +235,7 @@ genesisBenchmarkRunner loggingLayer
                  txFee
                  tpsRate
                  txAdditionalSize
+                 explorerAPIEndpoint
                  fundsWithGenesisMoney
 
 {-------------------------------------------------------------------------------
@@ -380,7 +400,8 @@ extractGenesisFunds genesisConfig signingKeys =
 -- Prepare and submit our first transaction: send money from 'initialAddress' to 'sourceAddress'
 -- (latter corresponds to 'targetAddress' here) and "remember" it in 'availableFunds'.
 prepareInitialFunds
-  :: Tracer IO String
+  :: Tracer IO (TraceBenchTxSubmit (Mempool.GenTxId ByronBlock))
+  -> Tracer IO String
   -> SocketPath
   -> CC.Genesis.Config
   -> NodeConfig ByronConsensusProtocol
@@ -388,15 +409,18 @@ prepareInitialFunds
   -> CC.Common.Address
   -> CC.Common.Address
   -> FeePerTx
+  -> Maybe ExplorerAPIEnpoint
   -> IO AvailableFunds
-prepareInitialFunds llTracer
+prepareInitialFunds benchTracer
+                    llTracer
                     socketFp
                     genesisConfig
                     pInfoConfig
                     genesisUtxo
                     genesisAddress
                     targetAddress
-                    (FeePerTx txFee) = do
+                    (FeePerTx txFee)
+                    explorerAPIEndpoint = do
   let ((_, out), signingKey) = genesisUtxo Map.! 0 -- Currently there's only 1 element.
       feePerTx = assumeBound . CC.Common.mkLovelace $ txFee
       outBig = CC.UTxO.txOutValue out `subLoveLace` feePerTx
@@ -405,17 +429,28 @@ prepareInitialFunds llTracer
         , CC.UTxO.txOutValue   = outBig
         }
 
-  let genesisTx :: GenTx ByronBlock
-      genesisTx = normalByronTxToGenTx $
-                  txSpendGenesisUTxOByronPBFT genesisConfig
+  let genesisTx :: CC.UTxO.ATxAux ByteString
+      genesisTx = txSpendGenesisUTxOByronPBFT genesisConfig
                                               signingKey
                                               genesisAddress
                                               (NE.fromList [outForBig])
+      genesisTxGeneral :: GenTx ByronBlock
+      genesisTxGeneral = normalByronTxToGenTx genesisTx
 
-  submitTx socketFp pInfoConfig genesisTx llTracer
+  case explorerAPIEndpoint of
+    Nothing -> do
+      -- There's no Explorer's API endpoint specified, submit genesis
+      -- transaction to the target nodes via 'ouroboros-network'.
+      submitTx socketFp pInfoConfig genesisTxGeneral llTracer
+    Just (ExplorerAPIEnpoint endpoint) -> do
+      -- Explorer's API endpoint is specified, submit genesis
+      -- transaction to that endpoint using POST-request.
+      initialRequest <- liftIO $ parseRequest endpoint
+      postTx benchTracer initialRequest $ toCborTxAux genesisTx
+
   -- Done, the first transaction 'initGenTx' is submitted, now 'sourceAddress' has a lot of money.
 
-  let txIn  = CC.UTxO.TxInUtxo (getTxIdFromGenTx genesisTx) 0
+  let txIn  = CC.UTxO.TxInUtxo (getTxIdFromGenTx genesisTxGeneral) 0
       txOut = outForBig
 
   -- Form availableFunds with a single value, it will be used for further (splitting) transactions.
@@ -452,10 +487,10 @@ mkTransaction
   -> ( Maybe (Word32, CC.Common.Lovelace) -- The 'change' index and value (if any)
      , CC.Common.Lovelace                 -- The associated fees
      , Map r Word32                       -- The offset map in the transaction below
-     , GenTx ByronBlock
+     , CC.UTxO.ATxAux ByteString
      )
 mkTransaction cfg inputs mChangeAddress payments txAdditionalSize txFee =
-  (mChange, fees, offsetMap, genTx)
+  (mChange, fees, offsetMap, txAux)
  where
   -- Each input contains the same 'signingKey' and the same 'txOutAddress',
   -- so pick the first one.
@@ -509,7 +544,7 @@ mkTransaction cfg inputs mChangeAddress payments txAdditionalSize txFee =
          , CC.UTxO.txAttributes = createTxAttributes txAdditionalSize
          }
 
-  genTx = generalizeTx cfg tx signingKey
+  txAux = createTxAux cfg tx signingKey
 
 -- | If this transaction should contain additional binary blob -
 --   we have to create attributes of the corresponding size.
@@ -555,14 +590,21 @@ appendr :: [a] -> NonEmpty a -> NonEmpty a
 appendr l nel = foldr NE.cons nel l
 
 -- | Annotate and sign transaction before submitting.
-generalizeTx
+-- generalizeTx
+--   :: NodeConfig ByronConsensusProtocol
+--   -> CC.UTxO.Tx
+--   -> Crypto.SigningKey -- signingKey for spending the input
+--   -> GenTx ByronBlock
+-- generalizeTx config tx signingKey =
+--   Byron.fromMempoolPayload $ CC.Mempool.MempoolTx $ createTxAux config tx signingKey
+
+-- | ...
+createTxAux
   :: NodeConfig ByronConsensusProtocol
   -> CC.UTxO.Tx
-  -> Crypto.SigningKey -- signingKey for spending the input
-  -> GenTx ByronBlock
-generalizeTx config tx signingKey =
-  Byron.fromMempoolPayload $
-    CC.Mempool.MempoolTx $ CC.UTxO.annotateTxAux $ CC.UTxO.mkTxAux tx witness
+  -> Crypto.SigningKey
+  -> CC.UTxO.ATxAux ByteString
+createTxAux config tx signingKey = CC.UTxO.annotateTxAux $ CC.UTxO.mkTxAux tx witness
  where
   witness = pure $
       CC.UTxO.VKWitness
@@ -615,6 +657,7 @@ runBenchmark
   -> FeePerTx
   -> TPSRate
   -> Maybe TxAdditionalSize
+  -> Maybe ExplorerAPIEnpoint
   -> AvailableFunds
   -> ExceptT TxGenError IO ()
 runBenchmark benchTracer
@@ -632,11 +675,13 @@ runBenchmark benchTracer
              txFee
              tpsRate
              txAdditionalSize
+             explorerAPIEndpoint
              fundsWithGenesisMoney = do
   liftIO . traceWith benchTracer . TraceBenchTxSubDebug
     $ "******* Tx generator, phase 1: make enough available UTxO entries *******"
   fundsWithSufficientCoins <-
-      createMoreFundCoins lowLevelSubmitTracer
+      createMoreFundCoins benchTracer
+                          lowLevelSubmitTracer
                           socketFp
                           pInfoConfig
                           sourceKey
@@ -644,6 +689,7 @@ runBenchmark benchTracer
                           numOfTxs
                           numOfInsPerTx
                           fundsWithGenesisMoney
+                          explorerAPIEndpoint
 
   -- sleep for 20 s; subsequent txs enter new block
   liftIO $ threadDelay (20*1000*1000)
@@ -690,7 +736,8 @@ runBenchmark benchTracer
 
   -- List of 'TMVar's with lists of transactions for submitting.
   -- The number of these lists corresponds to the number of target nodes.
-  txsListsForTargetNodes :: MSTM.TMVar IO [MSTM.TMVar IO [GenTx ByronBlock]] <- liftIO $ STM.newTMVarIO []
+  txsListsForTargetNodes :: MSTM.TMVar IO [MSTM.TMVar IO [CC.UTxO.ATxAux ByteString]]
+    <- liftIO $ STM.newTMVarIO []
 
   -- Run generator.
   txGenerator benchTracer
@@ -712,23 +759,75 @@ runBenchmark benchTracer
   -- TVar for termination.
   txSubmissionTerm :: MSTM.TVar IO Bool <- liftIO $ STM.newTVarIO False
 
-  liftIO $ do
-    txsLists <- STM.atomically $ STM.takeTMVar txsListsForTargetNodes
-    let targetNodesAddrsAndTxsLists = zip (NE.toList remoteAddresses) txsLists
-    allAsyncs <- forM targetNodesAddrsAndTxsLists $ \(remoteAddr, txsList) ->
-      -- Launch connection and submission threads for a peer
-      -- (corresponding to one target node).
-      launchTxPeer benchTracer
-                   benchmarkTracers
-                   txSubmissionTerm
-                   pInfoConfig
-                   localAddr
-                   remoteAddr
-                   updROEnv
-                   txsList
-    let allAsyncs' = intercalate [] [[c, s] | (c, s) <- allAsyncs]
-    -- Just wait for all threads to complete.
-    mapM_ (void . wait) allAsyncs'
+  txsLists :: [MSTM.TMVar IO [CC.UTxO.ATxAux ByteString]]
+    <- liftIO $ STM.atomically $ STM.takeTMVar txsListsForTargetNodes
+
+  case explorerAPIEndpoint of
+    Nothing ->
+      -- There's no Explorer's API endpoint specified, submit transactions
+      -- to the target nodes via 'ouroboros-network'.
+      liftIO $ do
+        let targetNodesAddrsAndTxsLists = zip (NE.toList remoteAddresses) txsLists
+        allAsyncs <- forM targetNodesAddrsAndTxsLists $ \(remoteAddr, txsList) -> do
+          -- Launch connection and submission threads for a peer
+          -- (corresponding to one target node).
+          txAuxes :: [CC.UTxO.ATxAux ByteString] <- STM.atomically $ STM.takeTMVar txsList
+          let generalTxs :: [GenTx ByronBlock]
+              generalTxs = map normalByronTxToGenTx txAuxes
+
+          txsListGeneral :: MSTM.TMVar IO [GenTx ByronBlock] <- liftIO $ STM.newTMVarIO generalTxs
+
+          launchTxPeer benchTracer
+                       benchmarkTracers
+                       txSubmissionTerm
+                       pInfoConfig
+                       localAddr
+                       remoteAddr
+                       updROEnv
+                       txsListGeneral
+        let allAsyncs' = intercalate [] [[c, s] | (c, s) <- allAsyncs]
+        -- Just wait for all threads to complete.
+        mapM_ (void . wait) allAsyncs'
+    Just (ExplorerAPIEnpoint endpoint) ->
+      -- Explorer's API endpoint is specified, submit transactions
+      -- to that endpoint using POST-request.
+      liftIO $ do
+        initialRequest <- parseRequest endpoint
+        txsList <- concat <$> mapM (STM.atomically . STM.takeTMVar) txsLists
+        submitTxsToExplorer benchTracer initialRequest txsList tpsRate
+
+submitTxsToExplorer
+  :: Tracer IO (TraceBenchTxSubmit (Mempool.GenTxId ByronBlock))
+  -> Request
+  -> [CC.UTxO.ATxAux ByteString]
+  -> TPSRate
+  -> IO ()
+submitTxsToExplorer benchTracer initialRequest allTxs (TPSRate rate) =
+  forM_ allTxs $ \txAux -> do
+    postTx benchTracer initialRequest $ toCborTxAux txAux
+    threadDelay delayBetweenSubmits
+ where
+  delayBetweenSubmits = oneSecond `div` rate
+  oneSecond = 1000000 :: Int
+
+postTx
+  :: Tracer IO (TraceBenchTxSubmit (Mempool.GenTxId ByronBlock))
+  -> Request
+  -> LB.ByteString
+  -> IO ()
+postTx benchTracer initialRequest serializedTx = do
+  manager <- newManager defaultManagerSettings
+  let request = initialRequest
+                  { method = "POST"
+                  , requestHeaders = [("Content-Type", "application/cbor")]
+                  , requestBody = RequestBodyLBS serializedTx
+                  }
+  responseFromExplorer <- httpLbs request manager
+  traceWith benchTracer . TraceBenchTxSubDebug
+    $ "Response from Explorer WebAPI: status code: "
+      <> (show $ statusCode $ responseStatus responseFromExplorer)
+      <> ", body: "
+      <> (show $ responseBody responseFromExplorer)
 
 -- | At this moment 'sourceAddress' contains a huge amount of money (lets call it A).
 --   Now we have to split this amount to N equal parts, as a result we'll have
@@ -736,7 +835,8 @@ runBenchmark benchTracer
 --   E.g. (1 entry * 1000 ADA) -> (10 entries * 100 ADA).
 --   Technically all splitting transactions will send money back to 'sourceAddress'.
 createMoreFundCoins
-  :: Tracer IO String
+  :: Tracer IO (TraceBenchTxSubmit (Mempool.GenTxId ByronBlock))
+  -> Tracer IO String
   -> SocketPath
   -> NodeConfig ByronConsensusProtocol
   -> Crypto.SigningKey
@@ -744,15 +844,18 @@ createMoreFundCoins
   -> NumberOfTxs
   -> NumberOfInputsPerTx
   -> AvailableFunds
+  -> Maybe ExplorerAPIEnpoint
   -> ExceptT TxGenError IO AvailableFunds
-createMoreFundCoins llTracer
+createMoreFundCoins benchTracer
+                    llTracer
                     socketFp
                     pInfoConfig
                     sourceKey
                     (FeePerTx txFee)
                     (NumberOfTxs numOfTxs)
                     (NumberOfInputsPerTx numOfInsPerTx)
-                    fundsWithGenesisMoney = do
+                    fundsWithGenesisMoney
+                    explorerAPIEndpoint = do
   let feePerTx              = assumeBound . CC.Common.mkLovelace $ txFee
       -- The number of splitting txout entries (corresponds to the number of all inputs we will need).
       numSplittingTxOuts    = numOfTxs * (fromIntegral numOfInsPerTx)
@@ -787,8 +890,20 @@ createMoreFundCoins llTracer
                                          txOut
                                          []
   -- Submit all splitting transactions sequentially.
-  liftIO $ forM_ splittingTxs $ \(tx, _) ->
-    submitTx socketFp pInfoConfig tx llTracer
+  case explorerAPIEndpoint of
+    Nothing ->
+      -- There's no Explorer's API endpoint specified, submit splitting
+      -- transactions to the target nodes via 'ouroboros-network'.
+      liftIO $ forM_ splittingTxs $ \(txAux, _) -> do
+        let splittingTxGeneral :: GenTx ByronBlock
+            splittingTxGeneral = normalByronTxToGenTx txAux
+        submitTx socketFp pInfoConfig splittingTxGeneral llTracer
+    Just (ExplorerAPIEnpoint endpoint) -> do
+      -- Explorer's API endpoint is specified, submit splitting
+      -- transactions to that endpoint using POST-request.
+      initialRequest <- liftIO $ parseRequest endpoint
+      liftIO $ forM_ splittingTxs $ \(txAux, _) ->
+        postTx benchTracer initialRequest $ toCborTxAux txAux
 
   -- Re-create availableFunds with information about all splitting transactions
   -- (it will be used for main transactions).
@@ -802,8 +917,8 @@ createMoreFundCoins llTracer
     -> Word64
     -> Int
     -> CC.UTxO.TxOut
-    -> [(GenTx ByronBlock, [TxDetails])]
-    -> [(GenTx ByronBlock, [TxDetails])]
+    -> [(CC.UTxO.ATxAux ByteString, [TxDetails])]
+    -> [(CC.UTxO.ATxAux ByteString, [TxDetails])]
   createSplittingTxs config details numTxOuts maxOutsPerInitTx identityIndex txOut acc
     | numTxOuts <= 0 = reverse acc
     | otherwise =
@@ -812,12 +927,13 @@ createMoreFundCoins llTracer
             -- same TxOut for all
             outs = Set.fromList $ zip [identityIndex .. identityIndex + (fromIntegral numOutsPerInitTx) - 1]
                                       (repeat txOut)
-            (mFunds, _fees, outIndices, genTx) = mkTransaction config
+            (mFunds, _fees, outIndices, txAux) = mkTransaction config
                                                                (details :| [])
                                                                Nothing
                                                                outs
                                                                Nothing
                                                                txFee
+            genTx = normalByronTxToGenTx txAux
             !txId = getTxIdFromGenTx genTx
             txDetailsList = (flip map) (Map.toList outIndices) $
                 \(_, txInIndex) ->
@@ -825,7 +941,7 @@ createMoreFundCoins llTracer
                   in (txIn, txOut)
         in
           case mFunds of
-            Nothing                 -> reverse $ (genTx, txDetailsList) : acc
+            Nothing                 -> reverse $ (txAux, txDetailsList) : acc
             Just (txInIndex, value) ->
               let !txInChange  = CC.UTxO.TxInUtxo (getTxIdFromGenTx genTx) txInIndex
                   !txOutChange = CC.UTxO.TxOut
@@ -841,9 +957,9 @@ createMoreFundCoins llTracer
                                    numOutsPerInitTx
                                    (identityIndex + fromIntegral numOutsPerInitTx)
                                    txOut
-                                   ((genTx, txDetailsList) : acc)
+                                   ((txAux, txDetailsList) : acc)
   reCreateAvailableFunds
-    :: [(GenTx ByronBlock, [TxDetails])]
+    :: [(CC.UTxO.ATxAux ByteString, [TxDetails])]
     -> AvailableFunds
   reCreateAvailableFunds splittingTxs =
     Set.fromList $
@@ -878,7 +994,7 @@ txGenerator
   -> NumberOfOutputsPerTx
   -> Maybe TxAdditionalSize
   -> AvailableFunds
-  -> MSTM.TMVar IO [MSTM.TMVar IO [GenTx ByronBlock]]
+  -> MSTM.TMVar IO [MSTM.TMVar IO [CC.UTxO.ATxAux ByteString]]
   -> ExceptT TxGenError IO ()
 txGenerator benchTracer
             cfg
@@ -897,7 +1013,7 @@ txGenerator benchTracer
 
   -- Generator is producing transactions and writes them in the list.
   -- Later sumbitter is reading and submitting these transactions.
-  txsForSubmission :: MSTM.TMVar IO [GenTx ByronBlock] <- liftIO $ STM.newTMVarIO []
+  txsForSubmission :: MSTM.TMVar IO [CC.UTxO.ATxAux ByteString] <- liftIO $ STM.newTMVarIO []
 
   -- Prepare a number of lists for transactions, for all target nodes.
   -- Later we'll write generated transactions in these lists,
@@ -949,17 +1065,18 @@ txGenerator benchTracer
     :: Word64
     -> Int
     -> AvailableFunds
-    -> ExceptT TxGenError IO [GenTx ByronBlock]
+    -> ExceptT TxGenError IO [CC.UTxO.ATxAux ByteString]
   createMainTxs 0 _ _ = right []
   createMainTxs txsNum insNumPerTx funds = do
     (txInputs, updatedFunds) <- getTxInputs insNumPerTx funds
-    let (_, _, _, tx :: GenTx ByronBlock) = mkTransaction cfg
-                                                          (NE.fromList txInputs)
-                                                          (Just addressForChange)
-                                                          recipients
-                                                          txAdditionalSize
-                                                          txFee
-    (tx :) <$> createMainTxs (txsNum - 1) insNumPerTx updatedFunds
+    let (_, _, _, txAux :: CC.UTxO.ATxAux ByteString) =
+          mkTransaction cfg
+                        (NE.fromList txInputs)
+                        (Just addressForChange)
+                        recipients
+                        txAdditionalSize
+                        txFee
+    (txAux :) <$> createMainTxs (txsNum - 1) insNumPerTx updatedFunds
 
   -- Get inputs for one main transaction, using available funds.
   getTxInputs
@@ -1011,8 +1128,8 @@ divListToSublists l  d =
 
 -- | Adds a list for transactions, for particular target node.
 addTxsListForTargetNode
-  :: MSTM.TMVar IO [MSTM.TMVar IO [GenTx ByronBlock]]
-  -> MSTM.TMVar IO [GenTx ByronBlock]
+  :: MSTM.TMVar IO [MSTM.TMVar IO [CC.UTxO.ATxAux ByteString]]
+  -> MSTM.TMVar IO [CC.UTxO.ATxAux ByteString]
   -> IO ()
 addTxsListForTargetNode txsListsForTargetNodes listForOneTargetNode = STM.atomically $
   STM.tryTakeTMVar txsListsForTargetNodes >>=
@@ -1024,8 +1141,8 @@ addTxsListForTargetNode txsListsForTargetNodes listForOneTargetNode = STM.atomic
 --   For example, if we have 3 target nodes and write txs to the list 0,
 --   these txs will later be sent to the first target node.
 writeTxsInListForTargetNode
-  :: MSTM.TMVar IO [MSTM.TMVar IO [GenTx ByronBlock]]
-  -> [GenTx ByronBlock]
+  :: MSTM.TMVar IO [MSTM.TMVar IO [CC.UTxO.ATxAux ByteString]]
+  -> [CC.UTxO.ATxAux ByteString]
   -> Int
   -> IO ()
 writeTxsInListForTargetNode txsListsForTargetNodes txs listIndex = STM.atomically $ do

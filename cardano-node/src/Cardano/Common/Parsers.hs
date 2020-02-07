@@ -12,6 +12,7 @@ module Cardano.Common.Parsers
   , parseCoreNodeId
   , parseDbPath
   , parseFilePath
+  , parseUrl
   , parseFlag
   , parseFlag'
   , parseGenesisFile
@@ -163,6 +164,10 @@ parseGenesisFile opt =
 parseFilePath :: String -> String -> Parser FilePath
 parseFilePath optname desc =
   strOption $ long optname <> metavar "FILEPATH" <> help desc
+
+parseUrl :: String -> String -> Parser String
+parseUrl optname desc =
+  strOption $ long optname <> metavar "URL" <> help desc
 
 parseIntegral :: Integral a => String -> String -> Parser a
 parseIntegral optname desc = option (fromInteger <$> auto)

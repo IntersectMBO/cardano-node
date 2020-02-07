@@ -25,6 +25,7 @@ module Cardano.CLI.Run (
   , FeePerTx(..)
   , TPSRate(..)
   , TxAdditionalSize(..)
+  , ExplorerAPIEnpoint(..)
   ) where
 
 import           Cardano.Prelude hiding (option, trace)
@@ -61,6 +62,7 @@ import           Cardano.CLI.Tx.Generation (NumberOfTxs (..),
                                             NumberOfOutputsPerTx (..),
                                             FeePerTx (..), TPSRate (..),
                                             TxAdditionalSize (..),
+                                            ExplorerAPIEnpoint (..),
                                             genesisBenchmarkRunner)
 import           Cardano.Common.Orphans ()
 import           Cardano.Config.Protocol
@@ -181,6 +183,7 @@ data ClientCommand
     FeePerTx
     TPSRate
     (Maybe TxAdditionalSize)
+    (Maybe ExplorerAPIEnpoint)
     [SigningKeyFile]
    deriving Show
 runCommand :: ClientCommand -> ExceptT CliError IO ()
@@ -311,6 +314,7 @@ runCommand (GenerateTxs
                feePerTx
                tps
                txAdditionalSize
+               explorerAPIEndpoint
                sigKeysFiles) = do
   -- Default update value
   let update = Update (ApplicationName "cardano-sl") 1 $ LastKnownBlockVersion 0 2 0
@@ -347,6 +351,7 @@ runCommand (GenerateTxs
                                     feePerTx
                                     tps
                                     txAdditionalSize
+                                    explorerAPIEndpoint
                                     [fp | SigningKeyFile fp <- sigKeysFiles]
 
 {-------------------------------------------------------------------------------
