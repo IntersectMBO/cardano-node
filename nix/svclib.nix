@@ -1,6 +1,7 @@
 { pkgs, cardano-node-packages ? pkgs.cardanoNodeHaskellPackages.cardano-node.components.exes }:
 with builtins; with pkgs.lib;
 let
+  inherit (pkgs) commonLib;
   cardano-cli-bin = "${cardano-node-packages.cardano-cli}/bin/cardano-cli";
 
   ## mkNodeConfig
@@ -238,7 +239,7 @@ let
     };
     script = (modules.evalModules {
       modules = [
-        ((import ./sources.nix).cardano-byron-proxy + "/nix/nixos")
+        (commonLib.sources.cardano-byron-proxy + "/nix/nixos")
         ./nixos/cardano-cluster-service.nix
         ./nixos/cardano-node-legacy-service.nix
         ./nixos/cardano-node-service.nix

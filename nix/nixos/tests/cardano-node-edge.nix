@@ -4,7 +4,7 @@ with pkgs;
   name = "cardano-node-edge-test";
   nodes = {
     machine = { config, pkgs, ... }: {
-      nixpkgs.overlays = pkgsOverlays;
+      nixpkgs.overlays = commonLib.overlays;
       imports = [
         ../.
       ];

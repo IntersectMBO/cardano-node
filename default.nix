@@ -16,8 +16,9 @@
 with pkgs; with commonLib;
 let
 
-  # we are only intersted in listing the project packages
-  haskellPackages = selectProjectPackages cardanoNodeHaskellPackages;
+  haskellPackages = recRecurseIntoAttrs
+    # the Haskell.nix package set, reduced to local packages.
+    (selectProjectPackages cardanoNodeHaskellPackages);
 
   scripts = callPackage ./nix/scripts.nix {};
   # NixOS tests run a proxy and validate it listens
@@ -38,10 +39,10 @@ let
     # `benchmarks` (only built, not run).
     benchmarks = collectComponents' "benchmarks" haskellPackages;
 
-    checks = {
+    checks = recurseIntoAttrs {
       # `checks.tests` collect results of executing the tests:
       tests = collectChecks haskellPackages;
-    } // { recurseForDerivations = true; };
+    };
 
     shell = import ./shell.nix {
       inherit pkgs;
