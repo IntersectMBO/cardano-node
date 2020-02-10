@@ -23,28 +23,28 @@
         "url": "https://github.com/input-output-hk/cardano-sl/archive/d0cc2e6336e3c57771c775cafe831bc83db303d3.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
+    "haskell.nix": {
+        "branch": "master",
+        "description": "Alternative Haskell Infrastructure for Nixpkgs",
+        "homepage": "https://input-output-hk.github.io/haskell.nix",
+        "owner": "input-output-hk",
+        "repo": "haskell.nix",
+        "rev": "ec848f3fafb28e7b8f079e84110dbd3443223457",
+        "sha256": "0b1idgpma8rl3xmxa4jby8305z054ngwirfng6bnyvvv3iwr1x6h",
+        "type": "tarball",
+        "url": "https://github.com/input-output-hk/haskell.nix/archive/ec848f3fafb28e7b8f079e84110dbd3443223457.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
     "iohk-nix": {
         "branch": "master",
         "description": "nix scripts shared across projects",
         "homepage": null,
         "owner": "input-output-hk",
         "repo": "iohk-nix",
-        "rev": "e3a8e3cb74917e1313143b7abd7cc67c28678c6f",
-        "sha256": "0ih5fp9rj5ps2x2n41nhfbq2h3p6vj8jglva448j71ywqkz5vjr6",
+        "rev": "8eb95138be415ea7a02c80cc52cbc14edc0a9e05",
+        "sha256": "1p6j5pz023ixyl4rc19ww2njv5wrffyl2f69zx1jazlqllnakbbz",
         "type": "tarball",
-        "url": "https://github.com/input-output-hk/iohk-nix/archive/e3a8e3cb74917e1313143b7abd7cc67c28678c6f.tar.gz",
-        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
-    },
-    "nixpkgs": {
-        "branch": "release-19.09",
-        "description": "Nix Packages collection",
-        "homepage": null,
-        "owner": "NixOS",
-        "repo": "nixpkgs",
-        "rev": "ea553d8c67c6a718448da50826ff5b6916dc9c59",
-        "sha256": "0g9smv36sk42rfyzi8wyq2wl11c5l0qaldij1zjdj60s57cl3wgj",
-        "type": "tarball",
-        "url": "https://github.com/NixOS/nixpkgs/archive/ea553d8c67c6a718448da50826ff5b6916dc9c59.tar.gz",
+        "url": "https://github.com/input-output-hk/iohk-nix/archive/8eb95138be415ea7a02c80cc52cbc14edc0a9e05.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     }
 }

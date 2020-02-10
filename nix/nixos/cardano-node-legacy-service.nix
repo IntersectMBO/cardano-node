@@ -10,7 +10,7 @@ let
               then "${stateDir}/${cfg.name}"
               else stateDir;
 
-  iohkPkgs = import ../../default.nix { };
+  inherit (pkgs) commonLib;
   distributionParam = "(${toString cfg.genesisN},${toString cfg.totalMoneyAmount})";
   rnpDistributionParam = "(${toString cfg.genesisN},50000,${toString cfg.totalMoneyAmount},0.99)";
   smartGenIP = builtins.getEnv "SMART_GEN_IP";
@@ -60,7 +60,7 @@ in {
       name = mkOption { type = types.str; };
 
       instanced = mkOption { type = types.bool; default = false; };
-      
+
       enable = mkEnableOption "cardano-node-legacy";
       port = mkOption { type = types.str; default = "3000"; };
       systemStart = mkOption { type = types.int; default = 0; };
@@ -89,7 +89,7 @@ in {
 
       source = mkOption {
         type = types.path;
-        default = (import ../sources.nix).cardano-sl;
+        default = commonLib.sources.cardano-sl;
         description = ''Source defiinition of the cardano-sl package to use'';
       };
       packageSet = mkOption {

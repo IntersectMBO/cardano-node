@@ -15,7 +15,7 @@ in let
   ### Packages and Nix libs
   cardano-node          = ncfg.package;
   cardano-sl-pkgs       = import ccfg.cardano-sl-src { gitrev = ccfg.cardano-sl-src.rev; };
-  svcLib                = pkgs.svcLib;
+  inherit (pkgs) svcLib commonLib;
 
 in let
   ### Node enumeration
@@ -186,7 +186,7 @@ in {
       };
       cardano-sl-src = mkOption {
         type = path;
-        default = (import ../sources.nix).cardano-sl;
+        default = commonLib.sources.cardano-sl;
         description = "Source of 'cardano-sl'.";
       };
     };

@@ -3,10 +3,12 @@
 with haskell-nix.haskellLib;
 {
 
-  inherit selectProjectPackages;
+  inherit
+    selectProjectPackages
+    collectComponents';
 
   inherit (extra)
-    collectComponents'
+    recRecurseIntoAttrs
     collectChecks;
 
 }
