@@ -49,4 +49,5 @@ parseClientCommand =
           <|> parseKeyRelatedValues
           <|> parseDelegationRelatedValues
           <|> parseTxRelatedValues
+          <|> parseBenchmarkingCommands
           )

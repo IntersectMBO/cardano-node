@@ -32,7 +32,6 @@ addr=$(${scripts}/get-default-key-address.sh ${to_key})
 args=" issue-utxo-expenditure
        --real-pbft
        --genesis-file        ${genesis_file}
-       --genesis-hash        ${genesis_hash}
        --tx                  ${tx}
        --wallet-key          ${from_key}
        --txin             (\"${txid}\",${outindex})

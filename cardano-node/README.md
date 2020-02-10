@@ -101,7 +101,7 @@ A CLI utility to support a variety of key material operations (genesis, migratio
 
 The general synopsis is as follows:
  ```
-   Usage: cardano-cli (Genesis Related CMDs | Key Related CMDs | Delegation related CMDs | Tx related CMDs)
+   Usage: cardano-cli (Genesis Related CMDs | Key Related CMDs | Delegation related CMDs | Tx related CMDs | Benchmarking related CMDs)
 ```
 
 NOTE: the exact invocation command depends on the environment.  If you have only

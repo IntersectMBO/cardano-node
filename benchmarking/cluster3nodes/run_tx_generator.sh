@@ -24,9 +24,7 @@ exec ${GENERATOR} \
   --signing-key ${CONFIGDIR}/latest-genesis/delegate-keys.000.key \
   --delegation-certificate ${CONFIGDIR}/latest-genesis/delegation-cert.000.json \
   --genesis-file ${GENESISJSON} \
-  --genesis-hash ${GENESISHASH} \
   --socket-path /tmp/cluster3nodes-socket/0 \
-  --real-pbft \
   --num-of-txs $numtx \
   --add-tx-size $addsizetx \
   --inputs-per-tx $inputstx \

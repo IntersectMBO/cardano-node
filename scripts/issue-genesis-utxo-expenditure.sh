@@ -27,7 +27,6 @@ EOF
 args=" issue-genesis-utxo-expenditure
        --real-pbft
        --genesis-file        ${genesis_file}
-       --genesis-hash        ${genesis_hash}
        --tx                  ${tx}
        --wallet-key          ${from_key}
        --rich-addr-from    \"${from_addr}\"
