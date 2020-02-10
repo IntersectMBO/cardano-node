@@ -23,7 +23,6 @@ let
        # but due to source-repository-package declarations being considered as local packages by cabal, we need the following packages as well.
        # cf. https://github.com/haskell/cabal/issues/6249 and https://github.com/haskell/cabal/issues/5444
        ps.cardano-sl-x509
-       ps.ekg-prometheus-adapter
        ps.ouroboros-consensus
        ps.ouroboros-network
     ];

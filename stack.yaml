@@ -112,8 +112,6 @@ extra-deps:
   - prometheus-2.1.2
   - libsystemd-journal-1.4.4
   - katip-0.8.3.0
-  - git: https://github.com/CodiePP/ekg-prometheus-adapter
-    commit: 1a258b6df7d9807d4c4ff3e99722223d31a2c320
 
     # Extracted from cardano-sl since it's quite useful
   - git: https://github.com/input-output-hk/cardano-sl-x509
