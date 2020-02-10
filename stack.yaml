@@ -97,7 +97,7 @@ extra-deps:
 
     # iohk-monitoring-framework currently not pinned to a release
   - git: https://github.com/input-output-hk/iohk-monitoring-framework
-    commit: 022ed4261fdeaa84056efdb6010d44f6be1f6952
+    commit: ee57b47381d12cf6463c7e44977d6f696c22ae50
     subdirs:
       - contra-tracer
       - iohk-monitoring
@@ -133,4 +133,11 @@ extra-deps:
         - typed-protocols-cbor
 
 nix:
-  shell-file: nix/stack-shell.nix
+  pure: true
+  packages: [ zlib.dev, zlib.out
+            , openssl.dev, openssl.out
+            , haskell.compiler.ghc865
+            , pkg-config
+            , systemd.dev
+            ]
+
