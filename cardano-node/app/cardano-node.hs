@@ -6,10 +6,13 @@
 
 import           Cardano.Prelude hiding (option)
 import           Prelude (String)
+import           Data.Text (pack)
 
 import           Data.Semigroup ((<>))
+import           Data.Version (showVersion)
 import           Options.Applicative (Parser)
 import qualified Options.Applicative as Opt
+import           Paths_cardano_node (version)
 
 import           Cardano.Shell.Lib (runCardanoApplicationWithFeatures)
 import           Cardano.Shell.Types (CardanoApplication (..),
@@ -66,7 +69,10 @@ initializeAllFeatures
   -> CardanoEnvironment
   -> IO ([CardanoFeature], NodeLayer)
 initializeAllFeatures npm cardanoEnvironment = do
-  (loggingLayer, loggingFeature) <- createLoggingFeature cardanoEnvironment npm
+  (loggingLayer, loggingFeature) <- createLoggingFeature
+                                      (pack $ showVersion version)
+                                      cardanoEnvironment
+                                      npm
   (nodeLayer   , nodeFeature)    <- createNodeFeature
                                       loggingLayer
                                       cardanoEnvironment

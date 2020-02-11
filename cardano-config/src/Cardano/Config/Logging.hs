@@ -58,6 +58,7 @@ import qualified Cardano.BM.Trace as Trace
 import           Cardano.Shell.Lib (GeneralException (..))
 import           Cardano.Shell.Types (CardanoFeature (..))
 
+import           Cardano.Config.GitRev (gitRev)
 import           Cardano.Config.Types (ConfigYamlFilePath (..), CardanoEnvironment,
                                        NodeMockCLI (..), NodeProtocolMode (..),
                                        NodeConfiguration (..), NodeCLI (..),parseNodeConfiguration)
@@ -141,17 +142,19 @@ loggingCLIConfiguration mfp captureMetrics' =
 
 -- | Create logging feature for `cardano-cli`
 createLoggingFeatureCLI
-  :: CardanoEnvironment
+  :: Text
+  -> CardanoEnvironment
   -> Maybe FilePath
   -> Bool
   -> IO (LoggingLayer, CardanoFeature)
-createLoggingFeatureCLI _ mLogConfig captureLogMetrics = do
+createLoggingFeatureCLI ver _ mLogConfig captureLogMetrics = do
     (disabled', loggingConfiguration) <- loggingCLIConfiguration
                                            mLogConfig
                                            captureLogMetrics
 
     -- we construct the layer
     (loggingLayer, cleanUpLogging) <- loggingCardanoFeatureInit
+                                        ver
                                         disabled'
                                         loggingConfiguration
 
@@ -168,8 +171,8 @@ createLoggingFeatureCLI _ mLogConfig captureLogMetrics = do
 
 -- | Create logging feature for `cardano-node`
 createLoggingFeature
-  :: CardanoEnvironment -> NodeProtocolMode -> IO (LoggingLayer, CardanoFeature)
-createLoggingFeature _ nodeProtocolMode = do
+  :: Text -> CardanoEnvironment -> NodeProtocolMode -> IO (LoggingLayer, CardanoFeature)
+createLoggingFeature ver _ nodeProtocolMode = do
 
     configYamlFp <- pure $ getConfigYaml nodeProtocolMode
 
@@ -181,7 +184,7 @@ createLoggingFeature _ nodeProtocolMode = do
                                            (ncLogMetrics nc)
 
     -- we construct the layer
-    (loggingLayer, cleanUpLogging) <- loggingCardanoFeatureInit disabled' loggingConfiguration
+    (loggingLayer, cleanUpLogging) <- loggingCardanoFeatureInit ver disabled' loggingConfiguration
 
 
     -- we construct the cardano feature
@@ -199,10 +202,12 @@ createLoggingFeature _ nodeProtocolMode = do
   getConfigYaml (MockProtocolMode (NodeMockCLI _ _ _ mConfigFp _)) = mConfigFp
 
 -- | Initialize `LoggingCardanoFeature`
-loggingCardanoFeatureInit :: LoggingFlag -> LoggingConfiguration -> IO (LoggingLayer, LoggingLayer -> IO())
-loggingCardanoFeatureInit disabled' conf = do
+loggingCardanoFeatureInit :: Text -> LoggingFlag -> LoggingConfiguration -> IO (LoggingLayer, LoggingLayer -> IO ())
+loggingCardanoFeatureInit ver disabled' conf = do
 
   let logConfig = lpConfiguration conf
+  Config.setTextOption logConfig "appversion" ver
+  Config.setTextOption logConfig "appcommit" gitRev
   (baseTrace, switchBoard) <- setupTrace_ logConfig "cardano"
 
   let trace = case disabled' of
@@ -210,15 +215,13 @@ loggingCardanoFeatureInit disabled' conf = do
                 LoggingDisabled -> Trace.nullTracer
 
   Config.getGUIport logConfig >>= \p ->
-      if p > 0
-      then Cardano.BM.Backend.Editor.plugin logConfig trace switchBoard
-               >>= loadPlugin switchBoard
-      else pure ()
+      when (p > 0) $
+          Cardano.BM.Backend.Editor.plugin logConfig trace switchBoard
+              >>= loadPlugin switchBoard
   Config.getEKGport logConfig >>= \p ->
-      if p > 0
-      then Cardano.BM.Backend.EKGView.plugin logConfig trace switchBoard
-                >>= loadPlugin switchBoard
-      else pure ()
+      when (p > 0) $
+          Cardano.BM.Backend.EKGView.plugin logConfig trace switchBoard
+              >>= loadPlugin switchBoard
 
   Cardano.BM.Backend.Aggregation.plugin logConfig trace switchBoard
       >>= loadPlugin switchBoard
@@ -231,9 +234,8 @@ loggingCardanoFeatureInit disabled' conf = do
 #endif
 
   -- record node metrics
-  if recordMetrics conf
-    then startCapturingMetrics baseTrace
-    else pure ()
+  when (recordMetrics conf) $
+    startCapturingMetrics baseTrace
 
   -- Construct the logging layer.
   let initLogging

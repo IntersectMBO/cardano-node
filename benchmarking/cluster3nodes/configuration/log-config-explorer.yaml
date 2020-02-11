@@ -49,8 +49,6 @@ defaultScribes:
 
 # more options which can be passed as key-value pairs:
 options:
-  era:
-    value: "Byron"
   mapSubtrace:
     benchmark:
       contents:

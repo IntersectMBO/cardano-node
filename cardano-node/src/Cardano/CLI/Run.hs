@@ -34,9 +34,12 @@ import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (hoistEither, firstExceptT)
 import qualified Data.ByteString.Lazy as LB
 import           Data.Semigroup ((<>))
+import           Data.Text (pack)
 import qualified Data.Text.Lazy.IO as TL
 import qualified Data.Text.Lazy.Builder as Builder
+import           Data.Version (showVersion)
 import qualified Formatting as F
+import           Paths_cardano_node (version)
 import           System.Directory (doesPathExist)
 
 import qualified Cardano.Chain.Common as Common
@@ -326,6 +329,7 @@ runCommand (GenerateTxs
 
   -- Logging layer
   (loggingLayer, _) <- liftIO $ createLoggingFeatureCLI
+                                  (pack $ showVersion version)
                                   NoEnvironment
                                   (Just logConfigFp)
                                   (ncLogMetrics nc)
