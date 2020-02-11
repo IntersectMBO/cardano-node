@@ -1,4 +1,4 @@
-resolver: lts-14.22
+resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/c40175657bc8134e0561d9b6e6334728c19112e4/snapshot.yaml
 compiler: ghc-8.6.5
 
 packages:
@@ -6,8 +6,8 @@ packages:
   - cardano-node
 
 ghc-options:
-  cardano-config:   -Wall -fwarn-redundant-constraints
-  cardano-node:     -Wall -fwarn-redundant-constraints
+  cardano-config:   -Wall -Werror -fwarn-redundant-constraints
+  cardano-node:     -Wall -Werror -fwarn-redundant-constraints
 
 allow-newer: true
 
@@ -51,6 +51,7 @@ extra-deps:
   - Unique-0.4.7.6
   - word-wrap-0.4.1
   - websockets-0.12.6.1
+  - th-lift-instances-0.1.14
 
     # Cardano-ledger dependencies
   - git: https://github.com/input-output-hk/cardano-ledger
