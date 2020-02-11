@@ -1,6 +1,6 @@
 { pkgs
 , config
-, customConfig ? config.scriptCustom or {}
+, customConfig
  }:
 with pkgs.commonLib;
 let
