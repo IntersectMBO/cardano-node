@@ -1,8 +1,9 @@
 { system ? builtins.currentSystem
 , crossSystem ? null
 # allows to cutomize haskellNix (ghc and profiling, see ./nix/haskell.nix)
-# and scripts (see ./nix/scripts.nix):
 , config ? {}
+# override scripts with custom configuration
+, customConfig ? {}
 # allows to override dependencies of the project without modifications,
 # eg. to test build against local checkout of nixpkgs and iohk-nix:
 # nix build -f default.nix cardano-node --arg sourcesOverride '{
@@ -20,7 +21,7 @@ let
     # the Haskell.nix package set, reduced to local packages.
     (selectProjectPackages cardanoNodeHaskellPackages);
 
-  scripts = callPackage ./nix/scripts.nix {};
+  scripts = callPackage ./nix/scripts.nix { inherit customConfig; };
   # NixOS tests run a proxy and validate it listens
   nixosTests = import ./nix/nixos/tests {
     inherit pkgs;
