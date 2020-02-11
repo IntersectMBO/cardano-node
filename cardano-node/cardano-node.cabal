@@ -81,6 +81,8 @@ library
                      , filepath
                      , formatting
                      , hostname
+                     , http-client
+                     , http-types
                      , io-sim-classes
                      , iohk-monitoring
                      , iproute
