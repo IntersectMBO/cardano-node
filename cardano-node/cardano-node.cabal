@@ -143,8 +143,11 @@ executable cardano-node
   ghc-options:         -threaded
                        -Wall
                        -rtsopts
-                       "-with-rtsopts=-T -I0 -N2 -A16m"
                        -fno-warn-unticked-promoted-constructors
+  if arch(arm)
+    ghc-options:         "-with-rtsopts=-T -I0 -N1 -A16m"
+  else
+    ghc-options:         "-with-rtsopts=-T -I0 -N2 -A16m"
 
   build-depends:       base >=4.12 && <5
                      , cardano-config
