@@ -271,6 +271,7 @@ instance DefineSeverity (ChainDB.TraceEvent blk) where
     ChainDB.StreamFromVolDB {} -> Debug
     _ -> Debug
   defineSeverity (ChainDB.TraceImmDBEvent _ev) = Debug
+  defineSeverity (ChainDB.TraceVolDBEvent _ev) = Debug
 
 instance DefinePrivacyAnnotation (TraceChainSyncClientEvent blk)
 instance DefineSeverity (TraceChainSyncClientEvent blk) where
@@ -538,6 +539,7 @@ readableChainDBTracer tracer = Tracer $ \case
     ChainDB.StreamFromVolDB _ _ _ -> tr $ WithTip tip "StreamFromVolDB"
     _ -> pure ()  -- TODO add more iterator events
   WithTip tip (ChainDB.TraceImmDBEvent _ev) -> tr $ WithTip tip "TraceImmDBEvent"
+  WithTip tip (ChainDB.TraceVolDBEvent _ev) -> tr $ WithTip tip "TraceVolDBEvent"
 
  where
   tr :: WithTip blk String -> m ()
@@ -751,6 +753,8 @@ instance (Condense (HeaderHash blk), ProtocolLedgerView blk)
     _ -> emptyObject  -- TODO add more iterator events
   toObject _verb (ChainDB.TraceImmDBEvent _ev) =
     mkObject [ "kind" .= String "TraceImmDBEvent" ]
+  toObject _verb (ChainDB.TraceVolDBEvent _ev) =
+    mkObject [ "kind" .= String "TraceVolDBEvent" ]
 
 instance ToObject LedgerDB.DiskSnapshot where
   toObject MinimalVerbosity snap = toObject NormalVerbosity snap
