@@ -56,7 +56,7 @@ import qualified Ouroboros.Consensus.Mempool as Consensus
 import           Ouroboros.Consensus.Util.Condense (condense)
 
 import           Cardano.CLI.Ops
-import           Cardano.CLI.Tx.Submission
+import           Cardano.Node.Submission
 import           Cardano.Config.Protocol
 import           Cardano.Config.Types (DelegationCertFile, GenesisFile,
                                        SigningKeyFile, SocketPath, Update)

@@ -9,7 +9,7 @@
 {-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
 {-# OPTIONS_GHC -Wno-missed-specialisations #-}
 
-module Cardano.CLI.Tx.Generation
+module Cardano.CLI.Benchmarking.Tx.Generation
   ( NumberOfTxs(..)
   , NumberOfInputsPerTx(..)
   , NumberOfOutputsPerTx(..)
@@ -72,17 +72,17 @@ import qualified Cardano.Crypto as Crypto
 import           Cardano.Config.Topology (NodeAddress (..),
                                           NodeHostAddress(..))
 import           Cardano.CLI.Ops
-import           Cardano.CLI.Tx (txSpendGenesisUTxOByronPBFT, toCborTxAux,
+import           Cardano.CLI.Tx (toCborTxAux, txSpendGenesisUTxOByronPBFT,
                      normalByronTxToGenTx)
-import           Cardano.CLI.Tx.BenchmarkingTxSubmission (ROEnv (..),
-                                                          TraceBenchTxSubmit (..),
-                                                          bulkSubmission)
-import           Cardano.CLI.Tx.Submission (submitTx)
-import           Cardano.CLI.Tx.BenchmarkingNodeToNode (BenchmarkTxSubmitTracers (..),
-                                                        SendRecvConnect,
-                                                        SendRecvTxSubmission,
-                                                        benchmarkConnectTxSubmit)
-import           Cardano.CLI.Tx.BenchmarkingTxSubClient
+import           Cardano.CLI.Benchmarking.Tx.TxSubmission (ROEnv (..),
+                     TraceBenchTxSubmit (..),
+                     bulkSubmission)
+import           Cardano.Node.Submission (submitTx)
+import           Cardano.CLI.Benchmarking.Tx.NodeToNode (BenchmarkTxSubmitTracers (..),
+                     SendRecvConnect,
+                     SendRecvTxSubmission,
+                     benchmarkConnectTxSubmit)
+import           Cardano.Node.TxSubClient
 import           Control.Tracer (Tracer, contramap, traceWith)
 
 import           Ouroboros.Consensus.Node.Run (RunNode)
@@ -351,7 +351,7 @@ readSecretKey skFp = do
     Right lbs -> pure $ Right lbs
  where
   handler :: IOException -> String
-  handler e = "Cardano.CLI.Tx.Generation.readSecretKey: "
+  handler e = "Cardano.CLI.Benchmarking.Tx.Generation.readSecretKey: "
               ++ displayException e
 -----------------------------------------------------------------------------------------
 -- Extract access to the Genesis funds.

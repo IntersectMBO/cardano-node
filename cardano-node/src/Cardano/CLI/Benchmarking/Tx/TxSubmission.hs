@@ -6,7 +6,7 @@
 
 {-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
 
-module Cardano.CLI.Tx.BenchmarkingTxSubmission
+module Cardano.CLI.Benchmarking.Tx.TxSubmission
   ( ROEnv(..)
   , RPCTxSubmission(..)
   , TraceBenchTxSubmit(..)
@@ -125,7 +125,7 @@ bulkSubmission updEnv tr termVar txIn rpcIn = do
               _        -> (term', txs')
       pure (term || terminating', txs, rpc')
 
-    -- Update terminating, if needed 
+    -- Update terminating, if needed
     -- lift . traceWith tr . TraceBenchTxSubDebug $ "go1, update terminating, if needed"
     when (nowTerminating && not terminating') $ do
       -- lift . traceWith tr . TraceBenchTxSubDebug $ "go1, update terminating: True"
@@ -213,7 +213,7 @@ bulkSubmission updEnv tr termVar txIn rpcIn = do
         processAcks acked
 
       RPCRequestTxIdsPromptly (acked, window) resp -> do
-      -- prompt reply expected 
+      -- prompt reply expected
         haveWork <- (not . Seq.null) <$> gets notYetSent
         if haveWork
         then do
