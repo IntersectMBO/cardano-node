@@ -13,6 +13,7 @@ module Cardano.CLI.Tx.Submission (
 import           Cardano.Prelude hiding (ByteString, option, threadDelay)
 import           Prelude (String)
 
+import           Codec.Serialise (DeserialiseFailure)
 import           Data.ByteString.Lazy (ByteString)
 import           Data.Void (Void)
 
@@ -28,9 +29,9 @@ import qualified Ouroboros.Consensus.Node.Run as Node
 import           Ouroboros.Consensus.Protocol (NodeConfig)
 
 import           Network.TypedProtocol.Driver (runPeer)
-import           Network.TypedProtocol.Codec.Cbor (Codec, DeserialiseFailure)
+import           Network.TypedProtocol.Codec (Codec)
 import           Ouroboros.Network.Mux (AppType(..), OuroborosApplication(..))
-import           Ouroboros.Network.Block (Point)
+import           Ouroboros.Network.Block (Point, unwrapCBORinCBOR)
 import qualified Ouroboros.Network.Block as Block
 import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Type as LocalTxSub
 import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Client as LocalTxSub
@@ -144,7 +145,7 @@ localChainSyncCodec
 localChainSyncCodec protoInfoConfig =
     codecChainSync
       (Node.nodeEncodeBlock protoInfoConfig)
-      (Node.nodeDecodeBlock protoInfoConfig)
+      (unwrapCBORinCBOR (Node.nodeDecodeBlock protoInfoConfig))
       (Block.encodePoint (Node.nodeEncodeHeaderHash (Proxy @blk)))
       (Block.decodePoint (Node.nodeDecodeHeaderHash (Proxy @blk)))
       (Block.encodePoint (Node.nodeEncodeHeaderHash (Proxy @blk)))

@@ -916,13 +916,14 @@ instance (HasTxId tx, ProtocolLedgerView blk, Condense (HeaderHash blk), Show (T
 
 instance (Show (GenTx blk), Show (GenTxId blk), Show (ApplyTxErr blk))
       => ToObject (TraceEventMempool blk) where
-  toObject _verb (TraceMempoolAddTxs txs mpSz) =
+  toObject _verb (TraceMempoolAddedTx tx mpSizeBefore mpSizeAfter) =
     mkObject
         [ "kind" .= String "TraceMempoolAddTxs"
-        , "txsAdded" .= String (pack $ show $ txs)
-        , "mempoolSize" .= String (pack $ show $ mpSz)
+        , "tx_added" .= String (pack $ show $ tx)
+        , "mempoolSize_before" .= String (pack $ show $ mpSizeBefore)
+        , "mempoolSize_after" .= String (pack $ show $ mpSizeAfter)
         ]
-  toObject _verb (TraceMempoolRejectedTxs txAndErrs mpSz) =
+  toObject _verb (TraceMempoolRejectedTx txAndErrs mpSz) =
     mkObject
         [ "kind" .= String "TraceMempoolRejectedTxs"
         , "txsRejected" .= String (pack $ show $ txAndErrs)

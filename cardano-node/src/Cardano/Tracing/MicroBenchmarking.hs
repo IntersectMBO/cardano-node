@@ -41,7 +41,7 @@ import           Ouroboros.Network.Block (SlotNo (..))
 import           Ouroboros.Consensus.Ledger.Abstract (ProtocolLedgerView)
 import           Ouroboros.Consensus.Mempool.API
                    (ApplyTx (..), GenTx, GenTxId, HasTxId (..),
-                    MempoolSize (..), TraceEventMempool (..), txId)
+                    MempoolSize (..), TraceEventMempool (..))
 import           Ouroboros.Consensus.Node.Tracers (TraceForgeEvent (..))
 
 --------------------------------------------------------------------------------
@@ -86,14 +86,14 @@ measureTxsStart tracer = measureTxsStartInter $ toLogObject tracer
   where
     measureTxsStartInter :: Tracer IO (MeasureTxs blk) -> Tracer IO (TraceEventMempool blk)
     measureTxsStartInter tracer' = Tracer $ \case
-        TraceMempoolAddTxs txs MempoolSize{msNumTxs, msNumBytes} ->
+        TraceMempoolAddedTx tx mpsizebefore _mpsizeafter  ->
             traceWith tracer' =<< measureTxsEvent
           where
             measureTxsEvent :: IO (MeasureTxs blk)
             measureTxsEvent = MeasureTxsTimeStart
-                                txs
-                                (fromIntegral msNumTxs)
-                                (fromIntegral msNumBytes)
+                                [tx]
+                                (fromIntegral $ msNumTxs mpsizebefore)
+                                (fromIntegral $ msNumBytes mpsizebefore)
                                 <$> getMonotonicTime
 
         -- The rest of the constructors.
@@ -246,4 +246,3 @@ instance (Monad m) => Outcome m (MeasureBlockForging blk) where
     computeOutcomeMetric _ (startSlot, absTimeStart, _) (stopSlot, absTimeStop, mempoolSize)
         | startSlot == stopSlot = pure $ Just (startSlot, (diffTime absTimeStop absTimeStart), mempoolSize)
         | otherwise             = pure Nothing
-

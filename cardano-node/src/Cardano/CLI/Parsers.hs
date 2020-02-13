@@ -30,9 +30,8 @@ import           Cardano.Common.Parsers
 
 import           Cardano.Binary (Annotated(..))
 import           Cardano.Chain.Common ( Address(..), BlockCount(..), Lovelace
-                                      , LovelacePortion(..), NetworkMagic(..)
-                                      , decodeAddressBase58
-                                      , mkLovelace, mkLovelacePortion)
+                                      , NetworkMagic(..), LovelacePortion, decodeAddressBase58
+                                      , mkLovelace, rationalToLovelacePortion)
 import           Cardano.Chain.Genesis (FakeAvvmOptions(..), TestnetBalanceOptions(..))
 import           Cardano.Chain.Slotting (EpochNumber(..))
 import           Cardano.Chain.UTxO (TxId, TxIn(..), TxOut(..))
@@ -296,19 +295,24 @@ parseLovelace optname desc =
   either (panic . show) identity . mkLovelace
     <$> parseIntegral optname desc
 
-parseLovelacePortion :: String -> String -> Parser LovelacePortion
+parseLovelacePortion :: String -> String -> Parser Rational
 parseLovelacePortion optname desc =
-  either (panic . show) identity . mkLovelacePortion
-    <$> parseIntegral optname desc
+   option auto
+  $ long optname
+  <> metavar "RATIONAL"
+  <> help desc
 
 parseLovelacePortionWithDefault
   :: String
   -> String
-  -> Word64
+  -> Rational
   -> Parser LovelacePortion
 parseLovelacePortionWithDefault optname desc w =
-  either (panic . show) identity . mkLovelacePortion
-    <$> parseIntegralWithDefault optname desc w
+  option (rationalToLovelacePortion <$> auto)
+    $ long optname
+    <> metavar "RATIONAL"
+    <> help desc
+    <> (value $ rationalToLovelacePortion w)
 
 parseNetworkMagic :: Parser NetworkMagic
 parseNetworkMagic =

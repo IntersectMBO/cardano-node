@@ -27,6 +27,7 @@ import           Network.TypedProtocol.Driver (TraceSendRecv, runPeer)
 import           Control.Tracer (Tracer, nullTracer)
 import           Ouroboros.Consensus.Block (BlockProtocol)
 import           Ouroboros.Consensus.Mempool.API (GenTxId, GenTx)
+import           Ouroboros.Consensus.Node.NetworkProtocolVersion (mostRecentNetworkProtocolVersion)
 import           Ouroboros.Consensus.Node.Run (RunNode, nodeNetworkMagic)
 import           Ouroboros.Consensus.NodeNetwork (ProtocolCodecs(..), protocolCodecs)
 import           Ouroboros.Consensus.Protocol.Abstract (NodeConfig)
@@ -79,7 +80,7 @@ benchmarkConnectTxSubmit trs nc localAddr remoteAddr myTxSubClient = do
   myCodecs :: ProtocolCodecs blk DeserialiseFailure m
                 ByteString ByteString ByteString ByteString ByteString
                 ByteString ByteString ByteString
-  myCodecs  = protocolCodecs nc
+  myCodecs  = protocolCodecs nc $ mostRecentNetworkProtocolVersion (Proxy @blk)
 
   peerMultiplex :: Versions NtN.NodeToNodeVersion NtN.DictVersion
               (OuroborosApplication
