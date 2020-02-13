@@ -78,7 +78,7 @@ import           Cardano.BM.Trace
 
 import           Cardano.Config.Topology
 import           Cardano.Config.Types
-import           Cardano.Node.TUI.GitRev (gitRev)
+import           Cardano.Config.GitRev (gitRev)
 import           Cardano.Slotting.Slot (unSlotNo)
 import qualified Ouroboros.Network.AnchoredFragment as Net
 import qualified Ouroboros.Network.Block as Net

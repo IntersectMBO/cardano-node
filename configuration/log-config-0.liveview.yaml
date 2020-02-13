@@ -30,16 +30,19 @@ setupScribes:
   - scKind: FileSK
     scName: "logs/node-0.log"
     scFormat: ScText
+  - scKind: FileSK
+    scName: "logs/node-0.json"
+    scFormat: ScJson
 
 # if not indicated otherwise, then log output is directed to this:
 defaultScribes:
   - - FileSK
     - "logs/node-0.log"
+  - - FileSK
+    - "logs/node-0.json"
 
 # more options which can be passed as key-value pairs:
 options:
-  cfokey:
-    value: "Release-1.0.0"
   mapSubtrace:
     '#ekgview':
       contents:

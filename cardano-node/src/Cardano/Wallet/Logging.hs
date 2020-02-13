@@ -5,6 +5,10 @@ module Cardano.Wallet.Logging
 
 import           Cardano.Prelude
 
+import           Data.Text (pack)
+import           Data.Version (showVersion)
+import           Paths_cardano_node (version)
+
 import           Cardano.Shell.Types (CardanoFeature (..))
 
 import           Cardano.Config.Types ( CardanoEnvironment, ConfigYamlFilePath(..)
@@ -31,7 +35,9 @@ createLoggingFeatureWallet _ wCli = do
                                            (ncLogMetrics nc)
 
     -- we construct the layer
-    (loggingLayer, cleanUpLogging) <- loggingCardanoFeatureInit disabled' loggingConfiguration
+    (loggingLayer, cleanUpLogging) <- loggingCardanoFeatureInit
+                                        (pack $ showVersion version)
+                                        disabled' loggingConfiguration
 
 
     -- we construct the cardano feature

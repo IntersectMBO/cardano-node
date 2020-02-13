@@ -14,6 +14,8 @@ library
   hs-source-dirs:      src
 
   exposed-modules:     Cardano.Config.CommonCLI
+                       Cardano.Config.GitRev
+                       Cardano.Config.GitRevFromGit
                        Cardano.Config.Logging
                        Cardano.Config.Orphanage
                        Cardano.Config.Protocol
@@ -31,6 +33,7 @@ library
                      , cardano-shell
                      , cborg
                      , contra-tracer
+                     , file-embed
                      , generic-monoid
                      , iohk-monitoring
                      , lobemo-backend-aggregation
@@ -42,11 +45,13 @@ library
                      , optparse-applicative
                      , ouroboros-consensus
                      , ouroboros-network
+                     , process
                      , iproute
                      , safe-exceptions
                      , scientific
                      , string-conv
                      , stm
+                     , template-haskell
                      , text
                      , transformers
                      , transformers-except

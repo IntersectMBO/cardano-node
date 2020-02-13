@@ -2,7 +2,7 @@
 # It just takes the shell attribute from default.nix.
 { config ? {}
 , sourcesOverride ? {}
-, withHoogle ? false
+, withHoogle ? true
 , pkgs ? import ./nix {
     inherit config sourcesOverride;
   }
