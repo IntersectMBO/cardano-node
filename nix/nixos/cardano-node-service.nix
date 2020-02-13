@@ -183,7 +183,7 @@ in {
 
       topology = mkOption {
         type = types.path;
-        default = localLib.mkEdgeTopology {
+        default = commonLib.mkEdgeTopology {
           inherit (cfg) port;
           inherit (envConfig) edgeNodes;
         };
