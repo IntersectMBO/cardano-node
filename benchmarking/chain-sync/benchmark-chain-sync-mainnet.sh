@@ -35,6 +35,7 @@ else
 fi
 
 exec ${NODE} \
+  run \
   --genesis-file ${BASEDIR}/../../configuration/mainnet-genesis.json \
   --genesis-hash "5f20df933584822601f9e3f8c024eb5eb252fe8cefb24d1317dc3d432e940ebb" \
   --config ${BASEDIR}/configuration/log-configuration.yaml \
