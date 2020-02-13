@@ -32,9 +32,8 @@ import           Ouroboros.Consensus.Node.ProtocolInfo
 import           Ouroboros.Consensus.Node.Run
 import           Ouroboros.Consensus.Protocol
 
-import           Network.TypedProtocol.Codec
-import           Network.TypedProtocol.Codec.Cbor
 import           Network.TypedProtocol.Driver
+import           Ouroboros.Network.Codec
 import           Ouroboros.Network.Mux
 import           Ouroboros.Network.Block (Tip)
 import qualified Ouroboros.Network.Block as Block
@@ -203,8 +202,8 @@ localChainSyncCodec
            DeserialiseFailure m ByteString
 localChainSyncCodec pInfoConfig =
     codecChainSync
-      (nodeEncodeBlock pInfoConfig)
-      (nodeDecodeBlock pInfoConfig)
+      (Block.wrapCBORinCBOR   (nodeEncodeBlock pInfoConfig))
+      (Block.unwrapCBORinCBOR (nodeDecodeBlock pInfoConfig))
       (Block.encodePoint (nodeEncodeHeaderHash (Proxy @blk)))
       (Block.decodePoint (nodeDecodeHeaderHash (Proxy @blk)))
       (Block.encodeTip (nodeEncodeHeaderHash (Proxy @blk)))

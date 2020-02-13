@@ -91,7 +91,7 @@ mkGenesisSpec gp = do
       Genesis.GenesisInitializer
       (gpTestnetBalance gp)
       (gpFakeAvvmOptions gp)
-      (gpAvvmBalanceFactor gp)
+      (Common.lovelacePortionToRational (gpAvvmBalanceFactor gp))
       useHeavyDlg
       seed
 

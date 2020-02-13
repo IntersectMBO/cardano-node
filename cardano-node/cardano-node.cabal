@@ -103,7 +103,7 @@ library
                      , transformers-except
                      , tracer-transformers
                      , typed-protocols
-                     , typed-protocols-cbor
+                     , ouroboros-network-framework
                      , utf8-string
                      , vector
                      , yaml
@@ -184,7 +184,7 @@ executable wallet-client
                      , ouroboros-consensus
                      , text
                      , typed-protocols
-                     , typed-protocols-cbor
+                     , ouroboros-network-framework
 
   if os(windows)
      build-depends:    Win32
@@ -232,7 +232,7 @@ executable chairman
                      , text
                      , transformers-except
                      , typed-protocols
-                     , typed-protocols-cbor
+                     , ouroboros-network-framework
 
   default-extensions:  NoImplicitPrelude
 

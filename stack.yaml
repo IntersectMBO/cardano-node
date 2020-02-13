@@ -1,4 +1,4 @@
-resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/c40175657bc8134e0561d9b6e6334728c19112e4/snapshot.yaml
+resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/fa7a16291d3e93b068d9b13620fc81c88b5600f0/snapshot.yaml
 compiler: ghc-8.6.5
 
 packages:
@@ -55,7 +55,7 @@ extra-deps:
 
     # Cardano-ledger dependencies
   - git: https://github.com/input-output-hk/cardano-ledger
-    commit: c62e2eeba5756898cbf59732fccd6a83a4065c18
+    commit: 86f0cb4705f46307e4c89e7ef4c90142882cce54
     subdirs:
       - cardano-ledger
       - cardano-ledger/test
@@ -63,7 +63,7 @@ extra-deps:
       - crypto/test
 
   - git: https://github.com/input-output-hk/cardano-ledger-specs
-    commit: f27e8b66a393f0b7da1893889dcea07da0fe4dec
+    commit: 318f5a1594a23aedadb3977ddd5a32230c8be4fe
     subdirs:
       # small-steps
       - byron/semantics/executable-spec
@@ -73,13 +73,13 @@ extra-deps:
       - byron/chain/executable-spec
 
   - git: https://github.com/input-output-hk/cardano-prelude
-    commit: 00487726c4bc21b4744e59d913334ebfeac7d68e
+    commit: fa7a16291d3e93b068d9b13620fc81c88b5600f0
     subdirs:
       - .
       - test
 
   - git: https://github.com/input-output-hk/cardano-base
-    commit: eed4fc484366214831576eef0c7fe90d1d08c78b
+    commit: 3c2791584d3f43aa18e9cc13c490239b4c3dcbd2
     subdirs:
       - binary
       - binary/test
@@ -98,7 +98,7 @@ extra-deps:
 
     # iohk-monitoring-framework currently not pinned to a release
   - git: https://github.com/input-output-hk/iohk-monitoring-framework
-    commit: e67dcb9a97b688e90aa93481839f2d162ab34b53
+    commit: 49b347d892d82dce23eb692722649cd8a1149406
     subdirs:
       - contra-tracer
       - iohk-monitoring
@@ -121,7 +121,7 @@ extra-deps:
     #Ouroboros-network dependencies
 
   - git: https://github.com/input-output-hk/ouroboros-network
-    commit: 398004e1403367cc2a25c639eb6349d473e51b2d
+    commit: f5741efd37c5558d8a29d0d2b142e01f650a3d45
     subdirs:
         - io-sim
         - io-sim-classes
@@ -129,7 +129,8 @@ extra-deps:
         - ouroboros-network
         - ouroboros-consensus
         - typed-protocols
-        - typed-protocols-cbor
+        - typed-protocols-examples
+        - ouroboros-network-framework
 
 nix:
   shell-file: nix/stack-shell.nix

@@ -56,7 +56,8 @@ import           Ouroboros.Consensus.NodeNetwork (ProtocolTracers,
 import           Ouroboros.Consensus.Util.Orphans ()
 
 import qualified Ouroboros.Network.AnchoredFragment as AF
-import           Ouroboros.Network.Block (Point, blockNo, unBlockNo, unSlotNo)
+import           Ouroboros.Network.Block (Point, BlockNo(..),
+                                          blockNo, unBlockNo, unSlotNo)
 import           Ouroboros.Network.BlockFetch.Decision (FetchDecision)
 import           Ouroboros.Network.BlockFetch.ClientState (TraceLabelPeer (..))
 import           Ouroboros.Network.NodeToNode (WithAddr, ErrorPolicyTrace)
@@ -280,9 +281,9 @@ mkTracers traceOptions tracer = do
     mempoolMetricsTraceTransformer tr = Tracer $ \mempoolEvent -> do
         let tr' = appendName "metrics" tr
             (n, tot) = case mempoolEvent of
-                  TraceMempoolAddTxs      txs0 tot0 -> (length txs0, tot0)
-                  TraceMempoolRejectedTxs txs0 tot0 -> (length txs0, tot0)
-                  TraceMempoolRemoveTxs   txs0 tot0 -> (length txs0, tot0)
+                  TraceMempoolAddedTx     _tx0 _ tot0 -> (1, tot0)
+                  TraceMempoolRejectedTx  _tx0 _ tot0 -> (1, tot0)
+                  TraceMempoolRemoveTxs   txs0   tot0 -> (length txs0, tot0)
                   TraceMempoolManuallyRemovedTxs txs0 txs1 tot0
                                                     -> ( length txs0 + length txs1
                                                        , tot0
@@ -497,7 +498,7 @@ chainInformation frag = ChainInformation
             - unSlotNo (fromWithOrigin 0 (AF.lastSlot frag))
     -- Block numbers start at 1. We ignore the genesis EBB, which has block number 0.
     blockD = blockN - firstBlock
-    blockN = unBlockNo $ fromMaybe 1 (AF.headBlockNo frag)
+    blockN = unBlockNo $ fromWithOrigin (BlockNo 1) (AF.headBlockNo frag)
     firstBlock = case unBlockNo . blockNo <$> AF.last frag of
       -- Empty fragment, no blocks. We have that @blocks = 1 - 1 = 0@
       Left _  -> 1

@@ -50,7 +50,7 @@ import           Ouroboros.Consensus.Node.Tracers (TraceForgeEvent (..))
 
 -- | Definition of the measurement datatype for the transactions.
 data MeasureTxs blk
-    = MeasureTxsTimeStart [GenTx blk] !Word !Word !Time  -- num txs, total size in bytes
+    = MeasureTxsTimeStart (GenTx blk) !Word !Word !Time  -- num txs, total size in bytes
     | MeasureTxsTimeStop !SlotNo blk [GenTx blk] !Time
 
 deriving instance (ProtocolLedgerView blk, Eq blk, Eq (GenTx blk)) => Eq (MeasureTxs blk)
@@ -86,15 +86,16 @@ measureTxsStart tracer = measureTxsStartInter $ toLogObject tracer
   where
     measureTxsStartInter :: Tracer IO (MeasureTxs blk) -> Tracer IO (TraceEventMempool blk)
     measureTxsStartInter tracer' = Tracer $ \case
-        TraceMempoolAddTxs txs MempoolSize{msNumTxs, msNumBytes} ->
-            traceWith tracer' =<< measureTxsEvent
+        TraceMempoolAddedTx tx _mpSizeBefore mpSizeAfter ->
+            traceWith tracer' =<< measureTxsEvent mpSizeAfter
           where
-            measureTxsEvent :: IO (MeasureTxs blk)
-            measureTxsEvent = MeasureTxsTimeStart
-                                txs
-                                (fromIntegral msNumTxs)
-                                (fromIntegral msNumBytes)
-                                <$> getMonotonicTime
+            measureTxsEvent :: MempoolSize -> IO (MeasureTxs blk)
+            measureTxsEvent MempoolSize{msNumTxs, msNumBytes} =
+              MeasureTxsTimeStart
+                    tx
+                    (fromIntegral msNumTxs)
+                    (fromIntegral msNumBytes)
+                <$> getMonotonicTime
 
         -- The rest of the constructors.
         _ -> pure ()
@@ -128,8 +129,8 @@ instance (Monad m, ApplyTx blk, HasTxId (GenTx blk)) => Outcome m (MeasureTxs bl
       MeasureTxsTimeStop  {}    -> OutcomeEnds
 
     --captureObservableValue :: a -> m (IntermediateValue a)
-    captureObservableValue (MeasureTxsTimeStart txs _ _ time) =
-        pure [(tx, time) | tx <- txs]
+    captureObservableValue (MeasureTxsTimeStart tx _ _ time) =
+        pure [(tx, time)]
 
     captureObservableValue (MeasureTxsTimeStop _sloNo _blk txs time) =
         pure [(tx, time) | tx <- txs]
@@ -246,4 +247,3 @@ instance (Monad m) => Outcome m (MeasureBlockForging blk) where
     computeOutcomeMetric _ (startSlot, absTimeStart, _) (stopSlot, absTimeStop, mempoolSize)
         | startSlot == stopSlot = pure $ Just (startSlot, (diffTime absTimeStop absTimeStart), mempoolSize)
         | otherwise             = pure Nothing
-

@@ -251,6 +251,7 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
 
       Node.run
         (consensusTracers nodeTracers)
+        (protocolTracers nodeTracers)
         (withTip varTip $ chainDBTracer nodeTracers)
         diffusionTracers
         diffusionArguments
@@ -349,6 +350,7 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
       varTip <- atomically $ newTVar GenesisPoint
       Node.run
         (consensusTracers nodeTracers)
+        (protocolTracers nodeTracers)
         (withTip varTip $ chainDBTracer nodeTracers)
         diffusionTracers
         diffusionArguments
@@ -379,7 +381,7 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
                         -> ChainDB.ChainDbArgs IO blk
                         -> ChainDB.ChainDbArgs IO blk
    customiseChainDbArgs runValid args = args
-     { ChainDB.cdbValidation = if runValid
+     { ChainDB.cdbImmValidation = if runValid
          then ValidateAllEpochs
          else ValidateMostRecentEpoch
      }

@@ -30,9 +30,8 @@ import           Cardano.Common.Parsers
 
 import           Cardano.Binary (Annotated(..))
 import           Cardano.Chain.Common ( Address(..), BlockCount(..), Lovelace
-                                      , LovelacePortion(..), NetworkMagic(..)
-                                      , decodeAddressBase58
-                                      , mkLovelace, mkLovelacePortion)
+                                      , NetworkMagic(..), decodeAddressBase58
+                                      , mkLovelace, rationalToLovelacePortion)
 import           Cardano.Chain.Genesis (FakeAvvmOptions(..), TestnetBalanceOptions(..))
 import           Cardano.Chain.Slotting (EpochNumber(..))
 import           Cardano.Chain.UTxO (TxId, TxIn(..), TxOut(..))
@@ -206,10 +205,11 @@ parseGenesisParameters =
     <*> parseProtocolMagic
     <*> parseTestnetBalanceOptions
     <*> parseFakeAvvmOptions
-    <*> parseLovelacePortionWithDefault
+    <*> (rationalToLovelacePortion <$>
+         parseFractionWithDefault
           "avvm-balance-factor"
           "AVVM balances will be multiplied by this factor (defaults to 1)."
-          1
+          1)
     <*> optional
         ( parseIntegral
             "secret-seed"
@@ -296,19 +296,32 @@ parseLovelace optname desc =
   either (panic . show) identity . mkLovelace
     <$> parseIntegral optname desc
 
-parseLovelacePortion :: String -> String -> Parser LovelacePortion
-parseLovelacePortion optname desc =
-  either (panic . show) identity . mkLovelacePortion
-    <$> parseIntegral optname desc
+parseFraction :: String -> String -> Parser Rational
+parseFraction optname desc =
+  option readFraction $
+      long optname
+   <> metavar "INT"
+   <> help desc
+  where
 
-parseLovelacePortionWithDefault
+parseFractionWithDefault
   :: String
   -> String
-  -> Word64
-  -> Parser LovelacePortion
-parseLovelacePortionWithDefault optname desc w =
-  either (panic . show) identity . mkLovelacePortion
-    <$> parseIntegralWithDefault optname desc w
+  -> Rational
+  -> Parser Rational
+parseFractionWithDefault optname desc w =
+  option readFraction $
+      long optname
+   <> metavar "INT"
+   <> help desc
+   <> value w
+
+readFraction :: ReadM Rational
+readFraction = do
+  f <- auto
+  when (f < 0) $ readerError "fraction must be >= 0"
+  when (f > 1) $ readerError "fraction must be <= 1"
+  return f
 
 parseNetworkMagic :: Parser NetworkMagic
 parseNetworkMagic =
@@ -399,7 +412,7 @@ parseTestnetBalanceOptions =
     <*> parseLovelace
           "total-balance"
           "Total balance owned by these nodes."
-    <*> parseLovelacePortion
+    <*> parseFraction
           "delegate-share"
           "Portion of stake owned by all delegates together."
 
