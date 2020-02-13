@@ -102,6 +102,7 @@ data ForgeTracers = ForgeTracers
   , ftForgedInvalid   :: Trace IO Text
   , ftTraceNodeNotLeader  :: Trace IO Text
   , ftTraceBlockFromFuture :: Trace IO Text
+  , ftTraceSlotIsImmutable :: Trace IO Text
   , ftTraceNodeIsLeader :: Trace IO Text
   }
 
@@ -174,6 +175,7 @@ mkTracers traceOptions tracer = do
       <*> (counting $ liftCounting staticMetaCC name "forged-invalid" tracer)
       <*> (counting $ liftCounting staticMetaCC name "node-not-leader" tracer)
       <*> (counting $ liftCounting staticMetaCC name "block-from-future" tracer)
+      <*> (counting $ liftCounting staticMetaCC name "slot-is-immutable" tracer)
       <*> (counting $ liftCounting staticMetaCC name "node-is-leader" tracer)
 
   -- The outcomes we want to measure, the outcome extractor
@@ -354,6 +356,7 @@ mkTracers traceOptions tracer = do
           Consensus.TraceForgedInvalidBlock{} -> teeForge' (ftForgedInvalid ft)
           Consensus.TraceNodeNotLeader{} -> teeForge' (ftTraceNodeNotLeader ft)
           Consensus.TraceBlockFromFuture{} -> teeForge' (ftTraceBlockFromFuture ft)
+          Consensus.TraceSlotIsImmutable{} -> teeForge' (ftTraceSlotIsImmutable ft)
           Consensus.TraceNodeIsLeader{} -> teeForge' (ftTraceNodeIsLeader ft)
 
       traceWith (toLogObject' tform tverb tr) ev
@@ -384,6 +387,8 @@ mkTracers traceOptions tracer = do
               LogValue "nodeNotLeader" $ PureI $ fromIntegral $ unSlotNo slot
             Consensus.TraceBlockFromFuture slot _slotNo ->
               LogValue "blockFromFuture" $ PureI $ fromIntegral $ unSlotNo slot
+            Consensus.TraceSlotIsImmutable slot _tipPoint _tipBlkNo ->
+              LogValue "slotIsImmutable" $ PureI $ fromIntegral $ unSlotNo slot
             Consensus.TraceNodeIsLeader slot ->
               LogValue "nodeIsLeader" $ PureI $ fromIntegral $ unSlotNo slot
 

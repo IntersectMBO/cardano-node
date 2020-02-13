@@ -329,6 +329,7 @@ instance DefineSeverity (TraceForgeEvent blk tx) where
   defineSeverity TraceNoLedgerState {}          = Error
   defineSeverity TraceNoLedgerView {}           = Error
   defineSeverity TraceBlockFromFuture {}        = Error
+  defineSeverity TraceSlotIsImmutable {}        = Error
   defineSeverity TraceAdoptedBlock {}           = Info
   defineSeverity TraceDidntAdoptBlock {}        = Error
   defineSeverity TraceForgedInvalidBlock {}     = Error
@@ -874,6 +875,13 @@ instance (HasTxId tx, ProtocolLedgerView blk, Condense (HeaderHash blk), Show (T
         [ "kind" .= String "TraceBlockFromFuture"
         , "current slot" .= toJSON (unSlotNo currentSlot)
         , "tip" .= toJSON (unSlotNo tip)
+        ]
+  toObject verb (TraceSlotIsImmutable slotNo tipPoint tipBlkNo) =
+    mkObject
+        [ "kind" .= String "TraceSlotIsImmutable"
+        , "slot" .= toJSON (unSlotNo slotNo)
+        , "tip" .= showPoint verb tipPoint
+        , "tipBlockNo" .= toJSON (unBlockNo tipBlkNo)
         ]
   toObject _verb (TraceDidntAdoptBlock slotNo _) =
     mkObject
