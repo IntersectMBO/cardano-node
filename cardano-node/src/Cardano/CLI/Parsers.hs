@@ -298,26 +298,27 @@ parseLovelace optname desc =
 
 parseFraction :: String -> String -> Parser Rational
 parseFraction optname desc =
-  option readFraction $
+  option (toRational <$> readDouble) $
       long optname
-   <> metavar "INT"
+   <> metavar "DOUBLE"
    <> help desc
   where
 
 parseFractionWithDefault
   :: String
   -> String
-  -> Rational
+  -> Double
   -> Parser Rational
 parseFractionWithDefault optname desc w =
-  option readFraction $
-      long optname
-   <> metavar "INT"
-   <> help desc
-   <> value w
+  toRational <$> ( option readDouble
+                 $ long optname
+                <> metavar "DOUBLE"
+                <> help desc
+                <> value w
+                )
 
-readFraction :: ReadM Rational
-readFraction = do
+readDouble :: ReadM Double
+readDouble = do
   f <- auto
   when (f < 0) $ readerError "fraction must be >= 0"
   when (f > 1) $ readerError "fraction must be <= 1"
