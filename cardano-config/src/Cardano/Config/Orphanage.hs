@@ -19,6 +19,7 @@ import qualified Data.Text as T
 import           Cardano.BM.Data.Tracer (TracingVerbosity(..))
 import qualified Cardano.Chain.Update as Update
 import qualified Ouroboros.Consensus.BlockchainTime as Consensus
+import           Ouroboros.Consensus.NodeId (NodeId(..), CoreNodeId (..))
 
 
 deriving instance Num Consensus.SlotLength
@@ -34,6 +35,10 @@ instance FromJSON TracingVerbosity where
                  <> err <> " is not a valid TracingVerbosity"
   parseJSON invalid  = panic $ "Parsing of TracingVerbosity failed due to type mismatch. "
                              <> "Encountered: " <> (T.pack $ Prelude.show invalid)
+
+instance FromJSON NodeId where
+  parseJSON v = CoreId . CoreNodeId <$> parseJSON v
+
 
 instance FromJSON PortNumber where
   parseJSON (Number portNum) = case readMaybe . show $ coefficient portNum of

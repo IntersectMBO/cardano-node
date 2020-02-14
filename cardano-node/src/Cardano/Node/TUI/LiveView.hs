@@ -76,7 +76,6 @@ import           Cardano.BM.Data.Severity
 import           Cardano.BM.Data.SubTrace
 import           Cardano.BM.Trace
 
-import           Cardano.Config.Topology
 import           Cardano.Config.Types
 import           Cardano.Config.GitRev (gitRev)
 import           Cardano.Slotting.Slot (unSlotNo)
@@ -548,8 +547,8 @@ setTopology :: NFData a => LiveViewBackend blk a -> NodeProtocolMode -> IO ()
 setTopology lvbe (RealProtocolMode (NodeCLI _ _ nAddress _ _)) =
   modifyMVar_ (getbe lvbe) $ \lvs ->
     return $ lvs { lvsNodeId = pack $ "Port: " <> (show $ naPort nAddress) }
-setTopology lvbe (MockProtocolMode (NodeMockCLI _ _ _ cfgYaml _)) = do
-  nc <- parseNodeConfiguration $ unConfigPath cfgYaml
+setTopology lvbe npm = do
+  nc <- parseNodeConfiguration npm
   modifyMVar_ (getbe lvbe) $ \lvs ->
     return $ lvs { lvsNodeId = namenum (ncNodeId nc) }
  where

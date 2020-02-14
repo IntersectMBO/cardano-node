@@ -72,14 +72,11 @@ import           Cardano.CLI.Benchmarking.Tx.Generation
 import           Cardano.Common.Orphans ()
 import           Cardano.Config.Protocol
 import           Cardano.Config.Logging (createLoggingFeatureCLI)
-import           Cardano.Config.Types
-                   ( CardanoEnvironment(..), DelegationCertFile(..)
-                   , GenesisFile(..), LastKnownBlockVersion(..)
-                   , NodeConfiguration(..), SigningKeyFile(..)
-                   , SocketPath(..), Update(..)
-                   , parseNodeConfiguration
-                   )
-import           Cardano.Config.Topology (NodeAddress(..))
+import           Cardano.Config.Types ( CardanoEnvironment(..), DelegationCertFile(..)
+                                      , GenesisFile(..), LastKnownBlockVersion(..)
+                                      , NodeAddress(..), NodeConfiguration(..)
+                                      , SigningKeyFile(..), SocketPath(..), Update(..)
+                                      , parseNodeConfigurationFP)
 
 -- | Sub-commands of 'cardano-cli'.
 data ClientCommand
@@ -325,7 +322,7 @@ runCommand (GenerateTxs
                sigKeysFiles) = do
   -- Default update value
   let update = Update (ApplicationName "cardano-sl") 1 $ LastKnownBlockVersion 0 2 0
-  nc <- liftIO $ parseNodeConfiguration logConfigFp
+  nc <- liftIO $ parseNodeConfigurationFP logConfigFp
 
   -- Logging layer
   (loggingLayer, _) <- liftIO $ createLoggingFeatureCLI

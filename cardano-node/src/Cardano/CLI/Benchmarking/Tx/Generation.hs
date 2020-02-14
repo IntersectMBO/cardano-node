@@ -67,10 +67,9 @@ import qualified Cardano.Chain.Genesis as CC.Genesis
 -- import qualified Cardano.Chain.MempoolPayload as CC.Mempool
 import qualified Cardano.Chain.UTxO as CC.UTxO
 import           Cardano.Config.Logging (LoggingLayer (..), Trace)
-import           Cardano.Config.Types (SocketPath)
+import           Cardano.Config.Types (NodeAddress (..), NodeHostAddress(..),
+                                       SocketPath)
 import qualified Cardano.Crypto as Crypto
-import           Cardano.Config.Topology (NodeAddress (..),
-                                          NodeHostAddress(..))
 import           Cardano.CLI.Ops
 import           Cardano.CLI.Tx (toCborTxAux, txSpendGenesisUTxOByronPBFT,
                      normalByronTxToGenTx)
