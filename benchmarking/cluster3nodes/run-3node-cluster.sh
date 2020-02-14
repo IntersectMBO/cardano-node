@@ -13,7 +13,8 @@ if [ -z "${TMUX}" ]; then
   exit 1
 fi
 
-CMD="cabal v2-run --"
+RUNNER=${RUNNER:-cabal v2-run -v0}
+CMD="${RUNNER} cardano-node --"
 
 # VERBOSITY="--tracing-verbosity-minimal"
 # VERBOSITY="--tracing-verbosity-normal"
@@ -65,8 +66,8 @@ tmux select-pane -t 0
 
 # start nodes
 tmux select-pane -t 0
-tmux send-keys "cd '${BASEPATH}'; ${CMD} exe:cardano-node run $(nodeargs 0 "$(echo -n ${EXTRA})") " C-m
+tmux send-keys "cd '${BASEPATH}'; ${CMD} run $(nodeargs 0 "$(echo -n ${EXTRA})") " C-m
 tmux select-pane -t 1
-tmux send-keys "cd '${BASEPATH}'; ${CMD} exe:cardano-node run $(nodeargs 1 "$(echo -n ${EXTRA})") " C-m
+tmux send-keys "cd '${BASEPATH}'; ${CMD} run $(nodeargs 1 "$(echo -n ${EXTRA})") " C-m
 tmux select-pane -t 2
-tmux send-keys "cd '${BASEPATH}'; ${CMD} exe:cardano-node run $(nodeargs 2 "$(echo -n ${EXTRA})") " C-m
+tmux send-keys "cd '${BASEPATH}'; ${CMD} run $(nodeargs 2 "$(echo -n ${EXTRA})") " C-m

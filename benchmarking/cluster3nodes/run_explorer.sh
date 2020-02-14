@@ -14,7 +14,9 @@ sed -i 's/^GenesisHash: .*$/GenesisHash: '${GENESISHASH}'/' ${CONFIGFILE}
 
 cd cardano-explorer.git
 
-EXPLORER="cabal v2-run exe:cardano-explorer-node -- "
+RUNNER=${RUNNER:-cabal v2-run -v0}
+EXPLORER="${RUNNER} cardano-explorer-node --"
+
 exec ${EXPLORER} \
   --genesis-file ${GENESISJSON} \
   --config ${CONFIGFILE} \

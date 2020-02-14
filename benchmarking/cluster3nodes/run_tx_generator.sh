@@ -17,7 +17,9 @@ TARGETNODES=`for N in $targetnodes; do echo -n "--target-node (\"127.0.0.1\",$((
 
 echo "$TARGETNODES"
 
-GENERATOR="cabal v2-run exe:cardano-cli -- "
+RUNNER=${RUNNER:-cabal v2-run -v0}
+GENERATOR="${RUNNER} cardano-cli --"
+
 exec ${GENERATOR} \
   generate-txs \
   --config ${CONFIGFILE} \
