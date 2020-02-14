@@ -10,7 +10,9 @@ module Cardano.Config.Types
     , GenesisFile (..)
     , LastKnownBlockVersion (..)
     , MiscellaneousFilepaths (..)
+    , NodeAddress (..)
     , NodeConfiguration (..)
+    , NodeHostAddress (..)
     , Protocol (..)
     , NodeMockCLI (..)
     , NodeCLI (..)
@@ -22,21 +24,24 @@ module Cardano.Config.Types
     , Update (..)
     , ViewMode (..)
     , parseNodeConfiguration
+    , parseNodeConfigurationFP
     ) where
 
-import           Prelude (show)
+import           Prelude (read)
 import           Cardano.Prelude
 
 import           Data.Aeson
+import qualified Data.IP as IP
 import qualified Data.Text as T
 import           Data.Yaml (decodeFileThrow)
+import           Network.Socket (PortNumber)
 
 import qualified Cardano.Chain.Update as Update
 import           Cardano.BM.Data.Tracer (TracingVerbosity (..))
 import           Cardano.Crypto.ProtocolMagic (RequiresNetworkMagic)
 import           Ouroboros.Consensus.NodeId (NodeId(..))
+import           Ouroboros.Consensus.Util.Condense (Condense (..))
 
-import           Cardano.Config.Topology
 import           Cardano.Config.Orphanage ()
 import           Cardano.Crypto (RequiresNetworkMagic(..))
 
@@ -189,8 +194,14 @@ instance FromJSON NodeConfiguration where
                                                          lkBlkVersionAlt))
 
 
-parseNodeConfiguration :: FilePath -> IO NodeConfiguration
-parseNodeConfiguration fp = decodeFileThrow fp
+parseNodeConfigurationFP :: FilePath -> IO NodeConfiguration
+parseNodeConfigurationFP fp = decodeFileThrow fp
+
+parseNodeConfiguration :: NodeProtocolMode -> IO NodeConfiguration
+parseNodeConfiguration npm =
+  case npm of
+    MockProtocolMode (NodeMockCLI _ _ _ cy _) -> decodeFileThrow $ unConfigPath cy
+    RealProtocolMode (NodeCLI _ _ _ cy _) -> decodeFileThrow $ unConfigPath cy
 
 -- TODO:  we don't want ByronLegacy in Protocol.  Let's wrap Protocol with another
 -- sum type for cases where it's required.
@@ -212,7 +223,7 @@ instance FromJSON Protocol where
                                           <> ptcl <> " failed. "
                                           <> ptcl <> " is not a valid protocol"
   parseJSON invalid  = panic $ "Parsing of Protocol failed due to type mismatch. "
-                             <> "Encountered: " <> (T.pack $ Prelude.show invalid)
+                             <> "Encountered: " <> (T.pack $ show invalid)
 
 -- TODO: migrate to Update.SoftwareVersion
 data Update = Update
@@ -247,7 +258,7 @@ instance FromJSON ViewMode where
                                           <> view <> " failed. "
                                           <> view <> " is not a valid view mode"
   parseJSON invalid  = panic $ "Parsing of ViewMode failed due to type mismatch. "
-                             <> "Encountered: " <> (T.pack $ Prelude.show invalid)
+                             <> "Encountered: " <> (T.pack $ show invalid)
 
 -- | Detailed tracing options. Each option enables a tracer
 --   which verbosity to the log output.
@@ -278,3 +289,32 @@ data TraceOptions = TraceOptions
   , traceTxOutbound :: !Bool
   , traceTxSubmissionProtocol :: !Bool
   } deriving (Eq, Show)
+
+--------------------------------------------------------------------------------
+-- Cardano Topology Related Data Structures
+--------------------------------------------------------------------------------
+
+-- | IPv4 address with a port number.
+data NodeAddress = NodeAddress
+  { naHostAddress :: !NodeHostAddress
+  , naPort :: !PortNumber
+  } deriving (Eq, Ord, Show)
+
+instance Condense NodeAddress where
+  condense (NodeAddress addr port) = show addr ++ ":" ++ show port
+
+instance FromJSON NodeAddress where
+  parseJSON = withObject "NodeAddress" $ \v -> do
+    NodeAddress
+      <$> (NodeHostAddress . Just <$> read <$> v .: "addr")
+      <*> ((fromIntegral :: Int -> PortNumber) <$> v .: "port")
+
+newtype NodeHostAddress = NodeHostAddress { getAddress :: Maybe IP.IP }
+                          deriving (Eq, Ord, Show)
+
+instance FromJSON NodeHostAddress where
+  parseJSON (String ipStr) = case readMaybe $ T.unpack ipStr of
+                               Just ip -> pure . NodeHostAddress $ Just ip
+                               Nothing -> pure $ NodeHostAddress Nothing
+  parseJSON invalid = panic $ "Parsing of IP failed due to type mismatch. "
+                            <> "Encountered: " <> (T.pack $ show invalid)

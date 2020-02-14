@@ -22,7 +22,6 @@ module Cardano.Common.Parsers
   , parseNodeId
   , parseProtocol
   , parseSocketPath
-  , parseTopologyInfo
   ) where
 
 
@@ -253,9 +252,6 @@ parseSocketPath helpMessage =
         <> completer (bashCompleter "file")
         <> metavar "FILEPATH"
     )
-
-parseTopologyInfo :: String -> Parser TopologyInfo
-parseTopologyInfo desc = TopologyInfo <$> parseNodeId desc <*> parseTopologyFile
 
 parseTopologyFile :: Parser FilePath
 parseTopologyFile =
