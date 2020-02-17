@@ -1,20 +1,23 @@
 #!/usr/bin/env bash
+#
+# ./scripts/chairman.sh ./socket/0 ./socket/1 ./socket/2
 
-[ $# -ne 1 ] && echo "Usage: $(basename $0) TargetSocketFilePath" 1>&2 && exit 1
-
-SOCKET=$1
+# it does not make sense to run chairman just for a single node
+[ $# -le 1 ] && echo "Usage: $(basename $0) TargetSocketFilePath" 1>&2 && exit 1
 
 set -e
+
+SOCKET_PATHS=${@/#/--socket-path }
 
 . $(dirname $0)/lib-node.sh
 CHAIRMAN="$(executable_runner chairman)"
 
 set -x
+
 ${CHAIRMAN} \
-        --core-node-id 0 --core-node-id 1 --core-node-id 2 \
         -k 10 -s 250 \
         -t 1000 \
         --genesis-file "${genesis_file}" \
         --genesis-hash "${genesis_hash}" \
-        --socket-path "${1}" \
-        --config "${configuration}/log-config-0.yaml"
+        --config "${configuration}/log-config-0.yaml" \
+        $SOCKET_PATHS

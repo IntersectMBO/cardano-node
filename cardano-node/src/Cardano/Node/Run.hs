@@ -70,6 +70,7 @@ import           Ouroboros.Consensus.Util.STM (onEachChange)
 
 import qualified Ouroboros.Storage.ChainDB as ChainDB
 import           Ouroboros.Storage.ImmutableDB (ValidationPolicy (..))
+import           Ouroboros.Storage.VolatileDB (BlockValidationPolicy (..))
 
 import           Cardano.Common.LocalSocket
 import           Cardano.Config.Protocol (SomeProtocol(..), fromProtocol)
@@ -251,6 +252,7 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
 
       Node.run
         (consensusTracers nodeTracers)
+        (protocolTracers nodeTracers)
         (withTip varTip $ chainDBTracer nodeTracers)
         diffusionTracers
         diffusionArguments
@@ -349,6 +351,7 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
       varTip <- atomically $ newTVar GenesisPoint
       Node.run
         (consensusTracers nodeTracers)
+        (protocolTracers nodeTracers)
         (withTip varTip $ chainDBTracer nodeTracers)
         diffusionTracers
         diffusionArguments
@@ -378,11 +381,15 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
    customiseChainDbArgs :: Bool
                         -> ChainDB.ChainDbArgs IO blk
                         -> ChainDB.ChainDbArgs IO blk
-   customiseChainDbArgs runValid args = args
-     { ChainDB.cdbValidation = if runValid
-         then ValidateAllEpochs
-         else ValidateMostRecentEpoch
-     }
+   customiseChainDbArgs runValid args
+     | runValid
+     = args
+       { ChainDB.cdbImmValidation = ValidateAllEpochs
+       , ChainDB.cdbVolValidation = ValidateAll
+       }
+     | otherwise
+     = args
+
    isProducer :: NodeConfiguration -> IsProducer
    isProducer nc = case p of
     -- For the real protocol, look at the leader credentials

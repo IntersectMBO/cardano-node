@@ -56,7 +56,8 @@ import           Ouroboros.Consensus.NodeNetwork (ProtocolTracers,
 import           Ouroboros.Consensus.Util.Orphans ()
 
 import qualified Ouroboros.Network.AnchoredFragment as AF
-import           Ouroboros.Network.Block (Point, blockNo, unBlockNo, unSlotNo)
+import           Ouroboros.Network.Block (Point, BlockNo(..),
+                                          blockNo, unBlockNo, unSlotNo)
 import           Ouroboros.Network.BlockFetch.Decision (FetchDecision)
 import           Ouroboros.Network.BlockFetch.ClientState (TraceLabelPeer (..))
 import           Ouroboros.Network.NodeToNode (WithAddr, ErrorPolicyTrace)
@@ -101,6 +102,7 @@ data ForgeTracers = ForgeTracers
   , ftForgedInvalid   :: Trace IO Text
   , ftTraceNodeNotLeader  :: Trace IO Text
   , ftTraceBlockFromFuture :: Trace IO Text
+  , ftTraceSlotIsImmutable :: Trace IO Text
   , ftTraceNodeIsLeader :: Trace IO Text
   }
 
@@ -173,6 +175,7 @@ mkTracers traceOptions tracer = do
       <*> (counting $ liftCounting staticMetaCC name "forged-invalid" tracer)
       <*> (counting $ liftCounting staticMetaCC name "node-not-leader" tracer)
       <*> (counting $ liftCounting staticMetaCC name "block-from-future" tracer)
+      <*> (counting $ liftCounting staticMetaCC name "slot-is-immutable" tracer)
       <*> (counting $ liftCounting staticMetaCC name "node-is-leader" tracer)
 
   -- The outcomes we want to measure, the outcome extractor
@@ -280,9 +283,9 @@ mkTracers traceOptions tracer = do
     mempoolMetricsTraceTransformer tr = Tracer $ \mempoolEvent -> do
         let tr' = appendName "metrics" tr
             (n, tot) = case mempoolEvent of
-                  TraceMempoolAddTxs      txs0 tot0 -> (length txs0, tot0)
-                  TraceMempoolRejectedTxs txs0 tot0 -> (length txs0, tot0)
-                  TraceMempoolRemoveTxs   txs0 tot0 -> (length txs0, tot0)
+                  TraceMempoolAddedTx     _tx0 _ tot0 -> (1, tot0)
+                  TraceMempoolRejectedTx  _tx0 _ tot0 -> (1, tot0)
+                  TraceMempoolRemoveTxs   txs0   tot0 -> (length txs0, tot0)
                   TraceMempoolManuallyRemovedTxs txs0 txs1 tot0
                                                     -> ( length txs0 + length txs1
                                                        , tot0
@@ -353,6 +356,7 @@ mkTracers traceOptions tracer = do
           Consensus.TraceForgedInvalidBlock{} -> teeForge' (ftForgedInvalid ft)
           Consensus.TraceNodeNotLeader{} -> teeForge' (ftTraceNodeNotLeader ft)
           Consensus.TraceBlockFromFuture{} -> teeForge' (ftTraceBlockFromFuture ft)
+          Consensus.TraceSlotIsImmutable{} -> teeForge' (ftTraceSlotIsImmutable ft)
           Consensus.TraceNodeIsLeader{} -> teeForge' (ftTraceNodeIsLeader ft)
 
       traceWith (toLogObject' tform tverb tr) ev
@@ -383,6 +387,8 @@ mkTracers traceOptions tracer = do
               LogValue "nodeNotLeader" $ PureI $ fromIntegral $ unSlotNo slot
             Consensus.TraceBlockFromFuture slot _slotNo ->
               LogValue "blockFromFuture" $ PureI $ fromIntegral $ unSlotNo slot
+            Consensus.TraceSlotIsImmutable slot _tipPoint _tipBlkNo ->
+              LogValue "slotIsImmutable" $ PureI $ fromIntegral $ unSlotNo slot
             Consensus.TraceNodeIsLeader slot ->
               LogValue "nodeIsLeader" $ PureI $ fromIntegral $ unSlotNo slot
 
@@ -497,7 +503,7 @@ chainInformation frag = ChainInformation
             - unSlotNo (fromWithOrigin 0 (AF.lastSlot frag))
     -- Block numbers start at 1. We ignore the genesis EBB, which has block number 0.
     blockD = blockN - firstBlock
-    blockN = unBlockNo $ fromMaybe 1 (AF.headBlockNo frag)
+    blockN = unBlockNo $ fromWithOrigin (BlockNo 1) (AF.headBlockNo frag)
     firstBlock = case unBlockNo . blockNo <$> AF.last frag of
       -- Empty fragment, no blocks. We have that @blocks = 1 - 1 = 0@
       Left _  -> 1

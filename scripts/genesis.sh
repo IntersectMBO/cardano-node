@@ -25,7 +25,7 @@ protocol_magic=459045235
 n_poors=128
 n_delegates=7
 total_balance=8000000000000000
-delegate_share=900000000000000
+delegate_share=0.9
 avvm_entries=128
 avvm_entry_balance=10000000000000
 not_so_secret=2718281828
@@ -35,16 +35,16 @@ args=(
       --genesis-output-dir           "${tmpdir}"
       --start-time                   "${start_time}"
       --protocol-parameters-file     "${protocol_params}"
-      --k                            ${parameter_k}
-      --protocol-magic               ${protocol_magic}
-      --n-poor-addresses             ${n_poors}
-      --n-delegate-addresses         ${n_delegates}
-      --total-balance                ${total_balance}
-      --delegate-share               ${delegate_share}
-      --avvm-entry-count             ${avvm_entries}
-      --avvm-entry-balance           ${avvm_entry_balance}
+      --k                            "${parameter_k}"
+      --protocol-magic               "${protocol_magic}"
+      --n-poor-addresses             "${n_poors}"
+      --n-delegate-addresses         "${n_delegates}"
+      --total-balance                "${total_balance}"
+      --avvm-entry-count             "${avvm_entries}"
+      --avvm-entry-balance           "${avvm_entry_balance}"
+      --delegate-share               "${delegate_share}"
       --real-pbft
-      --secret-seed                  ${not_so_secret}
+      --secret-seed                  "${not_so_secret}"
 )
 
 set -xe

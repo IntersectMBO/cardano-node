@@ -11,13 +11,14 @@ let
   envConfig = cfg.environments.${cfg.environment}; systemdServiceName = "cardano-node${optionalString cfg.instanced "@"}";
   mkScript = cfg:
     let exec = "cardano-node run";
+        runtimeDir = if cfg.runtimeDir == null then cfg.stateDir else "/run/${cfg.runtimeDir}";
         cmd = builtins.filter (x: x != "") [
           "${cfg.package}/bin/${exec}"
           "--genesis-file ${cfg.genesisFile}"
           "--genesis-hash ${cfg.genesisHash}"
           "--config ${cfg.nodeConfigFile}"
           "--database-path ${cfg.databasePath}"
-          "--socket-path ${if (cfg.runtimeDir == null) then "${cfg.stateDir}/socket" else "/run/${cfg.runtimeDir}"}"
+          "--socket-path ${runtimeDir}/node-$1.socket"
           "--topology ${cfg.topology}"
           "--host-addr ${cfg.hostAddr}"
           "--port ${toString cfg.port}"
@@ -31,7 +32,7 @@ let
         echo "Starting ${exec}: ${concatStringsSep "\"\n   echo \"" cmd}"
         echo "..or, once again, in a single line:"
         echo "${toString cmd}"
-        ls -l ${if (cfg.runtimeDir == null) then "${cfg.stateDir}/socket" else "/run/${cfg.runtimeDir}"} || true
+        ls -l ${runtimeDir} || true
         exec ${toString cmd}'';
 in {
   options = {
