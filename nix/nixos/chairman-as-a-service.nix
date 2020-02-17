@@ -15,19 +15,19 @@ let
     inherit (chairmanConfig) timeout maxBlockNo k slot-length node-ids nodeConfigFile nodeConfig timeoutIsSuccess;
   };
   mkScript = cfg:
-    let nodeIdArgs = builtins.toString
-                       (map (i: "--core-node-id ${toString i}")
+    let runtimeDir = if ncfg.runtimeDir == null then ncfg.stateDir else "/run/${ncfg.runtimeDir}";
+        socketArgs = builtins.toString
+                       (map (i: "--socket-path ${runtimeDir}/node-${toString i}.socket")
                          cfg.node-ids);
         exec = "chairman";
         cmd = [
           "${chairman}/bin/chairman"
-          (nodeIdArgs)
+          (socketArgs)
           "--timeout ${toString cfg.timeout}"
           "--max-block-no ${toString cfg.maxBlockNo}"
           "--security-param ${toString cfg.k}"
           "--genesis-file ${cfg.genesisFile}"
           "--genesis-hash ${cfg.genesisHash}"
-          "--socket-path ${if (ncfg.runtimeDir == null) then "${ncfg.stateDir}/socket" else "/run/${ncfg.runtimeDir}"}"
           "--config ${cfg.nodeConfigFile}"
           "${optionalString cfg.timeoutIsSuccess "--timeout-is-success"}"
         ];
