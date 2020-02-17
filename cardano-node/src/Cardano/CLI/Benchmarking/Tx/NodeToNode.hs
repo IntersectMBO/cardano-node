@@ -1,9 +1,14 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeSynonymInstances #-}
+
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Cardano.CLI.Benchmarking.Tx.NodeToNode
   ( BenchmarkTxSubmitTracers (..)
@@ -13,18 +18,24 @@ module Cardano.CLI.Benchmarking.Tx.NodeToNode
   ) where
 
 import           Prelude
-import           Cardano.Prelude (Void, forever)
+import           Cardano.Prelude (Text, Void, forever)
 
 import qualified Codec.CBOR.Term as CBOR
 import           Codec.Serialise (DeserialiseFailure)
 import           Control.Monad.Class.MonadTimer (MonadTimer, threadDelay)
+import           Data.Aeson ((.=), Value (..))
 import           Data.ByteString.Lazy (ByteString)
 import           Data.Proxy (Proxy (..))
-import           Network.Mux (AppType(InitiatorApp), WithMuxBearer)
+import qualified Data.Text as T
+import           Network.Mux (AppType(InitiatorApp), WithMuxBearer (..))
 import           Network.Socket (AddrInfo)
-import           Network.TypedProtocol.Driver (TraceSendRecv, runPeer)
+import           Network.TypedProtocol.Driver (TraceSendRecv (..), runPeer)
 
 import           Control.Tracer (Tracer, nullTracer)
+import           Cardano.BM.Data.Tracer (DefinePrivacyAnnotation (..),
+                     DefineSeverity (..), ToObject (..), TracingFormatting (..),
+                     TracingVerbosity (..), Transformable (..),
+                     emptyObject, mkObject, trStructured)
 import           Ouroboros.Consensus.Block (BlockProtocol)
 import           Ouroboros.Consensus.Mempool.API (GenTxId, GenTx)
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
@@ -47,7 +58,46 @@ type SendRecvConnect = WithMuxBearer
                                            NtN.NodeToNodeVersion
                                            CBOR.Term))
 
+instance ToObject SendRecvConnect where
+  toObject MinimalVerbosity _ = emptyObject -- do not log
+  toObject NormalVerbosity (WithMuxBearer _ _) =
+    mkObject ["kind" .= String "SendRecvConnect"]
+  toObject MaximalVerbosity (WithMuxBearer connId _) =
+    mkObject [ "kind"   .= String "SendRecvConnect"
+             , "connId" .= String (T.pack . show $ connId)
+             ]
+
+instance DefineSeverity SendRecvConnect
+
+instance DefinePrivacyAnnotation SendRecvConnect
+
+instance forall m . (m ~ IO) => Transformable Text m SendRecvConnect where
+  -- transform to JSON Object
+  trTransformer StructuredLogging verb tr = trStructured verb tr
+  trTransformer _ _verb _tr = nullTracer
+
+--------------------------------------------------------------------------------------
+
 type SendRecvTxSubmission blk = TraceSendRecv (TxSubmission (GenTxId blk) (GenTx blk))
+
+instance forall blk . (RunNode blk) => ToObject (SendRecvTxSubmission blk) where
+  toObject MinimalVerbosity _ = emptyObject -- do not log
+  toObject NormalVerbosity _ =
+    mkObject ["kind" .= String "SendRecvTxSubmission"]
+  toObject MaximalVerbosity _ =
+    mkObject [ "kind"   .= String "SendRecvTxSubmission"
+             ]
+
+instance forall blk . (RunNode blk) => DefineSeverity (SendRecvTxSubmission blk)
+
+instance forall blk . (RunNode blk) => DefinePrivacyAnnotation (SendRecvTxSubmission blk)
+
+instance forall m blk . (RunNode blk, m ~ IO) => Transformable Text m (SendRecvTxSubmission blk) where
+  -- transform to JSON Object
+  trTransformer StructuredLogging verb tr = trStructured verb tr
+  trTransformer _ _verb _tr = nullTracer
+
+--------------------------------------------------------------------------------------
 
 data BenchmarkTxSubmitTracers m blk = BenchmarkTracers
   { trSendRecvConnect      :: Tracer m SendRecvConnect

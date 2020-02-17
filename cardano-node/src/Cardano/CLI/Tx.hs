@@ -34,7 +34,7 @@ import           Data.Text (Text)
 import qualified Data.Text as T
 import           Formatting ((%), sformat)
 
-import           Control.Tracer (traceWith, stdoutTracer)
+import           Control.Tracer (traceWith, nullTracer, stdoutTracer)
 
 import qualified Cardano.Binary as Binary
 
@@ -280,7 +280,7 @@ nodeSubmitTx
         submitTx targetSocketFp
                  (pInfoConfig (protocolInfo p))
                  gentx
-                 stdoutTracer
+                 nullTracer -- stdoutTracer
 
 --TODO: remove these local definitions when the updated ledger lib is available
 fromCborTxAux :: LB.ByteString ->  Either Binary.DecoderError (UTxO.ATxAux B.ByteString)

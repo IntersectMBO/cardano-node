@@ -1,19 +1,24 @@
-{-# LANGUAGE FlexibleContexts    #-}
-{-# LANGUAGE DataKinds           #-}
-{-# LANGUAGE GADTs               #-}
-{-# LANGUAGE RankNTypes          #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications    #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE DataKinds             #-}
+{-# LANGUAGE GADTs                 #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE RankNTypes            #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE TypeApplications      #-}
 
 {-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
 
 module Cardano.Node.Submission (
-      submitTx
+      TraceLowLevelSubmit (..)
+    , submitTx
     ) where
 import           Cardano.Prelude hiding (ByteString, option, threadDelay)
 import           Prelude (String)
 
+import           Data.Aeson ((.=), Value (..))
 import           Data.ByteString.Lazy (ByteString)
+import qualified Data.Text as T
 import           Data.Void (Void)
 
 import           Control.Monad.Class.MonadST (MonadST)
@@ -43,11 +48,51 @@ import           Ouroboros.Network.Protocol.Handshake.Version ( Versions
 import           Ouroboros.Network.NodeToClient (NetworkConnectTracers (..))
 import qualified Ouroboros.Network.NodeToClient as NodeToClient
 
+import           Cardano.BM.Data.Tracer (DefinePrivacyAnnotation (..),
+                     DefineSeverity (..), ToObject (..), TracingFormatting (..),
+                     TracingVerbosity (..), Transformable (..),
+                     emptyObject, mkObject, trStructured)
 import           Cardano.Common.LocalSocket
 import           Cardano.Config.Types (SocketPath(..))
 
+-- | Low-tevel tracer
+data TraceLowLevelSubmit
+  = TraceLowLevelSubmitting
+  -- ^ Submitting transaction.
+  | TraceLowLevelAccepted
+  -- ^ The transaction has been accepted.
+  | TraceLowLevelRejected String
+  -- ^ The transaction has been rejected, with corresponding error message.
+  deriving (Show)
 
+instance ToObject TraceLowLevelSubmit where
+  toObject MinimalVerbosity _ = emptyObject -- do not log
+  toObject NormalVerbosity t =
+    case t of
+      TraceLowLevelSubmitting -> mkObject ["kind" .= String "TraceLowLevelSubmitting"]
+      TraceLowLevelAccepted   -> mkObject ["kind" .= String "TraceLowLevelAccepted"]
+      TraceLowLevelRejected _ -> mkObject ["kind" .= String "TraceLowLevelRejected"]
+  toObject MaximalVerbosity t =
+    case t of
+      TraceLowLevelSubmitting ->
+        mkObject [ "kind" .= String "TraceLowLevelSubmitting"
+                 ]
+      TraceLowLevelAccepted ->
+        mkObject [ "kind" .= String "TraceLowLevelAccepted"
+                 ]
+      TraceLowLevelRejected errMsg ->
+        mkObject [ "kind"   .= String "TraceLowLevelRejected"
+                 , "errMsg" .= String (T.pack errMsg)
+                 ]
 
+instance DefineSeverity TraceLowLevelSubmit
+
+instance DefinePrivacyAnnotation TraceLowLevelSubmit
+
+instance (MonadIO m) => Transformable Text m TraceLowLevelSubmit where
+  -- transform to JSON Object
+  trTransformer StructuredLogging verb tr = trStructured verb tr
+  trTransformer _ _verb _tr = nullTracer
 
 {-------------------------------------------------------------------------------
   Main logic
@@ -59,7 +104,7 @@ submitTx :: ( RunNode blk
          => SocketPath
          -> NodeConfig (BlockProtocol blk)
          -> GenTx blk
-         -> Tracer IO String
+         -> Tracer IO TraceLowLevelSubmit
          -> IO ()
 submitTx targetSocketFp protoInfoConfig tx tracer = do
     targetSocketFp' <- localSocketAddrInfo targetSocketFp
@@ -80,7 +125,7 @@ localInitiatorNetworkApplication
      , MonadTimer m
      , Show (ApplyTxErr blk)
      )
-  => Tracer m String
+  => Tracer m TraceLowLevelSubmit
   -> NodeConfig (BlockProtocol blk)
   -> GenTx blk
   -> Versions NodeToClient.NodeToClientVersion NodeToClient.DictVersion
@@ -95,7 +140,7 @@ localInitiatorNetworkApplication tracer protoInfoConfig tx =
 
   $ OuroborosInitiatorApplication $ \_peer ptcl -> case ptcl of
       NodeToClient.LocalTxSubmissionPtcl -> \channel -> do
-        traceWith tracer ("Submitting transaction: " {-++ show tx-})
+        traceWith tracer TraceLowLevelSubmitting
         result <- runPeer
                     nullTracer -- (contramap show tracer)
                     localTxSubmissionCodec
@@ -103,8 +148,8 @@ localInitiatorNetworkApplication tracer protoInfoConfig tx =
                     (LocalTxSub.localTxSubmissionClientPeer
                        (txSubmissionClientSingle tx))
         case result of
-          Nothing  -> traceWith tracer "Transaction accepted"
-          Just msg -> traceWith tracer ("Transaction rejected: " ++ show msg)
+          Nothing  -> traceWith tracer TraceLowLevelAccepted
+          Just msg -> traceWith tracer (TraceLowLevelRejected $ show msg)
 
       NodeToClient.ChainSyncWithBlocksPtcl -> \channel ->
         runPeer

@@ -64,7 +64,6 @@ import           Cardano.BM.Data.Tracer (ToLogObject (..))
 import           Cardano.BM.Trace (appendName)
 import qualified Cardano.Chain.Common as CC.Common
 import qualified Cardano.Chain.Genesis as CC.Genesis
--- import qualified Cardano.Chain.MempoolPayload as CC.Mempool
 import qualified Cardano.Chain.UTxO as CC.UTxO
 import           Cardano.Config.Logging (LoggingLayer (..), Trace)
 import           Cardano.Config.Types (NodeAddress (..), NodeHostAddress(..),
@@ -76,13 +75,13 @@ import           Cardano.CLI.Tx (toCborTxAux, txSpendGenesisUTxOByronPBFT,
 import           Cardano.CLI.Benchmarking.Tx.TxSubmission (ROEnv (..),
                      TraceBenchTxSubmit (..),
                      bulkSubmission)
-import           Cardano.Node.Submission (submitTx)
+import           Cardano.Node.Submission (TraceLowLevelSubmit, submitTx)
 import           Cardano.CLI.Benchmarking.Tx.NodeToNode (BenchmarkTxSubmitTracers (..),
                      SendRecvConnect,
                      SendRecvTxSubmission,
                      benchmarkConnectTxSubmit)
 import           Cardano.Node.TxSubClient
-import           Control.Tracer (Tracer, contramap, traceWith)
+import           Control.Tracer (Tracer, traceWith)
 
 import           Ouroboros.Consensus.Node.Run (RunNode)
 import           Ouroboros.Consensus.Block(BlockProtocol)
@@ -94,7 +93,6 @@ import qualified Ouroboros.Consensus.Mempool as Mempool
 import           Ouroboros.Consensus.Ledger.Byron (ByronBlock (..),
                                                    GenTx (..),
                                                    ByronConsensusProtocol)
--- import qualified Ouroboros.Consensus.Ledger.Byron as Byron
 import           Ouroboros.Consensus.Protocol.Abstract (NodeConfig)
 import           Ouroboros.Consensus.Protocol.ExtConfig (extNodeConfig)
 
@@ -278,7 +276,7 @@ createTracers
   -> ( Tracer IO (TraceBenchTxSubmit (Mempool.GenTxId ByronBlock))
      , Tracer IO SendRecvConnect
      , Tracer IO (SendRecvTxSubmission ByronBlock)
-     , Tracer IO String
+     , Tracer IO TraceLowLevelSubmit
      )
 createTracers loggingLayer =
   (benchTracer, connectTracer, submitTracer, lowLevelSubmitTracer)
@@ -292,25 +290,17 @@ createTracers loggingLayer =
   tr' :: Trace IO Text
   tr' = appendName "generate-txs" tr
 
-  trBenchTotext :: TraceBenchTxSubmit (Mempool.GenTxId ByronBlock) -> Text
-  trBenchTotext = T.pack . show
   benchTracer :: Tracer IO (TraceBenchTxSubmit (Mempool.GenTxId ByronBlock))
-  benchTracer = contramap trBenchTotext (toLogObject (appendName "benchmark" tr'))
+  benchTracer = toLogObjectVerbose (appendName "benchmark" tr')
 
-  trConnectTotext :: SendRecvConnect -> Text
-  trConnectTotext = T.pack . show
   connectTracer :: Tracer IO SendRecvConnect
-  connectTracer = contramap trConnectTotext (toLogObject (appendName "connect" tr'))
+  connectTracer = toLogObjectVerbose (appendName "connect" tr')
 
-  trSubmitTotext :: SendRecvTxSubmission ByronBlock -> Text
-  trSubmitTotext = T.pack . show
   submitTracer :: Tracer IO (SendRecvTxSubmission ByronBlock)
-  submitTracer = contramap trSubmitTotext (toLogObject (appendName "submit" tr'))
+  submitTracer = toLogObjectVerbose (appendName "submit" tr')
 
-  trStringTotext :: String -> Text
-  trStringTotext = T.pack
-  lowLevelSubmitTracer :: Tracer IO String
-  lowLevelSubmitTracer = contramap trStringTotext (toLogObject (appendName "llSubmit" tr'))
+  lowLevelSubmitTracer :: Tracer IO TraceLowLevelSubmit
+  lowLevelSubmitTracer = toLogObjectVerbose (appendName "llSubmit" tr')
 
 -----------------------------------------------------------------------------------------
 -- | Prepare signing keys and addresses for transactions.
@@ -400,7 +390,7 @@ extractGenesisFunds genesisConfig signingKeys =
 -- (latter corresponds to 'targetAddress' here) and "remember" it in 'availableFunds'.
 prepareInitialFunds
   :: Tracer IO (TraceBenchTxSubmit (Mempool.GenTxId ByronBlock))
-  -> Tracer IO String
+  -> Tracer IO TraceLowLevelSubmit
   -> SocketPath
   -> CC.Genesis.Config
   -> NodeConfig ByronConsensusProtocol
@@ -644,7 +634,7 @@ runBenchmark
   :: Tracer IO (TraceBenchTxSubmit (Mempool.GenTxId ByronBlock))
   -> Tracer IO SendRecvConnect
   -> Tracer IO (SendRecvTxSubmission ByronBlock)
-  -> Tracer IO String
+  -> Tracer IO TraceLowLevelSubmit
   -> SocketPath
   -> NodeConfig ByronConsensusProtocol
   -> Crypto.SigningKey
@@ -835,7 +825,7 @@ postTx benchTracer initialRequest serializedTx = do
 --   Technically all splitting transactions will send money back to 'sourceAddress'.
 createMoreFundCoins
   :: Tracer IO (TraceBenchTxSubmit (Mempool.GenTxId ByronBlock))
-  -> Tracer IO String
+  -> Tracer IO TraceLowLevelSubmit
   -> SocketPath
   -> NodeConfig ByronConsensusProtocol
   -> Crypto.SigningKey
