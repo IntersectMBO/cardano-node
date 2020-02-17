@@ -7,7 +7,7 @@ let
   '';
 
   buildTools =
-    [ git nix gnumake stack gnused gnutar coreutils stack-hpc-coveralls systemd ];
+    [ git nix gnumake stack gnused gnutar coreutils stack-hpc-coveralls systemd gzip ];
 
 in
   writeScript "stack-rebuild-wrapped" ''
