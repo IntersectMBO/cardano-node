@@ -30,4 +30,7 @@ test-ghcid: ## Run ghcid on test suites
 test-ghcid-nix: ## Run ghcid on test suites with Nix
 	@ghcid --command="stack ghci --test --main-is $(PROJECT_NAME):test:$(PROJECT_NAME)-test --nix -j$(NUM_PROC)"
 
+test-chairmans-cluster:
+	@scripts/cluster-test.sh
+
 .PHONY: stylish-haskell cabal-hashes ghcid ghcid-test run-test test-ghci test-ghcid help
