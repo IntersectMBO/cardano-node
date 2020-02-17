@@ -368,7 +368,7 @@ data TraceBenchTxSubmit txid
   deriving (Show)
 
 instance ToJSON (Mempool.GenTxId ByronBlock) where
-  toJSON _txId = String "<txId>"
+  toJSON txId = String (T.pack $ show txId)
 
 instance ToObject (TraceBenchTxSubmit (Mempool.GenTxId ByronBlock)) where
   toObject MinimalVerbosity _ = emptyObject -- do not log
