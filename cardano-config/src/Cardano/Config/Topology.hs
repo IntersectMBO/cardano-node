@@ -24,7 +24,6 @@ import           Prelude (String)
 import           Control.Exception (IOException)
 import qualified Control.Exception as Exception
 import           Data.Aeson
-import           Data.Aeson.TH
 import qualified Data.ByteString as BS
 import qualified Data.IP as IP
 import           Data.String.Conv (toS)
@@ -103,7 +102,12 @@ data NodeSetup = NodeSetup
   , producers :: ![RemoteAddress]
   } deriving Show
 
-deriveFromJSON defaultOptions ''NodeSetup
+instance FromJSON NodeSetup where
+  parseJSON = withObject "NodeSetup" $ \o ->
+                NodeSetup
+                  <$> o .: "nodeId"
+                  <*> o .: "nodeAddress"
+                  <*> o .: "producers"
 
 data NetworkTopology = MockNodeTopology ![NodeSetup]
                      | RealNodeTopology ![RemoteAddress]
@@ -111,7 +115,7 @@ data NetworkTopology = MockNodeTopology ![NodeSetup]
 
 instance FromJSON NetworkTopology where
   parseJSON = withObject "NetworkTopology" $ \o -> asum
-                [ MockNodeTopology <$> (genericParseJSON defaultOptions Null)
+                [ MockNodeTopology <$> o .: "MockProducers"
                 , RealNodeTopology <$> o .: "Producers"
                 ]
 
