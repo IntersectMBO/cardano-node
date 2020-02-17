@@ -1,5 +1,48 @@
 # Changelog for cardano-node
 
+## 1.6.0 -- February 2020
+
+### node changes
+- Improve node CLI for real protocol vs mock protocols (#297, #314, #318, #335)
+- Improve log output for normal block forging and errors (#537)
+- Improve log output for normal mempool events (#527, #538)
+- Remove redundant `--genesis-hash` flag from `cardano-cli` (#540)
+- Move benchmarking CLI commands to their own sub-group (#540)
+- Extend tx generator to be able to use the tx submission HTTP API (#549)
+- The "live view" now displays the node id (#534)
+- Report program version via logging and monitoring system (#542)
+- Disable SMP on ARM CPUs due to an RTS ARM SMP bug in GHC 8.6.x (#560)
+
+### consensus changes
+- Fix bugs found by tests related to block number handling (#1578, #1584, #1589)
+- Better handling of the block number at the genesis (#1585, #1594, #1595, #1597)
+- Fix bugs found by other tests (#1543, #1547, #1559, #1562, #1511, #1544)
+- Fix bugs found by dual ledger tests (#1608, #1571, #1617, #1577)
+- Fix a number of EBB-related bugs (#1620, #1621, #1624, #1625)
+- Introduce more sophisticated mempool tests and fix bugs (#1301, #1565, #1599)
+- Add tests for unusual changes in wall clock time (#759, #1554, #1601)
+- Handle restarting after wall clock time has been moved back (#1550, #1563)
+- Use specific program exit codes for node chain db errors (#1201, #1541)
+- Revalidate chain db files after unclean shutdown (#1551, #1623, #1304, #1568)
+- Add ability to report mempool capacity in tracing (#1509, #1510)
+- Add better support for versioned network protocols (#1632)
+- Fix minor space leaks (#1602, #1605)
+
+### ledger changes
+- Fix rare bug in validation of delegation certs in the mempool (#715, #716)
+- Fix a space leak (#717)
+- API refactoring (#722)
+- Move code from consensus that should be in the ledger library (#676)
+- Clean up LovelacePortion representation and API
+- Add generic derived JSON instances for downstream users
+- Switch to Apache 2.0 license
+
+### network changes
+- New NTP client time check library for the wallet (#1327)
+- Rearrange and move modules between network libraries (#1561)
+- Minor bug fixes in Win32 async I/O code (#1573, #1576)
+- Improve `io-sim-classes` support for monad stacks (#1539)
+
 ## 1.5.0 -- January 2020
 
 ### node changes
