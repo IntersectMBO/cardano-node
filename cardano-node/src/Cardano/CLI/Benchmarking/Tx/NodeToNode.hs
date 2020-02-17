@@ -28,6 +28,7 @@ import           Control.Tracer (Tracer, nullTracer)
 import           Ouroboros.Consensus.Block (BlockProtocol)
 import           Ouroboros.Consensus.Mempool.API (GenTxId, GenTx)
 import           Ouroboros.Consensus.Node.Run (RunNode, nodeNetworkMagic)
+import           Ouroboros.Consensus.Node.NetworkProtocolVersion (HasNetworkProtocolVersion (..))
 import           Ouroboros.Consensus.NodeNetwork (ProtocolCodecs(..), protocolCodecs)
 import           Ouroboros.Consensus.Protocol.Abstract (NodeConfig)
 import           Ouroboros.Network.Mux (OuroborosApplication(..))
@@ -59,6 +60,8 @@ benchmarkConnectTxSubmit
   -- ^ For tracing the send/receive actions
   -> NodeConfig (BlockProtocol blk)
   -- ^ The particular block protocol
+  -> NetworkProtocolVersion blk
+  -- ^ indicate verisoin of network protocol
   -> Maybe AddrInfo
   -- ^ local address information (typically local interface/port to use)
   -> AddrInfo
@@ -66,7 +69,7 @@ benchmarkConnectTxSubmit
   -> TxSubmissionClient (GenTxId blk) (GenTx blk) m ()
   -- ^ the particular txSubmission peer
   -> m ()
-benchmarkConnectTxSubmit trs nc localAddr remoteAddr myTxSubClient = do
+benchmarkConnectTxSubmit trs nc networkProtocolVersion localAddr remoteAddr myTxSubClient = do
   NtN.connectTo
     NetworkConnectTracers {
         nctMuxTracer       = nullTracer,
@@ -79,7 +82,7 @@ benchmarkConnectTxSubmit trs nc localAddr remoteAddr myTxSubClient = do
   myCodecs :: ProtocolCodecs blk DeserialiseFailure m
                 ByteString ByteString ByteString ByteString ByteString
                 ByteString ByteString ByteString
-  myCodecs  = protocolCodecs nc
+  myCodecs  = protocolCodecs nc networkProtocolVersion
 
   peerMultiplex :: Versions NtN.NodeToNodeVersion NtN.DictVersion
               (OuroborosApplication

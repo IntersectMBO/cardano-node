@@ -1,4 +1,5 @@
 {-# LANGUAGE ApplicativeDo #-}
+{-# LANGUAGE NumDecimals   #-}
 
 module Cardano.CLI.Parsers
   ( command'
@@ -30,9 +31,10 @@ import           Cardano.Common.Parsers
 
 import           Cardano.Binary (Annotated(..))
 import           Cardano.Chain.Common ( Address(..), BlockCount(..), Lovelace
-                                      , LovelacePortion(..), NetworkMagic(..)
+                                      , LovelacePortion, NetworkMagic(..)
                                       , decodeAddressBase58
-                                      , mkLovelace, mkLovelacePortion)
+                                      , mkLovelace, rationalToLovelacePortion
+                                      , lovelacePortionToRational)
 import           Cardano.Chain.Genesis (FakeAvvmOptions(..), TestnetBalanceOptions(..))
 import           Cardano.Chain.Slotting (EpochNumber(..))
 import           Cardano.Chain.UTxO (TxId, TxIn(..), TxOut(..))
@@ -208,8 +210,8 @@ parseGenesisParameters =
     <*> parseFakeAvvmOptions
     <*> parseLovelacePortionWithDefault
           "avvm-balance-factor"
-          "AVVM balances will be multiplied by this factor (defaults to 1)."
-          1
+          "AVVM balances will be multiplied by this factor (defaults to 1e-15)."
+          (toRational ((1 :: Int) % 1e15))
     <*> optional
         ( parseIntegral
             "secret-seed"
@@ -298,17 +300,17 @@ parseLovelace optname desc =
 
 parseLovelacePortion :: String -> String -> Parser LovelacePortion
 parseLovelacePortion optname desc =
-  either (panic . show) identity . mkLovelacePortion
-    <$> parseIntegral optname desc
+  rationalToLovelacePortion
+    <$> parseRational optname desc
 
 parseLovelacePortionWithDefault
   :: String
   -> String
-  -> Word64
+  -> Rational
   -> Parser LovelacePortion
-parseLovelacePortionWithDefault optname desc w =
-  either (panic . show) identity . mkLovelacePortion
-    <$> parseIntegralWithDefault optname desc w
+parseLovelacePortionWithDefault optname desc r =
+  rationalToLovelacePortion
+    <$> parseRationalWithDefault optname desc r
 
 parseNetworkMagic :: Parser NetworkMagic
 parseNetworkMagic =
@@ -399,9 +401,10 @@ parseTestnetBalanceOptions =
     <*> parseLovelace
           "total-balance"
           "Total balance owned by these nodes."
-    <*> parseLovelacePortion
-          "delegate-share"
-          "Portion of stake owned by all delegates together."
+    <*> (lovelacePortionToRational
+          <$> parseLovelacePortion
+              "delegate-share"
+              "Portion of stake owned by all delegates together.")
 
 parseTPSRate :: String -> String -> Parser TPSRate
 parseTPSRate opt desc = TPSRate <$> parseIntegral opt desc

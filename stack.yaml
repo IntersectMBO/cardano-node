@@ -1,4 +1,4 @@
-resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/c40175657bc8134e0561d9b6e6334728c19112e4/snapshot.yaml
+resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/fa7a16291d3e93b068d9b13620fc81c88b5600f0/snapshot.yaml
 compiler: ghc-8.6.5
 
 packages:
@@ -13,7 +13,7 @@ allow-newer: true
 
 extra-deps:
   - git: https://github.com/input-output-hk/cardano-crypto
-    commit: 4590efa638397e952a51a8994b5543e4ea3c1ecd
+    commit: 05aa1bc640c42bfca787531d12595489c1fa3b82
 
   - QuickCheck-2.12.6.1
   - quickcheck-instances-0.3.19
@@ -55,7 +55,7 @@ extra-deps:
 
     # Cardano-ledger dependencies
   - git: https://github.com/input-output-hk/cardano-ledger
-    commit: c62e2eeba5756898cbf59732fccd6a83a4065c18
+    commit: f05953511db1b4770c209095ace624afbd471826
     subdirs:
       - cardano-ledger
       - cardano-ledger/test
@@ -63,7 +63,7 @@ extra-deps:
       - crypto/test
 
   - git: https://github.com/input-output-hk/cardano-ledger-specs
-    commit: f27e8b66a393f0b7da1893889dcea07da0fe4dec
+    commit: ca265186970abe3d7368fd564cdff89b363ebf40
     subdirs:
       # small-steps
       - byron/semantics/executable-spec
@@ -73,13 +73,13 @@ extra-deps:
       - byron/chain/executable-spec
 
   - git: https://github.com/input-output-hk/cardano-prelude
-    commit: 00487726c4bc21b4744e59d913334ebfeac7d68e
+    commit: fa7a16291d3e93b068d9b13620fc81c88b5600f0
     subdirs:
       - .
       - test
 
   - git: https://github.com/input-output-hk/cardano-base
-    commit: eed4fc484366214831576eef0c7fe90d1d08c78b
+    commit: 3c2791584d3f43aa18e9cc13c490239b4c3dcbd2
     subdirs:
       - binary
       - binary/test
@@ -98,7 +98,7 @@ extra-deps:
 
     # iohk-monitoring-framework currently not pinned to a release
   - git: https://github.com/input-output-hk/iohk-monitoring-framework
-    commit: e67dcb9a97b688e90aa93481839f2d162ab34b53
+    commit: 87adbb5997d878353cd1dc057af677d3c47de16c
     subdirs:
       - contra-tracer
       - iohk-monitoring
@@ -121,15 +121,15 @@ extra-deps:
     #Ouroboros-network dependencies
 
   - git: https://github.com/input-output-hk/ouroboros-network
-    commit: 398004e1403367cc2a25c639eb6349d473e51b2d
+    commit: 6b28f1062aae81bfc3ce041229b4eb2ab5d1c53a
     subdirs:
         - io-sim
         - io-sim-classes
         - network-mux
+        - ouroboros-network-framework
         - ouroboros-network
         - ouroboros-consensus
         - typed-protocols
-        - typed-protocols-cbor
 
 nix:
   shell-file: nix/stack-shell.nix

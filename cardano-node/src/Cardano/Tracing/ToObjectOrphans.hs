@@ -62,6 +62,7 @@ import           Ouroboros.Network.TxSubmission.Outbound
                    (TraceTxSubmissionOutbound)
 
 import qualified Ouroboros.Storage.ChainDB as ChainDB
+import qualified Ouroboros.Storage.VolatileDB as VolatileDB
 import           Ouroboros.Storage.Common (EpochNo (..))
 import qualified Ouroboros.Storage.LedgerDB.OnDisk as LedgerDB
 
@@ -269,6 +270,13 @@ instance DefineSeverity (ChainDB.TraceEvent blk) where
     ChainDB.StreamFromVolDB {} -> Debug
     _ -> Debug
   defineSeverity (ChainDB.TraceImmDBEvent _ev) = Debug
+  defineSeverity (ChainDB.TraceVolDBEvent ev) = case ev of
+    VolatileDB.DBAlreadyClosed -> Debug
+    VolatileDB.DBAlreadyOpen -> Debug
+    VolatileDB.BlockAlreadyHere {} -> Debug
+    VolatileDB.TruncateCurrentFile {} -> Info
+    VolatileDB.Truncate {} -> Info
+    VolatileDB.InvalidFileNames {} -> Debug
 
 instance DefinePrivacyAnnotation (TraceChainSyncClientEvent blk)
 instance DefineSeverity (TraceChainSyncClientEvent blk) where
@@ -327,6 +335,7 @@ instance DefineSeverity (TraceForgeEvent blk tx) where
   defineSeverity TraceNoLedgerState {}          = Error
   defineSeverity TraceNoLedgerView {}           = Error
   defineSeverity TraceBlockFromFuture {}        = Error
+  defineSeverity TraceSlotIsImmutable {}        = Info
   defineSeverity TraceAdoptedBlock {}           = Info
   defineSeverity TraceDidntAdoptBlock {}        = Error
   defineSeverity TraceForgedInvalidBlock {}     = Error
@@ -535,6 +544,7 @@ readableChainDBTracer tracer = Tracer $ \case
     ChainDB.StreamFromVolDB _ _ _ -> tr $ WithTip tip "StreamFromVolDB"
     _ -> pure ()  -- TODO add more iterator events
   WithTip tip (ChainDB.TraceImmDBEvent _ev) -> tr $ WithTip tip "TraceImmDBEvent"
+  WithTip tip (ChainDB.TraceVolDBEvent _ev) -> tr $ WithTip tip "TraceVolDBEvent"
 
  where
   tr :: WithTip blk String -> m ()
@@ -748,6 +758,8 @@ instance (Condense (HeaderHash blk), ProtocolLedgerView blk)
     _ -> emptyObject  -- TODO add more iterator events
   toObject _verb (ChainDB.TraceImmDBEvent _ev) =
     mkObject [ "kind" .= String "TraceImmDBEvent" ]
+  toObject _verb (ChainDB.TraceVolDBEvent _ev) =
+    mkObject [ "kind" .= String "TraceImmDBEvent" ]
 
 instance ToObject LedgerDB.DiskSnapshot where
   toObject MinimalVerbosity snap = toObject NormalVerbosity snap
@@ -775,19 +787,19 @@ instance Condense (HeaderHash blk) => ToObject (TraceChainSyncServerEvent blk b)
     toObject verb ev = case ev of
       TraceChainSyncServerRead tip (AddBlock hdr) ->
         mkObject [ "kind" .= String "ChainSyncServerEvent.TraceChainSyncServerRead.AddBlock"
-                 , "tip" .= (String (pack . showTip verb $ tipPoint tip))
+                 , "tip" .= (String (pack . showTip verb $ getTipPoint tip))
                  , "addedBlock" .= (String (pack $ condense hdr)) ]
       TraceChainSyncServerRead tip (RollBack pt) ->
         mkObject [ "kind" .= String "ChainSyncServerEvent.TraceChainSyncServerRead.RollBack"
-                 , "tip" .= (String (pack . showTip verb $ tipPoint tip))
+                 , "tip" .= (String (pack . showTip verb $ getTipPoint tip))
                  , "rolledBackBlock" .= (String (pack $ showTip verb pt)) ]
       TraceChainSyncServerReadBlocked tip (AddBlock hdr) ->
         mkObject [ "kind" .= String "ChainSyncServerEvent.TraceChainSyncServerReadBlocked.AddBlock"
-                 , "tip" .= (String (pack . showTip verb $ tipPoint tip))
+                 , "tip" .= (String (pack . showTip verb $ getTipPoint tip))
                  , "addedBlock" .= (String (pack $ condense hdr)) ]
       TraceChainSyncServerReadBlocked tip (RollBack pt) ->
         mkObject [ "kind" .= String "ChainSyncServerEvent.TraceChainSyncServerReadBlocked.RollBack"
-                 , "tip" .= (String (pack . showTip verb $ tipPoint tip))
+                 , "tip" .= (String (pack . showTip verb $ getTipPoint tip))
                  , "rolledBackBlock" .= (String (pack $ showTip verb pt)) ]
 
 
@@ -873,6 +885,13 @@ instance (HasTxId tx, ProtocolLedgerView blk, Condense (HeaderHash blk), Show (T
         , "current slot" .= toJSON (unSlotNo currentSlot)
         , "tip" .= toJSON (unSlotNo tip)
         ]
+  toObject verb (TraceSlotIsImmutable slotNo tip (BlockNo bn)) =
+    mkObject
+      [ "kind" .= String "TraceSlotIsImmutable"
+      , "current_slot" .= toJSON (unSlotNo slotNo)
+      , "tip" .= (String (pack $ showTip verb tip))
+      , "blockNo" .= show bn
+      ]
   toObject _verb (TraceDidntAdoptBlock slotNo _) =
     mkObject
         [ "kind"    .= String "TraceDidntAdoptBlock"
@@ -916,16 +935,18 @@ instance (HasTxId tx, ProtocolLedgerView blk, Condense (HeaderHash blk), Show (T
 
 instance (Show (GenTx blk), Show (GenTxId blk), Show (ApplyTxErr blk))
       => ToObject (TraceEventMempool blk) where
-  toObject _verb (TraceMempoolAddTxs txs mpSz) =
+  toObject _verb (TraceMempoolAddedTx tx mpSzBefore mpSzAfter) =
     mkObject
         [ "kind" .= String "TraceMempoolAddTxs"
-        , "txsAdded" .= String (pack $ show $ txs)
-        , "mempoolSize" .= String (pack $ show $ mpSz)
+        , "txAdded" .= String (pack $ show $ tx)
+        , "mempoolSizeBefore" .= String (pack $ show $ mpSzBefore)
+        , "mempoolSizeAfter" .= String (pack $ show $ mpSzAfter)
         ]
-  toObject _verb (TraceMempoolRejectedTxs txAndErrs mpSz) =
+  toObject _verb (TraceMempoolRejectedTx tx err mpSz) =
     mkObject
         [ "kind" .= String "TraceMempoolRejectedTxs"
-        , "txsRejected" .= String (pack $ show $ txAndErrs)
+        , "txRejected" .= String (pack $ show $ tx)
+        , "txError" .= String (pack $ show $ err)
         , "mempoolSize" .= String (pack $ show $ mpSz)
         ]
   toObject _verb (TraceMempoolRemoveTxs txs mpSz) =

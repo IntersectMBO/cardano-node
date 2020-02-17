@@ -88,6 +88,7 @@ import           Control.Tracer (Tracer, contramap, traceWith)
 import           Ouroboros.Consensus.Node.Run (RunNode)
 import           Ouroboros.Consensus.Block(BlockProtocol)
 import           Ouroboros.Consensus.Ledger.Byron.Config (pbftProtocolMagic)
+import           Ouroboros.Consensus.Node.NetworkProtocolVersion (NetworkProtocolVersion)
 import           Ouroboros.Consensus.Node.ProtocolInfo (ProtocolInfo (..),
                                                         protocolInfo)
 import qualified Ouroboros.Consensus.Protocol as Consensus
@@ -95,6 +96,7 @@ import qualified Ouroboros.Consensus.Mempool as Mempool
 import           Ouroboros.Consensus.Ledger.Byron (ByronBlock (..),
                                                    GenTx (..),
                                                    ByronConsensusProtocol)
+import           Ouroboros.Consensus.Ledger.Byron.NetworkProtocolVersion (ByronNetworkProtocolVersion (..))
 -- import qualified Ouroboros.Consensus.Ledger.Byron as Byron
 import           Ouroboros.Consensus.Protocol.Abstract (NodeConfig)
 import           Ouroboros.Consensus.Protocol.ExtConfig (extNodeConfig)
@@ -781,6 +783,8 @@ runBenchmark benchTracer
                        benchmarkTracers
                        txSubmissionTerm
                        pInfoConfig
+                       ByronNetworkProtocolVersion2
+                       -- ^ TODO should this be configurable?
                        localAddr
                        remoteAddr
                        updROEnv
@@ -1176,6 +1180,8 @@ launchTxPeer
   -- a "global" stop variable, set to True to force shutdown
   -> NodeConfig (Ouroboros.Consensus.Block.BlockProtocol block)
   -- the configuration
+  -> NetworkProtocolVersion block
+  -- ^ indicate verisoin of network protocol
   -> Maybe Network.Socket.AddrInfo
   -- local address binding (if wanted)
   -> Network.Socket.AddrInfo
@@ -1187,7 +1193,7 @@ launchTxPeer
   -- give this peer 1 or more transactions, empty list
   -- signifies stop this peer
   -> m (Async (), Async ())
-launchTxPeer tr1 tr2 termTM nc localAddr remoteAddr updROEnv txInChan = do
+launchTxPeer tr1 tr2 termTM nc networkProtocolVersion localAddr remoteAddr updROEnv txInChan = do
   tmv <- MSTM.newEmptyTMVarM
-  (,) <$> (async $ benchmarkConnectTxSubmit tr2 nc localAddr remoteAddr (txSubmissionClient tmv))
+  (,) <$> (async $ benchmarkConnectTxSubmit tr2 nc networkProtocolVersion localAddr remoteAddr (txSubmissionClient tmv))
       <*> (async $ bulkSubmission updROEnv tr1 termTM txInChan tmv)

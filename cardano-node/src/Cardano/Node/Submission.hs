@@ -28,9 +28,8 @@ import qualified Ouroboros.Consensus.Node.Run as Node
 import           Ouroboros.Consensus.Protocol (NodeConfig)
 
 import           Network.TypedProtocol.Driver (runPeer)
-import           Network.TypedProtocol.Codec.Cbor (Codec, DeserialiseFailure)
+import           Network.TypedProtocol.Codec (Codec)
 import           Ouroboros.Network.Mux (AppType(..), OuroborosApplication(..))
-import           Ouroboros.Network.Block (Point)
 import qualified Ouroboros.Network.Block as Block
 import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Type as LocalTxSub
 import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Client as LocalTxSub
@@ -46,7 +45,7 @@ import qualified Ouroboros.Network.NodeToClient as NodeToClient
 import           Cardano.Common.LocalSocket
 import           Cardano.Config.Types (SocketPath(..))
 
-
+import           Codec.Serialise (DeserialiseFailure)
 
 
 {-------------------------------------------------------------------------------
@@ -139,13 +138,13 @@ localTxSubmissionCodec =
 localChainSyncCodec
   :: forall blk m. (RunNode blk, MonadST m)
   => NodeConfig (BlockProtocol blk)
-  -> Codec (ChainSync blk (Point blk))
+  -> Codec (ChainSync blk (Block.Tip blk))
            DeserialiseFailure m ByteString
 localChainSyncCodec protoInfoConfig =
     codecChainSync
       (Node.nodeEncodeBlock protoInfoConfig)
-      (Node.nodeDecodeBlock protoInfoConfig)
+      (Block.unwrapCBORinCBOR $ Node.nodeDecodeBlock protoInfoConfig)
       (Block.encodePoint (Node.nodeEncodeHeaderHash (Proxy @blk)))
       (Block.decodePoint (Node.nodeDecodeHeaderHash (Proxy @blk)))
-      (Block.encodePoint (Node.nodeEncodeHeaderHash (Proxy @blk)))
-      (Block.decodePoint (Node.nodeDecodeHeaderHash (Proxy @blk)))
+      (Block.encodeTip (Node.nodeEncodeHeaderHash (Proxy @blk)))
+      (Block.decodeTip (Node.nodeDecodeHeaderHash (Proxy @blk)))

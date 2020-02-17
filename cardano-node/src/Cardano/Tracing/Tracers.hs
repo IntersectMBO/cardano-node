@@ -68,6 +68,7 @@ import qualified Ouroboros.Storage.LedgerDB.OnDisk as LedgerDB
 
 import           Cardano.Config.Protocol (TraceConstraints)
 import           Cardano.Config.Types
+import           Cardano.Slotting.Slot (WithOrigin (..))
 import           Cardano.Tracing.MicroBenchmarking
 import           Cardano.Tracing.ToObjectOrphans
 
@@ -280,8 +281,8 @@ mkTracers traceOptions tracer = do
     mempoolMetricsTraceTransformer tr = Tracer $ \mempoolEvent -> do
         let tr' = appendName "metrics" tr
             (n, tot) = case mempoolEvent of
-                  TraceMempoolAddTxs      txs0 tot0 -> (length txs0, tot0)
-                  TraceMempoolRejectedTxs txs0 tot0 -> (length txs0, tot0)
+                  TraceMempoolAddedTx     _ _  tot0 -> (1, tot0)
+                  TraceMempoolRejectedTx  _ _  tot0 -> (1, tot0)
                   TraceMempoolRemoveTxs   txs0 tot0 -> (length txs0, tot0)
                   TraceMempoolManuallyRemovedTxs txs0 txs1 tot0
                                                     -> ( length txs0 + length txs1
@@ -353,6 +354,7 @@ mkTracers traceOptions tracer = do
           Consensus.TraceForgedInvalidBlock{} -> teeForge' (ftForgedInvalid ft)
           Consensus.TraceNodeNotLeader{} -> teeForge' (ftTraceNodeNotLeader ft)
           Consensus.TraceBlockFromFuture{} -> teeForge' (ftTraceBlockFromFuture ft)
+          Consensus.TraceSlotIsImmutable{} -> teeForge' (ftTraceBlockFromFuture ft)
           Consensus.TraceNodeIsLeader{} -> teeForge' (ftTraceNodeIsLeader ft)
 
       traceWith (toLogObject' tform tverb tr) ev
@@ -383,6 +385,8 @@ mkTracers traceOptions tracer = do
               LogValue "nodeNotLeader" $ PureI $ fromIntegral $ unSlotNo slot
             Consensus.TraceBlockFromFuture slot _slotNo ->
               LogValue "blockFromFuture" $ PureI $ fromIntegral $ unSlotNo slot
+            Consensus.TraceSlotIsImmutable slot _ _ ->
+              LogValue "slotIsImmutable" $ PureI $ fromIntegral $ unSlotNo slot
             Consensus.TraceNodeIsLeader slot ->
               LogValue "nodeIsLeader" $ PureI $ fromIntegral $ unSlotNo slot
 
@@ -497,7 +501,9 @@ chainInformation frag = ChainInformation
             - unSlotNo (fromWithOrigin 0 (AF.lastSlot frag))
     -- Block numbers start at 1. We ignore the genesis EBB, which has block number 0.
     blockD = blockN - firstBlock
-    blockN = unBlockNo $ fromMaybe 1 (AF.headBlockNo frag)
+    blockN = case AF.headBlockNo frag of
+      Origin -> 1
+      At bn  -> unBlockNo bn
     firstBlock = case unBlockNo . blockNo <$> AF.last frag of
       -- Empty fragment, no blocks. We have that @blocks = 1 - 1 = 0@
       Left _  -> 1

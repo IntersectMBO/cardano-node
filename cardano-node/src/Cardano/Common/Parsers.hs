@@ -18,6 +18,8 @@ module Cardano.Common.Parsers
   , parseGenesisFile
   , parseIntegral
   , parseIntegralWithDefault
+  , parseRational
+  , parseRationalWithDefault
   , parseLogOutputFile
   , parseNodeId
   , parseProtocol
@@ -176,6 +178,15 @@ parseIntegral optname desc = option (fromInteger <$> auto)
 parseIntegralWithDefault :: Integral a => String -> String -> a -> Parser a
 parseIntegralWithDefault optname desc def = option (fromInteger <$> auto)
  $ long optname <> metavar "INT" <> help desc <> value def
+
+parseRational :: String -> String -> Parser Rational
+parseRational optname desc = option auto
+  $ long optname <> metavar "INT" <> help desc
+
+parseRationalWithDefault :: String -> String -> Rational -> Parser Rational
+parseRationalWithDefault optname desc def = option auto
+ $ long optname <> metavar "INT" <> help desc <> value def
+
 
 parseFlag :: String -> String -> Parser Bool
 parseFlag = parseFlag' False True

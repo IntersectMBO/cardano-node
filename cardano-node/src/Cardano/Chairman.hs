@@ -45,10 +45,16 @@ import           Ouroboros.Consensus.Protocol
 import           Ouroboros.Consensus.Util.Condense
 
 import           Network.TypedProtocol.Codec
-import           Network.TypedProtocol.Codec.Cbor
 import           Network.TypedProtocol.Driver
+import           Ouroboros.Network.Codec
 import           Ouroboros.Network.Mux
-import           Ouroboros.Network.Block (BlockNo, HasHeader, HeaderHash, Point, Tip)
+import           Ouroboros.Network.Block ( BlockNo
+                                         , HasHeader
+                                         , HeaderHash
+                                         , Point
+                                         , Tip
+                                         , unwrapCBORinCBOR
+                                         , wrapCBORinCBOR)
 import qualified Ouroboros.Network.Block as Block
 import           Ouroboros.Network.AnchoredFragment (AnchoredFragment)
 import qualified Ouroboros.Network.AnchoredFragment as AF
@@ -89,7 +95,7 @@ runChairman :: forall blk.
 runChairman ptcl nids securityParam maxBlockNo socketDir tracer = do
 
     (chainsVar :: ChainsVar IO blk) <- newTVarM
-      (Map.fromList $ map (\coreNodeId -> (coreNodeId, AF.Empty Block.GenesisPoint)) nids)
+      (Map.fromList $ map (\coreNodeId -> (coreNodeId, AF.Empty undefined)) nids)
 
     void $ flip mapConcurrently nids $ \coreNodeId ->
         let ProtocolInfo{pInfoConfig} = protocolInfo ptcl
@@ -428,8 +434,8 @@ localChainSyncCodec
            DeserialiseFailure m ByteString
 localChainSyncCodec pInfoConfig =
     codecChainSync
-      (nodeEncodeBlock pInfoConfig)
-      (nodeDecodeBlock pInfoConfig)
+      (wrapCBORinCBOR   $ nodeEncodeBlock pInfoConfig)
+      (unwrapCBORinCBOR $ nodeDecodeBlock pInfoConfig)
       (Block.encodePoint (nodeEncodeHeaderHash (Proxy @blk)))
       (Block.decodePoint (nodeDecodeHeaderHash (Proxy @blk)))
       (Block.encodeTip   (nodeEncodeHeaderHash (Proxy @blk)))

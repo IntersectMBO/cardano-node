@@ -86,12 +86,12 @@ measureTxsStart tracer = measureTxsStartInter $ toLogObject tracer
   where
     measureTxsStartInter :: Tracer IO (MeasureTxs blk) -> Tracer IO (TraceEventMempool blk)
     measureTxsStartInter tracer' = Tracer $ \case
-        TraceMempoolAddTxs txs MempoolSize{msNumTxs, msNumBytes} ->
+        TraceMempoolAddedTx tx _ MempoolSize{msNumTxs, msNumBytes} ->
             traceWith tracer' =<< measureTxsEvent
           where
             measureTxsEvent :: IO (MeasureTxs blk)
             measureTxsEvent = MeasureTxsTimeStart
-                                txs
+                                [tx]
                                 (fromIntegral msNumTxs)
                                 (fromIntegral msNumBytes)
                                 <$> getMonotonicTime
