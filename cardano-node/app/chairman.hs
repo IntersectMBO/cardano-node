@@ -16,7 +16,6 @@ import           Control.Tracer (stdoutTracer)
 
 import           Ouroboros.Network.Block (BlockNo)
 import           Ouroboros.Consensus.Protocol.Abstract (SecurityParam (..))
-import           Ouroboros.Consensus.NodeId (CoreNodeId)
 
 import           Cardano.Config.CommonCLI
 import           Cardano.Config.Protocol ( ProtocolInstantiationError
@@ -29,14 +28,13 @@ import           Cardano.Chairman (runChairman)
 
 main :: IO ()
 main = do
-    ChairmanArgs { caCoreNodeIds
-                 , caSecurityParam
+    ChairmanArgs { caSecurityParam
                  , caMaxBlockNo
                  , caTimeout
                  , caTimeoutType
                  , caGenesisFile
                  , caGenesisHash
-                 , caSocketDir
+                 , caSocketPaths
                  , caConfigYaml
                  , caSigningKeyFp
                  , caDelegationCertFp
@@ -60,10 +58,10 @@ main = do
                         Left err -> do putTextLn $ renderPtclInstantiationErr err
                                        exitFailure
 
-    let run = runChairman p caCoreNodeIds
+    let run = runChairman p
                           caSecurityParam
                           caMaxBlockNo
-                          caSocketDir
+                          caSocketPaths
                           stdoutTracer
 
     case caTimeout of
@@ -87,8 +85,7 @@ data TimeoutType
   deriving (Eq, Show)
 
 data ChairmanArgs = ChairmanArgs {
-      caCoreNodeIds     :: ![CoreNodeId]
-    , caSecurityParam   :: !SecurityParam
+      caSecurityParam   :: !SecurityParam
       -- | stop after seeing given block number
     , caMaxBlockNo      :: !(Maybe BlockNo)
       -- | timeout after given number of seconds, this is useful in combination
@@ -102,7 +99,7 @@ data ChairmanArgs = ChairmanArgs {
     , caTimeoutType :: !TimeoutType
     , caGenesisFile :: !GenesisFile
     , caGenesisHash :: !Text
-    , caSocketDir :: !SocketPath
+    , caSocketPaths :: ![SocketPath]
     , caConfigYaml :: !ConfigYamlFilePath
     , caSigningKeyFp :: !(Maybe SigningKeyFile)
     , caDelegationCertFp :: !(Maybe DelegationCertFile)
@@ -138,15 +135,14 @@ parseTimeout =
 parseChairmanArgs :: Parser ChairmanArgs
 parseChairmanArgs =
     ChairmanArgs
-      <$> some parseCoreNodeId
-      <*> parseSecurityParam
+      <$> parseSecurityParam
       <*> optional parseSlots
       <*> optional parseTimeout
       <*> parseFlag' FailureTimeout SuccessTimeout
           "timeout-is-success" "Exit successfully on timeout."
       <*> (GenesisFile <$> parseGenesisPath)
       <*> parseGenesisHash
-      <*> parseSocketPath "Path to a cardano-node socket"
+      <*> (some $ parseSocketPath "Path to a cardano-node socket")
       <*> (ConfigYamlFilePath <$> parseConfigFile)
       <*> (optional $ SigningKeyFile <$> parseSigningKey)
       <*> (optional $ DelegationCertFile <$> parseDelegationCert)

@@ -40,7 +40,6 @@ import           Ouroboros.Consensus.Block (BlockProtocol, GetHeader (..))
 import           Ouroboros.Consensus.Mempool
 import           Ouroboros.Consensus.Node.ProtocolInfo
 import           Ouroboros.Consensus.Node.Run
-import           Ouroboros.Consensus.NodeId
 import           Ouroboros.Consensus.Protocol
 import           Ouroboros.Consensus.Util.Condense
 
@@ -75,44 +74,42 @@ runChairman :: forall blk.
                , TraceConstraints blk
                )
             => Protocol blk
-            -> [CoreNodeId]
             -> SecurityParam
             -- ^ security parameter, if a fork is deeper than it 'runChairman'
             -- will throw an exception.
             -> Maybe BlockNo
             -- ^ finish after that many blocks, if 'Nothing' run continuously.
-            -> SocketPath
+            -> [SocketPath]
             -- ^ local socket dir
             -> Tracer IO String
             -> IO ()
-runChairman ptcl nids securityParam maxBlockNo socketDir tracer = do
+runChairman ptcl securityParam maxBlockNo socketPaths tracer = do
 
     (chainsVar :: ChainsVar IO blk) <- newTVarM
-      (Map.fromList $ map (\coreNodeId -> (coreNodeId, AF.Empty AF.AnchorGenesis)) nids)
+      (Map.fromList $ map (\socketPath -> (socketPath, AF.Empty AF.AnchorGenesis)) socketPaths)
 
-    void $ flip mapConcurrently nids $ \coreNodeId ->
+    void $ flip mapConcurrently socketPaths $ \sockPath ->
         let ProtocolInfo{pInfoConfig} = protocolInfo ptcl
 
         in createConnection
-             coreNodeId
              chainsVar
              securityParam
              maxBlockNo
              tracer
              pInfoConfig
-             socketDir
+             sockPath
 
 -- catch 'MuxError'; it will be thrown if a node shuts down closing the
 -- connection.
 handleMuxError
   :: Tracer IO String
   -> ChainsVar IO blk
-  -> CoreNodeId
+  -> SocketPath
   -> MuxError
   -> IO ()
-handleMuxError tracer chainsVar coreNodeId err = do
+handleMuxError tracer chainsVar socketPath err = do
   traceWith tracer (show err)
-  atomically $ modifyTVar chainsVar (Map.delete coreNodeId)
+  atomically $ modifyTVar chainsVar (Map.delete socketPath)
 
 createConnection
   :: forall blk.
@@ -121,8 +118,7 @@ createConnection
      , Condense (Header blk)
      , Condense (HeaderHash blk)
      )
-  => CoreNodeId
-  -> ChainsVar IO blk
+  => ChainsVar IO blk
   -> SecurityParam
   -> Maybe BlockNo
   -> Tracer IO String
@@ -130,21 +126,20 @@ createConnection
   -> SocketPath
   -> IO ()
 createConnection
-  coreNodeId
   chainsVar
   securityParam
   maxBlockNo
   tracer
   pInfoConfig
-  socketFp = do
-    addr <- localSocketAddrInfo socketFp
+  socketPath = do
+    addr <- localSocketAddrInfo socketPath
     connectTo
       NetworkConnectTracers {
           nctMuxTracer       = nullTracer,
           nctHandshakeTracer = nullTracer
         }
       (localInitiatorNetworkApplication
-        coreNodeId
+        socketPath
         chainsVar
         securityParam
         maxBlockNo
@@ -154,7 +149,7 @@ createConnection
         pInfoConfig)
       Nothing
       addr
-    `catch` handleMuxError tracer chainsVar coreNodeId
+    `catch` handleMuxError tracer chainsVar socketPath
 
 data ChairmanTrace blk
   = WitnessedConsensus [Point (Header blk)]
@@ -177,7 +172,7 @@ instance (Condense blk, Condense (HeaderHash blk)) => Show (ChairmanTrace blk) w
 -- | Shared state between chain-sync clients.  Each chain-sync client will write to the
 -- corresponding entry.
 --
-type ChainsVar m blk = StrictTVar m (Map CoreNodeId (AnchoredFragment (Header blk)))
+type ChainsVar m blk = StrictTVar m (Map SocketPath (AnchoredFragment (Header blk)))
 
 
 -- | Add a single block to the chain.
@@ -188,12 +183,12 @@ addBlock
        , HasHeader (Header blk)
        , GetHeader blk
        )
-    => CoreNodeId
+    => SocketPath
     -> ChainsVar m blk
     -> blk
     -> STM m ()
-addBlock coreNodeId chainsVar blk =
-    modifyTVar chainsVar (Map.adjust (AF.addBlock (getHeader blk)) coreNodeId)
+addBlock sockPath chainsVar blk =
+    modifyTVar chainsVar (Map.adjust (AF.addBlock (getHeader blk)) sockPath)
 
 
 data ChairmanError blk =
@@ -267,12 +262,12 @@ rollback
        ( MonadSTM m
        , HasHeader (Header blk)
        )
-    => CoreNodeId
+    => SocketPath
     -> ChainsVar m blk
     -> Point blk
     -> STM m ()
-rollback coreNodeId chainsVar p =
-    modifyTVar chainsVar (Map.adjust fn coreNodeId)
+rollback sockPath chainsVar p =
+    modifyTVar chainsVar (Map.adjust fn sockPath)
   where
     p' :: Point (Header blk)
     p' = coerce p
@@ -302,12 +297,12 @@ chainSyncClient
      , Condense (HeaderHash (Header blk))
      )
   => Tracer m (ChairmanTrace blk)
-  -> CoreNodeId
+  -> SocketPath
   -> ChainsVar m blk
   -> SecurityParam
   -> Maybe BlockNo
   -> ChainSyncClient blk (Tip blk) m ()
-chainSyncClient tracer coreNodeId chainsVar securityParam maxBlockNo = ChainSyncClient $ pure $
+chainSyncClient tracer sockPath chainsVar securityParam maxBlockNo = ChainSyncClient $ pure $
     -- Notify the core node about the our latest points at which we are
     -- synchronised.  This client is not persistent and thus it just
     -- synchronises from the genesis block.  A real implementation should send
@@ -334,7 +329,7 @@ chainSyncClient tracer coreNodeId chainsVar securityParam maxBlockNo = ChainSync
           -- add block & check if there is consensus on immutable chain
           -- trace the decision or error
           res <- atomically $ do
-            addBlock coreNodeId chainsVar blk
+            addBlock sockPath chainsVar blk
             checkConsensus chainsVar securityParam
           traceWith tracer res
           let currentBlockNo = Just (Block.blockNo blk)
@@ -342,7 +337,7 @@ chainSyncClient tracer coreNodeId chainsVar securityParam maxBlockNo = ChainSync
       , recvMsgRollBackward = \point _tip -> ChainSyncClient $ do
           -- rollback & check
           res <- atomically $ do
-            rollback coreNodeId chainsVar point
+            rollback sockPath chainsVar point
             checkConsensus chainsVar securityParam
           traceWith tracer res
           pure $ clientStIdle Nothing
@@ -363,7 +358,7 @@ localInitiatorNetworkApplication
      , MonadThrow m
      , MonadThrow (STM m)
      )
-  => CoreNodeId
+  => SocketPath
   -> ChainsVar m blk
   -> SecurityParam
   -> Maybe BlockNo
@@ -380,7 +375,7 @@ localInitiatorNetworkApplication
   -> Versions NodeToClientVersion DictVersion
               (OuroborosApplication 'InitiatorApp peer NodeToClientProtocols
                                     m ByteString () Void)
-localInitiatorNetworkApplication coreNodeId chainsVar securityParam maxBlockNo chairmanTracer chainSyncTracer localTxSubmissionTracer pInfoConfig =
+localInitiatorNetworkApplication sockPath chainsVar securityParam maxBlockNo chairmanTracer chainSyncTracer localTxSubmissionTracer pInfoConfig =
     simpleSingletonVersions
       NodeToClientV_1
       (NodeToClientVersionData (nodeNetworkMagic (Proxy @blk) pInfoConfig))
@@ -399,7 +394,7 @@ localInitiatorNetworkApplication coreNodeId chainsVar securityParam maxBlockNo c
           chainSyncTracer
           (localChainSyncCodec pInfoConfig)
           channel
-          (chainSyncClientPeer $ chainSyncClient chairmanTracer coreNodeId chainsVar securityParam maxBlockNo)
+          (chainSyncClientPeer $ chainSyncClient chairmanTracer sockPath chainsVar securityParam maxBlockNo)
 
 
 --

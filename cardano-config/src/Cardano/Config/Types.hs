@@ -107,7 +107,7 @@ newtype DelegationCertFile = DelegationCertFile
 
 data SocketPath = SocketFile
   { unSocket :: FilePath }
-  deriving Show
+  deriving (Eq, Ord, Show)
 
 newtype SigningKeyFile = SigningKeyFile
   { unSigningKey ::  FilePath }
