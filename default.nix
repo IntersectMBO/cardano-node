@@ -27,8 +27,13 @@ let
     inherit pkgs;
   };
 
+  dockerImage = pkgs.callPackage ./nix/docker.nix {
+    inherit (self) cardano-node;
+    inherit scripts;
+  };
+
   self = {
-    inherit haskellPackages scripts nixosTests environments check-hydra;
+    inherit haskellPackages scripts nixosTests environments check-hydra dockerImage;
 
     inherit (haskellPackages.cardano-node.identifier) version;
     # Grab the executable component of our package.
