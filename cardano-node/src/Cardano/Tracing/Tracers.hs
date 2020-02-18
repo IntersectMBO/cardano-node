@@ -195,7 +195,7 @@ mkTracers traceOptions tracer = do
     , consensusTracers
         = mkConsensusTracers forgeTracers traceOptions
     , protocolTracers
-        = mkProtocolsTracers traceOptions
+        = mkProtocolTracers traceOptions
     , ipSubscriptionTracer
         = tracerOnOff (traceIpSubscription traceOptions)
           $ annotateSeverity
@@ -446,8 +446,8 @@ mkTracers traceOptions tracer = do
         TraceStartTimeInTheFuture (SystemStart start) toWait ->
           "Waiting " <> show toWait <> " until genesis start time at " <> show start
 
-    mkProtocolsTracers :: TraceOptions -> ProtocolTracers' peer blk DeserialiseFailure (Tracer IO)
-    mkProtocolsTracers traceOpts = ProtocolTracers
+    mkProtocolTracers :: TraceOptions -> ProtocolTracers' peer blk DeserialiseFailure (Tracer IO)
+    mkProtocolTracers traceOpts = ProtocolTracers
       { ptChainSyncTracer
         = tracerOnOff (traceChainSyncProtocol traceOpts)
         $ showTracing $ withName "ChainSyncProtocol" tracer
