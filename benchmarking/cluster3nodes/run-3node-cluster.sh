@@ -13,7 +13,7 @@ if [ -z "${TMUX}" ]; then
   exit 1
 fi
 
-RUNNER=${RUNNER:-cabal v2-run -v0}
+RUNNER=${RUNNER:-cabal v2-exec -v0}
 CMD="${RUNNER} cardano-node --"
 
 # VERBOSITY="--tracing-verbosity-minimal"
