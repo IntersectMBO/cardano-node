@@ -176,7 +176,7 @@ createLoggingFeature ver _ nodeProtocolMode = do
 
     configYamlFp <- pure $ getConfigYaml nodeProtocolMode
 
-    nc <- parseNodeConfiguration $ unConfigPath configYamlFp
+    nc <- parseNodeConfiguration nodeProtocolMode
     let logConfigFp = if ncLoggingSwitch nc then Just $ unConfigPath configYamlFp else Nothing
 
     (disabled', loggingConfiguration) <- loggingCLIConfiguration

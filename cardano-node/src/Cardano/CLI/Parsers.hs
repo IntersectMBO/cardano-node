@@ -36,8 +36,8 @@ import           Cardano.Chain.Genesis (FakeAvvmOptions(..), TestnetBalanceOptio
 import           Cardano.Chain.Slotting (EpochNumber(..))
 import           Cardano.Chain.UTxO (TxId, TxIn(..), TxOut(..))
 import           Cardano.Config.CommonCLI
-import           Cardano.Config.Topology (NodeAddress(..), NodeHostAddress(..))
-import           Cardano.Config.Types ( DelegationCertFile(..), GenesisFile(..), SigningKeyFile(..))
+import           Cardano.Config.Types ( DelegationCertFile(..), GenesisFile(..)
+                                      , NodeAddress(..), NodeHostAddress(..), SigningKeyFile(..))
 import           Cardano.Crypto (RequiresNetworkMagic(..), decodeHash)
 import           Cardano.Crypto.ProtocolMagic ( AProtocolMagic(..), ProtocolMagic
                                               , ProtocolMagicId(..))

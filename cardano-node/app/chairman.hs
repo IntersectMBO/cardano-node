@@ -22,7 +22,7 @@ import           Cardano.Config.Protocol ( ProtocolInstantiationError
                                          , SomeProtocol(..), fromProtocol)
 import           Cardano.Config.Types (ConfigYamlFilePath(..), DelegationCertFile(..),
                                        GenesisFile (..), NodeConfiguration(..),
-                                       SigningKeyFile(..), SocketPath(..), parseNodeConfiguration)
+                                       SigningKeyFile(..), SocketPath(..), parseNodeConfigurationFP)
 import           Cardano.Common.Parsers
 import           Cardano.Chairman (runChairman)
 
@@ -40,7 +40,7 @@ main = do
                  , caDelegationCertFp
                  } <- execParser opts
 
-    nc <- liftIO . parseNodeConfiguration $ unConfigPath caConfigYaml
+    nc <- liftIO . parseNodeConfigurationFP $ unConfigPath caConfigYaml
     frmPtclRes <- runExceptT $ fromProtocol
                                  caGenesisHash
                                  (ncNodeId nc)

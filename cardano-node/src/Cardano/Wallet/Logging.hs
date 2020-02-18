@@ -13,7 +13,7 @@ import           Cardano.Shell.Types (CardanoFeature (..))
 
 import           Cardano.Config.Types ( CardanoEnvironment, ConfigYamlFilePath(..)
                                       , DelegationCertFile , GenesisFile, NodeConfiguration(..)
-                                      , SigningKeyFile, SocketPath, parseNodeConfiguration)
+                                      , SigningKeyFile, SocketPath, parseNodeConfigurationFP)
 import           Cardano.Config.Logging ( LoggingLayer (..), loggingCardanoFeatureInit
                                         , loggingCLIConfiguration)
 
@@ -27,7 +27,7 @@ createLoggingFeatureWallet _ wCli = do
     --
     -- Currently we parse outside the features since we want to have a complete
     -- parser for __every feature__.
-    nc <- parseNodeConfiguration . unConfigPath $ waConfig wCli
+    nc <- parseNodeConfigurationFP . unConfigPath $ waConfig wCli
     let logConfigFp = if ncLoggingSwitch nc then Just . unConfigPath $ waConfig wCli else Nothing
 
     (disabled', loggingConfiguration) <- loggingCLIConfiguration

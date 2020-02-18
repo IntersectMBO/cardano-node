@@ -7,14 +7,10 @@
 
 module Cardano.Config.Topology
   ( TopologyError(..)
-  , TopologyInfo(..)
   , NetworkTopology(..)
-  , NodeAddress(..)
   , NodeHostAddress(..)
   , NodeSetup(..)
-  , RealNodeTopology(..)
   , RemoteAddress(..)
-  , createNodeAddress
   , nodeAddressInfo
   , nodeAddressToSockAddr
   , readTopologyFile
@@ -23,12 +19,11 @@ module Cardano.Config.Topology
 where
 
 import           Cardano.Prelude hiding (toS)
-import           Prelude (String, read)
+import           Prelude (String)
 
 import           Control.Exception (IOException)
 import qualified Control.Exception as Exception
 import           Data.Aeson
-import           Data.Aeson.TH
 import qualified Data.ByteString as BS
 import qualified Data.IP as IP
 import           Data.String.Conv (toS)
@@ -36,45 +31,12 @@ import qualified Data.Text as T
 import           Text.Read (readMaybe)
 import           Network.Socket
 
-import           Ouroboros.Consensus.NodeId ( NodeId(..)
-                                            , CoreNodeId (..))
+import           Cardano.Config.Types
+
 import           Ouroboros.Consensus.Util.Condense (Condense (..))
 
 
 newtype TopologyError = NodeIdNotFoundInToplogyFile FilePath deriving Show
-
--- | A data structure bundling together a node identifier and the path to
--- the topology file.
-data TopologyInfo = TopologyInfo
-  { node :: NodeId
-  , topologyFile :: FilePath
-  } deriving (Eq, Show)
-
--- | IPv4 address with a port number.
-data NodeAddress = NodeAddress
-  { naHostAddress :: !NodeHostAddress
-  , naPort :: !PortNumber
-  } deriving (Eq, Ord, Show)
-
-newtype NodeHostAddress = NodeHostAddress { getAddress :: Maybe IP.IP }
-                          deriving (Eq, Ord, Show)
-
-instance FromJSON NodeHostAddress where
-  parseJSON (String ipStr) = case readMaybe $ T.unpack ipStr of
-                               Just ip -> pure . NodeHostAddress $ Just ip
-                               Nothing -> pure $ NodeHostAddress Nothing
-  parseJSON invalid = panic $ "Parsing of IP failed due to type mismatch. "
-                            <> "Encountered: " <> (T.pack $ show invalid)
-
-
-instance Condense NodeAddress where
-  condense (NodeAddress addr port) = show addr ++ ":" ++ show port
-
-instance FromJSON NodeAddress where
-  parseJSON = withObject "NodeAddress" $ \v -> do
-    NodeAddress
-      <$> (NodeHostAddress . Just <$> read <$> v .: "addr")
-      <*> ((fromIntegral :: Int -> PortNumber) <$> v .: "port")
 
 nodeAddressToSockAddr :: NodeAddress -> SockAddr
 nodeAddressToSockAddr (NodeAddress addr port) =
@@ -83,8 +45,12 @@ nodeAddressToSockAddr (NodeAddress addr port) =
     Just (IP.IPv6 ipv6) -> SockAddrInet6 port 0 (IP.toHostAddress6 ipv6) 0
     Nothing             -> SockAddrInet port 0 -- Could also be any IPv6 addr
 
-nodeAddressInfo :: NodeAddress -> IO [AddrInfo]
-nodeAddressInfo (NodeAddress hostAddr port) = do
+nodeAddressInfo :: NodeProtocolMode -> IO [AddrInfo]
+nodeAddressInfo npm = do
+  (NodeAddress hostAddr port) <-
+    case npm of
+      (RealProtocolMode (NodeCLI _ _ nodeAddr' _ _)) -> pure nodeAddr'
+      (MockProtocolMode (NodeMockCLI _ _ nodeAddr' _ _)) -> pure nodeAddr'
   let hints = defaultHints {
                 addrFlags = [AI_PASSIVE, AI_ADDRCONFIG]
               , addrSocketType = Stream
@@ -110,7 +76,7 @@ data RemoteAddress = RemoteAddress
 -- | Parse 'raAddress' field as an IP address; if it parses and the valency is
 -- non zero return corresponding NodeAddress.
 --
-remoteAddressToNodeAddress:: RemoteAddress-> Maybe NodeAddress
+remoteAddressToNodeAddress :: RemoteAddress-> Maybe NodeAddress
 remoteAddressToNodeAddress (RemoteAddress addrStr port val) =
   case readMaybe addrStr of
     Nothing -> Nothing
@@ -136,49 +102,39 @@ data NodeSetup = NodeSetup
   , producers :: ![RemoteAddress]
   } deriving Show
 
-data RealNodeTopology = RealNodeTopology { rProducers :: ![RemoteAddress] }
+instance FromJSON NodeSetup where
+  parseJSON = withObject "NodeSetup" $ \o ->
+                NodeSetup
+                  <$> o .: "nodeId"
+                  <*> o .: "nodeAddress"
+                  <*> o .: "producers"
 
-instance FromJSON RealNodeTopology where
-  parseJSON = withObject "RealNodeTopology" $ \v ->
-    RealNodeTopology
-      <$> v .: "Producers"
-
-instance FromJSON NodeId where
-  parseJSON v = CoreId . CoreNodeId <$> parseJSON v
-
-deriveFromJSON defaultOptions ''NodeSetup
-
-data NetworkTopology = NetworkTopology [NodeSetup]
+data NetworkTopology = MockNodeTopology ![NodeSetup]
+                     | RealNodeTopology ![RemoteAddress]
   deriving Show
 
-deriveFromJSON defaultOptions ''NetworkTopology
+instance FromJSON NetworkTopology where
+  parseJSON = withObject "NetworkTopology" $ \o -> asum
+                [ MockNodeTopology <$> o .: "MockProducers"
+                , RealNodeTopology <$> o .: "Producers"
+                ]
 
--- | Creates a 'NodeAddress' if it exists in a given 'NetworkTopology'.
-createNodeAddress
-  :: NodeId
-  -> NetworkTopology
-  -> FilePath
-  -> Either TopologyError NodeAddress
-createNodeAddress _nodeId (NetworkTopology nodeSetups) fp =
-  case maybeNode of
-    Nothing -> Left $ NodeIdNotFoundInToplogyFile fp
-    Just (NodeSetup _ anAddress _) -> Right anAddress
- where
-  idInt :: Word64
-  idInt = case _nodeId of
-            CoreId (CoreNodeId i) -> i
-            RelayId i -> i
-  -- Search 'NetworkTopology' for a given 'NodeId'
-  maybeNode :: Maybe NodeSetup
-  maybeNode = find (\(NodeSetup nId _ _) -> idInt == nId) nodeSetups
+-- | Read the `NetworkTopology` configuration from the specified file.
+-- While running a real protocol, this gives your node its own address and
+-- other remote peers it will attempt to connect to.
+readTopologyFile :: NodeProtocolMode -> IO (Either Text NetworkTopology)
+readTopologyFile npm = do
+  topo  <- case npm of
+             (RealProtocolMode (NodeCLI mscFp' _ _ _ _)) -> pure . unTopology $ topFile mscFp'
+             (MockProtocolMode (NodeMockCLI mscFp' _ _ _ _)) -> pure . unTopology $ topFile mscFp'
 
-readTopologyFile :: FilePath -> IO (Either String NetworkTopology)
-readTopologyFile topo = do
   eBs <- Exception.try $ BS.readFile topo
+
   case eBs of
     Left e -> pure . Left $ handler e
-    Right bs -> pure . eitherDecode $ toS bs
+    Right bs -> pure . first T.pack . eitherDecode $ toS bs
+
  where
-  handler :: IOException -> String
-  handler e = "Cardano.Node.Configuration.Topology.readTopologyFile: "
-              ++ displayException e
+  handler :: IOException -> Text
+  handler e = T.pack $ "Cardano.Node.Configuration.Topology.readTopologyFile: "
+                     ++ displayException e
