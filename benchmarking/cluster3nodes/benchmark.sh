@@ -4,9 +4,9 @@
 
 # process
 create_new_genesis=1
-clean_explorer_db=1
+clean_explorer_db=0
 run_cluster_nodes=1
-run_explorer=1
+run_explorer=0
 run_tx_generator=1
 
 
@@ -86,21 +86,7 @@ if [ $run_explorer -eq 1 ]; then
 fi
 
 
-# wait for transactions
-tmux select-window -t :0
-tmux new-window -n Analysis "\
-  echo 'waiting for transactions...'\
-  sleep 30\
-  echo 'analyse data'\
-  echo 'TPS - transactions per second'\
-  echo 'TBPS - transaction bytes per second'\
-  echo 'number of slots total'\
-  echo 'number of slots per node'\
-  echo 'number of missed slots'\
-  echo 'distribution of block size in transactions'\
-  echo 'distribution of block size in bytes'\
-  echo 'distribution of seconds between blocks' \
-  $SHELL"
+tmux select-window -n Nodes
 sleep 1
 tmux set-window-option remain-on-exit on
-
+$SHELL

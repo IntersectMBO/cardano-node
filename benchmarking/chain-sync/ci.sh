@@ -23,6 +23,20 @@ nix build --out-link ./launch_node -f $BASEDIR/../.. scripts.$CLUSTER.node --arg
 
 rm -rf "./state-node-$CLUSTER"
 
-timeout ${TIME_LIMIT} ./launch_node || true
+echo
+echo "configuration"
+echo "============="
+echo "${LOG_CONFIG}"
+echo
+echo "topology"
+echo "========"
+TOPOLOGY=`cat launch_node | sed -ne 's/.* --topology \([^ ]\+\) .*/\1/p;' | tail -1`
+cat "${TOPOLOGY}"
+echo
+echo
+
+RTS="+RTS -T -I0 -N2 -A16m -RTS"
+RTS=""
+timeout ${TIME_LIMIT} ./launch_node ${RTS} || true
 
 $BASEDIR/analyse-logs.sh | tee benchmark-results.log

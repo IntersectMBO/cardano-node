@@ -24,7 +24,7 @@ defaultBackends:
 # here we set up outputs of logging in 'katip':
 setupScribes:
   - scKind: FileSK
-    scName: "logs/generator.log"
+    scName: "logs/generator.json"
     scFormat: ScJson
   - scKind: StdoutSK
     scName: stdout
@@ -34,7 +34,7 @@ setupScribes:
 # if not indicated otherwise, then log output is directed to this:
 defaultScribes:
   - - FileSK
-    - "logs/generator.log"
+    - "logs/generator.json"
   - - StdoutSK
     - stdout
 
