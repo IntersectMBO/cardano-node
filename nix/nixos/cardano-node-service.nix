@@ -9,16 +9,16 @@ let
   cfg = config.services.cardano-node;
   inherit (localPkgs) svcLib commonLib cardanoNodeHaskellPackages;
   envConfig = cfg.environments.${cfg.environment}; systemdServiceName = "cardano-node${optionalString cfg.instanced "@"}";
+  runtimeDir = if cfg.runtimeDir == null then cfg.stateDir else "/run/${cfg.runtimeDir}";
   mkScript = cfg:
     let exec = "cardano-node run";
-        runtimeDir = if cfg.runtimeDir == null then cfg.stateDir else "/run/${cfg.runtimeDir}";
         cmd = builtins.filter (x: x != "") [
           "${cfg.package}/bin/${exec}"
           "--genesis-file ${cfg.genesisFile}"
           "--genesis-hash ${cfg.genesisHash}"
           "--config ${cfg.nodeConfigFile}"
           "--database-path ${cfg.databasePath}"
-          "--socket-path ${runtimeDir}/node-$1.socket"
+          "--socket-path ${cfg.socketPath}"
           "--topology ${cfg.topology}"
           "--host-addr ${cfg.hostAddr}"
           "--port ${toString cfg.port}"
@@ -155,6 +155,12 @@ in {
         type = types.str;
         default = "${cfg.stateDir}/${cfg.dbPrefix}";
         description = ''Node database path.'';
+      };
+
+      socketPath = mkOption {
+        type = types.str;
+        default = "${runtimeDir}/node.socket";
+        description = ''Local communication socket path.'';
       };
 
       dbPrefix = mkOption {

@@ -89,7 +89,9 @@ in let
   node-root-dir         = "/var/lib/cardano-node";
   shelley-state-dir     = "${node-root-dir}/${legacy-name-shexpr}";
   shelley-database-paths = map (i: "${node-root-dir}/db-${i}") shelley-node-ids-str;
+  shelley-socket-paths   = map (i: "${node-root-dir}/node-${i}.socket") shelley-node-ids-str;
   database-path-shexpr  = ''$(choice "$1" ${toString legacy-node-ids-str} ${toString shelley-database-paths})'';
+  socket-path-shexpr    = ''$(choice "$1" ${toString legacy-node-ids-str} ${toString shelley-socket-paths})'';
 
 in let
   ### Secrets
@@ -215,6 +217,7 @@ in {
       runtimeDir            = null;
       nodeConfigFile        = config-shexpr;
       databasePath          = database-path-shexpr;
+      socketPath            = socket-path-shexpr;
       environment           = "mainnet";
       protover-major        = 0;
       protover-minor        = 0;
