@@ -30,7 +30,7 @@ import           Ouroboros.Consensus.Block (BlockProtocol)
 import           Ouroboros.Consensus.Mempool (ApplyTxErr, GenTx)
 import           Ouroboros.Consensus.Node.Run (RunNode)
 import qualified Ouroboros.Consensus.Node.Run as Node
-import           Ouroboros.Consensus.Protocol (NodeConfig)
+import           Ouroboros.Consensus.Protocol.Abstract (NodeConfig)
 
 import           Network.TypedProtocol.Driver (runPeer)
 import           Ouroboros.Network.Codec (Codec, DeserialiseFailure)
@@ -47,6 +47,7 @@ import           Ouroboros.Network.Protocol.Handshake.Version ( Versions
                                                               , simpleSingletonVersions)
 import           Ouroboros.Network.NodeToClient (NetworkConnectTracers (..))
 import qualified Ouroboros.Network.NodeToClient as NodeToClient
+import           Ouroboros.Network.Snocket (socketSnocket)
 
 import           Cardano.BM.Data.Tracer (DefinePrivacyAnnotation (..),
                      DefineSeverity (..), ToObject (..), TracingFormatting (..),
@@ -106,15 +107,15 @@ submitTx :: ( RunNode blk
          -> GenTx blk
          -> Tracer IO TraceLowLevelSubmit
          -> IO ()
-submitTx targetSocketFp protoInfoConfig tx tracer = do
-    targetSocketFp' <- localSocketAddrInfo targetSocketFp
+submitTx targetSocketFp protoInfoConfig tx tracer = NodeToClient.withIOManager $ \iocp -> do
+    targetSocketFp' <- localSocketPath targetSocketFp
     NodeToClient.connectTo
+      (socketSnocket iocp)
       NetworkConnectTracers {
           nctMuxTracer       = nullTracer,
           nctHandshakeTracer = nullTracer
         }
       (localInitiatorNetworkApplication tracer protoInfoConfig tx)
-      Nothing
       targetSocketFp'
 
 localInitiatorNetworkApplication

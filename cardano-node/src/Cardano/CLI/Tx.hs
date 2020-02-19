@@ -48,10 +48,10 @@ import           Cardano.Crypto (SigningKey(..), ProtocolMagicId, RequiresNetwor
 import qualified Cardano.Crypto.Hashing as Crypto
 import qualified Cardano.Crypto.Signing as Crypto
 
-import qualified Ouroboros.Consensus.Ledger.Byron as Byron
-import           Ouroboros.Consensus.Ledger.Byron (GenTx(..), ByronBlock)
-import qualified Ouroboros.Consensus.Protocol as Consensus
-import           Ouroboros.Consensus.Node.ProtocolInfo (protocolInfo, pInfoConfig)
+import qualified Ouroboros.Consensus.Byron.Ledger as Byron
+import           Ouroboros.Consensus.Byron.Ledger (GenTx(..), ByronBlock)
+import qualified Ouroboros.Consensus.Cardano as Consensus
+import           Ouroboros.Consensus.Node.ProtocolInfo (pInfoConfig)
 import qualified Ouroboros.Consensus.Mempool as Consensus
 import           Ouroboros.Consensus.Util.Condense (condense)
 
@@ -60,7 +60,6 @@ import           Cardano.Node.Submission
 import           Cardano.Config.Protocol
 import           Cardano.Config.Types (DelegationCertFile, GenesisFile,
                                        SigningKeyFile, SocketPath, Update)
-import           Cardano.Common.Orphans ()
 
 
 newtype TxFile =
@@ -278,7 +277,7 @@ nodeSubmitTx
         -- TODO: Update submitGenTx to use `ExceptT`
         traceWith stdoutTracer ("TxId: " ++ condense (Consensus.txId gentx))
         submitTx targetSocketFp
-                 (pInfoConfig (protocolInfo p))
+                 (pInfoConfig (Consensus.protocolInfo p))
                  gentx
                  nullTracer -- stdoutTracer
 

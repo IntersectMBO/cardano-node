@@ -166,6 +166,7 @@ instance FromJSON NodeConfiguration where
                                 <*> v .:? "TraceDNSResolver" .!= False
                                 <*> v .:? "TraceDNSSubscription" .!= True
                                 <*> v .:? "TraceErrorPolicy" .!= True
+                                <*> v .:? "TraceLocalErrorPolicy" .!= True
                                 <*> v .:? "TraceForge" .!= True
                                 <*> v .:? "TraceIpSubscription" .!= True
                                 <*> v .:? "TraceLocalChainSyncProtocol" .!= False
@@ -277,6 +278,7 @@ data TraceOptions = TraceOptions
   , traceDnsResolver :: !Bool
   , traceDnsSubscription :: !Bool
   , traceErrorPolicy :: !Bool
+  , traceLocalErrorPolicy :: !Bool
   , traceForge :: !Bool
   , traceIpSubscription :: !Bool
   , traceLocalChainSyncProtocol :: !Bool

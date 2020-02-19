@@ -85,16 +85,14 @@ import           Control.Tracer (Tracer, traceWith)
 
 import           Ouroboros.Consensus.Node.Run (RunNode)
 import           Ouroboros.Consensus.Block(BlockProtocol)
-import           Ouroboros.Consensus.Ledger.Byron.Config (pbftProtocolMagic)
-import           Ouroboros.Consensus.Node.ProtocolInfo (ProtocolInfo (..),
-                                                        protocolInfo)
-import qualified Ouroboros.Consensus.Protocol as Consensus
+import           Ouroboros.Consensus.Node.ProtocolInfo (ProtocolInfo (..))
+import qualified Ouroboros.Consensus.Cardano as Consensus
 import qualified Ouroboros.Consensus.Mempool as Mempool
-import           Ouroboros.Consensus.Ledger.Byron (ByronBlock (..),
+import           Ouroboros.Consensus.Byron.Ledger (ByronBlock (..),
                                                    GenTx (..),
-                                                   ByronConsensusProtocol)
+                                                   ByronConsensusProtocol,
+                                                   getGenesisConfig)
 import           Ouroboros.Consensus.Protocol.Abstract (NodeConfig)
-import           Ouroboros.Consensus.Protocol.ExtConfig (extNodeConfig)
 
 newtype NumberOfTxs =
   NumberOfTxs Word64
@@ -190,7 +188,7 @@ genesisBenchmarkRunner loggingLayer
   liftIO . traceWith benchTracer . TraceBenchTxSubDebug
     $ "******* Tx generator, genesis UTxO is ready *******"
 
-  let ProtocolInfo{pInfoConfig} = protocolInfo protocol
+  let ProtocolInfo{pInfoConfig} = Consensus.protocolInfo protocol
       genesisAddress   = mkAddressForKey pInfoConfig genesisKey
       sourceAddress    = mkAddressForKey pInfoConfig sourceKey
       recipientAddress = mkAddressForKey pInfoConfig recepientKey
@@ -599,7 +597,7 @@ createTxAux config tx signingKey = CC.UTxO.annotateTxAux $ CC.UTxO.mkTxAux tx wi
       CC.UTxO.VKWitness
         (Crypto.toVerification signingKey)
         (Crypto.sign
-          (Crypto.getProtocolMagicId . pbftProtocolMagic . extNodeConfig $ config)
+          (CC.Genesis.configProtocolMagicId (getGenesisConfig config))
           -- provide ProtocolMagicId so as not to calculate it every time
           Crypto.SignTx
           signingKey

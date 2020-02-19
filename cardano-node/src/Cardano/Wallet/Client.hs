@@ -30,7 +30,7 @@ import           Ouroboros.Consensus.Block (BlockProtocol)
 import           Ouroboros.Consensus.Mempool
 import           Ouroboros.Consensus.Node.ProtocolInfo
 import           Ouroboros.Consensus.Node.Run
-import           Ouroboros.Consensus.Protocol
+import           Ouroboros.Consensus.Cardano
 
 import           Network.TypedProtocol.Driver
 import           Ouroboros.Network.Codec
@@ -45,6 +45,7 @@ import           Ouroboros.Network.Protocol.ChainSync.Client
 import           Ouroboros.Network.Protocol.ChainSync.Codec
 import           Ouroboros.Network.Protocol.Handshake.Version
 import           Ouroboros.Network.NodeToClient
+import           Ouroboros.Network.Snocket (socketSnocket)
 
 import           Cardano.Common.LocalSocket
 import           Cardano.Config.Types (SocketPath)
@@ -58,9 +59,9 @@ runWalletClient :: forall blk.
                 -> SocketPath
                 -> Tracer IO String
                 -> IO ()
-runWalletClient ptcl sockFp tracer = do
+runWalletClient ptcl sockFp tracer = withIOManager $ \iocp -> do
 
-    addr <- localSocketAddrInfo sockFp
+    path <- localSocketPath sockFp
 
     let ProtocolInfo{pInfoConfig} = protocolInfo ptcl
 
@@ -68,6 +69,7 @@ runWalletClient ptcl sockFp tracer = do
         localTxSubmissionTracer = contramap show tracer
 
     connectTo
+      (socketSnocket iocp)
       NetworkConnectTracers {
           nctMuxTracer       = nullTracer,
           nctHandshakeTracer = nullTracer
@@ -77,8 +79,7 @@ runWalletClient ptcl sockFp tracer = do
         chainSyncTracer
         localTxSubmissionTracer
         pInfoConfig)
-      Nothing
-      addr
+      path
 
 localInitiatorNetworkApplication
   :: forall blk m peer.

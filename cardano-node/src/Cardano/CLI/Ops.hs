@@ -37,9 +37,9 @@ import           Codec.CBOR.Read (DeserialiseFailure, deserialiseFromBytes)
 import           Codec.CBOR.Write (toLazyByteString)
 import qualified Cardano.Crypto.Signing as Crypto
 import qualified Cardano.Chain.Genesis as Genesis
-import           Ouroboros.Consensus.Ledger.Byron (ByronBlock)
 import           Ouroboros.Consensus.Node.Run (RunNode)
-import qualified Ouroboros.Consensus.Protocol as Consensus
+import qualified Ouroboros.Consensus.Cardano as Consensus
+import           Ouroboros.Consensus.Byron.Ledger (ByronBlock)
 
 import           Cardano.Config.Protocol ( Protocol(..), ProtocolInstantiationError
                                          , SomeProtocol(..), fromProtocol)
