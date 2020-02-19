@@ -4,6 +4,7 @@
 {-# LANGUAGE LambdaCase            #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE UndecidableInstances  #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans  #-}
@@ -23,6 +24,7 @@ import           Data.Text (pack)
 import qualified Data.List.NonEmpty as NonEmpty
 import qualified Network.Socket as Socket (SockAddr)
 import           Network.Mux (WithMuxBearer (..), MuxTrace (..))
+import           Network.TypedProtocol.Codec (AnyMessage (..))
 
 import           Cardano.BM.Data.LogItem (LOContent (..), LogObject (..),
                    mkLOMeta)
@@ -51,7 +53,9 @@ import           Ouroboros.Network.BlockFetch.ClientState
                    (TraceFetchClientState (..), TraceLabelPeer (..))
 import           Ouroboros.Network.BlockFetch.Decision (FetchDecision)
 import           Ouroboros.Network.NodeToNode
-                   (WithAddr(..), ErrorPolicyTrace(..))
+                   (WithAddr(..), ErrorPolicyTrace(..), TraceSendRecv (..))
+import           Ouroboros.Network.Protocol.TxSubmission.Type
+                   (Message (..), TxSubmission)
 import           Ouroboros.Network.Subscription (ConnectResult (..), DnsTrace (..),
                    SubscriptionTrace (..),
                    WithDomainName (..), WithIPList (..))
@@ -297,6 +301,12 @@ instance DefineSeverity (TraceLabelPeer peer
                          (TraceFetchClientState header)) where
   defineSeverity _ = Info
 
+instance DefinePrivacyAnnotation (TraceLabelPeer peer
+                                  (TraceSendRecv (TxSubmission txid tx)))
+instance DefineSeverity (TraceLabelPeer peer
+                         (TraceSendRecv (TxSubmission txid tx))) where
+  defineSeverity _ = Debug
+
 instance DefinePrivacyAnnotation (TraceBlockFetchServerEvent blk)
 instance DefineSeverity (TraceBlockFetchServerEvent blk) where
   defineSeverity _ = Info
@@ -354,6 +364,11 @@ instance Show peer => Transformable Text IO [TraceLabelPeer peer
 -- transform @BlockFetchDecision@
 instance Show peer => Transformable Text IO (TraceLabelPeer peer
                                 (TraceFetchClientState header)) where
+  trTransformer _ verb tr = trStructured verb tr
+
+instance (Show peer, Show txid, Show tx)
+      => Transformable Text IO (TraceLabelPeer peer
+           (TraceSendRecv (TxSubmission txid tx))) where
   trTransformer _ verb tr = trStructured verb tr
 
 -- transform @BlockFetchServerEvent@
@@ -821,6 +836,47 @@ instance ToObject (FetchDecision [Point header]) where
   toObject _verb (Right results) =
     mkObject [ "kind" .= String "FetchDecision results"
              , "length" .= String (pack $ show $ length results) ]
+
+instance (Show peer, Show txid, Show tx)
+    => ToObject (TraceLabelPeer peer
+         (TraceSendRecv (TxSubmission txid tx))) where
+  toObject verb (TraceLabelPeer peerid (TraceSendMsg (AnyMessage msg))) =
+    mkObject
+        [ "kind" .= String "TraceSendMsg"
+        , "peer" .= show peerid
+        , "message" .= toObject verb msg
+        ]
+  toObject verb (TraceLabelPeer peerid (TraceRecvMsg (AnyMessage msg))) =
+    mkObject
+        [ "kind" .= String "TraceRecvMsg"
+        , "peer" .= show peerid
+        , "message" .= toObject verb msg
+        ]
+
+instance (Show txid, Show tx) => ToObject (Message
+                                   (TxSubmission txid tx) from to) where
+  toObject _verb (MsgRequestTxs txids) =
+    mkObject
+        [ "kind" .= String "MsgRequestTxs"
+        , "txIds" .= String (pack $ show $ txids)
+        ]
+  toObject _verb (MsgReplyTxs txs) =
+    mkObject
+        [ "kind" .= String "MsgReplyTxs"
+        , "txs" .= String (pack $ show $ txs)
+        ]
+  toObject _verb (MsgRequestTxIds _ _ _) =
+    mkObject
+        [ "kind" .= String "MsgRequestTxIds"
+        ]
+  toObject _verb (MsgReplyTxIds _) =
+    mkObject
+        [ "kind" .= String "MsgReplyTxIds"
+        ]
+  toObject _verb MsgDone =
+    mkObject
+        [ "kind" .= String "MsgDone"
+        ]
 
 instance Show peer => ToObject (TraceLabelPeer peer
                         (TraceFetchClientState header)) where
