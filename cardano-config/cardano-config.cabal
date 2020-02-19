@@ -48,6 +48,7 @@ library
                      , ouroboros-consensus
                      , ouroboros-consensus-byron
                      , ouroboros-consensus-cardano
+                     , ouroboros-consensus-mock
                      , ouroboros-network
                      , process
                      , iproute
