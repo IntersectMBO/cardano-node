@@ -31,7 +31,7 @@ import           Data.Proxy (Proxy (..))
 import qualified Data.Text as T
 import           Data.Time.Clock (getCurrentTime)
 import           Network.Mux (AppType(InitiatorApp), WithMuxBearer (..))
-import           Network.Socket (AddrInfo)
+import           Network.Socket (AddrInfo (..))
 import           Network.TypedProtocol.Codec (AnyMessage (..))
 import           Network.TypedProtocol.Driver (TraceSendRecv (..), runPeer)
 
@@ -42,7 +42,7 @@ import           Cardano.BM.Data.Tracer (DefinePrivacyAnnotation (..),
                      TracingVerbosity (..), Transformable (..),
                      emptyObject, mkObject, trStructured)
 import           Ouroboros.Consensus.Block (BlockProtocol)
-import           Ouroboros.Consensus.Ledger.Byron (ByronBlock (..))
+import           Ouroboros.Consensus.Byron.Ledger (ByronBlock (..))
 import           Ouroboros.Consensus.Mempool.API (GenTxId, GenTx)
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
 import           Ouroboros.Consensus.Node.Run (RunNode, nodeNetworkMagic)
@@ -57,9 +57,11 @@ import           Ouroboros.Network.Protocol.Handshake.Type (Handshake)
 import           Ouroboros.Network.Protocol.Handshake.Version (Versions, simpleSingletonVersions)
 import           Ouroboros.Network.Protocol.TxSubmission.Client (TxSubmissionClient, txSubmissionClientPeer)
 import qualified Ouroboros.Network.Protocol.TxSubmission.Type as TS
+import           Ouroboros.Network.Snocket (socketSnocket)
+import           Ouroboros.Network.IOManager (withIOManager)
 
 type SendRecvConnect = WithMuxBearer
-                         NtN.ConnectionId
+                         NtN.RemoteConnectionId
                          (TraceSendRecv (Handshake
                                            NtN.NodeToNodeVersion
                                            CBOR.Term))
@@ -201,15 +203,16 @@ benchmarkConnectTxSubmit
   -> TxSubmissionClient (GenTxId blk) (GenTx blk) m ()
   -- ^ the particular txSubmission peer
   -> m ()
-benchmarkConnectTxSubmit trs nc localAddr remoteAddr myTxSubClient = do
+benchmarkConnectTxSubmit trs nc localAddr remoteAddr myTxSubClient = withIOManager $ \iocp -> do
   NtN.connectTo
+    (socketSnocket iocp)
     NetworkConnectTracers {
         nctMuxTracer       = nullTracer,
         nctHandshakeTracer = trSendRecvConnect trs
       }
     peerMultiplex
-    localAddr
-    remoteAddr
+    (addrAddress <$> localAddr)
+    (addrAddress remoteAddr)
  where
   myCodecs :: ProtocolCodecs blk DeserialiseFailure m
                 ByteString ByteString ByteString ByteString ByteString
@@ -219,7 +222,7 @@ benchmarkConnectTxSubmit trs nc localAddr remoteAddr myTxSubClient = do
   peerMultiplex :: Versions NtN.NodeToNodeVersion NtN.DictVersion
               (OuroborosApplication
                  'InitiatorApp
-                 NtN.ConnectionId
+                 NtN.RemoteConnectionId
                  NtN.NodeToNodeProtocols
                  m
                  ByteString

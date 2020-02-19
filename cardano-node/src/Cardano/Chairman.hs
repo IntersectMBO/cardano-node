@@ -40,7 +40,7 @@ import           Ouroboros.Consensus.Block (BlockProtocol, GetHeader (..))
 import           Ouroboros.Consensus.Mempool
 import           Ouroboros.Consensus.Node.ProtocolInfo
 import           Ouroboros.Consensus.Node.Run
-import           Ouroboros.Consensus.Protocol
+import           Ouroboros.Consensus.Cardano
 import           Ouroboros.Consensus.Util.Condense
 
 import           Network.TypedProtocol.Driver
@@ -58,6 +58,7 @@ import           Ouroboros.Network.Protocol.ChainSync.Client
 import           Ouroboros.Network.Protocol.ChainSync.Codec
 import           Ouroboros.Network.Protocol.Handshake.Version
 import           Ouroboros.Network.NodeToClient
+import           Ouroboros.Network.Snocket (socketSnocket)
 
 import           Cardano.Common.LocalSocket
 import           Cardano.Config.Types (SocketPath)
@@ -131,25 +132,25 @@ createConnection
   maxBlockNo
   tracer
   pInfoConfig
-  socketPath = do
-    addr <- localSocketAddrInfo socketPath
-    connectTo
-      NetworkConnectTracers {
-          nctMuxTracer       = nullTracer,
-          nctHandshakeTracer = nullTracer
-        }
-      (localInitiatorNetworkApplication
-        socketPath
-        chainsVar
-        securityParam
-        maxBlockNo
-        (showTracing tracer)
-        nullTracer
-        nullTracer
-        pInfoConfig)
-      Nothing
-      addr
-    `catch` handleMuxError tracer chainsVar socketPath
+  socketPath = withIOManager $ \iocp -> do
+      path <- localSocketPath socketPath
+      connectTo
+        (socketSnocket iocp)
+        NetworkConnectTracers {
+            nctMuxTracer       = nullTracer,
+            nctHandshakeTracer = nullTracer
+            }
+        (localInitiatorNetworkApplication
+            socketPath
+            chainsVar
+            securityParam
+            maxBlockNo
+            (showTracing tracer)
+            nullTracer
+            nullTracer
+            pInfoConfig)
+        path
+        `catch` handleMuxError tracer chainsVar socketPath
 
 data ChairmanTrace blk
   = WitnessedConsensus [Point (Header blk)]

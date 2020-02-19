@@ -40,7 +40,7 @@ import           Cardano.BM.Data.Tracer (DefinePrivacyAnnotation (..),
                      emptyObject, mkObject, nullTracer, trStructured)
 
 import           Control.Tracer (Tracer, traceWith)
-import           Ouroboros.Consensus.Ledger.Byron (ByronBlock (..))
+import           Ouroboros.Consensus.Byron.Ledger (ByronBlock (..))
 import qualified Ouroboros.Consensus.Mempool as Mempool
 import qualified Ouroboros.Network.Protocol.TxSubmission.Type as TxSubmit
 

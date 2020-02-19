@@ -53,7 +53,7 @@ import           Cardano.Crypto (ProtocolMagicId, RequiresNetworkMagic(..))
 import qualified Cardano.Crypto.Hashing as Crypto
 import qualified Cardano.Crypto.Signing as Crypto
 
-import qualified Ouroboros.Consensus.Protocol as Consensus
+import qualified Ouroboros.Consensus.Cardano as Consensus
 
 import           Cardano.CLI.Delegation
 import           Cardano.CLI.Genesis
@@ -65,7 +65,6 @@ import           Cardano.CLI.Benchmarking.Tx.Generation
                    , NumberOfInputsPerTx (..), NumberOfOutputsPerTx (..)
                    , FeePerTx (..), TPSRate (..), TxAdditionalSize (..)
                    , genesisBenchmarkRunner)
-import           Cardano.Common.Orphans ()
 import           Cardano.Config.Protocol
 import           Cardano.Config.Logging (createLoggingFeatureCLI)
 import           Cardano.Config.Types
@@ -204,7 +203,6 @@ runCommand (GetLocalNodeTip configFp gFile sockPath) = do
 runCommand (PrettySigningKeyPublic ptcl skF) = do
   sK <- readSigningKey ptcl skF
   liftIO . putTextLn . prettyPublicKey $ Crypto.toVerification sK
-
 runCommand (MigrateDelegateKeyFrom oldPtcl oldKey newPtcl (NewSigningKeyFile newKey)) = do
   sk <- readSigningKey oldPtcl oldKey
   sDk <- hoistEither $ serialiseDelegateKey newPtcl sk

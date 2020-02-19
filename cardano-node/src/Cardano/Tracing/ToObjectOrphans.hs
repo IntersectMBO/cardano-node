@@ -64,9 +64,9 @@ import           Ouroboros.Network.TxSubmission.Inbound
 import           Ouroboros.Network.TxSubmission.Outbound
                    (TraceTxSubmissionOutbound)
 
-import qualified Ouroboros.Storage.ChainDB as ChainDB
-import           Ouroboros.Storage.Common (EpochNo (..))
-import qualified Ouroboros.Storage.LedgerDB.OnDisk as LedgerDB
+import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
+import           Ouroboros.Consensus.Storage.Common (EpochNo (..))
+import qualified Ouroboros.Consensus.Storage.LedgerDB.OnDisk as LedgerDB
 
 -- | Tracing wrapper which includes current tip in the logs (thus it requires
 -- it from the context).
@@ -252,7 +252,8 @@ instance DefineSeverity (ChainDB.TraceEvent blk) where
     ChainDB.StoreButDontChange {} -> Debug
     ChainDB.TryAddToCurrentChain {} -> Debug
     ChainDB.TrySwitchToAFork {} -> Info
-    ChainDB.SwitchedToChain {} -> Notice
+    ChainDB.AddedToCurrentChain {} -> Notice
+    ChainDB.SwitchedToAFork {} -> Notice
     ChainDB.AddBlockValidation ev' -> case ev' of
       ChainDB.InvalidBlock {} -> Error
       ChainDB.InvalidCandidate {} -> Error
@@ -477,8 +478,10 @@ readableChainDBTracer tracer = Tracer $ \case
       "Block fits onto the current chain: " <> condense pt
     ChainDB.TrySwitchToAFork pt _   -> tr $ WithTip tip $
       "Block fits onto some fork: " <> condense pt
-    ChainDB.SwitchedToChain _ c     -> tr $ WithTip tip $
-      "Chain changed, new tip: " <> condense (AF.headPoint c)
+    ChainDB.AddedToCurrentChain _ _ c -> tr $ WithTip tip $
+      "Chain extended, new tip: " <> condense (AF.headPoint c)
+    ChainDB.SwitchedToAFork _ _ c -> tr $ WithTip tip $
+      "Switched to a fork, new tip: " <> condense (AF.headPoint c)
     ChainDB.AddBlockValidation ev' -> case ev' of
       ChainDB.InvalidBlock err pt -> tr $ WithTip tip $
         "Invalid block " <> condense pt <> ": " <> show err
@@ -642,8 +645,11 @@ instance (Condense (HeaderHash blk), ProtocolLedgerView blk)
     ChainDB.TrySwitchToAFork pt _ ->
       mkObject [ "kind" .= String "TraceAddBlockEvent.TrySwitchToAFork"
                , "block" .= toObject verb pt ]
-    ChainDB.SwitchedToChain _ c ->
-      mkObject [ "kind" .= String "TraceAddBlockEvent.SwitchedToChain"
+    ChainDB.AddedToCurrentChain _ _ c ->
+      mkObject [ "kind" .= String "TraceAddBlockEvent.AddedToCurrentChain"
+               , "newtip" .= showPoint verb (AF.headPoint c) ]
+    ChainDB.SwitchedToAFork _ _ c ->
+      mkObject [ "kind" .= String "TraceAddBlockEvent.SwitchedToAFork"
                , "newtip" .= showPoint verb (AF.headPoint c) ]
     ChainDB.AddBlockValidation ev' -> case ev' of
       ChainDB.InvalidBlock err pt ->

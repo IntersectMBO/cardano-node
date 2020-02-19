@@ -48,7 +48,8 @@ import           Control.Tracer (nullTracer, stdoutTracer, traceWith)
 import           Network.Mux (MuxError)
 import           Network.TypedProtocol.Driver (runPeer)
 import           Ouroboros.Consensus.Block (BlockProtocol)
-import           Ouroboros.Consensus.Ledger.Byron (ByronBlock, GenTx)
+import           Ouroboros.Consensus.Byron.Ledger (ByronBlock, GenTx)
+import qualified Ouroboros.Consensus.Cardano as Consensus
 import           Ouroboros.Consensus.Mempool.API (ApplyTxErr)
 import           Ouroboros.Consensus.NodeNetwork (ProtocolCodecs(..), protocolCodecs)
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
@@ -56,7 +57,6 @@ import           Ouroboros.Consensus.Node.NetworkProtocolVersion
 import           Ouroboros.Consensus.Node.ProtocolInfo (ProtocolInfo(..), protocolInfo)
 import           Ouroboros.Consensus.Node.Run
                    (RunNode(..))
-import qualified Ouroboros.Consensus.Protocol as Consensus
 import           Ouroboros.Consensus.Util.Condense (Condense(..))
 import           Ouroboros.Consensus.Util.IOLike (IOLike)
 import           Ouroboros.Network.Block
