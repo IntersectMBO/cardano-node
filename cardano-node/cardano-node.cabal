@@ -49,7 +49,6 @@ library
 
 
   other-modules:       Paths_cardano_node
-                       Cardano.Tracing.ToObjectOrphans
                        Cardano.Tracing.MicroBenchmarking
 
   build-depends:       aeson

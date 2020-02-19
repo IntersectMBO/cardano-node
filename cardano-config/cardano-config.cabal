@@ -21,6 +21,7 @@ library
                        Cardano.Config.Protocol
                        Cardano.Config.Topology
                        Cardano.Config.Types
+                       Cardano.Tracing.ToObjectOrphans
 
   build-depends:       base >=4.12 && <5
                      , aeson
@@ -42,6 +43,7 @@ library
                      , lobemo-backend-monitoring
                      , lobemo-scribe-systemd
                      , network
+                     , network-mux
                      , optparse-applicative
                      , ouroboros-consensus
                      , ouroboros-consensus-byron
