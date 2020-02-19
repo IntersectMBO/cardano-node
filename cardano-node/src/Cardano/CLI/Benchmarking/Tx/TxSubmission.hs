@@ -1,10 +1,14 @@
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeSynonymInstances #-}
 
 {-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Cardano.CLI.Benchmarking.Tx.TxSubmission
   ( ROEnv(..)
@@ -14,7 +18,7 @@ module Cardano.CLI.Benchmarking.Tx.TxSubmission
   ) where
 
 import           Prelude
-import           Cardano.Prelude (MonadIO, Word16, Seq, StateT,
+import           Cardano.Prelude (MonadIO, Word16, Seq, StateT, Text,
                                   evalStateT, gets, isJust, lift, modify,
                                   toList, unless, when)
 
@@ -24,11 +28,19 @@ import           Control.Monad.Class.MonadSTM (MonadSTM, TMVar, TVar,
                                                retry, takeTMVar, tryTakeTMVar)
 import           Control.Monad.Class.MonadTime (MonadTime(..), addTime, diffTime, Time)
 import           Control.Monad.Class.MonadTimer (MonadTimer, threadDelay)
+import           Data.Aeson (ToJSON (..), (.=), Value (..))
 import qualified Data.Sequence as Seq
 import qualified Data.Set as Set
+import qualified Data.Text as T
 import           Data.Time.Clock (DiffTime)
 
+import           Cardano.BM.Data.Tracer (DefinePrivacyAnnotation (..),
+                     DefineSeverity (..), ToObject (..), TracingFormatting (..),
+                     TracingVerbosity (..), Transformable (..),
+                     emptyObject, mkObject, nullTracer, trStructured)
+
 import           Control.Tracer (Tracer, traceWith)
+import           Ouroboros.Consensus.Ledger.Byron (ByronBlock (..))
 import qualified Ouroboros.Consensus.Mempool as Mempool
 import qualified Ouroboros.Network.Protocol.TxSubmission.Type as TxSubmit
 
@@ -354,3 +366,71 @@ data TraceBenchTxSubmit txid
   --   configured rate.
   | TraceBenchTxSubDebug String
   deriving (Show)
+
+instance ToJSON (Mempool.GenTxId ByronBlock) where
+  toJSON txId = String (T.pack $ show txId)
+
+instance ToObject (TraceBenchTxSubmit (Mempool.GenTxId ByronBlock)) where
+  toObject MinimalVerbosity _ = emptyObject -- do not log
+  toObject NormalVerbosity t =
+    case t of
+      TraceBenchTxSubRecv _      -> mkObject ["kind" .= String "TraceBenchTxSubRecv"]
+      TraceBenchTxSubStart _     -> mkObject ["kind" .= String "TraceBenchTxSubStart"]
+      TraceBenchTxSubServReq _   -> mkObject ["kind" .= String "TraceBenchTxSubServReq"]
+      TraceBenchTxSubServAck _   -> mkObject ["kind" .= String "TraceBenchTxSubServAck"]
+      TraceBenchTxSubIdle        -> mkObject ["kind" .= String "TraceBenchTxSubIdle"]
+      TraceBenchTxSubRateLimit _ -> mkObject ["kind" .= String "TraceBenchTxSubRateLimit"]
+      TraceBenchTxSubDebug _     -> mkObject ["kind" .= String "TraceBenchTxSubDebug"]
+  toObject MaximalVerbosity t =
+    case t of
+      TraceBenchTxSubRecv txIds ->
+        mkObject [ "kind"  .= String "TraceBenchTxSubRecv"
+                 , "txIds" .= toJSON txIds
+                 ]
+      TraceBenchTxSubStart txIds ->
+        mkObject [ "kind"  .= String "TraceBenchTxSubStart"
+                 , "txIds" .= toJSON txIds
+                 ]
+      TraceBenchTxSubServReq txIds ->
+        mkObject [ "kind"  .= String "TraceBenchTxSubServReq"
+                 , "txIds" .= toJSON txIds
+                 ]
+      TraceBenchTxSubServAck txIds ->
+        mkObject [ "kind"  .= String "TraceBenchTxSubServAck"
+                 , "txIds" .= toJSON txIds
+                 ]
+      TraceBenchTxSubIdle ->
+        mkObject [ "kind" .= String "TraceBenchTxSubIdle"
+                 ]
+      TraceBenchTxSubRateLimit limit ->
+        mkObject [ "kind"  .= String "TraceBenchTxSubRateLimit"
+                 , "limit" .= toJSON limit
+                 ]
+      TraceBenchTxSubDebug s ->
+        mkObject [ "kind" .= String "TraceBenchTxSubDebug"
+                 , "msg"  .= String (T.pack s)
+                 ]
+
+instance ToObject (Mempool.GenTxId ByronBlock) where
+  toObject MinimalVerbosity _    = emptyObject -- do not log
+  toObject NormalVerbosity _     = mkObject [ "kind" .= String "GenTxId"]
+  toObject MaximalVerbosity txId = mkObject [ "kind" .= String "GenTxId"
+                                            , "txId" .= toJSON txId
+                                            ]
+
+instance DefineSeverity (Mempool.GenTxId ByronBlock)
+
+instance DefinePrivacyAnnotation (Mempool.GenTxId ByronBlock)
+
+instance Transformable Text IO (Mempool.GenTxId ByronBlock) where
+  trTransformer StructuredLogging verb tr = trStructured verb tr
+  trTransformer _ _ _tr = nullTracer
+
+instance DefineSeverity (TraceBenchTxSubmit (Mempool.GenTxId ByronBlock))
+
+instance DefinePrivacyAnnotation (TraceBenchTxSubmit (Mempool.GenTxId ByronBlock))
+
+instance Transformable Text IO (TraceBenchTxSubmit (Mempool.GenTxId ByronBlock)) where
+  -- transform to JSON Object
+  trTransformer StructuredLogging verb tr = trStructured verb tr
+  trTransformer _ _verb _tr = nullTracer

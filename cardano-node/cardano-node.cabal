@@ -104,6 +104,7 @@ library
                      , tracer-transformers
                      , typed-protocols
                      , ouroboros-network-framework
+                     , unordered-containers
                      , utf8-string
                      , vector
                      , yaml
