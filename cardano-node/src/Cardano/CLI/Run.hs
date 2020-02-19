@@ -190,6 +190,7 @@ data ClientCommand
     (Maybe ExplorerAPIEnpoint)
     [SigningKeyFile]
    deriving Show
+
 runCommand :: ClientCommand -> ExceptT CliError IO ()
 runCommand (Genesis outDir params ptcl) = do
   gen <- mkGenesis params
@@ -375,8 +376,3 @@ ensureNewFile writer outFile blob = do
 
 ensureNewFileLBS :: FilePath -> LB.ByteString -> IO ()
 ensureNewFileLBS = ensureNewFile LB.writeFile
-
-getGenesisHash :: GenesisFile -> ExceptT CliError IO Text
-getGenesisHash genFile = do
-  (_, Genesis.GenesisHash gHash) <- readGenesis genFile
-  return $ F.sformat Crypto.hashHexF gHash

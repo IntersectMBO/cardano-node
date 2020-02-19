@@ -6,9 +6,8 @@
 module Cardano.CLI.Genesis
   ( NewDirectory(..)
   , GenesisParameters(..)
-  , mkGenesis
-  , readGenesis
   , dumpGenesis
+  , mkGenesis
   )
 where
 
@@ -17,8 +16,8 @@ import           Cardano.Prelude hiding (option, show, trace)
 import           Test.Cardano.Prelude (canonicalDecodePretty)
 
 import           Control.Monad.Trans.Except (ExceptT)
-import           Control.Monad.Trans.Except.Extra (hoistEither, firstExceptT,
-                                                   left, right)
+import           Control.Monad.Trans.Except.Extra
+                   (hoistEither,left, right)
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.Map.Strict as Map
 import           Data.String (IsString)
@@ -43,7 +42,6 @@ import qualified Cardano.Crypto as Crypto
 
 import           Cardano.CLI.Key
 import           Cardano.CLI.Ops
-import           Cardano.Config.Types (GenesisFile(..))
 
 
 newtype NewDirectory =
@@ -113,10 +111,6 @@ mkGenesis gp = do
 
   withExceptT GenesisGenerationError $
     Genesis.generateGenesisData (gpStartTime gp) genesisSpec
-
--- | Read genesis from a file.
-readGenesis :: GenesisFile -> ExceptT CliError IO (Genesis.GenesisData, Genesis.GenesisHash)
-readGenesis (GenesisFile fp) = firstExceptT (GenesisReadError fp) $ Genesis.readGenesisData fp
 
 -- | Write out genesis into a directory that must not yet exist.  An error is
 -- thrown if the directory already exists, or the genesis has delegate keys that

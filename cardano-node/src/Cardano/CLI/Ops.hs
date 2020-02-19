@@ -2,7 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -11,6 +11,9 @@
 
 module Cardano.CLI.Ops
   ( deserialiseDelegateKey
+  , getGenesisHash
+  , getLocalTip
+  , readGenesis
   , serialiseDelegationCert
   , serialiseDelegateKey
   , serialiseGenesis
@@ -22,29 +25,66 @@ module Cardano.CLI.Ops
   , TxGenError(..)
   ) where
 
-import qualified Prelude as Prelude
-import           Cardano.Prelude hiding (option)
+import           Prelude (show, unlines)
+import           Cardano.Prelude hiding (catch, option, show)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, left)
 import           Test.Cardano.Prelude (canonicalEncodePretty)
 
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.Text as T
+import qualified Formatting as F
 import qualified Text.JSON.Canonical as CanonicalJSON
 
-import           Cardano.Crypto (RequiresNetworkMagic, SigningKey (..))
 import           Cardano.Binary (DecoderError)
+import qualified Cardano.Chain.Genesis as Genesis
+import           Cardano.Crypto (RequiresNetworkMagic, SigningKey (..))
+import qualified Cardano.Crypto.Hashing as Crypto
+import qualified Cardano.Crypto.Signing as Crypto
 import           Codec.CBOR.Read (DeserialiseFailure, deserialiseFromBytes)
 import           Codec.CBOR.Write (toLazyByteString)
-import qualified Cardano.Crypto.Signing as Crypto
-import qualified Cardano.Chain.Genesis as Genesis
-import           Ouroboros.Consensus.Ledger.Byron (ByronBlock)
-import           Ouroboros.Consensus.Node.Run (RunNode)
+import           Control.Monad.Class.MonadTimer
+import           Control.Monad.Class.MonadThrow
+import           Control.Tracer (nullTracer, stdoutTracer, traceWith)
+import           Network.Mux (MuxError)
+import           Network.TypedProtocol.Driver (runPeer)
+import           Ouroboros.Consensus.Block (BlockProtocol)
+import           Ouroboros.Consensus.Ledger.Byron (ByronBlock, GenTx)
+import           Ouroboros.Consensus.Mempool.API (ApplyTxErr)
+import           Ouroboros.Consensus.NodeNetwork (ProtocolCodecs(..), protocolCodecs)
+import           Ouroboros.Consensus.Node.NetworkProtocolVersion
+                   (NodeToClientVersion, mostRecentNetworkProtocolVersion)
+import           Ouroboros.Consensus.Node.ProtocolInfo (ProtocolInfo(..), protocolInfo)
+import           Ouroboros.Consensus.Node.Run
+                   (RunNode(..))
 import qualified Ouroboros.Consensus.Protocol as Consensus
+import           Ouroboros.Consensus.Util.Condense (Condense(..))
+import           Ouroboros.Consensus.Util.IOLike (IOLike)
+import           Ouroboros.Network.Block
+import           Ouroboros.Network.Codec (Codec)
+import           Ouroboros.Network.Mux
+                   (AppType(InitiatorApp), OuroborosApplication(..))
+import           Ouroboros.Network.NodeToClient
+                 (NetworkConnectTracers(..), NodeToClientProtocols(..), NodeToClientVersionData(..)
+                 , NodeToClientVersion(NodeToClientV_1), connectTo, localTxSubmissionClientNull
+                 , nodeToClientCodecCBORTerm)
+import           Ouroboros.Network.Protocol.ChainSync.Client
+                   (ChainSyncClient(..), ClientStIdle(..), ClientStNext(..)
+                   , chainSyncClientPeer, recvMsgRollForward)
+import           Ouroboros.Network.Protocol.ChainSync.Type (ChainSync)
+import           Ouroboros.Network.Protocol.Handshake.Version
+                   (DictVersion(..), Versions, simpleSingletonVersions)
+import           Ouroboros.Network.Protocol.LocalTxSubmission.Type
+                   (LocalTxSubmission)
+import           Ouroboros.Network.Protocol.LocalTxSubmission.Client
+                   (localTxSubmissionClientPeer)
 
-import           Cardano.Config.Protocol ( Protocol(..), ProtocolInstantiationError
-                                         , SomeProtocol(..), fromProtocol)
+import           Cardano.Common.LocalSocket
+import           Cardano.Config.Protocol
+                   (Protocol(..), ProtocolInstantiationError
+                   , SomeProtocol(..), fromProtocol)
 import           Cardano.Config.Types
 import qualified Cardano.CLI.Legacy.Byron as Legacy
+
 
 
 deserialiseDelegateKey :: Protocol -> FilePath -> LB.ByteString -> Either CliError SigningKey
@@ -57,6 +97,15 @@ deserialiseDelegateKey RealPBFT fp delSkey =
     Left deSerFail -> Left $ SigningKeyDeserialisationFailed fp deSerFail
     Right (_, sKey) -> Right $ SigningKey sKey
 deserialiseDelegateKey ptcl _ _ = Left $ ProtocolNotSupported ptcl
+
+getGenesisHash :: GenesisFile -> ExceptT CliError IO Text
+getGenesisHash genFile = do
+  (_, Genesis.GenesisHash gHash) <- readGenesis genFile
+  return $ F.sformat Crypto.hashHexF gHash
+
+-- | Read genesis from a file.
+readGenesis :: GenesisFile -> ExceptT CliError IO (Genesis.GenesisData, Genesis.GenesisHash)
+readGenesis (GenesisFile fp) = firstExceptT (GenesisReadError fp) $ Genesis.readGenesisData fp
 
 serialiseDelegationCert :: CanonicalJSON.ToJSON Identity a => Protocol -> a -> Either CliError LB.ByteString
 serialiseDelegationCert ByronLegacy dlgCert = pure $ canonicalEncodePretty dlgCert
@@ -89,36 +138,30 @@ serialiseSigningKey ptcl _ = Left $ ProtocolNotSupported ptcl
 -- | Exception type for all errors thrown by the CLI.
 --   Well, almost all, since we don't rethrow the errors from readFile & such.
 data CliError
-  -- Basic user errors
-  = OutputMustNotAlreadyExist !FilePath
-  | ProtocolNotSupported !Protocol
-  | NotEnoughTxInputs
-  | NotEnoughTxOutputs
-  -- Validation errors
-  | CertificateValidationErrors !FilePath ![Text]
-  -- Serialization errors
-  | ProtocolParametersParseFailed !FilePath !Text
-  | GenesisReadError !FilePath !Genesis.GenesisDataError
-  | SigningKeyDeserialisationFailed !FilePath !DeserialiseFailure
-  | VerificationKeyDeserialisationFailed !FilePath !Text
-  | DlgCertificateDeserialisationFailed !FilePath !Text
-  | TxDeserialisationFailed !FilePath !DecoderError
-  -- TODO:  sadly, VerificationKeyParseError isn't exported from Cardano.Crypto.Signing/*
-  -- Inconsistencies
+  = CertificateValidationErrors !FilePath ![Text]
   | DelegationError !Genesis.GenesisDelegationError
-  | GenesisSpecError !Text
+  | DlgCertificateDeserialisationFailed !FilePath !Text
   | GenerateTxsError !RealPBFTError
   | GenesisGenerationError !Genesis.GenesisDataGenerationError
+  | GenesisReadError !FilePath !Genesis.GenesisDataError
+  | GenesisSpecError !Text
   | IssueUtxoError !RealPBFTError
   | NodeSubmitTxError !RealPBFTError
-  -- Invariants/assertions -- does it belong here?
+  | NotEnoughTxInputs
+  | NotEnoughTxOutputs
   | NoGenesisDelegationForKey !Text
-  -- File reading errors
-  | ReadVerificationKeyFailure !FilePath !Text
-  -- ^ An exception was encountered while trying to read
-  -- the verification key file.
+  | OutputMustNotAlreadyExist !FilePath
+  | ProtocolError ProtocolInstantiationError
+  | ProtocolNotSupported !Protocol
+  | ProtocolParametersParseFailed !FilePath !Text
   | ReadSigningKeyFailure !FilePath !Text
+  | ReadVerificationKeyFailure !FilePath !Text
+  | TxDeserialisationFailed !FilePath !DecoderError
+  -- TODO:  sadly, VerificationKeyParseError isn't exported from Cardano.Crypto.Signing/*
+  | SigningKeyDeserialisationFailed !FilePath !DeserialiseFailure
   | SpendGenesisUTxOError !RealPBFTError
+  | VerificationKeyDeserialisationFailed !FilePath !Text
+
 
 instance Show CliError where
   show (OutputMustNotAlreadyExist fp)
@@ -130,9 +173,11 @@ instance Show CliError where
   show (ProtocolNotSupported proto)
     = "Unsupported protocol "<> show proto
   show (CertificateValidationErrors fp errs)
-    = Prelude.unlines $
+    = unlines $
       "Errors while validating certificate '" <> fp <> "':":
       (("  " <>) . T.unpack <$> errs)
+  show (ProtocolError err)
+    = "Protocol Instantiation Error " <> show err
   show (ProtocolParametersParseFailed fp err)
     = "Protocol parameters file '" <> fp <> "' read failure: "<> T.unpack err
   show (GenesisReadError fp err)
@@ -148,17 +193,17 @@ instance Show CliError where
   show (DelegationError err)
     = "Error while issuing delegation: " <> show err
   show (GenerateTxsError err)
-    = "Error in GenerateTxs command: " <> (T.unpack $ show err)
+    = "Error in GenerateTxs command: " <> show err
   show (NodeSubmitTxError err)
-    = "Error in SubmitTx command: " <> (T.unpack $ show err)
+    = "Error in SubmitTx command: " <> show err
   show (SpendGenesisUTxOError err)
-    = "Error in SpendGenesisUTxO command: " <> (T.unpack $ show err)
+    = "Error in SpendGenesisUTxO command: " <> show err
   show (GenesisSpecError err)
     = "Error in genesis specification: " <> T.unpack err
   show (GenesisGenerationError err)
     = "Genesis generation failed in mkGenesis: " <> show err
   show (IssueUtxoError err)
-    = "Error SpendUTxO command: " <> (T.unpack $ show err)
+    = "Error SpendUTxO command: " <> show err
   show (NoGenesisDelegationForKey key)
     = "Newly-generated genesis doesn't delegate to operational key: " <> T.unpack key
   show (ReadVerificationKeyFailure fp expt)
@@ -221,3 +266,143 @@ withRealPBFT gHash genFile nMagic sigThresh delCertFp sKeyFp update ptcl action 
   case p of
     proto@Consensus.ProtocolRealPBFT{} -> action proto
     _ -> left $ IncorrectProtocolSpecified ptcl
+
+--------------------------------------------------------------------------------
+-- Query local node's chain tip
+--------------------------------------------------------------------------------
+
+getLocalTip
+  :: ConfigYamlFilePath
+  -> GenesisFile
+  -> SocketPath
+  -> IO ()
+getLocalTip configFp genFp sockPath = do
+  nc <- parseNodeConfigurationFP $ unConfigPath configFp
+
+  eGenHash <- runExceptT $ getGenesisHash genFp
+
+  genHash <- case eGenHash  of
+               Right gHash -> pure gHash
+               Left err -> do putTextLn . toS $ show err
+                              exitFailure
+
+  frmPtclRes <- runExceptT . firstExceptT ProtocolError
+                           $ fromProtocol
+                               genHash
+                               (ncNodeId nc)
+                               (ncNumCoreNodes nc)
+                               (Just genFp)
+                               (ncReqNetworkMagic nc)
+                               (ncPbftSignatureThresh nc)
+                               Nothing
+                               Nothing
+                               (ncUpdate nc)
+                               (ncProtocol nc)
+
+  SomeProtocol p <- case frmPtclRes of
+                        Right (SomeProtocol p) -> pure (SomeProtocol p)
+                        Left err -> do putTextLn . toS $ show err
+                                       exitFailure
+
+  createNodeConnection (Proxy) p sockPath
+
+
+createNodeConnection
+  :: forall blk . (Condense (HeaderHash blk), RunNode blk)
+  => Proxy blk
+  -> Consensus.Protocol blk
+  -> SocketPath
+  -> IO ()
+createNodeConnection proxy ptcl socketPath = do
+    addr <- localSocketAddrInfo socketPath
+    let ProtocolInfo{pInfoConfig} = protocolInfo ptcl
+    connectTo
+      (NetworkConnectTracers nullTracer nullTracer)
+      (localInitiatorNetworkApplication proxy pInfoConfig)
+      Nothing
+      addr
+    `catch` handleMuxError
+
+handleMuxError :: MuxError -> IO ()
+handleMuxError err = print err
+
+localInitiatorNetworkApplication
+  :: forall blk m peer.
+     ( RunNode blk
+     , Condense (HeaderHash blk)
+     , IOLike m
+     , MonadIO m
+     , MonadTimer m
+     )
+  => Proxy blk
+  -> Consensus.NodeConfig (BlockProtocol blk)
+  -> Versions NodeToClientVersion DictVersion
+              (OuroborosApplication 'InitiatorApp peer NodeToClientProtocols
+                                    m LB.ByteString () Void)
+localInitiatorNetworkApplication proxy pInfoConfig =
+    simpleSingletonVersions
+      NodeToClientV_1
+      (NodeToClientVersionData { networkMagic = nodeNetworkMagic proxy pInfoConfig })
+      (DictVersion nodeToClientCodecCBORTerm)
+
+  $ OuroborosInitiatorApplication $ \_peer ptcl -> case ptcl of
+      LocalTxSubmissionPtcl -> \channel ->
+        runPeer
+          nullTracer
+          localTxSubmissionCodec
+          channel
+          (localTxSubmissionClientPeer localTxSubmissionClientNull)
+
+      ChainSyncWithBlocksPtcl -> \channel ->
+        runPeer
+          nullTracer
+          localChainSyncCodec
+          channel
+          (chainSyncClientPeer chainSyncClient)
+ where
+  localChainSyncCodec :: Codec (ChainSync (Serialised blk) (Tip blk)) DeserialiseFailure m LB.ByteString
+  localChainSyncCodec = pcLocalChainSyncCodec . protocolCodecs pInfoConfig $ mostRecentNetworkProtocolVersion proxy
+
+  localTxSubmissionCodec :: Codec (LocalTxSubmission (GenTx blk) (ApplyTxErr blk)) DeserialiseFailure m LB.ByteString
+  localTxSubmissionCodec = pcLocalTxSubmissionCodec . protocolCodecs pInfoConfig $ mostRecentNetworkProtocolVersion proxy
+
+
+chainSyncClient
+  :: forall blk m . (Condense (HeaderHash blk), MonadIO m)
+  => ChainSyncClient (Serialised blk) (Tip blk) m ()
+chainSyncClient = ChainSyncClient $ pure $
+  SendMsgRequestNext
+    clientStNext
+    (pure $ ClientStNext
+              { recvMsgRollForward = \_ _ -> ChainSyncClient $ pure clientStIdle
+              , recvMsgRollBackward = \_ _ -> ChainSyncClient $ pure clientStIdle
+              }
+    )
+ where
+  clientStIdle :: ClientStIdle (Serialised blk) (Tip blk) m ()
+  clientStIdle =
+    SendMsgRequestNext clientStNext (pure clientStNext)
+  --TODO: we should be able to simply return the tip as the result with
+  -- SendMsgDone and collect this as the result of the overall protocol.
+  -- While currently we can have protocols return things, the current OuroborosApplication
+  -- stuff gets in the way of returning an overall result, but that's being worked on,
+  -- and this can be improved when that's ready.
+  clientStNext :: ClientStNext (Serialised blk) (Tip blk) m ()
+  clientStNext = ClientStNext
+    { recvMsgRollForward = \_blk tip -> ChainSyncClient $ do
+        traceWith stdoutTracer . toS $ getTipOutput tip
+        pure $ SendMsgDone ()
+    , recvMsgRollBackward = \_point tip -> ChainSyncClient $ do
+        traceWith stdoutTracer . toS $ getTipOutput tip
+        pure $ SendMsgDone ()
+    }
+
+  getTipOutput :: Tip blk -> Text
+  getTipOutput (TipGenesis) = "Current tip: genesis (origin)"
+  getTipOutput (Tip slotNo headerHash blkNo) =
+     T.pack $ unlines [ "\n"
+                      , "Current tip: "
+                      , "Block hash: " <> condense headerHash
+                      , "Slot: " <> condense slotNo
+                      , "Block number: " <> condense blkNo
+                      ]
