@@ -31,6 +31,7 @@ import           Cardano.BM.Data.LogItem (LOContent (..), LogObject (..),
                    mkLOMeta)
 import           Cardano.BM.Tracing
 import           Cardano.BM.Data.Tracer (trStructured, emptyObject, mkObject)
+import qualified Cardano.Chain.Block as Block
 
 import           Ouroboros.Consensus.Block (Header, headerPoint)
 import           Ouroboros.Consensus.BlockFetchServer
@@ -41,9 +42,17 @@ import           Ouroboros.Consensus.ChainSyncServer
                    (TraceChainSyncServerEvent(..))
 import           Ouroboros.Consensus.Ledger.SupportsProtocol
                    (LedgerSupportsProtocol)
+import           Ouroboros.Consensus.HeaderValidation
+import           Ouroboros.Consensus.Ledger.Abstract
+import qualified Ouroboros.Consensus.Protocol.BFT as BFT
+import qualified Ouroboros.Consensus.Protocol.PBFT as PBFT
+import           Ouroboros.Consensus.Ledger.Extended
 import           Ouroboros.Consensus.Mempool.API (GenTx, GenTxId,
                    HasTxId, TraceEventMempool (..), TxId, txId)
+import qualified Ouroboros.Consensus.Mock.Ledger as Mock
+import qualified Ouroboros.Consensus.Mock.Protocol.Praos as Praos
 import           Ouroboros.Consensus.Node.Tracers (TraceForgeEvent (..))
+import           Ouroboros.Consensus.Protocol.Abstract
 import           Ouroboros.Consensus.TxSubmission
                    (TraceLocalTxSubmissionServerEvent (..))
 import           Ouroboros.Consensus.Util.Condense
@@ -415,7 +424,14 @@ instance (Show (GenTxId blk), Show (GenTx blk))
 instance Transformable Text IO (TraceLocalTxSubmissionServerEvent blk) where
   trTransformer _ verb tr = trStructured verb tr
 
-instance (Condense (HeaderHash blk), Show (TxId tx), HasTxId tx, Show blk, Show tx, LedgerSupportsProtocol blk)
+instance ( Condense (HeaderHash blk)
+         , HasTxId tx
+         , LedgerSupportsProtocol blk
+         , Show blk
+         , Show tx
+         , Show (TxId tx)
+         , ToObject (LedgerError blk)
+         , ToObject (ValidationErr (BlockProtocol blk)))
            => Transformable Text IO (TraceForgeEvent blk tx) where
   trTransformer = defaultTextTransformer
 
@@ -919,7 +935,12 @@ instance ToObject (TraceLocalTxSubmissionServerEvent blk) where
   toObject _verb _ =
     mkObject [ "kind" .= String "TraceLocalTxSubmissionServerEvent" ]
 
-instance (HasTxId tx, LedgerSupportsProtocol blk, Condense (HeaderHash blk), Show (TxId tx))
+instance ( Condense (HeaderHash blk)
+         , HasTxId tx
+         , LedgerSupportsProtocol blk
+         , Show (TxId tx)
+         , ToObject (LedgerError blk)
+         , ToObject (ValidationErr (BlockProtocol blk)))
            => ToObject (TraceForgeEvent blk tx) where
   toObject MaximalVerbosity (TraceAdoptedBlock slotNo blk txs) =
     mkObject
@@ -957,10 +978,11 @@ instance (HasTxId tx, LedgerSupportsProtocol blk, Condense (HeaderHash blk), Sho
         [ "kind"    .= String "TraceForgedBlock"
         , "slot"    .= toJSON (unSlotNo slotNo)
         ]
-  toObject _verb (TraceForgedInvalidBlock slotNo _ _) =
+  toObject verb (TraceForgedInvalidBlock slotNo _ reason) =
     mkObject
         [ "kind"    .= String "TraceForgedInvalidBlock"
         , "slot"    .= toJSON (unSlotNo slotNo)
+        , "reason"  .= toObject verb reason
         ]
   toObject _verb (TraceNodeIsLeader slotNo) =
     mkObject
@@ -1015,3 +1037,205 @@ instance (Show (GenTx blk), Show (GenTxId blk))
         , "txsNoLongerValidRemoved" .= String (pack $ show $ txs1)
         , "mempoolSize" .= String (pack $ show $ mpSz)
         ]
+
+instance ( StandardHash blk
+         , ToObject (LedgerError blk)
+         , ToObject (ValidationErr (BlockProtocol blk)))
+      => ToObject (ChainDB.InvalidBlockReason blk) where
+  toObject verb (ChainDB.ValidationError extvalerr) =
+    mkObject
+        [ "kind"  .= String "ValidationError"
+        , "error" .= toObject verb extvalerr
+        ]
+  toObject verb (ChainDB.InChainAfterInvalidBlock point extvalerr) =
+    mkObject
+        [ "kind"  .= String "InChainAfterInvalidBlock"
+        , "point" .= String (pack $ show point)
+        , "error" .= toObject verb extvalerr
+        ]
+
+instance ( StandardHash blk
+         , ToObject (LedgerError blk)
+         , ToObject (ValidationErr (BlockProtocol blk))
+         )
+      => ToObject (ExtValidationError blk) where
+  toObject verb (ExtValidationErrorLedger err) = toObject verb err
+  toObject verb (ExtValidationErrorHeader err) = toObject verb err
+
+instance ( StandardHash blk
+         , ToObject (ValidationErr (BlockProtocol blk)))
+      => ToObject (HeaderError blk) where
+  toObject verb (HeaderProtocolError err) =
+    mkObject
+        [ "kind"  .= String "HeaderProtocolError"
+        , "error" .= toObject verb err
+        ]
+  toObject verb (HeaderEnvelopeError err) =
+    mkObject
+        [ "kind"  .= String "HeaderEnvelopeError"
+        , "error" .= toObject verb err
+        ]
+
+instance (StandardHash blk)
+ => ToObject (HeaderEnvelopeError blk) where
+  toObject _verb (UnexpectedBlockNo expect act) =
+    mkObject
+        [ "kind"     .= String "UnexpectedBlockNo"
+        , "expected" .= condense expect
+        , "actual"   .= condense act
+        ]
+  toObject _verb (UnexpectedSlotNo expect act) =
+    mkObject
+        [ "kind"  .= String "UnexpectedSlotNo"
+        , "expected" .= condense expect
+        , "actual"   .= condense act
+        ]
+  toObject _verb (UnexpectedPrevHash expect act) =
+    mkObject
+        [ "kind"  .= String "UnexpectedPrevHash"
+        , "expected" .= String (pack $ show expect)
+        , "actual"   .= String (pack $ show act)
+        ]
+  toObject _verb (OtherEnvelopeError text) =
+    mkObject
+        [ "kind"  .= String "OtherEnvelopeError"
+        , "error" .= String text
+        ]
+
+instance StandardHash blk => ToObject (Mock.MockError blk) where
+  toObject _verb (Mock.MockUtxoError e) =
+    mkObject
+        [ "kind"  .= String "MockUtxoError"
+        , "error" .= String (pack $ show e)
+        ]
+  toObject _verb (Mock.MockInvalidHash expect act) =
+    mkObject
+        [ "kind"  .= String "MockInvalidHash"
+        , "expected" .= String (pack $ show expect)
+        , "actual"   .= String (pack $ show act)
+        ]
+
+instance (Show (PBFT.PBftVerKeyHash c))
+ => ToObject (PBFT.PBftValidationErr c) where
+  toObject _verb (PBFT.PBftInvalidSignature text) =
+    mkObject
+        [ "kind"  .= String "PBftInvalidSignature"
+        , "error" .= String text
+        ]
+  toObject _verb (PBFT.PBftNotGenesisDelegate vkhash _ledgerView) =
+    mkObject
+        [ "kind"  .= String "PBftNotGenesisDelegate"
+        , "vk"    .= String (pack $ show vkhash)
+        ]
+  toObject _verb (PBFT.PBftExceededSignThreshold vkhash n) =
+    mkObject
+        [ "kind"  .= String "PBftExceededSignThreshold"
+        , "vk"    .= String (pack $ show vkhash)
+        , "n"     .= String (pack $ show n)
+        ]
+  toObject _verb PBFT.PBftInvalidSlot =
+    mkObject
+        [ "kind"  .= String "PBftInvalidSlot"
+        ]
+
+instance ToObject BFT.BftValidationErr where
+  toObject _verb (BFT.BftInvalidSignature err) =
+    mkObject
+        [ "kind"  .= String "BftInvalidSignature"
+        , "error" .= String (pack err)
+        ]
+
+instance ToObject (Praos.PraosValidationError c) where
+  toObject _verb (Praos.PraosInvalidSlot expect act) =
+    mkObject
+        [ "kind"  .= String "PraosInvalidSlot"
+        , "expected" .= String (pack $ show expect)
+        , "actual"   .= String (pack $ show act)
+        ]
+  toObject _verb (Praos.PraosUnknownCoreId cid) =
+    mkObject
+        [ "kind"  .= String "PraosUnknownCoreId"
+        , "error" .= String (pack $ show cid)
+        ]
+  toObject _verb (Praos.PraosInvalidSig str _ _ _) =
+    mkObject
+        [ "kind"  .= String "PraosInvalidSig"
+        , "error" .= String (pack str)
+        ]
+  toObject _verb (Praos.PraosInvalidCert _vkvrf y nat _vrf) =
+    mkObject
+        [ "kind"  .= String "PraosInvalidCert"
+        , "y"     .= String (pack $ show y)
+        , "nat"   .= String (pack $ show nat)
+        ]
+  toObject _verb (Praos.PraosInsufficientStake t y) =
+    mkObject
+        [ "kind"  .= String "PraosInsufficientStake"
+        , "t"     .= String (pack $ show t)
+        , "y"     .= String (pack $ show y)
+        ]
+
+instance ToObject Block.ChainValidationError where
+  toObject _verb Block.ChainValidationBoundaryTooLarge =
+    mkObject
+        [ "kind"  .= String "ChainValidationBoundaryTooLarge" ]
+  toObject _verb Block.ChainValidationBlockAttributesTooLarge =
+    mkObject
+        [ "kind"  .= String "ChainValidationBlockAttributesTooLarge" ]
+  toObject _verb (Block.ChainValidationBlockTooLarge _ _) =
+    mkObject
+        [ "kind"  .= String "ChainValidationBlockTooLarge" ]
+  toObject _verb Block.ChainValidationHeaderAttributesTooLarge =
+    mkObject
+        [ "kind"  .= String "ChainValidationHeaderAttributesTooLarge" ]
+  toObject _verb (Block.ChainValidationHeaderTooLarge _ _) =
+    mkObject
+        [ "kind"  .= String "ChainValidationHeaderTooLarge" ]
+  toObject _verb (Block.ChainValidationDelegationPayloadError err) =
+    mkObject
+        [ "kind"  .= String err ]
+  toObject _verb (Block.ChainValidationInvalidDelegation _ _) =
+    mkObject
+        [ "kind"  .= String "ChainValidationInvalidDelegation" ]
+  toObject _verb (Block.ChainValidationGenesisHashMismatch _ _) =
+    mkObject
+        [ "kind"  .= String "ChainValidationGenesisHashMismatch" ]
+  toObject _verb (Block.ChainValidationExpectedGenesisHash _ _) =
+    mkObject
+        [ "kind"  .= String "ChainValidationExpectedGenesisHash" ]
+  toObject _verb (Block.ChainValidationExpectedHeaderHash _ _) =
+    mkObject
+        [ "kind"  .= String "ChainValidationExpectedHeaderHash" ]
+  toObject _verb (Block.ChainValidationInvalidHash _ _) =
+    mkObject
+        [ "kind"  .= String "ChainValidationInvalidHash" ]
+  toObject _verb (Block.ChainValidationMissingHash _) =
+    mkObject
+        [ "kind"  .= String "ChainValidationMissingHash" ]
+  toObject _verb (Block.ChainValidationUnexpectedGenesisHash _) =
+    mkObject
+        [ "kind"  .= String "ChainValidationUnexpectedGenesisHash" ]
+  toObject _verb (Block.ChainValidationInvalidSignature _) =
+    mkObject
+        [ "kind"  .= String "ChainValidationInvalidSignature" ]
+  toObject _verb (Block.ChainValidationDelegationSchedulingError _) =
+    mkObject
+        [ "kind"  .= String "ChainValidationDelegationSchedulingError" ]
+  toObject _verb (Block.ChainValidationProtocolMagicMismatch _ _) =
+    mkObject
+        [ "kind"  .= String "ChainValidationProtocolMagicMismatch" ]
+  toObject _verb Block.ChainValidationSignatureLight =
+    mkObject
+        [ "kind"  .= String "ChainValidationSignatureLight" ]
+  toObject _verb (Block.ChainValidationTooManyDelegations _) =
+    mkObject
+        [ "kind"  .= String "ChainValidationTooManyDelegations" ]
+  toObject _verb (Block.ChainValidationUpdateError _ _) =
+    mkObject
+        [ "kind"  .= String "ChainValidationUpdateError" ]
+  toObject _verb (Block.ChainValidationUTxOValidationError _) =
+    mkObject
+        [ "kind"  .= String "ChainValidationUTxOValidationError" ]
+  toObject _verb (Block.ChainValidationProofValidationError _) =
+    mkObject
+        [ "kind"  .= String "ChainValidationProofValidationError" ]

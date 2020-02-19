@@ -48,6 +48,7 @@ library
                      , ouroboros-consensus
                      , ouroboros-consensus-byron
                      , ouroboros-consensus-cardano
+                     , ouroboros-consensus-mock
                      , ouroboros-network
                      , process
                      , iproute
@@ -59,6 +60,7 @@ library
                      , text
                      , transformers
                      , transformers-except
+                     , typed-protocols
                      , yaml
 
   default-language:    Haskell2010
