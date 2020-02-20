@@ -31,7 +31,7 @@ import           Cardano.BM.Data.LogItem (LOContent (..), LogObject (..),
 import           Cardano.BM.Tracing
 import           Cardano.BM.Data.Tracer (trStructured, emptyObject, mkObject)
 
-import           Ouroboros.Consensus.Block (SupportedBlock, headerPoint)
+import           Ouroboros.Consensus.Block (Header, SupportedBlock, headerPoint)
 import           Ouroboros.Consensus.BlockFetchServer
                    (TraceBlockFetchServerEvent)
 import           Ouroboros.Consensus.ChainSyncClient
@@ -237,6 +237,14 @@ defaultTextTransformer TextualRepresentation _verb tr =
       <*> pure (LogMessage $ pack $ show s)
 defaultTextTransformer _ verb tr =
   trStructured verb tr
+
+instance ( DefinePrivacyAnnotation (ChainDB.TraceAddBlockEvent blk)
+         , DefineSeverity (ChainDB.TraceAddBlockEvent blk)
+         , ProtocolLedgerView blk
+         , Show (Ouroboros.Consensus.Block.Header blk)
+         , ToObject (ChainDB.TraceAddBlockEvent blk))
+ => Transformable Text IO (ChainDB.TraceAddBlockEvent blk) where
+   trTransformer = defaultTextTransformer
 
 instance DefineSeverity (ChainDB.TraceEvent blk) where
   defineSeverity (ChainDB.TraceAddBlockEvent ev) = case ev of
