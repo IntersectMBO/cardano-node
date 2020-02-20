@@ -17,7 +17,7 @@ import           Test.Cardano.Prelude (canonicalDecodePretty)
 
 import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra
-                   (hoistEither,left, right)
+                   (hoistEither, left, right)
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.Map.Strict as Map
 import           Data.String (IsString)

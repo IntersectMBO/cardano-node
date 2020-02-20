@@ -7,6 +7,7 @@ module Cardano.CLI.Parsers
   , parseGenesisParameters
   , parseGenesisRelatedValues
   , parseKeyRelatedValues
+  , parseLocalNodeQueryValues
   , parseRequiresNetworkMagic
   , parseTxRelatedValues
   ) where
@@ -29,18 +30,21 @@ import           Cardano.CLI.Run
 import           Cardano.Common.Parsers
 
 import           Cardano.Binary (Annotated(..))
-import           Cardano.Chain.Common ( Address(..), BlockCount(..), Lovelace
-                                      , NetworkMagic(..), decodeAddressBase58
-                                      , mkLovelace, rationalToLovelacePortion)
+import           Cardano.Chain.Common
+                   (Address(..), BlockCount(..), Lovelace
+                   , NetworkMagic(..), decodeAddressBase58
+                   , mkLovelace, rationalToLovelacePortion)
 import           Cardano.Chain.Genesis (FakeAvvmOptions(..), TestnetBalanceOptions(..))
 import           Cardano.Chain.Slotting (EpochNumber(..))
 import           Cardano.Chain.UTxO (TxId, TxIn(..), TxOut(..))
 import           Cardano.Config.CommonCLI
-import           Cardano.Config.Types ( DelegationCertFile(..), GenesisFile(..)
-                                      , NodeAddress(..), NodeHostAddress(..), SigningKeyFile(..))
+import           Cardano.Config.Types
+                   (ConfigYamlFilePath(..), DelegationCertFile(..), GenesisFile(..)
+                   , NodeAddress(..), NodeHostAddress(..), SigningKeyFile(..))
 import           Cardano.Crypto (RequiresNetworkMagic(..), decodeHash)
-import           Cardano.Crypto.ProtocolMagic ( AProtocolMagic(..), ProtocolMagic
-                                              , ProtocolMagicId(..))
+import           Cardano.Crypto.ProtocolMagic
+                   (AProtocolMagic(..), ProtocolMagic
+                   , ProtocolMagicId(..))
 
 
 -- | See the rationale for cliParseBase58Address.
@@ -289,6 +293,17 @@ parseKeyRelatedValues =
                 <*> parseSigningKeyFile "from" "Signing key file to migrate."
                 <*> parseProtocol -- New protocol
                 <*> parseNewSigningKeyFile "to"
+        ]
+parseLocalNodeQueryValues :: Parser ClientCommand
+parseLocalNodeQueryValues =
+  subparser $ mconcat
+        [ commandGroup "Local node related commands"
+        , metavar "Local node related commands"
+        , command' "get-tip" "Get the tip of your local node's blockchain"
+            $ GetLocalNodeTip
+                <$> (ConfigYamlFilePath <$> parseConfigFile)
+                <*> parseGenesisFile "genesis-json"
+                <*> parseSocketPath "Socket of target node"
         ]
 
 parseLovelace :: String -> String -> Parser Lovelace

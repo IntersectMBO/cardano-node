@@ -61,22 +61,19 @@ import           Cardano.CLI.Key
 import           Cardano.CLI.Ops
 import           Cardano.CLI.Tx
 import           Cardano.CLI.Benchmarking.Tx.Generation
-                   ( ExplorerAPIEnpoint (..)
-                   , NumberOfTxs (..)
-                   , NumberOfInputsPerTx (..)
-                   , NumberOfOutputsPerTx (..)
-                   , FeePerTx (..), TPSRate (..)
-                   , TxAdditionalSize (..)
-                   , genesisBenchmarkRunner
-                   )
+                   (ExplorerAPIEnpoint (..), NumberOfTxs (..)
+                   , NumberOfInputsPerTx (..), NumberOfOutputsPerTx (..)
+                   , FeePerTx (..), TPSRate (..), TxAdditionalSize (..)
+                   , genesisBenchmarkRunner)
 import           Cardano.Common.Orphans ()
 import           Cardano.Config.Protocol
 import           Cardano.Config.Logging (createLoggingFeatureCLI)
-import           Cardano.Config.Types ( CardanoEnvironment(..), DelegationCertFile(..)
-                                      , GenesisFile(..), LastKnownBlockVersion(..)
-                                      , NodeAddress(..), NodeConfiguration(..)
-                                      , SigningKeyFile(..), SocketPath(..), Update(..)
-                                      , parseNodeConfigurationFP)
+import           Cardano.Config.Types
+                   (CardanoEnvironment(..), ConfigYamlFilePath(..)
+                   , DelegationCertFile(..), GenesisFile(..)
+                   , LastKnownBlockVersion(..), NodeAddress(..)
+                   , NodeConfiguration(..), SigningKeyFile(..)
+                   , SocketPath(..), Update(..), parseNodeConfigurationFP)
 
 -- | Sub-commands of 'cardano-cli'.
 data ClientCommand
@@ -138,6 +135,11 @@ data ClientCommand
     VerificationKeyFile
     VerificationKeyFile
 
+  | GetLocalNodeTip
+    ConfigYamlFilePath
+    GenesisFile
+    SocketPath
+
     -----------------------------------
 
   | SubmitTx
@@ -196,9 +198,13 @@ runCommand (Genesis outDir params ptcl) = do
   gen <- mkGenesis params
   dumpGenesis ptcl outDir `uncurry` gen
 
+runCommand (GetLocalNodeTip configFp gFile sockPath) = do
+  liftIO $ getLocalTip configFp gFile sockPath
+
 runCommand (PrettySigningKeyPublic ptcl skF) = do
   sK <- readSigningKey ptcl skF
   liftIO . putTextLn . prettyPublicKey $ Crypto.toVerification sK
+
 runCommand (MigrateDelegateKeyFrom oldPtcl oldKey newPtcl (NewSigningKeyFile newKey)) = do
   sk <- readSigningKey oldPtcl oldKey
   sDk <- hoistEither $ serialiseDelegateKey newPtcl sk
