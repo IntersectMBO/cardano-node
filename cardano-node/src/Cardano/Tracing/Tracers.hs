@@ -190,8 +190,9 @@ mkTracers traceOptions tracer = do
     { chainDBTracer
         = tracerOnOff (traceChainDB traceOptions)
           $ annotateSeverity
-          $ teeTraceChainTip StructuredLogging tracingVerbosity elided
-          $ addName "ChainDB" tracer
+          $ teeTraceChainTip tracingVerbosity elided
+          $ addName "ChainDB"
+          $ tracer
     , consensusTracers
         = mkConsensusTracers forgeTracers traceOptions
     , protocolTracers
@@ -230,14 +231,14 @@ mkTracers traceOptions tracer = do
     tracingVerbosity :: TracingVerbosity
     tracingVerbosity = traceVerbosity traceOptions
 
-    teeTraceChainTip :: TracingFormatting
-                     -> TracingVerbosity
+    teeTraceChainTip :: TracingVerbosity
                      -> MVar (Maybe (WithSeverity (WithTip blk (ChainDB.TraceEvent blk))), Int)
                      -> Tracer IO (LogObject Text)
                      -> Tracer IO (WithSeverity (WithTip blk (ChainDB.TraceEvent blk)))
-    teeTraceChainTip tform tverb elided tr = Tracer $ \ev -> do
+    teeTraceChainTip tverb elided tr = Tracer $ \ev -> do
         traceWith (teeTraceChainTip' tr) ev
-        traceWith (teeTraceChainTipElide tform tverb elided tr) ev
+        traceWith (teeTraceChainTipElide StructuredLogging     tverb elided tr) ev
+        traceWith (teeTraceChainTipElide TextualRepresentation tverb elided (addName "text" tr)) ev
     teeTraceChainTipElide :: TracingFormatting
                           -> TracingVerbosity
                           -> MVar (Maybe (WithSeverity (WithTip blk (ChainDB.TraceEvent blk))), Int)
@@ -314,12 +315,12 @@ mkTracers traceOptions tracer = do
     mempoolTracer = Tracer $ \ev -> do
         traceWith (mempoolMetricsTraceTransformer tracer) ev
         traceWith (measureTxsStart tracer) ev
-        traceWith mpTracer ev
+        let tr = addName "Mempool" tracer
+        traceWith (mpTracer StructuredLogging     tr) ev
+        traceWith (mpTracer TextualRepresentation (addName "text" tr)) ev
       where
-        mpTracer :: Tracer IO (TraceEventMempool blk)
-        mpTracer = annotateSeverity
-          $ toLogObject' StructuredLogging tracingVerbosity
-          $ addName "Mempool" tracer
+        mpTracer :: TracingFormatting -> Tracer IO (LogObject Text) -> Tracer IO (TraceEventMempool blk)
+        mpTracer fmt tr = annotateSeverity $ toLogObject' fmt tracingVerbosity tr
 
     forgeTracer
         :: ForgeTracers
@@ -334,16 +335,15 @@ mkTracers traceOptions tracer = do
         -- The consensus tracer.
         consensusForgeTracer = tracerOnOff (traceForge traceOpts)
           $ annotateSeverity
-          $ teeForge forgeTracers StructuredLogging tracingVerbosity
+          $ teeForge forgeTracers tracingVerbosity
           $ addName "Forge" tracer
 
     teeForge
       :: ForgeTracers
-      -> TracingFormatting
       -> TracingVerbosity
       -> Trace IO Text
       -> Tracer IO (WithSeverity (Consensus.TraceForgeEvent blk (GenTx blk)))
-    teeForge ft tform tverb tr = Tracer $ \ev -> do
+    teeForge ft tverb tr = Tracer $ \ev -> do
       traceWith (teeForge' tr) ev
       flip traceWith ev $ fanning $ \(WithSeverity _ e) ->
         case e of
@@ -359,7 +359,8 @@ mkTracers traceOptions tracer = do
           Consensus.TraceSlotIsImmutable{} -> teeForge' (ftTraceSlotIsImmutable ft)
           Consensus.TraceNodeIsLeader{} -> teeForge' (ftTraceNodeIsLeader ft)
 
-      traceWith (toLogObject' tform tverb tr) ev
+      traceWith (toLogObject' StructuredLogging     tverb tr) ev
+      traceWith (toLogObject' TextualRepresentation tverb (addName "text" tr)) ev
 
     teeForge'
       :: Trace IO Text
