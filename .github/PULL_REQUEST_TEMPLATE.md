@@ -3,11 +3,11 @@ Issue
 
 -
 
-checklist
+- This PR **results**/**does not result** in breaking changes to upstream dependencies.
+
+Checklist
 ---------
 - [ ] This PR contains all the work required to resolve the linked issue.
-
-- [ ] This PR results in breaking changes to upstream dependencies.
 
 - [ ] The work contained has sufficient documentation to describe what it does and how to do it.
 
