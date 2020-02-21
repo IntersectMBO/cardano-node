@@ -27,17 +27,22 @@ setupScribes:
     scName: stdout
     scFormat: ScText
     scRotation: null
+  # for output to 'journald' add this scribe:
+  # - scKind: JournalSK
+  #   scName: "cardano"
+  #   scFormat: ScText
 
 # if not indicated otherwise, then log output is directed to this:
 defaultScribes:
   - - StdoutSK
     - stdout
-# for output to 'journald' add this scribe:
-#  - - JournalSK
-#    - cardano
 
 # more options which can be passed as key-value pairs:
 options:
+  # for output to 'journald', map these TextualRepresentation traces:
+  # mapScribes:
+  #   cardano.node.text:
+  #     - JournalSK::cardano
   mapSubtrace:
     benchmark:
       contents:
