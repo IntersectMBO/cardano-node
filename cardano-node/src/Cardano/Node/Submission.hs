@@ -45,7 +45,8 @@ import           Ouroboros.Network.Protocol.ChainSync.Client (chainSyncClientPee
 import           Ouroboros.Network.Protocol.ChainSync.Codec (codecChainSync)
 import           Ouroboros.Network.Protocol.Handshake.Version ( Versions
                                                               , simpleSingletonVersions)
-import           Ouroboros.Network.NodeToClient (NetworkConnectTracers (..))
+import           Ouroboros.Network.NodeToClient ( AssociateWithIOCP
+                                                , NetworkConnectTracers (..))
 import qualified Ouroboros.Network.NodeToClient as NodeToClient
 import           Ouroboros.Network.Snocket (socketSnocket)
 
@@ -102,12 +103,13 @@ instance (MonadIO m) => Transformable Text m TraceLowLevelSubmit where
 submitTx :: ( RunNode blk
             , Show (ApplyTxErr blk)
             )
-         => SocketPath
+         => AssociateWithIOCP
+         -> SocketPath
          -> NodeConfig (BlockProtocol blk)
          -> GenTx blk
          -> Tracer IO TraceLowLevelSubmit
          -> IO ()
-submitTx targetSocketFp protoInfoConfig tx tracer = NodeToClient.withIOManager $ \iocp -> do
+submitTx iocp targetSocketFp protoInfoConfig tx tracer = do
     targetSocketFp' <- localSocketPath targetSocketFp
     NodeToClient.connectTo
       (socketSnocket iocp)

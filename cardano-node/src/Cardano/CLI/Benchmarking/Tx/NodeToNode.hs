@@ -51,6 +51,9 @@ import           Ouroboros.Consensus.Protocol.Abstract (NodeConfig)
 import           Ouroboros.Network.Mux (OuroborosApplication(..))
 import           Ouroboros.Network.NodeToNode (NetworkConnectTracers (..))
 import qualified Ouroboros.Network.NodeToNode as NtN
+-- TODO: #1685 (ouroboros-network) IO manager terms and types should be exported
+-- from NodeToNode module as well.
+import           Ouroboros.Network.NodeToClient (AssociateWithIOCP)
 import           Ouroboros.Network.Protocol.BlockFetch.Client (BlockFetchClient(..), blockFetchClientPeer)
 import           Ouroboros.Network.Protocol.ChainSync.Client (chainSyncClientNull, chainSyncClientPeer)
 import           Ouroboros.Network.Protocol.Handshake.Type (Handshake)
@@ -58,7 +61,6 @@ import           Ouroboros.Network.Protocol.Handshake.Version (Versions, simpleS
 import           Ouroboros.Network.Protocol.TxSubmission.Client (TxSubmissionClient, txSubmissionClientPeer)
 import qualified Ouroboros.Network.Protocol.TxSubmission.Type as TS
 import           Ouroboros.Network.Snocket (socketSnocket)
-import           Ouroboros.Network.IOManager (withIOManager)
 
 type SendRecvConnect = WithMuxBearer
                          NtN.RemoteConnectionId
@@ -192,7 +194,8 @@ data BenchmarkTxSubmitTracers m blk = BenchmarkTracers
 
 benchmarkConnectTxSubmit
   :: forall m blk . (RunNode blk, m ~ IO)
-  => BenchmarkTxSubmitTracers m blk
+  => AssociateWithIOCP
+  -> BenchmarkTxSubmitTracers m blk
   -- ^ For tracing the send/receive actions
   -> NodeConfig (BlockProtocol blk)
   -- ^ The particular block protocol
@@ -203,7 +206,7 @@ benchmarkConnectTxSubmit
   -> TxSubmissionClient (GenTxId blk) (GenTx blk) m ()
   -- ^ the particular txSubmission peer
   -> m ()
-benchmarkConnectTxSubmit trs nc localAddr remoteAddr myTxSubClient = withIOManager $ \iocp -> do
+benchmarkConnectTxSubmit iocp trs nc localAddr remoteAddr myTxSubClient = do
   NtN.connectTo
     (socketSnocket iocp)
     NetworkConnectTracers {

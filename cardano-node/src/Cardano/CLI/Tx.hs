@@ -48,6 +48,8 @@ import           Cardano.Crypto (SigningKey(..), ProtocolMagicId, RequiresNetwor
 import qualified Cardano.Crypto.Hashing as Crypto
 import qualified Cardano.Crypto.Signing as Crypto
 
+import           Ouroboros.Network.NodeToClient (AssociateWithIOCP)
+
 import qualified Ouroboros.Consensus.Byron.Ledger as Byron
 import           Ouroboros.Consensus.Byron.Ledger (GenTx(..), ByronBlock)
 import qualified Ouroboros.Consensus.Cardano as Consensus
@@ -246,7 +248,8 @@ issueUTxOExpenditure
 
 -- | Submit a transaction to a node specified by topology info.
 nodeSubmitTx
-  :: Text
+  :: AssociateWithIOCP
+  -> Text
   -- ^ Genesis hash.
   -> Maybe Int
   -- ^ Number of core nodes.
@@ -261,6 +264,7 @@ nodeSubmitTx
   -> GenTx ByronBlock
   -> ExceptT RealPBFTError IO ()
 nodeSubmitTx
+  iocp
   gHash
   _mNumCoreNodes
   genFile
@@ -276,7 +280,7 @@ nodeSubmitTx
       \p@Consensus.ProtocolRealPBFT{} -> liftIO $ do
         -- TODO: Update submitGenTx to use `ExceptT`
         traceWith stdoutTracer ("TxId: " ++ condense (Consensus.txId gentx))
-        submitTx targetSocketFp
+        submitTx iocp targetSocketFp
                  (pInfoConfig (Consensus.protocolInfo p))
                  gentx
                  nullTracer -- stdoutTracer

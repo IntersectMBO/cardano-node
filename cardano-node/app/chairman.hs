@@ -15,6 +15,7 @@ import           Control.Monad.Trans.Except.Extra (runExceptT)
 import           Control.Tracer (stdoutTracer)
 
 import           Ouroboros.Network.Block (BlockNo)
+import           Ouroboros.Network.NodeToClient (withIOManager)
 import           Ouroboros.Consensus.Protocol.Abstract (SecurityParam (..))
 
 import           Cardano.Config.CommonCLI
@@ -27,7 +28,7 @@ import           Cardano.Common.Parsers
 import           Cardano.Chairman (runChairman)
 
 main :: IO ()
-main = do
+main = withIOManager $ \iocp -> do
     ChairmanArgs { caSecurityParam
                  , caMaxBlockNo
                  , caTimeout
@@ -58,7 +59,8 @@ main = do
                         Left err -> do putTextLn $ renderPtclInstantiationErr err
                                        exitFailure
 
-    let run = runChairman p
+    let run = runChairman iocp
+                          p
                           caSecurityParam
                           caMaxBlockNo
                           caSocketPaths

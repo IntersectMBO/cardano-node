@@ -74,7 +74,8 @@ runChairman :: forall blk.
                ( RunNode blk
                , TraceConstraints blk
                )
-            => Protocol blk
+            => AssociateWithIOCP
+            -> Protocol blk
             -> SecurityParam
             -- ^ security parameter, if a fork is deeper than it 'runChairman'
             -- will throw an exception.
@@ -84,7 +85,7 @@ runChairman :: forall blk.
             -- ^ local socket dir
             -> Tracer IO String
             -> IO ()
-runChairman ptcl securityParam maxBlockNo socketPaths tracer = do
+runChairman iocp ptcl securityParam maxBlockNo socketPaths tracer = do
 
     (chainsVar :: ChainsVar IO blk) <- newTVarM
       (Map.fromList $ map (\socketPath -> (socketPath, AF.Empty AF.AnchorGenesis)) socketPaths)
@@ -98,6 +99,7 @@ runChairman ptcl securityParam maxBlockNo socketPaths tracer = do
              maxBlockNo
              tracer
              pInfoConfig
+             iocp
              sockPath
 
 -- catch 'MuxError'; it will be thrown if a node shuts down closing the
@@ -124,6 +126,7 @@ createConnection
   -> Maybe BlockNo
   -> Tracer IO String
   -> NodeConfig (BlockProtocol blk)
+  -> AssociateWithIOCP
   -> SocketPath
   -> IO ()
 createConnection
@@ -132,7 +135,8 @@ createConnection
   maxBlockNo
   tracer
   pInfoConfig
-  socketPath = withIOManager $ \iocp -> do
+  iocp
+  socketPath = do
       path <- localSocketPath socketPath
       connectTo
         (socketSnocket iocp)

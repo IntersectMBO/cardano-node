@@ -83,6 +83,8 @@ import           Cardano.CLI.Benchmarking.Tx.NodeToNode (BenchmarkTxSubmitTracer
 import           Cardano.Node.TxSubClient
 import           Control.Tracer (Tracer, traceWith)
 
+import           Ouroboros.Network.NodeToClient (AssociateWithIOCP)
+
 import           Ouroboros.Consensus.Node.Run (RunNode)
 import           Ouroboros.Consensus.Block(BlockProtocol)
 import           Ouroboros.Consensus.Node.ProtocolInfo (ProtocolInfo (..))
@@ -143,6 +145,7 @@ newtype ExplorerAPIEnpoint =
 -----------------------------------------------------------------------------------------
 genesisBenchmarkRunner
   :: LoggingLayer
+  -> AssociateWithIOCP
   -> SocketPath
   -> Consensus.Protocol ByronBlock
   -> NonEmpty NodeAddress
@@ -156,6 +159,7 @@ genesisBenchmarkRunner
   -> [FilePath]
   -> ExceptT TxGenError IO ()
 genesisBenchmarkRunner loggingLayer
+                       iocp
                        socketFp
                        protocol@(Consensus.ProtocolRealPBFT genesisConfig _ _ _ _)
                        targetNodeAddresses
@@ -201,6 +205,7 @@ genesisBenchmarkRunner loggingLayer
   fundsWithGenesisMoney <- liftIO $
     prepareInitialFunds benchTracer
                         lowLevelSubmitTracer
+                        iocp
                         socketFp
                         genesisConfig
                         pInfoConfig
@@ -219,6 +224,7 @@ genesisBenchmarkRunner loggingLayer
                  connectTracer
                  submitTracer
                  lowLevelSubmitTracer
+                 iocp
                  socketFp
                  pInfoConfig
                  sourceKey
@@ -389,6 +395,7 @@ extractGenesisFunds genesisConfig signingKeys =
 prepareInitialFunds
   :: Tracer IO (TraceBenchTxSubmit (Mempool.GenTxId ByronBlock))
   -> Tracer IO TraceLowLevelSubmit
+  -> AssociateWithIOCP 
   -> SocketPath
   -> CC.Genesis.Config
   -> NodeConfig ByronConsensusProtocol
@@ -400,6 +407,7 @@ prepareInitialFunds
   -> IO AvailableFunds
 prepareInitialFunds benchTracer
                     llTracer
+                    iocp
                     socketFp
                     genesisConfig
                     pInfoConfig
@@ -428,7 +436,7 @@ prepareInitialFunds benchTracer
     Nothing -> do
       -- There's no Explorer's API endpoint specified, submit genesis
       -- transaction to the target nodes via 'ouroboros-network'.
-      submitTx socketFp pInfoConfig genesisTxGeneral llTracer
+      submitTx iocp socketFp pInfoConfig genesisTxGeneral llTracer
     Just (ExplorerAPIEnpoint endpoint) -> do
       -- Explorer's API endpoint is specified, submit genesis
       -- transaction to that endpoint using POST-request.
@@ -633,6 +641,7 @@ runBenchmark
   -> Tracer IO SendRecvConnect
   -> Tracer IO (SendRecvTxSubmission ByronBlock)
   -> Tracer IO TraceLowLevelSubmit
+  -> AssociateWithIOCP
   -> SocketPath
   -> NodeConfig ByronConsensusProtocol
   -> Crypto.SigningKey
@@ -651,6 +660,7 @@ runBenchmark benchTracer
              connectTracer
              submitTracer
              lowLevelSubmitTracer
+             iocp
              socketFp
              pInfoConfig
              sourceKey
@@ -669,6 +679,7 @@ runBenchmark benchTracer
   fundsWithSufficientCoins <-
       createMoreFundCoins benchTracer
                           lowLevelSubmitTracer
+                          iocp
                           socketFp
                           pInfoConfig
                           sourceKey
@@ -766,6 +777,7 @@ runBenchmark benchTracer
 
           launchTxPeer benchTracer
                        benchmarkTracers
+                       iocp
                        txSubmissionTerm
                        pInfoConfig
                        localAddr
@@ -824,6 +836,7 @@ postTx benchTracer initialRequest serializedTx = do
 createMoreFundCoins
   :: Tracer IO (TraceBenchTxSubmit (Mempool.GenTxId ByronBlock))
   -> Tracer IO TraceLowLevelSubmit
+  -> AssociateWithIOCP
   -> SocketPath
   -> NodeConfig ByronConsensusProtocol
   -> Crypto.SigningKey
@@ -835,6 +848,7 @@ createMoreFundCoins
   -> ExceptT TxGenError IO AvailableFunds
 createMoreFundCoins benchTracer
                     llTracer
+                    iocp
                     socketFp
                     pInfoConfig
                     sourceKey
@@ -884,7 +898,7 @@ createMoreFundCoins benchTracer
       liftIO $ forM_ splittingTxs $ \(txAux, _) -> do
         let splittingTxGeneral :: GenTx ByronBlock
             splittingTxGeneral = normalByronTxToGenTx txAux
-        submitTx socketFp pInfoConfig splittingTxGeneral llTracer
+        submitTx iocp socketFp pInfoConfig splittingTxGeneral llTracer
     Just (ExplorerAPIEnpoint endpoint) -> do
       -- Explorer's API endpoint is specified, submit splitting
       -- transactions to that endpoint using POST-request.
@@ -1145,7 +1159,9 @@ writeTxsInListForTargetNode txsListsForTargetNodes txs listIndex = STM.atomicall
 
 -- | To get higher performance we need to hide latency of getting and
 -- forwarding (in sufficient numbers) transactions.
-
+--
+-- TODO: transform comments into haddocks.
+--
 launchTxPeer
   :: forall m block txid tx.
      ( RunNode block
@@ -1159,6 +1175,8 @@ launchTxPeer
   -- tracer for lower level connection and details of
   -- protocol interactisn, intended for debugging
   -- associated issues.
+  -> AssociateWithIOCP
+  -- ^ associate a file descriptor with IO completion port
   -> MSTM.TVar m Bool
   -- a "global" stop variable, set to True to force shutdown
   -> NodeConfig (Ouroboros.Consensus.Block.BlockProtocol block)
@@ -1174,7 +1192,7 @@ launchTxPeer
   -- give this peer 1 or more transactions, empty list
   -- signifies stop this peer
   -> m (Async (), Async ())
-launchTxPeer tr1 tr2 termTM nc localAddr remoteAddr updROEnv txInChan = do
+launchTxPeer tr1 tr2 iocp termTM nc localAddr remoteAddr updROEnv txInChan = do
   tmv <- MSTM.newEmptyTMVarM
-  (,) <$> (async $ benchmarkConnectTxSubmit tr2 nc localAddr remoteAddr (txSubmissionClient tmv))
+  (,) <$> (async $ benchmarkConnectTxSubmit iocp tr2 nc localAddr remoteAddr (txSubmissionClient tmv))
       <*> (async $ bulkSubmission updROEnv tr1 termTM txInChan tmv)
