@@ -30,8 +30,8 @@ import           Control.Monad.Class.MonadTime (DiffTime, Time (..), diffTime,
 import           Data.Aeson (Value (..), toJSON, (.=))
 import           Data.Time.Clock (diffTimeToPicoseconds)
 
-import           Cardano.BM.Data.LogItem
 import           Cardano.BM.Data.Severity (Severity (..))
+import           Cardano.BM.Data.Trace
 import           Cardano.BM.Data.Tracer
 
 import           Control.Tracer.Transformers.ObserveOutcome
@@ -81,7 +81,7 @@ instance ToObject (MeasureTxs blk) where
 
 -- | Transformer for the start of the transaction, when the transaction was added
 -- to the mempool.
-measureTxsStart :: forall blk. Tracer IO (LogObject Text) -> Tracer IO (TraceEventMempool blk)
+measureTxsStart :: forall blk. Trace IO Text -> Tracer IO (TraceEventMempool blk)
 measureTxsStart tracer = measureTxsStartInter $ toLogObject tracer
   where
     measureTxsStartInter :: Tracer IO (MeasureTxs blk) -> Tracer IO (TraceEventMempool blk)
@@ -102,7 +102,7 @@ measureTxsStart tracer = measureTxsStartInter $ toLogObject tracer
 
 -- | Transformer for the end of the transaction, when the transaction was added to the
 -- block and the block was forged.
-measureTxsEnd :: forall blk. Tracer IO (LogObject Text) -> Tracer IO (TraceForgeEvent blk (GenTx blk))
+measureTxsEnd :: forall blk. Trace IO Text -> Tracer IO (TraceForgeEvent blk (GenTx blk))
 measureTxsEnd tracer = measureTxsEndInter $ toLogObject tracer
   where
     measureTxsEndInter :: Tracer IO (MeasureTxs blk) -> Tracer IO (TraceForgeEvent blk (GenTx blk))
@@ -205,7 +205,7 @@ instance ToObject (MeasureBlockForging blk) where
 
 -- | Transformer for the start of the block forge, when the current slot is the slot of the
 -- node and the protocol starts.
-measureBlockForgeStart :: Tracer IO (LogObject Text) -> Tracer IO (TraceForgeEvent blk (GenTx blk))
+measureBlockForgeStart :: Trace IO Text -> Tracer IO (TraceForgeEvent blk (GenTx blk))
 measureBlockForgeStart tracer = measureBlockForgeStartInter $ toLogObject tracer
   where
     measureBlockForgeStartInter :: Tracer IO (MeasureBlockForging blk) -> Tracer IO (TraceForgeEvent blk (GenTx blk))
@@ -215,7 +215,7 @@ measureBlockForgeStart tracer = measureBlockForgeStartInter $ toLogObject tracer
         _ -> pure ()
 
 -- | Transformer for the end of the block forge, when the block was created/forged.
-measureBlockForgeEnd :: Tracer IO (LogObject Text) -> Tracer IO (TraceForgeEvent blk (GenTx blk))
+measureBlockForgeEnd :: Trace IO Text -> Tracer IO (TraceForgeEvent blk (GenTx blk))
 measureBlockForgeEnd tracer = measureTxsEndInter $ toLogObject tracer
   where
     measureTxsEndInter :: Tracer IO (MeasureBlockForging blk) -> Tracer IO (TraceForgeEvent blk (GenTx blk))

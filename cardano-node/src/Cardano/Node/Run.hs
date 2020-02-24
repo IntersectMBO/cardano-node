@@ -46,9 +46,10 @@ import qualified Cardano.BM.Configuration.Model as CM
 import           Cardano.BM.Data.Backend
 import           Cardano.BM.Data.BackendKind (BackendKind (..))
 #endif
-import           Cardano.BM.Data.LogItem (LogObject (..))
 import           Cardano.BM.Data.Tracer (ToLogObject (..),
-                     TracingVerbosity (..), setHostname)
+                     TracingVerbosity (..))
+import           Cardano.BM.Data.Transformers (setHostname)
+import           Cardano.BM.Trace
 import           Cardano.Config.Logging (LoggingLayer (..))
 import           Cardano.Config.Types (MiscellaneousFilepaths(..),
                                        NodeConfiguration (..), ViewMode (..))
@@ -155,7 +156,7 @@ runNode loggingLayer npm = do
 handleSimpleNode
   :: forall blk. RunNode blk
   => Consensus.Protocol blk
-  -> Tracer IO (LogObject Text)
+  -> Trace IO Text
   -> Tracers ConnectionId blk
   -> NodeProtocolMode
   -> (NodeKernel IO ConnectionId blk -> IO ())

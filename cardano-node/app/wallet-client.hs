@@ -5,10 +5,9 @@
 
 import           Cardano.Prelude hiding (option)
 
-import           Control.Tracer
 import           Options.Applicative
 
-import           Cardano.BM.Data.LogItem
+import           Cardano.BM.Trace
 import           Cardano.Shell.Lib (runCardanoApplicationWithFeatures)
 import           Cardano.Shell.Types (CardanoApplication (..),
                                       CardanoFeature (..))
@@ -101,6 +100,6 @@ createNodeFeature loggingLayer cli cardanoEnvironment = do
   where
     featureStart' :: CardanoEnvironment -> LoggingLayer -> WalletCLI -> IO NodeLayer
     featureStart' _ loggingLayer' walletCli = do
-        let tr :: MonadIO m => Tracer m (Cardano.BM.Data.LogItem.LogObject Text)
+        let tr :: MonadIO m => Trace m Text
             tr = llAppendName loggingLayer "wallet" (llBasicTrace loggingLayer')
         pure $ NodeLayer {nlRunNode = liftIO $ runClient walletCli tr}
