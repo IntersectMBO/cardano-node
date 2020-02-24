@@ -33,7 +33,7 @@ let
       tracingVerbosity = "normal";
     } // (builtins.removeAttrs envConfig ["nodeConfig"]);
 
-    nodeConfig = (envConfig.nodeConfig or commonLib.environments.mainnet.nodeConfig)
+    nodeConfig = (envConfig.nodeConfig or environments.mainnet.nodeConfig)
       // (customConfig.nodeConfig or {});
 
     config = defaultConfig
