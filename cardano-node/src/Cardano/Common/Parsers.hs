@@ -4,7 +4,8 @@
 {-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
 
 module Cardano.Common.Parsers
-  ( nodeMockParser
+  ( flagParser
+  , nodeMockParser
   , nodeMockProtocolModeParser
   , nodeProtocolModeParser
   , nodeRealParser

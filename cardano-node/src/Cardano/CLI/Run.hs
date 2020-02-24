@@ -76,11 +76,6 @@ import           Cardano.CLI.Benchmarking.Tx.Generation
 import           Cardano.Config.Protocol
 import           Cardano.Config.Logging (createLoggingFeatureCLI)
 import           Cardano.Config.Types
-                   (CardanoEnvironment(..), ConfigYamlFilePath(..)
-                   , DelegationCertFile(..), GenesisFile(..)
-                   , LastKnownBlockVersion(..), NodeAddress(..)
-                   , NodeConfiguration(..), SigningKeyFile(..)
-                   , SocketPath(..), Update(..), parseNodeConfigurationFP)
 
 -- | Sub-commands of 'cardano-cli'.
 data ClientCommand
@@ -198,6 +193,12 @@ data ClientCommand
     (Maybe TxAdditionalSize)
     (Maybe ExplorerAPIEnpoint)
     [SigningKeyFile]
+    --- Misc Commands ---
+  | ValidateCBOR
+    CBORObject
+    -- ^ Type of the CBOR object
+    FilePath
+
    deriving Show
 
 
@@ -208,6 +209,10 @@ runCommand (Genesis outDir params ptcl) = do
 
 runCommand (GetLocalNodeTip configFp gFile sockPath) = withIOManagerE $ \iocp ->
   liftIO $ getLocalTip configFp gFile iocp sockPath
+
+runCommand (ValidateCBOR cborObject fp) = do
+  bs <- readCBOR fp
+  validateCBOR cborObject bs
 
 runCommand (PrettySigningKeyPublic ptcl skF) = do
   sK <- readSigningKey ptcl skF
