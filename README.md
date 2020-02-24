@@ -42,7 +42,7 @@ sudo yum install -y curl git openssl-devel systemd-devel zlib-devel # Install re
 **SLES** / **openSUSE**
 
 ```bash
-sudo zypper install -y curl git libopenssl-devel systemd-devel zlib-devel # Install required libraries and their header files required to build software
+sudo zypper install -y curl gcc git gmp-devel libopenssl-devel systemd-devel zlib-devel # Install required libraries and their header files required to build software
 ```
 
 #### Installing `stack` software building toolkit on all Linux distributions
