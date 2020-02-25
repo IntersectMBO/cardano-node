@@ -1,4 +1,4 @@
-resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/fa7a16291d3e93b068d9b13620fc81c88b5600f0/snapshot.yaml
+resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/57fcc83702b91e0a7aecdb32c99ab1d8c1c444d0/snapshot.yaml
 compiler: ghc-8.6.5
 
 packages:
@@ -13,7 +13,7 @@ allow-newer: true
 
 extra-deps:
   - git: https://github.com/input-output-hk/cardano-crypto
-    commit: 4590efa638397e952a51a8994b5543e4ea3c1ecd
+    commit: 2547ad1e80aeabca2899951601079408becbc92c
 
   - QuickCheck-2.12.6.1
   - quickcheck-instances-0.3.19
@@ -55,7 +55,7 @@ extra-deps:
 
     # Cardano-ledger dependencies
   - git: https://github.com/input-output-hk/cardano-ledger
-    commit: 86f0cb4705f46307e4c89e7ef4c90142882cce54
+    commit: 172b49ff1b6456851f10ae18f920fbfa733be0b0
     subdirs:
       - cardano-ledger
       - cardano-ledger/test
@@ -73,13 +73,13 @@ extra-deps:
       - byron/chain/executable-spec
 
   - git: https://github.com/input-output-hk/cardano-prelude
-    commit: fa7a16291d3e93b068d9b13620fc81c88b5600f0
+    commit: 57fcc83702b91e0a7aecdb32c99ab1d8c1c444d0
     subdirs:
       - .
       - test
 
   - git: https://github.com/input-output-hk/cardano-base
-    commit: 3c2791584d3f43aa18e9cc13c490239b4c3dcbd2
+    commit: a7b403c1762a6a122a691df816c26563b7e547f8
     subdirs:
       - binary
       - binary/test
@@ -98,7 +98,7 @@ extra-deps:
 
     # iohk-monitoring-framework currently not pinned to a release
   - git: https://github.com/input-output-hk/iohk-monitoring-framework
-    commit: 49b347d892d82dce23eb692722649cd8a1149406
+    commit: 479c1718ab85761ae72d13c559b12227c8837748
     subdirs:
       - contra-tracer
       - iohk-monitoring
