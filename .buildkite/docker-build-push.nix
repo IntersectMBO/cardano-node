@@ -30,17 +30,13 @@ with hostPkgs;
 with hostPkgs.lib;
 
 let
-  images = map impureCreated [
-    nodePackages.dockerImage.base
-    nodePackages.dockerImage.testnet
-    nodePackages.dockerImage.mainnet
-  ];
+  image = impureCreated nodePackages.dockerImage;
 
   # Override Docker image, setting its creation date to the current time rather than the unix epoch.
   impureCreated = image: image.overrideAttrs (oldAttrs: { created = "now"; }) // { inherit (image) version; };
 
 in
-  writeScript "docker-build-push" (''
+  writeScript "docker-build-push" ''
     #!${runtimeShell}
 
     set -euo pipefail
@@ -55,7 +51,6 @@ in
     fullrepo="${dockerHubRepoName}"
     ''}
 
-  '' + concatMapStringsSep "\n" (image: ''
     branch="''${BUILDKITE_BRANCH:-}"
     tag="''${BUILDKITE_TAG:-}"
     tagged="$fullrepo:$tag"
@@ -71,9 +66,9 @@ in
       docker push "$fullrepo:$branch"
     fi
     if [[ "$tag" ]]; then
-      echo "Tagging as ${image.imageTag}"
+      echo "Tagging as $tag"
       docker tag $fullrepo:$gitrev $fullrepo:$tag
       echo "Pushing $fullrepo:$tag"
       docker push "$fullrepo:$tag"
     fi
-  '') images)
+  ''

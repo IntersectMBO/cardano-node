@@ -27,3 +27,5 @@ logs/
 /benchmarking/chain-sync/state-node-mainnet/
 
 tags
+/config
+/data

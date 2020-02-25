@@ -27,9 +27,16 @@ let
     inherit pkgs;
   };
 
-  dockerImage = pkgs.callPackage ./nix/docker.nix {
+  dockerImage = let
+    defaultConfig = rec {
+      stateDir = "/data";
+      dbPrefix = "db";
+      socketPath = stateDir + "/node.socket";
+    };
+    customConfig' = defaultConfig // customConfig;
+  in pkgs.callPackage ./nix/docker.nix {
     inherit (self) cardano-node;
-    inherit scripts;
+    scripts = callPackage ./nix/scripts.nix { customConfig = customConfig'; };
   };
 
   self = {

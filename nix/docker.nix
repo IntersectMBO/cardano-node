@@ -3,32 +3,23 @@
 #
 # To test it out, use:
 #
-#   docker load -i $(nix-build -A dockerImage.base --no-out-link)
-#   docker load -i $(nix-build -A dockerImage.latency-tests --no-out-link)
-#   docker load -i $(nix-build -A dockerImage.mainnet --no-out-link)
-#   docker load -i $(nix-build -A dockerImage.mainnet-ci --no-out-link)
-#   docker load -i $(nix-build -A dockerImage.shelley_staging --no-out-link)
-#   docker load -i $(nix-build -A dockerImage.shelley_staging_short --no-out-link)
-#   docker load -i $(nix-build -A dockerImage.staging --no-out-link)
-#   docker load -i $(nix-build -A dockerImage.testnet --no-out-link)
+#   docker load -i $(nix-build -A dockerImage --no-out-link)
 #
-# For all output except base, run:
+# To launch mainnet and keep state in a persistent docker volume run:
 #
-#   docker run inputoutput/cardano-node:<TAG>
+#   docker run -v /data -e ENV=mainnet inputoutput/cardano-node:<TAG>
+
+# To launch testnet and keep no state between launches run:
 #
-# ie:
+#   docker run -e ENV=testnet inputoutput/cardano-node:<TAG>
 #
-#   docker run inputoutput/cardano-node:6a5b233e5861aa0012287a5557b3a6a08afbf3ca-testnet
+# To launch with a custom config, volume mount /config and /data
 #
-# For base, you will need to provide all variables. ie:
+#   docker run -v $PATH_TO/config:/config -v $PATH_TO/data:/data \
+#     inputoutput/cardano-node:<TAG> --genesis-hash <GENESIS_HASH>
 #
-#   docker run -ti \
-#   --volume $PATH_TO/state-docker:/data \
-#   --volume $PATH_TO/configuration-mainnet.yaml:/config/config.yaml \
-#   --volume $PATH_TO/mainnet-topology.json:/config/topology.json \
-#   --volume $PATH_TO/mainnet-genesis.json:/config/genesis.json \
-#   inputoutput/cardano-node:<GIT_HASH>-custom
-#   --genesis-hash <GENESIS_HASH>
+# /config must contain config.json, genesis.json and topology.json
+#
 #
 ############################################################################
 
@@ -54,6 +45,9 @@
 , iputils
 , socat
 , utillinux
+, writeScriptBin
+, runtimeShell
+, lib
 
 , repoName ? "inputoutput/cardano-node"
 }:
@@ -80,40 +74,43 @@ let
       mkdir -m 0777 tmp
     '';
   };
-  customImage = dockerTools.buildImage {
-    name = "${repoName}";
-    tag = "${gitrev}-base";
-    fromImage = baseImage;
-    contents = [
-      cardano-node
-    ];
-    created = "now";   # Set creation date to build time. Breaks reproducibility
-    extraCommands = ''
-      mkdir -p data config
+  # Image with all environment configs or utilizes a config volume mount
+  # To choose an environment, use `-e ENV testnet`
+    clusterStatements = lib.concatStringsSep "\n" (lib.mapAttrsToList (_: value: value) (commonLib.forEnvironments (env: ''
+      elif [[ "$ENV" == "${env.name}" ]]; then
+        exec ${scripts.${env.name}.node}
+    '')));
+  nodeDockerImage = let
+    entry-point = writeScriptBin "entry-point" ''
+      #!${runtimeShell}
+      echo $ENV
+      if [[ -d /config ]]; then
+        exec ${cardano-node}/bin/cardano-node run \
+          --config /config/config.json \
+          --database-path /data/db \
+          --genesis-file /config/genesis.json \
+          --host-addr 127.0.0.1 \
+          --port 3001 \
+          --socket-path /data/node.socket \
+          --topology /config/topology.json $@
+      ${clusterStatements}
+      else
+        echo "Please set ENV variable to one of: mainnet/testnet"
+        echo "Or add a /config volume with the config files: config.json, topology.json and genesis.json"
+      fi
     '';
-    config = {
-      EntryPoint = [
-        "${cardano-node}/bin/cardano-node" "run" "--config"
-        "/config/config.yaml" "--database-path" "/data.db" "--genesis-file"
-        "/config/genesis.json" "--host-addr" "127.0.0.1" "--port" "3001"
-        "--socket-path" "/data/ipc/socket0" "--topology" "/config/topology.json"
-      ];
-      ExposedPorts = {
-        "3001/tcp" = {};  # Cardano node p2p
-      };
-    };
-  };
-  clusterImage = env: dockerTools.buildImage {
+  in dockerTools.buildImage {
     name = "${repoName}";
-    tag = "${gitrev}-${env.name}";
-    fromImage = customImage;
+    fromImage = baseImage;
+    tag = "${gitrev}";
     created = "now";   # Set creation date to build time. Breaks reproducibility
+    contents = [ entry-point ];
     config = {
-      EntryPoint = [ scripts.${env.name}.node ];
+      EntryPoint = [ "${entry-point}/bin/entry-point" ];
       ExposedPorts = {
         "3001/tcp" = {};  # Cardano node p2p
       };
     };
   };
 
-in commonLib.forEnvironments clusterImage // { base = customImage; }
+in nodeDockerImage

@@ -21,7 +21,7 @@ let
       signingKey = null;
       delegationCertificate = null;
       nodeId = 0;
-      stateDir = "./";
+      stateDir = "state-node-${envConfig.name}";
       # defaults to proxy if env has no relays
       edgeHost = "127.0.0.1";
       edgeNodes = [];
@@ -31,6 +31,7 @@ let
       proxyHost = "127.0.0.1";
       loggingExtras = null;
       tracingVerbosity = "normal";
+      dbPrefix = "db-${envConfig.name}";
     } // (builtins.removeAttrs envConfig ["nodeConfig"]);
 
     nodeConfig = (envConfig.nodeConfig or environments.mainnet.nodeConfig)
@@ -60,9 +61,9 @@ let
         port
         nodeConfig
         nodeId
+        dbPrefix
         tracingVerbosity;
       runtimeDir = null;
-      dbPrefix = "db-${envConfig.name}";
       topology = topologyFile;
       nodeConfigFile = "${__toFile "config-${toString config.nodeId}.json" (__toJSON (svcLib.mkNodeConfig config config.nodeId))}";
     };
@@ -79,8 +80,7 @@ let
   in pkgs.writeScript "cardano-node-${envConfig.name}" ''
     #!${pkgs.runtimeShell}
     set -euo pipefail
-    mkdir -p "state-node-${envConfig.name}"
-    cd "state-node-${envConfig.name}"
+    mkdir -p "${config.stateDir}"
     ${nodeScript} $@
   '';
   scripts = forEnvironments (environment:
