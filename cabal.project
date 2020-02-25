@@ -273,6 +273,13 @@ source-repository-package
 
 source-repository-package
   type: git
+  location: https://github.com/input-output-hk/ouroboros-network
+  tag: 68ebc7b8c53078629dd57fd579eece12c66576c8
+  --sha256: 11hsa5b218cbkq0wb7hc9x7m5mp56dlfw4zx4q9i4ymyq82ra69c
+  subdir: Win32-network
+
+source-repository-package
+  type: git
   location: http://github.com/well-typed/canonical-json
   tag: ddfe3593b80b5ceb88842bb7a6f2268df75d2c2f
   --sha256: 02fzn1xskis1lc1pkz0j92v6ipd89ww0k2p3dvwpm3yap5dpnm7k
