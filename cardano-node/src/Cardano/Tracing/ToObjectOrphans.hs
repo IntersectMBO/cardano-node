@@ -229,12 +229,9 @@ defaultTextTransformer
   -> Trace m Text
   -> Tracer m b
 defaultTextTransformer TextualRepresentation _verb tr =
-  Tracer $ \s ->
-    traceWith tr =<<
-    LogObject
-      <$> pure mempty
-      <*> mkLOMeta (defineSeverity s) (definePrivacyAnnotation s)
-      <*> pure (LogMessage $ pack $ show s)
+  Tracer $ \s -> do
+    meta <- mkLOMeta (defineSeverity s) (definePrivacyAnnotation s)
+    traceWith tr (mempty, LogObject mempty meta (LogMessage $ pack $ show s))
 defaultTextTransformer _ verb tr =
   trStructured verb tr
 
