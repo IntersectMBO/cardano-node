@@ -15,11 +15,11 @@ import           Cardano.Common.TopHandler
 
 
 main :: IO ()
-main = toplevelExceptionHandler $ withIOManager $ \iocp -> do
+main = toplevelExceptionHandler $ do
 
   co <- Opt.customExecParser pref opts
 
-  cmdRes <- runExceptT . runCommand iocp $ mainCommand co
+  cmdRes <- runExceptT . runCommand $ mainCommand co
 
   case cmdRes of
     Right _ -> pure ()

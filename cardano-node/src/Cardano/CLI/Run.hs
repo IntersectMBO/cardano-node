@@ -200,23 +200,25 @@ data ClientCommand
     [SigningKeyFile]
    deriving Show
 
-runCommand :: AssociateWithIOCP -> ClientCommand -> ExceptT CliError IO ()
-runCommand _iocp (Genesis outDir params ptcl) = do
+
+
+runCommand :: ClientCommand -> ExceptT CliError IO ()
+runCommand (Genesis outDir params ptcl) = do
   gen <- mkGenesis params
   dumpGenesis ptcl outDir `uncurry` gen
 
-runCommand _iocp (GetLocalNodeTip configFp gFile sockPath) = do
+runCommand (GetLocalNodeTip configFp gFile sockPath) = do
   liftIO $ getLocalTip configFp gFile sockPath
 
-runCommand _iocp (PrettySigningKeyPublic ptcl skF) = do
+runCommand (PrettySigningKeyPublic ptcl skF) = do
   sK <- readSigningKey ptcl skF
   liftIO . putTextLn . prettyPublicKey $ Crypto.toVerification sK
-runCommand _iocp (MigrateDelegateKeyFrom oldPtcl oldKey newPtcl (NewSigningKeyFile newKey)) = do
+runCommand (MigrateDelegateKeyFrom oldPtcl oldKey newPtcl (NewSigningKeyFile newKey)) = do
   sk <- readSigningKey oldPtcl oldKey
   sDk <- hoistEither $ serialiseDelegateKey newPtcl sk
   liftIO $ ensureNewFileLBS newKey sDk
 
-runCommand _iocp (PrintGenesisHash genFp) = do
+runCommand (PrintGenesisHash genFp) = do
   eGen <- readGenesis genFp
 
   let formatter :: (a, Genesis.GenesisHash)-> Text
@@ -224,23 +226,23 @@ runCommand _iocp (PrintGenesisHash genFp) = do
 
   liftIO . putTextLn $ formatter eGen
 
-runCommand _iocp (PrintSigningKeyAddress ptcl netMagic skF) = do
+runCommand (PrintSigningKeyAddress ptcl netMagic skF) = do
   sK <- readSigningKey ptcl skF
   let sKeyAddress = prettyAddress . Common.makeVerKeyAddress netMagic $ Crypto.toVerification sK
   liftIO $ putTextLn sKeyAddress
 
-runCommand _iocp (Keygen ptcl (NewSigningKeyFile skF) passReq) = do
+runCommand (Keygen ptcl (NewSigningKeyFile skF) passReq) = do
   pPhrase <- liftIO $ getPassphrase ("Enter password to encrypt '" <> skF <> "': ") passReq
   sK <- liftIO $ keygen pPhrase
   serDk <- hoistEither $ serialiseDelegateKey ptcl sK
   liftIO $ ensureNewFileLBS skF serDk
 
-runCommand _iocp (ToVerification ptcl skFp (NewVerificationKeyFile vkFp)) = do
+runCommand (ToVerification ptcl skFp (NewVerificationKeyFile vkFp)) = do
   sk <- readSigningKey ptcl skFp
   let vKey = Builder.toLazyText . Crypto.formatFullVerificationKey $ Crypto.toVerification sk
   liftIO $ ensureNewFile TL.writeFile vkFp vKey
 
-runCommand _iocp (IssueDelegationCertificate ptcl magic epoch issuerSK delegateVK cert) = do
+runCommand (IssueDelegationCertificate ptcl magic epoch issuerSK delegateVK cert) = do
   vk <- readVerificationKey delegateVK
   sk <- readSigningKey ptcl issuerSK
   let byGenDelCert :: Delegation.Certificate
@@ -248,12 +250,12 @@ runCommand _iocp (IssueDelegationCertificate ptcl magic epoch issuerSK delegateV
   sCert <- hoistEither $ serialiseDelegationCert ptcl byGenDelCert
   liftIO $ ensureNewFileLBS (nFp cert) sCert
 
-runCommand _iocp (CheckDelegation magic cert issuerVF delegateVF) = do
+runCommand (CheckDelegation magic cert issuerVF delegateVF) = do
   issuerVK <- readVerificationKey issuerVF
   delegateVK <- readVerificationKey delegateVF
   liftIO $ checkByronGenesisDelegation cert magic issuerVK delegateVK
 
-runCommand iocp (SubmitTx fp ptcl genFile socketPath) = do
+runCommand (SubmitTx fp ptcl genFile socketPath) = withIOManagerE $ \iocp -> do
     -- Default update value
     let update = Update (ApplicationName "cardano-sl") 1 $ LastKnownBlockVersion 0 2 0
     tx <- liftIO $ readByronTx fp
@@ -274,29 +276,29 @@ runCommand iocp (SubmitTx fp ptcl genFile socketPath) = do
           update
           ptcl
           tx
-runCommand _iocp (SpendGenesisUTxO ptcl genFile (NewTxFile ctTx) ctKey genRichAddr outs) = do
-    sk <- readSigningKey ptcl ctKey
-    -- Default update value
-    let update = Update (ApplicationName "cardano-sl") 1 $ LastKnownBlockVersion 0 2 0
+runCommand (SpendGenesisUTxO ptcl genFile (NewTxFile ctTx) ctKey genRichAddr outs) = do
+      sk <- readSigningKey ptcl ctKey
+      -- Default update value
+      let update = Update (ApplicationName "cardano-sl") 1 $ LastKnownBlockVersion 0 2 0
 
-    genHash <- getGenesisHash genFile
+      genHash <- getGenesisHash genFile
 
-    tx <- firstExceptT SpendGenesisUTxOError
-            $ issueGenesisUTxOExpenditure
-                genRichAddr
-                outs
-                genHash
-                genFile
-                RequiresNoMagic
-                Nothing
-                Nothing
-                Nothing
-                update
-                ptcl
-                sk
-    liftIO . ensureNewFileLBS ctTx $ toCborTxAux tx
+      tx <- firstExceptT SpendGenesisUTxOError
+              $ issueGenesisUTxOExpenditure
+                  genRichAddr
+                  outs
+                  genHash
+                  genFile
+                  RequiresNoMagic
+                  Nothing
+                  Nothing
+                  Nothing
+                  update
+                  ptcl
+                  sk
+      liftIO . ensureNewFileLBS ctTx $ toCborTxAux tx
 
-runCommand _iocp (SpendUTxO ptcl genFile (NewTxFile ctTx) ctKey ins outs) = do
+runCommand (SpendUTxO ptcl genFile (NewTxFile ctTx) ctKey ins outs) = do
     sk <- readSigningKey ptcl ctKey
     -- Default update value
     let update = Update (ApplicationName "cardano-sl") 1 $ LastKnownBlockVersion 0 2 0
@@ -319,21 +321,21 @@ runCommand _iocp (SpendUTxO ptcl genFile (NewTxFile ctTx) ctKey ins outs) = do
                  sk
     liftIO . ensureNewFileLBS ctTx $ toCborTxAux gTx
 
-runCommand iocp (GenerateTxs
-                 logConfigFp
-                 signingKey
-                 delegCert
-                 genFile
-                 socketFp
-                 targetNodeAddresses
-                 numOfTxs
-                 numOfInsPerTx
-                 numOfOutsPerTx
-                 feePerTx
-                 tps
-                 txAdditionalSize
-                 explorerAPIEndpoint
-                 sigKeysFiles) = do
+runCommand (GenerateTxs
+            logConfigFp
+            signingKey
+            delegCert
+            genFile
+            socketFp
+            targetNodeAddresses
+            numOfTxs
+            numOfInsPerTx
+            numOfOutsPerTx
+            feePerTx
+            tps
+            txAdditionalSize
+            explorerAPIEndpoint
+            sigKeysFiles) = withIOManagerE $ \iocp -> do
   -- Default update value
   let update = Update (ApplicationName "cardano-sl") 1 $ LastKnownBlockVersion 0 2 0
   nc <- liftIO $ parseNodeConfigurationFP logConfigFp
@@ -390,3 +392,6 @@ ensureNewFile writer outFile blob = do
 
 ensureNewFileLBS :: FilePath -> LB.ByteString -> IO ()
 ensureNewFileLBS = ensureNewFile LB.writeFile
+
+withIOManagerE :: (AssociateWithIOCP -> ExceptT e IO a) -> ExceptT e IO a
+withIOManagerE k = ExceptT $ withIOManager (runExceptT . k)
