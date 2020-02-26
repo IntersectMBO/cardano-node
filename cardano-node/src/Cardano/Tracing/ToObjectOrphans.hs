@@ -229,12 +229,9 @@ defaultTextTransformer
   -> Trace m Text
   -> Tracer m b
 defaultTextTransformer TextualRepresentation _verb tr =
-  Tracer $ \s ->
-    traceWith tr =<<
-    LogObject
-      <$> pure mempty
-      <*> mkLOMeta (defineSeverity s) (definePrivacyAnnotation s)
-      <*> pure (LogMessage $ pack $ show s)
+  Tracer $ \s -> do
+    meta <- mkLOMeta (defineSeverity s) (definePrivacyAnnotation s)
+    traceWith tr (mempty, LogObject mempty meta (LogMessage $ pack $ show s))
 defaultTextTransformer _ verb tr =
   trStructured verb tr
 
@@ -449,10 +446,9 @@ instance (Condense (HeaderHash blk), ProtocolLedgerView blk)
   -- structure required, will call 'toObject'
   trTransformer StructuredLogging verb tr = trStructured verb tr
   -- textual output based on the readable ChainDB tracer
-  trTransformer TextualRepresentation _verb tr = readableChainDBTracer $ Tracer $ \s ->
-    traceWith tr =<< LogObject <$> pure mempty
-                               <*> mkLOMeta (defineSeverity s) (definePrivacyAnnotation s)
-                               <*> pure (LogMessage $ pack s)
+  trTransformer TextualRepresentation _verb tr = readableChainDBTracer $ Tracer $ \s -> do
+    meta <- mkLOMeta (defineSeverity s) (definePrivacyAnnotation s)
+    traceWith tr (mempty, LogObject mempty meta (LogMessage $ pack s))
   -- user defined formatting of log output
   trTransformer UserdefinedFormatting verb tr = trStructured verb tr
   -- trTransformer _ verb tr = trStructured verb tr

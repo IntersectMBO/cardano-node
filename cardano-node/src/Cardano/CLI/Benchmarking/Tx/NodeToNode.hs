@@ -177,11 +177,8 @@ instance Transformable Text IO (SendRecvTxSubmission ByronBlock) where
             -- Add a timestamp in 'ToObject'-representation.
             HM.insert "time" (String (T.pack . show $ currentTime)) obj
       tracer = if obj == emptyObject then nullTracer else tr
-    traceWith tracer =<<
-      LogObject
-        <$> pure mempty
-        <*> mkLOMeta (defineSeverity arg) (definePrivacyAnnotation arg)
-        <*> pure (LogStructured updatedObj)
+    meta <- mkLOMeta (defineSeverity arg) (definePrivacyAnnotation arg)
+    traceWith tracer (mempty, LogObject mempty meta (LogStructured updatedObj))
   trTransformer _ _verb _tr = nullTracer
 
 --------------------------------------------------------------------------------------

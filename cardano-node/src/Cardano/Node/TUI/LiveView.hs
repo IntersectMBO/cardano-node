@@ -257,7 +257,7 @@ instance IsEffectuator (LiveViewBackend blk) Text where
         checkForUnexpectedThunks ["IsEffectuator LiveViewBackend"] lvbe
 
         case item of
-            LogObject ["cardano","node","metrics"] meta content -> do
+            LogObject "cardano.node.metrics" meta content -> do
                 case content of
                     LogValue "Mem.resident" (PureI pages) ->
                         let !mbytes     = fromIntegral (pages * pagesize) / 1024 / 1024 :: Float
