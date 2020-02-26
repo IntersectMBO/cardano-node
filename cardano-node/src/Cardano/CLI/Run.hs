@@ -53,7 +53,7 @@ import           Cardano.Chain.Slotting (EpochNumber(..))
 import qualified Cardano.Chain.UTxO as UTxO
 import           Cardano.Chain.Update (ApplicationName(..))
 
-import           Cardano.Crypto (ProtocolMagicId, RequiresNetworkMagic(..))
+import           Cardano.Crypto (RequiresNetworkMagic(..))
 import qualified Cardano.Crypto.Hashing as Crypto
 import qualified Cardano.Crypto.Signing as Crypto
 
@@ -131,7 +131,7 @@ data ClientCommand
     NewCertificateFile
     -- ^ Filepath of the newly created delegation certificate.
   | CheckDelegation
-    ProtocolMagicId
+    ConfigYamlFilePath
     CertificateFile
     VerificationKeyFile
     VerificationKeyFile
@@ -260,10 +260,12 @@ runCommand (IssueDelegationCertificate configFp epoch issuerSK delegateVK cert) 
   sCert <- hoistEither $ serialiseDelegationCert (ncProtocol nc) byGenDelCert
   ensureNewFileLBS (nFp cert) sCert
 
-runCommand (CheckDelegation magic cert issuerVF delegateVF) = do
+runCommand (CheckDelegation configFp cert issuerVF delegateVF) = do
+  nc <- liftIO . parseNodeConfigurationFP $ unConfigPath configFp
   issuerVK <- readVerificationKey issuerVF
   delegateVK <- readVerificationKey delegateVF
-  liftIO $ checkByronGenesisDelegation cert magic issuerVK delegateVK
+  pmId <- readProtocolMagicId $ ncGenesisFile nc
+  liftIO $ checkByronGenesisDelegation cert pmId issuerVK delegateVK
 
 runCommand (SubmitTx fp ptcl genFile socketPath) = withIOManagerE $ \iocp -> do
     -- Default update value

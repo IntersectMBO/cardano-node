@@ -185,7 +185,7 @@ parseDelegationRelatedValues =
         "Verify that a given certificate constitutes a valid\
         \ delegation relationship between keys."
         $ CheckDelegation
-            <$> parseProtocolMagicId "protocol-magic"
+            <$> (ConfigYamlFilePath <$> parseConfigFile)
             <*> parseCertificateFile
                   "certificate"
                   "The certificate embodying delegation to verify."
