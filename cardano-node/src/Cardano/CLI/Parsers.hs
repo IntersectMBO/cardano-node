@@ -314,8 +314,7 @@ parseLocalNodeQueryValues =
         , command' "get-tip" "Get the tip of your local node's blockchain"
             $ GetLocalNodeTip
                 <$> (ConfigYamlFilePath <$> parseConfigFile)
-                <*> parseGenesisFile "genesis-json"
-                <*> parseSocketPath "Socket of target node"
+                <*> parseCLISocketPath "Socket of target node"
         ]
 
 parseLovelace :: String -> String -> Parser Lovelace

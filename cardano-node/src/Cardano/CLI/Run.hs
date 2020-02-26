@@ -138,8 +138,7 @@ data ClientCommand
 
   | GetLocalNodeTip
     ConfigYamlFilePath
-    GenesisFile
-    SocketPath
+    (Maybe CLISocketPath)
 
     -----------------------------------
 
@@ -207,8 +206,8 @@ runCommand (Genesis outDir params ptcl) = do
   gen <- mkGenesis params
   dumpGenesis ptcl outDir `uncurry` gen
 
-runCommand (GetLocalNodeTip configFp gFile sockPath) = withIOManagerE $ \iocp ->
-  liftIO $ getLocalTip configFp gFile iocp sockPath
+runCommand (GetLocalNodeTip configFp mSockPath) =
+  withIOManagerE $ \iocp -> liftIO $ getLocalTip configFp mSockPath iocp
 
 runCommand (ValidateCBOR cborObject fp) = do
   bs <- readCBOR fp

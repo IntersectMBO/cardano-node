@@ -45,6 +45,7 @@ import           Control.Monad.Trans.Except.Extra
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.Text as T
 import qualified Formatting as F
+import           System.Directory (canonicalizePath, makeAbsolute)
 import qualified Text.JSON.Canonical as CanonicalJSON
 
 import           Cardano.Binary
@@ -131,8 +132,10 @@ deserialiseDelegateKey RealPBFT fp delSkey =
 deserialiseDelegateKey ptcl _ _ = Left $ ProtocolNotSupported ptcl
 
 getGenesisHash :: GenesisFile -> ExceptT CliError IO Text
-getGenesisHash genFile = do
-  (_, Genesis.GenesisHash gHash) <- readGenesis genFile
+getGenesisHash (GenesisFile genFile) = do
+  absGen <- liftIO $ makeAbsolute genFile
+  gFile <- liftIO $ canonicalizePath absGen
+  (_, Genesis.GenesisHash gHash) <- readGenesis $ GenesisFile gFile
   return $ F.sformat Crypto.hashHexF gHash
 
 readProtocolMagicId :: GenesisFile -> ExceptT CliError IO Crypto.ProtocolMagicId
@@ -356,14 +359,13 @@ withRealPBFT gHash genFile nMagic sigThresh delCertFp sKeyFp update ptcl action 
 
 getLocalTip
   :: ConfigYamlFilePath
-  -> GenesisFile
+  -> Maybe CLISocketPath
   -> AssociateWithIOCP
-  -> SocketPath
   -> IO ()
-getLocalTip configFp genFp iocp sockPath = do
+getLocalTip configFp mSockPath iocp = do
   nc <- parseNodeConfigurationFP $ unConfigPath configFp
-
-  eGenHash <- runExceptT $ getGenesisHash genFp
+  sockPath <- return $ chooseSocketPath (ncSocketPath nc) mSockPath
+  eGenHash <- runExceptT $ getGenesisHash (ncGenesisFile nc)
 
   genHash <- case eGenHash  of
                Right gHash -> pure gHash
@@ -375,7 +377,7 @@ getLocalTip configFp genFp iocp sockPath = do
                                genHash
                                (ncNodeId nc)
                                (ncNumCoreNodes nc)
-                               (Just genFp)
+                               (Just $ ncGenesisFile nc)
                                (ncReqNetworkMagic nc)
                                (ncPbftSignatureThresh nc)
                                Nothing

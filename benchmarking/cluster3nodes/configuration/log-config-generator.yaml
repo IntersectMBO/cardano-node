@@ -81,12 +81,14 @@ options:
 
 NodeId:
 Protocol: RealPBFT
+GenesisFile: configuration/genesis/latest-genesis
 NumCoreNodes: 1
 RequiresNetworkMagic: RequiresMagic
 PBftSignatureThreshold:
 TurnOnLogging: True
 ViewMode: SimpleView
 TurnOnLogMetrics: True
+SocketPath:
 
 
 

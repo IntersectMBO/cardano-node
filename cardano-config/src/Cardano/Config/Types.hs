@@ -3,9 +3,10 @@
 {-# LANGUAGE RecordWildCards #-}
 
 module Cardano.Config.Types
-    ( CBORObject (..)
+    ( CardanoEnvironment (..)
+    , CBORObject (..)
+    , CLISocketPath (..)
     , ConfigYamlFilePath (..)
-    , CardanoEnvironment (..)
     , DbFile (..)
     , DelegationCertFile (..)
     , GenesisFile (..)
@@ -24,6 +25,7 @@ module Cardano.Config.Types
     , SocketPath (..)
     , Update (..)
     , ViewMode (..)
+    , YamlSocketPath (..)
     , parseNodeConfiguration
     , parseNodeConfigurationFP
     ) where
@@ -101,7 +103,7 @@ data MiscellaneousFilepaths = MiscellaneousFilepaths
   , genesisFile :: !(Maybe GenesisFile)
   , delegCertFile :: !(Maybe DelegationCertFile)
   , signKeyFile :: !(Maybe SigningKeyFile)
-  , socketFile :: !SocketPath
+  , socketFile :: !(Maybe CLISocketPath)
   } deriving Show
 
 newtype TopologyFile = TopologyFile
@@ -125,14 +127,9 @@ newtype DelegationCertFile = DelegationCertFile
   { unDelegationCert :: FilePath }
   deriving Show
 
-data SocketPath = SocketFile
+newtype SocketPath = SocketFile
   { unSocket :: FilePath }
-  deriving (Eq, Ord, Show)
-
-instance FromJSON SocketPath where
-  parseJSON (String sPath) = pure . SocketFile $ T.unpack sPath
-  parseJSON invalid = panic $ "Parsing of SocketPath failed due to type mismatch. "
-                           <> "Encountered: " <> (T.pack $ show invalid)
+  deriving (Eq, Ord, Show, IsString)
 
 newtype SigningKeyFile = SigningKeyFile
   { unSigningKey ::  FilePath }
@@ -148,7 +145,7 @@ data NodeConfiguration =
     , ncPbftSignatureThresh :: Maybe Double
     , ncLoggingSwitch :: Bool
     , ncLogMetrics :: Bool
-    , ncSocketPath :: Maybe SocketPath
+    , ncSocketPath :: Maybe YamlSocketPath
     , ncTraceOptions :: TraceOptions
     , ncViewMode :: ViewMode
     , ncUpdate :: Update
@@ -221,6 +218,20 @@ instance FromJSON NodeConfiguration where
                                                                     lkBlkVersionAlt))
                          }
 
+-- | Socket path read from the command line.
+newtype CLISocketPath = CLISocketPath
+  { unCLISocketPath :: SocketPath}
+  deriving Show
+
+-- | Socket path defined in the node's configuration yaml file.
+newtype YamlSocketPath = YamlSocketPath
+  { unYamlSocketPath :: SocketPath }
+  deriving Show
+
+instance FromJSON YamlSocketPath where
+  parseJSON (String sPath) = pure . YamlSocketPath . SocketFile $ T.unpack sPath
+  parseJSON invalid = panic $ "Parsing of SocketPath failed due to type mismatch. "
+                           <> "Encountered: " <> (T.pack $ show invalid)
 
 parseNodeConfigurationFP :: FilePath -> IO NodeConfiguration
 parseNodeConfigurationFP fp = decodeFileThrow fp
