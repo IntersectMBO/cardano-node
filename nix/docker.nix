@@ -7,11 +7,11 @@
 #
 # To launch with provided mainnet configuration and persist state in a docker volume run:
 #
-#   docker run -v /data -e ENV=mainnet inputoutput/cardano-node:<TAG>
+#   docker run -v /data -e NETWORK=mainnet inputoutput/cardano-node:<TAG>
 #
 # To launch with provided testnet configuration without persisting state run:
 #
-#   docker run -e ENV=testnet inputoutput/cardano-node:<TAG>
+#   docker run -e NETWORK=testnet inputoutput/cardano-node:<TAG>
 #
 # To launch with custom config, mount a dir containing config.json, genesis.json, and topology,json into /config
 #
@@ -71,16 +71,16 @@ let
       mkdir -m 0777 tmp
     '';
   };
-  # Image with all environment configs or utilizes a config volume mount
-  # To choose an environment, use `-e ENV testnet`
+  # Image with all network configs or utilizes a config volume mount
+  # To choose a network, use `-e NETWORK testnet`
     clusterStatements = lib.concatStringsSep "\n" (lib.mapAttrsToList (_: value: value) (commonLib.forEnvironments (env: ''
-      elif [[ "$ENV" == "${env.name}" ]]; then
+      elif [[ "$NETWORK" == "${env.name}" ]]; then
         exec ${scripts.${env.name}.node}
     '')));
   nodeDockerImage = let
     entry-point = writeScriptBin "entry-point" ''
       #!${runtimeShell}
-      echo $ENV
+      echo $NETWORK
       if [[ -d /config ]]; then
         exec ${cardano-node}/bin/cardano-node run \
           --config /config/config.json \
@@ -92,7 +92,7 @@ let
           --topology /config/topology.json $@
       ${clusterStatements}
       else
-        echo "Please set a ENV environment variable to one of: mainnet/testnet"
+        echo "Please set a NETWORK environment variable to one of: mainnet/testnet"
         echo "Or mount a /config volume containing: config.json, topology.json and genesis.json"
       fi
     '';
