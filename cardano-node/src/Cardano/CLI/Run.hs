@@ -201,14 +201,13 @@ data ClientCommand
    deriving Show
 
 
-
 runCommand :: ClientCommand -> ExceptT CliError IO ()
 runCommand (Genesis outDir params ptcl) = do
   gen <- mkGenesis params
   dumpGenesis ptcl outDir `uncurry` gen
 
-runCommand (GetLocalNodeTip configFp gFile sockPath) = do
-  liftIO $ getLocalTip configFp gFile sockPath
+runCommand (GetLocalNodeTip configFp gFile sockPath) = withIOManagerE $ \iocp ->
+  liftIO $ getLocalTip configFp gFile iocp sockPath
 
 runCommand (PrettySigningKeyPublic ptcl skF) = do
   sK <- readSigningKey ptcl skF

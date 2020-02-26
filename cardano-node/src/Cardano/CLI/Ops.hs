@@ -54,7 +54,7 @@ import           Ouroboros.Consensus.Mempool.API (ApplyTxErr)
 import           Ouroboros.Consensus.NodeNetwork (ProtocolCodecs(..), protocolCodecs)
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
                    (NodeToClientVersion, mostRecentNetworkProtocolVersion)
-import           Ouroboros.Consensus.Node.ProtocolInfo (ProtocolInfo(..), protocolInfo)
+import           Ouroboros.Consensus.Node.ProtocolInfo (ProtocolInfo(..))
 import           Ouroboros.Consensus.Node.Run
                    (RunNode(..))
 import           Ouroboros.Consensus.Util.Condense (Condense(..))
@@ -64,9 +64,9 @@ import           Ouroboros.Network.Codec (Codec)
 import           Ouroboros.Network.Mux
                    (AppType(InitiatorApp), OuroborosApplication(..))
 import           Ouroboros.Network.NodeToClient
-                 (NetworkConnectTracers(..), NodeToClientProtocols(..), NodeToClientVersionData(..)
-                 , NodeToClientVersion(NodeToClientV_1), connectTo, localTxSubmissionClientNull
-                 , nodeToClientCodecCBORTerm)
+                   (AssociateWithIOCP, NetworkConnectTracers(..), NodeToClientProtocols(..)
+                   , NodeToClientVersionData(..), NodeToClientVersion(NodeToClientV_1), connectTo
+                   , localTxSubmissionClientNull, nodeToClientCodecCBORTerm)
 import           Ouroboros.Network.Protocol.ChainSync.Client
                    (ChainSyncClient(..), ClientStIdle(..), ClientStNext(..)
                    , chainSyncClientPeer, recvMsgRollForward)
@@ -77,6 +77,7 @@ import           Ouroboros.Network.Protocol.LocalTxSubmission.Type
                    (LocalTxSubmission)
 import           Ouroboros.Network.Protocol.LocalTxSubmission.Client
                    (localTxSubmissionClientPeer)
+import           Ouroboros.Network.Snocket (socketSnocket)
 
 import           Cardano.Common.LocalSocket
 import           Cardano.Config.Protocol
@@ -274,9 +275,10 @@ withRealPBFT gHash genFile nMagic sigThresh delCertFp sKeyFp update ptcl action 
 getLocalTip
   :: ConfigYamlFilePath
   -> GenesisFile
+  -> AssociateWithIOCP
   -> SocketPath
   -> IO ()
-getLocalTip configFp genFp sockPath = do
+getLocalTip configFp genFp iocp sockPath = do
   nc <- parseNodeConfigurationFP $ unConfigPath configFp
 
   eGenHash <- runExceptT $ getGenesisHash genFp
@@ -304,22 +306,23 @@ getLocalTip configFp genFp sockPath = do
                         Left err -> do putTextLn . toS $ show err
                                        exitFailure
 
-  createNodeConnection (Proxy) p sockPath
+  createNodeConnection (Proxy) p iocp sockPath
 
 
 createNodeConnection
   :: forall blk . (Condense (HeaderHash blk), RunNode blk)
   => Proxy blk
   -> Consensus.Protocol blk
+  -> AssociateWithIOCP
   -> SocketPath
   -> IO ()
-createNodeConnection proxy ptcl socketPath = do
-    addr <- localSocketAddrInfo socketPath
-    let ProtocolInfo{pInfoConfig} = protocolInfo ptcl
+createNodeConnection proxy ptcl iocp socketPath = do
+    addr <- localSocketPath socketPath
+    let ProtocolInfo{pInfoConfig} = Consensus.protocolInfo ptcl
     connectTo
+      (socketSnocket iocp)
       (NetworkConnectTracers nullTracer nullTracer)
       (localInitiatorNetworkApplication proxy pInfoConfig)
-      Nothing
       addr
     `catch` handleMuxError
 
