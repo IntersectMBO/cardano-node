@@ -228,7 +228,7 @@ VerKey address with root e5a3807d99a1807c3f161a1558bcbc45de8392e049682df01809c48
 The `issue-delegation-certificate` subcommand enables generation of Byron genesis
 delegation certificates, given the following inputs:
 
-   - protocol magic
+   - node configuration yaml file
    - starting epoch of delegation
    - genesis delegator signing key
    - delegate verification key

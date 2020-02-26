@@ -121,8 +121,7 @@ data ClientCommand
     --- Delegation Related Commands ---
 
   | IssueDelegationCertificate
-    Protocol
-    ProtocolMagicId
+    ConfigYamlFilePath
     EpochNumber
     -- ^ The epoch from which the delegation is valid.
     SigningKeyFile
@@ -251,12 +250,14 @@ runCommand (ToVerification ptcl skFp (NewVerificationKeyFile vkFp)) = do
   let vKey = Builder.toLazyText . Crypto.formatFullVerificationKey $ Crypto.toVerification sk
   ensureNewFile TL.writeFile vkFp vKey
 
-runCommand (IssueDelegationCertificate ptcl magic epoch issuerSK delegateVK cert) = do
+runCommand (IssueDelegationCertificate configFp epoch issuerSK delegateVK cert) = do
+  nc <- liftIO . parseNodeConfigurationFP $ unConfigPath configFp
   vk <- readVerificationKey delegateVK
-  sk <- readSigningKey ptcl issuerSK
+  sk <- readSigningKey (ncProtocol nc) issuerSK
+  pmId <- readProtocolMagicId $ ncGenesisFile nc
   let byGenDelCert :: Delegation.Certificate
-      byGenDelCert = issueByronGenesisDelegation magic epoch sk vk
-  sCert <- hoistEither $ serialiseDelegationCert ptcl byGenDelCert
+      byGenDelCert = issueByronGenesisDelegation pmId epoch sk vk
+  sCert <- hoistEither $ serialiseDelegationCert (ncProtocol nc) byGenDelCert
   ensureNewFileLBS (nFp cert) sCert
 
 runCommand (CheckDelegation magic cert issuerVF delegateVF) = do

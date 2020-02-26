@@ -166,8 +166,7 @@ parseDelegationRelatedValues =
         "Create a delegation certificate allowing the\
         \ delegator to sign blocks on behalf of the issuer"
         $ IssueDelegationCertificate
-        <$> parseProtocol
-        <*> parseProtocolMagicId "protocol-magic"
+        <$> (ConfigYamlFilePath <$> parseConfigFile)
         <*> ( EpochNumber
                 <$> parseIntegral
                       "since-epoch"

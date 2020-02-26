@@ -18,6 +18,7 @@ module Cardano.CLI.Ops
   , pPrintCBOR
   , readCBOR
   , readGenesis
+  , readProtocolMagicId
   , serialiseDelegationCert
   , serialiseDelegateKey
   , serialiseGenesis
@@ -57,6 +58,7 @@ import qualified Cardano.Chain.Update as Update
 import qualified Cardano.Chain.UTxO as UTxO
 import           Cardano.Crypto (RequiresNetworkMagic, SigningKey (..))
 import qualified Cardano.Crypto.Hashing as Crypto
+import           Cardano.Crypto.ProtocolMagic as Crypto
 import           Control.Monad.Class.MonadTimer
 import           Control.Monad.Class.MonadThrow
 import           Control.Tracer (nullTracer, stdoutTracer, traceWith)
@@ -132,6 +134,11 @@ getGenesisHash :: GenesisFile -> ExceptT CliError IO Text
 getGenesisHash genFile = do
   (_, Genesis.GenesisHash gHash) <- readGenesis genFile
   return $ F.sformat Crypto.hashHexF gHash
+
+readProtocolMagicId :: GenesisFile -> ExceptT CliError IO Crypto.ProtocolMagicId
+readProtocolMagicId gFile = do
+  (genData, _) <- readGenesis gFile
+  pure $ Genesis.gdProtocolMagicId genData
 
 -- | Read genesis from a file.
 readGenesis :: GenesisFile -> ExceptT CliError IO (Genesis.GenesisData, Genesis.GenesisHash)
