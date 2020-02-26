@@ -1,25 +1,22 @@
 ############################################################################
 # Docker image builder
 #
-# To test it out, use:
+# To build and load into the Docker engine:
 #
 #   docker load -i $(nix-build -A dockerImage --no-out-link)
 #
-# To launch mainnet and keep state in a persistent docker volume run:
+# To launch with provided mainnet configuration and persist state in a docker volume run:
 #
 #   docker run -v /data -e ENV=mainnet inputoutput/cardano-node:<TAG>
-
-# To launch testnet and keep no state between launches run:
+#
+# To launch with provided testnet configuration without persisting state run:
 #
 #   docker run -e ENV=testnet inputoutput/cardano-node:<TAG>
 #
-# To launch with a custom config, volume mount /config and /data
+# To launch with custom config, mount a dir containing config.json, genesis.json, and topology,json into /config
 #
-#   docker run -v $PATH_TO/config:/config -v $PATH_TO/data:/data \
-#     inputoutput/cardano-node:<TAG> --genesis-hash <GENESIS_HASH>
-#
-# /config must contain config.json, genesis.json and topology.json
-#
+#   docker run -v $PATH_TO/config:/config \
+#     inputoutput/cardano-node:<TAG>
 #
 ############################################################################
 
@@ -95,8 +92,8 @@ let
           --topology /config/topology.json $@
       ${clusterStatements}
       else
-        echo "Please set ENV variable to one of: mainnet/testnet"
-        echo "Or add a /config volume with the config files: config.json, topology.json and genesis.json"
+        echo "Please set a ENV environment variable to one of: mainnet/testnet"
+        echo "Or mount a /config volume containing: config.json, topology.json and genesis.json"
       fi
     '';
   in dockerTools.buildImage {
