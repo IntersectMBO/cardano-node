@@ -3,7 +3,7 @@
 
 . $(dirname $0)/lib-node.sh
 CLI="$(executable_quiet_runner cardano-cli)"
-
+CONFIG="configuration/log-config-0.liveview.yaml"
 from_addr="2cWKMJemoBain3UWCzSY5wZvcf8uQ2MAaSy8hedrwpqsbYCm4QnBgPn3cEH7KF3X7DKoZ"
 from_key="${genesis_root}/delegate-keys.000.key"
 default_to_key="${genesis_root}/delegate-keys.001.key"
@@ -25,8 +25,7 @@ EOF
             exit 1;; esac
 
 args=" issue-genesis-utxo-expenditure
-       --real-pbft
-       --genesis-file        ${genesis_file}
+       --config              "$CONFIG"
        --tx                  ${tx}
        --wallet-key          ${from_key}
        --rich-addr-from    \"${from_addr}\"
