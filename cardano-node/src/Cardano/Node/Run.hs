@@ -66,6 +66,7 @@ import           Ouroboros.Consensus.Node (NodeKernel (getChainDB),
 import qualified Ouroboros.Consensus.Node as Node (run)
 import           Ouroboros.Consensus.Node.ProtocolInfo
 import           Ouroboros.Consensus.NodeId
+import qualified Ouroboros.Consensus.Config as Consensus
 import qualified Ouroboros.Consensus.Cardano as Consensus
 import           Ouroboros.Consensus.Util.Orphans ()
 import           Ouroboros.Consensus.Util.STM (onEachChange)
@@ -116,7 +117,7 @@ runNode loggingLayer npm = do
                                          (ncUpdate nc)
                                          (ncProtocol nc)
 
-    SomeProtocol (p :: Consensus.Protocol blk) <-
+    SomeProtocol (p :: Consensus.Protocol blk (BlockProtocol blk)) <-
       case eitherSomeProtocol of
         Left err -> (putTextLn . pack $ show err) >> exitFailure
         Right (SomeProtocol p) -> pure $ SomeProtocol p
@@ -158,7 +159,7 @@ runNode loggingLayer npm = do
 
 handleSimpleNode
   :: forall blk. RunNode blk
-  => Consensus.Protocol blk
+  => Consensus.Protocol blk (BlockProtocol blk)
   -> Trace IO Text
   -> Tracers RemoteConnectionId LocalConnectionId blk
   -> NodeProtocolMode
@@ -261,7 +262,7 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
   createTracers
     :: NodeProtocolMode
     -> Tracer IO GHC.Base.String
-    -> Consensus.NodeConfig (BlockProtocol blk)
+    -> Consensus.TopLevelConfig blk
     -> IO ()
   createTracers npm' tracer cfg = do
      case npm' of

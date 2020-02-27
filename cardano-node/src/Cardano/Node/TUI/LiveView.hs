@@ -745,7 +745,7 @@ ppPeer (LVPeer cid _af status inflight) =
    ppStatus Net.PeerFetchStatusShutdown      = "shutdown"
    ppStatus Net.PeerFetchStatusAberrant      = "aberrant"
    ppStatus Net.PeerFetchStatusBusy          = "fetching"
-   ppStatus (Net.PeerFetchStatusReady _blks) = "ready"
+   ppStatus (Net.PeerFetchStatusReady {})    = "ready"
 
 drawUI :: LiveViewState blk a -> [Widget ()]
 drawUI p = case lvsScreen p of

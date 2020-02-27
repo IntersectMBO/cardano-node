@@ -54,6 +54,7 @@ import           Ouroboros.Consensus.Mempool.API (ApplyTxErr)
 import           Ouroboros.Consensus.NodeNetwork (ProtocolCodecs(..), protocolCodecs)
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
                    (NodeToClientVersion, mostRecentNetworkProtocolVersion)
+import           Ouroboros.Consensus.Config (TopLevelConfig)
 import           Ouroboros.Consensus.Node.ProtocolInfo (ProtocolInfo(..))
 import           Ouroboros.Consensus.Node.Run
                    (RunNode(..))
@@ -247,7 +248,7 @@ withRealPBFT
   -> Update
   -> Protocol
   -> (RunNode ByronBlock
-        => Consensus.Protocol ByronBlock
+        => Consensus.Protocol ByronBlock Consensus.ProtocolRealPBFT
         -> ExceptT RealPBFTError IO a)
   -> ExceptT RealPBFTError IO a
 withRealPBFT gHash genFile nMagic sigThresh delCertFp sKeyFp update ptcl action = do
@@ -312,7 +313,7 @@ getLocalTip configFp genFp iocp sockPath = do
 createNodeConnection
   :: forall blk . (Condense (HeaderHash blk), RunNode blk)
   => Proxy blk
-  -> Consensus.Protocol blk
+  -> Consensus.Protocol blk (BlockProtocol blk)
   -> AssociateWithIOCP
   -> SocketPath
   -> IO ()
@@ -338,14 +339,14 @@ localInitiatorNetworkApplication
      , MonadTimer m
      )
   => Proxy blk
-  -> Consensus.NodeConfig (BlockProtocol blk)
+  -> TopLevelConfig blk
   -> Versions NodeToClientVersion DictVersion
               (OuroborosApplication 'InitiatorApp peer NodeToClientProtocols
                                     m LB.ByteString () Void)
-localInitiatorNetworkApplication proxy pInfoConfig =
+localInitiatorNetworkApplication proxy cfg =
     simpleSingletonVersions
       NodeToClientV_1
-      (NodeToClientVersionData { networkMagic = nodeNetworkMagic proxy pInfoConfig })
+      (NodeToClientVersionData { networkMagic = nodeNetworkMagic proxy cfg })
       (DictVersion nodeToClientCodecCBORTerm)
 
   $ OuroborosInitiatorApplication $ \_peer ptcl -> case ptcl of
@@ -364,10 +365,10 @@ localInitiatorNetworkApplication proxy pInfoConfig =
           (chainSyncClientPeer chainSyncClient)
  where
   localChainSyncCodec :: Codec (ChainSync (Serialised blk) (Tip blk)) DeserialiseFailure m LB.ByteString
-  localChainSyncCodec = pcLocalChainSyncCodec . protocolCodecs pInfoConfig $ mostRecentNetworkProtocolVersion proxy
+  localChainSyncCodec = pcLocalChainSyncCodec . protocolCodecs cfg $ mostRecentNetworkProtocolVersion proxy
 
   localTxSubmissionCodec :: Codec (LocalTxSubmission (GenTx blk) (ApplyTxErr blk)) DeserialiseFailure m LB.ByteString
-  localTxSubmissionCodec = pcLocalTxSubmissionCodec . protocolCodecs pInfoConfig $ mostRecentNetworkProtocolVersion proxy
+  localTxSubmissionCodec = pcLocalTxSubmissionCodec . protocolCodecs cfg $ mostRecentNetworkProtocolVersion proxy
 
 chainSyncClient
   :: forall blk m . (Condense (HeaderHash blk), MonadIO m)

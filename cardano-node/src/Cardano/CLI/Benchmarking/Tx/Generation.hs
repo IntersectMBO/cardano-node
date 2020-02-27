@@ -86,15 +86,13 @@ import           Control.Tracer (Tracer, traceWith)
 import           Ouroboros.Network.NodeToClient (AssociateWithIOCP)
 
 import           Ouroboros.Consensus.Node.Run (RunNode)
-import           Ouroboros.Consensus.Block(BlockProtocol)
 import           Ouroboros.Consensus.Node.ProtocolInfo (ProtocolInfo (..))
 import qualified Ouroboros.Consensus.Cardano as Consensus
+import           Ouroboros.Consensus.Config (TopLevelConfig (configBlock))
 import qualified Ouroboros.Consensus.Mempool as Mempool
 import           Ouroboros.Consensus.Byron.Ledger (ByronBlock (..),
                                                    GenTx (..),
-                                                   ByronConsensusProtocol,
-                                                   getGenesisConfig)
-import           Ouroboros.Consensus.Protocol.Abstract (NodeConfig)
+                                                   byronProtocolMagicId)
 
 newtype NumberOfTxs =
   NumberOfTxs Word64
@@ -147,7 +145,7 @@ genesisBenchmarkRunner
   :: LoggingLayer
   -> AssociateWithIOCP
   -> SocketPath
-  -> Consensus.Protocol ByronBlock
+  -> Consensus.Protocol ByronBlock Consensus.ProtocolRealPBFT
   -> NonEmpty NodeAddress
   -> NumberOfTxs
   -> NumberOfInputsPerTx
@@ -326,7 +324,7 @@ prepareSigningKeys skeys = do
   pure . map (Crypto.SigningKey . snd) $ rights desKeys
 
 mkAddressForKey
-  :: NodeConfig ByronConsensusProtocol
+  :: TopLevelConfig ByronBlock
   -> Crypto.SigningKey
   -> CC.Common.Address
 mkAddressForKey _pInfoConfig =
@@ -398,7 +396,7 @@ prepareInitialFunds
   -> AssociateWithIOCP 
   -> SocketPath
   -> CC.Genesis.Config
-  -> NodeConfig ByronConsensusProtocol
+  -> TopLevelConfig ByronBlock
   -> Map Int ((CC.UTxO.TxIn, CC.UTxO.TxOut), Crypto.SigningKey)
   -> CC.Common.Address
   -> CC.Common.Address
@@ -466,7 +464,7 @@ getTxIdFromGenTx _ = panic "Impossible happened: generated transaction is not a 
 -- | One or more inputs -> one or more outputs.
 mkTransaction
   :: (FiscalRecipient r)
-  => NodeConfig ByronConsensusProtocol
+  => TopLevelConfig ByronBlock
   -> NonEmpty (TxDetails, Crypto.SigningKey)
   -- ^ Non-empty list of (TxIn, TxOut) that will be used as
   -- inputs and the key to spend the associated value
@@ -595,7 +593,7 @@ appendr l nel = foldr NE.cons nel l
 
 -- | ...
 createTxAux
-  :: NodeConfig ByronConsensusProtocol
+  :: TopLevelConfig ByronBlock
   -> CC.UTxO.Tx
   -> Crypto.SigningKey
   -> CC.UTxO.ATxAux ByteString
@@ -605,7 +603,7 @@ createTxAux config tx signingKey = CC.UTxO.annotateTxAux $ CC.UTxO.mkTxAux tx wi
       CC.UTxO.VKWitness
         (Crypto.toVerification signingKey)
         (Crypto.sign
-          (CC.Genesis.configProtocolMagicId (getGenesisConfig config))
+          (byronProtocolMagicId (configBlock config))
           -- provide ProtocolMagicId so as not to calculate it every time
           Crypto.SignTx
           signingKey
@@ -643,7 +641,7 @@ runBenchmark
   -> Tracer IO TraceLowLevelSubmit
   -> AssociateWithIOCP
   -> SocketPath
-  -> NodeConfig ByronConsensusProtocol
+  -> TopLevelConfig ByronBlock
   -> Crypto.SigningKey
   -> CC.Common.Address
   -> NonEmpty NodeAddress
@@ -838,7 +836,7 @@ createMoreFundCoins
   -> Tracer IO TraceLowLevelSubmit
   -> AssociateWithIOCP
   -> SocketPath
-  -> NodeConfig ByronConsensusProtocol
+  -> TopLevelConfig ByronBlock
   -> Crypto.SigningKey
   -> FeePerTx
   -> NumberOfTxs
@@ -912,7 +910,7 @@ createMoreFundCoins benchTracer
  where
   -- create txs which split the funds to numTxOuts equal parts
   createSplittingTxs
-    :: NodeConfig ByronConsensusProtocol
+    :: TopLevelConfig ByronBlock
     -> (TxDetails, Crypto.SigningKey)
     -> Word64
     -> Word64
@@ -985,7 +983,7 @@ minimalTPSRate (TPSRate tps) = picosecondsToDiffTime timeInPicoSecs
 
 txGenerator
   :: Tracer IO (TraceBenchTxSubmit (Mempool.GenTxId ByronBlock))
-  -> NodeConfig ByronConsensusProtocol
+  -> TopLevelConfig ByronBlock
   -> CC.Common.Address
   -> Crypto.SigningKey
   -> FeePerTx
@@ -1179,7 +1177,7 @@ launchTxPeer
   -- ^ associate a file descriptor with IO completion port
   -> MSTM.TVar m Bool
   -- a "global" stop variable, set to True to force shutdown
-  -> NodeConfig (Ouroboros.Consensus.Block.BlockProtocol block)
+  -> TopLevelConfig block
   -- the configuration
   -> Maybe Network.Socket.AddrInfo
   -- local address binding (if wanted)

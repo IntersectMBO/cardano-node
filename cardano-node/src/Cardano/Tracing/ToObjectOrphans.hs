@@ -31,14 +31,15 @@ import           Cardano.BM.Data.LogItem (LOContent (..), LogObject (..),
 import           Cardano.BM.Tracing
 import           Cardano.BM.Data.Tracer (trStructured, emptyObject, mkObject)
 
-import           Ouroboros.Consensus.Block (Header, SupportedBlock, headerPoint)
+import           Ouroboros.Consensus.Block (Header, headerPoint)
 import           Ouroboros.Consensus.BlockFetchServer
                    (TraceBlockFetchServerEvent)
 import           Ouroboros.Consensus.ChainSyncClient
                    (TraceChainSyncClientEvent (..))
 import           Ouroboros.Consensus.ChainSyncServer
                    (TraceChainSyncServerEvent(..))
-import           Ouroboros.Consensus.Ledger.Abstract
+import           Ouroboros.Consensus.Ledger.SupportsProtocol
+                   (LedgerSupportsProtocol)
 import           Ouroboros.Consensus.Mempool.API (GenTx, GenTxId,
                    HasTxId, TraceEventMempool (..), TxId, txId)
 import           Ouroboros.Consensus.Node.Tracers (TraceForgeEvent (..))
@@ -237,7 +238,7 @@ defaultTextTransformer _ verb tr =
 
 instance ( DefinePrivacyAnnotation (ChainDB.TraceAddBlockEvent blk)
          , DefineSeverity (ChainDB.TraceAddBlockEvent blk)
-         , ProtocolLedgerView blk
+         , LedgerSupportsProtocol blk
          , Show (Ouroboros.Consensus.Block.Header blk)
          , ToObject (ChainDB.TraceAddBlockEvent blk))
  => Transformable Text IO (ChainDB.TraceAddBlockEvent blk) where
@@ -374,7 +375,7 @@ instance DefineSeverity (TraceForgeEvent blk tx) where
 -- | instances of @Transformable@
 
 -- transform @ChainSyncClient@
-instance (Condense (HeaderHash blk), ProtocolLedgerView blk, SupportedBlock blk)
+instance (Condense (HeaderHash blk), LedgerSupportsProtocol blk)
           => Transformable Text IO (TraceChainSyncClientEvent blk) where
   trTransformer _ verb tr = trStructured verb tr
 
@@ -405,14 +406,15 @@ instance Transformable Text IO (TraceTxSubmissionInbound
                                 (GenTxId blk) (GenTx blk)) where
   trTransformer = defaultTextTransformer
 
-instance Transformable Text IO (TraceTxSubmissionOutbound
+instance (Show (GenTxId blk), Show (GenTx blk))
+      => Transformable Text IO (TraceTxSubmissionOutbound
                                 (GenTxId blk) (GenTx blk)) where
   trTransformer = defaultTextTransformer
 
 instance Transformable Text IO (TraceLocalTxSubmissionServerEvent blk) where
   trTransformer _ verb tr = trStructured verb tr
 
-instance (Condense (HeaderHash blk), Show (TxId tx), HasTxId tx, Show blk, Show tx, ProtocolLedgerView blk)
+instance (Condense (HeaderHash blk), Show (TxId tx), HasTxId tx, Show blk, Show tx, LedgerSupportsProtocol blk)
            => Transformable Text IO (TraceForgeEvent blk tx) where
   trTransformer = defaultTextTransformer
 
@@ -442,7 +444,7 @@ instance (Show peer)
   trTransformer = defaultTextTransformer
 
 -- transform @TraceEvent@
-instance (Condense (HeaderHash blk), ProtocolLedgerView blk)
+instance (Condense (HeaderHash blk), LedgerSupportsProtocol blk)
             => Transformable Text IO (WithTip blk (ChainDB.TraceEvent blk)) where
   -- structure required, will call 'toObject'
   trTransformer StructuredLogging verb tr = trStructured verb tr
@@ -459,7 +461,7 @@ instance (Condense (HeaderHash blk), ProtocolLedgerView blk)
 -- human-readable trace messages.
 readableChainDBTracer
   :: forall m blk.
-     (Monad m, Condense (HeaderHash blk), ProtocolLedgerView blk)
+     (Monad m, Condense (HeaderHash blk), LedgerSupportsProtocol blk)
   => Tracer m String
   -> Tracer m (WithTip blk (ChainDB.TraceEvent blk))
 readableChainDBTracer tracer = Tracer $ \case
@@ -593,7 +595,7 @@ instance (Show peer)
              , "bearer" .= show b
              , "event" .= show ev ]
 
-instance (Condense (HeaderHash blk), ProtocolLedgerView blk)
+instance (Condense (HeaderHash blk), LedgerSupportsProtocol blk)
       => ToObject (WithTip blk (ChainDB.TraceEvent blk)) where
   -- example: turn off any tracing of @TraceEvent@s when minimal verbosity level is set
   -- toObject MinimalVerbosity _ = emptyObject -- no output
@@ -612,14 +614,14 @@ instance ToObject SlotNo where
     mkObject [ "kind" .= String "SlotNo"
              , "slot" .= toJSON (unSlotNo slot) ]
 
-instance (Condense (HeaderHash blk), ProtocolLedgerView blk)
+instance Condense (HeaderHash blk)
       => ToObject (Point blk) where
   toObject MinimalVerbosity p = toObject NormalVerbosity p
   toObject verb p =
     mkObject [ "kind" .= String "Tip"
              , "tip" .= showPoint verb p ]
 
-instance (Condense (HeaderHash blk), ProtocolLedgerView blk)
+instance (Condense (HeaderHash blk), LedgerSupportsProtocol blk)
       => ToObject (ChainDB.TraceEvent blk) where
   toObject verb (ChainDB.TraceAddBlockEvent ev) = case ev of
     ChainDB.IgnoreBlockOlderThanK pt ->
@@ -779,7 +781,7 @@ instance ToObject LedgerDB.DiskSnapshot where
     mkObject [ "kind" .= String "snapshot"
              , "snapshot" .= String (pack $ show snap) ]
 
-instance (Condense (HeaderHash blk), ProtocolLedgerView blk, SupportedBlock blk)
+instance (Condense (HeaderHash blk), LedgerSupportsProtocol blk)
           => ToObject (TraceChainSyncClientEvent blk) where
   toObject verb ev = case ev of
     TraceDownloadedHeader pt ->
@@ -916,7 +918,7 @@ instance ToObject (TraceLocalTxSubmissionServerEvent blk) where
   toObject _verb _ =
     mkObject [ "kind" .= String "TraceLocalTxSubmissionServerEvent" ]
 
-instance (HasTxId tx, ProtocolLedgerView blk, Condense (HeaderHash blk), Show (TxId tx))
+instance (HasTxId tx, LedgerSupportsProtocol blk, Condense (HeaderHash blk), Show (TxId tx))
            => ToObject (TraceForgeEvent blk tx) where
   toObject MaximalVerbosity (TraceAdoptedBlock slotNo blk txs) =
     mkObject

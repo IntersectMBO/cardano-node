@@ -30,7 +30,7 @@ import qualified Cardano.Chain.Update as Update
 import           Cardano.Crypto (RequiresNetworkMagic, decodeHash)
 import qualified Cardano.Crypto.Signing as Signing
 
-import           Ouroboros.Consensus.Block (Header)
+import           Ouroboros.Consensus.Block (Header, BlockProtocol)
 import           Ouroboros.Consensus.BlockchainTime (SlotLength, SlotLengths,
                                                      singletonSlotLengths,
                                                      slotLengthFromSec)
@@ -100,7 +100,7 @@ mockSomeProtocol
   => Maybe NodeId
   -> Maybe Word64
   -- ^ Number of core nodes
-  -> (CoreNodeId -> NumCoreNodes -> Consensus.Protocol blk)
+  -> (CoreNodeId -> NumCoreNodes -> Consensus.Protocol blk (BlockProtocol blk))
   -> Either ProtocolInstantiationError SomeProtocol
 mockSomeProtocol nId mNumCoreNodes mkConsensusProtocol =  do
     (cid, numCoreNodes) <- extractNodeInfo nId mNumCoreNodes
@@ -110,7 +110,7 @@ mockSomeProtocol nId mNumCoreNodes mkConsensusProtocol =  do
 
 data SomeProtocol where
   SomeProtocol :: (RunNode blk, TraceConstraints blk)
-               => Consensus.Protocol blk -> SomeProtocol
+               => Consensus.Protocol blk (BlockProtocol blk) -> SomeProtocol
 
 data ProtocolInstantiationError =
     ByronLegacyProtocolNotImplemented
@@ -144,21 +144,25 @@ fromProtocol _ nId mNumCoreNodes _ _ _ _ _ _ BFT =
     Consensus.ProtocolMockBFT numCoreNodes cid mockSecurityParam mockSlotLengths
 fromProtocol _ nId mNumCoreNodes _ _ _ _ _ _ Praos =
   hoistEither $ mockSomeProtocol nId mNumCoreNodes $ \cid numCoreNodes ->
-    Consensus.ProtocolMockPraos numCoreNodes cid PraosParams {
-        praosSecurityParam = mockSecurityParam
-      , praosSlotsPerEpoch = 3
-      , praosLeaderF       = 0.5
-      , praosLifetimeKES   = 1000000
-      , praosSlotLength    = slotLengthFromSec 2
-    }
+    Consensus.ProtocolMockPraos
+      numCoreNodes
+      cid
+      PraosParams {
+          praosSecurityParam = mockSecurityParam
+        , praosSlotsPerEpoch = 3
+        , praosLeaderF       = 0.5
+        , praosLifetimeKES   = 1000000
+        }
+      (singletonSlotLengths (slotLengthFromSec 2))
 fromProtocol _ nId mNumCoreNodes _ _ _ _ _ _ MockPBFT =
   hoistEither $ mockSomeProtocol nId mNumCoreNodes $ \cid numCoreNodes@(NumCoreNodes numNodes) ->
     Consensus.ProtocolMockPBFT
       PBftParams { pbftSecurityParam      = mockSecurityParam
                  , pbftNumNodes           = numCoreNodes
                  , pbftSignatureThreshold = (1.0 / fromIntegral numNodes) + 0.1
-                 , pbftSlotLength         = mockSlotLength
+
                  }
+      (singletonSlotLengths mockSlotLength)
       cid
 fromProtocol gHash _ _ mGenFile nMagic sigThresh delCertFp sKeyFp update RealPBFT = do
     let genHash = either panic identity $ decodeHash gHash
@@ -189,7 +193,7 @@ protocolConfigRealPbft :: Update
                        -> Maybe Double
                        -> Genesis.Config
                        -> Maybe PBftLeaderCredentials
-                       -> Consensus.Protocol ByronBlock
+                       -> Consensus.Protocol ByronBlock ProtocolRealPBFT
 protocolConfigRealPbft (Update appName appVer lastKnownBlockVersion)
                        pbftSignatureThresh
                        genesis leaderCredentials =

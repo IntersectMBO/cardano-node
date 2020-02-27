@@ -37,6 +37,7 @@ import           Control.Tracer
 import           Network.Mux (MuxError)
 
 import           Ouroboros.Consensus.Block (BlockProtocol, GetHeader (..))
+import           Ouroboros.Consensus.Config (TopLevelConfig)
 import           Ouroboros.Consensus.Mempool
 import           Ouroboros.Consensus.Node.ProtocolInfo
 import           Ouroboros.Consensus.Node.Run
@@ -75,7 +76,7 @@ runChairman :: forall blk.
                , TraceConstraints blk
                )
             => AssociateWithIOCP
-            -> Protocol blk
+            -> Protocol blk (BlockProtocol blk)
             -> SecurityParam
             -- ^ security parameter, if a fork is deeper than it 'runChairman'
             -- will throw an exception.
@@ -91,14 +92,14 @@ runChairman iocp ptcl securityParam maxBlockNo socketPaths tracer = do
       (Map.fromList $ map (\socketPath -> (socketPath, AF.Empty AF.AnchorGenesis)) socketPaths)
 
     void $ flip mapConcurrently socketPaths $ \sockPath ->
-        let ProtocolInfo{pInfoConfig} = protocolInfo ptcl
+        let ProtocolInfo { pInfoConfig = cfg } = protocolInfo ptcl
 
         in createConnection
              chainsVar
              securityParam
              maxBlockNo
              tracer
-             pInfoConfig
+             cfg
              iocp
              sockPath
 
@@ -125,7 +126,7 @@ createConnection
   -> SecurityParam
   -> Maybe BlockNo
   -> Tracer IO String
-  -> NodeConfig (BlockProtocol blk)
+  -> TopLevelConfig blk
   -> AssociateWithIOCP
   -> SocketPath
   -> IO ()
@@ -134,7 +135,7 @@ createConnection
   securityParam
   maxBlockNo
   tracer
-  pInfoConfig
+  cfg
   iocp
   socketPath = do
       path <- localSocketPath socketPath
@@ -152,7 +153,7 @@ createConnection
             (showTracing tracer)
             nullTracer
             nullTracer
-            pInfoConfig)
+            cfg)
         path
         `catch` handleMuxError tracer chainsVar socketPath
 
@@ -376,14 +377,14 @@ localInitiatorNetworkApplication
   -- ^ tracer which logs all local tx submission protocol messages send and
   -- received by the client (see 'Ouroboros.Network.Protocol.LocalTxSubmission.Type'
   -- in 'ouroboros-network' package).
-  -> NodeConfig (BlockProtocol blk)
+  -> TopLevelConfig blk
   -> Versions NodeToClientVersion DictVersion
               (OuroborosApplication 'InitiatorApp peer NodeToClientProtocols
                                     m ByteString () Void)
-localInitiatorNetworkApplication sockPath chainsVar securityParam maxBlockNo chairmanTracer chainSyncTracer localTxSubmissionTracer pInfoConfig =
+localInitiatorNetworkApplication sockPath chainsVar securityParam maxBlockNo chairmanTracer chainSyncTracer localTxSubmissionTracer cfg =
     simpleSingletonVersions
       NodeToClientV_1
-      (NodeToClientVersionData (nodeNetworkMagic (Proxy @blk) pInfoConfig))
+      (NodeToClientVersionData (nodeNetworkMagic (Proxy @blk) cfg))
       (DictVersion nodeToClientCodecCBORTerm)
 
   $ OuroborosInitiatorApplication $ \_peer ptcl -> case ptcl of
@@ -397,7 +398,7 @@ localInitiatorNetworkApplication sockPath chainsVar securityParam maxBlockNo cha
       ChainSyncWithBlocksPtcl -> \channel ->
         runPeer
           chainSyncTracer
-          (localChainSyncCodec pInfoConfig)
+          (localChainSyncCodec cfg)
           channel
           (chainSyncClientPeer $ chainSyncClient chairmanTracer sockPath chainsVar securityParam maxBlockNo)
 
@@ -422,13 +423,13 @@ localChainSyncCodec
      ( RunNode blk
      , MonadST    m
      )
-  => NodeConfig (BlockProtocol blk)
+  => TopLevelConfig blk
   -> Codec (ChainSync blk (Tip blk))
            DeserialiseFailure m ByteString
-localChainSyncCodec pInfoConfig =
+localChainSyncCodec cfg =
     codecChainSync
-      (Block.wrapCBORinCBOR   (nodeEncodeBlock pInfoConfig))
-      (Block.unwrapCBORinCBOR (nodeDecodeBlock pInfoConfig))
+      (Block.wrapCBORinCBOR   (nodeEncodeBlock cfg))
+      (Block.unwrapCBORinCBOR (nodeDecodeBlock cfg))
       (Block.encodePoint (nodeEncodeHeaderHash (Proxy @blk)))
       (Block.decodePoint (nodeDecodeHeaderHash (Proxy @blk)))
       (Block.encodeTip   (nodeEncodeHeaderHash (Proxy @blk)))

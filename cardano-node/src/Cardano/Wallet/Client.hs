@@ -26,6 +26,7 @@ import           Control.Monad.Class.MonadThrow
 import           Control.Monad.Class.MonadTimer
 import           Control.Tracer
 
+import           Ouroboros.Consensus.Config (TopLevelConfig)
 import           Ouroboros.Consensus.Block (BlockProtocol)
 import           Ouroboros.Consensus.Mempool
 import           Ouroboros.Consensus.Node.ProtocolInfo
@@ -55,7 +56,7 @@ runWalletClient :: forall blk.
                    ( RunNode blk
                    , TraceConstraints blk
                    )
-                => Protocol blk
+                => Protocol blk (BlockProtocol blk)
                 -> SocketPath
                 -> Tracer IO String
                 -> IO ()
@@ -63,7 +64,7 @@ runWalletClient ptcl sockFp tracer = withIOManager $ \iocp -> do
 
     path <- localSocketPath sockFp
 
-    let ProtocolInfo{pInfoConfig} = protocolInfo ptcl
+    let ProtocolInfo { pInfoConfig = cfg } = protocolInfo ptcl
 
         chainSyncTracer = contramap show tracer
         localTxSubmissionTracer = contramap show tracer
@@ -78,7 +79,7 @@ runWalletClient ptcl sockFp tracer = withIOManager $ \iocp -> do
         (Proxy :: Proxy blk)
         chainSyncTracer
         localTxSubmissionTracer
-        pInfoConfig)
+        cfg)
       path
 
 localInitiatorNetworkApplication
@@ -101,14 +102,14 @@ localInitiatorNetworkApplication
   -- ^ tracer which logs all local tx submission protocol messages send and
   -- received by the client (see 'Ouroboros.Network.Protocol.LocalTxSubmission.Type'
   -- in 'ouroboros-network' package).
-  -> NodeConfig (BlockProtocol blk)
+  -> TopLevelConfig blk
   -> Versions NodeToClientVersion DictVersion
               (OuroborosApplication 'InitiatorApp peer NodeToClientProtocols
                                     m ByteString Void Void)
-localInitiatorNetworkApplication Proxy chainSyncTracer localTxSubmissionTracer pInfoConfig =
+localInitiatorNetworkApplication Proxy chainSyncTracer localTxSubmissionTracer cfg =
     simpleSingletonVersions
       NodeToClientV_1
-      (NodeToClientVersionData { networkMagic = nodeNetworkMagic (Proxy @blk) pInfoConfig })
+      (NodeToClientVersionData { networkMagic = nodeNetworkMagic (Proxy @blk) cfg })
       (DictVersion nodeToClientCodecCBORTerm)
 
   $ OuroborosInitiatorApplication $ \_peer ptcl -> case ptcl of
@@ -124,7 +125,7 @@ localInitiatorNetworkApplication Proxy chainSyncTracer localTxSubmissionTracer p
       ChainSyncWithBlocksPtcl -> \channel ->
         runPeer
           chainSyncTracer
-          (localChainSyncCodec @blk pInfoConfig)
+          (localChainSyncCodec @blk cfg)
           channel
           (chainSyncClientPeer chainSyncClient)
 
@@ -198,13 +199,13 @@ localTxSubmissionCodec =
 
 localChainSyncCodec
   :: forall blk m. (RunNode blk, MonadST m)
-  => NodeConfig (BlockProtocol blk)
+  => TopLevelConfig blk
   -> Codec (ChainSync blk (Tip blk))
            DeserialiseFailure m ByteString
-localChainSyncCodec pInfoConfig =
+localChainSyncCodec cfg =
     codecChainSync
-      (Block.wrapCBORinCBOR   (nodeEncodeBlock pInfoConfig))
-      (Block.unwrapCBORinCBOR (nodeDecodeBlock pInfoConfig))
+      (Block.wrapCBORinCBOR   (nodeEncodeBlock cfg))
+      (Block.unwrapCBORinCBOR (nodeDecodeBlock cfg))
       (Block.encodePoint (nodeEncodeHeaderHash (Proxy @blk)))
       (Block.decodePoint (nodeDecodeHeaderHash (Proxy @blk)))
       (Block.encodeTip (nodeEncodeHeaderHash (Proxy @blk)))

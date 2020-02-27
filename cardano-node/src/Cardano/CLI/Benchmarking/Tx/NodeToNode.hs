@@ -41,13 +41,12 @@ import           Cardano.BM.Data.Tracer (DefinePrivacyAnnotation (..),
                      DefineSeverity (..), ToObject (..), TracingFormatting (..),
                      TracingVerbosity (..), Transformable (..),
                      emptyObject, mkObject, trStructured)
-import           Ouroboros.Consensus.Block (BlockProtocol)
 import           Ouroboros.Consensus.Byron.Ledger (ByronBlock (..))
 import           Ouroboros.Consensus.Mempool.API (GenTxId, GenTx)
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
 import           Ouroboros.Consensus.Node.Run (RunNode, nodeNetworkMagic)
 import           Ouroboros.Consensus.NodeNetwork (ProtocolCodecs(..), protocolCodecs)
-import           Ouroboros.Consensus.Protocol.Abstract (NodeConfig)
+import           Ouroboros.Consensus.Config (TopLevelConfig)
 import           Ouroboros.Network.Mux (OuroborosApplication(..))
 import           Ouroboros.Network.NodeToNode (NetworkConnectTracers (..))
 import qualified Ouroboros.Network.NodeToNode as NtN
@@ -197,7 +196,7 @@ benchmarkConnectTxSubmit
   => AssociateWithIOCP
   -> BenchmarkTxSubmitTracers m blk
   -- ^ For tracing the send/receive actions
-  -> NodeConfig (BlockProtocol blk)
+  -> TopLevelConfig blk
   -- ^ The particular block protocol
   -> Maybe AddrInfo
   -- ^ local address information (typically local interface/port to use)
@@ -206,7 +205,7 @@ benchmarkConnectTxSubmit
   -> TxSubmissionClient (GenTxId blk) (GenTx blk) m ()
   -- ^ the particular txSubmission peer
   -> m ()
-benchmarkConnectTxSubmit iocp trs nc localAddr remoteAddr myTxSubClient = do
+benchmarkConnectTxSubmit iocp trs cfg localAddr remoteAddr myTxSubClient = do
   NtN.connectTo
     (socketSnocket iocp)
     NetworkConnectTracers {
@@ -220,7 +219,7 @@ benchmarkConnectTxSubmit iocp trs nc localAddr remoteAddr myTxSubClient = do
   myCodecs :: ProtocolCodecs blk DeserialiseFailure m
                 ByteString ByteString ByteString ByteString ByteString
                 ByteString ByteString ByteString
-  myCodecs  = protocolCodecs nc (mostRecentNetworkProtocolVersion (Proxy @blk))
+  myCodecs  = protocolCodecs cfg (mostRecentNetworkProtocolVersion (Proxy @blk))
 
   peerMultiplex :: Versions NtN.NodeToNodeVersion NtN.DictVersion
               (OuroborosApplication
@@ -234,7 +233,7 @@ benchmarkConnectTxSubmit iocp trs nc localAddr remoteAddr myTxSubClient = do
   peerMultiplex =
     simpleSingletonVersions
       NtN.NodeToNodeV_1
-      (NtN.NodeToNodeVersionData { NtN.networkMagic = nodeNetworkMagic (Proxy @blk) nc})
+      (NtN.NodeToNodeVersionData { NtN.networkMagic = nodeNetworkMagic (Proxy @blk) cfg})
       (NtN.DictVersion NtN.nodeToNodeCodecCBORTerm)
       $ OuroborosInitiatorApplication $ \_peer ptcl ->
           case ptcl of

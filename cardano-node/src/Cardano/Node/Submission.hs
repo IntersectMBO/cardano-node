@@ -26,11 +26,10 @@ import           Control.Monad.Class.MonadThrow (MonadThrow)
 import           Control.Monad.Class.MonadTimer (MonadTimer)
 import           Control.Tracer (Tracer, nullTracer, traceWith)
 
-import           Ouroboros.Consensus.Block (BlockProtocol)
 import           Ouroboros.Consensus.Mempool (ApplyTxErr, GenTx)
 import           Ouroboros.Consensus.Node.Run (RunNode)
 import qualified Ouroboros.Consensus.Node.Run as Node
-import           Ouroboros.Consensus.Protocol.Abstract (NodeConfig)
+import           Ouroboros.Consensus.Config (TopLevelConfig)
 
 import           Network.TypedProtocol.Driver (runPeer)
 import           Ouroboros.Network.Codec (Codec, DeserialiseFailure)
@@ -105,11 +104,11 @@ submitTx :: ( RunNode blk
             )
          => AssociateWithIOCP
          -> SocketPath
-         -> NodeConfig (BlockProtocol blk)
+         -> TopLevelConfig blk
          -> GenTx blk
          -> Tracer IO TraceLowLevelSubmit
          -> IO ()
-submitTx iocp targetSocketFp protoInfoConfig tx tracer = do
+submitTx iocp targetSocketFp cfg tx tracer = do
     targetSocketFp' <- localSocketPath targetSocketFp
     NodeToClient.connectTo
       (socketSnocket iocp)
@@ -117,7 +116,7 @@ submitTx iocp targetSocketFp protoInfoConfig tx tracer = do
           nctMuxTracer       = nullTracer,
           nctHandshakeTracer = nullTracer
         }
-      (localInitiatorNetworkApplication tracer protoInfoConfig tx)
+      (localInitiatorNetworkApplication tracer cfg tx)
       targetSocketFp'
 
 localInitiatorNetworkApplication
@@ -129,16 +128,16 @@ localInitiatorNetworkApplication
      , Show (ApplyTxErr blk)
      )
   => Tracer m TraceLowLevelSubmit
-  -> NodeConfig (BlockProtocol blk)
+  -> TopLevelConfig blk
   -> GenTx blk
   -> Versions NodeToClient.NodeToClientVersion NodeToClient.DictVersion
               (OuroborosApplication 'InitiatorApp peer NodeToClient.NodeToClientProtocols
                                     m ByteString () Void)
-localInitiatorNetworkApplication tracer protoInfoConfig tx =
+localInitiatorNetworkApplication tracer cfg tx =
     simpleSingletonVersions
       NodeToClient.NodeToClientV_1
       (NodeToClient.NodeToClientVersionData
-        { NodeToClient.networkMagic = Node.nodeNetworkMagic (Proxy @blk) protoInfoConfig })
+        { NodeToClient.networkMagic = Node.nodeNetworkMagic (Proxy @blk) cfg })
       (NodeToClient.DictVersion NodeToClient.nodeToClientCodecCBORTerm)
 
   $ OuroborosInitiatorApplication $ \_peer ptcl -> case ptcl of
@@ -157,7 +156,7 @@ localInitiatorNetworkApplication tracer protoInfoConfig tx =
       NodeToClient.ChainSyncWithBlocksPtcl -> \channel ->
         runPeer
           nullTracer
-          (localChainSyncCodec @blk protoInfoConfig)
+          (localChainSyncCodec @blk cfg)
           channel
           (chainSyncClientPeer NodeToClient.chainSyncClientNull)
 
@@ -186,13 +185,13 @@ localTxSubmissionCodec =
 
 localChainSyncCodec
   :: forall blk m. (RunNode blk, MonadST m)
-  => NodeConfig (BlockProtocol blk)
+  => TopLevelConfig blk
   -> Codec (ChainSync blk (Point blk))
            DeserialiseFailure m ByteString
-localChainSyncCodec protoInfoConfig =
+localChainSyncCodec cfg =
     codecChainSync
-      (Block.wrapCBORinCBOR   (Node.nodeEncodeBlock protoInfoConfig))
-      (Block.unwrapCBORinCBOR (Node.nodeDecodeBlock protoInfoConfig))
+      (Block.wrapCBORinCBOR   (Node.nodeEncodeBlock cfg))
+      (Block.unwrapCBORinCBOR (Node.nodeDecodeBlock cfg))
       (Block.encodePoint (Node.nodeEncodeHeaderHash (Proxy @blk)))
       (Block.decodePoint (Node.nodeDecodeHeaderHash (Proxy @blk)))
       (Block.encodePoint (Node.nodeEncodeHeaderHash (Proxy @blk)))

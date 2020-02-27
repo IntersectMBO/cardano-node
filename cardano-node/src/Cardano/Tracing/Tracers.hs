@@ -46,6 +46,7 @@ import           Cardano.BM.Data.Transformers
 import           Ouroboros.Consensus.Block (Header)
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..), TraceBlockchainTimeEvent (..))
 import           Ouroboros.Consensus.Ledger.Abstract
+import           Ouroboros.Consensus.Ledger.SupportsProtocol (LedgerSupportsProtocol)
 import           Ouroboros.Consensus.Mempool.API (GenTx, MempoolSize (..),
                                                   TraceEventMempool (..))
 import qualified Ouroboros.Consensus.Node.Tracers as Consensus
@@ -155,7 +156,7 @@ instance ElidingTracer
 --
 mkTracers
   :: forall peer localPeer blk.
-     ( ProtocolLedgerView blk
+     ( LedgerSupportsProtocol blk
      , TraceConstraints blk
      , ShowQuery (Query blk)
      , Show peer
