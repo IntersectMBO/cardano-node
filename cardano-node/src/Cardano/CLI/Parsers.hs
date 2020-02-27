@@ -527,8 +527,7 @@ parseTxRelatedValues =
         "issue-utxo-expenditure"
         "Write a file with a signed transaction, spending normal UTxO."
         $ SpendUTxO
-            <$> parseProtocol
-            <*> (GenesisFile <$> parseGenesisPath)
+            <$> (ConfigYamlFilePath <$> parseConfigFile)
             <*> parseNewTxFile "tx"
             <*> parseSigningKeyFile
                   "wallet-key"

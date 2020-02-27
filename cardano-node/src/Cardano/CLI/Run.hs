@@ -160,8 +160,7 @@ data ClientCommand
     (NonEmpty UTxO.TxOut)
     -- ^ Tx output.
   | SpendUTxO
-    Protocol
-    GenesisFile
+    ConfigYamlFilePath
     NewTxFile
     -- ^ Filepath of the newly created transaction.
     SigningKeyFile
@@ -310,12 +309,13 @@ runCommand (SpendGenesisUTxO configFp (NewTxFile ctTx) ctKey genRichAddr outs) =
                 sk
     ensureNewFileLBS ctTx $ toCborTxAux tx
 
-runCommand (SpendUTxO ptcl genFile (NewTxFile ctTx) ctKey ins outs) = do
-    sk <- readSigningKey ptcl ctKey
+runCommand (SpendUTxO configFp (NewTxFile ctTx) ctKey ins outs) = do
+    nc <- liftIO . parseNodeConfigurationFP $ unConfigPath configFp
+    sk <- readSigningKey (ncProtocol nc) ctKey
     -- Default update value
     let update = Update (ApplicationName "cardano-sl") 1 $ LastKnownBlockVersion 0 2 0
 
-    genHash <- getGenesisHash genFile
+    genHash <- getGenesisHash $ ncGenesisFile nc
 
     gTx <- firstExceptT
              IssueUtxoError
@@ -323,13 +323,13 @@ runCommand (SpendUTxO ptcl genFile (NewTxFile ctTx) ctKey ins outs) = do
                  ins
                  outs
                  genHash
-                 genFile
+                 (ncGenesisFile nc)
                  RequiresNoMagic
                  Nothing
                  Nothing
                  Nothing
                  update
-                 ptcl
+                 (ncProtocol nc)
                  sk
     ensureNewFileLBS ctTx $ toCborTxAux gTx
 

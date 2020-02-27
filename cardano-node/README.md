@@ -101,7 +101,7 @@ A CLI utility to support a variety of key material operations (genesis, migratio
 
 The general synopsis is as follows:
  ```
-   Usage: cardano-cli (Genesis Related CMDs | Key Related CMDs | Delegation related CMDs | Tx related CMDs | Benchmarking related CMDs)
+   Usage: cardano-cli (Genesis related CMDs | Key related CMDs | Delegation related CMDs | Transaction related CMDs | Local node related CMDs | Benchmarking related CMDs)
 ```
 
 NOTE: the exact invocation command depends on the environment.  If you have only
@@ -289,7 +289,7 @@ You can query the tip of your local node via the `get-tip` command as follows
 1. Open `tmux`
 2. Run `cabal build cardano-node`
 3. Run `./scripts/shelley-testnet-live.sh`
-4. `cabal exec cardano-cli -- get-tip --config configuration/log-config-0.liveview.yaml --genesis-json configuration/genesis/genesis.json --socket-path socket/0`
+4. `cabal exec cardano-cli -- get-tip --config configuration/log-config-0.liveview.yaml --socket-path socket/0`
 
 You will see output from stdout in this format:
 ```

@@ -2,7 +2,7 @@
 
 . $(dirname $0)/lib-node.sh
 CLI="$(executable_quiet_runner cardano-cli)"
-
+CONFIG="configuration/log-config-0.liveview.yaml"
 default_from_key="${genesis_root}/delegate-keys.001.key"
 default_to_key="${genesis_root}/delegate-keys.002.key"
 
@@ -30,8 +30,7 @@ EOF
 addr=$(${scripts}/get-default-key-address.sh ${to_key})
 
 args=" issue-utxo-expenditure
-       --real-pbft
-       --genesis-file        ${genesis_file}
+       --config              $CONFIG
        --tx                  ${tx}
        --wallet-key          ${from_key}
        --txin             (\"${txid}\",${outindex})
