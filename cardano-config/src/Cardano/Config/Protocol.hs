@@ -1,5 +1,4 @@
 {-# LANGUAGE ConstraintKinds   #-}
-{-# LANGUAGE DeriveAnyClass    #-}
 {-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE GADTs             #-}
 {-# LANGUAGE NamedFieldPuns    #-}
@@ -25,10 +24,12 @@ import           Control.Monad.Trans.Except.Extra (bimapExceptT, firstExceptT,
                                                    hoistEither, left)
 import qualified Data.ByteString.Lazy as LB
 
+import           Cardano.BM.Tracing (ToObject)
 import qualified Cardano.Chain.Genesis as Genesis
 import qualified Cardano.Chain.Update as Update
 import           Cardano.Crypto (RequiresNetworkMagic, decodeHash)
 import qualified Cardano.Crypto.Signing as Signing
+import           Cardano.Tracing.ToObjectOrphans ()
 
 import           Ouroboros.Consensus.Block (Header, BlockProtocol)
 import           Ouroboros.Consensus.BlockchainTime (SlotLength, SlotLengths,
@@ -36,6 +37,7 @@ import           Ouroboros.Consensus.BlockchainTime (SlotLength, SlotLengths,
                                                      slotLengthFromSec)
 import           Ouroboros.Consensus.Cardano hiding (Protocol)
 import qualified Ouroboros.Consensus.Cardano as Consensus
+import           Ouroboros.Consensus.Ledger.Abstract
 import           Ouroboros.Consensus.Mempool.API (ApplyTxErr, GenTx, GenTxId,
                                                   HasTxId, TxId)
 import           Ouroboros.Consensus.Node.ProtocolInfo (NumCoreNodes (..))
@@ -43,7 +45,7 @@ import           Ouroboros.Consensus.Node.ProtocolInfo (NumCoreNodes (..))
 import           Ouroboros.Consensus.Byron.Ledger (ByronBlock)
 import           Ouroboros.Consensus.Node.Run (RunNode)
 import           Ouroboros.Consensus.NodeId (CoreNodeId (..), NodeId (..))
-import           Ouroboros.Consensus.Protocol.Abstract (SecurityParam (..))
+import           Ouroboros.Consensus.Protocol.Abstract (SecurityParam (..), ValidationErr(..))
 import           Ouroboros.Consensus.Util (Dict (..))
 import           Ouroboros.Consensus.Util.Condense
 import           Ouroboros.Network.Block (HeaderHash)
@@ -76,6 +78,8 @@ type TraceConstraints blk =
     , Show blk
     , Show (Header blk)
     , Show (TxId (GenTx blk))
+    , ToObject (LedgerError blk)
+    , ToObject (ValidationErr (BlockProtocol blk))
     )
 
 {-------------------------------------------------------------------------------

@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE LambdaCase            #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
 {-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE UndecidableInstances  #-}
@@ -30,6 +31,7 @@ import           Cardano.BM.Data.LogItem (LOContent (..), LogObject (..),
                    mkLOMeta)
 import           Cardano.BM.Tracing
 import           Cardano.BM.Data.Tracer (trStructured, emptyObject, mkObject)
+import qualified Cardano.Chain.Block as Block
 
 import           Ouroboros.Consensus.Block (Header, headerPoint)
 import           Ouroboros.Consensus.BlockFetchServer
@@ -40,9 +42,17 @@ import           Ouroboros.Consensus.ChainSyncServer
                    (TraceChainSyncServerEvent(..))
 import           Ouroboros.Consensus.Ledger.SupportsProtocol
                    (LedgerSupportsProtocol)
+import           Ouroboros.Consensus.HeaderValidation
+import           Ouroboros.Consensus.Ledger.Abstract
+import qualified Ouroboros.Consensus.Protocol.BFT as BFT
+import qualified Ouroboros.Consensus.Protocol.PBFT as PBFT
+import           Ouroboros.Consensus.Ledger.Extended
 import           Ouroboros.Consensus.Mempool.API (GenTx, GenTxId,
                    HasTxId, TraceEventMempool (..), TxId, txId)
+import qualified Ouroboros.Consensus.Mock.Ledger as Mock
+import qualified Ouroboros.Consensus.Mock.Protocol.Praos as Praos
 import           Ouroboros.Consensus.Node.Tracers (TraceForgeEvent (..))
+import           Ouroboros.Consensus.Protocol.Abstract
 import           Ouroboros.Consensus.TxSubmission
                    (TraceLocalTxSubmissionServerEvent (..))
 import           Ouroboros.Consensus.Util.Condense
@@ -96,9 +106,9 @@ showTip :: Condense (HeaderHash blk)
 showTip verb = showPoint verb . getTipPoint
 
 showPoint :: Condense (HeaderHash blk)
-             => TracingVerbosity
-             -> Point blk
-             -> String
+          => TracingVerbosity
+          -> Point blk
+          -> String
 showPoint verb pt =
   case pt of
     GenesisPoint -> "genesis (origin)"
@@ -107,7 +117,7 @@ showPoint verb pt =
   trim :: [a] -> [a]
   trim = case verb of
     MinimalVerbosity -> take 7
-    NormalVerbosity  -> take 7
+    NormalVerbosity -> take 7
     MaximalVerbosity -> id
 
 instance ( Show a
@@ -122,8 +132,8 @@ instance DefineSeverity (WithIPList (SubscriptionTrace Socket.SockAddr)) where
   defineSeverity (WithIPList _ _ ev) = case ev of
     SubscriptionTraceConnectStart _ -> Info
     SubscriptionTraceConnectEnd _ connectResult -> case connectResult of
-      ConnectSuccess         -> Info
-      ConnectSuccessLast     -> Notice
+      ConnectSuccess -> Info
+      ConnectSuccessLast -> Notice
       ConnectValencyExceeded -> Warning
     SubscriptionTraceConnectException {} -> Error
     SubscriptionTraceSocketAllocationException {} -> Error
@@ -192,28 +202,28 @@ instance DefineSeverity (WithAddr Socket.SockAddr ErrorPolicyTrace) where
 instance DefinePrivacyAnnotation (WithMuxBearer peer MuxTrace)
 instance DefineSeverity (WithMuxBearer peer MuxTrace) where
   defineSeverity (WithMuxBearer _ ev) = case ev of
-    MuxTraceRecvHeaderStart          -> Debug
-    MuxTraceRecvHeaderEnd {}         -> Debug
-    MuxTraceRecvPayloadStart {}      -> Debug
-    MuxTraceRecvPayloadEnd {}        -> Debug
-    MuxTraceRecvStart {}             -> Debug
-    MuxTraceRecvEnd {}               -> Debug
-    MuxTraceSendStart {}             -> Debug
-    MuxTraceSendEnd                  -> Debug
-    MuxTraceState {}                 -> Info
-    MuxTraceCleanExit {}             -> Info
-    MuxTraceExceptionExit {}         -> Info
-    MuxTraceChannelRecvStart {}      -> Debug
-    MuxTraceChannelRecvEnd {}        -> Debug
-    MuxTraceChannelSendStart {}      -> Debug
-    MuxTraceChannelSendEnd {}        -> Debug
-    MuxTraceHandshakeStart           -> Debug
-    MuxTraceHandshakeClientEnd {}    -> Info
-    MuxTraceHandshakeServerEnd       -> Debug
-    MuxTraceHandshakeClientError {}  -> Error
-    MuxTraceHandshakeServerError {}  -> Error
+    MuxTraceRecvHeaderStart -> Debug
+    MuxTraceRecvHeaderEnd {} -> Debug
+    MuxTraceRecvPayloadStart {} -> Debug
+    MuxTraceRecvPayloadEnd {} -> Debug
+    MuxTraceRecvStart {} -> Debug
+    MuxTraceRecvEnd {} -> Debug
+    MuxTraceSendStart {} -> Debug
+    MuxTraceSendEnd -> Debug
+    MuxTraceState {} -> Info
+    MuxTraceCleanExit {} -> Info
+    MuxTraceExceptionExit {} -> Info
+    MuxTraceChannelRecvStart {} -> Debug
+    MuxTraceChannelRecvEnd {} -> Debug
+    MuxTraceChannelSendStart {} -> Debug
+    MuxTraceChannelSendEnd {} -> Debug
+    MuxTraceHandshakeStart -> Debug
+    MuxTraceHandshakeClientEnd {} -> Info
+    MuxTraceHandshakeServerEnd -> Debug
+    MuxTraceHandshakeClientError {} -> Error
+    MuxTraceHandshakeServerError {} -> Error
     MuxTraceRecvDeltaQObservation {} -> Debug
-    MuxTraceRecvDeltaQSample {}      -> Info
+    MuxTraceRecvDeltaQSample {} -> Info
 
 instance DefinePrivacyAnnotation (WithTip blk (ChainDB.TraceEvent blk))
 instance DefineSeverity (WithTip blk (ChainDB.TraceEvent blk)) where
@@ -414,9 +424,18 @@ instance (Show (GenTxId blk), Show (GenTx blk))
 instance Transformable Text IO (TraceLocalTxSubmissionServerEvent blk) where
   trTransformer _ verb tr = trStructured verb tr
 
-instance (Condense (HeaderHash blk), Show (TxId tx), HasTxId tx, Show blk, Show tx, LedgerSupportsProtocol blk)
+instance ( Condense (HeaderHash blk)
+         , HasTxId tx
+         , LedgerSupportsProtocol blk
+         , Show (TxId tx)
+         , ToObject (LedgerError blk)
+         , ToObject (ValidationErr (BlockProtocol blk)))
            => Transformable Text IO (TraceForgeEvent blk tx) where
-  trTransformer = defaultTextTransformer
+  trTransformer TextualRepresentation _verb tr = readableForgeEventTracer $ Tracer $ \s -> do
+    meta <- mkLOMeta (defineSeverity s) (definePrivacyAnnotation s)
+    traceWith tr (mempty, LogObject mempty meta (LogMessage $ pack s))
+  -- user defined formatting of log output
+  trTransformer _ verb tr = trStructured verb tr
 
 instance (Show (GenTx blk), Show (GenTxId blk))
       => Transformable Text IO (TraceEventMempool blk) where
@@ -474,11 +493,11 @@ readableChainDBTracer tracer = Tracer $ \case
       "Ignoring previously seen invalid block: " <> condense pt
     ChainDB.BlockInTheFuture pt slot -> tr $ WithTip tip $
       "Ignoring block from future: " <> condense pt <> ", slot " <> condense slot
-    ChainDB.StoreButDontChange pt   -> tr $ WithTip tip $
+    ChainDB.StoreButDontChange pt -> tr $ WithTip tip $
       "Ignoring block: " <> condense pt
     ChainDB.TryAddToCurrentChain pt -> tr $ WithTip tip $
       "Block fits onto the current chain: " <> condense pt
-    ChainDB.TrySwitchToAFork pt _   -> tr $ WithTip tip $
+    ChainDB.TrySwitchToAFork pt _ -> tr $ WithTip tip $
       "Block fits onto some fork: " <> condense pt
     ChainDB.AddedToCurrentChain _ _ c -> tr $ WithTip tip $
       "Chain extended, new tip: " <> condense (AF.headPoint c)
@@ -495,7 +514,7 @@ readableChainDBTracer tracer = Tracer $ \case
         "Exceeds rollback " <> condense (AF.headPoint c)
     ChainDB.AddedBlockToVolDB pt _ _ -> tr $ WithTip tip $
       "Chain added block " <> condense pt
-    ChainDB.ChainChangedInBg c1 c2     -> tr $ WithTip tip $
+    ChainDB.ChainChangedInBg c1 c2 -> tr $ WithTip tip $
       "Chain changed in bg, from " <> condense (AF.headPoint c1) <> " to "  <> condense (AF.headPoint c2)
     ChainDB.ScheduledChainSelection pt slot _n -> tr $ WithTip tip $
       "Chain selection scheduled for future: " <> condense pt
@@ -524,7 +543,7 @@ readableChainDBTracer tracer = Tracer $ \case
     ChainDB.NoBlocksToCopyToImmDB -> tr $ WithTip tip
       "There are no blocks to copy to the ImmutableDB"
   WithTip tip (ChainDB.TraceGCEvent ev) -> case ev of
-    ChainDB.PerformedGC slot        -> tr $ WithTip tip $
+    ChainDB.PerformedGC slot -> tr $ WithTip tip $
       "Performed a garbage collection for " <> condense slot
     ChainDB.ScheduledGC slot _difft -> tr $ WithTip tip $
       "Scheduled a garbage collection for " <> condense slot
@@ -560,6 +579,42 @@ readableChainDBTracer tracer = Tracer $ \case
   tr :: WithTip blk String -> m ()
   tr = traceWith (contramap (showWithTip id) tracer)
 
+-- | Tracer transformer for making TraceForgeEvents human-readable.
+readableForgeEventTracer
+  :: forall m blk tx.
+     ( Condense (HeaderHash blk)
+     , HasTxId tx
+     , Show (TxId tx)
+     , LedgerSupportsProtocol blk)
+  => Tracer m String
+  -> Tracer m (TraceForgeEvent blk tx)
+readableForgeEventTracer tracer = Tracer $ \case
+  TraceAdoptedBlock slotNo blk txs -> tr $
+    "Adopted forged block for slot " <> show (unSlotNo slotNo) <> ": " <> condense (blockHash blk) <> "; TxIds: " <> show (map txId txs)
+  TraceBlockFromFuture currentSlot tip -> tr $
+    "Forged block from future: current slot " <> show (unSlotNo currentSlot) <> ", tip being " <> condense tip
+  TraceSlotIsImmutable slotNo tipPoint tipBlkNo -> tr $
+    "Forged for immutable slot " <> show (unSlotNo slotNo) <> ", tip: " <> showPoint MaximalVerbosity tipPoint <> ", block no: " <> show (unBlockNo tipBlkNo)
+  TraceDidntAdoptBlock slotNo _ -> tr $
+    "Didn't adopt forged block at slot " <> show (unSlotNo slotNo)
+  TraceForgedBlock slotNo _ _ -> tr $
+    "Forged block for slot " <> show (unSlotNo slotNo)
+  TraceForgedInvalidBlock slotNo _ reason -> tr $
+    "Forged invalid block for slot " <> show (unSlotNo slotNo) <> ", reason: " <> show reason
+      -- , "reason" .= toObject verb reason
+  TraceNodeIsLeader slotNo -> tr $
+    "Leading slot " <> show (unSlotNo slotNo)
+  TraceNodeNotLeader slotNo -> tr $
+    "Not leading slot " <> show (unSlotNo slotNo)
+  TraceNoLedgerState slotNo _blk -> tr $
+    "No ledger state at slot " <> show (unSlotNo slotNo)
+  TraceNoLedgerView slotNo _ -> tr $
+    "No ledger view at slot " <> show (unSlotNo slotNo)
+  TraceStartLeadershipCheck slotNo -> tr $
+    "Testing for leadership at slot " <> show (unSlotNo slotNo)
+ where
+   tr :: String -> m ()
+   tr = traceWith tracer
 
 -- | instances of @ToObject@
 
@@ -668,12 +723,12 @@ instance (Condense (HeaderHash blk), LedgerSupportsProtocol blk)
         mkObject [ "kind" .= String "TraceAddBlockEvent.AddBlockValidation.CandidateExceedsRollback"
                  , "block" .= showPoint verb (AF.headPoint c)
                  , "supported" .= show supported
-                 , "actual"    .= show actual ]
+                 , "actual" .= show actual ]
     ChainDB.AddedBlockToVolDB pt (BlockNo bn) _ ->
       mkObject [ "kind" .= String "TraceAddBlockEvent.AddedBlockToVolDB"
                , "block" .= toObject verb pt
                , "blockNo" .= show bn ]
-    ChainDB.ChainChangedInBg c1 c2     ->
+    ChainDB.ChainChangedInBg c1 c2 ->
       mkObject [ "kind" .= String "TraceAddBlockEvent.ChainChangedInBg"
                , "prev" .= showPoint verb (AF.headPoint c1)
                , "new" .= showPoint verb (AF.headPoint c2) ]
@@ -820,7 +875,7 @@ instance Show peer => ToObject [TraceLabelPeer peer
                         (FetchDecision [Point header])] where
   toObject MinimalVerbosity _ = emptyObject
   toObject NormalVerbosity lbls = mkObject [ "kind" .= String "TraceLabelPeer"
-                                           , "length" .= String (pack $ show $ length lbls) ]
+                                         , "length" .= String (pack $ show $ length lbls) ]
   toObject MaximalVerbosity [] = emptyObject
   toObject MaximalVerbosity (lbl : r) = toObject MaximalVerbosity lbl <>
                                         toObject MaximalVerbosity r
@@ -845,48 +900,48 @@ instance (Show peer, Show txid, Show tx)
          (TraceSendRecv (TxSubmission txid tx))) where
   toObject verb (TraceLabelPeer peerid (TraceSendMsg (AnyMessage msg))) =
     mkObject
-        [ "kind" .= String "TraceSendMsg"
-        , "peer" .= show peerid
-        , "message" .= toObject verb msg
-        ]
+      [ "kind" .= String "TraceSendMsg"
+      , "peer" .= show peerid
+      , "message" .= toObject verb msg
+      ]
   toObject verb (TraceLabelPeer peerid (TraceRecvMsg (AnyMessage msg))) =
     mkObject
-        [ "kind" .= String "TraceRecvMsg"
-        , "peer" .= show peerid
-        , "message" .= toObject verb msg
-        ]
+      [ "kind" .= String "TraceRecvMsg"
+      , "peer" .= show peerid
+      , "message" .= toObject verb msg
+      ]
 
 instance (Show txid, Show tx) => ToObject (Message
                                    (TxSubmission txid tx) from to) where
   toObject _verb (MsgRequestTxs txids) =
     mkObject
-        [ "kind" .= String "MsgRequestTxs"
-        , "txIds" .= String (pack $ show $ txids)
-        ]
+      [ "kind" .= String "MsgRequestTxs"
+      , "txIds" .= String (pack $ show $ txids)
+      ]
   toObject _verb (MsgReplyTxs txs) =
     mkObject
-        [ "kind" .= String "MsgReplyTxs"
-        , "txs" .= String (pack $ show $ txs)
-        ]
+      [ "kind" .= String "MsgReplyTxs"
+      , "txs" .= String (pack $ show $ txs)
+      ]
   toObject _verb (MsgRequestTxIds _ _ _) =
     mkObject
-        [ "kind" .= String "MsgRequestTxIds"
-        ]
+      [ "kind" .= String "MsgRequestTxIds"
+      ]
   toObject _verb (MsgReplyTxIds _) =
     mkObject
-        [ "kind" .= String "MsgReplyTxIds"
-        ]
+      [ "kind" .= String "MsgReplyTxIds"
+      ]
   toObject _verb MsgDone =
     mkObject
-        [ "kind" .= String "MsgDone"
-        ]
+      [ "kind" .= String "MsgDone"
+      ]
 
 instance Show peer => ToObject (TraceLabelPeer peer
                         (TraceFetchClientState header)) where
   toObject verb (TraceLabelPeer peerid a) =
     mkObject [ "kind" .= String "TraceFetchClientState"
-             , "peer" .= show peerid
-             , "state" .= toObject verb a ]
+           , "peer" .= show peerid
+           , "state" .= toObject verb a ]
 
 instance ToObject (TraceFetchClientState header) where
   toObject _verb (AddedFetchRequest {}) =
@@ -918,99 +973,308 @@ instance ToObject (TraceLocalTxSubmissionServerEvent blk) where
   toObject _verb _ =
     mkObject [ "kind" .= String "TraceLocalTxSubmissionServerEvent" ]
 
-instance (HasTxId tx, LedgerSupportsProtocol blk, Condense (HeaderHash blk), Show (TxId tx))
-           => ToObject (TraceForgeEvent blk tx) where
+instance ( Condense (HeaderHash blk)
+         , HasTxId tx
+         , LedgerSupportsProtocol blk
+         , Show (TxId tx)
+         , ToObject (LedgerError blk)
+         , ToObject (ValidationErr (BlockProtocol blk)))
+    => ToObject (TraceForgeEvent blk tx) where
   toObject MaximalVerbosity (TraceAdoptedBlock slotNo blk txs) =
     mkObject
-        [ "kind"    .= String "TraceAdoptedBlock"
-        , "slot"    .= toJSON (unSlotNo slotNo)
-        , "block hash" .=  (condense $ blockHash blk)
-        , "tx ids" .= (show $ map txId txs)
-        ]
+      [ "kind" .= String "TraceAdoptedBlock"
+      , "slot" .= toJSON (unSlotNo slotNo)
+      , "block hash" .=  (condense $ blockHash blk)
+      , "tx ids" .= (show $ map txId txs)
+      ]
   toObject _verb (TraceAdoptedBlock slotNo blk _txs) =
     mkObject
-        [ "kind"    .= String "TraceAdoptedBlock"
-        , "slot"    .= toJSON (unSlotNo slotNo)
-        , "block hash" .=  (condense $ blockHash blk)
-        ]
+      [ "kind" .= String "TraceAdoptedBlock"
+      , "slot" .= toJSON (unSlotNo slotNo)
+      , "block hash" .=  (condense $ blockHash blk)
+      ]
   toObject _verb (TraceBlockFromFuture currentSlot tip) =
     mkObject
-        [ "kind" .= String "TraceBlockFromFuture"
-        , "current slot" .= toJSON (unSlotNo currentSlot)
-        , "tip" .= toJSON (unSlotNo tip)
-        ]
+      [ "kind" .= String "TraceBlockFromFuture"
+      , "current slot" .= toJSON (unSlotNo currentSlot)
+      , "tip" .= toJSON (unSlotNo tip)
+      ]
   toObject verb (TraceSlotIsImmutable slotNo tipPoint tipBlkNo) =
     mkObject
-        [ "kind" .= String "TraceSlotIsImmutable"
-        , "slot" .= toJSON (unSlotNo slotNo)
-        , "tip" .= showPoint verb tipPoint
-        , "tipBlockNo" .= toJSON (unBlockNo tipBlkNo)
-        ]
+      [ "kind" .= String "TraceSlotIsImmutable"
+      , "slot" .= toJSON (unSlotNo slotNo)
+      , "tip" .= showPoint verb tipPoint
+      , "tipBlockNo" .= toJSON (unBlockNo tipBlkNo)
+      ]
   toObject _verb (TraceDidntAdoptBlock slotNo _) =
     mkObject
-        [ "kind"    .= String "TraceDidntAdoptBlock"
-        , "slot"    .= toJSON (unSlotNo slotNo)
-        ]
+      [ "kind" .= String "TraceDidntAdoptBlock"
+      , "slot" .= toJSON (unSlotNo slotNo)
+      ]
   toObject _verb (TraceForgedBlock slotNo _ _) =
     mkObject
-        [ "kind"    .= String "TraceForgedBlock"
-        , "slot"    .= toJSON (unSlotNo slotNo)
-        ]
-  toObject _verb (TraceForgedInvalidBlock slotNo _ _) =
+      [ "kind" .= String "TraceForgedBlock"
+      , "slot" .= toJSON (unSlotNo slotNo)
+      ]
+  toObject verb (TraceForgedInvalidBlock slotNo _ reason) =
     mkObject
-        [ "kind"    .= String "TraceForgedInvalidBlock"
-        , "slot"    .= toJSON (unSlotNo slotNo)
-        ]
+      [ "kind" .= String "TraceForgedInvalidBlock"
+      , "slot" .= toJSON (unSlotNo slotNo)
+      , "reason" .= toObject verb reason
+      ]
   toObject _verb (TraceNodeIsLeader slotNo) =
     mkObject
-        [ "kind"    .= String "TraceNodeIsLeader"
-        , "slot"    .= toJSON (unSlotNo slotNo)
-        ]
+      [ "kind" .= String "TraceNodeIsLeader"
+      , "slot" .= toJSON (unSlotNo slotNo)
+      ]
   toObject _verb (TraceNodeNotLeader slotNo) =
     mkObject
-        [ "kind"    .= String "TraceNodeNotLeader"
-        , "slot"    .= toJSON (unSlotNo slotNo)
-        ]
+      [ "kind" .= String "TraceNodeNotLeader"
+      , "slot" .= toJSON (unSlotNo slotNo)
+      ]
   toObject _verb (TraceNoLedgerState slotNo _blk) =
     mkObject
-        [ "kind"    .= String "TraceNoLedgerState"
-        , "slot"    .= toJSON (unSlotNo slotNo)
-        ]
+      [ "kind" .= String "TraceNoLedgerState"
+      , "slot" .= toJSON (unSlotNo slotNo)
+      ]
   toObject _verb (TraceNoLedgerView slotNo _) =
     mkObject
-        [ "kind"    .= String "TraceNoLedgerView"
-        , "slot"    .= toJSON (unSlotNo slotNo)
-        ]
+      [ "kind" .= String "TraceNoLedgerView"
+      , "slot" .= toJSON (unSlotNo slotNo)
+      ]
   toObject _verb (TraceStartLeadershipCheck slotNo) =
     mkObject
-        [ "kind"    .= String "TraceStartLeadershipCheck"
-        , "slot"    .= toJSON (unSlotNo slotNo)
-        ]
+      [ "kind" .= String "TraceStartLeadershipCheck"
+      , "slot" .= toJSON (unSlotNo slotNo)
+      ]
 
 instance (Show (GenTx blk), Show (GenTxId blk))
       => ToObject (TraceEventMempool blk) where
   toObject _verb (TraceMempoolAddedTx tx _mpSzBefore mpSzAfter) =
     mkObject
-        [ "kind" .= String "TraceMempoolAddedTx"
-        , "txAdded" .= String (pack $ show $ tx)
-        , "mempoolSize" .= String (pack $ show $ mpSzAfter)
-        ]
+      [ "kind" .= String "TraceMempoolAddedTx"
+      , "txAdded" .= String (pack $ show $ tx)
+      , "mempoolSize" .= String (pack $ show $ mpSzAfter)
+      ]
   toObject _verb (TraceMempoolRejectedTx txAndErrs _mpSzBefore mpSzAfter) =
     mkObject
-        [ "kind" .= String "TraceMempoolRejectedTxs"
-        , "txRejected" .= String (pack $ show $ txAndErrs)
-        , "mempoolSize" .= String (pack $ show $ mpSzAfter)
-        ]
+      [ "kind" .= String "TraceMempoolRejectedTxs"
+      , "txRejected" .= String (pack $ show $ txAndErrs)
+      , "mempoolSize" .= String (pack $ show $ mpSzAfter)
+      ]
   toObject _verb (TraceMempoolRemoveTxs txs mpSz) =
     mkObject
-        [ "kind" .= String "TraceMempoolRemoveTxs"
-        , "txsRemoved" .= String (pack $ show $ txs)
-        , "mempoolSize" .= String (pack $ show $ mpSz)
-        ]
+      [ "kind" .= String "TraceMempoolRemoveTxs"
+      , "txsRemoved" .= String (pack $ show $ txs)
+      , "mempoolSize" .= String (pack $ show $ mpSz)
+      ]
   toObject _verb (TraceMempoolManuallyRemovedTxs txs0 txs1 mpSz) =
     mkObject
-        [ "kind" .= String "TraceMempoolManuallyRemovedTxs"
-        , "txsManuallyRemoved" .= String (pack $ show $ txs0)
-        , "txsNoLongerValidRemoved" .= String (pack $ show $ txs1)
-        , "mempoolSize" .= String (pack $ show $ mpSz)
-        ]
+      [ "kind" .= String "TraceMempoolManuallyRemovedTxs"
+      , "txsManuallyRemoved" .= String (pack $ show $ txs0)
+      , "txsNoLongerValidRemoved" .= String (pack $ show $ txs1)
+      , "mempoolSize" .= String (pack $ show $ mpSz)
+      ]
+
+instance ( Condense (HeaderHash blk)
+         , StandardHash blk
+         , ToObject (LedgerError blk)
+         , ToObject (ValidationErr (BlockProtocol blk)))
+        => ToObject (ChainDB.InvalidBlockReason blk) where
+  toObject verb (ChainDB.ValidationError extvalerr) =
+    mkObject
+      [ "kind" .= String "ValidationError"
+      , "error" .= toObject verb extvalerr
+      ]
+  toObject verb (ChainDB.InChainAfterInvalidBlock point extvalerr) =
+    mkObject
+      [ "kind" .= String "InChainAfterInvalidBlock"
+      , "point" .= String (pack $ showPoint verb point)
+      , "error" .= toObject verb extvalerr
+      ]
+
+instance ( StandardHash blk
+         , ToObject (LedgerError blk)
+         , ToObject (ValidationErr (BlockProtocol blk))
+         )
+      => ToObject (ExtValidationError blk) where
+  toObject verb (ExtValidationErrorLedger err) = toObject verb err
+  toObject verb (ExtValidationErrorHeader err) = toObject verb err
+
+instance ( StandardHash blk
+         , ToObject (ValidationErr (BlockProtocol blk)))
+      => ToObject (HeaderError blk) where
+  toObject verb (HeaderProtocolError err) =
+    mkObject
+      [ "kind" .= String "HeaderProtocolError"
+      , "error" .= toObject verb err
+      ]
+  toObject verb (HeaderEnvelopeError err) =
+    mkObject
+      [ "kind" .= String "HeaderEnvelopeError"
+      , "error" .= toObject verb err
+      ]
+
+instance (StandardHash blk)
+ => ToObject (HeaderEnvelopeError blk) where
+  toObject _verb (UnexpectedBlockNo expect act) =
+    mkObject
+      [ "kind" .= String "UnexpectedBlockNo"
+      , "expected" .= condense expect
+      , "actual" .= condense act
+      ]
+  toObject _verb (UnexpectedSlotNo expect act) =
+    mkObject
+      [ "kind" .= String "UnexpectedSlotNo"
+      , "expected" .= condense expect
+      , "actual" .= condense act
+      ]
+  toObject _verb (UnexpectedPrevHash expect act) =
+    mkObject
+      [ "kind" .= String "UnexpectedPrevHash"
+      , "expected" .= String (pack $ show expect)
+      , "actual" .= String (pack $ show act)
+      ]
+  toObject _verb (OtherEnvelopeError text) =
+    mkObject
+      [ "kind" .= String "OtherEnvelopeError"
+      , "error" .= String text
+      ]
+
+instance StandardHash blk => ToObject (Mock.MockError blk) where
+  toObject _verb (Mock.MockUtxoError e) =
+    mkObject
+      [ "kind" .= String "MockUtxoError"
+      , "error" .= String (pack $ show e)
+      ]
+  toObject _verb (Mock.MockInvalidHash expect act) =
+    mkObject
+      [ "kind" .= String "MockInvalidHash"
+      , "expected" .= String (pack $ show expect)
+      , "actual" .= String (pack $ show act)
+      ]
+
+instance (Show (PBFT.PBftVerKeyHash c))
+ => ToObject (PBFT.PBftValidationErr c) where
+  toObject _verb (PBFT.PBftInvalidSignature text) =
+    mkObject
+      [ "kind" .= String "PBftInvalidSignature"
+      , "error" .= String text
+      ]
+  toObject _verb (PBFT.PBftNotGenesisDelegate vkhash _ledgerView) =
+    mkObject
+      [ "kind" .= String "PBftNotGenesisDelegate"
+      , "vk" .= String (pack $ show vkhash)
+      ]
+  toObject _verb (PBFT.PBftExceededSignThreshold vkhash n) =
+    mkObject
+      [ "kind" .= String "PBftExceededSignThreshold"
+      , "vk" .= String (pack $ show vkhash)
+      , "n" .= String (pack $ show n)
+      ]
+  toObject _verb PBFT.PBftInvalidSlot =
+    mkObject
+      [ "kind" .= String "PBftInvalidSlot"
+      ]
+
+instance ToObject BFT.BftValidationErr where
+  toObject _verb (BFT.BftInvalidSignature err) =
+    mkObject
+      [ "kind" .= String "BftInvalidSignature"
+      , "error" .= String (pack err)
+      ]
+
+instance ToObject (Praos.PraosValidationError c) where
+  toObject _verb (Praos.PraosInvalidSlot expect act) =
+    mkObject
+      [ "kind" .= String "PraosInvalidSlot"
+      , "expected" .= String (pack $ show expect)
+      , "actual" .= String (pack $ show act)
+      ]
+  toObject _verb (Praos.PraosUnknownCoreId cid) =
+    mkObject
+      [ "kind" .= String "PraosUnknownCoreId"
+      , "error" .= String (pack $ show cid)
+      ]
+  toObject _verb (Praos.PraosInvalidSig str _ _ _) =
+    mkObject
+      [ "kind" .= String "PraosInvalidSig"
+      , "error" .= String (pack str)
+      ]
+  toObject _verb (Praos.PraosInvalidCert _vkvrf y nat _vrf) =
+    mkObject
+      [ "kind" .= String "PraosInvalidCert"
+      , "y" .= String (pack $ show y)
+      , "nat" .= String (pack $ show nat)
+      ]
+  toObject _verb (Praos.PraosInsufficientStake t y) =
+    mkObject
+      [ "kind" .= String "PraosInsufficientStake"
+      , "t" .= String (pack $ show t)
+      , "y" .= String (pack $ show y)
+      ]
+
+instance ToObject Block.ChainValidationError where
+  toObject _verb Block.ChainValidationBoundaryTooLarge =
+    mkObject
+      [ "kind" .= String "ChainValidationBoundaryTooLarge" ]
+  toObject _verb Block.ChainValidationBlockAttributesTooLarge =
+    mkObject
+      [ "kind" .= String "ChainValidationBlockAttributesTooLarge" ]
+  toObject _verb (Block.ChainValidationBlockTooLarge _ _) =
+    mkObject
+      [ "kind" .= String "ChainValidationBlockTooLarge" ]
+  toObject _verb Block.ChainValidationHeaderAttributesTooLarge =
+    mkObject
+      [ "kind" .= String "ChainValidationHeaderAttributesTooLarge" ]
+  toObject _verb (Block.ChainValidationHeaderTooLarge _ _) =
+    mkObject
+      [ "kind" .= String "ChainValidationHeaderTooLarge" ]
+  toObject _verb (Block.ChainValidationDelegationPayloadError err) =
+    mkObject
+      [ "kind" .= String err ]
+  toObject _verb (Block.ChainValidationInvalidDelegation _ _) =
+    mkObject
+      [ "kind" .= String "ChainValidationInvalidDelegation" ]
+  toObject _verb (Block.ChainValidationGenesisHashMismatch _ _) =
+    mkObject
+      [ "kind" .= String "ChainValidationGenesisHashMismatch" ]
+  toObject _verb (Block.ChainValidationExpectedGenesisHash _ _) =
+    mkObject
+      [ "kind" .= String "ChainValidationExpectedGenesisHash" ]
+  toObject _verb (Block.ChainValidationExpectedHeaderHash _ _) =
+    mkObject
+      [ "kind" .= String "ChainValidationExpectedHeaderHash" ]
+  toObject _verb (Block.ChainValidationInvalidHash _ _) =
+    mkObject
+      [ "kind" .= String "ChainValidationInvalidHash" ]
+  toObject _verb (Block.ChainValidationMissingHash _) =
+    mkObject
+      [ "kind" .= String "ChainValidationMissingHash" ]
+  toObject _verb (Block.ChainValidationUnexpectedGenesisHash _) =
+    mkObject
+      [ "kind" .= String "ChainValidationUnexpectedGenesisHash" ]
+  toObject _verb (Block.ChainValidationInvalidSignature _) =
+    mkObject
+      [ "kind" .= String "ChainValidationInvalidSignature" ]
+  toObject _verb (Block.ChainValidationDelegationSchedulingError _) =
+    mkObject
+      [ "kind" .= String "ChainValidationDelegationSchedulingError" ]
+  toObject _verb (Block.ChainValidationProtocolMagicMismatch _ _) =
+    mkObject
+      [ "kind" .= String "ChainValidationProtocolMagicMismatch" ]
+  toObject _verb Block.ChainValidationSignatureLight =
+    mkObject
+      [ "kind" .= String "ChainValidationSignatureLight" ]
+  toObject _verb (Block.ChainValidationTooManyDelegations _) =
+    mkObject
+      [ "kind" .= String "ChainValidationTooManyDelegations" ]
+  toObject _verb (Block.ChainValidationUpdateError _ _) =
+    mkObject
+      [ "kind" .= String "ChainValidationUpdateError" ]
+  toObject _verb (Block.ChainValidationUTxOValidationError _) =
+    mkObject
+      [ "kind" .= String "ChainValidationUTxOValidationError" ]
+  toObject _verb (Block.ChainValidationProofValidationError _) =
+    mkObject
+      [ "kind" .= String "ChainValidationProofValidationError" ]
