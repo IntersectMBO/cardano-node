@@ -82,7 +82,7 @@ import           Cardano.Slotting.Slot (unSlotNo)
 import qualified Ouroboros.Network.AnchoredFragment as Net
 import qualified Ouroboros.Network.Block as Net
 import           Ouroboros.Consensus.Block (GetHeader(..))
-import           Ouroboros.Consensus.Node (NodeKernel(..), ConnectionId(..))
+import           Ouroboros.Consensus.Node (NodeKernel(..), RemoteConnectionId, remoteAddress)
 import           Ouroboros.Consensus.NodeId
 import qualified Ouroboros.Network.BlockFetch.ClientState as Net
 import qualified Ouroboros.Network.BlockFetch.ClientRegistry as Net
@@ -190,7 +190,7 @@ fromSMaybe x SNothing = x
 fromSMaybe _ (SJust x) = x
 
 data LVNodeKernel blk = LVNodeKernel
-  { getNodeKernel :: !(NodeKernel IO ConnectionId blk) }
+  { getNodeKernel :: !(NodeKernel IO RemoteConnectionId blk) }
   deriving (Generic)
 
 instance NoUnexpectedThunks (LVNodeKernel blk) where
@@ -373,7 +373,7 @@ instance IsEffectuator (LiveViewBackend blk) Text where
                               -> STM.STM IO (Map peer (Net.AnchoredFragment (Header blk)))
                             getCandidates var = STM.readTVar var >>= traverse STM.readTVar
 
-                            extractPeers :: NodeKernel IO ConnectionId blk -> IO [LVPeer blk]
+                            extractPeers :: NodeKernel IO RemoteConnectionId blk -> IO [LVPeer blk]
                             extractPeers kernel = do
                               peerStates <- fmap tuple3pop <$> (atomically . (>>= traverse Net.readFetchClientState) . Net.readFetchClientsStateVars . getFetchClientRegistry $ kernel)
                               candidates <- atomically . getCandidates . getNodeCandidates $ kernel
@@ -562,7 +562,7 @@ setNodeThread lvbe nodeThr =
   modifyMVar_ (getbe lvbe) $ \lvs ->
       return $ lvs { lvsNodeThread = LiveViewThread $ Just nodeThr }
 
-setNodeKernel :: NFData a => LiveViewBackend blk a -> NodeKernel IO ConnectionId blk -> IO ()
+setNodeKernel :: NFData a => LiveViewBackend blk a -> NodeKernel IO RemoteConnectionId blk -> IO ()
 setNodeKernel lvbe nodeKern =
     modifyMVar_ (getbe lvbe) $ \lvs ->
         return $ lvs { lvsNodeKernel = SJust (LVNodeKernel nodeKern) }
@@ -710,7 +710,7 @@ darkTheme = newTheme (V.white `on` darkMainBG)
 
 data LVPeer blk =
   LVPeer
-  !ConnectionId
+  !RemoteConnectionId
   !(Net.AnchoredFragment (Header blk))
   !(Net.PeerFetchStatus (Header blk))
   !(Net.PeerFetchInFlight (Header blk))
@@ -726,7 +726,7 @@ ppPeer :: LVPeer blk -> Text
 ppPeer (LVPeer cid _af status inflight) =
   pack $ printf "%-15s %-8s %s" (ppCid cid) (ppStatus status) (ppInFlight inflight)
  where
-   ppCid :: ConnectionId -> String
+   ppCid :: RemoteConnectionId -> String
    ppCid = takeWhile (/= ':') . show . remoteAddress
 
    ppInFlight :: Net.PeerFetchInFlight header -> String
@@ -745,7 +745,7 @@ ppPeer (LVPeer cid _af status inflight) =
    ppStatus Net.PeerFetchStatusShutdown      = "shutdown"
    ppStatus Net.PeerFetchStatusAberrant      = "aberrant"
    ppStatus Net.PeerFetchStatusBusy          = "fetching"
-   ppStatus (Net.PeerFetchStatusReady _blks) = "ready"
+   ppStatus (Net.PeerFetchStatusReady {})    = "ready"
 
 drawUI :: LiveViewState blk a -> [Widget ()]
 drawUI p = case lvsScreen p of

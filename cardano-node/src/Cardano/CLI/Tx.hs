@@ -48,10 +48,12 @@ import           Cardano.Crypto (SigningKey(..), ProtocolMagicId, RequiresNetwor
 import qualified Cardano.Crypto.Hashing as Crypto
 import qualified Cardano.Crypto.Signing as Crypto
 
-import qualified Ouroboros.Consensus.Ledger.Byron as Byron
-import           Ouroboros.Consensus.Ledger.Byron (GenTx(..), ByronBlock)
-import qualified Ouroboros.Consensus.Protocol as Consensus
-import           Ouroboros.Consensus.Node.ProtocolInfo (protocolInfo, pInfoConfig)
+import           Ouroboros.Network.NodeToClient (AssociateWithIOCP)
+
+import qualified Ouroboros.Consensus.Byron.Ledger as Byron
+import           Ouroboros.Consensus.Byron.Ledger (GenTx(..), ByronBlock)
+import qualified Ouroboros.Consensus.Cardano as Consensus
+import           Ouroboros.Consensus.Node.ProtocolInfo (pInfoConfig)
 import qualified Ouroboros.Consensus.Mempool as Consensus
 import           Ouroboros.Consensus.Util.Condense (condense)
 
@@ -60,7 +62,6 @@ import           Cardano.Node.Submission
 import           Cardano.Config.Protocol
 import           Cardano.Config.Types (DelegationCertFile, GenesisFile,
                                        SigningKeyFile, SocketPath, Update)
-import           Cardano.Common.Orphans ()
 
 
 newtype TxFile =
@@ -247,7 +248,8 @@ issueUTxOExpenditure
 
 -- | Submit a transaction to a node specified by topology info.
 nodeSubmitTx
-  :: Text
+  :: AssociateWithIOCP
+  -> Text
   -- ^ Genesis hash.
   -> Maybe Int
   -- ^ Number of core nodes.
@@ -262,6 +264,7 @@ nodeSubmitTx
   -> GenTx ByronBlock
   -> ExceptT RealPBFTError IO ()
 nodeSubmitTx
+  iocp
   gHash
   _mNumCoreNodes
   genFile
@@ -277,8 +280,8 @@ nodeSubmitTx
       \p@Consensus.ProtocolRealPBFT{} -> liftIO $ do
         -- TODO: Update submitGenTx to use `ExceptT`
         traceWith stdoutTracer ("TxId: " ++ condense (Consensus.txId gentx))
-        submitTx targetSocketFp
-                 (pInfoConfig (protocolInfo p))
+        submitTx iocp targetSocketFp
+                 (pInfoConfig (Consensus.protocolInfo p))
                  gentx
                  nullTracer -- stdoutTracer
 

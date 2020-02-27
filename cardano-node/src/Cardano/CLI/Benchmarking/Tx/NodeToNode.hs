@@ -31,7 +31,7 @@ import           Data.Proxy (Proxy (..))
 import qualified Data.Text as T
 import           Data.Time.Clock (getCurrentTime)
 import           Network.Mux (AppType(InitiatorApp), WithMuxBearer (..))
-import           Network.Socket (AddrInfo)
+import           Network.Socket (AddrInfo (..))
 import           Network.TypedProtocol.Codec (AnyMessage (..))
 import           Network.TypedProtocol.Driver (TraceSendRecv (..), runPeer)
 
@@ -41,25 +41,28 @@ import           Cardano.BM.Data.Tracer (DefinePrivacyAnnotation (..),
                      DefineSeverity (..), ToObject (..), TracingFormatting (..),
                      TracingVerbosity (..), Transformable (..),
                      emptyObject, mkObject, trStructured)
-import           Ouroboros.Consensus.Block (BlockProtocol)
-import           Ouroboros.Consensus.Ledger.Byron (ByronBlock (..))
+import           Ouroboros.Consensus.Byron.Ledger (ByronBlock (..))
 import           Ouroboros.Consensus.Mempool.API (GenTxId, GenTx)
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
 import           Ouroboros.Consensus.Node.Run (RunNode, nodeNetworkMagic)
 import           Ouroboros.Consensus.NodeNetwork (ProtocolCodecs(..), protocolCodecs)
-import           Ouroboros.Consensus.Protocol.Abstract (NodeConfig)
+import           Ouroboros.Consensus.Config (TopLevelConfig)
 import           Ouroboros.Network.Mux (OuroborosApplication(..))
 import           Ouroboros.Network.NodeToNode (NetworkConnectTracers (..))
 import qualified Ouroboros.Network.NodeToNode as NtN
+-- TODO: #1685 (ouroboros-network) IO manager terms and types should be exported
+-- from NodeToNode module as well.
+import           Ouroboros.Network.NodeToClient (AssociateWithIOCP)
 import           Ouroboros.Network.Protocol.BlockFetch.Client (BlockFetchClient(..), blockFetchClientPeer)
 import           Ouroboros.Network.Protocol.ChainSync.Client (chainSyncClientNull, chainSyncClientPeer)
 import           Ouroboros.Network.Protocol.Handshake.Type (Handshake)
 import           Ouroboros.Network.Protocol.Handshake.Version (Versions, simpleSingletonVersions)
 import           Ouroboros.Network.Protocol.TxSubmission.Client (TxSubmissionClient, txSubmissionClientPeer)
 import qualified Ouroboros.Network.Protocol.TxSubmission.Type as TS
+import           Ouroboros.Network.Snocket (socketSnocket)
 
 type SendRecvConnect = WithMuxBearer
-                         NtN.ConnectionId
+                         NtN.RemoteConnectionId
                          (TraceSendRecv (Handshake
                                            NtN.NodeToNodeVersion
                                            CBOR.Term))
@@ -190,9 +193,10 @@ data BenchmarkTxSubmitTracers m blk = BenchmarkTracers
 
 benchmarkConnectTxSubmit
   :: forall m blk . (RunNode blk, m ~ IO)
-  => BenchmarkTxSubmitTracers m blk
+  => AssociateWithIOCP
+  -> BenchmarkTxSubmitTracers m blk
   -- ^ For tracing the send/receive actions
-  -> NodeConfig (BlockProtocol blk)
+  -> TopLevelConfig blk
   -- ^ The particular block protocol
   -> Maybe AddrInfo
   -- ^ local address information (typically local interface/port to use)
@@ -201,25 +205,26 @@ benchmarkConnectTxSubmit
   -> TxSubmissionClient (GenTxId blk) (GenTx blk) m ()
   -- ^ the particular txSubmission peer
   -> m ()
-benchmarkConnectTxSubmit trs nc localAddr remoteAddr myTxSubClient = do
+benchmarkConnectTxSubmit iocp trs cfg localAddr remoteAddr myTxSubClient = do
   NtN.connectTo
+    (socketSnocket iocp)
     NetworkConnectTracers {
         nctMuxTracer       = nullTracer,
         nctHandshakeTracer = trSendRecvConnect trs
       }
     peerMultiplex
-    localAddr
-    remoteAddr
+    (addrAddress <$> localAddr)
+    (addrAddress remoteAddr)
  where
   myCodecs :: ProtocolCodecs blk DeserialiseFailure m
                 ByteString ByteString ByteString ByteString ByteString
                 ByteString ByteString ByteString
-  myCodecs  = protocolCodecs nc (mostRecentNetworkProtocolVersion (Proxy @blk))
+  myCodecs  = protocolCodecs cfg (mostRecentNetworkProtocolVersion (Proxy @blk))
 
   peerMultiplex :: Versions NtN.NodeToNodeVersion NtN.DictVersion
               (OuroborosApplication
                  'InitiatorApp
-                 NtN.ConnectionId
+                 NtN.RemoteConnectionId
                  NtN.NodeToNodeProtocols
                  m
                  ByteString
@@ -228,7 +233,7 @@ benchmarkConnectTxSubmit trs nc localAddr remoteAddr myTxSubClient = do
   peerMultiplex =
     simpleSingletonVersions
       NtN.NodeToNodeV_1
-      (NtN.NodeToNodeVersionData { NtN.networkMagic = nodeNetworkMagic (Proxy @blk) nc})
+      (NtN.NodeToNodeVersionData { NtN.networkMagic = nodeNetworkMagic (Proxy @blk) cfg})
       (NtN.DictVersion NtN.nodeToNodeCodecCBORTerm)
       $ OuroborosInitiatorApplication $ \_peer ptcl ->
           case ptcl of

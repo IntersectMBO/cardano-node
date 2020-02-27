@@ -44,6 +44,8 @@ library
                      , network
                      , optparse-applicative
                      , ouroboros-consensus
+                     , ouroboros-consensus-byron
+                     , ouroboros-consensus-cardano
                      , ouroboros-network
                      , process
                      , iproute

@@ -121,13 +121,16 @@ extra-deps:
     #Ouroboros-network dependencies
 
   - git: https://github.com/input-output-hk/ouroboros-network
-    commit: 5f77e24c2263560ad58b9ba092c8cfed174675ae
+    commit: 36861a97272de1e4de448925dd9bb9c0fddd80f6
     subdirs:
         - io-sim
         - io-sim-classes
         - network-mux
         - ouroboros-network
         - ouroboros-consensus
+        - ouroboros-consensus-byron
+        - ouroboros-consensus/ouroboros-consensus-mock
+        - ouroboros-consensus-cardano
         - typed-protocols
         - typed-protocols-examples
         - ouroboros-network-framework

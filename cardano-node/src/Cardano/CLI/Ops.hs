@@ -48,15 +48,16 @@ import           Control.Tracer (nullTracer, stdoutTracer, traceWith)
 import           Network.Mux (MuxError)
 import           Network.TypedProtocol.Driver (runPeer)
 import           Ouroboros.Consensus.Block (BlockProtocol)
-import           Ouroboros.Consensus.Ledger.Byron (ByronBlock, GenTx)
+import           Ouroboros.Consensus.Byron.Ledger (ByronBlock, GenTx)
+import qualified Ouroboros.Consensus.Cardano as Consensus
 import           Ouroboros.Consensus.Mempool.API (ApplyTxErr)
 import           Ouroboros.Consensus.NodeNetwork (ProtocolCodecs(..), protocolCodecs)
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
                    (NodeToClientVersion, mostRecentNetworkProtocolVersion)
-import           Ouroboros.Consensus.Node.ProtocolInfo (ProtocolInfo(..), protocolInfo)
+import           Ouroboros.Consensus.Config (TopLevelConfig)
+import           Ouroboros.Consensus.Node.ProtocolInfo (ProtocolInfo(..))
 import           Ouroboros.Consensus.Node.Run
                    (RunNode(..))
-import qualified Ouroboros.Consensus.Protocol as Consensus
 import           Ouroboros.Consensus.Util.Condense (Condense(..))
 import           Ouroboros.Consensus.Util.IOLike (IOLike)
 import           Ouroboros.Network.Block
@@ -64,9 +65,9 @@ import           Ouroboros.Network.Codec (Codec)
 import           Ouroboros.Network.Mux
                    (AppType(InitiatorApp), OuroborosApplication(..))
 import           Ouroboros.Network.NodeToClient
-                 (NetworkConnectTracers(..), NodeToClientProtocols(..), NodeToClientVersionData(..)
-                 , NodeToClientVersion(NodeToClientV_1), connectTo, localTxSubmissionClientNull
-                 , nodeToClientCodecCBORTerm)
+                   (AssociateWithIOCP, NetworkConnectTracers(..), NodeToClientProtocols(..)
+                   , NodeToClientVersionData(..), NodeToClientVersion(NodeToClientV_1), connectTo
+                   , localTxSubmissionClientNull, nodeToClientCodecCBORTerm)
 import           Ouroboros.Network.Protocol.ChainSync.Client
                    (ChainSyncClient(..), ClientStIdle(..), ClientStNext(..)
                    , chainSyncClientPeer, recvMsgRollForward)
@@ -77,6 +78,7 @@ import           Ouroboros.Network.Protocol.LocalTxSubmission.Type
                    (LocalTxSubmission)
 import           Ouroboros.Network.Protocol.LocalTxSubmission.Client
                    (localTxSubmissionClientPeer)
+import           Ouroboros.Network.Snocket (socketSnocket)
 
 import           Cardano.Common.LocalSocket
 import           Cardano.Config.Protocol
@@ -246,7 +248,7 @@ withRealPBFT
   -> Update
   -> Protocol
   -> (RunNode ByronBlock
-        => Consensus.Protocol ByronBlock
+        => Consensus.Protocol ByronBlock Consensus.ProtocolRealPBFT
         -> ExceptT RealPBFTError IO a)
   -> ExceptT RealPBFTError IO a
 withRealPBFT gHash genFile nMagic sigThresh delCertFp sKeyFp update ptcl action = do
@@ -274,9 +276,10 @@ withRealPBFT gHash genFile nMagic sigThresh delCertFp sKeyFp update ptcl action 
 getLocalTip
   :: ConfigYamlFilePath
   -> GenesisFile
+  -> AssociateWithIOCP
   -> SocketPath
   -> IO ()
-getLocalTip configFp genFp sockPath = do
+getLocalTip configFp genFp iocp sockPath = do
   nc <- parseNodeConfigurationFP $ unConfigPath configFp
 
   eGenHash <- runExceptT $ getGenesisHash genFp
@@ -304,22 +307,23 @@ getLocalTip configFp genFp sockPath = do
                         Left err -> do putTextLn . toS $ show err
                                        exitFailure
 
-  createNodeConnection (Proxy) p sockPath
+  createNodeConnection (Proxy) p iocp sockPath
 
 
 createNodeConnection
   :: forall blk . (Condense (HeaderHash blk), RunNode blk)
   => Proxy blk
-  -> Consensus.Protocol blk
+  -> Consensus.Protocol blk (BlockProtocol blk)
+  -> AssociateWithIOCP
   -> SocketPath
   -> IO ()
-createNodeConnection proxy ptcl socketPath = do
-    addr <- localSocketAddrInfo socketPath
-    let ProtocolInfo{pInfoConfig} = protocolInfo ptcl
+createNodeConnection proxy ptcl iocp socketPath = do
+    addr <- localSocketPath socketPath
+    let ProtocolInfo{pInfoConfig} = Consensus.protocolInfo ptcl
     connectTo
+      (socketSnocket iocp)
       (NetworkConnectTracers nullTracer nullTracer)
       (localInitiatorNetworkApplication proxy pInfoConfig)
-      Nothing
       addr
     `catch` handleMuxError
 
@@ -335,14 +339,14 @@ localInitiatorNetworkApplication
      , MonadTimer m
      )
   => Proxy blk
-  -> Consensus.NodeConfig (BlockProtocol blk)
+  -> TopLevelConfig blk
   -> Versions NodeToClientVersion DictVersion
               (OuroborosApplication 'InitiatorApp peer NodeToClientProtocols
                                     m LB.ByteString () Void)
-localInitiatorNetworkApplication proxy pInfoConfig =
+localInitiatorNetworkApplication proxy cfg =
     simpleSingletonVersions
       NodeToClientV_1
-      (NodeToClientVersionData { networkMagic = nodeNetworkMagic proxy pInfoConfig })
+      (NodeToClientVersionData { networkMagic = nodeNetworkMagic proxy cfg })
       (DictVersion nodeToClientCodecCBORTerm)
 
   $ OuroborosInitiatorApplication $ \_peer ptcl -> case ptcl of
@@ -361,10 +365,10 @@ localInitiatorNetworkApplication proxy pInfoConfig =
           (chainSyncClientPeer chainSyncClient)
  where
   localChainSyncCodec :: Codec (ChainSync (Serialised blk) (Tip blk)) DeserialiseFailure m LB.ByteString
-  localChainSyncCodec = pcLocalChainSyncCodec . protocolCodecs pInfoConfig $ mostRecentNetworkProtocolVersion proxy
+  localChainSyncCodec = pcLocalChainSyncCodec . protocolCodecs cfg $ mostRecentNetworkProtocolVersion proxy
 
   localTxSubmissionCodec :: Codec (LocalTxSubmission (GenTx blk) (ApplyTxErr blk)) DeserialiseFailure m LB.ByteString
-  localTxSubmissionCodec = pcLocalTxSubmissionCodec . protocolCodecs pInfoConfig $ mostRecentNetworkProtocolVersion proxy
+  localTxSubmissionCodec = pcLocalTxSubmissionCodec . protocolCodecs cfg $ mostRecentNetworkProtocolVersion proxy
 
 chainSyncClient
   :: forall blk m . (Condense (HeaderHash blk), MonadIO m)

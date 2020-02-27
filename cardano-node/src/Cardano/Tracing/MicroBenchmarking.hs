@@ -38,7 +38,6 @@ import           Control.Tracer.Transformers.ObserveOutcome
 
 import           Ouroboros.Network.Block (SlotNo (..))
 
-import           Ouroboros.Consensus.Ledger.Abstract (ProtocolLedgerView)
 import           Ouroboros.Consensus.Mempool.API
                    (ApplyTx (..), GenTx, GenTxId, HasTxId (..),
                     MempoolSize (..), TraceEventMempool (..), txId)
@@ -53,8 +52,8 @@ data MeasureTxs blk
     = MeasureTxsTimeStart (GenTx blk) !Word !Word !Time  -- num txs, total size in bytes
     | MeasureTxsTimeStop !SlotNo blk [GenTx blk] !Time
 
-deriving instance (ProtocolLedgerView blk, Eq blk, Eq (GenTx blk)) => Eq (MeasureTxs blk)
-deriving instance (ProtocolLedgerView blk, Show blk, Show (GenTx blk)) => Show (MeasureTxs blk)
+deriving instance (Eq blk, Eq (GenTx blk)) => Eq (MeasureTxs blk)
+deriving instance (Show blk, Show (GenTx blk)) => Show (MeasureTxs blk)
 
 instance Transformable Text IO (MeasureTxs blk) where
   trTransformer _ verb tr = trStructured verb tr
@@ -177,8 +176,8 @@ data MeasureBlockForging blk
     = MeasureBlockTimeStart !SlotNo  !Time
     | MeasureBlockTimeStop !SlotNo blk !MempoolSize !Time
 
-deriving instance (ProtocolLedgerView blk, Eq blk, Eq (GenTx blk)) => Eq (MeasureBlockForging blk)
-deriving instance (ProtocolLedgerView blk, Show blk, Show (GenTx blk)) => Show (MeasureBlockForging blk)
+deriving instance (Eq blk, Eq (GenTx blk)) => Eq (MeasureBlockForging blk)
+deriving instance (Show blk, Show (GenTx blk)) => Show (MeasureBlockForging blk)
 
 instance Transformable Text IO (MeasureBlockForging blk) where
   trTransformer _ verb tr = trStructured verb tr

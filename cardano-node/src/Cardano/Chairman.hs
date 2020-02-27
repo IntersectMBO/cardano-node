@@ -37,10 +37,11 @@ import           Control.Tracer
 import           Network.Mux (MuxError)
 
 import           Ouroboros.Consensus.Block (BlockProtocol, GetHeader (..))
+import           Ouroboros.Consensus.Config (TopLevelConfig)
 import           Ouroboros.Consensus.Mempool
 import           Ouroboros.Consensus.Node.ProtocolInfo
 import           Ouroboros.Consensus.Node.Run
-import           Ouroboros.Consensus.Protocol
+import           Ouroboros.Consensus.Cardano
 import           Ouroboros.Consensus.Util.Condense
 
 import           Network.TypedProtocol.Driver
@@ -58,6 +59,7 @@ import           Ouroboros.Network.Protocol.ChainSync.Client
 import           Ouroboros.Network.Protocol.ChainSync.Codec
 import           Ouroboros.Network.Protocol.Handshake.Version
 import           Ouroboros.Network.NodeToClient
+import           Ouroboros.Network.Snocket (socketSnocket)
 
 import           Cardano.Common.LocalSocket
 import           Cardano.Config.Types (SocketPath)
@@ -73,7 +75,8 @@ runChairman :: forall blk.
                ( RunNode blk
                , TraceConstraints blk
                )
-            => Protocol blk
+            => AssociateWithIOCP
+            -> Protocol blk (BlockProtocol blk)
             -> SecurityParam
             -- ^ security parameter, if a fork is deeper than it 'runChairman'
             -- will throw an exception.
@@ -83,20 +86,21 @@ runChairman :: forall blk.
             -- ^ local socket dir
             -> Tracer IO String
             -> IO ()
-runChairman ptcl securityParam maxBlockNo socketPaths tracer = do
+runChairman iocp ptcl securityParam maxBlockNo socketPaths tracer = do
 
     (chainsVar :: ChainsVar IO blk) <- newTVarM
       (Map.fromList $ map (\socketPath -> (socketPath, AF.Empty AF.AnchorGenesis)) socketPaths)
 
     void $ flip mapConcurrently socketPaths $ \sockPath ->
-        let ProtocolInfo{pInfoConfig} = protocolInfo ptcl
+        let ProtocolInfo { pInfoConfig = cfg } = protocolInfo ptcl
 
         in createConnection
              chainsVar
              securityParam
              maxBlockNo
              tracer
-             pInfoConfig
+             cfg
+             iocp
              sockPath
 
 -- catch 'MuxError'; it will be thrown if a node shuts down closing the
@@ -122,7 +126,8 @@ createConnection
   -> SecurityParam
   -> Maybe BlockNo
   -> Tracer IO String
-  -> NodeConfig (BlockProtocol blk)
+  -> TopLevelConfig blk
+  -> AssociateWithIOCP
   -> SocketPath
   -> IO ()
 createConnection
@@ -130,26 +135,27 @@ createConnection
   securityParam
   maxBlockNo
   tracer
-  pInfoConfig
+  cfg
+  iocp
   socketPath = do
-    addr <- localSocketAddrInfo socketPath
-    connectTo
-      NetworkConnectTracers {
-          nctMuxTracer       = nullTracer,
-          nctHandshakeTracer = nullTracer
-        }
-      (localInitiatorNetworkApplication
-        socketPath
-        chainsVar
-        securityParam
-        maxBlockNo
-        (showTracing tracer)
-        nullTracer
-        nullTracer
-        pInfoConfig)
-      Nothing
-      addr
-    `catch` handleMuxError tracer chainsVar socketPath
+      path <- localSocketPath socketPath
+      connectTo
+        (socketSnocket iocp)
+        NetworkConnectTracers {
+            nctMuxTracer       = nullTracer,
+            nctHandshakeTracer = nullTracer
+            }
+        (localInitiatorNetworkApplication
+            socketPath
+            chainsVar
+            securityParam
+            maxBlockNo
+            (showTracing tracer)
+            nullTracer
+            nullTracer
+            cfg)
+        path
+        `catch` handleMuxError tracer chainsVar socketPath
 
 data ChairmanTrace blk
   = WitnessedConsensus [Point (Header blk)]
@@ -371,14 +377,14 @@ localInitiatorNetworkApplication
   -- ^ tracer which logs all local tx submission protocol messages send and
   -- received by the client (see 'Ouroboros.Network.Protocol.LocalTxSubmission.Type'
   -- in 'ouroboros-network' package).
-  -> NodeConfig (BlockProtocol blk)
+  -> TopLevelConfig blk
   -> Versions NodeToClientVersion DictVersion
               (OuroborosApplication 'InitiatorApp peer NodeToClientProtocols
                                     m ByteString () Void)
-localInitiatorNetworkApplication sockPath chainsVar securityParam maxBlockNo chairmanTracer chainSyncTracer localTxSubmissionTracer pInfoConfig =
+localInitiatorNetworkApplication sockPath chainsVar securityParam maxBlockNo chairmanTracer chainSyncTracer localTxSubmissionTracer cfg =
     simpleSingletonVersions
       NodeToClientV_1
-      (NodeToClientVersionData (nodeNetworkMagic (Proxy @blk) pInfoConfig))
+      (NodeToClientVersionData (nodeNetworkMagic (Proxy @blk) cfg))
       (DictVersion nodeToClientCodecCBORTerm)
 
   $ OuroborosInitiatorApplication $ \_peer ptcl -> case ptcl of
@@ -392,7 +398,7 @@ localInitiatorNetworkApplication sockPath chainsVar securityParam maxBlockNo cha
       ChainSyncWithBlocksPtcl -> \channel ->
         runPeer
           chainSyncTracer
-          (localChainSyncCodec pInfoConfig)
+          (localChainSyncCodec cfg)
           channel
           (chainSyncClientPeer $ chainSyncClient chairmanTracer sockPath chainsVar securityParam maxBlockNo)
 
@@ -417,13 +423,13 @@ localChainSyncCodec
      ( RunNode blk
      , MonadST    m
      )
-  => NodeConfig (BlockProtocol blk)
+  => TopLevelConfig blk
   -> Codec (ChainSync blk (Tip blk))
            DeserialiseFailure m ByteString
-localChainSyncCodec pInfoConfig =
+localChainSyncCodec cfg =
     codecChainSync
-      (Block.wrapCBORinCBOR   (nodeEncodeBlock pInfoConfig))
-      (Block.unwrapCBORinCBOR (nodeDecodeBlock pInfoConfig))
+      (Block.wrapCBORinCBOR   (nodeEncodeBlock cfg))
+      (Block.unwrapCBORinCBOR (nodeDecodeBlock cfg))
       (Block.encodePoint (nodeEncodeHeaderHash (Proxy @blk)))
       (Block.decodePoint (nodeDecodeHeaderHash (Proxy @blk)))
       (Block.encodeTip   (nodeEncodeHeaderHash (Proxy @blk)))

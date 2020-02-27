@@ -54,22 +54,26 @@ import           Cardano.Config.Logging (LoggingLayer (..))
 import           Cardano.Config.Types (MiscellaneousFilepaths(..),
                                        NodeConfiguration (..), ViewMode (..))
 
+
 import           Ouroboros.Network.Block
+import           Ouroboros.Network.NodeToClient (LocalConnectionId)
 import           Ouroboros.Consensus.Block (BlockProtocol)
 import           Ouroboros.Consensus.Node (NodeKernel (getChainDB),
-                     ConnectionId (..), DiffusionTracers (..), DiffusionArguments (..),
+                     DiffusionTracers (..), DiffusionArguments (..),
                      DnsSubscriptionTarget (..), IPSubscriptionTarget (..),
-                     RunNode (nodeNetworkMagic, nodeStartTime), IsProducer (..))
+                     RunNode (nodeNetworkMagic, nodeStartTime), IsProducer (..),
+                     RemoteConnectionId)
 import qualified Ouroboros.Consensus.Node as Node (run)
 import           Ouroboros.Consensus.Node.ProtocolInfo
 import           Ouroboros.Consensus.NodeId
-import qualified Ouroboros.Consensus.Protocol as Consensus
+import qualified Ouroboros.Consensus.Config as Consensus
+import qualified Ouroboros.Consensus.Cardano as Consensus
 import           Ouroboros.Consensus.Util.Orphans ()
 import           Ouroboros.Consensus.Util.STM (onEachChange)
 
-import qualified Ouroboros.Storage.ChainDB as ChainDB
-import           Ouroboros.Storage.ImmutableDB (ValidationPolicy (..))
-import           Ouroboros.Storage.VolatileDB (BlockValidationPolicy (..))
+import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
+import           Ouroboros.Consensus.Storage.ImmutableDB (ValidationPolicy (..))
+import           Ouroboros.Consensus.Storage.VolatileDB (BlockValidationPolicy (..))
 
 import           Cardano.Common.LocalSocket
 import           Cardano.Config.Protocol (SomeProtocol(..), fromProtocol)
@@ -113,7 +117,7 @@ runNode loggingLayer npm = do
                                          (ncUpdate nc)
                                          (ncProtocol nc)
 
-    SomeProtocol (p :: Consensus.Protocol blk) <-
+    SomeProtocol (p :: Consensus.Protocol blk (BlockProtocol blk)) <-
       case eitherSomeProtocol of
         Left err -> (putTextLn . pack $ show err) >> exitFailure
         Right (SomeProtocol p) -> pure $ SomeProtocol p
@@ -155,18 +159,18 @@ runNode loggingLayer npm = do
 
 handleSimpleNode
   :: forall blk. RunNode blk
-  => Consensus.Protocol blk
+  => Consensus.Protocol blk (BlockProtocol blk)
   -> Trace IO Text
-  -> Tracers ConnectionId blk
+  -> Tracers RemoteConnectionId LocalConnectionId blk
   -> NodeProtocolMode
-  -> (NodeKernel IO ConnectionId blk -> IO ())
+  -> (NodeKernel IO RemoteConnectionId blk -> IO ())
   -- ^ Called on the 'NodeKernel' after creating it, but before the network
   -- layer is initialised.  This implies this function must not block,
   -- otherwise the node won't actually start.
   -> IO ()
 handleSimpleNode p trace nodeTracers npm onKernel = do
 
-  let pInfo@ProtocolInfo{ pInfoConfig = cfg } = protocolInfo p
+  let pInfo@ProtocolInfo{ pInfoConfig = cfg } = Consensus.protocolInfo p
       tracer = contramap pack $ toLogObject trace
 
   -- Node configuration
@@ -241,12 +245,14 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
           Just (CoreId _) -> IsProducer
           _               -> IsNotProducer
 
-  createDiffusionTracers :: Tracers ConnectionId blk -> DiffusionTracers
+  createDiffusionTracers :: Tracers RemoteConnectionId LocalConnectionId blk
+                         -> DiffusionTracers
   createDiffusionTracers nodeTracers' = DiffusionTracers
     { dtIpSubscriptionTracer = ipSubscriptionTracer nodeTracers'
     , dtDnsSubscriptionTracer = dnsSubscriptionTracer nodeTracers'
     , dtDnsResolverTracer = dnsResolverTracer nodeTracers'
     , dtErrorPolicyTracer = errorPolicyTracer nodeTracers'
+    , dtLocalErrorPolicyTracer = localErrorPolicyTracer nodeTracers'
     , dtMuxTracer = muxTracer nodeTracers'
     , dtMuxLocalTracer = nullTracer
     , dtHandshakeTracer = nullTracer
@@ -256,7 +262,7 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
   createTracers
     :: NodeProtocolMode
     -> Tracer IO GHC.Base.String
-    -> Consensus.NodeConfig (BlockProtocol blk)
+    -> Consensus.TopLevelConfig blk
     -> IO ()
   createTracers npm' tracer cfg = do
      case npm' of
@@ -333,7 +339,7 @@ dbValidation (RealProtocolMode (NodeCLI _ _ _ _ dbval)) = dbval
 
 createDiffusionArguments
   :: [AddrInfo]
-  -> AddrInfo
+  -> FilePath
   -> IPSubscriptionTarget
   -> [DnsSubscriptionTarget]
   -> DiffusionArguments

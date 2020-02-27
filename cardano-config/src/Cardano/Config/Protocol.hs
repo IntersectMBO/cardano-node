@@ -1,8 +1,8 @@
-{-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE ConstraintKinds   #-}
+{-# LANGUAGE DeriveAnyClass    #-}
+{-# LANGUAGE FlexibleContexts  #-}
+{-# LANGUAGE GADTs             #-}
+{-# LANGUAGE NamedFieldPuns    #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 {-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
@@ -16,15 +16,13 @@ module Cardano.Config.Protocol
   , TraceConstraints
   ) where
 
-
-
 import           Cardano.Prelude
 import           Test.Cardano.Prelude (canonicalDecodePretty)
 
-import           Codec.CBOR.Read (deserialiseFromBytes, DeserialiseFailure)
+import           Codec.CBOR.Read (DeserialiseFailure, deserialiseFromBytes)
 import           Control.Monad.Trans.Except (ExceptT)
-import           Control.Monad.Trans.Except.Extra ( bimapExceptT, firstExceptT
-                                                  , hoistEither, left)
+import           Control.Monad.Trans.Except.Extra (bimapExceptT, firstExceptT,
+                                                   hoistEither, left)
 import qualified Data.ByteString.Lazy as LB
 
 import qualified Cardano.Chain.Genesis as Genesis
@@ -32,32 +30,29 @@ import qualified Cardano.Chain.Update as Update
 import           Cardano.Crypto (RequiresNetworkMagic, decodeHash)
 import qualified Cardano.Crypto.Signing as Signing
 
-import           Ouroboros.Consensus.Block (Header)
-import           Ouroboros.Consensus.BlockchainTime
-                   (SlotLength, slotLengthFromSec,
-                    SlotLengths, singletonSlotLengths)
+import           Ouroboros.Consensus.Block (Header, BlockProtocol)
+import           Ouroboros.Consensus.BlockchainTime (SlotLength, SlotLengths,
+                                                     singletonSlotLengths,
+                                                     slotLengthFromSec)
+import           Ouroboros.Consensus.Cardano hiding (Protocol)
+import qualified Ouroboros.Consensus.Cardano as Consensus
 import           Ouroboros.Consensus.Mempool.API (ApplyTxErr, GenTx, GenTxId,
                                                   HasTxId, TxId)
-import           Ouroboros.Consensus.Node.ProtocolInfo (NumCoreNodes (..),
-                                                        PBftLeaderCredentials,
-                                                        PBftLeaderCredentialsError,
-                                                        PBftSignatureThreshold(..),
-                                                         mkPBftLeaderCredentials)
-import           Ouroboros.Consensus.NodeId (CoreNodeId (..), NodeId (..))
-import           Ouroboros.Consensus.Node.Run (RunNode)
-import           Ouroboros.Consensus.Protocol (SecurityParam (..),
-                                               PraosParams (..),
-                                               PBftParams (..))
-import qualified Ouroboros.Consensus.Protocol as Consensus
-import qualified Ouroboros.Consensus.Ledger.Byron        as Consensus
-import           Ouroboros.Consensus.Util (Dict(..))
-import           Ouroboros.Consensus.Util.Condense
-import           Ouroboros.Network.Block
+import           Ouroboros.Consensus.Node.ProtocolInfo (NumCoreNodes (..))
 
-import           Cardano.Config.Types
-                   (DelegationCertFile (..), GenesisFile (..),
-                    LastKnownBlockVersion (..), Update (..),
-                    Protocol (..), SigningKeyFile (..))
+import           Ouroboros.Consensus.Byron.Ledger (ByronBlock)
+import           Ouroboros.Consensus.Node.Run (RunNode)
+import           Ouroboros.Consensus.NodeId (CoreNodeId (..), NodeId (..))
+import           Ouroboros.Consensus.Protocol.Abstract (SecurityParam (..))
+import           Ouroboros.Consensus.Util (Dict (..))
+import           Ouroboros.Consensus.Util.Condense
+import           Ouroboros.Network.Block (HeaderHash)
+
+import           Cardano.Config.Types (DelegationCertFile (..),
+                                       GenesisFile (..),
+                                       LastKnownBlockVersion (..),
+                                       Protocol (..), SigningKeyFile (..),
+                                       Update (..))
 
 -- TODO: consider not throwing this, or wrap it in a local error type here
 -- that has proper error messages.
@@ -105,7 +100,7 @@ mockSomeProtocol
   => Maybe NodeId
   -> Maybe Word64
   -- ^ Number of core nodes
-  -> (CoreNodeId -> NumCoreNodes -> Consensus.Protocol blk)
+  -> (CoreNodeId -> NumCoreNodes -> Consensus.Protocol blk (BlockProtocol blk))
   -> Either ProtocolInstantiationError SomeProtocol
 mockSomeProtocol nId mNumCoreNodes mkConsensusProtocol =  do
     (cid, numCoreNodes) <- extractNodeInfo nId mNumCoreNodes
@@ -115,7 +110,7 @@ mockSomeProtocol nId mNumCoreNodes mkConsensusProtocol =  do
 
 data SomeProtocol where
   SomeProtocol :: (RunNode blk, TraceConstraints blk)
-               => Consensus.Protocol blk -> SomeProtocol
+               => Consensus.Protocol blk (BlockProtocol blk) -> SomeProtocol
 
 data ProtocolInstantiationError =
     ByronLegacyProtocolNotImplemented
@@ -149,21 +144,25 @@ fromProtocol _ nId mNumCoreNodes _ _ _ _ _ _ BFT =
     Consensus.ProtocolMockBFT numCoreNodes cid mockSecurityParam mockSlotLengths
 fromProtocol _ nId mNumCoreNodes _ _ _ _ _ _ Praos =
   hoistEither $ mockSomeProtocol nId mNumCoreNodes $ \cid numCoreNodes ->
-    Consensus.ProtocolMockPraos numCoreNodes cid PraosParams {
-        praosSecurityParam = mockSecurityParam
-      , praosSlotsPerEpoch = 3
-      , praosLeaderF       = 0.5
-      , praosLifetimeKES   = 1000000
-      , praosSlotLength    = slotLengthFromSec 2
-    }
+    Consensus.ProtocolMockPraos
+      numCoreNodes
+      cid
+      PraosParams {
+          praosSecurityParam = mockSecurityParam
+        , praosSlotsPerEpoch = 3
+        , praosLeaderF       = 0.5
+        , praosLifetimeKES   = 1000000
+        }
+      (singletonSlotLengths (slotLengthFromSec 2))
 fromProtocol _ nId mNumCoreNodes _ _ _ _ _ _ MockPBFT =
   hoistEither $ mockSomeProtocol nId mNumCoreNodes $ \cid numCoreNodes@(NumCoreNodes numNodes) ->
     Consensus.ProtocolMockPBFT
       PBftParams { pbftSecurityParam      = mockSecurityParam
                  , pbftNumNodes           = numCoreNodes
                  , pbftSignatureThreshold = (1.0 / fromIntegral numNodes) + 0.1
-                 , pbftSlotLength         = mockSlotLength
+
                  }
+      (singletonSlotLengths mockSlotLength)
       cid
 fromProtocol gHash _ _ mGenFile nMagic sigThresh delCertFp sKeyFp update RealPBFT = do
     let genHash = either panic identity $ decodeHash gHash
@@ -194,7 +193,7 @@ protocolConfigRealPbft :: Update
                        -> Maybe Double
                        -> Genesis.Config
                        -> Maybe PBftLeaderCredentials
-                       -> Consensus.Protocol Consensus.ByronBlock
+                       -> Consensus.Protocol ByronBlock ProtocolRealPBFT
 protocolConfigRealPbft (Update appName appVer lastKnownBlockVersion)
                        pbftSignatureThresh
                        genesis leaderCredentials =
@@ -247,6 +246,6 @@ extractNodeInfo mNodeId ncNumCoreNodes  = do
 
     coreNodeId   <- case mNodeId of
                       Just (CoreId coreNodeId) -> pure coreNodeId
-                      _ -> Left MissingCoreNodeId
+                      _                        -> Left MissingCoreNodeId
     numCoreNodes <- maybe (Left MissingNumCoreNodes) Right ncNumCoreNodes
     return (coreNodeId , NumCoreNodes numCoreNodes)

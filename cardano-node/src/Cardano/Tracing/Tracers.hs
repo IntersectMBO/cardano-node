@@ -46,6 +46,7 @@ import           Cardano.BM.Data.Transformers
 import           Ouroboros.Consensus.Block (Header)
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..), TraceBlockchainTimeEvent (..))
 import           Ouroboros.Consensus.Ledger.Abstract
+import           Ouroboros.Consensus.Ledger.SupportsProtocol (LedgerSupportsProtocol)
 import           Ouroboros.Consensus.Mempool.API (GenTx, MempoolSize (..),
                                                   TraceEventMempool (..))
 import qualified Ouroboros.Consensus.Node.Tracers as Consensus
@@ -63,8 +64,8 @@ import           Ouroboros.Network.NodeToNode (WithAddr, ErrorPolicyTrace)
 import           Ouroboros.Network.Point (fromWithOrigin)
 import           Ouroboros.Network.Subscription
 
-import qualified Ouroboros.Storage.ChainDB as ChainDB
-import qualified Ouroboros.Storage.LedgerDB.OnDisk as LedgerDB
+import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
+import qualified Ouroboros.Consensus.Storage.LedgerDB.OnDisk as LedgerDB
 
 import           Cardano.Config.Protocol (TraceConstraints)
 import           Cardano.Config.Types
@@ -73,13 +74,13 @@ import           Cardano.Tracing.ToObjectOrphans
 
 import           Control.Tracer.Transformers
 
-data Tracers peer blk = Tracers
+data Tracers peer localPeer blk = Tracers
   { -- | Trace the ChainDB
     chainDBTracer :: Tracer IO (WithTip blk (ChainDB.TraceEvent blk))
     -- | Consensus-specific tracers.
   , consensusTracers :: Consensus.Tracers IO peer blk
     -- | Tracers for the protocol messages.
-  , protocolTracers :: ProtocolTracers IO peer blk DeserialiseFailure
+  , protocolTracers :: ProtocolTracers IO peer localPeer blk DeserialiseFailure
     -- | Trace the IP subscription manager
   , ipSubscriptionTracer :: Tracer IO (WithIPList (SubscriptionTrace Socket.SockAddr))
     -- | Trace the DNS subscription manager
@@ -88,6 +89,8 @@ data Tracers peer blk = Tracers
   , dnsResolverTracer :: Tracer IO (WithDomainName DnsTrace)
     -- | Trace error policy resolution
   , errorPolicyTracer :: Tracer IO (WithAddr Socket.SockAddr ErrorPolicyTrace)
+    -- | Trace local error policy resolution
+  , localErrorPolicyTracer :: Tracer IO (WithAddr Socket.SockAddr ErrorPolicyTrace)
     -- | Trace the Mux
   , muxTracer :: Tracer IO (WithMuxBearer peer MuxTrace)
   }
@@ -105,7 +108,7 @@ data ForgeTracers = ForgeTracers
   , ftTraceNodeIsLeader :: Trace IO Text
   }
 
-nullTracers :: Tracers peer blk
+nullTracers :: Tracers peer localPeer blk
 nullTracers = Tracers
   { chainDBTracer = nullTracer
   , consensusTracers = Consensus.nullTracers
@@ -114,6 +117,7 @@ nullTracers = Tracers
   , dnsSubscriptionTracer = nullTracer
   , dnsResolverTracer = nullTracer
   , errorPolicyTracer = nullTracer
+  , localErrorPolicyTracer = nullTracer
   , muxTracer = nullTracer
   }
 
@@ -151,15 +155,16 @@ instance ElidingTracer
 -- | Smart constructor of 'NodeTraces'.
 --
 mkTracers
-  :: forall peer blk.
-     ( ProtocolLedgerView blk
+  :: forall peer localPeer blk.
+     ( LedgerSupportsProtocol blk
      , TraceConstraints blk
      , ShowQuery (Query blk)
      , Show peer
+     , Show localPeer
      )
   => TraceOptions
   -> Trace IO Text
-  -> IO (Tracers peer blk)
+  -> IO (Tracers peer localPeer blk)
 mkTracers traceOptions tracer = do
   -- We probably don't want to pay the extra IO cost per-counter-increment. -- sk
   staticMetaCC <- mkLOMeta Critical Confidential
@@ -216,6 +221,11 @@ mkTracers traceOptions tracer = do
           $ annotateSeverity
           $ toLogObject' StructuredLogging tracingVerbosity
           $ appendName "ErrorPolicy" tracer
+    , localErrorPolicyTracer
+        = tracerOnOff (traceLocalErrorPolicy traceOptions)
+          $ annotateSeverity
+          $ toLogObject' StructuredLogging tracingVerbosity
+          $ appendName "LocalErrorPolicy" tracer
     , muxTracer
         = tracerOnOff (traceMux traceOptions)
           $ annotateSeverity
@@ -245,22 +255,34 @@ mkTracers traceOptions tracer = do
                           -> Tracer IO (WithSeverity (WithTip blk (ChainDB.TraceEvent blk)))
     teeTraceChainTipElide = elideToLogObject
 
+    traceChainInformation :: Trace IO Text
+                          -> ChainInformation
+                          -> IO ()
+    traceChainInformation tr ChainInformation { slots, blocks, density } = do
+        -- TODO this is executed each time the chain changes. How cheap is it?
+        meta <- mkLOMeta Critical Confidential
+        let tr' = appendName "metrics" tr
+            traceD :: Text -> Double -> IO ()
+            traceD msg d = traceNamedObject tr' (meta, LogValue msg (PureD d))
+            traceI :: Integral a => Text -> a -> IO ()
+            traceI msg i = traceNamedObject tr' (meta, LogValue msg (PureI (fromIntegral i)))
+
+        traceD "density"     (fromRational density)
+        traceI "slotNum"     slots
+        traceI "blockNum"    blocks
+        traceI "slotInEpoch" (slots `rem` epochSlots)
+        traceI "epoch"       (slots `div` epochSlots)
+      where
+        epochSlots :: Word64 = 21600  -- TODO
+
     teeTraceChainTip' :: Trace IO Text
                       -> Tracer IO (WithSeverity (WithTip blk (ChainDB.TraceEvent blk)))
     teeTraceChainTip' tr =
         Tracer $ \(WithSeverity _ (WithTip _tip ev')) ->
           case ev' of
               (ChainDB.TraceAddBlockEvent ev) -> case ev of
-                  ChainDB.SwitchedToChain _ c -> do
-                      meta <- mkLOMeta Critical Confidential
-                      let tr' = appendName "metrics" tr
-                          ChainInformation { slots, blocks, density } = chainInformation c
-                          epochSlots :: Word64 = 21600  -- TODO
-                      traceNamedObject tr' (meta, LogValue "density" . PureD $ fromRational density)
-                      traceNamedObject tr' (meta, LogValue "slotNum" . PureI $ fromIntegral slots)
-                      traceNamedObject tr' (meta, LogValue "blockNum" . PureI $ fromIntegral blocks)
-                      traceNamedObject tr' (meta, LogValue "slotInEpoch" . PureI $ fromIntegral (slots `rem` epochSlots))
-                      traceNamedObject tr' (meta, LogValue "epoch" . PureI $ fromIntegral (slots `div` epochSlots))
+                  ChainDB.SwitchedToAFork     _ _ c -> traceChainInformation tr (chainInformation c)
+                  ChainDB.AddedToCurrentChain _ _ c -> traceChainInformation tr (chainInformation c)
                   _ -> pure ()
               _ -> pure ()
     teeTraceBlockFetchDecision :: TracingFormatting
@@ -446,7 +468,7 @@ mkTracers traceOptions tracer = do
         TraceStartTimeInTheFuture (SystemStart start) toWait ->
           "Waiting " <> show toWait <> " until genesis start time at " <> show start
 
-    mkProtocolTracers :: TraceOptions -> ProtocolTracers' peer blk DeserialiseFailure (Tracer IO)
+    mkProtocolTracers :: TraceOptions -> ProtocolTracers' peer localPeer blk DeserialiseFailure (Tracer IO)
     mkProtocolTracers traceOpts = ProtocolTracers
       { ptChainSyncTracer
         = tracerOnOff (traceChainSyncProtocol traceOpts)
