@@ -507,9 +507,8 @@ parseTxRelatedValues =
         "Submit a raw, signed transaction, in its on-wire representation."
         $ SubmitTx
             <$> parseTxFile "tx"
-            <*> parseProtocol
-            <*> (GenesisFile <$> parseGenesisPath)
-            <*> parseSocketPath "Socket of target node"
+            <*> (ConfigYamlFilePath <$> parseConfigFile)
+            <*> parseCLISocketPath "Socket of target node"
     , command'
         "issue-genesis-utxo-expenditure"
         "Write a file with a signed transaction, spending genesis UTxO."

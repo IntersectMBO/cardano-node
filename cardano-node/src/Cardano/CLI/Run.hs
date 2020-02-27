@@ -73,6 +73,7 @@ import           Cardano.CLI.Benchmarking.Tx.Generation
                    , NumberOfInputsPerTx (..), NumberOfOutputsPerTx (..)
                    , FeePerTx (..), TPSRate (..), TxAdditionalSize (..)
                    , genesisBenchmarkRunner)
+import           Cardano.Common.LocalSocket
 import           Cardano.Config.Protocol
 import           Cardano.Config.Logging (createLoggingFeatureCLI)
 import           Cardano.Config.Types
@@ -145,10 +146,9 @@ data ClientCommand
   | SubmitTx
     TxFile
     -- ^ Filepath of transaction to submit.
-    Protocol
-    GenesisFile
-    SocketPath
-    -- ^ Socket path of target node.
+    ConfigYamlFilePath
+    (Maybe CLISocketPath)
+
   | SpendGenesisUTxO
     Protocol
     GenesisFile
@@ -266,11 +266,12 @@ runCommand (CheckDelegation configFp cert issuerVF delegateVF) = do
   pmId <- readProtocolMagicId $ ncGenesisFile nc
   liftIO $ checkByronGenesisDelegation cert pmId issuerVK delegateVK
 
-runCommand (SubmitTx fp ptcl genFile socketPath) = withIOManagerE $ \iocp -> do
+runCommand (SubmitTx fp configFp mCliSockPath) = withIOManagerE $ \iocp -> do
+    nc <- liftIO . parseNodeConfigurationFP $ unConfigPath configFp
     -- Default update value
     let update = Update (ApplicationName "cardano-sl") 1 $ LastKnownBlockVersion 0 2 0
     tx <- liftIO $ readByronTx fp
-    genHash <- getGenesisHash genFile
+    genHash <- getGenesisHash (ncGenesisFile nc)
 
     firstExceptT
       NodeSubmitTxError
@@ -278,14 +279,14 @@ runCommand (SubmitTx fp ptcl genFile socketPath) = withIOManagerE $ \iocp -> do
           iocp
           genHash
           Nothing
-          genFile
+          (ncGenesisFile nc)
           RequiresNoMagic
           Nothing
           Nothing
           Nothing
-          socketPath
+          (chooseSocketPath (ncSocketPath nc) mCliSockPath)
           update
-          ptcl
+          (ncProtocol nc)
           tx
 runCommand (SpendGenesisUTxO ptcl genFile (NewTxFile ctTx) ctKey genRichAddr outs) = do
       sk <- readSigningKey ptcl ctKey

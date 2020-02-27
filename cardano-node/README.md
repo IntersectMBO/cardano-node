@@ -260,7 +260,7 @@ The `submit-tx` subcommand provides the option of submitting a pre-signed
 transaction, in its raw wire format (see GenTx for Byron transactions).
 
 The canned `scripts/submit-tx.sh` script will submit the supplied transaction to a testnet
-launched by `scripts/shelley-testnet*.sh` family of scripts.
+launched by `scripts/shelley-testnet-*.sh` family of scripts.
 
 ### Issuing UTxO expenditure (genesis and regular)
 

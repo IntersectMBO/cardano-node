@@ -12,13 +12,14 @@ shift
 . $(dirname $0)/lib-node.sh
 CLI="$(executable_runner cardano-cli)"
 
-ALGO="real-pbft"
+CONFIG="configuration/log-config-0.liveview.yaml"
 NOW=`date "+%Y-%m-%d 00:00:00"`
+SOCKET="socket/0"
 NETARGS=(
         submit-tx
         --tx           "$TX"
-        --${ALGO}
-        --genesis-file "${genesis_file}"
+        --config       "$CONFIG"
+        --socket-path  "$SOCKET"
 )
 
 
