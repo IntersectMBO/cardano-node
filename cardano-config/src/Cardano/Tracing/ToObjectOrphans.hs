@@ -431,7 +431,11 @@ instance ( Condense (HeaderHash blk)
          , ToObject (LedgerError blk)
          , ToObject (ValidationErr (BlockProtocol blk)))
            => Transformable Text IO (TraceForgeEvent blk tx) where
-  trTransformer = defaultTextTransformer
+  trTransformer TextualRepresentation _verb tr = readableForgeEventTracer $ Tracer $ \s -> do
+    meta <- mkLOMeta (defineSeverity s) (definePrivacyAnnotation s)
+    traceWith tr (mempty, LogObject mempty meta (LogMessage $ pack s))
+  -- user defined formatting of log output
+  trTransformer _ verb tr = trStructured verb tr
 
 instance (Show (GenTx blk), Show (GenTxId blk))
       => Transformable Text IO (TraceEventMempool blk) where
@@ -575,6 +579,42 @@ readableChainDBTracer tracer = Tracer $ \case
   tr :: WithTip blk String -> m ()
   tr = traceWith (contramap (showWithTip id) tracer)
 
+-- | Tracer transformer for making TraceForgeEvents human-readable.
+readableForgeEventTracer
+  :: forall m blk tx.
+     ( Condense (HeaderHash blk)
+     , HasTxId tx
+     , Show (TxId tx)
+     , LedgerSupportsProtocol blk)
+  => Tracer m String
+  -> Tracer m (TraceForgeEvent blk tx)
+readableForgeEventTracer tracer = Tracer $ \case
+  TraceAdoptedBlock slotNo blk txs -> tr $
+    "Adopted forged block for slot " <> show (unSlotNo slotNo) <> ": " <> condense (blockHash blk) <> "; TxIds: " <> show (map txId txs)
+  TraceBlockFromFuture currentSlot tip -> tr $
+    "Forged block from future: current slot " <> show (unSlotNo currentSlot) <> ", tip being " <> condense tip
+  TraceSlotIsImmutable slotNo tipPoint tipBlkNo -> tr $
+    "Forged for immutable slot " <> show (unSlotNo slotNo) <> ", tip: " <> showPoint MaximalVerbosity tipPoint <> ", block no: " <> show (unBlockNo tipBlkNo)
+  TraceDidntAdoptBlock slotNo _ -> tr $
+    "Didn't adopt forged block at slot " <> show (unSlotNo slotNo)
+  TraceForgedBlock slotNo _ _ -> tr $
+    "Forged block for slot " <> show (unSlotNo slotNo)
+  TraceForgedInvalidBlock slotNo _ reason -> tr $
+    "Forged invalid block for slot " <> show (unSlotNo slotNo) <> ", reason: " <> show reason
+      -- , "reason" .= toObject verb reason
+  TraceNodeIsLeader slotNo -> tr $
+    "Leading slot " <> show (unSlotNo slotNo)
+  TraceNodeNotLeader slotNo -> tr $
+    "Not leading slot " <> show (unSlotNo slotNo)
+  TraceNoLedgerState slotNo _blk -> tr $
+    "No ledger state at slot " <> show (unSlotNo slotNo)
+  TraceNoLedgerView slotNo _ -> tr $
+    "No ledger view at slot " <> show (unSlotNo slotNo)
+  TraceStartLeadershipCheck slotNo -> tr $
+    "Testing for leadership at slot " <> show (unSlotNo slotNo)
+ where
+   tr :: String -> m ()
+   tr = traceWith tracer
 
 -- | instances of @ToObject@
 
