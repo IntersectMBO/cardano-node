@@ -81,6 +81,7 @@ let
     #!${pkgs.runtimeShell}
     set -euo pipefail
     mkdir -p "${config.stateDir}"
+    cd "${config.stateDir}"
     ${nodeScript} $@
   '';
   scripts = forEnvironments (environment:
