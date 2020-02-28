@@ -150,7 +150,7 @@ executable cardano-node
   ghc-options:         -threaded
                        -Wall
                        -rtsopts
-                       -fno-warn-unticked-promoted-constructors
+                       -Wno-unticked-promoted-constructors
   if arch(arm)
     ghc-options:         "-with-rtsopts=-T -I0 -N1 -A16m"
   else
@@ -199,7 +199,7 @@ executable wallet-client
                        -Wall
                        -rtsopts
                        "-with-rtsopts=-T"
-                       -fno-warn-unticked-promoted-constructors
+                       -Wno-unticked-promoted-constructors
   build-depends:       base >=4.12 && <5
                      , bytestring
                      , cardano-config
@@ -234,7 +234,7 @@ executable chairman
                        -Wall
                        -rtsopts
                        "-with-rtsopts=-T"
-                       -fno-warn-unticked-promoted-constructors
+                       -Wno-unticked-promoted-constructors
   build-depends:       base >=4.12 && <5
                      , async
                      , bytestring

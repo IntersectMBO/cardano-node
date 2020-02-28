@@ -8,6 +8,7 @@
 {-# LANGUAGE TypeApplications    #-}
 
 {-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
+{-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 
 module Cardano.Wallet.Client
   (runWalletClient)
@@ -33,11 +34,11 @@ import           Ouroboros.Consensus.Node.ProtocolInfo
 import           Ouroboros.Consensus.Node.Run
 import           Ouroboros.Consensus.Cardano
 
-import           Network.TypedProtocol.Driver
 import           Ouroboros.Network.Codec
 import           Ouroboros.Network.Mux
 import           Ouroboros.Network.Block (Tip)
 import qualified Ouroboros.Network.Block as Block
+import           Ouroboros.Network.Driver (runPeer)
 import           Ouroboros.Network.Protocol.LocalTxSubmission.Type
 import           Ouroboros.Network.Protocol.LocalTxSubmission.Client
 import           Ouroboros.Network.Protocol.LocalTxSubmission.Codec
@@ -104,30 +105,28 @@ localInitiatorNetworkApplication
   -- in 'ouroboros-network' package).
   -> TopLevelConfig blk
   -> Versions NodeToClientVersion DictVersion
-              (OuroborosApplication 'InitiatorApp peer NodeToClientProtocols
-                                    m ByteString Void Void)
+              (peer -> OuroborosApplication InitiatorApp ByteString m Void Void)
 localInitiatorNetworkApplication Proxy chainSyncTracer localTxSubmissionTracer cfg =
     simpleSingletonVersions
       NodeToClientV_1
       (NodeToClientVersionData { networkMagic = nodeNetworkMagic (Proxy @blk) cfg })
-      (DictVersion nodeToClientCodecCBORTerm)
+      (DictVersion nodeToClientCodecCBORTerm) $ \_peerid ->
 
-  $ OuroborosInitiatorApplication $ \_peer ptcl -> case ptcl of
-      LocalTxSubmissionPtcl -> \channel -> do
-        txv <- newEmptyTMVarM @_ @(GenTx blk)
-        runPeer
-          localTxSubmissionTracer
-          localTxSubmissionCodec
-          channel
-          (localTxSubmissionClientPeer
-              (txSubmissionClient @(GenTx blk) txv))
-
-      ChainSyncWithBlocksPtcl -> \channel ->
-        runPeer
-          chainSyncTracer
-          (localChainSyncCodec @blk cfg)
-          channel
-          (chainSyncClientPeer chainSyncClient)
+    nodeToClientProtocols
+      (InitiatorProtocolOnly $
+         MuxPeerRaw $ \channel -> do
+           txv <- newEmptyTMVarM @_ @(GenTx blk)
+           runPeer
+             localTxSubmissionTracer
+             localTxSubmissionCodec
+             channel
+             (localTxSubmissionClientPeer
+                 (txSubmissionClient @(GenTx blk) txv)))
+      (InitiatorProtocolOnly $
+         MuxPeer
+           chainSyncTracer
+           (localChainSyncCodec @blk cfg)
+           (chainSyncClientPeer chainSyncClient))
 
 
 -- | A 'LocalTxSubmissionClient' that submits transactions reading them from

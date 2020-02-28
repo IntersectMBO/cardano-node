@@ -25,7 +25,6 @@ import           Data.Text (pack)
 import qualified Data.List.NonEmpty as NonEmpty
 import qualified Network.Socket as Socket (SockAddr)
 import           Network.Mux (WithMuxBearer (..), MuxTrace (..))
-import           Network.TypedProtocol.Codec (AnyMessage (..))
 
 import           Cardano.BM.Data.LogItem (LOContent (..), LogObject (..),
                    mkLOMeta)
@@ -33,7 +32,10 @@ import           Cardano.BM.Tracing
 import           Cardano.BM.Data.Tracer (trStructured, emptyObject, mkObject)
 import qualified Cardano.Chain.Block as Block
 
-import           Ouroboros.Consensus.Block (Header, headerPoint)
+import           Ouroboros.Consensus.Block
+                   (Header, headerPoint,
+                    RealPoint, realPointSlot, realPointHash)
+import           Ouroboros.Network.Point (withOrigin)
 import           Ouroboros.Consensus.BlockFetchServer
                    (TraceBlockFetchServerEvent)
 import           Ouroboros.Consensus.ChainSyncClient
@@ -63,6 +65,7 @@ import           Ouroboros.Network.Block
 import           Ouroboros.Network.BlockFetch.ClientState
                    (TraceFetchClientState (..), TraceLabelPeer (..))
 import           Ouroboros.Network.BlockFetch.Decision (FetchDecision)
+import           Ouroboros.Network.Codec (AnyMessage (..))
 import           Ouroboros.Network.NodeToNode
                    (WithAddr(..), ErrorPolicyTrace(..), TraceSendRecv (..))
 import           Ouroboros.Network.Protocol.TxSubmission.Type
@@ -76,7 +79,6 @@ import           Ouroboros.Network.TxSubmission.Outbound
                    (TraceTxSubmissionOutbound)
 
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
-import           Ouroboros.Consensus.Storage.Common (EpochNo (..))
 import qualified Ouroboros.Consensus.Storage.LedgerDB.OnDisk as LedgerDB
 
 -- | Tracing wrapper which includes current tip in the logs (thus it requires
@@ -259,6 +261,7 @@ instance DefineSeverity (ChainDB.TraceEvent blk) where
     ChainDB.IgnoreBlockOlderThanK {} -> Info
     ChainDB.IgnoreBlockAlreadyInVolDB {} -> Info
     ChainDB.IgnoreInvalidBlock {} -> Info
+    ChainDB.AddedBlockToQueue {} -> Debug
     ChainDB.BlockInTheFuture {} -> Info
     ChainDB.StoreButDontChange {} -> Debug
     ChainDB.TryAddToCurrentChain {} -> Debug
@@ -491,6 +494,8 @@ readableChainDBTracer tracer = Tracer $ \case
       "Ignoring block already in DB: " <> condense pt
     ChainDB.IgnoreInvalidBlock pt _reason -> tr $ WithTip tip $
       "Ignoring previously seen invalid block: " <> condense pt
+    ChainDB.AddedBlockToQueue pt sz -> tr $ WithTip tip $
+      "Block added to queue: " <> condense pt <> " queue size " <> condense sz
     ChainDB.BlockInTheFuture pt slot -> tr $ WithTip tip $
       "Ignoring block from future: " <> condense pt <> ", slot " <> condense slot
     ChainDB.StoreButDontChange pt -> tr $ WithTip tip $
@@ -528,8 +533,8 @@ readableChainDBTracer tracer = Tracer $ \case
     LedgerDB.ReplayFromSnapshot snap tip' _replayTo -> tr $ WithTip tip $
       "Replaying ledger from snapshot " <> show snap <> " at " <>
         condense tip'
-    LedgerDB.ReplayedBlock _r (epochno, slotno) _replayTo -> tr $ WithTip tip $
-      "Replayed block: " <> show (unSlotNo slotno) <> " in epoch: " <> show (unEpochNo epochno)
+    LedgerDB.ReplayedBlock pt replayTo -> tr $ WithTip tip $
+      "Replayed block: slot " <> show (realPointSlot pt) ++ " of " ++ show (pointSlot replayTo)
   WithTip tip (ChainDB.TraceLedgerEvent ev) -> case ev of
     LedgerDB.TookSnapshot snap pt -> tr $ WithTip tip $
       "Took ledger snapshot " <> show snap <> " at " <> condense pt
@@ -673,8 +678,16 @@ instance Condense (HeaderHash blk)
       => ToObject (Point blk) where
   toObject MinimalVerbosity p = toObject NormalVerbosity p
   toObject verb p =
-    mkObject [ "kind" .= String "Tip"
+    mkObject [ "kind" .= String "Tip" --TODO: why is this a Tip not a Point?
              , "tip" .= showPoint verb p ]
+
+instance Condense (HeaderHash blk)
+      => ToObject (RealPoint blk) where
+  toObject verb p =
+    mkObject $
+        [ "kind" .= String "Point"
+        , "slot" .= unSlotNo (realPointSlot p) ]
+     ++ [ "hash" .= condense (realPointHash p) | verb == MaximalVerbosity ]
 
 instance (Condense (HeaderHash blk), LedgerSupportsProtocol blk)
       => ToObject (ChainDB.TraceEvent blk) where
@@ -689,6 +702,10 @@ instance (Condense (HeaderHash blk), LedgerSupportsProtocol blk)
       mkObject [ "kind" .= String "TraceAddBlockEvent.IgnoreInvalidBlock"
                , "block" .= toObject verb pt
                , "reason" .= show reason ]
+    ChainDB.AddedBlockToQueue pt sz ->
+      mkObject [ "kind" .= String "TraceAddBlockEvent.AddedBlockToQueue"
+               , "block" .= toObject verb pt
+               , "queueSize" .= toJSON sz ]
     ChainDB.BlockInTheFuture pt slot ->
       mkObject [ "kind" .= String "TraceAddBlockEvent.BlockInTheFuture"
                , "block" .= toObject verb pt
@@ -751,10 +768,10 @@ instance (Condense (HeaderHash blk), LedgerSupportsProtocol blk)
       mkObject [ "kind" .= String "TraceLedgerReplayEvent.ReplayFromSnapshot"
                , "snapshot" .= toObject verb snap
                , "tip" .= show tip' ]
-    LedgerDB.ReplayedBlock _ (epochno, slotno) _replayTo ->
+    LedgerDB.ReplayedBlock pt replayTo ->
       mkObject [ "kind" .= String "TraceLedgerReplayEvent.ReplayedBlock"
-               , "epoch" .= show (unEpochNo epochno)
-               , "slot" .= show (unSlotNo slotno) ]
+               , "slot" .= unSlotNo (realPointSlot pt)
+               , "tip"  .= withOrigin 0 unSlotNo (pointSlot replayTo) ]
 
   toObject MinimalVerbosity (ChainDB.TraceLedgerEvent _ev) = emptyObject -- no output
   toObject verb (ChainDB.TraceLedgerEvent ev) = case ev of
@@ -1089,7 +1106,7 @@ instance ( Condense (HeaderHash blk)
   toObject verb (ChainDB.InChainAfterInvalidBlock point extvalerr) =
     mkObject
       [ "kind" .= String "InChainAfterInvalidBlock"
-      , "point" .= String (pack $ showPoint verb point)
+      , "point" .= toObject verb point
       , "error" .= toObject verb extvalerr
       ]
 
