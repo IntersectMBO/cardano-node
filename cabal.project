@@ -164,13 +164,6 @@ source-repository-package
   location: https://github.com/input-output-hk/iohk-monitoring-framework
   tag: b0bcdcd7d230ada5b78cd2285de40ea809d90ab0
   --sha256: 03hqvfpnwi8b5ywlg54jch6wnjpdkvkq29idj2zbhibczkhcravw
-  subdir:   plugins/backend-editor
-
-source-repository-package
-  type: git
-  location: https://github.com/input-output-hk/iohk-monitoring-framework
-  tag: b0bcdcd7d230ada5b78cd2285de40ea809d90ab0
-  --sha256: 03hqvfpnwi8b5ywlg54jch6wnjpdkvkq29idj2zbhibczkhcravw
   subdir:   plugins/backend-ekg
 
 source-repository-package

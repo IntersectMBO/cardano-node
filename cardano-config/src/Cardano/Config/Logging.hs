@@ -31,7 +31,6 @@ import           Control.Exception (IOException, catch)
 import           Control.Exception.Safe (MonadCatch)
 
 import           Cardano.BM.Backend.Aggregation (plugin)
-import           Cardano.BM.Backend.Editor (plugin)
 import           Cardano.BM.Backend.EKGView (plugin)
 import           Cardano.BM.Backend.Monitoring (plugin)
 import qualified Cardano.BM.Backend.Switchboard as Switchboard
@@ -214,10 +213,6 @@ loggingCardanoFeatureInit ver disabled' conf = do
                 LoggingEnabled -> baseTrace
                 LoggingDisabled -> Trace.nullTracer
 
-  Config.getGUIport logConfig >>= \p ->
-      when (p > 0) $
-          Cardano.BM.Backend.Editor.plugin logConfig trace switchBoard
-              >>= loadPlugin switchBoard
   Config.getEKGport logConfig >>= \p ->
       when (p > 0) $
           Cardano.BM.Backend.EKGView.plugin logConfig trace switchBoard
