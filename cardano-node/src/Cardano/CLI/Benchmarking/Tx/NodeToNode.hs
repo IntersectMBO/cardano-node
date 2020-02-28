@@ -9,7 +9,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 
-{-# OPTIONS_GHC -fno-warn-orphans #-}
+{-# OPTIONS_GHC -fno-warn-orphans -Wno-unticked-promoted-constructors #-}
 
 module Cardano.CLI.Benchmarking.Tx.NodeToNode
   ( BenchmarkTxSubmitTracers (..)
@@ -31,9 +31,7 @@ import           Data.Proxy (Proxy (..))
 import qualified Data.Text as T
 import           Data.Time.Clock (getCurrentTime)
 import           Network.Mux (AppType(InitiatorApp), WithMuxBearer (..))
-import           Network.Socket (AddrInfo (..))
-import           Network.TypedProtocol.Codec (AnyMessage (..))
-import           Network.TypedProtocol.Driver (TraceSendRecv (..), runPeer)
+import           Network.Socket (AddrInfo (..), SockAddr)
 
 import           Control.Tracer (Tracer (..), nullTracer, traceWith)
 import           Cardano.BM.Data.LogItem (LogObject (..), LOContent (..), mkLOMeta)
@@ -47,7 +45,11 @@ import           Ouroboros.Consensus.Node.NetworkProtocolVersion
 import           Ouroboros.Consensus.Node.Run (RunNode, nodeNetworkMagic)
 import           Ouroboros.Consensus.NodeNetwork (ProtocolCodecs(..), protocolCodecs)
 import           Ouroboros.Consensus.Config (TopLevelConfig)
-import           Ouroboros.Network.Mux (OuroborosApplication(..))
+
+import           Ouroboros.Network.Codec (AnyMessage (..))
+import           Ouroboros.Network.Driver (TraceSendRecv (..))
+import           Ouroboros.Network.Mux
+                   (OuroborosApplication(..), MuxPeer(..), RunMiniProtocol(..))
 import           Ouroboros.Network.NodeToNode (NetworkConnectTracers (..))
 import qualified Ouroboros.Network.NodeToNode as NtN
 -- TODO: #1685 (ouroboros-network) IO manager terms and types should be exported
@@ -222,32 +224,29 @@ benchmarkConnectTxSubmit iocp trs cfg localAddr remoteAddr myTxSubClient = do
   myCodecs  = protocolCodecs cfg (mostRecentNetworkProtocolVersion (Proxy @blk))
 
   peerMultiplex :: Versions NtN.NodeToNodeVersion NtN.DictVersion
-              (OuroborosApplication
-                 'InitiatorApp
-                 NtN.RemoteConnectionId
-                 NtN.NodeToNodeProtocols
-                 m
-                 ByteString
-                 ()
-                 Void)
+                            (NtN.ConnectionId SockAddr ->
+                               OuroborosApplication InitiatorApp ByteString m () Void)
   peerMultiplex =
     simpleSingletonVersions
       NtN.NodeToNodeV_1
       (NtN.NodeToNodeVersionData { NtN.networkMagic = nodeNetworkMagic (Proxy @blk) cfg})
-      (NtN.DictVersion NtN.nodeToNodeCodecCBORTerm)
-      $ OuroborosInitiatorApplication $ \_peer ptcl ->
-          case ptcl of
-            NtN.ChainSyncWithHeadersPtcl -> \channel ->
-              runPeer nullTracer (pcChainSyncCodec myCodecs) channel
-                                 (chainSyncClientPeer chainSyncClientNull)
-            NtN.BlockFetchPtcl           -> \channel ->
-              runPeer nullTracer (pcBlockFetchCodec myCodecs) channel
-                                 (blockFetchClientPeer blockFetchClientNull)
-            NtN.TxSubmissionPtcl         -> \channel ->
-              runPeer (trSendRecvTxSubmission trs)
-                      (pcTxSubmissionCodec myCodecs)
-                      channel
-                      (txSubmissionClientPeer myTxSubClient)
+      (NtN.DictVersion NtN.nodeToNodeCodecCBORTerm) $ \_ ->
+      NtN.nodeToNodeProtocols
+          (InitiatorProtocolOnly $
+             MuxPeer
+               nullTracer
+               (pcChainSyncCodec myCodecs)
+               (chainSyncClientPeer chainSyncClientNull))
+          (InitiatorProtocolOnly $
+             MuxPeer
+               nullTracer
+               (pcBlockFetchCodec myCodecs)
+               (blockFetchClientPeer blockFetchClientNull))
+          (InitiatorProtocolOnly $
+              MuxPeer
+                (trSendRecvTxSubmission trs)
+                (pcTxSubmissionCodec myCodecs)
+                (txSubmissionClientPeer myTxSubClient))
 
 -- the null block fetch client
 blockFetchClientNull

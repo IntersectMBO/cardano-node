@@ -8,6 +8,7 @@
 {-# LANGUAGE TypeApplications #-}
 
 {-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
+{-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 
 module Cardano.CLI.Ops
   ( deserialiseDelegateKey
@@ -46,7 +47,6 @@ import           Control.Monad.Class.MonadTimer
 import           Control.Monad.Class.MonadThrow
 import           Control.Tracer (nullTracer, stdoutTracer, traceWith)
 import           Network.Mux (MuxError)
-import           Network.TypedProtocol.Driver (runPeer)
 import           Ouroboros.Consensus.Block (BlockProtocol)
 import           Ouroboros.Consensus.Byron.Ledger (ByronBlock, GenTx)
 import qualified Ouroboros.Consensus.Cardano as Consensus
@@ -63,11 +63,12 @@ import           Ouroboros.Consensus.Util.IOLike (IOLike)
 import           Ouroboros.Network.Block
 import           Ouroboros.Network.Codec (Codec)
 import           Ouroboros.Network.Mux
-                   (AppType(InitiatorApp), OuroborosApplication(..))
+                   (AppType(InitiatorApp), OuroborosApplication(..),
+                    MuxPeer(..), RunMiniProtocol(..))
 import           Ouroboros.Network.NodeToClient
-                   (AssociateWithIOCP, NetworkConnectTracers(..), NodeToClientProtocols(..)
+                   (AssociateWithIOCP, NetworkConnectTracers(..), nodeToClientProtocols
                    , NodeToClientVersionData(..), NodeToClientVersion(NodeToClientV_1), connectTo
-                   , localTxSubmissionClientNull, nodeToClientCodecCBORTerm)
+                   , localTxSubmissionClientNull, nodeToClientCodecCBORTerm )
 import           Ouroboros.Network.Protocol.ChainSync.Client
                    (ChainSyncClient(..), ClientStIdle(..), ClientStNext(..)
                    , chainSyncClientPeer, recvMsgRollForward)
@@ -341,28 +342,24 @@ localInitiatorNetworkApplication
   => Proxy blk
   -> TopLevelConfig blk
   -> Versions NodeToClientVersion DictVersion
-              (OuroborosApplication 'InitiatorApp peer NodeToClientProtocols
-                                    m LB.ByteString () Void)
+              (peer -> OuroborosApplication InitiatorApp LB.ByteString m () Void)
 localInitiatorNetworkApplication proxy cfg =
     simpleSingletonVersions
       NodeToClientV_1
       (NodeToClientVersionData { networkMagic = nodeNetworkMagic proxy cfg })
-      (DictVersion nodeToClientCodecCBORTerm)
+      (DictVersion nodeToClientCodecCBORTerm) $ \_peerid ->
 
-  $ OuroborosInitiatorApplication $ \_peer ptcl -> case ptcl of
-      LocalTxSubmissionPtcl -> \channel ->
-        runPeer
-          nullTracer
-          localTxSubmissionCodec
-          channel
-          (localTxSubmissionClientPeer localTxSubmissionClientNull)
-
-      ChainSyncWithBlocksPtcl -> \channel ->
-        runPeer
-          nullTracer
-          localChainSyncCodec
-          channel
-          (chainSyncClientPeer chainSyncClient)
+      nodeToClientProtocols
+        (InitiatorProtocolOnly $
+           MuxPeer
+             nullTracer
+             localTxSubmissionCodec
+             (localTxSubmissionClientPeer localTxSubmissionClientNull))
+        (InitiatorProtocolOnly $
+           MuxPeer
+             nullTracer
+             localChainSyncCodec
+             (chainSyncClientPeer chainSyncClient))
  where
   localChainSyncCodec :: Codec (ChainSync (Serialised blk) (Tip blk)) DeserialiseFailure m LB.ByteString
   localChainSyncCodec = pcLocalChainSyncCodec . protocolCodecs cfg $ mostRecentNetworkProtocolVersion proxy

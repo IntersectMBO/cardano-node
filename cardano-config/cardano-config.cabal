@@ -50,6 +50,7 @@ library
                      , ouroboros-consensus-cardano
                      , ouroboros-consensus-mock
                      , ouroboros-network
+                     , ouroboros-network-framework
                      , process
                      , iproute
                      , safe-exceptions

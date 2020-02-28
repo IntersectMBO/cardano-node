@@ -1,5 +1,33 @@
 # Changelog for cardano-node
 
+## 1.7.0 -- February 2020
+
+### node changes
+- New CLI command to get the node tip (#591)
+- Fix the unstructured message output for journald (#590)
+- Add structured logging for TxSubmission (#584)
+- Add logging detail for TraceForgedInvalidBlock (#605)
+- Allow avoiding building the wallet client demo and chairman tool (#597)
+
+### consensus changes
+- Split consensus library: generic, byron, mock, testing  (#1651, #1652)
+- Internal refactoring to prepare for the hard fork combinator (#1674, #1679)
+- Improve use of PRNGs (#1554, #1616, #1678, #1677)
+- Simplify the test infrastructure for the volatile DB (#1639, #1680)
+- Fix an EBB-related bug (#1690, #1691)
+- Fix a bug and improve performance in the chain db adding blocks (#1463, #1709)
+
+### ledger changes
+- none
+
+### network changes
+- Integrate Windows IOCP-based async I/O, with abstraction layer (#1499)
+- Refactoring of the mux, in preparation for bi-directional connections (#1687)
+- Trace transaction flow in tx submission for tx system tracing (#1688)
+- Fix block fetch bug found by tests (#1147, #1705)
+- Introduce ouroboros-network-framework library and rearrange modules (#1655)
+- Refactor protocol bundle API (#1655)
+
 ## 1.6.0 -- February 2020
 
 ### node changes

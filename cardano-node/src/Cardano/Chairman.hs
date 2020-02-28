@@ -11,6 +11,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 {-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
+{-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 
 module Cardano.Chairman (runChairman) where
 
@@ -44,7 +45,6 @@ import           Ouroboros.Consensus.Node.Run
 import           Ouroboros.Consensus.Cardano
 import           Ouroboros.Consensus.Util.Condense
 
-import           Network.TypedProtocol.Driver
 import           Ouroboros.Network.Codec
 import           Ouroboros.Network.Mux
 import           Ouroboros.Network.Block (BlockNo, HasHeader, HeaderHash, Point, Tip)
@@ -361,7 +361,6 @@ localInitiatorNetworkApplication
      , MonadAsync m
      , MonadST    m
      , MonadTimer m
-     , MonadThrow m
      , MonadThrow (STM m)
      )
   => SocketPath
@@ -379,28 +378,26 @@ localInitiatorNetworkApplication
   -- in 'ouroboros-network' package).
   -> TopLevelConfig blk
   -> Versions NodeToClientVersion DictVersion
-              (OuroborosApplication 'InitiatorApp peer NodeToClientProtocols
-                                    m ByteString () Void)
+              (peer -> OuroborosApplication InitiatorApp ByteString m () Void)
 localInitiatorNetworkApplication sockPath chainsVar securityParam maxBlockNo chairmanTracer chainSyncTracer localTxSubmissionTracer cfg =
     simpleSingletonVersions
       NodeToClientV_1
       (NodeToClientVersionData (nodeNetworkMagic (Proxy @blk) cfg))
-      (DictVersion nodeToClientCodecCBORTerm)
+      (DictVersion nodeToClientCodecCBORTerm) $ \_peerid ->
 
-  $ OuroborosInitiatorApplication $ \_peer ptcl -> case ptcl of
-      LocalTxSubmissionPtcl -> \channel -> do
-        runPeer
-          localTxSubmissionTracer
-          localTxSubmissionCodec
-          channel
-          (localTxSubmissionClientPeer localTxSubmissionClientNull)
-
-      ChainSyncWithBlocksPtcl -> \channel ->
-        runPeer
-          chainSyncTracer
-          (localChainSyncCodec cfg)
-          channel
-          (chainSyncClientPeer $ chainSyncClient chairmanTracer sockPath chainsVar securityParam maxBlockNo)
+    nodeToClientProtocols
+      (InitiatorProtocolOnly $
+         MuxPeer
+           localTxSubmissionTracer
+           localTxSubmissionCodec
+           (localTxSubmissionClientPeer localTxSubmissionClientNull))
+      (InitiatorProtocolOnly $
+         MuxPeer
+           chainSyncTracer
+           (localChainSyncCodec cfg)
+           (chainSyncClientPeer $
+              chainSyncClient chairmanTracer sockPath chainsVar
+                              securityParam maxBlockNo))
 
 
 --
