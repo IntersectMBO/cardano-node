@@ -133,8 +133,8 @@ deserialiseDelegateKey ptcl _ _ = Left $ ProtocolNotSupported ptcl
 
 getGenesisHash :: GenesisFile -> ExceptT CliError IO Text
 getGenesisHash (GenesisFile genFile) = do
-  absGen <- liftIO $ makeAbsolute genFile
-  gFile <- liftIO $ canonicalizePath absGen
+  canonGenFile <- liftIO $ canonicalizePath genFile
+  gFile <- liftIO $ makeAbsolute canonGenFile
   (_, Genesis.GenesisHash gHash) <- readGenesis $ GenesisFile gFile
   return $ F.sformat Crypto.hashHexF gHash
 
