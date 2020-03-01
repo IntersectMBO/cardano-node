@@ -55,7 +55,7 @@ extra-deps:
 
     # Cardano-ledger dependencies
   - git: https://github.com/input-output-hk/cardano-ledger
-    commit: 172b49ff1b6456851f10ae18f920fbfa733be0b0
+    commit: 86f0cb4705f46307e4c89e7ef4c90142882cce54
     subdirs:
       - cardano-ledger
       - cardano-ledger/test
