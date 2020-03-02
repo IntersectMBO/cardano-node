@@ -284,6 +284,13 @@ source-repository-package
   tag: ddfe3593b80b5ceb88842bb7a6f2268df75d2c2f
   --sha256: 02fzn1xskis1lc1pkz0j92v6ipd89ww0k2p3dvwpm3yap5dpnm7k
 
+source-repository-package
+  type: git
+  location: https://github.com/well-typed/cborg.git
+  tag: 42a83192749774268337258f4f94c97584b80ca6
+  --sha256: 1smjni26p14p41d1zjpk59jn28zfnpblin5rq6ipp4cjpjiril04
+  subdir: cborg
+
 constraints:
   ip < 1.5,
   hedgehog >= 1.0,

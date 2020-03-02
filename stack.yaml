@@ -26,7 +26,6 @@ extra-deps:
   - hedgehog-1.0.2
   - micro-recursion-schemes-5.0.2.2
   - streaming-binary-0.3.0.1
-  - cborg-0.2.2.1
   - canonical-json-0.6.0.0
   - brick-0.47
   - binary-0.8.7.0
@@ -135,5 +134,10 @@ extra-deps:
         - typed-protocols-examples
         - ouroboros-network-framework
 
+    # Includes updated pretty printing function
+  - git: https://github.com/well-typed/cborg.git
+    commit: 42a83192749774268337258f4f94c97584b80ca6
+    subdirs:
+        - cborg
 nix:
   shell-file: nix/stack-shell.nix

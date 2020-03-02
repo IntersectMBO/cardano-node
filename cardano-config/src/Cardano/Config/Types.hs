@@ -3,7 +3,8 @@
 {-# LANGUAGE RecordWildCards #-}
 
 module Cardano.Config.Types
-    ( ConfigYamlFilePath (..)
+    ( CBORObject (..)
+    , ConfigYamlFilePath (..)
     , CardanoEnvironment (..)
     , DbFile (..)
     , DelegationCertFile (..)
@@ -44,6 +45,15 @@ import           Ouroboros.Consensus.Util.Condense (Condense (..))
 
 import           Cardano.Config.Orphanage ()
 import           Cardano.Crypto (RequiresNetworkMagic(..))
+
+
+-- | Specify what the CBOR file is
+-- i.e a block, a tx, etc
+data CBORObject = CBORBlockByron
+                | CBORDelegationCertificateByron
+                | CBORTxByron
+                | CBORUpdateProposalByron
+                deriving Show
 
 --------------------------------------------------------------------------------
 -- Cardano Environment

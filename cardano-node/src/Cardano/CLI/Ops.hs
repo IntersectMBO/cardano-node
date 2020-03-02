@@ -11,15 +11,19 @@
 {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 
 module Cardano.CLI.Ops
-  ( deserialiseDelegateKey
+  ( decodeCBOR
+  , deserialiseDelegateKey
   , getGenesisHash
   , getLocalTip
+  , pPrintCBOR
+  , readCBOR
   , readGenesis
   , serialiseDelegationCert
   , serialiseDelegateKey
   , serialiseGenesis
   , serialisePoorKey
   , serialiseSigningKey
+  , validateCBOR
   , withRealPBFT
   , CliError(..)
   , RealPBFTError(..)
@@ -31,18 +35,28 @@ import           Cardano.Prelude hiding (catch, option, show)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, left)
 import           Test.Cardano.Prelude (canonicalEncodePretty)
 
+import           Codec.CBOR.Pretty (prettyHexEnc)
+import           Codec.CBOR.Read (DeserialiseFailure, deserialiseFromBytes)
+import           Codec.CBOR.Term (decodeTerm, encodeTerm)
+import           Codec.CBOR.Write (toLazyByteString)
+import           Control.Monad.Trans.Except.Extra
+                   (handleIOExceptT, hoistEither, right, secondExceptT)
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.Text as T
 import qualified Formatting as F
 import qualified Text.JSON.Canonical as CanonicalJSON
 
-import           Cardano.Binary (DecoderError)
+import           Cardano.Binary
+                   (Decoder, DecoderError, decodeFullDecoder, fromCBOR)
+import           Cardano.Chain.Block (fromCBORABlockOrBoundary)
+import qualified Cardano.Chain.Delegation as Delegation
 import qualified Cardano.Chain.Genesis as Genesis
+import qualified Cardano.Crypto.Signing as Crypto
+import           Cardano.Chain.Slotting (EpochSlots(..))
+import qualified Cardano.Chain.Update as Update
+import qualified Cardano.Chain.UTxO as UTxO
 import           Cardano.Crypto (RequiresNetworkMagic, SigningKey (..))
 import qualified Cardano.Crypto.Hashing as Crypto
-import qualified Cardano.Crypto.Signing as Crypto
-import           Codec.CBOR.Read (DeserialiseFailure, deserialiseFromBytes)
-import           Codec.CBOR.Write (toLazyByteString)
 import           Control.Monad.Class.MonadTimer
 import           Control.Monad.Class.MonadThrow
 import           Control.Tracer (nullTracer, stdoutTracer, traceWith)
@@ -88,7 +102,20 @@ import           Cardano.Config.Protocol
 import           Cardano.Config.Types
 import qualified Cardano.CLI.Legacy.Byron as Legacy
 
-
+decodeCBOR
+  :: CBORObject
+  -> LByteString
+  -> (forall s. Decoder s a)
+  -> ExceptT CliError IO a
+decodeCBOR cborObject bs decoder = do
+  case cborObject of
+      CBORBlockByron -> toExceptT $ decodeFullDecoder "Byron Block" decoder bs
+      CBORDelegationCertificateByron -> toExceptT $ decodeFullDecoder "Byron Delegation Certificate" decoder bs
+      CBORTxByron -> toExceptT $ decodeFullDecoder "Byron Tx" decoder bs
+      CBORUpdateProposalByron -> toExceptT $ decodeFullDecoder "Byron Update Proposal" decoder bs
+ where
+   toExceptT :: Either DecoderError a -> ExceptT CliError IO a
+   toExceptT = firstExceptT CBORDecodingError . hoistEither
 
 deserialiseDelegateKey :: Protocol -> FilePath -> LB.ByteString -> Either CliError SigningKey
 deserialiseDelegateKey ByronLegacy fp delSkey =
@@ -109,6 +136,42 @@ getGenesisHash genFile = do
 -- | Read genesis from a file.
 readGenesis :: GenesisFile -> ExceptT CliError IO (Genesis.GenesisData, Genesis.GenesisHash)
 readGenesis (GenesisFile fp) = firstExceptT (GenesisReadError fp) $ Genesis.readGenesisData fp
+
+validateCBOR :: CBORObject -> LByteString -> ExceptT CliError IO ()
+validateCBOR cborObject bs =
+  case cborObject of
+    CBORBlockByron -> do
+      secondExceptT (const ())
+        $ decodeCBOR CBORBlockByron bs (fromCBORABlockOrBoundary $ EpochSlots 21600)
+      liftIO $ putTextLn "Valid Byron block."
+
+    CBORDelegationCertificateByron -> do
+      secondExceptT (const ())
+        $ decodeCBOR CBORDelegationCertificateByron bs (fromCBOR :: Decoder s Delegation.Certificate)
+      liftIO $ putTextLn "Valid Byron delegation certificate."
+
+    CBORTxByron -> do
+      secondExceptT (const ())
+        $ decodeCBOR CBORTxByron bs (fromCBOR :: Decoder s UTxO.Tx)
+      liftIO $ putTextLn "Valid Byron Tx."
+
+    CBORUpdateProposalByron -> do
+      secondExceptT (const ())
+        $ decodeCBOR CBORTxByron bs (fromCBOR :: Decoder s Update.Proposal)
+      liftIO $ putTextLn "Valid Byron update proposal."
+
+pPrintCBOR :: LByteString -> ExceptT CliError IO ()
+pPrintCBOR bs = do
+  case deserialiseFromBytes decodeTerm bs of
+    Left err -> left $ CBORPrettyPrintError err
+    Right (_, decodedVal) -> do liftIO . putTextLn . toS . prettyHexEnc $ encodeTerm decodedVal
+                                right ()
+
+readCBOR :: FilePath -> ExceptT CliError IO LByteString
+readCBOR fp =
+  handleIOExceptT
+    (ReadCBORFileFailure fp . toS . displayException)
+    (LB.readFile fp)
 
 serialiseDelegationCert :: CanonicalJSON.ToJSON Identity a => Protocol -> a -> Either CliError LB.ByteString
 serialiseDelegationCert ByronLegacy dlgCert = pure $ canonicalEncodePretty dlgCert
@@ -141,7 +204,9 @@ serialiseSigningKey ptcl _ = Left $ ProtocolNotSupported ptcl
 -- | Exception type for all errors thrown by the CLI.
 --   Well, almost all, since we don't rethrow the errors from readFile & such.
 data CliError
-  = CertificateValidationErrors !FilePath ![Text]
+  = CBORDecodingError DecoderError
+  | CBORPrettyPrintError DeserialiseFailure
+  | CertificateValidationErrors !FilePath ![Text]
   | DelegationError !Genesis.GenesisDelegationError
   | DlgCertificateDeserialisationFailed !FilePath !Text
   | GenerateTxsError !RealPBFTError
@@ -157,6 +222,7 @@ data CliError
   | ProtocolError ProtocolInstantiationError
   | ProtocolNotSupported !Protocol
   | ProtocolParametersParseFailed !FilePath !Text
+  | ReadCBORFileFailure !FilePath !Text
   | ReadSigningKeyFailure !FilePath !Text
   | ReadVerificationKeyFailure !FilePath !Text
   | TxDeserialisationFailed !FilePath !DecoderError
@@ -167,54 +233,61 @@ data CliError
 
 
 instance Show CliError where
-  show (OutputMustNotAlreadyExist fp)
-    = "Output file/directory must not already exist: " <> fp
-  show NotEnoughTxInputs
-    = "Transactions must have at least one input."
-  show NotEnoughTxOutputs
-    = "Transactions must have at least one output."
-  show (ProtocolNotSupported proto)
-    = "Unsupported protocol "<> show proto
+  show (CBORDecodingError e)
+    = "Error with CBOR decoding: " <> show e
+  show (CBORPrettyPrintError e)
+    = "Error with CBOR decoding: " <> show e
   show (CertificateValidationErrors fp errs)
     = unlines $
       "Errors while validating certificate '" <> fp <> "':":
       (("  " <>) . T.unpack <$> errs)
-  show (ProtocolError err)
-    = "Protocol Instantiation Error " <> show err
-  show (ProtocolParametersParseFailed fp err)
-    = "Protocol parameters file '" <> fp <> "' read failure: "<> T.unpack err
   show (GenesisReadError fp err)
     = "Genesis file '" <> fp <> "' read failure: "<> show err
-  show (SigningKeyDeserialisationFailed fp err)
-    = "Signing key '" <> fp <> "' read failure: "<> show err
-  show (VerificationKeyDeserialisationFailed fp err)
-    = "Verification key '" <> fp <> "' read failure: "<> T.unpack err
-  show (DlgCertificateDeserialisationFailed fp err)
-    = "Delegation certificate '" <> fp <> "' read failure: "<> T.unpack err
-  show (TxDeserialisationFailed fp err)
-    = "Transaction file '" <> fp <> "' read failure: "<> show err
   show (DelegationError err)
     = "Error while issuing delegation: " <> show err
+  show (DlgCertificateDeserialisationFailed fp err)
+    = "Delegation certificate '" <> fp <> "' read failure: "<> T.unpack err
   show (GenerateTxsError err)
     = "Error in GenerateTxs command: " <> show err
-  show (NodeSubmitTxError err)
-    = "Error in SubmitTx command: " <> show err
-  show (SpendGenesisUTxOError err)
-    = "Error in SpendGenesisUTxO command: " <> show err
-  show (GenesisSpecError err)
-    = "Error in genesis specification: " <> T.unpack err
   show (GenesisGenerationError err)
     = "Genesis generation failed in mkGenesis: " <> show err
+  show (GenesisSpecError err)
+    = "Error in genesis specification: " <> T.unpack err
   show (IssueUtxoError err)
     = "Error SpendUTxO command: " <> show err
+  show (NodeSubmitTxError err)
+    = "Error in SubmitTx command: " <> show err
   show (NoGenesisDelegationForKey key)
     = "Newly-generated genesis doesn't delegate to operational key: " <> T.unpack key
-  show (ReadVerificationKeyFailure fp expt)
-    = "Exception encountered while trying to read the verification key file at: " <> fp
-       <> "Exception: " <> T.unpack expt
+  show NotEnoughTxInputs
+    = "Transactions must have at least one input."
+  show NotEnoughTxOutputs
+    = "Transactions must have at least one output."
+  show (OutputMustNotAlreadyExist fp)
+    = "Output file/directory must not already exist: " <> fp
+  show (ProtocolError err)
+    = "Protocol Instantiation Error " <> show err
+  show (ProtocolNotSupported proto)
+    = "Unsupported protocol "<> show proto
+  show (ProtocolParametersParseFailed fp err)
+    = "Protocol parameters file '" <> fp <> "' read failure: "<> T.unpack err
   show (ReadSigningKeyFailure fp expt)
     = "Exception encountered while trying to read the signing key file at: " <> fp
        <> "Exception: " <> T.unpack expt
+  show (ReadCBORFileFailure fp expt)
+    = "Exception encountered while trying to read the CBOR file at: " <> fp
+       <> "Exception: " <> T.unpack expt
+  show (ReadVerificationKeyFailure fp expt)
+    = "Exception encountered while trying to read the verification key file at: " <> fp
+       <> "Exception: " <> T.unpack expt
+  show (SigningKeyDeserialisationFailed fp err)
+    = "Signing key '" <> fp <> "' read failure: "<> show err
+  show (SpendGenesisUTxOError err)
+    = "Error in SpendGenesisUTxO command: " <> show err
+  show (TxDeserialisationFailed fp err)
+    = "Transaction file '" <> fp <> "' read failure: "<> show err
+  show (VerificationKeyDeserialisationFailed fp err)
+    = "Verification key '" <> fp <> "' read failure: "<> T.unpack err
 
 instance Exception CliError
 

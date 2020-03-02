@@ -8,6 +8,7 @@ module Cardano.CLI.Parsers
   , parseGenesisRelatedValues
   , parseKeyRelatedValues
   , parseLocalNodeQueryValues
+  , parseMiscellaneous
   , parseRequiresNetworkMagic
   , parseTxRelatedValues
   ) where
@@ -39,8 +40,9 @@ import           Cardano.Chain.Slotting (EpochNumber(..))
 import           Cardano.Chain.UTxO (TxId, TxIn(..), TxOut(..))
 import           Cardano.Config.CommonCLI
 import           Cardano.Config.Types
-                   (ConfigYamlFilePath(..), DelegationCertFile(..), GenesisFile(..)
-                   , NodeAddress(..), NodeHostAddress(..), SigningKeyFile(..))
+                   (CBORObject(..), ConfigYamlFilePath(..), DelegationCertFile(..)
+                   , GenesisFile(..), NodeAddress(..), NodeHostAddress(..)
+                   , SigningKeyFile(..))
 import           Cardano.Crypto (RequiresNetworkMagic(..), decodeHash)
 import           Cardano.Crypto.ProtocolMagic
                    (AProtocolMagic(..), ProtocolMagic
@@ -139,6 +141,17 @@ parseBenchmarkingCommands =
                   "Path to signing key file, for genesis UTxO using by generator."
      ]
 
+parseCBORObject :: Parser CBORObject
+parseCBORObject = asum
+  [ flagParser CBORBlockByron "byron-block"
+    "The CBOR file is a byron era block"
+  , flagParser CBORDelegationCertificateByron "byron-delegation-certificate"
+    "The CBOR file is a byron era delegation certificate"
+  , flagParser CBORTxByron "byron-tx"
+    "The CBOR file is a byron era tx"
+  , flagParser CBORUpdateProposalByron "byron-update-proposal"
+    "The CBOR file is a byron era update proposal"
+  ]
 
 parseCertificateFile :: String -> String -> Parser CertificateFile
 parseCertificateFile opt desc = CertificateFile <$> parseFilePath opt desc
@@ -370,6 +383,23 @@ parseNewVerificationKeyFile :: String -> Parser NewVerificationKeyFile
 parseNewVerificationKeyFile opt =
   NewVerificationKeyFile
     <$> parseFilePath opt "Non-existent file to write the verification key to."
+
+parseMiscellaneous :: Parser ClientCommand
+parseMiscellaneous = subparser $ mconcat
+  [ commandGroup "Miscellaneous commands"
+  , metavar "Miscellaneous commands"
+  , command'
+      "validate-cbor"
+      "Validate a CBOR blockchain object."
+      $ ValidateCBOR
+          <$> parseCBORObject
+          <*> parseFilePath "filepath" "Filepath of CBOR file."
+  , command'
+      "pretty-print-cbor"
+      "Pretty print a CBOR file."
+      $ PrettyPrintCBOR
+          <$> parseFilePath "filepath" "Filepath of CBOR file."
+  ]
 
 parseNumberOfInputsPerTx :: String -> String -> Parser NumberOfInputsPerTx
 parseNumberOfInputsPerTx opt desc = NumberOfInputsPerTx <$> parseIntegral opt desc
