@@ -33,9 +33,6 @@ library
   hs-source-dirs:      src
 
   exposed-modules:     Cardano.Chairman
-                       Cardano.CLI.Benchmarking.Tx.Generation
-                       Cardano.CLI.Benchmarking.Tx.NodeToNode
-                       Cardano.CLI.Benchmarking.Tx.TxSubmission
                        Cardano.CLI.Delegation
                        Cardano.CLI.Genesis
                        Cardano.CLI.Key
@@ -77,6 +74,7 @@ library
                      , cardano-prelude-test
                      , cardano-shell
                      , cardano-slotting
+                     , cardano-tx-generator
                      , contra-tracer
                      , cborg >= 0.2.2 && < 0.3
                      , containers
@@ -84,8 +82,6 @@ library
                      , filepath
                      , formatting
                      , hostname
-                     , http-client
-                     , http-types
                      , io-sim-classes
                      , iohk-monitoring
                      , iproute

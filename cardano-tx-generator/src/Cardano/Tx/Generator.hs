@@ -9,7 +9,7 @@
 {-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
 {-# OPTIONS_GHC -Wno-missed-specialisations #-}
 
-module Cardano.CLI.Benchmarking.Tx.Generation
+module Cardano.Tx.Generator
   ( NumberOfTxs(..)
   , NumberOfInputsPerTx(..)
   , NumberOfOutputsPerTx(..)
@@ -69,18 +69,21 @@ import           Cardano.Config.Logging (LoggingLayer (..), Trace)
 import           Cardano.Config.Types (NodeAddress (..), NodeHostAddress(..),
                                        SocketPath)
 import qualified Cardano.Crypto as Crypto
-import           Cardano.CLI.Ops
-import           Cardano.CLI.Tx (toCborTxAux, txSpendGenesisUTxOByronPBFT,
-                     normalByronTxToGenTx)
-import           Cardano.CLI.Benchmarking.Tx.TxSubmission (ROEnv (..),
-                     TraceBenchTxSubmit (..),
-                     bulkSubmission)
-import           Cardano.Node.Submission (TraceLowLevelSubmit, submitTx)
-import           Cardano.CLI.Benchmarking.Tx.NodeToNode (BenchmarkTxSubmitTracers (..),
+
+import           Cardano.Tx.Generator.Error (TxGenError (..))
+import           Cardano.Tx.Generator.NodeToNode (BenchmarkTxSubmitTracers (..),
                      SendRecvConnect,
                      SendRecvTxSubmission,
                      benchmarkConnectTxSubmit)
-import           Cardano.Node.TxSubClient
+import           Cardano.Tx.Generator.TxSubmission (ROEnv (..),
+                     TraceBenchTxSubmit (..),
+                     TraceLowLevelSubmit (..),
+                     bulkSubmission,
+                     submitTx,
+                     txSubmissionClient)
+import           Cardano.Tx.Generator.Tx (toCborTxAux, txSpendGenesisUTxOByronPBFT,
+                     normalByronTxToGenTx)
+
 import           Control.Tracer (Tracer, traceWith)
 
 import           Ouroboros.Network.NodeToClient (AssociateWithIOCP)
@@ -1161,21 +1164,20 @@ writeTxsInListForTargetNode txsListsForTargetNodes txs listIndex = STM.atomicall
 -- TODO: transform comments into haddocks.
 --
 launchTxPeer
-  :: forall m block txid tx.
+  :: forall block txid tx.
      ( RunNode block
-     , m ~ IO
      , txid ~ Mempool.GenTxId block
      , tx ~ GenTx block
      )
-  => Tracer m (TraceBenchTxSubmit txid)
+  => Tracer IO (TraceBenchTxSubmit txid)
   -- Tracer carrying the benchmarking events
-  -> BenchmarkTxSubmitTracers m block
+  -> BenchmarkTxSubmitTracers IO block
   -- tracer for lower level connection and details of
   -- protocol interactisn, intended for debugging
   -- associated issues.
   -> AssociateWithIOCP
   -- ^ associate a file descriptor with IO completion port
-  -> MSTM.TVar m Bool
+  -> MSTM.TVar IO Bool
   -- a "global" stop variable, set to True to force shutdown
   -> TopLevelConfig block
   -- the configuration
@@ -1186,10 +1188,10 @@ launchTxPeer
   -> (ROEnv txid tx -> ROEnv txid tx)
   -- modifications to the submission engine enviroment to
   -- control rate etc
-  -> MSTM.TMVar m [tx]
+  -> MSTM.TMVar IO [tx]
   -- give this peer 1 or more transactions, empty list
   -- signifies stop this peer
-  -> m (Async (), Async ())
+  -> IO (Async (), Async ())
 launchTxPeer tr1 tr2 iocp termTM nc localAddr remoteAddr updROEnv txInChan = do
   tmv <- MSTM.newEmptyTMVarM
   (,) <$> (async $ benchmarkConnectTxSubmit iocp tr2 nc localAddr remoteAddr (txSubmissionClient tmv))

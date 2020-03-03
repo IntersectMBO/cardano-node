@@ -28,7 +28,6 @@ module Cardano.CLI.Ops
   , withRealPBFT
   , CliError(..)
   , RealPBFTError(..)
-  , TxGenError(..)
   ) where
 
 import           Prelude (show, unlines)
@@ -104,6 +103,8 @@ import           Cardano.Config.Protocol
                    , SomeProtocol(..), fromProtocol)
 import           Cardano.Config.Types
 import qualified Cardano.CLI.Legacy.Byron as Legacy
+
+import           Cardano.Tx.Generator.Error (TxGenError)
 
 decodeCBOR
   :: CBORObject
@@ -307,17 +308,6 @@ data RealPBFTError =
   | GenesisBenchmarkRunnerError !TxGenError
   | InvariantViolation !Text
   | TransactionTypeNotHandledYet !Text
-  deriving Show
-
-data TxGenError =
-    CurrentlyCannotSendTxToRelayNode !FilePath
-  -- ^ Relay nodes cannot currently be transaction recipients.
-  | InsufficientFundsForRecipientTx
-  -- ^ Error occurred while creating the target node address.
-  | NeedMinimumThreeSigningKeyFiles ![FilePath]
-  -- ^ Need at least 3 signing key files.
-  | SecretKeyDeserialiseError !Text
-  | SecretKeyReadError !Text
   deriving Show
 
 -- | Perform an action that expects ProtocolInfo for Byron/PBFT,

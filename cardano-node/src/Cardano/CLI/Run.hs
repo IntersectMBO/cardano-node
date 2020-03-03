@@ -68,7 +68,7 @@ import           Cardano.CLI.Genesis
 import           Cardano.CLI.Key
 import           Cardano.CLI.Ops
 import           Cardano.CLI.Tx
-import           Cardano.CLI.Benchmarking.Tx.Generation
+import           Cardano.Tx.Generator
                    (ExplorerAPIEnpoint (..), NumberOfTxs (..)
                    , NumberOfInputsPerTx (..), NumberOfOutputsPerTx (..)
                    , FeePerTx (..), TPSRate (..), TxAdditionalSize (..)
