@@ -76,7 +76,7 @@ import           Ouroboros.Network.Subscription (ConnectResult (..), DnsTrace (.
 import           Ouroboros.Network.TxSubmission.Inbound
                    (TraceTxSubmissionInbound)
 import           Ouroboros.Network.TxSubmission.Outbound
-                   (TraceTxSubmissionOutbound)
+                   (TraceTxSubmissionOutbound (..))
 
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 import qualified Ouroboros.Consensus.Storage.LedgerDB.OnDisk as LedgerDB
@@ -982,9 +982,26 @@ instance ToObject (TraceTxSubmissionInbound (GenTxId blk) (GenTx blk)) where
   toObject _verb _ =
     mkObject [ "kind" .= String "TraceTxSubmissionInbound" ]
 
-instance ToObject (TraceTxSubmissionOutbound (GenTxId blk) (GenTx blk)) where
-  toObject _verb _ =
-    mkObject [ "kind" .= String "TraceTxSubmissionOutbound" ]
+instance (Show (GenTx blk), Show (GenTxId blk))
+      => ToObject (TraceTxSubmissionOutbound (GenTxId blk) (GenTx blk)) where
+  toObject MaximalVerbosity (TraceTxSubmissionOutboundRecvMsgRequestTxs txids) =
+    mkObject
+      [ "kind" .= String "TraceTxSubmissionOutboundRecvMsgRequestTxs"
+      , "txIds" .= String (pack $ show txids)
+      ]
+  toObject _verb (TraceTxSubmissionOutboundRecvMsgRequestTxs _txids) =
+    mkObject
+      [ "kind" .= String "TraceTxSubmissionOutboundRecvMsgRequestTxs"
+      ]
+  toObject MaximalVerbosity (TraceTxSubmissionOutboundSendMsgReplyTxs txs) =
+    mkObject
+      [ "kind" .= String "TraceTxSubmissionOutboundSendMsgReplyTxs"
+      , "txs" .= String (pack $ show txs)
+      ]
+  toObject _verb (TraceTxSubmissionOutboundSendMsgReplyTxs _txs) =
+    mkObject
+      [ "kind" .= String "TraceTxSubmissionOutboundSendMsgReplyTxs"
+      ]
 
 instance ToObject (TraceLocalTxSubmissionServerEvent blk) where
   toObject _verb _ =
