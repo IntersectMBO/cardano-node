@@ -76,7 +76,7 @@ import           Ouroboros.Network.Subscription (ConnectResult (..), DnsTrace (.
 import           Ouroboros.Network.TxSubmission.Inbound
                    (TraceTxSubmissionInbound)
 import           Ouroboros.Network.TxSubmission.Outbound
-                   (TraceTxSubmissionOutbound)
+                   (TraceTxSubmissionOutbound (..))
 
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 import qualified Ouroboros.Consensus.Storage.LedgerDB.OnDisk as LedgerDB
@@ -933,12 +933,12 @@ instance (Show txid, Show tx) => ToObject (Message
   toObject _verb (MsgRequestTxs txids) =
     mkObject
       [ "kind" .= String "MsgRequestTxs"
-      , "txIds" .= String (pack $ show $ txids)
+      , "txIds" .= String (pack $ show txids)
       ]
   toObject _verb (MsgReplyTxs txs) =
     mkObject
       [ "kind" .= String "MsgReplyTxs"
-      , "txs" .= String (pack $ show $ txs)
+      , "txs" .= String (pack $ show txs)
       ]
   toObject _verb (MsgRequestTxIds _ _ _) =
     mkObject
@@ -982,9 +982,26 @@ instance ToObject (TraceTxSubmissionInbound (GenTxId blk) (GenTx blk)) where
   toObject _verb _ =
     mkObject [ "kind" .= String "TraceTxSubmissionInbound" ]
 
-instance ToObject (TraceTxSubmissionOutbound (GenTxId blk) (GenTx blk)) where
-  toObject _verb _ =
-    mkObject [ "kind" .= String "TraceTxSubmissionOutbound" ]
+instance (Show (GenTx blk), Show (GenTxId blk))
+      => ToObject (TraceTxSubmissionOutbound (GenTxId blk) (GenTx blk)) where
+  toObject MaximalVerbosity (TraceTxSubmissionOutboundRecvMsgRequestTxs txids) =
+    mkObject
+      [ "kind" .= String "TraceTxSubmissionOutboundRecvMsgRequestTxs"
+      , "txIds" .= String (pack $ show txids)
+      ]
+  toObject _verb (TraceTxSubmissionOutboundRecvMsgRequestTxs _txids) =
+    mkObject
+      [ "kind" .= String "TraceTxSubmissionOutboundRecvMsgRequestTxs"
+      ]
+  toObject MaximalVerbosity (TraceTxSubmissionOutboundSendMsgReplyTxs txs) =
+    mkObject
+      [ "kind" .= String "TraceTxSubmissionOutboundSendMsgReplyTxs"
+      , "txs" .= String (pack $ show txs)
+      ]
+  toObject _verb (TraceTxSubmissionOutboundSendMsgReplyTxs _txs) =
+    mkObject
+      [ "kind" .= String "TraceTxSubmissionOutboundSendMsgReplyTxs"
+      ]
 
 instance ToObject (TraceLocalTxSubmissionServerEvent blk) where
   toObject _verb _ =
@@ -1070,27 +1087,27 @@ instance (Show (GenTx blk), Show (GenTxId blk))
   toObject _verb (TraceMempoolAddedTx tx _mpSzBefore mpSzAfter) =
     mkObject
       [ "kind" .= String "TraceMempoolAddedTx"
-      , "txAdded" .= String (pack $ show $ tx)
-      , "mempoolSize" .= String (pack $ show $ mpSzAfter)
+      , "txAdded" .= String (pack $ show tx)
+      , "mempoolSize" .= String (pack $ show mpSzAfter)
       ]
   toObject _verb (TraceMempoolRejectedTx txAndErrs _mpSzBefore mpSzAfter) =
     mkObject
       [ "kind" .= String "TraceMempoolRejectedTxs"
-      , "txRejected" .= String (pack $ show $ txAndErrs)
-      , "mempoolSize" .= String (pack $ show $ mpSzAfter)
+      , "txRejected" .= String (pack $ show txAndErrs)
+      , "mempoolSize" .= String (pack $ show mpSzAfter)
       ]
   toObject _verb (TraceMempoolRemoveTxs txs mpSz) =
     mkObject
       [ "kind" .= String "TraceMempoolRemoveTxs"
-      , "txsRemoved" .= String (pack $ show $ txs)
-      , "mempoolSize" .= String (pack $ show $ mpSz)
+      , "txsRemoved" .= String (pack $ show txs)
+      , "mempoolSize" .= String (pack $ show mpSz)
       ]
   toObject _verb (TraceMempoolManuallyRemovedTxs txs0 txs1 mpSz) =
     mkObject
       [ "kind" .= String "TraceMempoolManuallyRemovedTxs"
-      , "txsManuallyRemoved" .= String (pack $ show $ txs0)
-      , "txsNoLongerValidRemoved" .= String (pack $ show $ txs1)
-      , "mempoolSize" .= String (pack $ show $ mpSz)
+      , "txsManuallyRemoved" .= String (pack $ show txs0)
+      , "txsNoLongerValidRemoved" .= String (pack $ show txs1)
+      , "mempoolSize" .= String (pack $ show mpSz)
       ]
 
 instance ( Condense (HeaderHash blk)
