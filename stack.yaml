@@ -102,7 +102,6 @@ extra-deps:
       - contra-tracer
       - iohk-monitoring
       - plugins/backend-aggregation
-      - plugins/backend-editor
       - plugins/backend-ekg
       - plugins/backend-monitoring
       - plugins/scribe-systemd
