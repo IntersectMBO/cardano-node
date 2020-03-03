@@ -35,7 +35,7 @@ module Cardano.CLI.Run (
 import           Cardano.Prelude hiding (option, trace)
 
 import           Control.Monad.Trans.Except (ExceptT)
-import           Control.Monad.Trans.Except.Extra (hoistEither, firstExceptT)
+import           Control.Monad.Trans.Except.Extra (hoistEither, firstExceptT, left)
 import qualified Data.ByteString.Lazy as LB
 import           Data.Semigroup ((<>))
 import           Data.Text (pack)
@@ -215,7 +215,7 @@ runCommand (PrettySigningKeyPublic ptcl skF) = do
 runCommand (MigrateDelegateKeyFrom oldPtcl oldKey newPtcl (NewSigningKeyFile newKey)) = do
   sk <- readSigningKey oldPtcl oldKey
   sDk <- hoistEither $ serialiseDelegateKey newPtcl sk
-  liftIO $ ensureNewFileLBS newKey sDk
+  ensureNewFileLBS newKey sDk
 
 runCommand (PrintGenesisHash genFp) = do
   eGen <- readGenesis genFp
@@ -234,12 +234,12 @@ runCommand (Keygen ptcl (NewSigningKeyFile skF) passReq) = do
   pPhrase <- liftIO $ getPassphrase ("Enter password to encrypt '" <> skF <> "': ") passReq
   sK <- liftIO $ keygen pPhrase
   serDk <- hoistEither $ serialiseDelegateKey ptcl sK
-  liftIO $ ensureNewFileLBS skF serDk
+  ensureNewFileLBS skF serDk
 
 runCommand (ToVerification ptcl skFp (NewVerificationKeyFile vkFp)) = do
   sk <- readSigningKey ptcl skFp
   let vKey = Builder.toLazyText . Crypto.formatFullVerificationKey $ Crypto.toVerification sk
-  liftIO $ ensureNewFile TL.writeFile vkFp vKey
+  ensureNewFile TL.writeFile vkFp vKey
 
 runCommand (IssueDelegationCertificate ptcl magic epoch issuerSK delegateVK cert) = do
   vk <- readVerificationKey delegateVK
@@ -247,7 +247,7 @@ runCommand (IssueDelegationCertificate ptcl magic epoch issuerSK delegateVK cert
   let byGenDelCert :: Delegation.Certificate
       byGenDelCert = issueByronGenesisDelegation magic epoch sk vk
   sCert <- hoistEither $ serialiseDelegationCert ptcl byGenDelCert
-  liftIO $ ensureNewFileLBS (nFp cert) sCert
+  ensureNewFileLBS (nFp cert) sCert
 
 runCommand (CheckDelegation magic cert issuerVF delegateVF) = do
   issuerVK <- readVerificationKey issuerVF
@@ -295,7 +295,7 @@ runCommand (SpendGenesisUTxO ptcl genFile (NewTxFile ctTx) ctKey genRichAddr out
                   update
                   ptcl
                   sk
-      liftIO . ensureNewFileLBS ctTx $ toCborTxAux tx
+      ensureNewFileLBS ctTx $ toCborTxAux tx
 
 runCommand (SpendUTxO ptcl genFile (NewTxFile ctTx) ctKey ins outs) = do
     sk <- readSigningKey ptcl ctKey
@@ -318,7 +318,7 @@ runCommand (SpendUTxO ptcl genFile (NewTxFile ctTx) ctKey ins outs) = do
                  update
                  ptcl
                  sk
-    liftIO . ensureNewFileLBS ctTx $ toCborTxAux gTx
+    ensureNewFileLBS ctTx $ toCborTxAux gTx
 
 runCommand (GenerateTxs
             logConfigFp
@@ -382,14 +382,14 @@ runCommand (GenerateTxs
 -- TODO:  we'd be better served by a combination of a temporary file
 --        with an atomic rename.
 -- | Checks if a path exists and throws and error if it does.
-ensureNewFile :: (FilePath -> a -> IO ()) -> FilePath -> a -> IO ()
+ensureNewFile :: (FilePath -> a -> IO ()) -> FilePath -> a -> ExceptT CliError IO ()
 ensureNewFile writer outFile blob = do
-  exists <- doesPathExist outFile
+  exists <- liftIO $ doesPathExist outFile
   when exists $
-    throwIO $ OutputMustNotAlreadyExist outFile
-  writer outFile blob
+    left $ OutputMustNotAlreadyExist outFile
+  liftIO $ writer outFile blob
 
-ensureNewFileLBS :: FilePath -> LB.ByteString -> IO ()
+ensureNewFileLBS :: FilePath -> LB.ByteString -> ExceptT CliError IO ()
 ensureNewFileLBS = ensureNewFile LB.writeFile
 
 withIOManagerE :: (AssociateWithIOCP -> ExceptT e IO a) -> ExceptT e IO a
