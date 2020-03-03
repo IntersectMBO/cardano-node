@@ -19,7 +19,9 @@ LOG_CONFIG="$(yj < $BASEDIR/configuration/log-config-ci.yaml)"
 
 CUSTOM_CONFIG="{nodeConfig = builtins.fromJSON ''$LOG_CONFIG'';}"
 
-nix build --out-link ./launch_node -f $BASEDIR/../.. scripts.$CLUSTER.node --arg customConfig "$CUSTOM_CONFIG"
+mkdir -p state-ci-chain-sync
+nix build --out-link ./state-ci-chain-sync/launch_node -f $BASEDIR/../.. scripts.$CLUSTER.node --arg customConfig "$CUSTOM_CONFIG"
+cd state-ci-chain-sync
 
 rm -rf "./state-node-$CLUSTER"
 
