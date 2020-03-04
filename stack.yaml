@@ -97,7 +97,7 @@ extra-deps:
 
     # iohk-monitoring-framework currently not pinned to a release
   - git: https://github.com/input-output-hk/iohk-monitoring-framework
-    commit: b0bcdcd7d230ada5b78cd2285de40ea809d90ab0
+    commit: d6f760591bc6f54e8c333986cf6cf7fb737747df
     subdirs:
       - contra-tracer
       - iohk-monitoring
@@ -131,7 +131,9 @@ extra-deps:
         - ouroboros-consensus-cardano
         - typed-protocols
         - typed-protocols-examples
+        - ouroboros-network-testing
         - ouroboros-network-framework
+        - Win32-network
 
     # Includes updated pretty printing function
   - git: https://github.com/well-typed/cborg.git
