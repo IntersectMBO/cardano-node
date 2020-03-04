@@ -602,7 +602,7 @@ readableForgeEventTracer tracer = Tracer $ \case
     "Forged for immutable slot " <> show (unSlotNo slotNo) <> ", tip: " <> showPoint MaximalVerbosity tipPoint <> ", block no: " <> show (unBlockNo tipBlkNo)
   TraceDidntAdoptBlock slotNo _ -> tr $
     "Didn't adopt forged block at slot " <> show (unSlotNo slotNo)
-  TraceForgedBlock slotNo _ _ -> tr $
+  TraceForgedBlock slotNo _ _ _ -> tr $
     "Forged block for slot " <> show (unSlotNo slotNo)
   TraceForgedInvalidBlock slotNo _ reason -> tr $
     "Forged invalid block for slot " <> show (unSlotNo slotNo) <> ", reason: " <> show reason
@@ -1045,7 +1045,7 @@ instance ( Condense (HeaderHash blk)
       [ "kind" .= String "TraceDidntAdoptBlock"
       , "slot" .= toJSON (unSlotNo slotNo)
       ]
-  toObject _verb (TraceForgedBlock slotNo _ _) =
+  toObject _verb (TraceForgedBlock slotNo _ _ _) =
     mkObject
       [ "kind" .= String "TraceForgedBlock"
       , "slot" .= toJSON (unSlotNo slotNo)

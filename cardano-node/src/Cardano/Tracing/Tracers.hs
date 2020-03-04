@@ -391,7 +391,7 @@ mkTracers traceOptions tracer = do
         meta <- mkLOMeta Critical Confidential
         traceNamedObject (appendName "metrics" tr) . (meta,) $
           case ev of
-            Consensus.TraceForgedBlock   slot _ _ ->
+            Consensus.TraceForgedBlock   slot _ _ _ ->
               LogValue "forgedSlotLast" $ PureI $ fromIntegral $ unSlotNo slot
             Consensus.TraceStartLeadershipCheck slot ->
               LogValue "aboutToLeadSlotLast" $ PureI $ fromIntegral $ unSlotNo slot
