@@ -272,7 +272,7 @@ instance FromJSON ViewMode where
                              <> "Encountered: " <> (T.pack $ show invalid)
 
 -- | Detailed tracing options. Each option enables a tracer
---   which verbosity to the log output.
+--   which logs to the log output.
 data TraceOptions = TraceOptions
   { traceVerbosity :: !TracingVerbosity
   , traceBlockFetchClient :: !Bool
