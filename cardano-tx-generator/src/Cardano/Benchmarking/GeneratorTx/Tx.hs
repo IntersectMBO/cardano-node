@@ -4,7 +4,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
 
-module Cardano.Tx.Generator.Tx
+module Cardano.Benchmarking.GeneratorTx.Tx
   ( toCborTxAux
   , normalByronTxToGenTx
   , txSpendGenesisUTxOByronPBFT

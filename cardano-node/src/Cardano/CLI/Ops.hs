@@ -104,7 +104,7 @@ import           Cardano.Config.Protocol
 import           Cardano.Config.Types
 import qualified Cardano.CLI.Legacy.Byron as Legacy
 
-import           Cardano.Tx.Generator.Error (TxGenError)
+import           Cardano.Benchmarking.GeneratorTx.Error (TxGenError)
 
 decodeCBOR
   :: CBORObject

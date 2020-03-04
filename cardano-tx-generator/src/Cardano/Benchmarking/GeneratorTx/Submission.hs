@@ -14,7 +14,7 @@
 {-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Cardano.Tx.Generator.TxSubmission
+module Cardano.Benchmarking.GeneratorTx.Submission
   ( ROEnv(..)
   , RPCTxSubmission(..)
   , TraceBenchTxSubmit(..)

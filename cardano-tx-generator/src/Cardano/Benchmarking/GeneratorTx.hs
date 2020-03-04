@@ -9,7 +9,7 @@
 {-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
 {-# OPTIONS_GHC -Wno-missed-specialisations #-}
 
-module Cardano.Tx.Generator
+module Cardano.Benchmarking.GeneratorTx
   ( NumberOfTxs(..)
   , NumberOfInputsPerTx(..)
   , NumberOfOutputsPerTx(..)
@@ -70,18 +70,18 @@ import           Cardano.Config.Types (NodeAddress (..), NodeHostAddress(..),
                                        SocketPath)
 import qualified Cardano.Crypto as Crypto
 
-import           Cardano.Tx.Generator.Error (TxGenError (..))
-import           Cardano.Tx.Generator.NodeToNode (BenchmarkTxSubmitTracers (..),
+import           Cardano.Benchmarking.GeneratorTx.Error (TxGenError (..))
+import           Cardano.Benchmarking.GeneratorTx.NodeToNode (BenchmarkTxSubmitTracers (..),
                      SendRecvConnect,
                      SendRecvTxSubmission,
                      benchmarkConnectTxSubmit)
-import           Cardano.Tx.Generator.TxSubmission (ROEnv (..),
+import           Cardano.Benchmarking.GeneratorTx.Submission (ROEnv (..),
                      TraceBenchTxSubmit (..),
                      TraceLowLevelSubmit (..),
                      bulkSubmission,
                      submitTx,
                      txSubmissionClient)
-import           Cardano.Tx.Generator.Tx (toCborTxAux, txSpendGenesisUTxOByronPBFT,
+import           Cardano.Benchmarking.GeneratorTx.Tx (toCborTxAux, txSpendGenesisUTxOByronPBFT,
                      normalByronTxToGenTx)
 
 import           Control.Tracer (Tracer, traceWith)

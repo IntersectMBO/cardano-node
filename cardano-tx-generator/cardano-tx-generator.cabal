@@ -15,11 +15,11 @@ library
 
   hs-source-dirs:      src
 
-  exposed-modules:     Cardano.Tx.Generator
-                       Cardano.Tx.Generator.Error
-                       Cardano.Tx.Generator.NodeToNode
-                       Cardano.Tx.Generator.Tx
-                       Cardano.Tx.Generator.TxSubmission
+  exposed-modules:     Cardano.Benchmarking.GeneratorTx
+                       Cardano.Benchmarking.GeneratorTx.Error
+                       Cardano.Benchmarking.GeneratorTx.NodeToNode
+                       Cardano.Benchmarking.GeneratorTx.Tx
+                       Cardano.Benchmarking.GeneratorTx.Submission
 
   other-modules:       Paths_cardano_tx_generator
 

@@ -1,4 +1,4 @@
-module Cardano.Tx.Generator.Error
+module Cardano.Benchmarking.GeneratorTx.Error
   ( TxGenError (..)
   ) where
 
