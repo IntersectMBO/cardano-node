@@ -20,6 +20,8 @@ library
                        Cardano.Benchmarking.GeneratorTx.NodeToNode
                        Cardano.Benchmarking.GeneratorTx.Tx
                        Cardano.Benchmarking.GeneratorTx.Submission
+                       Cardano.Benchmarking.GeneratorTx.CLI.Parsers
+                       Cardano.Benchmarking.GeneratorTx.CLI.Run
 
   other-modules:       Paths_cardano_tx_generator
 
