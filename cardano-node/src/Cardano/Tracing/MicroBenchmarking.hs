@@ -219,7 +219,7 @@ measureBlockForgeEnd tracer = measureTxsEndInter $ toLogObject tracer
   where
     measureTxsEndInter :: Tracer IO (MeasureBlockForging blk) -> Tracer IO (TraceForgeEvent blk (GenTx blk))
     measureTxsEndInter tracer' = Tracer $ \case
-        TraceForgedBlock slotNo blk mempoolSize
+        TraceForgedBlock slotNo _ blk mempoolSize
             -> traceWith tracer' =<< (MeasureBlockTimeStop slotNo blk mempoolSize <$> getMonotonicTime)
         _   -> pure ()
 

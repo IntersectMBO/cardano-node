@@ -36,11 +36,11 @@ import           Ouroboros.Consensus.Block
                    (Header, headerPoint,
                     RealPoint, realPointSlot, realPointHash)
 import           Ouroboros.Network.Point (withOrigin)
-import           Ouroboros.Consensus.BlockFetchServer
+import           Ouroboros.Consensus.MiniProtocol.BlockFetch.Server
                    (TraceBlockFetchServerEvent)
-import           Ouroboros.Consensus.ChainSyncClient
+import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client
                    (TraceChainSyncClientEvent (..))
-import           Ouroboros.Consensus.ChainSyncServer
+import           Ouroboros.Consensus.MiniProtocol.ChainSync.Server
                    (TraceChainSyncServerEvent(..))
 import           Ouroboros.Consensus.Ledger.SupportsProtocol
                    (LedgerSupportsProtocol)
@@ -55,7 +55,7 @@ import qualified Ouroboros.Consensus.Mock.Ledger as Mock
 import qualified Ouroboros.Consensus.Mock.Protocol.Praos as Praos
 import           Ouroboros.Consensus.Node.Tracers (TraceForgeEvent (..))
 import           Ouroboros.Consensus.Protocol.Abstract
-import           Ouroboros.Consensus.TxSubmission
+import           Ouroboros.Consensus.MiniProtocol.LocalTxSubmission.Server
                    (TraceLocalTxSubmissionServerEvent (..))
 import           Ouroboros.Consensus.Util.Condense
 import           Ouroboros.Consensus.Util.Orphans ()
@@ -602,7 +602,7 @@ readableForgeEventTracer tracer = Tracer $ \case
     "Forged for immutable slot " <> show (unSlotNo slotNo) <> ", tip: " <> showPoint MaximalVerbosity tipPoint <> ", block no: " <> show (unBlockNo tipBlkNo)
   TraceDidntAdoptBlock slotNo _ -> tr $
     "Didn't adopt forged block at slot " <> show (unSlotNo slotNo)
-  TraceForgedBlock slotNo _ _ -> tr $
+  TraceForgedBlock slotNo _ _ _ -> tr $
     "Forged block for slot " <> show (unSlotNo slotNo)
   TraceForgedInvalidBlock slotNo _ reason -> tr $
     "Forged invalid block for slot " <> show (unSlotNo slotNo) <> ", reason: " <> show reason
@@ -1045,7 +1045,7 @@ instance ( Condense (HeaderHash blk)
       [ "kind" .= String "TraceDidntAdoptBlock"
       , "slot" .= toJSON (unSlotNo slotNo)
       ]
-  toObject _verb (TraceForgedBlock slotNo _ _) =
+  toObject _verb (TraceForgedBlock slotNo _ _ _) =
     mkObject
       [ "kind" .= String "TraceForgedBlock"
       , "slot" .= toJSON (unSlotNo slotNo)
