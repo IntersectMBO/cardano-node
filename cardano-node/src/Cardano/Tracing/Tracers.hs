@@ -47,8 +47,8 @@ import           Ouroboros.Consensus.Block (Header)
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..), TraceBlockchainTimeEvent (..))
 import           Ouroboros.Consensus.Ledger.Abstract
 import           Ouroboros.Consensus.Ledger.SupportsProtocol (LedgerSupportsProtocol)
-import           Ouroboros.Consensus.Mempool.API (GenTx, MempoolSize (..),
-                                                  TraceEventMempool (..))
+import           Ouroboros.Consensus.Mempool.API
+                   (GenTx, MempoolSize (..), TraceEventMempool (..))
 import qualified Ouroboros.Consensus.Node.Tracers as Consensus
 import           Ouroboros.Consensus.NodeNetwork (ProtocolTracers,
                                                   ProtocolTracers' (..),
@@ -56,12 +56,13 @@ import           Ouroboros.Consensus.NodeNetwork (ProtocolTracers,
 import           Ouroboros.Consensus.Util.Orphans ()
 
 import qualified Ouroboros.Network.AnchoredFragment as AF
-import           Ouroboros.Network.Block (Point, BlockNo(..),
+import           Ouroboros.Network.Block (Point, BlockNo(..), HasHeader(..),
                                           blockNo, unBlockNo, unSlotNo)
 import           Ouroboros.Network.BlockFetch.Decision (FetchDecision)
 import           Ouroboros.Network.BlockFetch.ClientState (TraceLabelPeer (..))
 import qualified Ouroboros.Network.NodeToClient as NtC
 import qualified Ouroboros.Network.NodeToNode as NtN
+import           Ouroboros.Network.NodeToNode (ErrorPolicyTrace, WithAddr)
 import           Ouroboros.Network.Point (fromWithOrigin)
 import           Ouroboros.Network.Subscription
 
@@ -480,7 +481,8 @@ mkTracers traceOptions tracer = do
         TraceStartTimeInTheFuture (SystemStart start) toWait ->
           "Waiting " <> show toWait <> " until genesis start time at " <> show start
 
-    mkProtocolTracers :: TraceOptions -> ProtocolTracers' peer localPeer blk DeserialiseFailure (Tracer IO)
+    mkProtocolTracers
+      :: TraceOptions -> ProtocolTracers' peer localPeer blk DeserialiseFailure (Tracer IO)
     mkProtocolTracers traceOpts = ProtocolTracers
       { ptChainSyncTracer
         = tracerOnOff (traceChainSyncProtocol traceOpts)
@@ -490,7 +492,8 @@ mkTracers traceOptions tracer = do
         $ showTracing $ withName "ChainSyncProtocol" tracer
       , ptBlockFetchTracer
         = tracerOnOff (traceBlockFetchProtocol traceOpts)
-        $ showTracing $ withName "BlockFetchProtocol" tracer
+        $ toLogObject' StructuredLogging tracingVerbosity
+        $ appendName "BlockFetchProtocol" tracer
       , ptBlockFetchSerialisedTracer
         = tracerOnOff (traceBlockFetchProtocolSerialised traceOpts)
         $ showTracing $ withName "BlockFetchProtocolSerialised" tracer

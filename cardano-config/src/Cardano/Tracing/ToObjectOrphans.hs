@@ -50,7 +50,8 @@ import qualified Ouroboros.Consensus.Protocol.BFT as BFT
 import qualified Ouroboros.Consensus.Protocol.PBFT as PBFT
 import           Ouroboros.Consensus.Ledger.Extended
 import           Ouroboros.Consensus.Mempool.API (GenTx, GenTxId,
-                   HasTxId, TraceEventMempool (..), TxId, txId)
+                   HasTxId, HasTxs(..), TraceEventMempool (..), TxId,
+                   extractTxs, txId)
 import qualified Ouroboros.Consensus.Mock.Ledger as Mock
 import qualified Ouroboros.Consensus.Mock.Protocol.Praos as Praos
 import           Ouroboros.Consensus.Node.Tracers (TraceForgeEvent (..))
@@ -66,10 +67,12 @@ import           Ouroboros.Network.BlockFetch.ClientState
                    (TraceFetchClientState (..), TraceLabelPeer (..))
 import           Ouroboros.Network.BlockFetch.Decision (FetchDecision)
 import           Ouroboros.Network.Codec (AnyMessage (..))
+import           Ouroboros.Network.Driver.Simple (TraceSendRecv)
 import qualified Ouroboros.Network.NodeToClient as NtC
 import qualified Ouroboros.Network.NodeToNode as NtN
 import           Ouroboros.Network.NodeToNode
                    (WithAddr(..), ErrorPolicyTrace(..), TraceSendRecv (..))
+import           Ouroboros.Network.Protocol.BlockFetch.Type (BlockFetch, Message(..))
 import           Ouroboros.Network.Protocol.TxSubmission.Type
                    (Message (..), TxSubmission)
 import           Ouroboros.Network.Subscription (ConnectResult (..), DnsTrace (..),
@@ -237,6 +240,18 @@ instance DefinePrivacyAnnotation NtC.HandshakeTr
 instance DefineSeverity NtC.HandshakeTr where
   defineSeverity _ = Info
 
+instance DefinePrivacyAnnotation (TraceFetchClientState header)
+instance DefineSeverity (TraceFetchClientState header) where
+  defineSeverity _ = Info
+
+instance DefinePrivacyAnnotation (TraceSendRecv (TxSubmission txid tx))
+instance DefineSeverity (TraceSendRecv (TxSubmission txid tx)) where
+  defineSeverity _ = Debug
+
+instance DefinePrivacyAnnotation (TraceSendRecv (BlockFetch blk))
+instance DefineSeverity (TraceSendRecv (BlockFetch blk)) where
+  defineSeverity _ = Debug
+
 instance DefinePrivacyAnnotation (WithTip blk (ChainDB.TraceEvent blk))
 instance DefineSeverity (WithTip blk (ChainDB.TraceEvent blk)) where
   defineSeverity (WithTip _tip ev) = defineSeverity ev
@@ -345,17 +360,8 @@ instance DefineSeverity [TraceLabelPeer peer
   defineSeverity [] = Debug
   defineSeverity _ = Info
 
-instance DefinePrivacyAnnotation (TraceLabelPeer peer
-                                  (TraceFetchClientState header))
-instance DefineSeverity (TraceLabelPeer peer
-                         (TraceFetchClientState header)) where
-  defineSeverity _ = Info
-
-instance DefinePrivacyAnnotation (TraceLabelPeer peer
-                                  (TraceSendRecv (TxSubmission txid tx)))
-instance DefineSeverity (TraceLabelPeer peer
-                         (TraceSendRecv (TxSubmission txid tx))) where
-  defineSeverity _ = Debug
+instance DefinePrivacyAnnotation a => DefinePrivacyAnnotation (TraceLabelPeer peer a)
+instance DefineSeverity a => DefineSeverity (TraceLabelPeer peer a)
 
 instance DefinePrivacyAnnotation (TraceBlockFetchServerEvent blk)
 instance DefineSeverity (TraceBlockFetchServerEvent blk) where
@@ -406,20 +412,24 @@ instance (Condense (HeaderHash blk), LedgerSupportsProtocol blk)
 instance Condense (HeaderHash blk) => Transformable Text IO (TraceChainSyncServerEvent blk b) where
   trTransformer _ verb tr = trStructured verb tr
 
--- transform @BlockFetchDecision@
+-- transform @TraceLabelPeer * *@
 instance Show peer => Transformable Text IO [TraceLabelPeer peer
                                 (FetchDecision [Point header])] where
   trTransformer _ verb tr = trStructured verb tr
 
--- transform @BlockFetchDecision@
-instance Show peer => Transformable Text IO (TraceLabelPeer peer
-                                (TraceFetchClientState header)) where
+instance Show peer
+ => Transformable Text IO (TraceLabelPeer peer
+                            (TraceFetchClientState header)) where
   trTransformer _ verb tr = trStructured verb tr
 
 instance (Show peer, Show txid, Show tx)
-      => Transformable Text IO (TraceLabelPeer peer
-           (TraceSendRecv (TxSubmission txid tx))) where
+ => Transformable Text IO (TraceLabelPeer peer
+                           (TraceSendRecv (TxSubmission txid tx))) where
   trTransformer = defaultTextTransformer
+
+instance (Transformable Text IO a) => Transformable Text IO (TraceLabelPeer peer a) where
+  trTransformer f v t = Tracer $ \(TraceLabelPeer _peer a) ->
+    traceWith (trTransformer f v t) a
 
 -- transform @BlockFetchServerEvent@
 instance Transformable Text IO (TraceBlockFetchServerEvent blk) where
@@ -449,6 +459,48 @@ instance ( Condense (HeaderHash blk)
     traceWith tr (mempty, LogObject mempty meta (LogMessage $ pack s))
   -- user defined formatting of log output
   trTransformer _ verb tr = trStructured verb tr
+
+instance ( Show blk
+         , StandardHash blk
+         , ToObject (AnyMessage (BlockFetch blk))
+         )
+ => Transformable Text IO (TraceSendRecv (BlockFetch blk)) where
+  trTransformer = defaultTextTransformer
+
+instance ( ToObject (AnyMessage ps)
+         )
+ => ToObject (TraceSendRecv ps) where
+  toObject verb (TraceSendMsg m) = mkObject
+    [ "kind" .= String "Send" , "msg" .= toObject verb m ]
+  toObject verb (TraceRecvMsg m) = mkObject
+    [ "kind" .= String "Recv" , "msg" .= toObject verb m ]
+
+instance ( Condense (HeaderHash blk)
+         , Condense (TxId (GenTx blk))
+         , HasHeader blk
+         , HasTxs blk
+         , HasTxId (GenTx blk)
+         )
+ => ToObject (AnyMessage (BlockFetch blk)) where
+  toObject _verb (AnyMessage (MsgBlock blk)) =
+    mkObject
+      [ "kind" .= String "MsgBlock"
+      , "blkid" .= String (pack . condense $ blockHash blk)
+      , "txids" .= toJSON (presentTx <$> extractTxs blk)
+      ]
+   where
+     presentTx :: GenTx blk -> Value
+     presentTx =  String . pack . condense . txId
+  toObject _v (AnyMessage MsgRequestRange{}) =
+    mkObject [ "kind" .= String "MsgRequestRange" ]
+  toObject _v (AnyMessage MsgStartBatch{}) =
+    mkObject [ "kind" .= String "MsgStartBatch" ]
+  toObject _v (AnyMessage MsgNoBlocks{}) =
+    mkObject [ "kind" .= String "MsgNoBlocks" ]
+  toObject _v (AnyMessage MsgBatchDone{}) =
+    mkObject [ "kind" .= String "MsgBatchDone" ]
+  toObject _v (AnyMessage MsgClientDone{}) =
+    mkObject [ "kind" .= String "MsgClientDone" ]
 
 instance (Show (GenTx blk), Show (GenTxId blk))
       => Transformable Text IO (TraceEventMempool blk) where
@@ -925,24 +977,15 @@ instance Show peer => ToObject [TraceLabelPeer peer
   toObject _ (lbl : r) = toObject MaximalVerbosity lbl <>
                                         toObject MaximalVerbosity r
 
-instance Show peer => ToObject (TraceLabelPeer peer
-                        (FetchDecision [Point header])) where
+instance Show peer
+ => ToObject (TraceLabelPeer peer (FetchDecision [Point header])) where
   toObject verb (TraceLabelPeer peerid a) =
     mkObject [ "kind" .= String "FetchDecision"
              , "peer" .= show peerid
              , "decision" .= toObject verb a ]
 
-instance ToObject (FetchDecision [Point header]) where
-  toObject _verb (Left decline) =
-    mkObject [ "kind" .= String "FetchDecision declined"
-             , "declined" .= String (pack $ show $ decline) ]
-  toObject _verb (Right results) =
-    mkObject [ "kind" .= String "FetchDecision results"
-             , "length" .= String (pack $ show $ length results) ]
-
 instance (Show peer, Show txid, Show tx)
-    => ToObject (TraceLabelPeer peer
-         (TraceSendRecv (TxSubmission txid tx))) where
+ => ToObject (TraceLabelPeer peer (TraceSendRecv (TxSubmission txid tx))) where
   toObject verb (TraceLabelPeer peerid (TraceSendMsg (AnyMessage msg))) =
     mkObject
       [ "kind" .= String "TraceSendMsg"
@@ -955,6 +998,21 @@ instance (Show peer, Show txid, Show tx)
       , "peer" .= show peerid
       , "message" .= toObject verb msg
       ]
+
+instance Show peer
+ => ToObject (TraceLabelPeer peer (TraceFetchClientState header)) where
+  toObject verb (TraceLabelPeer peerid a) =
+    mkObject [ "kind" .= String "TraceFetchClientState"
+           , "peer" .= show peerid
+           , "state" .= toObject verb a ]
+
+instance ToObject (FetchDecision [Point header]) where
+  toObject _verb (Left decline) =
+    mkObject [ "kind" .= String "FetchDecision declined"
+             , "declined" .= String (pack $ show $ decline) ]
+  toObject _verb (Right results) =
+    mkObject [ "kind" .= String "FetchDecision results"
+             , "length" .= String (pack $ show $ length results) ]
 
 instance (Show txid, Show tx) => ToObject (Message
                                    (TxSubmission txid tx) from to) where
@@ -980,13 +1038,6 @@ instance (Show txid, Show tx) => ToObject (Message
     mkObject
       [ "kind" .= String "MsgDone"
       ]
-
-instance Show peer => ToObject (TraceLabelPeer peer
-                        (TraceFetchClientState header)) where
-  toObject verb (TraceLabelPeer peerid a) =
-    mkObject [ "kind" .= String "TraceFetchClientState"
-           , "peer" .= show peerid
-           , "state" .= toObject verb a ]
 
 instance ToObject (TraceFetchClientState header) where
   toObject _verb (AddedFetchRequest {}) =

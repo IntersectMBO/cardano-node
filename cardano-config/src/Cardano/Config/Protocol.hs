@@ -42,7 +42,7 @@ import           Ouroboros.Consensus.Cardano hiding (Protocol)
 import qualified Ouroboros.Consensus.Cardano as Consensus
 import           Ouroboros.Consensus.Ledger.Abstract
 import           Ouroboros.Consensus.Mempool.API (ApplyTxErr, GenTx, GenTxId,
-                                                  HasTxId, TxId)
+                                                  HasTxId, HasTxs, TxId)
 import           Ouroboros.Consensus.Node.ProtocolInfo (NumCoreNodes (..))
 
 import           Ouroboros.Consensus.Byron.Ledger (ByronBlock)
@@ -74,6 +74,8 @@ type TraceConstraints blk =
     , Condense (Header blk)
     , Condense (HeaderHash blk)
     , Condense (GenTx blk)
+    , Condense (TxId (GenTx blk))
+    , HasTxs blk
     , HasTxId (GenTx blk)
     , Show (ApplyTxErr blk)
     , Show (GenTx blk)
