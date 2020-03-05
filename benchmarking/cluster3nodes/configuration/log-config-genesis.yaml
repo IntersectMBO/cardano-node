@@ -112,6 +112,9 @@ TraceDNSSubscription: False
 # Trace error policy resolution.
 TraceErrorPolicy: False
 
+# Trace local error policy resolution.
+TraceLocalErrorPolicy: True
+
 # Trace block forging.
 TraceForge: False
 
