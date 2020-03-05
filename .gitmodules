@@ -1,6 +1,0 @@
-[submodule "benchmarking/chain-sync/cardano-byron-proxy.git"]
-	path = benchmarking/chain-sync/cardano-byron-proxy.git
-	url = https://github.com/input-output-hk/cardano-byron-proxy.git
-[submodule "benchmarking/cluster3nodes/cardano-explorer.git"]
-	path = benchmarking/cluster3nodes/cardano-explorer.git
-	url = https://github.com/input-output-hk/cardano-explorer.git
