@@ -232,6 +232,7 @@ benchmarkConnectTxSubmit iocp trs cfg localAddr remoteAddr myTxSubClient = do
       (NtN.NodeToNodeVersionData { NtN.networkMagic = nodeNetworkMagic (Proxy @blk) cfg})
       (NtN.DictVersion NtN.nodeToNodeCodecCBORTerm) $ \_ ->
       NtN.nodeToNodeProtocols
+          NtN.defaultMiniProtocolParameters
           (InitiatorProtocolOnly $
              MuxPeer
                nullTracer
