@@ -71,6 +71,11 @@ let
   in {
     node = wrapImage images.${cluster};
   };
+  mkPins = inputs: pkgs.runCommand "ifd-pins" {} ''
+    mkdir $out
+    cd $out
+    ${lib.concatMapStringsSep "\n" (input: "ln -sv ${input.value} ${input.key}") (lib.attrValues (lib.mapAttrs (key: value: { inherit key value; }) inputs))}
+  '';
   makeRelease = cluster: {
     name = cluster;
     value = {
@@ -103,11 +108,19 @@ let
 
   inherit (systems.examples) mingwW64 musl64;
 
+  sources = import ./nix/sources.nix;
+
   jobs = {
     native = mapTestOn (__trace (__toJSON (packagePlatforms project)) (packagePlatforms project));
     "${mingwW64.config}" = mapTestOnCross mingwW64 (packagePlatformsCross project);
     # TODO: fix broken evals
     #musl64 = mapTestOnCross musl64 (packagePlatformsCross project);
+    ifd-pins = mkPins {
+      inherit (sources) iohk-nix "haskell.nix";
+      inherit (import "${sources.iohk-nix}/nix/sources.nix" {}) nixpkgs;
+      hackageSrc = (import pkgs.path (import sources."haskell.nix")).haskell-nix.hackageSrc;
+      stackageSrc = (import pkgs.path (import sources."haskell.nix")).haskell-nix.stackageSrc;
+    };
   } // extraBuilds // (mkRequiredJob (
       collectTests jobs.native.checks ++
       collectTests jobs.native.benchmarks ++ [
