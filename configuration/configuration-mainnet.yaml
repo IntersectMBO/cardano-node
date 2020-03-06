@@ -143,7 +143,10 @@ TraceDNSSubscription: False
 TraceErrorPolicy: False
 
 # Trace local error policy resolution.
-TraceLocalErrorPolicy: False
+TraceLocalErrorPolicy: True
+
+# Trace local error policy resolution.
+TraceLocalErrorPolicy: True
 
 # Trace block forging.
 TraceForge: True
