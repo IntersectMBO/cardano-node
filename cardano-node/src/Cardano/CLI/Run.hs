@@ -33,7 +33,6 @@ module Cardano.CLI.Run (
   ) where
 
 import           Cardano.Prelude hiding (option, trace)
-
 import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (hoistEither, firstExceptT, left)
 import qualified Data.ByteString.Lazy as LB
@@ -45,6 +44,7 @@ import           Data.Version (showVersion)
 import qualified Formatting as F
 import           Paths_cardano_node (version)
 import           System.Directory (doesPathExist)
+import           System.Info (arch, compilerName, compilerVersion, os)
 
 import qualified Cardano.Chain.Common as Common
 import qualified Cardano.Chain.Delegation as Delegation
@@ -170,7 +170,7 @@ data ClientCommand
     (NonEmpty UTxO.TxOut)
     -- ^ Genesis UTxO output Address.
 
-    --- Tx Generator Command ----------
+    --- Tx Generator Command ---
 
   | GenerateTxs
     FilePath
@@ -189,17 +189,30 @@ data ClientCommand
     (Maybe TxAdditionalSize)
     (Maybe ExplorerAPIEnpoint)
     [SigningKeyFile]
+
     --- Misc Commands ---
+
+  | DisplayVersion
+
   | ValidateCBOR
     CBORObject
     -- ^ Type of the CBOR object
     FilePath
+
   | PrettyPrintCBOR
     FilePath
    deriving Show
 
 
 runCommand :: ClientCommand -> ExceptT CliError IO ()
+runCommand DisplayVersion = do
+  liftIO . putTextLn
+         . toS
+         $ concat [ "cardano-cli " <> showVersion version
+                  , " - " <> os <> "-" <> arch
+                  , " - " <> compilerName <> "-" <> showVersion compilerVersion
+                  ]
+
 runCommand (Genesis outDir params ptcl) = do
   gen <- mkGenesis params
   dumpGenesis ptcl outDir `uncurry` gen

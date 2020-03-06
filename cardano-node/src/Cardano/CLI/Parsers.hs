@@ -393,6 +393,10 @@ parseMiscellaneous = subparser $ mconcat
           <$> parseCBORObject
           <*> parseFilePath "filepath" "Filepath of CBOR file."
   , command'
+      "version"
+      "Show cardano-cli version"
+      $ pure DisplayVersion
+  , command'
       "pretty-print-cbor"
       "Pretty print a CBOR file."
       $ PrettyPrintCBOR
