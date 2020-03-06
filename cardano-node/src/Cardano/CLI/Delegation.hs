@@ -14,6 +14,9 @@ module Cardano.CLI.Delegation
 where
 
 import           Cardano.Prelude hiding (option, show, trace)
+
+import           Control.Monad.Trans.Except.Extra (left)
+
 import           Test.Cardano.Prelude (canonicalDecodePretty)
 
 import qualified Data.ByteString.Lazy as LB
@@ -58,15 +61,15 @@ checkByronGenesisDelegation
   -> ProtocolMagicId
   -> Crypto.VerificationKey
   -> Crypto.VerificationKey
-  -> IO ()
+  -> ExceptT CliError IO ()
 checkByronGenesisDelegation (CertificateFile certF) magic issuer delegate = do
-  ecert <- canonicalDecodePretty <$> LB.readFile certF
+  ecert <- liftIO $ canonicalDecodePretty <$> LB.readFile certF
   case ecert of
-    Left e -> throwIO $ DlgCertificateDeserialisationFailed certF e
+    Left e -> left $ DlgCertificateDeserialisationFailed certF e
     Right (cert :: Dlg.Certificate) -> do
       let issues = checkDlgCert cert magic issuer delegate
       unless (null issues) $
-        throwIO $ CertificateValidationErrors certF issues
+        left $ CertificateValidationErrors certF issues
 
 checkDlgCert
   :: Dlg.ACertificate a
