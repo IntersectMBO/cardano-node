@@ -18,6 +18,7 @@ module Cardano.CLI.Ops
   , pPrintCBOR
   , readCBOR
   , readGenesis
+  , readProtocolMagicId
   , serialiseDelegationCert
   , serialiseDelegateKey
   , serialiseGenesis
@@ -44,6 +45,7 @@ import           Control.Monad.Trans.Except.Extra
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.Text as T
 import qualified Formatting as F
+import           System.Directory (canonicalizePath, makeAbsolute)
 import qualified Text.JSON.Canonical as CanonicalJSON
 
 import           Cardano.Binary
@@ -57,6 +59,7 @@ import qualified Cardano.Chain.Update as Update
 import qualified Cardano.Chain.UTxO as UTxO
 import           Cardano.Crypto (RequiresNetworkMagic, SigningKey (..))
 import qualified Cardano.Crypto.Hashing as Crypto
+import           Cardano.Crypto.ProtocolMagic as Crypto
 import           Control.Monad.Class.MonadTimer
 import           Control.Monad.Class.MonadThrow
 import           Control.Tracer (nullTracer, stdoutTracer, traceWith)
@@ -129,9 +132,16 @@ deserialiseDelegateKey RealPBFT fp delSkey =
 deserialiseDelegateKey ptcl _ _ = Left $ ProtocolNotSupported ptcl
 
 getGenesisHash :: GenesisFile -> ExceptT CliError IO Text
-getGenesisHash genFile = do
-  (_, Genesis.GenesisHash gHash) <- readGenesis genFile
+getGenesisHash (GenesisFile genFile) = do
+  canonGenFile <- liftIO $ canonicalizePath genFile
+  gFile <- liftIO $ makeAbsolute canonGenFile
+  (_, Genesis.GenesisHash gHash) <- readGenesis $ GenesisFile gFile
   return $ F.sformat Crypto.hashHexF gHash
+
+readProtocolMagicId :: GenesisFile -> ExceptT CliError IO Crypto.ProtocolMagicId
+readProtocolMagicId gFile = do
+  (genData, _) <- readGenesis gFile
+  pure $ Genesis.gdProtocolMagicId genData
 
 -- | Read genesis from a file.
 readGenesis :: GenesisFile -> ExceptT CliError IO (Genesis.GenesisData, Genesis.GenesisHash)
@@ -349,14 +359,13 @@ withRealPBFT gHash genFile nMagic sigThresh delCertFp sKeyFp update ptcl action 
 
 getLocalTip
   :: ConfigYamlFilePath
-  -> GenesisFile
+  -> Maybe CLISocketPath
   -> AssociateWithIOCP
-  -> SocketPath
   -> IO ()
-getLocalTip configFp genFp iocp sockPath = do
+getLocalTip configFp mSockPath iocp = do
   nc <- parseNodeConfigurationFP $ unConfigPath configFp
-
-  eGenHash <- runExceptT $ getGenesisHash genFp
+  sockPath <- return $ chooseSocketPath (ncSocketPath nc) mSockPath
+  eGenHash <- runExceptT $ getGenesisHash (ncGenesisFile nc)
 
   genHash <- case eGenHash  of
                Right gHash -> pure gHash
@@ -368,7 +377,7 @@ getLocalTip configFp genFp iocp sockPath = do
                                genHash
                                (ncNodeId nc)
                                (ncNumCoreNodes nc)
-                               (Just genFp)
+                               (Just $ ncGenesisFile nc)
                                (ncReqNetworkMagic nc)
                                (ncPbftSignatureThresh nc)
                                Nothing

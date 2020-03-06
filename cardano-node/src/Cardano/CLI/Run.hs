@@ -53,7 +53,7 @@ import           Cardano.Chain.Slotting (EpochNumber(..))
 import qualified Cardano.Chain.UTxO as UTxO
 import           Cardano.Chain.Update (ApplicationName(..))
 
-import           Cardano.Crypto (ProtocolMagicId, RequiresNetworkMagic(..))
+import           Cardano.Crypto (RequiresNetworkMagic(..))
 import qualified Cardano.Crypto.Hashing as Crypto
 import qualified Cardano.Crypto.Signing as Crypto
 
@@ -73,6 +73,7 @@ import           Cardano.CLI.Benchmarking.Tx.Generation
                    , NumberOfInputsPerTx (..), NumberOfOutputsPerTx (..)
                    , FeePerTx (..), TPSRate (..), TxAdditionalSize (..)
                    , genesisBenchmarkRunner)
+import           Cardano.Common.LocalSocket
 import           Cardano.Config.Protocol
 import           Cardano.Config.Logging (createLoggingFeatureCLI)
 import           Cardano.Config.Types
@@ -121,8 +122,7 @@ data ClientCommand
     --- Delegation Related Commands ---
 
   | IssueDelegationCertificate
-    Protocol
-    ProtocolMagicId
+    ConfigYamlFilePath
     EpochNumber
     -- ^ The epoch from which the delegation is valid.
     SigningKeyFile
@@ -132,28 +132,25 @@ data ClientCommand
     NewCertificateFile
     -- ^ Filepath of the newly created delegation certificate.
   | CheckDelegation
-    ProtocolMagicId
+    ConfigYamlFilePath
     CertificateFile
     VerificationKeyFile
     VerificationKeyFile
 
   | GetLocalNodeTip
     ConfigYamlFilePath
-    GenesisFile
-    SocketPath
+    (Maybe CLISocketPath)
 
     -----------------------------------
 
   | SubmitTx
     TxFile
     -- ^ Filepath of transaction to submit.
-    Protocol
-    GenesisFile
-    SocketPath
-    -- ^ Socket path of target node.
+    ConfigYamlFilePath
+    (Maybe CLISocketPath)
+
   | SpendGenesisUTxO
-    Protocol
-    GenesisFile
+    ConfigYamlFilePath
     NewTxFile
     -- ^ Filepath of the newly created transaction.
     SigningKeyFile
@@ -163,8 +160,7 @@ data ClientCommand
     (NonEmpty UTxO.TxOut)
     -- ^ Tx output.
   | SpendUTxO
-    Protocol
-    GenesisFile
+    ConfigYamlFilePath
     NewTxFile
     -- ^ Filepath of the newly created transaction.
     SigningKeyFile
@@ -208,8 +204,8 @@ runCommand (Genesis outDir params ptcl) = do
   gen <- mkGenesis params
   dumpGenesis ptcl outDir `uncurry` gen
 
-runCommand (GetLocalNodeTip configFp gFile sockPath) = withIOManagerE $ \iocp ->
-  liftIO $ getLocalTip configFp gFile iocp sockPath
+runCommand (GetLocalNodeTip configFp mSockPath) =
+  withIOManagerE $ \iocp -> liftIO $ getLocalTip configFp mSockPath iocp
 
 runCommand (ValidateCBOR cborObject fp) = do
   bs <- readCBOR fp
@@ -251,24 +247,29 @@ runCommand (ToVerification ptcl skFp (NewVerificationKeyFile vkFp)) = do
   let vKey = Builder.toLazyText . Crypto.formatFullVerificationKey $ Crypto.toVerification sk
   ensureNewFile TL.writeFile vkFp vKey
 
-runCommand (IssueDelegationCertificate ptcl magic epoch issuerSK delegateVK cert) = do
+runCommand (IssueDelegationCertificate configFp epoch issuerSK delegateVK cert) = do
+  nc <- liftIO . parseNodeConfigurationFP $ unConfigPath configFp
   vk <- readVerificationKey delegateVK
-  sk <- readSigningKey ptcl issuerSK
+  sk <- readSigningKey (ncProtocol nc) issuerSK
+  pmId <- readProtocolMagicId $ ncGenesisFile nc
   let byGenDelCert :: Delegation.Certificate
-      byGenDelCert = issueByronGenesisDelegation magic epoch sk vk
-  sCert <- hoistEither $ serialiseDelegationCert ptcl byGenDelCert
+      byGenDelCert = issueByronGenesisDelegation pmId epoch sk vk
+  sCert <- hoistEither $ serialiseDelegationCert (ncProtocol nc) byGenDelCert
   ensureNewFileLBS (nFp cert) sCert
 
-runCommand (CheckDelegation magic cert issuerVF delegateVF) = do
+runCommand (CheckDelegation configFp cert issuerVF delegateVF) = do
+  nc <- liftIO . parseNodeConfigurationFP $ unConfigPath configFp
   issuerVK <- readVerificationKey issuerVF
   delegateVK <- readVerificationKey delegateVF
-  liftIO $ checkByronGenesisDelegation cert magic issuerVK delegateVK
+  pmId <- readProtocolMagicId $ ncGenesisFile nc
+  liftIO $ checkByronGenesisDelegation cert pmId issuerVK delegateVK
 
-runCommand (SubmitTx fp ptcl genFile socketPath) = withIOManagerE $ \iocp -> do
+runCommand (SubmitTx fp configFp mCliSockPath) = withIOManagerE $ \iocp -> do
+    nc <- liftIO . parseNodeConfigurationFP $ unConfigPath configFp
     -- Default update value
     let update = Update (ApplicationName "cardano-sl") 1 $ LastKnownBlockVersion 0 2 0
     tx <- liftIO $ readByronTx fp
-    genHash <- getGenesisHash genFile
+    genHash <- getGenesisHash (ncGenesisFile nc)
 
     firstExceptT
       NodeSubmitTxError
@@ -276,43 +277,45 @@ runCommand (SubmitTx fp ptcl genFile socketPath) = withIOManagerE $ \iocp -> do
           iocp
           genHash
           Nothing
-          genFile
+          (ncGenesisFile nc)
           RequiresNoMagic
           Nothing
           Nothing
           Nothing
-          socketPath
+          (chooseSocketPath (ncSocketPath nc) mCliSockPath)
           update
-          ptcl
+          (ncProtocol nc)
           tx
-runCommand (SpendGenesisUTxO ptcl genFile (NewTxFile ctTx) ctKey genRichAddr outs) = do
-      sk <- readSigningKey ptcl ctKey
-      -- Default update value
-      let update = Update (ApplicationName "cardano-sl") 1 $ LastKnownBlockVersion 0 2 0
-
-      genHash <- getGenesisHash genFile
-
-      tx <- firstExceptT SpendGenesisUTxOError
-              $ issueGenesisUTxOExpenditure
-                  genRichAddr
-                  outs
-                  genHash
-                  genFile
-                  RequiresNoMagic
-                  Nothing
-                  Nothing
-                  Nothing
-                  update
-                  ptcl
-                  sk
-      ensureNewFileLBS ctTx $ toCborTxAux tx
-
-runCommand (SpendUTxO ptcl genFile (NewTxFile ctTx) ctKey ins outs) = do
-    sk <- readSigningKey ptcl ctKey
+runCommand (SpendGenesisUTxO configFp (NewTxFile ctTx) ctKey genRichAddr outs) = do
+    nc <- liftIO . parseNodeConfigurationFP $ unConfigPath configFp
+    sk <- readSigningKey (ncProtocol nc) ctKey
     -- Default update value
     let update = Update (ApplicationName "cardano-sl") 1 $ LastKnownBlockVersion 0 2 0
 
-    genHash <- getGenesisHash genFile
+    genHash <- getGenesisHash $ ncGenesisFile nc
+
+    tx <- firstExceptT SpendGenesisUTxOError
+            $ issueGenesisUTxOExpenditure
+                genRichAddr
+                outs
+                genHash
+                (ncGenesisFile nc)
+                RequiresNoMagic
+                Nothing
+                Nothing
+                Nothing
+                update
+                (ncProtocol nc)
+                sk
+    ensureNewFileLBS ctTx $ toCborTxAux tx
+
+runCommand (SpendUTxO configFp (NewTxFile ctTx) ctKey ins outs) = do
+    nc <- liftIO . parseNodeConfigurationFP $ unConfigPath configFp
+    sk <- readSigningKey (ncProtocol nc) ctKey
+    -- Default update value
+    let update = Update (ApplicationName "cardano-sl") 1 $ LastKnownBlockVersion 0 2 0
+
+    genHash <- getGenesisHash $ ncGenesisFile nc
 
     gTx <- firstExceptT
              IssueUtxoError
@@ -320,13 +323,13 @@ runCommand (SpendUTxO ptcl genFile (NewTxFile ctTx) ctKey ins outs) = do
                  ins
                  outs
                  genHash
-                 genFile
+                 (ncGenesisFile nc)
                  RequiresNoMagic
                  Nothing
                  Nothing
                  Nothing
                  update
-                 ptcl
+                 (ncProtocol nc)
                  sk
     ensureNewFileLBS ctTx $ toCborTxAux gTx
 

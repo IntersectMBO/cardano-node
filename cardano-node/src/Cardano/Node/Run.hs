@@ -186,7 +186,7 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
 
   nt <- either (\err -> panic $ "Cardano.Node.Run.readTopologyFile: " <> err) pure eitherTopology
 
-  myLocalAddr <- nodeLocalSocketAddrInfo npm
+  myLocalAddr <- nodeLocalSocketAddrInfo nc npm
 
   let diffusionArguments :: DiffusionArguments
       diffusionArguments = createDiffusionArguments addrs myLocalAddr ipProducers dnsProducers
@@ -198,7 +198,7 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
       ipProducers = ipSubscriptionTargets ipProducerAddrs
       (dnsProducerAddrs, ipProducerAddrs) = producerAddresses nt
 
-  removeStaleLocalSocket npm
+  removeStaleLocalSocket nc npm
 
   varTip <- atomically $ newTVar GenesisPoint
 

@@ -9,6 +9,7 @@ module Cardano.Common.Parsers
   , nodeMockProtocolModeParser
   , nodeProtocolModeParser
   , nodeRealParser
+  , parseCLISocketPath
   , parseConfigFile
   , parseCoreNodeId
   , parseDbPath
@@ -72,7 +73,7 @@ nodeMockParser = do
   -- Filepaths
   topFp <- parseTopologyFile
   dbFp <- parseDbPath
-  socketFp <- parseSocketPath "Path to a cardano-node socket"
+  socketFp <- parseCLISocketPath "Path to a cardano-node socket"
 
   genHash <- parseGenesisHash
 
@@ -108,7 +109,7 @@ nodeRealParser = do
   genFp <- optional parseGenesisPath
   delCertFp <- optional parseDelegationCert
   sKeyFp <- optional parseSigningKey
-  socketFp <- parseSocketPath "Path to a cardano-node socket"
+  socketFp <- parseCLISocketPath "Path to a cardano-node socket"
 
   genHash <- parseGenesisHash
 
@@ -135,7 +136,14 @@ nodeRealParser = do
     , validateDB = validate
     }
 
-
+parseCLISocketPath :: Text -> Parser (Maybe CLISocketPath)
+parseCLISocketPath helpMessage =
+  optional $ CLISocketPath <$> strOption
+    ( long "socket-path"
+        <> (help $ toS helpMessage)
+        <> completer (bashCompleter "file")
+        <> metavar "FILEPATH"
+    )
 
 parseConfigFile :: Parser FilePath
 parseConfigFile =

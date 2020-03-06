@@ -166,8 +166,7 @@ parseDelegationRelatedValues =
         "Create a delegation certificate allowing the\
         \ delegator to sign blocks on behalf of the issuer"
         $ IssueDelegationCertificate
-        <$> parseProtocol
-        <*> parseProtocolMagicId "protocol-magic"
+        <$> (ConfigYamlFilePath <$> parseConfigFile)
         <*> ( EpochNumber
                 <$> parseIntegral
                       "since-epoch"
@@ -186,7 +185,7 @@ parseDelegationRelatedValues =
         "Verify that a given certificate constitutes a valid\
         \ delegation relationship between keys."
         $ CheckDelegation
-            <$> parseProtocolMagicId "protocol-magic"
+            <$> (ConfigYamlFilePath <$> parseConfigFile)
             <*> parseCertificateFile
                   "certificate"
                   "The certificate embodying delegation to verify."
@@ -315,8 +314,7 @@ parseLocalNodeQueryValues =
         , command' "get-tip" "Get the tip of your local node's blockchain"
             $ GetLocalNodeTip
                 <$> (ConfigYamlFilePath <$> parseConfigFile)
-                <*> parseGenesisFile "genesis-json"
-                <*> parseSocketPath "Socket of target node"
+                <*> parseCLISocketPath "Socket of target node"
         ]
 
 parseLovelace :: String -> String -> Parser Lovelace
@@ -509,15 +507,13 @@ parseTxRelatedValues =
         "Submit a raw, signed transaction, in its on-wire representation."
         $ SubmitTx
             <$> parseTxFile "tx"
-            <*> parseProtocol
-            <*> (GenesisFile <$> parseGenesisPath)
-            <*> parseSocketPath "Socket of target node"
+            <*> (ConfigYamlFilePath <$> parseConfigFile)
+            <*> parseCLISocketPath "Socket of target node"
     , command'
         "issue-genesis-utxo-expenditure"
         "Write a file with a signed transaction, spending genesis UTxO."
         $ SpendGenesisUTxO
-            <$> parseProtocol
-            <*> (GenesisFile <$> parseGenesisPath)
+            <$> (ConfigYamlFilePath <$> parseConfigFile)
             <*> parseNewTxFile "tx"
             <*> parseSigningKeyFile
                   "wallet-key"
@@ -531,8 +527,7 @@ parseTxRelatedValues =
         "issue-utxo-expenditure"
         "Write a file with a signed transaction, spending normal UTxO."
         $ SpendUTxO
-            <$> parseProtocol
-            <*> (GenesisFile <$> parseGenesisPath)
+            <$> (ConfigYamlFilePath <$> parseConfigFile)
             <*> parseNewTxFile "tx"
             <*> parseSigningKeyFile
                   "wallet-key"

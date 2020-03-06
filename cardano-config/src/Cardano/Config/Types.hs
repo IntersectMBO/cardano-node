@@ -3,9 +3,10 @@
 {-# LANGUAGE RecordWildCards #-}
 
 module Cardano.Config.Types
-    ( CBORObject (..)
+    ( CardanoEnvironment (..)
+    , CBORObject (..)
+    , CLISocketPath (..)
     , ConfigYamlFilePath (..)
-    , CardanoEnvironment (..)
     , DbFile (..)
     , DelegationCertFile (..)
     , GenesisFile (..)
@@ -24,6 +25,7 @@ module Cardano.Config.Types
     , SocketPath (..)
     , Update (..)
     , ViewMode (..)
+    , YamlSocketPath (..)
     , parseNodeConfiguration
     , parseNodeConfigurationFP
     ) where
@@ -68,20 +70,20 @@ data CardanoEnvironment = NoEnvironment
 --------------------------------------------------------------------------------
 
 data NodeCLI = NodeCLI
-    { mscFp :: !MiscellaneousFilepaths
-    , genesisHash :: !Text
-    , nodeAddr :: !NodeAddress
-    , configFp :: !ConfigYamlFilePath
-    , validateDB :: !Bool
-    }
+  { mscFp :: !MiscellaneousFilepaths
+  , genesisHash :: !Text
+  , nodeAddr :: !NodeAddress
+  , configFp :: !ConfigYamlFilePath
+  , validateDB :: !Bool
+  }
 
 data NodeMockCLI = NodeMockCLI
-    { mockMscFp :: !MiscellaneousFilepaths
-    , mockGenesisHash :: !Text
-    , mockNodeAddr :: !NodeAddress
-    , mockConfigFp :: !ConfigYamlFilePath
-    , mockValidateDB :: !Bool
-    } deriving Show
+  { mockMscFp :: !MiscellaneousFilepaths
+  , mockGenesisHash :: !Text
+  , mockNodeAddr :: !NodeAddress
+  , mockConfigFp :: !ConfigYamlFilePath
+  , mockValidateDB :: !Bool
+  } deriving Show
 
 -- | Mock protocols requires different parameters to real protocols.
 -- Therefore we distinguish this at the top level on the command line.
@@ -101,7 +103,7 @@ data MiscellaneousFilepaths = MiscellaneousFilepaths
   , genesisFile :: !(Maybe GenesisFile)
   , delegCertFile :: !(Maybe DelegationCertFile)
   , signKeyFile :: !(Maybe SigningKeyFile)
-  , socketFile :: !SocketPath
+  , socketFile :: !(Maybe CLISocketPath)
   } deriving Show
 
 newtype TopologyFile = TopologyFile
@@ -116,94 +118,120 @@ newtype GenesisFile = GenesisFile
   { unGenesisFile :: FilePath }
   deriving (Eq, Ord, Show, IsString)
 
+instance FromJSON GenesisFile where
+  parseJSON (String genFp) = pure . GenesisFile $ T.unpack genFp
+  parseJSON invalid = panic $ "Parsing of GenesisFile failed due to type mismatch. "
+                           <> "Encountered: " <> (T.pack $ show invalid)
+
 newtype DelegationCertFile = DelegationCertFile
   { unDelegationCert :: FilePath }
   deriving Show
 
-data SocketPath = SocketFile
+newtype SocketPath = SocketFile
   { unSocket :: FilePath }
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Ord, Show, IsString)
 
 newtype SigningKeyFile = SigningKeyFile
   { unSigningKey ::  FilePath }
   deriving (Eq, Ord, Show, IsString)
 
 data NodeConfiguration =
-    NodeConfiguration
-      { ncProtocol :: Protocol
-      , ncNodeId :: Maybe NodeId
-      , ncNumCoreNodes :: Maybe Word64
-      , ncReqNetworkMagic :: RequiresNetworkMagic
-      , ncPbftSignatureThresh :: Maybe Double
-      , ncLoggingSwitch :: Bool
-      , ncLogMetrics :: Bool
-      , ncTraceOptions :: TraceOptions
-      , ncViewMode :: ViewMode
-      , ncUpdate :: Update
-      } deriving (Show)
+  NodeConfiguration
+    { ncProtocol :: Protocol
+    , ncGenesisFile :: GenesisFile
+    , ncNodeId :: Maybe NodeId
+    , ncNumCoreNodes :: Maybe Word64
+    , ncReqNetworkMagic :: RequiresNetworkMagic
+    , ncPbftSignatureThresh :: Maybe Double
+    , ncLoggingSwitch :: Bool
+    , ncLogMetrics :: Bool
+    , ncSocketPath :: Maybe YamlSocketPath
+    , ncTraceOptions :: TraceOptions
+    , ncViewMode :: ViewMode
+    , ncUpdate :: Update
+    } deriving (Show)
 
 instance FromJSON NodeConfiguration where
-    parseJSON = withObject "NodeConfiguration" $ \v -> do
-                  nId <- v .:? "NodeId"
-                  ptcl <- v .: "Protocol" .!= RealPBFT
-                  numCoreNode <- v .:? "NumCoreNodes"
-                  rNetworkMagic <- v .:? "RequiresNetworkMagic" .!= RequiresNoMagic
-                  pbftSignatureThresh <- v .:? "PBftSignatureThreshold"
-                  loggingSwitch <- v .:? "TurnOnLogging" .!= True
-                  vMode <- v .:? "ViewMode" .!= LiveView
-                  logMetrics <- v .:? "TurnOnLogMetrics" .!= True
+  parseJSON = withObject "NodeConfiguration" $ \v -> do
+                nId <- v .:? "NodeId"
+                ptcl <- v .: "Protocol" .!= RealPBFT
+                genFile <- v .: "GenesisFile"
+                numCoreNode <- v .:? "NumCoreNodes"
+                rNetworkMagic <- v .:? "RequiresNetworkMagic" .!= RequiresNoMagic
+                pbftSignatureThresh <- v .:? "PBftSignatureThreshold"
+                loggingSwitch <- v .:? "TurnOnLogging" .!= True
+                vMode <- v .:? "ViewMode" .!= LiveView
+                logMetrics <- v .:? "TurnOnLogMetrics" .!= True
+                socketPath <- v .:? "SocketPath"
 
-                  -- Update Parameters
-                  appName <- v .:? "ApplicationName" .!= Update.ApplicationName "cardano-sl"
-                  appVersion <- v .:? "ApplicationVersion" .!= 1
-                  lkBlkVersionMajor <- v .:? "LastKnownBlockVersion-Major" .!= 0
-                  lkBlkVersionMinor <- v .:? "LastKnownBlockVersion-Minor" .!= 2
-                  lkBlkVersionAlt <- v .:? "LastKnownBlockVersion-Alt" .!= 0
+                -- Update Parameters
+                appName <- v .:? "ApplicationName" .!= Update.ApplicationName "cardano-sl"
+                appVersion <- v .:? "ApplicationVersion" .!= 1
+                lkBlkVersionMajor <- v .:? "LastKnownBlockVersion-Major" .!= 0
+                lkBlkVersionMinor <- v .:? "LastKnownBlockVersion-Minor" .!= 2
+                lkBlkVersionAlt <- v .:? "LastKnownBlockVersion-Alt" .!= 0
 
-                  -- Trace Options
-                  tOptions <- TraceOptions
-                                <$> v .:? "TracingVerbosity" .!= NormalVerbosity
-                                <*> v .:? "TraceBlockFetchClient" .!= False
-                                <*> v .:? "TraceBlockFetchDecisions" .!= True
-                                <*> v .:? "TraceBlockFetchProtocol" .!= False
-                                <*> v .:? "TraceBlockFetchProtocolSerialised" .!= False
-                                <*> v .:? "TraceBlockFetchServer" .!= False
-                                <*> v .:? "TraceChainDb" .!= True
-                                <*> v .:? "TraceChainSyncClient" .!= True
-                                <*> v .:? "TraceChainSyncBlockServer" .!= False
-                                <*> v .:? "TraceChainSyncHeaderServer" .!= False
-                                <*> v .:? "TraceChainSyncProtocol" .!= False
-                                <*> v .:? "TraceDNSResolver" .!= False
-                                <*> v .:? "TraceDNSSubscription" .!= True
-                                <*> v .:? "TraceErrorPolicy" .!= True
-                                <*> v .:? "TraceLocalErrorPolicy" .!= True
-                                <*> v .:? "TraceForge" .!= True
-                                <*> v .:? "TraceIpSubscription" .!= True
-                                <*> v .:? "TraceLocalChainSyncProtocol" .!= False
-                                <*> v .:? "TraceLocalTxSubmissionProtocol" .!= False
-                                <*> v .:? "TraceLocalTxSubmissionServer" .!= False
-                                <*> v .:? "TraceLocalStateQueryProtocol" .!= False
-                                <*> v .:? "TraceMempool" .!= True
-                                <*> v .:? "TraceMux" .!= True
-                                <*> v .:? "TraceTxInbound" .!= False
-                                <*> v .:? "TraceTxOutbound" .!= False
-                                <*> v .:? "TraceTxSubmissionProtocol" .!= False
+                -- Trace Options
+                tOptions <- TraceOptions
+                              <$> v .:? "TracingVerbosity" .!= NormalVerbosity
+                              <*> v .:? "TraceBlockFetchClient" .!= False
+                              <*> v .:? "TraceBlockFetchDecisions" .!= True
+                              <*> v .:? "TraceBlockFetchProtocol" .!= False
+                              <*> v .:? "TraceBlockFetchProtocolSerialised" .!= False
+                              <*> v .:? "TraceBlockFetchServer" .!= False
+                              <*> v .:? "TraceChainDb" .!= True
+                              <*> v .:? "TraceChainSyncClient" .!= True
+                              <*> v .:? "TraceChainSyncBlockServer" .!= False
+                              <*> v .:? "TraceChainSyncHeaderServer" .!= False
+                              <*> v .:? "TraceChainSyncProtocol" .!= False
+                              <*> v .:? "TraceDNSResolver" .!= False
+                              <*> v .:? "TraceDNSSubscription" .!= True
+                              <*> v .:? "TraceErrorPolicy" .!= True
+                              <*> v .:? "TraceForge" .!= True
+                              <*> v .:? "TraceIpSubscription" .!= True
+                              <*> v .:? "TraceLocalChainSyncProtocol" .!= False
+                              <*> v .:? "TraceLocalErrorPolicy" .!= True
+                              <*> v .:? "TraceLocalTxSubmissionProtocol" .!= False
+                              <*> v .:? "TraceLocalTxSubmissionServer" .!= False
+                              <*> v .:? "TraceLocalStateQueryProtocol" .!= False
+                              <*> v .:? "TraceMempool" .!= True
+                              <*> v .:? "TraceMux" .!= True
+                              <*> v .:? "TraceTxInbound" .!= False
+                              <*> v .:? "TraceTxOutbound" .!= False
+                              <*> v .:? "TraceTxSubmissionProtocol" .!= False
 
-                  pure $ NodeConfiguration
-                           ptcl
-                           nId
-                           numCoreNode
-                           rNetworkMagic
-                           pbftSignatureThresh
-                           loggingSwitch
-                           logMetrics
-                           tOptions
-                           vMode
-                           (Update appName appVersion (LastKnownBlockVersion
-                                                         lkBlkVersionMajor
-                                                         lkBlkVersionMinor
-                                                         lkBlkVersionAlt))
+                pure $ NodeConfiguration
+                         { ncProtocol = ptcl
+                         , ncGenesisFile = genFile
+                         , ncNodeId = nId
+                         , ncNumCoreNodes = numCoreNode
+                         , ncReqNetworkMagic = rNetworkMagic
+                         , ncPbftSignatureThresh = pbftSignatureThresh
+                         , ncLoggingSwitch = loggingSwitch
+                         , ncLogMetrics = logMetrics
+                         , ncSocketPath = socketPath
+                         , ncTraceOptions = tOptions
+                         , ncViewMode = vMode
+                         , ncUpdate = (Update appName appVersion (LastKnownBlockVersion
+                                                                    lkBlkVersionMajor
+                                                                    lkBlkVersionMinor
+                                                                    lkBlkVersionAlt))
+                         }
 
+-- | Socket path read from the command line.
+newtype CLISocketPath = CLISocketPath
+  { unCLISocketPath :: SocketPath}
+  deriving Show
+
+-- | Socket path defined in the node's configuration yaml file.
+newtype YamlSocketPath = YamlSocketPath
+  { unYamlSocketPath :: SocketPath }
+  deriving Show
+
+instance FromJSON YamlSocketPath where
+  parseJSON (String sPath) = pure . YamlSocketPath . SocketFile $ T.unpack sPath
+  parseJSON invalid = panic $ "Parsing of SocketPath failed due to type mismatch. "
+                           <> "Encountered: " <> (T.pack $ show invalid)
 
 parseNodeConfigurationFP :: FilePath -> IO NodeConfiguration
 parseNodeConfigurationFP fp = decodeFileThrow fp
@@ -268,8 +296,8 @@ instance FromJSON ViewMode where
                             view -> panic $ "Parsing of ViewMode: "
                                           <> view <> " failed. "
                                           <> view <> " is not a valid view mode"
-  parseJSON invalid  = panic $ "Parsing of ViewMode failed due to type mismatch. "
-                             <> "Encountered: " <> (T.pack $ show invalid)
+  parseJSON invalid = panic $ "Parsing of ViewMode failed due to type mismatch. "
+                            <> "Encountered: " <> (T.pack $ show invalid)
 
 -- | Detailed tracing options. Each option enables a tracer
 --   which verbosity to the log output.
@@ -288,10 +316,10 @@ data TraceOptions = TraceOptions
   , traceDnsResolver :: !Bool
   , traceDnsSubscription :: !Bool
   , traceErrorPolicy :: !Bool
-  , traceLocalErrorPolicy :: !Bool
   , traceForge :: !Bool
   , traceIpSubscription :: !Bool
   , traceLocalChainSyncProtocol :: !Bool
+  , traceLocalErrorPolicy :: !Bool
   , traceLocalTxSubmissionProtocol :: !Bool
   , traceLocalTxSubmissionServer :: !Bool
   , traceLocalStateQueryProtocol :: !Bool
