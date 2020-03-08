@@ -15,16 +15,6 @@ Flag unexpected_thunks
   Description:   Turn on unexpected thunks checks
   Default:       False
 
-Flag with_wallet_client
-  Description:   Turn on wallet-client build
-  Default:       True
-  Manual:        True
-
-Flag with_chairman
-  Description:   Turn on chairman build
-  Default:       True
-  Manual:        True
-
 library
 
   if flag(unexpected_thunks)
@@ -166,27 +156,7 @@ executable cardano-node
   else
      build-depends:    unix
 
-executable cardano-cli
-  hs-source-dirs:      app
-  main-is:             cardano-cli.hs
-  default-language:    Haskell2010
-  ghc-options:         -threaded
-                       -Wall
-                       -rtsopts
-                       "-with-rtsopts=-T"
-  build-depends:       base >=4.12 && <5
-                     , cardano-prelude
-                     , cardano-node
-                     , optparse-applicative
-                     , transformers-except
-
-  default-extensions:  NoImplicitPrelude
-
 executable wallet-client
-  if flag(with_wallet_client)
-    buildable: True
-  else
-    buildable: False
   hs-source-dirs:      app
   main-is:             wallet-client.hs
   default-language:    Haskell2010
@@ -217,11 +187,23 @@ executable wallet-client
   else
      build-depends:    unix
 
+executable cardano-cli
+  hs-source-dirs:      app
+  main-is:             cardano-cli.hs
+  default-language:    Haskell2010
+  ghc-options:         -threaded
+                       -Wall
+                       -rtsopts
+                       "-with-rtsopts=-T"
+  build-depends:       base >=4.12 && <5
+                     , cardano-prelude
+                     , cardano-node
+                     , optparse-applicative
+                     , transformers-except
+
+  default-extensions:  NoImplicitPrelude
+
 executable chairman
-  if flag(with_chairman)
-    buildable: True
-  else
-    buildable: False
   hs-source-dirs:      app
   main-is:             chairman.hs
   default-language:    Haskell2010
