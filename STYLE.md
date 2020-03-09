@@ -424,10 +424,6 @@ that this is vague so use your discretion.
 Cabal file formatting
 ---------------------
 
-### Flags
-
-All Cabal `Flags` should use `lowercase_separated_by_underscores` naming convention.
-
 ### Modules & libraries
 
 Modules and libraries should go in alphabetical order inside corresponding
