@@ -140,5 +140,12 @@ extra-deps:
     commit: 42a83192749774268337258f4f94c97584b80ca6
     subdirs:
         - cborg
+
+    # Includes a windows build fix (https://github.com/snoyberg/http-client/pull/430)
+  - git: https://github.com/snoyberg/http-client.git
+    commit: 1a75bdfca014723dd5d40760fad854b3f0f37156
+    subdirs:
+        - http-client
+
 nix:
   shell-file: nix/stack-shell.nix
