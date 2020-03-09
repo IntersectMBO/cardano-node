@@ -144,6 +144,11 @@ localInitiatorNetworkApplication tracer cfg tx =
 
     NodeToClient.nodeToClientProtocols
       (InitiatorProtocolOnly $
+         MuxPeer
+           nullTracer
+           (localChainSyncCodec @blk cfg)
+           (chainSyncClientPeer NodeToClient.chainSyncClientNull))
+      (InitiatorProtocolOnly $
          MuxPeerRaw $ \channel -> do
             traceWith tracer TraceLowLevelSubmitting
             result <- runPeer
@@ -155,12 +160,6 @@ localInitiatorNetworkApplication tracer cfg tx =
             case result of
               Nothing  -> traceWith tracer TraceLowLevelAccepted
               Just msg -> traceWith tracer (TraceLowLevelRejected $ show msg))
-
-      (InitiatorProtocolOnly $
-         MuxPeer
-           nullTracer
-           (localChainSyncCodec @blk cfg)
-           (chainSyncClientPeer NodeToClient.chainSyncClientNull))
 
 -- | A 'LocalTxSubmissionClient' that submits exactly one transaction, and then
 -- disconnects, returning the confirmation or rejection.
