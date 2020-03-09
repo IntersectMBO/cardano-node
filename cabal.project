@@ -134,49 +134,49 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/iohk-monitoring-framework
-  tag: d6f760591bc6f54e8c333986cf6cf7fb737747df
+  tag: c723eb055288657ee21dbe7a3572f0af2f78b4c4
   --sha256: 1l4rrll76wss4xsil788r1ffcwb4hqgl74bc29hsjxlygdfv09yc
   subdir: iohk-monitoring
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/iohk-monitoring-framework
-  tag: d6f760591bc6f54e8c333986cf6cf7fb737747df
+  tag: c723eb055288657ee21dbe7a3572f0af2f78b4c4
   --sha256: 1l4rrll76wss4xsil788r1ffcwb4hqgl74bc29hsjxlygdfv09yc
   subdir:   contra-tracer
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/iohk-monitoring-framework
-  tag: d6f760591bc6f54e8c333986cf6cf7fb737747df
+  tag: c723eb055288657ee21dbe7a3572f0af2f78b4c4
   --sha256: 1l4rrll76wss4xsil788r1ffcwb4hqgl74bc29hsjxlygdfv09yc
   subdir:   plugins/scribe-systemd
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/iohk-monitoring-framework
-  tag: d6f760591bc6f54e8c333986cf6cf7fb737747df
+  tag: c723eb055288657ee21dbe7a3572f0af2f78b4c4
   --sha256: 1l4rrll76wss4xsil788r1ffcwb4hqgl74bc29hsjxlygdfv09yc
   subdir:   plugins/backend-aggregation
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/iohk-monitoring-framework
-  tag: d6f760591bc6f54e8c333986cf6cf7fb737747df
+  tag: c723eb055288657ee21dbe7a3572f0af2f78b4c4
   --sha256: 1l4rrll76wss4xsil788r1ffcwb4hqgl74bc29hsjxlygdfv09yc
   subdir:   plugins/backend-ekg
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/iohk-monitoring-framework
-  tag: d6f760591bc6f54e8c333986cf6cf7fb737747df
+  tag: c723eb055288657ee21dbe7a3572f0af2f78b4c4
   --sha256: 1l4rrll76wss4xsil788r1ffcwb4hqgl74bc29hsjxlygdfv09yc
   subdir:   plugins/backend-monitoring
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/iohk-monitoring-framework
-  tag: d6f760591bc6f54e8c333986cf6cf7fb737747df
+  tag: c723eb055288657ee21dbe7a3572f0af2f78b4c4
   --sha256: 1l4rrll76wss4xsil788r1ffcwb4hqgl74bc29hsjxlygdfv09yc
   subdir:   tracer-transformers
 
