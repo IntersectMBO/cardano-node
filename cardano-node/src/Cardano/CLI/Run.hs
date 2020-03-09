@@ -275,13 +275,13 @@ runCommand (CheckDelegation configFp cert issuerVF delegateVF) = do
   issuerVK <- readVerificationKey issuerVF
   delegateVK <- readVerificationKey delegateVF
   pmId <- readProtocolMagicId $ ncGenesisFile nc
-  liftIO $ checkByronGenesisDelegation cert pmId issuerVK delegateVK
+  checkByronGenesisDelegation cert pmId issuerVK delegateVK
 
 runCommand (SubmitTx fp configFp mCliSockPath) = withIOManagerE $ \iocp -> do
     nc <- liftIO . parseNodeConfigurationFP $ unConfigPath configFp
     -- Default update value
     let update = Update (ApplicationName "cardano-sl") 1 $ LastKnownBlockVersion 0 2 0
-    tx <- liftIO $ readByronTx fp
+    tx <- readByronTx fp
     genHash <- getGenesisHash (ncGenesisFile nc)
 
     firstExceptT

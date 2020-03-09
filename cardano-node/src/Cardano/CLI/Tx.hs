@@ -25,7 +25,7 @@ where
 import           Prelude (error)
 import           Cardano.Prelude hiding (option, trace, (%))
 
-import           Control.Monad.Trans.Except.Extra (right)
+import           Control.Monad.Trans.Except.Extra (left, right)
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.ByteString as B
 import qualified Data.Map.Strict as Map
@@ -80,11 +80,11 @@ prettyAddress addr = sformat
   (Common.addressF %"\n"%Common.addressDetailedF)
   addr addr
 
-readByronTx :: TxFile -> IO (GenTx ByronBlock)
+readByronTx :: TxFile -> ExceptT CliError IO (GenTx ByronBlock)
 readByronTx (TxFile fp) = do
-  txBS <- LB.readFile fp
+  txBS <- liftIO $ LB.readFile fp
   case fromCborTxAux txBS of
-    Left e -> throwIO $ TxDeserialisationFailed fp e
+    Left e -> left $ TxDeserialisationFailed fp e
     Right tx -> pure (normalByronTxToGenTx tx)
 
 -- | The 'GenTx' is all the kinds of transactions that can be submitted
