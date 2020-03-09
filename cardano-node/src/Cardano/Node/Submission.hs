@@ -36,7 +36,7 @@ import           Ouroboros.Network.Codec (Codec, DeserialiseFailure)
 import           Ouroboros.Network.Mux
                    ( AppType(..), OuroborosApplication(..),
                      MuxPeer(..), RunMiniProtocol(..) )
-import           Ouroboros.Network.Block (Point)
+import           Ouroboros.Network.Block (Tip)
 import qualified Ouroboros.Network.Block as Block
 import           Ouroboros.Network.Driver (runPeer)
 import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Type as LocalTxSub
@@ -188,7 +188,7 @@ localTxSubmissionCodec =
 localChainSyncCodec
   :: forall blk m. (RunNode blk, MonadST m)
   => TopLevelConfig blk
-  -> Codec (ChainSync blk (Point blk))
+  -> Codec (ChainSync blk (Tip blk))
            DeserialiseFailure m ByteString
 localChainSyncCodec cfg =
     codecChainSync
@@ -196,5 +196,5 @@ localChainSyncCodec cfg =
       (Block.unwrapCBORinCBOR (Node.nodeDecodeBlock cfg))
       (Block.encodePoint (Node.nodeEncodeHeaderHash (Proxy @blk)))
       (Block.decodePoint (Node.nodeDecodeHeaderHash (Proxy @blk)))
-      (Block.encodePoint (Node.nodeEncodeHeaderHash (Proxy @blk)))
-      (Block.decodePoint (Node.nodeDecodeHeaderHash (Proxy @blk)))
+      (Block.encodeTip (Node.nodeEncodeHeaderHash (Proxy @blk)))
+      (Block.decodeTip (Node.nodeDecodeHeaderHash (Proxy @blk)))
