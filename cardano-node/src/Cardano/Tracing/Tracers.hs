@@ -186,7 +186,7 @@ mkTracers traceOptions tracer = do
   -- for measuring the time it takes a transaction to get into
   -- a block.
   --txsOutcomeExtractor <- mkOutcomeExtractor @_ @(MeasureTxs blk)
-  --blockForgeOutcomeExtractor <- mkOutcomeExtractor @_ @(MeasureBlockForging blk)
+  blockForgeOutcomeExtractor <- mkOutcomeExtractor -- @_ @(MeasureBlockForging blk)
 
   elided <- newstate  -- for eliding messages in ChainDB tracer
 
@@ -198,7 +198,7 @@ mkTracers traceOptions tracer = do
           $ appendName "ChainDB"
           $ tracer
     , consensusTracers
-        = mkConsensusTracers forgeTracers traceOptions
+        = mkConsensusTracers blockForgeOutcomeExtractor forgeTracers traceOptions
     , protocolTracers
         = mkProtocolTracers traceOptions
     , ipSubscriptionTracer
@@ -349,8 +349,8 @@ mkTracers traceOptions tracer = do
         -> Tracer IO (Consensus.TraceForgeEvent blk (GenTx blk))
     forgeTracer forgeTracers traceOpts = Tracer $ \ev -> do
         traceWith (measureTxsEnd tracer) ev
-        traceWith (measureBlockForgeStart tracer) ev
-        traceWith (measureBlockForgeEnd tracer) ev
+        -- traceWith (measureBlockForgeStart tracer) ev
+        -- traceWith (measureBlockForgeEnd tracer) ev
         traceWith (consensusForgeTracer) ev
       where
         -- The consensus tracer.
@@ -415,8 +415,9 @@ mkTracers traceOptions tracer = do
               LogValue "nodeIsLeader" $ PureI $ fromIntegral $ unSlotNo slot
 
     mkConsensusTracers
-        :: ForgeTracers -> TraceOptions -> Consensus.Tracers' peer blk (Tracer IO)
-    mkConsensusTracers forgeTracers traceOpts = Consensus.Tracers
+        :: (OutcomeEnhancedTracer IO (Consensus.TraceForgeEvent blk (GenTx blk)) -> Tracer IO (Consensus.TraceForgeEvent blk (GenTx blk)))
+        -> ForgeTracers -> TraceOptions -> Consensus.Tracers' peer blk (Tracer IO)
+    mkConsensusTracers measureBlockForging forgeTracers traceOpts = Consensus.Tracers
       { Consensus.chainSyncClientTracer
         = tracerOnOff (traceChainSyncClient traceOpts)
           $ toLogObject' StructuredLogging tracingVerbosity
@@ -457,7 +458,11 @@ mkTracers traceOptions tracer = do
       , Consensus.mempoolTracer
         = tracerOnOff (traceMempool traceOpts) $ mempoolTracer
       , Consensus.forgeTracer
-        = forgeTracer forgeTracers traceOpts
+        = Tracer $ \ev -> do
+            traceWith (forgeTracer forgeTracers traceOpts) ev
+            traceWith ( measureBlockForging
+                      $ toLogObject' StructuredLogging tracingVerbosity
+                      $ appendName "ForgeTime" tracer) ev
       , Consensus.blockchainTimeTracer
         = Tracer $ \ev ->
             traceWith (toLogObject tracer) (readableTraceBlockchainTimeEvent ev)

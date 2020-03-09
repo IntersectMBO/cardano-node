@@ -9,13 +9,12 @@
 {-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE UndecidableInstances  #-}
 
+{-# OPTIONS_GHC -fno-warn-orphans  #-}
+
 module Cardano.Tracing.MicroBenchmarking
     ( MeasureTxs (..)
     , measureTxsStart
     , measureTxsEnd
-    , MeasureBlockForging (..)
-    , measureBlockForgeStart
-    , measureBlockForgeEnd
     -- * Re-exports so we localize the changes
     , Outcome (..)
     , OutcomeEnhancedTracer
@@ -24,15 +23,17 @@ module Cardano.Tracing.MicroBenchmarking
 
 import           Cardano.Prelude
 
-import           Control.Monad.Class.MonadTime (DiffTime, Time (..), diffTime,
-                                                getMonotonicTime)
+import           Control.Monad.Class.MonadTime (DiffTime, MonadTime, Time (..),
+                     diffTime, getMonotonicTime)
 
 import           Data.Aeson (Value (..), toJSON, (.=))
 import           Data.Time.Clock (diffTimeToPicoseconds)
 
+import           Cardano.BM.Data.LogItem (LOContent (..), LogObject (..),
+                   mkLOMeta)
 import           Cardano.BM.Data.Severity (Severity (..))
-import           Cardano.BM.Data.Trace
-import           Cardano.BM.Data.Tracer
+import           Cardano.BM.Tracing
+import           Cardano.BM.Data.Tracer (trStructured, emptyObject, mkObject)
 
 import           Control.Tracer.Transformers.ObserveOutcome
 
@@ -171,78 +172,67 @@ instance (Monad m, ApplyTx blk, HasTxId (GenTx blk)) => Outcome m (MeasureTxs bl
 -- Measure block forging time
 --------------------------------------------------------------------------------
 
--- | Definition of the measurement datatype for the block forge time.
-data MeasureBlockForging blk
-    = MeasureBlockTimeStart !SlotNo  !Time
-    | MeasureBlockTimeStop !SlotNo blk !MempoolSize !Time
-
-deriving instance (Eq blk, Eq (GenTx blk)) => Eq (MeasureBlockForging blk)
-deriving instance (Show blk, Show (GenTx blk)) => Show (MeasureBlockForging blk)
-
-instance Transformable Text IO (MeasureBlockForging blk) where
-  trTransformer _ verb tr = trStructured verb tr
-
-instance DefinePrivacyAnnotation (MeasureBlockForging blk)
-instance DefineSeverity (MeasureBlockForging blk) where
-  defineSeverity _ = Info
-
-instance ToObject (MeasureBlockForging blk) where
-  toObject _verb (MeasureBlockTimeStart slotNo (Time time)) =
-    mkObject
-      [ "kind"              .= String "MeasureBlockTimeStart"
-      , "slot"              .= toJSON (unSlotNo slotNo)
-      , "time(ps)"          .= toJSON (diffTimeToPicoseconds time)
-      ]
-  toObject _verb (MeasureBlockTimeStop slotNo _blk mempoolSize (Time time)) =
-    mkObject
-      [ "kind"              .= String "MeasureBlockTimeStop"
-      , "slot"              .= toJSON (unSlotNo slotNo)
-      , "mempoolNumTxs"     .= toJSON (msNumTxs mempoolSize)
-      , "mempoolNumBytes"   .= toJSON (msNumBytes mempoolSize)
-      , "time(ps)"          .= toJSON (diffTimeToPicoseconds time)
-      ]
-
--- | Transformer for the start of the block forge, when the current slot is the slot of the
--- node and the protocol starts.
-measureBlockForgeStart :: Trace IO Text -> Tracer IO (TraceForgeEvent blk (GenTx blk))
-measureBlockForgeStart tracer = measureBlockForgeStartInter $ toLogObject tracer
-  where
-    measureBlockForgeStartInter :: Tracer IO (MeasureBlockForging blk) -> Tracer IO (TraceForgeEvent blk (GenTx blk))
-    measureBlockForgeStartInter tracer' = Tracer $ \case
-        TraceNodeIsLeader slotNo
-            -> traceWith tracer' =<< (MeasureBlockTimeStart slotNo <$> getMonotonicTime)
-        _ -> pure ()
-
--- | Transformer for the end of the block forge, when the block was created/forged.
-measureBlockForgeEnd :: Trace IO Text -> Tracer IO (TraceForgeEvent blk (GenTx blk))
-measureBlockForgeEnd tracer = measureTxsEndInter $ toLogObject tracer
-  where
-    measureTxsEndInter :: Tracer IO (MeasureBlockForging blk) -> Tracer IO (TraceForgeEvent blk (GenTx blk))
-    measureTxsEndInter tracer' = Tracer $ \case
-        TraceForgedBlock slotNo _ blk mempoolSize
-            -> traceWith tracer' =<< (MeasureBlockTimeStop slotNo blk mempoolSize <$> getMonotonicTime)
-        _   -> pure ()
-
-
--- | The outcome for the block forging time. It's a @Maybe@ since
--- the slot number might not be equal from when we start the measurement.
-instance (Monad m) => Outcome m (MeasureBlockForging blk) where
-    type IntermediateValue  (MeasureBlockForging blk)    = (SlotNo, Time, MempoolSize)
-    type OutcomeMetric      (MeasureBlockForging blk)    = Maybe (SlotNo, DiffTime, MempoolSize)
+instance (Monad m, MonadTime m) => Outcome m (TraceForgeEvent blk (GenTx blk)) where
+    type IntermediateValue  (TraceForgeEvent blk (GenTx blk))    = (SlotNo, Time, MempoolSize)
+    type OutcomeMetric      (TraceForgeEvent blk (GenTx blk))    = Maybe (SlotNo, DiffTime, MempoolSize)
 
     --classifyObservable     :: a -> m OutcomeProgressionStatus
     classifyObservable = pure . \case
-      MeasureBlockTimeStart {}    -> OutcomeStarts
-      MeasureBlockTimeStop  {}    -> OutcomeEnds
+      TraceNodeIsLeader {}    -> OutcomeStarts
+      TraceForgedBlock  {}    -> OutcomeEnds
 
     --captureObservableValue :: a -> m (IntermediateValue a)
-    captureObservableValue (MeasureBlockTimeStart slotNo time) =
+    captureObservableValue (TraceNodeIsLeader slotNo) = do
+        time <- getMonotonicTime
         pure (slotNo, time, mempty)
 
-    captureObservableValue (MeasureBlockTimeStop slotNo _blk mempoolSize time) =
+    captureObservableValue (TraceForgedBlock slotNo _ _blk mempoolSize) = do
+        time <- getMonotonicTime
         pure (slotNo, time, mempoolSize)
 
     --computeOutcomeMetric   :: a -> IntermediateValue a -> IntermediateValue a -> m (OutcomeMetric a)
     computeOutcomeMetric _ (startSlot, absTimeStart, _) (stopSlot, absTimeStop, mempoolSize)
         | startSlot == stopSlot = pure $ Just (startSlot, (diffTime absTimeStop absTimeStart), mempoolSize)
         | otherwise             = pure Nothing
+
+instance DefinePrivacyAnnotation (Either
+                             (TraceForgeEvent blk (GenTx blk))
+                             (OutcomeFidelity
+                                (Maybe
+                                   (SlotNo, DiffTime, MempoolSize))))
+instance DefineSeverity (Either
+                             (TraceForgeEvent blk (GenTx blk))
+                             (OutcomeFidelity
+                                (Maybe
+                                   (SlotNo, DiffTime, MempoolSize)))) where
+  defineSeverity _ = Info
+
+instance Transformable Text IO
+                        (Either
+                             (TraceForgeEvent blk (GenTx blk))
+                             (OutcomeFidelity
+                                (Maybe
+                                   (SlotNo, DiffTime, MempoolSize)))) where
+  trTransformer StructuredLogging verb tr = trStructured verb tr
+  trTransformer _ _verb tr = Tracer $ \ev -> do
+    meta <- mkLOMeta (defineSeverity ev) (definePrivacyAnnotation ev)
+    traceWith tr (mempty, LogObject mempty meta (LogMessage "Outcome of TraceForgeEvent"))
+
+instance ToObject
+                        (Either
+                             (TraceForgeEvent blk (GenTx blk))
+                             (OutcomeFidelity
+                                (Maybe
+                                   (SlotNo, DiffTime, MempoolSize)))) where
+  toObject _verb (Left _ev) = emptyObject
+  toObject _verb (Right EndsBeforeStarted) = emptyObject
+  toObject _verb (Right (ProgressedNormally (Just (slotno, difftime, mpsize)))) =
+      mkObject
+        [ "kind"         .= String "OutcomeTraceForgeEvent"
+        , "slot"         .= toJSON (unSlotNo slotno)
+        , "difftime"     .= toJSON (diffTimeToPicoseconds difftime)
+        , "mempoolnumtx" .= toJSON (msNumTxs mpsize)
+        , "mempoolbytes" .= toJSON (msNumBytes mpsize)
+        ]
+  toObject _verb (Right _) = emptyObject
+
