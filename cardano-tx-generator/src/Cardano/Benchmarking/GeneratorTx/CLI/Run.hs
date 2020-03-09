@@ -32,7 +32,7 @@ import           Cardano.Config.Protocol
                     , fromProtocol
                     )
 import           Cardano.Config.Types
-                    ( ConfigError (..)
+                    ( ConfigError (..), ConfigYamlFilePath (..)
                     , CardanoEnvironment(..), LastKnownBlockVersion(..)
                     , Protocol, SigningKeyFile(..), Update(..)
                     , ncLogMetrics, ncReqNetworkMagic, ncProtocol
@@ -79,7 +79,7 @@ runCommand (GenerateTxs logConfigFp
   withIOManagerE $ \iocp -> do
     -- Default update value
     let update = Update (ApplicationName "cardano-tx-generator") 1 $ LastKnownBlockVersion 0 2 0
-    nc <- liftIO $ parseNodeConfigurationFP logConfigFp
+    nc <- liftIO . parseNodeConfigurationFP $ ConfigYamlFilePath logConfigFp
 
     -- Logging layer
     (loggingLayer, _) <- firstExceptT (\(ConfigErrorFileNotFound fp) -> FileNotFoundError fp) $

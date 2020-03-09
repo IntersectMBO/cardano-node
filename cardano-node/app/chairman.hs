@@ -39,7 +39,7 @@ main = withIOManager $ \iocp -> do
                  , caDelegationCertFp
                  } <- execParser opts
 
-    nc <- liftIO . parseNodeConfigurationFP $ unConfigPath caConfigYaml
+    nc <- liftIO $ parseNodeConfigurationFP caConfigYaml
     frmPtclRes <- runExceptT $ fromProtocol
                                  (ncNodeId nc)
                                  (ncNumCoreNodes nc)

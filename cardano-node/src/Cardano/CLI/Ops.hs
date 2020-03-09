@@ -350,7 +350,7 @@ getLocalTip
   -> AssociateWithIOCP
   -> IO ()
 getLocalTip configFp mSockPath iocp = do
-  nc <- parseNodeConfigurationFP $ unConfigPath configFp
+  nc <- parseNodeConfigurationFP configFp
   sockPath <- return $ chooseSocketPath (ncSocketPath nc) mSockPath
 
   frmPtclRes <- runExceptT . firstExceptT ProtocolError

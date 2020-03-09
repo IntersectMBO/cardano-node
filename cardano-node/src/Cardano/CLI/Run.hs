@@ -261,7 +261,7 @@ runCommand (ToVerification ptcl skFp (NewVerificationKeyFile vkFp)) = do
   ensureNewFile TL.writeFile vkFp vKey
 
 runCommand (IssueDelegationCertificate configFp epoch issuerSK delegateVK cert) = do
-  nc <- liftIO . parseNodeConfigurationFP $ unConfigPath configFp
+  nc <- liftIO $ parseNodeConfigurationFP configFp
   vk <- readVerificationKey delegateVK
   sk <- readSigningKey (ncProtocol nc) issuerSK
   pmId <- readProtocolMagicId $ ncGenesisFile nc
@@ -271,14 +271,14 @@ runCommand (IssueDelegationCertificate configFp epoch issuerSK delegateVK cert) 
   ensureNewFileLBS (nFp cert) sCert
 
 runCommand (CheckDelegation configFp cert issuerVF delegateVF) = do
-  nc <- liftIO . parseNodeConfigurationFP $ unConfigPath configFp
+  nc <- liftIO $ parseNodeConfigurationFP configFp
   issuerVK <- readVerificationKey issuerVF
   delegateVK <- readVerificationKey delegateVF
   pmId <- readProtocolMagicId $ ncGenesisFile nc
   checkByronGenesisDelegation cert pmId issuerVK delegateVK
 
 runCommand (SubmitTx fp configFp mCliSockPath) = withIOManagerE $ \iocp -> do
-    nc <- liftIO . parseNodeConfigurationFP $ unConfigPath configFp
+    nc <- liftIO $ parseNodeConfigurationFP configFp
     -- Default update value
     let update = Update (ApplicationName "cardano-sl") 1 $ LastKnownBlockVersion 0 2 0
     tx <- readByronTx fp
@@ -300,7 +300,7 @@ runCommand (SubmitTx fp configFp mCliSockPath) = withIOManagerE $ \iocp -> do
           (ncProtocol nc)
           tx
 runCommand (SpendGenesisUTxO configFp (NewTxFile ctTx) ctKey genRichAddr outs) = do
-    nc <- liftIO . parseNodeConfigurationFP $ unConfigPath configFp
+    nc <- liftIO $ parseNodeConfigurationFP configFp
     sk <- readSigningKey (ncProtocol nc) ctKey
     -- Default update value
     let update = Update (ApplicationName "cardano-sl") 1 $ LastKnownBlockVersion 0 2 0
@@ -323,7 +323,7 @@ runCommand (SpendGenesisUTxO configFp (NewTxFile ctTx) ctKey genRichAddr outs) =
     ensureNewFileLBS ctTx $ toCborTxAux tx
 
 runCommand (SpendUTxO configFp (NewTxFile ctTx) ctKey ins outs) = do
-    nc <- liftIO . parseNodeConfigurationFP $ unConfigPath configFp
+    nc <- liftIO $ parseNodeConfigurationFP configFp
     sk <- readSigningKey (ncProtocol nc) ctKey
     -- Default update value
     let update = Update (ApplicationName "cardano-sl") 1 $ LastKnownBlockVersion 0 2 0
@@ -347,7 +347,7 @@ runCommand (SpendUTxO configFp (NewTxFile ctTx) ctKey ins outs) = do
     ensureNewFileLBS ctTx $ toCborTxAux gTx
 
 runCommand (GenerateTxs
-            logConfigFp
+            configFp
             signingKey
             delegCert
             genFile
@@ -363,14 +363,14 @@ runCommand (GenerateTxs
             sigKeysFiles) = withIOManagerE $ \iocp -> do
   -- Default update value
   let update = Update (ApplicationName "cardano-sl") 1 $ LastKnownBlockVersion 0 2 0
-  nc <- liftIO $ parseNodeConfigurationFP logConfigFp
+  nc <- liftIO . parseNodeConfigurationFP $ ConfigYamlFilePath configFp
 
   -- Logging layer
   (loggingLayer, _) <- firstExceptT (\(ConfigErrorFileNotFound fp) -> FileNotFoundError fp) $
                            createLoggingFeatureCLI
                            (pack $ showVersion version)
                            NoEnvironment
-                           (Just logConfigFp)
+                           (Just configFp)
                            (ncLogMetrics nc)
 
   genHash <- getGenesisHashText genFile

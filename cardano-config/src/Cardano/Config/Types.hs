@@ -39,6 +39,8 @@ import qualified Data.IP as IP
 import qualified Data.Text as T
 import           Data.Yaml (decodeFileThrow)
 import           Network.Socket (PortNumber)
+import           System.Directory (doesFileExist)
+import           System.FilePath ((</>), takeDirectory)
 
 import qualified Cardano.Chain.Update as Update
 import           Cardano.BM.Data.Tracer (TracingVerbosity (..))
@@ -161,7 +163,7 @@ instance FromJSON NodeConfiguration where
   parseJSON = withObject "NodeConfiguration" $ \v -> do
                 nId <- v .:? "NodeId"
                 ptcl <- v .: "Protocol" .!= RealPBFT
-                genFile <- v .: "GenesisFile"
+                genFile <- v .: "GenesisFile" .!= "configuration/genesis/genesis.json"
                 numCoreNode <- v .:? "NumCoreNodes"
                 rNetworkMagic <- v .:? "RequiresNetworkMagic" .!= RequiresNoMagic
                 pbftSignatureThresh <- v .:? "PBftSignatureThreshold"
@@ -241,9 +243,19 @@ instance FromJSON YamlSocketPath where
   parseJSON invalid = panic $ "Parsing of SocketPath failed due to type mismatch. "
                            <> "Encountered: " <> (T.pack $ show invalid)
 
-parseNodeConfigurationFP :: FilePath -> IO NodeConfiguration
-parseNodeConfigurationFP fp = decodeFileThrow fp
+parseNodeConfigurationFP :: ConfigYamlFilePath -> IO NodeConfiguration
+parseNodeConfigurationFP (ConfigYamlFilePath fp) = do
+ nc  <- decodeFileThrow fp
+ let genFile = unGenesisFile $ ncGenesisFile nc
+ exists <- doesFileExist genFile
+ case exists of
+   -- Genesis file is an absolute path
+   True -> pure nc
+   -- Genesis file is a relative path (relative to configuration yaml filepath)
+   False -> do let d = takeDirectory fp
+               pure $ nc { ncGenesisFile = GenesisFile $ d </> genFile }
 
+-- TODO: Make genesisfile relative to configuration file as above.
 parseNodeConfiguration :: NodeProtocolMode -> IO NodeConfiguration
 parseNodeConfiguration npm =
   case npm of
