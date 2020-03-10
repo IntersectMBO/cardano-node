@@ -91,7 +91,7 @@ data Tracers peer localPeer blk = Tracers
     -- | Trace error policy resolution
   , errorPolicyTracer :: Tracer IO (NtN.WithAddr Socket.SockAddr NtN.ErrorPolicyTrace)
     -- | Trace local error policy resolution
-  , localErrorPolicyTracer :: Tracer IO (NtN.WithAddr Socket.SockAddr NtN.ErrorPolicyTrace)
+  , localErrorPolicyTracer :: Tracer IO (NtN.WithAddr NtC.LocalAddress NtN.ErrorPolicyTrace)
     -- | Trace the Mux
   , muxTracer :: Tracer IO (WithMuxBearer peer MuxTrace)
   , handshakeTracer :: Tracer IO NtN.HandshakeTr

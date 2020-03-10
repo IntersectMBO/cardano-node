@@ -49,14 +49,12 @@ import           Ouroboros.Network.Protocol.Handshake.Version ( Versions
                                                               , simpleSingletonVersions)
 import           Ouroboros.Network.NodeToClient ( AssociateWithIOCP
                                                 , NetworkConnectTracers (..))
-import qualified Ouroboros.Network.NodeToClient as NodeToClient
-import           Ouroboros.Network.Snocket (socketSnocket)
+import qualified Ouroboros.Network.NodeToClient as NtC
 
 import           Cardano.BM.Data.Tracer (DefinePrivacyAnnotation (..),
                      DefineSeverity (..), ToObject (..), TracingFormatting (..),
                      TracingVerbosity (..), Transformable (..),
                      emptyObject, mkObject, trStructured)
-import           Cardano.Common.LocalSocket
 import           Cardano.Config.Types (SocketPath(..))
 
 -- | Low-tevel tracer
@@ -111,16 +109,15 @@ submitTx :: ( RunNode blk
          -> GenTx blk
          -> Tracer IO TraceLowLevelSubmit
          -> IO ()
-submitTx iocp targetSocketFp cfg tx tracer = do
-    targetSocketFp' <- localSocketPath targetSocketFp
-    NodeToClient.connectTo
-      (socketSnocket iocp)
+submitTx iocp (SocketFile path) cfg tx tracer =
+    NtC.connectTo
+      (NtC.localSnocket iocp path)
       NetworkConnectTracers {
           nctMuxTracer       = nullTracer,
           nctHandshakeTracer = nullTracer
         }
       (localInitiatorNetworkApplication tracer cfg tx)
-      targetSocketFp'
+      path
 
 localInitiatorNetworkApplication
   :: forall blk m peer.
@@ -133,33 +130,38 @@ localInitiatorNetworkApplication
   => Tracer m TraceLowLevelSubmit
   -> TopLevelConfig blk
   -> GenTx blk
-  -> Versions NodeToClient.NodeToClientVersion NodeToClient.DictVersion
+  -> Versions NtC.NodeToClientVersion NtC.DictVersion
               (peer -> OuroborosApplication InitiatorApp ByteString m () Void)
 localInitiatorNetworkApplication tracer cfg tx =
     simpleSingletonVersions
-      NodeToClient.NodeToClientV_1
-      (NodeToClient.NodeToClientVersionData
-        { NodeToClient.networkMagic = Node.nodeNetworkMagic (Proxy @blk) cfg })
-      (NodeToClient.DictVersion NodeToClient.nodeToClientCodecCBORTerm) $ \_peerid ->
+      NtC.NodeToClientV_1
+      (NtC.NodeToClientVersionData
+        { NtC.networkMagic = Node.nodeNetworkMagic (Proxy @blk) cfg })
+      (NtC.DictVersion NtC.nodeToClientCodecCBORTerm) $ \_peerid ->
 
-    NodeToClient.nodeToClientProtocols
-      (InitiatorProtocolOnly $
-         MuxPeer
-           nullTracer
-           (localChainSyncCodec @blk cfg)
-           (chainSyncClientPeer NodeToClient.chainSyncClientNull))
-      (InitiatorProtocolOnly $
-         MuxPeerRaw $ \channel -> do
-            traceWith tracer TraceLowLevelSubmitting
-            result <- runPeer
-                        nullTracer -- (contramap show tracer)
-                        localTxSubmissionCodec
-                        channel
-                        (LocalTxSub.localTxSubmissionClientPeer
-                           (txSubmissionClientSingle tx))
-            case result of
-              Nothing  -> traceWith tracer TraceLowLevelAccepted
-              Just msg -> traceWith tracer (TraceLowLevelRejected $ show msg))
+    NtC.nodeToClientProtocols
+      NtC.NodeToClientProtocols {
+        NtC.localChainSyncProtocol =
+          InitiatorProtocolOnly $
+            MuxPeer
+              nullTracer
+              (localChainSyncCodec @blk cfg)
+              (chainSyncClientPeer NtC.chainSyncClientNull)
+
+      , NtC.localTxSubmissionProtocol =
+          InitiatorProtocolOnly $
+            MuxPeerRaw $ \channel -> do
+              traceWith tracer TraceLowLevelSubmitting
+              result <- runPeer
+                          nullTracer -- (contramap show tracer)
+                          localTxSubmissionCodec
+                          channel
+                          (LocalTxSub.localTxSubmissionClientPeer
+                             (txSubmissionClientSingle tx))
+              case result of
+                Nothing  -> traceWith tracer TraceLowLevelAccepted
+                Just msg -> traceWith tracer (TraceLowLevelRejected $ show msg)
+      }
 
 -- | A 'LocalTxSubmissionClient' that submits exactly one transaction, and then
 -- disconnects, returning the confirmation or rejection.

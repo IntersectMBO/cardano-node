@@ -289,8 +289,8 @@ instance DefinePrivacyAnnotation (TraceTxSubmissionOutbound (GenTxId blk) (GenTx
 instance DefineSeverity (TraceTxSubmissionOutbound (GenTxId blk) (GenTx blk)) where
   defineSeverity _ = Info
 
-instance DefinePrivacyAnnotation (WithAddr Socket.SockAddr ErrorPolicyTrace)
-instance DefineSeverity (WithAddr Socket.SockAddr ErrorPolicyTrace) where
+instance DefinePrivacyAnnotation (WithAddr addr ErrorPolicyTrace)
+instance DefineSeverity (WithAddr addr ErrorPolicyTrace) where
   defineSeverity (WithAddr _ ev) = case ev of
     ErrorPolicySuspendPeer {} -> Warning -- peer misbehaved
     ErrorPolicySuspendConsumer {} -> Notice -- peer temporarily not useful
@@ -467,7 +467,7 @@ instance (Show (GenTxId blk), Show (GenTx blk))
  => Transformable Text IO (TraceTxSubmissionOutbound (GenTxId blk) (GenTx blk)) where
   trTransformer = defaultTextTransformer
 
-instance Transformable Text IO (WithAddr Socket.SockAddr ErrorPolicyTrace) where
+instance Show addr => Transformable Text IO (WithAddr addr ErrorPolicyTrace) where
   trTransformer = defaultTextTransformer
 
 instance Transformable Text IO (WithDomainName (SubscriptionTrace Socket.SockAddr)) where
@@ -1330,7 +1330,7 @@ instance (Show (GenTx blk), Show (GenTxId blk))
       [ "kind" .= String "TraceTxSubmissionOutboundSendMsgReplyTxs"
       ]
 
-instance ToObject (WithAddr Socket.SockAddr ErrorPolicyTrace) where
+instance Show addr => ToObject (WithAddr addr ErrorPolicyTrace) where
   toObject _verb (WithAddr addr ev) =
     mkObject [ "kind" .= String "ErrorPolicyTrace"
              , "address" .= show addr
