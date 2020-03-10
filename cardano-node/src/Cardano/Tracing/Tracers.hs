@@ -186,7 +186,7 @@ mkTracers traceOptions tracer = do
   -- for measuring the time it takes a transaction to get into
   -- a block.
   --txsOutcomeExtractor <- mkOutcomeExtractor @_ @(MeasureTxs blk)
-  blockForgeOutcomeExtractor <- mkOutcomeExtractor -- @_ @(MeasureBlockForging blk)
+  blockForgeOutcomeExtractor <- mkOutcomeExtractor
 
   elided <- newstate  -- for eliding messages in ChainDB tracer
 
@@ -349,8 +349,6 @@ mkTracers traceOptions tracer = do
         -> Tracer IO (Consensus.TraceForgeEvent blk (GenTx blk))
     forgeTracer forgeTracers traceOpts = Tracer $ \ev -> do
         traceWith (measureTxsEnd tracer) ev
-        -- traceWith (measureBlockForgeStart tracer) ev
-        -- traceWith (measureBlockForgeEnd tracer) ev
         traceWith (consensusForgeTracer) ev
       where
         -- The consensus tracer.
