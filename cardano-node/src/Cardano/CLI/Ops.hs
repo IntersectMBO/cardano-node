@@ -100,7 +100,7 @@ import           Ouroboros.Network.Snocket (socketSnocket)
 import           Cardano.Common.LocalSocket
 import           Cardano.Config.Protocol
                    (Protocol(..), ProtocolInstantiationError
-                   , SomeProtocol(..), fromProtocol)
+                   , SomeProtocol(..), fromProtocol, renderProtocolInstantiationError)
 import           Cardano.Config.Types
 import qualified Cardano.CLI.Legacy.Byron as Legacy
 
@@ -278,7 +278,7 @@ instance Show CliError where
   show (OutputMustNotAlreadyExist fp)
     = "Output file/directory must not already exist: " <> fp
   show (ProtocolError err)
-    = "Protocol Instantiation Error " <> show err
+    = "Protocol Instantiation Error " <> (T.unpack $ renderProtocolInstantiationError err)
   show (ProtocolNotSupported proto)
     = "Unsupported protocol "<> show proto
   show (ProtocolParametersParseFailed fp err)

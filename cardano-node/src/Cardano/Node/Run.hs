@@ -76,7 +76,8 @@ import           Ouroboros.Consensus.Storage.ImmutableDB (ValidationPolicy (..))
 import           Ouroboros.Consensus.Storage.VolatileDB (BlockValidationPolicy (..))
 
 import           Cardano.Common.LocalSocket
-import           Cardano.Config.Protocol (SomeProtocol(..), fromProtocol)
+import           Cardano.Config.Protocol
+                   (SomeProtocol(..), fromProtocol, renderProtocolInstantiationError)
 import           Cardano.Config.Topology
 import           Cardano.Config.Types (DbFile(..), NodeAddress(..),
                                        NodeMockCLI(..), NodeProtocolMode (..),
@@ -119,7 +120,7 @@ runNode loggingLayer npm = do
 
     SomeProtocol (p :: Consensus.Protocol blk (BlockProtocol blk)) <-
       case eitherSomeProtocol of
-        Left err -> (putTextLn . pack $ show err) >> exitFailure
+        Left err -> (putTextLn $ renderProtocolInstantiationError err) >> exitFailure
         Right (SomeProtocol p) -> pure $ SomeProtocol p
 
     tracers <- mkTracers (ncTraceOptions nc) trace

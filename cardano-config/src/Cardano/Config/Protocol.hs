@@ -11,8 +11,9 @@ module Cardano.Config.Protocol
   ( Protocol(..)
   , ProtocolInstantiationError(..)
   , SomeProtocol(..)
-  , fromProtocol
   , TraceConstraints
+  , fromProtocol
+  , renderProtocolInstantiationError
   ) where
 
 import           Cardano.Prelude
@@ -23,6 +24,7 @@ import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (bimapExceptT, firstExceptT,
                                                    hoistEither, left)
 import qualified Data.ByteString.Lazy as LB
+import qualified Data.Text as T
 
 import           Cardano.BM.Tracing (ToObject)
 import qualified Cardano.Chain.Genesis as Genesis
@@ -118,13 +120,13 @@ data SomeProtocol where
 
 data ProtocolInstantiationError =
     ByronLegacyProtocolNotImplemented
-  | CanonicalDecodeFailure Text
+  | CanonicalDecodeFailure FilePath Text
   | DelegationCertificateFilepathNotSpecified
-  | LedgerConfigError Genesis.ConfigurationError
+  | GenesisConfigurationError Genesis.ConfigurationError
   | MissingCoreNodeId
   | MissingNumCoreNodes
   | PbftError PBftLeaderCredentialsError
-  | SigningKeyDeserialiseFailure DeserialiseFailure
+  | SigningKeyDeserialiseFailure FilePath DeserialiseFailure
   | SigningKeyFilepathNotSpecified
   deriving Show
 
@@ -174,7 +176,7 @@ fromProtocol gHash _ _ mGenFile nMagic sigThresh delCertFp sKeyFp update RealPBF
                                    <> "Genesis file not specified"
                             ) mGenFile
 
-    gc <- firstExceptT LedgerConfigError $ Genesis.mkConfigFromFile
+    gc <- firstExceptT GenesisConfigurationError $ Genesis.mkConfigFromFile
              nMagic
              (unGenesisFile genFile)
              genHash
@@ -222,12 +224,16 @@ readLeaderCredentials gc mDelCertFp mSKeyFp =
     (Just _, Nothing) -> left SigningKeyFilepathNotSpecified
     (Nothing, Just _) -> left DelegationCertificateFilepathNotSpecified
     (Just delegCertFile, Just signingKeyFile) -> do
-         signingKeyFileBytes <- liftIO . LB.readFile $ unSigningKey signingKeyFile
-         delegCertFileBytes <- liftIO . LB.readFile $ unDelegationCert delegCertFile
-         signingKey <- firstExceptT SigningKeyDeserialiseFailure
+
+         let delegCertFp = unDelegationCert delegCertFile
+         let signKeyFp = unSigningKey signingKeyFile
+
+         signingKeyFileBytes <- liftIO $ LB.readFile signKeyFp
+         delegCertFileBytes <- liftIO $ LB.readFile delegCertFp
+         signingKey <- firstExceptT (SigningKeyDeserialiseFailure signKeyFp)
                          . hoistEither
                          $ deserialiseSigningKey signingKeyFileBytes
-         delegCert  <- firstExceptT CanonicalDecodeFailure
+         delegCert  <- firstExceptT (CanonicalDecodeFailure delegCertFp)
                          . hoistEither
                          $ canonicalDecodePretty delegCertFileBytes
 
@@ -241,6 +247,24 @@ readLeaderCredentials gc mDelCertFp mSKeyFp =
     deserialiseSigningKey =
         fmap (Signing.SigningKey . snd)
       . deserialiseFromBytes Signing.fromCBORXPrv
+
+renderProtocolInstantiationError :: ProtocolInstantiationError -> Text
+renderProtocolInstantiationError pie =
+  case pie of
+    ByronLegacyProtocolNotImplemented -> "ByronLegacyProtocolNotImplemented"
+    (CanonicalDecodeFailure fp failure) -> "Canonical decode failure in " <> toS fp
+                                           <> " Canonical failure: " <> failure
+    DelegationCertificateFilepathNotSpecified -> "Delegation certificate filepath not specified"
+    --TODO: Implement configuration error render function in cardano-ledger
+    GenesisConfigurationError genesisConfigError -> "Genesis configuration error: " <> (T.pack $ show genesisConfigError)
+    MissingCoreNodeId -> "Missing core node id"
+    MissingNumCoreNodes -> "NumCoreNodes: not specified in configuration yaml file."
+    -- TODO: Implement PBftLeaderCredentialsError render function in ouroboros-network
+    PbftError pbftLeaderCredentialsError -> "PBFT leader credentials error: " <> (T.pack $ show pbftLeaderCredentialsError)
+    (SigningKeyDeserialiseFailure fp deserialiseFailure) -> "Signing key deserialisation error in: " <> toS fp
+                                                            <> " Error: " <> (T.pack $ show deserialiseFailure)
+    SigningKeyFilepathNotSpecified -> "Signing key filepath not specified"
+
 
 extractNodeInfo
   :: Maybe NodeId
