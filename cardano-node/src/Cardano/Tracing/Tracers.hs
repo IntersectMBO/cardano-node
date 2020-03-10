@@ -322,14 +322,8 @@ mkTracers traceOptions tracer = do
             logValue3 = LogValue "mempoolBytes" $ PureI $ fromIntegral (msNumBytes tot)
 
         meta <- mkLOMeta Critical Confidential
-
-        traceNamedObject tr (meta, logValue1)
         traceNamedObject tr' (meta, logValue1)
-
-        traceNamedObject tr (meta, logValue2)
         traceNamedObject tr' (meta, logValue2)
-
-        traceNamedObject tr (meta, logValue3)
         traceNamedObject tr' (meta, logValue3)
 
     mempoolTracer :: Tracer IO (TraceEventMempool blk)
