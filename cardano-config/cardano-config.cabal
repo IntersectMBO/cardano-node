@@ -39,6 +39,7 @@ library
                        Cardano.TracingOrphanInstances.Mock
                        Cardano.TracingOrphanInstances.Network
                        Cardano.TracingOrphanInstances.Shelley
+                       Data.Hash.IsHash
 
   build-depends:       base >=4.12 && <5
                      , attoparsec
@@ -60,6 +61,7 @@ library
                      , directory
                      , file-embed
                      , filepath
+                     , formatting
                      , generic-monoid
                      , iohk-monitoring
                      , lobemo-backend-aggregation
@@ -67,6 +69,7 @@ library
                      , lobemo-backend-monitoring
                      , lobemo-backend-trace-forwarder
                      , lobemo-scribe-systemd
+                     , memory
                      , network
                      , network-mux
                      , optparse-applicative
@@ -87,6 +90,7 @@ library
                      , template-haskell
                      , text
                      , time
+                     , text-builder
                      , transformers
                      , transformers-except
                      , typed-protocols

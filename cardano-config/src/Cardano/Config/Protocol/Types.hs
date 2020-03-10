@@ -11,6 +11,8 @@ import           Prelude (Show)
 
 import           Data.Aeson (ToJSON)
 
+import           Data.Hash.IsHash (IsHash)
+
 import           Ouroboros.Network.Block
 import           Ouroboros.Consensus.Util.Condense (Condense)
 import           Ouroboros.Consensus.Block (Header, BlockProtocol)
@@ -46,6 +48,8 @@ type TraceConstraints blk =
     , Condense (HeaderHash blk)
     , Condense (GenTx blk)
     , Condense (TxId (GenTx blk))
+    , IsHash (HeaderHash blk)
+    , IsHash (TxId (GenTx blk))
     , HasTxs blk
     , HasTxId (GenTx blk)
     , Show (ApplyTxErr blk)
@@ -61,4 +65,3 @@ type TraceConstraints blk =
     , ToObject (OtherHeaderEnvelopeError blk)
     , ToObject (ValidationErr (BlockProtocol blk))
     )
-
