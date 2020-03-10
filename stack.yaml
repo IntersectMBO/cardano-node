@@ -99,7 +99,7 @@ extra-deps:
 
     # iohk-monitoring-framework currently not pinned to a release
   - git: https://github.com/input-output-hk/iohk-monitoring-framework
-    commit: d6f760591bc6f54e8c333986cf6cf7fb737747df
+    commit: 43a912b94498dcdeaaad71c37a6b58dceefaf1ca
     subdirs:
       - contra-tracer
       - iohk-monitoring
