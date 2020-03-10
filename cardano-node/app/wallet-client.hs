@@ -52,9 +52,19 @@ parseWalletCLI = WalletCLI
     <*> optional (SigningKeyFile <$> parseSigningKey)
     <*> parseSocketPath "Path to a cardano-node socket."
 
-initializeAllFeatures :: WalletCLI  -> CardanoEnvironment -> IO ([CardanoFeature], NodeLayer)
+initializeAllFeatures
+    :: WalletCLI
+    -> CardanoEnvironment
+    -> IO ([CardanoFeature], NodeLayer)
 initializeAllFeatures wCli cardanoEnvironment = do
-    (loggingLayer, loggingFeature) <- createLoggingFeatureWallet cardanoEnvironment wCli
+
+    eitherFeatures       <- runExceptT $ createLoggingFeatureWallet cardanoEnvironment wCli
+
+
+    (loggingLayer, loggingFeature) <- case eitherFeatures of
+                                        Left err  -> (putTextLn $ show err) >> exitFailure
+                                        Right res -> return res
+
     (nodeLayer   , nodeFeature)    <- createNodeFeature loggingLayer wCli cardanoEnvironment
 
     -- Here we return all the features.

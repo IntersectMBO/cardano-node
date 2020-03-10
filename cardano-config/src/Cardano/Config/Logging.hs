@@ -26,8 +26,10 @@ module Cardano.Config.Logging
 
 import           Cardano.Prelude hiding (trace)
 
+import           Control.Monad.Trans.Except.Extra (catchIOExceptT)
+
 import qualified Control.Concurrent.Async as Async
-import           Control.Exception (IOException, catch)
+import           Control.Exception (IOException)
 import           Control.Exception.Safe (MonadCatch)
 
 import           Cardano.BM.Backend.Aggregation (plugin)
@@ -54,11 +56,10 @@ import           Cardano.BM.Scribe.Systemd (plugin)
 import           Cardano.BM.Setup (setupTrace_, shutdown)
 import           Cardano.BM.Trace (Trace, appendName, traceNamedObject)
 import qualified Cardano.BM.Trace as Trace
-import           Cardano.Shell.Lib (GeneralException (..))
 import           Cardano.Shell.Types (CardanoFeature (..))
 
 import           Cardano.Config.GitRev (gitRev)
-import           Cardano.Config.Types (ConfigYamlFilePath (..), CardanoEnvironment,
+import           Cardano.Config.Types (ConfigYamlFilePath (..), ConfigError (..), CardanoEnvironment,
                                        NodeMockCLI (..), NodeProtocolMode (..),
                                        NodeConfiguration (..), NodeCLI (..),parseNodeConfiguration)
 
@@ -113,14 +114,16 @@ data LoggingLayer = LoggingLayer
 -- Feature
 --------------------------------
 
-
 data LoggingFlag = LoggingEnabled | LoggingDisabled
   deriving (Eq, Show)
 
 -- | Interpret main logging CLI controls into a tuple of:
 --   - a designation of whether logging was disabled,
 --   - a valid 'LoggingConfiguration' (still necessary, even if logging was disabled)
-loggingCLIConfiguration :: Maybe FilePath -> Bool -> IO (LoggingFlag, LoggingConfiguration)
+loggingCLIConfiguration
+    :: Maybe FilePath
+    -> Bool
+    -> ExceptT ConfigError IO (LoggingFlag, LoggingConfiguration)
 loggingCLIConfiguration mfp captureMetrics' =
     case mfp of
       Nothing ->
@@ -128,16 +131,15 @@ loggingCLIConfiguration mfp captureMetrics' =
       Just fp ->
         fmap (LoggingEnabled,) $ LoggingConfiguration <$> readConfig fp <*> pure captureMetrics'
   where
-    basicConfig :: IO Configuration
+    basicConfig :: ExceptT ConfigError IO Configuration
     basicConfig = do
-      c <- Config.empty
-      Config.setMinSeverity c Info
+      c <- liftIO $ Config.empty
+      liftIO $ Config.setMinSeverity c Info
       return c
-    readConfig :: FilePath -> IO Configuration
+
+    readConfig :: FilePath -> ExceptT ConfigError IO Configuration
     readConfig fp =
-      catch (Config.setup fp) $ \(_ :: IOException) -> do
-        putTextLn "Cannot find the logging configuration file at location."
-        throwIO $ FileNotFoundException fp
+      catchIOExceptT (Config.setup fp) $ \(_ :: IOException) -> ConfigErrorFileNotFound fp
 
 -- | Create logging feature for `cardano-cli`
 createLoggingFeatureCLI
@@ -145,14 +147,14 @@ createLoggingFeatureCLI
   -> CardanoEnvironment
   -> Maybe FilePath
   -> Bool
-  -> IO (LoggingLayer, CardanoFeature)
+  -> ExceptT ConfigError IO (LoggingLayer, CardanoFeature)
 createLoggingFeatureCLI ver _ mLogConfig captureLogMetrics = do
     (disabled', loggingConfiguration) <- loggingCLIConfiguration
                                            mLogConfig
                                            captureLogMetrics
 
     -- we construct the layer
-    (loggingLayer, cleanUpLogging) <- loggingCardanoFeatureInit
+    (loggingLayer, cleanUpLogging) <- liftIO $ loggingCardanoFeatureInit
                                         ver
                                         disabled'
                                         loggingConfiguration
@@ -170,12 +172,15 @@ createLoggingFeatureCLI ver _ mLogConfig captureLogMetrics = do
 
 -- | Create logging feature for `cardano-node`
 createLoggingFeature
-  :: Text -> CardanoEnvironment -> NodeProtocolMode -> IO (LoggingLayer, CardanoFeature)
+  :: Text
+  -> CardanoEnvironment
+  -> NodeProtocolMode
+  -> ExceptT ConfigError IO (LoggingLayer, CardanoFeature)
 createLoggingFeature ver _ nodeProtocolMode = do
 
     configYamlFp <- pure $ getConfigYaml nodeProtocolMode
 
-    nc <- parseNodeConfiguration nodeProtocolMode
+    nc <- liftIO $ parseNodeConfiguration nodeProtocolMode
     let logConfigFp = if ncLoggingSwitch nc then Just $ unConfigPath configYamlFp else Nothing
 
     (disabled', loggingConfiguration) <- loggingCLIConfiguration
@@ -183,7 +188,8 @@ createLoggingFeature ver _ nodeProtocolMode = do
                                            (ncLogMetrics nc)
 
     -- we construct the layer
-    (loggingLayer, cleanUpLogging) <- loggingCardanoFeatureInit ver disabled' loggingConfiguration
+    (loggingLayer, cleanUpLogging) <- liftIO $
+        loggingCardanoFeatureInit ver disabled' loggingConfiguration
 
 
     -- we construct the cardano feature

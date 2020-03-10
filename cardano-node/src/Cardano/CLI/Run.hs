@@ -366,11 +366,12 @@ runCommand (GenerateTxs
   nc <- liftIO $ parseNodeConfigurationFP logConfigFp
 
   -- Logging layer
-  (loggingLayer, _) <- liftIO $ createLoggingFeatureCLI
-                                  (pack $ showVersion version)
-                                  NoEnvironment
-                                  (Just logConfigFp)
-                                  (ncLogMetrics nc)
+  (loggingLayer, _) <- firstExceptT (\(ConfigErrorFileNotFound fp) -> FileNotFoundError fp) $
+                           createLoggingFeatureCLI
+                           (pack $ showVersion version)
+                           NoEnvironment
+                           (Just logConfigFp)
+                           (ncLogMetrics nc)
 
   genHash <- getGenesisHash genFile
 

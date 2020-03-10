@@ -33,7 +33,7 @@ import           Cardano.Config.Protocol
                     , fromProtocol
                     )
 import           Cardano.Config.Types
-                    ( GenesisFile(..)
+                    ( GenesisFile(..), ConfigError (..)
                     , CardanoEnvironment(..), LastKnownBlockVersion(..)
                     , Protocol, SigningKeyFile(..), Update(..)
                     , ncLogMetrics, ncReqNetworkMagic, ncProtocol
@@ -55,9 +55,11 @@ data RealPBFTError =
   | GenesisBenchmarkRunnerError !TxGenError
   deriving Show
 
+-- TODO(KS): This should probably be imported from Cardano.CLI.Ops
 data CliError =
     GenesisReadError !FilePath !Genesis.GenesisDataError
   | GenerateTxsError !RealPBFTError
+  | FileNotFoundError !FilePath
   deriving Show
 
 ------------------------------------------------------------------------------------------------
@@ -83,11 +85,12 @@ runCommand (GenerateTxs logConfigFp
     nc <- liftIO $ parseNodeConfigurationFP logConfigFp
 
     -- Logging layer
-    (loggingLayer, _) <- liftIO $ createLoggingFeatureCLI
-                                    (pack $ showVersion version)
-                                    NoEnvironment
-                                    (Just logConfigFp)
-                                    (ncLogMetrics nc)
+    (loggingLayer, _) <- firstExceptT (\(ConfigErrorFileNotFound fp) -> FileNotFoundError fp) $
+                             createLoggingFeatureCLI
+                             (pack $ showVersion version)
+                             NoEnvironment
+                             (Just logConfigFp)
+                             (ncLogMetrics nc)
 
     genHash <- getGenesisHash genFile
 
