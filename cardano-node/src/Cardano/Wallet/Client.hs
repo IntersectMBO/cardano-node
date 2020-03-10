@@ -112,22 +112,23 @@ localInitiatorNetworkApplication Proxy chainSyncTracer localTxSubmissionTracer c
       (NodeToClientVersionData { networkMagic = nodeNetworkMagic (Proxy @blk) cfg })
       (DictVersion nodeToClientCodecCBORTerm) $ \_peerid ->
 
-    nodeToClientProtocols
-      (InitiatorProtocolOnly $
-         MuxPeerRaw $ \channel -> do
-           txv <- newEmptyTMVarM @_ @(GenTx blk)
-           runPeer
-             localTxSubmissionTracer
-             localTxSubmissionCodec
-             channel
-             (localTxSubmissionClientPeer
-                 (txSubmissionClient @(GenTx blk) txv)))
-      (InitiatorProtocolOnly $
-         MuxPeer
-           chainSyncTracer
-           (localChainSyncCodec @blk cfg)
-           (chainSyncClientPeer chainSyncClient))
-
+    nodeToClientProtocols $
+      NodeToClientProtocols
+        { localChainSyncProtocol =(InitiatorProtocolOnly $
+           MuxPeerRaw $ \channel -> do
+             txv <- newEmptyTMVarM @_ @(GenTx blk)
+             runPeer
+               localTxSubmissionTracer
+               localTxSubmissionCodec
+               channel
+               (localTxSubmissionClientPeer
+                   (txSubmissionClient @(GenTx blk) txv)))
+        , localTxSubmissionProtocol =(InitiatorProtocolOnly $
+           MuxPeer
+             chainSyncTracer
+             (localChainSyncCodec @blk cfg)
+             (chainSyncClientPeer chainSyncClient))
+        }
 
 -- | A 'LocalTxSubmissionClient' that submits transactions reading them from
 -- a 'TMVar'.  A real implementation should use a better synchronisation

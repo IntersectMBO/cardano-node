@@ -21,7 +21,10 @@ import           Control.Monad.Trans.Except.Extra
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.Map.Strict as Map
 import           Data.String (IsString)
+import           Data.Text.Encoding (encodeUtf8)
+import           Data.Text.Lazy.Builder (toLazyText)
 import           Data.Time (UTCTime)
+import           Formatting.Buildable
 import           Text.Printf (printf)
 
 import           System.Directory (createDirectory, doesPathExist)
@@ -72,8 +75,6 @@ mkGenesisSpec gp = do
   genesisDelegation <- withExceptT (DelegationError) $
     Genesis.mkGenesisDelegation []
 
-  seed <- lift . getSeed $ gpSeed gp
-
   withExceptT GenesisSpecError $
     ExceptT . pure $ Genesis.mkGenesisSpec
       (Genesis.GenesisAvvmBalances mempty)
@@ -81,21 +82,16 @@ mkGenesisSpec gp = do
       protocolParameters
       (gpK gp)
       (gpProtocolMagic gp)
-      (mkGenesisInitialiser True seed)
+      (mkGenesisInitialiser True)
 
   where
-    mkGenesisInitialiser :: Bool -> Integer -> Genesis.GenesisInitializer
-    mkGenesisInitialiser useHeavyDlg seed =
+    mkGenesisInitialiser :: Bool -> Genesis.GenesisInitializer
+    mkGenesisInitialiser useHeavyDlg =
       Genesis.GenesisInitializer
       (gpTestnetBalance gp)
       (gpFakeAvvmOptions gp)
       (Common.lovelacePortionToRational (gpAvvmBalanceFactor gp))
       useHeavyDlg
-      seed
-
-    getSeed :: Maybe Integer -> IO Integer
-    getSeed (Just x) = pure x
-    getSeed Nothing  = Crypto.runSecureRandom . Crypto.randomNumber $ shiftL 1 32
 
 -- | Generate a genesis, for given blockchain start time, protocol parameters,
 -- security parameter, protocol magic, testnet balance options, fake AVVM options,
@@ -135,7 +131,7 @@ dumpGenesis ptcl (NewDirectory outDir) genesisData gs = do
   liftIO $ wOut "delegate-keys" "key" (pure . serialiseDelegateKey ptcl) (gsRichSecrets gs)
   liftIO $ wOut "poor-keys" "key" (pure . serialisePoorKey ptcl) (gsPoorSecrets gs)
   liftIO $ wOut "delegation-cert" "json" (pure . serialiseDelegationCert ptcl) dlgCerts
-  liftIO $ wOut "avvm-seed" "seed" (pure . (Right <$> LB.fromStrict)) (gsFakeAvvmSeeds gs)
+  liftIO $ wOut "avvm-secrets" "secret" (pure . printFakeAvvmSecrets) (gsFakeAvvmSecrets gs)
  where
   dlgCertMap :: Map Common.KeyHash Certificate
   dlgCertMap = Genesis.unGenesisDelegation $ Genesis.gdHeavyDelegation genesisData
@@ -147,6 +143,10 @@ dumpGenesis ptcl (NewDirectory outDir) genesisData gs = do
       Just x  -> right x
   genesisJSONFile :: FilePath
   genesisJSONFile = outDir <> "/genesis.json"
+
+  printFakeAvvmSecrets :: Crypto.RedeemSigningKey -> Either CliError LB.ByteString
+  printFakeAvvmSecrets rskey = Right . LB.fromStrict . encodeUtf8 . toStrict . toLazyText $ build rskey
+
   -- Compare a given 'SigningKey' with a 'Certificate' 'VerificationKey'
   isCertForSK :: SigningKey -> Certificate -> Bool
   isCertForSK sk cert = delegateVK cert == Crypto.toVerification sk

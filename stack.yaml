@@ -1,4 +1,4 @@
-resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/2440fd0dc3d5ba109c4f16a87d98dc80a66d1b8e/snapshot.yaml
+resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/3893f21db1665e7bab9e8c6504c547fc7c28f98c/snapshot.yaml
 compiler: ghc-8.6.5
 
 packages:
@@ -56,7 +56,7 @@ extra-deps:
 
     # Cardano-ledger dependencies
   - git: https://github.com/input-output-hk/cardano-ledger
-    commit: 86f0cb4705f46307e4c89e7ef4c90142882cce54
+    commit: b39e54d109c9f66883418cd7aaf989a7ca565daf
     subdirs:
       - cardano-ledger
       - cardano-ledger/test
@@ -64,7 +64,7 @@ extra-deps:
       - crypto/test
 
   - git: https://github.com/input-output-hk/cardano-ledger-specs
-    commit: 318f5a1594a23aedadb3977ddd5a32230c8be4fe
+    commit: 74086601d27648f35f59136c51bef5086cf52292
     subdirs:
       # small-steps
       - byron/semantics/executable-spec
@@ -74,13 +74,13 @@ extra-deps:
       - byron/chain/executable-spec
 
   - git: https://github.com/input-output-hk/cardano-prelude
-    commit: 2440fd0dc3d5ba109c4f16a87d98dc80a66d1b8e
+    commit: 3893f21db1665e7bab9e8c6504c547fc7c28f98c
     subdirs:
       - .
       - test
 
   - git: https://github.com/input-output-hk/cardano-base
-    commit: a7b403c1762a6a122a691df816c26563b7e547f8
+    commit: f869bee9b08ba1044b1476737c9d65083e1c6c7f
     subdirs:
       - binary
       - binary/test
@@ -99,7 +99,7 @@ extra-deps:
 
     # iohk-monitoring-framework currently not pinned to a release
   - git: https://github.com/input-output-hk/iohk-monitoring-framework
-    commit: 43a912b94498dcdeaaad71c37a6b58dceefaf1ca
+    commit: 06a20515f1b48d2c3ddc7e4485dd2a54341be41f
     subdirs:
       - contra-tracer
       - iohk-monitoring
@@ -121,7 +121,7 @@ extra-deps:
     #Ouroboros-network dependencies
 
   - git: https://github.com/input-output-hk/ouroboros-network
-    commit: 8a19e9cd6e6f8a02147cd96c4f633ac903d833b1
+    commit: 6e0651d812ea02718e2896bef30c931b1bb1e0b9
     subdirs:
         - io-sim
         - io-sim-classes

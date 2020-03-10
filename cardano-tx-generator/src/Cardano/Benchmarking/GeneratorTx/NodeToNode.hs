@@ -115,7 +115,7 @@ instance ToObject (SendRecvTxSubmission ByronBlock) where
           TS.MsgReplyTxs _                         -> mkObject ["kind" .= String "TxSubmissionRecvReplyTxs"]
           TS.MsgDone                               -> emptyObject -- No useful information.
 
-  toObject MaximalVerbosity t = 
+  toObject MaximalVerbosity t =
     case t of
       TraceSendMsg (AnyMessage msg) ->
         case msg of
@@ -224,30 +224,32 @@ benchmarkConnectTxSubmit iocp trs cfg localAddr remoteAddr myTxSubClient = do
   myCodecs  = protocolCodecs cfg (mostRecentNetworkProtocolVersion (Proxy @blk))
 
   peerMultiplex :: Versions NtN.NodeToNodeVersion NtN.DictVersion
-                            (NtN.ConnectionId SockAddr ->
-                               OuroborosApplication InitiatorApp ByteString m () Void)
+                          (NtN.ConnectionId SockAddr ->
+                              OuroborosApplication InitiatorApp ByteString m () Void)
   peerMultiplex =
     simpleSingletonVersions
       NtN.NodeToNodeV_1
       (NtN.NodeToNodeVersionData { NtN.networkMagic = nodeNetworkMagic (Proxy @blk) cfg})
       (NtN.DictVersion NtN.nodeToNodeCodecCBORTerm) $ \_ ->
-      NtN.nodeToNodeProtocols
-          (InitiatorProtocolOnly $
-             MuxPeer
-               nullTracer
-               (pcChainSyncCodec myCodecs)
-               (chainSyncClientPeer chainSyncClientNull))
-          (InitiatorProtocolOnly $
-             MuxPeer
-               nullTracer
-               (pcBlockFetchCodec myCodecs)
-               (blockFetchClientPeer blockFetchClientNull))
-          (InitiatorProtocolOnly $
-              MuxPeer
-                (trSendRecvTxSubmission trs)
-                (pcTxSubmissionCodec myCodecs)
-                (txSubmissionClientPeer myTxSubClient))
+      NtN.nodeToNodeProtocols $
+        NtN.NodeToNodeProtocols
+          { NtN.chainSyncProtocol = InitiatorProtocolOnly $
+                                      MuxPeer
+                                        nullTracer
+                                        (pcChainSyncCodec myCodecs)
+                                        (chainSyncClientPeer chainSyncClientNull)
+          , NtN.blockFetchProtocol = InitiatorProtocolOnly $
+                                       MuxPeer
+                                         nullTracer
+                                         (pcBlockFetchCodec myCodecs)
+                                         (blockFetchClientPeer blockFetchClientNull)
+          , NtN.txSubmissionProtocol = InitiatorProtocolOnly $
+                                         MuxPeer
+                                           (trSendRecvTxSubmission trs)
+                                           (pcTxSubmissionCodec myCodecs)
+                                           (txSubmissionClientPeer myTxSubClient)
 
+          }
 -- the null block fetch client
 blockFetchClientNull
   :: forall block m a.  MonadTimer m

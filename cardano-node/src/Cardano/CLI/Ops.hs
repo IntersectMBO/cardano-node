@@ -82,9 +82,10 @@ import           Ouroboros.Network.Mux
                    (AppType(InitiatorApp), OuroborosApplication(..),
                     MuxPeer(..), RunMiniProtocol(..))
 import           Ouroboros.Network.NodeToClient
-                   (AssociateWithIOCP, NetworkConnectTracers(..), nodeToClientProtocols
-                   , NodeToClientVersionData(..), NodeToClientVersion(NodeToClientV_1), connectTo
-                   , localTxSubmissionClientNull, nodeToClientCodecCBORTerm )
+                   (AssociateWithIOCP, NetworkConnectTracers(..), NodeToClientProtocols(..),
+                    nodeToClientProtocols, NodeToClientVersionData(..),
+                    NodeToClientVersion(NodeToClientV_1), connectTo,
+                    localTxSubmissionClientNull, nodeToClientCodecCBORTerm)
 import           Ouroboros.Network.Protocol.ChainSync.Client
                    (ChainSyncClient(..), ClientStIdle(..), ClientStNext(..)
                    , chainSyncClientPeer, recvMsgRollForward)
@@ -421,17 +422,19 @@ localInitiatorNetworkApplication proxy cfg =
       (NodeToClientVersionData { networkMagic = nodeNetworkMagic proxy cfg })
       (DictVersion nodeToClientCodecCBORTerm) $ \_peerid ->
 
-      nodeToClientProtocols
-        (InitiatorProtocolOnly $
-           MuxPeer
-             nullTracer
-             localTxSubmissionCodec
-             (localTxSubmissionClientPeer localTxSubmissionClientNull))
-        (InitiatorProtocolOnly $
-           MuxPeer
-             nullTracer
-             localChainSyncCodec
-             (chainSyncClientPeer chainSyncClient))
+      nodeToClientProtocols $ NodeToClientProtocols
+      { localChainSyncProtocol = InitiatorProtocolOnly $
+                                   MuxPeer
+                                     nullTracer
+                                     localTxSubmissionCodec
+                                     (localTxSubmissionClientPeer localTxSubmissionClientNull)
+      , localTxSubmissionProtocol = InitiatorProtocolOnly $
+                                      MuxPeer
+                                        nullTracer
+                                        localChainSyncCodec
+                                        (chainSyncClientPeer chainSyncClient)
+      }
+
  where
   localChainSyncCodec :: Codec (ChainSync (Serialised blk) (Tip blk)) DeserialiseFailure m LB.ByteString
   localChainSyncCodec = pcLocalChainSyncCodec . protocolCodecs cfg $ mostRecentNetworkProtocolVersion proxy

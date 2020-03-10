@@ -385,20 +385,21 @@ localInitiatorNetworkApplication sockPath chainsVar securityParam maxBlockNo cha
       (NodeToClientVersionData (nodeNetworkMagic (Proxy @blk) cfg))
       (DictVersion nodeToClientCodecCBORTerm) $ \_peerid ->
 
-    nodeToClientProtocols
-      (InitiatorProtocolOnly $
-         MuxPeer
-           localTxSubmissionTracer
-           localTxSubmissionCodec
-           (localTxSubmissionClientPeer localTxSubmissionClientNull))
-      (InitiatorProtocolOnly $
-         MuxPeer
-           chainSyncTracer
-           (localChainSyncCodec cfg)
-           (chainSyncClientPeer $
-              chainSyncClient chairmanTracer sockPath chainsVar
-                              securityParam maxBlockNo))
-
+    nodeToClientProtocols $
+      NodeToClientProtocols
+        { localChainSyncProtocol = InitiatorProtocolOnly $
+                                     MuxPeer
+                                       localTxSubmissionTracer
+                                       localTxSubmissionCodec
+                                       (localTxSubmissionClientPeer localTxSubmissionClientNull)
+        , localTxSubmissionProtocol = InitiatorProtocolOnly $
+                                        MuxPeer
+                                          chainSyncTracer
+                                          (localChainSyncCodec cfg)
+                                          (chainSyncClientPeer $
+                                             chainSyncClient chairmanTracer sockPath chainsVar
+                                                             securityParam maxBlockNo)
+        }
 
 --
 -- Codecs
