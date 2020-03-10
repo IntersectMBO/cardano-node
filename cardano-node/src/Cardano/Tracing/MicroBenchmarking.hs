@@ -180,6 +180,7 @@ instance (Monad m, MonadTime m) => Outcome m (TraceForgeEvent blk (GenTx blk)) w
     classifyObservable = pure . \case
       TraceNodeIsLeader {}    -> OutcomeStarts
       TraceForgedBlock  {}    -> OutcomeEnds
+      _                       -> OutcomeOther
 
     --captureObservableValue :: a -> m (IntermediateValue a)
     captureObservableValue (TraceNodeIsLeader slotNo) = do
@@ -189,6 +190,12 @@ instance (Monad m, MonadTime m) => Outcome m (TraceForgeEvent blk (GenTx blk)) w
     captureObservableValue (TraceForgedBlock slotNo _ _blk mempoolSize) = do
         time <- getMonotonicTime
         pure (slotNo, time, mempoolSize)
+
+    -- will never be called, just to make the pattern match complete
+    captureObservableValue _ = do
+        time <- getMonotonicTime
+        pure (0, time, mempty)
+
 
     --computeOutcomeMetric   :: a -> IntermediateValue a -> IntermediateValue a -> m (OutcomeMetric a)
     computeOutcomeMetric _ (startSlot, absTimeStart, _) (stopSlot, absTimeStop, mempoolSize)
