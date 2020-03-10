@@ -13,7 +13,7 @@ import           Control.Monad.Class.MonadSTM (TMVar, MonadSTM, atomically,
                                                newEmptyTMVarM, putTMVar, takeTMVar)
 import           Data.List.NonEmpty (fromList)
 
-import           Cardano.CLI.Benchmarking.Tx.TxSubmission (RPCTxSubmission(..))
+import           Cardano.Benchmarking.GeneratorTx.Submission (RPCTxSubmission(..))
 import           Ouroboros.Consensus.Mempool.API (GenTxId, GenTx)
 import           Ouroboros.Network.Protocol.TxSubmission.Client (ClientStIdle(..),
                                                                  ClientStTxs(..),

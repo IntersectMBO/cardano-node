@@ -11,7 +11,7 @@
 
 {-# OPTIONS_GHC -fno-warn-orphans -Wno-unticked-promoted-constructors #-}
 
-module Cardano.CLI.Benchmarking.Tx.NodeToNode
+module Cardano.Benchmarking.GeneratorTx.NodeToNode
   ( BenchmarkTxSubmitTracers (..)
   , SendRecvConnect
   , SendRecvTxSubmission

@@ -1,38 +1,54 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 
+{-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 {-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Cardano.CLI.Benchmarking.Tx.TxSubmission
+module Cardano.Benchmarking.GeneratorTx.Submission
   ( ROEnv(..)
   , RPCTxSubmission(..)
   , TraceBenchTxSubmit(..)
+  , TraceLowLevelSubmit (..)
   , bulkSubmission
+  , submitTx
+  , txSubmissionClient
   ) where
 
-import           Prelude
-import           Cardano.Prelude (MonadIO, Word16, Seq, StateT, Text,
-                                  evalStateT, gets, isJust, lift, modify,
-                                  toList, unless, when)
+-- import           Prelude
+import           Prelude (error, id)
+-- import           Cardano.Prelude
+-- import           Cardano.Prelude hiding (atomically)
+import           Cardano.Prelude hiding (ByteString, atomically, option, retry, threadDelay)
 
 import           Control.Exception (assert)
+import           Control.Monad.Class.MonadST (MonadST)
 import           Control.Monad.Class.MonadSTM (MonadSTM, TMVar, TVar,
-                                               atomically, putTMVar, readTVar,
+                                               atomically, newEmptyTMVarM, putTMVar, readTVar,
                                                retry, takeTMVar, tryTakeTMVar)
 import           Control.Monad.Class.MonadTime (MonadTime(..), addTime, diffTime, Time)
 import           Control.Monad.Class.MonadTimer (MonadTimer, threadDelay)
-import           Data.Aeson (ToJSON (..), (.=), Value (..))
+import           Control.Monad.Class.MonadThrow (MonadThrow)
+
+import           Data.Aeson (ToJSON (..), (.=))
+import qualified Data.Aeson as A
+import           Data.ByteString.Lazy (ByteString)
+import           Data.List.NonEmpty (fromList)
 import qualified Data.Sequence as Seq
 import qualified Data.Set as Set
+import           Data.String (String)
 import qualified Data.Text as T
 import           Data.Time.Clock (DiffTime)
+import           Data.Void (Void)
 
 import           Cardano.BM.Data.Tracer (DefinePrivacyAnnotation (..),
                      DefineSeverity (..), ToObject (..), TracingFormatting (..),
@@ -43,6 +59,44 @@ import           Control.Tracer (Tracer, traceWith)
 import           Ouroboros.Consensus.Byron.Ledger (ByronBlock (..))
 import qualified Ouroboros.Consensus.Mempool as Mempool
 import qualified Ouroboros.Network.Protocol.TxSubmission.Type as TxSubmit
+
+-----------------
+
+import           Ouroboros.Consensus.Mempool (ApplyTxErr, GenTx)
+import           Ouroboros.Consensus.Node.Run (RunNode)
+import qualified Ouroboros.Consensus.Node.Run as Node
+import           Ouroboros.Consensus.Config (TopLevelConfig)
+
+import           Ouroboros.Network.Codec (Codec, DeserialiseFailure)
+import           Ouroboros.Network.Mux
+                   ( AppType(..), OuroborosApplication(..),
+                     MuxPeer(..), RunMiniProtocol(..) )
+import           Ouroboros.Network.Block (Point)
+import qualified Ouroboros.Network.Block as Block
+import           Ouroboros.Network.Driver (runPeer)
+import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Type as LocalTxSub
+import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Client as LocalTxSub
+import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Codec as LocalTxSub
+import           Ouroboros.Network.Protocol.ChainSync.Type (ChainSync)
+import           Ouroboros.Network.Protocol.ChainSync.Client (chainSyncClientPeer)
+import           Ouroboros.Network.Protocol.ChainSync.Codec (codecChainSync)
+import           Ouroboros.Network.Protocol.Handshake.Version ( Versions
+                                                              , simpleSingletonVersions)
+import           Ouroboros.Network.Protocol.TxSubmission.Client (ClientStIdle(..),
+                                                                 ClientStTxs(..),
+                                                                 ClientStTxIds(..),
+                                                                 TxSubmissionClient(..))
+import           Ouroboros.Network.Protocol.TxSubmission.Type (BlockingReplyList(..),
+                                                               TokBlockingStyle(..))
+import           Ouroboros.Network.NodeToClient ( AssociateWithIOCP
+                                                , NetworkConnectTracers (..))
+import qualified Ouroboros.Network.NodeToClient as NodeToClient
+import           Ouroboros.Network.Snocket (socketSnocket)
+
+import           Cardano.Config.Types (SocketPath(..))
+
+import           System.Directory (createDirectoryIfMissing)
+import           System.FilePath (takeDirectory)
 
 -- | Bulk submisson of transactions.
 --
@@ -58,29 +112,28 @@ import qualified Ouroboros.Network.Protocol.TxSubmission.Type as TxSubmit
 --   `TxSubmit.TxSubmission` and its associated instances
 --   (e.g. `Message`).
 bulkSubmission
-  :: forall m blk txid tx .
-     ( MonadIO m, MonadSTM m, MonadTime m, MonadTimer m
-     , Ord txid
+  :: forall blk txid tx .
+     ( Ord txid
      , Mempool.ApplyTx blk
      , Mempool.HasTxId tx
      , tx ~ Mempool.GenTx blk, txid ~ Mempool.GenTxId blk)
   => (ROEnv txid tx -> ROEnv txid tx)
   -- changes to default settings
-  -> Tracer m (TraceBenchTxSubmit txid)
-  -> TVar m Bool
+  -> Tracer IO (TraceBenchTxSubmit txid)
+  -> TVar IO Bool
   -- Set to True to indicate subsystem should terminate
-  -> TMVar m [tx]
+  -> TMVar IO [tx]
   -- non-empty list of transactions to be forwarded,
   -- empty list indicates terminating
-  -> TMVar m (RPCTxSubmission m txid tx)
+  -> TMVar IO (RPCTxSubmission IO txid tx)
   -- the RPC variable shared with
   -- `TxSubmit.TxSubmission` local peer
-  -> m ()
+  -> IO ()
 bulkSubmission updEnv tr termVar txIn rpcIn = do
 --    liftIO $ putStrLn "bulkSubmission__0"
   defaultRWEnv >>= evalStateT (go $ updEnv defaultROEnv)
  where
-  go :: ROEnv txid tx -> StateT (RWEnv m txid tx) m ()
+  go :: ROEnv txid tx -> StateT (RWEnv IO txid tx) IO ()
   go env = do
     -- lift . traceWith tr . TraceBenchTxSubDebug $ "go, env: " ++ show env
     shutdown <- gets (\RWEnv{terminating, inFlight, notYetSent} ->
@@ -106,7 +159,7 @@ bulkSubmission updEnv tr termVar txIn rpcIn = do
       -- lift . traceWith tr . TraceBenchTxSubDebug $ "go, process next interaction"
       go1 env
 
-  go1 :: ROEnv txid tx -> StateT (RWEnv m txid tx) m ()
+  go1 :: ROEnv txid tx -> StateT (RWEnv IO txid tx) IO ()
   go1 env = do
     -- lift . traceWith tr . TraceBenchTxSubDebug $ "go1, env: " ++ show env
     terminating' <- gets terminating
@@ -171,7 +224,7 @@ bulkSubmission updEnv tr termVar txIn rpcIn = do
   getTxSize :: tx -> TxSubmit.TxSizeInBytes
   getTxSize = Mempool.txSize
 
-  processOp :: ROEnv txid tx -> StateT (RWEnv m txid tx) m ()
+  processOp :: ROEnv txid tx -> StateT (RWEnv IO txid tx) IO ()
   processOp env = do
     -- lift . traceWith tr . TraceBenchTxSubDebug $ "processOp, env: " ++ show env
     (window, op) <- (maybe (error "internal error")) id <$> gets availableOp
@@ -189,7 +242,7 @@ bulkSubmission updEnv tr termVar txIn rpcIn = do
                     , notYetSent  = store })
     -- lift . traceWith tr . TraceBenchTxSubDebug $ "processOp, done."
 
-  processRPC :: ROEnv txid tx -> RPCTxSubmission m txid tx -> StateT (RWEnv m txid tx) m ()
+  processRPC :: ROEnv txid tx -> RPCTxSubmission IO txid tx -> StateT (RWEnv IO txid tx) IO ()
   processRPC env =
     \case
       RPCRequestTxs  txids resp -> do
@@ -246,7 +299,7 @@ bulkSubmission updEnv tr termVar txIn rpcIn = do
         -- deal with acked txs
         processAcks acked
 
-  checkRateLimiter :: StateT (RWEnv m txid tx) m ()
+  checkRateLimiter :: StateT (RWEnv IO txid tx) IO ()
   checkRateLimiter = do
     waitUntil <- gets proceedAfter
     sleepFor <- (\x -> waitUntil `diffTime` x) <$> lift getMonotonicTime
@@ -257,7 +310,7 @@ bulkSubmission updEnv tr termVar txIn rpcIn = do
   setRateLimiter
     :: ROEnv txid tx
     -> [TxSubmit.TxSizeInBytes]
-    -> StateT (RWEnv m txid tx) m ()
+    -> StateT (RWEnv IO txid tx) IO ()
   setRateLimiter env tls = do
     let txLimit   = (* fromIntegral (length tls)) <$> txNumServiceTime  env
         sizeLimit = (* fromIntegral (sum    tls)) <$> txSizeServiceTime env
@@ -266,13 +319,13 @@ bulkSubmission updEnv tr termVar txIn rpcIn = do
       waitUntil <- (addTime d) <$> lift getMonotonicTime
       modify (\x -> x { proceedAfter = waitUntil })
 
-  processAcks :: Word16 -> StateT (RWEnv m txid tx) m ()
+  processAcks :: Word16 -> StateT (RWEnv IO txid tx) IO ()
   processAcks acked  =  when (acked > 0) $ do
     (done, left) <- (Seq.splitAt (fromIntegral acked)) <$> gets inFlight
     lift . traceWith tr $ TraceBenchTxSubServAck [a | (a,_,_) <- toList done]
     modify (\x -> x {inFlight = left})
 
-  noteIdle :: StateT (RWEnv m txid tx) m ()
+  noteIdle :: StateT (RWEnv IO txid tx) IO ()
   noteIdle = do
 --      liftIO $ putStrLn $ "noteIdle"
     wasBusy <- (== Busy) <$> gets activityState
@@ -281,7 +334,7 @@ bulkSubmission updEnv tr termVar txIn rpcIn = do
 --        liftIO $ putStrLn $ "noteIdle, Idle!"
       modify (\x -> x { activityState = Idle})
 
-  noteBusy :: StateT (RWEnv m txid tx) m ()
+  noteBusy :: StateT (RWEnv IO txid tx) IO ()
   noteBusy = do -- just can't get those memory write cycles out of my head
 --      liftIO $ putStrLn $ "noteBusy"
     wasIdle <- (== Idle) <$> gets activityState
@@ -368,53 +421,53 @@ data TraceBenchTxSubmit txid
   deriving (Show)
 
 instance ToJSON (Mempool.GenTxId ByronBlock) where
-  toJSON txId = String (T.pack $ show txId)
+  toJSON txId = A.String (T.pack $ show txId)
 
 instance ToObject (TraceBenchTxSubmit (Mempool.GenTxId ByronBlock)) where
   toObject MinimalVerbosity _ = emptyObject -- do not log
   toObject NormalVerbosity t =
     case t of
-      TraceBenchTxSubRecv _      -> mkObject ["kind" .= String "TraceBenchTxSubRecv"]
-      TraceBenchTxSubStart _     -> mkObject ["kind" .= String "TraceBenchTxSubStart"]
-      TraceBenchTxSubServReq _   -> mkObject ["kind" .= String "TraceBenchTxSubServReq"]
-      TraceBenchTxSubServAck _   -> mkObject ["kind" .= String "TraceBenchTxSubServAck"]
-      TraceBenchTxSubIdle        -> mkObject ["kind" .= String "TraceBenchTxSubIdle"]
-      TraceBenchTxSubRateLimit _ -> mkObject ["kind" .= String "TraceBenchTxSubRateLimit"]
-      TraceBenchTxSubDebug _     -> mkObject ["kind" .= String "TraceBenchTxSubDebug"]
+      TraceBenchTxSubRecv _      -> mkObject ["kind" .= A.String "TraceBenchTxSubRecv"]
+      TraceBenchTxSubStart _     -> mkObject ["kind" .= A.String "TraceBenchTxSubStart"]
+      TraceBenchTxSubServReq _   -> mkObject ["kind" .= A.String "TraceBenchTxSubServReq"]
+      TraceBenchTxSubServAck _   -> mkObject ["kind" .= A.String "TraceBenchTxSubServAck"]
+      TraceBenchTxSubIdle        -> mkObject ["kind" .= A.String "TraceBenchTxSubIdle"]
+      TraceBenchTxSubRateLimit _ -> mkObject ["kind" .= A.String "TraceBenchTxSubRateLimit"]
+      TraceBenchTxSubDebug _     -> mkObject ["kind" .= A.String "TraceBenchTxSubDebug"]
   toObject MaximalVerbosity t =
     case t of
       TraceBenchTxSubRecv txIds ->
-        mkObject [ "kind"  .= String "TraceBenchTxSubRecv"
+        mkObject [ "kind"  .= A.String "TraceBenchTxSubRecv"
                  , "txIds" .= toJSON txIds
                  ]
       TraceBenchTxSubStart txIds ->
-        mkObject [ "kind"  .= String "TraceBenchTxSubStart"
+        mkObject [ "kind"  .= A.String "TraceBenchTxSubStart"
                  , "txIds" .= toJSON txIds
                  ]
       TraceBenchTxSubServReq txIds ->
-        mkObject [ "kind"  .= String "TraceBenchTxSubServReq"
+        mkObject [ "kind"  .= A.String "TraceBenchTxSubServReq"
                  , "txIds" .= toJSON txIds
                  ]
       TraceBenchTxSubServAck txIds ->
-        mkObject [ "kind"  .= String "TraceBenchTxSubServAck"
+        mkObject [ "kind"  .= A.String "TraceBenchTxSubServAck"
                  , "txIds" .= toJSON txIds
                  ]
       TraceBenchTxSubIdle ->
-        mkObject [ "kind" .= String "TraceBenchTxSubIdle"
+        mkObject [ "kind" .= A.String "TraceBenchTxSubIdle"
                  ]
       TraceBenchTxSubRateLimit limit ->
-        mkObject [ "kind"  .= String "TraceBenchTxSubRateLimit"
+        mkObject [ "kind"  .= A.String "TraceBenchTxSubRateLimit"
                  , "limit" .= toJSON limit
                  ]
       TraceBenchTxSubDebug s ->
-        mkObject [ "kind" .= String "TraceBenchTxSubDebug"
-                 , "msg"  .= String (T.pack s)
+        mkObject [ "kind" .= A.String "TraceBenchTxSubDebug"
+                 , "msg"  .= A.String (T.pack s)
                  ]
 
 instance ToObject (Mempool.GenTxId ByronBlock) where
   toObject MinimalVerbosity _    = emptyObject -- do not log
-  toObject NormalVerbosity _     = mkObject [ "kind" .= String "GenTxId"]
-  toObject MaximalVerbosity txId = mkObject [ "kind" .= String "GenTxId"
+  toObject NormalVerbosity _     = mkObject [ "kind" .= A.String "GenTxId"]
+  toObject MaximalVerbosity txId = mkObject [ "kind" .= A.String "GenTxId"
                                             , "txId" .= toJSON txId
                                             ]
 
@@ -434,3 +487,185 @@ instance Transformable Text IO (TraceBenchTxSubmit (Mempool.GenTxId ByronBlock))
   -- transform to JSON Object
   trTransformer StructuredLogging verb tr = trStructured verb tr
   trTransformer _ _verb _tr = nullTracer
+
+-- | Low-tevel tracer
+data TraceLowLevelSubmit
+  = TraceLowLevelSubmitting
+  -- ^ Submitting transaction.
+  | TraceLowLevelAccepted
+  -- ^ The transaction has been accepted.
+  | TraceLowLevelRejected String
+  -- ^ The transaction has been rejected, with corresponding error message.
+  deriving (Show)
+
+instance ToObject TraceLowLevelSubmit where
+  toObject MinimalVerbosity _ = emptyObject -- do not log
+  toObject NormalVerbosity t =
+    case t of
+      TraceLowLevelSubmitting -> mkObject ["kind" .= A.String "TraceLowLevelSubmitting"]
+      TraceLowLevelAccepted   -> mkObject ["kind" .= A.String "TraceLowLevelAccepted"]
+      TraceLowLevelRejected _ -> mkObject ["kind" .= A.String "TraceLowLevelRejected"]
+  toObject MaximalVerbosity t =
+    case t of
+      TraceLowLevelSubmitting ->
+        mkObject [ "kind" .= A.String "TraceLowLevelSubmitting"
+                 ]
+      TraceLowLevelAccepted ->
+        mkObject [ "kind" .= A.String "TraceLowLevelAccepted"
+                 ]
+      TraceLowLevelRejected errMsg ->
+        mkObject [ "kind"   .= A.String "TraceLowLevelRejected"
+                 , "errMsg" .= A.String (T.pack errMsg)
+                 ]
+
+instance DefineSeverity TraceLowLevelSubmit
+
+instance DefinePrivacyAnnotation TraceLowLevelSubmit
+
+instance (MonadIO m) => Transformable Text m TraceLowLevelSubmit where
+  -- transform to JSON Object
+  trTransformer StructuredLogging verb tr = trStructured verb tr
+  trTransformer _ _verb _tr = nullTracer
+
+{-------------------------------------------------------------------------------
+  Main logic
+-------------------------------------------------------------------------------}
+
+submitTx :: ( RunNode blk
+            , Show (ApplyTxErr blk)
+            )
+         => AssociateWithIOCP
+         -> SocketPath
+         -> TopLevelConfig blk
+         -> GenTx blk
+         -> Tracer IO TraceLowLevelSubmit
+         -> IO ()
+submitTx iocp targetSocketFp cfg tx tracer = do
+    targetSocketFp' <- localSocketPath targetSocketFp
+    NodeToClient.connectTo
+      (socketSnocket iocp)
+      NetworkConnectTracers {
+          nctMuxTracer       = nullTracer,
+          nctHandshakeTracer = nullTracer
+        }
+      (localInitiatorNetworkApplication tracer cfg tx)
+      targetSocketFp'
+
+-- | Provide an filepath intended for a socket situated in 'socketDir'.
+-- When 'mkdir' is 'MkdirIfMissing', the directory is created.
+localSocketPath :: SocketPath -> IO FilePath
+localSocketPath (SocketFile fp) = do
+  createDirectoryIfMissing True $ takeDirectory fp
+  return fp
+
+localInitiatorNetworkApplication
+  :: forall blk m peer.
+     ( RunNode blk
+     , MonadST m
+     , MonadThrow m
+     , MonadTimer m
+     , Show (ApplyTxErr blk)
+     )
+  => Tracer m TraceLowLevelSubmit
+  -> TopLevelConfig blk
+  -> GenTx blk
+  -> Versions NodeToClient.NodeToClientVersion NodeToClient.DictVersion
+              (peer -> OuroborosApplication InitiatorApp ByteString m () Void)
+localInitiatorNetworkApplication tracer cfg tx =
+    simpleSingletonVersions
+      NodeToClient.NodeToClientV_1
+      (NodeToClient.NodeToClientVersionData
+        { NodeToClient.networkMagic = Node.nodeNetworkMagic (Proxy @blk) cfg })
+      (NodeToClient.DictVersion NodeToClient.nodeToClientCodecCBORTerm) $ \_peerid ->
+
+    NodeToClient.nodeToClientProtocols
+      (InitiatorProtocolOnly $
+         MuxPeer
+           nullTracer
+           (localChainSyncCodec @blk cfg)
+           (chainSyncClientPeer NodeToClient.chainSyncClientNull))
+      (InitiatorProtocolOnly $
+         MuxPeerRaw $ \channel -> do
+            traceWith tracer TraceLowLevelSubmitting
+            result <- runPeer
+                        nullTracer -- (contramap show tracer)
+                        localTxSubmissionCodec
+                        channel
+                        (LocalTxSub.localTxSubmissionClientPeer
+                           (txSubmissionClientSingle tx))
+            case result of
+              Nothing  -> traceWith tracer TraceLowLevelAccepted
+              Just msg -> traceWith tracer (TraceLowLevelRejected $ show msg))
+
+-- | A 'LocalTxSubmissionClient' that submits exactly one transaction, and then
+-- disconnects, returning the confirmation or rejection.
+--
+txSubmissionClientSingle
+  :: forall tx reject m.
+     Applicative m
+  => tx
+  -> LocalTxSub.LocalTxSubmissionClient tx reject m (Maybe reject)
+txSubmissionClientSingle tx = LocalTxSub.LocalTxSubmissionClient $ do
+    pure $ LocalTxSub.SendMsgSubmitTx tx $ \mreject ->
+      pure (LocalTxSub.SendMsgDone mreject)
+
+localTxSubmissionCodec
+  :: forall m blk . (RunNode blk, MonadST m)
+  => Codec (LocalTxSub.LocalTxSubmission (GenTx blk) (ApplyTxErr blk))
+           DeserialiseFailure m ByteString
+localTxSubmissionCodec =
+  LocalTxSub.codecLocalTxSubmission
+    Node.nodeEncodeGenTx
+    Node.nodeDecodeGenTx
+    (Node.nodeEncodeApplyTxError (Proxy @blk))
+    (Node.nodeDecodeApplyTxError (Proxy @blk))
+
+localChainSyncCodec
+  :: forall blk m. (RunNode blk, MonadST m)
+  => TopLevelConfig blk
+  -> Codec (ChainSync blk (Point blk))
+           DeserialiseFailure m ByteString
+localChainSyncCodec cfg =
+    codecChainSync
+      (Block.wrapCBORinCBOR   (Node.nodeEncodeBlock cfg))
+      (Block.unwrapCBORinCBOR (Node.nodeDecodeBlock cfg))
+      (Block.encodePoint (Node.nodeEncodeHeaderHash (Proxy @blk)))
+      (Block.decodePoint (Node.nodeDecodeHeaderHash (Proxy @blk)))
+      (Block.encodePoint (Node.nodeEncodeHeaderHash (Proxy @blk)))
+      (Block.decodePoint (Node.nodeDecodeHeaderHash (Proxy @blk)))
+
+txSubmissionClient
+  :: forall m block txid tx .
+     ( MonadSTM m
+     , txid ~ Mempool.GenTxId block
+     , tx ~ GenTx block)
+  => TMVar m (RPCTxSubmission m txid tx)
+  -> TxSubmissionClient txid tx m ()
+txSubmissionClient tmvReq =
+  TxSubmissionClient $ pure client
+ where
+  client = ClientStIdle
+    { recvMsgRequestTxIds = \blocking acked window ->
+        case blocking of
+          TokBlocking -> do -- prompt reply not required
+            resp' <- newEmptyTMVarM
+            atomically . putTMVar tmvReq $
+              RPCRequestTxIds (acked, window) resp'
+            -- might be some delay at this point
+            r <- atomically $ takeTMVar resp'
+            pure $
+              case r of
+                Nothing  -> SendMsgDone ()
+                Just txs -> SendMsgReplyTxIds (BlockingReply $ fromList txs) client
+          TokNonBlocking -> do -- prompt reply required
+            resp' <- newEmptyTMVarM
+            atomically . putTMVar tmvReq $
+              RPCRequestTxIdsPromptly (acked, window) resp'
+            txs <- atomically $ takeTMVar resp'
+            pure $ SendMsgReplyTxIds (NonBlockingReply txs) client
+    , recvMsgRequestTxs = \txids -> do
+        resp' <- newEmptyTMVarM
+        atomically $ putTMVar tmvReq $ RPCRequestTxs txids resp'
+        r <- atomically $ takeTMVar resp'
+        pure $ SendMsgReplyTxs r client
+    }
