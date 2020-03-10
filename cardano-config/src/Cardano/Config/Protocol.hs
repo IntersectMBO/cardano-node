@@ -26,10 +26,11 @@ import           Control.Monad.Trans.Except.Extra (bimapExceptT, firstExceptT,
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.Text as T
 
+import           Cardano.Binary (Raw)
 import           Cardano.BM.Tracing (ToObject)
 import qualified Cardano.Chain.Genesis as Genesis
 import qualified Cardano.Chain.Update as Update
-import           Cardano.Crypto (RequiresNetworkMagic, decodeHash)
+import           Cardano.Crypto (Hash, RequiresNetworkMagic, decodeHash)
 import qualified Cardano.Crypto.Signing as Signing
 import           Cardano.Tracing.ToObjectOrphans ()
 
@@ -123,6 +124,7 @@ data ProtocolInstantiationError =
   | CanonicalDecodeFailure FilePath Text
   | DelegationCertificateFilepathNotSpecified
   | GenesisConfigurationError Genesis.ConfigurationError
+  | GenesisHashDecodeFailure Text
   | MissingCoreNodeId
   | MissingNumCoreNodes
   | PbftError PBftLeaderCredentialsError
@@ -171,10 +173,12 @@ fromProtocol _ nId mNumCoreNodes _ _ _ _ _ _ MockPBFT =
       (singletonSlotLengths mockSlotLength)
       cid
 fromProtocol gHash _ _ mGenFile nMagic sigThresh delCertFp sKeyFp update RealPBFT = do
-    let genHash = either panic identity $ decodeHash gHash
-        genFile = fromMaybe (panic $ "Cardano.Config.Protocol.fromProtocol: "
-                                   <> "Genesis file not specified"
+    let genFile = fromMaybe ( panic $ "Cardano.Config.Protocol.fromProtocol: "
+                                    <> "Genesis file not specified"
                             ) mGenFile
+    --TODO: This should accept a filepath to the genesis hash
+    -- so the error can show where the hash exists
+    genHash <- decodeGenesisHash gHash
 
     gc <- firstExceptT GenesisConfigurationError $ Genesis.mkConfigFromFile
              nMagic
@@ -255,6 +259,7 @@ renderProtocolInstantiationError pie =
     (CanonicalDecodeFailure fp failure) -> "Canonical decode failure in " <> toS fp
                                            <> " Canonical failure: " <> failure
     DelegationCertificateFilepathNotSpecified -> "Delegation certificate filepath not specified"
+    GenesisHashDecodeFailure failure -> "Genesis hash decode failure: " <> failure
     --TODO: Implement configuration error render function in cardano-ledger
     GenesisConfigurationError genesisConfigError -> "Genesis configuration error: " <> (T.pack $ show genesisConfigError)
     MissingCoreNodeId -> "Missing core node id"
@@ -265,6 +270,9 @@ renderProtocolInstantiationError pie =
                                                             <> " Error: " <> (T.pack $ show deserialiseFailure)
     SigningKeyFilepathNotSpecified -> "Signing key filepath not specified"
 
+decodeGenesisHash :: Text -> ExceptT ProtocolInstantiationError IO (Hash Raw)
+decodeGenesisHash gHash =
+  firstExceptT GenesisHashDecodeFailure . hoistEither $ decodeHash gHash
 
 extractNodeInfo
   :: Maybe NodeId
