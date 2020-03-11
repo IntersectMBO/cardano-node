@@ -197,9 +197,11 @@ instance FromJSON NodeConfiguration where
                               <*> v .:? "TraceDNSSubscription" .!= True
                               <*> v .:? "TraceErrorPolicy" .!= True
                               <*> v .:? "TraceForge" .!= True
+                              <*> v .:? "TraceHandshake" .!= False
                               <*> v .:? "TraceIpSubscription" .!= True
                               <*> v .:? "TraceLocalChainSyncProtocol" .!= False
                               <*> v .:? "TraceLocalErrorPolicy" .!= True
+                              <*> v .:? "TraceLocalHandshake" .!= False
                               <*> v .:? "TraceLocalTxSubmissionProtocol" .!= False
                               <*> v .:? "TraceLocalTxSubmissionServer" .!= False
                               <*> v .:? "TraceLocalStateQueryProtocol" .!= False
@@ -326,9 +328,11 @@ data TraceOptions = TraceOptions
   , traceDnsSubscription :: !Bool
   , traceErrorPolicy :: !Bool
   , traceForge :: !Bool
+  , traceHandshake :: !Bool
   , traceIpSubscription :: !Bool
   , traceLocalChainSyncProtocol :: !Bool
   , traceLocalErrorPolicy :: !Bool
+  , traceLocalHandshake :: !Bool
   , traceLocalTxSubmissionProtocol :: !Bool
   , traceLocalTxSubmissionServer :: !Bool
   , traceLocalStateQueryProtocol :: !Bool

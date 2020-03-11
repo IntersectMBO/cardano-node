@@ -255,8 +255,8 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
     , dtLocalErrorPolicyTracer = localErrorPolicyTracer nodeTracers'
     , dtMuxTracer = muxTracer nodeTracers'
     , dtMuxLocalTracer = nullTracer
-    , dtHandshakeTracer = nullTracer
-    , dtHandshakeLocalTracer = nullTracer
+    , dtHandshakeTracer = handshakeTracer nodeTracers'
+    , dtHandshakeLocalTracer = localHandshakeTracer nodeTracers'
     }
 
   createTracers
