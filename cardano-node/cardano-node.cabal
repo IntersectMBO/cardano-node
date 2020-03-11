@@ -40,9 +40,6 @@ library
                        Cardano.Node.Submission
                        Cardano.Node.TxSubClient
                        Cardano.Tracing.Tracers
-                       Cardano.Wallet.Client
-                       Cardano.Wallet.Logging
-                       Cardano.Wallet.Run
 
 
   other-modules:       Paths_cardano_node
@@ -146,37 +143,6 @@ executable cardano-node
                      , cardano-shell
                      , optparse-applicative
                      , text
-
-  if os(windows)
-     build-depends:    Win32
-  else
-     build-depends:    unix
-
-executable wallet-client
-  hs-source-dirs:      app
-  main-is:             wallet-client.hs
-  default-language:    Haskell2010
-  ghc-options:         -threaded
-                       -Wall
-                       -rtsopts
-                       "-with-rtsopts=-T"
-                       -Wno-unticked-promoted-constructors
-  build-depends:       base >=4.12 && <5
-                     , bytestring
-                     , cardano-config
-                     , cardano-ledger
-                     , cardano-node
-                     , cardano-prelude
-                     , cardano-shell
-                     , contra-tracer
-                     , io-sim-classes
-                     , iohk-monitoring
-                     , optparse-applicative
-                     , ouroboros-network
-                     , ouroboros-consensus
-                     , text
-                     , typed-protocols
-                     , ouroboros-network-framework
 
   if os(windows)
      build-depends:    Win32

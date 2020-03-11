@@ -32,7 +32,6 @@
 - <span><b>shelley-testnet.sh</b></span> <br/> Start a dev cluster with 3 nodes, with
          basic logging (run from tmux)
 - <span><b>start-node.sh</b></span> <br/> Basic individual node startup script
-- <span><b>start-wallet.sh</b></span> <br/> Start a basic wallet client
 - <span><b>submit-tx.sh</b></span> <br/> Submit a transaction file made by `issue-*-expenditure.sh`
                       family of scripts
 
