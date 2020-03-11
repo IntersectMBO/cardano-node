@@ -405,32 +405,40 @@ instance IsEffectuator (LiveViewBackend blk) Text where
                                          , lvsUpTime              = diffUTCTime (tstamp meta) (lvsStartTime lvs)
                                          }
 
+                    LogValue "txsInMempool" (PureI txsInMempool) ->
+                        modifyMVar_ (getbe lvbe) $ \lvs -> do
+                                let lvsMempool' = fromIntegral txsInMempool :: Word64
+                                    percentage = fromIntegral lvsMempool' / fromIntegral (lvsMempoolCapacity lvs) :: Float
+
+                                -- Check for unexpected thunks
+                                checkForUnexpectedThunks ["txsInMempool LiveViewBackend"] lvs
+
+                                return $ lvs { lvsMempool = lvsMempool'
+                                            , lvsMempoolPerc = percentage
+                                            }
+                    LogValue "mempoolBytes" (PureI mempoolBytes) ->
+                        modifyMVar_ (getbe lvbe) $ \lvs -> do
+                                let lvsMempoolBytes' = fromIntegral mempoolBytes :: Word64
+                                    percentage = fromIntegral lvsMempoolBytes' / fromIntegral (lvsMempoolCapacityBytes lvs) :: Float
+
+                                -- Check for unexpected thunks
+                                checkForUnexpectedThunks ["mempoolBytes LiveViewBackend"] lvs
+
+                                return $ lvs { lvsMempoolBytes = lvsMempoolBytes'
+                                            , lvsMempoolBytesPerc = percentage
+                                            }
+                    LogValue "txsProcessed" (PureI txsProcessed) ->
+                        modifyMVar_ (getbe lvbe) $ \lvs -> do
+
+                                -- Check for unexpected thunks
+                                checkForUnexpectedThunks ["txsProcessed LiveViewBackend"] lvs
+
+                                return $ lvs { lvsTransactions = lvsTransactions lvs + fromIntegral txsProcessed }
+
                     _ -> pure ()
 
                 checkForUnexpectedThunks ["Cardano node metrics dispatch LiveViewBackend"] lvbe
 
-            LogObject _ _ (LogValue "txsInMempool" (PureI txsInMempool)) ->
-                modifyMVar_ (getbe lvbe) $ \lvs -> do
-                        let lvsMempool' = fromIntegral txsInMempool :: Word64
-                            percentage = fromIntegral lvsMempool' / fromIntegral (lvsMempoolCapacity lvs) :: Float
-
-                        -- Check for unexpected thunks
-                        checkForUnexpectedThunks ["txsInMempool LiveViewBackend"] lvs
-
-                        return $ lvs { lvsMempool = lvsMempool'
-                                     , lvsMempoolPerc = percentage
-                                     }
-            LogObject _ _ (LogValue "mempoolBytes" (PureI mempoolBytes)) ->
-                modifyMVar_ (getbe lvbe) $ \lvs -> do
-                        let lvsMempoolBytes' = fromIntegral mempoolBytes :: Word64
-                            percentage = fromIntegral lvsMempoolBytes' / fromIntegral (lvsMempoolCapacityBytes lvs) :: Float
-
-                        -- Check for unexpected thunks
-                        checkForUnexpectedThunks ["mempoolBytes LiveViewBackend"] lvs
-
-                        return $ lvs { lvsMempoolBytes = lvsMempoolBytes'
-                                     , lvsMempoolBytesPerc = percentage
-                                     }
             LogObject _ _ (LogValue "density" (PureD density)) ->
                 modifyMVar_ (getbe lvbe) $ \lvs -> do
 
@@ -447,13 +455,6 @@ instance IsEffectuator (LiveViewBackend blk) Text where
                         checkForUnexpectedThunks ["connectedPeers LiveViewBackend"] lvs
 
                         return $ lvs { lvsPeersConnected = fromIntegral npeers }
-            LogObject _ _ (LogValue "txsProcessed" (PureI txsProcessed)) ->
-                modifyMVar_ (getbe lvbe) $ \lvs -> do
-
-                        -- Check for unexpected thunks
-                        checkForUnexpectedThunks ["txsProcessed LiveViewBackend"] lvs
-
-                        return $ lvs { lvsTransactions = lvsTransactions lvs + fromIntegral txsProcessed }
             LogObject _ _ (LogValue "blockNum" (PureI slotnum)) ->
                 modifyMVar_ (getbe lvbe) $ \lvs -> do
 
