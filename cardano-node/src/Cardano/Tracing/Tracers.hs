@@ -60,7 +60,8 @@ import           Ouroboros.Network.Block (Point, BlockNo(..),
                                           blockNo, unBlockNo, unSlotNo)
 import           Ouroboros.Network.BlockFetch.Decision (FetchDecision)
 import           Ouroboros.Network.BlockFetch.ClientState (TraceLabelPeer (..))
-import           Ouroboros.Network.NodeToNode (WithAddr, ErrorPolicyTrace)
+import qualified Ouroboros.Network.NodeToClient as NtC
+import qualified Ouroboros.Network.NodeToNode as NtN
 import           Ouroboros.Network.Point (fromWithOrigin)
 import           Ouroboros.Network.Subscription
 
@@ -88,11 +89,13 @@ data Tracers peer localPeer blk = Tracers
     -- | Trace the DNS resolver
   , dnsResolverTracer :: Tracer IO (WithDomainName DnsTrace)
     -- | Trace error policy resolution
-  , errorPolicyTracer :: Tracer IO (WithAddr Socket.SockAddr ErrorPolicyTrace)
+  , errorPolicyTracer :: Tracer IO (NtN.WithAddr Socket.SockAddr NtN.ErrorPolicyTrace)
     -- | Trace local error policy resolution
-  , localErrorPolicyTracer :: Tracer IO (WithAddr Socket.SockAddr ErrorPolicyTrace)
+  , localErrorPolicyTracer :: Tracer IO (NtN.WithAddr Socket.SockAddr NtN.ErrorPolicyTrace)
     -- | Trace the Mux
   , muxTracer :: Tracer IO (WithMuxBearer peer MuxTrace)
+  , handshakeTracer :: Tracer IO NtN.HandshakeTr
+  , localHandshakeTracer :: Tracer IO NtC.HandshakeTr
   }
 
 data ForgeTracers = ForgeTracers
@@ -119,6 +122,8 @@ nullTracers = Tracers
   , errorPolicyTracer = nullTracer
   , localErrorPolicyTracer = nullTracer
   , muxTracer = nullTracer
+  , handshakeTracer = nullTracer
+  , localHandshakeTracer = nullTracer
   }
 
 
@@ -231,6 +236,16 @@ mkTracers traceOptions tracer = do
           $ annotateSeverity
           $ toLogObject' StructuredLogging tracingVerbosity
           $ appendName "Mux" tracer
+    , handshakeTracer
+        = tracerOnOff (traceHandshake traceOptions)
+          $ annotateSeverity
+          $ toLogObject' StructuredLogging tracingVerbosity
+          $ appendName "Handshake" tracer
+    , localHandshakeTracer
+        = tracerOnOff (traceLocalHandshake traceOptions)
+          $ annotateSeverity
+          $ toLogObject' StructuredLogging tracingVerbosity
+          $ appendName "LocalHandshake" tracer
     }
   where
     -- Turn on/off a tracer depending on what was parsed from the command line.

@@ -66,6 +66,8 @@ import           Ouroboros.Network.BlockFetch.ClientState
                    (TraceFetchClientState (..), TraceLabelPeer (..))
 import           Ouroboros.Network.BlockFetch.Decision (FetchDecision)
 import           Ouroboros.Network.Codec (AnyMessage (..))
+import qualified Ouroboros.Network.NodeToClient as NtC
+import qualified Ouroboros.Network.NodeToNode as NtN
 import           Ouroboros.Network.NodeToNode
                    (WithAddr(..), ErrorPolicyTrace(..), TraceSendRecv (..))
 import           Ouroboros.Network.Protocol.TxSubmission.Type
@@ -226,6 +228,14 @@ instance DefineSeverity (WithMuxBearer peer MuxTrace) where
     MuxTraceHandshakeServerError {} -> Error
     MuxTraceRecvDeltaQObservation {} -> Debug
     MuxTraceRecvDeltaQSample {} -> Info
+
+instance DefinePrivacyAnnotation NtN.HandshakeTr
+instance DefineSeverity NtN.HandshakeTr where
+  defineSeverity _ = Info
+
+instance DefinePrivacyAnnotation NtC.HandshakeTr
+instance DefineSeverity NtC.HandshakeTr where
+  defineSeverity _ = Info
 
 instance DefinePrivacyAnnotation (WithTip blk (ChainDB.TraceEvent blk))
 instance DefineSeverity (WithTip blk (ChainDB.TraceEvent blk)) where
@@ -465,6 +475,14 @@ instance (Show peer)
            => Transformable Text IO (WithMuxBearer peer MuxTrace) where
   trTransformer = defaultTextTransformer
 
+-- transform @NtN.HandshakeTrace@
+instance Transformable Text IO NtN.HandshakeTr where
+  trTransformer = defaultTextTransformer
+
+-- transform @NtC.HandshakeTrace@
+instance Transformable Text IO NtC.HandshakeTr where
+  trTransformer = defaultTextTransformer
+
 -- transform @TraceEvent@
 instance (Condense (HeaderHash blk), LedgerSupportsProtocol blk)
             => Transformable Text IO (WithTip blk (ChainDB.TraceEvent blk)) where
@@ -652,6 +670,18 @@ instance (Show peer)
       => ToObject (WithMuxBearer peer MuxTrace) where
   toObject _verb (WithMuxBearer b ev) =
     mkObject [ "kind" .= String "MuxTrace"
+             , "bearer" .= show b
+             , "event" .= show ev ]
+
+instance ToObject NtN.HandshakeTr where
+  toObject _verb (WithMuxBearer b ev) =
+    mkObject [ "kind" .= String "HandshakeTrace"
+             , "bearer" .= show b
+             , "event" .= show ev ]
+
+instance ToObject NtC.HandshakeTr where
+  toObject _verb (WithMuxBearer b ev) =
+    mkObject [ "kind" .= String "LocalHandshakeTrace"
              , "bearer" .= show b
              , "event" .= show ev ]
 

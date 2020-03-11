@@ -152,11 +152,17 @@ TraceLocalErrorPolicy: True
 # Trace block forging.
 TraceForge: False
 
+# Trace Handshake protocol messages.
+TraceHandshake: False
+
 # Trace IP Subscription messages.
 TraceIpSubscription: False
 
 # Trace local ChainSync protocol messages.
 TraceLocalChainSyncProtocol: False
+
+# Trace local Handshake protocol messages.
+TraceLocalHandshake: False
 
 # Trace local TxSubmission protocol messages.
 TraceLocalTxSubmissionProtocol: False

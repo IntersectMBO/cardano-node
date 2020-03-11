@@ -229,7 +229,7 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
   customiseChainDbArgs runValid args
     | runValid
     = args
-      { ChainDB.cdbImmValidation = ValidateAllEpochs
+      { ChainDB.cdbImmValidation = ValidateAllChunks
       , ChainDB.cdbVolValidation = ValidateAll
       }
     | otherwise
@@ -255,8 +255,8 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
     , dtLocalErrorPolicyTracer = localErrorPolicyTracer nodeTracers'
     , dtMuxTracer = muxTracer nodeTracers'
     , dtMuxLocalTracer = nullTracer
-    , dtHandshakeTracer = nullTracer
-    , dtHandshakeLocalTracer = nullTracer
+    , dtHandshakeTracer = handshakeTracer nodeTracers'
+    , dtHandshakeLocalTracer = localHandshakeTracer nodeTracers'
     }
 
   createTracers
