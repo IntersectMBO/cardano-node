@@ -424,9 +424,10 @@ instance IsEffectuator (LiveViewBackend blk) Text where
                                 -- Check for unexpected thunks
                                 checkForUnexpectedThunks ["mempoolBytes LiveViewBackend"] lvs
 
-                                return $ lvs { lvsMempoolBytes = lvsMempoolBytes'
-                                            , lvsMempoolBytesPerc = percentage
-                                            }
+                                return $ lvs
+                                    { lvsMempoolBytes = lvsMempoolBytes'
+                                    , lvsMempoolBytesPerc = percentage
+                                    }
                     LogValue "txsProcessed" (PureI txsProcessed) ->
                         modifyMVar_ (getbe lvbe) $ \lvs -> do
 
@@ -534,7 +535,7 @@ initLiveViewState = do
                 , lvsNetworkUsageOutLast    = 0
                 , lvsNetworkUsageOutNs      = 10000
                 , lvsMempoolCapacity        = mempoolCapacity
-                , lvsMempoolCapacityBytes   = mempoolCapacity * maxBytesPerTx -- / 1024
+                , lvsMempoolCapacityBytes   = mempoolCapacity * maxBytesPerTx
                 , lvsMessage                = Nothing
                 , lvsUIThread               = LiveViewThread Nothing
                 , lvsMetricsThread          = LiveViewThread Nothing
@@ -825,9 +826,9 @@ systemStatsW p =
       padTop   (T.Pad 1)
     . padLeft  (T.Pad 1)
     . padRight (T.Pad 1)
-    $ vBox [ hBox [ vBox [ hBox [ txt "Mempool (KB):"
+    $ vBox [ hBox [ vBox [ hBox [ txt "Mempool (Bytes):"
                                 , withAttr barValueAttr . padLeft T.Max . str .
-                                  show . (floor :: Float -> Int) . (/ 1024) . fromIntegral $ lvsMempoolCapacityBytes p
+                                  show . (floor :: Float -> Int) . fromIntegral $ lvsMempoolCapacityBytes p
 
                                 ]
                          , padBottom (T.Pad 1) memPoolBytesBar
