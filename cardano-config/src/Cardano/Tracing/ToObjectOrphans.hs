@@ -891,10 +891,8 @@ instance Condense (HeaderHash blk) => ToObject (TraceChainSyncServerEvent blk b)
 instance Show peer => ToObject [TraceLabelPeer peer
                         (FetchDecision [Point header])] where
   toObject MinimalVerbosity _ = emptyObject
-  toObject NormalVerbosity lbls = mkObject [ "kind" .= String "TraceLabelPeer"
-                                         , "length" .= String (pack $ show $ length lbls) ]
-  toObject MaximalVerbosity [] = emptyObject
-  toObject MaximalVerbosity (lbl : r) = toObject MaximalVerbosity lbl <>
+  toObject _ [] = emptyObject
+  toObject _ (lbl : r) = toObject MaximalVerbosity lbl <>
                                         toObject MaximalVerbosity r
 
 instance Show peer => ToObject (TraceLabelPeer peer
