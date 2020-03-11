@@ -229,7 +229,7 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
   customiseChainDbArgs runValid args
     | runValid
     = args
-      { ChainDB.cdbImmValidation = ValidateAllEpochs
+      { ChainDB.cdbImmValidation = ValidateAllChunks
       , ChainDB.cdbVolValidation = ValidateAll
       }
     | otherwise
