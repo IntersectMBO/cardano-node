@@ -534,7 +534,7 @@ initLiveViewState = do
                 , lvsNetworkUsageOutLast    = 0
                 , lvsNetworkUsageOutNs      = 10000
                 , lvsMempoolCapacity        = mempoolCapacity
-                , lvsMempoolCapacityBytes   = mempoolCapacity * maxBytesPerTx
+                , lvsMempoolCapacityBytes   = mempoolCapacity * maxBytesPerTx -- / 1024
                 , lvsMessage                = Nothing
                 , lvsUIThread               = LiveViewThread Nothing
                 , lvsMetricsThread          = LiveViewThread Nothing
@@ -1001,6 +1001,7 @@ eventHandler lvs  (VtyEvent e)         =
         V.EvKey  (V.KChar 'l') []        -> M.continue $ lvs { lvsColorTheme = LightTheme }
         V.EvKey  (V.KChar 'L') []        -> M.continue $ lvs { lvsColorTheme = LightTheme }
         V.EvKey  (V.KChar 'p') []        -> M.continue $ lvs { lvsScreen = Peers }
+        V.EvKey  (V.KChar 'P') []        -> M.continue $ lvs { lvsScreen = Peers }
         V.EvKey  V.KEsc        []        -> M.continue $ lvs { lvsScreen = MainView }
         _                                -> M.continue lvs
   where
