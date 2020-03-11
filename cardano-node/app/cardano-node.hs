@@ -69,10 +69,16 @@ initializeAllFeatures
   -> CardanoEnvironment
   -> IO ([CardanoFeature], NodeLayer)
 initializeAllFeatures npm cardanoEnvironment = do
-  (loggingLayer, loggingFeature) <- createLoggingFeature
-                                      (pack $ showVersion version)
-                                      cardanoEnvironment
-                                      npm
+
+  eitherFeatures       <- runExceptT $ createLoggingFeature
+                            (pack $ showVersion version)
+                            cardanoEnvironment
+                            npm
+
+  (loggingLayer, loggingFeature) <- case eitherFeatures of
+                                      Left err  -> (putTextLn $ show err) >> exitFailure
+                                      Right res -> return res
+
   (nodeLayer   , nodeFeature)    <- createNodeFeature
                                       loggingLayer
                                       cardanoEnvironment

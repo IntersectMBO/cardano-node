@@ -11,14 +11,14 @@ import           Paths_cardano_node (version)
 
 import           Cardano.Shell.Types (CardanoFeature (..))
 
-import           Cardano.Config.Types ( CardanoEnvironment, ConfigYamlFilePath(..)
+import           Cardano.Config.Types ( CardanoEnvironment, ConfigYamlFilePath(..), ConfigError (..)
                                       , DelegationCertFile , GenesisFile, NodeConfiguration(..)
                                       , SigningKeyFile, SocketPath, parseNodeConfigurationFP)
 import           Cardano.Config.Logging ( LoggingLayer (..), loggingCardanoFeatureInit
                                         , loggingCLIConfiguration)
 
 createLoggingFeatureWallet
-  :: CardanoEnvironment -> WalletCLI -> IO (LoggingLayer, CardanoFeature)
+  :: CardanoEnvironment -> WalletCLI -> ExceptT ConfigError IO (LoggingLayer, CardanoFeature)
 createLoggingFeatureWallet _ wCli = do
     -- we parse any additional configuration if there is any
     -- We don't know where the user wants to fetch the additional
@@ -27,7 +27,7 @@ createLoggingFeatureWallet _ wCli = do
     --
     -- Currently we parse outside the features since we want to have a complete
     -- parser for __every feature__.
-    nc <- parseNodeConfigurationFP . unConfigPath $ waConfig wCli
+    nc <- liftIO . parseNodeConfigurationFP . unConfigPath $ waConfig wCli
     let logConfigFp = if ncLoggingSwitch nc then Just . unConfigPath $ waConfig wCli else Nothing
 
     (disabled', loggingConfiguration) <- loggingCLIConfiguration
@@ -35,7 +35,7 @@ createLoggingFeatureWallet _ wCli = do
                                            (ncLogMetrics nc)
 
     -- we construct the layer
-    (loggingLayer, cleanUpLogging) <- loggingCardanoFeatureInit
+    (loggingLayer, cleanUpLogging) <- liftIO $ loggingCardanoFeatureInit
                                         (pack $ showVersion version)
                                         disabled' loggingConfiguration
 

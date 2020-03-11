@@ -7,6 +7,7 @@ module Cardano.Config.Types
     , CBORObject (..)
     , CLISocketPath (..)
     , ConfigYamlFilePath (..)
+    , ConfigError (..)
     , DbFile (..)
     , DelegationCertFile (..)
     , GenesisFile (..)
@@ -30,8 +31,8 @@ module Cardano.Config.Types
     , parseNodeConfigurationFP
     ) where
 
-import           Prelude (read)
-import           Cardano.Prelude
+import           Prelude (read, show)
+import           Cardano.Prelude hiding (show)
 
 import           Data.Aeson
 import qualified Data.IP as IP
@@ -48,6 +49,14 @@ import           Ouroboros.Consensus.Util.Condense (Condense (..))
 import           Cardano.Config.Orphanage ()
 import           Cardano.Crypto (RequiresNetworkMagic(..))
 
+-- | Errors for the cardano-config module.
+data ConfigError
+    = ConfigErrorFileNotFound !FilePath
+
+-- | Instance for showing the @ConfigError@.
+instance Show ConfigError where
+    show (ConfigErrorFileNotFound fp)
+        = "File '" <> fp <> "' not found!"
 
 -- | Specify what the CBOR file is
 -- i.e a block, a tx, etc

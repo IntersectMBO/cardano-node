@@ -241,6 +241,7 @@ data CliError
   | SigningKeyDeserialisationFailed !FilePath !DeserialiseFailure
   | SpendGenesisUTxOError !RealPBFTError
   | VerificationKeyDeserialisationFailed !FilePath !Text
+  | FileNotFoundError !FilePath
 
 
 instance Show CliError where
@@ -299,6 +300,8 @@ instance Show CliError where
     = "Transaction file '" <> fp <> "' read failure: "<> show err
   show (VerificationKeyDeserialisationFailed fp err)
     = "Verification key '" <> fp <> "' read failure: "<> T.unpack err
+  show (FileNotFoundError fp)
+    = "File '" <> fp <> "' not found!"
 
 instance Exception CliError
 
