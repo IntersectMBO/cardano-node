@@ -26,11 +26,10 @@ module Cardano.Config.Logging
 
 import           Cardano.Prelude hiding (trace)
 
-import           Control.Monad.Trans.Except.Extra (catchIOExceptT)
-
 import qualified Control.Concurrent.Async as Async
 import           Control.Exception (IOException)
 import           Control.Exception.Safe (MonadCatch)
+import           Control.Monad.Trans.Except.Extra (catchIOExceptT)
 
 import           Cardano.BM.Backend.Aggregation (plugin)
 import           Cardano.BM.Backend.EKGView (plugin)
