@@ -133,129 +133,6 @@ instance ( Show a
 
   show = showWithTip show
 
--- instances of @DefinePrivacyAnnotation@ and @DefineSeverity@
-instance DefinePrivacyAnnotation (WithIPList (SubscriptionTrace Socket.SockAddr))
-instance DefineSeverity (WithIPList (SubscriptionTrace Socket.SockAddr)) where
-  defineSeverity (WithIPList _ _ ev) = case ev of
-    SubscriptionTraceConnectStart _ -> Info
-    SubscriptionTraceConnectEnd _ connectResult -> case connectResult of
-      ConnectSuccess -> Info
-      ConnectSuccessLast -> Notice
-      ConnectValencyExceeded -> Warning
-    SubscriptionTraceConnectException {} -> Error
-    SubscriptionTraceSocketAllocationException {} -> Error
-    SubscriptionTraceTryConnectToPeer {} -> Info
-    SubscriptionTraceSkippingPeer {} -> Info
-    SubscriptionTraceSubscriptionRunning -> Debug
-    SubscriptionTraceSubscriptionWaiting {} -> Debug
-    SubscriptionTraceSubscriptionFailed -> Error
-    SubscriptionTraceSubscriptionWaitingNewConnection {} -> Notice
-    SubscriptionTraceStart {} -> Debug
-    SubscriptionTraceRestart {} -> Info
-    SubscriptionTraceConnectionExist {} -> Notice
-    SubscriptionTraceUnsupportedRemoteAddr {} -> Error
-    SubscriptionTraceMissingLocalAddress -> Warning
-    SubscriptionTraceApplicationException {} -> Error
-    SubscriptionTraceAllocateSocket {} -> Debug
-    SubscriptionTraceCloseSocket {} -> Info
-
-instance DefinePrivacyAnnotation (WithDomainName (SubscriptionTrace Socket.SockAddr))
-instance DefineSeverity (WithDomainName (SubscriptionTrace Socket.SockAddr)) where
-  defineSeverity (WithDomainName _ ev) = case ev of
-    SubscriptionTraceConnectStart {} -> Info
-    SubscriptionTraceConnectEnd {} -> Info
-    SubscriptionTraceConnectException {} -> Error
-    SubscriptionTraceSocketAllocationException {} -> Error
-    SubscriptionTraceTryConnectToPeer {} -> Info
-    SubscriptionTraceSkippingPeer {} -> Info
-    SubscriptionTraceSubscriptionRunning -> Debug
-    SubscriptionTraceSubscriptionWaiting {} -> Debug
-    SubscriptionTraceSubscriptionFailed -> Warning
-    SubscriptionTraceSubscriptionWaitingNewConnection {} -> Debug
-    SubscriptionTraceStart {} -> Debug
-    SubscriptionTraceRestart {} -> Debug
-    SubscriptionTraceConnectionExist {} -> Info
-    SubscriptionTraceUnsupportedRemoteAddr {} -> Warning
-    SubscriptionTraceMissingLocalAddress -> Warning
-    SubscriptionTraceApplicationException {} -> Error
-    SubscriptionTraceAllocateSocket {} -> Debug
-    SubscriptionTraceCloseSocket {} -> Debug
-
-instance DefinePrivacyAnnotation (WithDomainName DnsTrace)
-instance DefineSeverity (WithDomainName DnsTrace) where
-  defineSeverity (WithDomainName _ ev) = case ev of
-    DnsTraceLookupException {} -> Error
-    DnsTraceLookupAError {} -> Error
-    DnsTraceLookupAAAAError {} -> Error
-    DnsTraceLookupIPv6First -> Info
-    DnsTraceLookupIPv4First -> Info
-    DnsTraceLookupAResult {} -> Debug
-    DnsTraceLookupAAAAResult {} -> Debug
-
-instance DefinePrivacyAnnotation (WithAddr Socket.SockAddr ErrorPolicyTrace)
-instance DefineSeverity (WithAddr Socket.SockAddr ErrorPolicyTrace) where
-  defineSeverity (WithAddr _ ev) = case ev of
-    ErrorPolicySuspendPeer {} -> Warning -- peer misbehaved
-    ErrorPolicySuspendConsumer {} -> Notice -- peer temporarily not useful
-    ErrorPolicyLocalNodeError {} -> Error
-    ErrorPolicyResumePeer {} -> Debug
-    ErrorPolicyKeepSuspended {} -> Debug
-    ErrorPolicyResumeConsumer {} -> Debug
-    ErrorPolicyResumeProducer {} -> Debug
-    ErrorPolicyUnhandledApplicationException {} -> Error
-    ErrorPolicyUnhandledConnectionException {} -> Error
-    ErrorPolicyAcceptException {} -> Error
-
-instance DefinePrivacyAnnotation (WithMuxBearer peer MuxTrace)
-instance DefineSeverity (WithMuxBearer peer MuxTrace) where
-  defineSeverity (WithMuxBearer _ ev) = case ev of
-    MuxTraceRecvHeaderStart -> Debug
-    MuxTraceRecvHeaderEnd {} -> Debug
-    MuxTraceRecvPayloadStart {} -> Debug
-    MuxTraceRecvPayloadEnd {} -> Debug
-    MuxTraceRecvStart {} -> Debug
-    MuxTraceRecvEnd {} -> Debug
-    MuxTraceSendStart {} -> Debug
-    MuxTraceSendEnd -> Debug
-    MuxTraceState {} -> Info
-    MuxTraceCleanExit {} -> Info
-    MuxTraceExceptionExit {} -> Info
-    MuxTraceChannelRecvStart {} -> Debug
-    MuxTraceChannelRecvEnd {} -> Debug
-    MuxTraceChannelSendStart {} -> Debug
-    MuxTraceChannelSendEnd {} -> Debug
-    MuxTraceHandshakeStart -> Debug
-    MuxTraceHandshakeClientEnd {} -> Info
-    MuxTraceHandshakeServerEnd -> Debug
-    MuxTraceHandshakeClientError {} -> Error
-    MuxTraceHandshakeServerError {} -> Error
-    MuxTraceRecvDeltaQObservation {} -> Debug
-    MuxTraceRecvDeltaQSample {} -> Info
-
-instance DefinePrivacyAnnotation NtN.HandshakeTr
-instance DefineSeverity NtN.HandshakeTr where
-  defineSeverity _ = Info
-
-instance DefinePrivacyAnnotation NtC.HandshakeTr
-instance DefineSeverity NtC.HandshakeTr where
-  defineSeverity _ = Info
-
-instance DefinePrivacyAnnotation (TraceFetchClientState header)
-instance DefineSeverity (TraceFetchClientState header) where
-  defineSeverity _ = Info
-
-instance DefinePrivacyAnnotation (TraceSendRecv (TxSubmission txid tx))
-instance DefineSeverity (TraceSendRecv (TxSubmission txid tx)) where
-  defineSeverity _ = Debug
-
-instance DefinePrivacyAnnotation (TraceSendRecv (BlockFetch blk))
-instance DefineSeverity (TraceSendRecv (BlockFetch blk)) where
-  defineSeverity _ = Debug
-
-instance DefinePrivacyAnnotation (WithTip blk (ChainDB.TraceEvent blk))
-instance DefineSeverity (WithTip blk (ChainDB.TraceEvent blk)) where
-  defineSeverity (WithTip _tip ev) = defineSeverity ev
-
 defaultTextTransformer
   :: ( MonadIO m
      , DefinePrivacyAnnotation b
@@ -273,13 +150,18 @@ defaultTextTransformer TextualRepresentation _verb tr =
 defaultTextTransformer _ verb tr =
   trStructured verb tr
 
-instance ( DefinePrivacyAnnotation (ChainDB.TraceAddBlockEvent blk)
-         , DefineSeverity (ChainDB.TraceAddBlockEvent blk)
-         , LedgerSupportsProtocol blk
-         , Show (Ouroboros.Consensus.Block.Header blk)
-         , ToObject (ChainDB.TraceAddBlockEvent blk))
- => Transformable Text IO (ChainDB.TraceAddBlockEvent blk) where
-   trTransformer = defaultTextTransformer
+--
+-- * instances of @DefinePrivacyAnnotation@ and @DefineSeverity@
+--
+-- NOTE: this list is sorted by the unqualified name of the outermost type.
+
+instance DefinePrivacyAnnotation NtC.HandshakeTr
+instance DefineSeverity NtC.HandshakeTr where
+  defineSeverity _ = Info
+
+instance DefinePrivacyAnnotation NtN.HandshakeTr
+instance DefineSeverity NtN.HandshakeTr where
+  defineSeverity _ = Info
 
 instance DefineSeverity (ChainDB.TraceEvent blk) where
   defineSeverity (ChainDB.TraceAddBlockEvent ev) = case ev of
@@ -342,6 +224,10 @@ instance DefineSeverity (ChainDB.TraceEvent blk) where
   defineSeverity (ChainDB.TraceImmDBEvent _ev) = Debug
   defineSeverity (ChainDB.TraceVolDBEvent _ev) = Debug
 
+instance DefinePrivacyAnnotation (TraceBlockFetchServerEvent blk)
+instance DefineSeverity (TraceBlockFetchServerEvent blk) where
+  defineSeverity _ = Info
+
 instance DefinePrivacyAnnotation (TraceChainSyncClientEvent blk)
 instance DefineSeverity (TraceChainSyncClientEvent blk) where
   defineSeverity (TraceDownloadedHeader _) = Info
@@ -353,38 +239,12 @@ instance DefinePrivacyAnnotation (TraceChainSyncServerEvent blk b)
 instance DefineSeverity (TraceChainSyncServerEvent blk b) where
   defineSeverity _ = Info
 
-instance DefinePrivacyAnnotation [TraceLabelPeer peer
-                                  (FetchDecision [Point header])]
-instance DefineSeverity [TraceLabelPeer peer
-                         (FetchDecision [Point header])] where
-  defineSeverity [] = Debug
-  defineSeverity _ = Info
-
-instance DefinePrivacyAnnotation a => DefinePrivacyAnnotation (TraceLabelPeer peer a)
-instance DefineSeverity a => DefineSeverity (TraceLabelPeer peer a)
-
-instance DefinePrivacyAnnotation (TraceBlockFetchServerEvent blk)
-instance DefineSeverity (TraceBlockFetchServerEvent blk) where
-  defineSeverity _ = Info
-
-instance DefinePrivacyAnnotation (TraceTxSubmissionInbound
-                                  (GenTxId blk) (GenTx blk))
-instance DefineSeverity (TraceTxSubmissionInbound
-                         (GenTxId blk) (GenTx blk)) where
-  defineSeverity _ = Info
-
-instance DefinePrivacyAnnotation (TraceTxSubmissionOutbound
-                                  (GenTxId blk) (GenTx blk))
-instance DefineSeverity (TraceTxSubmissionOutbound
-                         (GenTxId blk) (GenTx blk)) where
-  defineSeverity _ = Info
-
-instance DefinePrivacyAnnotation (TraceLocalTxSubmissionServerEvent blk)
-instance DefineSeverity (TraceLocalTxSubmissionServerEvent blk) where
-  defineSeverity _ = Info
-
 instance DefinePrivacyAnnotation (TraceEventMempool blk)
 instance DefineSeverity (TraceEventMempool blk) where
+  defineSeverity _ = Info
+
+instance DefinePrivacyAnnotation (TraceFetchClientState header)
+instance DefineSeverity (TraceFetchClientState header) where
   defineSeverity _ = Info
 
 instance DefinePrivacyAnnotation (TraceForgeEvent blk tx)
@@ -401,50 +261,168 @@ instance DefineSeverity (TraceForgeEvent blk tx) where
   defineSeverity TraceDidntAdoptBlock {}        = Error
   defineSeverity TraceForgedInvalidBlock {}     = Error
 
+instance DefinePrivacyAnnotation (TraceLocalTxSubmissionServerEvent blk)
+instance DefineSeverity (TraceLocalTxSubmissionServerEvent blk) where
+  defineSeverity _ = Info
+
+instance DefinePrivacyAnnotation (TraceSendRecv (BlockFetch blk))
+instance DefineSeverity (TraceSendRecv (BlockFetch blk)) where
+  defineSeverity _ = Debug
+
+instance DefinePrivacyAnnotation (TraceSendRecv (TxSubmission txid tx))
+instance DefineSeverity (TraceSendRecv (TxSubmission txid tx)) where
+  defineSeverity _ = Debug
+
+instance DefinePrivacyAnnotation a => DefinePrivacyAnnotation (TraceLabelPeer peer a)
+instance DefineSeverity a => DefineSeverity (TraceLabelPeer peer a)
+
+instance DefinePrivacyAnnotation [TraceLabelPeer peer (FetchDecision [Point header])]
+instance DefineSeverity [TraceLabelPeer peer (FetchDecision [Point header])] where
+  defineSeverity [] = Debug
+  defineSeverity _ = Info
+
+instance DefinePrivacyAnnotation (TraceTxSubmissionInbound (GenTxId blk) (GenTx blk))
+instance DefineSeverity (TraceTxSubmissionInbound (GenTxId blk) (GenTx blk)) where
+  defineSeverity _ = Info
+
+instance DefinePrivacyAnnotation (TraceTxSubmissionOutbound (GenTxId blk) (GenTx blk))
+instance DefineSeverity (TraceTxSubmissionOutbound (GenTxId blk) (GenTx blk)) where
+  defineSeverity _ = Info
+
+instance DefinePrivacyAnnotation (WithAddr Socket.SockAddr ErrorPolicyTrace)
+instance DefineSeverity (WithAddr Socket.SockAddr ErrorPolicyTrace) where
+  defineSeverity (WithAddr _ ev) = case ev of
+    ErrorPolicySuspendPeer {} -> Warning -- peer misbehaved
+    ErrorPolicySuspendConsumer {} -> Notice -- peer temporarily not useful
+    ErrorPolicyLocalNodeError {} -> Error
+    ErrorPolicyResumePeer {} -> Debug
+    ErrorPolicyKeepSuspended {} -> Debug
+    ErrorPolicyResumeConsumer {} -> Debug
+    ErrorPolicyResumeProducer {} -> Debug
+    ErrorPolicyUnhandledApplicationException {} -> Error
+    ErrorPolicyUnhandledConnectionException {} -> Error
+    ErrorPolicyAcceptException {} -> Error
+
+instance DefinePrivacyAnnotation (WithDomainName DnsTrace)
+instance DefineSeverity (WithDomainName DnsTrace) where
+  defineSeverity (WithDomainName _ ev) = case ev of
+    DnsTraceLookupException {} -> Error
+    DnsTraceLookupAError {} -> Error
+    DnsTraceLookupAAAAError {} -> Error
+    DnsTraceLookupIPv6First -> Info
+    DnsTraceLookupIPv4First -> Info
+    DnsTraceLookupAResult {} -> Debug
+    DnsTraceLookupAAAAResult {} -> Debug
+
+instance DefinePrivacyAnnotation (WithDomainName (SubscriptionTrace Socket.SockAddr))
+instance DefineSeverity (WithDomainName (SubscriptionTrace Socket.SockAddr)) where
+  defineSeverity (WithDomainName _ ev) = case ev of
+    SubscriptionTraceConnectStart {} -> Info
+    SubscriptionTraceConnectEnd {} -> Info
+    SubscriptionTraceConnectException {} -> Error
+    SubscriptionTraceSocketAllocationException {} -> Error
+    SubscriptionTraceTryConnectToPeer {} -> Info
+    SubscriptionTraceSkippingPeer {} -> Info
+    SubscriptionTraceSubscriptionRunning -> Debug
+    SubscriptionTraceSubscriptionWaiting {} -> Debug
+    SubscriptionTraceSubscriptionFailed -> Warning
+    SubscriptionTraceSubscriptionWaitingNewConnection {} -> Debug
+    SubscriptionTraceStart {} -> Debug
+    SubscriptionTraceRestart {} -> Debug
+    SubscriptionTraceConnectionExist {} -> Info
+    SubscriptionTraceUnsupportedRemoteAddr {} -> Warning
+    SubscriptionTraceMissingLocalAddress -> Warning
+    SubscriptionTraceApplicationException {} -> Error
+    SubscriptionTraceAllocateSocket {} -> Debug
+    SubscriptionTraceCloseSocket {} -> Debug
+
+instance DefinePrivacyAnnotation (WithIPList (SubscriptionTrace Socket.SockAddr))
+instance DefineSeverity (WithIPList (SubscriptionTrace Socket.SockAddr)) where
+  defineSeverity (WithIPList _ _ ev) = case ev of
+    SubscriptionTraceConnectStart _ -> Info
+    SubscriptionTraceConnectEnd _ connectResult -> case connectResult of
+      ConnectSuccess -> Info
+      ConnectSuccessLast -> Notice
+      ConnectValencyExceeded -> Warning
+    SubscriptionTraceConnectException {} -> Error
+    SubscriptionTraceSocketAllocationException {} -> Error
+    SubscriptionTraceTryConnectToPeer {} -> Info
+    SubscriptionTraceSkippingPeer {} -> Info
+    SubscriptionTraceSubscriptionRunning -> Debug
+    SubscriptionTraceSubscriptionWaiting {} -> Debug
+    SubscriptionTraceSubscriptionFailed -> Error
+    SubscriptionTraceSubscriptionWaitingNewConnection {} -> Notice
+    SubscriptionTraceStart {} -> Debug
+    SubscriptionTraceRestart {} -> Info
+    SubscriptionTraceConnectionExist {} -> Notice
+    SubscriptionTraceUnsupportedRemoteAddr {} -> Error
+    SubscriptionTraceMissingLocalAddress -> Warning
+    SubscriptionTraceApplicationException {} -> Error
+    SubscriptionTraceAllocateSocket {} -> Debug
+    SubscriptionTraceCloseSocket {} -> Info
+
+instance DefinePrivacyAnnotation (WithMuxBearer peer MuxTrace)
+instance DefineSeverity (WithMuxBearer peer MuxTrace) where
+  defineSeverity (WithMuxBearer _ ev) = case ev of
+    MuxTraceRecvHeaderStart -> Debug
+    MuxTraceRecvHeaderEnd {} -> Debug
+    MuxTraceRecvPayloadStart {} -> Debug
+    MuxTraceRecvPayloadEnd {} -> Debug
+    MuxTraceRecvStart {} -> Debug
+    MuxTraceRecvEnd {} -> Debug
+    MuxTraceSendStart {} -> Debug
+    MuxTraceSendEnd -> Debug
+    MuxTraceState {} -> Info
+    MuxTraceCleanExit {} -> Info
+    MuxTraceExceptionExit {} -> Info
+    MuxTraceChannelRecvStart {} -> Debug
+    MuxTraceChannelRecvEnd {} -> Debug
+    MuxTraceChannelSendStart {} -> Debug
+    MuxTraceChannelSendEnd {} -> Debug
+    MuxTraceHandshakeStart -> Debug
+    MuxTraceHandshakeClientEnd {} -> Info
+    MuxTraceHandshakeServerEnd -> Debug
+    MuxTraceHandshakeClientError {} -> Error
+    MuxTraceHandshakeServerError {} -> Error
+    MuxTraceRecvDeltaQObservation {} -> Debug
+    MuxTraceRecvDeltaQSample {} -> Info
+
+instance DefinePrivacyAnnotation (WithTip blk (ChainDB.TraceEvent blk))
+instance DefineSeverity (WithTip blk (ChainDB.TraceEvent blk)) where
+  defineSeverity (WithTip _tip ev) = defineSeverity ev
+
+--
 -- | instances of @Transformable@
+--
+-- NOTE: this list is sorted by the unqualified name of the outermost type.
 
--- transform @ChainSyncClient@
-instance (Condense (HeaderHash blk), LedgerSupportsProtocol blk)
-          => Transformable Text IO (TraceChainSyncClientEvent blk) where
-  trTransformer _ verb tr = trStructured verb tr
-
--- transform @ChainSyncServer@
-instance Condense (HeaderHash blk) => Transformable Text IO (TraceChainSyncServerEvent blk b) where
-  trTransformer _ verb tr = trStructured verb tr
-
--- transform @TraceLabelPeer * *@
-instance Show peer => Transformable Text IO [TraceLabelPeer peer
-                                (FetchDecision [Point header])] where
-  trTransformer _ verb tr = trStructured verb tr
-
-instance Show peer
- => Transformable Text IO (TraceLabelPeer peer
-                            (TraceFetchClientState header)) where
-  trTransformer _ verb tr = trStructured verb tr
-
-instance (Show peer, Show txid, Show tx)
- => Transformable Text IO (TraceLabelPeer peer
-                           (TraceSendRecv (TxSubmission txid tx))) where
+instance Transformable Text IO NtN.HandshakeTr where
   trTransformer = defaultTextTransformer
 
-instance (Transformable Text IO a) => Transformable Text IO (TraceLabelPeer peer a) where
-  trTransformer f v t = Tracer $ \(TraceLabelPeer _peer a) ->
-    traceWith (trTransformer f v t) a
+instance Transformable Text IO NtC.HandshakeTr where
+  trTransformer = defaultTextTransformer
 
--- transform @BlockFetchServerEvent@
+instance ( DefinePrivacyAnnotation (ChainDB.TraceAddBlockEvent blk)
+         , DefineSeverity (ChainDB.TraceAddBlockEvent blk)
+         , LedgerSupportsProtocol blk
+         , Show (Ouroboros.Consensus.Block.Header blk)
+         , ToObject (ChainDB.TraceAddBlockEvent blk))
+ => Transformable Text IO (ChainDB.TraceAddBlockEvent blk) where
+   trTransformer = defaultTextTransformer
+
 instance Transformable Text IO (TraceBlockFetchServerEvent blk) where
   trTransformer = defaultTextTransformer
 
-instance Transformable Text IO (TraceTxSubmissionInbound
-                                (GenTxId blk) (GenTx blk)) where
-  trTransformer = defaultTextTransformer
+instance (Condense (HeaderHash blk), LedgerSupportsProtocol blk)
+ => Transformable Text IO (TraceChainSyncClientEvent blk) where
+  trTransformer _ verb tr = trStructured verb tr
 
-instance (Show (GenTxId blk), Show (GenTx blk))
-      => Transformable Text IO (TraceTxSubmissionOutbound
-                                (GenTxId blk) (GenTx blk)) where
-  trTransformer = defaultTextTransformer
+instance Condense (HeaderHash blk)
+ => Transformable Text IO (TraceChainSyncServerEvent blk b) where
+  trTransformer _ verb tr = trStructured verb tr
 
-instance Transformable Text IO (TraceLocalTxSubmissionServerEvent blk) where
+instance (Show (GenTx blk), Show (GenTxId blk))
+ => Transformable Text IO (TraceEventMempool blk) where
   trTransformer _ verb tr = trStructured verb tr
 
 instance ( Condense (HeaderHash blk)
@@ -453,91 +431,64 @@ instance ( Condense (HeaderHash blk)
          , Show (TxId tx)
          , ToObject (LedgerError blk)
          , ToObject (ValidationErr (BlockProtocol blk)))
-           => Transformable Text IO (TraceForgeEvent blk tx) where
+ => Transformable Text IO (TraceForgeEvent blk tx) where
   trTransformer TextualRepresentation _verb tr = readableForgeEventTracer $ Tracer $ \s -> do
     meta <- mkLOMeta (defineSeverity s) (definePrivacyAnnotation s)
     traceWith tr (mempty, LogObject mempty meta (LogMessage $ pack s))
   -- user defined formatting of log output
   trTransformer _ verb tr = trStructured verb tr
 
+instance (Transformable Text IO a)
+ => Transformable Text IO (TraceLabelPeer peer a) where
+  trTransformer f v t = Tracer $ \(TraceLabelPeer _peer a) ->
+    traceWith (trTransformer f v t) a
+
+instance Show peer
+ => Transformable Text IO [TraceLabelPeer peer (FetchDecision [Point header])] where
+  trTransformer _ verb tr = trStructured verb tr
+
+instance Show peer
+ => Transformable Text IO (TraceLabelPeer peer (TraceFetchClientState header)) where
+  trTransformer _ verb tr = trStructured verb tr
+
+instance (Show peer, Show txid, Show tx)
+ => Transformable Text IO (TraceLabelPeer peer (TraceSendRecv (TxSubmission txid tx))) where
+  trTransformer = defaultTextTransformer
+
+instance Transformable Text IO (TraceLocalTxSubmissionServerEvent blk) where
+  trTransformer _ verb tr = trStructured verb tr
+
 instance ( Show blk
          , StandardHash blk
-         , ToObject (AnyMessage (BlockFetch blk))
-         )
+         , ToObject (AnyMessage (BlockFetch blk)))
  => Transformable Text IO (TraceSendRecv (BlockFetch blk)) where
   trTransformer = defaultTextTransformer
 
-instance ( ToObject (AnyMessage ps)
-         )
- => ToObject (TraceSendRecv ps) where
-  toObject verb (TraceSendMsg m) = mkObject
-    [ "kind" .= String "Send" , "msg" .= toObject verb m ]
-  toObject verb (TraceRecvMsg m) = mkObject
-    [ "kind" .= String "Recv" , "msg" .= toObject verb m ]
-
-instance ( Condense (HeaderHash blk)
-         , Condense (TxId (GenTx blk))
-         , HasHeader blk
-         , HasTxs blk
-         , HasTxId (GenTx blk)
-         )
- => ToObject (AnyMessage (BlockFetch blk)) where
-  toObject _verb (AnyMessage (MsgBlock blk)) =
-    mkObject
-      [ "kind" .= String "MsgBlock"
-      , "blkid" .= String (pack . condense $ blockHash blk)
-      , "txids" .= toJSON (presentTx <$> extractTxs blk)
-      ]
-   where
-     presentTx :: GenTx blk -> Value
-     presentTx =  String . pack . condense . txId
-  toObject _v (AnyMessage MsgRequestRange{}) =
-    mkObject [ "kind" .= String "MsgRequestRange" ]
-  toObject _v (AnyMessage MsgStartBatch{}) =
-    mkObject [ "kind" .= String "MsgStartBatch" ]
-  toObject _v (AnyMessage MsgNoBlocks{}) =
-    mkObject [ "kind" .= String "MsgNoBlocks" ]
-  toObject _v (AnyMessage MsgBatchDone{}) =
-    mkObject [ "kind" .= String "MsgBatchDone" ]
-  toObject _v (AnyMessage MsgClientDone{}) =
-    mkObject [ "kind" .= String "MsgClientDone" ]
-
-instance (Show (GenTx blk), Show (GenTxId blk))
-      => Transformable Text IO (TraceEventMempool blk) where
-  trTransformer _ verb tr = trStructured verb tr
-
--- transform @SubscriptionTrace@
-instance Transformable Text IO (WithIPList (SubscriptionTrace Socket.SockAddr)) where
+instance Transformable Text IO (TraceTxSubmissionInbound (GenTxId blk) (GenTx blk)) where
   trTransformer = defaultTextTransformer
 
+instance (Show (GenTxId blk), Show (GenTx blk))
+ => Transformable Text IO (TraceTxSubmissionOutbound (GenTxId blk) (GenTx blk)) where
+  trTransformer = defaultTextTransformer
+
+instance Transformable Text IO (WithAddr Socket.SockAddr ErrorPolicyTrace) where
+  trTransformer = defaultTextTransformer
 
 instance Transformable Text IO (WithDomainName (SubscriptionTrace Socket.SockAddr)) where
   trTransformer = defaultTextTransformer
 
--- transform @DnsTrace@
 instance Transformable Text IO (WithDomainName DnsTrace) where
   trTransformer = defaultTextTransformer
 
--- transform @ErrorPolicyTrace@
-instance Transformable Text IO (WithAddr Socket.SockAddr ErrorPolicyTrace) where
+instance Transformable Text IO (WithIPList (SubscriptionTrace Socket.SockAddr)) where
   trTransformer = defaultTextTransformer
 
--- transform @MuxTrace@
 instance (Show peer)
-           => Transformable Text IO (WithMuxBearer peer MuxTrace) where
+ => Transformable Text IO (WithMuxBearer peer MuxTrace) where
   trTransformer = defaultTextTransformer
 
--- transform @NtN.HandshakeTrace@
-instance Transformable Text IO NtN.HandshakeTr where
-  trTransformer = defaultTextTransformer
-
--- transform @NtC.HandshakeTrace@
-instance Transformable Text IO NtC.HandshakeTr where
-  trTransformer = defaultTextTransformer
-
--- transform @TraceEvent@
 instance (Condense (HeaderHash blk), LedgerSupportsProtocol blk)
-            => Transformable Text IO (WithTip blk (ChainDB.TraceEvent blk)) where
+ => Transformable Text IO (WithTip blk (ChainDB.TraceEvent blk)) where
   -- structure required, will call 'toObject'
   trTransformer StructuredLogging verb tr = trStructured verb tr
   -- textual output based on the readable ChainDB tracer
@@ -691,37 +642,135 @@ readableForgeEventTracer tracer = Tracer $ \case
    tr :: String -> m ()
    tr = traceWith tracer
 
+--
 -- | instances of @ToObject@
+--
+-- NOTE: this list is sorted by the unqualified name of the outermost type.
 
-instance ToObject (WithIPList (SubscriptionTrace Socket.SockAddr)) where
-  toObject _verb (WithIPList localAddresses dests ev) =
-    mkObject [ "kind" .= String "WithIPList SubscriptionTrace"
-             , "localAddresses" .= show localAddresses
-             , "dests" .= show dests
-             , "event" .= show ev ]
+instance ( Condense (HeaderHash blk)
+         , Condense (TxId (GenTx blk))
+         , HasHeader blk
+         , HasTxs blk
+         , HasTxId (GenTx blk)
+         )
+ => ToObject (AnyMessage (BlockFetch blk)) where
+  toObject _verb (AnyMessage (MsgBlock blk)) =
+    mkObject
+      [ "kind" .= String "MsgBlock"
+      , "blkid" .= String (pack . condense $ blockHash blk)
+      , "txids" .= toJSON (presentTx <$> extractTxs blk)
+      ]
+   where
+     presentTx :: GenTx blk -> Value
+     presentTx =  String . pack . condense . txId
+  toObject _v (AnyMessage MsgRequestRange{}) =
+    mkObject [ "kind" .= String "MsgRequestRange" ]
+  toObject _v (AnyMessage MsgStartBatch{}) =
+    mkObject [ "kind" .= String "MsgStartBatch" ]
+  toObject _v (AnyMessage MsgNoBlocks{}) =
+    mkObject [ "kind" .= String "MsgNoBlocks" ]
+  toObject _v (AnyMessage MsgBatchDone{}) =
+    mkObject [ "kind" .= String "MsgBatchDone" ]
+  toObject _v (AnyMessage MsgClientDone{}) =
+    mkObject [ "kind" .= String "MsgClientDone" ]
 
-instance ToObject (WithDomainName (SubscriptionTrace Socket.SockAddr)) where
-  toObject _verb (WithDomainName dom ev) =
-    mkObject [ "kind" .= String "SubscriptionTrace"
-             , "domain" .= show dom
-             , "event" .= show ev ]
+instance ToObject BFT.BftValidationErr where
+  toObject _verb (BFT.BftInvalidSignature err) =
+    mkObject
+      [ "kind" .= String "BftInvalidSignature"
+      , "error" .= String (pack err)
+      ]
 
-instance ToObject (WithDomainName DnsTrace) where
-  toObject _verb (WithDomainName dom ev) =
-    mkObject [ "kind" .= String "DnsTrace"
-             , "domain" .= show dom
-             , "event" .= show ev ]
+instance ToObject Block.ChainValidationError where
+  toObject _verb Block.ChainValidationBoundaryTooLarge =
+    mkObject
+      [ "kind" .= String "ChainValidationBoundaryTooLarge" ]
+  toObject _verb Block.ChainValidationBlockAttributesTooLarge =
+    mkObject
+      [ "kind" .= String "ChainValidationBlockAttributesTooLarge" ]
+  toObject _verb (Block.ChainValidationBlockTooLarge _ _) =
+    mkObject
+      [ "kind" .= String "ChainValidationBlockTooLarge" ]
+  toObject _verb Block.ChainValidationHeaderAttributesTooLarge =
+    mkObject
+      [ "kind" .= String "ChainValidationHeaderAttributesTooLarge" ]
+  toObject _verb (Block.ChainValidationHeaderTooLarge _ _) =
+    mkObject
+      [ "kind" .= String "ChainValidationHeaderTooLarge" ]
+  toObject _verb (Block.ChainValidationDelegationPayloadError err) =
+    mkObject
+      [ "kind" .= String err ]
+  toObject _verb (Block.ChainValidationInvalidDelegation _ _) =
+    mkObject
+      [ "kind" .= String "ChainValidationInvalidDelegation" ]
+  toObject _verb (Block.ChainValidationGenesisHashMismatch _ _) =
+    mkObject
+      [ "kind" .= String "ChainValidationGenesisHashMismatch" ]
+  toObject _verb (Block.ChainValidationExpectedGenesisHash _ _) =
+    mkObject
+      [ "kind" .= String "ChainValidationExpectedGenesisHash" ]
+  toObject _verb (Block.ChainValidationExpectedHeaderHash _ _) =
+    mkObject
+      [ "kind" .= String "ChainValidationExpectedHeaderHash" ]
+  toObject _verb (Block.ChainValidationInvalidHash _ _) =
+    mkObject
+      [ "kind" .= String "ChainValidationInvalidHash" ]
+  toObject _verb (Block.ChainValidationMissingHash _) =
+    mkObject
+      [ "kind" .= String "ChainValidationMissingHash" ]
+  toObject _verb (Block.ChainValidationUnexpectedGenesisHash _) =
+    mkObject
+      [ "kind" .= String "ChainValidationUnexpectedGenesisHash" ]
+  toObject _verb (Block.ChainValidationInvalidSignature _) =
+    mkObject
+      [ "kind" .= String "ChainValidationInvalidSignature" ]
+  toObject _verb (Block.ChainValidationDelegationSchedulingError _) =
+    mkObject
+      [ "kind" .= String "ChainValidationDelegationSchedulingError" ]
+  toObject _verb (Block.ChainValidationProtocolMagicMismatch _ _) =
+    mkObject
+      [ "kind" .= String "ChainValidationProtocolMagicMismatch" ]
+  toObject _verb Block.ChainValidationSignatureLight =
+    mkObject
+      [ "kind" .= String "ChainValidationSignatureLight" ]
+  toObject _verb (Block.ChainValidationTooManyDelegations _) =
+    mkObject
+      [ "kind" .= String "ChainValidationTooManyDelegations" ]
+  toObject _verb (Block.ChainValidationUpdateError _ _) =
+    mkObject
+      [ "kind" .= String "ChainValidationUpdateError" ]
+  toObject _verb (Block.ChainValidationUTxOValidationError _) =
+    mkObject
+      [ "kind" .= String "ChainValidationUTxOValidationError" ]
+  toObject _verb (Block.ChainValidationProofValidationError _) =
+    mkObject
+      [ "kind" .= String "ChainValidationProofValidationError" ]
 
-instance ToObject (WithAddr Socket.SockAddr ErrorPolicyTrace) where
-  toObject _verb (WithAddr addr ev) =
-    mkObject [ "kind" .= String "ErrorPolicyTrace"
-             , "address" .= show addr
-             , "event" .= show ev ]
+instance ToObject LedgerDB.DiskSnapshot where
+  toObject MinimalVerbosity snap = toObject NormalVerbosity snap
+  toObject NormalVerbosity _ = mkObject [ "kind" .= String "snapshot" ]
+  toObject MaximalVerbosity snap =
+    mkObject [ "kind" .= String "snapshot"
+             , "snapshot" .= String (pack $ show snap) ]
 
-instance (Show peer)
-      => ToObject (WithMuxBearer peer MuxTrace) where
+instance ( StandardHash blk
+         , ToObject (LedgerError blk)
+         , ToObject (ValidationErr (BlockProtocol blk)))
+ => ToObject (ExtValidationError blk) where
+  toObject verb (ExtValidationErrorLedger err) = toObject verb err
+  toObject verb (ExtValidationErrorHeader err) = toObject verb err
+
+instance ToObject (FetchDecision [Point header]) where
+  toObject _verb (Left decline) =
+    mkObject [ "kind" .= String "FetchDecision declined"
+             , "declined" .= String (pack $ show $ decline) ]
+  toObject _verb (Right results) =
+    mkObject [ "kind" .= String "FetchDecision results"
+             , "length" .= String (pack $ show $ length results) ]
+
+instance ToObject NtC.HandshakeTr where
   toObject _verb (WithMuxBearer b ev) =
-    mkObject [ "kind" .= String "MuxTrace"
+    mkObject [ "kind" .= String "LocalHandshakeTrace"
              , "bearer" .= show b
              , "event" .= show ev ]
 
@@ -731,48 +780,177 @@ instance ToObject NtN.HandshakeTr where
              , "bearer" .= show b
              , "event" .= show ev ]
 
-instance ToObject NtC.HandshakeTr where
-  toObject _verb (WithMuxBearer b ev) =
-    mkObject [ "kind" .= String "LocalHandshakeTrace"
-             , "bearer" .= show b
-             , "event" .= show ev ]
+instance (StandardHash blk)
+ => ToObject (HeaderEnvelopeError blk) where
+  toObject _verb (UnexpectedBlockNo expect act) =
+    mkObject
+      [ "kind" .= String "UnexpectedBlockNo"
+      , "expected" .= condense expect
+      , "actual" .= condense act
+      ]
+  toObject _verb (UnexpectedSlotNo expect act) =
+    mkObject
+      [ "kind" .= String "UnexpectedSlotNo"
+      , "expected" .= condense expect
+      , "actual" .= condense act
+      ]
+  toObject _verb (UnexpectedPrevHash expect act) =
+    mkObject
+      [ "kind" .= String "UnexpectedPrevHash"
+      , "expected" .= String (pack $ show expect)
+      , "actual" .= String (pack $ show act)
+      ]
+  toObject _verb (OtherEnvelopeError text) =
+    mkObject
+      [ "kind" .= String "OtherEnvelopeError"
+      , "error" .= String text
+      ]
 
-instance (Condense (HeaderHash blk), LedgerSupportsProtocol blk)
-      => ToObject (WithTip blk (ChainDB.TraceEvent blk)) where
-  -- example: turn off any tracing of @TraceEvent@s when minimal verbosity level is set
-  -- toObject MinimalVerbosity _ = emptyObject -- no output
-  toObject verb (WithTip tip ev) =
-    let evobj = toObject verb ev
-    in
-    if evobj == emptyObject
-    then emptyObject
-    else mkObject [ "kind" .= String "TraceEvent"
-                  , "tip" .= showPoint MinimalVerbosity tip
-                  , "event" .= evobj
-                  ]
+instance ( StandardHash blk
+         , ToObject (ValidationErr (BlockProtocol blk)))
+ => ToObject (HeaderError blk) where
+  toObject verb (HeaderProtocolError err) =
+    mkObject
+      [ "kind" .= String "HeaderProtocolError"
+      , "error" .= toObject verb err
+      ]
+  toObject verb (HeaderEnvelopeError err) =
+    mkObject
+      [ "kind" .= String "HeaderEnvelopeError"
+      , "error" .= toObject verb err
+      ]
 
-instance ToObject SlotNo where
-  toObject _verb slot =
-    mkObject [ "kind" .= String "SlotNo"
-             , "slot" .= toJSON (unSlotNo slot) ]
+instance ( Condense (HeaderHash blk)
+         , StandardHash blk
+         , ToObject (LedgerError blk)
+         , ToObject (ValidationErr (BlockProtocol blk)))
+ => ToObject (ChainDB.InvalidBlockReason blk) where
+  toObject verb (ChainDB.ValidationError extvalerr) =
+    mkObject
+      [ "kind" .= String "ValidationError"
+      , "error" .= toObject verb extvalerr
+      ]
+  toObject verb (ChainDB.InChainAfterInvalidBlock point extvalerr) =
+    mkObject
+      [ "kind" .= String "InChainAfterInvalidBlock"
+      , "point" .= toObject verb point
+      , "error" .= toObject verb extvalerr
+      ]
+
+instance (Show txid, Show tx)
+ => ToObject (Message (TxSubmission txid tx) from to) where
+  toObject _verb (MsgRequestTxs txids) =
+    mkObject
+      [ "kind" .= String "MsgRequestTxs"
+      , "txIds" .= String (pack $ show txids)
+      ]
+  toObject _verb (MsgReplyTxs txs) =
+    mkObject
+      [ "kind" .= String "MsgReplyTxs"
+      , "txs" .= String (pack $ show txs)
+      ]
+  toObject _verb (MsgRequestTxIds _ _ _) =
+    mkObject
+      [ "kind" .= String "MsgRequestTxIds"
+      ]
+  toObject _verb (MsgReplyTxIds _) =
+    mkObject
+      [ "kind" .= String "MsgReplyTxIds"
+      ]
+  toObject _verb MsgDone =
+    mkObject
+      [ "kind" .= String "MsgDone"
+      ]
+instance StandardHash blk
+ => ToObject (Mock.MockError blk) where
+  toObject _verb (Mock.MockUtxoError e) =
+    mkObject
+      [ "kind" .= String "MockUtxoError"
+      , "error" .= String (pack $ show e)
+      ]
+  toObject _verb (Mock.MockInvalidHash expect act) =
+    mkObject
+      [ "kind" .= String "MockInvalidHash"
+      , "expected" .= String (pack $ show expect)
+      , "actual" .= String (pack $ show act)
+      ]
+
+instance (Show (PBFT.PBftVerKeyHash c))
+ => ToObject (PBFT.PBftValidationErr c) where
+  toObject _verb (PBFT.PBftInvalidSignature text) =
+    mkObject
+      [ "kind" .= String "PBftInvalidSignature"
+      , "error" .= String text
+      ]
+  toObject _verb (PBFT.PBftNotGenesisDelegate vkhash _ledgerView) =
+    mkObject
+      [ "kind" .= String "PBftNotGenesisDelegate"
+      , "vk" .= String (pack $ show vkhash)
+      ]
+  toObject _verb (PBFT.PBftExceededSignThreshold vkhash n) =
+    mkObject
+      [ "kind" .= String "PBftExceededSignThreshold"
+      , "vk" .= String (pack $ show vkhash)
+      , "n" .= String (pack $ show n)
+      ]
+  toObject _verb PBFT.PBftInvalidSlot =
+    mkObject
+      [ "kind" .= String "PBftInvalidSlot"
+      ]
 
 instance Condense (HeaderHash blk)
-      => ToObject (Point blk) where
+ => ToObject (Point blk) where
   toObject MinimalVerbosity p = toObject NormalVerbosity p
   toObject verb p =
     mkObject [ "kind" .= String "Tip" --TODO: why is this a Tip not a Point?
              , "tip" .= showPoint verb p ]
 
+instance ToObject (Praos.PraosValidationError c) where
+  toObject _verb (Praos.PraosInvalidSlot expect act) =
+    mkObject
+      [ "kind" .= String "PraosInvalidSlot"
+      , "expected" .= String (pack $ show expect)
+      , "actual" .= String (pack $ show act)
+      ]
+  toObject _verb (Praos.PraosUnknownCoreId cid) =
+    mkObject
+      [ "kind" .= String "PraosUnknownCoreId"
+      , "error" .= String (pack $ show cid)
+      ]
+  toObject _verb (Praos.PraosInvalidSig str _ _ _) =
+    mkObject
+      [ "kind" .= String "PraosInvalidSig"
+      , "error" .= String (pack str)
+      ]
+  toObject _verb (Praos.PraosInvalidCert _vkvrf y nat _vrf) =
+    mkObject
+      [ "kind" .= String "PraosInvalidCert"
+      , "y" .= String (pack $ show y)
+      , "nat" .= String (pack $ show nat)
+      ]
+  toObject _verb (Praos.PraosInsufficientStake t y) =
+    mkObject
+      [ "kind" .= String "PraosInsufficientStake"
+      , "t" .= String (pack $ show t)
+      , "y" .= String (pack $ show y)
+      ]
+
 instance Condense (HeaderHash blk)
-      => ToObject (RealPoint blk) where
+ => ToObject (RealPoint blk) where
   toObject verb p =
     mkObject $
         [ "kind" .= String "Point"
         , "slot" .= unSlotNo (realPointSlot p) ]
      ++ [ "hash" .= condense (realPointHash p) | verb == MaximalVerbosity ]
 
+instance ToObject SlotNo where
+  toObject _verb slot =
+    mkObject [ "kind" .= String "SlotNo"
+             , "slot" .= toJSON (unSlotNo slot) ]
+
+
 instance (Condense (HeaderHash blk), LedgerSupportsProtocol blk)
-      => ToObject (ChainDB.TraceEvent blk) where
+ => ToObject (ChainDB.TraceEvent blk) where
   toObject verb (ChainDB.TraceAddBlockEvent ev) = case ev of
     ChainDB.IgnoreBlockOlderThanK pt ->
       mkObject [ "kind" .= String "TraceAddBlockEvent.IgnoreBlockOlderThanK"
@@ -928,15 +1106,12 @@ instance (Condense (HeaderHash blk), LedgerSupportsProtocol blk)
   toObject _verb (ChainDB.TraceVolDBEvent _ev) =
     mkObject [ "kind" .= String "TraceVolDBEvent" ]
 
-instance ToObject LedgerDB.DiskSnapshot where
-  toObject MinimalVerbosity snap = toObject NormalVerbosity snap
-  toObject NormalVerbosity _ = mkObject [ "kind" .= String "snapshot" ]
-  toObject MaximalVerbosity snap =
-    mkObject [ "kind" .= String "snapshot"
-             , "snapshot" .= String (pack $ show snap) ]
+instance ToObject (TraceBlockFetchServerEvent blk) where
+  toObject _verb _ =
+    mkObject [ "kind" .= String "TraceBlockFetchServerEvent" ]
 
 instance (Condense (HeaderHash blk), LedgerSupportsProtocol blk)
-          => ToObject (TraceChainSyncClientEvent blk) where
+ => ToObject (TraceChainSyncClientEvent blk) where
   toObject verb ev = case ev of
     TraceDownloadedHeader pt ->
       mkObject [ "kind" .= String "ChainSyncClientEvent.TraceDownloadedHeader"
@@ -950,7 +1125,8 @@ instance (Condense (HeaderHash blk), LedgerSupportsProtocol blk)
     TraceFoundIntersection _ _ _ ->
       mkObject [ "kind" .= String "ChainSyncClientEvent.TraceFoundIntersection" ]
 
-instance Condense (HeaderHash blk) => ToObject (TraceChainSyncServerEvent blk b) where
+instance Condense (HeaderHash blk)
+ => ToObject (TraceChainSyncServerEvent blk b) where
     toObject verb ev = case ev of
       TraceChainSyncServerRead tip (AddBlock hdr) ->
         mkObject [ "kind" .= String "ChainSyncServerEvent.TraceChainSyncServerRead.AddBlock"
@@ -969,74 +1145,32 @@ instance Condense (HeaderHash blk) => ToObject (TraceChainSyncServerEvent blk b)
                  , "tip" .= (String (pack $ showTip verb tip))
                  , "rolledBackBlock" .= (String (pack $ showPoint verb pt)) ]
 
-
-instance Show peer => ToObject [TraceLabelPeer peer
-                        (FetchDecision [Point header])] where
-  toObject MinimalVerbosity _ = emptyObject
-  toObject _ [] = emptyObject
-  toObject _ (lbl : r) = toObject MaximalVerbosity lbl <>
-                                        toObject MaximalVerbosity r
-
-instance Show peer
- => ToObject (TraceLabelPeer peer (FetchDecision [Point header])) where
-  toObject verb (TraceLabelPeer peerid a) =
-    mkObject [ "kind" .= String "FetchDecision"
-             , "peer" .= show peerid
-             , "decision" .= toObject verb a ]
-
-instance (Show peer, Show txid, Show tx)
- => ToObject (TraceLabelPeer peer (TraceSendRecv (TxSubmission txid tx))) where
-  toObject verb (TraceLabelPeer peerid (TraceSendMsg (AnyMessage msg))) =
+instance (Show (GenTx blk), Show (GenTxId blk))
+ => ToObject (TraceEventMempool blk) where
+  toObject _verb (TraceMempoolAddedTx tx _mpSzBefore mpSzAfter) =
     mkObject
-      [ "kind" .= String "TraceSendMsg"
-      , "peer" .= show peerid
-      , "message" .= toObject verb msg
+      [ "kind" .= String "TraceMempoolAddedTx"
+      , "txAdded" .= String (pack $ show tx)
+      , "mempoolSize" .= String (pack $ show mpSzAfter)
       ]
-  toObject verb (TraceLabelPeer peerid (TraceRecvMsg (AnyMessage msg))) =
+  toObject _verb (TraceMempoolRejectedTx txAndErrs _mpSzBefore mpSzAfter) =
     mkObject
-      [ "kind" .= String "TraceRecvMsg"
-      , "peer" .= show peerid
-      , "message" .= toObject verb msg
+      [ "kind" .= String "TraceMempoolRejectedTxs"
+      , "txRejected" .= String (pack $ show txAndErrs)
+      , "mempoolSize" .= String (pack $ show mpSzAfter)
       ]
-
-instance Show peer
- => ToObject (TraceLabelPeer peer (TraceFetchClientState header)) where
-  toObject verb (TraceLabelPeer peerid a) =
-    mkObject [ "kind" .= String "TraceFetchClientState"
-           , "peer" .= show peerid
-           , "state" .= toObject verb a ]
-
-instance ToObject (FetchDecision [Point header]) where
-  toObject _verb (Left decline) =
-    mkObject [ "kind" .= String "FetchDecision declined"
-             , "declined" .= String (pack $ show $ decline) ]
-  toObject _verb (Right results) =
-    mkObject [ "kind" .= String "FetchDecision results"
-             , "length" .= String (pack $ show $ length results) ]
-
-instance (Show txid, Show tx) => ToObject (Message
-                                   (TxSubmission txid tx) from to) where
-  toObject _verb (MsgRequestTxs txids) =
+  toObject _verb (TraceMempoolRemoveTxs txs mpSz) =
     mkObject
-      [ "kind" .= String "MsgRequestTxs"
-      , "txIds" .= String (pack $ show txids)
+      [ "kind" .= String "TraceMempoolRemoveTxs"
+      , "txsRemoved" .= String (pack $ show txs)
+      , "mempoolSize" .= String (pack $ show mpSz)
       ]
-  toObject _verb (MsgReplyTxs txs) =
+  toObject _verb (TraceMempoolManuallyRemovedTxs txs0 txs1 mpSz) =
     mkObject
-      [ "kind" .= String "MsgReplyTxs"
-      , "txs" .= String (pack $ show txs)
-      ]
-  toObject _verb (MsgRequestTxIds _ _ _) =
-    mkObject
-      [ "kind" .= String "MsgRequestTxIds"
-      ]
-  toObject _verb (MsgReplyTxIds _) =
-    mkObject
-      [ "kind" .= String "MsgReplyTxIds"
-      ]
-  toObject _verb MsgDone =
-    mkObject
-      [ "kind" .= String "MsgDone"
+      [ "kind" .= String "TraceMempoolManuallyRemovedTxs"
+      , "txsManuallyRemoved" .= String (pack $ show txs0)
+      , "txsNoLongerValidRemoved" .= String (pack $ show txs1)
+      , "mempoolSize" .= String (pack $ show mpSz)
       ]
 
 instance ToObject (TraceFetchClientState header) where
@@ -1053,46 +1187,13 @@ instance ToObject (TraceFetchClientState header) where
   toObject _verb (RejectedFetchBatch {}) =
     mkObject [ "kind" .= String "RejectedFetchBatch" ]
 
-instance ToObject (TraceBlockFetchServerEvent blk) where
-  toObject _verb _ =
-    mkObject [ "kind" .= String "TraceBlockFetchServerEvent" ]
-
-instance ToObject (TraceTxSubmissionInbound (GenTxId blk) (GenTx blk)) where
-  toObject _verb _ =
-    mkObject [ "kind" .= String "TraceTxSubmissionInbound" ]
-
-instance (Show (GenTx blk), Show (GenTxId blk))
-      => ToObject (TraceTxSubmissionOutbound (GenTxId blk) (GenTx blk)) where
-  toObject MaximalVerbosity (TraceTxSubmissionOutboundRecvMsgRequestTxs txids) =
-    mkObject
-      [ "kind" .= String "TraceTxSubmissionOutboundRecvMsgRequestTxs"
-      , "txIds" .= String (pack $ show txids)
-      ]
-  toObject _verb (TraceTxSubmissionOutboundRecvMsgRequestTxs _txids) =
-    mkObject
-      [ "kind" .= String "TraceTxSubmissionOutboundRecvMsgRequestTxs"
-      ]
-  toObject MaximalVerbosity (TraceTxSubmissionOutboundSendMsgReplyTxs txs) =
-    mkObject
-      [ "kind" .= String "TraceTxSubmissionOutboundSendMsgReplyTxs"
-      , "txs" .= String (pack $ show txs)
-      ]
-  toObject _verb (TraceTxSubmissionOutboundSendMsgReplyTxs _txs) =
-    mkObject
-      [ "kind" .= String "TraceTxSubmissionOutboundSendMsgReplyTxs"
-      ]
-
-instance ToObject (TraceLocalTxSubmissionServerEvent blk) where
-  toObject _verb _ =
-    mkObject [ "kind" .= String "TraceLocalTxSubmissionServerEvent" ]
-
 instance ( Condense (HeaderHash blk)
          , HasTxId tx
          , LedgerSupportsProtocol blk
          , Show (TxId tx)
          , ToObject (LedgerError blk)
          , ToObject (ValidationErr (BlockProtocol blk)))
-    => ToObject (TraceForgeEvent blk tx) where
+ => ToObject (TraceForgeEvent blk tx) where
   toObject MaximalVerbosity (TraceAdoptedBlock slotNo blk txs) =
     mkObject
       [ "kind" .= String "TraceAdoptedBlock"
@@ -1161,233 +1262,120 @@ instance ( Condense (HeaderHash blk)
       , "slot" .= toJSON (unSlotNo slotNo)
       ]
 
+instance Show peer
+ => ToObject [TraceLabelPeer peer (FetchDecision [Point header])] where
+  toObject MinimalVerbosity _ = emptyObject
+  toObject _ [] = emptyObject
+  toObject _ (lbl : r) = toObject MaximalVerbosity lbl <>
+                                        toObject MaximalVerbosity r
+
+instance Show peer
+ => ToObject (TraceLabelPeer peer (FetchDecision [Point header])) where
+  toObject verb (TraceLabelPeer peerid a) =
+    mkObject [ "kind" .= String "FetchDecision"
+             , "peer" .= show peerid
+             , "decision" .= toObject verb a ]
+
+instance Show peer
+ => ToObject (TraceLabelPeer peer (TraceFetchClientState header)) where
+  toObject verb (TraceLabelPeer peerid a) =
+    mkObject [ "kind" .= String "TraceFetchClientState"
+           , "peer" .= show peerid
+           , "state" .= toObject verb a ]
+
+instance (Show peer, Show txid, Show tx)
+ => ToObject (TraceLabelPeer peer (TraceSendRecv (TxSubmission txid tx))) where
+  toObject verb (TraceLabelPeer peerid (TraceSendMsg (AnyMessage msg))) =
+    mkObject
+      [ "kind" .= String "TraceSendMsg"
+      , "peer" .= show peerid
+      , "message" .= toObject verb msg
+      ]
+  toObject verb (TraceLabelPeer peerid (TraceRecvMsg (AnyMessage msg))) =
+    mkObject
+      [ "kind" .= String "TraceRecvMsg"
+      , "peer" .= show peerid
+      , "message" .= toObject verb msg
+      ]
+
+instance ToObject (TraceLocalTxSubmissionServerEvent blk) where
+  toObject _verb _ =
+    mkObject [ "kind" .= String "TraceLocalTxSubmissionServerEvent" ]
+
+instance ToObject (AnyMessage ps)
+ => ToObject (TraceSendRecv ps) where
+  toObject verb (TraceSendMsg m) = mkObject
+    [ "kind" .= String "Send" , "msg" .= toObject verb m ]
+  toObject verb (TraceRecvMsg m) = mkObject
+    [ "kind" .= String "Recv" , "msg" .= toObject verb m ]
+
+instance ToObject (TraceTxSubmissionInbound (GenTxId blk) (GenTx blk)) where
+  toObject _verb _ =
+    mkObject [ "kind" .= String "TraceTxSubmissionInbound" ]
+
 instance (Show (GenTx blk), Show (GenTxId blk))
-      => ToObject (TraceEventMempool blk) where
-  toObject _verb (TraceMempoolAddedTx tx _mpSzBefore mpSzAfter) =
+ => ToObject (TraceTxSubmissionOutbound (GenTxId blk) (GenTx blk)) where
+  toObject MaximalVerbosity (TraceTxSubmissionOutboundRecvMsgRequestTxs txids) =
     mkObject
-      [ "kind" .= String "TraceMempoolAddedTx"
-      , "txAdded" .= String (pack $ show tx)
-      , "mempoolSize" .= String (pack $ show mpSzAfter)
+      [ "kind" .= String "TraceTxSubmissionOutboundRecvMsgRequestTxs"
+      , "txIds" .= String (pack $ show txids)
       ]
-  toObject _verb (TraceMempoolRejectedTx txAndErrs _mpSzBefore mpSzAfter) =
+  toObject _verb (TraceTxSubmissionOutboundRecvMsgRequestTxs _txids) =
     mkObject
-      [ "kind" .= String "TraceMempoolRejectedTxs"
-      , "txRejected" .= String (pack $ show txAndErrs)
-      , "mempoolSize" .= String (pack $ show mpSzAfter)
+      [ "kind" .= String "TraceTxSubmissionOutboundRecvMsgRequestTxs"
       ]
-  toObject _verb (TraceMempoolRemoveTxs txs mpSz) =
+  toObject MaximalVerbosity (TraceTxSubmissionOutboundSendMsgReplyTxs txs) =
     mkObject
-      [ "kind" .= String "TraceMempoolRemoveTxs"
-      , "txsRemoved" .= String (pack $ show txs)
-      , "mempoolSize" .= String (pack $ show mpSz)
+      [ "kind" .= String "TraceTxSubmissionOutboundSendMsgReplyTxs"
+      , "txs" .= String (pack $ show txs)
       ]
-  toObject _verb (TraceMempoolManuallyRemovedTxs txs0 txs1 mpSz) =
+  toObject _verb (TraceTxSubmissionOutboundSendMsgReplyTxs _txs) =
     mkObject
-      [ "kind" .= String "TraceMempoolManuallyRemovedTxs"
-      , "txsManuallyRemoved" .= String (pack $ show txs0)
-      , "txsNoLongerValidRemoved" .= String (pack $ show txs1)
-      , "mempoolSize" .= String (pack $ show mpSz)
+      [ "kind" .= String "TraceTxSubmissionOutboundSendMsgReplyTxs"
       ]
 
-instance ( Condense (HeaderHash blk)
-         , StandardHash blk
-         , ToObject (LedgerError blk)
-         , ToObject (ValidationErr (BlockProtocol blk)))
-        => ToObject (ChainDB.InvalidBlockReason blk) where
-  toObject verb (ChainDB.ValidationError extvalerr) =
-    mkObject
-      [ "kind" .= String "ValidationError"
-      , "error" .= toObject verb extvalerr
-      ]
-  toObject verb (ChainDB.InChainAfterInvalidBlock point extvalerr) =
-    mkObject
-      [ "kind" .= String "InChainAfterInvalidBlock"
-      , "point" .= toObject verb point
-      , "error" .= toObject verb extvalerr
-      ]
+instance ToObject (WithAddr Socket.SockAddr ErrorPolicyTrace) where
+  toObject _verb (WithAddr addr ev) =
+    mkObject [ "kind" .= String "ErrorPolicyTrace"
+             , "address" .= show addr
+             , "event" .= show ev ]
 
-instance ( StandardHash blk
-         , ToObject (LedgerError blk)
-         , ToObject (ValidationErr (BlockProtocol blk))
-         )
-      => ToObject (ExtValidationError blk) where
-  toObject verb (ExtValidationErrorLedger err) = toObject verb err
-  toObject verb (ExtValidationErrorHeader err) = toObject verb err
+instance ToObject (WithIPList (SubscriptionTrace Socket.SockAddr)) where
+  toObject _verb (WithIPList localAddresses dests ev) =
+    mkObject [ "kind" .= String "WithIPList SubscriptionTrace"
+             , "localAddresses" .= show localAddresses
+             , "dests" .= show dests
+             , "event" .= show ev ]
 
-instance ( StandardHash blk
-         , ToObject (ValidationErr (BlockProtocol blk)))
-      => ToObject (HeaderError blk) where
-  toObject verb (HeaderProtocolError err) =
-    mkObject
-      [ "kind" .= String "HeaderProtocolError"
-      , "error" .= toObject verb err
-      ]
-  toObject verb (HeaderEnvelopeError err) =
-    mkObject
-      [ "kind" .= String "HeaderEnvelopeError"
-      , "error" .= toObject verb err
-      ]
+instance ToObject (WithDomainName DnsTrace) where
+  toObject _verb (WithDomainName dom ev) =
+    mkObject [ "kind" .= String "DnsTrace"
+             , "domain" .= show dom
+             , "event" .= show ev ]
 
-instance (StandardHash blk)
- => ToObject (HeaderEnvelopeError blk) where
-  toObject _verb (UnexpectedBlockNo expect act) =
-    mkObject
-      [ "kind" .= String "UnexpectedBlockNo"
-      , "expected" .= condense expect
-      , "actual" .= condense act
-      ]
-  toObject _verb (UnexpectedSlotNo expect act) =
-    mkObject
-      [ "kind" .= String "UnexpectedSlotNo"
-      , "expected" .= condense expect
-      , "actual" .= condense act
-      ]
-  toObject _verb (UnexpectedPrevHash expect act) =
-    mkObject
-      [ "kind" .= String "UnexpectedPrevHash"
-      , "expected" .= String (pack $ show expect)
-      , "actual" .= String (pack $ show act)
-      ]
-  toObject _verb (OtherEnvelopeError text) =
-    mkObject
-      [ "kind" .= String "OtherEnvelopeError"
-      , "error" .= String text
-      ]
+instance ToObject (WithDomainName (SubscriptionTrace Socket.SockAddr)) where
+  toObject _verb (WithDomainName dom ev) =
+    mkObject [ "kind" .= String "SubscriptionTrace"
+             , "domain" .= show dom
+             , "event" .= show ev ]
 
-instance StandardHash blk => ToObject (Mock.MockError blk) where
-  toObject _verb (Mock.MockUtxoError e) =
-    mkObject
-      [ "kind" .= String "MockUtxoError"
-      , "error" .= String (pack $ show e)
-      ]
-  toObject _verb (Mock.MockInvalidHash expect act) =
-    mkObject
-      [ "kind" .= String "MockInvalidHash"
-      , "expected" .= String (pack $ show expect)
-      , "actual" .= String (pack $ show act)
-      ]
+instance (Show peer)
+ => ToObject (WithMuxBearer peer MuxTrace) where
+  toObject _verb (WithMuxBearer b ev) =
+    mkObject [ "kind" .= String "MuxTrace"
+             , "bearer" .= show b
+             , "event" .= show ev ]
 
-instance (Show (PBFT.PBftVerKeyHash c))
- => ToObject (PBFT.PBftValidationErr c) where
-  toObject _verb (PBFT.PBftInvalidSignature text) =
-    mkObject
-      [ "kind" .= String "PBftInvalidSignature"
-      , "error" .= String text
-      ]
-  toObject _verb (PBFT.PBftNotGenesisDelegate vkhash _ledgerView) =
-    mkObject
-      [ "kind" .= String "PBftNotGenesisDelegate"
-      , "vk" .= String (pack $ show vkhash)
-      ]
-  toObject _verb (PBFT.PBftExceededSignThreshold vkhash n) =
-    mkObject
-      [ "kind" .= String "PBftExceededSignThreshold"
-      , "vk" .= String (pack $ show vkhash)
-      , "n" .= String (pack $ show n)
-      ]
-  toObject _verb PBFT.PBftInvalidSlot =
-    mkObject
-      [ "kind" .= String "PBftInvalidSlot"
-      ]
-
-instance ToObject BFT.BftValidationErr where
-  toObject _verb (BFT.BftInvalidSignature err) =
-    mkObject
-      [ "kind" .= String "BftInvalidSignature"
-      , "error" .= String (pack err)
-      ]
-
-instance ToObject (Praos.PraosValidationError c) where
-  toObject _verb (Praos.PraosInvalidSlot expect act) =
-    mkObject
-      [ "kind" .= String "PraosInvalidSlot"
-      , "expected" .= String (pack $ show expect)
-      , "actual" .= String (pack $ show act)
-      ]
-  toObject _verb (Praos.PraosUnknownCoreId cid) =
-    mkObject
-      [ "kind" .= String "PraosUnknownCoreId"
-      , "error" .= String (pack $ show cid)
-      ]
-  toObject _verb (Praos.PraosInvalidSig str _ _ _) =
-    mkObject
-      [ "kind" .= String "PraosInvalidSig"
-      , "error" .= String (pack str)
-      ]
-  toObject _verb (Praos.PraosInvalidCert _vkvrf y nat _vrf) =
-    mkObject
-      [ "kind" .= String "PraosInvalidCert"
-      , "y" .= String (pack $ show y)
-      , "nat" .= String (pack $ show nat)
-      ]
-  toObject _verb (Praos.PraosInsufficientStake t y) =
-    mkObject
-      [ "kind" .= String "PraosInsufficientStake"
-      , "t" .= String (pack $ show t)
-      , "y" .= String (pack $ show y)
-      ]
-
-instance ToObject Block.ChainValidationError where
-  toObject _verb Block.ChainValidationBoundaryTooLarge =
-    mkObject
-      [ "kind" .= String "ChainValidationBoundaryTooLarge" ]
-  toObject _verb Block.ChainValidationBlockAttributesTooLarge =
-    mkObject
-      [ "kind" .= String "ChainValidationBlockAttributesTooLarge" ]
-  toObject _verb (Block.ChainValidationBlockTooLarge _ _) =
-    mkObject
-      [ "kind" .= String "ChainValidationBlockTooLarge" ]
-  toObject _verb Block.ChainValidationHeaderAttributesTooLarge =
-    mkObject
-      [ "kind" .= String "ChainValidationHeaderAttributesTooLarge" ]
-  toObject _verb (Block.ChainValidationHeaderTooLarge _ _) =
-    mkObject
-      [ "kind" .= String "ChainValidationHeaderTooLarge" ]
-  toObject _verb (Block.ChainValidationDelegationPayloadError err) =
-    mkObject
-      [ "kind" .= String err ]
-  toObject _verb (Block.ChainValidationInvalidDelegation _ _) =
-    mkObject
-      [ "kind" .= String "ChainValidationInvalidDelegation" ]
-  toObject _verb (Block.ChainValidationGenesisHashMismatch _ _) =
-    mkObject
-      [ "kind" .= String "ChainValidationGenesisHashMismatch" ]
-  toObject _verb (Block.ChainValidationExpectedGenesisHash _ _) =
-    mkObject
-      [ "kind" .= String "ChainValidationExpectedGenesisHash" ]
-  toObject _verb (Block.ChainValidationExpectedHeaderHash _ _) =
-    mkObject
-      [ "kind" .= String "ChainValidationExpectedHeaderHash" ]
-  toObject _verb (Block.ChainValidationInvalidHash _ _) =
-    mkObject
-      [ "kind" .= String "ChainValidationInvalidHash" ]
-  toObject _verb (Block.ChainValidationMissingHash _) =
-    mkObject
-      [ "kind" .= String "ChainValidationMissingHash" ]
-  toObject _verb (Block.ChainValidationUnexpectedGenesisHash _) =
-    mkObject
-      [ "kind" .= String "ChainValidationUnexpectedGenesisHash" ]
-  toObject _verb (Block.ChainValidationInvalidSignature _) =
-    mkObject
-      [ "kind" .= String "ChainValidationInvalidSignature" ]
-  toObject _verb (Block.ChainValidationDelegationSchedulingError _) =
-    mkObject
-      [ "kind" .= String "ChainValidationDelegationSchedulingError" ]
-  toObject _verb (Block.ChainValidationProtocolMagicMismatch _ _) =
-    mkObject
-      [ "kind" .= String "ChainValidationProtocolMagicMismatch" ]
-  toObject _verb Block.ChainValidationSignatureLight =
-    mkObject
-      [ "kind" .= String "ChainValidationSignatureLight" ]
-  toObject _verb (Block.ChainValidationTooManyDelegations _) =
-    mkObject
-      [ "kind" .= String "ChainValidationTooManyDelegations" ]
-  toObject _verb (Block.ChainValidationUpdateError _ _) =
-    mkObject
-      [ "kind" .= String "ChainValidationUpdateError" ]
-  toObject _verb (Block.ChainValidationUTxOValidationError _) =
-    mkObject
-      [ "kind" .= String "ChainValidationUTxOValidationError" ]
-  toObject _verb (Block.ChainValidationProofValidationError _) =
-    mkObject
-      [ "kind" .= String "ChainValidationProofValidationError" ]
+instance (Condense (HeaderHash blk), LedgerSupportsProtocol blk)
+ => ToObject (WithTip blk (ChainDB.TraceEvent blk)) where
+  -- example: turn off any tracing of @TraceEvent@s when minimal verbosity level is set
+  -- toObject MinimalVerbosity _ = emptyObject -- no output
+  toObject verb (WithTip tip ev) =
+    let evobj = toObject verb ev
+    in
+    if evobj == emptyObject
+    then emptyObject
+    else mkObject [ "kind" .= String "TraceEvent"
+                  , "tip" .= showPoint MinimalVerbosity tip
+                  , "event" .= evobj
+                  ]
