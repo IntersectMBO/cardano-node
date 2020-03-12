@@ -123,6 +123,7 @@ let
     };
   } // extraBuilds // (mkRequiredJob (
       collectTests jobs.native.checks ++
+      collectTests jobs."${mingwW64.config}".checks ++
       collectTests jobs.native.benchmarks ++ [
       jobs.native.cardano-node.x86_64-darwin
       jobs.native.cardano-node.x86_64-linux
