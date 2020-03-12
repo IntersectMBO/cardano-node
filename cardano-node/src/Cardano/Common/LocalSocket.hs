@@ -1,4 +1,5 @@
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Cardano.Common.LocalSocket
   ( chooseSocketPath
@@ -8,13 +9,24 @@ module Cardano.Common.LocalSocket
   )
 where
 
+import           Prelude (show)
 import           Cardano.Prelude
 
+import           Control.Monad.Trans.Except.Extra (newExceptT)
 import           System.Directory (createDirectoryIfMissing, removeFile)
 import           System.FilePath (takeDirectory)
 import           System.IO.Error (isDoesNotExistError)
 
 import           Cardano.Config.Types
+
+-- | Errors for the current module.
+data SocketError
+    = SocketError !FilePath !IOException
+
+-- | Instance for showing the @SocketError@.
+instance Show SocketError where
+    show (SocketError fp ex) =
+      "Socket '" <> fp <> "': " <> Prelude.show ex
 
 -- | This lets us override the socket path specified in the node configuration yaml file
 -- if required.
@@ -41,18 +53,19 @@ localSocketPath (SocketFile fp) = do
   createDirectoryIfMissing True $ takeDirectory fp
   return fp
 
--- TODO: Convert to ExceptT
 -- | Remove the socket established with 'localSocketAddrInfo'.
-removeStaleLocalSocket :: NodeConfiguration -> NodeProtocolMode -> IO ()
+removeStaleLocalSocket :: NodeConfiguration -> NodeProtocolMode -> ExceptT SocketError IO ()
 removeStaleLocalSocket nc npm = do
-  mCliSockPath <- case npm of
-                    MockProtocolMode (NodeMockCLI {mockMscFp}) -> pure $ socketFile mockMscFp
-                    RealProtocolMode (NodeCLI {mscFp}) -> pure $ socketFile mscFp
+    let mCliSockPath = case npm of
+                        MockProtocolMode mpm -> socketFile $ mockMscFp mpm
+                        RealProtocolMode rpm -> socketFile $ mscFp rpm
 
-  (SocketFile socketFp) <- pure $ chooseSocketPath (ncSocketPath nc) mCliSockPath
+    SocketFile socketFp <- pure $ chooseSocketPath (ncSocketPath nc) mCliSockPath
 
-  removeFile socketFp
-    `catch` \e ->
-      if isDoesNotExistError e
-        then return ()
-        else throwIO e
+    -- Removal of the socket file may fail if it has already been cleaned up.
+    newExceptT $ (Right <$> removeFile socketFp) `catch` handler socketFp
+  where
+    handler :: FilePath -> IOException -> IO (Either SocketError ())
+    handler fpath ex
+      | isDoesNotExistError ex = pure $ Right ()
+      | otherwise = pure $ Left (SocketError fpath ex)
