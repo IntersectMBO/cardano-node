@@ -27,6 +27,7 @@ library
                      , aeson
                      , async
                      , bytestring
+                     , cardano-binary
                      , cardano-crypto-wrapper
                      , cardano-ledger
                      , cardano-prelude

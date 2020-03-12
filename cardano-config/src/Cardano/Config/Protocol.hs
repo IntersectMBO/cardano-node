@@ -11,8 +11,9 @@ module Cardano.Config.Protocol
   ( Protocol(..)
   , ProtocolInstantiationError(..)
   , SomeProtocol(..)
-  , fromProtocol
   , TraceConstraints
+  , fromProtocol
+  , renderProtocolInstantiationError
   ) where
 
 import           Cardano.Prelude
@@ -23,11 +24,13 @@ import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (bimapExceptT, firstExceptT,
                                                    hoistEither, left)
 import qualified Data.ByteString.Lazy as LB
+import qualified Data.Text as T
 
+import           Cardano.Binary (Raw)
 import           Cardano.BM.Tracing (ToObject)
 import qualified Cardano.Chain.Genesis as Genesis
 import qualified Cardano.Chain.Update as Update
-import           Cardano.Crypto (RequiresNetworkMagic, decodeHash)
+import           Cardano.Crypto (Hash, RequiresNetworkMagic, decodeHash)
 import qualified Cardano.Crypto.Signing as Signing
 import           Cardano.Tracing.ToObjectOrphans ()
 
@@ -118,13 +121,14 @@ data SomeProtocol where
 
 data ProtocolInstantiationError =
     ByronLegacyProtocolNotImplemented
-  | CanonicalDecodeFailure Text
+  | CanonicalDecodeFailure FilePath Text
   | DelegationCertificateFilepathNotSpecified
-  | LedgerConfigError Genesis.ConfigurationError
+  | GenesisConfigurationError FilePath Genesis.ConfigurationError
+  | GenesisHashDecodeFailure Text
   | MissingCoreNodeId
   | MissingNumCoreNodes
   | PbftError PBftLeaderCredentialsError
-  | SigningKeyDeserialiseFailure DeserialiseFailure
+  | SigningKeyDeserialiseFailure FilePath DeserialiseFailure
   | SigningKeyFilepathNotSpecified
   deriving Show
 
@@ -169,14 +173,17 @@ fromProtocol _ nId mNumCoreNodes _ _ _ _ _ _ MockPBFT =
       (singletonSlotLengths mockSlotLength)
       cid
 fromProtocol gHash _ _ mGenFile nMagic sigThresh delCertFp sKeyFp update RealPBFT = do
-    let genHash = either panic identity $ decodeHash gHash
-        genFile = fromMaybe (panic $ "Cardano.Config.Protocol.fromProtocol: "
-                                   <> "Genesis file not specified"
-                            ) mGenFile
+    let genFile = unGenesisFile $ fromMaybe
+                                ( panic $ "Cardano.Config.Protocol.fromProtocol: "
+                                        <> "Genesis file not specified"
+                                ) mGenFile
+    --TODO: This should accept a filepath to the genesis hash
+    -- so the error can show where the hash exists
+    genHash <- decodeGenesisHash gHash
 
-    gc <- firstExceptT LedgerConfigError $ Genesis.mkConfigFromFile
+    gc <- firstExceptT (GenesisConfigurationError genFile) $ Genesis.mkConfigFromFile
              nMagic
-             (unGenesisFile genFile)
+             genFile
              genHash
 
     optionalLeaderCredentials <- readLeaderCredentials
@@ -222,12 +229,16 @@ readLeaderCredentials gc mDelCertFp mSKeyFp =
     (Just _, Nothing) -> left SigningKeyFilepathNotSpecified
     (Nothing, Just _) -> left DelegationCertificateFilepathNotSpecified
     (Just delegCertFile, Just signingKeyFile) -> do
-         signingKeyFileBytes <- liftIO . LB.readFile $ unSigningKey signingKeyFile
-         delegCertFileBytes <- liftIO . LB.readFile $ unDelegationCert delegCertFile
-         signingKey <- firstExceptT SigningKeyDeserialiseFailure
+
+         let delegCertFp = unDelegationCert delegCertFile
+         let signKeyFp = unSigningKey signingKeyFile
+
+         signingKeyFileBytes <- liftIO $ LB.readFile signKeyFp
+         delegCertFileBytes <- liftIO $ LB.readFile delegCertFp
+         signingKey <- firstExceptT (SigningKeyDeserialiseFailure signKeyFp)
                          . hoistEither
                          $ deserialiseSigningKey signingKeyFileBytes
-         delegCert  <- firstExceptT CanonicalDecodeFailure
+         delegCert  <- firstExceptT (CanonicalDecodeFailure delegCertFp)
                          . hoistEither
                          $ canonicalDecodePretty delegCertFileBytes
 
@@ -241,6 +252,29 @@ readLeaderCredentials gc mDelCertFp mSKeyFp =
     deserialiseSigningKey =
         fmap (Signing.SigningKey . snd)
       . deserialiseFromBytes Signing.fromCBORXPrv
+
+renderProtocolInstantiationError :: ProtocolInstantiationError -> Text
+renderProtocolInstantiationError pie =
+  case pie of
+    ByronLegacyProtocolNotImplemented -> "ByronLegacyProtocolNotImplemented"
+    CanonicalDecodeFailure fp failure -> "Canonical decode failure in " <> toS fp
+                                         <> " Canonical failure: " <> failure
+    DelegationCertificateFilepathNotSpecified -> "Delegation certificate filepath not specified"
+    GenesisHashDecodeFailure failure -> "Genesis hash decode failure: " <> failure
+    --TODO: Implement configuration error render function in cardano-ledger
+    GenesisConfigurationError fp genesisConfigError -> "Genesis configuration error in: " <> toS fp
+                                                       <> " Error: " <> (T.pack $ show genesisConfigError)
+    MissingCoreNodeId -> "Missing core node id"
+    MissingNumCoreNodes -> "NumCoreNodes: not specified in configuration yaml file."
+    -- TODO: Implement PBftLeaderCredentialsError render function in ouroboros-network
+    PbftError pbftLeaderCredentialsError -> "PBFT leader credentials error: " <> (T.pack $ show pbftLeaderCredentialsError)
+    SigningKeyDeserialiseFailure fp deserialiseFailure -> "Signing key deserialisation error in: " <> toS fp
+                                                           <> " Error: " <> (T.pack $ show deserialiseFailure)
+    SigningKeyFilepathNotSpecified -> "Signing key filepath not specified"
+
+decodeGenesisHash :: Text -> ExceptT ProtocolInstantiationError IO (Hash Raw)
+decodeGenesisHash gHash =
+  firstExceptT GenesisHashDecodeFailure . hoistEither $ decodeHash gHash
 
 extractNodeInfo
   :: Maybe NodeId
