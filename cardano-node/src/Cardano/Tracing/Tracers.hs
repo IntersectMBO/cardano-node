@@ -493,7 +493,7 @@ mkTracers traceOptions tracer = do
         $ showTracing $ withName "BlockFetchProtocol" tracer
       , ptBlockFetchSerialisedTracer
         = tracerOnOff (traceBlockFetchProtocolSerialised traceOpts)
-        $ showTracing $ withName "BlockFetchProtocol" tracer
+        $ showTracing $ withName "BlockFetchProtocolSerialised" tracer
       , ptTxSubmissionTracer
         = tracerOnOff (traceTxSubmissionProtocol traceOpts)
         $ toLogObject' StructuredLogging tracingVerbosity
