@@ -48,7 +48,7 @@ import           System.Directory (canonicalizePath, makeAbsolute)
 import qualified Text.JSON.Canonical as CanonicalJSON
 
 import           Cardano.Binary
-                   (Decoder, DecoderError, decodeFullDecoder, fromCBOR)
+                   (Decoder, DecoderError, fromCBOR)
 import           Cardano.Chain.Block (fromCBORABlockOrBoundary)
 import qualified Cardano.Chain.Delegation as Delegation
 import qualified Cardano.Chain.Genesis as Genesis
@@ -107,18 +107,12 @@ import qualified Cardano.CLI.Legacy.Byron as Legacy
 import           Cardano.Benchmarking.GeneratorTx.Error (TxGenError)
 
 decodeCBOR
-  :: CBORObject
-  -> LByteString
+  :: LByteString
   -> (forall s. Decoder s a)
-  -> ExceptT CliError IO a
-decodeCBOR cborObject bs decoder = do
-  case cborObject of
-      CBORBlockByron -> toExceptT $ decodeFullDecoder "Byron Block" decoder bs
-      CBORDelegationCertificateByron -> toExceptT $ decodeFullDecoder "Byron Delegation Certificate" decoder bs
-      CBORTxByron -> toExceptT $ decodeFullDecoder "Byron Tx" decoder bs
-      CBORUpdateProposalByron -> toExceptT $ decodeFullDecoder "Byron Update Proposal" decoder bs
+  -> ExceptT CliError IO (LB.ByteString, a)
+decodeCBOR bs decoder = toExceptT $ deserialiseFromBytes decoder bs
  where
-   toExceptT :: Either DecoderError a -> ExceptT CliError IO a
+   toExceptT :: Either DeserialiseFailure a -> ExceptT CliError IO a
    toExceptT = firstExceptT CBORDecodingError . hoistEither
 
 deserialiseDelegateKey :: Protocol -> FilePath -> LB.ByteString -> Either CliError SigningKey
@@ -153,22 +147,22 @@ validateCBOR cborObject bs =
   case cborObject of
     CBORBlockByron -> do
       secondExceptT (const ())
-        $ decodeCBOR CBORBlockByron bs (fromCBORABlockOrBoundary $ EpochSlots 21600)
+        $ decodeCBOR bs (fromCBORABlockOrBoundary $ EpochSlots 21600)
       liftIO $ putTextLn "Valid Byron block."
 
     CBORDelegationCertificateByron -> do
       secondExceptT (const ())
-        $ decodeCBOR CBORDelegationCertificateByron bs (fromCBOR :: Decoder s Delegation.Certificate)
+        $ decodeCBOR bs (fromCBOR :: Decoder s Delegation.Certificate)
       liftIO $ putTextLn "Valid Byron delegation certificate."
 
     CBORTxByron -> do
       secondExceptT (const ())
-        $ decodeCBOR CBORTxByron bs (fromCBOR :: Decoder s UTxO.Tx)
+        $ decodeCBOR bs (fromCBOR :: Decoder s UTxO.Tx)
       liftIO $ putTextLn "Valid Byron Tx."
 
     CBORUpdateProposalByron -> do
       secondExceptT (const ())
-        $ decodeCBOR CBORTxByron bs (fromCBOR :: Decoder s Update.Proposal)
+        $ decodeCBOR bs (fromCBOR :: Decoder s Update.Proposal)
       liftIO $ putTextLn "Valid Byron update proposal."
 
 pPrintCBOR :: LByteString -> ExceptT CliError IO ()
@@ -215,7 +209,7 @@ serialiseSigningKey ptcl _ = Left $ ProtocolNotSupported ptcl
 -- | Exception type for all errors thrown by the CLI.
 --   Well, almost all, since we don't rethrow the errors from readFile & such.
 data CliError
-  = CBORDecodingError DecoderError
+  = CBORDecodingError DeserialiseFailure
   | CBORPrettyPrintError DeserialiseFailure
   | CertificateValidationErrors !FilePath ![Text]
   | DelegationError !Genesis.GenesisDelegationError
