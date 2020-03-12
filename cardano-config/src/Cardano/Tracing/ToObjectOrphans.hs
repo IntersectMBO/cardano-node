@@ -438,11 +438,6 @@ instance ( Condense (HeaderHash blk)
   -- user defined formatting of log output
   trTransformer _ verb tr = trStructured verb tr
 
-instance (Transformable Text IO a)
- => Transformable Text IO (TraceLabelPeer peer a) where
-  trTransformer f v t = Tracer $ \(TraceLabelPeer _peer a) ->
-    traceWith (trTransformer f v t) a
-
 instance Show peer
  => Transformable Text IO [TraceLabelPeer peer (FetchDecision [Point header])] where
   trTransformer _ verb tr = trStructured verb tr
@@ -461,8 +456,9 @@ instance Transformable Text IO (TraceLocalTxSubmissionServerEvent blk) where
 instance ( Show blk
          , StandardHash blk
          , ToObject (AnyMessage (BlockFetch blk)))
- => Transformable Text IO (TraceSendRecv (BlockFetch blk)) where
-  trTransformer = defaultTextTransformer
+ => Transformable Text IO (TraceLabelPeer peer (TraceSendRecv (BlockFetch blk))) where
+  trTransformer f v =
+    contramap (\(TraceLabelPeer _peer a) -> a) . defaultTextTransformer f v
 
 instance Transformable Text IO (TraceTxSubmissionInbound (GenTxId blk) (GenTx blk)) where
   trTransformer = defaultTextTransformer

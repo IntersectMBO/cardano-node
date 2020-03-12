@@ -62,7 +62,6 @@ import           Ouroboros.Network.BlockFetch.Decision (FetchDecision)
 import           Ouroboros.Network.BlockFetch.ClientState (TraceLabelPeer (..))
 import qualified Ouroboros.Network.NodeToClient as NtC
 import qualified Ouroboros.Network.NodeToNode as NtN
-import           Ouroboros.Network.NodeToNode (ErrorPolicyTrace, WithAddr)
 import           Ouroboros.Network.Point (fromWithOrigin)
 import           Ouroboros.Network.Subscription
 
