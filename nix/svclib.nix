@@ -191,8 +191,9 @@ let
   ##   :: FilePath (Genesis a) -> String DelegatePK -> FilePath DelegationCert
   extractDelegateCertificate = genesisJson: delegatePk:
     pkgs.runCommand "delegate.crt" {} ''
+      PK="$(cat ${delegatePk})"
       args=(
-      '.heavyDelegation | .[] | select(.delegatePk == "${delegatePk}")'
+      '.heavyDelegation | .[] | select(.delegatePk == "'$PK'")'
       ${genesisJson}
       )
       ${pkgs.jq}/bin/jq "''${args[@]}" > $out

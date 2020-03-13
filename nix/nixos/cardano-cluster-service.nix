@@ -85,7 +85,7 @@ in let
   ### Genesis & state dirs
   genesis-dir           = ccfg.genesis-dir;
   genesisFile           = "${genesis-dir}/genesis.json";
-  genesis-hash          = readFile (svcLib.genesisHash genesisFile);
+  genesisHashPath       = svcLib.genesisHash genesisFile;
   node-root-dir         = "/var/lib/cardano-node";
   shelley-state-dir     = "${node-root-dir}/${legacy-name-shexpr}";
   shelley-database-paths = map (i: "${node-root-dir}/db-${i}") shelley-node-ids-str;
@@ -106,7 +106,7 @@ in let
 in let
   ### Delegation certs
   pbft-ver-keys         = map svcLib.toVerification migrated-pbft-keys;
-  delegate-certs        = map (pk: svcLib.extractDelegateCertificate genesisFile (readFile pk))
+  delegate-certs        = map (pk: svcLib.extractDelegateCertificate genesisFile pk)
                           pbft-ver-keys;
   pbft-cert-shexpr      = ''$(choice "$1" ${toString legacy-node-ids-str} ${toString delegate-certs})'';
 
@@ -211,7 +211,8 @@ in {
       port                  = toString shelley-port;
       hostAddr              = "127.1.0.$((1 + $1))";
       inherit genesisFile;
-      genesisHash           = genesis-hash;
+      genesisHash           = null;
+      genesisHashPath       = genesisHashPath;
       delegationCertificate = pbft-cert-shexpr;
       signingKey            = pbft-sig-key-shexpr;
       runtimeDir            = null;
