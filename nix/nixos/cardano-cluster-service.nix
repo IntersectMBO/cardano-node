@@ -47,28 +47,28 @@ in let
   ### Names and topologies
   legacy-topology       = svcLib.mkLegacyTopology
     { c-a-1 = { port = 3001;
-                static-routes = [ [ "c-a-2" ] [ "c-b-1" ] [ "c-b-2" ] ];
+                static-routes = [ [ "proxy" ] [ "c-a-2" ] [ "c-b-1" ] ];
               };
       c-a-2 = { port = 3002;
-                static-routes = [ [ "c-b-1" ] [ "c-b-2" ] [ "c-a-1" ] [ "proxy" ] ];
+                static-routes = [ [ "c-a-1" ] [ "c-b-1" ] [ "c-b-2" ] ];
               };
       c-b-1 = { port = 3003;
-                static-routes = [ [ "c-b-2" ] [ "c-a-1" ] [ "c-a-2" ] ];
+                static-routes = [ [ "c-a-1" ] [ "c-a-2" ] [ "c-b-2" ] ];
               };
       c-b-2 = { port = 3004;
-                static-routes = [ [ "c-a-1" ] [ "c-a-2" ] [ "c-b-1" ] ];
+                static-routes = [ [ "c-a-2" ] [ "c-b-1" ] [ "c-a-1" ] ];
               };
       c-c-1 = { port = 3005;
-                static-routes = [ [ "c-d-1" "c-a-1" ] [ "c-c-2" ] [ "proxy" ] ];
+                static-routes = [ [ "c-a-1" ] [ "c-b-1" ] [ "c-b-2" ] ];
               };
       c-c-2 = { port = 3006;
-                static-routes = [ [ "c-b-2" "c-b-1" ] [ "c-c-1" ] [ "proxy" ] ];
+                static-routes = [ [ "c-b-1" ] [ "c-b-2" ] [ "c-c-1" ] ];
               };
       c-d-1 = { port = 3007;
-                static-routes = [ [ "c-a-1" "c-a-2" ] [ "c-b-1" "c-b-2" ] [ "c-c-1" "c-c-2" ] [ "proxy" ] ];
+                static-routes = [ [ "c-b-2" ] [ "c-c-1" ] [ "c-c-2" ] ];
               };
       proxy = { port = 5555;
-                static-routes = [ [ "c-a-2" ] ];
+                static-routes = [ [ "c-a-1" ] ];
                 type = "relay";
               };
     };
