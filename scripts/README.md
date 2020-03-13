@@ -93,9 +93,9 @@ Connect with all the core nodes and store the forks from a common prefix.  If an
 
 #### Usage:
 
-1) Run `./scripts/shelley-testnet2.sh`.
+1) Run `./scripts/shelley-testnet-live.sh`.
 
-2) Run `./scripts/chairman.sh` in a separate terminal.
+2) Run `./scripts/chairman.sh ./socket/0 ./socket/1 ./socket/2` in a separate terminal.
 
 
 ## Connect to mainnet
@@ -109,12 +109,19 @@ This script connects to several IOHK nodes on mainnet.
 Following the instructions above, the window of the terminal will be split into four panes.
 Three of the panes showing the nodes running and a shell to enter commands for transaction submission, e.g.
 
+Create a tx:
+
 ```
-./scripts/submit-tx.sh generated-tx-file
+./scripts/issue-genesis-utxo-expenditure.sh transaction-file
+```
+Submit the tx:
+
+```
+./scripts/submit-tx.sh transaction-file
 ```
 The `submit-tx.sh` script by default sends the transaction to node with node id 0.
 
-See cardano-cli's Transactions section for instructions on how to generate a tx.
+See cardano-cli's [Transactions](../cardano-node/README.md#transactions) section for instructions on how to generate a tx.
 
 ## Startup testnet with dns
 
