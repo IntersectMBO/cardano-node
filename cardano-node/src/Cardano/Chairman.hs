@@ -1,9 +1,7 @@
-{-# LANGUAGE BangPatterns        #-}
 {-# LANGUAGE DataKinds           #-}
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE GADTs               #-}
 {-# LANGUAGE KindSignatures      #-}
-{-# LANGUAGE NamedFieldPuns      #-}
 {-# LANGUAGE MultiWayIf          #-}
 {-# LANGUAGE RankNTypes          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -51,6 +49,7 @@ import           Ouroboros.Network.Block (BlockNo, HasHeader, HeaderHash, Point,
 import qualified Ouroboros.Network.Block as Block
 import           Ouroboros.Network.AnchoredFragment (AnchoredFragment)
 import qualified Ouroboros.Network.AnchoredFragment as AF
+import qualified Ouroboros.Network.Point as Point
 import           Ouroboros.Network.Protocol.LocalTxSubmission.Type
 import           Ouroboros.Network.Protocol.LocalTxSubmission.Client hiding (SendMsgDone)
 import           Ouroboros.Network.Protocol.LocalTxSubmission.Codec
@@ -63,6 +62,7 @@ import           Ouroboros.Network.Snocket (socketSnocket)
 
 import           Cardano.Common.LocalSocket
 import           Cardano.Config.Types (SocketPath)
+import           Cardano.Slotting.Slot (SlotNo, WithOrigin(..))
 import           Cardano.Tracing.Tracers (TraceConstraints)
 
 -- | Run chairman: connect with all the core nodes.  Chairman will store the
@@ -157,8 +157,12 @@ createConnection
         path
         `catch` handleMuxError tracer chainsVar socketPath
 
+-- | A point where consensus was witnessed.
+newtype ConsensusPoint blk =
+  ConsensusPoint { unConsensusPoint :: Point (Header blk) }
+
 data ChairmanTrace blk
-  = WitnessedConsensus [Point (Header blk)]
+  = WitnessedConsensus [ConsensusPoint blk]
   -- ^ witness consensus at a given point.  The list is a list of tip points of
   -- each chain.
 
@@ -166,9 +170,47 @@ instance (Condense blk, Condense (HeaderHash blk)) => Show (ChairmanTrace blk) w
     show (WitnessedConsensus tips)
       = mconcat
       [ "witnessed consensus "
-      , condense tips
+      , condense (unConsensusPoint <$> tips)
       ]
 
+data ChairmanError blk
+  = ChainForksLongerThanK
+      SecurityParam
+      (AnchoredFragment (Header blk))
+      (AnchoredFragment (Header blk))
+    -- ^ Nodes did not agree on a chain: we witnessed a fork longer than
+    -- 'SecurityParam'.  The given points are tips of the chains when the fork
+    -- was encountered.
+  | NoChainIntersection
+      (AnchoredFragment (Header blk))
+      (AnchoredFragment (Header blk))
+    -- ^ Nodes returned completely diverging chains with zero intersection.
+    -- This is a sign of node misconfiguration.
+  | SummaryFailure
+      [ChairmanError blk]
+    -- ^ Problems found during the Chairman's session.
+
+instance ( Condense blk
+         , Condense (Header blk)
+         , Condense (HeaderHash blk)
+         , HasHeader (Header blk))
+    => Show (ChairmanError blk) where
+    show (ChainForksLongerThanK k l r) =
+      "Chain forks longer than 'k' (" ++ show k ++ "): "
+      ++ condense l ++ ", " ++ condense r
+    show (NoChainIntersection l r) =
+      "Nodes posted diverging chains:: "
+      ++ condense (AF.headPoint l) ++ ", " ++ condense (AF.headPoint r)
+    show (SummaryFailure errs) =
+      "Errors exposed during Chairman's session:\n  "
+      ++ intercalate "\n  " (show <$> errs)
+
+instance ( Condense blk
+         , Condense (Header blk)
+         , Condense (HeaderHash blk)
+         , HasHeader (Header blk)
+         , Typeable blk
+         ) => Exception (ChairmanError blk)
 
 --
 -- Shared State, and its API.
@@ -196,69 +238,61 @@ addBlock
 addBlock sockPath chainsVar blk =
     modifyTVar chainsVar (Map.adjust (AF.addBlock (getHeader blk)) sockPath)
 
-
-data ChairmanError blk =
-    NodeMisconduct [Point blk]
-    -- ^ Nodes did not agree on a chain: we witnessed a fork longer than
-    -- 'SecurityParam'.  The given points are tips of the chains when the fork
-    -- was encountered.
-
-instance (Condense blk, Condense (HeaderHash blk))
-    => Show (ChairmanError blk) where
-    show (NodeMisconduct blks) = "NodeMisconduct " ++ condense blks
-
-instance ( Condense blk
-         , Condense (HeaderHash blk)
-         , Typeable blk
-         ) => Exception (ChairmanError blk)
-
+getChains :: MonadSTM m => ChainsVar m blk -> STM m [AnchoredFragment (Header blk)]
+getChains chainsVar = Map.elems <$> readTVar chainsVar
 
 -- | Check if there is no illegitimate long fork.
 --
-checkConsensus
-    :: forall blk m.
-       ( MonadSTM m
-       , MonadThrow (STM m)
-       , HasHeader (Header blk)
-       , Condense (Header blk)
-       , Condense (HeaderHash (Header blk))
-       )
-    => ChainsVar m blk
-    -> SecurityParam
-    -> STM m (ChairmanTrace blk)
-checkConsensus chainsVar (SecurityParam securityParam) = do
-    chains <- readTVar chainsVar
-    let tips = AF.headPoint `map` Map.elems chains
-    case checkChains (Map.elems chains) of
-      True  -> pure (WitnessedConsensus tips)
-      False -> throwM (NodeMisconduct tips)
+checkChainsPairwise
+ :: ( Condense blk
+    , Condense (Header blk)
+    , Condense (HeaderHash blk)
+    , HasHeader (Header blk)
+    , MonadSTM m
+    , MonadThrow (STM m)
+    , Typeable blk)
+ => SecurityParam
+ -> ChainsVar m blk
+ -> STM m [ConsensusPoint blk]
+checkChainsPairwise securityParam chainsVar = do
+  chains <- getChains chainsVar
+  case computeInterchainRelation securityParam chains of
+    ([], cpoints) -> pure cpoints
+    (xs, _) -> throwM (SummaryFailure xs)
+
+-- | For a given set of chains fragments, perform a pairwise check for divergences:
+--   1. whether each pair has a shared part, and
+--   2. whether each pair has both intersection suffixes shorter than 'k'.
+--   Note that this is only a local pair coherency check.
+--
+computeInterchainRelation
+  :: forall blk. (HasHeader (Header blk))
+  => SecurityParam
+  -> [AnchoredFragment (Header blk)]
+  -> ([ChairmanError blk], [ConsensusPoint blk])
+computeInterchainRelation k@(SecurityParam securityParam) chains =
+    partitionEithers $
+      uncurry chainRelation <$> [ (fr0, fr1)  | fr0 <- chains, fr1 <- chains ]
   where
     -- This property is not transitive (e.g. fr0 and fr1 are not long forks,
     -- and fr1 and fr2 are not long forks, but fr0 and fr2 are long forks).
     -- As a consequence, we need to check it between all the pairs of chains.
-    longFork :: AnchoredFragment (Header blk)
+    chainRelation :: AnchoredFragment (Header blk)
              -> AnchoredFragment (Header blk)
-             -> Bool
-    longFork fr0 fr1 = case AF.intersect fr0 fr1 of
-      -- chains are anochored at the genesis, so their intersection is never
-      -- empty
-      Nothing -> error "chainChains: invariant violation"
-      Just (_, _, s0, s1) ->
+             -> Either (ChairmanError blk) (ConsensusPoint blk)
+    chainRelation fr0 fr1 = case AF.intersect fr0 fr1 of
+      -- chains are anchored at the genesis, so their intersection is never
+      -- empty, for properly-configured nodes.
+      Nothing -> Left $ NoChainIntersection fr0 fr1
+      Just (p0, _, s0, s1) ->
         let s0len = fromIntegral (AF.length s0)
             s1len = fromIntegral (AF.length s1)
         in if s0len > securityParam && s1len > securityParam
-             then True
-             -- if only one of 's0len', 's1len` is greater than 'securityParam'
+             then Left $ ChainForksLongerThanK k s0 s1
+             -- if only one of 's0len', 's1len' is greater than 'securityParam'
              -- then it is still ok. That node can still recover by receiving
              -- a valid rollback instruction.
-             else False
-
-    checkChains :: [AnchoredFragment (Header blk)]
-                -> Bool
-    checkChains chains =
-      all (not . (uncurry longFork))
-          [ (fr0, fr1)  | fr0 <- chains, fr1 <- chains ]
-
+             else Right $ ConsensusPoint (AF.headPoint p0)
 
 -- | Rollback a single block.  If the rollback point is not found, we simply
 -- error.  It should never happen if the security parameter is set up correctly.
@@ -299,6 +333,7 @@ chainSyncClient
      , GetHeader blk
      , HasHeader blk
      , HasHeader (Header blk)
+     , Condense blk
      , Condense (Header blk)
      , Condense (HeaderHash (Header blk))
      )
@@ -336,16 +371,16 @@ chainSyncClient tracer sockPath chainsVar securityParam maxBlockNo = ChainSyncCl
           -- trace the decision or error
           res <- atomically $ do
             addBlock sockPath chainsVar blk
-            checkConsensus chainsVar securityParam
-          traceWith tracer res
+            checkChainsPairwise securityParam chainsVar
+          traceWith tracer (WitnessedConsensus res)
           let currentBlockNo = Just (Block.blockNo blk)
           pure $ clientStIdle currentBlockNo
       , recvMsgRollBackward = \point _tip -> ChainSyncClient $ do
           -- rollback & check
           res <- atomically $ do
             rollback sockPath chainsVar point
-            checkConsensus chainsVar securityParam
-          traceWith tracer res
+            checkChainsPairwise securityParam chainsVar
+          traceWith tracer (WitnessedConsensus res)
           pure $ clientStIdle Nothing
       }
 
@@ -356,6 +391,7 @@ chainSyncClient tracer sockPath chainsVar securityParam maxBlockNo = ChainSyncCl
 localInitiatorNetworkApplication
   :: forall blk m peer.
      ( RunNode blk
+     , Condense blk
      , Condense (Header blk)
      , Condense (HeaderHash blk)
      , MonadAsync m
