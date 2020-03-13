@@ -1,7 +1,9 @@
-{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
+
+module Main (main) where
 
 import           Cardano.Prelude hiding (option)
 
@@ -13,11 +15,16 @@ import           Options.Applicative
 
 import           Control.Monad.Trans.Except.Extra (runExceptT)
 import           Control.Tracer (stdoutTracer)
+import           Data.Time.Clock (UTCTime (..), diffUTCTime, getCurrentTime)
 
-import           Ouroboros.Network.Block (BlockNo)
+import           Ouroboros.Network.Block (BlockNo, SlotNo(..))
 import           Ouroboros.Network.NodeToClient (withIOManager)
+import qualified Ouroboros.Consensus.Cardano as Cardano
 import           Ouroboros.Consensus.Protocol.Abstract (SecurityParam (..))
+import qualified Ouroboros.Consensus.Byron.Ledger.Block as Byron
 
+import qualified Cardano.Chain.Genesis as Cardano
+import qualified Cardano.Chain.Update as Cardano
 import           Cardano.Config.CommonCLI
 import           Cardano.Config.Protocol ( ProtocolInstantiationError
                                          , SomeProtocol(..), fromProtocol)
@@ -25,7 +32,23 @@ import           Cardano.Config.Types (ConfigYamlFilePath(..), DelegationCertFil
                                        GenesisFile (..), NodeConfiguration(..),
                                        SigningKeyFile(..), SocketPath(..), parseNodeConfigurationFP)
 import           Cardano.Common.Parsers
-import           Cardano.Chairman (runChairman)
+import           Cardano.Chairman (CurrentSlotEstimation(..), runChairman)
+
+instance CurrentSlotEstimation Byron.ByronBlock where
+  estimateCurrentSlot (Cardano.ProtocolRealPBFT gc _ _ _ _) =
+    estimate <$> getCurrentTime
+   where
+     estimate :: UTCTime -> SlotNo
+     estimate t = SlotNo . floor $
+       secondsElapsedAt t / fromIntegral slotDuration
+
+     secondsElapsedAt :: UTCTime -> Double
+     secondsElapsedAt t = realToFrac $ t `diffUTCTime` Cardano.configStartTime gc
+
+     slotDuration :: Natural
+     slotDuration = Cardano.ppSlotDuration $ Cardano.configProtocolParameters gc
+
+
 
 main :: IO ()
 main = withIOManager $ \iocp -> do
@@ -49,8 +72,8 @@ main = withIOManager $ \iocp -> do
                                  (Just caGenesisFile)
                                  (ncReqNetworkMagic nc)
                                  (ncPbftSignatureThresh nc)
-                                 (caDelegationCertFp)
-                                 (caSigningKeyFp)
+                                 caDelegationCertFp
+                                 caSigningKeyFp
                                  (ncUpdate nc)
                                  (ncProtocol nc)
 

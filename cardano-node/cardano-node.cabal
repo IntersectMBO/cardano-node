@@ -212,6 +212,7 @@ executable chairman
                      , async
                      , bytestring
                      , cardano-config
+                     , cardano-ledger
                      , cardano-prelude
                      , contra-tracer
                      , cardano-node
@@ -220,8 +221,11 @@ executable chairman
                      , network-mux
                      , optparse-applicative
                      , ouroboros-consensus
+                     , ouroboros-consensus-byron
+                     , ouroboros-consensus-cardano
                      , ouroboros-network
                      , text
+                     , time
                      , transformers-except
                      , typed-protocols
                      , ouroboros-network-framework
