@@ -25,9 +25,6 @@ EXTRA=""
 BASEPATH=$(realpath $(dirname $0))
 
 genesis_root=${BASEPATH}/configuration/latest-genesis
-genesis_file=${genesis_root}/genesis.json
-genesis_hash=$(cat ${genesis_root}/GENHASH)
-
 
 ### prep cli arguments
 
@@ -44,8 +41,6 @@ function dlgcert () {
 function commonargs() {
         printf -- "--topology configuration/simple-topology-real-pbft-node-$1.json "
         printf -- "--database-path ./db-$1/ "
-        printf -- "--genesis-file ${genesis_file} "
-        printf -- "--genesis-hash ${genesis_hash} "
         printf -- "--socket-path /tmp/cluster3nodes-socket/$1 "
 }
 

@@ -26,8 +26,6 @@ let
           "--timeout ${toString cfg.timeout}"
           "--max-block-no ${toString cfg.maxBlockNo}"
           "--security-param ${toString cfg.k}"
-          "--genesis-file ${cfg.genesisFile}"
-          "--genesis-hash $GENESIS_HASH"
           "--config ${cfg.nodeConfigFile}"
           "${optionalString cfg.timeoutIsSuccess "--timeout-is-success"}"
         ];
@@ -96,13 +94,6 @@ in {
         type = int;
         default = 2160;
         description = ''Should come from genesis instead.'';
-      };
-      genesisHash = mkOption {
-        type = types.str;
-        default = envConfig.genesisHash;
-        description = ''
-          Hash of the genesis file
-        '';
       };
       slot-length = mkOption {
         type = int;

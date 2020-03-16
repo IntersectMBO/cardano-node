@@ -174,15 +174,6 @@ The canned `scripts/genesis.sh` example provides a nice set of defaults and
 illustrates available options.  Running it will produce a `./configuration/XXXXX` directory,
 where `XXXXX` will be a 5-character prefix of the genesis hash.
 
-### Hashing
-
-To underscore the identity of the genesis being employed by the node, the latter
-requires hash of the genesis JSON file as a configuration parameter
-(`--genesis-hash`).
-
-This hash can be obtained by the means of the `print-genesis-hash` subcommand --
-in a form expected by the node.
-
 ## Key operations
 
 Note that no key operation currently supports accepting password-protected keys.

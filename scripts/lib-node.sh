@@ -27,8 +27,6 @@ function dlgcert () {
 function commonargs() {
         printf -- "--topology ${configuration}/realPBFT/simple-topology-real-pbft-node-$1.json "
         printf -- "--database-path ${root}/db/db-$1 "
-        printf -- "--genesis-file ${genesis_file} "
-        printf -- "--genesis-hash ${genesis_hash} "
         printf -- "--socket-path ${root}/socket/$1 "
 }
 
