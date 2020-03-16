@@ -9,7 +9,6 @@ import           Data.Text (pack)
 import           Control.Applicative (some)
 import           Control.Monad.Trans.Except.Extra (runExceptT)
 import           Control.Monad.Class.MonadTime (DiffTime)
-import           Control.Exception (Exception)
 import           Control.Tracer (stdoutTracer)
 
 import           Ouroboros.Network.Block (BlockNo)
@@ -26,8 +25,8 @@ import           Cardano.Chairman (chairmanTest)
 
 main :: IO ()
 main = do
-    ChairmanArgs { caMaxBlockNo
-                 , caTimeout
+    ChairmanArgs { caRunningTime
+                 , caMinProgress
                  , caSocketPaths
                  , caConfigYaml
                  , caSigningKeyFp
@@ -54,58 +53,50 @@ main = do
     chairmanTest
       stdoutTracer
       p
-      caMaxBlockNo
-      caTimeout
+      caRunningTime
+      caMinProgress
       caSocketPaths
 
 renderPtclInstantiationErr :: ProtocolInstantiationError -> Text
 renderPtclInstantiationErr = pack . show
 
-data TimeoutType
-  = SuccessTimeout
-  | FailureTimeout
-  deriving (Eq, Show)
-
 data ChairmanArgs = ChairmanArgs {
-      -- | stop after seeing given block number
-      caMaxBlockNo      :: !(Maybe BlockNo)
-      -- | timeout after given number of seconds, this is useful in combination
-      -- with 'caMaxBlockNo'.  The chairman will observe only for the given
-      -- period of time and then error.
+      -- | Stop the test after given number of seconds. The chairman will
+      -- observe only for the given period of time, and check the consensus
+      -- and progress conditions at the end.
       --
-      -- TODO: when we'll have timeouts for 'typed-protocols' we will be able to
-      -- detect progress errors when running 'chain-sync' protocol and we will
-      -- be able to remove this option
-    , caTimeout     :: !(Maybe DiffTime)
+      caRunningTime :: !DiffTime
+      -- | Expect this amount of progress (chain growth) by the end of the test.
+    , caMinProgress :: !(Maybe BlockNo)
     , caSocketPaths :: ![SocketPath]
     , caConfigYaml :: !ConfigYamlFilePath
     , caSigningKeyFp :: !(Maybe SigningKeyFile)
     , caDelegationCertFp :: !(Maybe DelegationCertFile)
     }
 
-parseSlots :: Parser BlockNo
-parseSlots =
-    option ((fromIntegral :: Int -> BlockNo) <$> auto) (
-         long "max-block-no"
-      <> short 's'
-      <> metavar "BlockNo"
-      <> help "Finish after that many number of blocks"
-    )
-
-parseTimeout :: Parser DiffTime
-parseTimeout =
+parseRunningTime :: Parser DiffTime
+parseRunningTime =
       option ((fromIntegral :: Int -> DiffTime) <$> auto) (
            long "timeout"
         <> short 't'
-        <> metavar "Timeout"
-        <> help "Timeout after given time in seconds."
+        <> metavar "Time"
+        <> help "Run the chairman for this length of time in seconds."
       )
+
+parseProgress :: Parser BlockNo
+parseProgress =
+    option ((fromIntegral :: Int -> BlockNo) <$> auto) (
+         long "require-progress"
+      <> short 'p'
+      <> metavar "Blocks"
+      <> help "Require this much chain-growth progress, in blocks."
+    )
 
 parseChairmanArgs :: Parser ChairmanArgs
 parseChairmanArgs =
     ChairmanArgs
-      <$> optional parseSlots
-      <*> optional parseTimeout
+      <$> parseRunningTime
+      <*> optional parseProgress
       <*> (some $ parseSocketPath "Path to a cardano-node socket")
       <*> (ConfigYamlFilePath <$> parseConfigFile)
       <*> (optional $ SigningKeyFile <$> parseSigningKey)
@@ -117,7 +108,3 @@ opts = info (parseChairmanArgs <**> helper)
   <> progDesc "Chairman Shelly application checks if Shelly nodes find consensus."
   <> header "Chairman sits in a room full of Shelley nodes, and checks if they are all behaving ...")
 
-data Timeout = Timeout
-  deriving Show
-
-instance Exception Timeout

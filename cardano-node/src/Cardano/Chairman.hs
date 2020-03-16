@@ -81,28 +81,23 @@ import           Cardano.Config.Types (SocketPath(..))
 -- that failures can be detected as early as possible. The progress condition
 -- is only checked at the end.
 --
--- It is also possible to specify how many blocks should be validated.
---
 chairmanTest :: RunNode blk
              => Tracer IO String
              -> Protocol blk (BlockProtocol blk)
+             -> DiffTime
              -> Maybe BlockNo
-             -> Maybe DiffTime
              -> [SocketPath]
              -> IO ()
-chairmanTest tracer ptcl maxBlockNo maxRunTime socketPaths = do
+chairmanTest tracer ptcl runningTime optionalProgressThreshold socketPaths = do
 
-    -- The chairman runs until we hit the max block no, or max run time,
-    -- or if both are @Nothing@ it runs indefinately, and the remaining
-    -- checks are never performed.
-    traceWith tracer ("Will run until block number " ++ show maxBlockNo')
-    traceWith tracer ("Will run until timeout "      ++ show maxRunTime')
+    traceWith tracer ("Will observe nodes for " ++ show runningTime)
+    traceWith tracer ("Will require chain growth of " ++ show progressThreshold)
 
     -- Run the chairman and get the final snapshot of the chain from each node.
     chainsSnapshot <- runChairman
                         tracer
                         cfg securityParam
-                        maxBlockNo' maxRunTime'
+                        runningTime
                         socketPaths
 
     traceWith tracer ("================== chairman results ==================")
@@ -124,35 +119,26 @@ chairmanTest tracer ptcl maxBlockNo maxRunTime socketPaths = do
     ProtocolInfo { pInfoConfig = cfg } = protocolInfo ptcl
     securityParam = protocolSecurityParam (configConsensus cfg)
     slotLength    = currentSlotLength (knownSlotLengths (configBlock cfg))
+    progressThreshold = deriveProgressThreshold
+                          slotLength
+                          runningTime
+                          optionalProgressThreshold
 
-    (maxBlockNo', maxRunTime') = deriveRunLimits slotLength (maxBlockNo, maxRunTime)
 
-    progressThreshold = fromMaybe 0 maxBlockNo'
+-- | The caller specifies how long to run the chairman for and optionally a
+-- chain growth progress threshold. If the threshold is not given, we can
+-- derive a reasonable default from the running time and slot length.
+--
+deriveProgressThreshold :: SlotLength
+                        -> DiffTime
+                        -> Maybe BlockNo
+                        -> BlockNo
+deriveProgressThreshold _ _ (Just progressThreshold) = progressThreshold
 
+-- If only the progress threshold is not specified, derive it from the running time
+deriveProgressThreshold slotLength runningTime Nothing =
+    Block.BlockNo (floor (runningTime / getSlotLengthDiffTime slotLength))
 
--- | We can specify how long to run the chairman either by specifying the
--- number of blocks to run for, or the time, or both, or neither. If only
--- one is given, the other is derived.
-deriveRunLimits :: SlotLength
-                -> (Maybe BlockNo, Maybe DiffTime)
-                -> (Maybe BlockNo, Maybe DiffTime)
-
--- If only the block number is specified, derive the timeout
-deriveRunLimits slotLength (Just maxBlockNo, Nothing) =
-    (Just maxBlockNo, Just maxRunTime)
-  where
-    maxRunTime = fromIntegral (Block.unBlockNo maxBlockNo)
-               * getSlotLengthDiffTime slotLength
-
--- If only the timeout is specified, derive the block number
-deriveRunLimits slotLength (Nothing, Just maxRunTime) =
-    (Just maxBlockNo, Just maxRunTime)
-  where
-    maxBlockNo = Block.BlockNo $
-                   floor (maxRunTime / getSlotLengthDiffTime slotLength)
-
--- Otherwise if both or none specified, leave them
-deriveRunLimits _ x = x
 
 getSlotLengthDiffTime :: SlotLength -> DiffTime
 getSlotLengthDiffTime = realToFrac . getSlotLength
@@ -297,22 +283,18 @@ runChairman :: RunNode blk
             -> SecurityParam
             -- ^ security parameter, if a fork is deeper than it 'runChairman'
             -- will throw an exception.
-            -> Maybe BlockNo
-            -- ^ finish after this many blocks, if 'Nothing' run continuously.
-            -> Maybe DiffTime
-            -- ^ finish after this much time, if 'Nothing' run continuously.
+            -> DiffTime
+            -- ^ Run for this much time.
             -> [SocketPath]
             -- ^ local socket dir
             -> IO (ChainsSnapshot blk)
-runChairman tracer cfg securityParam
-            maxBlockNo maxRunTime
-            socketPaths = do
+runChairman tracer cfg securityParam runningTime socketPaths = do
 
     let initialChains = Map.fromList [ (socketPath, AF.Empty AF.AnchorGenesis)
                                      | socketPath <- socketPaths]
     chainsVar <- newTVarM initialChains
 
-    void $ timeout (fromMaybe (-1) maxRunTime) $
+    void $ timeout runningTime $
       withIOManager $ \iomgr ->
         forConcurrently_ socketPaths $ \sockPath ->
           createConnection
@@ -320,7 +302,6 @@ runChairman tracer cfg securityParam
             iomgr
             cfg
             securityParam
-            maxBlockNo
             chainsVar
             sockPath
 
@@ -345,7 +326,6 @@ createConnection
   -> AssociateWithIOCP
   -> TopLevelConfig blk
   -> SecurityParam
-  -> Maybe BlockNo
   -> ChainsVar IO blk
   -> SocketPath
   -> IO ()
@@ -354,7 +334,6 @@ createConnection
   iomgr
   cfg
   securityParam
-  maxBlockNo
   chainsVar
   socketPath@(SocketFile path) =
       connectTo
@@ -367,7 +346,6 @@ createConnection
             socketPath
             chainsVar
             securityParam
-            maxBlockNo
             (showTracing tracer)
             nullTracer
             nullTracer
@@ -449,9 +427,8 @@ chainSyncClient
   -> SocketPath
   -> ChainsVar m blk
   -> SecurityParam
-  -> Maybe BlockNo
   -> ChainSyncClient blk (Tip blk) m ()
-chainSyncClient tracer sockPath chainsVar securityParam maxBlockNo = ChainSyncClient $ pure $
+chainSyncClient tracer sockPath chainsVar securityParam = ChainSyncClient $ pure $
     -- Notify the core node about the our latest points at which we are
     -- synchronised.  This client is not persistent and thus it just
     -- synchronises from the genesis block.  A real implementation should send
@@ -459,18 +436,12 @@ chainSyncClient tracer sockPath chainsVar securityParam maxBlockNo = ChainSyncCl
     SendMsgFindIntersect
       [Block.genesisPoint]
       ClientStIntersect {
-        recvMsgIntersectFound    = \_ _ -> ChainSyncClient (pure $ clientStIdle Nothing),
-        recvMsgIntersectNotFound = \  _ -> ChainSyncClient (pure $ clientStIdle Nothing)
+        recvMsgIntersectFound    = \_ _ -> ChainSyncClient (pure clientStIdle),
+        recvMsgIntersectNotFound = \  _ -> ChainSyncClient (pure clientStIdle)
       }
   where
-    clientStIdle :: Maybe BlockNo
-                 -- current point
-                 -> ClientStIdle blk (Tip blk) m ()
-    clientStIdle currentBlockNo =
-      case (currentBlockNo, maxBlockNo) of
-        (Just n, Just m) | n >= m
-                         -> SendMsgDone ()
-        _                -> SendMsgRequestNext clientStNext (pure clientStNext)
+    clientStIdle :: ClientStIdle blk (Tip blk) m ()
+    clientStIdle = SendMsgRequestNext clientStNext (pure clientStNext)
 
     clientStNext :: ClientStNext blk (Tip blk) m ()
     clientStNext = ClientStNext {
@@ -481,15 +452,14 @@ chainSyncClient tracer sockPath chainsVar securityParam maxBlockNo = ChainSyncCl
             addBlock sockPath chainsVar blk
             checkConsensus chainsVar securityParam
           traceWith tracer res
-          let currentBlockNo = Just (Block.blockNo blk)
-          pure $ clientStIdle currentBlockNo
+          pure clientStIdle
       , recvMsgRollBackward = \point _tip -> ChainSyncClient $ do
           -- rollback & check
           res <- atomically $ do
             rollback sockPath chainsVar point
             checkConsensus chainsVar securityParam
           traceWith tracer res
-          pure $ clientStIdle Nothing
+          pure clientStIdle
       }
 
 -- | Check that all nodes agree with each other, within the security parameter.
@@ -524,7 +494,6 @@ localInitiatorNetworkApplication
   => SocketPath
   -> ChainsVar m blk
   -> SecurityParam
-  -> Maybe BlockNo
   -> Tracer m (ChairmanTrace blk)
   -> Tracer m (TraceSendRecv (ChainSync blk (Tip blk)))
   -- ^ tracer which logs all chain-sync messages send and received by the client
@@ -537,7 +506,9 @@ localInitiatorNetworkApplication
   -> TopLevelConfig blk
   -> Versions NodeToClientVersion DictVersion
               (peer -> OuroborosApplication InitiatorApp ByteString m () Void)
-localInitiatorNetworkApplication sockPath chainsVar securityParam maxBlockNo chairmanTracer chainSyncTracer localTxSubmissionTracer cfg =
+localInitiatorNetworkApplication sockPath chainsVar securityParam
+                                 chairmanTracer chainSyncTracer
+                                 localTxSubmissionTracer cfg =
     simpleSingletonVersions
       NodeToClientV_1
       (NodeToClientVersionData (nodeNetworkMagic (Proxy @blk) cfg))
@@ -551,8 +522,7 @@ localInitiatorNetworkApplication sockPath chainsVar securityParam maxBlockNo cha
               chainSyncTracer
               (localChainSyncCodec cfg)
               (chainSyncClientPeer $
-                 chainSyncClient chairmanTracer sockPath chainsVar
-                                 securityParam maxBlockNo)
+                 chainSyncClient chairmanTracer sockPath chainsVar securityParam)
 
       , localTxSubmissionProtocol =
           InitiatorProtocolOnly $
