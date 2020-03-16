@@ -29,8 +29,10 @@ Please ensure that your /etc/nix/nix.conf has 'kvm' in its 'system-features' opt
 EOF
      exit 1; fi
 
+interactive='false'
 while test -n "$1"
 do case "$1" in
+           --interactive )          interactive='true';;
            --cls ) echo -en "\ec";; * ) break;; esac; shift; done
 ###
 ###
@@ -59,5 +61,7 @@ EOF
 announce
 trap announce EXIT
 
-nix-build -A nixosTests.chairmansCluster --show-trace --arg config '{ interactive = true; }' "$@" 2>&1 |
+nix-build -A nixosTests.chairmansCluster --show-trace --arg config "{ interactive = ${interactive}; }" "$@" 2>&1 |
         tee ${logfile}
+
+$(dirname $0)/cluster-log-split.sh '--print' ${logfile}

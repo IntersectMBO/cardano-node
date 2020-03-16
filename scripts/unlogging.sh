@@ -1,43 +1,51 @@
+ebb_block_hash=d0433b13f4454997db3b67ba9aee45b1d91f00bfbaef1db5c5fa8bf2bb052413
+genesis_block_hash=ec4fafee43d64b009eaae5353290167250b70694528ebbd479619673128e9cc2
+
 function ip_input_output() {
         local ip="$1" input="$2"
         echo -n "${input}.${ip}.png"
 }
-function log_ip_pid () {
+function deduce_ip_properties () {
         local ip="$1" input="$2"
         local legacy_pid=$(cluster_log_ip_legacy_pid "${input}" "${ip}")
         local rewrite_pid=$(cluster_log_ip_rewrite_pid "${input}" "${ip}")
         local proxy_pid=$(cluster_log_ip_proxy_pid "${input}" "${ip}")
         if   test -n "${rewrite_pid}"
         then kind='rewrite'
+             type='rewrite'
              pid=${rewrite_pid}
              filter="cardano-node_-start\[${pid}\]: ";
         elif test -n "${legacy_pid}"
         then kind='legacy'
+             type='legacy'
              pid=${legacy_pid}
              filter="cardano-node-legacy_-start\[${pid}\]: "
         elif test -n "${proxy_pid}"
         then kind='legacy'
+             type='proxy'
              pid=${proxy_pid}
              filter="byron-proxy-start\[${pid}\]: ";
         else fail "no PID for node IP address '${ip}' in ${input:-<stdin>}"
         fi
-        echo -n "${pid}|${kind}|${filter}"
+        echo -n "${pid}|${type}|${kind}|${filter}"
 }
 function fill_ip_maps () {
         local input="$1" ipmask="$2" ipmin="$3" ipmax="$4"
         local i=
         for i in $(seq ${ipmin} ${ipmax})
-        do fill_ip_maps_entry "${input}" $(printf $ipmask $i); done
+        do fill_id_maps_entry_for_ip "${input}" $(printf $ipmask $i); done
 }
-declare -A ip_pids
-declare -A ip_kinds
-declare -A ip_filters
-function fill_ip_maps_entry () {
+
+declare -A id_pids id_types id_kinds id_filters
+function fill_id_maps_entry_for_ip () {
         local input="$1" ip="$2"
-        local out="$(log_ip_pid ${ip} ${input})"
-        ip_pids["$ip"]="$(echo    "${out}" | cut -d\| -f1)"
-        ip_kinds["$ip"]="$(echo   "${out}" | cut -d\| -f2)"
-        ip_filters["$ip"]="$(echo "${out}" | cut -d\| -f3)"
+        local id=${ip_ids[$ip]}
+        local props="$(deduce_ip_properties ${ip} ${input})"
+
+        id_pids[$id]="$(echo    "${props}" | cut -d\| -f1)"
+        id_types[$id]="$(echo   "${props}" | cut -d\| -f2)"
+        id_kinds[$id]="$(echo   "${props}" | cut -d\| -f3)"
+        id_filters[$id]="$(echo "${props}" | cut -d\| -f4)"
 }
 
 function process_one_ip () {
@@ -80,20 +88,23 @@ function process_one_ip () {
                         usage "ERROR:  bad subcommand '${mode}'";; esac
 }
 
-function log_dot() {
-        local input="$1" kind="$2" limit="$3" genesis_block_hash="$4"
+function emit_dot() {
         cat <<EOF
 digraph forks {
-  bgcolor="${bg_color}"
-  color="${fg_color}"
+  bgcolor="${color[bg]}"
+  color="${color[fg]}"
   node [shape=record]
-$(${kind}_log_header_messages "${input}" |
-  ${kind}_header_messages_to_internal_raw ${genesis_block_hash} |
-  ${kind}_merge_internal |
-  internal_to_dot ${limit}
- )
+$(cat)
 }
 EOF
+}
+
+function log_dot() {
+        local input="$1" kind="$2" limit="$3" genesis_block_hash="$4"
+        ${kind}_log_header_messages "${input}" |
+                ${kind}_header_messages_to_internal_raw ${genesis_block_hash} |
+                ${kind}_merge_internal |
+                emit_dot
 }
 
 function rewrite_log_headers_seen_messages_raw() {
@@ -109,14 +120,24 @@ function headers_seen_messages_to_internal() {
 
 function rewrite_log_header_messages() {
         local input="$1"
-        fgrep 'ChainSyncServerEvent.TraceChainSyncServerReadBlocked.AddBlock' ${input}
+        fgrep 'TraceAddBlockEvent.AddedToCurrentChain' ${input} |
+          sed 's/^[^0-9]*\([0-9]*\)\.\(.*\)"slotNo"\(.*\)$/\2"stamp":\1,"slotNo"\3/' |
+          cut -d\] -f5- | cut -c2- |
+          jq '  .event.headers
+              | map ( " \(.stamp) \(.hash) \(.prevhash) \(.slotNo) \(.delegate)" )
+              | .[]
+             ' |
+          tr -d \" |
+          sed 's/genesis 0 null/genesis -1 genesis/; s/pub://' |
+          { read stamp hash prevhash slot delegate
+            while test -n "${delegate}"
+            do id=${leader_hex_id[${delegate}]}
+               echo "${stamp} ${hash} ${prevhash} ${slot} ${delegate} ${id}"
+               read stamp hash prevhash slot delegate; done; }
 }
 
 function rewrite_header_messages_to_internal_raw() {
-        local genesis_block_hash="$1"
-        processGenesis='s/^[^0-9]*\([0-9]*\)\..*( ebb: true, hash: \(.*\), previousHash: \(.*\)).*/\1 \2 \3 -1 Genesis/'
-        processNormal='s/^[^0-9]*\([0-9]*\)\..*(hash: \(.*\), previousHash: \(.*\), slot: \([0-9]*\), issuer: \(pub:[a-f0-9]*\), delegate: pub:[a-f0-9]*).*/\1 \2 \3 \4 \5/'
-        sed "${processGenesis}; ${processNormal}"
+        cat
 }
 
 function rewrite_merge_internal() {
@@ -135,17 +156,24 @@ function legacy_log_headers_seen_messages_raw() {
 }
 function legacy_log_header_messages() {
         local input="$1"
-        fgrep -B2 -A2 ':     slot:' ${input}
+        fgrep -B2 -A3 ':     slot:' ${input}
 }
 
 function legacy_header_messages_to_internal_raw() {
         local genesis_block_hash="$1"
-        grep 'hash:\|previous block:\|slot:\|leader:' |
+        grep 'hash:\|previous block:\|slot:\|signature:' |
         sed -e 's/^[^0-9]*\([0-9]*\)\.\(.*hash:.*\)$/:: \1\n\2/' |
         cut -d':' -f3-                                |
-        sed "s/${genesis_block_hash}/${genesis_block_hash}\npub:genesis/" |
-        sed "s/ \([0-9]*\).. slot of.*epoch$/ \1/"    |
-        sed 'N;N;N;N;s/\n//g'
+        sed "s/${genesis_block_hash}/${genesis_block_hash}\npub:genesis/;
+             s/ \([0-9]*\).. slot of.*epoch$/ \1/;
+             s/ BlockPSignatureHeavy: Proxy signature.* dPk = pub:\([0-9a-f]*\) .*$/ \1/
+             "    |
+        sed 'N;N;N;N;s/\n//g' |
+        { read stamp hash prevhash slot delegate
+          while test -n "${delegate}"
+          do id=${leader_hex_id[${delegate}]}
+             echo "${stamp} ${hash} ${prevhash} ${slot} ${delegate} ${id}"
+             read stamp hash prevhash slot delegate; done; }
 }
 
 function legacy_merge_internal() {
@@ -153,19 +181,38 @@ function legacy_merge_internal() {
         sort --key 4 --numeric --unique | uniq -f1
 }
 
+function legacy_key_properties() {
+        ${cardano_cli} signing-key-public --byron-legacy --secret "$1" |
+          grep '^    public key hash: \|^public key (base64): \|   public key (hex): ' |
+          cut -c22- |
+          { read hash; read base64; read hex
+            echo -n "${hash}|${base64}|${hex}"
+          }
+}
+
+function legacy_extract_genesis_delegation() {
+        grep 'GenesisDelegation (stakeholder ids)' $1 |
+                cut -d'[' -f6 | cut -d']' -f1 |
+                sed 's/, /\n/g; s/ -> / /g'
+}
+
+function smallest_file_size_bytes() {
+        stat -c "%s" "$@" | sort -n | head -n1 | xargs echo -n
+}
+
 function cluster_log_ip_rewrite_pid() {
         local input="$1" ip="$2"
-        grep "I am Node NodeAddress {naHostAddress = NodeHostAddress {getAddress = Just ${ip}}," "${input}" | head -n1 | cut -d'[' -f3 |cut -d']' -f1
+        grep -e "--host-addr ${ip}$" "${input}" | head -n1 | cut -d'[' -f3 |cut -d']' -f1
 }
 
 function cluster_log_ip_proxy_pid() {
         local input="$1" ip="$2"
-        fgrep -e "--local-addr [${ip}]" "${input}" | head -n1 | cut -d'[' -f3 |cut -d']' -f1
+        grep -e "Starting cardano-byron-proxy.*--local-addr \[${ip}\]" "${input}" | head -n1 | cut -d'[' -f3 |cut -d']' -f1
 }
 
 function cluster_log_ip_legacy_pid() {
         local input="$1" ip="$2"
-        grep "startNode, we are NodeId ${ip}:" "${input}" | head -n1 | cut -d'[' -f3 | cut -d']' -f1
+        grep "cardano-node-legacy_-start.*startNode, we are NodeId ${ip}:" "${input}" | head -n1 | cut -d'[' -f3 | cut -d']' -f1
 }
 
 function internal_to_dot() {
@@ -174,26 +221,26 @@ function internal_to_dot() {
         arrow_loop
 }
 
-function nodeid_color() {
-        case $1 in
-                0 | 1 | 2 | 3 ) echo -n "#859900";;
-                4 | 5 | 6 )     echo -n "#268bd2";;
-                * )             echo -n "#b58900";; esac
-}
+declare -A color
+color['bg']="#002b36"
+color['fg']="#586e75"
+color['arrlabel']="#b58900"
+color['drawing']="#586e75"
 
-bg_color="#002b36"
-fg_color="#586e75"
-arrlabel_color="#b58900";
-drawing_color="#586e75";
+declare -A type_color
+type_color['legacy']="#859900"
+type_color['rewrite']="#268bd2"
+type_color['proxy']="#b58900"
 
 function arrow_loop() {
-        read timestamp next prev slot leader_pub
+        read timestamp next prev slot leader_key node_id
         while test -n "${next}"
-        do nodeid=$(leader_pub_nodeid ${leader_pub})
-           node_color=$(nodeid_color ${nodeid})
-           echo "\"${next}\" [color=\"${drawing_color}\", fontcolor=\"${node_color}\", xlabel=\"Slot ${slot}\n@ ${timestamp}\"]"
-           echo "\"${next}\" -> \"${prev}\" [label=\"${leader_pub} Id ${nodeid}\", color=\"${drawing_color}\", fontcolor=\"${arrlabel_color}\"]"
-           read timestamp next prev slot leader_pub
+        do if test ! -v id_types[$node_id]
+           then echo "ERR: id_types[$node_id] undefined" >&2; fi
+           node_color=${type_color[${id_types[$node_id]}]}
+           echo "\"${next}\" [color=\"${color[drawing]}\", fontcolor=\"${node_color}\", xlabel=\"Slot ${slot}\n@ ${timestamp}\"]"
+           echo "\"${next}\" -> \"${prev}\" [label=\"${leader_key} Id ${node_id}\", color=\"${color[drawing]}\", fontcolor=\"${color[arrlabel]}\"]"
+           read timestamp next prev slot leader_key node_id
         done
 }
 
@@ -225,27 +272,8 @@ function ip_slot_timings_loop() {
         echo
 }
 
-function delegation_map() {
-        # if test -d "${delegate_keydir}"
-        # then i=0
-        #      for x in "${delegate_keydir}"/key*.sk
-        #      do echo $x
-        #         i=$((i+1)); done; fi
-
-        ## Hardcoded for 'mainnet_ci_full' for now.
-        cat <<EOF
-0 pub:4a309750
-1 pub:938abf5e
-2 pub:feb19082
-3 pub:8647d806
-4 pub:f5345d73
-5 pub:9a5aaa3b
-6 pub:627771ab
-EOF
-}
-
 function leader_pub_nodeid() {
-        delegation_map | grep "$1" | cut -d' ' -f1
+        echo ${delegate_hex_id[$1]}
 }
 
 function maybe_filter() {

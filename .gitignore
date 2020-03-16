@@ -23,6 +23,7 @@ logs/
 /db-[0-9]
 /launch_*
 /state-*
+/cardano-cli
 /cluster
 /cluster.*
 /benchmark*.log*

@@ -26,8 +26,6 @@ EOF
 
 limit=20
 ip='127.1.0.2'
-genesis_block_hash='12da51c484b5310fe26ca06ab24b94b323cde3698a0a50cb3f212abd08c2731e'
-ebb_block_hash='d2cbcf912983d670f0cb20299372dccfa045a4314bccf4cc84846db2dc8ffcbf'
 delegate_keydir=
 delegation=
 while test -n "$1"
