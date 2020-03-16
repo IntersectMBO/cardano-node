@@ -546,7 +546,7 @@ initLiveViewState = do
                 }
 
 setTopology :: NFData a => LiveViewBackend blk a -> NodeProtocolMode -> IO ()
-setTopology lvbe (RealProtocolMode (NodeCLI _ _ nAddress _ _)) =
+setTopology lvbe (RealProtocolMode (NodeCLI _ nAddress _ _)) =
   modifyMVar_ (getbe lvbe) $ \lvs ->
     return $ lvs { lvsNodeId = pack $ "Port: " <> (show $ naPort nAddress) }
 setTopology lvbe npm = do

@@ -34,7 +34,6 @@ main = withIOManager $ \iocp -> do
                  , caTimeout
                  , caTimeoutType
                  , caGenesisFile
-                 , caGenesisHash
                  , caSocketPaths
                  , caConfigYaml
                  , caSigningKeyFp
@@ -43,7 +42,6 @@ main = withIOManager $ \iocp -> do
 
     nc <- liftIO . parseNodeConfigurationFP $ unConfigPath caConfigYaml
     frmPtclRes <- runExceptT $ fromProtocol
-                                 caGenesisHash
                                  (ncNodeId nc)
                                  (ncNumCoreNodes nc)
                                  (Just caGenesisFile)
@@ -100,7 +98,6 @@ data ChairmanArgs = ChairmanArgs {
     , caTimeout         :: !(Maybe Int)
     , caTimeoutType :: !TimeoutType
     , caGenesisFile :: !GenesisFile
-    , caGenesisHash :: !Text
     , caSocketPaths :: ![SocketPath]
     , caConfigYaml :: !ConfigYamlFilePath
     , caSigningKeyFp :: !(Maybe SigningKeyFile)
@@ -143,7 +140,6 @@ parseChairmanArgs =
       <*> parseFlag' FailureTimeout SuccessTimeout
           "timeout-is-success" "Exit successfully on timeout."
       <*> (GenesisFile <$> parseGenesisPath)
-      <*> parseGenesisHash
       <*> (some $ parseSocketPath "Path to a cardano-node socket")
       <*> (ConfigYamlFilePath <$> parseConfigFile)
       <*> (optional $ SigningKeyFile <$> parseSigningKey)

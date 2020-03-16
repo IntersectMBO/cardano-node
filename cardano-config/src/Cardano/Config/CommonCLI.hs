@@ -5,7 +5,6 @@
 
 module Cardano.Config.CommonCLI
   ( parseDelegationCert
-  , parseGenesisHash
   , parseGenesisPath
   , parseSigningKey
   ) where
@@ -25,14 +24,6 @@ parseGenesisPath =
     ( long "genesis-file"
         <> metavar "FILEPATH"
         <> help "The filepath to the genesis file."
-    )
-
-parseGenesisHash :: Parser Text
-parseGenesisHash =
-  strOption
-    ( long "genesis-hash"
-        <> metavar "GENESIS-HASH"
-        <> help "The genesis hash value."
     )
 
 parseDelegationCert :: Parser FilePath

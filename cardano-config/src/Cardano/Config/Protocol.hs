@@ -26,11 +26,10 @@ import           Control.Monad.Trans.Except.Extra (bimapExceptT, firstExceptT,
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.Text as T
 
-import           Cardano.Binary (Raw)
 import           Cardano.BM.Tracing (ToObject)
 import qualified Cardano.Chain.Genesis as Genesis
 import qualified Cardano.Chain.Update as Update
-import           Cardano.Crypto (Hash, RequiresNetworkMagic, decodeHash)
+import           Cardano.Crypto (RequiresNetworkMagic)
 import qualified Cardano.Crypto.Signing as Signing
 import           Cardano.Tracing.ToObjectOrphans ()
 
@@ -123,20 +122,19 @@ data SomeProtocol where
 
 data ProtocolInstantiationError =
     ByronLegacyProtocolNotImplemented
-  | CanonicalDecodeFailure FilePath Text
+  | CanonicalDecodeFailure !FilePath !Text
   | DelegationCertificateFilepathNotSpecified
-  | GenesisConfigurationError FilePath Genesis.ConfigurationError
-  | GenesisHashDecodeFailure Text
+  | GenesisConfigurationError !FilePath !Genesis.ConfigurationError
+  | GenesisReadError !FilePath !Genesis.GenesisDataError
   | MissingCoreNodeId
   | MissingNumCoreNodes
-  | PbftError PBftLeaderCredentialsError
-  | SigningKeyDeserialiseFailure FilePath DeserialiseFailure
+  | PbftError !PBftLeaderCredentialsError
+  | SigningKeyDeserialiseFailure !FilePath !DeserialiseFailure
   | SigningKeyFilepathNotSpecified
   deriving Show
 
 fromProtocol
-  :: Text
-  -> Maybe NodeId
+  :: Maybe NodeId
   -> Maybe Word64
   -- ^ Number of core nodes
   -> Maybe GenesisFile
@@ -147,12 +145,12 @@ fromProtocol
   -> Update
   -> Protocol
   -> ExceptT ProtocolInstantiationError IO SomeProtocol
-fromProtocol _ _ _ _ _ _ _ _ _ ByronLegacy =
+fromProtocol _ _ _ _ _ _ _ _ ByronLegacy =
   left ByronLegacyProtocolNotImplemented
-fromProtocol _ nId mNumCoreNodes _ _ _ _ _ _ BFT =
+fromProtocol nId mNumCoreNodes _ _ _ _ _ _ BFT =
   hoistEither $ mockSomeProtocol nId mNumCoreNodes $ \cid numCoreNodes ->
     Consensus.ProtocolMockBFT numCoreNodes cid mockSecurityParam mockSlotLengths
-fromProtocol _ nId mNumCoreNodes _ _ _ _ _ _ Praos =
+fromProtocol nId mNumCoreNodes _ _ _ _ _ _ Praos =
   hoistEither $ mockSomeProtocol nId mNumCoreNodes $ \cid numCoreNodes ->
     Consensus.ProtocolMockPraos
       numCoreNodes
@@ -164,7 +162,7 @@ fromProtocol _ nId mNumCoreNodes _ _ _ _ _ _ Praos =
         , praosLifetimeKES   = 1000000
         }
       (singletonSlotLengths (slotLengthFromSec 2))
-fromProtocol _ nId mNumCoreNodes _ _ _ _ _ _ MockPBFT =
+fromProtocol nId mNumCoreNodes _ _ _ _ _ _ MockPBFT =
   hoistEither $ mockSomeProtocol nId mNumCoreNodes $ \cid numCoreNodes@(NumCoreNodes numNodes) ->
     Consensus.ProtocolMockPBFT
       PBftParams { pbftSecurityParam      = mockSecurityParam
@@ -174,19 +172,17 @@ fromProtocol _ nId mNumCoreNodes _ _ _ _ _ _ MockPBFT =
                  }
       (singletonSlotLengths mockSlotLength)
       cid
-fromProtocol gHash _ _ mGenFile nMagic sigThresh delCertFp sKeyFp update RealPBFT = do
-    let genFile = unGenesisFile $ fromMaybe
-                                ( panic $ "Cardano.Config.Protocol.fromProtocol: "
-                                        <> "Genesis file not specified"
-                                ) mGenFile
-    --TODO: This should accept a filepath to the genesis hash
-    -- so the error can show where the hash exists
-    genHash <- decodeGenesisHash gHash
+fromProtocol _ _ mGenFile nMagic sigThresh delCertFp sKeyFp update RealPBFT = do
+    let genFile@(GenesisFile gFp) = fromMaybe ( panic $ "Cardano.Config.Protocol.fromProtocol: "
+                                                      <> "Genesis file not specified"
+                                              ) mGenFile
 
-    gc <- firstExceptT (GenesisConfigurationError genFile) $ Genesis.mkConfigFromFile
+    (_, genHash) <- readGenesis genFile
+
+    gc <- firstExceptT (GenesisConfigurationError gFp) $ Genesis.mkConfigFromFile
              nMagic
-             genFile
-             genHash
+             gFp
+             (Genesis.unGenesisHash genHash)
 
     optionalLeaderCredentials <- readLeaderCredentials
                                    gc
@@ -220,6 +216,11 @@ protocolConfigRealPbft (Update appName appVer lastKnownBlockVersion)
     convertProtocolVersion
       LastKnownBlockVersion {lkbvMajor, lkbvMinor, lkbvAlt} =
       Update.ProtocolVersion lkbvMajor lkbvMinor lkbvAlt
+
+readGenesis
+  :: GenesisFile
+  -> ExceptT ProtocolInstantiationError IO (Genesis.GenesisData, Genesis.GenesisHash)
+readGenesis (GenesisFile fp) = firstExceptT (GenesisReadError fp) $ Genesis.readGenesisData fp
 
 readLeaderCredentials :: Genesis.Config
                       -> Maybe DelegationCertFile
@@ -262,10 +263,11 @@ renderProtocolInstantiationError pie =
     CanonicalDecodeFailure fp failure -> "Canonical decode failure in " <> toS fp
                                          <> " Canonical failure: " <> failure
     DelegationCertificateFilepathNotSpecified -> "Delegation certificate filepath not specified"
-    GenesisHashDecodeFailure failure -> "Genesis hash decode failure: " <> failure
     --TODO: Implement configuration error render function in cardano-ledger
     GenesisConfigurationError fp genesisConfigError -> "Genesis configuration error in: " <> toS fp
                                                        <> " Error: " <> (T.pack $ show genesisConfigError)
+    GenesisReadError fp err ->  "There was an error parsing the genesis file: " <> toS fp
+                                <> " Error: " <> (T.pack $ show err)
     MissingCoreNodeId -> "Missing core node id"
     MissingNumCoreNodes -> "NumCoreNodes: not specified in configuration yaml file."
     -- TODO: Implement PBftLeaderCredentialsError render function in ouroboros-network
@@ -273,10 +275,6 @@ renderProtocolInstantiationError pie =
     SigningKeyDeserialiseFailure fp deserialiseFailure -> "Signing key deserialisation error in: " <> toS fp
                                                            <> " Error: " <> (T.pack $ show deserialiseFailure)
     SigningKeyFilepathNotSpecified -> "Signing key filepath not specified"
-
-decodeGenesisHash :: Text -> ExceptT ProtocolInstantiationError IO (Hash Raw)
-decodeGenesisHash gHash =
-  firstExceptT GenesisHashDecodeFailure . hoistEither $ decodeHash gHash
 
 extractNodeInfo
   :: Maybe NodeId

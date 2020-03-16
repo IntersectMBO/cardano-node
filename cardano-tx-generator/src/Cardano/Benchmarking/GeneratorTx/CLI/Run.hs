@@ -12,7 +12,6 @@ import           Data.Text
                     ( pack )
 import           Paths_cardano_tx_generator
                     ( version )
-import qualified Formatting as F
 import           Cardano.Prelude hiding (option)
 import           Control.Monad.Trans.Except.Extra
                     ( firstExceptT, left )
@@ -33,14 +32,12 @@ import           Cardano.Config.Protocol
                     , fromProtocol
                     )
 import           Cardano.Config.Types
-                    ( GenesisFile(..), ConfigError (..)
+                    ( ConfigError (..)
                     , CardanoEnvironment(..), LastKnownBlockVersion(..)
                     , Protocol, SigningKeyFile(..), Update(..)
                     , ncLogMetrics, ncReqNetworkMagic, ncProtocol
                     , parseNodeConfigurationFP
                     )
-
-import qualified Cardano.Crypto.Hashing as Crypto
 
 import           Cardano.Benchmarking.GeneratorTx.Error
                     ( TxGenError )
@@ -92,11 +89,8 @@ runCommand (GenerateTxs logConfigFp
                              (Just logConfigFp)
                              (ncLogMetrics nc)
 
-    genHash <- getGenesisHash genFile
-
     SomeProtocol p <- firstExceptT GenerateTxsError $
-        firstExceptT FromProtocolError $ fromProtocol genHash
-                                                      Nothing
+        firstExceptT FromProtocolError $ fromProtocol Nothing
                                                       Nothing
                                                       (Just genFile)
                                                       (ncReqNetworkMagic nc)
@@ -124,15 +118,6 @@ runCommand (GenerateTxs logConfigFp
         _ -> left $ GenerateTxsError $ IncorrectProtocolSpecified (ncProtocol nc)
 
 ----------------------------------------------------------------------------
-
-getGenesisHash :: GenesisFile -> ExceptT CliError IO Text
-getGenesisHash genFile = do
-  (_, Genesis.GenesisHash gHash) <- readGenesis genFile
-  return $ F.sformat Crypto.hashHexF gHash
- where
-  -- | Read genesis from a file.
-  readGenesis :: GenesisFile -> ExceptT CliError IO (Genesis.GenesisData, Genesis.GenesisHash)
-  readGenesis (GenesisFile fp) = firstExceptT (GenesisReadError fp) $ Genesis.readGenesisData fp
 
 withIOManagerE :: (AssociateWithIOCP -> ExceptT e IO a) -> ExceptT e IO a
 withIOManagerE k = ExceptT $ withIOManager (runExceptT . k)
