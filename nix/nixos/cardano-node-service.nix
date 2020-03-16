@@ -15,7 +15,7 @@ let
         cmd = builtins.filter (x: x != "") [
           "${cfg.package}/bin/${exec}"
           "--genesis-file ${cfg.genesisFile}"
-          "--genesis-hash ${cfg.genesisHash}"
+          "--genesis-hash $GENESIS_HASH"
           "--config ${cfg.nodeConfigFile}"
           "--database-path ${cfg.databasePath}"
           "--socket-path ${cfg.socketPath}"
@@ -28,6 +28,7 @@ let
             "--delegation-certificate ${cfg.delegationCertificate}"}"
         ] ++ cfg.extraArgs;
     in ''
+        GENESIS_HASH=${if (cfg.genesisHash == null) then "$(cat ${cfg.genesisHashPath})" else cfg.genesisHash}
         choice() { i=$1; shift; eval "echo \''${$((i + 1))}"; }
         echo "Starting ${exec}: ${concatStringsSep "\"\n   echo \"" cmd}"
         echo "..or, once again, in a single line:"
@@ -92,10 +93,18 @@ in {
       };
 
       genesisHash = mkOption {
-        type = types.str;
+        type = types.nullOr types.str;
         default = envConfig.genesisHash;
         description = ''
           Hash of the genesis file
+        '';
+      };
+
+      genesisHashPath = mkOption {
+        type = types.nullOr types.path;
+        default = null;
+        description = ''
+          Path to the Hash of the genesis file
         '';
       };
 
@@ -266,10 +275,15 @@ in {
     } // optionalAttrs (! cfg.instanced) {
       wantedBy = [ "multi-user.target" ];
     };
-    assertions = [{
-      assertion = lib.hasPrefix stateDirBase cfg.stateDir;
-      message =
-        "The option services.cardano-node.stateDir should have ${stateDirBase} as a prefix!";
-    }];
+    assertions = [
+      {
+        assertion = lib.hasPrefix stateDirBase cfg.stateDir;
+        message = "The option services.cardano-node.stateDir should have ${stateDirBase} as a prefix!";
+      }
+      {
+        assertion = (cfg.genesisHash == null) != (cfg.genesisHashPath == null);
+        message = "only one of services.cardano-node.genesisHashPath or services.cardano-node.genesisHash can be non-null";
+      }
+    ];
   });
 }

@@ -11,7 +11,7 @@ let
   chairman = pkgs.cardanoNodeHaskellPackages.cardano-node.components.exes.chairman;
   envConfig = environments.${cfg.environment};
   mkChairmanConfig = nodeConfig: chairmanConfig: {
-    inherit (nodeConfig) package genesisFile genesisHash stateDir pbftThreshold consensusProtocol;
+    inherit (nodeConfig) package genesisFile genesisHash genesisHashPath stateDir pbftThreshold consensusProtocol;
     inherit (chairmanConfig) timeout maxBlockNo k slot-length node-ids nodeConfigFile nodeConfig timeoutIsSuccess;
   };
   mkScript = cfg:
@@ -27,11 +27,12 @@ let
           "--max-block-no ${toString cfg.maxBlockNo}"
           "--security-param ${toString cfg.k}"
           "--genesis-file ${cfg.genesisFile}"
-          "--genesis-hash ${cfg.genesisHash}"
+          "--genesis-hash $GENESIS_HASH"
           "--config ${cfg.nodeConfigFile}"
           "${optionalString cfg.timeoutIsSuccess "--timeout-is-success"}"
         ];
     in ''
+        GENESIS_HASH=${if (cfg.genesisHash == null) then "$(cat ${cfg.genesisHashPath})" else cfg.genesisHash}
         set +e
         echo "Starting ${exec}: '' + concatStringsSep "\"\n   echo \"" cmd + ''"
         echo "..or, once again, in a single line:"

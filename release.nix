@@ -106,15 +106,18 @@ let
       map (drv: drv // { inherit packageName; }) (collectTests' package)
     ) ds);
 
+  # Remove build jobs for which cross compiling does not make sense.
+  filterJobsCross = filterAttrs (n: _: n != "dockerImage" && n != "shell");
+
   inherit (systems.examples) mingwW64 musl64;
 
   sources = import ./nix/sources.nix;
 
   jobs = {
     native = mapTestOn (__trace (__toJSON (packagePlatforms project)) (packagePlatforms project));
-    "${mingwW64.config}" = mapTestOnCross mingwW64 (packagePlatformsCross project);
+    "${mingwW64.config}" = mapTestOnCross mingwW64 (packagePlatformsCross (filterJobsCross project));
     # TODO: fix broken evals
-    #musl64 = mapTestOnCross musl64 (packagePlatformsCross project);
+    #musl64 = mapTestOnCross musl64 (packagePlatformsCross (filterJobsCross project));
     ifd-pins = mkPins {
       inherit (sources) iohk-nix "haskell.nix";
       inherit (import "${sources.iohk-nix}/nix/sources.nix" {}) nixpkgs;
@@ -123,12 +126,13 @@ let
     };
   } // extraBuilds // (mkRequiredJob (
       collectTests jobs.native.checks ++
+      collectTests jobs."${mingwW64.config}".checks ++
       collectTests jobs.native.benchmarks ++ [
       jobs.native.cardano-node.x86_64-darwin
       jobs.native.cardano-node.x86_64-linux
+      jobs."${mingwW64.config}".cardano-node.x86_64-linux
+
       (map (cluster: jobs.${cluster}.scripts.node.x86_64-linux) [ "mainnet" "testnet" "staging" ])
-      # windows cross compilation targets
-      #jobs.x86_64-pc-mingw32.cardano-node.x86_64-linux
 
       jobs.nixosTests.chairmansCluster.x86_64-linux
     ]));
