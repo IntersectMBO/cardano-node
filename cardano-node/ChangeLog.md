@@ -1,5 +1,43 @@
 # Changelog for cardano-node
 
+## 1.8.0 -- March 2020
+
+### node changes
+- Move genesis file and socket path items into config file (#612)
+- Remove need for unnecessary flags in various CLI commands ()
+- New `pretty-print-cbor` and `validate-cbor` commands in CLI (#545, #637)
+- Fix configuration for routing of metrics to monitoring backends (#622, #659)
+- Improve default configuration for logging filters (#633)
+- Improve tracers for logging and benchmarking (#624, #653, #663, #664, #655, #670)
+- Build fixes for Windows (#646)
+- Remove wallet demo code (#665)
+
+### consensus changes
+- Improved consensus tests that found numerous subtle bugs (#1489, #1506, #1524)
+- Improved tests for protocol version updates (#1514, #1747)
+- Fix error classification policies (#1553, #1738)
+- Fix a couple resource management bugs (#1787, #1792)
+- Internal changes to prepare for the Shelley hard fork (#1750, #1775)
+- Squash accidental memory retention in a couple places (#1718, #1793)
+- Numerous internal improvements and refactoring (#1739, #1742, #1744, #1748, #1761, #1780)
+- Drop dependency on OpenSSL, allowing easier builds on Windows and ARM (#1774)
+
+### ledger changes
+- Fix calculation of transaction size to match legacy Byron implementation (#703)
+- Fix replay protection for votes on protocol updates (#739)
+- Fix minor mismatch vs specification on tx size in a block (#718, #742)
+- Drop dependency on OpenSSL, allowing easier builds on Windows and ARM
+- Clarify code for genesis generation to address external audit concerns (#732)
+
+### network changes
+- Add timeouts for the handshake phase in the node-to-node protocol (#1752)
+- Fix race condition with 0-length SDUs (#1730)
+- Reduce fetching of duplicate transactions (#1749)
+- Build fixes for Windows (#1791)
+- Improved tracing and error reporting (#1762)
+- Vectored async IO for Windows network sockets (#1552)
+- Minor clean ups for the NTP client library used by the wallet (#1788)
+
 ## 1.7.0 -- February 2020
 
 ### node changes
