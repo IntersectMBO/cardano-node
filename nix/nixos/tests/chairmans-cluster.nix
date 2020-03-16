@@ -94,7 +94,7 @@ in {
     $machine->succeed("cat /etc/resolv.conf        | systemd-cat --identifier=resolv");
     $machine->succeed("netstat -pltn | grep LISTEN | systemd-cat --identifier=netstat");
     $machine->succeed("ls -l /var/lib/cardano-node/*.socket | systemd-cat --identifier=sockets");
-    $machine->succeed("bash -c 'set -o pipefail; { ${chairman-runner} 2>&1; status=\$?; echo END-OF-CHAIRMAN-OUTPUT-MARKER; sleep 3; exit \$status; } | systemd-cat --identifier=chairman --priority=crit'");
+    $machine->succeed("bash -c 'set -o pipefail; { ${chairman-runner} 2>&1; status=\$?; echo END-OF-CHAIRMAN-OUTPUT-MARKER; sleep 1; exit \$status; } | systemd-cat --identifier=chairman --priority=crit'");
   '' + optionalString interactive
   ''
     $machine->waitUntilSucceeds("netstat -ptn | grep ESTABLISHED | systemd-cat --identifier=netstat --priority=crit; sleep 9s; false");
