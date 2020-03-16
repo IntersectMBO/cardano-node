@@ -202,7 +202,6 @@ in {
       node-ids              = shelley-node-ids;
       inherit (ccfg) slot-length;
       nodeConfigFile        = builtins.elemAt shelley-configs 0;
-      timeoutIsSuccess      = true;
     };
     services.cardano-node = {
       enable                = shelley-enabled;

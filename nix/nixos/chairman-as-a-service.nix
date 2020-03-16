@@ -12,7 +12,7 @@ let
   envConfig = environments.${cfg.environment};
   mkChairmanConfig = nodeConfig: chairmanConfig: {
     inherit (nodeConfig) package genesisFile genesisHash genesisHashPath stateDir pbftThreshold consensusProtocol;
-    inherit (chairmanConfig) timeout maxBlockNo k slot-length node-ids nodeConfigFile nodeConfig timeoutIsSuccess;
+    inherit (chairmanConfig) timeout k slot-length node-ids nodeConfigFile nodeConfig;
   };
   mkScript = cfg:
     let runtimeDir = if ncfg.runtimeDir == null then ncfg.stateDir else "/run/${ncfg.runtimeDir}";
@@ -24,10 +24,7 @@ let
           "${chairman}/bin/chairman"
           (socketArgs)
           "--timeout ${toString cfg.timeout}"
-          "--max-block-no ${toString cfg.maxBlockNo}"
-          "--security-param ${toString cfg.k}"
           "--config ${cfg.nodeConfigFile}"
-          "${optionalString cfg.timeoutIsSuccess "--timeout-is-success"}"
         ];
     in ''
         GENESIS_HASH=${if (cfg.genesisHash == null) then "$(cat ${cfg.genesisHashPath})" else cfg.genesisHash}
@@ -61,7 +58,7 @@ in {
       timeout = mkOption {
         type = int;
         default = 360;
-        description = ''How long to wait for consensus of maxBlockNo blocks.'';
+        description = ''How long to wait for consensus.'';
       };
       environment = mkOption {
         type = types.enum (builtins.attrNames environments);
@@ -69,11 +66,6 @@ in {
         description = ''
           environment node will connect to
         '';
-      };
-      timeoutIsSuccess = mkOption {
-        type = types.bool;
-        default = true;
-        description = ''Consider timing out as success.'';
       };
       nodeConfig = mkOption {
         type = types.attrs;
@@ -84,16 +76,6 @@ in {
         type = types.str;
         default = "${toFile "config-0.json" (toJSON (svcLib.mkNodeConfig cfg 0))}";
         description = ''Actual configuration file (shell expression).'';
-      };
-      maxBlockNo = mkOption {
-        type = int;
-        default = 5;
-        description = ''How many blocks of consensus should we require before succeeding.'';
-      };
-      k = mkOption {
-        type = int;
-        default = 2160;
-        description = ''Should come from genesis instead.'';
       };
       genesisHash = mkOption {
         type = types.str;

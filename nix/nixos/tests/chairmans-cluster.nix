@@ -28,7 +28,6 @@ let
     inherit cardano-cluster-config;
     chairman-config = {
       timeout    = 450;
-      maxBlockNo = 20;
     };
   };
 in {
