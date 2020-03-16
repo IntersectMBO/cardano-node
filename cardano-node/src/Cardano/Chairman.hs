@@ -59,10 +59,8 @@ import           Ouroboros.Network.Protocol.ChainSync.Client
 import           Ouroboros.Network.Protocol.ChainSync.Codec
 import           Ouroboros.Network.Protocol.Handshake.Version
 import           Ouroboros.Network.NodeToClient
-import           Ouroboros.Network.Snocket (socketSnocket)
 
-import           Cardano.Common.LocalSocket
-import           Cardano.Config.Types (SocketPath)
+import           Cardano.Config.Types (SocketPath(..))
 import           Cardano.Tracing.Tracers (TraceConstraints)
 
 -- | Run chairman: connect with all the core nodes.  Chairman will store the
@@ -136,11 +134,10 @@ createConnection
   maxBlockNo
   tracer
   cfg
-  iocp
-  socketPath = do
-      path <- localSocketPath socketPath
+  iomgr
+  socketPath@(SocketFile path) =
       connectTo
-        (socketSnocket iocp)
+        (localSnocket iomgr path)
         NetworkConnectTracers {
             nctMuxTracer       = nullTracer,
             nctHandshakeTracer = nullTracer
@@ -385,20 +382,24 @@ localInitiatorNetworkApplication sockPath chainsVar securityParam maxBlockNo cha
       (NodeToClientVersionData (nodeNetworkMagic (Proxy @blk) cfg))
       (DictVersion nodeToClientCodecCBORTerm) $ \_peerid ->
 
-    nodeToClientProtocols
-      (InitiatorProtocolOnly $
-         MuxPeer
-           localTxSubmissionTracer
-           localTxSubmissionCodec
-           (localTxSubmissionClientPeer localTxSubmissionClientNull))
-      (InitiatorProtocolOnly $
-         MuxPeer
-           chainSyncTracer
-           (localChainSyncCodec cfg)
-           (chainSyncClientPeer $
-              chainSyncClient chairmanTracer sockPath chainsVar
-                              securityParam maxBlockNo))
+    nodeToClientProtocols $
+      NodeToClientProtocols {
+        localChainSyncProtocol =
+          InitiatorProtocolOnly $
+            MuxPeer
+              chainSyncTracer
+              (localChainSyncCodec cfg)
+              (chainSyncClientPeer $
+                 chainSyncClient chairmanTracer sockPath chainsVar
+                                 securityParam maxBlockNo)
 
+      , localTxSubmissionProtocol =
+          InitiatorProtocolOnly $
+            MuxPeer
+              localTxSubmissionTracer
+              localTxSubmissionCodec
+              (localTxSubmissionClientPeer localTxSubmissionClientNull)
+      }
 
 --
 -- Codecs
