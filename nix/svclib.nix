@@ -188,7 +188,7 @@ let
     '';
 
   ## extractDelegateCertificate
-  ##   :: FilePath (Genesis a) -> String DelegatePK -> FilePath DelegationCert
+  ##   :: FilePath (Genesis a) -> FilePath DelegatePK -> FilePath DelegationCert
   extractDelegateCertificate = genesisJson: delegatePk:
     pkgs.runCommand "delegate.crt" {} ''
       PK="$(cat ${delegatePk})"

@@ -284,10 +284,6 @@ in {
         assertion = (cfg.genesisHash == null) != (cfg.genesisHashPath == null);
         message = "only one of services.cardano-node.genesisHashPath or services.cardano-node.genesisHash can be non-null";
       }
-      {
-        assertion = !((cfg.genesisHash == null) && (cfg.genesisHashPath == null));
-        message = "one of services.cardano-node.genesisHashPath or services.cardano-node.genesisHash must be non-null ${builtins.toJSON cfg.genesisHashPath}";
-      }
     ];
   });
 }
