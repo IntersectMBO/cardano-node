@@ -114,6 +114,10 @@ let
   sources = import ./nix/sources.nix;
 
   jobs = {
+    cardano-node-win64 = import ./nix/windows-release.nix {
+      inherit pkgs project;
+      cardano-node = jobs.x86_64-w64-mingw32.cardano-node.x86_64-linux;
+    };
     native = mapTestOn (__trace (__toJSON (packagePlatforms project)) (packagePlatforms project));
     "${mingwW64.config}" = mapTestOnCross mingwW64 (packagePlatformsCross (filterJobsCross project));
     # TODO: fix broken evals
@@ -131,6 +135,7 @@ let
       jobs.native.cardano-node.x86_64-darwin
       jobs.native.cardano-node.x86_64-linux
       jobs."${mingwW64.config}".cardano-node.x86_64-linux
+      jobs.cardano-node-win64
 
       (map (cluster: jobs.${cluster}.scripts.node.x86_64-linux) [ "mainnet" "testnet" "staging" ])
 
