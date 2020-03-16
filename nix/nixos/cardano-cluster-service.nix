@@ -3,6 +3,10 @@
 , pkgs
 , ... }:
 
+let
+  ### Static configuration to be moved to proper options
+  legacy-relay-enabled  = false;
+in
 with lib; with builtins;
 let
   ### Service configs
@@ -78,7 +82,8 @@ in let
   legacy-core-names     = take legacy-node-count topology-core-names;
   shelley-core-names    = take shelley-node-count (drop legacy-node-count topology-core-names);
   legacy-relay-name     = "r-a-1";
-  all-legacy-names      = topology-core-names ++ [legacy-relay-name];
+  all-legacy-names      = topology-core-names
+                          ++ optional legacy-relay-enabled legacy-relay-name;
   legacy-name-shexpr    = ''$(choice "$1" ${toString all-legacy-names})'';
 
 in let
@@ -121,13 +126,8 @@ in let
   mkProxyShelleyPeer    =
     { name, port }:
     "[${name}.cardano]:${toString port}";
-  mkProxyLegacyPeer     =
-    { name, port }:
-    "[{ host: ${name}.cardano, port: ${toString port} }]";
   proxy-shelley-peers   =
     optional shelley-enabled { name = elemAt shelley-core-names 0; port = first-shelley-node-port; };
-  proxy-legacy-peers    =
-    optional  legacy-enabled { name = legacy-relay-name;           port = legacy-port; };
 
 in let
   ### Config
@@ -268,7 +268,8 @@ in {
     systemd.services.cardano-cluster =
       let shelley-services = map (i:        "cardano-node@${i}.service") shelley-node-ids-str;
           legacy-services  = map (i: "cardano-node-legacy@${i}.service") (legacy-node-ids-str
-                                                                           ++ [(toString legacy-relay-id)]);
+                                                                          ++ optional legacy-relay-enabled
+                                                                            (toString legacy-relay-id));
       in {
         description = "Cluster of cardano nodes.";
         enable  = true;
