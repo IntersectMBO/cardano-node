@@ -5,19 +5,16 @@
 
 import           Cardano.Prelude hiding (option)
 
-import           Control.Applicative (some)
-import           Control.Exception (Exception)
-import           Control.Concurrent (threadDelay)
 import           Data.Text (pack)
-import           Options.Applicative
-
+import           Control.Applicative (some)
 import           Control.Monad.Trans.Except.Extra (runExceptT)
+import           Control.Monad.Class.MonadTime (DiffTime)
+import           Control.Exception (Exception)
 import           Control.Tracer (stdoutTracer)
 
 import           Ouroboros.Network.Block (BlockNo)
-import           Ouroboros.Network.NodeToClient (withIOManager)
-import           Ouroboros.Consensus.Protocol.Abstract (SecurityParam (..))
 
+import           Options.Applicative
 import           Cardano.Config.CommonCLI
 import           Cardano.Config.Protocol ( ProtocolInstantiationError
                                          , SomeProtocol(..), fromProtocol)
@@ -25,14 +22,12 @@ import           Cardano.Config.Types (ConfigYamlFilePath(..), DelegationCertFil
                                        NodeConfiguration(..), SigningKeyFile(..),
                                        SocketPath(..), parseNodeConfigurationFP)
 import           Cardano.Common.Parsers
-import           Cardano.Chairman (runChairman)
+import           Cardano.Chairman (chairmanTest)
 
 main :: IO ()
-main = withIOManager $ \iocp -> do
-    ChairmanArgs { caSecurityParam
-                 , caMaxBlockNo
+main = do
+    ChairmanArgs { caMaxBlockNo
                  , caTimeout
-                 , caTimeoutType
                  , caSocketPaths
                  , caConfigYaml
                  , caSigningKeyFp
@@ -56,24 +51,12 @@ main = withIOManager $ \iocp -> do
                         Left err -> do putTextLn $ renderPtclInstantiationErr err
                                        exitFailure
 
-    let run = runChairman iocp
-                          p
-                          caSecurityParam
-                          caMaxBlockNo
-                          caSocketPaths
-                          stdoutTracer
-
-    case caTimeout of
-      Nothing      -> run
-      Just timeout ->
-        run
-        `race_`
-        do
-          threadDelay (timeout * 1_000_000)
-          putTextLn $ show caTimeoutType <> " after "<> show timeout <>"seconds."
-          case caTimeoutType of
-            SuccessTimeout -> exitSuccess
-            FailureTimeout -> exitFailure
+    chairmanTest
+      stdoutTracer
+      p
+      caMaxBlockNo
+      caTimeout
+      caSocketPaths
 
 renderPtclInstantiationErr :: ProtocolInstantiationError -> Text
 renderPtclInstantiationErr = pack . show
@@ -84,9 +67,8 @@ data TimeoutType
   deriving (Eq, Show)
 
 data ChairmanArgs = ChairmanArgs {
-      caSecurityParam   :: !SecurityParam
       -- | stop after seeing given block number
-    , caMaxBlockNo      :: !(Maybe BlockNo)
+      caMaxBlockNo      :: !(Maybe BlockNo)
       -- | timeout after given number of seconds, this is useful in combination
       -- with 'caMaxBlockNo'.  The chairman will observe only for the given
       -- period of time and then error.
@@ -94,22 +76,12 @@ data ChairmanArgs = ChairmanArgs {
       -- TODO: when we'll have timeouts for 'typed-protocols' we will be able to
       -- detect progress errors when running 'chain-sync' protocol and we will
       -- be able to remove this option
-    , caTimeout         :: !(Maybe Int)
-    , caTimeoutType :: !TimeoutType
+    , caTimeout     :: !(Maybe DiffTime)
     , caSocketPaths :: ![SocketPath]
     , caConfigYaml :: !ConfigYamlFilePath
     , caSigningKeyFp :: !(Maybe SigningKeyFile)
     , caDelegationCertFp :: !(Maybe DelegationCertFile)
     }
-
-parseSecurityParam :: Parser SecurityParam
-parseSecurityParam =
-    option (SecurityParam <$> auto) (
-         long "security-param"
-      <> short 'k'
-      <> metavar "K"
-      <> help "The security parameter"
-    )
 
 parseSlots :: Parser BlockNo
 parseSlots =
@@ -120,9 +92,9 @@ parseSlots =
       <> help "Finish after that many number of blocks"
     )
 
-parseTimeout :: Parser Int
+parseTimeout :: Parser DiffTime
 parseTimeout =
-      option auto (
+      option ((fromIntegral :: Int -> DiffTime) <$> auto) (
            long "timeout"
         <> short 't'
         <> metavar "Timeout"
@@ -132,11 +104,8 @@ parseTimeout =
 parseChairmanArgs :: Parser ChairmanArgs
 parseChairmanArgs =
     ChairmanArgs
-      <$> parseSecurityParam
-      <*> optional parseSlots
+      <$> optional parseSlots
       <*> optional parseTimeout
-      <*> parseFlag' FailureTimeout SuccessTimeout
-          "timeout-is-success" "Exit successfully on timeout."
       <*> (some $ parseSocketPath "Path to a cardano-node socket")
       <*> (ConfigYamlFilePath <$> parseConfigFile)
       <*> (optional $ SigningKeyFile <$> parseSigningKey)
