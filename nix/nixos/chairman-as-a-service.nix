@@ -95,6 +95,13 @@ in {
         default = 2160;
         description = ''Should come from genesis instead.'';
       };
+      genesisHash = mkOption {
+        type = types.str;
+        default = envConfig.genesisHash;
+        description = ''
+          Hash of the genesis file
+        '';
+      };
       slot-length = mkOption {
         type = int;
         default = 20;

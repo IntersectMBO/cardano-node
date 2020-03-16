@@ -82,6 +82,14 @@ in {
         '';
       };
 
+     genesisFile = mkOption {
+        type = types.path;
+        default = envConfig.genesisFile;
+        description = ''
+          Genesis json file
+        '';
+      };
+
       genesisHash = mkOption {
         type = types.nullOr types.str;
         default = envConfig.genesisHash;
