@@ -32,6 +32,7 @@ import qualified Data.Map.Strict as Map
 import           Data.String (IsString)
 import           Data.Text (Text)
 import qualified Data.Text as T
+import qualified Data.Vector as Vector
 import           Formatting ((%), sformat)
 
 import           Control.Tracer (traceWith, nullTracer, stdoutTracer)
@@ -205,7 +206,7 @@ txSpendUTxOByronPBFT
   -> NonEmpty TxOut
   -> UTxO.ATxAux ByteString
 txSpendUTxOByronPBFT gc sk ins outs =
-    annotateTxAux $ mkTxAux tx (pure wit)
+    annotateTxAux $ mkTxAux tx (Vector.singleton wit)
   where
     tx = UnsafeTx ins outs txattrs
 
