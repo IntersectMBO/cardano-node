@@ -214,8 +214,8 @@ runCommand DisplayVersion = do
                   ]
 
 runCommand (Genesis outDir params ptcl) = do
-  gen <- mkGenesis params
-  dumpGenesis ptcl outDir `uncurry` gen
+  (genData, genSecrets) <- mkGenesis params
+  dumpGenesis ptcl outDir genData genSecrets
 
 runCommand (GetLocalNodeTip configFp mSockPath) =
   withIOManagerE $ \iocp -> liftIO $ getLocalTip configFp mSockPath iocp

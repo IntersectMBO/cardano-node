@@ -31,6 +31,7 @@ library
                        Cardano.CLI.Parsers
                        Cardano.CLI.Run
                        Cardano.CLI.Tx
+                       Cardano.CLI.Byron.UpdateProposal
                        Cardano.Common.Help
                        Cardano.Common.LocalSocket
                        Cardano.Common.Parsers
