@@ -59,9 +59,9 @@ deriving instance (Show blk, Show (GenTx blk)) => Show (MeasureTxs blk)
 instance Transformable Text IO (MeasureTxs blk) where
   trTransformer _ verb tr = trStructured verb tr
 
-instance DefinePrivacyAnnotation (MeasureTxs blk)
-instance DefineSeverity (MeasureTxs blk) where
-  defineSeverity _ = Info
+instance HasPrivacyAnnotation (MeasureTxs blk)
+instance HasSeverityAnnotation (MeasureTxs blk) where
+  getSeverityAnnotation _ = Info
 
 -- TODO(KS): Time will be removed.
 instance ToObject (MeasureTxs blk) where
@@ -202,17 +202,17 @@ instance (Monad m, MonadTime m) => Outcome m (TraceForgeEvent blk (GenTx blk)) w
         | startSlot == stopSlot = pure $ Just (startSlot, (diffTime absTimeStop absTimeStart), mempoolSize)
         | otherwise             = pure Nothing
 
-instance DefinePrivacyAnnotation (Either
+instance HasPrivacyAnnotation (Either
                              (TraceForgeEvent blk (GenTx blk))
                              (OutcomeFidelity
                                 (Maybe
                                    (SlotNo, DiffTime, MempoolSize))))
-instance DefineSeverity (Either
+instance HasSeverityAnnotation (Either
                              (TraceForgeEvent blk (GenTx blk))
                              (OutcomeFidelity
                                 (Maybe
                                    (SlotNo, DiffTime, MempoolSize)))) where
-  defineSeverity _ = Info
+  getSeverityAnnotation _ = Info
 
 instance Transformable Text IO
                         (Either
@@ -222,7 +222,7 @@ instance Transformable Text IO
                                    (SlotNo, DiffTime, MempoolSize)))) where
   trTransformer StructuredLogging verb tr = trStructured verb tr
   trTransformer _ _verb tr = Tracer $ \ev -> do
-    meta <- mkLOMeta (defineSeverity ev) (definePrivacyAnnotation ev)
+    meta <- mkLOMeta (getSeverityAnnotation ev) (getPrivacyAnnotation ev)
     traceWith tr (mempty, LogObject mempty meta (LogMessage "Outcome of TraceForgeEvent"))
 
 instance ToObject
