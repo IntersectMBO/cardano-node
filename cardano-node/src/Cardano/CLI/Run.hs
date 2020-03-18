@@ -282,7 +282,7 @@ runCommand (SubmitTx fp configFp mCliSockPath) = withIOManagerE $ \iocp -> do
     -- Default update value
     let update = Update (ApplicationName "cardano-sl") 1 $ LastKnownBlockVersion 0 2 0
     tx <- readByronTx fp
-    genHash <- getGenesisHash (ncGenesisFile nc)
+    genHash <- getGenesisHashText (ncGenesisFile nc)
 
     firstExceptT
       NodeSubmitTxError
@@ -305,7 +305,7 @@ runCommand (SpendGenesisUTxO configFp (NewTxFile ctTx) ctKey genRichAddr outs) =
     -- Default update value
     let update = Update (ApplicationName "cardano-sl") 1 $ LastKnownBlockVersion 0 2 0
 
-    genHash <- getGenesisHash $ ncGenesisFile nc
+    genHash <- getGenesisHashText $ ncGenesisFile nc
 
     tx <- firstExceptT SpendGenesisUTxOError
             $ issueGenesisUTxOExpenditure
@@ -328,7 +328,7 @@ runCommand (SpendUTxO configFp (NewTxFile ctTx) ctKey ins outs) = do
     -- Default update value
     let update = Update (ApplicationName "cardano-sl") 1 $ LastKnownBlockVersion 0 2 0
 
-    genHash <- getGenesisHash $ ncGenesisFile nc
+    genHash <- getGenesisHashText $ ncGenesisFile nc
 
     gTx <- firstExceptT
              IssueUtxoError
@@ -373,7 +373,7 @@ runCommand (GenerateTxs
                            (Just logConfigFp)
                            (ncLogMetrics nc)
 
-  genHash <- getGenesisHash genFile
+  genHash <- getGenesisHashText genFile
 
   firstExceptT
     GenerateTxsError

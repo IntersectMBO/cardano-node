@@ -12,8 +12,7 @@ let
     (optionalAttrs (cfg.protover-major or null != null) { LastKnownBlockVersion-Major = cfg.protover-major; }) //
     (optionalAttrs (cfg.protover-minor or null != null) { LastKnownBlockVersion-Minor = cfg.protover-minor; }) //
     (optionalAttrs (cfg.protover-alt   or null != null) { LastKnownBlockVersion-Alt   = cfg.protover-alt;   }) //
-    (optionalAttrs (cfg.genesisFile != null) { GenesisFile = cfg.genesisFile;   }) //
-    (optionalAttrs (cfg.genesisHash != null) { GenesisHash = cfg.genesisHash; });
+    (optionalAttrs (cfg.genesisFile != null) { GenesisFile = cfg.genesisFile;   });
 
   ## mkFullyConnectedLocalClusterTopology
   ##   :: String Address -> String Port -> Int PortNo -> Int Valency

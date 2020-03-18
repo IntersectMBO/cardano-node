@@ -13,7 +13,7 @@
 module Cardano.CLI.Ops
   ( decodeCBOR
   , deserialiseDelegateKey
-  , getGenesisHash
+  , getGenesisHashText
   , getLocalTip
   , pPrintCBOR
   , readCBOR
@@ -127,8 +127,8 @@ deserialiseDelegateKey RealPBFT fp delSkey =
     Right (_, sKey) -> Right $ SigningKey sKey
 deserialiseDelegateKey ptcl _ _ = Left $ ProtocolNotSupported ptcl
 
-getGenesisHash :: GenesisFile -> ExceptT CliError IO Text
-getGenesisHash (GenesisFile genFile) = do
+getGenesisHashText :: GenesisFile -> ExceptT CliError IO Text
+getGenesisHashText (GenesisFile genFile) = do
   canonGenFile <- liftIO $ canonicalizePath genFile
   gFile <- liftIO $ makeAbsolute canonGenFile
   (_, Genesis.GenesisHash gHash) <- readGenesis $ GenesisFile gFile
@@ -323,11 +323,10 @@ withRealPBFT
         => Consensus.Protocol ByronBlock Consensus.ProtocolRealPBFT
         -> ExceptT RealPBFTError IO a)
   -> ExceptT RealPBFTError IO a
-withRealPBFT gHash genFile nMagic sigThresh delCertFp sKeyFp update ptcl action = do
+withRealPBFT _ genFile nMagic sigThresh delCertFp sKeyFp update ptcl action = do
   SomeProtocol p <- firstExceptT
                       FromProtocolError
                       $ fromProtocol
-                          gHash
                           Nothing
                           Nothing
                           (Just genFile)
@@ -353,16 +352,9 @@ getLocalTip
 getLocalTip configFp mSockPath iocp = do
   nc <- parseNodeConfigurationFP $ unConfigPath configFp
   sockPath <- return $ chooseSocketPath (ncSocketPath nc) mSockPath
-  eGenHash <- runExceptT $ getGenesisHash (ncGenesisFile nc)
-
-  genHash <- case eGenHash  of
-               Right gHash -> pure gHash
-               Left err -> do putTextLn . toS $ show err
-                              exitFailure
 
   frmPtclRes <- runExceptT . firstExceptT ProtocolError
                            $ fromProtocol
-                               genHash
                                (ncNodeId nc)
                                (ncNumCoreNodes nc)
                                (Just $ ncGenesisFile nc)

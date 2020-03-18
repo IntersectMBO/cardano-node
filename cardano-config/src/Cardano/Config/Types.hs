@@ -80,7 +80,6 @@ data CardanoEnvironment = NoEnvironment
 
 data NodeCLI = NodeCLI
   { mscFp :: !MiscellaneousFilepaths
-  , genesisHash :: !Text
   , nodeAddr :: !NodeAddress
   , configFp :: !ConfigYamlFilePath
   , validateDB :: !Bool
@@ -88,7 +87,6 @@ data NodeCLI = NodeCLI
 
 data NodeMockCLI = NodeMockCLI
   { mockMscFp :: !MiscellaneousFilepaths
-  , mockGenesisHash :: !Text
   , mockNodeAddr :: !NodeAddress
   , mockConfigFp :: !ConfigYamlFilePath
   , mockValidateDB :: !Bool
@@ -109,7 +107,6 @@ newtype ConfigYamlFilePath = ConfigYamlFilePath
 data MiscellaneousFilepaths = MiscellaneousFilepaths
   { topFile :: !TopologyFile
   , dBFile :: !DbFile
-  , genesisFile :: !(Maybe GenesisFile)
   , delegCertFile :: !(Maybe DelegationCertFile)
   , signKeyFile :: !(Maybe SigningKeyFile)
   , socketFile :: !(Maybe CLISocketPath)
@@ -250,8 +247,8 @@ parseNodeConfigurationFP fp = decodeFileThrow fp
 parseNodeConfiguration :: NodeProtocolMode -> IO NodeConfiguration
 parseNodeConfiguration npm =
   case npm of
-    MockProtocolMode (NodeMockCLI _ _ _ cy _) -> decodeFileThrow $ unConfigPath cy
-    RealProtocolMode (NodeCLI _ _ _ cy _) -> decodeFileThrow $ unConfigPath cy
+    MockProtocolMode (NodeMockCLI _ _ cy _) -> decodeFileThrow $ unConfigPath cy
+    RealProtocolMode (NodeCLI _ _ cy _) -> decodeFileThrow $ unConfigPath cy
 
 -- TODO:  we don't want ByronLegacy in Protocol.  Let's wrap Protocol with another
 -- sum type for cases where it's required.

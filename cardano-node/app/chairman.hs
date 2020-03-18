@@ -22,8 +22,8 @@ import           Cardano.Config.CommonCLI
 import           Cardano.Config.Protocol ( ProtocolInstantiationError
                                          , SomeProtocol(..), fromProtocol)
 import           Cardano.Config.Types (ConfigYamlFilePath(..), DelegationCertFile(..),
-                                       GenesisFile (..), NodeConfiguration(..),
-                                       SigningKeyFile(..), SocketPath(..), parseNodeConfigurationFP)
+                                       NodeConfiguration(..), SigningKeyFile(..),
+                                       SocketPath(..), parseNodeConfigurationFP)
 import           Cardano.Common.Parsers
 import           Cardano.Chairman (runChairman)
 
@@ -33,8 +33,6 @@ main = withIOManager $ \iocp -> do
                  , caMaxBlockNo
                  , caTimeout
                  , caTimeoutType
-                 , caGenesisFile
-                 , caGenesisHash
                  , caSocketPaths
                  , caConfigYaml
                  , caSigningKeyFp
@@ -43,10 +41,9 @@ main = withIOManager $ \iocp -> do
 
     nc <- liftIO . parseNodeConfigurationFP $ unConfigPath caConfigYaml
     frmPtclRes <- runExceptT $ fromProtocol
-                                 caGenesisHash
                                  (ncNodeId nc)
                                  (ncNumCoreNodes nc)
-                                 (Just caGenesisFile)
+                                 (Just $ ncGenesisFile nc)
                                  (ncReqNetworkMagic nc)
                                  (ncPbftSignatureThresh nc)
                                  (caDelegationCertFp)
@@ -99,8 +96,6 @@ data ChairmanArgs = ChairmanArgs {
       -- be able to remove this option
     , caTimeout         :: !(Maybe Int)
     , caTimeoutType :: !TimeoutType
-    , caGenesisFile :: !GenesisFile
-    , caGenesisHash :: !Text
     , caSocketPaths :: ![SocketPath]
     , caConfigYaml :: !ConfigYamlFilePath
     , caSigningKeyFp :: !(Maybe SigningKeyFile)
@@ -142,8 +137,6 @@ parseChairmanArgs =
       <*> optional parseTimeout
       <*> parseFlag' FailureTimeout SuccessTimeout
           "timeout-is-success" "Exit successfully on timeout."
-      <*> (GenesisFile <$> parseGenesisPath)
-      <*> parseGenesisHash
       <*> (some $ parseSocketPath "Path to a cardano-node socket")
       <*> (ConfigYamlFilePath <$> parseConfigFile)
       <*> (optional $ SigningKeyFile <$> parseSigningKey)

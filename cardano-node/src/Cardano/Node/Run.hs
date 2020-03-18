@@ -79,9 +79,7 @@ import           Cardano.Common.LocalSocket
 import           Cardano.Config.Protocol
                    (SomeProtocol(..), fromProtocol, renderProtocolInstantiationError)
 import           Cardano.Config.Topology
-import           Cardano.Config.Types (DbFile(..), NodeAddress(..),
-                                       NodeMockCLI(..), NodeProtocolMode (..),
-                                       NodeCLI(..), parseNodeConfiguration)
+import           Cardano.Config.Types
 import           Cardano.Tracing.Tracers
 #ifdef UNIX
 import           Cardano.Node.TUI.LiveView
@@ -98,19 +96,19 @@ runNode loggingLayer npm = do
                  llAppendName loggingLayer "node" (llBasicTrace loggingLayer)
     let tracer = contramap pack $ toLogObject trace
 
-    (mscFp', genHash') <- return $ extractFilePathsAndGenHash npm
+    mscFp' <- return $ extractMiscFilePaths npm
 
     nc <- parseNodeConfiguration npm
+
     traceWith tracer $ "tracing verbosity = " ++
                          case traceVerbosity $ ncTraceOptions nc of
                            NormalVerbosity -> "normal"
                            MinimalVerbosity -> "minimal"
                            MaximalVerbosity -> "maximal"
     eitherSomeProtocol <- runExceptT $ fromProtocol
-                                         genHash'
                                          (ncNodeId nc)
                                          (ncNumCoreNodes nc)
-                                         (genesisFile mscFp')
+                                         (Just $ ncGenesisFile nc)
                                          (ncReqNetworkMagic nc)
                                          (ncPbftSignatureThresh nc)
                                          (delegCertFile mscFp')
@@ -267,7 +265,7 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
     -> IO ()
   createTracers npm' tracer cfg = do
      case npm' of
-       RealProtocolMode (NodeCLI _ _ rNodeAddr _ runDBValidation) -> do
+       RealProtocolMode (NodeCLI _ rNodeAddr _ runDBValidation) -> do
          eitherTopology <- readTopologyFile npm
          nt <- either
                  (\err -> panic $ "Cardano.Node.Run.readTopologyFile: " <> err)
@@ -290,7 +288,7 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
 
          when runDBValidation $ traceWith tracer "Performing DB validation"
 
-       MockProtocolMode (NodeMockCLI _ _ mockNodeAddress _ runDBValidation) -> do
+       MockProtocolMode (NodeMockCLI _ mockNodeAddress _ runDBValidation) -> do
          eitherTopology <- readTopologyFile npm
          nodeid <- nid npm
          (MockNodeTopology nodeSetups) <- either
@@ -326,17 +324,17 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
 canonDbPath :: NodeProtocolMode -> IO FilePath
 canonDbPath npm  = do
   dbFp <- case npm of
-            MockProtocolMode (NodeMockCLI mscFp' _ _ _ _) -> do
+            MockProtocolMode (NodeMockCLI mscFp' _ _ _) -> do
               nodeid <- nid npm
               pure $ (unDB $ dBFile mscFp') <> "-" <> show nodeid
 
-            RealProtocolMode (NodeCLI mscFp' _ _ _ _) -> pure . unDB $ dBFile mscFp'
+            RealProtocolMode (NodeCLI mscFp' _ _ _) -> pure . unDB $ dBFile mscFp'
 
   canonicalizePath =<< makeAbsolute dbFp
 
 dbValidation :: NodeProtocolMode -> Bool
-dbValidation (MockProtocolMode (NodeMockCLI _ _ _ _ dbval)) = dbval
-dbValidation (RealProtocolMode (NodeCLI _ _ _ _ dbval)) = dbval
+dbValidation (MockProtocolMode (NodeMockCLI _ _ _ dbval)) = dbval
+dbValidation (RealProtocolMode (NodeCLI _ _ _ dbval)) = dbval
 
 createDiffusionArguments
   :: [AddrInfo]
@@ -359,13 +357,11 @@ dnsSubscriptionTarget ra =
                         , dstValency = raValency ra
                         }
 
-extractFilePathsAndGenHash :: NodeProtocolMode -> (MiscellaneousFilepaths, Text)
-extractFilePathsAndGenHash npm =
+extractMiscFilePaths :: NodeProtocolMode -> MiscellaneousFilepaths
+extractMiscFilePaths npm =
   case npm of
-    MockProtocolMode (NodeMockCLI mMscFp genHash _ _ _) ->
-      (mMscFp, genHash)
-    RealProtocolMode (NodeCLI rMscFp genHash _ _ _) ->
-      (rMscFp, genHash)
+    MockProtocolMode (NodeMockCLI mMscFp _ _ _) -> mMscFp
+    RealProtocolMode (NodeCLI rMscFp _ _ _) -> rMscFp
 
 ipSubscriptionTargets :: [NodeAddress] -> IPSubscriptionTarget
 ipSubscriptionTargets ipProdAddrs =

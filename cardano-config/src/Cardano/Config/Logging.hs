@@ -202,8 +202,8 @@ createLoggingFeature ver _ nodeProtocolMode = do
     pure (loggingLayer, cardanoFeature)
  where
   getConfigYaml :: NodeProtocolMode -> ConfigYamlFilePath
-  getConfigYaml (RealProtocolMode (NodeCLI _ _ _ rConfigFp _ )) = rConfigFp
-  getConfigYaml (MockProtocolMode (NodeMockCLI _ _ _ mConfigFp _)) = mConfigFp
+  getConfigYaml (RealProtocolMode (NodeCLI _ _ rConfigFp _ )) = rConfigFp
+  getConfigYaml (MockProtocolMode (NodeMockCLI _ _ mConfigFp _)) = mConfigFp
 
 -- | Initialize `LoggingCardanoFeature`
 loggingCardanoFeatureInit :: Text -> LoggingFlag -> LoggingConfiguration -> IO (LoggingLayer, LoggingLayer -> IO ())

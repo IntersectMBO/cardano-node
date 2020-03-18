@@ -75,8 +75,6 @@ nodeMockParser = do
   dbFp <- parseDbPath
   socketFp <- parseCLISocketPath "Path to a cardano-node socket"
 
-  genHash <- parseGenesisHash
-
   -- NodeConfiguration filepath
   nodeConfigFp <- parseConfigFile
 
@@ -89,12 +87,10 @@ nodeMockParser = do
            { mockMscFp = MiscellaneousFilepaths
              { topFile = TopologyFile topFp
              , dBFile = DbFile dbFp
-             , genesisFile = Nothing
              , delegCertFile = Nothing
              , signKeyFile = Nothing
              , socketFile = socketFp
              }
-           , mockGenesisHash = genHash
            , mockNodeAddr = nAddress
            , mockConfigFp = ConfigYamlFilePath nodeConfigFp
            , mockValidateDB = validate
@@ -106,12 +102,9 @@ nodeRealParser = do
   -- Filepaths
   topFp <- parseTopologyFile
   dbFp <- parseDbPath
-  genFp <- optional parseGenesisPath
   delCertFp <- optional parseDelegationCert
   sKeyFp <- optional parseSigningKey
   socketFp <- parseCLISocketPath "Path to a cardano-node socket"
-
-  genHash <- parseGenesisHash
 
   -- Node Address
   nAddress <- parseNodeAddress
@@ -125,12 +118,10 @@ nodeRealParser = do
     { mscFp = MiscellaneousFilepaths
       { topFile = TopologyFile topFp
       , dBFile = DbFile dbFp
-      , genesisFile = GenesisFile <$> genFp
       , delegCertFile = DelegationCertFile <$> delCertFp
       , signKeyFile = SigningKeyFile <$> sKeyFp
       , socketFile = socketFp
       }
-    , genesisHash = genHash
     , nodeAddr = nAddress
     , configFp = ConfigYamlFilePath nodeConfigFp
     , validateDB = validate

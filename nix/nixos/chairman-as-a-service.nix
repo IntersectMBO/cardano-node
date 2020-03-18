@@ -26,8 +26,6 @@ let
           "--timeout ${toString cfg.timeout}"
           "--max-block-no ${toString cfg.maxBlockNo}"
           "--security-param ${toString cfg.k}"
-          "--genesis-file ${cfg.genesisFile}"
-          "--genesis-hash $GENESIS_HASH"
           "--config ${cfg.nodeConfigFile}"
           "${optionalString cfg.timeoutIsSuccess "--timeout-is-success"}"
         ];

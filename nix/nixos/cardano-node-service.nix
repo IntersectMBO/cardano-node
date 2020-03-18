@@ -14,8 +14,6 @@ let
     let exec = "cardano-node run";
         cmd = builtins.filter (x: x != "") [
           "${cfg.package}/bin/${exec}"
-          "--genesis-file ${cfg.genesisFile}"
-          "--genesis-hash $GENESIS_HASH"
           "--config ${cfg.nodeConfigFile}"
           "--database-path ${cfg.databasePath}"
           "--socket-path ${cfg.socketPath}"
@@ -84,7 +82,7 @@ in {
         '';
       };
 
-      genesisFile = mkOption {
+     genesisFile = mkOption {
         type = types.path;
         default = envConfig.genesisFile;
         description = ''
