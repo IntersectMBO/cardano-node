@@ -870,6 +870,12 @@ instance StandardHash blk
       , "expected" .= String (pack $ show expect)
       , "actual" .= String (pack $ show act)
       ]
+  toObject _verb (Mock.MockExpired expired fail) =
+    mkObject
+      [ "kind" .= String "MockExpired"
+      , "expiration" .= toJSON (unSlotNo expired)
+      , "failure" .= toJSON (unSlotNo fail)
+      ]
 
 instance (Show (PBFT.PBftVerKeyHash c))
  => ToObject (PBFT.PBftValidationErr c) where
