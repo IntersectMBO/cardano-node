@@ -56,7 +56,7 @@ extra-deps:
 
     # Cardano-ledger dependencies
   - git: https://github.com/input-output-hk/cardano-ledger
-    commit: 1368966fd6d806d8eb65cd1ba193548c402355f6
+    commit: 722d1dccfc60d2a42b8a6e32d61c29f36587c1bc
     subdirs:
       - cardano-ledger
       - cardano-ledger/test
@@ -64,7 +64,7 @@ extra-deps:
       - crypto/test
 
   - git: https://github.com/input-output-hk/cardano-ledger-specs
-    commit: 647cd71e3c4630488e71596f5e9c26fee598b541
+    commit: afacc7969445e4db5427936489f5a49a8a3a8f99
     subdirs:
       # small-steps
       - byron/semantics/executable-spec
@@ -99,7 +99,7 @@ extra-deps:
 
     # iohk-monitoring-framework currently not pinned to a release
   - git: https://github.com/input-output-hk/iohk-monitoring-framework
-    commit: 3e45d5dd4942c295f0ea4bfed7c407b914b15447
+    commit: d18b69c5733520c2735426888f93d395ec11ddb2
     subdirs:
       - contra-tracer
       - iohk-monitoring
