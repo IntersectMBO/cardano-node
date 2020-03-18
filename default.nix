@@ -44,8 +44,9 @@ let
 
     inherit (haskellPackages.cardano-node.identifier) version;
     # Grab the executable component of our package.
-    inherit (haskellPackages.cardano-node.components.exes)
-      cardano-node;
+    inherit (haskellPackages.cardano-node.components.exes) cardano-node;
+    # expose the db-converter from the ouroboros-network we depend on
+    inherit (cardanoNodeHaskellPackages.ouroboros-consensus-byron.components.exes) db-converter;
 
     inherit (pkgs.iohkNix) checkCabalProject;
 
