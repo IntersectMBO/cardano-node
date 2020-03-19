@@ -363,7 +363,26 @@ instance HasSeverityAnnotation (WithIPList (SubscriptionTrace Socket.SockAddr)) 
     SubscriptionTraceCloseSocket {} -> Info
 
 instance HasPrivacyAnnotation (Identity (SubscriptionTrace LocalAddress))
-instance HasSeverityAnnotation (Identity (SubscriptionTrace LocalAddress))
+instance HasSeverityAnnotation (Identity (SubscriptionTrace LocalAddress)) where
+  getSeverityAnnotation (Identity ev) = case ev of
+    SubscriptionTraceConnectStart {} -> Info
+    SubscriptionTraceConnectEnd {} -> Info
+    SubscriptionTraceConnectException {} -> Error
+    SubscriptionTraceSocketAllocationException {} -> Error
+    SubscriptionTraceTryConnectToPeer {} -> Info
+    SubscriptionTraceSkippingPeer {} -> Info
+    SubscriptionTraceSubscriptionRunning -> Debug
+    SubscriptionTraceSubscriptionWaiting {} -> Debug
+    SubscriptionTraceSubscriptionFailed -> Warning
+    SubscriptionTraceSubscriptionWaitingNewConnection {} -> Debug
+    SubscriptionTraceStart {} -> Debug
+    SubscriptionTraceRestart {} -> Debug
+    SubscriptionTraceConnectionExist {} -> Info
+    SubscriptionTraceUnsupportedRemoteAddr {} -> Warning
+    SubscriptionTraceMissingLocalAddress -> Warning
+    SubscriptionTraceApplicationException {} -> Error
+    SubscriptionTraceAllocateSocket {} -> Debug
+    SubscriptionTraceCloseSocket {} -> Debug
 
 instance Transformable Text IO (Identity (SubscriptionTrace LocalAddress)) where
   trTransformer = defaultTextTransformer
