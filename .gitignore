@@ -23,7 +23,8 @@ logs/
 /db-[0-9]
 /launch_*
 /state-*
-/cluster*.log*
+/cluster
+/cluster.*
 /benchmark*.log*
 
 /benchmarking/chain-sync/state-node-mainnet/
