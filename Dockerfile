@@ -13,7 +13,7 @@ ADD . /src
 WORKDIR /src
 RUN stack install
 
-FROM debian:stretch AS runtimeBase
+FROM debian:buster AS runtimeBase
 # Shared libs
 COPY --from=builder /root/.local/bin /root/.local/bin
 COPY --from=builder /usr/lib /usr/lib
