@@ -50,10 +50,9 @@ import qualified Data.Text as T
 import           Data.Time.Clock (DiffTime)
 import           Data.Void (Void)
 
-import           Cardano.BM.Data.Tracer (DefinePrivacyAnnotation (..),
-                     DefineSeverity (..), ToObject (..), TracingFormatting (..),
-                     TracingVerbosity (..), Transformable (..),
-                     emptyObject, mkObject, nullTracer, trStructured)
+import           Cardano.BM.Tracing
+import           Cardano.BM.Data.Tracer (emptyObject, mkObject, nullTracer,
+                     trStructured)
 
 import           Control.Tracer (Tracer, traceWith)
 import           Ouroboros.Consensus.Byron.Ledger (ByronBlock (..))
@@ -467,17 +466,17 @@ instance ToObject (Mempool.GenTxId ByronBlock) where
                                             , "txId" .= toJSON txId
                                             ]
 
-instance DefineSeverity (Mempool.GenTxId ByronBlock)
+instance HasSeverityAnnotation (Mempool.GenTxId ByronBlock)
 
-instance DefinePrivacyAnnotation (Mempool.GenTxId ByronBlock)
+instance HasPrivacyAnnotation (Mempool.GenTxId ByronBlock)
 
 instance Transformable Text IO (Mempool.GenTxId ByronBlock) where
   trTransformer StructuredLogging verb tr = trStructured verb tr
   trTransformer _ _ _tr = nullTracer
 
-instance DefineSeverity (TraceBenchTxSubmit (Mempool.GenTxId ByronBlock))
+instance HasSeverityAnnotation (TraceBenchTxSubmit (Mempool.GenTxId ByronBlock))
 
-instance DefinePrivacyAnnotation (TraceBenchTxSubmit (Mempool.GenTxId ByronBlock))
+instance HasPrivacyAnnotation (TraceBenchTxSubmit (Mempool.GenTxId ByronBlock))
 
 instance Transformable Text IO (TraceBenchTxSubmit (Mempool.GenTxId ByronBlock)) where
   -- transform to JSON Object
@@ -514,9 +513,9 @@ instance ToObject TraceLowLevelSubmit where
                  , "errMsg" .= A.String (T.pack errMsg)
                  ]
 
-instance DefineSeverity TraceLowLevelSubmit
+instance HasSeverityAnnotation TraceLowLevelSubmit
 
-instance DefinePrivacyAnnotation TraceLowLevelSubmit
+instance HasPrivacyAnnotation TraceLowLevelSubmit
 
 instance (MonadIO m) => Transformable Text m TraceLowLevelSubmit where
   -- transform to JSON Object

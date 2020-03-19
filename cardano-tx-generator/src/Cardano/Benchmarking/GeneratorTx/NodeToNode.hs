@@ -35,10 +35,8 @@ import           Network.Socket (AddrInfo (..), SockAddr)
 
 import           Control.Tracer (Tracer (..), nullTracer, traceWith)
 import           Cardano.BM.Data.LogItem (LogObject (..), LOContent (..), mkLOMeta)
-import           Cardano.BM.Data.Tracer (DefinePrivacyAnnotation (..),
-                     DefineSeverity (..), ToObject (..), TracingFormatting (..),
-                     TracingVerbosity (..), Transformable (..),
-                     emptyObject, mkObject, trStructured)
+import           Cardano.BM.Tracing
+import           Cardano.BM.Data.Tracer (emptyObject, mkObject, trStructured)
 import           Ouroboros.Consensus.Byron.Ledger (ByronBlock (..))
 import           Ouroboros.Consensus.Mempool.API (GenTxId, GenTx)
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
@@ -78,9 +76,9 @@ instance ToObject SendRecvConnect where
              , "connId" .= String (T.pack . show $ connId)
              ]
 
-instance DefineSeverity SendRecvConnect
+instance HasSeverityAnnotation SendRecvConnect
 
-instance DefinePrivacyAnnotation SendRecvConnect
+instance HasPrivacyAnnotation SendRecvConnect
 
 instance forall m . (m ~ IO) => Transformable Text m SendRecvConnect where
   -- transform to JSON Object
@@ -165,9 +163,9 @@ instance ToObject (SendRecvTxSubmission ByronBlock) where
                      ]
           TS.MsgDone -> emptyObject -- No useful information.
 
-instance DefineSeverity (SendRecvTxSubmission ByronBlock)
+instance HasSeverityAnnotation (SendRecvTxSubmission ByronBlock)
 
-instance DefinePrivacyAnnotation (SendRecvTxSubmission ByronBlock)
+instance HasPrivacyAnnotation (SendRecvTxSubmission ByronBlock)
 
 instance Transformable Text IO (SendRecvTxSubmission ByronBlock) where
   -- transform to JSON Object
@@ -182,7 +180,7 @@ instance Transformable Text IO (SendRecvTxSubmission ByronBlock) where
             -- Add a timestamp in 'ToObject'-representation.
             HM.insert "time" (String (T.pack . show $ currentTime)) obj
       tracer = if obj == emptyObject then nullTracer else tr
-    meta <- mkLOMeta (defineSeverity arg) (definePrivacyAnnotation arg)
+    meta <- mkLOMeta (getSeverityAnnotation arg) (getPrivacyAnnotation arg)
     traceWith tracer (mempty, LogObject mempty meta (LogStructured updatedObj))
   trTransformer _ _verb _tr = nullTracer
 

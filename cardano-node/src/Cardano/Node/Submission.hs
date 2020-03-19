@@ -51,10 +51,8 @@ import           Ouroboros.Network.NodeToClient ( AssociateWithIOCP
                                                 , NetworkConnectTracers (..))
 import qualified Ouroboros.Network.NodeToClient as NtC
 
-import           Cardano.BM.Data.Tracer (DefinePrivacyAnnotation (..),
-                     DefineSeverity (..), ToObject (..), TracingFormatting (..),
-                     TracingVerbosity (..), Transformable (..),
-                     emptyObject, mkObject, trStructured)
+import           Cardano.BM.Tracing
+import           Cardano.BM.Data.Tracer (emptyObject, mkObject, trStructured)
 import           Cardano.Config.Types (SocketPath(..))
 
 -- | Low-tevel tracer
@@ -87,9 +85,9 @@ instance ToObject TraceLowLevelSubmit where
                  , "errMsg" .= String (T.pack errMsg)
                  ]
 
-instance DefineSeverity TraceLowLevelSubmit
+instance HasSeverityAnnotation TraceLowLevelSubmit
 
-instance DefinePrivacyAnnotation TraceLowLevelSubmit
+instance HasPrivacyAnnotation TraceLowLevelSubmit
 
 instance (MonadIO m) => Transformable Text m TraceLowLevelSubmit where
   -- transform to JSON Object

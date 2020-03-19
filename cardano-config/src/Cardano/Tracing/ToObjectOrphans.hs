@@ -15,6 +15,7 @@ module Cardano.Tracing.ToObjectOrphans
   ( WithTip (..)
   , showTip
   , showWithTip
+  , defaultTextTransformer
   ) where
 
 import           Cardano.Prelude hiding (atomically, show)
@@ -67,7 +68,6 @@ import           Ouroboros.Network.BlockFetch.ClientState
                    (TraceFetchClientState (..), TraceLabelPeer (..))
 import           Ouroboros.Network.BlockFetch.Decision (FetchDecision)
 import           Ouroboros.Network.Codec (AnyMessage (..))
-import           Ouroboros.Network.Driver.Simple (TraceSendRecv)
 import qualified Ouroboros.Network.NodeToClient as NtC
 import qualified Ouroboros.Network.NodeToNode as NtN
 import           Ouroboros.Network.NodeToNode
@@ -136,8 +136,8 @@ instance ( Show a
 
 defaultTextTransformer
   :: ( MonadIO m
-     , DefinePrivacyAnnotation b
-     , DefineSeverity b
+     , HasPrivacyAnnotation b
+     , HasSeverityAnnotation b
      , Show b
      , ToObject b)
   => TracingFormatting
@@ -146,26 +146,26 @@ defaultTextTransformer
   -> Tracer m b
 defaultTextTransformer TextualRepresentation _verb tr =
   Tracer $ \s -> do
-    meta <- mkLOMeta (defineSeverity s) (definePrivacyAnnotation s)
+    meta <- mkLOMeta (getSeverityAnnotation s) (getPrivacyAnnotation s)
     traceWith tr (mempty, LogObject mempty meta (LogMessage $ pack $ show s))
 defaultTextTransformer _ verb tr =
   trStructured verb tr
 
 --
--- * instances of @DefinePrivacyAnnotation@ and @DefineSeverity@
+-- * instances of @HasPrivacyAnnotation@ and @HasSeverityAnnotation@
 --
 -- NOTE: this list is sorted by the unqualified name of the outermost type.
 
-instance DefinePrivacyAnnotation NtC.HandshakeTr
-instance DefineSeverity NtC.HandshakeTr where
-  defineSeverity _ = Info
+instance HasPrivacyAnnotation NtC.HandshakeTr
+instance HasSeverityAnnotation NtC.HandshakeTr where
+  getSeverityAnnotation _ = Info
 
-instance DefinePrivacyAnnotation NtN.HandshakeTr
-instance DefineSeverity NtN.HandshakeTr where
-  defineSeverity _ = Info
+instance HasPrivacyAnnotation NtN.HandshakeTr
+instance HasSeverityAnnotation NtN.HandshakeTr where
+  getSeverityAnnotation _ = Info
 
-instance DefineSeverity (ChainDB.TraceEvent blk) where
-  defineSeverity (ChainDB.TraceAddBlockEvent ev) = case ev of
+instance HasSeverityAnnotation (ChainDB.TraceEvent blk) where
+  getSeverityAnnotation (ChainDB.TraceAddBlockEvent ev) = case ev of
     ChainDB.IgnoreBlockOlderThanK {} -> Info
     ChainDB.IgnoreBlockAlreadyInVolDB {} -> Info
     ChainDB.IgnoreInvalidBlock {} -> Info
@@ -186,25 +186,25 @@ instance DefineSeverity (ChainDB.TraceEvent blk) where
     ChainDB.ScheduledChainSelection {} -> Debug
     ChainDB.RunningScheduledChainSelection {} -> Debug
 
-  defineSeverity (ChainDB.TraceLedgerReplayEvent ev) = case ev of
+  getSeverityAnnotation (ChainDB.TraceLedgerReplayEvent ev) = case ev of
     LedgerDB.ReplayFromGenesis {} -> Info
     LedgerDB.ReplayFromSnapshot {} -> Info
     LedgerDB.ReplayedBlock {} -> Info
 
-  defineSeverity (ChainDB.TraceLedgerEvent ev) = case ev of
+  getSeverityAnnotation (ChainDB.TraceLedgerEvent ev) = case ev of
     LedgerDB.TookSnapshot {} -> Info
     LedgerDB.DeletedSnapshot {} -> Debug
     LedgerDB.InvalidSnapshot {} -> Error
 
-  defineSeverity (ChainDB.TraceCopyToImmDBEvent ev) = case ev of
+  getSeverityAnnotation (ChainDB.TraceCopyToImmDBEvent ev) = case ev of
     ChainDB.CopiedBlockToImmDB {} -> Notice
     ChainDB.NoBlocksToCopyToImmDB -> Debug
 
-  defineSeverity (ChainDB.TraceGCEvent ev) = case ev of
+  getSeverityAnnotation (ChainDB.TraceGCEvent ev) = case ev of
     ChainDB.PerformedGC {} -> Debug
     ChainDB.ScheduledGC {} -> Debug
 
-  defineSeverity (ChainDB.TraceOpenEvent ev) = case ev of
+  getSeverityAnnotation (ChainDB.TraceOpenEvent ev) = case ev of
     ChainDB.OpenedDB {} -> Info
     ChainDB.ClosedDB {} -> Info
     ChainDB.ReopenedDB {} -> Debug
@@ -212,87 +212,87 @@ instance DefineSeverity (ChainDB.TraceEvent blk) where
     ChainDB.OpenedVolDB -> Info
     ChainDB.OpenedLgrDB -> Info
 
-  defineSeverity (ChainDB.TraceReaderEvent ev) = case ev of
+  getSeverityAnnotation (ChainDB.TraceReaderEvent ev) = case ev of
     ChainDB.NewReader {} -> Info
     ChainDB.ReaderNoLongerInMem {} -> Info
     ChainDB.ReaderSwitchToMem {} -> Info
     ChainDB.ReaderNewImmIterator {} -> Info
-  defineSeverity (ChainDB.TraceInitChainSelEvent ev) = case ev of
+  getSeverityAnnotation (ChainDB.TraceInitChainSelEvent ev) = case ev of
     ChainDB.InitChainSelValidation {} -> Debug
-  defineSeverity (ChainDB.TraceIteratorEvent ev) = case ev of
+  getSeverityAnnotation (ChainDB.TraceIteratorEvent ev) = case ev of
     ChainDB.StreamFromVolDB {} -> Debug
     _ -> Debug
-  defineSeverity (ChainDB.TraceImmDBEvent _ev) = Debug
-  defineSeverity (ChainDB.TraceVolDBEvent _ev) = Debug
+  getSeverityAnnotation (ChainDB.TraceImmDBEvent _ev) = Debug
+  getSeverityAnnotation (ChainDB.TraceVolDBEvent _ev) = Debug
 
-instance DefinePrivacyAnnotation (TraceBlockFetchServerEvent blk)
-instance DefineSeverity (TraceBlockFetchServerEvent blk) where
-  defineSeverity _ = Info
+instance HasPrivacyAnnotation (TraceBlockFetchServerEvent blk)
+instance HasSeverityAnnotation (TraceBlockFetchServerEvent blk) where
+  getSeverityAnnotation _ = Info
 
-instance DefinePrivacyAnnotation (TraceChainSyncClientEvent blk)
-instance DefineSeverity (TraceChainSyncClientEvent blk) where
-  defineSeverity (TraceDownloadedHeader _) = Info
-  defineSeverity (TraceFoundIntersection _ _ _) = Info
-  defineSeverity (TraceRolledBack _) = Notice
-  defineSeverity (TraceException _) = Warning
+instance HasPrivacyAnnotation (TraceChainSyncClientEvent blk)
+instance HasSeverityAnnotation (TraceChainSyncClientEvent blk) where
+  getSeverityAnnotation (TraceDownloadedHeader _) = Info
+  getSeverityAnnotation (TraceFoundIntersection _ _ _) = Info
+  getSeverityAnnotation (TraceRolledBack _) = Notice
+  getSeverityAnnotation (TraceException _) = Warning
 
-instance DefinePrivacyAnnotation (TraceChainSyncServerEvent blk b)
-instance DefineSeverity (TraceChainSyncServerEvent blk b) where
-  defineSeverity _ = Info
+instance HasPrivacyAnnotation (TraceChainSyncServerEvent blk b)
+instance HasSeverityAnnotation (TraceChainSyncServerEvent blk b) where
+  getSeverityAnnotation _ = Info
 
-instance DefinePrivacyAnnotation (TraceEventMempool blk)
-instance DefineSeverity (TraceEventMempool blk) where
-  defineSeverity _ = Info
+instance HasPrivacyAnnotation (TraceEventMempool blk)
+instance HasSeverityAnnotation (TraceEventMempool blk) where
+  getSeverityAnnotation _ = Info
 
-instance DefinePrivacyAnnotation (TraceFetchClientState header)
-instance DefineSeverity (TraceFetchClientState header) where
-  defineSeverity _ = Info
+instance HasPrivacyAnnotation (TraceFetchClientState header)
+instance HasSeverityAnnotation (TraceFetchClientState header) where
+  getSeverityAnnotation _ = Info
 
-instance DefinePrivacyAnnotation (TraceForgeEvent blk tx)
-instance DefineSeverity (TraceForgeEvent blk tx) where
-  defineSeverity TraceForgedBlock {}            = Info
-  defineSeverity TraceStartLeadershipCheck {}   = Info
-  defineSeverity TraceNodeNotLeader {}          = Info
-  defineSeverity TraceNodeIsLeader {}           = Info
-  defineSeverity TraceNoLedgerState {}          = Error
-  defineSeverity TraceNoLedgerView {}           = Error
-  defineSeverity TraceBlockFromFuture {}        = Error
-  defineSeverity TraceSlotIsImmutable {}        = Error
-  defineSeverity TraceAdoptedBlock {}           = Info
-  defineSeverity TraceDidntAdoptBlock {}        = Error
-  defineSeverity TraceForgedInvalidBlock {}     = Error
+instance HasPrivacyAnnotation (TraceForgeEvent blk tx)
+instance HasSeverityAnnotation (TraceForgeEvent blk tx) where
+  getSeverityAnnotation TraceForgedBlock {}            = Info
+  getSeverityAnnotation TraceStartLeadershipCheck {}   = Info
+  getSeverityAnnotation TraceNodeNotLeader {}          = Info
+  getSeverityAnnotation TraceNodeIsLeader {}           = Info
+  getSeverityAnnotation TraceNoLedgerState {}          = Error
+  getSeverityAnnotation TraceNoLedgerView {}           = Error
+  getSeverityAnnotation TraceBlockFromFuture {}        = Error
+  getSeverityAnnotation TraceSlotIsImmutable {}        = Error
+  getSeverityAnnotation TraceAdoptedBlock {}           = Info
+  getSeverityAnnotation TraceDidntAdoptBlock {}        = Error
+  getSeverityAnnotation TraceForgedInvalidBlock {}     = Error
 
-instance DefinePrivacyAnnotation (TraceLocalTxSubmissionServerEvent blk)
-instance DefineSeverity (TraceLocalTxSubmissionServerEvent blk) where
-  defineSeverity _ = Info
+instance HasPrivacyAnnotation (TraceLocalTxSubmissionServerEvent blk)
+instance HasSeverityAnnotation (TraceLocalTxSubmissionServerEvent blk) where
+  getSeverityAnnotation _ = Info
 
-instance DefinePrivacyAnnotation (TraceSendRecv (BlockFetch blk))
-instance DefineSeverity (TraceSendRecv (BlockFetch blk)) where
-  defineSeverity _ = Debug
+instance HasPrivacyAnnotation (TraceSendRecv (BlockFetch blk))
+instance HasSeverityAnnotation (TraceSendRecv (BlockFetch blk)) where
+  getSeverityAnnotation _ = Debug
 
-instance DefinePrivacyAnnotation (TraceSendRecv (TxSubmission txid tx))
-instance DefineSeverity (TraceSendRecv (TxSubmission txid tx)) where
-  defineSeverity _ = Debug
+instance HasPrivacyAnnotation (TraceSendRecv (TxSubmission txid tx))
+instance HasSeverityAnnotation (TraceSendRecv (TxSubmission txid tx)) where
+  getSeverityAnnotation _ = Debug
 
-instance DefinePrivacyAnnotation a => DefinePrivacyAnnotation (TraceLabelPeer peer a)
-instance DefineSeverity a => DefineSeverity (TraceLabelPeer peer a)
+instance HasPrivacyAnnotation a => HasPrivacyAnnotation (TraceLabelPeer peer a)
+instance HasSeverityAnnotation a => HasSeverityAnnotation (TraceLabelPeer peer a)
 
-instance DefinePrivacyAnnotation [TraceLabelPeer peer (FetchDecision [Point header])]
-instance DefineSeverity [TraceLabelPeer peer (FetchDecision [Point header])] where
-  defineSeverity [] = Debug
-  defineSeverity _ = Info
+instance HasPrivacyAnnotation [TraceLabelPeer peer (FetchDecision [Point header])]
+instance HasSeverityAnnotation [TraceLabelPeer peer (FetchDecision [Point header])] where
+  getSeverityAnnotation [] = Debug
+  getSeverityAnnotation _ = Info
 
-instance DefinePrivacyAnnotation (TraceTxSubmissionInbound (GenTxId blk) (GenTx blk))
-instance DefineSeverity (TraceTxSubmissionInbound (GenTxId blk) (GenTx blk)) where
-  defineSeverity _ = Info
+instance HasPrivacyAnnotation (TraceTxSubmissionInbound (GenTxId blk) (GenTx blk))
+instance HasSeverityAnnotation (TraceTxSubmissionInbound (GenTxId blk) (GenTx blk)) where
+  getSeverityAnnotation _ = Info
 
-instance DefinePrivacyAnnotation (TraceTxSubmissionOutbound (GenTxId blk) (GenTx blk))
-instance DefineSeverity (TraceTxSubmissionOutbound (GenTxId blk) (GenTx blk)) where
-  defineSeverity _ = Info
+instance HasPrivacyAnnotation (TraceTxSubmissionOutbound (GenTxId blk) (GenTx blk))
+instance HasSeverityAnnotation (TraceTxSubmissionOutbound (GenTxId blk) (GenTx blk)) where
+  getSeverityAnnotation _ = Info
 
-instance DefinePrivacyAnnotation (WithAddr addr ErrorPolicyTrace)
-instance DefineSeverity (WithAddr addr ErrorPolicyTrace) where
-  defineSeverity (WithAddr _ ev) = case ev of
+instance HasPrivacyAnnotation (WithAddr addr ErrorPolicyTrace)
+instance HasSeverityAnnotation (WithAddr addr ErrorPolicyTrace) where
+  getSeverityAnnotation (WithAddr _ ev) = case ev of
     ErrorPolicySuspendPeer {} -> Warning -- peer misbehaved
     ErrorPolicySuspendConsumer {} -> Notice -- peer temporarily not useful
     ErrorPolicyLocalNodeError {} -> Error
@@ -304,9 +304,9 @@ instance DefineSeverity (WithAddr addr ErrorPolicyTrace) where
     ErrorPolicyUnhandledConnectionException {} -> Error
     ErrorPolicyAcceptException {} -> Error
 
-instance DefinePrivacyAnnotation (WithDomainName DnsTrace)
-instance DefineSeverity (WithDomainName DnsTrace) where
-  defineSeverity (WithDomainName _ ev) = case ev of
+instance HasPrivacyAnnotation (WithDomainName DnsTrace)
+instance HasSeverityAnnotation (WithDomainName DnsTrace) where
+  getSeverityAnnotation (WithDomainName _ ev) = case ev of
     DnsTraceLookupException {} -> Error
     DnsTraceLookupAError {} -> Error
     DnsTraceLookupAAAAError {} -> Error
@@ -315,9 +315,9 @@ instance DefineSeverity (WithDomainName DnsTrace) where
     DnsTraceLookupAResult {} -> Debug
     DnsTraceLookupAAAAResult {} -> Debug
 
-instance DefinePrivacyAnnotation (WithDomainName (SubscriptionTrace Socket.SockAddr))
-instance DefineSeverity (WithDomainName (SubscriptionTrace Socket.SockAddr)) where
-  defineSeverity (WithDomainName _ ev) = case ev of
+instance HasPrivacyAnnotation (WithDomainName (SubscriptionTrace Socket.SockAddr))
+instance HasSeverityAnnotation (WithDomainName (SubscriptionTrace Socket.SockAddr)) where
+  getSeverityAnnotation (WithDomainName _ ev) = case ev of
     SubscriptionTraceConnectStart {} -> Info
     SubscriptionTraceConnectEnd {} -> Info
     SubscriptionTraceConnectException {} -> Error
@@ -337,9 +337,9 @@ instance DefineSeverity (WithDomainName (SubscriptionTrace Socket.SockAddr)) whe
     SubscriptionTraceAllocateSocket {} -> Debug
     SubscriptionTraceCloseSocket {} -> Debug
 
-instance DefinePrivacyAnnotation (WithIPList (SubscriptionTrace Socket.SockAddr))
-instance DefineSeverity (WithIPList (SubscriptionTrace Socket.SockAddr)) where
-  defineSeverity (WithIPList _ _ ev) = case ev of
+instance HasPrivacyAnnotation (WithIPList (SubscriptionTrace Socket.SockAddr))
+instance HasSeverityAnnotation (WithIPList (SubscriptionTrace Socket.SockAddr)) where
+  getSeverityAnnotation (WithIPList _ _ ev) = case ev of
     SubscriptionTraceConnectStart _ -> Info
     SubscriptionTraceConnectEnd _ connectResult -> case connectResult of
       ConnectSuccess -> Info
@@ -362,8 +362,27 @@ instance DefineSeverity (WithIPList (SubscriptionTrace Socket.SockAddr)) where
     SubscriptionTraceAllocateSocket {} -> Debug
     SubscriptionTraceCloseSocket {} -> Info
 
-instance DefinePrivacyAnnotation (Identity (SubscriptionTrace LocalAddress))
-instance DefineSeverity (Identity (SubscriptionTrace LocalAddress))
+instance HasPrivacyAnnotation (Identity (SubscriptionTrace LocalAddress))
+instance HasSeverityAnnotation (Identity (SubscriptionTrace LocalAddress)) where
+  getSeverityAnnotation (Identity ev) = case ev of
+    SubscriptionTraceConnectStart {} -> Info
+    SubscriptionTraceConnectEnd {} -> Info
+    SubscriptionTraceConnectException {} -> Error
+    SubscriptionTraceSocketAllocationException {} -> Error
+    SubscriptionTraceTryConnectToPeer {} -> Info
+    SubscriptionTraceSkippingPeer {} -> Info
+    SubscriptionTraceSubscriptionRunning -> Debug
+    SubscriptionTraceSubscriptionWaiting {} -> Debug
+    SubscriptionTraceSubscriptionFailed -> Warning
+    SubscriptionTraceSubscriptionWaitingNewConnection {} -> Debug
+    SubscriptionTraceStart {} -> Debug
+    SubscriptionTraceRestart {} -> Debug
+    SubscriptionTraceConnectionExist {} -> Info
+    SubscriptionTraceUnsupportedRemoteAddr {} -> Warning
+    SubscriptionTraceMissingLocalAddress -> Warning
+    SubscriptionTraceApplicationException {} -> Error
+    SubscriptionTraceAllocateSocket {} -> Debug
+    SubscriptionTraceCloseSocket {} -> Debug
 
 instance Transformable Text IO (Identity (SubscriptionTrace LocalAddress)) where
   trTransformer = defaultTextTransformer
@@ -374,9 +393,9 @@ instance ToObject (Identity (SubscriptionTrace LocalAddress)) where
              , "event" .= show ev
              ]
 
-instance DefinePrivacyAnnotation (WithMuxBearer peer MuxTrace)
-instance DefineSeverity (WithMuxBearer peer MuxTrace) where
-  defineSeverity (WithMuxBearer _ ev) = case ev of
+instance HasPrivacyAnnotation (WithMuxBearer peer MuxTrace)
+instance HasSeverityAnnotation (WithMuxBearer peer MuxTrace) where
+  getSeverityAnnotation (WithMuxBearer _ ev) = case ev of
     MuxTraceRecvHeaderStart -> Debug
     MuxTraceRecvHeaderEnd {} -> Debug
     MuxTraceRecvPayloadStart {} -> Debug
@@ -400,9 +419,9 @@ instance DefineSeverity (WithMuxBearer peer MuxTrace) where
     MuxTraceRecvDeltaQObservation {} -> Debug
     MuxTraceRecvDeltaQSample {} -> Info
 
-instance DefinePrivacyAnnotation (WithTip blk (ChainDB.TraceEvent blk))
-instance DefineSeverity (WithTip blk (ChainDB.TraceEvent blk)) where
-  defineSeverity (WithTip _tip ev) = defineSeverity ev
+instance HasPrivacyAnnotation (WithTip blk (ChainDB.TraceEvent blk))
+instance HasSeverityAnnotation (WithTip blk (ChainDB.TraceEvent blk)) where
+  getSeverityAnnotation (WithTip _tip ev) = getSeverityAnnotation ev
 
 --
 -- | instances of @Transformable@
@@ -415,8 +434,8 @@ instance Transformable Text IO NtN.HandshakeTr where
 instance Transformable Text IO NtC.HandshakeTr where
   trTransformer = defaultTextTransformer
 
-instance ( DefinePrivacyAnnotation (ChainDB.TraceAddBlockEvent blk)
-         , DefineSeverity (ChainDB.TraceAddBlockEvent blk)
+instance ( HasPrivacyAnnotation (ChainDB.TraceAddBlockEvent blk)
+         , HasSeverityAnnotation (ChainDB.TraceAddBlockEvent blk)
          , LedgerSupportsProtocol blk
          , Show (Ouroboros.Consensus.Block.Header blk)
          , ToObject (ChainDB.TraceAddBlockEvent blk))
@@ -446,7 +465,7 @@ instance ( Condense (HeaderHash blk)
          , ToObject (ValidationErr (BlockProtocol blk)))
  => Transformable Text IO (TraceForgeEvent blk tx) where
   trTransformer TextualRepresentation _verb tr = readableForgeEventTracer $ Tracer $ \s -> do
-    meta <- mkLOMeta (defineSeverity s) (definePrivacyAnnotation s)
+    meta <- mkLOMeta (getSeverityAnnotation s) (getPrivacyAnnotation s)
     traceWith tr (mempty, LogObject mempty meta (LogMessage $ pack s))
   -- user defined formatting of log output
   trTransformer _ verb tr = trStructured verb tr
@@ -502,7 +521,7 @@ instance (Condense (HeaderHash blk), LedgerSupportsProtocol blk)
   trTransformer StructuredLogging verb tr = trStructured verb tr
   -- textual output based on the readable ChainDB tracer
   trTransformer TextualRepresentation _verb tr = readableChainDBTracer $ Tracer $ \s -> do
-    meta <- mkLOMeta (defineSeverity s) (definePrivacyAnnotation s)
+    meta <- mkLOMeta (getSeverityAnnotation s) (getPrivacyAnnotation s)
     traceWith tr (mempty, LogObject mempty meta (LogMessage $ pack s))
   -- user defined formatting of log output
   trTransformer UserdefinedFormatting verb tr = trStructured verb tr
