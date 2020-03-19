@@ -2,7 +2,7 @@
 ARG NETWORK=runtimeBase
 
 ### Base builder with development dependencies
-FROM haskell:8.6.5
+FROM haskell:8.6.5 as builder
 RUN apt-get update && apt-get install -y \
   build-essential \
   libtinfo-dev \
