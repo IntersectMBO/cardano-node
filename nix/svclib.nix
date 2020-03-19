@@ -68,7 +68,8 @@ let
       shelley-ids = range                      node-id-base (node-id-base + node-count - 1);
       mkPeer = id: { inherit valency; port = port-base + id; addr = addr-fn id; };
       mkShelleyNode = {
-        Producers = map (mkPeer) (remove id shelley-ids);
+        Producers = (map (mkPeer) (remove id shelley-ids))
+                    ++ [{ valency = 1; port = proxy-port; addr = proxy-addr; }];
       };
       topology = mkShelleyNode;
     in toFile "topology.yaml" (toJSON topology);
