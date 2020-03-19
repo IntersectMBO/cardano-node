@@ -75,6 +75,7 @@ import           Ouroboros.Network.NodeToNode
 import           Ouroboros.Network.Protocol.BlockFetch.Type (BlockFetch, Message(..))
 import           Ouroboros.Network.Protocol.TxSubmission.Type
                    (Message (..), TxSubmission)
+import           Ouroboros.Network.Snocket (LocalAddress (..))
 import           Ouroboros.Network.Subscription (ConnectResult (..), DnsTrace (..),
                    SubscriptionTrace (..),
                    WithDomainName (..), WithIPList (..))
@@ -360,6 +361,18 @@ instance DefineSeverity (WithIPList (SubscriptionTrace Socket.SockAddr)) where
     SubscriptionTraceApplicationException {} -> Error
     SubscriptionTraceAllocateSocket {} -> Debug
     SubscriptionTraceCloseSocket {} -> Info
+
+instance DefinePrivacyAnnotation (Identity (SubscriptionTrace LocalAddress))
+instance DefineSeverity (Identity (SubscriptionTrace LocalAddress))
+
+instance Transformable Text IO (Identity (SubscriptionTrace LocalAddress)) where
+  trTransformer = defaultTextTransformer
+
+instance ToObject (Identity (SubscriptionTrace LocalAddress)) where
+  toObject _verb (Identity ev) =
+    mkObject [ "kind" .= ("SubscriptionTrace" :: String)
+             , "event" .= show ev
+             ]
 
 instance DefinePrivacyAnnotation (WithMuxBearer peer MuxTrace)
 instance DefineSeverity (WithMuxBearer peer MuxTrace) where
