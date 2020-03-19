@@ -1,10 +1,8 @@
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TupleSections #-}
-
 module Cardano.CLI.Byron.UpdateProposal
   ( ParametersToUpdate(..)
   , convertProposalToGenTx
   , createUpdateProposal
+  , serialiseByronUpdateProposal
   ) where
 
 import           Cardano.Prelude
@@ -20,12 +18,14 @@ import           System.Directory
 import           System.FilePath ((</>))
 import           Data.Time.Clock (UTCTime)
 
+import qualified Cardano.Binary as Binary
 import           Cardano.Chain.Block
                    (AHeader(..), ABlockOrBoundaryHdr(..),
                     abobHdrFromBlock, fromCBORABlockOrBoundary)
 import           Cardano.Chain.Common (LovelacePortion, TxFeePolicy(..))
+import           Cardano.Chain.Epoch.File (mainnetEpochSlots)
 import           Cardano.Chain.Genesis (GenesisData(..))
-import           Cardano.Chain.Slotting (EpochNumber(..), EpochSlots(..), SlotNumber(..))
+import           Cardano.Chain.Slotting (EpochNumber(..), SlotNumber(..))
 import           Cardano.Chain.Update
                    (AProposal(..), ProtocolParametersUpdate(..), InstallerHash(..),
                     Proposal, ProposalBody(..), ProtocolVersion(..), SoftforkRule(..),
@@ -47,15 +47,16 @@ data ParametersToUpdate =
   | MpcThd LovelacePortion
   | HeavyDelThd LovelacePortion
   | UpdateVoteThd LovelacePortion
-  -- UpdateVoteThd: This represents the minimum percentage of the total number of genesis
+  -- ^ UpdateVoteThd: This represents the minimum percentage of the total number of genesis
   -- keys that have to endorse a protocol version to be able to become adopted.
   | UpdateProposalThd LovelacePortion
-  -- UpdateProposalTTL: If after the number of slots specified the proposal
+  -- ^ UpdateProposalTTL: If after the number of slots specified the proposal
   -- does not reach majority of approvals, the proposal is simply discarded.
   | UpdateProposalTTL SlotNumber
   | SoftforkRuleParam SoftforkRule
   | TxFeePolicy TxFeePolicy
   | UnlockStakeEpoch EpochNumber
+  deriving Show
 
 createProtocolParametersUpdate
   :: ProtocolParametersUpdate
@@ -93,7 +94,8 @@ createUpdateProposal dbFile configFile sKey paramsToUpdate = do
 
   latestBlockBS <- getMostRecentBlock dbFile
 
-  latestBlock <- case decodeCBOR latestBlockBS (fromCBORABlockOrBoundary $ EpochSlots 21600) of
+  let eDecodedBlock = decodeCBOR latestBlockBS (fromCBORABlockOrBoundary mainnetEpochSlots)
+  latestBlock <- case eDecodedBlock of
                    Right (_, blk) -> right blk
                    Left err -> left err
 
@@ -177,6 +179,9 @@ getSoftwareVersion (ABOBBoundaryHdr _) =
          $ "Cardano.CLI.Byron.UpdateProposal.getSoftwareVersion: "
          <> "encountered an epoch boundary block which does not have a SoftwareVersion."
          <> " Wait a moment to download an additional block and try again."
+
+serialiseByronUpdateProposal :: Proposal -> LByteString
+serialiseByronUpdateProposal = Binary.serialize
 
 sortDescending :: [(FilePath, UTCTime)] -> [(FilePath, UTCTime)]
 sortDescending ls = sortBy (\(firMod, _) (secMod, _) -> compare secMod firMod) ls

@@ -4,7 +4,8 @@
 {-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
 
 module Cardano.Common.Parsers
-  ( flagParser
+  ( command'
+  , flagParser
   , nodeMockParser
   , nodeMockProtocolModeParser
   , nodeProtocolModeParser
@@ -14,16 +15,20 @@ module Cardano.Common.Parsers
   , parseCoreNodeId
   , parseDbPath
   , parseFilePath
+  , parseLovelace
   , parseUrl
   , parseFlag
   , parseFlag'
+  , parseFraction
   , parseGenesisFile
   , parseIntegral
   , parseIntegralWithDefault
   , parseLogOutputFile
   , parseNodeId
   , parseProtocol
+  , parseSigningKeyFile
   , parseSocketPath
+  , readDouble
   ) where
 
 
@@ -35,6 +40,7 @@ import           Network.Socket (PortNumber)
 import           Options.Applicative
 
 import           Ouroboros.Consensus.NodeId (NodeId(..), CoreNodeId(..))
+import           Cardano.Chain.Common (Lovelace, mkLovelace)
 
 import           Cardano.Config.CommonCLI
 import           Cardano.Config.Protocol
@@ -42,6 +48,11 @@ import           Cardano.Config.Topology
 import           Cardano.Config.Types
 
 -- Common command line parsers
+
+command' :: String -> String -> Parser a -> Mod CommandFields a
+command' c descr p =
+    command c $ info (p <**> helper)
+              $ mconcat [ progDesc descr ]
 
 nodeProtocolModeParser  :: Parser NodeProtocolMode
 nodeProtocolModeParser = nodeRealProtocolModeParser <|> nodeMockProtocolModeParser
@@ -164,6 +175,18 @@ parseFilePath :: String -> String -> Parser FilePath
 parseFilePath optname desc =
   strOption $ long optname <> metavar "FILEPATH" <> help desc
 
+parseFraction :: String -> String -> Parser Rational
+parseFraction optname desc =
+  option (toRational <$> readDouble) $
+      long optname
+   <> metavar "DOUBLE"
+   <> help desc
+
+parseLovelace :: String -> String -> Parser Lovelace
+parseLovelace optname desc =
+  either (panic . show) identity . mkLovelace
+    <$> parseIntegral optname desc
+
 parseUrl :: String -> String -> Parser String
 parseUrl optname desc =
   strOption $ long optname <> metavar "URL" <> help desc
@@ -244,6 +267,9 @@ parseProtocol = asum
     "Permissive BFT consensus with a real ledger"
   ]
 
+parseSigningKeyFile :: String -> String -> Parser SigningKeyFile
+parseSigningKeyFile opt desc = SigningKeyFile <$> parseFilePath opt desc
+
 parseSocketPath :: Text -> Parser SocketPath
 parseSocketPath helpMessage =
   SocketFile <$> strOption
@@ -268,3 +294,10 @@ parseLogOutputFile =
     <> help "Logging output file"
     <> completer (bashCompleter "file")
     )
+
+readDouble :: ReadM Double
+readDouble = do
+  f <- auto
+  when (f < 0) $ readerError "fraction must be >= 0"
+  when (f > 1) $ readerError "fraction must be <= 1"
+  return f

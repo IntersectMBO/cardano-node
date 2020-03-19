@@ -12,7 +12,7 @@
 
 module Cardano.CLI.Ops
   ( decodeCBOR
-  , deserialiseDelegateKey
+  , deserialiseSigningKey
   , getGenesisHashText
   , getLocalTip
   , pPrintCBOR
@@ -113,16 +113,17 @@ decodeCBOR bs decoder =
   first CBORDecodingError $ deserialiseFromBytes decoder bs
 
 
-deserialiseDelegateKey :: Protocol -> FilePath -> LB.ByteString -> Either CliError SigningKey
-deserialiseDelegateKey ByronLegacy fp delSkey =
+deserialiseSigningKey :: Protocol -> FilePath -> LB.ByteString -> Either CliError SigningKey
+deserialiseSigningKey ByronLegacy fp delSkey =
   case deserialiseFromBytes Legacy.decodeLegacyDelegateKey delSkey of
     Left deSerFail -> Left $ SigningKeyDeserialisationFailed fp deSerFail
     Right (_, Legacy.LegacyDelegateKey sKey ) -> pure sKey
-deserialiseDelegateKey RealPBFT fp delSkey =
+deserialiseSigningKey RealPBFT fp delSkey =
   case deserialiseFromBytes Crypto.fromCBORXPrv delSkey of
     Left deSerFail -> Left $ SigningKeyDeserialisationFailed fp deSerFail
     Right (_, sKey) -> Right $ SigningKey sKey
-deserialiseDelegateKey ptcl _ _ = Left $ ProtocolNotSupported ptcl
+deserialiseSigningKey ptcl _ _ = Left $ ProtocolNotSupported ptcl
+
 
 getGenesisHashText :: GenesisFile -> ExceptT CliError IO Text
 getGenesisHashText (GenesisFile genFile) = do
@@ -213,7 +214,7 @@ data CliError
   | GenesisReadError !FilePath !Genesis.GenesisDataError
   | GenesisSpecError !Text
   | IssueUtxoError !RealPBFTError
-  | NoBlocksFound FilePath
+  | NoBlocksFound !FilePath
   | NodeSubmitTxError !RealPBFTError
   | NotEnoughTxInputs
   | NotEnoughTxOutputs
@@ -229,9 +230,9 @@ data CliError
   -- TODO:  sadly, VerificationKeyParseError isn't exported from Cardano.Crypto.Signing/*
   | SigningKeyDeserialisationFailed !FilePath !DeserialiseFailure
   | SpendGenesisUTxOError !RealPBFTError
-  | UpdateProposalBlockReadError FilePath Text
-  | UpdateProposalEpochBoundaryBlockError Text
-  | UpdateProposalFileModificationError [FilePath] Text
+  | UpdateProposalBlockReadError !FilePath !Text
+  | UpdateProposalEpochBoundaryBlockError !Text
+  | UpdateProposalFileModificationError ![FilePath] !Text
   | VerificationKeyDeserialisationFailed !FilePath !Text
   | FileNotFoundError !FilePath
 

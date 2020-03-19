@@ -9,6 +9,7 @@ import           Options.Applicative (Parser, ParserInfo, ParserPrefs,
                                       showHelpOnEmpty)
 import           System.Exit (exitFailure)
 
+import           Cardano.CLI.Byron.Parsers (parseByronCommands)
 import           Cardano.CLI.Parsers
 import           Cardano.CLI.Run
 import           Cardano.Common.TopHandler
@@ -46,7 +47,8 @@ data CLI = CLI { mainCommand :: ClientCommand }
 
 parseClientCommand :: Parser CLI
 parseClientCommand =
-  CLI <$> (   parseGenesisRelatedValues
+  CLI <$> (   (ByronClientCommand <$> parseByronCommands)
+          <|> parseGenesisRelatedValues
           <|> parseKeyRelatedValues
           <|> parseDelegationRelatedValues
           <|> parseTxRelatedValues

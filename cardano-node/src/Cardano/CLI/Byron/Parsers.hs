@@ -1,18 +1,22 @@
 module Cardano.CLI.Byron.Parsers
-  ( parseScriptVersion
-  , parseSlotDuration
+  ( ByronCommand(..)
+  , parseByronCommands
+  , parseHeavyDelThd
+  , parseInstallerHash
   , parseMaxBlockSize
   , parseMaxHeaderSize
   , parseMaxTxSize
   , parseMaxProposalSize
   , parseMpcThd
-  , parseHeavyDelThd
-  , parseUpdateVoteThd
+  , parseScriptVersion
+  , parseSlotDuration
+  , parseSoftforkRuleParam
+  , parseSystemTag
+  , parseTxFeePolicy
   , parseUpdateProposalThd
   , parseUpdateProposalTTL
-  , parseSoftforkRuleParam
-  , parseTxFeePolicy
   , parseUnlockStakeEpoch
+  , parseUpdateVoteThd
   ) where
 
 import           Cardano.Prelude hiding (option)
@@ -21,11 +25,55 @@ import           Options.Applicative
 
 import           Cardano.Chain.Common
                    (TxFeePolicy(..), TxSizeLinear(..), rationalToLovelacePortion)
+import           Cardano.Crypto.Hashing (decodeHash)
 import           Cardano.Chain.Slotting (EpochNumber(..), SlotNumber(..))
-import           Cardano.Chain.Update (SoftforkRule(..))
+import           Cardano.Chain.Update (InstallerHash(..), SoftforkRule(..), SystemTag(..))
 
 import           Cardano.CLI.Byron.UpdateProposal
-import           Cardano.CLI.Parsers
+import           Cardano.Common.Parsers
+                   (command', parseConfigFile, parseDbPath, parseFilePath,
+                    parseFraction, parseLovelace, parseSigningKeyFile)
+import           Cardano.Config.Types
+
+-- TODO: Other Byron commands to be put here in follow up PR.
+data ByronCommand = UpdateProposal
+                    DbFile
+                    ConfigYamlFilePath
+                    SigningKeyFile
+                    FilePath
+                    [ParametersToUpdate]
+                    deriving Show
+
+parseByronCommands :: Parser ByronCommand
+parseByronCommands =  subparser $ mconcat
+    [ commandGroup "Byron related commands"
+    , metavar "Byron related commands"
+    , command' "create-byron-update-proposal" "Create Byron era update proposal."
+        $ parseAllParamsToUpdate
+    ]
+
+parseAllParamsToUpdate :: Parser ByronCommand
+parseAllParamsToUpdate = do
+  (\dbfile config sKey outputFp a b c d e f g h i j k l m n ->
+      UpdateProposal dbfile config sKey outputFp $ catMaybes [a, b, c, d, e, f, g, h, i, j, k, l, m, n])
+    <$> (DbFile <$> parseDbPath)
+    <*> (ConfigYamlFilePath <$> parseConfigFile)
+    <*> parseSigningKeyFile "signing-key" "Path to signing key."
+    <*> parseFilePath "filepath" "Output filepath"
+    <*> parseScriptVersion
+    <*> parseSlotDuration
+    <*> parseMaxBlockSize
+    <*> parseMaxHeaderSize
+    <*> parseMaxTxSize
+    <*> parseMaxProposalSize
+    <*> parseMpcThd
+    <*> parseHeavyDelThd
+    <*> parseUpdateVoteThd
+    <*> parseUpdateProposalThd
+    <*> parseUpdateProposalTTL
+    <*> parseSoftforkRuleParam
+    <*> parseTxFeePolicy
+    <*> parseUnlockStakeEpoch
 
 --------------------------------------------------------------------------------
 -- CLI Parsers
@@ -46,6 +94,22 @@ parseSlotDuration = optional $
                      <> metavar "NATURAL"
                      <> help "Proposed slot duration."
                      )
+
+parseSystemTag :: Parser SystemTag
+parseSystemTag =
+  SystemTag <$> strOption
+                  ( long "system-tag"
+                  <> metavar "SYSTAG"
+                  <> help "Identify which system (linux, win64, etc) the update proposal is for."
+                  )
+
+parseInstallerHash :: Parser InstallerHash
+parseInstallerHash =
+  InstallerHash <$> option (eitherReader (\str' -> first toS . decodeHash $ toS str'))
+                      ( long "installer-hash"
+                      <> metavar "HASH"
+                      <> help "Software hash."
+                      )
 
 parseMaxBlockSize :: Parser (Maybe ParametersToUpdate)
 parseMaxBlockSize = optional $

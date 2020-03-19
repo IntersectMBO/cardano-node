@@ -1,4 +1,3 @@
-{-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE NamedFieldPuns #-}
 
 {-# OPTIONS_GHC -Wno-all-missed-specialisations #-}

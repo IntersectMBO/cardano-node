@@ -88,7 +88,7 @@ readSigningKey ptcl (SigningKeyFile fp) = do
   sK <- handleIOExceptT (ReadSigningKeyFailure fp . T.pack . displayException) $ LB.readFile fp
 
   -- Signing Key
-  hoistEither $ deserialiseDelegateKey ptcl fp sK
+  hoistEither $ deserialiseSigningKey ptcl fp sK
 
 -- | Read verification key from a file.  Throw an error if the file can't be read
 -- or the key fails to deserialise.
