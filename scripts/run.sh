@@ -8,7 +8,6 @@ IFS=$'\n\t'
 
 exec cardano-node run --config /config/config.yaml \
   --database-path /data/db \
-  --genesis-file /config/genesis.json \
   --host-addr 127.0.0.1 \
   --port 3001 \
   --socket-path /data/ipc/node.socket \
