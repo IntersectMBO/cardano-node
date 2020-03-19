@@ -132,10 +132,13 @@ in let
 in let
   ### Config
   node-config-overlay   = {
-    hasEKG        = null;
-    hasGUI        = null;
-    hasGraylog    = null;
-    hasPrometheus = null;
+    hasEKG                  = null;
+    hasGUI                  = null;
+    hasGraylog              = null;
+    hasPrometheus           = null;
+    minSeverity             = "Debug";
+    TraceChainDb            = true;
+    TracingVerbosity        = "MaximalVerbosity";
   };
   shelley-configs       = map (i: toFile "config-${toString i}.json" (toJSON (svcLib.mkNodeConfig ncfg i // node-config-overlay)))
                               shelley-node-ids;

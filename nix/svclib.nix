@@ -5,7 +5,7 @@ let
   cardano-cli-bin = "${cardano-node-packages.cardano-cli}/bin/cardano-cli";
 
   ## mkNodeConfig
-  ##   :: NodeId Int -> ServiceConfig AttrSet -> NodeConfig AttrSet
+  ##   :: ServiceConfig AttrSet -> NodeId Int -> NodeConfig AttrSet
   mkNodeConfig = cfg: NodeId:
     cfg.nodeConfig //
     { inherit NodeId; } //
