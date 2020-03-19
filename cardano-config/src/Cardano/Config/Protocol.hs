@@ -3,6 +3,8 @@
 {-# LANGUAGE GADTs             #-}
 {-# LANGUAGE NamedFieldPuns    #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RankNTypes        #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 {-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -17,7 +19,6 @@ module Cardano.Config.Protocol
   ) where
 
 import           Cardano.Prelude
-import           Test.Cardano.Prelude (canonicalDecodePretty)
 
 import           Codec.CBOR.Read (DeserialiseFailure, deserialiseFromBytes)
 import           Control.Monad.Trans.Except (ExceptT)
@@ -57,6 +58,8 @@ import           Cardano.Config.Types (DelegationCertFile (..),
                                        LastKnownBlockVersion (..),
                                        Protocol (..), SigningKeyFile (..),
                                        Update (..))
+
+import qualified Text.JSON.Canonical as CanonicalJSON
 
 -- TODO: consider not throwing this, or wrap it in a local error type here
 -- that has proper error messages.
@@ -255,6 +258,18 @@ readLeaderCredentials gc mDelCertFp mSKeyFp =
     deserialiseSigningKey =
         fmap (Signing.SigningKey . snd)
       . deserialiseFromBytes Signing.fromCBORXPrv
+
+
+-- Will be pulled from cardano-prelude at some stage.
+canonicalDecodePretty
+  :: forall a
+   . CanonicalJSON.FromJSON (Either SchemaError) a
+  => LB.ByteString
+  -> Either Text a
+canonicalDecodePretty y = do
+  eVal <- first toS (CanonicalJSON.parseCanonicalJSON y)
+  first show (CanonicalJSON.fromJSON eVal :: Either SchemaError a)
+
 
 renderProtocolInstantiationError :: ProtocolInstantiationError -> Text
 renderProtocolInstantiationError pie =
