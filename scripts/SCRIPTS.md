@@ -1,10 +1,15 @@
 # Scripts
 
  This document describes how to use a given script and its purpose.
+ 
+## Production
+
+- <span><b>run.sh</b></span> <br/>  Defines a default convention for cardano-node. Used in:
+  - [Dockerfile](../Dockerfile)
 
 ## Development scripts
 
-  Scripts in this directory are not strictly intended for end users,
+  Most scripts in this directory are not strictly intended for end users,
   they rather serve as developer-oriented proving grounds for automation.
 
   As such, they break often, but also, by virtue of their existence, they provide
