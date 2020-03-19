@@ -5,10 +5,10 @@
         "homepage": null,
         "owner": "input-output-hk",
         "repo": "cardano-byron-proxy",
-        "rev": "9bae138919c31b5aeac8f7244e2b28e5f31d9f4f",
-        "sha256": "0drl4hhmph729g5s2bds0j9sg71jzw3b2cai4cm439dn2xymwc9x",
+        "rev": "5538821647728516d5702cbfd9fb3000fcf41082",
+        "sha256": "10s3ivzv6hb7mb32imi2dga02vlaibsx8z1m2h7ns8cfkj4yng30",
         "type": "tarball",
-        "url": "https://github.com/input-output-hk/cardano-byron-proxy/archive/9bae138919c31b5aeac8f7244e2b28e5f31d9f4f.tar.gz",
+        "url": "https://github.com/input-output-hk/cardano-byron-proxy/archive/5538821647728516d5702cbfd9fb3000fcf41082.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "cardano-sl": {
@@ -17,10 +17,10 @@
         "homepage": "",
         "owner": "input-output-hk",
         "repo": "cardano-sl",
-        "rev": "d0cc2e6336e3c57771c775cafe831bc83db303d3",
-        "sha256": "1l0af54ivqs26ibsl4nih8800b99f99r1y33wcrnby28mjsph8s2",
+        "rev": "5b35df50cce1ba65da49848f9888c6324796f10f",
+        "sha256": "1slr4lkqpaypwmpydabzlg5qlqpc296z0rpw7y1cns4nm0fb7plv",
         "type": "tarball",
-        "url": "https://github.com/input-output-hk/cardano-sl/archive/d0cc2e6336e3c57771c775cafe831bc83db303d3.tar.gz",
+        "url": "https://github.com/input-output-hk/cardano-sl/archive/5b35df50cce1ba65da49848f9888c6324796f10f.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "haskell.nix": {
