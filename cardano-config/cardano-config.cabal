@@ -27,11 +27,11 @@ library
                      , aeson
                      , async
                      , bytestring
+                     , canonical-json
                      , cardano-binary
                      , cardano-crypto-wrapper
                      , cardano-ledger
                      , cardano-prelude
-                     , cardano-prelude-test
                      , cardano-shell
                      , cborg
                      , contra-tracer
