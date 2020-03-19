@@ -4,10 +4,12 @@ module Cardano.CLI.Parsers
   ( command'
   , parseBenchmarkingCommands
   , parseDelegationRelatedValues
+  , parseFraction
   , parseGenesisParameters
   , parseGenesisRelatedValues
   , parseKeyRelatedValues
   , parseLocalNodeQueryValues
+  , parseLovelace
   , parseMiscellaneous
   , parseRequiresNetworkMagic
   , parseTxRelatedValues

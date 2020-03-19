@@ -2,7 +2,8 @@
 {-# LANGUAGE TupleSections #-}
 
 module Cardano.CLI.Byron.UpdateProposal
-  ( convertProposalToGenTx
+  ( ParametersToUpdate(..)
+  , convertProposalToGenTx
   , createUpdateProposal
   ) where
 
@@ -22,17 +23,19 @@ import           Data.Time.Clock (UTCTime)
 import           Cardano.Chain.Block
                    (AHeader(..), ABlockOrBoundaryHdr(..),
                     abobHdrFromBlock, fromCBORABlockOrBoundary)
-import           Cardano.Chain.Common (LovelacePortion, TxFeePolicy)
+import           Cardano.Chain.Common (LovelacePortion, TxFeePolicy(..))
 import           Cardano.Chain.Genesis (GenesisData(..))
-import           Cardano.Chain.Slotting (EpochNumber, EpochSlots(..), SlotNumber)
-import           Cardano.Chain.Update as Update
+import           Cardano.Chain.Slotting (EpochNumber(..), EpochSlots(..), SlotNumber(..))
+import           Cardano.Chain.Update
+                   (AProposal(..), ProtocolParametersUpdate(..), InstallerHash(..),
+                    Proposal, ProposalBody(..), ProtocolVersion(..), SoftforkRule(..),
+                    SoftwareVersion(..), SystemTag(..), recoverUpId, signProposal)
 import           Cardano.Config.Types
 import           Cardano.Crypto.Signing (SigningKey, noPassSafeSigner)
 import           Ouroboros.Consensus.Byron.Ledger.Block (ByronBlock)
 import qualified Ouroboros.Consensus.Byron.Ledger.Mempool as Mempool
 
 import           Cardano.CLI.Ops (CliError(..), decodeCBOR, readGenesis)
-
 
 data ParametersToUpdate =
     ScriptVersion Word16
@@ -44,7 +47,11 @@ data ParametersToUpdate =
   | MpcThd LovelacePortion
   | HeavyDelThd LovelacePortion
   | UpdateVoteThd LovelacePortion
+  -- UpdateVoteThd: This represents the minimum percentage of the total number of genesis
+  -- keys that have to endorse a protocol version to be able to become adopted.
   | UpdateProposalThd LovelacePortion
+  -- UpdateProposalTTL: If after the number of slots specified the proposal
+  -- does not reach majority of approvals, the proposal is simply discarded.
   | UpdateProposalTTL SlotNumber
   | SoftforkRuleParam SoftforkRule
   | TxFeePolicy TxFeePolicy
@@ -74,7 +81,7 @@ createProtocolParametersUpdate init paramsToUpdate = go init paramsToUpdate
            UnlockStakeEpoch val -> go i{ppuUnlockStakeEpoch = Just val} rest
 
 convertProposalToGenTx :: AProposal ByteString -> Mempool.GenTx ByronBlock
-convertProposalToGenTx prop = Mempool.ByronUpdateProposal (Update.recoverUpId prop) prop
+convertProposalToGenTx prop = Mempool.ByronUpdateProposal (recoverUpId prop) prop
 
 createUpdateProposal
   :: DbFile
@@ -93,15 +100,15 @@ createUpdateProposal dbFile configFile sKey paramsToUpdate = do
   nc <- liftIO $ parseNodeConfigurationFP configFile
   (genData, _) <- readGenesis $ ncGenesisFile nc
 
-  let header = abobHdrFromBlock latestBlock
-      metaData :: M.Map Update.SystemTag Update.InstallerHash
+  let header' = abobHdrFromBlock latestBlock
+      metaData :: M.Map SystemTag InstallerHash
       metaData = M.empty
       noPassSigningKey = noPassSafeSigner sKey
       pmId = gdProtocolMagicId genData
       protocolParamsUpdate = createProtocolParametersUpdate emptyProtocolParametersUpdate paramsToUpdate
 
-  protocolVersion' <- hoistEither $ getProtocolVersion header
-  softwareVersion' <- hoistEither $ getSoftwareVersion header
+  protocolVersion' <- hoistEither $ getProtocolVersion header'
+  softwareVersion' <- hoistEither $ getSoftwareVersion header'
 
   let proposalBody = ProposalBody protocolVersion' protocolParamsUpdate softwareVersion' metaData
 
