@@ -3,6 +3,10 @@
 , pkgs
 , ... }:
 
+let
+  ### Static configuration to be moved to proper options
+  legacy-relay-enabled  = false;
+in
 with lib; with builtins;
 let
   ### Service configs
@@ -47,28 +51,28 @@ in let
   ### Names and topologies
   legacy-topology       = svcLib.mkLegacyTopology
     { c-a-1 = { port = 3001;
-                static-routes = [ [ "c-a-2" ] [ "c-b-1" ] [ "c-b-2" ] ];
+                static-routes = [ [ "proxy" ] [ "c-a-2" ] [ "c-b-1" ] ];
               };
       c-a-2 = { port = 3002;
-                static-routes = [ [ "c-b-1" ] [ "c-b-2" ] [ "c-a-1" ] [ "proxy" ] ];
+                static-routes = [ [ "c-a-1" ] [ "c-b-1" ] [ "c-b-2" ] ];
               };
       c-b-1 = { port = 3003;
-                static-routes = [ [ "c-b-2" ] [ "c-a-1" ] [ "c-a-2" ] ];
+                static-routes = [ [ "c-a-1" ] [ "c-a-2" ] [ "c-b-2" ] ];
               };
       c-b-2 = { port = 3004;
-                static-routes = [ [ "c-a-1" ] [ "c-a-2" ] [ "c-b-1" ] ];
+                static-routes = [ [ "c-a-2" ] [ "c-b-1" ] [ "c-a-1" ] ];
               };
       c-c-1 = { port = 3005;
-                static-routes = [ [ "c-d-1" "c-a-1" ] [ "c-c-2" ] [ "proxy" ] ];
+                static-routes = [ [ "c-a-1" ] [ "c-b-1" ] [ "c-b-2" ] ];
               };
       c-c-2 = { port = 3006;
-                static-routes = [ [ "c-b-2" "c-b-1" ] [ "c-c-1" ] [ "proxy" ] ];
+                static-routes = [ [ "c-b-1" ] [ "c-b-2" ] [ "c-c-1" ] ];
               };
       c-d-1 = { port = 3007;
-                static-routes = [ [ "c-a-1" "c-a-2" ] [ "c-b-1" "c-b-2" ] [ "c-c-1" "c-c-2" ] [ "proxy" ] ];
+                static-routes = [ [ "c-b-2" ] [ "c-c-1" ] [ "c-c-2" ] ];
               };
       proxy = { port = 5555;
-                static-routes = [ [ "c-a-2" ] ];
+                static-routes = [ [ "c-a-1" ] ];
                 type = "relay";
               };
     };
@@ -78,7 +82,8 @@ in let
   legacy-core-names     = take legacy-node-count topology-core-names;
   shelley-core-names    = take shelley-node-count (drop legacy-node-count topology-core-names);
   legacy-relay-name     = "r-a-1";
-  all-legacy-names      = topology-core-names ++ [legacy-relay-name];
+  all-legacy-names      = topology-core-names
+                          ++ optional legacy-relay-enabled legacy-relay-name;
   legacy-name-shexpr    = ''$(choice "$1" ${toString all-legacy-names})'';
 
 in let
@@ -121,13 +126,8 @@ in let
   mkProxyShelleyPeer    =
     { name, port }:
     "[${name}.cardano]:${toString port}";
-  mkProxyLegacyPeer     =
-    { name, port }:
-    "[{ host: ${name}.cardano, port: ${toString port} }]";
   proxy-shelley-peers   =
     optional shelley-enabled { name = elemAt shelley-core-names 0; port = first-shelley-node-port; };
-  proxy-legacy-peers    =
-    optional  legacy-enabled { name = legacy-relay-name;           port = legacy-port; };
 
 in let
   ### Config
@@ -202,7 +202,6 @@ in {
       node-ids              = shelley-node-ids;
       inherit (ccfg) slot-length;
       nodeConfigFile        = builtins.elemAt shelley-configs 0;
-      timeoutIsSuccess      = true;
     };
     services.cardano-node = {
       enable                = shelley-enabled;
@@ -269,7 +268,8 @@ in {
     systemd.services.cardano-cluster =
       let shelley-services = map (i:        "cardano-node@${i}.service") shelley-node-ids-str;
           legacy-services  = map (i: "cardano-node-legacy@${i}.service") (legacy-node-ids-str
-                                                                           ++ [(toString legacy-relay-id)]);
+                                                                          ++ optional legacy-relay-enabled
+                                                                            (toString legacy-relay-id));
       in {
         description = "Cluster of cardano nodes.";
         enable  = true;
