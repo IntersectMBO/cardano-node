@@ -57,8 +57,9 @@ import           Ouroboros.Consensus.Util.Orphans ()
 
 import qualified Ouroboros.Network.AnchoredFragment as AF
 import           Ouroboros.Network.Block (Point, BlockNo(..), HasHeader(..),
+                                          StandardHash,
                                           blockNo, unBlockNo, unSlotNo)
-import           Ouroboros.Network.BlockFetch.Decision (FetchDecision)
+import           Ouroboros.Network.BlockFetch.Decision (FetchDecision, FetchDecline (..))
 import           Ouroboros.Network.BlockFetch.ClientState (TraceLabelPeer (..))
 import qualified Ouroboros.Network.NodeToClient as NtC
 import qualified Ouroboros.Network.NodeToNode as NtN
@@ -140,16 +141,35 @@ instance ElidingTracer
   (WithSeverity (WithTip blk (ChainDB.TraceEvent blk))) where
   -- equivalent by type and severity
   isEquivalent (WithSeverity s1 (WithTip _tip1 (ChainDB.TraceLedgerReplayEvent ev1)))
-                (WithSeverity s2 (WithTip _tip2 (ChainDB.TraceLedgerReplayEvent ev2))) = s1 == s2 &&
-                  indexReplType ev1 == indexReplType ev2
+               (WithSeverity s2 (WithTip _tip2 (ChainDB.TraceLedgerReplayEvent ev2))) =
+                  s1 == s2 && indexReplType ev1 == indexReplType ev2
   isEquivalent (WithSeverity s1 (WithTip _tip1 (ChainDB.TraceGCEvent ev1)))
-                (WithSeverity s2 (WithTip _tip2 (ChainDB.TraceGCEvent ev2))) = s1 == s2 &&
-                  indexGCType ev1 == indexGCType ev2
+               (WithSeverity s2 (WithTip _tip2 (ChainDB.TraceGCEvent ev2))) =
+                  s1 == s2 && indexGCType ev1 == indexGCType ev2
   isEquivalent _ _ = False
   -- the types to be elided
   doelide (WithSeverity _ (WithTip _ (ChainDB.TraceLedgerReplayEvent _))) = True
   doelide (WithSeverity _ (WithTip _ (ChainDB.TraceGCEvent _))) = True
   doelide _ = False
+  conteliding _tform _tverb _tr _ (Nothing, _count) = return (Nothing, 0)
+  conteliding _tform _tverb tr ev (_old, count) = do
+      when (count > 0 && count `mod` 100 == 0) $ do  -- report every 100th elided message
+          meta <- mkLOMeta (getSeverityAnnotation ev) (getPrivacyAnnotation ev)
+          traceNamedObject tr (meta, LogValue "messages elided so far" (PureI $ toInteger count))
+      return (Just ev, count + 1)
+
+instance (StandardHash header, Eq peer) => ElidingTracer
+  (WithSeverity [TraceLabelPeer peer (FetchDecision [Point header])]) where
+  -- equivalent by type and severity
+  isEquivalent (WithSeverity s1 peers1)
+               (WithSeverity s2 peers2) =
+                  s1 == s2 && peers1 == peers2
+  -- the types to be elided
+  doelide (WithSeverity _ peers) =
+    let checkDecision :: TraceLabelPeer peer (Either FetchDecline result) -> Bool
+        checkDecision (TraceLabelPeer _peer (Left FetchDeclineChainNotPlausible)) = True
+        checkDecision _ = False
+    in any checkDecision peers
   conteliding _tform _tverb _tr _ (Nothing, _count) = return (Nothing, 0)
   conteliding _tform _tverb tr ev (_old, count) = do
       when (count > 0 && count `mod` 100 == 0) $ do  -- report every 100th elided message
@@ -164,7 +184,7 @@ mkTracers
      ( LedgerSupportsProtocol blk
      , TraceConstraints blk
      , ShowQuery (Query blk)
-     , Show peer
+     , Show peer, Eq peer
      , Show localPeer
      )
   => TraceOptions
@@ -187,23 +207,21 @@ mkTracers traceOptions tracer = do
       <*> (counting $ liftCounting staticMetaCC name "slot-is-immutable" tracer)
       <*> (counting $ liftCounting staticMetaCC name "node-is-leader" tracer)
 
-  -- The outcomes we want to measure, the outcome extractor
-  -- for measuring the time it takes a transaction to get into
-  -- a block.
-  --txsOutcomeExtractor <- mkOutcomeExtractor @_ @(MeasureTxs blk)
+  -- prepare |Outcome| 
   blockForgeOutcomeExtractor <- mkOutcomeExtractor
 
-  elided <- newstate  -- for eliding messages in ChainDB tracer
+  elidedChainDB <- newstate  -- for eliding messages in ChainDB tracer
+  elidedFetchDecision <- newstate  -- for eliding messages in FetchDecision tracer
 
   pure Tracers
     { chainDBTracer
         = tracerOnOff (traceChainDB traceOptions)
           $ annotateSeverity
-          $ teeTraceChainTip tracingVerbosity elided
+          $ teeTraceChainTip tracingVerbosity elidedChainDB
           $ appendName "ChainDB"
           $ tracer
     , consensusTracers
-        = mkConsensusTracers blockForgeOutcomeExtractor forgeTracers traceOptions
+        = mkConsensusTracers elidedFetchDecision blockForgeOutcomeExtractor forgeTracers traceOptions
     , protocolTracers
         = mkProtocolTracers traceOptions
     , ipSubscriptionTracer
@@ -300,20 +318,31 @@ mkTracers traceOptions tracer = do
                   ChainDB.AddedToCurrentChain _ _ c -> traceChainInformation tr (chainInformation c)
                   _ -> pure ()
               _ -> pure ()
-    teeTraceBlockFetchDecision :: TracingFormatting
+
+    teeTraceBlockFetchDecision
+        :: TracingFormatting
         -> TracingVerbosity
+        -> MVar (Maybe (WithSeverity [TraceLabelPeer peer (FetchDecision [Point (Header blk)])]),Int)
         -> Trace IO Text
         -> Tracer IO (WithSeverity [TraceLabelPeer peer (FetchDecision [Point (Header blk)])])
-    teeTraceBlockFetchDecision tform tverb tr = Tracer $ \ev -> do
+    teeTraceBlockFetchDecision tform tverb eliding tr = Tracer $ \ev -> do
       traceWith (teeTraceBlockFetchDecision' tr) ev
-      traceWith (toLogObject' tform tverb tr) ev
-    teeTraceBlockFetchDecision' :: Trace IO Text
-                -> Tracer IO (WithSeverity [TraceLabelPeer peer (FetchDecision [Point (Header blk)])])
+      traceWith (teeTraceBlockFetchDecisionElide tform tverb eliding tr) ev
+    teeTraceBlockFetchDecision'
+        :: Trace IO Text
+        -> Tracer IO (WithSeverity [TraceLabelPeer peer (FetchDecision [Point (Header blk)])])
     teeTraceBlockFetchDecision' tr =
         Tracer $ \(WithSeverity _ peers) -> do
           meta <- mkLOMeta Notice Confidential
           let tr' = appendName "peers" tr
           traceNamedObject tr' (meta, LogValue "connectedPeers" . PureI $ fromIntegral $ length peers)
+    teeTraceBlockFetchDecisionElide 
+        :: TracingFormatting
+        -> TracingVerbosity
+        -> MVar (Maybe (WithSeverity [TraceLabelPeer peer (FetchDecision [Point (Header blk)])]),Int)
+        -> Trace IO Text
+        -> Tracer IO (WithSeverity [TraceLabelPeer peer (FetchDecision [Point (Header blk)])])
+    teeTraceBlockFetchDecisionElide = elideToLogObject
 
     mempoolMetricsTraceTransformer :: Trace IO a
                                    -> Tracer IO (TraceEventMempool blk)
@@ -422,9 +451,10 @@ mkTracers traceOptions tracer = do
               LogValue "nodeIsLeader" $ PureI $ fromIntegral $ unSlotNo slot
 
     mkConsensusTracers
-        :: (OutcomeEnhancedTracer IO (Consensus.TraceForgeEvent blk (GenTx blk)) -> Tracer IO (Consensus.TraceForgeEvent blk (GenTx blk)))
+        :: MVar (Maybe (WithSeverity [TraceLabelPeer peer (FetchDecision [Point (Header blk)])]),Int)
+        -> (OutcomeEnhancedTracer IO (Consensus.TraceForgeEvent blk (GenTx blk)) -> Tracer IO (Consensus.TraceForgeEvent blk (GenTx blk)))
         -> ForgeTracers -> TraceOptions -> Consensus.Tracers' peer blk (Tracer IO)
-    mkConsensusTracers measureBlockForging forgeTracers traceOpts = Consensus.Tracers
+    mkConsensusTracers elidingFetchDecision measureBlockForging forgeTracers traceOpts = Consensus.Tracers
       { Consensus.chainSyncClientTracer
         = tracerOnOff (traceChainSyncClient traceOpts)
           $ toLogObject' StructuredLogging tracingVerbosity
@@ -440,7 +470,7 @@ mkTracers traceOptions tracer = do
       , Consensus.blockFetchDecisionTracer
         = tracerOnOff (traceBlockFetchDecisions traceOpts)
           $ annotateSeverity
-          $ teeTraceBlockFetchDecision StructuredLogging tracingVerbosity
+          $ teeTraceBlockFetchDecision StructuredLogging tracingVerbosity elidingFetchDecision
           $ appendName "BlockFetchDecision" tracer
       , Consensus.blockFetchClientTracer
         = tracerOnOff (traceBlockFetchClient traceOpts)
