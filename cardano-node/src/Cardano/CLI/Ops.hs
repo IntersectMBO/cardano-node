@@ -39,8 +39,7 @@ import           Codec.CBOR.Pretty (prettyHexEnc)
 import           Codec.CBOR.Read (DeserialiseFailure, deserialiseFromBytes)
 import           Codec.CBOR.Term (decodeTerm, encodeTerm)
 import           Codec.CBOR.Write (toLazyByteString)
-import           Control.Monad.Trans.Except.Extra
-                   (handleIOExceptT, hoistEither, right, secondExceptT)
+import           Control.Monad.Trans.Except.Extra (handleIOExceptT, right)
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.Text as T
 import qualified Formatting as F
@@ -110,11 +109,10 @@ import           Cardano.Benchmarking.GeneratorTx.Error (TxGenError)
 decodeCBOR
   :: LByteString
   -> (forall s. Decoder s a)
-  -> ExceptT CliError IO (LB.ByteString, a)
-decodeCBOR bs decoder = toExceptT $ deserialiseFromBytes decoder bs
- where
-   toExceptT :: Either DeserialiseFailure a -> ExceptT CliError IO a
-   toExceptT = firstExceptT CBORDecodingError . hoistEither
+  -> Either CliError (LB.ByteString, a)
+decodeCBOR bs decoder =
+  first CBORDecodingError $ deserialiseFromBytes decoder bs
+
 
 deserialiseDelegateKey :: Protocol -> FilePath -> LB.ByteString -> Either CliError SigningKey
 deserialiseDelegateKey ByronLegacy fp delSkey =
@@ -143,28 +141,24 @@ readProtocolMagicId gFile = do
 readGenesis :: GenesisFile -> ExceptT CliError IO (Genesis.GenesisData, Genesis.GenesisHash)
 readGenesis (GenesisFile fp) = firstExceptT (GenesisReadError fp) $ Genesis.readGenesisData fp
 
-validateCBOR :: CBORObject -> LByteString -> ExceptT CliError IO ()
+validateCBOR :: CBORObject -> LByteString -> Either CliError Text
 validateCBOR cborObject bs =
   case cborObject of
     CBORBlockByron -> do
-      secondExceptT (const ())
-        $ decodeCBOR bs (fromCBORABlockOrBoundary $ EpochSlots 21600)
-      liftIO $ putTextLn "Valid Byron block."
+      (const () ) <$> decodeCBOR bs (fromCBORABlockOrBoundary $ EpochSlots 21600)
+      Right "Valid Byron block."
 
     CBORDelegationCertificateByron -> do
-      secondExceptT (const ())
-        $ decodeCBOR bs (fromCBOR :: Decoder s Delegation.Certificate)
-      liftIO $ putTextLn "Valid Byron delegation certificate."
+      (const () ) <$> decodeCBOR bs (fromCBOR :: Decoder s Delegation.Certificate)
+      Right "Valid Byron delegation certificate."
 
     CBORTxByron -> do
-      secondExceptT (const ())
-        $ decodeCBOR bs (fromCBOR :: Decoder s UTxO.Tx)
-      liftIO $ putTextLn "Valid Byron Tx."
+      (const () ) <$> decodeCBOR bs (fromCBOR :: Decoder s UTxO.Tx)
+      Right "Valid Byron Tx."
 
     CBORUpdateProposalByron -> do
-      secondExceptT (const ())
-        $ decodeCBOR bs (fromCBOR :: Decoder s Update.Proposal)
-      liftIO $ putTextLn "Valid Byron update proposal."
+      (const () ) <$> decodeCBOR bs (fromCBOR :: Decoder s Update.Proposal)
+      Right "Valid Byron update proposal."
 
 pPrintCBOR :: LByteString -> ExceptT CliError IO ()
 pPrintCBOR bs = do

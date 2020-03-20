@@ -222,7 +222,8 @@ runCommand (GetLocalNodeTip configFp mSockPath) =
 
 runCommand (ValidateCBOR cborObject fp) = do
   bs <- readCBOR fp
-  validateCBOR cborObject bs
+  res <- hoistEither $ validateCBOR cborObject bs
+  liftIO $ putTextLn res
 
 runCommand (PrettyPrintCBOR fp) = do
   bs <- readCBOR fp
