@@ -5,7 +5,7 @@ CLI="$(executable_quiet_runner cardano-cli)"
 
 NOW=`date "+%Y-%m-%d 00:00:00"`
 NETARGS=(
-        --config "configuration/log-configuration.yaml"
+        --config "configuration/log-config-0.yaml"
         --genesis-file  "${genesis_file}"
         --socket-path    "./socket/0"
 
