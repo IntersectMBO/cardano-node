@@ -90,15 +90,21 @@ let
         pkgsModule
       ];
     }).config.services.cardano-node.script;
-  in pkgs.writeScript "cardano-node-${envConfig.name}" ''
-    #!${pkgs.runtimeShell}
-    set -euo pipefail
-    mkdir -p "${config.stateDir}"
-    ${nodeScript} $@
-  '';
+  in {
+    node = pkgs.writeScript "cardano-node-${envConfig.name}" ''
+      #!${pkgs.runtimeShell}
+      set -euo pipefail
+      mkdir -p "${config.stateDir}"
+      ${nodeScript} $@
+    '';
+    inherit topologyFile;
+    inherit (serviceConfig) nodeConfigFile;
+  };
   scripts = forEnvironments (environment:
-  {
-    node = mkNodeScript environment;
-    chairman = svcLib.mkChairmanScript;
-  });
+    let
+      nodeScript = mkNodeScript environment;
+    in {
+      inherit (nodeScript) node topologyFile nodeConfigFile;
+      chairman = svcLib.mkChairmanScript;
+    });
 in scripts
