@@ -51,8 +51,6 @@ let
     };
     serviceConfig = {
       inherit (config)
-        genesisFile
-        genesisHash
         stateDir
         signingKey
         delegationCertificate
@@ -64,6 +62,7 @@ let
         dbPrefix
         tracingVerbosity;
       runtimeDir = null;
+      environment = envConfig.name;
       topology = topologyFile;
       nodeConfigFile = "${__toFile "config-${toString config.nodeId}.json" (__toJSON (svcLib.mkNodeConfig config config.nodeId))}";
     };
