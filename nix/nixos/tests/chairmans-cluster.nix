@@ -19,6 +19,12 @@ let
   '';
   cardano-cluster-config  = {
     enable = true;
+    ## NOTE:  Node counts
+    ##
+    ## 1. The cluster is currently hard-wired to have 7 nodes in total.
+    ## 2. Beware of setting the legacy slice too large, as it might cause
+    ##    issues due to the connection handling inefficiency between the legacy nodes,
+    ##    as the topology is fully connected within both segments (all-to-all).
     legacy-node-count  = 4;
     shelley-node-count = 3;
     genesis-dir        = "${../../../configuration/mainnet-ci}";
