@@ -10,11 +10,12 @@ let
   inherit (localPkgs) svcLib commonLib cardanoNodeHaskellPackages;
   envConfig = cfg.environments.${cfg.environment}; systemdServiceName = "cardano-node${optionalString cfg.instanced "@"}";
   runtimeDir = if cfg.runtimeDir == null then cfg.stateDir else "/run/${cfg.runtimeDir}";
-  mkScript = cfg:
-    let exec = "cardano-node run";
+  mkScript = cfg: let
+    realNodeConfigFile = __trace cfg.environment (if cfg.environment == "selfnode" then "${cfg.stateDir}/config.yaml" else cfg.nodeConfigFile);
+    exec = "cardano-node run";
         cmd = builtins.filter (x: x != "") [
           "${cfg.package}/bin/${exec}"
-          "--config ${cfg.nodeConfigFile}"
+          "--config ${realNodeConfigFile}"
           "--database-path ${cfg.databasePath}"
           "--socket-path ${cfg.socketPath}"
           "--topology ${cfg.topology}"
@@ -26,12 +27,20 @@ let
             "--delegation-certificate ${cfg.delegationCertificate}"}"
         ] ++ cfg.extraArgs;
     in ''
-        GENESIS_HASH=${if (cfg.genesisHash == null) then "$(cat ${cfg.genesisHashPath})" else cfg.genesisHash}
+      set -x
         choice() { i=$1; shift; eval "echo \''${$((i + 1))}"; }
         echo "Starting ${exec}: ${concatStringsSep "\"\n   echo \"" cmd}"
         echo "..or, once again, in a single line:"
         echo "${toString cmd}"
         ls -l ${runtimeDir} || true
+        ${lib.optionalString (cfg.environment == "selfnode") ''
+          echo "Wiping all data in ${cfg.stateDir}"
+          rm -rf ${cfg.stateDir}/*
+          GENESIS_FILE=$(${pkgs.jq}/bin/jq -r .GenesisFile < ${cfg.nodeConfigFile})
+          START_TIME=$(date +%s)
+          ${pkgs.jq}/bin/jq -r --arg startTime "''${START_TIME}" '. + {startTime: $startTime|tonumber}' < $GENESIS_FILE > ${cfg.stateDir}/genesis.json
+          ${pkgs.jq}/bin/jq -r --arg GenesisFile ${cfg.stateDir}/genesis.json '. + {GenesisFile: $GenesisFile}' < ${cfg.nodeConfigFile} > ${realNodeConfigFile}
+        ''}
         exec ${toString cmd}'';
 in {
   options = {
@@ -82,6 +91,7 @@ in {
         '';
       };
 
+     # TODO: remove
      genesisFile = mkOption {
         type = types.path;
         default = envConfig.genesisFile;
@@ -90,6 +100,7 @@ in {
         '';
       };
 
+     # TODO: remove
       genesisHash = mkOption {
         type = types.nullOr types.str;
         default = envConfig.genesisHash;
@@ -98,6 +109,7 @@ in {
         '';
       };
 
+     # TODO: remove
       genesisHashPath = mkOption {
         type = types.nullOr types.path;
         default = null;
@@ -107,7 +119,7 @@ in {
       };
 
       signingKey = mkOption {
-        type = types.nullOr types.str;
+        type = types.nullOr (types.either types.str types.path);
         default = null;
         description = ''
           Signing key
@@ -115,7 +127,7 @@ in {
       };
 
       delegationCertificate = mkOption {
-        type = types.nullOr types.str;
+        type = types.nullOr (types.either types.str types.path);
         default = null;
         description = ''
           Delegation certificate
@@ -277,10 +289,6 @@ in {
       {
         assertion = lib.hasPrefix stateDirBase cfg.stateDir;
         message = "The option services.cardano-node.stateDir should have ${stateDirBase} as a prefix!";
-      }
-      {
-        assertion = (cfg.genesisHash == null) != (cfg.genesisHashPath == null);
-        message = "only one of services.cardano-node.genesisHashPath or services.cardano-node.genesisHash can be non-null";
       }
     ];
   });

@@ -60,17 +60,15 @@ let
   in {
     node = getScript "node";
   };
-  wrapDockerImage = cluster: let
-    images = (getArchDefault "x86_64-linux").dockerImage;
+  dockerImageArtifact = let
+    image = (getArchDefault "x86_64-linux").dockerImage;
     wrapImage = image: pkgs.runCommand "${image.name}-hydra" {} ''
       mkdir -pv $out/nix-support/
       cat <<EOF > $out/nix-support/hydra-build-products
       file dockerimage-${image.name} ${image}
       EOF
     '';
-  in {
-    node = wrapImage images.${cluster};
-  };
+  in wrapImage image;
   mkPins = inputs: pkgs.runCommand "ifd-pins" {} ''
     mkdir $out
     cd $out
@@ -80,7 +78,6 @@ let
     name = cluster;
     value = {
       scripts = makeScripts cluster;
-      dockerImage = wrapDockerImage cluster;
     };
   };
   extraBuilds = let
@@ -114,6 +111,7 @@ let
   sources = import ./nix/sources.nix;
 
   jobs = {
+    inherit dockerImageArtifact;
     cardano-node-win64 = import ./nix/windows-release.nix {
       inherit pkgs project;
       cardano-node = jobs.x86_64-w64-mingw32.cardano-node.x86_64-linux;
@@ -136,6 +134,7 @@ let
       jobs.native.cardano-node.x86_64-linux
       jobs."${mingwW64.config}".cardano-node.x86_64-linux
       jobs.cardano-node-win64
+      jobs.dockerImageArtifact
 
       (map (cluster: jobs.${cluster}.scripts.node.x86_64-linux) [ "mainnet" "testnet" "staging" ])
 
