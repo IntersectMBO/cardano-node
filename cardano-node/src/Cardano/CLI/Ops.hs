@@ -315,8 +315,7 @@ data RealPBFTError =
 -- | Perform an action that expects ProtocolInfo for Byron/PBFT,
 --   with attendant configuration.
 withRealPBFT
-  :: Text
-  -> GenesisFile
+  :: GenesisFile
   -> RequiresNetworkMagic
   -> Maybe Double
   -> Maybe DelegationCertFile
@@ -327,7 +326,7 @@ withRealPBFT
         => Consensus.Protocol ByronBlock Consensus.ProtocolRealPBFT
         -> ExceptT RealPBFTError IO a)
   -> ExceptT RealPBFTError IO a
-withRealPBFT _ genFile nMagic sigThresh delCertFp sKeyFp update ptcl action = do
+withRealPBFT genFile nMagic sigThresh delCertFp sKeyFp update ptcl action = do
   SomeProtocol p <- firstExceptT
                       FromProtocolError
                       $ fromProtocol
