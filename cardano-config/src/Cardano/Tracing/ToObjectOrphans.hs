@@ -166,7 +166,7 @@ instance HasSeverityAnnotation NtN.HandshakeTr where
 
 instance HasPrivacyAnnotation NtN.AcceptConnectionsPolicyTrace
 instance HasSeverityAnnotation NtN.AcceptConnectionsPolicyTrace where
-  getSeverityAnnotation NtN.ServerTraceAcceptConnectionRateLimiting {} = Debug
+  getSeverityAnnotation NtN.ServerTraceAcceptConnectionRateLimiting {} = Info
   getSeverityAnnotation NtN.ServerTraceAcceptConnectionHardLimit {} = Warning
 
 instance HasSeverityAnnotation (ChainDB.TraceEvent blk) where
