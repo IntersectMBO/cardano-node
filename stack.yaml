@@ -1,4 +1,4 @@
-resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/fe76ec64f6b45259cc407a6d840dad79ee6063b6/snapshot.yaml
+resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/15329855d4eadbee5f5f486104c7b04b50e05f7b/snapshot.yaml
 compiler: ghc-8.6.5
 
 packages:
@@ -74,7 +74,7 @@ extra-deps:
       - byron/chain/executable-spec
 
   - git: https://github.com/input-output-hk/cardano-prelude
-    commit: fe76ec64f6b45259cc407a6d840dad79ee6063b6
+    commit: 15329855d4eadbee5f5f486104c7b04b50e05f7b
     subdirs:
       - .
       - test
@@ -121,7 +121,7 @@ extra-deps:
     #Ouroboros-network dependencies
 
   - git: https://github.com/input-output-hk/ouroboros-network
-    commit: a85bd4751ca5c81c0507482848358980814e9ca3
+    commit: ee2d69a973e0990b723d00fe8f2fec331c9d6b56
     subdirs:
         - io-sim
         - io-sim-classes

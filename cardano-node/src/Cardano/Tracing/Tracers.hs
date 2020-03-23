@@ -93,6 +93,7 @@ data Tracers peer localPeer blk = Tracers
   , errorPolicyTracer :: Tracer IO (NtN.WithAddr Socket.SockAddr NtN.ErrorPolicyTrace)
     -- | Trace local error policy resolution
   , localErrorPolicyTracer :: Tracer IO (NtN.WithAddr NtC.LocalAddress NtN.ErrorPolicyTrace)
+  , acceptPolicyTracer :: Tracer IO NtN.AcceptConnectionsPolicyTrace
     -- | Trace the Mux
   , muxTracer :: Tracer IO (WithMuxBearer peer MuxTrace)
   , handshakeTracer :: Tracer IO NtN.HandshakeTr
@@ -122,6 +123,7 @@ nullTracers = Tracers
   , dnsResolverTracer = nullTracer
   , errorPolicyTracer = nullTracer
   , localErrorPolicyTracer = nullTracer
+  , acceptPolicyTracer = nullTracer
   , muxTracer = nullTracer
   , handshakeTracer = nullTracer
   , localHandshakeTracer = nullTracer
@@ -249,6 +251,11 @@ mkTracers traceOptions tracer = do
           $ annotateSeverity
           $ toLogObject' StructuredLogging tracingVerbosity
           $ appendName "LocalErrorPolicy" tracer
+    , acceptPolicyTracer
+        = tracerOnOff (traceAcceptPolicy traceOptions)
+          $ annotateSeverity
+          $ toLogObject' StructuredLogging tracingVerbosity
+          $ appendName "AcceptPolicy" tracer
     , muxTracer
         = tracerOnOff (traceMux traceOptions)
           $ annotateSeverity

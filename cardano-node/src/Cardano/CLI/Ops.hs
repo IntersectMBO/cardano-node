@@ -33,7 +33,6 @@ module Cardano.CLI.Ops
 import           Prelude (show, unlines)
 import           Cardano.Prelude hiding (catch, option, show)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, left)
-import           Test.Cardano.Prelude (canonicalEncodePretty)
 
 import           Codec.CBOR.Pretty (prettyHexEnc)
 import           Codec.CBOR.Read (DeserialiseFailure, deserialiseFromBytes)

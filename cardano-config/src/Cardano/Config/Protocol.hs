@@ -35,14 +35,13 @@ import qualified Cardano.Crypto.Signing as Signing
 import           Cardano.Tracing.ToObjectOrphans ()
 
 import           Ouroboros.Consensus.Block (Header, BlockProtocol)
-import           Ouroboros.Consensus.BlockchainTime (SlotLength, SlotLengths,
-                                                     singletonSlotLengths,
-                                                     slotLengthFromSec)
+import           Ouroboros.Consensus.BlockchainTime (SlotLength, slotLengthFromSec)
 import           Ouroboros.Consensus.Cardano hiding (Protocol)
 import qualified Ouroboros.Consensus.Cardano as Consensus
 import           Ouroboros.Consensus.Ledger.Abstract
 import           Ouroboros.Consensus.Mempool.API (ApplyTxErr, GenTx, GenTxId,
                                                   HasTxId, HasTxs, TxId)
+import           Ouroboros.Consensus.Mock.Ledger.Block (defaultSimpleBlockConfig)
 import           Ouroboros.Consensus.Node.ProtocolInfo (NumCoreNodes (..))
 
 import           Ouroboros.Consensus.Byron.Ledger (ByronBlock)
@@ -58,8 +57,6 @@ import           Cardano.Config.Types (DelegationCertFile (..),
                                        LastKnownBlockVersion (..),
                                        Protocol (..), SigningKeyFile (..),
                                        Update (..))
-
-import qualified Text.JSON.Canonical as CanonicalJSON
 
 -- TODO: consider not throwing this, or wrap it in a local error type here
 -- that has proper error messages.
@@ -99,9 +96,6 @@ mockSecurityParam = SecurityParam 5
 
 mockSlotLength :: SlotLength
 mockSlotLength = slotLengthFromSec 20
-
-mockSlotLengths :: SlotLengths
-mockSlotLengths = singletonSlotLengths mockSlotLength
 
 -- | Helper for creating a 'SomeProtocol' for a mock protocol that needs the
 -- 'CoreNodeId' and NumCoreNodes'. If one of them is missing from the
@@ -152,7 +146,8 @@ fromProtocol _ _ _ _ _ _ _ _ ByronLegacy =
   left ByronLegacyProtocolNotImplemented
 fromProtocol nId mNumCoreNodes _ _ _ _ _ _ BFT =
   hoistEither $ mockSomeProtocol nId mNumCoreNodes $ \cid numCoreNodes ->
-    Consensus.ProtocolMockBFT numCoreNodes cid mockSecurityParam mockSlotLengths
+    Consensus.ProtocolMockBFT numCoreNodes cid mockSecurityParam
+      (defaultSimpleBlockConfig mockSecurityParam mockSlotLength)
 fromProtocol nId mNumCoreNodes _ _ _ _ _ _ Praos =
   hoistEither $ mockSomeProtocol nId mNumCoreNodes $ \cid numCoreNodes ->
     Consensus.ProtocolMockPraos
@@ -164,7 +159,7 @@ fromProtocol nId mNumCoreNodes _ _ _ _ _ _ Praos =
         , praosLeaderF       = 0.5
         , praosLifetimeKES   = 1000000
         }
-      (singletonSlotLengths (slotLengthFromSec 2))
+      (defaultSimpleBlockConfig mockSecurityParam (slotLengthFromSec 2))
 fromProtocol nId mNumCoreNodes _ _ _ _ _ _ MockPBFT =
   hoistEither $ mockSomeProtocol nId mNumCoreNodes $ \cid numCoreNodes@(NumCoreNodes numNodes) ->
     Consensus.ProtocolMockPBFT
@@ -173,7 +168,7 @@ fromProtocol nId mNumCoreNodes _ _ _ _ _ _ MockPBFT =
                  , pbftSignatureThreshold = (1.0 / fromIntegral numNodes) + 0.1
 
                  }
-      (singletonSlotLengths mockSlotLength)
+      (defaultSimpleBlockConfig mockSecurityParam mockSlotLength)
       cid
 fromProtocol _ _ mGenFile nMagic sigThresh delCertFp sKeyFp update RealPBFT = do
     let genFile@(GenesisFile gFp) = fromMaybe ( panic $ "Cardano.Config.Protocol.fromProtocol: "
@@ -258,18 +253,6 @@ readLeaderCredentials gc mDelCertFp mSKeyFp =
     deserialiseSigningKey =
         fmap (Signing.SigningKey . snd)
       . deserialiseFromBytes Signing.fromCBORXPrv
-
-
--- Will be pulled from cardano-prelude at some stage.
-canonicalDecodePretty
-  :: forall a
-   . CanonicalJSON.FromJSON (Either SchemaError) a
-  => LB.ByteString
-  -> Either Text a
-canonicalDecodePretty y = do
-  eVal <- first toS (CanonicalJSON.parseCanonicalJSON y)
-  first show (CanonicalJSON.fromJSON eVal :: Either SchemaError a)
-
 
 renderProtocolInstantiationError :: ProtocolInstantiationError -> Text
 renderProtocolInstantiationError pie =

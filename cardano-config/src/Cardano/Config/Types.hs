@@ -182,6 +182,7 @@ instance FromJSON NodeConfiguration where
                 -- Trace Options
                 tOptions <- TraceOptions
                               <$> v .:? "TracingVerbosity" .!= NormalVerbosity
+                              <*> v .:? "TraceAcceptPolicy" .!= False
                               <*> v .:? "TraceBlockFetchClient" .!= False
                               <*> v .:? "TraceBlockFetchDecisions" .!= True
                               <*> v .:? "TraceBlockFetchProtocol" .!= False
@@ -323,6 +324,7 @@ instance FromJSON ViewMode where
 --   which logs to the log output.
 data TraceOptions = TraceOptions
   { traceVerbosity :: !TracingVerbosity
+  , traceAcceptPolicy :: !Bool
   , traceBlockFetchClient :: !Bool
   , traceBlockFetchDecisions :: !Bool
   , traceBlockFetchProtocol :: !Bool
