@@ -301,6 +301,7 @@ constraints:
   bimap >= 0.4.0,
   brick >= 0.47,
   libsystemd-journal >= 1.4.4
+  old-time installed
 
 allow-newer: katip:Win32
 

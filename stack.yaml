@@ -11,8 +11,6 @@ ghc-options:
   cardano-node:         -Wall -Werror -fwarn-redundant-constraints
   cardano-tx-generator: -Wall -Werror -fwarn-redundant-constraints
 
-allow-newer: true
-
 extra-deps:
   - git: https://github.com/input-output-hk/cardano-crypto
     commit: 2547ad1e80aeabca2899951601079408becbc92c
@@ -114,7 +112,11 @@ extra-deps:
     # dependencies of iohk-monitoring
   - prometheus-2.1.2
   - libsystemd-journal-1.4.4
-  - katip-0.8.3.0
+
+  - git: https://github.com/Soostone/katip
+    commit: 0d735decdba435ab66bd3891392693d0720925a5
+    subdirs:
+        - katip
 
     # Extracted from cardano-sl since it's quite useful
   - git: https://github.com/input-output-hk/cardano-sl-x509
