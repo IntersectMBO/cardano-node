@@ -15,8 +15,6 @@ where
 
 import           Cardano.Prelude hiding (option, show, trace)
 
-import           Test.Cardano.Prelude (canonicalDecodePretty)
-
 import           Control.Monad.Trans.Except.Extra (left)
 import qualified Data.ByteString.Lazy as LB
 import           Formatting (Format, sformat)

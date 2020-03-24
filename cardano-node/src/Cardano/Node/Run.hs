@@ -57,6 +57,7 @@ import           Cardano.Config.Types (MiscellaneousFilepaths(..),
 
 import           Ouroboros.Network.Block
 import           Ouroboros.Network.NodeToClient (LocalConnectionId)
+import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..))
 import           Ouroboros.Consensus.Block (BlockProtocol)
 import           Ouroboros.Consensus.Node (NodeKernel (getChainDB),
                      DiffusionTracers (..), DiffusionArguments (..),
@@ -252,6 +253,7 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
     , dtDnsResolverTracer = dnsResolverTracer nodeTracers'
     , dtErrorPolicyTracer = errorPolicyTracer nodeTracers'
     , dtLocalErrorPolicyTracer = localErrorPolicyTracer nodeTracers'
+    , dtAcceptPolicyTracer = acceptPolicyTracer nodeTracers'
     , dtMuxTracer = muxTracer nodeTracers'
     , dtMuxLocalTracer = nullTracer
     , dtHandshakeTracer = handshakeTracer nodeTracers'
@@ -348,6 +350,13 @@ createDiffusionArguments addrs myLocalAddr ipProducers dnsProducers =
     , daLocalAddress = myLocalAddr
     , daIpProducers = ipProducers
     , daDnsProducers = dnsProducers
+    -- TODO: these limits are arbitrary at the moment;
+    -- issue: https://github.com/input-output-hk/ouroboros-network/issues/1836
+    , daAcceptedConnectionsLimit = AcceptedConnectionsLimit {
+        acceptedConnectionsHardLimit = 512
+      , acceptedConnectionsSoftLimit = 384
+      , acceptedConnectionsDelay     = 5
+      }
     }
 
 dnsSubscriptionTarget :: RemoteAddress -> DnsSubscriptionTarget

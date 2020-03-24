@@ -13,7 +13,6 @@ where
 
 import           Prelude (String, show)
 import           Cardano.Prelude hiding (option, show, trace)
-import           Test.Cardano.Prelude (canonicalDecodePretty)
 
 import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra

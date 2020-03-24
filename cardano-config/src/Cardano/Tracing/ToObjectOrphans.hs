@@ -164,6 +164,11 @@ instance HasPrivacyAnnotation NtN.HandshakeTr
 instance HasSeverityAnnotation NtN.HandshakeTr where
   getSeverityAnnotation _ = Info
 
+instance HasPrivacyAnnotation NtN.AcceptConnectionsPolicyTrace
+instance HasSeverityAnnotation NtN.AcceptConnectionsPolicyTrace where
+  getSeverityAnnotation NtN.ServerTraceAcceptConnectionRateLimiting {} = Info
+  getSeverityAnnotation NtN.ServerTraceAcceptConnectionHardLimit {} = Warning
+
 instance HasSeverityAnnotation (ChainDB.TraceEvent blk) where
   getSeverityAnnotation (ChainDB.TraceAddBlockEvent ev) = case ev of
     ChainDB.IgnoreBlockOlderThanK {} -> Info
@@ -432,6 +437,9 @@ instance Transformable Text IO NtN.HandshakeTr where
   trTransformer = defaultTextTransformer
 
 instance Transformable Text IO NtC.HandshakeTr where
+  trTransformer = defaultTextTransformer
+
+instance Transformable Text IO NtN.AcceptConnectionsPolicyTrace where
   trTransformer = defaultTextTransformer
 
 instance ( HasPrivacyAnnotation (ChainDB.TraceAddBlockEvent blk)
@@ -808,6 +816,17 @@ instance ToObject NtN.HandshakeTr where
              , "bearer" .= show b
              , "event" .= show ev ]
 
+instance ToObject NtN.AcceptConnectionsPolicyTrace where
+  toObject _verb (NtN.ServerTraceAcceptConnectionRateLimiting delay numOfConnections) =
+    mkObject [ "kind" .= String "ServerTraceAcceptConnectionRateLimiting"
+             , "delay" .= show delay
+             , "numberOfConnection" .= show numOfConnections
+             ]
+  toObject _verb (NtN.ServerTraceAcceptConnectionHardLimit softLimit) =
+    mkObject [ "kind" .= String "ServerTraceAcceptConnectionHardLimit"
+             , "softLimit" .= show softLimit
+             ]
+
 instance (StandardHash blk)
  => ToObject (HeaderEnvelopeError blk) where
   toObject _verb (UnexpectedBlockNo expect act) =
@@ -902,6 +921,15 @@ instance StandardHash blk
       , "expected" .= String (pack $ show expect)
       , "actual" .= String (pack $ show act)
       ]
+  toObject _verb (Mock.MockExpired expiredSlot validatedSlot) =
+      mkObject
+        [ "kind" .= String "MockExpired"
+        , "error" .= String (pack msg)
+        ]
+    where
+      msg =
+        "transaction expired in slot " <> condense expiredSlot <>
+        ", current slot " <> condense validatedSlot
 
 instance (Show (PBFT.PBftVerKeyHash c))
  => ToObject (PBFT.PBftValidationErr c) where
