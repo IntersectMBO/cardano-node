@@ -34,12 +34,10 @@ import qualified Ouroboros.Consensus.Byron.Ledger.Mempool as Mempool
 import qualified Ouroboros.Consensus.Cardano as Consensus
 import qualified Ouroboros.Consensus.Mempool as Mempool
 import           Ouroboros.Consensus.Node.ProtocolInfo (pInfoConfig)
-import           Ouroboros.Consensus.Util.Condense (condense)
 import           Ouroboros.Network.NodeToClient (IOManager)
 
 import           Cardano.CLI.Ops (CliError(..), readGenesis, withRealPBFT)
 import           Cardano.Common.LocalSocket
-import           Cardano.Node.Submission (submitGeneralTx)
 
 
 data ParametersToUpdate =

@@ -22,11 +22,12 @@ module Cardano.CLI.Byron.Parsers
 import           Cardano.Prelude hiding (option)
 import           Prelude (String)
 
+import qualified Data.ByteString.Lazy.Char8 as C8
 import           Options.Applicative
 
 import           Cardano.Chain.Common
                    (TxFeePolicy(..), TxSizeLinear(..), rationalToLovelacePortion)
-import           Cardano.Crypto.Hashing (decodeHash)
+import           Cardano.Crypto.Hashing (hashRaw)
 import           Cardano.Chain.Slotting (EpochNumber(..), SlotNumber(..))
 import           Cardano.Chain.Update
                    (ApplicationName(..), InstallerHash(..), NumSoftwareVersion,
@@ -34,7 +35,7 @@ import           Cardano.Chain.Update
 
 import           Cardano.CLI.Byron.UpdateProposal
 import           Cardano.Common.Parsers
-                   (command', parseConfigFile, parseFilePath,
+                   (command', parseCLISocketPath, parseConfigFile, parseFilePath,
                     parseFraction, parseLovelace, parseSigningKeyFile)
 import           Cardano.Config.Types
 
@@ -59,8 +60,10 @@ parseByronCommands :: Parser ByronCommand
 parseByronCommands =  subparser $ mconcat
     [ commandGroup "Byron related commands"
     , metavar "Byron related commands"
-    , command' "create-byron-update-proposal" "Create Byron era update proposal."
+    , command' "create-byron-update-proposal" "Create a Byron era update proposal."
         $ parseAllParamsToUpdate
+    , command' "submit-byron-update-proposal" "Submit a Byron era update proposal."
+        $ parseByronUpdateProposalSubmission
     ]
 
 parseAllParamsToUpdate :: Parser ByronCommand
@@ -74,7 +77,7 @@ parseAllParamsToUpdate = do
     <*> parseSoftwareVersion
     <*> parseSystemTag
     <*> parseInstallerHash
-    <*> parseFilePath "filepath" "Output filepath"
+    <*> parseFilePath "filepath" "Byron proposal output filepath."
     <*> parseScriptVersion
     <*> parseSlotDuration
     <*> parseMaxBlockSize
@@ -90,6 +93,12 @@ parseAllParamsToUpdate = do
     <*> parseTxFeePolicy
     <*> parseUnlockStakeEpoch
 
+parseByronUpdateProposalSubmission :: Parser ByronCommand
+parseByronUpdateProposalSubmission =
+  SubmitUpdateProposal
+    <$> (ConfigYamlFilePath <$> parseConfigFile)
+    <*> parseFilePath "filepath" "Filepath of Byron update proposal."
+    <*> parseCLISocketPath "Path to a cardano-node socket."
 --------------------------------------------------------------------------------
 -- CLI Parsers
 --------------------------------------------------------------------------------
@@ -120,11 +129,11 @@ parseSystemTag =
 
 parseInstallerHash :: Parser InstallerHash
 parseInstallerHash =
-  InstallerHash <$> option (eitherReader (\str' -> first toS . decodeHash $ toS str'))
-                      ( long "installer-hash"
-                      <> metavar "HASH"
-                      <> help "Software hash."
-                      )
+  InstallerHash .  hashRaw . C8.pack
+    <$> strOption ( long "installer-hash"
+                  <> metavar "HASH"
+                  <> help "Software hash."
+                  )
 
 parseMaxBlockSize :: Parser (Maybe ParametersToUpdate)
 parseMaxBlockSize = optional $
@@ -165,14 +174,14 @@ parseMpcThd = optional $
 
 parseProtocolVersion :: Parser ProtocolVersion
 parseProtocolVersion =
-  ProtocolVersion <$> (parseWord "protocol-version-major" "Protocol verson major" "WORD16" :: Parser Word16)
-                  <*> (parseWord "protocol-version-minor" "Protocol verson minor" "WORD16" :: Parser Word16)
-                  <*> (parseWord "protocol-version-alt" "Protocol verson alt" "WORD8" :: Parser Word8)
+  ProtocolVersion <$> (parseWord "protocol-version-major" "Protocol verson major." "WORD16" :: Parser Word16)
+                  <*> (parseWord "protocol-version-minor" "Protocol verson minor." "WORD16" :: Parser Word16)
+                  <*> (parseWord "protocol-version-alt" "Protocol verson alt." "WORD8" :: Parser Word8)
 
 parseHeavyDelThd :: Parser (Maybe ParametersToUpdate)
 parseHeavyDelThd = optional $
   HeavyDelThd . rationalToLovelacePortion
-    <$> parseFraction "heavy-del-thd" "Proposed heavy delegation threshold"
+    <$> parseFraction "heavy-del-thd" "Proposed heavy delegation threshold."
 
 parseUpdateVoteThd :: Parser (Maybe ParametersToUpdate)
 parseUpdateVoteThd = optional $
@@ -197,9 +206,9 @@ parseSoftforkRuleParam :: Parser (Maybe ParametersToUpdate)
 parseSoftforkRuleParam = optional $
   SoftforkRuleParam
     <$> (SoftforkRule
-           <$> (rationalToLovelacePortion <$> parseFraction "softfork-init-thd" "Propose initial threshold (right after proposal is confirmed)")
-           <*> (rationalToLovelacePortion <$> parseFraction "softfork-min-thd" "Propose minimum threshold (threshold can't be less than this)")
-           <*> (rationalToLovelacePortion <$> parseFraction "softfork-thd-dec" "Propose threshold decrement (threshold will decrease by this amount after each epoch)")
+           <$> (rationalToLovelacePortion <$> parseFraction "softfork-init-thd" "Propose initial threshold (right after proposal is confirmed).")
+           <*> (rationalToLovelacePortion <$> parseFraction "softfork-min-thd" "Propose minimum threshold (threshold can't be less than this).")
+           <*> (rationalToLovelacePortion <$> parseFraction "softfork-thd-dec" "Propose threshold decrement (threshold will decrease by this amount after each epoch).")
         )
 
 parseSoftwareVersion :: Parser SoftwareVersion
@@ -210,20 +219,21 @@ parseApplicationName :: Parser ApplicationName
 parseApplicationName = ApplicationName <$> strOption
        (  long "application-name"
        <> metavar "STRING"
+       <> help "The name of the application."
        )
 
 parseNumSoftwareVersion :: Parser NumSoftwareVersion
 parseNumSoftwareVersion =
   parseWord
     "software-version-num"
-    "Numeric software version associated with application name"
+    "Numeric software version associated with application name."
     "WORD32"
 
 parseTxFeePolicy :: Parser (Maybe ParametersToUpdate)
 parseTxFeePolicy = optional $
   TxFeePolicy . TxFeePolicyTxSizeLinear
-    <$> ( TxSizeLinear <$> parseLovelace "tx-fee-a-constant" "Propose the constant a for txfee = a + b*s where s is the size"
-                       <*> parseLovelace "tx-fee-b-constant" "Propose the constant b for txfee = a + b*s where s is the size"
+    <$> ( TxSizeLinear <$> parseLovelace "tx-fee-a-constant" "Propose the constant a for txfee = a + b*s where s is the size."
+                       <*> parseLovelace "tx-fee-b-constant" "Propose the constant b for txfee = a + b*s where s is the size."
         )
 
 parseUnlockStakeEpoch :: Parser (Maybe ParametersToUpdate)
