@@ -15,15 +15,12 @@ setupBackends:
 defaultBackends:
   - KatipBK
 
-# if wanted, the GUI is listening on this port:
-#hasGUI: 12872
-
 # if wanted, the EKG interface is listening on this port:
-hasEKG: 12783
+#hasEKG: 12783
 
-hasPrometheus:
-  - "127.0.0.1"
-  - 13790
+#hasPrometheus:
+#  - "127.0.0.1"
+#  - 13790
 
 # here we set up outputs of logging in 'katip':
 setupScribes:

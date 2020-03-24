@@ -15,13 +15,14 @@ setupBackends:
 defaultBackends:
   - KatipBK
 
-# if wanted, Prometheus "metrics" are presented on http://localhost:13789/metrics
-hasPrometheus:
-  - "127.0.0.1"
-  - 13789
+# if wanted, the EKG interface is listening on http://localhost:13788
+#hasEKG: 13788
 
-# if wanted, the EKG interface is listening on this port:
-hasEKG: 13788
+# if wanted, EKG "metrics" are presented on http://localhost:13789/metrics
+# for Prometheus
+#hasPrometheus:
+#  - "127.0.0.1"
+#  - 13789
 
 # here we set up outputs of logging in 'katip':
 setupScribes:
