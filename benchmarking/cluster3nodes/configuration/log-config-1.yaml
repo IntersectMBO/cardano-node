@@ -15,9 +15,6 @@ setupBackends:
 defaultBackends:
   - KatipBK
 
-# if wanted, the GUI is listening on this port:
-#hasGUI: 12872
-
 # if wanted, the EKG interface is listening on this port:
 #hasEKG: 12782
 
