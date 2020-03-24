@@ -48,6 +48,11 @@ data ByronCommand = UpdateProposal
                     InstallerHash
                     FilePath
                     [ParametersToUpdate]
+                  | SubmitUpdateProposal
+                    ConfigYamlFilePath
+                    -- ^ Update proposal filepath.
+                    FilePath
+                    (Maybe CLISocketPath)
                     deriving Show
 
 parseByronCommands :: Parser ByronCommand

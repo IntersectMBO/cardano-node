@@ -21,11 +21,14 @@ import           Cardano.Chain.Common (LovelacePortion, TxFeePolicy(..))
 import           Cardano.Chain.Genesis (GenesisData(..))
 import           Cardano.Chain.Slotting (EpochNumber(..), SlotNumber(..))
 import           Cardano.Chain.Update
-                   (AProposal(..), ProtocolParametersUpdate(..), InstallerHash(..),
-                    Proposal, ProposalBody(..), ProtocolVersion(..), SoftforkRule(..),
-                    SoftwareVersion(..), SystemTag(..), recoverUpId, signProposal)
+                   (AProposal(..), ProtocolParametersUpdate(..),
+                    InstallerHash(..), Proposal, ProposalBody(..), ProtocolVersion(..),
+                    SoftforkRule(..), SoftwareVersion(..), SystemTag(..), recoverUpId,
+                    signProposal)
 import           Cardano.Config.Types
+import           Ouroboros.Consensus.Util.Condense (condense)
 import           Cardano.Crypto.Signing (SigningKey, noPassSafeSigner)
+import           Cardano.Node.Submission (submitGeneralTx)
 import           Ouroboros.Consensus.Byron.Ledger.Block (ByronBlock)
 import qualified Ouroboros.Consensus.Byron.Ledger.Mempool as Mempool
 import qualified Ouroboros.Consensus.Cardano as Consensus
@@ -163,8 +166,8 @@ submitByronUpdateProposal iocp config proposalFp mSocket = do
     let genTx = convertProposalToGenTx aProposal
 
     let proposalBody = Binary.unAnnotated $ aBody aProposal
-        (ProtocolVersion major minor alt) = protocolVersion proposalBody
-        (SoftwareVersion appName sNumber) = softwareVersion proposalBody
+        ProtocolVersion major minor alt = protocolVersion proposalBody
+        SoftwareVersion appName sNumber = softwareVersion proposalBody
 
 
     let lastKnownBlockVersion = LastKnownBlockVersion {lkbvMajor = major, lkbvMinor = minor, lkbvAlt = alt}

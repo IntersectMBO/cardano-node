@@ -202,8 +202,8 @@ serialiseSigningKey ptcl _ = Left $ ProtocolNotSupported ptcl
 -- | Exception type for all errors thrown by the CLI.
 --   Well, almost all, since we don't rethrow the errors from readFile & such.
 data CliError
-  = CBORDecodingError DeserialiseFailure
-  | CBORPrettyPrintError DeserialiseFailure
+  = CBORDecodingError !DeserialiseFailure
+  | CBORPrettyPrintError !DeserialiseFailure
   | CertificateValidationErrors !FilePath ![Text]
   | DelegationError !Genesis.GenesisDelegationError
   | DlgCertificateDeserialisationFailed !FilePath !Text
@@ -218,7 +218,7 @@ data CliError
   | NotEnoughTxOutputs
   | NoGenesisDelegationForKey !Text
   | OutputMustNotAlreadyExist !FilePath
-  | ProtocolError ProtocolInstantiationError
+  | ProtocolError !ProtocolInstantiationError
   | ProtocolNotSupported !Protocol
   | ProtocolParametersParseFailed !FilePath !Text
   | ReadCBORFileFailure !FilePath !Text
