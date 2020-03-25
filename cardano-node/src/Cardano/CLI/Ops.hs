@@ -228,9 +228,8 @@ data CliError
   -- TODO:  sadly, VerificationKeyParseError isn't exported from Cardano.Crypto.Signing/*
   | SigningKeyDeserialisationFailed !FilePath !DeserialiseFailure
   | SpendGenesisUTxOError !RealPBFTError
-  | UpdateProposalBlockReadError !FilePath !Text
-  | UpdateProposalEpochBoundaryBlockError !Text
-  | UpdateProposalFileModificationError ![FilePath] !Text
+  | UpdateProposalDecodingError !DecoderError
+  | UpdateProposalSubmissionError !RealPBFTError
   | VerificationKeyDeserialisationFailed !FilePath !Text
   | FileNotFoundError !FilePath
 
@@ -291,13 +290,10 @@ instance Show CliError where
     = "Error in SpendGenesisUTxO command: " <> show err
   show (TxDeserialisationFailed fp err)
     = "Transaction file '" <> fp <> "' read failure: "<> show err
-  show (UpdateProposalBlockReadError fp err)
-    = "Error reading block at: " <> fp <> "Error: " <> T.unpack err
-  show (UpdateProposalEpochBoundaryBlockError err)
-    = "Error creating update proposal due to: " <> T.unpack err
-  show (UpdateProposalFileModificationError fps err)
-    = "Error checking for the latest created block in: " <> show fps
-      <> " Failure: " <> T.unpack err
+  show (UpdateProposalDecodingError err)
+    = "Error decoding update proposal: " <> show err
+  show (UpdateProposalSubmissionError pbftErr)
+    = "Error submitting update proposal: " <> show pbftErr
   show (VerificationKeyDeserialisationFailed fp err)
     = "Verification key '" <> fp <> "' read failure: "<> T.unpack err
   show (FileNotFoundError fp)

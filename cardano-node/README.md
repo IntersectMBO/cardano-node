@@ -295,20 +295,22 @@ Block number: 5
 There is currently only support to create a Byron update proposal:
 
 ```
-cardano-cli create-byron-update-proposal --database-path FILEPATH
-                                         --config NODE-CONFIGURATION
+cardano-cli create-byron-update-proposal --config NODE-CONFIGURATION
                                          --signing-key FILEPATH
+                                         --protocol-version-major WORD16
+                                         --protocol-version-minor WORD16
+                                         --protocol-version-alt WORD8
+                                         --application-name STRING
+                                         --software-version-num WORD32
+                                         --system-tag STRING
+                                         --installer-hash HASH
+                                         --filepath FILEPATH
                                          ...
 ```
-The three mandatory arguments are `database-path`, `config` and `signing-key`. The remaining arguments are parameters you want to update in your update proposal.
+The mandatory arguments are `config`, `signing-key`, `protocol-version-major`, `protocol-version-minor`, `protocol-version-alt`, `application-name`, `software-version-num`, `system-tag`, `installer-hash` and `filepath`.
 
-You must run a Byron node to have blocks available in the `db` directory. This is necessary to extract the protocol version and software version for the update proposal.
+The remaining arguments are optional parameters you want to update in your update proposal.
 
-Example:
-
-```
-cabal exec cardano-cli -- create-byron-update-proposal --database-path db --config configuration/configuration-mainnet.yaml --signing-key configuration/genesis/mainnet-genesis-key --filepath my-update-proposal
-```
 You can also check your proposal's validity using the [`validate-cbor`](#validate-cbor-files) command.
 
 See the [Byron specification](https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/byronLedgerSpec/latest/download-by-type/doc-pdf/ledger-spec) for more details on update proposals.

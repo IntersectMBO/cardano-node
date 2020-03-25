@@ -12,7 +12,7 @@
 
 module Cardano.Node.Submission (
       TraceLowLevelSubmit (..)
-    , submitTx
+    , submitGeneralTx
     ) where
 import           Cardano.Prelude hiding (ByteString, option, threadDelay)
 import           Prelude (String)
@@ -98,7 +98,7 @@ instance (MonadIO m) => Transformable Text m TraceLowLevelSubmit where
   Main logic
 -------------------------------------------------------------------------------}
 
-submitTx :: ( RunNode blk
+submitGeneralTx :: ( RunNode blk
             , Show (ApplyTxErr blk)
             )
          => IOManager
@@ -107,7 +107,7 @@ submitTx :: ( RunNode blk
          -> GenTx blk
          -> Tracer IO TraceLowLevelSubmit
          -> IO ()
-submitTx iocp (SocketFile path) cfg tx tracer =
+submitGeneralTx iocp (SocketFile path) cfg tx tracer =
     NtC.connectTo
       (NtC.localSnocket iocp path)
       NetworkConnectTracers {

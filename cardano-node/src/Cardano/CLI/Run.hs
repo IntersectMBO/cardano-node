@@ -65,9 +65,12 @@ import           Cardano.Config.Types
 
 
 runCommand :: ClientCommand -> ExceptT CliError IO ()
-runCommand (ByronClientCommand (UpdateProposal dbFp configFp sKey outputFp paramsToUpdate)) = do
+runCommand (ByronClientCommand
+             (UpdateProposal configFp sKey pVer sVer sysTag
+                             insHash outputFp paramsToUpdate)) = do
+
   sK <- readSigningKey RealPBFT sKey
-  proposal <- createUpdateProposal dbFp configFp sK paramsToUpdate
+  proposal <- createUpdateProposal  configFp sK pVer sVer sysTag insHash paramsToUpdate
   ensureNewFileLBS outputFp (serialiseByronUpdateProposal proposal)
 
 runCommand DisplayVersion = do

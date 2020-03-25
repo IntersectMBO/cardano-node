@@ -1,29 +1,23 @@
+{-# LANGUAGE GADTs #-}
+
 module Cardano.CLI.Byron.UpdateProposal
   ( ParametersToUpdate(..)
   , convertProposalToGenTx
   , createUpdateProposal
+  , deserialiseByronUpdateProposal
   , serialiseByronUpdateProposal
+  , submitByronUpdateProposal
   ) where
 
 import           Cardano.Prelude
 
-import           Control.Monad.Trans.Except.Extra
-                   (handleIOExceptT, hoistEither, left, right)
+import           Control.Monad.Trans.Except.Extra (firstExceptT, hoistEither)
+import           Control.Tracer (nullTracer, stdoutTracer, traceWith)
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.Map.Strict as M
-import qualified Data.Text as T
-import           System.Directory
-                   (canonicalizePath, getModificationTime,
-                    listDirectory, makeAbsolute)
-import           System.FilePath ((</>))
-import           Data.Time.Clock (UTCTime)
 
 import qualified Cardano.Binary as Binary
-import           Cardano.Chain.Block
-                   (AHeader(..), ABlockOrBoundaryHdr(..),
-                    abobHdrFromBlock, fromCBORABlockOrBoundary)
 import           Cardano.Chain.Common (LovelacePortion, TxFeePolicy(..))
-import           Cardano.Chain.Epoch.File (mainnetEpochSlots)
 import           Cardano.Chain.Genesis (GenesisData(..))
 import           Cardano.Chain.Slotting (EpochNumber(..), SlotNumber(..))
 import           Cardano.Chain.Update
@@ -34,8 +28,16 @@ import           Cardano.Config.Types
 import           Cardano.Crypto.Signing (SigningKey, noPassSafeSigner)
 import           Ouroboros.Consensus.Byron.Ledger.Block (ByronBlock)
 import qualified Ouroboros.Consensus.Byron.Ledger.Mempool as Mempool
+import qualified Ouroboros.Consensus.Cardano as Consensus
+import qualified Ouroboros.Consensus.Mempool as Mempool
+import           Ouroboros.Consensus.Node.ProtocolInfo (pInfoConfig)
+import           Ouroboros.Consensus.Util.Condense (condense)
+import           Ouroboros.Network.NodeToClient (IOManager)
 
-import           Cardano.CLI.Ops (CliError(..), decodeCBOR, readGenesis)
+import           Cardano.CLI.Ops (CliError(..), readGenesis, withRealPBFT)
+import           Cardano.Common.LocalSocket
+import           Cardano.Node.Submission (submitGeneralTx)
+
 
 data ParametersToUpdate =
     ScriptVersion Word16
@@ -85,65 +87,31 @@ convertProposalToGenTx :: AProposal ByteString -> Mempool.GenTx ByronBlock
 convertProposalToGenTx prop = Mempool.ByronUpdateProposal (recoverUpId prop) prop
 
 createUpdateProposal
-  :: DbFile
-  -> ConfigYamlFilePath
+  :: ConfigYamlFilePath
   -> SigningKey
+  -> ProtocolVersion
+  -> SoftwareVersion
+  -> SystemTag
+  -> InstallerHash
   -> [ParametersToUpdate]
   -> ExceptT CliError IO Proposal
-createUpdateProposal dbFile configFile sKey paramsToUpdate = do
-
-  latestBlockBS <- getMostRecentBlock dbFile
-
-  let eDecodedBlock = decodeCBOR latestBlockBS (fromCBORABlockOrBoundary mainnetEpochSlots)
-  latestBlock <- case eDecodedBlock of
-                   Right (_, blk) -> right blk
-                   Left err -> left err
+createUpdateProposal configFile sKey pVer sVer sysTag inshash paramsToUpdate = do
 
   nc <- liftIO $ parseNodeConfigurationFP configFile
   (genData, _) <- readGenesis $ ncGenesisFile nc
 
-  let header' = abobHdrFromBlock latestBlock
-      metaData :: M.Map SystemTag InstallerHash
-      metaData = M.empty
+  let metaData :: M.Map SystemTag InstallerHash
+      metaData = M.singleton sysTag inshash
       noPassSigningKey = noPassSafeSigner sKey
       pmId = gdProtocolMagicId genData
       protocolParamsUpdate = createProtocolParametersUpdate emptyProtocolParametersUpdate paramsToUpdate
 
-  protocolVersion' <- hoistEither $ getProtocolVersion header'
-  softwareVersion' <- hoistEither $ getSoftwareVersion header'
 
-  let proposalBody = ProposalBody protocolVersion' protocolParamsUpdate softwareVersion' metaData
+  let proposalBody = ProposalBody pVer protocolParamsUpdate sVer metaData
 
   let proposal = signProposal pmId proposalBody noPassSigningKey
 
   pure proposal
-
-
-getFileModificationTime :: FilePath -> IO (FilePath, UTCTime)
-getFileModificationTime fp = getModificationTime fp >>= \timeModded -> pure (fp, timeModded)
-
--- | Gets the most recent block in the volatile database.
-getMostRecentBlock :: DbFile -> ExceptT CliError IO LByteString
-getMostRecentBlock (DbFile dbFp) = do
- let volatileDbDir = dbFp </> "volatile"
-
- blockFps <- liftIO $ listDirectory volatileDbDir
-
- let adjustedBlockFps = map (\fp -> volatileDbDir </> fp) blockFps
-
- absFps <- liftIO $ mapM (makeAbsolute >=> canonicalizePath) adjustedBlockFps
-
- -- Creates a list of tuples containing the time that block was modified and the block filepath in question.
- blocksFpsAndModTime <- handleIOExceptT
-                          (UpdateProposalFileModificationError absFps . T.pack . displayException)
-                          $ mapM getFileModificationTime absFps
-
- -- Sorts the blocks in the volatile db in descending order based on the time it was modified.
- mRb <- case sortDescending blocksFpsAndModTime of
-          [] -> left $ NoBlocksFound dbFp
-          ((mostRecentBlock, _) : _) -> pure mostRecentBlock
-
- handleIOExceptT (UpdateProposalBlockReadError dbFp . T.pack . displayException) $ LB.readFile mRb
 
 emptyProtocolParametersUpdate :: ProtocolParametersUpdate
 emptyProtocolParametersUpdate =
@@ -164,24 +132,49 @@ emptyProtocolParametersUpdate =
     , ppuUnlockStakeEpoch = Nothing
     }
 
-getProtocolVersion :: ABlockOrBoundaryHdr a -> Either CliError ProtocolVersion
-getProtocolVersion (ABOBBlockHdr aHeader) = Right $ headerProtocolVersion aHeader
-getProtocolVersion (ABOBBoundaryHdr _) =
-  Left . UpdateProposalEpochBoundaryBlockError
-       $ "Cardano.CLI.Byron.UpdateProposal.getProtocolVersion: "
-       <> "encountered an epoch boundary block which does not have a ProtocolVersion."
-       <> " Wait a moment to download an additional block and try again."
-
-getSoftwareVersion :: ABlockOrBoundaryHdr a -> Either CliError SoftwareVersion
-getSoftwareVersion (ABOBBlockHdr aHeader) = Right $ headerSoftwareVersion aHeader
-getSoftwareVersion (ABOBBoundaryHdr _) =
-    Left . UpdateProposalEpochBoundaryBlockError
-         $ "Cardano.CLI.Byron.UpdateProposal.getSoftwareVersion: "
-         <> "encountered an epoch boundary block which does not have a SoftwareVersion."
-         <> " Wait a moment to download an additional block and try again."
-
 serialiseByronUpdateProposal :: Proposal -> LByteString
 serialiseByronUpdateProposal = Binary.serialize
 
-sortDescending :: [(FilePath, UTCTime)] -> [(FilePath, UTCTime)]
-sortDescending ls = sortBy (\(firMod, _) (secMod, _) -> compare secMod firMod) ls
+deserialiseByronUpdateProposal :: LByteString -> Either CliError (AProposal ByteString)
+deserialiseByronUpdateProposal bs =
+  case Binary.decodeFull bs :: Either Binary.DecoderError (AProposal Binary.ByteSpan) of
+    Left deserFail -> Left $ UpdateProposalDecodingError deserFail
+    Right proposal -> Right $ annotateProposal proposal
+ where
+  annotateProposal :: AProposal Binary.ByteSpan -> AProposal ByteString
+  annotateProposal proposal = Binary.annotationBytes bs proposal
+
+submitByronUpdateProposal
+  :: IOManager
+  -> ConfigYamlFilePath
+  -> FilePath
+  -> Maybe CLISocketPath
+  -> ExceptT CliError IO ()
+submitByronUpdateProposal iocp config proposalFp mSocket = do
+    nc <- liftIO $ parseNodeConfigurationFP config
+
+    let genFile = ncGenesisFile nc
+        ptcl = ncProtocol nc
+        sigThresh = ncPbftSignatureThresh nc
+        nMagic = ncReqNetworkMagic nc
+
+    proposalBs <- liftIO $ LB.readFile proposalFp
+    aProposal <- hoistEither $ deserialiseByronUpdateProposal proposalBs
+    let genTx = convertProposalToGenTx aProposal
+
+    let proposalBody = Binary.unAnnotated $ aBody aProposal
+        (ProtocolVersion major minor alt) = protocolVersion proposalBody
+        (SoftwareVersion appName sNumber) = softwareVersion proposalBody
+
+
+    let lastKnownBlockVersion = LastKnownBlockVersion {lkbvMajor = major, lkbvMinor = minor, lkbvAlt = alt}
+        update = Update appName sNumber $ lastKnownBlockVersion
+        skt = chooseSocketPath (ncSocketPath nc) mSocket
+
+    firstExceptT UpdateProposalSubmissionError $ withRealPBFT genFile nMagic sigThresh Nothing Nothing update ptcl $
+                \p@Consensus.ProtocolRealPBFT{} -> liftIO $ do
+                   traceWith stdoutTracer ("Update proposal TxId: " ++ condense (Mempool.txId genTx))
+                   submitGeneralTx iocp skt
+                                   (pInfoConfig (Consensus.protocolInfo p))
+                                   genTx
+                                   nullTracer -- stdoutTracer

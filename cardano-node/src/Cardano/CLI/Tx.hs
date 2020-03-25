@@ -274,10 +274,10 @@ nodeSubmitTx
       \p@Consensus.ProtocolRealPBFT{} -> liftIO $ do
         -- TODO: Update submitGenTx to use `ExceptT`
         traceWith stdoutTracer ("TxId: " ++ condense (Consensus.txId gentx))
-        submitTx iocp targetSocketFp
-                 (pInfoConfig (Consensus.protocolInfo p))
-                 gentx
-                 nullTracer -- stdoutTracer
+        submitGeneralTx iocp targetSocketFp
+                        (pInfoConfig (Consensus.protocolInfo p))
+                        gentx
+                        nullTracer -- stdoutTracer
 
 --TODO: remove these local definitions when the updated ledger lib is available
 fromCborTxAux :: LB.ByteString ->  Either Binary.DecoderError (UTxO.ATxAux B.ByteString)
