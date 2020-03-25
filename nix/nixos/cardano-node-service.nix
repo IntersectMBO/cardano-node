@@ -27,7 +27,6 @@ let
             "--delegation-certificate ${cfg.delegationCertificate}"}"
         ] ++ cfg.extraArgs;
     in ''
-      set -x
         choice() { i=$1; shift; eval "echo \''${$((i + 1))}"; }
         echo "Starting ${exec}: ${concatStringsSep "\"\n   echo \"" cmd}"
         echo "..or, once again, in a single line:"
