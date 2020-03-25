@@ -1,22 +1,7 @@
 {
    "Producers": [
      {
-       "addr": "3.125.75.199",
-       "port": 3001,
-       "valency": 1
-     },
-     {
-       "addr": "18.177.103.105",
-       "port": 3001,
-       "valency": 1
-     },
-     {
-       "addr": "18.141.0.112",
-       "port": 3001,
-       "valency": 1
-     },
-     {
-       "addr": "52.14.58.121",
+       "addr": "relays-new.cardano-mainnet.iohk.io",
        "port": 3001,
        "valency": 1
      }
