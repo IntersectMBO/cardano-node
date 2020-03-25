@@ -87,7 +87,7 @@ import           Ouroboros.Network.Protocol.TxSubmission.Client (ClientStIdle(..
                                                                  TxSubmissionClient(..))
 import           Ouroboros.Network.Protocol.TxSubmission.Type (BlockingReplyList(..),
                                                                TokBlockingStyle(..))
-import           Ouroboros.Network.NodeToClient ( AssociateWithIOCP
+import           Ouroboros.Network.NodeToClient ( IOManager
                                                 , NetworkConnectTracers (..))
 import qualified Ouroboros.Network.NodeToClient as NtC
 
@@ -529,7 +529,7 @@ instance (MonadIO m) => Transformable Text m TraceLowLevelSubmit where
 submitTx :: ( RunNode blk
             , Show (ApplyTxErr blk)
             )
-         => AssociateWithIOCP
+         => IOManager
          -> SocketPath
          -> TopLevelConfig blk
          -> GenTx blk

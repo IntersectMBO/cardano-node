@@ -1,4 +1,4 @@
-resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/15329855d4eadbee5f5f486104c7b04b50e05f7b/snapshot.yaml
+resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/3ac22a2fda11ca7131a011a9ea48fcbfdc26d6b3/snapshot.yaml
 compiler: ghc-8.6.5
 
 packages:
@@ -56,7 +56,7 @@ extra-deps:
 
     # Cardano-ledger dependencies
   - git: https://github.com/input-output-hk/cardano-ledger
-    commit: 2f6a649662aa93fc8427dcf6706ee63167f4205d
+    commit: 22e89a5f7cc2b02192b1eb420d74530eb2d6cb82
     subdirs:
       - cardano-ledger
       - cardano-ledger/test
@@ -64,7 +64,7 @@ extra-deps:
       - crypto/test
 
   - git: https://github.com/input-output-hk/cardano-ledger-specs
-    commit: afacc7969445e4db5427936489f5a49a8a3a8f99
+    commit: 28b4381461252b523473972c85b003301a5deadc
     subdirs:
       # small-steps
       - byron/semantics/executable-spec
@@ -72,15 +72,18 @@ extra-deps:
       - byron/ledger/executable-spec
       # cs-blockchain
       - byron/chain/executable-spec
+      - shelley/chain-and-ledger/dependencies/non-integer
+      - shelley/chain-and-ledger/executable-spec
+      - shelley/chain-and-ledger/executable-spec/test
 
   - git: https://github.com/input-output-hk/cardano-prelude
-    commit: 15329855d4eadbee5f5f486104c7b04b50e05f7b
+    commit: 3ac22a2fda11ca7131a011a9ea48fcbfdc26d6b3
     subdirs:
       - .
       - test
 
   - git: https://github.com/input-output-hk/cardano-base
-    commit: f869bee9b08ba1044b1476737c9d65083e1c6c7f
+    commit: 1222078176fe74d5ce17f2a8343c6588233a49a3
     subdirs:
       - binary
       - binary/test
@@ -121,7 +124,7 @@ extra-deps:
     #Ouroboros-network dependencies
 
   - git: https://github.com/input-output-hk/ouroboros-network
-    commit: ee2d69a973e0990b723d00fe8f2fec331c9d6b56
+    commit: e71aa72adc7e876cda4ff19b5cc0900167fa9804
     subdirs:
         - io-sim
         - io-sim-classes
@@ -131,6 +134,7 @@ extra-deps:
         - ouroboros-consensus-byron
         - ouroboros-consensus/ouroboros-consensus-mock
         - ouroboros-consensus-cardano
+        - ouroboros-consensus-shelley
         - typed-protocols
         - typed-protocols-examples
         - ouroboros-network-testing
