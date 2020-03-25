@@ -49,7 +49,6 @@ import           Ouroboros.Network.NodeToClient ( IOManager
                                                 , withIOManager
                                                 )
 
-
 import           Cardano.CLI.Delegation
 import           Cardano.CLI.Genesis
 import           Cardano.CLI.Key
@@ -211,3 +210,4 @@ runSpendUTxO configFp (NewTxFile ctTx) ctKey ins outs = do
     gTx <- firstExceptT IssueUtxoError $
              issueUTxOExpenditure nc ins outs sk
     ensureNewFileLBS ctTx $ toCborTxAux gTx
+

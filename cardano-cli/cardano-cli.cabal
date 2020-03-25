@@ -25,6 +25,7 @@ library
   exposed-modules:     Cardano.CLI.Byron.Parsers
                        Cardano.CLI.Byron.Run
                        Cardano.CLI.Byron.UpdateProposal
+                       Cardano.CLI.Byron.Vote
                        Cardano.CLI.Common.Parsers
                        Cardano.CLI.Delegation
                        Cardano.CLI.Genesis

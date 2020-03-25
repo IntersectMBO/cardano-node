@@ -63,6 +63,9 @@ parseCBORObject = asum
   , flag' CBORUpdateProposalByron $
         long "byron-update-proposal"
      <> help "The CBOR file is a byron era update proposal"
+  , flag' CBORVoteByron $
+        long "byron-vote"
+     <> help "The CBOR file is a byron era vote"
   ]
 
 parseDelegationRelatedValues :: Parser ClientCommand

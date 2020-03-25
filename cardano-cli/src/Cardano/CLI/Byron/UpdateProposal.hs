@@ -5,13 +5,15 @@ module Cardano.CLI.Byron.UpdateProposal
   , convertProposalToGenTx
   , createUpdateProposal
   , deserialiseByronUpdateProposal
+  , readByronUpdateProposal
   , serialiseByronUpdateProposal
   , submitByronUpdateProposal
   ) where
 
 import           Cardano.Prelude
 
-import           Control.Monad.Trans.Except.Extra (firstExceptT, hoistEither)
+import           Control.Monad.Trans.Except.Extra
+                   (firstExceptT, handleIOExceptT, hoistEither)
 import           Control.Tracer (nullTracer, stdoutTracer, traceWith)
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.Map.Strict as M
@@ -147,6 +149,12 @@ deserialiseByronUpdateProposal bs =
   annotateProposal :: AProposal Binary.ByteSpan -> AProposal ByteString
   annotateProposal proposal = Binary.annotationBytes bs proposal
 
+readByronUpdateProposal :: FilePath -> ExceptT CliError IO LByteString
+readByronUpdateProposal fp =
+  handleIOExceptT (ByronReadUpdateProposalFileFailure fp . toS . displayException)
+                  (LB.readFile fp)
+
+
 submitByronUpdateProposal
   :: IOManager
   -> ConfigYamlFilePath
@@ -156,7 +164,7 @@ submitByronUpdateProposal
 submitByronUpdateProposal iocp config proposalFp mSocket = do
     nc <- liftIO $ parseNodeConfigurationFP config
 
-    proposalBs <- liftIO $ LB.readFile proposalFp
+    proposalBs <- readByronUpdateProposal proposalFp
     aProposal <- hoistEither $ deserialiseByronUpdateProposal proposalBs
     let genTx = convertProposalToGenTx aProposal
     let skt   = chooseSocketPath (ncSocketPath nc) mSocket
