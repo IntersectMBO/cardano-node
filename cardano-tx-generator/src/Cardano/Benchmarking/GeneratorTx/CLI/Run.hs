@@ -18,7 +18,7 @@ import           Control.Monad.Trans.Except.Extra
 
 import qualified Ouroboros.Consensus.Cardano as Consensus
 import           Ouroboros.Network.NodeToClient
-                    ( AssociateWithIOCP
+                    ( IOManager
                     , withIOManager
                     )
 
@@ -119,5 +119,5 @@ runCommand (GenerateTxs logConfigFp
 
 ----------------------------------------------------------------------------
 
-withIOManagerE :: (AssociateWithIOCP -> ExceptT e IO a) -> ExceptT e IO a
+withIOManagerE :: (IOManager -> ExceptT e IO a) -> ExceptT e IO a
 withIOManagerE k = ExceptT $ withIOManager (runExceptT . k)

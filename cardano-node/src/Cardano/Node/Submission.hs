@@ -47,7 +47,7 @@ import           Ouroboros.Network.Protocol.ChainSync.Client (chainSyncClientPee
 import           Ouroboros.Network.Protocol.ChainSync.Codec (codecChainSync)
 import           Ouroboros.Network.Protocol.Handshake.Version ( Versions
                                                               , simpleSingletonVersions)
-import           Ouroboros.Network.NodeToClient ( AssociateWithIOCP
+import           Ouroboros.Network.NodeToClient ( IOManager
                                                 , NetworkConnectTracers (..))
 import qualified Ouroboros.Network.NodeToClient as NtC
 
@@ -101,7 +101,7 @@ instance (MonadIO m) => Transformable Text m TraceLowLevelSubmit where
 submitTx :: ( RunNode blk
             , Show (ApplyTxErr blk)
             )
-         => AssociateWithIOCP
+         => IOManager
          -> SocketPath
          -> TopLevelConfig blk
          -> GenTx blk

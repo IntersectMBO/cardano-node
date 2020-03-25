@@ -323,7 +323,7 @@ createConnection
   :: forall blk.
      RunNode blk
   => Tracer IO String
-  -> AssociateWithIOCP
+  -> IOManager
   -> TopLevelConfig blk
   -> SecurityParam
   -> ChainsVar IO blk

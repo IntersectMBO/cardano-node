@@ -28,7 +28,7 @@ module Cardano.CLI.Run (
   , ExplorerAPIEnpoint(..)
 
   -- * re-exports from Ouroboros-Network
-  , AssociateWithIOCP
+  , IOManager
   , withIOManager
   ) where
 
@@ -57,7 +57,7 @@ import           Cardano.Crypto (RequiresNetworkMagic(..))
 import qualified Cardano.Crypto.Hashing as Crypto
 import qualified Cardano.Crypto.Signing as Crypto
 
-import           Ouroboros.Network.NodeToClient ( AssociateWithIOCP
+import           Ouroboros.Network.NodeToClient ( IOManager
                                                 , withIOManager
                                                 )
 
@@ -420,5 +420,5 @@ ensureNewFile writer outFile blob = do
 ensureNewFileLBS :: FilePath -> LB.ByteString -> ExceptT CliError IO ()
 ensureNewFileLBS = ensureNewFile LB.writeFile
 
-withIOManagerE :: (AssociateWithIOCP -> ExceptT e IO a) -> ExceptT e IO a
+withIOManagerE :: (IOManager -> ExceptT e IO a) -> ExceptT e IO a
 withIOManagerE k = ExceptT $ withIOManager (runExceptT . k)

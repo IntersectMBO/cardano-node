@@ -86,7 +86,7 @@ import           Cardano.Benchmarking.GeneratorTx.Tx (toCborTxAux, txSpendGenesi
 
 import           Control.Tracer (Tracer, traceWith)
 
-import           Ouroboros.Network.NodeToClient (AssociateWithIOCP)
+import           Ouroboros.Network.NodeToClient (IOManager)
 
 import           Ouroboros.Consensus.Node.Run (RunNode)
 import           Ouroboros.Consensus.Node.ProtocolInfo (ProtocolInfo (..))
@@ -146,7 +146,7 @@ newtype ExplorerAPIEnpoint =
 -----------------------------------------------------------------------------------------
 genesisBenchmarkRunner
   :: LoggingLayer
-  -> AssociateWithIOCP
+  -> IOManager
   -> SocketPath
   -> Consensus.Protocol ByronBlock Consensus.ProtocolRealPBFT
   -> NonEmpty NodeAddress
@@ -396,7 +396,7 @@ extractGenesisFunds genesisConfig signingKeys =
 prepareInitialFunds
   :: Tracer IO (TraceBenchTxSubmit (Mempool.GenTxId ByronBlock))
   -> Tracer IO TraceLowLevelSubmit
-  -> AssociateWithIOCP 
+  -> IOManager 
   -> SocketPath
   -> CC.Genesis.Config
   -> TopLevelConfig ByronBlock
@@ -642,7 +642,7 @@ runBenchmark
   -> Tracer IO SendRecvConnect
   -> Tracer IO (SendRecvTxSubmission ByronBlock)
   -> Tracer IO TraceLowLevelSubmit
-  -> AssociateWithIOCP
+  -> IOManager
   -> SocketPath
   -> TopLevelConfig ByronBlock
   -> Crypto.SigningKey
@@ -837,7 +837,7 @@ postTx benchTracer initialRequest serializedTx = do
 createMoreFundCoins
   :: Tracer IO (TraceBenchTxSubmit (Mempool.GenTxId ByronBlock))
   -> Tracer IO TraceLowLevelSubmit
-  -> AssociateWithIOCP
+  -> IOManager
   -> SocketPath
   -> TopLevelConfig ByronBlock
   -> Crypto.SigningKey
@@ -1175,7 +1175,7 @@ launchTxPeer
   -- tracer for lower level connection and details of
   -- protocol interactisn, intended for debugging
   -- associated issues.
-  -> AssociateWithIOCP
+  -> IOManager
   -- ^ associate a file descriptor with IO completion port
   -> MSTM.TVar IO Bool
   -- a "global" stop variable, set to True to force shutdown

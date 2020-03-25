@@ -52,7 +52,7 @@ import           Ouroboros.Network.NodeToNode (NetworkConnectTracers (..))
 import qualified Ouroboros.Network.NodeToNode as NtN
 -- TODO: #1685 (ouroboros-network) IO manager terms and types should be exported
 -- from NodeToNode module as well.
-import           Ouroboros.Network.NodeToClient (AssociateWithIOCP)
+import           Ouroboros.Network.NodeToClient (IOManager)
 import           Ouroboros.Network.Protocol.BlockFetch.Client (BlockFetchClient(..), blockFetchClientPeer)
 import           Ouroboros.Network.Protocol.ChainSync.Client (chainSyncClientNull, chainSyncClientPeer)
 import           Ouroboros.Network.Protocol.Handshake.Type (Handshake)
@@ -193,7 +193,7 @@ data BenchmarkTxSubmitTracers m blk = BenchmarkTracers
 
 benchmarkConnectTxSubmit
   :: forall m blk . (RunNode blk, m ~ IO)
-  => AssociateWithIOCP
+  => IOManager
   -> BenchmarkTxSubmitTracers m blk
   -- ^ For tracing the send/receive actions
   -> TopLevelConfig blk

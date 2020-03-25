@@ -80,7 +80,7 @@ import           Ouroboros.Network.Mux
                    (AppType(InitiatorApp), OuroborosApplication(..),
                     MuxPeer(..), RunMiniProtocol(..))
 import           Ouroboros.Network.NodeToClient
-                   (AssociateWithIOCP, NetworkConnectTracers(..), NodeToClientProtocols(..),
+                   (IOManager, NetworkConnectTracers(..), NodeToClientProtocols(..),
                     nodeToClientProtocols, NodeToClientVersionData(..),
                     NodeToClientVersion(NodeToClientV_1),
                     connectTo, localSnocket,
@@ -340,7 +340,7 @@ withRealPBFT _ genFile nMagic sigThresh delCertFp sKeyFp update ptcl action = do
 getLocalTip
   :: ConfigYamlFilePath
   -> Maybe CLISocketPath
-  -> AssociateWithIOCP
+  -> IOManager
   -> IO ()
 getLocalTip configFp mSockPath iocp = do
   nc <- parseNodeConfigurationFP configFp
@@ -370,7 +370,7 @@ createNodeConnection
   :: forall blk . (Condense (HeaderHash blk), RunNode blk)
   => Proxy blk
   -> Consensus.Protocol blk (BlockProtocol blk)
-  -> AssociateWithIOCP
+  -> IOManager
   -> SocketPath
   -> IO ()
 createNodeConnection proxy ptcl iocp (SocketFile path) =

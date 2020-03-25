@@ -49,7 +49,7 @@ import           Cardano.Crypto (SigningKey(..), ProtocolMagicId, RequiresNetwor
 import qualified Cardano.Crypto.Hashing as Crypto
 import qualified Cardano.Crypto.Signing as Crypto
 
-import           Ouroboros.Network.NodeToClient (AssociateWithIOCP)
+import           Ouroboros.Network.NodeToClient (IOManager)
 
 import qualified Ouroboros.Consensus.Byron.Ledger as Byron
 import           Ouroboros.Consensus.Byron.Ledger (GenTx(..), ByronBlock)
@@ -249,7 +249,7 @@ issueUTxOExpenditure
 
 -- | Submit a transaction to a node specified by topology info.
 nodeSubmitTx
-  :: AssociateWithIOCP
+  :: IOManager
   -> Text
   -- ^ Genesis hash.
   -> Maybe Int
