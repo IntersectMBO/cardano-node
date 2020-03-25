@@ -12,7 +12,7 @@
 
 module Cardano.CLI.Ops
   ( decodeCBOR
-  , deserialiseDelegateKey
+  , deserialiseSigningKey
   , getGenesisHashText
   , getLocalTip
   , pPrintCBOR
@@ -32,13 +32,13 @@ module Cardano.CLI.Ops
 
 import           Prelude (show, unlines)
 import           Cardano.Prelude hiding (catch, option, show)
-import           Control.Monad.Trans.Except.Extra (firstExceptT, left)
 
 import           Codec.CBOR.Pretty (prettyHexEnc)
 import           Codec.CBOR.Read (DeserialiseFailure, deserialiseFromBytes)
 import           Codec.CBOR.Term (decodeTerm, encodeTerm)
 import           Codec.CBOR.Write (toLazyByteString)
-import           Control.Monad.Trans.Except.Extra (handleIOExceptT, right)
+import           Control.Monad.Trans.Except.Extra
+                   (firstExceptT, handleIOExceptT, left, right)
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.Text as T
 import qualified Formatting as F
@@ -113,16 +113,17 @@ decodeCBOR bs decoder =
   first CBORDecodingError $ deserialiseFromBytes decoder bs
 
 
-deserialiseDelegateKey :: Protocol -> FilePath -> LB.ByteString -> Either CliError SigningKey
-deserialiseDelegateKey ByronLegacy fp delSkey =
+deserialiseSigningKey :: Protocol -> FilePath -> LB.ByteString -> Either CliError SigningKey
+deserialiseSigningKey ByronLegacy fp delSkey =
   case deserialiseFromBytes Legacy.decodeLegacyDelegateKey delSkey of
     Left deSerFail -> Left $ SigningKeyDeserialisationFailed fp deSerFail
     Right (_, Legacy.LegacyDelegateKey sKey ) -> pure sKey
-deserialiseDelegateKey RealPBFT fp delSkey =
+deserialiseSigningKey RealPBFT fp delSkey =
   case deserialiseFromBytes Crypto.fromCBORXPrv delSkey of
     Left deSerFail -> Left $ SigningKeyDeserialisationFailed fp deSerFail
     Right (_, sKey) -> Right $ SigningKey sKey
-deserialiseDelegateKey ptcl _ _ = Left $ ProtocolNotSupported ptcl
+deserialiseSigningKey ptcl _ _ = Left $ ProtocolNotSupported ptcl
+
 
 getGenesisHashText :: GenesisFile -> ExceptT CliError IO Text
 getGenesisHashText (GenesisFile genFile) = do
@@ -213,6 +214,7 @@ data CliError
   | GenesisReadError !FilePath !Genesis.GenesisDataError
   | GenesisSpecError !Text
   | IssueUtxoError !RealPBFTError
+  | NoBlocksFound !FilePath
   | NodeSubmitTxError !RealPBFTError
   | NotEnoughTxInputs
   | NotEnoughTxOutputs
@@ -228,6 +230,9 @@ data CliError
   -- TODO:  sadly, VerificationKeyParseError isn't exported from Cardano.Crypto.Signing/*
   | SigningKeyDeserialisationFailed !FilePath !DeserialiseFailure
   | SpendGenesisUTxOError !RealPBFTError
+  | UpdateProposalBlockReadError !FilePath !Text
+  | UpdateProposalEpochBoundaryBlockError !Text
+  | UpdateProposalFileModificationError ![FilePath] !Text
   | VerificationKeyDeserialisationFailed !FilePath !Text
   | FileNotFoundError !FilePath
 
@@ -255,6 +260,8 @@ instance Show CliError where
     = "Error in genesis specification: " <> T.unpack err
   show (IssueUtxoError err)
     = "Error SpendUTxO command: " <> show err
+  show (NoBlocksFound fp)
+    = "Error while creating update proposal, no blocks found in: " <> fp
   show (NodeSubmitTxError err)
     = "Error in SubmitTx command: " <> show err
   show (NoGenesisDelegationForKey key)
@@ -286,6 +293,13 @@ instance Show CliError where
     = "Error in SpendGenesisUTxO command: " <> show err
   show (TxDeserialisationFailed fp err)
     = "Transaction file '" <> fp <> "' read failure: "<> show err
+  show (UpdateProposalBlockReadError fp err)
+    = "Error reading block at: " <> fp <> "Error: " <> T.unpack err
+  show (UpdateProposalEpochBoundaryBlockError err)
+    = "Error creating update proposal due to: " <> T.unpack err
+  show (UpdateProposalFileModificationError fps err)
+    = "Error checking for the latest created block in: " <> show fps
+      <> " Failure: " <> T.unpack err
   show (VerificationKeyDeserialisationFailed fp err)
     = "Verification key '" <> fp <> "' read failure: "<> T.unpack err
   show (FileNotFoundError fp)

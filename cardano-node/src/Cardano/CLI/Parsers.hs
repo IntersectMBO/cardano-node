@@ -1,7 +1,6 @@
-{-# LANGUAGE ApplicativeDo #-}
-
 module Cardano.CLI.Parsers
-  ( command'
+  ( ClientCommand(..)
+  , command'
   , parseBenchmarkingCommands
   , parseDelegationRelatedValues
   , parseGenesisParameters
@@ -24,30 +23,157 @@ import           Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import           Network.Socket (PortNumber)
 import           Options.Applicative as OA
 
+import           Cardano.Benchmarking.GeneratorTx
+import           Cardano.CLI.Byron.Parsers (ByronCommand(..))
 import           Cardano.CLI.Delegation
 import           Cardano.CLI.Genesis
 import           Cardano.CLI.Key
-import           Cardano.CLI.Run
+import           Cardano.CLI.Tx
+
 import           Cardano.Common.Parsers
 
 import           Cardano.Binary (Annotated(..))
 import           Cardano.Chain.Common
-                   (Address(..), BlockCount(..), Lovelace
-                   , NetworkMagic(..), decodeAddressBase58
-                   , mkLovelace, rationalToLovelacePortion)
+                   (Address(..), BlockCount(..), Lovelace,
+                    NetworkMagic(..), decodeAddressBase58,
+                    mkLovelace, rationalToLovelacePortion)
 import           Cardano.Chain.Genesis (FakeAvvmOptions(..), TestnetBalanceOptions(..))
 import           Cardano.Chain.Slotting (EpochNumber(..))
 import           Cardano.Chain.UTxO (TxId, TxIn(..), TxOut(..))
 import           Cardano.Config.CommonCLI
 import           Cardano.Config.Types
-                   (CBORObject(..), ConfigYamlFilePath(..), DelegationCertFile(..)
-                   , GenesisFile(..), NodeAddress(..), NodeHostAddress(..)
-                   , SigningKeyFile(..))
 import           Cardano.Crypto (RequiresNetworkMagic(..), decodeHash)
 import           Cardano.Crypto.ProtocolMagic
                    (AProtocolMagic(..), ProtocolMagic
                    , ProtocolMagicId(..))
 
+-- | Sub-commands of 'cardano-cli'.
+data ClientCommand
+  =
+  --- Byron Related Commands ---
+    ByronClientCommand ByronCommand
+
+  --- Genesis Related Commands ---
+  | Genesis
+    NewDirectory
+    GenesisParameters
+    Protocol
+  | PrintGenesisHash
+    GenesisFile
+
+  --- Key Related Commands ---
+  | Keygen
+    Protocol
+    NewSigningKeyFile
+    PasswordRequirement
+  | ToVerification
+    Protocol
+    SigningKeyFile
+    NewVerificationKeyFile
+
+  | PrettySigningKeyPublic
+    Protocol
+    SigningKeyFile
+
+  | MigrateDelegateKeyFrom
+    Protocol
+    -- ^ Old protocol
+    SigningKeyFile
+    -- ^ Old key
+    Protocol
+    -- ^ New protocol
+    NewSigningKeyFile
+    -- ^ New Key
+
+  | PrintSigningKeyAddress
+    Protocol
+    NetworkMagic  -- TODO:  consider deprecation in favor of ProtocolMagicId,
+                  --        once Byron is out of the picture.
+    SigningKeyFile
+
+    --- Delegation Related Commands ---
+
+  | IssueDelegationCertificate
+    ConfigYamlFilePath
+    EpochNumber
+    -- ^ The epoch from which the delegation is valid.
+    SigningKeyFile
+    -- ^ The issuer of the certificate, who delegates their right to sign blocks.
+    VerificationKeyFile
+    -- ^ The delegate, who gains the right to sign blocks on behalf of the issuer.
+    NewCertificateFile
+    -- ^ Filepath of the newly created delegation certificate.
+  | CheckDelegation
+    ConfigYamlFilePath
+    CertificateFile
+    VerificationKeyFile
+    VerificationKeyFile
+
+  | GetLocalNodeTip
+    ConfigYamlFilePath
+    (Maybe CLISocketPath)
+
+    -----------------------------------
+
+  | SubmitTx
+    TxFile
+    -- ^ Filepath of transaction to submit.
+    ConfigYamlFilePath
+    (Maybe CLISocketPath)
+
+  | SpendGenesisUTxO
+    ConfigYamlFilePath
+    NewTxFile
+    -- ^ Filepath of the newly created transaction.
+    SigningKeyFile
+    -- ^ Signing key of genesis UTxO owner.
+    Address
+    -- ^ Genesis UTxO address.
+    (NonEmpty TxOut)
+    -- ^ Tx output.
+  | SpendUTxO
+    ConfigYamlFilePath
+    NewTxFile
+    -- ^ Filepath of the newly created transaction.
+    SigningKeyFile
+    -- ^ Signing key of Tx underwriter.
+    (NonEmpty TxIn)
+    -- ^ Inputs available for spending to the Tx underwriter's key.
+    (NonEmpty TxOut)
+    -- ^ Genesis UTxO output Address.
+
+    --- Tx Generator Command ---
+
+  | GenerateTxs
+    FilePath
+    -- ^ Configuration yaml
+    SigningKeyFile
+    DelegationCertFile
+    GenesisFile
+    -- ^ Genesis hash
+    SocketPath
+    (NonEmpty NodeAddress)
+    NumberOfTxs
+    NumberOfInputsPerTx
+    NumberOfOutputsPerTx
+    FeePerTx
+    TPSRate
+    (Maybe TxAdditionalSize)
+    (Maybe ExplorerAPIEnpoint)
+    [SigningKeyFile]
+
+    --- Misc Commands ---
+
+  | DisplayVersion
+
+  | ValidateCBOR
+    CBORObject
+    -- ^ Type of the CBOR object
+    FilePath
+
+  | PrettyPrintCBOR
+    FilePath
+   deriving Show
 
 -- | See the rationale for cliParseBase58Address.
 cliParseLovelace :: Word64 -> Lovelace
@@ -79,12 +205,6 @@ cliParseTxId :: String -> TxId
 cliParseTxId =
   either (panic . ("Bad Lovelace value: " <>) . show) identity
   . decodeHash . pack
-
-command' :: String -> String -> Parser a -> Mod CommandFields a
-command' c descr p =
-    OA.command c $ info (p <**> helper) $ mconcat [
-        progDesc descr
-      ]
 
 parseAddress :: String -> String -> Parser Address
 parseAddress opt desc =
@@ -317,18 +437,7 @@ parseLocalNodeQueryValues =
                 <*> parseCLISocketPath "Socket of target node"
         ]
 
-parseLovelace :: String -> String -> Parser Lovelace
-parseLovelace optname desc =
-  either (panic . show) identity . mkLovelace
-    <$> parseIntegral optname desc
 
-parseFraction :: String -> String -> Parser Rational
-parseFraction optname desc =
-  option (toRational <$> readDouble) $
-      long optname
-   <> metavar "DOUBLE"
-   <> help desc
-  where
 
 parseFractionWithDefault
   :: String
@@ -342,13 +451,6 @@ parseFractionWithDefault optname desc w =
                 <> help desc
                 <> value w
                 )
-
-readDouble :: ReadM Double
-readDouble = do
-  f <- auto
-  when (f < 0) $ readerError "fraction must be >= 0"
-  when (f > 1) $ readerError "fraction must be <= 1"
-  return f
 
 parseNetworkMagic :: Parser NetworkMagic
 parseNetworkMagic =
@@ -429,9 +531,6 @@ parseRequiresNetworkMagic =
         <> help "Require network magic in transactions."
         <> hidden
     )
-
-parseSigningKeyFile :: String -> String -> Parser SigningKeyFile
-parseSigningKeyFile opt desc = SigningKeyFile <$> parseFilePath opt desc
 
 parseSigningKeysFiles :: String -> String -> Parser [SigningKeyFile]
 parseSigningKeysFiles opt desc = some $ SigningKeyFile <$> parseFilePath opt desc

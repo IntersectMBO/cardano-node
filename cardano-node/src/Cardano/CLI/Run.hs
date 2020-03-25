@@ -49,8 +49,6 @@ import           System.Info (arch, compilerName, compilerVersion, os)
 import qualified Cardano.Chain.Common as Common
 import qualified Cardano.Chain.Delegation as Delegation
 import qualified Cardano.Chain.Genesis as Genesis
-import           Cardano.Chain.Slotting (EpochNumber(..))
-import qualified Cardano.Chain.UTxO as UTxO
 import           Cardano.Chain.Update (ApplicationName(..))
 
 import           Cardano.Crypto (RequiresNetworkMagic(..))
@@ -63,10 +61,14 @@ import           Ouroboros.Network.NodeToClient ( AssociateWithIOCP
 
 import qualified Ouroboros.Consensus.Cardano as Consensus
 
+import           Cardano.CLI.Byron.Parsers (ByronCommand(..))
+import           Cardano.CLI.Byron.UpdateProposal
+                   (createUpdateProposal, serialiseByronUpdateProposal)
 import           Cardano.CLI.Delegation
 import           Cardano.CLI.Genesis
 import           Cardano.CLI.Key
 import           Cardano.CLI.Ops
+import           Cardano.CLI.Parsers
 import           Cardano.CLI.Tx
 import           Cardano.Benchmarking.GeneratorTx
                    (ExplorerAPIEnpoint (..), NumberOfTxs (..)
@@ -74,137 +76,16 @@ import           Cardano.Benchmarking.GeneratorTx
                    , FeePerTx (..), TPSRate (..), TxAdditionalSize (..)
                    , genesisBenchmarkRunner)
 import           Cardano.Common.LocalSocket
-import           Cardano.Config.Protocol
 import           Cardano.Config.Logging (createLoggingFeatureCLI)
 import           Cardano.Config.Types
 
--- | Sub-commands of 'cardano-cli'.
-data ClientCommand
-  =
-  --- Genesis Related Commands ---
-    Genesis
-    NewDirectory
-    GenesisParameters
-    Protocol
-  | PrintGenesisHash
-    GenesisFile
-
-  --- Key Related Commands ---
-  | Keygen
-    Protocol
-    NewSigningKeyFile
-    PasswordRequirement
-  | ToVerification
-    Protocol
-    SigningKeyFile
-    NewVerificationKeyFile
-
-  | PrettySigningKeyPublic
-    Protocol
-    SigningKeyFile
-
-  | MigrateDelegateKeyFrom
-    Protocol
-    -- ^ Old protocol
-    SigningKeyFile
-    -- ^ Old key
-    Protocol
-    -- ^ New protocol
-    NewSigningKeyFile
-    -- ^ New Key
-
-  | PrintSigningKeyAddress
-    Protocol
-    Common.NetworkMagic  -- TODO:  consider deprecation in favor of ProtocolMagicId,
-                         --        once Byron is out of the picture.
-    SigningKeyFile
-
-    --- Delegation Related Commands ---
-
-  | IssueDelegationCertificate
-    ConfigYamlFilePath
-    EpochNumber
-    -- ^ The epoch from which the delegation is valid.
-    SigningKeyFile
-    -- ^ The issuer of the certificate, who delegates their right to sign blocks.
-    VerificationKeyFile
-    -- ^ The delegate, who gains the right to sign blocks on behalf of the issuer.
-    NewCertificateFile
-    -- ^ Filepath of the newly created delegation certificate.
-  | CheckDelegation
-    ConfigYamlFilePath
-    CertificateFile
-    VerificationKeyFile
-    VerificationKeyFile
-
-  | GetLocalNodeTip
-    ConfigYamlFilePath
-    (Maybe CLISocketPath)
-
-    -----------------------------------
-
-  | SubmitTx
-    TxFile
-    -- ^ Filepath of transaction to submit.
-    ConfigYamlFilePath
-    (Maybe CLISocketPath)
-
-  | SpendGenesisUTxO
-    ConfigYamlFilePath
-    NewTxFile
-    -- ^ Filepath of the newly created transaction.
-    SigningKeyFile
-    -- ^ Signing key of genesis UTxO owner.
-    Common.Address
-    -- ^ Genesis UTxO address.
-    (NonEmpty UTxO.TxOut)
-    -- ^ Tx output.
-  | SpendUTxO
-    ConfigYamlFilePath
-    NewTxFile
-    -- ^ Filepath of the newly created transaction.
-    SigningKeyFile
-    -- ^ Signing key of Tx underwriter.
-    (NonEmpty UTxO.TxIn)
-    -- ^ Inputs available for spending to the Tx underwriter's key.
-    (NonEmpty UTxO.TxOut)
-    -- ^ Genesis UTxO output Address.
-
-    --- Tx Generator Command ---
-
-  | GenerateTxs
-    FilePath
-    -- ^ Configuration yaml
-    SigningKeyFile
-    DelegationCertFile
-    GenesisFile
-    -- ^ Genesis hash
-    SocketPath
-    (NonEmpty NodeAddress)
-    NumberOfTxs
-    NumberOfInputsPerTx
-    NumberOfOutputsPerTx
-    FeePerTx
-    TPSRate
-    (Maybe TxAdditionalSize)
-    (Maybe ExplorerAPIEnpoint)
-    [SigningKeyFile]
-
-    --- Misc Commands ---
-
-  | DisplayVersion
-
-  | ValidateCBOR
-    CBORObject
-    -- ^ Type of the CBOR object
-    FilePath
-
-  | PrettyPrintCBOR
-    FilePath
-   deriving Show
-
 
 runCommand :: ClientCommand -> ExceptT CliError IO ()
+runCommand (ByronClientCommand (UpdateProposal dbFp configFp sKey outputFp paramsToUpdate)) = do
+  sK <- readSigningKey RealPBFT sKey
+  proposal <- createUpdateProposal dbFp configFp sK paramsToUpdate
+  ensureNewFileLBS outputFp (serialiseByronUpdateProposal proposal)
+
 runCommand DisplayVersion = do
   liftIO . putTextLn
          . toS
@@ -214,8 +95,8 @@ runCommand DisplayVersion = do
                   ]
 
 runCommand (Genesis outDir params ptcl) = do
-  gen <- mkGenesis params
-  dumpGenesis ptcl outDir `uncurry` gen
+  (genData, genSecrets) <- mkGenesis params
+  dumpGenesis ptcl outDir genData genSecrets
 
 runCommand (GetLocalNodeTip configFp mSockPath) =
   withIOManagerE $ \iocp -> liftIO $ getLocalTip configFp mSockPath iocp

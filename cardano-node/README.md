@@ -101,7 +101,7 @@ A CLI utility to support a variety of key material operations (genesis, migratio
 
 The general synopsis is as follows:
  ```
-   Usage: cardano-cli (Genesis related CMDs | Key related CMDs | Delegation related CMDs | Transaction related CMDs | Local node related CMDs | Benchmarking related CMDs)
+   Usage: cardano-cli (Byron related CMDs |Genesis related CMDs | Key related CMDs | Delegation related CMDs | Transaction related CMDs | Local node related CMDs | Benchmarking related CMDs)
 ```
 
 NOTE: the exact invocation command depends on the environment.  If you have only
@@ -273,7 +273,7 @@ source and target signing keys and lovelace value to send.
 The target address defaults to the 1-st richman key (`configuration/delegate-keys.001.key`)
 of the testnet, and lovelace amount is almost the entirety of its funds.
 
-# Local node queries
+## Local node queries
 
 You can query the tip of your local node via the `get-tip` command as follows
 
@@ -289,6 +289,29 @@ Block hash: 4ab21a10e1b25e39
 Slot: 6
 Block number: 5
 ```
+
+## Update proposals
+
+There is currently only support to create a Byron update proposal:
+
+```
+cardano-cli create-byron-update-proposal --database-path FILEPATH
+                                         --config NODE-CONFIGURATION
+                                         --signing-key FILEPATH
+                                         ...
+```
+The three mandatory arguments are `database-path`, `config` and `signing-key`. The remaining arguments are parameters you want to update in your update proposal.
+
+You must run a Byron node to have blocks available in the `db` directory. This is necessary to extract the protocol version and software version for the update proposal.
+
+Example:
+
+```
+cabal exec cardano-cli -- create-byron-update-proposal --database-path db --config configuration/configuration-mainnet.yaml --signing-key configuration/genesis/mainnet-genesis-key --filepath my-update-proposal
+```
+You can also check your proposal's validity using the [`validate-cbor`](#validate-cbor-files) command.
+
+See the [Byron specification](https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/byronLedgerSpec/latest/download-by-type/doc-pdf/ledger-spec) for more details on update proposals.
 
 # Development
 
