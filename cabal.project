@@ -5,23 +5,19 @@ packages:
     cardano-node
     cardano-tx-generator
 
+tests: False
+
 package cardano-config
+  tests: True
   ghc-options: -Wall -fwarn-redundant-constraints
 
 package cardano-node
+  tests: True
   ghc-options: -Wall -fwarn-redundant-constraints
 
 package cardano-tx-generator
+  tests: True
   ghc-options: -Wall -fwarn-redundant-constraints
-
-package ouroboros-consensus-byron
-  tests: False
-
-package ouroboros-consensus-shelley
-  tests: False
-
-package ouroboros-consensus-mock
-  tests: False
 
 source-repository-package
   type: git
@@ -29,13 +25,6 @@ source-repository-package
   tag: 1222078176fe74d5ce17f2a8343c6588233a49a3
   --sha256: 1xnccf7p1979wvqdjnkj8a68k3yy3a9z0gbnbl4pghcv24j2myfm
   subdir: binary
-
-source-repository-package
-  type: git
-  location: https://github.com/input-output-hk/cardano-base
-  tag: 1222078176fe74d5ce17f2a8343c6588233a49a3
-  --sha256: 1xnccf7p1979wvqdjnkj8a68k3yy3a9z0gbnbl4pghcv24j2myfm
-  subdir: binary/test
 
 source-repository-package
   type: git
@@ -70,20 +59,6 @@ source-repository-package
   tag: 22e89a5f7cc2b02192b1eb420d74530eb2d6cb82
   --sha256: 1bazrgw2r9zi3p9m8is2pkbfrn9gqh22jfp5arvb4fc67mmmmm0l
   subdir: crypto
-
-source-repository-package
-  type: git
-  location: https://github.com/input-output-hk/cardano-ledger
-  tag: 22e89a5f7cc2b02192b1eb420d74530eb2d6cb82
-  --sha256: 1bazrgw2r9zi3p9m8is2pkbfrn9gqh22jfp5arvb4fc67mmmmm0l
-  subdir: cardano-ledger/test
-
-source-repository-package
-  type: git
-  location: https://github.com/input-output-hk/cardano-ledger
-  tag: 22e89a5f7cc2b02192b1eb420d74530eb2d6cb82
-  --sha256: 1bazrgw2r9zi3p9m8is2pkbfrn9gqh22jfp5arvb4fc67mmmmm0l
-  subdir: crypto/test
 
 source-repository-package
   type: git
@@ -214,13 +189,6 @@ source-repository-package
   tag: e71aa72adc7e876cda4ff19b5cc0900167fa9804
   --sha256: 0a16fd350kvyq4a23y8ma09r5sfs4xsr0gll0ssndd6ygpsd5s4b
   subdir: io-sim
-
-source-repository-package
-  type: git
-  location: https://github.com/input-output-hk/ouroboros-network
-  tag: e71aa72adc7e876cda4ff19b5cc0900167fa9804
-  --sha256: 0a16fd350kvyq4a23y8ma09r5sfs4xsr0gll0ssndd6ygpsd5s4b
-  subdir: ouroboros-network-testing
 
 source-repository-package
   type: git

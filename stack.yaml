@@ -59,9 +59,7 @@ extra-deps:
     commit: 22e89a5f7cc2b02192b1eb420d74530eb2d6cb82
     subdirs:
       - cardano-ledger
-      - cardano-ledger/test
       - crypto
-      - crypto/test
 
   - git: https://github.com/input-output-hk/cardano-ledger-specs
     commit: 28b4381461252b523473972c85b003301a5deadc
@@ -74,7 +72,6 @@ extra-deps:
       - byron/chain/executable-spec
       - shelley/chain-and-ledger/dependencies/non-integer
       - shelley/chain-and-ledger/executable-spec
-      - shelley/chain-and-ledger/executable-spec/test
 
   - git: https://github.com/input-output-hk/cardano-prelude
     commit: 3ac22a2fda11ca7131a011a9ea48fcbfdc26d6b3
@@ -86,7 +83,6 @@ extra-deps:
     commit: 1222078176fe74d5ce17f2a8343c6588233a49a3
     subdirs:
       - binary
-      - binary/test
       - cardano-crypto-class
       - slotting
 
@@ -137,7 +133,6 @@ extra-deps:
         - ouroboros-consensus-shelley
         - typed-protocols
         - typed-protocols-examples
-        - ouroboros-network-testing
         - ouroboros-network-framework
         - Win32-network
 
