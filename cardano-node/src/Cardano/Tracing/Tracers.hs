@@ -43,7 +43,7 @@ import           Cardano.BM.Trace (traceNamedObject, appendName)
 import           Cardano.BM.Data.Tracer (WithSeverity (..), annotateSeverity)
 import           Cardano.BM.Data.Transformers
 
-import           Ouroboros.Consensus.Block (Header)
+import           Ouroboros.Consensus.Block (Header, realPointSlot)
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..), TraceBlockchainTimeEvent (..))
 import           Ouroboros.Consensus.Ledger.Abstract
 import           Ouroboros.Consensus.Ledger.SupportsProtocol (LedgerSupportsProtocol)
@@ -57,13 +57,13 @@ import           Ouroboros.Consensus.Util.Orphans ()
 
 import qualified Ouroboros.Network.AnchoredFragment as AF
 import           Ouroboros.Network.Block (Point, BlockNo(..), HasHeader(..),
-                                          StandardHash,
-                                          blockNo, unBlockNo, unSlotNo)
+                                          StandardHash, blockNo, pointSlot,
+                                          unBlockNo, unSlotNo)
 import           Ouroboros.Network.BlockFetch.Decision (FetchDecision, FetchDecline (..))
 import           Ouroboros.Network.BlockFetch.ClientState (TraceLabelPeer (..))
 import qualified Ouroboros.Network.NodeToClient as NtC
 import qualified Ouroboros.Network.NodeToNode as NtN
-import           Ouroboros.Network.Point (fromWithOrigin)
+import           Ouroboros.Network.Point (fromWithOrigin, withOrigin)
 import           Ouroboros.Network.Subscription
 
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
@@ -154,11 +154,21 @@ instance ElidingTracer
   doelide (WithSeverity _ (WithTip _ (ChainDB.TraceGCEvent _))) = True
   doelide _ = False
   conteliding _tform _tverb _tr _ (Nothing, _count) = return (Nothing, 0)
-  conteliding _tform _tverb tr ev (_old, count) = do
-      when (count > 0 && count `mod` 100 == 0) $ do  -- report every 100th elided message
+  conteliding _tform _tverb tr ev@(WithSeverity _ (WithTip _ (ChainDB.TraceGCEvent _))) (_old, count) = do
+      when (count > 0 && count `mod` 100 == 0) $ do  -- report every 100th message
           meta <- mkLOMeta (getSeverityAnnotation ev) (getPrivacyAnnotation ev)
           traceNamedObject tr (meta, LogValue "messages elided so far" (PureI $ toInteger count))
       return (Just ev, count + 1)
+  conteliding _tform _tverb tr ev@(WithSeverity _ (WithTip _ (ChainDB.TraceLedgerReplayEvent (LedgerDB.ReplayedBlock pt replayTo)))) (_old, count) = do
+      let slotno = toInteger $ unSlotNo (realPointSlot pt)
+          endslot = toInteger $ withOrigin 0 unSlotNo (pointSlot replayTo)
+          startslot = if count == 0 then slotno else toInteger count
+          progress :: Double = (fromInteger (slotno - startslot) * 100.0) / fromInteger ((max slotno endslot) - startslot)
+      when (count > 0 && (slotno - startslot) `mod` 1000 == 0) $ do  -- report every 1000th slot
+          meta <- mkLOMeta (getSeverityAnnotation ev) (getPrivacyAnnotation ev)
+          traceNamedObject tr (meta, LogValue "block replay progress (%)" (PureD $ (fromInteger $ round (progress * 10.0)) / 10.0))
+      return (Just ev, fromInteger startslot)
+  conteliding _ _ _ _ _ = return (Nothing, 0)
 
 instance (StandardHash header, Eq peer) => ElidingTracer
   (WithSeverity [TraceLabelPeer peer (FetchDecision [Point header])]) where
@@ -287,7 +297,6 @@ mkTracers traceOptions tracer = do
     teeTraceChainTip tverb elided tr = Tracer $ \ev -> do
         traceWith (teeTraceChainTip' tr) ev
         traceWith (teeTraceChainTipElide StructuredLogging tverb elided tr) ev
-        traceWith (teeTraceChainTipElide TextualRepresentation tverb elided (appendName "text" tr)) ev
     teeTraceChainTipElide :: TracingFormatting
                           -> TracingVerbosity
                           -> MVar (Maybe (WithSeverity (WithTip blk (ChainDB.TraceEvent blk))), Int)
