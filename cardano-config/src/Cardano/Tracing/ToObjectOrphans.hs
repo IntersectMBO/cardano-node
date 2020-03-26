@@ -7,6 +7,7 @@
 {-# LANGUAGE ScopedTypeVariables   #-}
 {-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE UndecidableInstances  #-}
+{-# LANGUAGE NamedFieldPuns        #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans  #-}
 {-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
@@ -51,8 +52,8 @@ import qualified Ouroboros.Consensus.Protocol.BFT as BFT
 import qualified Ouroboros.Consensus.Protocol.PBFT as PBFT
 import           Ouroboros.Consensus.Ledger.Extended
 import           Ouroboros.Consensus.Mempool.API (GenTx, GenTxId,
-                   HasTxId, HasTxs(..), TraceEventMempool (..), TxId,
-                   extractTxs, txId)
+                   HasTxId, HasTxs(..), TraceEventMempool (..), ApplyTxErr,
+                   MempoolSize(..), TxId, extractTxs, txId)
 import qualified Ouroboros.Consensus.Mock.Ledger as Mock
 import qualified Ouroboros.Consensus.Mock.Protocol.Praos as Praos
 import           Ouroboros.Consensus.Node.Tracers (TraceForgeEvent (..))
@@ -461,7 +462,7 @@ instance Condense (HeaderHash blk)
  => Transformable Text IO (TraceChainSyncServerEvent blk b) where
   trTransformer _ verb tr = trStructured verb tr
 
-instance (Show (GenTx blk), Show (GenTxId blk))
+instance (Condense (GenTx blk), Condense (GenTxId blk), Show (ApplyTxErr blk))
  => Transformable Text IO (TraceEventMempool blk) where
   trTransformer _ verb tr = trStructured verb tr
 
@@ -1201,32 +1202,40 @@ instance Condense (HeaderHash blk)
                  , "tip" .= (String (pack $ showTip verb tip))
                  , "rolledBackBlock" .= (String (pack $ showPoint verb pt)) ]
 
-instance (Show (GenTx blk), Show (GenTxId blk))
+instance (Condense (GenTx blk), Condense (GenTxId blk), Show (ApplyTxErr blk))
  => ToObject (TraceEventMempool blk) where
-  toObject _verb (TraceMempoolAddedTx tx _mpSzBefore mpSzAfter) =
+  toObject verb (TraceMempoolAddedTx tx _mpSzBefore mpSzAfter) =
     mkObject
       [ "kind" .= String "TraceMempoolAddedTx"
-      , "txAdded" .= String (pack $ show tx)
-      , "mempoolSize" .= String (pack $ show mpSzAfter)
+      , "tx" .= condense tx
+      , "mempoolSize" .= toObject verb mpSzAfter
       ]
-  toObject _verb (TraceMempoolRejectedTx txAndErrs _mpSzBefore mpSzAfter) =
+  toObject verb (TraceMempoolRejectedTx tx err mpSz) =
     mkObject
-      [ "kind" .= String "TraceMempoolRejectedTxs"
-      , "txRejected" .= String (pack $ show txAndErrs)
-      , "mempoolSize" .= String (pack $ show mpSzAfter)
+      [ "kind" .= String "TraceMempoolRejectedTx"
+      , "err" .= show err
+      , "tx" .= condense tx
+      , "mempoolSize" .= toObject verb mpSz
       ]
-  toObject _verb (TraceMempoolRemoveTxs txs mpSz) =
+  toObject verb (TraceMempoolRemoveTxs txs mpSz) =
     mkObject
       [ "kind" .= String "TraceMempoolRemoveTxs"
-      , "txsRemoved" .= String (pack $ show txs)
-      , "mempoolSize" .= String (pack $ show mpSz)
+      , "txs" .= map condense txs
+      , "mempoolSize" .= toObject verb mpSz
       ]
-  toObject _verb (TraceMempoolManuallyRemovedTxs txs0 txs1 mpSz) =
+  toObject verb (TraceMempoolManuallyRemovedTxs txs0 txs1 mpSz) =
     mkObject
       [ "kind" .= String "TraceMempoolManuallyRemovedTxs"
-      , "txsManuallyRemoved" .= String (pack $ show txs0)
-      , "txsNoLongerValidRemoved" .= String (pack $ show txs1)
-      , "mempoolSize" .= String (pack $ show mpSz)
+      , "txsRemoved" .= map condense txs0
+      , "txsInvalidated" .= map condense txs1
+      , "mempoolSize" .= toObject verb mpSz
+      ]
+
+instance ToObject MempoolSize where
+  toObject _verb MempoolSize{msNumTxs, msNumBytes} =
+    mkObject
+      [ "numTxs" .= msNumTxs
+      , "bytes" .= msNumBytes
       ]
 
 instance ToObject (TraceFetchClientState header) where
