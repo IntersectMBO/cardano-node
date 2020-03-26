@@ -210,7 +210,7 @@ in {
         type = types.path;
         default = commonLib.mkEdgeTopology {
           inherit (cfg) port;
-          inherit (envConfig) edgeNodes;
+          edgeNodes = [ envConfig.relaysNew ];
         };
         description = ''
           Cluster topology
