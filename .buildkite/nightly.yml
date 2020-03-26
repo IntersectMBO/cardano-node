@@ -1,9 +1,0 @@
-steps:
-  - label: 'Chain-sync benchmark Mainnet'
-    command:
-      - ./benchmarking/chain-sync/ci.sh mainnet
-    timeout_in_minutes: 65
-    artifact_paths:
-      - "benchmark-results.log"
-    agents:
-      system: x86_64-linux
