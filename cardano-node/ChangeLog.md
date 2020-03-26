@@ -1,5 +1,46 @@
 # Changelog for cardano-node
 
+## 1.9.0 -- March 2020
+
+### node changes
+- Remove CLI override for genesis file. It must be in the confg file. (#683)
+- Genesis file path in confg relative to the config file location (#648)
+- For security adjust default confg to not listen on local ports (#707)
+- Use new DNS relay pool in default mainnet configuration (#708, )
+- CLI support for creating Byron era update proposals (#696)
+- Improved Windows CI (#669, #685)
+- More robust "chairman" integration test (#681)
+- Documentation updates (#677,709)
+- Progress meter in monitoring output for long running block replay (#712)
+- Improved trace verbosity for block fetch decisions (#701)
+- Improved trace output for mux timeouts (#717)
+- Improved trace output for mempool events (#724)
+- Improved trace output for subscription and DNS lookups (725)
+
+### consensus changes
+- Shelley ledger (#258, #982, #1403, #1405, #1820, #1822, #1824, #1695)
+- More internal framework to support hard forks (#1698)
+- Updated Shelley support for the local state query (#1848)
+- Fix subtle block fetch concurrency bug found by QC tests (#1845, #1850)
+- Tests for Byron era software update proposals (#1733, #1790)
+- Tests for transactions with TTLs as used by Shelley (#1297, #1564)
+- Minor optimisation in storage layer (#1810)
+
+### ledger changes
+- More tests for mempool validation (#707, #748)
+- Export the mainnet protocol magic id, for convenience (#750)
+- Test clusters started in OBFT mode have an EBB matching the legacy one (#751)
+- Adjust the update proposal endorsement rule to simplify hard forks (#753)
+
+### network changes
+- Significant update to the Win32 network I/O library (#1574, #1627, #1844)
+- Limit the number of accepted connections (#1391, #1831)
+- Protocol timeouts, per-protocol state (#1395, #1813)
+- Add a minor missing check in transaction submission protocol handler (#1856)
+- Improve sync performance for far away nodes with high network latency (#1843)
+- Improved selection of nearby low latency peers (#1858, #1859, #1860)
+- Improved Windows CI (#1808)
+
 ## 1.8.0 -- March 2020
 
 ### node changes
