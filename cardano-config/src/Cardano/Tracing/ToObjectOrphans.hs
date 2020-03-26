@@ -33,7 +33,6 @@ import           Cardano.BM.Data.LogItem (LOContent (..), LogObject (..),
 import           Cardano.BM.Tracing
 import           Cardano.BM.Data.Tracer (trStructured, emptyObject, mkObject)
 import qualified Cardano.Chain.Block as Block
-import qualified Cardano.Chain.Byron.API as Byron
 
 import           Ouroboros.Consensus.Block
                    (Header, headerPoint,

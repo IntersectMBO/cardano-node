@@ -23,6 +23,7 @@ import           Cardano.Prelude hiding (option)
 import           Prelude (String)
 
 import qualified Data.ByteString.Lazy.Char8 as C8
+import           Formatting (build, sformat)
 import           Options.Applicative
 
 import           Cardano.Chain.Common
@@ -31,7 +32,8 @@ import           Cardano.Crypto.Hashing (hashRaw)
 import           Cardano.Chain.Slotting (EpochNumber(..), SlotNumber(..))
 import           Cardano.Chain.Update
                    (ApplicationName(..), InstallerHash(..), NumSoftwareVersion,
-                    ProtocolVersion(..), SoftforkRule(..), SoftwareVersion(..), SystemTag(..))
+                    ProtocolVersion(..), SoftforkRule(..), SoftwareVersion(..), SystemTag(..),
+                    checkApplicationName, checkSystemTag)
 
 import           Cardano.CLI.Byron.UpdateProposal
 import           Cardano.Common.Parsers
@@ -120,12 +122,18 @@ parseSlotDuration = optional $
                      )
 
 parseSystemTag :: Parser SystemTag
-parseSystemTag =
-  SystemTag <$> strOption
-                  ( long "system-tag"
-                  <> metavar "STRING"
-                  <> help "Identify which system (linux, win64, etc) the update proposal is for."
-                  )
+parseSystemTag = option (eitherReader checkSysTag)
+                   ( long "system-tag"
+                   <> metavar "STRING"
+                   <> help "Identify which system (linux, win64, etc) the update proposal is for."
+                   )
+ where
+  checkSysTag :: String -> Either String SystemTag
+  checkSysTag name =
+    let tag = SystemTag $ toS name
+    in case checkSystemTag tag of
+         Left err -> Left . toS $ sformat build err
+         Right () -> Right tag
 
 parseInstallerHash :: Parser InstallerHash
 parseInstallerHash =
@@ -216,11 +224,18 @@ parseSoftwareVersion =
   SoftwareVersion <$> parseApplicationName <*> parseNumSoftwareVersion
 
 parseApplicationName :: Parser ApplicationName
-parseApplicationName = ApplicationName <$> strOption
+parseApplicationName = option (eitherReader checkAppNameLength)
        (  long "application-name"
        <> metavar "STRING"
        <> help "The name of the application."
        )
+ where
+  checkAppNameLength :: String -> Either String ApplicationName
+  checkAppNameLength name =
+    let appName = ApplicationName $ toS name
+    in case checkApplicationName appName of
+         Left err -> Left . toS $ sformat build err
+         Right () -> Right appName
 
 parseNumSoftwareVersion :: Parser NumSoftwareVersion
 parseNumSoftwareVersion =
