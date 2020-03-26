@@ -7,6 +7,7 @@
 {-# LANGUAGE ScopedTypeVariables   #-}
 {-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE UndecidableInstances  #-}
+{-# LANGUAGE NamedFieldPuns        #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans  #-}
 {-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
@@ -21,7 +22,7 @@ module Cardano.Tracing.ToObjectOrphans
 import           Cardano.Prelude hiding (atomically, show)
 import           Prelude (String, show, id)
 
-import           Data.Aeson (Value (..), toJSON, (.=))
+import           Data.Aeson (Value (..), ToJSON, toJSON, (.=))
 import           Data.Text (pack)
 import qualified Data.List.NonEmpty as NonEmpty
 import qualified Network.Socket as Socket (SockAddr)
@@ -32,6 +33,7 @@ import           Cardano.BM.Data.LogItem (LOContent (..), LogObject (..),
 import           Cardano.BM.Tracing
 import           Cardano.BM.Data.Tracer (trStructured, emptyObject, mkObject)
 import qualified Cardano.Chain.Block as Block
+import qualified Cardano.Chain.Byron.API as Byron
 
 import           Ouroboros.Consensus.Block
                    (Header, headerPoint,
@@ -51,8 +53,8 @@ import qualified Ouroboros.Consensus.Protocol.BFT as BFT
 import qualified Ouroboros.Consensus.Protocol.PBFT as PBFT
 import           Ouroboros.Consensus.Ledger.Extended
 import           Ouroboros.Consensus.Mempool.API (GenTx, GenTxId,
-                   HasTxId, HasTxs(..), TraceEventMempool (..), TxId,
-                   extractTxs, txId)
+                   HasTxId, HasTxs(..), TraceEventMempool (..), ApplyTxErr,
+                   MempoolSize(..), TxId, extractTxs, txId)
 import qualified Ouroboros.Consensus.Mock.Ledger as Mock
 import qualified Ouroboros.Consensus.Mock.Protocol.Praos as Praos
 import           Ouroboros.Consensus.Node.Tracers (TraceForgeEvent (..))
@@ -61,6 +63,7 @@ import           Ouroboros.Consensus.MiniProtocol.LocalTxSubmission.Server
                    (TraceLocalTxSubmissionServerEvent (..))
 import           Ouroboros.Consensus.Util.Condense
 import           Ouroboros.Consensus.Util.Orphans ()
+import qualified Ouroboros.Consensus.Byron.Ledger as Byron
 
 import qualified Ouroboros.Network.AnchoredFragment as AF
 import           Ouroboros.Network.Block
@@ -462,7 +465,7 @@ instance Condense (HeaderHash blk)
  => Transformable Text IO (TraceChainSyncServerEvent blk b) where
   trTransformer _ verb tr = trStructured verb tr
 
-instance (Show (GenTx blk), Show (GenTxId blk))
+instance (ToObject (GenTx blk), ToJSON (GenTxId blk), Show (ApplyTxErr blk))
  => Transformable Text IO (TraceEventMempool blk) where
   trTransformer _ verb tr = trStructured verb tr
 
@@ -711,12 +714,29 @@ instance ( Condense (HeaderHash blk)
   toObject _v (AnyMessage MsgClientDone{}) =
     mkObject [ "kind" .= String "MsgClientDone" ]
 
+{-
+instance ToObject Byron.ApplyMempoolPayloadErr where
+  toObject = TODO
+-}
+
 instance ToObject BFT.BftValidationErr where
   toObject _verb (BFT.BftInvalidSignature err) =
     mkObject
       [ "kind" .= String "BftInvalidSignature"
       , "error" .= String (pack err)
       ]
+
+instance ToObject (GenTx Byron.ByronBlock) where
+  toObject verb tx =
+    mkObject $
+        [ "txid" .= txId tx ]
+     ++ [ "tx"   .= condense tx | verb == MaximalVerbosity ]
+
+instance ToJSON (TxId (GenTx Byron.ByronBlock)) where
+  toJSON (Byron.ByronTxId             i) = toJSON (condense i)
+  toJSON (Byron.ByronDlgId            i) = toJSON (condense i)
+  toJSON (Byron.ByronUpdateProposalId i) = toJSON (condense i)
+  toJSON (Byron.ByronUpdateVoteId     i) = toJSON (condense i)
 
 instance ToObject Block.ChainValidationError where
   toObject _verb Block.ChainValidationBoundaryTooLarge =
@@ -1000,11 +1020,19 @@ instance Condense (HeaderHash blk)
         , "slot" .= unSlotNo (realPointSlot p) ]
      ++ [ "hash" .= condense (realPointHash p) | verb == MaximalVerbosity ]
 
+instance ToObject (GenTx (Mock.SimpleBlock c ext)) where
+  toObject verb tx =
+    mkObject $
+        [ "txid" .= txId tx ]
+     ++ [ "tx"   .= condense tx | verb == MaximalVerbosity ]
+
+instance ToJSON (TxId (GenTx (Mock.SimpleBlock c ext))) where
+  toJSON txid = toJSON (condense txid)
+
 instance ToObject SlotNo where
   toObject _verb slot =
     mkObject [ "kind" .= String "SlotNo"
              , "slot" .= toJSON (unSlotNo slot) ]
-
 
 instance (Condense (HeaderHash blk), LedgerSupportsProtocol blk)
  => ToObject (ChainDB.TraceEvent blk) where
@@ -1202,32 +1230,40 @@ instance Condense (HeaderHash blk)
                  , "tip" .= (String (pack $ showTip verb tip))
                  , "rolledBackBlock" .= (String (pack $ showPoint verb pt)) ]
 
-instance (Show (GenTx blk), Show (GenTxId blk))
+instance (ToObject (GenTx blk), ToJSON (GenTxId blk), Show (ApplyTxErr blk))
  => ToObject (TraceEventMempool blk) where
-  toObject _verb (TraceMempoolAddedTx tx _mpSzBefore mpSzAfter) =
+  toObject verb (TraceMempoolAddedTx tx _mpSzBefore mpSzAfter) =
     mkObject
       [ "kind" .= String "TraceMempoolAddedTx"
-      , "txAdded" .= String (pack $ show tx)
-      , "mempoolSize" .= String (pack $ show mpSzAfter)
+      , "tx" .= toObject verb tx
+      , "mempoolSize" .= toObject verb mpSzAfter
       ]
-  toObject _verb (TraceMempoolRejectedTx txAndErrs _mpSzBefore mpSzAfter) =
+  toObject verb (TraceMempoolRejectedTx tx err mpSz) =
     mkObject
-      [ "kind" .= String "TraceMempoolRejectedTxs"
-      , "txRejected" .= String (pack $ show txAndErrs)
-      , "mempoolSize" .= String (pack $ show mpSzAfter)
+      [ "kind" .= String "TraceMempoolRejectedTx"
+      , "err" .= show err --TODO: provide a proper ToObject instance
+      , "tx" .= toObject verb tx
+      , "mempoolSize" .= toObject verb mpSz
       ]
-  toObject _verb (TraceMempoolRemoveTxs txs mpSz) =
+  toObject verb (TraceMempoolRemoveTxs txs mpSz) =
     mkObject
       [ "kind" .= String "TraceMempoolRemoveTxs"
-      , "txsRemoved" .= String (pack $ show txs)
-      , "mempoolSize" .= String (pack $ show mpSz)
+      , "txs" .= map (toObject verb) txs
+      , "mempoolSize" .= toObject verb mpSz
       ]
-  toObject _verb (TraceMempoolManuallyRemovedTxs txs0 txs1 mpSz) =
+  toObject verb (TraceMempoolManuallyRemovedTxs txs0 txs1 mpSz) =
     mkObject
       [ "kind" .= String "TraceMempoolManuallyRemovedTxs"
-      , "txsManuallyRemoved" .= String (pack $ show txs0)
-      , "txsNoLongerValidRemoved" .= String (pack $ show txs1)
-      , "mempoolSize" .= String (pack $ show mpSz)
+      , "txsRemoved" .= txs0
+      , "txsInvalidated" .= map (toObject verb) txs1
+      , "mempoolSize" .= toObject verb mpSz
+      ]
+
+instance ToObject MempoolSize where
+  toObject _verb MempoolSize{msNumTxs, msNumBytes} =
+    mkObject
+      [ "numTxs" .= msNumTxs
+      , "bytes" .= msNumBytes
       ]
 
 instance ToObject (TraceFetchClientState header) where
