@@ -131,16 +131,13 @@ TraceChainSyncHeaderServer: False
 TraceChainSyncProtocol: False
 
 # Trace DNS Resolver messages.
-TraceDNSResolver: False
+TraceDNSResolver: True
 
 # Trace DNS Subscription messages.
-TraceDNSSubscription: False
+TraceDNSSubscription: True
 
 # Trace error policy resolution.
 TraceErrorPolicy: False
-
-# Trace local error policy resolution.
-TraceLocalErrorPolicy: True
 
 # Trace local error policy resolution.
 TraceLocalErrorPolicy: True
@@ -152,7 +149,7 @@ TraceForge: True
 TraceHandshake: False
 
 # Trace IP Subscription messages.
-TraceIpSubscription: False
+TraceIpSubscription: True
 
 # Trace local ChainSync protocol messages.
 TraceLocalChainSyncProtocol: False

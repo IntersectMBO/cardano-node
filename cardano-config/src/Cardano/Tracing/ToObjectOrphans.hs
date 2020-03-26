@@ -77,7 +77,7 @@ import           Ouroboros.Network.Protocol.TxSubmission.Type
                    (Message (..), TxSubmission)
 import           Ouroboros.Network.Snocket (LocalAddress (..))
 import           Ouroboros.Network.Subscription (ConnectResult (..), DnsTrace (..),
-                   SubscriptionTrace (..),
+                   SubscriptionTrace (..), SubscriberError (..),
                    WithDomainName (..), WithIPList (..))
 import           Ouroboros.Network.TxSubmission.Inbound
                    (TraceTxSubmissionInbound)
@@ -315,17 +315,20 @@ instance HasSeverityAnnotation (WithDomainName DnsTrace) where
     DnsTraceLookupException {} -> Error
     DnsTraceLookupAError {} -> Error
     DnsTraceLookupAAAAError {} -> Error
-    DnsTraceLookupIPv6First -> Info
-    DnsTraceLookupIPv4First -> Info
+    DnsTraceLookupIPv6First -> Debug
+    DnsTraceLookupIPv4First -> Debug
     DnsTraceLookupAResult {} -> Debug
     DnsTraceLookupAAAAResult {} -> Debug
 
 instance HasPrivacyAnnotation (WithDomainName (SubscriptionTrace Socket.SockAddr))
 instance HasSeverityAnnotation (WithDomainName (SubscriptionTrace Socket.SockAddr)) where
   getSeverityAnnotation (WithDomainName _ ev) = case ev of
-    SubscriptionTraceConnectStart {} -> Info
-    SubscriptionTraceConnectEnd {} -> Info
-    SubscriptionTraceConnectException {} -> Error
+    SubscriptionTraceConnectStart {} -> Notice
+    SubscriptionTraceConnectEnd {} -> Notice
+    SubscriptionTraceConnectException _ e ->
+        case fromException $ SomeException e of
+             Just (_::SubscriberError) -> Debug
+             Nothing -> Error
     SubscriptionTraceSocketAllocationException {} -> Error
     SubscriptionTraceTryConnectToPeer {} -> Info
     SubscriptionTraceSkippingPeer {} -> Info
@@ -338,7 +341,10 @@ instance HasSeverityAnnotation (WithDomainName (SubscriptionTrace Socket.SockAdd
     SubscriptionTraceConnectionExist {} -> Info
     SubscriptionTraceUnsupportedRemoteAddr {} -> Warning
     SubscriptionTraceMissingLocalAddress -> Warning
-    SubscriptionTraceApplicationException {} -> Error
+    SubscriptionTraceApplicationException _ e ->
+        case fromException $ SomeException e of
+             Just (_::SubscriberError) -> Debug
+             Nothing -> Error
     SubscriptionTraceAllocateSocket {} -> Debug
     SubscriptionTraceCloseSocket {} -> Debug
 
@@ -350,7 +356,10 @@ instance HasSeverityAnnotation (WithIPList (SubscriptionTrace Socket.SockAddr)) 
       ConnectSuccess -> Info
       ConnectSuccessLast -> Notice
       ConnectValencyExceeded -> Warning
-    SubscriptionTraceConnectException {} -> Error
+    SubscriptionTraceConnectException _ e ->
+        case fromException $ SomeException e of
+             Just (_::SubscriberError) -> Debug
+             Nothing -> Error
     SubscriptionTraceSocketAllocationException {} -> Error
     SubscriptionTraceTryConnectToPeer {} -> Info
     SubscriptionTraceSkippingPeer {} -> Info
@@ -363,7 +372,10 @@ instance HasSeverityAnnotation (WithIPList (SubscriptionTrace Socket.SockAddr)) 
     SubscriptionTraceConnectionExist {} -> Notice
     SubscriptionTraceUnsupportedRemoteAddr {} -> Error
     SubscriptionTraceMissingLocalAddress -> Warning
-    SubscriptionTraceApplicationException {} -> Error
+    SubscriptionTraceApplicationException _ e ->
+        case fromException $ SomeException e of
+             Just (_::SubscriberError) -> Debug
+             Nothing -> Error
     SubscriptionTraceAllocateSocket {} -> Debug
     SubscriptionTraceCloseSocket {} -> Info
 
@@ -410,8 +422,8 @@ instance HasSeverityAnnotation (WithMuxBearer peer MuxTrace) where
     MuxTraceSendStart {} -> Debug
     MuxTraceSendEnd -> Debug
     MuxTraceState {} -> Info
-    MuxTraceCleanExit {} -> Info
-    MuxTraceExceptionExit {} -> Info
+    MuxTraceCleanExit {} -> Notice
+    MuxTraceExceptionExit {} -> Notice
     MuxTraceChannelRecvStart {} -> Debug
     MuxTraceChannelRecvEnd {} -> Debug
     MuxTraceChannelSendStart {} -> Debug
@@ -422,8 +434,8 @@ instance HasSeverityAnnotation (WithMuxBearer peer MuxTrace) where
     MuxTraceHandshakeClientError {} -> Error
     MuxTraceHandshakeServerError {} -> Error
     MuxTraceRecvDeltaQObservation {} -> Debug
-    MuxTraceRecvDeltaQSample {} -> Info
-    MuxTraceSDUReadTimeoutException {} -> Error
+    MuxTraceRecvDeltaQSample {} -> Debug
+    MuxTraceSDUReadTimeoutException -> Notice
 
 instance HasPrivacyAnnotation (WithTip blk (ChainDB.TraceEvent blk))
 instance HasSeverityAnnotation (WithTip blk (ChainDB.TraceEvent blk)) where
