@@ -4,12 +4,10 @@ compiler: ghc-8.6.5
 packages:
   - cardano-config
   - cardano-node
-  - cardano-tx-generator
 
 ghc-options:
   cardano-config:       -Wall -Werror -fwarn-redundant-constraints
   cardano-node:         -Wall -Werror -fwarn-redundant-constraints
-  cardano-tx-generator: -Wall -Werror -fwarn-redundant-constraints
 
 allow-newer: true
 
@@ -154,4 +152,4 @@ extra-deps:
         - http-client
 
 nix:
-  shell-file: nix/stack-shell.nix
+    shell-file: nix/stack-shell.nix

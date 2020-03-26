@@ -1,7 +1,6 @@
 module Cardano.CLI.Parsers
   ( ClientCommand(..)
   , command'
-  , parseBenchmarkingCommands
   , parseDelegationRelatedValues
   , parseGenesisParameters
   , parseGenesisRelatedValues
@@ -20,10 +19,8 @@ import qualified Data.List.NonEmpty as NE
 import           Data.Text (pack)
 import           Data.Time (UTCTime)
 import           Data.Time.Clock.POSIX (posixSecondsToUTCTime)
-import           Network.Socket (PortNumber)
 import           Options.Applicative as OA
 
-import           Cardano.Benchmarking.GeneratorTx
 import           Cardano.CLI.Byron.Parsers (ByronCommand(..))
 import           Cardano.CLI.Delegation
 import           Cardano.CLI.Genesis
@@ -40,7 +37,6 @@ import           Cardano.Chain.Common
 import           Cardano.Chain.Genesis (FakeAvvmOptions(..), TestnetBalanceOptions(..))
 import           Cardano.Chain.Slotting (EpochNumber(..))
 import           Cardano.Chain.UTxO (TxId, TxIn(..), TxOut(..))
-import           Cardano.Config.CommonCLI
 import           Cardano.Config.Types
 import           Cardano.Crypto (RequiresNetworkMagic(..), decodeHash)
 import           Cardano.Crypto.ProtocolMagic
@@ -142,26 +138,6 @@ data ClientCommand
     (NonEmpty TxOut)
     -- ^ Genesis UTxO output Address.
 
-    --- Tx Generator Command ---
-
-  | GenerateTxs
-    FilePath
-    -- ^ Configuration yaml
-    SigningKeyFile
-    DelegationCertFile
-    GenesisFile
-    -- ^ Genesis hash
-    SocketPath
-    (NonEmpty NodeAddress)
-    NumberOfTxs
-    NumberOfInputsPerTx
-    NumberOfOutputsPerTx
-    FeePerTx
-    TPSRate
-    (Maybe TxAdditionalSize)
-    (Maybe ExplorerAPIEnpoint)
-    [SigningKeyFile]
-
     --- Misc Commands ---
 
   | DisplayVersion
@@ -193,12 +169,6 @@ cliParseBase58Address =
   either (panic . ("Bad Base58 address: " <>) . show) identity
   . decodeAddressBase58
 
-cliParseHostAddress :: String -> NodeHostAddress
-cliParseHostAddress = NodeHostAddress . Just .
-  maybe (panic "Bad host of target node") identity . readMaybe
-
-cliParsePort :: Word16 -> PortNumber
-cliParsePort = fromIntegral
 
 -- | See the rationale for cliParseBase58Address.
 cliParseTxId :: String -> TxId
@@ -210,56 +180,6 @@ parseAddress :: String -> String -> Parser Address
 parseAddress opt desc =
   option (cliParseBase58Address <$> auto)
     $ long opt <> metavar "ADDR" <> help desc
-
-parseBenchmarkingCommands :: Parser ClientCommand
-parseBenchmarkingCommands =
-  subparser $ mconcat
-    [ commandGroup "Benchmarking related commands"
-    , metavar "Benchmarking related commands"
-    , command'
-        "generate-txs"
-        "Launch transactions generator."
-        $ GenerateTxs
-            <$> parseConfigFile
-            <*> parseSigningKeyFile "signing-key" "Signing key file."
-            <*> (DelegationCertFile <$> parseDelegationCert)
-            <*> (GenesisFile <$> parseGenesisPath)
-            <*> parseSocketPath "Path to a cardano-node socket"
-            <*> (NE.fromList <$> some (
-                  parseTargetNodeAddress
-                    "target-node"
-                    "host and port of the node transactions will be sent to."
-                  )
-                )
-            <*> parseNumberOfTxs
-                  "num-of-txs"
-                  "Number of transactions generator will create."
-            <*> parseNumberOfInputsPerTx
-                  "inputs-per-tx"
-                  "Number of inputs in each of transactions."
-            <*> parseNumberOfOutputsPerTx
-                  "outputs-per-tx"
-                  "Number of outputs in each of transactions."
-            <*> parseFeePerTx
-                  "tx-fee"
-                  "Fee per transaction, in Lovelaces."
-            <*> parseTPSRate
-                  "tps"
-                  "TPS (transaction per second) rate."
-            <*> optional (
-                  parseTxAdditionalSize
-                    "add-tx-size"
-                    "Additional size of transaction, in bytes."
-                )
-            <*> optional (
-                  parseExplorerAPIEndpoint
-                    "submit-to-api"
-                    "Explorer's API endpoint to submit transaction."
-                )
-            <*> parseSigningKeysFiles
-                  "sig-key"
-                  "Path to signing key file, for genesis UTxO using by generator."
-     ]
 
 parseCBORObject :: Parser CBORObject
 parseCBORObject = asum
@@ -323,9 +243,6 @@ parseFakeAvvmOptions =
   FakeAvvmOptions
     <$> parseIntegral "avvm-entry-count" "Number of AVVM addresses."
     <*> parseLovelace "avvm-entry-balance" "AVVM address."
-
-parseFeePerTx :: String -> String -> Parser FeePerTx
-parseFeePerTx opt desc = FeePerTx <$> parseIntegral opt desc
 
 -- | Values required to create genesis.
 parseGenesisParameters :: Parser GenesisParameters
@@ -505,15 +422,6 @@ parseMiscellaneous = subparser $ mconcat
           <$> parseFilePath "filepath" "Filepath of CBOR file."
   ]
 
-parseNumberOfInputsPerTx :: String -> String -> Parser NumberOfInputsPerTx
-parseNumberOfInputsPerTx opt desc = NumberOfInputsPerTx <$> parseIntegral opt desc
-
-parseNumberOfOutputsPerTx :: String -> String -> Parser NumberOfOutputsPerTx
-parseNumberOfOutputsPerTx opt desc = NumberOfOutputsPerTx <$> parseIntegral opt desc
-
-parseNumberOfTxs :: String -> String -> Parser NumberOfTxs
-parseNumberOfTxs opt desc = NumberOfTxs <$> parseIntegral opt desc
-
 parseProtocolMagicId :: String -> Parser ProtocolMagicId
 parseProtocolMagicId arg =
   ProtocolMagicId
@@ -532,21 +440,6 @@ parseRequiresNetworkMagic =
         <> hidden
     )
 
-parseSigningKeysFiles :: String -> String -> Parser [SigningKeyFile]
-parseSigningKeysFiles opt desc = some $ SigningKeyFile <$> parseFilePath opt desc
-
-parseTargetNodeAddress :: String -> String -> Parser NodeAddress
-parseTargetNodeAddress optname desc =
-  option
-    ( uncurry NodeAddress
-      . Control.Arrow.first cliParseHostAddress
-      . Control.Arrow.second cliParsePort
-      <$> auto
-    )
-    $ long optname
-      <> metavar "(HOST,PORT)"
-      <> help desc
-
 parseTestnetBalanceOptions :: Parser TestnetBalanceOptions
 parseTestnetBalanceOptions =
   TestnetBalanceOptions
@@ -562,15 +455,6 @@ parseTestnetBalanceOptions =
     <*> parseFraction
           "delegate-share"
           "Portion of stake owned by all delegates together."
-
-parseTPSRate :: String -> String -> Parser TPSRate
-parseTPSRate opt desc = TPSRate <$> parseIntegral opt desc
-
-parseTxAdditionalSize :: String -> String -> Parser TxAdditionalSize
-parseTxAdditionalSize opt desc = TxAdditionalSize <$> parseIntegral opt desc
-
-parseExplorerAPIEndpoint :: String -> String -> Parser ExplorerAPIEnpoint
-parseExplorerAPIEndpoint opt desc = ExplorerAPIEnpoint <$> parseUrl opt desc
 
 parseTxFile :: String -> Parser TxFile
 parseTxFile opt =

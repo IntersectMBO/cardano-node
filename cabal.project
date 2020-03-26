@@ -3,15 +3,11 @@ index-state: 2020-01-31T00:00:00Z
 packages:
     cardano-config
     cardano-node
-    cardano-tx-generator
 
 package cardano-config
   ghc-options: -Wall -fwarn-redundant-constraints
 
 package cardano-node
-  ghc-options: -Wall -fwarn-redundant-constraints
-
-package cardano-tx-generator
   ghc-options: -Wall -fwarn-redundant-constraints
 
 package ouroboros-consensus-byron
