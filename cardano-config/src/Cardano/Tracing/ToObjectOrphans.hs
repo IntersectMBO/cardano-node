@@ -22,7 +22,7 @@ module Cardano.Tracing.ToObjectOrphans
 import           Cardano.Prelude hiding (atomically, show)
 import           Prelude (String, show, id)
 
-import           Data.Aeson (Value (..), toJSON, (.=))
+import           Data.Aeson (Value (..), ToJSON, toJSON, (.=))
 import           Data.Text (pack)
 import qualified Data.List.NonEmpty as NonEmpty
 import qualified Network.Socket as Socket (SockAddr)
@@ -33,6 +33,7 @@ import           Cardano.BM.Data.LogItem (LOContent (..), LogObject (..),
 import           Cardano.BM.Tracing
 import           Cardano.BM.Data.Tracer (trStructured, emptyObject, mkObject)
 import qualified Cardano.Chain.Block as Block
+import qualified Cardano.Chain.Byron.API as Byron
 
 import           Ouroboros.Consensus.Block
                    (Header, headerPoint,
@@ -62,6 +63,7 @@ import           Ouroboros.Consensus.MiniProtocol.LocalTxSubmission.Server
                    (TraceLocalTxSubmissionServerEvent (..))
 import           Ouroboros.Consensus.Util.Condense
 import           Ouroboros.Consensus.Util.Orphans ()
+import qualified Ouroboros.Consensus.Byron.Ledger as Byron
 
 import qualified Ouroboros.Network.AnchoredFragment as AF
 import           Ouroboros.Network.Block
@@ -462,7 +464,7 @@ instance Condense (HeaderHash blk)
  => Transformable Text IO (TraceChainSyncServerEvent blk b) where
   trTransformer _ verb tr = trStructured verb tr
 
-instance (Condense (GenTx blk), Condense (GenTxId blk), Show (ApplyTxErr blk))
+instance (ToObject (GenTx blk), ToJSON (GenTxId blk), Show (ApplyTxErr blk))
  => Transformable Text IO (TraceEventMempool blk) where
   trTransformer _ verb tr = trStructured verb tr
 
@@ -711,12 +713,29 @@ instance ( Condense (HeaderHash blk)
   toObject _v (AnyMessage MsgClientDone{}) =
     mkObject [ "kind" .= String "MsgClientDone" ]
 
+{-
+instance ToObject Byron.ApplyMempoolPayloadErr where
+  toObject = TODO
+-}
+
 instance ToObject BFT.BftValidationErr where
   toObject _verb (BFT.BftInvalidSignature err) =
     mkObject
       [ "kind" .= String "BftInvalidSignature"
       , "error" .= String (pack err)
       ]
+
+instance ToObject (GenTx Byron.ByronBlock) where
+  toObject verb tx =
+    mkObject $
+        [ "txid" .= txId tx ]
+     ++ [ "tx"   .= condense tx | verb == MaximalVerbosity ]
+
+instance ToJSON (TxId (GenTx Byron.ByronBlock)) where
+  toJSON (Byron.ByronTxId             i) = toJSON (condense i)
+  toJSON (Byron.ByronDlgId            i) = toJSON (condense i)
+  toJSON (Byron.ByronUpdateProposalId i) = toJSON (condense i)
+  toJSON (Byron.ByronUpdateVoteId     i) = toJSON (condense i)
 
 instance ToObject Block.ChainValidationError where
   toObject _verb Block.ChainValidationBoundaryTooLarge =
@@ -1000,11 +1019,19 @@ instance Condense (HeaderHash blk)
         , "slot" .= unSlotNo (realPointSlot p) ]
      ++ [ "hash" .= condense (realPointHash p) | verb == MaximalVerbosity ]
 
+instance ToObject (GenTx (Mock.SimpleBlock c ext)) where
+  toObject verb tx =
+    mkObject $
+        [ "txid" .= txId tx ]
+     ++ [ "tx"   .= condense tx | verb == MaximalVerbosity ]
+
+instance ToJSON (TxId (GenTx (Mock.SimpleBlock c ext))) where
+  toJSON txid = toJSON (condense txid)
+
 instance ToObject SlotNo where
   toObject _verb slot =
     mkObject [ "kind" .= String "SlotNo"
              , "slot" .= toJSON (unSlotNo slot) ]
-
 
 instance (Condense (HeaderHash blk), LedgerSupportsProtocol blk)
  => ToObject (ChainDB.TraceEvent blk) where
@@ -1202,32 +1229,32 @@ instance Condense (HeaderHash blk)
                  , "tip" .= (String (pack $ showTip verb tip))
                  , "rolledBackBlock" .= (String (pack $ showPoint verb pt)) ]
 
-instance (Condense (GenTx blk), Condense (GenTxId blk), Show (ApplyTxErr blk))
+instance (ToObject (GenTx blk), ToJSON (GenTxId blk), Show (ApplyTxErr blk))
  => ToObject (TraceEventMempool blk) where
   toObject verb (TraceMempoolAddedTx tx _mpSzBefore mpSzAfter) =
     mkObject
       [ "kind" .= String "TraceMempoolAddedTx"
-      , "tx" .= condense tx
+      , "tx" .= toObject verb tx
       , "mempoolSize" .= toObject verb mpSzAfter
       ]
   toObject verb (TraceMempoolRejectedTx tx err mpSz) =
     mkObject
       [ "kind" .= String "TraceMempoolRejectedTx"
-      , "err" .= show err
-      , "tx" .= condense tx
+      , "err" .= show err --TODO: provide a proper ToObject instance
+      , "tx" .= toObject verb tx
       , "mempoolSize" .= toObject verb mpSz
       ]
   toObject verb (TraceMempoolRemoveTxs txs mpSz) =
     mkObject
       [ "kind" .= String "TraceMempoolRemoveTxs"
-      , "txs" .= map condense txs
+      , "txs" .= map (toObject verb) txs
       , "mempoolSize" .= toObject verb mpSz
       ]
   toObject verb (TraceMempoolManuallyRemovedTxs txs0 txs1 mpSz) =
     mkObject
       [ "kind" .= String "TraceMempoolManuallyRemovedTxs"
-      , "txsRemoved" .= map condense txs0
-      , "txsInvalidated" .= map condense txs1
+      , "txsRemoved" .= txs0
+      , "txsInvalidated" .= map (toObject verb) txs1
       , "mempoolSize" .= toObject verb mpSz
       ]
 
