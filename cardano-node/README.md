@@ -101,7 +101,7 @@ A CLI utility to support a variety of key material operations (genesis, migratio
 
 The general synopsis is as follows:
  ```
-   Usage: cardano-cli (Byron related CMDs |Genesis related CMDs | Key related CMDs | Delegation related CMDs | Transaction related CMDs | Local node related CMDs | Benchmarking related CMDs)
+   Usage: cardano-cli (Byron related CMDs |Genesis related CMDs | Key related CMDs | Delegation related CMDs | Transaction related CMDs | Local node related CMDs)
 ```
 
 NOTE: the exact invocation command depends on the environment.  If you have only

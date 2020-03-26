@@ -40,7 +40,6 @@ library
                        Cardano.Node.Features.Node
                        Cardano.Node.Run
                        Cardano.Node.Submission
-                       Cardano.Node.TxSubClient
                        Cardano.Tracing.Tracers
 
 
@@ -63,7 +62,6 @@ library
                      , cardano-prelude-test
                      , cardano-shell
                      , cardano-slotting
-                     , cardano-tx-generator
                      , contra-tracer
                      , cborg >= 0.2.2 && < 0.3
                      , containers

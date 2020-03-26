@@ -19,13 +19,6 @@ module Cardano.CLI.Run (
   , NewCertificateFile(..)
   , TxFile(..)
   , NewTxFile(..)
-  , NumberOfTxs(..)
-  , NumberOfInputsPerTx(..)
-  , NumberOfOutputsPerTx(..)
-  , FeePerTx(..)
-  , TPSRate(..)
-  , TxAdditionalSize(..)
-  , ExplorerAPIEnpoint(..)
 
   -- * re-exports from Ouroboros-Network
   , IOManager
@@ -37,7 +30,6 @@ import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (hoistEither, firstExceptT, left)
 import qualified Data.ByteString.Lazy as LB
 import           Data.Semigroup ((<>))
-import           Data.Text (pack)
 import qualified Data.Text.Lazy.IO as TL
 import qualified Data.Text.Lazy.Builder as Builder
 import           Data.Version (showVersion)
@@ -59,8 +51,6 @@ import           Ouroboros.Network.NodeToClient ( IOManager
                                                 , withIOManager
                                                 )
 
-import qualified Ouroboros.Consensus.Cardano as Consensus
-
 import           Cardano.CLI.Byron.Parsers (ByronCommand(..))
 import           Cardano.CLI.Byron.UpdateProposal
                    (createUpdateProposal, serialiseByronUpdateProposal)
@@ -70,13 +60,7 @@ import           Cardano.CLI.Key
 import           Cardano.CLI.Ops
 import           Cardano.CLI.Parsers
 import           Cardano.CLI.Tx
-import           Cardano.Benchmarking.GeneratorTx
-                   (ExplorerAPIEnpoint (..), NumberOfTxs (..)
-                   , NumberOfInputsPerTx (..), NumberOfOutputsPerTx (..)
-                   , FeePerTx (..), TPSRate (..), TxAdditionalSize (..)
-                   , genesisBenchmarkRunner)
 import           Cardano.Common.LocalSocket
-import           Cardano.Config.Logging (createLoggingFeatureCLI)
 import           Cardano.Config.Types
 
 
@@ -227,62 +211,6 @@ runCommand (SpendUTxO configFp (NewTxFile ctTx) ctKey ins outs) = do
                  (ncProtocol nc)
                  sk
     ensureNewFileLBS ctTx $ toCborTxAux gTx
-
-runCommand (GenerateTxs
-            configFp
-            signingKey
-            delegCert
-            genFile
-            socketFp
-            targetNodeAddresses
-            numOfTxs
-            numOfInsPerTx
-            numOfOutsPerTx
-            feePerTx
-            tps
-            txAdditionalSize
-            explorerAPIEndpoint
-            sigKeysFiles) = withIOManagerE $ \iocp -> do
-  -- Default update value
-  let update = Update (ApplicationName "cardano-sl") 1 $ LastKnownBlockVersion 0 2 0
-  nc <- liftIO . parseNodeConfigurationFP $ ConfigYamlFilePath configFp
-
-  -- Logging layer
-  (loggingLayer, _) <- firstExceptT (\(ConfigErrorFileNotFound fp) -> FileNotFoundError fp) $
-                           createLoggingFeatureCLI
-                           (pack $ showVersion version)
-                           NoEnvironment
-                           (Just configFp)
-                           (ncLogMetrics nc)
-
-  genHash <- getGenesisHashText genFile
-
-  firstExceptT
-    GenerateTxsError
-    $  withRealPBFT
-         genHash
-         genFile
-         (ncReqNetworkMagic nc)
-         Nothing
-         (Just delegCert)
-         (Just signingKey)
-         update
-         (ncProtocol nc) $ \protocol@(Consensus.ProtocolRealPBFT _ _ _ _ _) ->
-                             firstExceptT GenesisBenchmarkRunnerError
-                               $ genesisBenchmarkRunner
-                                    loggingLayer
-                                    iocp
-                                    socketFp
-                                    protocol
-                                    targetNodeAddresses
-                                    numOfTxs
-                                    numOfInsPerTx
-                                    numOfOutsPerTx
-                                    feePerTx
-                                    tps
-                                    txAdditionalSize
-                                    explorerAPIEndpoint
-                                    [fp | SigningKeyFile fp <- sigKeysFiles]
 
 {-------------------------------------------------------------------------------
   Supporting functions

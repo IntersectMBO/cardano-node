@@ -103,8 +103,6 @@ import           Cardano.Config.Protocol
 import           Cardano.Config.Types
 import qualified Cardano.CLI.Legacy.Byron as Legacy
 
-import           Cardano.Benchmarking.GeneratorTx.Error (TxGenError)
-
 decodeCBOR
   :: LByteString
   -> (forall s. Decoder s a)
@@ -310,7 +308,6 @@ instance Exception CliError
 data RealPBFTError =
     IncorrectProtocolSpecified !Protocol
   | FromProtocolError !ProtocolInstantiationError
-  | GenesisBenchmarkRunnerError !TxGenError
   | InvariantViolation !Text
   | TransactionTypeNotHandledYet !Text
   deriving Show
