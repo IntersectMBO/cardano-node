@@ -423,6 +423,7 @@ instance HasSeverityAnnotation (WithMuxBearer peer MuxTrace) where
     MuxTraceHandshakeServerError {} -> Error
     MuxTraceRecvDeltaQObservation {} -> Debug
     MuxTraceRecvDeltaQSample {} -> Info
+    MuxTraceSDUReadTimeoutException {} -> Error
 
 instance HasPrivacyAnnotation (WithTip blk (ChainDB.TraceEvent blk))
 instance HasSeverityAnnotation (WithTip blk (ChainDB.TraceEvent blk)) where
