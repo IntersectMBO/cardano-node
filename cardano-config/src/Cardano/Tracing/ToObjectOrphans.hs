@@ -204,7 +204,7 @@ instance HasSeverityAnnotation (ChainDB.TraceEvent blk) where
     LedgerDB.InvalidSnapshot {} -> Error
 
   getSeverityAnnotation (ChainDB.TraceCopyToImmDBEvent ev) = case ev of
-    ChainDB.CopiedBlockToImmDB {} -> Notice
+    ChainDB.CopiedBlockToImmDB {} -> Debug
     ChainDB.NoBlocksToCopyToImmDB -> Debug
 
   getSeverityAnnotation (ChainDB.TraceGCEvent ev) = case ev of
