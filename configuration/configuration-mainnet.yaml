@@ -6,11 +6,11 @@
 GenesisFile: configuration/mainnet-genesis.json
 SocketPath:
 
+
+##### Core protocol parameters #####
+
 Protocol: RealPBFT
-NumCoreNodes: 1
-NodeId:
 RequiresNetworkMagic: RequiresNoMagic
-PBftSignatureThreshold:
 
 
 ##### Update Parameters #####
