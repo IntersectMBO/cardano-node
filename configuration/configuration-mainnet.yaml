@@ -29,7 +29,7 @@ ApplicationVersion: 1
 
 ##### Logging configuration #####
 
-ViewMode: LiveView
+ViewMode: SimpleView
 TurnOnLogging: True
 TurnOnLogMetrics: True
 
@@ -58,10 +58,18 @@ setupScribes:
     scName: "logs/mainnet.log"
     scFormat: ScText
 
+  - scKind: StdoutSK
+    scName: stdout
+    scFormat: ScText
+    scRotation: null
+
 # if not indicated otherwise, then log output is directed to this:
 defaultScribes:
   - - FileSK
     - "logs/mainnet.log"
+
+  - - StdoutSK
+    - stdout
 
 # global file rotation settings:
 rotation:
@@ -159,14 +167,7 @@ options:
   mapBackends:
     cardano.node.ChainDB.metrics:
       - EKGViewBK
-      - kind: UserDefinedBK
-        name: LiveViewBackend
     cardano.node.metrics:
-      - kind: UserDefinedBK
-        name: LiveViewBackend
-    cardano.node.BlockFetchDecision.peers:
-      - kind: UserDefinedBK
-        name: LiveViewBackend
 
   mapSubtrace:
     benchmark:
