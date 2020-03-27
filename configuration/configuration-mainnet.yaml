@@ -168,6 +168,9 @@ options:
     cardano.node.ChainDB.metrics:
       - EKGViewBK
     cardano.node.metrics:
+      - EKGViewBK
+    cardano.node-metrics:
+      - EKGViewBK
 
   mapSubtrace:
     benchmark:
