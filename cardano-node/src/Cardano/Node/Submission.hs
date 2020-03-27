@@ -12,7 +12,7 @@
 
 module Cardano.Node.Submission (
       TraceLowLevelSubmit (..)
-    , submitTx
+    , submitGeneralTx
     ) where
 import           Cardano.Prelude hiding (ByteString, option, threadDelay)
 import           Prelude (String)
@@ -98,24 +98,26 @@ instance (MonadIO m) => Transformable Text m TraceLowLevelSubmit where
   Main logic
 -------------------------------------------------------------------------------}
 
-submitTx :: ( RunNode blk
-            , Show (ApplyTxErr blk)
-            )
-         => IOManager
-         -> SocketPath
-         -> TopLevelConfig blk
-         -> GenTx blk
-         -> Tracer IO TraceLowLevelSubmit
-         -> IO ()
-submitTx iocp (SocketFile path) cfg tx tracer =
-    NtC.connectTo
-      (NtC.localSnocket iocp path)
-      NetworkConnectTracers {
-          nctMuxTracer       = nullTracer,
-          nctHandshakeTracer = nullTracer
-        }
-      (localInitiatorNetworkApplication tracer cfg tx)
-      path
+
+-- | Submit a general transaction. This can be a UTxO transaction,
+-- an update proposal, a vote or a delegation certificate.
+submitGeneralTx
+  :: ( RunNode blk, Show (ApplyTxErr blk))
+  => IOManager
+  -> SocketPath
+  -> TopLevelConfig blk
+  -> GenTx blk
+  -> Tracer IO TraceLowLevelSubmit
+  -> IO ()
+submitGeneralTx iocp (SocketFile path) cfg tx tracer =
+  NtC.connectTo
+    (NtC.localSnocket iocp path)
+    NetworkConnectTracers {
+        nctMuxTracer       = nullTracer,
+        nctHandshakeTracer = nullTracer
+      }
+    (localInitiatorNetworkApplication tracer cfg tx)
+    path
 
 localInitiatorNetworkApplication
   :: forall blk m peer.

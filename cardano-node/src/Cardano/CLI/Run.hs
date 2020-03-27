@@ -53,7 +53,7 @@ import           Ouroboros.Network.NodeToClient ( IOManager
 
 import           Cardano.CLI.Byron.Parsers (ByronCommand(..))
 import           Cardano.CLI.Byron.UpdateProposal
-                   (createUpdateProposal, serialiseByronUpdateProposal)
+                   (createUpdateProposal, serialiseByronUpdateProposal, submitByronUpdateProposal)
 import           Cardano.CLI.Delegation
 import           Cardano.CLI.Genesis
 import           Cardano.CLI.Key
@@ -65,10 +65,17 @@ import           Cardano.Config.Types
 
 
 runCommand :: ClientCommand -> ExceptT CliError IO ()
-runCommand (ByronClientCommand (UpdateProposal dbFp configFp sKey outputFp paramsToUpdate)) = do
+runCommand (ByronClientCommand
+             (UpdateProposal configFp sKey pVer sVer sysTag
+                             insHash outputFp paramsToUpdate)) = do
+
   sK <- readSigningKey RealPBFT sKey
-  proposal <- createUpdateProposal dbFp configFp sK paramsToUpdate
+  proposal <- createUpdateProposal  configFp sK pVer sVer sysTag insHash paramsToUpdate
   ensureNewFileLBS outputFp (serialiseByronUpdateProposal proposal)
+
+runCommand (ByronClientCommand (SubmitUpdateProposal configFp proposalFp mSocket)) =
+  withIOManagerE $ \iocp -> submitByronUpdateProposal iocp configFp proposalFp mSocket
+
 
 runCommand DisplayVersion = do
   liftIO . putTextLn
@@ -148,13 +155,11 @@ runCommand (SubmitTx fp configFp mCliSockPath) = withIOManagerE $ \iocp -> do
     -- Default update value
     let update = Update (ApplicationName "cardano-sl") 1 $ LastKnownBlockVersion 0 2 0
     tx <- readByronTx fp
-    genHash <- getGenesisHashText (ncGenesisFile nc)
 
     firstExceptT
       NodeSubmitTxError
       $ nodeSubmitTx
           iocp
-          genHash
           Nothing
           (ncGenesisFile nc)
           RequiresNoMagic
@@ -171,13 +176,10 @@ runCommand (SpendGenesisUTxO configFp (NewTxFile ctTx) ctKey genRichAddr outs) =
     -- Default update value
     let update = Update (ApplicationName "cardano-sl") 1 $ LastKnownBlockVersion 0 2 0
 
-    genHash <- getGenesisHashText $ ncGenesisFile nc
-
     tx <- firstExceptT SpendGenesisUTxOError
             $ issueGenesisUTxOExpenditure
                 genRichAddr
                 outs
-                genHash
                 (ncGenesisFile nc)
                 RequiresNoMagic
                 Nothing
@@ -194,14 +196,11 @@ runCommand (SpendUTxO configFp (NewTxFile ctTx) ctKey ins outs) = do
     -- Default update value
     let update = Update (ApplicationName "cardano-sl") 1 $ LastKnownBlockVersion 0 2 0
 
-    genHash <- getGenesisHashText $ ncGenesisFile nc
-
     gTx <- firstExceptT
              IssueUtxoError
              $ issueUTxOExpenditure
                  ins
                  outs
-                 genHash
                  (ncGenesisFile nc)
                  RequiresNoMagic
                  Nothing

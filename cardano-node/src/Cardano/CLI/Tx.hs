@@ -169,7 +169,6 @@ txSpendGenesisUTxOByronPBFT gc sk genAddr outs =
 issueGenesisUTxOExpenditure
   :: Address
   -> NonEmpty TxOut
-  -> Text
   -> GenesisFile
   -> RequiresNetworkMagic
   -> Maybe Double
@@ -182,7 +181,6 @@ issueGenesisUTxOExpenditure
 issueGenesisUTxOExpenditure
   genRichAddr
   outs
-  gHash
   genFile
   nMagic
   sigThresh
@@ -191,7 +189,7 @@ issueGenesisUTxOExpenditure
   update
   ptcl
   sk =
-    withRealPBFT gHash genFile nMagic sigThresh delCertFp sKeyFp update ptcl
+    withRealPBFT genFile nMagic sigThresh delCertFp sKeyFp update ptcl
       $ \(Consensus.ProtocolRealPBFT gc _ _ _ _)-> do
           let tx = txSpendGenesisUTxOByronPBFT gc sk genRichAddr outs
           traceWith stdoutTracer ("TxId: " ++ condense (Byron.byronIdTx tx))
@@ -219,7 +217,6 @@ txSpendUTxOByronPBFT gc sk ins outs =
 issueUTxOExpenditure
   :: NonEmpty TxIn
   -> NonEmpty TxOut
-  -> Text
   -> GenesisFile
   -> RequiresNetworkMagic
   -> Maybe Double
@@ -232,7 +229,6 @@ issueUTxOExpenditure
 issueUTxOExpenditure
   ins
   outs
-  gHash
   genFile
   nMagic
   sigThresh
@@ -241,7 +237,7 @@ issueUTxOExpenditure
   update
   ptcl
   key = do
-    withRealPBFT gHash genFile nMagic sigThresh delCertFp sKeyFp update ptcl $
+    withRealPBFT genFile nMagic sigThresh delCertFp sKeyFp update ptcl $
       \(Consensus.ProtocolRealPBFT gc _ _ _ _)-> do
         let tx = txSpendUTxOByronPBFT gc key ins outs
         traceWith stdoutTracer ("TxId: " ++ condense (Byron.byronIdTx tx))
@@ -250,8 +246,6 @@ issueUTxOExpenditure
 -- | Submit a transaction to a node specified by topology info.
 nodeSubmitTx
   :: IOManager
-  -> Text
-  -- ^ Genesis hash.
   -> Maybe Int
   -- ^ Number of core nodes.
   -> GenesisFile
@@ -266,7 +260,6 @@ nodeSubmitTx
   -> ExceptT RealPBFTError IO ()
 nodeSubmitTx
   iocp
-  gHash
   _mNumCoreNodes
   genFile
   nMagic
@@ -277,14 +270,14 @@ nodeSubmitTx
   update
   ptcl
   gentx =
-    withRealPBFT gHash genFile nMagic sigThresh delCertFp sKeyFp update ptcl $
+    withRealPBFT genFile nMagic sigThresh delCertFp sKeyFp update ptcl $
       \p@Consensus.ProtocolRealPBFT{} -> liftIO $ do
         -- TODO: Update submitGenTx to use `ExceptT`
         traceWith stdoutTracer ("TxId: " ++ condense (Consensus.txId gentx))
-        submitTx iocp targetSocketFp
-                 (pInfoConfig (Consensus.protocolInfo p))
-                 gentx
-                 nullTracer -- stdoutTracer
+        submitGeneralTx iocp targetSocketFp
+                        (pInfoConfig (Consensus.protocolInfo p))
+                        gentx
+                        nullTracer -- stdoutTracer
 
 --TODO: remove these local definitions when the updated ledger lib is available
 fromCborTxAux :: LB.ByteString ->  Either Binary.DecoderError (UTxO.ATxAux B.ByteString)
