@@ -3,37 +3,39 @@
 ##########################################################
 
 
-NodeId:
-Protocol: RealPBFT
 GenesisFile: configuration/mainnet-genesis.json
+SocketPath:
+
+Protocol: RealPBFT
 NumCoreNodes: 1
+NodeId:
 RequiresNetworkMagic: RequiresNoMagic
 PBftSignatureThreshold:
-TurnOnLogging: True
-ViewMode: LiveView
-TurnOnLogMetrics: True
-SocketPath:
 
 
 ##### Update Parameters #####
 
-ApplicationName: cardano-sl
-ApplicationVersion: 1
 LastKnownBlockVersion-Major: 0
 LastKnownBlockVersion-Minor: 2
 LastKnownBlockVersion-Alt: 0
 
+ApplicationName: cardano-sl
+ApplicationVersion: 1
+
 
 ##### Logging configuration #####
+
+ViewMode: LiveView
+TurnOnLogging: True
+TurnOnLogMetrics: True
 
 # global filter; messages must have at least this severity to pass:
 minSeverity: Notice
 
-# global file rotation settings:
-rotation:
-  rpLogLimitBytes: 5000000
-  rpKeepFilesNum:  3
-  rpMaxAgeHours:   24
+# MinimalVerbosity: Minimal level of the rendering of captured items
+# MaximalVerbosity: Maximal level of the rendering of captured items
+# NormalVerbosity: the default level of the rendering of captured items
+TracingVerbosity: MaximalVerbosity
 
 # these backends are initialized:
 setupBackends:
@@ -57,13 +59,14 @@ defaultScribes:
   - - FileSK
     - "logs/mainnet.log"
 
+# global file rotation settings:
+rotation:
+  rpLogLimitBytes: 5000000
+  rpKeepFilesNum:  3
+  rpMaxAgeHours:   24
+
 
 ##### Coarse grained logging control #####
-
-# MinimalVerbosity: Minimal level of the rendering of captured items
-# MaximalVerbosity: Maximal level of the rendering of captured items
-# NormalVerbosity: the default level of the rendering of captured items
-TracingVerbosity: MaximalVerbosity
 
 # Trace BlockFetch client.
 TraceBlockFetchClient: False
@@ -148,6 +151,19 @@ TraceTxSubmissionProtocol: False
 
 # more options which can be passed as key-value pairs:
 options:
+
+  mapBackends:
+    cardano.node.ChainDB.metrics:
+      - EKGViewBK
+      - kind: UserDefinedBK
+        name: LiveViewBackend
+    cardano.node.metrics:
+      - kind: UserDefinedBK
+        name: LiveViewBackend
+    cardano.node.BlockFetchDecision.peers:
+      - kind: UserDefinedBK
+        name: LiveViewBackend
+
   mapSubtrace:
     benchmark:
       contents:
@@ -173,15 +189,3 @@ options:
       # Change the `subtrace` value to `Neutral` in order to log
       # `UTxO`-related messages during epoch validation.
       subtrace: NoTrace
-  mapBackends:
-    cardano.node.ChainDB.metrics:
-      - EKGViewBK
-      - kind: UserDefinedBK
-        name: LiveViewBackend
-    cardano.node.metrics:
-      - kind: UserDefinedBK
-        name: LiveViewBackend
-    cardano.node.BlockFetchDecision.peers:
-      - kind: UserDefinedBK
-        name: LiveViewBackend
-
