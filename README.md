@@ -47,7 +47,7 @@ You can download [here](https://hydra.iohk.io/job/Cardano/cardano-node/cardano-n
 
 ### Instructions
 
-You can find the cardano-node executables on Hydra. The download includes cardano-node.exe and a .dll. To run the node with cardano-node run you need to reference a few files and directories as arguments. These can be copied from the cardano-node repo into the executables directory. The command to run the node on mainnet looks like this:
+The download includes cardano-node.exe and a .dll. To run the node with cardano-node run you need to reference a few files and directories as arguments. These can be copied from the cardano-node repo into the executables directory. The command to run the node on mainnet looks like this:
 
 ```
 cardano-node.exe run --topology ./mainnet-topology.json --database-path ./state --genesis-file ./mainnet-genesis.json --genesis-hash 5f20df933584822601f9e3f8c024eb5eb252fe8cefb24d1317dc3d432e940ebb --port 3001 --config ./configuration-mainnet.yaml --socket-path ./socket/mainnet-socket
