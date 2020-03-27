@@ -4,8 +4,12 @@
 
 
 GenesisFile: configuration/mainnet-genesis.json
-SocketPath:
+SocketPath: db/node.socket
 
+#TODO: These parameters cannot yet be used in the config file, only on the CLI:
+#DatabasePath: db/
+#Topology: configuration/mainnet-topology.json
+#Port 7776
 
 ##### Core protocol parameters #####
 
