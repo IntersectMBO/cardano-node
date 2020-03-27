@@ -1,3 +1,31 @@
+##########################################################
+############### Cardano Node Configuration ###############
+##########################################################
+
+
+NodeId:
+Protocol: RealPBFT
+GenesisFile: configuration/mainnet-genesis.json
+NumCoreNodes: 1
+RequiresNetworkMagic: RequiresNoMagic
+PBftSignatureThreshold:
+TurnOnLogging: True
+ViewMode: LiveView
+TurnOnLogMetrics: True
+SocketPath:
+
+
+##### Update Parameters #####
+
+ApplicationName: cardano-sl
+ApplicationVersion: 1
+LastKnownBlockVersion-Major: 0
+LastKnownBlockVersion-Minor: 2
+LastKnownBlockVersion-Alt: 0
+
+
+##### Logging configuration #####
+
 # global filter; messages must have at least this severity to pass:
 minSeverity: Notice
 
@@ -29,71 +57,8 @@ defaultScribes:
   - - FileSK
     - "logs/mainnet.log"
 
-# more options which can be passed as key-value pairs:
-options:
-  mapSubtrace:
-    benchmark:
-      contents:
-        - GhcRtsStats
-        - MonotonicClock
-      subtrace: ObservableTrace
-    '#ekgview':
-      contents:
-      - - tag: Contains
-          contents: 'cardano.epoch-validation.benchmark'
-        - - tag: Contains
-            contents: .monoclock.basic.
-      - - tag: Contains
-          contents: 'cardano.epoch-validation.benchmark'
-        - - tag: Contains
-            contents: diff.RTS.cpuNs.timed.
-      - - tag: StartsWith
-          contents: '#ekgview.#aggregation.cardano.epoch-validation.benchmark'
-        - - tag: Contains
-            contents: diff.RTS.gcNum.timed.
-      subtrace: FilterTrace
-    'cardano.epoch-validation.utxo-stats':
-      # Change the `subtrace` value to `Neutral` in order to log
-      # `UTxO`-related messages during epoch validation.
-      subtrace: NoTrace
-  mapBackends:
-    cardano.node.ChainDB.metrics:
-      - EKGViewBK
-      - kind: UserDefinedBK
-        name: LiveViewBackend
-    cardano.node.metrics:
-      - kind: UserDefinedBK
-        name: LiveViewBackend
-    cardano.node.BlockFetchDecision.peers:
-      - kind: UserDefinedBK
-        name: LiveViewBackend
 
-##########################################################
-############### Cardano Node Configuration ###############
-##########################################################
-
-
-NodeId:
-Protocol: RealPBFT
-GenesisFile: configuration/mainnet-genesis.json
-NumCoreNodes: 1
-RequiresNetworkMagic: RequiresNoMagic
-PBftSignatureThreshold:
-TurnOnLogging: True
-ViewMode: LiveView
-TurnOnLogMetrics: True
-SocketPath:
-
-
-#####    Update Parameters    #####
-
-ApplicationName: cardano-sl
-ApplicationVersion: 1
-LastKnownBlockVersion-Major: 0
-LastKnownBlockVersion-Minor: 2
-LastKnownBlockVersion-Alt: 0
-
-#####         Tracing         #####
+##### Coarse grained logging control #####
 
 # MinimalVerbosity: Minimal level of the rendering of captured items
 # MaximalVerbosity: Maximal level of the rendering of captured items
@@ -177,3 +142,46 @@ TraceTxOutbound: False
 
 # Trace TxSubmission protocol messages.
 TraceTxSubmissionProtocol: False
+
+
+##### Fine grained logging control #####
+
+# more options which can be passed as key-value pairs:
+options:
+  mapSubtrace:
+    benchmark:
+      contents:
+        - GhcRtsStats
+        - MonotonicClock
+      subtrace: ObservableTrace
+    '#ekgview':
+      contents:
+      - - tag: Contains
+          contents: 'cardano.epoch-validation.benchmark'
+        - - tag: Contains
+            contents: .monoclock.basic.
+      - - tag: Contains
+          contents: 'cardano.epoch-validation.benchmark'
+        - - tag: Contains
+            contents: diff.RTS.cpuNs.timed.
+      - - tag: StartsWith
+          contents: '#ekgview.#aggregation.cardano.epoch-validation.benchmark'
+        - - tag: Contains
+            contents: diff.RTS.gcNum.timed.
+      subtrace: FilterTrace
+    'cardano.epoch-validation.utxo-stats':
+      # Change the `subtrace` value to `Neutral` in order to log
+      # `UTxO`-related messages during epoch validation.
+      subtrace: NoTrace
+  mapBackends:
+    cardano.node.ChainDB.metrics:
+      - EKGViewBK
+      - kind: UserDefinedBK
+        name: LiveViewBackend
+    cardano.node.metrics:
+      - kind: UserDefinedBK
+        name: LiveViewBackend
+    cardano.node.BlockFetchDecision.peers:
+      - kind: UserDefinedBK
+        name: LiveViewBackend
+
