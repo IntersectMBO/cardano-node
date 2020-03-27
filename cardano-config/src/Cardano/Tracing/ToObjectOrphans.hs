@@ -384,19 +384,19 @@ instance HasSeverityAnnotation (WithIPList (SubscriptionTrace Socket.SockAddr)) 
 instance HasPrivacyAnnotation (Identity (SubscriptionTrace LocalAddress))
 instance HasSeverityAnnotation (Identity (SubscriptionTrace LocalAddress)) where
   getSeverityAnnotation (Identity ev) = case ev of
-    SubscriptionTraceConnectStart {} -> Info
-    SubscriptionTraceConnectEnd {} -> Info
+    SubscriptionTraceConnectStart {} -> Notice
+    SubscriptionTraceConnectEnd {} -> Notice
     SubscriptionTraceConnectException {} -> Error
     SubscriptionTraceSocketAllocationException {} -> Error
-    SubscriptionTraceTryConnectToPeer {} -> Info
+    SubscriptionTraceTryConnectToPeer {} -> Notice
     SubscriptionTraceSkippingPeer {} -> Info
-    SubscriptionTraceSubscriptionRunning -> Debug
+    SubscriptionTraceSubscriptionRunning -> Notice
     SubscriptionTraceSubscriptionWaiting {} -> Debug
     SubscriptionTraceSubscriptionFailed -> Warning
     SubscriptionTraceSubscriptionWaitingNewConnection {} -> Debug
-    SubscriptionTraceStart {} -> Debug
-    SubscriptionTraceRestart {} -> Debug
-    SubscriptionTraceConnectionExist {} -> Info
+    SubscriptionTraceStart {} -> Notice
+    SubscriptionTraceRestart {} -> Notice
+    SubscriptionTraceConnectionExist {} -> Debug
     SubscriptionTraceUnsupportedRemoteAddr {} -> Warning
     SubscriptionTraceMissingLocalAddress -> Warning
     SubscriptionTraceApplicationException {} -> Error
