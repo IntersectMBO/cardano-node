@@ -1,7 +1,0 @@
-configuration/pgpass
-logs/
-db/
-db-0/
-db-1/
-db-2/
-configuration/[0-9a-z][0-9a-z][0-9a-z][0-9a-z][0-9a-z]/
