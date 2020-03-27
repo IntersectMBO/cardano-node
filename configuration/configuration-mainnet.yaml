@@ -117,7 +117,7 @@ TraceDNSResolver: True
 TraceDNSSubscription: True
 
 # Trace error policy resolution.
-TraceErrorPolicy: False
+TraceErrorPolicy: True
 
 # Trace local error policy resolution.
 TraceLocalErrorPolicy: True
