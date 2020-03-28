@@ -1,5 +1,19 @@
 # Changelog for cardano-node
 
+## 1.9.1 -- March 2020
+
+### node changes
+- CLI support for submitting Byron era update proposals (#714)
+
+### consensus changes
+- None.
+
+### ledger changes
+- None.
+
+### network changes
+- Fix failures in the NTP client on Windows (#1862, 1865)
+
 ## 1.9.0 -- March 2020
 
 ### node changes
