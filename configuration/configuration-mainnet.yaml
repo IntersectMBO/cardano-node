@@ -128,7 +128,7 @@ rotation:
 TraceBlockFetchClient: False
 
 # Trace BlockFetch decisions made by the BlockFetch client.
-TraceBlockFetchDecisions: True
+TraceBlockFetchDecisions: False
 
 # Trace BlockFetch protocol messages.
 TraceBlockFetchProtocol: False
