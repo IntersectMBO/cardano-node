@@ -1,5 +1,19 @@
 # Changelog for cardano-node
 
+## 1.9.2 -- March 2020
+
+### node changes
+- None.
+
+### consensus changes
+- None.
+
+### ledger changes
+- Fix off-by-one mismatch in the minimum transaction fee (#756, #757)
+
+### network changes
+- None.
+
 ## 1.9.1 -- March 2020
 
 ### node changes
