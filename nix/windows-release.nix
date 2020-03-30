@@ -9,6 +9,7 @@
 { pkgs
 , project
 , cardano-node
+, chairman
 }:
 
 let
@@ -19,6 +20,8 @@ in pkgs.runCommand name { buildInputs = [ pkgs.buildPackages.zip ]; } ''
   cd release
 
   cp ${cardano-node}/bin/* .
+  chmod -R +w .
+  cp ${chairman}/bin/* .
   chmod -R +w .
 
   zip -r $out/${name}.zip .
