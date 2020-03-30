@@ -115,6 +115,7 @@ let
     cardano-node-win64 = import ./nix/windows-release.nix {
       inherit pkgs project;
       cardano-node = jobs.x86_64-w64-mingw32.cardano-node.x86_64-linux;
+      chairman = jobs.x86_64-w64-mingw32.chairman.x86_64-linux;
     };
     native = mapTestOn (__trace (__toJSON (packagePlatforms project)) (packagePlatforms project));
     "${mingwW64.config}" = mapTestOnCross mingwW64 (packagePlatformsCross (filterJobsCross project));
