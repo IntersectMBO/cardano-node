@@ -248,7 +248,7 @@ parseTxFeePolicy :: Parser (Maybe ParametersToUpdate)
 parseTxFeePolicy = optional $
   TxFeePolicy . TxFeePolicyTxSizeLinear
     <$> ( TxSizeLinear <$> parseLovelace "tx-fee-a-constant" "Propose the constant a for txfee = a + b*s where s is the size."
-                       <*> parseLovelace "tx-fee-b-constant" "Propose the constant b for txfee = a + b*s where s is the size."
+                       <*> parseFraction "tx-fee-b-constant" "Propose the constant b for txfee = a + b*s where s is the size."
         )
 
 parseUnlockStakeEpoch :: Parser (Maybe ParametersToUpdate)
