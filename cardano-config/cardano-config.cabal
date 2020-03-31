@@ -43,6 +43,7 @@ library
                      , lobemo-backend-aggregation
                      , lobemo-backend-ekg
                      , lobemo-backend-monitoring
+                     , lobemo-backend-trace-forwarder
                      , lobemo-scribe-systemd
                      , network
                      , network-mux

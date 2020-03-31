@@ -34,6 +34,7 @@ import           Control.Monad.Trans.Except.Extra (catchIOExceptT)
 import           Cardano.BM.Backend.Aggregation (plugin)
 import           Cardano.BM.Backend.EKGView (plugin)
 import           Cardano.BM.Backend.Monitoring (plugin)
+import           Cardano.BM.Backend.TraceForwarder (plugin)
 import qualified Cardano.BM.Backend.Switchboard as Switchboard
 import           Cardano.BM.Configuration (Configuration)
 import qualified Cardano.BM.Configuration as Config
@@ -222,6 +223,11 @@ loggingCardanoFeatureInit ver disabled' conf = do
       when (p > 0) $
           Cardano.BM.Backend.EKGView.plugin logConfig trace switchBoard
               >>= loadPlugin switchBoard
+
+  Config.getForwardTo logConfig >>= \forwardTo ->
+    when (isJust forwardTo) $
+      Cardano.BM.Backend.TraceForwarder.plugin logConfig trace switchBoard
+        >>= loadPlugin switchBoard
 
   Cardano.BM.Backend.Aggregation.plugin logConfig trace switchBoard
       >>= loadPlugin switchBoard
