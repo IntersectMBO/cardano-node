@@ -28,9 +28,12 @@ import           Control.Monad.Class.MonadTimer (MonadTimer)
 import           Control.Tracer (Tracer, nullTracer, traceWith)
 
 import           Ouroboros.Consensus.Mempool (ApplyTxErr, GenTx)
+import           Ouroboros.Consensus.NodeNetwork (ProtocolCodecs (..), protocolCodecs)
+import           Ouroboros.Consensus.Node.NetworkProtocolVersion (mostRecentNetworkProtocolVersion)
 import           Ouroboros.Consensus.Node.Run (RunNode)
 import qualified Ouroboros.Consensus.Node.Run as Node
 import           Ouroboros.Consensus.Config (TopLevelConfig)
+import           Ouroboros.Consensus.Util.IOLike
 
 import           Ouroboros.Network.Codec (Codec, DeserialiseFailure)
 import           Ouroboros.Network.Mux
@@ -125,6 +128,7 @@ localInitiatorNetworkApplication
      , MonadST m
      , MonadThrow m
      , MonadTimer m
+     , IOLike m
      , Show (ApplyTxErr blk)
      )
   => Tracer m TraceLowLevelSubmit
@@ -145,7 +149,7 @@ localInitiatorNetworkApplication tracer cfg tx =
           InitiatorProtocolOnly $
             MuxPeer
               nullTracer
-              (localChainSyncCodec @blk cfg)
+              (pcLocalChainSyncCodec codecs)
               (chainSyncClientPeer NtC.chainSyncClientNull)
 
       , NtC.localTxSubmissionProtocol =
@@ -154,7 +158,7 @@ localInitiatorNetworkApplication tracer cfg tx =
               traceWith tracer TraceLowLevelSubmitting
               result <- runPeer
                           nullTracer -- (contramap show tracer)
-                          localTxSubmissionCodec
+                          (pcLocalTxSubmissionCodec codecs)
                           channel
                           (LocalTxSub.localTxSubmissionClientPeer
                              (txSubmissionClientSingle tx))
@@ -162,6 +166,8 @@ localInitiatorNetworkApplication tracer cfg tx =
                 Nothing  -> traceWith tracer TraceLowLevelAccepted
                 Just msg -> traceWith tracer (TraceLowLevelRejected $ show msg)
       }
+    where
+      codecs = protocolCodecs cfg (mostRecentNetworkProtocolVersion (Proxy @ blk))
 
 -- | A 'LocalTxSubmissionClient' that submits exactly one transaction, and then
 -- disconnects, returning the confirmation or rejection.
@@ -174,28 +180,3 @@ txSubmissionClientSingle
 txSubmissionClientSingle tx = LocalTxSub.LocalTxSubmissionClient $ do
     pure $ LocalTxSub.SendMsgSubmitTx tx $ \mreject ->
       pure (LocalTxSub.SendMsgDone mreject)
-
-localTxSubmissionCodec
-  :: forall m blk . (RunNode blk, MonadST m)
-  => Codec (LocalTxSub.LocalTxSubmission (GenTx blk) (ApplyTxErr blk))
-           DeserialiseFailure m ByteString
-localTxSubmissionCodec =
-  LocalTxSub.codecLocalTxSubmission
-    Node.nodeEncodeGenTx
-    Node.nodeDecodeGenTx
-    (Node.nodeEncodeApplyTxError (Proxy @blk))
-    (Node.nodeDecodeApplyTxError (Proxy @blk))
-
-localChainSyncCodec
-  :: forall blk m. (RunNode blk, MonadST m)
-  => TopLevelConfig blk
-  -> Codec (ChainSync blk (Tip blk))
-           DeserialiseFailure m ByteString
-localChainSyncCodec cfg =
-    codecChainSync
-      (Block.wrapCBORinCBOR   (Node.nodeEncodeBlock cfg))
-      (Block.unwrapCBORinCBOR (Node.nodeDecodeBlock cfg))
-      (Block.encodePoint (Node.nodeEncodeHeaderHash (Proxy @blk)))
-      (Block.decodePoint (Node.nodeDecodeHeaderHash (Proxy @blk)))
-      (Block.encodeTip (Node.nodeEncodeHeaderHash (Proxy @blk)))
-      (Block.decodeTip (Node.nodeDecodeHeaderHash (Proxy @blk)))
