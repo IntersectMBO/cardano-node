@@ -38,26 +38,58 @@ nix-build -A scripts.mainnet.node -o mainnet-node-local
 ### Building Under Debian and Ubuntu
 The instructions for Debian and Ubuntu are largely identical.
 
-Since neither Debian nor Ubuntu are likely to have the required version of GHC and cabal they
-will probably need to be installed manually. The required versions are [GHC 8.6.5][ghc865] and
-[Cabal-3.0][cabal30].
+The required versions are [GHC 8.6.5][ghc865] and [Cabal-3.0][cabal30].
+You best get them with the Haskell installer tool [ghcup][ghcup].
+ 
+```
+curl --proto '=https' --tlsv1.2 -sSf https://get-ghcup.haskell.org | sh
+```
+confirm 2x ENTER and type YES at the end to add ghcup to your PATH variable
+Then restart your terminal session or execute 
 
+```
+source /home/mgu/.ghcup/env
+``` 
+to use the ghcup command for the next steps
+
+Now install and activate the required GHC version
+```
+ghcup install 8.6.5
+ghcup set 8.6.5
+ghc --version
+```
 The code in the Haskell node also requires that the development packages for a couple of Linux
 system libraries be installed:
 ```
 sudo apt-get update
-sudo apt-get libgmp-dev libssl-dev libtinfo-dev libsystemd-dev zlib1g-dev
+sudo apt-get -y install libgmp-dev libssl-dev libtinfo-dev libsystemd-dev zlib1g-dev
 ```
-
 Finally the Cardano Node git repo can be cloned and the code built:
 ```
 git clone https://github.com/input-output-hk/cardano-node
 cd cardano-node
 cabal build all
-cabal run cardano-node -- --help
+```
+
+Now you can copy the binaries 
+```
+cardano-node
+cardano-cli
+chairman
+```
+into your ~/.local/bin folder (when part of the PATH variable)
+you can see the build location path from the last 3 output lines. 
+for cardano-node 1.9.3 it is 
+```
+~/cardano-node/dist-newstyle/build/x86_64-linux/ghc-8.6.5/cardano-node-1.9.3/x/cardano-cli/build/cardano-cli/
 ```
 
 
+ 
+ 
+
+
+[ghcup]: https://www.haskell.org/ghcup/
 [cabal30]: https://www.haskell.org/cabal/download.html
 [ghc865]: https://www.haskell.org/ghc/blog/20190423-ghc-8.6.5-released.html
 [nix]: https://nixos.org/nix/
