@@ -62,15 +62,31 @@ The code in the Haskell node also requires that the development packages for a c
 system libraries be installed:
 ```
 sudo apt-get update
-sudo apt-get libgmp-dev install -Y libssl-dev libtinfo-dev libsystemd-dev zlib1g-dev
+sudo apt-get install -Y libgmp-dev libssl-dev libtinfo-dev libsystemd-dev zlib1g-dev
 ```
 Finally the Cardano Node git repo can be cloned and the code built:
 ```
 git clone https://github.com/input-output-hk/cardano-node
 cd cardano-node
 cabal build all
-cabal run cardano-node -- --help
 ```
+
+Now you can copy the binaries 
+```
+cardano-node
+cardano-cli
+chairman
+```
+into your ~/.local/bin folder (when part of the PATH variable)
+you can see the build location path from the last 3 output lines. 
+for cardano-node 1.9.3 it is 
+```
+~/cardano-node/dist-newstyle/build/x86_64-linux/ghc-8.6.5/cardano-node-1.9.3/x/cardano-cli/build/cardano-cli/
+```
+
+
+ 
+ 
 
 
 [ghcup]: https://www.haskell.org/ghcup/
