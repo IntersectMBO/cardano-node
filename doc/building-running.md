@@ -62,7 +62,7 @@ The code in the Haskell node also requires that the development packages for a c
 system libraries be installed:
 ```
 sudo apt-get update
-sudo apt-get install -Y libgmp-dev libssl-dev libtinfo-dev libsystemd-dev zlib1g-dev
+sudo apt-get -y install libgmp-dev libssl-dev libtinfo-dev libsystemd-dev zlib1g-dev
 ```
 Finally the Cardano Node git repo can be cloned and the code built:
 ```
