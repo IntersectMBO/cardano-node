@@ -1,5 +1,22 @@
 # Changelog for cardano-node
 
+## 1.9.3 -- March 2020
+
+### node changes
+- None.
+
+### consensus changes
+- None.
+
+### ledger changes
+- None
+
+### network changes
+- Fix Windows named pipes bug that limited node client connections (#1876)
+- More reliable establishment of connections with Windows named pipes (#1881)
+- Workaround DNS timeout problems on Windows (#1873, #1878)
+- Add a timeout in one state of the chain sync protocol (#1871)
+
 ## 1.9.2 -- March 2020
 
 ### node changes
