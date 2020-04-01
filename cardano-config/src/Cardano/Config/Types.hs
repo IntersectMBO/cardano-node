@@ -1,4 +1,5 @@
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 
@@ -23,6 +24,7 @@ module Cardano.Config.Types
     , SigningKeyFile (..)
     , TopologyFile (..)
     , TraceOptions (..)
+    , SocketActivation (..)
     , SocketPath (..)
     , Update (..)
     , ViewMode (..)
@@ -74,6 +76,9 @@ data CBORObject = CBORBlockByron
 -- | Just a placeholder for now.
 data CardanoEnvironment = NoEnvironment
     deriving (Eq, Show)
+
+data SocketActivation = UseActivatedSockets | UseNormalSockets
+                        deriving (Eq, Ord, Show)
 
 --------------------------------------------------------------------------------
 -- Cardano Configuration Data Structures
@@ -254,8 +259,8 @@ parseNodeConfigurationFP (ConfigYamlFilePath fp) = do
 parseNodeConfiguration :: NodeProtocolMode -> IO NodeConfiguration
 parseNodeConfiguration npm =
   case npm of
-    MockProtocolMode (NodeMockCLI _ _ cy _) -> parseNodeConfigurationFP cy
-    RealProtocolMode (NodeCLI _ _ cy _) -> parseNodeConfigurationFP cy
+    MockProtocolMode (NodeMockCLI {mockConfigFp}) -> parseNodeConfigurationFP mockConfigFp
+    RealProtocolMode (NodeCLI {configFp}) -> parseNodeConfigurationFP configFp
 
 -- TODO:  we don't want ByronLegacy in Protocol.  Let's wrap Protocol with another
 -- sum type for cases where it's required.
@@ -352,14 +357,13 @@ data TraceOptions = TraceOptions
 -- Cardano Topology Related Data Structures
 --------------------------------------------------------------------------------
 
--- | IPv4 address with a port number.
-data NodeAddress = NodeAddress
-  { naHostAddress :: !NodeHostAddress
-  , naPort :: !PortNumber
-  } deriving (Eq, Ord, Show)
+-- | IPv4 address with a port number or a systemd activated socket.
+data NodeAddress = NodeAddress !NodeHostAddress !PortNumber | ActSocks SocketActivation
+  deriving (Eq, Ord, Show)
 
 instance Condense NodeAddress where
   condense (NodeAddress addr port) = show addr ++ ":" ++ show port
+  condense _ = "ACTIVATED SOCKETS"
 
 instance FromJSON NodeAddress where
   parseJSON = withObject "NodeAddress" $ \v -> do

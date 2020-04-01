@@ -1,15 +1,16 @@
-{-# LANGUAGE BangPatterns          #-}
-{-# LANGUAGE CPP                   #-}
-{-# LANGUAGE DataKinds             #-}
-{-# LANGUAGE DeriveAnyClass        #-}
-{-# LANGUAGE DeriveFunctor         #-}
-{-# LANGUAGE DeriveFoldable        #-}
-{-# LANGUAGE DeriveGeneric         #-}
-{-# LANGUAGE DeriveTraversable     #-}
-{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE CPP #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE DeriveFoldable #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveTraversable #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE OverloadedStrings     #-}
-{-# LANGUAGE RankNTypes            #-}
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RankNTypes #-}
 
 {-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
@@ -546,9 +547,12 @@ initLiveViewState = do
                 }
 
 setTopology :: NFData a => LiveViewBackend blk a -> NodeProtocolMode -> IO ()
-setTopology lvbe (RealProtocolMode (NodeCLI _ nAddress _ _)) =
+setTopology lvbe (RealProtocolMode (NodeCLI {nodeAddr})) = do
+  pNum <- case nodeAddr of
+            NodeAddress _ portNum -> pure $ show portNum
+            _ -> pure "ACTIVATEDSOCKETS"
   modifyMVar_ (getbe lvbe) $ \lvs ->
-    return $ lvs { lvsNodeId = pack $ "Port: " <> (show $ naPort nAddress) }
+    return $ lvs { lvsNodeId = pack $ "Port: " <> pNum }
 setTopology lvbe npm = do
   nc <- parseNodeConfiguration npm
   modifyMVar_ (getbe lvbe) $ \lvs ->

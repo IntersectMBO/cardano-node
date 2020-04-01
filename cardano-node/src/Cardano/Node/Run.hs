@@ -2,6 +2,7 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -37,7 +38,7 @@ import           Data.Semigroup ((<>))
 import           Data.Text (Text, breakOn, pack, take)
 import           Data.Version (showVersion)
 import           Network.HostName (getHostName)
-import           Network.Socket (AddrInfo)
+import           Network.Socket (AddrInfo(..), SockAddr)
 import           System.Directory (canonicalizePath, makeAbsolute)
 
 import           Control.Monad.Class.MonadSTM
@@ -101,7 +102,6 @@ runNode loggingLayer npm = do
     let !trace = setHostname hn $
                  llAppendName loggingLayer "node" (llBasicTrace loggingLayer)
     let tracer = contramap pack $ toLogObject trace
-
     mscFp' <- return $ extractMiscFilePaths npm
 
     nc <- parseNodeConfiguration npm
@@ -174,16 +174,20 @@ handleSimpleNode
   -- otherwise the node won't actually start.
   -> IO ()
 handleSimpleNode p trace nodeTracers npm onKernel = do
-
   let pInfo@ProtocolInfo{ pInfoConfig = cfg } = Consensus.protocolInfo p
       tracer = contramap pack $ toLogObject trace
 
   -- Node configuration
   nc <- parseNodeConfiguration npm
 
-  createTracers npm trace tracer cfg
+  -- Create TCP/IP sockets for node to node?
+  eitherAddrs <- runExceptT $ nodeAddressInfo npm
 
-  addrs <- nodeAddressInfo npm
+  addrs <- either (\err -> panic $ "Cardano.Config.Topology.nodeAddressInfo: " <> show err) pure eitherAddrs
+
+  createTracers npm trace tracer cfg addrs
+
+  traceWith tracer $ "NodeAddress: " <> show addrs
 
   dbPath <- canonDbPath npm
 
@@ -191,21 +195,33 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
 
   nt <- either (\err -> panic $ "Cardano.Node.Run.readTopologyFile: " <> err) pure eitherTopology
 
+  -- UNIX socket filepath
   myLocalAddr <- nodeLocalSocketAddrInfo nc npm
 
-  let diffusionArguments :: DiffusionArguments
-      diffusionArguments = createDiffusionArguments addrs myLocalAddr ipProducers dnsProducers
-      diffusionTracers :: DiffusionTracers
+  traceWith tracer $ "nodeLocalSocketAddrInfo result(UNIX SOCKET FILEPATH): " <> show myLocalAddr
+
+  let diffusionTracers :: DiffusionTracers
       diffusionTracers = createDiffusionTracers nodeTracers
       dnsProducers :: [DnsSubscriptionTarget]
       dnsProducers = dnsSubscriptionTarget <$> dnsProducerAddrs
+      (dnsProducerAddrs, ipProducerAddrs) :: ([RemoteAddress], [NodeAddress]) = producerAddresses nt
+
+  -- Node ip addresses from the node topology
+  eIps <- runExceptT $ mapM nodeAddressToSockAddr ipProducerAddrs
+
+  let -- Node ips in topology file.
+      ips :: [SockAddr]
+      ips = either (\err -> panic $ "Cardano.Config.Topology.nodeAddressToSockAddr: " <> show err) identity eIps
       ipProducers :: IPSubscriptionTarget
-      ipProducers = ipSubscriptionTargets ipProducerAddrs
-      (dnsProducerAddrs, ipProducerAddrs) = producerAddresses nt
+      ipProducers = ipSubscriptionTargets ips
+      diffusionArguments :: DiffusionArguments
+      diffusionArguments = createDiffusionArguments addrs myLocalAddr ipProducers dnsProducers
 
   removeStaleLocalSocket nc npm
 
   varTip <- atomically $ newTVar GenesisPoint
+
+  traceWith tracer $ "DIFFUSION ARGUMENTS: " <> show diffusionArguments
 
   Node.run
     (consensusTracers nodeTracers)
@@ -270,10 +286,11 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
     -> Trace IO Text
     -> Tracer IO GHC.Base.String
     -> Consensus.TopLevelConfig blk
+    -> [AddrInfo]
     -> IO ()
-  createTracers npm' tr tracer cfg = do
+  createTracers npm' tr tracer cfg nodeAddress = do
      case npm' of
-       RealProtocolMode (NodeCLI _ rNodeAddr _ runDBValidation) -> do
+       RealProtocolMode (NodeCLI {validateDB}) -> do
          eitherTopology <- readTopologyFile npm
          nt <- either
                  (\err -> panic $ "Cardano.Node.Run.readTopologyFile: " <> err)
@@ -285,10 +302,15 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
          traceWith tracer $
            "System started at " <> show (nodeStartTime (Proxy @blk) cfg)
 
+         --eSocket <- runExceptT $ nodeAddressInfo npm'
+         --hostAddr <- case eSocket of
+         --              Left err -> panic $ "Cardano.Node.Run.createTracers.nodeAddressInfo: Error getting host address: " <> show err
+         --              Right hAddr -> pure hAddr
+
          traceWith tracer $ unlines
            [ ""
            , "**************************************"
-           , "Host node address: " <> show rNodeAddr
+           , "Host node address: " <> (show $ map addrAddress nodeAddress)
            , "My DNS producers are " <> show dnsProducerAddrs
            , "My IP producers are " <> show ipProducerAddrs
            , "**************************************"
@@ -302,9 +324,9 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
          traceNamedObject vTr (meta, LogMessage . pack . showVersion $ version)
          traceNamedObject cTr (meta, LogMessage gitRev)
 
-         when runDBValidation $ traceWith tracer "Performing DB validation"
+         when validateDB $ traceWith tracer "Performing DB validation"
 
-       MockProtocolMode (NodeMockCLI _ mockNodeAddress _ runDBValidation) -> do
+       MockProtocolMode (NodeMockCLI {mockNodeAddr, mockValidateDB}) -> do
          eitherTopology <- readTopologyFile npm
          nodeid <- nid npm
          (MockNodeTopology nodeSetups) <- either
@@ -317,7 +339,7 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
              producers' = case (List.lookup nodeid producersList) of
                             Just ps ->  ps
                             Nothing -> error $ "handleSimpleNode: own address "
-                                         <> show mockNodeAddress
+                                         <> show mockNodeAddr
                                          <> ", Node Id "
                                          <> show nodeid
                                          <> " not found in topology"
@@ -325,12 +347,12 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
          traceWith tracer $ unlines
                                [ ""
                                , "**************************************"
-                               , "I am Node "        <> show mockNodeAddress <> " Id: " <> show nodeid
+                               , "I am Node "        <> show mockNodeAddr <> " Id: " <> show nodeid
                                , "My producers are " <> show producers'
                                , "**************************************"
                                ]
 
-         when runDBValidation $ traceWith tracer "Performing DB validation"
+         when mockValidateDB $ traceWith tracer "Performing DB validation"
 
 
 --------------------------------------------------------------------------------
@@ -340,17 +362,17 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
 canonDbPath :: NodeProtocolMode -> IO FilePath
 canonDbPath npm  = do
   dbFp <- case npm of
-            MockProtocolMode (NodeMockCLI mscFp' _ _ _) -> do
+            MockProtocolMode (NodeMockCLI {mockMscFp}) -> do
               nodeid <- nid npm
-              pure $ (unDB $ dBFile mscFp') <> "-" <> show nodeid
+              pure $ (unDB $ dBFile mockMscFp) <> "-" <> show nodeid
 
-            RealProtocolMode (NodeCLI mscFp' _ _ _) -> pure . unDB $ dBFile mscFp'
+            RealProtocolMode (NodeCLI {mscFp}) -> pure . unDB $ dBFile mscFp
 
   canonicalizePath =<< makeAbsolute dbFp
 
 dbValidation :: NodeProtocolMode -> Bool
-dbValidation (MockProtocolMode (NodeMockCLI _ _ _ dbval)) = dbval
-dbValidation (RealProtocolMode (NodeCLI _ _ _ dbval)) = dbval
+dbValidation (MockProtocolMode (NodeMockCLI {mockValidateDB})) = mockValidateDB
+dbValidation (RealProtocolMode (NodeCLI {validateDB})) = validateDB
 
 createDiffusionArguments
   :: [AddrInfo]
@@ -383,15 +405,12 @@ dnsSubscriptionTarget ra =
 extractMiscFilePaths :: NodeProtocolMode -> MiscellaneousFilepaths
 extractMiscFilePaths npm =
   case npm of
-    MockProtocolMode (NodeMockCLI mMscFp _ _ _) -> mMscFp
-    RealProtocolMode (NodeCLI rMscFp _ _ _) -> rMscFp
+    MockProtocolMode (NodeMockCLI {mockMscFp}) -> mockMscFp
+    RealProtocolMode (NodeCLI {mscFp}) -> mscFp
 
-ipSubscriptionTargets :: [NodeAddress] -> IPSubscriptionTarget
-ipSubscriptionTargets ipProdAddrs =
-  let ips = nodeAddressToSockAddr <$> ipProdAddrs
-  in IPSubscriptionTarget { ispIps = ips
-                          , ispValency = length ips
-                          }
+ipSubscriptionTargets :: [SockAddr] -> IPSubscriptionTarget
+ipSubscriptionTargets ips =
+  IPSubscriptionTarget {ispIps = ips, ispValency = length ips}
 
 -- | NodeIds are only required for mock protocols
 nid :: NodeProtocolMode -> IO Word64

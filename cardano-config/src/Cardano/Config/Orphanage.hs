@@ -19,12 +19,14 @@ import qualified Data.Text as T
 import           Cardano.BM.Data.Tracer (TracingVerbosity(..))
 import qualified Cardano.Chain.Update as Update
 import qualified Ouroboros.Consensus.BlockchainTime as Consensus
+import           Ouroboros.Consensus.Node (DiffusionArguments(..))
 import           Ouroboros.Consensus.NodeId (NodeId(..), CoreNodeId (..))
 
 
 deriving instance Num Consensus.SlotLength
 
 deriving instance Show TracingVerbosity
+deriving instance Show DiffusionArguments
 
 instance FromJSON TracingVerbosity where
   parseJSON (String str) = case str of
