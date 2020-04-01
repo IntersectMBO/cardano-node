@@ -1,0 +1,104 @@
+name:                   cardano-api
+version:                1.6.0
+description:            The cardano api
+author:                 IOHK
+maintainer:             operations@iohk.io
+license:                Apache-2.0
+license-files:
+  LICENSE
+  NOTICE
+build-type:             Simple
+cabal-version:          >= 1.10
+extra-source-files:     README.md, ChangeLog.md
+
+library
+  hs-source-dirs:       src
+
+  exposed-modules:      Cardano.Api
+
+  other-modules:        Cardano.Api.CBOR
+                        Cardano.Api.Error
+                        Cardano.Api.TxSubmit
+                        Cardano.Api.TxSubmit.ErrorRender
+                        Cardano.Api.TxSubmit.TxSubmitVar
+                        Cardano.Api.TxSubmit.Types
+                        Cardano.Api.Types
+                        Cardano.Api.View
+
+
+  build-depends:        base >=4.12 && <5
+                      , aeson
+                      , base16-bytestring
+                      , bytestring
+                      , cardano-binary
+                      , cardano-node
+                      , cardano-config
+                      , cardano-crypto-wrapper
+                      , cardano-ledger
+                      , cardano-prelude
+                      , cardano-shell
+                      , cardano-slotting
+                      , cborg
+                      , contra-tracer
+                      , cryptonite
+                      , formatting
+                      , io-sim-classes
+                      , iohk-monitoring
+                      , network
+                      , network-mux
+                      , ouroboros-consensus
+                      , ouroboros-consensus-byron
+                      , ouroboros-consensus-cardano
+                      , ouroboros-network
+                      , ouroboros-network-framework
+                      , serialise
+                      , text
+                      , transformers-except
+                      , typed-protocols
+                      , typed-protocols-examples
+                      , vector
+
+  default-language:     Haskell2010
+  default-extensions:   NoImplicitPrelude
+                        OverloadedStrings
+
+  ghc-options:          -Weverything
+                        -Wno-implicit-prelude
+                        -fno-warn-safe
+                        -fno-warn-unsafe
+                        -fno-warn-missing-import-lists
+                        -Wno-unticked-promoted-constructors
+                        -Wincomplete-record-updates
+                        -Wincomplete-uni-patterns
+                        -Wredundant-constraints
+                        -Wpartial-fields
+                        -Wcompat
+
+test-suite cardano-api-test
+  hs-source-dirs:       test
+  main-is:              cardano-api-test.hs
+  type:                 exitcode-stdio-1.0
+
+  build-depends:
+                        base >=4.12 && <5
+                      , bytestring
+                      , cardano-api
+                      , cardano-crypto-test
+                      , cardano-crypto-wrapper
+                      , cardano-prelude
+                      , hedgehog
+
+  other-modules:        Test.Cardano.Api
+                        Test.Cardano.Api.Gen
+                        Test.Cardano.Api.CBOR
+                        Test.Cardano.Api.Orphans
+                        Test.Cardano.Api.View
+
+  default-language:     Haskell2010
+  default-extensions:   NoImplicitPrelude
+
+  ghc-options:          -Weverything
+                        -fno-warn-missing-import-lists
+                        -fno-warn-safe
+                        -fno-warn-unsafe
+                        -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
