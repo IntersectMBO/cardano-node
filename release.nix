@@ -114,10 +114,18 @@ let
     inherit dockerImageArtifact;
     cardano-node-win64 = import ./nix/windows-release.nix {
       inherit pkgs project;
-      cardano-node = jobs.x86_64-w64-mingw32.cardano-node.x86_64-linux;
-      chairman = jobs.x86_64-w64-mingw32.chairman.x86_64-linux;
+      cardano-node = jobs."${mingwW64.config}".cardano-node.x86_64-linux;
+      chairman = jobs."${mingwW64.config}".chairman.x86_64-linux;
     };
-    native = mapTestOn (__trace (__toJSON (packagePlatforms project)) (packagePlatforms project));
+    cardano-node-win64-profiled = import ./nix/windows-release.nix {
+      inherit pkgs project;
+      cardano-node = jobs."${mingwW64.config}".cardano-node-profiled.x86_64-linux;
+      chairman = jobs."${mingwW64.config}".chairman.x86_64-linux;
+    };
+    native = mapTestOn (__trace (__toJSON (packagePlatforms project)) (packagePlatforms project)) // {
+      # Only build with profiling for windows
+      cardano-node-profiled = null;
+    };
     "${mingwW64.config}" = mapTestOnCross mingwW64 (packagePlatformsCross (filterJobsCross project));
     # TODO: fix broken evals
     #musl64 = mapTestOnCross musl64 (packagePlatformsCross (filterJobsCross project));
@@ -133,8 +141,8 @@ let
       collectTests jobs.native.benchmarks ++ [
       jobs.native.cardano-node.x86_64-darwin
       jobs.native.cardano-node.x86_64-linux
-      jobs."${mingwW64.config}".cardano-node.x86_64-linux
       jobs.cardano-node-win64
+      jobs.cardano-node-win64-profiled
       jobs.dockerImageArtifact
 
       (map (cluster: jobs.${cluster}.scripts.node.x86_64-linux) [ "mainnet" "testnet" "staging" ])
