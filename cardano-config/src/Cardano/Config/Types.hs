@@ -39,7 +39,6 @@ import qualified Data.IP as IP
 import qualified Data.Text as T
 import           Data.Yaml (decodeFileThrow)
 import           Network.Socket (PortNumber)
-import           System.Directory (doesFileExist)
 import           System.FilePath ((</>), takeDirectory)
 
 import qualified Cardano.Chain.Update as Update
@@ -163,7 +162,7 @@ instance FromJSON NodeConfiguration where
   parseJSON = withObject "NodeConfiguration" $ \v -> do
                 nId <- v .:? "NodeId"
                 ptcl <- v .: "Protocol" .!= RealPBFT
-                genFile <- v .: "GenesisFile" .!= "configuration/genesis/genesis.json"
+                genFile <- v .: "GenesisFile" .!= "genesis/genesis.json"
                 numCoreNode <- v .:? "NumCoreNodes"
                 rNetworkMagic <- v .:? "RequiresNetworkMagic" .!= RequiresNoMagic
                 pbftSignatureThresh <- v .:? "PBftSignatureThreshold"
@@ -248,20 +247,15 @@ parseNodeConfigurationFP :: ConfigYamlFilePath -> IO NodeConfiguration
 parseNodeConfigurationFP (ConfigYamlFilePath fp) = do
  nc  <- decodeFileThrow fp
  let genFile = unGenesisFile $ ncGenesisFile nc
- exists <- doesFileExist genFile
- case exists of
-   -- Genesis file is an absolute path
-   True -> pure nc
-   -- Genesis file is a relative path (relative to configuration yaml filepath)
-   False -> do let d = takeDirectory fp
-               pure $ nc { ncGenesisFile = GenesisFile $ d </> genFile }
+ -- Make genesis file relative to configuration yaml filepath.
+ let d = takeDirectory fp
+ pure $ nc { ncGenesisFile = GenesisFile $ d </> genFile }
 
--- TODO: Make genesisfile relative to configuration file as above.
 parseNodeConfiguration :: NodeProtocolMode -> IO NodeConfiguration
 parseNodeConfiguration npm =
   case npm of
-    MockProtocolMode (NodeMockCLI _ _ cy _) -> decodeFileThrow $ unConfigPath cy
-    RealProtocolMode (NodeCLI _ _ cy _) -> decodeFileThrow $ unConfigPath cy
+    MockProtocolMode (NodeMockCLI _ _ cy _) -> parseNodeConfigurationFP cy
+    RealProtocolMode (NodeCLI _ _ cy _) -> parseNodeConfigurationFP cy
 
 -- TODO:  we don't want ByronLegacy in Protocol.  Let's wrap Protocol with another
 -- sum type for cases where it's required.
