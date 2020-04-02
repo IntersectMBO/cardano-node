@@ -1,12 +1,6 @@
 #!/usr/bin/env bash
 
-test "$1" == "--help" && {
-        cat <<EOF
-Usage:  $(basename $0) [GENESIS-SUBCMD-ARG..]
-EOF
-      echo "" >&2; exit 1; }
-
-umask 077
+OUTPUTDIR=${1?scripts.genesis.Error: no output directory specified}
 
 . $(dirname $0)/lib.sh
 CLI="$(executable_quiet_runner cardano-cli)"
@@ -49,18 +43,17 @@ args=(
 
 set -xe
 
-${CLI} genesis "${args[@]}" "$@"
+${CLI} genesis "${args[@]}"
 
 # move new genesis to configuration
 GENHASH=`${CLI} print-genesis-hash --genesis-json "${tmpdir}/genesis.json" | tail -1`
-TARGETDIR="${configuration}/genesis"
-mkdir -vp "${TARGETDIR}"
-cp -iav ${tmpdir}/genesis.json "${TARGETDIR}"/
-cp -iav ${tmpdir}/delegate-keys.*.key "${TARGETDIR}"/
-cp -iav ${tmpdir}/delegation-cert.*.json "${TARGETDIR}"/
+mkdir -vp "${OUTPUTDIR}"
+cp -iav ${tmpdir}/genesis.json "${OUTPUTDIR}"/
+cp -iav ${tmpdir}/delegate-keys.*.key "${OUTPUTDIR}"/
+cp -iav ${tmpdir}/delegation-cert.*.json "${OUTPUTDIR}"/
 
 set -
 
-echo $GENHASH > "${TARGETDIR}"/GENHASH
-echo "genesis created with hash = ${GENHASH}"
-echo "  in directory ${TARGETDIR}"
+echo $GENHASH > "${OUTPUTDIR}"/GENHASH
+echo "genesis created with hash = ${OUTPUTDIR}"
+echo "  in directory ${OUTPUTDIR}"

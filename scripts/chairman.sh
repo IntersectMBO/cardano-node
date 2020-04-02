@@ -9,13 +9,13 @@ set -e
 
 SOCKET_PATHS=${@/#/--socket-path }
 
-. $(dirname $0)/lib-node.sh
+. $(dirname $0)/lib-node.sh defaults/liveview
 CHAIRMAN="$(executable_runner chairman)"
 
 set -x
 
 ${CHAIRMAN} \
-        -k 10 -s 250 \
+        -p 25 \
         -t 1000 \
-        --config "${configuration}/log-config-0.yaml" \
+        --config "${configuration_root}/config-0.yaml" \
         $SOCKET_PATHS

@@ -21,6 +21,14 @@ provided as
 a [feature](https://github.com/input-output-hk/cardano-shell/blob/master/app/Cardano/Shell/Features/Logging.hs)
 by the node shell to the other packages.
 
+- The cardano-node is the top level for the node and
+  aggregates the other components from other packages: consensus, ledger and
+  networking, with configuration, CLI, logging and monitoring.
+
+- The node no longer incorporates wallet or explorer functionality. The wallet
+  backend and explorer backend are separate components that run in separate
+  external processes that communicate with the node via local IPC.
+
 ## How to build
 
 ### Stack
@@ -71,7 +79,7 @@ Usage: cardano-node --topology FILEPATH --database-path FILEPATH
 
 `--port` - Specify which port to assign to the node.
 
-`--config` - Specify the filepath to the config `.yaml` file. This file is responsible for all the other node's required settings. See examples in `configuration` (e.g. `log-config-0.yaml`).
+`--config` - Specify the filepath to the config `.yaml` file. This file is responsible for all the other node's required settings. See examples in `configuration` (e.g. [`config-0.yaml`](configuration/defaults/liveview/config-0.yaml)).
 
 
 ## Configuration `.yaml` files
@@ -173,8 +181,7 @@ Genesis delegation and related concepts are described in detail in:
   https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/byronLedgerSpec/latest/download-by-type/doc-pdf/ledger-spec
 
 The canned `scripts/genesis.sh` example provides a nice set of defaults and
-illustrates available options.  Running it will produce a `./configuration/XXXXX` directory,
-where `XXXXX` will be a 5-character prefix of the genesis hash.
+illustrates available options.
 
 ## Key operations
 
@@ -245,7 +252,9 @@ The easiest way to create a transaction is via the `scripts/issue-genesis-utxo-e
 
 `./scripts/issue-genesis-utxo-expenditure.sh transaction_file`
 
-This will run `scripts/genesis.sh` if you do not have a genesis file and will create a tx file with the name `transaction_file`. The script `scripts/issue-genesis-utxo-expenditure.sh` has defaults for all the requirements of the `issue-genesis-utxo-expenditure` command.
+NB: This by default creates a transaction based on `configuration/defaults/liveview/config-0.yaml`
+
+If you do not have a `genesis_file` you can run `scripts/genesis.sh` which will create an example `genesis_file` for you. The script `scripts/issue-genesis-utxo-expenditure.sh` has defaults for all the requirements of the `issue-genesis-utxo-expenditure` command.
 
 ### Submission
 
@@ -253,7 +262,7 @@ The `submit-tx` subcommand provides the option of submitting a pre-signed
 transaction, in its raw wire format (see GenTx for Byron transactions).
 
 The canned `scripts/submit-tx.sh` script will submit the supplied transaction to a testnet
-launched by `scripts/shelley-testnet-*.sh` family of scripts.
+launched by `scripts/shelley-testnet-liveview.sh` script.
 
 ### Issuing UTxO expenditure (genesis and regular)
 
@@ -282,7 +291,7 @@ You can query the tip of your local node via the `get-tip` command as follows
 1. Open `tmux`
 2. Run `cabal build cardano-node`
 3. Run `./scripts/shelley-testnet-live.sh`
-4. `cabal exec cardano-cli -- get-tip --config configuration/log-config-0.liveview.yaml --socket-path socket/0`
+4. `cabal exec cardano-cli -- get-tip --config configuration/defaults/liveview/config-0.yaml --socket-path socket/0`
 
 You will see output from stdout in this format:
 ```
@@ -291,6 +300,44 @@ Block hash: 4ab21a10e1b25e39
 Slot: 6
 Block number: 5
 ```
+
+## Update proposals
+
+There is currently only support to create a Byron update proposal:
+
+```
+cardano-cli create-byron-update-proposal --config NODE-CONFIGURATION
+                                         --signing-key FILEPATH
+                                         --protocol-version-major WORD16
+                                         --protocol-version-minor WORD16
+                                         --protocol-version-alt WORD8
+                                         --application-name STRING
+                                         --software-version-num WORD32
+                                         --system-tag STRING
+                                         --installer-hash HASH
+                                         --filepath FILEPATH
+                                         ...
+```
+The mandatory arguments are `config`, `signing-key`, `protocol-version-major`, `protocol-version-minor`, `protocol-version-alt`, `application-name`, `software-version-num`, `system-tag`, `installer-hash` and `filepath`.
+
+The remaining arguments are optional parameters you want to update in your update proposal.
+
+You can also check your proposal's validity using the [`validate-cbor`](#validate-cbor-files) command.
+
+See the [Byron specification](https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/byronLedgerSpec/latest/download-by-type/doc-pdf/ledger-spec) for more details on update proposals.
+
+You can submit your proposal using the `submit-byron-update-proposal` command.
+
+Example:
+```
+cardano-cli submit-byron-update-proposal --config configuration/configuration-mainnet.yaml
+                                         --filepath my-update-proposal
+                                         --socket-path socket/0
+```
+The socket path  must either be specified as an argument (`--socket-path`) or specified in the supplied config file.
+
+See the [Byron specification](https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/byronLedgerSpec/latest/download-by-type/doc-pdf/ledger-spec) for more deatils on update proposals.
+
 
 # Development
 

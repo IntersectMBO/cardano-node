@@ -9,10 +9,10 @@ EOF
 TX="$1"
 shift
 
-. $(dirname $0)/lib-node.sh
+. $(dirname $0)/lib-node.sh defaults/liveview
 CLI="$(executable_runner cardano-cli)"
 
-CONFIG="configuration/log-config-0.liveview.yaml"
+CONFIG="configuration/defaults/liveview/config-0.yaml"
 NOW=`date "+%Y-%m-%d 00:00:00"`
 SOCKET="socket/0"
 NETARGS=(

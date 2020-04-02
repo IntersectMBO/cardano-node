@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-. $(dirname $0)/lib-node.sh
+. $(dirname $0)/lib-node.sh defaults/liveview
 CLI="$(executable_quiet_runner cardano-cli)"
 
 proto_magic="$(jq '.protocolConsts | .protocolMagic' "${genesis_file}")"
