@@ -83,8 +83,6 @@ in {
     $machine->succeed("chown -R cardano-node.cardano-node /var/lib/cardano-node");
     $machine->succeed("lscpu | systemd-cat --identifier=lscpu --priority=crit");
     $machine->succeed("date +%s | systemd-cat --identifier=timekeeper --priority=crit");
-    $machine->succeed("cat /proc/sys/net/ipv4/tcp_syn_retries | systemd-cat --identifier tcp_syn_retries");
-    $machine->succeed("bash -c 'tcpdump -i lo tcp and port 5555 2>&1 | systemd-cat --identifier=proxy-tcpdump --priority=crit' &");
     $machine->succeed("{ now=\$(date +%s); if test 1000000000 -gt \$now; then echo 'Waiting until 1000000000'; sleep \$((1000000000 - now)); fi; } | systemd-cat --identifier=wait-until-1000000000");
     $machine->succeed("systemctl start cardano-cluster || true");
     $machine->waitUntilSucceeds("nc -z 127.1.0.1 3001");
@@ -96,10 +94,7 @@ in {
     $machine->waitUntilSucceeds("nc -z 127.1.0.7 3007");
     $machine->waitUntilSucceeds("nc -z 127.1.0.9 5555");
     $machine->waitUntilSucceeds("nc -z 127.1.0.9 7777");
-    $machine->succeed("ip r l                      | systemd-cat --identifier=routing");
-    $machine->succeed("cat /etc/resolv.conf        | systemd-cat --identifier=resolv");
     $machine->succeed("netstat -pltn | grep LISTEN | systemd-cat --identifier=netstat");
-    $machine->succeed("ls -l /var/lib/cardano-node/*.socket | systemd-cat --identifier=sockets");
     $machine->succeed("bash -c 'set -o pipefail; { ${chairman-runner} 2>&1; status=\$?; echo END-OF-CHAIRMAN-OUTPUT-MARKER; sleep 1; exit \$status; } | systemd-cat --identifier=chairman --priority=crit'");
   '' + optionalString interactive
   ''
