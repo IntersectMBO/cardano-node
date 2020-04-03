@@ -198,6 +198,13 @@ source-repository-package
   location: https://github.com/input-output-hk/iohk-monitoring-framework
   tag: 10877fbae54aa7a4c04ae3b5d87c825a4019e9e9
   --sha256: 17brigssa3yjys75izczpwh10m1ai4rja2wgkx95nvm6krizrkh7
+  subdir:   plugins/backend-trace-forwarder
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/iohk-monitoring-framework
+  tag: 10877fbae54aa7a4c04ae3b5d87c825a4019e9e9
+  --sha256: 17brigssa3yjys75izczpwh10m1ai4rja2wgkx95nvm6krizrkh7
   subdir:   tracer-transformers
 
 source-repository-package

@@ -107,6 +107,7 @@ extra-deps:
       - plugins/backend-aggregation
       - plugins/backend-ekg
       - plugins/backend-monitoring
+      - plugins/backend-trace-forwarder
       - plugins/scribe-systemd
       - tracer-transformers
 
