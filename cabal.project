@@ -10,6 +10,9 @@ package cardano-config
 package cardano-node
   ghc-options: -Wall -fwarn-redundant-constraints
 
+package ouroboros-consensus
+  tests: False
+
 package ouroboros-consensus-byron
   tests: False
 
