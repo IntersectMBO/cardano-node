@@ -35,25 +35,30 @@ import qualified Data.List as List
 import           Data.Proxy (Proxy (..))
 import           Data.Semigroup ((<>))
 import           Data.Text (Text, breakOn, pack, take)
+import           Data.Version (showVersion)
 import           Network.HostName (getHostName)
 import           Network.Socket (AddrInfo)
 import           System.Directory (canonicalizePath, makeAbsolute)
 
 import           Control.Monad.Class.MonadSTM
 
+import           Paths_cardano_node (version)
 #ifdef UNIX
 import qualified Cardano.BM.Configuration.Model as CM
 import           Cardano.BM.Data.Backend
 import           Cardano.BM.Data.BackendKind (BackendKind (..))
 #endif
+import           Cardano.BM.Data.LogItem (LOContent (..),
+                     PrivacyAnnotation (..), mkLOMeta)
 import           Cardano.BM.Data.Tracer (ToLogObject (..),
                      TracingVerbosity (..))
 import           Cardano.BM.Data.Transformers (setHostname)
 import           Cardano.BM.Trace
-import           Cardano.Config.Logging (LoggingLayer (..))
+
+import           Cardano.Config.GitRev (gitRev)
+import           Cardano.Config.Logging (LoggingLayer (..), Severity (..))
 import           Cardano.Config.Types (MiscellaneousFilepaths(..),
                                        NodeConfiguration (..), ViewMode (..))
-
 
 import           Ouroboros.Network.Block
 import           Ouroboros.Network.NodeToClient (LocalConnectionId)
@@ -176,7 +181,7 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
   -- Node configuration
   nc <- parseNodeConfiguration npm
 
-  createTracers npm tracer cfg
+  createTracers npm trace tracer cfg
 
   addrs <- nodeAddressInfo npm
 
@@ -262,10 +267,11 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
 
   createTracers
     :: NodeProtocolMode
+    -> Trace IO Text
     -> Tracer IO GHC.Base.String
     -> Consensus.TopLevelConfig blk
     -> IO ()
-  createTracers npm' tracer cfg = do
+  createTracers npm' tr tracer cfg = do
      case npm' of
        RealProtocolMode (NodeCLI _ rNodeAddr _ runDBValidation) -> do
          eitherTopology <- readTopologyFile npm
@@ -287,6 +293,14 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
            , "My IP producers are " <> show ipProducerAddrs
            , "**************************************"
            ]
+
+         meta <- mkLOMeta Notice Public
+         let rTr = appendName "release" tr
+             vTr = appendName "version" tr
+             cTr = appendName "commit"  tr
+         traceNamedObject rTr (meta, LogMessage "Byron")
+         traceNamedObject vTr (meta, LogMessage . pack . showVersion $ version)
+         traceNamedObject cTr (meta, LogMessage gitRev)
 
          when runDBValidation $ traceWith tracer "Performing DB validation"
 
