@@ -57,7 +57,7 @@ deriving instance (Eq blk, Eq (GenTx blk)) => Eq (MeasureTxs blk)
 deriving instance (Show blk, Show (GenTx blk)) => Show (MeasureTxs blk)
 
 instance Transformable Text IO (MeasureTxs blk) where
-  trTransformer _ verb tr = trStructured verb tr
+  trTransformer = trStructured
 
 instance HasPrivacyAnnotation (MeasureTxs blk)
 instance HasSeverityAnnotation (MeasureTxs blk) where
@@ -220,10 +220,7 @@ instance Transformable Text IO
                              (OutcomeFidelity
                                 (Maybe
                                    (SlotNo, DiffTime, MempoolSize)))) where
-  trTransformer StructuredLogging verb tr = trStructured verb tr
-  trTransformer _ _verb tr = Tracer $ \ev -> do
-    meta <- mkLOMeta (getSeverityAnnotation ev) (getPrivacyAnnotation ev)
-    traceWith tr (mempty, LogObject mempty meta (LogMessage "Outcome of TraceForgeEvent"))
+  trTransformer = trStructured
 
 instance ToObject
                         (Either
