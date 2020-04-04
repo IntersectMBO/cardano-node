@@ -54,7 +54,7 @@ extra-deps:
 
     # Cardano-ledger dependencies
   - git: https://github.com/input-output-hk/cardano-ledger
-    commit: 53ca3542019824d169378fa36a842eb4659b7ceb
+    commit: 90b14c056059d0082cb2641f9c77cb1b097be329
     subdirs:
       - cardano-ledger
       - cardano-ledger/test
@@ -62,10 +62,10 @@ extra-deps:
       - crypto/test
 
   - git: https://github.com/input-output-hk/cardano-ledger-specs
-    commit: 156086266486da710c5037c11f83d2112434926f
+    commit: f1d5ddb25531b2512796d34e9cfd803f7af76567
     subdirs:
       # small-steps
-      - byron/semantics/executable-spec
+      - semantics/executable-spec
       # cs-ledger
       - byron/ledger/executable-spec
       # cs-blockchain
@@ -90,7 +90,7 @@ extra-deps:
 
     # Following deps are for cardano-shell
   - git: https://github.com/input-output-hk/cardano-shell
-    commit: bc3563c952d9f3635e1c76749b86b0a24f7e4b83
+    commit: 8387be2c5d4f7060a48bceae119973c6382df57c
     subdirs:
       - cardano-shell
 
@@ -123,7 +123,7 @@ extra-deps:
     #Ouroboros-network dependencies
 
   - git: https://github.com/input-output-hk/ouroboros-network
-    commit: 954dcc08be8838a2e3a8d1b4231e6320c7839931
+    commit: ea83018839359742ce048e624dc34bd97154172e
     subdirs:
         - io-sim
         - io-sim-classes
