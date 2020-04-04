@@ -220,7 +220,8 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
       let chainDB = getChainDB nodeKernel
       void $ onEachChange registry identity Nothing
                           (ChainDB.getTipPoint chainDB) $ \tip ->
-        atomically $ writeTVar varTip tip
+        -- TODO: use StrictTVar
+        atomically $ writeTVar varTip $! tip
       onKernel nodeKernel
  where
   customiseChainDbArgs :: Bool
