@@ -82,7 +82,7 @@ import           Ouroboros.Network.Subscription (ConnectResult (..), DnsTrace (.
                    SubscriptionTrace (..), SubscriberError (..),
                    WithDomainName (..), WithIPList (..))
 import           Ouroboros.Network.TxSubmission.Inbound
-                   (TraceTxSubmissionInbound)
+                   (TraceTxSubmissionInbound(..))
 import           Ouroboros.Network.TxSubmission.Outbound
                    (TraceTxSubmissionOutbound (..))
 
@@ -214,7 +214,6 @@ instance HasSeverityAnnotation (ChainDB.TraceEvent blk) where
   getSeverityAnnotation (ChainDB.TraceOpenEvent ev) = case ev of
     ChainDB.OpenedDB {} -> Info
     ChainDB.ClosedDB {} -> Info
-    ChainDB.ReopenedDB {} -> Debug
     ChainDB.OpenedImmDB {} -> Info
     ChainDB.OpenedVolDB -> Info
     ChainDB.OpenedLgrDB -> Info
@@ -615,9 +614,6 @@ readableChainDBTracer tracer = Tracer $ \case
       " and tip " <> condense tip'
     ChainDB.ClosedDB immTip tip' -> tr $ WithTip tip $
       "Closed db with immutable tip at " <> condense immTip <>
-      " and tip " <> condense tip'
-    ChainDB.ReopenedDB immTip tip' -> tr $ WithTip tip $
-      "Reopened db with immutable tip at " <> condense immTip <>
       " and tip " <> condense tip'
     ChainDB.OpenedImmDB immTip epoch -> tr $ WithTip tip $
       "Opened imm db with immutable tip at " <> condense immTip <>
@@ -1153,10 +1149,6 @@ instance (Condense (HeaderHash blk), LedgerSupportsProtocol blk)
       mkObject [ "kind" .= String "TraceOpenEvent.ClosedDB"
                , "immtip" .= toObject verb immTip
                , "tip" .= toObject verb tip' ]
-    ChainDB.ReopenedDB immTip tip' ->
-      mkObject [ "kind" .= String "TraceOpenEvent.ReopenedDB"
-               , "immtip" .= toObject verb immTip
-               , "tip" .= toObject verb tip' ]
     ChainDB.OpenedImmDB immTip epoch ->
       mkObject [ "kind" .= String "TraceOpenEvent.OpenedImmDB"
                , "immtip" .= toObject verb immTip
@@ -1374,7 +1366,7 @@ instance ToObject (AnyMessage ps)
     [ "kind" .= String "Recv" , "msg" .= toObject verb m ]
 
 instance ToObject (TraceTxSubmissionInbound (GenTxId blk) (GenTx blk)) where
-  toObject _verb _ =
+  toObject _verb TraceTxSubmissionInbound =
     mkObject [ "kind" .= String "TraceTxSubmissionInbound" ]
 
 instance (Show (GenTx blk), Show (GenTxId blk))
