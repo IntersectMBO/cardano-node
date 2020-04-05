@@ -273,12 +273,8 @@ instance HasPrivacyAnnotation (TraceLocalTxSubmissionServerEvent blk)
 instance HasSeverityAnnotation (TraceLocalTxSubmissionServerEvent blk) where
   getSeverityAnnotation _ = Info
 
-instance HasPrivacyAnnotation (TraceSendRecv (BlockFetch blk))
-instance HasSeverityAnnotation (TraceSendRecv (BlockFetch blk)) where
-  getSeverityAnnotation _ = Debug
-
-instance HasPrivacyAnnotation (TraceSendRecv (TxSubmission txid tx))
-instance HasSeverityAnnotation (TraceSendRecv (TxSubmission txid tx)) where
+instance HasPrivacyAnnotation (TraceSendRecv a)
+instance HasSeverityAnnotation (TraceSendRecv a) where
   getSeverityAnnotation _ = Debug
 
 instance HasPrivacyAnnotation a => HasPrivacyAnnotation (TraceLabelPeer peer a)
@@ -497,23 +493,12 @@ instance Show peer
  => Transformable Text IO [TraceLabelPeer peer (FetchDecision [Point header])] where
   trTransformer _ verb tr = trStructured verb tr
 
-instance Show peer
- => Transformable Text IO (TraceLabelPeer peer (TraceFetchClientState header)) where
+instance (Show peer, HasPrivacyAnnotation a, HasSeverityAnnotation a, ToObject a)
+ => Transformable Text IO (TraceLabelPeer peer a) where
   trTransformer _ verb tr = trStructured verb tr
-
-instance (Show peer, Show txid, Show tx)
- => Transformable Text IO (TraceLabelPeer peer (TraceSendRecv (TxSubmission txid tx))) where
-  trTransformer = defaultTextTransformer
 
 instance Transformable Text IO (TraceLocalTxSubmissionServerEvent blk) where
   trTransformer _ verb tr = trStructured verb tr
-
-instance ( Show blk
-         , StandardHash blk
-         , ToObject (AnyMessage (BlockFetch blk)))
- => Transformable Text IO (TraceLabelPeer peer (TraceSendRecv (BlockFetch blk))) where
-  trTransformer f v =
-    contramap (\(TraceLabelPeer _peer a) -> a) . defaultTextTransformer f v
 
 instance Transformable Text IO (TraceTxSubmissionInbound (GenTxId blk) (GenTx blk)) where
   trTransformer = defaultTextTransformer
