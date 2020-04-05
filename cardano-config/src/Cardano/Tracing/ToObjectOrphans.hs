@@ -917,26 +917,26 @@ instance ( Condense (HeaderHash blk)
       ]
 
 instance (Show txid, Show tx)
- => ToObject (Message (TxSubmission txid tx) from to) where
-  toObject _verb (MsgRequestTxs txids) =
+ => ToObject (AnyMessage (TxSubmission txid tx)) where
+  toObject _verb (AnyMessage (MsgRequestTxs txids)) =
     mkObject
       [ "kind" .= String "MsgRequestTxs"
       , "txIds" .= String (pack $ show txids)
       ]
-  toObject _verb (MsgReplyTxs txs) =
+  toObject _verb (AnyMessage (MsgReplyTxs txs)) =
     mkObject
       [ "kind" .= String "MsgReplyTxs"
       , "txs" .= String (pack $ show txs)
       ]
-  toObject _verb (MsgRequestTxIds _ _ _) =
+  toObject _verb (AnyMessage (MsgRequestTxIds _ _ _)) =
     mkObject
       [ "kind" .= String "MsgRequestTxIds"
       ]
-  toObject _verb (MsgReplyTxIds _) =
+  toObject _verb (AnyMessage (MsgReplyTxIds _)) =
     mkObject
       [ "kind" .= String "MsgReplyTxIds"
       ]
-  toObject _verb MsgDone =
+  toObject _verb (AnyMessage MsgDone) =
     mkObject
       [ "kind" .= String "MsgDone"
       ]
@@ -1373,34 +1373,9 @@ instance Show peer
   toObject _ (lbl : r) = toObject MaximalVerbosity lbl <>
                                         toObject MaximalVerbosity r
 
-instance Show peer
- => ToObject (TraceLabelPeer peer (FetchDecision [Point header])) where
+instance (Show peer, ToObject a) => ToObject (TraceLabelPeer peer a) where
   toObject verb (TraceLabelPeer peerid a) =
-    mkObject [ "kind" .= String "FetchDecision"
-             , "peer" .= show peerid
-             , "decision" .= toObject verb a ]
-
-instance Show peer
- => ToObject (TraceLabelPeer peer (TraceFetchClientState header)) where
-  toObject verb (TraceLabelPeer peerid a) =
-    mkObject [ "kind" .= String "TraceFetchClientState"
-           , "peer" .= show peerid
-           , "state" .= toObject verb a ]
-
-instance (Show peer, Show txid, Show tx)
- => ToObject (TraceLabelPeer peer (TraceSendRecv (TxSubmission txid tx))) where
-  toObject verb (TraceLabelPeer peerid (TraceSendMsg (AnyMessage msg))) =
-    mkObject
-      [ "kind" .= String "TraceSendMsg"
-      , "peer" .= show peerid
-      , "message" .= toObject verb msg
-      ]
-  toObject verb (TraceLabelPeer peerid (TraceRecvMsg (AnyMessage msg))) =
-    mkObject
-      [ "kind" .= String "TraceRecvMsg"
-      , "peer" .= show peerid
-      , "message" .= toObject verb msg
-      ]
+    mkObject [ "peer" .= show peerid ] <> toObject verb a
 
 instance ToObject (TraceLocalTxSubmissionServerEvent blk) where
   toObject _verb _ =
