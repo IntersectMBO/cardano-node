@@ -1,8 +1,16 @@
 module Cardano.Api.View
-  ( parseKeyPairView
+  ( parseAddressView
+  , parseKeyPairView
+  , parsePublicKeyView
+  , readAddress
   , readKeyPair
+  , readPublicKey
+  , renderAddressView
   , renderKeyPairView
+  , renderPublicKeyView
+  , writeAddress
   , writeKeyPair
+  , writePublicKey
 
   -- Exported for testing.
   , rawToMultilineHex
@@ -24,6 +32,18 @@ import           Control.Monad.Trans.Except.Extra (handleIOExceptT, hoistEither,
 import qualified Data.Text as Text
 
 
+parseAddressView :: ByteString -> Either ApiError Address
+parseAddressView bs =
+    case BS.lines bs of
+      ("AddressByron" : rest) -> parseLines rest
+      ("AddressShelley" : rest) -> parseLines rest
+      [] -> Left $ ApiError "parseAddressView: Empty set of lines."
+      (m : _) -> Left $ ApiError (mconcat ["parseAddressView: Bad marker ", textShow m, "."])
+  where
+    parseLines :: [ByteString] -> Either ApiError Address
+    parseLines xs =
+      addressFromCBOR =<< unRawToMultilineHex (BS.concat xs)
+
 parseKeyPairView :: ByteString -> Either ApiError KeyPair
 parseKeyPairView bs =
     case BS.lines bs of
@@ -36,6 +56,28 @@ parseKeyPairView bs =
     parseLines xs =
       keyPairFromCBOR =<< unRawToMultilineHex (BS.concat xs)
 
+parsePublicKeyView :: ByteString -> Either ApiError PublicKey
+parsePublicKeyView bs =
+    case BS.lines bs of
+      ("PublicKeyByron" : rest) -> parseLines rest
+      ("PublicKeyShelley" : rest) -> parseLines rest
+      [] -> Left $ ApiError "parsePublicKeyView: Empty set of lines."
+      (m : _) -> Left $ ApiError (mconcat ["parsePublicKeyView: Bad marker ", textShow m, "."])
+  where
+    parseLines :: [ByteString] -> Either ApiError PublicKey
+    parseLines xs =
+      publicKeyFromCBOR =<< unRawToMultilineHex (BS.concat xs)
+
+renderAddressView :: Address -> ByteString
+renderAddressView kp =
+  BS.unlines $
+    case kp of
+      AddressByron {} -> "AddressByron" : xs
+      AddressShelley {} -> "AddressShelley" : xs
+  where
+    xs :: [ByteString]
+    xs = rawToMultilineHex $ addressToCBOR kp
+
 renderKeyPairView :: KeyPair -> ByteString
 renderKeyPairView kp =
   BS.unlines $
@@ -46,7 +88,23 @@ renderKeyPairView kp =
     xs :: [ByteString]
     xs = rawToMultilineHex $ keyPairToCBOR kp
 
+renderPublicKeyView :: PublicKey -> ByteString
+renderPublicKeyView kp =
+  BS.unlines $
+    case kp of
+      PubKeyByron {} -> "PublicKeyByron" : xs
+      PubKeyShelley {} -> "PublicKeyShelley" : xs
+  where
+    xs :: [ByteString]
+    xs = rawToMultilineHex $ publicKeyToCBOR kp
+
 -- -------------------------------------------------------------------------------------------------
+
+readAddress :: FilePath -> IO (Either ApiError Address)
+readAddress path =
+  runExceptT $ do
+    bs <- handleIOExceptT (ApiErrorIO path) $ BS.readFile path
+    hoistEither $ parseAddressView bs
 
 readKeyPair :: FilePath -> IO (Either ApiError KeyPair)
 readKeyPair path =
@@ -54,10 +112,26 @@ readKeyPair path =
     bs <- handleIOExceptT (ApiErrorIO path) $ BS.readFile path
     hoistEither $ parseKeyPairView bs
 
+readPublicKey :: FilePath -> IO (Either ApiError PublicKey)
+readPublicKey path =
+  runExceptT $ do
+    bs <- handleIOExceptT (ApiErrorIO path) $ BS.readFile path
+    hoistEither $ parsePublicKeyView bs
+
+writeAddress :: FilePath -> Address -> IO (Either ApiError ())
+writeAddress path kp =
+  runExceptT .
+    handleIOExceptT (ApiErrorIO path) $ BS.writeFile path (renderAddressView kp)
+
 writeKeyPair :: FilePath -> KeyPair -> IO (Either ApiError ())
 writeKeyPair path kp =
   runExceptT .
     handleIOExceptT (ApiErrorIO path) $ BS.writeFile path (renderKeyPairView kp)
+
+writePublicKey :: FilePath -> PublicKey -> IO (Either ApiError ())
+writePublicKey path kp =
+  runExceptT .
+    handleIOExceptT (ApiErrorIO path) $ BS.writeFile path (renderPublicKeyView kp)
 
 -- -------------------------------------------------------------------------------------------------
 

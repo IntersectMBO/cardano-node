@@ -11,3 +11,5 @@ import           Cardano.Prelude
 import           Test.Cardano.Crypto.Orphans ()
 
 deriving instance Eq KeyPair
+deriving instance Eq PublicKey
+

@@ -8,17 +8,18 @@ module Cardano.Api
 
   , Address (..)
   , KeyPair (..)
-  , PubKeyInfo (..)
+  , Network (..)
+  , PublicKey (..)
   , Transaction (..)
   , TxSigned (..)
   , TxUnsigned (..)
 
   , buildTransaction
-  , genAddress
-  , genByronKeyPair
-  , mkPubKeyInfo
+  , byronPubKeyAddress
+  , byronGenKeyPair
   , getTransactionId
   , getTransactionInfo
+  , mkPublicKey
   , signTransaction
   , witnessTransaction
   , signTransactionWithWitness
@@ -47,42 +48,47 @@ import           Data.List.NonEmpty (NonEmpty)
 import qualified Data.Vector as Vector
 
 
-genByronKeyPair :: IO KeyPair
-genByronKeyPair =
+byronGenKeyPair :: IO KeyPair
+byronGenKeyPair =
   -- Currently not possible to generate KeyPairShelley.
   uncurry KeyPairByron <$> runSecureRandom Crypto.keyGen
-
--- Obtain Key, Network and Address Information
---    - not needed for use in AWS by exchanges, can be done offline and then plugged in
---    key is just sequence of 64 bytes, any arbitrary sequence can be used
---    bit-shifting if needed for derivation
--- This was called 'getPubKey' but its type signature is the same as the 'PubKeyInfo' constructor.
-mkPubKeyInfo :: KeyPair -> Network -> PubKeyInfo
-mkPubKeyInfo kp nw =
-  case kp of
-    KeyPairByron bpub _ -> PubKeyInfoByron nw bpub
-    KeyPairShelley -> panic "Cardano.Api.mkPubKeyInfo: KeyPairShelley"
 
 -- Given key information (public key, and other network parameters), generate an Address.
 -- Originally: mkAddress :: Network -> PubKey -> PubKeyInfo -> Address
 -- but since PubKeyInfo already has the PublicKey and Network, it can be simplified.
 -- This is true for Byron, but for Shelley there’s also an optional StakeAddressRef as input to
 -- Address generation
-genAddress :: PubKeyInfo -> Address
-genAddress pki =
-  case pki of
-    PubKeyInfoByron _nw _bpk -> panic "Cardano.Api.genAddress: PubKeyInfoByron"
-    PubKeyInfoShelley -> panic "Cardano.Api.genAddress: PubKeyInfoShelley"
+byronPubKeyAddress :: PublicKey -> Address
+byronPubKeyAddress pk =
+  case pk of
+    PubKeyByron nw vk -> AddressByron $ Byron.makeVerKeyAddress (byronNetworkMagic nw) vk
+    PubKeyShelley -> panic "Cardano.Api.byronPubKeyAddress: PubKeyInfoShelley"
+
+mkPublicKey :: KeyPair -> Network -> PublicKey
+mkPublicKey kp nw =
+  case kp of
+    KeyPairByron vk _ -> PubKeyByron nw vk
+    KeyPairShelley -> PubKeyShelley
+
+byronNetworkMagic :: Network -> Byron.NetworkMagic
+byronNetworkMagic nw =
+  case nw of
+    Mainnet -> Byron.NetworkMainOrStage
+    Testnet pid -> Byron.NetworkTestnet $ unProtocolMagicId pid
 
 -- Create new Transaction
 -- ledger creates transaction and serialises it as CBOR - txBuilder
 -- fine for Byron
--- lots of extra params for Shelley
--- Currently this is only for Byron transactions, but will probably need to be extended
--- for Shelley.
+
+-- Currently this is only for Byron transactions.
+-- Shelly transactions will take lots of extra parameters.
+-- For Shelley, transactions can be constructed from any combination of Byron and Shelley
+-- transactions.
+-- Any set ot inputs/outputs that only contain Byron versions should generate a Byron transaction.
+-- Any set ot inputs/outputs that contain any Shelley versions should generate a Shelley transaction.
 buildTransaction :: NonEmpty Byron.TxIn -> NonEmpty Byron.TxOut -> TxUnsigned
 buildTransaction ins outs =
-  ByronTxUnsigned $ Byron.UnsafeTx ins outs (Byron.mkAttributes ())
+  TxUnsignedByron $ Byron.UnsafeTx ins outs (Byron.mkAttributes ())
 
 
 {-
@@ -114,10 +120,10 @@ dont need support Redeem, do need to support Proposal and Votes (possibly Del Ce
 
 
 -- Use the private key to give one witness to a transaction
-witnessTransaction :: TxUnsigned -> Network -> Crypto.SigningKey -> Byron.TxInWitness
+witnessTransaction :: TxUnsigned -> Network -> Crypto.SigningKey -> Byron.TxInWitness -- (TxInWirtness is fine for Byrin on shelley, need a TxWitness type with Byron/Shelley ctors)
 witnessTransaction txu nw signKey =
     case txu of
-      ByronTxUnsigned tx -> byronWitness tx
+      TxUnsignedByron tx -> byronWitness tx
       ShelleyTxUnsigned -> panic "Cardano.Api.witnessTransaction: ShelleyTxUnsigned"
   where
     byronWitness :: Byron.Tx -> Byron.TxInWitness
@@ -126,6 +132,7 @@ witnessTransaction txu nw signKey =
         (Crypto.toVerification signKey)
         (Crypto.sign protocolMagic Crypto.SignTx signKey (Byron.TxSigData $ Crypto.hash tx))
 
+    -- This is unlikely to be specific to Byron or Shelley
     protocolMagic :: ProtocolMagicId
     protocolMagic =
       case nw of
@@ -142,8 +149,8 @@ witnessTransaction txu nw signKey =
 signTransaction :: TxUnsigned -> Network -> [Crypto.SigningKey] -> TxSigned
 signTransaction txu nw sks =
   case txu of
-    ByronTxUnsigned tx ->
-      ByronTxSigned tx (Vector.fromList $ map (witnessTransaction txu nw) sks)
+    TxUnsignedByron tx ->
+      TxSignedByron tx (Vector.fromList $ map (witnessTransaction txu nw) sks)
     ShelleyTxUnsigned ->
       panic "Cardano.Api.witnessTransaction: ShelleyTxUnsigned"
 
@@ -155,8 +162,8 @@ signTransaction txu nw sks =
 signTransactionWithWitness :: TxUnsigned -> [Byron.TxInWitness] -> TxSigned
 signTransactionWithWitness txu ws =
   case txu of
-    ByronTxUnsigned tx ->
-      ByronTxSigned tx (Vector.fromList ws)
+    TxUnsignedByron tx ->
+      TxSignedByron tx (Vector.fromList ws)
     ShelleyTxUnsigned ->
       panic "Cardano.Api.signTransactionWithWitness: ShelleyTxUnsigned"
 
@@ -185,7 +192,12 @@ signTransactionWithWitness txu ws =
 getTransactionId :: Transaction status -> transactionId
 getTransactionId = panic "Cardano.Api.getTransactionId"
 
-getTransactionInfo :: Transaction status -> (transactionId, txBody, [Byron.TxWitness])
+-- Separate functons for TxUnsigned/TxSigned etc
+
+
+-- getTransactionBody
+-- getTransactionWitnesses
+getTransactionInfo :: Transaction status -> (txBody {- unsigned -}, [Byron.TxWitness])
 getTransactionInfo = panic "Cardano.Api.getTransactionInfo"
 -- or separate accessor functions
 -- the txid should be cached, it might be already. There was a ticket about doing that in the ledger

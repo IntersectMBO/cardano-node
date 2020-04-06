@@ -95,10 +95,10 @@ submitTransaction nodeEnv txs = do
 prepareTx :: TxSigned -> GenTx ByronBlock
 prepareTx txs =
   case txs of
-    ByronTxSigned tx vwit ->
+    TxSignedByron tx vwit ->
       let aTxAux = Byron.annotateTxAux (Byron.mkTxAux tx vwit)
       in Byron.ByronTx (Byron.byronIdTx aTxAux) aTxAux
-    ShelleyTxSigned -> panic "Cardano.Api.TxSubmit.submitTransaction: ShelleyTxSigned"
+    TxSignedShelley -> panic "Cardano.Api.TxSubmit.submitTransaction: TxSignedShelley"
 
 
 runTxSubmitNode :: TxSubmitVar -> Trace IO Text -> Genesis.Config -> SocketPath -> IO ()

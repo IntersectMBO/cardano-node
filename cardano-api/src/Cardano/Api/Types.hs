@@ -7,7 +7,7 @@ module Cardano.Api.Types
   ( Address (..)
   , KeyPair (..)
   , Network (..)
-  , PubKeyInfo (..)
+  , PublicKey (..)
   , Transaction (..)
   , TxSigned (..)
   , TxUnsigned (..)
@@ -25,9 +25,9 @@ import           Data.Vector (Vector)
 -- The 'Address' data type in 'cardano-sl' is a design train wreck.
 -- We need something that is compatible and discard as much of the insanity as possible.
 data Address
-  = AddressByron !Byron.Address'
+  = AddressByron !Byron.Address
   | AddressShelley
-  deriving (Generic {-, NFData -})  -- Byron.Address' needs NFData
+  deriving (Eq, Generic , NFData, Show)  -- Byron.Address' needs NFData
   deriving NoUnexpectedThunks via UseIsNormalForm Address
 
 data KeyPair
@@ -39,18 +39,18 @@ data KeyPair
   deriving (Generic, NFData, Show)
   deriving anyclass NoUnexpectedThunks
 
+data PublicKey
+  = PubKeyByron !Network !Crypto.VerificationKey
+  | PubKeyShelley -- Placeholder.
+  deriving (Generic, NFData, Show)
+  deriving anyclass NoUnexpectedThunks
+
 -- The cardano-sl codebase (and cardano-ledger) has something a little like
 -- this (actually isomorphic with Maybe):
 data Network
   = Mainnet
   | Testnet !Crypto.ProtocolMagicId
-  deriving (Generic, NFData)
-  deriving anyclass NoUnexpectedThunks
-
-data PubKeyInfo
-  = PubKeyInfoByron !Network !Crypto.VerificationKey
-  | PubKeyInfoShelley
-  deriving (Generic, NFData)
+  deriving (Eq, Generic, NFData, Show)
   deriving anyclass NoUnexpectedThunks
 
 -- This will probably be dropped.
@@ -61,13 +61,13 @@ data Transaction status
   deriving anyclass NoUnexpectedThunks
 
 data TxSigned
-  = ByronTxSigned !Byron.Tx !(Vector Byron.TxInWitness)
-  | ShelleyTxSigned
+  = TxSignedByron !Byron.Tx !(Vector Byron.TxInWitness)
+  | TxSignedShelley
   deriving (Generic, NFData)
   deriving NoUnexpectedThunks via UseIsNormalForm TxSigned
 
 data TxUnsigned
-  = ByronTxUnsigned !Byron.Tx
+  = TxUnsignedByron !Byron.Tx
   | ShelleyTxUnsigned
   deriving (Generic, NFData)
   deriving NoUnexpectedThunks via UseIsNormalForm TxUnsigned

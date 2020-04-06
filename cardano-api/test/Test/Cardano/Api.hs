@@ -14,13 +14,13 @@ import qualified Hedgehog as H
 import           Test.Cardano.Api.Orphans ()
 
 
-prop_genByronKeyPair_unique :: Property
-prop_genByronKeyPair_unique =
+prop_byronGenKeyPair_unique :: Property
+prop_byronGenKeyPair_unique =
   H.property $ do
     -- Basic sanity test that two distinct calls to the real 'genByronKeyPair'
     -- produces two distinct KeyPairs.
-    kp1 <- liftIO genByronKeyPair
-    kp2 <- liftIO genByronKeyPair
+    kp1 <- liftIO byronGenKeyPair
+    kp2 <- liftIO byronGenKeyPair
     kp1 /== kp2
 
 -- -----------------------------------------------------------------------------
