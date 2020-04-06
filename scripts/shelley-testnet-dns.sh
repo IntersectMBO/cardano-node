@@ -30,7 +30,7 @@ NETARGS="--slot-duration 2 --topology configuration/simple-topology-dns.json ${A
 NODE="$(executable_runner cardano-node)"
 
 function mklogcfg () {
-  echo "--log-config configuration/log-config-${1}.yaml"
+  echo "--log-config configuration/config-${1}.yaml"
 }
 
 tmux split-window -h

@@ -3,7 +3,9 @@
 /cabal.project.diff
 /cabal.project.local
 /cabal.project.old
-dist-newstyle/
+configuration/defaults/simpleview/genesis/
+configuration/defaults/liveview/genesis/
+/dist-newstyle/
 dist/
 *~
 \#*

@@ -72,17 +72,15 @@ set-window-option -g mouse on
 set -g default-terminal "tmux-256color"
 ```
 
-1.) Generate the necessary genesis files by running
-
-    `./scripts/genesis.sh`
-
-2.) create a `tmux` session
+1.) create a `tmux` session
 
 `tmux new-session -s Demo`
 
-3.) run the demo script in this new session
+2.) run the demo script in this new session
 
-`./scripts/shelley-testnet.sh`
+`./scripts/shelley-testnet-live.sh`
+
+NB: This will automatically create the necessary genesis file in `configuration/defaults/liveview/genesis`
 
 
 ## Run chairman
@@ -120,6 +118,8 @@ Submit the tx:
 ./scripts/submit-tx.sh transaction-file
 ```
 The `submit-tx.sh` script by default sends the transaction to node with node id 0.
+
+NB: This will submit a tx based on the `configuration/defaults/liveview/config-0.yaml` config file.
 
 See cardano-cli's [Transactions](../cardano-node/README.md#transactions) section for instructions on how to generate a tx.
 

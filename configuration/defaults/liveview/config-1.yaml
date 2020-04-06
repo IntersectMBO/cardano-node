@@ -16,37 +16,26 @@ defaultBackends:
   - KatipBK
 
 # if wanted, the EKG interface is listening on this port:
-#hasEKG: 12783
+#hasEKG: 12782
 
 #hasPrometheus:
 #  - "127.0.0.1"
-#  - 13790
+#  - 13789
 
 # here we set up outputs of logging in 'katip':
 setupScribes:
   - scKind: FileSK
-    scName: "logs/node-2.log"
+    scName: "logs/node-1.log"
     scFormat: ScText
-  - scKind: StdoutSK
-    scName: stdout
-    scFormat: ScText
-    scRotation: null
 
 # if not indicated otherwise, then log output is directed to this:
 defaultScribes:
   - - FileSK
-    - "logs/node-2.log"
-  - - StdoutSK
-    - stdout
+    - "logs/node-1.log"
 
 # more options which can be passed as key-value pairs:
 options:
   mapSubtrace:
-    benchmark:
-      contents:
-        - GhcRtsStats
-        - MonotonicClock
-      subtrace: ObservableTrace
     '#ekgview':
       contents:
       - - tag: Contains
@@ -91,15 +80,14 @@ options:
 ############### Cardano Node Configuration ###############
 ##########################################################
 
-
 NodeId:
 Protocol: RealPBFT
-GenesisFile: configuration/genesis/genesis.json
+GenesisFile: genesis/genesis.json
 NumCoreNodes: 1
 RequiresNetworkMagic: RequiresMagic
 PBftSignatureThreshold:
 TurnOnLogging: True
-ViewMode: SimpleView
+ViewMode: LiveView
 TurnOnLogMetrics: True
 SocketPath:
 
@@ -136,7 +124,7 @@ TraceBlockFetchProtocolSerialised: False
 TraceBlockFetchServer: True
 
 # Verbose tracer of ChainDB
-TraceChainDb: False
+TraceChainDb: True
 
 # Trace ChainSync client.
 TraceChainSyncClient: False

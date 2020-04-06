@@ -5,7 +5,7 @@
 
 ##### Locations #####
 
-GenesisFile: configuration/mainnet-genesis.json
+GenesisFile: genesis.json
 SocketPath: db/node.socket
 
 #TODO: These parameters cannot yet be used in the config file, only on the CLI:
