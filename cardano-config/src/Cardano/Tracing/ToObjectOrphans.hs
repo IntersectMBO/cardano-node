@@ -82,7 +82,7 @@ import           Ouroboros.Network.Subscription (ConnectResult (..), DnsTrace (.
                    SubscriptionTrace (..), SubscriberError (..),
                    WithDomainName (..), WithIPList (..))
 import           Ouroboros.Network.TxSubmission.Inbound
-                   (TraceTxSubmissionInbound)
+                   (TraceTxSubmissionInbound(..))
 import           Ouroboros.Network.TxSubmission.Outbound
                    (TraceTxSubmissionOutbound (..))
 
@@ -214,7 +214,6 @@ instance HasSeverityAnnotation (ChainDB.TraceEvent blk) where
   getSeverityAnnotation (ChainDB.TraceOpenEvent ev) = case ev of
     ChainDB.OpenedDB {} -> Info
     ChainDB.ClosedDB {} -> Info
-    ChainDB.ReopenedDB {} -> Debug
     ChainDB.OpenedImmDB {} -> Info
     ChainDB.OpenedVolDB -> Info
     ChainDB.OpenedLgrDB -> Info
@@ -273,12 +272,8 @@ instance HasPrivacyAnnotation (TraceLocalTxSubmissionServerEvent blk)
 instance HasSeverityAnnotation (TraceLocalTxSubmissionServerEvent blk) where
   getSeverityAnnotation _ = Info
 
-instance HasPrivacyAnnotation (TraceSendRecv (BlockFetch blk))
-instance HasSeverityAnnotation (TraceSendRecv (BlockFetch blk)) where
-  getSeverityAnnotation _ = Debug
-
-instance HasPrivacyAnnotation (TraceSendRecv (TxSubmission txid tx))
-instance HasSeverityAnnotation (TraceSendRecv (TxSubmission txid tx)) where
+instance HasPrivacyAnnotation (TraceSendRecv a)
+instance HasSeverityAnnotation (TraceSendRecv a) where
   getSeverityAnnotation _ = Debug
 
 instance HasPrivacyAnnotation a => HasPrivacyAnnotation (TraceLabelPeer peer a)
@@ -497,23 +492,12 @@ instance Show peer
  => Transformable Text IO [TraceLabelPeer peer (FetchDecision [Point header])] where
   trTransformer _ verb tr = trStructured verb tr
 
-instance Show peer
- => Transformable Text IO (TraceLabelPeer peer (TraceFetchClientState header)) where
+instance (Show peer, HasPrivacyAnnotation a, HasSeverityAnnotation a, ToObject a)
+ => Transformable Text IO (TraceLabelPeer peer a) where
   trTransformer _ verb tr = trStructured verb tr
-
-instance (Show peer, Show txid, Show tx)
- => Transformable Text IO (TraceLabelPeer peer (TraceSendRecv (TxSubmission txid tx))) where
-  trTransformer = defaultTextTransformer
 
 instance Transformable Text IO (TraceLocalTxSubmissionServerEvent blk) where
   trTransformer _ verb tr = trStructured verb tr
-
-instance ( Show blk
-         , StandardHash blk
-         , ToObject (AnyMessage (BlockFetch blk)))
- => Transformable Text IO (TraceLabelPeer peer (TraceSendRecv (BlockFetch blk))) where
-  trTransformer f v =
-    contramap (\(TraceLabelPeer _peer a) -> a) . defaultTextTransformer f v
 
 instance Transformable Text IO (TraceTxSubmissionInbound (GenTxId blk) (GenTx blk)) where
   trTransformer = defaultTextTransformer
@@ -630,9 +614,6 @@ readableChainDBTracer tracer = Tracer $ \case
       " and tip " <> condense tip'
     ChainDB.ClosedDB immTip tip' -> tr $ WithTip tip $
       "Closed db with immutable tip at " <> condense immTip <>
-      " and tip " <> condense tip'
-    ChainDB.ReopenedDB immTip tip' -> tr $ WithTip tip $
-      "Reopened db with immutable tip at " <> condense immTip <>
       " and tip " <> condense tip'
     ChainDB.OpenedImmDB immTip epoch -> tr $ WithTip tip $
       "Opened imm db with immutable tip at " <> condense immTip <>
@@ -917,26 +898,26 @@ instance ( Condense (HeaderHash blk)
       ]
 
 instance (Show txid, Show tx)
- => ToObject (Message (TxSubmission txid tx) from to) where
-  toObject _verb (MsgRequestTxs txids) =
+ => ToObject (AnyMessage (TxSubmission txid tx)) where
+  toObject _verb (AnyMessage (MsgRequestTxs txids)) =
     mkObject
       [ "kind" .= String "MsgRequestTxs"
       , "txIds" .= String (pack $ show txids)
       ]
-  toObject _verb (MsgReplyTxs txs) =
+  toObject _verb (AnyMessage (MsgReplyTxs txs)) =
     mkObject
       [ "kind" .= String "MsgReplyTxs"
       , "txs" .= String (pack $ show txs)
       ]
-  toObject _verb (MsgRequestTxIds _ _ _) =
+  toObject _verb (AnyMessage (MsgRequestTxIds _ _ _)) =
     mkObject
       [ "kind" .= String "MsgRequestTxIds"
       ]
-  toObject _verb (MsgReplyTxIds _) =
+  toObject _verb (AnyMessage (MsgReplyTxIds _)) =
     mkObject
       [ "kind" .= String "MsgReplyTxIds"
       ]
-  toObject _verb MsgDone =
+  toObject _verb (AnyMessage MsgDone) =
     mkObject
       [ "kind" .= String "MsgDone"
       ]
@@ -1168,10 +1149,6 @@ instance (Condense (HeaderHash blk), LedgerSupportsProtocol blk)
       mkObject [ "kind" .= String "TraceOpenEvent.ClosedDB"
                , "immtip" .= toObject verb immTip
                , "tip" .= toObject verb tip' ]
-    ChainDB.ReopenedDB immTip tip' ->
-      mkObject [ "kind" .= String "TraceOpenEvent.ReopenedDB"
-               , "immtip" .= toObject verb immTip
-               , "tip" .= toObject verb tip' ]
     ChainDB.OpenedImmDB immTip epoch ->
       mkObject [ "kind" .= String "TraceOpenEvent.OpenedImmDB"
                , "immtip" .= toObject verb immTip
@@ -1373,34 +1350,9 @@ instance Show peer
   toObject _ (lbl : r) = toObject MaximalVerbosity lbl <>
                                         toObject MaximalVerbosity r
 
-instance Show peer
- => ToObject (TraceLabelPeer peer (FetchDecision [Point header])) where
+instance (Show peer, ToObject a) => ToObject (TraceLabelPeer peer a) where
   toObject verb (TraceLabelPeer peerid a) =
-    mkObject [ "kind" .= String "FetchDecision"
-             , "peer" .= show peerid
-             , "decision" .= toObject verb a ]
-
-instance Show peer
- => ToObject (TraceLabelPeer peer (TraceFetchClientState header)) where
-  toObject verb (TraceLabelPeer peerid a) =
-    mkObject [ "kind" .= String "TraceFetchClientState"
-           , "peer" .= show peerid
-           , "state" .= toObject verb a ]
-
-instance (Show peer, Show txid, Show tx)
- => ToObject (TraceLabelPeer peer (TraceSendRecv (TxSubmission txid tx))) where
-  toObject verb (TraceLabelPeer peerid (TraceSendMsg (AnyMessage msg))) =
-    mkObject
-      [ "kind" .= String "TraceSendMsg"
-      , "peer" .= show peerid
-      , "message" .= toObject verb msg
-      ]
-  toObject verb (TraceLabelPeer peerid (TraceRecvMsg (AnyMessage msg))) =
-    mkObject
-      [ "kind" .= String "TraceRecvMsg"
-      , "peer" .= show peerid
-      , "message" .= toObject verb msg
-      ]
+    mkObject [ "peer" .= show peerid ] <> toObject verb a
 
 instance ToObject (TraceLocalTxSubmissionServerEvent blk) where
   toObject _verb _ =
@@ -1414,7 +1366,7 @@ instance ToObject (AnyMessage ps)
     [ "kind" .= String "Recv" , "msg" .= toObject verb m ]
 
 instance ToObject (TraceTxSubmissionInbound (GenTxId blk) (GenTx blk)) where
-  toObject _verb _ =
+  toObject _verb TraceTxSubmissionInbound =
     mkObject [ "kind" .= String "TraceTxSubmissionInbound" ]
 
 instance (Show (GenTx blk), Show (GenTxId blk))
