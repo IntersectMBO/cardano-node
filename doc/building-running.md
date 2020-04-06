@@ -35,12 +35,10 @@ nix-build -A scripts.mainnet.node -o mainnet-node-local
 ./mainnet-node-local
 ```
 
-### Building Under Debian and Ubuntu
-The instructions for Debian and Ubuntu are largely identical.
-
+### Building under Debian/Ubuntu or CentOS
 The required versions are [GHC 8.6.5][ghc865] and [Cabal-3.0][cabal30].
 You best get them with the Haskell installer tool [ghcup][ghcup].
- 
+
 ```
 curl --proto '=https' --tlsv1.2 -sSf https://get-ghcup.haskell.org | sh
 ```
@@ -48,8 +46,8 @@ confirm 2x ENTER and type YES at the end to add ghcup to your PATH variable
 Then restart your terminal session or execute 
 
 ```
-source /home/mgu/.ghcup/env
-``` 
+source ~/.ghcup/env
+```
 to use the ghcup command for the next steps
 
 Now install and activate the required GHC version
@@ -60,10 +58,20 @@ ghc --version
 ```
 The code in the Haskell node also requires that the development packages for a couple of Linux
 system libraries be installed:
+
+The instructions for **Debian** and **Ubuntu** are identical.
+
 ```
 sudo apt-get update
-sudo apt-get -y install libgmp-dev libssl-dev libtinfo-dev libsystemd-dev zlib1g-dev
+sudo apt-get -y install pkg-config libgmp-dev libssl-dev libtinfo-dev libsystemd-dev zlib1g-dev
 ```
+If you're using **CentOS**, the corresponding packages will be:
+
+```
+sudo yum update
+sudo yum -y install pkgconfig gmp-devel openssl-devel ncurses-libs systemd-devel zlib-devel
+```
+
 Finally the Cardano Node git repo can be cloned and the code built:
 ```
 git clone https://github.com/input-output-hk/cardano-node
@@ -85,7 +93,7 @@ for cardano-node 1.9.3 it is
 ```
 
 
- 
+
  
 
 
