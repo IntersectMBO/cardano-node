@@ -203,7 +203,10 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
       ipProducers = ipSubscriptionTargets ipProducerAddrs
       (dnsProducerAddrs, ipProducerAddrs) = producerAddresses nt
 
-  removeStaleLocalSocket nc npm
+  removedStaleSocket <- runExceptT $ removeStaleLocalSocket nc npm
+  case removedStaleSocket of
+    Left err   -> (putTextLn $ show err) >> exitFailure
+    Right addr -> return addr
 
   varTip <- atomically $ newTVar GenesisPoint
 
