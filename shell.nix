@@ -30,6 +30,7 @@ let
       nix
       niv
       pkgconfig
+      profiteur
       sqlite-interactive
       tmux
       git
