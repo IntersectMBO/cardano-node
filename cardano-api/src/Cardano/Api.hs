@@ -10,7 +10,6 @@ module Cardano.Api
   , KeyPair (..)
   , Network (..)
   , PublicKey (..)
-  , Transaction (..)
   , TxSigned (..)
   , TxUnsigned (..)
   , TxWitness (..)
@@ -23,7 +22,7 @@ module Cardano.Api
   , getTxSignedWitnesses
   , getTxUnsignedBody
   , getTxUnsignedHash
-  , getTransactionInfo
+
   , mkPublicKey
   , signTransaction
   , witnessTransaction
@@ -170,7 +169,7 @@ signTransaction txu nw sks =
     TxUnsignedByron tx txcbor txHash ->
       TxSignedByron tx txcbor txHash (Vector.fromList $ map (byronWitnessTransaction txHash nw) sks)
     TxUnsignedShelley ->
-      panic "Cardano.Api.witnessTransaction: TxUnsignedShelley"
+      panic "Cardano.Api.signTransaction: TxUnsignedShelley"
 
 
 
@@ -245,8 +244,6 @@ getTxUnsignedBody txu =
 
 -- getTransactionBody
 -- getTransactionWitnesses
-getTransactionInfo :: Transaction status -> (txBody {- unsigned -}, [Byron.TxWitness])
-getTransactionInfo = panic "Cardano.Api.getTransactionInfo"
 -- or separate accessor functions
 -- the txid should be cached, it might be already. There was a ticket about doing that in the ledger
 -- so consensus doesn’t have to do it elsewhere

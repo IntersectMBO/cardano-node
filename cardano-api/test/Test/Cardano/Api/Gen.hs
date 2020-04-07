@@ -5,15 +5,27 @@ module Test.Cardano.Api.Gen
   , genNetwork
   , genPublicKey
   , genPublicKeyByron
+
+  , genTxSigned
+  , genTxSignedByron
+  , genTxUnsigned
+  , genTxUnsignedByron
   ) where
 
 import           Cardano.Api
+import           Cardano.Binary (serialize)
+import           Cardano.Crypto (hashRaw)
 import           Cardano.Prelude
 
+import qualified Data.ByteString.Lazy.Char8 as LBS
+import           Data.Coerce (coerce)
+
+import           Test.Cardano.Chain.UTxO.Gen (genTx)
 import           Test.Cardano.Crypto.Gen (genProtocolMagicId, genSigningKey, genVerificationKey)
 
 import           Hedgehog (Gen)
 import qualified Hedgehog.Gen as Gen
+import qualified Hedgehog.Range as Range
 
 
 genAddress :: Gen Address
@@ -54,3 +66,32 @@ genPublicKey =
 genPublicKeyByron :: Gen PublicKey
 genPublicKeyByron =
   mkPublicKey <$> genKeyPairByron <*> genNetwork
+
+genTxSigned :: Gen TxSigned
+genTxSigned =
+  -- When Shelly is sorted out, this should change to `Gen.choose`.
+  Gen.frequency
+    [ (9, genTxSignedByron)
+    , (1, pure TxSignedShelley)
+    ]
+
+genTxSignedByron :: Gen TxSigned
+genTxSignedByron =
+  signTransaction
+    <$> genTxUnsignedByron
+    <*> genNetwork
+    <*> Gen.list (Range.linear 1 5) genSigningKey
+
+genTxUnsigned :: Gen TxUnsigned
+genTxUnsigned =
+  -- When Shelly is sorted out, this should change to `Gen.choose`.
+  Gen.frequency
+    [ (9, genTxUnsignedByron)
+    , (1, pure TxUnsignedShelley)
+    ]
+
+genTxUnsignedByron :: Gen TxUnsigned
+genTxUnsignedByron = do
+  tx <- genTx
+  let cbor = serialize tx
+  pure $ TxUnsignedByron tx (LBS.toStrict cbor) (coerce $ hashRaw cbor)

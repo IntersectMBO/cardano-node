@@ -83,8 +83,10 @@ test-suite cardano-api-test
                         base >=4.12 && <5
                       , bytestring
                       , cardano-api
+                      , cardano-binary
                       , cardano-crypto-test
                       , cardano-crypto-wrapper
+                      , cardano-ledger-test
                       , cardano-prelude
                       , hedgehog
 

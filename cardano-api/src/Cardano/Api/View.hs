@@ -2,15 +2,26 @@ module Cardano.Api.View
   ( parseAddressView
   , parseKeyPairView
   , parsePublicKeyView
+  , parseTxSignedView
+  , parseTxUnsignedView
+
   , readAddress
   , readKeyPair
   , readPublicKey
+  , readTxSigned
+  , readTxUnsigned
+
   , renderAddressView
   , renderKeyPairView
   , renderPublicKeyView
+  , renderTxSignedView
+  , renderTxUnsignedView
+
   , writeAddress
   , writeKeyPair
   , writePublicKey
+  , writeTxSigned
+  , writeTxUnsigned
 
   -- Exported for testing.
   , rawToMultilineHex
@@ -68,6 +79,30 @@ parsePublicKeyView bs =
     parseLines xs =
       publicKeyFromCBOR =<< unRawToMultilineHex (BS.concat xs)
 
+parseTxSignedView :: ByteString -> Either ApiError TxSigned
+parseTxSignedView bs =
+    case BS.lines bs of
+      ("TxSignedByron" : rest) -> parseLines rest
+      ("TxSignedShelley" : rest) -> parseLines rest
+      [] -> Left $ ApiError "parseTxSignedView: Empty set of lines."
+      (m : _) -> Left $ ApiError (mconcat ["parseTxSignedView: Bad marker ", textShow m, "."])
+  where
+    parseLines :: [ByteString] -> Either ApiError TxSigned
+    parseLines xs =
+      txSignedFromCBOR =<< unRawToMultilineHex (BS.concat xs)
+
+parseTxUnsignedView :: ByteString -> Either ApiError TxUnsigned
+parseTxUnsignedView bs =
+    case BS.lines bs of
+      ("TxUnsignedByron" : rest) -> parseLines rest
+      ("TxUnsignedShelley" : rest) -> parseLines rest
+      [] -> Left $ ApiError "parseTxUnsignedView: Empty set of lines."
+      (m : _) -> Left $ ApiError (mconcat ["parseTxUnsignedView: Bad marker ", textShow m, "."])
+  where
+    parseLines :: [ByteString] -> Either ApiError TxUnsigned
+    parseLines xs =
+      txUnsignedFromCBOR =<< unRawToMultilineHex (BS.concat xs)
+
 renderAddressView :: Address -> ByteString
 renderAddressView kp =
   BS.unlines $
@@ -98,6 +133,26 @@ renderPublicKeyView kp =
     xs :: [ByteString]
     xs = rawToMultilineHex $ publicKeyToCBOR kp
 
+renderTxSignedView :: TxSigned -> ByteString
+renderTxSignedView tu =
+  BS.unlines $
+    case tu of
+      TxSignedByron {} -> "TxSignedByron" : xs
+      TxSignedShelley {} -> "TxSignedShelley" : xs
+  where
+    xs :: [ByteString]
+    xs = rawToMultilineHex $ txSignedToCBOR tu
+
+renderTxUnsignedView :: TxUnsigned -> ByteString
+renderTxUnsignedView tu =
+  BS.unlines $
+    case tu of
+      TxUnsignedByron {} -> "TxUnsignedByron" : xs
+      TxUnsignedShelley {} -> "TxUnsignedShelley" : xs
+  where
+    xs :: [ByteString]
+    xs = rawToMultilineHex $ txUnsignedToCBOR tu
+
 -- -------------------------------------------------------------------------------------------------
 
 readAddress :: FilePath -> IO (Either ApiError Address)
@@ -118,6 +173,18 @@ readPublicKey path =
     bs <- handleIOExceptT (ApiErrorIO path) $ BS.readFile path
     hoistEither $ parsePublicKeyView bs
 
+readTxSigned :: FilePath -> IO (Either ApiError TxSigned)
+readTxSigned path =
+  runExceptT $ do
+    bs <- handleIOExceptT (ApiErrorIO path) $ BS.readFile path
+    hoistEither $ parseTxSignedView bs
+
+readTxUnsigned :: FilePath -> IO (Either ApiError TxUnsigned)
+readTxUnsigned path =
+  runExceptT $ do
+    bs <- handleIOExceptT (ApiErrorIO path) $ BS.readFile path
+    hoistEither $ parseTxUnsignedView bs
+
 writeAddress :: FilePath -> Address -> IO (Either ApiError ())
 writeAddress path kp =
   runExceptT .
@@ -132,6 +199,16 @@ writePublicKey :: FilePath -> PublicKey -> IO (Either ApiError ())
 writePublicKey path kp =
   runExceptT .
     handleIOExceptT (ApiErrorIO path) $ BS.writeFile path (renderPublicKeyView kp)
+
+writeTxSigned :: FilePath -> TxSigned -> IO (Either ApiError ())
+writeTxSigned path kp =
+  runExceptT .
+    handleIOExceptT (ApiErrorIO path) $ BS.writeFile path (renderTxSignedView kp)
+
+writeTxUnsigned :: FilePath -> TxUnsigned -> IO (Either ApiError ())
+writeTxUnsigned path kp =
+  runExceptT .
+    handleIOExceptT (ApiErrorIO path) $ BS.writeFile path (renderTxUnsignedView kp)
 
 -- -------------------------------------------------------------------------------------------------
 

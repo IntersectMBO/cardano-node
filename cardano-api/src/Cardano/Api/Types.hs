@@ -8,7 +8,6 @@ module Cardano.Api.Types
   , KeyPair (..)
   , Network (..)
   , PublicKey (..)
-  , Transaction (..)
   , TxSigned (..)
   , TxUnsigned (..)
   , TxWitness (..)
@@ -54,23 +53,16 @@ data Network
   deriving (Eq, Generic, NFData, Show)
   deriving anyclass NoUnexpectedThunks
 
--- This will probably be dropped.
-data Transaction status
-  = TransactionByron status
-  | TransactionShelley status
-  deriving (Generic, NFData)
-  deriving anyclass NoUnexpectedThunks
-
 data TxSigned
   = TxSignedByron !Byron.Tx !ByteString !(Crypto.Hash Byron.Tx) !(Vector Byron.TxInWitness)
   | TxSignedShelley
-  deriving (Generic, NFData)
+  deriving (Eq, Generic, NFData, Show)
   deriving NoUnexpectedThunks via UseIsNormalForm TxSigned
 
 data TxUnsigned
   = TxUnsignedByron !Byron.Tx !ByteString !(Crypto.Hash Byron.Tx)
   | TxUnsignedShelley
-  deriving (Generic, NFData)
+  deriving (Eq, Generic, NFData, Show)
   deriving NoUnexpectedThunks via UseIsNormalForm TxUnsigned
 
 data TxWitness

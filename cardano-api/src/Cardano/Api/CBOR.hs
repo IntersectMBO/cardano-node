@@ -5,6 +5,11 @@ module Cardano.Api.CBOR
   , keyPairToCBOR
   , publicKeyFromCBOR
   , publicKeyToCBOR
+
+  , txSignedFromCBOR
+  , txSignedToCBOR
+  , txUnsignedFromCBOR
+  , txUnsignedToCBOR
   ) where
 
 import           Cardano.Api.Error
@@ -77,6 +82,46 @@ publicKeyToCBOR pk =
     case pk of
       PubKeyByron nw vk -> mconcat [ toCBOR (174 :: Word8), networkToCBOR nw, toCBOR vk ]
       PubKeyShelley -> toCBOR (175 :: Word8)
+
+txSignedFromCBOR :: ByteString -> Either ApiError TxSigned
+txSignedFromCBOR bs =
+   first ApiErrorCBOR . CBOR.decodeFullDecoder "TxSigned" decode $ LBS.fromStrict bs
+  where
+    decode :: Decoder s TxSigned
+    decode = do
+      tag <- CBOR.decodeWord8
+      case tag of
+        176  -> TxSignedByron <$> fromCBOR <*> fromCBOR <*> fromCBOR <*> fromCBOR
+        177  -> pure TxSignedShelley
+        _  -> cborError $ DecoderErrorUnknownTag "TxSigned" tag
+
+txSignedToCBOR :: TxSigned -> ByteString
+txSignedToCBOR pk =
+  CBOR.serializeEncoding' $
+    case pk of
+      TxSignedByron btx cbor hash wit ->
+        mconcat [ toCBOR (176 :: Word8), toCBOR btx, toCBOR cbor, toCBOR hash, toCBOR wit ]
+      TxSignedShelley -> toCBOR (177 :: Word8)
+
+txUnsignedFromCBOR :: ByteString -> Either ApiError TxUnsigned
+txUnsignedFromCBOR bs =
+   first ApiErrorCBOR . CBOR.decodeFullDecoder "TxUnsigned" decode $ LBS.fromStrict bs
+  where
+    decode :: Decoder s TxUnsigned
+    decode = do
+      tag <- CBOR.decodeWord8
+      case tag of
+        178  -> TxUnsignedByron <$> fromCBOR <*> fromCBOR <*> fromCBOR
+        179  -> pure TxUnsignedShelley
+        _  -> cborError $ DecoderErrorUnknownTag "TxUnsigned" tag
+
+txUnsignedToCBOR :: TxUnsigned -> ByteString
+txUnsignedToCBOR pk =
+  CBOR.serializeEncoding' $
+    case pk of
+      TxUnsignedByron btx cbor hash ->
+        mconcat [ toCBOR (178 :: Word8), toCBOR btx, toCBOR cbor, toCBOR hash ]
+      TxUnsignedShelley -> toCBOR (179 :: Word8)
 
 -- -------------------------------------------------------------------------------------------------
 

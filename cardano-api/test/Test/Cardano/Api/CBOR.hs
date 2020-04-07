@@ -33,6 +33,18 @@ prop_PublicKey_CBOR =
     kp <- H.forAll genPublicKey
     H.tripping kp publicKeyToCBOR publicKeyFromCBOR
 
+prop_TxSigned_CBOR :: Property
+prop_TxSigned_CBOR =
+  H.property $ do
+    txs <- H.forAll genTxSignedByron
+    H.tripping txs txSignedToCBOR txSignedFromCBOR
+
+prop_TxUnsigned_CBOR :: Property
+prop_TxUnsigned_CBOR =
+  H.property $ do
+    txu <- H.forAll genTxUnsigned
+    H.tripping txu txUnsignedToCBOR txUnsignedFromCBOR
+
 -- -----------------------------------------------------------------------------
 
 tests :: IO Bool
