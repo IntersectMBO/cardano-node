@@ -20,14 +20,15 @@ module Cardano.Tracing.Tracers
   , nullTracers
   ) where
 
-import           Cardano.Prelude hiding (atomically)
+import           Cardano.Prelude hiding (Text, atomically)
 import           Prelude (String)
 
 import           Control.Tracer
 
 import           Codec.CBOR.Read (DeserialiseFailure)
 import           Data.Functor.Contravariant (contramap)
-import           Data.Text (Text, pack)
+import qualified Data.Text as ST
+import           Data.Text.Lazy (Text, pack)
 import           Network.Mux (MuxTrace, WithMuxBearer)
 import qualified Network.Socket as Socket (SockAddr)
 
@@ -308,9 +309,9 @@ mkTracers traceOptions tracer = do
         -- TODO this is executed each time the chain changes. How cheap is it?
         meta <- mkLOMeta Critical Confidential
         let tr' = appendName "metrics" tr
-            traceD :: Text -> Double -> IO ()
+            traceD :: ST.Text -> Double -> IO ()
             traceD msg d = traceNamedObject tr' (meta, LogValue msg (PureD d))
-            traceI :: Integral a => Text -> a -> IO ()
+            traceI :: Integral a => ST.Text -> a -> IO ()
             traceI msg i = traceNamedObject tr' (meta, LogValue msg (PureI (fromIntegral i)))
 
         traceD "density"     (fromRational density)
@@ -594,5 +595,5 @@ chainInformation frag = ChainInformation
 --
 
 withName :: String -> Trace IO Text -> Tracer IO String
-withName name tr = contramap pack $ toLogObject $ appendName (pack name) tr
+withName name tr = contramap pack $ toLogObject $ appendName (ST.pack name) tr
 

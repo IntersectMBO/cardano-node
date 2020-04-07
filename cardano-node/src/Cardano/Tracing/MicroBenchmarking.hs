@@ -21,12 +21,13 @@ module Cardano.Tracing.MicroBenchmarking
     , mkOutcomeExtractor
     ) where
 
-import           Cardano.Prelude
+import           Cardano.Prelude hiding (Text)
 
 import           Control.Monad.Class.MonadTime (DiffTime, MonadTime, Time (..),
                      diffTime, getMonotonicTime)
 
 import           Data.Aeson (Value (..), toJSON, (.=))
+import           Data.Text.Lazy (Text)
 import           Data.Time.Clock (diffTimeToPicoseconds)
 
 import           Cardano.BM.Data.Severity (Severity (..))

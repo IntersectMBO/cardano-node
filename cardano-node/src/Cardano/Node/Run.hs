@@ -21,7 +21,7 @@ module Cardano.Node.Run
   )
 where
 
-import           Cardano.Prelude hiding (ByteString, atomically, take, trace)
+import           Cardano.Prelude hiding (ByteString, Text, atomically, take, trace)
 import           Prelude (String, error, unlines)
 
 import qualified Control.Concurrent.Async as Async
@@ -32,7 +32,8 @@ import           Data.Functor.Contravariant (contramap)
 import qualified Data.List as List
 import           Data.Proxy (Proxy (..))
 import           Data.Semigroup ((<>))
-import           Data.Text (Text, breakOn, pack, take)
+import qualified Data.Text as ST
+import           Data.Text.Lazy (Text, pack, fromStrict)
 import           Data.Version (showVersion)
 import           Network.HostName (getHostName)
 import           Network.Socket (AddrInfo)
@@ -142,8 +143,8 @@ runNode loggingLayer npm = do
 #endif
   where
     hostname = do
-      hn0 <- pack <$> getHostName
-      return $ take 8 $ fst $ breakOn "." hn0
+      hn0 <- ST.pack <$> getHostName
+      return $ ST.take 8 $ fst $ ST.breakOn "." hn0
 
 -- | Sets up a simple node, which will run the chain sync protocol and block
 -- fetch protocol, and, if core, will also look at the mempool when trying to
@@ -274,7 +275,7 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
              cTr = appendName "commit"  tr
          traceNamedObject rTr (meta, LogMessage "Byron")
          traceNamedObject vTr (meta, LogMessage . pack . showVersion $ version)
-         traceNamedObject cTr (meta, LogMessage gitRev)
+         traceNamedObject cTr (meta, LogMessage (fromStrict gitRev))
 
          when validateDB $ traceWith tracer "Performing DB validation"
 

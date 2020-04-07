@@ -25,7 +25,10 @@ module Cardano.Config.Logging
   , LOContent (..)
   ) where
 
-import           Cardano.Prelude hiding (trace)
+import           Cardano.Prelude hiding (Text, trace)
+
+import           Data.Text.Lazy (Text)
+import qualified Data.Text as ST
 
 import qualified Control.Concurrent.Async as Async
 import           Control.Exception (IOException)
@@ -97,16 +100,16 @@ data LoggingLayer = LoggingLayer
   , llLogWarning :: forall m a. (MonadIO m, Show a) => Trace m a -> a -> m ()
   , llLogError :: forall m a. (MonadIO m, Show a) => Trace m a -> a -> m ()
   , llAppendName :: forall m a. (Show a) => LoggerName -> Trace m a -> Trace m a
-  , llBracketMonadIO :: forall a t. (Show a) => Trace IO a -> Severity -> Text -> IO t -> IO t
+  , llBracketMonadIO :: forall a t. (Show a) => Trace IO a -> Severity -> ST.Text -> IO t -> IO t
   , llBracketMonadM
       :: forall m a t. (MonadCatch m, MonadIO m, Show a)
-      => Trace m a -> Severity -> Text -> m t -> m t
+      => Trace m a -> Severity -> ST.Text -> m t -> m t
   , llBracketMonadX
-      :: forall m a t. (MonadIO m, Show a) => Trace m a -> Severity -> Text -> m t -> m t
-  , llBracketStmIO :: forall a t. (Show a) => Trace IO a -> Severity -> Text -> STM t -> IO t
+      :: forall m a t. (MonadIO m, Show a) => Trace m a -> Severity -> ST.Text -> m t -> m t
+  , llBracketStmIO :: forall a t. (Show a) => Trace IO a -> Severity -> ST.Text -> STM t -> IO t
   , llBracketStmLogIO
       :: forall a t. (Show a)
-      => Trace IO a -> Severity -> Text -> STM (t,[(LOMeta, LOContent a)]) -> IO t
+      => Trace IO a -> Severity -> ST.Text -> STM (t,[(LOMeta, LOContent a)]) -> IO t
   , llConfiguration :: Configuration
   , llAddBackend :: Backend Text -> BackendKind -> IO ()
   }
@@ -144,7 +147,7 @@ loggingCLIConfiguration mfp captureMetrics' =
 
 -- | Create logging feature for `cardano-cli`
 createLoggingFeatureCLI
-  :: Text
+  :: ST.Text
   -> CardanoEnvironment
   -> Maybe FilePath
   -> Bool
@@ -173,7 +176,7 @@ createLoggingFeatureCLI ver _ mLogConfig captureLogMetrics = do
 
 -- | Create logging feature for `cardano-node`
 createLoggingFeature
-  :: Text
+  :: ST.Text
   -> CardanoEnvironment
   -> NodeProtocolMode
   -> ExceptT ConfigError IO (LoggingLayer, CardanoFeature)
@@ -208,7 +211,7 @@ createLoggingFeature ver _ nodeProtocolMode = do
   getConfigYaml (MockProtocolMode NodeMockCLI{mockConfigFp}) = mockConfigFp
 
 -- | Initialize `LoggingCardanoFeature`
-loggingCardanoFeatureInit :: Text -> LoggingFlag -> LoggingConfiguration -> IO (LoggingLayer, LoggingLayer -> IO ())
+loggingCardanoFeatureInit :: ST.Text -> LoggingFlag -> LoggingConfiguration -> IO (LoggingLayer, LoggingLayer -> IO ())
 loggingCardanoFeatureInit ver disabled' conf = do
 
   let logConfig = lpConfiguration conf

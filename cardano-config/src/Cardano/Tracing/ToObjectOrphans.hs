@@ -14,11 +14,13 @@
 module Cardano.Tracing.ToObjectOrphans
   ( ) where
 
-import           Cardano.Prelude hiding (atomically, show)
+import           Cardano.Prelude hiding (Text, atomically, show)
 import           Prelude (String, show, id)
 
 import           Data.Aeson (Value (..), ToJSON, toJSON, (.=))
+import           Data.Text.Lazy (Text)
 import           Data.Text (pack)
+import qualified Data.Text.Lazy as TL
 import qualified Data.List.NonEmpty as NonEmpty
 import qualified Network.Socket as Socket (SockAddr)
 import           Network.Mux (WithMuxBearer (..), MuxTrace (..))
@@ -357,7 +359,7 @@ instance HasSeverityAnnotation (Identity (SubscriptionTrace LocalAddress)) where
 instance Transformable Text IO (Identity (SubscriptionTrace LocalAddress)) where
   trTransformer = trStructuredText
 instance HasTextFormatter (Identity (SubscriptionTrace LocalAddress)) where
-  formatText _ = pack . show . toList
+  formatText _ = showT . toList
 
 instance ToObject (Identity (SubscriptionTrace LocalAddress)) where
   toObject _verb (Identity ev) =
@@ -398,17 +400,17 @@ instance HasSeverityAnnotation (WithMuxBearer peer MuxTrace) where
 instance Transformable Text IO NtN.HandshakeTr where
   trTransformer = trStructuredText
 instance HasTextFormatter NtN.HandshakeTr where
-  formatText _ = pack . show . toList
+  formatText _ = showT . toList
 
 instance Transformable Text IO NtC.HandshakeTr where
   trTransformer = trStructuredText
 instance HasTextFormatter NtC.HandshakeTr where
-  formatText _ = pack . show . toList
+  formatText _ = showT . toList
 
 instance Transformable Text IO NtN.AcceptConnectionsPolicyTrace where
   trTransformer = trStructuredText
 instance HasTextFormatter NtN.AcceptConnectionsPolicyTrace where
-  formatText _ = pack . show . toList
+  formatText _ = showT . toList
 
 instance ( HasPrivacyAnnotation (ChainDB.TraceAddBlockEvent blk)
          , HasSeverityAnnotation (ChainDB.TraceAddBlockEvent blk)
@@ -418,12 +420,12 @@ instance ( HasPrivacyAnnotation (ChainDB.TraceAddBlockEvent blk)
    trTransformer = trStructuredText
 instance (LedgerSupportsProtocol blk)
  => HasTextFormatter (ChainDB.TraceAddBlockEvent blk) where
-  formatText _ = pack . show . toList
+  formatText _ = showT . toList
 
 instance Transformable Text IO (TraceBlockFetchServerEvent blk) where
   trTransformer = trStructuredText
 instance HasTextFormatter (TraceBlockFetchServerEvent blk) where
-  formatText _ = pack . show . toList
+  formatText _ = showT . toList
 
 instance (Condense (HeaderHash blk), LedgerSupportsProtocol blk)
  => Transformable Text IO (TraceChainSyncClientEvent blk) where
@@ -438,9 +440,9 @@ instance (ToObject (GenTx blk), ToJSON (GenTxId blk), Show (ApplyTxErr blk))
   trTransformer verb tr = trStructured verb tr
 
 condenseT :: Condense a => a -> Text
-condenseT = pack . condense
+condenseT = TL.pack . condense
 showT :: Show a => a -> Text
-showT = pack . show
+showT = TL.pack . show
 
 instance ( Condense (HeaderHash blk)
          , HasTxId tx
@@ -461,7 +463,7 @@ instance ( Condense (HeaderHash blk)
         TraceBlockFromFuture currentSlot tip -> const $
           "Forged block from future: current slot " <> showT (unSlotNo currentSlot) <> ", tip being " <> condenseT tip
         TraceSlotIsImmutable slotNo tipPoint tipBlkNo -> const $
-          "Forged for immutable slot " <> showT (unSlotNo slotNo) <> ", tip: " <> pack (showPoint MaximalVerbosity tipPoint) <> ", block no: " <> showT (unBlockNo tipBlkNo)
+          "Forged for immutable slot " <> showT (unSlotNo slotNo) <> ", tip: " <> TL.pack (showPoint MaximalVerbosity tipPoint) <> ", block no: " <> showT (unBlockNo tipBlkNo)
         TraceDidntAdoptBlock slotNo _ -> const $
           "Didn't adopt forged block at slot " <> showT (unSlotNo slotNo)
         TraceForgedBlock slotNo _ _ _ -> const $
@@ -483,13 +485,14 @@ instance Show peer
  => Transformable Text IO [TraceLabelPeer peer (FetchDecision [Point header])] where
   trTransformer = trStructuredText
 instance HasTextFormatter [TraceLabelPeer peer (FetchDecision [Point header])] where
-  formatText _ = pack . show . toList
+  formatText _ = showT . toList
 
 instance (Show peer, HasPrivacyAnnotation a, HasSeverityAnnotation a, ToObject a)
  => Transformable Text IO (TraceLabelPeer peer a) where
   trTransformer = trStructuredText
+
 instance HasTextFormatter (TraceLabelPeer peer a) where
-  formatText _ = pack . show . toList
+  formatText _ = showT . toList
 
 instance Transformable Text IO (TraceLocalTxSubmissionServerEvent blk) where
   trTransformer = trStructured
@@ -497,40 +500,40 @@ instance Transformable Text IO (TraceLocalTxSubmissionServerEvent blk) where
 instance Transformable Text IO (TraceTxSubmissionInbound (GenTxId blk) (GenTx blk)) where
   trTransformer = trStructuredText
 instance HasTextFormatter (TraceTxSubmissionInbound (GenTxId blk) (GenTx blk)) where
-  formatText _ = pack . show . toList
+  formatText _ = showT . toList
 
 instance (Show (GenTxId blk), Show (GenTx blk))
  => Transformable Text IO (TraceTxSubmissionOutbound (GenTxId blk) (GenTx blk)) where
   trTransformer = trStructuredText
 instance HasTextFormatter (TraceTxSubmissionOutbound (GenTxId blk) (GenTx blk)) where
-  formatText _ = pack . show . toList
+  formatText _ = showT . toList
 
 instance Show addr => Transformable Text IO (WithAddr addr ErrorPolicyTrace) where
   trTransformer = trStructuredText
 instance HasTextFormatter (WithAddr addr ErrorPolicyTrace) where
-  formatText _ = pack . show . toList
+  formatText _ = showT . toList
 
 instance Transformable Text IO (WithDomainName (SubscriptionTrace Socket.SockAddr)) where
   trTransformer = trStructuredText
 instance HasTextFormatter (WithDomainName (SubscriptionTrace Socket.SockAddr)) where
-  formatText _ = pack . show . toList
+  formatText _ = showT . toList
 
 instance Transformable Text IO (WithDomainName DnsTrace) where
   trTransformer = trStructuredText
 instance HasTextFormatter (WithDomainName DnsTrace) where
-  formatText _ = pack . show . toList
+  formatText _ = showT . toList
 
 instance Transformable Text IO (WithIPList (SubscriptionTrace Socket.SockAddr)) where
   trTransformer = trStructuredText
 instance HasTextFormatter (WithIPList (SubscriptionTrace Socket.SockAddr)) where
-  formatText _ = pack . show . toList
+  formatText _ = showT . toList
 
 instance (Show peer)
  => Transformable Text IO (WithMuxBearer peer MuxTrace) where
   trTransformer = trStructuredText
 instance (Show peer)
  => HasTextFormatter (WithMuxBearer peer MuxTrace) where
-  formatText (WithMuxBearer peer ev) = \_o -> "Bearer on " <> (pack $ show peer) <> " event: " <> (pack $ show ev)
+  formatText (WithMuxBearer peer ev) = \_o -> "Bearer on " <> (showT peer) <> " event: " <> showT ev
 
 instance ( Condense (HeaderHash blk)
          , LedgerSupportsProtocol blk

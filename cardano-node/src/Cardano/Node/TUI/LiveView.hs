@@ -24,7 +24,7 @@ module Cardano.Node.TUI.LiveView (
     , setNodeKernel
     ) where
 
-import           Cardano.Prelude hiding (isPrefixOf, modifyMVar_, newMVar, on,
+import           Cardano.Prelude hiding (Text, isPrefixOf, modifyMVar_, newMVar, on,
                                   readMVar, show)
 import           Prelude (String, show)
 
@@ -38,7 +38,8 @@ import           Control.Monad.IO.Class (liftIO)
 import qualified Control.Monad.Class.MonadSTM.Strict as STM
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
-import           Data.Text (Text, pack, unpack)
+import qualified Data.Text as ST
+import           Data.Text.Lazy (Text)
 import           Data.Time.Calendar (Day (..))
 import           Data.Time.Clock (NominalDiffTime, UTCTime (..), addUTCTime,
                                   diffUTCTime, getCurrentTime)
@@ -126,7 +127,7 @@ data Screen
 data LiveViewState blk a = LiveViewState
     { lvsScreen               :: !Screen
     , lvsRelease              :: !String
-    , lvsNodeId               :: !Text
+    , lvsNodeId               :: !ST.Text
     , lvsVersion              :: !String
     , lvsCommit               :: !String
     , lvsUpTime               :: !NominalDiffTime
@@ -496,7 +497,7 @@ initLiveViewState = do
                 , lvsRelease                = "Byron"
                 , lvsNodeId                 = ""
                 , lvsVersion                = showVersion version
-                , lvsCommit                 = unpack gitRev
+                , lvsCommit                 = ST.unpack gitRev
                 , lvsUpTime                 = diffUTCTime now now
                 , lvsEpoch                  = 0
                 , lvsSlotNum                = 0
@@ -549,14 +550,14 @@ initLiveViewState = do
 setTopology :: NFData a => LiveViewBackend blk a -> NodeProtocolMode -> IO ()
 setTopology lvbe (RealProtocolMode NodeCLI{nodeAddr}) =
   modifyMVar_ (getbe lvbe) $ \lvs ->
-    return lvs { lvsNodeId = pack $ "Port: " <> show (naPort nodeAddr) }
+    return lvs { lvsNodeId = ST.pack $ "Port: " <> show (naPort nodeAddr) }
 setTopology lvbe npm = do
   nc <- parseNodeConfiguration npm
   modifyMVar_ (getbe lvbe) $ \lvs ->
     return $ lvs { lvsNodeId = namenum (ncNodeId nc) }
  where
-  namenum (Just (CoreId (CoreNodeId num))) = "C" <> pack (show num)
-  namenum (Just (RelayId num)) = "R" <> pack (show num)
+  namenum (Just (CoreId (CoreNodeId num))) = "C" <> ST.pack (show num)
+  namenum (Just (RelayId num)) = "R" <> ST.pack (show num)
   namenum Nothing = panic $ "Cardano.Node.TUI.LiveView.namenum: "
                           <> "Mock protocols require a NodeId value in the configuration .yaml file"
 
@@ -725,9 +726,9 @@ instance NoUnexpectedThunks (LVPeer blk) where
 instance NFData (LVPeer blk) where
     rnf _ = ()
 
-ppPeer :: LVPeer blk -> Text
+ppPeer :: LVPeer blk -> ST.Text
 ppPeer (LVPeer cid _af status inflight) =
-  pack $ printf "%-15s %-8s %s" (ppCid cid) (ppStatus status) (ppInFlight inflight)
+  ST.pack $ printf "%-15s %-8s %s" (ppCid cid) (ppStatus status) (ppInFlight inflight)
  where
    ppCid :: RemoteConnectionId -> String
    ppCid = takeWhile (/= ':') . show . remoteAddress
@@ -781,9 +782,9 @@ peerListContentW lvs
   . vBox
   . ([ txt "Known peers"
        & padBottom (T.Pad 1)
-     , txt . pack $ printf "%-15s %-8s %-5s  %-10s"
+     , txt . ST.pack $ printf "%-15s %-8s %-5s  %-10s"
        ("Address" :: String) ("Status" :: String) ("Slot" :: String) ("In flight:" :: String)
-     , (txt . pack $ printf "%31s Reqs Blocks   Bytes" ("" :: String))
+     , (txt . ST.pack $ printf "%31s Reqs Blocks   Bytes" ("" :: String))
        & padBottom (T.Pad 1)
      ] <>)
   $ txt . ppPeer <$> lvsPeers lvs
