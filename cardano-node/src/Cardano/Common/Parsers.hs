@@ -1,4 +1,5 @@
 {-# LANGUAGE ApplicativeDo #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
 
 {-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
@@ -124,6 +125,7 @@ nodeRealParser = do
   nodeConfigFp <- parseConfigFile
 
   validate <- parseValidateDB
+  shutdownIPC <- parseShutdownIPC
 
   pure NodeCLI
     { mscFp = MiscellaneousFilepaths
@@ -136,6 +138,7 @@ nodeRealParser = do
     , nodeAddr = nAddress
     , configFp = ConfigYamlFilePath nodeConfigFp
     , validateDB = validate
+    , shutdownIPC
     }
 
 parseCLISocketPath :: Text -> Parser (Maybe CLISocketPath)
@@ -247,6 +250,15 @@ parseValidateDB =
     switch (
          long "validate-db"
       <> help "Validate all on-disk database files"
+    )
+
+parseShutdownIPC :: Parser (Maybe Fd)
+parseShutdownIPC =
+    optional $ option (Fd <$> auto) (
+         long "shutdown-ipc"
+      <> metavar "FD"
+      <> help "Shut down the process when this inherited FD reaches EOF"
+      <> hidden
     )
 
 -- | Flag parser, that returns its argument on success.

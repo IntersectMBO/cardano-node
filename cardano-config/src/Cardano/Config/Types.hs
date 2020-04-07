@@ -27,6 +27,7 @@ module Cardano.Config.Types
     , Update (..)
     , ViewMode (..)
     , YamlSocketPath (..)
+    , Fd (..)
     , parseNodeConfiguration
     , parseNodeConfigurationFP
     ) where
@@ -40,6 +41,7 @@ import qualified Data.Text as T
 import           Data.Yaml (decodeFileThrow)
 import           Network.Socket (PortNumber)
 import           System.FilePath ((</>), takeDirectory)
+import           System.Posix.Types (Fd(Fd))
 
 import qualified Cardano.Chain.Update as Update
 import           Cardano.BM.Data.Tracer (TracingVerbosity (..))
@@ -84,6 +86,7 @@ data NodeCLI = NodeCLI
   , nodeAddr :: !NodeAddress
   , configFp :: !ConfigYamlFilePath
   , validateDB :: !Bool
+  , shutdownIPC :: !(Maybe Fd)
   }
 
 data NodeMockCLI = NodeMockCLI

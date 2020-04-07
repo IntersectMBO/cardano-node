@@ -24,9 +24,7 @@ where
 import           Cardano.Prelude hiding (ByteString, atomically, take, trace)
 import           Prelude (String, error, unlines)
 
-#ifdef UNIX
 import qualified Control.Concurrent.Async as Async
-#endif
 import           Control.Tracer
 import qualified Data.ByteString.Char8 as BSC
 import           Data.Either (partitionEithers)
@@ -39,6 +37,9 @@ import           Data.Version (showVersion)
 import           Network.HostName (getHostName)
 import           Network.Socket (AddrInfo)
 import           System.Directory (canonicalizePath, makeAbsolute)
+import qualified System.IO as IO
+import qualified System.IO.Error  as IO
+import qualified GHC.IO.Handle.FD as IO (fdToHandle)
 
 import           Paths_cardano_node (version)
 #ifdef UNIX
@@ -204,7 +205,8 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
     Left err   -> (putTextLn $ show err) >> exitFailure
     Right addr -> return addr
 
-  Node.run
+  withShutdownHandler npm tracer $
+   Node.run
     (consensusTracers nodeTracers)
     (protocolTracers nodeTracers)
     (chainDBTracer nodeTracers)
@@ -322,6 +324,31 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
                                ]
 
          when mockValidateDB $ traceWith tracer "Performing DB validation"
+
+-- | We provide an optional cross-platform method to politely request shut down.
+--
+-- The parent process passes us the file descriptor number of the read end of a
+-- pipe, via the CLI with @--shutdown-ipc FD@. If the write end gets closed,
+-- either deliberatly by the parent process or automatically because the parent
+-- process itself terminated, then we initiate a clean shutdown.
+--
+withShutdownHandler :: NodeProtocolMode -> Tracer IO String -> IO () -> IO ()
+withShutdownHandler (RealProtocolMode NodeCLI{shutdownIPC = Just (Fd fd)})
+                    tracer action =
+    Async.race_ waitForEOF action
+  where
+    waitForEOF :: IO ()
+    waitForEOF = do
+      hnd <- IO.fdToHandle fd
+      r   <- try $ IO.hGetChar hnd
+      case r of
+        Left e | IO.isEOFError e -> traceWith tracer "received shutdown request"
+               | otherwise       -> throwIO e
+
+        Right _  ->
+          throwIO $ IO.userError "--shutdown-ipc FD does not expect input"
+
+withShutdownHandler _ _ action = action
 
 
 --------------------------------------------------------------------------------
