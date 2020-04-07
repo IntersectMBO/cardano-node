@@ -11,6 +11,7 @@ module Cardano.Api.Types
   , Transaction (..)
   , TxSigned (..)
   , TxUnsigned (..)
+  , TxWitness (..)
   ) where
 
 import           Cardano.Prelude
@@ -61,13 +62,19 @@ data Transaction status
   deriving anyclass NoUnexpectedThunks
 
 data TxSigned
-  = TxSignedByron !Byron.Tx !(Vector Byron.TxInWitness)
+  = TxSignedByron !Byron.Tx !ByteString !(Crypto.Hash Byron.Tx) !(Vector Byron.TxInWitness)
   | TxSignedShelley
   deriving (Generic, NFData)
   deriving NoUnexpectedThunks via UseIsNormalForm TxSigned
 
 data TxUnsigned
-  = TxUnsignedByron !Byron.Tx
-  | ShelleyTxUnsigned
+  = TxUnsignedByron !Byron.Tx !ByteString !(Crypto.Hash Byron.Tx)
+  | TxUnsignedShelley
   deriving (Generic, NFData)
   deriving NoUnexpectedThunks via UseIsNormalForm TxUnsigned
+
+data TxWitness
+  = TxWitByron !Byron.TxInWitness
+  | TxWitShelley
+  deriving (Generic, NFData)
+  deriving NoUnexpectedThunks via UseIsNormalForm TxWitness
