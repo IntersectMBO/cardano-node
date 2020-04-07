@@ -43,6 +43,7 @@ let
         packages.katip.doExactConfig = true;
 
         # split data output for ekg to reduce closure size
+        packages.iohk-monitoring.src = ../../../iohk-monitoring-framework/iohk-monitoring;
         packages.ekg.components.library.enableSeparateDataOutput = true;
         packages.cardano-config.configureFlags = [ "--ghc-option=-Werror" ];
 
