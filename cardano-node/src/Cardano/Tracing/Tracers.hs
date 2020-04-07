@@ -18,13 +18,11 @@ module Cardano.Tracing.Tracers
   , TraceOptions(..)
   , mkTracers
   , nullTracers
-  , withTip
   ) where
 
 import           Cardano.Prelude hiding (atomically)
 import           Prelude (String)
 
-import           Control.Monad.Class.MonadSTM
 import           Control.Tracer
 
 import           Codec.CBOR.Read (DeserialiseFailure)
@@ -72,13 +70,13 @@ import qualified Ouroboros.Consensus.Storage.LedgerDB.OnDisk as LedgerDB
 import           Cardano.Config.Protocol (TraceConstraints)
 import           Cardano.Config.Types
 import           Cardano.Tracing.MicroBenchmarking
-import           Cardano.Tracing.ToObjectOrphans
+import           Cardano.Tracing.ToObjectOrphans ()
 
 import           Control.Tracer.Transformers
 
 data Tracers peer localPeer blk = Tracers
   { -- | Trace the ChainDB
-    chainDBTracer :: Tracer IO (WithTip blk (ChainDB.TraceEvent blk))
+    chainDBTracer :: Tracer IO (ChainDB.TraceEvent blk)
     -- | Consensus-specific tracers.
   , consensusTracers :: Consensus.Tracers IO peer blk
     -- | Tracers for the protocol messages.
@@ -139,27 +137,26 @@ indexReplType LedgerDB.ReplayFromGenesis{} = 1
 indexReplType LedgerDB.ReplayFromSnapshot{} = 2
 indexReplType LedgerDB.ReplayedBlock{} = 3
 
-instance ElidingTracer
-  (WithSeverity (WithTip blk (ChainDB.TraceEvent blk))) where
+instance ElidingTracer (WithSeverity (ChainDB.TraceEvent blk)) where
   -- equivalent by type and severity
-  isEquivalent (WithSeverity s1 (WithTip _tip1 (ChainDB.TraceLedgerReplayEvent ev1)))
-               (WithSeverity s2 (WithTip _tip2 (ChainDB.TraceLedgerReplayEvent ev2))) =
+  isEquivalent (WithSeverity s1 (ChainDB.TraceLedgerReplayEvent ev1))
+               (WithSeverity s2 (ChainDB.TraceLedgerReplayEvent ev2)) =
                   s1 == s2 && indexReplType ev1 == indexReplType ev2
-  isEquivalent (WithSeverity s1 (WithTip _tip1 (ChainDB.TraceGCEvent ev1)))
-               (WithSeverity s2 (WithTip _tip2 (ChainDB.TraceGCEvent ev2))) =
+  isEquivalent (WithSeverity s1 (ChainDB.TraceGCEvent ev1))
+               (WithSeverity s2 (ChainDB.TraceGCEvent ev2)) =
                   s1 == s2 && indexGCType ev1 == indexGCType ev2
   isEquivalent _ _ = False
   -- the types to be elided
-  doelide (WithSeverity _ (WithTip _ (ChainDB.TraceLedgerReplayEvent _))) = True
-  doelide (WithSeverity _ (WithTip _ (ChainDB.TraceGCEvent _))) = True
+  doelide (WithSeverity _ (ChainDB.TraceLedgerReplayEvent _)) = True
+  doelide (WithSeverity _ (ChainDB.TraceGCEvent _)) = True
   doelide _ = False
   conteliding _tform _tverb _tr _ (Nothing, _count) = return (Nothing, 0)
-  conteliding _tform _tverb tr ev@(WithSeverity _ (WithTip _ (ChainDB.TraceGCEvent _))) (_old, count) = do
+  conteliding _tform _tverb tr ev@(WithSeverity _ (ChainDB.TraceGCEvent _)) (_old, count) = do
       when (count > 0 && count `mod` 100 == 0) $ do  -- report every 100th message
           meta <- mkLOMeta (getSeverityAnnotation ev) (getPrivacyAnnotation ev)
           traceNamedObject tr (meta, LogValue "messages elided so far" (PureI $ toInteger count))
       return (Just ev, count + 1)
-  conteliding _tform _tverb tr ev@(WithSeverity _ (WithTip _ (ChainDB.TraceLedgerReplayEvent (LedgerDB.ReplayedBlock pt replayTo)))) (_old, count) = do
+  conteliding _tform _tverb tr ev@(WithSeverity _ (ChainDB.TraceLedgerReplayEvent (LedgerDB.ReplayedBlock pt replayTo))) (_old, count) = do
       let slotno = toInteger $ unSlotNo (realPointSlot pt)
           endslot = toInteger $ withOrigin 0 unSlotNo (pointSlot replayTo)
           startslot = if count == 0 then slotno else toInteger count
@@ -291,17 +288,17 @@ mkTracers traceOptions tracer = do
     tracingVerbosity = traceVerbosity traceOptions
 
     teeTraceChainTip :: TracingVerbosity
-                     -> MVar (Maybe (WithSeverity (WithTip blk (ChainDB.TraceEvent blk))), Int)
+                     -> MVar (Maybe (WithSeverity (ChainDB.TraceEvent blk)), Int)
                      -> Trace IO Text
-                     -> Tracer IO (WithSeverity (WithTip blk (ChainDB.TraceEvent blk)))
+                     -> Tracer IO (WithSeverity (ChainDB.TraceEvent blk))
     teeTraceChainTip tverb elided tr = Tracer $ \ev -> do
         traceWith (teeTraceChainTip' tr) ev
         traceWith (teeTraceChainTipElide StructuredLogging tverb elided tr) ev
     teeTraceChainTipElide :: TracingFormatting
                           -> TracingVerbosity
-                          -> MVar (Maybe (WithSeverity (WithTip blk (ChainDB.TraceEvent blk))), Int)
+                          -> MVar (Maybe (WithSeverity (ChainDB.TraceEvent blk)), Int)
                           -> Trace IO Text
-                          -> Tracer IO (WithSeverity (WithTip blk (ChainDB.TraceEvent blk)))
+                          -> Tracer IO (WithSeverity (ChainDB.TraceEvent blk))
     teeTraceChainTipElide = elideToLogObject
 
     traceChainInformation :: Trace IO Text
@@ -325,9 +322,9 @@ mkTracers traceOptions tracer = do
         epochSlots :: Word64 = 21600  -- TODO
 
     teeTraceChainTip' :: Trace IO Text
-                      -> Tracer IO (WithSeverity (WithTip blk (ChainDB.TraceEvent blk)))
+                      -> Tracer IO (WithSeverity (ChainDB.TraceEvent blk))
     teeTraceChainTip' tr =
-        Tracer $ \(WithSeverity _ (WithTip _tip ev')) ->
+        Tracer $ \(WithSeverity _ ev') ->
           case ev' of
               (ChainDB.TraceAddBlockEvent ev) -> case ev of
                   ChainDB.SwitchedToAFork     _ _ c -> traceChainInformation tr (chainInformation c)
@@ -603,11 +600,3 @@ chainInformation frag = ChainInformation
 withName :: String -> Trace IO Text -> Tracer IO String
 withName name tr = contramap pack $ toLogObject $ appendName (pack name) tr
 
-
--- | A way to satisfy tracer which requires current tip.  The tip is read from
--- a mutable cell.
---
-withTip :: TVar IO (Point blk) -> Tracer IO (WithTip blk a) -> Tracer IO a
-withTip varTip tr = Tracer $ \msg -> do
-    tip <- atomically $ readTVar varTip
-    traceWith (contramap (WithTip tip) tr) msg

@@ -13,9 +13,7 @@
 {-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
 
 module Cardano.Tracing.ToObjectOrphans
-  ( WithTip (..)
-  , showTip
-  , showWithTip
+  ( showTip
   , defaultTextTransformer
   ) where
 
@@ -89,26 +87,6 @@ import           Ouroboros.Network.TxSubmission.Outbound
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 import qualified Ouroboros.Consensus.Storage.LedgerDB.OnDisk as LedgerDB
 
--- | Tracing wrapper which includes current tip in the logs (thus it requires
--- it from the context).
---
--- TODO: this should be moved to `ouroboros-consensus`.  Running in a seprate
--- STM transaction we risk reporting  wrong tip.
---
-data WithTip blk a =
-  WithTip
-    (Point blk)
-    -- ^ current tip point
-    a
-    -- ^ data
-
-showWithTip :: Condense (HeaderHash blk)
-            => (a -> String)
-            -> WithTip blk a
-            -> String
-showWithTip customShow (WithTip tip a) =
-  "[" ++ showPoint MinimalVerbosity tip ++ "] " ++ customShow a
-
 showTip :: Condense (HeaderHash blk)
         => TracingVerbosity
         -> Tip blk
@@ -129,12 +107,6 @@ showPoint verb pt =
     MinimalVerbosity -> take 7
     NormalVerbosity -> take 7
     MaximalVerbosity -> id
-
-instance ( Show a
-         , Condense (HeaderHash blk)
-         ) => Show (WithTip blk a) where
-
-  show = showWithTip show
 
 defaultTextTransformer
   :: ( MonadIO m
@@ -171,6 +143,7 @@ instance HasSeverityAnnotation NtN.AcceptConnectionsPolicyTrace where
   getSeverityAnnotation NtN.ServerTraceAcceptConnectionRateLimiting {} = Info
   getSeverityAnnotation NtN.ServerTraceAcceptConnectionHardLimit {} = Warning
 
+instance HasPrivacyAnnotation (ChainDB.TraceEvent blk)
 instance HasSeverityAnnotation (ChainDB.TraceEvent blk) where
   getSeverityAnnotation (ChainDB.TraceAddBlockEvent ev) = case ev of
     ChainDB.IgnoreBlockOlderThanK {} -> Info
@@ -434,10 +407,6 @@ instance HasSeverityAnnotation (WithMuxBearer peer MuxTrace) where
     MuxTraceRecvDeltaQSample {} -> Debug
     MuxTraceSDUReadTimeoutException -> Notice
 
-instance HasPrivacyAnnotation (WithTip blk (ChainDB.TraceEvent blk))
-instance HasSeverityAnnotation (WithTip blk (ChainDB.TraceEvent blk)) where
-  getSeverityAnnotation (WithTip _tip ev) = getSeverityAnnotation ev
-
 --
 -- | instances of @Transformable@
 --
@@ -523,7 +492,7 @@ instance (Show peer)
   trTransformer = defaultTextTransformer
 
 instance (Condense (HeaderHash blk), LedgerSupportsProtocol blk)
- => Transformable Text IO (WithTip blk (ChainDB.TraceEvent blk)) where
+ => Transformable Text IO (ChainDB.TraceEvent blk) where
   -- structure required, will call 'toObject'
   trTransformer StructuredLogging verb tr = trStructured verb tr
   -- textual output based on the readable ChainDB tracer
@@ -541,101 +510,101 @@ readableChainDBTracer
   :: forall m blk.
      (Monad m, Condense (HeaderHash blk), LedgerSupportsProtocol blk)
   => Tracer m String
-  -> Tracer m (WithTip blk (ChainDB.TraceEvent blk))
+  -> Tracer m (ChainDB.TraceEvent blk)
 readableChainDBTracer tracer = Tracer $ \case
-  WithTip tip (ChainDB.TraceAddBlockEvent ev) -> case ev of
-    ChainDB.IgnoreBlockOlderThanK pt -> tr $ WithTip tip $
+  ChainDB.TraceAddBlockEvent ev -> case ev of
+    ChainDB.IgnoreBlockOlderThanK pt -> tr $
       "Ignoring block older than K: " <> condense pt
-    ChainDB.IgnoreBlockAlreadyInVolDB pt -> tr $ WithTip tip $
+    ChainDB.IgnoreBlockAlreadyInVolDB pt -> tr $
       "Ignoring block already in DB: " <> condense pt
-    ChainDB.IgnoreInvalidBlock pt _reason -> tr $ WithTip tip $
+    ChainDB.IgnoreInvalidBlock pt _reason -> tr $
       "Ignoring previously seen invalid block: " <> condense pt
-    ChainDB.AddedBlockToQueue pt sz -> tr $ WithTip tip $
+    ChainDB.AddedBlockToQueue pt sz -> tr $
       "Block added to queue: " <> condense pt <> " queue size " <> condense sz
-    ChainDB.BlockInTheFuture pt slot -> tr $ WithTip tip $
+    ChainDB.BlockInTheFuture pt slot -> tr $
       "Ignoring block from future: " <> condense pt <> ", slot " <> condense slot
-    ChainDB.StoreButDontChange pt -> tr $ WithTip tip $
+    ChainDB.StoreButDontChange pt -> tr $
       "Ignoring block: " <> condense pt
-    ChainDB.TryAddToCurrentChain pt -> tr $ WithTip tip $
+    ChainDB.TryAddToCurrentChain pt -> tr $
       "Block fits onto the current chain: " <> condense pt
-    ChainDB.TrySwitchToAFork pt _ -> tr $ WithTip tip $
+    ChainDB.TrySwitchToAFork pt _ -> tr $
       "Block fits onto some fork: " <> condense pt
-    ChainDB.AddedToCurrentChain _ _ c -> tr $ WithTip tip $
+    ChainDB.AddedToCurrentChain _ _ c -> tr $
       "Chain extended, new tip: " <> condense (AF.headPoint c)
-    ChainDB.SwitchedToAFork _ _ c -> tr $ WithTip tip $
+    ChainDB.SwitchedToAFork _ _ c -> tr $
       "Switched to a fork, new tip: " <> condense (AF.headPoint c)
     ChainDB.AddBlockValidation ev' -> case ev' of
-      ChainDB.InvalidBlock err pt -> tr $ WithTip tip $
+      ChainDB.InvalidBlock err pt -> tr $
         "Invalid block " <> condense pt <> ": " <> show err
-      ChainDB.InvalidCandidate c -> tr $ WithTip tip $
+      ChainDB.InvalidCandidate c -> tr $
         "Invalid candidate " <> condense (AF.headPoint c)
-      ChainDB.ValidCandidate c -> tr $ WithTip tip $
+      ChainDB.ValidCandidate c -> tr $
         "Valid candidate " <> condense (AF.headPoint c)
-      ChainDB.CandidateExceedsRollback _ _ c -> tr $ WithTip tip $
+      ChainDB.CandidateExceedsRollback _ _ c -> tr $
         "Exceeds rollback " <> condense (AF.headPoint c)
-    ChainDB.AddedBlockToVolDB pt _ _ -> tr $ WithTip tip $
+    ChainDB.AddedBlockToVolDB pt _ _ -> tr $
       "Chain added block " <> condense pt
-    ChainDB.ChainChangedInBg c1 c2 -> tr $ WithTip tip $
+    ChainDB.ChainChangedInBg c1 c2 -> tr $
       "Chain changed in bg, from " <> condense (AF.headPoint c1) <> " to "  <> condense (AF.headPoint c2)
-    ChainDB.ScheduledChainSelection pt slot _n -> tr $ WithTip tip $
+    ChainDB.ScheduledChainSelection pt slot _n -> tr $
       "Chain selection scheduled for future: " <> condense pt
                                   <> ", slot " <> condense slot
-    ChainDB.RunningScheduledChainSelection pts slot _n -> tr $ WithTip tip $
+    ChainDB.RunningScheduledChainSelection pts slot _n -> tr $
       "Running scheduled chain selection: " <> condense (NonEmpty.toList pts)
                                <> ", slot " <> condense slot
-  WithTip tip (ChainDB.TraceLedgerReplayEvent ev) -> case ev of
-    LedgerDB.ReplayFromGenesis _replayTo -> tr $ WithTip tip
+  (ChainDB.TraceLedgerReplayEvent ev) -> case ev of
+    LedgerDB.ReplayFromGenesis _replayTo -> tr $
       "Replaying ledger from genesis"
-    LedgerDB.ReplayFromSnapshot snap tip' _replayTo -> tr $ WithTip tip $
+    LedgerDB.ReplayFromSnapshot snap tip' _replayTo -> tr $
       "Replaying ledger from snapshot " <> show snap <> " at " <>
         condense tip'
-    LedgerDB.ReplayedBlock pt replayTo -> tr $ WithTip tip $
+    LedgerDB.ReplayedBlock pt replayTo -> tr $
       "Replayed block: slot " <> show (realPointSlot pt) ++ " of " ++ show (pointSlot replayTo)
-  WithTip tip (ChainDB.TraceLedgerEvent ev) -> case ev of
-    LedgerDB.TookSnapshot snap pt -> tr $ WithTip tip $
+  (ChainDB.TraceLedgerEvent ev) -> case ev of
+    LedgerDB.TookSnapshot snap pt -> tr $
       "Took ledger snapshot " <> show snap <> " at " <> condense pt
-    LedgerDB.DeletedSnapshot snap -> tr $ WithTip tip $
+    LedgerDB.DeletedSnapshot snap -> tr $
       "Deleted old snapshot " <> show snap
-    LedgerDB.InvalidSnapshot snap failure -> tr $ WithTip tip $
+    LedgerDB.InvalidSnapshot snap failure -> tr $
       "Invalid snapshot " <> show snap <> show failure
-  WithTip tip (ChainDB.TraceCopyToImmDBEvent ev) -> case ev of
-    ChainDB.CopiedBlockToImmDB pt -> tr $ WithTip tip $
+  (ChainDB.TraceCopyToImmDBEvent ev) -> case ev of
+    ChainDB.CopiedBlockToImmDB pt -> tr $
       "Copied block " <> condense pt <> " to the ImmutableDB"
-    ChainDB.NoBlocksToCopyToImmDB -> tr $ WithTip tip
+    ChainDB.NoBlocksToCopyToImmDB -> tr $
       "There are no blocks to copy to the ImmutableDB"
-  WithTip tip (ChainDB.TraceGCEvent ev) -> case ev of
-    ChainDB.PerformedGC slot -> tr $ WithTip tip $
+  (ChainDB.TraceGCEvent ev) -> case ev of
+    ChainDB.PerformedGC slot -> tr $
       "Performed a garbage collection for " <> condense slot
-    ChainDB.ScheduledGC slot _difft -> tr $ WithTip tip $
+    ChainDB.ScheduledGC slot _difft -> tr $
       "Scheduled a garbage collection for " <> condense slot
-  WithTip tip (ChainDB.TraceOpenEvent ev) -> case ev of
-    ChainDB.OpenedDB immTip tip' -> tr $ WithTip tip $
+  (ChainDB.TraceOpenEvent ev) -> case ev of
+    ChainDB.OpenedDB immTip tip' -> tr $
       "Opened db with immutable tip at " <> condense immTip <>
       " and tip " <> condense tip'
-    ChainDB.ClosedDB immTip tip' -> tr $ WithTip tip $
+    ChainDB.ClosedDB immTip tip' -> tr $
       "Closed db with immutable tip at " <> condense immTip <>
       " and tip " <> condense tip'
-    ChainDB.OpenedImmDB immTip epoch -> tr $ WithTip tip $
+    ChainDB.OpenedImmDB immTip epoch -> tr $
       "Opened imm db with immutable tip at " <> condense immTip <>
       " and epoch " <> show epoch
-    ChainDB.OpenedVolDB -> tr $ WithTip tip "Opened vol db"
-    ChainDB.OpenedLgrDB -> tr $ WithTip tip "Opened lgr db"
-  WithTip tip (ChainDB.TraceReaderEvent ev) -> case ev of
-    ChainDB.NewReader -> tr $ WithTip tip $ "New reader was created"
-    ChainDB.ReaderNoLongerInMem _ -> tr $ WithTip tip "ReaderNoLongerInMem"
-    ChainDB.ReaderSwitchToMem _ _ -> tr $ WithTip tip "ReaderSwitchToMem"
-    ChainDB.ReaderNewImmIterator _ _ -> tr $ WithTip tip "ReaderNewImmIterator"
-  WithTip tip (ChainDB.TraceInitChainSelEvent ev) -> case ev of
-    ChainDB.InitChainSelValidation _ -> tr $ WithTip tip "InitChainSelValidation"
-  WithTip tip (ChainDB.TraceIteratorEvent ev) -> case ev of
-    ChainDB.StreamFromVolDB _ _ _ -> tr $ WithTip tip "StreamFromVolDB"
+    ChainDB.OpenedVolDB -> tr $ "Opened vol db"
+    ChainDB.OpenedLgrDB -> tr $ "Opened lgr db"
+  (ChainDB.TraceReaderEvent ev) -> case ev of
+    ChainDB.NewReader -> tr $ "New reader was created"
+    ChainDB.ReaderNoLongerInMem _ -> tr $ "ReaderNoLongerInMem"
+    ChainDB.ReaderSwitchToMem _ _ -> tr $ "ReaderSwitchToMem"
+    ChainDB.ReaderNewImmIterator _ _ -> tr $ "ReaderNewImmIterator"
+  (ChainDB.TraceInitChainSelEvent ev) -> case ev of
+    ChainDB.InitChainSelValidation _ -> tr $ "InitChainSelValidation"
+  (ChainDB.TraceIteratorEvent ev) -> case ev of
+    ChainDB.StreamFromVolDB _ _ _ -> tr $ "StreamFromVolDB"
     _ -> pure ()  -- TODO add more iterator events
-  WithTip tip (ChainDB.TraceImmDBEvent _ev) -> tr $ WithTip tip "TraceImmDBEvent"
-  WithTip tip (ChainDB.TraceVolDBEvent _ev) -> tr $ WithTip tip "TraceVolDBEvent"
+  (ChainDB.TraceImmDBEvent _ev) -> tr $ "TraceImmDBEvent"
+  (ChainDB.TraceVolDBEvent _ev) -> tr $ "TraceVolDBEvent"
 
  where
-  tr :: WithTip blk String -> m ()
-  tr = traceWith (contramap (showWithTip id) tracer)
+  tr :: String -> m ()
+  tr = traceWith tracer
 
 -- | Tracer transformer for making TraceForgeEvents human-readable.
 readableForgeEventTracer
@@ -1422,16 +1391,3 @@ instance (Show peer)
              , "bearer" .= show b
              , "event" .= show ev ]
 
-instance (Condense (HeaderHash blk), LedgerSupportsProtocol blk)
- => ToObject (WithTip blk (ChainDB.TraceEvent blk)) where
-  -- example: turn off any tracing of @TraceEvent@s when minimal verbosity level is set
-  -- toObject MinimalVerbosity _ = emptyObject -- no output
-  toObject verb (WithTip tip ev) =
-    let evobj = toObject verb ev
-    in
-    if evobj == emptyObject
-    then emptyObject
-    else mkObject [ "kind" .= String "TraceEvent"
-                  , "tip" .= showPoint MinimalVerbosity tip
-                  , "event" .= evobj
-                  ]

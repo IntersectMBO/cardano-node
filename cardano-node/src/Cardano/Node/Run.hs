@@ -40,8 +40,6 @@ import           Network.HostName (getHostName)
 import           Network.Socket (AddrInfo)
 import           System.Directory (canonicalizePath, makeAbsolute)
 
-import           Control.Monad.Class.MonadSTM
-
 import           Paths_cardano_node (version)
 #ifdef UNIX
 import qualified Cardano.BM.Configuration.Model as CM
@@ -60,11 +58,10 @@ import           Cardano.Config.Logging (LoggingLayer (..), Severity (..))
 import           Cardano.Config.Types (MiscellaneousFilepaths(..),
                                        NodeConfiguration (..), ViewMode (..))
 
-import           Ouroboros.Network.Block
 import           Ouroboros.Network.NodeToClient (LocalConnectionId)
 import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..))
 import           Ouroboros.Consensus.Block (BlockProtocol)
-import           Ouroboros.Consensus.Node (NodeKernel (getChainDB),
+import           Ouroboros.Consensus.Node (NodeKernel,
                      DiffusionTracers (..), DiffusionArguments (..),
                      DnsSubscriptionTarget (..), IPSubscriptionTarget (..),
                      RunNode (nodeNetworkMagic, nodeStartTime), IsProducer (..),
@@ -75,7 +72,6 @@ import           Ouroboros.Consensus.NodeId
 import qualified Ouroboros.Consensus.Config as Consensus
 import qualified Ouroboros.Consensus.Cardano as Consensus
 import           Ouroboros.Consensus.Util.Orphans ()
-import           Ouroboros.Consensus.Util.STM (onEachChange)
 
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 import           Ouroboros.Consensus.Storage.ImmutableDB (ValidationPolicy (..))
@@ -208,12 +204,10 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
     Left err   -> (putTextLn $ show err) >> exitFailure
     Right addr -> return addr
 
-  varTip <- atomically $ newTVar GenesisPoint
-
   Node.run
     (consensusTracers nodeTracers)
     (protocolTracers nodeTracers)
-    (withTip varTip $ chainDBTracer nodeTracers)
+    (chainDBTracer nodeTracers)
     diffusionTracers
     diffusionArguments
     (nodeNetworkMagic (Proxy @blk) cfg)
@@ -222,14 +216,7 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
     (isProducer nc)
     (customiseChainDbArgs $ dbValidation npm)
     identity -- No NodeParams customisation
-    $ \registry nodeKernel -> do
-      -- Watch the tip of the chain and store it in @varTip@ so we can include
-      -- it in trace messages.
-      let chainDB = getChainDB nodeKernel
-      void $ onEachChange registry identity Nothing
-                          (ChainDB.getTipPoint chainDB) $ \tip ->
-        atomically $ writeTVar varTip tip
-      onKernel nodeKernel
+    $ \_registry nodeKernel -> onKernel nodeKernel
  where
   customiseChainDbArgs :: Bool
                        -> ChainDB.ChainDbArgs IO blk
