@@ -14,9 +14,6 @@
 
 - <span><b>chairman.sh</b></span> <br/>  Run the Chairman consensus checker against a cluster started
                      by `shelley-testnet*.sh` family of scripts
-- <span><b>cluster-log.sh</b></span> <br/> Visualise blockchain from logs emitted by `cluster-test.sh`
-- <span><b>cluster-test.sh</b></span> <br/>- Run a CI-oriented cluster (consisting of Byron Rewrite
-         nodes, a proxy and Byron Legacy nodes) in a VM, while capturing the logs
 - <span><b>generator.sh</b></span> <br/> Run the transaction generator against a cluster started
                      by `shelley-testnet` family of scripts
 - <span><b>genesis.sh</b></span> <br/> Generate a new genesis in the `configuration/` folder
@@ -146,64 +143,4 @@ https://github.com/input-output-hk/iohk-monitoring-framework/wiki/Transaction-Ge
 
 ## CI cluster
 
-#### Prerequisites
-
-Prerequisites include having the Nix package manager installed and suitably
-configured.
-
-Configuration consists of ensuring `/etc/nix/nix.conf` have:
-
-1. The IOHK Hydra binary cache enabled:
-
-   - https://hydra.iohk.io must be in either of the `substituters` or the
-     `binary-caches` space-separated list options
-   - <b><span>hydra.iohk.io</span>:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ</b> must be
-     present in the `public-keys` space-separated list option
-
-2. Configuration allowing KVM to be used by Nix:
-
-   `kvm` and `nixos-test` must be in the `system-features` space-separated list option
-
-   The effective configuration can be observed as follows:
-
-    `$ nix show-config | grep system-features`<br/>
-    `system-features = benchmark big-parallel kvm nixos-test`
-
-#### Running
-
- To launch the CI cluster, just execute the script:
-
-`./scripts/cluster-test.sh`
-
-It'll create a log file for the entire cluster's output in a file named:
-
-`cluster.EPOCHTIME.COMMIT-ID.log`.
-
-#### Logs
-
-Logs for individual machines can be extracted using the `cat` and `less`
-subcommands of `scripts/cluster-log.sh`:
-
-`scripts/cluster-log.sh --ip 10.1.0.2 cluster.1573270530.4158764bcaed9e6b.log less`
-
-#### Charting
-
-The logs can interpret to plot a chart of the produced blockchain (including forks),
-either from the standpoint of a single node, as specified by its IP address:
-
-`scripts/cluster-log.sh --ip 10.1.0.2 cluster.1573270530.4158764bcaed9e6b.log png`
-
-..or for the entire cluster:
-
-`scripts/cluster-log.sh --cluster 10.1.0.%s 1 cluster.1573270530.4158764bcaed9e6b.log png`
-
-Both commands will produce PNG files for the relevant node's chart & launch
-the Eye of Gnome (eog) program to view that.
-
-The number of blocks to show is by default limited to 25.
-
-In the charts:
-
-  - blue-colored blocks are made by Byron Rewrite nodes,
-  - green-colored blocks are made by Byron Legacy nodes,
-  - arrow labels have the public key of the block signer & its BFT id.
+See the README file in the `chairmans-cluster` subdirectory.

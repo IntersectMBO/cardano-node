@@ -31,7 +31,7 @@ do case "$1" in
            --help | "--"* ) usage; exit 1;;
            * ) break;; esac; shift; done
 
-. scripts/unlogging.sh
+. $(dirname $0)/unlogging.sh
 
 logfile="$1"
 test -f "${logfile}" -a -r "${logfile}" || {
@@ -39,7 +39,7 @@ test -f "${logfile}" -a -r "${logfile}" || {
         usage
         exit 1
         }
-keydir="${2:-$(dirname $0)/../configuration/mainnet-ci}"
+keydir="${2:-$(dirname $0)/../../configuration/mainnet-ci}"
 test -d "${keydir}" -a -f "${keydir}/key6.sk" || {
         error "Arg 2 is not a directory containing Byron delegate key files: '${keydir}'"
         usage
