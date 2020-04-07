@@ -335,7 +335,7 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
 withShutdownHandler :: NodeProtocolMode -> Tracer IO String -> IO () -> IO ()
 withShutdownHandler (RealProtocolMode NodeCLI{shutdownIPC = Just (Fd fd)})
                     tracer action =
-    Async.race_ waitForEOF action
+    Async.race_ (wrapUninterruptableIO waitForEOF) action
   where
     waitForEOF :: IO ()
     waitForEOF = do
@@ -349,6 +349,18 @@ withShutdownHandler (RealProtocolMode NodeCLI{shutdownIPC = Just (Fd fd)})
           throwIO $ IO.userError "--shutdown-ipc FD does not expect input"
 
 withShutdownHandler _ _ action = action
+
+-- | Windows blocking file IO calls like 'hGetChar' are not interruptable by
+-- asynchronous exceptions, as used by async 'cancel' (as of base-4.12).
+--
+-- This wrapper works around that problem by running the blocking IO in a
+-- separate thread. If the parent thread receives an async cancel then it
+-- will return. Note however that in this circumstance the child thread may
+-- continue and remain blocked, leading to a leak of the thread. As such this
+-- is only reasonable to use a fixed number of times for the whole process.
+--
+wrapUninterruptableIO :: IO a -> IO a
+wrapUninterruptableIO action = async action >>= wait
 
 
 --------------------------------------------------------------------------------
