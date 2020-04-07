@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE NumericUnderscores #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -21,8 +22,7 @@ module Cardano.Node.Run
 where
 
 import           Cardano.Prelude hiding (ByteString, atomically, take, trace)
-import qualified GHC.Base
-import           Prelude (error, unlines)
+import           Prelude (String, error, unlines)
 
 #ifdef UNIX
 import qualified Control.Concurrent.Async as Async
@@ -258,12 +258,12 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
   createTracers
     :: NodeProtocolMode
     -> Trace IO Text
-    -> Tracer IO GHC.Base.String
+    -> Tracer IO String
     -> Consensus.TopLevelConfig blk
     -> IO ()
   createTracers npm' tr tracer cfg = do
      case npm' of
-       RealProtocolMode (NodeCLI _ rNodeAddr _ runDBValidation) -> do
+       RealProtocolMode NodeCLI{nodeAddr, validateDB} -> do
          eitherTopology <- readTopologyFile npm
          nt <- either
                  (\err -> panic $ "Cardano.Node.Run.readTopologyFile: " <> err)
@@ -278,7 +278,7 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
          traceWith tracer $ unlines
            [ ""
            , "**************************************"
-           , "Host node address: " <> show rNodeAddr
+           , "Host node address: " <> show nodeAddr
            , "My DNS producers are " <> show dnsProducerAddrs
            , "My IP producers are " <> show ipProducerAddrs
            , "**************************************"
@@ -292,9 +292,9 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
          traceNamedObject vTr (meta, LogMessage . pack . showVersion $ version)
          traceNamedObject cTr (meta, LogMessage gitRev)
 
-         when runDBValidation $ traceWith tracer "Performing DB validation"
+         when validateDB $ traceWith tracer "Performing DB validation"
 
-       MockProtocolMode (NodeMockCLI _ mockNodeAddress _ runDBValidation) -> do
+       MockProtocolMode NodeMockCLI{mockNodeAddr, mockValidateDB} -> do
          eitherTopology <- readTopologyFile npm
          nodeid <- nid npm
          (MockNodeTopology nodeSetups) <- either
@@ -307,7 +307,7 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
              producers' = case (List.lookup nodeid producersList) of
                             Just ps ->  ps
                             Nothing -> error $ "handleSimpleNode: own address "
-                                         <> show mockNodeAddress
+                                         <> show mockNodeAddr
                                          <> ", Node Id "
                                          <> show nodeid
                                          <> " not found in topology"
@@ -315,12 +315,13 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
          traceWith tracer $ unlines
                                [ ""
                                , "**************************************"
-                               , "I am Node "        <> show mockNodeAddress <> " Id: " <> show nodeid
+                               , "I am Node "        <> show mockNodeAddr
+                                          <> " Id: " <> show nodeid
                                , "My producers are " <> show producers'
                                , "**************************************"
                                ]
 
-         when runDBValidation $ traceWith tracer "Performing DB validation"
+         when mockValidateDB $ traceWith tracer "Performing DB validation"
 
 
 --------------------------------------------------------------------------------
@@ -330,17 +331,18 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
 canonDbPath :: NodeProtocolMode -> IO FilePath
 canonDbPath npm  = do
   dbFp <- case npm of
-            MockProtocolMode (NodeMockCLI mscFp' _ _ _) -> do
+            MockProtocolMode NodeMockCLI{mockMscFp} -> do
+              --TODO: we should eliminate auto-naming here too
               nodeid <- nid npm
-              pure $ (unDB $ dBFile mscFp') <> "-" <> show nodeid
+              pure $ unDB (dBFile mockMscFp) <> "-" <> show nodeid
 
-            RealProtocolMode (NodeCLI mscFp' _ _ _) -> pure . unDB $ dBFile mscFp'
+            RealProtocolMode NodeCLI{mscFp} -> pure . unDB $ dBFile mscFp
 
   canonicalizePath =<< makeAbsolute dbFp
 
 dbValidation :: NodeProtocolMode -> Bool
-dbValidation (MockProtocolMode (NodeMockCLI _ _ _ dbval)) = dbval
-dbValidation (RealProtocolMode (NodeCLI _ _ _ dbval)) = dbval
+dbValidation (MockProtocolMode NodeMockCLI{mockValidateDB}) = mockValidateDB
+dbValidation (RealProtocolMode NodeCLI{validateDB}) = validateDB
 
 createDiffusionArguments
   :: [AddrInfo]
@@ -373,8 +375,8 @@ dnsSubscriptionTarget ra =
 extractMiscFilePaths :: NodeProtocolMode -> MiscellaneousFilepaths
 extractMiscFilePaths npm =
   case npm of
-    MockProtocolMode (NodeMockCLI mMscFp _ _ _) -> mMscFp
-    RealProtocolMode (NodeCLI rMscFp _ _ _) -> rMscFp
+    MockProtocolMode NodeMockCLI{mockMscFp} -> mockMscFp
+    RealProtocolMode NodeCLI{mscFp} -> mscFp
 
 ipSubscriptionTargets :: [NodeAddress] -> IPSubscriptionTarget
 ipSubscriptionTargets ipProdAddrs =
