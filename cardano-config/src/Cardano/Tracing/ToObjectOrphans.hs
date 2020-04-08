@@ -261,8 +261,8 @@ getFetchDecisionSeverityAnnotation fd =
       Left FetchDeclineAlreadyFetched        -> Debug
       Left FetchDeclineInFlightThisPeer      -> Notice
       Left FetchDeclineInFlightOtherPeer     -> Debug
-      Left FetchDeclinePeerShutdown          -> Notice
-      Left FetchDeclinePeerSlow              -> Notice
+      Left FetchDeclinePeerShutdown          -> Info
+      Left FetchDeclinePeerSlow              -> Info
       Left FetchDeclineReqsInFlightLimit {}  -> Info
       Left FetchDeclineBytesInFlightLimit {} -> Info
       Left FetchDeclinePeerBusy {}           -> Info
@@ -1408,4 +1408,3 @@ instance (Show peer)
     mkObject [ "kind" .= String "MuxTrace"
              , "bearer" .= show b
              , "event" .= show ev ]
-
