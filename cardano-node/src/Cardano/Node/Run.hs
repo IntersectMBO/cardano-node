@@ -66,7 +66,7 @@ import           Ouroboros.Consensus.Block (BlockProtocol)
 import           Ouroboros.Consensus.Node (NodeKernel,
                      DiffusionTracers (..), DiffusionArguments (..),
                      DnsSubscriptionTarget (..), IPSubscriptionTarget (..),
-                     RunNode (nodeNetworkMagic, nodeStartTime), IsProducer (..),
+                     RunNode (nodeNetworkMagic, nodeStartTime),
                      RemoteConnectionId)
 import qualified Ouroboros.Consensus.Node as Node (run)
 import           Ouroboros.Consensus.Node.ProtocolInfo
@@ -216,7 +216,6 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
     (nodeNetworkMagic (Proxy @blk) cfg)
     dbPath
     pInfo
-    (isProducer nc)
     (customiseChainDbArgs $ dbValidation npm)
     identity -- No NodeParams customisation
     $ \_registry nodeKernel -> onKernel nodeKernel
@@ -232,16 +231,6 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
       }
     | otherwise
     = args
-
-  isProducer :: NodeConfiguration -> IsProducer
-  isProducer nc = case p of
-   -- For the real protocol, look at the leader credentials
-   Consensus.ProtocolRealPBFT _ _ _ _ (Just _) -> IsProducer
-   Consensus.ProtocolRealPBFT _ _ _ _ Nothing -> IsNotProducer
-   -- For mock protocols, look at the NodeId
-   _ -> case ncNodeId nc of
-          Just (CoreId _) -> IsProducer
-          _               -> IsNotProducer
 
   createDiffusionTracers :: Tracers RemoteConnectionId LocalConnectionId blk
                          -> DiffusionTracers
