@@ -256,7 +256,7 @@ instance HasSeverityAnnotation a => HasSeverityAnnotation (TraceLabelPeer peer a
 getFetchDecisionSeverityAnnotation :: FetchDecision a -> Severity
 getFetchDecisionSeverityAnnotation fd =
     case fd of
-      Left FetchDeclineChainNotPlausible     -> Info
+      Left FetchDeclineChainNotPlausible     -> Debug
       Left FetchDeclineChainNoIntersection   -> Notice
       Left FetchDeclineAlreadyFetched        -> Debug
       Left FetchDeclineInFlightThisPeer      -> Debug
