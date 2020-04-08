@@ -40,6 +40,7 @@ import           Network.Socket (PortNumber)
 import           Options.Applicative
 
 import           Ouroboros.Consensus.NodeId (NodeId(..), CoreNodeId(..))
+import           Ouroboros.Network.Block (MaxSlotNo(..), SlotNo(..))
 import           Cardano.Chain.Common (Lovelace, mkLovelace)
 
 import           Cardano.Config.CommonCLI
@@ -95,6 +96,8 @@ nodeMockParser = do
 
   validate <- parseValidateDB
 
+  mockShutdownOnSlotSynced <- parseShutdownOnSlotSynced
+
   pure $ NodeMockCLI
            { mockMscFp = MiscellaneousFilepaths
              { topFile = TopologyFile topFp
@@ -106,6 +109,7 @@ nodeMockParser = do
            , mockNodeAddr = nAddress
            , mockConfigFp = ConfigYamlFilePath nodeConfigFp
            , mockValidateDB = validate
+           , mockShutdownOnSlotSynced
            }
 
 -- | The real protocol parser.
@@ -127,6 +131,8 @@ nodeRealParser = do
   validate <- parseValidateDB
   shutdownIPC <- parseShutdownIPC
 
+  shutdownOnSlotSynced <- parseShutdownOnSlotSynced
+
   pure NodeCLI
     { mscFp = MiscellaneousFilepaths
       { topFile = TopologyFile topFp
@@ -139,6 +145,7 @@ nodeRealParser = do
     , configFp = ConfigYamlFilePath nodeConfigFp
     , validateDB = validate
     , shutdownIPC
+    , shutdownOnSlotSynced
     }
 
 parseCLISocketPath :: Text -> Parser (Maybe CLISocketPath)
@@ -282,6 +289,16 @@ parseCardanoEra = asum
   , flag' ShelleyEra     $ hidden <> long "mock-pbft"
   , flag' ByronEra       $ hidden <> long "real-pbft"
   ]
+
+parseShutdownOnSlotSynced :: Parser MaxSlotNo
+parseShutdownOnSlotSynced =
+    fmap (fromMaybe NoMaxSlotNo) $
+    optional $ option (MaxSlotNo . SlotNo <$> auto) (
+         long "shutdown-on-slot-synced"
+      <> metavar "SLOT"
+      <> help "Shut down the process after ChainDB is synced up to the specified slot"
+      <> hidden
+    )
 
 parseSigningKeyFile :: String -> String -> Parser SigningKeyFile
 parseSigningKeyFile opt desc = SigningKeyFile <$> parseFilePath opt desc

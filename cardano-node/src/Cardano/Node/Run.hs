@@ -2,6 +2,7 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -38,6 +39,7 @@ import           Network.HostName (getHostName)
 import           Network.Socket (AddrInfo)
 import           System.Directory (canonicalizePath, makeAbsolute)
 import qualified System.IO as IO
+import qualified System.Process as IO (createPipeFd)
 import qualified System.IO.Error  as IO
 import qualified GHC.IO.Handle.FD as IO (fdToHandle)
 
@@ -60,6 +62,9 @@ import           Cardano.Config.Logging (LoggingLayer (..), Severity (..))
 import           Cardano.Config.Types (MiscellaneousFilepaths(..),
                                        NodeConfiguration (..), ViewMode (..))
 
+import           Cardano.Slotting.Slot (WithOrigin(..))
+
+import           Ouroboros.Network.Block (MaxSlotNo(..), SlotNo, pointSlot)
 import           Ouroboros.Network.NodeToClient (LocalConnectionId)
 import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..))
 import           Ouroboros.Consensus.Block (BlockProtocol)
@@ -68,12 +73,14 @@ import           Ouroboros.Consensus.Node (NodeKernel,
                      DnsSubscriptionTarget (..), IPSubscriptionTarget (..),
                      RunNode (nodeNetworkMagic, nodeStartTime),
                      RemoteConnectionId)
-import qualified Ouroboros.Consensus.Node as Node (run)
+import qualified Ouroboros.Consensus.Node as Node (getChainDB, run)
 import           Ouroboros.Consensus.Node.ProtocolInfo
 import           Ouroboros.Consensus.NodeId
 import qualified Ouroboros.Consensus.Config as Consensus
 import qualified Ouroboros.Consensus.Cardano as Consensus
+import           Ouroboros.Consensus.Util.STM (onEachChange)
 import           Ouroboros.Consensus.Util.Orphans ()
+import           Ouroboros.Consensus.Util.ResourceRegistry (ResourceRegistry)
 
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 import           Ouroboros.Consensus.Storage.ImmutableDB (ValidationPolicy (..))
@@ -198,7 +205,9 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
     Left err   -> (putTextLn $ show err) >> exitFailure
     Right addr -> return addr
 
-  withShutdownHandler npm trace $
+  sfds <- decideShutdownFds npm
+
+  withShutdownHandler sfds trace $
    Node.run
     (consensusTracers nodeTracers)
     (protocolTracers nodeTracers)
@@ -210,8 +219,29 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
     pInfo
     (customiseChainDbArgs $ dbValidation npm)
     identity -- No NodeParams customisation
-    $ \_registry nodeKernel -> onKernel nodeKernel
+    $ \registry nodeKernel -> do
+      case (stopOnSlotSynced npm, sfds) of
+        (MaxSlotNo maxSlot, InternalShutdown _sl sd) -> do
+          traceWith (trTransformer TextualRepresentation MaximalVerbosity $
+                      severityNotice trace)
+            ("will terminate upon reaching " <> (pack $ show maxSlot) :: Text)
+          spawnSlotLimitTerminator registry (Node.getChainDB nodeKernel) maxSlot sd
+        (MaxSlotNo{}, _) -> panic
+          "internal error: slot-limited shutdown requested, but no proper ShutdownFDs passed."
+        _ -> pure ()
+      onKernel nodeKernel
  where
+  spawnSlotLimitTerminator
+    :: ResourceRegistry IO -> ChainDB.ChainDB IO blk -> SlotNo -> ShutdownDoorbell -> IO ()
+  spawnSlotLimitTerminator registry chainDB maxSlot sd =
+    void $ onEachChange registry "slotLimitTerminator" identity Nothing
+      (pointSlot <$> ChainDB.getTipPoint chainDB) $
+        \case
+          Origin -> pure ()
+          At cur -> when (cur >= maxSlot) $
+            triggerShutdown sd trace
+              ("spawnSlotLimitTerminator: reached target " <> show cur)
+
   customiseChainDbArgs :: Bool
                        -> ChainDB.ChainDbArgs IO blk
                        -> ChainDB.ChainDbArgs IO blk
@@ -307,6 +337,53 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
 
          when mockValidateDB $ traceWith tracer "Performing DB validation"
 
+  stopOnSlotSynced :: NodeProtocolMode -> MaxSlotNo
+  stopOnSlotSynced (RealProtocolMode cli) = shutdownOnSlotSynced cli
+  stopOnSlotSynced _ = NoMaxSlotNo
+
+  -- | Produce a potential pair of FDs:
+  --  - read end, where EOF is a signal of termination
+  --  - write end, which is means of internal termination handling
+  decideShutdownFds :: NodeProtocolMode -> IO ShutdownFDs
+  decideShutdownFds (RealProtocolMode NodeCLI{shutdownIPC = Just fd}) =
+    pure $ ExternalShutdown (ShutdownListener fd)
+  decideShutdownFds (RealProtocolMode NodeCLI{shutdownOnSlotSynced = MaxSlotNo{}}) =
+    mkInternalShutdown
+  decideShutdownFds (MockProtocolMode NodeMockCLI{mockShutdownOnSlotSynced = MaxSlotNo{}}) =
+    mkInternalShutdown
+  decideShutdownFds _ = pure NoShutdownFDs
+
+  mkInternalShutdown :: IO ShutdownFDs
+  mkInternalShutdown = do
+    (r, w) <- IO.createPipeFd
+    pure $ InternalShutdown (ShutdownListener $ Fd r) (ShutdownDoorbell $ Fd w)
+
+-- | FD we're listening on for the EOF signalling the shutdown.
+newtype ShutdownListener = ShutdownListener { _listenerFd :: Fd }
+
+-- | FD used to send an EOF-based request for shutdown.
+newtype ShutdownDoorbell = ShutdownDoorbell { _doorbellFd :: Fd }
+
+data ShutdownFDs
+  = NoShutdownFDs
+  | ExternalShutdown !ShutdownListener
+  -- ^ Extra-processually signalled shutdown.
+  | InternalShutdown !ShutdownListener !ShutdownDoorbell
+  -- ^ Intra-processually signalled shutdown.
+
+sfdsListener :: ShutdownFDs -> Maybe ShutdownListener
+sfdsListener = \case
+  ExternalShutdown r -> Just r
+  InternalShutdown r _w -> Just r
+  _ -> Nothing
+
+triggerShutdown :: ShutdownDoorbell -> Trace IO Text -> Text -> IO ()
+triggerShutdown (ShutdownDoorbell (Fd shutFd)) trace reason = do
+  traceWith (trTransformer TextualRepresentation MaximalVerbosity $
+              severityNotice trace)
+    ("Ringing the node shutdown doorbell:  " <> reason)
+  IO.hClose =<< IO.fdToHandle shutFd
+
 -- | We provide an optional cross-platform method to politely request shut down.
 --
 -- The parent process passes us the file descriptor number of the read end of a
@@ -314,13 +391,14 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
 -- either deliberatly by the parent process or automatically because the parent
 -- process itself terminated, then we initiate a clean shutdown.
 --
-withShutdownHandler :: NodeProtocolMode -> Trace IO Text -> IO () -> IO ()
-withShutdownHandler (RealProtocolMode NodeCLI{shutdownIPC = Just (Fd fd)})
-                    trace action =
-    Async.race_ (wrapUninterruptableIO waitForEOF) action
+withShutdownHandler :: ShutdownFDs -> Trace IO Text -> IO () -> IO ()
+withShutdownHandler sfds trace action
+  | Just (ShutdownListener fd) <- sfdsListener sfds =
+      Async.race_ (wrapUninterruptableIO $ waitForEOF fd) action
+  | otherwise = action
   where
-    waitForEOF :: IO ()
-    waitForEOF = do
+    waitForEOF :: Fd -> IO ()
+    waitForEOF (Fd fd) = do
       hnd <- IO.fdToHandle fd
       r   <- try $ IO.hGetChar hnd
       case r of
@@ -334,8 +412,6 @@ withShutdownHandler (RealProtocolMode NodeCLI{shutdownIPC = Just (Fd fd)})
     tracer :: Tracer IO Text
     tracer = trTransformer TextualRepresentation MaximalVerbosity
                            (severityNotice trace)
-
-withShutdownHandler _ _ action = action
 
 -- | Windows blocking file IO calls like 'hGetChar' are not interruptable by
 -- asynchronous exceptions, as used by async 'cancel' (as of base-4.12).
