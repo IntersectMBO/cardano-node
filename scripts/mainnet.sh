@@ -6,21 +6,22 @@ app_usage() {
 
 Run this like:
 
-   scripts/mainnet.sh --nix --profile --shutdown-on-slot-synced 21600
+   scripts/mainnet.sh --nix --profile time --shutdown-on-slot-synced 21600
 
 This syncs the mainnet chain.
 
   Common options (going BEFORE app options or LATTER ARE IGNORED):
 
-    --profile                   enable profiling of the benchmarked node
-    --nix / --cabal / --stack   pick your poison
-    --help                      see for more common options
+    --profile MODE        enable profiling of the benchmarked node, where MODE is:
+       time space space-module space-closure space-type space-retainer space-bio 
+    --nix / --cabal / --stack  
+                          pick your poison
+    --help                see for more common options
 
   App options (going AFTER common options OR IGNORED):
 
     --shutdown-on-slot-synced SLOT
-                                shut the node down on reaching
-                                  given mainnet slot
+                          shut the node down on reaching given mainnet slot
 
     ..or any other 'cardano-node' option.
 

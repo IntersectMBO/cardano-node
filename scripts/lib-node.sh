@@ -16,10 +16,16 @@ USAGE="
     --delegate-id ID     Delegate number
     --port PORTNO        Listen on this port
 
-    --profile            Enable profiling
-    --no-profile         Suppress profiling
+    --profile MODE       Enable profiling:
+       time space space-module space-closure space-type space-retainer space-bio
+
+    --no-profile         Suppress profiling in .hp/.prof/.eventlog
+    --no-stats           Suppress runtime stats in .stats
+    --redirect-stdout FILE
+                         Redirect stdout to the specified file
+    --no-stdout          Redirect stdout to Dave Null
     --profile-suffix SUF
-                         Extra suffix to add to the profile name.
+                         Extra suffix to add to the profile name
 
 "
 
@@ -69,6 +75,9 @@ _run_node() {
         local delegate_id=
         local profile=${COMMON_NODE_PROFILING}
         local profile_suffix=
+        local no_stats=
+        local redirect_stdout=
+        local tag=
         while test -n "$1"
         do case "$1" in
            --config-name )      config_id=$2;   shift;;
@@ -76,21 +85,30 @@ _run_node() {
            --state )            state_id=$2;    shift;;
            --delegate-id )      delegate_id=$2; shift;;
            --port )             port=$2;        shift;;
+           --redirect-stdout )  redirect_stdout=$2; shift;;
+           --no-stdout )        redirect_stdout='/dev/null'; shift;;
            ## Sadly, due to arg splitting, some runner args
            ## have to be handled here..
-           --profile )          profile=t;;
            --no-profile )       profile=;;
-           --profile-suffix )   profile_suffix=$2;
-                                                shift;;
+           --no-stats )         no_stats=t;;
+           --profile )          profile=$2;     shift;;
+           --profile-suffix )   profile_suffix=$2; shift;;
+           --tag )              tag=$2;         shift;;
            * ) break;; esac; shift; done
 
         local RUNNER_ARGS=(
         )
         if test -n "${profile}"; then RUNNER_ARGS+=(
-          --profile
+          --profile "${profile}"
         ); fi
         if test -n "${profile_suffix}"; then RUNNER_ARGS+=(
           --profile-suffix "${profile_suffix}"
+        ); fi
+        if test -n "${no_stats}"; then RUNNER_ARGS+=(
+          --no-stats
+        ); fi
+        if test -n "${tag}"; then RUNNER_ARGS+=(
+          --tag "${tag}"
         ); fi
 
         dprint "config_id=${config_id}"
@@ -98,7 +116,8 @@ _run_node() {
         dprint "state_id=${state_id}"
         dprint "delegate_id=${delegate_id}"
         dprint "port=${port}"
-        dprint "remaining_args:  $*"
+        dprint "tag=${tag}"
+        dprint "run_node binary extra args:  $*"
 
         topo_id="${topo_id:-$config_id}"
         state_id="${state_id:-$config_id}"
@@ -124,6 +143,8 @@ _run_node() {
 
         dprint "_run_node exec: ${LODE_RUNNER} ${RUNNER_ARGS[*]} 'cardano-node' $* ${NODE_ARGS[@]}"
 
-        ${LODE_RUNNER} "${RUNNER_ARGS[@]}" \
-           'cardano-node' run "${NODE_ARGS[@]}"
+        local final_stdout_redirect=${redirect_stdout:+>"${redirect_stdout/}"}
+
+        eval "${LODE_RUNNER}" "${RUNNER_ARGS[@]}" \
+           'cardano-node' run "${NODE_ARGS[@]}" ${final_stdout_redirect}
 }

@@ -60,6 +60,7 @@ library
                      , ouroboros-consensus
                      , ouroboros-consensus-cardano
                      , ouroboros-network
+                     , process
                      , strict-concurrency
                      , text
                      , time
