@@ -100,8 +100,9 @@ import           Ouroboros.Network.Protocol.LocalTxSubmission.Client
 
 import           Cardano.Common.LocalSocket (chooseSocketPath)
 import           Cardano.Config.Protocol
-                   (Protocol(..), ProtocolInstantiationError
-                   , SomeProtocol(..), fromProtocol, renderProtocolInstantiationError)
+                   (Protocol(..), ProtocolInstantiationError,
+                    SomeConsensusProtocol(..), mkConsensusProtocol,
+                    renderProtocolInstantiationError)
 import           Cardano.Config.Types
 import qualified Cardano.CLI.Legacy.Byron as Legacy
 
@@ -348,9 +349,9 @@ withRealPBFT
         -> ExceptT RealPBFTError IO a)
   -> ExceptT RealPBFTError IO a
 withRealPBFT genFile nMagic sigThresh delCertFp sKeyFp update ptcl action = do
-  SomeProtocol p <- firstExceptT
+  SomeConsensusProtocol p <- firstExceptT
                       FromProtocolError
-                      $ fromProtocol
+                      $ mkConsensusProtocol
                           ptcl
                           Nothing
                           Nothing
@@ -378,7 +379,7 @@ getLocalTip configFp mSockPath iocp = do
   sockPath <- return $ chooseSocketPath (ncSocketPath nc) mSockPath
 
   frmPtclRes <- runExceptT . firstExceptT ProtocolError
-                           $ fromProtocol
+                           $ mkConsensusProtocol
                                (ncProtocol nc)
                                (ncNodeId nc)
                                (ncNumCoreNodes nc)
@@ -389,8 +390,8 @@ getLocalTip configFp mSockPath iocp = do
                                Nothing
                                (ncUpdate nc)
 
-  SomeProtocol p <- case frmPtclRes of
-                        Right (SomeProtocol p) -> pure (SomeProtocol p)
+  SomeConsensusProtocol p <- case frmPtclRes of
+                        Right p -> pure p
                         Left err -> do putTextLn . toS $ show err
                                        exitFailure
 

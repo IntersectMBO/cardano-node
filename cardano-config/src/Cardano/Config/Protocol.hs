@@ -12,9 +12,9 @@
 module Cardano.Config.Protocol
   ( Protocol(..)
   , ProtocolInstantiationError(..)
-  , SomeProtocol(..)
+  , SomeConsensusProtocol(..)
   , TraceConstraints
-  , fromProtocol
+  , mkConsensusProtocol
   , renderProtocolInstantiationError
   ) where
 
@@ -53,15 +53,17 @@ import           Cardano.Config.Types (DelegationCertFile (..),
 import           Cardano.Tracing.Constraints (TraceConstraints)
 
 
-{-------------------------------------------------------------------------------
-  Untyped/typed protocol boundary
--------------------------------------------------------------------------------}
+------------------------------------------------------------------------------
+-- Conversions from configuration into specific protocols and their params
+--
 
-data SomeProtocol where
-  SomeProtocol :: (RunNode blk, TraceConstraints blk)
-               => Consensus.Protocol blk (BlockProtocol blk) -> SomeProtocol
 
-fromProtocol
+data SomeConsensusProtocol where
+  SomeConsensusProtocol :: (RunNode blk, TraceConstraints blk)
+                        => Consensus.Protocol blk (BlockProtocol blk)
+                        -> SomeConsensusProtocol
+
+mkConsensusProtocol
   :: Protocol
   -> Maybe NodeId
   -> Maybe Word64
@@ -72,11 +74,11 @@ fromProtocol
   -> Maybe DelegationCertFile
   -> Maybe SigningKeyFile
   -> Update
-  -> ExceptT ProtocolInstantiationError IO SomeProtocol
-fromProtocol BFT         = mkConsensusProtocolBFT
-fromProtocol Praos       = mkConsensusProtocolPraos
-fromProtocol MockPBFT    = mkConsensusProtocolMockPBFT
-fromProtocol RealPBFT    = mkConsensusProtocolRealPBFT
+  -> ExceptT ProtocolInstantiationError IO SomeConsensusProtocol
+mkConsensusProtocol BFT         = mkConsensusProtocolBFT
+mkConsensusProtocol Praos       = mkConsensusProtocolPraos
+mkConsensusProtocol MockPBFT    = mkConsensusProtocolMockPBFT
+mkConsensusProtocol RealPBFT    = mkConsensusProtocolRealPBFT
 
 
 mkConsensusProtocolBFT,
@@ -92,7 +94,7 @@ mkConsensusProtocolBFT,
   -> Maybe DelegationCertFile
   -> Maybe SigningKeyFile
   -> Update
-  -> ExceptT ProtocolInstantiationError IO SomeProtocol
+  -> ExceptT ProtocolInstantiationError IO SomeConsensusProtocol
 
 
 ------------------------------------------------------------------------------
@@ -134,8 +136,8 @@ mockSecurityParam = SecurityParam 5
 mockSlotLength :: SlotLength
 mockSlotLength = slotLengthFromSec 20
 
--- | Helper for creating a 'SomeProtocol' for a mock protocol that needs the
--- 'CoreNodeId' and NumCoreNodes'. If one of them is missing from the
+-- | Helper for creating a 'SomeConsensusProtocol' for a mock protocol that
+-- needs the 'CoreNodeId' and NumCoreNodes'. If one of them is missing from the
 -- 'CardanoConfiguration', a 'MissingNodeInfo' exception is thrown.
 mockSomeProtocol
   :: (RunNode blk, TraceConstraints blk)
@@ -143,11 +145,11 @@ mockSomeProtocol
   -> Maybe Word64
   -- ^ Number of core nodes
   -> (CoreNodeId -> NumCoreNodes -> Consensus.Protocol blk (BlockProtocol blk))
-  -> Either ProtocolInstantiationError SomeProtocol
-mockSomeProtocol nId mNumCoreNodes mkConsensusProtocol =  do
+  -> Either ProtocolInstantiationError SomeConsensusProtocol
+mockSomeProtocol nId mNumCoreNodes mkProtocol =  do
     (cid, numCoreNodes) <- extractNodeInfo nId mNumCoreNodes
-    let p = mkConsensusProtocol cid numCoreNodes
-    return $ SomeProtocol p
+    let p = mkProtocol cid numCoreNodes
+    return $ SomeConsensusProtocol p
 
 extractNodeInfo
   :: Maybe NodeId
@@ -185,7 +187,7 @@ mkConsensusProtocolRealPBFT _ _ mGenFile nMagic sigThresh delCertFp sKeyFp updat
 
     let p = protocolConfigRealPbft update sigThresh gc optionalLeaderCredentials
 
-    return $ SomeProtocol p
+    return $ SomeConsensusProtocol p
 
 
 -- | The plumbing to select and convert the appropriate configuration subset

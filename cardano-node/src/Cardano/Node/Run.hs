@@ -81,7 +81,8 @@ import           Ouroboros.Consensus.Storage.VolatileDB (BlockValidationPolicy (
 
 import           Cardano.Common.LocalSocket
 import           Cardano.Config.Protocol
-                   (SomeProtocol(..), fromProtocol, renderProtocolInstantiationError)
+                   (SomeConsensusProtocol(..), mkConsensusProtocol,
+                    renderProtocolInstantiationError)
 import           Cardano.Config.Topology
 import           Cardano.Config.Types
 import           Cardano.Tracing.Tracers
@@ -109,7 +110,7 @@ runNode loggingLayer npm = do
                            NormalVerbosity -> "normal"
                            MinimalVerbosity -> "minimal"
                            MaximalVerbosity -> "maximal"
-    eitherSomeProtocol <- runExceptT $ fromProtocol
+    eitherSomeProtocol <- runExceptT $ mkConsensusProtocol
                                          (ncProtocol nc)
                                          (ncNodeId nc)
                                          (ncNumCoreNodes nc)
@@ -120,10 +121,10 @@ runNode loggingLayer npm = do
                                          (signKeyFile mscFp')
                                          (ncUpdate nc)
 
-    SomeProtocol (p :: Consensus.Protocol blk (BlockProtocol blk)) <-
+    SomeConsensusProtocol (p :: Consensus.Protocol blk (BlockProtocol blk)) <-
       case eitherSomeProtocol of
         Left err -> (putTextLn $ renderProtocolInstantiationError err) >> exitFailure
-        Right (SomeProtocol p) -> pure $ SomeProtocol p
+        Right (SomeConsensusProtocol p) -> pure $ SomeConsensusProtocol p
 
     tracers <- mkTracers (ncTraceOptions nc) trace
 

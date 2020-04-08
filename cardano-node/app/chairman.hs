@@ -15,8 +15,9 @@ import           Ouroboros.Network.Block (BlockNo)
 
 import           Options.Applicative
 import           Cardano.Config.CommonCLI
-import           Cardano.Config.Protocol ( ProtocolInstantiationError
-                                         , SomeProtocol(..), fromProtocol)
+import           Cardano.Config.Protocol
+                   (SomeConsensusProtocol(..), mkConsensusProtocol,
+                    ProtocolInstantiationError)
 import           Cardano.Config.Types (ConfigYamlFilePath(..), DelegationCertFile(..),
                                        NodeConfiguration(..), SigningKeyFile(..),
                                        SocketPath(..), parseNodeConfigurationFP)
@@ -34,7 +35,7 @@ main = do
                  } <- execParser opts
 
     nc <- liftIO $ parseNodeConfigurationFP caConfigYaml
-    frmPtclRes <- runExceptT $ fromProtocol
+    frmPtclRes <- runExceptT $ mkConsensusProtocol
                                  (ncProtocol nc)
                                  (ncNodeId nc)
                                  (ncNumCoreNodes nc)
@@ -45,8 +46,8 @@ main = do
                                  (caSigningKeyFp)
                                  (ncUpdate nc)
 
-    SomeProtocol p <- case frmPtclRes of
-                        Right (SomeProtocol p) -> pure (SomeProtocol p)
+    SomeConsensusProtocol p <- case frmPtclRes of
+                        Right p  -> pure p
                         Left err -> do putTextLn $ renderPtclInstantiationErr err
                                        exitFailure
 
