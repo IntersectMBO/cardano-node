@@ -13,7 +13,7 @@
 #
 #   docker run -e NETWORK=testnet inputoutput/cardano-node:<TAG>
 #
-# To launch with custom config, mount a dir containing config.json, genesis.json, and topology,json into /config
+# To launch with custom config, mount a dir containing config.yaml, genesis.json, and topology,json into /config
 #
 #   docker run -v $PATH_TO/config:/config \
 #     inputoutput/cardano-node:<TAG>
@@ -83,7 +83,7 @@ let
       echo $NETWORK
       if [[ -d /config ]]; then
         exec ${cardano-node}/bin/cardano-node run \
-          --config /config/config.json \
+          --config /config/config.yaml \
           --database-path /data/db \
           --genesis-file /config/genesis.json \
           --host-addr 127.0.0.1 \
@@ -93,7 +93,7 @@ let
       ${clusterStatements}
       else
         echo "Please set a NETWORK environment variable to one of: mainnet/testnet"
-        echo "Or mount a /config volume containing: config.json, topology.json and genesis.json"
+        echo "Or mount a /config volume containing: config.yaml, topology.json and genesis.json"
       fi
     '';
   in dockerTools.buildImage {
