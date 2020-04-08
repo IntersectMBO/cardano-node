@@ -8,6 +8,7 @@
 {-# LANGUAGE DeriveTraversable     #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns        #-}
 {-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE RankNTypes            #-}
 
@@ -546,9 +547,9 @@ initLiveViewState = do
                 }
 
 setTopology :: NFData a => LiveViewBackend blk a -> NodeProtocolMode -> IO ()
-setTopology lvbe (RealProtocolMode (NodeCLI _ nAddress _ _)) =
+setTopology lvbe (RealProtocolMode NodeCLI{nodeAddr}) =
   modifyMVar_ (getbe lvbe) $ \lvs ->
-    return $ lvs { lvsNodeId = pack $ "Port: " <> (show $ naPort nAddress) }
+    return lvs { lvsNodeId = pack $ "Port: " <> show (naPort nodeAddr) }
 setTopology lvbe npm = do
   nc <- parseNodeConfiguration npm
   modifyMVar_ (getbe lvbe) $ \lvs ->

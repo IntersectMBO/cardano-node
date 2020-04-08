@@ -1,4 +1,5 @@
 {-# LANGUAGE CPP                 #-}
+{-# LANGUAGE NamedFieldPuns      #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE Rank2Types          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -203,8 +204,8 @@ createLoggingFeature ver _ nodeProtocolMode = do
     pure (loggingLayer, cardanoFeature)
  where
   getConfigYaml :: NodeProtocolMode -> ConfigYamlFilePath
-  getConfigYaml (RealProtocolMode (NodeCLI _ _ rConfigFp _ )) = rConfigFp
-  getConfigYaml (MockProtocolMode (NodeMockCLI _ _ mConfigFp _)) = mConfigFp
+  getConfigYaml (RealProtocolMode NodeCLI{configFp}) = configFp
+  getConfigYaml (MockProtocolMode NodeMockCLI{mockConfigFp}) = mockConfigFp
 
 -- | Initialize `LoggingCardanoFeature`
 loggingCardanoFeatureInit :: Text -> LoggingFlag -> LoggingConfiguration -> IO (LoggingLayer, LoggingLayer -> IO ())

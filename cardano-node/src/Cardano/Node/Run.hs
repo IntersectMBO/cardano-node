@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE NumericUnderscores #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -21,12 +22,9 @@ module Cardano.Node.Run
 where
 
 import           Cardano.Prelude hiding (ByteString, atomically, take, trace)
-import qualified GHC.Base
-import           Prelude (error, unlines)
+import           Prelude (String, error, unlines)
 
-#ifdef UNIX
 import qualified Control.Concurrent.Async as Async
-#endif
 import           Control.Tracer
 import qualified Data.ByteString.Char8 as BSC
 import           Data.Either (partitionEithers)
@@ -39,6 +37,9 @@ import           Data.Version (showVersion)
 import           Network.HostName (getHostName)
 import           Network.Socket (AddrInfo)
 import           System.Directory (canonicalizePath, makeAbsolute)
+import qualified System.IO as IO
+import qualified System.IO.Error  as IO
+import qualified GHC.IO.Handle.FD as IO (fdToHandle)
 
 import           Paths_cardano_node (version)
 #ifdef UNIX
@@ -49,7 +50,8 @@ import           Cardano.BM.Data.BackendKind (BackendKind (..))
 import           Cardano.BM.Data.LogItem (LOContent (..),
                      PrivacyAnnotation (..), mkLOMeta)
 import           Cardano.BM.Data.Tracer (ToLogObject (..),
-                     TracingVerbosity (..))
+                     TracingVerbosity (..), TracingFormatting (..),
+                     severityNotice, trTransformer)
 import           Cardano.BM.Data.Transformers (setHostname)
 import           Cardano.BM.Trace
 
@@ -204,7 +206,8 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
     Left err   -> (putTextLn $ show err) >> exitFailure
     Right addr -> return addr
 
-  Node.run
+  withShutdownHandler npm trace $
+   Node.run
     (consensusTracers nodeTracers)
     (protocolTracers nodeTracers)
     (chainDBTracer nodeTracers)
@@ -258,12 +261,12 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
   createTracers
     :: NodeProtocolMode
     -> Trace IO Text
-    -> Tracer IO GHC.Base.String
+    -> Tracer IO String
     -> Consensus.TopLevelConfig blk
     -> IO ()
   createTracers npm' tr tracer cfg = do
      case npm' of
-       RealProtocolMode (NodeCLI _ rNodeAddr _ runDBValidation) -> do
+       RealProtocolMode NodeCLI{nodeAddr, validateDB} -> do
          eitherTopology <- readTopologyFile npm
          nt <- either
                  (\err -> panic $ "Cardano.Node.Run.readTopologyFile: " <> err)
@@ -278,7 +281,7 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
          traceWith tracer $ unlines
            [ ""
            , "**************************************"
-           , "Host node address: " <> show rNodeAddr
+           , "Host node address: " <> show nodeAddr
            , "My DNS producers are " <> show dnsProducerAddrs
            , "My IP producers are " <> show ipProducerAddrs
            , "**************************************"
@@ -292,9 +295,9 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
          traceNamedObject vTr (meta, LogMessage . pack . showVersion $ version)
          traceNamedObject cTr (meta, LogMessage gitRev)
 
-         when runDBValidation $ traceWith tracer "Performing DB validation"
+         when validateDB $ traceWith tracer "Performing DB validation"
 
-       MockProtocolMode (NodeMockCLI _ mockNodeAddress _ runDBValidation) -> do
+       MockProtocolMode NodeMockCLI{mockNodeAddr, mockValidateDB} -> do
          eitherTopology <- readTopologyFile npm
          nodeid <- nid npm
          (MockNodeTopology nodeSetups) <- either
@@ -307,7 +310,7 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
              producers' = case (List.lookup nodeid producersList) of
                             Just ps ->  ps
                             Nothing -> error $ "handleSimpleNode: own address "
-                                         <> show mockNodeAddress
+                                         <> show mockNodeAddr
                                          <> ", Node Id "
                                          <> show nodeid
                                          <> " not found in topology"
@@ -315,12 +318,55 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
          traceWith tracer $ unlines
                                [ ""
                                , "**************************************"
-                               , "I am Node "        <> show mockNodeAddress <> " Id: " <> show nodeid
+                               , "I am Node "        <> show mockNodeAddr
+                                          <> " Id: " <> show nodeid
                                , "My producers are " <> show producers'
                                , "**************************************"
                                ]
 
-         when runDBValidation $ traceWith tracer "Performing DB validation"
+         when mockValidateDB $ traceWith tracer "Performing DB validation"
+
+-- | We provide an optional cross-platform method to politely request shut down.
+--
+-- The parent process passes us the file descriptor number of the read end of a
+-- pipe, via the CLI with @--shutdown-ipc FD@. If the write end gets closed,
+-- either deliberatly by the parent process or automatically because the parent
+-- process itself terminated, then we initiate a clean shutdown.
+--
+withShutdownHandler :: NodeProtocolMode -> Trace IO Text -> IO () -> IO ()
+withShutdownHandler (RealProtocolMode NodeCLI{shutdownIPC = Just (Fd fd)})
+                    trace action =
+    Async.race_ (wrapUninterruptableIO waitForEOF) action
+  where
+    waitForEOF :: IO ()
+    waitForEOF = do
+      hnd <- IO.fdToHandle fd
+      r   <- try $ IO.hGetChar hnd
+      case r of
+        Left e
+          | IO.isEOFError e -> traceWith tracer "received shutdown request"
+          | otherwise       -> throwIO e
+
+        Right _  ->
+          throwIO $ IO.userError "--shutdown-ipc FD does not expect input"
+
+    tracer :: Tracer IO Text
+    tracer = trTransformer TextualRepresentation MaximalVerbosity
+                           (severityNotice trace)
+
+withShutdownHandler _ _ action = action
+
+-- | Windows blocking file IO calls like 'hGetChar' are not interruptable by
+-- asynchronous exceptions, as used by async 'cancel' (as of base-4.12).
+--
+-- This wrapper works around that problem by running the blocking IO in a
+-- separate thread. If the parent thread receives an async cancel then it
+-- will return. Note however that in this circumstance the child thread may
+-- continue and remain blocked, leading to a leak of the thread. As such this
+-- is only reasonable to use a fixed number of times for the whole process.
+--
+wrapUninterruptableIO :: IO a -> IO a
+wrapUninterruptableIO action = async action >>= wait
 
 
 --------------------------------------------------------------------------------
@@ -330,17 +376,18 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
 canonDbPath :: NodeProtocolMode -> IO FilePath
 canonDbPath npm  = do
   dbFp <- case npm of
-            MockProtocolMode (NodeMockCLI mscFp' _ _ _) -> do
+            MockProtocolMode NodeMockCLI{mockMscFp} -> do
+              --TODO: we should eliminate auto-naming here too
               nodeid <- nid npm
-              pure $ (unDB $ dBFile mscFp') <> "-" <> show nodeid
+              pure $ unDB (dBFile mockMscFp) <> "-" <> show nodeid
 
-            RealProtocolMode (NodeCLI mscFp' _ _ _) -> pure . unDB $ dBFile mscFp'
+            RealProtocolMode NodeCLI{mscFp} -> pure . unDB $ dBFile mscFp
 
   canonicalizePath =<< makeAbsolute dbFp
 
 dbValidation :: NodeProtocolMode -> Bool
-dbValidation (MockProtocolMode (NodeMockCLI _ _ _ dbval)) = dbval
-dbValidation (RealProtocolMode (NodeCLI _ _ _ dbval)) = dbval
+dbValidation (MockProtocolMode NodeMockCLI{mockValidateDB}) = mockValidateDB
+dbValidation (RealProtocolMode NodeCLI{validateDB}) = validateDB
 
 createDiffusionArguments
   :: [AddrInfo]
@@ -373,8 +420,8 @@ dnsSubscriptionTarget ra =
 extractMiscFilePaths :: NodeProtocolMode -> MiscellaneousFilepaths
 extractMiscFilePaths npm =
   case npm of
-    MockProtocolMode (NodeMockCLI mMscFp _ _ _) -> mMscFp
-    RealProtocolMode (NodeCLI rMscFp _ _ _) -> rMscFp
+    MockProtocolMode NodeMockCLI{mockMscFp} -> mockMscFp
+    RealProtocolMode NodeCLI{mscFp} -> mscFp
 
 ipSubscriptionTargets :: [NodeAddress] -> IPSubscriptionTarget
 ipSubscriptionTargets ipProdAddrs =

@@ -1,4 +1,5 @@
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
 
@@ -47,10 +48,10 @@ nodeAddressToSockAddr (NodeAddress addr port) =
 
 nodeAddressInfo :: NodeProtocolMode -> IO [AddrInfo]
 nodeAddressInfo npm = do
-  (NodeAddress hostAddr port) <-
-    case npm of
-      (RealProtocolMode (NodeCLI _ nodeAddr' _ _)) -> pure nodeAddr'
-      (MockProtocolMode (NodeMockCLI _ nodeAddr' _ _)) -> pure nodeAddr'
+  let NodeAddress hostAddr port =
+        case npm of
+          RealProtocolMode NodeCLI{nodeAddr} -> nodeAddr
+          MockProtocolMode NodeMockCLI{mockNodeAddr} -> mockNodeAddr
   let hints = defaultHints {
                 addrFlags = [AI_PASSIVE, AI_ADDRCONFIG]
               , addrSocketType = Stream
@@ -124,9 +125,9 @@ instance FromJSON NetworkTopology where
 -- other remote peers it will attempt to connect to.
 readTopologyFile :: NodeProtocolMode -> IO (Either Text NetworkTopology)
 readTopologyFile npm = do
-  topo  <- case npm of
-             (RealProtocolMode (NodeCLI mscFp' _ _ _)) -> pure . unTopology $ topFile mscFp'
-             (MockProtocolMode (NodeMockCLI mscFp' _ _ _)) -> pure . unTopology $ topFile mscFp'
+  let topo = case npm of
+               RealProtocolMode NodeCLI{mscFp}         -> unTopology (topFile mscFp)
+               MockProtocolMode NodeMockCLI{mockMscFp} -> unTopology (topFile mockMscFp)
 
   eBs <- Exception.try $ BS.readFile topo
 

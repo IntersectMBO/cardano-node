@@ -1,6 +1,6 @@
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards #-}
 
 module Cardano.Config.Types
     ( CardanoEnvironment (..)
@@ -27,6 +27,7 @@ module Cardano.Config.Types
     , Update (..)
     , ViewMode (..)
     , YamlSocketPath (..)
+    , Fd (..)
     , parseNodeConfiguration
     , parseNodeConfigurationFP
     ) where
@@ -40,6 +41,7 @@ import qualified Data.Text as T
 import           Data.Yaml (decodeFileThrow)
 import           Network.Socket (PortNumber)
 import           System.FilePath ((</>), takeDirectory)
+import           System.Posix.Types (Fd(Fd))
 
 import qualified Cardano.Chain.Update as Update
 import           Cardano.BM.Data.Tracer (TracingVerbosity (..))
@@ -84,6 +86,7 @@ data NodeCLI = NodeCLI
   , nodeAddr :: !NodeAddress
   , configFp :: !ConfigYamlFilePath
   , validateDB :: !Bool
+  , shutdownIPC :: !(Maybe Fd)
   }
 
 data NodeMockCLI = NodeMockCLI
@@ -97,6 +100,15 @@ data NodeMockCLI = NodeMockCLI
 -- Therefore we distinguish this at the top level on the command line.
 data NodeProtocolMode = MockProtocolMode NodeMockCLI
                       | RealProtocolMode NodeCLI
+
+-- TODO: these types above are currently structured such that we cannot share
+-- anything. Sharing nothing is too little. There are things that are the same
+-- that we can and should share. The code is littered with example where we
+-- select the same bits from both sides.
+--
+-- At the same time, we are not yet taking advantage of the ability to have
+-- different fields for the real vs mock. For example the MiscellaneousFilepaths
+-- is used for both, but mock protocols do not use delegCertFile or signKeyFile.
 
 -- | Filepath of the configuration yaml file. This file determines
 -- all the configuration settings required for the cardano node
@@ -254,8 +266,11 @@ parseNodeConfigurationFP (ConfigYamlFilePath fp) = do
 parseNodeConfiguration :: NodeProtocolMode -> IO NodeConfiguration
 parseNodeConfiguration npm =
   case npm of
-    MockProtocolMode (NodeMockCLI _ _ cy _) -> parseNodeConfigurationFP cy
-    RealProtocolMode (NodeCLI _ _ cy _) -> parseNodeConfigurationFP cy
+    MockProtocolMode NodeMockCLI{mockConfigFp} ->
+      parseNodeConfigurationFP mockConfigFp
+
+    RealProtocolMode NodeCLI{configFp} ->
+      parseNodeConfigurationFP configFp
 
 -- TODO:  we don't want ByronLegacy in Protocol.  Let's wrap Protocol with another
 -- sum type for cases where it's required.
