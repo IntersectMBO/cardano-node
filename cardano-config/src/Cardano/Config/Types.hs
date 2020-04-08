@@ -48,6 +48,7 @@ import           Cardano.BM.Data.Tracer (TracingVerbosity (..))
 import           Cardano.Crypto.ProtocolMagic (RequiresNetworkMagic)
 import           Ouroboros.Consensus.NodeId (NodeId(..))
 import           Ouroboros.Consensus.Util.Condense (Condense (..))
+import           Ouroboros.Network.Block (MaxSlotNo(..))
 
 import           Cardano.Config.Orphanage ()
 import           Cardano.Crypto (RequiresNetworkMagic(..))
@@ -87,6 +88,7 @@ data NodeCLI = NodeCLI
   , configFp :: !ConfigYamlFilePath
   , validateDB :: !Bool
   , shutdownIPC :: !(Maybe Fd)
+  , shutdownOnSlotSynced :: !MaxSlotNo
   }
 
 data NodeMockCLI = NodeMockCLI

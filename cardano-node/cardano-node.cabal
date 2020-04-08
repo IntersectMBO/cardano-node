@@ -82,6 +82,7 @@ library
                      , ouroboros-consensus-byron
                      , ouroboros-consensus-cardano
                      , ouroboros-network
+                     , process
                      , serialise
                      , stm
                      , strict-concurrency
