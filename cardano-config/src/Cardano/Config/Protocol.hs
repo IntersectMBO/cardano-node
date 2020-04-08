@@ -89,44 +89,9 @@ type TraceConstraints blk =
   Untyped/typed protocol boundary
 -------------------------------------------------------------------------------}
 
-
-mockSecurityParam :: SecurityParam
-mockSecurityParam = SecurityParam 5
-
-mockSlotLength :: SlotLength
-mockSlotLength = slotLengthFromSec 20
-
--- | Helper for creating a 'SomeProtocol' for a mock protocol that needs the
--- 'CoreNodeId' and NumCoreNodes'. If one of them is missing from the
--- 'CardanoConfiguration', a 'MissingNodeInfo' exception is thrown.
-mockSomeProtocol
-  :: (RunNode blk, TraceConstraints blk)
-  => Maybe NodeId
-  -> Maybe Word64
-  -- ^ Number of core nodes
-  -> (CoreNodeId -> NumCoreNodes -> Consensus.Protocol blk (BlockProtocol blk))
-  -> Either ProtocolInstantiationError SomeProtocol
-mockSomeProtocol nId mNumCoreNodes mkConsensusProtocol =  do
-    (cid, numCoreNodes) <- extractNodeInfo nId mNumCoreNodes
-    let p = mkConsensusProtocol cid numCoreNodes
-    return $ SomeProtocol p
-
 data SomeProtocol where
   SomeProtocol :: (RunNode blk, TraceConstraints blk)
                => Consensus.Protocol blk (BlockProtocol blk) -> SomeProtocol
-
-data ProtocolInstantiationError =
-    ByronLegacyProtocolNotImplemented
-  | CanonicalDecodeFailure !FilePath !Text
-  | DelegationCertificateFilepathNotSpecified
-  | GenesisConfigurationError !FilePath !Genesis.ConfigurationError
-  | GenesisReadError !FilePath !Genesis.GenesisDataError
-  | MissingCoreNodeId
-  | MissingNumCoreNodes
-  | PbftError !PBftLeaderCredentialsError
-  | SigningKeyDeserialiseFailure !FilePath !DeserialiseFailure
-  | SigningKeyFilepathNotSpecified
-  deriving Show
 
 fromProtocol
   :: Protocol
@@ -162,6 +127,11 @@ mkConsensusProtocolBFT,
   -> Update
   -> ExceptT ProtocolInstantiationError IO SomeProtocol
 
+
+------------------------------------------------------------------------------
+-- Mock/testing protocols
+--
+
 mkConsensusProtocolBFT nId mNumCoreNodes _ _ _ _ _ _ =
   hoistEither $ mockSomeProtocol nId mNumCoreNodes $ \cid numCoreNodes ->
     Consensus.ProtocolMockBFT numCoreNodes cid mockSecurityParam
@@ -190,6 +160,44 @@ mkConsensusProtocolMockPBFT nId mNumCoreNodes _ _ _ _ _ _ =
                  }
       (defaultSimpleBlockConfig mockSecurityParam mockSlotLength)
       cid
+
+mockSecurityParam :: SecurityParam
+mockSecurityParam = SecurityParam 5
+
+mockSlotLength :: SlotLength
+mockSlotLength = slotLengthFromSec 20
+
+-- | Helper for creating a 'SomeProtocol' for a mock protocol that needs the
+-- 'CoreNodeId' and NumCoreNodes'. If one of them is missing from the
+-- 'CardanoConfiguration', a 'MissingNodeInfo' exception is thrown.
+mockSomeProtocol
+  :: (RunNode blk, TraceConstraints blk)
+  => Maybe NodeId
+  -> Maybe Word64
+  -- ^ Number of core nodes
+  -> (CoreNodeId -> NumCoreNodes -> Consensus.Protocol blk (BlockProtocol blk))
+  -> Either ProtocolInstantiationError SomeProtocol
+mockSomeProtocol nId mNumCoreNodes mkConsensusProtocol =  do
+    (cid, numCoreNodes) <- extractNodeInfo nId mNumCoreNodes
+    let p = mkConsensusProtocol cid numCoreNodes
+    return $ SomeProtocol p
+
+extractNodeInfo
+  :: Maybe NodeId
+  -> Maybe Word64
+  -> Either ProtocolInstantiationError (CoreNodeId, NumCoreNodes)
+extractNodeInfo mNodeId ncNumCoreNodes  = do
+
+    coreNodeId   <- case mNodeId of
+                      Just (CoreId coreNodeId) -> pure coreNodeId
+                      _                        -> Left MissingCoreNodeId
+    numCoreNodes <- maybe (Left MissingNumCoreNodes) Right ncNumCoreNodes
+    return (coreNodeId , NumCoreNodes numCoreNodes)
+
+
+------------------------------------------------------------------------------
+-- Real protocols
+--
 
 mkConsensusProtocolRealPBFT _ _ mGenFile nMagic sigThresh delCertFp sKeyFp update = do
     let genFile@(GenesisFile gFp) = fromMaybe ( panic $ "Cardano.Config.Protocol.fromProtocol: "
@@ -274,6 +282,25 @@ readLeaderCredentials gc mDelCertFp mSKeyFp =
         fmap (Signing.SigningKey . snd)
       . deserialiseFromBytes Signing.fromCBORXPrv
 
+
+------------------------------------------------------------------------------
+-- Errors
+--
+
+data ProtocolInstantiationError =
+    ByronLegacyProtocolNotImplemented
+  | CanonicalDecodeFailure !FilePath !Text
+  | DelegationCertificateFilepathNotSpecified
+  | GenesisConfigurationError !FilePath !Genesis.ConfigurationError
+  | GenesisReadError !FilePath !Genesis.GenesisDataError
+  | MissingCoreNodeId
+  | MissingNumCoreNodes
+  | PbftError !PBftLeaderCredentialsError
+  | SigningKeyDeserialiseFailure !FilePath !DeserialiseFailure
+  | SigningKeyFilepathNotSpecified
+  deriving Show
+
+
 renderProtocolInstantiationError :: ProtocolInstantiationError -> Text
 renderProtocolInstantiationError pie =
   case pie of
@@ -294,14 +321,3 @@ renderProtocolInstantiationError pie =
                                                            <> " Error: " <> (T.pack $ show deserialiseFailure)
     SigningKeyFilepathNotSpecified -> "Signing key filepath not specified"
 
-extractNodeInfo
-  :: Maybe NodeId
-  -> Maybe Word64
-  -> Either ProtocolInstantiationError (CoreNodeId, NumCoreNodes)
-extractNodeInfo mNodeId ncNumCoreNodes  = do
-
-    coreNodeId   <- case mNodeId of
-                      Just (CoreId coreNodeId) -> pure coreNodeId
-                      _                        -> Left MissingCoreNodeId
-    numCoreNodes <- maybe (Left MissingNumCoreNodes) Right ncNumCoreNodes
-    return (coreNodeId , NumCoreNodes numCoreNodes)
