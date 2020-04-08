@@ -6,7 +6,6 @@
 
 module Cardano.Common.Parsers
   ( command'
-  , flagParser
   , nodeMockParser
   , nodeMockProtocolModeParser
   , nodeProtocolModeParser
@@ -26,7 +25,7 @@ module Cardano.Common.Parsers
   , parseIntegralWithDefault
   , parseLogOutputFile
   , parseNodeId
-  , parseProtocol
+  , parseCardanoEra
   , parseSigningKeyFile
   , parseSocketPath
   , readDouble
@@ -44,9 +43,10 @@ import           Ouroboros.Consensus.NodeId (NodeId(..), CoreNodeId(..))
 import           Cardano.Chain.Common (Lovelace, mkLovelace)
 
 import           Cardano.Config.CommonCLI
-import           Cardano.Config.Protocol
 import           Cardano.Config.Topology
 import           Cardano.Config.Types
+import           Cardano.CLI.Ops (CardanoEra(..))
+
 
 -- Common command line parsers
 
@@ -261,22 +261,26 @@ parseShutdownIPC =
       <> hidden
     )
 
--- | Flag parser, that returns its argument on success.
-flagParser :: a -> String -> String -> Parser a
-flagParser val opt desc = flag' val $ long opt <> help desc
+parseCardanoEra :: Parser CardanoEra
+parseCardanoEra = asum
+  [ flag' ByronEraLegacy $
+        long "byron-legacy-formats"
+     <> help "Byron/cardano-sl formats and compatibility"
 
-parseProtocol :: Parser Protocol
-parseProtocol = asum
-  [ flagParser ByronLegacy "byron-legacy"
-    "Byron/Ouroboros Classic suite of algorithms"
-  , flagParser BFT "bft"
-    "BFT consensus"
-  , flagParser Praos "praos"
-    "Praos consensus"
-  , flagParser MockPBFT "mock-pbft"
-    "Permissive BFT consensus with a mock ledger"
-  , flagParser RealPBFT "real-pbft"
-    "Permissive BFT consensus with a real ledger"
+  , flag' ByronEra $
+        long "byron-formats"
+     <> help "Byron era formats and compatibility"
+
+  , flag' ShelleyEra $
+        long "shelley-formats"
+     <> help "Shelley-era formats and compatibility"
+
+    -- And various hidden compatibility flag aliases:
+  , flag' ByronEraLegacy $ hidden <> long "byron-legacy"
+  , flag' ShelleyEra     $ hidden <> long "bft"
+  , flag' ShelleyEra     $ hidden <> long "praos"
+  , flag' ShelleyEra     $ hidden <> long "mock-pbft"
+  , flag' ByronEra       $ hidden <> long "real-pbft"
   ]
 
 parseSigningKeyFile :: String -> String -> Parser SigningKeyFile

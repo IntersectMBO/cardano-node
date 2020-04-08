@@ -34,14 +34,21 @@ import           Prelude (String)
 
 parseCBORObject :: Parser CBORObject
 parseCBORObject = asum
-  [ flagParser CBORBlockByron "byron-block"
-    "The CBOR file is a byron era block"
-  , flagParser CBORDelegationCertificateByron "byron-delegation-certificate"
-    "The CBOR file is a byron era delegation certificate"
-  , flagParser CBORTxByron "byron-tx"
-    "The CBOR file is a byron era tx"
-  , flagParser CBORUpdateProposalByron "byron-update-proposal"
-    "The CBOR file is a byron era update proposal"
+  [ flag' CBORBlockByron $
+        long "byron-block"
+     <> help "The CBOR file is a byron era block"
+
+  , flag' CBORDelegationCertificateByron $
+        long "byron-delegation-certificate"
+     <> help "The CBOR file is a byron era delegation certificate"
+
+  , flag' CBORTxByron $
+        long "byron-tx"
+     <> help "The CBOR file is a byron era tx"
+
+  , flag' CBORUpdateProposalByron $
+        long "byron-update-proposal"
+     <> help "The CBOR file is a byron era update proposal"
   ]
 
 parseDelegationRelatedValues :: Parser ClientCommand
@@ -122,7 +129,7 @@ parseGenesisRelatedValues =
               "genesis-output-dir"
               "Non-existent directory where genesis JSON file and secrets shall be placed."
           <*> parseGenesisParameters
-          <*> parseProtocol
+          <*> parseCardanoEra
     , command' "print-genesis-hash" "Compute hash of a genesis file."
         $ PrintGenesisHash
             <$> parseGenesisFile "genesis-json"
@@ -137,7 +144,7 @@ parseKeyRelatedValues =
         , metavar "Key related commands"
         , command' "keygen" "Generate a signing key."
             $ Keygen
-                <$> parseProtocol
+                <$> parseCardanoEra
                 <*> parseNewSigningKeyFile "secret"
                 <*> parseFlag' GetPassword EmptyPassword
                       "no-password"
@@ -146,7 +153,7 @@ parseKeyRelatedValues =
             "to-verification"
             "Extract a verification key in its base64 form."
             $ ToVerification
-                <$> parseProtocol
+                <$> parseCardanoEra
                 <*> parseSigningKeyFile
                       "secret"
                       "Signing key file to extract the verification part from."
@@ -155,7 +162,7 @@ parseKeyRelatedValues =
             "signing-key-public"
             "Pretty-print a signing key's verification key (not a secret)."
             $ PrettySigningKeyPublic
-                <$> parseProtocol
+                <$> parseCardanoEra
                 <*> parseSigningKeyFile
                       "secret"
                       "Signing key to pretty-print."
@@ -163,7 +170,7 @@ parseKeyRelatedValues =
             "signing-key-address"
             "Print address of a signing key."
             $ PrintSigningKeyAddress
-                <$> parseProtocol
+                <$> parseCardanoEra
                 <*> parseNetworkMagic
                 <*> parseSigningKeyFile
                       "secret"
@@ -172,9 +179,9 @@ parseKeyRelatedValues =
             "migrate-delegate-key-from"
             "Migrate a delegate key from an older version."
             $ MigrateDelegateKeyFrom
-                <$> parseProtocol -- Old protocol
+                <$> parseCardanoEra -- Old CardanoEra
                 <*> parseSigningKeyFile "from" "Signing key file to migrate."
-                <*> parseProtocol -- New protocol
+                <*> parseCardanoEra -- New CardanoEra
                 <*> parseNewSigningKeyFile "to"
         ]
 parseLocalNodeQueryValues :: Parser ClientCommand

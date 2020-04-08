@@ -11,7 +11,9 @@
 {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 
 module Cardano.CLI.Ops
-  ( decodeCBOR
+  ( CardanoEra(..)
+  , cardanoEraForProtocol
+  , decodeCBOR
   , deserialiseSigningKey
   , getGenesisHashText
   , getLocalTip
@@ -103,6 +105,17 @@ import           Cardano.Config.Protocol
 import           Cardano.Config.Types
 import qualified Cardano.CLI.Legacy.Byron as Legacy
 
+-- | Many commands have variants or file formats that depend on the era.
+--
+data CardanoEra = ByronEraLegacy | ByronEra | ShelleyEra
+  deriving Show
+
+cardanoEraForProtocol :: Protocol -> CardanoEra
+cardanoEraForProtocol BFT      = ShelleyEra
+cardanoEraForProtocol Praos    = ShelleyEra
+cardanoEraForProtocol MockPBFT = ShelleyEra
+cardanoEraForProtocol RealPBFT = ByronEra
+
 decodeCBOR
   :: LByteString
   -> (forall s. Decoder s a)
@@ -111,16 +124,19 @@ decodeCBOR bs decoder =
   first CBORDecodingError $ deserialiseFromBytes decoder bs
 
 
-deserialiseSigningKey :: Protocol -> FilePath -> LB.ByteString -> Either CliError SigningKey
-deserialiseSigningKey ByronLegacy fp delSkey =
+deserialiseSigningKey :: CardanoEra -> FilePath -> LB.ByteString
+                      -> Either CliError SigningKey
+deserialiseSigningKey ByronEraLegacy fp delSkey =
   case deserialiseFromBytes Legacy.decodeLegacyDelegateKey delSkey of
     Left deSerFail -> Left $ SigningKeyDeserialisationFailed fp deSerFail
     Right (_, Legacy.LegacyDelegateKey sKey ) -> pure sKey
-deserialiseSigningKey RealPBFT fp delSkey =
+
+deserialiseSigningKey ByronEra fp delSkey =
   case deserialiseFromBytes Crypto.fromCBORXPrv delSkey of
     Left deSerFail -> Left $ SigningKeyDeserialisationFailed fp deSerFail
     Right (_, sKey) -> Right $ SigningKey sKey
-deserialiseSigningKey ptcl _ _ = Left $ ProtocolNotSupported ptcl
+
+deserialiseSigningKey ShelleyEra _ _ = Left $ CardanoEraNotSupported ShelleyEra
 
 
 getGenesisHashText :: GenesisFile -> ExceptT CliError IO Text
@@ -171,33 +187,44 @@ readCBOR fp =
     (ReadCBORFileFailure fp . toS . displayException)
     (LB.readFile fp)
 
-serialiseDelegationCert :: CanonicalJSON.ToJSON Identity a => Protocol -> a -> Either CliError LB.ByteString
-serialiseDelegationCert ByronLegacy dlgCert = pure $ canonicalEncodePretty dlgCert
-serialiseDelegationCert RealPBFT dlgCert = pure $ canonicalEncodePretty dlgCert
-serialiseDelegationCert ptcl _ = Left $ ProtocolNotSupported ptcl
 
-serialiseDelegateKey :: Protocol -> SigningKey -> Either CliError LB.ByteString
-serialiseDelegateKey ByronLegacy sk = pure
-                                    . toLazyByteString
-                                    . Legacy.encodeLegacyDelegateKey
-                                    $ Legacy.LegacyDelegateKey sk
-serialiseDelegateKey RealPBFT sk = serialiseSigningKey RealPBFT sk
-serialiseDelegateKey ptcl _ = Left $ ProtocolNotSupported ptcl
+serialiseDelegationCert :: CanonicalJSON.ToJSON Identity a
+                        => CardanoEra -> a -> Either CliError LB.ByteString
+serialiseDelegationCert ByronEraLegacy dlgCert = pure $ canonicalEncodePretty dlgCert
+serialiseDelegationCert ByronEra       dlgCert = pure $ canonicalEncodePretty dlgCert
+serialiseDelegationCert ShelleyEra     _       = Left $ CardanoEraNotSupported ShelleyEra
 
-serialiseGenesis ::  Protocol -> Genesis.GenesisData -> Either CliError LB.ByteString
-serialiseGenesis ByronLegacy gData = pure $ canonicalEncodePretty gData
-serialiseGenesis RealPBFT gData = pure $ canonicalEncodePretty gData
-serialiseGenesis ptcl _ = Left $ ProtocolNotSupported ptcl
 
-serialisePoorKey :: Protocol -> Genesis.PoorSecret -> Either CliError LB.ByteString
-serialisePoorKey ByronLegacy ps = serialiseSigningKey ByronLegacy $ Genesis.poorSecretToKey ps
-serialisePoorKey RealPBFT ps = serialiseSigningKey RealPBFT $ Genesis.poorSecretToKey ps
-serialisePoorKey ptcl _ = Left $ ProtocolNotSupported ptcl
+serialiseDelegateKey :: CardanoEra -> SigningKey -> Either CliError LB.ByteString
+serialiseDelegateKey ByronEraLegacy sk = pure
+                                       . toLazyByteString
+                                       . Legacy.encodeLegacyDelegateKey
+                                       $ Legacy.LegacyDelegateKey sk
+serialiseDelegateKey ByronEra  sk = serialiseSigningKey ByronEra sk
+serialiseDelegateKey ShelleyEra _ = Left $ CardanoEraNotSupported ShelleyEra
 
-serialiseSigningKey :: Protocol -> SigningKey -> Either CliError LB.ByteString
-serialiseSigningKey ByronLegacy (SigningKey k) = pure . toLazyByteString $ Crypto.toCBORXPrv k
-serialiseSigningKey RealPBFT (SigningKey k) = pure . toLazyByteString $ Crypto.toCBORXPrv k
-serialiseSigningKey ptcl _ = Left $ ProtocolNotSupported ptcl
+
+serialiseGenesis :: CardanoEra -> Genesis.GenesisData
+                 -> Either CliError LB.ByteString
+serialiseGenesis ByronEraLegacy gData = pure $ canonicalEncodePretty gData
+serialiseGenesis ByronEra       gData = pure $ canonicalEncodePretty gData
+serialiseGenesis ShelleyEra     _     = Left $ CardanoEraNotSupported ShelleyEra
+
+
+serialisePoorKey :: CardanoEra -> Genesis.PoorSecret
+                 -> Either CliError LB.ByteString
+serialisePoorKey ByronEraLegacy ps = serialiseSigningKey ByronEraLegacy $
+                                       Genesis.poorSecretToKey ps
+serialisePoorKey ByronEra       ps = serialiseSigningKey ByronEra $
+                                       Genesis.poorSecretToKey ps
+serialisePoorKey ShelleyEra     _  = Left $ CardanoEraNotSupported ShelleyEra
+
+
+serialiseSigningKey :: CardanoEra -> SigningKey
+                    -> Either CliError LB.ByteString
+serialiseSigningKey ByronEraLegacy (SigningKey k) = pure $ toLazyByteString (Crypto.toCBORXPrv k)
+serialiseSigningKey ByronEra       (SigningKey k) = pure $ toLazyByteString (Crypto.toCBORXPrv k)
+serialiseSigningKey ShelleyEra     _              = Left $ CardanoEraNotSupported ShelleyEra
 
 -- | Exception type for all errors thrown by the CLI.
 --   Well, almost all, since we don't rethrow the errors from readFile & such.
@@ -219,7 +246,7 @@ data CliError
   | NoGenesisDelegationForKey !Text
   | OutputMustNotAlreadyExist !FilePath
   | ProtocolError !ProtocolInstantiationError
-  | ProtocolNotSupported !Protocol
+  | CardanoEraNotSupported !CardanoEra
   | ProtocolParametersParseFailed !FilePath !Text
   | ReadCBORFileFailure !FilePath !Text
   | ReadSigningKeyFailure !FilePath !Text
@@ -271,8 +298,8 @@ instance Show CliError where
     = "Output file/directory must not already exist: " <> fp
   show (ProtocolError err)
     = "Protocol Instantiation Error " <> (T.unpack $ renderProtocolInstantiationError err)
-  show (ProtocolNotSupported proto)
-    = "Unsupported protocol "<> show proto
+  show (CardanoEraNotSupported era)
+    = "Unsupported Cardano era " <> show era
   show (ProtocolParametersParseFailed fp err)
     = "Protocol parameters file '" <> fp <> "' read failure: "<> T.unpack err
   show (ReadSigningKeyFailure fp expt)

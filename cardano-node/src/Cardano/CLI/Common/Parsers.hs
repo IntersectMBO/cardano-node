@@ -33,6 +33,7 @@ import           Cardano.CLI.Byron.Parsers (ByronCommand(..))
 import           Cardano.CLI.Delegation
 import           Cardano.CLI.Genesis
 import           Cardano.CLI.Key
+import           Cardano.CLI.Ops (CardanoEra(..))
 import           Cardano.CLI.Tx
 
 import           Cardano.Common.Parsers
@@ -60,36 +61,36 @@ data ClientCommand
   | Genesis
         NewDirectory
         GenesisParameters
-        Protocol
+        CardanoEra
   | PrintGenesisHash
         GenesisFile
 
   --- Key Related Commands ---
   | Keygen
-        Protocol
+        CardanoEra
         NewSigningKeyFile
         PasswordRequirement
   | ToVerification
-        Protocol
+        CardanoEra
         SigningKeyFile
         NewVerificationKeyFile
 
   | PrettySigningKeyPublic
-        Protocol
+        CardanoEra
         SigningKeyFile
 
   | MigrateDelegateKeyFrom
-        Protocol
-        -- ^ Old protocol
+        CardanoEra
+        -- ^ Old CardanoEra
         SigningKeyFile
         -- ^ Old key
-        Protocol
-        -- ^ New protocol
+        CardanoEra
+        -- ^ New CardanoEra
         NewSigningKeyFile
         -- ^ New Key
 
   | PrintSigningKeyAddress
-        Protocol
+        CardanoEra
         NetworkMagic  -- TODO:  consider deprecation in favor of ProtocolMagicId,
                       --        once Byron is out of the picture.
         SigningKeyFile

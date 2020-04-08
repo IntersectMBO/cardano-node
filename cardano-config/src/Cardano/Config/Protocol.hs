@@ -73,7 +73,6 @@ fromProtocol
   -> Maybe SigningKeyFile
   -> Update
   -> ExceptT ProtocolInstantiationError IO SomeProtocol
-fromProtocol ByronLegacy = \_ _ _ _ _ _ _ _ -> left ByronLegacyProtocolNotImplemented
 fromProtocol BFT         = mkConsensusProtocolBFT
 fromProtocol Praos       = mkConsensusProtocolPraos
 fromProtocol MockPBFT    = mkConsensusProtocolMockPBFT
@@ -256,8 +255,7 @@ readLeaderCredentials gc mDelCertFp mSKeyFp =
 --
 
 data ProtocolInstantiationError =
-    ByronLegacyProtocolNotImplemented
-  | CanonicalDecodeFailure !FilePath !Text
+    CanonicalDecodeFailure !FilePath !Text
   | DelegationCertificateFilepathNotSpecified
   | GenesisConfigurationError !FilePath !Genesis.ConfigurationError
   | GenesisReadError !FilePath !Genesis.GenesisDataError
@@ -272,7 +270,6 @@ data ProtocolInstantiationError =
 renderProtocolInstantiationError :: ProtocolInstantiationError -> Text
 renderProtocolInstantiationError pie =
   case pie of
-    ByronLegacyProtocolNotImplemented -> "ByronLegacyProtocolNotImplemented"
     CanonicalDecodeFailure fp failure -> "Canonical decode failure in " <> toS fp
                                          <> " Canonical failure: " <> failure
     DelegationCertificateFilepathNotSpecified -> "Delegation certificate filepath not specified"

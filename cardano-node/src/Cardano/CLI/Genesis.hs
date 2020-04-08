@@ -38,7 +38,6 @@ import qualified Cardano.Chain.Common as Common
 import           Cardano.Chain.Delegation hiding (Map, epoch)
 import qualified Cardano.Chain.Genesis as Genesis
 import           Cardano.Chain.Genesis (GeneratedSecrets(..))
-import           Cardano.Config.Protocol (Protocol(..))
 import           Cardano.Crypto (SigningKey (..))
 import qualified Cardano.Crypto as Crypto
 
@@ -111,25 +110,25 @@ mkGenesis gp = do
 -- thrown if the directory already exists, or the genesis has delegate keys that
 -- are not delegated to.
 dumpGenesis
-  :: Protocol
+  :: CardanoEra
   -> NewDirectory
   -> Genesis.GenesisData
   -> Genesis.GeneratedSecrets
   -> ExceptT CliError IO ()
-dumpGenesis ptcl (NewDirectory outDir) genesisData gs = do
+dumpGenesis era (NewDirectory outDir) genesisData gs = do
   exists <- liftIO $ doesPathExist outDir
   if exists
   then left $ OutputMustNotAlreadyExist outDir
   else liftIO $ createDirectory outDir
-  genesis <- hoistEither $ serialiseGenesis ptcl genesisData
+  genesis <- hoistEither $ serialiseGenesis era genesisData
   liftIO $ LB.writeFile genesisJSONFile genesis
 
   dlgCerts <- mapM findDelegateCert $ gsRichSecrets gs
 
-  liftIO $ wOut "genesis-keys" "key" (pure . serialiseSigningKey ptcl) (gsDlgIssuersSecrets gs)
-  liftIO $ wOut "delegate-keys" "key" (pure . serialiseDelegateKey ptcl) (gsRichSecrets gs)
-  liftIO $ wOut "poor-keys" "key" (pure . serialisePoorKey ptcl) (gsPoorSecrets gs)
-  liftIO $ wOut "delegation-cert" "json" (pure . serialiseDelegationCert ptcl) dlgCerts
+  liftIO $ wOut "genesis-keys" "key" (pure . serialiseSigningKey era) (gsDlgIssuersSecrets gs)
+  liftIO $ wOut "delegate-keys" "key" (pure . serialiseDelegateKey era) (gsRichSecrets gs)
+  liftIO $ wOut "poor-keys" "key" (pure . serialisePoorKey era) (gsPoorSecrets gs)
+  liftIO $ wOut "delegation-cert" "json" (pure . serialiseDelegationCert era) dlgCerts
   liftIO $ wOut "avvm-secrets" "secret" (pure . printFakeAvvmSecrets) (gsFakeAvvmSecrets gs)
  where
   dlgCertMap :: Map Common.KeyHash Certificate
