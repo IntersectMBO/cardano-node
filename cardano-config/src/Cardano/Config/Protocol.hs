@@ -26,64 +26,32 @@ import           Control.Monad.Trans.Except.Extra (bimapExceptT, firstExceptT,
                                                    hoistEither, left)
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.Text as T
-import           Data.Aeson (ToJSON)
 
-import           Cardano.BM.Tracing (ToObject)
 import qualified Cardano.Chain.Genesis as Genesis
 import qualified Cardano.Chain.Update as Update
 import           Cardano.Crypto (RequiresNetworkMagic)
 import qualified Cardano.Crypto.Signing as Signing
 import           Cardano.Tracing.ToObjectOrphans ()
 
-import           Ouroboros.Consensus.Block (Header, BlockProtocol)
+import           Ouroboros.Consensus.Block (BlockProtocol)
 import           Ouroboros.Consensus.BlockchainTime (SlotLength, slotLengthFromSec)
 import           Ouroboros.Consensus.Cardano hiding (Protocol)
 import qualified Ouroboros.Consensus.Cardano as Consensus
-import           Ouroboros.Consensus.Ledger.Abstract
-import           Ouroboros.Consensus.Mempool.API (ApplyTxErr, GenTx, GenTxId,
-                                                  HasTxId, HasTxs, TxId)
 import           Ouroboros.Consensus.Mock.Ledger.Block (defaultSimpleBlockConfig)
 import           Ouroboros.Consensus.Node.ProtocolInfo (NumCoreNodes (..))
 
 import           Ouroboros.Consensus.Byron.Ledger (ByronBlock)
 import           Ouroboros.Consensus.Node.Run (RunNode)
 import           Ouroboros.Consensus.NodeId (CoreNodeId (..), NodeId (..))
-import           Ouroboros.Consensus.Protocol.Abstract (SecurityParam (..), ValidationErr(..))
-import           Ouroboros.Consensus.Util.Condense
-import           Ouroboros.Network.Block (HeaderHash)
+import           Ouroboros.Consensus.Protocol.Abstract (SecurityParam (..))
 
 import           Cardano.Config.Types (DelegationCertFile (..),
                                        GenesisFile (..),
                                        LastKnownBlockVersion (..),
                                        Protocol (..), SigningKeyFile (..),
                                        Update (..))
+import           Cardano.Tracing.Constraints (TraceConstraints)
 
--- | Tracing-related constraints for monitoring purposes.
---
--- When you need a 'Show' or 'Condense' instance for more types, just add the
--- appropriate constraint here. There's no need to modify the consensus
--- code-base, unless the corresponding instance is missing.
-type TraceConstraints blk =
-    ( Condense blk
-    , Condense [blk]
-    , Condense (Header blk)
-    , Condense (HeaderHash blk)
-    , Condense (GenTx blk)
-    , Condense (TxId (GenTx blk))
-    , HasTxs blk
-    , HasTxId (GenTx blk)
-    , Show (ApplyTxErr blk)
-    , Show (GenTx blk)
-    , Show (GenTxId blk)
-    , Show blk
-    , Show (Header blk)
-    , Show (TxId (GenTx blk))
-    , ToJSON   (TxId (GenTx blk))
-    , ToObject (GenTx blk)
-    , ToObject (Header blk)
-    , ToObject (LedgerError blk)
-    , ToObject (ValidationErr (BlockProtocol blk))
-    )
 
 {-------------------------------------------------------------------------------
   Untyped/typed protocol boundary
