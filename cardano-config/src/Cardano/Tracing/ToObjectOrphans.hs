@@ -66,7 +66,8 @@ import qualified Ouroboros.Network.AnchoredFragment as AF
 import           Ouroboros.Network.Block
 import           Ouroboros.Network.BlockFetch.ClientState
                    (TraceFetchClientState (..), TraceLabelPeer (..))
-import           Ouroboros.Network.BlockFetch.Decision (FetchDecision)
+import           Ouroboros.Network.BlockFetch.Decision
+                   (FetchDecision, FetchDecline (..))
 import           Ouroboros.Network.Codec (AnyMessage (..))
 import qualified Ouroboros.Network.NodeToClient as NtC
 import qualified Ouroboros.Network.NodeToNode as NtN
@@ -252,10 +253,27 @@ instance HasSeverityAnnotation (TraceSendRecv a) where
 instance HasPrivacyAnnotation a => HasPrivacyAnnotation (TraceLabelPeer peer a)
 instance HasSeverityAnnotation a => HasSeverityAnnotation (TraceLabelPeer peer a)
 
+getFetchDecisionSeverityAnnotation :: FetchDecision a -> Severity
+getFetchDecisionSeverityAnnotation fd =
+    case fd of
+      Left FetchDeclineChainNotPlausible     -> Debug
+      Left FetchDeclineChainNoIntersection   -> Notice
+      Left FetchDeclineAlreadyFetched        -> Debug
+      Left FetchDeclineInFlightThisPeer      -> Debug
+      Left FetchDeclineInFlightOtherPeer     -> Debug
+      Left FetchDeclinePeerShutdown          -> Info
+      Left FetchDeclinePeerSlow              -> Info
+      Left FetchDeclineReqsInFlightLimit {}  -> Info
+      Left FetchDeclineBytesInFlightLimit {} -> Info
+      Left FetchDeclinePeerBusy {}           -> Info
+      Left FetchDeclineConcurrencyLimit {}   -> Info
+      Right _                                -> Info
+
 instance HasPrivacyAnnotation [TraceLabelPeer peer (FetchDecision [Point header])]
 instance HasSeverityAnnotation [TraceLabelPeer peer (FetchDecision [Point header])] where
-  getSeverityAnnotation [] = Debug
-  getSeverityAnnotation _ = Info
+  getSeverityAnnotation =
+      maximum
+    . map (\(TraceLabelPeer _ a) -> getFetchDecisionSeverityAnnotation a)
 
 instance HasPrivacyAnnotation (TraceTxSubmissionInbound (GenTxId blk) (GenTx blk))
 instance HasSeverityAnnotation (TraceTxSubmissionInbound (GenTxId blk) (GenTx blk)) where
@@ -1390,4 +1408,3 @@ instance (Show peer)
     mkObject [ "kind" .= String "MuxTrace"
              , "bearer" .= show b
              , "event" .= show ev ]
-
