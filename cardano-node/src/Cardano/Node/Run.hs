@@ -50,7 +50,8 @@ import           Cardano.BM.Data.BackendKind (BackendKind (..))
 import           Cardano.BM.Data.LogItem (LOContent (..),
                      PrivacyAnnotation (..), mkLOMeta)
 import           Cardano.BM.Data.Tracer (ToLogObject (..),
-                     TracingVerbosity (..))
+                     TracingVerbosity (..), TracingFormatting (..),
+                     severityNotice, trTransformer)
 import           Cardano.BM.Data.Transformers (setHostname)
 import           Cardano.BM.Trace
 
@@ -205,7 +206,7 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
     Left err   -> (putTextLn $ show err) >> exitFailure
     Right addr -> return addr
 
-  withShutdownHandler npm tracer $
+  withShutdownHandler npm trace $
    Node.run
     (consensusTracers nodeTracers)
     (protocolTracers nodeTracers)
@@ -332,9 +333,9 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
 -- either deliberatly by the parent process or automatically because the parent
 -- process itself terminated, then we initiate a clean shutdown.
 --
-withShutdownHandler :: NodeProtocolMode -> Tracer IO String -> IO () -> IO ()
+withShutdownHandler :: NodeProtocolMode -> Trace IO Text -> IO () -> IO ()
 withShutdownHandler (RealProtocolMode NodeCLI{shutdownIPC = Just (Fd fd)})
-                    tracer action =
+                    trace action =
     Async.race_ (wrapUninterruptableIO waitForEOF) action
   where
     waitForEOF :: IO ()
@@ -342,7 +343,9 @@ withShutdownHandler (RealProtocolMode NodeCLI{shutdownIPC = Just (Fd fd)})
       hnd <- IO.fdToHandle fd
       r   <- try $ IO.hGetChar hnd
       case r of
-        Left e | IO.isEOFError e -> traceWith tracer "received shutdown request"
+        Left e | IO.isEOFError e -> traceWith (trTransformer TextualRepresentation MaximalVerbosity $
+                                               severityNotice trace)
+                                    ("received shutdown request" :: Text)
                | otherwise       -> throwIO e
 
         Right _  ->
