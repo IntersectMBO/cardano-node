@@ -218,7 +218,7 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
       -- Watch the tip of the chain and store it in @varTip@ so we can include
       -- it in trace messages.
       let chainDB = getChainDB nodeKernel
-      void $ onEachChange registry identity Nothing
+      void $ onEachChange registry "watch-tip" identity Nothing
                           (ChainDB.getTipPoint chainDB) $ \tip ->
         -- TODO: use StrictTVar
         atomically $ writeTVar varTip $! tip
