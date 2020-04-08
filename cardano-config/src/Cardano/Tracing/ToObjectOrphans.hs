@@ -259,7 +259,7 @@ getFetchDecisionSeverityAnnotation fd =
       Left FetchDeclineChainNotPlausible     -> Info
       Left FetchDeclineChainNoIntersection   -> Notice
       Left FetchDeclineAlreadyFetched        -> Debug
-      Left FetchDeclineInFlightThisPeer      -> Notice
+      Left FetchDeclineInFlightThisPeer      -> Debug
       Left FetchDeclineInFlightOtherPeer     -> Debug
       Left FetchDeclinePeerShutdown          -> Info
       Left FetchDeclinePeerSlow              -> Info
