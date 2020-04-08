@@ -35,6 +35,7 @@ main = do
 
     nc <- liftIO $ parseNodeConfigurationFP caConfigYaml
     frmPtclRes <- runExceptT $ fromProtocol
+                                 (ncProtocol nc)
                                  (ncNodeId nc)
                                  (ncNumCoreNodes nc)
                                  (Just $ ncGenesisFile nc)
@@ -43,7 +44,6 @@ main = do
                                  (caDelegationCertFp)
                                  (caSigningKeyFp)
                                  (ncUpdate nc)
-                                 (ncProtocol nc)
 
     SomeProtocol p <- case frmPtclRes of
                         Right (SomeProtocol p) -> pure (SomeProtocol p)

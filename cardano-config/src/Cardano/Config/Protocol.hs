@@ -129,6 +129,28 @@ data ProtocolInstantiationError =
   deriving Show
 
 fromProtocol
+  :: Protocol
+  -> Maybe NodeId
+  -> Maybe Word64
+  -- ^ Number of core nodes
+  -> Maybe GenesisFile
+  -> RequiresNetworkMagic
+  -> Maybe Double
+  -> Maybe DelegationCertFile
+  -> Maybe SigningKeyFile
+  -> Update
+  -> ExceptT ProtocolInstantiationError IO SomeProtocol
+fromProtocol ByronLegacy = \_ _ _ _ _ _ _ _ -> left ByronLegacyProtocolNotImplemented
+fromProtocol BFT         = mkConsensusProtocolBFT
+fromProtocol Praos       = mkConsensusProtocolPraos
+fromProtocol MockPBFT    = mkConsensusProtocolMockPBFT
+fromProtocol RealPBFT    = mkConsensusProtocolRealPBFT
+
+
+mkConsensusProtocolBFT,
+ mkConsensusProtocolPraos,
+ mkConsensusProtocolMockPBFT,
+ mkConsensusProtocolRealPBFT
   :: Maybe NodeId
   -> Maybe Word64
   -- ^ Number of core nodes
@@ -138,15 +160,14 @@ fromProtocol
   -> Maybe DelegationCertFile
   -> Maybe SigningKeyFile
   -> Update
-  -> Protocol
   -> ExceptT ProtocolInstantiationError IO SomeProtocol
-fromProtocol _ _ _ _ _ _ _ _ ByronLegacy =
-  left ByronLegacyProtocolNotImplemented
-fromProtocol nId mNumCoreNodes _ _ _ _ _ _ BFT =
+
+mkConsensusProtocolBFT nId mNumCoreNodes _ _ _ _ _ _ =
   hoistEither $ mockSomeProtocol nId mNumCoreNodes $ \cid numCoreNodes ->
     Consensus.ProtocolMockBFT numCoreNodes cid mockSecurityParam
       (defaultSimpleBlockConfig mockSecurityParam mockSlotLength)
-fromProtocol nId mNumCoreNodes _ _ _ _ _ _ Praos =
+
+mkConsensusProtocolPraos nId mNumCoreNodes _ _ _ _ _ _ =
   hoistEither $ mockSomeProtocol nId mNumCoreNodes $ \cid numCoreNodes ->
     Consensus.ProtocolMockPraos
       numCoreNodes
@@ -158,7 +179,8 @@ fromProtocol nId mNumCoreNodes _ _ _ _ _ _ Praos =
         , praosLifetimeKES   = 1000000
         }
       (defaultSimpleBlockConfig mockSecurityParam (slotLengthFromSec 2))
-fromProtocol nId mNumCoreNodes _ _ _ _ _ _ MockPBFT =
+
+mkConsensusProtocolMockPBFT nId mNumCoreNodes _ _ _ _ _ _ =
   hoistEither $ mockSomeProtocol nId mNumCoreNodes $ \cid numCoreNodes@(NumCoreNodes numNodes) ->
     Consensus.ProtocolMockPBFT
       PBftParams { pbftSecurityParam      = mockSecurityParam
@@ -168,7 +190,8 @@ fromProtocol nId mNumCoreNodes _ _ _ _ _ _ MockPBFT =
                  }
       (defaultSimpleBlockConfig mockSecurityParam mockSlotLength)
       cid
-fromProtocol _ _ mGenFile nMagic sigThresh delCertFp sKeyFp update RealPBFT = do
+
+mkConsensusProtocolRealPBFT _ _ mGenFile nMagic sigThresh delCertFp sKeyFp update = do
     let genFile@(GenesisFile gFp) = fromMaybe ( panic $ "Cardano.Config.Protocol.fromProtocol: "
                                                       <> "Genesis file not specified"
                                               ) mGenFile

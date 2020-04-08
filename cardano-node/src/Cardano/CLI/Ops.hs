@@ -324,6 +324,7 @@ withRealPBFT genFile nMagic sigThresh delCertFp sKeyFp update ptcl action = do
   SomeProtocol p <- firstExceptT
                       FromProtocolError
                       $ fromProtocol
+                          ptcl
                           Nothing
                           Nothing
                           (Just genFile)
@@ -332,7 +333,6 @@ withRealPBFT genFile nMagic sigThresh delCertFp sKeyFp update ptcl action = do
                           delCertFp
                           sKeyFp
                           update
-                          ptcl
   case p of
     proto@Consensus.ProtocolRealPBFT{} -> action proto
     _ -> left $ IncorrectProtocolSpecified ptcl
@@ -352,6 +352,7 @@ getLocalTip configFp mSockPath iocp = do
 
   frmPtclRes <- runExceptT . firstExceptT ProtocolError
                            $ fromProtocol
+                               (ncProtocol nc)
                                (ncNodeId nc)
                                (ncNumCoreNodes nc)
                                (Just $ ncGenesisFile nc)
@@ -360,7 +361,6 @@ getLocalTip configFp mSockPath iocp = do
                                Nothing
                                Nothing
                                (ncUpdate nc)
-                               (ncProtocol nc)
 
   SomeProtocol p <- case frmPtclRes of
                         Right (SomeProtocol p) -> pure (SomeProtocol p)
