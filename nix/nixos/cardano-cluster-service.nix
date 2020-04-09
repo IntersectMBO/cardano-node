@@ -48,36 +48,8 @@ in let
   proxy-port-shelley    = 7777;
 
 in let
-  ### Names and topologies
-  legacy-topology       = svcLib.mkLegacyTopology
-    { c-a-1 = { port = 3001;
-                static-routes = [ [ "proxy" ] [ "c-a-2" ] [ "c-b-1" ] ];
-              };
-      c-a-2 = { port = 3002;
-                static-routes = [ [ "c-a-1" ] [ "c-b-1" ] [ "c-b-2" ] ];
-              };
-      c-b-1 = { port = 3003;
-                static-routes = [ [ "c-a-1" ] [ "c-a-2" ] [ "c-b-2" ] ];
-              };
-      c-b-2 = { port = 3004;
-                static-routes = [ [ "c-a-2" ] [ "c-b-1" ] [ "c-a-1" ] ];
-              };
-      c-c-1 = { port = 3005;
-                static-routes = [ [ "c-a-1" ] [ "c-b-1" ] [ "c-b-2" ] ];
-              };
-      c-c-2 = { port = 3006;
-                static-routes = [ [ "c-b-1" ] [ "c-b-2" ] [ "c-c-1" ] ];
-              };
-      c-d-1 = { port = 3007;
-                static-routes = [ [ "c-b-2" ] [ "c-c-1" ] [ "c-c-2" ] ];
-              };
-      proxy = { port = 5555;
-                static-routes = [ [ "c-a-1" ] ];
-                type = "relay";
-              };
-    };
   configuration-key     = "mainnet_ci_full";
-  ## the below is hard-coded to the names from the above
+  ### Names and topologies
   topology-core-names   = [ "c-a-1" "c-a-2" "c-b-1" "c-b-2" "c-c-1" "c-c-2" "c-d-1" ];
   legacy-core-names     = take legacy-node-count topology-core-names;
   shelley-core-names    = take shelley-node-count (drop legacy-node-count topology-core-names);
@@ -85,6 +57,15 @@ in let
   all-legacy-names      = topology-core-names
                           ++ optional legacy-relay-enabled legacy-relay-name;
   legacy-name-shexpr    = ''$(choice "$1" ${toString all-legacy-names})'';
+
+  legacy-topology       =
+    svcLib.mkFullyConnectedLocalClusterLegacyTopologyWithProxy
+      { inherit port-base;
+        node-names = legacy-core-names;
+        proxy-connected-node-name = head legacy-core-names;
+        proxy-name = "proxy";
+        proxy-port = 5555;
+      };
 
 in let
   ### Genesis & state dirs
@@ -132,10 +113,13 @@ in let
 in let
   ### Config
   node-config-overlay   = {
-    hasEKG        = null;
-    hasGUI        = null;
-    hasGraylog    = null;
-    hasPrometheus = null;
+    hasEKG                  = null;
+    hasGUI                  = null;
+    hasGraylog              = null;
+    hasPrometheus           = null;
+    minSeverity             = "Debug";
+    TraceChainDb            = true;
+    TracingVerbosity        = "MaximalVerbosity";
   };
   shelley-configs       = map (i: toFile "config-${toString i}.json" (toJSON (svcLib.mkNodeConfig ncfg i // node-config-overlay)))
                               shelley-node-ids;

@@ -5,7 +5,7 @@ let
   cardano-cli-bin = "${cardano-node-packages.cardano-cli}/bin/cardano-cli";
 
   ## mkNodeConfig
-  ##   :: NodeId Int -> ServiceConfig AttrSet -> NodeConfig AttrSet
+  ##   :: ServiceConfig AttrSet -> NodeId Int -> NodeConfig AttrSet
   mkNodeConfig = cfg: NodeId:
     cfg.nodeConfig //
     { inherit NodeId; } //
@@ -14,54 +14,26 @@ let
     (optionalAttrs (cfg.protover-alt   or null != null) { LastKnownBlockVersion-Alt   = cfg.protover-alt;   }) //
     (optionalAttrs (cfg.genesisFile != null) { GenesisFile = cfg.genesisFile;   });
 
-  ## mkFullyConnectedLocalClusterTopology
-  ##   :: String Address -> String Port -> Int PortNo -> Int Valency
+  ## mkFullyConnectedLocalClusterTopologyWithProxy
+  ##   :: (Int NodeId -> String Address)
+  ##   -> Int Port
+  ##   -> Int NodeId
+  ##   -> Int Count
+  ##   -> String Address -> Int PortNo
   ##   -> Topology FilePath
-  mkFullyConnectedLocalClusterTopology =
-    { host-addr
-    , port-base
-    , node-count
-    , valency ? 1
-    }:
-    let
-      addr = host-addr;
-      ports = map (x: port-base + x) (range 0 (node-count - 1));
-      mkPeer = port: { inherit addr port valency; };
-      mkNodeTopo = port : {
-        Producers =  map mkPeer (remove port ports);
-      };
-    in toFile "topology.json" (toJSON (imap0 mkNodeTopo ports));
-
-  ## mkLegacyTopology
-  ##   :: Map (NodeName String) NodeSpec
-  ##   -> Topology FilePath
-  mkLegacyTopology =
-    topoSpec:
-    let
-      mkTopo =
-        {
-          nodes = mapAttrs (name: { port, static-routes, type ? "core", public ? false }: {
-            inherit port type public static-routes;
-            host = "${name}.cardano";
-            kademlia = false;
-            region = "eu-central-1";
-            zone = "eu-central-1a";
-            org = "IOHK";
-          }) topoSpec;
-        };
-    in toFile "legacy-topology.json" (toJSON (mkTopo));
-
-  ## mkFullyConnectedLocalClusterTopology
-  ##   :: String Address -> String Port -> Int PortNo -> Int Valency
-  ##   -> Topology FilePath
+  ##
+  ##  Produce a store path containing a Byron Reboot topology
+  ##  with following properties:
+  ##   - fully connected between the nodes
+  ##   - every node lists the proxy as a peer
   mkFullyConnectedLocalClusterTopologyWithProxy =
     { addr-fn
     , port-base
     , node-id-base
     , node-count
-    , valency ? 1
     , proxy-addr
     , proxy-port
+    , valency ? 1
     }:
     let
       ## we choose not to spread ports for this topology
@@ -73,6 +45,55 @@ let
       };
       topology = mkShelleyNode;
     in toFile "topology.yaml" (toJSON topology);
+
+  ## mkFullyConnectedLocalClusterLegacyTopologyWithProxy
+  ##   :: Int Port
+  ##   -> [String NodeName]
+  ##   -> String NodeName
+  ##   -> String NodeName -> Int PortNo
+  ##   -> Topology FilePath
+  ##
+  ##  Produce a store path containing a legacy SL topology
+  ##  with following properties:
+  ##   - fully connected between the nodes
+  ##   - the designated node is two-way-connected with the proxy
+  mkFullyConnectedLocalClusterLegacyTopologyWithProxy =
+  { port-base
+  , node-names
+  , proxy-connected-node-name
+  , proxy-name
+  , proxy-port
+  , valency ? 1
+  }:
+  let
+    node-specs = imap0 (i: name:
+      { inherit name;
+        port = port-base + i;
+        static-routes = map (x: [x])
+                        ((remove name node-names)
+                         ++ optional (name == proxy-connected-node-name) "proxy");
+      }) node-names;
+    proxy-spec =
+      { name = proxy-name;
+        port = proxy-port;
+        static-routes = [ [ proxy-connected-node-name ] ];
+      };
+    mkNodeTopoFromSpec = type: { name, port, static-routes }: {
+        inherit name;
+        value = {
+          inherit type port static-routes;
+          host = "${name}.cardano";
+          kademlia = false;
+          region = "eu-central-1";
+          zone = "eu-central-1a";
+          org = "IOHK";
+          public = false;
+        };
+      };
+    entries = map (mkNodeTopoFromSpec "core") node-specs
+              ++ [(mkNodeTopoFromSpec "relay" proxy-spec)];
+    topology = { nodes = listToAttrs entries; };
+  in toFile "legacy-topology.json" (toJSON topology);
 
   # Note how some values are literal strings, and some integral.
   # This is an important detail.
@@ -306,9 +327,8 @@ let
   # --disable-peer-host-check
 in
 { inherit
-  mkFullyConnectedLocalClusterTopology
   mkFullyConnectedLocalClusterTopologyWithProxy
-  mkLegacyTopology
+  mkFullyConnectedLocalClusterLegacyTopologyWithProxy
   mkPeriodicGenesisDir
   defaultGenesisArgs
   leakDelegateSigningKey
