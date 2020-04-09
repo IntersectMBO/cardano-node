@@ -65,9 +65,12 @@ TracingVerbosity: NormalVerbosity
 # This setting lists the the backends that will be available to use in the
 # configuration below. The logging backend is called Katip. Also enable the EKG
 # backend if you want to use the EKG or Prometheus monitoring interfaces.
+# You can also enable trace forwarder backend if node should send the metrics
+# to an external process.
 setupBackends:
   - KatipBK
 # - EKGViewBK
+# - TraceForwarderBK
 
 # This specifies the default backends that trace output is sent to if it
 # is not specifically configured to be sent to other backends.
@@ -220,9 +223,18 @@ options:
     cardano.node.ChainDB.metrics:
       - EKGViewBK
     cardano.node.metrics:
-      - EKGViewBK
+      - EKGViewBK  
+    # Uncomment it to send 'cardano.node.metrics' to 'TraceForwarderBK' as well.
+    # - TraceForwarderBK
     cardano.node-metrics:
       - EKGViewBK
+    # Uncomment it to send node's release, version and commit to 'TraceForwarderBK'.
+    # cardano.node.release:
+    #   - TraceForwarderBK
+    # cardano.node.version:
+    #   - TraceForwarderBK
+    # cardano.node.commit:
+    #   - TraceForwarderBK
 
   # This section is more expressive still, and needs to be properly documented.
   mapSubtrace:
@@ -250,3 +262,11 @@ options:
       # Change the `subtrace` value to `Neutral` in order to log
       # `UTxO`-related messages during epoch validation.
       subtrace: NoTrace
+
+# If 'TraceForwarderBK' is enabled, uncomment it to forward node's metrics
+# to remote socket '127.0.0.1:2997'.
+# traceForwardTo:
+#   tag: RemoteSocket
+#   contents:
+#     - "127.0.0.1"
+#     - "2997"

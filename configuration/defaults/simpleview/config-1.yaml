@@ -10,6 +10,9 @@ rotation:
 # these backends are initialized:
 setupBackends:
   - KatipBK
+# Uncomment it to enable trace forwarder backend, if the node should
+# forward metrics to an external process.
+# - TraceForwarderBK
 
 # if not indicated otherwise, then messages are passed to these backends:
 defaultBackends:
@@ -74,13 +77,28 @@ options:
       - EKGViewBK
       - kind: UserDefinedBK
         name: LiveViewBackend
+# Uncomment it to send 'cardano.node.metrics' to 'TraceForwarderBK' as well.
+#     - TraceForwarderBK
     cardano.node.peers:
       - EKGViewBK
     cardano.node.BlockFetchDecision.peers:
       - EKGViewBK
       - kind: UserDefinedBK
         name: LiveViewBackend
+# Uncomment it to send node's release, version and commit to 'TraceForwarderBK'.
+#    cardano.node.release:
+#      - TraceForwarderBK
+#    cardano.node.version:
+#      - TraceForwarderBK
+#    cardano.node.commit:
+#      - TraceForwarderBK
 
+# Uncomment it to forward node's metrics to remote socket '127.0.0.1:2998'.
+# traceForwardTo:
+#   tag: RemoteSocket
+#   contents:
+#     - "127.0.0.1"
+#     - "2998"
 
 ##########################################################
 ############### Cardano Node Configuration ###############
