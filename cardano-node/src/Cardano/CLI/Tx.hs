@@ -61,7 +61,7 @@ import           Ouroboros.Consensus.Util.Condense (condense)
 import           Cardano.CLI.Ops
 import           Cardano.Node.Submission
 import           Cardano.Config.Types
-                   (NodeConfiguration, MiscellaneousFilepaths, SocketPath)
+                   (NodeConfiguration, SocketPath)
 
 
 newtype TxFile =
@@ -167,13 +167,12 @@ txSpendGenesisUTxOByronPBFT gc sk genAddr outs =
 --   to given outputs, signed by the given key.
 issueGenesisUTxOExpenditure
   :: NodeConfiguration
-  -> Maybe MiscellaneousFilepaths
   -> Address
   -> NonEmpty TxOut
   -> Crypto.SigningKey
   -> ExceptT RealPBFTError IO (UTxO.ATxAux ByteString)
-issueGenesisUTxOExpenditure nc files genRichAddr outs sk =
-    withRealPBFT nc files
+issueGenesisUTxOExpenditure nc genRichAddr outs sk =
+    withRealPBFT nc
       $ \(Consensus.ProtocolRealPBFT gc _ _ _ _)-> do
           let tx = txSpendGenesisUTxOByronPBFT gc sk genRichAddr outs
           traceWith stdoutTracer ("TxId: " ++ condense (Byron.byronIdTx tx))
@@ -200,13 +199,12 @@ txSpendUTxOByronPBFT gc sk ins outs =
 --   signed by the given key.
 issueUTxOExpenditure
   :: NodeConfiguration
-  -> Maybe MiscellaneousFilepaths
   -> NonEmpty TxIn
   -> NonEmpty TxOut
   -> Crypto.SigningKey
   -> ExceptT RealPBFTError IO (UTxO.ATxAux ByteString)
-issueUTxOExpenditure nc files ins outs key =
-    withRealPBFT nc files $
+issueUTxOExpenditure nc ins outs key =
+    withRealPBFT nc $
       \(Consensus.ProtocolRealPBFT gc _ _ _ _)-> do
         let tx = txSpendUTxOByronPBFT gc key ins outs
         traceWith stdoutTracer ("TxId: " ++ condense (Byron.byronIdTx tx))
@@ -216,12 +214,11 @@ issueUTxOExpenditure nc files ins outs key =
 nodeSubmitTx
   :: IOManager
   -> NodeConfiguration
-  -> Maybe MiscellaneousFilepaths
   -> SocketPath
   -> GenTx ByronBlock
   -> ExceptT RealPBFTError IO ()
-nodeSubmitTx iocp nc files targetSocketFp gentx =
-    withRealPBFT nc files $
+nodeSubmitTx iocp nc targetSocketFp gentx =
+    withRealPBFT nc $
       \p@Consensus.ProtocolRealPBFT{} -> liftIO $ do
         -- TODO: Update submitGenTx to use `ExceptT`
         traceWith stdoutTracer ("TxId: " ++ condense (Consensus.txId gentx))

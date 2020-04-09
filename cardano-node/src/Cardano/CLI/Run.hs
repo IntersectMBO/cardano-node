@@ -203,7 +203,6 @@ runSubmitTx fp configFp mCliSockPath =
       $ nodeSubmitTx
           iocp
           nc
-          Nothing
           (chooseSocketPath (ncSocketPath nc) mCliSockPath)
           tx
 
@@ -217,7 +216,6 @@ runSpendGenesisUTxO configFp (NewTxFile ctTx) ctKey genRichAddr outs = do
     tx <- firstExceptT SpendGenesisUTxOError
             $ issueGenesisUTxOExpenditure
                 nc
-                Nothing
                 genRichAddr
                 outs
                 sk
@@ -234,7 +232,6 @@ runSpendUTxO configFp (NewTxFile ctTx) ctKey ins outs = do
              IssueUtxoError
              $ issueUTxOExpenditure
                  nc
-                 Nothing
                  ins
                  outs
                  sk

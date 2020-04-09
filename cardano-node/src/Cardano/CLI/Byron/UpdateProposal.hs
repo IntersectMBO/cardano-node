@@ -160,8 +160,7 @@ submitByronUpdateProposal iocp config proposalFp mSocket = do
     let skt   = chooseSocketPath (ncSocketPath nc) mSocket
 
     firstExceptT UpdateProposalSubmissionError $
-      withRealPBFT nc Nothing $
-                \p@Consensus.ProtocolRealPBFT{} -> liftIO $ do
+      withRealPBFT nc $ \p@Consensus.ProtocolRealPBFT{} -> liftIO $ do
                    traceWith stdoutTracer ("Update proposal TxId: " ++ condense (Mempool.txId genTx))
                    submitGeneralTx iocp skt
                                    (pInfoConfig (Consensus.protocolInfo p))

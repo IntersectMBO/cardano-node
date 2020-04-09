@@ -338,17 +338,16 @@ data RealPBFTError
 --   with attendant configuration.
 withRealPBFT
   :: NodeConfiguration
-  -> Maybe MiscellaneousFilepaths
   -> (RunNode ByronBlock
         => Consensus.Protocol ByronBlock Consensus.ProtocolRealPBFT
         -> ExceptT RealPBFTError IO a)
   -> ExceptT RealPBFTError IO a
-withRealPBFT nc files action = do
+withRealPBFT nc action = do
   SomeConsensusProtocol p <- firstExceptT
                       FromProtocolError
                       $ mkConsensusProtocol
                           nc
-                          files
+                          Nothing
   case p of
     proto@Consensus.ProtocolRealPBFT{} -> action proto
     _ -> left $ IncorrectProtocolSpecified (ncProtocol nc)
