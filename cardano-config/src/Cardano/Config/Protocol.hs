@@ -147,21 +147,14 @@ mockSomeProtocol
   -> (CoreNodeId -> NumCoreNodes -> Consensus.Protocol blk (BlockProtocol blk))
   -> Either ProtocolInstantiationError SomeConsensusProtocol
 mockSomeProtocol nId mNumCoreNodes mkProtocol =  do
-    (cid, numCoreNodes) <- extractNodeInfo nId mNumCoreNodes
-    let p = mkProtocol cid numCoreNodes
-    return $ SomeConsensusProtocol p
 
-extractNodeInfo
-  :: Maybe NodeId
-  -> Maybe Word64
-  -> Either ProtocolInstantiationError (CoreNodeId, NumCoreNodes)
-extractNodeInfo mNodeId ncNumCoreNodes  = do
-
-    coreNodeId   <- case mNodeId of
+    coreNodeId   <- case nId of
                       Just (CoreId coreNodeId) -> pure coreNodeId
                       _                        -> Left MissingCoreNodeId
-    numCoreNodes <- maybe (Left MissingNumCoreNodes) Right ncNumCoreNodes
-    return (coreNodeId , NumCoreNodes numCoreNodes)
+    numCoreNodes <- maybe (Left MissingNumCoreNodes) Right mNumCoreNodes
+
+    let p = mkProtocol coreNodeId (NumCoreNodes numCoreNodes)
+    return $ SomeConsensusProtocol p
 
 
 ------------------------------------------------------------------------------
