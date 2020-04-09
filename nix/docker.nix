@@ -13,9 +13,9 @@
 #
 #   docker run -e NETWORK=testnet inputoutput/cardano-node:<TAG>
 #
-# To launch with custom config, mount a dir containing config.yaml, genesis.json, and topology,json into /config
+# To launch with custom config, mount a dir containing configuration.yaml, genesis.json, and topology.json
 #
-#   docker run -v $PATH_TO/config:/config \
+#   docker run -v $PATH_TO/configuration:/configuration \
 #     inputoutput/cardano-node:<TAG>
 #
 ############################################################################
@@ -71,7 +71,7 @@ let
       mkdir -m 0777 tmp
     '';
   };
-  # Image with all network configs or utilizes a config volume mount
+  # Image with all iohk-nix network configs or utilizes a configuration volume mount
   # To choose a network, use `-e NETWORK testnet`
     clusterStatements = lib.concatStringsSep "\n" (lib.mapAttrsToList (_: value: value) (commonLib.forEnvironments (env: ''
       elif [[ "$NETWORK" == "${env.name}" ]]; then
@@ -81,19 +81,18 @@ let
     entry-point = writeScriptBin "entry-point" ''
       #!${runtimeShell}
       echo $NETWORK
-      if [[ -d /config ]]; then
+      if [[ -d /configuration ]]; then
         exec ${cardano-node}/bin/cardano-node run \
-          --config /config/config.yaml \
+          --config /configuration/configuration.yaml \
           --database-path /data/db \
-          --genesis-file /config/genesis.json \
           --host-addr 127.0.0.1 \
           --port 3001 \
           --socket-path /data/node.socket \
-          --topology /config/topology.json $@
+          --topology /configuration/topology.json $@
       ${clusterStatements}
       else
         echo "Please set a NETWORK environment variable to one of: mainnet/testnet"
-        echo "Or mount a /config volume containing: config.yaml, topology.json and genesis.json"
+        echo "Or mount a /configuration volume containing: configuration.yaml, genesis.json, and topology.json"
       fi
     '';
   in dockerTools.buildImage {
