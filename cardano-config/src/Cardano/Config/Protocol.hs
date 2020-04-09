@@ -49,7 +49,6 @@ import           Ouroboros.Consensus.Byron.Ledger (ByronBlock)
 import           Ouroboros.Consensus.Node.Run (RunNode)
 import           Ouroboros.Consensus.NodeId (CoreNodeId (..), NodeId (..))
 import           Ouroboros.Consensus.Protocol.Abstract (SecurityParam (..), ValidationErr(..))
-import           Ouroboros.Consensus.Util (Dict (..))
 import           Ouroboros.Consensus.Util.Condense
 import           Ouroboros.Network.Block (HeaderHash)
 
@@ -110,8 +109,7 @@ mockSomeProtocol
 mockSomeProtocol nId mNumCoreNodes mkConsensusProtocol =  do
     (cid, numCoreNodes) <- extractNodeInfo nId mNumCoreNodes
     let p = mkConsensusProtocol cid numCoreNodes
-    case Consensus.runProtocol p of
-      Dict -> return $ SomeProtocol p
+    return $ SomeProtocol p
 
 data SomeProtocol where
   SomeProtocol :: (RunNode blk, TraceConstraints blk)
@@ -189,8 +187,7 @@ fromProtocol _ _ mGenFile nMagic sigThresh delCertFp sKeyFp update RealPBFT = do
 
     let p = protocolConfigRealPbft update sigThresh gc optionalLeaderCredentials
 
-    case Consensus.runProtocol p of
-      Dict -> return $ SomeProtocol p
+    return $ SomeProtocol p
 
 
 -- | The plumbing to select and convert the appropriate configuration subset
