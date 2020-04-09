@@ -181,7 +181,7 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
   nc <- parseNodeConfiguration npm
 
   -- Create TCP/IP sockets for node to node?
-  eitherAddrs <- runExceptT $ nodeAddressInfo npm
+  eitherAddrs <- runExceptT $ nodeAddressInfo tracer npm
 
   addrs <- either (\err -> panic $ "Cardano.Config.Topology.nodeAddressInfo: " <> show err) pure eitherAddrs
 
@@ -301,11 +301,6 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
 
          traceWith tracer $
            "System started at " <> show (nodeStartTime (Proxy @blk) cfg)
-
-         --eSocket <- runExceptT $ nodeAddressInfo npm'
-         --hostAddr <- case eSocket of
-         --              Left err -> panic $ "Cardano.Node.Run.createTracers.nodeAddressInfo: Error getting host address: " <> show err
-         --              Right hAddr -> pure hAddr
 
          traceWith tracer $ unlines
            [ ""

@@ -24,6 +24,7 @@ import           Prelude (String)
 import           Control.Exception (IOException)
 import qualified Control.Exception as Exception
 import           Control.Monad.Trans.Except.Extra (left)
+import           Control.Tracer (Tracer, traceWith)
 import           Data.Aeson
 import qualified Data.ByteString as BS
 import qualified Data.IP as IP
@@ -31,7 +32,7 @@ import           Data.String.Conv (toS)
 import qualified Data.Text as T
 import           Text.Read (readMaybe)
 import           Network.Socket
-import           System.Systemd.Daemon (getActivatedSockets)
+import           System.Systemd.Daemon (getActivatedSocketsWithNames)
 
 import           Cardano.Config.Types
 
@@ -59,24 +60,24 @@ nodeAddressToSockAddr _ = pure $ SockAddrInet 9009 98989898
   --liftIO $ getSocketName skt
 
 -- | Get TCP/IP sockets for local node
-nodeAddressInfo :: NodeProtocolMode -> ExceptT NodeAddressError IO [AddrInfo]
-nodeAddressInfo npm = do
+nodeAddressInfo :: Tracer IO String -> NodeProtocolMode -> ExceptT NodeAddressError IO [AddrInfo]
+nodeAddressInfo trace' npm = do
     mActivatedSockets <- useActivatedSockets npm
+    liftIO $ traceWith trace' $ "Activated socket names: " <> show mActivatedSockets
     case mActivatedSockets of
       Nothing -> do let NodeAddress hostAddr port = extractNodeAddress
                     liftIO $ getAddrInfo (Just hints) (show <$> getAddress hostAddr) (Just $ show port)
-      Just (_:skt:[]) -> do name <- liftIO $ getSocketName skt
-                            (ip, port) <- liftIO $ getNameInfo [NI_NUMERICHOST, NI_NUMERICSERV] True True name
-                            liftIO $ getAddrInfo (Just hints) ip port
+                                                 -- TODO: Handle these exceptions via ExceptT
+      Just (_:(ipv4skt,_):(ipv6skt,_): []) -> do addrInfo4 <- liftIO $ getSocketAddr ipv4skt
+                                                 addrInfo6 <- liftIO $ getSocketAddr ipv6skt
+                                                 pure $ addrInfo4 ++ addrInfo6
 
-      _ ->  panic "nodeAddressInfo Failed" -- liftIO $ getAddrInfo (Just hints) (Just "0.0.0.0") (Just "7777")
-                        -- secondExceptT concat (liftIO $ zipWithM (\port name -> getAddrInfo (Just hints) (Just name) (Just port)) (getNames ports) (getPorts names))
+      _ ->  panic "nodeAddressInfo Failed"
  where
-  --getNames :: [Maybe PortNumber] -> [ServiceName]
-  --getNames ports = map show $ catMaybes ports
---
-  --getPorts :: [SockAddr] -> [HostName]
-  --getPorts addrs = map getHostname addrs
+  getSocketAddr :: Socket -> IO [AddrInfo]
+  getSocketAddr skt = do name <- liftIO $ getSocketName skt
+                         (ip, port) <- getNameInfo [NI_NUMERICHOST, NI_NUMERICSERV] True True name
+                         getAddrInfo (Just hints) ip port
 
   hints :: AddrInfo
   hints = defaultHints { addrFlags = [AI_PASSIVE, AI_ADDRCONFIG]
@@ -171,18 +172,18 @@ readTopologyFile npm = do
   handler e = T.pack $ "Cardano.Node.Configuration.Topology.readTopologyFile: "
                      ++ displayException e
 
-useActivatedSockets :: NodeProtocolMode -> ExceptT NodeAddressError IO (Maybe [Socket])
+useActivatedSockets :: NodeProtocolMode -> ExceptT NodeAddressError IO (Maybe [(Socket,String)])
 useActivatedSockets (MockProtocolMode (NodeMockCLI {mockNodeAddr})) =
   case mockNodeAddr of
     ActSocks sActivation -> case sActivation of
-                              UseActivatedSockets -> do mSkts <- liftIO getActivatedSockets
+                              UseActivatedSockets -> do mSkts <- liftIO getActivatedSocketsWithNames
                                                         if isNothing mSkts then left ActivatedSocketsNotFound else pure mSkts
                               UseNormalSockets -> pure Nothing
     _ -> pure Nothing
 useActivatedSockets (RealProtocolMode (NodeCLI {nodeAddr})) =
   case nodeAddr of
      ActSocks sActivation -> case sActivation of
-                               UseActivatedSockets -> do mSkts <- liftIO getActivatedSockets
+                               UseActivatedSockets -> do mSkts <- liftIO getActivatedSocketsWithNames
                                                          if isNothing mSkts then left ActivatedSocketsNotFound else pure mSkts
                                UseNormalSockets -> pure Nothing
      _ -> pure Nothing
