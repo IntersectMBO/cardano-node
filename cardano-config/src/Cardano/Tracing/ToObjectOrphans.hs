@@ -407,8 +407,6 @@ instance HasSeverityAnnotation (WithMuxBearer peer MuxTrace) where
   getSeverityAnnotation (WithMuxBearer _ ev) = case ev of
     MuxTraceRecvHeaderStart -> Debug
     MuxTraceRecvHeaderEnd {} -> Debug
-    MuxTraceRecvPayloadStart {} -> Debug
-    MuxTraceRecvPayloadEnd {} -> Debug
     MuxTraceRecvStart {} -> Debug
     MuxTraceRecvEnd {} -> Debug
     MuxTraceSendStart {} -> Debug
