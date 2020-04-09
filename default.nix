@@ -31,7 +31,7 @@ let
     defaultConfig = rec {
       stateDir = "/data";
       dbPrefix = "db";
-      socketPath = stateDir + "/node.socket";
+      socketPath = "/ipc/node.socket";
     };
     customConfig' = defaultConfig // customConfig;
   in pkgs.callPackage ./nix/docker.nix {

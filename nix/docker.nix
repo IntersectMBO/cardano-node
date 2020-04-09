@@ -18,6 +18,10 @@
 #   docker run -v $PATH_TO/configuration:/configuration \
 #     inputoutput/cardano-node:<TAG>
 #
+# Mount a volume into /ipc for establishing cross-container communication via node.socket
+#
+#   docker run -v node-ipc:/ipc inputoutput/cardano-node:<TAG>
+#   docker run -v node-ipc:/ipc inputoutput/some-node-client
 ############################################################################
 
 { iohkNix
@@ -87,7 +91,7 @@ let
           --database-path /data/db \
           --host-addr 127.0.0.1 \
           --port 3001 \
-          --socket-path /data/node.socket \
+          --socket-path /ipc/node.socket \
           --topology /configuration/topology.json $@
       ${clusterStatements}
       else
