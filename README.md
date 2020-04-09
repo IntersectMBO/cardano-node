@@ -48,6 +48,19 @@ $ cd cardano-node
 $ cabal build
 ```
 
+## Windows Executable
+
+### Download
+You can download [here](https://hydra.iohk.io/job/Cardano/cardano-node/cardano-node-win64/latest-finished).
+
+### Instructions
+
+The download includes cardano-node.exe and a .dll. To run the node with cardano-node run you need to reference a few files and directories as arguments. These can be copied from the cardano-node repo into the executables directory. The command to run the node on mainnet looks like this:
+
+```
+cardano-node.exe run --topology ./mainnet-topology.json --database-path ./state --port 3001 --config ./configuration-mainnet.yaml --socket-path ./socket/mainnet-socket
+```
+
 # `cardano-node`
 
 This refers to the client that is used for running a node.
