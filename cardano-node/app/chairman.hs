@@ -32,9 +32,7 @@ main = do
                  } <- execParser opts
 
     nc <- liftIO $ parseNodeConfigurationFP caConfigYaml
-    frmPtclRes <- runExceptT $ mkConsensusProtocol
-                                 nc
-                                 Nothing
+    frmPtclRes <- runExceptT $ mkConsensusProtocol nc Nothing
 
     SomeConsensusProtocol p <- case frmPtclRes of
                         Right p  -> pure p

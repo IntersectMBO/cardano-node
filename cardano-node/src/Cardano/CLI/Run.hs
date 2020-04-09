@@ -197,14 +197,11 @@ runSubmitTx fp configFp mCliSockPath =
   withIOManagerE $ \iocp -> do
     nc <- liftIO $ parseNodeConfigurationFP configFp
     tx <- readByronTx fp
+    --TODO: just override the nc { ncSocketPath }
+    let sockPath = chooseSocketPath (ncSocketPath nc) mCliSockPath
 
-    firstExceptT
-      NodeSubmitTxError
-      $ nodeSubmitTx
-          iocp
-          nc
-          (chooseSocketPath (ncSocketPath nc) mCliSockPath)
-          tx
+    firstExceptT NodeSubmitTxError $
+      nodeSubmitTx iocp nc sockPath tx
 
 runSpendGenesisUTxO
         :: ConfigYamlFilePath -> NewTxFile -> SigningKeyFile -> Common.Address -> NonEmpty TxOut
@@ -213,12 +210,8 @@ runSpendGenesisUTxO configFp (NewTxFile ctTx) ctKey genRichAddr outs = do
     nc <- liftIO $ parseNodeConfigurationFP configFp
     sk <- readSigningKey (ncCardanoEra nc) ctKey
 
-    tx <- firstExceptT SpendGenesisUTxOError
-            $ issueGenesisUTxOExpenditure
-                nc
-                genRichAddr
-                outs
-                sk
+    tx <- firstExceptT SpendGenesisUTxOError $
+            issueGenesisUTxOExpenditure nc genRichAddr outs sk
     ensureNewFileLBS ctTx $ toCborTxAux tx
 
 runSpendUTxO
@@ -228,13 +221,8 @@ runSpendUTxO configFp (NewTxFile ctTx) ctKey ins outs = do
     nc <- liftIO $ parseNodeConfigurationFP configFp
     sk <- readSigningKey (ncCardanoEra nc) ctKey
 
-    gTx <- firstExceptT
-             IssueUtxoError
-             $ issueUTxOExpenditure
-                 nc
-                 ins
-                 outs
-                 sk
+    gTx <- firstExceptT IssueUtxoError $
+             issueUTxOExpenditure nc ins outs sk
     ensureNewFileLBS ctTx $ toCborTxAux gTx
 
 {-------------------------------------------------------------------------------

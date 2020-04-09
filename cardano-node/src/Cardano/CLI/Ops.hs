@@ -343,11 +343,8 @@ withRealPBFT
         -> ExceptT RealPBFTError IO a)
   -> ExceptT RealPBFTError IO a
 withRealPBFT nc action = do
-  SomeConsensusProtocol p <- firstExceptT
-                      FromProtocolError
-                      $ mkConsensusProtocol
-                          nc
-                          Nothing
+  SomeConsensusProtocol p <- firstExceptT FromProtocolError $
+                               mkConsensusProtocol nc Nothing
   case p of
     proto@Consensus.ProtocolRealPBFT{} -> action proto
     _ -> left $ IncorrectProtocolSpecified (ncProtocol nc)
@@ -365,10 +362,8 @@ getLocalTip configFp mSockPath iocp = do
   nc <- parseNodeConfigurationFP configFp
   sockPath <- return $ chooseSocketPath (ncSocketPath nc) mSockPath
 
-  frmPtclRes <- runExceptT . firstExceptT ProtocolError
-                           $ mkConsensusProtocol
-                               nc
-                               Nothing
+  frmPtclRes <- runExceptT $ firstExceptT ProtocolError $
+                  mkConsensusProtocol nc Nothing
 
   SomeConsensusProtocol p <- case frmPtclRes of
                         Right p -> pure p

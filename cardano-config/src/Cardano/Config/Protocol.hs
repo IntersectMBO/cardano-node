@@ -126,7 +126,6 @@ mkConsensusProtocolMockPBFT NodeConfiguration {
       PBftParams { pbftSecurityParam      = mockSecurityParam
                  , pbftNumNodes           = numCoreNodes
                  , pbftSignatureThreshold = (1.0 / fromIntegral numNodes) + 0.1
-
                  }
       (defaultSimpleBlockConfig mockSecurityParam mockSlotLength)
       cid

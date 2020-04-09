@@ -105,7 +105,8 @@ createUpdateProposal configFile sKey pVer sVer sysTag inshash paramsToUpdate = d
       metaData = M.singleton sysTag inshash
       noPassSigningKey = noPassSafeSigner sKey
       pmId = gdProtocolMagicId genData
-      protocolParamsUpdate = createProtocolParametersUpdate emptyProtocolParametersUpdate paramsToUpdate
+      protocolParamsUpdate = createProtocolParametersUpdate
+                               emptyProtocolParametersUpdate paramsToUpdate
 
 
   let proposalBody = ProposalBody pVer protocolParamsUpdate sVer metaData
@@ -136,9 +137,10 @@ emptyProtocolParametersUpdate =
 serialiseByronUpdateProposal :: Proposal -> LByteString
 serialiseByronUpdateProposal = Binary.serialize
 
-deserialiseByronUpdateProposal :: LByteString -> Either CliError (AProposal ByteString)
+deserialiseByronUpdateProposal :: LByteString
+                               -> Either CliError (AProposal ByteString)
 deserialiseByronUpdateProposal bs =
-  case Binary.decodeFull bs :: Either Binary.DecoderError (AProposal Binary.ByteSpan) of
+  case Binary.decodeFull bs of
     Left deserFail -> Left $ UpdateProposalDecodingError deserFail
     Right proposal -> Right $ annotateProposal proposal
  where
@@ -161,8 +163,10 @@ submitByronUpdateProposal iocp config proposalFp mSocket = do
 
     firstExceptT UpdateProposalSubmissionError $
       withRealPBFT nc $ \p@Consensus.ProtocolRealPBFT{} -> liftIO $ do
-                   traceWith stdoutTracer ("Update proposal TxId: " ++ condense (Mempool.txId genTx))
-                   submitGeneralTx iocp skt
-                                   (pInfoConfig (Consensus.protocolInfo p))
-                                   genTx
-                                   nullTracer -- stdoutTracer
+        traceWith stdoutTracer $
+          "Update proposal TxId: " ++ condense (Mempool.txId genTx)
+        submitGeneralTx
+          iocp skt
+          (pInfoConfig (Consensus.protocolInfo p))
+          genTx
+          nullTracer -- stdoutTracer
