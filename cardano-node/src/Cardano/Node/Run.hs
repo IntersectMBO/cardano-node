@@ -117,9 +117,8 @@ runNode loggingLayer npm = do
                                          (Just $ ncGenesisFile nc)
                                          (ncReqNetworkMagic nc)
                                          (ncPbftSignatureThresh nc)
-                                         (delegCertFile mscFp')
-                                         (signKeyFile mscFp')
                                          (ncUpdate nc)
+                                         (Just mscFp')
 
     SomeConsensusProtocol (p :: Consensus.Protocol blk (BlockProtocol blk)) <-
       case eitherSomeProtocol of

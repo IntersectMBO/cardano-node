@@ -172,7 +172,8 @@ submitByronUpdateProposal iocp config proposalFp mSocket = do
         update = Update appName sNumber $ lastKnownBlockVersion
         skt = chooseSocketPath (ncSocketPath nc) mSocket
 
-    firstExceptT UpdateProposalSubmissionError $ withRealPBFT genFile nMagic sigThresh Nothing Nothing update ptcl $
+    firstExceptT UpdateProposalSubmissionError $
+      withRealPBFT ptcl genFile nMagic sigThresh update Nothing $
                 \p@Consensus.ProtocolRealPBFT{} -> liftIO $ do
                    traceWith stdoutTracer ("Update proposal TxId: " ++ condense (Mempool.txId genTx))
                    submitGeneralTx iocp skt

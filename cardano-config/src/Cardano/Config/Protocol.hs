@@ -45,11 +45,11 @@ import           Ouroboros.Consensus.Node.Run (RunNode)
 import           Ouroboros.Consensus.NodeId (CoreNodeId (..), NodeId (..))
 import           Ouroboros.Consensus.Protocol.Abstract (SecurityParam (..))
 
-import           Cardano.Config.Types (DelegationCertFile (..),
-                                       GenesisFile (..),
-                                       LastKnownBlockVersion (..),
-                                       Protocol (..), SigningKeyFile (..),
-                                       Update (..))
+import           Cardano.Config.Types
+                   (Protocol (..), MiscellaneousFilepaths(..),
+                    DelegationCertFile (..), GenesisFile (..),
+                    LastKnownBlockVersion (..), SigningKeyFile (..),
+                    Update (..))
 import           Cardano.Tracing.Constraints (TraceConstraints)
 
 
@@ -71,9 +71,8 @@ mkConsensusProtocol
   -> Maybe GenesisFile
   -> RequiresNetworkMagic
   -> Maybe Double
-  -> Maybe DelegationCertFile
-  -> Maybe SigningKeyFile
   -> Update
+  -> Maybe MiscellaneousFilepaths
   -> ExceptT ProtocolInstantiationError IO SomeConsensusProtocol
 mkConsensusProtocol BFT         = mkConsensusProtocolBFT
 mkConsensusProtocol Praos       = mkConsensusProtocolPraos
@@ -91,9 +90,8 @@ mkConsensusProtocolBFT,
   -> Maybe GenesisFile
   -> RequiresNetworkMagic
   -> Maybe Double
-  -> Maybe DelegationCertFile
-  -> Maybe SigningKeyFile
   -> Update
+  -> Maybe MiscellaneousFilepaths
   -> ExceptT ProtocolInstantiationError IO SomeConsensusProtocol
 
 
@@ -101,12 +99,12 @@ mkConsensusProtocolBFT,
 -- Mock/testing protocols
 --
 
-mkConsensusProtocolBFT nId mNumCoreNodes _ _ _ _ _ _ =
+mkConsensusProtocolBFT nId mNumCoreNodes _ _ _ _ _ =
   hoistEither $ mockSomeProtocol nId mNumCoreNodes $ \cid numCoreNodes ->
     Consensus.ProtocolMockBFT numCoreNodes cid mockSecurityParam
       (defaultSimpleBlockConfig mockSecurityParam mockSlotLength)
 
-mkConsensusProtocolPraos nId mNumCoreNodes _ _ _ _ _ _ =
+mkConsensusProtocolPraos nId mNumCoreNodes _ _ _ _ _ =
   hoistEither $ mockSomeProtocol nId mNumCoreNodes $ \cid numCoreNodes ->
     Consensus.ProtocolMockPraos
       numCoreNodes
@@ -119,7 +117,7 @@ mkConsensusProtocolPraos nId mNumCoreNodes _ _ _ _ _ _ =
         }
       (defaultSimpleBlockConfig mockSecurityParam (slotLengthFromSec 2))
 
-mkConsensusProtocolMockPBFT nId mNumCoreNodes _ _ _ _ _ _ =
+mkConsensusProtocolMockPBFT nId mNumCoreNodes _ _ _ _ _ =
   hoistEither $ mockSomeProtocol nId mNumCoreNodes $ \cid numCoreNodes@(NumCoreNodes numNodes) ->
     Consensus.ProtocolMockPBFT
       PBftParams { pbftSecurityParam      = mockSecurityParam
@@ -168,7 +166,7 @@ extractNodeInfo mNodeId ncNumCoreNodes  = do
 -- Real protocols
 --
 
-mkConsensusProtocolRealPBFT _ _ mGenFile nMagic sigThresh delCertFp sKeyFp update = do
+mkConsensusProtocolRealPBFT _ _ mGenFile nMagic sigThresh update files = do
     let genFile@(GenesisFile gFp) = fromMaybe ( panic $ "Cardano.Config.Protocol.fromProtocol: "
                                                       <> "Genesis file not specified"
                                               ) mGenFile
@@ -180,10 +178,13 @@ mkConsensusProtocolRealPBFT _ _ mGenFile nMagic sigThresh delCertFp sKeyFp updat
              gFp
              (Genesis.unGenesisHash genHash)
 
-    optionalLeaderCredentials <- readLeaderCredentials
-                                   gc
-                                   delCertFp
-                                   sKeyFp
+    optionalLeaderCredentials <-
+      case files of
+        Just MiscellaneousFilepaths {
+               delegCertFile,
+               signKeyFile
+             }  -> readLeaderCredentials gc delegCertFile signKeyFile
+        Nothing -> return Nothing
 
     let p = protocolConfigRealPbft update sigThresh gc optionalLeaderCredentials
 

@@ -337,18 +337,17 @@ data RealPBFTError
 -- | Perform an action that expects ProtocolInfo for Byron/PBFT,
 --   with attendant configuration.
 withRealPBFT
-  :: GenesisFile
+  :: Protocol
+  -> GenesisFile
   -> RequiresNetworkMagic
   -> Maybe Double
-  -> Maybe DelegationCertFile
-  -> Maybe SigningKeyFile
   -> Update
-  -> Protocol
+  -> Maybe MiscellaneousFilepaths
   -> (RunNode ByronBlock
         => Consensus.Protocol ByronBlock Consensus.ProtocolRealPBFT
         -> ExceptT RealPBFTError IO a)
   -> ExceptT RealPBFTError IO a
-withRealPBFT genFile nMagic sigThresh delCertFp sKeyFp update ptcl action = do
+withRealPBFT ptcl genFile nMagic sigThresh update files action = do
   SomeConsensusProtocol p <- firstExceptT
                       FromProtocolError
                       $ mkConsensusProtocol
@@ -358,9 +357,8 @@ withRealPBFT genFile nMagic sigThresh delCertFp sKeyFp update ptcl action = do
                           (Just genFile)
                           nMagic
                           sigThresh
-                          delCertFp
-                          sKeyFp
                           update
+                          files
   case p of
     proto@Consensus.ProtocolRealPBFT{} -> action proto
     _ -> left $ IncorrectProtocolSpecified ptcl
@@ -386,9 +384,8 @@ getLocalTip configFp mSockPath iocp = do
                                (Just $ ncGenesisFile nc)
                                (ncReqNetworkMagic nc)
                                (ncPbftSignatureThresh nc)
-                               Nothing
-                               Nothing
                                (ncUpdate nc)
+                               Nothing
 
   SomeConsensusProtocol p <- case frmPtclRes of
                         Right p -> pure p

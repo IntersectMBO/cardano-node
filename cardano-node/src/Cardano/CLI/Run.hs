@@ -206,15 +206,13 @@ runSubmitTx fp configFp mCliSockPath =
       NodeSubmitTxError
       $ nodeSubmitTx
           iocp
-          Nothing
+          (ncProtocol nc)
           (ncGenesisFile nc)
           RequiresNoMagic
           Nothing
-          Nothing
-          Nothing
           (chooseSocketPath (ncSocketPath nc) mCliSockPath)
           update
-          (ncProtocol nc)
+          Nothing
           tx
 
 runSpendGenesisUTxO
@@ -228,15 +226,14 @@ runSpendGenesisUTxO configFp (NewTxFile ctTx) ctKey genRichAddr outs = do
 
     tx <- firstExceptT SpendGenesisUTxOError
             $ issueGenesisUTxOExpenditure
+                (ncProtocol nc)
                 genRichAddr
                 outs
                 (ncGenesisFile nc)
                 RequiresNoMagic
                 Nothing
-                Nothing
-                Nothing
                 update
-                (ncProtocol nc)
+                Nothing
                 sk
     ensureNewFileLBS ctTx $ toCborTxAux tx
 
@@ -252,15 +249,14 @@ runSpendUTxO configFp (NewTxFile ctTx) ctKey ins outs = do
     gTx <- firstExceptT
              IssueUtxoError
              $ issueUTxOExpenditure
+                 (ncProtocol nc)
                  ins
                  outs
                  (ncGenesisFile nc)
                  RequiresNoMagic
                  Nothing
-                 Nothing
-                 Nothing
                  update
-                 (ncProtocol nc)
+                 Nothing
                  sk
     ensureNewFileLBS ctTx $ toCborTxAux gTx
 
