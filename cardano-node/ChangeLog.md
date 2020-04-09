@@ -1,5 +1,37 @@
 # Changelog for cardano-node
 
+## 1.10.0 -- April 2020
+
+### node changes
+- Change interpretation of relative paths in the config file (#750)
+- Fix activation of the TraceForwarder logging system plugin (#743)
+- Added a cross-platform clean shutdown mechanism (#767)
+- Log node version on startup (#757)
+- Minor simplifications of tracing output and internals (#763, #768)
+- Improved docs for building and running (#718, #752)
+
+### consensus changes
+- Performance improvement in sync from improved hash representation (#1887)
+- Chain DB locking improvements for better concurrent performance (#1816, #1866, #1907, #1919)
+- Further test coverage for recovery from chain DB corruption (#1628, #1839)
+- Disable support for rewinding system clock to simplify hard fork support (#1908)
+- Improved tests for hard fork history support (#1888, #1898)
+- Refactoring of time support in preparation for hard fork support (#1918)
+- Internal simplifications in the chain DB (#1890)
+- Improved tracing (#1861, #1895)
+- Label consensus threads for more useful performance profile output (#1916)
+
+### ledger changes
+- Fix mismatch with specs with update proposal version numbers (#759, #766)
+- Performance improvement in validation from improved hash representation (#760)
+
+### network changes
+- Improved Windows IO mangager exception handling (#1897)
+- Handle DNS server changes due to switching network connection (#1891)
+- Numerous small memory-use reductions in low level network code (#1902)
+- Label network threads for more useful performance profile output (#1900)
+- Extensions to a simplified library interface for node clients (#1894)
+
 ## 1.9.3 -- March 2020
 
 ### node changes
