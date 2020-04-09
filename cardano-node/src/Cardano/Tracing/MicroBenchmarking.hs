@@ -29,8 +29,6 @@ import           Control.Monad.Class.MonadTime (DiffTime, MonadTime, Time (..),
 import           Data.Aeson (Value (..), toJSON, (.=))
 import           Data.Time.Clock (diffTimeToPicoseconds)
 
-import           Cardano.BM.Data.LogItem (LOContent (..), LogObject (..),
-                   mkLOMeta)
 import           Cardano.BM.Data.Severity (Severity (..))
 import           Cardano.BM.Tracing
 import           Cardano.BM.Data.Tracer (trStructured, emptyObject, mkObject)
