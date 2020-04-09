@@ -43,10 +43,8 @@ import qualified Cardano.Chain.Common as Common
 import qualified Cardano.Chain.Delegation as Delegation
 import qualified Cardano.Chain.Genesis as Genesis
 import           Cardano.Chain.Slotting (EpochNumber)
-import           Cardano.Chain.Update (ApplicationName(..))
 import           Cardano.Chain.UTxO (TxIn, TxOut)
 
-import           Cardano.Crypto (RequiresNetworkMagic(..))
 import qualified Cardano.Crypto.Hashing as Crypto
 import qualified Cardano.Crypto.Signing as Crypto
 
@@ -198,21 +196,15 @@ runSubmitTx :: TxFile -> ConfigYamlFilePath -> Maybe CLISocketPath -> ExceptT Cl
 runSubmitTx fp configFp mCliSockPath =
   withIOManagerE $ \iocp -> do
     nc <- liftIO $ parseNodeConfigurationFP configFp
-    -- Default update value
-    let update = Update (ApplicationName "cardano-sl") 1 $ LastKnownBlockVersion 0 2 0
     tx <- readByronTx fp
 
     firstExceptT
       NodeSubmitTxError
       $ nodeSubmitTx
           iocp
-          (ncProtocol nc)
-          (ncGenesisFile nc)
-          RequiresNoMagic
+          nc
           Nothing
           (chooseSocketPath (ncSocketPath nc) mCliSockPath)
-          update
-          Nothing
           tx
 
 runSpendGenesisUTxO
@@ -221,19 +213,13 @@ runSpendGenesisUTxO
 runSpendGenesisUTxO configFp (NewTxFile ctTx) ctKey genRichAddr outs = do
     nc <- liftIO $ parseNodeConfigurationFP configFp
     sk <- readSigningKey (ncCardanoEra nc) ctKey
-    -- Default update value
-    let update = Update (ApplicationName "cardano-sl") 1 $ LastKnownBlockVersion 0 2 0
 
     tx <- firstExceptT SpendGenesisUTxOError
             $ issueGenesisUTxOExpenditure
-                (ncProtocol nc)
+                nc
+                Nothing
                 genRichAddr
                 outs
-                (ncGenesisFile nc)
-                RequiresNoMagic
-                Nothing
-                update
-                Nothing
                 sk
     ensureNewFileLBS ctTx $ toCborTxAux tx
 
@@ -243,20 +229,14 @@ runSpendUTxO
 runSpendUTxO configFp (NewTxFile ctTx) ctKey ins outs = do
     nc <- liftIO $ parseNodeConfigurationFP configFp
     sk <- readSigningKey (ncCardanoEra nc) ctKey
-    -- Default update value
-    let update = Update (ApplicationName "cardano-sl") 1 $ LastKnownBlockVersion 0 2 0
 
     gTx <- firstExceptT
              IssueUtxoError
              $ issueUTxOExpenditure
-                 (ncProtocol nc)
+                 nc
+                 Nothing
                  ins
                  outs
-                 (ncGenesisFile nc)
-                 RequiresNoMagic
-                 Nothing
-                 update
-                 Nothing
                  sk
     ensureNewFileLBS ctTx $ toCborTxAux gTx
 

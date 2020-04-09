@@ -45,7 +45,7 @@ import           Cardano.Chain.Genesis as Genesis
 import           Cardano.Chain.UTxO ( mkTxAux, annotateTxAux
                                     , Tx(..), TxId, TxIn, TxOut)
 import qualified Cardano.Chain.UTxO as UTxO
-import           Cardano.Crypto (SigningKey(..), ProtocolMagicId, RequiresNetworkMagic)
+import           Cardano.Crypto (SigningKey(..), ProtocolMagicId)
 import qualified Cardano.Crypto.Hashing as Crypto
 import qualified Cardano.Crypto.Signing as Crypto
 
@@ -60,9 +60,8 @@ import           Ouroboros.Consensus.Util.Condense (condense)
 
 import           Cardano.CLI.Ops
 import           Cardano.Node.Submission
-import           Cardano.Config.Protocol
 import           Cardano.Config.Types
-                   (MiscellaneousFilepaths, GenesisFile, SocketPath, Update)
+                   (NodeConfiguration, MiscellaneousFilepaths, SocketPath)
 
 
 newtype TxFile =
@@ -167,27 +166,14 @@ txSpendGenesisUTxOByronPBFT gc sk genAddr outs =
 -- | Generate a transaction spending genesis UTxO at a given address,
 --   to given outputs, signed by the given key.
 issueGenesisUTxOExpenditure
-  :: Protocol
+  :: NodeConfiguration
+  -> Maybe MiscellaneousFilepaths
   -> Address
   -> NonEmpty TxOut
-  -> GenesisFile
-  -> RequiresNetworkMagic
-  -> Maybe Double
-  -> Update
-  -> Maybe MiscellaneousFilepaths
   -> Crypto.SigningKey
   -> ExceptT RealPBFTError IO (UTxO.ATxAux ByteString)
-issueGenesisUTxOExpenditure
-  ptcl
-  genRichAddr
-  outs
-  genFile
-  nMagic
-  sigThresh
-  update
-  files
-  sk =
-    withRealPBFT ptcl genFile nMagic sigThresh update files
+issueGenesisUTxOExpenditure nc files genRichAddr outs sk =
+    withRealPBFT nc files
       $ \(Consensus.ProtocolRealPBFT gc _ _ _ _)-> do
           let tx = txSpendGenesisUTxOByronPBFT gc sk genRichAddr outs
           traceWith stdoutTracer ("TxId: " ++ condense (Byron.byronIdTx tx))
@@ -213,27 +199,14 @@ txSpendUTxOByronPBFT gc sk ins outs =
 -- | Generate a transaction from given Tx inputs to outputs,
 --   signed by the given key.
 issueUTxOExpenditure
-  :: Protocol
+  :: NodeConfiguration
+  -> Maybe MiscellaneousFilepaths
   -> NonEmpty TxIn
   -> NonEmpty TxOut
-  -> GenesisFile
-  -> RequiresNetworkMagic
-  -> Maybe Double
-  -> Update
-  -> Maybe MiscellaneousFilepaths
   -> Crypto.SigningKey
   -> ExceptT RealPBFTError IO (UTxO.ATxAux ByteString)
-issueUTxOExpenditure
-  ptcl
-  ins
-  outs
-  genFile
-  nMagic
-  sigThresh
-  update
-  files
-  key = do
-    withRealPBFT ptcl genFile nMagic sigThresh update files $
+issueUTxOExpenditure nc files ins outs key =
+    withRealPBFT nc files $
       \(Consensus.ProtocolRealPBFT gc _ _ _ _)-> do
         let tx = txSpendUTxOByronPBFT gc key ins outs
         traceWith stdoutTracer ("TxId: " ++ condense (Byron.byronIdTx tx))
@@ -242,26 +215,13 @@ issueUTxOExpenditure
 -- | Submit a transaction to a node specified by topology info.
 nodeSubmitTx
   :: IOManager
-  -> Protocol
-  -> GenesisFile
-  -> RequiresNetworkMagic
-  -> Maybe Double
-  -> SocketPath
-  -> Update
+  -> NodeConfiguration
   -> Maybe MiscellaneousFilepaths
+  -> SocketPath
   -> GenTx ByronBlock
   -> ExceptT RealPBFTError IO ()
-nodeSubmitTx
-  iocp
-  ptcl
-  genFile
-  nMagic
-  sigThresh
-  targetSocketFp
-  update
-  files
-  gentx =
-    withRealPBFT ptcl genFile nMagic sigThresh update files $
+nodeSubmitTx iocp nc files targetSocketFp gentx =
+    withRealPBFT nc files $
       \p@Consensus.ProtocolRealPBFT{} -> liftIO $ do
         -- TODO: Update submitGenTx to use `ExceptT`
         traceWith stdoutTracer ("TxId: " ++ condense (Consensus.txId gentx))

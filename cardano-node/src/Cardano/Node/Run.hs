@@ -110,15 +110,7 @@ runNode loggingLayer npm = do
                            NormalVerbosity -> "normal"
                            MinimalVerbosity -> "minimal"
                            MaximalVerbosity -> "maximal"
-    eitherSomeProtocol <- runExceptT $ mkConsensusProtocol
-                                         (ncProtocol nc)
-                                         (ncNodeId nc)
-                                         (ncNumCoreNodes nc)
-                                         (Just $ ncGenesisFile nc)
-                                         (ncReqNetworkMagic nc)
-                                         (ncPbftSignatureThresh nc)
-                                         (ncUpdate nc)
-                                         (Just mscFp')
+    eitherSomeProtocol <- runExceptT $ mkConsensusProtocol nc (Just mscFp')
 
     SomeConsensusProtocol (p :: Consensus.Protocol blk (BlockProtocol blk)) <-
       case eitherSomeProtocol of

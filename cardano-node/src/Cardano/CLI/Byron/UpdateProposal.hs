@@ -154,26 +154,13 @@ submitByronUpdateProposal
 submitByronUpdateProposal iocp config proposalFp mSocket = do
     nc <- liftIO $ parseNodeConfigurationFP config
 
-    let genFile = ncGenesisFile nc
-        ptcl = ncProtocol nc
-        sigThresh = ncPbftSignatureThresh nc
-        nMagic = ncReqNetworkMagic nc
-
     proposalBs <- liftIO $ LB.readFile proposalFp
     aProposal <- hoistEither $ deserialiseByronUpdateProposal proposalBs
     let genTx = convertProposalToGenTx aProposal
-
-    let proposalBody = Binary.unAnnotated $ aBody aProposal
-        ProtocolVersion major minor alt = protocolVersion proposalBody
-        SoftwareVersion appName sNumber = softwareVersion proposalBody
-
-
-    let lastKnownBlockVersion = LastKnownBlockVersion {lkbvMajor = major, lkbvMinor = minor, lkbvAlt = alt}
-        update = Update appName sNumber $ lastKnownBlockVersion
-        skt = chooseSocketPath (ncSocketPath nc) mSocket
+    let skt   = chooseSocketPath (ncSocketPath nc) mSocket
 
     firstExceptT UpdateProposalSubmissionError $
-      withRealPBFT ptcl genFile nMagic sigThresh update Nothing $
+      withRealPBFT nc Nothing $
                 \p@Consensus.ProtocolRealPBFT{} -> liftIO $ do
                    traceWith stdoutTracer ("Update proposal TxId: " ++ condense (Mempool.txId genTx))
                    submitGeneralTx iocp skt

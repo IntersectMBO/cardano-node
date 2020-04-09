@@ -18,8 +18,8 @@ import           Cardano.Config.Protocol
                    (SomeConsensusProtocol(..), mkConsensusProtocol,
                     ProtocolInstantiationError)
 import           Cardano.Config.Types
-                  (ConfigYamlFilePath(..), NodeConfiguration(..),
-                   SocketPath(..), parseNodeConfigurationFP)
+                  (ConfigYamlFilePath(..), SocketPath(..),
+                   parseNodeConfigurationFP)
 import           Cardano.Common.Parsers
 import           Cardano.Chairman (chairmanTest)
 
@@ -33,13 +33,7 @@ main = do
 
     nc <- liftIO $ parseNodeConfigurationFP caConfigYaml
     frmPtclRes <- runExceptT $ mkConsensusProtocol
-                                 (ncProtocol nc)
-                                 (ncNodeId nc)
-                                 (ncNumCoreNodes nc)
-                                 (Just $ ncGenesisFile nc)
-                                 (ncReqNetworkMagic nc)
-                                 (ncPbftSignatureThresh nc)
-                                 (ncUpdate nc)
+                                 nc
                                  Nothing
 
     SomeConsensusProtocol p <- case frmPtclRes of

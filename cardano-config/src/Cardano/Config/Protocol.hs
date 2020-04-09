@@ -29,7 +29,6 @@ import qualified Data.Text as T
 
 import qualified Cardano.Chain.Genesis as Genesis
 import qualified Cardano.Chain.Update as Update
-import           Cardano.Crypto (RequiresNetworkMagic)
 import qualified Cardano.Crypto.Signing as Signing
 import           Cardano.Tracing.ToObjectOrphans ()
 
@@ -46,10 +45,10 @@ import           Ouroboros.Consensus.NodeId (CoreNodeId (..), NodeId (..))
 import           Ouroboros.Consensus.Protocol.Abstract (SecurityParam (..))
 
 import           Cardano.Config.Types
-                   (Protocol (..), MiscellaneousFilepaths(..),
-                    DelegationCertFile (..), GenesisFile (..),
-                    LastKnownBlockVersion (..), SigningKeyFile (..),
-                    Update (..))
+                   (NodeConfiguration(..), Protocol (..),
+                    MiscellaneousFilepaths(..), GenesisFile (..),
+                    DelegationCertFile (..), SigningKeyFile (..),
+                    Update (..), LastKnownBlockVersion (..))
 import           Cardano.Tracing.Constraints (TraceConstraints)
 
 
@@ -64,48 +63,44 @@ data SomeConsensusProtocol where
                         -> SomeConsensusProtocol
 
 mkConsensusProtocol
-  :: Protocol
-  -> Maybe NodeId
-  -> Maybe Word64
-  -- ^ Number of core nodes
-  -> Maybe GenesisFile
-  -> RequiresNetworkMagic
-  -> Maybe Double
-  -> Update
+  :: NodeConfiguration
   -> Maybe MiscellaneousFilepaths
   -> ExceptT ProtocolInstantiationError IO SomeConsensusProtocol
-mkConsensusProtocol BFT         = mkConsensusProtocolBFT
-mkConsensusProtocol Praos       = mkConsensusProtocolPraos
-mkConsensusProtocol MockPBFT    = mkConsensusProtocolMockPBFT
-mkConsensusProtocol RealPBFT    = mkConsensusProtocolRealPBFT
-
-
-mkConsensusProtocolBFT,
- mkConsensusProtocolPraos,
- mkConsensusProtocolMockPBFT,
- mkConsensusProtocolRealPBFT
-  :: Maybe NodeId
-  -> Maybe Word64
-  -- ^ Number of core nodes
-  -> Maybe GenesisFile
-  -> RequiresNetworkMagic
-  -> Maybe Double
-  -> Update
-  -> Maybe MiscellaneousFilepaths
-  -> ExceptT ProtocolInstantiationError IO SomeConsensusProtocol
+mkConsensusProtocol config@NodeConfiguration{ncProtocol} =
+  case ncProtocol of
+    BFT      -> mkConsensusProtocolBFT      config
+    Praos    -> mkConsensusProtocolPraos    config
+    MockPBFT -> mkConsensusProtocolMockPBFT config
+    RealPBFT -> mkConsensusProtocolRealPBFT config
 
 
 ------------------------------------------------------------------------------
 -- Mock/testing protocols
 --
 
-mkConsensusProtocolBFT nId mNumCoreNodes _ _ _ _ _ =
-  hoistEither $ mockSomeProtocol nId mNumCoreNodes $ \cid numCoreNodes ->
+
+mkConsensusProtocolBFT
+  :: NodeConfiguration
+  -> Maybe MiscellaneousFilepaths
+  -> ExceptT ProtocolInstantiationError IO SomeConsensusProtocol
+mkConsensusProtocolBFT NodeConfiguration {
+                         ncNodeId,
+                         ncNumCoreNodes
+                       } _ =
+  hoistEither $ mockSomeProtocol ncNodeId ncNumCoreNodes $ \cid numCoreNodes ->
     Consensus.ProtocolMockBFT numCoreNodes cid mockSecurityParam
       (defaultSimpleBlockConfig mockSecurityParam mockSlotLength)
 
-mkConsensusProtocolPraos nId mNumCoreNodes _ _ _ _ _ =
-  hoistEither $ mockSomeProtocol nId mNumCoreNodes $ \cid numCoreNodes ->
+
+mkConsensusProtocolPraos
+  :: NodeConfiguration
+  -> Maybe MiscellaneousFilepaths
+  -> ExceptT ProtocolInstantiationError IO SomeConsensusProtocol
+mkConsensusProtocolPraos NodeConfiguration {
+                           ncNodeId,
+                           ncNumCoreNodes
+                         } _ =
+  hoistEither $ mockSomeProtocol ncNodeId ncNumCoreNodes $ \cid numCoreNodes ->
     Consensus.ProtocolMockPraos
       numCoreNodes
       cid
@@ -117,8 +112,16 @@ mkConsensusProtocolPraos nId mNumCoreNodes _ _ _ _ _ =
         }
       (defaultSimpleBlockConfig mockSecurityParam (slotLengthFromSec 2))
 
-mkConsensusProtocolMockPBFT nId mNumCoreNodes _ _ _ _ _ =
-  hoistEither $ mockSomeProtocol nId mNumCoreNodes $ \cid numCoreNodes@(NumCoreNodes numNodes) ->
+
+mkConsensusProtocolMockPBFT
+  :: NodeConfiguration
+  -> Maybe MiscellaneousFilepaths
+  -> ExceptT ProtocolInstantiationError IO SomeConsensusProtocol
+mkConsensusProtocolMockPBFT NodeConfiguration {
+                              ncNodeId,
+                              ncNumCoreNodes
+                            } _ =
+  hoistEither $ mockSomeProtocol ncNodeId ncNumCoreNodes $ \cid numCoreNodes@(NumCoreNodes numNodes) ->
     Consensus.ProtocolMockPBFT
       PBftParams { pbftSecurityParam      = mockSecurityParam
                  , pbftNumNodes           = numCoreNodes
@@ -166,15 +169,23 @@ extractNodeInfo mNodeId ncNumCoreNodes  = do
 -- Real protocols
 --
 
-mkConsensusProtocolRealPBFT _ _ mGenFile nMagic sigThresh update files = do
-    let genFile@(GenesisFile gFp) = fromMaybe ( panic $ "Cardano.Config.Protocol.fromProtocol: "
-                                                      <> "Genesis file not specified"
-                                              ) mGenFile
+mkConsensusProtocolRealPBFT
+  :: NodeConfiguration
+  -> Maybe MiscellaneousFilepaths
+  -> ExceptT ProtocolInstantiationError IO SomeConsensusProtocol
+mkConsensusProtocolRealPBFT NodeConfiguration {
+                              ncGenesisFile,
+                              ncReqNetworkMagic,
+                              ncPbftSignatureThresh,
+                              ncUpdate
+                            }
+                            files = do
+    let genFile@(GenesisFile gFp) = ncGenesisFile
 
     (_, genHash) <- readGenesis genFile
 
     gc <- firstExceptT (GenesisConfigurationError gFp) $ Genesis.mkConfigFromFile
-             nMagic
+             ncReqNetworkMagic
              gFp
              (Genesis.unGenesisHash genHash)
 
@@ -186,7 +197,8 @@ mkConsensusProtocolRealPBFT _ _ mGenFile nMagic sigThresh update files = do
              }  -> readLeaderCredentials gc delegCertFile signKeyFile
         Nothing -> return Nothing
 
-    let p = protocolConfigRealPbft update sigThresh gc optionalLeaderCredentials
+    let p = protocolConfigRealPbft ncUpdate ncPbftSignatureThresh
+                                   gc optionalLeaderCredentials
 
     return $ SomeConsensusProtocol p
 

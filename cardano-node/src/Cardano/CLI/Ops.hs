@@ -56,7 +56,7 @@ import qualified Cardano.Crypto.Signing as Crypto
 import           Cardano.Chain.Slotting (EpochSlots(..))
 import qualified Cardano.Chain.Update as Update
 import qualified Cardano.Chain.UTxO as UTxO
-import           Cardano.Crypto (RequiresNetworkMagic, SigningKey (..))
+import           Cardano.Crypto (SigningKey (..))
 import qualified Cardano.Crypto.Hashing as Crypto
 import           Cardano.Crypto.ProtocolMagic as Crypto
 import           Control.Monad.Class.MonadTimer
@@ -337,31 +337,21 @@ data RealPBFTError
 -- | Perform an action that expects ProtocolInfo for Byron/PBFT,
 --   with attendant configuration.
 withRealPBFT
-  :: Protocol
-  -> GenesisFile
-  -> RequiresNetworkMagic
-  -> Maybe Double
-  -> Update
+  :: NodeConfiguration
   -> Maybe MiscellaneousFilepaths
   -> (RunNode ByronBlock
         => Consensus.Protocol ByronBlock Consensus.ProtocolRealPBFT
         -> ExceptT RealPBFTError IO a)
   -> ExceptT RealPBFTError IO a
-withRealPBFT ptcl genFile nMagic sigThresh update files action = do
+withRealPBFT nc files action = do
   SomeConsensusProtocol p <- firstExceptT
                       FromProtocolError
                       $ mkConsensusProtocol
-                          ptcl
-                          Nothing
-                          Nothing
-                          (Just genFile)
-                          nMagic
-                          sigThresh
-                          update
+                          nc
                           files
   case p of
     proto@Consensus.ProtocolRealPBFT{} -> action proto
-    _ -> left $ IncorrectProtocolSpecified ptcl
+    _ -> left $ IncorrectProtocolSpecified (ncProtocol nc)
 
 --------------------------------------------------------------------------------
 -- Query local node's chain tip
@@ -378,13 +368,7 @@ getLocalTip configFp mSockPath iocp = do
 
   frmPtclRes <- runExceptT . firstExceptT ProtocolError
                            $ mkConsensusProtocol
-                               (ncProtocol nc)
-                               (ncNodeId nc)
-                               (ncNumCoreNodes nc)
-                               (Just $ ncGenesisFile nc)
-                               (ncReqNetworkMagic nc)
-                               (ncPbftSignatureThresh nc)
-                               (ncUpdate nc)
+                               nc
                                Nothing
 
   SomeConsensusProtocol p <- case frmPtclRes of
