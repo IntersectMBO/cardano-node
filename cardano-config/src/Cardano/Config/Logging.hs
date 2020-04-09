@@ -274,7 +274,7 @@ loggingCardanoFeatureInit ver disabled' conf = do
 startCapturingMetrics :: Trace IO Text -> IO ()
 startCapturingMetrics trace0 = do
   let trace = appendName "node-metrics" trace0
-      counters = [MemoryStats, ProcessStats, NetStats, IOStats]
+      counters = [MemoryStats, ProcessStats, NetStats, IOStats, GhcRtsStats]
   _ <- Async.async $ forever $ do
               cts <- readCounters (ObservableTraceSelf counters)
               traceCounters trace cts
