@@ -20,7 +20,7 @@ main = toplevelExceptionHandler $ do
 
   co <- Opt.customExecParser pref opts
 
-  cmdRes <- runExceptT . runCommand $ mainCommand co
+  cmdRes <- runExceptT $ runCommand co
 
   case cmdRes of
     Right _ -> pure ()
@@ -30,7 +30,7 @@ main = toplevelExceptionHandler $ do
     pref :: ParserPrefs
     pref = Opt.prefs showHelpOnEmpty
 
-    opts :: ParserInfo CLI
+    opts :: ParserInfo ClientCommand
     opts =
       Opt.info (parseClientCommand <**> Opt.helper)
         ( Opt.fullDesc
@@ -43,15 +43,14 @@ main = toplevelExceptionHandler $ do
     renderCliError :: CliError -> String
     renderCliError = show
 
-data CLI = CLI { mainCommand :: ClientCommand }
-
-parseClientCommand :: Parser CLI
+parseClientCommand :: Parser ClientCommand
 parseClientCommand =
-  CLI <$> (   (ByronClientCommand <$> parseByronCommands)
-          <|> parseGenesisRelatedValues
-          <|> parseKeyRelatedValues
-          <|> parseDelegationRelatedValues
-          <|> parseTxRelatedValues
-          <|> parseLocalNodeQueryValues
-          <|> parseMiscellaneous
-          )
+  asum
+    [ ByronClientCommand <$> parseByronCommands
+    , parseGenesisRelatedValues
+    , parseKeyRelatedValues
+    , parseDelegationRelatedValues
+    , parseTxRelatedValues
+    , parseLocalNodeQueryValues
+    , parseMiscellaneous
+    ]
