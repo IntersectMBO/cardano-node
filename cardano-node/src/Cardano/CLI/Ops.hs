@@ -299,10 +299,8 @@ instance Show CliError where
   show (FileNotFoundError fp)
     = "File '" <> fp <> "' not found!"
 
-instance Exception CliError
-
-data RealPBFTError =
-    IncorrectProtocolSpecified !Protocol
+data RealPBFTError
+  = IncorrectProtocolSpecified !Protocol
   | FromProtocolError !ProtocolInstantiationError
   | InvariantViolation !Text
   | TransactionTypeNotHandledYet !Text
