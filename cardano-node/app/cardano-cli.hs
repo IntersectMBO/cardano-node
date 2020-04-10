@@ -20,7 +20,7 @@ main = toplevelExceptionHandler $ do
 
   co <- Opt.customExecParser pref opts
 
-  cmdRes <- runExceptT $ runCommand co
+  cmdRes <- runExceptT $ runClientCommand co
 
   case cmdRes of
     Right _ -> pure ()

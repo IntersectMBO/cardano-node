@@ -9,7 +9,7 @@
 module Cardano.CLI.Run (
     CliError (..)
   , ClientCommand(..)
-  , runCommand
+  , runClientCommand
   --
   , NewDirectory(..)
   , SigningKeyFile(..)
@@ -30,6 +30,7 @@ import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (hoistEither, firstExceptT, left)
 import qualified Data.ByteString.Lazy as LB
 import           Data.Semigroup ((<>))
+import qualified Data.Text as Text
 import qualified Data.Text.Lazy.IO as TL
 import qualified Data.Text.Lazy.Builder as Builder
 import           Data.Version (showVersion)
@@ -41,7 +42,9 @@ import           System.Info (arch, compilerName, compilerVersion, os)
 import qualified Cardano.Chain.Common as Common
 import qualified Cardano.Chain.Delegation as Delegation
 import qualified Cardano.Chain.Genesis as Genesis
+import           Cardano.Chain.Slotting (EpochNumber)
 import           Cardano.Chain.Update (ApplicationName(..))
+import           Cardano.Chain.UTxO (TxIn, TxOut)
 
 import           Cardano.Crypto (RequiresNetworkMagic(..))
 import qualified Cardano.Crypto.Hashing as Crypto
@@ -64,76 +67,114 @@ import           Cardano.Common.LocalSocket
 import           Cardano.Config.Types
 
 
-runCommand :: ClientCommand -> ExceptT CliError IO ()
-runCommand (ByronClientCommand
-             (UpdateProposal configFp sKey pVer sVer sysTag
-                             insHash outputFp paramsToUpdate)) = do
+runClientCommand :: ClientCommand -> ExceptT CliError IO ()
+runClientCommand cc =
+  case cc of
+    ByronClientCommand bc -> runByronClientCommand bc
+    DisplayVersion -> runDisplayVersion
+    Genesis outDir params ptcl -> runGenesisCommand outDir params ptcl
+    GetLocalNodeTip configFp mSockPath -> runGetLocalNodeTip configFp mSockPath
+    ValidateCBOR cborObject fp -> runValidateCBOR cborObject fp
+    PrettyPrintCBOR fp -> runPrettyPrintCBOR fp
+    PrettySigningKeyPublic ptcl skF -> runPrettySigningKeyPublic ptcl skF
+    MigrateDelegateKeyFrom oldPtcl oldKey newPtcl nskf -> runMigrateDelegateKeyFrom oldPtcl oldKey newPtcl nskf
+    PrintGenesisHash genFp -> runPrintGenesisHash genFp
+    PrintSigningKeyAddress ptcl netMagic skF -> runPrintSigningKeyAddress ptcl netMagic skF
+    Keygen ptcl nskf passReq -> runKeygen ptcl nskf passReq
+    ToVerification ptcl skFp nvkFp -> runToVerification ptcl skFp nvkFp
+    IssueDelegationCertificate configFp epoch issuerSK delVK cert -> runIssueDelegationCertificate configFp epoch issuerSK delVK cert
+    CheckDelegation configFp cert issuerVF delegateVF -> runCheckDelegation configFp cert issuerVF delegateVF
+    SubmitTx fp configFp mCliSockPath -> runSubmitTx fp configFp mCliSockPath
+    SpendGenesisUTxO configFp nftx ctKey genRichAddr outs -> runSpendGenesisUTxO configFp nftx ctKey genRichAddr outs
+    SpendUTxO configFp nftx ctKey ins outs -> runSpendUTxO configFp nftx ctKey ins outs
 
-  sK <- readSigningKey RealPBFT sKey
-  proposal <- createUpdateProposal  configFp sK pVer sVer sysTag insHash paramsToUpdate
-  ensureNewFileLBS outputFp (serialiseByronUpdateProposal proposal)
+-- -----------------------------------------------------------------------------
 
-runCommand (ByronClientCommand (SubmitUpdateProposal configFp proposalFp mSocket)) =
-  withIOManagerE $ \iocp -> submitByronUpdateProposal iocp configFp proposalFp mSocket
+runByronClientCommand :: ByronCommand -> ExceptT CliError IO ()
+runByronClientCommand bcc =
+  case bcc of
+    UpdateProposal configFp sKey pVer sVer sysTag insHash outputFp params -> do
+        sK <- readSigningKey RealPBFT sKey
+        proposal <- createUpdateProposal configFp sK pVer sVer sysTag insHash params
+        ensureNewFileLBS outputFp (serialiseByronUpdateProposal proposal)
 
+    SubmitUpdateProposal configFp proposalFp mSocket ->
+        withIOManagerE $ \iocp -> submitByronUpdateProposal iocp configFp proposalFp mSocket
 
-runCommand DisplayVersion = do
-  liftIO . putTextLn
-         . toS
-         $ concat [ "cardano-cli " <> showVersion version
-                  , " - " <> os <> "-" <> arch
-                  , " - " <> compilerName <> "-" <> showVersion compilerVersion
-                  ]
+runDisplayVersion :: ExceptT CliError IO ()
+runDisplayVersion = do
+    liftIO . putTextLn $ mconcat
+                [ "cardano-cli " <> renderVersion version
+                , " - " <> Text.pack os <> "-" <> Text.pack arch
+                , " - " <> Text.pack compilerName <> "-" <> renderVersion compilerVersion
+                ]
+  where
+    renderVersion = Text.pack . showVersion
 
-runCommand (Genesis outDir params ptcl) = do
+runGenesisCommand :: NewDirectory -> GenesisParameters -> Protocol -> ExceptT CliError IO ()
+runGenesisCommand outDir params ptcl = do
   (genData, genSecrets) <- mkGenesis params
   dumpGenesis ptcl outDir genData genSecrets
 
-runCommand (GetLocalNodeTip configFp mSockPath) =
+runGetLocalNodeTip :: ConfigYamlFilePath -> Maybe CLISocketPath -> ExceptT e IO ()
+runGetLocalNodeTip configFp mSockPath =
   withIOManagerE $ \iocp -> liftIO $ getLocalTip configFp mSockPath iocp
 
-runCommand (ValidateCBOR cborObject fp) = do
+runValidateCBOR :: CBORObject -> FilePath -> ExceptT CliError IO ()
+runValidateCBOR cborObject fp = do
   bs <- readCBOR fp
   res <- hoistEither $ validateCBOR cborObject bs
   liftIO $ putTextLn res
 
-runCommand (PrettyPrintCBOR fp) = do
+runPrettyPrintCBOR :: FilePath -> ExceptT CliError IO ()
+runPrettyPrintCBOR fp = do
   bs <- readCBOR fp
   pPrintCBOR bs
 
-runCommand (PrettySigningKeyPublic ptcl skF) = do
+runPrettySigningKeyPublic :: Protocol -> SigningKeyFile -> ExceptT CliError IO ()
+runPrettySigningKeyPublic ptcl skF = do
   sK <- readSigningKey ptcl skF
   liftIO . putTextLn . prettyPublicKey $ Crypto.toVerification sK
-runCommand (MigrateDelegateKeyFrom oldPtcl oldKey newPtcl (NewSigningKeyFile newKey)) = do
+
+runMigrateDelegateKeyFrom
+        :: Protocol -> SigningKeyFile -> Protocol -> NewSigningKeyFile
+        -> ExceptT CliError IO ()
+runMigrateDelegateKeyFrom oldPtcl oldKey newPtcl (NewSigningKeyFile newKey) = do
   sk <- readSigningKey oldPtcl oldKey
   sDk <- hoistEither $ serialiseDelegateKey newPtcl sk
   ensureNewFileLBS newKey sDk
 
-runCommand (PrintGenesisHash genFp) = do
-  eGen <- readGenesis genFp
+runPrintGenesisHash :: GenesisFile -> ExceptT CliError IO ()
+runPrintGenesisHash genFp = do
+    gen <- readGenesis genFp
+    liftIO . putTextLn $ formatter gen
+  where
+    formatter :: (a, Genesis.GenesisHash)-> Text
+    formatter = F.sformat Crypto.hashHexF . Genesis.unGenesisHash . snd
 
-  let formatter :: (a, Genesis.GenesisHash)-> Text
-      formatter = F.sformat Crypto.hashHexF . Genesis.unGenesisHash . snd
-
-  liftIO . putTextLn $ formatter eGen
-
-runCommand (PrintSigningKeyAddress ptcl netMagic skF) = do
+runPrintSigningKeyAddress :: Protocol -> Common.NetworkMagic -> SigningKeyFile -> ExceptT CliError IO ()
+runPrintSigningKeyAddress ptcl netMagic skF = do
   sK <- readSigningKey ptcl skF
   let sKeyAddress = prettyAddress . Common.makeVerKeyAddress netMagic $ Crypto.toVerification sK
   liftIO $ putTextLn sKeyAddress
 
-runCommand (Keygen ptcl (NewSigningKeyFile skF) passReq) = do
+runKeygen :: Protocol -> NewSigningKeyFile -> PasswordRequirement -> ExceptT CliError IO ()
+runKeygen ptcl (NewSigningKeyFile skF) passReq = do
   pPhrase <- liftIO $ getPassphrase ("Enter password to encrypt '" <> skF <> "': ") passReq
   sK <- liftIO $ keygen pPhrase
   serDk <- hoistEither $ serialiseDelegateKey ptcl sK
   ensureNewFileLBS skF serDk
 
-runCommand (ToVerification ptcl skFp (NewVerificationKeyFile vkFp)) = do
+runToVerification :: Protocol -> SigningKeyFile -> NewVerificationKeyFile -> ExceptT CliError IO ()
+runToVerification ptcl skFp (NewVerificationKeyFile vkFp) = do
   sk <- readSigningKey ptcl skFp
   let vKey = Builder.toLazyText . Crypto.formatFullVerificationKey $ Crypto.toVerification sk
   ensureNewFile TL.writeFile vkFp vKey
 
-runCommand (IssueDelegationCertificate configFp epoch issuerSK delegateVK cert) = do
+runIssueDelegationCertificate
+        :: ConfigYamlFilePath -> EpochNumber -> SigningKeyFile -> VerificationKeyFile -> NewCertificateFile
+        -> ExceptT CliError IO ()
+runIssueDelegationCertificate configFp epoch issuerSK delegateVK cert = do
   nc <- liftIO $ parseNodeConfigurationFP configFp
   vk <- readVerificationKey delegateVK
   sk <- readSigningKey (ncProtocol nc) issuerSK
@@ -143,14 +184,19 @@ runCommand (IssueDelegationCertificate configFp epoch issuerSK delegateVK cert) 
   sCert <- hoistEither $ serialiseDelegationCert (ncProtocol nc) byGenDelCert
   ensureNewFileLBS (nFp cert) sCert
 
-runCommand (CheckDelegation configFp cert issuerVF delegateVF) = do
+runCheckDelegation
+        :: ConfigYamlFilePath -> CertificateFile -> VerificationKeyFile -> VerificationKeyFile
+        -> ExceptT CliError IO ()
+runCheckDelegation configFp cert issuerVF delegateVF = do
   nc <- liftIO $ parseNodeConfigurationFP configFp
   issuerVK <- readVerificationKey issuerVF
   delegateVK <- readVerificationKey delegateVF
   pmId <- readProtocolMagicId $ ncGenesisFile nc
   checkByronGenesisDelegation cert pmId issuerVK delegateVK
 
-runCommand (SubmitTx fp configFp mCliSockPath) = withIOManagerE $ \iocp -> do
+runSubmitTx :: TxFile -> ConfigYamlFilePath -> Maybe CLISocketPath -> ExceptT CliError IO ()
+runSubmitTx fp configFp mCliSockPath =
+  withIOManagerE $ \iocp -> do
     nc <- liftIO $ parseNodeConfigurationFP configFp
     -- Default update value
     let update = Update (ApplicationName "cardano-sl") 1 $ LastKnownBlockVersion 0 2 0
@@ -170,7 +216,11 @@ runCommand (SubmitTx fp configFp mCliSockPath) = withIOManagerE $ \iocp -> do
           update
           (ncProtocol nc)
           tx
-runCommand (SpendGenesisUTxO configFp (NewTxFile ctTx) ctKey genRichAddr outs) = do
+
+runSpendGenesisUTxO
+        :: ConfigYamlFilePath -> NewTxFile -> SigningKeyFile -> Common.Address -> NonEmpty TxOut
+        -> ExceptT CliError IO ()
+runSpendGenesisUTxO configFp (NewTxFile ctTx) ctKey genRichAddr outs = do
     nc <- liftIO $ parseNodeConfigurationFP configFp
     sk <- readSigningKey (ncProtocol nc) ctKey
     -- Default update value
@@ -190,7 +240,10 @@ runCommand (SpendGenesisUTxO configFp (NewTxFile ctTx) ctKey genRichAddr outs) =
                 sk
     ensureNewFileLBS ctTx $ toCborTxAux tx
 
-runCommand (SpendUTxO configFp (NewTxFile ctTx) ctKey ins outs) = do
+runSpendUTxO
+        :: ConfigYamlFilePath -> NewTxFile -> SigningKeyFile -> NonEmpty TxIn -> NonEmpty TxOut
+        -> ExceptT CliError IO ()
+runSpendUTxO configFp (NewTxFile ctTx) ctKey ins outs = do
     nc <- liftIO $ parseNodeConfigurationFP configFp
     sk <- readSigningKey (ncProtocol nc) ctKey
     -- Default update value

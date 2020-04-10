@@ -1,6 +1,5 @@
 module Cardano.CLI.Parsers
   ( ClientCommand(..)
-  , command'
   , parseDelegationRelatedValues
   , parseGenesisParameters
   , parseGenesisRelatedValues
@@ -51,105 +50,105 @@ data ClientCommand
 
   --- Genesis Related Commands ---
   | Genesis
-    NewDirectory
-    GenesisParameters
-    Protocol
+        NewDirectory
+        GenesisParameters
+        Protocol
   | PrintGenesisHash
-    GenesisFile
+        GenesisFile
 
   --- Key Related Commands ---
   | Keygen
-    Protocol
-    NewSigningKeyFile
-    PasswordRequirement
+        Protocol
+        NewSigningKeyFile
+        PasswordRequirement
   | ToVerification
-    Protocol
-    SigningKeyFile
-    NewVerificationKeyFile
+        Protocol
+        SigningKeyFile
+        NewVerificationKeyFile
 
   | PrettySigningKeyPublic
-    Protocol
-    SigningKeyFile
+        Protocol
+        SigningKeyFile
 
   | MigrateDelegateKeyFrom
-    Protocol
-    -- ^ Old protocol
-    SigningKeyFile
-    -- ^ Old key
-    Protocol
-    -- ^ New protocol
-    NewSigningKeyFile
-    -- ^ New Key
+        Protocol
+        -- ^ Old protocol
+        SigningKeyFile
+        -- ^ Old key
+        Protocol
+        -- ^ New protocol
+        NewSigningKeyFile
+        -- ^ New Key
 
   | PrintSigningKeyAddress
-    Protocol
-    NetworkMagic  -- TODO:  consider deprecation in favor of ProtocolMagicId,
-                  --        once Byron is out of the picture.
-    SigningKeyFile
+        Protocol
+        NetworkMagic  -- TODO:  consider deprecation in favor of ProtocolMagicId,
+                      --        once Byron is out of the picture.
+        SigningKeyFile
 
     --- Delegation Related Commands ---
 
   | IssueDelegationCertificate
-    ConfigYamlFilePath
-    EpochNumber
-    -- ^ The epoch from which the delegation is valid.
-    SigningKeyFile
-    -- ^ The issuer of the certificate, who delegates their right to sign blocks.
-    VerificationKeyFile
-    -- ^ The delegate, who gains the right to sign blocks on behalf of the issuer.
-    NewCertificateFile
-    -- ^ Filepath of the newly created delegation certificate.
+        ConfigYamlFilePath
+        EpochNumber
+        -- ^ The epoch from which the delegation is valid.
+        SigningKeyFile
+        -- ^ The issuer of the certificate, who delegates their right to sign blocks.
+        VerificationKeyFile
+        -- ^ The delegate, who gains the right to sign blocks on behalf of the issuer.
+        NewCertificateFile
+        -- ^ Filepath of the newly created delegation certificate.
   | CheckDelegation
-    ConfigYamlFilePath
-    CertificateFile
-    VerificationKeyFile
-    VerificationKeyFile
+        ConfigYamlFilePath
+        CertificateFile
+        VerificationKeyFile
+        VerificationKeyFile
 
   | GetLocalNodeTip
-    ConfigYamlFilePath
-    (Maybe CLISocketPath)
+        ConfigYamlFilePath
+        (Maybe CLISocketPath)
 
     -----------------------------------
 
   | SubmitTx
-    TxFile
-    -- ^ Filepath of transaction to submit.
-    ConfigYamlFilePath
-    (Maybe CLISocketPath)
+        TxFile
+        -- ^ Filepath of transaction to submit.
+        ConfigYamlFilePath
+        (Maybe CLISocketPath)
 
   | SpendGenesisUTxO
-    ConfigYamlFilePath
-    NewTxFile
-    -- ^ Filepath of the newly created transaction.
-    SigningKeyFile
-    -- ^ Signing key of genesis UTxO owner.
-    Address
-    -- ^ Genesis UTxO address.
-    (NonEmpty TxOut)
-    -- ^ Tx output.
+        ConfigYamlFilePath
+        NewTxFile
+        -- ^ Filepath of the newly created transaction.
+        SigningKeyFile
+        -- ^ Signing key of genesis UTxO owner.
+        Address
+        -- ^ Genesis UTxO address.
+        (NonEmpty TxOut)
+        -- ^ Tx output.
   | SpendUTxO
-    ConfigYamlFilePath
-    NewTxFile
-    -- ^ Filepath of the newly created transaction.
-    SigningKeyFile
-    -- ^ Signing key of Tx underwriter.
-    (NonEmpty TxIn)
-    -- ^ Inputs available for spending to the Tx underwriter's key.
-    (NonEmpty TxOut)
-    -- ^ Genesis UTxO output Address.
+        ConfigYamlFilePath
+        NewTxFile
+        -- ^ Filepath of the newly created transaction.
+        SigningKeyFile
+        -- ^ Signing key of Tx underwriter.
+        (NonEmpty TxIn)
+        -- ^ Inputs available for spending to the Tx underwriter's key.
+        (NonEmpty TxOut)
+        -- ^ Genesis UTxO output Address.
 
     --- Misc Commands ---
 
   | DisplayVersion
 
   | ValidateCBOR
-    CBORObject
-    -- ^ Type of the CBOR object
-    FilePath
+        CBORObject
+        -- ^ Type of the CBOR object
+        FilePath
 
   | PrettyPrintCBOR
-    FilePath
-   deriving Show
+        FilePath
+  deriving Show
 
 -- | See the rationale for cliParseBase58Address.
 cliParseLovelace :: Word64 -> Lovelace
