@@ -298,6 +298,7 @@ parseTopologyFile =
          <> metavar "FILEPATH"
          <> help "The path to a file describing the topology."
     )
+
 parseLogOutputFile :: Parser FilePath
 parseLogOutputFile =
   strOption
