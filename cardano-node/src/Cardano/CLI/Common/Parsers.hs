@@ -29,11 +29,12 @@ import           Data.Time (UTCTime)
 import           Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import           Options.Applicative as OA
 
-import           Cardano.CLI.Byron.Parsers (ByronCommand(..))
+import           Cardano.CLI.Byron.Parsers (ByronCommand (..))
 import           Cardano.CLI.Delegation
 import           Cardano.CLI.Genesis
 import           Cardano.CLI.Key
 import           Cardano.CLI.Ops (CardanoEra(..))
+import           Cardano.CLI.Shelley.Parsers (ShelleyCommand (..))
 import           Cardano.CLI.Tx
 
 import           Cardano.Common.Parsers
@@ -56,6 +57,9 @@ data ClientCommand
   =
   --- Byron Related Commands ---
     ByronClientCommand ByronCommand
+
+  --- Shelley Related Commands ---
+  | ShelleyClientCommand ShelleyCommand
 
   --- Genesis Related Commands ---
   | Genesis

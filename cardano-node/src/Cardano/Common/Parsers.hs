@@ -24,6 +24,7 @@ module Cardano.Common.Parsers
   , parseIntegral
   , parseIntegralWithDefault
   , parseLogOutputFile
+  , parseNodeAddress
   , parseNodeId
   , parseCardanoEra
   , parseSigningKeyFile
