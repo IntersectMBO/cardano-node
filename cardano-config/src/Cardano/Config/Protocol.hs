@@ -59,10 +59,6 @@ import           Cardano.Config.Types (DelegationCertFile (..),
                                        Protocol (..), SigningKeyFile (..),
                                        Update (..))
 
--- TODO: consider not throwing this, or wrap it in a local error type here
--- that has proper error messages.
-instance Exception Genesis.ConfigurationError
-
 -- | Tracing-related constraints for monitoring purposes.
 --
 -- When you need a 'Show' or 'Condense' instance for more types, just add the

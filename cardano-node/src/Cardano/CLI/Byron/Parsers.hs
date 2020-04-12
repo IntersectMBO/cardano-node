@@ -42,21 +42,22 @@ import           Cardano.Common.Parsers
 import           Cardano.Config.Types
 
 -- TODO: Other Byron commands to be put here in follow up PR.
-data ByronCommand = UpdateProposal
-                    ConfigYamlFilePath
-                    SigningKeyFile
-                    ProtocolVersion
-                    SoftwareVersion
-                    SystemTag
-                    InstallerHash
-                    FilePath
-                    [ParametersToUpdate]
-                  | SubmitUpdateProposal
-                    ConfigYamlFilePath
-                    -- ^ Update proposal filepath.
-                    FilePath
-                    (Maybe CLISocketPath)
-                    deriving Show
+data ByronCommand
+  = UpdateProposal
+        ConfigYamlFilePath
+        SigningKeyFile
+        ProtocolVersion
+        SoftwareVersion
+        SystemTag
+        InstallerHash
+        FilePath
+        [ParametersToUpdate]
+  | SubmitUpdateProposal
+        ConfigYamlFilePath
+        -- ^ Update proposal filepath.
+        FilePath
+        (Maybe CLISocketPath)
+  deriving Show
 
 parseByronCommands :: Parser ByronCommand
 parseByronCommands =  subparser $ mconcat
@@ -70,9 +71,7 @@ parseByronCommands =  subparser $ mconcat
 
 parseAllParamsToUpdate :: Parser ByronCommand
 parseAllParamsToUpdate = do
-  (\config sKey pVer sVer sysTag insHash outputFp a b c d e f g h i j k l m n ->
-      UpdateProposal config sKey pVer sVer sysTag
-                     insHash outputFp $ catMaybes [a, b, c, d, e, f, g, h, i, j, k, l, m, n])
+  UpdateProposal
     <$> (ConfigYamlFilePath <$> parseConfigFile)
     <*> parseSigningKeyFile "signing-key" "Path to signing key."
     <*> parseProtocolVersion
@@ -80,20 +79,27 @@ parseAllParamsToUpdate = do
     <*> parseSystemTag
     <*> parseInstallerHash
     <*> parseFilePath "filepath" "Byron proposal output filepath."
-    <*> parseScriptVersion
-    <*> parseSlotDuration
-    <*> parseMaxBlockSize
-    <*> parseMaxHeaderSize
-    <*> parseMaxTxSize
-    <*> parseMaxProposalSize
-    <*> parseMpcThd
-    <*> parseHeavyDelThd
-    <*> parseUpdateVoteThd
-    <*> parseUpdateProposalThd
-    <*> parseUpdateProposalTTL
-    <*> parseSoftforkRuleParam
-    <*> parseTxFeePolicy
-    <*> parseUnlockStakeEpoch
+    <*> parseParametersToUpdate
+
+parseParametersToUpdate :: Parser [ParametersToUpdate]
+parseParametersToUpdate =
+  catMaybes
+    <$> sequenceA
+          [ parseScriptVersion
+          , parseSlotDuration
+          , parseMaxBlockSize
+          , parseMaxHeaderSize
+          , parseMaxTxSize
+          , parseMaxProposalSize
+          , parseMpcThd
+          , parseHeavyDelThd
+          , parseUpdateVoteThd
+          , parseUpdateProposalThd
+          , parseUpdateProposalTTL
+          , parseSoftforkRuleParam
+          , parseTxFeePolicy
+          , parseUnlockStakeEpoch
+          ]
 
 parseByronUpdateProposalSubmission :: Parser ByronCommand
 parseByronUpdateProposalSubmission =
