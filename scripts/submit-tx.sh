@@ -1,27 +1,25 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC1090
+
+. "$(dirname "$0")"/common.sh
+. "$(dirname "$0")"/lib-cli.sh
+
+setup_genesis_for_config 'liveview'
 
 test -z "$1" -o ! -f "$1" -o ! -r "$1" && {
         cat >&1 <<EOF
-Usage:  $(basename $0) TX-FILE
+Usage:  $(basename "$0") COMMON-OPTIONS.. TX-FILE
 EOF
         exit 1
 }
+
 TX="$1"
 shift
 
-. $(dirname $0)/lib-node.sh defaults/liveview
-CLI="$(executable_runner cardano-cli)"
-
-CONFIG="configuration/defaults/liveview/config-0.yaml"
-NOW=`date "+%Y-%m-%d 00:00:00"`
-SOCKET="socket/0"
-NETARGS=(
+ARGS=(
         submit-tx
         --tx           "$TX"
-        --config       "$CONFIG"
-        --socket-path  "$SOCKET"
+        --config       "${configuration_root}/config-0.yaml"
+        --socket-path  "socket/node-0-socket"
 )
-
-
-set -x
-${CLI} ${NETARGS[*]} "$@"
+run cardano-cli "${ARGS[@]}" "$@"

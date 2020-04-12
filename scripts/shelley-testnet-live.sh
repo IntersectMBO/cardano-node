@@ -1,33 +1,10 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC1090,SC2034
 
-set -e
+DEFAULT_VERBOSE=t
+. "$(dirname "$0")"/common.sh
+. "$(dirname "$0")"/lib-cli.sh
+. "$(dirname "$0")"/lib-node.sh
+. "$(dirname "$0")"/lib-cluster.sh
 
-# build first:
-#> cabal v2-build --reorder-goals
-
-# create tmux session:
-#> tmux new-session -s 'Demo' -t demo
-
-EXTRA=""
-
-. $(dirname $0)/lib-node.sh defaults/liveview
-NODE="$(executable_runner cardano-node)"
-
-# for logs:
-mkdir -p logs/
-
-PWD=$(pwd)
-
-#tmux split-window -v
-#tmux select-pane -t 0
-tmux split-window -h
-tmux split-window -v
-tmux select-pane -t 0
-tmux split-window -v
-
-tmux select-pane -t 1
-tmux send-keys "cd '${PWD}'; ${NODE} run $(nodeargs 0 "${ALGO} $(echo -n ${EXTRA})") " C-m
-tmux select-pane -t 2
-tmux send-keys "cd '${PWD}'; ${NODE} run $(nodeargs 1 "${ALGO} $(echo -n ${EXTRA})") " C-m
-tmux select-pane -t 3
-tmux send-keys "cd '${PWD}'; ${NODE} run $(nodeargs 2 "${ALGO} $(echo -n ${EXTRA})") " C-m
+run_3node_cluster 'liveview'

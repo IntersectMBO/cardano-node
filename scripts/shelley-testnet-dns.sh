@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC1090,SC2034
+
+DEFAULT_VERBOSE=t
+. "$(dirname "$0")"/common.sh
+. "$(dirname "$0")"/lib-cli.sh
+. "$(dirname "$0")"/lib-node.sh
+. "$(dirname "$0")"/lib-cluster.sh
 
 # requires a local dns server which resolves
 # * local6.iohk.io to ::1
@@ -11,43 +18,4 @@
 #   local-data: "local6.iohk.io AAAA ::1"
 # ```
 
-# add to your ~/.tmux.conf:
-# set-window-option -g mouse on
-# set -g default-terminal "tmux-256color"
-
-# start a tmux session:
-# tmux new-session -s 'Demo' -t demo
-
-# then run this script
-
-
-ALGO="--real-pbft"
-NOW=`date "+%Y-%m-%d 00:00:00"`
-NETARGS="--slot-duration 2 --topology configuration/simple-topology-dns.json ${ALGO}"
-#SCR="./scripts/start-node.sh"
-
-. $(dirname $0)/lib.sh
-NODE="$(executable_runner cardano-node)"
-
-function mklogcfg () {
-  echo "--log-config configuration/config-${1}.yaml"
-}
-
-tmux split-window -h
-tmux split-window -v
-tmux select-pane -t 0
-# tmux split-window -v
-
-node_args() {
-        id=$1
-        echo -n "--node-id ${id} "
-        echo -n "--port 300${id} "
-        echo -n "--live-view "
-}
-
-tmux select-pane -t 0
-tmux send-keys "${NODE} $(mklogcfg 0) ${NETARGS} $(node_args 0)" C-m
-tmux select-pane -t 1
-tmux send-keys "${NODE} $(mklogcfg 1) ${NETARGS} $(node_args 1)" C-m
-tmux select-pane -t 2
-tmux send-keys "${NODE} $(mklogcfg 2) ${NETARGS} $(node_args 2)" C-m
+run_3node_cluster 'simpleview' 'simple-dns'
