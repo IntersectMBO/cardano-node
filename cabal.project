@@ -25,29 +25,29 @@ package ouroboros-consensus-mock
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: 742a789a520387c6cd30a4ca28bc4fc8588a41c7
-  --sha256: 0zqar90z7hdklxcimfxb2dmk0cq43bywa7p255hynn7ss0nxszz6
+  tag: 42c57fed487b61c13a68a1600a6675ad987822d0
+  --sha256: 0iab9bwa7my1qb3nnwml8zv4g4zxi5rrypkfmdjs558yh00ykskq
   subdir: binary
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: 742a789a520387c6cd30a4ca28bc4fc8588a41c7
-  --sha256: 0zqar90z7hdklxcimfxb2dmk0cq43bywa7p255hynn7ss0nxszz6
+  tag: 42c57fed487b61c13a68a1600a6675ad987822d0
+  --sha256: 0iab9bwa7my1qb3nnwml8zv4g4zxi5rrypkfmdjs558yh00ykskq
   subdir: binary/test
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: 742a789a520387c6cd30a4ca28bc4fc8588a41c7
-  --sha256: 0zqar90z7hdklxcimfxb2dmk0cq43bywa7p255hynn7ss0nxszz6
+  tag: 42c57fed487b61c13a68a1600a6675ad987822d0
+  --sha256: 0iab9bwa7my1qb3nnwml8zv4g4zxi5rrypkfmdjs558yh00ykskq
   subdir: cardano-crypto-class
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: 742a789a520387c6cd30a4ca28bc4fc8588a41c7
-  --sha256: 0zqar90z7hdklxcimfxb2dmk0cq43bywa7p255hynn7ss0nxszz6
+  tag: 42c57fed487b61c13a68a1600a6675ad987822d0
+  --sha256: 0iab9bwa7my1qb3nnwml8zv4g4zxi5rrypkfmdjs558yh00ykskq
   subdir: slotting
 
 source-repository-package
@@ -59,64 +59,64 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger
-  tag: 90b14c056059d0082cb2641f9c77cb1b097be329
-  --sha256: 029lqlf33a3vvy933fil8qglv3hjaprankllr80h0acspqjzahk0
+  tag: 357ed656ad81fcddb401ceb656d6c2a6a177a0fa
+  --sha256: 1fw87n0cvi4asyhv8x2spqhp90a460r47vcahmdl9pvjs913syvv
   subdir: cardano-ledger
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger
-  tag: 90b14c056059d0082cb2641f9c77cb1b097be329
-  --sha256: 029lqlf33a3vvy933fil8qglv3hjaprankllr80h0acspqjzahk0
+  tag: 357ed656ad81fcddb401ceb656d6c2a6a177a0fa
+  --sha256: 1fw87n0cvi4asyhv8x2spqhp90a460r47vcahmdl9pvjs913syvv
   subdir: crypto
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger
-  tag: 90b14c056059d0082cb2641f9c77cb1b097be329
-  --sha256: 029lqlf33a3vvy933fil8qglv3hjaprankllr80h0acspqjzahk0
+  tag: 357ed656ad81fcddb401ceb656d6c2a6a177a0fa
+  --sha256: 1fw87n0cvi4asyhv8x2spqhp90a460r47vcahmdl9pvjs913syvv
   subdir: cardano-ledger/test
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger
-  tag: 90b14c056059d0082cb2641f9c77cb1b097be329
-  --sha256: 029lqlf33a3vvy933fil8qglv3hjaprankllr80h0acspqjzahk0
+  tag: 357ed656ad81fcddb401ceb656d6c2a6a177a0fa
+  --sha256: 1fw87n0cvi4asyhv8x2spqhp90a460r47vcahmdl9pvjs913syvv
   subdir: crypto/test
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger-specs
-  tag: f1d5ddb25531b2512796d34e9cfd803f7af76567
-  --sha256: 1nxqdi8vbx3mg1qdbvj7v6ngfjbgbf9i7yxc3ijac2mqb4fn5b4f
+  tag: 5c5854be017f75c703b11c1aad4b765f511ee70e
+  --sha256: 0bbwjba0jdsvc1w1dzli6yrsrh7k3jh6j9swfv767nwx9j37gmw8
   subdir: byron/chain/executable-spec
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger-specs
-  tag: f1d5ddb25531b2512796d34e9cfd803f7af76567
-  --sha256: 1nxqdi8vbx3mg1qdbvj7v6ngfjbgbf9i7yxc3ijac2mqb4fn5b4f
+  tag: 5c5854be017f75c703b11c1aad4b765f511ee70e
+  --sha256: 0bbwjba0jdsvc1w1dzli6yrsrh7k3jh6j9swfv767nwx9j37gmw8
   subdir: byron/ledger/executable-spec
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger-specs
-  tag: f1d5ddb25531b2512796d34e9cfd803f7af76567
-  --sha256: 1nxqdi8vbx3mg1qdbvj7v6ngfjbgbf9i7yxc3ijac2mqb4fn5b4f
+  tag: 5c5854be017f75c703b11c1aad4b765f511ee70e
+  --sha256: 0bbwjba0jdsvc1w1dzli6yrsrh7k3jh6j9swfv767nwx9j37gmw8
   subdir: semantics/executable-spec
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger-specs
-  tag: f1d5ddb25531b2512796d34e9cfd803f7af76567
-  --sha256: 1nxqdi8vbx3mg1qdbvj7v6ngfjbgbf9i7yxc3ijac2mqb4fn5b4f
+  tag: 5c5854be017f75c703b11c1aad4b765f511ee70e
+  --sha256: 0bbwjba0jdsvc1w1dzli6yrsrh7k3jh6j9swfv767nwx9j37gmw8
   subdir: shelley/chain-and-ledger/dependencies/non-integer
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger-specs
-  tag: f1d5ddb25531b2512796d34e9cfd803f7af76567
-  --sha256: 1nxqdi8vbx3mg1qdbvj7v6ngfjbgbf9i7yxc3ijac2mqb4fn5b4f
+  tag: 5c5854be017f75c703b11c1aad4b765f511ee70e
+  --sha256: 0bbwjba0jdsvc1w1dzli6yrsrh7k3jh6j9swfv767nwx9j37gmw8
   subdir: shelley/chain-and-ledger/executable-spec
 
 source-repository-package
@@ -210,99 +210,99 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: 3d89fa475bc740473e5ffe947572c19f9b91d26d
-  --sha256: 0v1mfsamjh3c93m0bqqdflg89iy6wvfq0l1ji66m4xgvrj0ilzds
+  tag: dbc48d30c5e3a46d28b7c25a15141d3518982c70
+  --sha256: 1d8959sdmpk9ijji2dqp3wdpl8pff4kbxqwnglafb347wwss7bi7
   subdir: ouroboros-network
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: 3d89fa475bc740473e5ffe947572c19f9b91d26d
-  --sha256: 0v1mfsamjh3c93m0bqqdflg89iy6wvfq0l1ji66m4xgvrj0ilzds
+  tag: dbc48d30c5e3a46d28b7c25a15141d3518982c70
+  --sha256: 1d8959sdmpk9ijji2dqp3wdpl8pff4kbxqwnglafb347wwss7bi7
   subdir: io-sim
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: 3d89fa475bc740473e5ffe947572c19f9b91d26d
-  --sha256: 0v1mfsamjh3c93m0bqqdflg89iy6wvfq0l1ji66m4xgvrj0ilzds
+  tag: dbc48d30c5e3a46d28b7c25a15141d3518982c70
+  --sha256: 1d8959sdmpk9ijji2dqp3wdpl8pff4kbxqwnglafb347wwss7bi7
   subdir: ouroboros-network-testing
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: 3d89fa475bc740473e5ffe947572c19f9b91d26d
-  --sha256: 0v1mfsamjh3c93m0bqqdflg89iy6wvfq0l1ji66m4xgvrj0ilzds
+  tag: dbc48d30c5e3a46d28b7c25a15141d3518982c70
+  --sha256: 1d8959sdmpk9ijji2dqp3wdpl8pff4kbxqwnglafb347wwss7bi7
   subdir: ouroboros-consensus
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: 3d89fa475bc740473e5ffe947572c19f9b91d26d
-  --sha256: 0v1mfsamjh3c93m0bqqdflg89iy6wvfq0l1ji66m4xgvrj0ilzds
+  tag: dbc48d30c5e3a46d28b7c25a15141d3518982c70
+  --sha256: 1d8959sdmpk9ijji2dqp3wdpl8pff4kbxqwnglafb347wwss7bi7
   subdir: ouroboros-consensus/ouroboros-consensus-mock
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: 3d89fa475bc740473e5ffe947572c19f9b91d26d
-  --sha256: 0v1mfsamjh3c93m0bqqdflg89iy6wvfq0l1ji66m4xgvrj0ilzds
+  tag: dbc48d30c5e3a46d28b7c25a15141d3518982c70
+  --sha256: 1d8959sdmpk9ijji2dqp3wdpl8pff4kbxqwnglafb347wwss7bi7
   subdir: ouroboros-consensus-byron
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: 3d89fa475bc740473e5ffe947572c19f9b91d26d
-  --sha256: 0v1mfsamjh3c93m0bqqdflg89iy6wvfq0l1ji66m4xgvrj0ilzds
+  tag: dbc48d30c5e3a46d28b7c25a15141d3518982c70
+  --sha256: 1d8959sdmpk9ijji2dqp3wdpl8pff4kbxqwnglafb347wwss7bi7
   subdir: ouroboros-consensus-shelley
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: 3d89fa475bc740473e5ffe947572c19f9b91d26d
-  --sha256: 0v1mfsamjh3c93m0bqqdflg89iy6wvfq0l1ji66m4xgvrj0ilzds
+  tag: dbc48d30c5e3a46d28b7c25a15141d3518982c70
+  --sha256: 1d8959sdmpk9ijji2dqp3wdpl8pff4kbxqwnglafb347wwss7bi7
   subdir: ouroboros-consensus-cardano
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: 3d89fa475bc740473e5ffe947572c19f9b91d26d
-  --sha256: 0v1mfsamjh3c93m0bqqdflg89iy6wvfq0l1ji66m4xgvrj0ilzds
+  tag: dbc48d30c5e3a46d28b7c25a15141d3518982c70
+  --sha256: 1d8959sdmpk9ijji2dqp3wdpl8pff4kbxqwnglafb347wwss7bi7
   subdir: typed-protocols
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: 3d89fa475bc740473e5ffe947572c19f9b91d26d
-  --sha256: 0v1mfsamjh3c93m0bqqdflg89iy6wvfq0l1ji66m4xgvrj0ilzds
+  tag: dbc48d30c5e3a46d28b7c25a15141d3518982c70
+  --sha256: 1d8959sdmpk9ijji2dqp3wdpl8pff4kbxqwnglafb347wwss7bi7
   subdir: typed-protocols-examples
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: 3d89fa475bc740473e5ffe947572c19f9b91d26d
-  --sha256: 0v1mfsamjh3c93m0bqqdflg89iy6wvfq0l1ji66m4xgvrj0ilzds
+  tag: dbc48d30c5e3a46d28b7c25a15141d3518982c70
+  --sha256: 1d8959sdmpk9ijji2dqp3wdpl8pff4kbxqwnglafb347wwss7bi7
   subdir: ouroboros-network-framework
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: 3d89fa475bc740473e5ffe947572c19f9b91d26d
-  --sha256: 0v1mfsamjh3c93m0bqqdflg89iy6wvfq0l1ji66m4xgvrj0ilzds
+  tag: dbc48d30c5e3a46d28b7c25a15141d3518982c70
+  --sha256: 1d8959sdmpk9ijji2dqp3wdpl8pff4kbxqwnglafb347wwss7bi7
   subdir: network-mux
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: 3d89fa475bc740473e5ffe947572c19f9b91d26d
-  --sha256: 0v1mfsamjh3c93m0bqqdflg89iy6wvfq0l1ji66m4xgvrj0ilzds
+  tag: dbc48d30c5e3a46d28b7c25a15141d3518982c70
+  --sha256: 1d8959sdmpk9ijji2dqp3wdpl8pff4kbxqwnglafb347wwss7bi7
   subdir: io-sim-classes
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: 3d89fa475bc740473e5ffe947572c19f9b91d26d
-  --sha256: 0v1mfsamjh3c93m0bqqdflg89iy6wvfq0l1ji66m4xgvrj0ilzds
+  tag: dbc48d30c5e3a46d28b7c25a15141d3518982c70
+  --sha256: 1d8959sdmpk9ijji2dqp3wdpl8pff4kbxqwnglafb347wwss7bi7
   subdir: Win32-network
 
 source-repository-package
