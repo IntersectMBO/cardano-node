@@ -1,5 +1,21 @@
 # Changelog for cardano-node
 
+## 1.10.1 -- April 2020
+
+### node changes
+- None
+
+### consensus changes
+- Improve chain DB concurrency during syncing by batching GC actions (#1932)
+
+### ledger changes
+- Exemptions for historical null update proposals on staging blockchain (#768)
+- Document Byron-era protections against network address confusion (#727, #755)
+
+### network changes
+- Windows sync performance improvements with new timeouts implementation (#1931)
+- Fix handling of negative timeouts in the IO simulator (#1939)
+
 ## 1.10.0 -- April 2020
 
 ### node changes
