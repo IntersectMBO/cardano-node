@@ -124,8 +124,8 @@ let
     ifd-pins = mkPins {
       inherit (sources) iohk-nix "haskell.nix";
       inherit (import "${sources.iohk-nix}/nix/sources.nix" {}) nixpkgs;
-      hackageSrc = (import pkgs.path (import sources."haskell.nix")).haskell-nix.hackageSrc;
-      stackageSrc = (import pkgs.path (import sources."haskell.nix")).haskell-nix.stackageSrc;
+      #hackageSrc = (import pkgs.path (import sources."haskell.nix")).haskell-nix.hackageSrc;
+      #stackageSrc = (import pkgs.path (import sources."haskell.nix")).haskell-nix.stackageSrc;
     };
   } // extraBuilds // (mkRequiredJob (
       collectTests jobs.native.checks ++
