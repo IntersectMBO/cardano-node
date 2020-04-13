@@ -21,6 +21,7 @@ library
                        Cardano.Config.Protocol
                        Cardano.Config.Topology
                        Cardano.Config.Types
+                       Cardano.Tracing.Constraints
                        Cardano.Tracing.ToObjectOrphans
 
   build-depends:       base >=4.12 && <5
@@ -69,3 +70,6 @@ library
 
   default-language:    Haskell2010
   default-extensions:  NoImplicitPrelude
+
+  ghc-options:       -Wall
+

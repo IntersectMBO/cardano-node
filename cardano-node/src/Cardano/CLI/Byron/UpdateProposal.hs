@@ -105,7 +105,8 @@ createUpdateProposal configFile sKey pVer sVer sysTag inshash paramsToUpdate = d
       metaData = M.singleton sysTag inshash
       noPassSigningKey = noPassSafeSigner sKey
       pmId = gdProtocolMagicId genData
-      protocolParamsUpdate = createProtocolParametersUpdate emptyProtocolParametersUpdate paramsToUpdate
+      protocolParamsUpdate = createProtocolParametersUpdate
+                               emptyProtocolParametersUpdate paramsToUpdate
 
 
   let proposalBody = ProposalBody pVer protocolParamsUpdate sVer metaData
@@ -136,9 +137,10 @@ emptyProtocolParametersUpdate =
 serialiseByronUpdateProposal :: Proposal -> LByteString
 serialiseByronUpdateProposal = Binary.serialize
 
-deserialiseByronUpdateProposal :: LByteString -> Either CliError (AProposal ByteString)
+deserialiseByronUpdateProposal :: LByteString
+                               -> Either CliError (AProposal ByteString)
 deserialiseByronUpdateProposal bs =
-  case Binary.decodeFull bs :: Either Binary.DecoderError (AProposal Binary.ByteSpan) of
+  case Binary.decodeFull bs of
     Left deserFail -> Left $ UpdateProposalDecodingError deserFail
     Right proposal -> Right $ annotateProposal proposal
  where
@@ -154,28 +156,17 @@ submitByronUpdateProposal
 submitByronUpdateProposal iocp config proposalFp mSocket = do
     nc <- liftIO $ parseNodeConfigurationFP config
 
-    let genFile = ncGenesisFile nc
-        ptcl = ncProtocol nc
-        sigThresh = ncPbftSignatureThresh nc
-        nMagic = ncReqNetworkMagic nc
-
     proposalBs <- liftIO $ LB.readFile proposalFp
     aProposal <- hoistEither $ deserialiseByronUpdateProposal proposalBs
     let genTx = convertProposalToGenTx aProposal
+    let skt   = chooseSocketPath (ncSocketPath nc) mSocket
 
-    let proposalBody = Binary.unAnnotated $ aBody aProposal
-        ProtocolVersion major minor alt = protocolVersion proposalBody
-        SoftwareVersion appName sNumber = softwareVersion proposalBody
-
-
-    let lastKnownBlockVersion = LastKnownBlockVersion {lkbvMajor = major, lkbvMinor = minor, lkbvAlt = alt}
-        update = Update appName sNumber $ lastKnownBlockVersion
-        skt = chooseSocketPath (ncSocketPath nc) mSocket
-
-    firstExceptT UpdateProposalSubmissionError $ withRealPBFT genFile nMagic sigThresh Nothing Nothing update ptcl $
-                \p@Consensus.ProtocolRealPBFT{} -> liftIO $ do
-                   traceWith stdoutTracer ("Update proposal TxId: " ++ condense (Mempool.txId genTx))
-                   submitGeneralTx iocp skt
-                                   (pInfoConfig (Consensus.protocolInfo p))
-                                   genTx
-                                   nullTracer -- stdoutTracer
+    firstExceptT UpdateProposalSubmissionError $
+      withRealPBFT nc $ \p@Consensus.ProtocolRealPBFT{} -> liftIO $ do
+        traceWith stdoutTracer $
+          "Update proposal TxId: " ++ condense (Mempool.txId genTx)
+        submitGeneralTx
+          iocp skt
+          (pInfoConfig (Consensus.protocolInfo p))
+          genTx
+          nullTracer -- stdoutTracer

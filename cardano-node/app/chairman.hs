@@ -14,12 +14,12 @@ import           Control.Tracer (stdoutTracer)
 import           Ouroboros.Network.Block (BlockNo)
 
 import           Options.Applicative
-import           Cardano.Config.CommonCLI
-import           Cardano.Config.Protocol ( ProtocolInstantiationError
-                                         , SomeProtocol(..), fromProtocol)
-import           Cardano.Config.Types (ConfigYamlFilePath(..), DelegationCertFile(..),
-                                       NodeConfiguration(..), SigningKeyFile(..),
-                                       SocketPath(..), parseNodeConfigurationFP)
+import           Cardano.Config.Protocol
+                   (SomeConsensusProtocol(..), mkConsensusProtocol,
+                    ProtocolInstantiationError)
+import           Cardano.Config.Types
+                  (ConfigYamlFilePath(..), SocketPath(..),
+                   parseNodeConfigurationFP)
 import           Cardano.Common.Parsers
 import           Cardano.Chairman (chairmanTest)
 
@@ -29,24 +29,13 @@ main = do
                  , caMinProgress
                  , caSocketPaths
                  , caConfigYaml
-                 , caSigningKeyFp
-                 , caDelegationCertFp
                  } <- execParser opts
 
     nc <- liftIO $ parseNodeConfigurationFP caConfigYaml
-    frmPtclRes <- runExceptT $ fromProtocol
-                                 (ncNodeId nc)
-                                 (ncNumCoreNodes nc)
-                                 (Just $ ncGenesisFile nc)
-                                 (ncReqNetworkMagic nc)
-                                 (ncPbftSignatureThresh nc)
-                                 (caDelegationCertFp)
-                                 (caSigningKeyFp)
-                                 (ncUpdate nc)
-                                 (ncProtocol nc)
+    frmPtclRes <- runExceptT $ mkConsensusProtocol nc Nothing
 
-    SomeProtocol p <- case frmPtclRes of
-                        Right (SomeProtocol p) -> pure (SomeProtocol p)
+    SomeConsensusProtocol p <- case frmPtclRes of
+                        Right p  -> pure p
                         Left err -> do putTextLn $ renderPtclInstantiationErr err
                                        exitFailure
 
@@ -70,8 +59,6 @@ data ChairmanArgs = ChairmanArgs {
     , caMinProgress :: !(Maybe BlockNo)
     , caSocketPaths :: ![SocketPath]
     , caConfigYaml :: !ConfigYamlFilePath
-    , caSigningKeyFp :: !(Maybe SigningKeyFile)
-    , caDelegationCertFp :: !(Maybe DelegationCertFile)
     }
 
 parseRunningTime :: Parser DiffTime
@@ -99,8 +86,6 @@ parseChairmanArgs =
       <*> optional parseProgress
       <*> (some $ parseSocketPath "Path to a cardano-node socket")
       <*> (ConfigYamlFilePath <$> parseConfigFile)
-      <*> (optional $ SigningKeyFile <$> parseSigningKey)
-      <*> (optional $ DelegationCertFile <$> parseDelegationCert)
 
 opts :: ParserInfo ChairmanArgs
 opts = info (parseChairmanArgs <**> helper)

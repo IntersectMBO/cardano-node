@@ -272,10 +272,7 @@ parseNodeConfiguration npm =
     RealProtocolMode NodeCLI{configFp} ->
       parseNodeConfigurationFP configFp
 
--- TODO:  we don't want ByronLegacy in Protocol.  Let's wrap Protocol with another
--- sum type for cases where it's required.
-data Protocol = ByronLegacy
-              | BFT
+data Protocol = BFT
               | Praos
               | MockPBFT
               | RealPBFT
@@ -283,7 +280,6 @@ data Protocol = ByronLegacy
 
 instance FromJSON Protocol where
   parseJSON (String str) = case str of
-                            "ByronLegacy" -> pure ByronLegacy
                             "BFT" -> pure BFT
                             "Praos" -> pure Praos
                             "MockPBFT" -> pure MockPBFT
