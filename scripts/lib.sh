@@ -28,10 +28,10 @@ dprint() {
 }
 export -f dprint
 
-oprint() {
-        echo "-- $*" >&2
+fprint() {
+        echo "-- FATAL:  $*" >&2
 }
-export -f oprint
+export -f fprint
 
 prebuild() {
         vprint "prebuilding the \"$1\" executable in \"${mode}\" mode.."
