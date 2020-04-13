@@ -1,18 +1,40 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC1090
 
-set -e
+app_usage() {
+        cat <<EOF
 
-. $(dirname $0)/lib.sh
-NODE="$(executable_runner cardano-node)"
+Run this like:
 
-TOPOLOGY=${TOPOLOGY:-"${configuration}/defaults/mainnet/topology.json"}
+   scripts/mainnet.sh --nix --profile --shutdown-on-slot-synced 21600
 
-ARGS=(  run
-        --database-path           "${root}/db/"
-        --topology                "${TOPOLOGY}"
-        --socket-path              "${root}/socket/mainnet-socket"
-        --config                  "${configuration}/defaults/mainnet/configuration.yaml"
-        --port                    7776
-)
+This syncs the mainnet chain.
 
-${NODE} "${ARGS[@]}"
+  Common options (going BEFORE app options or LATTER ARE IGNORED):
+
+    --profile                   enable profiling of the benchmarked node
+    --nix / --cabal / --stack   pick your poison
+    --help                      see for more common options
+
+  App options (going AFTER common options OR IGNORED):
+
+    --shutdown-on-slot-synced SLOT
+                                shut the node down on reaching
+                                  given mainnet slot
+
+    ..or any other 'cardano-node' option.
+
+EOF
+}
+
+. "$(dirname "$0")"/common.sh
+. "$(dirname "$0")"/lib-cli.sh
+. "$(dirname "$0")"/lib-node.sh
+
+while test -n "$1"
+do case "$1" in
+           --app-help ) app_usage; exit 1;;
+           * ) break;; esac; shift; done
+
+run_node --config-name 'mainnet' \
+  "$@"

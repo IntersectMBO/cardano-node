@@ -18,6 +18,8 @@ dist/
 stack.yaml.lock
 /genesis.*
 logs/
+/*.prof
+/*.prof.*
 
 /db
 /db-[0-9]

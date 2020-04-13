@@ -29,22 +29,13 @@ Please ensure that your /etc/nix/nix.conf has 'kvm' in its 'system-features' opt
 EOF
      exit 1; fi
 
-interactive='false'
-while test -n "$1"
-do case "$1" in
-           --interactive )          interactive='true';;
-           --cls ) echo -en "\ec";; * ) break;; esac; shift; done
+. $(dirname $0)/../common.sh
+. $(dirname $0)/../lib.sh
+. $(dirname $0)/../lib-cli.sh
 ###
 ###
-mnemonic="$(nix-shell -p diceware --run 'diceware --no-caps --num 2 --wordlist en_eff -d-')"
-timestamp="$(date +%s)"
-commit="$(git rev-parse HEAD | cut -c-16)"
-if git diff --quiet --exit-code
-then status=pristine
-else status=modified
-fi
 
-logfile="cluster.${timestamp}.${commit}.${status}.${mnemonic}.log"
+logfile="cluster.$(generate_mnemonic).log"
 rm -f cluster.log
 ln -s ${logfile} cluster.log
 announce() {
