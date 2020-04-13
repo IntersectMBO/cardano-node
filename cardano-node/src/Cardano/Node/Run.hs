@@ -37,9 +37,6 @@ import           Data.Version (showVersion)
 import           Network.HostName (getHostName)
 import           Network.Socket (AddrInfo)
 import           System.Directory (canonicalizePath, makeAbsolute)
-import qualified System.IO as IO
-import qualified System.IO.Error  as IO
-import qualified GHC.IO.Handle.FD as IO (fdToHandle)
 
 import           Paths_cardano_node (version)
 #ifdef UNIX
@@ -50,7 +47,7 @@ import           Cardano.BM.Data.BackendKind (BackendKind (..))
 import           Cardano.BM.Data.LogItem (LOContent (..),
                      PrivacyAnnotation (..), mkLOMeta)
 import           Cardano.BM.Data.Tracer (ToLogObject (..),
-                     TracingVerbosity (..), severityNotice, trTransformer)
+                     TracingVerbosity (..))
 import           Cardano.BM.Data.Transformers (setHostname)
 import           Cardano.BM.Trace
 
@@ -67,7 +64,7 @@ import           Ouroboros.Consensus.Node (NodeKernel,
                      DnsSubscriptionTarget (..), IPSubscriptionTarget (..),
                      RunNode (nodeNetworkMagic, nodeStartTime),
                      RemoteConnectionId)
-import qualified Ouroboros.Consensus.Node as Node (run)
+import qualified Ouroboros.Consensus.Node as Node (getChainDB, run)
 import           Ouroboros.Consensus.Node.ProtocolInfo
 import           Ouroboros.Consensus.NodeId
 import qualified Ouroboros.Consensus.Config as Consensus
@@ -84,6 +81,7 @@ import           Cardano.Config.Protocol
                     renderProtocolInstantiationError)
 import           Cardano.Config.Topology
 import           Cardano.Config.Types
+import           Cardano.Node.Shutdown
 import           Cardano.Tracing.Tracers
 #ifdef UNIX
 import           Cardano.Node.TUI.LiveView
@@ -197,7 +195,7 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
     Left err   -> (putTextLn $ show err) >> exitFailure
     Right addr -> return addr
 
-  withShutdownHandler npm trace $
+  withShutdownHandling npm trace $ \sfds ->
    Node.run
     (consensusTracers nodeTracers)
     (protocolTracers nodeTracers)
@@ -209,7 +207,10 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
     pInfo
     (customiseChainDbArgs $ dbValidation npm)
     identity -- No NodeParams customisation
-    $ \_registry nodeKernel -> onKernel nodeKernel
+    $ \registry nodeKernel -> do
+      maybeSpawnOnSlotSyncedShutdownHandler npm sfds trace registry
+        (Node.getChainDB nodeKernel)
+      onKernel nodeKernel
  where
   customiseChainDbArgs :: Bool
                        -> ChainDB.ChainDbArgs IO blk
@@ -305,48 +306,6 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
                                ]
 
          when mockValidateDB $ traceWith tracer "Performing DB validation"
-
--- | We provide an optional cross-platform method to politely request shut down.
---
--- The parent process passes us the file descriptor number of the read end of a
--- pipe, via the CLI with @--shutdown-ipc FD@. If the write end gets closed,
--- either deliberatly by the parent process or automatically because the parent
--- process itself terminated, then we initiate a clean shutdown.
---
-withShutdownHandler :: NodeProtocolMode -> Trace IO Text -> IO () -> IO ()
-withShutdownHandler (RealProtocolMode NodeCLI{shutdownIPC = Just (Fd fd)})
-                    trace action =
-    Async.race_ (wrapUninterruptableIO waitForEOF) action
-  where
-    waitForEOF :: IO ()
-    waitForEOF = do
-      hnd <- IO.fdToHandle fd
-      r   <- try $ IO.hGetChar hnd
-      case r of
-        Left e
-          | IO.isEOFError e -> traceWith tracer "received shutdown request"
-          | otherwise       -> throwIO e
-
-        Right _  ->
-          throwIO $ IO.userError "--shutdown-ipc FD does not expect input"
-
-    tracer :: Tracer IO Text
-    tracer = trTransformer MaximalVerbosity (severityNotice trace)
-
-withShutdownHandler _ _ action = action
-
--- | Windows blocking file IO calls like 'hGetChar' are not interruptable by
--- asynchronous exceptions, as used by async 'cancel' (as of base-4.12).
---
--- This wrapper works around that problem by running the blocking IO in a
--- separate thread. If the parent thread receives an async cancel then it
--- will return. Note however that in this circumstance the child thread may
--- continue and remain blocked, leading to a leak of the thread. As such this
--- is only reasonable to use a fixed number of times for the whole process.
---
-wrapUninterruptableIO :: IO a -> IO a
-wrapUninterruptableIO action = async action >>= wait
-
 
 --------------------------------------------------------------------------------
 -- Helper functions
