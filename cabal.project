@@ -3,6 +3,7 @@ index-state: 2020-04-01T00:00:00Z
 packages:
     cardano-config
     cardano-node
+    cardano-api
 
 package cardano-config
   ghc-options: -Wall -fwarn-redundant-constraints
