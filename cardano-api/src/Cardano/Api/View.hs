@@ -22,136 +22,85 @@ module Cardano.Api.View
   , writePublicKey
   , writeTxSigned
   , writeTxUnsigned
-
-  -- Exported for testing.
-  , rawToMultilineHex
-  , unRawToMultilineHex
   ) where
 
 import           Cardano.Api.CBOR
 import           Cardano.Api.Types
 import           Cardano.Api.Error
+import           Cardano.Api.TextView
 
 import           Cardano.Prelude
 
-import qualified Data.ByteString.Base16 as Base16
-import           Data.ByteString.Char8 (ByteString)
-import qualified Data.ByteString.Char8 as BS
-
 import           Control.Monad.Trans.Except.Extra (handleIOExceptT, hoistEither, runExceptT)
 
-import qualified Data.Text as Text
+import           Data.ByteString.Char8 (ByteString)
+import qualified Data.ByteString.Char8 as BS
 
 
 parseAddressView :: ByteString -> Either ApiError Address
 parseAddressView bs =
-    case BS.lines bs of
-      ("AddressByron" : rest) -> parseLines rest
-      ("AddressShelley" : rest) -> parseLines rest
-      [] -> Left $ ApiError "parseAddressView: Empty set of lines."
-      (m : _) -> Left $ ApiError (mconcat ["parseAddressView: Bad marker ", textShow m, "."])
-  where
-    parseLines :: [ByteString] -> Either ApiError Address
-    parseLines xs =
-      addressFromCBOR =<< unRawToMultilineHex (BS.concat xs)
+  join (addressFromCBOR . tvRawCBOR <$> parseTextView bs)
 
 parseKeyPairView :: ByteString -> Either ApiError KeyPair
 parseKeyPairView bs =
-    case BS.lines bs of
-      ("KeyPairByron" : rest) -> parseLines rest
-      ("KeyPairShelley" : rest) -> parseLines rest
-      [] -> Left $ ApiError "parseKeyPairView: Empty set of lines."
-      (m : _) -> Left $ ApiError (mconcat ["parseKeyPairView: Bad marker ", textShow m, "."])
-  where
-    parseLines :: [ByteString] -> Either ApiError KeyPair
-    parseLines xs =
-      keyPairFromCBOR =<< unRawToMultilineHex (BS.concat xs)
+  join (keyPairFromCBOR . tvRawCBOR <$> parseTextView bs)
 
 parsePublicKeyView :: ByteString -> Either ApiError PublicKey
 parsePublicKeyView bs =
-    case BS.lines bs of
-      ("PublicKeyByron" : rest) -> parseLines rest
-      ("PublicKeyShelley" : rest) -> parseLines rest
-      [] -> Left $ ApiError "parsePublicKeyView: Empty set of lines."
-      (m : _) -> Left $ ApiError (mconcat ["parsePublicKeyView: Bad marker ", textShow m, "."])
-  where
-    parseLines :: [ByteString] -> Either ApiError PublicKey
-    parseLines xs =
-      publicKeyFromCBOR =<< unRawToMultilineHex (BS.concat xs)
+  join (publicKeyFromCBOR . tvRawCBOR <$> parseTextView bs)
 
 parseTxSignedView :: ByteString -> Either ApiError TxSigned
 parseTxSignedView bs =
-    case BS.lines bs of
-      ("TxSignedByron" : rest) -> parseLines rest
-      ("TxSignedShelley" : rest) -> parseLines rest
-      [] -> Left $ ApiError "parseTxSignedView: Empty set of lines."
-      (m : _) -> Left $ ApiError (mconcat ["parseTxSignedView: Bad marker ", textShow m, "."])
-  where
-    parseLines :: [ByteString] -> Either ApiError TxSigned
-    parseLines xs =
-      txSignedFromCBOR =<< unRawToMultilineHex (BS.concat xs)
+  join (txSignedFromCBOR . tvRawCBOR <$> parseTextView bs)
 
 parseTxUnsignedView :: ByteString -> Either ApiError TxUnsigned
 parseTxUnsignedView bs =
-    case BS.lines bs of
-      ("TxUnsignedByron" : rest) -> parseLines rest
-      ("TxUnsignedShelley" : rest) -> parseLines rest
-      [] -> Left $ ApiError "parseTxUnsignedView: Empty set of lines."
-      (m : _) -> Left $ ApiError (mconcat ["parseTxUnsignedView: Bad marker ", textShow m, "."])
-  where
-    parseLines :: [ByteString] -> Either ApiError TxUnsigned
-    parseLines xs =
-      txUnsignedFromCBOR =<< unRawToMultilineHex (BS.concat xs)
+  join (txUnsignedFromCBOR . tvRawCBOR <$> parseTextView bs)
 
 renderAddressView :: Address -> ByteString
-renderAddressView kp =
-  BS.unlines $
-    case kp of
-      AddressByron {} -> "AddressByron" : xs
-      AddressShelley {} -> "AddressShelley" : xs
+renderAddressView addr =
+  case addr of
+    AddressByron {} -> renderTextView $ TextView "PublicKeyByron" "Free form text" cbor
+    AddressShelley {} -> renderTextView $ TextView "KeyPairShelley" "Free form text" cbor
   where
-    xs :: [ByteString]
-    xs = rawToMultilineHex $ addressToCBOR kp
+    cbor :: ByteString
+    cbor = addressToCBOR addr
 
 renderKeyPairView :: KeyPair -> ByteString
 renderKeyPairView kp =
-  BS.unlines $
-    case kp of
-      KeyPairByron {} -> "KeyPairByron" : xs
-      KeyPairShelley {} -> "KeyPairShelley" : xs
+  case kp of
+    KeyPairByron {} -> renderTextView $ TextView "PublicKeyByron" "Free form text" cbor
+    KeyPairShelley {} -> renderTextView $ TextView "KeyPairShelley" "Free form text" cbor
   where
-    xs :: [ByteString]
-    xs = rawToMultilineHex $ keyPairToCBOR kp
+    cbor :: ByteString
+    cbor = keyPairToCBOR kp
 
 renderPublicKeyView :: PublicKey -> ByteString
-renderPublicKeyView kp =
-  BS.unlines $
-    case kp of
-      PubKeyByron {} -> "PublicKeyByron" : xs
-      PubKeyShelley {} -> "PublicKeyShelley" : xs
+renderPublicKeyView pk =
+  case pk of
+    PubKeyByron {} -> renderTextView $ TextView "PublicKeyByron" "Free form text" cbor
+    PubKeyShelley {} -> renderTextView $ TextView "PubKeyShelley" "Free form text" cbor
   where
-    xs :: [ByteString]
-    xs = rawToMultilineHex $ publicKeyToCBOR kp
+    cbor :: ByteString
+    cbor = publicKeyToCBOR pk
 
 renderTxSignedView :: TxSigned -> ByteString
-renderTxSignedView tu =
-  BS.unlines $
-    case tu of
-      TxSignedByron {} -> "TxSignedByron" : xs
-      TxSignedShelley {} -> "TxSignedShelley" : xs
+renderTxSignedView ts =
+  case ts of
+    TxSignedByron {} -> renderTextView $ TextView "TxSignedByron" "Free form text" cbor
+    TxSignedShelley {} -> renderTextView $ TextView "TxSignedShelley" "Free form text" cbor
   where
-    xs :: [ByteString]
-    xs = rawToMultilineHex $ txSignedToCBOR tu
+    cbor :: ByteString
+    cbor = txSignedToCBOR ts
 
 renderTxUnsignedView :: TxUnsigned -> ByteString
 renderTxUnsignedView tu =
-  BS.unlines $
-    case tu of
-      TxUnsignedByron {} -> "TxUnsignedByron" : xs
-      TxUnsignedShelley {} -> "TxUnsignedShelley" : xs
+  case tu of
+    TxUnsignedByron {} -> renderTextView $ TextView "TxUnsignedByron" "Free form text" cbor
+    TxUnsignedShelley {} -> renderTextView $ TextView "TxUnsignedShelley" "Free form text" cbor
   where
-    xs :: [ByteString]
-    xs = rawToMultilineHex $ txUnsignedToCBOR tu
+    cbor :: ByteString
+    cbor = txUnsignedToCBOR tu
 
 -- -------------------------------------------------------------------------------------------------
 
@@ -209,26 +158,3 @@ writeTxUnsigned :: FilePath -> TxUnsigned -> IO (Either ApiError ())
 writeTxUnsigned path kp =
   runExceptT .
     handleIOExceptT (ApiErrorIO path) $ BS.writeFile path (renderTxUnsignedView kp)
-
--- -------------------------------------------------------------------------------------------------
-
--- | Convert a raw ByteString to hexadecimal and then line wrap
-rawToMultilineHex :: ByteString -> [ByteString]
-rawToMultilineHex = chunksOf . Base16.encode
-
--- | Convert from multiline hexadecimal to a raw ByteString.
-unRawToMultilineHex :: ByteString -> Either ApiError ByteString
-unRawToMultilineHex bs =
-  case Base16.decode (BS.concat $ BS.lines bs) of
-    (raw, "") -> Right raw
-    (_, err) -> Left $ ApiError ("unRawToMultilineHex: Unable to decode " <> textShow err)
-
-chunksOf :: ByteString -> [ByteString]
-chunksOf bs =
-  case BS.splitAt 80 bs of
-    (leading, "") -> [leading]
-    (leading, trailing) -> leading : chunksOf trailing
-
-
-textShow :: Show a => a -> Text
-textShow = Text.pack . show
