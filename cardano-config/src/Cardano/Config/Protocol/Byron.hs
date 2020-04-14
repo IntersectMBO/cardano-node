@@ -23,6 +23,7 @@ import qualified Data.Text as T
 
 import qualified Cardano.Chain.Genesis as Genesis
 import qualified Cardano.Chain.Update as Update
+import qualified Cardano.Chain.UTxO as UTxO
 import qualified Cardano.Crypto.Signing as Signing
 
 import           Ouroboros.Consensus.Cardano hiding (Protocol)
@@ -47,33 +48,45 @@ mkConsensusProtocolRealPBFT
   -> ExceptT ByronProtocolInstantiationError IO
              (Consensus.Protocol ByronBlock ProtocolRealPBFT)
 mkConsensusProtocolRealPBFT NodeConfiguration {
-                              ncGenesisFile,
+                              ncGenesisFile = GenesisFile genesisFile,
                               ncReqNetworkMagic,
                               ncPbftSignatureThresh,
                               ncUpdate
                             }
                             files = do
-    let genFile@(GenesisFile gFp) = ncGenesisFile
+    (genesisData, genesisHash) <-
+      firstExceptT (GenesisReadError genesisFile) $
+        Genesis.readGenesisData genesisFile
 
-    (_, genHash) <- readGenesis genFile
-
-    gc <- firstExceptT (GenesisConfigurationError gFp) $ Genesis.mkConfigFromFile
-             ncReqNetworkMagic
-             gFp
-             (Genesis.unGenesisHash genHash)
+    let genesisConfig :: Genesis.Config
+        genesisConfig =
+          Genesis.Config {
+            Genesis.configGenesisData       = genesisData,
+            Genesis.configGenesisHash       = genesisHash,
+            Genesis.configReqNetMagic       = ncReqNetworkMagic,
+            Genesis.configUTxOConfiguration = UTxO.defaultUTxOConfiguration
+            --TODO: add config support for the UTxOConfiguration if needed
+          }
 
     optionalLeaderCredentials <-
       case files of
         Just MiscellaneousFilepaths {
                delegCertFile,
                signKeyFile
-             }  -> readLeaderCredentials gc delegCertFile signKeyFile
+             }  -> readLeaderCredentials
+                     genesisConfig
+                     delegCertFile
+                     signKeyFile
         Nothing -> return Nothing
 
-    let p = protocolConfigRealPbft ncUpdate ncPbftSignatureThresh
-                                   gc optionalLeaderCredentials
+    let consensusProtocol =
+          protocolConfigRealPbft
+            ncUpdate
+            ncPbftSignatureThresh
+            genesisConfig
+            optionalLeaderCredentials
 
-    return p
+    return consensusProtocol
 
 
 -- | The plumbing to select and convert the appropriate configuration subset
@@ -98,18 +111,13 @@ protocolConfigRealPbft (Update appName appVer lastKnownBlockVersion)
       LastKnownBlockVersion {lkbvMajor, lkbvMinor, lkbvAlt} =
       Update.ProtocolVersion lkbvMajor lkbvMinor lkbvAlt
 
-readGenesis
-  :: GenesisFile
-  -> ExceptT ByronProtocolInstantiationError IO
-             (Genesis.GenesisData, Genesis.GenesisHash)
-readGenesis (GenesisFile fp) = firstExceptT (GenesisReadError fp) $ Genesis.readGenesisData fp
 
 readLeaderCredentials :: Genesis.Config
                       -> Maybe DelegationCertFile
                       -> Maybe SigningKeyFile
                       -> ExceptT ByronProtocolInstantiationError IO
                                  (Maybe PBftLeaderCredentials)
-readLeaderCredentials gc mDelCertFp mSKeyFp =
+readLeaderCredentials genesisConfig mDelCertFp mSKeyFp =
   case (mDelCertFp, mSKeyFp) of
     (Nothing, Nothing) -> pure Nothing
     (Just _, Nothing) -> left SigningKeyFilepathNotSpecified
@@ -130,7 +138,7 @@ readLeaderCredentials gc mDelCertFp mSKeyFp =
 
          bimapExceptT PbftError Just
            . hoistEither
-           $ mkPBftLeaderCredentials gc signingKey delegCert
+           $ mkPBftLeaderCredentials genesisConfig signingKey delegCert
 
   where
     deserialiseSigningKey :: LB.ByteString
