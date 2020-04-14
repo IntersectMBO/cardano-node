@@ -34,7 +34,6 @@ library
                        Cardano.CLI.Run
                        Cardano.CLI.Tx
                        Cardano.Common.Help
-                       Cardano.Common.LocalSocket
                        Cardano.Common.Parsers
                        Cardano.Common.TopHandler
                        Cardano.Node.Features.Node

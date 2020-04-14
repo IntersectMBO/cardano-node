@@ -10,11 +10,16 @@ module Cardano.Config.Topology
   ( NetworkTopology(..)
   , NodeHostAddress(..)
   , NodeSetup(..)
+  , NodeSockets(..)
   , RemoteAddress(..)
+  , chooseSocketPath
+  , localSocketPath
   , nodeAddressInfo
   , nodeAddressToSockAddr
+  , nodeLocalSocketAddrInfo
   , readTopologyFile
   , remoteAddressToNodeAddress
+  , removeStaleLocalSocket
   )
 where
 
@@ -32,19 +37,42 @@ import           Data.String.Conv (toS)
 import qualified Data.Text as T
 import           Text.Read (readMaybe)
 import           Network.Socket
+import           System.Directory (createDirectoryIfMissing, removeFile)
+import           System.FilePath (takeDirectory)
+import           System.IO.Error (isDoesNotExistError)
 import           System.Systemd.Daemon (getActivatedSocketsWithNames)
+
 
 import           Cardano.Config.Types
 
 import           Ouroboros.Consensus.Util.Condense (Condense (..))
 
 
-data NodeAddressError = ActivatedSocketsNotFound deriving Show
+data NodeAddressError = ActivatedSocketsNotFound
+                      | IncorrectNumberOfActivatedSockets Text
+                      deriving Show
 
---getHostname :: SockAddr -> HostName
---getHostname (SockAddrInet _ hostAddr) =  show $ IP.fromHostAddress hostAddr
---getHostname (SockAddrInet6 _ _ hostAddr6 _) = show $ IP.fromHostAddress6 hostAddr6
---getHostname (SockAddrUnix addr) = addr
+type TCPSockets = [AddrInfo]
+
+data NodeSockets = ActivatedSockets TCPSockets FilePath
+                 | NonActivatedSockets TCPSockets FilePath
+
+-- | This lets us override the socket path specified in the node configuration yaml file
+-- if required.
+chooseSocketPath :: Maybe YamlSocketPath -> Maybe CLISocketPath -> SocketPath
+chooseSocketPath Nothing Nothing = panic $ "Cardano.Config.Topology.chooseSocketPath: "
+                                         <> "Please specify a socket path either in the config yaml "
+                                         <> "file or on the command line."
+chooseSocketPath (Just yamlSockPath) Nothing = unYamlSocketPath yamlSockPath
+chooseSocketPath Nothing (Just cliSockPath) = unCLISocketPath cliSockPath
+chooseSocketPath _ (Just cliSockPath) = unCLISocketPath cliSockPath
+
+-- | Provide an filepath intended for a socket situated in 'socketDir'.
+-- When 'mkdir' is 'MkdirIfMissing', the directory is created.
+localSocketPath :: SocketPath -> IO FilePath
+localSocketPath (SocketFile fp) = do
+  createDirectoryIfMissing True $ takeDirectory fp
+  return fp
 
 nodeAddressToSockAddr :: NodeAddress -> ExceptT NodeAddressError IO SockAddr
 nodeAddressToSockAddr (NodeAddress addr port) =
@@ -53,42 +81,62 @@ nodeAddressToSockAddr (NodeAddress addr port) =
     Just (IP.IPv6 ipv6) -> pure $ SockAddrInet6 port 0 (IP.toHostAddress6 ipv6) 0
     Nothing -> pure $ SockAddrInet port 0 -- Could also be any IPv6 addr
 nodeAddressToSockAddr _ = pure $ SockAddrInet 9009 98989898
-  --skts <- liftIO $ getActivatedSockets
-  --skt:_ <- case skts of
-  --         Just skts' -> pure skts'
-  --         Nothing -> left ActivatedSocketsNotFound
-  --liftIO $ getSocketName skt
 
--- | Get TCP/IP sockets for local node
-nodeAddressInfo :: Tracer IO String -> NodeProtocolMode -> ExceptT NodeAddressError IO [AddrInfo]
-nodeAddressInfo trace' npm = do
+
+-- | Get TCP/IP and UNIX sockets for local node: (Activated TCP/IP sockets, Activated UNIX socket, Maybe Filepath for non-activated socket)
+nodeAddressInfo :: Tracer IO String -> NodeProtocolMode -> NodeConfiguration -> ExceptT NodeAddressError IO NodeSockets
+nodeAddressInfo trace' npm nc = do
     mActivatedSockets <- useActivatedSockets npm
     liftIO $ traceWith trace' $ "Activated socket names: " <> show mActivatedSockets
     case mActivatedSockets of
       Nothing -> do let NodeAddress hostAddr port = extractNodeAddress
-                    liftIO $ getAddrInfo (Just hints) (show <$> getAddress hostAddr) (Just $ show port)
-                                                 -- TODO: Handle these exceptions via ExceptT
-      Just (_:(ipv4skt,_):(ipv6skt,_): []) -> do addrInfo4 <- liftIO $ getSocketAddr ipv4skt
-                                                 addrInfo6 <- liftIO $ getSocketAddr ipv6skt
-                                                 pure $ addrInfo4 ++ addrInfo6
+                    localUnixSocketFp <- liftIO $ nodeLocalSocketAddrInfo nc npm
+                    tcpIpSocket <- liftIO $ getAddrInfo (Just tcpIpHints) (show <$> getAddress hostAddr) (Just $ show port)
+                    pure $ NonActivatedSockets tcpIpSocket localUnixSocketFp
 
-      _ ->  panic "nodeAddressInfo Failed"
+      Just (_:(ipv4skt,_):(ipv6skt,_):(localUnixSocket,_) : []) -> do
+                    -- TODO: Handle these exceptions via ExceptT
+                    addrInfo4 <- liftIO $ getSocketAddr ipv4skt
+                    addrInfo6 <- liftIO $ getSocketAddr ipv6skt
+                    name <- liftIO $ getSocketName localUnixSocket
+                    liftIO $ traceWith trace' $ "UNIX Socket name: " <> show name
+                    pure $ ActivatedSockets (addrInfo4 ++ addrInfo6) (show name)
+
+      _ ->  left . IncorrectNumberOfActivatedSockets
+                 $ "Cardano.Config.Topology.nodeAddressInfo: Was expecting IPv4 socket, IPv6 socket and a UNIX socket."
+                 <> "Make sure your .socket file has only these sockets, anymore or less will result in this failure."
  where
   getSocketAddr :: Socket -> IO [AddrInfo]
-  getSocketAddr skt = do name <- liftIO $ getSocketName skt
+  getSocketAddr skt = do name <- getSocketName skt
                          (ip, port) <- getNameInfo [NI_NUMERICHOST, NI_NUMERICSERV] True True name
-                         getAddrInfo (Just hints) ip port
+                         getAddrInfo (Just tcpIpHints) ip port
+  --getUNIXSocketAddr :: Socket -> IO [AddrInfo]
+  --getUNIXSocketAddr skt = do name <- getSocketName skt
+  --                           (hostname, servicename) <- getNameInfo [] True True name
+  --                           getAddrInfo (Just unixHints) hostname servicename
 
-  hints :: AddrInfo
-  hints = defaultHints { addrFlags = [AI_PASSIVE, AI_ADDRCONFIG]
-                       , addrSocketType = Stream
-                     --  , addrProtocol = 0
-                     --  , addrFamily = AF_INET6
-                       }
+  tcpIpHints :: AddrInfo
+  tcpIpHints = defaultHints { addrFlags = [AI_PASSIVE, AI_ADDRCONFIG]
+                            , addrSocketType = Stream
+                            }
+  --unixHints :: AddrInfo
+  --unixHints = defaultHints { addrFlags = [AI_CANONNAME]
+  --                         , addrSocketType = SeqPacket
+  --                         , addrFamily = AF_UNIX
+  --                         }
   extractNodeAddress :: NodeAddress
   extractNodeAddress = case npm of
                          (RealProtocolMode (NodeCLI {nodeAddr})) -> nodeAddr
                          (MockProtocolMode (NodeMockCLI {mockNodeAddr})) -> mockNodeAddr
+
+
+nodeLocalSocketAddrInfo :: NodeConfiguration -> NodeProtocolMode -> IO FilePath
+nodeLocalSocketAddrInfo nc npm = do
+  mCliSockPath <- case npm of
+                    MockProtocolMode (NodeMockCLI {mockMscFp}) -> pure $ socketFile mockMscFp
+                    RealProtocolMode (NodeCLI {mscFp}) -> pure $ socketFile mscFp
+
+  localSocketPath $ chooseSocketPath (ncSocketPath nc) mCliSockPath
 
 -- | Domain name with port number
 --
@@ -117,6 +165,21 @@ remoteAddressToNodeAddress (RemoteAddress addrStr port val) =
                  then Just $ NodeAddress (NodeHostAddress $ Just addr) port
                  else Nothing
 
+-- TODO: Convert to ExceptT
+-- | Remove the socket established with 'localSocketAddrInfo'.
+removeStaleLocalSocket :: NodeConfiguration -> NodeProtocolMode -> IO ()
+removeStaleLocalSocket nc npm = do
+  mCliSockPath <- case npm of
+                    MockProtocolMode (NodeMockCLI {mockMscFp}) -> pure $ socketFile mockMscFp
+                    RealProtocolMode (NodeCLI {mscFp}) -> pure $ socketFile mscFp
+
+  (SocketFile socketFp) <- pure $ chooseSocketPath (ncSocketPath nc) mCliSockPath
+
+  removeFile socketFp
+    `catch` \e ->
+      if isDoesNotExistError e
+        then return ()
+        else throwIO e
 
 instance Condense RemoteAddress where
   condense (RemoteAddress addr port val) =

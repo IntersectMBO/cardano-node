@@ -60,8 +60,8 @@ import           Cardano.CLI.Key
 import           Cardano.CLI.Ops
 import           Cardano.CLI.Parsers
 import           Cardano.CLI.Tx
-import           Cardano.Common.LocalSocket
 import           Cardano.Config.Types
+import           Cardano.Config.Topology
 
 
 runCommand :: ClientCommand -> ExceptT CliError IO ()

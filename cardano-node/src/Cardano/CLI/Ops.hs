@@ -96,10 +96,10 @@ import           Ouroboros.Network.Protocol.LocalTxSubmission.Type
 import           Ouroboros.Network.Protocol.LocalTxSubmission.Client
                    (localTxSubmissionClientPeer)
 
-import           Cardano.Common.LocalSocket (chooseSocketPath)
 import           Cardano.Config.Protocol
                    (Protocol(..), ProtocolInstantiationError
                    , SomeProtocol(..), fromProtocol, renderProtocolInstantiationError)
+import           Cardano.Config.Topology (chooseSocketPath)
 import           Cardano.Config.Types
 import qualified Cardano.CLI.Legacy.Byron as Legacy
 

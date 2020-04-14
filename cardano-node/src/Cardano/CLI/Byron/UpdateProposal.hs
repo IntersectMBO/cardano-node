@@ -26,6 +26,7 @@ import           Cardano.Chain.Update
                     SoftforkRule(..), SoftwareVersion(..), SystemTag(..), recoverUpId,
                     signProposal)
 import           Cardano.Config.Types
+import           Cardano.Config.Topology
 import           Ouroboros.Consensus.Util.Condense (condense)
 import           Cardano.Crypto.Signing (SigningKey, noPassSafeSigner)
 import           Cardano.Node.Submission (submitGeneralTx)
@@ -37,7 +38,6 @@ import           Ouroboros.Consensus.Node.ProtocolInfo (pInfoConfig)
 import           Ouroboros.Network.NodeToClient (IOManager)
 
 import           Cardano.CLI.Ops (CliError(..), readGenesis, withRealPBFT)
-import           Cardano.Common.LocalSocket
 
 
 data ParametersToUpdate =

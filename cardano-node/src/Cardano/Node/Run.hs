@@ -82,7 +82,6 @@ import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 import           Ouroboros.Consensus.Storage.ImmutableDB (ValidationPolicy (..))
 import           Ouroboros.Consensus.Storage.VolatileDB (BlockValidationPolicy (..))
 
-import           Cardano.Common.LocalSocket
 import           Cardano.Config.Protocol
                    (SomeProtocol(..), fromProtocol, renderProtocolInstantiationError)
 import           Cardano.Config.Topology
@@ -180,14 +179,22 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
   -- Node configuration
   nc <- parseNodeConfiguration npm
 
-  -- Create TCP/IP sockets for node to node?
-  eitherAddrs <- runExceptT $ nodeAddressInfo tracer npm
+  -- Create TCP/IP sockets and UNIX socket for node.
+  eNodeSockets <- runExceptT $ nodeAddressInfo tracer npm nc
 
-  addrs <- either (\err -> panic $ "Cardano.Config.Topology.nodeAddressInfo: " <> show err) pure eitherAddrs
+  (tcpIpAddrs, localSocketFp) <- case eNodeSockets of
+                                   Left err -> panic $ "Cardano.Config.Topology.nodeAddressInfo: " <> show err
+                                   Right (NonActivatedSockets tcpSockets unixFp) -> do
+                                     pure (tcpSockets, unixFp)
+                                   Right (ActivatedSockets tcpSockets unixSockFp) -> do
+                                     pure (tcpSockets, unixSockFp)
 
-  createTracers npm trace tracer cfg addrs
 
-  traceWith tracer $ "NodeAddress: " <> show addrs
+
+  createTracers npm trace tracer cfg tcpIpAddrs
+
+  traceWith tracer $ "TCPIP NodeAddress: " <> show tcpIpAddrs
+  traceWith tracer $ "nodeAddressInfo UNIX Socket: " <> show localSocketFp
 
   dbPath <- canonDbPath npm
 
@@ -195,10 +202,6 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
 
   nt <- either (\err -> panic $ "Cardano.Node.Run.readTopologyFile: " <> err) pure eitherTopology
 
-  -- UNIX socket filepath
-  myLocalAddr <- nodeLocalSocketAddrInfo nc npm
-
-  traceWith tracer $ "nodeLocalSocketAddrInfo result(UNIX SOCKET FILEPATH): " <> show myLocalAddr
 
   let diffusionTracers :: DiffusionTracers
       diffusionTracers = createDiffusionTracers nodeTracers
@@ -215,7 +218,7 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
       ipProducers :: IPSubscriptionTarget
       ipProducers = ipSubscriptionTargets ips
       diffusionArguments :: DiffusionArguments
-      diffusionArguments = createDiffusionArguments addrs myLocalAddr ipProducers dnsProducers
+      diffusionArguments = createDiffusionArguments tcpIpAddrs localSocketFp ipProducers dnsProducers
 
   removeStaleLocalSocket nc npm
 
