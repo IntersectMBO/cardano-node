@@ -21,6 +21,7 @@ library
                        Cardano.Config.Protocol
                        Cardano.Config.Protocol.Mock
                        Cardano.Config.Protocol.Byron
+                       Cardano.Config.ShelleyGenesis
                        Cardano.Config.Topology
                        Cardano.Config.Types
                        Cardano.Tracing.Constraints
@@ -32,11 +33,14 @@ library
                      , bytestring
                      , canonical-json
                      , cardano-binary
+                     , cardano-crypto-class
                      , cardano-crypto-wrapper
                      , cardano-ledger
                      , cardano-prelude
                      , cardano-shell
+                     , cardano-slotting
                      , cborg
+                     , containers
                      , contra-tracer
                      , directory
                      , file-embed
@@ -55,16 +59,19 @@ library
                      , ouroboros-consensus-byron
                      , ouroboros-consensus-cardano
                      , ouroboros-consensus-mock
+                     , ouroboros-consensus-shelley
                      , ouroboros-network
                      , ouroboros-network-framework
                      , process
                      , iproute
                      , safe-exceptions
                      , scientific
+                     , shelley-spec-ledger
                      , string-conv
                      , stm
                      , template-haskell
                      , text
+                     , time
                      , transformers
                      , transformers-except
                      , typed-protocols
