@@ -33,16 +33,11 @@ import qualified Cardano.Crypto.Signing as Signing
 import           Cardano.Tracing.ToObjectOrphans ()
 
 import           Ouroboros.Consensus.Block (BlockProtocol)
-import           Ouroboros.Consensus.BlockchainTime (SlotLength, slotLengthFromSec)
 import           Ouroboros.Consensus.Cardano hiding (Protocol)
 import qualified Ouroboros.Consensus.Cardano as Consensus
-import           Ouroboros.Consensus.Mock.Ledger.Block (defaultSimpleBlockConfig)
-import           Ouroboros.Consensus.Node.ProtocolInfo (NumCoreNodes (..))
 
 import           Ouroboros.Consensus.Byron.Ledger (ByronBlock)
 import           Ouroboros.Consensus.Node.Run (RunNode)
-import           Ouroboros.Consensus.NodeId (CoreNodeId (..), NodeId (..))
-import           Ouroboros.Consensus.Protocol.Abstract (SecurityParam (..))
 
 import           Cardano.Config.Types
                    (NodeConfiguration(..), Protocol (..),
@@ -50,6 +45,8 @@ import           Cardano.Config.Types
                     DelegationCertFile (..), SigningKeyFile (..),
                     Update (..), LastKnownBlockVersion (..))
 import           Cardano.Tracing.Constraints (TraceConstraints)
+
+import           Cardano.Config.Protocol.Mock
 
 
 ------------------------------------------------------------------------------
@@ -66,95 +63,20 @@ mkConsensusProtocol
   :: NodeConfiguration
   -> Maybe MiscellaneousFilepaths
   -> ExceptT ProtocolInstantiationError IO SomeConsensusProtocol
-mkConsensusProtocol config@NodeConfiguration{ncProtocol} =
-  case ncProtocol of
-    BFT      -> mkConsensusProtocolBFT      config
-    Praos    -> mkConsensusProtocolPraos    config
-    MockPBFT -> mkConsensusProtocolMockPBFT config
-    RealPBFT -> mkConsensusProtocolRealPBFT config
+mkConsensusProtocol config@NodeConfiguration{ncProtocol} files =
+    case ncProtocol of
+      -- Mock protocols
+      BFT      -> firstExceptT MockProtocolInstantiationError $
+                    SomeConsensusProtocol <$> mkConsensusProtocolBFT   config
 
+      MockPBFT -> firstExceptT MockProtocolInstantiationError $
+                    SomeConsensusProtocol <$> mkConsensusProtocolPBFT  config
 
-------------------------------------------------------------------------------
--- Mock/testing protocols
---
+      Praos    -> firstExceptT MockProtocolInstantiationError $
+                    SomeConsensusProtocol <$> mkConsensusProtocolPraos config
 
-
-mkConsensusProtocolBFT
-  :: NodeConfiguration
-  -> Maybe MiscellaneousFilepaths
-  -> ExceptT ProtocolInstantiationError IO SomeConsensusProtocol
-mkConsensusProtocolBFT NodeConfiguration {
-                         ncNodeId,
-                         ncNumCoreNodes
-                       } _ =
-  hoistEither $ mockSomeProtocol ncNodeId ncNumCoreNodes $ \cid numCoreNodes ->
-    Consensus.ProtocolMockBFT numCoreNodes cid mockSecurityParam
-      (defaultSimpleBlockConfig mockSecurityParam mockSlotLength)
-
-
-mkConsensusProtocolPraos
-  :: NodeConfiguration
-  -> Maybe MiscellaneousFilepaths
-  -> ExceptT ProtocolInstantiationError IO SomeConsensusProtocol
-mkConsensusProtocolPraos NodeConfiguration {
-                           ncNodeId,
-                           ncNumCoreNodes
-                         } _ =
-  hoistEither $ mockSomeProtocol ncNodeId ncNumCoreNodes $ \cid numCoreNodes ->
-    Consensus.ProtocolMockPraos
-      numCoreNodes
-      cid
-      PraosParams {
-          praosSecurityParam = mockSecurityParam
-        , praosSlotsPerEpoch = 3
-        , praosLeaderF       = 0.5
-        , praosLifetimeKES   = 1000000
-        }
-      (defaultSimpleBlockConfig mockSecurityParam (slotLengthFromSec 2))
-
-
-mkConsensusProtocolMockPBFT
-  :: NodeConfiguration
-  -> Maybe MiscellaneousFilepaths
-  -> ExceptT ProtocolInstantiationError IO SomeConsensusProtocol
-mkConsensusProtocolMockPBFT NodeConfiguration {
-                              ncNodeId,
-                              ncNumCoreNodes
-                            } _ =
-  hoistEither $ mockSomeProtocol ncNodeId ncNumCoreNodes $ \cid numCoreNodes@(NumCoreNodes numNodes) ->
-    Consensus.ProtocolMockPBFT
-      PBftParams { pbftSecurityParam      = mockSecurityParam
-                 , pbftNumNodes           = numCoreNodes
-                 , pbftSignatureThreshold = (1.0 / fromIntegral numNodes) + 0.1
-                 }
-      (defaultSimpleBlockConfig mockSecurityParam mockSlotLength)
-      cid
-
-mockSecurityParam :: SecurityParam
-mockSecurityParam = SecurityParam 5
-
-mockSlotLength :: SlotLength
-mockSlotLength = slotLengthFromSec 20
-
--- | Helper for creating a 'SomeConsensusProtocol' for a mock protocol that
--- needs the 'CoreNodeId' and NumCoreNodes'. If one of them is missing from the
--- 'CardanoConfiguration', a 'MissingNodeInfo' exception is thrown.
-mockSomeProtocol
-  :: (RunNode blk, TraceConstraints blk)
-  => Maybe NodeId
-  -> Maybe Word64
-  -- ^ Number of core nodes
-  -> (CoreNodeId -> NumCoreNodes -> Consensus.Protocol blk (BlockProtocol blk))
-  -> Either ProtocolInstantiationError SomeConsensusProtocol
-mockSomeProtocol nId mNumCoreNodes mkProtocol =  do
-
-    coreNodeId   <- case nId of
-                      Just (CoreId coreNodeId) -> pure coreNodeId
-                      _                        -> Left MissingCoreNodeId
-    numCoreNodes <- maybe (Left MissingNumCoreNodes) Right mNumCoreNodes
-
-    let p = mkProtocol coreNodeId (NumCoreNodes numCoreNodes)
-    return $ SomeConsensusProtocol p
+      -- Real protocols
+      RealPBFT -> mkConsensusProtocolRealPBFT config files
 
 
 ------------------------------------------------------------------------------
@@ -266,11 +188,10 @@ data ProtocolInstantiationError =
   | DelegationCertificateFilepathNotSpecified
   | GenesisConfigurationError !FilePath !Genesis.ConfigurationError
   | GenesisReadError !FilePath !Genesis.GenesisDataError
-  | MissingCoreNodeId
-  | MissingNumCoreNodes
   | PbftError !PBftLeaderCredentialsError
   | SigningKeyDeserialiseFailure !FilePath !DeserialiseFailure
   | SigningKeyFilepathNotSpecified
+  | MockProtocolInstantiationError MockProtocolInstantiationError
   deriving Show
 
 
@@ -285,11 +206,12 @@ renderProtocolInstantiationError pie =
                                                        <> " Error: " <> (T.pack $ show genesisConfigError)
     GenesisReadError fp err ->  "There was an error parsing the genesis file: " <> toS fp
                                 <> " Error: " <> (T.pack $ show err)
-    MissingCoreNodeId -> "Missing core node id"
-    MissingNumCoreNodes -> "NumCoreNodes: not specified in configuration yaml file."
     -- TODO: Implement PBftLeaderCredentialsError render function in ouroboros-network
     PbftError pbftLeaderCredentialsError -> "PBFT leader credentials error: " <> (T.pack $ show pbftLeaderCredentialsError)
     SigningKeyDeserialiseFailure fp deserialiseFailure -> "Signing key deserialisation error in: " <> toS fp
                                                            <> " Error: " <> (T.pack $ show deserialiseFailure)
     SigningKeyFilepathNotSpecified -> "Signing key filepath not specified"
+
+    MockProtocolInstantiationError mpie ->
+      renderMockProtocolInstantiationError mpie
 
