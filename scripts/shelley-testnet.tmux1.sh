@@ -56,8 +56,8 @@ do tmux select-pane -t ${i}
       DEFAULT_TRACE=${DEFAULT_TRACE};
 
       . ${__COMMON_SRCROOT}/scripts/common.sh;
-      . ${__COMMON_SRCROOT}/lib-cli.sh;
-      . ${__COMMON_SRCROOT}/lib-node.sh;
+      . ${__COMMON_SRCROOT}/scripts/lib-cli.sh;
+      . ${__COMMON_SRCROOT}/scripts/lib-node.sh;
 
       run_node $(run_node_args ${i})" \
      C-m
