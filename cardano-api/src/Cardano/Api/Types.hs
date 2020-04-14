@@ -2,12 +2,15 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module Cardano.Api.Types
   ( Address (..)
   , KeyPair (..)
   , Network (..)
   , PublicKey (..)
+  , ShelleyKeyDiscriminator (..)
+  , ShelleyVerificationKey (..)
   , TxSigned (..)
   , TxUnsigned (..)
   , TxWitness (..)
@@ -15,11 +18,17 @@ module Cardano.Api.Types
 
 import           Cardano.Prelude
 
+import           Cardano.Api.Orphans ()
+
 import qualified Cardano.Chain.Common as Byron
 import qualified Cardano.Chain.UTxO as Byron
 import qualified Cardano.Crypto as Crypto
 
 import           Data.Vector (Vector)
+
+import           Ouroboros.Consensus.Shelley.Protocol.Crypto (TPraosStandardCrypto)
+
+import           Shelley.Spec.Ledger.Keys (KeyDiscriminator, SKey, VKey, VKeyGenesis)
 
 
 -- The 'Address' data type in 'cardano-sl' is a design train wreck.
@@ -35,13 +44,23 @@ data KeyPair
   -- An 'XPub' is 32 bytes of public key and 32 bytes of Chaincode which is used in the
   -- Byron address derivation scheme.
   = KeyPairByron !Crypto.VerificationKey !Crypto.SigningKey
-  | KeyPairShelley -- Exact crypto not ready yet.
+  | KeyPairShelley !ShelleyVerificationKey !(SKey TPraosStandardCrypto)
+  deriving (Generic, NFData, Show)
+  deriving anyclass NoUnexpectedThunks
+
+newtype ShelleyKeyDiscriminator = ShelleyKeyDiscriminator KeyDiscriminator
+  deriving (Generic, Show)
+  deriving newtype (NFData, NoUnexpectedThunks)
+
+data ShelleyVerificationKey
+  = GenesisShelleyVerificationKey !(VKeyGenesis TPraosStandardCrypto)
+  | RegularShelleyVerificationKey !(VKey TPraosStandardCrypto)
   deriving (Generic, NFData, Show)
   deriving anyclass NoUnexpectedThunks
 
 data PublicKey
   = PubKeyByron !Network !Crypto.VerificationKey
-  | PubKeyShelley -- Placeholder.
+  | PubKeyShelley !Network !ShelleyVerificationKey
   deriving (Generic, NFData, Show)
   deriving anyclass NoUnexpectedThunks
 
