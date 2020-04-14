@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
-# shellcheck disable=SC1090,SC2154,SC2155,SC2034,SC2039,SC2240,SC2124
+# shellcheck disable=SC1090,SC2154,SC2155,SC2034,SC2039,SC2240,SC2124,SC2046
 ## Don't ask, the story is too sad -- function env sharing & tmux involved.
 set -o allexport
 
-. "$(dirname "$0")"/lib.sh "$(dirname "$0")"
+__COMMON_SRCROOT=${__COMMON_SRCROOT:-"$(realpath $(dirname "$0")/..)"}
+. "${__COMMON_SRCROOT}/scripts/lib.sh" "${__COMMON_SRCROOT}"
 
 usage() {
         cat <<EOF
@@ -52,10 +53,14 @@ setup_recursion_and_verbosity() {
         then verbose=t
         fi
         if test -z "${debug}" -a -n "${DEFAULT_DEBUG}"
-        then debug=t
+        then verbose=t; debug=t;
+        fi
+        if test -z "${trace}" -a -n "${DEFAULT_TRACE}"
+        then verbose=t; debug=t; trace=t; set -x
         fi
         export DEFAULT_VERBOSE=${verbose}
         export DEFAULT_DEBUG=${debug}
+        export DEFAULT_TRACE=${trace}
 }
 
 ## Part of common init, see below.
@@ -69,9 +74,9 @@ setup_executables() {
         elif test -n "${SCRIPTS_LIB_SH_RECURSE_MODE}"
         then mode=${SCRIPTS_LIB_SH_RECURSE_MODE}
              dprint "inheriting ${SCRIPTS_LIB_SH_RECURSE_MODE} mode in recursed call"
-        elif test -d "${root}/"'dist-newstyle'
+        elif test -d "${__COMMON_SRCROOT}/dist-newstyle"
         then mode='cabal'
-        elif test -d "${root}/"'.stack-work'
+        elif test -d "${__COMMON_SRCROOT}/.stack-work"
         then mode='stack'
         else mode=$default_mode
         fi
@@ -112,10 +117,8 @@ setup_nix() {
 ##      downstream, case-specific parsing of remaining args.
 ##   3. resolve verbosity and recursion issues
 
-self=$(basename "$0")
-export root="$(realpath "$(dirname "$0")"/..)"
-export configuration="${root}/configuration"
-export scripts="${root}/scripts"
+export configuration="${__COMMON_SRCROOT}/configuration"
+export scripts="${__COMMON_SRCROOT}/scripts"
 
 export default_mode='nix'
 export mode='default'
@@ -142,7 +145,7 @@ do case "$1" in
            --quiet )              verbose=;;
            --verbose )            verbose=t;;
            --debug )              debug=t; verbose=t;;
-           --trace )              debug=t; verbose=t; set -x;;
+           --trace )              debug=t; verbose=t; trace=t; set -x;;
 
            --help )               usage; exit 1;;
            * ) break;; esac; shift; done
@@ -150,6 +153,7 @@ do case "$1" in
 setup_recursion_and_verbosity
 setup_executables
 
+vprint_top "git commit:  $(git rev-parse HEAD)"
 vprint_top "process group id (PGID): $$"
 vprint_top "to list the process tree:  pstree -Tulap $$"
 vprint_top "..or, interactively:       watch --interval=1 \"pstree -Tulap $$\""

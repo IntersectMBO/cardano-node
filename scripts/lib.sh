@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # shellcheck disable=SC1090,SC2034,SC2154,SC2039,SC1007,SC2207,SC2145,SC2155,SC2206
-## Don't import this file directly,
-## unless you provide it the path to 'scripts/' as first argument.
+## Don't import this file directly.
 
-#set -e
+## TODO:  debug the spectacular failure this causes..
+# set -e
 
-. "$1"/lib-nix.sh
+. "${__COMMON_SRCROOT}/scripts/lib-nix.sh"
 
 ##
 ## This depends on the setup done by scripts/common.sh
@@ -28,10 +28,10 @@ dprint() {
 }
 export -f dprint
 
-oprint() {
-        echo "-- $*" >&2
+fprint() {
+        echo "-- FATAL:  $*" >&2
 }
-export -f oprint
+export -f fprint
 
 prebuild() {
         vprint "prebuilding the \"$1\" executable in \"${mode}\" mode.."
@@ -62,14 +62,12 @@ run_quiet()
         do case "$1" in
            --build-extra )    bld_extra=$2; shift;;
            * ) break;; esac; shift; done
-        local new_bld_extra=$(
-                case ${mode} in
-                        nix )               echo -n '--no-build-output --quiet';;
-                        cabal )             echo -n '-v0';;
-                        stack | stack-nix ) echo -n '--silent';; esac;
-                echo -n " ${bld_extra}";)
+        case ${mode} in
+                nix )               bld_extra="--no-build-output --quiet ${bld_extra}";;
+                cabal )             bld_extra="-v0 ${bld_extra}";;
+                stack | stack-nix ) bld_extra="--silent ${bld_extra}";; esac;
 
-        actually_run --build-extra "${new_bld_extra}" "$@"
+        actually_run --build-extra "${bld_extra}" "$@"
 }
 export -f run_quiet
 

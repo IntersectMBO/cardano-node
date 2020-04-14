@@ -8,10 +8,9 @@ run_3node_cluster() {
         setup_genesis_for_config "${config}"
         prebuild 'cardano-node'
 
-        self=$(basename "$0")
         tmux new-session \
           -E \
-          -s "${self%.sh}" \
+          -s "3node-cluster-${config}" \
           -n 'Main' \
           "${scripts}/shelley-testnet.tmux0.sh '${config}' '${topo}' '${delegate}'"
 }
