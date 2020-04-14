@@ -53,4 +53,5 @@ parseClientCommand =
     , parseTxRelatedValues
     , parseLocalNodeQueryValues
     , parseMiscellaneous
+    , parseShelley
     ]

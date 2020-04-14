@@ -33,6 +33,8 @@ library
                        Cardano.CLI.Ops
                        Cardano.CLI.Parsers
                        Cardano.CLI.Run
+                       Cardano.CLI.Shelley.Parsers
+                       Cardano.CLI.Shelley.Run
                        Cardano.CLI.Tx
                        Cardano.Common.Help
                        Cardano.Common.LocalSocket

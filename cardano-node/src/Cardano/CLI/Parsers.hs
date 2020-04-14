@@ -7,12 +7,14 @@ module Cardano.CLI.Parsers
   , parseLocalNodeQueryValues
   , parseMiscellaneous
   , parseRequiresNetworkMagic
+  , parseShelley
   , parseTxRelatedValues
   ) where
 
 import           Cardano.CLI.Common.Parsers
 import           Cardano.CLI.Genesis
 import           Cardano.CLI.Key
+import           Cardano.CLI.Shelley.Parsers (parseShelleyCommands)
 
 import           Cardano.Common.Parsers
 
@@ -215,6 +217,18 @@ parseMiscellaneous = subparser $ mconcat
       $ PrettyPrintCBOR
           <$> parseFilePath "filepath" "Filepath of CBOR file."
   ]
+
+parseShelley :: Parser ClientCommand
+parseShelley =
+  subparser $ mconcat
+    [ commandGroup "Shelley specific commands"
+    , metavar "Shelley specific commands"
+    , command'
+        "shelley"
+        "Shelley specific commands"
+        $ ShelleyClientCommand <$> parseShelleyCommands
+    ]
+
 
 parseTestnetBalanceOptions :: Parser TestnetBalanceOptions
 parseTestnetBalanceOptions =
