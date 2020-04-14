@@ -5,7 +5,7 @@ module Test.Cardano.Api.Gen
   , genNetwork
   , genPublicKey
   , genPublicKeyByron
-
+  , genTextView
   , genTxSigned
   , genTxSignedByron
   , genTxUnsigned
@@ -17,6 +17,7 @@ import           Cardano.Binary (serialize)
 import           Cardano.Crypto (hashRaw)
 import           Cardano.Prelude
 
+import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import           Data.Coerce (coerce)
 
@@ -66,6 +67,13 @@ genPublicKey =
 genPublicKeyByron :: Gen PublicKey
 genPublicKeyByron =
   mkPublicKey <$> genKeyPairByron <*> genNetwork
+
+genTextView :: Gen TextView
+genTextView =
+  TextView
+    <$> Gen.utf8 (Range.linear 1 20) Gen.alpha
+    <*> Gen.utf8 (Range.linear 1 80) (Gen.filter (/= '\n') Gen.ascii)
+    <*> Gen.bytes (Range.linear 0 500)
 
 genTxSigned :: Gen TxSigned
 genTxSigned =

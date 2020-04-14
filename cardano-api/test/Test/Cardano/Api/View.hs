@@ -26,6 +26,12 @@ prop_roundtrip_multiline_hex =
     bs <- BS.pack <$> H.forAll (Gen.string (Range.linear 0 500) (Gen.element ['\0' .. '\xff']))
     H.tripping bs (BS.unlines . rawToMultilineHex) unRawToMultilineHex
 
+prop_roundtrip_TextView :: Property
+prop_roundtrip_TextView =
+  H.property $ do
+    tv <- H.forAll genTextView
+    H.tripping tv renderTextView parseTextView
+
 prop_roundtrip_Address_view :: Property
 prop_roundtrip_Address_view =
   H.property $ do

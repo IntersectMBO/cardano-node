@@ -17,6 +17,7 @@ data ApiError
   = ApiError !Text
   | ApiErrorCBOR !DecoderError
   | ApiErrorIO !FilePath !IOException
+  | ApiTextView !Text
   deriving (Eq, Show)
 
 renderApiError :: ApiError -> Text
@@ -25,6 +26,7 @@ renderApiError ae =
     ApiError txt -> txt
     ApiErrorCBOR de -> sformat build de
     ApiErrorIO fp e -> mconcat [Text.pack fp, ": ", textShow e]
+    ApiTextView txt -> mconcat ["TextView: ", txt]
 
 
 textShow :: Show a => a -> Text
