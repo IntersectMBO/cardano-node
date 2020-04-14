@@ -19,6 +19,8 @@ library
                        Cardano.Config.Logging
                        Cardano.Config.Orphanage
                        Cardano.Config.Protocol
+                       Cardano.Config.Protocol.Mock
+                       Cardano.Config.Protocol.Byron
                        Cardano.Config.Topology
                        Cardano.Config.Types
                        Cardano.Tracing.Constraints
