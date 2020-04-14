@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # shellcheck disable=SC1090,SC2034,SC2154,SC2039,SC1007,SC2207,SC2145,SC2155,SC2206
-## Don't import this file directly,
-## unless you provide it the path to 'scripts/' as first argument.
+## Don't import this file directly.
 
-#set -e
+## TODO:  debug the spectacular failure this causes..
+# set -e
 
-. "$1"/lib-nix.sh
+. "${__COMMON_SRCROOT}/scripts/lib-nix.sh"
 
 ##
 ## This depends on the setup done by scripts/common.sh

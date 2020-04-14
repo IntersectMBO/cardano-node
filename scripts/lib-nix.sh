@@ -21,7 +21,7 @@ fill_nix_executable_cache_entry() {
         vprint "filling the Nix executable cache for \"$1\".."
         NIX_BUILD=(
                 nix-build
-                "${root}/default.nix"
+                "${__COMMON_SRCROOT}/default.nix"
                 --no-out-link
                 ${extra}
                 ${defaultnix_args}

@@ -104,8 +104,8 @@ _run_node() {
         state_id="${state_id:-$config_id}"
 
         local NODE_ARGS=(
-          --database-path    "${root}/db/${state_id}/"
-          --socket-path      "${root}/socket/${state_id}-socket"
+          --database-path    "${__COMMON_SRCROOT}/db/${state_id}/"
+          --socket-path      "${__COMMON_SRCROOT}/socket/${state_id}-socket"
           --port             "${port}"
           "$@"
         )
