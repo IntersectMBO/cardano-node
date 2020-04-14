@@ -62,14 +62,12 @@ run_quiet()
         do case "$1" in
            --build-extra )    bld_extra=$2; shift;;
            * ) break;; esac; shift; done
-        local new_bld_extra=$(
-                case ${mode} in
-                        nix )               echo -n '--no-build-output --quiet';;
-                        cabal )             echo -n '-v0';;
-                        stack | stack-nix ) echo -n '--silent';; esac;
-                echo -n " ${bld_extra}";)
+        case ${mode} in
+                nix )               bld_extra="--no-build-output --quiet ${bld_extra}";;
+                cabal )             bld_extra="-v0 ${bld_extra}";;
+                stack | stack-nix ) bld_extra="--silent ${bld_extra}";; esac;
 
-        actually_run --build-extra "${new_bld_extra}" "$@"
+        actually_run --build-extra "${bld_extra}" "$@"
 }
 export -f run_quiet
 
