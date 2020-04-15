@@ -26,29 +26,29 @@ package ouroboros-consensus-mock
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: 42c57fed487b61c13a68a1600a6675ad987822d0
-  --sha256: 0iab9bwa7my1qb3nnwml8zv4g4zxi5rrypkfmdjs558yh00ykskq
+  tag: 6e71b0e3ff0c3fe151d47b1c3c5ea871d1bc70b9
+  --sha256: 02v06bflynffbpm13qzvqqhckh3w8fhc6npvyrfsdd66kk5q2s8b
   subdir: binary
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: 42c57fed487b61c13a68a1600a6675ad987822d0
-  --sha256: 0iab9bwa7my1qb3nnwml8zv4g4zxi5rrypkfmdjs558yh00ykskq
+  tag: 6e71b0e3ff0c3fe151d47b1c3c5ea871d1bc70b9
+  --sha256: 02v06bflynffbpm13qzvqqhckh3w8fhc6npvyrfsdd66kk5q2s8b
   subdir: binary/test
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: 42c57fed487b61c13a68a1600a6675ad987822d0
-  --sha256: 0iab9bwa7my1qb3nnwml8zv4g4zxi5rrypkfmdjs558yh00ykskq
+  tag: 6e71b0e3ff0c3fe151d47b1c3c5ea871d1bc70b9
+  --sha256: 02v06bflynffbpm13qzvqqhckh3w8fhc6npvyrfsdd66kk5q2s8b
   subdir: cardano-crypto-class
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: 42c57fed487b61c13a68a1600a6675ad987822d0
-  --sha256: 0iab9bwa7my1qb3nnwml8zv4g4zxi5rrypkfmdjs558yh00ykskq
+  tag: 6e71b0e3ff0c3fe151d47b1c3c5ea871d1bc70b9
+  --sha256: 02v06bflynffbpm13qzvqqhckh3w8fhc6npvyrfsdd66kk5q2s8b
   subdir: slotting
 
 source-repository-package
