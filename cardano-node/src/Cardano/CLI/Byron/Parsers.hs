@@ -61,11 +61,9 @@ data ByronCommand
 
 parseByronCommands :: Parser ByronCommand
 parseByronCommands =  subparser $ mconcat
-    [ commandGroup "Byron related commands"
-    , metavar "Byron related commands"
-    , command' "create-byron-update-proposal" "Create a Byron era update proposal."
+    [ command' "create-update-proposal" "Create a Byron era update proposal."
         $ parseAllParamsToUpdate
-    , command' "submit-byron-update-proposal" "Submit a Byron era update proposal."
+    , command' "submit-update-proposal" "Submit a Byron era update proposal."
         $ parseByronUpdateProposalSubmission
     ]
 

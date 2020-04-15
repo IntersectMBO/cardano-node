@@ -1,5 +1,6 @@
 module Cardano.CLI.Parsers
   ( ClientCommand(..)
+  , parseByron
   , parseDelegationRelatedValues
   , parseGenesisParameters
   , parseGenesisRelatedValues
@@ -11,6 +12,7 @@ module Cardano.CLI.Parsers
   , parseTxRelatedValues
   ) where
 
+import           Cardano.CLI.Byron.Parsers (parseByronCommands)
 import           Cardano.CLI.Common.Parsers
 import           Cardano.CLI.Genesis
 import           Cardano.CLI.Key
@@ -33,6 +35,16 @@ import           Options.Applicative as OA
 
 import           Prelude (String)
 
+parseByron :: Parser ClientCommand
+parseByron =
+  subparser $ mconcat
+    [ commandGroup "Byron specific commands"
+    , metavar "Byron specific commands"
+    , command'
+        "byron"
+        "Byron specific commands"
+        $ ByronClientCommand <$> parseByronCommands
+    ]
 
 parseCBORObject :: Parser CBORObject
 parseCBORObject = asum

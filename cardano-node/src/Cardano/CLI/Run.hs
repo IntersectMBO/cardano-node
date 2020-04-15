@@ -6,9 +6,8 @@
 
 {-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
 
-module Cardano.CLI.Run (
-    CliError (..)
-  , ClientCommand(..)
+module Cardano.CLI.Run
+  ( ClientCommand(..)
   , runClientCommand
   --
   , NewDirectory(..)
@@ -27,8 +26,7 @@ module Cardano.CLI.Run (
 
 import           Cardano.Prelude hiding (option, trace)
 import           Control.Monad.Trans.Except (ExceptT)
-import           Control.Monad.Trans.Except.Extra (hoistEither, firstExceptT, left)
-import qualified Data.ByteString.Lazy as LB
+import           Control.Monad.Trans.Except.Extra (hoistEither, firstExceptT)
 import           Data.Semigroup ((<>))
 import qualified Data.Text as Text
 import qualified Data.Text.Lazy.IO as TL
@@ -36,7 +34,6 @@ import qualified Data.Text.Lazy.Builder as Builder
 import           Data.Version (showVersion)
 import qualified Formatting as F
 import           Paths_cardano_node (version)
-import           System.Directory (doesPathExist)
 import           System.Info (arch, compilerName, compilerVersion, os)
 
 import qualified Cardano.Chain.Common as Common
@@ -52,15 +49,14 @@ import           Ouroboros.Network.NodeToClient ( IOManager
                                                 , withIOManager
                                                 )
 
-import           Cardano.CLI.Byron.Parsers (ByronCommand(..))
-import           Cardano.CLI.Byron.UpdateProposal
-                   (createUpdateProposal, serialiseByronUpdateProposal, submitByronUpdateProposal)
+
 import           Cardano.CLI.Delegation
 import           Cardano.CLI.Genesis
 import           Cardano.CLI.Key
 import           Cardano.CLI.Ops
 import           Cardano.CLI.Parsers
-import           Cardano.CLI.Shelley.Run (runShelleyCommand)
+import           Cardano.CLI.Byron.Run (runByronClientCommand)
+import           Cardano.CLI.Shelley.Run (runShelleyClientCommand)
 import           Cardano.CLI.Tx
 import           Cardano.Common.LocalSocket
 import           Cardano.Config.Types
@@ -70,7 +66,7 @@ runClientCommand :: ClientCommand -> ExceptT CliError IO ()
 runClientCommand cc =
   case cc of
     ByronClientCommand bc -> runByronClientCommand bc
-    ShelleyClientCommand bc -> runShelleyCommand bc
+    ShelleyClientCommand bc -> runShelleyClientCommand bc
     DisplayVersion -> runDisplayVersion
     Genesis outDir params era -> runGenesisCommand outDir params era
     GetLocalNodeTip configFp mSockPath -> runGetLocalNodeTip configFp mSockPath
@@ -89,17 +85,6 @@ runClientCommand cc =
     SpendUTxO configFp nftx ctKey ins outs -> runSpendUTxO configFp nftx ctKey ins outs
 
 -- -----------------------------------------------------------------------------
-
-runByronClientCommand :: ByronCommand -> ExceptT CliError IO ()
-runByronClientCommand bcc =
-  case bcc of
-    UpdateProposal configFp sKey pVer sVer sysTag insHash outputFp params -> do
-        sK <- readSigningKey ByronEra sKey
-        proposal <- createUpdateProposal configFp sK pVer sVer sysTag insHash params
-        ensureNewFileLBS outputFp (serialiseByronUpdateProposal proposal)
-
-    SubmitUpdateProposal configFp proposalFp mSocket ->
-        withIOManagerE $ \iocp -> submitByronUpdateProposal iocp configFp proposalFp mSocket
 
 runDisplayVersion :: ExceptT CliError IO ()
 runDisplayVersion = do
@@ -226,26 +211,3 @@ runSpendUTxO configFp (NewTxFile ctTx) ctKey ins outs = do
     gTx <- firstExceptT IssueUtxoError $
              issueUTxOExpenditure nc ins outs sk
     ensureNewFileLBS ctTx $ toCborTxAux gTx
-
-{-------------------------------------------------------------------------------
-  Supporting functions
--------------------------------------------------------------------------------}
-
-ncCardanoEra :: NodeConfiguration -> CardanoEra
-ncCardanoEra = cardanoEraForProtocol . ncProtocol
-
--- TODO:  we'd be better served by a combination of a temporary file
---        with an atomic rename.
--- | Checks if a path exists and throws and error if it does.
-ensureNewFile :: (FilePath -> a -> IO ()) -> FilePath -> a -> ExceptT CliError IO ()
-ensureNewFile writer outFile blob = do
-  exists <- liftIO $ doesPathExist outFile
-  when exists $
-    left $ OutputMustNotAlreadyExist outFile
-  liftIO $ writer outFile blob
-
-ensureNewFileLBS :: FilePath -> LB.ByteString -> ExceptT CliError IO ()
-ensureNewFileLBS = ensureNewFile LB.writeFile
-
-withIOManagerE :: (IOManager -> ExceptT e IO a) -> ExceptT e IO a
-withIOManagerE k = ExceptT $ withIOManager (runExceptT . k)

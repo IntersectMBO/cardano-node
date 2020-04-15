@@ -7,7 +7,7 @@
 {-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
 
 module Cardano.CLI.Shelley.Run
-  ( runShelleyCommand
+  ( runShelleyClientCommand
   ) where
 
 import           Cardano.Prelude hiding (option, trace)
@@ -18,11 +18,11 @@ import           Cardano.CLI.Ops (CliError (..))
 import           Cardano.CLI.Shelley.Parsers (OutputFile (..), ShelleyCommand(..))
 
 
-runShelleyCommand :: ShelleyCommand -> ExceptT CliError IO ()
-runShelleyCommand cc =
+runShelleyClientCommand :: ShelleyCommand -> ExceptT CliError IO ()
+runShelleyClientCommand cc =
   case cc of
     ShelleyKeyGenerate fpath title -> runShelleyKeyGenerate fpath title
-    _ -> liftIO . putStrLn $ "runShelleyCommand: " ++ show cc
+    _ -> liftIO . putStrLn $ "runShelleyClientCommand: " ++ show cc
 
 
 runShelleyKeyGenerate :: OutputFile -> ByteString -> ExceptT CliError IO ()

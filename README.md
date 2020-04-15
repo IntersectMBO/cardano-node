@@ -311,17 +311,19 @@ Block number: 5
 There is currently only support to create a Byron update proposal:
 
 ```
-cardano-cli create-byron-update-proposal --config NODE-CONFIGURATION
-                                         --signing-key FILEPATH
-                                         --protocol-version-major WORD16
-                                         --protocol-version-minor WORD16
-                                         --protocol-version-alt WORD8
-                                         --application-name STRING
-                                         --software-version-num WORD32
-                                         --system-tag STRING
-                                         --installer-hash HASH
-                                         --filepath FILEPATH
-                                         ...
+cardano-cli -- byron
+               create-update-proposal
+               --config NODE-CONFIGURATION
+               --signing-key FILEPATH
+               --protocol-version-major WORD16
+               --protocol-version-minor WORD16
+               --protocol-version-alt WORD8
+               --application-name STRING
+               --software-version-num WORD32
+               --system-tag STRING
+               --installer-hash HASH
+               --filepath FILEPATH
+               ...
 ```
 The mandatory arguments are `config`, `signing-key`, `protocol-version-major`, `protocol-version-minor`, `protocol-version-alt`, `application-name`, `software-version-num`, `system-tag`, `installer-hash` and `filepath`.
 
@@ -331,13 +333,15 @@ You can also check your proposal's validity using the [`validate-cbor`](#validat
 
 See the [Byron specification](https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/byronLedgerSpec/latest/download-by-type/doc-pdf/ledger-spec) for more details on update proposals.
 
-You can submit your proposal using the `submit-byron-update-proposal` command.
+You can submit your proposal using the `byron submit-update-proposal` command.
 
 Example:
 ```
-cardano-cli submit-byron-update-proposal --config configuration/configuration-mainnet.yaml
-                                         --filepath my-update-proposal
-                                         --socket-path socket/0
+cardano-cli -- byron
+               submit-update-proposal
+               --config configuration/defaults/mainnet/configuration.yaml
+               --filepath my-update-proposal
+               --socket-path socket/0
 ```
 The socket path  must either be specified as an argument (`--socket-path`) or specified in the supplied config file.
 
