@@ -37,7 +37,7 @@ import           Cardano.Config.Types
                     DelegationCertFile (..), SigningKeyFile (..),
                     Update (..), LastKnownBlockVersion (..))
 import           Cardano.Config.Protocol.Types (SomeConsensusProtocol(..))
-import           Cardano.Tracing.ToObjectOrphans ()
+import           Cardano.TracingInstances.Byron ()
 
 
 ------------------------------------------------------------------------------

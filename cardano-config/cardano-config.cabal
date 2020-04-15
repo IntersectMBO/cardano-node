@@ -25,7 +25,11 @@ library
                        Cardano.Config.ShelleyGenesis
                        Cardano.Config.Topology
                        Cardano.Config.Types
-                       Cardano.Tracing.ToObjectOrphans
+                       Cardano.TracingInstances.Byron
+                       Cardano.TracingInstances.Common
+                       Cardano.TracingInstances.Consensus
+                       Cardano.TracingInstances.Mock
+                       Cardano.TracingInstances.Network
 
   build-depends:       base >=4.12 && <5
                      , aeson

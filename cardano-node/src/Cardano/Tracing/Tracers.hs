@@ -70,7 +70,6 @@ import qualified Ouroboros.Consensus.Storage.LedgerDB.OnDisk as LedgerDB
 import           Cardano.Config.Protocol (TraceConstraints)
 import           Cardano.Config.Types
 import           Cardano.Tracing.MicroBenchmarking
-import           Cardano.Tracing.ToObjectOrphans ()
 
 import           Control.Tracer.Transformers
 
