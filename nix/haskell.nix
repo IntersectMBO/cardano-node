@@ -112,6 +112,8 @@ let
         packages.cardano-node.components.exes.cardano-node = fullyStaticOptions;
         packages.cardano-node.components.exes.chairman = fullyStaticOptions;
         packages.ouroboros-consensus-byron.components.exes.db-converter = fullyStaticOptions;
+        # systemd can't be statically linked - disable lobemo-scribe-journal
+        packages.cardano-config.flags.systemd = false;
       }))
     ];
 

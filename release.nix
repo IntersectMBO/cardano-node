@@ -111,8 +111,7 @@ let
     };
     native = mapTestOn (__trace (__toJSON (packagePlatforms project)) (packagePlatforms project));
     "${mingwW64.config}" = mapTestOnCross mingwW64 (packagePlatformsCross (filterJobsCross project));
-    # TODO: fix broken evals
-    #musl64 = mapTestOnCross musl64 (packagePlatformsCross (filterJobsCross project));
+    musl64 = mapTestOnCross musl64 (packagePlatformsCross (filterJobsCross project));
     ifd-pins = mkPins {
       inherit (sources) iohk-nix "haskell.nix";
       inherit nixpkgs;
