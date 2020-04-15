@@ -1,4 +1,5 @@
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 
@@ -22,7 +23,6 @@ module Cardano.Config.Types
     , NodeProtocolMode (..)
     , SigningKeyFile (..)
     , TopologyFile (..)
-    , TraceOptions (..)
     , SocketPath (..)
     , Update (..)
     , ViewMode (..)
@@ -44,12 +44,12 @@ import           System.FilePath ((</>), takeDirectory)
 import           System.Posix.Types (Fd(Fd))
 
 import qualified Cardano.Chain.Update as Update
-import           Cardano.BM.Data.Tracer (TracingVerbosity (..))
 import           Cardano.Crypto.ProtocolMagic (RequiresNetworkMagic)
 import           Ouroboros.Consensus.NodeId (NodeId(..))
 import           Ouroboros.Consensus.Util.Condense (Condense (..))
 
 import           Cardano.Config.Orphanage ()
+import           Cardano.Config.TraceConfig
 import           Cardano.Crypto (RequiresNetworkMagic(..))
 
 -- | Errors for the cardano-config module.
@@ -165,7 +165,7 @@ data NodeConfiguration =
     , ncLoggingSwitch :: Bool
     , ncLogMetrics :: Bool
     , ncSocketPath :: Maybe YamlSocketPath
-    , ncTraceOptions :: TraceOptions
+    , ncTraceConfig :: TraceConfig
     , ncViewMode :: ViewMode
     , ncUpdate :: Update
     } deriving (Show)
@@ -178,9 +178,7 @@ instance FromJSON NodeConfiguration where
                 numCoreNode <- v .:? "NumCoreNodes"
                 rNetworkMagic <- v .:? "RequiresNetworkMagic" .!= RequiresNoMagic
                 pbftSignatureThresh <- v .:? "PBftSignatureThreshold"
-                loggingSwitch <- v .:? "TurnOnLogging" .!= True
                 vMode <- v .:? "ViewMode" .!= LiveView
-                logMetrics <- v .:? "TurnOnLogMetrics" .!= True
                 socketPath <- v .:? "SocketPath"
 
                 -- Update Parameters
@@ -190,37 +188,12 @@ instance FromJSON NodeConfiguration where
                 lkBlkVersionMinor <- v .:? "LastKnownBlockVersion-Minor" .!= 2
                 lkBlkVersionAlt <- v .:? "LastKnownBlockVersion-Alt" .!= 0
 
-                -- Trace Options
-                tOptions <- TraceOptions
-                              <$> v .:? "TracingVerbosity" .!= NormalVerbosity
-                              <*> v .:? "TraceAcceptPolicy" .!= False
-                              <*> v .:? "TraceBlockFetchClient" .!= False
-                              <*> v .:? "TraceBlockFetchDecisions" .!= True
-                              <*> v .:? "TraceBlockFetchProtocol" .!= False
-                              <*> v .:? "TraceBlockFetchProtocolSerialised" .!= False
-                              <*> v .:? "TraceBlockFetchServer" .!= False
-                              <*> v .:? "TraceChainDb" .!= True
-                              <*> v .:? "TraceChainSyncClient" .!= True
-                              <*> v .:? "TraceChainSyncBlockServer" .!= False
-                              <*> v .:? "TraceChainSyncHeaderServer" .!= False
-                              <*> v .:? "TraceChainSyncProtocol" .!= False
-                              <*> v .:? "TraceDNSResolver" .!= False
-                              <*> v .:? "TraceDNSSubscription" .!= True
-                              <*> v .:? "TraceErrorPolicy" .!= True
-                              <*> v .:? "TraceForge" .!= True
-                              <*> v .:? "TraceHandshake" .!= False
-                              <*> v .:? "TraceIpSubscription" .!= True
-                              <*> v .:? "TraceLocalChainSyncProtocol" .!= False
-                              <*> v .:? "TraceLocalErrorPolicy" .!= True
-                              <*> v .:? "TraceLocalHandshake" .!= False
-                              <*> v .:? "TraceLocalTxSubmissionProtocol" .!= False
-                              <*> v .:? "TraceLocalTxSubmissionServer" .!= False
-                              <*> v .:? "TraceLocalStateQueryProtocol" .!= False
-                              <*> v .:? "TraceMempool" .!= True
-                              <*> v .:? "TraceMux" .!= True
-                              <*> v .:? "TraceTxInbound" .!= False
-                              <*> v .:? "TraceTxOutbound" .!= False
-                              <*> v .:? "TraceTxSubmissionProtocol" .!= False
+                -- Logging
+                loggingSwitch <- v .:? "TurnOnLogging" .!= True
+                logMetrics <- v .:? "TurnOnLogMetrics" .!= True
+                traceConfig <- if not loggingSwitch
+                               then pure traceConfigMute
+                               else traceConfigParser v
 
                 pure $ NodeConfiguration
                          { ncProtocol = ptcl
@@ -232,7 +205,7 @@ instance FromJSON NodeConfiguration where
                          , ncLoggingSwitch = loggingSwitch
                          , ncLogMetrics = logMetrics
                          , ncSocketPath = socketPath
-                         , ncTraceOptions = tOptions
+                         , ncTraceConfig = traceConfig
                          , ncViewMode = vMode
                          , ncUpdate = (Update appName appVersion (LastKnownBlockVersion
                                                                     lkBlkVersionMajor
@@ -264,13 +237,9 @@ parseNodeConfigurationFP (ConfigYamlFilePath fp) = do
  pure $ nc { ncGenesisFile = GenesisFile $ d </> genFile }
 
 parseNodeConfiguration :: NodeProtocolMode -> IO NodeConfiguration
-parseNodeConfiguration npm =
-  case npm of
-    MockProtocolMode NodeMockCLI{mockConfigFp} ->
-      parseNodeConfigurationFP mockConfigFp
-
-    RealProtocolMode NodeCLI{configFp} ->
-      parseNodeConfigurationFP configFp
+parseNodeConfiguration = parseNodeConfigurationFP .
+  \case MockProtocolMode NodeMockCLI{mockConfigFp} -> mockConfigFp
+        RealProtocolMode NodeCLI{configFp} -> configFp
 
 data Protocol = BFT
               | Praos
@@ -324,40 +293,6 @@ instance FromJSON ViewMode where
                                           <> view <> " is not a valid view mode"
   parseJSON invalid = panic $ "Parsing of ViewMode failed due to type mismatch. "
                             <> "Encountered: " <> (T.pack $ show invalid)
-
--- | Detailed tracing options. Each option enables a tracer
---   which logs to the log output.
-data TraceOptions = TraceOptions
-  { traceVerbosity :: !TracingVerbosity
-  , traceAcceptPolicy :: !Bool
-  , traceBlockFetchClient :: !Bool
-  , traceBlockFetchDecisions :: !Bool
-  , traceBlockFetchProtocol :: !Bool
-  , traceBlockFetchProtocolSerialised :: !Bool
-  , traceBlockFetchServer :: !Bool
-  , traceChainDB :: !Bool
-  , traceChainSyncClient :: !Bool
-  , traceChainSyncBlockServer :: !Bool
-  , traceChainSyncHeaderServer :: !Bool
-  , traceChainSyncProtocol :: !Bool
-  , traceDnsResolver :: !Bool
-  , traceDnsSubscription :: !Bool
-  , traceErrorPolicy :: !Bool
-  , traceForge :: !Bool
-  , traceHandshake :: !Bool
-  , traceIpSubscription :: !Bool
-  , traceLocalChainSyncProtocol :: !Bool
-  , traceLocalErrorPolicy :: !Bool
-  , traceLocalHandshake :: !Bool
-  , traceLocalTxSubmissionProtocol :: !Bool
-  , traceLocalTxSubmissionServer :: !Bool
-  , traceLocalStateQueryProtocol :: !Bool
-  , traceMempool :: !Bool
-  , traceMux :: !Bool
-  , traceTxInbound :: !Bool
-  , traceTxOutbound :: !Bool
-  , traceTxSubmissionProtocol :: !Bool
-  } deriving (Eq, Show)
 
 --------------------------------------------------------------------------------
 -- Cardano Topology Related Data Structures
