@@ -81,4 +81,9 @@ library
   default-extensions:  NoImplicitPrelude
 
   ghc-options:       -Wall
+                     -Wincomplete-record-updates
+                     -Wincomplete-uni-patterns
+                     -Wredundant-constraints
+                     -Wpartial-fields
+                     -Wcompat
 
