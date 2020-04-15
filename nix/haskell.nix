@@ -71,7 +71,7 @@ let
         packages.cardano-node.components.exes.cardano-node.enableExecutableProfiling = true;
         profilingDetail = "default";
       })
-      (lib.optionalAttrs stdenv.hostPlatform.isWindows {
+      (lib.optionalAttrs (stdenv.hostPlatform != stdenv.buildPlatform) {
         # Disable cabal-doctest tests by turning off custom setups
         packages.comonad.package.buildType = lib.mkForce "Simple";
         packages.distributive.package.buildType = lib.mkForce "Simple";
@@ -81,13 +81,40 @@ let
 
         # Make sure we use a buildPackages version of happy
         packages.pretty-show.components.library.build-tools = [ buildPackages.haskell-nix.haskellPackages.happy ];
-
+      })
+      (lib.optionalAttrs stdenv.hostPlatform.isWindows {
         # Remove hsc2hs build-tool dependencies (suitable version will be available as part of the ghc derivation)
         packages.Win32.components.library.build-tools = lib.mkForce [];
         packages.terminal-size.components.library.build-tools = lib.mkForce [];
         packages.network.components.library.build-tools = lib.mkForce [];
       })
+      (lib.optionalAttrs stdenv.hostPlatform.isMusl (let
+        staticLibs = [ zlib openssl libffi gmp6 ];
+        gmp6 = buildPackages.gmp6.override { withStatic = true; };
+        zlib = buildPackages.zlib.static;
+        openssl = (buildPackages.openssl.override { static = true; }).out;
+        libffi = buildPackages.libffi.overrideAttrs (oldAttrs: {
+          dontDisableStatic = true;
+          configureFlags = (oldAttrs.configureFlags or []) ++ [
+                    "--enable-static"
+                    "--disable-shared"
+          ];
+        });
+
+        # Module options which adds GHC flags and libraries for a fully static build
+        fullyStaticOptions = {
+          enableShared = false;
+          enableStatic = true;
+          configureFlags = map (drv: "--ghc-option=-optl=-L${drv}/lib") staticLibs;
+        };
+      in {
+        # Apply fully static options to our Haskell executables
+        packages.cardano-node.components.exes.cardano-node = fullyStaticOptions;
+        packages.cardano-node.components.exes.chairman = fullyStaticOptions;
+        packages.ouroboros-consensus-byron.components.exes.db-converter = fullyStaticOptions;
+      }))
     ];
+
     # TODO add flags to packages (like cs-ledger) so we can turn off tests that will
     # not build for windows on a per package bases (rather than using --disable-tests).
     # configureArgs = lib.optionalString stdenv.hostPlatform.isWindows "--disable-tests";
