@@ -36,6 +36,8 @@ import           Cardano.Config.Types
                     MiscellaneousFilepaths(..), GenesisFile (..),
                     DelegationCertFile (..), SigningKeyFile (..),
                     Update (..), LastKnownBlockVersion (..))
+import           Cardano.Config.Protocol.Types (SomeConsensusProtocol(..))
+import           Cardano.Tracing.ToObjectOrphans ()
 
 
 ------------------------------------------------------------------------------
@@ -45,8 +47,7 @@ import           Cardano.Config.Types
 mkConsensusProtocolRealPBFT
   :: NodeConfiguration
   -> Maybe MiscellaneousFilepaths
-  -> ExceptT ByronProtocolInstantiationError IO
-             (Consensus.Protocol ByronBlock ProtocolRealPBFT)
+  -> ExceptT ByronProtocolInstantiationError IO SomeConsensusProtocol
 mkConsensusProtocolRealPBFT NodeConfiguration {
                               ncGenesisFile = GenesisFile genesisFile,
                               ncReqNetworkMagic,
@@ -79,14 +80,15 @@ mkConsensusProtocolRealPBFT NodeConfiguration {
                      signKeyFile
         Nothing -> return Nothing
 
-    let consensusProtocol =
+    let consensusProtocol :: Consensus.Protocol ByronBlock ProtocolRealPBFT
+        consensusProtocol =
           protocolConfigRealPbft
             ncUpdate
             ncPbftSignatureThresh
             genesisConfig
             optionalLeaderCredentials
 
-    return consensusProtocol
+    return (SomeConsensusProtocol consensusProtocol)
 
 
 -- | The plumbing to select and convert the appropriate configuration subset

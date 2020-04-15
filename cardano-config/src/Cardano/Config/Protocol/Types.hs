@@ -1,12 +1,15 @@
-{-# LANGUAGE ConstraintKinds       #-}
-{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE ConstraintKinds   #-}
+{-# LANGUAGE FlexibleContexts  #-}
+{-# LANGUAGE GADTs             #-}
 
-module Cardano.Tracing.Constraints (TraceConstraints) where
+module Cardano.Config.Protocol.Types
+  ( SomeConsensusProtocol(..)
+  , TraceConstraints
+  ) where
 
 import           Prelude (Show)
 
 import           Data.Aeson (ToJSON)
-import           Cardano.BM.Tracing
 
 import           Ouroboros.Network.Block
 import           Ouroboros.Consensus.Util.Condense (Condense)
@@ -16,6 +19,17 @@ import           Ouroboros.Consensus.Ledger.Abstract
 import           Ouroboros.Consensus.Mempool.API
                    (GenTx, GenTxId, HasTxId, HasTxs(..), ApplyTxErr, TxId)
 import           Ouroboros.Consensus.Protocol.Abstract (ValidationErr)
+import qualified Ouroboros.Consensus.Cardano as Consensus (Protocol)
+import           Ouroboros.Consensus.Node.Run (RunNode)
+
+import           Cardano.BM.Tracing (ToObject)
+
+
+data SomeConsensusProtocol where
+
+     SomeConsensusProtocol :: (RunNode blk, TraceConstraints blk)
+                           => Consensus.Protocol blk (BlockProtocol blk)
+                           -> SomeConsensusProtocol
 
 
 -- | Tracing-related constraints for monitoring purposes.
