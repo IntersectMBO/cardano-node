@@ -276,6 +276,7 @@ data Protocol = BFT
               | Praos
               | MockPBFT
               | RealPBFT
+              | TPraos
               deriving (Eq, Show)
 
 instance FromJSON Protocol where

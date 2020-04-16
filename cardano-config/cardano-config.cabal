@@ -22,6 +22,7 @@ library
                        Cardano.Config.Protocol.Types
                        Cardano.Config.Protocol.Mock
                        Cardano.Config.Protocol.Byron
+                       Cardano.Config.Protocol.Shelley
                        Cardano.Config.ShelleyGenesis
                        Cardano.Config.Topology
                        Cardano.Config.Types
@@ -30,6 +31,7 @@ library
                        Cardano.TracingInstances.Consensus
                        Cardano.TracingInstances.Mock
                        Cardano.TracingInstances.Network
+                       Cardano.TracingInstances.Shelley
 
   build-depends:       base >=4.12 && <5
                      , aeson

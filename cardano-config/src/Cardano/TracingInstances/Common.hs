@@ -1,3 +1,9 @@
+{-# LANGUAGE StandaloneDeriving         #-}
+{-# LANGUAGE DerivingStrategies         #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+
+{-# OPTIONS_GHC -fno-warn-orphans #-}
+
 module Cardano.TracingInstances.Common
   ( 
     -- * ToObject and helpers
@@ -30,7 +36,7 @@ module Cardano.TracingInstances.Common
 
 import           Cardano.Prelude
 
-import           Data.Aeson (ToJSON(..), toJSON, Value (..), (.=))
+import           Data.Aeson (ToJSON(..), FromJSON(..), toJSON, Value (..), (.=))
 
 import           Cardano.BM.Tracing
                    (ToObject(..), TracingVerbosity(..), Transformable(..),
@@ -42,6 +48,8 @@ import           Cardano.BM.Data.LogItem
                    (LOContent (..), LogObject (..), mkLOMeta)
 import           Cardano.BM.Data.Tracer
                    (trStructured, emptyObject, mkObject)
+
+import           Cardano.Slotting.Slot (SlotNo(..), EpochNo(..))
 
 
 defaultTextTransformer
@@ -60,4 +68,15 @@ defaultTextTransformer TextualRepresentation _verb tr =
     traceWith tr (mempty, LogObject mempty meta (LogMessage $ show s))
 defaultTextTransformer _ verb tr =
   trStructured verb tr
+
+
+-- These ones are all just newtype wrappers of numbers,
+-- so newtype deriving for the JSON format is ok.
+deriving newtype instance ToJSON   SlotNo
+deriving newtype instance FromJSON SlotNo
+
+-- These ones are all just newtype wrappers of numbers,
+-- so newtype deriving for the JSON format is ok.
+deriving newtype instance ToJSON   EpochNo
+deriving newtype instance FromJSON EpochNo
 
