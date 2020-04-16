@@ -231,6 +231,7 @@ runSpendUTxO configFp (NewTxFile ctTx) ctKey ins outs = do
   Supporting functions
 -------------------------------------------------------------------------------}
 
+ncCardanoEra :: NodeConfiguration -> CardanoEra
 ncCardanoEra = cardanoEraForProtocol . ncProtocol
 
 -- TODO:  we'd be better served by a combination of a temporary file

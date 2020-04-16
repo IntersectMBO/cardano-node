@@ -17,7 +17,6 @@ import           Cardano.Binary (serialize)
 import           Cardano.Crypto (hashRaw)
 import           Cardano.Prelude
 
-import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import           Data.Coerce (coerce)
 
