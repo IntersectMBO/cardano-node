@@ -115,6 +115,7 @@ cardanoEraForProtocol BFT      = ShelleyEra
 cardanoEraForProtocol Praos    = ShelleyEra
 cardanoEraForProtocol MockPBFT = ShelleyEra
 cardanoEraForProtocol RealPBFT = ByronEra
+cardanoEraForProtocol TPraos   = ShelleyEra
 
 decodeCBOR
   :: LByteString

@@ -245,6 +245,7 @@ data Protocol = BFT
               | Praos
               | MockPBFT
               | RealPBFT
+              | TPraos
               deriving (Eq, Show)
 
 instance FromJSON Protocol where
@@ -253,6 +254,7 @@ instance FromJSON Protocol where
                             "Praos" -> pure Praos
                             "MockPBFT" -> pure MockPBFT
                             "RealPBFT" -> pure RealPBFT
+                            "TPraos"   -> pure TPraos
                             ptcl -> panic $ "Parsing of Protocol: "
                                           <> ptcl <> " failed. "
                                           <> ptcl <> " is not a valid protocol"
