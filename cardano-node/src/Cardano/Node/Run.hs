@@ -171,7 +171,7 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
   -- Node configuration
   nc <- parseNodeConfiguration npm
 
-  createTracers npm trace tracer cfg
+  createTracers npm nc trace tracer cfg
 
   addrs <- nodeAddressInfo npm
 
@@ -244,11 +244,12 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
 
   createTracers
     :: NodeProtocolMode
+    -> NodeConfiguration
     -> Trace IO Text
     -> Tracer IO String
     -> Consensus.TopLevelConfig blk
     -> IO ()
-  createTracers npm' tr tracer cfg = do
+  createTracers npm' nc tr tracer cfg = do
      case npm' of
        RealProtocolMode NodeCLI{nodeAddr, validateDB} -> do
          eitherTopology <- readTopologyFile npm
@@ -275,7 +276,7 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
          let rTr = appendName "release" tr
              vTr = appendName "version" tr
              cTr = appendName "commit"  tr
-         traceNamedObject rTr (meta, LogMessage "Byron")
+         traceNamedObject rTr (meta, LogMessage (show (ncProtocol nc)))
          traceNamedObject vTr (meta, LogMessage . pack . showVersion $ version)
          traceNamedObject cTr (meta, LogMessage gitRev)
 
