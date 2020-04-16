@@ -11,7 +11,7 @@
 {-# OPTIONS_GHC -fno-warn-orphans  #-}
 {-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
 
-module Cardano.TracingInstances.Network
+module Cardano.TracingOrphanInstances.Network
   ( showTip
   , showPoint
   ) where
@@ -24,7 +24,7 @@ import           Data.Text (pack)
 import qualified Network.Socket as Socket (SockAddr)
 import           Network.Mux (WithMuxBearer (..), MuxTrace (..))
 
-import           Cardano.TracingInstances.Common
+import           Cardano.TracingOrphanInstances.Common
 
 import           Ouroboros.Network.Block
 import           Ouroboros.Network.BlockFetch.ClientState

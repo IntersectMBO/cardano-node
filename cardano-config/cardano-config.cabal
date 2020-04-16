@@ -26,11 +26,11 @@ library
                        Cardano.Config.Topology
                        Cardano.Config.TraceConfig
                        Cardano.Config.Types
-                       Cardano.TracingInstances.Byron
-                       Cardano.TracingInstances.Common
-                       Cardano.TracingInstances.Consensus
-                       Cardano.TracingInstances.Mock
-                       Cardano.TracingInstances.Network
+                       Cardano.TracingOrphanInstances.Byron
+                       Cardano.TracingOrphanInstances.Common
+                       Cardano.TracingOrphanInstances.Consensus
+                       Cardano.TracingOrphanInstances.Mock
+                       Cardano.TracingOrphanInstances.Network
 
   build-depends:       base >=4.12 && <5
                      , aeson

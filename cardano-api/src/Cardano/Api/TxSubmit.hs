@@ -28,7 +28,7 @@ import           Cardano.BM.Trace (Trace, appendName, logInfo)
 import qualified Cardano.Chain.Genesis as Genesis
 import qualified Cardano.Chain.Update as Update
 import qualified Cardano.Chain.UTxO as Byron
-import           Cardano.TracingInstances.Network ()
+import           Cardano.TracingOrphanInstances.Network ()
 
 import qualified Codec.CBOR.Term as CBOR
 

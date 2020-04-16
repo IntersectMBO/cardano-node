@@ -1,4 +1,4 @@
-module Cardano.TracingInstances.Common
+module Cardano.TracingOrphanInstances.Common
   ( 
     -- * ToObject and helpers
     ToObject(..)

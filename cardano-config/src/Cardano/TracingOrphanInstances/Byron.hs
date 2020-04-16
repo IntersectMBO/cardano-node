@@ -11,12 +11,12 @@
 {-# OPTIONS_GHC -fno-warn-orphans  #-}
 {-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
 
-module Cardano.TracingInstances.Byron () where
+module Cardano.TracingOrphanInstances.Byron () where
 
 import           Cardano.Prelude
 
-import           Cardano.TracingInstances.Common
-import           Cardano.TracingInstances.Consensus ()
+import           Cardano.TracingOrphanInstances.Common
+import           Cardano.TracingOrphanInstances.Consensus ()
 
 import           Ouroboros.Network.Block
                    (blockHash, blockSlot, blockNo, blockPrevHash)

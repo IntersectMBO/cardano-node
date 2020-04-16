@@ -30,7 +30,7 @@ import           Ouroboros.Consensus.Protocol.Abstract (SecurityParam (..))
 
 import           Cardano.Config.Types (NodeConfiguration(..))
 import           Cardano.Config.Protocol.Types (SomeConsensusProtocol(..))
-import           Cardano.TracingInstances.Mock ()
+import           Cardano.TracingOrphanInstances.Mock ()
 
 
 ------------------------------------------------------------------------------
