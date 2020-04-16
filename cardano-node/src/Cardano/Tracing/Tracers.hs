@@ -146,18 +146,49 @@ instance ElidingTracer (WithSeverity (ChainDB.TraceEvent blk)) where
   isEquivalent (WithSeverity s1 (ChainDB.TraceGCEvent ev1))
                (WithSeverity s2 (ChainDB.TraceGCEvent ev2)) =
                   s1 == s2 && indexGCType ev1 == indexGCType ev2
-   
+  isEquivalent (WithSeverity _s1 (ChainDB.TraceAddBlockEvent _))
+               (WithSeverity _s2 (ChainDB.TraceAddBlockEvent _)) = True
+  isEquivalent (WithSeverity _s1 (ChainDB.TraceGCEvent _ev1))
+               (WithSeverity _s2 (ChainDB.TraceAddBlockEvent _)) = True
+  isEquivalent (WithSeverity _s1 (ChainDB.TraceAddBlockEvent _))
+               (WithSeverity _s2 (ChainDB.TraceGCEvent _ev2)) = True   
+  isEquivalent (WithSeverity _s1 (ChainDB.TraceGCEvent _ev1))
+               (WithSeverity _s2 (ChainDB.TraceCopyToImmDBEvent _)) = True
+  isEquivalent (WithSeverity _s1 (ChainDB.TraceCopyToImmDBEvent _))
+               (WithSeverity _s2 (ChainDB.TraceGCEvent _ev2)) = True   
+  isEquivalent (WithSeverity _s1 (ChainDB.TraceCopyToImmDBEvent _))
+               (WithSeverity _s2 (ChainDB.TraceAddBlockEvent _)) = True
+  isEquivalent (WithSeverity _s1 (ChainDB.TraceAddBlockEvent _))
+               (WithSeverity _s2 (ChainDB.TraceCopyToImmDBEvent _)) = True   
+  isEquivalent (WithSeverity _s1 (ChainDB.TraceCopyToImmDBEvent _))
+               (WithSeverity _s2 (ChainDB.TraceCopyToImmDBEvent _)) = True   
   isEquivalent _ _ = False
   -- the types to be elided
   doelide (WithSeverity _ (ChainDB.TraceLedgerReplayEvent _)) = True
   doelide (WithSeverity _ (ChainDB.TraceGCEvent _)) = True
+  doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.IgnoreBlockOlderThanK _))) = False
+  doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.IgnoreInvalidBlock _ _))) = False
+  doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.BlockInTheFuture _ _))) = False
+  doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.StoreButDontChange _))) = False
+  doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.TrySwitchToAFork _ _))) = False
+  doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.SwitchedToAFork _ _ _))) = False
+  doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.AddBlockValidation (ChainDB.InvalidBlock _ _)))) = False
+  doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.AddBlockValidation (ChainDB.InvalidCandidate _)))) = False
+  doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.AddBlockValidation (ChainDB.CandidateExceedsRollback _ _ _)))) = False
+  doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent _)) = True
+  doelide (WithSeverity _ (ChainDB.TraceCopyToImmDBEvent _)) = True
   doelide _ = False
   conteliding _tverb _tr _ (Nothing, _count) = return (Nothing, 0)
-  conteliding _tverb tr ev@(WithSeverity _ (ChainDB.TraceGCEvent _)) (_old, count) = do
-      when (count > 0 && count `mod` 100 == 0) $ do  -- report every 100th message
-          meta <- mkLOMeta (getSeverityAnnotation ev) (getPrivacyAnnotation ev)
-          traceNamedObject tr (meta, LogValue "messages elided so far" (PureI $ toInteger count))
+  conteliding tverb tr ev@(WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.AddedToCurrentChain _ _ _))) (_old, count) = do
+      when (count > 0 && count `mod` 250 == 0) $ do  -- report every 250th block
+          traceWith (toLogObject' tverb tr) ev
       return (Just ev, count + 1)
+  conteliding _tverb _tr ev@(WithSeverity _ (ChainDB.TraceAddBlockEvent _)) (_old, count) =
+      return (Just ev, count)
+  conteliding _tverb _tr ev@(WithSeverity _ (ChainDB.TraceCopyToImmDBEvent _)) (_old, count) =
+      return (Just ev, count)
+  conteliding _tverb _tr ev@(WithSeverity _ (ChainDB.TraceGCEvent _)) (_old, count) =
+      return (Just ev, count)
   conteliding _tverb tr ev@(WithSeverity _ (ChainDB.TraceLedgerReplayEvent (LedgerDB.ReplayedBlock pt replayTo))) (_old, count) = do
       let slotno = toInteger $ unSlotNo (realPointSlot pt)
           endslot = toInteger $ withOrigin 0 unSlotNo (pointSlot replayTo)
@@ -172,20 +203,20 @@ instance ElidingTracer (WithSeverity (ChainDB.TraceEvent blk)) where
 instance (StandardHash header, Eq peer) => ElidingTracer
   (WithSeverity [TraceLabelPeer peer (FetchDecision [Point header])]) where
   -- equivalent by type and severity
-  isEquivalent (WithSeverity s1 peers1)
-               (WithSeverity s2 peers2) =
-                  s1 == s2 && peers1 == peers2
+  isEquivalent (WithSeverity s1 _peers1)
+               (WithSeverity s2 _peers2) = s1 == s2
   -- the types to be elided
   doelide (WithSeverity _ peers) =
     let checkDecision :: TraceLabelPeer peer (Either FetchDecline result) -> Bool
         checkDecision (TraceLabelPeer _peer (Left FetchDeclineChainNotPlausible)) = True
+        checkDecision (TraceLabelPeer _peer (Left (FetchDeclineConcurrencyLimit _ _))) = True
+        checkDecision (TraceLabelPeer _peer (Left (FetchDeclinePeerBusy _ _ _))) = True
         checkDecision _ = False
     in any checkDecision peers
   conteliding _tverb _tr _ (Nothing, _count) = return (Nothing, 0)
-  conteliding _tverb tr ev (_old, count) = do
-      when (count > 0 && count `mod` 100 == 0) $ do  -- report every 100th elided message
-          meta <- mkLOMeta (getSeverityAnnotation ev) (getPrivacyAnnotation ev)
-          traceNamedObject tr (meta, LogValue "messages elided so far" (PureI $ toInteger count))
+  conteliding tverb tr ev (_old, count) = do
+      when (count > 0 && count `mod` 1000 == 0) $ do  -- report every 1000th message
+          traceWith (toLogObject' tverb tr) ev
       return (Just ev, count + 1)
 
 -- | Smart constructor of 'NodeTraces'.

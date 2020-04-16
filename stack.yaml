@@ -42,6 +42,7 @@ extra-deps:
   - io-streams-haproxy-1.0.1.0
   - moo-1.2
   - network-3.1.1.1
+  - quiet-0.2
   - snap-core-1.0.4.1
   - snap-server-1.1.1.1
   - statistics-linreg-0.3
@@ -117,7 +118,7 @@ extra-deps:
     # dependencies of iohk-monitoring
   - prometheus-2.1.2
   - libsystemd-journal-1.4.4
-  - katip-0.8.3.0
+  - katip-0.8.4.0
 
     # Extracted from cardano-sl since it's quite useful
   - git: https://github.com/input-output-hk/cardano-sl-x509
