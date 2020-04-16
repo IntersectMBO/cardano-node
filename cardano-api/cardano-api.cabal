@@ -18,6 +18,7 @@ library
 
   other-modules:        Cardano.Api.CBOR
                         Cardano.Api.Error
+                        Cardano.Api.Orphans
                         Cardano.Api.TextView
                         Cardano.Api.TxSubmit
                         Cardano.Api.TxSubmit.ErrorRender
@@ -35,6 +36,7 @@ library
                       , cardano-binary
                       , cardano-node
                       , cardano-config
+                      , cardano-crypto-class
                       , cardano-crypto-wrapper
                       , cardano-ledger
                       , cardano-prelude
@@ -51,9 +53,11 @@ library
                       , ouroboros-consensus
                       , ouroboros-consensus-byron
                       , ouroboros-consensus-cardano
+                      , ouroboros-consensus-shelley
                       , ouroboros-network
                       , ouroboros-network-framework
                       , serialise
+                      , shelley-spec-ledger
                       , text
                       , transformers-except
                       , typed-protocols
@@ -81,11 +85,14 @@ test-suite cardano-api-test
                       , bytestring
                       , cardano-api
                       , cardano-binary
+                      , cardano-crypto-class
                       , cardano-crypto-test
                       , cardano-crypto-wrapper
                       , cardano-ledger-test
                       , cardano-prelude
+                      , cryptonite
                       , hedgehog
+                      , shelley-spec-ledger
 
   other-modules:        Test.Cardano.Api
                         Test.Cardano.Api.Gen

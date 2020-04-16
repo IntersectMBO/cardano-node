@@ -33,6 +33,12 @@ prop_PublicKey_CBOR =
     kp <- H.forAll genPublicKey
     H.tripping kp publicKeyToCBOR publicKeyFromCBOR
 
+prop_ShelleyVerificationKey_CBOR :: Property
+prop_ShelleyVerificationKey_CBOR =
+  H.property $ do
+    svk <- H.forAll genShelleyVerificationKey
+    H.tripping svk shelleyVerificationKeyToCBOR shelleyVerificationKeyFromCBOR
+
 prop_TxSigned_CBOR :: Property
 prop_TxSigned_CBOR =
   H.property $ do
