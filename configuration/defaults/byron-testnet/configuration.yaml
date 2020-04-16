@@ -1,11 +1,12 @@
 ##########################################################
-############### Cardano Node Configuration ###############
+###############          Testnet                 #########
+############### Cardano Byron Node Configuration #########
 ##########################################################
 
 
 ##### Locations #####
 
-GenesisFile: genesis.json
+GenesisFile: testnet_genesis.json
 SocketPath: db/node.socket
 
 #TODO: These parameters cannot yet be used in the config file, only on the CLI:
@@ -22,112 +23,94 @@ SocketPath: db/node.socket
 Protocol: RealPBFT
 
 # The mainnet does not include the network magic into addresses. Testnets do.
-RequiresNetworkMagic: RequiresNoMagic
+RequiresNetworkMagic: RequiresMagic
 
 
 ##### Update system parameters #####
 
 # This protocol version number gets used by by block producing nodes as part
 # part of the system for agreeing on and synchronising protocol updates.
-LastKnownBlockVersion-Major: 0
-LastKnownBlockVersion-Minor: 2
+LastKnownBlockVersion-Major: 1
+LastKnownBlockVersion-Minor: 0
 LastKnownBlockVersion-Alt: 0
 
 # In the Byron era some software versions are also published on the chain.
 # We do this only for Byron compatibility now.
 ApplicationName: cardano-sl
-ApplicationVersion: 1
+ApplicationVersion: 0
 
 
 ##### Logging configuration #####
 
 # The node can run in either the SimpleView or LiveView. The SimpleView just
 # uses standard output, optionally with log output. The LiveView is a text
-# console on Linux with a live view of various node metrics. To use LiveView
-# disable the default output to 'stdout' in "defaultScribes" section.
+# console with a live view of various node metrics.
 ViewMode: SimpleView
-#ViewMode: LiveView
 
 # Enble or disable logging overall
 TurnOnLogging: True
 
 # Enable the collection of various OS metrics such as memory and CPU use.
-# These metrics are traced in the context name: 'cardano.node-metrics' and can
-# be directed to the logs or monitoring backends.
+# These metrics can be directed to the logs or monitoring backends.
 TurnOnLogMetrics: True
 
 # Global logging severity filter. Messages must have at least this severity to
 # pass. Typical values would be Warning, Notice, Info or Debug.
-minSeverity: Info
+minSeverity: Notice
 
 # Log items can be rendered with more or less verbose detail.
-# Verbosity ranges from MinimalVerbosity, NormalVerbosity to MaximalVerbosity
+# The verbosity can be: MinimalVerbosity, NormalVerbosity
 TracingVerbosity: NormalVerbosity
 
 # The system supports a number of backends for logging and monitoring.
 # This setting lists the the backends that will be available to use in the
-# configuration below. The logging backend is called Katip.
+# configuration below. The logging backend is called Katip. Also enable the EKG
+# backend if you want to use the EKG or Prometheus monitoring interfaces.
+# You can also enable trace forwarder backend if node should send the metrics
+# to an external process.
 setupBackends:
   - KatipBK
+# - EKGViewBK
+# - TraceForwarderBK
 
 # This specifies the default backends that trace output is sent to if it
 # is not specifically configured to be sent to other backends.
 defaultBackends:
   - KatipBK
 
-# EKG is a simple metrics monitoring system. Uncomment the following to enable
-# this backend and listen on the given local port and point your web browser to
-# http://localhost:12788/
+# EKG is a simple metrics monitoring system. Uncomment the following to listen
+# on the given local port and point your web browser to http://localhost:12788/
+# for a live view. The same URL can also serve JSON output.
 # hasEKG: 12788
 
-# The Prometheus monitoring system exports EKG metrics. Uncomment the following
-# to listen on the given port. Output is provided on
-# http://localhost:12789/metrics
+# The Prometheus monitoring system can also be used. Uncomment the following
+# to listen on the given port
 # hasPrometheus: 12789
-
-# To enable the 'TraceForwarder' backend, uncomment the following setting. Log
-# items are then forwarded based on an entry in 'mapBackends' to a separate
-# process running a 'TraceAcceptor'.
-# Example using UNIX pipes:
-# traceForwardTo:
-#   tag: RemotePipe
-#   contents: "logs/pipe"
-# 
-# Example using Windows named pipes:
-# traceForwardTo:
-#   tag: RemotePipe
-#   contents: "\\\\.\\pipe\\acceptor"
-#
-# Example using network socket:
-# traceForwardTo:
-#   tag: RemoteSocket
-#   contents:
-#     - "127.0.0.1"
-#     - "2997"
 
 # For the Katip logging backend we must set up outputs (called scribes)
 # The available types of scribe are:
 #   FileSK for files
 #   StdoutSK/StdoutSK for stdout/stderr
 #   JournalSK for systemd's journal system
-#   DevNullSK ignores all output
+#   DevNullSK
 # The scribe output format can be ScText or ScJson. Log rotation settings can
 # be specified in the defaults below or overidden on a per-scribe basis here.
 setupScribes:
   - scKind: FileSK
-    scName: "logs/mainnet.log"
+    scName: "logs/testnet.log"
     scFormat: ScText
 
   - scKind: StdoutSK
     scName: stdout
     scFormat: ScText
+    scRotation: null
 
 # For the Katip logging backend this specifies the default scribes that trace
 # output is sent to if it is not configured to be sent to other scribes.
 defaultScribes:
   - - FileSK
-    - "logs/mainnet.log"
-  # When using "ViewMode: LiveView" above, comment out the following directive to output to 'stdout'
+    - "logs/testnet.log"
+
   - - StdoutSK
     - stdout
 
@@ -234,45 +217,57 @@ TraceTxSubmissionProtocol: False
 options:
 
   # This routes metrics matching specific names to particular backends.
-  # This overrides the 'defaultBackends' listed above. And note that it is
-  # an override and not an extension so anything matched here will not
+  # This overrides the defaultBackends listed above. And note that it is
+  # and override and not an extension so anything matched here will not
   # go to the default backend, only to the explicitly listed backends.
   mapBackends:
-    cardano.node.BlockFetchDecision.peers:
-      - TraceForwarderBK
-      - EKGViewBK
-      - kind: UserDefinedBK
-        name: LiveViewBackend
     cardano.node.ChainDB.metrics:
-      - TraceForwarderBK
       - EKGViewBK
-      - kind: UserDefinedBK
-        name: LiveViewBackend
     cardano.node.metrics:
-      - TraceForwarderBK
       - EKGViewBK  
-      - kind: UserDefinedBK
-        name: LiveViewBackend
-    cardano.node.release:
-      - TraceForwarderBK
-      - KatipBK
-    cardano.node.version:
-      - TraceForwarderBK
-      - KatipBK
-    cardano.node.commit:
-      - TraceForwarderBK
-      - KatipBK
-
-  # redirects traced values to a specific scribe which is identified by its
-  # type and its name, separated by "::":
-  mapScribes:
+    # Uncomment it to send 'cardano.node.metrics' to 'TraceForwarderBK' as well.
+    # - TraceForwarderBK
     cardano.node-metrics:
-      - "FileSK::logs/mainnet.log"
+      - EKGViewBK
+    # Uncomment it to send node's release, version and commit to 'TraceForwarderBK'.
+    # cardano.node.release:
+    #   - TraceForwarderBK
+    # cardano.node.version:
+    #   - TraceForwarderBK
+    # cardano.node.commit:
+    #   - TraceForwarderBK
 
-  # apply a filter on message severity on messages in a specific named context.
-  # this filter is applied additionally to the global 'minSeverity' and thus
-  # needs to be at least as high.
-  mapSeverity:
-    cardano.node.ChainDB: Notice
-    cardano.node.DnsSubscription: Debug
+  # This section is more expressive still, and needs to be properly documented.
+  mapSubtrace:
+    benchmark:
+      contents:
+        - GhcRtsStats
+        - MonotonicClock
+      subtrace: ObservableTrace
+    '#ekgview':
+      contents:
+      - - tag: Contains
+          contents: 'cardano.epoch-validation.benchmark'
+        - - tag: Contains
+            contents: .monoclock.basic.
+      - - tag: Contains
+          contents: 'cardano.epoch-validation.benchmark'
+        - - tag: Contains
+            contents: diff.RTS.cpuNs.timed.
+      - - tag: StartsWith
+          contents: '#ekgview.#aggregation.cardano.epoch-validation.benchmark'
+        - - tag: Contains
+            contents: diff.RTS.gcNum.timed.
+      subtrace: FilterTrace
+    'cardano.epoch-validation.utxo-stats':
+      # Change the `subtrace` value to `Neutral` in order to log
+      # `UTxO`-related messages during epoch validation.
+      subtrace: NoTrace
 
+# If 'TraceForwarderBK' is enabled, uncomment it to forward node's metrics
+# to remote socket '127.0.0.1:2997'.
+# traceForwardTo:
+#   tag: RemoteSocket
+#   contents:
+#     - "127.0.0.1"
+#     - "2997"
