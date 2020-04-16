@@ -15,8 +15,11 @@ module Cardano.CLI.Ops
   , cardanoEraForProtocol
   , decodeCBOR
   , deserialiseSigningKey
+  , ensureNewFile
+  , ensureNewFileLBS
   , getGenesisHashText
   , getLocalTip
+  , ncCardanoEra
   , pPrintCBOR
   , readCBOR
   , readGenesis
@@ -27,6 +30,7 @@ module Cardano.CLI.Ops
   , serialisePoorKey
   , serialiseSigningKey
   , validateCBOR
+  , withIOManagerE
   , withRealPBFT
   , CliError(..)
   , RealPBFTError(..)
@@ -44,7 +48,7 @@ import           Control.Monad.Trans.Except.Extra
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.Text as T
 import qualified Formatting as F
-import           System.Directory (canonicalizePath, makeAbsolute)
+import           System.Directory (canonicalizePath, doesPathExist, makeAbsolute)
 import qualified Text.JSON.Canonical as CanonicalJSON
 
 import           Cardano.Binary
@@ -85,8 +89,8 @@ import           Ouroboros.Network.NodeToClient
                    (IOManager, NetworkConnectTracers(..), NodeToClientProtocols(..),
                     nodeToClientProtocols, NodeToClientVersionData(..),
                     NodeToClientVersion(NodeToClientV_1),
-                    connectTo, localSnocket,
-                    localTxSubmissionClientNull, nodeToClientCodecCBORTerm)
+                    connectTo, localSnocket, localTxSubmissionClientNull,
+                    nodeToClientCodecCBORTerm, withIOManager)
 import           Ouroboros.Network.Protocol.ChainSync.Client
                    (ChainSyncClient(..), ClientStIdle(..), ClientStNext(..)
                    , chainSyncClientPeer, recvMsgRollForward)
@@ -139,6 +143,16 @@ deserialiseSigningKey ByronEra fp delSkey =
 
 deserialiseSigningKey ShelleyEra _ _ = Left $ CardanoEraNotSupported ShelleyEra
 
+-- | Checks if a path exists and throws and error if it does.
+ensureNewFile :: (FilePath -> a -> IO ()) -> FilePath -> a -> ExceptT CliError IO ()
+ensureNewFile writer outFile blob = do
+  exists <- liftIO $ doesPathExist outFile
+  when exists $
+    left $ OutputMustNotAlreadyExist outFile
+  liftIO $ writer outFile blob
+
+ensureNewFileLBS :: FilePath -> LB.ByteString -> ExceptT CliError IO ()
+ensureNewFileLBS = ensureNewFile LB.writeFile
 
 getGenesisHashText :: GenesisFile -> ExceptT CliError IO Text
 getGenesisHashText (GenesisFile genFile) = do
@@ -432,6 +446,12 @@ localInitiatorNetworkApplication proxy cfg =
 
   localTxSubmissionCodec :: Codec (LocalTxSubmission (GenTx blk) (ApplyTxErr blk)) DeserialiseFailure m LB.ByteString
   localTxSubmissionCodec = pcLocalTxSubmissionCodec . protocolCodecs cfg $ mostRecentNetworkProtocolVersion proxy
+
+ncCardanoEra :: NodeConfiguration -> CardanoEra
+ncCardanoEra = cardanoEraForProtocol . ncProtocol
+
+withIOManagerE :: (IOManager -> ExceptT e IO a) -> ExceptT e IO a
+withIOManagerE k = ExceptT $ withIOManager (runExceptT . k)
 
 chainSyncClient
   :: forall blk m . (Condense (HeaderHash blk), MonadIO m)
