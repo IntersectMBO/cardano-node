@@ -85,11 +85,14 @@ test-suite cardano-api-test
                       , bytestring
                       , cardano-api
                       , cardano-binary
+                      , cardano-crypto-class
                       , cardano-crypto-test
                       , cardano-crypto-wrapper
                       , cardano-ledger-test
                       , cardano-prelude
+                      , cryptonite
                       , hedgehog
+                      , shelley-spec-ledger
 
   other-modules:        Test.Cardano.Api
                         Test.Cardano.Api.Gen
