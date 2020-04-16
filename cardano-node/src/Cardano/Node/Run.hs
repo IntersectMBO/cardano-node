@@ -50,8 +50,7 @@ import           Cardano.BM.Data.BackendKind (BackendKind (..))
 import           Cardano.BM.Data.LogItem (LOContent (..),
                      PrivacyAnnotation (..), mkLOMeta)
 import           Cardano.BM.Data.Tracer (ToLogObject (..),
-                     TracingVerbosity (..), TracingFormatting (..),
-                     severityNotice, trTransformer)
+                     TracingVerbosity (..), severityNotice, trTransformer)
 import           Cardano.BM.Data.Transformers (setHostname)
 import           Cardano.BM.Trace
 
@@ -332,8 +331,7 @@ withShutdownHandler (RealProtocolMode NodeCLI{shutdownIPC = Just (Fd fd)})
           throwIO $ IO.userError "--shutdown-ipc FD does not expect input"
 
     tracer :: Tracer IO Text
-    tracer = trTransformer TextualRepresentation MaximalVerbosity
-                           (severityNotice trace)
+    tracer = trTransformer MaximalVerbosity (severityNotice trace)
 
 withShutdownHandler _ _ action = action
 

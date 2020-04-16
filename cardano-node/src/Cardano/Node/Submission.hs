@@ -91,8 +91,7 @@ instance HasPrivacyAnnotation TraceLowLevelSubmit
 
 instance (MonadIO m) => Transformable Text m TraceLowLevelSubmit where
   -- transform to JSON Object
-  trTransformer StructuredLogging verb tr = trStructured verb tr
-  trTransformer _ _verb _tr = nullTracer
+  trTransformer = trStructured
 
 {-------------------------------------------------------------------------------
   Main logic
