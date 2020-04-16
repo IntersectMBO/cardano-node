@@ -11,6 +11,7 @@ package cardano-config
 package cardano-node
   ghc-options: -Wall -fwarn-redundant-constraints
 
+
 package ouroboros-consensus
   tests: False
 
@@ -21,6 +22,81 @@ package ouroboros-consensus-shelley
   tests: False
 
 package ouroboros-consensus-mock
+  tests: False
+
+package byron-spec-chain
+  tests: False
+
+package byron-spec-ledger
+  tests: False
+
+package canonical-json
+  tests: False
+
+package cardano-crypto
+  tests: False
+
+package cborg
+  tests: False
+
+package http-client
+  tests: False
+
+package goblins
+  tests: False
+
+package io-sim
+  tests: False
+
+package shelley-spec-non-integral
+  tests: False
+
+package network-mux
+  tests: False
+
+package typed-protocols
+  tests: False
+
+package typed-protocols-examples
+  tests: False
+
+package cardano-prelude
+  tests: False
+
+package iohk-monitoring
+  tests: False
+
+package cardano-binary
+  tests: False
+
+package cardano-sl-x509
+  tests: False
+
+package cardano-shell
+  tests: False
+
+package cardano-crypto-class
+  tests: False
+
+package cardano-crypto-wrapper
+  tests: False
+
+package ouroboros-network-framework
+  tests: False
+
+package lobemo-backend-monitoring
+  tests: False
+
+package small-steps
+  tests: False
+
+package ouroboros-network
+  tests: False
+
+package shelley-spec-ledger
+  tests: False
+
+package cardano-ledger
   tests: False
 
 source-repository-package
