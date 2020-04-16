@@ -56,6 +56,7 @@ import           Cardano.BM.Trace
 
 import           Cardano.Config.GitRev (gitRev)
 import           Cardano.Config.Logging (LoggingLayer (..), Severity (..))
+import           Cardano.Config.TraceConfig (traceConfigVerbosity)
 import           Cardano.Config.Types (MiscellaneousFilepaths(..),
                                        NodeConfiguration (..), ViewMode (..))
 
@@ -105,7 +106,7 @@ runNode loggingLayer npm = do
     nc <- parseNodeConfiguration npm
 
     traceWith tracer $ "tracing verbosity = " ++
-                         case traceVerbosity $ ncTraceOptions nc of
+                         case traceConfigVerbosity $ ncTraceConfig nc of
                            NormalVerbosity -> "normal"
                            MinimalVerbosity -> "minimal"
                            MaximalVerbosity -> "maximal"
@@ -116,7 +117,7 @@ runNode loggingLayer npm = do
         Left err -> (putTextLn $ renderProtocolInstantiationError err) >> exitFailure
         Right (SomeConsensusProtocol p) -> pure $ SomeConsensusProtocol p
 
-    tracers <- mkTracers (ncTraceOptions nc) trace
+    tracers <- mkTracers (ncTraceConfig nc) trace
 
     case ncViewMode nc of
       SimpleView -> handleSimpleNode p trace tracers npm (const $ pure ())

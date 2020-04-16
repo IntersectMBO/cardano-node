@@ -23,6 +23,7 @@ library
                        Cardano.Config.Protocol.Byron
                        Cardano.Config.ShelleyGenesis
                        Cardano.Config.Topology
+                       Cardano.Config.TraceConfig
                        Cardano.Config.Types
                        Cardano.Tracing.Constraints
                        Cardano.Tracing.ToObjectOrphans
