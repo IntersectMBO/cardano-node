@@ -103,15 +103,18 @@ test-suite cardano-config-test
                         base >=4.12 && <5
                       , bytestring
                       , cardano-config
+                      , cardano-crypto-class
                       , cardano-crypto-test
                       , cardano-prelude
                       , cardano-prelude-test
                       , cardano-slotting
                       , containers
+                      , cryptonite
                       , ouroboros-consensus
                       , ouroboros-consensus-shelley
                       , ouroboros-network
                       , shelley-spec-ledger
+                      , shelley-spec-ledger-test
                       , time
                       , hedgehog
 
@@ -128,4 +131,3 @@ test-suite cardano-config-test
                         -Wpartial-fields
                         -Wcompat
                         -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
-
