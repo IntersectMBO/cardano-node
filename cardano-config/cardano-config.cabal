@@ -19,14 +19,18 @@ library
                        Cardano.Config.Logging
                        Cardano.Config.Orphanage
                        Cardano.Config.Protocol
+                       Cardano.Config.Protocol.Types
                        Cardano.Config.Protocol.Mock
                        Cardano.Config.Protocol.Byron
                        Cardano.Config.ShelleyGenesis
                        Cardano.Config.Topology
                        Cardano.Config.TraceConfig
                        Cardano.Config.Types
-                       Cardano.Tracing.Constraints
-                       Cardano.Tracing.ToObjectOrphans
+                       Cardano.TracingOrphanInstances.Byron
+                       Cardano.TracingOrphanInstances.Common
+                       Cardano.TracingOrphanInstances.Consensus
+                       Cardano.TracingOrphanInstances.Mock
+                       Cardano.TracingOrphanInstances.Network
 
   build-depends:       base >=4.12 && <5
                      , aeson

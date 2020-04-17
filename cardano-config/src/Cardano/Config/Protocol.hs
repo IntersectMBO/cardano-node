@@ -23,18 +23,11 @@ import           Cardano.Prelude
 import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT)
 
-import           Cardano.Tracing.ToObjectOrphans ()
-
-import           Ouroboros.Consensus.Block (BlockProtocol)
-import qualified Ouroboros.Consensus.Cardano as Consensus
-
-import           Ouroboros.Consensus.Node.Run (RunNode)
-
 import           Cardano.Config.Types
                    (NodeConfiguration(..), Protocol (..),
                     MiscellaneousFilepaths(..))
-import           Cardano.Tracing.Constraints (TraceConstraints)
 
+import           Cardano.Config.Protocol.Types
 import           Cardano.Config.Protocol.Mock
 import           Cardano.Config.Protocol.Byron
 
@@ -42,12 +35,6 @@ import           Cardano.Config.Protocol.Byron
 ------------------------------------------------------------------------------
 -- Conversions from configuration into specific protocols and their params
 --
-
-
-data SomeConsensusProtocol where
-  SomeConsensusProtocol :: (RunNode blk, TraceConstraints blk)
-                        => Consensus.Protocol blk (BlockProtocol blk)
-                        -> SomeConsensusProtocol
 
 mkConsensusProtocol
   :: NodeConfiguration
@@ -57,17 +44,17 @@ mkConsensusProtocol config@NodeConfiguration{ncProtocol} files =
     case ncProtocol of
       -- Mock protocols
       BFT      -> firstExceptT MockProtocolInstantiationError $
-                    SomeConsensusProtocol <$> mkConsensusProtocolBFT   config
+                    mkConsensusProtocolBFT   config
 
       MockPBFT -> firstExceptT MockProtocolInstantiationError $
-                    SomeConsensusProtocol <$> mkConsensusProtocolPBFT  config
+                    mkConsensusProtocolPBFT  config
 
       Praos    -> firstExceptT MockProtocolInstantiationError $
-                    SomeConsensusProtocol <$> mkConsensusProtocolPraos config
+                    mkConsensusProtocolPraos config
 
       -- Real protocols
       RealPBFT -> firstExceptT ByronProtocolInstantiationError $
-                    SomeConsensusProtocol <$> mkConsensusProtocolRealPBFT config files
+                    mkConsensusProtocolRealPBFT config files
 
 
 

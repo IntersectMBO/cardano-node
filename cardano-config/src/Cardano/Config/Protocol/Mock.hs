@@ -29,20 +29,17 @@ import           Ouroboros.Consensus.NodeId (CoreNodeId (..), NodeId (..))
 import           Ouroboros.Consensus.Protocol.Abstract (SecurityParam (..))
 
 import           Cardano.Config.Types (NodeConfiguration(..))
+import           Cardano.Config.Protocol.Types (SomeConsensusProtocol(..))
+import           Cardano.TracingOrphanInstances.Mock ()
 
 
 ------------------------------------------------------------------------------
 -- Mock/testing protocols
 --
 
-type BftBlock =
-       SimpleBlock SimpleMockCrypto
-                   (SimpleBftExt SimpleMockCrypto BftMockCrypto)
-
 mkConsensusProtocolBFT
   :: NodeConfiguration
-  -> ExceptT MockProtocolInstantiationError IO
-             (Consensus.Protocol BftBlock (Bft BftMockCrypto))
+  -> ExceptT MockProtocolInstantiationError IO SomeConsensusProtocol
 mkConsensusProtocolBFT NodeConfiguration {
                          ncNodeId,
                          ncNumCoreNodes
@@ -50,21 +47,24 @@ mkConsensusProtocolBFT NodeConfiguration {
   hoistEither $ do
     (nodeId, numCoreNodes) <- checkProtocolParams ncNodeId ncNumCoreNodes
 
-    return $ Consensus.ProtocolMockBFT
-               numCoreNodes
-               nodeId
-               mockSecurityParam
-               (defaultSimpleBlockConfig mockSecurityParam mockSlotLength)
+    let consensusProtocol ::
+          Consensus.Protocol
+            (SimpleBlock SimpleMockCrypto
+                         (SimpleBftExt SimpleMockCrypto BftMockCrypto))
+            (Bft BftMockCrypto)
+        consensusProtocol =
+          Consensus.ProtocolMockBFT
+            numCoreNodes
+            nodeId
+            mockSecurityParam
+            (defaultSimpleBlockConfig mockSecurityParam mockSlotLength)
 
+    return (SomeConsensusProtocol consensusProtocol)
 
-type PBFTBlock =
-       SimpleBlock SimpleMockCrypto
-                   (SimplePBftExt SimpleMockCrypto PBftMockCrypto)
 
 mkConsensusProtocolPBFT
   :: NodeConfiguration
-  -> ExceptT MockProtocolInstantiationError IO
-             (Consensus.Protocol PBFTBlock (PBft PBftMockCrypto))
+  -> ExceptT MockProtocolInstantiationError IO SomeConsensusProtocol
 mkConsensusProtocolPBFT NodeConfiguration {
                               ncNodeId,
                               ncNumCoreNodes
@@ -73,24 +73,27 @@ mkConsensusProtocolPBFT NodeConfiguration {
     (nodeId, numCoreNodes) <- checkProtocolParams ncNodeId ncNumCoreNodes
     let (NumCoreNodes numNodes) = numCoreNodes
 
-    return $ Consensus.ProtocolMockPBFT
-               PBftParams {
-                 pbftSecurityParam      = mockSecurityParam
-               , pbftNumNodes           = numCoreNodes
-               , pbftSignatureThreshold = (1.0 / fromIntegral numNodes) + 0.1
-               }
-               (defaultSimpleBlockConfig mockSecurityParam mockSlotLength)
-               nodeId
+    let consensusProtocol ::
+          Consensus.Protocol
+            (SimpleBlock SimpleMockCrypto
+                         (SimplePBftExt SimpleMockCrypto PBftMockCrypto))
+            (PBft PBftMockCrypto)
+        consensusProtocol =
+          Consensus.ProtocolMockPBFT
+            PBftParams {
+              pbftSecurityParam      = mockSecurityParam
+            , pbftNumNodes           = numCoreNodes
+            , pbftSignatureThreshold = (1.0 / fromIntegral numNodes) + 0.1
+            }
+            (defaultSimpleBlockConfig mockSecurityParam mockSlotLength)
+            nodeId
 
+    return (SomeConsensusProtocol consensusProtocol)
 
-type PraosBlock =
-       SimpleBlock SimpleMockCrypto
-                   (SimplePraosExt SimpleMockCrypto PraosMockCrypto)
 
 mkConsensusProtocolPraos
   :: NodeConfiguration
-  -> ExceptT MockProtocolInstantiationError IO
-             (Consensus.Protocol PraosBlock (Praos PraosMockCrypto))
+  -> ExceptT MockProtocolInstantiationError IO SomeConsensusProtocol
 mkConsensusProtocolPraos NodeConfiguration {
                            ncNodeId,
                            ncNumCoreNodes
@@ -98,16 +101,24 @@ mkConsensusProtocolPraos NodeConfiguration {
   hoistEither $ do
     (nodeId, numCoreNodes) <- checkProtocolParams ncNodeId ncNumCoreNodes
 
-    return $ Consensus.ProtocolMockPraos
-               numCoreNodes
-               nodeId
-               PraosParams {
-                   praosSecurityParam = mockSecurityParam
-                 , praosSlotsPerEpoch = 3
-                 , praosLeaderF       = 0.5
-                 , praosLifetimeKES   = 1000000
-                 }
-               (defaultSimpleBlockConfig mockSecurityParam (slotLengthFromSec 2))
+    let consensusProtocol ::
+          Consensus.Protocol
+            (SimpleBlock SimpleMockCrypto
+                         (SimplePraosExt SimpleMockCrypto PraosMockCrypto))
+            (Praos PraosMockCrypto)
+        consensusProtocol =
+          Consensus.ProtocolMockPraos
+            numCoreNodes
+            nodeId
+            PraosParams {
+                praosSecurityParam = mockSecurityParam
+              , praosSlotsPerEpoch = 3
+              , praosLeaderF       = 0.5
+              , praosLifetimeKES   = 1000000
+              }
+            (defaultSimpleBlockConfig mockSecurityParam (slotLengthFromSec 2))
+
+    return (SomeConsensusProtocol consensusProtocol)
 
 
 mockSecurityParam :: SecurityParam
