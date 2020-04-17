@@ -82,8 +82,10 @@ import           Cardano.Config.GitRev (gitRev)
 import           Cardano.Slotting.Slot (unSlotNo)
 import qualified Ouroboros.Network.AnchoredFragment as Net
 import qualified Ouroboros.Network.Block as Net
+import           Ouroboros.Network.NodeToClient (LocalConnectionId)
+import           Ouroboros.Network.NodeToNode (RemoteConnectionId)
 import           Ouroboros.Consensus.Block (GetHeader(..))
-import           Ouroboros.Consensus.Node (NodeKernel(..), RemoteConnectionId, remoteAddress)
+import           Ouroboros.Consensus.Node (NodeKernel(..), remoteAddress)
 import           Ouroboros.Consensus.NodeId
 import qualified Ouroboros.Network.BlockFetch.ClientState as Net
 import qualified Ouroboros.Network.BlockFetch.ClientRegistry as Net
@@ -191,7 +193,7 @@ fromSMaybe x SNothing = x
 fromSMaybe _ (SJust x) = x
 
 data LVNodeKernel blk = LVNodeKernel
-  { getNodeKernel :: !(NodeKernel IO RemoteConnectionId blk) }
+  { getNodeKernel :: !(NodeKernel IO RemoteConnectionId LocalConnectionId blk) }
   deriving (Generic)
 
 instance NoUnexpectedThunks (LVNodeKernel blk) where
@@ -374,7 +376,8 @@ instance IsEffectuator (LiveViewBackend blk) Text where
                               -> STM.STM IO (Map peer (Net.AnchoredFragment (Header blk)))
                             getCandidates var = STM.readTVar var >>= traverse STM.readTVar
 
-                            extractPeers :: NodeKernel IO RemoteConnectionId blk -> IO [LVPeer blk]
+                            extractPeers :: NodeKernel IO RemoteConnectionId LocalConnectionId blk
+                                         -> IO [LVPeer blk]
                             extractPeers kernel = do
                               peerStates <- fmap tuple3pop <$> (atomically . (>>= traverse Net.readFetchClientState) . Net.readFetchClientsStateVars . getFetchClientRegistry $ kernel)
                               candidates <- atomically . getCandidates . getNodeCandidates $ kernel
@@ -565,7 +568,10 @@ setNodeThread lvbe nodeThr =
   modifyMVar_ (getbe lvbe) $ \lvs ->
       return $ lvs { lvsNodeThread = LiveViewThread $ Just nodeThr }
 
-setNodeKernel :: NFData a => LiveViewBackend blk a -> NodeKernel IO RemoteConnectionId blk -> IO ()
+setNodeKernel :: NFData a
+              => LiveViewBackend blk a
+              -> NodeKernel IO RemoteConnectionId LocalConnectionId blk
+              -> IO ()
 setNodeKernel lvbe nodeKern =
     modifyMVar_ (getbe lvbe) $ \lvs ->
         return $ lvs { lvsNodeKernel = SJust (LVNodeKernel nodeKern) }

@@ -63,44 +63,39 @@ import qualified Cardano.Chain.UTxO as UTxO
 import           Cardano.Crypto (SigningKey (..))
 import qualified Cardano.Crypto.Hashing as Crypto
 import           Cardano.Crypto.ProtocolMagic as Crypto
+import           Control.Monad.Class.MonadST
 import           Control.Monad.Class.MonadTimer
 import           Control.Monad.Class.MonadThrow
 import           Control.Tracer (nullTracer, stdoutTracer, traceWith)
 import           Network.Mux (MuxError)
 import           Ouroboros.Consensus.Block (BlockProtocol)
-import           Ouroboros.Consensus.Byron.Ledger (ByronBlock, GenTx)
+import           Ouroboros.Consensus.Byron.Ledger (ByronBlock)
 import qualified Ouroboros.Consensus.Cardano as Consensus
-import           Ouroboros.Consensus.Mempool.API (ApplyTxErr)
-import           Ouroboros.Consensus.NodeNetwork (ProtocolCodecs(..), protocolCodecs)
+import           Ouroboros.Consensus.Network.NodeToClient
+                   (Codecs'(..), defaultCodecs)
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
-                   (NodeToClientVersion, mostRecentNetworkProtocolVersion)
-import           Ouroboros.Consensus.Config (TopLevelConfig)
+                   (nodeToClientProtocolVersion, supportedNodeToClientVersions)
+import           Ouroboros.Consensus.Config (TopLevelConfig (..))
 import           Ouroboros.Consensus.Node.ProtocolInfo (ProtocolInfo(..))
 import           Ouroboros.Consensus.Node.Run
                    (RunNode(..))
 import           Ouroboros.Consensus.Util.Condense (Condense(..))
-import           Ouroboros.Consensus.Util.IOLike (IOLike)
 import           Ouroboros.Network.Block
-import           Ouroboros.Network.Codec (Codec)
 import           Ouroboros.Network.Mux
                    (AppType(InitiatorApp), OuroborosApplication(..),
                     MuxPeer(..), RunMiniProtocol(..))
 import           Ouroboros.Network.NodeToClient
-                   (IOManager, NetworkConnectTracers(..), NodeToClientProtocols(..),
-                    nodeToClientProtocols, NodeToClientVersionData(..),
-                    NodeToClientVersion(NodeToClientV_1),
-                    connectTo, localSnocket, localTxSubmissionClientNull,
-                    nodeToClientCodecCBORTerm, withIOManager)
+                   (IOManager, LocalConnectionId, NetworkConnectTracers(..),
+                    NodeToClientProtocols(..), NodeToClientVersionData(..),
+                    NodeToClientVersion, connectTo, localSnocket,
+                    localStateQueryPeerNull, localTxSubmissionPeerNull,
+                    versionedNodeToClientProtocols, foldMapVersions,
+                    withIOManager)
 import           Ouroboros.Network.Protocol.ChainSync.Client
                    (ChainSyncClient(..), ClientStIdle(..), ClientStNext(..)
                    , chainSyncClientPeer, recvMsgRollForward)
-import           Ouroboros.Network.Protocol.ChainSync.Type (ChainSync)
 import           Ouroboros.Network.Protocol.Handshake.Version
-                   (DictVersion(..), Versions, simpleSingletonVersions)
-import           Ouroboros.Network.Protocol.LocalTxSubmission.Type
-                   (LocalTxSubmission)
-import           Ouroboros.Network.Protocol.LocalTxSubmission.Client
-                   (localTxSubmissionClientPeer)
+                   (DictVersion(..), Versions)
 
 import           Cardano.Common.LocalSocket (chooseSocketPath)
 import           Cardano.Config.Protocol
@@ -407,45 +402,56 @@ handleMuxError :: MuxError -> IO ()
 handleMuxError err = print err
 
 localInitiatorNetworkApplication
-  :: forall blk m peer.
+  :: forall blk m.
      ( RunNode blk
      , Condense (HeaderHash blk)
-     , IOLike m
      , MonadIO m
+     , MonadST    m
      , MonadTimer m
      )
   => Proxy blk
   -> TopLevelConfig blk
   -> Versions NodeToClientVersion DictVersion
-              (peer -> OuroborosApplication InitiatorApp LB.ByteString m () Void)
+              (LocalConnectionId -> OuroborosApplication InitiatorApp LB.ByteString m () Void)
 localInitiatorNetworkApplication proxy cfg =
-    simpleSingletonVersions
-      NodeToClientV_1
-      (NodeToClientVersionData { networkMagic = nodeNetworkMagic proxy cfg })
-      (DictVersion nodeToClientCodecCBORTerm) $ \_peerid ->
-
-      nodeToClientProtocols
-        NodeToClientProtocols {
-          localChainSyncProtocol =
-            InitiatorProtocolOnly $
-              MuxPeer
-                nullTracer
-                localChainSyncCodec
-                (chainSyncClientPeer chainSyncClient)
-
-        , localTxSubmissionProtocol =
-            InitiatorProtocolOnly $
-              MuxPeer
-                nullTracer
-                localTxSubmissionCodec
-                (localTxSubmissionClientPeer localTxSubmissionClientNull)
-        }
+    foldMapVersions
+      (\v ->
+        versionedNodeToClientProtocols
+          (nodeToClientProtocolVersion proxy v)
+          versionData
+          (protocols v))
+      (supportedNodeToClientVersions proxy)
  where
-  localChainSyncCodec :: Codec (ChainSync (Serialised blk) (Tip blk)) DeserialiseFailure m LB.ByteString
-  localChainSyncCodec = pcLocalChainSyncCodec . protocolCodecs cfg $ mostRecentNetworkProtocolVersion proxy
+  versionData = NodeToClientVersionData { networkMagic = nodeNetworkMagic proxy cfg }
 
-  localTxSubmissionCodec :: Codec (LocalTxSubmission (GenTx blk) (ApplyTxErr blk)) DeserialiseFailure m LB.ByteString
-  localTxSubmissionCodec = pcLocalTxSubmissionCodec . protocolCodecs cfg $ mostRecentNetworkProtocolVersion proxy
+  protocols clientVersion =
+      NodeToClientProtocols {
+        localChainSyncProtocol =
+          InitiatorProtocolOnly $
+            MuxPeer
+              nullTracer
+              cChainSyncCodec
+              (chainSyncClientPeer chainSyncClient)
+
+      , localTxSubmissionProtocol =
+          InitiatorProtocolOnly $
+            MuxPeer
+              nullTracer
+              cTxSubmissionCodec
+              localTxSubmissionPeerNull
+      , localStateQueryProtocol =
+          InitiatorProtocolOnly $
+            MuxPeer
+              nullTracer
+              cStateQueryCodec
+              localStateQueryPeerNull
+      }
+    where
+      Codecs { cChainSyncCodec
+             , cTxSubmissionCodec
+             , cStateQueryCodec
+             }
+        = defaultCodecs (configBlock cfg) clientVersion
 
 ncCardanoEra :: NodeConfiguration -> CardanoEra
 ncCardanoEra = cardanoEraForProtocol . ncProtocol
