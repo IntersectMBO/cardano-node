@@ -1,5 +1,3 @@
-{-# LANGUAGE PatternSynonyms #-}
-
 module Test.Cardano.Api.Gen
   ( genAddress
   , genKeyPair
@@ -20,7 +18,6 @@ module Test.Cardano.Api.Gen
 import           Cardano.Api
 import           Cardano.Binary (serialize)
 import           Cardano.Crypto (hashRaw)
-import           Cardano.Crypto.DSIGN.Class (DSIGNAlgorithm (..))
 import           Cardano.Crypto.DSIGN.Ed448 ()
 import           Cardano.Prelude
 
@@ -29,8 +26,7 @@ import           Crypto.Random (drgNewTest, withDRG)
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import           Data.Coerce (coerce)
 
-import qualified Shelley.Spec.Ledger.Keys as Shelley (KeyDiscriminator (..), pattern SKey,
-                     pattern VKey, pattern VKeyGenesis)
+import qualified Shelley.Spec.Ledger.Keys as Shelley (KeyDiscriminator (..))
 
 import           Test.Cardano.Chain.UTxO.Gen (genTx)
 import           Test.Cardano.Crypto.Gen (genProtocolMagicId, genSigningKey, genVerificationKey)
@@ -162,16 +158,14 @@ genTxUnsignedByron = do
 
 mkDeterministicGenesisKeyPairShelley :: (Word64, Word64, Word64, Word64, Word64) -> KeyPair
 mkDeterministicGenesisKeyPairShelley seed =
-  fst . withDRG (drgNewTest seed) $ do
-    sk <- genKeyDSIGN
-    pure $ KeyPairShelley
-      (GenesisShelleyVerificationKey (Shelley.VKeyGenesis $ deriveVerKeyDSIGN sk))
-      (Shelley.SKey sk)
+  mkDeterministicKeyPairShelley seed (ShelleyKeyDiscriminator Shelley.Genesis)
 
 mkDeterministicRegularKeyPairShelley :: (Word64, Word64, Word64, Word64, Word64) -> KeyPair
 mkDeterministicRegularKeyPairShelley seed =
-  fst . withDRG (drgNewTest seed) $ do
-    sk <- genKeyDSIGN
-    pure $ KeyPairShelley
-      (RegularShelleyVerificationKey (Shelley.VKey $ deriveVerKeyDSIGN sk))
-      (Shelley.SKey sk)
+  mkDeterministicKeyPairShelley seed (ShelleyKeyDiscriminator Shelley.Regular)
+
+mkDeterministicKeyPairShelley :: (Word64, Word64, Word64, Word64, Word64)
+                              -> ShelleyKeyDiscriminator
+                              -> KeyPair
+mkDeterministicKeyPairShelley seed skd =
+  fst . withDRG (drgNewTest seed) $ genericShelleyKeyPair skd

@@ -32,6 +32,9 @@ module Cardano.Api
   , witnessTransaction
   , signTransactionWithWitness
   , submitTransaction
+
+  -- Mainly for testing
+  , genericShelleyKeyPair
   ) where
 
 import           Cardano.Api.TxSubmit
@@ -56,6 +59,8 @@ import qualified Cardano.Chain.Common as Byron
 import qualified Cardano.Chain.Genesis as Byron
 import qualified Cardano.Chain.UTxO as Byron
 
+import           Crypto.Random (MonadRandom)
+
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import           Data.Coerce (coerce)
 import           Data.List.NonEmpty (NonEmpty)
@@ -72,7 +77,10 @@ byronGenKeyPair =
   uncurry KeyPairByron <$> runSecureRandom Crypto.keyGen
 
 shelleyGenKeyPair :: ShelleyKeyDiscriminator -> IO KeyPair
-shelleyGenKeyPair (ShelleyKeyDiscriminator kd) = runSecureRandom $ do
+shelleyGenKeyPair = runSecureRandom . genericShelleyKeyPair
+
+genericShelleyKeyPair :: MonadRandom m => ShelleyKeyDiscriminator -> m KeyPair
+genericShelleyKeyPair (ShelleyKeyDiscriminator kd) = do
     sk <- genKeyDSIGN
     pure $ KeyPairShelley (mkShelleyVKey (deriveVerKeyDSIGN sk)) (Shelley.SKey sk)
   where
@@ -81,7 +89,6 @@ shelleyGenKeyPair (ShelleyKeyDiscriminator kd) = runSecureRandom $ do
       case kd of
         Shelley.Genesis -> GenesisShelleyVerificationKey $ Shelley.VKeyGenesis vk
         Shelley.Regular -> RegularShelleyVerificationKey $ Shelley.VKey vk
-
 
 -- Given key information (public key, and other network parameters), generate an Address.
 -- Originally: mkAddress :: Network -> PubKey -> PubKeyInfo -> Address
