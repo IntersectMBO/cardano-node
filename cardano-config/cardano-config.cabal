@@ -37,6 +37,7 @@ library
   build-depends:       base >=4.12 && <5
                      , aeson
                      , async
+                     , base16-bytestring
                      , bytestring
                      , canonical-json
                      , cardano-binary
@@ -100,7 +101,8 @@ test-suite cardano-config-test
   type:                 exitcode-stdio-1.0
 
   build-depends:
-                        base >=4.12 && <5
+                        base >= 4.12 && < 5
+                      , aeson
                       , bytestring
                       , cardano-config
                       , cardano-crypto-class

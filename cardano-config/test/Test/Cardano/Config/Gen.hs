@@ -1,7 +1,10 @@
 {-# LANGUAGE PatternSynonyms #-}
 
 module Test.Cardano.Config.Gen
-  ( genShelleyGenesis
+  ( genAddress
+  , genGenesisDelegationPair
+  , genGenesisFundPair
+  , genShelleyGenesis
   ) where
 
 import           Cardano.Prelude
@@ -26,19 +29,13 @@ import           Ouroboros.Consensus.Protocol.Abstract (SecurityParam (..))
 import           Ouroboros.Consensus.Shelley.Protocol (Crypto, TPraosStandardCrypto)
 import           Ouroboros.Network.Magic (NetworkMagic (..))
 
--- import           Cardano.Ledger.Shelley.Crypto
 import           Shelley.Spec.Ledger.Address (toAddr)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
-import qualified Shelley.Spec.Ledger.Keys as Shelley
-import           Shelley.Spec.Ledger.Keys (hashKey, sKey, vKey)
+import           Shelley.Spec.Ledger.Keys (GenKeyHash, KeyHash, SKey (..), VKey, VKeyGenesis,
+                    pattern KeyPair, pattern VKey, pattern VKeyGenesis, hashKey, sKey, vKey)
 import           Shelley.Spec.Ledger.TxData (Addr)
 
-
-
 import           Test.Cardano.Crypto.Gen (genProtocolMagicId)
-
-
---import           Test.Shelley.Spec.Ledger.Utils (mkKeyPair) -- Useful starting point
 
 
 genShelleyGenesis :: Gen (ShelleyGenesis TPraosStandardCrypto)
@@ -59,57 +56,64 @@ genShelleyGenesis =
     <*> Gen.word64 (Range.linear 1 100000)
     <*> fmap fromIntegral (Gen.word $ Range.linear 100 1000000)
     <*> fmap fromIntegral (Gen.word $ Range.linear 100 1000000)
-    <*> fmap Map.fromList genGenesisDelegationList -- !(Map (SL.GenKeyHash c) (SL.KeyHash c))
-    <*> fmap Map.fromList genFundsList             -- !(Map (SL.Addr c) SL.Coin)
+    <*> fmap Map.fromList genGenesisDelegationList
+    <*> fmap Map.fromList genFundsList
 
 
-genFundsList :: Crypto crypto => Gen [(Addr crypto, Coin)]
-genFundsList = Gen.list (Range.linear 1 100) ((,) <$> genAddress <*> genCoin)
+genGenesisFundPair :: Gen (Addr TPraosStandardCrypto, Coin)
+genGenesisFundPair =
+  (,) <$> genAddress <*> genCoin
 
-genGenesisDelegationList :: Crypto crypto => Gen [(Shelley.GenKeyHash crypto,Shelley.KeyHash crypto)]
+genFundsList :: Gen [(Addr TPraosStandardCrypto, Coin)]
+genFundsList = Gen.list (Range.linear 1 100) genGenesisFundPair
+
+genGenesisDelegationList :: Gen [(GenKeyHash TPraosStandardCrypto, KeyHash TPraosStandardCrypto)]
 genGenesisDelegationList = Gen.list (Range.linear 1 10) genGenesisDelegationPair
 
-genGenesisDelegationPair :: Crypto crypto => Gen (Shelley.GenKeyHash crypto, Shelley.KeyHash crypto)
+genGenesisDelegationPair :: Gen (GenKeyHash TPraosStandardCrypto, KeyHash TPraosStandardCrypto)
 genGenesisDelegationPair = do
-  -- I think SL.GenKeyHash refers to the hash of the genesis verification key
-  (_, verGenKey) <- genGenesisKeyPair
-  let genKeyHash = hashKey verGenKey
-
-  -- I think SL.KeyHash refers to the hash of the delegators veritifation key
-  (_, delegatorVerKey) <- genKeyPair
-  let keyhash = hashKey delegatorVerKey
+  -- SL.GenKeyHash should refer to the hash of the genesis verification key
+  genKeyHash <- hashKey . snd <$> genGenesisKeyPair
+  -- SL.KeyHash should refer to the hash of the delegators veritifation key
+  keyhash <- hashKey . snd <$> genKeyPair
   pure (genKeyHash, keyhash)
 
 
-genGenesisKeyPair :: Crypto crypto => Gen (Shelley.SKey crypto, Shelley.VKeyGenesis crypto)
-genGenesisKeyPair = do
-  [a, b, c, d, e] <- Gen.list (Range.singleton 5) (Gen.word64 Range.constantBounded)
-  pure $ mkGenKeyPair (a, b, c, d, e)
+genGenesisKeyPair :: Crypto crypto => Gen (SKey crypto, VKeyGenesis crypto)
+genGenesisKeyPair = mkGenKeyPair <$> genSeed5
 
-genKeyPair :: Crypto crypto => Gen (Shelley.SKey crypto, Shelley.VKey crypto)
-genKeyPair = do
-  [a, b, c, d, e] <- Gen.list (Range.singleton 5) (Gen.word64 Range.constantBounded)
-  pure $ mkKeyPair (a, b, c, d, e)
+genKeyPair :: Crypto crypto => Gen (SKey crypto, VKey crypto)
+genKeyPair = mkKeyPair <$> genSeed5
+
+genSeed5 :: Gen (Word64, Word64, Word64, Word64, Word64)
+genSeed5 =
+  (,,,,)
+    <$> Gen.word64 Range.constantBounded
+    <*> Gen.word64 Range.constantBounded
+    <*> Gen.word64 Range.constantBounded
+    <*> Gen.word64 Range.constantBounded
+    <*> Gen.word64 Range.constantBounded
 
 -- | Generate a deterministic genesis key pair given a seed.
-mkGenKeyPair :: Crypto crypto => (Word64, Word64, Word64, Word64, Word64) -> (Shelley.SKey crypto, Shelley.VKeyGenesis crypto)
-mkGenKeyPair seed = fst . withDRG (drgNewTest seed) $ do
-  sk <- genKeyDSIGN
-  return (Shelley.SKey sk, Shelley.VKeyGenesis $ deriveVerKeyDSIGN sk)
+mkGenKeyPair :: Crypto crypto => (Word64, Word64, Word64, Word64, Word64) -> (SKey crypto, VKeyGenesis crypto)
+mkGenKeyPair seed =
+  fst . withDRG (drgNewTest seed) $ do
+    sk <- genKeyDSIGN
+    return (SKey sk, VKeyGenesis $ deriveVerKeyDSIGN sk)
 
 -- | Generate a deterministic key pair given a seed.
-mkKeyPair :: Crypto crypto => (Word64, Word64, Word64, Word64, Word64) -> (Shelley.SKey crypto, Shelley.VKey crypto)
+mkKeyPair :: Crypto crypto => (Word64, Word64, Word64, Word64, Word64) -> (SKey crypto, VKey crypto)
 mkKeyPair seed = fst . withDRG (drgNewTest seed) $ do
   sk <- genKeyDSIGN
-  return (Shelley.SKey sk, Shelley.VKey $ deriveVerKeyDSIGN sk)
+  return (SKey sk, VKey $ deriveVerKeyDSIGN sk)
 
-genAddress :: Crypto crypto => Gen (Addr crypto)
+genAddress :: Gen (Addr TPraosStandardCrypto)
 genAddress = do
   (secKey1, verKey1) <- genKeyPair
   (secKey2, verKey2) <- genKeyPair
-  let keyPair1 = Shelley.KeyPair {sKey = secKey1, vKey = verKey1}
-      keyPair2 = Shelley.KeyPair {sKey = secKey2, vKey = verKey2}
-  pure . toAddr $ (keyPair1, keyPair2)
+  let keyPair1 = KeyPair {sKey = secKey1, vKey = verKey1}
+      keyPair2 = KeyPair {sKey = secKey2, vKey = verKey2}
+  pure $ toAddr (keyPair1, keyPair2)
 
 
 genCoin :: Gen Coin
