@@ -308,7 +308,9 @@ Block number: 5
 
 ## Update proposals
 
-There is currently only support to create a Byron update proposal:
+### Update proposal creation
+
+A Byron update proposal can be created as follows:
 
 ```
 cardano-cli -- byron
@@ -333,7 +335,9 @@ You can also check your proposal's validity using the [`validate-cbor`](#validat
 
 See the [Byron specification](https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/byronLedgerSpec/latest/download-by-type/doc-pdf/ledger-spec) for more details on update proposals.
 
-You can submit your proposal using the `byron submit-update-proposal` command.
+### Update proposal submission
+
+You can submit your proposal using the `submit-byron-update-proposal` command.
 
 Example:
 ```
@@ -347,6 +351,30 @@ The socket path  must either be specified as an argument (`--socket-path`) or sp
 
 See the [Byron specification](https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/byronLedgerSpec/latest/download-by-type/doc-pdf/ledger-spec) for more deatils on update proposals.
 
+
+## Update proposal voting
+You can create and submit byron update proposal votes with the `create-byron-proposal-vote` & `submit-byron-proposal-vote` commands. The following are two example commands:
+
+
+Byron vote creation:
+
+```
+cabal exec cardano-cli -- byron create-byron-proposal-vote
+                        --config configuration/defaults/liveview/config-0.yaml
+                        --signing-key configuration/defaults/liveview/genesis/delegate-keys.000.key
+                        --proposal-filepath ProtocolUpdateProposalFile
+                        --vote-yes
+                        --output-filepath UpdateProposalVoteFile
+```
+
+Byron vote submission:
+
+```
+cabal exec cardano-cli -- byron submit-byron-proposal-vote
+                        --config  configuration/defaults/liveview/config-0.yaml
+                        --filepath UpdateProposalVoteFile
+                        --socket-path socket/node-0-socket
+```
 
 # Development
 

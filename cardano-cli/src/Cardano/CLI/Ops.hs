@@ -294,7 +294,7 @@ instance Show CliError where
   show (ByronVoteDecodingError err)
     =  "Error decoding Byron vote: " <> show err
   show (ByronVoteSubmissionError pbftErr)
-    = "Error submitting Byron vote: " <> show pbftErr
+    = "Error submitting Byron vote: " <> (show $ renderRealPBFTError pbftErr)
   show (ByronReadUpdateProposalFileFailure fp err)
     =  "Error reading Byron update proposal at: " <> fp <> "Error: " <> show err
   show (ByronReadVoteFileFailure fp err)
