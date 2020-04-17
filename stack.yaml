@@ -2,6 +2,8 @@ resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/91f3
 compiler: ghc-8.6.5
 
 packages:
+  - cardano-api
+  - cardano-cli
   - cardano-config
   - cardano-node
 

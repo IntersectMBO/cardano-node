@@ -4,6 +4,7 @@ module Cardano.CLI.Common.Parsers
   , cliParseLovelace
   , cliParseTxId
   , parseAddress
+  , parseCardanoEra
   , parseCertificateFile
   , parseFakeAvvmOptions
   , parseK
@@ -167,6 +168,28 @@ parseAddress :: String -> String -> Parser Address
 parseAddress opt desc =
   option (cliParseBase58Address <$> auto)
     $ long opt <> metavar "ADDR" <> help desc
+
+parseCardanoEra :: Parser CardanoEra
+parseCardanoEra = asum
+  [ flag' ByronEraLegacy $
+        long "byron-legacy-formats"
+     <> help "Byron/cardano-sl formats and compatibility"
+
+  , flag' ByronEra $
+        long "byron-formats"
+     <> help "Byron era formats and compatibility"
+
+  , flag' ShelleyEra $
+        long "shelley-formats"
+     <> help "Shelley-era formats and compatibility"
+
+    -- And various hidden compatibility flag aliases:
+  , flag' ByronEraLegacy $ hidden <> long "byron-legacy"
+  , flag' ShelleyEra     $ hidden <> long "bft"
+  , flag' ShelleyEra     $ hidden <> long "praos"
+  , flag' ShelleyEra     $ hidden <> long "mock-pbft"
+  , flag' ByronEra       $ hidden <> long "real-pbft"
+  ]
 
 parseCertificateFile :: String -> String -> Parser CertificateFile
 parseCertificateFile opt desc = CertificateFile <$> parseFilePath opt desc

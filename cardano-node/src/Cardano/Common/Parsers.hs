@@ -26,7 +26,6 @@ module Cardano.Common.Parsers
   , parseLogOutputFile
   , parseNodeAddress
   , parseNodeId
-  , parseCardanoEra
   , parseSigningKeyFile
   , parseSocketPath
   , readDouble
@@ -46,7 +45,6 @@ import           Cardano.Chain.Common (Lovelace, mkLovelace)
 import           Cardano.Config.CommonCLI
 import           Cardano.Config.Topology
 import           Cardano.Config.Types
-import           Cardano.CLI.Ops (CardanoEra(..))
 
 
 -- Common command line parsers
@@ -261,28 +259,6 @@ parseShutdownIPC =
       <> help "Shut down the process when this inherited FD reaches EOF"
       <> hidden
     )
-
-parseCardanoEra :: Parser CardanoEra
-parseCardanoEra = asum
-  [ flag' ByronEraLegacy $
-        long "byron-legacy-formats"
-     <> help "Byron/cardano-sl formats and compatibility"
-
-  , flag' ByronEra $
-        long "byron-formats"
-     <> help "Byron era formats and compatibility"
-
-  , flag' ShelleyEra $
-        long "shelley-formats"
-     <> help "Shelley-era formats and compatibility"
-
-    -- And various hidden compatibility flag aliases:
-  , flag' ByronEraLegacy $ hidden <> long "byron-legacy"
-  , flag' ShelleyEra     $ hidden <> long "bft"
-  , flag' ShelleyEra     $ hidden <> long "praos"
-  , flag' ShelleyEra     $ hidden <> long "mock-pbft"
-  , flag' ByronEra       $ hidden <> long "real-pbft"
-  ]
 
 parseSigningKeyFile :: String -> String -> Parser SigningKeyFile
 parseSigningKeyFile opt desc = SigningKeyFile <$> parseFilePath opt desc
