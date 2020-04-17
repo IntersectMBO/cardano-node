@@ -13,9 +13,11 @@ import           Data.Aeson (ToJSON)
 
 import           Ouroboros.Network.Block
 import           Ouroboros.Consensus.Util.Condense (Condense)
-import           Ouroboros.Consensus.Block (Header)
+import           Ouroboros.Consensus.Block (Header, BlockProtocol)
+import           Ouroboros.Consensus.HeaderValidation
+                   (OtherHeaderEnvelopeError)
 import           Ouroboros.Consensus.Ledger.Abstract
-                   (LedgerError, BlockProtocol)
+                   (LedgerError)
 import           Ouroboros.Consensus.Mempool.API
                    (GenTx, GenTxId, HasTxId, HasTxs(..), ApplyTxErr, TxId)
 import           Ouroboros.Consensus.Protocol.Abstract (ValidationErr)
@@ -56,6 +58,7 @@ type TraceConstraints blk =
     , ToObject (GenTx blk)
     , ToObject (Header blk)
     , ToObject (LedgerError blk)
+    , ToObject (OtherHeaderEnvelopeError blk)
     , ToObject (ValidationErr (BlockProtocol blk))
     )
 
