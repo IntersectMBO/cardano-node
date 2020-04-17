@@ -5,6 +5,7 @@ module Test.Cardano.Config
   ) where
 
 import           Cardano.Prelude
+import           Test.Cardano.Prelude
 
 import           Data.Aeson (encode, fromJSON, decode, toJSON)
 
@@ -13,7 +14,11 @@ import           Shelley.Spec.Ledger.Address (serialiseAddr, deserialiseAddr)
 import           Hedgehog (Property, discover)
 import qualified Hedgehog
 
+import           Test.Cardano.Config.Examples
 import           Test.Cardano.Config.Gen
+
+prop_golden_ShelleyGenesis :: Property
+prop_golden_ShelleyGenesis = goldenTestJSON exampleShelleyGenesis "test/Golden/ShelleyGenesis"
 
 -- Keep this here to make sure serialiseAddr/deserialiseAddr are working.
 -- They are defined in the Shelley executable spec and have been wrong at

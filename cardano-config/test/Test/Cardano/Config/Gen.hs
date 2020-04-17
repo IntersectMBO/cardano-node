@@ -72,9 +72,9 @@ genGenesisDelegationList = Gen.list (Range.linear 1 10) genGenesisDelegationPair
 
 genGenesisDelegationPair :: Gen (GenKeyHash TPraosStandardCrypto, KeyHash TPraosStandardCrypto)
 genGenesisDelegationPair = do
-  -- SL.GenKeyHash should refer to the hash of the genesis verification key
+  -- GenKeyHash should refer to the hash of the genesis verification key
   genKeyHash <- hashKey . snd <$> genGenesisKeyPair
-  -- SL.KeyHash should refer to the hash of the delegators veritifation key
+  -- KeyHash should refer to the hash of the delegators verification key
   keyhash <- hashKey . snd <$> genKeyPair
   pure (genKeyHash, keyhash)
 
