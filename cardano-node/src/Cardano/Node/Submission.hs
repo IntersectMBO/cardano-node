@@ -3,6 +3,7 @@
 {-# LANGUAGE DataKinds             #-}
 {-# LANGUAGE GADTs                 #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns        #-}
 {-# LANGUAGE RankNTypes            #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
 {-# LANGUAGE TypeApplications      #-}
@@ -28,27 +29,22 @@ import           Control.Monad.Class.MonadTimer (MonadTimer)
 import           Control.Tracer (Tracer, nullTracer, traceWith)
 
 import           Ouroboros.Consensus.Mempool (ApplyTxErr, GenTx)
-import           Ouroboros.Consensus.Node.Run (RunNode)
-import qualified Ouroboros.Consensus.Node.Run as Node
-import           Ouroboros.Consensus.Config (TopLevelConfig)
+import           Ouroboros.Consensus.Network.NodeToClient
+import           Ouroboros.Consensus.Node.NetworkProtocolVersion
+                  (nodeToClientProtocolVersion,
+                   supportedNodeToClientVersions)
+import           Ouroboros.Consensus.Node.Run (RunNode, nodeNetworkMagic)
+import           Ouroboros.Consensus.Config (TopLevelConfig (..))
 
-import           Ouroboros.Network.Codec (Codec, DeserialiseFailure)
 import           Ouroboros.Network.Mux
                    ( AppType(..), OuroborosApplication(..),
                      MuxPeer(..), RunMiniProtocol(..) )
-import           Ouroboros.Network.Block (Tip)
-import qualified Ouroboros.Network.Block as Block
 import           Ouroboros.Network.Driver (runPeer)
-import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Type as LocalTxSub
 import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Client as LocalTxSub
-import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Codec as LocalTxSub
-import           Ouroboros.Network.Protocol.ChainSync.Type (ChainSync)
-import           Ouroboros.Network.Protocol.ChainSync.Client (chainSyncClientPeer)
-import           Ouroboros.Network.Protocol.ChainSync.Codec (codecChainSync)
-import           Ouroboros.Network.Protocol.Handshake.Version ( Versions
-                                                              , simpleSingletonVersions)
 import           Ouroboros.Network.NodeToClient ( IOManager
-                                                , NetworkConnectTracers (..))
+                                                , NetworkConnectTracers (..)
+                                                , Versions
+                                                )
 import qualified Ouroboros.Network.NodeToClient as NtC
 
 import           Cardano.BM.Tracing
@@ -119,7 +115,7 @@ submitGeneralTx iocp (SocketFile path) cfg tx tracer =
     path
 
 localInitiatorNetworkApplication
-  :: forall blk m peer.
+  :: forall blk m.
      ( RunNode blk
      , MonadST m
      , MonadThrow m
@@ -130,37 +126,58 @@ localInitiatorNetworkApplication
   -> TopLevelConfig blk
   -> GenTx blk
   -> Versions NtC.NodeToClientVersion NtC.DictVersion
-              (peer -> OuroborosApplication InitiatorApp ByteString m () Void)
+              (NtC.LocalConnectionId -> OuroborosApplication InitiatorApp ByteString m () Void)
 localInitiatorNetworkApplication tracer cfg tx =
-    simpleSingletonVersions
-      NtC.NodeToClientV_1
-      (NtC.NodeToClientVersionData
-        { NtC.networkMagic = Node.nodeNetworkMagic (Proxy @blk) cfg })
-      (NtC.DictVersion NtC.nodeToClientCodecCBORTerm) $ \_peerid ->
+    NtC.foldMapVersions
+      (\v ->
+        NtC.versionedNodeToClientProtocols
+          (nodeToClientProtocolVersion proxy v)
+          versionData
+          (protocols v))
+      (supportedNodeToClientVersions proxy)
+  where
+    proxy :: Proxy blk
+    proxy = Proxy
 
-    NtC.nodeToClientProtocols
-      NtC.NodeToClientProtocols {
-        NtC.localChainSyncProtocol =
-          InitiatorProtocolOnly $
-            MuxPeer
-              nullTracer
-              (localChainSyncCodec @blk cfg)
-              (chainSyncClientPeer NtC.chainSyncClientNull)
+    versionData = NtC.NodeToClientVersionData { NtC.networkMagic = nodeNetworkMagic proxy cfg }
 
-      , NtC.localTxSubmissionProtocol =
-          InitiatorProtocolOnly $
-            MuxPeerRaw $ \channel -> do
-              traceWith tracer TraceLowLevelSubmitting
-              result <- runPeer
-                          nullTracer -- (contramap show tracer)
-                          localTxSubmissionCodec
-                          channel
-                          (LocalTxSub.localTxSubmissionClientPeer
-                             (txSubmissionClientSingle tx))
-              case result of
-                Nothing  -> traceWith tracer TraceLowLevelAccepted
-                Just msg -> traceWith tracer (TraceLowLevelRejected $ show msg)
-      }
+    protocols clientVersion =
+        NtC.NodeToClientProtocols {
+          NtC.localChainSyncProtocol =
+            InitiatorProtocolOnly $
+              MuxPeer
+                nullTracer
+                cChainSyncCodec
+                NtC.chainSyncPeerNull
+
+        , NtC.localTxSubmissionProtocol =
+            InitiatorProtocolOnly $
+              MuxPeerRaw $ \channel -> do
+                traceWith tracer TraceLowLevelSubmitting
+                result <- runPeer
+                            nullTracer -- (contramap show tracer)
+                            cTxSubmissionCodec
+                            channel
+                            (LocalTxSub.localTxSubmissionClientPeer
+                               (txSubmissionClientSingle tx))
+                case result of
+                  Nothing  -> traceWith tracer TraceLowLevelAccepted
+                  Just msg -> traceWith tracer (TraceLowLevelRejected $ show msg)
+
+        , NtC.localStateQueryProtocol =
+            InitiatorProtocolOnly $
+              MuxPeer
+                nullTracer
+                cStateQueryCodec
+                NtC.localStateQueryPeerNull
+        }
+      where
+        Codecs { cChainSyncCodec
+               , cTxSubmissionCodec
+               , cStateQueryCodec
+               }
+          = defaultCodecs (configBlock cfg) clientVersion
+
 
 -- | A 'LocalTxSubmissionClient' that submits exactly one transaction, and then
 -- disconnects, returning the confirmation or rejection.
@@ -173,28 +190,3 @@ txSubmissionClientSingle
 txSubmissionClientSingle tx = LocalTxSub.LocalTxSubmissionClient $ do
     pure $ LocalTxSub.SendMsgSubmitTx tx $ \mreject ->
       pure (LocalTxSub.SendMsgDone mreject)
-
-localTxSubmissionCodec
-  :: forall m blk . (RunNode blk, MonadST m)
-  => Codec (LocalTxSub.LocalTxSubmission (GenTx blk) (ApplyTxErr blk))
-           DeserialiseFailure m ByteString
-localTxSubmissionCodec =
-  LocalTxSub.codecLocalTxSubmission
-    Node.nodeEncodeGenTx
-    Node.nodeDecodeGenTx
-    (Node.nodeEncodeApplyTxError (Proxy @blk))
-    (Node.nodeDecodeApplyTxError (Proxy @blk))
-
-localChainSyncCodec
-  :: forall blk m. (RunNode blk, MonadST m)
-  => TopLevelConfig blk
-  -> Codec (ChainSync blk (Tip blk))
-           DeserialiseFailure m ByteString
-localChainSyncCodec cfg =
-    codecChainSync
-      (Block.wrapCBORinCBOR   (Node.nodeEncodeBlock cfg))
-      (Block.unwrapCBORinCBOR (Node.nodeDecodeBlock cfg))
-      (Block.encodePoint (Node.nodeEncodeHeaderHash (Proxy @blk)))
-      (Block.decodePoint (Node.nodeDecodeHeaderHash (Proxy @blk)))
-      (Block.encodeTip (Node.nodeEncodeHeaderHash (Proxy @blk)))
-      (Block.decodeTip (Node.nodeDecodeHeaderHash (Proxy @blk)))

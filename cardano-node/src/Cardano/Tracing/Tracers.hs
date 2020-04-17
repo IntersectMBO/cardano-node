@@ -48,9 +48,8 @@ import           Ouroboros.Consensus.Ledger.SupportsProtocol (LedgerSupportsProt
 import           Ouroboros.Consensus.Mempool.API
                    (GenTx, MempoolSize (..), TraceEventMempool (..))
 import qualified Ouroboros.Consensus.Node.Tracers as Consensus
-import           Ouroboros.Consensus.NodeNetwork (ProtocolTracers,
-                                                  ProtocolTracers' (..),
-                                                  nullProtocolTracers)
+import qualified Ouroboros.Consensus.Network.NodeToClient as NodeToClient
+import qualified Ouroboros.Consensus.Network.NodeToNode as NodeToNode
 import           Ouroboros.Consensus.Util.Orphans ()
 
 import qualified Ouroboros.Network.AnchoredFragment as AF
@@ -78,9 +77,11 @@ data Tracers peer localPeer blk = Tracers
   { -- | Trace the ChainDB
     chainDBTracer :: Tracer IO (ChainDB.TraceEvent blk)
     -- | Consensus-specific tracers.
-  , consensusTracers :: Consensus.Tracers IO peer blk
-    -- | Tracers for the protocol messages.
-  , protocolTracers :: ProtocolTracers IO peer localPeer blk DeserialiseFailure
+  , consensusTracers :: Consensus.Tracers IO peer localPeer blk
+    -- | Tracers for the node-to-node protocols.
+  , nodeToNodeTracers :: NodeToNode.Tracers IO peer blk DeserialiseFailure
+    -- | Tracers for the node-to-client protocols
+  , nodeToClientTracers :: NodeToClient.Tracers IO localPeer blk DeserialiseFailure
     -- | Trace the IP subscription manager
   , ipSubscriptionTracer :: Tracer IO (WithIPList (SubscriptionTrace Socket.SockAddr))
     -- | Trace the DNS subscription manager
@@ -115,7 +116,8 @@ nullTracers :: Tracers peer localPeer blk
 nullTracers = Tracers
   { chainDBTracer = nullTracer
   , consensusTracers = Consensus.nullTracers
-  , protocolTracers = nullProtocolTracers
+  , nodeToClientTracers = NodeToClient.nullTracers
+  , nodeToNodeTracers = NodeToNode.nullTracers
   , ipSubscriptionTracer = nullTracer
   , dnsSubscriptionTracer = nullTracer
   , dnsResolverTracer = nullTracer
@@ -232,8 +234,8 @@ mkTracers traceConf tracer = do
           $ tracer
     , consensusTracers
         = mkConsensusTracers elidedFetchDecision blockForgeOutcomeExtractor forgeTracers
-    , protocolTracers
-        = mkProtocolTracers
+    , nodeToClientTracers
+    , nodeToNodeTracers
     , ipSubscriptionTracer
         = tracerOnOff traceConf traceIpSubscription
           $ annotateSeverity
@@ -461,7 +463,7 @@ mkTracers traceConf tracer = do
         :: MVar (Maybe (WithSeverity [TraceLabelPeer peer (FetchDecision [Point (Header blk)])]),Int)
         -> (OutcomeEnhancedTracer IO (Consensus.TraceForgeEvent blk (GenTx blk)) -> Tracer IO (Consensus.TraceForgeEvent blk (GenTx blk)))
         -> ForgeTracers
-        -> Consensus.Tracers' peer blk (Tracer IO)
+        -> Consensus.Tracers' peer localPeer blk (Tracer IO)
     mkConsensusTracers elidingFetchDecision measureBlockForging forgeTracers = Consensus.Tracers
       { Consensus.chainSyncClientTracer
         = tracerOnOff traceConf traceChainSyncClient
@@ -522,35 +524,40 @@ mkTracers traceConf tracer = do
         TraceStartTimeInTheFuture (SystemStart start) toWait ->
           "Waiting " <> show toWait <> " until genesis start time at " <> show start
 
-    mkProtocolTracers
-      :: ProtocolTracers' peer localPeer blk DeserialiseFailure (Tracer IO)
-    mkProtocolTracers = ProtocolTracers
-      { ptChainSyncTracer
+    nodeToClientTracers
+      :: NodeToClient.Tracers' localPeer blk DeserialiseFailure (Tracer IO)
+    nodeToClientTracers = NodeToClient.Tracers
+      { NodeToClient.tChainSyncTracer
+        = tracerOnOff traceConf traceLocalChainSyncProtocol
+        $ showTracing $ withName "LocalChainSyncProtocol" tracer
+      , NodeToClient.tTxSubmissionTracer
+        = tracerOnOff traceConf traceLocalTxSubmissionProtocol
+        $ showTracing $ withName "LocalTxSubmissionProtocol" tracer
+      , NodeToClient.tStateQueryTracer
+        = tracerOnOff traceConf traceLocalStateQueryProtocol
+        $ showTracing $ withName "LocalStateQueryProtocol" tracer
+      }
+
+    nodeToNodeTracers
+      :: NodeToNode.Tracers' peer blk DeserialiseFailure (Tracer IO)
+    nodeToNodeTracers = NodeToNode.Tracers
+      { NodeToNode.tChainSyncTracer
         = tracerOnOff traceConf traceChainSyncProtocol
         $ showTracing $ withName "ChainSyncProtocol" tracer
-      , ptChainSyncSerialisedTracer
+      , NodeToNode.tChainSyncSerialisedTracer
         = tracerOnOff traceConf traceChainSyncProtocol
         $ showTracing $ withName "ChainSyncProtocol" tracer
-      , ptBlockFetchTracer
+      , NodeToNode.tBlockFetchTracer
         = tracerOnOff traceConf traceBlockFetchProtocol
         $ toLogObject' tracingVerbosity
         $ appendName "BlockFetchProtocol" tracer
-      , ptBlockFetchSerialisedTracer
+      , NodeToNode.tBlockFetchSerialisedTracer
         = tracerOnOff traceConf traceBlockFetchProtocolSerialised
         $ showTracing $ withName "BlockFetchProtocolSerialised" tracer
-      , ptTxSubmissionTracer
+      , NodeToNode.tTxSubmissionTracer
         = tracerOnOff traceConf traceTxSubmissionProtocol
         $ toLogObject' tracingVerbosity
         $ appendName "TxSubmissionProtocol" tracer
-      , ptLocalChainSyncTracer
-        = tracerOnOff traceConf traceLocalChainSyncProtocol
-        $ showTracing $ withName "LocalChainSyncProtocol" tracer
-      , ptLocalTxSubmissionTracer
-        = tracerOnOff traceConf traceLocalTxSubmissionProtocol
-        $ showTracing $ withName "LocalTxSubmissionProtocol" tracer
-      , ptLocalStateQueryTracer
-        = tracerOnOff traceConf traceLocalStateQueryProtocol
-        $ showTracing $ withName "LocalStateQueryProtocol" tracer
       }
 
 -- | get information about a chain fragment

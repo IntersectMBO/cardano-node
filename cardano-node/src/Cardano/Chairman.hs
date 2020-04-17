@@ -43,12 +43,14 @@ import           Ouroboros.Consensus.BlockchainTime.SlotLengths
 import           Ouroboros.Consensus.Config
                    ( TopLevelConfig, configConsensus, configBlock )
 import           Ouroboros.Consensus.Mempool
+import           Ouroboros.Consensus.Network.NodeToClient
+import           Ouroboros.Consensus.Node.NetworkProtocolVersion
+                  (HasNetworkProtocolVersion (..))
 import           Ouroboros.Consensus.Node.ProtocolInfo
 import           Ouroboros.Consensus.Node.LedgerDerivedInfo
 import           Ouroboros.Consensus.Node.Run
 import           Ouroboros.Consensus.Cardano
 
-import           Ouroboros.Network.Codec
 import           Ouroboros.Network.Mux
 import           Ouroboros.Network.Block (BlockNo, HasHeader, Point, Tip)
 import qualified Ouroboros.Network.Block as Block
@@ -56,13 +58,11 @@ import           Ouroboros.Network.Point (WithOrigin(..), fromWithOrigin)
 import           Ouroboros.Network.AnchoredFragment (AnchoredFragment, Anchor)
 import qualified Ouroboros.Network.AnchoredFragment as AF
 import           Ouroboros.Network.Protocol.LocalTxSubmission.Type
-import           Ouroboros.Network.Protocol.LocalTxSubmission.Client hiding (SendMsgDone)
-import           Ouroboros.Network.Protocol.LocalTxSubmission.Codec
 import           Ouroboros.Network.Protocol.ChainSync.Type
 import           Ouroboros.Network.Protocol.ChainSync.Client
-import           Ouroboros.Network.Protocol.ChainSync.Codec
 import           Ouroboros.Network.Protocol.Handshake.Version
-import           Ouroboros.Network.NodeToClient
+import           Ouroboros.Network.NodeToClient hiding (NodeToClientVersion (..))
+import qualified Ouroboros.Network.NodeToClient as NtC
 
 import           Cardano.Config.Types (SocketPath(..))
 
@@ -484,7 +484,7 @@ checkConsensus chainsVar securityParam = do
 --
 
 localInitiatorNetworkApplication
-  :: forall blk m peer.
+  :: forall blk m.
      ( RunNode blk
      , MonadAsync m
      , MonadST    m
@@ -504,62 +504,52 @@ localInitiatorNetworkApplication
   -- received by the client (see 'Ouroboros.Network.Protocol.LocalTxSubmission.Type'
   -- in 'ouroboros-network' package).
   -> TopLevelConfig blk
-  -> Versions NodeToClientVersion DictVersion
-              (peer -> OuroborosApplication InitiatorApp ByteString m () Void)
+  -> Versions NtC.NodeToClientVersion DictVersion
+              (LocalConnectionId -> OuroborosApplication InitiatorApp ByteString m () Void)
 localInitiatorNetworkApplication sockPath chainsVar securityParam
                                  chairmanTracer chainSyncTracer
                                  localTxSubmissionTracer cfg =
-    simpleSingletonVersions
-      NodeToClientV_1
-      (NodeToClientVersionData (nodeNetworkMagic (Proxy @blk) cfg))
-      (DictVersion nodeToClientCodecCBORTerm) $ \_peerid ->
+    foldMapVersions
+      (\v ->
+        versionedNodeToClientProtocols
+          (nodeToClientProtocolVersion proxy v)
+          versionData
+          (protocols v))
+      (supportedNodeToClientVersions proxy)
+  where
+    -- TODO: it should be passed as an argument
+    proxy :: Proxy blk
+    proxy = Proxy
 
-    nodeToClientProtocols $
-      NodeToClientProtocols {
-        localChainSyncProtocol =
-          InitiatorProtocolOnly $
-            MuxPeer
-              chainSyncTracer
-              (localChainSyncCodec cfg)
-              (chainSyncClientPeer $
-                 chainSyncClient chairmanTracer sockPath chainsVar securityParam)
+    versionData = NodeToClientVersionData (nodeNetworkMagic proxy cfg)
 
-      , localTxSubmissionProtocol =
-          InitiatorProtocolOnly $
-            MuxPeer
-              localTxSubmissionTracer
-              localTxSubmissionCodec
-              (localTxSubmissionClientPeer localTxSubmissionClientNull)
-      }
+    protocols :: NodeToClientVersion blk
+              -> NodeToClientProtocols InitiatorApp ByteString m () Void
+    protocols byronClientVersion  =
+        NodeToClientProtocols {
+          localChainSyncProtocol =
+            InitiatorProtocolOnly $
+              MuxPeer
+                chainSyncTracer
+                cChainSyncCodec
+                (chainSyncClientPeer $
+                   chainSyncClient chairmanTracer sockPath chainsVar securityParam)
 
---
--- Codecs
---
-
-localTxSubmissionCodec
-  :: forall m blk . (RunNode blk, MonadST m)
-  => Codec (LocalTxSubmission (GenTx blk) (ApplyTxErr blk))
-           DeserialiseFailure m ByteString
-localTxSubmissionCodec =
-  codecLocalTxSubmission
-    nodeEncodeGenTx
-    nodeDecodeGenTx
-    (nodeEncodeApplyTxError (Proxy @blk))
-    (nodeDecodeApplyTxError (Proxy @blk))
-
-localChainSyncCodec
-  :: forall blk m.
-     ( RunNode blk
-     , MonadST    m
-     )
-  => TopLevelConfig blk
-  -> Codec (ChainSync blk (Tip blk))
-           DeserialiseFailure m ByteString
-localChainSyncCodec cfg =
-    codecChainSync
-      (Block.wrapCBORinCBOR   (nodeEncodeBlock cfg))
-      (Block.unwrapCBORinCBOR (nodeDecodeBlock cfg))
-      (Block.encodePoint (nodeEncodeHeaderHash (Proxy @blk)))
-      (Block.decodePoint (nodeDecodeHeaderHash (Proxy @blk)))
-      (Block.encodeTip   (nodeEncodeHeaderHash (Proxy @blk)))
-      (Block.decodeTip   (nodeDecodeHeaderHash (Proxy @blk)))
+        , localTxSubmissionProtocol =
+            InitiatorProtocolOnly $
+              MuxPeer
+                localTxSubmissionTracer
+                cTxSubmissionCodec
+                localTxSubmissionPeerNull
+        , localStateQueryProtocol = 
+            InitiatorProtocolOnly $
+              MuxPeer
+                nullTracer
+                cStateQueryCodec
+                localStateQueryPeerNull
+        }
+      where
+        Codecs { cChainSyncCodec
+               , cTxSubmissionCodec
+               , cStateQueryCodec
+               } = clientCodecs (configBlock cfg) byronClientVersion

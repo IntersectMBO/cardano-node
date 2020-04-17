@@ -61,13 +61,13 @@ import           Cardano.Config.Types (MiscellaneousFilepaths(..),
                                        NodeConfiguration (..), ViewMode (..))
 
 import           Ouroboros.Network.NodeToClient (LocalConnectionId)
-import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..))
+import           Ouroboros.Network.NodeToNode (RemoteConnectionId, AcceptedConnectionsLimit (..))
 import           Ouroboros.Consensus.Block (BlockProtocol)
 import           Ouroboros.Consensus.Node (NodeKernel,
                      DiffusionTracers (..), DiffusionArguments (..),
                      DnsSubscriptionTarget (..), IPSubscriptionTarget (..),
                      RunNode (nodeNetworkMagic, nodeStartTime),
-                     RemoteConnectionId)
+                     RunNodeArgs (..))
 import qualified Ouroboros.Consensus.Node as Node (run)
 import           Ouroboros.Consensus.Node.ProtocolInfo
 import           Ouroboros.Consensus.NodeId
@@ -158,7 +158,7 @@ handleSimpleNode
   -> Trace IO Text
   -> Tracers RemoteConnectionId LocalConnectionId blk
   -> NodeProtocolMode
-  -> (NodeKernel IO RemoteConnectionId blk -> IO ())
+  -> (NodeKernel IO RemoteConnectionId LocalConnectionId blk -> IO ())
   -- ^ Called on the 'NodeKernel' after creating it, but before the network
   -- layer is initialised.  This implies this function must not block,
   -- otherwise the node won't actually start.
@@ -200,17 +200,20 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
 
   withShutdownHandler npm trace $
    Node.run
-    (consensusTracers nodeTracers)
-    (protocolTracers nodeTracers)
-    (chainDBTracer nodeTracers)
-    diffusionTracers
-    diffusionArguments
-    (nodeNetworkMagic (Proxy @blk) cfg)
-    dbPath
-    pInfo
-    (customiseChainDbArgs $ dbValidation npm)
-    identity -- No NodeParams customisation
-    $ \_registry nodeKernel -> onKernel nodeKernel
+     RunNodeArgs {
+       rnTraceConsensus       = consensusTracers nodeTracers,
+       rnTraceNTN             = nodeToNodeTracers nodeTracers,
+       rnTraceNTC             = nodeToClientTracers nodeTracers,
+       rnTraceDB              = chainDBTracer nodeTracers,
+       rnTraceDiffusion       = diffusionTracers,
+       rnDiffusionArguments   = diffusionArguments,
+       rnNetworkMagic         = nodeNetworkMagic (Proxy @blk) cfg,
+       rnDatabasePath         = dbPath,
+       rnProtocolInfo         = pInfo,
+       rnCustomiseChainDbArgs = customiseChainDbArgs $ dbValidation npm,
+       rnCustomiseNodeArgs    = identity,
+       rnNodeKernelHook       = \_registry nodeKernel -> onKernel nodeKernel
+    }
  where
   customiseChainDbArgs :: Bool
                        -> ChainDB.ChainDbArgs IO blk
