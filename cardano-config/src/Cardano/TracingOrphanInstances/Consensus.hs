@@ -22,9 +22,8 @@ import           Cardano.TracingOrphanInstances.Common
 import           Cardano.TracingOrphanInstances.Network (showTip, showPoint)
 
 import           Ouroboros.Consensus.Block
-                   (Header, headerPoint,
+                   (BlockProtocol, Header, headerPoint,
                     RealPoint, realPointSlot, realPointHash)
-import           Ouroboros.Network.Point (withOrigin)
 import           Ouroboros.Consensus.MiniProtocol.BlockFetch.Server
                    (TraceBlockFetchServerEvent)
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client
@@ -49,6 +48,7 @@ import           Ouroboros.Consensus.Util.Condense
 import           Ouroboros.Consensus.Util.Orphans ()
 
 import qualified Ouroboros.Network.AnchoredFragment as AF
+import           Ouroboros.Network.Point (withOrigin)
 import           Ouroboros.Network.Block
                    (BlockNo(..), SlotNo(..), ChainUpdate(..),
                     HeaderHash, StandardHash, blockHash, pointSlot)
@@ -221,6 +221,7 @@ instance ( Condense (HeaderHash blk)
          , LedgerSupportsProtocol blk
          , Show (TxId tx)
          , ToObject (LedgerError blk)
+         , ToObject (OtherHeaderEnvelopeError blk)
          , ToObject (ValidationErr (BlockProtocol blk)))
       => Transformable Text IO (TraceForgeEvent blk tx) where
   trTransformer = trStructuredText
@@ -396,13 +397,16 @@ instance ToObject LedgerDB.DiskSnapshot where
 
 instance ( StandardHash blk
          , ToObject (LedgerError blk)
+         , ToObject (OtherHeaderEnvelopeError blk)
          , ToObject (ValidationErr (BlockProtocol blk)))
       => ToObject (ExtValidationError blk) where
   toObject verb (ExtValidationErrorLedger err) = toObject verb err
   toObject verb (ExtValidationErrorHeader err) = toObject verb err
 
 
-instance (StandardHash blk)
+instance ( StandardHash blk
+         , ToObject (OtherHeaderEnvelopeError blk)
+         )
       => ToObject (HeaderEnvelopeError blk) where
   toObject _verb (UnexpectedBlockNo expect act) =
     mkObject
@@ -422,15 +426,14 @@ instance (StandardHash blk)
       , "expected" .= String (pack $ show expect)
       , "actual" .= String (pack $ show act)
       ]
-  toObject _verb (OtherEnvelopeError text) =
-    mkObject
-      [ "kind" .= String "OtherEnvelopeError"
-      , "error" .= String text
-      ]
+  toObject verb (OtherHeaderEnvelopeError err) =
+    toObject verb err
 
 
 instance ( StandardHash blk
-         , ToObject (ValidationErr (BlockProtocol blk)))
+         , ToObject (ValidationErr (BlockProtocol blk))
+         , ToObject (OtherHeaderEnvelopeError blk)
+         )
       => ToObject (HeaderError blk) where
   toObject verb (HeaderProtocolError err) =
     mkObject
@@ -447,6 +450,7 @@ instance ( StandardHash blk
 instance ( Condense (HeaderHash blk)
          , StandardHash blk
          , ToObject (LedgerError blk)
+         , ToObject (OtherHeaderEnvelopeError blk)
          , ToObject (ValidationErr (BlockProtocol blk)))
       => ToObject (ChainDB.InvalidBlockReason blk) where
   toObject verb (ChainDB.ValidationError extvalerr) =
@@ -753,6 +757,7 @@ instance ( Condense (HeaderHash blk)
          , LedgerSupportsProtocol blk
          , Show (TxId tx)
          , ToObject (LedgerError blk)
+         , ToObject (OtherHeaderEnvelopeError blk)
          , ToObject (ValidationErr (BlockProtocol blk)))
       => ToObject (TraceForgeEvent blk tx) where
   toObject MaximalVerbosity (TraceAdoptedBlock slotNo blk txs) =

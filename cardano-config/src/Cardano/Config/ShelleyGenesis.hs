@@ -13,7 +13,6 @@ module Cardano.Config.ShelleyGenesis
   ) where
 
 import           Cardano.Prelude
-import           Prelude (id)
 
 import qualified Data.Text.Encoding as Text
 import qualified Data.Map.Strict as Map
@@ -29,7 +28,6 @@ import qualified Data.Aeson.Encoding as Aeson
 
 import           Control.Monad.Fail (fail)
 
-import           Cardano.Binary (serialize', decodeFull')
 import           Cardano.Crypto.Hash.Class as Crypto
 import           Cardano.Crypto.ProtocolMagic (ProtocolMagicId(..))
 import           Cardano.Slotting.Slot (EpochSize (..))
@@ -42,7 +40,7 @@ import           Ouroboros.Consensus.Shelley.Node (ShelleyGenesis (..))
 import           Ouroboros.Consensus.Shelley.Protocol (TPraosStandardCrypto)
 
 
-import           Shelley.Spec.Ledger.Address
+import           Shelley.Spec.Ledger.Address (serialiseAddr, deserialiseAddr)
 import           Shelley.Spec.Ledger.Coin   (Coin(..))
 import           Shelley.Spec.Ledger.Crypto (Crypto)
 import           Shelley.Spec.Ledger.Keys   (HashAlgorithm)
@@ -243,19 +241,3 @@ parseAddr t = do
     badHex _  = fail "Addresses are expected in hex encoding for now"
     badFormat = fail "Address is not in the right format"
 
-
-
---TODO: use these as soon as they are available from
--- Shelley.Spec.Ledger.Address (serialiseAddr, deserialiseAddr)
--- and remove these local copies:
-
-serialiseAddr :: Crypto crypto => Addr crypto -> ByteString
-serialiseAddr = serialize'
-  where
-    -- reference an arbitrary function from Shelley.Spec.Ledger.Address just
-    -- to keep the import live, so we will notice the name clash as soon as
-    -- the utils are ready and so we will not forget.
-      _unused = mkRwdAcnt
-
-deserialiseAddr :: Crypto crypto => ByteString -> Maybe (Addr crypto)
-deserialiseAddr = either (const Nothing) id . decodeFull'

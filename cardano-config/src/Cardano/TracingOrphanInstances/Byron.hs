@@ -22,7 +22,8 @@ import           Ouroboros.Network.Block
                    (blockHash, blockSlot, blockNo, blockPrevHash)
 import           Ouroboros.Consensus.Block (Header)
 import           Ouroboros.Consensus.Byron.Ledger
-                   (ByronBlock(..), byronHeaderRaw)
+                   (ByronBlock(..), byronHeaderRaw,
+                    ByronOtherHeaderEnvelopeError(..))
 import           Ouroboros.Consensus.Mempool.API (GenTx, TxId, txId)
 import           Ouroboros.Consensus.Util.Condense (condense)
 
@@ -137,4 +138,12 @@ instance ToObject (Header ByronBlock) where
      headerSignerVk :: AHeader ByteString -> VerificationKey
      headerSignerVk =
        delegateVK . delegationCertificate . headerSignature
+
+
+instance ToObject ByronOtherHeaderEnvelopeError where
+  toObject _verb (UnexpectedEBBInSlot slot) =
+    mkObject
+      [ "kind" .= String "UnexpectedEBBInSlot"
+      , "slot" .= slot
+      ]
 
