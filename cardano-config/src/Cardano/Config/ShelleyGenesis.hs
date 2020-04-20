@@ -25,6 +25,7 @@ import           Data.Aeson (Value, ToJSON(..), toJSON, (.=),
 import           Data.Aeson.Types    (Parser)
 import qualified Data.Aeson          as Aeson
 import qualified Data.Aeson.Encoding as Aeson
+import qualified Data.ByteString.Base16 as Base16
 
 import           Control.Monad.Fail (fail)
 
@@ -231,13 +232,13 @@ instance Crypto crypto => FromJSON (Addr crypto) where
 
 addrToText :: Crypto crypto => Addr crypto -> Text
 addrToText =
-     Text.decodeLatin1 . serialiseAddr
+     Text.decodeLatin1 . Base16.encode . serialiseAddr
 
 parseAddr :: Crypto crypto => Text -> Parser (Addr crypto)
 parseAddr t = do
     bytes <- either badHex return (parseBase16 t)
     maybe badFormat return (deserialiseAddr bytes)
   where
-    badHex _  = fail "Addresses are expected in hex encoding for now"
+    badHex h = fail $ "Addresses are expected in hex encoding for now: " ++ show h
     badFormat = fail "Address is not in the right format"
 
