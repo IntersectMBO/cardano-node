@@ -33,7 +33,7 @@ import qualified Data.Text.Lazy.IO as TL
 import qualified Data.Text.Lazy.Builder as Builder
 import           Data.Version (showVersion)
 import qualified Formatting as F
-import           Paths_cardano_node (version)
+import           Paths_cardano_cli (version)
 import           System.Info (arch, compilerName, compilerVersion, os)
 
 import qualified Cardano.Chain.Common as Common

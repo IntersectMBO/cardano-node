@@ -1,8 +1,8 @@
-{ pkgs, cardano-node-packages ? pkgs.cardanoNodeHaskellPackages.cardano-node.components.exes }:
+{ pkgs, cardano-cli-packages ? pkgs.cardanoNodeHaskellPackages.cardano-cli.components.exes }:
 with builtins; with pkgs.lib;
 let
   inherit (pkgs) commonLib;
-  cardano-cli-bin = "${cardano-node-packages.cardano-cli}/bin/cardano-cli";
+  cardano-cli-bin = "${cardano-cli-packages.cardano-cli}/bin/cardano-cli";
 
   ## mkNodeConfig
   ##   :: ServiceConfig AttrSet -> NodeId Int -> NodeConfig AttrSet
