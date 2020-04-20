@@ -14,7 +14,7 @@ let
     users = mkOption {};
   };
   mkNodeScript = envConfig: let
-    defaultConfig = rec {
+    defaultConfig = {
       consensusProtocol = "real-pbft";
       hostAddr = "127.0.0.1";
       port = 3001;
@@ -22,7 +22,7 @@ let
       delegationCertificate = null;
       nodeId = 0;
       stateDir = "state-node-${envConfig.name}";
-      socketPath = "${stateDir}/node.socket";
+      socketPath = "${config.stateDir}/node.socket";
       # defaults to proxy if env has no relays
       edgeHost = "127.0.0.1";
       edgeNodes = [];
