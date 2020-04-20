@@ -56,6 +56,7 @@ let
       inherit edgeNodes edgeHost edgePort;
     };
     serviceConfig = {
+      inherit environments;
       inherit (config)
         stateDir
         socketPath
