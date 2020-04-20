@@ -69,8 +69,8 @@ import qualified Data.Vector as Vector
 import           Ouroboros.Consensus.Shelley.Protocol.Crypto (TPraosStandardCrypto)
 
 import           Shelley.Spec.Ledger.Crypto (DSIGN)
-import qualified Shelley.Spec.Ledger.Keys as Shelley (KeyDiscriminator (..), SKey (..),
-                     pattern VKey, pattern VKeyGenesis)
+import qualified Shelley.Spec.Ledger.Keys as Shelley (SKey (..), pattern VKey,
+                     pattern VKeyGenesis)
 
 byronGenKeyPair :: IO KeyPair
 byronGenKeyPair =
@@ -80,15 +80,15 @@ shelleyGenKeyPair :: ShelleyKeyDiscriminator -> IO KeyPair
 shelleyGenKeyPair = runSecureRandom . genericShelleyKeyPair
 
 genericShelleyKeyPair :: MonadRandom m => ShelleyKeyDiscriminator -> m KeyPair
-genericShelleyKeyPair (ShelleyKeyDiscriminator kd) = do
+genericShelleyKeyPair skd = do
     sk <- genKeyDSIGN
     pure $ KeyPairShelley (mkShelleyVKey (deriveVerKeyDSIGN sk)) (Shelley.SKey sk)
   where
     mkShelleyVKey :: VerKeyDSIGN (DSIGN TPraosStandardCrypto) -> ShelleyVerificationKey
     mkShelleyVKey vk =
-      case kd of
-        Shelley.Genesis -> GenesisShelleyVerificationKey $ Shelley.VKeyGenesis vk
-        Shelley.Regular -> RegularShelleyVerificationKey $ Shelley.VKey vk
+      case skd of
+        GenesisShelleyKey -> GenesisShelleyVerificationKey $ Shelley.VKeyGenesis vk
+        RegularShelleyKey -> RegularShelleyVerificationKey $ Shelley.VKey vk
 
 -- Given key information (public key, and other network parameters), generate an Address.
 -- Originally: mkAddress :: Network -> PubKey -> PubKeyInfo -> Address

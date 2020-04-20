@@ -26,8 +26,6 @@ import           Crypto.Random (drgNewTest, withDRG)
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import           Data.Coerce (coerce)
 
-import qualified Shelley.Spec.Ledger.Keys as Shelley (KeyDiscriminator (..))
-
 import           Test.Cardano.Chain.UTxO.Gen (genTx)
 import           Test.Cardano.Crypto.Gen (genProtocolMagicId, genSigningKey, genVerificationKey)
 
@@ -81,8 +79,7 @@ genRegularKeyPairShelley =
 
 genShelleyKeyDiscriminator :: Gen ShelleyKeyDiscriminator
 genShelleyKeyDiscriminator =
-  ShelleyKeyDiscriminator
-    <$> Gen.choice [pure Shelley.Genesis, pure Shelley.Regular]
+  Gen.choice [pure GenesisShelleyKey, pure RegularShelleyKey]
 
 genShelleyVerificationKey :: Gen ShelleyVerificationKey
 genShelleyVerificationKey =
@@ -158,11 +155,11 @@ genTxUnsignedByron = do
 
 mkDeterministicGenesisKeyPairShelley :: (Word64, Word64, Word64, Word64, Word64) -> KeyPair
 mkDeterministicGenesisKeyPairShelley seed =
-  mkDeterministicKeyPairShelley seed (ShelleyKeyDiscriminator Shelley.Genesis)
+  mkDeterministicKeyPairShelley seed GenesisShelleyKey
 
 mkDeterministicRegularKeyPairShelley :: (Word64, Word64, Word64, Word64, Word64) -> KeyPair
 mkDeterministicRegularKeyPairShelley seed =
-  mkDeterministicKeyPairShelley seed (ShelleyKeyDiscriminator Shelley.Regular)
+  mkDeterministicKeyPairShelley seed RegularShelleyKey
 
 mkDeterministicKeyPairShelley :: (Word64, Word64, Word64, Word64, Word64)
                               -> ShelleyKeyDiscriminator

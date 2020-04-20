@@ -29,7 +29,7 @@ import           Data.Vector (Vector)
 
 import           Ouroboros.Consensus.Shelley.Protocol.Crypto (TPraosStandardCrypto)
 
-import           Shelley.Spec.Ledger.Keys (KeyDiscriminator, SKey, VKey, VKeyGenesis)
+import           Shelley.Spec.Ledger.Keys (KeyDiscriminator (..), SKey, VKey, VKeyGenesis)
 
 -- The 'Address' data type in 'cardano-sl' is a design train wreck.
 -- We need something that is compatible and discard as much of the insanity as possible.
@@ -48,9 +48,12 @@ data KeyPair
   deriving (Generic, NFData, Show)
   deriving anyclass NoUnexpectedThunks
 
-newtype ShelleyKeyDiscriminator = ShelleyKeyDiscriminator KeyDiscriminator
-  deriving (Generic, Show)
-  deriving newtype (NFData, NoUnexpectedThunks)
+-- | A means of discriminating between different kinds of Shelley keys.
+data ShelleyKeyDiscriminator
+  = GenesisShelleyKey
+  | RegularShelleyKey
+  deriving (Generic, NFData, Show)
+  deriving anyclass NoUnexpectedThunks
 
 data ShelleyVerificationKey
   = GenesisShelleyVerificationKey !(VKeyGenesis TPraosStandardCrypto)
