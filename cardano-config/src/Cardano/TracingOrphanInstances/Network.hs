@@ -294,6 +294,7 @@ instance HasSeverityAnnotation (WithMuxBearer peer MuxTrace) where
     MuxTraceRecvDeltaQObservation {} -> Debug
     MuxTraceRecvDeltaQSample {} -> Debug
     MuxTraceSDUReadTimeoutException -> Notice
+    MuxTraceSDUWriteTimeoutException -> Notice
 
 --
 -- | instances of @Transformable@
