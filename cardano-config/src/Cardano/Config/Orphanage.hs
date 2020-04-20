@@ -1,5 +1,7 @@
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GeneralisedNewtypeDeriving #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeSynonymInstances #-}
@@ -18,9 +20,20 @@ import qualified Data.Text as T
 
 import           Cardano.BM.Data.Tracer (TracingVerbosity(..))
 import qualified Cardano.Chain.Update as Update
+import           Cardano.Crypto.DSIGN.Ed448 (Ed448DSIGN)
+import           Cardano.Crypto.KES (SignKeyKES, SimpleKES, VerKeyKES)
 import qualified Ouroboros.Consensus.BlockchainTime as Consensus
 import           Ouroboros.Consensus.NodeId (NodeId(..), CoreNodeId (..))
+import           Ouroboros.Consensus.Shelley.Protocol.Crypto (TPraosStandardCrypto)
+import           Shelley.Spec.Ledger.Keys (VKeyES (..))
 
+
+deriving instance Generic (VKeyES TPraosStandardCrypto)
+deriving instance NFData (VKeyES TPraosStandardCrypto)
+
+deriving instance NFData (SignKeyKES (SimpleKES Ed448DSIGN))
+
+deriving instance NFData (VerKeyKES (SimpleKES Ed448DSIGN))
 
 deriving instance Num Consensus.SlotLength
 

@@ -24,7 +24,6 @@ import           Cardano.Binary (DecoderError (..), Decoder, Encoding, FromCBOR 
 import qualified Cardano.Binary as CBOR
 
 import           Cardano.Crypto.DSIGN.Class (DSIGNAlgorithm (..))
-
 import           Cardano.Prelude
 
 import           Data.ByteString.Char8 (ByteString)
