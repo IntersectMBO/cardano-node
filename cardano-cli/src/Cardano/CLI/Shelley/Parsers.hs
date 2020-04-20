@@ -14,7 +14,6 @@ import           Cardano.Common.Parsers (parseNodeAddress)
 import           Cardano.Config.Types (NodeAddress, SigningKeyFile(..))
 import           Cardano.Slotting.Slot (EpochNo (..))
 
-import qualified Data.ByteString.Char8 as BS
 import           Data.Time.Clock (UTCTime)
 import           Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 
@@ -65,7 +64,7 @@ data ShelleyDevOpsCmd
 
 data ShelleyCommand
   = ShelleyCreateGenesis GenesisDir (Maybe SystemStart) Lovelace
-  | ShelleyKeyGenerate OutputFile ByteString
+  | ShelleyKeyGenerate OutputFile
   | ShelleyKESKeyPairGenerate VerificationKeyFile SigningKeyFile Natural
   | ShelleyVRFKeyPairGenerate VerificationKeyFile SigningKeyFile
   | ShelleyPool ShelleyPoolCmd
@@ -158,7 +157,7 @@ parseShelleyCommands =
 
     pKeyGen :: Parser ShelleyCommand
     pKeyGen =
-      ShelleyKeyGenerate <$> pOutputFile <*> pComment
+      ShelleyKeyGenerate <$> pOutputFile
 
     pKESKeyGen :: Parser ShelleyCommand
     pKESKeyGen =
@@ -167,17 +166,6 @@ parseShelleyCommands =
     pVRFKeyGen :: Parser ShelleyCommand
     pVRFKeyGen =
       ShelleyVRFKeyPairGenerate <$> pVerificationKeyFile <*> pSigningKeyFile
-
-    -- The comment field is just passed around as a 'ByteString' to its better to leave it
-    -- as such instead of converting it to 'Text'.
-    pComment :: Parser ByteString
-    pComment =
-      BS.pack <$>
-        Opt.strOption
-          (  Opt.long "comment"
-          <> Opt.metavar "TEXT"
-          <> Opt.help "A single line of text comment."
-          )
 
     pGenesisDir :: Parser GenesisDir
     pGenesisDir =

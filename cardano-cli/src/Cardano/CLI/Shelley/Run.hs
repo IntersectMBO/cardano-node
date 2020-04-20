@@ -13,7 +13,9 @@ module Cardano.CLI.Shelley.Run
 import           Cardano.Prelude hiding (option, trace)
 
 import           Control.Monad.Trans.Except (ExceptT)
-import           Control.Monad.Trans.Except.Extra (firstExceptT)
+import           Control.Monad.Trans.Except.Extra (firstExceptT, newExceptT)
+
+import           Cardano.Api (ShelleyKeyDiscriminator (..), shelleyGenKeyPair, writeKeyPair)
 
 import           Cardano.CLI.Key (VerificationKeyFile(..))
 import           Cardano.CLI.Ops (CliError (..))
@@ -27,15 +29,16 @@ import           Cardano.Config.Types (SigningKeyFile(..))
 runShelleyClientCommand :: ShelleyCommand -> ExceptT CliError IO ()
 runShelleyClientCommand cc =
   case cc of
-    ShelleyKeyGenerate fpath title -> runShelleyKeyGenerate fpath title
+    ShelleyKeyGenerate fpath -> runShelleyKeyGenerate fpath
     ShelleyKESKeyPairGenerate vKeyPath sKeyPath duration -> runShelleyKESKeyPairGeneration vKeyPath sKeyPath duration
     ShelleyVRFKeyPairGenerate vKeyPath sKeyPath -> runShelleyVRFKeyPairGeneration vKeyPath sKeyPath
     _ -> liftIO . putStrLn $ "runShelleyClientCommand: " ++ show cc
 
 
-runShelleyKeyGenerate :: OutputFile -> ByteString -> ExceptT CliError IO ()
-runShelleyKeyGenerate fpath title =
-  liftIO . putStrLn $ "runShelleyKeyGenerate (" ++ show fpath ++ ") " ++ show title
+runShelleyKeyGenerate :: OutputFile -> ExceptT CliError IO ()
+runShelleyKeyGenerate (OutputFile fpath) = do
+  kp <- liftIO $ shelleyGenKeyPair RegularShelleyKey
+  firstExceptT CardanoApiError $ newExceptT (writeKeyPair fpath kp)
 
 runShelleyKESKeyPairGeneration :: VerificationKeyFile -> SigningKeyFile -> Natural -> ExceptT CliError IO ()
 runShelleyKESKeyPairGeneration (VerificationKeyFile vKeyPath) (SigningKeyFile sKeyPath) duration = do

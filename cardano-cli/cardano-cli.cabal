@@ -42,6 +42,7 @@ library
   build-depends:       base >=4.12 && <5
                      , bytestring
                      , canonical-json
+                     , cardano-api
                      , cardano-binary
                      , cardano-config
                      , cardano-crypto
