@@ -30,6 +30,7 @@ import           Cardano.Config.Types
 import           Cardano.Config.Protocol.Types
 import           Cardano.Config.Protocol.Mock
 import           Cardano.Config.Protocol.Byron
+import           Cardano.Config.Protocol.Shelley
 
 
 ------------------------------------------------------------------------------
@@ -56,6 +57,8 @@ mkConsensusProtocol config@NodeConfiguration{ncProtocol} files =
       RealPBFT -> firstExceptT ByronProtocolInstantiationError $
                     mkConsensusProtocolRealPBFT config files
 
+      TPraos   -> firstExceptT ShelleyProtocolInstantiationError $
+                    SomeConsensusProtocol <$> mkConsensusProtocolTPraos config files
 
 
 ------------------------------------------------------------------------------
@@ -63,8 +66,9 @@ mkConsensusProtocol config@NodeConfiguration{ncProtocol} files =
 --
 
 data ProtocolInstantiationError =
-    ByronProtocolInstantiationError ByronProtocolInstantiationError
-  | MockProtocolInstantiationError MockProtocolInstantiationError
+    ByronProtocolInstantiationError   ByronProtocolInstantiationError
+  | ShelleyProtocolInstantiationError ShelleyProtocolInstantiationError
+  | MockProtocolInstantiationError    MockProtocolInstantiationError
   deriving Show
 
 
@@ -73,6 +77,9 @@ renderProtocolInstantiationError pie =
   case pie of
     ByronProtocolInstantiationError bpie ->
       renderByronProtocolInstantiationError bpie
+
+    ShelleyProtocolInstantiationError spie ->
+      renderShelleyProtocolInstantiationError spie
 
     MockProtocolInstantiationError mpie ->
       renderMockProtocolInstantiationError mpie
