@@ -27,15 +27,17 @@ exampleShelleyGenesis :: ShelleyGenesis TPraosStandardCrypto
 exampleShelleyGenesis =
   ShelleyGenesis
     { sgStartTime = SystemStart . posixSecondsToUTCTime $ realToFrac (1234566789 :: Integer)
-    , sgNetworkMagic = NetworkMagic {unNetworkMagic = 4036000900}
-    , sgProtocolMagicId = ProtocolMagicId {unProtocolMagicId = 838299499}
-    , sgActiveSlotsCoeff = 6.259, sgDecentralisationParam = 1.9e-2
-    , sgSecurityParam = SecurityParam {maxRollbacks = 120842}
-    , sgEpochLength = EpochSize {unEpochSize = 1215}
+    , sgNetworkMagic = NetworkMagic 4036000900
+    , sgProtocolMagicId = ProtocolMagicId 838299499
+    , sgActiveSlotsCoeff = 6.259
+    , sgDecentralisationParam = 1.9e-2
+    , sgSecurityParam = SecurityParam 120842
+    , sgEpochLength = EpochSize 1215
     , sgSlotsPerKESPeriod = 8541
     , sgMaxKESEvolutions = 28899
     , sgSlotLength =  slotLengthFromSec 8
-    , sgUpdateQuorum = 16991, sgMaxMajorPV = 25446
+    , sgUpdateQuorum = 16991
+    , sgMaxMajorPV = 25446
     , sgMaxLovelaceSupply = 71
     , sgMaxBodySize = 239857
     , sgMaxHeaderSize = 217569
