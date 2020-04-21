@@ -352,6 +352,10 @@ See the [Byron specification](https://hydra.iohk.io/job/Cardano/cardano-ledger-s
 
 run *ghcid* with: `ghcid -c "cabal v2-repl exe:cardano-node --reorder-goals"`
 
+# Testing
+
+Cardano-Node is essentially a container which implements several components such networking, consensus, and storage. These components have individual test coverage. The node goes through integration and release testing by Devops/QA while automated CLI tests are ongoing alongside development.
+
 # Debugging
 
 ### Pretty printing CBOR encoded files
