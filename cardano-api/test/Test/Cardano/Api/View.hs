@@ -8,29 +8,12 @@ import           Cardano.Api
 
 import           Cardano.Prelude
 
-import qualified Data.ByteString.Char8 as BS
-
 import           Hedgehog (Property, discover)
 import qualified Hedgehog as H
-import           Hedgehog.Gen as Gen
-import           Hedgehog.Range as Range
 
 import           Test.Cardano.Api.Gen
 import           Test.Cardano.Api.Orphans ()
 
-
--- Test this first. If this fails, others are likely to fail.
-prop_roundtrip_multiline_hex :: Property
-prop_roundtrip_multiline_hex =
-  H.property $ do
-    bs <- BS.pack <$> H.forAll (Gen.string (Range.linear 0 500) (Gen.element ['\0' .. '\xff']))
-    H.tripping bs (BS.unlines . rawToMultilineHex) unRawToMultilineHex
-
-prop_roundtrip_TextView :: Property
-prop_roundtrip_TextView =
-  H.property $ do
-    tv <- H.forAll genTextView
-    H.tripping tv renderTextView parseTextView
 
 prop_roundtrip_Address_view :: Property
 prop_roundtrip_Address_view =

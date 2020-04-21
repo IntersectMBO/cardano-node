@@ -27,7 +27,8 @@ module Cardano.Api.View
 import           Cardano.Api.CBOR
 import           Cardano.Api.Types
 import           Cardano.Api.Error
-import           Cardano.Api.TextView
+
+import           Cardano.Config.TextView
 
 import           Cardano.Prelude
 
@@ -39,23 +40,23 @@ import qualified Data.ByteString.Char8 as BS
 
 parseAddressView :: ByteString -> Either ApiError Address
 parseAddressView bs =
-  join (addressFromCBOR . tvRawCBOR <$> parseTextView bs)
+  either convertTestViewError (addressFromCBOR . tvRawCBOR) $ parseTextView bs
 
 parseKeyPairView :: ByteString -> Either ApiError KeyPair
 parseKeyPairView bs =
-  join (keyPairFromCBOR . tvRawCBOR <$> parseTextView bs)
+  either convertTestViewError (keyPairFromCBOR . tvRawCBOR) $ parseTextView bs
 
 parsePublicKeyView :: ByteString -> Either ApiError PublicKey
 parsePublicKeyView bs =
-  join (publicKeyFromCBOR . tvRawCBOR <$> parseTextView bs)
+  either convertTestViewError (publicKeyFromCBOR . tvRawCBOR) $ parseTextView bs
 
 parseTxSignedView :: ByteString -> Either ApiError TxSigned
 parseTxSignedView bs =
-  join (txSignedFromCBOR . tvRawCBOR <$> parseTextView bs)
+  either convertTestViewError (txSignedFromCBOR . tvRawCBOR) $ parseTextView bs
 
 parseTxUnsignedView :: ByteString -> Either ApiError TxUnsigned
 parseTxUnsignedView bs =
-  join (txUnsignedFromCBOR . tvRawCBOR <$> parseTextView bs)
+  either convertTestViewError (txUnsignedFromCBOR . tvRawCBOR) $ parseTextView bs
 
 renderAddressView :: Address -> ByteString
 renderAddressView addr =
@@ -103,6 +104,9 @@ renderTxUnsignedView tu =
     cbor = txUnsignedToCBOR tu
 
 -- -------------------------------------------------------------------------------------------------
+
+convertTestViewError :: TextViewError -> Either ApiError b
+convertTestViewError = Left . ApiTextView . unTextViewError
 
 readAddress :: FilePath -> IO (Either ApiError Address)
 readAddress path =

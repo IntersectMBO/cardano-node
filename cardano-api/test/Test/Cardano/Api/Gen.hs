@@ -11,7 +11,6 @@ module Test.Cardano.Api.Gen
   , genPublicKeyShelley
   , genShelleyKeyDiscriminator
   , genShelleyVerificationKey
-  , genTextView
   , genTxSigned
   , genTxSignedByron
   , genTxUnsigned
@@ -127,13 +126,6 @@ genPublicKeyByron =
 genPublicKeyShelley :: Gen PublicKey
 genPublicKeyShelley =
   mkPublicKey <$> genKeyPairShelley <*> genNetwork
-
-genTextView :: Gen TextView
-genTextView =
-  TextView
-    <$> Gen.utf8 (Range.linear 1 20) Gen.alpha
-    <*> Gen.utf8 (Range.linear 1 80) (Gen.filter (/= '\n') Gen.ascii)
-    <*> Gen.bytes (Range.linear 0 500)
 
 genTxSigned :: Gen TxSigned
 genTxSigned =
