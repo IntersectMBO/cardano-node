@@ -9,8 +9,9 @@ module Cardano.CLI.Shelley.Parsers
 import           Cardano.Prelude hiding (option)
 
 import           Cardano.Chain.Common (Lovelace, mkLovelace)
+import           Cardano.CLI.Key (VerificationKeyFile(..))
 import           Cardano.Common.Parsers (parseNodeAddress)
-import           Cardano.Config.Types (NodeAddress)
+import           Cardano.Config.Types (NodeAddress, SigningKeyFile(..))
 import           Cardano.Slotting.Slot (EpochNo (..))
 
 import qualified Data.ByteString.Char8 as BS
@@ -65,6 +66,8 @@ data ShelleyDevOpsCmd
 data ShelleyCommand
   = ShelleyCreateGenesis GenesisDir (Maybe SystemStart) Lovelace
   | ShelleyKeyGenerate OutputFile ByteString
+  | ShelleyKESKeyPairGenerate VerificationKeyFile SigningKeyFile Natural
+  | ShelleyVRFKeyPairGenerate VerificationKeyFile SigningKeyFile
   | ShelleyPool ShelleyPoolCmd
   | ShelleyStakeKey ShelleyStakeKeyCmd
   | ShelleyTransaction ShelleyTransactionCmd
@@ -125,6 +128,14 @@ parseShelleyCommands =
           (Opt.info pKeyGen
           $ Opt.progDesc "Generate Shelley era crypto keys."
           )
+      , Opt.command "KES-key-gen"
+          (Opt.info pKESKeyGen
+          $ Opt.progDesc "Generate Shelley era KES keys."
+          )
+      , Opt.command "VRF-key-gen"
+          (Opt.info pVRFKeyGen
+          $ Opt.progDesc "Generate Shelley era VRF keys."
+          )
       , Opt.command "pool"
           (Opt.info (ShelleyPool <$> pShelleyPoolCmd) $ Opt.progDesc "Shelley pool commands")
       , Opt.command "stake-key"
@@ -148,6 +159,14 @@ parseShelleyCommands =
     pKeyGen :: Parser ShelleyCommand
     pKeyGen =
       ShelleyKeyGenerate <$> pOutputFile <*> pComment
+
+    pKESKeyGen :: Parser ShelleyCommand
+    pKESKeyGen =
+      ShelleyKESKeyPairGenerate <$> pVerificationKeyFile <*> pSigningKeyFile <*> pDuration
+
+    pVRFKeyGen :: Parser ShelleyCommand
+    pVRFKeyGen =
+      ShelleyVRFKeyPairGenerate <$> pVerificationKeyFile <*> pSigningKeyFile
 
     -- The comment field is just passed around as a 'ByteString' to its better to leave it
     -- as such instead of converting it to 'Text'.
@@ -211,6 +230,15 @@ pShelleyPoolCmd =
 
     pPoolRetire :: Parser ShelleyPoolCmd
     pPoolRetire = PoolRetire <$> pPoolId <*> pEpochNo <*> parseNodeAddress
+
+pSigningKeyFile :: Parser SigningKeyFile
+pSigningKeyFile =
+  SigningKeyFile <$>
+   Opt.strOption
+     (  Opt.long "signing-key-file"
+     <> Opt.metavar "FILEPATH"
+     <> Opt.help "Output filepath of the signing key."
+     )
 
 pStakeKey :: Parser ShelleyStakeKeyCmd
 pStakeKey =
@@ -379,6 +407,13 @@ pBlockId =
       <> Opt.help "The block identifier."
       )
 
+pDuration :: Parser Natural
+pDuration =
+  Opt.option Opt.auto (  Opt.long "kes-duration"
+                      <> Opt.metavar "NATURAL"
+                      <> Opt.help "The duration of the KESPeriod."
+                      )
+
 pEpochNo :: Parser EpochNo
 pEpochNo =
   EpochNo <$>
@@ -423,4 +458,13 @@ pPrivKeyFile =
       (  Opt.long "private-key"
       <> Opt.metavar "FILE"
       <> Opt.help "The private key file."
+      )
+
+pVerificationKeyFile :: Parser VerificationKeyFile
+pVerificationKeyFile =
+  VerificationKeyFile <$>
+    Opt.strOption
+      (  Opt.long "verification-key-file"
+      <> Opt.metavar "FILEPATH"
+      <> Opt.help "Output filepath of the verification key."
       )

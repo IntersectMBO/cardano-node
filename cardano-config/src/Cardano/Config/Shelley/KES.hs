@@ -1,14 +1,17 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Cardano.Config.Shelley.KES
-  ( genKESKeyPair
+  ( KESError
+  , genKESKeyPair
   , readKESSigningKey
   , readKESVerKey
+  , renderKESError
   , writeKESSigningKey
   , writeKESVerKey
   ) where
 
 import           Cardano.Prelude
+import           Prelude (String)
 
 import qualified Data.ByteString.Lazy.Char8 as LB
 
@@ -37,6 +40,28 @@ readKESSigningKey :: FilePath ->  ExceptT KESError IO (SKeyES TPraosStandardCryp
 readKESSigningKey fp = do
   bs <- handleIOExceptT (ReadKESSigningKeyError fp) $ LB.readFile fp
   firstExceptT (DecodeKESSigningKeyError fp) . hoistEither $ second SKeyES $ CBOR.decodeFull bs
+
+renderKESError :: KESError -> String
+renderKESError kesErr =
+  case kesErr of
+    ReadKESSigningKeyError fp ioExcptn -> "KES signing key read error at: " <> fp
+                                          <> " Error: " <> show ioExcptn
+
+    ReadKESVerKeyError fp ioExcptn -> "KES verification key read error at: " <> fp
+                                      <> " Error: " <> show ioExcptn
+
+    DecodeKESSigningKeyError fp cborDecErr -> "KES signing key decode error at: " <> fp
+                                              <> " Error: " <> show cborDecErr
+
+    DecodeKESVerKeyError fp cborDecErr -> "KES verification key decode error at: " <> fp
+                                          <> " Error: " <> show cborDecErr
+
+    WriteKESSigningKeyError fp ioExcptn -> "KES signing key write error at: " <> fp
+                                           <> " Error: " <> show ioExcptn
+
+    WriteKESVerKeyError fp ioExcptn -> "KES verification key write error at: " <> fp
+                                       <> " Error: " <> show ioExcptn
+
 
 writeKESSigningKey :: FilePath -> SKeyES TPraosStandardCrypto -> ExceptT KESError IO ()
 writeKESSigningKey fp (SKeyES sKeyKES) =

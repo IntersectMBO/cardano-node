@@ -23,9 +23,9 @@ import           Ouroboros.Consensus.Shelley.Protocol.Crypto (TPraosStandardCryp
 signOperationalCertificate
   :: VKeyES TPraosStandardCrypto
   -> SKey TPraosStandardCrypto
-  -- | Counter.
+  -- ^ Counter.
   -> Natural
-  -- | Start of key evolving signature period.
+  -- ^ Start of key evolving signature period.
   -> KESPeriod
   -> OCert TPraosStandardCrypto
 signOperationalCertificate hotKESVerKey signingKey counter kesPeriod' = do

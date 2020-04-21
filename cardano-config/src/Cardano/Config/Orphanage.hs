@@ -7,6 +7,7 @@
 {-# LANGUAGE TypeSynonymInstances #-}
 
 {-# OPTIONS_GHC -Wno-orphans #-}
+{-# OPTIONS_GHC -Wno-missing-methods #-}
 
 module Cardano.Config.Orphanage where
 

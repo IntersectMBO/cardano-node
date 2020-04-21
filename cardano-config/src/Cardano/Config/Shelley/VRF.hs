@@ -3,11 +3,13 @@ module Cardano.Config.Shelley.VRF
   , genVRFKeyPair
   , readVRFSigningKey
   , readVRFVerKey
+  , renderVRFError
   , writeVRFSigningKey
   , writeVRFVerKey
   ) where
 
 import           Cardano.Prelude
+import           Prelude (String)
 
 import qualified Cardano.Binary as CBOR
 import           Control.Monad.Trans.Except.Extra
@@ -29,6 +31,26 @@ data VRFError = ReadVRFSigningKeyError !FilePath !IOException
 genVRFKeyPair :: IO (SignKeyVRF SimpleVRF, VerKeyVRF SimpleVRF)
 genVRFKeyPair = do sKeyVRF <- genKeyVRF
                    pure (sKeyVRF, deriveVerKeyVRF sKeyVRF)
+renderVRFError :: VRFError -> String
+renderVRFError vrfErr =
+  case vrfErr of
+    ReadVRFSigningKeyError fp ioExcptn -> "VRF signing key read error at: " <> fp
+                                          <> " Error: " <> show ioExcptn
+
+    ReadVRFVerKeyError fp ioExcptn -> "VRF verification key read error at: " <> fp
+                                      <> " Error: " <> show ioExcptn
+
+    DecodeVRFSigningKeyError fp cborDecErr -> "VRF signing key decode error at: " <> fp
+                                              <> " Error: " <> show cborDecErr
+
+    DecodeVRFVerKeyError fp cborDecErr -> "VRF verification key decode error at: " <> fp
+                                          <> " Error: " <> show cborDecErr
+
+    WriteVRFSigningKeyError fp ioExcptn -> "VRF signing key write error at: " <> fp
+                                           <> " Error: " <> show ioExcptn
+
+    WriteVRFVerKeyError fp ioExcptn -> "VRF verification key write error at: " <> fp
+                                       <> " Error: " <> show ioExcptn
 
 readVRFSigningKey :: FilePath -> ExceptT VRFError IO (SignKeyVRF SimpleVRF)
 readVRFSigningKey fp = do
