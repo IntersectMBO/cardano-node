@@ -24,6 +24,7 @@ library
                        Cardano.Config.Protocol.Byron
                        Cardano.Config.Protocol.Shelley
                        Cardano.Config.ShelleyGenesis
+                       Cardano.Config.TextView
                        Cardano.Config.Topology
                        Cardano.Config.TraceConfig
                        Cardano.Config.Types
@@ -35,6 +36,7 @@ library
                        Cardano.TracingOrphanInstances.Shelley
 
   build-depends:       base >=4.12 && <5
+                     , attoparsec
                      , aeson
                      , async
                      , base16-bytestring

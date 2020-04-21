@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Cardano.Api.TextView
+module Cardano.Config.TextView
   ( TextView (..)
+  , TextViewError (..)
   , parseTextView
   , renderTextView
 
@@ -8,8 +9,6 @@ module Cardano.Api.TextView
   , rawToMultilineHex
   , unRawToMultilineHex
   ) where
-
-import           Cardano.Api.Error
 
 import           Cardano.Prelude
 
@@ -23,15 +22,20 @@ import           Data.Char (isSpace)
 import qualified Data.Text as Text
 
 
+newtype TextViewError
+  = TextViewError { unTextViewError :: Text }
+  deriving (Eq, Show)
+
+
 data TextView = TextView
   { tvType :: !ByteString
   , tvTitle :: !ByteString
   , tvRawCBOR :: !ByteString
   } deriving (Eq, Show)
 
-parseTextView :: ByteString -> Either ApiError TextView
+parseTextView :: ByteString -> Either TextViewError TextView
 parseTextView =
-  first (ApiTextView . Text.pack) . Atto.parseOnly pTextView
+  first (TextViewError . Text.pack) . Atto.parseOnly pTextView
 
 renderTextView :: TextView -> ByteString
 renderTextView tv =
@@ -66,8 +70,8 @@ textShow :: Show a => a -> Text
 textShow = Text.pack . show
 
 -- | Convert from multiline hexadecimal to a raw ByteString.
-unRawToMultilineHex :: ByteString -> Either ApiError ByteString
+unRawToMultilineHex :: ByteString -> Either TextViewError ByteString
 unRawToMultilineHex bs =
   case Base16.decode $ BS.concat (map (BS.dropWhile isSpace) $ BS.lines bs) of
     (raw, "") -> Right raw
-    (_, err) -> Left $ ApiTextView ("unRawToMultilineHex: Unable to decode " <> textShow err)
+    (_, err) -> Left $ TextViewError ("unRawToMultilineHex: Unable to decode " <> textShow err)

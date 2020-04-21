@@ -5,11 +5,13 @@ module Test.Cardano.Config.Gen
   , genGenesisDelegationPair
   , genGenesisFundPair
   , genShelleyGenesis
+  , genTextView
   ) where
 
 import           Cardano.Prelude
 
 import           Cardano.Config.ShelleyGenesis
+import           Cardano.Config.TextView
 import           Cardano.Slotting.Slot (EpochSize (..))
 import           Cardano.Crypto.DSIGN (deriveVerKeyDSIGN, genKeyDSIGN)
 import           Crypto.Random (drgNewTest, withDRG)
@@ -93,6 +95,15 @@ genSeed5 =
     <*> Gen.word64 Range.constantBounded
     <*> Gen.word64 Range.constantBounded
     <*> Gen.word64 Range.constantBounded
+
+genTextView :: Gen TextView
+genTextView =
+  TextView
+    <$> Gen.utf8 (Range.linear 1 20) Gen.alpha
+    <*> Gen.utf8 (Range.linear 1 80) (Gen.filter (/= '\n') Gen.ascii)
+    <*> Gen.bytes (Range.linear 0 500)
+
+-- -------------------------------------------------------------------------------------------------
 
 -- | Generate a deterministic genesis key pair given a seed.
 mkGenKeyPair :: Crypto crypto => (Word64, Word64, Word64, Word64, Word64) -> (SKey crypto, VKeyGenesis crypto)
