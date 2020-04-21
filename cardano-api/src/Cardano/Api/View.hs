@@ -40,23 +40,23 @@ import qualified Data.ByteString.Char8 as BS
 
 parseAddressView :: ByteString -> Either ApiError Address
 parseAddressView bs =
-  either convertTestViewError (addressFromCBOR . tvRawCBOR) $ parseTextView bs
+  either convertTextViewError (addressFromCBOR . tvRawCBOR) $ parseTextView bs
 
 parseKeyPairView :: ByteString -> Either ApiError KeyPair
 parseKeyPairView bs =
-  either convertTestViewError (keyPairFromCBOR . tvRawCBOR) $ parseTextView bs
+  either convertTextViewError (keyPairFromCBOR . tvRawCBOR) $ parseTextView bs
 
 parsePublicKeyView :: ByteString -> Either ApiError PublicKey
 parsePublicKeyView bs =
-  either convertTestViewError (publicKeyFromCBOR . tvRawCBOR) $ parseTextView bs
+  either convertTextViewError (publicKeyFromCBOR . tvRawCBOR) $ parseTextView bs
 
 parseTxSignedView :: ByteString -> Either ApiError TxSigned
 parseTxSignedView bs =
-  either convertTestViewError (txSignedFromCBOR . tvRawCBOR) $ parseTextView bs
+  either convertTextViewError (txSignedFromCBOR . tvRawCBOR) $ parseTextView bs
 
 parseTxUnsignedView :: ByteString -> Either ApiError TxUnsigned
 parseTxUnsignedView bs =
-  either convertTestViewError (txUnsignedFromCBOR . tvRawCBOR) $ parseTextView bs
+  either convertTextViewError (txUnsignedFromCBOR . tvRawCBOR) $ parseTextView bs
 
 renderAddressView :: Address -> ByteString
 renderAddressView addr =
@@ -105,8 +105,8 @@ renderTxUnsignedView tu =
 
 -- -------------------------------------------------------------------------------------------------
 
-convertTestViewError :: TextViewError -> Either ApiError b
-convertTestViewError = Left . ApiTextView . unTextViewError
+convertTextViewError :: TextViewError -> Either ApiError b
+convertTextViewError = Left . ApiTextView . unTextViewError
 
 readAddress :: FilePath -> IO (Either ApiError Address)
 readAddress path =
