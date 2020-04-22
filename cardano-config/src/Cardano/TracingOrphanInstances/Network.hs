@@ -115,9 +115,9 @@ instance HasSeverityAnnotation a => HasSeverityAnnotation (TraceLabelPeer peer a
 
 instance HasPrivacyAnnotation [TraceLabelPeer peer (FetchDecision [Point header])]
 instance HasSeverityAnnotation [TraceLabelPeer peer (FetchDecision [Point header])] where
-  getSeverityAnnotation =
-      maximum
-    . map (\(TraceLabelPeer _ a) -> fetchDecisionSeverity a)
+  getSeverityAnnotation [] = Debug
+  getSeverityAnnotation xs =
+      maximum $ map (\(TraceLabelPeer _ a) -> fetchDecisionSeverity a) xs
     where
       fetchDecisionSeverity :: FetchDecision a -> Severity
       fetchDecisionSeverity fd =
