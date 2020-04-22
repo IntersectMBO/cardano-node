@@ -13,15 +13,14 @@ module Cardano.Config.Types
     , DelegationCertFile (..)
     , GenesisFile (..)
     , LastKnownBlockVersion (..)
-    , MiscellaneousFilepaths (..)
     , NodeAddress (..)
     , NodeConfiguration (..)
     , NodeHostAddress (..)
     , Protocol (..)
-    , NodeMockCLI (..)
     , NodeCLI (..)
     , NodeProtocolMode (..)
     , SigningKeyFile (..)
+    , ProtocolFilepaths (..)
     , TopologyFile (..)
     , SocketPath (..)
     , Update (..)
@@ -82,33 +81,36 @@ data CardanoEnvironment = NoEnvironment
 --------------------------------------------------------------------------------
 
 data NodeCLI = NodeCLI
-  { mscFp :: !MiscellaneousFilepaths
-  , nodeAddr :: !NodeAddress
-  , configFp :: !ConfigYamlFilePath
-  , validateDB :: !Bool
-  , shutdownIPC :: !(Maybe Fd)
+  { nodeMode        :: !NodeProtocolMode
+  , nodeAddr        :: !NodeAddress
+    -- | Filepath of the configuration yaml file. This file determines
+    -- all the configuration settings required for the cardano node
+    -- (logging, tracing, protocol, slot length etc)
+  , configFile      :: !ConfigYamlFilePath
+  , topologyFile    :: !TopologyFile
+  , databaseFile    :: !DbFile
+  , socketFile      :: !(Maybe CLISocketPath)
+  , protocolFiles   :: !ProtocolFilepaths
+  , validateDB      :: !Bool
+  , shutdownIPC     :: !(Maybe Fd)
   }
-
-data NodeMockCLI = NodeMockCLI
-  { mockMscFp :: !MiscellaneousFilepaths
-  , mockNodeAddr :: !NodeAddress
-  , mockConfigFp :: !ConfigYamlFilePath
-  , mockValidateDB :: !Bool
-  } deriving Show
 
 -- | Mock protocols requires different parameters to real protocols.
 -- Therefore we distinguish this at the top level on the command line.
-data NodeProtocolMode = MockProtocolMode NodeMockCLI
-                      | RealProtocolMode NodeCLI
+data NodeProtocolMode = MockProtocolMode
+                      | RealProtocolMode
 
--- TODO: these types above are currently structured such that we cannot share
--- anything. Sharing nothing is too little. There are things that are the same
--- that we can and should share. The code is littered with example where we
--- select the same bits from both sides.
---
--- At the same time, we are not yet taking advantage of the ability to have
--- different fields for the real vs mock. For example the MiscellaneousFilepaths
--- is used for both, but mock protocols do not use delegCertFile or signKeyFile.
+data ProtocolFilepaths =
+     ProtocolFilepaths {
+       byronCertFile   :: !(Maybe FilePath)
+     , byronKeyFile    :: !(Maybe FilePath)
+--   , shelleyKESFile  :: !(Maybe FilePath)
+--   , shelleyVRFFile  :: !(Maybe FilePath)
+--   , shelleyCertFile :: !(Maybe FilePath)
+     }
+
+--TODO: things will probably be clearer if we don't use these newtype wrappers and instead
+-- use records with named fields in the CLI code.
 
 -- | Filepath of the configuration yaml file. This file determines
 -- all the configuration settings required for the cardano node
@@ -116,14 +118,6 @@ data NodeProtocolMode = MockProtocolMode NodeMockCLI
 newtype ConfigYamlFilePath = ConfigYamlFilePath
   { unConfigPath :: FilePath }
   deriving Show
-
-data MiscellaneousFilepaths = MiscellaneousFilepaths
-  { topFile :: !TopologyFile
-  , dBFile :: !DbFile
-  , delegCertFile :: !(Maybe DelegationCertFile)
-  , signKeyFile :: !(Maybe SigningKeyFile)
-  , socketFile :: !(Maybe CLISocketPath)
-  } deriving Show
 
 newtype TopologyFile = TopologyFile
   { unTopology :: FilePath }
@@ -236,10 +230,8 @@ parseNodeConfigurationFP (ConfigYamlFilePath fp) = do
  let d = takeDirectory fp
  pure $ nc { ncGenesisFile = GenesisFile $ d </> genFile }
 
-parseNodeConfiguration :: NodeProtocolMode -> IO NodeConfiguration
-parseNodeConfiguration = parseNodeConfigurationFP .
-  \case MockProtocolMode NodeMockCLI{mockConfigFp} -> mockConfigFp
-        RealProtocolMode NodeCLI{configFp} -> configFp
+parseNodeConfiguration :: NodeCLI -> IO NodeConfiguration
+parseNodeConfiguration NodeCLI{configFile} = parseNodeConfigurationFP configFile
 
 data Protocol = BFT
               | Praos

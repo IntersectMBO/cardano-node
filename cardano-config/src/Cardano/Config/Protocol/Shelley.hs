@@ -30,9 +30,8 @@ import           Ouroboros.Consensus.Shelley.Protocol (TPraosStandardCrypto)
 import           Shelley.Spec.Ledger.PParams (ProtVer(..))
 
 import           Cardano.Config.Types
-                   (NodeConfiguration(..),
-                    MiscellaneousFilepaths(..), GenesisFile (..),
-                    Update (..), LastKnownBlockVersion (..))
+                   (NodeConfiguration(..), ProtocolFilepaths(..),
+                    GenesisFile (..), Update (..), LastKnownBlockVersion (..))
 import           Cardano.Config.Shelley.Genesis ()
 import           Cardano.TracingOrphanInstances.Shelley ()
 
@@ -43,7 +42,7 @@ import           Cardano.TracingOrphanInstances.Shelley ()
 
 mkConsensusProtocolTPraos
   :: NodeConfiguration
-  -> Maybe MiscellaneousFilepaths
+  -> Maybe ProtocolFilepaths
   -> ExceptT ShelleyProtocolInstantiationError IO
              (Consensus.Protocol (ShelleyBlock TPraosStandardCrypto)
                                  ProtocolRealTPraos)
@@ -89,7 +88,7 @@ toShelleyProtocolVersion (Update _appName _appVer lastKnownBlockVersion) =
 
 
 -- TODO: support reading leader credentials
-readLeaderCredentials :: Maybe MiscellaneousFilepaths
+readLeaderCredentials :: Maybe ProtocolFilepaths
                       -> ExceptT ShelleyProtocolInstantiationError IO
                                  (Maybe (TPraosLeaderCredentials TPraosStandardCrypto))
 readLeaderCredentials _files = return Nothing

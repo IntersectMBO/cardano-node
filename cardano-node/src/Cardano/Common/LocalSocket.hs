@@ -38,13 +38,9 @@ chooseSocketPath (Just yamlSockPath) Nothing = unYamlSocketPath yamlSockPath
 chooseSocketPath Nothing (Just cliSockPath) = unCLISocketPath cliSockPath
 chooseSocketPath _ (Just cliSockPath) = unCLISocketPath cliSockPath
 
-nodeLocalSocketAddrInfo :: NodeConfiguration -> NodeProtocolMode -> IO FilePath
-nodeLocalSocketAddrInfo nc npm = do
-  mCliSockPath <- case npm of
-                    MockProtocolMode (NodeMockCLI {mockMscFp}) -> pure $ socketFile mockMscFp
-                    RealProtocolMode (NodeCLI {mscFp}) -> pure $ socketFile mscFp
-
-  localSocketPath $ chooseSocketPath (ncSocketPath nc) mCliSockPath
+nodeLocalSocketAddrInfo :: NodeConfiguration -> NodeCLI -> IO FilePath
+nodeLocalSocketAddrInfo nc NodeCLI {socketFile} = do
+  localSocketPath $ chooseSocketPath (ncSocketPath nc) socketFile
 
 -- | Provide an filepath intended for a socket situated in 'socketDir'.
 -- When 'mkdir' is 'MkdirIfMissing', the directory is created.
@@ -54,13 +50,9 @@ localSocketPath (SocketFile fp) = do
   return fp
 
 -- | Remove the socket established with 'localSocketAddrInfo'.
-removeStaleLocalSocket :: NodeConfiguration -> NodeProtocolMode -> ExceptT SocketError IO ()
-removeStaleLocalSocket nc npm = do
-    let mCliSockPath = case npm of
-                        MockProtocolMode mpm -> socketFile $ mockMscFp mpm
-                        RealProtocolMode rpm -> socketFile $ mscFp rpm
-
-    SocketFile socketFp <- pure $ chooseSocketPath (ncSocketPath nc) mCliSockPath
+removeStaleLocalSocket :: NodeConfiguration -> NodeCLI -> ExceptT SocketError IO ()
+removeStaleLocalSocket nc NodeCLI{socketFile} = do
+    SocketFile socketFp <- pure $ chooseSocketPath (ncSocketPath nc) socketFile
 
     -- Removal of the socket file may fail if it has already been cleaned up.
     newExceptT $ (Right <$> removeFile socketFp) `catch` handler socketFp

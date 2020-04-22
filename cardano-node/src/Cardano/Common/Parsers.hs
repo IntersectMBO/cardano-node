@@ -6,10 +6,7 @@
 
 module Cardano.Common.Parsers
   ( command'
-  , nodeMockParser
-  , nodeMockProtocolModeParser
-  , nodeProtocolModeParser
-  , nodeRealParser
+  , nodeCLIParser
   , parseCLISocketPath
   , parseConfigFile
   , parseCoreNodeId
@@ -54,32 +51,28 @@ command' c descr p =
     command c $ info (p <**> helper)
               $ mconcat [ progDesc descr ]
 
-nodeProtocolModeParser  :: Parser NodeProtocolMode
-nodeProtocolModeParser = nodeRealProtocolModeParser <|> nodeMockProtocolModeParser
+nodeCLIParser  :: Parser NodeCLI
+nodeCLIParser = nodeRealProtocolModeParser <|> nodeMockProtocolModeParser
 
-nodeMockProtocolModeParser :: Parser NodeProtocolMode
+nodeMockProtocolModeParser :: Parser NodeCLI
 nodeMockProtocolModeParser = subparser
                            (  commandGroup "Execute node with a mock protocol."
                            <> metavar "run-mock"
                            <> command "run-mock"
-                                (MockProtocolMode
-                                  <$> info
-                                        (nodeMockParser <**> helper)
-                                        (progDesc "Execute node with a mock protocol."))
+                                (info (nodeMockParser <**> helper)
+                                      (progDesc "Execute node with a mock protocol."))
                            )
-nodeRealProtocolModeParser :: Parser NodeProtocolMode
+nodeRealProtocolModeParser :: Parser NodeCLI
 nodeRealProtocolModeParser = subparser
                            (  commandGroup "Execute node with a real protocol."
                            <> metavar "run"
                            <> command "run"
-                                (RealProtocolMode
-                                  <$> info
-                                        (nodeRealParser <**> helper)
-                                        (progDesc "Execute node with a real protocol." ))
+                                (info (nodeRealParser <**> helper)
+                                      (progDesc "Execute node with a real protocol." ))
                            )
 
 -- | The mock protocol parser.
-nodeMockParser :: Parser NodeMockCLI
+nodeMockParser :: Parser NodeCLI
 nodeMockParser = do
   -- Filepaths
   topFp <- parseTopologyFile
@@ -93,18 +86,21 @@ nodeMockParser = do
   nAddress <- parseNodeAddress
 
   validate <- parseValidateDB
+  shutdownIPC <- parseShutdownIPC
 
-  pure $ NodeMockCLI
-           { mockMscFp = MiscellaneousFilepaths
-             { topFile = TopologyFile topFp
-             , dBFile = DbFile dbFp
-             , delegCertFile = Nothing
-             , signKeyFile = Nothing
-             , socketFile = socketFp
+  pure $ NodeCLI
+           { nodeMode = MockProtocolMode
+           , nodeAddr = nAddress
+           , configFile   = ConfigYamlFilePath nodeConfigFp
+           , topologyFile = TopologyFile topFp
+           , databaseFile = DbFile dbFp
+           , socketFile   = socketFp
+           , protocolFiles = ProtocolFilepaths
+             { byronCertFile = Nothing
+             , byronKeyFile  = Nothing
              }
-           , mockNodeAddr = nAddress
-           , mockConfigFp = ConfigYamlFilePath nodeConfigFp
-           , mockValidateDB = validate
+           , validateDB = validate
+           , shutdownIPC
            }
 
 -- | The real protocol parser.
@@ -127,15 +123,16 @@ nodeRealParser = do
   shutdownIPC <- parseShutdownIPC
 
   pure NodeCLI
-    { mscFp = MiscellaneousFilepaths
-      { topFile = TopologyFile topFp
-      , dBFile = DbFile dbFp
-      , delegCertFile = DelegationCertFile <$> delCertFp
-      , signKeyFile = SigningKeyFile <$> sKeyFp
-      , socketFile = socketFp
-      }
+    { nodeMode = RealProtocolMode
     , nodeAddr = nAddress
-    , configFp = ConfigYamlFilePath nodeConfigFp
+    , configFile   = ConfigYamlFilePath nodeConfigFp
+    , topologyFile = TopologyFile topFp
+    , databaseFile = DbFile dbFp
+    , socketFile   = socketFp
+    , protocolFiles = ProtocolFilepaths
+      { byronCertFile = delCertFp
+      , byronKeyFile  = sKeyFp
+      }
     , validateDB = validate
     , shutdownIPC
     }

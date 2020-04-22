@@ -57,8 +57,7 @@ import           Cardano.BM.Trace
 import           Cardano.Config.GitRev (gitRev)
 import           Cardano.Config.Logging (LoggingLayer (..), Severity (..))
 import           Cardano.Config.TraceConfig (traceConfigVerbosity)
-import           Cardano.Config.Types (MiscellaneousFilepaths(..),
-                                       NodeConfiguration (..), ViewMode (..))
+import           Cardano.Config.Types (NodeConfiguration (..), ViewMode (..))
 
 import           Ouroboros.Network.NodeToClient (LocalConnectionId)
 import           Ouroboros.Network.NodeToNode (RemoteConnectionId, AcceptedConnectionsLimit (..))
@@ -93,15 +92,13 @@ import           Cardano.Node.TUI.LiveView
 
 runNode
   :: LoggingLayer
-  -> NodeProtocolMode
+  -> NodeCLI
   -> IO ()
-runNode loggingLayer npm = do
+runNode loggingLayer npm@NodeCLI{protocolFiles} = do
     hn <- hostname
     let !trace = setHostname hn $
                  llAppendName loggingLayer "node" (llBasicTrace loggingLayer)
     let tracer = contramap pack $ toLogObject trace
-
-    mscFp' <- return $ extractMiscFilePaths npm
 
     nc <- parseNodeConfiguration npm
 
@@ -110,7 +107,7 @@ runNode loggingLayer npm = do
                            NormalVerbosity -> "normal"
                            MinimalVerbosity -> "minimal"
                            MaximalVerbosity -> "maximal"
-    eitherSomeProtocol <- runExceptT $ mkConsensusProtocol nc (Just mscFp')
+    eitherSomeProtocol <- runExceptT $ mkConsensusProtocol nc (Just protocolFiles)
 
     SomeConsensusProtocol (p :: Consensus.Protocol blk (BlockProtocol blk)) <-
       case eitherSomeProtocol of
@@ -157,7 +154,7 @@ handleSimpleNode
   => Consensus.Protocol blk (BlockProtocol blk)
   -> Trace IO Text
   -> Tracers RemoteConnectionId LocalConnectionId blk
-  -> NodeProtocolMode
+  -> NodeCLI
   -> (NodeKernel IO RemoteConnectionId LocalConnectionId blk -> IO ())
   -- ^ Called on the 'NodeKernel' after creating it, but before the network
   -- layer is initialised.  This implies this function must not block,
@@ -210,7 +207,7 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
        rnNetworkMagic         = nodeNetworkMagic (Proxy @blk) cfg,
        rnDatabasePath         = dbPath,
        rnProtocolInfo         = pInfo,
-       rnCustomiseChainDbArgs = customiseChainDbArgs $ dbValidation npm,
+       rnCustomiseChainDbArgs = customiseChainDbArgs $ validateDB npm,
        rnCustomiseNodeArgs    = identity,
        rnNodeKernelHook       = \_registry nodeKernel -> onKernel nodeKernel
     }
@@ -243,16 +240,15 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
     }
 
   createTracers
-    :: NodeProtocolMode
+    :: NodeCLI
     -> NodeConfiguration
     -> Trace IO Text
     -> Tracer IO String
     -> Consensus.TopLevelConfig blk
     -> IO ()
-  createTracers npm' nc tr tracer cfg = do
-     case npm' of
-       RealProtocolMode NodeCLI{nodeAddr, validateDB} -> do
-         eitherTopology <- readTopologyFile npm
+  createTracers npm'@NodeCLI{nodeMode = RealProtocolMode, nodeAddr, validateDB}
+                nc tr tracer cfg = do
+         eitherTopology <- readTopologyFile npm'
          nt <- either
                  (\err -> panic $ "Cardano.Node.Run.readTopologyFile: " <> err)
                  pure
@@ -282,9 +278,12 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
 
          when validateDB $ traceWith tracer "Performing DB validation"
 
-       MockProtocolMode NodeMockCLI{mockNodeAddr, mockValidateDB} -> do
-         eitherTopology <- readTopologyFile npm
-         nodeid <- nid npm
+  --TODO: there's still lots of duplication here, when only minor things are
+  -- different
+  createTracers npm'@NodeCLI{nodeMode = MockProtocolMode, nodeAddr, validateDB}
+                _nc _tr tracer cfg = do
+         eitherTopology <- readTopologyFile npm'
+         nodeid <- nid npm'
          (MockNodeTopology nodeSetups) <- either
                                             (\err -> panic $ "Cardano.Node.Run.readTopologyFile: " <> err)
                                             pure
@@ -295,7 +294,7 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
              producers' = case (List.lookup nodeid producersList) of
                             Just ps ->  ps
                             Nothing -> error $ "handleSimpleNode: own address "
-                                         <> show mockNodeAddr
+                                         <> show nodeAddr
                                          <> ", Node Id "
                                          <> show nodeid
                                          <> " not found in topology"
@@ -303,13 +302,13 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
          traceWith tracer $ unlines
                                [ ""
                                , "**************************************"
-                               , "I am Node "        <> show mockNodeAddr
+                               , "I am Node "        <> show nodeAddr
                                           <> " Id: " <> show nodeid
                                , "My producers are " <> show producers'
                                , "**************************************"
                                ]
 
-         when mockValidateDB $ traceWith tracer "Performing DB validation"
+         when validateDB $ traceWith tracer "Performing DB validation"
 
 -- | We provide an optional cross-platform method to politely request shut down.
 --
@@ -318,9 +317,8 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
 -- either deliberatly by the parent process or automatically because the parent
 -- process itself terminated, then we initiate a clean shutdown.
 --
-withShutdownHandler :: NodeProtocolMode -> Trace IO Text -> IO () -> IO ()
-withShutdownHandler (RealProtocolMode NodeCLI{shutdownIPC = Just (Fd fd)})
-                    trace action =
+withShutdownHandler :: NodeCLI -> Trace IO Text -> IO () -> IO ()
+withShutdownHandler NodeCLI{shutdownIPC = Just (Fd fd)} trace action =
     Async.race_ (wrapUninterruptableIO waitForEOF) action
   where
     waitForEOF :: IO ()
@@ -357,21 +355,17 @@ wrapUninterruptableIO action = async action >>= wait
 -- Helper functions
 --------------------------------------------------------------------------------
 
-canonDbPath :: NodeProtocolMode -> IO FilePath
-canonDbPath npm  = do
-  dbFp <- case npm of
-            MockProtocolMode NodeMockCLI{mockMscFp} -> do
+canonDbPath :: NodeCLI -> IO FilePath
+canonDbPath npm@NodeCLI{databaseFile, nodeMode} = do
+  dbFp <- case nodeMode of
+            MockProtocolMode -> do
               --TODO: we should eliminate auto-naming here too
               nodeid <- nid npm
-              pure $ unDB (dBFile mockMscFp) <> "-" <> show nodeid
+              pure $ unDB databaseFile <> "-" <> show nodeid
 
-            RealProtocolMode NodeCLI{mscFp} -> pure . unDB $ dBFile mscFp
+            RealProtocolMode -> pure (unDB databaseFile)
 
   canonicalizePath =<< makeAbsolute dbFp
-
-dbValidation :: NodeProtocolMode -> Bool
-dbValidation (MockProtocolMode NodeMockCLI{mockValidateDB}) = mockValidateDB
-dbValidation (RealProtocolMode NodeCLI{validateDB}) = validateDB
 
 createDiffusionArguments
   :: [AddrInfo]
@@ -401,12 +395,6 @@ dnsSubscriptionTarget ra =
                         , dstValency = raValency ra
                         }
 
-extractMiscFilePaths :: NodeProtocolMode -> MiscellaneousFilepaths
-extractMiscFilePaths npm =
-  case npm of
-    MockProtocolMode NodeMockCLI{mockMscFp} -> mockMscFp
-    RealProtocolMode NodeCLI{mscFp} -> mscFp
-
 ipSubscriptionTargets :: [NodeAddress] -> IPSubscriptionTarget
 ipSubscriptionTargets ipProdAddrs =
   let ips = nodeAddressToSockAddr <$> ipProdAddrs
@@ -415,10 +403,10 @@ ipSubscriptionTargets ipProdAddrs =
                           }
 
 -- | NodeIds are only required for mock protocols
-nid :: NodeProtocolMode -> IO Word64
-nid (RealProtocolMode _) = panic $ "Cardano.Node.Run.nid: "
-                                 <> "Real protocols do not require node ids"
-nid npm@(MockProtocolMode _) = do
+nid :: NodeCLI -> IO Word64
+nid NodeCLI{nodeMode = RealProtocolMode} =
+    panic $ "Cardano.Node.Run.nid: Real protocols do not require node ids"
+nid npm@NodeCLI{nodeMode = MockProtocolMode} = do
    nc <- parseNodeConfiguration npm
    case ncNodeId nc of
         Just (CoreId (CoreNodeId n)) -> pure n

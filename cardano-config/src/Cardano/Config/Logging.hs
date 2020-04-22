@@ -58,7 +58,6 @@ import           Cardano.Shell.Types (CardanoFeature (..))
 
 import           Cardano.Config.GitRev (gitRev)
 import           Cardano.Config.Types (ConfigYamlFilePath (..), ConfigError (..), CardanoEnvironment,
-                                       NodeMockCLI (..), NodeProtocolMode (..),
                                        NodeConfiguration (..), NodeCLI (..),parseNodeConfiguration)
 
 
@@ -120,17 +119,17 @@ loggingCLIConfiguration = maybe emptyConfig readConfig
 createLoggingFeature
   :: Text
   -> CardanoEnvironment
-  -> NodeProtocolMode
+  -> NodeCLI
   -> ExceptT ConfigError IO (LoggingLayer, CardanoFeature)
-createLoggingFeature ver _ nodeProtocolMode = do
+createLoggingFeature ver _ nodecli@NodeCLI{configFile} = do
 
   -- TODO:  we shouldn't be parsing configuration multiple times!
-  nodeConfig <- liftIO $ parseNodeConfiguration nodeProtocolMode
+  nodeConfig <- liftIO $ parseNodeConfiguration nodecli
 
   logConfig <- loggingCLIConfiguration $
     if ncLoggingSwitch nodeConfig
     -- Re-interpret node config again, as logging 'Configuration':
-    then Just $ unConfigPath (getConfigYaml nodeProtocolMode)
+    then Just $ unConfigPath configFile
     else Nothing
 
   -- These have to be set before the switchboard is set up.
@@ -215,12 +214,6 @@ createLoggingFeature ver _ nodeProtocolMode = do
        , llConfiguration = logConfig
        , llAddBackend = Switchboard.addExternalBackend switchBoard
        }
-
-   -- TODO: that should be resolved with CLI sharing.
-   getConfigYaml :: NodeProtocolMode -> ConfigYamlFilePath
-   getConfigYaml = \case
-     RealProtocolMode NodeCLI{configFp} -> configFp
-     MockProtocolMode NodeMockCLI{mockConfigFp} -> mockConfigFp
 
    startCapturingMetrics :: Trace IO Text -> IO ()
    startCapturingMetrics trace0 = do

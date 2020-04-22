@@ -32,10 +32,8 @@ import qualified Ouroboros.Consensus.Cardano as Consensus
 import           Ouroboros.Consensus.Byron.Ledger (ByronBlock)
 
 import           Cardano.Config.Types
-                   (NodeConfiguration(..),
-                    MiscellaneousFilepaths(..), GenesisFile (..),
-                    DelegationCertFile (..), SigningKeyFile (..),
-                    Update (..), LastKnownBlockVersion (..))
+                   (NodeConfiguration(..), ProtocolFilepaths(..),
+                    GenesisFile (..), Update (..), LastKnownBlockVersion (..))
 import           Cardano.Config.Protocol.Types (SomeConsensusProtocol(..))
 import           Cardano.TracingOrphanInstances.Byron ()
 
@@ -46,7 +44,7 @@ import           Cardano.TracingOrphanInstances.Byron ()
 
 mkConsensusProtocolRealPBFT
   :: NodeConfiguration
-  -> Maybe MiscellaneousFilepaths
+  -> Maybe ProtocolFilepaths
   -> ExceptT ByronProtocolInstantiationError IO SomeConsensusProtocol
 mkConsensusProtocolRealPBFT NodeConfiguration {
                               ncGenesisFile = GenesisFile genesisFile,
@@ -71,13 +69,13 @@ mkConsensusProtocolRealPBFT NodeConfiguration {
 
     optionalLeaderCredentials <-
       case files of
-        Just MiscellaneousFilepaths {
-               delegCertFile,
-               signKeyFile
+        Just ProtocolFilepaths {
+               byronCertFile,
+               byronKeyFile
              }  -> readLeaderCredentials
                      genesisConfig
-                     delegCertFile
-                     signKeyFile
+                     byronCertFile
+                     byronKeyFile
         Nothing -> return Nothing
 
     let consensusProtocol :: Consensus.Protocol ByronBlock ProtocolRealPBFT
@@ -115,8 +113,8 @@ protocolConfigRealPbft (Update appName appVer lastKnownBlockVersion)
 
 
 readLeaderCredentials :: Genesis.Config
-                      -> Maybe DelegationCertFile
-                      -> Maybe SigningKeyFile
+                      -> Maybe FilePath
+                      -> Maybe FilePath
                       -> ExceptT ByronProtocolInstantiationError IO
                                  (Maybe PBftLeaderCredentials)
 readLeaderCredentials genesisConfig mDelCertFp mSKeyFp =
@@ -126,15 +124,12 @@ readLeaderCredentials genesisConfig mDelCertFp mSKeyFp =
     (Nothing, Just _) -> left DelegationCertificateFilepathNotSpecified
     (Just delegCertFile, Just signingKeyFile) -> do
 
-         let delegCertFp = unDelegationCert delegCertFile
-         let signKeyFp = unSigningKey signingKeyFile
-
-         signingKeyFileBytes <- liftIO $ LB.readFile signKeyFp
-         delegCertFileBytes <- liftIO $ LB.readFile delegCertFp
-         signingKey <- firstExceptT (SigningKeyDeserialiseFailure signKeyFp)
+         signingKeyFileBytes <- liftIO $ LB.readFile signingKeyFile
+         delegCertFileBytes <- liftIO $ LB.readFile delegCertFile
+         signingKey <- firstExceptT (SigningKeyDeserialiseFailure signingKeyFile)
                          . hoistEither
                          $ deserialiseSigningKey signingKeyFileBytes
-         delegCert  <- firstExceptT (CanonicalDecodeFailure delegCertFp)
+         delegCert  <- firstExceptT (CanonicalDecodeFailure delegCertFile)
                          . hoistEither
                          $ canonicalDecodePretty delegCertFileBytes
 

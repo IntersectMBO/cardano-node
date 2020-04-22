@@ -43,9 +43,9 @@ main = toplevelExceptionHandler $ do
       cardanoApplication :: NodeLayer -> CardanoApplication
       cardanoApplication = CardanoApplication . nlRunNode
 
-      opts :: Opt.ParserInfo NodeProtocolMode
+      opts :: Opt.ParserInfo NodeCLI
       opts =
-        Opt.info (nodeProtocolModeParser
+        Opt.info (nodeCLIParser
                     <**> helperBrief "help" "Show this help text" nodeCliHelpMain)
 
           ( Opt.fullDesc <>
@@ -59,13 +59,13 @@ main = toplevelExceptionHandler $ do
 
       nodeCliHelpMain :: String
       nodeCliHelpMain = renderHelpDoc 80 $
-        parserHelpHeader "cardano-node" nodeProtocolModeParser
+        parserHelpHeader "cardano-node" nodeCLIParser
         <$$> ""
-        <$$> parserHelpOptions nodeProtocolModeParser
+        <$$> parserHelpOptions nodeCLIParser
 
 
 initializeAllFeatures
-  :: NodeProtocolMode
+  :: NodeCLI
   -> CardanoEnvironment
   -> IO ([CardanoFeature], NodeLayer)
 initializeAllFeatures npm cardanoEnvironment = do
