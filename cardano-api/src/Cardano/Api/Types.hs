@@ -36,7 +36,7 @@ import           Shelley.Spec.Ledger.Keys (KeyDiscriminator, SKey, VKey, VKeyGen
 data Address
   = AddressByron !Byron.Address
   | AddressShelley
-  deriving (Eq, Generic , NFData, Show)  -- Byron.Address' needs NFData
+  deriving (Eq, Generic, Show)
   deriving NoUnexpectedThunks via UseIsNormalForm Address
 
 data KeyPair
@@ -45,23 +45,23 @@ data KeyPair
   -- Byron address derivation scheme.
   = KeyPairByron !Crypto.VerificationKey !Crypto.SigningKey
   | KeyPairShelley !ShelleyVerificationKey !(SKey TPraosStandardCrypto)
-  deriving (Generic, NFData, Show)
+  deriving (Generic, Show)
   deriving anyclass NoUnexpectedThunks
 
 newtype ShelleyKeyDiscriminator = ShelleyKeyDiscriminator KeyDiscriminator
   deriving (Generic, Show)
-  deriving newtype (NFData, NoUnexpectedThunks)
+  deriving newtype NoUnexpectedThunks
 
 data ShelleyVerificationKey
   = GenesisShelleyVerificationKey !(VKeyGenesis TPraosStandardCrypto)
   | RegularShelleyVerificationKey !(VKey TPraosStandardCrypto)
-  deriving (Generic, NFData, Show)
+  deriving (Generic, Show)
   deriving anyclass NoUnexpectedThunks
 
 data PublicKey
   = PubKeyByron !Network !Crypto.VerificationKey
   | PubKeyShelley !Network !ShelleyVerificationKey
-  deriving (Generic, NFData, Show)
+  deriving (Generic, Show)
   deriving anyclass NoUnexpectedThunks
 
 -- The cardano-sl codebase (and cardano-ledger) has something a little like
@@ -69,23 +69,23 @@ data PublicKey
 data Network
   = Mainnet
   | Testnet !Crypto.ProtocolMagicId
-  deriving (Eq, Generic, NFData, Show)
+  deriving (Eq, Generic, Show)
   deriving anyclass NoUnexpectedThunks
 
 data TxSigned
   = TxSignedByron !Byron.Tx !ByteString !(Crypto.Hash Byron.Tx) !(Vector Byron.TxInWitness)
   | TxSignedShelley
-  deriving (Eq, Generic, NFData, Show)
+  deriving (Eq, Generic, Show)
   deriving NoUnexpectedThunks via UseIsNormalForm TxSigned
 
 data TxUnsigned
   = TxUnsignedByron !Byron.Tx !ByteString !(Crypto.Hash Byron.Tx)
   | TxUnsignedShelley
-  deriving (Eq, Generic, NFData, Show)
+  deriving (Eq, Generic, Show)
   deriving NoUnexpectedThunks via UseIsNormalForm TxUnsigned
 
 data TxWitness
   = TxWitByron !Byron.TxInWitness
   | TxWitShelley
-  deriving (Generic, NFData)
+  deriving (Generic)
   deriving NoUnexpectedThunks via UseIsNormalForm TxWitness
