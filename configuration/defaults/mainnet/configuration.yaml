@@ -21,6 +21,14 @@ SocketPath: db/node.socket
 # is what we use on mainnet in Byron era.
 Protocol: RealPBFT
 
+# By default all supported versions are enabled (the two lists below might not
+# be exhaustive)
+# ByronNodeToClientVersions:
+#   - ByronNodeToClientVersion1
+#   - ByronNodeToClientVersion2
+# ByronNodeToNodeVersions:
+#   - ByronNodeToNodeVersion1
+
 # The mainnet does not include the network magic into addresses. Testnets do.
 RequiresNetworkMagic: RequiresNoMagic
 
