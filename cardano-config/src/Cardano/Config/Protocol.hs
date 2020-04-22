@@ -69,7 +69,6 @@ data ProtocolInstantiationError =
     ByronProtocolInstantiationError   ByronProtocolInstantiationError
   | ShelleyProtocolInstantiationError ShelleyProtocolInstantiationError
   | MockProtocolInstantiationError    MockProtocolInstantiationError
-  deriving Show
 
 
 renderProtocolInstantiationError :: ProtocolInstantiationError -> Text

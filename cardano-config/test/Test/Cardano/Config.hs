@@ -10,12 +10,15 @@ import           Cardano.Prelude
 import           Data.Aeson (encode, fromJSON, decode, toJSON)
 import qualified Data.ByteString.Char8 as BS
 
+import           Cardano.Config.Shelley.KES (decodeKESVerificationKey, encodeKESVerificationKey)
+import           Cardano.Config.Shelley.VRF (decodeVRFVerificationKey, encodeVRFVerificationKey)
 import           Shelley.Spec.Ledger.Address (serialiseAddr, deserialiseAddr)
 
 import           Hedgehog (Property, discover)
 import qualified Hedgehog
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
+import           Hedgehog.Internal.Property (forAllT)
 
 import           Test.Cardano.Config.Examples
 import           Test.Cardano.Config.Gen
@@ -65,6 +68,18 @@ prop_roundtrip_ShelleyGenesis_JSON =
     sg <- Hedgehog.forAll genShelleyGenesis
     Hedgehog.tripping sg toJSON fromJSON
     Hedgehog.tripping sg encode decode
+
+prop_roundtrip_VerKeyVRF_SimpleVRF_CBOR :: Property
+prop_roundtrip_VerKeyVRF_SimpleVRF_CBOR =
+  Hedgehog.property $ do
+    (_, vKeyVRF) <- forAllT genVRFKeyPair'
+    Hedgehog.tripping vKeyVRF encodeVRFVerificationKey decodeVRFVerificationKey
+
+prop_roundtrip_VKeyES_TPraosStandardCrypto_CBOR :: Property
+prop_roundtrip_VKeyES_TPraosStandardCrypto_CBOR =
+  Hedgehog.property $ do
+    (vKeyES, _) <- forAllT genKESKeyPair'
+    Hedgehog.tripping vKeyES encodeKESVerificationKey decodeKESVerificationKey
 
 -- Test this first. If this fails, others are likely to fail.
 prop_roundtrip_multiline_hex :: Property

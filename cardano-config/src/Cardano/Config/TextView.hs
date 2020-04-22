@@ -14,12 +14,14 @@ module Cardano.Config.TextView
   , expectTextViewOfType
   , decodeFromTextView
   , encodeToTextView
+  , textShow
 
     -- * File IO support
   , TextViewFileError (..)
   , readTextViewFile
   , readTextViewFileOfType
   , readTextViewEncodedFile
+  , renderTextViewFileError
   , writeTextViewFile
   , writeTextViewEncodedFile
 
@@ -140,6 +142,21 @@ data TextViewFileError
   | TextViewFileIOError !FilePath !IOException
   deriving (Eq, Show)
 
+renderTextViewFileError :: TextViewFileError -> Text
+renderTextViewFileError tvfe =
+  case tvfe of
+    TextViewFileError fp (TextViewFormatError err) ->
+      "TextView format error at: " <> toS fp <> " Error: " <> toS err
+
+    TextViewFileError fp (TextViewTypeError expType actType) ->
+      "TextView type error at: " <> toS fp <> " Expected: " <> (toS . BS.unpack $ unTextViewType expType)
+                                           <> " Actual: " <> (toS . BS.unpack $ unTextViewType actType)
+
+    TextViewFileError fp (TextViewDecodeError decErr)->
+      "TextView file error at: " <> toS fp <> " Error: " <> textShow decErr
+
+    TextViewFileIOError fp ioExcpt ->
+      "TextView IO exception at: " <> toS fp <> " Error: " <> textShow ioExcpt
 
 -- | Read a file in the external serialised format for 'TextView'.
 --
@@ -169,17 +186,15 @@ readTextViewFileOfType expectedType path =
 -- | Read a file in the external serialised format for 'TextView', check
 -- that it's declared to be the expected type, and decode the body.
 --
-readTextViewEncodedFile :: TextViewType -> (forall s . Decoder s a)
-                          -> FilePath -> IO (Either TextViewFileError a)
-readTextViewEncodedFile expectedType decoder path =
+readTextViewEncodedFile :: (TextView -> Either TextViewError a)
+                        -> FilePath -> IO (Either TextViewFileError a)
+readTextViewEncodedFile decoder path =
     runExceptT $ do
-      tv <- ExceptT $ readTextViewFileOfType expectedType path
-      firstExceptT (TextViewFileError path) $ hoistEither $
-        decodeFromTextView decoder tv
+      tv <- ExceptT $ readTextViewFile path
+      firstExceptT (TextViewFileError path) $ hoistEither $ decoder tv
 
 
 -- | Write a file in the external serialised format for 'TextView'.
--- Use 'encodeToTextView' to make the value.
 --
 writeTextViewFile :: FilePath -> TextView -> IO (Either TextViewFileError ())
 writeTextViewFile path tv =
@@ -189,16 +204,16 @@ writeTextViewFile path tv =
 
 
 -- | Write a file in the external serialised format for 'TextView'.
--- Use 'encodeToTextView' to make the value.
+-- Use supplied encoder to encode the value in TextView's tvRawCBOR field.
 --
-writeTextViewEncodedFile :: TextViewType -> TextViewTitle -> (a -> Encoding)
-                         -> FilePath -> a -> IO (Either TextViewFileError ())
-writeTextViewEncodedFile tvType tvTitle encode path a =
+writeTextViewEncodedFile :: (a -> TextView) -> FilePath -> a
+                         -> IO (Either TextViewFileError ())
+writeTextViewEncodedFile encode path a =
     runExceptT $
       handleIOExceptT (TextViewFileIOError path) $
         BS.writeFile path (renderTextView tv)
   where
-    tv = encodeToTextView tvType tvTitle encode a
+    tv = encode a
 
 
 -- ----------------------------------------------------------------------------

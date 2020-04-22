@@ -140,16 +140,14 @@ readLeaderCredentials (Just ProtocolFilepaths {shelleyKESFile = Nothing}) =
 -- Errors
 --
 
-data ShelleyProtocolInstantiationError =
-       GenesisReadError !FilePath !String
-     | OCertError OperationalCertError
-     | VRFError VRFError
-     | KESError KESError
+data ShelleyProtocolInstantiationError = GenesisReadError !FilePath !String
+                                       | OCertError OperationalCertError
+                                       | VRFError VRFError
+                                       | KESError KESError
 
-     | OCertNotSpecified
-     | VRFKeyNotSpecified
-     | KESKeyNotSpecified
-  deriving Show
+                                       | OCertNotSpecified
+                                       | VRFKeyNotSpecified
+                                       | KESKeyNotSpecified
 
 
 renderShelleyProtocolInstantiationError :: ShelleyProtocolInstantiationError
@@ -160,8 +158,8 @@ renderShelleyProtocolInstantiationError pie =
         "There was an error parsing the genesis file: "
      <> toS fp <> " Error: " <> (T.pack $ show err)
 
-    KESError   err -> T.pack $ renderKESError err
-    VRFError   err -> T.pack $ renderVRFError err
+    KESError   err -> renderKESError err
+    VRFError   err -> renderVRFError err
     OCertError err -> T.pack $ show err --TODO: renderOperationalCertError
 
     OCertNotSpecified  -> missingFlagMessage "shelley-operational-certificate"

@@ -2,6 +2,12 @@
 
 module Cardano.Config.Shelley.KES
   ( KESError
+  , SignKey
+  , VerKey
+  , decodeKESSigningKey
+  , decodeKESVerificationKey
+  , encodeKESSigningKey
+  , encodeKESVerificationKey
   , genKESKeyPair
   , readKESSigningKey
   , readKESVerKey
@@ -11,14 +17,11 @@ module Cardano.Config.Shelley.KES
   ) where
 
 import           Cardano.Prelude
-import           Prelude (String)
-
-import qualified Data.ByteString.Lazy.Char8 as LB
 
 import qualified Cardano.Binary as CBOR
-import           Control.Monad.Trans.Except.Extra
-                   (firstExceptT, handleIOExceptT, hoistEither)
+import           Control.Monad.Trans.Except.Extra (firstExceptT, newExceptT)
 
+import           Cardano.Config.TextView
 import           Cardano.Crypto.KES.Class
 import           Ouroboros.Consensus.Shelley.Protocol.Crypto
                    (TPraosStandardCrypto, KES)
@@ -35,50 +38,59 @@ genKESKeyPair duration = do
   let verKeyKes = deriveVerKeyKES signKeyKES
   pure (verKeyKes, signKeyKES)
 
-data KESError = ReadKESSigningKeyError !FilePath !IOException
-              | ReadKESVerKeyError !FilePath !IOException
-              | DecodeKESSigningKeyError !FilePath !CBOR.DecoderError
-              | DecodeKESVerKeyError !FilePath !CBOR.DecoderError
-              | WriteKESSigningKeyError !FilePath !IOException
-              | WriteKESVerKeyError !FilePath !IOException
-  deriving Show
+data KESError = ReadKESSigningKeyError !TextViewFileError
+              | ReadKESVerKeyError !TextViewFileError
+              | WriteKESSigningKeyError !TextViewFileError
+              | WriteKESVerKeyError !TextViewFileError
 
-readKESSigningKey :: FilePath ->  ExceptT KESError IO SignKey
-readKESSigningKey fp = do
-  bs <- handleIOExceptT (ReadKESSigningKeyError fp) $ LB.readFile fp
-  firstExceptT (DecodeKESSigningKeyError fp) . hoistEither $ CBOR.decodeFull bs
-
-renderKESError :: KESError -> String
+renderKESError :: KESError -> Text
 renderKESError kesErr =
   case kesErr of
-    ReadKESSigningKeyError fp ioExcptn -> "KES signing key read error at: " <> fp
-                                          <> " Error: " <> show ioExcptn
+    ReadKESSigningKeyError err -> "KES signing key read error: " <> renderTextViewFileError err
+    ReadKESVerKeyError err -> "KES verification key read error: " <> renderTextViewFileError err
+    WriteKESSigningKeyError err -> "KES signing key write error: " <> renderTextViewFileError err
+    WriteKESVerKeyError err -> "KES verification key write error: " <> renderTextViewFileError err
 
-    ReadKESVerKeyError fp ioExcptn -> "KES verification key read error at: " <> fp
-                                      <> " Error: " <> show ioExcptn
+encodeKESSigningKey :: SignKey -> TextView
+encodeKESSigningKey sKeyEs =
+  encodeToTextView tvType' tvTitle' CBOR.toCBOR sKeyEs
+ where
+  tvType' = "SKeyES TPraosStandardCrypto"
+  tvTitle' = "KES Signing Key"
 
-    DecodeKESSigningKeyError fp cborDecErr -> "KES signing key decode error at: " <> fp
-                                              <> " Error: " <> show cborDecErr
+decodeKESSigningKey :: TextView -> Either TextViewError SignKey
+decodeKESSigningKey tView = do
+  expectTextViewOfType "SKeyES TPraosStandardCrypto" tView
+  decodeFromTextView CBOR.fromCBOR tView
 
-    DecodeKESVerKeyError fp cborDecErr -> "KES verification key decode error at: " <> fp
-                                          <> " Error: " <> show cborDecErr
+encodeKESVerificationKey :: VerKey -> TextView
+encodeKESVerificationKey vKeyEs =
+  encodeToTextView tvType' tvTitle' CBOR.toCBOR vKeyEs
+ where
+  tvType' = "VKeyES TPraosStandardCrypto"
+  tvTitle' = "KES Verification Key"
 
-    WriteKESSigningKeyError fp ioExcptn -> "KES signing key write error at: " <> fp
-                                           <> " Error: " <> show ioExcptn
+decodeKESVerificationKey :: TextView -> Either TextViewError VerKey
+decodeKESVerificationKey tView = do
+  expectTextViewOfType "VKeyES TPraosStandardCrypto" tView
+  decodeFromTextView CBOR.fromCBOR tView
 
-    WriteKESVerKeyError fp ioExcptn -> "KES verification key write error at: " <> fp
-                                       <> " Error: " <> show ioExcptn
-
+readKESSigningKey :: FilePath -> ExceptT KESError IO SignKey
+readKESSigningKey fp =
+  firstExceptT ReadKESSigningKeyError
+    . newExceptT $ readTextViewEncodedFile decodeKESSigningKey fp
 
 writeKESSigningKey :: FilePath -> SignKey -> ExceptT KESError IO ()
-writeKESSigningKey fp sKeyKES =
-  handleIOExceptT (WriteKESSigningKeyError fp) $ LB.writeFile fp (CBOR.serialize sKeyKES)
+writeKESSigningKey fp sKey =
+  firstExceptT WriteKESSigningKeyError
+    . newExceptT $ writeTextViewEncodedFile encodeKESSigningKey fp sKey
 
 readKESVerKey :: FilePath -> ExceptT KESError IO VerKey
 readKESVerKey fp = do
-  bs <- handleIOExceptT (ReadKESVerKeyError fp) $ LB.readFile fp
-  firstExceptT (DecodeKESVerKeyError fp) . hoistEither $ CBOR.decodeFull bs
+  firstExceptT ReadKESVerKeyError
+    . newExceptT $ readTextViewEncodedFile decodeKESVerificationKey fp
 
 writeKESVerKey :: FilePath -> VerKey -> ExceptT KESError IO ()
 writeKESVerKey fp vKeyKES =
-  handleIOExceptT (WriteKESVerKeyError fp) $ LB.writeFile fp (CBOR.serialize vKeyKES)
+  firstExceptT WriteKESVerKeyError
+    . newExceptT $ writeTextViewEncodedFile encodeKESVerificationKey fp vKeyKES
