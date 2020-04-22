@@ -45,15 +45,12 @@ let
         # split data output for ekg to reduce closure size
         packages.ekg.components.library.enableSeparateDataOutput = true;
         packages.cardano-config.configureFlags = [ "--ghc-option=-Werror" ];
-
-        # profiling
-        enableLibraryProfiling = profiling;
-        packages.cardano-node.components.exes.cardano-node.enableExecutableProfiling = profiling;
-        packages.cardano-config.package.ghcOptions =
-          if profiling then "-fprof-auto" else "";
-        packages.cardano-node.package.ghcOptions =
-          if profiling then "-fprof-auto" else "";
       }
+      (lib.optionalAttrs profiling {
+        enableLibraryProfiling = true;
+        packages.cardano-node.components.exes.cardano-node.enableExecutableProfiling = true;
+        profilingDetail = "default";
+      })
       (lib.optionalAttrs stdenv.hostPlatform.isWindows {
         # Disable cabal-doctest tests by turning off custom setups
         packages.comonad.package.buildType = lib.mkForce "Simple";
