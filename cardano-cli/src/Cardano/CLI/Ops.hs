@@ -102,6 +102,8 @@ import           Cardano.Config.Protocol
                    (Protocol(..), ProtocolInstantiationError,
                     SomeConsensusProtocol(..), mkConsensusProtocol,
                     renderProtocolInstantiationError)
+import           Cardano.Config.Shelley.KES (KESError, renderKESError)
+import           Cardano.Config.Shelley.VRF (VRFError, renderVRFError)
 import           Cardano.Config.Types
 import qualified Cardano.CLI.Legacy.Byron as Legacy
 
@@ -240,7 +242,8 @@ serialiseSigningKey ShelleyEra     _              = Left $ CardanoEraNotSupporte
 -- | Exception type for all errors thrown by the CLI.
 --   Well, almost all, since we don't rethrow the errors from readFile & such.
 data CliError
-  = CBORDecodingError !DeserialiseFailure
+  = CardanoEraNotSupported !CardanoEra
+  | CBORDecodingError !DeserialiseFailure
   | CBORPrettyPrintError !DeserialiseFailure
   | CertificateValidationErrors !FilePath ![Text]
   | DelegationError !Genesis.GenesisDelegationError
@@ -250,6 +253,7 @@ data CliError
   | GenesisReadError !FilePath !Genesis.GenesisDataError
   | GenesisSpecError !Text
   | IssueUtxoError !RealPBFTError
+  | KESCliError KESError
   | NoBlocksFound !FilePath
   | NodeSubmitTxError !RealPBFTError
   | NotEnoughTxInputs
@@ -257,7 +261,6 @@ data CliError
   | NoGenesisDelegationForKey !Text
   | OutputMustNotAlreadyExist !FilePath
   | ProtocolError !ProtocolInstantiationError
-  | CardanoEraNotSupported !CardanoEra
   | ProtocolParametersParseFailed !FilePath !Text
   | ReadCBORFileFailure !FilePath !Text
   | ReadSigningKeyFailure !FilePath !Text
@@ -269,6 +272,7 @@ data CliError
   | UpdateProposalDecodingError !DecoderError
   | UpdateProposalSubmissionError !RealPBFTError
   | VerificationKeyDeserialisationFailed !FilePath !Text
+  | VRFCliError VRFError
   | FileNotFoundError !FilePath
 
 
@@ -287,6 +291,8 @@ instance Show CliError where
     = "Error while issuing delegation: " <> show err
   show (DlgCertificateDeserialisationFailed fp err)
     = "Delegation certificate '" <> fp <> "' read failure: "<> T.unpack err
+  show (FileNotFoundError fp)
+    = "File '" <> fp <> "' not found!"
   show (GenerateTxsError err)
     = "Error in GenerateTxs command: " <> show err
   show (GenesisGenerationError err)
@@ -295,6 +301,8 @@ instance Show CliError where
     = "Error in genesis specification: " <> T.unpack err
   show (IssueUtxoError err)
     = "Error SpendUTxO command: " <> show err
+  show (KESCliError err)
+    = renderKESError err
   show (NoBlocksFound fp)
     = "Error while creating update proposal, no blocks found in: " <> fp
   show (NodeSubmitTxError err)
@@ -334,8 +342,8 @@ instance Show CliError where
     = "Error submitting update proposal: " <> show pbftErr
   show (VerificationKeyDeserialisationFailed fp err)
     = "Verification key '" <> fp <> "' read failure: "<> T.unpack err
-  show (FileNotFoundError fp)
-    = "File '" <> fp <> "' not found!"
+  show (VRFCliError err) = renderVRFError err
+
 
 data RealPBFTError
   = IncorrectProtocolSpecified !Protocol

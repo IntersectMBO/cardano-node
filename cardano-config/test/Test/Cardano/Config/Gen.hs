@@ -10,7 +10,7 @@ module Test.Cardano.Config.Gen
 
 import           Cardano.Prelude
 
-import           Cardano.Config.ShelleyGenesis
+import           Cardano.Config.Shelley.Genesis
 import           Cardano.Config.TextView
 import           Cardano.Slotting.Slot (EpochSize (..))
 import           Cardano.Crypto.DSIGN (deriveVerKeyDSIGN, genKeyDSIGN)

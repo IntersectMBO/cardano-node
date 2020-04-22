@@ -22,6 +22,7 @@ import           Cardano.Api.Orphans ()
 
 import qualified Cardano.Chain.Common as Byron
 import qualified Cardano.Chain.UTxO as Byron
+import           Cardano.Config.Orphanage ()
 import qualified Cardano.Crypto as Crypto
 
 import           Data.Vector (Vector)
@@ -29,7 +30,6 @@ import           Data.Vector (Vector)
 import           Ouroboros.Consensus.Shelley.Protocol.Crypto (TPraosStandardCrypto)
 
 import           Shelley.Spec.Ledger.Keys (KeyDiscriminator, SKey, VKey, VKeyGenesis)
-
 
 -- The 'Address' data type in 'cardano-sl' is a design train wreck.
 -- We need something that is compatible and discard as much of the insanity as possible.

@@ -23,7 +23,10 @@ library
                        Cardano.Config.Protocol.Mock
                        Cardano.Config.Protocol.Byron
                        Cardano.Config.Protocol.Shelley
-                       Cardano.Config.ShelleyGenesis
+                       Cardano.Config.Shelley.Genesis
+                       Cardano.Config.Shelley.KES
+                       Cardano.Config.Shelley.OCert
+                       Cardano.Config.Shelley.VRF
                        Cardano.Config.TextView
                        Cardano.Config.Topology
                        Cardano.Config.TraceConfig

@@ -20,7 +20,7 @@ import           Shelley.Spec.Ledger.Keys (DiscKeyHash (..), GenKeyHash, KeyHash
 import           Shelley.Spec.Ledger.TxData
                    (Addr (..), Credential (..), StakeReference(..))
 
-import           Cardano.Config.ShelleyGenesis
+import           Cardano.Config.Shelley.Genesis
 
 
 exampleShelleyGenesis :: ShelleyGenesis TPraosStandardCrypto

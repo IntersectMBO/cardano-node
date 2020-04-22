@@ -33,7 +33,7 @@ import           Cardano.Config.Types
                    (NodeConfiguration(..),
                     MiscellaneousFilepaths(..), GenesisFile (..),
                     Update (..), LastKnownBlockVersion (..))
-import           Cardano.Config.ShelleyGenesis ()
+import           Cardano.Config.Shelley.Genesis ()
 import           Cardano.TracingOrphanInstances.Shelley ()
 
 
@@ -111,4 +111,3 @@ renderShelleyProtocolInstantiationError pie =
     GenesisReadError fp err ->
         "There was an error parsing the genesis file: "
      <> toS fp <> " Error: " <> (T.pack $ show err)
-

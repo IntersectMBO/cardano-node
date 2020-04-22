@@ -23,7 +23,7 @@ import qualified Data.Set as Set
 
 import           Cardano.TracingOrphanInstances.Common
 import           Cardano.TracingOrphanInstances.Consensus ()
-import           Cardano.Config.ShelleyGenesis ()
+import           Cardano.Config.Shelley.Genesis ()
 
 import           Ouroboros.Network.Block
                    (blockHash, blockSlot, blockNo, blockPrevHash)
@@ -333,4 +333,3 @@ instance ToObject (PredicateFailure (OCERT c)) where
 
 instance ToObject (PredicateFailure (UPDN c)) where
   toObject _verb x = case x of {} -- no constructors
-

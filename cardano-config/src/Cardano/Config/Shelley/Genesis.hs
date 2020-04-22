@@ -5,7 +5,7 @@
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Cardano.Config.ShelleyGenesis
+module Cardano.Config.Shelley.Genesis
   ( ShelleyGenesis(..)
   , shelleyGenesisDefaults
   , shelleyGenesisToJSON
