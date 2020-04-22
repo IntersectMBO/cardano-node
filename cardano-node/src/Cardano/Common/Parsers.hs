@@ -39,7 +39,8 @@ import           Options.Applicative
 import           Ouroboros.Consensus.NodeId (NodeId(..), CoreNodeId(..))
 import           Cardano.Chain.Common (Lovelace, mkLovelace)
 
-import           Cardano.Config.CommonCLI
+import           Cardano.Config.Byron.Parsers   as Byron
+import           Cardano.Config.Shelley.Parsers as Shelley
 import           Cardano.Config.Topology
 import           Cardano.Config.Types
 
@@ -98,6 +99,9 @@ nodeMockParser = do
            , protocolFiles = ProtocolFilepaths
              { byronCertFile = Nothing
              , byronKeyFile  = Nothing
+             , shelleyKESFile  = Nothing
+             , shelleyVRFFile  = Nothing
+             , shelleyCertFile = Nothing
              }
            , validateDB = validate
            , shutdownIPC
@@ -109,9 +113,14 @@ nodeRealParser = do
   -- Filepaths
   topFp <- parseTopologyFile
   dbFp <- parseDbPath
-  delCertFp <- optional parseDelegationCert
-  sKeyFp <- optional parseSigningKey
   socketFp <- parseCLISocketPath "Path to a cardano-node socket"
+
+  -- Protocol files
+  byronCertFile   <- optional Byron.parseDelegationCert
+  byronKeyFile    <- optional Byron.parseSigningKey
+  shelleyKESFile  <- optional Shelley.parseKesKeyFilePath
+  shelleyVRFFile  <- optional Shelley.parseVrfKeyFilePath
+  shelleyCertFile <- optional Shelley.parseOperationalCertFilePath
 
   -- Node Address
   nAddress <- parseNodeAddress
@@ -130,8 +139,11 @@ nodeRealParser = do
     , databaseFile = DbFile dbFp
     , socketFile   = socketFp
     , protocolFiles = ProtocolFilepaths
-      { byronCertFile = delCertFp
-      , byronKeyFile  = sKeyFp
+      { byronCertFile
+      , byronKeyFile
+      , shelleyKESFile
+      , shelleyVRFFile
+      , shelleyCertFile
       }
     , validateDB = validate
     , shutdownIPC

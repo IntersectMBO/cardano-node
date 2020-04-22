@@ -104,9 +104,9 @@ data ProtocolFilepaths =
      ProtocolFilepaths {
        byronCertFile   :: !(Maybe FilePath)
      , byronKeyFile    :: !(Maybe FilePath)
---   , shelleyKESFile  :: !(Maybe FilePath)
---   , shelleyVRFFile  :: !(Maybe FilePath)
---   , shelleyCertFile :: !(Maybe FilePath)
+     , shelleyKESFile  :: !(Maybe FilePath)
+     , shelleyVRFFile  :: !(Maybe FilePath)
+     , shelleyCertFile :: !(Maybe FilePath)
      }
 
 --TODO: things will probably be clearer if we don't use these newtype wrappers and instead
