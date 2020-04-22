@@ -52,7 +52,9 @@ mkConsensusProtocolRealPBFT NodeConfiguration {
                               ncGenesisFile = GenesisFile genesisFile,
                               ncReqNetworkMagic,
                               ncPbftSignatureThresh,
-                              ncUpdate
+                              ncUpdate,
+                              ncByronNodeToNodeVersions,
+                              ncByronNodeToClientVersions
                             }
                             files = do
     (genesisData, genesisHash) <-
@@ -88,7 +90,9 @@ mkConsensusProtocolRealPBFT NodeConfiguration {
             genesisConfig
             optionalLeaderCredentials
 
-    return (SomeConsensusProtocol consensusProtocol)
+    return (SomeConsensusProtocol consensusProtocol
+                                  ncByronNodeToNodeVersions
+                                  ncByronNodeToClientVersions)
 
 
 -- | The plumbing to select and convert the appropriate configuration subset

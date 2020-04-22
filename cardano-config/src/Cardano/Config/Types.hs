@@ -1,7 +1,16 @@
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE StandaloneDeriving #-}
+
+-- | 'FromJSON' orphaned instances of 'ByronNodeToNodeVersion' and
+-- 'ByronNodeToClientVersion'
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Config.Types
     ( CardanoEnvironment (..)
@@ -36,6 +45,9 @@ import           Prelude (read, show)
 import           Cardano.Prelude hiding (show)
 
 import           Data.Aeson
+import           Data.Aeson.Types (Parser, listParser)
+import           Data.List.NonEmpty (NonEmpty)
+import qualified Data.List.NonEmpty as NonEmpty
 import qualified Data.IP as IP
 import qualified Data.Text as T
 import           Data.Yaml (decodeFileThrow)
@@ -47,6 +59,10 @@ import qualified Cardano.Chain.Update as Update
 import           Cardano.Crypto.ProtocolMagic (RequiresNetworkMagic)
 import           Ouroboros.Consensus.NodeId (NodeId(..))
 import           Ouroboros.Consensus.Util.Condense (Condense (..))
+import           Ouroboros.Consensus.Node.NetworkProtocolVersion (HasNetworkProtocolVersion (..))
+import           Ouroboros.Consensus.Byron.Ledger (ByronBlock)
+import           Ouroboros.Consensus.Byron.Ledger.NetworkProtocolVersion
+                    (ByronNodeToNodeVersion (..), ByronNodeToClientVersion (..))
 
 import           Cardano.Config.Orphanage ()
 import           Cardano.Config.TraceConfig
@@ -168,6 +184,12 @@ data NodeConfiguration =
     , ncTraceConfig :: TraceConfig
     , ncViewMode :: ViewMode
     , ncUpdate :: Update
+
+      -- | node-to-node protocol versions to use
+    , ncByronNodeToNodeVersions :: NonEmpty ByronNodeToNodeVersion
+
+      -- | node-to-client protocol versions to use
+    , ncByronNodeToClientVersions :: NonEmpty ByronNodeToClientVersion
     } deriving (Show)
 
 instance FromJSON NodeConfiguration where
@@ -194,6 +216,13 @@ instance FromJSON NodeConfiguration where
                 traceConfig <- if not loggingSwitch
                                then pure traceConfigMute
                                else traceConfigParser v
+                ncByronNodeToNodeVersions <-
+                  v .:? "ByronNodeToNodeVersions"
+                  >>= parseByronNodeToNodeVersions
+
+                ncByronNodeToClientVersions <-
+                  v .:? "ByronNodeToClientVersions"
+                  >>= parseByronNodeToClientVersions
 
                 pure $ NodeConfiguration
                          { ncProtocol = ptcl
@@ -211,6 +240,8 @@ instance FromJSON NodeConfiguration where
                                                                     lkBlkVersionMajor
                                                                     lkBlkVersionMinor
                                                                     lkBlkVersionAlt))
+                         , ncByronNodeToNodeVersions
+                         , ncByronNodeToClientVersions
                          }
 
 -- | Socket path read from the command line.
@@ -324,3 +355,49 @@ instance FromJSON NodeHostAddress where
                                Nothing -> pure $ NodeHostAddress Nothing
   parseJSON invalid = panic $ "Parsing of IP failed due to type mismatch. "
                             <> "Encountered: " <> (T.pack $ show invalid)
+
+--------------------------------------------------------------------------------
+-- Supported Protocol Versions
+--------------------------------------------------------------------------------
+
+parseByronNodeToNodeVersions :: Maybe Value -> Parser (NonEmpty ByronNodeToNodeVersion)
+parseByronNodeToNodeVersions mv =
+    case mv of
+      Nothing -> pure (supportedNodeToNodeVersions proxy)
+      Just v -> do
+        vs <- listParser parseJSONNodeToNodeVersion v
+        pure $ case vs of
+          [] -> supportedNodeToNodeVersions proxy
+          _  -> NonEmpty.fromList vs
+  where
+    proxy :: Proxy ByronBlock
+    proxy = Proxy
+
+
+parseByronNodeToClientVersions :: Maybe Value -> Parser (NonEmpty ByronNodeToClientVersion)
+parseByronNodeToClientVersions mv =
+    case mv of
+      Nothing -> pure (supportedNodeToClientVersions proxy)
+      Just v  -> do
+        vs <- listParser parseJSONNodeToClientVersion v
+        pure $ case vs of
+          [] -> supportedNodeToClientVersions proxy
+          _  -> NonEmpty.fromList vs
+  where
+    proxy :: Proxy ByronBlock
+    proxy = Proxy
+
+
+parseJSONNodeToNodeVersion :: Value -> Parser ByronNodeToNodeVersion
+parseJSONNodeToNodeVersion (String "ByronNodeToNodeVersion1") =
+    pure ByronNodeToNodeVersion1
+parseJSONNodeToNodeVersion _                                  =
+    panic "Unknown NodeToNodeVersion"
+
+parseJSONNodeToClientVersion :: Value -> Parser ByronNodeToClientVersion
+parseJSONNodeToClientVersion (String "ByronNodeToClientVersion1") =
+    pure ByronNodeToClientVersion1
+parseJSONNodeToClientVersion (String "ByronNodeToClientVersion2") =
+    pure ByronNodeToClientVersion2
+parseJSONNodeToClientVersion _                                    =
+    panic "Unknown NodeToClientVersion"

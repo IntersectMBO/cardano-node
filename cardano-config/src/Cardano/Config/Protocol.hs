@@ -58,7 +58,7 @@ mkConsensusProtocol config@NodeConfiguration{ncProtocol} files =
                     mkConsensusProtocolRealPBFT config files
 
       TPraos   -> firstExceptT ShelleyProtocolInstantiationError $
-                    SomeConsensusProtocol <$> mkConsensusProtocolTPraos config files
+                    mkConsensusProtocolTPraos config files
 
 
 ------------------------------------------------------------------------------

@@ -9,6 +9,7 @@ module Cardano.Config.Protocol.Types
 
 import           Prelude (Show)
 
+import           Data.List.NonEmpty (NonEmpty)
 import           Data.Aeson (ToJSON)
 
 import           Ouroboros.Network.Block
@@ -23,14 +24,21 @@ import           Ouroboros.Consensus.Mempool.API
 import           Ouroboros.Consensus.Protocol.Abstract (ValidationErr)
 import qualified Ouroboros.Consensus.Cardano as Consensus (Protocol)
 import           Ouroboros.Consensus.Node.Run (RunNode)
+import           Ouroboros.Consensus.Node.NetworkProtocolVersion (HasNetworkProtocolVersion (..))
 
 import           Cardano.BM.Tracing (ToObject)
 
 
+-- | 'SomeConsensusProtocol' is a en existential product type which holds
+-- 'Consensus.Protocol' together with network versions: 'NodeToNodeVersion' and
+-- 'NodeToClientVersion' for some block type @blk@.
+--
 data SomeConsensusProtocol where
 
      SomeConsensusProtocol :: (RunNode blk, TraceConstraints blk)
                            => Consensus.Protocol blk (BlockProtocol blk)
+                           -> NonEmpty (NodeToNodeVersion blk)
+                           -> NonEmpty (NodeToClientVersion blk)
                            -> SomeConsensusProtocol
 
 

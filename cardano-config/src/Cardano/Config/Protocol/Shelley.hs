@@ -21,8 +21,8 @@ import qualified Data.Text as T
 
 import qualified Data.Aeson as Aeson
 
+import           Ouroboros.Consensus.Node.NetworkProtocolVersion (HasNetworkProtocolVersion (..))
 import           Ouroboros.Consensus.Cardano hiding (Protocol)
-import qualified Ouroboros.Consensus.Cardano as Consensus
 
 import           Ouroboros.Consensus.Shelley.Ledger
 import           Ouroboros.Consensus.Shelley.Protocol (TPraosStandardCrypto)
@@ -34,6 +34,7 @@ import           Cardano.Config.Types
                     MiscellaneousFilepaths(..), GenesisFile (..),
                     Update (..), LastKnownBlockVersion (..))
 import           Cardano.Config.Shelley.Genesis ()
+import           Cardano.Config.Protocol.Types (SomeConsensusProtocol (..))
 import           Cardano.TracingOrphanInstances.Shelley ()
 
 
@@ -45,8 +46,7 @@ mkConsensusProtocolTPraos
   :: NodeConfiguration
   -> Maybe MiscellaneousFilepaths
   -> ExceptT ShelleyProtocolInstantiationError IO
-             (Consensus.Protocol (ShelleyBlock TPraosStandardCrypto)
-                                 ProtocolRealTPraos)
+             SomeConsensusProtocol
 mkConsensusProtocolTPraos NodeConfiguration {
                               ncGenesisFile,
                               ncUpdate
@@ -64,7 +64,12 @@ mkConsensusProtocolTPraos NodeConfiguration {
             protocolVersion
             optionalLeaderCredentials
 
-    return consensusProtocol
+        proxy :: Proxy (ShelleyBlock TPraosStandardCrypto)
+        proxy = Proxy
+
+    return $ SomeConsensusProtocol consensusProtocol
+                                   (supportedNodeToNodeVersions proxy)
+                                   (supportedNodeToClientVersions proxy)
 
 
 readShelleyGenesis :: GenesisFile

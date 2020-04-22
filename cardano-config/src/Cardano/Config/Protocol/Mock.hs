@@ -24,6 +24,7 @@ import           Ouroboros.Consensus.Mock.Ledger.Block.BFT
 import           Ouroboros.Consensus.Mock.Ledger.Block.Praos
 import           Ouroboros.Consensus.Mock.Ledger.Block.PBFT
 import           Ouroboros.Consensus.Node.ProtocolInfo (NumCoreNodes (..))
+import           Ouroboros.Consensus.Node.NetworkProtocolVersion (HasNetworkProtocolVersion (..))
 
 import           Ouroboros.Consensus.NodeId (CoreNodeId (..), NodeId (..))
 import           Ouroboros.Consensus.Protocol.Abstract (SecurityParam (..))
@@ -59,7 +60,14 @@ mkConsensusProtocolBFT NodeConfiguration {
             mockSecurityParam
             (defaultSimpleBlockConfig mockSecurityParam mockSlotLength)
 
-    return (SomeConsensusProtocol consensusProtocol)
+        proxy :: Proxy
+                  (SimpleBlock SimpleMockCrypto
+                    (SimpleBftExt SimpleMockCrypto BftMockCrypto))
+        proxy = Proxy 
+
+    return (SomeConsensusProtocol consensusProtocol
+                                  (supportedNodeToNodeVersions proxy)
+                                  (supportedNodeToClientVersions proxy))
 
 
 mkConsensusProtocolPBFT
@@ -88,7 +96,13 @@ mkConsensusProtocolPBFT NodeConfiguration {
             (defaultSimpleBlockConfig mockSecurityParam mockSlotLength)
             nodeId
 
-    return (SomeConsensusProtocol consensusProtocol)
+        proxy :: Proxy (SimpleBlock SimpleMockCrypto
+                         (SimplePBftExt SimpleMockCrypto PBftMockCrypto))
+        proxy = Proxy
+
+    return (SomeConsensusProtocol consensusProtocol
+                                  (supportedNodeToNodeVersions proxy)
+                                  (supportedNodeToClientVersions proxy))
 
 
 mkConsensusProtocolPraos
@@ -118,7 +132,14 @@ mkConsensusProtocolPraos NodeConfiguration {
               }
             (defaultSimpleBlockConfig mockSecurityParam (slotLengthFromSec 2))
 
-    return (SomeConsensusProtocol consensusProtocol)
+        proxy :: Proxy
+                  (SimpleBlock SimpleMockCrypto
+                    (SimplePraosExt SimpleMockCrypto PraosMockCrypto))
+        proxy = Proxy
+
+    return (SomeConsensusProtocol consensusProtocol
+                                  (supportedNodeToNodeVersions proxy)
+                                  (supportedNodeToClientVersions proxy))
 
 
 mockSecurityParam :: SecurityParam
