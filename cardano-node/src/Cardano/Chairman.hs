@@ -20,6 +20,7 @@ import           Prelude (String, error, show)
 
 import           Control.Concurrent.Async (forConcurrently_)
 import           Control.Monad (void)
+import           Data.List.NonEmpty (NonEmpty)
 import           Data.ByteString.Lazy (ByteString)
 import           Data.Proxy (Proxy (..))
 import           Data.Void (Void)
@@ -84,11 +85,12 @@ import           Cardano.Config.Types (SocketPath(..))
 chairmanTest :: RunNode blk
              => Tracer IO String
              -> Protocol blk (BlockProtocol blk)
+             -> NonEmpty (NodeToClientVersion blk)
              -> DiffTime
              -> Maybe BlockNo
              -> [SocketPath]
              -> IO ()
-chairmanTest tracer ptcl runningTime optionalProgressThreshold socketPaths = do
+chairmanTest tracer ptcl nodeToClientVersions runningTime optionalProgressThreshold socketPaths = do
 
     traceWith tracer ("Will observe nodes for " ++ show runningTime)
     traceWith tracer ("Will require chain growth of " ++ show progressThreshold)
@@ -96,7 +98,9 @@ chairmanTest tracer ptcl runningTime optionalProgressThreshold socketPaths = do
     -- Run the chairman and get the final snapshot of the chain from each node.
     chainsSnapshot <- runChairman
                         tracer
-                        cfg securityParam
+                        cfg
+                        nodeToClientVersions
+                        securityParam
                         runningTime
                         socketPaths
 
@@ -280,6 +284,7 @@ progressCondition minBlockNo (ConsensusSuccess _ tips) =
 runChairman :: RunNode blk
             => Tracer IO String
             -> TopLevelConfig blk
+            -> NonEmpty (NodeToClientVersion blk)
             -> SecurityParam
             -- ^ security parameter, if a fork is deeper than it 'runChairman'
             -- will throw an exception.
@@ -288,7 +293,7 @@ runChairman :: RunNode blk
             -> [SocketPath]
             -- ^ local socket dir
             -> IO (ChainsSnapshot blk)
-runChairman tracer cfg securityParam runningTime socketPaths = do
+runChairman tracer cfg nodeToClientVersions securityParam runningTime socketPaths = do
 
     let initialChains = Map.fromList [ (socketPath, AF.Empty AF.AnchorGenesis)
                                      | socketPath <- socketPaths]
@@ -301,6 +306,7 @@ runChairman tracer cfg securityParam runningTime socketPaths = do
             tracer
             iomgr
             cfg
+            nodeToClientVersions
             securityParam
             chainsVar
             sockPath
@@ -325,6 +331,7 @@ createConnection
   => Tracer IO String
   -> IOManager
   -> TopLevelConfig blk
+  -> NonEmpty (NodeToClientVersion blk)
   -> SecurityParam
   -> ChainsVar IO blk
   -> SocketPath
@@ -333,6 +340,7 @@ createConnection
   tracer
   iomgr
   cfg
+  nodeToClientVersions
   securityParam
   chainsVar
   socketPath@(SocketFile path) =
@@ -349,7 +357,8 @@ createConnection
             (showTracing tracer)
             nullTracer
             nullTracer
-            cfg)
+            cfg
+            nodeToClientVersions)
         path
         `catch` handleMuxError tracer chainsVar socketPath
 
@@ -504,18 +513,20 @@ localInitiatorNetworkApplication
   -- received by the client (see 'Ouroboros.Network.Protocol.LocalTxSubmission.Type'
   -- in 'ouroboros-network' package).
   -> TopLevelConfig blk
+  -> NonEmpty (NodeToClientVersion blk)
   -> Versions NtC.NodeToClientVersion DictVersion
               (LocalConnectionId -> OuroborosApplication InitiatorApp ByteString m () Void)
 localInitiatorNetworkApplication sockPath chainsVar securityParam
                                  chairmanTracer chainSyncTracer
-                                 localTxSubmissionTracer cfg =
+                                 localTxSubmissionTracer cfg
+                                 nodeToClientVersions =
     foldMapVersions
       (\v ->
         versionedNodeToClientProtocols
           (nodeToClientProtocolVersion proxy v)
           versionData
           (protocols v))
-      (supportedNodeToClientVersions proxy)
+      nodeToClientVersions
   where
     -- TODO: it should be passed as an argument
     proxy :: Proxy blk

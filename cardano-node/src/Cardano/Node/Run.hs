@@ -30,6 +30,8 @@ import qualified Data.ByteString.Char8 as BSC
 import           Data.Either (partitionEithers)
 import           Data.Functor.Contravariant (contramap)
 import qualified Data.List as List
+import           Data.List.NonEmpty (NonEmpty)
+import qualified Data.List.NonEmpty as NonEmpty
 import           Data.Proxy (Proxy (..))
 import           Data.Semigroup ((<>))
 import           Data.Text (Text, breakOn, pack, take)
@@ -68,6 +70,7 @@ import           Ouroboros.Consensus.Node (NodeKernel,
                      DnsSubscriptionTarget (..), IPSubscriptionTarget (..),
                      RunNode (nodeNetworkMagic, nodeStartTime),
                      RunNodeArgs (..))
+import           Ouroboros.Consensus.Node.NetworkProtocolVersion
 import qualified Ouroboros.Consensus.Node as Node (run)
 import           Ouroboros.Consensus.Node.ProtocolInfo
 import           Ouroboros.Consensus.NodeId
@@ -112,15 +115,20 @@ runNode loggingLayer npm = do
                            MaximalVerbosity -> "maximal"
     eitherSomeProtocol <- runExceptT $ mkConsensusProtocol nc (Just mscFp')
 
-    SomeConsensusProtocol (p :: Consensus.Protocol blk (BlockProtocol blk)) <-
-      case eitherSomeProtocol of
-        Left err -> (putTextLn $ renderProtocolInstantiationError err) >> exitFailure
-        Right (SomeConsensusProtocol p) -> pure $ SomeConsensusProtocol p
+    SomeConsensusProtocol
+      (p :: Consensus.Protocol blk (BlockProtocol blk))
+      nodeToNodeVersions
+      nodeToClientVersions
+        <- case eitherSomeProtocol of
+            Left err -> (putTextLn $ renderProtocolInstantiationError err) >> exitFailure
+            Right p -> pure $ p
 
     tracers <- mkTracers (ncTraceConfig nc) trace
 
     case ncViewMode nc of
-      SimpleView -> handleSimpleNode p trace tracers npm (const $ pure ())
+      SimpleView -> handleSimpleNode
+                      p nodeToNodeVersions nodeToClientVersions
+                      trace tracers npm (const $ pure ())
       LiveView   -> do
 #ifdef UNIX
         let c = llConfiguration loggingLayer
@@ -135,13 +143,16 @@ runNode loggingLayer npm = do
         captureCounters be trace
 
         -- User will see a terminal graphics and will be able to interact with it.
-        nodeThread <- Async.async $ handleSimpleNode p trace tracers npm
-                       (setNodeKernel be)
+        nodeThread <- Async.async $ handleSimpleNode
+                        p nodeToNodeVersions nodeToClientVersions
+                        trace tracers npm (setNodeKernel be)
         setNodeThread be nodeThread
 
         void $ Async.waitAny [nodeThread]
 #else
-        handleSimpleNode p trace tracers npm (const $ pure ())
+        handleSimpleNode
+          p nodeToNodeVersions nodeToClientVersions
+          trace tracers npm (const $ pure ())
 #endif
   where
     hostname = do
@@ -155,6 +166,8 @@ runNode loggingLayer npm = do
 handleSimpleNode
   :: forall blk. RunNode blk
   => Consensus.Protocol blk (BlockProtocol blk)
+  -> NonEmpty (NodeToNodeVersion blk)
+  -> NonEmpty (NodeToClientVersion blk)
   -> Trace IO Text
   -> Tracers RemoteConnectionId LocalConnectionId blk
   -> NodeProtocolMode
@@ -163,7 +176,7 @@ handleSimpleNode
   -- layer is initialised.  This implies this function must not block,
   -- otherwise the node won't actually start.
   -> IO ()
-handleSimpleNode p trace nodeTracers npm onKernel = do
+handleSimpleNode p rnNodeToNodeVersions rnNodeToClientVersions trace nodeTracers npm onKernel = do
 
   let pInfo@ProtocolInfo{ pInfoConfig = cfg } = Consensus.protocolInfo p
       tracer = contramap pack $ toLogObject trace
@@ -212,7 +225,9 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
        rnProtocolInfo         = pInfo,
        rnCustomiseChainDbArgs = customiseChainDbArgs $ dbValidation npm,
        rnCustomiseNodeArgs    = identity,
-       rnNodeKernelHook       = \_registry nodeKernel -> onKernel nodeKernel
+       rnNodeKernelHook       = \_registry nodeKernel -> onKernel nodeKernel,
+       rnNodeToNodeVersions,
+       rnNodeToClientVersions
     }
  where
   customiseChainDbArgs :: Bool
@@ -277,6 +292,8 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
              vTr = appendName "version" tr
              cTr = appendName "commit"  tr
          traceNamedObject rTr (meta, LogMessage (show (ncProtocol nc)))
+         traceNamedObject rTr (meta, LogMessage (show $ NonEmpty.toList rnNodeToNodeVersions))
+         traceNamedObject rTr (meta, LogMessage (show $ NonEmpty.toList rnNodeToClientVersions))
          traceNamedObject vTr (meta, LogMessage . pack . showVersion $ version)
          traceNamedObject cTr (meta, LogMessage gitRev)
 

@@ -73,8 +73,7 @@ import           Ouroboros.Consensus.Byron.Ledger (ByronBlock)
 import qualified Ouroboros.Consensus.Cardano as Consensus
 import           Ouroboros.Consensus.Network.NodeToClient
                    (Codecs'(..), defaultCodecs)
-import           Ouroboros.Consensus.Node.NetworkProtocolVersion
-                   (nodeToClientProtocolVersion, supportedNodeToClientVersions)
+import           Ouroboros.Consensus.Node.NetworkProtocolVersion (HasNetworkProtocolVersion (..))
 import           Ouroboros.Consensus.Config (TopLevelConfig (..))
 import           Ouroboros.Consensus.Node.ProtocolInfo (ProtocolInfo(..))
 import           Ouroboros.Consensus.Node.Run
@@ -87,10 +86,11 @@ import           Ouroboros.Network.Mux
 import           Ouroboros.Network.NodeToClient
                    (IOManager, LocalConnectionId, NetworkConnectTracers(..),
                     NodeToClientProtocols(..), NodeToClientVersionData(..),
-                    NodeToClientVersion, connectTo, localSnocket,
+                    connectTo, localSnocket,
                     localStateQueryPeerNull, localTxSubmissionPeerNull,
                     versionedNodeToClientProtocols, foldMapVersions,
                     withIOManager)
+import qualified Ouroboros.Network.NodeToClient as NtC
 import           Ouroboros.Network.Protocol.ChainSync.Client
                    (ChainSyncClient(..), ClientStIdle(..), ClientStNext(..)
                    , chainSyncClientPeer, recvMsgRollForward)
@@ -361,8 +361,9 @@ withRealPBFT
         -> ExceptT RealPBFTError IO a)
   -> ExceptT RealPBFTError IO a
 withRealPBFT nc action = do
-  SomeConsensusProtocol p <- firstExceptT FromProtocolError $
-                               mkConsensusProtocol nc Nothing
+  SomeConsensusProtocol p _ _
+    <- firstExceptT FromProtocolError $
+         mkConsensusProtocol nc Nothing
   case p of
     proto@Consensus.ProtocolRealPBFT{} -> action proto
     _ -> left $ IncorrectProtocolSpecified (ncProtocol nc)
@@ -383,27 +384,28 @@ getLocalTip configFp mSockPath iocp = do
   frmPtclRes <- runExceptT $ firstExceptT ProtocolError $
                   mkConsensusProtocol nc Nothing
 
-  SomeConsensusProtocol p <- case frmPtclRes of
+  SomeConsensusProtocol p _ nodeToClientVersions <- case frmPtclRes of
                         Right p -> pure p
                         Left err -> do putTextLn . toS $ show err
                                        exitFailure
 
-  createNodeConnection (Proxy) p iocp sockPath
+  createNodeConnection (Proxy) p nodeToClientVersions iocp sockPath
 
 
 createNodeConnection
   :: forall blk . (Condense (HeaderHash blk), RunNode blk)
   => Proxy blk
   -> Consensus.Protocol blk (BlockProtocol blk)
+  -> NonEmpty (NodeToClientVersion blk)
   -> IOManager
   -> SocketPath
   -> IO ()
-createNodeConnection proxy ptcl iocp (SocketFile path) =
+createNodeConnection proxy ptcl nodeToClientVersions iocp (SocketFile path) =
     let ProtocolInfo{pInfoConfig} = Consensus.protocolInfo ptcl in
     connectTo
       (localSnocket iocp path)
       (NetworkConnectTracers nullTracer nullTracer)
-      (localInitiatorNetworkApplication proxy pInfoConfig)
+      (localInitiatorNetworkApplication proxy pInfoConfig nodeToClientVersions)
       path
     `catch` handleMuxError
 
@@ -420,16 +422,17 @@ localInitiatorNetworkApplication
      )
   => Proxy blk
   -> TopLevelConfig blk
-  -> Versions NodeToClientVersion DictVersion
+  -> NonEmpty (NodeToClientVersion blk)
+  -> Versions NtC.NodeToClientVersion DictVersion
               (LocalConnectionId -> OuroborosApplication InitiatorApp LB.ByteString m () Void)
-localInitiatorNetworkApplication proxy cfg =
+localInitiatorNetworkApplication proxy cfg nodeToClientVersions =
     foldMapVersions
       (\v ->
         versionedNodeToClientProtocols
           (nodeToClientProtocolVersion proxy v)
           versionData
           (protocols v))
-      (supportedNodeToClientVersions proxy)
+      nodeToClientVersions
  where
   versionData = NodeToClientVersionData { networkMagic = nodeNetworkMagic proxy cfg }
 

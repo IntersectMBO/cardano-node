@@ -34,14 +34,19 @@ main = do
     nc <- liftIO $ parseNodeConfigurationFP caConfigYaml
     frmPtclRes <- runExceptT $ mkConsensusProtocol nc Nothing
 
-    SomeConsensusProtocol p <- case frmPtclRes of
-                        Right p  -> pure p
-                        Left err -> do putTextLn $ renderPtclInstantiationErr err
-                                       exitFailure
+    SomeConsensusProtocol
+      p
+      _nodeToNodeVersions
+      nodeToClientVersions
+        <- case frmPtclRes of
+             Right p  -> pure p
+             Left err -> putTextLn (renderPtclInstantiationErr err)
+                      >> exitFailure
 
     chairmanTest
       stdoutTracer
       p
+      nodeToClientVersions
       caRunningTime
       caMinProgress
       caSocketPaths
