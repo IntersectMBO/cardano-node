@@ -25,7 +25,7 @@ import           Control.Monad.Trans.Except.Extra (firstExceptT)
 
 import           Cardano.Config.Types
                    (NodeConfiguration(..), Protocol (..),
-                    MiscellaneousFilepaths(..))
+                    ProtocolFilepaths(..))
 
 import           Cardano.Config.Protocol.Types
 import           Cardano.Config.Protocol.Mock
@@ -39,7 +39,7 @@ import           Cardano.Config.Protocol.Shelley
 
 mkConsensusProtocol
   :: NodeConfiguration
-  -> Maybe MiscellaneousFilepaths
+  -> Maybe ProtocolFilepaths
   -> ExceptT ProtocolInstantiationError IO SomeConsensusProtocol
 mkConsensusProtocol config@NodeConfiguration{ncProtocol} files =
     case ncProtocol of

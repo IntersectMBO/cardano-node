@@ -46,12 +46,8 @@ nodeAddressToSockAddr (NodeAddress addr port) =
     Just (IP.IPv6 ipv6) -> SockAddrInet6 port 0 (IP.toHostAddress6 ipv6) 0
     Nothing             -> SockAddrInet port 0 -- Could also be any IPv6 addr
 
-nodeAddressInfo :: NodeProtocolMode -> IO [AddrInfo]
-nodeAddressInfo npm = do
-  let NodeAddress hostAddr port =
-        case npm of
-          RealProtocolMode NodeCLI{nodeAddr} -> nodeAddr
-          MockProtocolMode NodeMockCLI{mockNodeAddr} -> mockNodeAddr
+nodeAddressInfo :: NodeCLI -> IO [AddrInfo]
+nodeAddressInfo NodeCLI{nodeAddr = NodeAddress hostAddr port} = do
   let hints = defaultHints {
                 addrFlags = [AI_PASSIVE, AI_ADDRCONFIG]
               , addrSocketType = Stream
@@ -123,11 +119,9 @@ instance FromJSON NetworkTopology where
 -- | Read the `NetworkTopology` configuration from the specified file.
 -- While running a real protocol, this gives your node its own address and
 -- other remote peers it will attempt to connect to.
-readTopologyFile :: NodeProtocolMode -> IO (Either Text NetworkTopology)
-readTopologyFile npm = do
-  let topo = case npm of
-               RealProtocolMode NodeCLI{mscFp}         -> unTopology (topFile mscFp)
-               MockProtocolMode NodeMockCLI{mockMscFp} -> unTopology (topFile mockMscFp)
+readTopologyFile :: NodeCLI -> IO (Either Text NetworkTopology)
+readTopologyFile NodeCLI{topologyFile} = do
+  let topo = unTopology topologyFile
 
   eBs <- Exception.try $ BS.readFile topo
 

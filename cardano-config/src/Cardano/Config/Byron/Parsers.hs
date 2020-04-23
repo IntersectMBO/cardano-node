@@ -1,10 +1,5 @@
-{-# LANGUAGE NamedFieldPuns #-}
-
-{-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
-
-module Cardano.Config.CommonCLI
+module Cardano.Config.Byron.Parsers
   ( parseDelegationCert
-  , parseGenesisPath
   , parseSigningKey
   ) where
 
@@ -12,18 +7,6 @@ import           Cardano.Prelude hiding (option)
 
 import           Options.Applicative hiding (command)
 
-
-{-------------------------------------------------------------------------------
-  Common CLI
--------------------------------------------------------------------------------}
-
-parseGenesisPath :: Parser FilePath
-parseGenesisPath =
-  strOption
-    ( long "genesis-file"
-        <> metavar "FILEPATH"
-        <> help "The filepath to the genesis file."
-    )
 
 parseDelegationCert :: Parser FilePath
 parseDelegationCert =

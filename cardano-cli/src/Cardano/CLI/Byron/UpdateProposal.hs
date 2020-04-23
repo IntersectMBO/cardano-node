@@ -96,9 +96,9 @@ createUpdateProposal
   -> InstallerHash
   -> [ParametersToUpdate]
   -> ExceptT CliError IO Proposal
-createUpdateProposal configFile sKey pVer sVer sysTag inshash paramsToUpdate = do
+createUpdateProposal yamlConfigFile sKey pVer sVer sysTag inshash paramsToUpdate = do
 
-  nc <- liftIO $ parseNodeConfigurationFP configFile
+  nc <- liftIO $ parseNodeConfigurationFP yamlConfigFile
   (genData, _) <- readGenesis $ ncGenesisFile nc
 
   let metaData :: M.Map SystemTag InstallerHash

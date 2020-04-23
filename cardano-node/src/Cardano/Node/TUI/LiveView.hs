@@ -549,11 +549,11 @@ initLiveViewState = do
                 , lvsColorTheme             = DarkTheme
                 }
 
-setTopology :: NFData a => LiveViewBackend blk a -> NodeProtocolMode -> IO ()
-setTopology lvbe (RealProtocolMode NodeCLI{nodeAddr}) =
+setTopology :: NFData a => LiveViewBackend blk a -> NodeCLI -> IO ()
+setTopology lvbe NodeCLI{nodeAddr, nodeMode = RealProtocolMode} =
   modifyMVar_ (getbe lvbe) $ \lvs ->
     return lvs { lvsNodeId = pack $ "Port: " <> show (naPort nodeAddr) }
-setTopology lvbe npm = do
+setTopology lvbe npm@NodeCLI{nodeMode = MockProtocolMode} = do
   nc <- parseNodeConfiguration npm
   modifyMVar_ (getbe lvbe) $ \lvs ->
     return $ lvs { lvsNodeId = namenum (ncNodeId nc) }

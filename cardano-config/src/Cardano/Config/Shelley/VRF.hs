@@ -27,6 +27,7 @@ data VRFError = ReadVRFSigningKeyError !FilePath !IOException
               | DecodeVRFVerKeyError !FilePath !CBOR.DecoderError
               | WriteVRFSigningKeyError !FilePath !IOException
               | WriteVRFVerKeyError !FilePath !IOException
+  deriving Show
 
 genVRFKeyPair :: IO (SignKeyVRF SimpleVRF, VerKeyVRF SimpleVRF)
 genVRFKeyPair = do sKeyVRF <- genKeyVRF
