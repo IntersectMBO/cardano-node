@@ -15,9 +15,11 @@ let
   };
   mkNodeScript = envConfig: let
     defaultConfig = {
-      consensusProtocol = "real-pbft";
       hostAddr = "127.0.0.1";
       port = 3001;
+      operationalCertificate = null;
+      kesKey = null;
+      vrfKey = null;
       signingKey = null;
       delegationCertificate = null;
       nodeId = 0;
@@ -60,9 +62,11 @@ let
       inherit (config)
         stateDir
         socketPath
+        operationalCertificate
+        kesKey
+        vrfKey
         signingKey
         delegationCertificate
-        consensusProtocol
         hostAddr
         port
         nodeConfig

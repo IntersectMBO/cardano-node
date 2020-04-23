@@ -11,7 +11,7 @@ let
   chairman = pkgs.cardanoNodeHaskellPackages.cardano-node.components.exes.chairman;
   envConfig = environments.${cfg.environment};
   mkChairmanConfig = nodeConfig: chairmanConfig: {
-    inherit (nodeConfig) package genesisFile genesisHash genesisHashPath stateDir pbftThreshold consensusProtocol;
+    inherit (nodeConfig) package genesisFile genesisHash genesisHashPath stateDir pbftThreshold;
     inherit (chairmanConfig) timeout k slot-length node-ids nodeConfigFile nodeConfig;
   };
   mkScript = cfg:

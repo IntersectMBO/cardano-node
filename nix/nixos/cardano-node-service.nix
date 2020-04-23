@@ -25,6 +25,12 @@ let
             "--signing-key ${cfg.signingKey}"}"
           "${lib.optionalString (cfg.delegationCertificate != null)
             "--delegation-certificate ${cfg.delegationCertificate}"}"
+          "${lib.optionalString (cfg.operationalCertificate != null)
+            "--shelley-operational-certificate ${cfg.operationalCertificate}"}"
+          "${lib.optionalString (cfg.kesKey != null)
+            "--shelley-kes-key ${cfg.kesKey}"}"
+          "${lib.optionalString (cfg.vrfKey != null)
+            "--shelley-vrf-key ${cfg.vrfKey}"}"
         ] ++ cfg.extraArgs;
     in ''
         choice() { i=$1; shift; eval "echo \''${$((i + 1))}"; }
@@ -117,11 +123,35 @@ in {
         '';
       };
 
+      operationalCertificate = mkOption {
+        type = types.nullOr (types.either types.str types.path);
+        default = null;
+        description = ''
+          Path to the delegation certificate (Shelley Era)
+        '';
+      };
+
+      kesKey = mkOption {
+        type = types.nullOr (types.either types.str types.path);
+        default = null;
+        description = ''
+          Path to the KES signing key (Shelley Era)
+        '';
+      };
+
+      vrfKey = mkOption {
+        type = types.nullOr (types.either types.str types.path);
+        default = null;
+        description = ''
+          Path to the VRF signing key (Shelley Era)
+        '';
+      };
+
       signingKey = mkOption {
         type = types.nullOr (types.either types.str types.path);
         default = null;
         description = ''
-          Signing key
+          Signing key (Byron Era)
         '';
       };
 
@@ -129,19 +159,7 @@ in {
         type = types.nullOr (types.either types.str types.path);
         default = null;
         description = ''
-          Delegation certificate
-        '';
-      };
-
-      consensusProtocol = mkOption {
-        default = "real-pbft";
-        type = types.enum ["bft" "praos" "mock-pbft" "real-pbft"];
-        description = ''
-          Consensus initially used by the node:
-            - bft: BFT consensus algorithm
-            - praos: Praos consensus algorithm
-            - mock-pbft: Permissive BFT consensus algorithm using a mock ledger
-            - real-pbft: Permissive BFT consensus algorithm using the real ledger
+          Delegation certificate (Byron Era)
         '';
       };
 
@@ -288,6 +306,10 @@ in {
       {
         assertion = lib.hasPrefix stateDirBase cfg.stateDir;
         message = "The option services.cardano-node.stateDir should have ${stateDirBase} as a prefix!";
+      }
+      {
+        assertion = (cfg.kesKey == null) == (cfg.vrfKey == null) && (cfg.kesKey == null) == (cfg.operationalCertificate == null);
+        message = "Shelley Era: all of three [operationalCertificate kesKey vrfKey] options must be defined (or none of them).";
       }
     ];
   });
