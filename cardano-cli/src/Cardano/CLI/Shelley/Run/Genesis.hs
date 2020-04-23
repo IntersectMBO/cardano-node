@@ -14,7 +14,7 @@ import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT
 import           Cardano.Chain.Common (Lovelace, unsafeGetLovelace)
 import           Cardano.CLI.Ops (CliError (..))
 import           Cardano.CLI.Shelley.Parsers (GenesisDir (..))
-import           Cardano.Config.ShelleyGenesis
+import           Cardano.Config.Shelley.Genesis
 
 import qualified Data.Aeson as Aeson
 import           Data.Aeson.Encode.Pretty (encodePretty)
@@ -61,4 +61,3 @@ updateTemplate start amount template =
 writeShelleyGenesis :: FilePath -> ShelleyGenesis TPraosStandardCrypto -> ExceptT CliError IO ()
 writeShelleyGenesis fpath sg =
   handleIOExceptT (IOError fpath) $ LBS.writeFile fpath (encodePretty sg)
-
