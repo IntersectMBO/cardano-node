@@ -109,11 +109,20 @@ executable cardano-cli
 
 test-suite cardano-cli-test
   hs-source-dirs:       test
-  main-is:              Spec.hs
+  main-is:              cardano-cli-test.hs
   type:                 exitcode-stdio-1.0
 
-  build-depends:
-                        cardano-prelude
+  if os(windows)
+    buildable: False
+
+  build-depends:        base
+                      , cardano-cli
+                      , cardano-prelude
+                      , directory
+                      , filepath
+                      , process
+                      , text
+                      , unix
 
   default-language:     Haskell2010
   default-extensions:   NoImplicitPrelude
