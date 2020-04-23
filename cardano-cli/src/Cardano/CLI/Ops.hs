@@ -51,6 +51,7 @@ import qualified Formatting as F
 import           System.Directory (canonicalizePath, doesPathExist, makeAbsolute)
 import qualified Text.JSON.Canonical as CanonicalJSON
 
+import           Cardano.Api (ApiError)
 import           Cardano.Binary
                    (Decoder, DecoderError, fromCBOR)
 import           Cardano.Chain.Block (fromCBORABlockOrBoundary)
@@ -274,6 +275,7 @@ data CliError
   | VerificationKeyDeserialisationFailed !FilePath !Text
   | VRFCliError VRFError
   | FileNotFoundError !FilePath
+  | CardanoApiError !ApiError
 
 
 instance Show CliError where
@@ -317,6 +319,8 @@ instance Show CliError where
     = "Output file/directory must not already exist: " <> fp
   show (ProtocolError err)
     = "Protocol Instantiation Error " <> (T.unpack $ renderProtocolInstantiationError err)
+  show (CardanoApiError apiError)
+    = show apiError
   show (CardanoEraNotSupported era)
     = "Unsupported Cardano era " <> show era
   show (ProtocolParametersParseFailed fp err)
@@ -343,7 +347,6 @@ instance Show CliError where
   show (VerificationKeyDeserialisationFailed fp err)
     = "Verification key '" <> fp <> "' read failure: "<> T.unpack err
   show (VRFCliError err) = renderVRFError err
-
 
 data RealPBFTError
   = IncorrectProtocolSpecified !Protocol
