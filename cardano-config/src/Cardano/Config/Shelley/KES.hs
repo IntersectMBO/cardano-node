@@ -20,14 +20,20 @@ import           Control.Monad.Trans.Except.Extra
                    (firstExceptT, handleIOExceptT, hoistEither)
 
 import           Cardano.Crypto.KES.Class
-import           Ouroboros.Consensus.Shelley.Protocol.Crypto (TPraosStandardCrypto)
-import           Shelley.Spec.Ledger.Keys (SKeyES (..), VKeyES (..))
+import           Ouroboros.Consensus.Shelley.Protocol.Crypto
+                   (TPraosStandardCrypto, KES)
 
-genKESKeyPair :: Natural -> IO (VKeyES TPraosStandardCrypto, SKeyES TPraosStandardCrypto)
+
+-- Local aliases for shorter types:
+type VerKey  = VerKeyKES  (KES TPraosStandardCrypto)
+type SignKey = SignKeyKES (KES TPraosStandardCrypto)
+
+
+genKESKeyPair :: Natural -> IO (VerKey, SignKey)
 genKESKeyPair duration = do
   signKeyKES <- genKeyKES duration
   let verKeyKes = deriveVerKeyKES signKeyKES
-  pure $ (VKeyES verKeyKes,SKeyES signKeyKES)
+  pure (verKeyKes, signKeyKES)
 
 data KESError = ReadKESSigningKeyError !FilePath !IOException
               | ReadKESVerKeyError !FilePath !IOException
@@ -35,11 +41,12 @@ data KESError = ReadKESSigningKeyError !FilePath !IOException
               | DecodeKESVerKeyError !FilePath !CBOR.DecoderError
               | WriteKESSigningKeyError !FilePath !IOException
               | WriteKESVerKeyError !FilePath !IOException
+  deriving Show
 
-readKESSigningKey :: FilePath ->  ExceptT KESError IO (SKeyES TPraosStandardCrypto)
+readKESSigningKey :: FilePath ->  ExceptT KESError IO SignKey
 readKESSigningKey fp = do
   bs <- handleIOExceptT (ReadKESSigningKeyError fp) $ LB.readFile fp
-  firstExceptT (DecodeKESSigningKeyError fp) . hoistEither $ second SKeyES $ CBOR.decodeFull bs
+  firstExceptT (DecodeKESSigningKeyError fp) . hoistEither $ CBOR.decodeFull bs
 
 renderKESError :: KESError -> String
 renderKESError kesErr =
@@ -63,15 +70,15 @@ renderKESError kesErr =
                                        <> " Error: " <> show ioExcptn
 
 
-writeKESSigningKey :: FilePath -> SKeyES TPraosStandardCrypto -> ExceptT KESError IO ()
-writeKESSigningKey fp (SKeyES sKeyKES) =
+writeKESSigningKey :: FilePath -> SignKey -> ExceptT KESError IO ()
+writeKESSigningKey fp sKeyKES =
   handleIOExceptT (WriteKESSigningKeyError fp) $ LB.writeFile fp (CBOR.serialize sKeyKES)
 
-readKESVerKey :: FilePath -> ExceptT KESError IO (VKeyES TPraosStandardCrypto)
+readKESVerKey :: FilePath -> ExceptT KESError IO VerKey
 readKESVerKey fp = do
   bs <- handleIOExceptT (ReadKESVerKeyError fp) $ LB.readFile fp
   firstExceptT (DecodeKESVerKeyError fp) . hoistEither $ CBOR.decodeFull bs
 
-writeKESVerKey :: FilePath -> VKeyES TPraosStandardCrypto -> ExceptT KESError IO ()
+writeKESVerKey :: FilePath -> VerKey -> ExceptT KESError IO ()
 writeKESVerKey fp vKeyKES =
   handleIOExceptT (WriteKESVerKeyError fp) $ LB.writeFile fp (CBOR.serialize vKeyKES)
