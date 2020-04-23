@@ -417,7 +417,5 @@ constraints:
   brick >= 0.47,
   libsystemd-journal >= 1.4.4
 
-allow-newer: katip:Win32
-
 package comonad
   flags: -test-doctests
