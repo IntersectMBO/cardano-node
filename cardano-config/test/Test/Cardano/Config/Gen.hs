@@ -4,14 +4,19 @@ module Test.Cardano.Config.Gen
   ( genAddress
   , genGenesisDelegationPair
   , genGenesisFundPair
+  , genKESKeyPair'
+  , genVRFKeyPair'
   , genShelleyGenesis
   , genTextView
   ) where
 
 import           Cardano.Prelude
 
+import           Cardano.Config.Shelley.KES (SignKey, VerKey, genKESKeyPair)
 import           Cardano.Config.Shelley.Genesis
+import           Cardano.Config.Shelley.VRF (genVRFKeyPair)
 import           Cardano.Config.TextView
+import           Cardano.Crypto.VRF.Simple (SimpleVRF)
 import           Cardano.Slotting.Slot (EpochSize (..))
 import           Cardano.Crypto.DSIGN (deriveVerKeyDSIGN, genKeyDSIGN)
 import           Crypto.Random (drgNewTest, withDRG)
@@ -21,9 +26,10 @@ import qualified Data.Map.Strict as Map
 import           Data.Time.Clock (UTCTime)
 import           Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 
-import           Hedgehog (Gen)
+import           Hedgehog (Gen, GenT)
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
+import           Hedgehog.Internal.Gen ()
 
 import           Ouroboros.Consensus.BlockchainTime (SlotLength (..), SystemStart (..),
                     slotLengthFromMillisec)
@@ -33,8 +39,9 @@ import           Ouroboros.Network.Magic (NetworkMagic (..))
 
 import           Shelley.Spec.Ledger.Address (toAddr)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
-import           Shelley.Spec.Ledger.Keys (GenKeyHash, KeyHash, SKey (..), VKey, VKeyGenesis,
-                    pattern KeyPair, pattern VKey, pattern VKeyGenesis, hashKey, sKey, vKey)
+import           Shelley.Spec.Ledger.Keys (GenKeyHash, KeyHash, SKey (..),
+                    SignKeyVRF, VerKeyVRF, VKey, VKeyGenesis, pattern KeyPair,
+                    pattern VKey, pattern VKeyGenesis, hashKey, sKey, vKey)
 import           Shelley.Spec.Ledger.TxData (Addr)
 
 import           Test.Cardano.Crypto.Gen (genProtocolMagicId)
@@ -84,6 +91,12 @@ genGenesisDelegationPair = do
 genGenesisKeyPair :: Crypto crypto => Gen (SKey crypto, VKeyGenesis crypto)
 genGenesisKeyPair = mkGenKeyPair <$> genSeed5
 
+genKESKeyPair' ::  GenT IO (VerKey, SignKey)
+genKESKeyPair' = do
+  duration <- Gen.integral $ Range.constant 0 1000
+  liftIO $ genKESKeyPair duration
+
+
 genKeyPair :: Crypto crypto => Gen (SKey crypto, VKey crypto)
 genKeyPair = mkKeyPair <$> genSeed5
 
@@ -102,6 +115,9 @@ genTextView =
     <$> fmap TextViewType (Gen.utf8 (Range.linear 1 20) Gen.alpha)
     <*> fmap TextViewTitle (Gen.utf8 (Range.linear 1 80) (Gen.filter (/= '\n') Gen.ascii))
     <*> Gen.bytes (Range.linear 0 500)
+
+genVRFKeyPair' :: GenT IO (SignKeyVRF SimpleVRF, VerKeyVRF SimpleVRF)
+genVRFKeyPair' = liftIO genVRFKeyPair
 
 -- -------------------------------------------------------------------------------------------------
 

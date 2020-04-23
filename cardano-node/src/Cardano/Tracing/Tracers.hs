@@ -375,7 +375,7 @@ mkTracers traceConf tracer = do
         -> Tracer IO (WithSeverity [TraceLabelPeer peer (FetchDecision [Point (Header blk)])])
     teeTraceBlockFetchDecision' tr =
         Tracer $ \(WithSeverity _ peers) -> do
-          meta <- mkLOMeta Notice Confidential
+          meta <- mkLOMeta Info Confidential
           let tr' = appendName "peers" tr
           traceNamedObject tr' (meta, LogValue "connectedPeers" . PureI $ fromIntegral $ length peers)
     teeTraceBlockFetchDecisionElide

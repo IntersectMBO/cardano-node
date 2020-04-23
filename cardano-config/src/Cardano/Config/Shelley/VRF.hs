@@ -1,5 +1,9 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Cardano.Config.Shelley.VRF
   ( VRFError(..)
+  , decodeVRFVerificationKey
+  , encodeVRFVerificationKey
   , genVRFKeyPair
   , readVRFSigningKey
   , readVRFVerKey
@@ -9,64 +13,73 @@ module Cardano.Config.Shelley.VRF
   ) where
 
 import           Cardano.Prelude
-import           Prelude (String)
 
 import qualified Cardano.Binary as CBOR
-import           Control.Monad.Trans.Except.Extra
-                   (firstExceptT, handleIOExceptT, hoistEither)
-import qualified Data.ByteString.Lazy.Char8 as LB
+import           Control.Monad.Trans.Except.Extra (firstExceptT, newExceptT)
 
+import           Cardano.Config.TextView
 import           Cardano.Crypto.VRF.Class
                    (SignKeyVRF, VerKeyVRF, deriveVerKeyVRF, genKeyVRF)
 import           Cardano.Crypto.VRF.Simple (SimpleVRF)
 
 
-data VRFError = ReadVRFSigningKeyError !FilePath !IOException
-              | ReadVRFVerKeyError !FilePath !IOException
-              | DecodeVRFSigningKeyError !FilePath !CBOR.DecoderError
-              | DecodeVRFVerKeyError !FilePath !CBOR.DecoderError
-              | WriteVRFSigningKeyError !FilePath !IOException
-              | WriteVRFVerKeyError !FilePath !IOException
-  deriving Show
+data VRFError = ReadVRFSigningKeyError !TextViewFileError
+              | ReadVRFVerKeyError !TextViewFileError
+              | WriteVRFSigningKeyError !TextViewFileError
+              | WriteVRFVerKeyError !TextViewFileError
+
+encodeVRFSigningKey :: SignKeyVRF SimpleVRF -> TextView
+encodeVRFSigningKey vKeyEs =
+  encodeToTextView tvType' tvTitle' CBOR.toCBOR vKeyEs
+ where
+  tvType' = "SignKeyVRF SimpleVRF"
+  tvTitle' = "VRF Signing Key"
+
+decodeVRFSigningKey :: TextView -> Either TextViewError (SignKeyVRF SimpleVRF)
+decodeVRFSigningKey tView = do
+  expectTextViewOfType "SignKeyVRF SimpleVRF" tView
+  decodeFromTextView CBOR.fromCBOR tView
+
+encodeVRFVerificationKey :: VerKeyVRF SimpleVRF -> TextView
+encodeVRFVerificationKey vKeyEs =
+  encodeToTextView tvType' tvTitle' CBOR.toCBOR vKeyEs
+ where
+  tvType' = "VerKeyVRF SimpleVRF"
+  tvTitle' = "VRF Verification Key"
+
+decodeVRFVerificationKey :: TextView -> Either TextViewError (VerKeyVRF SimpleVRF)
+decodeVRFVerificationKey tView = do
+  expectTextViewOfType "VerKeyVRF SimpleVRF" tView
+  decodeFromTextView CBOR.fromCBOR tView
 
 genVRFKeyPair :: IO (SignKeyVRF SimpleVRF, VerKeyVRF SimpleVRF)
 genVRFKeyPair = do sKeyVRF <- genKeyVRF
                    pure (sKeyVRF, deriveVerKeyVRF sKeyVRF)
-renderVRFError :: VRFError -> String
+
+renderVRFError :: VRFError -> Text
 renderVRFError vrfErr =
   case vrfErr of
-    ReadVRFSigningKeyError fp ioExcptn -> "VRF signing key read error at: " <> fp
-                                          <> " Error: " <> show ioExcptn
-
-    ReadVRFVerKeyError fp ioExcptn -> "VRF verification key read error at: " <> fp
-                                      <> " Error: " <> show ioExcptn
-
-    DecodeVRFSigningKeyError fp cborDecErr -> "VRF signing key decode error at: " <> fp
-                                              <> " Error: " <> show cborDecErr
-
-    DecodeVRFVerKeyError fp cborDecErr -> "VRF verification key decode error at: " <> fp
-                                          <> " Error: " <> show cborDecErr
-
-    WriteVRFSigningKeyError fp ioExcptn -> "VRF signing key write error at: " <> fp
-                                           <> " Error: " <> show ioExcptn
-
-    WriteVRFVerKeyError fp ioExcptn -> "VRF verification key write error at: " <> fp
-                                       <> " Error: " <> show ioExcptn
+    ReadVRFSigningKeyError err -> "VRF signing key read error: " <> renderTextViewFileError err
+    ReadVRFVerKeyError err -> "VRF verification key read error : " <> renderTextViewFileError err
+    WriteVRFSigningKeyError err -> "VRF signing key write error: " <> renderTextViewFileError err
+    WriteVRFVerKeyError err-> "VRF verification key write error: " <> renderTextViewFileError err
 
 readVRFSigningKey :: FilePath -> ExceptT VRFError IO (SignKeyVRF SimpleVRF)
 readVRFSigningKey fp = do
-  bs <- handleIOExceptT (ReadVRFSigningKeyError fp) $ LB.readFile fp
-  firstExceptT (DecodeVRFSigningKeyError fp) . hoistEither $ CBOR.decodeFull bs
+  firstExceptT ReadVRFSigningKeyError
+    . newExceptT $ readTextViewEncodedFile decodeVRFSigningKey fp
 
 writeVRFSigningKey :: FilePath -> SignKeyVRF SimpleVRF -> ExceptT VRFError IO ()
 writeVRFSigningKey fp vKeyVRF =
-  handleIOExceptT (WriteVRFSigningKeyError fp) $ LB.writeFile fp (CBOR.serialize vKeyVRF)
+  firstExceptT WriteVRFSigningKeyError
+    . newExceptT $ writeTextViewEncodedFile encodeVRFSigningKey fp vKeyVRF
 
 readVRFVerKey :: FilePath ->  ExceptT VRFError IO (VerKeyVRF SimpleVRF)
 readVRFVerKey fp = do
-  bs <- handleIOExceptT (ReadVRFVerKeyError fp) $ LB.readFile fp
-  firstExceptT (DecodeVRFVerKeyError fp) . hoistEither $ CBOR.decodeFull bs
+  firstExceptT ReadVRFVerKeyError
+    . newExceptT $ readTextViewEncodedFile decodeVRFVerificationKey fp
 
 writeVRFVerKey :: FilePath -> VerKeyVRF SimpleVRF -> ExceptT VRFError IO ()
 writeVRFVerKey fp vKeyVRF =
-  handleIOExceptT (WriteVRFVerKeyError fp) $ LB.writeFile fp (CBOR.serialize vKeyVRF)
+  firstExceptT WriteVRFVerKeyError
+    . newExceptT $ writeTextViewEncodedFile encodeVRFVerificationKey fp vKeyVRF

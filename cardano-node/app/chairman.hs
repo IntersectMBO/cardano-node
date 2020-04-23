@@ -5,7 +5,6 @@
 
 import           Cardano.Prelude hiding (option)
 
-import           Data.Text (pack)
 import           Control.Applicative (some)
 import           Control.Monad.Trans.Except.Extra (runExceptT)
 import           Control.Monad.Class.MonadTime (DiffTime)
@@ -16,7 +15,7 @@ import           Ouroboros.Network.Block (BlockNo)
 import           Options.Applicative
 import           Cardano.Config.Protocol
                    (SomeConsensusProtocol(..), mkConsensusProtocol,
-                    ProtocolInstantiationError)
+                    renderProtocolInstantiationError)
 import           Cardano.Config.Types
                   (ConfigYamlFilePath(..), SocketPath(..),
                    parseNodeConfigurationFP)
@@ -36,7 +35,7 @@ main = do
 
     SomeConsensusProtocol p <- case frmPtclRes of
                         Right p  -> pure p
-                        Left err -> do putTextLn $ renderPtclInstantiationErr err
+                        Left err -> do putTextLn $ renderProtocolInstantiationError err
                                        exitFailure
 
     chairmanTest
@@ -45,9 +44,6 @@ main = do
       caRunningTime
       caMinProgress
       caSocketPaths
-
-renderPtclInstantiationErr :: ProtocolInstantiationError -> Text
-renderPtclInstantiationErr = pack . show
 
 data ChairmanArgs = ChairmanArgs {
       -- | Stop the test after given number of seconds. The chairman will

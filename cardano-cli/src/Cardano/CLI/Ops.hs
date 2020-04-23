@@ -296,19 +296,19 @@ instance Show CliError where
   show (FileNotFoundError fp)
     = "File '" <> fp <> "' not found!"
   show (GenerateTxsError err)
-    = "Error in GenerateTxs command: " <> show err
+    = "Error in GenerateTxs command: " <> (T.unpack $ renderRealPBFTError err)
   show (GenesisGenerationError err)
     = "Genesis generation failed in mkGenesis: " <> show err
   show (GenesisSpecError err)
     = "Error in genesis specification: " <> T.unpack err
   show (IssueUtxoError err)
-    = "Error SpendUTxO command: " <> show err
+    = "Error SpendUTxO command: " <> (T.unpack $ renderRealPBFTError err)
   show (KESCliError err)
-    = renderKESError err
+    = show $ renderKESError err
   show (NoBlocksFound fp)
     = "Error while creating update proposal, no blocks found in: " <> fp
   show (NodeSubmitTxError err)
-    = "Error in SubmitTx command: " <> show err
+    = "Error in SubmitTx command: " <> (T.unpack $ renderRealPBFTError err)
   show (NoGenesisDelegationForKey key)
     = "Newly-generated genesis doesn't delegate to operational key: " <> T.unpack key
   show NotEnoughTxInputs
@@ -337,23 +337,30 @@ instance Show CliError where
   show (SigningKeyDeserialisationFailed fp err)
     = "Signing key '" <> fp <> "' read failure: "<> show err
   show (SpendGenesisUTxOError err)
-    = "Error in SpendGenesisUTxO command: " <> show err
+    = "Error in SpendGenesisUTxO command: " <> (T.unpack $ renderRealPBFTError err)
   show (TxDeserialisationFailed fp err)
     = "Transaction file '" <> fp <> "' read failure: "<> show err
   show (UpdateProposalDecodingError err)
     = "Error decoding update proposal: " <> show err
-  show (UpdateProposalSubmissionError pbftErr)
-    = "Error submitting update proposal: " <> show pbftErr
+  show (UpdateProposalSubmissionError err)
+    = "Error submitting update proposal: " <> (T.unpack $ renderRealPBFTError err)
   show (VerificationKeyDeserialisationFailed fp err)
     = "Verification key '" <> fp <> "' read failure: "<> T.unpack err
-  show (VRFCliError err) = renderVRFError err
+  show (VRFCliError err) = show $ renderVRFError err
 
 data RealPBFTError
   = IncorrectProtocolSpecified !Protocol
   | FromProtocolError !ProtocolInstantiationError
   | InvariantViolation !Text
   | TransactionTypeNotHandledYet !Text
-  deriving Show
+
+renderRealPBFTError :: RealPBFTError -> Text
+renderRealPBFTError err =
+  case err of
+    IncorrectProtocolSpecified ptcl -> "Incorrect protocol specified: " <> (toS $ show ptcl)
+    FromProtocolError ptclInstErr -> renderProtocolInstantiationError ptclInstErr
+    InvariantViolation invErr -> "Invariant violation: " <> invErr
+    TransactionTypeNotHandledYet err' -> "Transaction type not handled yet: " <> err'
 
 -- | Perform an action that expects ProtocolInfo for Byron/PBFT,
 --   with attendant configuration.
