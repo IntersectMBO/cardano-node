@@ -20,6 +20,7 @@ import           Cardano.Api (ShelleyKeyDiscriminator (..), shelleyGenKeyPair, w
 import           Cardano.CLI.Key (VerificationKeyFile(..))
 import           Cardano.CLI.Ops (CliError (..))
 import           Cardano.CLI.Shelley.Parsers (OutputFile (..), ShelleyCommand(..))
+import           Cardano.CLI.Shelley.Run.Genesis (runGenesisCreate)
 import           Cardano.Config.Shelley.KES
                    (genKESKeyPair, writeKESSigningKey, writeKESVerKey)
 import           Cardano.Config.Shelley.VRF
@@ -29,6 +30,7 @@ import           Cardano.Config.Types (SigningKeyFile(..))
 runShelleyClientCommand :: ShelleyCommand -> ExceptT CliError IO ()
 runShelleyClientCommand cc =
   case cc of
+    ShelleyCreateGenesis genSyr mstart amount -> runGenesisCreate genSyr mstart amount
     ShelleyKeyGenerate fpath -> runShelleyKeyGenerate fpath
     ShelleyKESKeyPairGenerate vKeyPath sKeyPath duration -> runShelleyKESKeyPairGeneration vKeyPath sKeyPath duration
     ShelleyVRFKeyPairGenerate vKeyPath sKeyPath -> runShelleyVRFKeyPairGeneration vKeyPath sKeyPath
