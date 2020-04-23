@@ -239,57 +239,57 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/iohk-monitoring-framework
-  tag: eb340f88c0d52b973c0e80bf98a8152097a056c0
-  --sha256: 0nz9h5jcxnzgbj0pmm5zq99pxx7by6i60cvyvnyi1mzv23a3zxhm
+  tag: 8f7d2a4ba4288e528fea62946b525f493c26ae7a
+  --sha256: 12slplsvvf1hywddzsissza4sb85j4r0xhx44nv2icmhp4hp83cc
   subdir: iohk-monitoring
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/iohk-monitoring-framework
-  tag: eb340f88c0d52b973c0e80bf98a8152097a056c0
-  --sha256: 0nz9h5jcxnzgbj0pmm5zq99pxx7by6i60cvyvnyi1mzv23a3zxhm
+  tag: 8f7d2a4ba4288e528fea62946b525f493c26ae7a
+  --sha256: 12slplsvvf1hywddzsissza4sb85j4r0xhx44nv2icmhp4hp83cc
   subdir:   contra-tracer
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/iohk-monitoring-framework
-  tag: eb340f88c0d52b973c0e80bf98a8152097a056c0
-  --sha256: 0nz9h5jcxnzgbj0pmm5zq99pxx7by6i60cvyvnyi1mzv23a3zxhm
+  tag: 8f7d2a4ba4288e528fea62946b525f493c26ae7a
+  --sha256: 12slplsvvf1hywddzsissza4sb85j4r0xhx44nv2icmhp4hp83cc
   subdir:   plugins/scribe-systemd
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/iohk-monitoring-framework
-  tag: eb340f88c0d52b973c0e80bf98a8152097a056c0
-  --sha256: 0nz9h5jcxnzgbj0pmm5zq99pxx7by6i60cvyvnyi1mzv23a3zxhm
+  tag: 8f7d2a4ba4288e528fea62946b525f493c26ae7a
+  --sha256: 12slplsvvf1hywddzsissza4sb85j4r0xhx44nv2icmhp4hp83cc
   subdir:   plugins/backend-aggregation
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/iohk-monitoring-framework
-  tag: eb340f88c0d52b973c0e80bf98a8152097a056c0
-  --sha256: 0nz9h5jcxnzgbj0pmm5zq99pxx7by6i60cvyvnyi1mzv23a3zxhm
+  tag: 8f7d2a4ba4288e528fea62946b525f493c26ae7a
+  --sha256: 12slplsvvf1hywddzsissza4sb85j4r0xhx44nv2icmhp4hp83cc
   subdir:   plugins/backend-ekg
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/iohk-monitoring-framework
-  tag: eb340f88c0d52b973c0e80bf98a8152097a056c0
-  --sha256: 0nz9h5jcxnzgbj0pmm5zq99pxx7by6i60cvyvnyi1mzv23a3zxhm
+  tag: 8f7d2a4ba4288e528fea62946b525f493c26ae7a
+  --sha256: 12slplsvvf1hywddzsissza4sb85j4r0xhx44nv2icmhp4hp83cc
   subdir:   plugins/backend-monitoring
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/iohk-monitoring-framework
-  tag: eb340f88c0d52b973c0e80bf98a8152097a056c0
-  --sha256: 0nz9h5jcxnzgbj0pmm5zq99pxx7by6i60cvyvnyi1mzv23a3zxhm
+  tag: 8f7d2a4ba4288e528fea62946b525f493c26ae7a
+  --sha256: 12slplsvvf1hywddzsissza4sb85j4r0xhx44nv2icmhp4hp83cc
   subdir:   plugins/backend-trace-forwarder
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/iohk-monitoring-framework
-  tag: eb340f88c0d52b973c0e80bf98a8152097a056c0
-  --sha256: 0nz9h5jcxnzgbj0pmm5zq99pxx7by6i60cvyvnyi1mzv23a3zxhm
+  tag: 8f7d2a4ba4288e528fea62946b525f493c26ae7a
+  --sha256: 12slplsvvf1hywddzsissza4sb85j4r0xhx44nv2icmhp4hp83cc
   subdir:   tracer-transformers
 
 source-repository-package

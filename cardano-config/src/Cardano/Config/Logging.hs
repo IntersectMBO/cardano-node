@@ -177,7 +177,7 @@ createLoggingFeature ver _ nodeProtocolMode = do
 
      Config.getForwardTo logConfig >>= \forwardTo ->
        when (isJust forwardTo) $
-         Cardano.BM.Backend.TraceForwarder.plugin logConfig trace switchBoard
+         Cardano.BM.Backend.TraceForwarder.plugin logConfig trace switchBoard "forwarderMinSeverity"
            >>= loadPlugin switchBoard
 
      Cardano.BM.Backend.Aggregation.plugin logConfig trace switchBoard
