@@ -133,7 +133,7 @@ TraceBlockFetchDecisions: False
 TraceBlockFetchProtocol: False
 
 # Serialised Trace BlockFetch protocol messages.
-TraceBlockFetchProtocolSerialised: False
+TraceBlockFetchProtocolSerialised: True
 
 # Trace BlockFetch server.
 TraceBlockFetchServer: False
