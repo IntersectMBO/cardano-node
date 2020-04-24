@@ -255,10 +255,13 @@ options:
         name: LiveViewBackend
     cardano.node.release:
       - TraceForwarderBK
+      - KatipBK
     cardano.node.version:
       - TraceForwarderBK
+      - KatipBK
     cardano.node.commit:
       - TraceForwarderBK
+      - KatipBK
 
   # redirects traced values to a specific scribe which is identified by its
   # type and its name, separated by "::":
