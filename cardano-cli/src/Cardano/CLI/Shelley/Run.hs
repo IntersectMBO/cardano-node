@@ -19,7 +19,7 @@ import           Cardano.Api (ShelleyKeyDiscriminator (..), shelleyGenKeyPair, w
 
 import           Cardano.CLI.Key (VerificationKeyFile(..))
 import           Cardano.CLI.Ops (CliError (..))
-import           Cardano.CLI.Shelley.Parsers (OutputFile (..), ShelleyCommand(..))
+import           Cardano.CLI.Shelley.Parsers
 import           Cardano.Config.Shelley.KES
                    (genKESKeyPair, writeKESSigningKey, writeKESVerKey)
 import           Cardano.Config.Shelley.VRF
@@ -27,10 +27,65 @@ import           Cardano.Config.Shelley.VRF
 import           Cardano.Config.Types (SigningKeyFile(..))
 
 
+--
+-- CLI shelley command dispatch
+--
+
 runShelleyClientCommand :: ShelleyCommand -> ExceptT CliError IO ()
-runShelleyClientCommand cc =
-  case cc of
-    _ -> liftIO . putStrLn $ "runShelleyClientCommand: " ++ show cc
+runShelleyClientCommand (AddressCmd      cmd) = runAddressCmd      cmd
+runShelleyClientCommand (StakeAddressCmd cmd) = runStakeAddressCmd cmd
+runShelleyClientCommand (TransactionCmd  cmd) = runTransactionCmd  cmd
+runShelleyClientCommand (NodeCmd         cmd) = runNodeCmd         cmd
+runShelleyClientCommand (PoolCmd         cmd) = runPoolCmd         cmd
+runShelleyClientCommand (QueryCmd        cmd) = runQueryCmd        cmd
+runShelleyClientCommand (BlockCmd        cmd) = runBlockCmd        cmd
+runShelleyClientCommand (SystemCmd       cmd) = runSystemCmd       cmd
+runShelleyClientCommand (DevOpsCmd       cmd) = runDevOpsCmd       cmd
+runShelleyClientCommand (GenesisCmd      cmd) = runGenesisCmd      cmd
+
+
+--
+-- CLI shelley subcommand dispatch
+--
+
+runAddressCmd :: AddressCmd -> ExceptT CliError IO ()
+runAddressCmd cmd = liftIO $ putStrLn $ "runAddressCmd: " ++ show cmd
+
+
+runStakeAddressCmd :: StakeAddressCmd -> ExceptT CliError IO ()
+runStakeAddressCmd cmd = liftIO $ putStrLn $ "runStakeAddressCmd: " ++ show cmd
+
+
+runTransactionCmd :: TransactionCmd -> ExceptT CliError IO ()
+runTransactionCmd cmd = liftIO $ putStrLn $ "runTransactionCmd: " ++ show cmd
+
+
+runNodeCmd :: NodeCmd -> ExceptT CliError IO ()
+runNodeCmd cmd = liftIO $ putStrLn $ "runNodeCmd: " ++ show cmd
+
+
+runPoolCmd :: PoolCmd -> ExceptT CliError IO ()
+runPoolCmd cmd = liftIO $ putStrLn $ "runPoolCmd: " ++ show cmd
+
+
+runQueryCmd :: QueryCmd -> ExceptT CliError IO ()
+runQueryCmd cmd = liftIO $ putStrLn $ "runQueryCmd: " ++ show cmd
+
+
+runBlockCmd :: BlockCmd -> ExceptT CliError IO ()
+runBlockCmd cmd = liftIO $ putStrLn $ "runBlockCmd: " ++ show cmd
+
+
+runSystemCmd:: SystemCmd -> ExceptT CliError IO ()
+runSystemCmd cmd = liftIO $ putStrLn $ "runSystemCmd: " ++ show cmd
+
+
+runDevOpsCmd :: DevOpsCmd -> ExceptT CliError IO ()
+runDevOpsCmd cmd = liftIO $ putStrLn $ "runDevOpsCmd: " ++ show cmd
+
+
+runGenesisCmd :: GenesisCmd -> ExceptT CliError IO ()
+runGenesisCmd cmd = liftIO $ putStrLn $ "runGenesisCmd: " ++ show cmd
 
 
 {-
