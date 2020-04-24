@@ -1,5 +1,48 @@
 # Changelog for cardano-node
 
+## 1.11.0 -- April 2020
+
+### node changes
+- Shelley preparatory refactoring (#775, #792, #807)
+- Shelley genesis file support (#798)
+- Initial support for starting a node in Shelley mode (#820)
+- Initial support for loading Shelley node leader credentials (#832)
+- Split out CLI functionality into cardano-cli package (#819)
+- Support for reading/writing readable Shelley key file formats (#826, #829)
+- Option for log output in readable text form, rather than structured (#760)
+- Performance improvements in logging/monitoring system (#831)
+- Suppress high frequency logging output during syncing (#773)
+- Improve example configuration for "live view" (#827)
+- README improvements (#793, #828)
+
+### consensus changes
+- Refactoring in preparation for hard fork support (#1946, #1942, #1968, #1973)
+- Shelley ledger integration improvements (#1963, #1821, #1967, #1984, #1986)
+- Verify no excessive memory use in Shelley ledger state (#1558, #1928)
+- Verify no excessive memory use in inbound transaction path (#1645, #1708)
+- Improve restart times by storing a ledger snapshot after a long replay (#1956)
+- Move immutable chain db files from ".epoch" to ".chunk" (#1755, #1954)
+- Minor disk I/O optimisation when serving headers and blocks (#1978)
+
+### ledger changes (Byron)
+- None
+
+### ledger changes (Shelley)
+- Avoid excessive memory use in ledger state by using normal form types (#1343)
+- Keep serialised forms of transactions and tx sequences (#1361, #1377, #1379)
+- Minor changes to the CBOR CDDL binary schema (#1376)
+- Adjust the address type to better reflect the logical structure (#1370)
+- Improve the representation of the overlay schedule (#1378)
+- Various exports needed for node and CLI integration (#1370, #1373, #1375)
+
+### network changes
+- Enable the local state query protocol with a V2 local IPC protocol (#1522)
+- Fix handling of unknown versions in protocol version negotiation (#1981)
+- API improvements for the local node IPC protocol (#1950, #1959, #1962)
+- DNS error handling improvements during temporary network outages (#1961)
+- Add timeouts on message sends, rather than just receive (#1953)
+- Unified library API docs https://input-output-hk.github.io/ouroboros-network/
+
 ## 1.10.1 -- April 2020
 
 ### node changes
