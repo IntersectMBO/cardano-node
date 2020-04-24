@@ -92,7 +92,7 @@ defaultBackends:
 # be specified in the defaults below or overidden on a per-scribe basis here.
 setupScribes:
   - scKind: FileSK
-    scName: "logs/mainnet-via-fetcher.log"
+    scName: "logs/mainnet-benchmark.log"
     scFormat: ScText
 
   - scKind: StdoutSK
@@ -104,7 +104,7 @@ setupScribes:
 # output is sent to if it is not configured to be sent to other scribes.
 defaultScribes:
   - - FileSK
-    - "logs/mainnet-via-fetcher.log"
+    - "logs/mainnet-benchmark.log"
 
   - - StdoutSK
     - stdout

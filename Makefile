@@ -33,16 +33,13 @@ test-ghcid-nix: ## Run ghcid on test suites with Nix
 test-chairmans-cluster:
 	@scripts/cluster-test.sh
 
-BENCH_REPEATS ?= 3
-BENCH_CONFIG ?= both
+BENCH_REPEATS ?= 5
+BENCH_CONFIG ?= mainnet-benchmark
 BENCH_TAG ?= HEAD
 BENCH_XARGS ?=
 
 profile-chainsync:
-	scripts/mainnet-via-fetcher.sh ${BENCH_XARGS}  --node-config-${BENCH_CONFIG} --repeats ${BENCH_REPEATS} --nix --profile time --tag ${BENCH_TAG}
-
-profile-chainsync-fast: BENCH_XARGS=--skip-prefetch
-profile-chainsync-fast: profile-chainsync
+	scripts/mainnet-benchmark.sh ${BENCH_XARGS}  --node-config-${BENCH_CONFIG} --repeats ${BENCH_REPEATS} --nix --profile time --tag ${BENCH_TAG}
 
 clean-profile proclean:
 	rm -f *.html *.prof *.hp *.stats *.eventlog
