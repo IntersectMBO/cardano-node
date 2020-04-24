@@ -13,9 +13,7 @@ module Cardano.CLI.Shelley.Run
 import           Cardano.Prelude hiding (option, trace)
 
 import           Control.Monad.Trans.Except (ExceptT)
-import           Control.Monad.Trans.Except.Extra (firstExceptT, newExceptT)
-
-import           Cardano.Api (ShelleyKeyDiscriminator (..), shelleyGenKeyPair, writeKeyPair)
+import           Control.Monad.Trans.Except.Extra (firstExceptT)
 
 import           Cardano.CLI.Key (VerificationKeyFile(..))
 import           Cardano.CLI.Ops (CliError (..))
@@ -61,6 +59,8 @@ runTransactionCmd cmd = liftIO $ putStrLn $ "runTransactionCmd: " ++ show cmd
 
 
 runNodeCmd :: NodeCmd -> ExceptT CliError IO ()
+runNodeCmd (NodeKeyGenKES  vk sk dur) = runNodeKeyGenKES  vk sk dur
+runNodeCmd (NodeKeyGenVRF  vk sk)     = runNodeKeyGenVRF  vk sk
 runNodeCmd cmd = liftIO $ putStrLn $ "runNodeCmd: " ++ show cmd
 
 
@@ -88,21 +88,25 @@ runGenesisCmd :: GenesisCmd -> ExceptT CliError IO ()
 runGenesisCmd cmd = liftIO $ putStrLn $ "runGenesisCmd: " ++ show cmd
 
 
-{-
-runShelleyKeyGenerate :: OutputFile -> ExceptT CliError IO ()
-runShelleyKeyGenerate (OutputFile fpath) = do
-  kp <- liftIO $ shelleyGenKeyPair RegularShelleyKey
-  firstExceptT CardanoApiError $ newExceptT (writeKeyPair fpath kp)
+--
+-- Node command implementations
+--
 
-runShelleyKESKeyPairGeneration :: VerificationKeyFile -> SigningKeyFile -> Natural -> ExceptT CliError IO ()
-runShelleyKESKeyPairGeneration (VerificationKeyFile vKeyPath) (SigningKeyFile sKeyPath) duration = do
-  (vKESKey, sKESKey) <- liftIO $ genKESKeyPair duration
-  firstExceptT KESCliError $ writeKESSigningKey sKeyPath sKESKey
-  firstExceptT KESCliError $ writeKESVerKey vKeyPath vKESKey
+runNodeKeyGenKES :: VerificationKeyFile -> SigningKeyFile -> Natural
+                 -> ExceptT CliError IO ()
+runNodeKeyGenKES (VerificationKeyFile vkeyPath) (SigningKeyFile skeyPath) duration =
+    firstExceptT KESCliError $ do
+      (vkey, skey) <- liftIO $ genKESKeyPair duration
+      writeKESVerKey     vkeyPath vkey
+      writeKESSigningKey skeyPath skey
 
-runShelleyVRFKeyPairGeneration :: VerificationKeyFile -> SigningKeyFile  -> ExceptT CliError IO ()
-runShelleyVRFKeyPairGeneration (VerificationKeyFile vKeyPath) (SigningKeyFile sKeyPath) = do
-  (sKESKey, vKESKey) <- liftIO $ genVRFKeyPair
-  firstExceptT VRFCliError $ writeVRFSigningKey sKeyPath sKESKey
-  firstExceptT VRFCliError $ writeVRFVerKey vKeyPath vKESKey
--}
+
+runNodeKeyGenVRF :: VerificationKeyFile -> SigningKeyFile
+                 -> ExceptT CliError IO ()
+runNodeKeyGenVRF (VerificationKeyFile vkeyPath) (SigningKeyFile skeyPath) =
+    firstExceptT VRFCliError $ do
+      --FIXME: genVRFKeyPair genKESKeyPair results are in an inconsistent order
+      (skey, vkey) <- liftIO genVRFKeyPair
+      writeVRFVerKey     vkeyPath vkey
+      writeVRFSigningKey skeyPath skey
+
