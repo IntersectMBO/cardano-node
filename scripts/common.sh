@@ -25,11 +25,13 @@ Usage:
 
     --cls               Clear the TTY before anything happens..
 
-    --profile           Enable library & executable profiling, with
-                         .prof and profiteur's .html output.
+    --profile MODE      Enable library & executable profiling, with
+                         .prof/.hp and profiteur/profiterole's .html output.
                         The Nix case works end-to-end, while cabal&stack
                         need to be manually set up to provide correspondingly
                         capable binaries before this works.
+                        MODE is one of:
+       time space space-module space-closure space-type space-retainer space-bio
     --mnemonic-suffix SUFFIX
                         Profiling output will get an additional suffix
 
@@ -84,10 +86,9 @@ setup_executables() {
         vprint_top "executable mode: ${mode}"
 
         if test -n "${profile}"
-        then vprint_top "cardano-node profiling enabled"
-             export COMMON_NODE_PROFILING=t
-        else export COMMON_NODE_PROFILING=
+        then vprint_top "cardano-node profiling enabled:  ${profile}"
         fi
+        export COMMON_NODE_PROFILING=${profile}
 
         case ${mode} in
                 nix ) setup_nix;;
@@ -137,7 +138,7 @@ do case "$1" in
 
            --cls )                echo -en "\ec";;
 
-           --profile )            profile=t;;
+           --profile )            profile=$2; shift;;
            --mnemonic-suffix )    mnemonic_suffix=$2; shift;;
 
            --force-genesis )      force_genesis=t;;

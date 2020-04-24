@@ -37,6 +37,7 @@ import           Network.Socket (PortNumber)
 import           Options.Applicative
 
 import           Ouroboros.Consensus.NodeId (NodeId(..), CoreNodeId(..))
+import           Ouroboros.Network.Block (MaxSlotNo(..), SlotNo(..))
 import           Cardano.Chain.Common (Lovelace, mkLovelace)
 
 import           Cardano.Config.Byron.Parsers   as Byron
@@ -88,6 +89,7 @@ nodeMockParser = do
 
   validate <- parseValidateDB
   shutdownIPC <- parseShutdownIPC
+  shutdownOnSlotSynced <- parseShutdownOnSlotSynced
 
   pure $ NodeCLI
            { nodeMode = MockProtocolMode
@@ -105,6 +107,7 @@ nodeMockParser = do
              }
            , validateDB = validate
            , shutdownIPC
+           , shutdownOnSlotSynced
            }
 
 -- | The real protocol parser.
@@ -131,6 +134,8 @@ nodeRealParser = do
   validate <- parseValidateDB
   shutdownIPC <- parseShutdownIPC
 
+  shutdownOnSlotSynced <- parseShutdownOnSlotSynced
+
   pure NodeCLI
     { nodeMode = RealProtocolMode
     , nodeAddr = nAddress
@@ -147,6 +152,7 @@ nodeRealParser = do
       }
     , validateDB = validate
     , shutdownIPC
+    , shutdownOnSlotSynced
     }
 
 parseCLISocketPath :: Text -> Parser (Maybe CLISocketPath)
@@ -266,6 +272,16 @@ parseShutdownIPC =
          long "shutdown-ipc"
       <> metavar "FD"
       <> help "Shut down the process when this inherited FD reaches EOF"
+      <> hidden
+    )
+
+parseShutdownOnSlotSynced :: Parser MaxSlotNo
+parseShutdownOnSlotSynced =
+    fmap (fromMaybe NoMaxSlotNo) $
+    optional $ option (MaxSlotNo . SlotNo <$> auto) (
+         long "shutdown-on-slot-synced"
+      <> metavar "SLOT"
+      <> help "Shut down the process after ChainDB is synced up to the specified slot"
       <> hidden
     )
 

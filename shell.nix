@@ -31,6 +31,8 @@ let
       niv
       pkgconfig
       profiteur
+      profiterole
+      ghc-prof-flamegraph
       sqlite-interactive
       tmux
       git

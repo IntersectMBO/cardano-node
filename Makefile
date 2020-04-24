@@ -33,4 +33,24 @@ test-ghcid-nix: ## Run ghcid on test suites with Nix
 test-chairmans-cluster:
 	@scripts/cluster-test.sh
 
-.PHONY: stylish-haskell cabal-hashes ghcid ghcid-test run-test test-ghci test-ghcid help
+BENCH_REPEATS ?= 3
+BENCH_CONFIG ?= both
+BENCH_TAG ?= HEAD
+BENCH_XARGS ?=
+
+profile-chainsync:
+	scripts/mainnet-via-fetcher.sh ${BENCH_XARGS}  --node-config-${BENCH_CONFIG} --repeats ${BENCH_REPEATS} --nix --profile time --tag ${BENCH_TAG}
+
+profile-chainsync-fast: BENCH_XARGS=--skip-prefetch
+profile-chainsync-fast: profile-chainsync
+
+clean-profile proclean:
+	rm -f *.html *.prof *.hp *.stats *.eventlog
+
+clean: clean-profile
+	rm -rf logs/ socket/ cluster.*
+
+full-clean: clean
+	rm -rf db dist-newstyle .stack-work $(shell find . -name '*~' -or -name '*.swp')
+
+.PHONY: stylish-haskell cabal-hashes ghcid ghcid-test run-test test-ghci test-ghcid help clean clean-profile proclean

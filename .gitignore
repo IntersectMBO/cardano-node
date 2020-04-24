@@ -14,12 +14,15 @@ dist/
 .dir-locals.el
 /result*
 /launch-*
-.stack-to-nix.cache
 stack.yaml.lock
-/genesis.*
 logs/
+/*.eventlog
+/*.hp
+/*.hp.*
 /*.prof
 /*.prof.*
+/*.profiterole.*
+/*.stats
 
 /db
 /db-[0-9]
