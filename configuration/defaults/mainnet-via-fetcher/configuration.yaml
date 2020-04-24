@@ -151,7 +151,7 @@ TraceChainSyncBlockServer: False
 TraceChainSyncHeaderServer: False
 
 # Trace ChainSync protocol messages.
-TraceChainSyncProtocol: False
+TraceChainSyncProtocol: True
 
 # Trace DNS Resolver messages.
 TraceDNSResolver: True
