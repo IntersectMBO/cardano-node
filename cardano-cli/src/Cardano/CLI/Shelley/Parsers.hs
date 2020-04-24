@@ -73,7 +73,7 @@ data ShelleyCommand
   | ShelleyPool ShelleyPoolCmd
   | ShelleyStakeKey ShelleyStakeKeyCmd
   | ShelleyTransaction ShelleyTransactionCmd
-  | ShelleyNode ShelleyNodeCmd
+  | ShelleyQuery ShelleyQueryCmd
   | ShelleyBlock ShelleyBlockCmd
   | ShelleySystem ShelleySystemCmd
   | ShelleyDevOps ShelleyDevOpsCmd
@@ -84,12 +84,12 @@ data GenesisCommand
   = GenesisCreateCmd GenesisFile
   deriving (Eq, Show)
 
-data ShelleyNodeCmd
-  = NodePoolId NodeAddress
-  | NodeTip NodeAddress
-  | NodeSlot NodeAddress
-  | NodeVersion NodeAddress
-  | NodeStatus NodeAddress
+data ShelleyQueryCmd
+  = QueryPoolId NodeAddress
+  | QueryTip NodeAddress
+  | QuerySlot NodeAddress
+  | QueryVersion NodeAddress
+  | QueryStatus NodeAddress
   deriving (Eq, Show)
 
 data ShelleyPoolCmd
@@ -141,8 +141,8 @@ parseShelleyCommands =
           (Opt.info (ShelleyStakeKey <$> pStakeKey) $ Opt.progDesc "Shelley stake key commands")
       , Opt.command "transaction"
           (Opt.info (ShelleyTransaction <$> pTransaction) $ Opt.progDesc "Shelley transaction commands")
-      , Opt.command "node"
-          (Opt.info (ShelleyNode <$> pShelleyNodeCmd) $ Opt.progDesc "Shelley node commands")
+      , Opt.command "query"
+          (Opt.info (ShelleyQuery <$> pShelleyQueryCmd) $ Opt.progDesc "Shelley node query commands")
       , Opt.command "block"
           (Opt.info (ShelleyBlock <$> pShelleyBlockCmd) $ Opt.progDesc "Shelley block commands")
       , Opt.command "system"
@@ -270,36 +270,36 @@ pTransaction =
     pTransactionInfo  :: Parser ShelleyTransactionCmd
     pTransactionInfo = pure TxInfo
 
-pShelleyNodeCmd :: Parser ShelleyNodeCmd
-pShelleyNodeCmd =
+pShelleyQueryCmd :: Parser ShelleyQueryCmd
+pShelleyQueryCmd =
   Opt.subparser $
     mconcat
       [ Opt.command "pool-id"
-          (Opt.info pNodePoolId $ Opt.progDesc "Get the node's pool id")
+          (Opt.info pQueryPoolId $ Opt.progDesc "Get the node's pool id")
       , Opt.command "tip"
-          (Opt.info pNodeTip $ Opt.progDesc "Get the node tip")
+          (Opt.info pQueryTip $ Opt.progDesc "Get the node tip")
       , Opt.command "slot"
-          (Opt.info pNodeSlot $ Opt.progDesc "Get the node slot")
+          (Opt.info pQuerySlot $ Opt.progDesc "Get the node slot")
       , Opt.command "version"
-          (Opt.info pNodeVersion $ Opt.progDesc "Get the node version")
+          (Opt.info pQueryVersion $ Opt.progDesc "Get the node version")
       , Opt.command "status"
-          (Opt.info pNodeStatus $ Opt.progDesc "Get the status of the node")
+          (Opt.info pQueryStatus $ Opt.progDesc "Get the status of the node")
       ]
   where
-    pNodePoolId :: Parser ShelleyNodeCmd
-    pNodePoolId = NodePoolId <$> parseNodeAddress
+    pQueryPoolId :: Parser ShelleyQueryCmd
+    pQueryPoolId = QueryPoolId <$> parseNodeAddress
 
-    pNodeTip :: Parser ShelleyNodeCmd
-    pNodeTip = NodeTip <$> parseNodeAddress
+    pQueryTip :: Parser ShelleyQueryCmd
+    pQueryTip = QueryTip <$> parseNodeAddress
 
-    pNodeSlot :: Parser ShelleyNodeCmd
-    pNodeSlot = NodeSlot <$> parseNodeAddress
+    pQuerySlot :: Parser ShelleyQueryCmd
+    pQuerySlot = QuerySlot <$> parseNodeAddress
 
-    pNodeVersion :: Parser ShelleyNodeCmd
-    pNodeVersion = NodeVersion <$> parseNodeAddress
+    pQueryVersion :: Parser ShelleyQueryCmd
+    pQueryVersion = QueryVersion <$> parseNodeAddress
 
-    pNodeStatus :: Parser ShelleyNodeCmd
-    pNodeStatus = NodeStatus <$> parseNodeAddress
+    pQueryStatus :: Parser ShelleyQueryCmd
+    pQueryStatus = QueryStatus <$> parseNodeAddress
 
 
 pShelleyBlockCmd :: Parser ShelleyBlockCmd
