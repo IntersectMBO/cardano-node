@@ -87,7 +87,6 @@ data GenesisCommand
 data ShelleyQueryCmd
   = QueryPoolId NodeAddress
   | QueryTip NodeAddress
-  | QuerySlot NodeAddress
   | QueryVersion NodeAddress
   | QueryStatus NodeAddress
   deriving (Eq, Show)
@@ -277,9 +276,7 @@ pShelleyQueryCmd =
       [ Opt.command "pool-id"
           (Opt.info pQueryPoolId $ Opt.progDesc "Get the node's pool id")
       , Opt.command "tip"
-          (Opt.info pQueryTip $ Opt.progDesc "Get the node tip")
-      , Opt.command "slot"
-          (Opt.info pQuerySlot $ Opt.progDesc "Get the node slot")
+          (Opt.info pQueryTip $ Opt.progDesc "Get the node's current tip (slot no, hash, block no)")
       , Opt.command "version"
           (Opt.info pQueryVersion $ Opt.progDesc "Get the node version")
       , Opt.command "status"
@@ -291,9 +288,6 @@ pShelleyQueryCmd =
 
     pQueryTip :: Parser ShelleyQueryCmd
     pQueryTip = QueryTip <$> parseNodeAddress
-
-    pQuerySlot :: Parser ShelleyQueryCmd
-    pQuerySlot = QuerySlot <$> parseNodeAddress
 
     pQueryVersion :: Parser ShelleyQueryCmd
     pQueryVersion = QueryVersion <$> parseNodeAddress
