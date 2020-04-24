@@ -38,6 +38,12 @@ let
           "xhtml"
           # "stm" "terminfo"
         ];
+
+
+        # Tell hydra to skip this test on windows (it does not build)
+        packages.cardano-cli.components.tests.cardano-cli-test.platforms =
+          with stdenv.lib.platforms; [ linux darwin ];
+
       }
       {
         # Packages we wish to ignore version bounds of.
@@ -48,6 +54,9 @@ let
         # split data output for ekg to reduce closure size
         packages.ekg.components.library.enableSeparateDataOutput = true;
         packages.cardano-config.configureFlags = [ "--ghc-option=-Werror" ];
+
+        # cardano-cli-tests depends on cardano-cli
+        packages.cardano-cli.preCheck = "export CARDANO_CLI=${pkgSet.cardano-cli.components.exes.cardano-cli}/bin/cardano-cli";
       }
       (lib.optionalAttrs profiling {
         enableLibraryProfiling = true;
