@@ -71,7 +71,7 @@ data ShelleyCommand
   | ShelleyKESKeyPairGenerate VerificationKeyFile SigningKeyFile Natural
   | ShelleyVRFKeyPairGenerate VerificationKeyFile SigningKeyFile
   | ShelleyPool ShelleyPoolCmd
-  | ShelleyStakeKey ShelleyStakeKeyCmd
+  | ShelleyStakeAddress ShelleyStakeAddressCmd
   | ShelleyTransaction ShelleyTransactionCmd
   | ShelleyQuery ShelleyQueryCmd
   | ShelleyBlock ShelleyBlockCmd
@@ -97,7 +97,7 @@ data ShelleyPoolCmd
   | PoolRetire PoolId EpochNo NodeAddress
   deriving (Eq, Show)
 
-data ShelleyStakeKeyCmd
+data ShelleyStakeAddressCmd
   = StakeKeyRegister PrivKeyFile NodeAddress
   | StakeKeyDelegate PrivKeyFile PoolId Lovelace NodeAddress
   | StakeKeyDeRegister PrivKeyFile NodeAddress
@@ -134,10 +134,10 @@ parseShelleyCommands =
           (Opt.info pVRFKeyGen
           $ Opt.progDesc "Generate Shelley era VRF keys."
           )
-      , Opt.command "pool"
-          (Opt.info (ShelleyPool <$> pShelleyPoolCmd) $ Opt.progDesc "Shelley pool commands")
-      , Opt.command "stake-key"
-          (Opt.info (ShelleyStakeKey <$> pStakeKey) $ Opt.progDesc "Shelley stake key commands")
+      , Opt.command "stake-pool"
+          (Opt.info (ShelleyPool <$> pShelleyPoolCmd) $ Opt.progDesc "Shelley stake pool commands")
+      , Opt.command "stake-address"
+          (Opt.info (ShelleyStakeAddress <$> pStakeAddress) $ Opt.progDesc "Shelley stake address commands")
       , Opt.command "transaction"
           (Opt.info (ShelleyTransaction <$> pTransaction) $ Opt.progDesc "Shelley transaction commands")
       , Opt.command "query"
@@ -195,27 +195,27 @@ pSigningKeyFile =
      <> Opt.help "Output filepath of the signing key."
      )
 
-pStakeKey :: Parser ShelleyStakeKeyCmd
-pStakeKey =
+pStakeAddress :: Parser ShelleyStakeAddressCmd
+pStakeAddress =
   Opt.subparser $
     mconcat
       [ Opt.command "register"
-          (Opt.info pStakeKeyRegister $ Opt.progDesc "Register a stake pool")
+          (Opt.info pStakeAddressRegister $ Opt.progDesc "Register a stake address")
       , Opt.command "delegate"
-          (Opt.info pStakeKeyDelegate $ Opt.progDesc "Re-register a stake pool")
+          (Opt.info pStakeAddressDelegate $ Opt.progDesc "Delegate from a stake address to a stake pool")
       , Opt.command "de-register"
-          (Opt.info pStakeKeyDeRegister $ Opt.progDesc "Retire a stake pool")
+          (Opt.info pStakeAddressDeRegister $ Opt.progDesc "De-register a stake address")
       ]
   where
-    pStakeKeyRegister :: Parser ShelleyStakeKeyCmd
-    pStakeKeyRegister = StakeKeyRegister <$> pPrivKeyFile <*> parseNodeAddress
+    pStakeAddressRegister :: Parser ShelleyStakeAddressCmd
+    pStakeAddressRegister = StakeKeyRegister <$> pPrivKeyFile <*> parseNodeAddress
 
-    pStakeKeyDelegate :: Parser ShelleyStakeKeyCmd
-    pStakeKeyDelegate =
+    pStakeAddressDelegate :: Parser ShelleyStakeAddressCmd
+    pStakeAddressDelegate =
       StakeKeyDelegate <$> pPrivKeyFile <*> pPoolId <*> pDelegationFee <*> parseNodeAddress
 
-    pStakeKeyDeRegister :: Parser ShelleyStakeKeyCmd
-    pStakeKeyDeRegister = StakeKeyDeRegister <$> pPrivKeyFile <*> parseNodeAddress
+    pStakeAddressDeRegister :: Parser ShelleyStakeAddressCmd
+    pStakeAddressDeRegister = StakeKeyDeRegister <$> pPrivKeyFile <*> parseNodeAddress
 
     pDelegationFee :: Parser Lovelace
     pDelegationFee =
