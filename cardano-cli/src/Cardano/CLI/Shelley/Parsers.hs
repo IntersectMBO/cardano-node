@@ -4,16 +4,16 @@ module Cardano.CLI.Shelley.Parsers
 
     -- * CLI command types
   , ShelleyCommand (..)
-  , ShelleyAddressCmd (..)
-  , ShelleyStakeAddressCmd (..)
-  , ShelleyTransactionCmd (..)
-  , ShelleyNodeCmd (..)
-  , ShelleyPoolCmd (..)
-  , ShelleyQueryCmd (..)
-  , ShelleyBlockCmd (..)
-  , ShelleySystemCmd (..)
-  , ShelleyDevOpsCmd (..)
-  , ShelleyGenesisCmd (..)
+  , AddressCmd (..)
+  , StakeAddressCmd (..)
+  , TransactionCmd (..)
+  , NodeCmd (..)
+  , PoolCmd (..)
+  , QueryCmd (..)
+  , BlockCmd (..)
+  , SystemCmd (..)
+  , DevOpsCmd (..)
+  , GenesisCmd (..)
 
     -- * CLI flag types
   , GenesisDir (..)
@@ -46,20 +46,20 @@ import qualified Prelude as Prelude
 -- | All the CLI subcommands under \"shelley\".
 --
 data ShelleyCommand
-  = ShelleyAddress      ShelleyAddressCmd
-  | ShelleyStakeAddress ShelleyStakeAddressCmd
-  | ShelleyTransaction  ShelleyTransactionCmd
-  | ShelleyNode         ShelleyNodeCmd
-  | ShelleyPool         ShelleyPoolCmd
-  | ShelleyQuery        ShelleyQueryCmd
-  | ShelleyBlock        ShelleyBlockCmd
-  | ShelleySystem       ShelleySystemCmd
-  | ShelleyDevOps       ShelleyDevOpsCmd
-  | ShelleyGenesis      ShelleyGenesisCmd
+  = AddressCmd      AddressCmd
+  | StakeAddressCmd StakeAddressCmd
+  | TransactionCmd  TransactionCmd
+  | NodeCmd         NodeCmd
+  | PoolCmd         PoolCmd
+  | QueryCmd        QueryCmd
+  | BlockCmd        BlockCmd
+  | SystemCmd       SystemCmd
+  | DevOpsCmd       DevOpsCmd
+  | GenesisCmd      GenesisCmd
   deriving (Eq, Show)
 
 
-data ShelleyAddressCmd
+data AddressCmd
   = AddressKeyGen OutputFile OutputFile
   | AddressKeyHash VerificationKeyFile
   | AddressBuild          --TODO
@@ -67,14 +67,14 @@ data ShelleyAddressCmd
   deriving (Eq, Show)
 
 
-data ShelleyStakeAddressCmd
+data StakeAddressCmd
   = StakeKeyRegister PrivKeyFile NodeAddress
   | StakeKeyDelegate PrivKeyFile PoolId Lovelace NodeAddress
   | StakeKeyDeRegister PrivKeyFile NodeAddress
   deriving (Eq, Show)
 
 
-data ShelleyTransactionCmd
+data TransactionCmd
   = TxBuild         -- { input :: [Utxo], output :: [(Address,Lovelace)], nodeAddr :: NodeAddress }
   | TxSign          -- { transaction :: Transaction, keys :: [PrivKeyFile], utxo :: [Utxo], nodeAddr :: NodeAddress }
   | TxWitness       -- { transaction :: Transaction, key :: PrivKeyFile, nodeAddr :: NodeAddress }
@@ -85,7 +85,7 @@ data ShelleyTransactionCmd
   deriving (Eq, Show)
 
 
-data ShelleyNodeCmd
+data NodeCmd
   = NodeKeyGenCold VerificationKeyFile SigningKeyFile
   | NodeKeyGenKES  VerificationKeyFile SigningKeyFile Natural
   | NodeKeyGenVRF  VerificationKeyFile SigningKeyFile
@@ -93,14 +93,14 @@ data ShelleyNodeCmd
   deriving (Eq, Show)
 
 
-data ShelleyPoolCmd
+data PoolCmd
   = PoolRegister PoolId   -- { operator :: PubKey, owner :: [PubKey], kes :: PubKey, vrf :: PubKey, rewards :: PubKey, cost :: Lovelace, margin :: Margin, nodeAddr :: NodeAddress }
   | PoolReRegister PoolId -- { operator :: PubKey, owner :: [PubKey], kes :: PubKey, vrf :: PubKey, rewards :: PubKey, cost :: Lovelace, margin :: Margin, nodeAddr :: NodeAddress }
   | PoolRetire PoolId EpochNo NodeAddress
   deriving (Eq, Show)
 
 
-data ShelleyQueryCmd
+data QueryCmd
   = QueryPoolId NodeAddress
   | QueryTip NodeAddress
   | QueryVersion NodeAddress
@@ -108,24 +108,24 @@ data ShelleyQueryCmd
   deriving (Eq, Show)
 
 
-data ShelleyBlockCmd
+data BlockCmd
   = BlockInfo BlockId NodeAddress
   deriving (Eq, Show)
 
 
-data ShelleyDevOpsCmd
+data DevOpsCmd
   = DevOpsProtocolUpdate PrivKeyFile -- { parameters :: ProtocolParams, nodeAddr :: NodeAddress }
   | DevOpsColdKeys GenesisKeyFile     -- { genesis :: GenesisKeyFile, keys :: [PubKey], nodeAddr :: NodeAddress }
   deriving (Eq, Show)
 
 
-data ShelleySystemCmd
+data SystemCmd
   = SysStart GenesisFile NodeAddress
   | SysStop NodeAddress
   deriving (Eq, Show)
 
 
-data ShelleyGenesisCmd
+data GenesisCmd
   = GenesisCreate GenesisDir (Maybe SystemStart) Lovelace
   | GenesisKeyGen OutputFile OutputFile
   deriving (Eq, Show)
@@ -173,29 +173,29 @@ parseShelleyCommands =
   Opt.subparser $
     mconcat
       [ Opt.command "address"
-          (Opt.info (ShelleyAddress <$> pAddress) $ Opt.progDesc "Shelley address commands")
+          (Opt.info (AddressCmd <$> pAddress) $ Opt.progDesc "Shelley address commands")
       , Opt.command "stake-address"
-          (Opt.info (ShelleyStakeAddress <$> pStakeAddress) $ Opt.progDesc "Shelley stake address commands")
+          (Opt.info (StakeAddressCmd <$> pStakeAddress) $ Opt.progDesc "Shelley stake address commands")
       , Opt.command "transaction"
-          (Opt.info (ShelleyTransaction <$> pTransaction) $ Opt.progDesc "Shelley transaction commands")
+          (Opt.info (TransactionCmd <$> pTransaction) $ Opt.progDesc "Shelley transaction commands")
       , Opt.command "node"
-          (Opt.info (ShelleyNode <$> pShelleyNodeCmd) $ Opt.progDesc "Shelley node operaton commands")
+          (Opt.info (NodeCmd <$> pNodeCmd) $ Opt.progDesc "Shelley node operaton commands")
       , Opt.command "stake-pool"
-          (Opt.info (ShelleyPool <$> pShelleyPoolCmd) $ Opt.progDesc "Shelley stake pool commands")
+          (Opt.info (PoolCmd <$> pPoolCmd) $ Opt.progDesc "Shelley stake pool commands")
       , Opt.command "query"
-          (Opt.info (ShelleyQuery <$> pShelleyQueryCmd) $ Opt.progDesc "Shelley node query commands")
+          (Opt.info (QueryCmd <$> pQueryCmd) $ Opt.progDesc "Shelley node query commands")
       , Opt.command "block"
-          (Opt.info (ShelleyBlock <$> pShelleyBlockCmd) $ Opt.progDesc "Shelley block commands")
+          (Opt.info (BlockCmd <$> pBlockCmd) $ Opt.progDesc "Shelley block commands")
       , Opt.command "system"
-          (Opt.info (ShelleySystem <$> pShelleySystemCmd) $ Opt.progDesc "Shelley system commands")
+          (Opt.info (SystemCmd <$> pSystemCmd) $ Opt.progDesc "Shelley system commands")
       , Opt.command "devops"
-          (Opt.info (ShelleyDevOps <$> pShelleyDevOpsCmd) $ Opt.progDesc "Shelley devops commands")
+          (Opt.info (DevOpsCmd <$> pDevOpsCmd) $ Opt.progDesc "Shelley devops commands")
       , Opt.command "genesis"
-          (Opt.info (ShelleyGenesis <$> pShelleyGenesisCmd) $ Opt.progDesc "Shelley genesis block commands")
+          (Opt.info (GenesisCmd <$> pGenesisCmd) $ Opt.progDesc "Shelley genesis block commands")
       ]
 
 
-pAddress :: Parser ShelleyAddressCmd
+pAddress :: Parser AddressCmd
 pAddress =
   Opt.subparser $
     mconcat
@@ -209,20 +209,20 @@ pAddress =
           (Opt.info pAddressBuildMultiSig $ Opt.progDesc "Build a multi-sig address")
       ]
   where
-    pAddressKeyGen :: Parser ShelleyAddressCmd
+    pAddressKeyGen :: Parser AddressCmd
     pAddressKeyGen = AddressKeyGen <$> pOutputFile <*> pOutputFile
 
-    pAddressKeyHash :: Parser ShelleyAddressCmd
+    pAddressKeyHash :: Parser AddressCmd
     pAddressKeyHash = AddressKeyHash <$> pVerificationKeyFile
 
-    pAddressBuild :: Parser ShelleyAddressCmd
+    pAddressBuild :: Parser AddressCmd
     pAddressBuild = pure AddressBuild
 
-    pAddressBuildMultiSig :: Parser ShelleyAddressCmd
+    pAddressBuildMultiSig :: Parser AddressCmd
     pAddressBuildMultiSig = pure AddressBuildMultiSig
 
 
-pStakeAddress :: Parser ShelleyStakeAddressCmd
+pStakeAddress :: Parser StakeAddressCmd
 pStakeAddress =
   Opt.subparser $
     mconcat
@@ -234,14 +234,14 @@ pStakeAddress =
           (Opt.info pStakeAddressDeRegister $ Opt.progDesc "De-register a stake address")
       ]
   where
-    pStakeAddressRegister :: Parser ShelleyStakeAddressCmd
+    pStakeAddressRegister :: Parser StakeAddressCmd
     pStakeAddressRegister = StakeKeyRegister <$> pPrivKeyFile <*> parseNodeAddress
 
-    pStakeAddressDelegate :: Parser ShelleyStakeAddressCmd
+    pStakeAddressDelegate :: Parser StakeAddressCmd
     pStakeAddressDelegate =
       StakeKeyDelegate <$> pPrivKeyFile <*> pPoolId <*> pDelegationFee <*> parseNodeAddress
 
-    pStakeAddressDeRegister :: Parser ShelleyStakeAddressCmd
+    pStakeAddressDeRegister :: Parser StakeAddressCmd
     pStakeAddressDeRegister = StakeKeyDeRegister <$> pPrivKeyFile <*> parseNodeAddress
 
     pDelegationFee :: Parser Lovelace
@@ -255,7 +255,7 @@ pStakeAddress =
 
 
 
-pTransaction :: Parser ShelleyTransactionCmd
+pTransaction :: Parser TransactionCmd
 pTransaction =
   Opt.subparser $
     mconcat
@@ -275,30 +275,30 @@ pTransaction =
           (Opt.info pTransactionInfo $ Opt.progDesc "Print information about a transaction")
       ]
   where
-    pTransactionBuild :: Parser ShelleyTransactionCmd
+    pTransactionBuild :: Parser TransactionCmd
     pTransactionBuild = pure TxBuild
 
-    pTransactionSign  :: Parser ShelleyTransactionCmd
+    pTransactionSign  :: Parser TransactionCmd
     pTransactionSign = pure TxSign
 
-    pTransactionWitness :: Parser ShelleyTransactionCmd
+    pTransactionWitness :: Parser TransactionCmd
     pTransactionWitness = pure TxWitness
 
-    pTransactionSignWit :: Parser ShelleyTransactionCmd
+    pTransactionSignWit :: Parser TransactionCmd
     pTransactionSignWit = pure TxSignWitness
 
-    pTransactionCheck  :: Parser ShelleyTransactionCmd
+    pTransactionCheck  :: Parser TransactionCmd
     pTransactionCheck = pure TxCheck
 
-    pTransactionSubmit  :: Parser ShelleyTransactionCmd
+    pTransactionSubmit  :: Parser TransactionCmd
     pTransactionSubmit = pure TxSubmit
 
-    pTransactionInfo  :: Parser ShelleyTransactionCmd
+    pTransactionInfo  :: Parser TransactionCmd
     pTransactionInfo = pure TxInfo
 
 
-pShelleyNodeCmd :: Parser ShelleyNodeCmd
-pShelleyNodeCmd =
+pNodeCmd :: Parser NodeCmd
+pNodeCmd =
   Opt.subparser $
     mconcat
       [ Opt.command "key-gen"
@@ -315,25 +315,25 @@ pShelleyNodeCmd =
              Opt.progDesc "Issue a node operational certificate")
       ]
   where
-    pKeyGenOperator :: Parser ShelleyNodeCmd
+    pKeyGenOperator :: Parser NodeCmd
     pKeyGenOperator =
       NodeKeyGenCold <$> pVerificationKeyFile <*> pSigningKeyFile
 
-    pKeyGenKES :: Parser ShelleyNodeCmd
+    pKeyGenKES :: Parser NodeCmd
     pKeyGenKES =
       NodeKeyGenKES <$> pVerificationKeyFile <*> pSigningKeyFile <*> pDuration
 
-    pKeyGenVRF :: Parser ShelleyNodeCmd
+    pKeyGenVRF :: Parser NodeCmd
     pKeyGenVRF =
       NodeKeyGenVRF <$> pVerificationKeyFile <*> pSigningKeyFile
 
-    pIssueOpCert :: Parser ShelleyNodeCmd
+    pIssueOpCert :: Parser NodeCmd
     pIssueOpCert =
       pure NodeIssueOpCert
 
 
-pShelleyPoolCmd :: Parser ShelleyPoolCmd
-pShelleyPoolCmd =
+pPoolCmd :: Parser PoolCmd
+pPoolCmd =
   Opt.subparser $
     mconcat
       [ Opt.command "register"
@@ -344,18 +344,18 @@ pShelleyPoolCmd =
           (Opt.info pPoolRetire $ Opt.progDesc "Retire a stake pool")
       ]
   where
-    pPoolRegster :: Parser ShelleyPoolCmd
+    pPoolRegster :: Parser PoolCmd
     pPoolRegster = PoolRegister <$> pPoolId
 
-    pPoolReRegster :: Parser ShelleyPoolCmd
+    pPoolReRegster :: Parser PoolCmd
     pPoolReRegster = PoolReRegister <$> pPoolId
 
-    pPoolRetire :: Parser ShelleyPoolCmd
+    pPoolRetire :: Parser PoolCmd
     pPoolRetire = PoolRetire <$> pPoolId <*> pEpochNo <*> parseNodeAddress
 
 
-pShelleyQueryCmd :: Parser ShelleyQueryCmd
-pShelleyQueryCmd =
+pQueryCmd :: Parser QueryCmd
+pQueryCmd =
   Opt.subparser $
     mconcat
       [ Opt.command "pool-id"
@@ -368,32 +368,32 @@ pShelleyQueryCmd =
           (Opt.info pQueryStatus $ Opt.progDesc "Get the status of the node")
       ]
   where
-    pQueryPoolId :: Parser ShelleyQueryCmd
+    pQueryPoolId :: Parser QueryCmd
     pQueryPoolId = QueryPoolId <$> parseNodeAddress
 
-    pQueryTip :: Parser ShelleyQueryCmd
+    pQueryTip :: Parser QueryCmd
     pQueryTip = QueryTip <$> parseNodeAddress
 
-    pQueryVersion :: Parser ShelleyQueryCmd
+    pQueryVersion :: Parser QueryCmd
     pQueryVersion = QueryVersion <$> parseNodeAddress
 
-    pQueryStatus :: Parser ShelleyQueryCmd
+    pQueryStatus :: Parser QueryCmd
     pQueryStatus = QueryStatus <$> parseNodeAddress
 
 
-pShelleyBlockCmd :: Parser ShelleyBlockCmd
-pShelleyBlockCmd =
+pBlockCmd :: Parser BlockCmd
+pBlockCmd =
   Opt.subparser $
     mconcat
       [ Opt.command "info"
           (Opt.info pBlockInfo $ Opt.progDesc "Get the node's pool id")
       ]
   where
-    pBlockInfo :: Parser ShelleyBlockCmd
+    pBlockInfo :: Parser BlockCmd
     pBlockInfo = BlockInfo <$> pBlockId <*> parseNodeAddress
 
-pShelleyDevOpsCmd :: Parser ShelleyDevOpsCmd
-pShelleyDevOpsCmd =
+pDevOpsCmd :: Parser DevOpsCmd
+pDevOpsCmd =
   Opt.subparser $
     mconcat
       [ Opt.command "protocol-update"
@@ -402,10 +402,10 @@ pShelleyDevOpsCmd =
           (Opt.info pColdKeys $ Opt.progDesc "Cold keys")
       ]
   where
-    pProtocolUpdate :: Parser ShelleyDevOpsCmd
+    pProtocolUpdate :: Parser DevOpsCmd
     pProtocolUpdate = DevOpsProtocolUpdate <$> pPrivKeyFile
 
-    pColdKeys :: Parser ShelleyDevOpsCmd
+    pColdKeys :: Parser DevOpsCmd
     pColdKeys = DevOpsColdKeys <$> pGenesisKeyFile
 
     pGenesisKeyFile :: Parser GenesisKeyFile
@@ -418,8 +418,8 @@ pShelleyDevOpsCmd =
           )
 
 
-pShelleySystemCmd :: Parser ShelleySystemCmd
-pShelleySystemCmd =
+pSystemCmd :: Parser SystemCmd
+pSystemCmd =
   Opt.subparser $
     mconcat
       [ Opt.command "start"
@@ -428,15 +428,15 @@ pShelleySystemCmd =
           (Opt.info pSystemStop $ Opt.progDesc "Stop system")
       ]
   where
-    pSystemStart :: Parser ShelleySystemCmd
+    pSystemStart :: Parser SystemCmd
     pSystemStart = SysStart <$> pGenesisFile <*> parseNodeAddress
 
-    pSystemStop :: Parser ShelleySystemCmd
+    pSystemStop :: Parser SystemCmd
     pSystemStop = SysStop <$> parseNodeAddress
 
 
-pShelleyGenesisCmd :: Parser ShelleyGenesisCmd
-pShelleyGenesisCmd =
+pGenesisCmd :: Parser GenesisCmd
+pGenesisCmd =
   Opt.subparser $
     mconcat
       [ Opt.command "key-gen-genesis"
@@ -454,19 +454,19 @@ pShelleyGenesisCmd =
                         ++ "template and genesis/delegation/spending keys."))
       ]
   where
-    pGenesisKeyGen :: Parser ShelleyGenesisCmd
+    pGenesisKeyGen :: Parser GenesisCmd
     pGenesisKeyGen =
       GenesisKeyGen <$> pOutputFile <*> pOutputFile
 
-    pGenesisDelegateKeyGen :: Parser ShelleyGenesisCmd
+    pGenesisDelegateKeyGen :: Parser GenesisCmd
     pGenesisDelegateKeyGen =
       GenesisKeyGen <$> pOutputFile <*> pOutputFile
 
-    pGenesisUTxOKeyGen :: Parser ShelleyGenesisCmd
+    pGenesisUTxOKeyGen :: Parser GenesisCmd
     pGenesisUTxOKeyGen =
       GenesisKeyGen <$> pOutputFile <*> pOutputFile
 
-    pGenesisCommand :: Parser ShelleyGenesisCmd
+    pGenesisCommand :: Parser GenesisCmd
     pGenesisCommand =
       GenesisCreate <$> pGenesisDir <*> pMaybeSystemStart <*> pInitialSupply
 
