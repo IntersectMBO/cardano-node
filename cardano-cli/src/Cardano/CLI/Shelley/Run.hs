@@ -26,15 +26,14 @@ import           Cardano.Config.Shelley.VRF
                    (genVRFKeyPair, writeVRFSigningKey, writeVRFVerKey)
 import           Cardano.Config.Types (SigningKeyFile(..))
 
+
 runShelleyClientCommand :: ShelleyCommand -> ExceptT CliError IO ()
 runShelleyClientCommand cc =
   case cc of
-    ShelleyKeyGenerate fpath -> runShelleyKeyGenerate fpath
-    ShelleyKESKeyPairGenerate vKeyPath sKeyPath duration -> runShelleyKESKeyPairGeneration vKeyPath sKeyPath duration
-    ShelleyVRFKeyPairGenerate vKeyPath sKeyPath -> runShelleyVRFKeyPairGeneration vKeyPath sKeyPath
     _ -> liftIO . putStrLn $ "runShelleyClientCommand: " ++ show cc
 
 
+{-
 runShelleyKeyGenerate :: OutputFile -> ExceptT CliError IO ()
 runShelleyKeyGenerate (OutputFile fpath) = do
   kp <- liftIO $ shelleyGenKeyPair RegularShelleyKey
@@ -51,3 +50,4 @@ runShelleyVRFKeyPairGeneration (VerificationKeyFile vKeyPath) (SigningKeyFile sK
   (sKESKey, vKESKey) <- liftIO $ genVRFKeyPair
   firstExceptT VRFCliError $ writeVRFSigningKey sKeyPath sKESKey
   firstExceptT VRFCliError $ writeVRFVerKey vKeyPath vKESKey
+-}

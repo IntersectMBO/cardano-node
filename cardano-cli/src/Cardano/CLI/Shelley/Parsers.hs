@@ -74,10 +74,7 @@ data ShelleyGenesisCmd
   deriving (Eq, Show)
 
 data ShelleyCommand
-  = ShelleyKeyGenerate OutputFile
-  | ShelleyKESKeyPairGenerate VerificationKeyFile SigningKeyFile Natural
-  | ShelleyVRFKeyPairGenerate VerificationKeyFile SigningKeyFile
-  | ShelleyAddress ShelleyAddressCmd
+  = ShelleyAddress ShelleyAddressCmd
   | ShelleyPool ShelleyPoolCmd
   | ShelleyStakeAddress ShelleyStakeAddressCmd
   | ShelleyTransaction ShelleyTransactionCmd
@@ -138,19 +135,7 @@ parseShelleyCommands :: Parser ShelleyCommand
 parseShelleyCommands =
   Opt.subparser $
     mconcat
-      [ Opt.command "key-gen"
-          (Opt.info pKeyGen
-          $ Opt.progDesc "Generate Shelley era crypto keys."
-          )
-      , Opt.command "KES-key-gen"
-          (Opt.info pKESKeyGen
-          $ Opt.progDesc "Generate Shelley era KES keys."
-          )
-      , Opt.command "VRF-key-gen"
-          (Opt.info pVRFKeyGen
-          $ Opt.progDesc "Generate Shelley era VRF keys."
-          )
-      , Opt.command "address"
+      [ Opt.command "address"
           (Opt.info (ShelleyAddress <$> pAddress) $ Opt.progDesc "Shelley address commands")
       , Opt.command "stake-pool"
           (Opt.info (ShelleyPool <$> pShelleyPoolCmd) $ Opt.progDesc "Shelley stake pool commands")
@@ -171,18 +156,6 @@ parseShelleyCommands =
       , Opt.command "genesis"
           (Opt.info (ShelleyGenesis <$> pShelleyGenesisCmd) $ Opt.progDesc "Shelley genesis block commands")
       ]
-  where
-    pKeyGen :: Parser ShelleyCommand
-    pKeyGen =
-      ShelleyKeyGenerate <$> pOutputFile
-
-    pKESKeyGen :: Parser ShelleyCommand
-    pKESKeyGen =
-      ShelleyKESKeyPairGenerate <$> pVerificationKeyFile <*> pSigningKeyFile <*> pDuration
-
-    pVRFKeyGen :: Parser ShelleyCommand
-    pVRFKeyGen =
-      ShelleyVRFKeyPairGenerate <$> pVerificationKeyFile <*> pSigningKeyFile
 
 
 pShelleyPoolCmd :: Parser ShelleyPoolCmd
