@@ -90,6 +90,8 @@ runDevOpsCmd cmd = liftIO $ putStrLn $ "runDevOpsCmd: " ++ show cmd
 
 
 runGenesisCmd :: GenesisCmd -> ExceptT CliError IO ()
+runGenesisCmd (GenesisKeyGenGenesis  vk sk) = runGenesisKeyGenGenesis  vk sk
+runGenesisCmd (GenesisKeyGenDelegate vk sk) = runGenesisKeyGenDelegate vk sk
 runGenesisCmd cmd = liftIO $ putStrLn $ "runGenesisCmd: " ++ show cmd
 
 
@@ -125,4 +127,30 @@ runNodeKeyGenVRF (VerificationKeyFile vkeyPath) (SigningKeyFile skeyPath) =
       (skey, vkey) <- liftIO genVRFKeyPair
       writeVRFVerKey     vkeyPath vkey
       writeVRFSigningKey skeyPath skey
+
+
+--
+-- Genesis command implementations
+--
+
+runGenesisKeyGenGenesis :: VerificationKeyFile -> SigningKeyFile
+                        -> ExceptT CliError IO ()
+runGenesisKeyGenGenesis (VerificationKeyFile vkeyPath) (SigningKeyFile skeyPath) =
+    firstExceptT KeyCliError $ do
+      (vkey, skey) <- liftIO genKeyPair
+      writeVerKey     keyType vkeyPath vkey
+      writeSigningKey keyType skeyPath skey
+  where
+    keyType = GenesisKey
+
+
+runGenesisKeyGenDelegate :: VerificationKeyFile -> SigningKeyFile
+                         -> ExceptT CliError IO ()
+runGenesisKeyGenDelegate (VerificationKeyFile vkeyPath) (SigningKeyFile skeyPath) =
+    firstExceptT KeyCliError $ do
+      (vkey, skey) <- liftIO genKeyPair
+      writeVerKey     keyType vkeyPath vkey
+      writeSigningKey keyType skeyPath skey
+  where
+    keyType = OperatorKey GenesisDelegateKey
 

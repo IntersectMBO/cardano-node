@@ -129,7 +129,9 @@ data SystemCmd
 
 data GenesisCmd
   = GenesisCreate GenesisDir (Maybe SystemStart) Lovelace
-  | GenesisKeyGen OutputFile OutputFile
+  | GenesisKeyGenGenesis  VerificationKeyFile SigningKeyFile
+  | GenesisKeyGenDelegate VerificationKeyFile SigningKeyFile
+  | GenesisKeyGenUTxO     VerificationKeyFile SigningKeyFile
   deriving (Eq, Show)
 
 
@@ -458,15 +460,15 @@ pGenesisCmd =
   where
     pGenesisKeyGen :: Parser GenesisCmd
     pGenesisKeyGen =
-      GenesisKeyGen <$> pOutputFile <*> pOutputFile
+      GenesisKeyGenGenesis <$> pVerificationKeyFile <*> pSigningKeyFile
 
     pGenesisDelegateKeyGen :: Parser GenesisCmd
     pGenesisDelegateKeyGen =
-      GenesisKeyGen <$> pOutputFile <*> pOutputFile
+      GenesisKeyGenDelegate <$> pVerificationKeyFile <*> pSigningKeyFile
 
     pGenesisUTxOKeyGen :: Parser GenesisCmd
     pGenesisUTxOKeyGen =
-      GenesisKeyGen <$> pOutputFile <*> pOutputFile
+      GenesisKeyGenUTxO <$> pVerificationKeyFile <*> pSigningKeyFile
 
     pGenesisCommand :: Parser GenesisCmd
     pGenesisCommand =
