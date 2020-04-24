@@ -85,7 +85,7 @@ extra-deps:
       - test
 
   - git: https://github.com/input-output-hk/cardano-base
-    commit: f950ed079b257ee7318c095b2c0363f28843f964
+    commit: 2cc27584bb19bd5be9f1721fd4a2393bb99c6119
     subdirs:
       - binary
       - binary/test
@@ -127,7 +127,7 @@ extra-deps:
     #Ouroboros-network dependencies
 
   - git: https://github.com/input-output-hk/ouroboros-network
-    commit: a5ca95890f3d4a0c37ea017b5a96f309e6f3b4da
+    commit: ec4f3af58c13a4c20116e9e262b048fb2d27bdc3
     subdirs:
         - io-sim
         - io-sim-classes

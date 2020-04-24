@@ -69,6 +69,7 @@ import           Ouroboros.Consensus.Node (NodeKernel,
                      RunNodeArgs (..))
 import qualified Ouroboros.Consensus.Node as Node (run)
 import           Ouroboros.Consensus.Node.ProtocolInfo
+import           Ouroboros.Consensus.Node.NetworkProtocolVersion
 import           Ouroboros.Consensus.NodeId
 import qualified Ouroboros.Consensus.Config as Consensus
 import qualified Ouroboros.Consensus.Cardano as Consensus
@@ -209,6 +210,8 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
        rnProtocolInfo         = pInfo,
        rnCustomiseChainDbArgs = customiseChainDbArgs $ validateDB npm,
        rnCustomiseNodeArgs    = identity,
+       rnNodeToNodeVersions   = supportedNodeToNodeVersions (Proxy @blk),
+       rnNodeToClientVersions = supportedNodeToClientVersions (Proxy @blk),
        rnNodeKernelHook       = \_registry nodeKernel -> onKernel nodeKernel
     }
  where
