@@ -61,10 +61,13 @@ data ShelleyDevOpsCmd
   | DevOpsColdKeys GenesisKeyFile     -- { genesis :: GenesisKeyFile, keys :: [PubKey], nodeAddr :: NodeAddress }
   deriving (Eq, Show)
 
+data ShelleyGenesisCmd
+  = GenesisCreate GenesisDir (Maybe SystemStart) Lovelace
+  | GenesisKeyGen OutputFile OutputFile
+  deriving (Eq, Show)
 
 data ShelleyCommand
-  = ShelleyCreateGenesis GenesisDir (Maybe SystemStart) Lovelace
-  | ShelleyKeyGenerate OutputFile
+  = ShelleyKeyGenerate OutputFile
   | ShelleyKESKeyPairGenerate VerificationKeyFile SigningKeyFile Natural
   | ShelleyVRFKeyPairGenerate VerificationKeyFile SigningKeyFile
   | ShelleyPool ShelleyPoolCmd
@@ -74,6 +77,7 @@ data ShelleyCommand
   | ShelleyBlock ShelleyBlockCmd
   | ShelleySystem ShelleySystemCmd
   | ShelleyDevOps ShelleyDevOpsCmd
+  | ShelleyGenesis ShelleyGenesisCmd
   deriving (Eq, Show)
 
 data GenesisCommand
@@ -119,11 +123,7 @@ parseShelleyCommands :: Parser ShelleyCommand
 parseShelleyCommands =
   Opt.subparser $
     mconcat
-      [ Opt.command "create-genesis"
-          (Opt.info pGenesisCommand
-          $ Opt.progDesc "Create a Shelley genesis file from a genesis template and genesis/delegation/spending keys."
-          )
-      , Opt.command "key-gen"
+      [ Opt.command "key-gen"
           (Opt.info pKeyGen
           $ Opt.progDesc "Generate Shelley era crypto keys."
           )
@@ -149,12 +149,10 @@ parseShelleyCommands =
           (Opt.info (ShelleySystem <$> pShelleySystemCmd) $ Opt.progDesc "Shelley system commands")
       , Opt.command "devops"
           (Opt.info (ShelleyDevOps <$> pShelleyDevOpsCmd) $ Opt.progDesc "Shelley devops commands")
+      , Opt.command "genesis"
+          (Opt.info (ShelleyGenesis <$> pShelleyGenesisCmd) $ Opt.progDesc "Shelley genesis block commands")
       ]
   where
-    pGenesisCommand :: Parser ShelleyCommand
-    pGenesisCommand =
-      ShelleyCreateGenesis <$> pGenesisDir <*> pMaybeSystemStart <*> pInitialSupply
-
     pKeyGen :: Parser ShelleyCommand
     pKeyGen =
       ShelleyKeyGenerate <$> pOutputFile
@@ -167,36 +165,6 @@ parseShelleyCommands =
     pVRFKeyGen =
       ShelleyVRFKeyPairGenerate <$> pVerificationKeyFile <*> pSigningKeyFile
 
-    pGenesisDir :: Parser GenesisDir
-    pGenesisDir =
-      GenesisDir <$>
-        Opt.strOption
-          (  Opt.long "genesis-dir"
-          <> Opt.metavar "DIR"
-          <> Opt.help "The genesis directory containing the genesis template and required genesis/delegation/spending keys."
-          )
-
-    pMaybeSystemStart :: Parser (Maybe SystemStart)
-    pMaybeSystemStart =
-      Opt.optional $
-        SystemStart . convertTime <$>
-          Opt.option Opt.auto
-            (  Opt.long "start-time"
-            <> Opt.metavar "EPOCH_SECS"
-            <> Opt.help "The genesis start time in POSIX seconds. If unspecified, will be the current time +30 seconds."
-            )
-
-    convertTime :: Integer -> UTCTime
-    convertTime = posixSecondsToUTCTime . realToFrac
-
-    pInitialSupply :: Parser Lovelace
-    pInitialSupply =
-      either (Prelude.error . Prelude.show) identity . mkLovelace <$>
-        Opt.option Opt.auto
-          (  Opt.long "supply"
-          <> Opt.metavar "LOVELACE"
-          <> Opt.help "The initial coin supply in Lovelace which will be evenly distributed across initial stake holders."
-          )
 
 pShelleyPoolCmd :: Parser ShelleyPoolCmd
 pShelleyPoolCmd =
@@ -369,6 +337,74 @@ pShelleyDevOpsCmd =
           <> Opt.metavar "FILE"
           <> Opt.help "The genesis key file."
           )
+
+
+pShelleyGenesisCmd :: Parser ShelleyGenesisCmd
+pShelleyGenesisCmd =
+  Opt.subparser $
+    mconcat
+      [ Opt.command "key-gen-genesis"
+          (Opt.info pGenesisKeyGen $
+             Opt.progDesc "Create a Shelley genesis key pair")
+      , Opt.command "key-gen-delegate"
+          (Opt.info pGenesisDelegateKeyGen $
+             Opt.progDesc "Create a Shelley genesis delegate key pair")
+      , Opt.command "key-gen-utxo"
+          (Opt.info pGenesisUTxOKeyGen $
+             Opt.progDesc "Create a Shelley genesis UTxO key pair")
+      , Opt.command "create-genesis"
+          (Opt.info pGenesisCommand $
+             Opt.progDesc ("Create a Shelley genesis file from a genesis "
+                        ++ "template and genesis/delegation/spending keys."))
+      ]
+  where
+    pGenesisKeyGen :: Parser ShelleyGenesisCmd
+    pGenesisKeyGen =
+      GenesisKeyGen <$> pOutputFile <*> pOutputFile
+
+    pGenesisDelegateKeyGen :: Parser ShelleyGenesisCmd
+    pGenesisDelegateKeyGen =
+      GenesisKeyGen <$> pOutputFile <*> pOutputFile
+
+    pGenesisUTxOKeyGen :: Parser ShelleyGenesisCmd
+    pGenesisUTxOKeyGen =
+      GenesisKeyGen <$> pOutputFile <*> pOutputFile
+
+    pGenesisCommand :: Parser ShelleyGenesisCmd
+    pGenesisCommand =
+      GenesisCreate <$> pGenesisDir <*> pMaybeSystemStart <*> pInitialSupply
+
+    pGenesisDir :: Parser GenesisDir
+    pGenesisDir =
+      GenesisDir <$>
+        Opt.strOption
+          (  Opt.long "genesis-dir"
+          <> Opt.metavar "DIR"
+          <> Opt.help "The genesis directory containing the genesis template and required genesis/delegation/spending keys."
+          )
+
+    pMaybeSystemStart :: Parser (Maybe SystemStart)
+    pMaybeSystemStart =
+      Opt.optional $
+        SystemStart . convertTime <$>
+          Opt.option Opt.auto
+            (  Opt.long "start-time"
+            <> Opt.metavar "EPOCH_SECS"
+            <> Opt.help "The genesis start time in POSIX seconds. If unspecified, will be the current time +30 seconds."
+            )
+
+    convertTime :: Integer -> UTCTime
+    convertTime = posixSecondsToUTCTime . realToFrac
+
+    pInitialSupply :: Parser Lovelace
+    pInitialSupply =
+      either (Prelude.error . Prelude.show) identity . mkLovelace <$>
+        Opt.option Opt.auto
+          (  Opt.long "supply"
+          <> Opt.metavar "LOVELACE"
+          <> Opt.help "The initial coin supply in Lovelace which will be evenly distributed across initial stake holders."
+          )
+
 
 pShelleySystemCmd :: Parser ShelleySystemCmd
 pShelleySystemCmd =
