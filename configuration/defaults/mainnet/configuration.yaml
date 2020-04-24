@@ -155,7 +155,7 @@ TraceBlockFetchDecisions: False
 TraceBlockFetchProtocol: False
 
 # Serialised Trace BlockFetch protocol messages.
-TraceBlockFetchProtocolSerialised: False
+TraceBlockFetchProtocolSerialised: True
 
 # Trace BlockFetch server.
 TraceBlockFetchServer: False
@@ -173,7 +173,7 @@ TraceChainSyncBlockServer: False
 TraceChainSyncHeaderServer: False
 
 # Trace ChainSync protocol messages.
-TraceChainSyncProtocol: False
+TraceChainSyncProtocol: True
 
 # Trace DNS Resolver messages.
 TraceDNSResolver: True
@@ -194,7 +194,7 @@ TraceForge: True
 TraceHandshake: False
 
 # Trace IP Subscription messages.
-TraceIpSubscription: True
+TraceIpSubscription: False
 
 # Trace local ChainSync protocol messages.
 TraceLocalChainSyncProtocol: False
