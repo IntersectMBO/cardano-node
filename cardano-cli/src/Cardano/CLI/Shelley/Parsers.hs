@@ -70,6 +70,7 @@ data ShelleyCommand
   = ShelleyKeyGenerate OutputFile
   | ShelleyKESKeyPairGenerate VerificationKeyFile SigningKeyFile Natural
   | ShelleyVRFKeyPairGenerate VerificationKeyFile SigningKeyFile
+  | ShelleyAddress ShelleyAddressCmd
   | ShelleyPool ShelleyPoolCmd
   | ShelleyStakeAddress ShelleyStakeAddressCmd
   | ShelleyTransaction ShelleyTransactionCmd
@@ -89,6 +90,13 @@ data ShelleyQueryCmd
   | QueryTip NodeAddress
   | QueryVersion NodeAddress
   | QueryStatus NodeAddress
+  deriving (Eq, Show)
+
+data ShelleyAddressCmd
+  = AddressKeyGen OutputFile OutputFile
+  | AddressKeyHash VerificationKeyFile
+  | AddressBuild          --TODO
+  | AddressBuildMultiSig  --TODO
   deriving (Eq, Show)
 
 data ShelleyPoolCmd
@@ -134,6 +142,8 @@ parseShelleyCommands =
           (Opt.info pVRFKeyGen
           $ Opt.progDesc "Generate Shelley era VRF keys."
           )
+      , Opt.command "address"
+          (Opt.info (ShelleyAddress <$> pAddress) $ Opt.progDesc "Shelley address commands")
       , Opt.command "stake-pool"
           (Opt.info (ShelleyPool <$> pShelleyPoolCmd) $ Opt.progDesc "Shelley stake pool commands")
       , Opt.command "stake-address"
@@ -194,6 +204,33 @@ pSigningKeyFile =
      <> Opt.metavar "FILEPATH"
      <> Opt.help "Output filepath of the signing key."
      )
+
+pAddress :: Parser ShelleyAddressCmd
+pAddress =
+  Opt.subparser $
+    mconcat
+      [ Opt.command "key-gen"
+          (Opt.info pAddressKeyGen $ Opt.progDesc "Create a single address key pair")
+      , Opt.command "key-hash"
+          (Opt.info pAddressKeyHash $ Opt.progDesc "Show the hash of an address key")
+      , Opt.command "build"
+          (Opt.info pAddressBuild $ Opt.progDesc "Build an address")
+      , Opt.command "build-multisig"
+          (Opt.info pAddressBuildMultiSig $ Opt.progDesc "Build a multi-sig address")
+      ]
+  where
+    pAddressKeyGen :: Parser ShelleyAddressCmd
+    pAddressKeyGen = AddressKeyGen <$> pOutputFile <*> pOutputFile
+
+    pAddressKeyHash :: Parser ShelleyAddressCmd
+    pAddressKeyHash = AddressKeyHash <$> pVerificationKeyFile
+
+    pAddressBuild :: Parser ShelleyAddressCmd
+    pAddressBuild = pure AddressBuild
+
+    pAddressBuildMultiSig :: Parser ShelleyAddressCmd
+    pAddressBuildMultiSig = pure AddressBuildMultiSig
+
 
 pStakeAddress :: Parser ShelleyStakeAddressCmd
 pStakeAddress =
