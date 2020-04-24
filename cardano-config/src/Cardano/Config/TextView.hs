@@ -48,11 +48,11 @@ import           Control.Monad.Trans.Except.Extra
 
 newtype TextViewType
   = TextViewType { unTextViewType :: ByteString }
-  deriving (Eq, IsString, Show)
+  deriving (Eq, IsString, Show, Semigroup)
 
 newtype TextViewTitle
   = TextViewTitle { unTextViewTitle :: ByteString }
-  deriving (Eq, IsString, Show)
+  deriving (Eq, IsString, Show, Semigroup)
 
 -- | A 'TextView' is a structured envalope for serialised binary values
 -- with an external format with a semi-readable textual format.

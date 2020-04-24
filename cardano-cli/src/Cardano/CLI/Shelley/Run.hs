@@ -18,6 +18,10 @@ import           Control.Monad.Trans.Except.Extra (firstExceptT)
 import           Cardano.CLI.Key (VerificationKeyFile(..))
 import           Cardano.CLI.Ops (CliError (..))
 import           Cardano.CLI.Shelley.Parsers
+
+import           Cardano.Config.Shelley.ColdKeys
+                   (KeyType(..), OperatorKeyRole(..),
+                    genKeyPair, writeSigningKey, writeVerKey)
 import           Cardano.Config.Shelley.KES
                    (genKESKeyPair, writeKESSigningKey, writeKESVerKey)
 import           Cardano.Config.Shelley.VRF
@@ -59,6 +63,7 @@ runTransactionCmd cmd = liftIO $ putStrLn $ "runTransactionCmd: " ++ show cmd
 
 
 runNodeCmd :: NodeCmd -> ExceptT CliError IO ()
+runNodeCmd (NodeKeyGenCold vk sk)     = runNodeKeyGenCold vk sk
 runNodeCmd (NodeKeyGenKES  vk sk dur) = runNodeKeyGenKES  vk sk dur
 runNodeCmd (NodeKeyGenVRF  vk sk)     = runNodeKeyGenVRF  vk sk
 runNodeCmd cmd = liftIO $ putStrLn $ "runNodeCmd: " ++ show cmd
@@ -91,6 +96,17 @@ runGenesisCmd cmd = liftIO $ putStrLn $ "runGenesisCmd: " ++ show cmd
 --
 -- Node command implementations
 --
+
+runNodeKeyGenCold :: VerificationKeyFile -> SigningKeyFile
+                  -> ExceptT CliError IO ()
+runNodeKeyGenCold (VerificationKeyFile vkeyPath) (SigningKeyFile skeyPath) =
+    firstExceptT KeyCliError $ do
+      (vkey, skey) <- liftIO genKeyPair
+      writeVerKey     keyType vkeyPath vkey
+      writeSigningKey keyType skeyPath skey
+  where
+    keyType = OperatorKey StakePoolOperatorKey
+
 
 runNodeKeyGenKES :: VerificationKeyFile -> SigningKeyFile -> Natural
                  -> ExceptT CliError IO ()

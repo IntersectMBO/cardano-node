@@ -103,6 +103,7 @@ import           Cardano.Config.Protocol
                    (Protocol(..), ProtocolInstantiationError,
                     SomeConsensusProtocol(..), mkConsensusProtocol,
                     renderProtocolInstantiationError)
+import           Cardano.Config.Shelley.ColdKeys (KeyError, renderKeyError)
 import           Cardano.Config.Shelley.KES (KESError, renderKESError)
 import           Cardano.Config.Shelley.VRF (VRFError, renderVRFError)
 import           Cardano.Config.Types
@@ -255,6 +256,7 @@ data CliError
   | GenesisSpecError !Text
   | IssueUtxoError !RealPBFTError
   | KESCliError KESError
+  | KeyCliError KeyError
   | NoBlocksFound !FilePath
   | NodeSubmitTxError !RealPBFTError
   | NotEnoughTxInputs
@@ -305,6 +307,8 @@ instance Show CliError where
     = "Error SpendUTxO command: " <> (T.unpack $ renderRealPBFTError err)
   show (KESCliError err)
     = show $ renderKESError err
+  show (KeyCliError err)
+    = T.unpack $ renderKeyError err
   show (NoBlocksFound fp)
     = "Error while creating update proposal, no blocks found in: " <> fp
   show (NodeSubmitTxError err)
