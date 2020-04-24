@@ -61,6 +61,13 @@ data ShelleyDevOpsCmd
   | DevOpsColdKeys GenesisKeyFile     -- { genesis :: GenesisKeyFile, keys :: [PubKey], nodeAddr :: NodeAddress }
   deriving (Eq, Show)
 
+data ShelleyNodeCmd
+  = NodeKeyGenCold VerificationKeyFile SigningKeyFile
+  | NodeKeyGenKES  VerificationKeyFile SigningKeyFile Natural
+  | NodeKeyGenVRF  VerificationKeyFile SigningKeyFile
+  | NodeIssueOpCert --TODO
+  deriving (Eq, Show)
+
 data ShelleyGenesisCmd
   = GenesisCreate GenesisDir (Maybe SystemStart) Lovelace
   | GenesisKeyGen OutputFile OutputFile
@@ -74,6 +81,7 @@ data ShelleyCommand
   | ShelleyPool ShelleyPoolCmd
   | ShelleyStakeAddress ShelleyStakeAddressCmd
   | ShelleyTransaction ShelleyTransactionCmd
+  | ShelleyNode  ShelleyNodeCmd
   | ShelleyQuery ShelleyQueryCmd
   | ShelleyBlock ShelleyBlockCmd
   | ShelleySystem ShelleySystemCmd
@@ -150,6 +158,8 @@ parseShelleyCommands =
           (Opt.info (ShelleyStakeAddress <$> pStakeAddress) $ Opt.progDesc "Shelley stake address commands")
       , Opt.command "transaction"
           (Opt.info (ShelleyTransaction <$> pTransaction) $ Opt.progDesc "Shelley transaction commands")
+      , Opt.command "node"
+          (Opt.info (ShelleyNode <$> pShelleyNodeCmd) $ Opt.progDesc "Shelley node operaton commands")
       , Opt.command "query"
           (Opt.info (ShelleyQuery <$> pShelleyQueryCmd) $ Opt.progDesc "Shelley node query commands")
       , Opt.command "block"
@@ -305,6 +315,42 @@ pTransaction =
 
     pTransactionInfo  :: Parser ShelleyTransactionCmd
     pTransactionInfo = pure TxInfo
+
+
+pShelleyNodeCmd :: Parser ShelleyNodeCmd
+pShelleyNodeCmd =
+  Opt.subparser $
+    mconcat
+      [ Opt.command "key-gen"
+          (Opt.info pKeyGenOperator $
+             Opt.progDesc "Create a key pair for node operator's offline key")
+      , Opt.command "key-gen-KES"
+          (Opt.info pKeyGenKES $
+             Opt.progDesc "Create a key pair for a node KES operational key")
+      , Opt.command "key-gen-VRF"
+          (Opt.info pKeyGenVRF $
+             Opt.progDesc "Create a key pair for a node VRF operational key")
+      , Opt.command "issue-op-cert"
+          (Opt.info pIssueOpCert $
+             Opt.progDesc "Issue a node operational certificate")
+      ]
+  where
+    pKeyGenOperator :: Parser ShelleyNodeCmd
+    pKeyGenOperator =
+      NodeKeyGenCold <$> pVerificationKeyFile <*> pSigningKeyFile
+
+    pKeyGenKES :: Parser ShelleyNodeCmd
+    pKeyGenKES =
+      NodeKeyGenKES <$> pVerificationKeyFile <*> pSigningKeyFile <*> pDuration
+
+    pKeyGenVRF :: Parser ShelleyNodeCmd
+    pKeyGenVRF =
+      NodeKeyGenVRF <$> pVerificationKeyFile <*> pSigningKeyFile
+
+    pIssueOpCert :: Parser ShelleyNodeCmd
+    pIssueOpCert =
+      pure NodeIssueOpCert
+
 
 pShelleyQueryCmd :: Parser ShelleyQueryCmd
 pShelleyQueryCmd =
