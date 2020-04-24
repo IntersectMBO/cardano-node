@@ -6,7 +6,6 @@
 {-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
 {-# LANGUAGE TupleSections         #-}
-{-# LANGUAGE TypeApplications      #-}
 {-# LANGUAGE UndecidableInstances  #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans  #-}
@@ -23,6 +22,7 @@ module Cardano.Tracing.Tracers
 import           Cardano.Prelude hiding (atomically)
 import           Prelude (String)
 
+import           GHC.Clock (getMonotonicTimeNSec)
 import           Control.Tracer
 
 import           Codec.CBOR.Read (DeserialiseFailure)
@@ -151,17 +151,17 @@ instance ElidingTracer (WithSeverity (ChainDB.TraceEvent blk)) where
   isEquivalent (WithSeverity _s1 (ChainDB.TraceGCEvent _ev1))
                (WithSeverity _s2 (ChainDB.TraceAddBlockEvent _)) = True
   isEquivalent (WithSeverity _s1 (ChainDB.TraceAddBlockEvent _))
-               (WithSeverity _s2 (ChainDB.TraceGCEvent _ev2)) = True   
+               (WithSeverity _s2 (ChainDB.TraceGCEvent _ev2)) = True
   isEquivalent (WithSeverity _s1 (ChainDB.TraceGCEvent _ev1))
                (WithSeverity _s2 (ChainDB.TraceCopyToImmDBEvent _)) = True
   isEquivalent (WithSeverity _s1 (ChainDB.TraceCopyToImmDBEvent _))
-               (WithSeverity _s2 (ChainDB.TraceGCEvent _ev2)) = True   
+               (WithSeverity _s2 (ChainDB.TraceGCEvent _ev2)) = True
   isEquivalent (WithSeverity _s1 (ChainDB.TraceCopyToImmDBEvent _))
                (WithSeverity _s2 (ChainDB.TraceAddBlockEvent _)) = True
   isEquivalent (WithSeverity _s1 (ChainDB.TraceAddBlockEvent _))
-               (WithSeverity _s2 (ChainDB.TraceCopyToImmDBEvent _)) = True   
+               (WithSeverity _s2 (ChainDB.TraceCopyToImmDBEvent _)) = True
   isEquivalent (WithSeverity _s1 (ChainDB.TraceCopyToImmDBEvent _))
-               (WithSeverity _s2 (ChainDB.TraceCopyToImmDBEvent _)) = True   
+               (WithSeverity _s2 (ChainDB.TraceCopyToImmDBEvent _)) = True
   isEquivalent _ _ = False
   -- the types to be elided
   doelide (WithSeverity _ (ChainDB.TraceLedgerReplayEvent _)) = True
@@ -179,10 +179,14 @@ instance ElidingTracer (WithSeverity (ChainDB.TraceEvent blk)) where
   doelide (WithSeverity _ (ChainDB.TraceCopyToImmDBEvent _)) = True
   doelide _ = False
   conteliding _tverb _tr _ (Nothing, _count) = return (Nothing, 0)
-  conteliding tverb tr ev@(WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.AddedToCurrentChain _ _ _))) (_old, count) = do
-      when (count > 0 && count `mod` 250 == 0) $ do  -- report every 250th block
+  conteliding tverb tr ev@(WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.AddedToCurrentChain _pt _ _))) (_old, oldt) = do
+      tnow <- fromIntegral <$> getMonotonicTimeNSec
+      let deltat = tnow - oldt
+      if (deltat > 1250000000)  -- report at most every 1250 ms
+        then do
           traceWith (toLogObject' tverb tr) ev
-      return (Just ev, count + 1)
+          return (Just ev, tnow)
+        else return (Just ev, oldt)
   conteliding _tverb _tr ev@(WithSeverity _ (ChainDB.TraceAddBlockEvent _)) (_old, count) =
       return (Just ev, count)
   conteliding _tverb _tr ev@(WithSeverity _ (ChainDB.TraceCopyToImmDBEvent _)) (_old, count) =
@@ -193,7 +197,7 @@ instance ElidingTracer (WithSeverity (ChainDB.TraceEvent blk)) where
       let slotno = toInteger $ unSlotNo (realPointSlot pt)
           endslot = toInteger $ withOrigin 0 unSlotNo (pointSlot replayTo)
           startslot = if count == 0 then slotno else toInteger count
-          progress :: Double = (fromInteger (slotno - startslot) * 100.0) / fromInteger ((max slotno endslot) - startslot)
+          progress :: Double = (fromInteger slotno * 100.0) / fromInteger (max slotno endslot)
       when (count > 0 && (slotno - startslot) `mod` 1000 == 0) $ do  -- report every 1000th slot
           meta <- mkLOMeta (getSeverityAnnotation ev) (getPrivacyAnnotation ev)
           traceNamedObject tr (meta, LogValue "block replay progress (%)" (PureD $ (fromInteger $ round (progress * 10.0)) / 10.0))
@@ -215,7 +219,7 @@ instance (StandardHash header, Eq peer) => ElidingTracer
     in any checkDecision peers
   conteliding _tverb _tr _ (Nothing, _count) = return (Nothing, 0)
   conteliding tverb tr ev (_old, count) = do
-      when (count > 0 && count `mod` 1000 == 0) $ do  -- report every 1000th message
+      when (count > 0 && count `mod` 1000 == 0) $  -- report every 1000th message
           traceWith (toLogObject' tverb tr) ev
       return (Just ev, count + 1)
 
@@ -319,14 +323,14 @@ mkTracers traceConf tracer = do
       if traceEnabled tc getter then tracer' else nullTracer
 
     teeTraceChainTip :: TracingVerbosity
-                     -> MVar (Maybe (WithSeverity (ChainDB.TraceEvent blk)), Int)
+                     -> MVar (Maybe (WithSeverity (ChainDB.TraceEvent blk)), Integer)
                      -> Trace IO Text
                      -> Tracer IO (WithSeverity (ChainDB.TraceEvent blk))
     teeTraceChainTip tverb elided tr = Tracer $ \ev -> do
         traceWith (teeTraceChainTip' tr) ev
         traceWith (teeTraceChainTipElide tverb elided tr) ev
     teeTraceChainTipElide :: TracingVerbosity
-                          -> MVar (Maybe (WithSeverity (ChainDB.TraceEvent blk)), Int)
+                          -> MVar (Maybe (WithSeverity (ChainDB.TraceEvent blk)), Integer)
                           -> Trace IO Text
                           -> Tracer IO (WithSeverity (ChainDB.TraceEvent blk))
     teeTraceChainTipElide = elideToLogObject
@@ -364,7 +368,7 @@ mkTracers traceConf tracer = do
 
     teeTraceBlockFetchDecision
         :: TracingVerbosity
-        -> MVar (Maybe (WithSeverity [TraceLabelPeer peer (FetchDecision [Point (Header blk)])]),Int)
+        -> MVar (Maybe (WithSeverity [TraceLabelPeer peer (FetchDecision [Point (Header blk)])]),Integer)
         -> Trace IO Text
         -> Tracer IO (WithSeverity [TraceLabelPeer peer (FetchDecision [Point (Header blk)])])
     teeTraceBlockFetchDecision tverb eliding tr = Tracer $ \ev -> do
@@ -380,7 +384,7 @@ mkTracers traceConf tracer = do
           traceNamedObject tr' (meta, LogValue "connectedPeers" . PureI $ fromIntegral $ length peers)
     teeTraceBlockFetchDecisionElide
         :: TracingVerbosity
-        -> MVar (Maybe (WithSeverity [TraceLabelPeer peer (FetchDecision [Point (Header blk)])]),Int)
+        -> MVar (Maybe (WithSeverity [TraceLabelPeer peer (FetchDecision [Point (Header blk)])]),Integer)
         -> Trace IO Text
         -> Tracer IO (WithSeverity [TraceLabelPeer peer (FetchDecision [Point (Header blk)])])
     teeTraceBlockFetchDecisionElide = elideToLogObject
@@ -490,7 +494,7 @@ mkTracers traceConf tracer = do
               LogValue "nodeIsLeader" $ PureI $ fromIntegral $ unSlotNo slot
 
     mkConsensusTracers
-        :: MVar (Maybe (WithSeverity [TraceLabelPeer peer (FetchDecision [Point (Header blk)])]),Int)
+        :: MVar (Maybe (WithSeverity [TraceLabelPeer peer (FetchDecision [Point (Header blk)])]),Integer)
         -> (OutcomeEnhancedTracer IO (Consensus.TraceForgeEvent blk (GenTx blk)) -> Tracer IO (Consensus.TraceForgeEvent blk (GenTx blk)))
         -> ForgeTracers
         -> Consensus.Tracers' peer localPeer blk (Tracer IO)
