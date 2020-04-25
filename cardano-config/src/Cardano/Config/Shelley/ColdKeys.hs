@@ -27,17 +27,21 @@ import           Ouroboros.Consensus.Shelley.Protocol.Crypto
 import           Cardano.Config.TextView
 
 
-data KeyType = GenesisKey | OperatorKey OperatorKeyRole
+data KeyType = GenesisKey
+             | GenesisUTxOKey
+             | OperatorKey OperatorKeyRole
 
 data OperatorKeyRole = GenesisDelegateKey | StakePoolOperatorKey
 
 
 renderKeyType :: KeyType -> TextViewType
-renderKeyType GenesisKey    = "Genesis"
-renderKeyType OperatorKey{} = "Node operator"
+renderKeyType GenesisKey     = "Genesis"
+renderKeyType GenesisUTxOKey = "Genesis UTxO"
+renderKeyType OperatorKey{}  = "Node operator"
 
 renderKeyRole :: KeyType -> TextViewTitle
 renderKeyRole GenesisKey                         = "Genesis key"
+renderKeyRole GenesisUTxOKey                     = "Genesis initial UTxO key"
 renderKeyRole (OperatorKey GenesisDelegateKey)   = "Genesis delegate operator key"
 renderKeyRole (OperatorKey StakePoolOperatorKey) = "Stake pool operator key"
 

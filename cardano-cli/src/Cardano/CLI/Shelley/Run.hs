@@ -92,7 +92,8 @@ runDevOpsCmd cmd = liftIO $ putStrLn $ "runDevOpsCmd: " ++ show cmd
 runGenesisCmd :: GenesisCmd -> ExceptT CliError IO ()
 runGenesisCmd (GenesisKeyGenGenesis  vk sk) = runGenesisKeyGenGenesis  vk sk
 runGenesisCmd (GenesisKeyGenDelegate vk sk) = runGenesisKeyGenDelegate vk sk
-runGenesisCmd cmd = liftIO $ putStrLn $ "runGenesisCmd: " ++ show cmd
+runGenesisCmd (GenesisKeyGenUTxO     vk sk) = runGenesisKeyGenUTxO     vk sk
+runGenesisCmd cmd@GenesisKeyGenUTxO{} = liftIO $ putStrLn $ "runGenesisCmd: " ++ show cmd
 
 
 --
@@ -101,13 +102,7 @@ runGenesisCmd cmd = liftIO $ putStrLn $ "runGenesisCmd: " ++ show cmd
 
 runNodeKeyGenCold :: VerificationKeyFile -> SigningKeyFile
                   -> ExceptT CliError IO ()
-runNodeKeyGenCold (VerificationKeyFile vkeyPath) (SigningKeyFile skeyPath) =
-    firstExceptT KeyCliError $ do
-      (vkey, skey) <- liftIO genKeyPair
-      writeVerKey     keyType vkeyPath vkey
-      writeSigningKey keyType skeyPath skey
-  where
-    keyType = OperatorKey StakePoolOperatorKey
+runNodeKeyGenCold = runColdKeyGen (OperatorKey StakePoolOperatorKey)
 
 
 runNodeKeyGenKES :: VerificationKeyFile -> SigningKeyFile -> Natural
@@ -135,22 +130,23 @@ runNodeKeyGenVRF (VerificationKeyFile vkeyPath) (SigningKeyFile skeyPath) =
 
 runGenesisKeyGenGenesis :: VerificationKeyFile -> SigningKeyFile
                         -> ExceptT CliError IO ()
-runGenesisKeyGenGenesis (VerificationKeyFile vkeyPath) (SigningKeyFile skeyPath) =
-    firstExceptT KeyCliError $ do
-      (vkey, skey) <- liftIO genKeyPair
-      writeVerKey     keyType vkeyPath vkey
-      writeSigningKey keyType skeyPath skey
-  where
-    keyType = GenesisKey
+runGenesisKeyGenGenesis = runColdKeyGen GenesisKey
 
 
 runGenesisKeyGenDelegate :: VerificationKeyFile -> SigningKeyFile
                          -> ExceptT CliError IO ()
-runGenesisKeyGenDelegate (VerificationKeyFile vkeyPath) (SigningKeyFile skeyPath) =
+runGenesisKeyGenDelegate = runColdKeyGen (OperatorKey GenesisDelegateKey)
+
+
+runGenesisKeyGenUTxO :: VerificationKeyFile -> SigningKeyFile
+                     -> ExceptT CliError IO ()
+runGenesisKeyGenUTxO = runColdKeyGen GenesisUTxOKey
+
+
+runColdKeyGen :: KeyType -> VerificationKeyFile -> SigningKeyFile
+                 -> ExceptT CliError IO ()
+runColdKeyGen keyType (VerificationKeyFile vkeyPath) (SigningKeyFile skeyPath) =
     firstExceptT KeyCliError $ do
       (vkey, skey) <- liftIO genKeyPair
       writeVerKey     keyType vkeyPath vkey
       writeSigningKey keyType skeyPath skey
-  where
-    keyType = OperatorKey GenesisDelegateKey
-
