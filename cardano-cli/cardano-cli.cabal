@@ -46,6 +46,7 @@ library
                      , cardano-binary
                      , cardano-config
                      , cardano-crypto
+                     , cardano-crypto-class
                      , cardano-crypto-wrapper
                      , cardano-ledger
                      , cardano-node
@@ -66,6 +67,7 @@ library
                      , ouroboros-consensus-byron
                      , ouroboros-consensus-cardano
                      , ouroboros-network
+                     , shelley-spec-ledger
                      , text
                      , time
                      , transformers

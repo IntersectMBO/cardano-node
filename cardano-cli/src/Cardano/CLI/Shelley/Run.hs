@@ -12,16 +12,20 @@ module Cardano.CLI.Shelley.Run
 
 import           Cardano.Prelude hiding (option, trace)
 
+import qualified Data.ByteString.Char8 as BS
+
 import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT)
+
+import qualified Shelley.Spec.Ledger.Keys as Ledger
+import qualified Cardano.Crypto.Hash.Class as Crypto
+import qualified Cardano.Crypto.DSIGN.Class as Crypto
 
 import           Cardano.CLI.Key (VerificationKeyFile(..))
 import           Cardano.CLI.Ops (CliError (..))
 import           Cardano.CLI.Shelley.Parsers
 
 import           Cardano.Config.Shelley.ColdKeys
-                   (KeyType(..), OperatorKeyRole(..),
-                    genKeyPair, writeSigningKey, writeVerKey)
 import           Cardano.Config.Shelley.KES
                    (genKESKeyPair, writeKESSigningKey, writeKESVerKey)
 import           Cardano.Config.Shelley.VRF
@@ -93,7 +97,9 @@ runGenesisCmd :: GenesisCmd -> ExceptT CliError IO ()
 runGenesisCmd (GenesisKeyGenGenesis  vk sk) = runGenesisKeyGenGenesis  vk sk
 runGenesisCmd (GenesisKeyGenDelegate vk sk) = runGenesisKeyGenDelegate vk sk
 runGenesisCmd (GenesisKeyGenUTxO     vk sk) = runGenesisKeyGenUTxO     vk sk
-runGenesisCmd cmd@GenesisKeyGenUTxO{} = liftIO $ putStrLn $ "runGenesisCmd: " ++ show cmd
+runGenesisCmd (GenesisKeyHash        vk)    = runGenesisKeyHash        vk
+runGenesisCmd (GenesisVerKey         vk sk) = runGenesisVerKey         vk sk
+runGenesisCmd cmd@GenesisCreate{} = liftIO $ putStrLn $ "runGenesisCmd: " ++ show cmd
 
 
 --
@@ -143,10 +149,34 @@ runGenesisKeyGenUTxO :: VerificationKeyFile -> SigningKeyFile
 runGenesisKeyGenUTxO = runColdKeyGen GenesisUTxOKey
 
 
-runColdKeyGen :: KeyType -> VerificationKeyFile -> SigningKeyFile
-                 -> ExceptT CliError IO ()
-runColdKeyGen keyType (VerificationKeyFile vkeyPath) (SigningKeyFile skeyPath) =
+runColdKeyGen :: KeyRole -> VerificationKeyFile -> SigningKeyFile
+              -> ExceptT CliError IO ()
+runColdKeyGen role (VerificationKeyFile vkeyPath) (SigningKeyFile skeyPath) =
     firstExceptT KeyCliError $ do
       (vkey, skey) <- liftIO genKeyPair
-      writeVerKey     keyType vkeyPath vkey
-      writeSigningKey keyType skeyPath skey
+      writeVerKey     role vkeyPath vkey
+      writeSigningKey role skeyPath skey
+
+
+runGenesisKeyHash :: VerificationKeyFile -> ExceptT CliError IO ()
+runGenesisKeyHash (VerificationKeyFile vkeyPath) =
+    firstExceptT KeyCliError $ do
+      (vkey, _role) <- readVerKeySomeRole genesisKeyRoles vkeyPath
+      let Ledger.KeyHash khash = Ledger.hashKey vkey
+      liftIO $ BS.putStrLn $ Crypto.getHashBytesAsHex khash
+
+
+runGenesisVerKey :: VerificationKeyFile -> SigningKeyFile
+                 -> ExceptT CliError IO ()
+runGenesisVerKey (VerificationKeyFile vkeyPath) (SigningKeyFile skeyPath) =
+    firstExceptT KeyCliError $ do
+      (skey, role) <- readSigningKeySomeRole genesisKeyRoles skeyPath
+      let vkey = Ledger.VKey (Crypto.deriveVerKeyDSIGN sk)
+                   where Ledger.SKey sk = skey
+      writeVerKey role vkeyPath vkey
+
+genesisKeyRoles :: [KeyRole]
+genesisKeyRoles = [ GenesisKey
+                  , GenesisUTxOKey
+                  , OperatorKey GenesisDelegateKey ]
+

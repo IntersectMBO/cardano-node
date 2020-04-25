@@ -12,6 +12,7 @@ module Cardano.Config.TextView
   , parseTextView
   , renderTextView
   , expectTextViewOfType
+  , expectTextViewOfTypes
   , decodeFromTextView
   , encodeToTextView
   , textShow
@@ -39,6 +40,7 @@ import           Data.ByteString.Char8 (ByteString)
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Char (isSpace)
+import qualified Data.List as List
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 
@@ -74,7 +76,7 @@ data TextView = TextView
 --
 data TextViewError
   = TextViewFormatError !Text
-  | TextViewTypeError !TextViewType !TextViewType -- ^ expected, actual
+  | TextViewTypeError   ![TextViewType] !TextViewType -- ^ expected, actual
   | TextViewDecodeError !DecoderError
   deriving (Eq, Show)
 
@@ -106,7 +108,21 @@ expectTextViewOfType :: TextViewType -> TextView -> Either TextViewError ()
 expectTextViewOfType expectedType tv = do
     let actualType = tvType tv
     unless (expectedType == actualType) $
-      throwError (TextViewTypeError expectedType actualType)
+      throwError (TextViewTypeError [expectedType] actualType)
+
+
+-- | Check that the \"type\" of the 'TextView' is one of a list of expected
+-- types, and return which one it was.
+--
+expectTextViewOfTypes :: [(TextViewType, t)]
+                      -> TextView
+                      -> Either TextViewError t
+expectTextViewOfTypes expectedTypes tv =
+    let actualType = tvType tv in
+    case List.lookup actualType expectedTypes of
+      Nothing  -> throwError $ TextViewTypeError (map fst expectedTypes)
+                                                 actualType
+      Just tag -> return tag
 
 
 -- | Decode the body of a 'TextView' with a CBOR 'Decoder'.
@@ -148,9 +164,17 @@ renderTextViewFileError tvfe =
     TextViewFileError fp (TextViewFormatError err) ->
       "TextView format error at: " <> toS fp <> " Error: " <> toS err
 
-    TextViewFileError fp (TextViewTypeError expType actType) ->
-      "TextView type error at: " <> toS fp <> " Expected: " <> (toS . BS.unpack $ unTextViewType expType)
-                                           <> " Actual: " <> (toS . BS.unpack $ unTextViewType actType)
+    TextViewFileError fp (TextViewTypeError [expType] actType) ->
+        "TextView type error at: " <> toS fp
+     <> " Expected: " <> Text.decodeLatin1 (unTextViewType expType)
+     <> " Actual: " <> Text.decodeLatin1 (unTextViewType actType)
+
+    TextViewFileError fp (TextViewTypeError expTypes actType) ->
+        "TextView type error at: " <> toS fp
+     <> " Expected one of: "
+     <> Text.intercalate ", "
+          [ Text.decodeLatin1 (unTextViewType expType) | expType <- expTypes ]
+     <> " Actual: " <> (Text.decodeLatin1 (unTextViewType actType))
 
     TextViewFileError fp (TextViewDecodeError decErr)->
       "TextView file error at: " <> toS fp <> " Error: " <> textShow decErr
