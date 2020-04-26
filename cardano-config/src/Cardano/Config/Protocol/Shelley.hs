@@ -31,7 +31,7 @@ import           Ouroboros.Consensus.Shelley.Node
                    (TPraosLeaderCredentials(..))
 
 import           Shelley.Spec.Ledger.PParams (ProtVer(..))
-import           Shelley.Spec.Ledger.Keys (DiscVKey(..))
+import qualified Shelley.Spec.Ledger.Keys as Ledger
 
 import           Cardano.Config.Types
                    (NodeConfiguration(..), ProtocolFilepaths(..),
@@ -115,13 +115,13 @@ readLeaderCredentials (Just ProtocolFilepaths {
 
     (opcert, vkey) <- firstExceptT OCertError $ readOperationalCert certFile
     vrfKey <- firstExceptT VRFError $ readVRFSigningKey vrfFile
-    kesKey <- firstExceptT KESError $ readKESSigningKey kesFile
+    Ledger.SKeyES kesKey <- firstExceptT KESError $ readKESSigningKey kesFile
 
     return $ Just TPraosLeaderCredentials {
                tpraosLeaderCredentialsIsCoreNode =
                  TPraosIsCoreNode {
                    tpraosIsCoreNodeOpCert     = opcert,
-                   tpraosIsCoreNodeColdVerKey = DiscVKey vkey,
+                   tpraosIsCoreNodeColdVerKey = vkey,
                    tpraosIsCoreNodeSignKeyVRF = vrfKey
                  },
                tpraosLeaderCredentialsSignKey = kesKey

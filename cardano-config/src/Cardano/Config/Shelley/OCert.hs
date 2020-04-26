@@ -14,21 +14,20 @@ import qualified Cardano.Binary as CBOR
 import           Control.Monad.Trans.Except.Extra (firstExceptT, newExceptT)
 
 import           Cardano.Config.TextView
-import           Cardano.Crypto.DSIGN.Class
-import           Cardano.Crypto.KES.Class
-import           Shelley.Spec.Ledger.Keys (SKey(..), VKeyES(..), Sig, sign)
+import qualified Shelley.Spec.Ledger.Keys as Ledger
 import           Shelley.Spec.Ledger.OCert
 import           Shelley.Spec.Ledger.Serialization
 import           Ouroboros.Consensus.Shelley.Protocol.Crypto
-                   (TPraosStandardCrypto, DSIGN, KES)
+                   (TPraosStandardCrypto)
 
 
 
 -- Local aliases for shorter types:
-type VerKey   = VerKeyDSIGN  (DSIGN TPraosStandardCrypto)
-type SignKey  = SignKeyDSIGN (DSIGN TPraosStandardCrypto)
-type VerKeyES = VerKeyKES    (KES TPraosStandardCrypto)
+type VerKey   = Ledger.VKey TPraosStandardCrypto
+type SignKey  = Ledger.SKey TPraosStandardCrypto
+type VerKeyES = Ledger.VKeyES TPraosStandardCrypto
 type Cert     = OCert TPraosStandardCrypto
+type Sig      = Ledger.Sig TPraosStandardCrypto (VerKeyES, Natural, KESPeriod)
 
 encodeOperationalCert :: (Cert,VerKey) -> TextView
 encodeOperationalCert (oCert,vKey) =
@@ -55,9 +54,9 @@ signOperationalCertificate
   -> KESPeriod
   -> Cert
 signOperationalCertificate hotKESVerKey signingKey counter kesPeriod' =
-  let oCertSig :: Sig TPraosStandardCrypto (VKeyES TPraosStandardCrypto, Natural, KESPeriod)
-      oCertSig = sign (SKey signingKey) (VKeyES hotKESVerKey, counter, kesPeriod')
-   in OCert (VKeyES hotKESVerKey) counter kesPeriod' oCertSig
+  let oCertSig :: Sig
+      oCertSig = Ledger.sign signingKey (hotKESVerKey, counter, kesPeriod')
+   in OCert hotKESVerKey counter kesPeriod' oCertSig
 
 data OperationalCertError = ReadOperationalCertError !TextViewFileError
                           | WriteOpertaionalCertError !TextViewFileError
@@ -73,14 +72,15 @@ renderOperationalCertError err =
 
 readOperationalCert :: FilePath -> ExceptT OperationalCertError IO (Cert, VerKey)
 readOperationalCert fp = do
-  firstExceptT ReadOperationalCertError
-    . newExceptT $ readTextViewEncodedFile decodeOperationalCert fp
+    firstExceptT ReadOperationalCertError $ newExceptT $
+      readTextViewEncodedFile decodeOperationalCert fp
+
 
 writeOperationalCert :: FilePath -> Cert -> VerKey
                      -> ExceptT OperationalCertError IO ()
 writeOperationalCert fp oCert vkey =
-  firstExceptT WriteOpertaionalCertError
-    . newExceptT $ writeTextViewEncodedFile encodeOperationalCert fp (oCert, vkey)
+    firstExceptT WriteOpertaionalCertError $ newExceptT $
+      writeTextViewEncodedFile encodeOperationalCert fp (oCert, vkey)
 
 
 -- We encode a pair of the operational cert and the corresponding vkey.
