@@ -15,11 +15,14 @@ let
   };
   mkNodeScript = envConfig: let
     defaultConfig = {
-      consensusProtocol = "real-pbft";
+      consensusProtocol = "RealPBFT";
       hostAddr = "127.0.0.1";
       port = 3001;
       signingKey = null;
       delegationCertificate = null;
+      kesKey = null;
+      vrfKey = null;
+      operationalCertificate = null;
       nodeId = 0;
       stateDir = "state-node-${envConfig.name}";
       socketPath = "${config.stateDir}/node.socket";
@@ -62,6 +65,9 @@ let
         socketPath
         signingKey
         delegationCertificate
+        kesKey
+        vrfKey
+        operationalCertificate
         consensusProtocol
         hostAddr
         port

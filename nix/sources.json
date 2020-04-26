@@ -36,15 +36,15 @@
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "iohk-nix": {
-        "branch": "master",
+        "branch": "shelley-selfnode",
         "description": "nix scripts shared across projects",
         "homepage": null,
         "owner": "input-output-hk",
         "repo": "iohk-nix",
-        "rev": "ca80aeb33e8ca854dca77c1098a90136b9dabf2e",
-        "sha256": "0sp9v7l68xq1kg4862pcpjji918lgb6jlak4p6lpv2k4h93dypv2",
+        "rev": "667fc60294683a3eeac6c2593a4c3251071138df",
+        "sha256": "1hzva66hzjv4cdvyc8kc39bhf1r288pd8m3666f9dxcd9vavkrv3",
         "type": "tarball",
-        "url": "https://github.com/input-output-hk/iohk-nix/archive/ca80aeb33e8ca854dca77c1098a90136b9dabf2e.tar.gz",
+        "url": "https://github.com/input-output-hk/iohk-nix/archive/667fc60294683a3eeac6c2593a4c3251071138df.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     }
 }

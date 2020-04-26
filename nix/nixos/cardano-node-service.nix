@@ -11,7 +11,23 @@ let
   envConfig = cfg.environments.${cfg.environment}; systemdServiceName = "cardano-node${optionalString cfg.instanced "@"}";
   runtimeDir = if cfg.runtimeDir == null then cfg.stateDir else "/run/${cfg.runtimeDir}";
   mkScript = cfg: let
-    realNodeConfigFile = __trace cfg.environment (if cfg.environment == "selfnode" then "${cfg.stateDir}/config.yaml" else cfg.nodeConfigFile);
+    realNodeConfigFile = if (cfg.environment == "selfnode" || cfg.environment == "shelley_selfnode") then "${cfg.stateDir}/config.yaml" else cfg.nodeConfigFile;
+    consensusParams = {
+      RealPBFT = [
+        "${lib.optionalString (cfg.signingKey != null)
+          "--signing-key ${cfg.signingKey}"}"
+        "${lib.optionalString (cfg.delegationCertificate != null)
+          "--delegation-certificate ${cfg.delegationCertificate}"}"
+      ];
+      TPraos = [
+        "${lib.optionalString (cfg.vrfKey != null)
+          "--shelley-vrf-key ${cfg.vrfKey}"}"
+        "${lib.optionalString (cfg.kesKey != null)
+          "--shelley-kes-key ${cfg.kesKey}"}"
+        "${lib.optionalString (cfg.operationalCertificate != null)
+          "--shelley-operational-certificate ${cfg.operationalCertificate}"}"
+      ];
+    };
     exec = "cardano-node run";
         cmd = builtins.filter (x: x != "") [
           "${cfg.package}/bin/${exec}"
@@ -21,24 +37,27 @@ let
           "--topology ${cfg.topology}"
           "--host-addr ${cfg.hostAddr}"
           "--port ${toString cfg.port}"
-          "${lib.optionalString (cfg.signingKey != null)
-            "--signing-key ${cfg.signingKey}"}"
-          "${lib.optionalString (cfg.delegationCertificate != null)
-            "--delegation-certificate ${cfg.delegationCertificate}"}"
-        ] ++ cfg.extraArgs;
+        ] ++ consensusParams.${cfg.consensusProtocol} ++ cfg.extraArgs;
     in ''
         choice() { i=$1; shift; eval "echo \''${$((i + 1))}"; }
         echo "Starting ${exec}: ${concatStringsSep "\"\n   echo \"" cmd}"
         echo "..or, once again, in a single line:"
         echo "${toString cmd}"
-        ls -l ${runtimeDir} || true
         ${lib.optionalString (cfg.environment == "selfnode") ''
           echo "Wiping all data in ${cfg.stateDir}"
           rm -rf ${cfg.stateDir}/*
           GENESIS_FILE=$(${pkgs.jq}/bin/jq -r .GenesisFile < ${cfg.nodeConfigFile})
-          START_TIME=$(date +%s)
+          START_TIME=$(date +%s --date="30 seconds")
           ${pkgs.jq}/bin/jq -r --arg startTime "''${START_TIME}" '. + {startTime: $startTime|tonumber}' < $GENESIS_FILE > ${cfg.stateDir}/genesis.json
-          ${pkgs.jq}/bin/jq -r --arg GenesisFile ${cfg.stateDir}/genesis.json '. + {GenesisFile: $GenesisFile}' < ${cfg.nodeConfigFile} > ${realNodeConfigFile}
+          ${pkgs.jq}/bin/jq -r --arg GenesisFile genesis.json '. + {GenesisFile: $GenesisFile}' < ${cfg.nodeConfigFile} > ${realNodeConfigFile}
+        ''}
+        ${lib.optionalString (cfg.environment == "shelley_selfnode") ''
+          echo "Wiping all data in ${cfg.stateDir}"
+          rm -rf ${cfg.stateDir}/*
+          GENESIS_FILE=$(${pkgs.jq}/bin/jq -r .GenesisFile < ${cfg.nodeConfigFile})
+          START_TIME=$(date --utc +"%Y-%m-%dT%H:%M:%SZ" --date="30 seconds")
+          ${pkgs.jq}/bin/jq -r --arg StartTime "''${START_TIME}" '. + {StartTime: $StartTime}' < $GENESIS_FILE > ${cfg.stateDir}/genesis.json
+          ${pkgs.jq}/bin/jq -r --arg GenesisFile genesis.json '. + {GenesisFile: $GenesisFile}' < ${cfg.nodeConfigFile} > ${realNodeConfigFile}
         ''}
         exec ${toString cmd}'';
 in {
@@ -117,6 +136,8 @@ in {
         '';
       };
 
+      # Byron signing/delegation
+
       signingKey = mkOption {
         type = types.nullOr (types.either types.str types.path);
         default = null;
@@ -133,15 +154,38 @@ in {
         '';
       };
 
+      # Shelley kes/vrf keys and operation cert
+
+      kesKey = mkOption {
+        type = types.nullOr (types.either types.str types.path);
+        default = null;
+        description = ''
+          Signing key
+        '';
+      };
+      vrfKey = mkOption {
+        type = types.nullOr (types.either types.str types.path);
+        default = null;
+        description = ''
+          Signing key
+        '';
+      };
+
+      operationalCertificate = mkOption {
+        type = types.nullOr (types.either types.str types.path);
+        default = null;
+        description = ''
+          Operational certificate
+        '';
+      };
+
       consensusProtocol = mkOption {
-        default = "real-pbft";
-        type = types.enum ["bft" "praos" "mock-pbft" "real-pbft"];
+        default = "RealPBFT";
+        type = types.enum ["RealPBFT" "TPraos"];
         description = ''
           Consensus initially used by the node:
-            - bft: BFT consensus algorithm
-            - praos: Praos consensus algorithm
-            - mock-pbft: Permissive BFT consensus algorithm using a mock ledger
-            - real-pbft: Permissive BFT consensus algorithm using the real ledger
+            - TPraos: Praos consensus algorithm
+            - RealPBFT: Permissive BFT consensus algorithm using the real ledger
         '';
       };
 
