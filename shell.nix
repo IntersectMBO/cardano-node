@@ -19,6 +19,7 @@ let
     packages = ps: with ps; [
        ps.cardano-node
        ps.cardano-config
+       ps.cardano-cli
     ];
 
     # These programs will be available inside the nix-shell.
@@ -49,6 +50,7 @@ let
     name = "devops-shell";
     buildInputs = [
       niv
+      cardanoNodeHaskellPackages.cardano-cli.components.exes.cardano-cli
     ];
     shellHook = ''
       echo "DevOps Tools" \
@@ -58,6 +60,7 @@ let
       echo "NOTE: you may need to export GITHUB_TOKEN if you hit rate limits with niv"
       echo "Commands:
         * niv update <package> - update package
+        * cardano-cli - used for key generation and other operations tasks
 
       "
     '';

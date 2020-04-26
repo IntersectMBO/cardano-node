@@ -23,20 +23,21 @@ import           Control.Monad.Trans.Except.Extra (firstExceptT, newExceptT)
 
 import           Cardano.Config.TextView
 import           Cardano.Crypto.KES.Class
+import qualified Shelley.Spec.Ledger.Keys as Ledger
 import           Ouroboros.Consensus.Shelley.Protocol.Crypto
-                   (TPraosStandardCrypto, KES)
+                   (TPraosStandardCrypto)
 
 
 -- Local aliases for shorter types:
-type VerKey  = VerKeyKES  (KES TPraosStandardCrypto)
-type SignKey = SignKeyKES (KES TPraosStandardCrypto)
+type VerKey  = Ledger.VKeyES TPraosStandardCrypto
+type SignKey = Ledger.SKeyES TPraosStandardCrypto
 
 
 genKESKeyPair :: Natural -> IO (VerKey, SignKey)
 genKESKeyPair duration = do
   signKeyKES <- genKeyKES duration
   let verKeyKes = deriveVerKeyKES signKeyKES
-  pure (verKeyKes, signKeyKES)
+  pure (Ledger.VKeyES verKeyKes, Ledger.SKeyES signKeyKES)
 
 data KESError = ReadKESSigningKeyError !TextViewFileError
               | ReadKESVerKeyError !TextViewFileError
@@ -52,7 +53,7 @@ renderKESError kesErr =
     WriteKESVerKeyError err -> "KES verification key write error: " <> renderTextViewFileError err
 
 encodeKESSigningKey :: SignKey -> TextView
-encodeKESSigningKey sKeyEs =
+encodeKESSigningKey (Ledger.SKeyES sKeyEs) =
   encodeToTextView tvType' tvTitle' CBOR.toCBOR sKeyEs
  where
   tvType' = "SKeyES TPraosStandardCrypto"
@@ -61,7 +62,7 @@ encodeKESSigningKey sKeyEs =
 decodeKESSigningKey :: TextView -> Either TextViewError SignKey
 decodeKESSigningKey tView = do
   expectTextViewOfType "SKeyES TPraosStandardCrypto" tView
-  decodeFromTextView CBOR.fromCBOR tView
+  decodeFromTextView (Ledger.SKeyES <$> CBOR.fromCBOR) tView
 
 encodeKESVerificationKey :: VerKey -> TextView
 encodeKESVerificationKey vKeyEs =

@@ -20,15 +20,18 @@ module Cardano.CLI.Shelley.Parsers
   , OutputFile (..)
   , SigningKeyFile (..)
   , VerificationKeyFile (..)
+  , OpCertCounterFile (..)
   ) where
 
 import           Cardano.Prelude hiding (option)
 
 import           Cardano.Chain.Common (Lovelace, mkLovelace)
-import           Cardano.CLI.Key (VerificationKeyFile(..))
 import           Cardano.Common.Parsers (parseNodeAddress)
-import           Cardano.Config.Types (NodeAddress, SigningKeyFile(..))
 import           Cardano.Slotting.Slot (EpochNo (..))
+
+import           Cardano.Config.Types (NodeAddress, SigningKeyFile(..))
+import           Cardano.Config.Shelley.OCert (KESPeriod(..))
+import           Cardano.CLI.Key (VerificationKeyFile(..))
 
 import           Data.Time.Clock (UTCTime)
 import           Data.Time.Clock.POSIX (posixSecondsToUTCTime)
@@ -88,10 +91,11 @@ data TransactionCmd
 
 
 data NodeCmd
-  = NodeKeyGenCold VerificationKeyFile SigningKeyFile
+  = NodeKeyGenCold VerificationKeyFile SigningKeyFile OpCertCounterFile
   | NodeKeyGenKES  VerificationKeyFile SigningKeyFile Natural
   | NodeKeyGenVRF  VerificationKeyFile SigningKeyFile
-  | NodeIssueOpCert --TODO
+  | NodeIssueOpCert VerificationKeyFile SigningKeyFile OpCertCounterFile
+                    KESPeriod OutputFile
   deriving (Eq, Show)
 
 
@@ -129,7 +133,11 @@ data SystemCmd
 
 data GenesisCmd
   = GenesisCreate GenesisDir (Maybe SystemStart) Lovelace
-  | GenesisKeyGen OutputFile OutputFile
+  | GenesisKeyGenGenesis  VerificationKeyFile SigningKeyFile
+  | GenesisKeyGenDelegate VerificationKeyFile SigningKeyFile OpCertCounterFile
+  | GenesisKeyGenUTxO     VerificationKeyFile SigningKeyFile
+  | GenesisKeyHash        VerificationKeyFile
+  | GenesisVerKey         VerificationKeyFile SigningKeyFile
   deriving (Eq, Show)
 
 
@@ -159,6 +167,10 @@ newtype PoolId
 
 newtype GenesisDir
   = GenesisDir FilePath
+  deriving (Eq, Show)
+
+newtype OpCertCounterFile
+  = OpCertCounterFile FilePath
   deriving (Eq, Show)
 
 newtype PrivKeyFile
@@ -305,7 +317,8 @@ pNodeCmd =
     mconcat
       [ Opt.command "key-gen"
           (Opt.info pKeyGenOperator $
-             Opt.progDesc "Create a key pair for node operator's offline key")
+             Opt.progDesc "Create a key pair for a node operator's offline \
+                         \ key and a new certificate issue counter")
       , Opt.command "key-gen-KES"
           (Opt.info pKeyGenKES $
              Opt.progDesc "Create a key pair for a node KES operational key")
@@ -319,7 +332,9 @@ pNodeCmd =
   where
     pKeyGenOperator :: Parser NodeCmd
     pKeyGenOperator =
-      NodeKeyGenCold <$> pVerificationKeyFile <*> pSigningKeyFile
+      NodeKeyGenCold <$> pVerificationKeyFile
+                     <*> pSigningKeyFile
+                     <*> pOperatorCertIssueCounterFile
 
     pKeyGenKES :: Parser NodeCmd
     pKeyGenKES =
@@ -331,7 +346,11 @@ pNodeCmd =
 
     pIssueOpCert :: Parser NodeCmd
     pIssueOpCert =
-      pure NodeIssueOpCert
+      NodeIssueOpCert <$> pVerificationKeyFile
+                      <*> pSigningKeyFile
+                      <*> pOperatorCertIssueCounterFile
+                      <*> pKesPeriod
+                      <*> pOutputFile
 
 
 pPoolCmd :: Parser PoolCmd
@@ -450,6 +469,12 @@ pGenesisCmd =
       , Opt.command "key-gen-utxo"
           (Opt.info pGenesisUTxOKeyGen $
              Opt.progDesc "Create a Shelley genesis UTxO key pair")
+      , Opt.command "key-hash"
+          (Opt.info pGenesisKeyHash $
+             Opt.progDesc "Print the identifier (hash) of a public key")
+      , Opt.command "get-ver-key"
+          (Opt.info pGenesisVerKey $
+             Opt.progDesc "Derive the verification key from a signing key")
       , Opt.command "create-genesis"
           (Opt.info pGenesisCommand $
              Opt.progDesc ("Create a Shelley genesis file from a genesis "
@@ -458,15 +483,25 @@ pGenesisCmd =
   where
     pGenesisKeyGen :: Parser GenesisCmd
     pGenesisKeyGen =
-      GenesisKeyGen <$> pOutputFile <*> pOutputFile
+      GenesisKeyGenGenesis <$> pVerificationKeyFile <*> pSigningKeyFile
 
     pGenesisDelegateKeyGen :: Parser GenesisCmd
     pGenesisDelegateKeyGen =
-      GenesisKeyGen <$> pOutputFile <*> pOutputFile
+      GenesisKeyGenDelegate <$> pVerificationKeyFile
+                            <*> pSigningKeyFile
+                            <*> pOperatorCertIssueCounterFile
 
     pGenesisUTxOKeyGen :: Parser GenesisCmd
     pGenesisUTxOKeyGen =
-      GenesisKeyGen <$> pOutputFile <*> pOutputFile
+      GenesisKeyGenUTxO <$> pVerificationKeyFile <*> pSigningKeyFile
+
+    pGenesisKeyHash :: Parser GenesisCmd
+    pGenesisKeyHash =
+      GenesisKeyHash <$> pVerificationKeyFile
+
+    pGenesisVerKey :: Parser GenesisCmd
+    pGenesisVerKey =
+      GenesisVerKey <$> pVerificationKeyFile <*> pSigningKeyFile
 
     pGenesisCommand :: Parser GenesisCmd
     pGenesisCommand =
@@ -534,6 +569,14 @@ pDuration =
                       <> Opt.help "The duration of the KESPeriod."
                       )
 
+pKesPeriod :: Parser KESPeriod
+pKesPeriod =
+  KESPeriod <$>
+  Opt.option Opt.auto (  Opt.long "kes-period"
+                      <> Opt.metavar "NATURAL"
+                      <> Opt.help "The start of the KES key validity period."
+                      )
+
 pEpochNo :: Parser EpochNo
 pEpochNo =
   EpochNo <$>
@@ -550,6 +593,15 @@ pGenesisFile =
       (  Opt.long "genesis"
       <> Opt.metavar "FILE"
       <> Opt.help "The genesis file."
+      )
+
+pOperatorCertIssueCounterFile :: Parser OpCertCounterFile
+pOperatorCertIssueCounterFile =
+  OpCertCounterFile <$>
+    Opt.strOption
+      (  Opt.long "operational-certificate-issue-counter"
+      <> Opt.metavar "FILE"
+      <> Opt.help "The file with the issue counter for the operational certificate."
       )
 
 pOutputFile :: Parser OutputFile

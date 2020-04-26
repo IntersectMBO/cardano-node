@@ -23,6 +23,7 @@ library
                        Cardano.Config.Protocol.Mock
                        Cardano.Config.Protocol.Byron
                        Cardano.Config.Protocol.Shelley
+                       Cardano.Config.Shelley.ColdKeys
                        Cardano.Config.Shelley.Genesis
                        Cardano.Config.Shelley.KES
                        Cardano.Config.Shelley.OCert
