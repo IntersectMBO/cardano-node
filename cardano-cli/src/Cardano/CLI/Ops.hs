@@ -106,6 +106,7 @@ import           Cardano.Config.Protocol
 import           Cardano.Config.Shelley.ColdKeys (KeyError, renderKeyError)
 import           Cardano.Config.Shelley.KES (KESError, renderKESError)
 import           Cardano.Config.Shelley.VRF (VRFError, renderVRFError)
+import           Cardano.Config.Shelley.OCert (OperationalCertError)
 import           Cardano.Config.Types
 import qualified Cardano.CLI.Legacy.Byron as Legacy
 
@@ -263,6 +264,7 @@ data CliError
   | NotEnoughTxOutputs
   | NoGenesisDelegationForKey !Text
   | OutputMustNotAlreadyExist !FilePath
+  | OperationalCertError OperationalCertError
   | ProtocolError !ProtocolInstantiationError
   | ProtocolParametersParseFailed !FilePath !Text
   | ReadCBORFileFailure !FilePath !Text
@@ -321,6 +323,8 @@ instance Show CliError where
     = "Transactions must have at least one output."
   show (OutputMustNotAlreadyExist fp)
     = "Output file/directory must not already exist: " <> fp
+  show (OperationalCertError err)
+    = show err --TODO: renderOperationalCertError
   show (ProtocolError err)
     = "Protocol Instantiation Error " <> (T.unpack $ renderProtocolInstantiationError err)
   show (CardanoApiError apiError)

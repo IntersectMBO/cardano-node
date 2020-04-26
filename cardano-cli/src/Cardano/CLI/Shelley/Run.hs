@@ -26,9 +26,8 @@ import           Cardano.CLI.Shelley.Parsers
 
 import           Cardano.Config.Shelley.ColdKeys
 import           Cardano.Config.Shelley.KES
-                   (genKESKeyPair, writeKESSigningKey, writeKESVerKey)
+import           Cardano.Config.Shelley.OCert
 import           Cardano.Config.Shelley.VRF
-                   (genVRFKeyPair, writeVRFSigningKey, writeVRFVerKey)
 import           Cardano.Config.Types (SigningKeyFile(..))
 
 
@@ -66,10 +65,11 @@ runTransactionCmd cmd = liftIO $ putStrLn $ "runTransactionCmd: " ++ show cmd
 
 
 runNodeCmd :: NodeCmd -> ExceptT CliError IO ()
-runNodeCmd (NodeKeyGenCold vk sk)     = runNodeKeyGenCold vk sk
+runNodeCmd (NodeKeyGenCold vk sk ctr) = runNodeKeyGenCold vk sk ctr
 runNodeCmd (NodeKeyGenKES  vk sk dur) = runNodeKeyGenKES  vk sk dur
 runNodeCmd (NodeKeyGenVRF  vk sk)     = runNodeKeyGenVRF  vk sk
-runNodeCmd cmd = liftIO $ putStrLn $ "runNodeCmd: " ++ show cmd
+runNodeCmd (NodeIssueOpCert vk sk ctr p out) =
+  runNodeIssueOpCert vk sk ctr p out
 
 
 runPoolCmd :: PoolCmd -> ExceptT CliError IO ()
@@ -93,11 +93,11 @@ runDevOpsCmd cmd = liftIO $ putStrLn $ "runDevOpsCmd: " ++ show cmd
 
 
 runGenesisCmd :: GenesisCmd -> ExceptT CliError IO ()
-runGenesisCmd (GenesisKeyGenGenesis  vk sk) = runGenesisKeyGenGenesis  vk sk
-runGenesisCmd (GenesisKeyGenDelegate vk sk) = runGenesisKeyGenDelegate vk sk
-runGenesisCmd (GenesisKeyGenUTxO     vk sk) = runGenesisKeyGenUTxO     vk sk
-runGenesisCmd (GenesisKeyHash        vk)    = runGenesisKeyHash        vk
-runGenesisCmd (GenesisVerKey         vk sk) = runGenesisVerKey         vk sk
+runGenesisCmd (GenesisKeyGenGenesis  vk sk)     = runGenesisKeyGenGenesis  vk sk
+runGenesisCmd (GenesisKeyGenDelegate vk sk ctr) = runGenesisKeyGenDelegate vk sk ctr
+runGenesisCmd (GenesisKeyGenUTxO     vk sk)     = runGenesisKeyGenUTxO     vk sk
+runGenesisCmd (GenesisKeyHash        vk)        = runGenesisKeyHash        vk
+runGenesisCmd (GenesisVerKey         vk sk)     = runGenesisVerKey         vk sk
 runGenesisCmd cmd@GenesisCreate{} = liftIO $ putStrLn $ "runGenesisCmd: " ++ show cmd
 
 
@@ -105,9 +105,16 @@ runGenesisCmd cmd@GenesisCreate{} = liftIO $ putStrLn $ "runGenesisCmd: " ++ sho
 -- Node command implementations
 --
 
-runNodeKeyGenCold :: VerificationKeyFile -> SigningKeyFile
+runNodeKeyGenCold :: VerificationKeyFile
+                  -> SigningKeyFile
+                  -> OpCertCounterFile
                   -> ExceptT CliError IO ()
-runNodeKeyGenCold = runColdKeyGen (OperatorKey StakePoolOperatorKey)
+runNodeKeyGenCold vkeyPath skeyPath (OpCertCounterFile ocertCtrPath) = do
+    runColdKeyGen (OperatorKey StakePoolOperatorKey) vkeyPath skeyPath
+    firstExceptT OperationalCertError $
+      writeOperationalCertIssueCounter ocertCtrPath initialCounter
+  where
+    initialCounter = 0
 
 
 runNodeKeyGenKES :: VerificationKeyFile -> SigningKeyFile -> Natural
@@ -129,6 +136,38 @@ runNodeKeyGenVRF (VerificationKeyFile vkeyPath) (SigningKeyFile skeyPath) =
       writeVRFSigningKey skeyPath skey
 
 
+runNodeIssueOpCert :: VerificationKeyFile
+                   -> SigningKeyFile
+                   -> OpCertCounterFile
+                   -> KESPeriod
+                   -> OutputFile
+                   -> ExceptT CliError IO ()
+runNodeIssueOpCert (VerificationKeyFile vkeyKESPath)
+                   (SigningKeyFile skeyPath)
+                   (OpCertCounterFile ocertCtrPath)
+                   kesPeriod
+                   (OutputFile certFile) = do
+    issueNumber <- firstExceptT OperationalCertError $
+      readOperationalCertIssueCounter ocertCtrPath
+
+    verKeyKes <- firstExceptT KESCliError $
+      readKESVerKey vkeyKESPath
+
+    signKey <- firstExceptT KeyCliError $
+      readSigningKey (OperatorKey StakePoolOperatorKey) skeyPath
+
+    let cert = signOperationalCertificate
+                 verKeyKes signKey
+                 issueNumber kesPeriod
+        vkey = deriveVerKey signKey
+
+    firstExceptT OperationalCertError $ do
+      -- Write the counter first, to reduce the chance of ending up with
+      -- a new cert but without updating the counter.
+      writeOperationalCertIssueCounter ocertCtrPath (succ issueNumber)
+      writeOperationalCert certFile cert vkey
+
+
 --
 -- Genesis command implementations
 --
@@ -138,9 +177,16 @@ runGenesisKeyGenGenesis :: VerificationKeyFile -> SigningKeyFile
 runGenesisKeyGenGenesis = runColdKeyGen GenesisKey
 
 
-runGenesisKeyGenDelegate :: VerificationKeyFile -> SigningKeyFile
+runGenesisKeyGenDelegate :: VerificationKeyFile
+                         -> SigningKeyFile
+                         -> OpCertCounterFile
                          -> ExceptT CliError IO ()
-runGenesisKeyGenDelegate = runColdKeyGen (OperatorKey GenesisDelegateKey)
+runGenesisKeyGenDelegate vkeyPath skeyPath (OpCertCounterFile ocertCtrPath) = do
+    runColdKeyGen (OperatorKey GenesisDelegateKey) vkeyPath skeyPath
+    firstExceptT OperationalCertError $
+      writeOperationalCertIssueCounter ocertCtrPath initialCounter
+  where
+    initialCounter = 0
 
 
 runGenesisKeyGenUTxO :: VerificationKeyFile -> SigningKeyFile
