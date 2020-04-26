@@ -11,6 +11,7 @@ module Cardano.Config.Shelley.ColdKeys
   , decodeSigningKey
   , decodeSigningKeySomeRole
   , genKeyPair
+  , deriveVerKey
   , readSigningKey
   , readSigningKeySomeRole
   , readVerKey
@@ -66,6 +67,11 @@ genKeyPair = do
   signKey <- runSecureRandom genKeyDSIGN
   let verKey = deriveVerKeyDSIGN signKey
   pure (Ledger.DiscVKey verKey, Ledger.SKey signKey)
+
+
+deriveVerKey :: SignKey -> VerKey
+deriveVerKey (Ledger.SKey skey) =
+    Ledger.VKey (deriveVerKeyDSIGN skey)
 
 
 encodeSigningKey :: KeyRole -> SignKey -> TextView

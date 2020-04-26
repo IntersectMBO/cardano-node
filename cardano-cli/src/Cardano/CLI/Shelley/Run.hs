@@ -19,7 +19,6 @@ import           Control.Monad.Trans.Except.Extra (firstExceptT)
 
 import qualified Shelley.Spec.Ledger.Keys as Ledger
 import qualified Cardano.Crypto.Hash.Class as Crypto
-import qualified Cardano.Crypto.DSIGN.Class as Crypto
 
 import           Cardano.CLI.Key (VerificationKeyFile(..))
 import           Cardano.CLI.Ops (CliError (..))
@@ -171,8 +170,7 @@ runGenesisVerKey :: VerificationKeyFile -> SigningKeyFile
 runGenesisVerKey (VerificationKeyFile vkeyPath) (SigningKeyFile skeyPath) =
     firstExceptT KeyCliError $ do
       (skey, role) <- readSigningKeySomeRole genesisKeyRoles skeyPath
-      let vkey = Ledger.VKey (Crypto.deriveVerKeyDSIGN sk)
-                   where Ledger.SKey sk = skey
+      let vkey = deriveVerKey skey
       writeVerKey role vkeyPath vkey
 
 genesisKeyRoles :: [KeyRole]
