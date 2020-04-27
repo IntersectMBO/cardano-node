@@ -36,11 +36,14 @@ library
                        Cardano.CLI.Run
                        Cardano.CLI.Shelley.Parsers
                        Cardano.CLI.Shelley.Run
+                       Cardano.CLI.Shelley.Run.Genesis
                        Cardano.CLI.Tx
 
   other-modules:       Paths_cardano_cli
 
   build-depends:       base >=4.12 && <5
+                     , aeson
+                     , aeson-pretty
                      , bytestring
                      , canonical-json
                      , cardano-api
@@ -67,6 +70,7 @@ library
                      , ouroboros-consensus
                      , ouroboros-consensus-byron
                      , ouroboros-consensus-cardano
+                     , ouroboros-consensus-shelley
                      , ouroboros-network
                      , shelley-spec-ledger
                      , text

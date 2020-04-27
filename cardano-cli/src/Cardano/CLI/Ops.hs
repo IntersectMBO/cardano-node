@@ -287,6 +287,8 @@ data CliError
   | VRFCliError VRFError
   | FileNotFoundError !FilePath
   | CardanoApiError !ApiError
+  | IOError !FilePath !IOException
+  | AesonDecode !FilePath !Text
 
 
 instance Show CliError where
@@ -369,7 +371,11 @@ instance Show CliError where
     = "Error submitting update proposal: " <> (T.unpack $ renderRealPBFTError err)
   show (VerificationKeyDeserialisationFailed fp err)
     = "Verification key '" <> fp <> "' read failure: "<> T.unpack err
-  show (VRFCliError err) = show $ renderVRFError err
+  show (VRFCliError err) = T.unpack $ renderVRFError err
+  show (IOError fp ioe)
+    = "File '" <> fp <> "': " ++ show ioe
+  show (AesonDecode fp txt)
+    = "File '" <> fp <> "': " ++ show txt
 
 data RealPBFTError
   = IncorrectProtocolSpecified !Protocol

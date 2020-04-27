@@ -29,6 +29,8 @@ import           Cardano.Config.Shelley.KES
 import           Cardano.Config.Shelley.OCert
 import           Cardano.Config.Shelley.VRF
 import           Cardano.Config.Types (SigningKeyFile(..))
+import           Cardano.CLI.Shelley.Run.Genesis (runGenesisCreate)
+
 
 
 --
@@ -46,7 +48,6 @@ runShelleyClientCommand (BlockCmd        cmd) = runBlockCmd        cmd
 runShelleyClientCommand (SystemCmd       cmd) = runSystemCmd       cmd
 runShelleyClientCommand (DevOpsCmd       cmd) = runDevOpsCmd       cmd
 runShelleyClientCommand (GenesisCmd      cmd) = runGenesisCmd      cmd
-
 
 --
 -- CLI shelley subcommand dispatch
@@ -98,8 +99,7 @@ runGenesisCmd (GenesisKeyGenDelegate vk sk ctr) = runGenesisKeyGenDelegate vk sk
 runGenesisCmd (GenesisKeyGenUTxO     vk sk)     = runGenesisKeyGenUTxO     vk sk
 runGenesisCmd (GenesisKeyHash        vk)        = runGenesisKeyHash        vk
 runGenesisCmd (GenesisVerKey         vk sk)     = runGenesisVerKey         vk sk
-runGenesisCmd cmd@GenesisCreate{} = liftIO $ putStrLn $ "runGenesisCmd: " ++ show cmd
-
+runGenesisCmd (GenesisCreate         gd ms am)  = runGenesisCreate         gd ms am
 
 --
 -- Node command implementations
