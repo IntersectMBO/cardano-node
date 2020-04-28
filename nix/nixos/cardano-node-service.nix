@@ -363,6 +363,10 @@ in {
         assertion = lib.hasPrefix stateDirBase cfg.stateDir;
         message = "The option services.cardano-node.stateDir should have ${stateDirBase} as a prefix!";
       }
+      {
+        assertion = (cfg.kesKey == null) == (cfg.vrfKey == null) && (cfg.kesKey == null) == (cfg.operationalCertificate == null);
+        message = "Shelley Era: all of three [operationalCertificate kesKey vrfKey] options must be defined (or none of them).";
+      }
     ];
   });
 }
