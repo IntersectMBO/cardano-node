@@ -22,7 +22,7 @@ import           Cardano.Common.Parsers
 
 import           Cardano.Chain.Common (rationalToLovelacePortion)
 import           Cardano.Chain.Genesis (TestnetBalanceOptions(..))
-import           Cardano.Chain.Slotting (EpochNumber(..))
+import           Cardano.Chain.Slotting (EpochNumber(..), EpochSlots(..))
 import           Cardano.Chain.UTxO (TxIn(..), TxOut(..))
 import           Cardano.Config.Types
 
@@ -48,9 +48,13 @@ parseByron =
 
 parseCBORObject :: Parser CBORObject
 parseCBORObject = asum
-  [ flag' CBORBlockByron $
-        long "byron-block"
-     <> help "The CBOR file is a byron era block"
+  [ CBORBlockByron <$> option auto
+      (  long "byron-block"
+      <> (help $  "The CBOR file is a byron era block."
+               <> " Enter the number of slots in an epoch. The default value is 21600")
+      <> metavar "INT"
+      <> (value $ EpochSlots 21600)
+      )
 
   , flag' CBORDelegationCertificateByron $
         long "byron-delegation-certificate"
