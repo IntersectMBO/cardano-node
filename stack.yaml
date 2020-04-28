@@ -54,7 +54,6 @@ extra-deps:
   - word-wrap-0.4.1
   - websockets-0.12.6.1
   - th-lift-instances-0.1.14
-  - quiet-0.2
 
     # Cardano-ledger dependencies
   - git: https://github.com/input-output-hk/cardano-ledger
