@@ -23,7 +23,7 @@ import qualified Data.Set as Set
 
 import           Cardano.TracingOrphanInstances.Common
 import           Cardano.TracingOrphanInstances.Consensus ()
-import           Cardano.Config.Shelley.Genesis ()
+import           Cardano.Config.Shelley.Orphans ()
 
 import           Ouroboros.Network.Block
                    (blockHash, blockSlot, blockNo, blockPrevHash)

@@ -1,17 +1,22 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Cardano.Config.Shelley.ColdKeys
-  ( KeyError(..)
+  ( GenesisVerKey
+  , KeyError(..)
   , KeyRole(..)
   , OperatorKeyRole(..)
+  , VerKey
+  , SignKey
   , decodeVerificationKey
   , decodeVerificationKeySomeRole
   , encodeVerificationKey
   , encodeSigningKey
   , decodeSigningKey
   , decodeSigningKeySomeRole
+  , genGenesisKeyPair
   , genKeyPair
   , deriveVerKey
+  , readGenesisVerKey
   , readSigningKey
   , readSigningKeySomeRole
   , readVerKey
@@ -43,6 +48,7 @@ data OperatorKeyRole = GenesisDelegateKey | StakePoolOperatorKey
 
 
 -- Local aliases for shorter types:
+type GenesisVerKey = Ledger.VKeyGenesis TPraosStandardCrypto
 type VerKey  = Ledger.VKey TPraosStandardCrypto
 type SignKey = Ledger.SKey TPraosStandardCrypto
 
@@ -51,7 +57,6 @@ data KeyError = ReadSigningKeyError  !TextViewFileError
               | ReadVerKeyError      !TextViewFileError
               | WriteSigningKeyError !TextViewFileError
               | WriteVerKeyError     !TextViewFileError
-  deriving Show
 
 renderKeyError :: KeyError -> Text
 renderKeyError keyErr =
@@ -61,6 +66,11 @@ renderKeyError keyErr =
     WriteSigningKeyError err -> "signing key write error: " <> renderTextViewFileError err
     WriteVerKeyError err -> "verification key write error: " <> renderTextViewFileError err
 
+genGenesisKeyPair :: IO (GenesisVerKey, SignKey)
+genGenesisKeyPair = do
+  signKey <- runSecureRandom genKeyDSIGN
+  let verKey = deriveVerKeyDSIGN signKey
+  return (Ledger.VKeyGenesis verKey, Ledger.SKey signKey)
 
 genKeyPair :: IO (VerKey, SignKey)
 genKeyPair = do
@@ -148,6 +158,10 @@ writeSigningKey role fp sKey =
   firstExceptT WriteSigningKeyError $ newExceptT $
     writeTextViewEncodedFile (encodeSigningKey role) fp sKey
 
+readGenesisVerKey :: KeyRole -> FilePath -> ExceptT KeyError IO GenesisVerKey
+readGenesisVerKey role fp = do
+  Ledger.VKey genVerKey <- readVerKey role fp
+  pure $ Ledger.VKeyGenesis genVerKey
 
 readVerKey :: KeyRole -> FilePath -> ExceptT KeyError IO VerKey
 readVerKey role fp = do

@@ -36,7 +36,6 @@ import qualified Shelley.Spec.Ledger.Keys as Ledger
 import           Cardano.Config.Types
                    (NodeConfiguration(..), ProtocolFilepaths(..),
                     GenesisFile (..), Update (..), LastKnownBlockVersion (..))
-import           Cardano.Config.Shelley.Genesis ()
 import           Cardano.Config.Shelley.OCert
 import           Cardano.Config.Shelley.VRF
 import           Cardano.Config.Shelley.KES

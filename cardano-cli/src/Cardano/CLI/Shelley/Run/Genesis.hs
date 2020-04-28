@@ -8,9 +8,13 @@ module Cardano.CLI.Shelley.Run.Genesis
   ) where
 
 import           Cardano.Prelude
+import           Prelude (String)
 
+import           Cardano.Config.Shelley.Address (AddressRole (..), ShelleyAddress,
+                    genBootstrapAddress, writeAddress)
 import           Cardano.Config.Shelley.ColdKeys (KeyError, KeyRole (..), OperatorKeyRole (..),
                     readVerKey)
+import           Cardano.Config.Shelley.Genesis (ShelleyGenesisError (..))
 
 import           Cardano.Chain.Common (Lovelace, unsafeGetLovelace)
 import           Cardano.CLI.Ops (CliError (..))
@@ -20,12 +24,13 @@ import           Cardano.CLI.Shelley.Parsers (GenesisDir (..), OpCertCounterFile
 import           Cardano.Config.Shelley.Genesis
 
 import           Control.Monad.Trans.Except (ExceptT)
-import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistEither)
+import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT,
+                   hoistEither, left, right)
 
 import qualified Data.Aeson as Aeson
 import           Data.Aeson.Encode.Pretty (encodePretty)
 import qualified Data.ByteString.Lazy.Char8 as LBS
-import           Data.Char (isDigit)
+import qualified Data.List as List
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
@@ -34,33 +39,40 @@ import           Data.Time.Clock (NominalDiffTime, UTCTime, addUTCTime, getCurre
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
 import           Ouroboros.Consensus.Shelley.Protocol (TPraosStandardCrypto)
 
-import qualified Prelude
-
+import           Shelley.Spec.Ledger.Coin (Coin (..))
 import           Shelley.Spec.Ledger.Keys (GenKeyHash, KeyHash)
 import qualified Shelley.Spec.Ledger.Keys as Ledger
 
 import           System.Directory (createDirectoryIfMissing, listDirectory)
-import           System.FilePath ((</>), takeExtension)
+import           System.FilePath ((</>), takeFileName, takeExtension)
 
 runGenesisCreate :: GenesisDir -> Word -> Maybe SystemStart -> Lovelace -> ExceptT CliError IO ()
 runGenesisCreate (GenesisDir gendir) count mStart amount = do
   start <- maybe (SystemStart <$> getCurrentTimePlus30) pure mStart
   template <- readShelleyGenesis (gendir </> "genesis.spec.json")
 
-  forM_ [ 1 .. count ] $
-    createRequiredKeys gendir
+  utxoAddrs <- forM [ 1 .. count ] $ createRequiredKeys gendir
   genDlgs <- readGenDelegsMap gendir
 
-  writeShelleyGenesis (gendir </> "genesis.json") (updateTemplate start amount genDlgs template)
+  writeShelleyGenesis (gendir </> "genesis.json") (updateTemplate start amount genDlgs utxoAddrs template)
 
-  liftIO $ putTextLn "Genesis file created, but still need to set genesis delegates and genesis distribution."
+  liftIO $ putTextLn "Genesis file, genesis delegates and genesis distribution created."
 
 -- -------------------------------------------------------------------------------------------------
 
-createRequiredKeys :: FilePath -> Word -> ExceptT CliError IO ()
+-- Represents the filepath's basename of a particular key (genesis key, delegate keys, etc)
+newtype BaseName
+  = BaseName String
+  deriving (Eq, Ord)
+
+textBaseName :: BaseName -> Text
+textBaseName (BaseName a) = Text.pack a
+
+createRequiredKeys :: FilePath -> Word -> ExceptT CliError IO ShelleyAddress
 createRequiredKeys gendir index = do
   createDelegateKeys (gendir </> "delegate-keys") index
   createGenesisKeys (gendir </> "genesis-keys") index
+  createUtxoAddresses (gendir </> "utxo-keys") index
 
 createDelegateKeys :: FilePath -> Word -> ExceptT CliError IO ()
 createDelegateKeys dir index = do
@@ -80,6 +92,16 @@ createGenesisKeys dir index = do
         (SigningKeyFile $ dir </> "genesis" ++ strIndex ++ ".skey")
 
 
+createUtxoAddresses :: FilePath -> Word -> ExceptT CliError IO ShelleyAddress
+createUtxoAddresses dir index = do
+  liftIO $ createDirectoryIfMissing True dir
+  addr <- liftIO genBootstrapAddress
+  let strIndex = show index
+  firstExceptT AddressCliError $
+    writeAddress BootstrapAddr (dir </> "address" ++ strIndex ++ ".vkey") addr
+  pure addr
+
+
 -- | Current UTCTime plus 30 seconds
 getCurrentTimePlus30 :: ExceptT CliError IO UTCTime
 getCurrentTimePlus30 =
@@ -96,14 +118,29 @@ readShelleyGenesis fpath = do
 
 updateTemplate
     :: SystemStart -> Lovelace
-    -> (Map (GenKeyHash TPraosStandardCrypto) (KeyHash TPraosStandardCrypto))
+    -> (Map (GenKeyHash TPraosStandardCrypto) (KeyHash TPraosStandardCrypto)) -> [ShelleyAddress]
     -> ShelleyGenesis TPraosStandardCrypto -> ShelleyGenesis TPraosStandardCrypto
-updateTemplate start amount delKeys template =
-  template
-    { sgStartTime = start
-    , sgMaxLovelaceSupply = unsafeGetLovelace amount
-    , sgGenDelegs = delKeys
-    }
+updateTemplate start amount delKeys utxoAddrs template =
+    template
+      { sgStartTime = start
+      , sgMaxLovelaceSupply = unsafeGetLovelace amount
+      , sgGenDelegs = delKeys
+      , sgInitialFunds = Map.fromList utxoList
+      }
+  where
+    totalCoin :: Integer
+    totalCoin = fromIntegral (unsafeGetLovelace amount)
+
+    eachAddrCoin :: Integer
+    eachAddrCoin = totalCoin `div` fromIntegral (length utxoAddrs)
+
+    utxoList :: [(ShelleyAddress, Coin)]
+    utxoList = fst $ List.foldl' folder ([], totalCoin) utxoAddrs
+
+    folder :: ([(ShelleyAddress, Coin)], Integer) -> ShelleyAddress -> ([(ShelleyAddress, Coin)], Integer)
+    folder (acc, rest) addr
+      | rest > eachAddrCoin + fromIntegral (length utxoAddrs) = ((addr, Coin eachAddrCoin) : acc, rest - eachAddrCoin)
+      | otherwise = ((addr, Coin rest) : acc, 0)
 
 writeShelleyGenesis :: FilePath -> ShelleyGenesis TPraosStandardCrypto -> ExceptT CliError IO ()
 writeShelleyGenesis fpath sg =
@@ -113,38 +150,50 @@ readGenDelegsMap :: FilePath -> ExceptT CliError IO (Map (GenKeyHash TPraosStand
 readGenDelegsMap gendir = do
     gkm <- firstExceptT KeyCliError $ readGenesisKeys (gendir </> "genesis-keys")
     dkm <- firstExceptT KeyCliError $ readDelegateKeys (gendir </> "delegate-keys")
-    -- Both maps should have an identical set of keys.
-    -- The mapMaybe will silently drop any map elements for which the key does not exist
-    -- in both maps.
-    pure $ Map.fromList (mapMaybe (rearrange gkm dkm) $ Map.keys gkm)
-  where
-    rearrange :: Map Int (Ledger.VKey TPraosStandardCrypto) -> Map Int (Ledger.VKey TPraosStandardCrypto)
-             -> Int -> Maybe (GenKeyHash TPraosStandardCrypto, KeyHash TPraosStandardCrypto)
-    rearrange gkm dkm i =
-      case (Map.lookup i gkm, Map.lookup i dkm) of
-        (Just (Ledger.VKey a), Just b) ->
-          Just (Ledger.hashKey (Ledger.VKeyGenesis a), Ledger.hashKey b)
-        _otherwise -> Nothing
 
-readGenesisKeys :: FilePath -> ExceptT KeyError IO (Map Int (Ledger.VKey TPraosStandardCrypto))
+    -- Both maps should have an identical set of keys (as in Map keys)
+    -- because we should have generated an equal amount of genesis keys
+    -- and delegate keys.
+    let genesiskeyBaseNames = Map.keys gkm
+        delegatekeyBaseNames = Map.keys dkm
+        eitherDelegationKeyPairs = [ combine gkm dkm gBn dBn
+                                   | gBn <- genesiskeyBaseNames
+                                   , dBn <- delegatekeyBaseNames
+                                   ]
+    case partitionEithers eitherDelegationKeyPairs of
+      ([], xs) -> right $ Map.fromList xs
+      (errors, _) -> left $ ShelleyGenesisError (MultipleMissingKeys errors)
+
+  where
+    combine :: Map BaseName (Ledger.VKey TPraosStandardCrypto)
+            -- ^ Genesis Keys
+            -> Map BaseName (Ledger.VKey TPraosStandardCrypto)
+            -- ^ Delegate Keys
+            -> BaseName
+            -- ^ Genesis Key basename
+            -> BaseName
+            -- ^ Delegate Key basename
+            -> Either ShelleyGenesisError (GenKeyHash TPraosStandardCrypto, KeyHash TPraosStandardCrypto)
+    combine gkm dkm gBn dBn =
+      case (Map.lookup gBn gkm, Map.lookup dBn dkm) of
+        (Just (Ledger.VKey a), Just b) -> Right (Ledger.hashKey (Ledger.VKeyGenesis a), Ledger.hashKey b)
+        (Nothing, Just _) -> Left $ MissingGenesisKey (textBaseName gBn)
+        (Just _, Nothing) -> Left $ MissingDelegateKey (textBaseName dBn)
+        _ -> Left $ MissingGenesisAndDelegationKey (textBaseName gBn) (textBaseName dBn)
+
+readGenesisKeys :: FilePath -> ExceptT KeyError IO (Map BaseName (Ledger.VKey TPraosStandardCrypto))
 readGenesisKeys gendir = do
   files <- filter isVkey <$> liftIO (listDirectory gendir)
-  fmap Map.fromList <$> traverse (readIndexVerKey GenesisKey) $ map (gendir </>) files
+  fmap Map.fromList <$> traverse (readBaseNameVerKey GenesisKey) $ map (gendir </>) files
 
-readDelegateKeys :: FilePath -> ExceptT KeyError IO (Map Int (Ledger.VKey TPraosStandardCrypto))
+readDelegateKeys :: FilePath -> ExceptT KeyError IO (Map BaseName (Ledger.VKey TPraosStandardCrypto))
 readDelegateKeys deldir = do
   files <- filter isVkey <$> liftIO (listDirectory deldir)
-  fmap Map.fromList <$> traverse (readIndexVerKey (OperatorKey GenesisDelegateKey)) $ map (deldir </>) files
+  fmap Map.fromList <$> traverse (readBaseNameVerKey (OperatorKey GenesisDelegateKey)) $ map (deldir </>) files
 
-readIndexVerKey :: KeyRole -> FilePath -> ExceptT KeyError IO (Int, Ledger.VKey TPraosStandardCrypto)
-readIndexVerKey role fpath =
-  (extractIndex fpath,) <$> readVerKey role fpath
-
-extractIndex :: FilePath -> Int
-extractIndex fpath =
-  case filter isDigit fpath of
-    [] -> 0
-    xs -> Prelude.read xs
+readBaseNameVerKey :: KeyRole -> FilePath -> ExceptT KeyError IO (BaseName, Ledger.VKey TPraosStandardCrypto)
+readBaseNameVerKey role fpath =
+  (BaseName (takeFileName fpath),) <$> readVerKey role fpath
 
 isVkey :: FilePath -> Bool
 isVkey fp = takeExtension fp == ".vkey"
