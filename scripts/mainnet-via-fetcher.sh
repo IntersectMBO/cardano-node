@@ -27,7 +27,7 @@ App options (going BEFORE common options OR IGNORED):
                                   Defaults to ${server_wait} seconds.
     --no-server-wait            same as --server-wait 0
     --node-stdout FILE          redirect stdout of benchmarked node to a file
-    --node-no-stdout            redirect stdout of benchmarked node to Dave Null
+    --node-no-stdout            redirect stdout of benchmarked node to /dev/null
 
   Benchmark schedule options:
 
