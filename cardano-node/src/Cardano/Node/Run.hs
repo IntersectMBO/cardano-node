@@ -35,8 +35,11 @@ import           Data.Text (Text, breakOn, pack, take, unlines)
 import           GHC.Clock (getMonotonicTimeNSec)
 import           Data.Version (showVersion)
 import           Network.HostName (getHostName)
-import           Network.Socket (AddrInfo)
+import           Network.Socket (AddrInfo, Socket)
 import           System.Directory (canonicalizePath, makeAbsolute)
+#ifdef SYSTEMD
+import           System.Systemd.Daemon (getActivatedSockets)
+#endif
 
 import           Paths_cardano_node (version)
 import           Cardano.BM.Data.Aggregated (Measurable (..))
@@ -233,7 +236,12 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
 
   createTracers npm nc trace tracer cfg
 
-  addrs <- nodeAddressInfo npm
+  sds_m <- systemdSockets
+
+  addrs <- case sds_m of
+                Nothing      -> Right <$> nodeAddressInfo npm
+                Just (_,[])  -> Right <$> nodeAddressInfo npm
+                Just (_,sds) -> return $ Left sds
 
   dbPath <- canonDbPath npm
 
@@ -241,7 +249,9 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
 
   nt <- either (\err -> panic $ "Cardano.Node.Run.readTopologyFile: " <> err) pure eitherTopology
 
-  let myLocalAddr = nodeLocalSocketAddrInfo nc npm
+  let myLocalAddr = case sds_m of
+                      Nothing     -> Right $ nodeLocalSocketAddrInfo nc npm
+                      Just (sd,_) -> Left sd
 
   let diffusionArguments :: DiffusionArguments
       diffusionArguments = createDiffusionArguments addrs myLocalAddr ipProducers dnsProducers
@@ -397,16 +407,20 @@ canonDbPath npm@NodeCLI{databaseFile, nodeMode} = do
   canonicalizePath =<< makeAbsolute dbFp
 
 createDiffusionArguments
-  :: [AddrInfo]  -- TODO: use descrptive type for existing socket vs addr
-  -> FilePath    -- TODO: use descrptive type for existing socket vs path
+  :: Either [Socket] [AddrInfo]
+   -- ^ Either a list of sockets provided by systemd or addresses to bind to
+   -- for NodeToNode communication.
+  -> Either Socket FilePath
+  -- ^ Either a SOCKET_UNIX socket provided by systemd or a path for
+  -- NodeToClient communication.
   -> IPSubscriptionTarget
   -> [DnsSubscriptionTarget]
   -> DiffusionArguments
 createDiffusionArguments addrs myLocalAddr ipProducers dnsProducers =
   DiffusionArguments
-    { daAddresses    = Right addrs       -- or Left for existing sockets
-    , daLocalAddress = Right myLocalAddr -- or Left for an existing socket
-    , daIpProducers = ipProducers
+    { daAddresses    = addrs
+    , daLocalAddress = myLocalAddr
+    , daIpProducers  = ipProducers
     , daDnsProducers = dnsProducers
     -- TODO: these limits are arbitrary at the moment;
     -- issue: https://github.com/input-output-hk/ouroboros-network/issues/1836
@@ -455,3 +469,19 @@ producerAddresses nt =
    remoteOrNode ra = case remoteAddressToNodeAddress ra of
                        Just na -> Right na
                        Nothing -> Left ra
+
+-- |
+-- Possibly return a SOCKET_UNIX socket for NodeToClient communication
+-- and a list of SOCKET_STREAM sockets for NodeToNode communication.
+-- The SOCKEt_UNIX socket should be defined first in the `.socket` systemd file.
+systemdSockets :: IO (Maybe (Socket, [Socket]))
+#ifdef SYSTEMD
+systemdSockets = do
+  sds_m <- getActivatedSockets
+  case sds_m of
+       Nothing       -> return Nothing
+       Just []       -> return Nothing
+       Just (sd:sds) -> return $ Just (sd, sds)
+#else
+systemdSockets = return Nothing
+#endif

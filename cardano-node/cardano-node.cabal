@@ -15,10 +15,20 @@ Flag unexpected_thunks
   Description:   Turn on unexpected thunks checks
   Default:       False
 
+flag systemd
+  description: Enable systemd support
+  default:     True
+  manual:      False
+
+
 library
 
   if flag(unexpected_thunks)
     cpp-options: -DUNEXPECTED_THUNKS
+
+  if os(linux) && flag(systemd)
+    cpp-options: -DSYSTEMD
+    build-depends:     systemd
 
   hs-source-dirs:      src
 
