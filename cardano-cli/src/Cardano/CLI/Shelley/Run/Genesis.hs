@@ -12,6 +12,13 @@ import           Cardano.Prelude
 import           Cardano.Config.Shelley.ColdKeys (KeyError, KeyRole (..), OperatorKeyRole (..),
                     readVerKey)
 
+import           Cardano.Chain.Common (Lovelace, unsafeGetLovelace)
+import           Cardano.CLI.Ops (CliError (..))
+import           Cardano.CLI.Shelley.Run.KeyGen (runGenesisKeyGenDelegate, runGenesisKeyGenGenesis)
+import           Cardano.CLI.Shelley.Parsers (GenesisDir (..), OpCertCounterFile (..),
+                    SigningKeyFile (..), VerificationKeyFile (..))
+import           Cardano.Config.Shelley.Genesis
+
 import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistEither)
 
@@ -19,40 +26,59 @@ import qualified Data.Aeson as Aeson
 import           Data.Aeson.Encode.Pretty (encodePretty)
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import           Data.Char (isDigit)
-import           Data.Coerce (coerce)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
 import           Data.Time.Clock (NominalDiffTime, UTCTime, addUTCTime, getCurrentTime)
-
-import           Cardano.Chain.Common (Lovelace, unsafeGetLovelace)
-import           Cardano.CLI.Ops (CliError (..))
-import           Cardano.CLI.Shelley.Parsers (GenesisDir (..))
-import           Cardano.Config.Shelley.Genesis
 
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
 import           Ouroboros.Consensus.Shelley.Protocol (TPraosStandardCrypto)
 
 import qualified Prelude
 
-import           Shelley.Spec.Ledger.Keys (DiscKeyHash (..), GenKeyHash, KeyHash)
+import           Shelley.Spec.Ledger.Keys (GenKeyHash, KeyHash)
 import qualified Shelley.Spec.Ledger.Keys as Ledger
 
-import           System.Directory (listDirectory)
+import           System.Directory (createDirectoryIfMissing, listDirectory)
 import           System.FilePath ((</>), takeExtension)
 
-runGenesisCreate :: GenesisDir -> Maybe SystemStart -> Lovelace -> ExceptT CliError IO ()
-runGenesisCreate (GenesisDir gendir) mStart amount = do
+runGenesisCreate :: GenesisDir -> Word -> Maybe SystemStart -> Lovelace -> ExceptT CliError IO ()
+runGenesisCreate (GenesisDir gendir) count mStart amount = do
   start <- maybe (SystemStart <$> getCurrentTimePlus30) pure mStart
   template <- readShelleyGenesis (gendir </> "genesis.spec.json")
+
+  forM_ [ 1 .. count ] $
+    createRequiredKeys gendir
   genDlgs <- readGenDelegsMap gendir
 
-  -- create the final dynamic type and feed to updateTemplate
   writeShelleyGenesis (gendir </> "genesis.json") (updateTemplate start amount genDlgs template)
 
   liftIO $ putTextLn "Genesis file created, but still need to set genesis delegates and genesis distribution."
 
 -- -------------------------------------------------------------------------------------------------
+
+createRequiredKeys :: FilePath -> Word -> ExceptT CliError IO ()
+createRequiredKeys gendir index = do
+  createDelegateKeys (gendir </> "delegate-keys") index
+  createGenesisKeys (gendir </> "genesis-keys") index
+
+createDelegateKeys :: FilePath -> Word -> ExceptT CliError IO ()
+createDelegateKeys dir index = do
+  liftIO $ createDirectoryIfMissing True dir
+  let strIndex = show index
+  runGenesisKeyGenDelegate
+        (VerificationKeyFile $ dir </> "delegate" ++ strIndex ++ ".vkey")
+        (SigningKeyFile $ dir </> "delegate" ++ strIndex ++ ".skey")
+        (OpCertCounterFile $ dir </> "delegate-opcert" ++ strIndex ++ ".counter")
+
+createGenesisKeys :: FilePath -> Word -> ExceptT CliError IO ()
+createGenesisKeys dir index = do
+  liftIO $ createDirectoryIfMissing True dir
+  let strIndex = show index
+  runGenesisKeyGenGenesis
+        (VerificationKeyFile $ dir </> "genesis" ++ strIndex ++ ".vkey")
+        (SigningKeyFile $ dir </> "genesis" ++ strIndex ++ ".skey")
+
 
 -- | Current UTCTime plus 30 seconds
 getCurrentTimePlus30 :: ExceptT CliError IO UTCTime
@@ -96,9 +122,9 @@ readGenDelegsMap gendir = do
              -> Int -> Maybe (GenKeyHash TPraosStandardCrypto, KeyHash TPraosStandardCrypto)
     rearrange gkm dkm i =
       case (Map.lookup i gkm, Map.lookup i dkm) of
-        (Just a, Just b) -> Just (coerce (Ledger.hashKey a), Ledger.hashKey b)
+        (Just (Ledger.VKey a), Just b) ->
+          Just (Ledger.hashKey (Ledger.VKeyGenesis a), Ledger.hashKey b)
         _otherwise -> Nothing
-
 
 readGenesisKeys :: FilePath -> ExceptT KeyError IO (Map Int (Ledger.VKey TPraosStandardCrypto))
 readGenesisKeys gendir = do

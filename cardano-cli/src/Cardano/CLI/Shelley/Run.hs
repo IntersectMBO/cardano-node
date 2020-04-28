@@ -90,12 +90,12 @@ runDevOpsCmd cmd = liftIO $ putStrLn $ "runDevOpsCmd: " ++ show cmd
 
 
 runGenesisCmd :: GenesisCmd -> ExceptT CliError IO ()
-runGenesisCmd (GenesisKeyGenGenesis  vk sk)     = runGenesisKeyGenGenesis  vk sk
+runGenesisCmd (GenesisKeyGenGenesis vk sk) = runGenesisKeyGenGenesis vk sk
 runGenesisCmd (GenesisKeyGenDelegate vk sk ctr) = runGenesisKeyGenDelegate vk sk ctr
-runGenesisCmd (GenesisKeyGenUTxO     vk sk)     = runGenesisKeyGenUTxO     vk sk
-runGenesisCmd (GenesisKeyHash        vk)        = runGenesisKeyHash        vk
-runGenesisCmd (GenesisVerKey         vk sk)     = runGenesisVerKey         vk sk
-runGenesisCmd (GenesisCreate         gd ms am)  = runGenesisCreate         gd ms am
+runGenesisCmd (GenesisKeyGenUTxO vk sk) = runGenesisKeyGenUTxO vk sk
+runGenesisCmd (GenesisKeyHash vk) = runGenesisKeyHash vk
+runGenesisCmd (GenesisVerKey vk sk) = runGenesisVerKey vk sk
+runGenesisCmd (GenesisCreate gd count ms am) = runGenesisCreate gd count ms am
 
 --
 -- Node command implementations

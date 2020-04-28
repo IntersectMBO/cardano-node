@@ -33,6 +33,7 @@ import           Cardano.Config.Types (NodeAddress, SigningKeyFile(..))
 import           Cardano.Config.Shelley.OCert (KESPeriod(..))
 import           Cardano.CLI.Key (VerificationKeyFile(..))
 
+import           Data.Maybe (fromMaybe)
 import           Data.Time.Clock (UTCTime)
 import           Data.Time.Format (defaultTimeLocale, iso8601DateFormat, parseTimeOrError)
 
@@ -41,7 +42,7 @@ import qualified Options.Applicative as Opt
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
 
 import           Prelude (String)
-import qualified Prelude as Prelude
+import qualified Prelude
 
 
 --
@@ -132,12 +133,12 @@ data SystemCmd
 
 
 data GenesisCmd
-  = GenesisCreate GenesisDir (Maybe SystemStart) Lovelace
-  | GenesisKeyGenGenesis  VerificationKeyFile SigningKeyFile
+  = GenesisCreate GenesisDir Word (Maybe SystemStart) Lovelace
+  | GenesisKeyGenGenesis VerificationKeyFile SigningKeyFile
   | GenesisKeyGenDelegate VerificationKeyFile SigningKeyFile OpCertCounterFile
-  | GenesisKeyGenUTxO     VerificationKeyFile SigningKeyFile
-  | GenesisKeyHash        VerificationKeyFile
-  | GenesisVerKey         VerificationKeyFile SigningKeyFile
+  | GenesisKeyGenUTxO VerificationKeyFile SigningKeyFile
+  | GenesisKeyHash VerificationKeyFile
+  | GenesisVerKey VerificationKeyFile SigningKeyFile
   deriving (Eq, Show)
 
 --
@@ -503,7 +504,7 @@ pGenesisCmd =
 
     pGenesisCreate :: Parser GenesisCmd
     pGenesisCreate =
-      GenesisCreate <$> pGenesisDir <*> pMaybeSystemStart <*> pInitialSupply
+      GenesisCreate <$> pGenesisDir <*> pGenesisDelegates <*> pMaybeSystemStart <*> pInitialSupply
 
     pGenesisDir :: Parser GenesisDir
     pGenesisDir =
@@ -523,6 +524,17 @@ pGenesisCmd =
             <> Opt.metavar "UTC_TIME"
             <> Opt.help "The genesis start time in YYYY-MM-DDThh:mm:ssZ format. If unspecified, will be the current time +30 seconds."
             )
+
+    pGenesisDelegates :: Parser Word
+    pGenesisDelegates =
+      fromMaybe 7 <$> Opt.optional
+        ( Prelude.read <$>
+            Opt.strOption
+              (  Opt.long "genesis-delegates"
+              <> Opt.metavar "INT"
+              <> Opt.help "The number of genesis delegates [default is 7]."
+              )
+          )
 
     convertTime :: String -> UTCTime
     convertTime =
