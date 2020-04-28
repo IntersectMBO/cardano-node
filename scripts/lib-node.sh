@@ -23,7 +23,7 @@ USAGE="
     --no-stats           Suppress runtime stats in .stats
     --redirect-stdout FILE
                          Redirect stdout to the specified file
-    --no-stdout          Redirect stdout to Dave Null
+    --no-stdout          Redirect stdout to /dev/null
     --profile-suffix SUF
                          Extra suffix to add to the profile name
 
