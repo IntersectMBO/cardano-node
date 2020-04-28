@@ -37,6 +37,7 @@ library
                        Cardano.CLI.Shelley.Parsers
                        Cardano.CLI.Shelley.Run
                        Cardano.CLI.Shelley.Run.Genesis
+                       Cardano.CLI.Shelley.Run.KeyGen
                        Cardano.CLI.Tx
 
   other-modules:       Paths_cardano_cli
