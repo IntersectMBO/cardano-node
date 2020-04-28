@@ -43,7 +43,13 @@ import           Cardano.Config.Types
 
 -- TODO: Other Byron commands to be put here in follow up PR.
 data ByronCommand
-  = UpdateProposal
+  = CreateVote
+        ConfigYamlFilePath
+        SigningKeyFile
+        FilePath -- filepath to update proposal
+        Bool
+        FilePath
+  | UpdateProposal
         ConfigYamlFilePath
         SigningKeyFile
         ProtocolVersion
@@ -57,18 +63,30 @@ data ByronCommand
         -- ^ Update proposal filepath.
         FilePath
         (Maybe CLISocketPath)
+  | SubmitVote
+        ConfigYamlFilePath
+        FilePath
+        -- ^ Vote filepath.
+        (Maybe CLISocketPath)
+
   deriving Show
 
 parseByronCommands :: Parser ByronCommand
 parseByronCommands =  subparser $ mconcat
-    [ command' "create-update-proposal" "Create a Byron era update proposal."
-        $ parseAllParamsToUpdate
-    , command' "submit-update-proposal" "Submit a Byron era update proposal."
+    [ commandGroup "Byron related commands"
+    , metavar "Byron related commands"
+    , command' "create-byron-update-proposal" "Create a Byron era update proposal."
+        $ parseByronUpdateProposal
+    , command' "create-byron-proposal-vote" "Create a Byron era proposal vote."
+        $ parseByronVote
+    , command' "submit-byron-update-proposal" "Submit a Byron era update proposal."
         $ parseByronUpdateProposalSubmission
+    , command' "submit-byron-proposal-vote" "Submit a Byron era proposal vote."
+        $ parseByronVoteSubmission
     ]
 
-parseAllParamsToUpdate :: Parser ByronCommand
-parseAllParamsToUpdate = do
+parseByronUpdateProposal :: Parser ByronCommand
+parseByronUpdateProposal = do
   UpdateProposal
     <$> (ConfigYamlFilePath <$> parseConfigFile)
     <*> parseSigningKeyFile "signing-key" "Path to signing key."
@@ -78,6 +96,13 @@ parseAllParamsToUpdate = do
     <*> parseInstallerHash
     <*> parseFilePath "filepath" "Byron proposal output filepath."
     <*> parseParametersToUpdate
+
+parseByronVoteSubmission :: Parser ByronCommand
+parseByronVoteSubmission = do
+  SubmitVote
+    <$> (ConfigYamlFilePath <$> parseConfigFile)
+    <*> parseFilePath "filepath" "Filepath of Byron update proposal vote."
+    <*> parseCLISocketPath "Path to a cardano-node socket."
 
 parseParametersToUpdate :: Parser [ParametersToUpdate]
 parseParametersToUpdate =
@@ -105,6 +130,17 @@ parseByronUpdateProposalSubmission =
     <$> (ConfigYamlFilePath <$> parseConfigFile)
     <*> parseFilePath "filepath" "Filepath of Byron update proposal."
     <*> parseCLISocketPath "Path to a cardano-node socket."
+
+
+parseByronVote :: Parser ByronCommand
+parseByronVote =
+  CreateVote
+    <$> (ConfigYamlFilePath <$> parseConfigFile)
+    <*> (SigningKeyFile <$> parseFilePath "signing-key" "Filepath of signing key.")
+    <*> parseFilePath "proposal-filepath" "Filepath of Byron update proposal."
+    <*> parseVoteBool
+    <*> parseFilePath "output-filepath" "Byron vote output filepath."
+
 --------------------------------------------------------------------------------
 -- CLI Parsers
 --------------------------------------------------------------------------------
@@ -254,6 +290,10 @@ parseTxFeePolicy = optional $
     <$> ( TxSizeLinear <$> parseLovelace "tx-fee-a-constant" "Propose the constant a for txfee = a + b*s where s is the size."
                        <*> parseFraction "tx-fee-b-constant" "Propose the constant b for txfee = a + b*s where s is the size."
         )
+
+parseVoteBool :: Parser Bool
+parseVoteBool = flag' True (long "vote-yes" <> help "Vote yes with respect to an update proposal.")
+            <|> flag' False (long "vote-no" <> help "Vote no with respect to an update proposal.")
 
 parseUnlockStakeEpoch :: Parser (Maybe ParametersToUpdate)
 parseUnlockStakeEpoch = optional $

@@ -190,6 +190,10 @@ validateCBOR cborObject bs =
       (const () ) <$> decodeCBOR bs (fromCBOR :: Decoder s Update.Proposal)
       Right "Valid Byron update proposal."
 
+    CBORVoteByron -> do
+      (const () ) <$> decodeCBOR bs (fromCBOR :: Decoder s Update.Vote)
+      Right "Valid Byron vote."
+
 pPrintCBOR :: LByteString -> ExceptT CliError IO ()
 pPrintCBOR bs = do
   case deserialiseFromBytes decodeTerm bs of
@@ -245,7 +249,11 @@ serialiseSigningKey ShelleyEra     _              = Left $ CardanoEraNotSupporte
 -- | Exception type for all errors thrown by the CLI.
 --   Well, almost all, since we don't rethrow the errors from readFile & such.
 data CliError
-  = CardanoEraNotSupported !CardanoEra
+  = ByronVoteDecodingError !DecoderError
+  | ByronVoteSubmissionError !RealPBFTError
+  | ByronReadUpdateProposalFileFailure !FilePath !Text
+  | ByronReadVoteFileFailure !FilePath !Text
+  | CardanoEraNotSupported !CardanoEra
   | CBORDecodingError !DeserialiseFailure
   | CBORPrettyPrintError !DeserialiseFailure
   | CertificateValidationErrors !FilePath ![Text]
@@ -283,6 +291,14 @@ data CliError
 
 
 instance Show CliError where
+  show (ByronVoteDecodingError err)
+    =  "Error decoding Byron vote: " <> show err
+  show (ByronVoteSubmissionError pbftErr)
+    = "Error submitting Byron vote: " <> (show $ renderRealPBFTError pbftErr)
+  show (ByronReadUpdateProposalFileFailure fp err)
+    =  "Error reading Byron update proposal at: " <> fp <> "Error: " <> show err
+  show (ByronReadVoteFileFailure fp err)
+    =  "Error reading Byron vote at: " <> fp <> "Error: " <> show err
   show (CBORDecodingError e)
     = "Error with CBOR decoding: " <> show e
   show (CBORPrettyPrintError e)
