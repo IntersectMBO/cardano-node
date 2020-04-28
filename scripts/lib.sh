@@ -176,7 +176,7 @@ export -f actually_run
 ##
 generate_mnemonic()
 {
-        local mnemonic="${1:-$(nix-shell -p diceware --run 'diceware --no-caps --num 2 --wordlist en_eff -d-')}"
+        local mnemonic="${1:-$(nix-shell -p diceware --run 'diceware --no-caps --num 2 --wordlist en_eff -d-' 2>/dev/null || true)}"
         local timestamp="$(date +%s)"
         local commit="$(git rev-parse HEAD | cut -c-8)"
         local status=''
@@ -186,6 +186,6 @@ generate_mnemonic()
         else status=modified
         fi
 
-        echo "${timestamp}.${commit}.${status}.${mnemonic}"
+        echo "${timestamp}.${commit}.${status}${mnemonic:+.${mnemonic}}"
 }
 export -f generate_mnemonic
