@@ -42,12 +42,12 @@ let
 
         # Tell hydra to skip this test on windows (it does not build)
         packages.cardano-cli.components.tests.cardano-cli-test.platforms =
-          with stdenv.lib.platforms; [ linux darwin ];
+          with stdenv.lib.platforms; lib.mkForce [ linux darwin ];
 
         # Needed for the CLI tests.
         # Coreutils because we need 'paste'.
         packages.cardano-cli.components.tests.cardano-cli-test.build-tools =
-          [buildPackages.bc buildPackages.jq buildPackages.coreutils];
+          lib.mkForce [buildPackages.bc buildPackages.jq buildPackages.coreutils];
       }
       {
         # Packages we wish to ignore version bounds of.
