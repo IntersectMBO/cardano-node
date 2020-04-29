@@ -1,0 +1,19 @@
+{
+    "DecentralisationParam": 0.8,
+    "ActiveSlotsCoeff": 0.05,
+    "ProtocolMagicId": 838299499,
+    "StartTime": "2020-01-01T00:20:40Z",
+    "GenDelegs": {},
+    "UpdateQuorum": 12,
+    "MaxHeaderSize": 8192,
+    "MaxMajorPV": 25446,
+    "MaxBodySize": 2097152,
+    "MaxLovelaceSupply": 100000000,
+    "InitialFunds": {},
+    "NetworkMagic": 4036000900,
+    "EpochLength": 21600,
+    "SlotLength": 20000,
+    "SlotsPerKESPeriod": 216000,
+    "MaxKESEvolutions": 1080000,
+    "SecurityParam": 2160
+}

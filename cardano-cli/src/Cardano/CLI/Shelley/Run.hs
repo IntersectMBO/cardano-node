@@ -12,13 +12,8 @@ module Cardano.CLI.Shelley.Run
 
 import           Cardano.Prelude hiding (option, trace)
 
-import qualified Data.ByteString.Char8 as BS
-
 import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT)
-
-import qualified Shelley.Spec.Ledger.Keys as Ledger
-import qualified Cardano.Crypto.Hash.Class as Crypto
 
 import           Cardano.CLI.Key (VerificationKeyFile(..))
 import           Cardano.CLI.Ops (CliError (..))
@@ -29,6 +24,9 @@ import           Cardano.Config.Shelley.KES
 import           Cardano.Config.Shelley.OCert
 import           Cardano.Config.Shelley.VRF
 import           Cardano.Config.Types (SigningKeyFile(..))
+import           Cardano.CLI.Shelley.Run.KeyGen
+import           Cardano.CLI.Shelley.Run.Genesis (runGenesisCreate)
+
 
 
 --
@@ -46,7 +44,6 @@ runShelleyClientCommand (BlockCmd        cmd) = runBlockCmd        cmd
 runShelleyClientCommand (SystemCmd       cmd) = runSystemCmd       cmd
 runShelleyClientCommand (DevOpsCmd       cmd) = runDevOpsCmd       cmd
 runShelleyClientCommand (GenesisCmd      cmd) = runGenesisCmd      cmd
-
 
 --
 -- CLI shelley subcommand dispatch
@@ -93,13 +90,12 @@ runDevOpsCmd cmd = liftIO $ putStrLn $ "runDevOpsCmd: " ++ show cmd
 
 
 runGenesisCmd :: GenesisCmd -> ExceptT CliError IO ()
-runGenesisCmd (GenesisKeyGenGenesis  vk sk)     = runGenesisKeyGenGenesis  vk sk
+runGenesisCmd (GenesisKeyGenGenesis vk sk) = runGenesisKeyGenGenesis vk sk
 runGenesisCmd (GenesisKeyGenDelegate vk sk ctr) = runGenesisKeyGenDelegate vk sk ctr
-runGenesisCmd (GenesisKeyGenUTxO     vk sk)     = runGenesisKeyGenUTxO     vk sk
-runGenesisCmd (GenesisKeyHash        vk)        = runGenesisKeyHash        vk
-runGenesisCmd (GenesisVerKey         vk sk)     = runGenesisVerKey         vk sk
-runGenesisCmd cmd@GenesisCreate{} = liftIO $ putStrLn $ "runGenesisCmd: " ++ show cmd
-
+runGenesisCmd (GenesisKeyGenUTxO vk sk) = runGenesisKeyGenUTxO vk sk
+runGenesisCmd (GenesisKeyHash vk) = runGenesisKeyHash vk
+runGenesisCmd (GenesisVerKey vk sk) = runGenesisVerKey vk sk
+runGenesisCmd (GenesisCreate gd count ms am) = runGenesisCreate gd count ms am
 
 --
 -- Node command implementations
@@ -166,61 +162,3 @@ runNodeIssueOpCert (VerificationKeyFile vkeyKESPath)
       -- a new cert but without updating the counter.
       writeOperationalCertIssueCounter ocertCtrPath (succ issueNumber)
       writeOperationalCert certFile cert vkey
-
-
---
--- Genesis command implementations
---
-
-runGenesisKeyGenGenesis :: VerificationKeyFile -> SigningKeyFile
-                        -> ExceptT CliError IO ()
-runGenesisKeyGenGenesis = runColdKeyGen GenesisKey
-
-
-runGenesisKeyGenDelegate :: VerificationKeyFile
-                         -> SigningKeyFile
-                         -> OpCertCounterFile
-                         -> ExceptT CliError IO ()
-runGenesisKeyGenDelegate vkeyPath skeyPath (OpCertCounterFile ocertCtrPath) = do
-    runColdKeyGen (OperatorKey GenesisDelegateKey) vkeyPath skeyPath
-    firstExceptT OperationalCertError $
-      writeOperationalCertIssueCounter ocertCtrPath initialCounter
-  where
-    initialCounter = 0
-
-
-runGenesisKeyGenUTxO :: VerificationKeyFile -> SigningKeyFile
-                     -> ExceptT CliError IO ()
-runGenesisKeyGenUTxO = runColdKeyGen GenesisUTxOKey
-
-
-runColdKeyGen :: KeyRole -> VerificationKeyFile -> SigningKeyFile
-              -> ExceptT CliError IO ()
-runColdKeyGen role (VerificationKeyFile vkeyPath) (SigningKeyFile skeyPath) =
-    firstExceptT KeyCliError $ do
-      (vkey, skey) <- liftIO genKeyPair
-      writeVerKey     role vkeyPath vkey
-      writeSigningKey role skeyPath skey
-
-
-runGenesisKeyHash :: VerificationKeyFile -> ExceptT CliError IO ()
-runGenesisKeyHash (VerificationKeyFile vkeyPath) =
-    firstExceptT KeyCliError $ do
-      (vkey, _role) <- readVerKeySomeRole genesisKeyRoles vkeyPath
-      let Ledger.KeyHash khash = Ledger.hashKey vkey
-      liftIO $ BS.putStrLn $ Crypto.getHashBytesAsHex khash
-
-
-runGenesisVerKey :: VerificationKeyFile -> SigningKeyFile
-                 -> ExceptT CliError IO ()
-runGenesisVerKey (VerificationKeyFile vkeyPath) (SigningKeyFile skeyPath) =
-    firstExceptT KeyCliError $ do
-      (skey, role) <- readSigningKeySomeRole genesisKeyRoles skeyPath
-      let vkey = deriveVerKey skey
-      writeVerKey role vkeyPath vkey
-
-genesisKeyRoles :: [KeyRole]
-genesisKeyRoles = [ GenesisKey
-                  , GenesisUTxOKey
-                  , OperatorKey GenesisDelegateKey ]
-

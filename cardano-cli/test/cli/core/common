@@ -28,7 +28,7 @@ colourRed='\e[0;31m'
 colourYellow='\e[0;33m'
 
 # Failure is the default!
-RESULT="FAILED"
+RESULT="${colourRed}FAILED [ ${testname} ]${colourReset}"
 
 ROOT=$(dirname "$0")/../../..
 ROOT=$(cd "$ROOT" > /dev/null 2>&1 && pwd)

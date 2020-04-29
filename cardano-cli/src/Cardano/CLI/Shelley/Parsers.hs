@@ -33,15 +33,16 @@ import           Cardano.Config.Types (NodeAddress, SigningKeyFile(..))
 import           Cardano.Config.Shelley.OCert (KESPeriod(..))
 import           Cardano.CLI.Key (VerificationKeyFile(..))
 
+import           Data.Maybe (fromMaybe)
 import           Data.Time.Clock (UTCTime)
-import           Data.Time.Clock.POSIX (posixSecondsToUTCTime)
+import           Data.Time.Format (defaultTimeLocale, iso8601DateFormat, parseTimeOrError)
 
 import           Options.Applicative (Parser)
 import qualified Options.Applicative as Opt
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
 
 import           Prelude (String)
-import qualified Prelude as Prelude
+import qualified Prelude
 
 
 --
@@ -132,14 +133,13 @@ data SystemCmd
 
 
 data GenesisCmd
-  = GenesisCreate GenesisDir (Maybe SystemStart) Lovelace
-  | GenesisKeyGenGenesis  VerificationKeyFile SigningKeyFile
+  = GenesisCreate GenesisDir Word (Maybe SystemStart) Lovelace
+  | GenesisKeyGenGenesis VerificationKeyFile SigningKeyFile
   | GenesisKeyGenDelegate VerificationKeyFile SigningKeyFile OpCertCounterFile
-  | GenesisKeyGenUTxO     VerificationKeyFile SigningKeyFile
-  | GenesisKeyHash        VerificationKeyFile
-  | GenesisVerKey         VerificationKeyFile SigningKeyFile
+  | GenesisKeyGenUTxO VerificationKeyFile SigningKeyFile
+  | GenesisKeyHash VerificationKeyFile
+  | GenesisVerKey VerificationKeyFile SigningKeyFile
   deriving (Eq, Show)
-
 
 --
 -- Shelley CLI flag/option data types
@@ -207,7 +207,6 @@ parseShelleyCommands =
       , Opt.command "genesis"
           (Opt.info (GenesisCmd <$> pGenesisCmd) $ Opt.progDesc "Shelley genesis block commands")
       ]
-
 
 pAddress :: Parser AddressCmd
 pAddress =
@@ -476,7 +475,7 @@ pGenesisCmd =
           (Opt.info pGenesisVerKey $
              Opt.progDesc "Derive the verification key from a signing key")
       , Opt.command "create-genesis"
-          (Opt.info pGenesisCommand $
+          (Opt.info pGenesisCreate $
              Opt.progDesc ("Create a Shelley genesis file from a genesis "
                         ++ "template and genesis/delegation/spending keys."))
       ]
@@ -503,9 +502,9 @@ pGenesisCmd =
     pGenesisVerKey =
       GenesisVerKey <$> pVerificationKeyFile <*> pSigningKeyFile
 
-    pGenesisCommand :: Parser GenesisCmd
-    pGenesisCommand =
-      GenesisCreate <$> pGenesisDir <*> pMaybeSystemStart <*> pInitialSupply
+    pGenesisCreate :: Parser GenesisCmd
+    pGenesisCreate =
+      GenesisCreate <$> pGenesisDir <*> pGenesisDelegates <*> pMaybeSystemStart <*> pInitialSupply
 
     pGenesisDir :: Parser GenesisDir
     pGenesisDir =
@@ -520,14 +519,26 @@ pGenesisCmd =
     pMaybeSystemStart =
       Opt.optional $
         SystemStart . convertTime <$>
-          Opt.option Opt.auto
+          Opt.strOption
             (  Opt.long "start-time"
-            <> Opt.metavar "EPOCH_SECS"
-            <> Opt.help "The genesis start time in POSIX seconds. If unspecified, will be the current time +30 seconds."
+            <> Opt.metavar "UTC_TIME"
+            <> Opt.help "The genesis start time in YYYY-MM-DDThh:mm:ssZ format. If unspecified, will be the current time +30 seconds."
             )
 
-    convertTime :: Integer -> UTCTime
-    convertTime = posixSecondsToUTCTime . realToFrac
+    pGenesisDelegates :: Parser Word
+    pGenesisDelegates =
+      fromMaybe 7 <$> Opt.optional
+        ( Prelude.read <$>
+            Opt.strOption
+              (  Opt.long "genesis-delegates"
+              <> Opt.metavar "INT"
+              <> Opt.help "The number of genesis delegates [default is 7]."
+              )
+          )
+
+    convertTime :: String -> UTCTime
+    convertTime =
+      parseTimeOrError False defaultTimeLocale (iso8601DateFormat $ Just "%H:%M:%SZ")
 
     pInitialSupply :: Parser Lovelace
     pInitialSupply =
@@ -612,7 +623,6 @@ pOutputFile =
       <> Opt.metavar "FILE"
       <> Opt.help "The output file."
       )
-
 
 pPoolId :: Parser PoolId
 pPoolId =

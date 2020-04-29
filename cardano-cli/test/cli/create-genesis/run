@@ -1,0 +1,66 @@
+#!/bin/sh -eu
+
+cwd=$(dirname "$0")
+
+# shellcheck source=/dev/null
+. "${cwd}/../core/common"
+
+# shellcheck disable=SC2154
+banner "${testname}"
+
+OUTPUT_DIR="${TEST}"
+OUTPUT_JSON="${TEST}/genesis.json"
+
+start_time=$(TZ=UTC date --iso-8601=seconds | sed 's/+.*/Z/')
+
+rm -rf "${OUTPUT_DIR}"
+mkdir -p "${OUTPUT_DIR}/delegate-keys/" "${OUTPUT_DIR}/genesis-keys/"
+cp "${cwd}/data/genesis.spec.json" "${OUTPUT_DIR}/"
+
+# Random number for the total supply.
+supply=$(head -100 /dev/urandom | cksum | sed 's/ .*//')
+
+# Random number for the number of genesis delegates.
+seconds=$(date +"%s")
+gendlg_count=$(( 4 + seconds % 16))
+
+error=0
+
+# Create the genesis json file and required keys.
+${CARDANO_CLI} shelley genesis create-genesis \
+    --genesis-dir "${OUTPUT_DIR}/" \
+    --start-time "${start_time}" \
+    --supply "${supply}" \
+    --genesis-delegates ${gendlg_count} \
+    > /dev/null
+
+check_supply=$(grep MaxLovelaceSupply "${OUTPUT_JSON}" | sed "s/${supply}/correct/;s/[ \"]//g")
+if test "${check_supply}" != "MaxLovelaceSupply:correct," ; then
+    echo "Bad $(grep MaxLovelaceSupply "${OUTPUT_JSON}")"
+	error=1
+	fi
+
+check_start_time=$(grep StartTime "${OUTPUT_JSON}" | sed "s/${start_time}/correct/;s/[ \"]//g")
+if test "${check_start_time}" != "StartTime:correct," ; then
+    echo "Bad $(grep StartTime "${OUTPUT_JSON}")"
+	error=1
+	fi
+
+# tree "${OUTPUT_DIR}"
+# cat "${OUTPUT_JSON}"
+# echo
+
+check_delegate_count=$(jq '.GenDelegs' < "${OUTPUT_JSON}" | grep -c ':')
+if test "${check_delegate_count}" != "${gendlg_count}" ; then
+    echo "Bad genesis delegate count: ${check_delegate_count}"
+	error=1
+	fi
+
+# Check that the sum of the initial fund amounts matches the total supply.
+check_supply=$(jq '.InitialFunds' < "${OUTPUT_JSON}" | grep ':' | sed 's/.*://;s/,//' | paste -sd+ -| bc)
+if test "${check_supply}" != "${supply}" ; then
+    echo "Bad sum of supply: ${check_supply} != ${supply}"
+	error=1
+	fi
+
+report_result ${error}

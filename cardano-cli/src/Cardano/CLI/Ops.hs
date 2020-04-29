@@ -57,6 +57,7 @@ import           Cardano.Binary
 import           Cardano.Chain.Block (fromCBORABlockOrBoundary)
 import qualified Cardano.Chain.Delegation as Delegation
 import qualified Cardano.Chain.Genesis as Genesis
+import           Cardano.Config.Shelley.Genesis (ShelleyGenesisError, renderShelleyGenesisError)
 import qualified Cardano.Crypto.Signing as Crypto
 import qualified Cardano.Chain.Update as Update
 import qualified Cardano.Chain.UTxO as UTxO
@@ -102,6 +103,7 @@ import           Cardano.Config.Protocol
                    (Protocol(..), ProtocolInstantiationError,
                     SomeConsensusProtocol(..), mkConsensusProtocol,
                     renderProtocolInstantiationError)
+import           Cardano.Config.Shelley.Address (AddressError, renderAddressError)
 import           Cardano.Config.Shelley.ColdKeys (KeyError, renderKeyError)
 import           Cardano.Config.Shelley.KES (KESError, renderKESError)
 import           Cardano.Config.Shelley.VRF (VRFError, renderVRFError)
@@ -248,7 +250,8 @@ serialiseSigningKey ShelleyEra     _              = Left $ CardanoEraNotSupporte
 -- | Exception type for all errors thrown by the CLI.
 --   Well, almost all, since we don't rethrow the errors from readFile & such.
 data CliError
-  = ByronVoteDecodingError !DecoderError
+  = AddressCliError AddressError
+  | ByronVoteDecodingError !DecoderError
   | ByronVoteSubmissionError !RealPBFTError
   | ByronReadUpdateProposalFileFailure !FilePath !Text
   | ByronReadVoteFileFailure !FilePath !Text
@@ -287,9 +290,13 @@ data CliError
   | VRFCliError VRFError
   | FileNotFoundError !FilePath
   | CardanoApiError !ApiError
-
+  | IOError !FilePath !IOException
+  | AesonDecode !FilePath !Text
+  | ShelleyGenesisError !ShelleyGenesisError
 
 instance Show CliError where
+  show (AddressCliError e)
+    = T.unpack $ renderAddressError e
   show (ByronVoteDecodingError err)
     =  "Error decoding Byron vote: " <> show err
   show (ByronVoteSubmissionError pbftErr)
@@ -369,7 +376,13 @@ instance Show CliError where
     = "Error submitting update proposal: " <> (T.unpack $ renderRealPBFTError err)
   show (VerificationKeyDeserialisationFailed fp err)
     = "Verification key '" <> fp <> "' read failure: "<> T.unpack err
-  show (VRFCliError err) = show $ renderVRFError err
+  show (VRFCliError err) = T.unpack $ renderVRFError err
+  show (IOError fp ioe)
+    = "File '" <> fp <> "': " ++ show ioe
+  show (AesonDecode fp txt)
+    = "File '" <> fp <> "': " ++ show txt
+  show (ShelleyGenesisError sge)
+    = T.unpack $ renderShelleyGenesisError sge
 
 data RealPBFTError
   = IncorrectProtocolSpecified !Protocol
