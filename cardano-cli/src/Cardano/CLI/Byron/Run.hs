@@ -5,7 +5,6 @@ module Cardano.CLI.Byron.Run
 import           Cardano.Prelude
 
 import           Control.Monad.Trans.Except.Extra (hoistEither)
-import qualified Data.ByteString.Lazy as LB
 
 import           Cardano.Chain.Update (recoverUpId)
 
