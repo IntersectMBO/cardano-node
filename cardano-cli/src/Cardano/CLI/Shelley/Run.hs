@@ -133,9 +133,14 @@ runNodeKeyGenVRF (VerificationKeyFile vkeyPath) (SigningKeyFile skeyPath) =
 
 
 runNodeIssueOpCert :: VerificationKeyFile
+                   -- ^ This is the hot KES verification key.
                    -> SigningKeyFile
+                   -- ^ This is the cold signing key.
                    -> OpCertCounterFile
+                   -- ^ Counter that establishes the precedence
+                   -- of the operational certificate.
                    -> KESPeriod
+                   -- ^ Start of the validity period for this certificate.
                    -> OutputFile
                    -> ExceptT CliError IO ()
 runNodeIssueOpCert (VerificationKeyFile vkeyKESPath)

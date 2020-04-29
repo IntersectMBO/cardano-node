@@ -89,11 +89,23 @@ decodeOperationalCertIssueCounter tView = do
 --TODO: this code would be a lot simpler without the extra newtype wrappers
 -- that the ledger layers over the types from the Cardano.Crypto classes.
 
+-- | The operational certificate delegates block/vote signing capability
+-- to a hot KES key pair. You use a cold key (kept offline) to sign the certificate.
+-- This way if your hot key is compromised, you can generate another KES pair and
+-- create another operational certificate (signed by your cold key) to re-delegate
+-- block/vote signing capability to that newly generated KES key pair.
 signOperationalCertificate
-  :: VerKeyES   -- ^ The operational KES key we are signing
-  -> SignKey    -- ^ The cold\/offline key we are using to sign with
-  -> Natural    -- ^ Certificate issue number.
-  -> KESPeriod  -- ^ Start of the validity period for this certificate.
+  :: VerKeyES
+  -- ^ The operational hot KES verification key we are delegating block/vote
+  -- signing capability to.
+  -> SignKey
+  -- ^ The cold\/offline key we are using to sign the operational certificate with.
+  -> Natural
+  -- ^ Certificate issue number. This allows us to establish the precedence of operational
+  -- certificates. An operational key certificate with a higher counter overrides one
+  -- with a lower counter.
+  -> KESPeriod
+  -- ^ Start of the validity period for this certificate.
   -> Cert
 signOperationalCertificate hotKESVerKey signingKey counter kesPeriod' =
   let oCertSig :: Sig
@@ -101,7 +113,7 @@ signOperationalCertificate hotKESVerKey signingKey counter kesPeriod' =
    in OCert hotKESVerKey counter kesPeriod' oCertSig
 
 
-data OperationalCertError = 
+data OperationalCertError =
        ReadOperationalCertError  !TextViewFileError
      | WriteOpertaionalCertError !TextViewFileError
      | ReadOperationalCertIssueCounterError  !TextViewFileError

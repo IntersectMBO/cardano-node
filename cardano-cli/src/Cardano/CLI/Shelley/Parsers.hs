@@ -345,8 +345,8 @@ pNodeCmd =
 
     pIssueOpCert :: Parser NodeCmd
     pIssueOpCert =
-      NodeIssueOpCert <$> pVerificationKeyFile
-                      <*> pSigningKeyFile
+      NodeIssueOpCert <$> pKESVerificationKeyFile
+                      <*> pColdSigningKeyFile
                       <*> pOperatorCertIssueCounterFile
                       <*> pKesPeriod
                       <*> pOutputFile
@@ -554,6 +554,15 @@ pGenesisCmd =
 -- Shelley CLI flag parsers
 --
 
+pColdSigningKeyFile :: Parser SigningKeyFile
+pColdSigningKeyFile =
+  SigningKeyFile <$>
+   Opt.strOption
+     (  Opt.long "cold-signing-key-file"
+     <> Opt.metavar "FILEPATH"
+     <> Opt.help "Filepath of the cold signing key."
+     )
+
 pSigningKeyFile :: Parser SigningKeyFile
 pSigningKeyFile =
   SigningKeyFile <$>
@@ -649,4 +658,13 @@ pVerificationKeyFile =
       (  Opt.long "verification-key-file"
       <> Opt.metavar "FILEPATH"
       <> Opt.help "Output filepath of the verification key."
+      )
+
+pKESVerificationKeyFile :: Parser VerificationKeyFile
+pKESVerificationKeyFile =
+  VerificationKeyFile <$>
+    Opt.strOption
+      (  Opt.long "hot-kes-verification-key-file"
+      <> Opt.metavar "FILEPATH"
+      <> Opt.help "Filepath of the hot KES verification key."
       )
