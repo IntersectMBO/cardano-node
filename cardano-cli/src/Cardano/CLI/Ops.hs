@@ -58,7 +58,6 @@ import           Cardano.Chain.Block (fromCBORABlockOrBoundary)
 import qualified Cardano.Chain.Delegation as Delegation
 import qualified Cardano.Chain.Genesis as Genesis
 import qualified Cardano.Crypto.Signing as Crypto
-import           Cardano.Chain.Slotting (EpochSlots(..))
 import qualified Cardano.Chain.Update as Update
 import qualified Cardano.Chain.UTxO as UTxO
 import           Cardano.Crypto (SigningKey (..))
@@ -174,8 +173,8 @@ readGenesis (GenesisFile fp) = firstExceptT (GenesisReadError fp) $ Genesis.read
 validateCBOR :: CBORObject -> LByteString -> Either CliError Text
 validateCBOR cborObject bs =
   case cborObject of
-    CBORBlockByron -> do
-      (const () ) <$> decodeCBOR bs (fromCBORABlockOrBoundary $ EpochSlots 21600)
+    CBORBlockByron epochSlots -> do
+      (const () ) <$> decodeCBOR bs (fromCBORABlockOrBoundary epochSlots)
       Right "Valid Byron block."
 
     CBORDelegationCertificateByron -> do

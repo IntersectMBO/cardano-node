@@ -43,6 +43,7 @@ import           System.FilePath ((</>), takeDirectory)
 import           System.Posix.Types (Fd(Fd))
 
 import qualified Cardano.Chain.Update as Update
+import           Cardano.Chain.Slotting (EpochSlots)
 import           Cardano.Crypto.ProtocolMagic (RequiresNetworkMagic)
 import           Ouroboros.Consensus.NodeId (NodeId(..))
 import           Ouroboros.Consensus.Util.Condense (Condense (..))
@@ -63,7 +64,7 @@ instance Show ConfigError where
 
 -- | Specify what the CBOR file is
 -- i.e a block, a tx, etc
-data CBORObject = CBORBlockByron
+data CBORObject = CBORBlockByron EpochSlots
                 | CBORDelegationCertificateByron
                 | CBORTxByron
                 | CBORUpdateProposalByron
