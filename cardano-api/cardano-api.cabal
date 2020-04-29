@@ -16,9 +16,13 @@ library
 
   exposed-modules:      Cardano.Api
 
-  other-modules:        Cardano.Api.CBOR
+  other-modules:        Cardano.Api.Byron.CBOR
+                        Cardano.Api.Byron.View
+                        Cardano.Api.CBOR
                         Cardano.Api.Error
                         Cardano.Api.Orphans
+                        Cardano.Api.Shelley.CBOR
+                        Cardano.Api.Shelley.View
                         Cardano.Api.TxSubmit
                         Cardano.Api.TxSubmit.ErrorRender
                         Cardano.Api.TxSubmit.TxSubmitVar
@@ -34,6 +38,7 @@ library
                       , cardano-binary
                       , cardano-node
                       , cardano-config
+                      , cardano-crypto
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
                       , cardano-ledger
@@ -90,12 +95,17 @@ test-suite cardano-api-test
                       , cardano-prelude
                       , cryptonite
                       , hedgehog
+                      , ouroboros-consensus-shelley
                       , shelley-spec-ledger
 
   other-modules:        Test.Cardano.Api
-                        Test.Cardano.Api.Gen
+                        Test.Cardano.Api.Byron.CBOR
+                        Test.Cardano.Api.Byron.View
                         Test.Cardano.Api.CBOR
+                        Test.Cardano.Api.Gen
                         Test.Cardano.Api.Orphans
+                        Test.Cardano.Api.Shelley.CBOR
+                        Test.Cardano.Api.Shelley.View
                         Test.Cardano.Api.View
 
   default-language:     Haskell2010

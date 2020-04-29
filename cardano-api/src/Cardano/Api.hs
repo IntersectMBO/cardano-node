@@ -7,12 +7,14 @@
 module Cardano.Api
   ( module X
 
-  , Address (..)
-  , KeyPair (..)
+  , ByronAddress (..)
+  , ByronKeyPair (..)
+  , ByronPublicKey (..)
   , Network (..)
-  , PublicKey (..)
+  , ShelleyAddress (..)
   , ShelleyKeyDiscriminator (..)
-  , ShelleyVerificationKey (..)
+  , ShelleyKeyPair (..)
+  , ShelleyPublicKey (..)
   , TxSigned (..)
   , TxUnsigned (..)
   , TxWitness (..)
@@ -20,21 +22,24 @@ module Cardano.Api
   , buildTransaction
   , byronPubKeyAddress
   , byronGenKeyPair
-  , shelleyGenKeyPair
   , getTxSignedBody
   , getTxSignedHash
   , getTxSignedWitnesses
   , getTxUnsignedBody
   , getTxUnsignedHash
 
-  , mkPublicKey
+  , mkByronPublicKey
+  , mkShelleyPubKeyAddress
+  , mkShelleyPublicKey
+  , mkShelleyBootStrapPubKeyAddress
   , signTransaction
   , witnessTransaction
   , signTransactionWithWitness
   , submitTransaction
 
   -- Mainly for testing
-  , genericShelleyKeyPair
+  , shelleyGenesisKeyPair
+  , shelleyKeyPair
   ) where
 
 import           Cardano.Api.TxSubmit
@@ -42,8 +47,12 @@ import           Cardano.Api.TxSubmit
 import           Cardano.Prelude
 
 import           Cardano.Api.Types
+import           Cardano.Api.Byron.CBOR as X
+import           Cardano.Api.Byron.View as X
 import           Cardano.Api.CBOR as X
 import           Cardano.Api.Error as X
+import           Cardano.Api.Shelley.CBOR as X
+import           Cardano.Api.Shelley.View as X
 import           Cardano.Api.View as X
 
 import           Cardano.Binary (serialize')
@@ -59,8 +68,6 @@ import qualified Cardano.Chain.Common as Byron
 import qualified Cardano.Chain.Genesis as Byron
 import qualified Cardano.Chain.UTxO as Byron
 
-import           Crypto.Random (MonadRandom)
-
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import           Data.Coerce (coerce)
 import           Data.List.NonEmpty (NonEmpty)
@@ -68,44 +75,53 @@ import qualified Data.Vector as Vector
 
 import           Ouroboros.Consensus.Shelley.Protocol.Crypto (TPraosStandardCrypto)
 
-import           Shelley.Spec.Ledger.Crypto (DSIGN)
-import qualified Shelley.Spec.Ledger.Keys as Shelley (SKey (..), pattern VKey,
-                     pattern VKeyGenesis)
+import           Shelley.Spec.Ledger.Address (toAddr)
+import qualified Shelley.Spec.Ledger.Keys as Shelley (KeyPair(..), SKey (..), pattern VKey,
+                     VKey, pattern VKeyGenesis, hashKey)
+import           Shelley.Spec.Ledger.TxData (Addr(..))
 
-byronGenKeyPair :: IO KeyPair
+byronGenKeyPair :: IO ByronKeyPair
 byronGenKeyPair =
   uncurry KeyPairByron <$> runSecureRandom Crypto.keyGen
 
-shelleyGenKeyPair :: ShelleyKeyDiscriminator -> IO KeyPair
-shelleyGenKeyPair = runSecureRandom . genericShelleyKeyPair
+shelleyKeyPair :: IO ShelleyKeyPair
+shelleyKeyPair = do
+  sk <- runSecureRandom genKeyDSIGN
+  pure $ KeyPairShelley (Shelley.VKey (deriveVerKeyDSIGN sk)) (Shelley.SKey sk)
 
-genericShelleyKeyPair :: MonadRandom m => ShelleyKeyDiscriminator -> m KeyPair
-genericShelleyKeyPair skd = do
-    sk <- genKeyDSIGN
-    pure $ KeyPairShelley (mkShelleyVKey (deriveVerKeyDSIGN sk)) (Shelley.SKey sk)
-  where
-    mkShelleyVKey :: VerKeyDSIGN (DSIGN TPraosStandardCrypto) -> ShelleyVerificationKey
-    mkShelleyVKey vk =
-      case skd of
-        GenesisShelleyKey -> GenesisShelleyVerificationKey $ Shelley.VKeyGenesis vk
-        RegularShelleyKey -> RegularShelleyVerificationKey $ Shelley.VKey vk
+shelleyGenesisKeyPair :: IO ShelleyKeyPair
+shelleyGenesisKeyPair = do
+  sk <- runSecureRandom genKeyDSIGN
+  pure $ GenesisKeyPairShelley (Shelley.VKeyGenesis (deriveVerKeyDSIGN sk)) (Shelley.SKey sk)
 
 -- Given key information (public key, and other network parameters), generate an Address.
 -- Originally: mkAddress :: Network -> PubKey -> PubKeyInfo -> Address
 -- but since PubKeyInfo already has the PublicKey and Network, it can be simplified.
 -- This is true for Byron, but for Shelley there’s also an optional StakeAddressRef as input to
 -- Address generation
-byronPubKeyAddress :: PublicKey -> Address
-byronPubKeyAddress pk =
-  case pk of
-    PubKeyByron nw vk -> AddressByron $ Byron.makeVerKeyAddress (byronNetworkMagic nw) vk
-    PubKeyShelley _ _ -> panic "Cardano.Api.byronPubKeyAddress: PubKeyInfoShelley"
+byronPubKeyAddress :: ByronPublicKey -> ByronAddress
+byronPubKeyAddress (PubKeyByron' nw vk) =
+  ByronAddress $ Byron.makeVerKeyAddress (byronNetworkMagic nw) vk
 
-mkPublicKey :: KeyPair -> Network -> PublicKey
-mkPublicKey kp nw =
-  case kp of
-    KeyPairByron vk _ -> PubKeyByron nw vk
-    KeyPairShelley vk _ -> PubKeyShelley nw vk
+
+mkShelleyPubKeyAddress :: ShelleyKeyPair -> ShelleyKeyPair -> Addr TPraosStandardCrypto
+mkShelleyPubKeyAddress payKey stakKey =
+  case (payKey, stakKey) of
+    (KeyPairShelley vKeyPay sKeyPay, KeyPairShelley vKeyStak sKeyStak) -> do
+      let keyPairPay = Shelley.KeyPair {Shelley.vKey = vKeyPay, Shelley.sKey = sKeyPay }
+          keyPairStake = Shelley.KeyPair {Shelley.vKey = vKeyStak, Shelley.sKey = sKeyStak }
+      toAddr (keyPairPay, keyPairStake)
+    _ -> panic "The ShelleyKeyPair type needs to be rethought"
+
+mkShelleyBootStrapPubKeyAddress :: Shelley.VKey TPraosStandardCrypto -> Addr TPraosStandardCrypto
+mkShelleyBootStrapPubKeyAddress vKey = AddrBootstrap $ Shelley.hashKey vKey
+
+mkByronPublicKey :: ByronKeyPair -> Network -> ByronPublicKey
+mkByronPublicKey (KeyPairByron vk _sk) nw = PubKeyByron' nw vk
+
+mkShelleyPublicKey :: ShelleyKeyPair -> ShelleyPublicKey
+mkShelleyPublicKey (KeyPairShelley vk _) = BootStrapPubKeyShelley vk
+mkShelleyPublicKey (GenesisKeyPairShelley vk _) = GenesisPubKeyShelley vk
 
 byronNetworkMagic :: Network -> Byron.NetworkMagic
 byronNetworkMagic nw =
@@ -201,8 +217,6 @@ signTransaction txu nw sks =
       panic "Cardano.Api.signTransaction: TxUnsignedShelley"
 
 
-
-
 -- Verify that the transaction has been fully witnessed
 -- same decision about checking or not, that all witnesses are the right ones and in the right order etc
 signTransactionWithWitness :: TxUnsigned -> [Byron.TxInWitness] -> TxSigned
@@ -230,9 +244,6 @@ signTransactionWithWitness txu ws =
 
 
 
-
-
-
 -- Extract transaction information - getTransactionId may be redundant
 -- part of TxBuilder
 getTxSignedBody :: TxSigned -> ByteString
@@ -252,8 +263,6 @@ getTxSignedWitnesses txs =
   case txs of
     TxSignedByron _tx _txCbor _txHash txWit -> map TxWitByron (Vector.toList txWit)
     TxSignedShelley -> panic "Cardano.Api.getTxSignedWitnesses: TxUnsignedShelley"
-
-
 
 getTxUnsignedHash :: TxUnsigned -> Crypto.Hash TxUnsigned
 getTxUnsignedHash txu =

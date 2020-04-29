@@ -24,6 +24,7 @@ import           Cardano.Config.Shelley.KES
 import           Cardano.Config.Shelley.OCert
 import           Cardano.Config.Shelley.VRF
 import           Cardano.Config.Types (SigningKeyFile(..))
+import           Cardano.CLI.Shelley.Run.Address
 import           Cardano.CLI.Shelley.Run.KeyGen
 import           Cardano.CLI.Shelley.Run.Genesis (runGenesisCreate)
 
@@ -50,6 +51,7 @@ runShelleyClientCommand (GenesisCmd      cmd) = runGenesisCmd      cmd
 --
 
 runAddressCmd :: AddressCmd -> ExceptT CliError IO ()
+runAddressCmd AddressKeyGen = liftIO runAddressGen
 runAddressCmd cmd = liftIO $ putStrLn $ "runAddressCmd: " ++ show cmd
 
 

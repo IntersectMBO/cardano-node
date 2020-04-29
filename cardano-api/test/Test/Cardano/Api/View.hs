@@ -14,25 +14,6 @@ import qualified Hedgehog as H
 import           Test.Cardano.Api.Gen
 import           Test.Cardano.Api.Orphans ()
 
-
-prop_roundtrip_Address_view :: Property
-prop_roundtrip_Address_view =
-  H.property $ do
-    addr <- byronPubKeyAddress <$> H.forAll genPublicKeyByron
-    H.tripping addr renderAddressView parseAddressView
-
-prop_roundtrip_KeyPair_view :: Property
-prop_roundtrip_KeyPair_view =
-  H.property $ do
-    kp <- H.forAll genKeyPair
-    H.tripping kp renderKeyPairView parseKeyPairView
-
-prop_roundtrip_PublicKey_view :: Property
-prop_roundtrip_PublicKey_view =
-  H.property $ do
-    pk <- H.forAll genPublicKey
-    H.tripping pk renderPublicKeyView parsePublicKeyView
-
 prop_roundtrip_TxSigned_view :: Property
 prop_roundtrip_TxSigned_view =
   H.property $ do

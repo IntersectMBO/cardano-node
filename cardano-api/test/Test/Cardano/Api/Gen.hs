@@ -1,14 +1,18 @@
+{-# LANGUAGE PatternSynonyms #-}
+
 module Test.Cardano.Api.Gen
-  ( genAddress
-  , genKeyPair
+  ( genByronAddress
+  , genGenesisKeyPairShelley
+  , genGenesisShelleyVerificationKey
   , genKeyPairByron
   , genKeyPairShelley
   , genNetwork
-  , genPublicKey
   , genPublicKeyByron
   , genPublicKeyShelley
+  , genRegularKeyPairShelley
+  , genRegularShelleyVerificationKey
+  , genShelleyAddress
   , genShelleyKeyDiscriminator
-  , genShelleyVerificationKey
   , genTxSigned
   , genTxSignedByron
   , genTxUnsigned
@@ -19,12 +23,18 @@ import           Cardano.Api
 import           Cardano.Binary (serialize)
 import           Cardano.Crypto (hashRaw)
 import           Cardano.Crypto.DSIGN.Ed448 ()
+import           Cardano.Crypto.DSIGN (deriveVerKeyDSIGN, genKeyDSIGN)
 import           Cardano.Prelude
 
 import           Crypto.Random (drgNewTest, withDRG)
 
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import           Data.Coerce (coerce)
+
+import           Ouroboros.Consensus.Shelley.Protocol.Crypto (TPraosStandardCrypto)
+import           Shelley.Spec.Ledger.Keys (DiscVKey (..), SKey (..), pattern VKey, VKey,
+                     pattern VKeyGenesis, VKeyGenesis)
+import           Shelley.Spec.Ledger.TxData (Addr)
 
 import           Test.Cardano.Chain.UTxO.Gen (genTx)
 import           Test.Cardano.Crypto.Gen (genProtocolMagicId, genSigningKey, genVerificationKey)
@@ -34,26 +44,18 @@ import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 
 
-genAddress :: Gen Address
-genAddress =
-  -- When Shelly is sorted out, this should change to `Gen.choose`.
-  Gen.frequency
-    [ (9, byronPubKeyAddress <$> genPublicKey)
-    , (1, pure AddressShelley)
-    ]
+genByronAddress :: Gen ByronAddress
+genByronAddress = byronPubKeyAddress <$> genPublicKeyByron
 
-genKeyPair :: Gen KeyPair
-genKeyPair =
-  Gen.choice
-    [ genKeyPairByron
-    , genKeyPairShelley
-    ]
+genShelleyAddress :: Gen (Addr TPraosStandardCrypto)
+genShelleyAddress =
+  mkShelleyPubKeyAddress <$> genRegularKeyPairShelley <*> genRegularKeyPairShelley
 
-genKeyPairByron :: Gen KeyPair
+genKeyPairByron :: Gen ByronKeyPair
 genKeyPairByron =
   KeyPairByron <$> genVerificationKey <*> genSigningKey
 
-genKeyPairShelley :: Gen KeyPair
+genKeyPairShelley :: Gen ShelleyKeyPair
 genKeyPairShelley =
   Gen.choice
     [ genGenesisKeyPairShelley
@@ -69,33 +71,26 @@ genSeed =
     <*> Gen.word64 Range.constantBounded
     <*> Gen.word64 Range.constantBounded
 
-genGenesisKeyPairShelley :: Gen KeyPair
+genGenesisKeyPairShelley :: Gen ShelleyKeyPair
 genGenesisKeyPairShelley =
-  mkDeterministicGenesisKeyPairShelley <$> genSeed
+  mkGenKeyPair <$> genSeed
 
-genRegularKeyPairShelley :: Gen KeyPair
+genRegularKeyPairShelley :: Gen ShelleyKeyPair
 genRegularKeyPairShelley =
-  mkDeterministicRegularKeyPairShelley <$> genSeed
+  mkKeyPair <$> genSeed
 
 genShelleyKeyDiscriminator :: Gen ShelleyKeyDiscriminator
 genShelleyKeyDiscriminator =
   Gen.choice [pure GenesisShelleyKey, pure RegularShelleyKey]
 
-genShelleyVerificationKey :: Gen ShelleyVerificationKey
-genShelleyVerificationKey =
-  Gen.choice
-    [ genGenesisShelleyVerificationKey
-    , genRegularShelleyVerificationKey
-    ]
-
-genGenesisShelleyVerificationKey :: Gen ShelleyVerificationKey
+genGenesisShelleyVerificationKey :: Gen (VKeyGenesis TPraosStandardCrypto)
 genGenesisShelleyVerificationKey = do
-  KeyPairShelley vk _ <- mkDeterministicGenesisKeyPairShelley <$> genSeed
+  (GenesisKeyPairShelley vk _) <- mkGenKeyPair <$> genSeed
   pure vk
 
-genRegularShelleyVerificationKey :: Gen ShelleyVerificationKey
+genRegularShelleyVerificationKey :: Gen (VKey TPraosStandardCrypto)
 genRegularShelleyVerificationKey = do
-  KeyPairShelley vk _ <- mkDeterministicRegularKeyPairShelley <$> genSeed
+  (KeyPairShelley vk _) <- mkKeyPair <$> genSeed
   pure vk
 
 genNetwork :: Gen Network
@@ -105,20 +100,13 @@ genNetwork =
     , Testnet <$> genProtocolMagicId
     ]
 
-genPublicKey :: Gen PublicKey
-genPublicKey =
-  Gen.choice
-    [ genPublicKeyByron
-    , genPublicKeyShelley
-    ]
-
-genPublicKeyByron :: Gen PublicKey
+genPublicKeyByron :: Gen ByronPublicKey
 genPublicKeyByron =
-  mkPublicKey <$> genKeyPairByron <*> genNetwork
+  mkByronPublicKey <$> genKeyPairByron <*> genNetwork
 
-genPublicKeyShelley :: Gen PublicKey
+genPublicKeyShelley :: Gen ShelleyPublicKey
 genPublicKeyShelley =
-  mkPublicKey <$> genKeyPairShelley <*> genNetwork
+  mkShelleyPublicKey <$> genKeyPairShelley
 
 genTxSigned :: Gen TxSigned
 genTxSigned =
@@ -153,16 +141,17 @@ genTxUnsignedByron = do
 -- Shelley Helpers
 ------------------------------------------------------------------------------
 
-mkDeterministicGenesisKeyPairShelley :: (Word64, Word64, Word64, Word64, Word64) -> KeyPair
-mkDeterministicGenesisKeyPairShelley seed =
-  mkDeterministicKeyPairShelley seed GenesisShelleyKey
+-- | Generate a deterministic genesis key pair given a seed.
+mkGenKeyPair :: (Word64, Word64, Word64, Word64, Word64) -> ShelleyKeyPair
+mkGenKeyPair seed =
+  fst . withDRG (drgNewTest seed) $ do
+    sk <- genKeyDSIGN
+    return $ GenesisKeyPairShelley (VKeyGenesis $ deriveVerKeyDSIGN sk) (SKey sk)
 
-mkDeterministicRegularKeyPairShelley :: (Word64, Word64, Word64, Word64, Word64) -> KeyPair
-mkDeterministicRegularKeyPairShelley seed =
-  mkDeterministicKeyPairShelley seed RegularShelleyKey
+-- | Generate a deterministic key pair given a seed.
+mkKeyPair :: (Word64, Word64, Word64, Word64, Word64) -> ShelleyKeyPair
+mkKeyPair seed = fst . withDRG (drgNewTest seed) $ do
+  sk <- genKeyDSIGN
+  return $ KeyPairShelley (VKey $ deriveVerKeyDSIGN sk) (SKey sk)
 
-mkDeterministicKeyPairShelley :: (Word64, Word64, Word64, Word64, Word64)
-                              -> ShelleyKeyDiscriminator
-                              -> KeyPair
-mkDeterministicKeyPairShelley seed skd =
-  fst . withDRG (drgNewTest seed) $ genericShelleyKeyPair skd
+

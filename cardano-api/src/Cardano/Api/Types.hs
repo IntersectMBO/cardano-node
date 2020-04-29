@@ -5,12 +5,14 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module Cardano.Api.Types
-  ( Address (..)
-  , KeyPair (..)
+  ( ByronAddress (..)
+  , ByronKeyPair (..)
+  , ByronPublicKey (..)
   , Network (..)
-  , PublicKey (..)
+  , ShelleyAddress (..)
   , ShelleyKeyDiscriminator (..)
-  , ShelleyVerificationKey (..)
+  , ShelleyKeyPair (..)
+  , ShelleyPublicKey (..)
   , TxSigned (..)
   , TxUnsigned (..)
   , TxWitness (..)
@@ -30,23 +32,30 @@ import           Data.Vector (Vector)
 import           Ouroboros.Consensus.Shelley.Protocol.Crypto (TPraosStandardCrypto)
 
 import           Shelley.Spec.Ledger.Keys (SKey, VKey, VKeyGenesis)
+import           Shelley.Spec.Ledger.TxData (Addr(..))
 
 -- The 'Address' data type in 'cardano-sl' is a design train wreck.
 -- We need something that is compatible and discard as much of the insanity as possible.
-data Address
-  = AddressByron !Byron.Address
-  | AddressShelley
-  deriving (Eq, Generic , NFData, Show)  -- Byron.Address' needs NFData
-  deriving NoUnexpectedThunks via UseIsNormalForm Address
+data ByronAddress = ByronAddress !Byron.Address
+                  deriving (Eq, Generic , NFData, Show)  -- Byron.Address' needs NFData
+                  deriving NoUnexpectedThunks via UseIsNormalForm ByronAddress
 
-data KeyPair
-  -- The Byron key pair use newtype wrappers around 'XPriv'/'Xpub' keys.
-  -- An 'XPub' is 32 bytes of public key and 32 bytes of Chaincode which is used in the
-  -- Byron address derivation scheme.
-  = KeyPairByron !Crypto.VerificationKey !Crypto.SigningKey
-  | KeyPairShelley !ShelleyVerificationKey !(SKey TPraosStandardCrypto)
-  deriving (Generic, NFData, Show)
-  deriving anyclass NoUnexpectedThunks
+data ShelleyAddress = BootStrapAddressShelley !(Addr TPraosStandardCrypto)
+                    deriving (Eq, Generic , NFData, Show)
+                    deriving NoUnexpectedThunks via UseIsNormalForm ShelleyAddress
+
+
+-- The Byron key pair use newtype wrappers around 'XPriv'/'Xpub' keys.
+-- An 'XPub' is 32 bytes of public key and 32 bytes of Chaincode which is used in the
+-- Byron address derivation scheme.
+data ByronKeyPair = KeyPairByron !Crypto.VerificationKey !Crypto.SigningKey
+                  deriving (Generic, NFData, Show)
+                  deriving anyclass NoUnexpectedThunks
+
+data ShelleyKeyPair = KeyPairShelley !(VKey TPraosStandardCrypto) !(SKey TPraosStandardCrypto)
+                    | GenesisKeyPairShelley !(VKeyGenesis TPraosStandardCrypto) !(SKey TPraosStandardCrypto)
+                    deriving (Eq, Generic, NFData, Show)
+                    deriving anyclass NoUnexpectedThunks
 
 -- | A means of discriminating between different kinds of Shelley keys.
 data ShelleyKeyDiscriminator
@@ -55,17 +64,15 @@ data ShelleyKeyDiscriminator
   deriving (Generic, NFData, Show)
   deriving anyclass NoUnexpectedThunks
 
-data ShelleyVerificationKey
-  = GenesisShelleyVerificationKey !(VKeyGenesis TPraosStandardCrypto)
-  | RegularShelleyVerificationKey !(VKey TPraosStandardCrypto)
-  deriving (Generic, NFData, Show)
-  deriving anyclass NoUnexpectedThunks
 
-data PublicKey
-  = PubKeyByron !Network !Crypto.VerificationKey
-  | PubKeyShelley !Network !ShelleyVerificationKey
-  deriving (Generic, NFData, Show)
-  deriving anyclass NoUnexpectedThunks
+data ByronPublicKey = PubKeyByron' !Network !Crypto.VerificationKey
+                    deriving Show
+
+
+data ShelleyPublicKey = BootStrapPubKeyShelley !(VKey TPraosStandardCrypto)
+                      | GenesisPubKeyShelley !(VKeyGenesis TPraosStandardCrypto)
+                      deriving (Eq, Show)
+
 
 -- The cardano-sl codebase (and cardano-ledger) has something a little like
 -- this (actually isomorphic with Maybe):

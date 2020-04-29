@@ -8,11 +8,12 @@ import qualified Data.ByteString.Char8 as BS
 main :: IO ()
 main = do
   keyPair <- byronGenKeyPair
-  BS.putStrLn $ renderKeyPairView keyPair
+  BS.putStrLn $ renderByronKeyPairView keyPair
 
+  keyPair' <- byronGenKeyPair
   -- Could also be 'Testnet x'.
-  let pubKey = mkPublicKey keyPair Mainnet
-  BS.putStrLn $ renderPublicKeyView pubKey
+  let pubKey = mkByronPublicKey keyPair' Mainnet
+  BS.putStrLn $ renderByronPublicKeyView pubKey
 
   let addr = byronPubKeyAddress pubKey
-  BS.putStrLn $ renderAddressView addr
+  BS.putStrLn $ renderByronAddressView addr
