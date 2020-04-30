@@ -103,7 +103,7 @@ Some of the more important settings are as follows:
 
 ## Logging
 
-Logs are output to the `log/` dir.
+Logs are output to the `logs/` dir.
 
 ## Profiling & statistics
 
