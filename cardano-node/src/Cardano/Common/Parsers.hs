@@ -30,20 +30,22 @@ module Cardano.Common.Parsers
 
 
 import           Prelude (String)
+import qualified Prelude
 
 import           Cardano.Prelude hiding (option)
+
+import           Cardano.Chain.Common (Lovelace, mkLovelace)
+import           Cardano.Config.Byron.Parsers   as Byron
+import           Cardano.Config.Shelley.Parsers as Shelley
+import           Cardano.Config.Topology
+import           Cardano.Config.Types
+
 
 import           Network.Socket (PortNumber)
 import           Options.Applicative
 
 import           Ouroboros.Consensus.NodeId (NodeId(..), CoreNodeId(..))
 import           Ouroboros.Network.Block (MaxSlotNo(..), SlotNo(..))
-import           Cardano.Chain.Common (Lovelace, mkLovelace)
-
-import           Cardano.Config.Byron.Parsers   as Byron
-import           Cardano.Config.Shelley.Parsers as Shelley
-import           Cardano.Config.Topology
-import           Cardano.Config.Types
 
 
 -- Common command line parsers
@@ -240,15 +242,15 @@ parseNodeId desc =
     )
 
 parseNodeAddress :: Parser NodeAddress
-parseNodeAddress = NodeAddress <$> parseHostAddr <*> parsePort
+parseNodeAddress = NodeAddress <$> optional parseHostAddr <*> parsePort
 
 parseHostAddr :: Parser NodeHostAddress
 parseHostAddr =
-    option (NodeHostAddress . readMaybe <$> str) (
+    option (NodeHostAddress . Prelude.read <$> str) (
           long "host-addr"
        <> metavar "HOST-NAME"
        <> help "Optionally limit node to one ipv6 or ipv4 address"
-       <> (value $ NodeHostAddress Nothing)
+       <> value (NodeHostAddress "localhost")
     )
 
 parsePort :: Parser PortNumber

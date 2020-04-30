@@ -1,6 +1,6 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
-module Test.Cardano.Config
+module Test.Cardano.Config.Types
   ( tests
   ) where
 
@@ -71,13 +71,13 @@ prop_roundtrip_ShelleyGenesis_JSON =
 
 prop_roundtrip_VerKeyVRF_SimpleVRF_CBOR :: Property
 prop_roundtrip_VerKeyVRF_SimpleVRF_CBOR =
-  Hedgehog.property $ do
-    (_, vKeyVRF) <- forAllT genVRFKeyPair'
+  Hedgehog.withTests 50 . Hedgehog.property $ do
+    vKeyVRF <- snd <$> forAllT genVRFKeyPair'
     Hedgehog.tripping vKeyVRF encodeVRFVerificationKey decodeVRFVerificationKey
 
 prop_roundtrip_VKeyES_TPraosStandardCrypto_CBOR :: Property
 prop_roundtrip_VKeyES_TPraosStandardCrypto_CBOR =
-  Hedgehog.property $ do
+  Hedgehog.withTests 20 . Hedgehog.property $ do
     (vKeyES, _) <- forAllT genKESKeyPair'
     Hedgehog.tripping vKeyES encodeKESVerificationKey decodeKESVerificationKey
 

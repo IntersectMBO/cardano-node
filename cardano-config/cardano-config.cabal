@@ -122,6 +122,7 @@ test-suite cardano-config-test
                       , cardano-slotting
                       , containers
                       , cryptonite
+                      , iproute
                       , ouroboros-consensus
                       , ouroboros-consensus-shelley
                       , ouroboros-network
@@ -129,9 +130,11 @@ test-suite cardano-config-test
                       , shelley-spec-ledger-test
                       , time
                       , hedgehog
+                      , hedgehog-corpus
 
-  other-modules:        Test.Cardano.Config
+  other-modules:        Test.Cardano.Config.Types
                         Test.Cardano.Config.Examples
+                        Test.Cardano.Config.Json
                         Test.Cardano.Config.Gen
 
   default-language:     Haskell2010

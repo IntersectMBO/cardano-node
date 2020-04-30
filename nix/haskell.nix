@@ -41,6 +41,10 @@ let
 
 
         # Tell hydra to skip this test on windows (it does not build)
+        # 1. Set them to all ...
+        packages.cardano-cli.components.all.platforms =
+          with stdenv.lib.platforms; lib.mkForce [ linux darwin windows ];
+        # 2. then drop windows for the test
         packages.cardano-cli.components.tests.cardano-cli-test.platforms =
           with stdenv.lib.platforms; lib.mkForce [ linux darwin ];
 
@@ -86,7 +90,7 @@ let
     ];
     # TODO add flags to packages (like cs-ledger) so we can turn off tests that will
     # not build for windows on a per package bases (rather than using --disable-tests).
-    configureArgs = lib.optionalString stdenv.hostPlatform.isWindows "--disable-tests";
+    # configureArgs = lib.optionalString stdenv.hostPlatform.isWindows "--disable-tests";
   };
 in
   pkgSet

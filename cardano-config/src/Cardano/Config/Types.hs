@@ -31,7 +31,7 @@ module Cardano.Config.Types
     , parseNodeConfigurationFP
     ) where
 
-import           Prelude (read, show)
+import           Prelude (show)
 import           Cardano.Prelude hiding (show)
 
 import           Data.Aeson
@@ -298,7 +298,7 @@ instance FromJSON ViewMode where
 
 -- | IPv4 address with a port number.
 data NodeAddress = NodeAddress
-  { naHostAddress :: !NodeHostAddress
+  { naHostAddress :: !(Maybe NodeHostAddress)
   , naPort :: !PortNumber
   } deriving (Eq, Ord, Show)
 
@@ -308,15 +308,28 @@ instance Condense NodeAddress where
 instance FromJSON NodeAddress where
   parseJSON = withObject "NodeAddress" $ \v -> do
     NodeAddress
-      <$> (NodeHostAddress . Just <$> read <$> v .: "addr")
+      <$> (maybe Nothing (Just . NodeHostAddress) <$> readMaybe <$> v .: "addr")
       <*> ((fromIntegral :: Int -> PortNumber) <$> v .: "port")
 
-newtype NodeHostAddress = NodeHostAddress { getAddress :: Maybe IP.IP }
-                          deriving (Eq, Ord, Show)
+instance ToJSON NodeAddress where
+  toJSON na =
+    object
+      [ "addr" .= maybe "null" toJSON (naHostAddress na)
+      , "port" .= (fromIntegral (naPort na) :: Int)
+      ]
+
+newtype NodeHostAddress
+  = NodeHostAddress { unNodeHostAddress :: IP.IP }
+  deriving (Eq, Ord, Show)
 
 instance FromJSON NodeHostAddress where
-  parseJSON (String ipStr) = case readMaybe $ T.unpack ipStr of
-                               Just ip -> pure . NodeHostAddress $ Just ip
-                               Nothing -> pure $ NodeHostAddress Nothing
+  parseJSON (String ipStr) =
+    case readMaybe $ T.unpack ipStr of
+      Just ip -> pure $ NodeHostAddress ip
+      Nothing -> panic $ "Parsing of IP failed: " <> ipStr
   parseJSON invalid = panic $ "Parsing of IP failed due to type mismatch. "
                             <> "Encountered: " <> (T.pack $ show invalid)
+
+instance ToJSON NodeHostAddress where
+  toJSON mha =
+    String (T.pack . show $ unNodeHostAddress mha)

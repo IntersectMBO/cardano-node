@@ -5,9 +5,13 @@ module Test.Cardano.Config.Gen
   , genGenesisDelegationPair
   , genGenesisFundPair
   , genKESKeyPair'
-  , genVRFKeyPair'
+  , genNetworkTopology
+  , genNodeAddress
+  , genNodeHostAddress
+  , genNodeSetup
   , genShelleyGenesis
   , genTextView
+  , genVRFKeyPair'
   ) where
 
 import           Cardano.Prelude
@@ -16,17 +20,20 @@ import           Cardano.Config.Shelley.KES (SignKey, VerKey, genKESKeyPair)
 import           Cardano.Config.Shelley.Genesis
 import           Cardano.Config.Shelley.VRF (genVRFKeyPair)
 import           Cardano.Config.TextView
+import           Cardano.Config.Topology
+import           Cardano.Config.Types
 import           Cardano.Crypto.VRF.Simple (SimpleVRF)
 import           Cardano.Slotting.Slot (EpochSize (..))
 import           Cardano.Crypto.DSIGN (deriveVerKeyDSIGN, genKeyDSIGN)
 import           Crypto.Random (drgNewTest, withDRG)
 
 import qualified Data.Map.Strict as Map
-
+import qualified Data.IP as IP
 import           Data.Time.Clock (UTCTime)
 import           Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 
 import           Hedgehog (Gen, GenT)
+import           Hedgehog.Corpus (cooking)
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 import           Hedgehog.Internal.Gen ()
@@ -100,14 +107,12 @@ genKESKeyPair' = do
 genKeyPair :: Crypto crypto => Gen (SKey crypto, VKey crypto)
 genKeyPair = mkKeyPair <$> genSeed5
 
-genSeed5 :: Gen (Word64, Word64, Word64, Word64, Word64)
-genSeed5 =
-  (,,,,)
-    <$> Gen.word64 Range.constantBounded
-    <*> Gen.word64 Range.constantBounded
-    <*> Gen.word64 Range.constantBounded
-    <*> Gen.word64 Range.constantBounded
-    <*> Gen.word64 Range.constantBounded
+genNetworkTopology :: Gen NetworkTopology
+genNetworkTopology =
+  Gen.choice
+    [ MockNodeTopology <$> Gen.list (Range.linear 0 10) genNodeSetup
+    , RealNodeTopology <$> Gen.list (Range.linear 0 10) genRemoteAddress
+    ]
 
 genTextView :: Gen TextView
 genTextView =
@@ -155,9 +160,50 @@ genNetworkMagic :: Gen NetworkMagic
 genNetworkMagic =
   NetworkMagic <$> Gen.enumBounded
 
+genNodeAddress :: Gen NodeAddress
+genNodeAddress =
+  NodeAddress
+    <$> Gen.maybe genNodeHostAddress
+    <*> fmap fromIntegral (Gen.word16 $ Range.linear 100 20000)
+
+genNodeHostAddress :: Gen NodeHostAddress
+genNodeHostAddress =
+  NodeHostAddress
+    <$> Gen.choice
+          [ IP.IPv4 . IP.toIPv4w <$> Gen.enumBounded
+          , IP.IPv6 . IP.toIPv6w <$> genFourWord32
+          ]
+  where
+    genFourWord32 :: Gen (Word32, Word32, Word32, Word32)
+    genFourWord32 =
+       (,,,) <$> Gen.enumBounded <*> Gen.enumBounded <*> Gen.enumBounded <*> Gen.enumBounded
+
+genNodeSetup :: Gen NodeSetup
+genNodeSetup =
+  NodeSetup
+    <$> Gen.word64 (Range.linear 0 10000)
+    <*> genNodeAddress
+    <*> Gen.list (Range.linear 0 6) genRemoteAddress
+
+genRemoteAddress :: Gen RemoteAddress
+genRemoteAddress =
+  RemoteAddress
+    <$> Gen.element cooking
+    <*> fmap fromIntegral (Gen.word16 $ Range.linear 100 20000)
+    <*> Gen.int (Range.linear 0 100)
+
 genSecurityParam :: Gen SecurityParam
 genSecurityParam =
   SecurityParam <$> Gen.word64 (Range.linear 1 20000)
+
+genSeed5 :: Gen (Word64, Word64, Word64, Word64, Word64)
+genSeed5 =
+  (,,,,)
+    <$> Gen.word64 Range.constantBounded
+    <*> Gen.word64 Range.constantBounded
+    <*> Gen.word64 Range.constantBounded
+    <*> Gen.word64 Range.constantBounded
+    <*> Gen.word64 Range.constantBounded
 
 genSlotLength :: Gen SlotLength
 genSlotLength =
