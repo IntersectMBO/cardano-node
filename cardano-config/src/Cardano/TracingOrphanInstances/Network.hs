@@ -507,8 +507,10 @@ instance Show peer
       => ToObject [TraceLabelPeer peer (FetchDecision [Point header])] where
   toObject MinimalVerbosity _ = emptyObject
   toObject _ [] = emptyObject
-  toObject _ (lbl : r) = toObject MaximalVerbosity lbl <>
-                                        toObject MaximalVerbosity r
+  toObject _ xs = mkObject
+    [ "kind"  .= String "PeersFetch"
+    , "peers" .= toJSON
+      (foldl' (\acc x -> toObject MaximalVerbosity x : acc) [] xs) ]
 
 
 instance (Show peer, ToObject a) => ToObject (TraceLabelPeer peer a) where
