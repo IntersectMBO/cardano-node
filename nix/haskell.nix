@@ -90,7 +90,7 @@ let
     ];
     # TODO add flags to packages (like cs-ledger) so we can turn off tests that will
     # not build for windows on a per package bases (rather than using --disable-tests).
-    configureArgs = lib.optionalString stdenv.hostPlatform.isWindows "--disable-tests";
+    # configureArgs = lib.optionalString stdenv.hostPlatform.isWindows "--disable-tests";
   };
 in
   pkgSet
