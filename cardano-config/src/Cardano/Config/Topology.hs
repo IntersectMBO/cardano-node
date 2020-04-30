@@ -41,10 +41,12 @@ newtype TopologyError = NodeIdNotFoundInToplogyFile FilePath deriving Show
 
 nodeAddressToSockAddr :: NodeAddress -> SockAddr
 nodeAddressToSockAddr (NodeAddress addr port) =
-  case getAddress addr of
-    Just (IP.IPv4 ipv4) -> SockAddrInet port $ IP.toHostAddress ipv4
-    Just (IP.IPv6 ipv6) -> SockAddrInet6 port 0 (IP.toHostAddress6 ipv6) 0
-    Nothing             -> SockAddrInet port 0 -- Could also be any IPv6 addr
+  case addr of
+    Just nha ->
+      case unNodeHostAddress nha of
+        IP.IPv4 ipv4 -> SockAddrInet port $ IP.toHostAddress ipv4
+        IP.IPv6 ipv6 -> SockAddrInet6 port 0 (IP.toHostAddress6 ipv6) 0
+    Nothing -> SockAddrInet port 0 -- Could also be any IPv6 addr
 
 nodeAddressInfo :: NodeCLI -> IO [AddrInfo]
 nodeAddressInfo NodeCLI{nodeAddr = NodeAddress hostAddr port} = do
@@ -52,7 +54,7 @@ nodeAddressInfo NodeCLI{nodeAddr = NodeAddress hostAddr port} = do
                 addrFlags = [AI_PASSIVE, AI_ADDRCONFIG]
               , addrSocketType = Stream
               }
-  getAddrInfo (Just hints) (fmap show $ getAddress hostAddr) (Just $ show port)
+  getAddrInfo (Just hints) (maybe Nothing (Just . show . unNodeHostAddress) hostAddr) (Just $ show port)
 
 -- | Domain name with port number
 --
@@ -78,7 +80,7 @@ remoteAddressToNodeAddress (RemoteAddress addrStr port val) =
   case readMaybe addrStr of
     Nothing -> Nothing
     Just addr -> if val /= 0
-                 then Just $ NodeAddress (NodeHostAddress $ Just addr) port
+                 then Just $ NodeAddress (Just $ NodeHostAddress addr) port
                  else Nothing
 
 
@@ -91,13 +93,22 @@ instance FromJSON RemoteAddress where
     RemoteAddress
       <$> v .: "addr"
       <*> ((fromIntegral :: Int -> PortNumber) <$> v .: "port")
-      <*> (v .: "valency")
+      <*> v .: "valency"
+
+instance ToJSON RemoteAddress where
+  toJSON ra =
+    object
+      [ "addr" .= raAddress ra
+      , "port" .= (fromIntegral (raPort ra) :: Int)
+      , "valency" .= raValency ra
+      ]
+
 
 data NodeSetup = NodeSetup
   { nodeId :: !Word64
   , nodeAddress :: !NodeAddress
   , producers :: ![RemoteAddress]
-  } deriving Show
+  } deriving (Eq, Show)
 
 instance FromJSON NodeSetup where
   parseJSON = withObject "NodeSetup" $ \o ->
@@ -106,15 +117,29 @@ instance FromJSON NodeSetup where
                   <*> o .: "nodeAddress"
                   <*> o .: "producers"
 
+instance ToJSON NodeSetup where
+  toJSON ns =
+    object
+      [ "nodeId" .= nodeId ns
+      , "nodeAddress" .= nodeAddress ns
+      , "producers" .= producers ns
+      ]
+
 data NetworkTopology = MockNodeTopology ![NodeSetup]
                      | RealNodeTopology ![RemoteAddress]
-  deriving Show
+  deriving (Eq, Show)
 
 instance FromJSON NetworkTopology where
   parseJSON = withObject "NetworkTopology" $ \o -> asum
                 [ MockNodeTopology <$> o .: "MockProducers"
                 , RealNodeTopology <$> o .: "Producers"
                 ]
+
+instance ToJSON NetworkTopology where
+  toJSON top =
+    case top of
+      MockNodeTopology nss -> object [ "MockProducers" .= toJSON nss ]
+      RealNodeTopology ras -> object [ "Producers" .= toJSON ras ]
 
 -- | Read the `NetworkTopology` configuration from the specified file.
 -- While running a real protocol, this gives your node its own address and

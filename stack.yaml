@@ -26,6 +26,7 @@ extra-deps:
   - base58-bytestring-0.1.0
   # Waiting on Stackage release
   - hedgehog-1.0.2
+  - hedgehog-corpus-0.2.0
   - micro-recursion-schemes-5.0.2.2
   - streaming-binary-0.3.0.1
   - canonical-json-0.6.0.0
