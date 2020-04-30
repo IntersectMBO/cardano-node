@@ -33,7 +33,6 @@ import           Cardano.Config.Types (NodeAddress, SigningKeyFile(..))
 import           Cardano.Config.Shelley.OCert (KESPeriod(..))
 import           Cardano.CLI.Key (VerificationKeyFile(..))
 
-import           Data.Maybe (fromMaybe)
 import           Data.Time.Clock (UTCTime)
 import           Data.Time.Format (defaultTimeLocale, iso8601DateFormat, parseTimeOrError)
 
@@ -527,13 +526,12 @@ pGenesisCmd =
 
     pGenesisDelegates :: Parser Word
     pGenesisDelegates =
-      fromMaybe 7 <$> Opt.optional
-        ( Prelude.read <$>
-            Opt.strOption
-              (  Opt.long "genesis-delegates"
-              <> Opt.metavar "INT"
-              <> Opt.help "The number of genesis delegates [default is 7]."
-              )
+      Prelude.read <$>
+        Opt.strOption
+          (  Opt.long "genesis-delegates"
+          <> Opt.metavar "INT"
+          <> Opt.help "The number of genesis delegates [default is 7]."
+          <> Opt.value "7"
           )
 
     convertTime :: String -> UTCTime
