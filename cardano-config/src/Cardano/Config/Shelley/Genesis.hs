@@ -32,7 +32,8 @@ import           Ouroboros.Network.Magic (NetworkMagic (..))
 import           Ouroboros.Consensus.BlockchainTime
                    (SystemStart (..), slotLengthFromSec)
 import           Ouroboros.Consensus.Protocol.Abstract (SecurityParam (..))
-import           Ouroboros.Consensus.Shelley.Node (ShelleyGenesis (..))
+import           Ouroboros.Consensus.Shelley.Node
+                   (ShelleyGenesis (..), emptyGenesisStaking)
 import           Ouroboros.Consensus.Shelley.Protocol (TPraosStandardCrypto)
 
 data ShelleyGenesisError
@@ -88,6 +89,7 @@ shelleyGenesisDefaults =
 
       -- genesis keys and initial funds
     , sgGenDelegs             = Map.empty
+    , sgStaking               = emptyGenesisStaking
     , sgInitialFunds          = Map.empty
     , sgMaxLovelaceSupply     = 0
     }

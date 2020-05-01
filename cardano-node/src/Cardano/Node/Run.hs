@@ -21,7 +21,7 @@ module Cardano.Node.Run
   )
 where
 
-import           Cardano.Prelude hiding (ByteString, atomically, take, trace)
+import           Cardano.Prelude hiding (ByteString, atomically, take, unlines, trace)
 import           Prelude (String, error, unlines)
 
 import qualified Control.Concurrent.Async as Async
@@ -68,6 +68,7 @@ import qualified Ouroboros.Consensus.Node as Node (getChainDB, run)
 import           Ouroboros.Consensus.Node.ProtocolInfo
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
 import           Ouroboros.Consensus.NodeId
+import           Ouroboros.Consensus.Fragment.InFuture (defaultClockSkew)
 import qualified Ouroboros.Consensus.Config as Consensus
 import qualified Ouroboros.Consensus.Cardano as Consensus
 import           Ouroboros.Consensus.Util.Orphans ()
@@ -213,7 +214,8 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
        rnNodeKernelHook       = \registry nodeKernel -> do
          maybeSpawnOnSlotSyncedShutdownHandler npm sfds trace registry
            (Node.getChainDB nodeKernel)
-         onKernel nodeKernel
+         onKernel nodeKernel,
+       rnMaxClockSkew         = defaultClockSkew
     }
  where
   customiseChainDbArgs :: Bool
@@ -331,15 +333,15 @@ canonDbPath npm@NodeCLI{databaseFile, nodeMode} = do
   canonicalizePath =<< makeAbsolute dbFp
 
 createDiffusionArguments
-  :: [AddrInfo]
-  -> FilePath
+  :: [AddrInfo]  -- TODO: use descrptive type for existing socket vs addr
+  -> FilePath    -- TODO: use descrptive type for existing socket vs path
   -> IPSubscriptionTarget
   -> [DnsSubscriptionTarget]
   -> DiffusionArguments
 createDiffusionArguments addrs myLocalAddr ipProducers dnsProducers =
   DiffusionArguments
-    { daAddresses = addrs
-    , daLocalAddress = myLocalAddr
+    { daAddresses    = Right addrs       -- or Left for existing sockets
+    , daLocalAddress = Right myLocalAddr -- or Left for an existing socket
     , daIpProducers = ipProducers
     , daDnsProducers = dnsProducers
     -- TODO: these limits are arbitrary at the moment;

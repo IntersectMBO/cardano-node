@@ -174,7 +174,7 @@ instance ElidingTracer (WithSeverity (ChainDB.TraceEvent blk)) where
   doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.SwitchedToAFork _ _ _))) = False
   doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.AddBlockValidation (ChainDB.InvalidBlock _ _)))) = False
   doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.AddBlockValidation (ChainDB.InvalidCandidate _)))) = False
-  doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.AddBlockValidation (ChainDB.CandidateExceedsRollback _ _ _)))) = False
+  doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.AddBlockValidation ChainDB.CandidateContainsFutureBlocksExceedingClockSkew{}))) = False
   doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent _)) = True
   doelide (WithSeverity _ (ChainDB.TraceCopyToImmDBEvent _)) = True
   doelide _ = False
@@ -557,6 +557,9 @@ mkTracers traceConf tracer = do
     readableTraceBlockchainTimeEvent ev = case ev of
         TraceStartTimeInTheFuture (SystemStart start) toWait ->
           "Waiting " <> show toWait <> " until genesis start time at " <> show start
+        TraceCurrentSlotUnknown time _ ->
+          "Too far from the chain tip to determine the current slot number for the time "
+           <> show time
 
     nodeToClientTracers
       :: NodeToClient.Tracers' localPeer blk DeserialiseFailure (Tracer IO)

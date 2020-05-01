@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeSynonymInstances #-}
@@ -27,9 +28,11 @@ import           Cardano.Crypto.Hash.Class as Crypto
 import           Cardano.Slotting.Slot (EpochSize (..))
 import           Ouroboros.Consensus.BlockchainTime
                    (SlotLength (..), SystemStart (..))
+import           Ouroboros.Consensus.BlockchainTime.WallClock.Types
 import           Ouroboros.Network.Magic (NetworkMagic (..))
 import           Ouroboros.Consensus.Protocol.Abstract (SecurityParam (..))
-import           Ouroboros.Consensus.Shelley.Node (ShelleyGenesis (..))
+import           Ouroboros.Consensus.Shelley.Node
+                   (ShelleyGenesis (..), emptyGenesisStaking)
 import           Shelley.Spec.Ledger.Address (serialiseAddr, deserialiseAddr)
 import           Shelley.Spec.Ledger.Coin (Coin(..))
 import           Shelley.Spec.Ledger.Crypto (Crypto)
@@ -58,6 +61,7 @@ instance Crypto crypto => ToJSON (ShelleyGenesis crypto) where
       , "MaxHeaderSize"         .= sgMaxHeaderSize sg
       , "GenDelegs"             .= sgGenDelegs sg
       , "InitialFunds"          .= sgInitialFunds sg
+--    , "Staking"               .= sgStaking sg  --TODO
       ]
 
 instance Crypto crypto => FromJSON (ShelleyGenesis crypto) where
@@ -81,7 +85,7 @@ instance Crypto crypto => FromJSON (ShelleyGenesis crypto) where
         <*> obj .: "MaxHeaderSize"
         <*> obj .: "GenDelegs"
         <*> obj .: "InitialFunds"
-
+        <*> pure emptyGenesisStaking  --TODO
 
 --
 -- Simple newtype wrappers JSON conversion
@@ -103,8 +107,12 @@ deriving newtype instance Aeson.FromJSON NetworkMagic
 deriving newtype instance Aeson.ToJSON   SecurityParam
 deriving newtype instance Aeson.FromJSON SecurityParam
 
-deriving newtype instance Aeson.ToJSON   SlotLength
-deriving newtype instance Aeson.FromJSON SlotLength
+-- A 'NominalDiffTime' time
+instance Aeson.ToJSON   SlotLength where
+  toJSON = toJSON . getSlotLength
+
+instance Aeson.FromJSON SlotLength where
+  parseJSON = fmap mkSlotLength . parseJSON
 
 -- A UTCTime, with format like "2020-04-15 11:44:07"
 deriving newtype instance Aeson.ToJSON   SystemStart

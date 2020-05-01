@@ -25,7 +25,6 @@ import           Cardano.BM.Data.Tracer (TracingVerbosity(..))
 import qualified Cardano.Chain.Update as Update
 import           Cardano.Crypto.DSIGN.Ed448 (Ed448DSIGN)
 import           Cardano.Crypto.KES (SignKeyKES, SimpleKES, VerKeyKES)
-import           Ouroboros.Consensus.BlockchainTime (SlotLength (..))
 import qualified Ouroboros.Consensus.BlockchainTime as Consensus
 import           Ouroboros.Consensus.NodeId (NodeId(..), CoreNodeId (..))
 import           Ouroboros.Consensus.Shelley.Protocol.Crypto (TPraosStandardCrypto)

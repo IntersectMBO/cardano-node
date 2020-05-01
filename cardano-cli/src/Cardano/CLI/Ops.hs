@@ -37,7 +37,7 @@ module Cardano.CLI.Ops
   ) where
 
 import           Prelude (show, unlines)
-import           Cardano.Prelude hiding (catch, option, show)
+import           Cardano.Prelude hiding (catch, option, show, unlines)
 
 import           Codec.CBOR.Pretty (prettyHexEnc)
 import           Codec.CBOR.Read (DeserialiseFailure, deserialiseFromBytes)
