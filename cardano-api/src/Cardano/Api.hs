@@ -95,17 +95,17 @@ genericShelleyKeyPair skd = do
 -- but since PubKeyInfo already has the PublicKey and Network, it can be simplified.
 -- This is true for Byron, but for Shelley there’s also an optional StakeAddressRef as input to
 -- Address generation
-byronPubKeyAddress :: PublicKey -> Address
-byronPubKeyAddress pk =
+byronPubKeyAddress :: PublicKey -> Network -> Address
+byronPubKeyAddress pk nw =
   case pk of
-    PubKeyByron nw vk -> AddressByron $ Byron.makeVerKeyAddress (byronNetworkMagic nw) vk
-    PubKeyShelley _ _ -> panic "Cardano.Api.byronPubKeyAddress: PubKeyInfoShelley"
+    PubKeyByron vk -> AddressByron $ Byron.makeVerKeyAddress (byronNetworkMagic nw) vk
+    PubKeyShelley _ -> panic "Cardano.Api.byronPubKeyAddress: PubKeyInfoShelley"
 
-mkPublicKey :: KeyPair -> Network -> PublicKey
-mkPublicKey kp nw =
+mkPublicKey :: KeyPair -> PublicKey
+mkPublicKey kp =
   case kp of
-    KeyPairByron vk _ -> PubKeyByron nw vk
-    KeyPairShelley vk _ -> PubKeyShelley nw vk
+    KeyPairByron vk _ -> PubKeyByron vk
+    KeyPairShelley vk _ -> PubKeyShelley vk
 
 byronNetworkMagic :: Network -> Byron.NetworkMagic
 byronNetworkMagic nw =

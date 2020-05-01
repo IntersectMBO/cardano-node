@@ -38,7 +38,7 @@ genAddress :: Gen Address
 genAddress =
   -- When Shelly is sorted out, this should change to `Gen.choose`.
   Gen.frequency
-    [ (9, byronPubKeyAddress <$> genPublicKey)
+    [ (9, byronPubKeyAddress <$> genPublicKey <*> genNetwork)
     , (1, pure AddressShelley)
     ]
 
@@ -114,11 +114,11 @@ genPublicKey =
 
 genPublicKeyByron :: Gen PublicKey
 genPublicKeyByron =
-  mkPublicKey <$> genKeyPairByron <*> genNetwork
+  mkPublicKey <$> genKeyPairByron
 
 genPublicKeyShelley :: Gen PublicKey
 genPublicKeyShelley =
-  mkPublicKey <$> genKeyPairShelley <*> genNetwork
+  mkPublicKey <$> genKeyPairShelley
 
 genTxSigned :: Gen TxSigned
 genTxSigned =

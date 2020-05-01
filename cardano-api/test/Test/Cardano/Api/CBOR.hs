@@ -18,7 +18,9 @@ import           Test.Cardano.Api.Orphans ()
 prop_Address_CBOR :: Property
 prop_Address_CBOR =
   H.property $ do
-    addr <- byronPubKeyAddress <$> H.forAll genPublicKeyByron
+    nw <- H.forAll genNetwork
+    bpk <- H.forAll genPublicKeyByron
+    let addr = byronPubKeyAddress bpk nw
     H.tripping addr addressToCBOR addressFromCBOR
 
 prop_KeyPair_CBOR :: Property

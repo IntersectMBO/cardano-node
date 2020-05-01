@@ -11,8 +11,8 @@ main = do
   BS.putStrLn $ renderKeyPairView keyPair
 
   -- Could also be 'Testnet x'.
-  let pubKey = mkPublicKey keyPair Mainnet
+  let pubKey = mkPublicKey keyPair
   BS.putStrLn $ renderPublicKeyView pubKey
 
-  let addr = byronPubKeyAddress pubKey
+  let addr = byronPubKeyAddress pubKey Mainnet
   BS.putStrLn $ renderAddressView addr

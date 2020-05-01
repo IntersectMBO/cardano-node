@@ -62,8 +62,8 @@ data ShelleyVerificationKey
   deriving anyclass NoUnexpectedThunks
 
 data PublicKey
-  = PubKeyByron !Network !Crypto.VerificationKey
-  | PubKeyShelley !Network !ShelleyVerificationKey
+  = PubKeyByron !Crypto.VerificationKey
+  | PubKeyShelley !ShelleyVerificationKey
   deriving (Generic, NFData, Show)
   deriving anyclass NoUnexpectedThunks
 

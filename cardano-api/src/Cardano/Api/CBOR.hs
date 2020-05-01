@@ -15,6 +15,11 @@ module Cardano.Api.CBOR
   , txSignedToCBOR
   , txUnsignedFromCBOR
   , txUnsignedToCBOR
+
+  -- Export these to avoid "defined but not used" error.
+  -- Probably needed later.
+  , networkFromCBOR
+  , networkToCBOR
   ) where
 
 import           Cardano.Api.Error
@@ -86,19 +91,18 @@ publicKeyFromCBOR bs =
     decode = do
       tag <- CBOR.decodeWord8
       case tag of
-        174  -> PubKeyByron <$> networkFromCBOR <*> fromCBOR
-        175  -> PubKeyShelley <$> networkFromCBOR <*> decodeShelleyVerificationKey
+        174  -> PubKeyByron <$> fromCBOR
+        175  -> PubKeyShelley <$> decodeShelleyVerificationKey
         _  -> cborError $ DecoderErrorUnknownTag "KeyPair" tag
 
 publicKeyToCBOR :: PublicKey -> ByteString
 publicKeyToCBOR pk =
   CBOR.serializeEncoding' $
     case pk of
-      PubKeyByron nw vk -> mconcat [ toCBOR (174 :: Word8), networkToCBOR nw, toCBOR vk ]
-      PubKeyShelley nw vk ->
+      PubKeyByron vk -> mconcat [ toCBOR (174 :: Word8), toCBOR vk ]
+      PubKeyShelley vk ->
         mconcat
           [ toCBOR (175 :: Word8)
-          , networkToCBOR nw
           , encodeShelleyVerificationKey vk
           ]
 

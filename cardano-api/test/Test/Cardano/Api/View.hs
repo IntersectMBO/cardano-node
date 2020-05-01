@@ -18,7 +18,9 @@ import           Test.Cardano.Api.Orphans ()
 prop_roundtrip_Address_view :: Property
 prop_roundtrip_Address_view =
   H.property $ do
-    addr <- byronPubKeyAddress <$> H.forAll genPublicKeyByron
+    nw <- H.forAll genNetwork
+    bpk <- H.forAll genPublicKeyByron
+    let addr = byronPubKeyAddress bpk nw
     H.tripping addr renderAddressView parseAddressView
 
 prop_roundtrip_KeyPair_view :: Property
