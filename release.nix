@@ -168,7 +168,7 @@ let
 
       # Require all environment topology and nodeConfig jobs
       (pkgs.commonLib.forEnvironments (environment: jobs.${environment.name}.topology))
-      (pkgs.commonLib.orEnvironments (environment: jobs.${environment.name}.nodeConfig))
+      (pkgs.commonLib.forEnvironments (environment: jobs.${environment.name}.nodeConfig))
 
       (map (cluster: jobs.${cluster}.scripts.node.x86_64-linux) [ "mainnet" "testnet" "staging" ])
 
