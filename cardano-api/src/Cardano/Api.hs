@@ -76,8 +76,8 @@ byronGenKeyPair :: IO KeyPair
 byronGenKeyPair =
   uncurry KeyPairByron <$> runSecureRandom Crypto.keyGen
 
-shelleyGenKeyPair :: ShelleyKeyDiscriminator -> IO KeyPair
-shelleyGenKeyPair = runSecureRandom . genericShelleyKeyPair
+shelleyGenKeyPair :: IO KeyPair
+shelleyGenKeyPair = runSecureRandom $ genericShelleyKeyPair RegularShelleyKey
 
 genericShelleyKeyPair :: MonadRandom m => ShelleyKeyDiscriminator -> m KeyPair
 genericShelleyKeyPair skd = do

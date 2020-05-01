@@ -71,7 +71,7 @@ genSeed =
 
 genGenesisKeyPairShelley :: Gen KeyPair
 genGenesisKeyPairShelley =
-  mkDeterministicGenesisKeyPairShelley <$> genSeed
+  mkDeterministicGenesisKeyPairShelley  <$> genSeed
 
 genRegularKeyPairShelley :: Gen KeyPair
 genRegularKeyPairShelley =
@@ -165,4 +165,4 @@ mkDeterministicKeyPairShelley :: (Word64, Word64, Word64, Word64, Word64)
                               -> ShelleyKeyDiscriminator
                               -> KeyPair
 mkDeterministicKeyPairShelley seed skd =
-  fst . withDRG (drgNewTest seed) $ genericShelleyKeyPair skd
+  fst $ withDRG (drgNewTest seed) $ genericShelleyKeyPair skd

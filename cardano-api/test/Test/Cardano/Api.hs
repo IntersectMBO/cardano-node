@@ -11,7 +11,6 @@ import           Cardano.Prelude
 import           Hedgehog (Property, (/==), discover)
 import qualified Hedgehog as H
 
-import           Test.Cardano.Api.Gen (genShelleyKeyDiscriminator)
 import           Test.Cardano.Api.Orphans ()
 
 
@@ -29,9 +28,8 @@ prop_byronGenKeyPair_unique =
 prop_shelleyGenKeyPair_unique :: Property
 prop_shelleyGenKeyPair_unique =
   H.property $ do
-    kd <- H.forAll genShelleyKeyDiscriminator
-    kp1 <- liftIO (shelleyGenKeyPair kd)
-    kp2 <- liftIO (shelleyGenKeyPair kd)
+    kp1 <- liftIO shelleyGenKeyPair
+    kp2 <- liftIO shelleyGenKeyPair
     kp1 /== kp2
 
 -- -----------------------------------------------------------------------------
