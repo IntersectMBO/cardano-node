@@ -70,31 +70,33 @@ let
     '';
   in wrapImage image;
 
-  mainnetConfig = let
-    inherit ((import ./. {}).scripts.mainnet) topologyFile nodeConfigFile;
-    wrapConfig = name: file: pkgs.runCommand name {} ''
-      echo "Making $out/nix-support"
-      mkdir -p $out/nix-support
-      echo
-      echo "Creating build product $out/nix-support/hydra-build-products"
-      echo "file none ${file}" > $out/nix-support/hydra-build-products
-      echo
-      echo "Contents of $out/nix-support/hydra-build-products:"
-      cat $out/nix-support/hydra-build-products
-      echo
-      echo "ls of the out: $out"
-      ls -lah $out
-      echo
-      echo "ls of the file: ${file}"
-      ls -lah ${file}
-      echo
-      echo "Cat-ing the file: ${file}"
-      cat ${file}
-    '';
-  in {
-    mainnetTopology = wrapConfig "topology.yaml" topologyFile;
-    mainnetNodeConfig = wrapConfig "config.json" nodeConfigFile;
-  };
+  configFiles = pkgs.commonLib.forEnvironments (environment:
+    let
+      inherit ((import ./. {}).scripts."${environment.name}") topologyFile nodeConfigFile;
+      wrapConfig = name: file: pkgs.runCommand name {} ''
+        echo "Making $out/nix-support"
+        mkdir -p $out/nix-support
+        echo
+        echo "Creating build product $out/nix-support/hydra-build-products"
+        echo "file none ${file}" > $out/nix-support/hydra-build-products
+        echo
+        echo "Contents of $out/nix-support/hydra-build-products:"
+        cat $out/nix-support/hydra-build-products
+        echo
+        echo "ls of the out: $out"
+        ls -lah $out
+        echo
+        echo "ls of the file: ${file}"
+        ls -lah ${file}
+        echo
+        echo "Cat-ing the file: ${file}"
+        cat ${file}
+      '';
+    in {
+      topology = wrapConfig "topology.yaml" topologyFile;
+      nodeConfig = wrapConfig "config.json" nodeConfigFile;
+    }
+  );
 
   mkPins = inputs: pkgs.runCommand "ifd-pins" {} ''
     mkdir $out
@@ -154,8 +156,7 @@ let
       #hackageSrc = (import pkgs.path (import sources."haskell.nix")).haskell-nix.hackageSrc;
       #stackageSrc = (import pkgs.path (import sources."haskell.nix")).haskell-nix.stackageSrc;
     };
-    inherit (mainnetConfig) mainnetTopology mainnetNodeConfig;
-  } // extraBuilds // (mkRequiredJob (
+  } // configFiles // extraBuilds // (mkRequiredJob (
       collectTests jobs.native.checks ++
       collectTests jobs."${mingwW64.config}".checks ++
       collectTests jobs.native.benchmarks ++ [
