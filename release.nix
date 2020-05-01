@@ -156,7 +156,7 @@ let
       #hackageSrc = (import pkgs.path (import sources."haskell.nix")).haskell-nix.hackageSrc;
       #stackageSrc = (import pkgs.path (import sources."haskell.nix")).haskell-nix.stackageSrc;
     };
-  } // configFiles // extraBuilds // (mkRequiredJob (
+  } // (recursiveUpdate extraBuilds configFiles) // (mkRequiredJob (
       collectTests jobs.native.checks ++
       collectTests jobs."${mingwW64.config}".checks ++
       collectTests jobs.native.benchmarks ++ [
@@ -165,8 +165,10 @@ let
       jobs."${mingwW64.config}".cardano-node.x86_64-linux
       jobs.cardano-node-win64
       jobs.dockerImageArtifact
-      jobs.mainnetTopology
-      jobs.mainnetNodeConfig
+
+      # Require all environment topology and nodeConfig jobs
+      (pkgs.commonLib.forEnvironments (environment: jobs.${environment.name}.topology))
+      (pkgs.commonLib.forEnvironments (environment: jobs.${environment.name}.nodeConfig))
 
       (map (cluster: jobs.${cluster}.scripts.node.x86_64-linux) [ "mainnet" "testnet" "staging" ])
 
