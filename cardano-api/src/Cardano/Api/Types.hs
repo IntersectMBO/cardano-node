@@ -5,31 +5,44 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module Cardano.Api.Types
-  ( Address (..)
+  (
+    -- * Common types across all eras.
+    Address (..)
   , KeyPair (..)
   , Network (..)
-  , PublicKey (..)
-  , ShelleyKeyDiscriminator (..)
-  , ShelleyVerificationKey (..)
+  , VerificationKey (..)
   , TxSigned (..)
   , TxUnsigned (..)
   , TxWitness (..)
+
+    -- * Era-specific type aliases
+  , ByronVerificationKey
+  , ByronSigningKey
+  , ShelleyVerificationKey
+  , ShelleySigningKey
   ) where
 
 import           Cardano.Prelude
 
-import           Cardano.Api.Orphans ()
-
-import qualified Cardano.Chain.Common as Byron
-import qualified Cardano.Chain.UTxO as Byron
-import           Cardano.Config.Orphanage ()
-import qualified Cardano.Crypto as Crypto
-
 import           Data.Vector (Vector)
 
-import           Ouroboros.Consensus.Shelley.Protocol.Crypto (TPraosStandardCrypto)
+import           Cardano.Api.Orphans ()
+import           Cardano.Config.Orphanage ()
 
-import           Shelley.Spec.Ledger.Keys (SKey, VKey, VKeyGenesis)
+import qualified Cardano.Chain.Common as Byron
+import qualified Cardano.Chain.UTxO   as Byron
+import qualified Cardano.Crypto       as Byron
+
+import qualified Ouroboros.Consensus.Shelley.Protocol.Crypto as Shelley
+import qualified Shelley.Spec.Ledger.Keys                    as Shelley
+
+
+type ByronVerificationKey = Byron.VerificationKey
+type ByronSigningKey      = Byron.SigningKey
+
+type ShelleyVerificationKey = Shelley.VKey Shelley.TPraosStandardCrypto
+type ShelleySigningKey      = Shelley.SKey Shelley.TPraosStandardCrypto
+
 
 -- The 'Address' data type in 'cardano-sl' is a design train wreck.
 -- We need something that is compatible and discard as much of the insanity as possible.
@@ -39,31 +52,28 @@ data Address
   deriving (Eq, Generic , NFData, Show)  -- Byron.Address' needs NFData
   deriving NoUnexpectedThunks via UseIsNormalForm Address
 
+-- | The combination of a verification key and a signing key.
+--
+-- Verification keys are also commonly known as \"public keys\".
+--
+-- Signing keys are also commonly known as \"private keys\" or \"secret keys\".
+--
 data KeyPair
   -- The Byron key pair use newtype wrappers around 'XPriv'/'Xpub' keys.
   -- An 'XPub' is 32 bytes of public key and 32 bytes of Chaincode which is used in the
   -- Byron address derivation scheme.
-  = KeyPairByron !Crypto.VerificationKey !Crypto.SigningKey
-  | KeyPairShelley !ShelleyVerificationKey !(SKey TPraosStandardCrypto)
+  = KeyPairByron !ByronVerificationKey !ByronSigningKey
+  | KeyPairShelley !ShelleyVerificationKey !ShelleySigningKey
   deriving (Generic, NFData, Show)
   deriving anyclass NoUnexpectedThunks
 
--- | A means of discriminating between different kinds of Shelley keys.
-data ShelleyKeyDiscriminator
-  = GenesisShelleyKey
-  | RegularShelleyKey
-  deriving (Generic, NFData, Show)
-  deriving anyclass NoUnexpectedThunks
-
-data ShelleyVerificationKey
-  = GenesisShelleyVerificationKey !(VKeyGenesis TPraosStandardCrypto)
-  | RegularShelleyVerificationKey !(VKey TPraosStandardCrypto)
-  deriving (Generic, NFData, Show)
-  deriving anyclass NoUnexpectedThunks
-
-data PublicKey
-  = PubKeyByron !Crypto.VerificationKey
-  | PubKeyShelley !ShelleyVerificationKey
+-- | A verification key for use in addresses (payment and stake).
+--
+-- Verification keys are also commonly known as \"public keys\".
+--
+data VerificationKey
+  = VerificationKeyByron !ByronVerificationKey
+  | VerificationKeyShelley !ShelleyVerificationKey
   deriving (Generic, NFData, Show)
   deriving anyclass NoUnexpectedThunks
 
@@ -71,18 +81,18 @@ data PublicKey
 -- this (actually isomorphic with Maybe):
 data Network
   = Mainnet
-  | Testnet !Crypto.ProtocolMagicId
+  | Testnet !Byron.ProtocolMagicId
   deriving (Eq, Generic, NFData, Show)
   deriving anyclass NoUnexpectedThunks
 
 data TxSigned
-  = TxSignedByron !Byron.Tx !ByteString !(Crypto.Hash Byron.Tx) !(Vector Byron.TxInWitness)
+  = TxSignedByron !Byron.Tx !ByteString !(Byron.Hash Byron.Tx) !(Vector Byron.TxInWitness)
   | TxSignedShelley
   deriving (Eq, Generic, NFData, Show)
   deriving NoUnexpectedThunks via UseIsNormalForm TxSigned
 
 data TxUnsigned
-  = TxUnsignedByron !Byron.Tx !ByteString !(Crypto.Hash Byron.Tx)
+  = TxUnsignedByron !Byron.Tx !ByteString !(Byron.Hash Byron.Tx)
   | TxUnsignedShelley
   deriving (Eq, Generic, NFData, Show)
   deriving NoUnexpectedThunks via UseIsNormalForm TxUnsigned

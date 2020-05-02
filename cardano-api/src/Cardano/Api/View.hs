@@ -1,25 +1,25 @@
 module Cardano.Api.View
   ( parseAddressView
   , parseKeyPairView
-  , parsePublicKeyView
+  , parseVerificationKeyView
   , parseTxSignedView
   , parseTxUnsignedView
 
   , readAddress
   , readKeyPair
-  , readPublicKey
+  , readVerificationKey
   , readTxSigned
   , readTxUnsigned
 
   , renderAddressView
   , renderKeyPairView
-  , renderPublicKeyView
+  , renderVerificationKeyView
   , renderTxSignedView
   , renderTxUnsignedView
 
   , writeAddress
   , writeKeyPair
-  , writePublicKey
+  , writeVerificationKey
   , writeTxSigned
   , writeTxUnsigned
   ) where
@@ -48,9 +48,9 @@ parseKeyPairView :: ByteString -> Either ApiError KeyPair
 parseKeyPairView bs =
   either convertTextViewError (keyPairFromCBOR . tvRawCBOR) $ parseTextView bs
 
-parsePublicKeyView :: ByteString -> Either ApiError PublicKey
-parsePublicKeyView bs =
-  either convertTextViewError (publicKeyFromCBOR . tvRawCBOR) $ parseTextView bs
+parseVerificationKeyView :: ByteString -> Either ApiError VerificationKey
+parseVerificationKeyView bs =
+  either convertTextViewError (verificationKeyFromCBOR . tvRawCBOR) $ parseTextView bs
 
 parseTxSignedView :: ByteString -> Either ApiError TxSigned
 parseTxSignedView bs =
@@ -63,8 +63,8 @@ parseTxUnsignedView bs =
 renderAddressView :: Address -> ByteString
 renderAddressView addr =
   case addr of
-    AddressByron {} -> renderTextView $ TextView "PublicKeyByron" "Free form text" cbor
-    AddressShelley {} -> renderTextView $ TextView "KeyPairShelley" "Free form text" cbor
+    AddressByron {} -> renderTextView $ TextView "AddressByron" "Free form text" cbor
+    AddressShelley {} -> renderTextView $ TextView "AddressShelley" "Free form text" cbor
   where
     cbor :: ByteString
     cbor = addressToCBOR addr
@@ -72,20 +72,20 @@ renderAddressView addr =
 renderKeyPairView :: KeyPair -> ByteString
 renderKeyPairView kp =
   case kp of
-    KeyPairByron {} -> renderTextView $ TextView "PublicKeyByron" "Free form text" cbor
+    KeyPairByron {} -> renderTextView $ TextView "KeyPairByron" "Free form text" cbor
     KeyPairShelley {} -> renderTextView $ TextView "KeyPairShelley" "Free form text" cbor
   where
     cbor :: ByteString
     cbor = keyPairToCBOR kp
 
-renderPublicKeyView :: PublicKey -> ByteString
-renderPublicKeyView pk =
+renderVerificationKeyView :: VerificationKey -> ByteString
+renderVerificationKeyView pk =
   case pk of
-    PubKeyByron {} -> renderTextView $ TextView "PublicKeyByron" "Free form text" cbor
-    PubKeyShelley {} -> renderTextView $ TextView "PubKeyShelley" "Free form text" cbor
+    VerificationKeyByron {} -> renderTextView $ TextView "VerificationKeyByron" "Free form text" cbor
+    VerificationKeyShelley {} -> renderTextView $ TextView "VerificationKeyShelley" "Free form text" cbor
   where
     cbor :: ByteString
-    cbor = publicKeyToCBOR pk
+    cbor = verificationKeyToCBOR pk
 
 renderTxSignedView :: TxSigned -> ByteString
 renderTxSignedView ts =
@@ -141,11 +141,11 @@ readKeyPair path =
     bs <- handleIOExceptT (ApiErrorIO path) $ BS.readFile path
     hoistEither $ parseKeyPairView bs
 
-readPublicKey :: FilePath -> IO (Either ApiError PublicKey)
-readPublicKey path =
+readVerificationKey :: FilePath -> IO (Either ApiError VerificationKey)
+readVerificationKey path =
   runExceptT $ do
     bs <- handleIOExceptT (ApiErrorIO path) $ BS.readFile path
-    hoistEither $ parsePublicKeyView bs
+    hoistEither $ parseVerificationKeyView bs
 
 readTxSigned :: FilePath -> IO (Either ApiError TxSigned)
 readTxSigned path =
@@ -169,10 +169,10 @@ writeKeyPair path kp =
   runExceptT .
     handleIOExceptT (ApiErrorIO path) $ BS.writeFile path (renderKeyPairView kp)
 
-writePublicKey :: FilePath -> PublicKey -> IO (Either ApiError ())
-writePublicKey path kp =
+writeVerificationKey :: FilePath -> VerificationKey -> IO (Either ApiError ())
+writeVerificationKey path kp =
   runExceptT .
-    handleIOExceptT (ApiErrorIO path) $ BS.writeFile path (renderPublicKeyView kp)
+    handleIOExceptT (ApiErrorIO path) $ BS.writeFile path (renderVerificationKeyView kp)
 
 writeTxSigned :: FilePath -> TxSigned -> IO (Either ApiError ())
 writeTxSigned path kp =

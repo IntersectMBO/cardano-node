@@ -5,8 +5,8 @@ module Cardano.Api.CBOR
   , addressToCBOR
   , keyPairFromCBOR
   , keyPairToCBOR
-  , publicKeyFromCBOR
-  , publicKeyToCBOR
+  , verificationKeyFromCBOR
+  , verificationKeyToCBOR
 
   , shelleyVerificationKeyFromCBOR
   , shelleyVerificationKeyToCBOR
@@ -32,12 +32,11 @@ import           Cardano.Crypto.DSIGN.Class (DSIGNAlgorithm (..))
 import           Cardano.Prelude
 
 import           Data.ByteString.Char8 (ByteString)
--- import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import           Data.Word (Word8)
 
-import           Shelley.Spec.Ledger.Keys (DiscVKey (..), SKey (..), pattern VKey,
-                     pattern VKeyGenesis)
+import           Shelley.Spec.Ledger.Keys
+                   (DiscVKey (..), SKey (..), pattern VKey)
 
 
 addressFromCBOR :: ByteString -> Either ApiError Address
@@ -83,24 +82,26 @@ keyPairToCBOR kp =
           , encodeSignKeyDSIGN sk
           ]
 
-publicKeyFromCBOR :: ByteString -> Either ApiError PublicKey
-publicKeyFromCBOR bs =
-   first ApiErrorCBOR . CBOR.decodeFullDecoder "PublicKey" decode $ LBS.fromStrict bs
+verificationKeyFromCBOR :: ByteString -> Either ApiError VerificationKey
+verificationKeyFromCBOR =
+   first ApiErrorCBOR
+ . CBOR.decodeFullDecoder "VerificationKey" decode
+ . LBS.fromStrict
   where
-    decode :: Decoder s PublicKey
+    decode :: Decoder s VerificationKey
     decode = do
       tag <- CBOR.decodeWord8
       case tag of
-        174  -> PubKeyByron <$> fromCBOR
-        175  -> PubKeyShelley <$> decodeShelleyVerificationKey
+        174  -> VerificationKeyByron <$> fromCBOR
+        175  -> VerificationKeyShelley <$> decodeShelleyVerificationKey
         _  -> cborError $ DecoderErrorUnknownTag "KeyPair" tag
 
-publicKeyToCBOR :: PublicKey -> ByteString
-publicKeyToCBOR pk =
+verificationKeyToCBOR :: VerificationKey -> ByteString
+verificationKeyToCBOR pk =
   CBOR.serializeEncoding' $
     case pk of
-      PubKeyByron vk -> mconcat [ toCBOR (174 :: Word8), toCBOR vk ]
-      PubKeyShelley vk ->
+      VerificationKeyByron vk -> mconcat [ toCBOR (174 :: Word8), toCBOR vk ]
+      VerificationKeyShelley vk ->
         mconcat
           [ toCBOR (175 :: Word8)
           , encodeShelleyVerificationKey vk
@@ -153,23 +154,13 @@ shelleyVerificationKeyFromCBOR bs =
     $ LBS.fromStrict bs
 
 decodeShelleyVerificationKey :: Decoder s ShelleyVerificationKey
-decodeShelleyVerificationKey = do
-  tag <- CBOR.decodeWord8
-  case tag of
-    180 -> GenesisShelleyVerificationKey <$> (VKeyGenesis <$> decodeVerKeyDSIGN)
-    181 -> RegularShelleyVerificationKey <$> (VKey <$> decodeVerKeyDSIGN)
-    _  -> cborError $ DecoderErrorUnknownTag "ShelleyVerificationKey" tag
+decodeShelleyVerificationKey = VKey <$> decodeVerKeyDSIGN
 
 shelleyVerificationKeyToCBOR :: ShelleyVerificationKey -> ByteString
 shelleyVerificationKeyToCBOR = CBOR.serializeEncoding' . encodeShelleyVerificationKey
 
 encodeShelleyVerificationKey :: ShelleyVerificationKey -> Encoding
-encodeShelleyVerificationKey svk =
-  case svk of
-    GenesisShelleyVerificationKey (DiscVKey vk) ->
-      mconcat [toCBOR (180 :: Word8), encodeVerKeyDSIGN vk]
-    RegularShelleyVerificationKey (DiscVKey vk) ->
-      mconcat [toCBOR (181 :: Word8), encodeVerKeyDSIGN vk]
+encodeShelleyVerificationKey (DiscVKey vk) = encodeVerKeyDSIGN vk
 
 -- -------------------------------------------------------------------------------------------------
 

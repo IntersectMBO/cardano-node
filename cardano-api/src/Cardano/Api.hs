@@ -10,15 +10,13 @@ module Cardano.Api
   , Address (..)
   , KeyPair (..)
   , Network (..)
-  , PublicKey (..)
-  , ShelleyKeyDiscriminator (..)
-  , ShelleyVerificationKey (..)
+  , VerificationKey (..)
   , TxSigned (..)
   , TxUnsigned (..)
   , TxWitness (..)
 
   , buildTransaction
-  , byronPubKeyAddress
+  , byronVerificationKeyAddress
   , byronGenKeyPair
   , shelleyGenKeyPair
   , getTxSignedBody
@@ -27,7 +25,7 @@ module Cardano.Api
   , getTxUnsignedBody
   , getTxUnsignedHash
 
-  , mkPublicKey
+  , mkVerificationKey
   , signTransaction
   , witnessTransaction
   , signTransactionWithWitness
@@ -41,7 +39,7 @@ import           Cardano.Api.TxSubmit
 
 import           Cardano.Prelude
 
-import           Cardano.Api.Types
+import           Cardano.Api.Types as X
 import           Cardano.Api.CBOR as X
 import           Cardano.Api.Error as X
 import           Cardano.Api.View as X
@@ -66,46 +64,37 @@ import           Data.Coerce (coerce)
 import           Data.List.NonEmpty (NonEmpty)
 import qualified Data.Vector as Vector
 
-import           Ouroboros.Consensus.Shelley.Protocol.Crypto (TPraosStandardCrypto)
-
-import           Shelley.Spec.Ledger.Crypto (DSIGN)
-import qualified Shelley.Spec.Ledger.Keys as Shelley (SKey (..), pattern VKey,
-                     pattern VKeyGenesis)
+import qualified Shelley.Spec.Ledger.Keys as Shelley (SKey (..), pattern VKey)
 
 byronGenKeyPair :: IO KeyPair
 byronGenKeyPair =
   uncurry KeyPairByron <$> runSecureRandom Crypto.keyGen
 
 shelleyGenKeyPair :: IO KeyPair
-shelleyGenKeyPair = runSecureRandom $ genericShelleyKeyPair RegularShelleyKey
+shelleyGenKeyPair = runSecureRandom genericShelleyKeyPair
 
-genericShelleyKeyPair :: MonadRandom m => ShelleyKeyDiscriminator -> m KeyPair
-genericShelleyKeyPair skd = do
+genericShelleyKeyPair :: MonadRandom m => m KeyPair
+genericShelleyKeyPair = do
     sk <- genKeyDSIGN
-    pure $ KeyPairShelley (mkShelleyVKey (deriveVerKeyDSIGN sk)) (Shelley.SKey sk)
-  where
-    mkShelleyVKey :: VerKeyDSIGN (DSIGN TPraosStandardCrypto) -> ShelleyVerificationKey
-    mkShelleyVKey vk =
-      case skd of
-        GenesisShelleyKey -> GenesisShelleyVerificationKey $ Shelley.VKeyGenesis vk
-        RegularShelleyKey -> RegularShelleyVerificationKey $ Shelley.VKey vk
+    let vk = deriveVerKeyDSIGN sk
+    pure $ KeyPairShelley (Shelley.VKey vk) (Shelley.SKey sk)
 
 -- Given key information (public key, and other network parameters), generate an Address.
--- Originally: mkAddress :: Network -> PubKey -> PubKeyInfo -> Address
--- but since PubKeyInfo already has the PublicKey and Network, it can be simplified.
+-- Originally: mkAddress :: Network -> VerificationKey -> VerificationKeyInfo -> Address
+-- but since VerificationKeyInfo already has the VerificationKey and Network, it can be simplified.
 -- This is true for Byron, but for Shelley there’s also an optional StakeAddressRef as input to
 -- Address generation
-byronPubKeyAddress :: PublicKey -> Network -> Address
-byronPubKeyAddress pk nw =
+byronVerificationKeyAddress :: VerificationKey -> Network -> Address
+byronVerificationKeyAddress pk nw =
   case pk of
-    PubKeyByron vk -> AddressByron $ Byron.makeVerKeyAddress (byronNetworkMagic nw) vk
-    PubKeyShelley _ -> panic "Cardano.Api.byronPubKeyAddress: PubKeyInfoShelley"
+    VerificationKeyByron vk -> AddressByron $ Byron.makeVerKeyAddress (byronNetworkMagic nw) vk
+    VerificationKeyShelley _ -> panic "Cardano.Api.byronVerificationKeyAddress: VerificationKeyInfoShelley"
 
-mkPublicKey :: KeyPair -> PublicKey
-mkPublicKey kp =
+mkVerificationKey :: KeyPair -> VerificationKey
+mkVerificationKey kp =
   case kp of
-    KeyPairByron vk _ -> PubKeyByron vk
-    KeyPairShelley vk _ -> PubKeyShelley vk
+    KeyPairByron vk _ -> VerificationKeyByron vk
+    KeyPairShelley vk _ -> VerificationKeyShelley vk
 
 byronNetworkMagic :: Network -> Byron.NetworkMagic
 byronNetworkMagic nw =
@@ -165,7 +154,7 @@ dont need support Redeem, do need to support Proposal and Votes (possibly Del Ce
 
 
 -- Use the private key to give one witness to a transaction
--- (TxInWirtness is fine for Byrin on shelley, need a TxWitness type with Byron/Shelley ctors)
+-- (TxInWirtness is fine for Byron on shelley, need a TxWitness type with Byron/Shelley ctors)
 witnessTransaction :: TxUnsigned -> Network -> Crypto.SigningKey -> TxWitness
 witnessTransaction txu nw signKey =
     case txu of

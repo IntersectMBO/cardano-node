@@ -19,8 +19,8 @@ prop_roundtrip_Address_view :: Property
 prop_roundtrip_Address_view =
   H.property $ do
     nw <- H.forAll genNetwork
-    bpk <- H.forAll genPublicKeyByron
-    let addr = byronPubKeyAddress bpk nw
+    bpk <- H.forAll genVerificationKeyByron
+    let addr = byronVerificationKeyAddress bpk nw
     H.tripping addr renderAddressView parseAddressView
 
 prop_roundtrip_KeyPair_view :: Property
@@ -29,11 +29,11 @@ prop_roundtrip_KeyPair_view =
     kp <- H.forAll genKeyPair
     H.tripping kp renderKeyPairView parseKeyPairView
 
-prop_roundtrip_PublicKey_view :: Property
-prop_roundtrip_PublicKey_view =
+prop_roundtrip_VerificationKey_view :: Property
+prop_roundtrip_VerificationKey_view =
   H.property $ do
-    pk <- H.forAll genPublicKey
-    H.tripping pk renderPublicKeyView parsePublicKeyView
+    pk <- H.forAll genVerificationKey
+    H.tripping pk renderVerificationKeyView parseVerificationKeyView
 
 prop_roundtrip_TxSigned_view :: Property
 prop_roundtrip_TxSigned_view =
