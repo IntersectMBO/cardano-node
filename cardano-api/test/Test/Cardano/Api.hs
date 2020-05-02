@@ -4,14 +4,14 @@ module Test.Cardano.Api
   ( tests
   ) where
 
+import           Cardano.Prelude
+
 import           Cardano.Api
 
-import           Cardano.Prelude
+import           Test.Cardano.Api.Orphans ()
 
 import           Hedgehog (Property, (/==), discover)
 import qualified Hedgehog as H
-
-import           Test.Cardano.Api.Orphans ()
 
 
 prop_byronGenKeyPair_unique :: Property

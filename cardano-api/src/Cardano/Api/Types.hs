@@ -26,7 +26,6 @@ import           Cardano.Prelude
 
 import           Data.Vector (Vector)
 
-import           Cardano.Api.Orphans ()
 import           Cardano.Config.Orphanage ()
 
 import qualified Cardano.Chain.Common as Byron
@@ -35,20 +34,23 @@ import qualified Cardano.Crypto       as Byron
 
 import qualified Ouroboros.Consensus.Shelley.Protocol.Crypto as Shelley
 import qualified Shelley.Spec.Ledger.Keys                    as Shelley
+import qualified Shelley.Spec.Ledger.TxData                  as Shelley
 
 
 type ByronVerificationKey = Byron.VerificationKey
 type ByronSigningKey      = Byron.SigningKey
+type ByronAddress         = Byron.Address
 
 type ShelleyVerificationKey = Shelley.VKey Shelley.TPraosStandardCrypto
 type ShelleySigningKey      = Shelley.SKey Shelley.TPraosStandardCrypto
+type ShelleyAddress         = Shelley.Addr Shelley.TPraosStandardCrypto
 
 
 -- The 'Address' data type in 'cardano-sl' is a design train wreck.
 -- We need something that is compatible and discard as much of the insanity as possible.
 data Address
-  = AddressByron !Byron.Address
-  | AddressShelley
+  = AddressByron !ByronAddress
+  | AddressShelley !ShelleyAddress
   deriving (Eq, Generic , NFData, Show)  -- Byron.Address' needs NFData
   deriving NoUnexpectedThunks via UseIsNormalForm Address
 

@@ -17,13 +17,15 @@ module Test.Cardano.Api.Gen
 import           Cardano.Api
 import           Cardano.Binary (serialize)
 import           Cardano.Crypto (hashRaw)
-import           Cardano.Crypto.DSIGN.Ed448 ()
+import           Cardano.Crypto.DSIGN
 import           Cardano.Prelude
 
 import           Crypto.Random (drgNewTest, withDRG)
 
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import           Data.Coerce (coerce)
+
+import           Shelley.Spec.Ledger.Keys hiding (KeyPair)
 
 import           Test.Cardano.Chain.UTxO.Gen (genTx)
 import qualified Test.Cardano.Crypto.Gen as Byron
@@ -36,10 +38,9 @@ import qualified Hedgehog.Range as Range
 
 genAddress :: Gen Address
 genAddress =
-  -- When Shelly is sorted out, this should change to `Gen.choose`.
-  Gen.frequency
-    [ (9, byronVerificationKeyAddress <$> genVerificationKey <*> genNetwork)
-    , (1, pure AddressShelley)
+  Gen.choice
+    [ byronVerificationKeyAddress <$> genVerificationKey <*> genNetwork
+    , shelleyVerificationKeyAddress <$> genVerificationKey <*> genNetwork
     ]
 
 genKeyPair :: Gen KeyPair
@@ -54,8 +55,11 @@ genKeyPairByron =
   KeyPairByron <$> Byron.genVerificationKey <*> Byron.genSigningKey
 
 genKeyPairShelley :: Gen KeyPair
-genKeyPairShelley =
-  mkDeterministicKeyPairShelley <$> genSeed
+genKeyPairShelley = do
+  seed <- genSeed
+  let sk = fst (withDRG (drgNewTest seed) genKeyDSIGN)
+      vk = deriveVerKeyDSIGN sk
+  return $ KeyPairShelley (VKey vk) (SKey sk)
 
 genSeed :: Gen (Word64, Word64, Word64, Word64, Word64)
 genSeed =
@@ -68,7 +72,7 @@ genSeed =
 
 genShelleyVerificationKey :: Gen ShelleyVerificationKey
 genShelleyVerificationKey = do
-  KeyPairShelley vk _ <- mkDeterministicKeyPairShelley <$> genSeed
+  KeyPairShelley vk _ <- genKeyPairShelley
   pure vk
 
 genNetwork :: Gen Network
@@ -122,11 +126,3 @@ genTxUnsignedByron = do
   let cbor = serialize tx
   pure $ TxUnsignedByron tx (LBS.toStrict cbor) (coerce $ hashRaw cbor)
 
-------------------------------------------------------------------------------
--- Shelley Helpers
-------------------------------------------------------------------------------
-
-mkDeterministicKeyPairShelley :: (Word64, Word64, Word64, Word64, Word64)
-                              -> KeyPair
-mkDeterministicKeyPairShelley seed =
-  fst $ withDRG (drgNewTest seed) genericShelleyKeyPair

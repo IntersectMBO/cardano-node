@@ -19,5 +19,4 @@ import           Test.Cardano.Crypto.Orphans ()
 
 deriving instance Eq KeyPair
 deriving instance Eq VerificationKey
---deriving instance Eq ShelleyVerificationKey
 deriving instance Eq (SignKeyDSIGN (DSIGN crypto)) => Eq (SKey crypto)

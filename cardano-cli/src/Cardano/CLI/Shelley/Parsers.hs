@@ -65,9 +65,9 @@ data ShelleyCommand
 
 
 data AddressCmd
-  = AddressKeyGen OutputFile OutputFile
+  = AddressKeyGen  VerificationKeyFile SigningKeyFile
   | AddressKeyHash VerificationKeyFile
-  | AddressBuild          --TODO
+  | AddressBuild   VerificationKeyFile
   | AddressBuildMultiSig  --TODO
   deriving (Eq, Show)
 
@@ -222,13 +222,13 @@ pAddress =
       ]
   where
     pAddressKeyGen :: Parser AddressCmd
-    pAddressKeyGen = AddressKeyGen <$> pOutputFile <*> pOutputFile
+    pAddressKeyGen = AddressKeyGen <$> pVerificationKeyFile <*> pSigningKeyFile
 
     pAddressKeyHash :: Parser AddressCmd
     pAddressKeyHash = AddressKeyHash <$> pVerificationKeyFile
 
     pAddressBuild :: Parser AddressCmd
-    pAddressBuild = pure AddressBuild
+    pAddressBuild = AddressBuild <$> pVerificationKeyFile
 
     pAddressBuildMultiSig :: Parser AddressCmd
     pAddressBuildMultiSig = pure AddressBuildMultiSig
@@ -569,7 +569,6 @@ pSigningKeyFile =
      <> Opt.metavar "FILEPATH"
      <> Opt.help "Output filepath of the signing key."
      )
-
 
 pBlockId :: Parser BlockId
 pBlockId =

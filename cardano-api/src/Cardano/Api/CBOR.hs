@@ -48,15 +48,15 @@ addressFromCBOR bs =
       tag <- CBOR.decodeWord8
       case tag of
         170  -> AddressByron <$> fromCBOR
-        171  -> pure AddressShelley
+        171  -> AddressShelley <$> fromCBOR
         _  -> cborError $ DecoderErrorUnknownTag "Address" tag
 
 addressToCBOR :: Address -> ByteString
 addressToCBOR kp =
   CBOR.serializeEncoding' $
     case kp of
-      AddressByron ba -> mconcat [ toCBOR (170 :: Word8), toCBOR ba ]
-      AddressShelley -> toCBOR (171 :: Word8)
+      AddressByron   addr -> mconcat [ toCBOR (170 :: Word8), toCBOR addr ]
+      AddressShelley addr -> mconcat [ toCBOR (171 :: Word8), toCBOR addr ]
 
 keyPairFromCBOR :: ByteString -> Either ApiError KeyPair
 keyPairFromCBOR bs =

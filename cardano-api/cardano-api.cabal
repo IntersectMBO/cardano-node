@@ -18,7 +18,6 @@ library
 
   other-modules:        Cardano.Api.CBOR
                         Cardano.Api.Error
-                        Cardano.Api.Orphans
                         Cardano.Api.TxSubmit
                         Cardano.Api.TxSubmit.ErrorRender
                         Cardano.Api.TxSubmit.TxSubmitVar
@@ -90,6 +89,7 @@ test-suite cardano-api-test
                       , cardano-prelude
                       , cryptonite
                       , hedgehog
+                      , ouroboros-consensus-shelley
                       , shelley-spec-ledger
 
   other-modules:        Test.Cardano.Api

@@ -17,6 +17,7 @@ module Cardano.Api
 
   , buildTransaction
   , byronVerificationKeyAddress
+  , shelleyVerificationKeyAddress
   , byronGenKeyPair
   , shelleyGenKeyPair
   , getTxSignedBody
@@ -30,19 +31,14 @@ module Cardano.Api
   , witnessTransaction
   , signTransactionWithWitness
   , submitTransaction
-
-  -- Mainly for testing
-  , genericShelleyKeyPair
   ) where
-
-import           Cardano.Api.TxSubmit
 
 import           Cardano.Prelude
 
-import           Cardano.Api.Types as X
-import           Cardano.Api.CBOR as X
-import           Cardano.Api.Error as X
-import           Cardano.Api.View as X
+import qualified Data.ByteString.Lazy.Char8 as LBS
+import           Data.Coerce (coerce)
+import           Data.List.NonEmpty (NonEmpty)
+import qualified Data.Vector as Vector
 
 import           Cardano.Binary (serialize')
 
@@ -53,29 +49,27 @@ import           Cardano.Crypto.ProtocolMagic (ProtocolMagicId (..))
 import           Cardano.Crypto.Random (runSecureRandom)
 import qualified Cardano.Crypto.Signing as Crypto
 
-import qualified Cardano.Chain.Common as Byron
+import           Cardano.Api.Types as X
+import           Cardano.Api.CBOR as X
+import           Cardano.Api.Error as X
+import           Cardano.Api.View as X
+import           Cardano.Api.TxSubmit
+
+import qualified Cardano.Chain.Common  as Byron
 import qualified Cardano.Chain.Genesis as Byron
-import qualified Cardano.Chain.UTxO as Byron
+import qualified Cardano.Chain.UTxO    as Byron
 
-import           Crypto.Random (MonadRandom)
+import qualified Shelley.Spec.Ledger.Keys    as Shelley
+import qualified Shelley.Spec.Ledger.TxData  as Shelley
 
-import qualified Data.ByteString.Lazy.Char8 as LBS
-import           Data.Coerce (coerce)
-import           Data.List.NonEmpty (NonEmpty)
-import qualified Data.Vector as Vector
-
-import qualified Shelley.Spec.Ledger.Keys as Shelley (SKey (..), pattern VKey)
 
 byronGenKeyPair :: IO KeyPair
 byronGenKeyPair =
   uncurry KeyPairByron <$> runSecureRandom Crypto.keyGen
 
 shelleyGenKeyPair :: IO KeyPair
-shelleyGenKeyPair = runSecureRandom genericShelleyKeyPair
-
-genericShelleyKeyPair :: MonadRandom m => m KeyPair
-genericShelleyKeyPair = do
-    sk <- genKeyDSIGN
+shelleyGenKeyPair = do
+    sk <- runSecureRandom genKeyDSIGN
     let vk = deriveVerKeyDSIGN sk
     pure $ KeyPairShelley (Shelley.VKey vk) (Shelley.SKey sk)
 
@@ -89,6 +83,18 @@ byronVerificationKeyAddress pk nw =
   case pk of
     VerificationKeyByron vk -> AddressByron $ Byron.makeVerKeyAddress (byronNetworkMagic nw) vk
     VerificationKeyShelley _ -> panic "Cardano.Api.byronVerificationKeyAddress: VerificationKeyInfoShelley"
+
+shelleyVerificationKeyAddress :: VerificationKey -> Network -> Address
+shelleyVerificationKeyAddress pk _nw =
+  case pk of
+    VerificationKeyByron _ -> panic "Cardano.Api.shelleyVerificationKeyAddress: VerificationKeyByron"
+    VerificationKeyShelley vk ->
+      AddressShelley $
+        --TODO: we cannot use toAddr or toCred here because they unnecessarily
+        -- require a full key pair, when only the pub key is needed, and that
+        -- is all we have here
+        Shelley.Addr (Shelley.KeyHashObj (Shelley.hashKey vk))
+                     Shelley.StakeRefNull
 
 mkVerificationKey :: KeyPair -> VerificationKey
 mkVerificationKey kp =
@@ -190,8 +196,6 @@ signTransaction txu nw sks =
       panic "Cardano.Api.signTransaction: TxUnsignedShelley"
 
 
-
-
 -- Verify that the transaction has been fully witnessed
 -- same decision about checking or not, that all witnesses are the right ones and in the right order etc
 signTransactionWithWitness :: TxUnsigned -> [Byron.TxInWitness] -> TxSigned
@@ -219,9 +223,6 @@ signTransactionWithWitness txu ws =
 
 
 
-
-
-
 -- Extract transaction information - getTransactionId may be redundant
 -- part of TxBuilder
 getTxSignedBody :: TxSigned -> ByteString
@@ -241,8 +242,6 @@ getTxSignedWitnesses txs =
   case txs of
     TxSignedByron _tx _txCbor _txHash txWit -> map TxWitByron (Vector.toList txWit)
     TxSignedShelley -> panic "Cardano.Api.getTxSignedWitnesses: TxUnsignedShelley"
-
-
 
 getTxUnsignedHash :: TxUnsigned -> Crypto.Hash TxUnsigned
 getTxUnsignedHash txu =

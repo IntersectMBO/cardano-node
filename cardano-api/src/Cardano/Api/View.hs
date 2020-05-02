@@ -36,8 +36,6 @@ import           Control.Monad.Trans.Except.Extra (handleIOExceptT, hoistEither,
 
 import           Data.ByteString.Char8 (ByteString)
 import qualified Data.ByteString.Char8 as BS
-import qualified Data.Text as Text
-import qualified Data.Text.Encoding as Text
 
 
 parseAddressView :: ByteString -> Either ApiError Address
@@ -107,27 +105,6 @@ renderTxUnsignedView tu =
 
 -- -------------------------------------------------------------------------------------------------
 
-convertTextViewError :: TextViewError -> Either ApiError b
-convertTextViewError err =
-  Left $
-    case err of
-      TextViewFormatError msg -> ApiTextView msg
-
-      TextViewTypeError [expected] actual ->
-        ApiTextView $ mconcat
-          [ "Expected file type ", Text.decodeLatin1 (unTextViewType expected)
-          , ", but got type ", Text.decodeLatin1 (unTextViewType actual)
-          ]
-
-      TextViewTypeError expected actual ->
-        ApiTextView $ mconcat
-          [ "Expected file type to be one of "
-          , Text.intercalate ", "
-              [ Text.decodeLatin1 (unTextViewType t) | t <- expected ]
-          , ", but got type ", Text.decodeLatin1 (unTextViewType actual)
-          ]
-
-      TextViewDecodeError derr -> ApiErrorCBOR derr
 
 readAddress :: FilePath -> IO (Either ApiError Address)
 readAddress path =
