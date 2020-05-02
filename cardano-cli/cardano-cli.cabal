@@ -36,6 +36,7 @@ library
                        Cardano.CLI.Run
                        Cardano.CLI.Shelley.Parsers
                        Cardano.CLI.Shelley.Run
+                       Cardano.CLI.Shelley.Run.Address
                        Cardano.CLI.Shelley.Run.Genesis
                        Cardano.CLI.Shelley.Run.KeyGen
                        Cardano.CLI.Tx
@@ -46,6 +47,7 @@ library
                      , aeson
                      , aeson-pretty
                      , bytestring
+                     , base16-bytestring
                      , canonical-json
                      , cardano-api
                      , cardano-binary
