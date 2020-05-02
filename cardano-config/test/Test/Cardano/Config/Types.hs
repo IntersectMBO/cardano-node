@@ -18,7 +18,6 @@ import           Hedgehog (Property, discover)
 import qualified Hedgehog
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
-import           Hedgehog.Internal.Property (forAllT)
 
 import           Test.Cardano.Config.Examples
 import           Test.Cardano.Config.Gen
@@ -72,13 +71,13 @@ prop_roundtrip_ShelleyGenesis_JSON =
 prop_roundtrip_VerKeyVRF_SimpleVRF_CBOR :: Property
 prop_roundtrip_VerKeyVRF_SimpleVRF_CBOR =
   Hedgehog.withTests 50 . Hedgehog.property $ do
-    vKeyVRF <- snd <$> forAllT genVRFKeyPair'
+    (_, vKeyVRF) <- Hedgehog.forAll genVRFKeyPair
     Hedgehog.tripping vKeyVRF encodeVRFVerificationKey decodeVRFVerificationKey
 
 prop_roundtrip_VKeyES_TPraosStandardCrypto_CBOR :: Property
 prop_roundtrip_VKeyES_TPraosStandardCrypto_CBOR =
   Hedgehog.withTests 20 . Hedgehog.property $ do
-    (vKeyES, _) <- forAllT genKESKeyPair'
+    (vKeyES, _) <- Hedgehog.forAll genKESKeyPair
     Hedgehog.tripping vKeyES encodeKESVerificationKey decodeKESVerificationKey
 
 -- Test this first. If this fails, others are likely to fail.

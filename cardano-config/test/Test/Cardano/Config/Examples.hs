@@ -14,6 +14,7 @@ import           Cardano.Slotting.Slot (EpochSize (..))
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..), slotLengthFromSec)
 import           Ouroboros.Consensus.Protocol.Abstract (SecurityParam (..))
 import           Ouroboros.Consensus.Shelley.Protocol (TPraosStandardCrypto)
+import           Ouroboros.Consensus.Shelley.Node (emptyGenesisStaking)
 import           Ouroboros.Network.Magic (NetworkMagic (..))
 import           Shelley.Spec.Ledger.Coin (Coin(..))
 import           Shelley.Spec.Ledger.Keys (DiscKeyHash (..), GenKeyHash, KeyHash)
@@ -43,6 +44,7 @@ exampleShelleyGenesis =
     , sgMaxHeaderSize = 217569
     , sgGenDelegs = Map.fromList [(genesisVerKeyHash, delegVerKeyHash)]
     , sgInitialFunds = Map.fromList [(initialFundedAddress,initialFunds)]
+    , sgStaking = emptyGenesisStaking
     }
  where
   -- hash of the genesis verification key

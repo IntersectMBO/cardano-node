@@ -15,7 +15,7 @@ module Cardano.TracingOrphanInstances.Consensus () where
 import           Cardano.Prelude hiding (show)
 import           Prelude (show)
 
-import qualified Data.List.NonEmpty as NonEmpty
+import qualified Data.Text as Text
 import           Data.Text (pack)
 
 import           Cardano.TracingOrphanInstances.Common
@@ -71,20 +71,19 @@ instance HasSeverityAnnotation (ChainDB.TraceEvent blk) where
     ChainDB.IgnoreInvalidBlock {} -> Info
     ChainDB.AddedBlockToQueue {} -> Debug
     ChainDB.BlockInTheFuture {} -> Info
-    ChainDB.StoreButDontChange {} -> Debug
+    ChainDB.AddedBlockToVolDB {} -> Debug
     ChainDB.TryAddToCurrentChain {} -> Debug
     ChainDB.TrySwitchToAFork {} -> Info
+    ChainDB.StoreButDontChange {} -> Debug
     ChainDB.AddedToCurrentChain {} -> Notice
     ChainDB.SwitchedToAFork {} -> Notice
     ChainDB.AddBlockValidation ev' -> case ev' of
       ChainDB.InvalidBlock {} -> Error
       ChainDB.InvalidCandidate {} -> Error
       ChainDB.ValidCandidate {} -> Info
-      ChainDB.CandidateExceedsRollback {} -> Error
-    ChainDB.AddedBlockToVolDB {} -> Debug
-    ChainDB.ChainChangedInBg {} -> Info
-    ChainDB.ScheduledChainSelection {} -> Debug
-    ChainDB.RunningScheduledChainSelection {} -> Debug
+      ChainDB.CandidateContainsFutureBlocks{} -> Debug
+      ChainDB.CandidateContainsFutureBlocksExceedingClockSkew{} -> Error
+    ChainDB.ChainSelectionForFutureBlock{} -> Debug
 
   getSeverityAnnotation (ChainDB.TraceLedgerReplayEvent ev) = case ev of
     LedgerDB.ReplayFromGenesis {} -> Info
@@ -305,18 +304,18 @@ instance (Condense (HeaderHash blk), LedgerSupportsProtocol blk)
             "Invalid candidate " <> condenseT (AF.headPoint c)
           ChainDB.ValidCandidate c -> \_o ->
             "Valid candidate " <> condenseT (AF.headPoint c)
-          ChainDB.CandidateExceedsRollback _ _ c -> \_o ->
-            "Exceeds rollback " <> condenseT (AF.headPoint c)
+          ChainDB.CandidateContainsFutureBlocks c hdrs -> \_o ->
+            "Candidate contains blocks from near future:  " <>
+            condenseT (AF.headPoint c) <> ", slots " <>
+            Text.intercalate ", " (map (condenseT . headerPoint) hdrs)
+          ChainDB.CandidateContainsFutureBlocksExceedingClockSkew c hdrs -> \_o ->
+            "Candidate contains blocks from future exceeding clock skew limit: " <>
+            condenseT (AF.headPoint c) <> ", slots " <>
+            Text.intercalate ", " (map (condenseT . headerPoint) hdrs)
         ChainDB.AddedBlockToVolDB pt _ _ -> \_o ->
           "Chain added block " <> condenseT pt
-        ChainDB.ChainChangedInBg c1 c2 -> \_o ->
-          "Chain changed in bg, from " <> condenseT (AF.headPoint c1) <> " to "  <> condenseT (AF.headPoint c2)
-        ChainDB.ScheduledChainSelection pt slot _n -> \_o ->
-          "Chain selection scheduled for future: " <> condenseT pt
-                                      <> ", slot " <> condenseT slot
-        ChainDB.RunningScheduledChainSelection pts slot _n -> \_o ->
-          "Running scheduled chain selection: " <> condenseT (NonEmpty.toList pts)
-                                  <> ", slot " <> condenseT slot
+        ChainDB.ChainSelectionForFutureBlock pt -> \_o ->
+          "Chain selection run for block previously from future: " <> condenseT pt
       ChainDB.TraceLedgerReplayEvent ev -> case ev of
         LedgerDB.ReplayFromGenesis _replayTo -> \_o ->
           "Replaying ledger from genesis"
@@ -458,11 +457,10 @@ instance ( Condense (HeaderHash blk)
       [ "kind" .= String "ValidationError"
       , "error" .= toObject verb extvalerr
       ]
-  toObject verb (ChainDB.InChainAfterInvalidBlock point extvalerr) =
+  toObject verb (ChainDB.InFutureExceedsClockSkew point) =
     mkObject
-      [ "kind" .= String "InChainAfterInvalidBlock"
+      [ "kind" .= String "InFutureExceedsClockSkew"
       , "point" .= toObject verb point
-      , "error" .= toObject verb extvalerr
       ]
 
 
@@ -556,29 +554,21 @@ instance ( Condense (HeaderHash blk)
       ChainDB.ValidCandidate c ->
         mkObject [ "kind" .= String "TraceAddBlockEvent.AddBlockValidation.ValidCandidate"
                  , "block" .= showPoint verb (AF.headPoint c) ]
-      ChainDB.CandidateExceedsRollback supported actual c ->
-        mkObject [ "kind" .= String "TraceAddBlockEvent.AddBlockValidation.CandidateExceedsRollback"
-                 , "block" .= showPoint verb (AF.headPoint c)
-                 , "supported" .= show supported
-                 , "actual" .= show actual ]
+      ChainDB.CandidateContainsFutureBlocks c hdrs ->
+        mkObject [ "kind" .= String "TraceAddBlockEvent.AddBlockValidation.CandidateContainsFutureBlocks"
+                 , "block"   .= showPoint verb (AF.headPoint c)
+                 , "headers" .= map (showPoint verb . headerPoint) hdrs ]
+      ChainDB.CandidateContainsFutureBlocksExceedingClockSkew c hdrs ->
+        mkObject [ "kind" .= String "TraceAddBlockEvent.AddBlockValidation.CandidateContainsFutureBlocksExceedingClockSkew"
+                 , "block"   .= showPoint verb (AF.headPoint c)
+                 , "headers" .= map (showPoint verb . headerPoint) hdrs ]
     ChainDB.AddedBlockToVolDB pt (BlockNo bn) _ ->
       mkObject [ "kind" .= String "TraceAddBlockEvent.AddedBlockToVolDB"
                , "block" .= toObject verb pt
                , "blockNo" .= show bn ]
-    ChainDB.ChainChangedInBg c1 c2 ->
-      mkObject [ "kind" .= String "TraceAddBlockEvent.ChainChangedInBg"
-               , "prev" .= showPoint verb (AF.headPoint c1)
-               , "new" .= showPoint verb (AF.headPoint c2) ]
-    ChainDB.ScheduledChainSelection pt slot n ->
-      mkObject [ "kind" .= String "TraceAddBlockEvent.ScheduledChainSelection"
-               , "block" .= toObject verb pt
-               , "slot" .= toObject verb slot
-               , "scheduled" .= n ]
-    ChainDB.RunningScheduledChainSelection pts slot n ->
-      mkObject [ "kind" .= String "TraceAddBlockEvent.RunningScheduledChainSelection"
-               , "blocks" .= map (toObject verb) (NonEmpty.toList pts)
-               , "slot" .= toObject verb slot
-               , "scheduled" .= n ]
+    ChainDB.ChainSelectionForFutureBlock pt ->
+      mkObject [ "kind" .= String "TraceAddBlockEvent.ChainSelectionForFutureBlock"
+               , "block" .= toObject verb pt ]
    where
      addedHdrsNewChain
        :: (AF.AnchoredFragment (Header blk))

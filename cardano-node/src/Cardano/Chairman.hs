@@ -38,8 +38,7 @@ import           Control.Tracer
 import           Network.Mux (MuxError)
 
 import           Ouroboros.Consensus.Block (BlockProtocol, GetHeader (..))
-import           Ouroboros.Consensus.BlockchainTime.SlotLength
-import           Ouroboros.Consensus.BlockchainTime.SlotLengths
+import           Ouroboros.Consensus.BlockchainTime
 import           Ouroboros.Consensus.Config
                    ( TopLevelConfig, configConsensus, configBlock )
 import           Ouroboros.Consensus.Mempool
@@ -47,7 +46,8 @@ import           Ouroboros.Consensus.Network.NodeToClient
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
                   (HasNetworkProtocolVersion (..))
 import           Ouroboros.Consensus.Node.ProtocolInfo
-import           Ouroboros.Consensus.Node.LedgerDerivedInfo
+import           Ouroboros.Consensus.HardFork.Abstract (HasHardForkHistory(..))
+import           Ouroboros.Consensus.HardFork.History (EraParams(..), Shape(..))
 import           Ouroboros.Consensus.Node.Run
 import           Ouroboros.Consensus.Cardano
 
@@ -118,11 +118,20 @@ chairmanTest tracer ptcl runningTime optionalProgressThreshold socketPaths = do
   where
     ProtocolInfo { pInfoConfig = cfg } = protocolInfo ptcl
     securityParam = protocolSecurityParam (configConsensus cfg)
-    slotLength    = currentSlotLength (knownSlotLengths (configBlock cfg))
+
     progressThreshold = deriveProgressThreshold
                           slotLength
                           runningTime
                           optionalProgressThreshold
+
+    slotLength =
+      case hardForkShape (configBlock cfg) of
+      -- This will need to be generalised to cope with protocols that do
+      -- hard forks. This currently expects a single protocol era.
+        Shape eras ->
+          case toList eras of
+            [EraParams{eraSlotLength}] -> eraSlotLength
+            _ -> error "chairmanTest: TODO protocols with hard forks"
 
 
 -- | The caller specifies how long to run the chairman for and optionally a
@@ -553,3 +562,5 @@ localInitiatorNetworkApplication sockPath chainsVar securityParam
                , cTxSubmissionCodec
                , cStateQueryCodec
                } = clientCodecs (configBlock cfg) byronClientVersion
+
+

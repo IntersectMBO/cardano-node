@@ -1,30 +1,32 @@
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Test.Cardano.Config.Gen
   ( genAddress
   , genGenesisDelegationPair
   , genGenesisFundPair
-  , genKESKeyPair'
+  , genKESKeyPair
   , genNetworkTopology
   , genNodeAddress
   , genNodeHostAddress
   , genNodeSetup
   , genShelleyGenesis
   , genTextView
-  , genVRFKeyPair'
+  , genVRFKeyPair
   ) where
 
 import           Cardano.Prelude
 
-import           Cardano.Config.Shelley.KES (SignKey, VerKey, genKESKeyPair)
+import           Cardano.Config.Shelley.KES (SignKey, VerKey)
 import           Cardano.Config.Shelley.Genesis
-import           Cardano.Config.Shelley.VRF (genVRFKeyPair)
 import           Cardano.Config.TextView
 import           Cardano.Config.Topology
 import           Cardano.Config.Types
 import           Cardano.Crypto.VRF.Simple (SimpleVRF)
 import           Cardano.Slotting.Slot (EpochSize (..))
 import           Cardano.Crypto.DSIGN (deriveVerKeyDSIGN, genKeyDSIGN)
+import           Cardano.Crypto.VRF.Class
+import           Cardano.Crypto.KES.Class
 import           Crypto.Random (drgNewTest, withDRG)
 
 import qualified Data.Map.Strict as Map
@@ -32,7 +34,7 @@ import qualified Data.IP as IP
 import           Data.Time.Clock (UTCTime)
 import           Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 
-import           Hedgehog (Gen, GenT)
+import           Hedgehog (Gen)
 import           Hedgehog.Corpus (cooking)
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
@@ -42,13 +44,17 @@ import           Ouroboros.Consensus.BlockchainTime (SlotLength (..), SystemStar
                     slotLengthFromMillisec)
 import           Ouroboros.Consensus.Protocol.Abstract (SecurityParam (..))
 import           Ouroboros.Consensus.Shelley.Protocol (Crypto, TPraosStandardCrypto)
+import           Ouroboros.Consensus.Shelley.Node (emptyGenesisStaking)
 import           Ouroboros.Network.Magic (NetworkMagic (..))
 
 import           Shelley.Spec.Ledger.Address (toAddr)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
-import           Shelley.Spec.Ledger.Keys (GenKeyHash, KeyHash, SKey (..),
-                    SignKeyVRF, VerKeyVRF, VKey, VKeyGenesis, pattern KeyPair,
-                    pattern VKey, pattern VKeyGenesis, hashKey, sKey, vKey)
+import           Shelley.Spec.Ledger.Keys (GenKeyHash, KeyHash, Hash, SKey (..),
+                    SignKeyVRF, VerKeyVRF, hashKeyVRF,
+                    VKey, VKeyGenesis, pattern KeyPair,
+                    pattern VKey, pattern VKeyGenesis, hashKey, sKey, vKey,
+                    VKeyES(..), SKeyES(..))
+import           Shelley.Spec.Ledger.Crypto
 import           Shelley.Spec.Ledger.TxData (Addr)
 
 import           Test.Cardano.Crypto.Gen (genProtocolMagicId)
@@ -74,6 +80,7 @@ genShelleyGenesis =
     <*> fmap fromIntegral (Gen.word $ Range.linear 100 1000000)
     <*> fmap Map.fromList genGenesisDelegationList
     <*> fmap Map.fromList genFundsList
+    <*> pure emptyGenesisStaking
 
 
 genGenesisFundPair :: Gen (Addr TPraosStandardCrypto, Coin)
@@ -87,22 +94,31 @@ genGenesisDelegationList :: Gen [(GenKeyHash TPraosStandardCrypto, KeyHash TPrao
 genGenesisDelegationList = Gen.list (Range.linear 1 10) genGenesisDelegationPair
 
 genGenesisDelegationPair :: Gen (GenKeyHash TPraosStandardCrypto, KeyHash TPraosStandardCrypto)
-genGenesisDelegationPair = do
+genGenesisDelegationPair =
   -- GenKeyHash should refer to the hash of the genesis verification key
-  genKeyHash <- hashKey . snd <$> genGenesisKeyPair
   -- KeyHash should refer to the hash of the delegators verification key
-  keyhash <- hashKey . snd <$> genKeyPair
-  pure (genKeyHash, keyhash)
+  (,) <$> genGenesisKeyHash
+      <*> genKeyHash
 
 
 genGenesisKeyPair :: Crypto crypto => Gen (SKey crypto, VKeyGenesis crypto)
 genGenesisKeyPair = mkGenKeyPair <$> genSeed5
 
-genKESKeyPair' ::  GenT IO (VerKey, SignKey)
-genKESKeyPair' = do
-  duration <- Gen.integral $ Range.constant 0 1000
-  liftIO $ genKESKeyPair duration
+genGenesisKeyHash :: Gen (GenKeyHash TPraosStandardCrypto)
+genGenesisKeyHash = hashKey . snd <$> genGenesisKeyPair
 
+genKESKeyPair ::  Gen (VerKey, SignKey)
+genKESKeyPair = do
+  duration <- Gen.integral $ Range.constant 0 1000
+  seed <- genSeed5
+  pure $ fst $ withDRG (drgNewTest seed) $ do
+    sk <- genKeyKES duration
+    let vk = deriveVerKeyKES sk
+    pure (VKeyES vk, SKeyES sk)
+
+
+genKeyHash :: Gen (KeyHash TPraosStandardCrypto)
+genKeyHash = hashKey . snd <$> genKeyPair
 
 genKeyPair :: Crypto crypto => Gen (SKey crypto, VKey crypto)
 genKeyPair = mkKeyPair <$> genSeed5
@@ -121,8 +137,17 @@ genTextView =
     <*> fmap TextViewTitle (Gen.utf8 (Range.linear 1 80) (Gen.filter (/= '\n') Gen.ascii))
     <*> Gen.bytes (Range.linear 0 500)
 
-genVRFKeyPair' :: GenT IO (SignKeyVRF SimpleVRF, VerKeyVRF SimpleVRF)
-genVRFKeyPair' = liftIO genVRFKeyPair
+
+_genVRFKeyHash :: Gen (Hash (HASH TPraosStandardCrypto) (VerKeyVRF SimpleVRF))
+_genVRFKeyHash = (hashKeyVRF @TPraosStandardCrypto . snd) <$> genVRFKeyPair
+
+genVRFKeyPair :: Gen (SignKeyVRF SimpleVRF, VerKeyVRF SimpleVRF)
+genVRFKeyPair = do
+  seed <- genSeed5
+  pure $ fst $ withDRG (drgNewTest seed) $ do
+     sk <- genKeyVRF
+     let vk = deriveVerKeyVRF sk
+     pure (sk, vk)
 
 -- -------------------------------------------------------------------------------------------------
 
