@@ -30,7 +30,6 @@ module Cardano.Common.Parsers
 
 
 import           Prelude (String)
-import qualified Prelude
 
 import           Cardano.Prelude hiding (option)
 
@@ -246,11 +245,11 @@ parseNodeAddress = NodeAddress <$> optional parseHostAddr <*> parsePort
 
 parseHostAddr :: Parser NodeHostAddress
 parseHostAddr =
-    option (NodeHostAddress . Prelude.read <$> str) (
+    option (NodeHostAddress <$> auto) (
           long "host-addr"
        <> metavar "HOST-NAME"
        <> help "Optionally limit node to one ipv6 or ipv4 address"
-       <> value (NodeHostAddress "localhost")
+       <> value (NodeHostAddress "127.0.0.1")
     )
 
 parsePort :: Parser PortNumber
