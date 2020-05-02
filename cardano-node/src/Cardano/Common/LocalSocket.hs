@@ -3,7 +3,6 @@
 
 module Cardano.Common.LocalSocket
   ( chooseSocketPath
-  , localSocketPath
   , nodeLocalSocketAddrInfo
   , removeStaleLocalSocket
   )
@@ -38,16 +37,11 @@ chooseSocketPath (Just yamlSockPath) Nothing = unYamlSocketPath yamlSockPath
 chooseSocketPath Nothing (Just cliSockPath) = unCLISocketPath cliSockPath
 chooseSocketPath _ (Just cliSockPath) = unCLISocketPath cliSockPath
 
-nodeLocalSocketAddrInfo :: NodeConfiguration -> NodeCLI -> IO FilePath
-nodeLocalSocketAddrInfo nc NodeCLI {socketFile} = do
-  localSocketPath $ chooseSocketPath (ncSocketPath nc) socketFile
-
--- | Provide an filepath intended for a socket situated in 'socketDir'.
--- When 'mkdir' is 'MkdirIfMissing', the directory is created.
-localSocketPath :: SocketPath -> IO FilePath
-localSocketPath (SocketFile fp) = do
-  createDirectoryIfMissing True $ takeDirectory fp
-  return fp
+nodeLocalSocketAddrInfo :: NodeConfiguration -> NodeCLI -> FilePath
+nodeLocalSocketAddrInfo nc NodeCLI {socketFile} =
+    path
+  where
+    SocketFile path = chooseSocketPath (ncSocketPath nc) socketFile
 
 -- | Remove the socket established with 'localSocketAddrInfo'.
 removeStaleLocalSocket :: NodeConfiguration -> NodeCLI -> ExceptT SocketError IO ()

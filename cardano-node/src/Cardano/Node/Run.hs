@@ -178,7 +178,7 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
 
   nt <- either (\err -> panic $ "Cardano.Node.Run.readTopologyFile: " <> err) pure eitherTopology
 
-  myLocalAddr <- nodeLocalSocketAddrInfo nc npm
+  let myLocalAddr = nodeLocalSocketAddrInfo nc npm
 
   let diffusionArguments :: DiffusionArguments
       diffusionArguments = createDiffusionArguments addrs myLocalAddr ipProducers dnsProducers
