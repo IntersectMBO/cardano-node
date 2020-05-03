@@ -1,0 +1,44 @@
+#!/bin/sh -u
+
+cwd=$(dirname "$0")
+
+# shellcheck source=/dev/null
+. "${cwd}/../core/common"
+
+# shellcheck disable=SC2154
+banner "${testname}"
+
+OUTPUT_DIR="${TEST}"
+
+rm -rf "${OUTPUT_DIR}"
+mkdir "${OUTPUT_DIR}"
+
+error=0
+
+# Generate a key pair
+${CARDANO_CLI} shelley address key-gen \
+    --verification-key-file "${OUTPUT_DIR}/address.vkey" \
+    --signing-key-file "${OUTPUT_DIR}/address.skey"
+
+assert_file_exists "${OUTPUT_DIR}/address.vkey"
+
+count=$(grep -c VerificationKeyShelley "${OUTPUT_DIR}/address.vkey")
+if test "${count}" != 1 ; then
+  echo "${OUTPUT_DIR}/address.vkey: Expected VerificationKeyShelley"
+  error=1
+  fi
+
+${CARDANO_CLI} shelley address build \
+    --verification-key-file "${OUTPUT_DIR}/address.vkey" \
+    > "${OUTPUT_DIR}/address.build"
+
+assert_file_exists "${OUTPUT_DIR}/address.build"
+
+line_count=$(wc -l < "${OUTPUT_DIR}/address.build")
+if test "${line_count}" != 1 ; then
+  echo "Address build:"
+  cat "${OUTPUT_DIR}/address.build"
+  error=1
+  fi
+
+report_result ${error}

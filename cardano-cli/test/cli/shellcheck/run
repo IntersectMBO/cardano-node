@@ -1,0 +1,30 @@
+#!/bin/sh -u
+
+cwd=$(dirname "$0")
+
+# shellcheck source=/dev/null
+. "${cwd}/../core/common"
+
+# shellcheck disable=SC2154
+banner "${testname}"
+
+type shellcheck > /dev/null 2>&1 || {
+    echo "Missing 'shellcheck' executable."
+    exit 1
+}
+
+# Need this if running outside "cabal test cardano-cli".
+if test -d "cardano-cli" ; then
+  cd "cardano-cli" || exit 1
+  fi
+
+shellcheck test/cli/core/common
+error=$?
+
+files=$(find test/cli -name run)
+for file in ${files} ; do
+  shellcheck "${file}"
+  error=$?
+  done
+
+report_result ${error}
