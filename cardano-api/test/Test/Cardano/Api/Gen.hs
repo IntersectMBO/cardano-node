@@ -1,17 +1,15 @@
 module Test.Cardano.Api.Gen
-  ( genAddress
-  , genKeyPair
+  ( genKeyPair
   , genKeyPairByron
   , genKeyPairShelley
   , genNetwork
   , genVerificationKey
-  , genVerificationKeyByron
-  , genVerificationKeyShelley
-  , genShelleyVerificationKey
   , genTxSigned
   , genTxSignedByron
   , genTxUnsigned
   , genTxUnsignedByron
+  , genByronVerificationKeyAddress
+  , genShelleyVerificationKeyAddress
   ) where
 
 import           Cardano.Api
@@ -36,12 +34,13 @@ import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 
 
-genAddress :: Gen Address
-genAddress =
-  Gen.choice
-    [ byronVerificationKeyAddress <$> genVerificationKey <*> genNetwork
-    , shelleyVerificationKeyAddress <$> genVerificationKey <*> genNetwork
-    ]
+genByronVerificationKeyAddress :: Gen Address
+genByronVerificationKeyAddress =
+  byronVerificationKeyAddress <$> genVerificationKeyByron <*> genNetwork
+
+genShelleyVerificationKeyAddress :: Gen Address
+genShelleyVerificationKeyAddress =
+  shelleyVerificationKeyAddress <$> genVerificationKeyShelley <*> genNetwork
 
 genKeyPair :: Gen KeyPair
 genKeyPair =
@@ -69,11 +68,6 @@ genSeed =
     <*> Gen.word64 Range.constantBounded
     <*> Gen.word64 Range.constantBounded
     <*> Gen.word64 Range.constantBounded
-
-genShelleyVerificationKey :: Gen ShelleyVerificationKey
-genShelleyVerificationKey = do
-  KeyPairShelley vk _ <- genKeyPairShelley
-  pure vk
 
 genNetwork :: Gen Network
 genNetwork =
@@ -114,10 +108,9 @@ genTxSignedByron =
 
 genTxUnsigned :: Gen TxUnsigned
 genTxUnsigned =
-  -- When Shelly is sorted out, this should change to `Gen.choose`.
-  Gen.frequency
-    [ (9, genTxUnsignedByron)
-    , (1, pure TxUnsignedShelley)
+  Gen.choice
+    [ genTxUnsignedByron
+--  , genTxUnsignedShelley  --TODO
     ]
 
 genTxUnsignedByron :: Gen TxUnsigned
@@ -125,4 +118,9 @@ genTxUnsignedByron = do
   tx <- genTx
   let cbor = serialize tx
   pure $ TxUnsignedByron tx (LBS.toStrict cbor) (coerce $ hashRaw cbor)
+
+--genTxUnsignedShelley :: Gen TxUnsigned
+--genTxUnsignedShelley = fail "TODO: genTxUnsignedShelley"
+--TODO: reuse an existing generator
+
 

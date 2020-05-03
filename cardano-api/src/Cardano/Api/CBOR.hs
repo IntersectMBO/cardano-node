@@ -31,8 +31,9 @@ import qualified Cardano.Binary as CBOR
 import           Cardano.Crypto.DSIGN.Class (DSIGNAlgorithm (..))
 import           Cardano.Prelude
 
-import           Data.ByteString.Char8 (ByteString)
-import qualified Data.ByteString.Lazy.Char8 as LBS
+import           Data.ByteString (ByteString)
+import qualified Data.ByteString as BS
+import qualified Data.ByteString.Lazy as LBS
 import           Data.Word (Word8)
 
 import           Shelley.Spec.Ledger.Keys
@@ -136,7 +137,7 @@ txUnsignedFromCBOR bs =
       tag <- CBOR.decodeWord8
       case tag of
         178  -> TxUnsignedByron <$> fromCBOR <*> fromCBOR <*> fromCBOR
-        179  -> pure TxUnsignedShelley
+        179  -> TxUnsignedShelley <$> decodeShelleyTxBody (BS.drop 1 bs)
         _  -> cborError $ DecoderErrorUnknownTag "TxUnsigned" tag
 
 txUnsignedToCBOR :: TxUnsigned -> ByteString
@@ -145,7 +146,8 @@ txUnsignedToCBOR pk =
     case pk of
       TxUnsignedByron btx cbor hash ->
         mconcat [ toCBOR (178 :: Word8), toCBOR btx, toCBOR cbor, toCBOR hash ]
-      TxUnsignedShelley -> toCBOR (179 :: Word8)
+      TxUnsignedShelley tx ->
+        mconcat [ toCBOR (179 :: Word8), encodeShelleyTxBody tx ]
 
 shelleyVerificationKeyFromCBOR :: ByteString -> Either ApiError ShelleyVerificationKey
 shelleyVerificationKeyFromCBOR bs =
@@ -161,6 +163,14 @@ shelleyVerificationKeyToCBOR = CBOR.serializeEncoding' . encodeShelleyVerificati
 
 encodeShelleyVerificationKey :: ShelleyVerificationKey -> Encoding
 encodeShelleyVerificationKey (DiscVKey vk) = encodeVerKeyDSIGN vk
+
+encodeShelleyTxBody :: ShelleyTxBody -> Encoding
+encodeShelleyTxBody = toCBOR
+
+decodeShelleyTxBody :: ByteString -> Decoder s ShelleyTxBody
+decodeShelleyTxBody full = do
+    atx <- fromCBOR
+    return $! CBOR.runAnnotator atx (CBOR.Full (LBS.fromStrict full))
 
 -- -------------------------------------------------------------------------------------------------
 

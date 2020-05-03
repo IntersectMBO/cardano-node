@@ -1,0 +1,48 @@
+#!/bin/sh -u
+
+cwd=$(dirname "$0")
+
+# shellcheck source=/dev/null
+. "${cwd}/../core/common"
+
+# shellcheck disable=SC2154
+banner "${testname}"
+
+OUTPUT_DIR="${TEST}"
+
+rm -rf "${OUTPUT_DIR}"
+mkdir "${OUTPUT_DIR}"
+
+error=0
+
+${CARDANO_CLI} shelley node key-gen \
+    --verification-key-file "${OUTPUT_DIR}/key-gen.vkey" \
+    --signing-key-file "${OUTPUT_DIR}/key-gen.skey" \
+    --operational-certificate-issue-counter "${OUTPUT_DIR}/op-cert.counter"
+
+assert_file_exists "${OUTPUT_DIR}/key-gen.vkey"
+assert_file_exists "${OUTPUT_DIR}/key-gen.skey"
+assert_file_exists "${OUTPUT_DIR}/op-cert.counter"
+
+count=$(grep -c 'Node operator verification key' "${OUTPUT_DIR}/key-gen.vkey")
+if test "${count}" != 1 ; then
+  echo "${OUTPUT_DIR}/key-gen.vkey: Expected 'Node operator verification key'"
+  cat "${OUTPUT_DIR}/key-gen.vkey"
+  error=1
+  fi
+
+count=$(grep -c 'Node operator signing key' "${OUTPUT_DIR}/key-gen.skey")
+if test "${count}" != 1 ; then
+  echo "${OUTPUT_DIR}/key-gen.skey: Expected 'Node operator signing key'"
+  cat "${OUTPUT_DIR}/key-gen.skey"
+  error=1
+  fi
+
+count=$(grep -c 'Node operational certificate issue counter' "${OUTPUT_DIR}/op-cert.counter")
+if test "${count}" != 1 ; then
+  echo "${OUTPUT_DIR}/op-cert.counter: Expected 'Node operational certificate issue counter'"
+  cat "${OUTPUT_DIR}/op-cert.counter"
+  error=1
+  fi
+
+report_result ${error}

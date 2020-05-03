@@ -1,0 +1,39 @@
+#!/bin/sh -u
+
+cwd=$(dirname "$0")
+
+# shellcheck source=/dev/null
+. "${cwd}/../core/common"
+
+# shellcheck disable=SC2154
+banner "${testname}"
+
+OUTPUT_DIR="${TEST}"
+
+rm -rf "${OUTPUT_DIR}"
+mkdir "${OUTPUT_DIR}"
+
+error=0
+
+${CARDANO_CLI} shelley node key-gen-VRF \
+    --verification-key-file "${OUTPUT_DIR}/vrf.vkey" \
+    --signing-key-file "${OUTPUT_DIR}/vrf.skey"
+
+assert_file_exists "${OUTPUT_DIR}/vrf.vkey"
+assert_file_exists "${OUTPUT_DIR}/vrf.skey"
+
+count=$(grep -c 'VerKeyVRF SimpleVRF' "${OUTPUT_DIR}/vrf.vkey")
+if test "${count}" != 1 ; then
+  echo "${OUTPUT_DIR}/vrf.vkey: Expected 'VerKeyVRF SimpleVRF'"
+  cat "${OUTPUT_DIR}/vrf.vkey"
+  error=1
+  fi
+
+count=$(grep -c 'SignKeyVRF SimpleVRF' "${OUTPUT_DIR}/vrf.skey")
+if test "${count}" != 1 ; then
+  echo "${OUTPUT_DIR}/vrf.skey: Expected 'SignKeyVRF SimpleVRF'"
+  cat "${OUTPUT_DIR}/vrf.skey"
+  error=1
+  fi
+
+report_result ${error}

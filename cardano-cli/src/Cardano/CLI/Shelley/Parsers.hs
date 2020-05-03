@@ -148,6 +148,11 @@ newtype BlockId
   = BlockId String -- Probably not a String
   deriving (Eq, Show)
 
+data FileDirection
+  = Input
+  | Output
+  deriving (Eq, Show)
+
 newtype GenesisFile
   = GenesisFile FilePath
   deriving (Eq, Show)
@@ -214,7 +219,7 @@ pAddress =
       [ Opt.command "key-gen"
           (Opt.info pAddressKeyGen $ Opt.progDesc "Create a single address key pair")
       , Opt.command "key-hash"
-          (Opt.info pAddressKeyHash $ Opt.progDesc "Show the hash of an address key")
+          (Opt.info pAddressKeyHash $ Opt.progDesc "Print the hash of an address key to stdout")
       , Opt.command "build"
           (Opt.info pAddressBuild $ Opt.progDesc "Build an address")
       , Opt.command "build-multisig"
@@ -222,13 +227,13 @@ pAddress =
       ]
   where
     pAddressKeyGen :: Parser AddressCmd
-    pAddressKeyGen = AddressKeyGen <$> pVerificationKeyFile <*> pSigningKeyFile
+    pAddressKeyGen = AddressKeyGen <$> pVerificationKeyFile Input <*> pSigningKeyFile Input
 
     pAddressKeyHash :: Parser AddressCmd
-    pAddressKeyHash = AddressKeyHash <$> pVerificationKeyFile
+    pAddressKeyHash = AddressKeyHash <$> pVerificationKeyFile Input
 
     pAddressBuild :: Parser AddressCmd
-    pAddressBuild = AddressBuild <$> pVerificationKeyFile
+    pAddressBuild = AddressBuild <$> pVerificationKeyFile Input
 
     pAddressBuildMultiSig :: Parser AddressCmd
     pAddressBuildMultiSig = pure AddressBuildMultiSig
@@ -330,17 +335,17 @@ pNodeCmd =
   where
     pKeyGenOperator :: Parser NodeCmd
     pKeyGenOperator =
-      NodeKeyGenCold <$> pVerificationKeyFile
-                     <*> pSigningKeyFile
+      NodeKeyGenCold <$> pVerificationKeyFile Output
+                     <*> pSigningKeyFile Output
                      <*> pOperatorCertIssueCounterFile
 
     pKeyGenKES :: Parser NodeCmd
     pKeyGenKES =
-      NodeKeyGenKES <$> pVerificationKeyFile <*> pSigningKeyFile <*> pDuration
+      NodeKeyGenKES <$> pVerificationKeyFile Output <*> pSigningKeyFile Output <*> pDuration
 
     pKeyGenVRF :: Parser NodeCmd
     pKeyGenVRF =
-      NodeKeyGenVRF <$> pVerificationKeyFile <*> pSigningKeyFile
+      NodeKeyGenVRF <$> pVerificationKeyFile Output <*> pSigningKeyFile Output
 
     pIssueOpCert :: Parser NodeCmd
     pIssueOpCert =
@@ -481,25 +486,25 @@ pGenesisCmd =
   where
     pGenesisKeyGen :: Parser GenesisCmd
     pGenesisKeyGen =
-      GenesisKeyGenGenesis <$> pVerificationKeyFile <*> pSigningKeyFile
+      GenesisKeyGenGenesis <$> pVerificationKeyFile Output <*> pSigningKeyFile Output
 
     pGenesisDelegateKeyGen :: Parser GenesisCmd
     pGenesisDelegateKeyGen =
-      GenesisKeyGenDelegate <$> pVerificationKeyFile
-                            <*> pSigningKeyFile
+      GenesisKeyGenDelegate <$> pVerificationKeyFile Output
+                            <*> pSigningKeyFile Output
                             <*> pOperatorCertIssueCounterFile
 
     pGenesisUTxOKeyGen :: Parser GenesisCmd
     pGenesisUTxOKeyGen =
-      GenesisKeyGenUTxO <$> pVerificationKeyFile <*> pSigningKeyFile
+      GenesisKeyGenUTxO <$> pVerificationKeyFile Output <*> pSigningKeyFile Output
 
     pGenesisKeyHash :: Parser GenesisCmd
     pGenesisKeyHash =
-      GenesisKeyHash <$> pVerificationKeyFile
+      GenesisKeyHash <$> pVerificationKeyFile Input
 
     pGenesisVerKey :: Parser GenesisCmd
     pGenesisVerKey =
-      GenesisVerKey <$> pVerificationKeyFile <*> pSigningKeyFile
+      GenesisVerKey <$> pVerificationKeyFile Output <*> pSigningKeyFile Output
 
     pGenesisCreate :: Parser GenesisCmd
     pGenesisCreate =
@@ -561,13 +566,13 @@ pColdSigningKeyFile =
      <> Opt.help "Filepath of the cold signing key."
      )
 
-pSigningKeyFile :: Parser SigningKeyFile
-pSigningKeyFile =
+pSigningKeyFile :: FileDirection -> Parser SigningKeyFile
+pSigningKeyFile fdir =
   SigningKeyFile <$>
    Opt.strOption
      (  Opt.long "signing-key-file"
      <> Opt.metavar "FILEPATH"
-     <> Opt.help "Output filepath of the signing key."
+     <> Opt.help (show fdir ++ " filepath of the signing key.")
      )
 
 pBlockId :: Parser BlockId
@@ -648,13 +653,13 @@ pPrivKeyFile =
       <> Opt.help "The private key file."
       )
 
-pVerificationKeyFile :: Parser VerificationKeyFile
-pVerificationKeyFile =
+pVerificationKeyFile :: FileDirection -> Parser VerificationKeyFile
+pVerificationKeyFile fdir =
   VerificationKeyFile <$>
     Opt.strOption
       (  Opt.long "verification-key-file"
       <> Opt.metavar "FILEPATH"
-      <> Opt.help "Output filepath of the verification key."
+      <> Opt.help (show fdir ++ " filepath of the verification key.")
       )
 
 pKESVerificationKeyFile :: Parser VerificationKeyFile
