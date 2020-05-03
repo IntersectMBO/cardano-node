@@ -32,14 +32,14 @@ RESULT="${colourRed}FAILED [ ${testname} ]${colourReset}"
 
 ROOT=$(dirname "$0")/../../..
 ROOT=$(cd "$ROOT" > /dev/null 2>&1 && pwd)
-TMP=${ROOT}/tmp
-TEST=${TMP}/test/$$
+TMP="${ROOT}/tmp"
+TEST="${TMP}/$$"
 mkdir -p "${TEST}"
 
 cleanup () {
     echo "Cleaning up ${TEST}"
     rm -rf "${TEST}"
-    echo ${RESULT}
+    echo "${RESULT}"
     echo
 }
 
@@ -53,7 +53,7 @@ banner () {
 assert_file_exists () {
     if test ! -f "$1" ; then
         echo "Output file '$1' is missing."
-        fail_test
+        exit 1
     fi
 }
 
