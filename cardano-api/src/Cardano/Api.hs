@@ -81,6 +81,7 @@ import qualified Cardano.Chain.UTxO    as Byron
 import qualified Shelley.Spec.Ledger.Address   as Shelley
 import qualified Shelley.Spec.Ledger.Keys      as Shelley
 import qualified Shelley.Spec.Ledger.TxData    as Shelley
+import qualified Shelley.Spec.Ledger.Tx        as Shelley
 import qualified Shelley.Spec.Ledger.BaseTypes as Shelley
 
 
@@ -222,14 +223,15 @@ dont need support Redeem, do need to support Proposal and Votes (possibly Del Ce
 
 -- Use the private key to give one witness to a transaction
 -- (TxInWirtness is fine for Byron on shelley, need a TxWitness type with Byron/Shelley ctors)
-witnessTransaction :: TxUnsigned -> Network -> Crypto.SigningKey -> TxWitness
+witnessTransaction :: TxUnsigned -> Network -> SigningKey -> TxWitness
 witnessTransaction txu nw signKey =
     case txu of
       TxUnsignedByron _tx _txcbor txHash -> TxWitByron $ byronWitnessTransaction txHash nw signKey
-      TxUnsignedShelley _tx -> panic "Cardano.Api.witnessTransaction: TxUnsignedShelley"
+      TxUnsignedShelley tx ->
+        TxWitShelley $ shelleyWitnessTransaction tx signKey
 
-byronWitnessTransaction :: Crypto.Hash Byron.Tx -> Network -> Crypto.SigningKey -> Byron.TxInWitness
-byronWitnessTransaction txHash nw signKey =
+byronWitnessTransaction :: Crypto.Hash Byron.Tx -> Network -> SigningKey -> ByronWitness
+byronWitnessTransaction txHash nw (SigningKeyByron signKey) =
     Byron.VKWitness
       (Crypto.toVerification signKey)
       (Crypto.sign protocolMagic Crypto.SignTx signKey (Byron.TxSigData txHash))
@@ -241,6 +243,14 @@ byronWitnessTransaction txHash nw signKey =
         Mainnet -> Byron.mainnetProtocolMagicId
         Testnet pm -> pm
 
+shelleyWitnessTransaction :: ShelleyTxBody -> SigningKey -> ShelleyWitnessVKey
+shelleyWitnessTransaction txbody (SigningKeyShelley sk) =
+    Shelley.WitVKey vk sig
+  where
+    vk  = Shelley.VKey (deriveVerKeyDSIGN sk') where (Shelley.SKey sk') = sk
+    sig = Shelley.sign sk txbody
+
+
 -- Sign Transaction - signTransaction is built over witnesseTransaction/signTransactionWithWitness
 -- we could have this fail if the wrong (or too many/few) keys are provided, in which case it’d
 -- return Transaction Checked
@@ -248,15 +258,21 @@ byronWitnessTransaction txHash nw signKey =
 -- them to be the right ones, since in Byron txs, witnesses are a list that has match up with the
 -- tx inputs, i.e same number and in the right order. In Shelley they’re a set, so don’t need to
 -- provide duplicate sigs for multiple inputs that share the same input address.
-signTransaction :: TxUnsigned -> Network -> [Crypto.SigningKey] -> TxSigned
+signTransaction :: TxUnsigned -> Network -> [SigningKey] -> TxSigned
 signTransaction txu nw sks =
   case txu of
     TxUnsignedByron tx txcbor txHash ->
       TxSignedByron tx txcbor txHash (Vector.fromList $ map (byronWitnessTransaction txHash nw) sks)
 
-    TxUnsignedShelley _tx ->
---      Shelley.sign makeWitnessVKey
-      panic "Cardano.Api.signTransaction: TxUnsignedShelley"
+    TxUnsignedShelley txbody ->
+        TxSignedShelley $
+          Shelley.Tx
+            txbody
+            keyWitnesses
+            Map.empty         -- script witnesses
+            Shelley.SNothing  -- metadata
+      where
+        keyWitnesses = Set.fromList (map (shelleyWitnessTransaction txbody) sks)
 
 
 -- Verify that the transaction has been fully witnessed
@@ -292,19 +308,19 @@ getTxSignedBody :: TxSigned -> ByteString
 getTxSignedBody txs =
   case txs of
     TxSignedByron _tx txCbor _txHash _txWit -> txCbor
-    TxSignedShelley -> panic "Cardano.Api.getTxSignedBody: TxUnsignedShelley"
+    TxSignedShelley _tx -> panic "Cardano.Api.getTxSignedBody: TxUnsignedShelley"
 
 getTxSignedHash :: TxSigned -> Crypto.Hash TxSigned
 getTxSignedHash txs =
   case txs of
     TxSignedByron _tx _txCbor txHash _txWit -> coerce txHash
-    TxSignedShelley -> panic "Cardano.Api.getSignedHash: TxSignedShelley"
+    TxSignedShelley _tx -> panic "Cardano.Api.getSignedHash: TxSignedShelley"
 
 getTxSignedWitnesses :: TxSigned -> [TxWitness]
 getTxSignedWitnesses txs =
   case txs of
     TxSignedByron _tx _txCbor _txHash txWit -> map TxWitByron (Vector.toList txWit)
-    TxSignedShelley -> panic "Cardano.Api.getTxSignedWitnesses: TxUnsignedShelley"
+    TxSignedShelley _tx -> panic "Cardano.Api.getTxSignedWitnesses: TxUnsignedShelley"
 
 getTxUnsignedHash :: TxUnsigned -> Crypto.Hash TxUnsigned
 getTxUnsignedHash txu =

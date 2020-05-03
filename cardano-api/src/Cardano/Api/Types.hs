@@ -30,9 +30,11 @@ module Cardano.Api.Types
   , ByronSigningKey
   , ByronAddress
   , ByronTxBody
+  , ByronTx
   , ByronTxId
   , ByronTxIn
   , ByronTxOut
+  , ByronWitness
   , toByronTxIn
   , toByronTxOut
   , toByronLovelace
@@ -42,9 +44,11 @@ module Cardano.Api.Types
   , ShelleySigningKey
   , ShelleyAddress
   , ShelleyTxBody
+  , ShelleyTx
   , ShelleyTxId
   , ShelleyTxIn
   , ShelleyTxOut
+  , ShelleyWitnessVKey
   , toShelleyTxIn
   , toShelleyTxOut
   , toShelleyLovelace
@@ -69,6 +73,7 @@ import qualified Ouroboros.Consensus.Shelley.Protocol.Crypto as Shelley
 import qualified Shelley.Spec.Ledger.Coin                    as Shelley
 import qualified Shelley.Spec.Ledger.Keys                    as Shelley
 import qualified Shelley.Spec.Ledger.TxData                  as Shelley
+import qualified Shelley.Spec.Ledger.Tx                      as Shelley
 
 
 type ByronVerificationKey = Byron.VerificationKey
@@ -77,7 +82,9 @@ type ByronAddress         = Byron.Address
 type ByronTxIn            = Byron.TxIn
 type ByronTxOut           = Byron.TxOut
 type ByronTxBody          = Byron.Tx
+type ByronTx              = Byron.TxAux
 type ByronTxId            = Byron.TxId
+type ByronWitness         = Byron.TxInWitness
 
 type ShelleyVerificationKey = Shelley.VKey   Shelley.TPraosStandardCrypto
 type ShelleySigningKey      = Shelley.SKey   Shelley.TPraosStandardCrypto
@@ -85,7 +92,9 @@ type ShelleyAddress         = Shelley.Addr   Shelley.TPraosStandardCrypto
 type ShelleyTxIn            = Shelley.TxIn   Shelley.TPraosStandardCrypto
 type ShelleyTxOut           = Shelley.TxOut  Shelley.TPraosStandardCrypto
 type ShelleyTxBody          = Shelley.TxBody Shelley.TPraosStandardCrypto
+type ShelleyTx              = Shelley.Tx     Shelley.TPraosStandardCrypto
 type ShelleyTxId            = Shelley.TxId   Shelley.TPraosStandardCrypto
+type ShelleyWitnessVKey     = Shelley.WitVKey Shelley.TPraosStandardCrypto
 
 -- The 'Address' data type in 'cardano-sl' is a design train wreck.
 -- We need something that is compatible and discard as much of the insanity as possible.
@@ -175,8 +184,8 @@ toShelleyLovelace = Shelley.Coin
 
 data TxSigned
   = TxSignedByron !ByronTxBody !ByteString !(Byron.Hash ByronTxBody) !(Vector Byron.TxInWitness)
-  | TxSignedShelley
-  deriving (Eq, Generic, NFData, Show)
+  | TxSignedShelley !ShelleyTx
+  deriving (Eq, Generic, {-NFData, TODO -} Show)
   deriving NoUnexpectedThunks via UseIsNormalForm TxSigned
 
 data TxUnsigned
@@ -186,7 +195,8 @@ data TxUnsigned
   deriving NoUnexpectedThunks via UseIsNormalForm TxUnsigned
 
 data TxWitness
-  = TxWitByron !Byron.TxInWitness
-  | TxWitShelley
-  deriving (Generic, NFData)
+  = TxWitByron   !ByronWitness
+  | TxWitShelley !ShelleyWitnessVKey
+-- | TxWitShelleyScript !ShelleyWitnessScript
+  deriving (Generic{-, NFData TODO -})
   deriving NoUnexpectedThunks via UseIsNormalForm TxWitness

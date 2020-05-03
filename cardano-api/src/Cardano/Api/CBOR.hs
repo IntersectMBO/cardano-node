@@ -120,7 +120,7 @@ txSignedFromCBOR bs =
       tag <- CBOR.decodeWord8
       case tag of
         176  -> TxSignedByron <$> fromCBOR <*> fromCBOR <*> fromCBOR <*> fromCBOR
-        177  -> pure TxSignedShelley
+        177  -> TxSignedShelley <$> decodeShelleyTx (BS.drop 2 bs)
         _  -> cborError $ DecoderErrorUnknownTag "TxSigned" tag
 
 txSignedToCBOR :: TxSigned -> ByteString
@@ -129,7 +129,8 @@ txSignedToCBOR pk =
     case pk of
       TxSignedByron btx cbor hash wit ->
         mconcat [ toCBOR (176 :: Word8), toCBOR btx, toCBOR cbor, toCBOR hash, toCBOR wit ]
-      TxSignedShelley -> toCBOR (177 :: Word8)
+      TxSignedShelley tx ->
+        mconcat [ toCBOR (177 :: Word8), toCBOR tx ]
 
 txUnsignedFromCBOR :: ByteString -> Either ApiError TxUnsigned
 txUnsignedFromCBOR bs =
@@ -140,7 +141,7 @@ txUnsignedFromCBOR bs =
       tag <- CBOR.decodeWord8
       case tag of
         178  -> TxUnsignedByron <$> fromCBOR <*> fromCBOR <*> fromCBOR
-        179  -> TxUnsignedShelley <$> decodeShelleyTxBody (BS.drop 1 bs)
+        179  -> TxUnsignedShelley <$> decodeShelleyTxBody (BS.drop 2 bs)
         _  -> cborError $ DecoderErrorUnknownTag "TxUnsigned" tag
 
 txUnsignedToCBOR :: TxUnsigned -> ByteString
@@ -172,6 +173,11 @@ encodeShelleyTxBody = toCBOR
 
 decodeShelleyTxBody :: ByteString -> Decoder s ShelleyTxBody
 decodeShelleyTxBody full = do
+    atx <- fromCBOR
+    return $! CBOR.runAnnotator atx (CBOR.Full (LBS.fromStrict full))
+
+decodeShelleyTx :: ByteString -> Decoder s ShelleyTx
+decodeShelleyTx full = do
     atx <- fromCBOR
     return $! CBOR.runAnnotator atx (CBOR.Full (LBS.fromStrict full))
 
