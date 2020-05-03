@@ -11,12 +11,13 @@ import           Cardano.Api
 import           Test.Cardano.Api.Orphans ()
 
 import           Hedgehog (Property, (/==), discover)
-import qualified Hedgehog as H
+import qualified Hedgehog as Hedgehog
 
+import           Test.Cardano.Api.Gen
 
 prop_byronGenKeyPair_unique :: Property
 prop_byronGenKeyPair_unique =
-  H.property $ do
+  Hedgehog.property $ do
     -- Basic sanity test that two distinct calls to the real 'genByronKeyPair'
     -- produces two distinct KeyPairs.
     kp1 <- liftIO byronGenKeyPair
@@ -27,13 +28,25 @@ prop_byronGenKeyPair_unique =
 -- produces two distinct 'KeyPair's.
 prop_shelleyGenKeyPair_unique :: Property
 prop_shelleyGenKeyPair_unique =
-  H.property $ do
+  Hedgehog.property $ do
     kp1 <- liftIO shelleyGenKeyPair
     kp2 <- liftIO shelleyGenKeyPair
     kp1 /== kp2
+
+prop_roundtrip_AddressByron_hex :: Property
+prop_roundtrip_AddressByron_hex = do
+  Hedgehog.property $ do
+    addr <- Hedgehog.forAll genByronVerificationKeyAddress
+    Hedgehog.tripping addr addressToHex addressFromHex
+
+prop_roundtrip_AddressShelley_hex :: Property
+prop_roundtrip_AddressShelley_hex = do
+  Hedgehog.property $ do
+    addr <- Hedgehog.forAll genShelleyVerificationKeyAddress
+    Hedgehog.tripping addr addressToHex addressFromHex
 
 -- -----------------------------------------------------------------------------
 
 tests :: IO Bool
 tests =
-  H.checkParallel $$discover
+  Hedgehog.checkParallel $$discover

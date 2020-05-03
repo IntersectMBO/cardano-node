@@ -16,13 +16,14 @@ module Cardano.Api
   , TxWitness (..)
   , TxIn (..)
   , TxOut (..)
-  , TxId
-  , TxIx
-  , Lovelace
-  , SlotNo
+
+
+  , addressFromHex
+  , addressToHex
 
   , byronVerificationKeyAddress
   , shelleyVerificationKeyAddress
+
   , byronGenKeyPair
   , shelleyGenKeyPair
   , getTxSignedBody
@@ -42,6 +43,7 @@ module Cardano.Api
 
 import           Cardano.Prelude
 
+import qualified Data.ByteString.Base16 as Base16
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import           Data.Coerce (coerce)
 import qualified Data.List.NonEmpty as NonEmpty
@@ -49,8 +51,9 @@ import qualified Data.Vector as Vector
 import qualified Data.Map.Strict as Map
 import qualified Data.Set        as Set
 import qualified Data.Sequence.Strict as Seq
+import qualified Data.Text.Encoding as Text
 
-import           Cardano.Binary (serialize')
+import qualified Cardano.Binary as Binary
 
 import           Cardano.Crypto.DSIGN (DSIGNAlgorithm (..))
 
@@ -69,9 +72,28 @@ import qualified Cardano.Chain.Common  as Byron
 import qualified Cardano.Chain.Genesis as Byron
 import qualified Cardano.Chain.UTxO    as Byron
 
+import qualified Shelley.Spec.Ledger.Address   as Shelley
 import qualified Shelley.Spec.Ledger.Keys      as Shelley
 import qualified Shelley.Spec.Ledger.TxData    as Shelley
 import qualified Shelley.Spec.Ledger.BaseTypes as Shelley
+
+
+addressFromHex :: Text -> Maybe Address
+addressFromHex txt =
+  case Base16.decode (Text.encodeUtf8 txt) of
+    (raw, _) ->
+      case Shelley.deserialiseAddr raw of
+        Just addr -> Just $ AddressShelley addr
+        Nothing -> either (const Nothing) (Just . AddressByron) $ Binary.decodeFull' raw
+
+addressToHex :: Address -> Text
+addressToHex addr =
+  -- Text.decodeUtf8 theoretically can throw an exception but should never
+  -- do so on Base16 encoded data.
+  Text.decodeUtf8 . Base16.encode $
+    case addr of
+      AddressByron ba -> Binary.serialize' ba
+      AddressShelley sa -> Shelley.serialiseAddr sa
 
 
 byronGenKeyPair :: IO KeyPair
@@ -89,15 +111,16 @@ shelleyGenKeyPair = do
 -- but since VerificationKeyInfo already has the VerificationKey and Network, it can be simplified.
 -- This is true for Byron, but for Shelley there’s also an optional StakeAddressRef as input to
 -- Address generation
+
 byronVerificationKeyAddress :: VerificationKey -> Network -> Address
-byronVerificationKeyAddress pk nw =
-  case pk of
+byronVerificationKeyAddress vkey nw =
+  case vkey of
     VerificationKeyByron vk -> AddressByron $ Byron.makeVerKeyAddress (byronNetworkMagic nw) vk
     VerificationKeyShelley _ -> panic "Cardano.Api.byronVerificationKeyAddress: VerificationKeyInfoShelley"
 
 shelleyVerificationKeyAddress :: VerificationKey -> Network -> Address
-shelleyVerificationKeyAddress pk _nw =
-  case pk of
+shelleyVerificationKeyAddress vkey _nw =
+  case vkey of
     VerificationKeyByron _ -> panic "Cardano.Api.shelleyVerificationKeyAddress: VerificationKeyByron"
     VerificationKeyShelley vk ->
       AddressShelley $
@@ -140,7 +163,7 @@ buildByronTransaction ins outs =
                          --TODO: handle partial conversions (non-empty)
 
     bTxCbor :: ByteString
-    bTxCbor = serialize' bTx
+    bTxCbor = Binary.serialize' bTx
 
     bTxHash :: Crypto.Hash Byron.Tx
     bTxHash = coerce $ Crypto.hashRaw (LBS.fromStrict bTxCbor)
