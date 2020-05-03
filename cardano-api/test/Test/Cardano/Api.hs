@@ -15,22 +15,22 @@ import qualified Hedgehog as Hedgehog
 
 import           Test.Cardano.Api.Gen
 
-prop_byronGenKeyPair_unique :: Property
-prop_byronGenKeyPair_unique =
+prop_byronGenSigningKey_unique :: Property
+prop_byronGenSigningKey_unique =
   Hedgehog.property $ do
-    -- Basic sanity test that two distinct calls to the real 'genByronKeyPair'
-    -- produces two distinct KeyPairs.
-    kp1 <- liftIO byronGenKeyPair
-    kp2 <- liftIO byronGenKeyPair
+    -- Basic sanity test that two distinct calls to the real 'genByronSigningKey'
+    -- produces two distinct SigningKeys.
+    kp1 <- liftIO byronGenSigningKey
+    kp2 <- liftIO byronGenSigningKey
     kp1 /== kp2
 
--- | Basic sanity test that two distinct calls to the real 'shelleyGenKeyPair'
--- produces two distinct 'KeyPair's.
-prop_shelleyGenKeyPair_unique :: Property
-prop_shelleyGenKeyPair_unique =
+-- | Basic sanity test that two distinct calls to the real 'shelleyGenSigningKey'
+-- produces two distinct 'SigningKey's.
+prop_shelleyGenSigningKey_unique :: Property
+prop_shelleyGenSigningKey_unique =
   Hedgehog.property $ do
-    kp1 <- liftIO shelleyGenKeyPair
-    kp2 <- liftIO shelleyGenKeyPair
+    kp1 <- liftIO shelleyGenSigningKey
+    kp2 <- liftIO shelleyGenSigningKey
     kp1 /== kp2
 
 prop_roundtrip_AddressByron_hex :: Property
