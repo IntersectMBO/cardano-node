@@ -15,12 +15,16 @@ import           Test.Cardano.Api.Gen
 import           Test.Cardano.Api.Orphans ()
 
 
-prop_Address_CBOR :: Property
-prop_Address_CBOR =
+prop_AddressByron_CBOR :: Property
+prop_AddressByron_CBOR =
   H.property $ do
-    nw <- H.forAll genNetwork
-    bpk <- H.forAll genVerificationKeyByron
-    let addr = byronVerificationKeyAddress bpk nw
+    addr <- H.forAll genByronVerificationKeyAddress
+    H.tripping addr addressToCBOR addressFromCBOR
+
+prop_AddressShelley_CBOR :: Property
+prop_AddressShelley_CBOR =
+  H.property $ do
+    addr <- H.forAll genShelleyVerificationKeyAddress
     H.tripping addr addressToCBOR addressFromCBOR
 
 prop_KeyPair_CBOR :: Property
@@ -34,12 +38,6 @@ prop_VerificationKey_CBOR =
   H.property $ do
     kp <- H.forAll genVerificationKey
     H.tripping kp verificationKeyToCBOR verificationKeyFromCBOR
-
-prop_ShelleyVerificationKey_CBOR :: Property
-prop_ShelleyVerificationKey_CBOR =
-  H.property $ do
-    svk <- H.forAll genShelleyVerificationKey
-    H.tripping svk shelleyVerificationKeyToCBOR shelleyVerificationKeyFromCBOR
 
 prop_TxSigned_CBOR :: Property
 prop_TxSigned_CBOR =
