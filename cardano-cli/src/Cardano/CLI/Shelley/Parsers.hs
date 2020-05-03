@@ -25,6 +25,7 @@ module Cardano.CLI.Shelley.Parsers
 
 import           Cardano.Prelude hiding (option)
 
+import           Cardano.Api
 import           Cardano.Chain.Common (Lovelace, mkLovelace)
 import           Cardano.Common.Parsers (parseConfigFile, parseCLISocketPath, parseNodeAddress)
 import           Cardano.Slotting.Slot (EpochNo (..))
@@ -81,8 +82,8 @@ data StakeAddressCmd
 
 
 data TransactionCmd
-  = TxBuild         -- { input :: [Utxo], output :: [(Address,Lovelace)], nodeAddr :: NodeAddress }
-  | TxSign          -- { transaction :: Transaction, keys :: [PrivKeyFile], utxo :: [Utxo], nodeAddr :: NodeAddress }
+  = TxBuildRaw TxBodyFile [TxIn] [TxOut] SlotNo Lovelace
+  | TxSign     TxBodyFile TxFile [SigningKeyFile]
   | TxWitness       -- { transaction :: Transaction, key :: PrivKeyFile, nodeAddr :: NodeAddress }
   | TxSignWitness   -- { transaction :: Transaction, witnesses :: [Witness], nodeAddr :: NodeAddress }
   | TxCheck         -- { transaction :: Transaction, nodeAddr :: NodeAddress }
@@ -183,6 +184,12 @@ newtype PrivKeyFile
   = PrivKeyFile FilePath
   deriving (Eq, Show)
 
+newtype TxBodyFile = TxBodyFile FilePath
+  deriving (Eq, Show)
+
+newtype TxFile = TxFile FilePath
+  deriving (Eq, Show)
+
 
 --
 -- Shelley CLI command parsers
@@ -265,7 +272,6 @@ pStakeAddress =
 
     pDelegationFee :: Parser Lovelace
     pDelegationFee =
-      either (Prelude.error . Prelude.show) identity . mkLovelace <$>
         Opt.option Opt.auto
           (  Opt.long "delegation-fee"
           <> Opt.metavar "LOVELACE"
@@ -278,8 +284,8 @@ pTransaction :: Parser TransactionCmd
 pTransaction =
   Opt.subparser $
     mconcat
-      [ Opt.command "build"
-          (Opt.info pTransactionBuild $ Opt.progDesc "Build a transaction")
+      [ Opt.command "build-raw"
+          (Opt.info pTransactionBuild $ Opt.progDesc "Build a transaction (low-level, inconvenient)")
       , Opt.command "sign"
           (Opt.info pTransactionSign $ Opt.progDesc "Sign a transaction")
       , Opt.command "witness"
@@ -295,10 +301,16 @@ pTransaction =
       ]
   where
     pTransactionBuild :: Parser TransactionCmd
-    pTransactionBuild = pure TxBuild
+    pTransactionBuild = TxBuildRaw <$> pTxBodyFile Output
+                                   <*> some pTxIn
+                                   <*> some pTxOut
+                                   <*> pTxTTL
+                                   <*> pTxFee
 
     pTransactionSign  :: Parser TransactionCmd
-    pTransactionSign = pure TxSign
+    pTransactionSign = TxSign <$> pTxBodyFile Input
+                              <*> pTxFile Output
+                              <*> many (pSigningKeyFile Input)
 
     pTransactionWitness :: Parser TransactionCmd
     pTransactionWitness = pure TxWitness
@@ -542,12 +554,11 @@ pGenesisCmd =
 
     pGenesisDelegates :: Parser Word
     pGenesisDelegates =
-      Prelude.read <$>
-        Opt.strOption
+        Opt.option Opt.auto
           (  Opt.long "genesis-delegates"
           <> Opt.metavar "INT"
           <> Opt.help "The number of genesis delegates [default is 7]."
-          <> Opt.value "7"
+          <> Opt.value 7
           )
 
     convertTime :: String -> UTCTime
@@ -556,7 +567,6 @@ pGenesisCmd =
 
     pInitialSupply :: Parser Lovelace
     pInitialSupply =
-      either (Prelude.error . Prelude.show) identity . mkLovelace <$>
         Opt.option Opt.auto
           (  Opt.long "supply"
           <> Opt.metavar "LOVELACE"
@@ -681,3 +691,21 @@ pKESVerificationKeyFile =
       <> Opt.metavar "FILEPATH"
       <> Opt.help "Filepath of the hot KES verification key."
       )
+
+pTxIn :: Parser TxIn
+pTxIn = undefined
+
+pTxOut :: Parser TxOut
+pTxOut = undefined
+
+pTxTTL :: Parser SlotNo
+pTxTTL = undefined
+
+pTxFee :: Parser Lovelace
+pTxFee = undefined
+
+pTxBodyFile :: FileDirection -> Parser TxBodyFile
+pTxBodyFile = undefined
+
+pTxFile :: FileDirection -> Parser TxFile
+pTxFile = undefined

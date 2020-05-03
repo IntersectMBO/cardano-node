@@ -10,13 +10,15 @@ module Cardano.CLI.Shelley.Run.Genesis
 import           Cardano.Prelude
 import           Prelude (String)
 
+import           Cardano.Api hiding (writeAddress)
+--TODO: prefer versions from Cardano.Api where possible
+
 import           Cardano.Config.Shelley.Address (AddressRole (..), ShelleyAddress,
                     genBootstrapAddress, writeAddress)
 import           Cardano.Config.Shelley.ColdKeys (KeyError, KeyRole (..), OperatorKeyRole (..),
                     readVerKey)
 import           Cardano.Config.Shelley.Genesis (ShelleyGenesisError (..))
 
-import           Cardano.Chain.Common (Lovelace, unsafeGetLovelace)
 import           Cardano.CLI.Ops (CliError (..))
 import           Cardano.CLI.Shelley.Run.KeyGen (runGenesisKeyGenDelegate, runGenesisKeyGenGenesis)
 import           Cardano.CLI.Shelley.Parsers (GenesisDir (..), OpCertCounterFile (..),
@@ -123,13 +125,13 @@ updateTemplate
 updateTemplate start amount delKeys utxoAddrs template =
     template
       { sgStartTime = start
-      , sgMaxLovelaceSupply = unsafeGetLovelace amount
+      , sgMaxLovelaceSupply = fromIntegral amount
       , sgGenDelegs = delKeys
       , sgInitialFunds = Map.fromList utxoList
       }
   where
     totalCoin :: Integer
-    totalCoin = fromIntegral (unsafeGetLovelace amount)
+    totalCoin = amount
 
     eachAddrCoin :: Integer
     eachAddrCoin = totalCoin `div` fromIntegral (length utxoAddrs)

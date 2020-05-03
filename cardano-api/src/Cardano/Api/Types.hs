@@ -138,11 +138,18 @@ data Network
   deriving anyclass NoUnexpectedThunks
 
 data TxIn = TxIn !TxId !TxIx
+  deriving (Eq, Generic, NFData, Show)
+  deriving anyclass NoUnexpectedThunks
 
 newtype TxId = TxId (Crypto.Hash Crypto.Blake2b_256 ())
+  deriving (Eq, Generic, Show)
+  deriving newtype (NFData, NoUnexpectedThunks)
+
 type TxIx = Word
 
 data TxOut = TxOut !Address !Lovelace
+  deriving (Eq, Generic, NFData, Show)
+  deriving anyclass NoUnexpectedThunks
 
 type Lovelace = Integer
 
