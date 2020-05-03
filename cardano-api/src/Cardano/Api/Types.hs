@@ -11,8 +11,8 @@ module Cardano.Api.Types
   (
     -- * Common types across all eras.
     Address (..)
-  , KeyPair (..)
   , Network (..)
+  , SigningKey (..)
   , VerificationKey (..)
   , TxSigned (..)
   , TxUnsigned (..)
@@ -101,12 +101,12 @@ data Address
 --
 -- Signing keys are also commonly known as \"private keys\" or \"secret keys\".
 --
-data KeyPair
+data SigningKey
   -- The Byron key pair use newtype wrappers around 'XPriv'/'Xpub' keys.
   -- An 'XPub' is 32 bytes of public key and 32 bytes of Chaincode which is used in the
   -- Byron address derivation scheme.
-  = KeyPairByron !ByronVerificationKey !ByronSigningKey
-  | KeyPairShelley !ShelleyVerificationKey !ShelleySigningKey
+  = SigningKeyByron   !ByronSigningKey
+  | SigningKeyShelley !ShelleySigningKey
   deriving (Generic, NFData, Show)
   deriving anyclass NoUnexpectedThunks
 

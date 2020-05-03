@@ -35,11 +35,11 @@ runAddressCmd AddressBuildMultiSig{}   = runAddressBuildMultiSig
 
 runAddressKeyGen :: VerificationKeyFile -> SigningKeyFile -> ExceptT CliError IO ()
 runAddressKeyGen (VerificationKeyFile vkeyPath) (SigningKeyFile skeyPath) = do
-    kp <- liftIO shelleyGenKeyPair
-    let vk = mkVerificationKey kp
+    sk <- liftIO shelleyGenSigningKey
+    let vk = getVerificationKey sk
     firstExceptT CardanoApiError $ do
       ExceptT $ writeVerificationKey vkeyPath vk
-      ExceptT $ writeKeyPair skeyPath kp
+      ExceptT $ writeSigningKey skeyPath sk
 
 runAddressKeyHash :: VerificationKeyFile -> ExceptT CliError IO ()
 runAddressKeyHash (VerificationKeyFile vkeyPath) =

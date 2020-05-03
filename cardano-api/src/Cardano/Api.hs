@@ -7,32 +7,38 @@
 module Cardano.Api
   ( module X
 
-  , Address (..)
-  , KeyPair (..)
-  , Network (..)
+    -- * Keys
+  , SigningKey (..)
   , VerificationKey (..)
+  , getVerificationKey
+  , byronGenSigningKey
+  , shelleyGenSigningKey
+
+    -- * Addresses
+  , Address (..)
+  , Network (..)
+  , byronVerificationKeyAddress
+  , shelleyVerificationKeyAddress
+  , addressToHex
+  , addressFromHex
+
+    -- * Transactions
   , TxSigned (..)
   , TxUnsigned (..)
   , TxWitness (..)
   , TxIn (..)
   , TxOut (..)
+  , TxId
+  , TxIx
+  , Lovelace
+  , SlotNo
 
-
-  , addressFromHex
-  , addressToHex
-
-  , byronVerificationKeyAddress
-  , shelleyVerificationKeyAddress
-
-  , byronGenKeyPair
-  , shelleyGenKeyPair
   , getTxSignedBody
   , getTxSignedHash
   , getTxSignedWitnesses
   , getTxUnsignedBody
   , getTxUnsignedHash
 
-  , mkVerificationKey
   , buildByronTransaction
   , buildShelleyTransaction
   , signTransaction
@@ -62,7 +68,7 @@ import           Cardano.Crypto.ProtocolMagic (ProtocolMagicId (..))
 import           Cardano.Crypto.Random (runSecureRandom)
 import qualified Cardano.Crypto.Signing as Crypto
 
-import           Cardano.Api.Types as X
+import           Cardano.Api.Types
 import           Cardano.Api.CBOR as X
 import           Cardano.Api.Error as X
 import           Cardano.Api.View as X
@@ -96,15 +102,13 @@ addressToHex addr =
       AddressShelley sa -> Shelley.serialiseAddr sa
 
 
-byronGenKeyPair :: IO KeyPair
-byronGenKeyPair =
-  uncurry KeyPairByron <$> runSecureRandom Crypto.keyGen
+byronGenSigningKey :: IO SigningKey
+byronGenSigningKey =
+    SigningKeyByron . snd <$> runSecureRandom Crypto.keyGen
 
-shelleyGenKeyPair :: IO KeyPair
-shelleyGenKeyPair = do
-    sk <- runSecureRandom genKeyDSIGN
-    let vk = deriveVerKeyDSIGN sk
-    pure $ KeyPairShelley (Shelley.VKey vk) (Shelley.SKey sk)
+shelleyGenSigningKey :: IO SigningKey
+shelleyGenSigningKey =
+    SigningKeyShelley . Shelley.SKey <$> runSecureRandom genKeyDSIGN
 
 -- Given key information (public key, and other network parameters), generate an Address.
 -- Originally: mkAddress :: Network -> VerificationKey -> VerificationKeyInfo -> Address
@@ -130,11 +134,16 @@ shelleyVerificationKeyAddress vkey _nw =
         Shelley.Addr (Shelley.KeyHashObj (Shelley.hashKey vk))
                      Shelley.StakeRefNull
 
-mkVerificationKey :: KeyPair -> VerificationKey
-mkVerificationKey kp =
+getVerificationKey :: SigningKey -> VerificationKey
+getVerificationKey kp =
   case kp of
-    KeyPairByron vk _ -> VerificationKeyByron vk
-    KeyPairShelley vk _ -> VerificationKeyShelley vk
+    SigningKeyByron sk -> VerificationKeyByron vk
+      where
+        vk = Crypto.toVerification sk
+
+    SigningKeyShelley (Shelley.SKey sk) -> VerificationKeyShelley (Shelley.VKey vk)
+      where
+        vk = deriveVerKeyDSIGN sk
 
 byronNetworkMagic :: Network -> Byron.NetworkMagic
 byronNetworkMagic nw =
@@ -244,7 +253,9 @@ signTransaction txu nw sks =
   case txu of
     TxUnsignedByron tx txcbor txHash ->
       TxSignedByron tx txcbor txHash (Vector.fromList $ map (byronWitnessTransaction txHash nw) sks)
+
     TxUnsignedShelley _tx ->
+--      Shelley.sign makeWitnessVKey
       panic "Cardano.Api.signTransaction: TxUnsignedShelley"
 
 

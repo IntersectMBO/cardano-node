@@ -1,24 +1,24 @@
 module Cardano.Api.View
   ( parseAddressView
-  , parseKeyPairView
+  , parseSigningKeyView
   , parseVerificationKeyView
   , parseTxSignedView
   , parseTxUnsignedView
 
   , readAddress
-  , readKeyPair
+  , readSigningKey
   , readVerificationKey
   , readTxSigned
   , readTxUnsigned
 
   , renderAddressView
-  , renderKeyPairView
+  , renderSigningKeyView
   , renderVerificationKeyView
   , renderTxSignedView
   , renderTxUnsignedView
 
   , writeAddress
-  , writeKeyPair
+  , writeSigningKey
   , writeVerificationKey
   , writeTxSigned
   , writeTxUnsigned
@@ -42,9 +42,9 @@ parseAddressView :: ByteString -> Either ApiError Address
 parseAddressView bs =
   either convertTextViewError (addressFromCBOR . tvRawCBOR) $ parseTextView bs
 
-parseKeyPairView :: ByteString -> Either ApiError KeyPair
-parseKeyPairView bs =
-  either convertTextViewError (keyPairFromCBOR . tvRawCBOR) $ parseTextView bs
+parseSigningKeyView :: ByteString -> Either ApiError SigningKey
+parseSigningKeyView bs =
+  either convertTextViewError (signingKeyFromCBOR . tvRawCBOR) $ parseTextView bs
 
 parseVerificationKeyView :: ByteString -> Either ApiError VerificationKey
 parseVerificationKeyView bs =
@@ -67,14 +67,14 @@ renderAddressView addr =
     cbor :: ByteString
     cbor = addressToCBOR addr
 
-renderKeyPairView :: KeyPair -> ByteString
-renderKeyPairView kp =
+renderSigningKeyView :: SigningKey -> ByteString
+renderSigningKeyView kp =
   case kp of
-    KeyPairByron {} -> renderTextView $ TextView "KeyPairByron" "Free form text" cbor
-    KeyPairShelley {} -> renderTextView $ TextView "KeyPairShelley" "Free form text" cbor
+    SigningKeyByron {} -> renderTextView $ TextView "SigningKeyByron" "Free form text" cbor
+    SigningKeyShelley {} -> renderTextView $ TextView "SigningKeyShelley" "Free form text" cbor
   where
     cbor :: ByteString
-    cbor = keyPairToCBOR kp
+    cbor = signingKeyToCBOR kp
 
 renderVerificationKeyView :: VerificationKey -> ByteString
 renderVerificationKeyView pk =
@@ -112,11 +112,11 @@ readAddress path =
     bs <- handleIOExceptT (ApiErrorIO path) $ BS.readFile path
     hoistEither $ parseAddressView bs
 
-readKeyPair :: FilePath -> IO (Either ApiError KeyPair)
-readKeyPair path =
+readSigningKey :: FilePath -> IO (Either ApiError SigningKey)
+readSigningKey path =
   runExceptT $ do
     bs <- handleIOExceptT (ApiErrorIO path) $ BS.readFile path
-    hoistEither $ parseKeyPairView bs
+    hoistEither $ parseSigningKeyView bs
 
 readVerificationKey :: FilePath -> IO (Either ApiError VerificationKey)
 readVerificationKey path =
@@ -141,10 +141,10 @@ writeAddress path kp =
   runExceptT .
     handleIOExceptT (ApiErrorIO path) $ BS.writeFile path (renderAddressView kp)
 
-writeKeyPair :: FilePath -> KeyPair -> IO (Either ApiError ())
-writeKeyPair path kp =
+writeSigningKey :: FilePath -> SigningKey -> IO (Either ApiError ())
+writeSigningKey path kp =
   runExceptT .
-    handleIOExceptT (ApiErrorIO path) $ BS.writeFile path (renderKeyPairView kp)
+    handleIOExceptT (ApiErrorIO path) $ BS.writeFile path (renderSigningKeyView kp)
 
 writeVerificationKey :: FilePath -> VerificationKey -> IO (Either ApiError ())
 writeVerificationKey path kp =

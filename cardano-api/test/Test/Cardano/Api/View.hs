@@ -27,11 +27,11 @@ prop_roundtrip_AddressShelley_view =
     addr <- H.forAll genShelleyVerificationKeyAddress
     H.tripping addr renderAddressView parseAddressView
 
-prop_roundtrip_KeyPair_view :: Property
-prop_roundtrip_KeyPair_view =
+prop_roundtrip_SigningKey_view :: Property
+prop_roundtrip_SigningKey_view =
   H.property $ do
-    kp <- H.forAll genKeyPair
-    H.tripping kp renderKeyPairView parseKeyPairView
+    kp <- H.forAll genSigningKey
+    H.tripping kp renderSigningKeyView parseSigningKeyView
 
 prop_roundtrip_VerificationKey_view :: Property
 prop_roundtrip_VerificationKey_view =

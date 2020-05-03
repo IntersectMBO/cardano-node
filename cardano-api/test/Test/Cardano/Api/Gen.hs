@@ -1,7 +1,7 @@
 module Test.Cardano.Api.Gen
-  ( genKeyPair
-  , genKeyPairByron
-  , genKeyPairShelley
+  ( genSigningKey
+  , genSigningKeyByron
+  , genSigningKeyShelley
   , genNetwork
   , genVerificationKey
   , genTxSigned
@@ -23,11 +23,11 @@ import           Crypto.Random (drgNewTest, withDRG)
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import           Data.Coerce (coerce)
 
-import           Shelley.Spec.Ledger.Keys hiding (KeyPair)
+import           Shelley.Spec.Ledger.Keys
 
 import           Test.Cardano.Chain.UTxO.Gen (genTx)
 import qualified Test.Cardano.Crypto.Gen as Byron
-                   (genProtocolMagicId, genSigningKey, genVerificationKey)
+                   (genProtocolMagicId, genSigningKey)
 
 import           Hedgehog (Gen)
 import qualified Hedgehog.Gen as Gen
@@ -42,23 +42,22 @@ genShelleyVerificationKeyAddress :: Gen Address
 genShelleyVerificationKeyAddress =
   shelleyVerificationKeyAddress <$> genVerificationKeyShelley <*> genNetwork
 
-genKeyPair :: Gen KeyPair
-genKeyPair =
+genSigningKey :: Gen SigningKey
+genSigningKey =
   Gen.choice
-    [ genKeyPairByron
-    , genKeyPairShelley
+    [ genSigningKeyByron
+    , genSigningKeyShelley
     ]
 
-genKeyPairByron :: Gen KeyPair
-genKeyPairByron =
-  KeyPairByron <$> Byron.genVerificationKey <*> Byron.genSigningKey
+genSigningKeyByron :: Gen SigningKey
+genSigningKeyByron =
+  SigningKeyByron <$> Byron.genSigningKey
 
-genKeyPairShelley :: Gen KeyPair
-genKeyPairShelley = do
+genSigningKeyShelley :: Gen SigningKey
+genSigningKeyShelley = do
   seed <- genSeed
   let sk = fst (withDRG (drgNewTest seed) genKeyDSIGN)
-      vk = deriveVerKeyDSIGN sk
-  return $ KeyPairShelley (VKey vk) (SKey sk)
+  return $ SigningKeyShelley (SKey sk)
 
 genSeed :: Gen (Word64, Word64, Word64, Word64, Word64)
 genSeed =
@@ -85,11 +84,11 @@ genVerificationKey =
 
 genVerificationKeyByron :: Gen VerificationKey
 genVerificationKeyByron =
-  mkVerificationKey <$> genKeyPairByron
+  getVerificationKey <$> genSigningKeyByron
 
 genVerificationKeyShelley :: Gen VerificationKey
 genVerificationKeyShelley =
-  mkVerificationKey <$> genKeyPairShelley
+  getVerificationKey <$> genSigningKeyShelley
 
 genTxSigned :: Gen TxSigned
 genTxSigned =

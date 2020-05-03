@@ -28,9 +28,9 @@ if test "${count}" != 1 ; then
   error=1
   fi
 
-count=$(grep -c KeyPairShelley "${OUTPUT_DIR}/address.skey")
+count=$(grep -c SigningKeyShelley "${OUTPUT_DIR}/address.skey")
 if test "${count}" != 1 ; then
-  echo "${OUTPUT_DIR}/address.skey: Expected KeyPairShelley"
+  echo "${OUTPUT_DIR}/address.skey: Expected SigningKeyShelley"
   error=1
   fi
 

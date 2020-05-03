@@ -3,8 +3,8 @@
 module Cardano.Api.CBOR
   ( addressFromCBOR
   , addressToCBOR
-  , keyPairFromCBOR
-  , keyPairToCBOR
+  , signingKeyFromCBOR
+  , signingKeyToCBOR
   , verificationKeyFromCBOR
   , verificationKeyToCBOR
 
@@ -59,27 +59,30 @@ addressToCBOR kp =
       AddressByron   addr -> mconcat [ toCBOR (170 :: Word8), toCBOR addr ]
       AddressShelley addr -> mconcat [ toCBOR (171 :: Word8), toCBOR addr ]
 
-keyPairFromCBOR :: ByteString -> Either ApiError KeyPair
-keyPairFromCBOR bs =
-   first ApiErrorCBOR . CBOR.decodeFullDecoder "KeyPair" decode $ LBS.fromStrict bs
+signingKeyFromCBOR :: ByteString -> Either ApiError SigningKey
+signingKeyFromCBOR bs =
+   first ApiErrorCBOR . CBOR.decodeFullDecoder "SigningKey" decode $ LBS.fromStrict bs
   where
-    decode :: Decoder s KeyPair
+    decode :: Decoder s SigningKey
     decode = do
       tag <- CBOR.decodeWord8
       case tag of
-        172  -> KeyPairByron <$> fromCBOR <*> fromCBOR
-        173  -> KeyPairShelley <$> decodeShelleyVerificationKey <*> (SKey <$> decodeSignKeyDSIGN)
-        _  -> cborError $ DecoderErrorUnknownTag "KeyPair" tag
+        172  -> SigningKeyByron <$> fromCBOR
+        173  -> SigningKeyShelley . SKey <$> decodeSignKeyDSIGN
+        _  -> cborError $ DecoderErrorUnknownTag "SigningKey" tag
 
-keyPairToCBOR :: KeyPair -> ByteString
-keyPairToCBOR kp =
+signingKeyToCBOR :: SigningKey -> ByteString
+signingKeyToCBOR kp =
   CBOR.serializeEncoding' $
     case kp of
-      KeyPairByron vk sk -> mconcat [ toCBOR (172 :: Word8), toCBOR vk, toCBOR sk ]
-      KeyPairShelley svk (SKey sk) ->
+      SigningKeyByron sk ->
+        mconcat
+          [ toCBOR (172 :: Word8)
+          , toCBOR sk ]
+
+      SigningKeyShelley (SKey sk) ->
         mconcat
           [ toCBOR (173 :: Word8)
-          , encodeShelleyVerificationKey svk
           , encodeSignKeyDSIGN sk
           ]
 
@@ -95,7 +98,7 @@ verificationKeyFromCBOR =
       case tag of
         174  -> VerificationKeyByron <$> fromCBOR
         175  -> VerificationKeyShelley <$> decodeShelleyVerificationKey
-        _  -> cborError $ DecoderErrorUnknownTag "KeyPair" tag
+        _  -> cborError $ DecoderErrorUnknownTag "VerificationKey" tag
 
 verificationKeyToCBOR :: VerificationKey -> ByteString
 verificationKeyToCBOR pk =
