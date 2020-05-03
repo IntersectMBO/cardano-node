@@ -51,7 +51,7 @@ let
         # Needed for the CLI tests.
         # Coreutils because we need 'paste'.
         packages.cardano-cli.components.tests.cardano-cli-test.build-tools =
-          lib.mkForce [buildPackages.bc buildPackages.jq buildPackages.coreutils];
+          lib.mkForce [buildPackages.bc buildPackages.jq buildPackages.coreutils buildPackages.shellcheck];
       }
       {
         # Packages we wish to ignore version bounds of.
