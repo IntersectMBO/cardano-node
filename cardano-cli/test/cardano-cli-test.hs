@@ -6,6 +6,7 @@ import           Cardano.Prelude
 import           Control.Monad (foldM, forM, when)
 
 import           Data.Maybe (isNothing)
+import qualified Data.List as List
 import qualified Data.Text as Text
 
 import           Prelude (String)
@@ -26,7 +27,7 @@ main = do
 
   setExecutableEnvVar "CARDANO_CLI" "cardano-cli"
 
-  tests <- filter (`notElem` ["core", "data"]) <$> listDirectory "test/cli/"
+  tests <- List.sort . filter (`notElem` ["core", "data"]) <$> listDirectory "test/cli/"
   res <- forM tests $ \ t -> rawSystem (joinPath ["test", "cli", t, "run"]) []
   if all (== ExitSuccess) res
     then exitSuccess
