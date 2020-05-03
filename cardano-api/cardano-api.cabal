@@ -41,6 +41,7 @@ library
                       , cardano-slotting
                       , cborg
                       , contra-tracer
+                      , containers
                       , cryptonite
                       , formatting
                       , io-sim-classes

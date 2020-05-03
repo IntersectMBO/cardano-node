@@ -114,10 +114,9 @@ genTxSignedByron =
 
 genTxUnsigned :: Gen TxUnsigned
 genTxUnsigned =
-  -- When Shelly is sorted out, this should change to `Gen.choose`.
-  Gen.frequency
-    [ (9, genTxUnsignedByron)
-    , (1, pure TxUnsignedShelley)
+  Gen.choice
+    [ genTxUnsignedByron
+--  , genTxUnsignedShelley  --TODO
     ]
 
 genTxUnsignedByron :: Gen TxUnsigned
@@ -125,4 +124,9 @@ genTxUnsignedByron = do
   tx <- genTx
   let cbor = serialize tx
   pure $ TxUnsignedByron tx (LBS.toStrict cbor) (coerce $ hashRaw cbor)
+
+--genTxUnsignedShelley :: Gen TxUnsigned
+--genTxUnsignedShelley = fail "TODO: genTxUnsignedShelley"
+--TODO: reuse an existing generator
+
 
