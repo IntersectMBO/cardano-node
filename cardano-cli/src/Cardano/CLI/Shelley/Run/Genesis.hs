@@ -125,13 +125,13 @@ updateTemplate
 updateTemplate start amount delKeys utxoAddrs template =
     template
       { sgStartTime = start
-      , sgMaxLovelaceSupply = fromIntegral amount
+      , sgMaxLovelaceSupply = fromIntegral totalCoin
       , sgGenDelegs = delKeys
       , sgInitialFunds = Map.fromList utxoList
       }
   where
     totalCoin :: Integer
-    totalCoin = amount
+    totalCoin = unLoveLace amount
 
     eachAddrCoin :: Integer
     eachAddrCoin = totalCoin `div` fromIntegral (length utxoAddrs)

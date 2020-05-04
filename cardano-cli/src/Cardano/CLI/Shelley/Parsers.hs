@@ -34,6 +34,7 @@ import           Cardano.Config.Types (CLISocketPath, ConfigYamlFilePath (..), N
 import           Cardano.Config.Shelley.OCert (KESPeriod(..))
 import           Cardano.CLI.Key (VerificationKeyFile(..))
 
+import qualified Data.Text as Text
 import           Data.Time.Clock (UTCTime)
 import           Data.Time.Format (defaultTimeLocale, iso8601DateFormat, parseTimeOrError)
 
@@ -80,7 +81,7 @@ data StakeAddressCmd
 
 
 data TransactionCmd
-  = TxBuildRaw TxBodyFile [TxIn] [TxOut] SlotNo Lovelace
+  = TxBuildRaw [TxIn] [TxOut] SlotNo Lovelace TxBodyFile
   | TxSign     TxBodyFile TxFile [SigningKeyFile]
   | TxWitness       -- { transaction :: Transaction, key :: PrivKeyFile, nodeAddr :: NodeAddress }
   | TxSignWitness   -- { transaction :: Transaction, witnesses :: [Witness], nodeAddr :: NodeAddress }
@@ -182,10 +183,12 @@ newtype PrivKeyFile
   = PrivKeyFile FilePath
   deriving (Eq, Show)
 
-newtype TxBodyFile = TxBodyFile FilePath
+newtype TxBodyFile
+  = TxBodyFile FilePath
   deriving (Eq, Show)
 
-newtype TxFile = TxFile FilePath
+newtype TxFile
+  = TxFile FilePath
   deriving (Eq, Show)
 
 
@@ -270,6 +273,7 @@ pStakeAddress =
 
     pDelegationFee :: Parser Lovelace
     pDelegationFee =
+      Lovelace <$>
         Opt.option Opt.auto
           (  Opt.long "delegation-fee"
           <> Opt.metavar "LOVELACE"
@@ -299,11 +303,11 @@ pTransaction =
       ]
   where
     pTransactionBuild :: Parser TransactionCmd
-    pTransactionBuild = TxBuildRaw <$> pTxBodyFile Output
-                                   <*> some pTxIn
+    pTransactionBuild = TxBuildRaw <$> some pTxIn
                                    <*> some pTxOut
                                    <*> pTxTTL
                                    <*> pTxFee
+                                   <*> pTxBodyFile Output
 
     pTransactionSign  :: Parser TransactionCmd
     pTransactionSign = TxSign <$> pTxBodyFile Input
@@ -565,6 +569,7 @@ pGenesisCmd =
 
     pInitialSupply :: Parser Lovelace
     pInitialSupply =
+      Lovelace <$>
         Opt.option Opt.auto
           (  Opt.long "supply"
           <> Opt.metavar "LOVELACE"
@@ -691,19 +696,53 @@ pKESVerificationKeyFile =
       )
 
 pTxIn :: Parser TxIn
-pTxIn = undefined
+pTxIn =
+  Opt.option (Opt.maybeReader (parseTxIn . Text.pack))
+    (  Opt.long "tx-in"
+    <> Opt.metavar "TX_IN"
+    <> Opt.help "The input transaction as TxId#TxIx where TxId is the transaction hash and TxIx is the index."
+    )
 
 pTxOut :: Parser TxOut
-pTxOut = undefined
+pTxOut =
+  Opt.option (Opt.maybeReader (parseTxOut . Text.pack))
+    (  Opt.long "tx-out"
+    <> Opt.metavar "TX_OUT"
+    <> Opt.help "The ouput transaction as TxOut$Lovelace where TxOut is the hex encoded address followed by the amount in Lovelace."
+    )
 
 pTxTTL :: Parser SlotNo
-pTxTTL = undefined
+pTxTTL =
+  SlotNo <$>
+    Opt.option Opt.auto
+      (  Opt.long "ttl"
+      <> Opt.metavar "SLOT_COUNT"
+      <> Opt.help "Time to live (in slots)."
+      )
 
 pTxFee :: Parser Lovelace
-pTxFee = undefined
+pTxFee =
+  Lovelace <$>
+    Opt.option Opt.auto
+      (  Opt.long "fee"
+      <> Opt.metavar "LOVELACE"
+      <> Opt.help "The fee amount in Lovelace."
+      )
 
 pTxBodyFile :: FileDirection -> Parser TxBodyFile
-pTxBodyFile = undefined
+pTxBodyFile fdir =
+  TxBodyFile <$>
+    Opt.strOption
+      (  Opt.long "tx-body-file"
+      <> Opt.metavar "FILEPATH"
+      <> Opt.help (show fdir ++ " filepath of the TxBody.")
+      )
 
 pTxFile :: FileDirection -> Parser TxFile
-pTxFile = undefined
+pTxFile fdir =
+  TxFile <$>
+    Opt.strOption
+      (  Opt.long "tx-file"
+      <> Opt.metavar "FILEPATH"
+      <> Opt.help (show fdir ++ " filepath of the Tx.")
+      )

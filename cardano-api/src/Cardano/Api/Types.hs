@@ -22,7 +22,7 @@ module Cardano.Api.Types
   , TxIx
   , TxOut (..)
   , SlotNo (..)
-  , Lovelace
+  , Lovelace (..)
 
     -- * Era-specific type aliases and conversions
     -- ** Byron
@@ -151,7 +151,11 @@ data TxOut = TxOut !Address !Lovelace
   deriving (Eq, Generic, NFData, Show)
   deriving anyclass NoUnexpectedThunks
 
-type Lovelace = Integer
+newtype Lovelace
+  = Lovelace { unLoveLace :: Integer }
+  deriving (Eq, Generic)
+  deriving newtype (Read, Show)
+  deriving anyclass (NFData, NoUnexpectedThunks)
 
 toByronTxIn  :: TxIn  -> ByronTxIn
 toByronTxIn (TxIn txid txix) =
@@ -182,11 +186,11 @@ toShelleyTxId (TxId (Crypto.UnsafeHash h)) =
     Shelley.TxId (Crypto.UnsafeHash h)
 
 toByronLovelace :: Lovelace -> Byron.Lovelace
-toByronLovelace x = x' where Right x' = Byron.integerToLovelace x
+toByronLovelace (Lovelace x) = x' where Right x' = Byron.integerToLovelace x
                   --TODO: deal with partial conversion
 
 toShelleyLovelace :: Lovelace -> Shelley.Coin
-toShelleyLovelace = Shelley.Coin
+toShelleyLovelace (Lovelace l) = Shelley.Coin l
 
 
 data TxSigned

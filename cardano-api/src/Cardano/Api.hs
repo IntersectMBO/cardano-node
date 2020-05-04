@@ -28,7 +28,7 @@ module Cardano.Api
   , TxOut (..)
   , TxId (..)
   , TxIx
-  , Lovelace
+  , Lovelace (..)
   , SlotNo (..)
 
   , ShelleyTxBody
