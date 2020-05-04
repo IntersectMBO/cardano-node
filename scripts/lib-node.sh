@@ -119,15 +119,26 @@ _run_node() {
         dprint "tag=${tag}"
         dprint "run_node binary extra args:  $*"
 
-        topo_id="${topo_id:-$config_id}"
-        state_id="${state_id:-$config_id}"
+        local topo_id="${topo_id:-$config_id}"
+        local state_id="${state_id:-$config_id}"
+        local db_root="${__COMMON_SRCROOT}/db"
+        local sock_root="${__COMMON_SRCROOT}/sockets"
 
         local NODE_ARGS=(
-          --database-path    "${__COMMON_SRCROOT}/db/${state_id}/"
-          --socket-path      "${__COMMON_SRCROOT}/socket/${state_id}-socket"
+          --database-path    "${db_root}/${state_id}/"
+          --socket-path      "${sock_root}/${state_id}-socket"
           --port             "${port}"
           "$@"
         )
+
+        if test ! -d "${db_root}"
+        then dprint "Creating DB root: '${db_root}'"
+             mkdir -p "${db_root}"
+        fi
+        if test ! -d "${sock_root}"
+        then dprint "Creating socket root: '${sock_root}'"
+             mkdir -p "${sock_root}"
+        fi
 
         if test "${config_id}" != 'custom'; then
         NODE_ARGS+=(
