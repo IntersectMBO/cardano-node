@@ -18,6 +18,7 @@ module Cardano.CLI.Ops
   , ensureNewFile
   , ensureNewFileLBS
   , getGenesisHashText
+  , getAndPrintLocalTip
   , getLocalTip
   , ncCardanoEra
   , pPrintCBOR
@@ -37,7 +38,7 @@ module Cardano.CLI.Ops
   ) where
 
 import           Prelude (show, unlines)
-import           Cardano.Prelude hiding (catch, option, show, unlines)
+import           Cardano.Prelude hiding (atomically, catch, option, show, unlines)
 
 import           Codec.CBOR.Pretty (prettyHexEnc)
 import           Codec.CBOR.Read (DeserialiseFailure, deserialiseFromBytes)
@@ -65,9 +66,11 @@ import           Cardano.Crypto (SigningKey (..))
 import qualified Cardano.Crypto.Hashing as Crypto
 import           Cardano.Crypto.ProtocolMagic as Crypto
 import           Control.Monad.Class.MonadST
+import           Control.Monad.Class.MonadSTM.Strict
+                   (MonadSTM, StrictTMVar, atomically, newEmptyTMVarM, tryPutTMVar, takeTMVar)
 import           Control.Monad.Class.MonadTimer
 import           Control.Monad.Class.MonadThrow
-import           Control.Tracer (nullTracer, stdoutTracer, traceWith)
+import           Control.Tracer (nullTracer)
 import           Network.Mux (MuxError)
 import           Ouroboros.Consensus.Block (BlockProtocol)
 import           Ouroboros.Consensus.Byron.Ledger (ByronBlock)
@@ -417,39 +420,60 @@ withRealPBFT nc action = do
 -- Query local node's chain tip
 --------------------------------------------------------------------------------
 
-getLocalTip
+-- | Get the node's tip, using the local chain sync protocol, and write it to
+-- the standard output device.
+getAndPrintLocalTip
   :: ConfigYamlFilePath
   -> Maybe CLISocketPath
   -> IOManager
   -> IO ()
-getLocalTip configFp mSockPath iocp = do
-  nc <- parseNodeConfigurationFP configFp
-  sockPath <- return $ chooseSocketPath (ncSocketPath nc) mSockPath
+getAndPrintLocalTip configFp mSockPath iocp = do
+    nc <- parseNodeConfigurationFP configFp
+    sockPath <- return $ chooseSocketPath (ncSocketPath nc) mSockPath
+    frmPtclRes <- runExceptT $ firstExceptT ProtocolError $
+                    mkConsensusProtocol nc Nothing
+    SomeConsensusProtocol p <- case frmPtclRes of
+                          Right p -> pure p
+                          Left err -> do putTextLn . toS $ show err
+                                         exitFailure
+    putTextLn =<< getTipOutput <$> getLocalTip p iocp sockPath
+  where
+    getTipOutput :: forall blk. Condense (HeaderHash blk) => Tip blk -> Text
+    getTipOutput (TipGenesis) = "Current tip: genesis (origin)"
+    getTipOutput (Tip slotNo headerHash blkNo) =
+      T.pack $ unlines [ "\n"
+                        , "Current tip: "
+                        , "Block hash: " <> condense headerHash
+                        , "Slot: " <> condense slotNo
+                        , "Block number: " <> condense blkNo
+                        ]
 
-  frmPtclRes <- runExceptT $ firstExceptT ProtocolError $
-                  mkConsensusProtocol nc Nothing
-
-  SomeConsensusProtocol p <- case frmPtclRes of
-                        Right p -> pure p
-                        Left err -> do putTextLn . toS $ show err
-                                       exitFailure
-
-  createNodeConnection (Proxy) p iocp sockPath
-
+-- | Get the node's tip using the local chain sync protocol.
+getLocalTip
+  :: forall blk . RunNode blk
+  => Consensus.Protocol blk (BlockProtocol blk)
+  -> IOManager
+  -> SocketPath
+  -> IO (Tip blk)
+getLocalTip ptcl iocp sockPath = do
+  tipVar <- newEmptyTMVarM
+  createNodeConnection (Proxy) ptcl iocp sockPath tipVar
+  atomically $ takeTMVar tipVar
 
 createNodeConnection
-  :: forall blk . (Condense (HeaderHash blk), RunNode blk)
+  :: forall blk . RunNode blk
   => Proxy blk
   -> Consensus.Protocol blk (BlockProtocol blk)
   -> IOManager
   -> SocketPath
+  -> StrictTMVar IO (Tip blk)
   -> IO ()
-createNodeConnection proxy ptcl iocp (SocketFile path) =
+createNodeConnection proxy ptcl iocp (SocketFile path) tipVar =
     let ProtocolInfo{pInfoConfig} = Consensus.protocolInfo ptcl in
     connectTo
       (localSnocket iocp path)
       (NetworkConnectTracers nullTracer nullTracer)
-      (localInitiatorNetworkApplication proxy pInfoConfig)
+      (localInitiatorNetworkApplication proxy pInfoConfig tipVar)
       path
     `catch` handleMuxError
 
@@ -459,16 +483,16 @@ handleMuxError err = print err
 localInitiatorNetworkApplication
   :: forall blk m.
      ( RunNode blk
-     , Condense (HeaderHash blk)
      , MonadIO m
      , MonadST    m
      , MonadTimer m
      )
   => Proxy blk
   -> TopLevelConfig blk
+  -> StrictTMVar m (Tip blk)
   -> Versions NodeToClientVersion DictVersion
               (LocalConnectionId -> OuroborosApplication InitiatorApp LB.ByteString m () Void)
-localInitiatorNetworkApplication proxy cfg =
+localInitiatorNetworkApplication proxy cfg tipVar =
     foldMapVersions
       (\v ->
         versionedNodeToClientProtocols
@@ -486,7 +510,7 @@ localInitiatorNetworkApplication proxy cfg =
             MuxPeer
               nullTracer
               cChainSyncCodec
-              (chainSyncClientPeer chainSyncClient)
+              (chainSyncClientPeer (chainSyncClient tipVar))
 
       , localTxSubmissionProtocol =
           InitiatorProtocolOnly $
@@ -515,9 +539,10 @@ withIOManagerE :: (IOManager -> ExceptT e IO a) -> ExceptT e IO a
 withIOManagerE k = ExceptT $ withIOManager (runExceptT . k)
 
 chainSyncClient
-  :: forall blk m . (Condense (HeaderHash blk), MonadIO m)
-  => ChainSyncClient (Serialised blk) (Tip blk) m ()
-chainSyncClient = ChainSyncClient $ pure $
+  :: forall blk m . (MonadIO m, MonadSTM m)
+  => StrictTMVar m (Tip blk)
+  -> ChainSyncClient (Serialised blk) (Tip blk) m ()
+chainSyncClient tipVar = ChainSyncClient $ pure $
   SendMsgRequestNext
     clientStNext
     (pure $ ClientStNext
@@ -537,19 +562,9 @@ chainSyncClient = ChainSyncClient $ pure $
   clientStNext :: ClientStNext (Serialised blk) (Tip blk) m ()
   clientStNext = ClientStNext
     { recvMsgRollForward = \_blk tip -> ChainSyncClient $ do
-        traceWith stdoutTracer . toS $ getTipOutput tip
+        void $ atomically $ tryPutTMVar tipVar tip
         pure $ SendMsgDone ()
     , recvMsgRollBackward = \_point tip -> ChainSyncClient $ do
-        traceWith stdoutTracer . toS $ getTipOutput tip
+        void $ atomically $ tryPutTMVar tipVar tip
         pure $ SendMsgDone ()
     }
-
-  getTipOutput :: Tip blk -> Text
-  getTipOutput (TipGenesis) = "Current tip: genesis (origin)"
-  getTipOutput (Tip slotNo headerHash blkNo) =
-     T.pack $ unlines [ "\n"
-                      , "Current tip: "
-                      , "Block hash: " <> condense headerHash
-                      , "Slot: " <> condense slotNo
-                      , "Block number: " <> condense blkNo
-                      ]
