@@ -43,8 +43,9 @@ fprint() {
 export -f fprint
 
 prebuild() {
-        vprint "prebuilding the \"$1\" executable in \"${mode}\" mode.."
-        run --no-stats "$1" --help >/dev/null || true
+        local pkg="$1" exe="${2:-${pkg}}"
+        vprint "prebuilding the \"$pkg:$exe\" executable in \"${mode}\" mode.."
+        run --no-stats "$pkg" "$exe" --help >/dev/null || true
 }
 export -f prebuild
 
@@ -144,10 +145,11 @@ actually_run()
         if test -n "${rtsopts}"
         then vprint "result prefix:  ${profile_prefix}"; fi
 
+        local pkg="$1"; shift
         local exe="$1"; shift
 
         case ${mode} in
-        nix )       X=(run_nix_executable "$exe" "${bld_extra}" ${rtsopts} "$@");;
+        nix )       X=(run_nix_executable "$pkg" "$exe" "${bld_extra}" ${rtsopts} "$@");;
         cabal )     X=(cabal v2-run ${bld_extra} exe:$exe --    ${rtsopts} "$@");;
         stack )     X=(stack ${bld_extra} run $exe        --    ${rtsopts} "$@");;
         stack-nix ) X=(stack ${bld_extra} run --nix $exe  --    ${rtsopts} "$@");;

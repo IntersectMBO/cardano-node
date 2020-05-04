@@ -122,7 +122,7 @@ _run_node() {
         local topo_id="${topo_id:-$config_id}"
         local state_id="${state_id:-$config_id}"
         local db_root="${__COMMON_SRCROOT}/db"
-        local sock_root="${__COMMON_SRCROOT}/sockets"
+        local sock_root="${__COMMON_SRCROOT}/socket"
 
         local NODE_ARGS=(
           --database-path    "${db_root}/${state_id}/"
@@ -157,5 +157,5 @@ _run_node() {
         local final_stdout_redirect=${redirect_stdout:+>"${redirect_stdout/}"}
 
         eval "${LODE_RUNNER}" "${RUNNER_ARGS[@]}" \
-           'cardano-node' run "${NODE_ARGS[@]}" ${final_stdout_redirect}
+           'cardano-node' 'cardano-node' run "${NODE_ARGS[@]}" ${final_stdout_redirect}
 }

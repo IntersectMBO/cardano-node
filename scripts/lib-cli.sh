@@ -60,10 +60,10 @@ genesis() {
                 --real-pbft
                 --secret-seed                  "${not_so_secret}"
         )
-        run_quiet cardano-cli genesis "${ARGS[@]}"
+        run_quiet cardano-cli cardano-cli genesis "${ARGS[@]}"
 
         # move new genesis to configuration
-        local GENHASH=$(run_quiet cardano-cli print-genesis-hash --genesis-json "${tmpdir}/genesis.json" | tail -1)
+        local GENHASH=$(run_quiet cardano-cli cardano-cli print-genesis-hash --genesis-json "${tmpdir}/genesis.json" | tail -1)
         mkdir -p "${outdir}"
         cp -af "${tmpdir}"/genesis.json "${outdir}"/
         cp -af "${tmpdir}"/delegate-keys.*.key "${outdir}"/
@@ -84,7 +84,7 @@ get_default_key_address() {
                 --testnet-magic "${proto_magic}"
                 --secret "${key}"
         )
-        run_quiet cardano-cli "${ARGS[@]}" | head -n1 | xargs echo -n
+        run_quiet cardano-cli cardano-cli "${ARGS[@]}" | head -n1 | xargs echo -n
 }
 
 issue_genesis_utxo_expenditure() {
@@ -101,7 +101,7 @@ issue_genesis_utxo_expenditure() {
                 --rich-addr-from      "\"${from_addr}\""
                 --txout               "(\"${to_addr}\",${lovelace})"
         )
-        run_quiet cardano-cli "${ARGS[@]}"
+        run_quiet cardano-cli cardano-cli "${ARGS[@]}"
 }
 
 issue_utxo_expenditure() {
@@ -118,5 +118,5 @@ issue_utxo_expenditure() {
                 --txin                "(\"${txin}\",${txinoutputindex})"
                 --txout               "(\"${to_addr}\",${lovelace})"
         )
-        run_quiet cardano-cli "${ARGS[@]}"
+        run_quiet cardano-cli cardano-cli "${ARGS[@]}"
 }
