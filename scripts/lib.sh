@@ -86,6 +86,7 @@ actually_run()
         dprint "actually_run:  ${ARGS[@]@Q}"
         local bld_extra=
         local profile= profile_suffix= user_suffix= profile_prefix= profile_file=
+        local profile_root='./profile'
         local profmode=
         local rtsopts=
         local stats=t
@@ -104,7 +105,7 @@ actually_run()
         dprint "actually_run binary extra args:  $*"
 
         rtsopts="+RTS";
-        profile_prefix="$(generate_mnemonic "${tag}")${user_suffix}"
+        profile_prefix="${profile_root}/$(generate_mnemonic "${tag}")${user_suffix}"
         case "${profile}" in
            time )            vprint "profiling:  time"
                              profmode='-P';  profile_suffix="prof";;
@@ -124,6 +125,9 @@ actually_run()
            '' )              true;;
            * ) fprint "--profile requires a mode argument:  time space space-module space-closure space-type space-retainer space-bio"; exit 1;; esac
 
+        if test -n "${stats}${profile}"
+        then mkdir -p "${profile_root}"
+        fi
         if test -n "${stats}"
         then rtsopts+=" --machine-readable -t${profile_prefix}.stats"
         fi
