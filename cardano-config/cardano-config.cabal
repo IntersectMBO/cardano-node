@@ -14,15 +14,13 @@ library
   hs-source-dirs:      src
 
   exposed-modules:     Cardano.Config.Byron.Parsers
+                       Cardano.Config.Byron.Protocol
                        Cardano.Config.GitRev
                        Cardano.Config.GitRevFromGit
                        Cardano.Config.Logging
+                       Cardano.Config.Mock.Protocol
                        Cardano.Config.Orphanage
                        Cardano.Config.Protocol
-                       Cardano.Config.Protocol.Types
-                       Cardano.Config.Protocol.Mock
-                       Cardano.Config.Protocol.Byron
-                       Cardano.Config.Protocol.Shelley
                        Cardano.Config.Shelley.Address
                        Cardano.Config.Shelley.ColdKeys
                        Cardano.Config.Shelley.Genesis
@@ -30,6 +28,7 @@ library
                        Cardano.Config.Shelley.OCert
                        Cardano.Config.Shelley.Orphans
                        Cardano.Config.Shelley.Parsers
+                       Cardano.Config.Shelley.Protocol
                        Cardano.Config.Shelley.VRF
                        Cardano.Config.TextView
                        Cardano.Config.Topology

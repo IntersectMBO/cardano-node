@@ -25,12 +25,12 @@ import           Control.Monad.Trans.Except.Extra (firstExceptT)
 
 import           Cardano.Config.Types
                    (NodeConfiguration(..), Protocol (..),
-                    ProtocolFilepaths(..))
+                    ProtocolFilepaths(..), SomeConsensusProtocol(..),
+                    TraceConstraints)
 
-import           Cardano.Config.Protocol.Types
-import           Cardano.Config.Protocol.Mock
-import           Cardano.Config.Protocol.Byron
-import           Cardano.Config.Protocol.Shelley
+import           Cardano.Config.Byron.Protocol
+import           Cardano.Config.Mock.Protocol
+import           Cardano.Config.Shelley.Protocol
 
 
 ------------------------------------------------------------------------------
