@@ -2,6 +2,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 
 module Cardano.Api
@@ -31,7 +32,9 @@ module Cardano.Api
   , TxId
   , TxIx
   , Lovelace
-  , SlotNo
+  , SlotNo (..)
+
+  , ShelleyTxBody
 
   , getTxSignedBody
   , getTxSignedHash

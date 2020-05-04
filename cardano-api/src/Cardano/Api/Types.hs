@@ -21,7 +21,7 @@ module Cardano.Api.Types
   , TxId (..)
   , TxIx
   , TxOut (..)
-  , SlotNo
+  , SlotNo (..)
   , Lovelace
 
     -- * Era-specific type aliases and conversions
@@ -60,7 +60,7 @@ import           Data.Vector (Vector)
 
 import           Cardano.Config.Orphanage ()
 
-import           Cardano.Slotting.Slot (SlotNo)
+import           Cardano.Slotting.Slot (SlotNo (..))
 
 import qualified Cardano.Crypto.Hash.Class   as Crypto
 import qualified Cardano.Crypto.Hash.Blake2b as Crypto

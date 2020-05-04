@@ -32,7 +32,6 @@ import           Cardano.Crypto.DSIGN.Class (DSIGNAlgorithm (..))
 import           Cardano.Prelude
 
 import           Data.ByteString (ByteString)
-import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Word (Word8)
 
@@ -120,7 +119,7 @@ txSignedFromCBOR bs =
       tag <- CBOR.decodeWord8
       case tag of
         176  -> TxSignedByron <$> fromCBOR <*> fromCBOR <*> fromCBOR <*> fromCBOR
-        177  -> TxSignedShelley <$> decodeShelleyTx (BS.drop 2 bs)
+        177  -> TxSignedShelley <$> decodeShelleyTx bs
         _  -> cborError $ DecoderErrorUnknownTag "TxSigned" tag
 
 txSignedToCBOR :: TxSigned -> ByteString
@@ -141,8 +140,9 @@ txUnsignedFromCBOR bs =
       tag <- CBOR.decodeWord8
       case tag of
         178  -> TxUnsignedByron <$> fromCBOR <*> fromCBOR <*> fromCBOR
-        179  -> TxUnsignedShelley <$> decodeShelleyTxBody (BS.drop 2 bs)
+        179  -> TxUnsignedShelley <$> decodeShelleyTxBody bs
         _  -> cborError $ DecoderErrorUnknownTag "TxUnsigned" tag
+
 
 txUnsignedToCBOR :: TxUnsigned -> ByteString
 txUnsignedToCBOR pk =

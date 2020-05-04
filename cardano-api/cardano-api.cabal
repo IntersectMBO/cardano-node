@@ -89,6 +89,7 @@ test-suite cardano-api-test
                       , cardano-crypto-wrapper
                       , cardano-ledger-test
                       , cardano-prelude
+                      , containers
                       , cryptonite
                       , hedgehog
                       , ouroboros-consensus-shelley

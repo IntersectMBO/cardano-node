@@ -1,3 +1,4 @@
+{-# LANGUAGE PatternSynonyms #-}
 module Test.Cardano.Api.Gen
   ( genSigningKey
   , genSigningKeyByron
@@ -22,12 +23,17 @@ import           Crypto.Random (drgNewTest, withDRG)
 
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import           Data.Coerce (coerce)
+import qualified Data.Map.Strict as Map
+import qualified Data.Sequence.Strict as StrictSeq
+import qualified Data.Set as Set
 
+import           Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..))
+import           Shelley.Spec.Ledger.Coin (Coin (..))
 import           Shelley.Spec.Ledger.Keys
+import           Shelley.Spec.Ledger.TxData (pattern TxBody, Wdrl (..))
 
 import           Test.Cardano.Chain.UTxO.Gen (genTx)
 import qualified Test.Cardano.Crypto.Gen as Byron
-                   (genProtocolMagicId, genSigningKey)
 
 import           Hedgehog (Gen)
 import qualified Hedgehog.Gen as Gen
@@ -92,10 +98,9 @@ genVerificationKeyShelley =
 
 genTxSigned :: Gen TxSigned
 genTxSigned =
-  -- When Shelly is sorted out, this should change to `Gen.choose`.
-  Gen.frequency
-    [ (9, genTxSignedByron)
-    , (1, pure TxSignedShelley)
+  Gen.choice
+    [ genTxSignedByron
+    , genTxSignedShelley
     ]
 
 genTxSignedByron :: Gen TxSigned
@@ -103,13 +108,20 @@ genTxSignedByron =
   signTransaction
     <$> genTxUnsignedByron
     <*> genNetwork
-    <*> Gen.list (Range.linear 1 5) Byron.genSigningKey
+    <*> Gen.list (Range.linear 1 5) genSigningKeyByron
+
+genTxSignedShelley :: Gen TxSigned
+genTxSignedShelley =
+  signTransaction
+    <$> genTxUnsignedShelley
+    <*> genNetwork
+    <*> Gen.list (Range.linear 1 5) genSigningKeyShelley
 
 genTxUnsigned :: Gen TxUnsigned
 genTxUnsigned =
   Gen.choice
     [ genTxUnsignedByron
---  , genTxUnsignedShelley  --TODO
+    , genTxUnsignedShelley
     ]
 
 genTxUnsignedByron :: Gen TxUnsigned
@@ -118,8 +130,15 @@ genTxUnsignedByron = do
   let cbor = serialize tx
   pure $ TxUnsignedByron tx (LBS.toStrict cbor) (coerce $ hashRaw cbor)
 
---genTxUnsignedShelley :: Gen TxUnsigned
---genTxUnsignedShelley = fail "TODO: genTxUnsignedShelley"
---TODO: reuse an existing generator
-
+genTxUnsignedShelley :: Gen TxUnsigned
+genTxUnsignedShelley =
+    TxUnsignedShelley <$> genTxBodyShelley
+  where
+    -- TODO: Improve this incredibly naive generator.
+    genTxBodyShelley :: Gen ShelleyTxBody
+    genTxBodyShelley = do
+      coin <- Gen.integral (Range.linear 0 10000000000)
+      slot <- Gen.word64 (Range.linear minBound maxBound)
+      pure $ TxBody (Set.fromList []) (StrictSeq.fromList []) (StrictSeq.fromList [])
+                (Wdrl $ Map.fromList []) (Coin coin) (SlotNo slot) SNothing SNothing
 
