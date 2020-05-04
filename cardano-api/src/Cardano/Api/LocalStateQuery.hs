@@ -5,7 +5,8 @@
 {-# LANGUAGE TypeFamilies #-}
 
 module Cardano.Api.LocalStateQuery
-  ( queryPParamsFromLocalState
+  ( queryFilteredUTxOFromLocalState
+  , queryPParamsFromLocalState
   ) where
 
 import           Cardano.Prelude hiding (atomically, option, threadDelay)
@@ -26,6 +27,7 @@ import           Control.Monad.Trans.Except.Extra (newExceptT)
 import           Control.Tracer (Tracer)
 
 import           Data.Functor.Contravariant (contramap)
+import           Data.Set (Set)
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Data.Void (Void)
@@ -59,6 +61,28 @@ import           Ouroboros.Network.Protocol.LocalStateQuery.Client
 import           Ouroboros.Network.Protocol.LocalStateQuery.Type (AcquireFailure (..))
 
 import qualified Shelley.Spec.Ledger.PParams as Ledger (PParams)
+import qualified Shelley.Spec.Ledger.TxData as Ledger (Addr)
+import qualified Shelley.Spec.Ledger.UTxO as Ledger (UTxO)
+
+-- | Query the UTxO, filtered by a given set of addresses, from a Shelley node
+-- via the local state query protocol.
+queryFilteredUTxOFromLocalState
+  :: TPraosCrypto c
+  => Protocol (ShelleyBlock c) (BlockProtocol (ShelleyBlock c))
+  -> SocketPath
+  -> Set (Ledger.Addr c)
+  -> Point (ShelleyBlock c)
+  -> ExceptT AcquireFailure IO (Ledger.UTxO c)
+queryFilteredUTxOFromLocalState ptcl socketPath addrs point = do
+  let pointAndQuery = (point, GetFilteredUTxO addrs)
+  utxoVar <- liftIO newEmptyTMVarM
+  liftIO $ queryNodeLocalState
+    utxoVar
+    nullTracer
+    ptcl
+    socketPath
+    pointAndQuery
+  newExceptT $ atomically $ takeTMVar utxoVar
 
 -- | Query the current protocol parameters from a Shelley node via the local
 -- state query protocol.
