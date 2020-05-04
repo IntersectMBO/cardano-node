@@ -3,7 +3,6 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE PatternSynonyms #-}
 
 module Cardano.Api
   ( module X
@@ -20,8 +19,6 @@ module Cardano.Api
   , Network (..)
   , byronVerificationKeyAddress
   , shelleyVerificationKeyAddress
-  , addressToHex
-  , addressFromHex
 
     -- * Transactions
   , TxSigned (..)
@@ -29,7 +26,7 @@ module Cardano.Api
   , TxWitness (..)
   , TxIn (..)
   , TxOut (..)
-  , TxId
+  , TxId (..)
   , TxIx
   , Lovelace
   , SlotNo (..)
@@ -54,7 +51,6 @@ module Cardano.Api
 
 import           Cardano.Prelude
 
-import qualified Data.ByteString.Base16 as Base16
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import           Data.Coerce (coerce)
 import qualified Data.List.NonEmpty as NonEmpty
@@ -62,7 +58,6 @@ import qualified Data.Vector as Vector
 import qualified Data.Map.Strict as Map
 import qualified Data.Set        as Set
 import qualified Data.Sequence.Strict as Seq
-import qualified Data.Text.Encoding as Text
 
 import qualified Cardano.Binary as Binary
 
@@ -75,6 +70,7 @@ import qualified Cardano.Crypto.Signing as Crypto
 
 import           Cardano.Api.Types
 import           Cardano.Api.CBOR as X
+import           Cardano.Api.Convert as X
 import           Cardano.Api.Error as X
 import           Cardano.Api.View as X
 import           Cardano.Api.TxSubmit
@@ -89,24 +85,6 @@ import qualified Shelley.Spec.Ledger.Keys      as Shelley
 import qualified Shelley.Spec.Ledger.TxData    as Shelley
 import qualified Shelley.Spec.Ledger.Tx        as Shelley
 import qualified Shelley.Spec.Ledger.BaseTypes as Shelley
-
-
-addressFromHex :: Text -> Maybe Address
-addressFromHex txt =
-  case Base16.decode (Text.encodeUtf8 txt) of
-    (raw, _) ->
-      case Shelley.deserialiseAddr raw of
-        Just addr -> Just $ AddressShelley addr
-        Nothing -> either (const Nothing) (Just . AddressByron) $ Binary.decodeFull' raw
-
-addressToHex :: Address -> Text
-addressToHex addr =
-  -- Text.decodeUtf8 theoretically can throw an exception but should never
-  -- do so on Base16 encoded data.
-  Text.decodeUtf8 . Base16.encode $
-    case addr of
-      AddressByron ba -> Binary.serialize' ba
-      AddressShelley sa -> Shelley.serialiseAddr sa
 
 
 byronGenSigningKey :: IO SigningKey

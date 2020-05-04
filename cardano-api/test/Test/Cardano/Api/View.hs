@@ -18,13 +18,13 @@ import           Test.Cardano.Api.Orphans ()
 prop_roundtrip_AddressByron_view :: Property
 prop_roundtrip_AddressByron_view =
   H.property $ do
-    addr <- H.forAll genByronVerificationKeyAddress
+    addr <- H.forAll genVerificationKeyAddressByron
     H.tripping addr renderAddressView parseAddressView
 
 prop_roundtrip_AddressShelley_view :: Property
 prop_roundtrip_AddressShelley_view =
   H.property $ do
-    addr <- H.forAll genShelleyVerificationKeyAddress
+    addr <- H.forAll genVerificationKeyAddressShelley
     H.tripping addr renderAddressView parseAddressView
 
 prop_roundtrip_SigningKey_view :: Property

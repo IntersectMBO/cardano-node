@@ -26,7 +26,6 @@ module Cardano.CLI.Shelley.Parsers
 import           Cardano.Prelude hiding (option)
 
 import           Cardano.Api
-import           Cardano.Chain.Common (Lovelace, mkLovelace)
 import           Cardano.Common.Parsers (parseConfigFile, parseCLISocketPath, parseNodeAddress)
 import           Cardano.Slotting.Slot (EpochNo (..))
 
