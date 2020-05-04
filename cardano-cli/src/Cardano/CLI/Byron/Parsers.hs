@@ -1,5 +1,6 @@
 module Cardano.CLI.Byron.Parsers
   ( ByronCommand(..)
+  , NodeCmd(..)
   , parseByronCommands
   , parseHeavyDelThd
   , parseInstallerHash
@@ -25,6 +26,7 @@ import           Prelude (String)
 import qualified Data.ByteString.Lazy.Char8 as C8
 import           Formatting (build, sformat)
 import           Options.Applicative
+import qualified Options.Applicative as Opt
 
 import           Cardano.Chain.Common
                    (TxFeePolicy(..), TxSizeLinear(..), rationalToLovelacePortion)
@@ -37,55 +39,66 @@ import           Cardano.Chain.Update
 
 import           Cardano.CLI.Byron.UpdateProposal
 import           Cardano.Common.Parsers
-                   (command', parseCLISocketPath, parseConfigFile, parseFilePath,
+                   (parseCLISocketPath, parseConfigFile, parseFilePath,
                     parseFraction, parseLovelace, parseSigningKeyFile)
 import           Cardano.Config.Types
 
--- TODO: Other Byron commands to be put here in follow up PR.
-data ByronCommand
-  = CreateVote
-        ConfigYamlFilePath
-        SigningKeyFile
-        FilePath -- filepath to update proposal
-        Bool
-        FilePath
-  | UpdateProposal
-        ConfigYamlFilePath
-        SigningKeyFile
-        ProtocolVersion
-        SoftwareVersion
-        SystemTag
-        InstallerHash
-        FilePath
-        [ParametersToUpdate]
-  | SubmitUpdateProposal
-        ConfigYamlFilePath
-        -- ^ Update proposal filepath.
-        FilePath
-        (Maybe CLISocketPath)
-  | SubmitVote
-        ConfigYamlFilePath
-        FilePath
-        -- ^ Vote filepath.
-        (Maybe CLISocketPath)
+data ByronCommand = NodeCmd NodeCmd deriving Show
 
-  deriving Show
+data NodeCmd = CreateVote
+               ConfigYamlFilePath
+               SigningKeyFile
+               FilePath -- filepath to update proposal
+               Bool
+               FilePath
+             | UpdateProposal
+               ConfigYamlFilePath
+               SigningKeyFile
+               ProtocolVersion
+               SoftwareVersion
+               SystemTag
+               InstallerHash
+               FilePath
+               [ParametersToUpdate]
+             | SubmitUpdateProposal
+               ConfigYamlFilePath
+               -- ^ Update proposal filepath.
+               FilePath
+               (Maybe CLISocketPath)
+             | SubmitVote
+               ConfigYamlFilePath
+               FilePath
+               -- ^ Vote filepath.
+               (Maybe CLISocketPath)
+              deriving Show
 
 parseByronCommands :: Parser ByronCommand
 parseByronCommands =  subparser $ mconcat
     [ commandGroup "Byron related commands"
     , metavar "Byron related commands"
-    , command' "create-byron-update-proposal" "Create a Byron era update proposal."
-        $ parseByronUpdateProposal
-    , command' "create-byron-proposal-vote" "Create a Byron era proposal vote."
-        $ parseByronVote
-    , command' "submit-byron-update-proposal" "Submit a Byron era update proposal."
-        $ parseByronUpdateProposalSubmission
-    , command' "submit-byron-proposal-vote" "Submit a Byron era proposal vote."
-        $ parseByronVoteSubmission
+    , Opt.command "node"
+        (Opt.info (NodeCmd <$> pNodeCmd) $ Opt.progDesc "Byron node operation commands")
+
     ]
 
-parseByronUpdateProposal :: Parser ByronCommand
+pNodeCmd :: Parser NodeCmd
+pNodeCmd =
+  Opt.subparser $
+    mconcat
+      [ Opt.command "create-update-proposal"
+          (Opt.info parseByronUpdateProposal $ Opt.progDesc  "Create an update proposal.")
+
+      , Opt.command "create-proposal-vote"
+          (Opt.info parseByronVote $ Opt.progDesc "Create an update proposal vote.")
+
+      , Opt.command "submit-update-proposal"
+          (Opt.info parseByronUpdateProposalSubmission $ Opt.progDesc "Submit an update proposal.")
+
+      , Opt.command "submit-proposal-vote"
+          (Opt.info parseByronVoteSubmission $ Opt.progDesc "Submit a proposal vote.")
+      ]
+
+parseByronUpdateProposal :: Parser NodeCmd
 parseByronUpdateProposal = do
   UpdateProposal
     <$> (ConfigYamlFilePath <$> parseConfigFile)
@@ -97,7 +110,7 @@ parseByronUpdateProposal = do
     <*> parseFilePath "filepath" "Byron proposal output filepath."
     <*> parseParametersToUpdate
 
-parseByronVoteSubmission :: Parser ByronCommand
+parseByronVoteSubmission :: Parser NodeCmd
 parseByronVoteSubmission = do
   SubmitVote
     <$> (ConfigYamlFilePath <$> parseConfigFile)
@@ -124,7 +137,7 @@ parseParametersToUpdate =
           , parseUnlockStakeEpoch
           ]
 
-parseByronUpdateProposalSubmission :: Parser ByronCommand
+parseByronUpdateProposalSubmission :: Parser NodeCmd
 parseByronUpdateProposalSubmission =
   SubmitUpdateProposal
     <$> (ConfigYamlFilePath <$> parseConfigFile)
@@ -132,7 +145,7 @@ parseByronUpdateProposalSubmission =
     <*> parseCLISocketPath "Path to a cardano-node socket."
 
 
-parseByronVote :: Parser ByronCommand
+parseByronVote :: Parser NodeCmd
 parseByronVote =
   CreateVote
     <$> (ConfigYamlFilePath <$> parseConfigFile)

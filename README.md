@@ -313,7 +313,7 @@ Block number: 5
 A Byron update proposal can be created as follows:
 
 ```
-cardano-cli -- byron
+cardano-cli -- byron node
                create-update-proposal
                --config NODE-CONFIGURATION
                --signing-key FILEPATH
@@ -337,11 +337,11 @@ See the [Byron specification](https://hydra.iohk.io/job/Cardano/cardano-ledger-s
 
 ### Update proposal submission
 
-You can submit your proposal using the `submit-byron-update-proposal` command.
+You can submit your proposal using the `submit-update-proposal` command.
 
 Example:
 ```
-cardano-cli -- byron
+cardano-cli -- byron node
                submit-update-proposal
                --config configuration/defaults/mainnet/configuration.yaml
                --filepath my-update-proposal
@@ -353,13 +353,13 @@ See the [Byron specification](https://hydra.iohk.io/job/Cardano/cardano-ledger-s
 
 
 ## Update proposal voting
-You can create and submit byron update proposal votes with the `create-byron-proposal-vote` & `submit-byron-proposal-vote` commands. The following are two example commands:
+You can create and submit byron update proposal votes with the `create-proposal-vote` & `submit-proposal-vote` commands. The following are two example commands:
 
 
 Byron vote creation:
 
 ```
-cabal exec cardano-cli -- byron create-byron-proposal-vote
+cabal exec cardano-cli -- byron node create-proposal-vote
                         --config configuration/defaults/liveview/config-0.yaml
                         --signing-key configuration/defaults/liveview/genesis/delegate-keys.000.key
                         --proposal-filepath ProtocolUpdateProposalFile
@@ -370,7 +370,7 @@ cabal exec cardano-cli -- byron create-byron-proposal-vote
 Byron vote submission:
 
 ```
-cabal exec cardano-cli -- byron submit-byron-proposal-vote
+cabal exec cardano-cli -- byron node submit-proposal-vote
                         --config  configuration/defaults/liveview/config-0.yaml
                         --filepath UpdateProposalVoteFile
                         --socket-path socket/node-0-socket

@@ -2,11 +2,10 @@
 
 module Cardano.CLI.Byron.UpdateProposal
   ( ParametersToUpdate(..)
-  , convertProposalToGenTx
+  , runProposalCreation
   , createUpdateProposal
   , deserialiseByronUpdateProposal
   , readByronUpdateProposal
-  , serialiseByronUpdateProposal
   , submitByronUpdateProposal
   ) where
 
@@ -38,8 +37,26 @@ import qualified Ouroboros.Consensus.Mempool as Mempool
 import           Ouroboros.Consensus.Node.ProtocolInfo (pInfoConfig)
 import           Ouroboros.Network.NodeToClient (IOManager)
 
-import           Cardano.CLI.Ops (CliError(..), readGenesis, withRealPBFT)
+import           Cardano.CLI.Key (readSigningKey)
+import           Cardano.CLI.Ops
+                   (CardanoEra(..), CliError(..), ensureNewFileLBS,
+                    readGenesis, withRealPBFT)
 import           Cardano.Common.LocalSocket
+
+runProposalCreation
+  :: ConfigYamlFilePath
+  -> SigningKeyFile
+  -> ProtocolVersion
+  -> SoftwareVersion
+  -> SystemTag
+  -> InstallerHash
+  -> FilePath
+  -> [ParametersToUpdate]
+  -> ExceptT CliError IO ()
+runProposalCreation configFp sKey pVer sVer sysTag insHash outputFp params = do
+  sK <- readSigningKey ByronEra sKey
+  proposal <- createUpdateProposal configFp sK pVer sVer sysTag insHash params
+  ensureNewFileLBS outputFp (serialiseByronUpdateProposal proposal)
 
 
 data ParametersToUpdate =
