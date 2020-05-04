@@ -136,7 +136,7 @@ data ProtocolFilepaths =
 -- (logging, tracing, protocol, slot length etc)
 newtype ConfigYamlFilePath = ConfigYamlFilePath
   { unConfigPath :: FilePath }
-  deriving newtype Show
+  deriving newtype (Eq, Show)
 
 newtype TopologyFile = TopologyFile
   { unTopology :: FilePath }
@@ -232,7 +232,7 @@ instance FromJSON NodeConfiguration where
 -- | Socket path read from the command line.
 newtype CLISocketPath = CLISocketPath
   { unCLISocketPath :: SocketPath}
-  deriving newtype Show
+  deriving newtype (Eq, Show)
 
 -- | Socket path defined in the node's configuration yaml file.
 newtype YamlSocketPath = YamlSocketPath
@@ -391,4 +391,3 @@ type TraceConstraints blk =
     , ToObject (OtherHeaderEnvelopeError blk)
     , ToObject (ValidationErr (BlockProtocol blk))
     )
-

@@ -100,6 +100,7 @@ import           Ouroboros.Network.Protocol.ChainSync.Client
                    , chainSyncClientPeer, recvMsgRollForward)
 import           Ouroboros.Network.Protocol.Handshake.Version
                    (DictVersion(..), Versions)
+import           Ouroboros.Network.Protocol.LocalStateQuery.Type (AcquireFailure (..))
 
 import           Cardano.Common.LocalSocket (chooseSocketPath)
 import           Cardano.Config.Protocol
@@ -296,6 +297,8 @@ data CliError
   | IOError !FilePath !IOException
   | AesonDecode !FilePath !Text
   | ShelleyGenesisError !ShelleyGenesisError
+  | IncorrectProtocolSpecifiedError !Protocol
+  | NodeLocalStateQueryError !AcquireFailure
 
 instance Show CliError where
   show (AddressCliError e)
@@ -386,6 +389,10 @@ instance Show CliError where
     = "File '" <> fp <> "': " ++ show txt
   show (ShelleyGenesisError sge)
     = T.unpack $ renderShelleyGenesisError sge
+  show (IncorrectProtocolSpecifiedError ptcl)
+    = "Incorrect protocol specified: " <> (toS $ show ptcl)
+  show (NodeLocalStateQueryError acquireFailure)
+    = "Error querying node's local state: " <> show acquireFailure
 
 data RealPBFTError
   = IncorrectProtocolSpecified !Protocol

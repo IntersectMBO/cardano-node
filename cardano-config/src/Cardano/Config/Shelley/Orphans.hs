@@ -26,6 +26,7 @@ import qualified Data.Text.Encoding as Text
 
 import           Cardano.Crypto.Hash.Class as Crypto
 import           Cardano.Slotting.Slot (EpochSize (..))
+import           Cardano.TracingOrphanInstances.Common () -- For ToJSON EpochNo
 import           Ouroboros.Consensus.BlockchainTime
                    (SlotLength (..), SystemStart (..))
 import           Ouroboros.Consensus.BlockchainTime.WallClock.Types
@@ -34,9 +35,11 @@ import           Ouroboros.Consensus.Protocol.Abstract (SecurityParam (..))
 import           Ouroboros.Consensus.Shelley.Node
                    (ShelleyGenesis (..), emptyGenesisStaking)
 import           Shelley.Spec.Ledger.Address (serialiseAddr, deserialiseAddr)
+import           Shelley.Spec.Ledger.BaseTypes (Nonce (..), UnitInterval (..))
 import           Shelley.Spec.Ledger.Coin (Coin(..))
 import           Shelley.Spec.Ledger.Crypto (Crypto)
 import           Shelley.Spec.Ledger.Keys (DiscKeyHash(..))
+import           Shelley.Spec.Ledger.PParams (PParams, ProtVer (..))
 import           Shelley.Spec.Ledger.TxData (Addr(..))
 
 instance Crypto crypto => ToJSON (ShelleyGenesis crypto) where
@@ -87,9 +90,16 @@ instance Crypto crypto => FromJSON (ShelleyGenesis crypto) where
         <*> obj .: "InitialFunds"
         <*> pure emptyGenesisStaking  --TODO
 
+deriving instance ToJSON PParams
+deriving instance ToJSON ProtVer
+deriving instance ToJSON Nonce
+
 --
 -- Simple newtype wrappers JSON conversion
 --
+
+-- This instance is for PParams
+deriving newtype instance ToJSON UnitInterval
 
 -- These are for ShelleyGenesis.
 -- These ones are all just newtype wrappers of numbers,
