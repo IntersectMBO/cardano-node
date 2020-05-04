@@ -105,6 +105,11 @@ Some of the more important settings are as follows:
 
 Logs are output to the `log/` dir.
 
+## Profiling & statistics
+
+Profiling data and RTS run stats are stored in the `profile/` dir.
+
+Please see `scripts/README.md` for how to obtain profiling information using the scripts.
 
 ## Scripts
 

@@ -222,7 +222,7 @@ print_benchmark_schedule
 #
 if test -z "${skip_prefetch}"
 then time -p phase_prefetch
-else prebuild "cardano-node"; fi
+else prebuild 'cardano-node' 'cardano-node'; fi
 
 test -n "${prebench_pause}" &&
   read -rp "Mainnet prefetch complete. Press Enter to continue..." foo

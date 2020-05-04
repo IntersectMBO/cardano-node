@@ -4,7 +4,7 @@
 . "$(dirname "$0")"/common.sh
 . "$(dirname "$0")"/lib-cli.sh
 
-prebuild 'cardano-cli'
+prebuild 'cardano-cli' 'cardano-cli'
 
 setup_genesis_for_config 'liveview'
 

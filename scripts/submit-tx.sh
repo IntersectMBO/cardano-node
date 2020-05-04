@@ -22,4 +22,4 @@ ARGS=(
         --config       "${configuration_root}/config-0.yaml"
         --socket-path  "socket/node-0-socket"
 )
-run cardano-cli "${ARGS[@]}" "$@"
+run cardano-cli cardano-cli "${ARGS[@]}" "$@"

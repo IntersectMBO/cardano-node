@@ -13,7 +13,7 @@ setup_genesis_for_config 'liveview'
 
 SOCKET_PATHS=${@/#/--socket-path }
 
-run chairman \
+run cardano-node chairman \
         -p 25 \
         -t 1000 \
         --config "${configuration_root}/config-0.yaml" \

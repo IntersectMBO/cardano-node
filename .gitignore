@@ -15,24 +15,15 @@ dist/
 /result*
 /launch-*
 stack.yaml.lock
-logs/
-/*.eventlog
-/*.hp
-/*.hp.*
-/*.prof
-/*.prof.*
-/*.profiterole.*
-/*.stats
 
 /db
 /db-[0-9]
+/logs
+/profile
 /launch_*
 /state-*
 /cluster
 /cluster.*
-/benchmark*.log*
-
-/benchmarking/chain-sync/state-node-mainnet/
 
 tags
 /config

@@ -7,7 +7,7 @@ run_3node_cluster() {
         local config="$1" topo="${2:-indexed}" delegate="${3:-indexed}"
 
         setup_genesis_for_config "${config}"
-        prebuild 'cardano-node'
+        prebuild 'cardano-node' 'cardano-node'
 
         tmux \
           -f "${TMUX_CONFIG}" \
