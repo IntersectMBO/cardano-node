@@ -230,6 +230,8 @@ pTransaction =
           (Opt.info pTransactionCalculateMinFee $ Opt.progDesc "Calulate the min fee for a transaction")
       , Opt.command "info"
           (Opt.info pTransactionInfo $ Opt.progDesc "Print information about a transaction")
+      , Opt.command "single-addr-wallet"
+          (Opt.info pTransactionSingleAddrWallet $ Opt.progDesc "Testing single addr wallet")
       ]
   where
     pTransactionBuild :: Parser TransactionCmd
@@ -273,6 +275,14 @@ pTransaction =
 
     pTransactionInfo  :: Parser TransactionCmd
     pTransactionInfo = pure TxInfo
+
+    pTransactionSingleAddrWallet :: Parser TransactionCmd
+    pTransactionSingleAddrWallet =
+      TxSingleAddrWallet
+        <$> pSigningKeyFile Input
+        <*> Opt.optional pTxTTL
+        <*> pNetwork
+        <*> pTxFile Output
 
 
 pNodeCmd :: Parser NodeCmd

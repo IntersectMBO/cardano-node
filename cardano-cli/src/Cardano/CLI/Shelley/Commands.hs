@@ -102,6 +102,7 @@ data TransactionCmd
       [CertificateFile]
       ProtocolParamsFile
   | TxInfo          -- { transaction :: Transaction, nodeAddr :: NodeAddress }
+  | TxSingleAddrWallet SigningKeyFile (Maybe SlotNo) Network TxFile
   deriving (Eq, Show)
 
 
