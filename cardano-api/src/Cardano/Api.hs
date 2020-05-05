@@ -39,6 +39,8 @@ module Cardano.Api
   , witnessTransaction
   , signTransactionWithWitness
   , submitTransaction
+
+  , queryPParamsFromLocalState
   ) where
 
 import           Cardano.Prelude
@@ -67,6 +69,7 @@ import           Cardano.Api.CBOR as X
 import           Cardano.Api.Error as X
 import           Cardano.Api.View as X
 import           Cardano.Api.TxSubmit
+import           Cardano.Api.LocalStateQuery (queryPParamsFromLocalState)
 
 import qualified Cardano.Chain.Common  as Byron
 import qualified Cardano.Chain.Genesis as Byron

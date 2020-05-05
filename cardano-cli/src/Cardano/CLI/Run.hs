@@ -102,7 +102,7 @@ runGenesisCommand outDir params era = do
 
 runGetLocalNodeTip :: ConfigYamlFilePath -> Maybe CLISocketPath -> ExceptT e IO ()
 runGetLocalNodeTip configFp mSockPath =
-  withIOManagerE $ \iocp -> liftIO $ getLocalTip configFp mSockPath iocp
+  withIOManagerE $ \iocp -> liftIO $ getAndPrintLocalTip configFp mSockPath iocp
 
 runValidateCBOR :: CBORObject -> FilePath -> ExceptT CliError IO ()
 runValidateCBOR cborObject fp = do
@@ -210,4 +210,3 @@ runSpendUTxO configFp (NewTxFile ctTx) ctKey ins outs = do
     gTx <- firstExceptT IssueUtxoError $
              issueUTxOExpenditure nc ins outs sk
     ensureNewFileLBS ctTx $ toCborTxAux gTx
-

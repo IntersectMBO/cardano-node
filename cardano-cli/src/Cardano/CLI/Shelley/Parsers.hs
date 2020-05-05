@@ -26,10 +26,11 @@ module Cardano.CLI.Shelley.Parsers
 import           Cardano.Prelude hiding (option)
 
 import           Cardano.Chain.Common (Lovelace, mkLovelace)
-import           Cardano.Common.Parsers (parseNodeAddress)
+import           Cardano.Common.Parsers (parseConfigFile, parseCLISocketPath, parseNodeAddress)
 import           Cardano.Slotting.Slot (EpochNo (..))
 
-import           Cardano.Config.Types (NodeAddress, SigningKeyFile(..))
+import           Cardano.Config.Types (CLISocketPath, ConfigYamlFilePath (..), NodeAddress,
+                     SigningKeyFile(..))
 import           Cardano.Config.Shelley.OCert (KESPeriod(..))
 import           Cardano.CLI.Key (VerificationKeyFile(..))
 
@@ -108,6 +109,7 @@ data PoolCmd
 
 data QueryCmd
   = QueryPoolId NodeAddress
+  | QueryProtocolParameters ConfigYamlFilePath (Maybe CLISocketPath) OutputFile
   | QueryTip NodeAddress
   | QueryVersion NodeAddress
   | QueryStatus NodeAddress
@@ -384,6 +386,8 @@ pQueryCmd =
     mconcat
       [ Opt.command "pool-id"
           (Opt.info pQueryPoolId $ Opt.progDesc "Get the node's pool id")
+      , Opt.command "protocol-parameters"
+          (Opt.info pQueryProtocolParameters $ Opt.progDesc "Get the node's current protocol parameters")
       , Opt.command "tip"
           (Opt.info pQueryTip $ Opt.progDesc "Get the node's current tip (slot no, hash, block no)")
       , Opt.command "version"
@@ -394,6 +398,13 @@ pQueryCmd =
   where
     pQueryPoolId :: Parser QueryCmd
     pQueryPoolId = QueryPoolId <$> parseNodeAddress
+
+    pQueryProtocolParameters :: Parser QueryCmd
+    pQueryProtocolParameters =
+      QueryProtocolParameters
+        <$> (ConfigYamlFilePath <$> parseConfigFile)
+        <*> parseCLISocketPath "Socket of target node"
+        <*> pOutputFile
 
     pQueryTip :: Parser QueryCmd
     pQueryTip = QueryTip <$> parseNodeAddress
