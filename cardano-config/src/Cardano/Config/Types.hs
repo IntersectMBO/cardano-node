@@ -1,3 +1,7 @@
+{-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
@@ -21,7 +25,9 @@ module Cardano.Config.Types
     , NodeProtocolMode (..)
     , SigningKeyFile (..)
     , ProtocolFilepaths (..)
+    , SomeConsensusProtocol (..)
     , TopologyFile (..)
+    , TraceConstraints
     , SocketPath (..)
     , Update (..)
     , ViewMode (..)
@@ -42,12 +48,21 @@ import           Network.Socket (PortNumber)
 import           System.FilePath ((</>), takeDirectory)
 import           System.Posix.Types (Fd(Fd))
 
+import           Cardano.BM.Tracing (ToObject)
 import qualified Cardano.Chain.Update as Update
 import           Cardano.Chain.Slotting (EpochSlots)
 import           Cardano.Crypto.ProtocolMagic (RequiresNetworkMagic)
+import           Ouroboros.Consensus.Block (Header, BlockProtocol)
+import qualified Ouroboros.Consensus.Cardano as Consensus (Protocol)
+import           Ouroboros.Consensus.HeaderValidation (OtherHeaderEnvelopeError)
+import           Ouroboros.Consensus.Ledger.Abstract (LedgerError)
+import           Ouroboros.Consensus.Mempool.API
+                   (GenTx, GenTxId, HasTxId, HasTxs(..), ApplyTxErr, TxId)
+import           Ouroboros.Consensus.Node.Run (RunNode)
 import           Ouroboros.Consensus.NodeId (NodeId(..))
+import           Ouroboros.Consensus.Protocol.Abstract (ValidationErr)
 import           Ouroboros.Consensus.Util.Condense (Condense (..))
-import           Ouroboros.Network.Block (MaxSlotNo(..))
+import           Ouroboros.Network.Block (HeaderHash, MaxSlotNo(..))
 
 import           Cardano.Config.Orphanage ()
 import           Cardano.Config.TraceConfig
@@ -121,19 +136,20 @@ data ProtocolFilepaths =
 -- (logging, tracing, protocol, slot length etc)
 newtype ConfigYamlFilePath = ConfigYamlFilePath
   { unConfigPath :: FilePath }
-  deriving Show
+  deriving newtype Show
 
 newtype TopologyFile = TopologyFile
   { unTopology :: FilePath }
-  deriving Show
+  deriving newtype Show
 
 newtype DbFile = DbFile
   { unDB :: FilePath }
-  deriving Show
+  deriving newtype Show
 
 newtype GenesisFile = GenesisFile
   { unGenesisFile :: FilePath }
-  deriving (Eq, Ord, Show, IsString)
+  deriving newtype Show
+  deriving (Eq, Ord, IsString)
 
 instance FromJSON GenesisFile where
   parseJSON (String genFp) = pure . GenesisFile $ T.unpack genFp
@@ -142,15 +158,17 @@ instance FromJSON GenesisFile where
 
 newtype DelegationCertFile = DelegationCertFile
   { unDelegationCert :: FilePath }
-  deriving Show
+  deriving newtype Show
 
 newtype SocketPath = SocketFile
   { unSocket :: FilePath }
-  deriving (Eq, Ord, Show, IsString)
+  deriving newtype Show
+  deriving (Eq, Ord, IsString)
 
 newtype SigningKeyFile = SigningKeyFile
   { unSigningKey ::  FilePath }
-  deriving (Eq, Ord, Show, IsString)
+  deriving newtype Show
+  deriving (Eq, Ord, IsString)
 
 data NodeConfiguration =
   NodeConfiguration
@@ -166,7 +184,7 @@ data NodeConfiguration =
     , ncTraceConfig :: TraceConfig
     , ncViewMode :: ViewMode
     , ncUpdate :: Update
-    } deriving (Show)
+    } deriving Show
 
 instance FromJSON NodeConfiguration where
   parseJSON = withObject "NodeConfiguration" $ \v -> do
@@ -214,12 +232,12 @@ instance FromJSON NodeConfiguration where
 -- | Socket path read from the command line.
 newtype CLISocketPath = CLISocketPath
   { unCLISocketPath :: SocketPath}
-  deriving Show
+  deriving newtype Show
 
 -- | Socket path defined in the node's configuration yaml file.
 newtype YamlSocketPath = YamlSocketPath
   { unYamlSocketPath :: SocketPath }
-  deriving Show
+  deriving newtype Show
 
 instance FromJSON YamlSocketPath where
   parseJSON (String sPath) = pure . YamlSocketPath . SocketFile $ T.unpack sPath
@@ -320,7 +338,8 @@ instance ToJSON NodeAddress where
 
 newtype NodeHostAddress
   = NodeHostAddress { unNodeHostAddress :: IP.IP }
-  deriving (Eq, Ord, Show)
+  deriving newtype Show
+  deriving (Eq, Ord)
 
 instance FromJSON NodeHostAddress where
   parseJSON (String ipStr) =
@@ -333,3 +352,43 @@ instance FromJSON NodeHostAddress where
 instance ToJSON NodeHostAddress where
   toJSON mha =
     String (T.pack . show $ unNodeHostAddress mha)
+
+--------------------------------------------------------------------------------
+-- Protocol & Tracing Related
+--------------------------------------------------------------------------------
+
+data SomeConsensusProtocol where
+
+     SomeConsensusProtocol :: (RunNode blk, TraceConstraints blk)
+                           => Consensus.Protocol blk (BlockProtocol blk)
+                           -> SomeConsensusProtocol
+
+
+-- | Tracing-related constraints for monitoring purposes.
+--
+-- When you need a 'Show' or 'Condense' instance for more types, just add the
+-- appropriate constraint here. There's no need to modify the consensus
+-- code-base, unless the corresponding instance is missing.
+type TraceConstraints blk =
+    ( Condense blk
+    , Condense [blk]
+    , Condense (Header blk)
+    , Condense (HeaderHash blk)
+    , Condense (GenTx blk)
+    , Condense (TxId (GenTx blk))
+    , HasTxs blk
+    , HasTxId (GenTx blk)
+    , Show (ApplyTxErr blk)
+    , Show (GenTx blk)
+    , Show (GenTxId blk)
+    , Show blk
+    , Show (Header blk)
+    , Show (TxId (GenTx blk))
+    , ToJSON   (TxId (GenTx blk))
+    , ToObject (GenTx blk)
+    , ToObject (Header blk)
+    , ToObject (LedgerError blk)
+    , ToObject (OtherHeaderEnvelopeError blk)
+    , ToObject (ValidationErr (BlockProtocol blk))
+    )
+

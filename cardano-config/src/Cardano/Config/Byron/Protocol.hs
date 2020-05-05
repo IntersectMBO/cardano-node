@@ -6,7 +6,7 @@
 {-# LANGUAGE RankNTypes        #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Cardano.Config.Protocol.Byron
+module Cardano.Config.Byron.Protocol
   ( mkConsensusProtocolRealPBFT
   , ByronProtocolInstantiationError(..)
   , renderByronProtocolInstantiationError
@@ -33,8 +33,8 @@ import           Ouroboros.Consensus.Byron.Ledger (ByronBlock)
 
 import           Cardano.Config.Types
                    (NodeConfiguration(..), ProtocolFilepaths(..),
-                    GenesisFile (..), Update (..), LastKnownBlockVersion (..))
-import           Cardano.Config.Protocol.Types (SomeConsensusProtocol(..))
+                    GenesisFile (..), Update (..), LastKnownBlockVersion (..),
+                    SomeConsensusProtocol(..))
 import           Cardano.TracingOrphanInstances.Byron ()
 
 
@@ -176,4 +176,3 @@ renderByronProtocolInstantiationError pie =
     SigningKeyDeserialiseFailure fp deserialiseFailure -> "Signing key deserialisation error in: " <> toS fp
                                                            <> " Error: " <> (T.pack $ show deserialiseFailure)
     SigningKeyFilepathNotSpecified -> "Signing key filepath not specified"
-

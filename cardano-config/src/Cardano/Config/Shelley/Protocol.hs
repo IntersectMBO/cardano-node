@@ -6,7 +6,7 @@
 {-# LANGUAGE RankNTypes        #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Cardano.Config.Protocol.Shelley
+module Cardano.Config.Shelley.Protocol
   ( mkConsensusProtocolTPraos
   , ShelleyProtocolInstantiationError(..)
   , renderShelleyProtocolInstantiationError

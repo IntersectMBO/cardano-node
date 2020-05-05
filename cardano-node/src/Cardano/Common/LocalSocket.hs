@@ -12,8 +12,7 @@ import           Prelude (show)
 import           Cardano.Prelude
 
 import           Control.Monad.Trans.Except.Extra (newExceptT)
-import           System.Directory (createDirectoryIfMissing, removeFile)
-import           System.FilePath (takeDirectory)
+import           System.Directory (removeFile)
 import           System.IO.Error (isDoesNotExistError)
 
 import           Cardano.Config.Types

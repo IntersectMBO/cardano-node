@@ -3,7 +3,7 @@
 {-# LANGUAGE NamedFieldPuns    #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Cardano.Config.Protocol.Mock
+module Cardano.Config.Mock.Protocol
   ( mkConsensusProtocolBFT
   , mkConsensusProtocolPBFT
   , mkConsensusProtocolPraos
@@ -28,8 +28,7 @@ import           Ouroboros.Consensus.Node.ProtocolInfo (NumCoreNodes (..))
 import           Ouroboros.Consensus.NodeId (CoreNodeId (..), NodeId (..))
 import           Ouroboros.Consensus.Protocol.Abstract (SecurityParam (..))
 
-import           Cardano.Config.Types (NodeConfiguration(..))
-import           Cardano.Config.Protocol.Types (SomeConsensusProtocol(..))
+import           Cardano.Config.Types (NodeConfiguration(..),SomeConsensusProtocol(..))
 import           Cardano.TracingOrphanInstances.Mock ()
 
 
@@ -160,4 +159,3 @@ renderMockProtocolInstantiationError pie =
   case pie of
     MissingCoreNodeId   -> "Missing core node id"
     MissingNumCoreNodes -> "NumCoreNodes: not specified in configuration yaml file."
-
