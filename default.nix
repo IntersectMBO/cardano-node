@@ -21,6 +21,10 @@ let
     # the Haskell.nix package set, reduced to local packages.
     (selectProjectPackages cardanoNodeHaskellPackages);
 
+  profiledHaskellPackages = recRecurseIntoAttrs
+    # the Haskell.nix package set (with profiling), reduced to local packages.
+    (selectProjectPackages cardanoNodeProfiledHaskellPackages);
+
   scripts = callPackage ./nix/scripts.nix { inherit customConfig; };
   # NixOS tests run a proxy and validate it listens
   nixosTests = import ./nix/nixos/tests {
@@ -40,7 +44,7 @@ let
   };
 
   self = {
-    inherit haskellPackages scripts nixosTests environments check-hydra dockerImage;
+    inherit haskellPackages profiledHaskellPackages scripts nixosTests environments check-hydra dockerImage;
 
     inherit (haskellPackages.cardano-node.identifier) version;
     # Grab the executable component of our package.
