@@ -8,12 +8,13 @@ cwd=$(dirname "$0")
 # shellcheck disable=SC2154
 banner "${testname}"
 
-OUTPUT_DIR="${TEST}"
-
-rm -rf "${OUTPUT_DIR}"
 if test -d cardano-cli ; then
   cd cardano-cli || exit 1
   fi
+
+OUTPUT_DIR="${TEST}"
+
+rm -rf "${OUTPUT_DIR}"
 
 mkdir "${OUTPUT_DIR}"
 

@@ -17,10 +17,11 @@ module Cardano.CLI.Shelley.Parsers
 
     -- * CLI flag types
   , GenesisDir (..)
+  , OpCertCounterFile (..)
   , OutputFile (..)
   , SigningKeyFile (..)
+  , TxBodyFile (..)
   , VerificationKeyFile (..)
-  , OpCertCounterFile (..)
   ) where
 
 import           Cardano.Prelude hiding (option)

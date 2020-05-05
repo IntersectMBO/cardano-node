@@ -75,6 +75,13 @@ assert_file_exists () {
     fi
 }
 
+fail_on_error () {
+  if test "$1" -ne 0 ; then
+    echo "Error code: $1"
+    exit "$1"
+    fi
+}
+
 report_result () {
   if test "${1}" = 0 ; then
     RESULT="${colourGreen}PASSED [ ${testname} ]${colourReset}"
