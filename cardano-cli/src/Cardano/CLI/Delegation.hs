@@ -22,15 +22,12 @@ import           Formatting (Format, sformat)
 import           Cardano.Binary (Annotated(..), serialize')
 import qualified Cardano.Chain.Delegation as Dlg
 import           Cardano.Chain.Slotting (EpochNumber)
+import           Cardano.Config.Types (CertificateFile (..))
 import qualified Cardano.Crypto as Crypto
 import           Cardano.Crypto (ProtocolMagicId)
 
 import           Cardano.CLI.Ops
 
-
-newtype CertificateFile =
-  CertificateFile FilePath
-  deriving (Eq, Ord, Show, IsString)
 
 newtype NewCertificateFile =
   NewCertificateFile { nFp :: FilePath }

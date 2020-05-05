@@ -10,11 +10,11 @@
 module Cardano.Config.Types
     ( CardanoEnvironment (..)
     , CBORObject (..)
+    , CertificateFile (..)
     , CLISocketPath (..)
     , ConfigYamlFilePath (..)
     , ConfigError (..)
     , DbFile (..)
-    , DelegationCertFile (..)
     , GenesisFile (..)
     , LastKnownBlockVersion (..)
     , NodeAddress (..)
@@ -156,9 +156,12 @@ instance FromJSON GenesisFile where
   parseJSON invalid = panic $ "Parsing of GenesisFile failed due to type mismatch. "
                            <> "Encountered: " <> (T.pack $ show invalid)
 
-newtype DelegationCertFile = DelegationCertFile
-  { unDelegationCert :: FilePath }
+-- Encompasses staking certificates, stake pool certificates,
+-- genesis delegate certificates and MIR certificates.
+newtype CertificateFile = CertificateFile
+  { unCertificate :: FilePath }
   deriving newtype Show
+  deriving Eq
 
 newtype SocketPath = SocketPath
   { unSocketPath :: FilePath }

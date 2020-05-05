@@ -35,7 +35,6 @@ library
                       , base16-bytestring
                       , bytestring
                       , cardano-binary
-                      , cardano-node
                       , cardano-config
                       , cardano-crypto-class
                       , cardano-crypto-wrapper

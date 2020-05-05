@@ -3,6 +3,8 @@
 module Cardano.Api.CBOR
   ( addressFromCBOR
   , addressToCBOR
+  , certificateFromCBOR
+  , certificateToCBOR
   , signingKeyFromCBOR
   , signingKeyToCBOR
   , verificationKeyFromCBOR
@@ -56,6 +58,26 @@ addressToCBOR kp =
     case kp of
       AddressByron   addr -> mconcat [ toCBOR (170 :: Word8), toCBOR addr ]
       AddressShelley addr -> mconcat [ toCBOR (171 :: Word8), toCBOR addr ]
+
+certificateFromCBOR :: ByteString -> Either ApiError Certificate
+certificateFromCBOR bs =
+    first ApiErrorCBOR . CBOR.decodeFullDecoder "ShelleyCertificate" decode $ LBS.fromStrict bs
+  where
+    decode :: Decoder s Certificate
+    decode = do
+      tag <- CBOR.decodeWord8
+      case tag of
+        180 -> ShelleyDelegationCertificate <$> fromCBOR
+        181 -> ShelleyStakePoolCertificate <$> fromCBOR
+        _ -> cborError $ DecoderErrorUnknownTag "ShelleyCertificate" tag
+
+certificateToCBOR :: Certificate -> ByteString
+certificateToCBOR sc =
+  CBOR.serializeEncoding' $
+    case sc of
+      ShelleyDelegationCertificate cert -> mconcat [ toCBOR (180 :: Word8) , toCBOR cert]
+      ShelleyStakePoolCertificate cert -> mconcat [ toCBOR (181 :: Word8) , toCBOR cert]
+
 
 signingKeyFromCBOR :: ByteString -> Either ApiError SigningKey
 signingKeyFromCBOR bs =
