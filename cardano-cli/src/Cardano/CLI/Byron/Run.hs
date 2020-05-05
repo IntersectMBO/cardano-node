@@ -4,36 +4,23 @@ module Cardano.CLI.Byron.Run
 
 import           Cardano.Prelude
 
-import           Control.Monad.Trans.Except.Extra (hoistEither)
-
-import           Cardano.Chain.Update (recoverUpId)
-
 import           Cardano.CLI.Byron.Parsers
 import           Cardano.CLI.Byron.UpdateProposal
-import           Cardano.CLI.Byron.Vote
-import           Cardano.CLI.Key
+import           Cardano.CLI.Byron.Vote (runVoteCreation, submitByronVote)
 import           Cardano.CLI.Ops
 
 runByronClientCommand :: ByronCommand -> ExceptT CliError IO ()
-runByronClientCommand bcc =
-  case bcc of
-    CreateVote configFp sKey upPropFp voteBool outputFp -> do
-        sK <- readSigningKey ByronEra sKey
-        upProp <- readByronUpdateProposal upPropFp
-        proposal <- hoistEither $ deserialiseByronUpdateProposal upProp
-        let updatePropId = recoverUpId proposal
-        vote <- createByronVote configFp sK updatePropId voteBool
-        ensureNewFileLBS outputFp (serialiseByronVote vote)
+runByronClientCommand (NodeCmd cmd) = runNodeCmd cmd
 
-    SubmitUpdateProposal configFp proposalFp mSocket ->
-        withIOManagerE $ \iocp -> submitByronUpdateProposal iocp configFp proposalFp mSocket
+runNodeCmd :: NodeCmd -> ExceptT CliError IO ()
+runNodeCmd (CreateVote configFp sKey upPropFp voteBool outputFp) =
+  runVoteCreation configFp sKey upPropFp voteBool outputFp
 
-    SubmitVote configFp voteFp mSocket ->
-        withIOManagerE $ \iocp -> submitByronVote iocp configFp voteFp mSocket
+runNodeCmd (SubmitUpdateProposal configFp proposalFp mSocket) =
+  withIOManagerE $ \iocp -> submitByronUpdateProposal iocp configFp proposalFp mSocket
 
-    UpdateProposal configFp sKey pVer sVer sysTag insHash outputFp params -> do
-        sK <- readSigningKey ByronEra sKey
-        proposal <- createUpdateProposal configFp sK pVer sVer sysTag insHash params
-        ensureNewFileLBS outputFp (serialiseByronUpdateProposal proposal)
+runNodeCmd (SubmitVote configFp voteFp mSocket) =
+  withIOManagerE $ \iocp -> submitByronVote iocp configFp voteFp mSocket
 
-
+runNodeCmd (UpdateProposal configFp sKey pVer sVer sysTag insHash outputFp params) =
+  runProposalCreation configFp sKey pVer sVer sysTag insHash outputFp params

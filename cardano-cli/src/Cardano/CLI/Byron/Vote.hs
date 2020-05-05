@@ -1,19 +1,13 @@
 {-# LANGUAGE GADTs #-}
 
 module Cardano.CLI.Byron.Vote
-  ( convertVoteToGenTx
-  , createByronVote
-  , createUpdate
-  , deserialiseByronVote
-  , readByronVote
-  , serialiseByronVote
+  ( runVoteCreation
   , submitByronVote
   ) where
 
 import           Cardano.Prelude
 
-import           Control.Monad.Trans.Except.Extra
-                   (firstExceptT, handleIOExceptT, hoistEither)
+import           Control.Monad.Trans.Except.Extra (firstExceptT, hoistEither)
 import           Control.Tracer (nullTracer, stdoutTracer, traceWith)
 import qualified Data.ByteString.Lazy as LB
 
@@ -22,8 +16,11 @@ import qualified Cardano.Binary as Binary
 import           Cardano.Config.Types
 import           Cardano.Chain.Genesis (GenesisData(..))
 import           Cardano.Chain.Update
-                   (AVote(..), ProtocolVersion(..), SoftwareVersion(..),
-                    UpId, Vote, mkVote, recoverVoteId)
+                   (AVote(..), UpId, Vote, mkVote, recoverUpId, recoverVoteId)
+import           Cardano.CLI.Byron.UpdateProposal
+                   (deserialiseByronUpdateProposal, readByronUpdateProposal)
+import           Cardano.CLI.Key (readSigningKey)
+import           Cardano.CLI.Ops (CardanoEra(..), ensureNewFileLBS)
 import           Cardano.Crypto.Signing (SigningKey)
 import           Ouroboros.Consensus.Byron.Ledger.Block (ByronBlock)
 import qualified Ouroboros.Consensus.Byron.Ledger.Mempool as Mempool
@@ -37,7 +34,20 @@ import           Cardano.Node.Submission (submitGeneralTx)
 import           Cardano.CLI.Ops (CliError(..), readGenesis, withRealPBFT)
 import           Cardano.Common.LocalSocket (chooseSocketPath)
 
-
+runVoteCreation
+  :: ConfigYamlFilePath
+  -> SigningKeyFile
+  -> FilePath
+  -> Bool
+  -> FilePath
+  -> ExceptT CliError IO ()
+runVoteCreation configFp sKey upPropFp voteBool outputFp = do
+  sK <- readSigningKey ByronEra sKey
+  upProp <- readByronUpdateProposal upPropFp
+  proposal <- hoistEither $ deserialiseByronUpdateProposal upProp
+  let updatePropId = recoverUpId proposal
+  vote <- createByronVote configFp sK updatePropId voteBool
+  ensureNewFileLBS outputFp (serialiseByronVote vote)
 
 convertVoteToGenTx :: AVote ByteString -> Mempool.GenTx ByronBlock
 convertVoteToGenTx vote = Mempool.ByronUpdateVote (recoverVoteId vote) vote
@@ -63,10 +73,6 @@ deserialiseByronVote bs =
   annotateVote :: AVote Binary.ByteSpan -> AVote ByteString
   annotateVote vote = Binary.annotationBytes bs vote
 
-readByronVote :: FilePath -> ExceptT CliError IO LByteString
-readByronVote fp = handleIOExceptT
-                     (ByronReadVoteFileFailure fp . toS . displayException)
-                     (LB.readFile fp)
 
 serialiseByronVote :: Vote -> LByteString
 serialiseByronVote = Binary.serialize
@@ -92,11 +98,3 @@ submitByronVote iocp config voteFp mSocket = do
                                  (pInfoConfig (Consensus.protocolInfo p))
                                  genTx
                                  nullTracer -- stdoutTracer
-
-createUpdate :: ProtocolVersion -> SoftwareVersion -> Update
-createUpdate (ProtocolVersion major minor alt) (SoftwareVersion appName sNumber) = do
-  let lastKnownBlockVersion = LastKnownBlockVersion { lkbvMajor = major
-                                                    , lkbvMinor = minor
-                                                    , lkbvAlt = alt
-                                                    }
-  Update appName sNumber $ lastKnownBlockVersion
