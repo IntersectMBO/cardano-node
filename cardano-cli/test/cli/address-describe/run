@@ -1,0 +1,60 @@
+#!/bin/sh -u
+
+cwd=$(dirname "$0")
+
+# shellcheck source=/dev/null
+. "${cwd}/../core/common"
+
+# shellcheck disable=SC2154
+banner "${testname}"
+
+OUTPUT_DIR="${TEST}"
+
+rm -rf "${OUTPUT_DIR}"
+if test -d cardano-cli ; then
+  cd cardano-cli || exit 1
+  fi
+
+mkdir "${OUTPUT_DIR}"
+
+error=0
+
+#-------------------------
+
+byron_base58=$(head -1 test/cli/address-describe/data/byron-base58.address)
+
+${CARDANO_CLI} shelley address describe \
+    --address "${byron_base58}" \
+    > "${OUTPUT_DIR}/describe"
+
+assert_file_exists "${OUTPUT_DIR}/describe"
+assert_string 'Encoding: Base58' "${OUTPUT_DIR}/describe"
+assert_string 'Era: Byron' "${OUTPUT_DIR}/describe"
+
+#-------------------------
+
+byron_hex=$(head -1 test/cli/address-describe/data/byron-hex.address)
+
+${CARDANO_CLI} shelley address describe \
+    --address "${byron_hex}" \
+    > "${OUTPUT_DIR}/describe"
+
+assert_file_exists "${OUTPUT_DIR}/describe"
+assert_string 'Encoding: Hex' "${OUTPUT_DIR}/describe"
+assert_string 'Era: Byron' "${OUTPUT_DIR}/describe"
+
+#-------------------------
+
+shelley_hex=$(head -1 test/cli/address-describe/data/shelley-hex.address)
+
+${CARDANO_CLI} shelley address describe \
+    --address "${shelley_hex}" \
+    > "${OUTPUT_DIR}/describe"
+
+assert_file_exists "${OUTPUT_DIR}/describe"
+assert_string 'Encoding: Hex' "${OUTPUT_DIR}/describe"
+assert_string 'Era: Shelley' "${OUTPUT_DIR}/describe"
+
+#-------------------------
+
+report_result ${error}

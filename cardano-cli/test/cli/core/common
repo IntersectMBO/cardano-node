@@ -4,9 +4,9 @@ if test "${CARDANO_CLI:-x}" = "x" ; then
   # Need this for when the test scripts are run directly instead of via the
   # Haskell test runner.
   if test -d dist-newstyle ; then
-    CARDANO_CLI=$(find dist-newstyle -type f -name cardano-cli)
+    CARDANO_CLI=$(pwd)/$(find dist-newstyle -type f -name cardano-cli)
   elif test -d ../dist-newstyle ; then
-    CARDANO_CLI=$(find ../dist-newstyle -type f -name cardano-cli)
+    CARDANO_CLI=$(pwd)/$(find ../dist-newstyle -type f -name cardano-cli)
     fi
   fi
 
@@ -50,10 +50,19 @@ banner () {
     echo "Running in ${TEST}"
 }
 
+assert_string () {
+  count=$(grep -c "$1" "$2")
+  if test "${count}" != 1 ; then
+    echo "$2: ${colourRed}Expected '$1'${colourReset}"
+    cat "$2"
+    exit 1
+    fi
+}
+
 assert_file_exists () {
-    if test ! -f "$1" ; then
-        echo "Output file '$1' is missing."
-        exit 1
+  if test ! -f "$1" ; then
+    echo "Output file '$1' is missing."
+    exit 1
     fi
 }
 

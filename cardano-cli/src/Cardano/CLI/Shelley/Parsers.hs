@@ -70,6 +70,7 @@ data AddressCmd
   | AddressKeyHash VerificationKeyFile
   | AddressBuild   VerificationKeyFile
   | AddressBuildMultiSig  --TODO
+  | AddressDescribe Text
   deriving (Eq, Show)
 
 
@@ -201,7 +202,7 @@ parseShelleyCommands =
   Opt.subparser $
     mconcat
       [ Opt.command "address"
-          (Opt.info (AddressCmd <$> pAddress) $ Opt.progDesc "Shelley address commands")
+          (Opt.info (AddressCmd <$> pAddressCmd) $ Opt.progDesc "Shelley address commands")
       , Opt.command "stake-address"
           (Opt.info (StakeAddressCmd <$> pStakeAddress) $ Opt.progDesc "Shelley stake address commands")
       , Opt.command "transaction"
@@ -222,8 +223,8 @@ parseShelleyCommands =
           (Opt.info (GenesisCmd <$> pGenesisCmd) $ Opt.progDesc "Shelley genesis block commands")
       ]
 
-pAddress :: Parser AddressCmd
-pAddress =
+pAddressCmd :: Parser AddressCmd
+pAddressCmd =
   Opt.subparser $
     mconcat
       [ Opt.command "key-gen"
@@ -234,6 +235,8 @@ pAddress =
           (Opt.info pAddressBuild $ Opt.progDesc "Build an address")
       , Opt.command "build-multisig"
           (Opt.info pAddressBuildMultiSig $ Opt.progDesc "Build a multi-sig address")
+      , Opt.command "describe"
+          (Opt.info pAddressDescribe $ Opt.progDesc "Describe an address")
       ]
   where
     pAddressKeyGen :: Parser AddressCmd
@@ -248,6 +251,8 @@ pAddress =
     pAddressBuildMultiSig :: Parser AddressCmd
     pAddressBuildMultiSig = pure AddressBuildMultiSig
 
+    pAddressDescribe :: Parser AddressCmd
+    pAddressDescribe = AddressDescribe <$> pAddress
 
 pStakeAddress :: Parser StakeAddressCmd
 pStakeAddress =
@@ -745,4 +750,13 @@ pTxFile fdir =
       (  Opt.long "tx-file"
       <> Opt.metavar "FILEPATH"
       <> Opt.help (show fdir ++ " filepath of the Tx.")
+      )
+
+pAddress :: Parser Text
+pAddress =
+  Text.pack <$>
+    Opt.strOption
+      (  Opt.long "address"
+      <> Opt.metavar "ADDRESS"
+      <> Opt.help "A Cardano address"
       )
