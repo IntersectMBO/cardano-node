@@ -51,6 +51,11 @@ module Cardano.Api
   , renderLocalStateQueryError
   , queryFilteredUTxOFromLocalState
   , queryPParamsFromLocalState
+
+  -- Delegation Certificate Related
+  , shelleyDeregisterStakingAddress
+  , shelleyDelegateStake
+  , shelleyRegisterStakingAddress
   ) where
 
 import           Cardano.Prelude
@@ -105,6 +110,37 @@ shelleyGenSigningKey = do
   where
     dsignProxy :: Proxy (Shelley.DSIGN Shelley.TPraosStandardCrypto)
     dsignProxy = Proxy
+
+-- | Register a shelley staking key.
+shelleyRegisterStakingAddress
+  :: ShelleyVerificationKeyHashStaking
+  -> Certificate
+shelleyRegisterStakingAddress vKeyHash= do
+  let cred = mkShelleyStakingCredential vKeyHash
+  ShelleyDelegationCertificate $ Shelley.DCertDeleg $ Shelley.RegKey cred
+
+-- | Deregister a shelley staking key.
+shelleyDeregisterStakingAddress
+  :: ShelleyVerificationKeyHashStaking
+  -> Certificate
+shelleyDeregisterStakingAddress vKeyHash = do
+  let cred = mkShelleyStakingCredential vKeyHash
+  ShelleyDelegationCertificate $ Shelley.DCertDeleg $ Shelley.DeRegKey cred
+
+-- | Delegate your stake (as the delegator) to a specified delegatee.
+shelleyDelegateStake
+  :: ShelleyVerificationKeyHashStaking
+  -- ^ Delegator verification key hash
+  -> ShelleyVerificationKeyHashStakePool
+  -- ^ Delegatee verification key hash
+  -> Certificate
+shelleyDelegateStake delegatorKeyHash delegateeKeyHash = do
+  let cred = mkShelleyStakingCredential delegatorKeyHash
+  ShelleyDelegationCertificate $ Shelley.DCertDeleg $ Shelley.Delegate $ Shelley.Delegation cred delegateeKeyHash
+
+mkShelleyStakingCredential :: ShelleyVerificationKeyHashStaking -> ShelleyCredentialStaking
+mkShelleyStakingCredential vKey =
+  Shelley.KeyHashObj vKey
 
 -- Given key information (public key, and other network parameters), generate an Address.
 -- Originally: mkAddress :: Network -> VerificationKey -> VerificationKeyInfo -> Address
