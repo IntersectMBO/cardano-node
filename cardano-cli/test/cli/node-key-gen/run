@@ -24,25 +24,8 @@ assert_file_exists "${OUTPUT_DIR}/key-gen.vkey"
 assert_file_exists "${OUTPUT_DIR}/key-gen.skey"
 assert_file_exists "${OUTPUT_DIR}/op-cert.counter"
 
-count=$(grep -c 'Node operator verification key' "${OUTPUT_DIR}/key-gen.vkey")
-if test "${count}" != 1 ; then
-  echo "${OUTPUT_DIR}/key-gen.vkey: Expected 'Node operator verification key'"
-  cat "${OUTPUT_DIR}/key-gen.vkey"
-  error=1
-  fi
-
-count=$(grep -c 'Node operator signing key' "${OUTPUT_DIR}/key-gen.skey")
-if test "${count}" != 1 ; then
-  echo "${OUTPUT_DIR}/key-gen.skey: Expected 'Node operator signing key'"
-  cat "${OUTPUT_DIR}/key-gen.skey"
-  error=1
-  fi
-
-count=$(grep -c 'Node operational certificate issue counter' "${OUTPUT_DIR}/op-cert.counter")
-if test "${count}" != 1 ; then
-  echo "${OUTPUT_DIR}/op-cert.counter: Expected 'Node operational certificate issue counter'"
-  cat "${OUTPUT_DIR}/op-cert.counter"
-  error=1
-  fi
+assert_string 'Node operator verification key' "${OUTPUT_DIR}/key-gen.vkey"
+assert_string 'Node operator signing key' "${OUTPUT_DIR}/key-gen.skey"
+assert_string 'Node operational certificate issue counter' "${OUTPUT_DIR}/op-cert.counter"
 
 report_result ${error}

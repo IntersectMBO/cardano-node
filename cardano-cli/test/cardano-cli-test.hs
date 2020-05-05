@@ -8,6 +8,7 @@ import           Control.Monad (foldM, forM, when)
 import           Data.Maybe (isNothing)
 import qualified Data.List as List
 import qualified Data.Text as Text
+import           Data.Text.ANSI (brightRed, green)
 
 import           Prelude (String)
 
@@ -29,7 +30,12 @@ main = do
 
   tests <- List.sort . filter (`notElem` ["core", "data"]) <$> listDirectory "test/cli/"
   res <- forM tests $ \ t -> rawSystem (joinPath ["test", "cli", t, "run"]) []
-  if all (== ExitSuccess) res
+  let count = length $ filter (/= ExitSuccess) res
+  if
+    | count == 1 -> putTextLn $ brightRed "1 failure\n"
+    | count > 1 -> putTextLn $ brightRed (Text.pack (show count) <> " failures\n")
+    | otherwise -> putTextLn $ green "All tests passed!\n"
+  if count == 0
     then exitSuccess
     else exitFailure
 

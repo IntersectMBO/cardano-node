@@ -59,6 +59,15 @@ assert_string () {
     fi
 }
 
+assert_line_count () {
+  line_count=$(wc -l < "$2")
+  if test "${line_count}" != "$1" ; then
+    echo "$2: line count is ${line_count} "
+    cat "$2"
+    exit 1
+    fi
+}
+
 assert_file_exists () {
   if test ! -f "$1" ; then
     echo "Output file '$1' is missing."

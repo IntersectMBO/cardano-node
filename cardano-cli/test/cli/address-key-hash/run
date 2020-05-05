@@ -36,11 +36,6 @@ ${CARDANO_CLI} shelley address key-hash \
 
 assert_file_exists "${OUTPUT_DIR}/vkey-hash"
 
-line_count=$(wc -l < "${OUTPUT_DIR}/vkey-hash")
-if test "${line_count}" != 1 ; then
-  echo "Verification key hash:"
-  cat "${OUTPUT_DIR}/vkey-hash"
-  error=1
-  fi
+assert_line_count 1 "${OUTPUT_DIR}/vkey-hash"
 
 report_result ${error}
