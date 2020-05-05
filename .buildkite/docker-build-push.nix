@@ -49,10 +49,6 @@ in
     echo "Loading $fullrepo:$gitrev"
     docker load -i ${image}
 
-    # An image is built on each commit
-    echo "Pushing $fullrepo:$gitrev"
-    docker push "$fullrepo:$gitrev"
-
     # If a release event, apply two tags to the image
     # e.g. "1.0.0" AND "latest"
     if [[ "$event" = release ]]; then
