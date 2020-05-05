@@ -64,10 +64,8 @@ in
       docker tag $fullrepo:$version $fullrepo:latest
       echo "Pushing $fullrepo:latest"
       docker push "$fullrepo:latest"
-    fi
-
     # Every commit to master needs to be tagged with master
-    if [[ "$branch" = master ]]; then
+    elif [[ "$branch" = master ]]; then
       echo "Tagging as master"
       docker tag $fullrepo:$gitrev $fullrepo:$branch
       echo "Pushing $fullrepo:$branch"
