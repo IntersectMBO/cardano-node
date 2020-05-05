@@ -36,6 +36,9 @@ let
       loggingExtras = null;
       tracingVerbosity = "normal";
       dbPrefix = "db-${envConfig.name}";
+      extraArgs = [];
+      profiling = "none";
+      rtsArgs = [];
     } // (builtins.removeAttrs envConfig ["nodeConfig"]);
 
     nodeConfig = (envConfig.nodeConfig or environments.mainnet.nodeConfig)
@@ -74,7 +77,11 @@ let
         nodeConfig
         nodeId
         dbPrefix
-        tracingVerbosity;
+        tracingVerbosity
+        extraArgs
+        rtsArgs
+        profiling
+        ;
       runtimeDir = null;
       environment = envConfig.name;
       topology = topologyFile;

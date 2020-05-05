@@ -69,7 +69,6 @@ let
       (lib.optionalAttrs profiling {
         enableLibraryProfiling = true;
         packages.cardano-node.components.exes.cardano-node.enableExecutableProfiling = true;
-        profilingDetail = "default";
       })
       (lib.optionalAttrs stdenv.hostPlatform.isWindows {
         # Disable cabal-doctest tests by turning off custom setups
