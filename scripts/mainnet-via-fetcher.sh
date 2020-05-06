@@ -120,7 +120,7 @@ phase_prefetch()
                 --no-profile
                 --no-stats
                 --config-name     'mainnet-silent'
-                --topology-name   'mainnet'
+                --topology-name   'byron-mainnet'
                 --state           'mainnet'
                 ## non-run_node args follow:
                 "${REMAINING_TOP_ARGS[@]}"
