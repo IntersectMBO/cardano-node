@@ -5,6 +5,7 @@
 {-# LANGUAGE TupleSections #-}
 module Cardano.CLI.Shelley.Run.Genesis
   ( runGenesisCreate
+  , runGenesisTxIn
   ) where
 
 import           Cardano.Prelude
@@ -36,17 +37,42 @@ import qualified Data.List as List
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
+import qualified Data.Text.IO as Text
 import           Data.Time.Clock (NominalDiffTime, UTCTime, addUTCTime, getCurrentTime)
 
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
 import           Ouroboros.Consensus.Shelley.Protocol (TPraosStandardCrypto)
 
+import           Ouroboros.Consensus.Shelley.Node
+
+import qualified Cardano.Crypto.Hash.Class as Crypto
+
 import           Shelley.Spec.Ledger.Coin (Coin (..))
 import           Shelley.Spec.Ledger.Keys (GenKeyHash, KeyHash)
 import qualified Shelley.Spec.Ledger.Keys as Ledger
+import qualified Shelley.Spec.Ledger.TxData as Shelley
 
 import           System.Directory (createDirectoryIfMissing, listDirectory)
 import           System.FilePath ((</>), takeFileName, takeExtension)
+
+
+runGenesisTxIn :: VerificationKeyFile -> ExceptT CliError IO ()
+runGenesisTxIn (VerificationKeyFile vkeyPath) =
+    firstExceptT KeyCliError $ do
+      vkey <- readVerKey GenesisUTxOKey vkeyPath
+      let AddressShelley addr = shelleyVerificationKeyAddress
+                                  (VerificationKeyShelley vkey) Mainnet
+          txin = fromShelleyTxIn (initialFundsPseudoTxIn addr)
+      liftIO $ Text.putStrLn $ renderTxIn txin
+  where
+    fromShelleyTxIn :: Shelley.TxIn TPraosStandardCrypto -> TxIn
+    fromShelleyTxIn (Shelley.TxIn txid txix) =
+        TxIn (fromShelleyTxId txid) (fromIntegral txix)
+
+    fromShelleyTxId :: Shelley.TxId TPraosStandardCrypto -> TxId
+    fromShelleyTxId (Shelley.TxId (Crypto.UnsafeHash h)) =
+        TxId (Crypto.UnsafeHash h)
+
 
 runGenesisCreate :: GenesisDir -> Word -> Maybe SystemStart -> Lovelace -> ExceptT CliError IO ()
 runGenesisCreate (GenesisDir gendir) count mStart amount = do
