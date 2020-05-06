@@ -299,6 +299,7 @@ data CliError
   | ShelleyGenesisError !ShelleyGenesisError
   | IncorrectProtocolSpecifiedError !Protocol
   | NodeLocalStateQueryError !AcquireFailure
+  | AddressDescribeError !Text
 
 instance Show CliError where
   show (AddressCliError e)
@@ -393,6 +394,8 @@ instance Show CliError where
     = "Incorrect protocol specified: " <> (toS $ show ptcl)
   show (NodeLocalStateQueryError acquireFailure)
     = "Error querying node's local state: " <> show acquireFailure
+  show (AddressDescribeError txt)
+    = T.unpack txt
 
 data RealPBFTError
   = IncorrectProtocolSpecified !Protocol

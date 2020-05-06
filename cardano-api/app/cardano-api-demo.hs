@@ -7,11 +7,11 @@ import qualified Data.ByteString.Char8 as BS
 
 main :: IO ()
 main = do
-  keyPair <- byronGenKeyPair
-  BS.putStrLn $ renderKeyPairView keyPair
+  sk <- byronGenSigningKey
+  BS.putStrLn $ renderSigningKeyView sk
 
   -- Could also be 'Testnet x'.
-  let vk = mkVerificationKey keyPair
+  let vk = getVerificationKey sk
   BS.putStrLn $ renderVerificationKeyView vk
 
   let addr = byronVerificationKeyAddress vk Mainnet

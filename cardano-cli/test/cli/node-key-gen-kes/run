@@ -23,18 +23,7 @@ ${CARDANO_CLI} shelley node key-gen-KES \
 assert_file_exists "${OUTPUT_DIR}/kes.vkey"
 assert_file_exists "${OUTPUT_DIR}/kes.skey"
 
-count=$(grep -c 'VKeyES TPraosStandardCrypto' "${OUTPUT_DIR}/kes.vkey")
-if test "${count}" != 1 ; then
-  echo "${OUTPUT_DIR}/kes.vkey: Expected 'VKeyES TPraosStandardCrypto'"
-  cat "${OUTPUT_DIR}/kes.vkey"
-  error=1
-  fi
-
-count=$(grep -c 'SKeyES TPraosStandardCrypto' "${OUTPUT_DIR}/kes.skey")
-if test "${count}" != 1 ; then
-  echo "${OUTPUT_DIR}/kes.skey: Expected 'SKeyES TPraosStandardCrypto'"
-  cat "${OUTPUT_DIR}/kes.skey"
-  error=1
-  fi
+assert_string 'VKeyES TPraosStandardCrypto' "${OUTPUT_DIR}/kes.vkey"
+assert_string 'SKeyES TPraosStandardCrypto' "${OUTPUT_DIR}/kes.skey"
 
 report_result ${error}

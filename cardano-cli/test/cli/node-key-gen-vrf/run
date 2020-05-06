@@ -22,18 +22,8 @@ ${CARDANO_CLI} shelley node key-gen-VRF \
 assert_file_exists "${OUTPUT_DIR}/vrf.vkey"
 assert_file_exists "${OUTPUT_DIR}/vrf.skey"
 
-count=$(grep -c 'VerKeyVRF SimpleVRF' "${OUTPUT_DIR}/vrf.vkey")
-if test "${count}" != 1 ; then
-  echo "${OUTPUT_DIR}/vrf.vkey: Expected 'VerKeyVRF SimpleVRF'"
-  cat "${OUTPUT_DIR}/vrf.vkey"
-  error=1
-  fi
+assert_string 'VerKeyVRF SimpleVRF' "${OUTPUT_DIR}/vrf.vkey"
+assert_string 'SignKeyVRF SimpleVRF' "${OUTPUT_DIR}/vrf.skey"
 
-count=$(grep -c 'SignKeyVRF SimpleVRF' "${OUTPUT_DIR}/vrf.skey")
-if test "${count}" != 1 ; then
-  echo "${OUTPUT_DIR}/vrf.skey: Expected 'SignKeyVRF SimpleVRF'"
-  cat "${OUTPUT_DIR}/vrf.skey"
-  error=1
-  fi
 
 report_result ${error}

@@ -36,11 +36,6 @@ ${CARDANO_CLI} shelley node issue-op-cert \
 
 assert_file_exists "${OUTPUT_DIR}/operational.cert"
 
-count=$(grep -c 'Node operational certificate' "${OUTPUT_DIR}/operational.cert")
-if test "${count}" != 1 ; then
-  echo "${OUTPUT_DIR}/operational.cert: Expected 'Node operational certificate'"
-  cat "${OUTPUT_DIR}/operational.cert"
-  error=1
-  fi
+assert_string 'Node operational certificate' "${OUTPUT_DIR}/operational.cert"
 
 report_result ${error}

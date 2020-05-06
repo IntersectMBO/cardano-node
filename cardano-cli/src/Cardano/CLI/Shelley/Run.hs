@@ -28,6 +28,10 @@ import           Cardano.Config.Shelley.KES
 import           Cardano.Config.Shelley.OCert
 import           Cardano.Config.Shelley.VRF
 import           Cardano.Config.Types (SigningKeyFile(..))
+import           Cardano.CLI.Shelley.Run.Address (runAddressCmd)
+import           Cardano.CLI.Shelley.Run.KeyGen
+import           Cardano.CLI.Shelley.Run.Genesis (runGenesisCreate)
+import           Cardano.CLI.Shelley.Run.Transaction (runTransactionCmd)
 
 
 
@@ -53,10 +57,6 @@ runShelleyClientCommand (GenesisCmd      cmd) = runGenesisCmd      cmd
 
 runStakeAddressCmd :: StakeAddressCmd -> ExceptT CliError IO ()
 runStakeAddressCmd cmd = liftIO $ putStrLn $ "runStakeAddressCmd: " ++ show cmd
-
-
-runTransactionCmd :: TransactionCmd -> ExceptT CliError IO ()
-runTransactionCmd cmd = liftIO $ putStrLn $ "runTransactionCmd: " ++ show cmd
 
 
 runNodeCmd :: NodeCmd -> ExceptT CliError IO ()

@@ -22,16 +22,7 @@ ${CARDANO_CLI} shelley address key-gen \
 assert_file_exists "${OUTPUT_DIR}/address.vkey"
 assert_file_exists "${OUTPUT_DIR}/address.skey"
 
-count=$(grep -c VerificationKeyShelley "${OUTPUT_DIR}/address.vkey")
-if test "${count}" != 1 ; then
-  echo "${OUTPUT_DIR}/address.vkey: Expected VerificationKeyShelley"
-  error=1
-  fi
-
-count=$(grep -c KeyPairShelley "${OUTPUT_DIR}/address.skey")
-if test "${count}" != 1 ; then
-  echo "${OUTPUT_DIR}/address.skey: Expected KeyPairShelley"
-  error=1
-  fi
+assert_string 'VerificationKeyShelley' "${OUTPUT_DIR}/address.vkey"
+assert_string 'SigningKeyShelley' "${OUTPUT_DIR}/address.skey"
 
 report_result ${error}

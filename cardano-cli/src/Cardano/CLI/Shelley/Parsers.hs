@@ -17,15 +17,16 @@ module Cardano.CLI.Shelley.Parsers
 
     -- * CLI flag types
   , GenesisDir (..)
+  , OpCertCounterFile (..)
   , OutputFile (..)
   , SigningKeyFile (..)
+  , TxBodyFile (..)
   , VerificationKeyFile (..)
-  , OpCertCounterFile (..)
   ) where
 
 import           Cardano.Prelude hiding (option)
 
-import           Cardano.Chain.Common (Lovelace, mkLovelace)
+import           Cardano.Api
 import           Cardano.Common.Parsers (parseConfigFile, parseCLISocketPath, parseNodeAddress)
 import           Cardano.Slotting.Slot (EpochNo (..))
 
@@ -34,6 +35,7 @@ import           Cardano.Config.Types (CLISocketPath, ConfigYamlFilePath (..), N
 import           Cardano.Config.Shelley.OCert (KESPeriod(..))
 import           Cardano.CLI.Key (VerificationKeyFile(..))
 
+import qualified Data.Text as Text
 import           Data.Time.Clock (UTCTime)
 import           Data.Time.Format (defaultTimeLocale, iso8601DateFormat, parseTimeOrError)
 
@@ -42,7 +44,6 @@ import qualified Options.Applicative as Opt
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
 
 import           Prelude (String)
-import qualified Prelude
 
 
 --
@@ -70,6 +71,7 @@ data AddressCmd
   | AddressKeyHash VerificationKeyFile
   | AddressBuild   VerificationKeyFile
   | AddressBuildMultiSig  --TODO
+  | AddressDescribe Text
   deriving (Eq, Show)
 
 
@@ -81,8 +83,8 @@ data StakeAddressCmd
 
 
 data TransactionCmd
-  = TxBuild         -- { input :: [Utxo], output :: [(Address,Lovelace)], nodeAddr :: NodeAddress }
-  | TxSign          -- { transaction :: Transaction, keys :: [PrivKeyFile], utxo :: [Utxo], nodeAddr :: NodeAddress }
+  = TxBuildRaw [TxIn] [TxOut] SlotNo Lovelace TxBodyFile
+  | TxSign     TxBodyFile TxFile [SigningKeyFile]
   | TxWitness       -- { transaction :: Transaction, key :: PrivKeyFile, nodeAddr :: NodeAddress }
   | TxSignWitness   -- { transaction :: Transaction, witnesses :: [Witness], nodeAddr :: NodeAddress }
   | TxCheck         -- { transaction :: Transaction, nodeAddr :: NodeAddress }
@@ -183,6 +185,14 @@ newtype PrivKeyFile
   = PrivKeyFile FilePath
   deriving (Eq, Show)
 
+newtype TxBodyFile
+  = TxBodyFile FilePath
+  deriving (Eq, Show)
+
+newtype TxFile
+  = TxFile FilePath
+  deriving (Eq, Show)
+
 
 --
 -- Shelley CLI command parsers
@@ -193,7 +203,7 @@ parseShelleyCommands =
   Opt.subparser $
     mconcat
       [ Opt.command "address"
-          (Opt.info (AddressCmd <$> pAddress) $ Opt.progDesc "Shelley address commands")
+          (Opt.info (AddressCmd <$> pAddressCmd) $ Opt.progDesc "Shelley address commands")
       , Opt.command "stake-address"
           (Opt.info (StakeAddressCmd <$> pStakeAddress) $ Opt.progDesc "Shelley stake address commands")
       , Opt.command "transaction"
@@ -214,8 +224,8 @@ parseShelleyCommands =
           (Opt.info (GenesisCmd <$> pGenesisCmd) $ Opt.progDesc "Shelley genesis block commands")
       ]
 
-pAddress :: Parser AddressCmd
-pAddress =
+pAddressCmd :: Parser AddressCmd
+pAddressCmd =
   Opt.subparser $
     mconcat
       [ Opt.command "key-gen"
@@ -226,6 +236,8 @@ pAddress =
           (Opt.info pAddressBuild $ Opt.progDesc "Build an address")
       , Opt.command "build-multisig"
           (Opt.info pAddressBuildMultiSig $ Opt.progDesc "Build a multi-sig address")
+      , Opt.command "describe"
+          (Opt.info pAddressDescribe $ Opt.progDesc "Describe an address")
       ]
   where
     pAddressKeyGen :: Parser AddressCmd
@@ -240,6 +252,8 @@ pAddress =
     pAddressBuildMultiSig :: Parser AddressCmd
     pAddressBuildMultiSig = pure AddressBuildMultiSig
 
+    pAddressDescribe :: Parser AddressCmd
+    pAddressDescribe = AddressDescribe <$> pAddress
 
 pStakeAddress :: Parser StakeAddressCmd
 pStakeAddress =
@@ -265,7 +279,7 @@ pStakeAddress =
 
     pDelegationFee :: Parser Lovelace
     pDelegationFee =
-      either (Prelude.error . Prelude.show) identity . mkLovelace <$>
+      Lovelace <$>
         Opt.option Opt.auto
           (  Opt.long "delegation-fee"
           <> Opt.metavar "LOVELACE"
@@ -278,8 +292,8 @@ pTransaction :: Parser TransactionCmd
 pTransaction =
   Opt.subparser $
     mconcat
-      [ Opt.command "build"
-          (Opt.info pTransactionBuild $ Opt.progDesc "Build a transaction")
+      [ Opt.command "build-raw"
+          (Opt.info pTransactionBuild $ Opt.progDesc "Build a transaction (low-level, inconvenient)")
       , Opt.command "sign"
           (Opt.info pTransactionSign $ Opt.progDesc "Sign a transaction")
       , Opt.command "witness"
@@ -295,10 +309,16 @@ pTransaction =
       ]
   where
     pTransactionBuild :: Parser TransactionCmd
-    pTransactionBuild = pure TxBuild
+    pTransactionBuild = TxBuildRaw <$> some pTxIn
+                                   <*> some pTxOut
+                                   <*> pTxTTL
+                                   <*> pTxFee
+                                   <*> pTxBodyFile Output
 
     pTransactionSign  :: Parser TransactionCmd
-    pTransactionSign = pure TxSign
+    pTransactionSign = TxSign <$> pTxBodyFile Input
+                              <*> pTxFile Output
+                              <*> many (pSigningKeyFile Input)
 
     pTransactionWitness :: Parser TransactionCmd
     pTransactionWitness = pure TxWitness
@@ -542,12 +562,11 @@ pGenesisCmd =
 
     pGenesisDelegates :: Parser Word
     pGenesisDelegates =
-      Prelude.read <$>
-        Opt.strOption
+        Opt.option Opt.auto
           (  Opt.long "genesis-delegates"
           <> Opt.metavar "INT"
           <> Opt.help "The number of genesis delegates [default is 7]."
-          <> Opt.value "7"
+          <> Opt.value 7
           )
 
     convertTime :: String -> UTCTime
@@ -556,7 +575,7 @@ pGenesisCmd =
 
     pInitialSupply :: Parser Lovelace
     pInitialSupply =
-      either (Prelude.error . Prelude.show) identity . mkLovelace <$>
+      Lovelace <$>
         Opt.option Opt.auto
           (  Opt.long "supply"
           <> Opt.metavar "LOVELACE"
@@ -680,4 +699,65 @@ pKESVerificationKeyFile =
       (  Opt.long "hot-kes-verification-key-file"
       <> Opt.metavar "FILEPATH"
       <> Opt.help "Filepath of the hot KES verification key."
+      )
+
+pTxIn :: Parser TxIn
+pTxIn =
+  Opt.option (Opt.maybeReader (parseTxIn . Text.pack))
+    (  Opt.long "tx-in"
+    <> Opt.metavar "TX_IN"
+    <> Opt.help "The input transaction as TxId#TxIx where TxId is the transaction hash and TxIx is the index."
+    )
+
+pTxOut :: Parser TxOut
+pTxOut =
+  Opt.option (Opt.maybeReader (parseTxOut . Text.pack))
+    (  Opt.long "tx-out"
+    <> Opt.metavar "TX_OUT"
+    <> Opt.help "The ouput transaction as TxOut$Lovelace where TxOut is the hex encoded address followed by the amount in Lovelace."
+    )
+
+pTxTTL :: Parser SlotNo
+pTxTTL =
+  SlotNo <$>
+    Opt.option Opt.auto
+      (  Opt.long "ttl"
+      <> Opt.metavar "SLOT_COUNT"
+      <> Opt.help "Time to live (in slots)."
+      )
+
+pTxFee :: Parser Lovelace
+pTxFee =
+  Lovelace <$>
+    Opt.option Opt.auto
+      (  Opt.long "fee"
+      <> Opt.metavar "LOVELACE"
+      <> Opt.help "The fee amount in Lovelace."
+      )
+
+pTxBodyFile :: FileDirection -> Parser TxBodyFile
+pTxBodyFile fdir =
+  TxBodyFile <$>
+    Opt.strOption
+      (  Opt.long "tx-body-file"
+      <> Opt.metavar "FILEPATH"
+      <> Opt.help (show fdir ++ " filepath of the TxBody.")
+      )
+
+pTxFile :: FileDirection -> Parser TxFile
+pTxFile fdir =
+  TxFile <$>
+    Opt.strOption
+      (  Opt.long "tx-file"
+      <> Opt.metavar "FILEPATH"
+      <> Opt.help (show fdir ++ " filepath of the Tx.")
+      )
+
+pAddress :: Parser Text
+pAddress =
+  Text.pack <$>
+    Opt.strOption
+      (  Opt.long "address"
+      <> Opt.metavar "ADDRESS"
+      <> Opt.help "A Cardano address"
       )

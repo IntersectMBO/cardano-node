@@ -17,6 +17,7 @@ library
   exposed-modules:      Cardano.Api
 
   other-modules:        Cardano.Api.CBOR
+                        Cardano.Api.Convert
                         Cardano.Api.Error
                         Cardano.Api.LocalStateQuery
                         Cardano.Api.TxSubmit
@@ -29,6 +30,7 @@ library
 
   build-depends:        base >=4.12 && <5
                       , aeson
+                      , attoparsec
                       , base16-bytestring
                       , bytestring
                       , cardano-binary
@@ -47,6 +49,7 @@ library
                       , formatting
                       , io-sim-classes
                       , iohk-monitoring
+                      , memory
                       , network
                       , network-mux
                       , ouroboros-consensus
@@ -89,14 +92,16 @@ test-suite cardano-api-test
                       , cardano-crypto-wrapper
                       , cardano-ledger-test
                       , cardano-prelude
+                      , containers
                       , cryptonite
                       , hedgehog
                       , ouroboros-consensus-shelley
                       , shelley-spec-ledger
 
   other-modules:        Test.Cardano.Api
-                        Test.Cardano.Api.Gen
                         Test.Cardano.Api.CBOR
+                        Test.Cardano.Api.Convert
+                        Test.Cardano.Api.Gen
                         Test.Cardano.Api.Orphans
                         Test.Cardano.Api.View
 

@@ -1,64 +1,181 @@
+{-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE RankNTypes #-}
 module Test.Cardano.Api.Gen
-  ( genKeyPair
-  , genKeyPairByron
-  , genKeyPairShelley
+  ( genAddress
   , genNetwork
-  , genVerificationKey
+  , genSigningKey
+  , genSigningKeyByron
+  , genSigningKeyShelley
+  , genTxIn
+  , genTxOut
   , genTxSigned
   , genTxSignedByron
   , genTxUnsigned
   , genTxUnsignedByron
-  , genByronVerificationKeyAddress
-  , genShelleyVerificationKeyAddress
+  , genVerificationKey
+  , genVerificationKeyAddressByron
+  , genVerificationKeyAddressShelley
   ) where
 
 import           Cardano.Api
 import           Cardano.Binary (serialize)
-import           Cardano.Crypto (hashRaw)
+import qualified Cardano.Crypto as Byron
 import           Cardano.Crypto.DSIGN
 import           Cardano.Prelude
+import qualified Cardano.Crypto.Hash.Class as Crypto
+import qualified Cardano.Crypto.Hash.Blake2b as Crypto
 
 import           Crypto.Random (drgNewTest, withDRG)
 
+import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import           Data.Coerce (coerce)
+import qualified Data.Map.Strict as Map
+import qualified Data.Sequence.Strict as StrictSeq
+import qualified Data.Set as Set
 
-import           Shelley.Spec.Ledger.Keys hiding (KeyPair)
+
+import           Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..))
+import           Shelley.Spec.Ledger.Coin (Coin (..))
+import           Shelley.Spec.Ledger.Keys
+import           Shelley.Spec.Ledger.TxData (pattern TxBody, Wdrl (..))
 
 import           Test.Cardano.Chain.UTxO.Gen (genTx)
 import qualified Test.Cardano.Crypto.Gen as Byron
-                   (genProtocolMagicId, genSigningKey, genVerificationKey)
 
-import           Hedgehog (Gen)
+import           Hedgehog (Gen, Range)
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 
 
-genByronVerificationKeyAddress :: Gen Address
-genByronVerificationKeyAddress =
-  byronVerificationKeyAddress <$> genVerificationKeyByron <*> genNetwork
-
-genShelleyVerificationKeyAddress :: Gen Address
-genShelleyVerificationKeyAddress =
-  shelleyVerificationKeyAddress <$> genVerificationKeyShelley <*> genNetwork
-
-genKeyPair :: Gen KeyPair
-genKeyPair =
+genAddress :: Gen Address
+genAddress =
   Gen.choice
-    [ genKeyPairByron
-    , genKeyPairShelley
+    [ genVerificationKeyAddressByron
+    , genVerificationKeyAddressShelley
     ]
 
-genKeyPairByron :: Gen KeyPair
-genKeyPairByron =
-  KeyPairByron <$> Byron.genVerificationKey <*> Byron.genSigningKey
+genNetwork :: Gen Network
+genNetwork =
+  Gen.choice
+    [ pure Mainnet
+    , Testnet <$> Byron.genProtocolMagicId
+    ]
 
-genKeyPairShelley :: Gen KeyPair
-genKeyPairShelley = do
+genSigningKey :: Gen SigningKey
+genSigningKey =
+  Gen.choice
+    [ genSigningKeyByron
+    , genSigningKeyShelley
+    ]
+
+genSigningKeyByron :: Gen SigningKey
+genSigningKeyByron =
+  SigningKeyByron <$> Byron.genSigningKey
+
+genSigningKeyShelley :: Gen SigningKey
+genSigningKeyShelley = do
   seed <- genSeed
   let sk = fst (withDRG (drgNewTest seed) genKeyDSIGN)
-      vk = deriveVerKeyDSIGN sk
-  return $ KeyPairShelley (VKey vk) (SKey sk)
+  return $ SigningKeyShelley (SKey sk)
+
+genTxIn :: Gen TxIn
+genTxIn =
+  TxIn <$> genFakeTxId <*> Gen.word (Range.linear 0 10000)
+
+genTxOut :: Gen TxOut
+genTxOut =
+  TxOut <$> genAddress <*> genLovelace
+
+genTxSigned :: Gen TxSigned
+genTxSigned =
+  Gen.choice
+    [ genTxSignedByron
+    , genTxSignedShelley
+    ]
+
+genTxSignedByron :: Gen TxSigned
+genTxSignedByron =
+  signTransaction
+    <$> genTxUnsignedByron
+    <*> genNetwork
+    <*> Gen.list (Range.linear 1 5) genSigningKeyByron
+
+genTxSignedShelley :: Gen TxSigned
+genTxSignedShelley =
+  signTransaction
+    <$> genTxUnsignedShelley
+    <*> genNetwork
+    <*> Gen.list (Range.linear 1 5) genSigningKeyShelley
+
+genTxUnsigned :: Gen TxUnsigned
+genTxUnsigned =
+  Gen.choice
+    [ genTxUnsignedByron
+    , genTxUnsignedShelley
+    ]
+
+genTxUnsignedByron :: Gen TxUnsigned
+genTxUnsignedByron = do
+  tx <- genTx
+  let cbor = serialize tx
+  pure $ TxUnsignedByron tx (LBS.toStrict cbor) (coerce $ Byron.hashRaw cbor)
+
+genTxUnsignedShelley :: Gen TxUnsigned
+genTxUnsignedShelley =
+    TxUnsignedShelley <$> genTxBodyShelley
+  where
+    -- TODO: Improve this incredibly naive generator.
+    genTxBodyShelley :: Gen ShelleyTxBody
+    genTxBodyShelley = do
+      coin <- Gen.integral (Range.linear 0 10000000000)
+      slot <- Gen.word64 (Range.linear minBound maxBound)
+      pure $ TxBody (Set.fromList []) (StrictSeq.fromList []) (StrictSeq.fromList [])
+                (Wdrl $ Map.fromList []) (Coin coin) (SlotNo slot) SNothing SNothing
+
+genVerificationKey :: Gen VerificationKey
+genVerificationKey =
+  Gen.choice
+    [ genVerificationKeyByron
+    , genVerificationKeyShelley
+    ]
+
+genVerificationKeyAddressByron :: Gen Address
+genVerificationKeyAddressByron =
+  byronVerificationKeyAddress <$> genVerificationKeyByron <*> genNetwork
+
+genVerificationKeyAddressShelley :: Gen Address
+genVerificationKeyAddressShelley =
+  shelleyVerificationKeyAddress <$> genVerificationKeyShelley <*> genNetwork
+
+genVerificationKeyByron :: Gen VerificationKey
+genVerificationKeyByron =
+  getVerificationKey <$> genSigningKeyByron
+
+genVerificationKeyShelley :: Gen VerificationKey
+genVerificationKeyShelley =
+  getVerificationKey <$> genSigningKeyShelley
+
+-- -------------------------------------------------------------------------------------------------
+
+genByteString :: Range Int -> Gen ByteString
+genByteString lenRange =
+  BS.pack <$> Gen.list lenRange (Gen.element [ '\x00' .. '\xff' ])
+
+-- Generates a fake TxId by applying the right hashing function to a random ByteString.
+genFakeTxId :: Gen TxId
+genFakeTxId =
+  TxId . {- Crypto. -} hashRaw identity <$> genByteString (Range.linear 10 50)
+
+-- This name will clash with one in Cardano.Crypto.Hash.Class.
+-- This should be removed (or maybe specialized) then the one in Cardano.Crypto.Hash.Class is
+-- available.
+hashRaw :: (a -> ByteString) -> a -> Crypto.Hash Crypto.Blake2b_256 ()
+hashRaw serialise = Crypto.UnsafeHash . Crypto.digest (Proxy :: Proxy Crypto.Blake2b_256) . serialise
+
+genLovelace :: Gen Lovelace
+genLovelace =
+  Lovelace <$> Gen.integral (Range.linear 1 999999999999)
 
 genSeed :: Gen (Word64, Word64, Word64, Word64, Word64)
 genSeed =
@@ -68,59 +185,3 @@ genSeed =
     <*> Gen.word64 Range.constantBounded
     <*> Gen.word64 Range.constantBounded
     <*> Gen.word64 Range.constantBounded
-
-genNetwork :: Gen Network
-genNetwork =
-  Gen.choice
-    [ pure Mainnet
-    , Testnet <$> Byron.genProtocolMagicId
-    ]
-
-genVerificationKey :: Gen VerificationKey
-genVerificationKey =
-  Gen.choice
-    [ genVerificationKeyByron
-    , genVerificationKeyShelley
-    ]
-
-genVerificationKeyByron :: Gen VerificationKey
-genVerificationKeyByron =
-  mkVerificationKey <$> genKeyPairByron
-
-genVerificationKeyShelley :: Gen VerificationKey
-genVerificationKeyShelley =
-  mkVerificationKey <$> genKeyPairShelley
-
-genTxSigned :: Gen TxSigned
-genTxSigned =
-  -- When Shelly is sorted out, this should change to `Gen.choose`.
-  Gen.frequency
-    [ (9, genTxSignedByron)
-    , (1, pure TxSignedShelley)
-    ]
-
-genTxSignedByron :: Gen TxSigned
-genTxSignedByron =
-  signTransaction
-    <$> genTxUnsignedByron
-    <*> genNetwork
-    <*> Gen.list (Range.linear 1 5) Byron.genSigningKey
-
-genTxUnsigned :: Gen TxUnsigned
-genTxUnsigned =
-  Gen.choice
-    [ genTxUnsignedByron
---  , genTxUnsignedShelley  --TODO
-    ]
-
-genTxUnsignedByron :: Gen TxUnsigned
-genTxUnsignedByron = do
-  tx <- genTx
-  let cbor = serialize tx
-  pure $ TxUnsignedByron tx (LBS.toStrict cbor) (coerce $ hashRaw cbor)
-
---genTxUnsignedShelley :: Gen TxUnsigned
---genTxUnsignedShelley = fail "TODO: genTxUnsignedShelley"
---TODO: reuse an existing generator
-
-

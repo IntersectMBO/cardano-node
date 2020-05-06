@@ -3,8 +3,8 @@
 module Cardano.Api.CBOR
   ( addressFromCBOR
   , addressToCBOR
-  , keyPairFromCBOR
-  , keyPairToCBOR
+  , signingKeyFromCBOR
+  , signingKeyToCBOR
   , verificationKeyFromCBOR
   , verificationKeyToCBOR
 
@@ -32,7 +32,6 @@ import           Cardano.Crypto.DSIGN.Class (DSIGNAlgorithm (..))
 import           Cardano.Prelude
 
 import           Data.ByteString (ByteString)
-import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Word (Word8)
 
@@ -59,27 +58,30 @@ addressToCBOR kp =
       AddressByron   addr -> mconcat [ toCBOR (170 :: Word8), toCBOR addr ]
       AddressShelley addr -> mconcat [ toCBOR (171 :: Word8), toCBOR addr ]
 
-keyPairFromCBOR :: ByteString -> Either ApiError KeyPair
-keyPairFromCBOR bs =
-   first ApiErrorCBOR . CBOR.decodeFullDecoder "KeyPair" decode $ LBS.fromStrict bs
+signingKeyFromCBOR :: ByteString -> Either ApiError SigningKey
+signingKeyFromCBOR bs =
+   first ApiErrorCBOR . CBOR.decodeFullDecoder "SigningKey" decode $ LBS.fromStrict bs
   where
-    decode :: Decoder s KeyPair
+    decode :: Decoder s SigningKey
     decode = do
       tag <- CBOR.decodeWord8
       case tag of
-        172  -> KeyPairByron <$> fromCBOR <*> fromCBOR
-        173  -> KeyPairShelley <$> decodeShelleyVerificationKey <*> (SKey <$> decodeSignKeyDSIGN)
-        _  -> cborError $ DecoderErrorUnknownTag "KeyPair" tag
+        172  -> SigningKeyByron <$> fromCBOR
+        173  -> SigningKeyShelley . SKey <$> decodeSignKeyDSIGN
+        _  -> cborError $ DecoderErrorUnknownTag "SigningKey" tag
 
-keyPairToCBOR :: KeyPair -> ByteString
-keyPairToCBOR kp =
+signingKeyToCBOR :: SigningKey -> ByteString
+signingKeyToCBOR kp =
   CBOR.serializeEncoding' $
     case kp of
-      KeyPairByron vk sk -> mconcat [ toCBOR (172 :: Word8), toCBOR vk, toCBOR sk ]
-      KeyPairShelley svk (SKey sk) ->
+      SigningKeyByron sk ->
+        mconcat
+          [ toCBOR (172 :: Word8)
+          , toCBOR sk ]
+
+      SigningKeyShelley (SKey sk) ->
         mconcat
           [ toCBOR (173 :: Word8)
-          , encodeShelleyVerificationKey svk
           , encodeSignKeyDSIGN sk
           ]
 
@@ -95,7 +97,7 @@ verificationKeyFromCBOR =
       case tag of
         174  -> VerificationKeyByron <$> fromCBOR
         175  -> VerificationKeyShelley <$> decodeShelleyVerificationKey
-        _  -> cborError $ DecoderErrorUnknownTag "KeyPair" tag
+        _  -> cborError $ DecoderErrorUnknownTag "VerificationKey" tag
 
 verificationKeyToCBOR :: VerificationKey -> ByteString
 verificationKeyToCBOR pk =
@@ -117,7 +119,7 @@ txSignedFromCBOR bs =
       tag <- CBOR.decodeWord8
       case tag of
         176  -> TxSignedByron <$> fromCBOR <*> fromCBOR <*> fromCBOR <*> fromCBOR
-        177  -> pure TxSignedShelley
+        177  -> TxSignedShelley <$> decodeShelleyTx bs
         _  -> cborError $ DecoderErrorUnknownTag "TxSigned" tag
 
 txSignedToCBOR :: TxSigned -> ByteString
@@ -126,7 +128,8 @@ txSignedToCBOR pk =
     case pk of
       TxSignedByron btx cbor hash wit ->
         mconcat [ toCBOR (176 :: Word8), toCBOR btx, toCBOR cbor, toCBOR hash, toCBOR wit ]
-      TxSignedShelley -> toCBOR (177 :: Word8)
+      TxSignedShelley tx ->
+        mconcat [ toCBOR (177 :: Word8), toCBOR tx ]
 
 txUnsignedFromCBOR :: ByteString -> Either ApiError TxUnsigned
 txUnsignedFromCBOR bs =
@@ -137,8 +140,9 @@ txUnsignedFromCBOR bs =
       tag <- CBOR.decodeWord8
       case tag of
         178  -> TxUnsignedByron <$> fromCBOR <*> fromCBOR <*> fromCBOR
-        179  -> TxUnsignedShelley <$> decodeShelleyTxBody (BS.drop 1 bs)
+        179  -> TxUnsignedShelley <$> decodeShelleyTxBody bs
         _  -> cborError $ DecoderErrorUnknownTag "TxUnsigned" tag
+
 
 txUnsignedToCBOR :: TxUnsigned -> ByteString
 txUnsignedToCBOR pk =
@@ -169,6 +173,11 @@ encodeShelleyTxBody = toCBOR
 
 decodeShelleyTxBody :: ByteString -> Decoder s ShelleyTxBody
 decodeShelleyTxBody full = do
+    atx <- fromCBOR
+    return $! CBOR.runAnnotator atx (CBOR.Full (LBS.fromStrict full))
+
+decodeShelleyTx :: ByteString -> Decoder s ShelleyTx
+decodeShelleyTx full = do
     atx <- fromCBOR
     return $! CBOR.runAnnotator atx (CBOR.Full (LBS.fromStrict full))
 

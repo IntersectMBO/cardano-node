@@ -91,7 +91,7 @@ prepareTx txs =
     TxSignedByron tx _txCbor _txHash vwit ->
       let aTxAux = Byron.annotateTxAux (Byron.mkTxAux tx vwit)
       in Byron.ByronTx (Byron.byronIdTx aTxAux) aTxAux
-    TxSignedShelley -> panic "Cardano.Api.TxSubmit.submitTransaction: TxSignedShelley"
+    TxSignedShelley _tx -> panic "Cardano.Api.TxSubmit.submitTransaction: TxSignedShelley"
 
 
 runTxSubmitNode :: TxSubmitVar -> Trace IO Text -> Genesis.Config -> SocketPath -> IO ()

@@ -37,9 +37,11 @@ library
                        Cardano.CLI.Shelley.Parsers
                        Cardano.CLI.Shelley.Run
                        Cardano.CLI.Shelley.Run.Address
+                       Cardano.CLI.Shelley.Run.Address.Describe
                        Cardano.CLI.Shelley.Run.Genesis
                        Cardano.CLI.Shelley.Run.KeyGen
                        Cardano.CLI.Shelley.Run.Query
+                       Cardano.CLI.Shelley.Run.Transaction
                        Cardano.CLI.Tx
 
   other-modules:       Paths_cardano_cli
@@ -49,6 +51,7 @@ library
                      , aeson-pretty
                      , bytestring
                      , base16-bytestring
+                     , base58-bytestring
                      , canonical-json
                      , cardano-api
                      , cardano-binary
@@ -133,6 +136,7 @@ test-suite cardano-cli-test
                       , filepath
                       , process
                       , text
+                      , text-ansi
                       , unix
 
   default-language:     Haskell2010
