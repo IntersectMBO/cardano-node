@@ -22,6 +22,7 @@ module Cardano.CLI.Shelley.Parsers
   , OutputFile (..)
   , SigningKeyFile (..)
   , TxBodyFile (..)
+  , TxFile (..)
   , VerificationKeyFile (..)
   ) where
 
@@ -29,6 +30,7 @@ import           Cardano.Prelude hiding (option)
 
 import           Cardano.Api
 import           Cardano.Common.Parsers (parseConfigFile, parseCLISocketPath, parseNodeAddress)
+import qualified Cardano.Crypto as Byron
 import           Cardano.Slotting.Slot (EpochNo (..))
 
 import           Cardano.Config.Types (CLISocketPath, ConfigYamlFilePath (..), NodeAddress,
@@ -85,7 +87,7 @@ data StakeAddressCmd
 
 data TransactionCmd
   = TxBuildRaw [TxIn] [TxOut] SlotNo Lovelace TxBodyFile
-  | TxSign     TxBodyFile TxFile [SigningKeyFile]
+  | TxSign TxBodyFile [SigningKeyFile] (Maybe Byron.ProtocolMagicId) TxFile
   | TxWitness       -- { transaction :: Transaction, key :: PrivKeyFile, nodeAddr :: NodeAddress }
   | TxSignWitness   -- { transaction :: Transaction, witnesses :: [Witness], nodeAddr :: NodeAddress }
   | TxCheck         -- { transaction :: Transaction, nodeAddr :: NodeAddress }
@@ -325,8 +327,9 @@ pTransaction =
 
     pTransactionSign  :: Parser TransactionCmd
     pTransactionSign = TxSign <$> pTxBodyFile Input
+                              <*> pSomeSigningKeyFiles
+                              <*> pMaybeProtocolMagicId
                               <*> pTxFile Output
-                              <*> many (pSigningKeyFile Input)
 
     pTransactionWitness :: Parser TransactionCmd
     pTransactionWitness = pure TxWitness
@@ -641,6 +644,16 @@ pColdSigningKeyFile =
      <> Opt.help "Filepath of the cold signing key."
      )
 
+pSomeSigningKeyFiles :: Parser [SigningKeyFile]
+pSomeSigningKeyFiles =
+  some $
+    SigningKeyFile <$>
+      Opt.strOption
+      (  Opt.long "signing-key-file"
+      <> Opt.metavar "FILEPATH"
+      <> Opt.help ("Input filepath of the signing key (one or more).")
+      )
+
 pSigningKeyFile :: FileDirection -> Parser SigningKeyFile
 pSigningKeyFile fdir =
   SigningKeyFile <$>
@@ -744,6 +757,15 @@ pKESVerificationKeyFile =
       (  Opt.long "hot-kes-verification-key-file"
       <> Opt.metavar "FILEPATH"
       <> Opt.help "Filepath of the hot KES verification key."
+      )
+
+pMaybeProtocolMagicId :: Parser (Maybe Byron.ProtocolMagicId)
+pMaybeProtocolMagicId =
+  optional $ Byron.ProtocolMagicId <$>
+    Opt.option Opt.auto
+      (  Opt.long "protocol-id"
+      <> Opt.metavar "INT"
+      <> Opt.help "The network protocol id [Defaults to the one for Mainnet]."
       )
 
 pTxIn :: Parser TxIn

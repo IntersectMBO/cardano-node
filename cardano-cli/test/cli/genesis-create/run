@@ -33,7 +33,6 @@ ${CARDANO_CLI} shelley genesis create-genesis \
     --supply "${supply}" \
     --gen-genesis-keys ${gendlg_count} \
     --gen-utxo-keys ${gendlg_count}
-    > /dev/null
 
 check_supply=$(grep MaxLovelaceSupply "${OUTPUT_JSON}" | sed "s/${supply}/correct/;s/[ \"]//g")
 if test "${check_supply}" != "MaxLovelaceSupply:correct," ; then
