@@ -1,13 +1,13 @@
 { config
 , lib
 , pkgs
+, cardanoNodePkgs ? import ../. {}
 , ... }:
 
 with lib; with builtins;
 let
-  localPkgs = import ../. {};
   cfg = config.services.cardano-node;
-  inherit (localPkgs) svcLib commonLib cardanoNodeHaskellPackages;
+  inherit (cardanoNodePkgs) svcLib commonLib cardanoNodeHaskellPackages cardanoNodeProfiledHaskellPackages;
   envConfig = cfg.environments.${cfg.environment}; systemdServiceName = "cardano-node${optionalString cfg.instanced "@"}";
   runtimeDir = if cfg.runtimeDir == null then cfg.stateDir else "/run/${cfg.runtimeDir}";
   mkScript = cfg: let
@@ -37,7 +37,7 @@ let
           "--topology ${cfg.topology}"
           "--host-addr ${cfg.hostAddr}"
           "--port ${toString cfg.port}"
-        ] ++ consensusParams.${cfg.consensusProtocol} ++ cfg.extraArgs;
+        ] ++ consensusParams.${cfg.consensusProtocol} ++ cfg.extraArgs ++ cfg.rtsArgs;
     in ''
         choice() { i=$1; shift; eval "echo \''${$((i + 1))}"; }
         echo "Starting ${exec}: ${concatStringsSep "\"\n   echo \"" cmd}"
@@ -84,9 +84,16 @@ in {
         default = mkScript cfg;
       };
 
+      profiling = mkOption {
+        type = types.enum ["none" "time" "space" "space-module" "space-closure" "space-type" "space-retainer" "space-bio"];
+        default = "none";
+      };
+
       package = mkOption {
         type = types.package;
-        default = cardanoNodeHaskellPackages.cardano-node.components.exes.cardano-node;
+        default = if (cfg.profiling != "none")
+          then cardanoNodeProfiledHaskellPackages.cardano-node.components.exes.cardano-node
+          else cardanoNodeHaskellPackages.cardano-node.components.exes.cardano-node;
         defaultText = "cardano-node";
         description = ''
           The cardano-node package that should be used
@@ -277,6 +284,29 @@ in {
         type = types.listOf types.str;
         default = [];
         description = ''Extra CLI args for 'cardano-node'.'';
+      };
+
+      rtsArgs = mkOption {
+        type = types.listOf types.str;
+        default = [];
+        apply = args: if (args != [] || cfg.profilingArgs != []) then
+          ["+RTS"] ++ cfg.profilingArgs ++ args ++ ["-RTS"]
+          else [];
+        description = ''Extra CLI args for 'cardano-node', to be surrounded by "+RTS"/"-RTS"'';
+      };
+
+      profilingArgs = mkOption {
+        type = types.listOf types.str;
+        default = let commonProfilingArgs = ["--machine-readable" "-tcardano-node.stats" "-l" "-pocardano-node"];
+          in if cfg.profiling == "time" then ["-P"] ++ commonProfilingArgs
+            else if cfg.profiling == "space" then ["-h"] ++ commonProfilingArgs
+            else if cfg.profiling == "space-module" then ["-hm"] ++ commonProfilingArgs
+            else if cfg.profiling == "space-closure" then ["-hd"] ++ commonProfilingArgs
+            else if cfg.profiling == "space-type" then ["-hy"] ++ commonProfilingArgs
+            else if cfg.profiling == "space-retainer" then ["-hr"] ++ commonProfilingArgs
+            else if cfg.profiling == "space-bio" then ["-hb"] ++ commonProfilingArgs
+            else [];
+        description = ''RTS profiling options'';
       };
 
       tracingVerbosity = mkOption {

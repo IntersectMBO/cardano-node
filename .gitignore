@@ -22,6 +22,10 @@ stack.yaml.lock
 /profile
 /launch_*
 /state-*
+*.eventlog
+*.hp
+*.prof
+*.stats
 /cluster
 /cluster.*
 

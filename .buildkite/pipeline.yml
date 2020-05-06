@@ -9,12 +9,6 @@ steps:
     agents:
       system: x86_64-linux
 
-# FIXME, waiting for https://github.com/input-output-hk/haskell.nix/pull/426
-#  - label: 'release.nix'
-#    command: 'nix-build -A check-hydra -o check-hydra.sh && ./check-hydra.sh'
-#    agents:
-#      system: x86_64-linux
-
   - label: 'stack-cabal-sync'
     command: 'nix-shell ./nix -A iohkNix.stack-cabal-sync-shell --run scripts/buildkite/stack-cabal-sync.sh'
     agents:

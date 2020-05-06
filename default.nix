@@ -40,11 +40,12 @@ let
   };
 
   self = {
-    inherit haskellPackages scripts nixosTests environments check-hydra dockerImage;
+    inherit haskellPackages scripts nixosTests environments dockerImage;
 
     inherit (haskellPackages.cardano-node.identifier) version;
     # Grab the executable component of our package.
     inherit (haskellPackages.cardano-node.components.exes) cardano-node;
+    cardano-node-profiled = cardanoNodeProfiledHaskellPackages.cardano-node.components.exes.cardano-node;
     inherit (haskellPackages.cardano-cli.components.exes) cardano-cli;
     inherit (haskellPackages.cardano-node.components.exes) chairman;
     # expose the db-converter from the ouroboros-network we depend on

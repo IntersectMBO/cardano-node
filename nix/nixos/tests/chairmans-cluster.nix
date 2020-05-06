@@ -6,6 +6,7 @@
 with pkgs.lib;
 let
   inherit (pkgs) svcLib commonLib;
+  pkgs' = pkgs;
   byron-proxy-src = commonLib.sources.cardano-byron-proxy;
   cardano-sl-src  = commonLib.sources.cardano-sl;
   # byron-proxy-src = ../../../../cardano-byron-proxy;
@@ -40,6 +41,7 @@ in {
   name = "chairmans-cluster-test";
   nodes = {
     machine = { lib, config, pkgs, ... }: {
+      _module.args.cardanoNodePkgs = mkDefault pkgs';
       nixpkgs.overlays = commonLib.overlays;
       imports = [
         (byron-proxy-src + "/nix/nixos")
