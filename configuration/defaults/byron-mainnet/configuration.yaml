@@ -46,6 +46,7 @@ ApplicationVersion: 1
 # uses standard output, optionally with log output. The LiveView is a text
 # console on Linux with a live view of various node metrics. To use LiveView
 # disable the default output to 'stdout' in "defaultScribes" section.
+# And, also set "TraceBlockFetchDecisions: True" to see the connected peers.
 ViewMode: SimpleView
 #ViewMode: LiveView
 
@@ -128,7 +129,8 @@ setupScribes:
 defaultScribes:
   - - FileSK
     - "logs/mainnet.log"
-  # When using "ViewMode: LiveView" above, comment out the following directive to output to 'stdout'
+  # When using "ViewMode: LiveView" above, comment out the following directive
+  # to stop output to 'stdout'
   - - StdoutSK
     - stdout
 
