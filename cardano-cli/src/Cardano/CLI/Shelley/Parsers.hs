@@ -16,6 +16,7 @@ module Cardano.CLI.Shelley.Parsers
   , GenesisCmd (..)
 
     -- * CLI flag types
+  , AddressFile (..)
   , GenesisDir (..)
   , OpCertCounterFile (..)
   , OutputFile (..)
@@ -113,6 +114,7 @@ data QueryCmd
   = QueryPoolId NodeAddress
   | QueryProtocolParameters ConfigYamlFilePath (Maybe CLISocketPath) OutputFile
   | QueryTip NodeAddress
+  | QueryFilteredUTxO AddressFile ConfigYamlFilePath (Maybe CLISocketPath) OutputFile
   | QueryVersion NodeAddress
   | QueryStatus NodeAddress
   deriving (Eq, Show)
@@ -147,6 +149,10 @@ data GenesisCmd
 --
 -- Shelley CLI flag/option data types
 --
+
+newtype AddressFile
+  = AddressFile FilePath
+  deriving (Eq, Show)
 
 newtype BlockId
   = BlockId String -- Probably not a String
@@ -410,6 +416,8 @@ pQueryCmd =
           (Opt.info pQueryProtocolParameters $ Opt.progDesc "Get the node's current protocol parameters")
       , Opt.command "tip"
           (Opt.info pQueryTip $ Opt.progDesc "Get the node's current tip (slot no, hash, block no)")
+      , Opt.command "filtered-utxo"
+          (Opt.info pQueryFilteredUTxO $ Opt.progDesc "Get the node's current UTxO filtered by address")
       , Opt.command "version"
           (Opt.info pQueryVersion $ Opt.progDesc "Get the node version")
       , Opt.command "status"
@@ -428,6 +436,14 @@ pQueryCmd =
 
     pQueryTip :: Parser QueryCmd
     pQueryTip = QueryTip <$> parseNodeAddress
+
+    pQueryFilteredUTxO :: Parser QueryCmd
+    pQueryFilteredUTxO =
+      QueryFilteredUTxO
+        <$> pAddressFile Input
+        <*> (ConfigYamlFilePath <$> parseConfigFile)
+        <*> parseCLISocketPath "Socket of target node"
+        <*> pOutputFile
 
     pQueryVersion :: Parser QueryCmd
     pQueryVersion = QueryVersion <$> parseNodeAddress
@@ -760,4 +776,13 @@ pAddress =
       (  Opt.long "address"
       <> Opt.metavar "ADDRESS"
       <> Opt.help "A Cardano address"
+      )
+
+pAddressFile :: FileDirection -> Parser AddressFile
+pAddressFile fdir =
+  AddressFile <$>
+    Opt.strOption
+      (  Opt.long "address-file"
+      <> Opt.metavar "FILEPATH"
+      <> Opt.help (show fdir ++ " filepath of the Address.")
       )
