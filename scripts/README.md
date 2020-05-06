@@ -18,7 +18,7 @@
      if the `dist-newstyle` directory is absent.
 
      Before you can use `--nix`, you'll need to set up Nix -- please see
-     the `Building under Nix` section in `doc/building-running.md`.
+     the `Building under Nix` section [here](https://github.com/input-output-hk/cardano-node/blob/master/doc/building-running.md#building-under-nix)
 
   2. using Cabal -- if you already have the development context set up
      (dependencies, GHC, etc.), then this is the fastest way to iterate.
@@ -54,21 +54,21 @@
 
 - <span><b>chairman.sh</b></span> <br/>  Run the Chairman consensus checker against a cluster started
                      by `shelley-testnet*.sh` family of scripts
-- <span><b>generator.sh</b></span> <br/> Run the transaction generator against a cluster started
-                     by `shelley-testnet` family of scripts
 - <span><b>genesis.sh</b></span> <br/> Generate a new genesis in the `configuration/` folder
-- <span><b>get-default-key-address.sh</b></span> <br/> Given a signing key, print its associated address
 - <span><b>issue-genesis-utxo-expenditure.sh</b></span> <br/> Write a file with a transaction
          spending a genesis UTxO entry, given a key owning it
 - <span><b>issue-utxo-expenditure.sh</b></span> <br/> Write a file with a transaction spending a
          normal UTxO entry, given a key owning it
-- <span><b>mainnet.sh</b></span> <br/> Run a node against Cardano Mainnet
+- <span><b>mainnet.sh</b></span> <br/> Run a node against Cardano Mainnet (the [configuration file](https://github.com/input-output-hk/cardano-node/blob/master/configuration/defaults/byron-mainnet/configuration.yaml) contains documentation how to change options 
+	 and turn on/off features like "LiveView")
+- <span><b>mainnet-via-fetcher.sh</b></span> <br/> Works in two phases, 1) prefetch - preload the prefetcher's 
+	 ChainDB, up to desired limit and 2) benchmark - run the second node as the benchmark, up to desired 
+	 slot limit 
 - <span><b>shelley-testnet-live.sh</b></span> <br/> Start a dev cluster with 3 nodes,
          with neat curses-based UI (run from tmux)
 - <span><b>shelley-testnet-dns.sh</b></span> <br/> Start a dev cluster with 3 nodes (run from tmux)
 - <span><b>shelley-testnet.sh</b></span> <br/> Start a dev cluster with 3 nodes, with
          basic logging (run from tmux)
-- <span><b>start-node.sh</b></span> <br/> Basic individual node startup script
 - <span><b>submit-tx.sh</b></span> <br/> Submit a transaction file made by `issue-*-expenditure.sh`
                       family of scripts
 
@@ -109,15 +109,12 @@ set-window-option -g mouse on
 set -g default-terminal "tmux-256color"
 ```
 
-1.) create a `tmux` session
 
-`tmux new-session -s Demo`
-
-2.) run the demo script in this new session
+Run the demo script:
 
 `./scripts/shelley-testnet-live.sh`
 
-NB: This will automatically create the necessary genesis file in `configuration/defaults/liveview/genesis`
+NB: This will automatically start a tmux session and create the necessary genesis file in `configuration/defaults/liveview/genesis`
 
 
 ## Run chairman
@@ -130,7 +127,7 @@ Connect with all the core nodes and store the forks from a common prefix.  If an
 
 1) Run `./scripts/shelley-testnet-live.sh`.
 
-2) Run `./scripts/chairman.sh ./socket/0 ./socket/1 ./socket/2` in a separate terminal.
+2) Run `./scripts/chairman.sh ./socket/node-0-socket ./socket/node-1-socket ./socket/node-2-socket` in a separate terminal.
 
 
 ## Connect to mainnet
@@ -176,10 +173,6 @@ server:
   local-data: "local.iohk.io A 127.0.0.1"
   local-data: "local6.iohk.io AAAA ::1"
 ```
-
-## Run transaction generator
-
-https://github.com/input-output-hk/iohk-monitoring-framework/wiki/Transaction-Generator:-Usage-Guide#launch-a-cluster
 
 ## CI cluster
 
