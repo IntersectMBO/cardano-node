@@ -33,6 +33,7 @@ import qualified Data.List as List
 import           Data.Proxy (Proxy (..))
 import           Data.Semigroup ((<>))
 import           Data.Text (Text, breakOn, pack, take)
+import           Data.Time.Clock (getCurrentTime)
 import           Data.Version (showVersion)
 import           Network.HostName (getHostName)
 import           Network.Socket (AddrInfo)
@@ -278,9 +279,12 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
          let rTr = appendName "release" tr
              vTr = appendName "version" tr
              cTr = appendName "commit"  tr
+             lTr = appendName "launchTime" tr
          traceNamedObject rTr (meta, LogMessage (show (ncProtocol nc)))
          traceNamedObject vTr (meta, LogMessage . pack . showVersion $ version)
          traceNamedObject cTr (meta, LogMessage gitRev)
+         now <- getCurrentTime
+         traceNamedObject lTr (meta, LogMessage (show now))
 
          when validateDB $ traceWith tracer "Performing DB validation"
 
