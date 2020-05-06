@@ -22,16 +22,13 @@ import           Cardano.CLI.Shelley.Run.Address (runAddressCmd)
 import           Cardano.CLI.Shelley.Run.Genesis (runGenesisCreate)
 import           Cardano.CLI.Shelley.Run.KeyGen
 import           Cardano.CLI.Shelley.Run.Query (runQueryCmd)
+import           Cardano.CLI.Shelley.Run.Transaction (runTransactionCmd)
 
 import           Cardano.Config.Shelley.ColdKeys
 import           Cardano.Config.Shelley.KES
 import           Cardano.Config.Shelley.OCert
 import           Cardano.Config.Shelley.VRF
 import           Cardano.Config.Types (SigningKeyFile(..))
-import           Cardano.CLI.Shelley.Run.Address (runAddressCmd)
-import           Cardano.CLI.Shelley.Run.KeyGen
-import           Cardano.CLI.Shelley.Run.Genesis (runGenesisCreate)
-import           Cardano.CLI.Shelley.Run.Transaction (runTransactionCmd)
 
 
 
