@@ -21,10 +21,6 @@ let
     # the Haskell.nix package set, reduced to local packages.
     (selectProjectPackages cardanoNodeHaskellPackages);
 
-  profiledHaskellPackages = recRecurseIntoAttrs
-    # the Haskell.nix package set (with profiling), reduced to local packages.
-    (selectProjectPackages cardanoNodeProfiledHaskellPackages);
-
   scripts = callPackage ./nix/scripts.nix { inherit customConfig; };
   # NixOS tests run a proxy and validate it listens
   nixosTests = import ./nix/nixos/tests {
@@ -44,11 +40,12 @@ let
   };
 
   self = {
-    inherit haskellPackages profiledHaskellPackages scripts nixosTests environments dockerImage;
+    inherit haskellPackages scripts nixosTests environments dockerImage;
 
     inherit (haskellPackages.cardano-node.identifier) version;
     # Grab the executable component of our package.
     inherit (haskellPackages.cardano-node.components.exes) cardano-node;
+    cardano-node-profiled = cardanoNodeProfiledHaskellPackages.cardano-node.components.exes.cardano-node;
     inherit (haskellPackages.cardano-cli.components.exes) cardano-cli;
     inherit (haskellPackages.cardano-node.components.exes) chairman;
     # expose the db-converter from the ouroboros-network we depend on

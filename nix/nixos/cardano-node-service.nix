@@ -1,13 +1,13 @@
 { config
 , lib
 , pkgs
+, cardanoNodePkgs ? import ../. {}
 , ... }:
 
 with lib; with builtins;
 let
-  localPkgs = import ../. {};
   cfg = config.services.cardano-node;
-  inherit (localPkgs) svcLib commonLib cardanoNodeHaskellPackages cardanoNodeProfiledHaskellPackages;
+  inherit (cardanoNodePkgs) svcLib commonLib cardanoNodeHaskellPackages cardanoNodeProfiledHaskellPackages;
   envConfig = cfg.environments.${cfg.environment}; systemdServiceName = "cardano-node${optionalString cfg.instanced "@"}";
   runtimeDir = if cfg.runtimeDir == null then cfg.stateDir else "/run/${cfg.runtimeDir}";
   mkScript = cfg: let

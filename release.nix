@@ -10,8 +10,10 @@
 # The project sources
 { cardano-node ? { outPath = ./.; rev = "abcdef"; }
 
+
 # Function arguments to pass to the project
 , projectArgs ? {
+    inherit sourcesOverride;
     config = { allowUnfree = false; inHydra = true; };
     gitrev = cardano-node.rev;
   }
@@ -43,25 +45,16 @@ with (import pkgs.iohkNix.release-lib) {
 with pkgs.lib;
 
 let
-  nixosTests = (import ./. {}).nixosTests;
-  getArchDefault = system: let
-    table = {
-      x86_64-linux = import ./. { system = "x86_64-linux"; };
-      x86_64-darwin = import ./. { system = "x86_64-darwin"; };
-      x86_64-windows = import ./. { system = "x86_64-linux"; crossSystem = "x86_64-windows"; };
-    };
-  in table.${system};
-  default = getArchDefault builtins.currentSystem;
   makeScripts = cluster: let
     getScript = name: {
-      x86_64-linux = (getArchDefault "x86_64-linux").scripts.${cluster}.${name};
-      x86_64-darwin = (getArchDefault "x86_64-darwin").scripts.${cluster}.${name};
+      x86_64-linux = (pkgsFor "x86_64-linux").scripts.${cluster}.${name};
+      x86_64-darwin = (pkgsFor "x86_64-darwin").scripts.${cluster}.${name};
     };
   in {
     node = getScript "node";
   };
   dockerImageArtifact = let
-    image = (getArchDefault "x86_64-linux").dockerImage;
+    image = (pkgsFor "x86_64-linux").dockerImage;
     wrapImage = image: pkgs.runCommand "${image.name}-hydra" {} ''
       mkdir -pv $out/nix-support/
       cat <<EOF > $out/nix-support/hydra-build-products
@@ -80,11 +73,9 @@ let
       scripts = makeScripts cluster;
     };
   };
-  extraBuilds = let
+  extraBuilds = {
     # only build nixos tests for linux
-    default = getArchDefault "x86_64-linux";
-  in {
-    inherit nixosTests;
+    inherit (pkgsFor "x86_64-linux") nixosTests;
   } // (builtins.listToAttrs (map makeRelease [
     "mainnet"
     "staging"
@@ -108,7 +99,7 @@ let
 
   inherit (systems.examples) mingwW64 musl64;
 
-  sources = import ./nix/sources.nix;
+  inherit (pkgs.commonLib) sources nixpkgs;
 
   jobs = {
     inherit dockerImageArtifact;
@@ -123,7 +114,7 @@ let
     #musl64 = mapTestOnCross musl64 (packagePlatformsCross (filterJobsCross project));
     ifd-pins = mkPins {
       inherit (sources) iohk-nix "haskell.nix";
-      inherit (import "${sources.iohk-nix}/nix/sources.nix" {}) nixpkgs;
+      inherit nixpkgs;
       #hackageSrc = (import pkgs.path (import sources."haskell.nix")).haskell-nix.hackageSrc;
       #stackageSrc = (import pkgs.path (import sources."haskell.nix")).haskell-nix.stackageSrc;
     };
