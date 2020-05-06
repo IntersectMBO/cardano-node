@@ -44,7 +44,7 @@ let
   };
 
   self = {
-    inherit haskellPackages profiledHaskellPackages scripts nixosTests environments check-hydra dockerImage;
+    inherit haskellPackages profiledHaskellPackages scripts nixosTests environments dockerImage;
 
     inherit (haskellPackages.cardano-node.identifier) version;
     # Grab the executable component of our package.
