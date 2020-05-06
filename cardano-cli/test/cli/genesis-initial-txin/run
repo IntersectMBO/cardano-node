@@ -1,0 +1,36 @@
+#!/bin/sh -u
+
+cwd=$(dirname "$0")
+
+# shellcheck source=/dev/null
+. "${cwd}/../core/common"
+
+# shellcheck disable=SC2154
+banner "${testname}"
+
+OUTPUT_DIR="${TEST}"
+
+
+rm -rf "${OUTPUT_DIR}"
+mkdir "${OUTPUT_DIR}"
+
+error=0
+
+# Create the genesis json file and required keys.
+${CARDANO_CLI} shelley genesis key-gen-utxo \
+    --verification-key-file "${OUTPUT_DIR}/genesis-utxo.vkey" \
+    --signing-key-file "${OUTPUT_DIR}/genesis-utxo.skey"
+fail_on_error $?
+
+# tree "${OUTPUT_DIR}"
+
+assert_file_exists "${OUTPUT_DIR}/genesis-utxo.vkey"
+
+${CARDANO_CLI} shelley genesis initial-txin \
+    --verification-key-file "${OUTPUT_DIR}/genesis-utxo.vkey" \
+    > "${OUTPUT_DIR}/utxo-hash.hex"
+fail_on_error $?
+
+assert_line_count 1 "${OUTPUT_DIR}/utxo-hash.hex"
+
+report_result ${error}

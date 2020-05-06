@@ -18,8 +18,9 @@ import           Control.Monad.Trans.Except.Extra (firstExceptT)
 import           Cardano.CLI.Key (VerificationKeyFile(..))
 import           Cardano.CLI.Ops (CliError (..))
 import           Cardano.CLI.Shelley.Parsers
-import           Cardano.CLI.Shelley.Run.Address (runAddressCmd)
-import           Cardano.CLI.Shelley.Run.Genesis (runGenesisCreate)
+
+import           Cardano.CLI.Shelley.Run.Address
+import           Cardano.CLI.Shelley.Run.Genesis
 import           Cardano.CLI.Shelley.Run.KeyGen
 import           Cardano.CLI.Shelley.Run.Query (runQueryCmd)
 import           Cardano.CLI.Shelley.Run.Transaction (runTransactionCmd)
@@ -86,6 +87,7 @@ runGenesisCmd (GenesisKeyGenDelegate vk sk ctr) = runGenesisKeyGenDelegate vk sk
 runGenesisCmd (GenesisKeyGenUTxO vk sk) = runGenesisKeyGenUTxO vk sk
 runGenesisCmd (GenesisKeyHash vk) = runGenesisKeyHash vk
 runGenesisCmd (GenesisVerKey vk sk) = runGenesisVerKey vk sk
+runGenesisCmd (GenesisTxIn vk) = runGenesisTxIn vk
 runGenesisCmd (GenesisCreate gd count ms am) = runGenesisCreate gd count ms am
 
 --

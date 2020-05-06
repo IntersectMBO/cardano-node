@@ -144,6 +144,7 @@ data GenesisCmd
   | GenesisKeyGenUTxO VerificationKeyFile SigningKeyFile
   | GenesisKeyHash VerificationKeyFile
   | GenesisVerKey VerificationKeyFile SigningKeyFile
+  | GenesisTxIn VerificationKeyFile
   deriving (Eq, Show)
 
 --
@@ -525,6 +526,9 @@ pGenesisCmd =
       , Opt.command "get-ver-key"
           (Opt.info pGenesisVerKey $
              Opt.progDesc "Derive the verification key from a signing key")
+      , Opt.command "initial-txin"
+          (Opt.info pGenesisTxIn $
+             Opt.progDesc "Get the TxIn for an initial UTxO based on the verification key")
       , Opt.command "create-genesis"
           (Opt.info pGenesisCreate $
              Opt.progDesc ("Create a Shelley genesis file from a genesis "
@@ -552,6 +556,10 @@ pGenesisCmd =
     pGenesisVerKey :: Parser GenesisCmd
     pGenesisVerKey =
       GenesisVerKey <$> pVerificationKeyFile Output <*> pSigningKeyFile Output
+
+    pGenesisTxIn :: Parser GenesisCmd
+    pGenesisTxIn =
+      GenesisTxIn <$> pVerificationKeyFile Input
 
     pGenesisCreate :: Parser GenesisCmd
     pGenesisCreate =
