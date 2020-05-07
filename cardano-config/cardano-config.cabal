@@ -131,10 +131,12 @@ test-suite cardano-config-test
                       , hedgehog
                       , hedgehog-corpus
 
-  other-modules:        Test.Cardano.Config.Types
-                        Test.Cardano.Config.Examples
-                        Test.Cardano.Config.Json
+  other-modules:        Test.Cardano.Config.Examples
                         Test.Cardano.Config.Gen
+                        Test.Cardano.Config.Json
+                        Test.Cardano.Config.Orphans
+                        Test.Cardano.Config.Types
+                        Test.Cardano.Config.TextView
 
   default-language:     Haskell2010
   default-extensions:   NoImplicitPrelude

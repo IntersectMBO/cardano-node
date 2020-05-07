@@ -6,11 +6,13 @@ module Test.Cardano.Config.Gen
   , genGenesisDelegationPair
   , genGenesisFundPair
   , genKESKeyPair
+  , genKeyRole
   , genNetworkTopology
   , genNodeAddress
   , genNodeHostAddress
   , genNodeSetup
   , genShelleyGenesis
+  , genSigningKey
   , genTextView
   , genVRFKeyPair
   ) where
@@ -27,6 +29,7 @@ import           Cardano.Slotting.Slot (EpochSize (..))
 import           Cardano.Crypto.DSIGN (deriveVerKeyDSIGN, genKeyDSIGN)
 import           Cardano.Crypto.VRF.Class
 import           Cardano.Crypto.KES.Class
+import           Cardano.Config.Shelley.ColdKeys (KeyRole (..), OperatorKeyRole (..))
 import           Crypto.Random (drgNewTest, withDRG)
 
 import qualified Data.Map.Strict as Map
@@ -58,7 +61,7 @@ import           Shelley.Spec.Ledger.Crypto
 import           Shelley.Spec.Ledger.TxData (Addr)
 
 import           Test.Cardano.Crypto.Gen (genProtocolMagicId)
-
+import           Test.Cardano.Config.Orphans ()
 
 genShelleyGenesis :: Gen (ShelleyGenesis TPraosStandardCrypto)
 genShelleyGenesis =
@@ -123,12 +126,24 @@ genKeyHash = hashKey . snd <$> genKeyPair
 genKeyPair :: Crypto crypto => Gen (SKey crypto, VKey crypto)
 genKeyPair = mkKeyPair <$> genSeed5
 
+genKeyRole :: Gen KeyRole
+genKeyRole =
+  Gen.element
+    [ GenesisKey
+    , GenesisUTxOKey
+    , OperatorKey GenesisDelegateKey
+    , OperatorKey StakePoolOperatorKey
+    ]
+
 genNetworkTopology :: Gen NetworkTopology
 genNetworkTopology =
   Gen.choice
     [ MockNodeTopology <$> Gen.list (Range.linear 0 10) genNodeSetup
     , RealNodeTopology <$> Gen.list (Range.linear 0 10) genRemoteAddress
     ]
+
+genSigningKey :: Crypto crypto => Gen (SKey crypto)
+genSigningKey = fst <$> genKeyPair
 
 genTextView :: Gen TextView
 genTextView =

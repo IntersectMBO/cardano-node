@@ -117,14 +117,14 @@ runPrettyPrintCBOR fp = do
 
 runPrettySigningKeyPublic :: CardanoEra -> SigningKeyFile -> ExceptT CliError IO ()
 runPrettySigningKeyPublic era skF = do
-  sK <- readSigningKey era skF
+  sK <- readEraSigningKey era skF
   liftIO . putTextLn . prettyPublicKey $ Crypto.toVerification sK
 
 runMigrateDelegateKeyFrom
         :: CardanoEra -> SigningKeyFile -> CardanoEra -> NewSigningKeyFile
         -> ExceptT CliError IO ()
 runMigrateDelegateKeyFrom oldEra oldKey newEra (NewSigningKeyFile newKey) = do
-  sk <- readSigningKey oldEra oldKey
+  sk <- readEraSigningKey oldEra oldKey
   sDk <- hoistEither $ serialiseDelegateKey newEra sk
   ensureNewFileLBS newKey sDk
 
@@ -138,7 +138,7 @@ runPrintGenesisHash genFp = do
 
 runPrintSigningKeyAddress :: CardanoEra -> Common.NetworkMagic -> SigningKeyFile -> ExceptT CliError IO ()
 runPrintSigningKeyAddress era netMagic skF = do
-  sK <- readSigningKey era skF
+  sK <- readEraSigningKey era skF
   let sKeyAddress = prettyAddress . Common.makeVerKeyAddress netMagic $ Crypto.toVerification sK
   liftIO $ putTextLn sKeyAddress
 
@@ -151,7 +151,7 @@ runKeygen era (NewSigningKeyFile skF) passReq = do
 
 runToVerification :: CardanoEra -> SigningKeyFile -> NewVerificationKeyFile -> ExceptT CliError IO ()
 runToVerification era skFp (NewVerificationKeyFile vkFp) = do
-  sk <- readSigningKey era skFp
+  sk <- readEraSigningKey era skFp
   let vKey = Builder.toLazyText . Crypto.formatFullVerificationKey $ Crypto.toVerification sk
   ensureNewFile TL.writeFile vkFp vKey
 
@@ -161,7 +161,7 @@ runIssueDelegationCertificate
 runIssueDelegationCertificate configFp epoch issuerSK delegateVK cert = do
   nc <- liftIO $ parseNodeConfigurationFP configFp
   vk <- readVerificationKey delegateVK
-  sk <- readSigningKey (ncCardanoEra nc) issuerSK
+  sk <- readEraSigningKey (ncCardanoEra nc) issuerSK
   pmId <- readProtocolMagicId $ ncGenesisFile nc
   let byGenDelCert :: Delegation.Certificate
       byGenDelCert = issueByronGenesisDelegation pmId epoch sk vk
@@ -194,7 +194,7 @@ runSpendGenesisUTxO
         -> ExceptT CliError IO ()
 runSpendGenesisUTxO configFp (NewTxFile ctTx) ctKey genRichAddr outs = do
     nc <- liftIO $ parseNodeConfigurationFP configFp
-    sk <- readSigningKey (ncCardanoEra nc) ctKey
+    sk <- readEraSigningKey (ncCardanoEra nc) ctKey
 
     tx <- firstExceptT SpendGenesisUTxOError $
             issueGenesisUTxOExpenditure nc genRichAddr outs sk
@@ -205,7 +205,7 @@ runSpendUTxO
         -> ExceptT CliError IO ()
 runSpendUTxO configFp (NewTxFile ctTx) ctKey ins outs = do
     nc <- liftIO $ parseNodeConfigurationFP configFp
-    sk <- readSigningKey (ncCardanoEra nc) ctKey
+    sk <- readEraSigningKey (ncCardanoEra nc) ctKey
 
     gTx <- firstExceptT IssueUtxoError $
              issueUTxOExpenditure nc ins outs sk

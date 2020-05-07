@@ -4,11 +4,9 @@ module Test.Cardano.Config.Types
   ( tests
   ) where
 
-import           Cardano.Config.TextView
 import           Cardano.Prelude
 
 import           Data.Aeson (encode, fromJSON, decode, toJSON)
-import qualified Data.ByteString.Char8 as BS
 
 import           Cardano.Config.Shelley.KES (decodeKESVerificationKey, encodeKESVerificationKey)
 import           Cardano.Config.Shelley.VRF (decodeVRFVerificationKey, encodeVRFVerificationKey)
@@ -16,8 +14,6 @@ import           Shelley.Spec.Ledger.Address (serialiseAddr, deserialiseAddr)
 
 import           Hedgehog (Property, discover)
 import qualified Hedgehog
-import qualified Hedgehog.Gen as Gen
-import qualified Hedgehog.Range as Range
 
 import           Test.Cardano.Config.Examples
 import           Test.Cardano.Config.Gen
@@ -71,27 +67,14 @@ prop_roundtrip_ShelleyGenesis_JSON =
 prop_roundtrip_VerKeyVRF_SimpleVRF_CBOR :: Property
 prop_roundtrip_VerKeyVRF_SimpleVRF_CBOR =
   Hedgehog.withTests 50 . Hedgehog.property $ do
-    (_, vKeyVRF) <- Hedgehog.forAll genVRFKeyPair
+    vKeyVRF <- snd <$> Hedgehog.forAll genVRFKeyPair
     Hedgehog.tripping vKeyVRF encodeVRFVerificationKey decodeVRFVerificationKey
 
 prop_roundtrip_VKeyES_TPraosStandardCrypto_CBOR :: Property
 prop_roundtrip_VKeyES_TPraosStandardCrypto_CBOR =
   Hedgehog.withTests 20 . Hedgehog.property $ do
-    (vKeyES, _) <- Hedgehog.forAll genKESKeyPair
+    vKeyES <- fst <$> Hedgehog.forAll genKESKeyPair
     Hedgehog.tripping vKeyES encodeKESVerificationKey decodeKESVerificationKey
-
--- Test this first. If this fails, others are likely to fail.
-prop_roundtrip_multiline_hex :: Property
-prop_roundtrip_multiline_hex =
-  Hedgehog.property $ do
-    bs <- BS.pack <$> Hedgehog.forAll (Gen.string (Range.linear 0 500) (Gen.element ['\0' .. '\xff']))
-    Hedgehog.tripping bs (BS.unlines . rawToMultilineHex) unRawToMultilineHex
-
-prop_roundtrip_TextView :: Property
-prop_roundtrip_TextView =
-  Hedgehog.property $ do
-    tv <- Hedgehog.forAll genTextView
-    Hedgehog.tripping tv renderTextView parseTextView
 
 -- -----------------------------------------------------------------------------
 

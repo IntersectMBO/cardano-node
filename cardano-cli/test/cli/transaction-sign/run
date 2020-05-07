@@ -1,0 +1,46 @@
+#!/bin/sh -u
+
+cwd=$(dirname "$0")
+
+# shellcheck source=/dev/null
+. "${cwd}/../core/common"
+
+# shellcheck disable=SC2154
+banner "${testname}"
+
+if test -d cardano-cli ; then
+  cd cardano-cli || exit 1
+  fi
+
+OUTPUT_DIR="${TEST}"
+
+rm -rf "${OUTPUT_DIR}"
+if test -d cardano-cli ; then
+  cd cardano-cli || exit 1
+  fi
+
+mkdir "${OUTPUT_DIR}"
+
+error=0
+
+# Defaults to signing a Mainnet transaction.
+${CARDANO_CLI} shelley transaction sign \
+    --tx-body-file "test/cli/${testname}/data/unsigned.tx" \
+    --signing-key-file "test/cli/${testname}/data/initial-utxo1.skey" \
+    --tx-file "${OUTPUT_DIR}/signed.tx"
+fail_on_error $?
+
+assert_file_exists "${OUTPUT_DIR}/signed.tx"
+assert_string 'TxSignedShelley' "${OUTPUT_DIR}/signed.tx"
+
+# Sign for a testnet with a ProtocolId of 11, but use two signing keys.
+${CARDANO_CLI} shelley transaction sign \
+    --tx-body-file "test/cli/${testname}/data/unsigned.tx" \
+    --signing-key-file "test/cli/${testname}/data/initial-utxo1.skey" \
+    --signing-key-file "test/cli/${testname}/data/initial-utxo2.skey" \
+    --protocol-id 11 \
+    --tx-file "${OUTPUT_DIR}/signed.tx"
+fail_on_error $?
+
+
+report_result ${error}

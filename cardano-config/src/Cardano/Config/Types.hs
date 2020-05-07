@@ -166,7 +166,7 @@ newtype SocketPath = SocketFile
   deriving (Eq, Ord, IsString)
 
 newtype SigningKeyFile = SigningKeyFile
-  { unSigningKey ::  FilePath }
+  { unSigningKeyFile ::  FilePath }
   deriving newtype Show
   deriving (Eq, Ord, IsString)
 

@@ -14,7 +14,7 @@ module Cardano.CLI.Key
   , NewSigningKeyFile(..)
   , NewVerificationKeyFile(..)
   , prettyPublicKey
-  , readSigningKey
+  , readEraSigningKey
   , readVerificationKey
   , keygen
     -- * Passwords
@@ -82,8 +82,8 @@ prettyPublicKey vk =
 -- TODO:  we need to support password-protected secrets.
 -- | Read signing key from a file.  Throw an error if the file can't be read or
 -- fails to deserialise.
-readSigningKey :: CardanoEra -> SigningKeyFile -> ExceptT CliError IO SigningKey
-readSigningKey era (SigningKeyFile fp) = do
+readEraSigningKey :: CardanoEra -> SigningKeyFile -> ExceptT CliError IO SigningKey
+readEraSigningKey era (SigningKeyFile fp) = do
   sK <- handleIOExceptT (ReadSigningKeyFailure fp . T.pack . displayException) $ LB.readFile fp
 
   -- Signing Key

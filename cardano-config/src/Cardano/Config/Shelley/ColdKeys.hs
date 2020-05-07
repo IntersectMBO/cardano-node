@@ -40,11 +40,17 @@ import qualified Shelley.Spec.Ledger.Keys as Ledger
 import           Cardano.Config.TextView
 
 
-data KeyRole = GenesisKey
-             | GenesisUTxOKey
-             | OperatorKey OperatorKeyRole
+data KeyRole
+  = GenesisKey
+  | GenesisUTxOKey
+  | OperatorKey OperatorKeyRole
+  deriving (Eq, Show)
 
-data OperatorKeyRole = GenesisDelegateKey | StakePoolOperatorKey
+
+data OperatorKeyRole
+  = GenesisDelegateKey
+  | StakePoolOperatorKey
+  deriving (Eq, Show)
 
 
 -- Local aliases for shorter types:
