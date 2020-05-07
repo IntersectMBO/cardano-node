@@ -5,6 +5,7 @@
 {-# LANGUAGE TupleSections #-}
 module Cardano.CLI.Shelley.Run.Genesis
   ( runGenesisCreate
+  , runGenesisAddr
   , runGenesisTxIn
   ) where
 
@@ -14,8 +15,7 @@ import           Prelude (String)
 import           Cardano.Api hiding (writeAddress)
 --TODO: prefer versions from Cardano.Api where possible
 
-import           Cardano.Config.Shelley.Address (AddressRole (..), ShelleyAddress,
-                    genBootstrapAddress, writeAddress)
+import           Cardano.Config.Shelley.Address (ShelleyAddress)
 import           Cardano.Config.Shelley.ColdKeys (KeyError, KeyRole (..), OperatorKeyRole (..),
                     readVerKey)
 import           Cardano.Config.Shelley.Genesis (ShelleyGenesisError (..))
@@ -56,6 +56,15 @@ import qualified Shelley.Spec.Ledger.TxData as Shelley
 
 import           System.Directory (createDirectoryIfMissing, listDirectory)
 import           System.FilePath ((</>), takeFileName, takeExtension)
+
+
+runGenesisAddr :: VerificationKeyFile -> ExceptT CliError IO ()
+runGenesisAddr (VerificationKeyFile vkeyPath) =
+    firstExceptT KeyCliError $ do
+      vkey <- readVerKey GenesisUTxOKey vkeyPath
+      let addr = shelleyVerificationKeyAddress
+                   (VerificationKeyShelley vkey) Mainnet
+      liftIO $ Text.putStrLn $ addressToHex addr
 
 
 runGenesisTxIn :: VerificationKeyFile -> ExceptT CliError IO ()

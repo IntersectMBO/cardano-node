@@ -145,6 +145,7 @@ data GenesisCmd
   | GenesisKeyHash VerificationKeyFile
   | GenesisVerKey VerificationKeyFile SigningKeyFile
   | GenesisTxIn VerificationKeyFile
+  | GenesisAddr VerificationKeyFile
   deriving (Eq, Show)
 
 --
@@ -526,6 +527,9 @@ pGenesisCmd =
       , Opt.command "get-ver-key"
           (Opt.info pGenesisVerKey $
              Opt.progDesc "Derive the verification key from a signing key")
+      , Opt.command "initial-addr"
+          (Opt.info pGenesisAddr $
+             Opt.progDesc "Get the address for an initial UTxO based on the verification key")
       , Opt.command "initial-txin"
           (Opt.info pGenesisTxIn $
              Opt.progDesc "Get the TxIn for an initial UTxO based on the verification key")
@@ -556,6 +560,10 @@ pGenesisCmd =
     pGenesisVerKey :: Parser GenesisCmd
     pGenesisVerKey =
       GenesisVerKey <$> pVerificationKeyFile Output <*> pSigningKeyFile Output
+
+    pGenesisAddr :: Parser GenesisCmd
+    pGenesisAddr =
+      GenesisAddr <$> pVerificationKeyFile Input
 
     pGenesisTxIn :: Parser GenesisCmd
     pGenesisTxIn =
