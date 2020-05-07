@@ -37,7 +37,7 @@ import qualified Ouroboros.Consensus.Mempool as Mempool
 import           Ouroboros.Consensus.Node.ProtocolInfo (pInfoConfig)
 import           Ouroboros.Network.NodeToClient (IOManager)
 
-import           Cardano.CLI.Key (readSigningKey)
+import           Cardano.CLI.Key (readEraSigningKey)
 import           Cardano.CLI.Ops
                    (CardanoEra(..), CliError(..), ensureNewFileLBS,
                     readGenesis, withRealPBFT)
@@ -54,7 +54,7 @@ runProposalCreation
   -> [ParametersToUpdate]
   -> ExceptT CliError IO ()
 runProposalCreation configFp sKey pVer sVer sysTag insHash outputFp params = do
-  sK <- readSigningKey ByronEra sKey
+  sK <- readEraSigningKey ByronEra sKey
   proposal <- createUpdateProposal configFp sK pVer sVer sysTag insHash params
   ensureNewFileLBS outputFp (serialiseByronUpdateProposal proposal)
 

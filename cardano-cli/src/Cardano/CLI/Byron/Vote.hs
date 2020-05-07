@@ -19,7 +19,7 @@ import           Cardano.Chain.Update
                    (AVote(..), UpId, Vote, mkVote, recoverUpId, recoverVoteId)
 import           Cardano.CLI.Byron.UpdateProposal
                    (deserialiseByronUpdateProposal, readByronUpdateProposal)
-import           Cardano.CLI.Key (readSigningKey)
+import           Cardano.CLI.Key (readEraSigningKey)
 import           Cardano.CLI.Ops (CardanoEra(..), ensureNewFileLBS)
 import           Cardano.Crypto.Signing (SigningKey)
 import           Ouroboros.Consensus.Byron.Ledger.Block (ByronBlock)
@@ -42,7 +42,7 @@ runVoteCreation
   -> FilePath
   -> ExceptT CliError IO ()
 runVoteCreation configFp sKey upPropFp voteBool outputFp = do
-  sK <- readSigningKey ByronEra sKey
+  sK <- readEraSigningKey ByronEra sKey
   upProp <- readByronUpdateProposal upPropFp
   proposal <- hoistEither $ deserialiseByronUpdateProposal upProp
   let updatePropId = recoverUpId proposal
