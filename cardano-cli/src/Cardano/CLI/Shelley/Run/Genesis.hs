@@ -21,7 +21,9 @@ import           Cardano.Config.Shelley.ColdKeys (KeyError, KeyRole (..), Operat
 import           Cardano.Config.Shelley.Genesis (ShelleyGenesisError (..))
 
 import           Cardano.CLI.Ops (CliError (..))
-import           Cardano.CLI.Shelley.Run.KeyGen (runGenesisKeyGenDelegate, runGenesisKeyGenGenesis)
+import           Cardano.CLI.Shelley.Run.KeyGen
+                   (runGenesisKeyGenDelegate, runGenesisKeyGenGenesis,
+                    runGenesisKeyGenUTxO)
 import           Cardano.CLI.Shelley.Parsers (GenesisDir (..), OpCertCounterFile (..),
                     SigningKeyFile (..), VerificationKeyFile (..))
 import           Cardano.Config.Shelley.Genesis
@@ -79,12 +81,13 @@ runGenesisCreate (GenesisDir gendir) count mStart amount = do
   start <- maybe (SystemStart <$> getCurrentTimePlus30) pure mStart
   template <- readShelleyGenesis (gendir </> "genesis.spec.json")
 
-  utxoAddrs <- forM [ 1 .. count ] $ createRequiredKeys gendir
+  forM_ [ 1 .. count ] $ createRequiredKeys gendir
   genDlgs <- readGenDelegsMap gendir
+  utxoAddrs <- readInitialFundAddresses gendir
 
-  writeShelleyGenesis (gendir </> "genesis.json") (updateTemplate start amount genDlgs utxoAddrs template)
+  let finalGenesis = updateTemplate start amount genDlgs utxoAddrs template
 
-  liftIO $ putTextLn "Genesis file, genesis delegates and genesis distribution created."
+  writeShelleyGenesis (gendir </> "genesis.json") finalGenesis
 
 -- -------------------------------------------------------------------------------------------------
 
@@ -96,15 +99,16 @@ newtype BaseName
 textBaseName :: BaseName -> Text
 textBaseName (BaseName a) = Text.pack a
 
-createRequiredKeys :: FilePath -> Word -> ExceptT CliError IO ShelleyAddress
+createRequiredKeys :: FilePath -> Word -> ExceptT CliError IO ()
 createRequiredKeys gendir index = do
+  liftIO $ createDirectoryIfMissing False gendir
   createDelegateKeys (gendir </> "delegate-keys") index
   createGenesisKeys (gendir </> "genesis-keys") index
-  createUtxoAddresses (gendir </> "utxo-keys") index
+  createUtxoKeys (gendir </> "utxo-keys") index
 
 createDelegateKeys :: FilePath -> Word -> ExceptT CliError IO ()
 createDelegateKeys dir index = do
-  liftIO $ createDirectoryIfMissing True dir
+  liftIO $ createDirectoryIfMissing False dir
   let strIndex = show index
   runGenesisKeyGenDelegate
         (VerificationKeyFile $ dir </> "delegate" ++ strIndex ++ ".vkey")
@@ -113,21 +117,20 @@ createDelegateKeys dir index = do
 
 createGenesisKeys :: FilePath -> Word -> ExceptT CliError IO ()
 createGenesisKeys dir index = do
-  liftIO $ createDirectoryIfMissing True dir
+  liftIO $ createDirectoryIfMissing False dir
   let strIndex = show index
   runGenesisKeyGenGenesis
         (VerificationKeyFile $ dir </> "genesis" ++ strIndex ++ ".vkey")
         (SigningKeyFile $ dir </> "genesis" ++ strIndex ++ ".skey")
 
 
-createUtxoAddresses :: FilePath -> Word -> ExceptT CliError IO ShelleyAddress
-createUtxoAddresses dir index = do
-  liftIO $ createDirectoryIfMissing True dir
-  addr <- liftIO genBootstrapAddress
+createUtxoKeys :: FilePath -> Word -> ExceptT CliError IO ()
+createUtxoKeys dir index = do
+  liftIO $ createDirectoryIfMissing False dir
   let strIndex = show index
-  firstExceptT AddressCliError $
-    writeAddress BootstrapAddr (dir </> "address" ++ strIndex ++ ".vkey") addr
-  pure addr
+  runGenesisKeyGenUTxO
+        (VerificationKeyFile $ dir </> "utxo" ++ strIndex ++ ".vkey")
+        (SigningKeyFile $ dir </> "utxo" ++ strIndex ++ ".skey")
 
 
 -- | Current UTCTime plus 30 seconds
@@ -222,6 +225,22 @@ readDelegateKeys deldir = do
 readBaseNameVerKey :: KeyRole -> FilePath -> ExceptT KeyError IO (BaseName, Ledger.VKey TPraosStandardCrypto)
 readBaseNameVerKey role fpath =
   (BaseName (takeFileName fpath),) <$> readVerKey role fpath
+
+readInitialFundAddresses :: FilePath -> ExceptT CliError IO [ShelleyAddress]
+readInitialFundAddresses gendir = do
+    files <- filter isVkey <$> liftIO (listDirectory utxodir)
+    vkeys <- firstExceptT KeyCliError $
+               traverse (readVerKey GenesisUTxOKey)
+                        (map (utxodir </>) files)
+    return [ addr | vkey <- vkeys
+           , let AddressShelley addr = shelleyVerificationKeyAddress
+                                         (VerificationKeyShelley vkey) Mainnet
+           ]
+    --TODO: need to support testnets, not just Mainnet
+    --TODO: need less insane version of shelleyVerificationKeyAddress with
+    -- shelley-specific types
+  where
+    utxodir = gendir </> "utxo-keys"
 
 isVkey :: FilePath -> Bool
 isVkey fp = takeExtension fp == ".vkey"
