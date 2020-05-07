@@ -52,7 +52,7 @@ import qualified Formatting as F
 import           System.Directory (canonicalizePath, doesPathExist, makeAbsolute)
 import qualified Text.JSON.Canonical as CanonicalJSON
 
-import           Cardano.Api (ApiError)
+import           Cardano.Api (ApiError, LocalStateQueryError, renderLocalStateQueryError)
 import           Cardano.Binary
                    (Decoder, DecoderError, fromCBOR)
 import           Cardano.Chain.Block (fromCBORABlockOrBoundary)
@@ -100,7 +100,6 @@ import           Ouroboros.Network.Protocol.ChainSync.Client
                    , chainSyncClientPeer, recvMsgRollForward)
 import           Ouroboros.Network.Protocol.Handshake.Version
                    (DictVersion(..), Versions)
-import           Ouroboros.Network.Protocol.LocalStateQuery.Type (AcquireFailure (..))
 
 import           Cardano.Common.LocalSocket (chooseSocketPath)
 import           Cardano.Config.Protocol
@@ -298,7 +297,7 @@ data CliError
   | AesonDecode !FilePath !Text
   | ShelleyGenesisError !ShelleyGenesisError
   | IncorrectProtocolSpecifiedError !Protocol
-  | NodeLocalStateQueryError !AcquireFailure
+  | NodeLocalStateQueryError !LocalStateQueryError
   | AddressDescribeError !Text
 
 instance Show CliError where
@@ -392,8 +391,8 @@ instance Show CliError where
     = T.unpack $ renderShelleyGenesisError sge
   show (IncorrectProtocolSpecifiedError ptcl)
     = "Incorrect protocol specified: " <> (toS $ show ptcl)
-  show (NodeLocalStateQueryError acquireFailure)
-    = "Error querying node's local state: " <> show acquireFailure
+  show (NodeLocalStateQueryError err)
+    = T.unpack $ renderLocalStateQueryError err
   show (AddressDescribeError txt)
     = T.unpack txt
 

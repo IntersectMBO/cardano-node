@@ -47,6 +47,9 @@ module Cardano.Api
   , signTransactionWithWitness
   , submitTransaction
 
+  -- * Node local state queries
+  , LocalStateQueryError (..)
+  , renderLocalStateQueryError
   , queryFilteredUTxOFromLocalState
   , queryPParamsFromLocalState
   ) where
