@@ -19,6 +19,7 @@ module Cardano.Api
   , Network (..)
   , byronVerificationKeyAddress
   , shelleyVerificationKeyAddress
+  , shelleyVerificationKeyBootstrapAddress
 
     -- * Transactions
   , TxSigned (..)
@@ -119,6 +120,14 @@ shelleyVerificationKeyAddress vkey _nw =
         -- is all we have here
         Shelley.Addr (Shelley.KeyHashObj (Shelley.hashKey vk))
                      Shelley.StakeRefNull
+
+shelleyVerificationKeyBootstrapAddress :: VerificationKey -> Network -> Address
+shelleyVerificationKeyBootstrapAddress vkey _nw =
+  case vkey of
+    VerificationKeyByron _ -> panic "Cardano.Api.shelleyVerificationKeyBootstrapAddress: VerificationKeyByron"
+    VerificationKeyShelley vk ->
+      AddressShelley $
+        Shelley.AddrBootstrap (Shelley.hashKey vk)
 
 getVerificationKey :: SigningKey -> VerificationKey
 getVerificationKey kp =

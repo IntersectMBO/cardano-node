@@ -261,7 +261,8 @@ readInitialFundAddresses utxodir = do
                traverse (readVerKey GenesisUTxOKey)
                         (map (utxodir </>) files)
     return [ addr | vkey <- vkeys
-           , let AddressShelley addr = shelleyVerificationKeyAddress
+             -- The initial fund addresses /must/ be bootstrap addresses.
+           , let AddressShelley addr = shelleyVerificationKeyBootstrapAddress
                                          (VerificationKeyShelley vkey) Mainnet
            ]
     --TODO: need to support testnets, not just Mainnet
