@@ -593,8 +593,8 @@ pGenesisCmd =
         Opt.option Opt.auto
           (  Opt.long "gen-genesis-keys"
           <> Opt.metavar "INT"
-          <> Opt.help "The number of genesis keys to make [default is 7]."
-          <> Opt.value 7
+          <> Opt.help "The number of genesis keys to make [default is 0]."
+          <> Opt.value 0
           )
 
     pGenesisNumUTxOKeys :: Parser Word
@@ -602,8 +602,8 @@ pGenesisCmd =
         Opt.option Opt.auto
           (  Opt.long "gen-utxo-keys"
           <> Opt.metavar "INT"
-          <> Opt.help "The number of UTxO keys to make [default is 7]."
-          <> Opt.value 7
+          <> Opt.help "The number of UTxO keys to make [default is 0]."
+          <> Opt.value 0
           )
 
     convertTime :: String -> UTCTime
