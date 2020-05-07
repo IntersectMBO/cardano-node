@@ -138,13 +138,14 @@ data SystemCmd
 
 
 data GenesisCmd
-  = GenesisCreate GenesisDir Word (Maybe SystemStart) Lovelace
+  = GenesisCreate GenesisDir Word Word (Maybe SystemStart) Lovelace
   | GenesisKeyGenGenesis VerificationKeyFile SigningKeyFile
   | GenesisKeyGenDelegate VerificationKeyFile SigningKeyFile OpCertCounterFile
   | GenesisKeyGenUTxO VerificationKeyFile SigningKeyFile
   | GenesisKeyHash VerificationKeyFile
   | GenesisVerKey VerificationKeyFile SigningKeyFile
   | GenesisTxIn VerificationKeyFile
+  | GenesisAddr VerificationKeyFile
   deriving (Eq, Show)
 
 --
@@ -526,6 +527,9 @@ pGenesisCmd =
       , Opt.command "get-ver-key"
           (Opt.info pGenesisVerKey $
              Opt.progDesc "Derive the verification key from a signing key")
+      , Opt.command "initial-addr"
+          (Opt.info pGenesisAddr $
+             Opt.progDesc "Get the address for an initial UTxO based on the verification key")
       , Opt.command "initial-txin"
           (Opt.info pGenesisTxIn $
              Opt.progDesc "Get the TxIn for an initial UTxO based on the verification key")
@@ -557,13 +561,21 @@ pGenesisCmd =
     pGenesisVerKey =
       GenesisVerKey <$> pVerificationKeyFile Output <*> pSigningKeyFile Output
 
+    pGenesisAddr :: Parser GenesisCmd
+    pGenesisAddr =
+      GenesisAddr <$> pVerificationKeyFile Input
+
     pGenesisTxIn :: Parser GenesisCmd
     pGenesisTxIn =
       GenesisTxIn <$> pVerificationKeyFile Input
 
     pGenesisCreate :: Parser GenesisCmd
     pGenesisCreate =
-      GenesisCreate <$> pGenesisDir <*> pGenesisDelegates <*> pMaybeSystemStart <*> pInitialSupply
+      GenesisCreate <$> pGenesisDir
+                    <*> pGenesisNumGenesisKeys
+                    <*> pGenesisNumUTxOKeys
+                    <*> pMaybeSystemStart
+                    <*> pInitialSupply
 
     pGenesisDir :: Parser GenesisDir
     pGenesisDir =
@@ -584,13 +596,22 @@ pGenesisCmd =
             <> Opt.help "The genesis start time in YYYY-MM-DDThh:mm:ssZ format. If unspecified, will be the current time +30 seconds."
             )
 
-    pGenesisDelegates :: Parser Word
-    pGenesisDelegates =
+    pGenesisNumGenesisKeys :: Parser Word
+    pGenesisNumGenesisKeys =
         Opt.option Opt.auto
-          (  Opt.long "genesis-delegates"
+          (  Opt.long "gen-genesis-keys"
           <> Opt.metavar "INT"
-          <> Opt.help "The number of genesis delegates [default is 7]."
-          <> Opt.value 7
+          <> Opt.help "The number of genesis keys to make [default is 0]."
+          <> Opt.value 0
+          )
+
+    pGenesisNumUTxOKeys :: Parser Word
+    pGenesisNumUTxOKeys =
+        Opt.option Opt.auto
+          (  Opt.long "gen-utxo-keys"
+          <> Opt.metavar "INT"
+          <> Opt.help "The number of UTxO keys to make [default is 0]."
+          <> Opt.value 0
           )
 
     convertTime :: String -> UTCTime

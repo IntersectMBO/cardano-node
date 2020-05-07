@@ -19,7 +19,7 @@ error=0
 
 ${CARDANO_CLI} shelley genesis create-genesis \
     --genesis-dir "${OUTPUT_DIR}" \
-    --genesis-delegates 1 \
+    --gen-genesis-keys 1 \
     --supply 1000 > /dev/null
 
 ${CARDANO_CLI} shelley node key-gen-KES \
