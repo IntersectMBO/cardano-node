@@ -82,27 +82,35 @@ runGenesisCreate :: GenesisDir
                  -> Maybe SystemStart
                  -> Lovelace
                  -> ExceptT CliError IO ()
-runGenesisCreate (GenesisDir gendir)
+runGenesisCreate (GenesisDir rootdir)
                  genNumGenesisKeys genNumUTxOKeys
                  mStart amount = do
   start <- maybe (SystemStart <$> getCurrentTimePlus30) pure mStart
-  template <- readShelleyGenesis (gendir </> "genesis.spec.json")
+  template <- readShelleyGenesis (rootdir </> "genesis.spec.json")
 
-  liftIO $ createDirectoryIfMissing False gendir
+  liftIO $ do
+    createDirectoryIfMissing False rootdir
+    createDirectoryIfMissing False gendir
+    createDirectoryIfMissing False deldir
+    createDirectoryIfMissing False utxodir
 
   forM_ [ 1 .. genNumGenesisKeys ] $ \index -> do
-    createGenesisKeys  (gendir </> "genesis-keys")  index
-    createDelegateKeys (gendir </> "delegate-keys") index
+    createGenesisKeys  gendir  index
+    createDelegateKeys deldir index
 
   forM_ [ 1 .. genNumUTxOKeys ] $ \index ->
-    createUtxoKeys (gendir </> "utxo-keys") index
+    createUtxoKeys utxodir index
 
-  genDlgs <- readGenDelegsMap gendir
-  utxoAddrs <- readInitialFundAddresses gendir
+  genDlgs <- readGenDelegsMap gendir deldir
+  utxoAddrs <- readInitialFundAddresses utxodir
 
   let finalGenesis = updateTemplate start amount genDlgs utxoAddrs template
 
-  writeShelleyGenesis (gendir </> "genesis.json") finalGenesis
+  writeShelleyGenesis (rootdir </> "genesis.json") finalGenesis
+  where
+    gendir  = rootdir </> "genesis-keys"
+    deldir  = rootdir </> "delegate-keys"
+    utxodir = rootdir </> "utxo-keys"
 
 -- -------------------------------------------------------------------------------------------------
 
@@ -185,10 +193,13 @@ writeShelleyGenesis :: FilePath -> ShelleyGenesis TPraosStandardCrypto -> Except
 writeShelleyGenesis fpath sg =
   handleIOExceptT (IOError fpath) $ LBS.writeFile fpath (encodePretty sg)
 
-readGenDelegsMap :: FilePath -> ExceptT CliError IO (Map (GenKeyHash TPraosStandardCrypto) (KeyHash TPraosStandardCrypto))
-readGenDelegsMap gendir = do
-    gkm <- firstExceptT KeyCliError $ readGenesisKeys (gendir </> "genesis-keys")
-    dkm <- firstExceptT KeyCliError $ readDelegateKeys (gendir </> "delegate-keys")
+readGenDelegsMap :: FilePath
+                 -> FilePath
+                 -> ExceptT CliError IO (Map (GenKeyHash TPraosStandardCrypto)
+                                             (KeyHash TPraosStandardCrypto))
+readGenDelegsMap gendir deldir = do
+    gkm <- firstExceptT KeyCliError $ readGenesisKeys gendir
+    dkm <- firstExceptT KeyCliError $ readDelegateKeys deldir
 
     -- Both maps should have an identical set of keys (as in Map keys)
     -- because we should have generated an equal amount of genesis keys
@@ -235,7 +246,7 @@ readBaseNameVerKey role fpath =
   (BaseName (takeFileName fpath),) <$> readVerKey role fpath
 
 readInitialFundAddresses :: FilePath -> ExceptT CliError IO [ShelleyAddress]
-readInitialFundAddresses gendir = do
+readInitialFundAddresses utxodir = do
     files <- filter isVkey <$> liftIO (listDirectory utxodir)
     vkeys <- firstExceptT KeyCliError $
                traverse (readVerKey GenesisUTxOKey)
@@ -247,8 +258,6 @@ readInitialFundAddresses gendir = do
     --TODO: need to support testnets, not just Mainnet
     --TODO: need less insane version of shelleyVerificationKeyAddress with
     -- shelley-specific types
-  where
-    utxodir = gendir </> "utxo-keys"
 
 isVkey :: FilePath -> Bool
 isVkey fp = takeExtension fp == ".vkey"
