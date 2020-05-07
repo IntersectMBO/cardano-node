@@ -31,7 +31,8 @@ ${CARDANO_CLI} shelley genesis create-genesis \
     --genesis-dir "${OUTPUT_DIR}/" \
     --start-time "${start_time}" \
     --supply "${supply}" \
-    --genesis-delegates ${gendlg_count} \
+    --gen-genesis-keys ${gendlg_count} \
+    --gen-utxo-keys ${gendlg_count}
     > /dev/null
 
 check_supply=$(grep MaxLovelaceSupply "${OUTPUT_JSON}" | sed "s/${supply}/correct/;s/[ \"]//g")
