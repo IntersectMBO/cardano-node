@@ -138,7 +138,7 @@ data SystemCmd
 
 
 data GenesisCmd
-  = GenesisCreate GenesisDir Word (Maybe SystemStart) Lovelace
+  = GenesisCreate GenesisDir Word Word (Maybe SystemStart) Lovelace
   | GenesisKeyGenGenesis VerificationKeyFile SigningKeyFile
   | GenesisKeyGenDelegate VerificationKeyFile SigningKeyFile OpCertCounterFile
   | GenesisKeyGenUTxO VerificationKeyFile SigningKeyFile
@@ -563,7 +563,11 @@ pGenesisCmd =
 
     pGenesisCreate :: Parser GenesisCmd
     pGenesisCreate =
-      GenesisCreate <$> pGenesisDir <*> pGenesisDelegates <*> pMaybeSystemStart <*> pInitialSupply
+      GenesisCreate <$> pGenesisDir
+                    <*> pGenesisNumGenesisKeys
+                    <*> pGenesisNumUTxOKeys
+                    <*> pMaybeSystemStart
+                    <*> pInitialSupply
 
     pGenesisDir :: Parser GenesisDir
     pGenesisDir =
@@ -584,12 +588,21 @@ pGenesisCmd =
             <> Opt.help "The genesis start time in YYYY-MM-DDThh:mm:ssZ format. If unspecified, will be the current time +30 seconds."
             )
 
-    pGenesisDelegates :: Parser Word
-    pGenesisDelegates =
+    pGenesisNumGenesisKeys :: Parser Word
+    pGenesisNumGenesisKeys =
         Opt.option Opt.auto
-          (  Opt.long "genesis-delegates"
+          (  Opt.long "gen-genesis-keys"
           <> Opt.metavar "INT"
-          <> Opt.help "The number of genesis delegates [default is 7]."
+          <> Opt.help "The number of genesis keys to make [default is 7]."
+          <> Opt.value 7
+          )
+
+    pGenesisNumUTxOKeys :: Parser Word
+    pGenesisNumUTxOKeys =
+        Opt.option Opt.auto
+          (  Opt.long "gen-utxo-keys"
+          <> Opt.metavar "INT"
+          <> Opt.help "The number of UTxO keys to make [default is 7]."
           <> Opt.value 7
           )
 

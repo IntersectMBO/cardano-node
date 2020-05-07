@@ -76,12 +76,27 @@ runGenesisTxIn (VerificationKeyFile vkeyPath) =
         TxId (Crypto.UnsafeHash h)
 
 
-runGenesisCreate :: GenesisDir -> Word -> Maybe SystemStart -> Lovelace -> ExceptT CliError IO ()
-runGenesisCreate (GenesisDir gendir) count mStart amount = do
+runGenesisCreate :: GenesisDir
+                 -> Word  -- ^ num genesis & delegate keys to make
+                 -> Word  -- ^ num utxo keys to make
+                 -> Maybe SystemStart
+                 -> Lovelace
+                 -> ExceptT CliError IO ()
+runGenesisCreate (GenesisDir gendir)
+                 genNumGenesisKeys genNumUTxOKeys
+                 mStart amount = do
   start <- maybe (SystemStart <$> getCurrentTimePlus30) pure mStart
   template <- readShelleyGenesis (gendir </> "genesis.spec.json")
 
-  forM_ [ 1 .. count ] $ createRequiredKeys gendir
+  liftIO $ createDirectoryIfMissing False gendir
+
+  forM_ [ 1 .. genNumGenesisKeys ] $ \index -> do
+    createGenesisKeys  (gendir </> "genesis-keys")  index
+    createDelegateKeys (gendir </> "delegate-keys") index
+
+  forM_ [ 1 .. genNumUTxOKeys ] $ \index ->
+    createUtxoKeys (gendir </> "utxo-keys") index
+
   genDlgs <- readGenDelegsMap gendir
   utxoAddrs <- readInitialFundAddresses gendir
 
@@ -98,13 +113,6 @@ newtype BaseName
 
 textBaseName :: BaseName -> Text
 textBaseName (BaseName a) = Text.pack a
-
-createRequiredKeys :: FilePath -> Word -> ExceptT CliError IO ()
-createRequiredKeys gendir index = do
-  liftIO $ createDirectoryIfMissing False gendir
-  createDelegateKeys (gendir </> "delegate-keys") index
-  createGenesisKeys (gendir </> "genesis-keys") index
-  createUtxoKeys (gendir </> "utxo-keys") index
 
 createDelegateKeys :: FilePath -> Word -> ExceptT CliError IO ()
 createDelegateKeys dir index = do

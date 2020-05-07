@@ -88,7 +88,7 @@ runGenesisCmd (GenesisKeyGenUTxO vk sk) = runGenesisKeyGenUTxO vk sk
 runGenesisCmd (GenesisKeyHash vk) = runGenesisKeyHash vk
 runGenesisCmd (GenesisVerKey vk sk) = runGenesisVerKey vk sk
 runGenesisCmd (GenesisTxIn vk) = runGenesisTxIn vk
-runGenesisCmd (GenesisCreate gd count ms am) = runGenesisCreate gd count ms am
+runGenesisCmd (GenesisCreate gd gn un ms am) = runGenesisCreate gd gn un ms am
 
 --
 -- Node command implementations
