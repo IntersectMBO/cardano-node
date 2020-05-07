@@ -82,7 +82,6 @@ import qualified Cardano.Chain.Common  as Byron
 import qualified Cardano.Chain.Genesis as Byron
 import qualified Cardano.Chain.UTxO    as Byron
 
-import qualified Shelley.Spec.Ledger.Address   as Shelley
 import qualified Shelley.Spec.Ledger.Keys      as Shelley
 import qualified Shelley.Spec.Ledger.TxData    as Shelley
 import qualified Shelley.Spec.Ledger.Tx        as Shelley
