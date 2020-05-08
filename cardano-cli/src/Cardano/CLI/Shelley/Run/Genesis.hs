@@ -74,10 +74,10 @@ runGenesisTxIn :: VerificationKeyFile -> ExceptT CliError IO ()
 runGenesisTxIn (VerificationKeyFile vkeyPath) =
     firstExceptT KeyCliError $ do
       vkey <- readVerKey GenesisUTxOKey vkeyPath
-      let AddressShelley addr = shelleyVerificationKeyAddress
-                                  (VerificationKeyShelley vkey) Mainnet
-          txin = fromShelleyTxIn (initialFundsPseudoTxIn addr)
-      liftIO $ Text.putStrLn $ renderTxIn txin
+      case shelleyVerificationKeyAddress (VerificationKeyShelley vkey) Mainnet of
+        AddressShelley addr -> do let txin = fromShelleyTxIn (initialFundsPseudoTxIn addr)
+                                  liftIO $ Text.putStrLn $ renderTxIn txin
+        AddressByron _addr -> panic "Please supply only shelley addresses"
   where
     fromShelleyTxIn :: Shelley.TxIn TPraosStandardCrypto -> TxIn
     fromShelleyTxIn (Shelley.TxIn txid txix) =
@@ -279,8 +279,9 @@ readInitialFundAddresses utxodir = do
                traverse (readVerKey GenesisUTxOKey)
                         (map (utxodir </>) files)
     return [ addr | vkey <- vkeys
-           , let AddressShelley addr = shelleyVerificationKeyAddress
-                                         (VerificationKeyShelley vkey) Mainnet
+           , addr <- case shelleyVerificationKeyAddress (VerificationKeyShelley vkey) Mainnet of
+                       AddressShelley addr' -> return addr'
+                       _ -> panic "Please supply only shelley verification keys"
            ]
     --TODO: need to support testnets, not just Mainnet
     --TODO: need less insane version of shelleyVerificationKeyAddress with

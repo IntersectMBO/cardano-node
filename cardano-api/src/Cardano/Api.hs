@@ -223,6 +223,7 @@ witnessTransaction txu nw signKey =
         TxWitShelley $ shelleyWitnessTransaction tx signKey
 
 byronWitnessTransaction :: Crypto.Hash Byron.Tx -> Network -> SigningKey -> ByronWitness
+byronWitnessTransaction _ _ (SigningKeyShelley _) = panic "Cardano.Api.byronWitnessTransaction: Please use a byron signing key"
 byronWitnessTransaction txHash nw (SigningKeyByron signKey) =
     Byron.VKWitness
       (Crypto.toVerification signKey)
@@ -236,6 +237,7 @@ byronWitnessTransaction txHash nw (SigningKeyByron signKey) =
         Testnet pm -> pm
 
 shelleyWitnessTransaction :: ShelleyTxBody -> SigningKey -> ShelleyWitnessVKey
+shelleyWitnessTransaction _ (SigningKeyByron _) = panic "Cardano.Api.shelleyWitnessTransaction: Please use a shelley signing key"
 shelleyWitnessTransaction txbody (SigningKeyShelley sk) =
     Shelley.WitVKey vk sig
   where
