@@ -6,15 +6,15 @@ module Cardano.CLI.Shelley.Run.Query
 
 import           Cardano.Prelude
 
-import           Cardano.Api (queryFilteredUTxOFromLocalState, queryPParamsFromLocalState)
+import           Cardano.Api (Address, queryFilteredUTxOFromLocalState,
+                     queryPParamsFromLocalState)
 
 import           Cardano.CLI.Ops (CliError (..), getLocalTip, withIOManagerE)
-import           Cardano.CLI.Shelley.Parsers (AddressFile (..), OutputFile (..), QueryCmd (..))
+import           Cardano.CLI.Shelley.Parsers (OutputFile (..), QueryCmd (..))
 
 import           Cardano.Common.LocalSocket (chooseSocketPath)
 
 import           Cardano.Config.Protocol (mkConsensusProtocol)
-import           Cardano.Config.Shelley.Address (AddressRole (..), readAddress)
 import           Cardano.Config.Types (CLISocketPath, ConfigYamlFilePath, NodeConfiguration (..),
                      SomeConsensusProtocol (..), parseNodeConfigurationFP)
 
@@ -38,8 +38,8 @@ import           Shelley.Spec.Ledger.PParams (PParams)
 runQueryCmd :: QueryCmd -> ExceptT CliError IO ()
 runQueryCmd (QueryProtocolParameters configFp mbSockPath outFile) =
   runQueryProtocolParameters configFp mbSockPath outFile
-runQueryCmd (QueryFilteredUTxO af configFp mbSockPath outFile) =
-  runQueryFilteredUTxO af configFp mbSockPath outFile
+runQueryCmd (QueryFilteredUTxO addr configFp mbSockPath outFile) =
+  runQueryFilteredUTxO addr configFp mbSockPath outFile
 runQueryCmd cmd = liftIO $ putStrLn $ "runQueryCmd: " ++ show cmd
 
 runQueryProtocolParameters
@@ -65,15 +65,12 @@ runQueryProtocolParameters configFp mbSockPath (OutputFile outFile) = do
       _ -> left $ IncorrectProtocolSpecifiedError (ncProtocol nc)
 
 runQueryFilteredUTxO
-  :: AddressFile
+  :: Address
   -> ConfigYamlFilePath
   -> Maybe CLISocketPath
   -> OutputFile
   -> ExceptT CliError IO ()
-runQueryFilteredUTxO (AddressFile addrPath) configFp mbSockPath (OutputFile _outFile) = do
-    -- TODO: Add support for other 'AddressRole's.
-    addr <- firstExceptT AddressCliError $ readAddress BootstrapAddr addrPath
-
+runQueryFilteredUTxO addr configFp mbSockPath (OutputFile _outFile) = do
     nc <- liftIO $ parseNodeConfigurationFP configFp
     sockPath <- pure $ chooseSocketPath (ncSocketPath nc) mbSockPath
     SomeConsensusProtocol p <- firstExceptT ProtocolError $ mkConsensusProtocol nc Nothing

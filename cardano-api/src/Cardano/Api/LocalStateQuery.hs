@@ -5,12 +5,15 @@
 {-# LANGUAGE TypeFamilies #-}
 
 module Cardano.Api.LocalStateQuery
-  ( queryFilteredUTxOFromLocalState
+  ( LocalStateQueryError (..)
+  , renderLocalStateQueryError
+  , queryFilteredUTxOFromLocalState
   , queryPParamsFromLocalState
   ) where
 
 import           Cardano.Prelude hiding (atomically, option, threadDelay)
 
+import           Cardano.Api.Types (Address (..), ByronAddress, ShelleyAddress)
 import           Cardano.Api.TxSubmit.Types (textShow)
 
 import           Cardano.BM.Data.Tracer (ToLogObject (..), nullTracer)
@@ -23,11 +26,12 @@ import qualified Codec.CBOR.Term as CBOR
 
 import           Control.Monad.Class.MonadSTM.Strict
                    (MonadSTM, StrictTMVar, atomically, newEmptyTMVarM, tryPutTMVar, takeTMVar)
-import           Control.Monad.Trans.Except.Extra (newExceptT)
+import           Control.Monad.Trans.Except.Extra (left, newExceptT)
 import           Control.Tracer (Tracer)
 
 import           Data.Functor.Contravariant (contramap)
 import           Data.Set (Set)
+import qualified Data.Set as Set
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Data.Void (Void)
@@ -40,6 +44,7 @@ import           Ouroboros.Consensus.Node.NetworkProtocolVersion
                   (nodeToClientProtocolVersion, supportedNodeToClientVersions)
 import           Ouroboros.Consensus.Node.Run (RunNode)
 import           Ouroboros.Consensus.Shelley.Ledger
+import           Ouroboros.Consensus.Shelley.Protocol.Crypto (TPraosStandardCrypto)
 
 import           Ouroboros.Network.Block (Point)
 import           Ouroboros.Network.Magic (NetworkMagic)
@@ -57,8 +62,21 @@ import           Ouroboros.Network.Protocol.LocalStateQuery.Client
 import           Ouroboros.Network.Protocol.LocalStateQuery.Type (AcquireFailure (..))
 
 import qualified Shelley.Spec.Ledger.PParams as Ledger (PParams)
-import qualified Shelley.Spec.Ledger.TxData as Ledger (Addr)
 import qualified Shelley.Spec.Ledger.UTxO as Ledger (UTxO)
+
+-- | An error that can occur while querying a node's local state.
+data LocalStateQueryError
+  = AcquireFailureError !AcquireFailure
+  | ByronAddressesNotSupportedError !(Set ByronAddress)
+  -- ^ The query does not support Byron addresses.
+  deriving (Eq, Show)
+
+renderLocalStateQueryError :: LocalStateQueryError -> Text
+renderLocalStateQueryError lsqErr =
+  case lsqErr of
+    AcquireFailureError err -> "Local state query acquire failure: " <> show err
+    ByronAddressesNotSupportedError byronAddrs ->
+      "The attempted local state query does not support Byron addresses: " <> show byronAddrs
 
 -- | Query the UTxO, filtered by a given set of addresses, from a Shelley node
 -- via the local state query protocol.
@@ -66,23 +84,24 @@ import qualified Shelley.Spec.Ledger.UTxO as Ledger (UTxO)
 -- This one is Shelley-specific because the query is Shelley-specific.
 --
 queryFilteredUTxOFromLocalState
-  :: (RunNode blk, blk ~ ShelleyBlock c)
-  => CodecConfig blk
+  :: CodecConfig (ShelleyBlock TPraosStandardCrypto)
   -> NetworkMagic
   -> SocketPath
-  -> Set (Ledger.Addr c)
-  -> Point blk
-  -> ExceptT AcquireFailure IO (Ledger.UTxO c)
-queryFilteredUTxOFromLocalState cfg nm socketPath addrs point = do
-  let pointAndQuery = (point, GetFilteredUTxO addrs)
-  utxoVar <- liftIO newEmptyTMVarM
-  liftIO $ queryNodeLocalState
-    utxoVar
-    nullTracer
-    cfg nm
-    socketPath
-    pointAndQuery
-  newExceptT $ atomically $ takeTMVar utxoVar
+  -> Set Address
+  -> Point (ShelleyBlock TPraosStandardCrypto)
+  -> ExceptT LocalStateQueryError IO (Ledger.UTxO TPraosStandardCrypto)
+queryFilteredUTxOFromLocalState cfg nm socketPath addrs point =
+  whenAllShelleyAddresses addrs $ \shelleyAddrs -> do
+    let pointAndQuery = (point, GetFilteredUTxO shelleyAddrs)
+    utxoVar <- liftIO newEmptyTMVarM
+    liftIO $ queryNodeLocalState
+      utxoVar
+      nullTracer
+      cfg
+      nm
+      socketPath
+      pointAndQuery
+    newExceptT $ atomically $ takeTMVar utxoVar
 
 -- | Query the current protocol parameters from a Shelley node via the local
 -- state query protocol.
@@ -95,7 +114,7 @@ queryPParamsFromLocalState
   -> NetworkMagic
   -> SocketPath
   -> Point blk
-  -> ExceptT AcquireFailure IO Ledger.PParams
+  -> ExceptT LocalStateQueryError IO Ledger.PParams
 queryPParamsFromLocalState cfg nm socketPath point = do
   let pointAndQuery = (point, GetCurrentPParams)
   pParamsVar <- liftIO newEmptyTMVarM
@@ -114,7 +133,7 @@ queryPParamsFromLocalState cfg nm socketPath point = do
 --
 queryNodeLocalState
   :: forall blk result. RunNode blk
-  => StrictTMVar IO (Either AcquireFailure result)
+  => StrictTMVar IO (Either LocalStateQueryError result)
   -> Trace IO Text
   -> CodecConfig blk
   -> NetworkMagic
@@ -146,13 +165,13 @@ localInitiatorNetworkApplication
   => Trace IO Text
   -> CodecConfig blk
   -> NetworkMagic
-  -> StrictTMVar IO (Either AcquireFailure result)
+  -> StrictTMVar IO (Either LocalStateQueryError result)
   -> (Point blk, Query blk result)
   -> Versions
       NodeToClientVersion
       DictVersion
       (LocalConnectionId
-        -> OuroborosApplication 'InitiatorApp LByteString IO (Either AcquireFailure result) Void)
+        -> OuroborosApplication 'InitiatorApp LByteString IO (Either LocalStateQueryError result) Void)
 localInitiatorNetworkApplication trce cfg networkMagic
                                  resultVar pointAndQuery =
     NodeToClient.foldMapVersions
@@ -204,8 +223,8 @@ localInitiatorNetworkApplication trce cfg networkMagic
 localStateQueryClient
   :: forall block query m result. (Applicative m, MonadIO m, MonadSTM m)
   => (Point block, query result)
-  -> StrictTMVar m (Either AcquireFailure result)
-  -> LocalStateQueryClient block query m (Either AcquireFailure result)
+  -> StrictTMVar m (Either LocalStateQueryError result)
+  -> LocalStateQueryClient block query m (Either LocalStateQueryError result)
 localStateQueryClient (point, query) resultVar =
   LocalStateQueryClient $ pure $ SendMsgAcquire point $
     ClientStAcquiring
@@ -216,6 +235,42 @@ localStateQueryClient (point, query) resultVar =
                 pure $ SendMsgRelease $ SendMsgDone (Right result)
             }
       , recvMsgFailure = \failure -> do
-          void $ atomically $ tryPutTMVar resultVar (Left failure)
-          pure $ SendMsgDone (Left failure)
+          void $ atomically $ tryPutTMVar resultVar (Left $ AcquireFailureError failure)
+          pure $ SendMsgDone (Left $ AcquireFailureError failure)
       }
+
+whenAllShelleyAddresses
+  :: Monad m
+  => Set Address
+  -> (Set ShelleyAddress -> ExceptT LocalStateQueryError m a)
+  -> ExceptT LocalStateQueryError m a
+whenAllShelleyAddresses addrs fn =
+    if Set.null byronAddrs
+    then fn shelleyAddrs
+    else left $ ByronAddressesNotSupportedError byronAddrs
+  where
+    (byronAddrs, shelleyAddrs) = partitionAddresses addrs
+
+-- | Partitions a 'Set' of addresses such that Byron addresses are on the left
+-- and Shelley on the right.
+partitionAddresses :: Set Address -> (Set ByronAddress, Set ShelleyAddress)
+partitionAddresses = partitionMap isAddressByron getByronAddress getShelleyAddress
+  where
+    isAddressByron :: Address -> Bool
+    isAddressByron (AddressByron _) = True
+    isAddressByron _ = False
+
+    getByronAddress :: Address -> ByronAddress
+    getByronAddress (AddressByron ab) = ab
+    getByronAddress _ =
+      panic "Cardano.Api.LocalStateQuery.partitionAddresses.getByronAddress: Impossible"
+
+    getShelleyAddress :: Address -> ShelleyAddress
+    getShelleyAddress (AddressShelley as) = as
+    getShelleyAddress _ =
+       panic "Cardano.Api.LocalStateQuery.partitionAddresses.getShelleyAddress: Impossible"
+
+partitionMap :: (Ord b, Ord c) => (a -> Bool) -> (a -> b) -> (a -> c) -> Set a -> (Set b, Set c)
+partitionMap cond leftFn rightFn xs = (Set.map leftFn ys, Set.map rightFn zs)
+  where
+    (ys, zs) = Set.partition cond xs

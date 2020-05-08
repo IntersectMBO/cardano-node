@@ -16,7 +16,6 @@ module Cardano.CLI.Shelley.Parsers
   , GenesisCmd (..)
 
     -- * CLI flag types
-  , AddressFile (..)
   , GenesisDir (..)
   , OpCertCounterFile (..)
   , OutputFile (..)
@@ -116,7 +115,7 @@ data QueryCmd
   = QueryPoolId NodeAddress
   | QueryProtocolParameters ConfigYamlFilePath (Maybe CLISocketPath) OutputFile
   | QueryTip NodeAddress
-  | QueryFilteredUTxO AddressFile ConfigYamlFilePath (Maybe CLISocketPath) OutputFile
+  | QueryFilteredUTxO Address ConfigYamlFilePath (Maybe CLISocketPath) OutputFile
   | QueryVersion NodeAddress
   | QueryStatus NodeAddress
   deriving (Eq, Show)
@@ -153,10 +152,6 @@ data GenesisCmd
 --
 -- Shelley CLI flag/option data types
 --
-
-newtype AddressFile
-  = AddressFile FilePath
-  deriving (Eq, Show)
 
 newtype BlockId
   = BlockId String -- Probably not a String
@@ -445,7 +440,7 @@ pQueryCmd =
     pQueryFilteredUTxO :: Parser QueryCmd
     pQueryFilteredUTxO =
       QueryFilteredUTxO
-        <$> pAddressFile Input
+        <$> pHexEncodedAddress
         <*> (ConfigYamlFilePath <$> parseConfigFile)
         <*> parseCLISocketPath "Socket of target node"
         <*> pOutputFile
@@ -813,6 +808,14 @@ pTxFile fdir =
       <> Opt.help (show fdir ++ " filepath of the Tx.")
       )
 
+pHexEncodedAddress :: Parser Address
+pHexEncodedAddress =
+  Opt.option (Opt.maybeReader (addressFromHex . Text.pack))
+    (  Opt.long "address"
+    <> Opt.metavar "ADDRESS"
+    <> Opt.help "A hex-encoded Cardano address."
+    )
+
 pAddress :: Parser Text
 pAddress =
   Text.pack <$>
@@ -820,13 +823,4 @@ pAddress =
       (  Opt.long "address"
       <> Opt.metavar "ADDRESS"
       <> Opt.help "A Cardano address"
-      )
-
-pAddressFile :: FileDirection -> Parser AddressFile
-pAddressFile fdir =
-  AddressFile <$>
-    Opt.strOption
-      (  Opt.long "address-file"
-      <> Opt.metavar "FILEPATH"
-      <> Opt.help (show fdir ++ " filepath of the Address.")
       )
