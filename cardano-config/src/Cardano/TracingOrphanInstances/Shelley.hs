@@ -325,8 +325,9 @@ instance ToObject (PredicateFailure (OCERT c)) where
     mkObject [ "kind" .= String "KESPeriodWrongOCERT" ]
   toObject _verb InvalidSignatureOCERT =
     mkObject [ "kind" .= String "InvalidSignatureOCERT" ]
-  toObject _verb InvalidKesSignatureOCERT =
-    mkObject [ "kind" .= String "InvalidKesSignatureOCERT" ]
+  toObject _verb (InvalidKesSignatureOCERT err) =
+    mkObject [ "kind" .= String "InvalidKesSignatureOCERT"
+             , "err"  .= err ]
   toObject _verb NoCounterForKeyHashOCERT =
     mkObject [ "kind" .= String "NoCounterForKeyHashOCERT" ]
 

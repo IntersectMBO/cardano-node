@@ -1,4 +1,7 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE OverloadedStrings #-}
+
+{-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 
 module Test.Cardano.Config.Examples
   ( exampleShelleyGenesis
@@ -16,8 +19,9 @@ import           Ouroboros.Consensus.Protocol.Abstract (SecurityParam (..))
 import           Ouroboros.Consensus.Shelley.Protocol (TPraosStandardCrypto)
 import           Ouroboros.Consensus.Shelley.Node (emptyGenesisStaking)
 import           Ouroboros.Network.Magic (NetworkMagic (..))
+
 import           Shelley.Spec.Ledger.Coin (Coin(..))
-import           Shelley.Spec.Ledger.Keys (DiscKeyHash (..), GenKeyHash, KeyHash)
+import           Shelley.Spec.Ledger.Keys (KeyHash(..), KeyRole(..))
 import           Shelley.Spec.Ledger.TxData
                    (Addr (..), Credential (..), StakeReference(..))
 
@@ -48,19 +52,19 @@ exampleShelleyGenesis =
     }
  where
   -- hash of the genesis verification key
-  genesisVerKeyHash :: GenKeyHash TPraosStandardCrypto
-  genesisVerKeyHash = DiscKeyHash "23d51e91ae5adc7ae801e9de4cd54175fb7464ec2680b25686bbb19452b4ed96"
+  genesisVerKeyHash :: KeyHash Genesis TPraosStandardCrypto
+  genesisVerKeyHash = KeyHash "23d51e91ae5adc7ae801e9de4cd54175fb7464ec2680b25686bbb19452b4ed96"
   -- hash of the delegators verififation key
-  delegVerKeyHash :: KeyHash TPraosStandardCrypto
-  delegVerKeyHash = DiscKeyHash "839b047f56e50654bdb504832186dc1ee0c73c8de2daec7ae62738273be825b2"
+  delegVerKeyHash :: KeyHash GenesisDelegate TPraosStandardCrypto
+  delegVerKeyHash = KeyHash "839b047f56e50654bdb504832186dc1ee0c73c8de2daec7ae62738273be825b2"
   initialFundedAddress :: Addr TPraosStandardCrypto
   initialFundedAddress = Addr paymentCredential (StakeRefBase stakingCredential)
     where
       paymentCredential =
-        KeyHashObj $ DiscKeyHash
+        KeyHashObj $ KeyHash
           "1c14ee8e58fbcbd48dc7367c95a63fd1d937ba989820015db16ac7e5a2e89798"
       stakingCredential =
-        KeyHashObj $ DiscKeyHash
+        KeyHashObj $ KeyHash
           "e37a65ea2f9bcefb645de4312cf13d8ac12ae61cf242a9aa2973c9ee32e99ce2"
 
   initialFunds :: Coin

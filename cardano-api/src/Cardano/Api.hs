@@ -3,6 +3,7 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Cardano.Api
   ( module X
@@ -63,6 +64,7 @@ import qualified Data.Sequence.Strict as Seq
 import qualified Cardano.Binary as Binary
 
 import           Cardano.Crypto.DSIGN (DSIGNAlgorithm (..))
+import           Cardano.Crypto.Seed (readSeedFromSystemEntropy)
 
 import qualified Cardano.Crypto.Hashing as Crypto
 import           Cardano.Crypto.ProtocolMagic (ProtocolMagicId (..))
@@ -81,7 +83,7 @@ import qualified Cardano.Chain.Common  as Byron
 import qualified Cardano.Chain.Genesis as Byron
 import qualified Cardano.Chain.UTxO    as Byron
 
-import qualified Shelley.Spec.Ledger.Address   as Shelley
+import qualified Ouroboros.Consensus.Shelley.Protocol.Crypto as Shelley
 import qualified Shelley.Spec.Ledger.Keys      as Shelley
 import qualified Shelley.Spec.Ledger.TxData    as Shelley
 import qualified Shelley.Spec.Ledger.Tx        as Shelley
@@ -93,8 +95,13 @@ byronGenSigningKey =
     SigningKeyByron . snd <$> runSecureRandom Crypto.keyGen
 
 shelleyGenSigningKey :: IO SigningKey
-shelleyGenSigningKey =
-    SigningKeyShelley . Shelley.SKey <$> runSecureRandom genKeyDSIGN
+shelleyGenSigningKey = do
+    seed <- readSeedFromSystemEntropy (seedSizeDSIGN dsignProxy)
+    let sk = genKeyDSIGN seed
+    return (SigningKeyShelley sk)
+  where
+    dsignProxy :: Proxy (Shelley.DSIGN Shelley.TPraosStandardCrypto)
+    dsignProxy = Proxy
 
 -- Given key information (public key, and other network parameters), generate an Address.
 -- Originally: mkAddress :: Network -> VerificationKey -> VerificationKeyInfo -> Address
@@ -127,7 +134,7 @@ getVerificationKey kp =
       where
         vk = Crypto.toVerification sk
 
-    SigningKeyShelley (Shelley.SKey sk) -> VerificationKeyShelley (Shelley.VKey vk)
+    SigningKeyShelley sk -> VerificationKeyShelley (Shelley.VKey vk)
       where
         vk = deriveVerKeyDSIGN sk
 
@@ -232,8 +239,8 @@ shelleyWitnessTransaction :: ShelleyTxBody -> SigningKey -> ShelleyWitnessVKey
 shelleyWitnessTransaction txbody (SigningKeyShelley sk) =
     Shelley.WitVKey vk sig
   where
-    vk  = Shelley.VKey (deriveVerKeyDSIGN sk') where (Shelley.SKey sk') = sk
-    sig = Shelley.sign sk txbody
+    vk  = Shelley.VKey (deriveVerKeyDSIGN sk)
+    sig = Shelley.signedDSIGN @Shelley.TPraosStandardCrypto sk txbody
 
 
 -- Sign Transaction - signTransaction is built over witnesseTransaction/signTransactionWithWitness

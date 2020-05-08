@@ -38,7 +38,7 @@ import           Shelley.Spec.Ledger.Address (serialiseAddr, deserialiseAddr)
 import           Shelley.Spec.Ledger.BaseTypes (Nonce (..), UnitInterval (..))
 import           Shelley.Spec.Ledger.Coin (Coin(..))
 import           Shelley.Spec.Ledger.Crypto (Crypto)
-import           Shelley.Spec.Ledger.Keys (DiscKeyHash(..))
+import           Shelley.Spec.Ledger.Keys (KeyHash(..))
 import           Shelley.Spec.Ledger.PParams (PParams, ProtVer (..))
 import           Shelley.Spec.Ledger.TxData (Addr(..))
 
@@ -133,13 +133,13 @@ deriving newtype instance Aeson.FromJSON SystemStart
 -- Genesis key hashes JSON conversion, including as map keys
 --
 
-deriving newtype instance ToJSONKey (DiscKeyHash disc crypto)
+deriving newtype instance ToJSONKey (KeyHash disc crypto)
 deriving newtype instance Crypto crypto =>
-                          FromJSONKey (DiscKeyHash disc crypto)
+                          FromJSONKey (KeyHash disc crypto)
 
-deriving newtype instance ToJSON (DiscKeyHash disc crypto)
+deriving newtype instance ToJSON (KeyHash disc crypto)
 deriving newtype instance Crypto crypto =>
-                          FromJSON (DiscKeyHash disc crypto)
+                          FromJSON (KeyHash disc crypto)
 
 instance ToJSONKey (Hash crypto a) where
   toJSONKey = ToJSONKeyText hashToText (Aeson.text . hashToText)

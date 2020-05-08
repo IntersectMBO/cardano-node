@@ -17,8 +17,7 @@ error=0
 
 ${CARDANO_CLI} shelley node key-gen-KES \
     --verification-key-file "${OUTPUT_DIR}/kes.vkey" \
-    --signing-key-file "${OUTPUT_DIR}/kes.skey" \
-    --kes-duration 10
+    --signing-key-file "${OUTPUT_DIR}/kes.skey"
 
 assert_file_exists "${OUTPUT_DIR}/kes.vkey"
 assert_file_exists "${OUTPUT_DIR}/kes.skey"

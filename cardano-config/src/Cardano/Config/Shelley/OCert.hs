@@ -1,4 +1,8 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeApplications #-}
+
+{-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 
 module Cardano.Config.Shelley.OCert
   (
@@ -36,11 +40,12 @@ import           Ouroboros.Consensus.Shelley.Protocol.Crypto
 
 
 -- Local aliases for shorter types:
-type VerKey   = Ledger.VKey TPraosStandardCrypto
-type SignKey  = Ledger.SKey TPraosStandardCrypto
-type VerKeyES = Ledger.VKeyES TPraosStandardCrypto
-type Cert     = OCert TPraosStandardCrypto
-type Sig      = Ledger.Sig TPraosStandardCrypto (VerKeyES, Natural, KESPeriod)
+type VerKey    = Ledger.VKey Ledger.BlockIssuer TPraosStandardCrypto
+type SignKey   = Ledger.SignKeyDSIGN TPraosStandardCrypto
+type VerKeyKES = Ledger.VerKeyKES TPraosStandardCrypto
+type Cert      = OCert TPraosStandardCrypto
+type Sig       = Ledger.SignedDSIGN TPraosStandardCrypto
+                                    (VerKeyKES, Natural, KESPeriod)
 
 operationalCertTextViewType :: TextViewType
 operationalCertTextViewType =
@@ -95,7 +100,7 @@ decodeOperationalCertIssueCounter tView = do
 -- create another operational certificate (signed by your cold key) to re-delegate
 -- block/vote signing capability to that newly generated KES key pair.
 signOperationalCertificate
-  :: VerKeyES
+  :: VerKeyKES
   -- ^ The operational hot KES verification key we are delegating block/vote
   -- signing capability to.
   -> SignKey
@@ -109,7 +114,9 @@ signOperationalCertificate
   -> Cert
 signOperationalCertificate hotKESVerKey signingKey counter kesPeriod' =
   let oCertSig :: Sig
-      oCertSig = Ledger.sign signingKey (hotKESVerKey, counter, kesPeriod')
+      oCertSig = Ledger.signedDSIGN @TPraosStandardCrypto
+                                    signingKey
+                                    (hotKESVerKey, counter, kesPeriod')
    in OCert hotKESVerKey counter kesPeriod' oCertSig
 
 

@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -5,6 +6,7 @@
 {-# LANGUAGE StrictData #-}
 
 {-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
+{-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 
 module Cardano.CLI.Shelley.Run.KeyGen
   ( runGenesisKeyGenGenesis
@@ -62,7 +64,9 @@ runColdKeyGen :: KeyRole -> VerificationKeyFile -> SigningKeyFile
 runColdKeyGen role (VerificationKeyFile vkeyPath) (SigningKeyFile skeyPath) =
     firstExceptT KeyCliError $ do
       (vkey, skey) <- liftIO genKeyPair
-      writeVerKey     role vkeyPath vkey
+      -- The Ledger.Genesis role type param here is actually arbitrary
+      -- the representation is the same for them all.
+      writeVerKey     role vkeyPath (vkey :: VerKey Ledger.Genesis)
       writeSigningKey role skeyPath skey
 
 
@@ -70,7 +74,7 @@ runGenesisKeyHash :: VerificationKeyFile -> ExceptT CliError IO ()
 runGenesisKeyHash (VerificationKeyFile vkeyPath) =
     firstExceptT KeyCliError $ do
       (vkey, _role) <- readVerKeySomeRole genesisKeyRoles vkeyPath
-      let Ledger.KeyHash khash = Ledger.hashKey vkey
+      let Ledger.KeyHash khash = Ledger.hashKey (vkey :: VerKey Ledger.Genesis)
       liftIO $ BS.putStrLn $ Crypto.getHashBytesAsHex khash
 
 
@@ -79,7 +83,8 @@ runGenesisVerKey :: VerificationKeyFile -> SigningKeyFile
 runGenesisVerKey (VerificationKeyFile vkeyPath) (SigningKeyFile skeyPath) =
     firstExceptT KeyCliError $ do
       (skey, role) <- readSigningKeySomeRole genesisKeyRoles skeyPath
-      let vkey = deriveVerKey skey
+      let vkey :: VerKey Ledger.Genesis
+          vkey = deriveVerKey skey
       writeVerKey role vkeyPath vkey
 
 genesisKeyRoles :: [KeyRole]

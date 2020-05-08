@@ -1,8 +1,12 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE StrictData #-}
 {-# LANGUAGE TupleSections #-}
+
+{-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
+
 module Cardano.CLI.Shelley.Run.Genesis
   ( runGenesisCreate
   , runGenesisAddr
@@ -50,7 +54,6 @@ import           Ouroboros.Consensus.Shelley.Node
 import qualified Cardano.Crypto.Hash.Class as Crypto
 
 import           Shelley.Spec.Ledger.Coin (Coin (..))
-import           Shelley.Spec.Ledger.Keys (GenKeyHash, KeyHash)
 import qualified Shelley.Spec.Ledger.Keys as Ledger
 import qualified Shelley.Spec.Ledger.TxData as Shelley
 
@@ -172,10 +175,23 @@ readShelleyGenesis fpath = do
   lbs <- handleIOExceptT (IOError fpath) $ LBS.readFile fpath
   firstExceptT (AesonDecode fpath . Text.pack) . hoistEither $ Aeson.eitherDecode' lbs
 
+
+-- Local type aliases
+type VerKey r              = Ledger.VKey r TPraosStandardCrypto
+type VerKeyGenesis         = VerKey Ledger.Genesis
+type VerKeyGenesisDelegate = VerKey Ledger.GenesisDelegate
+
+type KeyHash r              = Ledger.KeyHash r TPraosStandardCrypto
+type KeyHashGenesis         = KeyHash Ledger.Genesis
+type KeyHashGenesisDelegate = KeyHash Ledger.GenesisDelegate
+
+
 updateTemplate
     :: SystemStart -> Lovelace
-    -> (Map (GenKeyHash TPraosStandardCrypto) (KeyHash TPraosStandardCrypto)) -> [ShelleyAddress]
-    -> ShelleyGenesis TPraosStandardCrypto -> ShelleyGenesis TPraosStandardCrypto
+    -> Map KeyHashGenesis KeyHashGenesisDelegate
+    -> [ShelleyAddress]
+    -> ShelleyGenesis TPraosStandardCrypto
+    -> ShelleyGenesis TPraosStandardCrypto
 updateTemplate start amount delKeys utxoAddrs template =
     template
       { sgStartTime = start
@@ -204,8 +220,8 @@ writeShelleyGenesis fpath sg =
 
 readGenDelegsMap :: FilePath
                  -> FilePath
-                 -> ExceptT CliError IO (Map (GenKeyHash TPraosStandardCrypto)
-                                             (KeyHash TPraosStandardCrypto))
+                 -> ExceptT CliError IO (Map KeyHashGenesis
+                                             KeyHashGenesisDelegate)
 readGenDelegsMap gendir deldir = do
     gkm <- firstExceptT KeyCliError $ readGenesisKeys gendir
     dkm <- firstExceptT KeyCliError $ readDelegateKeys deldir
@@ -224,33 +240,35 @@ readGenDelegsMap gendir deldir = do
       (errors, _) -> left $ ShelleyGenesisError (MultipleMissingKeys errors)
 
   where
-    combine :: Map BaseName (Ledger.VKey TPraosStandardCrypto)
+    combine :: Map BaseName VerKeyGenesis
             -- ^ Genesis Keys
-            -> Map BaseName (Ledger.VKey TPraosStandardCrypto)
+            -> Map BaseName VerKeyGenesisDelegate
             -- ^ Delegate Keys
             -> BaseName
             -- ^ Genesis Key basename
             -> BaseName
             -- ^ Delegate Key basename
-            -> Either ShelleyGenesisError (GenKeyHash TPraosStandardCrypto, KeyHash TPraosStandardCrypto)
+            -> Either ShelleyGenesisError (KeyHashGenesis, KeyHashGenesisDelegate)
     combine gkm dkm gBn dBn =
       case (Map.lookup gBn gkm, Map.lookup dBn dkm) of
-        (Just (Ledger.VKey a), Just b) -> Right (Ledger.hashKey (Ledger.VKeyGenesis a), Ledger.hashKey b)
+        (Just a, Just b) -> Right (Ledger.hashKey a, Ledger.hashKey b)
         (Nothing, Just _) -> Left $ MissingGenesisKey (textBaseName gBn)
         (Just _, Nothing) -> Left $ MissingDelegateKey (textBaseName dBn)
         _ -> Left $ MissingGenesisAndDelegationKey (textBaseName gBn) (textBaseName dBn)
 
-readGenesisKeys :: FilePath -> ExceptT KeyError IO (Map BaseName (Ledger.VKey TPraosStandardCrypto))
+readGenesisKeys :: FilePath -> ExceptT KeyError IO (Map BaseName VerKeyGenesis)
 readGenesisKeys gendir = do
   files <- filter isVkey <$> liftIO (listDirectory gendir)
   fmap Map.fromList <$> traverse (readBaseNameVerKey GenesisKey) $ map (gendir </>) files
 
-readDelegateKeys :: FilePath -> ExceptT KeyError IO (Map BaseName (Ledger.VKey TPraosStandardCrypto))
+readDelegateKeys :: FilePath -> ExceptT KeyError IO (Map BaseName VerKeyGenesisDelegate)
 readDelegateKeys deldir = do
   files <- filter isVkey <$> liftIO (listDirectory deldir)
   fmap Map.fromList <$> traverse (readBaseNameVerKey (OperatorKey GenesisDelegateKey)) $ map (deldir </>) files
 
-readBaseNameVerKey :: KeyRole -> FilePath -> ExceptT KeyError IO (BaseName, Ledger.VKey TPraosStandardCrypto)
+readBaseNameVerKey :: Typeable r
+                   => KeyRole -> FilePath
+                   -> ExceptT KeyError IO (BaseName, VerKey r)
 readBaseNameVerKey role fpath =
   (BaseName (takeFileName fpath),) <$> readVerKey role fpath
 

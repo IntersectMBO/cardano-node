@@ -66,7 +66,7 @@ extra-deps:
       - crypto/test
 
   - git: https://github.com/input-output-hk/cardano-ledger-specs
-    commit: 2684a3d6c59f740cc09e219182276330e70ddfb9
+    commit: 1b2a06df9a710f5cc9b511b6ae39c23bcfd04486
     subdirs:
       # small-steps
       - semantics/executable-spec
@@ -85,7 +85,7 @@ extra-deps:
       - test
 
   - git: https://github.com/input-output-hk/cardano-base
-    commit: 2cc27584bb19bd5be9f1721fd4a2393bb99c6119
+    commit: c845509c307af9df956ef203ac8ad67fe4d5d065
     subdirs:
       - binary
       - binary/test
@@ -104,7 +104,7 @@ extra-deps:
 
     # iohk-monitoring-framework currently not pinned to a release
   - git: https://github.com/input-output-hk/iohk-monitoring-framework
-    commit: ae0bf700bed6a411dcf7f03a49f8c89e8344a7b9
+    commit: 20309d5aa56b0ae5fd982465297a1d87aa5658a1
     subdirs:
       - contra-tracer
       - iohk-monitoring
@@ -127,7 +127,7 @@ extra-deps:
     #Ouroboros-network dependencies
 
   - git: https://github.com/input-output-hk/ouroboros-network
-    commit: e82c4fe3dc28b2c63d09db12d51e104cd5466600
+    commit: 776d76c24fb96ef4fb64f427f3989f1004ba2907
     subdirs:
         - io-sim
         - io-sim-classes
