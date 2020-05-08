@@ -79,7 +79,7 @@ import           Ouroboros.Consensus.Network.NodeToClient
                    (Codecs'(..), defaultCodecs)
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
                    (nodeToClientProtocolVersion, supportedNodeToClientVersions)
-import           Ouroboros.Consensus.Config (TopLevelConfig (..))
+import           Ouroboros.Consensus.Config (TopLevelConfig (..), configCodec)
 import           Ouroboros.Consensus.Node.ProtocolInfo (ProtocolInfo(..))
 import           Ouroboros.Consensus.Node.Run
                    (RunNode(..))
@@ -540,7 +540,7 @@ localInitiatorNetworkApplication proxy cfg tipVar =
              , cTxSubmissionCodec
              , cStateQueryCodec
              }
-        = defaultCodecs (configBlock cfg) clientVersion
+        = defaultCodecs (configCodec cfg) clientVersion
 
 ncCardanoEra :: NodeConfiguration -> CardanoEra
 ncCardanoEra = cardanoEraForProtocol . ncProtocol

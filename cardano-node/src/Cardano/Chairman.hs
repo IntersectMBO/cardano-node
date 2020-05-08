@@ -40,7 +40,7 @@ import           Network.Mux (MuxError)
 import           Ouroboros.Consensus.Block (BlockProtocol, GetHeader (..))
 import           Ouroboros.Consensus.BlockchainTime
 import           Ouroboros.Consensus.Config
-                   ( TopLevelConfig, configConsensus, configBlock )
+                   ( TopLevelConfig, configConsensus, configBlock, configCodec )
 import           Ouroboros.Consensus.Mempool
 import           Ouroboros.Consensus.Network.NodeToClient
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
@@ -561,6 +561,6 @@ localInitiatorNetworkApplication sockPath chainsVar securityParam
         Codecs { cChainSyncCodec
                , cTxSubmissionCodec
                , cStateQueryCodec
-               } = clientCodecs (configBlock cfg) byronClientVersion
+               } = clientCodecs (configCodec cfg) byronClientVersion
 
 

@@ -36,7 +36,7 @@ import           Network.Mux (MuxTrace, WithMuxBearer)
 
 import           Ouroboros.Consensus.Block (BlockProtocol)
 import           Ouroboros.Consensus.Cardano (Protocol (..), protocolInfo)
-import           Ouroboros.Consensus.Config (TopLevelConfig (..))
+import           Ouroboros.Consensus.Config (TopLevelConfig (..), configCodec)
 import           Ouroboros.Consensus.Ledger.Abstract (Query)
 import           Ouroboros.Consensus.Network.NodeToClient
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
@@ -190,7 +190,7 @@ localInitiatorNetworkApplication proxy resultVar trce cfg pointAndQuery =
           { cChainSyncCodec
           , cTxSubmissionCodec
           , cStateQueryCodec
-          } = defaultCodecs (configBlock cfg) clientVersion
+          } = defaultCodecs (configCodec cfg) clientVersion
 
 -- | A 'LocalStateQueryClient' which executes the provided local state query
 -- and puts the result in the provided 'StrictTMVar'.

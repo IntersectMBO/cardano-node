@@ -34,7 +34,7 @@ import           Ouroboros.Consensus.Node.NetworkProtocolVersion
                   (nodeToClientProtocolVersion,
                    supportedNodeToClientVersions)
 import           Ouroboros.Consensus.Node.Run (RunNode, nodeNetworkMagic)
-import           Ouroboros.Consensus.Config (TopLevelConfig (..))
+import           Ouroboros.Consensus.Config (TopLevelConfig (..), configCodec)
 
 import           Ouroboros.Network.Mux
                    ( AppType(..), OuroborosApplication(..),
@@ -176,7 +176,7 @@ localInitiatorNetworkApplication tracer cfg tx =
                , cTxSubmissionCodec
                , cStateQueryCodec
                }
-          = defaultCodecs (configBlock cfg) clientVersion
+          = defaultCodecs (configCodec cfg) clientVersion
 
 
 -- | A 'LocalTxSubmissionClient' that submits exactly one transaction, and then

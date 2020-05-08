@@ -42,11 +42,11 @@ import           Data.Void (Void)
 
 import           Network.Mux (MuxTrace, WithMuxBearer)
 
-import           Ouroboros.Consensus.Block (BlockConfig)
+import           Ouroboros.Consensus.Block (CodecConfig)
 import           Ouroboros.Consensus.Byron.Ledger (ByronBlock (..), GenTx)
 import qualified Ouroboros.Consensus.Byron.Ledger as Byron
 import           Ouroboros.Consensus.Cardano (Protocol (..), protocolInfo)
-import           Ouroboros.Consensus.Config (TopLevelConfig (..))
+import           Ouroboros.Consensus.Config (TopLevelConfig (..), configCodec)
 import           Ouroboros.Consensus.Mempool.API (ApplyTxErr)
 import           Ouroboros.Consensus.Network.NodeToClient
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
@@ -134,7 +134,7 @@ runTxSubmitNodeClient tsv nodeConfig trce (SocketPath socketPath) = do
             (nodeToClientProtocolVersion proxy v)
             versionData
             (localInitiatorNetworkApplication
-              trce (configBlock nodeConfig) v tsv))
+              trce (configCodec nodeConfig) v tsv))
         (supportedNodeToClientVersions proxy))
   where
     -- TODO: it should be passed as an argument
@@ -160,11 +160,11 @@ runTxSubmitNodeClient tsv nodeConfig trce (SocketPath socketPath) = do
 
 localInitiatorNetworkApplication
   :: Trace IO Text
-  -> BlockConfig ByronBlock
+  -> CodecConfig ByronBlock
   -> NodeToClientVersion ByronBlock
   -> TxSubmitVar
   -> NodeToClientProtocols 'InitiatorApp LBS.ByteString IO Void Void
-localInitiatorNetworkApplication trce blockConfig byronClientVersion tsv =
+localInitiatorNetworkApplication trce codecConfig byronClientVersion tsv =
     NodeToClientProtocols
       { localChainSyncProtocol =
           InitiatorProtocolOnly $ MuxPeer
@@ -189,7 +189,7 @@ localInitiatorNetworkApplication trce blockConfig byronClientVersion tsv =
     Codecs { cChainSyncCodec
            , cTxSubmissionCodec
            , cStateQueryCodec
-           } = defaultCodecs blockConfig byronClientVersion 
+           } = defaultCodecs codecConfig byronClientVersion
 
 
 -- | A 'LocalTxSubmissionClient' that submits transactions reading them from
