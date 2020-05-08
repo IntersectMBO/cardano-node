@@ -1,5 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StrictData #-}
+{-# LANGUAGE TypeFamilies #-}
 
 {-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 
@@ -15,11 +17,21 @@ import           Cardano.Config.Shelley.ColdKeys
                    (KeyType(..), KeyRole(..), KeyError(..), renderKeyType)
 import           Cardano.Config.TextView
 import           Cardano.CLI.Ops (CliError (..))
+
+import           Cardano.Api hiding (readSigningKey)
+import           Cardano.Config.Protocol (mkConsensusProtocol)
+import           Cardano.Config.Shelley.ColdKeys (KeyRole (..), readSigningKey)
+import           Cardano.Config.Types
+import           Cardano.CLI.Ops (CliError (..), withIOManagerE)
+
 import           Cardano.CLI.Shelley.Parsers
+import qualified Ouroboros.Consensus.Cardano as Consensus
+import           Ouroboros.Consensus.Node.ProtocolInfo (pInfoConfig)
+
 
 import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, newExceptT)
-
+import           Control.Tracer (nullTracer)
 
 runTransactionCmd :: TransactionCmd -> ExceptT CliError IO ()
 runTransactionCmd cmd =
@@ -28,6 +40,7 @@ runTransactionCmd cmd =
       runTxBuildRaw txins txouts ttl fee out
     TxSign txinfile skfiles mNetwork txoutfile ->
       runTxSign txinfile skfiles (maybe Mainnet Testnet mNetwork) txoutfile
+    TxSubmit txFp configFp sockFp -> runTxSubmit txFp configFp sockFp
 
     _ -> liftIO $ putStrLn $ "runTransactionCmd: " ++ show cmd
 
@@ -47,6 +60,24 @@ runTxSign (TxBodyFile infile) skfiles  network (TxFile outfile) = do
       . newExceptT
       . writeTxSigned outfile
       $ signTransaction txu network sks
+
+runTxSubmit :: FilePath -> ConfigYamlFilePath -> SocketPath -> ExceptT CliError IO ()
+runTxSubmit txFp configFp sktFp =
+  withIOManagerE $ \iocp -> do
+    nc <- liftIO $ parseNodeConfigurationFP configFp
+    SomeConsensusProtocol p <- firstExceptT ProtocolError $ mkConsensusProtocol nc Nothing
+    signedTx <- firstExceptT CardanoApiError . newExceptT $ readTxSigned txFp
+    case p of
+      Consensus.ProtocolRealTPraos{} -> do
+        let config = pInfoConfig $ Consensus.protocolInfo p
+        liftIO $ submitTx
+                   nullTracer -- tracer needed
+                   iocp
+                   config
+                   sktFp
+                   (prepareTxShelley signedTx)
+      _ -> panic "Wrong protocol specified"
+
 
 
 -- TODO : This is nuts. The 'cardano-api' and 'cardano-config' packages both have functions

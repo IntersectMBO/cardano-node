@@ -45,7 +45,6 @@ module Cardano.Api
   , signTransaction
   , witnessTransaction
   , signTransactionWithWitness
-  , submitTransaction
 
   , queryFilteredUTxOFromLocalState
   , queryPParamsFromLocalState
@@ -77,7 +76,7 @@ import           Cardano.Api.Convert as X
 import           Cardano.Api.Error as X
 import           Cardano.Api.View as X
 import           Cardano.Api.TxSubmitChairman as X
-import           Cardano.Api.TxSubmit
+import           Cardano.Api.TxSubmit as X
 import           Cardano.Api.LocalStateQuery
 
 import qualified Cardano.Chain.Common  as Byron
