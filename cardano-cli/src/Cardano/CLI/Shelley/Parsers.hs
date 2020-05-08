@@ -774,7 +774,7 @@ pTxOut =
   Opt.option (Opt.maybeReader (parseTxOut . Text.pack))
     (  Opt.long "tx-out"
     <> Opt.metavar "TX_OUT"
-    <> Opt.help "The ouput transaction as TxOut$Lovelace where TxOut is the hex encoded address followed by the amount in Lovelace."
+    <> Opt.help "The ouput transaction as TxOut+Lovelace where TxOut is the hex encoded address followed by the amount in Lovelace."
     )
 
 pTxTTL :: Parser SlotNo

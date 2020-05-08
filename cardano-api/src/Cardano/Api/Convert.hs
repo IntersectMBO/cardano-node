@@ -65,7 +65,7 @@ renderTxOut :: TxOut -> Text
 renderTxOut (TxOut addr ll) =
   mconcat
     [ addressToHex addr
-    , "$"
+    , "+"
     , Text.pack (show ll)
     ]
 
@@ -82,7 +82,7 @@ pCBlakeHash =
 
 pTxOut :: Parser TxOut
 pTxOut =
-  TxOut <$> pAddress <* Atto.char '$' <*> pLovelace
+  TxOut <$> pAddress <* Atto.char '+' <*> pLovelace
 
 pLovelace :: Parser Lovelace
 pLovelace = Lovelace <$> Atto.decimal
