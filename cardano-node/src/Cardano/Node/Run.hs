@@ -40,9 +40,9 @@ import           Network.Socket (AddrInfo)
 import           System.Directory (canonicalizePath, makeAbsolute)
 
 import           Paths_cardano_node (version)
+import           Cardano.BM.Data.Aggregated (Measurable (..))
 #ifdef UNIX
 import qualified Cardano.BM.Configuration.Model as CM
-import           Cardano.BM.Data.Aggregated (Measurable (..))
 import           Cardano.BM.Data.Backend
 import           Cardano.BM.Data.BackendKind (BackendKind (..))
 #endif
@@ -118,14 +118,20 @@ runNode loggingLayer npm@NodeCLI{protocolFiles} = do
 
     tracers <- mkTracers (ncTraceConfig nc) trace
 
-    case ncViewMode nc of
+#ifdef UNIX
+    let viewmode = ncViewMode nc
+#else
+    let viewmode = SimpleView
+#endif
+
+    upTimeThread <- Async.async $ traceNodeUpTime (appendName "metrics" trace) =<< getMonotonicTimeNSec
+
+    case viewmode of
       SimpleView -> do
-        nodeLaunchTime <- getMonotonicTimeNSec
-        upTimeThread <- Async.async $ traceNodeUpTime trace nodeLaunchTime
 
         handleSimpleNode p trace tracers npm (const $ pure ())
-
         Async.uninterruptibleCancel upTimeThread
+
       LiveView   -> do
 #ifdef UNIX
         let c = llConfiguration loggingLayer
@@ -139,9 +145,6 @@ runNode loggingLayer npm@NodeCLI{protocolFiles} = do
         setTopology be npm
         captureCounters be trace
 
-        nodeLaunchTime <- getMonotonicTimeNSec
-        upTimeThread <- Async.async $ traceNodeUpTime trace nodeLaunchTime
-
         -- User will see a terminal graphics and will be able to interact with it.
         nodeThread <- Async.async $ handleSimpleNode p trace tracers npm
                        (setNodeKernel be)
@@ -150,6 +153,7 @@ runNode loggingLayer npm@NodeCLI{protocolFiles} = do
         void $ Async.waitAny [nodeThread, upTimeThread]
 #else
         handleSimpleNode p trace tracers npm (const $ pure ())
+        Async.uninterruptibleCancel upTimeThread
 #endif
   where
     hostname = do
@@ -165,8 +169,7 @@ traceNodeUpTime tr nodeLaunchTime = do
   now <- getMonotonicTimeNSec
   let upTimeInNs = now - nodeLaunchTime
   meta <- mkLOMeta Notice Public
-  let tr' = appendName "upTime" tr
-  traceNamedObject tr' (meta, LogValue "upTime" (Nanoseconds upTimeInNs))
+  traceNamedObject tr (meta, LogValue "upTime" (Nanoseconds upTimeInNs))
   threadDelay 1000000
   traceNodeUpTime tr nodeLaunchTime
 
