@@ -24,8 +24,7 @@ module Cardano.Node.TUI.LiveView (
     , setNodeKernel
     ) where
 
-import           Cardano.Prelude hiding (isPrefixOf, modifyMVar_, newMVar, on,
-                                  readMVar, show)
+import           Cardano.Prelude hiding (modifyMVar_, newMVar, on, readMVar, show)
 import           Prelude (String, show)
 
 import           Control.Concurrent (threadDelay)
@@ -131,6 +130,7 @@ data LiveViewState blk a = LiveViewState
     , lvsNodeId               :: !Text
     , lvsVersion              :: !String
     , lvsCommit               :: !String
+    , lvsPlatform             :: !String
     , lvsUpTime               :: !NominalDiffTime
     , lvsEpoch                :: !Word64
     , lvsSlotNum              :: !Word64
@@ -179,6 +179,7 @@ data LiveViewState blk a = LiveViewState
     , lvsNodeThread           :: !LiveViewThread
 
     , lvsNodeKernel           :: !(SMaybe (LVNodeKernel blk))
+    , lvsPeersLastTime        :: !Word64
     , lvsPeers                :: [LVPeer blk]
     , lvsColorTheme           :: !ColorTheme
     } deriving (Generic, NFData, NoUnexpectedThunks)
@@ -204,7 +205,7 @@ instance NFData (LVNodeKernel blk) where
 
 -- | Type wrapper to simplify derivations.
 newtype LiveViewThread = LiveViewThread
-    { getLiveViewThred :: Maybe (Async.Async ())
+    { getLVThread :: Maybe (Async.Async ())
     } deriving (Eq, Generic)
 
 instance NoUnexpectedThunks LiveViewThread where
@@ -232,7 +233,6 @@ instance IsBackend (LiveViewBackend blk) Text where
 
         modifyMVar_ mv $ \lvs -> return $ lvs { lvsUIThread = LiveViewThread $ Just thr }
 
-        -- Check for unexpected thunks
         checkForUnexpectedThunks ["IsBackend LiveViewBackend"] sharedState
 
         return sharedState
@@ -256,22 +256,18 @@ checkForUnexpectedThunks _context _unexpectedThunks = pure ()
 
 instance IsEffectuator (LiveViewBackend blk) Text where
     effectuate lvbe item = do
-        -- Check for unexpected thunks
         checkForUnexpectedThunks ["IsEffectuator LiveViewBackend"] lvbe
 
         case item of
             LogObject "cardano.node.metrics" meta content -> do
+                let currentTimeInNs = utc2ns (tstamp meta)
                 case content of
                     LogValue "Mem.resident" (PureI pages) ->
-                        let !mbytes     = fromIntegral (pages * pagesize) / 1024 / 1024 :: Float
-
-                        in
                         modifyMVar_ (getbe lvbe) $ \lvs -> do
-
+                            let !mbytes     = fromIntegral (pages * pagesize) / 1024 / 1024 :: Float
                             let !maxMemory  = max (lvsMemoryUsageMax lvs) mbytes
                             let !uptime     = diffUTCTime (tstamp meta) (lvsStartTime lvs)
 
-                            -- Check for unexpected thunks
                             checkForUnexpectedThunks ["Mem.resident LiveViewBackend"] lvs
 
                             return $ lvs { lvsMemoryUsageCurr = mbytes
@@ -279,11 +275,21 @@ instance IsEffectuator (LiveViewBackend blk) Text where
                                          , lvsUpTime          = uptime
                                          }
 
-                    LogValue "IO.rchar" (Bytes bytesWereRead) ->
-                        let currentTimeInNs = utc2ns (tstamp meta)
-                        in
+                    LogValue "Mem.resident_size" (Bytes bytes) ->   -- Darwin
                         modifyMVar_ (getbe lvbe) $ \lvs -> do
+                            let !mbytes     = fromIntegral bytes / 1024 / 1024 :: Float
+                            let !maxMemory  = max (lvsMemoryUsageMax lvs) mbytes
+                            let !uptime     = diffUTCTime (tstamp meta) (lvsStartTime lvs)
 
+                            checkForUnexpectedThunks ["Mem.resident_size LiveViewBackend"] lvs
+
+                            return $ lvs { lvsMemoryUsageCurr = mbytes
+                                         , lvsMemoryUsageMax  = maxMemory
+                                         , lvsUpTime          = uptime
+                                         }
+
+                    LogValue "IO.rchar" (Bytes bytesWereRead) ->
+                        modifyMVar_ (getbe lvbe) $ \lvs -> do
                             let !timeDiff           = fromIntegral (currentTimeInNs - lvsDiskUsageRNs lvs) :: Float
                                 !timeDiffInSecs     = timeDiff / 1000000000
                                 !bytesDiff          = fromIntegral (bytesWereRead - lvsDiskUsageRLast lvs) :: Float
@@ -293,7 +299,6 @@ instance IsEffectuator (LiveViewBackend blk) Text where
                                 !upTime             = diffUTCTime (tstamp meta) (lvsStartTime lvs)
                                 !diskUsageRPerc     = (currentDiskRate / (maxDiskRate / 100.0)) / 100.0
 
-                            -- Check for unexpected thunks
                             checkForUnexpectedThunks ["IO.rchar LiveViewBackend"] lvs
 
                             return $ lvs { lvsDiskUsageRCurr = currentDiskRate
@@ -305,8 +310,6 @@ instance IsEffectuator (LiveViewBackend blk) Text where
                                          }
 
                     LogValue "IO.wchar" (Bytes bytesWereWritten) ->
-                        let currentTimeInNs = utc2ns (tstamp meta)
-                        in
                         modifyMVar_ (getbe lvbe) $ \lvs -> do
                             let !timeDiff        = fromIntegral (currentTimeInNs - lvsDiskUsageWNs lvs) :: Float
                                 !timeDiffInSecs  = timeDiff / 1000000000
@@ -315,7 +318,6 @@ instance IsEffectuator (LiveViewBackend blk) Text where
                                 !currentDiskRate = bytesDiffInKB / timeDiffInSecs
                                 !maxDiskRate     = max currentDiskRate $ lvsDiskUsageWMax lvs
 
-                            -- Check for unexpected thunks
                             checkForUnexpectedThunks ["IO.wchar LiveViewBackend"] lvs
 
                             return $! lvs { lvsDiskUsageWCurr = currentDiskRate
@@ -327,94 +329,61 @@ instance IsEffectuator (LiveViewBackend blk) Text where
                                          }
 
                     LogValue "Stat.utime" (PureI ticks) ->
-                        let tns = utc2ns (tstamp meta)
-                        in
                         modifyMVar_ (getbe lvbe) $ \lvs -> do
-
-                            let !tdiff      = min 1 $ (fromIntegral (tns - lvsCPUUsageNs lvs)) / 1000000000 :: Float
+                            let !tdiff      = max 1 $ (fromIntegral (currentTimeInNs - lvsCPUUsageNs lvs)) / 1000000000 :: Float
                                 !cpuperc    = (fromIntegral (ticks - lvsCPUUsageLast lvs)) / (fromIntegral clktck) / tdiff
                                 !uptime     = diffUTCTime (tstamp meta) (lvsStartTime lvs)
 
-                            -- Check for unexpected thunks
                             checkForUnexpectedThunks ["Stat.utime LiveViewBackend"] lvs
 
                             return $ lvs { lvsCPUUsagePerc = cpuperc
                                          , lvsCPUUsageLast = ticks
-                                         , lvsCPUUsageNs   = tns
+                                         , lvsCPUUsageNs   = currentTimeInNs
                                          , lvsUpTime       = uptime
                                          }
 
+                    LogValue "Sys.SysUserTime" v@(Nanoseconds nsecs) ->   -- Darwin, Windows
+                        modifyMVar_ (getbe lvbe) $ \lvs -> do
+                            let !tdiff      = max 1 $ (fromIntegral (currentTimeInNs - lvsCPUUsageNs lvs)) :: Float
+                                !deltacpu   = fromIntegral nsecs - fromIntegral (lvsCPUUsageLast lvs) :: Float
+                                !cpuperc    = deltacpu * 10 / tdiff
+                                !uptime     = diffUTCTime (tstamp meta) (lvsStartTime lvs)
+
+                            checkForUnexpectedThunks ["Sys.SysUserTime LiveViewBackend"] lvs
+
+                            return $ lvs { lvsCPUUsagePerc = cpuperc
+                                         , lvsCPUUsageLast = fromIntegral nsecs
+                                         , lvsCPUUsageNs   = currentTimeInNs
+                                         , lvsUpTime       = uptime
+                                         }
+
+                    LogValue "Net.ifd_0-ibytes" (Bytes inBytes) ->  -- Darwin
+                        modifyMVar_ (getbe lvbe) $ \lvs ->
+                          updateNetInbound lvs currentTimeInNs inBytes  -- Linux
                     LogValue "Net.IpExt:InOctets" (Bytes inBytes) ->
-                        modifyMVar_ (getbe lvbe) $ \lvs -> do
-                            let currentTimeInNs = utc2ns (tstamp meta)
-                                timeDiff        = fromIntegral (currentTimeInNs - lvsNetworkUsageInNs lvs) :: Float
-                                timeDiffInSecs  = timeDiff / 1000000000
-                                bytesDiff       = fromIntegral (inBytes - lvsNetworkUsageInLast lvs) :: Float
-                                bytesDiffInKB   = bytesDiff / 1024
-                                currentNetRate  = bytesDiffInKB / timeDiffInSecs
-                                maxNetRate      = max currentNetRate $ lvsNetworkUsageInMax lvs
+                        modifyMVar_ (getbe lvbe) $ \lvs ->
+                          updateNetInbound lvs currentTimeInNs inBytes
 
-                            -- Check for unexpected thunks
-                            checkForUnexpectedThunks ["Net.IpExt:InOctets LiveViewBackend"] lvs
-
-                            peers <- fromSMaybe mempty <$> sequence (extractPeers . getNodeKernel <$> lvsNodeKernel lvs)
-
-                            return $ lvs { lvsNetworkUsageInCurr = currentNetRate
-                                         , lvsNetworkUsageInPerc = (currentNetRate / (maxNetRate / 100.0)) / 100.0
-                                         , lvsNetworkUsageInLast = inBytes
-                                         , lvsNetworkUsageInNs   = currentTimeInNs
-                                         , lvsNetworkUsageInMax  = maxNetRate
-                                         , lvsUpTime             = diffUTCTime (tstamp meta) (lvsStartTime lvs)
-                                         , lvsPeers              = peers
-                                         }
-                          where
-                            tuple3pop :: (a, b, c) -> (a, b)
-                            tuple3pop (a, b, _) = (a, b)
-
-                            getCandidates
-                              :: STM.StrictTVar IO (Map peer (STM.StrictTVar IO (Net.AnchoredFragment (Header blk))))
-                              -> STM.STM IO (Map peer (Net.AnchoredFragment (Header blk)))
-                            getCandidates var = STM.readTVar var >>= traverse STM.readTVar
-
-                            extractPeers :: NodeKernel IO RemoteConnectionId LocalConnectionId blk
-                                         -> IO [LVPeer blk]
-                            extractPeers kernel = do
-                              peerStates <- fmap tuple3pop <$> (atomically . (>>= traverse Net.readFetchClientState) . Net.readFetchClientsStateVars . getFetchClientRegistry $ kernel)
-                              candidates <- atomically . getCandidates . getNodeCandidates $ kernel
-
-                              pure $ Map.elems . flip Map.mapMaybeWithKey candidates $
-                                \cid af -> Map.lookup cid peerStates <&>
-                                \(status, inflight) -> LVPeer cid af status inflight
-
+                    LogValue "Net.ifd_0-obytes" (Bytes outBytes) ->   -- Darwin
+                        modifyMVar_ (getbe lvbe) $ \lvs ->
+                          updateNetOutbound lvs currentTimeInNs outBytes
                     LogValue "Net.IpExt:OutOctets" (Bytes outBytes) ->
-                        let currentTimeInNs = utc2ns (tstamp meta)
-                        in
+                        modifyMVar_ (getbe lvbe) $ \lvs ->
+                          updateNetOutbound lvs currentTimeInNs outBytes
+
+                    LogValue "Sys.Platform" (PureI pfid) ->
                         modifyMVar_ (getbe lvbe) $ \lvs -> do
+                            let platform = toEnum $ fromIntegral pfid :: Platform
 
-                            let timeDiff        = fromIntegral (currentTimeInNs - lvsNetworkUsageOutNs lvs) :: Float
-                                timeDiffInSecs  = timeDiff / 1000000000
-                                bytesDiff       = fromIntegral (outBytes - lvsNetworkUsageOutLast lvs) :: Float
-                                bytesDiffInKB   = bytesDiff / 1024
-                                currentNetRate  = bytesDiffInKB / timeDiffInSecs
-                                maxNetRate      = max currentNetRate $ lvsNetworkUsageOutMax lvs
+                            checkForUnexpectedThunks ["Sys.Platform LiveViewBackend"] lvs
 
-                            -- Check for unexpected thunks
-                            checkForUnexpectedThunks ["Net.IpExt:OutOctets LiveViewBackend"] lvs
-
-                            return $ lvs { lvsNetworkUsageOutCurr = currentNetRate
-                                         , lvsNetworkUsageOutPerc = (currentNetRate / (maxNetRate / 100.0)) / 100.0
-                                         , lvsNetworkUsageOutLast = outBytes
-                                         , lvsNetworkUsageOutNs   = currentTimeInNs
-                                         , lvsNetworkUsageOutMax  = maxNetRate
-                                         , lvsUpTime              = diffUTCTime (tstamp meta) (lvsStartTime lvs)
-                                         }
+                            return $ lvs { lvsPlatform = show platform }
 
                     LogValue "txsInMempool" (PureI txsInMempool) ->
                         modifyMVar_ (getbe lvbe) $ \lvs -> do
                                 let lvsMempool' = fromIntegral txsInMempool :: Word64
                                     percentage = fromIntegral lvsMempool' / fromIntegral (lvsMempoolCapacity lvs) :: Float
 
-                                -- Check for unexpected thunks
                                 checkForUnexpectedThunks ["txsInMempool LiveViewBackend"] lvs
 
                                 return $ lvs { lvsMempool = lvsMempool'
@@ -425,7 +394,6 @@ instance IsEffectuator (LiveViewBackend blk) Text where
                                 let lvsMempoolBytes' = fromIntegral mempoolBytes :: Word64
                                     percentage = fromIntegral lvsMempoolBytes' / fromIntegral (lvsMempoolCapacityBytes lvs) :: Float
 
-                                -- Check for unexpected thunks
                                 checkForUnexpectedThunks ["mempoolBytes LiveViewBackend"] lvs
 
                                 return $ lvs
@@ -435,7 +403,6 @@ instance IsEffectuator (LiveViewBackend blk) Text where
                     LogValue "txsProcessed" (PureI txsProcessed) ->
                         modifyMVar_ (getbe lvbe) $ \lvs -> do
 
-                                -- Check for unexpected thunks
                                 checkForUnexpectedThunks ["txsProcessed LiveViewBackend"] lvs
 
                                 return $ lvs { lvsTransactions = lvsTransactions lvs + fromIntegral txsProcessed }
@@ -449,35 +416,57 @@ instance IsEffectuator (LiveViewBackend blk) Text where
 
                         let !chainDensity = 0.05 + density * 100.0
 
-                        -- Check for unexpected thunks
                         checkForUnexpectedThunks ["density LiveViewBackend"] lvs
 
                         return $ lvs { lvsChainDensity = chainDensity }
-            LogObject _ _ (LogValue "connectedPeers" (PureI npeers)) ->
-                modifyMVar_ (getbe lvbe) $ \lvs -> do
+            LogObject _ meta (LogValue "connectedPeers" (PureI npeers)) ->
+                modifyMVar_ (getbe lvbe) $ \lvs ->
+                        let currentTimeInNs = utc2ns (tstamp meta)
+                        in
+                        if currentTimeInNs - lvsPeersLastTime lvs > 2001000000
+                          then do
+                            peers <- fromSMaybe mempty <$> sequence (extractPeers . getNodeKernel <$> lvsNodeKernel lvs)
+                            checkForUnexpectedThunks ["connectedPeers LiveViewBackend"] lvs
+                            return $ lvs { lvsPeersConnected = fromIntegral npeers
+                                        , lvsPeersLastTime  = currentTimeInNs
+                                        , lvsPeers          = peers }
+                          else
+                            return $ lvs { lvsPeersConnected = fromIntegral npeers }
 
-                        -- Check for unexpected thunks
-                        checkForUnexpectedThunks ["connectedPeers LiveViewBackend"] lvs
+                      where
+                        tuple3pop :: (a, b, c) -> (a, b)
+                        tuple3pop (a, b, _) = (a, b)
 
-                        return $ lvs { lvsPeersConnected = fromIntegral npeers }
+                        getCandidates
+                          :: STM.StrictTVar IO (Map peer (STM.StrictTVar IO (Net.AnchoredFragment (Header blk))))
+                          -> STM.STM IO (Map peer (Net.AnchoredFragment (Header blk)))
+                        getCandidates var = STM.readTVar var >>= traverse STM.readTVar
+
+                        extractPeers :: NodeKernel IO RemoteConnectionId LocalConnectionId blk
+                                      -> IO [LVPeer blk]
+                        extractPeers kernel = do
+                          peerStates <- fmap tuple3pop <$> (atomically . (>>= traverse Net.readFetchClientState) . Net.readFetchClientsStateVars . getFetchClientRegistry $ kernel)
+                          candidates <- atomically . getCandidates . getNodeCandidates $ kernel
+
+                          pure $ Map.elems . flip Map.mapMaybeWithKey candidates $
+                            \cid af -> Map.lookup cid peerStates <&>
+                            \(status, inflight) -> LVPeer cid af status inflight
+
             LogObject _ _ (LogValue "blockNum" (PureI slotnum)) ->
                 modifyMVar_ (getbe lvbe) $ \lvs -> do
 
-                        -- Check for unexpected thunks
                         checkForUnexpectedThunks ["blockNum LiveViewBackend"] lvs
 
                         return $ lvs { lvsBlockNum = fromIntegral slotnum }
             LogObject _ _ (LogValue "slotInEpoch" (PureI slotnum)) ->
                 modifyMVar_ (getbe lvbe) $ \lvs -> do
 
-                        -- Check for unexpected thunks
                         checkForUnexpectedThunks ["slotInEpoch LiveViewBackend"] lvs
 
                         return $ lvs { lvsSlotNum = fromIntegral slotnum }
             LogObject _ _ (LogValue "epoch" (PureI epoch)) ->
                 modifyMVar_ (getbe lvbe) $ \lvs -> do
 
-                        -- Check for unexpected thunks
                         checkForUnexpectedThunks ["epoch LiveViewBackend"] lvs
 
                         return $ lvs { lvsEpoch = fromIntegral epoch }
@@ -485,6 +474,35 @@ instance IsEffectuator (LiveViewBackend blk) Text where
             _ -> pure ()
 
     handleOverflow _ = pure ()
+
+updateNetOutbound lvs currentTimeInNs outBytes =
+    let (timeDiff, currentNetRate) =
+            calcNetRate currentTimeInNs (lvsNetworkUsageOutNs lvs) (lvsNetworkUsageOutLast lvs) outBytes
+        maxNetRate = max currentNetRate (lvsNetworkUsageOutMax lvs)
+    in return lvs { lvsNetworkUsageOutCurr = currentNetRate
+                  , lvsNetworkUsageOutPerc = (currentNetRate / (maxNetRate / 100.0)) / 100.0
+                  , lvsNetworkUsageOutLast = outBytes
+                  , lvsNetworkUsageOutNs   = currentTimeInNs
+                  , lvsNetworkUsageOutMax  = maxNetRate
+                  }
+
+updateNetInbound lvs currentTimeInNs inBytes =
+    let (timeDiff, currentNetRate) =
+            calcNetRate currentTimeInNs (lvsNetworkUsageInNs lvs) (lvsNetworkUsageInLast lvs) inBytes
+        maxNetRate = max currentNetRate (lvsNetworkUsageInMax lvs)
+    in return $ lvs { lvsNetworkUsageInCurr = currentNetRate
+                    , lvsNetworkUsageInPerc = (currentNetRate / (maxNetRate / 100.0)) / 100.0
+                    , lvsNetworkUsageInLast = inBytes
+                    , lvsNetworkUsageInNs   = currentTimeInNs
+                    , lvsNetworkUsageInMax  = maxNetRate
+                    }
+calcNetRate currentTimeInNs lastTimeInNs lastUsageBytes bytes =
+    let timeDiff        = fromIntegral (currentTimeInNs - lastTimeInNs) :: Float
+        timeDiffInSecs  = timeDiff / 1000000000
+        bytesDiff       = fromIntegral (bytes - lastUsageBytes) :: Float
+        bytesDiffInKB   = bytesDiff / 1024
+        currentNetRate  = bytesDiffInKB / timeDiffInSecs
+    in (timeDiff, currentNetRate)
 
 initLiveViewState :: IO (LiveViewState blk a)
 initLiveViewState = do
@@ -500,6 +518,7 @@ initLiveViewState = do
                 , lvsNodeId                 = ""
                 , lvsVersion                = showVersion version
                 , lvsCommit                 = unpack gitRev
+                , lvsPlatform               = "?"
                 , lvsUpTime                 = diffUTCTime now now
                 , lvsEpoch                  = 0
                 , lvsSlotNum                = 0
@@ -512,7 +531,7 @@ initLiveViewState = do
                 , lvsMempoolPerc            = 0.0
                 , lvsMempoolBytes           = 0
                 , lvsMempoolBytesPerc       = 0.0
-                , lvsCPUUsagePerc           = 0.58
+                , lvsCPUUsagePerc           = 0.042
                 , lvsMemoryUsageCurr        = 0.0
                 , lvsMemoryUsageMax         = 0.2
                 , lvsDiskUsageRPerc         = 0.0
@@ -546,6 +565,7 @@ initLiveViewState = do
                 , lvsNodeThread             = LiveViewThread Nothing
                 , lvsNodeKernel             = SNothing
                 , lvsPeers                  = mempty
+                , lvsPeersLastTime          = 0
                 , lvsColorTheme             = DarkTheme
                 }
 
@@ -579,13 +599,12 @@ setNodeKernel lvbe nodeKern =
 captureCounters :: NFData a => LiveViewBackend blk a -> Trace IO Text -> IO ()
 captureCounters lvbe trace0 = do
     let trace' = appendName "metrics" trace0
-        counters = [MemoryStats, ProcessStats, NetStats, IOStats]
+        counters = [MemoryStats, ProcessStats, NetStats, IOStats, SysStats]
     -- start capturing counters on this process
     thr <- Async.async $ forever $ do
                 threadDelay 1000000   -- 1 second
                 cts <- readCounters (ObservableTraceSelf counters)
                 traceCounters trace' cts
-    pure ()
 
     modifyMVar_ (getbe lvbe) $ \lvs -> return $ lvs { lvsMetricsThread = LiveViewThread $ Just thr }
     where
@@ -751,10 +770,10 @@ ppPeer (LVPeer cid _af status inflight) =
    ppMaxSlotNo (Net.MaxSlotNo x) = show (unSlotNo x)
 
    ppStatus :: Net.PeerFetchStatus header -> String
-   ppStatus Net.PeerFetchStatusShutdown      = "shutdown"
-   ppStatus Net.PeerFetchStatusAberrant      = "aberrant"
-   ppStatus Net.PeerFetchStatusBusy          = "fetching"
-   ppStatus (Net.PeerFetchStatusReady {})    = "ready"
+   ppStatus Net.PeerFetchStatusShutdown = "shutdown"
+   ppStatus Net.PeerFetchStatusAberrant = "aberrant"
+   ppStatus Net.PeerFetchStatusBusy     = "fetching"
+   ppStatus Net.PeerFetchStatusReady {} = "ready"
 
 drawUI :: LiveViewState blk a -> [Widget ()]
 drawUI p = case lvsScreen p of
@@ -969,6 +988,7 @@ nodeInfoLabels =
       padRight (T.Pad 3)
     $ vBox [                    txt "version:"
            ,                    txt "commit:"
+           ,                    txt "platform:"
            , padTop (T.Pad 1) $ txt "uptime:"
            , padTop (T.Pad 1) $ txt "epoch / slot:"
            ,                    txt "block number:"
@@ -982,6 +1002,7 @@ nodeInfoValues lvs =
       withAttr valueAttr
     $ vBox [                    str (lvsVersion lvs)
            ,                    str (take 7 $ lvsCommit lvs)
+           ,                    str (lvsPlatform lvs)
            , padTop (T.Pad 1) $ str (formatTime defaultTimeLocale "%X" $
                                         -- NominalDiffTime is not an instance of FormatTime before time-1.9.1
                                         addUTCTime (lvsUpTime lvs) (UTCTime (ModifiedJulianDay 0) 0))
@@ -1015,7 +1036,7 @@ eventHandler lvs  (VtyEvent e)         =
   where
     stopNodeThread :: MonadIO m => m ()
     stopNodeThread =
-      case (getLiveViewThred $ lvsNodeThread lvs) of
+      case getLVThread (lvsNodeThread lvs) of
         Nothing -> return ()
         Just t  -> liftIO $ Async.cancel t
 eventHandler lvs  _                    = M.halt lvs
