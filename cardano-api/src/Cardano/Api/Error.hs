@@ -2,7 +2,6 @@
 
 module Cardano.Api.Error
   ( ApiError (..)
-  , convertTextViewError
   , renderApiError
   ) where
 
@@ -20,31 +19,8 @@ data ApiError
   = ApiError !Text
   | ApiErrorCBOR !DecoderError
   | ApiErrorIO !FilePath !IOException
-  | ApiTextView !Text
+  | ApiTextView !TextViewError
   deriving (Eq, Show)
-
-convertTextViewError :: TextViewError -> Either ApiError b
-convertTextViewError err =
-  Left $
-    case err of
-      TextViewFormatError msg -> ApiTextView msg
-
-      TextViewTypeError [expected] actual ->
-        ApiTextView $ mconcat
-          [ "Expected file type ", Text.decodeLatin1 (unTextViewType expected)
-          , ", but got type ", Text.decodeLatin1 (unTextViewType actual)
-          ]
-
-      TextViewTypeError expected actual ->
-        ApiTextView $ mconcat
-          [ "Expected file type to be one of "
-          , Text.intercalate ", "
-              [ Text.decodeLatin1 (unTextViewType t) | t <- expected ]
-          , ", but got type ", Text.decodeLatin1 (unTextViewType actual)
-          ]
-
-      TextViewDecodeError derr -> ApiErrorCBOR derr
-
 
 renderApiError :: ApiError -> Text
 renderApiError ae =
@@ -52,8 +28,24 @@ renderApiError ae =
     ApiError txt -> txt
     ApiErrorCBOR de -> sformat build de
     ApiErrorIO fp e -> mconcat [Text.pack fp, ": ", textShow e]
-    ApiTextView txt -> mconcat ["TextView: ", txt]
+    ApiTextView err -> case err of
+      TextViewFormatError msg -> msg
 
+      TextViewTypeError [expected] actual ->
+        mconcat
+          [ "Expected file type ", Text.decodeLatin1 (unTextViewType expected)
+          , ", but got type ", Text.decodeLatin1 (unTextViewType actual)
+          ]
+
+      TextViewTypeError expected actual ->
+        mconcat
+          [ "Expected file type to be one of "
+          , Text.intercalate ", "
+              [ Text.decodeLatin1 (unTextViewType t) | t <- expected ]
+          , ", but got type ", Text.decodeLatin1 (unTextViewType actual)
+          ]
+
+      TextViewDecodeError de -> sformat build de
 
 textShow :: Show a => a -> Text
 textShow = Text.pack . show

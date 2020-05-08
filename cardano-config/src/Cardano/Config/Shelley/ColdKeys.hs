@@ -24,6 +24,8 @@ module Cardano.Config.Shelley.ColdKeys
   , renderKeyError
   , writeSigningKey
   , writeVerKey
+  , KeyType(..)
+  , renderKeyType
   ) where
 
 import           Cardano.Prelude
