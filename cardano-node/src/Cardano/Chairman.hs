@@ -350,7 +350,7 @@ createConnection
   iomgr
   cfg
   networkMagic
-  socketPath@(SocketFile path)
+  socketPath@(SocketPath path)
   chainsVar
   securityParam =
       connectTo

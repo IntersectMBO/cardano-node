@@ -478,7 +478,7 @@ createNodeConnection
   -> SocketPath
   -> StrictTMVar IO (Tip blk)
   -> IO ()
-createNodeConnection proxy ptcl iocp (SocketFile path) tipVar =
+createNodeConnection proxy ptcl iocp (SocketPath path) tipVar =
     let ProtocolInfo{pInfoConfig} = Consensus.protocolInfo ptcl in
     connectTo
       (localSnocket iocp path)

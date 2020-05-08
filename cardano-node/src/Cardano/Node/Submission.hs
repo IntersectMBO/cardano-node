@@ -104,7 +104,7 @@ submitGeneralTx
   -> GenTx blk
   -> Tracer IO TraceLowLevelSubmit
   -> IO ()
-submitGeneralTx iocp (SocketFile path) cfg tx tracer =
+submitGeneralTx iocp (SocketPath path) cfg tx tracer =
   NtC.connectTo
     (NtC.localSnocket iocp path)
     NetworkConnectTracers {
