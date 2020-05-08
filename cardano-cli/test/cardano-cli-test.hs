@@ -8,7 +8,8 @@ import           Control.Monad (foldM, forM, when)
 import           Data.Maybe (isNothing)
 import qualified Data.List as List
 import qualified Data.Text as Text
-import           Data.Text.ANSI (brightRed, green)
+import qualified Data.Text.IO as Text
+import           Data.Text.ANSI (bold, green, red)
 
 import           Prelude (String)
 
@@ -30,15 +31,24 @@ main = do
 
   tests <- List.sort . filter (`notElem` ["core", "data"]) <$> listDirectory "test/cli/"
   res <- forM tests $ \ t -> rawSystem (joinPath ["test", "cli", t, "run"]) []
-  let count = length $ filter (/= ExitSuccess) res
-  if
-    | count == 1 -> putTextLn $ brightRed "1 failure\n"
-    | count > 1 -> putTextLn $ brightRed (Text.pack (show count) <> " failures\n")
-    | otherwise -> putTextLn $ green "All tests passed!\n"
-  if count == 0
-    then exitSuccess
-    else exitFailure
 
+  uncurry reportResult $ bimap length length $ List.partition (== ExitSuccess) res
+
+-- -------------------------------------------------------------------------------------------------
+
+reportResult :: Int -> Int -> IO ()
+reportResult passCount failCount
+  | failCount == 0 = do
+      Text.putStrLn $
+        green (mconcat [ Text.pack (show passCount), " tests passed, 0 failed.\n" ])
+      exitSuccess
+  | otherwise = do
+      Text.putStrLn $
+        mconcat
+          [ green (mconcat [ Text.pack (show passCount), " tests passed, " ])
+          , bold $ red (mconcat [ Text.pack (show failCount), " failed.\n" ])
+          ]
+      exitFailure
 
 setExecutableEnvVar :: String -> FilePath -> IO ()
 setExecutableEnvVar envName target = do
