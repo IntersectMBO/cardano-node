@@ -20,8 +20,11 @@ import           Ouroboros.Consensus.Shelley.Protocol (TPraosStandardCrypto)
 import           Ouroboros.Consensus.Shelley.Node (emptyGenesisStaking)
 import           Ouroboros.Network.Magic (NetworkMagic (..))
 
+import           Shelley.Spec.Ledger.BaseTypes (truncateUnitInterval)
 import           Shelley.Spec.Ledger.Coin (Coin(..))
 import           Shelley.Spec.Ledger.Keys (KeyHash(..), KeyRole(..))
+
+import           Shelley.Spec.Ledger.PParams (PParams' (..), emptyPParams)
 import           Shelley.Spec.Ledger.TxData
                    (Addr (..), Credential (..), StakeReference(..))
 
@@ -35,7 +38,6 @@ exampleShelleyGenesis =
     , sgNetworkMagic = NetworkMagic 4036000900
     , sgProtocolMagicId = ProtocolMagicId 838299499
     , sgActiveSlotsCoeff = 6.259
-    , sgDecentralisationParam = 1.9e-2
     , sgSecurityParam = SecurityParam 120842
     , sgEpochLength = EpochSize 1215
     , sgSlotsPerKESPeriod = 8541
@@ -44,8 +46,11 @@ exampleShelleyGenesis =
     , sgUpdateQuorum = 16991
     , sgMaxMajorPV = 25446
     , sgMaxLovelaceSupply = 71
-    , sgMaxBodySize = 239857
-    , sgMaxHeaderSize = 217569
+    , sgProtocolParams = emptyPParams
+        { _d = truncateUnitInterval . realToFrac $ (1.9e-2 :: Double)
+        , _maxBBSize = 239857
+        , _maxBHSize = 217569
+        }
     , sgGenDelegs = Map.fromList [(genesisVerKeyHash, delegVerKeyHash)]
     , sgInitialFunds = Map.fromList [(initialFundedAddress,initialFunds)]
     , sgStaking = emptyGenesisStaking

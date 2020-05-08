@@ -35,11 +35,12 @@ import           Ouroboros.Consensus.Protocol.Abstract (SecurityParam (..))
 import           Ouroboros.Consensus.Shelley.Node
                    (ShelleyGenesis (..), emptyGenesisStaking)
 import           Shelley.Spec.Ledger.Address (serialiseAddr, deserialiseAddr)
-import           Shelley.Spec.Ledger.BaseTypes (Nonce (..), UnitInterval (..))
+import           Shelley.Spec.Ledger.BaseTypes
+                   (Nonce (..), UnitInterval (..), truncateUnitInterval)
 import           Shelley.Spec.Ledger.Coin (Coin(..))
 import           Shelley.Spec.Ledger.Crypto (Crypto)
 import           Shelley.Spec.Ledger.Keys (KeyHash(..))
-import           Shelley.Spec.Ledger.PParams (PParams, ProtVer (..))
+import           Shelley.Spec.Ledger.PParams (PParams, PParams' (..), ProtVer (..))
 import           Shelley.Spec.Ledger.TxData (Addr(..))
 
 instance Crypto crypto => ToJSON (ShelleyGenesis crypto) where
@@ -51,7 +52,6 @@ instance Crypto crypto => ToJSON (ShelleyGenesis crypto) where
       , "NetworkMagic"          .= sgNetworkMagic sg
       , "ProtocolMagicId"       .= sgProtocolMagicId sg
       , "ActiveSlotsCoeff"      .= sgActiveSlotsCoeff sg
-      , "DecentralisationParam" .= sgDecentralisationParam sg
       , "SecurityParam"         .= sgSecurityParam sg
       , "EpochLength"           .= sgEpochLength sg
       , "SlotsPerKESPeriod"     .= sgSlotsPerKESPeriod sg
@@ -60,8 +60,7 @@ instance Crypto crypto => ToJSON (ShelleyGenesis crypto) where
       , "UpdateQuorum"          .= sgUpdateQuorum sg
       , "MaxMajorPV"            .= sgMaxMajorPV sg
       , "MaxLovelaceSupply"     .= sgMaxLovelaceSupply sg
-      , "MaxBodySize"           .= sgMaxBodySize sg
-      , "MaxHeaderSize"         .= sgMaxHeaderSize sg
+      , "ProtocolParams"        .= sgProtocolParams sg
       , "GenDelegs"             .= sgGenDelegs sg
       , "InitialFunds"          .= sgInitialFunds sg
 --    , "Staking"               .= sgStaking sg  --TODO
@@ -75,7 +74,6 @@ instance Crypto crypto => FromJSON (ShelleyGenesis crypto) where
         <*> obj .: "NetworkMagic"
         <*> obj .: "ProtocolMagicId"
         <*> obj .: "ActiveSlotsCoeff"
-        <*> obj .: "DecentralisationParam"
         <*> obj .: "SecurityParam"
         <*> obj .: "EpochLength"
         <*> obj .: "SlotsPerKESPeriod"
@@ -84,22 +82,90 @@ instance Crypto crypto => FromJSON (ShelleyGenesis crypto) where
         <*> obj .: "UpdateQuorum"
         <*> obj .: "MaxMajorPV"
         <*> obj .: "MaxLovelaceSupply"
-        <*> obj .: "MaxBodySize"
-        <*> obj .: "MaxHeaderSize"
+        <*> obj .: "ProtocolParams"
         <*> obj .: "GenDelegs"
         <*> obj .: "InitialFunds"
         <*> pure emptyGenesisStaking  --TODO
 
-deriving instance ToJSON PParams
-deriving instance ToJSON ProtVer
+instance ToJSON PParams where
+  toJSON pp =
+    Aeson.object
+      [ "minFeeA" .= _minfeeA pp
+      , "minFeeB" .= _minfeeB pp
+      , "maxBlockBodySize" .= _maxBBSize pp
+      , "maxTxSize" .= _maxTxSize pp
+      , "maxBlockHeaderSize" .= _maxBHSize pp
+      , "keyDeposit" .= _keyDeposit pp
+      , "keyMinRefund" .= _keyMinRefund pp
+      , "keyDecayRate" .= (fromRational $ _keyDecayRate pp :: Double)
+      , "poolDeposit" .= _poolDeposit pp
+      , "poolMinRefund" .= _poolMinRefund pp
+      , "poolDecayRate" .= (fromRational $ _poolDecayRate pp :: Double)
+      , "eMax" .= _eMax pp
+      , "nOpt" .= _nOpt pp
+      , "a0" .= (fromRational $ _a0 pp :: Double)
+      , "rho" .= _rho pp
+      , "tau" .= _tau pp
+      , "decentralisationParam" .= _d pp
+      , "extraEntropy" .= _extraEntropy pp
+      , "protocolVersion" .= _protocolVersion pp
+      ]
+
+instance FromJSON PParams where
+  parseJSON =
+      Aeson.withObject "PParams" $ \ obj ->
+        PParams
+          <$> obj .: "minFeeA"
+          <*> obj .: "minFeeB"
+          <*> obj .: "maxBlockBodySize"
+          <*> obj .: "maxTxSize"
+          <*> obj .: "maxBlockHeaderSize"
+          <*> obj .: "keyDeposit"
+          <*> obj .: "keyMinRefund"
+          <*> parseRationalFromDouble (obj .: "keyDecayRate")
+          <*> obj .: "poolDeposit"
+          <*> obj .: "poolMinRefund"
+          <*> parseRationalFromDouble (obj .: "poolDecayRate")
+          <*> obj .: "eMax"
+          <*> obj .: "nOpt"
+          <*> parseRationalFromDouble (obj .: "a0")
+          <*> obj .: "rho"
+          <*> obj .: "tau"
+          <*> obj .: "decentralisationParam"
+          <*> obj .: "extraEntropy"
+          <*> obj .: "protocolVersion"
+      where
+        parseRationalFromDouble :: Parser Double -> Parser Rational
+        parseRationalFromDouble p = realToFrac <$> p
+
+instance ToJSON UnitInterval where
+  toJSON (UnsafeUnitInterval r) = toJSON (fromRational r :: Double)
+
+instance FromJSON UnitInterval where
+  parseJSON v =
+    truncateUnitInterval . realToFrac
+      <$> (parseJSON v :: Parser Double)
+
+instance ToJSON ProtVer where
+  toJSON (ProtVer major minor) =
+    Aeson.object
+      [ "major" .= major
+      , "minor" .= minor
+      ]
+
+instance FromJSON ProtVer where
+  parseJSON =
+    Aeson.withObject "ProtVer" $ \ obj ->
+      ProtVer
+        <$> obj .: "major"
+        <*> obj .: "minor"
+
 deriving instance ToJSON Nonce
+deriving instance FromJSON Nonce
 
 --
 -- Simple newtype wrappers JSON conversion
 --
-
--- This instance is for PParams
-deriving newtype instance ToJSON UnitInterval
 
 -- These are for ShelleyGenesis.
 -- These ones are all just newtype wrappers of numbers,
