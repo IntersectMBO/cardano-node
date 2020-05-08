@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
@@ -6,6 +7,7 @@
 
 --TODO: eliminate partial conversions:
 {-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
+{-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 
 module Cardano.Api.Types
   (
@@ -86,8 +88,8 @@ type ByronTx              = Byron.TxAux
 type ByronTxId            = Byron.TxId
 type ByronWitness         = Byron.TxInWitness
 
-type ShelleyVerificationKey = Shelley.VKey   Shelley.TPraosStandardCrypto
-type ShelleySigningKey      = Shelley.SKey   Shelley.TPraosStandardCrypto
+type ShelleyVerificationKey = Shelley.VKey Shelley.Payment Shelley.TPraosStandardCrypto
+type ShelleySigningKey      = Shelley.SignKeyDSIGN Shelley.TPraosStandardCrypto
 type ShelleyAddress         = Shelley.Addr   Shelley.TPraosStandardCrypto
 type ShelleyTxIn            = Shelley.TxIn   Shelley.TPraosStandardCrypto
 type ShelleyTxOut           = Shelley.TxOut  Shelley.TPraosStandardCrypto

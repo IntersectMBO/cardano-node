@@ -22,22 +22,27 @@ import qualified Cardano.Binary as CBOR
 import           Control.Monad.Trans.Except.Extra (firstExceptT, newExceptT)
 
 import           Cardano.Config.TextView
+
+import           Cardano.Crypto.Seed (readSeedFromSystemEntropy)
 import           Cardano.Crypto.KES.Class
 import qualified Shelley.Spec.Ledger.Keys as Ledger
+import qualified Shelley.Spec.Ledger.Crypto as Ledger
 import           Ouroboros.Consensus.Shelley.Protocol.Crypto
                    (TPraosStandardCrypto)
 
 
 -- Local aliases for shorter types:
-type VerKey  = Ledger.VKeyES TPraosStandardCrypto
-type SignKey = Ledger.SKeyES TPraosStandardCrypto
+type VerKey  = Ledger.VerKeyKES TPraosStandardCrypto
+type SignKey = Ledger.SignKeyKES TPraosStandardCrypto
+type KES     = Ledger.KES TPraosStandardCrypto
 
 
-genKESKeyPair :: Natural -> IO (VerKey, SignKey)
-genKESKeyPair duration = do
-  signKeyKES <- genKeyKES duration
-  let verKeyKes = deriveVerKeyKES signKeyKES
-  pure (Ledger.VKeyES verKeyKes, Ledger.SKeyES signKeyKES)
+genKESKeyPair :: IO (VerKey, SignKey)
+genKESKeyPair = do
+  seed <- readSeedFromSystemEntropy (seedSizeKES (Proxy :: Proxy KES))
+  let signKeyKES = genKeyKES seed
+      verKeyKes  = deriveVerKeyKES signKeyKES
+  pure (verKeyKes, signKeyKES)
 
 data KESError = ReadKESSigningKeyError !TextViewFileError
               | ReadKESVerKeyError !TextViewFileError
@@ -53,7 +58,7 @@ renderKESError kesErr =
     WriteKESVerKeyError err -> "KES verification key write error: " <> renderTextViewFileError err
 
 encodeKESSigningKey :: SignKey -> TextView
-encodeKESSigningKey (Ledger.SKeyES sKeyEs) =
+encodeKESSigningKey sKeyEs =
   encodeToTextView tvType' tvTitle' CBOR.toCBOR sKeyEs
  where
   tvType' = "SKeyES TPraosStandardCrypto"
@@ -62,7 +67,7 @@ encodeKESSigningKey (Ledger.SKeyES sKeyEs) =
 decodeKESSigningKey :: TextView -> Either TextViewError SignKey
 decodeKESSigningKey tView = do
   expectTextViewOfType "SKeyES TPraosStandardCrypto" tView
-  decodeFromTextView (Ledger.SKeyES <$> CBOR.fromCBOR) tView
+  decodeFromTextView CBOR.fromCBOR tView
 
 encodeKESVerificationKey :: VerKey -> TextView
 encodeKESVerificationKey vKeyEs =

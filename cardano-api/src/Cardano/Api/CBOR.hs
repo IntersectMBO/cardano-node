@@ -35,8 +35,7 @@ import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Word (Word8)
 
-import           Shelley.Spec.Ledger.Keys
-                   (DiscVKey (..), SKey (..), pattern VKey)
+import           Shelley.Spec.Ledger.Keys (VKey (..))
 
 
 addressFromCBOR :: ByteString -> Either ApiError Address
@@ -67,7 +66,7 @@ signingKeyFromCBOR bs =
       tag <- CBOR.decodeWord8
       case tag of
         172  -> SigningKeyByron <$> fromCBOR
-        173  -> SigningKeyShelley . SKey <$> decodeSignKeyDSIGN
+        173  -> SigningKeyShelley <$> decodeSignKeyDSIGN
         _  -> cborError $ DecoderErrorUnknownTag "SigningKey" tag
 
 signingKeyToCBOR :: SigningKey -> ByteString
@@ -79,7 +78,7 @@ signingKeyToCBOR kp =
           [ toCBOR (172 :: Word8)
           , toCBOR sk ]
 
-      SigningKeyShelley (SKey sk) ->
+      SigningKeyShelley sk ->
         mconcat
           [ toCBOR (173 :: Word8)
           , encodeSignKeyDSIGN sk
@@ -166,7 +165,7 @@ shelleyVerificationKeyToCBOR :: ShelleyVerificationKey -> ByteString
 shelleyVerificationKeyToCBOR = CBOR.serializeEncoding' . encodeShelleyVerificationKey
 
 encodeShelleyVerificationKey :: ShelleyVerificationKey -> Encoding
-encodeShelleyVerificationKey (DiscVKey vk) = encodeVerKeyDSIGN vk
+encodeShelleyVerificationKey (VKey vk) = encodeVerKeyDSIGN vk
 
 encodeShelleyTxBody :: ShelleyTxBody -> Encoding
 encodeShelleyTxBody = toCBOR

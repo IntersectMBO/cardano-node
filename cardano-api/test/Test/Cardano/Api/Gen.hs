@@ -22,12 +22,11 @@ import           Cardano.Binary (serialize)
 import qualified Cardano.Crypto as Byron
 import           Cardano.Crypto.DSIGN
 import           Cardano.Prelude
+
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import qualified Cardano.Crypto.Hash.Blake2b as Crypto
+import           Cardano.Crypto.Seed as Crypto
 
-import           Crypto.Random (drgNewTest, withDRG)
-
-import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import           Data.Coerce (coerce)
 import qualified Data.Map.Strict as Map
@@ -37,13 +36,15 @@ import qualified Data.Set as Set
 
 import           Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..))
 import           Shelley.Spec.Ledger.Coin (Coin (..))
-import           Shelley.Spec.Ledger.Keys
+import           Shelley.Spec.Ledger.Crypto
 import           Shelley.Spec.Ledger.TxData (pattern TxBody, Wdrl (..))
+
+import           Ouroboros.Consensus.Shelley.Protocol (TPraosStandardCrypto)
 
 import           Test.Cardano.Chain.UTxO.Gen (genTx)
 import qualified Test.Cardano.Crypto.Gen as Byron
 
-import           Hedgehog (Gen, Range)
+import           Hedgehog (Gen)
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 
@@ -75,9 +76,12 @@ genSigningKeyByron =
 
 genSigningKeyShelley :: Gen SigningKey
 genSigningKeyShelley = do
-  seed <- genSeed
-  let sk = fst (withDRG (drgNewTest seed) genKeyDSIGN)
-  return $ SigningKeyShelley (SKey sk)
+  seed <- genSeed seedSize
+  let sk = genKeyDSIGN seed
+  return (SigningKeyShelley sk)
+  where
+    seedSize :: Int
+    seedSize = fromIntegral (seedSizeDSIGN (Proxy :: Proxy (DSIGN TPraosStandardCrypto)))
 
 genTxIn :: Gen TxIn
 genTxIn =
@@ -158,14 +162,10 @@ genVerificationKeyShelley =
 
 -- -------------------------------------------------------------------------------------------------
 
-genByteString :: Range Int -> Gen ByteString
-genByteString lenRange =
-  BS.pack <$> Gen.list lenRange (Gen.element [ '\x00' .. '\xff' ])
-
 -- Generates a fake TxId by applying the right hashing function to a random ByteString.
 genFakeTxId :: Gen TxId
 genFakeTxId =
-  TxId . {- Crypto. -} hashRaw identity <$> genByteString (Range.linear 10 50)
+  TxId . {- Crypto. -} hashRaw identity <$> Gen.bytes (Range.linear 10 50)
 
 -- This name will clash with one in Cardano.Crypto.Hash.Class.
 -- This should be removed (or maybe specialized) then the one in Cardano.Crypto.Hash.Class is
@@ -177,11 +177,5 @@ genLovelace :: Gen Lovelace
 genLovelace =
   Lovelace <$> Gen.integral (Range.linear 1 999999999999)
 
-genSeed :: Gen (Word64, Word64, Word64, Word64, Word64)
-genSeed =
-  (,,,,)
-    <$> Gen.word64 Range.constantBounded
-    <*> Gen.word64 Range.constantBounded
-    <*> Gen.word64 Range.constantBounded
-    <*> Gen.word64 Range.constantBounded
-    <*> Gen.word64 Range.constantBounded
+genSeed :: Int -> Gen Crypto.Seed
+genSeed n = Crypto.mkSeedFromBytes <$> Gen.bytes (Range.singleton n)

@@ -1,22 +1,22 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE OverloadedStrings #-}
 
+{-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
+
 module Cardano.Config.Shelley.ColdKeys
-  ( GenesisVerKey
-  , KeyError(..)
+  ( VerKey
+  , SignKey
   , KeyRole(..)
   , OperatorKeyRole(..)
-  , VerKey
-  , SignKey
+  , KeyError(..)
   , decodeVerificationKey
   , decodeVerificationKeySomeRole
   , encodeVerificationKey
   , encodeSigningKey
   , decodeSigningKey
   , decodeSigningKeySomeRole
-  , genGenesisKeyPair
   , genKeyPair
   , deriveVerKey
-  , readGenesisVerKey
   , readSigningKey
   , readSigningKeySomeRole
   , readVerKey
@@ -31,11 +31,12 @@ import           Cardano.Prelude
 import qualified Cardano.Binary as CBOR
 import           Control.Monad.Trans.Except.Extra (firstExceptT, newExceptT)
 
+import           Cardano.Crypto.Seed (readSeedFromSystemEntropy)
 import           Cardano.Crypto.DSIGN.Class
-import           Cardano.Crypto.Random (runSecureRandom)
+import qualified Shelley.Spec.Ledger.Keys as Ledger
+import qualified Shelley.Spec.Ledger.Crypto as Ledger
 import           Ouroboros.Consensus.Shelley.Protocol.Crypto
                    (TPraosStandardCrypto)
-import qualified Shelley.Spec.Ledger.Keys as Ledger
 
 import           Cardano.Config.TextView
 
@@ -54,10 +55,9 @@ data OperatorKeyRole
 
 
 -- Local aliases for shorter types:
-type GenesisVerKey = Ledger.VKeyGenesis TPraosStandardCrypto
-type VerKey  = Ledger.VKey TPraosStandardCrypto
-type SignKey = Ledger.SKey TPraosStandardCrypto
-
+type VerKey r = Ledger.VKey r TPraosStandardCrypto
+type SignKey  = Ledger.SignKeyDSIGN TPraosStandardCrypto
+type DSIGN    = Ledger.DSIGN TPraosStandardCrypto
 
 data KeyError = ReadSigningKeyError  !TextViewFileError
               | ReadVerKeyError      !TextViewFileError
@@ -72,26 +72,22 @@ renderKeyError keyErr =
     WriteSigningKeyError err -> "signing key write error: " <> renderTextViewFileError err
     WriteVerKeyError err -> "verification key write error: " <> renderTextViewFileError err
 
-genGenesisKeyPair :: IO (GenesisVerKey, SignKey)
-genGenesisKeyPair = do
-  signKey <- runSecureRandom genKeyDSIGN
-  let verKey = deriveVerKeyDSIGN signKey
-  return (Ledger.VKeyGenesis verKey, Ledger.SKey signKey)
 
-genKeyPair :: IO (VerKey, SignKey)
+genKeyPair :: IO (VerKey r, SignKey)
 genKeyPair = do
-  signKey <- runSecureRandom genKeyDSIGN
-  let verKey = deriveVerKeyDSIGN signKey
-  pure (Ledger.DiscVKey verKey, Ledger.SKey signKey)
+  seed <- readSeedFromSystemEntropy (seedSizeDSIGN (Proxy :: Proxy DSIGN))
+  let signKey = genKeyDSIGN seed
+      verKey  = deriveVerKeyDSIGN signKey
+  return (Ledger.VKey verKey, signKey)
 
 
-deriveVerKey :: SignKey -> VerKey
-deriveVerKey (Ledger.SKey skey) =
+deriveVerKey :: SignKey -> VerKey r
+deriveVerKey skey =
     Ledger.VKey (deriveVerKeyDSIGN skey)
 
 
 encodeSigningKey :: KeyRole -> SignKey -> TextView
-encodeSigningKey role (Ledger.SKey sKey) =
+encodeSigningKey role sKey =
     encodeToTextView fileType fileTitle CBOR.toCBOR sKey
   where
     fileType  = renderKeyType (KeyTypeSigning role)
@@ -101,7 +97,7 @@ encodeSigningKey role (Ledger.SKey sKey) =
 decodeSigningKey :: KeyRole -> TextView -> Either TextViewError SignKey
 decodeSigningKey role tView = do
     expectTextViewOfType fileType tView
-    decodeFromTextView (Ledger.SKey <$> CBOR.fromCBOR) tView
+    decodeFromTextView CBOR.fromCBOR tView
   where
     fileType  = renderKeyType (KeyTypeSigning role)
 
@@ -111,13 +107,13 @@ decodeSigningKeySomeRole :: [KeyRole]
                          -> Either TextViewError (SignKey, KeyRole)
 decodeSigningKeySomeRole roles tView = do
     role <- expectTextViewOfTypes fileTypes tView
-    skey <- decodeFromTextView (Ledger.SKey <$> CBOR.fromCBOR) tView
+    skey <- decodeFromTextView CBOR.fromCBOR tView
     return (skey, role)
   where
     fileTypes = [ (renderKeyType (KeyTypeSigning role), role) | role <- roles ]
 
 
-encodeVerificationKey :: KeyRole -> VerKey -> TextView
+encodeVerificationKey :: Typeable r => KeyRole -> VerKey r -> TextView
 encodeVerificationKey role vkey =
     encodeToTextView fileType fileTitle CBOR.toCBOR vkey
   where
@@ -125,7 +121,8 @@ encodeVerificationKey role vkey =
     fileTitle = renderKeyDescr role
 
 
-decodeVerificationKey :: KeyRole -> TextView -> Either TextViewError VerKey
+decodeVerificationKey :: Typeable r
+                      => KeyRole -> TextView -> Either TextViewError (VerKey r)
 decodeVerificationKey role tView = do
     expectTextViewOfType fileType tView
     decodeFromTextView CBOR.fromCBOR tView
@@ -133,9 +130,10 @@ decodeVerificationKey role tView = do
     fileType  = renderKeyType (KeyTypeVerification role)
 
 
-decodeVerificationKeySomeRole :: [KeyRole]
+decodeVerificationKeySomeRole :: Typeable r
+                              => [KeyRole]
                               -> TextView
-                              -> Either TextViewError (VerKey, KeyRole)
+                              -> Either TextViewError (VerKey r, KeyRole)
 decodeVerificationKeySomeRole roles tView = do
     role <- expectTextViewOfTypes fileTypes tView
     vkey <- decodeFromTextView CBOR.fromCBOR tView
@@ -164,26 +162,24 @@ writeSigningKey role fp sKey =
   firstExceptT WriteSigningKeyError $ newExceptT $
     writeTextViewEncodedFile (encodeSigningKey role) fp sKey
 
-readGenesisVerKey :: KeyRole -> FilePath -> ExceptT KeyError IO GenesisVerKey
-readGenesisVerKey role fp = do
-  Ledger.VKey genVerKey <- readVerKey role fp
-  pure $ Ledger.VKeyGenesis genVerKey
-
-readVerKey :: KeyRole -> FilePath -> ExceptT KeyError IO VerKey
+readVerKey :: Typeable r 
+           => KeyRole -> FilePath -> ExceptT KeyError IO (VerKey r)
 readVerKey role fp = do
   firstExceptT ReadVerKeyError $ newExceptT $
     readTextViewEncodedFile (decodeVerificationKey role) fp
 
 
-readVerKeySomeRole :: [KeyRole]
+readVerKeySomeRole :: Typeable r
+                   => [KeyRole]
                    -> FilePath
-                   -> ExceptT KeyError IO (VerKey, KeyRole)
+                   -> ExceptT KeyError IO (VerKey r, KeyRole)
 readVerKeySomeRole roles fp = do
   firstExceptT ReadVerKeyError $ newExceptT $
     readTextViewEncodedFile (decodeVerificationKeySomeRole roles) fp
 
 
-writeVerKey :: KeyRole -> FilePath -> VerKey -> ExceptT KeyError IO ()
+writeVerKey :: Typeable r
+            => KeyRole -> FilePath -> VerKey r -> ExceptT KeyError IO ()
 writeVerKey role fp vKey =
   firstExceptT WriteVerKeyError $ newExceptT $
     writeTextViewEncodedFile (encodeVerificationKey role) fp vKey

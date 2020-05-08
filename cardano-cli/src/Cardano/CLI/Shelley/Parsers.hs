@@ -98,7 +98,7 @@ data TransactionCmd
 
 data NodeCmd
   = NodeKeyGenCold VerificationKeyFile SigningKeyFile OpCertCounterFile
-  | NodeKeyGenKES  VerificationKeyFile SigningKeyFile Natural
+  | NodeKeyGenKES  VerificationKeyFile SigningKeyFile
   | NodeKeyGenVRF  VerificationKeyFile SigningKeyFile
   | NodeIssueOpCert VerificationKeyFile SigningKeyFile OpCertCounterFile
                     KESPeriod OutputFile
@@ -374,7 +374,7 @@ pNodeCmd =
 
     pKeyGenKES :: Parser NodeCmd
     pKeyGenKES =
-      NodeKeyGenKES <$> pVerificationKeyFile Output <*> pSigningKeyFile Output <*> pDuration
+      NodeKeyGenKES <$> pVerificationKeyFile Output <*> pSigningKeyFile Output
 
     pKeyGenVRF :: Parser NodeCmd
     pKeyGenVRF =
@@ -671,13 +671,6 @@ pBlockId =
       <> Opt.metavar "STRING"
       <> Opt.help "The block identifier."
       )
-
-pDuration :: Parser Natural
-pDuration =
-  Opt.option Opt.auto (  Opt.long "kes-duration"
-                      <> Opt.metavar "NATURAL"
-                      <> Opt.help "The duration of the KESPeriod."
-                      )
 
 pKesPeriod :: Parser KESPeriod
 pKesPeriod =

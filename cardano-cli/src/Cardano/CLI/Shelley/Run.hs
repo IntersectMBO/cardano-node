@@ -59,7 +59,7 @@ runStakeAddressCmd cmd = liftIO $ putStrLn $ "runStakeAddressCmd: " ++ show cmd
 
 runNodeCmd :: NodeCmd -> ExceptT CliError IO ()
 runNodeCmd (NodeKeyGenCold vk sk ctr) = runNodeKeyGenCold vk sk ctr
-runNodeCmd (NodeKeyGenKES  vk sk dur) = runNodeKeyGenKES  vk sk dur
+runNodeCmd (NodeKeyGenKES  vk sk)     = runNodeKeyGenKES  vk sk
 runNodeCmd (NodeKeyGenVRF  vk sk)     = runNodeKeyGenVRF  vk sk
 runNodeCmd (NodeIssueOpCert vk sk ctr p out) =
   runNodeIssueOpCert vk sk ctr p out
@@ -107,11 +107,12 @@ runNodeKeyGenCold vkeyPath skeyPath (OpCertCounterFile ocertCtrPath) = do
     initialCounter = 0
 
 
-runNodeKeyGenKES :: VerificationKeyFile -> SigningKeyFile -> Natural
+runNodeKeyGenKES :: VerificationKeyFile
+                 -> SigningKeyFile
                  -> ExceptT CliError IO ()
-runNodeKeyGenKES (VerificationKeyFile vkeyPath) (SigningKeyFile skeyPath) duration =
+runNodeKeyGenKES (VerificationKeyFile vkeyPath) (SigningKeyFile skeyPath) =
     firstExceptT KESCliError $ do
-      (vkey, skey) <- liftIO $ genKESKeyPair duration
+      (vkey, skey) <- liftIO $ genKESKeyPair
       writeKESVerKey     vkeyPath vkey
       writeKESSigningKey skeyPath skey
 
