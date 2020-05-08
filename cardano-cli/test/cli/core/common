@@ -77,7 +77,7 @@ assert_file_exists () {
 
 fail_on_error () {
   if test "$1" -ne 0 ; then
-    echo "Error code: $1"
+    echo "fail_on_error: $1"
     exit "$1"
     fi
 }

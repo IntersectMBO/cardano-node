@@ -1,0 +1,31 @@
+#!/bin/sh -u
+
+cwd=$(dirname "$0")
+
+# shellcheck source=/dev/null
+. "${cwd}/../core/common"
+
+# shellcheck disable=SC2154
+banner "${testname}"
+
+OUTPUT_DIR="${TEST}"
+
+rm -rf "${OUTPUT_DIR}"
+mkdir "${OUTPUT_DIR}"
+
+DATA_DIR="test/cli/${testname}/data"
+if test -d cardano-cli ; then
+  DATA_DIR="cardano-cli/${DATA_DIR}"
+  fi
+
+error=0
+
+${CARDANO_CLI} shelley address build \
+    --verification-key-file "${DATA_DIR}/address.vkey" \
+    > "${OUTPUT_DIR}/address.hex"
+fail_on_error $?
+
+assert_file_exists "${OUTPUT_DIR}/address.hex"
+assert_line_count 1 "${OUTPUT_DIR}/address.hex"
+
+report_result ${error}
