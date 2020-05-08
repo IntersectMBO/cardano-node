@@ -37,10 +37,11 @@ import           Control.Tracer
 
 import           Network.Mux (MuxError)
 
-import           Ouroboros.Consensus.Block (BlockProtocol, GetHeader (..))
+import           Ouroboros.Consensus.Block
+                   (BlockProtocol, GetHeader (..), CodecConfig)
 import           Ouroboros.Consensus.BlockchainTime
 import           Ouroboros.Consensus.Config
-                   ( TopLevelConfig, configConsensus, configBlock )
+                   (configConsensus, configBlock, configCodec)
 import           Ouroboros.Consensus.Mempool
 import           Ouroboros.Consensus.Network.NodeToClient
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
@@ -51,6 +52,7 @@ import           Ouroboros.Consensus.HardFork.History (EraParams(..), Shape(..))
 import           Ouroboros.Consensus.Node.Run
 import           Ouroboros.Consensus.Cardano
 
+import           Ouroboros.Network.Magic (NetworkMagic)
 import           Ouroboros.Network.Mux
 import           Ouroboros.Network.Block (BlockNo, HasHeader, Point, Tip)
 import qualified Ouroboros.Network.Block as Block
@@ -96,7 +98,9 @@ chairmanTest tracer ptcl runningTime optionalProgressThreshold socketPaths = do
     -- Run the chairman and get the final snapshot of the chain from each node.
     chainsSnapshot <- runChairman
                         tracer
-                        cfg securityParam
+                        (configCodec cfg)
+                        (nodeNetworkMagic (Proxy :: Proxy blk) cfg)
+                        securityParam
                         runningTime
                         socketPaths
 
@@ -288,7 +292,8 @@ progressCondition minBlockNo (ConsensusSuccess _ tips) =
 
 runChairman :: RunNode blk
             => Tracer IO String
-            -> TopLevelConfig blk
+            -> CodecConfig blk
+            -> NetworkMagic
             -> SecurityParam
             -- ^ security parameter, if a fork is deeper than it 'runChairman'
             -- will throw an exception.
@@ -297,7 +302,7 @@ runChairman :: RunNode blk
             -> [SocketPath]
             -- ^ local socket dir
             -> IO (ChainsSnapshot blk)
-runChairman tracer cfg securityParam runningTime socketPaths = do
+runChairman tracer cfg networkMagic securityParam runningTime socketPaths = do
 
     let initialChains = Map.fromList [ (socketPath, AF.Empty AF.AnchorGenesis)
                                      | socketPath <- socketPaths]
@@ -310,9 +315,10 @@ runChairman tracer cfg securityParam runningTime socketPaths = do
             tracer
             iomgr
             cfg
-            securityParam
-            chainsVar
+            networkMagic
             sockPath
+            chainsVar
+            securityParam
 
     atomically (readTVar chainsVar)
 
@@ -333,18 +339,20 @@ createConnection
      RunNode blk
   => Tracer IO String
   -> IOManager
-  -> TopLevelConfig blk
-  -> SecurityParam
-  -> ChainsVar IO blk
+  -> CodecConfig blk
+  -> NetworkMagic
   -> SocketPath
+  -> ChainsVar IO blk
+  -> SecurityParam
   -> IO ()
 createConnection
   tracer
   iomgr
   cfg
-  securityParam
+  networkMagic
+  socketPath@(SocketFile path)
   chainsVar
-  socketPath@(SocketFile path) =
+  securityParam =
       connectTo
         (localSnocket iomgr path)
         NetworkConnectTracers {
@@ -352,13 +360,14 @@ createConnection
             nctHandshakeTracer = nullTracer
             }
         (localInitiatorNetworkApplication
-            socketPath
-            chainsVar
-            securityParam
             (showTracing tracer)
             nullTracer
             nullTracer
-            cfg)
+            cfg
+            networkMagic
+            socketPath
+            chainsVar
+            securityParam)
         path
         `catch` handleMuxError tracer chainsVar socketPath
 
@@ -500,10 +509,7 @@ localInitiatorNetworkApplication
      , MonadTimer m
      , MonadThrow (STM m)
      )
-  => SocketPath
-  -> ChainsVar m blk
-  -> SecurityParam
-  -> Tracer m (ChairmanTrace blk)
+  => Tracer m (ChairmanTrace blk)
   -> Tracer m (TraceSendRecv (ChainSync blk (Tip blk)))
   -- ^ tracer which logs all chain-sync messages send and received by the client
   -- (see 'Ouroboros.Network.Protocol.ChainSync.Type' in 'ouroboros-network'
@@ -512,12 +518,17 @@ localInitiatorNetworkApplication
   -- ^ tracer which logs all local tx submission protocol messages send and
   -- received by the client (see 'Ouroboros.Network.Protocol.LocalTxSubmission.Type'
   -- in 'ouroboros-network' package).
-  -> TopLevelConfig blk
+  -> CodecConfig blk
+  -> NetworkMagic
+  -> SocketPath
+  -> ChainsVar m blk
+  -> SecurityParam
   -> Versions NtC.NodeToClientVersion DictVersion
               (LocalConnectionId -> OuroborosApplication InitiatorApp ByteString m () Void)
-localInitiatorNetworkApplication sockPath chainsVar securityParam
-                                 chairmanTracer chainSyncTracer
-                                 localTxSubmissionTracer cfg =
+localInitiatorNetworkApplication chairmanTracer chainSyncTracer
+                                 localTxSubmissionTracer
+                                 cfg networkMagic
+                                 sockPath chainsVar securityParam =
     foldMapVersions
       (\v ->
         versionedNodeToClientProtocols
@@ -526,11 +537,10 @@ localInitiatorNetworkApplication sockPath chainsVar securityParam
           (protocols v))
       (supportedNodeToClientVersions proxy)
   where
-    -- TODO: it should be passed as an argument
     proxy :: Proxy blk
     proxy = Proxy
 
-    versionData = NodeToClientVersionData (nodeNetworkMagic proxy cfg)
+    versionData = NodeToClientVersionData networkMagic
 
     protocols :: NodeToClientVersion blk
               -> NodeToClientProtocols InitiatorApp ByteString m () Void
@@ -561,6 +571,4 @@ localInitiatorNetworkApplication sockPath chainsVar securityParam
         Codecs { cChainSyncCodec
                , cTxSubmissionCodec
                , cStateQueryCodec
-               } = clientCodecs (configBlock cfg) byronClientVersion
-
-
+               } = clientCodecs cfg byronClientVersion
