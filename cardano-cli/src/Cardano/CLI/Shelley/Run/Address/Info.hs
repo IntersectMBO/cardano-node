@@ -1,6 +1,6 @@
 {-# LANGUAGE MultiWayIf #-}
-module Cardano.CLI.Shelley.Run.Address.Describe
-  ( runAddressDescribe
+module Cardano.CLI.Shelley.Run.Address.Info
+  ( runAddressInfo
   ) where
 
 import           Cardano.Prelude hiding (putStrLn)
@@ -22,16 +22,16 @@ import qualified Data.Text.IO as Text
 
 
 
-runAddressDescribe :: Text -> ExceptT CliError IO ()
-runAddressDescribe addrTxt = do
+runAddressInfo :: Text -> ExceptT CliError IO ()
+runAddressInfo addrTxt = do
   liftIO $ Text.putStrLn $ "Address: " <> addrTxt
   if
     | Text.all isHexDigit addrTxt -> do
         liftIO $ putStrLn "Encoding: Hex"
-        runAddressDescribeHex addrTxt
+        runAddressInfoHex addrTxt
     | Text.all isBase58Char addrTxt -> do
         liftIO $ putStrLn "Encoding: Base58"
-        runAddressDescribeBase58 addrTxt
+        runAddressInfoBase58 addrTxt
     | otherwise -> left $ AddressDescribeError ("Unknown address type: " <> addrTxt)
   where
     isBase58Char :: Char -> Bool
@@ -39,17 +39,17 @@ runAddressDescribe addrTxt = do
 
 -- -------------------------------------------------------------------------------------------------
 
-runAddressDescribeHex :: Text -> ExceptT CliError IO ()
-runAddressDescribeHex addrTxt = do
+runAddressInfoHex :: Text -> ExceptT CliError IO ()
+runAddressInfoHex addrTxt = do
   case addressFromHex addrTxt of
     Just addr -> describeAddr addr
     Nothing -> left $ AddressDescribeError "Failed Base16 decode. Impossible!"
 
-runAddressDescribeBase58 :: Text -> ExceptT CliError IO ()
-runAddressDescribeBase58 addrTxt = do
+runAddressInfoBase58 :: Text -> ExceptT CliError IO ()
+runAddressInfoBase58 addrTxt = do
   case Base16.encode <$> Base58.decodeBase58 Base58.bitcoinAlphabet (Text.encodeUtf8 addrTxt) of
     Just hex -> do
-      runAddressDescribeHex $ Text.decodeUtf8 hex
+      runAddressInfoHex $ Text.decodeUtf8 hex
       liftIO $ BS.putStrLn ("Hex: " <> hex)
     Nothing -> left $ AddressDescribeError "Failed Base58 decode. Impossible!"
 

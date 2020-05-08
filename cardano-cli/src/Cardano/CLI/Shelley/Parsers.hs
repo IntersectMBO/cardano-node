@@ -74,7 +74,7 @@ data AddressCmd
   | AddressKeyHash VerificationKeyFile
   | AddressBuild   VerificationKeyFile
   | AddressBuildMultiSig  --TODO
-  | AddressDescribe Text
+  | AddressInfo Text
   deriving (Eq, Show)
 
 
@@ -246,8 +246,8 @@ pAddressCmd =
           (Opt.info pAddressBuild $ Opt.progDesc "Build an address")
       , Opt.command "build-multisig"
           (Opt.info pAddressBuildMultiSig $ Opt.progDesc "Build a multi-sig address")
-      , Opt.command "describe"
-          (Opt.info pAddressDescribe $ Opt.progDesc "Describe an address")
+      , Opt.command "info"
+          (Opt.info pAddressInfo $ Opt.progDesc "Describe an address")
       ]
   where
     pAddressKeyGen :: Parser AddressCmd
@@ -262,8 +262,8 @@ pAddressCmd =
     pAddressBuildMultiSig :: Parser AddressCmd
     pAddressBuildMultiSig = pure AddressBuildMultiSig
 
-    pAddressDescribe :: Parser AddressCmd
-    pAddressDescribe = AddressDescribe <$> pAddress
+    pAddressInfo :: Parser AddressCmd
+    pAddressInfo = AddressInfo <$> pAddress
 
 pStakeAddress :: Parser StakeAddressCmd
 pStakeAddress =
