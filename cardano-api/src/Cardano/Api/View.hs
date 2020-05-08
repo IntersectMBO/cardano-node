@@ -40,23 +40,23 @@ import qualified Data.ByteString.Char8 as BS
 
 parseAddressView :: ByteString -> Either ApiError Address
 parseAddressView bs =
-  either convertTextViewError (addressFromCBOR . tvRawCBOR) $ parseTextView bs
+  addressFromCBOR . tvRawCBOR =<< first ApiTextView (parseTextView bs)
 
 parseSigningKeyView :: ByteString -> Either ApiError SigningKey
 parseSigningKeyView bs =
-  either convertTextViewError (signingKeyFromCBOR . tvRawCBOR) $ parseTextView bs
+  signingKeyFromCBOR . tvRawCBOR =<< first ApiTextView (parseTextView bs)
 
 parseVerificationKeyView :: ByteString -> Either ApiError VerificationKey
 parseVerificationKeyView bs =
-  either convertTextViewError (verificationKeyFromCBOR . tvRawCBOR) $ parseTextView bs
+  verificationKeyFromCBOR . tvRawCBOR =<< first ApiTextView (parseTextView bs)
 
 parseTxSignedView :: ByteString -> Either ApiError TxSigned
 parseTxSignedView bs =
-  either convertTextViewError (txSignedFromCBOR . tvRawCBOR) $ parseTextView bs
+  txSignedFromCBOR . tvRawCBOR =<< first ApiTextView (parseTextView bs)
 
 parseTxUnsignedView :: ByteString -> Either ApiError TxUnsigned
 parseTxUnsignedView bs =
-  either convertTextViewError (txUnsignedFromCBOR . tvRawCBOR) $ parseTextView bs
+  txUnsignedFromCBOR . tvRawCBOR =<< first ApiTextView (parseTextView bs)
 
 renderAddressView :: Address -> ByteString
 renderAddressView addr =

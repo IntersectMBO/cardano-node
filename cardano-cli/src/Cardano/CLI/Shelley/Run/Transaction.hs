@@ -1,14 +1,19 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StrictData #-}
 
+{-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
+
 module Cardano.CLI.Shelley.Run.Transaction
   ( runTransactionCmd
   ) where
 
 import           Cardano.Prelude
+import           Cardano.Binary (FromCBOR(..))
 
-import           Cardano.Api hiding (readSigningKey)
-import           Cardano.Config.Shelley.ColdKeys (KeyRole (..), readSigningKey)
+import           Cardano.Api
+import           Cardano.Config.Shelley.ColdKeys
+                   (KeyType(..), KeyRole(..), KeyError(..), renderKeyType)
+import           Cardano.Config.TextView
 import           Cardano.CLI.Ops (CliError (..))
 import           Cardano.CLI.Shelley.Parsers
 
@@ -51,7 +56,35 @@ runTxSign (TxBodyFile infile) skfiles  network (TxFile outfile) = do
 readSigningKeyFiles :: [SigningKeyFile] -> ExceptT CliError IO [SigningKey]
 readSigningKeyFiles files =
   newExceptT $ do
-    xs <- mapM (runExceptT . readSigningKey GenesisUTxOKey . unSigningKeyFile) files
+    xs <- mapM readSigningKeyFile files
     case partitionEithers xs of
-      (e:_, _) -> pure $ Left (KeyCliError e)
-      ([], ys) -> pure $ Right (map SigningKeyShelley ys)
+      (e:_, _) -> pure $ Left (KeyCliError (ReadSigningKeyError e))
+      ([], ys) -> pure $ Right ys
+
+readSigningKeyFile :: SigningKeyFile -> IO (Either TextViewFileError SigningKey)
+readSigningKeyFile (SigningKeyFile skfile) =
+      readTextViewEncodedFile decodeAddressSigningKey skfile
+
+-- The goal here is to read either a Byron or Shelley address signing key or a
+-- Genesis UTxO signing key. The TextView provides functions to read one of
+-- several file types, however this does not currently mesh well with the
+-- key reading functions from the API package.
+--
+-- The API package provides parseSigningKeyView but this takes the whole
+-- ByteString textview, rather than the structured TextView, so we cannot
+-- compose that with readTextViewEncodedFile. It provides the lower level
+-- signingKeyFromCBOR which returns too big an error type to fit here, so
+-- we have to fudge it with a partial conversion.
+decodeAddressSigningKey :: TextView -> Either TextViewError SigningKey
+decodeAddressSigningKey tView = do
+    isGenesisUTxOKey <- expectTextViewOfTypes fileTypes tView
+    if isGenesisUTxOKey
+      then decodeFromTextView (SigningKeyShelley <$> fromCBOR) tView
+      else first (\(ApiTextView tve) -> tve)
+                 (signingKeyFromCBOR (tvRawCBOR tView))
+  where
+    fileTypes =
+      [ ("SigningKeyShelley", False)
+      , ("SigningKeyByron",   False)
+      , (renderKeyType (KeyTypeSigning GenesisUTxOKey), True) ]
+
