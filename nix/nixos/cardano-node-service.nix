@@ -1,7 +1,7 @@
 { config
 , lib
 , pkgs
-, cardanoNodePkgs ? import ../. {}
+, cardanoNodePkgs
 , ... }:
 
 with lib; with builtins;
@@ -331,6 +331,7 @@ in {
   };
 
   config = mkIf cfg.enable ( let stateDirBase = "/var/lib/"; in {
+    _module.args.cardanoNodePkgs = mkDefault (import ../. {});
     users.groups.cardano-node.gid = 10016;
     users.users.cardano-node = {
       description = "cardano-node node daemon user";
