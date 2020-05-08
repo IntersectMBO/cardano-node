@@ -37,7 +37,7 @@ library
                        Cardano.CLI.Shelley.Parsers
                        Cardano.CLI.Shelley.Run
                        Cardano.CLI.Shelley.Run.Address
-                       Cardano.CLI.Shelley.Run.Address.Describe
+                       Cardano.CLI.Shelley.Run.Address.Info
                        Cardano.CLI.Shelley.Run.Genesis
                        Cardano.CLI.Shelley.Run.KeyGen
                        Cardano.CLI.Shelley.Run.Query

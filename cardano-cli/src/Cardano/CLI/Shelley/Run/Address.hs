@@ -17,7 +17,7 @@ import           Cardano.CLI.Ops (CliError (..))
 import           Cardano.CLI.Shelley.Parsers
                    (SigningKeyFile (..), VerificationKeyFile (..),
                     AddressCmd(..))
-import           Cardano.CLI.Shelley.Run.Address.Describe (runAddressDescribe)
+import           Cardano.CLI.Shelley.Run.Address.Info (runAddressInfo)
 
 import qualified Cardano.Crypto.Hash.Class as Crypto
 
@@ -29,7 +29,7 @@ runAddressCmd (AddressKeyGen  vkf skf) = runAddressKeyGen  vkf skf
 runAddressCmd (AddressKeyHash vkf)     = runAddressKeyHash vkf
 runAddressCmd (AddressBuild   vkf)     = runAddressBuild   vkf
 runAddressCmd AddressBuildMultiSig{}   = runAddressBuildMultiSig
-runAddressCmd (AddressDescribe txt)    = runAddressDescribe txt
+runAddressCmd (AddressInfo txt)    = runAddressInfo txt
 
 runAddressKeyGen :: VerificationKeyFile -> SigningKeyFile -> ExceptT CliError IO ()
 runAddressKeyGen (VerificationKeyFile vkeyPath) (SigningKeyFile skeyPath) = do

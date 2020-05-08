@@ -8,8 +8,9 @@ cwd=$(dirname "$0")
 # shellcheck disable=SC2154
 banner "${testname}"
 
+DATA_DIR="test/cli/${testname}/data"
 if test -d cardano-cli ; then
-  cd cardano-cli || exit 1
+  DATA_DIR="cardano-cli/${DATA_DIR}"
   fi
 
 OUTPUT_DIR="${TEST}"
@@ -22,9 +23,9 @@ error=0
 
 #-------------------------
 
-byron_base58=$(head -1 test/cli/address-describe/data/byron-base58.address)
+byron_base58=$(head -1 "${DATA_DIR}/byron-base58.address")
 
-${CARDANO_CLI} shelley address describe \
+${CARDANO_CLI} shelley address info \
     --address "${byron_base58}" \
     > "${OUTPUT_DIR}/describe"
 
@@ -34,9 +35,9 @@ assert_string 'Era: Byron' "${OUTPUT_DIR}/describe"
 
 #-------------------------
 
-byron_hex=$(head -1 test/cli/address-describe/data/byron-hex.address)
+byron_hex=$(head -1 "${DATA_DIR}/byron-hex.address")
 
-${CARDANO_CLI} shelley address describe \
+${CARDANO_CLI} shelley address info \
     --address "${byron_hex}" \
     > "${OUTPUT_DIR}/describe"
 
@@ -46,9 +47,9 @@ assert_string 'Era: Byron' "${OUTPUT_DIR}/describe"
 
 #-------------------------
 
-shelley_hex=$(head -1 test/cli/address-describe/data/shelley-hex.address)
+shelley_hex=$(head -1 "${DATA_DIR}/shelley-hex.address")
 
-${CARDANO_CLI} shelley address describe \
+${CARDANO_CLI} shelley address info \
     --address "${shelley_hex}" \
     > "${OUTPUT_DIR}/describe"
 
