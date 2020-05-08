@@ -1,5 +1,4 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StrictData #-}
 {-# LANGUAGE TypeFamilies #-}
 
@@ -18,11 +17,9 @@ import           Cardano.Config.Shelley.ColdKeys
 import           Cardano.Config.TextView
 import           Cardano.CLI.Ops (CliError (..))
 
-import           Cardano.Api hiding (readSigningKey)
 import           Cardano.Config.Protocol (mkConsensusProtocol)
-import           Cardano.Config.Shelley.ColdKeys (KeyRole (..), readSigningKey)
 import           Cardano.Config.Types
-import           Cardano.CLI.Ops (CliError (..), withIOManagerE)
+import           Cardano.CLI.Ops (withIOManagerE)
 
 import           Cardano.CLI.Shelley.Parsers
 import qualified Ouroboros.Consensus.Cardano as Consensus
@@ -30,7 +27,7 @@ import           Ouroboros.Consensus.Node.ProtocolInfo (pInfoConfig)
 
 
 import           Control.Monad.Trans.Except (ExceptT)
-import           Control.Monad.Trans.Except.Extra (firstExceptT, newExceptT)
+import           Control.Monad.Trans.Except.Extra (firstExceptT, left, newExceptT)
 import           Control.Tracer (nullTracer)
 
 runTransactionCmd :: TransactionCmd -> ExceptT CliError IO ()
@@ -76,7 +73,7 @@ runTxSubmit txFp configFp sktFp =
                    config
                    sktFp
                    (prepareTxShelley signedTx)
-      _ -> panic "Wrong protocol specified"
+      _ -> left $ IncorrectProtocolSpecifiedError (ncProtocol nc)
 
 
 

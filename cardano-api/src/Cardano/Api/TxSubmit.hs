@@ -48,7 +48,6 @@ import           Ouroboros.Consensus.Byron.Ledger (ByronBlock (..), GenTx)
 import qualified Ouroboros.Consensus.Byron.Ledger as Byron
 import           Ouroboros.Consensus.Cardano (Protocol (..), protocolInfo)
 import           Ouroboros.Consensus.Config (TopLevelConfig (..), configCodec)
-import           Ouroboros.Consensus.Config (TopLevelConfig (..))
 import           Ouroboros.Consensus.Shelley.Ledger (ShelleyBlock)
 import           Ouroboros.Consensus.Shelley.Protocol (TPraosStandardCrypto)
 import           Ouroboros.Consensus.Mempool.API (ApplyTxErr)

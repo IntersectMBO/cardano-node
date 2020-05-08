@@ -11,7 +11,7 @@ import           Cardano.Prelude
 
 import           Control.Tracer
 
-import           Ouroboros.Consensus.Config (TopLevelConfig (..))
+import           Ouroboros.Consensus.Config (TopLevelConfig (..), configCodec)
 import           Ouroboros.Consensus.Network.NodeToClient
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
                   (nodeToClientProtocolVersion, supportedNodeToClientVersions)
@@ -37,7 +37,7 @@ submitTx
   tracer
   iomgr
   cfg
-  (SocketFile path)
+  (SocketPath path)
   genTx =
       connectTo
         (localSnocket iomgr path)
@@ -108,7 +108,7 @@ localInitiatorNetworkApplication proxy tracer' cfg genTx =
           { cChainSyncCodec
           , cTxSubmissionCodec
           , cStateQueryCodec
-          } = defaultCodecs (configBlock cfg) clientVersion
+          } = defaultCodecs (configCodec cfg) clientVersion
 
 txSubmissionClientSingle
   :: forall tx reject m.
