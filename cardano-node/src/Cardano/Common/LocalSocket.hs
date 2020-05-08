@@ -40,12 +40,12 @@ nodeLocalSocketAddrInfo :: NodeConfiguration -> NodeCLI -> FilePath
 nodeLocalSocketAddrInfo nc NodeCLI {socketFile} =
     path
   where
-    SocketFile path = chooseSocketPath (ncSocketPath nc) socketFile
+    SocketPath path = chooseSocketPath (ncSocketPath nc) socketFile
 
 -- | Remove the socket established with 'localSocketAddrInfo'.
 removeStaleLocalSocket :: NodeConfiguration -> NodeCLI -> ExceptT SocketError IO ()
 removeStaleLocalSocket nc NodeCLI{socketFile} = do
-    SocketFile socketFp <- pure $ chooseSocketPath (ncSocketPath nc) socketFile
+    SocketPath socketFp <- pure $ chooseSocketPath (ncSocketPath nc) socketFile
 
     -- Removal of the socket file may fail if it has already been cleaned up.
     newExceptT $ (Right <$> removeFile socketFp) `catch` handler socketFp

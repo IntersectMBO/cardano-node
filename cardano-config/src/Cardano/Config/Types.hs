@@ -160,8 +160,8 @@ newtype DelegationCertFile = DelegationCertFile
   { unDelegationCert :: FilePath }
   deriving newtype Show
 
-newtype SocketPath = SocketFile
-  { unSocket :: FilePath }
+newtype SocketPath = SocketPath
+  { unSocketPath :: FilePath }
   deriving newtype Show
   deriving (Eq, Ord, IsString)
 
@@ -240,7 +240,7 @@ newtype YamlSocketPath = YamlSocketPath
   deriving newtype Show
 
 instance FromJSON YamlSocketPath where
-  parseJSON (String sPath) = pure . YamlSocketPath . SocketFile $ T.unpack sPath
+  parseJSON (String sPath) = pure . YamlSocketPath . SocketPath $ T.unpack sPath
   parseJSON invalid = panic $ "Parsing of SocketPath failed due to type mismatch. "
                            <> "Encountered: " <> (T.pack $ show invalid)
 

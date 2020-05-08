@@ -121,7 +121,7 @@ queryNodeLocalState
   -> SocketPath
   -> (Point blk, Query blk result)
   -> IO ()
-queryNodeLocalState resultVar trce cfg nm (SocketFile socketPath) pointAndQuery = do
+queryNodeLocalState resultVar trce cfg nm (SocketPath socketPath) pointAndQuery = do
     logInfo trce $ "queryNodeLocalState: Connecting to node via " <> textShow socketPath
     NodeToClient.withIOManager $ \iocp -> do
       NodeToClient.connectTo

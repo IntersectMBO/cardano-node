@@ -291,7 +291,7 @@ parseSigningKeyFile opt desc = SigningKeyFile <$> parseFilePath opt desc
 
 parseSocketPath :: Text -> Parser SocketPath
 parseSocketPath helpMessage =
-  SocketFile <$> strOption
+  SocketPath <$> strOption
     ( long "socket-path"
         <> (help $ toS helpMessage)
         <> completer (bashCompleter "file")
