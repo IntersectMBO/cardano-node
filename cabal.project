@@ -6,11 +6,17 @@ packages:
     cardano-config
     cardano-node
 
+package cardano-api
+  ghc-options: -Werror -Wall -Wredundant-constraints -Wincomplete-record-updates -Wincomplete-uni-patterns -Wpartial-fields
+
+package cardano-cli
+  ghc-options: -Werror -Wall -Wredundant-constraints -Wincomplete-record-updates -Wincomplete-uni-patterns -Wpartial-fields
+
 package cardano-config
-  ghc-options: -Wall -fwarn-redundant-constraints
+  ghc-options: -Werror -Wall -Wredundant-constraints -Wincomplete-record-updates -Wincomplete-uni-patterns -Wpartial-fields
 
 package cardano-node
-  ghc-options: -Wall -fwarn-redundant-constraints
+  ghc-options: -Werror -Wall -Wredundant-constraints -Wincomplete-record-updates -Wincomplete-uni-patterns -Wpartial-fields
 
 
 package ouroboros-consensus

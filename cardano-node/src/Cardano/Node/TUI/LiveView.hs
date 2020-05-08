@@ -342,7 +342,7 @@ instance IsEffectuator (LiveViewBackend blk) Text where
                                          , lvsUpTime       = uptime
                                          }
 
-                    LogValue "Sys.SysUserTime" v@(Nanoseconds nsecs) ->   -- Darwin, Windows
+                    LogValue "Sys.SysUserTime" (Nanoseconds nsecs) ->   -- Darwin, Windows
                         modifyMVar_ (getbe lvbe) $ \lvs -> do
                             let !tdiff      = max 1 $ (fromIntegral (currentTimeInNs - lvsCPUUsageNs lvs)) :: Float
                                 !deltacpu   = fromIntegral nsecs - fromIntegral (lvsCPUUsageLast lvs) :: Float
@@ -475,8 +475,9 @@ instance IsEffectuator (LiveViewBackend blk) Text where
 
     handleOverflow _ = pure ()
 
+updateNetOutbound :: Monad m => LiveViewState blk a -> Word64 -> Word64 -> m (LiveViewState blk a)
 updateNetOutbound lvs currentTimeInNs outBytes =
-    let (timeDiff, currentNetRate) =
+    let (_timeDiff, currentNetRate) =
             calcNetRate currentTimeInNs (lvsNetworkUsageOutNs lvs) (lvsNetworkUsageOutLast lvs) outBytes
         maxNetRate = max currentNetRate (lvsNetworkUsageOutMax lvs)
     in return lvs { lvsNetworkUsageOutCurr = currentNetRate
@@ -486,8 +487,9 @@ updateNetOutbound lvs currentTimeInNs outBytes =
                   , lvsNetworkUsageOutMax  = maxNetRate
                   }
 
+updateNetInbound :: Monad m => LiveViewState blk a -> Word64 -> Word64 -> m (LiveViewState blk a)
 updateNetInbound lvs currentTimeInNs inBytes =
-    let (timeDiff, currentNetRate) =
+    let (_timeDiff, currentNetRate) =
             calcNetRate currentTimeInNs (lvsNetworkUsageInNs lvs) (lvsNetworkUsageInLast lvs) inBytes
         maxNetRate = max currentNetRate (lvsNetworkUsageInMax lvs)
     in return $ lvs { lvsNetworkUsageInCurr = currentNetRate
@@ -496,6 +498,7 @@ updateNetInbound lvs currentTimeInNs inBytes =
                     , lvsNetworkUsageInNs   = currentTimeInNs
                     , lvsNetworkUsageInMax  = maxNetRate
                     }
+calcNetRate :: (Integral a1, Integral a2) => a2 -> a2 -> a1 -> a1 -> (Float, Float)
 calcNetRate currentTimeInNs lastTimeInNs lastUsageBytes bytes =
     let timeDiff        = fromIntegral (currentTimeInNs - lastTimeInNs) :: Float
         timeDiffInSecs  = timeDiff / 1000000000
