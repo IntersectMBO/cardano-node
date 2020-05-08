@@ -33,12 +33,14 @@ import qualified Data.List as List
 import           Data.Proxy (Proxy (..))
 import           Data.Semigroup ((<>))
 import           Data.Text (Text, breakOn, pack, take)
+import           GHC.Clock (getMonotonicTimeNSec)
 import           Data.Version (showVersion)
 import           Network.HostName (getHostName)
 import           Network.Socket (AddrInfo)
 import           System.Directory (canonicalizePath, makeAbsolute)
 
 import           Paths_cardano_node (version)
+import           Cardano.BM.Data.Aggregated (Measurable (..))
 #ifdef UNIX
 import qualified Cardano.BM.Configuration.Model as CM
 import           Cardano.BM.Data.Backend
@@ -116,8 +118,20 @@ runNode loggingLayer npm@NodeCLI{protocolFiles} = do
 
     tracers <- mkTracers (ncTraceConfig nc) trace
 
-    case ncViewMode nc of
-      SimpleView -> handleSimpleNode p trace tracers npm (const $ pure ())
+#ifdef UNIX
+    let viewmode = ncViewMode nc
+#else
+    let viewmode = SimpleView
+#endif
+
+    upTimeThread <- Async.async $ traceNodeUpTime (appendName "metrics" trace) =<< getMonotonicTimeNSec
+
+    case viewmode of
+      SimpleView -> do
+
+        handleSimpleNode p trace tracers npm (const $ pure ())
+        Async.uninterruptibleCancel upTimeThread
+
       LiveView   -> do
 #ifdef UNIX
         let c = llConfiguration loggingLayer
@@ -136,14 +150,28 @@ runNode loggingLayer npm@NodeCLI{protocolFiles} = do
                        (setNodeKernel be)
         setNodeThread be nodeThread
 
-        void $ Async.waitAny [nodeThread]
+        void $ Async.waitAny [nodeThread, upTimeThread]
 #else
         handleSimpleNode p trace tracers npm (const $ pure ())
+        Async.uninterruptibleCancel upTimeThread
 #endif
   where
     hostname = do
       hn0 <- pack <$> getHostName
       return $ take 8 $ fst $ breakOn "." hn0
+
+-- | The node sends its real up time, every second.
+traceNodeUpTime
+  :: Trace IO Text
+  -> Word64
+  -> IO ()
+traceNodeUpTime tr nodeLaunchTime = do
+  now <- getMonotonicTimeNSec
+  let upTimeInNs = now - nodeLaunchTime
+  meta <- mkLOMeta Notice Public
+  traceNamedObject tr (meta, LogValue "upTime" (Nanoseconds upTimeInNs))
+  threadDelay 1000000
+  traceNodeUpTime tr nodeLaunchTime
 
 -- | Sets up a simple node, which will run the chain sync protocol and block
 -- fetch protocol, and, if core, will also look at the mempool when trying to
