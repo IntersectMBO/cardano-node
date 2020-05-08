@@ -34,19 +34,15 @@ import           Data.Void (Void)
 
 import           Network.Mux (MuxTrace, WithMuxBearer)
 
-import           Ouroboros.Consensus.Block (BlockProtocol)
-import           Ouroboros.Consensus.Cardano (Protocol (..), protocolInfo)
-import           Ouroboros.Consensus.Config (TopLevelConfig (..), configCodec)
 import           Ouroboros.Consensus.Ledger.Abstract (Query)
 import           Ouroboros.Consensus.Network.NodeToClient
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
                   (nodeToClientProtocolVersion, supportedNodeToClientVersions)
-import           Ouroboros.Consensus.Node.ProtocolInfo (ProtocolInfo(..))
-import           Ouroboros.Consensus.Node.Run (RunNode, nodeNetworkMagic)
+import           Ouroboros.Consensus.Node.Run (RunNode)
 import           Ouroboros.Consensus.Shelley.Ledger
-import           Ouroboros.Consensus.Shelley.Protocol.Crypto (TPraosCrypto)
 
 import           Ouroboros.Network.Block (Point)
+import           Ouroboros.Network.Magic (NetworkMagic)
 import           Ouroboros.Network.Mux
                    ( AppType(..), OuroborosApplication(..),
                      MuxPeer(..), RunMiniProtocol(..))
@@ -66,56 +62,67 @@ import qualified Shelley.Spec.Ledger.UTxO as Ledger (UTxO)
 
 -- | Query the UTxO, filtered by a given set of addresses, from a Shelley node
 -- via the local state query protocol.
+--
+-- This one is Shelley-specific because the query is Shelley-specific.
+--
 queryFilteredUTxOFromLocalState
-  :: TPraosCrypto c
-  => Protocol (ShelleyBlock c) (BlockProtocol (ShelleyBlock c))
+  :: (RunNode blk, blk ~ ShelleyBlock c)
+  => CodecConfig blk
+  -> NetworkMagic
   -> SocketPath
   -> Set (Ledger.Addr c)
-  -> Point (ShelleyBlock c)
+  -> Point blk
   -> ExceptT AcquireFailure IO (Ledger.UTxO c)
-queryFilteredUTxOFromLocalState ptcl socketPath addrs point = do
+queryFilteredUTxOFromLocalState cfg nm socketPath addrs point = do
   let pointAndQuery = (point, GetFilteredUTxO addrs)
   utxoVar <- liftIO newEmptyTMVarM
   liftIO $ queryNodeLocalState
     utxoVar
     nullTracer
-    ptcl
+    cfg nm
     socketPath
     pointAndQuery
   newExceptT $ atomically $ takeTMVar utxoVar
 
 -- | Query the current protocol parameters from a Shelley node via the local
 -- state query protocol.
+--
+-- This one is Shelley-specific because the query is Shelley-specific.
+--
 queryPParamsFromLocalState
-  :: TPraosCrypto c
-  => Protocol (ShelleyBlock c) (BlockProtocol (ShelleyBlock c))
+  :: (RunNode blk, blk ~ ShelleyBlock c)
+  => CodecConfig blk
+  -> NetworkMagic
   -> SocketPath
-  -> Point (ShelleyBlock c)
+  -> Point blk
   -> ExceptT AcquireFailure IO Ledger.PParams
-queryPParamsFromLocalState ptcl socketPath point = do
+queryPParamsFromLocalState cfg nm socketPath point = do
   let pointAndQuery = (point, GetCurrentPParams)
   pParamsVar <- liftIO newEmptyTMVarM
   liftIO $ queryNodeLocalState
     pParamsVar
     nullTracer
-    ptcl
+    cfg nm
     socketPath
     pointAndQuery
   newExceptT $ atomically $ takeTMVar pParamsVar
 
--- | Establish a connection to a Shelley node and execute the provided query
+-- | Establish a connection to a node and execute the provided query
 -- via the local state query protocol.
+--
+-- This one is not specific to any era.
+--
 queryNodeLocalState
   :: forall blk result. RunNode blk
   => StrictTMVar IO (Either AcquireFailure result)
   -> Trace IO Text
-  -> Protocol blk (BlockProtocol blk)
+  -> CodecConfig blk
+  -> NetworkMagic
   -> SocketPath
   -> (Point blk, Query blk result)
   -> IO ()
-queryNodeLocalState resultVar trce ptcl (SocketFile socketPath) pointAndQuery = do
+queryNodeLocalState resultVar trce cfg nm (SocketFile socketPath) pointAndQuery = do
     logInfo trce $ "queryNodeLocalState: Connecting to node via " <> textShow socketPath
-    let ProtocolInfo{pInfoConfig} = protocolInfo ptcl
     NodeToClient.withIOManager $ \iocp -> do
       NodeToClient.connectTo
         (NodeToClient.localSnocket iocp socketPath)
@@ -123,13 +130,9 @@ queryNodeLocalState resultVar trce ptcl (SocketFile socketPath) pointAndQuery = 
           { nctMuxTracer = muxTracer
           , nctHandshakeTracer = handshakeTracer
           }
-        (localInitiatorNetworkApplication proxy resultVar trce pInfoConfig pointAndQuery)
+        (localInitiatorNetworkApplication trce cfg nm resultVar pointAndQuery)
         socketPath
   where
-    -- TODO: it should be passed as an argument
-    proxy :: Proxy blk
-    proxy = Proxy
-
     muxTracer :: Show peer => Tracer IO (WithMuxBearer peer MuxTrace)
     muxTracer = toLogObject $ appendName "Mux" trce
 
@@ -140,17 +143,18 @@ queryNodeLocalState resultVar trce ptcl (SocketFile socketPath) pointAndQuery = 
 
 localInitiatorNetworkApplication
   :: forall blk result. RunNode blk
-  => Proxy blk
+  => Trace IO Text
+  -> CodecConfig blk
+  -> NetworkMagic
   -> StrictTMVar IO (Either AcquireFailure result)
-  -> Trace IO Text
-  -> TopLevelConfig blk
   -> (Point blk, Query blk result)
   -> Versions
       NodeToClientVersion
       DictVersion
       (LocalConnectionId
         -> OuroborosApplication 'InitiatorApp LByteString IO (Either AcquireFailure result) Void)
-localInitiatorNetworkApplication proxy resultVar trce cfg pointAndQuery =
+localInitiatorNetworkApplication trce cfg networkMagic
+                                 resultVar pointAndQuery =
     NodeToClient.foldMapVersions
       (\v ->
         NodeToClient.versionedNodeToClientProtocols
@@ -159,7 +163,10 @@ localInitiatorNetworkApplication proxy resultVar trce cfg pointAndQuery =
           (protocols v))
       (supportedNodeToClientVersions proxy)
   where
-    versionData = NodeToClientVersionData { networkMagic = nodeNetworkMagic proxy cfg }
+    proxy :: Proxy blk
+    proxy = Proxy
+
+    versionData = NodeToClientVersionData { networkMagic }
 
     protocols clientVersion =
         NodeToClientProtocols
@@ -190,7 +197,7 @@ localInitiatorNetworkApplication proxy resultVar trce cfg pointAndQuery =
           { cChainSyncCodec
           , cTxSubmissionCodec
           , cStateQueryCodec
-          } = defaultCodecs (configCodec cfg) clientVersion
+          } = defaultCodecs cfg clientVersion
 
 -- | A 'LocalStateQueryClient' which executes the provided local state query
 -- and puts the result in the provided 'StrictTMVar'.

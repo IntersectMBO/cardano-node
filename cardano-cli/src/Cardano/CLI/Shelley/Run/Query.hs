@@ -25,11 +25,15 @@ import           Data.Aeson.Encode.Pretty (encodePretty)
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import qualified Data.Set as Set
 
-import           Ouroboros.Consensus.Cardano (Protocol (..))
+import           Ouroboros.Consensus.Cardano (Protocol (..), protocolInfo)
+import           Ouroboros.Consensus.Config (configCodec)
+import           Ouroboros.Consensus.Node.ProtocolInfo (ProtocolInfo(..))
+import           Ouroboros.Consensus.Node.Run (nodeNetworkMagic)
 
 import           Ouroboros.Network.Block (getTipPoint)
 
 import           Shelley.Spec.Ledger.PParams (PParams)
+
 
 runQueryCmd :: QueryCmd -> ExceptT CliError IO ()
 runQueryCmd (QueryProtocolParameters configFp mbSockPath outFile) =
@@ -51,8 +55,13 @@ runQueryProtocolParameters configFp mbSockPath (OutputFile outFile) = do
       ptcl@ProtocolRealTPraos{} -> do
         tip <- withIOManagerE $ \iocp -> liftIO $ getLocalTip p iocp sockPath
         pparams <- firstExceptT NodeLocalStateQueryError $
-          queryPParamsFromLocalState ptcl sockPath (getTipPoint tip)
+          queryPParamsFromLocalState cfg nm sockPath (getTipPoint tip)
         writeProtocolParameters outFile pparams
+        where
+          cfg = configCodec ptclcfg
+          nm  = nodeNetworkMagic (Proxy :: Proxy blk) ptclcfg
+          ProtocolInfo{pInfoConfig = ptclcfg} = protocolInfo ptcl
+
       _ -> left $ IncorrectProtocolSpecifiedError (ncProtocol nc)
 
 runQueryFilteredUTxO
@@ -73,8 +82,14 @@ runQueryFilteredUTxO (AddressFile addrPath) configFp mbSockPath (OutputFile _out
       ptcl@ProtocolRealTPraos{} -> do
         tip <- withIOManagerE $ \iocp -> liftIO $ getLocalTip p iocp sockPath
         filteredUtxo <- firstExceptT NodeLocalStateQueryError $
-          queryFilteredUTxOFromLocalState ptcl sockPath (Set.singleton addr) (getTipPoint tip)
+          queryFilteredUTxOFromLocalState cfg nm sockPath
+                                          (Set.singleton addr) (getTipPoint tip)
         liftIO $ putStrLn $ "Filtered UTxO: " ++ show filteredUtxo
+        where
+          cfg = configCodec ptclcfg
+          nm  = nodeNetworkMagic (Proxy :: Proxy blk) ptclcfg
+          ProtocolInfo{pInfoConfig = ptclcfg} = protocolInfo ptcl
+
       _ -> left $ IncorrectProtocolSpecifiedError (ncProtocol nc)
 
 writeProtocolParameters :: FilePath -> PParams -> ExceptT CliError IO ()
