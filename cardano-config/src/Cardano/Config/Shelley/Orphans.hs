@@ -46,45 +46,45 @@ import           Shelley.Spec.Ledger.TxData (Addr(..))
 instance Crypto crypto => ToJSON (ShelleyGenesis crypto) where
   toJSON sg =
     Aeson.object
-      [ "StartTime"             .= sgStartTime sg
+      [ "startTime"             .= sgStartTime sg
         --TODO: this should not have both network magic and protocol magic
         -- they are different names for the same thing used in two ways.
-      , "NetworkMagic"          .= sgNetworkMagic sg
-      , "ProtocolMagicId"       .= sgProtocolMagicId sg
-      , "ActiveSlotsCoeff"      .= sgActiveSlotsCoeff sg
-      , "SecurityParam"         .= sgSecurityParam sg
-      , "EpochLength"           .= sgEpochLength sg
-      , "SlotsPerKESPeriod"     .= sgSlotsPerKESPeriod sg
-      , "MaxKESEvolutions"      .= sgMaxKESEvolutions sg
-      , "SlotLength"            .= sgSlotLength sg
-      , "UpdateQuorum"          .= sgUpdateQuorum sg
-      , "MaxMajorPV"            .= sgMaxMajorPV sg
-      , "MaxLovelaceSupply"     .= sgMaxLovelaceSupply sg
-      , "ProtocolParams"        .= sgProtocolParams sg
-      , "GenDelegs"             .= sgGenDelegs sg
-      , "InitialFunds"          .= sgInitialFunds sg
---    , "Staking"               .= sgStaking sg  --TODO
+      , "networkMagic"          .= sgNetworkMagic sg
+      , "protocolMagicId"       .= sgProtocolMagicId sg
+      , "activeSlotsCoeff"      .= sgActiveSlotsCoeff sg
+      , "securityParam"         .= sgSecurityParam sg
+      , "epochLength"           .= sgEpochLength sg
+      , "slotsPerKESPeriod"     .= sgSlotsPerKESPeriod sg
+      , "maxKESEvolutions"      .= sgMaxKESEvolutions sg
+      , "slotLength"            .= sgSlotLength sg
+      , "updateQuorum"          .= sgUpdateQuorum sg
+      , "maxMajorPV"            .= sgMaxMajorPV sg
+      , "maxLovelaceSupply"     .= sgMaxLovelaceSupply sg
+      , "protocolParams"        .= sgProtocolParams sg
+      , "genDelegs"             .= sgGenDelegs sg
+      , "initialFunds"          .= sgInitialFunds sg
+      , "staking"               .= Null
       ]
 
 instance Crypto crypto => FromJSON (ShelleyGenesis crypto) where
   parseJSON =
     Aeson.withObject "ShelleyGenesis" $ \ obj ->
       ShelleyGenesis
-        <$> obj .: "StartTime"
-        <*> obj .: "NetworkMagic"
-        <*> obj .: "ProtocolMagicId"
-        <*> obj .: "ActiveSlotsCoeff"
-        <*> obj .: "SecurityParam"
-        <*> obj .: "EpochLength"
-        <*> obj .: "SlotsPerKESPeriod"
-        <*> obj .: "MaxKESEvolutions"
-        <*> obj .: "SlotLength"
-        <*> obj .: "UpdateQuorum"
-        <*> obj .: "MaxMajorPV"
-        <*> obj .: "MaxLovelaceSupply"
-        <*> obj .: "ProtocolParams"
-        <*> obj .: "GenDelegs"
-        <*> obj .: "InitialFunds"
+        <$> obj .: "startTime"
+        <*> obj .: "networkMagic"
+        <*> obj .: "protocolMagicId"
+        <*> obj .: "activeSlotsCoeff"
+        <*> obj .: "securityParam"
+        <*> obj .: "epochLength"
+        <*> obj .: "slotsPerKESPeriod"
+        <*> obj .: "maxKESEvolutions"
+        <*> obj .: "slotLength"
+        <*> obj .: "updateQuorum"
+        <*> obj .: "maxMajorPV"
+        <*> obj .: "maxLovelaceSupply"
+        <*> obj .: "protocolParams"
+        <*> obj .: "genDelegs"
+        <*> obj .: "initialFunds"
         <*> pure emptyGenesisStaking  --TODO
 
 instance ToJSON PParams where
