@@ -28,9 +28,7 @@ module Cardano.CLI.Shelley.Parsers
 import           Cardano.Prelude hiding (option)
 
 import           Cardano.Api
-import           Cardano.Common.Parsers
-                   (parseConfigFile, parseCLISocketPath, parseNodeAddress)
-import qualified Cardano.Crypto as Byron
+import           Cardano.Common.Parsers (parseConfigFile, parseCLISocketPath, parseNodeAddress)
 import           Cardano.Slotting.Slot (EpochNo (..))
 
 import           Cardano.Config.Types (CertificateFile (..), CLISocketPath,
@@ -86,9 +84,8 @@ data StakeAddressCmd
 
 
 data TransactionCmd
-
   = TxBuildRaw [TxIn] [TxOut] SlotNo Lovelace TxBodyFile [CertificateFile]
-  | TxSign TxBodyFile [SigningKeyFile] (Maybe Byron.ProtocolMagicId) TxFile
+  | TxSign TxBodyFile [SigningKeyFile] Network TxFile
   | TxWitness       -- { transaction :: Transaction, key :: PrivKeyFile, nodeAddr :: NodeAddress }
   | TxSignWitness   -- { transaction :: Transaction, witnesses :: [Witness], nodeAddr :: NodeAddress }
   | TxCheck         -- { transaction :: Transaction, nodeAddr :: NodeAddress }
@@ -326,7 +323,7 @@ pTransaction =
     pTransactionSign  :: Parser TransactionCmd
     pTransactionSign = TxSign <$> pTxBodyFile Input
                               <*> pSomeSigningKeyFiles
-                              <*> pMaybeProtocolMagicId
+                              <*> pNetwork
                               <*> pTxFile Output
 
     pTransactionWitness :: Parser TransactionCmd
@@ -763,14 +760,16 @@ pKESVerificationKeyFile =
       <> Opt.help "Filepath of the hot KES verification key."
       )
 
-pMaybeProtocolMagicId :: Parser (Maybe Byron.ProtocolMagicId)
-pMaybeProtocolMagicId =
-  optional $ Byron.ProtocolMagicId <$>
-    Opt.option Opt.auto
-      (  Opt.long "protocol-id"
-      <> Opt.metavar "INT"
-      <> Opt.help "The network protocol id [Defaults to the one for Mainnet]."
-      )
+pNetwork :: Parser Network
+pNetwork =
+  maybe Mainnet (Testnet . NetworkMagic) <$>
+    Opt.optional
+      (Opt.option Opt.auto
+        (  Opt.long "network-magic"
+        <> Opt.metavar "INT"
+        <> Opt.help "The network magic id [default is mainnet]."
+        ))
+
 pTxSubmitFile :: Parser FilePath
 pTxSubmitFile =
   Opt.strOption

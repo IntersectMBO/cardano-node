@@ -36,9 +36,11 @@ runTransactionCmd cmd =
   case cmd of
     TxBuildRaw txins txouts ttl fee out certs ->
       runTxBuildRaw txins txouts ttl fee out certs
-    TxSign txinfile skfiles mNetwork txoutfile ->
-      runTxSign txinfile skfiles (maybe Mainnet Testnet mNetwork) txoutfile
-    TxSubmit txFp configFp sockFp -> runTxSubmit txFp configFp sockFp
+    TxSign txinfile skfiles network txoutfile ->
+      runTxSign txinfile skfiles network txoutfile
+    TxSubmit txFp configFp sockFp ->
+      runTxSubmit txFp configFp sockFp
+
     _ -> liftIO $ putStrLn $ "runTransactionCmd: " ++ show cmd
 
 runTxBuildRaw

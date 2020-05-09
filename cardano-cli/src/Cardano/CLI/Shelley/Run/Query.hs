@@ -6,8 +6,9 @@ module Cardano.CLI.Shelley.Run.Query
 
 import           Cardano.Prelude
 
-import           Cardano.Api (Address, queryFilteredUTxOFromLocalState,
-                     queryPParamsFromLocalState)
+import           Cardano.Api
+                   (Address, Network(..), queryFilteredUTxOFromLocalState,
+                    queryPParamsFromLocalState)
 
 import           Cardano.CLI.Ops (CliError (..), getLocalTip, withIOManagerE)
 import           Cardano.CLI.Shelley.Parsers (OutputFile (..), QueryCmd (..))
@@ -59,7 +60,8 @@ runQueryProtocolParameters configFp mbSockPath (OutputFile outFile) = do
         writeProtocolParameters outFile pparams
         where
           cfg = configCodec ptclcfg
-          nm  = nodeNetworkMagic (Proxy :: Proxy blk) ptclcfg
+          --FIXME: this works, but we should get the magic properly:
+          nm  = Testnet (nodeNetworkMagic (Proxy :: Proxy blk) ptclcfg)
           ProtocolInfo{pInfoConfig = ptclcfg} = protocolInfo ptcl
 
       _ -> left $ IncorrectProtocolSpecifiedError (ncProtocol nc)
@@ -84,7 +86,8 @@ runQueryFilteredUTxO addr configFp mbSockPath (OutputFile _outFile) = do
         liftIO $ putStrLn $ "Filtered UTxO: " ++ show filteredUtxo
         where
           cfg = configCodec ptclcfg
-          nm  = nodeNetworkMagic (Proxy :: Proxy blk) ptclcfg
+          --FIXME: this works, but we should get the magic properly:
+          nm  = Testnet (nodeNetworkMagic (Proxy :: Proxy blk) ptclcfg)
           ProtocolInfo{pInfoConfig = ptclcfg} = protocolInfo ptcl
 
       _ -> left $ IncorrectProtocolSpecifiedError (ncProtocol nc)

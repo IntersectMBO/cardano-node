@@ -14,6 +14,8 @@ module Cardano.Api.Types
     -- * Common types across all eras.
     Address (..)
   , Network (..)
+  , NetworkMagic (..)
+  , toNetworkMagic
   , SigningKey (..)
   , VerificationKey (..)
   , Certificate (..)
@@ -86,6 +88,7 @@ import           Data.Vector (Vector)
 import           Cardano.Config.Orphanage ()
 
 import           Cardano.Slotting.Slot (SlotNo (..))
+import           Ouroboros.Network.Magic (NetworkMagic(..))
 
 import qualified Cardano.Crypto.Hash.Class   as Crypto
 import qualified Cardano.Crypto.Hash.Blake2b as Crypto
@@ -196,8 +199,8 @@ data VerificationKey
 -- this (actually isomorphic with Maybe):
 data Network
   = Mainnet
-  | Testnet !Byron.ProtocolMagicId
-  deriving (Eq, Generic, NFData, Show)
+  | Testnet !NetworkMagic
+  deriving (Eq, Generic, {-NFData, TODO-} Show)
   deriving anyclass NoUnexpectedThunks
 
 data TxIn = TxIn !TxId !TxIx
@@ -219,6 +222,12 @@ newtype Lovelace
   deriving (Eq, Generic)
   deriving newtype (Read, Show)
   deriving anyclass (NFData, NoUnexpectedThunks)
+
+toNetworkMagic :: Network -> NetworkMagic
+toNetworkMagic nw =
+  case nw of
+    Mainnet    -> NetworkMagic 764824073 -- The network magic for mainnet
+    Testnet nm -> nm
 
 toByronTxIn  :: TxIn  -> ByronTxIn
 toByronTxIn (TxIn txid txix) =
