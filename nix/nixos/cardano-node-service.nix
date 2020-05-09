@@ -37,7 +37,7 @@ let
           "--topology ${cfg.topology}"
           "--host-addr ${cfg.hostAddr}"
           "--port ${toString cfg.port}"
-        ] ++ consensusParams.${cfg.consensusProtocol} ++ cfg.extraArgs ++ cfg.rtsArgs;
+        ] ++ consensusParams.${cfg.nodeConfig.Protocol} ++ cfg.extraArgs ++ cfg.rtsArgs;
     in ''
         choice() { i=$1; shift; eval "echo \''${$((i + 1))}"; }
         echo "Starting ${exec}: ${concatStringsSep "\"\n   echo \"" cmd}"
@@ -183,16 +183,6 @@ in {
         default = null;
         description = ''
           Operational certificate
-        '';
-      };
-
-      consensusProtocol = mkOption {
-        default = "RealPBFT";
-        type = types.enum ["RealPBFT" "TPraos"];
-        description = ''
-          Consensus initially used by the node:
-            - TPraos: Praos consensus algorithm
-            - RealPBFT: Permissive BFT consensus algorithm using the real ledger
         '';
       };
 
