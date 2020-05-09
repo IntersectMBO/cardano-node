@@ -28,11 +28,11 @@ module Cardano.CLI.Shelley.Parsers
 import           Cardano.Prelude hiding (option)
 
 import           Cardano.Api
-import           Cardano.Common.Parsers (parseConfigFile, parseCLISocketPath, parseNodeAddress)
+import           Cardano.Common.Parsers (parseConfigFile, parseNodeAddress)
 import           Cardano.Slotting.Slot (EpochNo (..))
 
-import           Cardano.Config.Types (CertificateFile (..), CLISocketPath,
-                     ConfigYamlFilePath (..), NodeAddress, SigningKeyFile(..), SocketPath(..))
+import           Cardano.Config.Types (SocketPath(..), ConfigYamlFilePath (..),
+                     NodeAddress, SigningKeyFile(..), CertificateFile (..))
 import           Cardano.Config.Shelley.OCert (KESPeriod(..))
 import           Cardano.CLI.Key (VerificationKeyFile(..))
 
@@ -112,9 +112,9 @@ data PoolCmd
 
 data QueryCmd
   = QueryPoolId NodeAddress
-  | QueryProtocolParameters ConfigYamlFilePath (Maybe CLISocketPath) OutputFile
+  | QueryProtocolParameters ConfigYamlFilePath SocketPath OutputFile
   | QueryTip NodeAddress
-  | QueryFilteredUTxO Address ConfigYamlFilePath (Maybe CLISocketPath) OutputFile
+  | QueryFilteredUTxO Address ConfigYamlFilePath SocketPath OutputFile
   | QueryVersion NodeAddress
   | QueryStatus NodeAddress
   deriving (Eq, Show)
@@ -433,7 +433,7 @@ pQueryCmd =
     pQueryProtocolParameters =
       QueryProtocolParameters
         <$> (ConfigYamlFilePath <$> parseConfigFile)
-        <*> parseCLISocketPath "Socket of target node"
+        <*> pSocketPath
         <*> pOutputFile
 
     pQueryTip :: Parser QueryCmd
@@ -444,7 +444,7 @@ pQueryCmd =
       QueryFilteredUTxO
         <$> pHexEncodedAddress
         <*> (ConfigYamlFilePath <$> parseConfigFile)
-        <*> parseCLISocketPath "Socket of target node"
+        <*> pSocketPath
         <*> pOutputFile
 
     pQueryVersion :: Parser QueryCmd
@@ -818,7 +818,7 @@ pSocketPath =
     Opt.strOption
       (  Opt.long "socket-path"
       <> Opt.metavar "FILEPATH"
-      <> Opt.help "Socket filepath."
+      <> Opt.help "The local node's socket"
       )
 
 pTxBodyFile :: FileDirection -> Parser TxBodyFile

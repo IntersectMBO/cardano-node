@@ -13,10 +13,9 @@ import           Cardano.Api
 import           Cardano.CLI.Ops (CliError (..), getLocalTip)
 import           Cardano.CLI.Shelley.Parsers (OutputFile (..), QueryCmd (..))
 
-import           Cardano.Common.LocalSocket (chooseSocketPath)
-
 import           Cardano.Config.Protocol (mkConsensusProtocol)
-import           Cardano.Config.Types (CLISocketPath, ConfigYamlFilePath, NodeConfiguration (..),
+import           Cardano.Config.Types (SocketPath, ConfigYamlFilePath,
+                     NodeConfiguration (..),
                      SomeConsensusProtocol (..), parseNodeConfigurationFP)
 
 import           Control.Monad.Trans.Except (ExceptT)
@@ -38,20 +37,19 @@ import           Shelley.Spec.Ledger.PParams (PParams)
 
 
 runQueryCmd :: QueryCmd -> ExceptT CliError IO ()
-runQueryCmd (QueryProtocolParameters configFp mbSockPath outFile) =
-  runQueryProtocolParameters configFp mbSockPath outFile
-runQueryCmd (QueryFilteredUTxO addr configFp mbSockPath outFile) =
-  runQueryFilteredUTxO addr configFp mbSockPath outFile
+runQueryCmd (QueryProtocolParameters configFp sockPath outFile) =
+  runQueryProtocolParameters configFp sockPath outFile
+runQueryCmd (QueryFilteredUTxO addr configFp sockPath outFile) =
+  runQueryFilteredUTxO addr configFp sockPath outFile
 runQueryCmd cmd = liftIO $ putStrLn $ "runQueryCmd: " ++ show cmd
 
 runQueryProtocolParameters
   :: ConfigYamlFilePath
-  -> Maybe CLISocketPath
+  -> SocketPath
   -> OutputFile
   -> ExceptT CliError IO ()
-runQueryProtocolParameters configFp mbSockPath (OutputFile outFile) = do
+runQueryProtocolParameters configFp sockPath (OutputFile outFile) = do
     nc <- liftIO $ parseNodeConfigurationFP configFp
-    sockPath <- pure $ chooseSocketPath (ncSocketPath nc) mbSockPath
     SomeConsensusProtocol p <- firstExceptT ProtocolError $ mkConsensusProtocol nc Nothing
     case p of
       ptcl@ProtocolRealTPraos{} -> do
@@ -70,12 +68,11 @@ runQueryProtocolParameters configFp mbSockPath (OutputFile outFile) = do
 runQueryFilteredUTxO
   :: Address
   -> ConfigYamlFilePath
-  -> Maybe CLISocketPath
+  -> SocketPath
   -> OutputFile
   -> ExceptT CliError IO ()
-runQueryFilteredUTxO addr configFp mbSockPath (OutputFile _outFile) = do
+runQueryFilteredUTxO addr configFp sockPath (OutputFile _outFile) = do
     nc <- liftIO $ parseNodeConfigurationFP configFp
-    sockPath <- pure $ chooseSocketPath (ncSocketPath nc) mbSockPath
     SomeConsensusProtocol p <- firstExceptT ProtocolError $ mkConsensusProtocol nc Nothing
 
     case p of
