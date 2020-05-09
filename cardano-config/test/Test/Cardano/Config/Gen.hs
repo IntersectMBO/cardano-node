@@ -28,7 +28,7 @@ import           Cardano.Config.TextView
 import           Cardano.Config.Topology
 import           Cardano.Config.Types
 
-import           Cardano.Slotting.Slot (EpochSize (..))
+import           Cardano.Slotting.Slot (EpochNo (..), EpochSize (..))
 
 import           Cardano.Crypto.Seed (Seed, mkSeedFromBytes)
 import           Cardano.Crypto.DSIGN.Class
@@ -45,6 +45,7 @@ import           Hedgehog (Gen)
 import           Hedgehog.Corpus (cooking)
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
+import           Hedgehog.Range (Range)
 import           Hedgehog.Internal.Gen ()
 
 import           Ouroboros.Consensus.BlockchainTime (SlotLength (..), SystemStart (..),
@@ -55,11 +56,13 @@ import           Ouroboros.Consensus.Shelley.Node (emptyGenesisStaking)
 import           Ouroboros.Network.Magic (NetworkMagic (..))
 
 import           Shelley.Spec.Ledger.Address (toAddr)
+import           Shelley.Spec.Ledger.BaseTypes (Nonce (..), UnitInterval (..), mkNonce)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
 import           Shelley.Spec.Ledger.Keys
                    (KeyHash, KeyPair(..), VKey(..), hashKey)
 import qualified Shelley.Spec.Ledger.Keys as Ledger (KeyRole(..))
 import           Shelley.Spec.Ledger.Crypto
+import           Shelley.Spec.Ledger.PParams (PParams, PParams' (..), ProtVer (..))
 import           Shelley.Spec.Ledger.TxData (Addr)
 
 import           Test.Cardano.Crypto.Gen (genProtocolMagicId)
@@ -72,7 +75,6 @@ genShelleyGenesis =
     <*> genNetworkMagic
     <*> genProtocolMagicId
     <*> fmap (realToFrac . getSlotLength) genSlotLength
-    <*> genNeatUnitDouble
     <*> fmap SecurityParam (Gen.word64 $ Range.linear 1 1000000)
     <*> fmap (EpochSize . maxRollbacks) genSecurityParam
     <*> Gen.word64 (Range.linear 1 100000)
@@ -81,12 +83,61 @@ genShelleyGenesis =
     <*> Gen.word64 (Range.linear 1 100000)
     <*> fmap fromIntegral (Gen.word $ Range.linear 0 100000)
     <*> Gen.word64 (Range.linear 1 100000)
-    <*> fmap fromIntegral (Gen.word $ Range.linear 100 1000000)
-    <*> fmap fromIntegral (Gen.word $ Range.linear 100 1000000)
+    <*> genPParams
     <*> fmap Map.fromList genGenesisDelegationList
     <*> fmap Map.fromList genFundsList
     <*> pure emptyGenesisStaking
 
+
+genPParams :: Gen PParams
+genPParams =
+  PParams
+    <$> genNatural (Range.linear 0 1000)
+    <*> genNatural (Range.linear 0 3)
+    <*> fmap fromIntegral (Gen.word $ Range.linear 100 1000000)
+    <*> fmap fromIntegral (Gen.word $ Range.linear 100 1000000)
+    <*> fmap fromIntegral (Gen.word $ Range.linear 100 1000000)
+    <*> genCoin
+    <*> genUnitInterval
+    <*> genRational
+    <*> genCoin
+    <*> genUnitInterval
+    <*> genRational
+    <*> genEpochNo
+    <*> genNatural (Range.linear 0 10)
+    <*> genRational
+    <*> genUnitInterval
+    <*> genUnitInterval
+    <*> genUnitInterval
+    <*> genNonce
+    <*> genProtVer
+
+genNatural :: Range Natural -> Gen Natural
+genNatural range = Gen.integral range
+
+genRational :: Gen Rational
+genRational = Gen.realFrac_ (Range.linearFrac 0 10000)
+
+genEpochNo :: Gen EpochNo
+genEpochNo = EpochNo <$> Gen.word64 (Range.linear 0 500)
+
+genNonce :: Gen Nonce
+genNonce =
+  Gen.choice
+    [ mkNonce <$> genNatural (Range.linear 1 123)
+    , pure NeutralNonce
+    ]
+
+genProtVer :: Gen ProtVer
+genProtVer =
+  ProtVer
+    <$> genNatural (Range.linear 0 1000)
+    <*> genNatural (Range.linear 0 1000)
+
+genUnitInterval :: Gen UnitInterval
+genUnitInterval =
+  UnsafeUnitInterval
+    <$> Gen.realFrac_ (Range.linearFrac 0 1)
 
 genGenesisFundPair :: Gen (Addr TPraosStandardCrypto, Coin)
 genGenesisFundPair =
@@ -187,10 +238,6 @@ genAddress = do
 genCoin :: Gen Coin
 genCoin =
   Coin <$> Gen.integral (Range.linear 1 1000000000)
-
-genNeatUnitDouble :: Gen Double
-genNeatUnitDouble =
-  (\x -> fromIntegral x / 1000) <$> Gen.int (Range.linear 0 1000)
 
 genNetworkMagic :: Gen NetworkMagic
 genNetworkMagic =

@@ -36,6 +36,9 @@ import           Ouroboros.Consensus.Shelley.Node
                    (ShelleyGenesis (..), emptyGenesisStaking)
 import           Ouroboros.Consensus.Shelley.Protocol (TPraosStandardCrypto)
 
+import           Shelley.Spec.Ledger.BaseTypes as Ledger (truncateUnitInterval)
+import           Shelley.Spec.Ledger.PParams as Ledger (PParams' (..), emptyPParams)
+
 data ShelleyGenesisError
   = MissingGenesisKey !Text
   | MissingDelegateKey !Text
@@ -72,20 +75,25 @@ shelleyGenesisDefaults =
     , sgNetworkMagic          = NetworkMagic 0
     , sgProtocolMagicId       = ProtocolMagicId 0
 
-      -- protocol params
+      -- consensus protocol params
     , sgSlotLength            = slotLengthFromSec 1 -- 1s slots
     , sgActiveSlotsCoeff      = 1/20                -- 20s block times on average
-    , sgDecentralisationParam = 1
     , sgSecurityParam         = SecurityParam k
     , sgEpochLength           = EpochSize (10 * k)
     , sgSlotsPerKESPeriod     = 60 * 60 * 24        -- 1 day with 1s slots
     , sgMaxKESEvolutions      = 90                  -- 90 days
     , sgUpdateQuorum          = 5
-
-      -- ledger params
     , sgMaxMajorPV            = 1000
-    , sgMaxBodySize           = 1024 * 16
-    , sgMaxHeaderSize         = 1400
+
+    -- ledger protocol params
+    , sgProtocolParams        = Ledger.emptyPParams
+        { Ledger._d =
+              Ledger.truncateUnitInterval
+            . realToFrac
+            $ (1 :: Double)
+        , Ledger._maxBBSize = 1024 * 16
+        , Ledger._maxBHSize = 1400
+        }
 
       -- genesis keys and initial funds
     , sgGenDelegs             = Map.empty
