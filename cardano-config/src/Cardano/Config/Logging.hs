@@ -48,7 +48,7 @@ import           Cardano.BM.Data.SubTrace
 import qualified Cardano.BM.Observer.Monadic as Monadic
 import qualified Cardano.BM.Observer.STM as Stm
 import           Cardano.BM.Plugin (loadPlugin)
-#if defined(linux_HOST_OS)
+#if defined(SYSTEMD)
 import           Cardano.BM.Scribe.Systemd (plugin)
 #endif
 import           Cardano.BM.Setup (setupTrace_, shutdown)
@@ -184,7 +184,7 @@ createLoggingFeature ver _ nodecli@NodeCLI{configFile} = do
      Cardano.BM.Backend.Monitoring.plugin logConfig trace switchBoard
        >>= loadPlugin switchBoard
 
-#if defined(linux_HOST_OS)
+#if defined(SYSTEMD)
      Cardano.BM.Scribe.Systemd.plugin logConfig trace switchBoard "cardano"
        >>= loadPlugin switchBoard
 #endif
