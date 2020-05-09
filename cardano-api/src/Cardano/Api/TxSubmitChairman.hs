@@ -14,8 +14,10 @@ import           Cardano.Prelude
 
 import           Control.Tracer
 
-import           Ouroboros.Consensus.Config (TopLevelConfig (..), configCodec)
+import           Cardano.Api.Types
+
 import           Ouroboros.Consensus.Network.NodeToClient
+import           Ouroboros.Consensus.Node.ProtocolInfo (ProtocolClientInfo(..))
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
                   (nodeToClientProtocolVersion, supportedNodeToClientVersions)
 import           Ouroboros.Consensus.Node.Run
@@ -29,28 +31,25 @@ import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Client as LocalTxS
 
 import           Cardano.Config.Types (SocketPath(..))
 
+
 submitTx
   :: forall blk.
      RunNode blk
   => Tracer IO Text
   -> IOManager
-  -> TopLevelConfig blk
+  -> ProtocolClientInfo blk
+  -> Network
   -> SocketPath
   -> GenTx blk
   -> IO ()
-submitTx
-  tracer
-  iomgr
-  cfg
-  (SocketPath path)
-  genTx =
+submitTx tracer iomgr cfg nm (SocketPath path) genTx =
       connectTo
         (localSnocket iomgr path)
         NetworkConnectTracers {
             nctMuxTracer       = nullTracer,
             nctHandshakeTracer = nullTracer
             }
-        (localInitiatorNetworkApplication tracer cfg genTx)
+        (localInitiatorNetworkApplication tracer cfg nm genTx)
         path
         --`catch` handleMuxError tracer chainsVar socketPath
 
@@ -61,12 +60,13 @@ localInitiatorNetworkApplication
   -- ^ tracer which logs all local tx submission protocol messages send and
   -- received by the client (see 'Ouroboros.Network.Protocol.LocalTxSubmission.Type'
   -- in 'ouroboros-network' package).
-  -> TopLevelConfig blk
+  -> ProtocolClientInfo blk
+  -> Network
   -> GenTx blk
   -> Versions NtC.NodeToClientVersion DictVersion
               (LocalConnectionId
                -> OuroborosApplication InitiatorApp LByteString IO () Void)
-localInitiatorNetworkApplication tracer cfg genTx =
+localInitiatorNetworkApplication tracer cfg nm genTx =
     foldMapVersions
       (\v ->
         NtC.versionedNodeToClientProtocols
@@ -78,7 +78,7 @@ localInitiatorNetworkApplication tracer cfg genTx =
     proxy :: Proxy blk
     proxy = Proxy
 
-    versionData = NodeToClientVersionData (nodeNetworkMagic proxy cfg)
+    versionData = NodeToClientVersionData { networkMagic = toNetworkMagic nm }
 
     protocols clientVersion tx =
         NodeToClientProtocols {
@@ -116,7 +116,7 @@ localInitiatorNetworkApplication tracer cfg genTx =
           { cChainSyncCodec
           , cTxSubmissionCodec
           , cStateQueryCodec
-          } = defaultCodecs (configCodec cfg) clientVersion
+          } = defaultCodecs (pClientInfoCodecConfig cfg) clientVersion
 
 txSubmissionClientSingle
   :: forall tx reject m.

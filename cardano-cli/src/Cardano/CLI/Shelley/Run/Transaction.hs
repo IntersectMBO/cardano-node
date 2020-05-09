@@ -18,19 +18,18 @@ import           Cardano.Config.TextView
 import           Cardano.CLI.Environment (readEnvSocketPath)
 import           Cardano.CLI.Ops (CliError (..))
 
-import           Cardano.Config.Protocol (mkConsensusProtocol)
+import           Cardano.Config.Shelley.Protocol (mkNodeClientProtocolTPraos)
 import           Cardano.Config.Types
 import           Cardano.CLI.Ops (withIOManagerE)
 
 import           Cardano.CLI.Shelley.Parsers
 import qualified Ouroboros.Consensus.Cardano as Consensus
-import           Ouroboros.Consensus.Node.ProtocolInfo (pInfoConfig)
 import           Cardano.Config.Types (CertificateFile (..))
 
-
 import           Control.Monad.Trans.Except (ExceptT)
-import           Control.Monad.Trans.Except.Extra (firstExceptT, left, newExceptT)
+import           Control.Monad.Trans.Except.Extra (firstExceptT, newExceptT)
 import           Control.Tracer (nullTracer)
+
 
 runTransactionCmd :: TransactionCmd -> ExceptT CliError IO ()
 runTransactionCmd cmd =
@@ -39,8 +38,8 @@ runTransactionCmd cmd =
       runTxBuildRaw txins txouts ttl fee out certs
     TxSign txinfile skfiles network txoutfile ->
       runTxSign txinfile skfiles network txoutfile
-    TxSubmit txFp configFp ->
-      runTxSubmit txFp configFp
+    TxSubmit txFp network ->
+      runTxSubmit txFp network
 
     _ -> liftIO $ putStrLn $ "runTransactionCmd: " ++ show cmd
 
@@ -75,23 +74,20 @@ runTxSign (TxBodyFile infile) skfiles  network (TxFile outfile) = do
       . writeTxSigned outfile
       $ signTransaction txu network sks
 
-runTxSubmit :: FilePath -> ConfigYamlFilePath -> ExceptT CliError IO ()
-runTxSubmit txFp configFp =
+runTxSubmit :: FilePath -> Network -> ExceptT CliError IO ()
+runTxSubmit txFp network =
   withIOManagerE $ \iocp -> do
     sktFp <- readEnvSocketPath
-    nc <- liftIO $ parseNodeConfigurationFP configFp
-    SomeConsensusProtocol p <- firstExceptT ProtocolError $ mkConsensusProtocol nc Nothing
     signedTx <- firstExceptT CardanoApiError . newExceptT $ readTxSigned txFp
-    case p of
-      Consensus.ProtocolRealTPraos{} -> do
-        let config = pInfoConfig $ Consensus.protocolInfo p
-        liftIO $ submitTx
-                   nullTracer -- tracer needed
-                   iocp
-                   config
-                   sktFp
-                   (prepareTxShelley signedTx)
-      _ -> left $ IncorrectProtocolSpecifiedError (ncProtocol nc)
+
+    let config = Consensus.protocolClientInfo mkNodeClientProtocolTPraos
+    liftIO $ submitTx
+               nullTracer -- tracer needed
+               iocp
+               config
+               network
+               sktFp
+               (prepareTxShelley signedTx)
 
 
 
