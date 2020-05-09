@@ -14,31 +14,28 @@ module Cardano.CLI.Shelley.Run.Genesis
   ) where
 
 import           Cardano.Prelude
-import           Prelude (String)
 
 import           Cardano.Api hiding (writeAddress)
 --TODO: prefer versions from Cardano.Api where possible
 
 import           Cardano.Config.Shelley.Address (ShelleyAddress)
-import           Cardano.Config.Shelley.ColdKeys (KeyError, KeyRole (..), OperatorKeyRole (..),
+import           Cardano.Config.Shelley.ColdKeys (KeyRole (..), OperatorKeyRole (..),
                     readVerKey)
-import           Cardano.Config.Shelley.Genesis (ShelleyGenesisError (..))
 
 import           Cardano.CLI.Ops (CliError (..))
-import           Cardano.CLI.Shelley.Run.KeyGen
-                   (runGenesisKeyGenDelegate, runGenesisKeyGenGenesis,
+import           Cardano.CLI.Shelley.Run.KeyGen (runGenesisKeyGenDelegate, runGenesisKeyGenGenesis,
                     runGenesisKeyGenUTxO)
 import           Cardano.CLI.Shelley.Parsers (GenesisDir (..), OpCertCounterFile (..),
                     SigningKeyFile (..), VerificationKeyFile (..))
 import           Cardano.Config.Shelley.Genesis
 
 import           Control.Monad.Trans.Except (ExceptT)
-import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT,
-                   hoistEither, left, right)
+import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistEither)
 
 import qualified Data.Aeson as Aeson
 import           Data.Aeson.Encode.Pretty (encodePretty)
 import qualified Data.ByteString.Lazy.Char8 as LBS
+import           Data.Char (isDigit)
 import qualified Data.List as List
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -58,7 +55,8 @@ import qualified Shelley.Spec.Ledger.Keys as Ledger
 import qualified Shelley.Spec.Ledger.TxData as Shelley
 
 import           System.Directory (createDirectoryIfMissing, listDirectory)
-import           System.FilePath ((</>), takeFileName, takeExtension)
+import           System.FilePath ((</>), takeExtension)
+
 
 
 runGenesisAddr :: VerificationKeyFile -> ExceptT CliError IO ()
@@ -125,14 +123,6 @@ runGenesisCreate (GenesisDir rootdir)
     utxodir = rootdir </> "utxo-keys"
 
 -- -------------------------------------------------------------------------------------------------
-
--- Represents the filepath's basename of a particular key (genesis key, delegate keys, etc)
-newtype BaseName
-  = BaseName String
-  deriving (Eq, Ord)
-
-textBaseName :: BaseName -> Text
-textBaseName (BaseName a) = Text.pack a
 
 createDelegateKeys :: FilePath -> Word -> ExceptT CliError IO ()
 createDelegateKeys dir index = do
@@ -218,59 +208,53 @@ writeShelleyGenesis :: FilePath -> ShelleyGenesis TPraosStandardCrypto -> Except
 writeShelleyGenesis fpath sg =
   handleIOExceptT (IOError fpath) $ LBS.writeFile fpath (encodePretty sg)
 
-readGenDelegsMap :: FilePath
-                 -> FilePath
-                 -> ExceptT CliError IO (Map KeyHashGenesis
-                                             KeyHashGenesisDelegate)
+-- -------------------------------------------------------------------------------------------------
+
+readGenDelegsMap :: FilePath -> FilePath -> ExceptT CliError IO (Map KeyHashGenesis KeyHashGenesisDelegate)
 readGenDelegsMap gendir deldir = do
-    gkm <- firstExceptT KeyCliError $ readGenesisKeys gendir
-    dkm <- firstExceptT KeyCliError $ readDelegateKeys deldir
-
-    -- Both maps should have an identical set of keys (as in Map keys)
-    -- because we should have generated an equal amount of genesis keys
-    -- and delegate keys.
-    let genesiskeyBaseNames = Map.keys gkm
-        delegatekeyBaseNames = Map.keys dkm
-        eitherDelegationKeyPairs = [ combine gkm dkm gBn dBn
-                                   | gBn <- genesiskeyBaseNames
-                                   , dBn <- delegatekeyBaseNames
-                                   ]
-    case partitionEithers eitherDelegationKeyPairs of
-      ([], xs) -> right $ Map.fromList xs
-      (errors, _) -> left $ ShelleyGenesisError (MultipleMissingKeys errors)
-
+    gkm <- readGenesisKeys gendir
+    dkm <- readDelegateKeys deldir
+    -- Both maps should have an identical set of keys.
+    -- The mapMaybe will silently drop any map elements for which the key does not exist
+    -- in both maps.
+    pure $ Map.fromList (map (rearrange gkm dkm) $ Map.keys gkm)
   where
-    combine :: Map BaseName VerKeyGenesis
-            -- ^ Genesis Keys
-            -> Map BaseName VerKeyGenesisDelegate
-            -- ^ Delegate Keys
-            -> BaseName
-            -- ^ Genesis Key basename
-            -> BaseName
-            -- ^ Delegate Key basename
-            -> Either ShelleyGenesisError (KeyHashGenesis, KeyHashGenesisDelegate)
-    combine gkm dkm gBn dBn =
-      case (Map.lookup gBn gkm, Map.lookup dBn dkm) of
-        (Just a, Just b) -> Right (Ledger.hashKey a, Ledger.hashKey b)
-        (Nothing, Just _) -> Left $ MissingGenesisKey (textBaseName gBn)
-        (Just _, Nothing) -> Left $ MissingDelegateKey (textBaseName dBn)
-        _ -> Left $ MissingGenesisAndDelegationKey (textBaseName gBn) (textBaseName dBn)
+    rearrange :: Map Int (Ledger.VKey 'Ledger.Genesis TPraosStandardCrypto)
+             -> Map Int (Ledger.VKey 'Ledger.GenesisDelegate TPraosStandardCrypto)
+             -> Int
+             -> (KeyHashGenesis, KeyHashGenesisDelegate)
+    rearrange gkm dkm i =
+      case (Map.lookup i gkm, Map.lookup i dkm) of
+        (Just a, Just b) -> (Ledger.hashKey a, Ledger.hashKey b)
+        _otherwise -> panic "readGenDelegsMap"
 
-readGenesisKeys :: FilePath -> ExceptT KeyError IO (Map BaseName VerKeyGenesis)
+
+readGenesisKeys :: FilePath -> ExceptT CliError IO (Map Int VerKeyGenesis)
 readGenesisKeys gendir = do
   files <- filter isVkey <$> liftIO (listDirectory gendir)
-  fmap Map.fromList <$> traverse (readBaseNameVerKey GenesisKey) $ map (gendir </>) files
+  fmap Map.fromList <$> traverse (readIndexedVerKey GenesisKey) $ map (gendir </>) files
 
-readDelegateKeys :: FilePath -> ExceptT KeyError IO (Map BaseName VerKeyGenesisDelegate)
+readDelegateKeys :: FilePath -> ExceptT CliError IO (Map Int VerKeyGenesisDelegate)
 readDelegateKeys deldir = do
   files <- filter isVkey <$> liftIO (listDirectory deldir)
-  fmap Map.fromList <$> traverse (readBaseNameVerKey (OperatorKey GenesisDelegateKey)) $ map (deldir </>) files
+  fmap Map.fromList <$> traverse (readIndexedVerKey (OperatorKey GenesisDelegateKey)) $ map (deldir </>) files
 
-readBaseNameVerKey :: Typeable r
+
+-- The file path is of the form "delegate-keys/delegate3.vkey".
+-- This function reads the file and extracts the index (in this case 3).
+readIndexedVerKey :: Typeable r
                    => KeyRole -> FilePath
-                   -> ExceptT KeyError IO (BaseName, VerKey r)
-readBaseNameVerKey role fpath =
-  (BaseName (takeFileName fpath),) <$> readVerKey role fpath
+                   -> ExceptT CliError IO (Int, VerKey r)
+readIndexedVerKey role fpath =
+   case extractIndex fpath of
+     Nothing -> panic "readIndexedVerKey role fpath"
+     Just i -> (i,) <$> firstExceptT KeyCliError (readVerKey role fpath)
+  where
+    extractIndex :: FilePath -> Maybe Int
+    extractIndex fp =
+      case filter isDigit fp of
+        [] -> Nothing
+        xs -> readMaybe xs
 
 readInitialFundAddresses :: FilePath -> ExceptT CliError IO [ShelleyAddress]
 readInitialFundAddresses utxodir = do
