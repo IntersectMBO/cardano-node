@@ -35,9 +35,9 @@ let
           "--database-path ${cfg.databasePath}"
           "--socket-path ${cfg.socketPath}"
           "--topology ${cfg.topology}"
-          "--host-addr ${cfg.hostAddr}"
+          (optionalString (cfg.hostAddr != null) "--host-addr ${cfg.hostAddr}")
           "--port ${toString cfg.port}"
-        ] ++ consensusParams.${cfg.consensusProtocol} ++ cfg.extraArgs ++ cfg.rtsArgs;
+        ] ++ consensusParams.${cfg.nodeConfig.Protocol} ++ cfg.extraArgs ++ cfg.rtsArgs;
     in ''
         choice() { i=$1; shift; eval "echo \''${$((i + 1))}"; }
         echo "Starting ${exec}: ${concatStringsSep "\"\n   echo \"" cmd}"
@@ -186,18 +186,8 @@ in {
         '';
       };
 
-      consensusProtocol = mkOption {
-        default = "RealPBFT";
-        type = types.enum ["RealPBFT" "TPraos"];
-        description = ''
-          Consensus initially used by the node:
-            - TPraos: Praos consensus algorithm
-            - RealPBFT: Permissive BFT consensus algorithm using the real ledger
-        '';
-      };
-
       hostAddr = mkOption {
-        type = types.str;
+        type = types.nullOr types.str;
         default = "127.0.0.1";
         description = ''
           The host address to bind to

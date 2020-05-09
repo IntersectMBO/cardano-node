@@ -16,7 +16,6 @@ let
   };
   mkNodeScript = envConfig: let
     defaultConfig = {
-      consensusProtocol = "RealPBFT";
       hostAddr = "127.0.0.1";
       port = 3001;
       signingKey = null;
@@ -72,7 +71,6 @@ let
         kesKey
         vrfKey
         operationalCertificate
-        consensusProtocol
         hostAddr
         port
         nodeConfig
