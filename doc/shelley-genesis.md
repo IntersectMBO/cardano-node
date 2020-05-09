@@ -92,7 +92,7 @@ cardano-cli shelley genesis key-gen-genesis \
 
 You can look at these files, they are semi-readable
 ```
-$ cat example/genesis1.vkey 
+$ cat example/genesis1.vkey
 type: Genesis verification key
 title: Genesis key
 cbor-hex:
@@ -192,26 +192,53 @@ Here is a starting template. We will mostly use these defaults for this demo.
 The meaning of all the ones we do not edit here will be covered elsewhere.
 ```
 {
-   "StartTime":"1970-01-01T00:00:00Z",
-   "NetworkMagic":42,
-   "ProtocolMagicId":42,
+   "startTime":"1970-01-01T00:00:00Z",
+   "networkMagic":42,
+   "protocolMagicId":42,
 
-   "SlotLength":1,
-   "ActiveSlotsCoeff": 5.0e-2,
-   "DecentralisationParam":1,
-   "SecurityParam":2160,
-   "EpochLength":21600,
-   "SlotsPerKESPeriod":86400,
-   "MaxKESEvolutions":90,
-   "UpdateQuorum":5,
+   "slotLength":1,
+   "activeSlotsCoeff": 5.0e-2,
+   "decentralisationParam":1,
+   "securityParam":2160,
+   "epochLength":21600,
+   "slotsPerKESPeriod":86400,
+   "maxKESEvolutions":90,
+   "updateQuorum":5,
 
-   "MaxMajorPV":1000,
-   "MaxBodySize":16384,
-   "MaxHeaderSize":1400,
+   "maxMajorPV":1000,
+   "maxBodySize":16384,
+   "maxHeaderSize":1400,
 
-   "GenDelegs":{},
-   "InitialFunds":{},
-   "MaxLovelaceSupply":0
+   "genDelegs":{},
+   "initialFunds":{},
+   "maxLovelaceSupply":0,
+
+   "protocolParams": {
+        "a0": 0,
+        "decentralisationParam": 0.99,
+        "eMax": 0,
+        "extraEntropy": {
+            "tag": "NeutralNonce"
+        },
+        "keyDecayRate": 0,
+        "keyDeposit": 0,
+        "keyMinRefund": 0,
+        "maxBlockBodySize": 2097152,
+        "maxBlockHeaderSize": 8192,
+        "maxTxSize": 2048,
+        "minFeeA": 0,
+        "minFeeB": 0,
+        "nOpt": 100,
+        "poolDecayRate": 0,
+        "poolDeposit": 0,
+        "poolMinRefund": 0,
+        "protocolVersion": {
+            "major": 0,
+            "minor": 0
+        },
+        "rho": 0,
+        "tau": 0
+    }
 }
 ```
 We will fill in the:
@@ -236,7 +263,7 @@ Available options:
 Let's do that for our genesis key and genesis delegate key
 ```
 $ cardano-cli shelley genesis key-hash \
-  --verification-key-file example/genesis-keys/genesis1.vkey 
+  --verification-key-file example/genesis-keys/genesis1.vkey
 a4d927a8e50c7a51e0f7d41a75057073cd2fc49bfc87a44891a8a9f80800cd8a
 
 $ cardano-cli shelley genesis key-hash \
@@ -245,7 +272,7 @@ b2ee836b2b92fd3dd5e4228c943d8854e673c0510983956ce4f4ea7afcd9f761
 ```
 So these are the hashes we'll copy into the `GenDelegs`
 ```
-  "GenDelegs": {
+  "genDelegs": {
     "a4d927a8e50c7a51e0f7d41a75057073cd2fc49bfc87a44891a8a9f80800cd8a":
       "b2ee836b2b92fd3dd5e4228c943d8854e673c0510983956ce4f4ea7afcd9f761"
   },
@@ -265,14 +292,14 @@ Available options:
 So lets do that for the UTxO key
 ```
 $ cardano-cli shelley genesis initial-addr \
-  --verification-key-file example/utxo-keys/utxo1.vkey 
+  --verification-key-file example/utxo-keys/utxo1.vkey
 820658207c3c942eaa39dd0aec74415312cf80dfc92b34fa1d0e1c2fd2499ee105219305
 ```
 We can copy that into the `InitialFunds`
 ```
-  "InitialFunds": {
+  "initialFunds": {
     "820658207c3c942eaa39dd0aec74415312cf80dfc92b34fa1d0e1c2fd2499ee105219305":
-      1000000,
+      1000000
   }
 ```
 This means we'll start with 1000000 lovelace in a special genesis UTxO at that
@@ -289,34 +316,61 @@ otherwise the system would start having missed a very large number of slots.
 Here's our final example
 ```
 {
-   "StartTime":"2020-05-07T00:00:00Z",
-   "NetworkMagic":42,
-   "ProtocolMagicId":42,
+   "startTime":"2020-05-07T00:00:00Z",
+   "networkMagic":42,
+   "protocolMagicId":42,
 
-   "SlotLength":1,
-   "ActiveSlotsCoeff": 5.0e-2,
-   "DecentralisationParam":1,
-   "SecurityParam":2160,
-   "EpochLength":21600,
-   "SlotsPerKESPeriod":86400,
-   "MaxKESEvolutions":90,
-   "UpdateQuorum":5,
+   "slotLength":1,
+   "activeSlotsCoeff": 5.0e-2,
+   "decentralisationParam":1,
+   "securityParam":2160,
+   "epochLength":21600,
+   "slotsPerKESPeriod":86400,
+   "maxKESEvolutions":90,
+   "updateQuorum":5,
 
-   "MaxMajorPV":1000,
-   "MaxBodySize":16384,
-   "MaxHeaderSize":1400,
+   "maxMajorPV":1000,
+   "maxBodySize":16384,
+   "maxHeaderSize":1400,
 
-    "GenDelegs": {
+    "genDelegs": {
       "a4d927a8e50c7a51e0f7d41a75057073cd2fc49bfc87a44891a8a9f80800cd8a":
         "b2ee836b2b92fd3dd5e4228c943d8854e673c0510983956ce4f4ea7afcd9f761"
     },
 
-    "InitialFunds": {
+    "initialFunds": {
       "820658207c3c942eaa39dd0aec74415312cf80dfc92b34fa1d0e1c2fd2499ee105219305":
-        1000000,
+        1000000
     }
 
-   "MaxLovelaceSupply":1000000
+   "maxLovelaceSupply":1000000,
+
+   "protocolParams": {
+        "a0": 0,
+        "decentralisationParam": 0.99,
+        "eMax": 0,
+        "extraEntropy": {
+            "tag": "NeutralNonce"
+        },
+        "keyDecayRate": 0,
+        "keyDeposit": 0,
+        "keyMinRefund": 0,
+        "maxBlockBodySize": 2097152,
+        "maxBlockHeaderSize": 8192,
+        "maxTxSize": 2048,
+        "minFeeA": 0,
+        "minFeeB": 0,
+        "nOpt": 100,
+        "poolDecayRate": 0,
+        "poolDeposit": 0,
+        "poolMinRefund": 0,
+        "protocolVersion": {
+            "major": 0,
+            "minor": 0
+        },
+        "rho": 0,
+        "tau": 0
+    }
 }
 ```
 
@@ -332,7 +386,7 @@ If you jumped straight in here, skipping the manual method, do go back and
 review that section covers the concepts about what these keys are all for.
 
 Also remember: **when doing it for real you cannot use the automagic method.**
-It is not secure to  because it makes all the keys in one place.
+It is not secure to because it makes all the keys in one place.
 When doing it for real the people involved have to follow the manual method
 where keys are generated separately on secure offline machines.
 
@@ -358,9 +412,9 @@ The automagic method uses the last one, `create-genesis`, and all the others
 are for the manual method.
 ```
 $ cardano-cli shelley genesis create-genesis
-Usage: cardano-cli shelley genesis create-genesis --genesis-dir DIR 
-                                                  [--gen-genesis-keys INT] 
-                                                  [--gen-utxo-keys INT] 
+Usage: cardano-cli shelley genesis create-genesis --genesis-dir DIR
+                                                  [--gen-genesis-keys INT]
+                                                  [--gen-utxo-keys INT]
                                                   [--start-time UTC_TIME]
                                                   --supply LOVELACE
   Create a Shelley genesis file from a genesis template and
@@ -405,30 +459,58 @@ keys for you. The optional `--gen-genesis-keys` and `--gen-utxo-keys` flags
 can be used to specify the number of keys of each kind to generate.
 
 We still need a genesis template to start from. No there is no command (yet) to
-make the template. That would be nice. Here's one I made earlier.
+make the template. That would be nice. Here's one I made earlier but you can also
+access an example [here](../cardano-cli/test/cli/genesis-create/data/genesis.spec.json).
+--TODO: NB I had to manually create the genesis.spec.json file and place it in the example dir
 ```
 $ cat example/genesis.spec.json
 {
-   "StartTime":"1970-01-01T00:00:00Z",
-   "NetworkMagic":42,
-   "ProtocolMagicId":42,
+   "startTime":"1970-01-01T00:00:00Z",
+   "networkMagic":42,
+   "protocolMagicId":42,
 
-   "SlotLength":1,
-   "ActiveSlotsCoeff": 5.0e-2,
-   "DecentralisationParam":1,
-   "SecurityParam":2160,
-   "EpochLength":21600,
-   "SlotsPerKESPeriod":86400,
-   "MaxKESEvolutions":90,
-   "UpdateQuorum":5,
+   "slotLength":1,
+   "activeSlotsCoeff": 5.0e-2,
+   "decentralisationParam":1,
+   "securityParam":2160,
+   "epochLength":21600,
+   "slotsPerKESPeriod":86400,
+   "maxKESEvolutions":90,
+   "updateQuorum":5,
 
-   "MaxMajorPV":1000,
-   "MaxBodySize":16384,
-   "MaxHeaderSize":1400,
+   "maxMajorPV":1000,
+   "maxBodySize":16384,
+   "maxHeaderSize":1400,
 
-   "GenDelegs":{},
-   "InitialFunds":{},
-   "MaxLovelaceSupply":0
+   "genDelegs":{},
+   "initialFunds":{},
+   "maxLovelaceSupply":0
+   "protocolParams": {
+          "a0": 0,
+          "decentralisationParam": 0.99,
+          "eMax": 0,
+          "extraEntropy": {
+              "tag": "NeutralNonce"
+          },
+          "keyDecayRate": 0,
+          "keyDeposit": 0,
+          "keyMinRefund": 0,
+          "maxBlockBodySize": 2097152,
+          "maxBlockHeaderSize": 8192,
+          "maxTxSize": 2048,
+          "minFeeA": 0,
+          "minFeeB": 0,
+          "nOpt": 100,
+          "poolDecayRate": 0,
+          "poolDeposit": 0,
+          "poolMinRefund": 0,
+          "protocolVersion": {
+              "major": 0,
+              "minor": 0
+          },
+          "rho": 0,
+          "tau": 0
+      }
 }
 ```
 The `create-genesis` will fill in the:
@@ -451,13 +533,13 @@ Yes [ONE MILLION LOVELACE](https://www.youtube.com/watch?v=l91ISfcuzDw).
 
 Lets have a look at the result
 ```
-$ cat example/genesis.json 
+$ cat example/genesis.json
 {
-    "DecentralisationParam": 1,
-    "ActiveSlotsCoeff": 5.0e-2,
-    "ProtocolMagicId": 42,
-    "StartTime": "2020-05-07T01:46:02.884394538Z",
-    "GenDelegs": {
+    "decentralisationParam": 1,
+    "activeSlotsCoeff": 5.0e-2,
+    "protocolMagicId": 42,
+    "startTime": "2020-05-07T01:46:02.884394538Z",
+    "genDelegs": {
         "40a5d0f1db7ec1bcf92758f1909677576b4edf7164c94602bee0f7848495c615":
           "6e8f60c82449be3d6c17415d784881476d81ed99d88108526e5a32c8d087bdc8",
         "ed58a13ab0dd88df401c6a8db4bb0fe166c6f80b20f80905d31d0226883e4fcb":
@@ -465,21 +547,47 @@ $ cat example/genesis.json
         "60262fd1a9c700730c93a8cc855d840f8a9795d956e8ee1f6980657efa172fbb":
           "6e8f60c82449be3d6c17415d784881476d81ed99d88108526e5a32c8d087bdc8"
     },
-    "UpdateQuorum": 5,
-    "MaxHeaderSize": 1400,
-    "MaxMajorPV": 1000,
-    "MaxBodySize": 16384,
-    "MaxLovelaceSupply": 1000000,
-    "InitialFunds": {
+    "updateQuorum": 5,
+    "maxHeaderSize": 1400,
+    "maxMajorPV": 1000,
+    "maxBodySize": 16384,
+    "maxLovelaceSupply": 1000000,
+    "initialFunds": {
         "820658209b9d64a0bb979d2067757403262353f383809e43f48fe3d391b5ce6591e11278": 500000,
         "82065820918195bc60cb5b91f36cc8ce97ce7d657f0e38a12eacaf135a6be9501210df6a": 500000
     },
-    "NetworkMagic": 42,
-    "EpochLength": 21600,
-    "SlotLength": 1,
-    "SlotsPerKESPeriod": 86400,
-    "MaxKESEvolutions": 90,
-    "SecurityParam": 2160
+    "networkMagic": 42,
+    "epochLength": 21600,
+    "slotLength": 1,
+    "slotsPerKESPeriod": 86400,
+    "maxKESEvolutions": 90,
+    "securityParam": 2160,
+    "protocolParams": {
+           "a0": 0,
+           "decentralisationParam": 0.99,
+           "eMax": 0,
+           "extraEntropy": {
+               "tag": "NeutralNonce"
+           },
+           "keyDecayRate": 0,
+           "keyDeposit": 0,
+           "keyMinRefund": 0,
+           "maxBlockBodySize": 2097152,
+           "maxBlockHeaderSize": 8192,
+           "maxTxSize": 2048,
+           "minFeeA": 0,
+           "minFeeB": 0,
+           "nOpt": 100,
+           "poolDecayRate": 0,
+           "poolDeposit": 0,
+           "poolMinRefund": 0,
+           "protocolVersion": {
+               "major": 0,
+               "minor": 0
+           },
+           "rho": 0,
+           "tau": 0
+       }
 }
 ```
 And the files it made
@@ -506,7 +614,42 @@ if you want.
 
 ## Creating node operational keys
 
-TODO
+In order to run a shelley node we need to generate:
+
+- KES Keys
+- VRF Keys
+- An operational certificate
+
+#### KES Keys
+
+```
+mkdir example/KES
+cabal exec cardano-cli -- shelley node key-gen-KES \
+                        --verification-key-file example/KES/verkey \
+                        --signing-key-file example/KES/signkey
+```
+
+#### VRF Keys
+
+```
+mkdir example/VRF
+cabal exec cardano-cli -- shelley node key-gen-VRF \
+                        --verification-key-file example/VRF/verkey \
+                        --signing-key-file example/VRF/signkey
+```
+
+#### Operational Certificate
+
+```
+cabal exec cardano-cli -- shelley node issue-op-cert \
+                        --hot-kes-verification-key-file example/KES/verkey \
+                        --cold-signing-key-file example/delegate-keys/delegate1.skey \
+                        --operational-certificate-issue-counter example/delegate-keys/delegate1.counter \
+                        --kes-period 0 \
+                        --out-file example/opcert
+```
+
+
 
 ## Issuing node operational certificates
 
@@ -514,5 +657,103 @@ TODO
 
 ## Starting a node
 
-TODO
+Now that we have generated our genesis.json, operational certificate, VRF signing key and KES signing key, we can run a node via:
+--TODO: What about creation of topology?
+--TODO: Probably need to add a default config.yaml for a shelley node
+--TODO: I needed to manuall update my time
+```
+cabal exec cardano-node -- run \
+                         --topology configuration/defaults/shelley/topology.json \
+                         --shelley-kes-key example/KES/signkey \
+                         --shelley-operational-certificate example/opcert \
+                         --shelley-vrf-key example/VRF/signkey \
+                         --config configuration/defaults/shelley/config.yaml \
+                         --database-path example/db \
+                         --port 3001 \
+                         --socket-path example/socket/shelley-node
+```
 
+## Submitting a transaction
+
+Once you have a node up and running, you can submit transactions to it. You will need to:
+
+  1. Query the genesis UTxO
+  2. Create an address
+  3. Build a transaction
+  4. Sign the transaction
+  5. Submit the transaction
+
+#
+
+1. Querying the genesis UTxO. This will display the addresses and their funds that you defined in your genesis.json. It will allow you to get the transaction ids and their indexes to build the transaction.
+
+-- TODO: I had to create the socket file manually at this point and restart the node
+
+```
+cabal exec cardano-cli -- shelley query filtered-utxo \
+                        --address ${initialfundaddress} \
+                        --config configuration/defaults/shelley/config.yaml \
+                        --socket-path example/socket/shelley-node \
+                        --out-file /dev/null
+```
+You will get something like the following:
+
+```
+Filtered UTxO: UTxO (fromList [(TxIn (TxId {_TxId = 97681ef59a9d76c6db9247e7897d9e35c6f1c9d244ac233c0f30d02e2906549f}) 0,TxOut (Addr (KeyHashObj (KeyHash 97681ef59a9d76c6db9247e7897d9e35c6f1c9d244ac233c0f30d02e2906549f)) StakeRefNull) (Coin 1000000))])
+```
+
+
+2. You can send your ADA to another initial fund address or you can generate a new address to send ADA to.
+
+- Generate a keypair for the new output address
+
+```
+mkdir example/new-address
+cabal run cardano-cli:cardano-cli -- shelley address key-gen \
+                                   --verification-key-file example/new-address/verkey \
+                                   --signing-key-file example/new-address/signkey
+```
+
+- Build the address
+
+```
+cabal run cardano-cli:cardano-cli -- shelley address build \
+                                   --verification-key-file example/new-address/verkey
+```
+
+3. Build the transaction.
+- Be sure to add the correct index to the end of the txid using '#'.
+- Be sure to add the amount you like to spend at the end of the output using '+'.
+- Make sure the inputs = outputs + fee.
+
+```
+ cabal run cardano-cli:cardano-cli -- shelley transaction build-raw \
+                                    --tx-in 97681ef59a9d76c6db9247e7897d9e35c6f1c9d244ac233c0f30d02e2906549f#0 \
+                                    --tx-out 82065820debd78e08f0aa77ba6e30047f45e8335d908735f7dd73c808f56c27dc42a82a2+900000 \
+                                    --ttl 1000 \
+                                    --fee 100000 \
+                                    --tx-body-file example/shelley-tx-body
+```
+
+4. Signing the transaction.
+
+- You must sign the transaction with the signing key the tx input you are spending belongs to.
+-- TODO: Would be nice to easily determine which keys correspond to which initial fund addresses if
+-- users want to send to other initial funding addresses
+```
+cabal run cardano-cli:cardano-cli -- shelley transaction sign \
+                                   --tx-body-file example/shelley-tx-body \
+                                   --signing-key-file example/utxo-keys/utxo1.skey \
+                                   --tx-file example/shelley-tx-file
+```
+
+5. Submitting the transaction
+
+Now you can submit the transaction to the node! You can check the logs and if you've done everything right you should see...
+
+```
+cabal run cardano-cli:cardano-cli -- shelley transaction submit \
+                                   --config configuration/defaults/shelley/config.yaml \
+                                   --socket-path example/socket/shelley-node \
+                                   --tx-filepath example/shelley-tx-file
+```
