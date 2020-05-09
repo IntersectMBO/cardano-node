@@ -68,6 +68,8 @@ module Cardano.Api
   , Certificate(..)
   , shelleyDeregisterStakingAddress
   , shelleyDelegateStake
+  , shelleyGenesisDelegateStake
+  , shelleyMIRCertificate
   , shelleyRegisterStakingAddress
   , shelleyRegisterStakePool
   , shelleyRetireStakePool
@@ -209,6 +211,22 @@ mkShelleyStakingCredential :: ShelleyVerificationKeyHashStaking -> ShelleyCreden
 mkShelleyStakingCredential vKey =
   Shelley.KeyHashObj vKey
 
+-- | Delegate your genesis key's stake
+shelleyGenesisDelegateStake
+  :: ShelleyGenesisVerificationHash
+  -> ShelleyGenesisDelegateVerKeyHash
+  -> Certificate
+shelleyGenesisDelegateStake genDelegatorHash genDelegateeHash = do
+  ShelleyGenesisDelegationCertificate . Shelley.DCertGenesis $ Shelley.GenesisDelegCert genDelegatorHash genDelegateeHash
+
+-- | Move instantaneous rewards.
+shelleyMIRCertificate
+  :: ShelleyMIRMap
+  -> Certificate
+shelleyMIRCertificate mirMap =
+  ShelleyMIRCertificate . Shelley.DCertMir $ Shelley.MIRCert mirMap
+
+
 -- Given key information (public key, and other network parameters), generate an Address.
 -- Originally: mkAddress :: Network -> VerificationKey -> VerificationKeyInfo -> Address
 -- but since VerificationKeyInfo already has the VerificationKey and Network, it can be simplified.
@@ -300,7 +318,8 @@ buildShelleyTransaction txins txouts ttl fee certs = do
    certDiscrim :: Certificate -> ShelleyCertificate
    certDiscrim (ShelleyDelegationCertificate delegCert) = delegCert
    certDiscrim (ShelleyStakePoolCertificate sPoolCert) = sPoolCert
-
+   certDiscrim (ShelleyGenesisDelegationCertificate sGenDelegCert) = sGenDelegCert
+   certDiscrim (ShelleyMIRCertificate mirCert) = mirCert
 {-
 inputs outputs, attributes:
 ATxAux { Tx TxWiness Annotation }

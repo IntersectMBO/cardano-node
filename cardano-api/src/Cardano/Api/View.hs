@@ -80,6 +80,9 @@ renderCertificateView cert =
   case cert of
     ShelleyDelegationCertificate {} -> renderTextView $ TextView "DelegationCertificateShelley" "Free form text" cbor
     ShelleyStakePoolCertificate {} -> renderTextView $ TextView "StakePoolCertificateShelley" "Free form text" cbor
+    ShelleyGenesisDelegationCertificate {} -> renderTextView $ TextView "GenesisDelegationCertificateShelley" "Free form text" cbor
+    ShelleyMIRCertificate {} -> renderTextView $ TextView "MIRCertificateShelley" "Free form text" cbor
+
   where
     cbor :: ByteString
     cbor = certificateToCBOR cert
