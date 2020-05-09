@@ -1,23 +1,27 @@
 module Cardano.Api.View
   ( parseAddressView
+  , parseCertificateView
   , parseSigningKeyView
   , parseVerificationKeyView
   , parseTxSignedView
   , parseTxUnsignedView
 
   , readAddress
+  , readCertificate
   , readSigningKey
   , readVerificationKey
   , readTxSigned
   , readTxUnsigned
 
   , renderAddressView
+  , renderCertificateView
   , renderSigningKeyView
   , renderVerificationKeyView
   , renderTxSignedView
   , renderTxUnsignedView
 
   , writeAddress
+  , writeCertificate
   , writeSigningKey
   , writeVerificationKey
   , writeTxSigned
@@ -41,6 +45,10 @@ import qualified Data.ByteString.Char8 as BS
 parseAddressView :: ByteString -> Either ApiError Address
 parseAddressView bs =
   addressFromCBOR . tvRawCBOR =<< first ApiTextView (parseTextView bs)
+
+parseCertificateView :: ByteString -> Either ApiError Certificate
+parseCertificateView bs =
+  certificateFromCBOR . tvRawCBOR =<< first ApiTextView (parseTextView bs)
 
 parseSigningKeyView :: ByteString -> Either ApiError SigningKey
 parseSigningKeyView bs =
@@ -66,6 +74,15 @@ renderAddressView addr =
   where
     cbor :: ByteString
     cbor = addressToCBOR addr
+
+renderCertificateView :: Certificate -> ByteString
+renderCertificateView cert =
+  case cert of
+    ShelleyDelegationCertificate {} -> renderTextView $ TextView "DelegationCertificateShelley" "Free form text" cbor
+    ShelleyStakePoolCertificate {} -> renderTextView $ TextView "StakePoolCertificateShelley" "Free form text" cbor
+  where
+    cbor :: ByteString
+    cbor = certificateToCBOR cert
 
 renderSigningKeyView :: SigningKey -> ByteString
 renderSigningKeyView kp =
@@ -112,6 +129,12 @@ readAddress path =
     bs <- handleIOExceptT (ApiErrorIO path) $ BS.readFile path
     hoistEither $ parseAddressView bs
 
+readCertificate :: FilePath -> IO (Either ApiError Certificate)
+readCertificate path =
+  runExceptT $ do
+    bs <- handleIOExceptT (ApiErrorIO path) $ BS.readFile path
+    hoistEither $ parseCertificateView bs
+
 readSigningKey :: FilePath -> IO (Either ApiError SigningKey)
 readSigningKey path =
   runExceptT $ do
@@ -140,6 +163,11 @@ writeAddress :: FilePath -> Address -> IO (Either ApiError ())
 writeAddress path kp =
   runExceptT .
     handleIOExceptT (ApiErrorIO path) $ BS.writeFile path (renderAddressView kp)
+
+writeCertificate :: FilePath -> Certificate -> IO (Either ApiError ())
+writeCertificate path cert =
+  runExceptT .
+    handleIOExceptT (ApiErrorIO path) $ BS.writeFile path (renderCertificateView cert)
 
 writeSigningKey :: FilePath -> SigningKey -> IO (Either ApiError ())
 writeSigningKey path kp =

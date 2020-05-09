@@ -33,8 +33,8 @@ import           Cardano.Common.Parsers
 import qualified Cardano.Crypto as Byron
 import           Cardano.Slotting.Slot (EpochNo (..))
 
-import           Cardano.Config.Types (CLISocketPath, ConfigYamlFilePath (..), NodeAddress,
-                     SigningKeyFile(..), SocketPath(..))
+import           Cardano.Config.Types (CertificateFile (..), CLISocketPath,
+                     ConfigYamlFilePath (..), NodeAddress, SigningKeyFile(..), SocketPath(..))
 import           Cardano.Config.Shelley.OCert (KESPeriod(..))
 import           Cardano.CLI.Key (VerificationKeyFile(..))
 
@@ -86,7 +86,8 @@ data StakeAddressCmd
 
 
 data TransactionCmd
-  = TxBuildRaw [TxIn] [TxOut] SlotNo Lovelace TxBodyFile
+
+  = TxBuildRaw [TxIn] [TxOut] SlotNo Lovelace TxBodyFile [CertificateFile]
   | TxSign TxBodyFile [SigningKeyFile] (Maybe Byron.ProtocolMagicId) TxFile
   | TxWitness       -- { transaction :: Transaction, key :: PrivKeyFile, nodeAddr :: NodeAddress }
   | TxSignWitness   -- { transaction :: Transaction, witnesses :: [Witness], nodeAddr :: NodeAddress }
@@ -320,6 +321,7 @@ pTransaction =
                                    <*> pTxTTL
                                    <*> pTxFee
                                    <*> pTxBodyFile Output
+                                   <*> many pCertificate
 
     pTransactionSign  :: Parser TransactionCmd
     pTransactionSign = TxSign <$> pTxBodyFile Input
@@ -632,6 +634,17 @@ pGenesisCmd =
 --
 -- Shelley CLI flag parsers
 --
+
+pCertificate :: Parser CertificateFile
+pCertificate =
+ CertificateFile <$>
+   Opt.strOption
+     (  Opt.long "certificate"
+     <> Opt.metavar "FILEPATH"
+     <> Opt.help "Filepath of the certificate. This encompasses all \
+                 \types of certificates (stake pool certificates, \
+                 \stake key certificates etc)"
+     )
 
 pColdSigningKeyFile :: Parser SigningKeyFile
 pColdSigningKeyFile =

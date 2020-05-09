@@ -16,6 +16,7 @@ module Cardano.Api.Types
   , Network (..)
   , SigningKey (..)
   , VerificationKey (..)
+  , Certificate (..)
   , TxSigned (..)
   , TxUnsigned (..)
   , TxWitness (..)
@@ -42,9 +43,25 @@ module Cardano.Api.Types
   , toByronLovelace
 
     -- ** Shelley
+  , ShelleyCertificate
+  , ShelleyCoin
+  , ShelleyStakePoolMargin
+  , ShelleyStakePoolCertificate
+  , ShelleyStakePoolMetaData
+  , ShelleyStakePoolOwners
+  , ShelleyStakePoolRelay
   , ShelleyVerificationKey
+  , ShelleyVerificationKeyHashStaking
+  , ShelleyVerificationKeyHashStakePool
+  , ShelleyVerificationKeyStakePool
+  , ShelleyVerificationKeyStaking
   , ShelleySigningKey
+  , ShelleyVRFVerificationKeyHash
   , ShelleyAddress
+  , ShelleyCredentialStaking
+  , ShelleyCredentialStakePool
+  , ShelleyDelegationCertificate
+  , ShelleyRewardAccount
   , ShelleyTxBody
   , ShelleyTx
   , ShelleyTxId
@@ -71,7 +88,10 @@ import qualified Cardano.Chain.Common as Byron
 import qualified Cardano.Chain.UTxO   as Byron
 import qualified Cardano.Crypto       as Byron
 
+--import qualified Cardano.Crypto.Hash                         as HASH
+--import qualified Cardano.Crypto.VRF                          as VRF
 import qualified Ouroboros.Consensus.Shelley.Protocol.Crypto as Shelley
+import qualified Shelley.Spec.Ledger.BaseTypes               as Shelley
 import qualified Shelley.Spec.Ledger.Coin                    as Shelley
 import qualified Shelley.Spec.Ledger.Keys                    as Shelley
 import qualified Shelley.Spec.Ledger.TxData                  as Shelley
@@ -88,15 +108,32 @@ type ByronTx              = Byron.TxAux
 type ByronTxId            = Byron.TxId
 type ByronWitness         = Byron.TxInWitness
 
-type ShelleyVerificationKey = Shelley.VKey Shelley.Payment Shelley.TPraosStandardCrypto
-type ShelleySigningKey      = Shelley.SignKeyDSIGN Shelley.TPraosStandardCrypto
-type ShelleyAddress         = Shelley.Addr   Shelley.TPraosStandardCrypto
-type ShelleyTxIn            = Shelley.TxIn   Shelley.TPraosStandardCrypto
-type ShelleyTxOut           = Shelley.TxOut  Shelley.TPraosStandardCrypto
-type ShelleyTxBody          = Shelley.TxBody Shelley.TPraosStandardCrypto
-type ShelleyTx              = Shelley.Tx     Shelley.TPraosStandardCrypto
-type ShelleyTxId            = Shelley.TxId   Shelley.TPraosStandardCrypto
-type ShelleyWitnessVKey     = Shelley.WitVKey Shelley.TPraosStandardCrypto
+type ShelleyCertificate                  = Shelley.DCert Shelley.TPraosStandardCrypto
+type ShelleyCoin                         = Shelley.Coin
+type ShelleyCredentialStaking            = Shelley.Credential Shelley.Staking Shelley.TPraosStandardCrypto
+type ShelleyCredentialStakePool          = Shelley.Credential Shelley.StakePool Shelley.TPraosStandardCrypto
+type ShelleyVerificationKey              = Shelley.VKey Shelley.Payment Shelley.TPraosStandardCrypto
+type ShelleyVerificationKeyStaking       = Shelley.VKey Shelley.Staking Shelley.TPraosStandardCrypto
+type ShelleyVerificationKeyStakePool     = Shelley.VKey Shelley.StakePool Shelley.TPraosStandardCrypto
+type ShelleyVerificationKeyHashStaking   = Shelley.KeyHash Shelley.Staking Shelley.TPraosStandardCrypto
+type ShelleyVerificationKeyHashStakePool = Shelley.KeyHash Shelley.StakePool Shelley.TPraosStandardCrypto
+type ShelleyVRFVerificationKeyHash       = Shelley.Hash   Shelley.TPraosStandardCrypto (Shelley.VerKeyVRF Shelley.TPraosStandardCrypto)
+type ShelleySigningKey                   = Shelley.SignKeyDSIGN Shelley.TPraosStandardCrypto
+type ShelleyAddress                      = Shelley.Addr   Shelley.TPraosStandardCrypto
+type ShelleyTxIn                         = Shelley.TxIn   Shelley.TPraosStandardCrypto
+type ShelleyTxOut                        = Shelley.TxOut  Shelley.TPraosStandardCrypto
+type ShelleyTxBody                       = Shelley.TxBody Shelley.TPraosStandardCrypto
+type ShelleyTx                           = Shelley.Tx     Shelley.TPraosStandardCrypto
+type ShelleyTxId                         = Shelley.TxId   Shelley.TPraosStandardCrypto
+type ShelleyWitnessVKey                  = Shelley.WitVKey Shelley.TPraosStandardCrypto
+type ShelleyDelegationCertificate        = Shelley.DCert      Shelley.TPraosStandardCrypto
+
+type ShelleyStakePoolCertificate         = Shelley.PoolCert Shelley.TPraosStandardCrypto
+type ShelleyStakePoolOwners              = Set (Shelley.KeyHash Shelley.Staking Shelley.TPraosStandardCrypto)
+type ShelleyStakePoolMargin              = Shelley.UnitInterval
+type ShelleyStakePoolMetaData            = Shelley.PoolMetaData
+type ShelleyStakePoolRelay               = Shelley.StakePoolRelay
+type ShelleyRewardAccount                = Shelley.RewardAcnt     Shelley.TPraosStandardCrypto
 
 -- The 'Address' data type in 'cardano-sl' is a design train wreck.
 -- We need something that is compatible and discard as much of the insanity as possible.
@@ -105,6 +142,12 @@ data Address
   | AddressShelley !ShelleyAddress
   deriving (Eq, Generic , NFData, Show)  -- Byron.Address' needs NFData
   deriving NoUnexpectedThunks via UseIsNormalForm Address
+
+
+data Certificate
+  = ShelleyDelegationCertificate !ShelleyCertificate
+  | ShelleyStakePoolCertificate !ShelleyCertificate
+  deriving (Eq, Show)
 
 -- | The combination of a verification key and a signing key.
 --

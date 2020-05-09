@@ -283,6 +283,7 @@ data CliError
   | ReadCBORFileFailure !FilePath !Text
   | ReadSigningKeyFailure !FilePath !Text
   | ReadVerificationKeyFailure !FilePath !Text
+  | ShelleyCertReadError !ApiError
   | TxDeserialisationFailed !FilePath !DecoderError
   -- TODO:  sadly, VerificationKeyParseError isn't exported from Cardano.Crypto.Signing/*
   | SigningKeyDeserialisationFailed !FilePath !DeserialiseFailure
@@ -370,6 +371,8 @@ instance Show CliError where
   show (ReadVerificationKeyFailure fp expt)
     = "Exception encountered while trying to read the verification key file at: " <> fp
        <> "Exception: " <> T.unpack expt
+  show (ShelleyCertReadError err)
+    = "Shelley certificate read error: " <> show err
   show (SigningKeyDeserialisationFailed fp err)
     = "Signing key '" <> fp <> "' read failure: "<> show err
   show (SpendGenesisUTxOError err)
