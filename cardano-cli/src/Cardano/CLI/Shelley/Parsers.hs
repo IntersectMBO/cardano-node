@@ -28,12 +28,13 @@ module Cardano.CLI.Shelley.Parsers
 import           Cardano.Prelude hiding (option)
 
 import           Cardano.Api
-import           Cardano.Common.Parsers (parseConfigFile, parseCLISocketPath, parseNodeAddress)
+import           Cardano.Common.Parsers
+                   (parseConfigFile, parseCLISocketPath, parseNodeAddress)
 import qualified Cardano.Crypto as Byron
 import           Cardano.Slotting.Slot (EpochNo (..))
 
 import           Cardano.Config.Types (CLISocketPath, ConfigYamlFilePath (..), NodeAddress,
-                     SigningKeyFile(..))
+                     SigningKeyFile(..), SocketPath(..))
 import           Cardano.Config.Shelley.OCert (KESPeriod(..))
 import           Cardano.CLI.Key (VerificationKeyFile(..))
 
@@ -90,7 +91,7 @@ data TransactionCmd
   | TxWitness       -- { transaction :: Transaction, key :: PrivKeyFile, nodeAddr :: NodeAddress }
   | TxSignWitness   -- { transaction :: Transaction, witnesses :: [Witness], nodeAddr :: NodeAddress }
   | TxCheck         -- { transaction :: Transaction, nodeAddr :: NodeAddress }
-  | TxSubmit        -- { transaction :: Transaction, nodeAddr :: NodeAddress }
+  | TxSubmit FilePath ConfigYamlFilePath SocketPath
   | TxInfo          -- { transaction :: Transaction, nodeAddr :: NodeAddress }
   deriving (Eq, Show)
 
@@ -336,7 +337,9 @@ pTransaction =
     pTransactionCheck = pure TxCheck
 
     pTransactionSubmit  :: Parser TransactionCmd
-    pTransactionSubmit = pure TxSubmit
+    pTransactionSubmit = TxSubmit <$> pTxSubmitFile
+                                  <*> (ConfigYamlFilePath <$> parseConfigFile)
+                                  <*> pSocketPath
 
     pTransactionInfo  :: Parser TransactionCmd
     pTransactionInfo = pure TxInfo
@@ -755,6 +758,13 @@ pMaybeProtocolMagicId =
       <> Opt.metavar "INT"
       <> Opt.help "The network protocol id [Defaults to the one for Mainnet]."
       )
+pTxSubmitFile :: Parser FilePath
+pTxSubmitFile =
+  Opt.strOption
+    (  Opt.long "tx-filepath"
+    <> Opt.metavar "FILEPATH"
+    <> Opt.help "Filepath of the transaction you intend to submit."
+    )
 
 pTxIn :: Parser TxIn
 pTxIn =
@@ -788,6 +798,15 @@ pTxFee =
       (  Opt.long "fee"
       <> Opt.metavar "LOVELACE"
       <> Opt.help "The fee amount in Lovelace."
+      )
+
+pSocketPath :: Parser SocketPath
+pSocketPath =
+  SocketPath <$>
+    Opt.strOption
+      (  Opt.long "socket-path"
+      <> Opt.metavar "FILEPATH"
+      <> Opt.help "Socket filepath."
       )
 
 pTxBodyFile :: FileDirection -> Parser TxBodyFile

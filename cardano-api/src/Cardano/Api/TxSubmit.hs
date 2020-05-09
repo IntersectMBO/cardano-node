@@ -14,6 +14,7 @@ module Cardano.Api.TxSubmit
   ( TxSubmitStatus (..)
   , renderTxSubmitStatus
   , submitTransaction
+  , prepareTxShelley
   ) where
 
 import           Cardano.Prelude hiding (Nat, atomically, option, (%))
@@ -47,6 +48,8 @@ import           Ouroboros.Consensus.Byron.Ledger (ByronBlock (..), GenTx)
 import qualified Ouroboros.Consensus.Byron.Ledger as Byron
 import           Ouroboros.Consensus.Cardano (Protocol (..), protocolInfo)
 import           Ouroboros.Consensus.Config (TopLevelConfig (..), configCodec)
+import           Ouroboros.Consensus.Shelley.Ledger (ShelleyBlock)
+import           Ouroboros.Consensus.Shelley.Protocol (TPraosStandardCrypto)
 import           Ouroboros.Consensus.Mempool.API (ApplyTxErr)
 import           Ouroboros.Consensus.Network.NodeToClient
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
@@ -56,6 +59,7 @@ import           Ouroboros.Consensus.Node.ErrorPolicy (consensusErrorPolicy)
 
 import           Ouroboros.Consensus.Node.ProtocolInfo (pInfoConfig)
 import           Ouroboros.Consensus.Node.Run (nodeNetworkMagic)
+import           Ouroboros.Consensus.Shelley.Ledger.Mempool (mkShelleyTx)
 import           Ouroboros.Network.Driver.Simple (runPeer)
 import           Ouroboros.Network.Mux (AppType (..) , MuxPeer (..),
                     RunMiniProtocol (..))
@@ -93,6 +97,11 @@ prepareTx txs =
       in Byron.ByronTx (Byron.byronIdTx aTxAux) aTxAux
     TxSignedShelley _tx -> panic "Cardano.Api.TxSubmit.submitTransaction: TxSignedShelley"
 
+prepareTxShelley :: TxSigned -> GenTx (ShelleyBlock TPraosStandardCrypto)
+prepareTxShelley txs =
+  case txs of
+    TxSignedByron _ _ _ _ ->  panic "Cardano.Api.TxSubmit.submitTransaction: Please supply a shelley signed tx."
+    TxSignedShelley tx -> mkShelleyTx tx
 
 runTxSubmitNode :: TxSubmitVar -> Trace IO Text -> Genesis.Config -> SocketPath -> IO ()
 runTxSubmitNode tsv trce gc socket = do

@@ -21,6 +21,7 @@ library
                         Cardano.Api.Error
                         Cardano.Api.LocalStateQuery
                         Cardano.Api.TxSubmit
+                        Cardano.Api.TxSubmitChairman
                         Cardano.Api.TxSubmit.ErrorRender
                         Cardano.Api.TxSubmit.TxSubmitVar
                         Cardano.Api.TxSubmit.Types
