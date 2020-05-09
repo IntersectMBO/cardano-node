@@ -17,10 +17,13 @@ module Cardano.Api
 
     -- * Addresses
   , Address (..)
-  , Network (..)
-  , NetworkMagic (..)
   , byronVerificationKeyAddress
   , shelleyVerificationKeyAddress
+
+    -- ** Network identifiers
+  , Network (..)
+  , NetworkMagic (..)
+  , toNetworkMagic
 
     -- * Transactions
   , TxSigned (..)

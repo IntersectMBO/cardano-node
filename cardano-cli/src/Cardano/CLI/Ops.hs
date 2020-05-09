@@ -52,7 +52,9 @@ import qualified Formatting as F
 import           System.Directory (canonicalizePath, doesPathExist, makeAbsolute)
 import qualified Text.JSON.Canonical as CanonicalJSON
 
-import           Cardano.Api (ApiError, LocalStateQueryError, renderLocalStateQueryError)
+import           Cardano.Api
+                   (ApiError, LocalStateQueryError, renderLocalStateQueryError,
+                    Network(..), toNetworkMagic)
 import           Cardano.Binary
                    (Decoder, DecoderError, fromCBOR)
 import           Cardano.Chain.Block (fromCBORABlockOrBoundary)
@@ -72,14 +74,14 @@ import           Control.Monad.Class.MonadTimer
 import           Control.Monad.Class.MonadThrow
 import           Control.Tracer (nullTracer)
 import           Network.Mux (MuxError)
-import           Ouroboros.Consensus.Block (BlockProtocol)
+import           Ouroboros.Consensus.Block (BlockProtocol, CodecConfig)
 import           Ouroboros.Consensus.Byron.Ledger (ByronBlock)
 import qualified Ouroboros.Consensus.Cardano as Consensus
 import           Ouroboros.Consensus.Network.NodeToClient
                    (Codecs'(..), defaultCodecs)
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
                    (nodeToClientProtocolVersion, supportedNodeToClientVersions)
-import           Ouroboros.Consensus.Config (TopLevelConfig (..), configCodec)
+import           Ouroboros.Consensus.Config (configCodec)
 import           Ouroboros.Consensus.Node.ProtocolInfo (ProtocolInfo(..))
 import           Ouroboros.Consensus.Node.Run
                    (RunNode(..))
@@ -439,16 +441,25 @@ getAndPrintLocalTip
   -> Maybe CLISocketPath
   -> IOManager
   -> IO ()
-getAndPrintLocalTip configFp mSockPath iocp = do
+getAndPrintLocalTip configFp mSockPath iomgr = do
     nc <- parseNodeConfigurationFP configFp
     sockPath <- return $ chooseSocketPath (ncSocketPath nc) mSockPath
     frmPtclRes <- runExceptT $ firstExceptT ProtocolError $
                     mkConsensusProtocol nc Nothing
-    SomeConsensusProtocol p <- case frmPtclRes of
+
+    --TODO: simplify using the Consensus.ProtocolClient
+    SomeConsensusProtocol (p :: Consensus.Protocol blk (BlockProtocol blk))
+                     <- case frmPtclRes of
                           Right p -> pure p
                           Left err -> do putTextLn . toS $ show err
                                          exitFailure
-    putTextLn =<< getTipOutput <$> getLocalTip p iocp sockPath
+
+    let ProtocolInfo{pInfoConfig = ptclcfg} = Consensus.protocolInfo p
+        cfg = configCodec ptclcfg
+        --FIXME: this works, but we should get the magic properly:
+        nm  = Testnet (nodeNetworkMagic (Proxy :: Proxy blk) ptclcfg)
+
+    putTextLn =<< getTipOutput <$> getLocalTip iomgr cfg nm sockPath
   where
     getTipOutput :: forall blk. Condense (HeaderHash blk) => Tip blk -> Text
     getTipOutput (TipGenesis) = "Current tip: genesis (origin)"
@@ -463,29 +474,29 @@ getAndPrintLocalTip configFp mSockPath iocp = do
 -- | Get the node's tip using the local chain sync protocol.
 getLocalTip
   :: forall blk . RunNode blk
-  => Consensus.Protocol blk (BlockProtocol blk)
-  -> IOManager
+  => IOManager
+  -> CodecConfig blk
+  -> Network
   -> SocketPath
   -> IO (Tip blk)
-getLocalTip ptcl iocp sockPath = do
+getLocalTip iomgr cfg nm sockPath = do
   tipVar <- newEmptyTMVarM
-  createNodeConnection (Proxy) ptcl iocp sockPath tipVar
+  createNodeConnection iomgr cfg nm sockPath tipVar
   atomically $ takeTMVar tipVar
 
 createNodeConnection
   :: forall blk . RunNode blk
-  => Proxy blk
-  -> Consensus.Protocol blk (BlockProtocol blk)
-  -> IOManager
+  => IOManager
+  -> CodecConfig blk
+  -> Network
   -> SocketPath
   -> StrictTMVar IO (Tip blk)
   -> IO ()
-createNodeConnection proxy ptcl iocp (SocketPath path) tipVar =
-    let ProtocolInfo{pInfoConfig} = Consensus.protocolInfo ptcl in
+createNodeConnection iomgr cfg nm (SocketPath path) tipVar =
     connectTo
-      (localSnocket iocp path)
+      (localSnocket iomgr path)
       (NetworkConnectTracers nullTracer nullTracer)
-      (localInitiatorNetworkApplication proxy pInfoConfig tipVar)
+      (localInitiatorNetworkApplication cfg nm tipVar)
       path
     `catch` handleMuxError
 
@@ -499,12 +510,12 @@ localInitiatorNetworkApplication
      , MonadST    m
      , MonadTimer m
      )
-  => Proxy blk
-  -> TopLevelConfig blk
+  => CodecConfig blk
+  -> Network
   -> StrictTMVar m (Tip blk)
   -> Versions NodeToClientVersion DictVersion
               (LocalConnectionId -> OuroborosApplication InitiatorApp LB.ByteString m () Void)
-localInitiatorNetworkApplication proxy cfg tipVar =
+localInitiatorNetworkApplication cfg nm tipVar =
     foldMapVersions
       (\v ->
         versionedNodeToClientProtocols
@@ -513,7 +524,10 @@ localInitiatorNetworkApplication proxy cfg tipVar =
           (protocols v))
       (supportedNodeToClientVersions proxy)
  where
-  versionData = NodeToClientVersionData { networkMagic = nodeNetworkMagic proxy cfg }
+  proxy :: Proxy blk
+  proxy = Proxy
+
+  versionData = NodeToClientVersionData { networkMagic = toNetworkMagic nm }
 
   protocols clientVersion =
       NodeToClientProtocols {
@@ -542,7 +556,7 @@ localInitiatorNetworkApplication proxy cfg tipVar =
              , cTxSubmissionCodec
              , cStateQueryCodec
              }
-        = defaultCodecs (configCodec cfg) clientVersion
+        = defaultCodecs cfg clientVersion
 
 ncCardanoEra :: NodeConfiguration -> CardanoEra
 ncCardanoEra = cardanoEraForProtocol . ncProtocol

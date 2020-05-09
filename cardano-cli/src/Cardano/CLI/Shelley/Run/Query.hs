@@ -10,7 +10,7 @@ import           Cardano.Api
                    (Address, Network(..), queryFilteredUTxOFromLocalState,
                     queryPParamsFromLocalState)
 
-import           Cardano.CLI.Ops (CliError (..), getLocalTip, withIOManagerE)
+import           Cardano.CLI.Ops (CliError (..), getLocalTip)
 import           Cardano.CLI.Shelley.Parsers (OutputFile (..), QueryCmd (..))
 
 import           Cardano.Common.LocalSocket (chooseSocketPath)
@@ -30,6 +30,7 @@ import           Ouroboros.Consensus.Cardano (Protocol (..), protocolInfo)
 import           Ouroboros.Consensus.Config (configCodec)
 import           Ouroboros.Consensus.Node.ProtocolInfo (ProtocolInfo(..))
 import           Ouroboros.Consensus.Node.Run (nodeNetworkMagic)
+import           Ouroboros.Network.NodeToClient (withIOManager)
 
 import           Ouroboros.Network.Block (getTipPoint)
 
@@ -54,7 +55,7 @@ runQueryProtocolParameters configFp mbSockPath (OutputFile outFile) = do
     SomeConsensusProtocol p <- firstExceptT ProtocolError $ mkConsensusProtocol nc Nothing
     case p of
       ptcl@ProtocolRealTPraos{} -> do
-        tip <- withIOManagerE $ \iocp -> liftIO $ getLocalTip p iocp sockPath
+        tip <- liftIO $ withIOManager $ \iomgr -> getLocalTip iomgr cfg nm sockPath
         pparams <- firstExceptT NodeLocalStateQueryError $
           queryPParamsFromLocalState cfg nm sockPath (getTipPoint tip)
         writeProtocolParameters outFile pparams
@@ -79,7 +80,7 @@ runQueryFilteredUTxO addr configFp mbSockPath (OutputFile _outFile) = do
 
     case p of
       ptcl@ProtocolRealTPraos{} -> do
-        tip <- withIOManagerE $ \iocp -> liftIO $ getLocalTip p iocp sockPath
+        tip <- liftIO $ withIOManager $ \iomgr -> getLocalTip iomgr cfg nm sockPath
         filteredUtxo <- firstExceptT NodeLocalStateQueryError $
           queryFilteredUTxOFromLocalState cfg nm sockPath
                                           (Set.singleton addr) (getTipPoint tip)
