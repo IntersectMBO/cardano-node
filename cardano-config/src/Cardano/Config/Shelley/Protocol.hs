@@ -16,6 +16,10 @@ module Cardano.Config.Shelley.Protocol
     -- | Use this when you want to handle protocols generically
   , mkSomeConsensusProtocolTPraos
 
+    -- * Client support
+  , mkNodeClientProtocolTPraos
+  , mkSomeNodeClientProtocolTPraos
+
     -- * Errors
   , ShelleyProtocolInstantiationError(..)
   , renderShelleyProtocolInstantiationError
@@ -44,11 +48,25 @@ import           Shelley.Spec.Ledger.PParams (ProtVer(..))
 import           Cardano.Config.Types
                    (NodeConfiguration(..), ProtocolFilepaths(..),
                     GenesisFile (..), Update (..), LastKnownBlockVersion (..),
-                    SomeConsensusProtocol(..))
+                    SomeConsensusProtocol(..), SomeNodeClientProtocol(..))
 import           Cardano.Config.Shelley.OCert
 import           Cardano.Config.Shelley.VRF
 import           Cardano.Config.Shelley.KES
 import           Cardano.TracingOrphanInstances.Shelley ()
+
+
+------------------------------------------------------------------------------
+-- Shelley protocol, client support
+--
+
+mkNodeClientProtocolTPraos :: ProtocolClient (ShelleyBlock TPraosStandardCrypto)
+                                             ProtocolRealTPraos
+mkNodeClientProtocolTPraos = ProtocolClientRealTPraos
+
+
+mkSomeNodeClientProtocolTPraos :: SomeNodeClientProtocol
+mkSomeNodeClientProtocolTPraos =
+    SomeNodeClientProtocol mkNodeClientProtocolTPraos
 
 
 ------------------------------------------------------------------------------

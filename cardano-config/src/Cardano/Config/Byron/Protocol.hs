@@ -16,6 +16,10 @@ module Cardano.Config.Byron.Protocol
     -- | Use this when you want to handle protocols generically
   , mkSomeConsensusProtocolRealPBFT
 
+    -- * Client support
+  , mkNodeClientProtocolRealPBFT
+  , mkSomeNodeClientProtocolRealPBFT
+
     -- * Errors
   , ByronProtocolInstantiationError(..)
   , renderByronProtocolInstantiationError
@@ -31,6 +35,7 @@ import qualified Data.ByteString.Lazy as LB
 import qualified Data.Text as T
 
 import qualified Cardano.Chain.Genesis as Genesis
+import           Cardano.Chain.Slotting (EpochSlots)
 import qualified Cardano.Chain.Update as Update
 import qualified Cardano.Chain.UTxO as UTxO
 import qualified Cardano.Crypto.Signing as Signing
@@ -43,8 +48,23 @@ import           Ouroboros.Consensus.Byron.Ledger (ByronBlock)
 import           Cardano.Config.Types
                    (NodeConfiguration(..), ProtocolFilepaths(..),
                     GenesisFile (..), Update (..), LastKnownBlockVersion (..),
-                    SomeConsensusProtocol(..))
+                    SomeConsensusProtocol(..), SomeNodeClientProtocol(..))
 import           Cardano.TracingOrphanInstances.Byron ()
+
+
+------------------------------------------------------------------------------
+-- Real Byron protocol, client support
+--
+
+mkNodeClientProtocolRealPBFT :: EpochSlots
+                             -> ProtocolClient ByronBlock ProtocolRealPBFT
+mkNodeClientProtocolRealPBFT epochSlots =
+    ProtocolClientRealPBFT epochSlots
+
+
+mkSomeNodeClientProtocolRealPBFT :: EpochSlots -> SomeNodeClientProtocol
+mkSomeNodeClientProtocolRealPBFT epochSlots =
+    SomeNodeClientProtocol (mkNodeClientProtocolRealPBFT epochSlots)
 
 
 ------------------------------------------------------------------------------

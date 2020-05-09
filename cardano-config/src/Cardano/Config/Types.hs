@@ -33,6 +33,7 @@ module Cardano.Config.Types
     , Fd (..)
     , parseNodeConfiguration
     , parseNodeConfigurationFP
+    , SomeNodeClientProtocol(..)
     ) where
 
 import           Prelude (show)
@@ -51,7 +52,7 @@ import qualified Cardano.Chain.Update as Update
 import           Cardano.Chain.Slotting (EpochSlots)
 import           Cardano.Crypto.ProtocolMagic (RequiresNetworkMagic)
 import           Ouroboros.Consensus.Block (Header, BlockProtocol)
-import qualified Ouroboros.Consensus.Cardano as Consensus (Protocol)
+import qualified Ouroboros.Consensus.Cardano as Consensus (Protocol, ProtocolClient)
 import           Ouroboros.Consensus.HeaderValidation (OtherHeaderEnvelopeError)
 import           Ouroboros.Consensus.Ledger.Abstract (LedgerError)
 import           Ouroboros.Consensus.Mempool.API
@@ -377,3 +378,15 @@ type TraceConstraints blk =
     , ToObject (OtherHeaderEnvelopeError blk)
     , ToObject (ValidationErr (BlockProtocol blk))
     )
+
+--------------------------------------------------------------------------------
+-- Node client requirements
+--------------------------------------------------------------------------------
+
+data SomeNodeClientProtocol where
+
+     SomeNodeClientProtocol
+       :: RunNode blk
+       => Consensus.ProtocolClient blk (BlockProtocol blk)
+       -> SomeNodeClientProtocol
+
