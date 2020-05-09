@@ -11,7 +11,6 @@ module Cardano.Config.Types
     ( CardanoEnvironment (..)
     , CBORObject (..)
     , CertificateFile (..)
-    , CLISocketPath (..)
     , ConfigYamlFilePath (..)
     , ConfigError (..)
     , DbFile (..)
@@ -31,7 +30,6 @@ module Cardano.Config.Types
     , SocketPath (..)
     , Update (..)
     , ViewMode (..)
-    , YamlSocketPath (..)
     , Fd (..)
     , parseNodeConfiguration
     , parseNodeConfigurationFP
@@ -107,7 +105,7 @@ data NodeCLI = NodeCLI
   , configFile      :: !ConfigYamlFilePath
   , topologyFile    :: !TopologyFile
   , databaseFile    :: !DbFile
-  , socketFile      :: !(Maybe CLISocketPath)
+  , socketFile      :: !(Maybe SocketPath)
   , protocolFiles   :: !ProtocolFilepaths
   , validateDB      :: !Bool
   , shutdownIPC     :: !(Maybe Fd)
@@ -165,7 +163,7 @@ newtype CertificateFile = CertificateFile
 
 newtype SocketPath = SocketPath
   { unSocketPath :: FilePath }
-  deriving newtype Show
+  deriving newtype (Show, FromJSON)
   deriving (Eq, Ord, IsString)
 
 newtype SigningKeyFile = SigningKeyFile
@@ -183,7 +181,7 @@ data NodeConfiguration =
     , ncPbftSignatureThresh :: Maybe Double
     , ncLoggingSwitch :: Bool
     , ncLogMetrics :: Bool
-    , ncSocketPath :: Maybe YamlSocketPath
+    , ncSocketPath :: Maybe SocketPath
     , ncTraceConfig :: TraceConfig
     , ncViewMode :: ViewMode
     , ncUpdate :: Update
@@ -231,21 +229,6 @@ instance FromJSON NodeConfiguration where
                                                                     lkBlkVersionMinor
                                                                     lkBlkVersionAlt))
                          }
-
--- | Socket path read from the command line.
-newtype CLISocketPath = CLISocketPath
-  { unCLISocketPath :: SocketPath}
-  deriving newtype (Eq, Show)
-
--- | Socket path defined in the node's configuration yaml file.
-newtype YamlSocketPath = YamlSocketPath
-  { unYamlSocketPath :: SocketPath }
-  deriving newtype Show
-
-instance FromJSON YamlSocketPath where
-  parseJSON (String sPath) = pure . YamlSocketPath . SocketPath $ T.unpack sPath
-  parseJSON invalid = panic $ "Parsing of SocketPath failed due to type mismatch. "
-                           <> "Encountered: " <> (T.pack $ show invalid)
 
 parseNodeConfigurationFP :: ConfigYamlFilePath -> IO NodeConfiguration
 parseNodeConfigurationFP (ConfigYamlFilePath fp) = do

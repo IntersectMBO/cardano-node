@@ -212,11 +212,11 @@ networkFromCBOR = do
   tag <- CBOR.decodeWord8
   case tag of
     168  -> pure Mainnet
-    169  -> Testnet <$> fromCBOR
+    169  -> Testnet . NetworkMagic <$> fromCBOR
     _  -> cborError $ DecoderErrorUnknownTag "Network" tag
 
 networkToCBOR :: Network -> Encoding
 networkToCBOR nw =
   case nw of
     Mainnet -> mconcat [toCBOR (168 :: Word8)]
-    Testnet pid -> mconcat [toCBOR (169 :: Word8), toCBOR pid]
+    Testnet (NetworkMagic nm) -> mconcat [toCBOR (169 :: Word8), toCBOR nm]

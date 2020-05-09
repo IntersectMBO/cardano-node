@@ -39,7 +39,7 @@ import           Cardano.Chain.Update
 
 import           Cardano.CLI.Byron.UpdateProposal
 import           Cardano.Common.Parsers
-                   (parseCLISocketPath, parseConfigFile, parseFilePath,
+                   (parseSocketPath, parseConfigFile, parseFilePath,
                     parseFraction, parseLovelace, parseSigningKeyFile)
 import           Cardano.Config.Types
 
@@ -64,12 +64,12 @@ data NodeCmd = CreateVote
                ConfigYamlFilePath
                -- ^ Update proposal filepath.
                FilePath
-               (Maybe CLISocketPath)
+               (Maybe SocketPath)
              | SubmitVote
                ConfigYamlFilePath
                FilePath
                -- ^ Vote filepath.
-               (Maybe CLISocketPath)
+               (Maybe SocketPath)
               deriving Show
 
 parseByronCommands :: Parser ByronCommand
@@ -115,7 +115,7 @@ parseByronVoteSubmission = do
   SubmitVote
     <$> (ConfigYamlFilePath <$> parseConfigFile)
     <*> parseFilePath "filepath" "Filepath of Byron update proposal vote."
-    <*> parseCLISocketPath "Path to a cardano-node socket."
+    <*> optional (parseSocketPath "Path to a cardano-node socket.")
 
 parseParametersToUpdate :: Parser [ParametersToUpdate]
 parseParametersToUpdate =
@@ -142,7 +142,7 @@ parseByronUpdateProposalSubmission =
   SubmitUpdateProposal
     <$> (ConfigYamlFilePath <$> parseConfigFile)
     <*> parseFilePath "filepath" "Filepath of Byron update proposal."
-    <*> parseCLISocketPath "Path to a cardano-node socket."
+    <*> optional (parseSocketPath "Path to a cardano-node socket.")
 
 
 parseByronVote :: Parser NodeCmd

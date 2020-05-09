@@ -7,7 +7,6 @@
 module Cardano.Common.Parsers
   ( command'
   , nodeCLIParser
-  , parseCLISocketPath
   , parseConfigFile
   , parseCoreNodeId
   , parseDbPath
@@ -80,7 +79,7 @@ nodeMockParser = do
   -- Filepaths
   topFp <- parseTopologyFile
   dbFp <- parseDbPath
-  socketFp <- parseCLISocketPath "Path to a cardano-node socket"
+  socketFp <- optional $ parseSocketPath "Path to a cardano-node socket"
 
   -- NodeConfiguration filepath
   nodeConfigFp <- parseConfigFile
@@ -117,7 +116,7 @@ nodeRealParser = do
   -- Filepaths
   topFp <- parseTopologyFile
   dbFp <- parseDbPath
-  socketFp <- parseCLISocketPath "Path to a cardano-node socket"
+  socketFp <-   optional $ parseSocketPath "Path to a cardano-node socket"
 
   -- Protocol files
   byronCertFile   <- optional Byron.parseDelegationCert
@@ -155,15 +154,6 @@ nodeRealParser = do
     , shutdownIPC
     , shutdownOnSlotSynced
     }
-
-parseCLISocketPath :: Text -> Parser (Maybe CLISocketPath)
-parseCLISocketPath helpMessage =
-  optional $ CLISocketPath <$> strOption
-    ( long "socket-path"
-        <> (help $ toS helpMessage)
-        <> completer (bashCompleter "file")
-        <> metavar "FILEPATH"
-    )
 
 parseConfigFile :: Parser FilePath
 parseConfigFile =

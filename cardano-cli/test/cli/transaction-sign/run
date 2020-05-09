@@ -33,12 +33,12 @@ fail_on_error $?
 assert_file_exists "${OUTPUT_DIR}/signed.tx"
 assert_string 'TxSignedShelley' "${OUTPUT_DIR}/signed.tx"
 
-# Sign for a testnet with a ProtocolId of 11, but use two signing keys.
+# Sign for a testnet with a testnet network magic of 11, but use two signing keys.
 ${CARDANO_CLI} shelley transaction sign \
     --tx-body-file "test/cli/${testname}/data/unsigned.tx" \
     --signing-key-file "test/cli/${testname}/data/initial-utxo1.skey" \
     --signing-key-file "test/cli/${testname}/data/initial-utxo2.skey" \
-    --protocol-id 11 \
+    --network-magic 11 \
     --tx-file "${OUTPUT_DIR}/signed.tx"
 fail_on_error $?
 

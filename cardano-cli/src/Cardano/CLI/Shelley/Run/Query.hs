@@ -6,16 +6,16 @@ module Cardano.CLI.Shelley.Run.Query
 
 import           Cardano.Prelude
 
-import           Cardano.Api (Address, queryFilteredUTxOFromLocalState,
-                     queryPParamsFromLocalState)
+import           Cardano.Api
+                   (Address, Network(..), queryFilteredUTxOFromLocalState,
+                    queryPParamsFromLocalState)
 
-import           Cardano.CLI.Ops (CliError (..), getLocalTip, withIOManagerE)
+import           Cardano.CLI.Ops (CliError (..), getLocalTip)
 import           Cardano.CLI.Shelley.Parsers (OutputFile (..), QueryCmd (..))
 
-import           Cardano.Common.LocalSocket (chooseSocketPath)
-
 import           Cardano.Config.Protocol (mkConsensusProtocol)
-import           Cardano.Config.Types (CLISocketPath, ConfigYamlFilePath, NodeConfiguration (..),
+import           Cardano.Config.Types (SocketPath, ConfigYamlFilePath,
+                     NodeConfiguration (..),
                      SomeConsensusProtocol (..), parseNodeConfigurationFP)
 
 import           Control.Monad.Trans.Except (ExceptT)
@@ -29,6 +29,7 @@ import           Ouroboros.Consensus.Cardano (Protocol (..), protocolInfo)
 import           Ouroboros.Consensus.Config (configCodec)
 import           Ouroboros.Consensus.Node.ProtocolInfo (ProtocolInfo(..))
 import           Ouroboros.Consensus.Node.Run (nodeNetworkMagic)
+import           Ouroboros.Network.NodeToClient (withIOManager)
 
 import           Ouroboros.Network.Block (getTipPoint)
 
@@ -36,30 +37,30 @@ import           Shelley.Spec.Ledger.PParams (PParams)
 
 
 runQueryCmd :: QueryCmd -> ExceptT CliError IO ()
-runQueryCmd (QueryProtocolParameters configFp mbSockPath outFile) =
-  runQueryProtocolParameters configFp mbSockPath outFile
-runQueryCmd (QueryFilteredUTxO addr configFp mbSockPath outFile) =
-  runQueryFilteredUTxO addr configFp mbSockPath outFile
+runQueryCmd (QueryProtocolParameters configFp sockPath outFile) =
+  runQueryProtocolParameters configFp sockPath outFile
+runQueryCmd (QueryFilteredUTxO addr configFp sockPath outFile) =
+  runQueryFilteredUTxO addr configFp sockPath outFile
 runQueryCmd cmd = liftIO $ putStrLn $ "runQueryCmd: " ++ show cmd
 
 runQueryProtocolParameters
   :: ConfigYamlFilePath
-  -> Maybe CLISocketPath
+  -> SocketPath
   -> OutputFile
   -> ExceptT CliError IO ()
-runQueryProtocolParameters configFp mbSockPath (OutputFile outFile) = do
+runQueryProtocolParameters configFp sockPath (OutputFile outFile) = do
     nc <- liftIO $ parseNodeConfigurationFP configFp
-    sockPath <- pure $ chooseSocketPath (ncSocketPath nc) mbSockPath
     SomeConsensusProtocol p <- firstExceptT ProtocolError $ mkConsensusProtocol nc Nothing
     case p of
       ptcl@ProtocolRealTPraos{} -> do
-        tip <- withIOManagerE $ \iocp -> liftIO $ getLocalTip p iocp sockPath
+        tip <- liftIO $ withIOManager $ \iomgr -> getLocalTip iomgr cfg nm sockPath
         pparams <- firstExceptT NodeLocalStateQueryError $
           queryPParamsFromLocalState cfg nm sockPath (getTipPoint tip)
         writeProtocolParameters outFile pparams
         where
           cfg = configCodec ptclcfg
-          nm  = nodeNetworkMagic (Proxy :: Proxy blk) ptclcfg
+          --FIXME: this works, but we should get the magic properly:
+          nm  = Testnet (nodeNetworkMagic (Proxy :: Proxy blk) ptclcfg)
           ProtocolInfo{pInfoConfig = ptclcfg} = protocolInfo ptcl
 
       _ -> left $ IncorrectProtocolSpecifiedError (ncProtocol nc)
@@ -67,24 +68,24 @@ runQueryProtocolParameters configFp mbSockPath (OutputFile outFile) = do
 runQueryFilteredUTxO
   :: Address
   -> ConfigYamlFilePath
-  -> Maybe CLISocketPath
+  -> SocketPath
   -> OutputFile
   -> ExceptT CliError IO ()
-runQueryFilteredUTxO addr configFp mbSockPath (OutputFile _outFile) = do
+runQueryFilteredUTxO addr configFp sockPath (OutputFile _outFile) = do
     nc <- liftIO $ parseNodeConfigurationFP configFp
-    sockPath <- pure $ chooseSocketPath (ncSocketPath nc) mbSockPath
     SomeConsensusProtocol p <- firstExceptT ProtocolError $ mkConsensusProtocol nc Nothing
 
     case p of
       ptcl@ProtocolRealTPraos{} -> do
-        tip <- withIOManagerE $ \iocp -> liftIO $ getLocalTip p iocp sockPath
+        tip <- liftIO $ withIOManager $ \iomgr -> getLocalTip iomgr cfg nm sockPath
         filteredUtxo <- firstExceptT NodeLocalStateQueryError $
           queryFilteredUTxOFromLocalState cfg nm sockPath
                                           (Set.singleton addr) (getTipPoint tip)
         liftIO $ putStrLn $ "Filtered UTxO: " ++ show filteredUtxo
         where
           cfg = configCodec ptclcfg
-          nm  = nodeNetworkMagic (Proxy :: Proxy blk) ptclcfg
+          --FIXME: this works, but we should get the magic properly:
+          nm  = Testnet (nodeNetworkMagic (Proxy :: Proxy blk) ptclcfg)
           ProtocolInfo{pInfoConfig = ptclcfg} = protocolInfo ptcl
 
       _ -> left $ IncorrectProtocolSpecifiedError (ncProtocol nc)

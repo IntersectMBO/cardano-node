@@ -100,7 +100,7 @@ runGenesisCommand outDir params era = do
   (genData, genSecrets) <- mkGenesis params
   dumpGenesis era outDir genData genSecrets
 
-runGetLocalNodeTip :: ConfigYamlFilePath -> Maybe CLISocketPath -> ExceptT e IO ()
+runGetLocalNodeTip :: ConfigYamlFilePath -> Maybe SocketPath -> ExceptT e IO ()
 runGetLocalNodeTip configFp mSockPath =
   withIOManagerE $ \iocp -> liftIO $ getAndPrintLocalTip configFp mSockPath iocp
 
@@ -178,7 +178,7 @@ runCheckDelegation configFp cert issuerVF delegateVF = do
   pmId <- readProtocolMagicId $ ncGenesisFile nc
   checkByronGenesisDelegation cert pmId issuerVK delegateVK
 
-runSubmitTx :: TxFile -> ConfigYamlFilePath -> Maybe CLISocketPath -> ExceptT CliError IO ()
+runSubmitTx :: TxFile -> ConfigYamlFilePath -> Maybe SocketPath -> ExceptT CliError IO ()
 runSubmitTx fp configFp mCliSockPath =
   withIOManagerE $ \iocp -> do
     nc <- liftIO $ parseNodeConfigurationFP configFp

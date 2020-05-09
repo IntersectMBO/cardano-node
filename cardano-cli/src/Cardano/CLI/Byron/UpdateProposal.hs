@@ -176,7 +176,7 @@ submitByronUpdateProposal
   :: IOManager
   -> ConfigYamlFilePath
   -> FilePath
-  -> Maybe CLISocketPath
+  -> Maybe SocketPath
   -> ExceptT CliError IO ()
 submitByronUpdateProposal iocp config proposalFp mSocket = do
     nc <- liftIO $ parseNodeConfigurationFP config

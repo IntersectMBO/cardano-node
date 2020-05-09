@@ -5,6 +5,7 @@ module Test.Cardano.Api.Gen
   ( genAddress
   , genCertificate
   , genNetwork
+  , genNetworkMagic
   , genSigningKey
   , genSigningKeyByron
   , genSigningKeyShelley
@@ -108,8 +109,12 @@ genNetwork :: Gen Network
 genNetwork =
   Gen.choice
     [ pure Mainnet
-    , Testnet <$> Byron.genProtocolMagicId
+    , Testnet <$> genNetworkMagic
     ]
+
+genNetworkMagic :: Gen NetworkMagic
+genNetworkMagic =
+  NetworkMagic <$> Gen.word32 Range.constantBounded
 
 genRewardAccountShelley :: Gen ShelleyRewardAccount
 genRewardAccountShelley = do

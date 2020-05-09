@@ -13,7 +13,7 @@ module Cardano.Api.LocalStateQuery
 
 import           Cardano.Prelude hiding (atomically, option, threadDelay)
 
-import           Cardano.Api.Types (Address (..), ByronAddress, ShelleyAddress)
+import           Cardano.Api.Types (Network, toNetworkMagic, Address (..), ByronAddress, ShelleyAddress)
 import           Cardano.Api.TxSubmit.Types (textShow)
 
 import           Cardano.BM.Data.Tracer (ToLogObject (..), nullTracer)
@@ -47,7 +47,6 @@ import           Ouroboros.Consensus.Shelley.Ledger
 import           Ouroboros.Consensus.Shelley.Protocol.Crypto (TPraosStandardCrypto)
 
 import           Ouroboros.Network.Block (Point)
-import           Ouroboros.Network.Magic (NetworkMagic)
 import           Ouroboros.Network.Mux
                    ( AppType(..), OuroborosApplication(..),
                      MuxPeer(..), RunMiniProtocol(..))
@@ -85,7 +84,7 @@ renderLocalStateQueryError lsqErr =
 --
 queryFilteredUTxOFromLocalState
   :: CodecConfig (ShelleyBlock TPraosStandardCrypto)
-  -> NetworkMagic
+  -> Network
   -> SocketPath
   -> Set Address
   -> Point (ShelleyBlock TPraosStandardCrypto)
@@ -111,7 +110,7 @@ queryFilteredUTxOFromLocalState cfg nm socketPath addrs point =
 queryPParamsFromLocalState
   :: (RunNode blk, blk ~ ShelleyBlock c)
   => CodecConfig blk
-  -> NetworkMagic
+  -> Network
   -> SocketPath
   -> Point blk
   -> ExceptT LocalStateQueryError IO Ledger.PParams
@@ -136,7 +135,7 @@ queryNodeLocalState
   => StrictTMVar IO (Either LocalStateQueryError result)
   -> Trace IO Text
   -> CodecConfig blk
-  -> NetworkMagic
+  -> Network
   -> SocketPath
   -> (Point blk, Query blk result)
   -> IO ()
@@ -164,7 +163,7 @@ localInitiatorNetworkApplication
   :: forall blk result. RunNode blk
   => Trace IO Text
   -> CodecConfig blk
-  -> NetworkMagic
+  -> Network
   -> StrictTMVar IO (Either LocalStateQueryError result)
   -> (Point blk, Query blk result)
   -> Versions
@@ -172,7 +171,7 @@ localInitiatorNetworkApplication
       DictVersion
       (LocalConnectionId
         -> OuroborosApplication 'InitiatorApp LByteString IO (Either LocalStateQueryError result) Void)
-localInitiatorNetworkApplication trce cfg networkMagic
+localInitiatorNetworkApplication trce cfg nm
                                  resultVar pointAndQuery =
     NodeToClient.foldMapVersions
       (\v ->
@@ -185,7 +184,7 @@ localInitiatorNetworkApplication trce cfg networkMagic
     proxy :: Proxy blk
     proxy = Proxy
 
-    versionData = NodeToClientVersionData { networkMagic }
+    versionData = NodeToClientVersionData { networkMagic = toNetworkMagic nm }
 
     protocols clientVersion =
         NodeToClientProtocols

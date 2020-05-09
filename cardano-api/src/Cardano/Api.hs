@@ -17,9 +17,13 @@ module Cardano.Api
 
     -- * Addresses
   , Address (..)
-  , Network (..)
   , byronVerificationKeyAddress
   , shelleyVerificationKeyAddress
+
+    -- ** Network identifiers
+  , Network (..)
+  , NetworkMagic (..)
+  , toNetworkMagic
 
     -- * Transactions
   , TxSigned (..)
@@ -266,7 +270,7 @@ byronNetworkMagic :: Network -> Byron.NetworkMagic
 byronNetworkMagic nw =
   case nw of
     Mainnet -> Byron.NetworkMainOrStage
-    Testnet pid -> Byron.NetworkTestnet $ unProtocolMagicId pid
+    Testnet (NetworkMagic nm) -> Byron.NetworkTestnet nm
 
 -- Create new Transaction
 -- ledger creates transaction and serialises it as CBOR - txBuilder
@@ -369,7 +373,7 @@ byronWitnessTransaction txHash nw (SigningKeyByron signKey) =
     protocolMagic =
       case nw of
         Mainnet -> Byron.mainnetProtocolMagicId
-        Testnet pm -> pm
+        Testnet (NetworkMagic pm) -> ProtocolMagicId pm
 
 shelleyWitnessTransaction :: ShelleyTxBody -> SigningKey -> ShelleyWitnessVKey
 shelleyWitnessTransaction _ (SigningKeyByron _) = panic "Cardano.Api.shelleyWitnessTransaction: Please use a shelley signing key"
