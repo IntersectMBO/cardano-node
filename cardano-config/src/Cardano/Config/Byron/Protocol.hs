@@ -7,7 +7,16 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Cardano.Config.Byron.Protocol
-  ( mkConsensusProtocolRealPBFT
+  (
+    -- * Protocol exposing the specific type
+    -- | Use this when you need the specific instance
+    mkConsensusProtocolRealPBFT
+
+    -- * Protocols hiding the specific type
+    -- | Use this when you want to handle protocols generically
+  , mkSomeConsensusProtocolRealPBFT
+
+    -- * Errors
   , ByronProtocolInstantiationError(..)
   , renderByronProtocolInstantiationError
   ) where
@@ -42,10 +51,34 @@ import           Cardano.TracingOrphanInstances.Byron ()
 -- Real Byron protocol
 --
 
-mkConsensusProtocolRealPBFT
+-- | Make 'SomeConsensusProtocol' using the Byron instance.
+--
+-- This lets us handle multiple protocols in a generic way.
+--
+-- This also serves a purpose as a sanity check that we have all the necessary
+-- type class instances available.
+--
+mkSomeConsensusProtocolRealPBFT
   :: NodeConfiguration
   -> Maybe ProtocolFilepaths
   -> ExceptT ByronProtocolInstantiationError IO SomeConsensusProtocol
+mkSomeConsensusProtocolRealPBFT nc files =
+
+    -- Applying the SomeConsensusProtocol here is a check that
+    -- the type of mkConsensusProtocolRealPBFT fits all the class
+    -- constraints we need to run the protocol.
+    SomeConsensusProtocol <$> mkConsensusProtocolRealPBFT nc files
+
+
+-- | Instantiate 'Consensus.Protocol' for Byron specifically.
+--
+-- Use this when you need to run the consensus with this specific protocol.
+--
+mkConsensusProtocolRealPBFT
+  :: NodeConfiguration
+  -> Maybe ProtocolFilepaths
+  -> ExceptT ByronProtocolInstantiationError IO
+             (Consensus.Protocol ByronBlock ProtocolRealPBFT)
 mkConsensusProtocolRealPBFT NodeConfiguration {
                               ncGenesisFile = GenesisFile genesisFile,
                               ncReqNetworkMagic,
@@ -78,15 +111,12 @@ mkConsensusProtocolRealPBFT NodeConfiguration {
                      byronKeyFile
         Nothing -> return Nothing
 
-    let consensusProtocol :: Consensus.Protocol ByronBlock ProtocolRealPBFT
-        consensusProtocol =
-          protocolConfigRealPbft
-            ncUpdate
-            ncPbftSignatureThresh
-            genesisConfig
-            optionalLeaderCredentials
-
-    return (SomeConsensusProtocol consensusProtocol)
+    return $
+      protocolConfigRealPbft
+        ncUpdate
+        ncPbftSignatureThresh
+        genesisConfig
+        optionalLeaderCredentials
 
 
 -- | The plumbing to select and convert the appropriate configuration subset

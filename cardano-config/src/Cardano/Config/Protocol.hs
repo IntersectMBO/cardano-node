@@ -7,14 +7,13 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 {-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Config.Protocol
   ( Protocol(..)
-  , ProtocolInstantiationError(..)
+  , mkConsensusProtocol
   , SomeConsensusProtocol(..)
   , TraceConstraints
-  , mkConsensusProtocol
+  , ProtocolInstantiationError(..)
   , renderProtocolInstantiationError
   ) where
 
@@ -45,20 +44,20 @@ mkConsensusProtocol config@NodeConfiguration{ncProtocol} files =
     case ncProtocol of
       -- Mock protocols
       BFT      -> firstExceptT MockProtocolInstantiationError $
-                    mkConsensusProtocolBFT   config
+                    mkSomeConsensusProtocolBFT   config
 
       MockPBFT -> firstExceptT MockProtocolInstantiationError $
-                    mkConsensusProtocolPBFT  config
+                    mkSomeConsensusProtocolPBFT  config
 
       Praos    -> firstExceptT MockProtocolInstantiationError $
-                    mkConsensusProtocolPraos config
+                    mkSomeConsensusProtocolPraos config
 
       -- Real protocols
       RealPBFT -> firstExceptT ByronProtocolInstantiationError $
-                    mkConsensusProtocolRealPBFT config files
+                    mkSomeConsensusProtocolRealPBFT config files
 
       TPraos   -> firstExceptT ShelleyProtocolInstantiationError $
-                    SomeConsensusProtocol <$> mkConsensusProtocolTPraos config files
+                    mkSomeConsensusProtocolTPraos config files
 
 
 ------------------------------------------------------------------------------
