@@ -28,13 +28,13 @@ instance Show SocketError where
 
 -- | This lets us override the socket path specified in the node configuration yaml file
 -- if required.
-chooseSocketPath :: Maybe YamlSocketPath -> Maybe CLISocketPath -> SocketPath
+chooseSocketPath :: Maybe SocketPath -> Maybe SocketPath -> SocketPath
 chooseSocketPath Nothing Nothing = panic $ "Cardano.Common.LocalSocket.chooseSocketPath: "
                                          <> "Please specify a socket path either in the config yaml "
                                          <> "file or on the command line."
-chooseSocketPath (Just yamlSockPath) Nothing = unYamlSocketPath yamlSockPath
-chooseSocketPath Nothing (Just cliSockPath) = unCLISocketPath cliSockPath
-chooseSocketPath _ (Just cliSockPath) = unCLISocketPath cliSockPath
+chooseSocketPath (Just yamlSockPath) Nothing = yamlSockPath
+chooseSocketPath Nothing (Just cliSockPath)  = cliSockPath
+chooseSocketPath Just{}  (Just cliSockPath)  = cliSockPath
 
 nodeLocalSocketAddrInfo :: NodeConfiguration -> NodeCLI -> FilePath
 nodeLocalSocketAddrInfo nc NodeCLI {socketFile} =

@@ -438,7 +438,7 @@ withRealPBFT nc action = do
 -- the standard output device.
 getAndPrintLocalTip
   :: ConfigYamlFilePath
-  -> Maybe CLISocketPath
+  -> Maybe SocketPath
   -> IOManager
   -> IO ()
 getAndPrintLocalTip configFp mSockPath iomgr = do

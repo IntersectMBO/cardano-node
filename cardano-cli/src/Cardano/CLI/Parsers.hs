@@ -213,7 +213,7 @@ parseLocalNodeQueryValues =
         , command' "get-tip" "Get the tip of your local node's blockchain"
             $ GetLocalNodeTip
                 <$> (ConfigYamlFilePath <$> parseConfigFile)
-                <*> parseCLISocketPath "Socket of target node"
+                <*> optional (parseSocketPath "Socket of target node")
         ]
 
 parseMiscellaneous :: Parser ClientCommand
@@ -299,7 +299,7 @@ parseTxRelatedValues =
         $ SubmitTx
             <$> parseTxFile "tx"
             <*> (ConfigYamlFilePath <$> parseConfigFile)
-            <*> parseCLISocketPath "Socket of target node"
+            <*> optional (parseSocketPath "Socket of target node")
     , command'
         "issue-genesis-utxo-expenditure"
         "Write a file with a signed transaction, spending genesis UTxO."

@@ -120,7 +120,7 @@ data ClientCommand
 
   | GetLocalNodeTip
         ConfigYamlFilePath
-        (Maybe CLISocketPath)
+        (Maybe SocketPath)
 
     -----------------------------------
 
@@ -128,7 +128,7 @@ data ClientCommand
         TxFile
         -- ^ Filepath of transaction to submit.
         ConfigYamlFilePath
-        (Maybe CLISocketPath)
+        (Maybe SocketPath)
 
   | SpendGenesisUTxO
         ConfigYamlFilePath

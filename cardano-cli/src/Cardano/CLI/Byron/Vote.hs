@@ -81,7 +81,7 @@ submitByronVote
   :: IOManager
   -> ConfigYamlFilePath
   -> FilePath
-  -> Maybe CLISocketPath
+  -> Maybe SocketPath
   -> ExceptT CliError IO ()
 submitByronVote iocp config voteFp mSocket = do
   nc <- liftIO $ parseNodeConfigurationFP config
