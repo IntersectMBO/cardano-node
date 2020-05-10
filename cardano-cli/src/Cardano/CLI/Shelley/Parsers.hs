@@ -256,7 +256,12 @@ parseShelleyCommands =
       , Opt.command "stake-pool"
           (Opt.info (PoolCmd <$> pPoolCmd) $ Opt.progDesc "Shelley stake pool commands")
       , Opt.command "query"
-          (Opt.info (QueryCmd <$> pQueryCmd) $ Opt.progDesc "Shelley node query commands")
+          (Opt.info (QueryCmd <$> pQueryCmd) . Opt.progDesc $
+             mconcat
+               [ "Shelley node query commands. Will query the local node whose Unix domain socket "
+               , "is obtained from the CARDANO_NODE_SOCKET_PATH enviromnent variable."
+               ]
+            )
       , Opt.command "block"
           (Opt.info (BlockCmd <$> pBlockCmd) $ Opt.progDesc "Shelley block commands")
       , Opt.command "system"
@@ -390,7 +395,13 @@ pTransaction =
       , Opt.command "check"
           (Opt.info pTransactionCheck $ Opt.progDesc "Check a transaction")
       , Opt.command "submit"
-          (Opt.info pTransactionSubmit $ Opt.progDesc "Submit a transaction")
+          (Opt.info pTransactionSubmit . Opt.progDesc $
+             mconcat
+               [ "Submit a transaction to the local node whose Unix domain socket "
+               , "is obtained from the CARDANO_NODE_SOCKET_PATH enviromnent variable."
+               ]
+            )
+
       , Opt.command "info"
           (Opt.info pTransactionInfo $ Opt.progDesc "Print information about a transaction")
       ]
