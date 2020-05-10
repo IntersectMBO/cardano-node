@@ -58,6 +58,7 @@ import           Cardano.Config.Logging (LoggingLayer (..), Severity (..))
 import           Cardano.Config.TraceConfig (traceConfigVerbosity)
 import           Cardano.Config.Types (NodeConfiguration (..), ViewMode (..))
 
+import           Ouroboros.Network.Magic (NetworkMagic (..))
 import           Ouroboros.Network.NodeToClient (LocalConnectionId)
 import           Ouroboros.Network.NodeToNode (RemoteConnectionId, AcceptedConnectionsLimit (..))
 import           Ouroboros.Consensus.Block (BlockProtocol)
@@ -307,6 +308,7 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
              vTr = appendName "version" tr
              cTr = appendName "commit"  tr
          traceNamedObject rTr (meta, LogMessage (show (ncProtocol nc)))
+         traceNamedObject rTr (meta, LogMessage ("NetworkMagic " <> show (unNetworkMagic $ nodeNetworkMagic (Proxy @blk) cfg)))
          traceNamedObject vTr (meta, LogMessage . pack . showVersion $ version)
          traceNamedObject cTr (meta, LogMessage gitRev)
 
