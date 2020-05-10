@@ -693,7 +693,7 @@ to prove that the node has the right to create a block in this slot.
 The use of a VRF key is special to Ouroboros Praos. In a "normal" proof-of-stake
 blockchain (like Ouroboros Classic or BFT) one simply knows who has the right to
 make the block in each slot, because we *know* what the slot leader schedule is:
-that is the the slot leader schedule is public. So in that case you only have to
+that is the slot leader schedule is public. So in that case you only have to
 prove you are who you say you are, and everyone can check that the slot leader
 schedule says if you're the slot leader or not. Ouroboros Praos has a *private*
 slot leader schedule. This means that nobody knows in advance who is going to
