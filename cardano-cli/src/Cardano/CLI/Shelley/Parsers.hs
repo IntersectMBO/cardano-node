@@ -109,6 +109,8 @@ data NodeCmd
   | NodeKeyGenVRF  VerificationKeyFile SigningKeyFile
   | NodeIssueOpCert VerificationKeyFile SigningKeyFile OpCertCounterFile
                     KESPeriod OutputFile
+  | NodeStakingKeyGen  VerificationKeyFile SigningKeyFile
+  | NodeStakePoolKeyGen  VerificationKeyFile SigningKeyFile
   deriving (Eq, Show)
 
 
@@ -442,6 +444,12 @@ pNodeCmd =
       , Opt.command "issue-op-cert"
           (Opt.info pIssueOpCert $
              Opt.progDesc "Issue a node operational certificate")
+      , Opt.command "key-gen-staking"
+          (Opt.info pStakingKeyPair $
+             Opt.progDesc "Create an address staking key pair")
+      , Opt.command "key-gen-stake-pool"
+          (Opt.info pStakePoolKeyPair $
+             Opt.progDesc "Create a stake pool key pair")
       ]
   where
     pKeyGenOperator :: Parser NodeCmd
@@ -465,6 +473,16 @@ pNodeCmd =
                       <*> pOperatorCertIssueCounterFile
                       <*> pKesPeriod
                       <*> pOutputFile
+
+    pStakingKeyPair :: Parser NodeCmd
+    pStakingKeyPair = NodeStakingKeyGen
+                        <$> pVerificationKeyFile Output
+                        <*> pSigningKeyFile Output
+
+    pStakePoolKeyPair :: Parser NodeCmd
+    pStakePoolKeyPair = NodeStakePoolKeyGen
+                          <$> pVerificationKeyFile Output
+                          <*> pSigningKeyFile Output
 
 
 pPoolCmd :: Parser PoolCmd

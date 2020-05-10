@@ -28,6 +28,9 @@ import           Ouroboros.Consensus.Shelley.Protocol.Crypto
                    (TPraosStandardCrypto)
 
 
+--TODO: There are VRF reading and writing functions that also exist in Cardano.Api.View
+-- This needs to be sorted out
+
 -- Local type aliases
 type SignKey = Ledger.SignKeyVRF TPraosStandardCrypto
 type VerKey  = Ledger.VerKeyVRF  TPraosStandardCrypto

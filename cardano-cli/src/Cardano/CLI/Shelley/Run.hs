@@ -14,11 +14,12 @@ import           Cardano.Prelude hiding (option, trace)
 
 import qualified Data.Set as Set
 
-import           Cardano.Api (ShelleyCoin, ShelleyStakePoolMargin, ShelleyStakePoolRelay,
-                   mkShelleyStakingCredential, readVerificationKeyStaking, readVRFVerificationKey,
+import           Cardano.Api (ShelleyCoin, ShelleyStakePoolMargin, ShelleyStakePoolRelay, SigningKey(..),
+                   mkShelleyStakingCredential, readVerificationKeyStaking,
                    readVerificationKeyStakePool, shelleyDeregisterStakingAddress,
                    shelleyDelegateStake, shelleyRegisterStakePool,
-                   shelleyRegisterStakingAddress, shelleyRetireStakePool, writeCertificate)
+                   shelleyRegisterStakingAddress, shelleyRetireStakePool, writeCertificate,
+                   writeSigningKey, writeVerificationKeyStakePool, writeVerificationKeyStaking)
 
 import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, newExceptT)
@@ -34,7 +35,7 @@ import           Cardano.CLI.Shelley.Run.Query (runQueryCmd)
 import           Cardano.CLI.Shelley.Run.TextView (runTextViewCmd)
 import           Cardano.CLI.Shelley.Run.Transaction (runTransactionCmd)
 
-import           Cardano.Config.Shelley.ColdKeys
+import           Cardano.Config.Shelley.ColdKeys hiding (writeSigningKey)
 import           Cardano.Config.Shelley.KES
 import           Cardano.Config.Shelley.OCert
 import           Cardano.Config.Shelley.VRF
@@ -83,6 +84,8 @@ runNodeCmd (NodeKeyGenKES  vk sk)     = runNodeKeyGenKES  vk sk
 runNodeCmd (NodeKeyGenVRF  vk sk)     = runNodeKeyGenVRF  vk sk
 runNodeCmd (NodeIssueOpCert vk sk ctr p out) =
   runNodeIssueOpCert vk sk ctr p out
+runNodeCmd (NodeStakingKeyGen vk sk) = runNodeStakingKeyGen vk sk
+runNodeCmd (NodeStakePoolKeyGen vk sk) = runNodeStakePoolKeyGen vk sk
 
 
 runPoolCmd :: PoolCmd -> ExceptT CliError IO ()
@@ -187,6 +190,20 @@ runNodeIssueOpCert (VerificationKeyFile vkeyKESPath)
       writeOperationalCertIssueCounter ocertCtrPath (succ issueNumber)
       writeOperationalCert certFile cert vkey
 
+runNodeStakingKeyGen :: VerificationKeyFile -> SigningKeyFile -> ExceptT CliError IO ()
+runNodeStakingKeyGen (VerificationKeyFile vkFp) (SigningKeyFile skFp) = do
+  (vkey, skey) <- liftIO genKeyPair
+  firstExceptT CardanoApiError . newExceptT $ writeVerificationKeyStaking vkFp vkey
+  --TODO: writeSigningKey should really come from Cardano.Config.Shelley.ColdKeys
+  firstExceptT CardanoApiError . newExceptT $ writeSigningKey skFp (SigningKeyShelley skey)
+
+runNodeStakePoolKeyGen :: VerificationKeyFile -> SigningKeyFile -> ExceptT CliError IO ()
+runNodeStakePoolKeyGen (VerificationKeyFile vkFp) (SigningKeyFile skFp) = do
+  (vkey, skey) <- liftIO genKeyPair
+  firstExceptT CardanoApiError . newExceptT $ writeVerificationKeyStakePool vkFp vkey
+  --TODO: writeSigningKey should really come from Cardano.Config.Shelley.ColdKeys
+  firstExceptT CardanoApiError . newExceptT $ writeSigningKey skFp (SigningKeyShelley skey)
+
 --
 -- Stake address command implementations
 --
@@ -256,7 +273,8 @@ runStakePoolRegistrationCert
     stakePoolVerKey <- firstExceptT CardanoApiError . newExceptT $ readVerificationKeyStakePool sPvkeyFp
 
     -- VRF verification key
-    vrfVerKey <- firstExceptT CardanoApiError . newExceptT $ readVRFVerificationKey vrfVkeyFp
+    -- TODO: VRF key reading and writing has two versions and needs to be sorted out.
+    vrfVerKey <- firstExceptT VRFCliError $ readVRFVerKey vrfVkeyFp
 
     -- Pool reward account
     rewardAcctVerKey <- firstExceptT CardanoApiError . newExceptT $ readVerificationKeyStaking rwdVerFp

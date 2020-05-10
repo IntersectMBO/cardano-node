@@ -53,6 +53,9 @@ import           Control.Monad.Trans.Except.Extra (handleIOExceptT, hoistEither,
 import           Data.ByteString.Char8 (ByteString)
 import qualified Data.ByteString.Char8 as BS
 
+--TODO: There are VRF reading and writing functions that also exist in Cardano.Config.Shelley.VRF
+-- This needs to be sorted out
+
 
 parseAddressView :: ByteString -> Either ApiError Address
 parseAddressView bs =
