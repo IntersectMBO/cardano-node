@@ -616,7 +616,7 @@ pGenesisCmd =
       , Opt.command "initial-txin"
           (Opt.info pGenesisTxIn $
              Opt.progDesc "Get the TxIn for an initial UTxO based on the verification key")
-      , Opt.command "create-genesis"
+      , Opt.command "create"
           (Opt.info pGenesisCreate $
              Opt.progDesc ("Create a Shelley genesis file from a genesis "
                         ++ "template and genesis/delegation/spending keys."))
