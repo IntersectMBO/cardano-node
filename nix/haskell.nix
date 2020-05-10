@@ -103,8 +103,8 @@ let
 
         # Module options which adds GHC flags and libraries for a fully static build
         fullyStaticOptions = {
-          enableShared = false;
-          enableStatic = true;
+          enableShared = lib.mkForce false;
+          enableStatic = lib.mkForce true;
           configureFlags = map (drv: "--ghc-option=-optl=-L${drv}/lib") staticLibs;
         };
       in {
