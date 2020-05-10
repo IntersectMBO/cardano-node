@@ -28,6 +28,7 @@ library
                        Cardano.CLI.Byron.Vote
                        Cardano.CLI.Common.Parsers
                        Cardano.CLI.Delegation
+                       Cardano.CLI.Environment
                        Cardano.CLI.Genesis
                        Cardano.CLI.Key
                        Cardano.CLI.Legacy.Byron

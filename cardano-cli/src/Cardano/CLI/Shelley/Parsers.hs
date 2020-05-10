@@ -32,8 +32,8 @@ import           Cardano.Api
 import           Cardano.Common.Parsers (parseConfigFile, parseNodeAddress)
 import           Cardano.Slotting.Slot (EpochNo (..))
 
-import           Cardano.Config.Types (SocketPath(..), ConfigYamlFilePath (..),
-                     NodeAddress, SigningKeyFile(..), CertificateFile (..))
+import           Cardano.Config.Types (ConfigYamlFilePath (..), NodeAddress,
+                    SigningKeyFile(..), CertificateFile (..))
 import           Cardano.Config.Shelley.OCert (KESPeriod(..))
 import           Cardano.CLI.Key (VerificationKeyFile(..))
 
@@ -91,7 +91,7 @@ data TransactionCmd
   | TxWitness       -- { transaction :: Transaction, key :: PrivKeyFile, nodeAddr :: NodeAddress }
   | TxSignWitness   -- { transaction :: Transaction, witnesses :: [Witness], nodeAddr :: NodeAddress }
   | TxCheck         -- { transaction :: Transaction, nodeAddr :: NodeAddress }
-  | TxSubmit FilePath ConfigYamlFilePath SocketPath
+  | TxSubmit FilePath ConfigYamlFilePath
   | TxInfo          -- { transaction :: Transaction, nodeAddr :: NodeAddress }
   deriving (Eq, Show)
 
@@ -114,9 +114,9 @@ data PoolCmd
 
 data QueryCmd
   = QueryPoolId NodeAddress
-  | QueryProtocolParameters ConfigYamlFilePath SocketPath OutputFile
+  | QueryProtocolParameters ConfigYamlFilePath OutputFile
   | QueryTip NodeAddress
-  | QueryFilteredUTxO Address ConfigYamlFilePath SocketPath OutputFile
+  | QueryFilteredUTxO Address ConfigYamlFilePath OutputFile
   | QueryVersion NodeAddress
   | QueryStatus NodeAddress
   deriving (Eq, Show)
@@ -364,7 +364,6 @@ pTransaction =
     pTransactionSubmit  :: Parser TransactionCmd
     pTransactionSubmit = TxSubmit <$> pTxSubmitFile
                                   <*> (ConfigYamlFilePath <$> parseConfigFile)
-                                  <*> pSocketPath
 
     pTransactionInfo  :: Parser TransactionCmd
     pTransactionInfo = pure TxInfo
@@ -459,7 +458,6 @@ pQueryCmd =
     pQueryProtocolParameters =
       QueryProtocolParameters
         <$> (ConfigYamlFilePath <$> parseConfigFile)
-        <*> pSocketPath
         <*> pOutputFile
 
     pQueryTip :: Parser QueryCmd
@@ -470,7 +468,6 @@ pQueryCmd =
       QueryFilteredUTxO
         <$> pHexEncodedAddress
         <*> (ConfigYamlFilePath <$> parseConfigFile)
-        <*> pSocketPath
         <*> pOutputFile
 
     pQueryVersion :: Parser QueryCmd
@@ -844,15 +841,6 @@ pTxFee =
       (  Opt.long "fee"
       <> Opt.metavar "LOVELACE"
       <> Opt.help "The fee amount in Lovelace."
-      )
-
-pSocketPath :: Parser SocketPath
-pSocketPath =
-  SocketPath <$>
-    Opt.strOption
-      (  Opt.long "socket-path"
-      <> Opt.metavar "FILEPATH"
-      <> Opt.help "The local node's socket"
       )
 
 pTxBodyFile :: FileDirection -> Parser TxBodyFile
