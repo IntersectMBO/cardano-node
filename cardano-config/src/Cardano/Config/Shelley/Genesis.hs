@@ -72,27 +72,29 @@ shelleyGenesisDefaults =
     {
       -- params for this specific chain
       sgStartTime             = SystemStart zeroTime
-    , sgNetworkMagic          = NetworkMagic 0
-    , sgProtocolMagicId       = ProtocolMagicId 0
+    , sgNetworkMagic          = NetworkMagic 42
+    , sgProtocolMagicId       = ProtocolMagicId 42
 
       -- consensus protocol params
     , sgSlotLength            = slotLengthFromSec 1 -- 1s slots
     , sgActiveSlotsCoeff      = 1/20                -- 20s block times on average
     , sgSecurityParam         = SecurityParam k
-    , sgEpochLength           = EpochSize (10 * k)
-    , sgSlotsPerKESPeriod     = 60 * 60 * 24        -- 1 day with 1s slots
-    , sgMaxKESEvolutions      = 90                  -- 90 days
-    , sgUpdateQuorum          = 5
-    , sgMaxMajorPV            = 1000
+    , sgEpochLength           = EpochSize (k * 10 * 20) -- 10k/f
+    , sgSlotsPerKESPeriod     = 60 * 60 * 36        -- 1.5 days with 1s slots
+    , sgMaxKESEvolutions      = 60                  -- 90 days
+    , sgUpdateQuorum          = 5                   -- assuming 7 genesis keys
+    , sgMaxMajorPV            = 1                   -- starting at 0
 
     -- ledger protocol params
-    , sgProtocolParams        = Ledger.emptyPParams
+    , sgProtocolParams        =
+        Ledger.emptyPParams
         { Ledger._d =
               Ledger.truncateUnitInterval
             . realToFrac
             $ (1 :: Double)
-        , Ledger._maxBBSize = 1024 * 16
-        , Ledger._maxBHSize = 1400
+        , Ledger._maxBHSize = 1000                  -- TODO: compute from crypto
+        , Ledger._maxBBSize = 64 * 1024             -- max 64kb blocks
+        , Ledger._maxTxSize = 16 * 1024             -- max 16kb txs
         }
 
       -- genesis keys and initial funds
