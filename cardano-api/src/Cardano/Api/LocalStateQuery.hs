@@ -20,6 +20,7 @@ import           Cardano.BM.Data.Tracer (ToLogObject (..), nullTracer)
 import           Cardano.BM.Trace (Trace, appendName, logInfo)
 
 import           Cardano.Config.Protocol ()
+import           Cardano.Config.Shelley.Protocol (mkNodeClientProtocolTPraos)
 import           Cardano.Config.Types (SocketPath (..))
 
 import qualified Codec.CBOR.Term as CBOR
@@ -38,10 +39,12 @@ import           Data.Void (Void)
 
 import           Network.Mux (MuxTrace, WithMuxBearer)
 
+import           Ouroboros.Consensus.Cardano (protocolClientInfo)
 import           Ouroboros.Consensus.Ledger.Abstract (Query)
 import           Ouroboros.Consensus.Network.NodeToClient
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
                   (nodeToClientProtocolVersion, supportedNodeToClientVersions)
+import           Ouroboros.Consensus.Node.ProtocolInfo (ProtocolClientInfo (..))
 import           Ouroboros.Consensus.Node.Run (RunNode)
 import           Ouroboros.Consensus.Shelley.Ledger
 import           Ouroboros.Consensus.Shelley.Protocol.Crypto (TPraosStandardCrypto)
@@ -83,21 +86,20 @@ renderLocalStateQueryError lsqErr =
 -- This one is Shelley-specific because the query is Shelley-specific.
 --
 queryFilteredUTxOFromLocalState
-  :: CodecConfig (ShelleyBlock TPraosStandardCrypto)
-  -> Network
+  :: Network
   -> SocketPath
   -> Set Address
   -> Point (ShelleyBlock TPraosStandardCrypto)
   -> ExceptT LocalStateQueryError IO (Ledger.UTxO TPraosStandardCrypto)
-queryFilteredUTxOFromLocalState cfg nm socketPath addrs point =
+queryFilteredUTxOFromLocalState network socketPath addrs point =
   whenAllShelleyAddresses addrs $ \shelleyAddrs -> do
     let pointAndQuery = (point, GetFilteredUTxO shelleyAddrs)
     utxoVar <- liftIO newEmptyTMVarM
     liftIO $ queryNodeLocalState
       utxoVar
       nullTracer
-      cfg
-      nm
+      (pClientInfoCodecConfig . protocolClientInfo $ mkNodeClientProtocolTPraos)
+      network
       socketPath
       pointAndQuery
     newExceptT $ atomically $ takeTMVar utxoVar
@@ -108,19 +110,19 @@ queryFilteredUTxOFromLocalState cfg nm socketPath addrs point =
 -- This one is Shelley-specific because the query is Shelley-specific.
 --
 queryPParamsFromLocalState
-  :: (RunNode blk, blk ~ ShelleyBlock c)
-  => CodecConfig blk
-  -> Network
+  :: blk ~ ShelleyBlock TPraosStandardCrypto
+  => Network
   -> SocketPath
   -> Point blk
   -> ExceptT LocalStateQueryError IO Ledger.PParams
-queryPParamsFromLocalState cfg nm socketPath point = do
+queryPParamsFromLocalState network socketPath point = do
   let pointAndQuery = (point, GetCurrentPParams)
   pParamsVar <- liftIO newEmptyTMVarM
   liftIO $ queryNodeLocalState
     pParamsVar
     nullTracer
-    cfg nm
+    (pClientInfoCodecConfig . protocolClientInfo $ mkNodeClientProtocolTPraos)
+    network
     socketPath
     pointAndQuery
   newExceptT $ atomically $ takeTMVar pParamsVar

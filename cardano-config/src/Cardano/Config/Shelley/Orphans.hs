@@ -22,6 +22,7 @@ import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Encoding as Aeson
 import           Data.Aeson.Types (Parser)
 import qualified Data.ByteString.Base16 as Base16
+import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 
 import           Cardano.Crypto.Hash.Class as Crypto
@@ -41,7 +42,8 @@ import           Shelley.Spec.Ledger.Coin (Coin(..))
 import           Shelley.Spec.Ledger.Crypto (Crypto)
 import           Shelley.Spec.Ledger.Keys (KeyHash(..))
 import           Shelley.Spec.Ledger.PParams (PParams, PParams' (..), ProtVer (..))
-import           Shelley.Spec.Ledger.TxData (Addr(..))
+import           Shelley.Spec.Ledger.TxData (Addr(..), TxId(..), TxIn(..), TxOut(..))
+import           Shelley.Spec.Ledger.UTxO (UTxO(..))
 
 instance Crypto crypto => ToJSON (ShelleyGenesis crypto) where
   toJSON sg =
@@ -163,9 +165,32 @@ instance FromJSON ProtVer where
 deriving instance ToJSON Nonce
 deriving instance FromJSON Nonce
 
+instance Crypto c => ToJSONKey (TxIn c) where
+  toJSONKey = ToJSONKeyText txInToText (Aeson.text . txInToText)
+
+txInToText :: TxIn c -> Text
+txInToText (TxIn (TxId txidHash) ix) =
+  hashToText txidHash
+    <> Text.pack "#"
+    <> Text.pack (show ix)
+
+deriving instance Crypto c => ToJSON (TxIn c)
+
+instance Crypto c => ToJSON (TxOut c) where
+  toJSON (TxOut addr amount) =
+    Aeson.object
+      [ "address" .= addr
+      , "amount" .= amount
+      ]
+
+
 --
 -- Simple newtype wrappers JSON conversion
 --
+
+deriving newtype instance ToJSON (TxId c)
+
+deriving newtype instance Crypto c => ToJSON (UTxO c)
 
 -- These are for ShelleyGenesis.
 -- These ones are all just newtype wrappers of numbers,

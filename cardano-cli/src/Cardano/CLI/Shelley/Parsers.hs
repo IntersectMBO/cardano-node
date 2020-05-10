@@ -29,11 +29,10 @@ module Cardano.CLI.Shelley.Parsers
 import           Cardano.Prelude hiding (option)
 
 import           Cardano.Api
-import           Cardano.Common.Parsers (parseConfigFile, parseNodeAddress)
+import           Cardano.Common.Parsers (parseNodeAddress)
 import           Cardano.Slotting.Slot (EpochNo (..))
 
-import           Cardano.Config.Types (ConfigYamlFilePath (..), NodeAddress,
-                    SigningKeyFile(..), CertificateFile (..))
+import           Cardano.Config.Types (NodeAddress, SigningKeyFile(..), CertificateFile (..))
 import           Cardano.Config.Shelley.OCert (KESPeriod(..))
 import           Cardano.CLI.Key (VerificationKeyFile(..))
 
@@ -147,9 +146,9 @@ data PoolCmd
 
 data QueryCmd
   = QueryPoolId NodeAddress
-  | QueryProtocolParameters ConfigYamlFilePath (Maybe OutputFile)
+  | QueryProtocolParameters Network (Maybe OutputFile)
   | QueryTip NodeAddress
-  | QueryFilteredUTxO Address ConfigYamlFilePath
+  | QueryFilteredUTxO Address Network (Maybe OutputFile)
   | QueryVersion NodeAddress
   | QueryStatus NodeAddress
   deriving (Eq, Show)
@@ -518,7 +517,7 @@ pQueryCmd =
     pQueryProtocolParameters :: Parser QueryCmd
     pQueryProtocolParameters =
       QueryProtocolParameters
-        <$> (ConfigYamlFilePath <$> parseConfigFile)
+        <$> pNetwork
         <*> pMaybeOutputFile
 
     pQueryTip :: Parser QueryCmd
@@ -528,7 +527,8 @@ pQueryCmd =
     pQueryFilteredUTxO =
       QueryFilteredUTxO
         <$> pHexEncodedAddress
-        <*> (ConfigYamlFilePath <$> parseConfigFile)
+        <*> pNetwork
+        <*> pMaybeOutputFile
 
     pQueryVersion :: Parser QueryCmd
     pQueryVersion = QueryVersion <$> parseNodeAddress
