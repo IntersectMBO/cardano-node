@@ -13,6 +13,8 @@ module Cardano.Api.CBOR
   , verificationKeyStakePoolToCBOR
   , verificationKeyStakingFromCBOR
   , verificationKeyStakingToCBOR
+  , verificationKeyVRFFromCBOR
+  , verificationKeyVRFToCBOR
 
   , shelleyVerificationKeyFromCBOR
   , shelleyVerificationKeyToCBOR
@@ -137,6 +139,25 @@ verificationKeyToCBOR pk =
           [ toCBOR (175 :: Word8)
           , encodeShelleyVerificationKey vk
           ]
+
+
+verificationKeyVRFFromCBOR :: ByteString -> Either ApiError ShelleyVRFVerificationKey
+verificationKeyVRFFromCBOR =
+   first ApiErrorCBOR
+ . CBOR.decodeFullDecoder "VRFVerificationKey" decode
+ . LBS.fromStrict
+  where
+    decode :: Decoder s ShelleyVRFVerificationKey
+    decode = do
+      tag <- CBOR.decodeWord8
+      case tag of
+        186  -> fromCBOR
+        _  -> cborError $ DecoderErrorUnknownTag "VRFVerificationKey" tag
+
+verificationKeyVRFToCBOR :: ShelleyVRFVerificationKey -> ByteString
+verificationKeyVRFToCBOR vk =
+  CBOR.serializeEncoding' $  mconcat [ toCBOR (186 :: Word8), toCBOR vk ]
+
 
 verificationKeyStakePoolFromCBOR :: ByteString -> Either ApiError ShelleyVerificationKeyStakePool
 verificationKeyStakePoolFromCBOR =

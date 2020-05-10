@@ -65,6 +65,7 @@ module Cardano.Api.Types
   , ShelleyVerificationKeyStaking
   , ShelleySigningKey
   , ShelleyVRFVerificationKeyHash
+  , ShelleyVRFVerificationKey
   , ShelleyAddress
   , ShelleyCredentialStaking
   , ShelleyCredentialStakePool
@@ -128,6 +129,7 @@ type ShelleyVerificationKeyStakePool     = Shelley.VKey Shelley.StakePool Shelle
 type ShelleyVerificationKeyHashStaking   = Shelley.KeyHash Shelley.Staking Shelley.TPraosStandardCrypto
 type ShelleyVerificationKeyHashStakePool = Shelley.KeyHash Shelley.StakePool Shelley.TPraosStandardCrypto
 type ShelleyVRFVerificationKeyHash       = Shelley.Hash   Shelley.TPraosStandardCrypto (Shelley.VerKeyVRF Shelley.TPraosStandardCrypto)
+type ShelleyVRFVerificationKey           = Shelley.VerKeyVRF Shelley.TPraosStandardCrypto
 type ShelleySigningKey                   = Shelley.SignKeyDSIGN Shelley.TPraosStandardCrypto
 type ShelleyAddress                      = Shelley.Addr   Shelley.TPraosStandardCrypto
 type ShelleyTxIn                         = Shelley.TxIn   Shelley.TPraosStandardCrypto
