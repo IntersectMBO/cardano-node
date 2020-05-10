@@ -306,6 +306,7 @@ data CliError
   | NodeLocalStateQueryError !LocalStateQueryError
   | AddressDescribeError !Text
   | CliTextViewFileError !TextViewFileError
+  | CliEnvVarLookup !Text
 
 instance Show CliError where
   show (AddressCliError e)
@@ -406,6 +407,8 @@ instance Show CliError where
     = T.unpack txt
   show (CliTextViewFileError err)
     = T.unpack $ renderTextViewFileError err
+  show (CliEnvVarLookup name)
+    = "Lookup of environment variable " <> show name <> " failed."
 
 data RealPBFTError
   = IncorrectProtocolSpecified !Protocol

@@ -15,6 +15,7 @@ import           Cardano.Api
 import           Cardano.Config.Shelley.ColdKeys
                    (KeyType(..), KeyRole(..), KeyError(..), renderKeyType)
 import           Cardano.Config.TextView
+import           Cardano.CLI.Environment (readEnvSocketPath)
 import           Cardano.CLI.Ops (CliError (..))
 
 import           Cardano.Config.Protocol (mkConsensusProtocol)
@@ -38,8 +39,8 @@ runTransactionCmd cmd =
       runTxBuildRaw txins txouts ttl fee out certs
     TxSign txinfile skfiles network txoutfile ->
       runTxSign txinfile skfiles network txoutfile
-    TxSubmit txFp configFp sockFp ->
-      runTxSubmit txFp configFp sockFp
+    TxSubmit txFp configFp ->
+      runTxSubmit txFp configFp
 
     _ -> liftIO $ putStrLn $ "runTransactionCmd: " ++ show cmd
 
@@ -74,9 +75,10 @@ runTxSign (TxBodyFile infile) skfiles  network (TxFile outfile) = do
       . writeTxSigned outfile
       $ signTransaction txu network sks
 
-runTxSubmit :: FilePath -> ConfigYamlFilePath -> SocketPath -> ExceptT CliError IO ()
-runTxSubmit txFp configFp sktFp =
+runTxSubmit :: FilePath -> ConfigYamlFilePath -> ExceptT CliError IO ()
+runTxSubmit txFp configFp =
   withIOManagerE $ \iocp -> do
+    sktFp <- readEnvSocketPath
     nc <- liftIO $ parseNodeConfigurationFP configFp
     SomeConsensusProtocol p <- firstExceptT ProtocolError $ mkConsensusProtocol nc Nothing
     signedTx <- firstExceptT CardanoApiError . newExceptT $ readTxSigned txFp

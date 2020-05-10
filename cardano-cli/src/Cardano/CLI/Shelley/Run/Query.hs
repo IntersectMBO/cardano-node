@@ -10,12 +10,12 @@ import           Cardano.Api
                    (Address, Network(..), queryFilteredUTxOFromLocalState,
                     queryPParamsFromLocalState)
 
+import           Cardano.CLI.Environment (readEnvSocketPath)
 import           Cardano.CLI.Ops (CliError (..), getLocalTip)
 import           Cardano.CLI.Shelley.Parsers (OutputFile (..), QueryCmd (..))
 
 import           Cardano.Config.Protocol (mkConsensusProtocol)
-import           Cardano.Config.Types (SocketPath, ConfigYamlFilePath,
-                     NodeConfiguration (..),
+import           Cardano.Config.Types (ConfigYamlFilePath, NodeConfiguration (..),
                      SomeConsensusProtocol (..), parseNodeConfigurationFP)
 
 import           Control.Monad.Trans.Except (ExceptT)
@@ -37,22 +37,24 @@ import           Shelley.Spec.Ledger.PParams (PParams)
 
 
 runQueryCmd :: QueryCmd -> ExceptT CliError IO ()
-runQueryCmd (QueryProtocolParameters configFp sockPath outFile) =
-  runQueryProtocolParameters configFp sockPath outFile
-runQueryCmd (QueryFilteredUTxO addr configFp sockPath outFile) =
-  runQueryFilteredUTxO addr configFp sockPath outFile
-runQueryCmd cmd = liftIO $ putStrLn $ "runQueryCmd: " ++ show cmd
+runQueryCmd cmd =
+  case cmd of
+    QueryProtocolParameters configFp outFile ->
+      runQueryProtocolParameters configFp outFile
+    QueryFilteredUTxO addr configFp outFile ->
+      runQueryFilteredUTxO addr configFp outFile
+    _ -> liftIO $ putStrLn $ "runQueryCmd: " ++ show cmd
 
 runQueryProtocolParameters
   :: ConfigYamlFilePath
-  -> SocketPath
   -> OutputFile
   -> ExceptT CliError IO ()
-runQueryProtocolParameters configFp sockPath (OutputFile outFile) = do
+runQueryProtocolParameters configFp (OutputFile outFile) = do
     nc <- liftIO $ parseNodeConfigurationFP configFp
     SomeConsensusProtocol p <- firstExceptT ProtocolError $ mkConsensusProtocol nc Nothing
     case p of
       ptcl@ProtocolRealTPraos{} -> do
+        sockPath <- readEnvSocketPath
         tip <- liftIO $ withIOManager $ \iomgr -> getLocalTip iomgr cfg nm sockPath
         pparams <- firstExceptT NodeLocalStateQueryError $
           queryPParamsFromLocalState cfg nm sockPath (getTipPoint tip)
@@ -68,15 +70,15 @@ runQueryProtocolParameters configFp sockPath (OutputFile outFile) = do
 runQueryFilteredUTxO
   :: Address
   -> ConfigYamlFilePath
-  -> SocketPath
   -> OutputFile
   -> ExceptT CliError IO ()
-runQueryFilteredUTxO addr configFp sockPath (OutputFile _outFile) = do
+runQueryFilteredUTxO addr configFp (OutputFile _outFile) = do
     nc <- liftIO $ parseNodeConfigurationFP configFp
     SomeConsensusProtocol p <- firstExceptT ProtocolError $ mkConsensusProtocol nc Nothing
 
     case p of
       ptcl@ProtocolRealTPraos{} -> do
+        sockPath <- readEnvSocketPath
         tip <- liftIO $ withIOManager $ \iomgr -> getLocalTip iomgr cfg nm sockPath
         filteredUtxo <- firstExceptT NodeLocalStateQueryError $
           queryFilteredUTxOFromLocalState cfg nm sockPath
