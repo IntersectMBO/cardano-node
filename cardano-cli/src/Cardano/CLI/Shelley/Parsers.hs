@@ -116,7 +116,7 @@ data QueryCmd
   = QueryPoolId NodeAddress
   | QueryProtocolParameters ConfigYamlFilePath OutputFile
   | QueryTip NodeAddress
-  | QueryFilteredUTxO Address ConfigYamlFilePath OutputFile
+  | QueryFilteredUTxO Address ConfigYamlFilePath
   | QueryVersion NodeAddress
   | QueryStatus NodeAddress
   deriving (Eq, Show)
@@ -468,7 +468,6 @@ pQueryCmd =
       QueryFilteredUTxO
         <$> pHexEncodedAddress
         <*> (ConfigYamlFilePath <$> parseConfigFile)
-        <*> pOutputFile
 
     pQueryVersion :: Parser QueryCmd
     pQueryVersion = QueryVersion <$> parseNodeAddress
