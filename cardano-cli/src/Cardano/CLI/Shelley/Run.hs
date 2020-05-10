@@ -23,6 +23,7 @@ import           Cardano.CLI.Shelley.Run.Address
 import           Cardano.CLI.Shelley.Run.Genesis
 import           Cardano.CLI.Shelley.Run.KeyGen
 import           Cardano.CLI.Shelley.Run.Query (runQueryCmd)
+import           Cardano.CLI.Shelley.Run.TextView (runTextViewCmd)
 import           Cardano.CLI.Shelley.Run.Transaction (runTransactionCmd)
 
 import           Cardano.Config.Shelley.ColdKeys
@@ -48,6 +49,7 @@ runShelleyClientCommand (BlockCmd        cmd) = runBlockCmd        cmd
 runShelleyClientCommand (SystemCmd       cmd) = runSystemCmd       cmd
 runShelleyClientCommand (DevOpsCmd       cmd) = runDevOpsCmd       cmd
 runShelleyClientCommand (GenesisCmd      cmd) = runGenesisCmd      cmd
+runShelleyClientCommand (TextViewCmd     cmd) = runTextViewCmd     cmd
 
 --
 -- CLI shelley subcommand dispatch

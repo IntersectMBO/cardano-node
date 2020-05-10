@@ -14,6 +14,7 @@ module Cardano.CLI.Shelley.Parsers
   , SystemCmd (..)
   , DevOpsCmd (..)
   , GenesisCmd (..)
+  , TextViewCmd (..)
 
     -- * CLI flag types
   , GenesisDir (..)
@@ -64,6 +65,7 @@ data ShelleyCommand
   | SystemCmd       SystemCmd
   | DevOpsCmd       DevOpsCmd
   | GenesisCmd      GenesisCmd
+  | TextViewCmd     TextViewCmd
   deriving (Eq, Show)
 
 
@@ -130,6 +132,10 @@ data DevOpsCmd
   | DevOpsColdKeys GenesisKeyFile     -- { genesis :: GenesisKeyFile, keys :: [PubKey], nodeAddr :: NodeAddress }
   deriving (Eq, Show)
 
+
+data TextViewCmd
+  = TextViewInfo !FilePath
+  deriving (Eq, Show)
 
 data SystemCmd
   = SysStart GenesisFile NodeAddress
@@ -226,7 +232,27 @@ parseShelleyCommands =
           (Opt.info (DevOpsCmd <$> pDevOpsCmd) $ Opt.progDesc "Shelley devops commands")
       , Opt.command "genesis"
           (Opt.info (GenesisCmd <$> pGenesisCmd) $ Opt.progDesc "Shelley genesis block commands")
+      , Opt.command "text-view"
+          (Opt.info (TextViewCmd <$> pTextViewCmd) . Opt.progDesc $
+             mconcat
+               [ "Commands for dealing with Shelley TextView files. "
+               , "Transactions, addresses etc are stored on disk as TextView files."
+               ]
+            )
+
       ]
+
+pTextViewCmd :: Parser TextViewCmd
+pTextViewCmd =
+  Opt.subparser $
+    mconcat
+      [ Opt.command "decode-cbor"
+          (Opt.info (TextViewInfo <$> pFilePath Input)
+            $ Opt.progDesc "Print a TextView file as decoded CBOR."
+            )
+      ]
+
+
 
 pAddressCmd :: Parser AddressCmd
 pAddressCmd =
@@ -723,6 +749,14 @@ pOutputFile =
       <> Opt.metavar "FILE"
       <> Opt.help "The output file."
       )
+
+pFilePath :: FileDirection -> Parser FilePath
+pFilePath fdir =
+  Opt.strOption
+    (  Opt.long "file"
+    <> Opt.metavar "FILENAME"
+    <> Opt.help (show fdir ++ " file.")
+    )
 
 pPoolId :: Parser PoolId
 pPoolId =
