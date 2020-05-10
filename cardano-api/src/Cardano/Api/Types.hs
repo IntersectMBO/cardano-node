@@ -80,6 +80,11 @@ module Cardano.Api.Types
   , toShelleyTxIn
   , toShelleyTxOut
   , toShelleyLovelace
+  , fromShelleyTxId
+  , fromShelleyTxIn
+  , fromShelleyTxOut
+  , fromShelleyAddress
+  , fromShelleyCoin
   ) where
 
 import           Cardano.Prelude
@@ -265,6 +270,22 @@ toByronLovelace (Lovelace x) = x' where Right x' = Byron.integerToLovelace x
 
 toShelleyLovelace :: Lovelace -> Shelley.Coin
 toShelleyLovelace (Lovelace l) = Shelley.Coin l
+
+fromShelleyAddress :: ShelleyAddress -> Address
+fromShelleyAddress = AddressShelley
+
+fromShelleyCoin :: ShelleyCoin -> Lovelace
+fromShelleyCoin (Shelley.Coin amount) = Lovelace amount
+
+fromShelleyTxId :: Shelley.TxId crypto -> TxId
+fromShelleyTxId (Shelley.TxId (Crypto.UnsafeHash h)) = TxId (Crypto.UnsafeHash h)
+
+fromShelleyTxIn :: Shelley.TxIn crypto -> TxIn
+fromShelleyTxIn (Shelley.TxIn txid ix) = TxIn (fromShelleyTxId txid) (fromIntegral ix)
+
+fromShelleyTxOut :: ShelleyTxOut -> TxOut
+fromShelleyTxOut (Shelley.TxOut addr amount) =
+  TxOut (fromShelleyAddress addr) (fromShelleyCoin amount)
 
 
 data TxSigned

@@ -18,8 +18,11 @@ module Cardano.CLI.Shelley.Parsers
 
     -- * CLI flag types
   , GenesisDir (..)
+  , TxInCount (..)
+  , TxOutCount (..)
   , OpCertCounterFile (..)
   , OutputFile (..)
+  , ProtocolParamsFile (..)
   , SigningKeyFile (..)
   , TxBodyFile (..)
   , TxFile (..)
@@ -99,6 +102,14 @@ data TransactionCmd
   | TxSignWitness   -- { transaction :: Transaction, witnesses :: [Witness], nodeAddr :: NodeAddress }
   | TxCheck         -- { transaction :: Transaction, nodeAddr :: NodeAddress }
   | TxSubmit FilePath Network
+  | TxCalculateMinFee
+      TxInCount
+      TxOutCount
+      SlotNo
+      Network
+      [SigningKeyFile]
+      [CertificateFile]
+      ProtocolParamsFile
   | TxInfo          -- { transaction :: Transaction, nodeAddr :: NodeAddress }
   deriving (Eq, Show)
 
@@ -191,6 +202,18 @@ data GenesisCmd
 --
 -- Shelley CLI flag/option data types
 --
+
+newtype ProtocolParamsFile
+  = ProtocolParamsFile FilePath
+  deriving (Show, Eq)
+
+newtype TxInCount
+  = TxInCount Int
+  deriving (Eq, Show)
+
+newtype TxOutCount
+  = TxOutCount Int
+  deriving (Eq, Show)
 
 newtype BlockId
   = BlockId String -- Probably not a String
@@ -402,7 +425,8 @@ pTransaction =
                , "is obtained from the CARDANO_NODE_SOCKET_PATH enviromnent variable."
                ]
             )
-
+      , Opt.command "calculate-min-fee"
+          (Opt.info pTransactionCalculateMinFee $ Opt.progDesc "Calulate the min fee for a transaction")
       , Opt.command "info"
           (Opt.info pTransactionInfo $ Opt.progDesc "Print information about a transaction")
       ]
@@ -433,6 +457,17 @@ pTransaction =
     pTransactionSubmit  :: Parser TransactionCmd
     pTransactionSubmit = TxSubmit <$> pTxSubmitFile
                                   <*> pNetwork
+
+    pTransactionCalculateMinFee :: Parser TransactionCmd
+    pTransactionCalculateMinFee =
+      TxCalculateMinFee
+        <$> pTxInCount
+        <*> pTxOutCount
+        <*> pTxTTL
+        <*> pNetwork
+        <*> pSomeSigningKeyFiles
+        <*> many pCertificate
+        <*> pProtocolParamsFile
 
     pTransactionInfo  :: Parser TransactionCmd
     pTransactionInfo = pure TxInfo
@@ -745,6 +780,15 @@ pGenesisCmd =
 -- Shelley CLI flag parsers
 --
 
+pProtocolParamsFile :: Parser ProtocolParamsFile
+pProtocolParamsFile =
+ ProtocolParamsFile <$>
+   Opt.strOption
+     (  Opt.long "protocol-params-file"
+     <> Opt.metavar "FILEPATH"
+     <> Opt.help "Filepath of the JSON-encoded protocol parameters file"
+     )
+
 pCertificate :: Parser CertificateFile
 pCertificate =
  CertificateFile <$>
@@ -959,6 +1003,24 @@ pTxFile fdir =
       (  Opt.long "tx-file"
       <> Opt.metavar "FILEPATH"
       <> Opt.help (show fdir ++ " filepath of the Tx.")
+      )
+
+pTxInCount :: Parser TxInCount
+pTxInCount =
+  TxInCount <$>
+    Opt.option Opt.auto
+      (  Opt.long "tx-in-count"
+      <> Opt.metavar "INT"
+      <> Opt.help "The number of transaction inputs."
+      )
+
+pTxOutCount :: Parser TxOutCount
+pTxOutCount =
+  TxOutCount <$>
+    Opt.option Opt.auto
+      (  Opt.long "tx-out-count"
+      <> Opt.metavar "INT"
+      <> Opt.help "The number of transaction outputs."
       )
 
 pHexEncodedAddress :: Parser Address

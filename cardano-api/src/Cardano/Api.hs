@@ -46,6 +46,8 @@ module Cardano.Api
 
   , buildByronTransaction
   , buildShelleyTransaction
+  , buildDummyShelleyTxForFeeCalc
+  , calculateShelleyMinFee
   , signTransaction
   , witnessTransaction
   , signTransactionWithWitness
@@ -97,7 +99,8 @@ import qualified Cardano.Binary as Binary
 import           Cardano.Crypto.DSIGN (DSIGNAlgorithm (..))
 import           Cardano.Crypto.Seed (readSeedFromSystemEntropy)
 
-import qualified Cardano.Crypto.Hashing as Crypto
+import qualified Cardano.Crypto.Hash as Crypto (Blake2b_256, hash)
+import qualified Cardano.Crypto.Hashing as Crypto hiding (hash)
 import           Cardano.Crypto.ProtocolMagic (ProtocolMagicId (..))
 import           Cardano.Crypto.Random (runSecureRandom)
 import qualified Cardano.Crypto.Signing as Crypto
@@ -116,11 +119,13 @@ import qualified Cardano.Chain.Genesis as Byron
 import qualified Cardano.Chain.UTxO    as Byron
 
 import qualified Ouroboros.Consensus.Shelley.Protocol.Crypto as Shelley
-import qualified Shelley.Spec.Ledger.Keys      as Shelley
-import qualified Shelley.Spec.Ledger.Slot      as Shelley
-import qualified Shelley.Spec.Ledger.TxData    as Shelley
-import qualified Shelley.Spec.Ledger.Tx        as Shelley
-import qualified Shelley.Spec.Ledger.BaseTypes as Shelley
+import qualified Shelley.Spec.Ledger.Keys        as Shelley
+import qualified Shelley.Spec.Ledger.LedgerState as Shelley (minfee)
+import qualified Shelley.Spec.Ledger.PParams     as Shelley
+import qualified Shelley.Spec.Ledger.Slot        as Shelley
+import qualified Shelley.Spec.Ledger.TxData      as Shelley
+import qualified Shelley.Spec.Ledger.Tx          as Shelley
+import qualified Shelley.Spec.Ledger.BaseTypes   as Shelley
 
 
 byronGenSigningKey :: IO SigningKey
@@ -327,6 +332,55 @@ buildShelleyTransaction txins txouts ttl fee certs = do
    certDiscrim (ShelleyStakePoolCertificate sPoolCert) = sPoolCert
    certDiscrim (ShelleyGenesisDelegationCertificate sGenDelegCert) = sGenDelegCert
    certDiscrim (ShelleyMIRCertificate mirCert) = mirCert
+
+-- | Calculate the minimum fee of a Shelley transaction.
+calculateShelleyMinFee :: Shelley.PParams -> TxSigned -> Lovelace
+calculateShelleyMinFee _ (TxSignedByron _ _ _ _) =
+  panic "calculateShelleyMinFee: TxSignedByron"
+calculateShelleyMinFee pparams (TxSignedShelley tx) =
+  Lovelace . fromIntegral $ Shelley.minfee pparams tx
+
+-- | Build a dummy Shelley transaction to be used for the minimum fee
+-- calculation.
+buildDummyShelleyTxForFeeCalc
+  :: Int
+  -- ^ The number of dummy transaction inputs to use.
+  -> Int
+  -- ^ The number of dummy transaction outputs to use.
+  -> SlotNo
+  -- ^ The transaction TTL.
+  -> Network
+  -> [SigningKey]
+  -> [Certificate]
+  -> TxSigned
+buildDummyShelleyTxForFeeCalc txInCount txOutCount ttl network skeys certs =
+    signTransaction (buildShelleyTransaction txIns txOuts ttl fee certs) network skeys
+  where
+    vkey :: VerificationKey
+    vkey =
+      maybe
+        (panic "buildDummyShelleyTxForFeeCalc: No signing keys provided.")
+        getVerificationKey
+        (headMay skeys)
+
+    addr :: Address
+    addr = shelleyVerificationKeyAddress vkey network
+
+    txIns :: [TxIn]
+    txIns = map (mkTxIn . mkTxId) [0..txInCount - 1]
+
+    mkTxIn :: TxId -> TxIn
+    mkTxIn = (flip TxIn) 0
+
+    mkTxId :: Int -> TxId
+    mkTxId = TxId . coerce . Crypto.hash @Crypto.Blake2b_256
+
+    txOuts :: [TxOut]
+    txOuts = replicate txOutCount (TxOut addr (Lovelace 0))
+
+    fee :: Lovelace
+    fee = Lovelace 0
+
 {-
 inputs outputs, attributes:
 ATxAux { Tx TxWiness Annotation }
