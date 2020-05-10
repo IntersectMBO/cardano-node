@@ -44,8 +44,8 @@ runQueryCmd cmd =
   case cmd of
     QueryProtocolParameters network mOutFile ->
       runQueryProtocolParameters network mOutFile
-    QueryFilteredUTxO addr network ->
-      runQueryFilteredUTxO addr network
+    QueryFilteredUTxO addr network mOutFile ->
+      runQueryFilteredUTxO addr network mOutFile
     _ -> liftIO $ putStrLn $ "runQueryCmd: " ++ show cmd
 
 runQueryProtocolParameters
@@ -64,23 +64,30 @@ runQueryProtocolParameters network mOutFile = do
 runQueryFilteredUTxO
   :: Address
   -> Network
+  -> Maybe OutputFile
   -> ExceptT CliError IO ()
-runQueryFilteredUTxO addr network = do
+runQueryFilteredUTxO addr network mOutFile = do
   sockPath <- readEnvSocketPath
   let ptclClientInfo = pClientInfoCodecConfig . protocolClientInfo $ mkNodeClientProtocolTPraos
   tip <- liftIO $ withIOManager $ \iomgr ->
     getLocalTip iomgr ptclClientInfo network sockPath
   filteredUtxo <- firstExceptT NodeLocalStateQueryError $
     queryFilteredUTxOFromLocalState network sockPath (Set.singleton addr) (getTipPoint tip)
-  liftIO $ printFilteredUTxOs filteredUtxo
+  writeFilteredUTxOs mOutFile filteredUtxo
 
-writeProtocolParameters :: Maybe OutputFile  -> PParams -> ExceptT CliError IO ()
+writeProtocolParameters :: Maybe OutputFile -> PParams -> ExceptT CliError IO ()
 writeProtocolParameters mOutFile pparams =
     case mOutFile of
       Nothing -> liftIO $ LBS.putStrLn (encodePretty pparams)
       Just (OutputFile fpath) ->
         handleIOExceptT (IOError fpath) $ LBS.writeFile fpath (encodePretty pparams)
 
+writeFilteredUTxOs :: Maybe OutputFile -> UTxO TPraosStandardCrypto -> ExceptT CliError IO ()
+writeFilteredUTxOs mOutFile utxo =
+    case mOutFile of
+      Nothing -> liftIO $ printFilteredUTxOs utxo
+      Just (OutputFile fpath) ->
+        handleIOExceptT (IOError fpath) $ LBS.writeFile fpath (encodePretty utxo)
 
 printFilteredUTxOs :: UTxO TPraosStandardCrypto -> IO ()
 printFilteredUTxOs (UTxO utxo) = do

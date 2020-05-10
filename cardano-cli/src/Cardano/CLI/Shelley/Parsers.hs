@@ -148,7 +148,7 @@ data QueryCmd
   = QueryPoolId NodeAddress
   | QueryProtocolParameters Network (Maybe OutputFile)
   | QueryTip NodeAddress
-  | QueryFilteredUTxO Address Network
+  | QueryFilteredUTxO Address Network (Maybe OutputFile)
   | QueryVersion NodeAddress
   | QueryStatus NodeAddress
   deriving (Eq, Show)
@@ -528,6 +528,7 @@ pQueryCmd =
       QueryFilteredUTxO
         <$> pHexEncodedAddress
         <*> pNetwork
+        <*> pMaybeOutputFile
 
     pQueryVersion :: Parser QueryCmd
     pQueryVersion = QueryVersion <$> parseNodeAddress
