@@ -674,6 +674,7 @@ pGenesisCmd =
           (  Opt.long "supply"
           <> Opt.metavar "LOVELACE"
           <> Opt.help "The initial coin supply in Lovelace which will be evenly distributed across initial stake holders."
+          <> Opt.value 0
           )
 
 
