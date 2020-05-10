@@ -836,7 +836,7 @@ Available options:
 There's a few things here to understand.
 
 As discussed above, a certificate identifies an operational KES key that we
-will be using to sign block headers, so we need is verification key. It is
+will be using to sign block headers, so we need its verification key. It is
 signed by the operator's offline key so we need that signing key.
 
 As mentioned, certificates have an issue counter number that is used to
