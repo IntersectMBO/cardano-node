@@ -659,7 +659,7 @@ if you want.
 
 Armed just with the genesis file we could now start a node, however it would
 raise difficult philosophical questions about the nature of a blockchain with
-no blocks. To avoid such questions, lets aim to have some nodes that can create
+no blocks. To avoid such questions, let's aim to have some nodes that can create
 blocks. Of course this means everyone's favourite: more keys.
 
 Shelley uses a "hot key / cold key" scheme for block producing nodes:
