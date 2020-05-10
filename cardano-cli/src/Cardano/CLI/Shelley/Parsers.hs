@@ -178,7 +178,7 @@ data SystemCmd
 
 
 data GenesisCmd
-  = GenesisCreate GenesisDir Word Word (Maybe SystemStart) Lovelace
+  = GenesisCreate GenesisDir Word Word (Maybe SystemStart) (Maybe Lovelace)
   | GenesisKeyGenGenesis VerificationKeyFile SigningKeyFile
   | GenesisKeyGenDelegate VerificationKeyFile SigningKeyFile OpCertCounterFile
   | GenesisKeyGenUTxO VerificationKeyFile SigningKeyFile
@@ -257,7 +257,12 @@ parseShelleyCommands =
       , Opt.command "stake-pool"
           (Opt.info (PoolCmd <$> pPoolCmd) $ Opt.progDesc "Shelley stake pool commands")
       , Opt.command "query"
-          (Opt.info (QueryCmd <$> pQueryCmd) $ Opt.progDesc "Shelley node query commands")
+          (Opt.info (QueryCmd <$> pQueryCmd) . Opt.progDesc $
+             mconcat
+               [ "Shelley node query commands. Will query the local node whose Unix domain socket "
+               , "is obtained from the CARDANO_NODE_SOCKET_PATH enviromnent variable."
+               ]
+            )
       , Opt.command "block"
           (Opt.info (BlockCmd <$> pBlockCmd) $ Opt.progDesc "Shelley block commands")
       , Opt.command "system"
@@ -391,7 +396,13 @@ pTransaction =
       , Opt.command "check"
           (Opt.info pTransactionCheck $ Opt.progDesc "Check a transaction")
       , Opt.command "submit"
-          (Opt.info pTransactionSubmit $ Opt.progDesc "Submit a transaction")
+          (Opt.info pTransactionSubmit . Opt.progDesc $
+             mconcat
+               [ "Submit a transaction to the local node whose Unix domain socket "
+               , "is obtained from the CARDANO_NODE_SOCKET_PATH enviromnent variable."
+               ]
+            )
+
       , Opt.command "info"
           (Opt.info pTransactionInfo $ Opt.progDesc "Print information about a transaction")
       ]
@@ -634,7 +645,7 @@ pGenesisCmd =
       , Opt.command "initial-txin"
           (Opt.info pGenesisTxIn $
              Opt.progDesc "Get the TxIn for an initial UTxO based on the verification key")
-      , Opt.command "create-genesis"
+      , Opt.command "create"
           (Opt.info pGenesisCreate $
              Opt.progDesc ("Create a Shelley genesis file from a genesis "
                         ++ "template and genesis/delegation/spending keys."))
@@ -719,14 +730,14 @@ pGenesisCmd =
     convertTime =
       parseTimeOrError False defaultTimeLocale (iso8601DateFormat $ Just "%H:%M:%SZ")
 
-    pInitialSupply :: Parser Lovelace
+    pInitialSupply :: Parser (Maybe Lovelace)
     pInitialSupply =
+      Opt.optional $
       Lovelace <$>
         Opt.option Opt.auto
           (  Opt.long "supply"
           <> Opt.metavar "LOVELACE"
           <> Opt.help "The initial coin supply in Lovelace which will be evenly distributed across initial stake holders."
-          <> Opt.value 0
           )
 
 

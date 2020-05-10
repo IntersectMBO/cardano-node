@@ -91,11 +91,11 @@ runGenesisCreate :: GenesisDir
                  -> Word  -- ^ num genesis & delegate keys to make
                  -> Word  -- ^ num utxo keys to make
                  -> Maybe SystemStart
-                 -> Lovelace
+                 -> Maybe Lovelace
                  -> ExceptT CliError IO ()
 runGenesisCreate (GenesisDir rootdir)
                  genNumGenesisKeys genNumUTxOKeys
-                 mStart amount = do
+                 mStart mAmount = do
   liftIO $ do
     createDirectoryIfMissing False rootdir
     createDirectoryIfMissing False gendir
@@ -115,7 +115,7 @@ runGenesisCreate (GenesisDir rootdir)
   utxoAddrs <- readInitialFundAddresses utxodir
   start <- maybe (SystemStart <$> getCurrentTimePlus30) pure mStart
 
-  let finalGenesis = updateTemplate start amount genDlgs utxoAddrs template
+  let finalGenesis = updateTemplate start mAmount genDlgs utxoAddrs template
 
   writeShelleyGenesis (rootdir </> "genesis.json") finalGenesis
   where
@@ -195,12 +195,12 @@ type KeyHashGenesisDelegate = KeyHash Ledger.GenesisDelegate
 
 
 updateTemplate
-    :: SystemStart -> Lovelace
+    :: SystemStart -> Maybe Lovelace
     -> Map KeyHashGenesis KeyHashGenesisDelegate
     -> [ShelleyAddress]
     -> ShelleyGenesis TPraosStandardCrypto
     -> ShelleyGenesis TPraosStandardCrypto
-updateTemplate start amount delKeys utxoAddrs template =
+updateTemplate start mAmount delKeys utxoAddrs template =
     template
       { sgStartTime = start
       , sgMaxLovelaceSupply = fromIntegral totalCoin
@@ -209,7 +209,8 @@ updateTemplate start amount delKeys utxoAddrs template =
       }
   where
     totalCoin :: Integer
-    totalCoin = unLoveLace amount
+    totalCoin = maybe (fromIntegral (sgMaxLovelaceSupply template))
+                      unLoveLace mAmount
 
     eachAddrCoin :: Integer
     eachAddrCoin = totalCoin `div` fromIntegral (length utxoAddrs)

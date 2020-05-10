@@ -256,6 +256,8 @@ options:
       - EKGViewBK  
       - kind: UserDefinedBK
         name: LiveViewBackend
+    cardano.node.Forge.metrics:
+      - EKGViewBK
     cardano.node.release:
       - TraceForwarderBK
       - KatipBK
