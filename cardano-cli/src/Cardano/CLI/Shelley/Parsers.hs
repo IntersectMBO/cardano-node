@@ -147,7 +147,7 @@ data PoolCmd
 
 data QueryCmd
   = QueryPoolId NodeAddress
-  | QueryProtocolParameters ConfigYamlFilePath (Maybe OutputFile)
+  | QueryProtocolParameters Network (Maybe OutputFile)
   | QueryTip NodeAddress
   | QueryFilteredUTxO Address ConfigYamlFilePath
   | QueryVersion NodeAddress
@@ -518,7 +518,7 @@ pQueryCmd =
     pQueryProtocolParameters :: Parser QueryCmd
     pQueryProtocolParameters =
       QueryProtocolParameters
-        <$> (ConfigYamlFilePath <$> parseConfigFile)
+        <$> pNetwork
         <*> pMaybeOutputFile
 
     pQueryTip :: Parser QueryCmd
