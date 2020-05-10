@@ -41,6 +41,7 @@ library
                        Cardano.CLI.Shelley.Run.Genesis
                        Cardano.CLI.Shelley.Run.KeyGen
                        Cardano.CLI.Shelley.Run.Query
+                       Cardano.CLI.Shelley.Run.TextView
                        Cardano.CLI.Shelley.Run.Transaction
                        Cardano.CLI.Tx
 

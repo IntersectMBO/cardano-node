@@ -51,12 +51,12 @@ runTxBuildRaw
   -> TxBodyFile
   -> [CertificateFile]
   -> ExceptT CliError IO ()
-runTxBuildRaw txins txouts ttl amount (TxBodyFile fpath) certFps = do
+runTxBuildRaw txins txouts ttl fee (TxBodyFile fpath) certFps = do
   certs <- mapM readShelleyCert certFps
   firstExceptT CardanoApiError
     . newExceptT
     . writeTxUnsigned fpath
-    $ buildShelleyTransaction txins txouts ttl amount certs
+    $ buildShelleyTransaction txins txouts ttl fee certs
  where
    -- TODO: This should exist in its own module along with
    -- a custom error type and an error rendering function.

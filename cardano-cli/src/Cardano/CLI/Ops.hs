@@ -45,7 +45,7 @@ import           Codec.CBOR.Read (DeserialiseFailure, deserialiseFromBytes)
 import           Codec.CBOR.Term (decodeTerm, encodeTerm)
 import           Codec.CBOR.Write (toLazyByteString)
 import           Control.Monad.Trans.Except.Extra
-                   (firstExceptT, handleIOExceptT, left, right)
+                   (firstExceptT, handleIOExceptT, left)
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.Text as T
 import qualified Formatting as F
@@ -61,6 +61,7 @@ import           Cardano.Chain.Block (fromCBORABlockOrBoundary)
 import qualified Cardano.Chain.Delegation as Delegation
 import qualified Cardano.Chain.Genesis as Genesis
 import           Cardano.Config.Shelley.Genesis (ShelleyGenesisError, renderShelleyGenesisError)
+import           Cardano.Config.TextView (TextViewFileError, renderTextViewFileError)
 import qualified Cardano.Crypto.Signing as Crypto
 import qualified Cardano.Chain.Update as Update
 import qualified Cardano.Chain.UTxO as UTxO
@@ -204,8 +205,10 @@ pPrintCBOR :: LByteString -> ExceptT CliError IO ()
 pPrintCBOR bs = do
   case deserialiseFromBytes decodeTerm bs of
     Left err -> left $ CBORPrettyPrintError err
-    Right (_, decodedVal) -> do liftIO . putTextLn . toS . prettyHexEnc $ encodeTerm decodedVal
-                                right ()
+    Right (remaining, decodedVal) -> do
+        liftIO . putTextLn . toS . prettyHexEnc $ encodeTerm decodedVal
+        unless (LB.null remaining) $
+          pPrintCBOR remaining
 
 readCBOR :: FilePath -> ExceptT CliError IO LByteString
 readCBOR fp =
@@ -302,6 +305,7 @@ data CliError
   | IncorrectProtocolSpecifiedError !Protocol
   | NodeLocalStateQueryError !LocalStateQueryError
   | AddressDescribeError !Text
+  | CliTextViewFileError !TextViewFileError
 
 instance Show CliError where
   show (AddressCliError e)
@@ -400,6 +404,8 @@ instance Show CliError where
     = T.unpack $ renderLocalStateQueryError err
   show (AddressDescribeError txt)
     = T.unpack txt
+  show (CliTextViewFileError err)
+    = T.unpack $ renderTextViewFileError err
 
 data RealPBFTError
   = IncorrectProtocolSpecified !Protocol

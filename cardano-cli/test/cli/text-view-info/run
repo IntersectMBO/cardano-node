@@ -1,0 +1,45 @@
+#!/bin/sh -u
+
+cwd=$(dirname "$0")
+
+# shellcheck source=/dev/null
+. "${cwd}/../core/common"
+
+# shellcheck disable=SC2154
+banner "${testname}"
+
+if test -d cardano-cli ; then
+  cd cardano-cli || exit 1
+  fi
+
+OUTPUT_DIR="${TEST}"
+
+rm -rf "${OUTPUT_DIR}"
+if test -d cardano-cli ; then
+  cd cardano-cli || exit 1
+  fi
+
+mkdir "${OUTPUT_DIR}"
+
+error=0
+
+# Defaults to signing a Mainnet transaction.
+${CARDANO_CLI} shelley text-view decode-cbor \
+    --file "test/cli/${testname}/data/unsigned.tx" \
+    > "${OUTPUT_DIR}/decoded.txt"
+fail_on_error $?
+
+assert_file_exists "${OUTPUT_DIR}/decoded.txt"
+
+line_count=$(wc -l < "${OUTPUT_DIR}/decoded.txt")
+if test "${line_count}" -lt 10 ; then
+  echo "Error: Expected at least 10 lines"
+  cat "${OUTPUT_DIR}/decoded.txt"
+  error=1
+  fi
+
+assert_string '# int(4999998000)' "${OUTPUT_DIR}/decoded.txt"
+assert_string '# int(2000)' "${OUTPUT_DIR}/decoded.txt"
+assert_string '# int(1000)' "${OUTPUT_DIR}/decoded.txt"
+
+report_result ${error}
