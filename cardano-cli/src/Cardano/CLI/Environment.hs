@@ -27,4 +27,4 @@ readEnvSocketPath =
       =<< liftIO (lookupEnv envName)
   where
     envName :: String
-    envName = "NODE_SOCKET_PATH"
+    envName = "CARDANO_NODE_SOCKET_PATH"
