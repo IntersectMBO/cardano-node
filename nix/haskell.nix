@@ -110,10 +110,15 @@ let
       in {
         # Apply fully static options to our Haskell executables
         packages.cardano-node.components.exes.cardano-node = fullyStaticOptions;
+        packages.cardano-node.components.all = fullyStaticOptions;
         packages.cardano-node.components.exes.chairman = fullyStaticOptions;
         packages.ouroboros-consensus-byron.components.exes.db-converter = fullyStaticOptions;
+
         # systemd can't be statically linked - disable lobemo-scribe-journal
         packages.cardano-config.flags.systemd = false;
+
+        # Remove haddock build-tool dependency (suitable version will be available as part of the ghc derivation)
+        packages.time.components.library.build-tools = lib.mkForce [];
       }))
     ];
 
