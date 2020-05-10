@@ -114,7 +114,7 @@ printFilteredUTxOs (UTxO utxo) = do
   where
     title :: Text
     title =
-      "                           TxHash                                 TxId        Lovelace"
+      "                           TxHash                                 TxIx        Lovelace"
 
     printUtxo :: (TxIn TPraosStandardCrypto, TxOut TPraosStandardCrypto) -> IO ()
     printUtxo (TxIn (TxId txhash) txin , TxOut _ (Coin coin)) =
