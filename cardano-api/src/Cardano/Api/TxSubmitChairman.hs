@@ -14,8 +14,10 @@ import           Cardano.Prelude
 
 import           Control.Tracer
 
+import           Cardano.Api.TxSubmit (prepareTxByron, prepareTxShelley)
 import           Cardano.Api.Types
 
+import           Ouroboros.Consensus.Cardano (protocolClientInfo)
 import           Ouroboros.Consensus.Network.NodeToClient
 import           Ouroboros.Consensus.Node.ProtocolInfo (ProtocolClientInfo(..))
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
@@ -29,10 +31,40 @@ import           Ouroboros.Network.NodeToClient hiding (NodeToClientVersion (..)
 import qualified Ouroboros.Network.NodeToClient as NtC
 import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Client as LocalTxSub
 
+import           Cardano.Chain.Slotting (EpochSlots (..))
+
+import           Cardano.Config.Byron.Protocol (mkNodeClientProtocolRealPBFT)
+import           Cardano.Config.Shelley.Protocol (mkNodeClientProtocolTPraos)
 import           Cardano.Config.Types (SocketPath(..))
 
 
 submitTx
+  :: Network
+  -> SocketPath
+  -> TxSigned
+  -> IO ()
+submitTx network socketPath tx =
+    NtC.withIOManager $ \iocp ->
+      case tx of
+        TxSignedByron _ _ _ _ ->
+          submitGenTx
+            nullTracer
+            iocp
+            (protocolClientInfo $ mkNodeClientProtocolRealPBFT $ EpochSlots 21600)
+            network
+            socketPath
+            (prepareTxByron tx)
+
+        TxSignedShelley _ -> do
+          submitGenTx
+            nullTracer
+            iocp
+            (protocolClientInfo mkNodeClientProtocolTPraos)
+            network
+            socketPath
+            (prepareTxShelley tx)
+
+submitGenTx
   :: forall blk.
      RunNode blk
   => Tracer IO Text
@@ -42,7 +74,7 @@ submitTx
   -> SocketPath
   -> GenTx blk
   -> IO ()
-submitTx tracer iomgr cfg nm (SocketPath path) genTx =
+submitGenTx tracer iomgr cfg nm (SocketPath path) genTx =
       connectTo
         (localSnocket iomgr path)
         NetworkConnectTracers {

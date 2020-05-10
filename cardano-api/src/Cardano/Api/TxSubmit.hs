@@ -14,6 +14,7 @@ module Cardano.Api.TxSubmit
   ( TxSubmitStatus (..)
   , renderTxSubmitStatus
   , submitTransaction
+  , prepareTxByron
   , prepareTxShelley
   ) where
 
@@ -84,13 +85,13 @@ submitTransaction nodeEnv txs = do
   tvar <- newTxSubmitVar
   res <- race
             (runTxSubmitNode tvar nullTracer (naeConfig nodeEnv) (naeSocket nodeEnv))
-            (submitTx tvar $ prepareTx txs)
+            (submitTx tvar $ prepareTxByron txs)
   case res of
     Left _ -> panic "Cardano.Api.TxSubmit.submitTransaction: runTxSubmitNode terminated unexpectedly."
     Right st -> pure st
 
-prepareTx :: TxSigned -> GenTx ByronBlock
-prepareTx txs =
+prepareTxByron :: TxSigned -> GenTx ByronBlock
+prepareTxByron txs =
   case txs of
     TxSignedByron tx _txCbor _txHash vwit ->
       let aTxAux = Byron.annotateTxAux (Byron.mkTxAux tx vwit)

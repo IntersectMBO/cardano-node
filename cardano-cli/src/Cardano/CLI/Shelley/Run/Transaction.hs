@@ -18,17 +18,13 @@ import           Cardano.Config.TextView
 import           Cardano.CLI.Environment (readEnvSocketPath)
 import           Cardano.CLI.Ops (CliError (..))
 
-import           Cardano.Config.Shelley.Protocol (mkNodeClientProtocolTPraos)
 import           Cardano.Config.Types
-import           Cardano.CLI.Ops (withIOManagerE)
 
 import           Cardano.CLI.Shelley.Parsers
-import qualified Ouroboros.Consensus.Cardano as Consensus
 import           Cardano.Config.Types (CertificateFile (..))
 
 import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, newExceptT)
-import           Control.Tracer (nullTracer)
 
 
 runTransactionCmd :: TransactionCmd -> ExceptT CliError IO ()
@@ -75,19 +71,10 @@ runTxSign (TxBodyFile infile) skfiles  network (TxFile outfile) = do
       $ signTransaction txu network sks
 
 runTxSubmit :: FilePath -> Network -> ExceptT CliError IO ()
-runTxSubmit txFp network =
-  withIOManagerE $ \iocp -> do
-    sktFp <- readEnvSocketPath
-    signedTx <- firstExceptT CardanoApiError . newExceptT $ readTxSigned txFp
-
-    let config = Consensus.protocolClientInfo mkNodeClientProtocolTPraos
-    liftIO $ submitTx
-               nullTracer -- tracer needed
-               iocp
-               config
-               network
-               sktFp
-               (prepareTxShelley signedTx)
+runTxSubmit txFp network = do
+  sktFp <- readEnvSocketPath
+  signedTx <- firstExceptT CardanoApiError . newExceptT $ readTxSigned txFp
+  liftIO $ submitTx network sktFp signedTx
 
 
 

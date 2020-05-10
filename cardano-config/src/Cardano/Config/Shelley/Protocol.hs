@@ -215,4 +215,3 @@ renderShelleyProtocolInstantiationError pie =
   where
     missingFlagMessage flag =
       "To create blocks, the --" <> flag <> " must also be specified"
-
