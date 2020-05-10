@@ -46,6 +46,18 @@ prop_VerificationKey_CBOR =
     kp <- H.forAll genVerificationKey
     H.tripping kp verificationKeyToCBOR verificationKeyFromCBOR
 
+prop_VerificationKeyStakePool_CBOR :: Property
+prop_VerificationKeyStakePool_CBOR =
+  H.property $ do
+    kp <- H.forAll genVerificationKeyShelleyStakePool
+    H.tripping kp verificationKeyStakePoolToCBOR verificationKeyStakePoolFromCBOR
+
+prop_VerificationKeyStaking_CBOR :: Property
+prop_VerificationKeyStaking_CBOR =
+  H.property $ do
+    kp <- H.forAll genVerificationKeyShelleyStaking
+    H.tripping kp verificationKeyStakingToCBOR verificationKeyStakingFromCBOR
+
 prop_TxSigned_CBOR :: Property
 prop_TxSigned_CBOR =
   H.property $ do

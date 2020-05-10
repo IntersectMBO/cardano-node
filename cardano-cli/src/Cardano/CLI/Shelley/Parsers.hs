@@ -82,6 +82,9 @@ data StakeAddressCmd
   = StakeKeyRegister PrivKeyFile NodeAddress
   | StakeKeyDelegate PrivKeyFile PoolId Lovelace NodeAddress
   | StakeKeyDeRegister PrivKeyFile NodeAddress
+  | StakeKeyRegistrationCert VerificationKeyFile OutputFile
+  | StakeKeyDelegationCert VerificationKeyFile VerificationKeyFile OutputFile
+  | StakeKeyDeRegistrationCert VerificationKeyFile OutputFile
   deriving (Eq, Show)
 
 
@@ -295,6 +298,12 @@ pStakeAddress =
           (Opt.info pStakeAddressDelegate $ Opt.progDesc "Delegate from a stake address to a stake pool")
       , Opt.command "de-register"
           (Opt.info pStakeAddressDeRegister $ Opt.progDesc "De-register a stake address")
+      , Opt.command "registration-certificate"
+          (Opt.info pStakeAddressRegistrationCert $ Opt.progDesc "Create a stake address registration certificate")
+      , Opt.command "deregistration-certificate"
+          (Opt.info pStakeAddressDeregistrationCert $ Opt.progDesc "Create a stake address deregistration certificate")
+      , Opt.command "delegation-certificate"
+          (Opt.info pStakeAddressDelegationCert $ Opt.progDesc "Create a stake address delegation certificate")
       ]
   where
     pStakeAddressRegister :: Parser StakeAddressCmd
@@ -306,6 +315,24 @@ pStakeAddress =
 
     pStakeAddressDeRegister :: Parser StakeAddressCmd
     pStakeAddressDeRegister = StakeKeyDeRegister <$> pPrivKeyFile <*> parseNodeAddress
+
+    pStakeAddressRegistrationCert :: Parser StakeAddressCmd
+    pStakeAddressRegistrationCert = StakeKeyRegistrationCert
+                                      <$> pStakingVerificationKeyFile
+                                      <*> pOutputFile
+
+    pStakeAddressDeregistrationCert :: Parser StakeAddressCmd
+    pStakeAddressDeregistrationCert = StakeKeyDeRegistrationCert
+                                        <$> pStakingVerificationKeyFile
+                                        <*> pOutputFile
+
+    pStakeAddressDelegationCert :: Parser StakeAddressCmd
+    pStakeAddressDelegationCert = StakeKeyDelegationCert
+                                    <$> pStakingVerificationKeyFile
+                                    <*> pPoolStakingVerificationKeyFile
+                                    <*> pOutputFile
+
+
 
     pDelegationFee :: Parser Lovelace
     pDelegationFee =
@@ -876,4 +903,23 @@ pAddress =
       (  Opt.long "address"
       <> Opt.metavar "ADDRESS"
       <> Opt.help "A Cardano address"
+      )
+
+
+pStakingVerificationKeyFile :: Parser VerificationKeyFile
+pStakingVerificationKeyFile =
+  VerificationKeyFile <$>
+    Opt.strOption
+      (  Opt.long "verification-key-file"
+      <> Opt.metavar "FILEPATH"
+      <> Opt.help ("Filepath of the staking verification key.")
+      )
+
+pPoolStakingVerificationKeyFile :: Parser VerificationKeyFile
+pPoolStakingVerificationKeyFile =
+  VerificationKeyFile <$>
+    Opt.strOption
+      (  Opt.long "stake-pool-verification-key-file"
+      <> Opt.metavar "FILEPATH"
+      <> Opt.help ("Filepath of the stake pool verification key.")
       )

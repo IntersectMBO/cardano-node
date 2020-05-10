@@ -9,6 +9,10 @@ module Cardano.Api.CBOR
   , signingKeyToCBOR
   , verificationKeyFromCBOR
   , verificationKeyToCBOR
+  , verificationKeyStakePoolFromCBOR
+  , verificationKeyStakePoolToCBOR
+  , verificationKeyStakingFromCBOR
+  , verificationKeyStakingToCBOR
 
   , shelleyVerificationKeyFromCBOR
   , shelleyVerificationKeyToCBOR
@@ -133,6 +137,41 @@ verificationKeyToCBOR pk =
           [ toCBOR (175 :: Word8)
           , encodeShelleyVerificationKey vk
           ]
+
+verificationKeyStakePoolFromCBOR :: ByteString -> Either ApiError ShelleyVerificationKeyStakePool
+verificationKeyStakePoolFromCBOR =
+   first ApiErrorCBOR
+ . CBOR.decodeFullDecoder "StakePoolVerificationKey" decode
+ . LBS.fromStrict
+  where
+    decode :: Decoder s ShelleyVerificationKeyStakePool
+    decode = do
+      tag <- CBOR.decodeWord8
+      case tag of
+        184 -> fromCBOR
+        _  -> cborError $ DecoderErrorUnknownTag "StakePoolVerificationKey" tag
+
+verificationKeyStakePoolToCBOR :: ShelleyVerificationKeyStakePool -> ByteString
+verificationKeyStakePoolToCBOR vk =
+  CBOR.serializeEncoding' $ mconcat [ toCBOR (184 :: Word8), toCBOR vk ]
+
+
+verificationKeyStakingFromCBOR :: ByteString -> Either ApiError ShelleyVerificationKeyStaking
+verificationKeyStakingFromCBOR =
+   first ApiErrorCBOR
+ . CBOR.decodeFullDecoder "StakingVerificationKey" decode
+ . LBS.fromStrict
+  where
+    decode :: Decoder s ShelleyVerificationKeyStaking
+    decode = do
+      tag <- CBOR.decodeWord8
+      case tag of
+        185 -> fromCBOR
+        _  -> cborError $ DecoderErrorUnknownTag "StakingVerificationKey" tag
+
+verificationKeyStakingToCBOR :: ShelleyVerificationKeyStaking -> ByteString
+verificationKeyStakingToCBOR vk =
+  CBOR.serializeEncoding' $ mconcat [ toCBOR (185 :: Word8), toCBOR vk ]
 
 txSignedFromCBOR :: ByteString -> Either ApiError TxSigned
 txSignedFromCBOR bs =
