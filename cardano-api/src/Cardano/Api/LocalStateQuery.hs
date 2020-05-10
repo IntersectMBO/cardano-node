@@ -86,21 +86,20 @@ renderLocalStateQueryError lsqErr =
 -- This one is Shelley-specific because the query is Shelley-specific.
 --
 queryFilteredUTxOFromLocalState
-  :: CodecConfig (ShelleyBlock TPraosStandardCrypto)
-  -> Network
+  :: Network
   -> SocketPath
   -> Set Address
   -> Point (ShelleyBlock TPraosStandardCrypto)
   -> ExceptT LocalStateQueryError IO (Ledger.UTxO TPraosStandardCrypto)
-queryFilteredUTxOFromLocalState cfg nm socketPath addrs point =
+queryFilteredUTxOFromLocalState network socketPath addrs point =
   whenAllShelleyAddresses addrs $ \shelleyAddrs -> do
     let pointAndQuery = (point, GetFilteredUTxO shelleyAddrs)
     utxoVar <- liftIO newEmptyTMVarM
     liftIO $ queryNodeLocalState
       utxoVar
       nullTracer
-      cfg
-      nm
+      (pClientInfoCodecConfig . protocolClientInfo $ mkNodeClientProtocolTPraos)
+      network
       socketPath
       pointAndQuery
     newExceptT $ atomically $ takeTMVar utxoVar
