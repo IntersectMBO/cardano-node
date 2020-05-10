@@ -797,7 +797,7 @@ Available options:
                            Output filepath of the signing key.
 ```
 
-So lets do that too
+So let's do that too
 ```
 $ cardano-cli shelley node key-gen-VRF \
     --verification-key-file example/node1/vrf.vkey \
