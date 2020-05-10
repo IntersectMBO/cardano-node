@@ -56,6 +56,7 @@ import qualified Shelley.Spec.Ledger.TxData as Shelley
 
 import           System.Directory (createDirectoryIfMissing, listDirectory)
 import           System.FilePath ((</>), takeExtension)
+import           System.IO.Error (isDoesNotExistError)
 
 
 
@@ -95,14 +96,13 @@ runGenesisCreate :: GenesisDir
 runGenesisCreate (GenesisDir rootdir)
                  genNumGenesisKeys genNumUTxOKeys
                  mStart amount = do
-  start <- maybe (SystemStart <$> getCurrentTimePlus30) pure mStart
-  template <- readShelleyGenesis (rootdir </> "genesis.spec.json")
-
   liftIO $ do
     createDirectoryIfMissing False rootdir
     createDirectoryIfMissing False gendir
     createDirectoryIfMissing False deldir
     createDirectoryIfMissing False utxodir
+
+  template <- readShelleyGenesis (rootdir </> "genesis.spec.json")
 
   forM_ [ 1 .. genNumGenesisKeys ] $ \index -> do
     createGenesisKeys  gendir  index
@@ -113,6 +113,7 @@ runGenesisCreate (GenesisDir rootdir)
 
   genDlgs <- readGenDelegsMap gendir deldir
   utxoAddrs <- readInitialFundAddresses utxodir
+  start <- maybe (SystemStart <$> getCurrentTimePlus30) pure mStart
 
   let finalGenesis = updateTemplate start amount genDlgs utxoAddrs template
 
@@ -162,8 +163,25 @@ getCurrentTimePlus30 =
 
 readShelleyGenesis :: FilePath -> ExceptT CliError IO (ShelleyGenesis TPraosStandardCrypto)
 readShelleyGenesis fpath = do
-  lbs <- handleIOExceptT (IOError fpath) $ LBS.readFile fpath
-  firstExceptT (AesonDecode fpath . Text.pack) . hoistEither $ Aeson.eitherDecode' lbs
+    readAndDecode
+      `catchError` \err ->
+        case err of
+          IOError _ ioe
+            | isDoesNotExistError ioe -> writeDefault
+          _                           -> throwError err
+  where
+    readAndDecode = do
+      lbs <- handleIOExceptT (IOError fpath) $ LBS.readFile fpath
+      firstExceptT (AesonDecode fpath . Text.pack) . hoistEither $
+        Aeson.eitherDecode' lbs
+
+    defaults :: ShelleyGenesis TPraosStandardCrypto
+    defaults = shelleyGenesisDefaults
+
+    writeDefault = do
+      handleIOExceptT (IOError fpath) $
+        LBS.writeFile fpath (encodePretty defaults)
+      return defaults
 
 
 -- Local type aliases
