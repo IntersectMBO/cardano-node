@@ -91,7 +91,7 @@ data TransactionCmd
   | TxWitness       -- { transaction :: Transaction, key :: PrivKeyFile, nodeAddr :: NodeAddress }
   | TxSignWitness   -- { transaction :: Transaction, witnesses :: [Witness], nodeAddr :: NodeAddress }
   | TxCheck         -- { transaction :: Transaction, nodeAddr :: NodeAddress }
-  | TxSubmit FilePath ConfigYamlFilePath
+  | TxSubmit FilePath Network
   | TxInfo          -- { transaction :: Transaction, nodeAddr :: NodeAddress }
   deriving (Eq, Show)
 
@@ -363,7 +363,7 @@ pTransaction =
 
     pTransactionSubmit  :: Parser TransactionCmd
     pTransactionSubmit = TxSubmit <$> pTxSubmitFile
-                                  <*> (ConfigYamlFilePath <$> parseConfigFile)
+                                  <*> pNetwork
 
     pTransactionInfo  :: Parser TransactionCmd
     pTransactionInfo = pure TxInfo

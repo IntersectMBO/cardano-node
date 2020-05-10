@@ -7,7 +7,20 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Cardano.Config.Shelley.Protocol
-  ( mkConsensusProtocolTPraos
+  (
+    -- * Protocol exposing the specific type
+    -- | Use this when you need the specific instance
+    mkConsensusProtocolTPraos
+
+    -- * Protocols hiding the specific type
+    -- | Use this when you want to handle protocols generically
+  , mkSomeConsensusProtocolTPraos
+
+    -- * Client support
+  , mkNodeClientProtocolTPraos
+  , mkSomeNodeClientProtocolTPraos
+
+    -- * Errors
   , ShelleyProtocolInstantiationError(..)
   , renderShelleyProtocolInstantiationError
   ) where
@@ -34,7 +47,8 @@ import           Shelley.Spec.Ledger.PParams (ProtVer(..))
 
 import           Cardano.Config.Types
                    (NodeConfiguration(..), ProtocolFilepaths(..),
-                    GenesisFile (..), Update (..), LastKnownBlockVersion (..))
+                    GenesisFile (..), Update (..), LastKnownBlockVersion (..),
+                    SomeConsensusProtocol(..), SomeNodeClientProtocol(..))
 import           Cardano.Config.Shelley.OCert
 import           Cardano.Config.Shelley.VRF
 import           Cardano.Config.Shelley.KES
@@ -42,9 +56,46 @@ import           Cardano.TracingOrphanInstances.Shelley ()
 
 
 ------------------------------------------------------------------------------
+-- Shelley protocol, client support
+--
+
+mkNodeClientProtocolTPraos :: ProtocolClient (ShelleyBlock TPraosStandardCrypto)
+                                             ProtocolRealTPraos
+mkNodeClientProtocolTPraos = ProtocolClientRealTPraos
+
+
+mkSomeNodeClientProtocolTPraos :: SomeNodeClientProtocol
+mkSomeNodeClientProtocolTPraos =
+    SomeNodeClientProtocol mkNodeClientProtocolTPraos
+
+
+------------------------------------------------------------------------------
 -- Shelley protocol
 --
 
+-- | Make 'SomeConsensusProtocol' using the Shelley instance.
+--
+-- This lets us handle multiple protocols in a generic way.
+--
+-- This also serves a purpose as a sanity check that we have all the necessary
+-- type class instances available.
+--
+mkSomeConsensusProtocolTPraos
+  :: NodeConfiguration
+  -> Maybe ProtocolFilepaths
+  -> ExceptT ShelleyProtocolInstantiationError IO SomeConsensusProtocol
+mkSomeConsensusProtocolTPraos nc files =
+
+    -- Applying the SomeConsensusProtocol here is a check that
+    -- the type of mkConsensusProtocolTPraos fits all the class
+    -- constraints we need to run the protocol.
+    SomeConsensusProtocol <$> mkConsensusProtocolTPraos nc files
+
+
+-- | Instantiate 'Consensus.Protocol' for Shelley specifically.
+--
+-- Use this when you need to run the consensus with this specific protocol.
+--
 mkConsensusProtocolTPraos
   :: NodeConfiguration
   -> Maybe ProtocolFilepaths
@@ -62,13 +113,11 @@ mkConsensusProtocolTPraos NodeConfiguration {
 
     optionalLeaderCredentials <- readLeaderCredentials files
 
-    let consensusProtocol =
-          ProtocolRealTPraos
-            genesis
-            protocolVersion
-            optionalLeaderCredentials
-
-    return consensusProtocol
+    return $
+      ProtocolRealTPraos
+        genesis
+        protocolVersion
+        optionalLeaderCredentials
 
 
 readShelleyGenesis :: GenesisFile
@@ -166,4 +215,3 @@ renderShelleyProtocolInstantiationError pie =
   where
     missingFlagMessage flag =
       "To create blocks, the --" <> flag <> " must also be specified"
-

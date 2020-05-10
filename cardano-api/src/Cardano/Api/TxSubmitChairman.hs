@@ -2,6 +2,9 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+
+{-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 
 module Cardano.Api.TxSubmitChairman
   ( submitTx
@@ -11,69 +14,105 @@ import           Cardano.Prelude
 
 import           Control.Tracer
 
-import           Ouroboros.Consensus.Config (TopLevelConfig (..), configCodec)
+import           Cardano.Api.TxSubmit (prepareTxByron, prepareTxShelley)
+import           Cardano.Api.Types
+
+import           Ouroboros.Consensus.Cardano (protocolClientInfo)
 import           Ouroboros.Consensus.Network.NodeToClient
+import           Ouroboros.Consensus.Node.ProtocolInfo (ProtocolClientInfo(..))
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
                   (nodeToClientProtocolVersion, supportedNodeToClientVersions)
 import           Ouroboros.Consensus.Node.Run
-import           Ouroboros.Consensus.Shelley.Protocol (TPraosStandardCrypto)
-import           Ouroboros.Consensus.Shelley.Ledger (GenTx, ShelleyBlock)
+import           Ouroboros.Consensus.Mempool (GenTx)
+
 import           Ouroboros.Network.Driver (runPeer)
 import           Ouroboros.Network.Mux
 import           Ouroboros.Network.NodeToClient hiding (NodeToClientVersion (..))
 import qualified Ouroboros.Network.NodeToClient as NtC
 import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Client as LocalTxSub
 
+import           Cardano.Chain.Slotting (EpochSlots (..))
+
+import           Cardano.Config.Byron.Protocol (mkNodeClientProtocolRealPBFT)
+import           Cardano.Config.Shelley.Protocol (mkNodeClientProtocolTPraos)
 import           Cardano.Config.Types (SocketPath(..))
 
+
 submitTx
-  :: Tracer IO Text
-  -> IOManager
-  -> TopLevelConfig (ShelleyBlock TPraosStandardCrypto)
+  :: Network
   -> SocketPath
-  -> GenTx (ShelleyBlock TPraosStandardCrypto)
+  -> TxSigned
   -> IO ()
-submitTx
-  tracer
-  iomgr
-  cfg
-  (SocketPath path)
-  genTx =
+submitTx network socketPath tx =
+    NtC.withIOManager $ \iocp ->
+      case tx of
+        TxSignedByron _ _ _ _ ->
+          submitGenTx
+            nullTracer
+            iocp
+            (protocolClientInfo $ mkNodeClientProtocolRealPBFT $ EpochSlots 21600)
+            network
+            socketPath
+            (prepareTxByron tx)
+
+        TxSignedShelley _ -> do
+          submitGenTx
+            nullTracer
+            iocp
+            (protocolClientInfo mkNodeClientProtocolTPraos)
+            network
+            socketPath
+            (prepareTxShelley tx)
+
+submitGenTx
+  :: forall blk.
+     RunNode blk
+  => Tracer IO Text
+  -> IOManager
+  -> ProtocolClientInfo blk
+  -> Network
+  -> SocketPath
+  -> GenTx blk
+  -> IO ()
+submitGenTx tracer iomgr cfg nm (SocketPath path) genTx =
       connectTo
         (localSnocket iomgr path)
         NetworkConnectTracers {
             nctMuxTracer       = nullTracer,
             nctHandshakeTracer = nullTracer
             }
-        (localInitiatorNetworkApplication proxy tracer cfg genTx)
+        (localInitiatorNetworkApplication tracer cfg nm genTx)
         path
         --`catch` handleMuxError tracer chainsVar socketPath
-  where
-   proxy :: Proxy (ShelleyBlock TPraosStandardCrypto)
-   proxy = Proxy
 
 localInitiatorNetworkApplication
-  :: Proxy (ShelleyBlock TPraosStandardCrypto)
-  -> Tracer IO Text
+  :: forall blk.
+     RunNode blk
+  => Tracer IO Text
   -- ^ tracer which logs all local tx submission protocol messages send and
   -- received by the client (see 'Ouroboros.Network.Protocol.LocalTxSubmission.Type'
   -- in 'ouroboros-network' package).
-  -> TopLevelConfig (ShelleyBlock TPraosStandardCrypto)
-  -> GenTx (ShelleyBlock TPraosStandardCrypto)
+  -> ProtocolClientInfo blk
+  -> Network
+  -> GenTx blk
   -> Versions NtC.NodeToClientVersion DictVersion
-              (LocalConnectionId -> OuroborosApplication 'InitiatorApp LByteString IO () Void)
-localInitiatorNetworkApplication proxy tracer' cfg genTx =
+              (LocalConnectionId
+               -> OuroborosApplication InitiatorApp LByteString IO () Void)
+localInitiatorNetworkApplication tracer cfg nm genTx =
     foldMapVersions
       (\v ->
         NtC.versionedNodeToClientProtocols
           (nodeToClientProtocolVersion proxy v)
           versionData
-          (protocols v tracer' genTx))
+          (protocols v genTx))
       (supportedNodeToClientVersions proxy)
   where
-    versionData = NodeToClientVersionData (nodeNetworkMagic proxy cfg)
+    proxy :: Proxy blk
+    proxy = Proxy
 
-    protocols clientVersion tracer tx =
+    versionData = NodeToClientVersionData { networkMagic = toNetworkMagic nm }
+
+    protocols clientVersion tx =
         NodeToClientProtocols {
           localChainSyncProtocol =
             InitiatorProtocolOnly $
@@ -94,7 +133,8 @@ localInitiatorNetworkApplication proxy tracer' cfg genTx =
                                (txSubmissionClientSingle tx))
                 case result of
                   Nothing  -> traceWith tracer "Transaction accepted"
-                  Just msg -> traceWith tracer $ "Transaction rejected: " <> show msg
+                  Just _TODO -> traceWith tracer "Transaction rejected"
+                  --TODO: return the result
 
         , localStateQueryProtocol =
             InitiatorProtocolOnly $
@@ -108,7 +148,7 @@ localInitiatorNetworkApplication proxy tracer' cfg genTx =
           { cChainSyncCodec
           , cTxSubmissionCodec
           , cStateQueryCodec
-          } = defaultCodecs (configCodec cfg) clientVersion
+          } = defaultCodecs (pClientInfoCodecConfig cfg) clientVersion
 
 txSubmissionClientSingle
   :: forall tx reject m.

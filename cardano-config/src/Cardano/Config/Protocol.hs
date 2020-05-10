@@ -7,15 +7,25 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 {-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Config.Protocol
-  ( Protocol(..)
-  , ProtocolInstantiationError(..)
+  (
+    -- * The enumeration of supported protocols
+    Protocol(..)
+
+    -- * Node support
+    -- | Support for the context needed to run a node with a protocol
   , SomeConsensusProtocol(..)
   , TraceConstraints
   , mkConsensusProtocol
+  , ProtocolInstantiationError(..)
   , renderProtocolInstantiationError
+
+    -- * Client support
+    -- | Support for the context needed to run a client of a node that is using
+    -- a protocol.
+  , SomeNodeClientProtocol(..)
+  , mkNodeClientProtocol
   ) where
 
 import           Cardano.Prelude
@@ -24,9 +34,10 @@ import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT)
 
 import           Cardano.Config.Types
-                   (NodeConfiguration(..), Protocol (..),
-                    ProtocolFilepaths(..), SomeConsensusProtocol(..),
+                   (NodeConfiguration(..), Protocol (..), ProtocolFilepaths(..),
+                    SomeConsensusProtocol(..), SomeNodeClientProtocol(..),
                     TraceConstraints)
+import           Cardano.Chain.Slotting (EpochSlots(..))
 
 import           Cardano.Config.Byron.Protocol
 import           Cardano.Config.Mock.Protocol
@@ -45,20 +56,51 @@ mkConsensusProtocol config@NodeConfiguration{ncProtocol} files =
     case ncProtocol of
       -- Mock protocols
       BFT      -> firstExceptT MockProtocolInstantiationError $
-                    mkConsensusProtocolBFT   config
+                    mkSomeConsensusProtocolBFT   config
 
       MockPBFT -> firstExceptT MockProtocolInstantiationError $
-                    mkConsensusProtocolPBFT  config
+                    mkSomeConsensusProtocolPBFT  config
 
       Praos    -> firstExceptT MockProtocolInstantiationError $
-                    mkConsensusProtocolPraos config
+                    mkSomeConsensusProtocolPraos config
 
       -- Real protocols
       RealPBFT -> firstExceptT ByronProtocolInstantiationError $
-                    mkConsensusProtocolRealPBFT config files
+                    mkSomeConsensusProtocolRealPBFT config files
 
       TPraos   -> firstExceptT ShelleyProtocolInstantiationError $
-                    SomeConsensusProtocol <$> mkConsensusProtocolTPraos config files
+                    mkSomeConsensusProtocolTPraos config files
+
+
+mkNodeClientProtocol :: Protocol -> SomeNodeClientProtocol
+mkNodeClientProtocol protocol =
+    case protocol of
+{-
+      --TODO
+      -- Mock protocols
+      BFT      -> firstExceptT MockProtocolInstantiationError $
+                    mkNodeClientProtocolBFT
+
+      MockPBFT -> firstExceptT MockProtocolInstantiationError $
+                    mkNodeClientProtocolPBFT
+
+      Praos    -> firstExceptT MockProtocolInstantiationError $
+                    mkNodeClientProtocolPraos
+-}
+
+      -- Real protocols
+      RealPBFT -> mkSomeNodeClientProtocolRealPBFT
+                    --TODO: this is only the correct value for mainnet
+                    -- not for Byron testnets. This value is needed because
+                    -- to decode legacy EBBs one needs to know how many
+                    -- slots there are per-epoch. This info comes from
+                    -- the genesis file, but we don't have that in the
+                    -- client case.
+                    (EpochSlots 21600)
+
+      TPraos   -> mkSomeNodeClientProtocolTPraos
+
+      _        -> panic ("mkNodeClientProtocol TODO: " <> show protocol)
 
 
 ------------------------------------------------------------------------------

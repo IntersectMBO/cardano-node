@@ -7,7 +7,20 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Cardano.Config.Byron.Protocol
-  ( mkConsensusProtocolRealPBFT
+  (
+    -- * Protocol exposing the specific type
+    -- | Use this when you need the specific instance
+    mkConsensusProtocolRealPBFT
+
+    -- * Protocols hiding the specific type
+    -- | Use this when you want to handle protocols generically
+  , mkSomeConsensusProtocolRealPBFT
+
+    -- * Client support
+  , mkNodeClientProtocolRealPBFT
+  , mkSomeNodeClientProtocolRealPBFT
+
+    -- * Errors
   , ByronProtocolInstantiationError(..)
   , renderByronProtocolInstantiationError
   ) where
@@ -22,6 +35,7 @@ import qualified Data.ByteString.Lazy as LB
 import qualified Data.Text as T
 
 import qualified Cardano.Chain.Genesis as Genesis
+import           Cardano.Chain.Slotting (EpochSlots)
 import qualified Cardano.Chain.Update as Update
 import qualified Cardano.Chain.UTxO as UTxO
 import qualified Cardano.Crypto.Signing as Signing
@@ -34,18 +48,57 @@ import           Ouroboros.Consensus.Byron.Ledger (ByronBlock)
 import           Cardano.Config.Types
                    (NodeConfiguration(..), ProtocolFilepaths(..),
                     GenesisFile (..), Update (..), LastKnownBlockVersion (..),
-                    SomeConsensusProtocol(..))
+                    SomeConsensusProtocol(..), SomeNodeClientProtocol(..))
 import           Cardano.TracingOrphanInstances.Byron ()
+
+
+------------------------------------------------------------------------------
+-- Real Byron protocol, client support
+--
+
+mkNodeClientProtocolRealPBFT :: EpochSlots
+                             -> ProtocolClient ByronBlock ProtocolRealPBFT
+mkNodeClientProtocolRealPBFT epochSlots =
+    ProtocolClientRealPBFT epochSlots
+
+
+mkSomeNodeClientProtocolRealPBFT :: EpochSlots -> SomeNodeClientProtocol
+mkSomeNodeClientProtocolRealPBFT epochSlots =
+    SomeNodeClientProtocol (mkNodeClientProtocolRealPBFT epochSlots)
 
 
 ------------------------------------------------------------------------------
 -- Real Byron protocol
 --
 
-mkConsensusProtocolRealPBFT
+-- | Make 'SomeConsensusProtocol' using the Byron instance.
+--
+-- This lets us handle multiple protocols in a generic way.
+--
+-- This also serves a purpose as a sanity check that we have all the necessary
+-- type class instances available.
+--
+mkSomeConsensusProtocolRealPBFT
   :: NodeConfiguration
   -> Maybe ProtocolFilepaths
   -> ExceptT ByronProtocolInstantiationError IO SomeConsensusProtocol
+mkSomeConsensusProtocolRealPBFT nc files =
+
+    -- Applying the SomeConsensusProtocol here is a check that
+    -- the type of mkConsensusProtocolRealPBFT fits all the class
+    -- constraints we need to run the protocol.
+    SomeConsensusProtocol <$> mkConsensusProtocolRealPBFT nc files
+
+
+-- | Instantiate 'Consensus.Protocol' for Byron specifically.
+--
+-- Use this when you need to run the consensus with this specific protocol.
+--
+mkConsensusProtocolRealPBFT
+  :: NodeConfiguration
+  -> Maybe ProtocolFilepaths
+  -> ExceptT ByronProtocolInstantiationError IO
+             (Consensus.Protocol ByronBlock ProtocolRealPBFT)
 mkConsensusProtocolRealPBFT NodeConfiguration {
                               ncGenesisFile = GenesisFile genesisFile,
                               ncReqNetworkMagic,
@@ -78,15 +131,12 @@ mkConsensusProtocolRealPBFT NodeConfiguration {
                      byronKeyFile
         Nothing -> return Nothing
 
-    let consensusProtocol :: Consensus.Protocol ByronBlock ProtocolRealPBFT
-        consensusProtocol =
-          protocolConfigRealPbft
-            ncUpdate
-            ncPbftSignatureThresh
-            genesisConfig
-            optionalLeaderCredentials
-
-    return (SomeConsensusProtocol consensusProtocol)
+    return $
+      protocolConfigRealPbft
+        ncUpdate
+        ncPbftSignatureThresh
+        genesisConfig
+        optionalLeaderCredentials
 
 
 -- | The plumbing to select and convert the appropriate configuration subset
