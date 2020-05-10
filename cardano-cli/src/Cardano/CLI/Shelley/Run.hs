@@ -12,8 +12,12 @@ module Cardano.CLI.Shelley.Run
 
 import           Cardano.Prelude hiding (option, trace)
 
+import           Cardano.Api (readVerificationKeyStaking, readVerificationKeyStakePool,
+                   shelleyDeregisterStakingAddress, shelleyDelegateStake,
+                   shelleyRegisterStakingAddress, writeCertificate)
+
 import           Control.Monad.Trans.Except (ExceptT)
-import           Control.Monad.Trans.Except.Extra (firstExceptT)
+import           Control.Monad.Trans.Except.Extra (firstExceptT, newExceptT)
 
 import           Cardano.CLI.Key (VerificationKeyFile(..))
 import           Cardano.CLI.Ops (CliError (..))
@@ -32,6 +36,7 @@ import           Cardano.Config.Shelley.OCert
 import           Cardano.Config.Shelley.VRF
 import           Cardano.Config.Types (SigningKeyFile(..))
 
+import           Shelley.Spec.Ledger.Keys (hashKey)
 
 
 --
@@ -56,6 +61,13 @@ runShelleyClientCommand (TextViewCmd     cmd) = runTextViewCmd     cmd
 --
 
 runStakeAddressCmd :: StakeAddressCmd -> ExceptT CliError IO ()
+
+runStakeAddressCmd (StakeKeyRegistrationCert stkKeyVerKeyFp outputFp) =
+  runStakeKeyRegistrationCert stkKeyVerKeyFp outputFp
+runStakeAddressCmd (StakeKeyDelegationCert stkKeyVerKeyFp stkPoolVerKeyFp outputFp) =
+  runStakeKeyDelegationCert stkKeyVerKeyFp stkPoolVerKeyFp outputFp
+runStakeAddressCmd (StakeKeyDeRegistrationCert stkKeyVerKeyFp outputFp) =
+  runStakeKeyDeRegistrationCert stkKeyVerKeyFp outputFp
 runStakeAddressCmd cmd = liftIO $ putStrLn $ "runStakeAddressCmd: " ++ show cmd
 
 
@@ -164,3 +176,32 @@ runNodeIssueOpCert (VerificationKeyFile vkeyKESPath)
       -- a new cert but without updating the counter.
       writeOperationalCertIssueCounter ocertCtrPath (succ issueNumber)
       writeOperationalCert certFile cert vkey
+
+--
+-- Stake address command implementations
+--
+
+runStakeKeyRegistrationCert :: VerificationKeyFile -> OutputFile -> ExceptT CliError IO ()
+runStakeKeyRegistrationCert (VerificationKeyFile vkFp) (OutputFile oFp) = do
+  stakeVkey <- firstExceptT CardanoApiError . newExceptT $ readVerificationKeyStaking vkFp
+  let regCert = shelleyRegisterStakingAddress (hashKey stakeVkey)
+  firstExceptT CardanoApiError . newExceptT $ writeCertificate oFp regCert
+
+runStakeKeyDelegationCert
+  :: VerificationKeyFile
+  -- ^ Delegator staking verification key file.
+  -> VerificationKeyFile
+  -- ^ Delegatee stake pool verification key file.
+  -> OutputFile
+  -> ExceptT CliError IO ()
+runStakeKeyDelegationCert (VerificationKeyFile stkKey) (VerificationKeyFile poolVKey) (OutputFile outFp) = do
+  stakeVkey <- firstExceptT CardanoApiError . newExceptT $ readVerificationKeyStaking stkKey
+  poolStakeVkey <- firstExceptT CardanoApiError . newExceptT $ readVerificationKeyStakePool poolVKey
+  let delegCert = shelleyDelegateStake (hashKey stakeVkey) (hashKey poolStakeVkey)
+  firstExceptT CardanoApiError . newExceptT $ writeCertificate outFp delegCert
+
+runStakeKeyDeRegistrationCert :: VerificationKeyFile -> OutputFile -> ExceptT CliError IO ()
+runStakeKeyDeRegistrationCert (VerificationKeyFile vkFp) (OutputFile oFp) = do
+  stakeVkey <- firstExceptT CardanoApiError . newExceptT $ readVerificationKeyStaking vkFp
+  let deRegCert = shelleyDeregisterStakingAddress (hashKey stakeVkey)
+  firstExceptT CardanoApiError . newExceptT $ writeCertificate oFp deRegCert

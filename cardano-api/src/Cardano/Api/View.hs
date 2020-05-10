@@ -3,6 +3,8 @@ module Cardano.Api.View
   , parseCertificateView
   , parseSigningKeyView
   , parseVerificationKeyView
+  , parseVerificationKeyStakePoolView
+  , parseVerificationKeyStakingView
   , parseTxSignedView
   , parseTxUnsignedView
 
@@ -10,6 +12,8 @@ module Cardano.Api.View
   , readCertificate
   , readSigningKey
   , readVerificationKey
+  , readVerificationKeyStakePool
+  , readVerificationKeyStaking
   , readTxSigned
   , readTxUnsigned
 
@@ -17,6 +21,8 @@ module Cardano.Api.View
   , renderCertificateView
   , renderSigningKeyView
   , renderVerificationKeyView
+  , renderVerificationKeyStakePoolView
+  , renderVerificationKeyStakingView
   , renderTxSignedView
   , renderTxUnsignedView
 
@@ -24,6 +30,8 @@ module Cardano.Api.View
   , writeCertificate
   , writeSigningKey
   , writeVerificationKey
+  , writeVerificationKeyStakePool
+  , writeVerificationKeyStaking
   , writeTxSigned
   , writeTxUnsigned
   ) where
@@ -57,6 +65,14 @@ parseSigningKeyView bs =
 parseVerificationKeyView :: ByteString -> Either ApiError VerificationKey
 parseVerificationKeyView bs =
   verificationKeyFromCBOR . tvRawCBOR =<< first ApiTextView (parseTextView bs)
+
+parseVerificationKeyStakePoolView :: ByteString -> Either ApiError ShelleyVerificationKeyStakePool
+parseVerificationKeyStakePoolView bs =
+  verificationKeyStakePoolFromCBOR . tvRawCBOR =<< first ApiTextView (parseTextView bs)
+
+parseVerificationKeyStakingView :: ByteString -> Either ApiError ShelleyVerificationKeyStaking
+parseVerificationKeyStakingView bs =
+  verificationKeyStakingFromCBOR . tvRawCBOR =<< first ApiTextView (parseTextView bs)
 
 parseTxSignedView :: ByteString -> Either ApiError TxSigned
 parseTxSignedView bs =
@@ -105,6 +121,20 @@ renderVerificationKeyView pk =
     cbor :: ByteString
     cbor = verificationKeyToCBOR pk
 
+renderVerificationKeyStakingView :: ShelleyVerificationKeyStaking -> ByteString
+renderVerificationKeyStakingView vk =
+    renderTextView $ TextView "VerificationKeyStakingShelley" "Free form text" cbor
+  where
+    cbor :: ByteString
+    cbor = verificationKeyStakingToCBOR vk
+
+renderVerificationKeyStakePoolView :: ShelleyVerificationKeyStakePool -> ByteString
+renderVerificationKeyStakePoolView vk =
+    renderTextView $ TextView "VerificationKeyStakePoolShelley" "Free form text" cbor
+  where
+    cbor :: ByteString
+    cbor = verificationKeyStakePoolToCBOR vk
+
 renderTxSignedView :: TxSigned -> ByteString
 renderTxSignedView ts =
   case ts of
@@ -150,6 +180,18 @@ readVerificationKey path =
     bs <- handleIOExceptT (ApiErrorIO path) $ BS.readFile path
     hoistEither $ parseVerificationKeyView bs
 
+readVerificationKeyStakePool :: FilePath -> IO (Either ApiError ShelleyVerificationKeyStakePool)
+readVerificationKeyStakePool path =
+  runExceptT $ do
+    bs <- handleIOExceptT (ApiErrorIO path) $ BS.readFile path
+    hoistEither $ parseVerificationKeyStakePoolView bs
+
+readVerificationKeyStaking :: FilePath -> IO (Either ApiError ShelleyVerificationKeyStaking)
+readVerificationKeyStaking path =
+  runExceptT $ do
+    bs <- handleIOExceptT (ApiErrorIO path) $ BS.readFile path
+    hoistEither $ parseVerificationKeyStakingView bs
+
 readTxSigned :: FilePath -> IO (Either ApiError TxSigned)
 readTxSigned path =
   runExceptT $ do
@@ -181,6 +223,16 @@ writeVerificationKey :: FilePath -> VerificationKey -> IO (Either ApiError ())
 writeVerificationKey path kp =
   runExceptT .
     handleIOExceptT (ApiErrorIO path) $ BS.writeFile path (renderVerificationKeyView kp)
+
+writeVerificationKeyStaking :: FilePath -> ShelleyVerificationKeyStaking -> IO (Either ApiError ())
+writeVerificationKeyStaking path kp =
+  runExceptT .
+    handleIOExceptT (ApiErrorIO path) $ BS.writeFile path (renderVerificationKeyStakingView kp)
+
+writeVerificationKeyStakePool :: FilePath -> ShelleyVerificationKeyStakePool -> IO (Either ApiError ())
+writeVerificationKeyStakePool path kp =
+  runExceptT .
+    handleIOExceptT (ApiErrorIO path) $ BS.writeFile path (renderVerificationKeyStakePoolView kp)
 
 writeTxSigned :: FilePath -> TxSigned -> IO (Either ApiError ())
 writeTxSigned path kp =

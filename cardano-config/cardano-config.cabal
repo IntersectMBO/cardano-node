@@ -10,8 +10,17 @@ build-type:            Simple
 cabal-version:         >= 1.10
 extra-source-files:    README.md
 
+flag systemd
+  description: Enable systemd support
+  default:     True
+  manual:      False
+
 library
   hs-source-dirs:      src
+
+  if os(linux) && flag(systemd)
+    cpp-options:       -DSYSTEMD
+    build-depends:     lobemo-scribe-systemd
 
   exposed-modules:     Cardano.Config.Byron.Parsers
                        Cardano.Config.Byron.Protocol
@@ -67,7 +76,6 @@ library
                      , lobemo-backend-ekg
                      , lobemo-backend-monitoring
                      , lobemo-backend-trace-forwarder
-                     , lobemo-scribe-systemd
                      , network
                      , network-mux
                      , optparse-applicative

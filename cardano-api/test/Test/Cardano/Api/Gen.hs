@@ -18,6 +18,8 @@ module Test.Cardano.Api.Gen
   , genVerificationKey
   , genVerificationKeyAddressByron
   , genVerificationKeyAddressShelley
+  , genVerificationKeyShelleyStakePool
+  , genVerificationKeyShelleyStaking
   ) where
 
 import           Cardano.Api
