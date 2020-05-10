@@ -37,6 +37,8 @@ import           Cardano.Config.Types (ConfigYamlFilePath (..), NodeAddress,
 import           Cardano.Config.Shelley.OCert (KESPeriod(..))
 import           Cardano.CLI.Key (VerificationKeyFile(..))
 
+import qualified Data.IP as IP
+import           Data.Ratio (approxRational)
 import qualified Data.Text as Text
 import           Data.Time.Clock (UTCTime)
 import           Data.Time.Format (defaultTimeLocale, iso8601DateFormat, parseTimeOrError)
@@ -47,7 +49,10 @@ import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
 
 import           Prelude (String)
 
-
+import qualified Shelley.Spec.Ledger.BaseTypes as Shelley
+import qualified Shelley.Spec.Ledger.Coin as Shelley
+import qualified Shelley.Spec.Ledger.Slot as Shelley
+import qualified Shelley.Spec.Ledger.TxData as Shelley
 --
 -- Shelley CLI command data types
 --
@@ -112,6 +117,31 @@ data PoolCmd
   = PoolRegister PoolId   -- { operator :: PubKey, owner :: [PubKey], kes :: PubKey, vrf :: PubKey, rewards :: PubKey, cost :: Lovelace, margin :: Margin, nodeAddr :: NodeAddress }
   | PoolReRegister PoolId -- { operator :: PubKey, owner :: [PubKey], kes :: PubKey, vrf :: PubKey, rewards :: PubKey, cost :: Lovelace, margin :: Margin, nodeAddr :: NodeAddress }
   | PoolRetire PoolId EpochNo NodeAddress
+  | PoolRegistrationCert
+      VerificationKeyFile
+      -- ^ Stake pool verification key.
+      VerificationKeyFile
+      -- ^ VRF Verification key.
+      ShelleyCoin
+      -- ^ Pool pledge.
+      ShelleyCoin
+      -- ^ Pool cost.
+      ShelleyStakePoolMargin
+      -- ^ Pool margin.
+      VerificationKeyFile
+      -- ^ Reward account verification staking key.
+      [VerificationKeyFile]
+      -- ^ Pool owner verification staking key(s).
+      [ShelleyStakePoolRelay]
+      -- ^ Stake pool relays.
+      OutputFile
+  | PoolRetirmentCert
+      VerificationKeyFile
+      -- ^ Stake pool verification key.
+      Shelley.EpochNo
+      -- ^ Epoch in which to retire the stake pool. --TODO: Double check this
+      OutputFile
+
   deriving (Eq, Show)
 
 
@@ -448,6 +478,10 @@ pPoolCmd =
           (Opt.info pPoolReRegster $ Opt.progDesc "Re-register a stake pool")
       , Opt.command "retire"
           (Opt.info pPoolRetire $ Opt.progDesc "Retire a stake pool")
+      , Opt.command "registration-certificate"
+          (Opt.info pStakePoolRegistrationCert $ Opt.progDesc "Create a stake pool registration certificate")
+      , Opt.command "deregistration-certificate"
+          (Opt.info pStakePoolRetirmentCert $ Opt.progDesc "Create a stake pool deregistration certificate")
       ]
   where
     pPoolRegster :: Parser PoolCmd
@@ -932,3 +966,100 @@ pPoolStakingVerificationKeyFile =
       <> Opt.metavar "FILEPATH"
       <> Opt.help ("Filepath of the stake pool verification key.")
       )
+
+pVRFVerificationKeyFile :: Parser VerificationKeyFile
+pVRFVerificationKeyFile =
+  VerificationKeyFile <$>
+    Opt.strOption
+      (  Opt.long "vrf-verification-key-file"
+      <> Opt.metavar "FILEPATH"
+      <> Opt.help ("Filepath of the VRF verification key.")
+      )
+
+pRewardAcctVerificationKeyFile :: Parser VerificationKeyFile
+pRewardAcctVerificationKeyFile =
+  VerificationKeyFile <$>
+    Opt.strOption
+      (  Opt.long "reward-account-verification-key-file"
+      <> Opt.metavar "FILEPATH"
+      <> Opt.help ("Filepath of the reward account staking verification key.")
+      )
+
+pPoolOwner :: Parser VerificationKeyFile
+pPoolOwner =
+  VerificationKeyFile <$>
+    Opt.strOption
+      (  Opt.long "pool-owner-staking-verification-key"
+      <> Opt.metavar "FILEPATH"
+      <> Opt.help ("Filepath of the pool owner staking verification key.")
+      )
+
+pPoolPledge :: Parser ShelleyCoin
+pPoolPledge =
+  Shelley.Coin <$>
+    Opt.option Opt.auto
+      (  Opt.long "pool-pledge"
+      <> Opt.metavar "INT"
+      <> Opt.help "The stake pool's pledge."
+      )
+
+
+pPoolCost :: Parser ShelleyCoin
+pPoolCost =
+  Shelley.Coin <$>
+    Opt.option Opt.auto
+      (  Opt.long "pool-cost"
+      <> Opt.metavar "INT"
+      <> Opt.help "The stake pool's cost."
+      )
+
+pPoolMargin :: Parser ShelleyStakePoolMargin
+pPoolMargin =
+  (\dbl -> maybeOrFail . Shelley.mkUnitInterval $ approxRational (dbl :: Double) 1) <$>
+    Opt.option Opt.auto
+      (  Opt.long "pool-margin"
+      <> Opt.metavar "DOUBLE"
+      <> Opt.help "The stake pool's margin."
+      )
+  where
+    maybeOrFail (Just mgn) = mgn
+    maybeOrFail Nothing = panic "Pool margin outside of [0,1] range."
+
+_pPoolRelay :: Parser ShelleyStakePoolRelay
+_pPoolRelay = Shelley.SingleHostAddr Shelley.SNothing
+               <$> (Shelley.maybeToStrictMaybe <$> optional _pIpV4)
+               <*> (Shelley.maybeToStrictMaybe <$> optional _pIpV6)
+
+_pIpV4 :: Parser IP.IPv4
+_pIpV4 = Opt.option (Opt.maybeReader readMaybe :: Opt.ReadM IP.IPv4)
+          (  Opt.long "pool-relay-ipv4"
+          <> Opt.metavar "STRING"
+          <> Opt.help "The stake pool relay's IpV4 address"
+          )
+
+_pIpV6 :: Parser IP.IPv6
+_pIpV6 = Opt.option (Opt.maybeReader readMaybe :: Opt.ReadM IP.IPv6)
+          (  Opt.long "pool-relay-ipv6"
+          <> Opt.metavar "STRING"
+          <> Opt.help "The stake pool relay's IpV6 address"
+          )
+
+pStakePoolRegistrationCert :: Parser PoolCmd
+pStakePoolRegistrationCert =
+ PoolRegistrationCert
+  <$> pPoolStakingVerificationKeyFile
+  <*> pVRFVerificationKeyFile
+  <*> pPoolPledge
+  <*> pPoolCost
+  <*> pPoolMargin
+  <*> pRewardAcctVerificationKeyFile
+  <*> some pPoolOwner
+  <*> pure []
+  <*> pOutputFile
+
+pStakePoolRetirmentCert :: Parser PoolCmd
+pStakePoolRetirmentCert =
+  PoolRetirmentCert
+    <$> pPoolStakingVerificationKeyFile
+    <*> pEpochNo
+    <*> pOutputFile

@@ -56,8 +56,10 @@ module Cardano.Api
   , queryFilteredUTxOFromLocalState
   , queryPParamsFromLocalState
 
+  , ShelleyCoin
   , ShelleyCredentialStaking
   , ShelleyRewardAccount
+  , ShelleyStakePoolMargin
   , ShelleyStakePoolMetaData
   , ShelleyStakePoolOwners
   , ShelleyStakePoolRelay
@@ -66,6 +68,7 @@ module Cardano.Api
   , ShelleyVerificationKeyStakePool
   , ShelleyVerificationKeyStaking
   , ShelleyVRFVerificationKeyHash
+  , ShelleyVRFVerificationKey
   , mkShelleyStakingCredential
 
   -- * Shelley Delegation Certificate Related

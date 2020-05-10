@@ -5,6 +5,7 @@ module Cardano.Api.View
   , parseVerificationKeyView
   , parseVerificationKeyStakePoolView
   , parseVerificationKeyStakingView
+  , parseVerificationKeyVRFView
   , parseTxSignedView
   , parseTxUnsignedView
 
@@ -12,6 +13,7 @@ module Cardano.Api.View
   , readCertificate
   , readSigningKey
   , readVerificationKey
+  , readVRFVerificationKey
   , readVerificationKeyStakePool
   , readVerificationKeyStaking
   , readTxSigned
@@ -23,6 +25,7 @@ module Cardano.Api.View
   , renderVerificationKeyView
   , renderVerificationKeyStakePoolView
   , renderVerificationKeyStakingView
+  , renderVerificationKeyVRFView
   , renderTxSignedView
   , renderTxUnsignedView
 
@@ -32,6 +35,7 @@ module Cardano.Api.View
   , writeVerificationKey
   , writeVerificationKeyStakePool
   , writeVerificationKeyStaking
+  , writeVRFVerificationKey
   , writeTxSigned
   , writeTxUnsigned
   ) where
@@ -66,6 +70,10 @@ parseVerificationKeyView :: ByteString -> Either ApiError VerificationKey
 parseVerificationKeyView bs =
   verificationKeyFromCBOR . tvRawCBOR =<< first ApiTextView (parseTextView bs)
 
+parseVRFVerificationKeyView :: ByteString -> Either ApiError ShelleyVRFVerificationKey
+parseVRFVerificationKeyView bs =
+  verificationKeyVRFFromCBOR . tvRawCBOR =<< first ApiTextView (parseTextView bs)
+
 parseVerificationKeyStakePoolView :: ByteString -> Either ApiError ShelleyVerificationKeyStakePool
 parseVerificationKeyStakePoolView bs =
   verificationKeyStakePoolFromCBOR . tvRawCBOR =<< first ApiTextView (parseTextView bs)
@@ -73,6 +81,11 @@ parseVerificationKeyStakePoolView bs =
 parseVerificationKeyStakingView :: ByteString -> Either ApiError ShelleyVerificationKeyStaking
 parseVerificationKeyStakingView bs =
   verificationKeyStakingFromCBOR . tvRawCBOR =<< first ApiTextView (parseTextView bs)
+
+parseVerificationKeyVRFView :: ByteString -> Either ApiError ShelleyVRFVerificationKey
+parseVerificationKeyVRFView bs =
+  verificationKeyVRFFromCBOR . tvRawCBOR =<< first ApiTextView (parseTextView bs)
+
 
 parseTxSignedView :: ByteString -> Either ApiError TxSigned
 parseTxSignedView bs =
@@ -135,6 +148,13 @@ renderVerificationKeyStakePoolView vk =
     cbor :: ByteString
     cbor = verificationKeyStakePoolToCBOR vk
 
+renderVerificationKeyVRFView :: ShelleyVRFVerificationKey -> ByteString
+renderVerificationKeyVRFView vk =
+    renderTextView $ TextView "VerificationKeyVRF" "Free form text" cbor
+  where
+    cbor :: ByteString
+    cbor = verificationKeyVRFToCBOR vk
+
 renderTxSignedView :: TxSigned -> ByteString
 renderTxSignedView ts =
   case ts of
@@ -179,6 +199,12 @@ readVerificationKey path =
   runExceptT $ do
     bs <- handleIOExceptT (ApiErrorIO path) $ BS.readFile path
     hoistEither $ parseVerificationKeyView bs
+
+readVRFVerificationKey :: FilePath -> IO (Either ApiError ShelleyVRFVerificationKey)
+readVRFVerificationKey path =
+  runExceptT $ do
+    bs <- handleIOExceptT (ApiErrorIO path) $ BS.readFile path
+    hoistEither $ parseVRFVerificationKeyView bs
 
 readVerificationKeyStakePool :: FilePath -> IO (Either ApiError ShelleyVerificationKeyStakePool)
 readVerificationKeyStakePool path =
@@ -228,6 +254,11 @@ writeVerificationKeyStaking :: FilePath -> ShelleyVerificationKeyStaking -> IO (
 writeVerificationKeyStaking path kp =
   runExceptT .
     handleIOExceptT (ApiErrorIO path) $ BS.writeFile path (renderVerificationKeyStakingView kp)
+
+writeVRFVerificationKey :: FilePath -> ShelleyVRFVerificationKey -> IO (Either ApiError ())
+writeVRFVerificationKey path kp =
+  runExceptT .
+    handleIOExceptT (ApiErrorIO path) $ BS.writeFile path (renderVerificationKeyVRFView kp)
 
 writeVerificationKeyStakePool :: FilePath -> ShelleyVerificationKeyStakePool -> IO (Either ApiError ())
 writeVerificationKeyStakePool path kp =

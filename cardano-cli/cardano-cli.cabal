@@ -72,6 +72,7 @@ library
                      , filepath
                      , formatting
                      , io-sim-classes
+                     , iproute
                      , lens
                      , memory
                      , network-mux

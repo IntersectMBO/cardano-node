@@ -58,6 +58,12 @@ prop_VerificationKeyStaking_CBOR =
     kp <- H.forAll genVerificationKeyShelleyStaking
     H.tripping kp verificationKeyStakingToCBOR verificationKeyStakingFromCBOR
 
+prop_VerificationKeyVRF_CBOR :: Property
+prop_VerificationKeyVRF_CBOR =
+  H.property $ do
+    (_, vKey) <- H.forAll genVRFKeyPair
+    H.tripping vKey verificationKeyVRFToCBOR verificationKeyVRFFromCBOR
+
 prop_TxSigned_CBOR :: Property
 prop_TxSigned_CBOR =
   H.property $ do
