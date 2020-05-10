@@ -117,7 +117,7 @@ data PoolCmd
 
 data QueryCmd
   = QueryPoolId NodeAddress
-  | QueryProtocolParameters ConfigYamlFilePath OutputFile
+  | QueryProtocolParameters ConfigYamlFilePath (Maybe OutputFile)
   | QueryTip NodeAddress
   | QueryFilteredUTxO Address ConfigYamlFilePath
   | QueryVersion NodeAddress
@@ -485,7 +485,7 @@ pQueryCmd =
     pQueryProtocolParameters =
       QueryProtocolParameters
         <$> (ConfigYamlFilePath <$> parseConfigFile)
-        <*> pOutputFile
+        <*> pMaybeOutputFile
 
     pQueryTip :: Parser QueryCmd
     pQueryTip = QueryTip <$> parseNodeAddress
@@ -763,6 +763,16 @@ pOperatorCertIssueCounterFile =
       <> Opt.metavar "FILE"
       <> Opt.help "The file with the issue counter for the operational certificate."
       )
+
+pMaybeOutputFile :: Parser (Maybe OutputFile)
+pMaybeOutputFile =
+  optional $
+    OutputFile <$>
+      Opt.strOption
+        (  Opt.long "out-file"
+        <> Opt.metavar "FILE"
+        <> Opt.help "Optional output file. Default is to write to stdout."
+        )
 
 pOutputFile :: Parser OutputFile
 pOutputFile =

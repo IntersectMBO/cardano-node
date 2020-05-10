@@ -46,17 +46,17 @@ import           Shelley.Spec.Ledger.UTxO (UTxO (..))
 runQueryCmd :: QueryCmd -> ExceptT CliError IO ()
 runQueryCmd cmd =
   case cmd of
-    QueryProtocolParameters configFp outFile ->
-      runQueryProtocolParameters configFp outFile
+    QueryProtocolParameters configFp mOutFile ->
+      runQueryProtocolParameters configFp mOutFile
     QueryFilteredUTxO addr configFp ->
       runQueryFilteredUTxO addr configFp
     _ -> liftIO $ putStrLn $ "runQueryCmd: " ++ show cmd
 
 runQueryProtocolParameters
   :: ConfigYamlFilePath
-  -> OutputFile
+  -> Maybe OutputFile
   -> ExceptT CliError IO ()
-runQueryProtocolParameters configFp (OutputFile outFile) = do
+runQueryProtocolParameters configFp mOutFile = do
     nc <- liftIO $ parseNodeConfigurationFP configFp
     SomeConsensusProtocol p <- firstExceptT ProtocolError $ mkConsensusProtocol nc Nothing
     case p of
@@ -65,7 +65,7 @@ runQueryProtocolParameters configFp (OutputFile outFile) = do
         tip <- liftIO $ withIOManager $ \iomgr -> getLocalTip iomgr cfg nm sockPath
         pparams <- firstExceptT NodeLocalStateQueryError $
           queryPParamsFromLocalState cfg nm sockPath (getTipPoint tip)
-        writeProtocolParameters outFile pparams
+        writeProtocolParameters mOutFile pparams
         where
           cfg = configCodec ptclcfg
           --FIXME: this works, but we should get the magic properly:
@@ -98,9 +98,12 @@ runQueryFilteredUTxO addr configFp = do
 
       _ -> left $ IncorrectProtocolSpecifiedError (ncProtocol nc)
 
-writeProtocolParameters :: FilePath -> PParams -> ExceptT CliError IO ()
-writeProtocolParameters fpath pparams =
-  handleIOExceptT (IOError fpath) $ LBS.writeFile fpath (encodePretty pparams)
+writeProtocolParameters :: Maybe OutputFile  -> PParams -> ExceptT CliError IO ()
+writeProtocolParameters mOutFile pparams =
+    case mOutFile of
+      Nothing -> liftIO $ LBS.putStrLn (encodePretty pparams)
+      Just (OutputFile fpath) ->
+        handleIOExceptT (IOError fpath) $ LBS.writeFile fpath (encodePretty pparams)
 
 
 printFilteredUTxOs :: UTxO TPraosStandardCrypto -> IO ()
