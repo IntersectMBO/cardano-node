@@ -177,7 +177,7 @@ data SystemCmd
 
 
 data GenesisCmd
-  = GenesisCreate GenesisDir Word Word (Maybe SystemStart) Lovelace
+  = GenesisCreate GenesisDir Word Word (Maybe SystemStart) (Maybe Lovelace)
   | GenesisKeyGenGenesis VerificationKeyFile SigningKeyFile
   | GenesisKeyGenDelegate VerificationKeyFile SigningKeyFile OpCertCounterFile
   | GenesisKeyGenUTxO VerificationKeyFile SigningKeyFile
@@ -701,14 +701,14 @@ pGenesisCmd =
     convertTime =
       parseTimeOrError False defaultTimeLocale (iso8601DateFormat $ Just "%H:%M:%SZ")
 
-    pInitialSupply :: Parser Lovelace
+    pInitialSupply :: Parser (Maybe Lovelace)
     pInitialSupply =
+      Opt.optional $
       Lovelace <$>
         Opt.option Opt.auto
           (  Opt.long "supply"
           <> Opt.metavar "LOVELACE"
           <> Opt.help "The initial coin supply in Lovelace which will be evenly distributed across initial stake holders."
-          <> Opt.value 0
           )
 
 
