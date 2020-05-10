@@ -1,6 +1,7 @@
 # This file is used by nix-shell.
 # It just takes the shell attribute from default.nix.
 { config ? {}
+, customConfig ? {}
 , sourcesOverride ? {}
 , withHoogle ? true
 , pkgs ? import ./nix {
@@ -56,6 +57,11 @@ let
       echo "DevOps Tools" \
       | ${figlet}/bin/figlet -f banner -c \
       | ${lolcat}/bin/lolcat
+
+      ${lib.optionalString (__hasAttr "network" customConfig) ''
+        export CARDANO_NODE_SOCKET_PATH=./state-node-${customConfig.network}/node.socket
+
+      ''}
 
       echo "NOTE: you may need to export GITHUB_TOKEN if you hit rate limits with niv"
       echo "Commands:
