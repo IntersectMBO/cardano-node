@@ -7,11 +7,11 @@ module Cardano.CLI.Shelley.Run.Query
 import           Cardano.Prelude
 
 import           Cardano.Api
-                   (Address, Network(..), queryFilteredUTxOFromLocalState,
+                   (Address, Network(..), getLocalTip, queryFilteredUTxOFromLocalState,
                     queryPParamsFromLocalState)
 
 import           Cardano.CLI.Environment (readEnvSocketPath)
-import           Cardano.CLI.Ops (CliError (..), getLocalTip)
+import           Cardano.CLI.Ops (CliError (..))
 import           Cardano.CLI.Shelley.Parsers (OutputFile (..), QueryCmd (..))
 
 import           Cardano.Config.Shelley.Protocol (mkNodeClientProtocolTPraos)

@@ -52,11 +52,14 @@ module Cardano.Api
   , witnessTransaction
   , signTransactionWithWitness
 
-  -- * Node local state queries
+    -- * Node local state queries
   , LocalStateQueryError (..)
   , renderLocalStateQueryError
   , queryFilteredUTxOFromLocalState
   , queryPParamsFromLocalState
+
+    -- * Node local chain sync related
+  , getLocalTip
 
   , ShelleyCoin
   , ShelleyCredentialStaking
@@ -112,6 +115,7 @@ import           Cardano.Api.Error as X
 import           Cardano.Api.View as X
 import           Cardano.Api.TxSubmitChairman as X
 import           Cardano.Api.TxSubmit as X
+import           Cardano.Api.LocalChainSync
 import           Cardano.Api.LocalStateQuery
 
 import qualified Cardano.Chain.Common  as Byron
