@@ -8,14 +8,13 @@ cwd=$(dirname "$0")
 # shellcheck disable=SC2154
 banner "${testname}"
 
-OUTPUT_DIR="${TEST}"
-OUTPUT_JSON="${TEST}/genesis.json"
+setup_data_dir "${testname}"
+
+OUTPUT_JSON="${TEST_DIR}/genesis.json"
 
 start_time=$(TZ=UTC date --iso-8601=seconds | sed 's/+.*/Z/')
 
-rm -rf "${OUTPUT_DIR}"
-mkdir -p "${OUTPUT_DIR}/delegate-keys/" "${OUTPUT_DIR}/genesis-keys/"
-cp "${cwd}/data/genesis.spec.json" "${OUTPUT_DIR}/"
+cp "${DATA_DIR}/genesis.spec.json" "${TEST_DIR}/"
 
 # Random number for the total supply.
 supply=$(head -100 /dev/urandom | cksum | sed 's/ .*//')
@@ -32,7 +31,7 @@ ${CARDANO_CLI} shelley genesis create \
     --supply "${supply}" \
     --gen-genesis-keys ${gendlg_count} \
     --gen-utxo-keys ${gendlg_count} \
-    --genesis-dir "${OUTPUT_DIR}/"
+    --genesis-dir "${TEST_DIR}/"
 
 check_supply=$(grep maxLovelaceSupply "${OUTPUT_JSON}" | sed "s/${supply}/correct/;s/[ \"]//g")
 if test "${check_supply}" != "maxLovelaceSupply:correct," ; then
@@ -46,7 +45,7 @@ if test "${check_start_time}" != "startTime:correct," ; then
     error=1
     fi
 
-# tree "${OUTPUT_DIR}"
+# tree "${TEST_DIR}"
 # cat "${OUTPUT_JSON}"
 # echo
 
@@ -63,19 +62,19 @@ if test "${check_supply}" != "${supply}" ; then
     error=1
     fi
 
-jq '.genDelegs' < "${OUTPUT_JSON}" | grep ':' > "${OUTPUT_DIR}/genesis-delegate.pairs"
+jq '.genDelegs' < "${OUTPUT_JSON}" | grep ':' > "${TEST_DIR}/genesis-delegate.pairs"
 
-keyhash_count=$(sed 's/:.*//' < "${OUTPUT_DIR}/genesis-delegate.pairs" | sort | uniq | wc -l)
+keyhash_count=$(sed 's/:.*//' < "${TEST_DIR}/genesis-delegate.pairs" | sort | uniq | wc -l)
 if test "${keyhash_count}" != "${gendlg_count}" ; then
     echo "Genesis keyhashes are not unique."
-    cat "${OUTPUT_DIR}/genesis-delegate.pairs"
+    cat "${TEST_DIR}/genesis-delegate.pairs"
     error=1
     fi
 
-keyhash_delegate_count=$(sed 's/.*://' < "${OUTPUT_DIR}/genesis-delegate.pairs" | sort | uniq | wc -l)
+keyhash_delegate_count=$(sed 's/.*://' < "${TEST_DIR}/genesis-delegate.pairs" | sort | uniq | wc -l)
 if test "${keyhash_delegate_count}" != "${gendlg_count}" ; then
     echo "Genesis delegate keyhashes are not unique."
-    cat "${OUTPUT_DIR}/genesis-delegate.pairs"
+    cat "${TEST_DIR}/genesis-delegate.pairs"
     error=1
     fi
 

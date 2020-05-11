@@ -8,19 +8,11 @@ cwd=$(dirname "$0")
 # shellcheck disable=SC2154
 banner "${testname}"
 
-OUTPUT_DIR="${TEST}"
-
-rm -rf "${OUTPUT_DIR}"
-mkdir "${OUTPUT_DIR}"
-
-DATA_DIR="test/cli/${testname}/data/"
-if test -d cardano-cli ; then
-  DATA_DIR="cardano-cli/${DATA_DIR}"
-  fi
+setup_data_dir "${testname}"
 
 # This file gets updated so copy it from the data directory to the output and
 # modify it there.
-cp "${DATA_DIR}/delegate-op-cert.counter" "${OUTPUT_DIR}/"
+cp "${DATA_DIR}/delegate-op-cert.counter" "${TEST_DIR}/"
 
 error=0
 
@@ -34,14 +26,14 @@ error=0
 ${CARDANO_CLI} shelley node issue-op-cert \
     --hot-kes-verification-key-file "${DATA_DIR}/node-kes.vkey" \
     --cold-signing-key-file "${DATA_DIR}/delegate.skey" \
-    --operational-certificate-issue-counter "${OUTPUT_DIR}/delegate-op-cert.counter" \
+    --operational-certificate-issue-counter "${TEST_DIR}/delegate-op-cert.counter" \
     --kes-period 0 \
-    --out-file "${OUTPUT_DIR}/operational.cert"
+    --out-file "${TEST_DIR}/operational.cert"
 
-assert_file_exists "${OUTPUT_DIR}/operational.cert"
+assert_file_exists "${TEST_DIR}/operational.cert"
 
-assert_string 'Node operational certificate' "${OUTPUT_DIR}/operational.cert"
+assert_string 'Node operational certificate' "${TEST_DIR}/operational.cert"
 
-assert_string 'Next certificate issue number: 7' "${OUTPUT_DIR}/delegate-op-cert.counter"
+assert_string 'Next certificate issue number: 7' "${TEST_DIR}/delegate-op-cert.counter"
 
 report_result ${error}

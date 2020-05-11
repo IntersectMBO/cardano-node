@@ -8,24 +8,19 @@ cwd=$(dirname "$0")
 # shellcheck disable=SC2154
 banner "${testname}"
 
-OUTPUT_DIR="${TEST}"
-
-rm -rf "${OUTPUT_DIR}"
-mkdir "${OUTPUT_DIR}"
-
 error=0
 
 ${CARDANO_CLI} shelley node key-gen \
-    --verification-key-file "${OUTPUT_DIR}/key-gen.vkey" \
-    --signing-key-file "${OUTPUT_DIR}/key-gen.skey" \
-    --operational-certificate-issue-counter "${OUTPUT_DIR}/op-cert.counter"
+    --verification-key-file "${TEST_DIR}/key-gen.vkey" \
+    --signing-key-file "${TEST_DIR}/key-gen.skey" \
+    --operational-certificate-issue-counter "${TEST_DIR}/op-cert.counter"
 
-assert_file_exists "${OUTPUT_DIR}/key-gen.vkey"
-assert_file_exists "${OUTPUT_DIR}/key-gen.skey"
-assert_file_exists "${OUTPUT_DIR}/op-cert.counter"
+assert_file_exists "${TEST_DIR}/key-gen.vkey"
+assert_file_exists "${TEST_DIR}/key-gen.skey"
+assert_file_exists "${TEST_DIR}/op-cert.counter"
 
-assert_string 'Node operator verification key' "${OUTPUT_DIR}/key-gen.vkey"
-assert_string 'Node operator signing key' "${OUTPUT_DIR}/key-gen.skey"
-assert_string 'Node operational certificate issue counter' "${OUTPUT_DIR}/op-cert.counter"
+assert_string 'Node operator verification key' "${TEST_DIR}/key-gen.vkey"
+assert_string 'Node operator signing key' "${TEST_DIR}/key-gen.skey"
+assert_string 'Node operational certificate issue counter' "${TEST_DIR}/op-cert.counter"
 
 report_result ${error}

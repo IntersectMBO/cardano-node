@@ -8,19 +8,6 @@ cwd=$(dirname "$0")
 # shellcheck disable=SC2154
 banner "${testname}"
 
-if test -d cardano-cli ; then
-  cd cardano-cli || exit 1
-  fi
-
-OUTPUT_DIR="${TEST}"
-
-rm -rf "${OUTPUT_DIR}"
-if test -d cardano-cli ; then
-  cd cardano-cli || exit 1
-  fi
-
-mkdir "${OUTPUT_DIR}"
-
 error=0
 
 # Use the same (faked) TxIn for both transactions.
@@ -41,10 +28,10 @@ tx_in="2392d2b1200b5139fe555c81261697b29a8ccf561c5c783d46e78a479d977053#0"
 #     --tx-out ${tx_out}  \
 #     --ttl 60 \
 #     --fee 12 \
-#     --tx-body-file "${OUTPUT_DIR}/tx-body-out"
+#     --tx-body-file "${TEST_DIR}/tx-body-out"
 # fail_on_error $?
 #
-# cat "${OUTPUT_DIR}/tx-body-out"
+# cat "${TEST_DIR}/tx-body-out"
 
 #-----------------------------
 # Using a Shelley output address
@@ -56,11 +43,11 @@ ${CARDANO_CLI} shelley transaction build-raw \
     --tx-out "${tx_out}"  \
     --ttl 60 \
     --fee 12 \
-    --tx-body-file "${OUTPUT_DIR}/tx-body-out"
+    --tx-body-file "${TEST_DIR}/tx-body-out"
 fail_on_error $?
 
-assert_file_exists "${OUTPUT_DIR}/tx-body-out"
-assert_string 'TxUnsignedShelley' "${OUTPUT_DIR}/tx-body-out"
+assert_file_exists "${TEST_DIR}/tx-body-out"
+assert_string 'TxUnsignedShelley' "${TEST_DIR}/tx-body-out"
 
 #-----------------------------
 

@@ -8,15 +8,7 @@ cwd=$(dirname "$0")
 # shellcheck disable=SC2154
 banner "${testname}"
 
-OUTPUT_DIR="${TEST}"
-
-rm -rf "${OUTPUT_DIR}"
-mkdir "${OUTPUT_DIR}"
-
-DATA_DIR="test/cli/${testname}/data"
-if test -d cardano-cli ; then
-  DATA_DIR="cardano-cli/${DATA_DIR}"
-  fi
+setup_data_dir "${testname}"
 
 error=0
 
@@ -27,18 +19,18 @@ ${CARDANO_CLI} shelley transaction calculate-min-fee \
     --testnet-magic 4036000900 \
     --protocol-params-file "${DATA_DIR}/protocol-params.json" \
     --signing-key-file "${DATA_DIR}/utxo.skey" \
-    > "${OUTPUT_DIR}/min-fee.txt"
+    > "${TEST_DIR}/min-fee.txt"
 fail_on_error $?
 
-assert_file_exists "${OUTPUT_DIR}/min-fee.txt"
+assert_file_exists "${TEST_DIR}/min-fee.txt"
 
-line_count=$(wc -l < "${OUTPUT_DIR}/min-fee.txt")
+line_count=$(wc -l < "${TEST_DIR}/min-fee.txt")
 if test "${line_count}" -ne 1 ; then
   echo "Error: Expected only a single line of output."
-  cat "${OUTPUT_DIR}/min-fee.txt"
+  cat "${TEST_DIR}/min-fee.txt"
   error=1
   fi
 
-assert_string '1575502' "${OUTPUT_DIR}/min-fee.txt"
+assert_string '1575502' "${TEST_DIR}/min-fee.txt"
 
 report_result ${error}

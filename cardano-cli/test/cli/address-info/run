@@ -13,12 +13,6 @@ if test -d cardano-cli ; then
   DATA_DIR="cardano-cli/${DATA_DIR}"
   fi
 
-OUTPUT_DIR="${TEST}"
-
-rm -rf "${OUTPUT_DIR}"
-
-mkdir "${OUTPUT_DIR}"
-
 error=0
 
 #-------------------------
@@ -27,11 +21,11 @@ byron_base58=$(head -1 "${DATA_DIR}/byron-base58.address")
 
 ${CARDANO_CLI} shelley address info \
     --address "${byron_base58}" \
-    > "${OUTPUT_DIR}/describe"
+    > "${TEST_DIR}/describe"
 
-assert_file_exists "${OUTPUT_DIR}/describe"
-assert_string 'Encoding: Base58' "${OUTPUT_DIR}/describe"
-assert_string 'Era: Byron' "${OUTPUT_DIR}/describe"
+assert_file_exists "${TEST_DIR}/describe"
+assert_string 'Encoding: Base58' "${TEST_DIR}/describe"
+assert_string 'Era: Byron' "${TEST_DIR}/describe"
 
 #-------------------------
 
@@ -39,11 +33,11 @@ byron_hex=$(head -1 "${DATA_DIR}/byron-hex.address")
 
 ${CARDANO_CLI} shelley address info \
     --address "${byron_hex}" \
-    > "${OUTPUT_DIR}/describe"
+    > "${TEST_DIR}/describe"
 
-assert_file_exists "${OUTPUT_DIR}/describe"
-assert_string 'Encoding: Hex' "${OUTPUT_DIR}/describe"
-assert_string 'Era: Byron' "${OUTPUT_DIR}/describe"
+assert_file_exists "${TEST_DIR}/describe"
+assert_string 'Encoding: Hex' "${TEST_DIR}/describe"
+assert_string 'Era: Byron' "${TEST_DIR}/describe"
 
 #-------------------------
 
@@ -51,11 +45,11 @@ shelley_hex=$(head -1 "${DATA_DIR}/shelley-hex.address")
 
 ${CARDANO_CLI} shelley address info \
     --address "${shelley_hex}" \
-    > "${OUTPUT_DIR}/describe"
+    > "${TEST_DIR}/describe"
 
-assert_file_exists "${OUTPUT_DIR}/describe"
-assert_string 'Encoding: Hex' "${OUTPUT_DIR}/describe"
-assert_string 'Era: Shelley' "${OUTPUT_DIR}/describe"
+assert_file_exists "${TEST_DIR}/describe"
+assert_string 'Encoding: Hex' "${TEST_DIR}/describe"
+assert_string 'Era: Shelley' "${TEST_DIR}/describe"
 
 #-------------------------
 

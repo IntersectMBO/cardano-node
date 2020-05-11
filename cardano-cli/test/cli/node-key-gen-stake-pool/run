@@ -8,21 +8,16 @@ cwd=$(dirname "$0")
 # shellcheck disable=SC2154
 banner "${testname}"
 
-OUTPUT_DIR="${TEST}"
-
-rm -rf "${OUTPUT_DIR}"
-mkdir "${OUTPUT_DIR}"
-
 error=0
 
 ${CARDANO_CLI} shelley node key-gen-stake-pool \
-    --verification-key-file "${OUTPUT_DIR}/key-gen-stake-pool.vkey" \
-    --signing-key-file "${OUTPUT_DIR}/key-gen-stake-pool.skey"
+    --verification-key-file "${TEST_DIR}/key-gen-stake-pool.vkey" \
+    --signing-key-file "${TEST_DIR}/key-gen-stake-pool.skey"
 
-assert_file_exists "${OUTPUT_DIR}/key-gen-stake-pool.vkey"
-assert_file_exists "${OUTPUT_DIR}/key-gen-stake-pool.skey"
+assert_file_exists "${TEST_DIR}/key-gen-stake-pool.vkey"
+assert_file_exists "${TEST_DIR}/key-gen-stake-pool.skey"
 
-assert_string 'VerificationKeyStakePoolShelley' "${OUTPUT_DIR}/key-gen-stake-pool.vkey"
-assert_string 'SigningKeyShelley' "${OUTPUT_DIR}/key-gen-stake-pool.skey"
+assert_string 'VerificationKeyStakePoolShelley' "${TEST_DIR}/key-gen-stake-pool.vkey"
+assert_string 'SigningKeyShelley' "${TEST_DIR}/key-gen-stake-pool.skey"
 
 report_result ${error}
