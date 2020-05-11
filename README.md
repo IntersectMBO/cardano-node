@@ -37,13 +37,21 @@ Use [Cabal - Version 3.0](https://www.haskell.org/cabal/) to build this project:
 
 ```
 $ cd cardano-node
-$ cabal build
+$ cabal build all
 ```
+
+Then install it, also using cabal
+
+```
+$ cabal install cardano-node
+```
+
+Please see the Cabal documentation for more information on setup and use of the build system.
 
 ## Windows Executable
 
 ### Download
-You can download [here](https://hydra.iohk.io/job/Cardano/cardano-node/cardano-node-win64/latest-finished).
+You can download a pre-compiled executable [here](https://hydra.iohk.io/job/Cardano/cardano-node/cardano-node-win64/latest-finished).
 
 ### Instructions
 
