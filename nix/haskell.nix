@@ -117,8 +117,8 @@ let
         # systemd can't be statically linked - disable lobemo-scribe-journal
         packages.cardano-config.flags.systemd = false;
 
-        # Remove haddock build-tool dependency (suitable version will be available as part of the ghc derivation)
-        packages.time.components.library.build-tools = lib.mkForce [];
+        # Haddock not working and not needed for cross builds
+        packages.doHaddock = false;
       }))
     ];
 
