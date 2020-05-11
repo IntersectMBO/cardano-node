@@ -6,7 +6,7 @@
 
 {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 
-module Cardano.Api.TxSubmitChairman
+module Cardano.Api.TxSubmit
   ( submitTx
   , TxSubmitResult(..)
   ) where
