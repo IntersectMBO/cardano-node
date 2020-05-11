@@ -333,7 +333,7 @@ pAddressCmd =
       ]
   where
     pAddressKeyGen :: Parser AddressCmd
-    pAddressKeyGen = AddressKeyGen <$> pVerificationKeyFile Input <*> pSigningKeyFile Input
+    pAddressKeyGen = AddressKeyGen <$> pVerificationKeyFile Output <*> pSigningKeyFile Output
 
     pAddressKeyHash :: Parser AddressCmd
     pAddressKeyHash = AddressKeyHash <$> pVerificationKeyFile Input
