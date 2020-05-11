@@ -1,13 +1,12 @@
 { config
 , lib
 , pkgs
-, cardanoNodePkgs
 , ... }:
 
 with lib; with builtins;
 let
   cfg = config.services.cardano-node;
-  inherit (cardanoNodePkgs) svcLib commonLib cardanoNodeHaskellPackages cardanoNodeProfiledHaskellPackages;
+  inherit (cfg.cardanoNodePkgs) svcLib commonLib cardanoNodeHaskellPackages cardanoNodeProfiledHaskellPackages;
   envConfig = cfg.environments.${cfg.environment}; systemdServiceName = "cardano-node${optionalString cfg.instanced "@"}";
   runtimeDir = if cfg.runtimeDir == null then cfg.stateDir else "/run/${cfg.runtimeDir}";
   mkScript = cfg: let
@@ -87,6 +86,17 @@ in {
       profiling = mkOption {
         type = types.enum ["none" "time" "space" "space-module" "space-closure" "space-type" "space-retainer" "space-bio"];
         default = "none";
+      };
+
+      cardanoNodePkgs = mkOption {
+        type = types.attrs;
+        default = import ../. {};
+        defaultText = "cardano-node pkgs";
+        description = ''
+          The cardano-node packages and library that should be used.
+          Main usage is sharing optimization:
+          reduce eval time when service is instantiated multiple times.
+        '';
       };
 
       package = mkOption {
@@ -321,7 +331,6 @@ in {
   };
 
   config = mkIf cfg.enable ( let stateDirBase = "/var/lib/"; in {
-    _module.args.cardanoNodePkgs = mkDefault (import ../. {});
     users.groups.cardano-node.gid = 10016;
     users.users.cardano-node = {
       description = "cardano-node node daemon user";

@@ -41,7 +41,6 @@ in {
   name = "chairmans-cluster-test";
   nodes = {
     machine = { lib, config, pkgs, ... }: {
-      _module.args.cardanoNodePkgs = mkDefault pkgs';
       nixpkgs.overlays = commonLib.overlays;
       imports = [
         (byron-proxy-src + "/nix/nixos")
@@ -58,6 +57,7 @@ in {
       ];
 
       services.cardano-cluster = cardano-cluster-config;
+      services.cardano-node.cardanoNodePkgs = pkgs';
 
       ## Time
       services.timesyncd.enable = false;

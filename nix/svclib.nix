@@ -251,10 +251,10 @@ let
     injectServiceConfigs = {
       config.services.chairman = chairman-config;
       config.services.cardano-cluster = cardano-cluster-config;
+      config.services.cardano-node.cardanoNodePkgs = pkgs;
     };
     pkgsModule = {
       config._module.args.pkgs = mkDefault pkgs;
-      config._module.args.cardanoNodePkgs = mkDefault pkgs;
     };
     systemdCompat.options = {
       systemd.services = mkOption {};
