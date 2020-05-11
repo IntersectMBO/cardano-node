@@ -77,7 +77,12 @@ runTxSubmit :: FilePath -> Network -> ExceptT CliError IO ()
 runTxSubmit txFp network = do
   sktFp <- readEnvSocketPath
   signedTx <- firstExceptT CardanoApiError . newExceptT $ readTxSigned txFp
-  liftIO $ submitTx network sktFp signedTx
+  result   <- liftIO $ submitTx network sktFp signedTx
+  case result of
+    TxSubmitSuccess            -> return ()
+    --TODO: use the Cardano.Api.TxSubmit.ErrorRender here
+    TxSubmitFailureByron   err -> liftIO $ print err
+    TxSubmitFailureShelley err -> liftIO $ print err
 
 runTxCalculateMinFee
   :: TxInCount

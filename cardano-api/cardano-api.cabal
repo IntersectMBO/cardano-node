@@ -22,9 +22,7 @@ library
                         Cardano.Api.LocalChainSync
                         Cardano.Api.LocalStateQuery
                         Cardano.Api.TxSubmit
-                        Cardano.Api.TxSubmitChairman
                         Cardano.Api.TxSubmit.ErrorRender
-                        Cardano.Api.TxSubmit.TxSubmitVar
                         Cardano.Api.TxSubmit.Types
                         Cardano.Api.Types
                         Cardano.Api.View
@@ -61,6 +59,7 @@ library
                       , ouroboros-network-framework
                       , serialise
                       , shelley-spec-ledger
+                      , stm
                       , text
                       , transformers-except
                       , typed-protocols

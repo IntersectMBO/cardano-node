@@ -113,7 +113,6 @@ import           Cardano.Api.CBOR as X
 import           Cardano.Api.Convert as X
 import           Cardano.Api.Error as X
 import           Cardano.Api.View as X
-import           Cardano.Api.TxSubmitChairman as X
 import           Cardano.Api.TxSubmit as X
 import           Cardano.Api.LocalChainSync
 import           Cardano.Api.LocalStateQuery

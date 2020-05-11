@@ -1,222 +1,193 @@
-{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE NoImplicitPrelude #-}
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeFamilies #-}
+
+{-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 
 module Cardano.Api.TxSubmit
-  ( TxSubmitStatus (..)
-  , renderTxSubmitStatus
-  , submitTransaction
-  , prepareTxByron
-  , prepareTxShelley
+  ( submitTx
+  , TxSubmitResult(..)
   ) where
 
-import           Cardano.Prelude hiding (Nat, atomically, option, (%))
+import           Cardano.Prelude
 
-import           Cardano.Api.TxSubmit.TxSubmitVar
-import           Cardano.Api.TxSubmit.Types
+import           Control.Tracer
+import           Control.Concurrent.STM
+
 import           Cardano.Api.Types
 
-import           Cardano.BM.Data.Tracer (ToLogObject (..), nullTracer)
-import           Cardano.BM.Trace (Trace, appendName, logInfo)
-
-import qualified Cardano.Chain.Genesis as Genesis
-import qualified Cardano.Chain.Update as Update
-import qualified Cardano.Chain.UTxO as Byron
-import           Cardano.TracingOrphanInstances.Network ()
-
-import qualified Codec.CBOR.Term as CBOR
-
-import           Control.Tracer (Tracer)
-
-import           Data.Functor.Contravariant (contramap)
-import qualified Data.ByteString.Lazy.Char8 as LBS
-import           Data.Text (Text)
-import qualified Data.Text as Text
-import           Data.Void (Void)
-
-import           Network.Mux (MuxTrace, WithMuxBearer)
-
-import           Ouroboros.Consensus.Block (CodecConfig)
-import           Ouroboros.Consensus.Byron.Ledger (ByronBlock (..), GenTx)
-import qualified Ouroboros.Consensus.Byron.Ledger as Byron
-import           Ouroboros.Consensus.Cardano (Protocol (..), protocolInfo)
-import           Ouroboros.Consensus.Config (TopLevelConfig (..), configCodec)
-import           Ouroboros.Consensus.Shelley.Ledger (ShelleyBlock)
-import           Ouroboros.Consensus.Shelley.Protocol (TPraosStandardCrypto)
-import           Ouroboros.Consensus.Mempool.API (ApplyTxErr)
+import           Ouroboros.Consensus.Cardano (protocolClientInfo)
 import           Ouroboros.Consensus.Network.NodeToClient
+import           Ouroboros.Consensus.Node.ProtocolInfo (ProtocolClientInfo(..))
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
-                  (NodeToClientVersion, nodeToClientProtocolVersion,
-                   supportedNodeToClientVersions)
-import           Ouroboros.Consensus.Node.ErrorPolicy (consensusErrorPolicy)
+                  (nodeToClientProtocolVersion, supportedNodeToClientVersions)
+import           Ouroboros.Consensus.Node.Run
+import           Ouroboros.Consensus.Mempool (GenTx, ApplyTxErr)
 
-import           Ouroboros.Consensus.Node.ProtocolInfo (pInfoConfig)
-import           Ouroboros.Consensus.Node.Run (nodeNetworkMagic)
-import           Ouroboros.Consensus.Shelley.Ledger.Mempool (mkShelleyTx)
-import           Ouroboros.Network.Driver.Simple (runPeer)
-import           Ouroboros.Network.Mux (AppType (..) , MuxPeer (..),
-                    RunMiniProtocol (..))
-
-import           Ouroboros.Network.NodeToClient (ClientSubscriptionParams (..),
-                    NetworkSubscriptionTracers (..), NodeToClientProtocols (..),
-                    TraceSendRecv, WithAddr (..))
+import           Ouroboros.Network.Driver (runPeer)
+import           Ouroboros.Network.Mux
+import           Ouroboros.Network.NodeToClient hiding (NodeToClientVersion (..))
 import qualified Ouroboros.Network.NodeToClient as NtC
+import           Ouroboros.Network.Protocol.LocalTxSubmission.Client
 
-import           Ouroboros.Network.Protocol.LocalTxSubmission.Client (LocalTxClientStIdle (..), LocalTxSubmissionClient (..),
-                   localTxSubmissionClientPeer)
-import           Ouroboros.Network.Subscription (SubscriptionTrace)
+import           Cardano.Chain.Slotting (EpochSlots (..))
 
+import qualified Ouroboros.Consensus.Byron.Ledger as Byron
+import qualified Cardano.Chain.UTxO as Byron
 
--- Submit Transaction - status indicates whether transaction has been submitted, not processed
--- could be Byron or Shelley
--- can mark as done once split into separate library
--- the status is just whether the transaction has been submitted, not whether it has
--- succeeded/appeared on chain
-submitTransaction :: NodeApiEnv -> TxSigned -> IO TxSubmitStatus
-submitTransaction nodeEnv txs = do
-  tvar <- newTxSubmitVar
-  res <- race
-            (runTxSubmitNode tvar nullTracer (naeConfig nodeEnv) (naeSocket nodeEnv))
-            (submitTx tvar $ prepareTxByron txs)
-  case res of
-    Left _ -> panic "Cardano.Api.TxSubmit.submitTransaction: runTxSubmitNode terminated unexpectedly."
-    Right st -> pure st
+import           Ouroboros.Consensus.Shelley.Ledger.Mempool (mkShelleyTx)
+import           Ouroboros.Consensus.Shelley.Ledger (ShelleyBlock)
+import           Ouroboros.Consensus.Byron.Ledger (ByronBlock)
+import           Ouroboros.Consensus.Shelley.Protocol.Crypto (TPraosStandardCrypto)
 
-prepareTxByron :: TxSigned -> GenTx ByronBlock
-prepareTxByron txs =
-  case txs of
-    TxSignedByron tx _txCbor _txHash vwit ->
-      let aTxAux = Byron.annotateTxAux (Byron.mkTxAux tx vwit)
-      in Byron.ByronTx (Byron.byronIdTx aTxAux) aTxAux
-    TxSignedShelley _tx -> panic "Cardano.Api.TxSubmit.submitTransaction: TxSignedShelley"
-
-prepareTxShelley :: TxSigned -> GenTx (ShelleyBlock TPraosStandardCrypto)
-prepareTxShelley txs =
-  case txs of
-    TxSignedByron _ _ _ _ ->  panic "Cardano.Api.TxSubmit.submitTransaction: Please supply a shelley signed tx."
-    TxSignedShelley tx -> mkShelleyTx tx
-
-runTxSubmitNode :: TxSubmitVar -> Trace IO Text -> Genesis.Config -> SocketPath -> IO ()
-runTxSubmitNode tsv trce gc socket = do
-  logInfo trce "Running tx-submit node"
-  void $ runTxSubmitNodeClient tsv (mkNodeConfig gc) trce socket
+import           Cardano.Config.Byron.Protocol (mkNodeClientProtocolRealPBFT)
+import           Cardano.Config.Shelley.Protocol (mkNodeClientProtocolTPraos)
+import           Cardano.Config.Types (SocketPath(..))
 
 
-mkNodeConfig :: Genesis.Config -> TopLevelConfig ByronBlock
-mkNodeConfig gc =
-  pInfoConfig . protocolInfo $ ProtocolRealPBFT gc Nothing (Update.ProtocolVersion 0 2 0)
-      (Update.SoftwareVersion (Update.ApplicationName "cardano-sl") 1) Nothing
+data TxSubmitResult
+   = TxSubmitSuccess
+   | TxSubmitFailureByron   (ApplyTxErr ByronBlock)
+   | TxSubmitFailureShelley (ApplyTxErr (ShelleyBlock TPraosStandardCrypto))
 
-runTxSubmitNodeClient
-  :: forall blk. (blk ~ ByronBlock)
-  => TxSubmitVar -> TopLevelConfig blk
-  -> Trace IO Text -> SocketPath
-  -> IO Void
-runTxSubmitNodeClient tsv nodeConfig trce (SocketPath socketPath) = do
-  logInfo trce $ "localInitiatorNetworkApplication: connecting to node via " <> textShow socketPath
-  networkState <- NtC.newNetworkMutableState
-  NtC.withIOManager $ \iocp -> do
-    NtC.ncSubscriptionWorker
-      (NtC.localSnocket iocp socketPath)
-      NtC.NetworkSubscriptionTracers {
-        nsMuxTracer = muxTracer,
-        nsHandshakeTracer = handshakeTracer,
-        nsErrorPolicyTracer = errorPolicyTracer,
-        nsSubscriptionTracer = subscriptionTracer
-        }
-      networkState
-      ClientSubscriptionParams
-        { cspAddress = NtC.LocalAddress socketPath
-        , cspConnectionAttemptDelay = Nothing
-        , cspErrorPolicies = NtC.networkErrorPolicies <> consensusErrorPolicy proxy
-        }
-      (NtC.foldMapVersions
-        (\v ->
-          NtC.versionedNodeToClientProtocols
-            (nodeToClientProtocolVersion proxy v)
-            versionData
-            (localInitiatorNetworkApplication
-              trce (configCodec nodeConfig) v tsv))
-        (supportedNodeToClientVersions proxy))
+submitTx
+  :: Network
+  -> SocketPath
+  -> TxSigned
+  -> IO TxSubmitResult
+submitTx network socketPath tx =
+    NtC.withIOManager $ \iocp ->
+      case tx of
+        TxSignedByron txbody _txCbor _txHash vwit -> do
+          let aTxAux = Byron.annotateTxAux (Byron.mkTxAux txbody vwit)
+              genTx  = Byron.ByronTx (Byron.byronIdTx aTxAux) aTxAux
+          resultVar <- newEmptyTMVarIO
+          submitGenTx
+            nullTracer
+            iocp
+            (protocolClientInfo $ mkNodeClientProtocolRealPBFT $ EpochSlots 21600)
+            network
+            socketPath
+            resultVar
+            genTx
+          result <- atomically (readTMVar resultVar)
+          case result of
+            Nothing  -> return TxSubmitSuccess
+            Just err -> return (TxSubmitFailureByron err)
+
+        TxSignedShelley stx -> do
+          let genTx = mkShelleyTx stx
+          resultVar <- newEmptyTMVarIO
+          submitGenTx
+            nullTracer
+            iocp
+            (protocolClientInfo mkNodeClientProtocolTPraos)
+            network
+            socketPath
+            resultVar
+            genTx
+          result <- atomically (readTMVar resultVar)
+          case result of
+            Nothing  -> return TxSubmitSuccess
+            Just err -> return (TxSubmitFailureShelley err)
+
+
+submitGenTx
+  :: forall blk.
+     RunNode blk
+  => Tracer IO Text
+  -> IOManager
+  -> ProtocolClientInfo blk
+  -> Network
+  -> SocketPath
+  -> TMVar (Maybe (ApplyTxErr blk)) -- ^ Result will be placed here
+  -> GenTx blk
+  -> IO ()
+submitGenTx tracer iomgr cfg nm (SocketPath path) resultVar genTx =
+      connectTo
+        (localSnocket iomgr path)
+        NetworkConnectTracers {
+            nctMuxTracer       = nullTracer,
+            nctHandshakeTracer = nullTracer
+            }
+        (localInitiatorNetworkApplication tracer cfg nm resultVar genTx)
+        path
+        --`catch` handleMuxError tracer chainsVar socketPath
+
+localInitiatorNetworkApplication
+  :: forall blk.
+     RunNode blk
+  => Tracer IO Text
+  -- ^ tracer which logs all local tx submission protocol messages send and
+  -- received by the client (see 'Ouroboros.Network.Protocol.LocalTxSubmission.Type'
+  -- in 'ouroboros-network' package).
+  -> ProtocolClientInfo blk
+  -> Network
+  -> TMVar (Maybe (ApplyTxErr blk)) -- ^ Result will be placed here
+  -> GenTx blk
+  -> Versions NtC.NodeToClientVersion DictVersion
+              (LocalConnectionId
+               -> OuroborosApplication InitiatorApp LByteString IO () Void)
+localInitiatorNetworkApplication tracer cfg nm resultVar genTx =
+    foldMapVersions
+      (\v ->
+        NtC.versionedNodeToClientProtocols
+          (nodeToClientProtocolVersion proxy v)
+          versionData
+          (protocols v genTx))
+      (supportedNodeToClientVersions proxy)
   where
-    -- TODO: it should be passed as an argument
     proxy :: Proxy blk
     proxy = Proxy
 
-    versionData = NtC.NodeToClientVersionData (nodeNetworkMagic proxy nodeConfig)
+    versionData = NodeToClientVersionData { networkMagic = toNetworkMagic nm }
 
-    errorPolicyTracer :: Tracer IO (WithAddr NtC.LocalAddress NtC.ErrorPolicyTrace)
-    errorPolicyTracer = contramap (Text.pack . show). toLogObject $ appendName "ErrorPolicy" trce
+    protocols clientVersion tx =
+        NodeToClientProtocols {
+          localChainSyncProtocol =
+            InitiatorProtocolOnly $
+              MuxPeer
+                nullTracer
+                cChainSyncCodec
+                chainSyncPeerNull
 
-    muxTracer :: Show peer => Tracer IO (WithMuxBearer peer MuxTrace)
-    muxTracer = toLogObject $ appendName "Mux" trce
+        , localTxSubmissionProtocol =
+            InitiatorProtocolOnly $
+              MuxPeerRaw $ \channel -> do
+                traceWith tracer "Submitting transaction"
+                result <- runPeer
+                            nullTracer -- (contramap show tracer)
+                            cTxSubmissionCodec
+                            channel
+                            (localTxSubmissionClientPeer
+                               (txSubmissionClientSingle tx))
+                case result of
+                  Nothing -> traceWith tracer "Transaction accepted"
+                  Just _  -> traceWith tracer "Transaction rejected"
+                atomically $ putTMVar resultVar result
 
-    subscriptionTracer :: Tracer IO (Identity (SubscriptionTrace NtC.LocalAddress))
-    subscriptionTracer = toLogObject $ appendName "Subscription" trce
+        , localStateQueryProtocol =
+            InitiatorProtocolOnly $
+              MuxPeer
+                nullTracer
+                cStateQueryCodec
+                localStateQueryPeerNull
+        }
+      where
+        Codecs
+          { cChainSyncCodec
+          , cTxSubmissionCodec
+          , cStateQueryCodec
+          } = defaultCodecs (pClientInfoCodecConfig cfg) clientVersion
 
-    handshakeTracer :: Tracer IO
-                        (WithMuxBearer (NtC.ConnectionId NtC.LocalAddress)
-                        (TraceSendRecv (NtC.Handshake NtC.NodeToClientVersion CBOR.Term)))
-    handshakeTracer = toLogObject $ appendName "Handshake" trce
-
-
-localInitiatorNetworkApplication
-  :: Trace IO Text
-  -> CodecConfig ByronBlock
-  -> NodeToClientVersion ByronBlock
-  -> TxSubmitVar
-  -> NodeToClientProtocols 'InitiatorApp LBS.ByteString IO Void Void
-localInitiatorNetworkApplication trce codecConfig byronClientVersion tsv =
-    NodeToClientProtocols
-      { localChainSyncProtocol =
-          InitiatorProtocolOnly $ MuxPeer
-            nullTracer
-            cChainSyncCodec
-            NtC.chainSyncPeerNull
-
-      , localTxSubmissionProtocol =
-          InitiatorProtocolOnly $ MuxPeerRaw $ \channel ->
-                runPeer
-                  (contramap (Text.pack . show) . toLogObject $ appendName "cardano-tx-submit" trce)
-                  cTxSubmissionCodec channel
-                  (localTxSubmissionClientPeer (txSubmissionClient tsv))
-      , localStateQueryProtocol =
-          InitiatorProtocolOnly $
-            MuxPeer
-              nullTracer
-              cStateQueryCodec
-              NtC.localStateQueryPeerNull
-      }
-  where
-    Codecs { cChainSyncCodec
-           , cTxSubmissionCodec
-           , cStateQueryCodec
-           } = defaultCodecs codecConfig byronClientVersion
-
-
--- | A 'LocalTxSubmissionClient' that submits transactions reading them from
--- a 'StrictTMVar'.  A real implementation should use a better synchronisation
--- primitive.  This demo creates and empty 'TMVar' in
--- 'muxLocalInitiatorNetworkApplication' above and never fills it with a tx.
---
-txSubmissionClient
-  :: TxSubmitVar
-  -> LocalTxSubmissionClient (GenTx ByronBlock) (ApplyTxErr ByronBlock) IO Void
-txSubmissionClient tsv =
+txSubmissionClientSingle
+  :: forall tx reject m.
+     Applicative m
+  => tx
+  -> LocalTxSubmissionClient tx reject m (Maybe reject)
+txSubmissionClientSingle tx =
     LocalTxSubmissionClient $
-      readTxSubmit tsv >>= pure . loop
-  where
-    loop :: GenTx ByronBlock -> LocalTxClientStIdle (GenTx ByronBlock) (ApplyTxErr ByronBlock) IO Void
-    loop tx =
-      SendMsgSubmitTx tx $ \mbreject -> do
-        writeTxSubmitResponse tsv mbreject
-        nextTx <- readTxSubmit tsv
-        pure $ loop nextTx
+    pure $ SendMsgSubmitTx tx $ \result ->
+    pure (SendMsgDone result)
