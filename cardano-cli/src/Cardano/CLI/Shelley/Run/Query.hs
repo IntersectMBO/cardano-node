@@ -44,6 +44,8 @@ runQueryCmd cmd =
   case cmd of
     QueryProtocolParameters network mOutFile ->
       runQueryProtocolParameters network mOutFile
+    QueryTip network ->
+      runQueryTip network
     QueryFilteredUTxO addr network mOutFile ->
       runQueryFilteredUTxO addr network mOutFile
     _ -> liftIO $ putStrLn $ "runQueryCmd: " ++ show cmd
@@ -60,6 +62,16 @@ runQueryProtocolParameters network mOutFile = do
   pparams <- firstExceptT NodeLocalStateQueryError $
     queryPParamsFromLocalState network sockPath (getTipPoint tip)
   writeProtocolParameters mOutFile pparams
+
+runQueryTip
+  :: Network
+  -> ExceptT CliError IO ()
+runQueryTip network = do
+  sockPath <- readEnvSocketPath
+  let ptclClientInfo = pClientInfoCodecConfig . protocolClientInfo $ mkNodeClientProtocolTPraos
+  tip <- liftIO $ withIOManager $ \iomgr ->
+    getLocalTip iomgr ptclClientInfo network sockPath
+  liftIO $ putTextLn (show tip)
 
 runQueryFilteredUTxO
   :: Address
