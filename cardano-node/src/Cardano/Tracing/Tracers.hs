@@ -235,8 +235,9 @@ mkTracers
      )
   => TraceConfig
   -> Trace IO Text
+  -> MVar Integer
   -> IO (Tracers peer localPeer blk)
-mkTracers traceConf tracer = do
+mkTracers traceConf tracer txsProcessedCounter = do
   -- We probably don't want to pay the extra IO cost per-counter-increment. -- sk
   staticMetaCC <- mkLOMeta Critical Confidential
   let name :: LoggerName = "metrics.Forge"
@@ -395,7 +396,7 @@ mkTracers traceConf tracer = do
                                    -> Tracer IO (TraceEventMempool blk)
     mempoolMetricsTraceTransformer tr = Tracer $ \mempoolEvent -> do
         let tr' = appendName "metrics" tr
-            (n, tot) = case mempoolEvent of
+            (_n, tot) = case mempoolEvent of
                   TraceMempoolAddedTx     _tx0 _ tot0 -> (1, tot0)
                   TraceMempoolRejectedTx  _tx0 _ tot0 -> (1, tot0)
                   TraceMempoolRemoveTxs   txs0   tot0 -> (length txs0, tot0)
@@ -407,15 +408,19 @@ mkTracers traceConf tracer = do
             logValue1 = LogValue "txsInMempool" $ PureI $ fromIntegral (msNumTxs tot)
 
             logValue2 :: LOContent a
-            logValue2 = LogValue "txsProcessed" $ PureI $ fromIntegral n
-
-            logValue3 :: LOContent a
-            logValue3 = LogValue "mempoolBytes" $ PureI $ fromIntegral (msNumBytes tot)
+            logValue2 = LogValue "mempoolBytes" $ PureI $ fromIntegral (msNumBytes tot)
 
         meta <- mkLOMeta Critical Confidential
         traceNamedObject tr' (meta, logValue1)
         traceNamedObject tr' (meta, logValue2)
-        traceNamedObject tr' (meta, logValue3)
+ 
+        case mempoolEvent of
+          TraceMempoolRemoveTxs txs _ ->
+            -- TraceMempoolRemoveTxs are previously valid transactions that are no longer valid because of
+            -- changes in the ledger state. These transactions are already removed from the mempool,
+            -- so we can treat them as completely processed.
+            modifyMVar_ txsProcessedCounter $ \counter -> return $ counter + fromIntegral (length txs)
+          _ -> return ()
 
     mempoolTracer :: TraceConfig -> Tracer IO (TraceEventMempool blk)
     mempoolTracer tc = Tracer $ \ev -> do

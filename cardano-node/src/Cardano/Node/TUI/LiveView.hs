@@ -400,12 +400,12 @@ instance IsEffectuator (LiveViewBackend blk) Text where
                                     { lvsMempoolBytes = lvsMempoolBytes'
                                     , lvsMempoolBytesPerc = percentage
                                     }
-                    LogValue "txsProcessed" (PureI txsProcessed) ->
+                    LogValue "txsProcessedNum" (PureI txsProcessedNum) ->
                         modifyMVar_ (getbe lvbe) $ \lvs -> do
 
-                                checkForUnexpectedThunks ["txsProcessed LiveViewBackend"] lvs
+                                checkForUnexpectedThunks ["txsProcessedNum LiveViewBackend"] lvs
 
-                                return $ lvs { lvsTransactions = lvsTransactions lvs + fromIntegral txsProcessed }
+                                return $ lvs { lvsTransactions = fromIntegral txsProcessedNum }
 
                     _ -> pure ()
 
