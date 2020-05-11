@@ -65,7 +65,7 @@ runGenesisAddr (VerificationKeyFile vkeyPath) =
     firstExceptT KeyCliError $ do
       vkey <- readVerKey GenesisUTxOKey vkeyPath
       let addr = shelleyVerificationKeyAddress
-                   (VerificationKeyShelley vkey) Mainnet
+                   (PaymentVerificationKeyShelley vkey) Nothing
       liftIO $ Text.putStrLn $ addressToHex addr
 
 
@@ -73,9 +73,10 @@ runGenesisTxIn :: VerificationKeyFile -> ExceptT CliError IO ()
 runGenesisTxIn (VerificationKeyFile vkeyPath) =
     firstExceptT KeyCliError $ do
       vkey <- readVerKey GenesisUTxOKey vkeyPath
-      case shelleyVerificationKeyAddress (VerificationKeyShelley vkey) Mainnet of
+      case shelleyVerificationKeyAddress (PaymentVerificationKeyShelley vkey) Nothing of
         AddressShelley addr -> do let txin = fromShelleyTxIn (initialFundsPseudoTxIn addr)
                                   liftIO $ Text.putStrLn $ renderTxIn txin
+        AddressShelleyReward _rwdAcct -> panic "Please only supply shelley addresses. Reward accound found."
         AddressByron _addr -> panic "Please supply only shelley addresses"
   where
     fromShelleyTxIn :: Shelley.TxIn TPraosStandardCrypto -> TxIn
@@ -282,7 +283,7 @@ readInitialFundAddresses utxodir = do
                traverse (readVerKey GenesisUTxOKey)
                         (map (utxodir </>) files)
     return [ addr | vkey <- vkeys
-           , addr <- case shelleyVerificationKeyAddress (VerificationKeyShelley vkey) Mainnet of
+           , addr <- case shelleyVerificationKeyAddress (PaymentVerificationKeyShelley vkey) Nothing of
                        AddressShelley addr' -> return addr'
                        _ -> panic "Please supply only shelley verification keys"
            ]

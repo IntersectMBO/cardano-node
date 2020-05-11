@@ -15,7 +15,7 @@ module Cardano.CLI.Key
   , NewVerificationKeyFile(..)
   , prettyPublicKey
   , readEraSigningKey
-  , readVerificationKey
+  , readPaymentVerificationKey
   , keygen
     -- * Passwords
   , PasswordRequirement(..)
@@ -91,8 +91,8 @@ readEraSigningKey era (SigningKeyFile fp) = do
 
 -- | Read verification key from a file.  Throw an error if the file can't be read
 -- or the key fails to deserialise.
-readVerificationKey :: VerificationKeyFile -> ExceptT CliError IO Crypto.VerificationKey
-readVerificationKey (VerificationKeyFile fp) = do
+readPaymentVerificationKey :: VerificationKeyFile -> ExceptT CliError IO Crypto.VerificationKey
+readPaymentVerificationKey (VerificationKeyFile fp) = do
   vkB <- handleIOExceptT (ReadVerificationKeyFailure fp . T.pack . displayException) (SB.readFile fp)
   -- Verification Key
   let eVk = hoistEither . Crypto.parseFullVerificationKey . fromString $ UTF8.toString vkB

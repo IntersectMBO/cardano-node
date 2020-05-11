@@ -7,17 +7,20 @@ module Cardano.Api.CBOR
   , certificateToCBOR
   , signingKeyFromCBOR
   , signingKeyToCBOR
-  , verificationKeyFromCBOR
-  , verificationKeyToCBOR
+  , paymentVerificationKeyFromCBOR
+  , paymentVerificationKeyToCBOR
+  , stakingVerificationKeyFromCBOR
+  , stakingVerificationKeyToCBOR
   , verificationKeyStakePoolFromCBOR
   , verificationKeyStakePoolToCBOR
-  , verificationKeyStakingFromCBOR
-  , verificationKeyStakingToCBOR
   , verificationKeyVRFFromCBOR
   , verificationKeyVRFToCBOR
 
-  , shelleyVerificationKeyFromCBOR
-  , shelleyVerificationKeyToCBOR
+  , shelleyVerificationKeyPaymentFromCBOR
+  , shelleyVerificationKeyPaymentToCBOR
+
+  , shelleyVerificationKeyStakingFromCBOR
+  , shelleyVerificationKeyStakingToCBOR
 
   , txSignedFromCBOR
   , txSignedToCBOR
@@ -62,9 +65,9 @@ addressToCBOR :: Address -> ByteString
 addressToCBOR kp =
   CBOR.serializeEncoding' $
     case kp of
-      AddressByron   addr -> mconcat [ toCBOR (170 :: Word8), toCBOR addr ]
-      AddressShelley addr -> mconcat [ toCBOR (171 :: Word8), toCBOR addr ]
-
+      AddressByron         addr    -> mconcat [ toCBOR (170 :: Word8), toCBOR addr   ]
+      AddressShelley       addr    -> mconcat [ toCBOR (171 :: Word8), toCBOR addr   ]
+      AddressShelleyReward rwdAcct -> mconcat [ toCBOR (187 :: Word8), toCBOR rwdAcct]
 certificateFromCBOR :: ByteString -> Either ApiError Certificate
 certificateFromCBOR bs =
     first ApiErrorCBOR . CBOR.decodeFullDecoder "ShelleyCertificate" decode $ LBS.fromStrict bs
@@ -115,29 +118,29 @@ signingKeyToCBOR kp =
           , encodeSignKeyDSIGN sk
           ]
 
-verificationKeyFromCBOR :: ByteString -> Either ApiError VerificationKey
-verificationKeyFromCBOR =
+paymentVerificationKeyFromCBOR :: ByteString -> Either ApiError PaymentVerificationKey
+paymentVerificationKeyFromCBOR =
    first ApiErrorCBOR
- . CBOR.decodeFullDecoder "VerificationKey" decode
+ . CBOR.decodeFullDecoder "PaymentVerificationKey" decode
  . LBS.fromStrict
   where
-    decode :: Decoder s VerificationKey
+    decode :: Decoder s PaymentVerificationKey
     decode = do
       tag <- CBOR.decodeWord8
       case tag of
-        174  -> VerificationKeyByron <$> fromCBOR
-        175  -> VerificationKeyShelley <$> decodeShelleyVerificationKey
-        _  -> cborError $ DecoderErrorUnknownTag "VerificationKey" tag
+        174  -> PaymentVerificationKeyByron <$> fromCBOR
+        175  -> PaymentVerificationKeyShelley <$> decodeShelleyVerificationKeyPayment
+        _  -> cborError $ DecoderErrorUnknownTag "PaymentVerificationKey" tag
 
-verificationKeyToCBOR :: VerificationKey -> ByteString
-verificationKeyToCBOR pk =
+paymentVerificationKeyToCBOR :: PaymentVerificationKey -> ByteString
+paymentVerificationKeyToCBOR pk =
   CBOR.serializeEncoding' $
     case pk of
-      VerificationKeyByron vk -> mconcat [ toCBOR (174 :: Word8), toCBOR vk ]
-      VerificationKeyShelley vk ->
+      PaymentVerificationKeyByron vk -> mconcat [ toCBOR (174 :: Word8), toCBOR vk ]
+      PaymentVerificationKeyShelley vk ->
         mconcat
           [ toCBOR (175 :: Word8)
-          , encodeShelleyVerificationKey vk
+          , encodeShelleyVerificationKeyPayment vk
           ]
 
 
@@ -176,23 +179,28 @@ verificationKeyStakePoolToCBOR :: ShelleyVerificationKeyStakePool -> ByteString
 verificationKeyStakePoolToCBOR vk =
   CBOR.serializeEncoding' $ mconcat [ toCBOR (184 :: Word8), toCBOR vk ]
 
-
-verificationKeyStakingFromCBOR :: ByteString -> Either ApiError ShelleyVerificationKeyStaking
-verificationKeyStakingFromCBOR =
+stakingVerificationKeyFromCBOR :: ByteString -> Either ApiError StakingVerificationKey
+stakingVerificationKeyFromCBOR =
    first ApiErrorCBOR
  . CBOR.decodeFullDecoder "StakingVerificationKey" decode
  . LBS.fromStrict
   where
-    decode :: Decoder s ShelleyVerificationKeyStaking
+    decode :: Decoder s StakingVerificationKey
     decode = do
       tag <- CBOR.decodeWord8
       case tag of
-        185 -> fromCBOR
+        185  -> StakingVerificationKeyShelley <$> decodeShelleyVerificationKeyStaking
         _  -> cborError $ DecoderErrorUnknownTag "StakingVerificationKey" tag
 
-verificationKeyStakingToCBOR :: ShelleyVerificationKeyStaking -> ByteString
-verificationKeyStakingToCBOR vk =
-  CBOR.serializeEncoding' $ mconcat [ toCBOR (185 :: Word8), toCBOR vk ]
+stakingVerificationKeyToCBOR :: StakingVerificationKey -> ByteString
+stakingVerificationKeyToCBOR svk =
+  CBOR.serializeEncoding' $
+    case svk of
+      StakingVerificationKeyShelley vk ->
+        mconcat
+          [ toCBOR (185 :: Word8)
+          , encodeShelleyVerificationKeyStaking vk
+          ]
 
 txSignedFromCBOR :: ByteString -> Either ApiError TxSigned
 txSignedFromCBOR bs =
@@ -237,20 +245,36 @@ txUnsignedToCBOR pk =
       TxUnsignedShelley tx ->
         mconcat [ toCBOR (179 :: Word8), encodeShelleyTxBody tx ]
 
-shelleyVerificationKeyFromCBOR :: ByteString -> Either ApiError ShelleyVerificationKey
-shelleyVerificationKeyFromCBOR bs =
+shelleyVerificationKeyStakingFromCBOR :: ByteString -> Either ApiError ShelleyVerificationKeyStaking
+shelleyVerificationKeyStakingFromCBOR bs =
    first ApiErrorCBOR
-    . CBOR.decodeFullDecoder "ShelleyVerificationKey" decodeShelleyVerificationKey
+    . CBOR.decodeFullDecoder "ShelleyVerificationKeyStaking" decodeShelleyVerificationKeyStaking
     $ LBS.fromStrict bs
 
-decodeShelleyVerificationKey :: Decoder s ShelleyVerificationKey
-decodeShelleyVerificationKey = VKey <$> decodeVerKeyDSIGN
+decodeShelleyVerificationKeyStaking :: Decoder s ShelleyVerificationKeyStaking
+decodeShelleyVerificationKeyStaking = VKey <$> decodeVerKeyDSIGN
 
-shelleyVerificationKeyToCBOR :: ShelleyVerificationKey -> ByteString
-shelleyVerificationKeyToCBOR = CBOR.serializeEncoding' . encodeShelleyVerificationKey
+shelleyVerificationKeyStakingToCBOR :: ShelleyVerificationKeyStaking -> ByteString
+shelleyVerificationKeyStakingToCBOR =
+  CBOR.serializeEncoding' . encodeShelleyVerificationKeyStaking
 
-encodeShelleyVerificationKey :: ShelleyVerificationKey -> Encoding
-encodeShelleyVerificationKey (VKey vk) = encodeVerKeyDSIGN vk
+encodeShelleyVerificationKeyStaking :: ShelleyVerificationKeyStaking -> Encoding
+encodeShelleyVerificationKeyStaking (VKey vk) = encodeVerKeyDSIGN vk
+
+shelleyVerificationKeyPaymentFromCBOR :: ByteString -> Either ApiError ShelleyVerificationKeyPayment
+shelleyVerificationKeyPaymentFromCBOR bs =
+   first ApiErrorCBOR
+    . CBOR.decodeFullDecoder "ShelleyVerificationKeyPayment" decodeShelleyVerificationKeyPayment
+    $ LBS.fromStrict bs
+
+decodeShelleyVerificationKeyPayment :: Decoder s ShelleyVerificationKeyPayment
+decodeShelleyVerificationKeyPayment = VKey <$> decodeVerKeyDSIGN
+
+shelleyVerificationKeyPaymentToCBOR :: ShelleyVerificationKeyPayment -> ByteString
+shelleyVerificationKeyPaymentToCBOR = CBOR.serializeEncoding' . encodeShelleyVerificationKeyPayment
+
+encodeShelleyVerificationKeyPayment :: ShelleyVerificationKeyPayment -> Encoding
+encodeShelleyVerificationKeyPayment (VKey vk) = encodeVerKeyDSIGN vk
 
 encodeShelleyTxBody :: ShelleyTxBody -> Encoding
 encodeShelleyTxBody = toCBOR

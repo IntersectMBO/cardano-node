@@ -77,13 +77,14 @@ data ShelleyCommand
 
 
 data AddressCmd
-  = AddressKeyGen  VerificationKeyFile SigningKeyFile
+  = AddressKeyGen VerificationKeyFile SigningKeyFile
   | AddressKeyHash VerificationKeyFile
-  | AddressBuild   VerificationKeyFile
+  | AddressBuildStaking VerificationKeyFile VerificationKeyFile
+  | AddressBuildReward VerificationKeyFile
+  | AddressBuildEnterprise VerificationKeyFile
   | AddressBuildMultiSig  --TODO
   | AddressInfo Text
   deriving (Eq, Show)
-
 
 data StakeAddressCmd
   = StakeKeyRegister PrivKeyFile NodeAddress
@@ -321,15 +322,19 @@ pAddressCmd =
   Opt.subparser $
     mconcat
       [ Opt.command "key-gen"
-          (Opt.info pAddressKeyGen $ Opt.progDesc "Create a single address key pair")
+          (Opt.info pAddressKeyGen $ Opt.progDesc "Create a single address key pair.")
       , Opt.command "key-hash"
-          (Opt.info pAddressKeyHash $ Opt.progDesc "Print the hash of an address key to stdout")
-      , Opt.command "build"
-          (Opt.info pAddressBuild $ Opt.progDesc "Build an address")
+          (Opt.info pAddressKeyHash $ Opt.progDesc "Print the hash of an address key to stdout.")
+      , Opt.command "build-staking"
+          (Opt.info pAddressBuildStaking $ Opt.progDesc "Build a standard Shelley address (capable of receiving payments and staking).")
+      , Opt.command "build-reward"
+          (Opt.info pAddressBuildReward $ Opt.progDesc "Build a Shelley reward address (special address for recieving staking rewards).")
+      , Opt.command "build-enterprise"
+          (Opt.info pAddressBuildEnterprise $ Opt.progDesc "Build a Shelley enterprise address (can recieve payments but not able to stake, eg for exchanges).")
       , Opt.command "build-multisig"
-          (Opt.info pAddressBuildMultiSig $ Opt.progDesc "Build a multi-sig address")
+          (Opt.info pAddressBuildMultiSig $ Opt.progDesc "Build a multi-sig address.")
       , Opt.command "info"
-          (Opt.info pAddressInfo $ Opt.progDesc "Describe an address")
+          (Opt.info pAddressInfo $ Opt.progDesc "Print information about an address.")
       ]
   where
     pAddressKeyGen :: Parser AddressCmd
@@ -338,14 +343,34 @@ pAddressCmd =
     pAddressKeyHash :: Parser AddressCmd
     pAddressKeyHash = AddressKeyHash <$> pVerificationKeyFile Input
 
-    pAddressBuild :: Parser AddressCmd
-    pAddressBuild = AddressBuild <$> pVerificationKeyFile Input
+    pAddressBuildStaking :: Parser AddressCmd
+    pAddressBuildStaking =
+      AddressBuildStaking
+        <$> pPaymentVerificationKeyFile
+        <*> pStakingVerificationKeyFile
+
+
+    pAddressBuildReward :: Parser AddressCmd
+    pAddressBuildReward = AddressBuildReward <$> pStakingVerificationKeyFile
+
+    pAddressBuildEnterprise :: Parser AddressCmd
+    pAddressBuildEnterprise = AddressBuildEnterprise <$> pPaymentVerificationKeyFile
 
     pAddressBuildMultiSig :: Parser AddressCmd
     pAddressBuildMultiSig = pure AddressBuildMultiSig
 
     pAddressInfo :: Parser AddressCmd
     pAddressInfo = AddressInfo <$> pAddress
+
+
+pPaymentVerificationKeyFile :: Parser VerificationKeyFile
+pPaymentVerificationKeyFile =
+  VerificationKeyFile <$>
+    Opt.strOption
+      (  Opt.long "payment-verification-key-file"
+      <> Opt.metavar "FILEPATH"
+      <> Opt.help "Filepath of the payment verification key."
+      )
 
 pStakeAddress :: Parser StakeAddressCmd
 pStakeAddress =
@@ -401,8 +426,6 @@ pStakeAddress =
           <> Opt.metavar "LOVELACE"
           <> Opt.help "The delegation fee in Lovelace."
           )
-
-
 
 pTransaction :: Parser TransactionCmd
 pTransaction =
@@ -1055,7 +1078,7 @@ pStakingVerificationKeyFile :: Parser VerificationKeyFile
 pStakingVerificationKeyFile =
   VerificationKeyFile <$>
     Opt.strOption
-      (  Opt.long "verification-key-file"
+      (  Opt.long "staking-verification-key-file"
       <> Opt.metavar "FILEPATH"
       <> Opt.help ("Filepath of the staking verification key.")
       )

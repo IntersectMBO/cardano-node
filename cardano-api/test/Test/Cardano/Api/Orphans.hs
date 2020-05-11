@@ -13,5 +13,5 @@ import           Cardano.Prelude
 import           Test.Cardano.Crypto.Orphans ()
 
 deriving instance Eq SigningKey
-deriving instance Eq VerificationKey
-
+deriving instance Eq PaymentVerificationKey
+deriving instance Eq StakingVerificationKey

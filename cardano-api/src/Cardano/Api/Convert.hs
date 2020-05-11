@@ -42,6 +42,7 @@ addressToHex addr =
     case addr of
       AddressByron ba -> Binary.serialize' ba
       AddressShelley sa -> Shelley.serialiseAddr sa
+      AddressShelleyReward sRwdAcct -> Binary.serialize' sRwdAcct
 
 parseTxIn :: Text -> Maybe TxIn
 parseTxIn txt =

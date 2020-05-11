@@ -59,4 +59,4 @@ describeAddr addr =
   case addr of
     AddressByron {} -> liftIO $ putStrLn "Era: Byron"
     AddressShelley {} -> liftIO $ putStrLn "Era: Shelley"
-
+    AddressShelleyReward {} -> liftIO $ putStrLn "Era: Shelley"

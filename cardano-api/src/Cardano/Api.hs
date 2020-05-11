@@ -10,8 +10,10 @@ module Cardano.Api
 
     -- * Keys
   , SigningKey (..)
-  , VerificationKey (..)
-  , getVerificationKey
+  , PaymentVerificationKey (..)
+  , StakingVerificationKey (..)
+  , getPaymentVerificationKey
+  , getStakingVerificationKey
   , byronGenSigningKey
   , shelleyGenSigningKey
 
@@ -19,6 +21,7 @@ module Cardano.Api
   , Address (..)
   , byronVerificationKeyAddress
   , shelleyVerificationKeyAddress
+  , shelleyVerificationKeyRewardAddress
 
     -- ** Network identifiers
   , Network (..)
@@ -122,6 +125,7 @@ import qualified Cardano.Chain.Genesis as Byron
 import qualified Cardano.Chain.UTxO    as Byron
 
 import qualified Ouroboros.Consensus.Shelley.Protocol.Crypto as Shelley
+import qualified Shelley.Spec.Ledger.Address     as Shelley
 import qualified Shelley.Spec.Ledger.Keys        as Shelley
 import qualified Shelley.Spec.Ledger.LedgerState as Shelley (minfee)
 import qualified Shelley.Spec.Ledger.PParams     as Shelley
@@ -241,34 +245,64 @@ shelleyMIRCertificate mirMap =
 -- This is true for Byron, but for Shelley there’s also an optional StakeAddressRef as input to
 -- Address generation
 
-byronVerificationKeyAddress :: VerificationKey -> Network -> Address
+byronVerificationKeyAddress :: PaymentVerificationKey -> Network -> Address
 byronVerificationKeyAddress vkey nw =
   case vkey of
-    VerificationKeyByron vk -> AddressByron $ Byron.makeVerKeyAddress (byronNetworkMagic nw) vk
-    VerificationKeyShelley _ -> panic "Cardano.Api.byronVerificationKeyAddress: VerificationKeyInfoShelley"
+    PaymentVerificationKeyByron vk -> AddressByron $ Byron.makeVerKeyAddress (byronNetworkMagic nw) vk
+    PaymentVerificationKeyShelley _ -> panic "Cardano.Api.byronVerificationKeyAddress: VerificationKeyInfoShelley"
 
-shelleyVerificationKeyAddress :: VerificationKey -> Network -> Address
-shelleyVerificationKeyAddress vkey _nw =
-  case vkey of
-    VerificationKeyByron _ -> panic "Cardano.Api.shelleyVerificationKeyAddress: VerificationKeyByron"
-    VerificationKeyShelley vk ->
+shelleyVerificationKeyAddress
+  :: PaymentVerificationKey
+  -> Maybe StakingVerificationKey
+  -> Address
+shelleyVerificationKeyAddress (PaymentVerificationKeyByron _) _ =
+  panic "Cardano.Api.shelleyVerificationKeyAddress: PaymentVerificationKeyByron"
+shelleyVerificationKeyAddress (PaymentVerificationKeyShelley payVKey) mbStkVKey = do
+  case mbStkVKey of
+    -- Build a Shelley base address.
+    Just (StakingVerificationKeyShelley stkVKey) -> do
+      -- TODO: we cannot use toAddr or toCred here because they unnecessarily
+      -- require a full key pair, when only the pub key is needed, and that
+      -- is all we have here
+      let paymentCredential = Shelley.KeyHashObj $ Shelley.hashKey payVKey
+          stakingCredential = Shelley.StakeRefBase . Shelley.KeyHashObj $ Shelley.hashKey stkVKey
+      AddressShelley $ Shelley.Addr paymentCredential stakingCredential
+
+    -- Build a Shelley enterprise address.
+    Nothing ->
       AddressShelley $
-        --TODO: we cannot use toAddr or toCred here because they unnecessarily
+        -- TODO: we cannot use toAddr or toCred here because they unnecessarily
         -- require a full key pair, when only the pub key is needed, and that
         -- is all we have here
-        Shelley.Addr (Shelley.KeyHashObj (Shelley.hashKey vk))
+        Shelley.Addr (Shelley.KeyHashObj (Shelley.hashKey payVKey))
                      Shelley.StakeRefNull
 
-getVerificationKey :: SigningKey -> VerificationKey
-getVerificationKey kp =
+-- | Shelley reward accounts are not UTxO addresses so they are handled differently.
+shelleyVerificationKeyRewardAddress :: StakingVerificationKey -> ShelleyRewardAccount
+shelleyVerificationKeyRewardAddress (StakingVerificationKeyShelley stkVKey) = do
+  let stakingCredential = Shelley.KeyHashObj $ Shelley.hashKey stkVKey
+  Shelley.mkRwdAcnt stakingCredential
+
+
+getPaymentVerificationKey :: SigningKey -> PaymentVerificationKey
+getPaymentVerificationKey kp =
   case kp of
-    SigningKeyByron sk -> VerificationKeyByron vk
+    SigningKeyByron sk -> PaymentVerificationKeyByron vk
       where
         vk = Crypto.toVerification sk
 
-    SigningKeyShelley sk -> VerificationKeyShelley (Shelley.VKey vk)
+    SigningKeyShelley sk -> PaymentVerificationKeyShelley (Shelley.VKey vk)
       where
         vk = deriveVerKeyDSIGN sk
+
+getStakingVerificationKey :: SigningKey -> StakingVerificationKey
+getStakingVerificationKey sk =
+  case sk of
+    SigningKeyByron _ -> panic "Cardano.Api.getPaymentVerificationKey: SigningKeyByron"
+
+    SigningKeyShelley sks -> StakingVerificationKeyShelley (Shelley.VKey vk)
+      where
+        vk = deriveVerKeyDSIGN sks
 
 byronNetworkMagic :: Network -> Byron.NetworkMagic
 byronNetworkMagic nw =
@@ -352,15 +386,15 @@ buildDummyShelleyTxForFeeCalc
 buildDummyShelleyTxForFeeCalc txInCount txOutCount ttl network skeys certs =
     signTransaction (buildShelleyTransaction txIns txOuts ttl fee certs) network skeys
   where
-    vkey :: VerificationKey
+    vkey :: PaymentVerificationKey
     vkey =
       maybe
         (panic "buildDummyShelleyTxForFeeCalc: No signing keys provided.")
-        getVerificationKey
+        getPaymentVerificationKey
         (headMay skeys)
 
     addr :: Address
-    addr = shelleyVerificationKeyAddress vkey network
+    addr = shelleyVerificationKeyAddress vkey Nothing
 
     txIns :: [TxIn]
     txIns = map (mkTxIn . mkTxId) [0..txInCount - 1]

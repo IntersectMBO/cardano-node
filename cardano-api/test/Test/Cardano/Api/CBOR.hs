@@ -40,11 +40,17 @@ prop_SigningKey_CBOR =
     kp <- H.forAll genSigningKey
     H.tripping kp signingKeyToCBOR signingKeyFromCBOR
 
-prop_VerificationKey_CBOR :: Property
-prop_VerificationKey_CBOR =
+prop_PaymentVerificationKey_CBOR :: Property
+prop_PaymentVerificationKey_CBOR =
   H.property $ do
-    kp <- H.forAll genVerificationKey
-    H.tripping kp verificationKeyToCBOR verificationKeyFromCBOR
+    kp <- H.forAll genPaymentVerificationKey
+    H.tripping kp paymentVerificationKeyToCBOR paymentVerificationKeyFromCBOR
+
+prop_StakingVerificationKey_CBOR :: Property
+prop_StakingVerificationKey_CBOR =
+  H.property $ do
+    kp <- H.forAll genStakingVerificationKey
+    H.tripping kp stakingVerificationKeyToCBOR stakingVerificationKeyFromCBOR
 
 prop_VerificationKeyStakePool_CBOR :: Property
 prop_VerificationKeyStakePool_CBOR =
@@ -56,7 +62,7 @@ prop_VerificationKeyStaking_CBOR :: Property
 prop_VerificationKeyStaking_CBOR =
   H.property $ do
     kp <- H.forAll genVerificationKeyShelleyStaking
-    H.tripping kp verificationKeyStakingToCBOR verificationKeyStakingFromCBOR
+    H.tripping kp shelleyVerificationKeyStakingToCBOR shelleyVerificationKeyStakingFromCBOR
 
 prop_VerificationKeyVRF_CBOR :: Property
 prop_VerificationKeyVRF_CBOR =

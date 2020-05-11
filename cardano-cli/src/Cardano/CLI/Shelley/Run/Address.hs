@@ -9,7 +9,7 @@ import qualified Data.ByteString.Char8 as BS
 import qualified Data.Text.IO as Text
 
 import           Control.Monad.Trans.Except (ExceptT)
-import           Control.Monad.Trans.Except.Extra (firstExceptT)
+import           Control.Monad.Trans.Except.Extra (firstExceptT, newExceptT)
 
 import           Cardano.Api
 
@@ -25,35 +25,53 @@ import qualified Shelley.Spec.Ledger.Keys as Ledger
 
 
 runAddressCmd :: AddressCmd -> ExceptT CliError IO ()
-runAddressCmd (AddressKeyGen  vkf skf) = runAddressKeyGen  vkf skf
-runAddressCmd (AddressKeyHash vkf)     = runAddressKeyHash vkf
-runAddressCmd (AddressBuild   vkf)     = runAddressBuild   vkf
-runAddressCmd AddressBuildMultiSig{}   = runAddressBuildMultiSig
-runAddressCmd (AddressInfo txt)    = runAddressInfo txt
+runAddressCmd cmd =
+  case cmd of
+    AddressKeyGen vkf skf -> runAddressKeyGen  vkf skf
+    AddressKeyHash vkf -> runAddressKeyHash vkf
+    AddressBuildStaking payVk stkVk -> runAddressBuildStaking payVk stkVk
+    AddressBuildReward stkVk -> runAddressBuildReward stkVk
+    AddressBuildEnterprise payVk -> runAddressBuildEnterprise payVk
+    AddressBuildMultiSig {} -> runAddressBuildMultiSig
+    AddressInfo txt -> runAddressInfo txt
 
 runAddressKeyGen :: VerificationKeyFile -> SigningKeyFile -> ExceptT CliError IO ()
 runAddressKeyGen (VerificationKeyFile vkeyPath) (SigningKeyFile skeyPath) = do
     sk <- liftIO shelleyGenSigningKey
-    let vk = getVerificationKey sk
+    let vk = getPaymentVerificationKey sk
     firstExceptT CardanoApiError $ do
-      ExceptT $ writeVerificationKey vkeyPath vk
+      ExceptT $ writePaymentVerificationKey vkeyPath vk
       ExceptT $ writeSigningKey skeyPath sk
 
 runAddressKeyHash :: VerificationKeyFile -> ExceptT CliError IO ()
 runAddressKeyHash (VerificationKeyFile vkeyPath) =
     firstExceptT CardanoApiError $ do
-      VerificationKeyShelley vkey <- ExceptT $ readVerificationKey vkeyPath
+      PaymentVerificationKeyShelley vkey <- ExceptT $ readPaymentVerificationKey vkeyPath
       let Ledger.KeyHash khash = Ledger.hashKey vkey
       liftIO $ BS.putStrLn $ Crypto.getHashBytesAsHex khash
 
 
-runAddressBuild :: VerificationKeyFile -> ExceptT CliError IO ()
-runAddressBuild (VerificationKeyFile vkeyPath) =
-    firstExceptT CardanoApiError $ do
-      vkey <- ExceptT $ readVerificationKey vkeyPath
-      let addr = shelleyVerificationKeyAddress vkey Mainnet
-      liftIO $ Text.putStrLn $ addressToHex addr
+runAddressBuildStaking :: VerificationKeyFile -> VerificationKeyFile -> ExceptT CliError IO ()
+runAddressBuildStaking (VerificationKeyFile payVkeyFp) (VerificationKeyFile stkVkeyFp) =
+  firstExceptT CardanoApiError $ do
+    stkVKey <- newExceptT $ readStakingVerificationKey stkVkeyFp
+    payVKey <- newExceptT $ readPaymentVerificationKey payVkeyFp
+    let addr = shelleyVerificationKeyAddress payVKey (Just stkVKey)
+    liftIO $ Text.putStrLn $ addressToHex addr
 
+runAddressBuildReward :: VerificationKeyFile -> ExceptT CliError IO ()
+runAddressBuildReward (VerificationKeyFile stkVkeyFp) =
+  firstExceptT CardanoApiError $ do
+    stkVKey <- ExceptT $ readStakingVerificationKey stkVkeyFp
+    let rwdAddr = AddressShelleyReward $ shelleyVerificationKeyRewardAddress stkVKey
+    liftIO . Text.putStrLn $ addressToHex rwdAddr
+
+runAddressBuildEnterprise :: VerificationKeyFile -> ExceptT CliError IO ()
+runAddressBuildEnterprise (VerificationKeyFile payVkeyFp) =
+  firstExceptT CardanoApiError $ do
+    payVKey <- newExceptT $ readPaymentVerificationKey payVkeyFp
+    let addr = shelleyVerificationKeyAddress payVKey Nothing
+    liftIO $ Text.putStrLn $ addressToHex addr
 
 runAddressBuildMultiSig :: ExceptT CliError IO ()
 runAddressBuildMultiSig =
