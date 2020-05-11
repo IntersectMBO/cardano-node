@@ -61,6 +61,7 @@ library
                       , ouroboros-network-framework
                       , serialise
                       , shelley-spec-ledger
+                      , stm
                       , text
                       , transformers-except
                       , typed-protocols
