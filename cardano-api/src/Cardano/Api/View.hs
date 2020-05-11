@@ -4,6 +4,7 @@ module Cardano.Api.View
   , parseSigningKeyView
   , parsePaymentVerificationKeyView
   , parseStakingVerificationKeyView
+  , parseUpdateView
   , parseVerificationKeyStakePoolView
   , parseVerificationKeyVRFView
   , parseTxSignedView
@@ -25,6 +26,7 @@ module Cardano.Api.View
   , renderPaymentVerificationKeyView
   , renderVerificationKeyStakePoolView
   , renderStakingVerificationKeyView
+  , renderUpdateView
   , renderVerificationKeyVRFView
   , renderTxSignedView
   , renderTxUnsignedView
@@ -77,6 +79,10 @@ parseStakingVerificationKeyView :: ByteString -> Either ApiError StakingVerifica
 parseStakingVerificationKeyView bs =
   stakingVerificationKeyFromCBOR . tvRawCBOR =<< first ApiTextView (parseTextView bs)
 
+parseUpdateView :: ByteString -> Either ApiError Update
+parseUpdateView bs =
+  updateFromCBOR . tvRawCBOR =<< first ApiTextView (parseTextView bs)
+
 parseVRFVerificationKeyView :: ByteString -> Either ApiError ShelleyVRFVerificationKey
 parseVRFVerificationKeyView bs =
   verificationKeyVRFFromCBOR . tvRawCBOR =<< first ApiTextView (parseTextView bs)
@@ -128,6 +134,13 @@ renderSigningKeyView kp =
   where
     cbor :: ByteString
     cbor = signingKeyToCBOR kp
+
+renderUpdateView :: Update -> ByteString
+renderUpdateView up =
+    renderTextView $ TextView "UpdateShelley" "Free form text" cbor
+  where
+    cbor :: ByteString
+    cbor = updateToCBOR up
 
 renderPaymentVerificationKeyView :: PaymentVerificationKey -> ByteString
 renderPaymentVerificationKeyView pk =

@@ -39,6 +39,13 @@ prop_roundtrip_SigningKey_view =
     kp <- H.forAll genSigningKey
     H.tripping kp renderSigningKeyView parseSigningKeyView
 
+
+prop_roundtrip_Update_view :: Property
+prop_roundtrip_Update_view =
+  H.property $ do
+    kp <- H.forAll genUpdate
+    H.tripping kp renderUpdateView parseUpdateView
+
 prop_roundtrip_PaymentVerificationKey_view :: Property
 prop_roundtrip_PaymentVerificationKey_view =
   H.property $ do

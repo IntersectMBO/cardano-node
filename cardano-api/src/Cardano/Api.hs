@@ -39,7 +39,7 @@ module Cardano.Api
   , TxIx
   , Lovelace (..)
   , SlotNo (..)
-
+  , Update (..)
   , ShelleyTxBody
 
   , getTxSignedBody
@@ -80,7 +80,7 @@ module Cardano.Api
   , ShelleyVRFVerificationKey
   , mkShelleyStakingCredential
 
-  -- * Shelley Delegation Certificate Related
+  -- * Shelley delegation certificate related
   , Certificate(..)
   , shelleyDeregisterStakingAddress
   , shelleyDelegateStake
@@ -89,6 +89,9 @@ module Cardano.Api
   , shelleyRegisterStakingAddress
   , shelleyRegisterStakePool
   , shelleyRetireStakePool
+
+  -- * Shelley update proposal related
+  , createShelleyUpdateProposal
   ) where
 
 import           Cardano.Prelude
@@ -148,6 +151,11 @@ shelleyGenSigningKey = do
   where
     dsignProxy :: Proxy (Shelley.DSIGN Shelley.TPraosStandardCrypto)
     dsignProxy = Proxy
+
+
+---
+-- Shelley staking related
+---
 
 -- | Register a shelley staking pool.
 shelleyRegisterStakePool
@@ -238,6 +246,16 @@ shelleyMIRCertificate
   -> Certificate
 shelleyMIRCertificate mirMap =
   ShelleyMIRCertificate . Shelley.DCertMir $ Shelley.MIRCert mirMap
+
+---
+-- Shelley update related
+---
+
+createShelleyUpdateProposal
+  :: Shelley.EpochNo
+  -> Shelley.ProposedPPUpdates Shelley.TPraosStandardCrypto
+  -> Shelley.Update Shelley.TPraosStandardCrypto
+createShelleyUpdateProposal epNo propUpdates = Shelley.Update propUpdates epNo
 
 
 -- Given key information (public key, and other network parameters), generate an Address.

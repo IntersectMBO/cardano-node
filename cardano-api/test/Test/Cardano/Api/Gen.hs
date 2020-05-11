@@ -1,11 +1,14 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
+
 module Test.Cardano.Api.Gen
   ( genAddress
   , genCertificate
   , genNetwork
   , genNetworkMagic
+  , genPaymentVerificationKey
   , genSigningKey
   , genSigningKeyByron
   , genSigningKeyShelley
@@ -15,8 +18,8 @@ module Test.Cardano.Api.Gen
   , genTxSignedByron
   , genTxUnsigned
   , genTxUnsignedByron
-  , genPaymentVerificationKey
   , genStakingVerificationKey
+  , genUpdate
   , genVerificationKeyAddressByron
   , genVerificationKeyAddressShelley
   , genVerificationKeyShelleyStakePool
@@ -43,11 +46,15 @@ import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 
 
-import           Shelley.Spec.Ledger.BaseTypes
-                   (StrictMaybe (..), UnitInterval, mkUnitInterval, textToDns, textToUrl)
+import           Shelley.Spec.Ledger.BaseTypes (Nonce (..),StrictMaybe (..),
+                    UnitInterval(..), maybeToStrictMaybe, mkNonce,
+                    mkUnitInterval, textToDns, textToUrl)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
 import           Shelley.Spec.Ledger.Crypto
-import           Shelley.Spec.Ledger.Keys (SignKeyVRF, VerKeyVRF, VKey(..), hash, hashKey)
+import           Shelley.Spec.Ledger.Keys (KeyHash, SignKeyVRF, VerKeyVRF,
+                   VKey(..), hash, hashKey)
+import           Shelley.Spec.Ledger.PParams (ProposedPPUpdates(..), PParamsUpdate,
+                   PParams'(..), ProtVer(..))
 import           Shelley.Spec.Ledger.Slot (EpochNo(..))
 import           Shelley.Spec.Ledger.TxData
                    (PoolMetaData (..), RewardAcnt (..), StakePoolRelay (..),
@@ -58,7 +65,7 @@ import           Ouroboros.Consensus.Shelley.Protocol (TPraosStandardCrypto)
 import           Test.Cardano.Chain.UTxO.Gen (genTx)
 import qualified Test.Cardano.Crypto.Gen as Byron
 
-import           Hedgehog (Gen)
+import           Hedgehog (Gen, Range)
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 
@@ -91,6 +98,22 @@ genEpochNoShelly :: Gen EpochNo
 genEpochNoShelly = do
   slot <- Gen.word64 (Range.linear minBound maxBound)
   return $ EpochNo slot
+
+genKeyHash :: Gen (KeyHash krole TPraosStandardCrypto)
+genKeyHash = hashKey . snd <$> genKeyPair
+
+-- | Generate a deterministic key pair given a seed.
+genKeyPair :: Gen (SignKeyDSIGN (DSIGN TPraosStandardCrypto),
+                   VKey krole TPraosStandardCrypto)
+genKeyPair = do
+    seed <- genSeed seedSize
+    let sk = genKeyDSIGN seed
+        vk = deriveVerKeyDSIGN sk
+    pure (sk, VKey vk)
+  where
+    seedSize :: Int
+    seedSize = fromIntegral (seedSizeDSIGN (Proxy :: Proxy (DSIGN TPraosStandardCrypto)))
+
 
 genStakingKeyRegistrationCert :: Gen Certificate
 genStakingKeyRegistrationCert = do
@@ -246,6 +269,69 @@ genTxUnsignedShelley =
       slot <- Gen.word64 (Range.linear minBound maxBound)
       pure $ TxBody (Set.fromList []) (StrictSeq.fromList []) (StrictSeq.fromList [])
                 (Wdrl $ Map.fromList []) (Coin coin) (SlotNo slot) SNothing SNothing
+
+
+genUpdate :: Gen Update
+genUpdate = do
+  eNo <- genEpochNoShelly
+  pps <- genPParamsUpdate
+  gKeyHash <- genKeyHash
+
+  let genHashUpMap  = ProposedPPUpdates $ Map.fromList [(gKeyHash, pps)]
+  return . ShelleyUpdate $ createShelleyUpdateProposal eNo genHashUpMap
+
+genNonce :: Gen Nonce
+genNonce =
+  Gen.choice
+    [ mkNonce <$> genNatural (Range.linear 1 123)
+    , pure NeutralNonce
+    ]
+
+genPParamsUpdate :: Gen PParamsUpdate
+genPParamsUpdate =
+  PParams
+    <$> (genStrictMaybe $ genNatural (Range.linear 0 1000))
+    <*> (genStrictMaybe $ genNatural (Range.linear 0 3))
+    <*> (genStrictMaybe $ fmap fromIntegral (Gen.word $ Range.linear 100 1000000))
+    <*> (genStrictMaybe $ fmap fromIntegral (Gen.word $ Range.linear 100 1000000))
+    <*> (genStrictMaybe $ fmap fromIntegral (Gen.word $ Range.linear 100 1000000))
+    <*> genStrictMaybe genShelleyCoin
+    <*> genStrictMaybe genUnitInterval
+    <*> genStrictMaybe genRational
+    <*> genStrictMaybe genShelleyCoin
+    <*> genStrictMaybe genUnitInterval
+    <*> genStrictMaybe genRational
+    <*> genStrictMaybe genEpochNoShelly
+    <*> (genStrictMaybe $ genNatural (Range.linear 0 10))
+    <*> genStrictMaybe genRational
+    <*> genStrictMaybe genUnitInterval
+    <*> genStrictMaybe genUnitInterval
+    <*> genStrictMaybe genUnitInterval
+    <*> genStrictMaybe genNonce
+    <*> genStrictMaybe genProtVer
+
+genStrictMaybe :: Gen a -> Gen (StrictMaybe a)
+genStrictMaybe gen = maybeToStrictMaybe <$> Gen.maybe gen
+
+genNatural :: Range Natural -> Gen Natural
+genNatural range = Gen.integral range
+
+genProtVer :: Gen ProtVer
+genProtVer =
+  ProtVer
+    <$> genNatural (Range.linear 0 1000)
+    <*> genNatural (Range.linear 0 1000)
+
+genRational :: Gen Rational
+genRational = Gen.realFrac_ (Range.linearFrac 0 10000)
+
+genShelleyCoin :: Gen Coin
+genShelleyCoin =  Coin <$> Gen.integral (Range.linear 1 1000000000)
+
+genUnitInterval :: Gen UnitInterval
+genUnitInterval =
+  UnsafeUnitInterval
+    <$> Gen.realFrac_ (Range.linearFrac 0 1)
 
 genPaymentVerificationKey :: Gen PaymentVerificationKey
 genPaymentVerificationKey =

@@ -11,6 +11,8 @@ module Cardano.Api.CBOR
   , paymentVerificationKeyToCBOR
   , stakingVerificationKeyFromCBOR
   , stakingVerificationKeyToCBOR
+  , updateFromCBOR
+  , updateToCBOR
   , verificationKeyStakePoolFromCBOR
   , verificationKeyStakePoolToCBOR
   , verificationKeyVRFFromCBOR
@@ -117,6 +119,22 @@ signingKeyToCBOR kp =
           [ toCBOR (173 :: Word8)
           , encodeSignKeyDSIGN sk
           ]
+
+
+updateFromCBOR :: ByteString -> Either ApiError Update
+updateFromCBOR bs =
+   first ApiErrorCBOR . CBOR.decodeFullDecoder "Update" decode $ LBS.fromStrict bs
+  where
+    decode :: Decoder s Update
+    decode = do
+      tag <- CBOR.decodeWord8
+      case tag of
+        187  -> ShelleyUpdate <$> fromCBOR
+        _  -> cborError $ DecoderErrorUnknownTag "Update" tag
+
+updateToCBOR :: Update -> ByteString
+updateToCBOR (ShelleyUpdate up) =
+  CBOR.serializeEncoding' $ mconcat [ toCBOR (187 :: Word8) , toCBOR up ]
 
 paymentVerificationKeyFromCBOR :: ByteString -> Either ApiError PaymentVerificationKey
 paymentVerificationKeyFromCBOR =

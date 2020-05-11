@@ -28,6 +28,7 @@ module Cardano.Api.Types
   , TxId (..)
   , TxIx
   , TxOut (..)
+  , Update (..)
   , SlotNo (..)
   , Lovelace (..)
 
@@ -112,6 +113,7 @@ import qualified Shelley.Spec.Ledger.BaseTypes               as Shelley
 import qualified Shelley.Spec.Ledger.Coin                    as Shelley
 import qualified Shelley.Spec.Ledger.Delegation.Certificates as Shelley
 import qualified Shelley.Spec.Ledger.Keys                    as Shelley
+import qualified Shelley.Spec.Ledger.PParams                 as Shelley
 import qualified Shelley.Spec.Ledger.TxData                  as Shelley
 import qualified Shelley.Spec.Ledger.Tx                      as Shelley
 
@@ -213,6 +215,10 @@ data PaymentVerificationKey
 data StakingVerificationKey
   = StakingVerificationKeyShelley !ShelleyVerificationKeyStaking
   deriving (Generic, NFData, Show)
+  deriving anyclass NoUnexpectedThunks
+
+data Update = ShelleyUpdate (Shelley.Update Shelley.TPraosStandardCrypto)
+  deriving (Eq, Generic, Show)
   deriving anyclass NoUnexpectedThunks
 
 -- The cardano-sl codebase (and cardano-ledger) has something a little like

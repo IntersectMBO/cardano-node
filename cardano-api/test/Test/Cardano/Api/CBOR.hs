@@ -40,8 +40,15 @@ prop_SigningKey_CBOR =
     kp <- H.forAll genSigningKey
     H.tripping kp signingKeyToCBOR signingKeyFromCBOR
 
-prop_PaymentVerificationKey_CBOR :: Property
-prop_PaymentVerificationKey_CBOR =
+prop_Update_CBOR :: Property
+prop_Update_CBOR =
+  H.property $ do
+    kp <- H.forAll genUpdate
+    H.tripping kp updateToCBOR updateFromCBOR
+
+
+prop_VerificationKey_CBOR :: Property
+prop_VerificationKey_CBOR =
   H.property $ do
     kp <- H.forAll genPaymentVerificationKey
     H.tripping kp paymentVerificationKeyToCBOR paymentVerificationKeyFromCBOR
