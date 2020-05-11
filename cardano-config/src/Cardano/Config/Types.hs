@@ -389,4 +389,3 @@ data SomeNodeClientProtocol where
        :: RunNode blk
        => Consensus.ProtocolClient blk (BlockProtocol blk)
        -> SomeNodeClientProtocol
-

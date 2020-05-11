@@ -1,0 +1,26 @@
+{
+    "poolDecayRate": 0,
+    "poolDeposit": 0,
+    "protocolVersion": {
+        "minor": 0,
+        "major": 0
+    },
+    "decentralisationParam": 0.99,
+    "maxTxSize": 2048,
+    "minFeeA": 500,
+    "maxBlockBodySize": 2097152,
+    "keyMinRefund": 0,
+    "minFeeB": 2,
+    "eMax": 0,
+    "extraEntropy": {
+        "tag": "NeutralNonce"
+    },
+    "maxBlockHeaderSize": 8192,
+    "keyDeposit": 0,
+    "keyDecayRate": 0,
+    "nOpt": 100,
+    "rho": 0,
+    "poolMinRefund": 0,
+    "tau": 0,
+    "a0": 0
+}

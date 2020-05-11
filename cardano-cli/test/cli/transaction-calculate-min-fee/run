@@ -1,0 +1,44 @@
+#!/bin/sh -u
+
+cwd=$(dirname "$0")
+
+# shellcheck source=/dev/null
+. "${cwd}/../core/common"
+
+# shellcheck disable=SC2154
+banner "${testname}"
+
+OUTPUT_DIR="${TEST}"
+
+rm -rf "${OUTPUT_DIR}"
+mkdir "${OUTPUT_DIR}"
+
+DATA_DIR="test/cli/${testname}/data"
+if test -d cardano-cli ; then
+  DATA_DIR="cardano-cli/${DATA_DIR}"
+  fi
+
+error=0
+
+${CARDANO_CLI} shelley transaction calculate-min-fee \
+    --tx-in-count 32 \
+    --tx-out-count 27 \
+    --ttl 10 \
+    --network-magic 4036000900 \
+    --protocol-params-file "${DATA_DIR}/protocol-params.json" \
+    --signing-key-file "${DATA_DIR}/utxo.skey" \
+    > "${OUTPUT_DIR}/min-fee.txt"
+fail_on_error $?
+
+assert_file_exists "${OUTPUT_DIR}/min-fee.txt"
+
+line_count=$(wc -l < "${OUTPUT_DIR}/min-fee.txt")
+if test "${line_count}" -ne 1 ; then
+  echo "Error: Expected only a single line of output."
+  cat "${OUTPUT_DIR}/min-fee.txt"
+  error=1
+  fi
+
+assert_string '1575502' "${OUTPUT_DIR}/min-fee.txt"
+
+report_result ${error}

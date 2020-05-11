@@ -24,7 +24,14 @@ import           Cardano.CLI.Shelley.Parsers
 import           Cardano.Config.Types (CertificateFile (..))
 
 import           Control.Monad.Trans.Except (ExceptT)
-import           Control.Monad.Trans.Except.Extra (firstExceptT, newExceptT)
+import           Control.Monad.Trans.Except.Extra
+                   (firstExceptT, handleIOExceptT, hoistEither, newExceptT)
+
+import qualified Data.Aeson as Aeson
+import qualified Data.ByteString.Lazy.Char8 as LBS
+import qualified Data.Text as Text
+
+import           Shelley.Spec.Ledger.PParams (PParams)
 
 
 runTransactionCmd :: TransactionCmd -> ExceptT CliError IO ()
@@ -36,6 +43,8 @@ runTransactionCmd cmd =
       runTxSign txinfile skfiles network txoutfile
     TxSubmit txFp network ->
       runTxSubmit txFp network
+    TxCalculateMinFee txInCount txOutCount ttl network skFiles certFiles pParamsFile ->
+      runTxCalculateMinFee txInCount txOutCount ttl network skFiles certFiles pParamsFile
 
     _ -> liftIO $ putStrLn $ "runTransactionCmd: " ++ show cmd
 
@@ -53,12 +62,6 @@ runTxBuildRaw txins txouts ttl fee (TxBodyFile fpath) certFps = do
     . newExceptT
     . writeTxUnsigned fpath
     $ buildShelleyTransaction txins txouts ttl fee certs
- where
-   -- TODO: This should exist in its own module along with
-   -- a custom error type and an error rendering function.
-   readShelleyCert :: CertificateFile -> ExceptT CliError IO Certificate
-   readShelleyCert (CertificateFile fp) =
-      firstExceptT ShelleyCertReadError . newExceptT $ readCertificate fp
 
 
 runTxSign :: TxBodyFile -> [SigningKeyFile] -> Network -> TxFile -> ExceptT CliError IO ()
@@ -76,7 +79,38 @@ runTxSubmit txFp network = do
   signedTx <- firstExceptT CardanoApiError . newExceptT $ readTxSigned txFp
   liftIO $ submitTx network sktFp signedTx
 
+runTxCalculateMinFee
+  :: TxInCount
+  -> TxOutCount
+  -> SlotNo
+  -> Network
+  -> [SigningKeyFile]
+  -> [CertificateFile]
+  -> ProtocolParamsFile
+  -> ExceptT CliError IO ()
+runTxCalculateMinFee (TxInCount txInCount) (TxOutCount txOutCount)
+                     txTtl network skFiles certFiles pParamsFile = do
+    skeys <- readSigningKeyFiles skFiles
+    certs <- mapM readShelleyCert certFiles
+    pparams <- readProtocolParameters pParamsFile
+    liftIO $ putStrLn
+      $  "runTxCalculateMinFee: "
+      ++ show (calculateShelleyMinFee pparams (dummyShelleyTxForFeeCalc skeys certs))
+  where
+    dummyShelleyTxForFeeCalc skeys certs =
+      buildDummyShelleyTxForFeeCalc txInCount txOutCount txTtl network skeys certs
 
+readProtocolParameters :: ProtocolParamsFile -> ExceptT CliError IO PParams
+readProtocolParameters (ProtocolParamsFile fpath) = do
+  pparams <- handleIOExceptT (IOError fpath) $ LBS.readFile fpath
+  firstExceptT (AesonDecode fpath . Text.pack) . hoistEither $
+    Aeson.eitherDecode' pparams
+
+-- TODO: This should exist in its own module along with
+-- a custom error type and an error rendering function.
+readShelleyCert :: CertificateFile -> ExceptT CliError IO Certificate
+readShelleyCert (CertificateFile fp) =
+  firstExceptT ShelleyCertReadError . newExceptT $ readCertificate fp
 
 -- TODO : This is nuts. The 'cardano-api' and 'cardano-config' packages both have functions
 -- for reading/writing keys, but they are incompatible.
