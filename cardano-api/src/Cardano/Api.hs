@@ -167,28 +167,21 @@ shelleyRegisterStakePool
   -> Certificate
 shelleyRegisterStakePool poolVkeyHash vrfVkeyHash pldg cst
                           mrgn rwdact ownrs relays md = do
-  let poolPubKeyHash = poolVkeyHash
-      poolVRFkeyHash = vrfVkeyHash
-      poolPledge = pldg
-      poolCost = cst
-      poolMargin = mrgn
-      poolRewardAcnt = rwdact
-      poolOwners = ownrs
-      poolRelays = Seq.fromList relays
-      poolMetaData = Shelley.maybeToStrictMaybe md
+  ShelleyStakePoolCertificate
+    . Shelley.DCertPool
+    . Shelley.RegPool
+    $ Shelley.PoolParams
+        { Shelley._poolPubKey = poolVkeyHash
+        , Shelley._poolVrf = vrfVkeyHash
+        , Shelley._poolPledge = pldg
+        , Shelley._poolCost = cst
+        , Shelley._poolMargin = mrgn
+        , Shelley._poolRAcnt = rwdact
+        , Shelley._poolOwners = ownrs
+        , Shelley._poolRelays = Seq.fromList relays
+        , Shelley._poolMD = Shelley.maybeToStrictMaybe md
+        }
 
-  let poolParams = Shelley.PoolParams
-                     { Shelley._poolPubKey = poolPubKeyHash
-                     , Shelley._poolVrf = poolVRFkeyHash
-                     , Shelley._poolPledge = poolPledge
-                     , Shelley._poolCost = poolCost
-                     , Shelley._poolMargin = poolMargin
-                     , Shelley._poolRAcnt = poolRewardAcnt
-                     , Shelley._poolOwners = poolOwners
-                     , Shelley._poolRelays = poolRelays
-                     , Shelley._poolMD = poolMetaData
-                     }
-  ShelleyStakePoolCertificate . Shelley.DCertPool . Shelley.RegPool $ poolParams
 
 -- | Retire a shelley staking pool.
 shelleyRetireStakePool :: ShelleyVerificationKeyStakePool -> Shelley.EpochNo -> Certificate
