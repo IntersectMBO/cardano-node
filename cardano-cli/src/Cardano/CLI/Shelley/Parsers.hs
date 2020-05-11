@@ -160,7 +160,7 @@ data PoolCmd
 data QueryCmd
   = QueryPoolId NodeAddress
   | QueryProtocolParameters Network (Maybe OutputFile)
-  | QueryTip NodeAddress
+  | QueryTip Network
   | QueryFilteredUTxO Address Network (Maybe OutputFile)
   | QueryVersion NodeAddress
   | QueryStatus NodeAddress
@@ -585,7 +585,7 @@ pQueryCmd =
         <*> pMaybeOutputFile
 
     pQueryTip :: Parser QueryCmd
-    pQueryTip = QueryTip <$> parseNodeAddress
+    pQueryTip = QueryTip <$> pNetwork
 
     pQueryFilteredUTxO :: Parser QueryCmd
     pQueryFilteredUTxO =

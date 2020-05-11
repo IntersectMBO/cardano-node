@@ -19,6 +19,7 @@ library
   other-modules:        Cardano.Api.CBOR
                         Cardano.Api.Convert
                         Cardano.Api.Error
+                        Cardano.Api.LocalChainSync
                         Cardano.Api.LocalStateQuery
                         Cardano.Api.TxSubmit
                         Cardano.Api.TxSubmitChairman

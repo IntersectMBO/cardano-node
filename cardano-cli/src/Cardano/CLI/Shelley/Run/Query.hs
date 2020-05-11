@@ -7,11 +7,11 @@ module Cardano.CLI.Shelley.Run.Query
 import           Cardano.Prelude
 
 import           Cardano.Api
-                   (Address, Network(..), queryFilteredUTxOFromLocalState,
+                   (Address, Network(..), getLocalTip, queryFilteredUTxOFromLocalState,
                     queryPParamsFromLocalState)
 
 import           Cardano.CLI.Environment (readEnvSocketPath)
-import           Cardano.CLI.Ops (CliError (..), getLocalTip)
+import           Cardano.CLI.Ops (CliError (..))
 import           Cardano.CLI.Shelley.Parsers (OutputFile (..), QueryCmd (..))
 
 import           Cardano.Config.Shelley.Protocol (mkNodeClientProtocolTPraos)
@@ -44,6 +44,8 @@ runQueryCmd cmd =
   case cmd of
     QueryProtocolParameters network mOutFile ->
       runQueryProtocolParameters network mOutFile
+    QueryTip network ->
+      runQueryTip network
     QueryFilteredUTxO addr network mOutFile ->
       runQueryFilteredUTxO addr network mOutFile
     _ -> liftIO $ putStrLn $ "runQueryCmd: " ++ show cmd
@@ -60,6 +62,16 @@ runQueryProtocolParameters network mOutFile = do
   pparams <- firstExceptT NodeLocalStateQueryError $
     queryPParamsFromLocalState network sockPath (getTipPoint tip)
   writeProtocolParameters mOutFile pparams
+
+runQueryTip
+  :: Network
+  -> ExceptT CliError IO ()
+runQueryTip network = do
+  sockPath <- readEnvSocketPath
+  let ptclClientInfo = pClientInfoCodecConfig . protocolClientInfo $ mkNodeClientProtocolTPraos
+  tip <- liftIO $ withIOManager $ \iomgr ->
+    getLocalTip iomgr ptclClientInfo network sockPath
+  liftIO $ putTextLn (show tip)
 
 runQueryFilteredUTxO
   :: Address
