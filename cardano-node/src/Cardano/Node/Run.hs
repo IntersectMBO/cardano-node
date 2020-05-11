@@ -117,7 +117,11 @@ runNode loggingLayer npm@NodeCLI{protocolFiles} = do
         Left err -> (putTextLn $ renderProtocolInstantiationError err) >> exitFailure
         Right (SomeConsensusProtocol p) -> pure $ SomeConsensusProtocol p
 
-    tracers <- mkTracers (ncTraceConfig nc) trace
+    txsProcessedCounter :: MVar Integer <- newMVar 0
+
+    tracers <- mkTracers (ncTraceConfig nc) trace txsProcessedCounter
+
+    txsProcessedThread <- Async.async $ traceTxsProcessed (appendName "metrics" trace) txsProcessedCounter 0
 
 #ifdef UNIX
     let viewmode = ncViewMode nc
@@ -132,6 +136,7 @@ runNode loggingLayer npm@NodeCLI{protocolFiles} = do
 
         handleSimpleNode p trace tracers npm (const $ pure ())
         Async.uninterruptibleCancel upTimeThread
+        Async.uninterruptibleCancel txsProcessedThread
 
       LiveView   -> do
 #ifdef UNIX
@@ -151,15 +156,31 @@ runNode loggingLayer npm@NodeCLI{protocolFiles} = do
                        (setNodeKernel be)
         setNodeThread be nodeThread
 
-        void $ Async.waitAny [nodeThread, upTimeThread]
+        void $ Async.waitAny [nodeThread, upTimeThread, txsProcessedThread]
 #else
         handleSimpleNode p trace tracers npm (const $ pure ())
         Async.uninterruptibleCancel upTimeThread
+        Async.uninterruptibleCancel txsProcessedThread
 #endif
   where
     hostname = do
       hn0 <- pack <$> getHostName
       return $ take 8 $ fst $ breakOn "." hn0
+
+-- | The node sends the number of processed transactions, every second (if needed).
+traceTxsProcessed
+  :: Trace IO Text
+  -> MVar Integer
+  -> Integer
+  -> IO ()
+traceTxsProcessed tr txsProcessedCounter txsNum = do
+  txsProcessed <- readMVar txsProcessedCounter
+  -- To avoid tracing the same number of processed transactions, check if it changed.
+  when (txsProcessed /= txsNum) $ do
+    meta <- mkLOMeta Notice Public
+    traceNamedObject tr (meta, LogValue "txsProcessedNum" (PureI txsProcessed))
+  threadDelay 1000000
+  traceTxsProcessed tr txsProcessedCounter txsProcessed
 
 -- | The node sends its real up time, every second.
 traceNodeUpTime
