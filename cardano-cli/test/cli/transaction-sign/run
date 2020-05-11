@@ -27,6 +27,7 @@ error=0
 ${CARDANO_CLI} shelley transaction sign \
     --tx-body-file "test/cli/${testname}/data/unsigned.tx" \
     --signing-key-file "test/cli/${testname}/data/initial-utxo1.skey" \
+    --mainnet \
     --tx-file "${OUTPUT_DIR}/signed.tx"
 fail_on_error $?
 
@@ -38,7 +39,7 @@ ${CARDANO_CLI} shelley transaction sign \
     --tx-body-file "test/cli/${testname}/data/unsigned.tx" \
     --signing-key-file "test/cli/${testname}/data/initial-utxo1.skey" \
     --signing-key-file "test/cli/${testname}/data/initial-utxo2.skey" \
-    --network-magic 11 \
+    --testnet-magic 11 \
     --tx-file "${OUTPUT_DIR}/signed.tx"
 fail_on_error $?
 

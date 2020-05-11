@@ -24,7 +24,7 @@ ${CARDANO_CLI} shelley transaction calculate-min-fee \
     --tx-in-count 32 \
     --tx-out-count 27 \
     --ttl 10 \
-    --network-magic 4036000900 \
+    --testnet-magic 4036000900 \
     --protocol-params-file "${DATA_DIR}/protocol-params.json" \
     --signing-key-file "${DATA_DIR}/utxo.skey" \
     > "${OUTPUT_DIR}/min-fee.txt"
