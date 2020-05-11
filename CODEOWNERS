@@ -1,0 +1,12 @@
+# General reviewers per PR
+#                       Duncan   Jordan     Luke       Erik
+*                       @dcoutts @Jimbo4350 @intricate @erikd
+
+# Specific reviewers for code pieces
+
+cardano-cli/test/cli/        @erikd
+
+.buildkite                   @devops
+ci                           @devops
+configuration                @devops
+nix                          @devops
