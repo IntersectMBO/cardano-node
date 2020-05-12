@@ -7,7 +7,6 @@ let
   inherit (pkgs) svcLib;
   pkgsModule = {
     config._module.args.pkgs = mkDefault pkgs;
-    config._module.args.cardanoNodePkgs = mkDefault pkgs;
   };
   systemdCompat.options = {
     systemd.services = mkOption {};
@@ -16,6 +15,7 @@ let
   };
   mkNodeScript = envConfig: let
     defaultConfig = {
+      cardanoNodePkgs = pkgs;
       hostAddr = "127.0.0.1";
       port = 3001;
       signingKey = null;
@@ -64,6 +64,7 @@ let
     serviceConfig = {
       inherit environments;
       inherit (config)
+        cardanoNodePkgs
         stateDir
         socketPath
         signingKey
