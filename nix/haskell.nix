@@ -116,9 +116,12 @@ let
 
         # systemd can't be statically linked - disable lobemo-scribe-journal
         packages.cardano-config.flags.systemd = false;
+ 
+        # segfaults in Setup.hs
+        # packages.pretty-show.package.buildType = lib.mkForce "Simple";
 
         # Haddock not working and not needed for cross builds
-        packages.doHaddock = false;
+        doHaddock = false;
       }))
     ];
 

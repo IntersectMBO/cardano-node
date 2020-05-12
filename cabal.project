@@ -421,7 +421,8 @@ constraints:
   hedgehog >= 1.0,
   bimap >= 0.4.0,
   brick >= 0.47,
-  libsystemd-journal >= 1.4.4
+  libsystemd-journal >= 1.4.4,
+  pretty-show == 1.9.5
 
 package comonad
   flags: -test-doctests
