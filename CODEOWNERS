@@ -3,8 +3,7 @@
 *                       @dcoutts @Jimbo4350 @intricate @erikd
 
 # Specific reviewers for code pieces
-
-cardano-cli/test/cli/        @erikd
+# NB - The last matching pattern takes precedence
 
 .buildkite                   @devops
 ci                           @devops
