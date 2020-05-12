@@ -29,6 +29,10 @@ by the node shell to the other packages.
   backend and explorer backend are separate components that run in separate
   external processes that communicate with the node via local IPC.
 
+## Network Configuration, Genesis and Topology Files
+
+The latest supported networks can be found at https://hydra.iohk.io/job/Cardano/cardano-node/cardano-deployment/latest-finished/download/1/index.html
+
 ## How to build
 
 ## Cabal
