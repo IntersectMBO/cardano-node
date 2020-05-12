@@ -22,11 +22,7 @@ library
 
   hs-source-dirs:      src
 
-  exposed-modules:     Cardano.CLI.Byron.Parsers
-                       Cardano.CLI.Byron.Run
-                       Cardano.CLI.Byron.UpdateProposal
-                       Cardano.CLI.Byron.Vote
-                       Cardano.CLI.Common.Parsers
+  exposed-modules:     Cardano.CLI.Commands
                        Cardano.CLI.Delegation
                        Cardano.CLI.Environment
                        Cardano.CLI.Genesis
@@ -35,6 +31,14 @@ library
                        Cardano.CLI.Ops
                        Cardano.CLI.Parsers
                        Cardano.CLI.Run
+                       Cardano.CLI.Tx
+
+                       Cardano.CLI.Byron.Commands
+                       Cardano.CLI.Byron.Parsers
+                       Cardano.CLI.Byron.Run
+                       Cardano.CLI.Byron.UpdateProposal
+                       Cardano.CLI.Byron.Vote
+
                        Cardano.CLI.Shelley.Commands
                        Cardano.CLI.Shelley.Parsers
                        Cardano.CLI.Shelley.Run
@@ -48,7 +52,6 @@ library
                        Cardano.CLI.Shelley.Run.Genesis
                        Cardano.CLI.Shelley.Run.TextView
                        Cardano.CLI.Shelley.KeyGen
-                       Cardano.CLI.Tx
 
   other-modules:       Paths_cardano_cli
 

@@ -53,20 +53,20 @@ import           Cardano.CLI.Delegation
 import           Cardano.CLI.Genesis
 import           Cardano.CLI.Key
 import           Cardano.CLI.Ops
-import           Cardano.CLI.Parsers
-import           Cardano.CLI.Byron.Run (runByronClientCommand)
-import           Cardano.CLI.Shelley.Run (runShelleyClientCommand)
+import           Cardano.CLI.Commands
+import           Cardano.CLI.Byron.Commands
+import           Cardano.CLI.Byron.Run (runNodeCmd)
+import           Cardano.CLI.Shelley.Run
 import           Cardano.CLI.Tx
 import           Cardano.Common.LocalSocket
 import           Cardano.Config.Types
 
 
 runClientCommand :: ClientCommand -> ExceptT CliError IO ()
-runClientCommand cc =
-  case cc of
-    ByronClientCommand bc -> runByronClientCommand bc
-    ShelleyClientCommand bc -> runShelleyClientCommand bc
-    DisplayVersion -> runDisplayVersion
+runClientCommand (ShelleyCommand c) = runShelleyClientCommand c
+runClientCommand (ByronCommand c) =
+  case c of
+    NodeCmd bc -> runNodeCmd bc
     Genesis outDir params era -> runGenesisCommand outDir params era
     GetLocalNodeTip configFp mSockPath -> runGetLocalNodeTip configFp mSockPath
     ValidateCBOR cborObject fp -> runValidateCBOR cborObject fp
@@ -82,6 +82,9 @@ runClientCommand cc =
     SubmitTx fp configFp mCliSockPath -> runSubmitTx fp configFp mCliSockPath
     SpendGenesisUTxO configFp nftx ctKey genRichAddr outs -> runSpendGenesisUTxO configFp nftx ctKey genRichAddr outs
     SpendUTxO configFp nftx ctKey ins outs -> runSpendUTxO configFp nftx ctKey ins outs
+
+runClientCommand DisplayVersion = runDisplayVersion
+
 
 -- -----------------------------------------------------------------------------
 

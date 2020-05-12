@@ -5,13 +5,12 @@ import           Prelude (String)
 
 import           Control.Monad.Trans.Except.Extra (runExceptT)
 import qualified Options.Applicative as Opt
-import           Options.Applicative (Parser, ParserInfo, ParserPrefs,
-                                      showHelpOnEmpty)
+import           Options.Applicative (ParserInfo, ParserPrefs, showHelpOnEmpty)
 import           System.Exit (exitFailure)
 
 import           Cardano.CLI.Ops
-import           Cardano.CLI.Parsers
-import           Cardano.CLI.Run
+import           Cardano.CLI.Parsers (ClientCommand, parseClientCommand)
+import           Cardano.CLI.Run (runClientCommand)
 import           Cardano.Common.TopHandler
 
 
@@ -43,15 +42,3 @@ main = toplevelExceptionHandler $ do
     renderCliError :: CliError -> String
     renderCliError = show
 
-parseClientCommand :: Parser ClientCommand
-parseClientCommand =
-  asum
-    [ parseByron
-    , parseGenesisRelatedValues
-    , parseKeyRelatedValues
-    , parseDelegationRelatedValues
-    , parseTxRelatedValues
-    , parseLocalNodeQueryValues
-    , parseMiscellaneous
-    , parseShelley
-    ]
