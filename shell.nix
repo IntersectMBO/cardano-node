@@ -52,11 +52,15 @@ let
     buildInputs = [
       niv
       cardanoNodeHaskellPackages.cardano-cli.components.exes.cardano-cli
+      cardanoNodeHaskellPackages.cardano-node.components.exes.cardano-node
     ];
     shellHook = ''
       echo "DevOps Tools" \
       | ${figlet}/bin/figlet -f banner -c \
       | ${lolcat}/bin/lolcat
+
+      source <(cardano-cli --bash-completion-script cardano-cli)
+      source <(cardano-node --bash-completion-script cardano-node)
 
       ${lib.optionalString (__hasAttr "network" customConfig) ''
         export CARDANO_NODE_SOCKET_PATH=./state-node-${customConfig.network}/node.socket
