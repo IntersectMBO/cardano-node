@@ -492,7 +492,7 @@ initLiveViewState = do
 
     return $ LiveViewState
                 { lvsScreen                 = MainView
-                , lvsRelease                = "Byron"
+                , lvsRelease                = "Shelley"
                 , lvsNodeId                 = ""
                 , lvsVersion                = showVersion version
                 , lvsCommit                 = unpack gitRev
