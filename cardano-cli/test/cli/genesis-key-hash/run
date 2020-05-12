@@ -1,0 +1,24 @@
+#!/bin/sh -u
+
+cwd=$(dirname "$0")
+
+# shellcheck source=/dev/null
+. "${cwd}/../core/common"
+
+# shellcheck disable=SC2154
+banner "${testname}"
+
+error=0
+
+setup_data_dir "${testname}"
+assert_file_exists "${DATA_DIR}/genesis.vkey"
+
+${CARDANO_CLI} shelley genesis key-hash \
+    --verification-key-file "${DATA_DIR}/genesis.vkey" \
+    > "${TEST_DIR}/genesis-vkey-hash"
+
+assert_file_exists "${TEST_DIR}/genesis-vkey-hash"
+assert_line_count 1 "${TEST_DIR}/genesis-vkey-hash"
+assert_string "1ec53db0a4620ab5e0ecde4ac2b4897b9c36394d6c07d60ba6773529de9321c7" "${TEST_DIR}/genesis-vkey-hash"
+
+report_result ${error}
