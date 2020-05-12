@@ -8,21 +8,16 @@ cwd=$(dirname "$0")
 # shellcheck disable=SC2154
 banner "${testname}"
 
-OUTPUT_DIR="${TEST}"
-
-rm -rf "${OUTPUT_DIR}"
-mkdir "${OUTPUT_DIR}"
-
 error=0
 
 ${CARDANO_CLI} shelley node key-gen-KES \
-    --verification-key-file "${OUTPUT_DIR}/kes.vkey" \
-    --signing-key-file "${OUTPUT_DIR}/kes.skey"
+    --verification-key-file "${TEST_DIR}/kes.vkey" \
+    --signing-key-file "${TEST_DIR}/kes.skey"
 
-assert_file_exists "${OUTPUT_DIR}/kes.vkey"
-assert_file_exists "${OUTPUT_DIR}/kes.skey"
+assert_file_exists "${TEST_DIR}/kes.vkey"
+assert_file_exists "${TEST_DIR}/kes.skey"
 
-assert_string 'VKeyES TPraosStandardCrypto' "${OUTPUT_DIR}/kes.vkey"
-assert_string 'SKeyES TPraosStandardCrypto' "${OUTPUT_DIR}/kes.skey"
+assert_string 'VKeyES TPraosStandardCrypto' "${TEST_DIR}/kes.vkey"
+assert_string 'SKeyES TPraosStandardCrypto' "${TEST_DIR}/kes.skey"
 
 report_result ${error}

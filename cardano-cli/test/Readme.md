@@ -15,6 +15,8 @@ tests can be run like for instance:
 cardano-cli/test/cli/version/run
 ```
 
+All tests should work both within the Haskell test runner and as standalone scripts.
+
 Currently these tests do not run on Windows.
 
 # Writing CLI tests

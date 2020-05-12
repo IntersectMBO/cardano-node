@@ -13,18 +13,15 @@ type shellcheck > /dev/null 2>&1 || {
     exit 1
 }
 
-# Need this if running outside "cabal test cardano-cli".
-if test -d "cardano-cli" ; then
-  cd "cardano-cli" || exit 1
-  fi
+error=0
 
 shellcheck test/cli/core/common
-error=$?
+fail_on_error $?
 
 files=$(find test/cli -name run)
 for file in ${files} ; do
   shellcheck "${file}"
-  error=$?
+  fail_on_error $?
   done
 
 report_result ${error}

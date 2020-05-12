@@ -937,13 +937,23 @@ pKESVerificationKeyFile =
 
 pNetwork :: Parser Network
 pNetwork =
-  maybe Mainnet (Testnet . NetworkMagic) <$>
-    Opt.optional
-      (Opt.option Opt.auto
-        (  Opt.long "network-magic"
-        <> Opt.metavar "INT"
-        <> Opt.help "The network magic id [default is mainnet]."
-        ))
+  pMainnet <|> fmap Testnet pTestnetMagic
+
+pMainnet :: Parser Network
+pMainnet =
+  Opt.flag' Mainnet
+    (  Opt.long "mainnet"
+    <> Opt.help "Use the mainnet magic id."
+    )
+
+pTestnetMagic :: Parser NetworkMagic
+pTestnetMagic =
+  NetworkMagic <$>
+    Opt.option Opt.auto
+      (  Opt.long "testnet-magic"
+      <> Opt.metavar "INT"
+      <> Opt.help "Specify a testnet magic id."
+      )
 
 pTxSubmitFile :: Parser FilePath
 pTxSubmitFile =

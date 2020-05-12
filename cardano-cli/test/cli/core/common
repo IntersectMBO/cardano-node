@@ -33,12 +33,17 @@ RESULT="${colourRed}FAILED [ ${testname} ]${colourReset}"
 ROOT=$(dirname "$0")/../../..
 ROOT=$(cd "$ROOT" > /dev/null 2>&1 && pwd)
 TMP="${ROOT}/tmp"
-TEST="${TMP}/$$"
-mkdir -p "${TEST}"
+TEST_DIR="${TMP}/$$"
+mkdir -p "${TEST_DIR}"
+
+# Need this if running outside "cabal test cardano-cli".
+if test -d cardano-cli ; then
+  cd cardano-cli || exit 1
+  fi
 
 cleanup () {
-    echo "Cleaning up ${TEST}"
-    rm -rf "${TEST}"
+    echo "Cleaning up ${TEST_DIR}"
+    rm -rf "${TEST_DIR}"
     echo "${RESULT}"
     echo
 }
@@ -47,7 +52,7 @@ trap cleanup EXIT
 
 banner () {
     echo "${colourYellow}== $* ==${colourReset}"
-    echo "Running in ${TEST}"
+    echo "Running in ${TEST_DIR}"
 }
 
 assert_string () {
@@ -90,4 +95,11 @@ report_result () {
     RESULT="${colourRed}FAILED [ ${testname} ]${colourReset}"
     exit 1
   fi
+}
+
+setup_data_dir () {
+  DATA_DIR="test/cli/${1}/data"
+  if test -d cardano-cli ; then
+    DATA_DIR="cardano-cli/${DATA_DIR}"
+    fi
 }

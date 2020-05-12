@@ -8,21 +8,16 @@ cwd=$(dirname "$0")
 # shellcheck disable=SC2154
 banner "${testname}"
 
-OUTPUT_DIR="${TEST}"
-
-rm -rf "${OUTPUT_DIR}"
-mkdir "${OUTPUT_DIR}"
-
 error=0
 
 ${CARDANO_CLI} shelley address key-gen \
-    --verification-key-file "${OUTPUT_DIR}/address.vkey" \
-    --signing-key-file "${OUTPUT_DIR}/address.skey"
+    --verification-key-file "${TEST_DIR}/address.vkey" \
+    --signing-key-file "${TEST_DIR}/address.skey"
 
-assert_file_exists "${OUTPUT_DIR}/address.vkey"
-assert_file_exists "${OUTPUT_DIR}/address.skey"
+assert_file_exists "${TEST_DIR}/address.vkey"
+assert_file_exists "${TEST_DIR}/address.skey"
 
-assert_string 'VerificationKeyShelley' "${OUTPUT_DIR}/address.vkey"
-assert_string 'SigningKeyShelley' "${OUTPUT_DIR}/address.skey"
+assert_string 'VerificationKeyShelley' "${TEST_DIR}/address.vkey"
+assert_string 'SigningKeyShelley' "${TEST_DIR}/address.skey"
 
 report_result ${error}
