@@ -5,6 +5,8 @@ module Cardano.Api.CBOR
   , addressToCBOR
   , certificateFromCBOR
   , certificateToCBOR
+  , genesisVerificationKeyFromCBOR
+  , genesisVerificationKeyToCBOR
   , signingKeyFromCBOR
   , signingKeyToCBOR
   , paymentVerificationKeyFromCBOR
@@ -135,6 +137,36 @@ updateFromCBOR bs =
 updateToCBOR :: Update -> ByteString
 updateToCBOR (ShelleyUpdate up) =
   CBOR.serializeEncoding' $ mconcat [ toCBOR (187 :: Word8) , toCBOR up ]
+
+genesisVerificationKeyFromCBOR :: ByteString -> Either ApiError GenesisVerificationKey
+genesisVerificationKeyFromCBOR =
+   first ApiErrorCBOR
+     . CBOR.decodeFullDecoder "GenesisVerificationKey" decode
+     . LBS.fromStrict
+  where
+    decode :: Decoder s GenesisVerificationKey
+    decode = do
+      tag <- CBOR.decodeWord8
+      case tag of
+        188  -> GenesisVerificationKeyShelley <$> decodeShelleyVerificationKeyGenesis
+        _  -> cborError $ DecoderErrorUnknownTag "GenesisVerificationKey" tag
+
+
+decodeShelleyVerificationKeyGenesis :: Decoder s ShelleyGenesisVerificationKey
+decodeShelleyVerificationKeyGenesis = VKey <$> decodeVerKeyDSIGN
+
+genesisVerificationKeyToCBOR :: GenesisVerificationKey -> ByteString
+genesisVerificationKeyToCBOR pk =
+  CBOR.serializeEncoding' $
+    case pk of
+      GenesisVerificationKeyShelley vk ->
+        mconcat
+          [ toCBOR (188 :: Word8)
+          , encodeShelleyVerificationKeyGenesis vk
+          ]
+
+encodeShelleyVerificationKeyGenesis :: ShelleyGenesisVerificationKey -> Encoding
+encodeShelleyVerificationKeyGenesis (VKey vk) = encodeVerKeyDSIGN vk
 
 paymentVerificationKeyFromCBOR :: ByteString -> Either ApiError PaymentVerificationKey
 paymentVerificationKeyFromCBOR =

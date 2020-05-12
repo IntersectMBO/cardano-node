@@ -5,18 +5,22 @@ module Cardano.CLI.Shelley.Run.Node
 import           Cardano.Prelude
 
 import           Control.Monad.Trans.Except (ExceptT)
-import           Control.Monad.Trans.Except.Extra (firstExceptT)
+import           Control.Monad.Trans.Except.Extra (firstExceptT, newExceptT)
+
+import           Cardano.Api (GenesisVerificationKey(..), EpochNo,
+                  ShelleyPParamsUpdate, Update (..), createShelleyUpdateProposal,
+                  hashKey, readGenesisVerificationKey, writeUpdate)
 
 import           Cardano.Config.Shelley.ColdKeys hiding (writeSigningKey)
 import           Cardano.Config.Shelley.KES
 import           Cardano.Config.Shelley.OCert
 import           Cardano.Config.Shelley.VRF
+
 import           Cardano.Config.Types (SigningKeyFile(..))
 
 import           Cardano.CLI.Errors (CliError(..))
 import           Cardano.CLI.Shelley.Commands
 import           Cardano.CLI.Shelley.KeyGen
-
 
 runNodeCmd :: NodeCmd -> ExceptT CliError IO ()
 runNodeCmd (NodeKeyGenCold vk sk ctr) = runNodeKeyGenCold vk sk ctr
@@ -24,6 +28,8 @@ runNodeCmd (NodeKeyGenKES  vk sk)     = runNodeKeyGenKES  vk sk
 runNodeCmd (NodeKeyGenVRF  vk sk)     = runNodeKeyGenVRF  vk sk
 runNodeCmd (NodeIssueOpCert vk sk ctr p out) =
   runNodeIssueOpCert vk sk ctr p out
+runNodeCmd (NodeUpdateProposal out eNo genVKeys ppUp) = runNodeUpdateProposal out eNo genVKeys ppUp
+
 
 
 --
@@ -98,3 +104,21 @@ runNodeIssueOpCert (VerificationKeyFile vkeyKESPath)
       writeOperationalCertIssueCounter ocertCtrPath (succ issueNumber)
       writeOperationalCert certFile cert vkey
 
+runNodeUpdateProposal
+  :: OutputFile
+  -> EpochNo
+  -> [VerificationKeyFile]
+  -- ^ Genesis verification keys
+  -> ShelleyPParamsUpdate
+  -> ExceptT CliError IO ()
+runNodeUpdateProposal (OutputFile upFile) eNo genVerKeyFiles upPprams = do
+  genVKeys <- mapM
+                (\(VerificationKeyFile fp) -> do
+                  GenesisVerificationKeyShelley gvk <-
+                    firstExceptT CardanoApiError $ newExceptT $ readGenesisVerificationKey fp
+                  pure gvk
+                )
+                genVerKeyFiles
+  let genKeyHashes = map hashKey genVKeys
+      upProp = ShelleyUpdate $ createShelleyUpdateProposal eNo genKeyHashes upPprams
+  firstExceptT CardanoApiError . newExceptT $ writeUpdate upFile upProp

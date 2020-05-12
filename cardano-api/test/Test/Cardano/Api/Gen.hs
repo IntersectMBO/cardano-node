@@ -6,6 +6,7 @@
 module Test.Cardano.Api.Gen
   ( genAddress
   , genCertificate
+  , genGenesisVerificationKey
   , genNetwork
   , genNetworkMagic
   , genPaymentVerificationKey
@@ -53,7 +54,7 @@ import           Shelley.Spec.Ledger.Coin (Coin (..))
 import           Shelley.Spec.Ledger.Crypto
 import           Shelley.Spec.Ledger.Keys (KeyHash, SignKeyVRF, VerKeyVRF,
                    VKey(..), hash, hashKey)
-import           Shelley.Spec.Ledger.PParams (ProposedPPUpdates(..), PParamsUpdate,
+import           Shelley.Spec.Ledger.PParams (PParamsUpdate,
                    PParams'(..), ProtVer(..))
 import           Shelley.Spec.Ledger.Slot (EpochNo(..))
 import           Shelley.Spec.Ledger.TxData
@@ -275,10 +276,9 @@ genUpdate :: Gen Update
 genUpdate = do
   eNo <- genEpochNoShelly
   pps <- genPParamsUpdate
-  gKeyHash <- genKeyHash
+  gKeyHashes <- Gen.list (Range.linear 1 8) genKeyHash
 
-  let genHashUpMap  = ProposedPPUpdates $ Map.fromList [(gKeyHash, pps)]
-  return . ShelleyUpdate $ createShelleyUpdateProposal eNo genHashUpMap
+  return . ShelleyUpdate $ createShelleyUpdateProposal eNo gKeyHashes pps
 
 genNonce :: Gen Nonce
 genNonce =
@@ -332,6 +332,13 @@ genUnitInterval :: Gen UnitInterval
 genUnitInterval =
   UnsafeUnitInterval
     <$> Gen.realFrac_ (Range.linearFrac 0 1)
+
+genGenesisVerificationKey :: Gen GenesisVerificationKey
+genGenesisVerificationKey = genGenesisVerificationKeyShelley
+
+genGenesisVerificationKeyShelley :: Gen GenesisVerificationKey
+genGenesisVerificationKeyShelley =
+  getGenesisVerificationKey <$> genSigningKeyShelley
 
 genPaymentVerificationKey :: Gen PaymentVerificationKey
 genPaymentVerificationKey =

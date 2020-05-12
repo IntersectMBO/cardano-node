@@ -29,6 +29,7 @@ module Cardano.Config.Types
     , TraceConstraints
     , SocketPath (..)
     , Update (..)
+    , UpdateProposalFile (..)
     , ViewMode (..)
     , Fd (..)
     , parseNodeConfiguration
@@ -158,9 +159,12 @@ instance FromJSON GenesisFile where
 -- Encompasses staking certificates, stake pool certificates,
 -- genesis delegate certificates and MIR certificates.
 newtype CertificateFile = CertificateFile
-  { unCertificate :: FilePath }
-  deriving newtype Show
-  deriving Eq
+  { unCertificateFile :: FilePath }
+  deriving newtype (Eq, Show)
+
+newtype UpdateProposalFile = UpdateProposalFile
+  { unUpdateProposalFile :: FilePath }
+  deriving newtype (Eq, Show)
 
 newtype SocketPath = SocketPath
   { unSocketPath :: FilePath }

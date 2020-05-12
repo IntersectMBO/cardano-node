@@ -18,6 +18,7 @@ module Cardano.Api.Types
   , toNetworkMagic
   , toByronNetworkMagic
   , SigningKey (..)
+  , GenesisVerificationKey (..)
   , PaymentVerificationKey (..)
   , StakingVerificationKey (..)
   , Certificate (..)
@@ -29,6 +30,7 @@ module Cardano.Api.Types
   , TxIx
   , TxOut (..)
   , Update (..)
+  , EpochNo (..)
   , SlotNo (..)
   , Lovelace (..)
 
@@ -56,11 +58,13 @@ module Cardano.Api.Types
   , ShelleyGenesisVerificationHash
   , ShelleyMIRCertificate
   , ShelleyMIRMap
+  , ShelleyPParamsUpdate
   , ShelleyStakePoolMargin
   , ShelleyStakePoolCertificate
   , ShelleyStakePoolMetaData
   , ShelleyStakePoolOwners
   , ShelleyStakePoolRelay
+  , ShelleyUpdate
   , ShelleyVerificationKeyPayment
   , ShelleyVerificationKeyHashStaking
   , ShelleyVerificationKeyHashStakePool
@@ -96,7 +100,7 @@ import           Data.Vector (Vector)
 
 import           Cardano.Config.Orphanage ()
 
-import           Cardano.Slotting.Slot (SlotNo (..))
+import           Cardano.Slotting.Slot (SlotNo (..), EpochNo (..))
 import           Ouroboros.Network.Magic (NetworkMagic(..))
 
 import qualified Cardano.Crypto.Hash.Class   as Crypto
@@ -132,6 +136,8 @@ type ShelleyCertificate                  = Shelley.DCert Shelley.TPraosStandardC
 type ShelleyCoin                         = Shelley.Coin
 type ShelleyCredentialStaking            = Shelley.Credential Shelley.Staking Shelley.TPraosStandardCrypto
 type ShelleyCredentialStakePool          = Shelley.Credential Shelley.StakePool Shelley.TPraosStandardCrypto
+type ShelleyUpdate                       = Shelley.Update Shelley.TPraosStandardCrypto
+type ShelleyPParamsUpdate                = Shelley.PParamsUpdate
 type ShelleyVerificationKeyPayment       = Shelley.VKey Shelley.Payment Shelley.TPraosStandardCrypto
 type ShelleyVerificationKeyStaking       = Shelley.VKey Shelley.Staking Shelley.TPraosStandardCrypto
 type ShelleyVerificationKeyStakePool     = Shelley.VKey Shelley.StakePool Shelley.TPraosStandardCrypto
@@ -196,6 +202,13 @@ data SigningKey
   = SigningKeyByron   !ByronSigningKey
   | SigningKeyShelley !ShelleySigningKey
   deriving (Generic, NFData, Show)
+  deriving anyclass NoUnexpectedThunks
+
+-- | A verification key for use in genesis.
+--
+data GenesisVerificationKey
+  = GenesisVerificationKeyShelley !ShelleyGenesisVerificationKey
+  deriving (Eq, Generic, NFData, Show)
   deriving anyclass NoUnexpectedThunks
 
 -- | A verification key for use in addresses (payment).

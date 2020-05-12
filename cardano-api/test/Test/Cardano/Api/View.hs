@@ -33,6 +33,13 @@ prop_roundtrip_CertificateShelley_view =
     addr <- H.forAll genCertificate
     H.tripping addr renderCertificateView parseCertificateView
 
+prop_roundtrip_GenesisVerificationKey_view :: Property
+prop_roundtrip_GenesisVerificationKey_view =
+  H.property $ do
+    pk <- H.forAll genGenesisVerificationKey
+    H.tripping pk renderGenesisVerificationKeyView parseGenesisVerificationKeyView
+
+
 prop_roundtrip_SigningKey_view :: Property
 prop_roundtrip_SigningKey_view =
   H.property $ do

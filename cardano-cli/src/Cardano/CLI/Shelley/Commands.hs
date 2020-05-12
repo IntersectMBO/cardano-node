@@ -41,7 +41,7 @@ import           Cardano.Slotting.Slot (EpochNo (..))
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
 
 import           Cardano.Config.Types
-                  (NodeAddress, SigningKeyFile(..), CertificateFile (..))
+                  (NodeAddress, SigningKeyFile(..), CertificateFile (..), UpdateProposalFile(..))
 import           Cardano.Config.Shelley.OCert (KESPeriod(..))
 
 
@@ -87,7 +87,7 @@ data StakeAddressCmd
 
 
 data TransactionCmd
-  = TxBuildRaw [TxIn] [TxOut] SlotNo Lovelace TxBodyFile [CertificateFile]
+  = TxBuildRaw [TxIn] [TxOut] SlotNo Lovelace TxBodyFile [CertificateFile] (Maybe UpdateProposalFile)
   | TxSign TxBodyFile [SigningKeyFile] Network TxFile
   | TxWitness       -- { transaction :: Transaction, key :: PrivKeyFile, nodeAddr :: NodeAddress }
   | TxSignWitness   -- { transaction :: Transaction, witnesses :: [Witness], nodeAddr :: NodeAddress }
@@ -111,8 +111,8 @@ data NodeCmd
   | NodeKeyGenVRF  VerificationKeyFile SigningKeyFile
   | NodeIssueOpCert VerificationKeyFile SigningKeyFile OpCertCounterFile
                     KESPeriod OutputFile
+  | NodeUpdateProposal OutputFile EpochNo [VerificationKeyFile] ShelleyPParamsUpdate
   deriving (Eq, Show)
-
 
 data PoolCmd
   = PoolKeyGen VerificationKeyFile SigningKeyFile
@@ -248,4 +248,3 @@ newtype TxFile
 newtype VerificationKeyFile
   = VerificationKeyFile FilePath
   deriving (Eq, Show)
-
