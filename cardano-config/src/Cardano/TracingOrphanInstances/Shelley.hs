@@ -334,7 +334,10 @@ instance ToObject (PredicateFailure (OCERT c)) where
              ]
   toObject _verb NoCounterForKeyHashOCERT =
     mkObject [ "kind" .= String "NoCounterForKeyHashOCERT" ]
-
+  toObject _verb TESToffByOneBeforeOCERT =
+    mkObject [ "kind" .= String "TESToffByOneBeforeOCERT" ]
+  toObject _verb TESToffByOneAfterOCERT =
+    mkObject [ "kind" .= String "TESToffByOneAfterOCERT" ]
 
 instance ToObject (PredicateFailure (UPDN c)) where
   toObject _verb x = case x of {} -- no constructors
