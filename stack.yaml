@@ -157,4 +157,4 @@ extra-deps:
         - http-client
 
 nix:
-    shell-file: nix/stack-shell.nix
+    shell-file: nix/ci/stack-shell.nix

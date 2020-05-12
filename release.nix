@@ -103,7 +103,7 @@ let
 
   jobs = {
     inherit dockerImageArtifact;
-    cardano-node-win64 = import ./nix/windows-release.nix {
+    cardano-node-win64 = import ./nix/ci/windows-release.nix {
       inherit pkgs project;
       cardano-node = jobs.x86_64-w64-mingw32.cardano-node.x86_64-linux;
       chairman = jobs.x86_64-w64-mingw32.chairman.x86_64-linux;

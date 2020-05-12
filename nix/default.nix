@@ -30,14 +30,14 @@ let
 
         # commonLib: mix pkgs.lib with iohk-nix utils and our own:
         commonLib = lib // iohkNix // iohkNix.cardanoLib
-          // import ./util.nix { inherit haskell-nix; }
+          // import ./ci/util.nix { inherit haskell-nix; }
           # also expose our sources, nixpkgs and overlays
           // { inherit overlays sources nixpkgs; };
 
         svcLib = import ./svclib.nix { inherit pkgs; };
       })
       # And, of course, our haskell-nix-ified cabal project:
-      (import ./pkgs.nix)
+      (import ./ci/pkgs.nix)
     ];
 
   pkgs = import nixpkgs {
