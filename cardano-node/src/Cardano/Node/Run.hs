@@ -28,6 +28,7 @@ import           Control.Tracer
 import qualified Data.ByteString.Char8 as BSC
 import           Data.Either (partitionEithers)
 import           Data.Functor.Contravariant (contramap)
+import           Data.IORef (IORef, newIORef)
 import qualified Data.List as List (lookup, null)
 import           Data.Proxy (Proxy (..))
 import           Data.Semigroup ((<>))
@@ -122,11 +123,9 @@ runNode loggingLayer npm@NodeCLI{protocolFiles} = do
         Left err -> putTextLn (renderProtocolInstantiationError err) >> exitFailure
         Right (SomeConsensusProtocol p) -> pure $ SomeConsensusProtocol p
 
-    txsProcessedCounter :: MVar Integer <- newMVar 0
+    bcCounters :: IORef BlockchainCounters <- newIORef initialBlockchainCounters
 
-    tracers <- mkTracers (ncTraceConfig nc) trace txsProcessedCounter
-
-    txsProcessedThread <- Async.async $ traceTxsProcessed (appendName "metrics" trace) txsProcessedCounter 0
+    tracers <- mkTracers (ncTraceConfig nc) trace bcCounters
 
 #ifdef UNIX
     let viewmode = ncViewMode nc
@@ -141,7 +140,6 @@ runNode loggingLayer npm@NodeCLI{protocolFiles} = do
 
         handleSimpleNode p trace tracers npm (const $ pure ())
         Async.uninterruptibleCancel upTimeThread
-        Async.uninterruptibleCancel txsProcessedThread
 
       LiveView   -> do
 #ifdef UNIX
@@ -172,31 +170,15 @@ runNode loggingLayer npm@NodeCLI{protocolFiles} = do
                        (setNodeKernel be)
         setNodeThread be nodeThread
 
-        void $ Async.waitAny [nodeThread, upTimeThread, txsProcessedThread]
+        void $ Async.waitAny [nodeThread, upTimeThread]
 #else
         handleSimpleNode p trace tracers npm (const $ pure ())
         Async.uninterruptibleCancel upTimeThread
-        Async.uninterruptibleCancel txsProcessedThread
 #endif
   where
     hostname = do
       hn0 <- pack <$> getHostName
       return $ take 8 $ fst $ breakOn "." hn0
-
--- | The node sends the number of processed transactions, every second (if needed).
-traceTxsProcessed
-  :: Trace IO Text
-  -> MVar Integer
-  -> Integer
-  -> IO ()
-traceTxsProcessed tr txsProcessedCounter txsNum = do
-  txsProcessed <- readMVar txsProcessedCounter
-  -- To avoid tracing the same number of processed transactions, check if it changed.
-  when (txsProcessed /= txsNum) $ do
-    meta <- mkLOMeta Notice Public
-    traceNamedObject tr (meta, LogValue "txsProcessedNum" (PureI txsProcessed))
-  threadDelay 1000000
-  traceTxsProcessed tr txsProcessedCounter txsProcessed
 
 -- | The node sends its real up time, every second.
 traceNodeUpTime

@@ -1,6 +1,7 @@
 {-# LANGUAGE ConstraintKinds       #-}
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE LambdaCase            #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns        #-}
 {-# LANGUAGE OverloadedStrings     #-}
@@ -12,9 +13,11 @@
 {-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
 
 module Cardano.Tracing.Tracers
-  ( Tracers (..)
+  ( BlockchainCounters
+  , Tracers (..)
   , TraceConstraints
   , TraceConfig
+  , initialBlockchainCounters
   , mkTracers
   , nullTracers
   ) where
@@ -27,6 +30,7 @@ import           Control.Tracer
 
 import           Codec.CBOR.Read (DeserialiseFailure)
 import           Data.Functor.Contravariant (contramap)
+import           Data.IORef (IORef, atomicModifyIORef')
 import           Data.Text (Text, pack)
 import           Network.Mux (MuxTrace, WithMuxBearer)
 import qualified Network.Socket as Socket (SockAddr)
@@ -223,6 +227,16 @@ instance (StandardHash header, Eq peer) => ElidingTracer
           traceWith (toLogObject' tverb tr) ev
       return (Just ev, count + 1)
 
+-- | This structure stores counters of blockchain-related events.
+--   These values will be traced periodically.
+data BlockchainCounters = BlockchainCounters
+  { bcTxsProcessedNum :: !Word64
+  , bcBlocksForgedNum :: !Word64
+  }
+
+initialBlockchainCounters :: BlockchainCounters
+initialBlockchainCounters = BlockchainCounters 0 0
+
 -- | Smart constructor of 'NodeTraces'.
 --
 mkTracers
@@ -235,9 +249,9 @@ mkTracers
      )
   => TraceConfig
   -> Trace IO Text
-  -> MVar Integer
+  -> IORef BlockchainCounters
   -> IO (Tracers peer localPeer blk)
-mkTracers traceConf tracer txsProcessedCounter = do
+mkTracers traceConf tracer bcCounters = do
   -- We probably don't want to pay the extra IO cost per-counter-increment. -- sk
   staticMetaCC <- mkLOMeta Critical Confidential
   let name :: LoggerName = "metrics.Forge"
@@ -413,18 +427,27 @@ mkTracers traceConf tracer txsProcessedCounter = do
         meta <- mkLOMeta Critical Confidential
         traceNamedObject tr' (meta, logValue1)
         traceNamedObject tr' (meta, logValue2)
- 
-        case mempoolEvent of
-          TraceMempoolRemoveTxs txs _ ->
-            -- TraceMempoolRemoveTxs are previously valid transactions that are no longer valid because of
-            -- changes in the ledger state. These transactions are already removed from the mempool,
-            -- so we can treat them as completely processed.
-            modifyMVar_ txsProcessedCounter $ \counter -> return $ counter + fromIntegral (length txs)
-          _ -> return ()
+
+    notifyTxsProcessed :: Tracer IO (TraceEventMempool blk)
+    notifyTxsProcessed = Tracer $ \case
+      TraceMempoolRemoveTxs [] _ -> return ()
+      TraceMempoolRemoveTxs txs _ -> do
+        -- TraceMempoolRemoveTxs are previously valid transactions that are no longer valid because of
+        -- changes in the ledger state. These transactions are already removed from the mempool,
+        -- so we can treat them as completely processed.
+        newCounter <- atomicModifyIORef' bcCounters $ \counters ->
+          let nc = bcTxsProcessedNum counters + fromIntegral (length txs)
+          in (counters { bcTxsProcessedNum = nc }, nc)
+        meta <- mkLOMeta Notice Public
+        traceNamedObject (appendName "metrics" tracer)
+                         (meta, LogValue "txsProcessedNum" (PureI $ fromIntegral newCounter))
+      -- The rest of the constructors.
+      _ -> return ()
 
     mempoolTracer :: TraceConfig -> Tracer IO (TraceEventMempool blk)
     mempoolTracer tc = Tracer $ \ev -> do
         traceWith (mempoolMetricsTraceTransformer tracer) ev
+        traceWith (notifyTxsProcessed) ev
         traceWith (measureTxsStart tracer) ev
         let tr = appendName "Mempool" tracer
         traceWith (mpTracer tr) ev
@@ -438,6 +461,7 @@ mkTracers traceConf tracer txsProcessedCounter = do
         -> Tracer IO (Consensus.TraceForgeEvent blk (GenTx blk))
     forgeTracer forgeTracers tc = Tracer $ \ev -> do
         traceWith (measureTxsEnd tracer) ev
+        traceWith (notifyBlockForging) ev
         traceWith (consensusForgeTracer) ev
       where
         -- The consensus tracer.
@@ -445,6 +469,17 @@ mkTracers traceConf tracer txsProcessedCounter = do
           $ annotateSeverity
           $ teeForge forgeTracers (traceConfigVerbosity tc)
           $ appendName "Forge" tracer
+
+        notifyBlockForging = Tracer $ \case
+          Consensus.TraceForgedBlock _ _ _ _ -> do
+            newCounter <- atomicModifyIORef' bcCounters $ \counters ->
+              let nc = bcBlocksForgedNum counters + 1
+              in (counters { bcBlocksForgedNum = nc }, nc)
+            meta <- mkLOMeta Notice Public
+            traceNamedObject (appendName "metrics" tracer)
+                             (meta, LogValue "blocksForgedNum" (PureI $ fromIntegral newCounter))
+          -- The rest of the constructors.
+          _ -> pure ()
 
     teeForge
       :: ForgeTracers
