@@ -15,7 +15,8 @@ module Test.Cardano.Api.Gen
   , genTxSignedByron
   , genTxUnsigned
   , genTxUnsignedByron
-  , genVerificationKey
+  , genPaymentVerificationKey
+  , genStakingVerificationKey
   , genVerificationKeyAddressByron
   , genVerificationKeyAddressShelley
   , genVerificationKeyShelleyStakePool
@@ -246,28 +247,37 @@ genTxUnsignedShelley =
       pure $ TxBody (Set.fromList []) (StrictSeq.fromList []) (StrictSeq.fromList [])
                 (Wdrl $ Map.fromList []) (Coin coin) (SlotNo slot) SNothing SNothing
 
-genVerificationKey :: Gen VerificationKey
-genVerificationKey =
+genPaymentVerificationKey :: Gen PaymentVerificationKey
+genPaymentVerificationKey =
   Gen.choice
-    [ genVerificationKeyByron
-    , genVerificationKeyShelley
+    [ genPaymentVerificationKeyByron
+    , genPaymentVerificationKeyShelley
     ]
+
+genStakingVerificationKey :: Gen StakingVerificationKey
+genStakingVerificationKey =
+  getStakingVerificationKey <$> genSigningKeyShelley
 
 genVerificationKeyAddressByron :: Gen Address
 genVerificationKeyAddressByron =
-  byronVerificationKeyAddress <$> genVerificationKeyByron <*> genNetwork
+  byronVerificationKeyAddress <$> genPaymentVerificationKeyByron <*> genNetwork
 
 genVerificationKeyAddressShelley :: Gen Address
 genVerificationKeyAddressShelley =
-  shelleyVerificationKeyAddress <$> genVerificationKeyShelley <*> genNetwork
+  shelleyVerificationKeyAddress
+    <$> genPaymentVerificationKeyShelley
+    <*> Gen.choice
+          [ pure Nothing
+          , Just <$> genStakingVerificationKey
+          ]
 
-genVerificationKeyByron :: Gen VerificationKey
-genVerificationKeyByron =
-  getVerificationKey <$> genSigningKeyByron
+genPaymentVerificationKeyByron :: Gen PaymentVerificationKey
+genPaymentVerificationKeyByron =
+  getPaymentVerificationKey <$> genSigningKeyByron
 
-genVerificationKeyShelley :: Gen VerificationKey
-genVerificationKeyShelley =
-  getVerificationKey <$> genSigningKeyShelley
+genPaymentVerificationKeyShelley :: Gen PaymentVerificationKey
+genPaymentVerificationKeyShelley =
+  getPaymentVerificationKey <$> genSigningKeyShelley
 
 genVerificationKeyShelleyStakePool :: Gen ShelleyVerificationKeyStakePool
 genVerificationKeyShelleyStakePool = do

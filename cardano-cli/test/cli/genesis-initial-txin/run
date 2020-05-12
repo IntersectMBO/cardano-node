@@ -8,20 +8,12 @@ cwd=$(dirname "$0")
 # shellcheck disable=SC2154
 banner "${testname}"
 
+setup_data_dir "${testname}"
+
 error=0
 
-# Create the genesis json file and required keys.
-${CARDANO_CLI} shelley genesis key-gen-utxo \
-    --verification-key-file "${TEST_DIR}/genesis-utxo.vkey" \
-    --signing-key-file "${TEST_DIR}/genesis-utxo.skey"
-fail_on_error $?
-
-# tree "${TEST_DIR}"
-
-assert_file_exists "${TEST_DIR}/genesis-utxo.vkey"
-
 ${CARDANO_CLI} shelley genesis initial-txin \
-    --verification-key-file "${TEST_DIR}/genesis-utxo.vkey" \
+    --verification-key-file "${DATA_DIR}/genesis-utxo.vkey" \
     > "${TEST_DIR}/utxo-hash.hex"
 fail_on_error $?
 

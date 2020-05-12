@@ -17,7 +17,8 @@ module Cardano.Api.Types
   , NetworkMagic (..)
   , toNetworkMagic
   , SigningKey (..)
-  , VerificationKey (..)
+  , PaymentVerificationKey (..)
+  , StakingVerificationKey (..)
   , Certificate (..)
   , TxSigned (..)
   , TxUnsigned (..)
@@ -58,7 +59,7 @@ module Cardano.Api.Types
   , ShelleyStakePoolMetaData
   , ShelleyStakePoolOwners
   , ShelleyStakePoolRelay
-  , ShelleyVerificationKey
+  , ShelleyVerificationKeyPayment
   , ShelleyVerificationKeyHashStaking
   , ShelleyVerificationKeyHashStakePool
   , ShelleyVerificationKeyStakePool
@@ -128,7 +129,7 @@ type ShelleyCertificate                  = Shelley.DCert Shelley.TPraosStandardC
 type ShelleyCoin                         = Shelley.Coin
 type ShelleyCredentialStaking            = Shelley.Credential Shelley.Staking Shelley.TPraosStandardCrypto
 type ShelleyCredentialStakePool          = Shelley.Credential Shelley.StakePool Shelley.TPraosStandardCrypto
-type ShelleyVerificationKey              = Shelley.VKey Shelley.Payment Shelley.TPraosStandardCrypto
+type ShelleyVerificationKeyPayment       = Shelley.VKey Shelley.Payment Shelley.TPraosStandardCrypto
 type ShelleyVerificationKeyStaking       = Shelley.VKey Shelley.Staking Shelley.TPraosStandardCrypto
 type ShelleyVerificationKeyStakePool     = Shelley.VKey Shelley.StakePool Shelley.TPraosStandardCrypto
 type ShelleyVerificationKeyHashStaking   = Shelley.KeyHash Shelley.Staking Shelley.TPraosStandardCrypto
@@ -164,6 +165,8 @@ type ShelleyRewardAccount                = Shelley.RewardAcnt Shelley.TPraosStan
 data Address
   = AddressByron !ByronAddress
   | AddressShelley !ShelleyAddress
+  | AddressShelleyReward !ShelleyRewardAccount
+    -- ^ The Shelley reward account is not a UTxO
   deriving (Eq, Generic , NFData, Show)  -- Byron.Address' needs NFData
   deriving NoUnexpectedThunks via UseIsNormalForm Address
 
@@ -192,13 +195,22 @@ data SigningKey
   deriving (Generic, NFData, Show)
   deriving anyclass NoUnexpectedThunks
 
--- | A verification key for use in addresses (payment and stake).
+-- | A verification key for use in addresses (payment).
 --
 -- Verification keys are also commonly known as \"public keys\".
 --
-data VerificationKey
-  = VerificationKeyByron !ByronVerificationKey
-  | VerificationKeyShelley !ShelleyVerificationKey
+data PaymentVerificationKey
+  = PaymentVerificationKeyByron !ByronVerificationKey
+  | PaymentVerificationKeyShelley !ShelleyVerificationKeyPayment
+  deriving (Generic, NFData, Show)
+  deriving anyclass NoUnexpectedThunks
+
+-- | A verification key for use in addresses (staking).
+--
+-- Verification keys are also commonly known as \"public keys\".
+--
+data StakingVerificationKey
+  = StakingVerificationKeyShelley !ShelleyVerificationKeyStaking
   deriving (Generic, NFData, Show)
   deriving anyclass NoUnexpectedThunks
 
@@ -245,6 +257,8 @@ toByronTxOut (TxOut (AddressByron addr) value) =
     Byron.TxOut addr (toByronLovelace value)
 toByronTxOut (TxOut (AddressShelley _) _) =
     panic "TODO: toByronTxOut AddressShelley"
+toByronTxOut (TxOut (AddressShelleyReward _) _) =
+    panic "TODO: toByronTxOut AddressShelleyReward"
 
 toShelleyTxIn :: TxIn -> ShelleyTxIn
 toShelleyTxIn (TxIn txid txix) =
@@ -253,6 +267,8 @@ toShelleyTxIn (TxIn txid txix) =
 toShelleyTxOut :: TxOut -> ShelleyTxOut
 toShelleyTxOut (TxOut (AddressShelley addr) value) =
     Shelley.TxOut addr (toShelleyLovelace value)
+toShelleyTxOut (TxOut (AddressShelleyReward _) _) =
+    panic "toShelleyTxOut AddressShelleyReward - Reward addresses are not UTxO addresses"
 toShelleyTxOut (TxOut (AddressByron _) _) =
     panic "TODO: toShelleyTxOut convert byron address to Shelley bootstrap address"
 

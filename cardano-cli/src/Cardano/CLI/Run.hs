@@ -160,7 +160,7 @@ runIssueDelegationCertificate
         -> ExceptT CliError IO ()
 runIssueDelegationCertificate configFp epoch issuerSK delegateVK cert = do
   nc <- liftIO $ parseNodeConfigurationFP configFp
-  vk <- readVerificationKey delegateVK
+  vk <- readPaymentVerificationKey delegateVK
   sk <- readEraSigningKey (ncCardanoEra nc) issuerSK
   pmId <- readProtocolMagicId $ ncGenesisFile nc
   let byGenDelCert :: Delegation.Certificate
@@ -173,8 +173,8 @@ runCheckDelegation
         -> ExceptT CliError IO ()
 runCheckDelegation configFp cert issuerVF delegateVF = do
   nc <- liftIO $ parseNodeConfigurationFP configFp
-  issuerVK <- readVerificationKey issuerVF
-  delegateVK <- readVerificationKey delegateVF
+  issuerVK <- readPaymentVerificationKey issuerVF
+  delegateVK <- readPaymentVerificationKey delegateVF
   pmId <- readProtocolMagicId $ ncGenesisFile nc
   checkByronGenesisDelegation cert pmId issuerVK delegateVK
 

@@ -17,7 +17,7 @@ ${CARDANO_CLI} shelley address key-gen \
 assert_file_exists "${TEST_DIR}/address.vkey"
 assert_file_exists "${TEST_DIR}/address.skey"
 
-assert_string 'VerificationKeyShelley' "${TEST_DIR}/address.vkey"
+assert_string 'PaymentVerificationKeyShelley' "${TEST_DIR}/address.vkey"
 assert_string 'SigningKeyShelley' "${TEST_DIR}/address.skey"
 
 report_result ${error}

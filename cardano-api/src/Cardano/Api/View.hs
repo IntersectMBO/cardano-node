@@ -2,9 +2,9 @@ module Cardano.Api.View
   ( parseAddressView
   , parseCertificateView
   , parseSigningKeyView
-  , parseVerificationKeyView
+  , parsePaymentVerificationKeyView
+  , parseStakingVerificationKeyView
   , parseVerificationKeyStakePoolView
-  , parseVerificationKeyStakingView
   , parseVerificationKeyVRFView
   , parseTxSignedView
   , parseTxUnsignedView
@@ -12,19 +12,19 @@ module Cardano.Api.View
   , readAddress
   , readCertificate
   , readSigningKey
-  , readVerificationKey
+  , readPaymentVerificationKey
+  , readStakingVerificationKey
   , readVRFVerificationKey
   , readVerificationKeyStakePool
-  , readVerificationKeyStaking
   , readTxSigned
   , readTxUnsigned
 
   , renderAddressView
   , renderCertificateView
   , renderSigningKeyView
-  , renderVerificationKeyView
+  , renderPaymentVerificationKeyView
   , renderVerificationKeyStakePoolView
-  , renderVerificationKeyStakingView
+  , renderStakingVerificationKeyView
   , renderVerificationKeyVRFView
   , renderTxSignedView
   , renderTxUnsignedView
@@ -32,9 +32,9 @@ module Cardano.Api.View
   , writeAddress
   , writeCertificate
   , writeSigningKey
-  , writeVerificationKey
+  , writePaymentVerificationKey
   , writeVerificationKeyStakePool
-  , writeVerificationKeyStaking
+  , writeStakingVerificationKey
   , writeVRFVerificationKey
   , writeTxSigned
   , writeTxUnsigned
@@ -69,9 +69,13 @@ parseSigningKeyView :: ByteString -> Either ApiError SigningKey
 parseSigningKeyView bs =
   signingKeyFromCBOR . tvRawCBOR =<< first ApiTextView (parseTextView bs)
 
-parseVerificationKeyView :: ByteString -> Either ApiError VerificationKey
-parseVerificationKeyView bs =
-  verificationKeyFromCBOR . tvRawCBOR =<< first ApiTextView (parseTextView bs)
+parsePaymentVerificationKeyView :: ByteString -> Either ApiError PaymentVerificationKey
+parsePaymentVerificationKeyView bs =
+  paymentVerificationKeyFromCBOR . tvRawCBOR =<< first ApiTextView (parseTextView bs)
+
+parseStakingVerificationKeyView :: ByteString -> Either ApiError StakingVerificationKey
+parseStakingVerificationKeyView bs =
+  stakingVerificationKeyFromCBOR . tvRawCBOR =<< first ApiTextView (parseTextView bs)
 
 parseVRFVerificationKeyView :: ByteString -> Either ApiError ShelleyVRFVerificationKey
 parseVRFVerificationKeyView bs =
@@ -80,10 +84,6 @@ parseVRFVerificationKeyView bs =
 parseVerificationKeyStakePoolView :: ByteString -> Either ApiError ShelleyVerificationKeyStakePool
 parseVerificationKeyStakePoolView bs =
   verificationKeyStakePoolFromCBOR . tvRawCBOR =<< first ApiTextView (parseTextView bs)
-
-parseVerificationKeyStakingView :: ByteString -> Either ApiError ShelleyVerificationKeyStaking
-parseVerificationKeyStakingView bs =
-  verificationKeyStakingFromCBOR . tvRawCBOR =<< first ApiTextView (parseTextView bs)
 
 parseVerificationKeyVRFView :: ByteString -> Either ApiError ShelleyVRFVerificationKey
 parseVerificationKeyVRFView bs =
@@ -103,6 +103,7 @@ renderAddressView addr =
   case addr of
     AddressByron {} -> renderTextView $ TextView "AddressByron" "Free form text" cbor
     AddressShelley {} -> renderTextView $ TextView "AddressShelley" "Free form text" cbor
+    AddressShelleyReward {} -> renderTextView $ TextView "AddressShelleyRewardAccount" "Free form text" cbor
   where
     cbor :: ByteString
     cbor = addressToCBOR addr
@@ -128,21 +129,25 @@ renderSigningKeyView kp =
     cbor :: ByteString
     cbor = signingKeyToCBOR kp
 
-renderVerificationKeyView :: VerificationKey -> ByteString
-renderVerificationKeyView pk =
+renderPaymentVerificationKeyView :: PaymentVerificationKey -> ByteString
+renderPaymentVerificationKeyView pk =
   case pk of
-    VerificationKeyByron {} -> renderTextView $ TextView "VerificationKeyByron" "Free form text" cbor
-    VerificationKeyShelley {} -> renderTextView $ TextView "VerificationKeyShelley" "Free form text" cbor
+    PaymentVerificationKeyByron {} ->
+      renderTextView $ TextView "PaymentVerificationKeyByron" "Free form text" cbor
+    PaymentVerificationKeyShelley {} ->
+      renderTextView $ TextView "PaymentVerificationKeyShelley" "Free form text" cbor
   where
     cbor :: ByteString
-    cbor = verificationKeyToCBOR pk
+    cbor = paymentVerificationKeyToCBOR pk
 
-renderVerificationKeyStakingView :: ShelleyVerificationKeyStaking -> ByteString
-renderVerificationKeyStakingView vk =
-    renderTextView $ TextView "VerificationKeyStakingShelley" "Free form text" cbor
+renderStakingVerificationKeyView :: StakingVerificationKey -> ByteString
+renderStakingVerificationKeyView svk =
+  case svk of
+    StakingVerificationKeyShelley {} ->
+      renderTextView $ TextView "StakingVerificationKeyShelley" "Free form text" cbor
   where
     cbor :: ByteString
-    cbor = verificationKeyStakingToCBOR vk
+    cbor = stakingVerificationKeyToCBOR svk
 
 renderVerificationKeyStakePoolView :: ShelleyVerificationKeyStakePool -> ByteString
 renderVerificationKeyStakePoolView vk =
@@ -197,11 +202,17 @@ readSigningKey path =
     bs <- handleIOExceptT (ApiErrorIO path) $ BS.readFile path
     hoistEither $ parseSigningKeyView bs
 
-readVerificationKey :: FilePath -> IO (Either ApiError VerificationKey)
-readVerificationKey path =
+readPaymentVerificationKey :: FilePath -> IO (Either ApiError PaymentVerificationKey)
+readPaymentVerificationKey path =
   runExceptT $ do
     bs <- handleIOExceptT (ApiErrorIO path) $ BS.readFile path
-    hoistEither $ parseVerificationKeyView bs
+    hoistEither $ parsePaymentVerificationKeyView bs
+
+readStakingVerificationKey :: FilePath -> IO (Either ApiError StakingVerificationKey)
+readStakingVerificationKey path =
+  runExceptT $ do
+    bs <- handleIOExceptT (ApiErrorIO path) $ BS.readFile path
+    hoistEither $ parseStakingVerificationKeyView bs
 
 readVRFVerificationKey :: FilePath -> IO (Either ApiError ShelleyVRFVerificationKey)
 readVRFVerificationKey path =
@@ -214,12 +225,6 @@ readVerificationKeyStakePool path =
   runExceptT $ do
     bs <- handleIOExceptT (ApiErrorIO path) $ BS.readFile path
     hoistEither $ parseVerificationKeyStakePoolView bs
-
-readVerificationKeyStaking :: FilePath -> IO (Either ApiError ShelleyVerificationKeyStaking)
-readVerificationKeyStaking path =
-  runExceptT $ do
-    bs <- handleIOExceptT (ApiErrorIO path) $ BS.readFile path
-    hoistEither $ parseVerificationKeyStakingView bs
 
 readTxSigned :: FilePath -> IO (Either ApiError TxSigned)
 readTxSigned path =
@@ -248,15 +253,15 @@ writeSigningKey path kp =
   runExceptT .
     handleIOExceptT (ApiErrorIO path) $ BS.writeFile path (renderSigningKeyView kp)
 
-writeVerificationKey :: FilePath -> VerificationKey -> IO (Either ApiError ())
-writeVerificationKey path kp =
+writePaymentVerificationKey :: FilePath -> PaymentVerificationKey -> IO (Either ApiError ())
+writePaymentVerificationKey path kp =
   runExceptT .
-    handleIOExceptT (ApiErrorIO path) $ BS.writeFile path (renderVerificationKeyView kp)
+    handleIOExceptT (ApiErrorIO path) $ BS.writeFile path (renderPaymentVerificationKeyView kp)
 
-writeVerificationKeyStaking :: FilePath -> ShelleyVerificationKeyStaking -> IO (Either ApiError ())
-writeVerificationKeyStaking path kp =
+writeStakingVerificationKey :: FilePath -> StakingVerificationKey -> IO (Either ApiError ())
+writeStakingVerificationKey path kp =
   runExceptT .
-    handleIOExceptT (ApiErrorIO path) $ BS.writeFile path (renderVerificationKeyStakingView kp)
+    handleIOExceptT (ApiErrorIO path) $ BS.writeFile path (renderStakingVerificationKeyView kp)
 
 writeVRFVerificationKey :: FilePath -> ShelleyVRFVerificationKey -> IO (Either ApiError ())
 writeVRFVerificationKey path kp =

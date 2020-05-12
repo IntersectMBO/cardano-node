@@ -15,11 +15,11 @@ import           Cardano.Prelude hiding (option, trace)
 import qualified Data.Set as Set
 
 import           Cardano.Api (ShelleyCoin, ShelleyStakePoolMargin, ShelleyStakePoolRelay, SigningKey(..),
-                   mkShelleyStakingCredential, readVerificationKeyStaking,
+                   StakingVerificationKey (..), mkShelleyStakingCredential, readStakingVerificationKey,
                    readVerificationKeyStakePool, shelleyDeregisterStakingAddress,
                    shelleyDelegateStake, shelleyRegisterStakePool,
                    shelleyRegisterStakingAddress, shelleyRetireStakePool, writeCertificate,
-                   writeSigningKey, writeVerificationKeyStakePool, writeVerificationKeyStaking)
+                   writeSigningKey, writeVerificationKeyStakePool, writeStakingVerificationKey)
 
 import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, newExceptT)
@@ -193,7 +193,9 @@ runNodeIssueOpCert (VerificationKeyFile vkeyKESPath)
 runNodeStakingKeyGen :: VerificationKeyFile -> SigningKeyFile -> ExceptT CliError IO ()
 runNodeStakingKeyGen (VerificationKeyFile vkFp) (SigningKeyFile skFp) = do
   (vkey, skey) <- liftIO genKeyPair
-  firstExceptT CardanoApiError . newExceptT $ writeVerificationKeyStaking vkFp vkey
+  firstExceptT CardanoApiError
+    . newExceptT
+    $ writeStakingVerificationKey vkFp (StakingVerificationKeyShelley vkey)
   --TODO: writeSigningKey should really come from Cardano.Config.Shelley.ColdKeys
   firstExceptT CardanoApiError . newExceptT $ writeSigningKey skFp (SigningKeyShelley skey)
 
@@ -210,7 +212,8 @@ runNodeStakePoolKeyGen (VerificationKeyFile vkFp) (SigningKeyFile skFp) = do
 
 runStakeKeyRegistrationCert :: VerificationKeyFile -> OutputFile -> ExceptT CliError IO ()
 runStakeKeyRegistrationCert (VerificationKeyFile vkFp) (OutputFile oFp) = do
-  stakeVkey <- firstExceptT CardanoApiError . newExceptT $ readVerificationKeyStaking vkFp
+  StakingVerificationKeyShelley stakeVkey <-
+    firstExceptT CardanoApiError . newExceptT $ readStakingVerificationKey vkFp
   let regCert = shelleyRegisterStakingAddress (hashKey stakeVkey)
   firstExceptT CardanoApiError . newExceptT $ writeCertificate oFp regCert
 
@@ -222,14 +225,16 @@ runStakeKeyDelegationCert
   -> OutputFile
   -> ExceptT CliError IO ()
 runStakeKeyDelegationCert (VerificationKeyFile stkKey) (VerificationKeyFile poolVKey) (OutputFile outFp) = do
-  stakeVkey <- firstExceptT CardanoApiError . newExceptT $ readVerificationKeyStaking stkKey
+  StakingVerificationKeyShelley stakeVkey <-
+    firstExceptT CardanoApiError . newExceptT $ readStakingVerificationKey stkKey
   poolStakeVkey <- firstExceptT CardanoApiError . newExceptT $ readVerificationKeyStakePool poolVKey
   let delegCert = shelleyDelegateStake (hashKey stakeVkey) (hashKey poolStakeVkey)
   firstExceptT CardanoApiError . newExceptT $ writeCertificate outFp delegCert
 
 runStakeKeyDeRegistrationCert :: VerificationKeyFile -> OutputFile -> ExceptT CliError IO ()
 runStakeKeyDeRegistrationCert (VerificationKeyFile vkFp) (OutputFile oFp) = do
-  stakeVkey <- firstExceptT CardanoApiError . newExceptT $ readVerificationKeyStaking vkFp
+  StakingVerificationKeyShelley stakeVkey <-
+    firstExceptT CardanoApiError . newExceptT $ readStakingVerificationKey vkFp
   let deRegCert = shelleyDeregisterStakingAddress (hashKey stakeVkey)
   firstExceptT CardanoApiError . newExceptT $ writeCertificate oFp deRegCert
 
@@ -277,11 +282,19 @@ runStakePoolRegistrationCert
     vrfVerKey <- firstExceptT VRFCliError $ readVRFVerKey vrfVkeyFp
 
     -- Pool reward account
-    rewardAcctVerKey <- firstExceptT CardanoApiError . newExceptT $ readVerificationKeyStaking rwdVerFp
+    StakingVerificationKeyShelley rewardAcctVerKey <-
+      firstExceptT CardanoApiError . newExceptT $ readStakingVerificationKey rwdVerFp
     let rewardAccount = Shelley.mkRwdAcnt . mkShelleyStakingCredential $ hashKey rewardAcctVerKey
 
     -- Pool owner(s)
-    sPoolOwnerVkeys <-  mapM (\(VerificationKeyFile fp) -> firstExceptT CardanoApiError $ newExceptT $ readVerificationKeyStaking fp) ownerVerFps
+    sPoolOwnerVkeys <-
+      mapM
+        (\(VerificationKeyFile fp) -> do
+          StakingVerificationKeyShelley svk <-
+            firstExceptT CardanoApiError $ newExceptT $ readStakingVerificationKey fp
+          pure svk
+        )
+        ownerVerFps
     let stakePoolOwners = Set.fromList $ map hashKey sPoolOwnerVkeys
 
     let registrationCert = shelleyRegisterStakePool

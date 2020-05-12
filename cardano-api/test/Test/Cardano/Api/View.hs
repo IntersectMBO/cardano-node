@@ -39,23 +39,23 @@ prop_roundtrip_SigningKey_view =
     kp <- H.forAll genSigningKey
     H.tripping kp renderSigningKeyView parseSigningKeyView
 
-prop_roundtrip_VerificationKey_view :: Property
-prop_roundtrip_VerificationKey_view =
+prop_roundtrip_PaymentVerificationKey_view :: Property
+prop_roundtrip_PaymentVerificationKey_view =
   H.property $ do
-    pk <- H.forAll genVerificationKey
-    H.tripping pk renderVerificationKeyView parseVerificationKeyView
+    pk <- H.forAll genPaymentVerificationKey
+    H.tripping pk renderPaymentVerificationKeyView parsePaymentVerificationKeyView
+
+prop_roundtrip_StakingVerificationKey_view :: Property
+prop_roundtrip_StakingVerificationKey_view =
+  H.property $ do
+    pk <- H.forAll genStakingVerificationKey
+    H.tripping pk renderStakingVerificationKeyView parseStakingVerificationKeyView
 
 prop_roundtrip_VerificationKeyStakePool_view :: Property
 prop_roundtrip_VerificationKeyStakePool_view =
   H.property $ do
     pk <- H.forAll genVerificationKeyShelleyStakePool
     H.tripping pk renderVerificationKeyStakePoolView parseVerificationKeyStakePoolView
-
-prop_roundtrip_VerificationKeyStaking_view :: Property
-prop_roundtrip_VerificationKeyStaking_view =
-  H.property $ do
-    pk <- H.forAll genVerificationKeyShelleyStaking
-    H.tripping pk renderVerificationKeyStakingView parseVerificationKeyStakingView
 
 prop_roundtrip_VerificationKeyVRF_view :: Property
 prop_roundtrip_VerificationKeyVRF_view =

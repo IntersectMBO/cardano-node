@@ -11,8 +11,8 @@ main = do
   BS.putStrLn $ renderSigningKeyView sk
 
   -- Could also be 'Testnet x'.
-  let vk = getVerificationKey sk
-  BS.putStrLn $ renderVerificationKeyView vk
+  let vk = getPaymentVerificationKey sk
+  BS.putStrLn $ renderPaymentVerificationKeyView vk
 
   let addr = byronVerificationKeyAddress vk Mainnet
   BS.putStrLn $ renderAddressView addr

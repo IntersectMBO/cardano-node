@@ -12,12 +12,29 @@ setup_data_dir "${testname}"
 
 error=0
 
-${CARDANO_CLI} shelley address build \
-    --verification-key-file "${DATA_DIR}/address.vkey" \
-    > "${TEST_DIR}/address.hex"
+${CARDANO_CLI} shelley address build-staking \
+    --payment-verification-key-file "${DATA_DIR}/payment.vkey" \
+    --staking-verification-key-file "${DATA_DIR}/staking.vkey" \
+    > "${TEST_DIR}/staking-address.hex"
 fail_on_error $?
 
-assert_file_exists "${TEST_DIR}/address.hex"
-assert_line_count 1 "${TEST_DIR}/address.hex"
+assert_file_exists "${TEST_DIR}/staking-address.hex"
+assert_line_count 1 "${TEST_DIR}/staking-address.hex"
+
+${CARDANO_CLI} shelley address build-reward \
+    --staking-verification-key-file "${DATA_DIR}/staking.vkey" \
+    > "${TEST_DIR}/reward-address.hex"
+fail_on_error $?
+
+assert_file_exists "${TEST_DIR}/reward-address.hex"
+assert_line_count 1 "${TEST_DIR}/reward-address.hex"
+
+${CARDANO_CLI} shelley address build-enterprise \
+    --payment-verification-key-file "${DATA_DIR}/payment.vkey" \
+    > "${TEST_DIR}/enterprise-address.hex"
+fail_on_error $?
+
+assert_file_exists "${TEST_DIR}/enterprise-address.hex"
+assert_line_count 1 "${TEST_DIR}/enterprise-address.hex"
 
 report_result ${error}
