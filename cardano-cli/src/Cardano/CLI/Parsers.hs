@@ -22,14 +22,14 @@ parseClientCommand =
     ]
 
 parseByron :: Parser ClientCommand
-parseByron = ByronCommand <$> parseByronCommands
-{-
+parseByron =
+  fmap ByronCommand $
   subparser $ mconcat
     [ commandGroup "Byron specific commands"
     , metavar "Byron specific commands"
-    , ByronCommand <$> parseByronCommands
+    , parseByronCommands
     ]
--}
+
 parseShelley :: Parser ClientCommand
 parseShelley =
   subparser $ mconcat

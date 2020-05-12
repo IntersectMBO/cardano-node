@@ -75,9 +75,9 @@ import           Cardano.Common.Parsers
                     command', parseFlag')
 
 
-parseByronCommands :: Parser ByronCommand
+parseByronCommands :: Mod CommandFields ByronCommand
 parseByronCommands =
-  asum
+  mconcat
     [ parseNode
     , parseGenesisRelatedValues
     , parseKeyRelatedValues
@@ -88,11 +88,9 @@ parseByronCommands =
     ]
 
 
-parseNode :: Parser ByronCommand
-parseNode =  subparser $ mconcat
-    [ commandGroup "Byron node related commands"
-    , metavar "Byron node related commands"
-    , Opt.command "byron"
+parseNode :: Mod CommandFields ByronCommand
+parseNode = mconcat
+    [ Opt.command "byron"
         (Opt.info (NodeCmd <$> pNodeCmd) $ Opt.progDesc "Byron node operation commands")
 
     ]
@@ -123,12 +121,10 @@ parseCBORObject = asum
      <> help "The CBOR file is a byron era vote"
   ]
 
-parseDelegationRelatedValues :: Parser ByronCommand
+parseDelegationRelatedValues :: Mod CommandFields ByronCommand
 parseDelegationRelatedValues =
-  subparser $ mconcat
-    [ commandGroup "Delegation related commands"
-    , metavar "Delegation related commands"
-    , command'
+  mconcat
+    [ command'
         "issue-delegation-certificate"
         "Create a delegation certificate allowing the\
         \ delegator to sign blocks on behalf of the issuer"
@@ -190,12 +186,10 @@ parseGenesisParameters =
             "Optionally specify the seed of generation."
         )
 
-parseGenesisRelatedValues :: Parser ByronCommand
+parseGenesisRelatedValues :: Mod CommandFields ByronCommand
 parseGenesisRelatedValues =
-  subparser $ mconcat
-    [ commandGroup "Genesis related commands"
-    , metavar "Genesis related commands"
-    , command' "genesis" "Create genesis."
+  mconcat
+    [ command' "genesis" "Create genesis."
       $ Genesis
           <$> parseNewDirectory
               "genesis-output-dir"
@@ -209,12 +203,10 @@ parseGenesisRelatedValues =
 
 -- | Values required to create keys and perform
 -- transformation on keys.
-parseKeyRelatedValues :: Parser ByronCommand
+parseKeyRelatedValues :: Mod CommandFields ByronCommand
 parseKeyRelatedValues =
-  subparser $ mconcat
-        [ commandGroup "Key related commands"
-        , metavar "Key related commands"
-        , command' "keygen" "Generate a signing key."
+    mconcat
+        [ command' "keygen" "Generate a signing key."
             $ Keygen
                 <$> parseCardanoEra
                 <*> parseNewSigningKeyFile "secret"
@@ -256,22 +248,18 @@ parseKeyRelatedValues =
                 <*> parseCardanoEra -- New CardanoEra
                 <*> parseNewSigningKeyFile "to"
         ]
-parseLocalNodeQueryValues :: Parser ByronCommand
+parseLocalNodeQueryValues :: Mod CommandFields ByronCommand
 parseLocalNodeQueryValues =
-  subparser $ mconcat
-        [ commandGroup "Local node related commands"
-        , metavar "Local node related commands"
-        , command' "get-tip" "Get the tip of your local node's blockchain"
+    mconcat
+        [ command' "get-tip" "Get the tip of your local node's blockchain"
             $ GetLocalNodeTip
                 <$> (ConfigYamlFilePath <$> parseConfigFile)
                 <*> optional (parseSocketPath "Socket of target node")
         ]
 
-parseMiscellaneous :: Parser ByronCommand
-parseMiscellaneous = subparser $ mconcat
-  [ commandGroup "Miscellaneous commands"
-  , metavar "Miscellaneous commands"
-  , command'
+parseMiscellaneous :: Mod CommandFields ByronCommand
+parseMiscellaneous = mconcat
+  [ command'
       "validate-cbor"
       "Validate a CBOR blockchain object."
       $ ValidateCBOR
@@ -325,12 +313,10 @@ parseTxOut =
       <> metavar "ADDR:LOVELACE"
       <> help "Specify a transaction output, as a pair of an address and lovelace."
 
-parseTxRelatedValues :: Parser ByronCommand
+parseTxRelatedValues :: Mod CommandFields ByronCommand
 parseTxRelatedValues =
-  subparser $ mconcat
-    [ commandGroup "Transaction related commands"
-    , metavar "Transaction related commands"
-    , command'
+  mconcat
+    [ command'
         "submit-tx"
         "Submit a raw, signed transaction, in its on-wire representation."
         $ SubmitTx
