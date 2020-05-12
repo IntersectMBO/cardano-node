@@ -8,32 +8,14 @@
 {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 
 module Cardano.CLI.Shelley.Run.Genesis
-  ( runGenesisCreate
-  , runGenesisAddr
-  , runGenesisTxIn
+  ( runGenesisCmd
   ) where
 
 import           Cardano.Prelude
 
-import           Cardano.Api hiding (writeAddress)
---TODO: prefer versions from Cardano.Api where possible
-
-import           Cardano.Config.Shelley.Address (ShelleyAddress)
-import           Cardano.Config.Shelley.ColdKeys (KeyRole (..), OperatorKeyRole (..),
-                    readVerKey)
-
-import           Cardano.CLI.Ops (CliError (..))
-import           Cardano.CLI.Shelley.Run.KeyGen (runGenesisKeyGenDelegate, runGenesisKeyGenGenesis,
-                    runGenesisKeyGenUTxO)
-import           Cardano.CLI.Shelley.Parsers (GenesisDir (..), OpCertCounterFile (..),
-                    SigningKeyFile (..), VerificationKeyFile (..))
-import           Cardano.Config.Shelley.Genesis
-
-import           Control.Monad.Trans.Except (ExceptT)
-import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistEither)
-
 import qualified Data.Aeson as Aeson
 import           Data.Aeson.Encode.Pretty (encodePretty)
+import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import           Data.Char (isDigit)
 import qualified Data.List as List
@@ -43,6 +25,15 @@ import qualified Data.Text as Text
 import qualified Data.Text.IO as Text
 import           Data.Time.Clock (NominalDiffTime, UTCTime, addUTCTime, getCurrentTime)
 
+import           System.Directory (createDirectoryIfMissing, listDirectory)
+import           System.FilePath ((</>), takeExtension)
+import           System.IO.Error (isDoesNotExistError)
+
+import           Control.Monad.Trans.Except (ExceptT)
+import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistEither)
+
+import           Cardano.Api hiding (writeAddress)
+--TODO: prefer versions from Cardano.Api where possible
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
 import           Ouroboros.Consensus.Shelley.Protocol (TPraosStandardCrypto)
 
@@ -54,19 +45,78 @@ import           Shelley.Spec.Ledger.Coin (Coin (..))
 import qualified Shelley.Spec.Ledger.Keys as Ledger
 import qualified Shelley.Spec.Ledger.TxData as Shelley
 
-import           System.Directory (createDirectoryIfMissing, listDirectory)
-import           System.FilePath ((</>), takeExtension)
-import           System.IO.Error (isDoesNotExistError)
+import           Cardano.Config.Shelley.Address (ShelleyAddress)
+import           Cardano.Config.Shelley.ColdKeys (KeyRole (..), OperatorKeyRole (..),
+                    readVerKey)
+import           Cardano.Config.Shelley.Genesis
+import           Cardano.Config.Shelley.ColdKeys
+import           Cardano.Config.Shelley.OCert
+
+import           Cardano.CLI.Shelley.Commands
+import           Cardano.CLI.Ops (CliError (..))
+import           Cardano.CLI.Shelley.KeyGen (runColdKeyGen)
 
 
+runGenesisCmd :: GenesisCmd -> ExceptT CliError IO ()
+runGenesisCmd (GenesisKeyGenGenesis vk sk) = runGenesisKeyGenGenesis vk sk
+runGenesisCmd (GenesisKeyGenDelegate vk sk ctr) = runGenesisKeyGenDelegate vk sk ctr
+runGenesisCmd (GenesisKeyGenUTxO vk sk) = runGenesisKeyGenUTxO vk sk
+runGenesisCmd (GenesisKeyHash vk) = runGenesisKeyHash vk
+runGenesisCmd (GenesisVerKey vk sk) = runGenesisVerKey vk sk
+runGenesisCmd (GenesisTxIn vk) = runGenesisTxIn vk
+runGenesisCmd (GenesisAddr vk) = runGenesisAddr vk
+runGenesisCmd (GenesisCreate gd gn un ms am) = runGenesisCreate gd gn un ms am
 
-runGenesisAddr :: VerificationKeyFile -> ExceptT CliError IO ()
-runGenesisAddr (VerificationKeyFile vkeyPath) =
+--
+-- Genesis command implementations
+--
+
+runGenesisKeyGenGenesis :: VerificationKeyFile -> SigningKeyFile
+                        -> ExceptT CliError IO ()
+runGenesisKeyGenGenesis = runColdKeyGen GenesisKey
+
+
+runGenesisKeyGenDelegate :: VerificationKeyFile
+                         -> SigningKeyFile
+                         -> OpCertCounterFile
+                         -> ExceptT CliError IO ()
+runGenesisKeyGenDelegate vkeyPath skeyPath (OpCertCounterFile ocertCtrPath) = do
+    runColdKeyGen (OperatorKey GenesisDelegateKey) vkeyPath skeyPath
+    firstExceptT OperationalCertError $
+      writeOperationalCertIssueCounter ocertCtrPath initialCounter
+  where
+    initialCounter = 0
+
+
+runGenesisKeyGenUTxO :: VerificationKeyFile -> SigningKeyFile
+                     -> ExceptT CliError IO ()
+runGenesisKeyGenUTxO = runColdKeyGen GenesisUTxOKey
+
+
+runGenesisKeyHash :: VerificationKeyFile -> ExceptT CliError IO ()
+runGenesisKeyHash (VerificationKeyFile vkeyPath) =
     firstExceptT KeyCliError $ do
-      vkey <- readVerKey GenesisUTxOKey vkeyPath
-      let addr = shelleyVerificationKeyAddress
-                   (PaymentVerificationKeyShelley vkey) Nothing
-      liftIO $ Text.putStrLn $ addressToHex addr
+      (vkey, _role) <- readVerKeySomeRole genesisKeyRoles vkeyPath
+      let Ledger.KeyHash khash = Ledger.hashKey (vkey :: VerKey Ledger.Genesis)
+      liftIO $ BS.putStrLn $ Crypto.getHashBytesAsHex khash
+
+
+runGenesisVerKey :: VerificationKeyFile -> SigningKeyFile
+                 -> ExceptT CliError IO ()
+runGenesisVerKey (VerificationKeyFile vkeyPath) (SigningKeyFile skeyPath) =
+    firstExceptT KeyCliError $ do
+      (skey, role) <- readSigningKeySomeRole genesisKeyRoles skeyPath
+      let vkey :: VerKey Ledger.Genesis
+          vkey = deriveVerKey skey
+      writeVerKey role vkeyPath vkey
+
+
+genesisKeyRoles :: [KeyRole]
+genesisKeyRoles =
+  [ GenesisKey
+  , GenesisUTxOKey
+  , OperatorKey GenesisDelegateKey
+  ]
 
 
 runGenesisTxIn :: VerificationKeyFile -> ExceptT CliError IO ()
@@ -87,6 +137,19 @@ runGenesisTxIn (VerificationKeyFile vkeyPath) =
     fromShelleyTxId (Shelley.TxId (Crypto.UnsafeHash h)) =
         TxId (Crypto.UnsafeHash h)
 
+
+runGenesisAddr :: VerificationKeyFile -> ExceptT CliError IO ()
+runGenesisAddr (VerificationKeyFile vkeyPath) =
+    firstExceptT KeyCliError $ do
+      vkey <- readVerKey GenesisUTxOKey vkeyPath
+      let addr = shelleyVerificationKeyAddress
+                   (PaymentVerificationKeyShelley vkey) Nothing
+      liftIO $ Text.putStrLn $ addressToHex addr
+
+
+--
+-- Create Genesis command implementation
+--
 
 runGenesisCreate :: GenesisDir
                  -> Word  -- ^ num genesis & delegate keys to make
@@ -186,7 +249,6 @@ readShelleyGenesis fpath = do
 
 
 -- Local type aliases
-type VerKey r              = Ledger.VKey r TPraosStandardCrypto
 type VerKeyGenesis         = VerKey Ledger.Genesis
 type VerKeyGenesisDelegate = VerKey Ledger.GenesisDelegate
 
