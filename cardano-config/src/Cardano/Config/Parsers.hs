@@ -1,10 +1,11 @@
 {-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 
 {-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
 
-module Cardano.Common.Parsers
+module Cardano.Config.Parsers
   ( command'
   , nodeCLIParser
   , parseConfigFile

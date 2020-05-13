@@ -29,6 +29,7 @@ library
                        Cardano.Config.Logging
                        Cardano.Config.Mock.Protocol
                        Cardano.Config.Orphanage
+                       Cardano.Config.Parsers
                        Cardano.Config.Protocol
                        Cardano.Config.Shelley.Address
                        Cardano.Config.Shelley.ColdKeys
@@ -41,6 +42,7 @@ library
                        Cardano.Config.Shelley.VRF
                        Cardano.Config.TextView
                        Cardano.Config.Topology
+                       Cardano.Config.TopHandler
                        Cardano.Config.TraceConfig
                        Cardano.Config.Types
                        Cardano.TracingOrphanInstances.Byron

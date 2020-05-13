@@ -24,8 +24,6 @@ library
 
   exposed-modules:     Cardano.Chairman
                        Cardano.Common.Help
-                       Cardano.Common.Parsers
-                       Cardano.Common.TopHandler
                        Cardano.Node.Features.Node
                        Cardano.Node.Run
                        Cardano.Node.Shutdown

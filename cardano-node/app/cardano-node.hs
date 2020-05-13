@@ -22,8 +22,8 @@ import           Cardano.Shell.Types (CardanoApplication (..),
                                       CardanoFeature (..))
 
 import           Cardano.Common.Help
-import           Cardano.Common.TopHandler
-import           Cardano.Common.Parsers
+import           Cardano.Config.TopHandler
+import           Cardano.Config.Parsers
 import           Cardano.Config.Logging (createLoggingFeature)
 import           Cardano.Config.Types
 import           Cardano.Node.Features.Node

@@ -59,6 +59,10 @@ import           Cardano.Chain.UTxO (TxId, TxIn(..), TxOut(..))
 
 import           Cardano.Api (Network(..), NetworkMagic(..))
 import           Cardano.Config.Types
+import           Cardano.Config.Parsers
+                   (parseIntegral, parseFraction, parseLovelace, readDouble,
+                    parseFilePath,  parseConfigFile, parseSigningKeyFile,
+                    parseGenesisFile, command', parseFlag')
 
 import           Cardano.CLI.Byron.Commands
 import           Cardano.CLI.Byron.UpdateProposal
@@ -66,11 +70,6 @@ import           Cardano.CLI.Byron.Genesis
 import           Cardano.CLI.Byron.Key
 import           Cardano.CLI.Byron.Tx
 import           Cardano.CLI.Ops (CardanoEra(..))
-
-import           Cardano.Common.Parsers
-                   (parseIntegral, parseFraction, parseLovelace, readDouble,
-                    parseFilePath,  parseConfigFile, parseSigningKeyFile,
-                    parseGenesisFile, command', parseFlag')
 
 
 parseByronCommands :: Mod CommandFields ByronCommand
