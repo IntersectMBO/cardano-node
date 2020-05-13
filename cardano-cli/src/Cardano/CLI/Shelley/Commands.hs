@@ -43,7 +43,6 @@ import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
 import           Cardano.Config.Types
                   (NodeAddress, SigningKeyFile(..), CertificateFile (..))
 import           Cardano.Config.Shelley.OCert (KESPeriod(..))
-import           Cardano.CLI.Key (VerificationKeyFile(..))
 
 
 --
@@ -246,3 +245,8 @@ newtype TxBodyFile
 newtype TxFile
   = TxFile FilePath
   deriving (Eq, Show)
+
+newtype VerificationKeyFile
+  = VerificationKeyFile FilePath
+  deriving (Eq, Show)
+

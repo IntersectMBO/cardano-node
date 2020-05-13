@@ -19,11 +19,10 @@ import           Control.Monad.Trans.Except.Extra (firstExceptT)
 
 import qualified Shelley.Spec.Ledger.Keys as Ledger
 
-import           Cardano.CLI.Key (VerificationKeyFile(..))
+import           Cardano.CLI.Shelley.Commands
 import           Cardano.CLI.Ops (CliError (..))
 
 import           Cardano.Config.Shelley.ColdKeys
-import           Cardano.Config.Types (SigningKeyFile(..))
 
 
 runColdKeyGen :: KeyRole -> VerificationKeyFile -> SigningKeyFile

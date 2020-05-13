@@ -8,7 +8,7 @@
 
 
 
-module Cardano.CLI.Key
+module Cardano.CLI.Byron.Key
   ( -- * Keys
     VerificationKeyFile(..)
   , NewSigningKeyFile(..)

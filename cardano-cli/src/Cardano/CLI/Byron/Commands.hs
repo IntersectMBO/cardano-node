@@ -1,6 +1,12 @@
+{-# LANGUAGE GeneralisedNewtypeDeriving #-}
+
 module Cardano.CLI.Byron.Commands
   ( ByronCommand (..)
-  , NodeCmd(..)
+  , NodeCmd (..)
+  , VerificationKeyFile (..)
+  , NewVerificationKeyFile (..)
+  , CertificateFile (..)
+  , NewCertificateFile (..)
   ) where
 
 import           Cardano.Prelude
@@ -14,11 +20,10 @@ import           Cardano.Config.Types
 
 import           Cardano.CLI.Byron.UpdateProposal
 
-import           Cardano.CLI.Delegation
-import           Cardano.CLI.Genesis
-import           Cardano.CLI.Key
+import           Cardano.CLI.Byron.Genesis
+import           Cardano.CLI.Byron.Key
 import           Cardano.CLI.Ops (CardanoEra(..))
-import           Cardano.CLI.Tx
+import           Cardano.CLI.Byron.Tx
 
 import           Cardano.Chain.Common (Address(..), NetworkMagic(..))
 import           Cardano.Chain.UTxO (TxIn(..), TxOut(..))
@@ -155,4 +160,9 @@ data NodeCmd = CreateVote
                -- ^ Vote filepath.
                (Maybe SocketPath)
               deriving Show
+
+
+newtype NewCertificateFile
+  = NewCertificateFile { nFp :: FilePath }
+  deriving (Eq, Show, IsString)
 

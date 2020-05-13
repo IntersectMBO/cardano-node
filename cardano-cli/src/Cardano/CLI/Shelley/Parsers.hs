@@ -27,7 +27,6 @@ import           Cardano.Slotting.Slot (EpochNo (..))
 
 import           Cardano.Config.Types (SigningKeyFile(..), CertificateFile (..))
 import           Cardano.Config.Shelley.OCert (KESPeriod(..))
-import           Cardano.CLI.Key (VerificationKeyFile(..))
 import           Cardano.Common.Parsers (parseNodeAddress)
 
 import           Cardano.CLI.Shelley.Commands

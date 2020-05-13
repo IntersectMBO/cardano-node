@@ -60,13 +60,12 @@ import           Cardano.Chain.UTxO (TxId, TxIn(..), TxOut(..))
 
 import           Cardano.Config.Types
 
-import           Cardano.CLI.Byron.UpdateProposal
 import           Cardano.CLI.Byron.Commands
-import           Cardano.CLI.Genesis
-import           Cardano.CLI.Key
-import           Cardano.CLI.Delegation
+import           Cardano.CLI.Byron.UpdateProposal
+import           Cardano.CLI.Byron.Genesis
+import           Cardano.CLI.Byron.Key
+import           Cardano.CLI.Byron.Tx
 import           Cardano.CLI.Ops (CardanoEra(..))
-import           Cardano.CLI.Tx
 
 import           Cardano.Common.Parsers
                    (parseIntegral, parseFraction, parseLovelace, readDouble,

@@ -19,7 +19,7 @@ import           Cardano.Chain.Update
                    (AVote(..), UpId, Vote, mkVote, recoverUpId, recoverVoteId)
 import           Cardano.CLI.Byron.UpdateProposal
                    (deserialiseByronUpdateProposal, readByronUpdateProposal)
-import           Cardano.CLI.Key (readEraSigningKey)
+import           Cardano.CLI.Byron.Key (readEraSigningKey)
 import           Cardano.CLI.Ops (CardanoEra(..), ensureNewFileLBS)
 import           Cardano.Crypto.Signing (SigningKey)
 import           Ouroboros.Consensus.Byron.Ledger.Block (ByronBlock)

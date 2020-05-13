@@ -4,11 +4,6 @@ module Cardano.CLI.Byron.Run
 
 import           Cardano.Prelude
 
-import           Cardano.CLI.Byron.Commands
-import           Cardano.CLI.Byron.UpdateProposal
-import           Cardano.CLI.Byron.Vote (runVoteCreation, submitByronVote)
-import           Cardano.CLI.Ops
-
 import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (hoistEither, firstExceptT)
 import           Data.Semigroup ((<>))
@@ -25,12 +20,17 @@ import           Cardano.Chain.UTxO (TxIn, TxOut)
 import qualified Cardano.Crypto.Hashing as Crypto
 import qualified Cardano.Crypto.Signing as Crypto
 
-import           Cardano.CLI.Delegation
-import           Cardano.CLI.Genesis
-import           Cardano.CLI.Key
-import           Cardano.CLI.Tx
 import           Cardano.Common.LocalSocket
 import           Cardano.Config.Types
+
+import           Cardano.CLI.Byron.Commands
+import           Cardano.CLI.Byron.Delegation
+import           Cardano.CLI.Byron.Genesis
+import           Cardano.CLI.Byron.Key
+import           Cardano.CLI.Byron.Tx
+import           Cardano.CLI.Byron.UpdateProposal
+import           Cardano.CLI.Byron.Vote (runVoteCreation, submitByronVote)
+import           Cardano.CLI.Ops
 
 
 runByronClientCommand :: ByronCommand -> ExceptT CliError IO ()

@@ -4,7 +4,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
 
-module Cardano.CLI.Tx
+module Cardano.CLI.Byron.Tx
   ( TxFile(..)
   , NewTxFile(..)
   , prettyAddress

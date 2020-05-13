@@ -18,7 +18,6 @@ import           Cardano.Api (StakingVerificationKey (..),
                    shelleyRegisterStakingAddress, writeCertificate)
 import           Shelley.Spec.Ledger.Keys (hashKey)
 
-import           Cardano.CLI.Key (VerificationKeyFile(..))
 import           Cardano.CLI.Ops (CliError (..))
 import           Cardano.CLI.Shelley.Parsers
 
