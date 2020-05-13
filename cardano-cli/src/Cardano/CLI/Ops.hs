@@ -12,7 +12,6 @@ module Cardano.CLI.Ops
   , ensureNewFile
   , ensureNewFileLBS
   , getGenesisHashText
-  , getAndPrintLocalTip
   , ncCardanoEra
   , pPrintCBOR
   , readCBOR
@@ -24,7 +23,6 @@ module Cardano.CLI.Ops
   , serialisePoorKey
   , serialiseSigningKey
   , validateCBOR
-  , withIOManagerE
   , withRealPBFT
   , CliError(..)
   , RealPBFTError(..)
@@ -46,8 +44,7 @@ import           System.Directory (canonicalizePath, doesPathExist, makeAbsolute
 import qualified Text.JSON.Canonical as CanonicalJSON
 
 import           Cardano.Api
-                   (ApiError, LocalStateQueryError, Network(..), getLocalTip,
-                    renderLocalStateQueryError)
+                   (ApiError, LocalStateQueryError, renderLocalStateQueryError)
 import           Cardano.Binary
                    (Decoder, DecoderError, fromCBOR)
 import           Cardano.Chain.Block (fromCBORABlockOrBoundary)
@@ -61,18 +58,11 @@ import qualified Cardano.Chain.UTxO as UTxO
 import           Cardano.Crypto (SigningKey (..))
 import qualified Cardano.Crypto.Hashing as Crypto
 import           Cardano.Crypto.ProtocolMagic as Crypto
-import           Ouroboros.Consensus.Block (BlockProtocol)
 import           Ouroboros.Consensus.Byron.Ledger (ByronBlock)
 import qualified Ouroboros.Consensus.Cardano as Consensus
-import           Ouroboros.Consensus.Config (configCodec)
-import           Ouroboros.Consensus.Node.ProtocolInfo (ProtocolInfo(..))
 import           Ouroboros.Consensus.Node.Run
                    (RunNode(..))
-import           Ouroboros.Consensus.Util.Condense (Condense(..))
-import           Ouroboros.Network.Block
-import           Ouroboros.Network.NodeToClient (IOManager, withIOManager)
 
-import           Cardano.Common.LocalSocket (chooseSocketPath)
 import           Cardano.Config.Protocol
                    (Protocol(..), ProtocolInstantiationError,
                     SomeConsensusProtocol(..), mkConsensusProtocol,
@@ -407,49 +397,6 @@ withRealPBFT nc action = do
     proto@Consensus.ProtocolRealPBFT{} -> action proto
     _ -> left $ IncorrectProtocolSpecified (ncProtocol nc)
 
---------------------------------------------------------------------------------
--- Query local node's chain tip
---------------------------------------------------------------------------------
-
--- | Get the node's tip, using the local chain sync protocol, and write it to
--- the standard output device.
-getAndPrintLocalTip
-  :: ConfigYamlFilePath
-  -> Maybe SocketPath
-  -> IOManager
-  -> IO ()
-getAndPrintLocalTip configFp mSockPath iomgr = do
-    nc <- parseNodeConfigurationFP configFp
-    sockPath <- return $ chooseSocketPath (ncSocketPath nc) mSockPath
-    frmPtclRes <- runExceptT $ firstExceptT ProtocolError $
-                    mkConsensusProtocol nc Nothing
-
-    --TODO: simplify using the Consensus.ProtocolClient
-    SomeConsensusProtocol (p :: Consensus.Protocol blk (BlockProtocol blk))
-                     <- case frmPtclRes of
-                          Right p -> pure p
-                          Left err -> do putTextLn . toS $ show err
-                                         exitFailure
-
-    let ProtocolInfo{pInfoConfig = ptclcfg} = Consensus.protocolInfo p
-        cfg = configCodec ptclcfg
-        --FIXME: this works, but we should get the magic properly:
-        nm  = Testnet (nodeNetworkMagic (Proxy :: Proxy blk) ptclcfg)
-
-    putTextLn =<< getTipOutput <$> getLocalTip iomgr cfg nm sockPath
-  where
-    getTipOutput :: forall blk. Condense (HeaderHash blk) => Tip blk -> Text
-    getTipOutput (TipGenesis) = "Current tip: genesis (origin)"
-    getTipOutput (Tip slotNo headerHash blkNo) =
-      T.pack $ unlines [ "\n"
-                        , "Current tip: "
-                        , "Block hash: " <> condense headerHash
-                        , "Slot: " <> condense slotNo
-                        , "Block number: " <> condense blkNo
-                        ]
-
 ncCardanoEra :: NodeConfiguration -> CardanoEra
 ncCardanoEra = cardanoEraForProtocol . ncProtocol
 
-withIOManagerE :: (IOManager -> ExceptT e IO a) -> ExceptT e IO a
-withIOManagerE k = ExceptT $ withIOManager (runExceptT . k)

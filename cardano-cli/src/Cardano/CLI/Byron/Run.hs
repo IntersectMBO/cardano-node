@@ -11,6 +11,8 @@ import qualified Data.Text.Lazy.IO as TL
 import qualified Data.Text.Lazy.Builder as Builder
 import qualified Formatting as F
 
+import           Ouroboros.Network.NodeToClient (IOManager, withIOManager)
+
 import qualified Cardano.Chain.Common as Common
 import qualified Cardano.Chain.Delegation as Delegation
 import qualified Cardano.Chain.Genesis as Genesis
@@ -27,6 +29,7 @@ import           Cardano.CLI.Byron.Commands
 import           Cardano.CLI.Byron.Delegation
 import           Cardano.CLI.Byron.Genesis
 import           Cardano.CLI.Byron.Key
+import           Cardano.CLI.Byron.Query
 import           Cardano.CLI.Byron.Tx
 import           Cardano.CLI.Byron.UpdateProposal
 import           Cardano.CLI.Byron.Vote (runVoteCreation, submitByronVote)
@@ -71,10 +74,6 @@ runGenesisCommand :: NewDirectory -> GenesisParameters -> CardanoEra -> ExceptT 
 runGenesisCommand outDir params era = do
   (genData, genSecrets) <- mkGenesis params
   dumpGenesis era outDir genData genSecrets
-
-runGetLocalNodeTip :: ConfigYamlFilePath -> Maybe SocketPath -> ExceptT e IO ()
-runGetLocalNodeTip configFp mSockPath =
-  withIOManagerE $ \iocp -> liftIO $ getAndPrintLocalTip configFp mSockPath iocp
 
 runValidateCBOR :: CBORObject -> FilePath -> ExceptT CliError IO ()
 runValidateCBOR cborObject fp = do
@@ -182,3 +181,6 @@ runSpendUTxO configFp (NewTxFile ctTx) ctKey ins outs = do
     gTx <- firstExceptT IssueUtxoError $
              issueUTxOExpenditure nc ins outs sk
     ensureNewFileLBS ctTx $ toCborTxAux gTx
+
+withIOManagerE :: (IOManager -> ExceptT e IO a) -> ExceptT e IO a
+withIOManagerE k = ExceptT $ withIOManager (runExceptT . k)
