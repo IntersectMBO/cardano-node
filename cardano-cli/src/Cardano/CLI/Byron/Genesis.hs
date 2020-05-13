@@ -1,13 +1,11 @@
 {-# LANGUAGE CPP                        #-}
-{-# LANGUAGE GADTs                      #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
-{-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
 
 #if !defined(mingw32_HOST_OS)
 #define UNIX
 #endif
 
-module Cardano.CLI.Genesis
+module Cardano.CLI.Byron.Genesis
   ( NewDirectory(..)
   , GenesisParameters(..)
   , dumpGenesis
@@ -45,7 +43,8 @@ import           Cardano.Chain.Genesis (GeneratedSecrets(..))
 import           Cardano.Crypto (SigningKey (..))
 import qualified Cardano.Crypto as Crypto
 
-import           Cardano.CLI.Key
+import           Cardano.CLI.Byron.Key
+import           Cardano.CLI.Errors (CliError(..))
 import           Cardano.CLI.Ops
 
 

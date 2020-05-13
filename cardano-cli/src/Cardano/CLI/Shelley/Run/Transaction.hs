@@ -1,7 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE StrictData #-}
-{-# LANGUAGE TypeFamilies #-}
-
 {-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 
 module Cardano.CLI.Shelley.Run.Transaction
@@ -16,7 +12,7 @@ import           Cardano.Config.Shelley.ColdKeys
                    (KeyType(..), KeyRole(..), KeyError(..), renderKeyType)
 import           Cardano.Config.TextView
 import           Cardano.CLI.Environment (readEnvSocketPath)
-import           Cardano.CLI.Ops (CliError (..))
+import           Cardano.CLI.Errors (CliError(..))
 
 import           Cardano.Config.Types
 

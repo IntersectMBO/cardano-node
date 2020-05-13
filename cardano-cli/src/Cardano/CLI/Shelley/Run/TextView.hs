@@ -1,13 +1,11 @@
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE StrictData #-}
-
 module Cardano.CLI.Shelley.Run.TextView
   ( runTextViewCmd
   ) where
 
 import           Cardano.Prelude
 
-import           Cardano.CLI.Ops (CliError (..), pPrintCBOR)
+import           Cardano.CLI.Errors (CliError(..))
+import           Cardano.CLI.Ops (pPrintCBOR)
 import           Cardano.CLI.Shelley.Parsers
 
 import           Cardano.Config.TextView

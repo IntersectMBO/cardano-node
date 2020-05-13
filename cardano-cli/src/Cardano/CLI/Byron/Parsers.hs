@@ -23,64 +23,334 @@ module Cardano.CLI.Byron.Parsers
 import           Cardano.Prelude hiding (option)
 import           Prelude (String)
 
+import           Data.Bifunctor (first, second)
+import qualified Data.List.NonEmpty as NE
 import qualified Data.ByteString.Lazy.Char8 as C8
+import qualified Data.Text as Text
+import           Data.Time (UTCTime)
+import           Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import           Formatting (build, sformat)
+
 import           Options.Applicative
 import qualified Options.Applicative as Opt
 
-import           Cardano.Chain.Common
-                   (TxFeePolicy(..), TxSizeLinear(..), rationalToLovelacePortion)
-import           Cardano.Crypto.Hashing (hashRaw)
-import           Cardano.Chain.Slotting (EpochNumber(..), SlotNumber(..))
-import           Cardano.Chain.Update
-                   (ApplicationName(..), InstallerHash(..), NumSoftwareVersion,
-                    ProtocolVersion(..), SoftforkRule(..), SoftwareVersion(..), SystemTag(..),
-                    checkApplicationName, checkSystemTag)
+import           Cardano.Binary (Annotated(..))
 
-import           Cardano.CLI.Byron.UpdateProposal
-import           Cardano.Common.Parsers
-                   (parseSocketPath, parseConfigFile, parseFilePath,
-                    parseFraction, parseLovelace, parseSigningKeyFile)
+import           Cardano.Crypto.Hashing (hashRaw)
+import           Cardano.Crypto (RequiresNetworkMagic(..), decodeHash)
+import           Cardano.Crypto.ProtocolMagic
+                   (AProtocolMagic(..), ProtocolMagic
+                   , ProtocolMagicId(..))
+
+import           Cardano.Chain.Slotting
+                   (EpochNumber(..), EpochSlots(..), SlotNumber(..))
+import           Cardano.Chain.Common
+                   (Address(..), decodeAddressBase58, 
+                    Lovelace, mkLovelace, rationalToLovelacePortion,
+                    BlockCount(..), NetworkMagic(..),
+                    TxFeePolicy(..), TxSizeLinear(..))
+import           Cardano.Chain.Update
+                   (ApplicationName(..), checkApplicationName, 
+                    InstallerHash(..), NumSoftwareVersion,
+                    ProtocolVersion(..), SoftforkRule(..), SoftwareVersion(..),
+                    SystemTag(..), checkSystemTag)
+import           Cardano.Chain.Genesis
+                   (TestnetBalanceOptions(..), FakeAvvmOptions(..))
+import           Cardano.Chain.UTxO (TxId, TxIn(..), TxOut(..))
+
 import           Cardano.Config.Types
 
-data ByronCommand = NodeCmd NodeCmd deriving Show
+import           Cardano.CLI.Byron.Commands
+import           Cardano.CLI.Byron.UpdateProposal
+import           Cardano.CLI.Byron.Genesis
+import           Cardano.CLI.Byron.Key
+import           Cardano.CLI.Byron.Tx
+import           Cardano.CLI.Ops (CardanoEra(..))
 
-data NodeCmd = CreateVote
-               ConfigYamlFilePath
-               SigningKeyFile
-               FilePath -- filepath to update proposal
-               Bool
-               FilePath
-             | UpdateProposal
-               ConfigYamlFilePath
-               SigningKeyFile
-               ProtocolVersion
-               SoftwareVersion
-               SystemTag
-               InstallerHash
-               FilePath
-               [ParametersToUpdate]
-             | SubmitUpdateProposal
-               ConfigYamlFilePath
-               -- ^ Update proposal filepath.
-               FilePath
-               (Maybe SocketPath)
-             | SubmitVote
-               ConfigYamlFilePath
-               FilePath
-               -- ^ Vote filepath.
-               (Maybe SocketPath)
-              deriving Show
+import           Cardano.Common.Parsers
+                   (parseIntegral, parseFraction, parseLovelace, readDouble,
+                    parseFilePath, parseSocketPath, parseConfigFile,
+                    parseSigningKeyFile, parseGenesisFile,
+                    command', parseFlag')
 
-parseByronCommands :: Parser ByronCommand
-parseByronCommands =  subparser $ mconcat
-    [ commandGroup "Byron related commands"
-    , metavar "Byron related commands"
-    , Opt.command "node"
+
+parseByronCommands :: Mod CommandFields ByronCommand
+parseByronCommands =
+  mconcat
+    [ parseNode
+    , parseGenesisRelatedValues
+    , parseKeyRelatedValues
+    , parseDelegationRelatedValues
+    , parseTxRelatedValues
+    , parseLocalNodeQueryValues
+    , parseMiscellaneous
+    ]
+
+
+parseNode :: Mod CommandFields ByronCommand
+parseNode = mconcat
+    [ Opt.command "byron"
         (Opt.info (NodeCmd <$> pNodeCmd) $ Opt.progDesc "Byron node operation commands")
 
     ]
 
+parseCBORObject :: Parser CBORObject
+parseCBORObject = asum
+  [ CBORBlockByron <$> option auto
+      (  long "byron-block"
+      <> (help $  "The CBOR file is a byron era block."
+               <> " Enter the number of slots in an epoch. The default value is 21600")
+      <> metavar "INT"
+      <> (value $ EpochSlots 21600)
+      )
+
+  , flag' CBORDelegationCertificateByron $
+        long "byron-delegation-certificate"
+     <> help "The CBOR file is a byron era delegation certificate"
+
+  , flag' CBORTxByron $
+        long "byron-tx"
+     <> help "The CBOR file is a byron era tx"
+
+  , flag' CBORUpdateProposalByron $
+        long "byron-update-proposal"
+     <> help "The CBOR file is a byron era update proposal"
+  , flag' CBORVoteByron $
+        long "byron-vote"
+     <> help "The CBOR file is a byron era vote"
+  ]
+
+parseDelegationRelatedValues :: Mod CommandFields ByronCommand
+parseDelegationRelatedValues =
+  mconcat
+    [ command'
+        "issue-delegation-certificate"
+        "Create a delegation certificate allowing the\
+        \ delegator to sign blocks on behalf of the issuer"
+        $ IssueDelegationCertificate
+        <$> (ConfigYamlFilePath <$> parseConfigFile)
+        <*> ( EpochNumber
+                <$> parseIntegral
+                      "since-epoch"
+                      "The epoch from which the delegation is valid."
+              )
+        <*> parseSigningKeyFile
+              "secret"
+              "The issuer of the certificate, who delegates\
+              \ their right to sign blocks."
+        <*> parseVerificationKeyFile
+              "delegate-key"
+              "The delegate, who gains the right to sign block."
+        <*> parseNewCertificateFile "certificate"
+    , command'
+        "check-delegation"
+        "Verify that a given certificate constitutes a valid\
+        \ delegation relationship between keys."
+        $ CheckDelegation
+            <$> (ConfigYamlFilePath <$> parseConfigFile)
+            <*> parseCertificateFile
+                  "certificate"
+                  "The certificate embodying delegation to verify."
+            <*> parseVerificationKeyFile
+                  "issuer-key"
+                  "The genesis key that supposedly delegates."
+            <*> parseVerificationKeyFile
+                  "delegate-key"
+                  "The operation verification key supposedly delegated to."
+      ]
+
+
+-- | Values required to create genesis.
+parseGenesisParameters :: Parser GenesisParameters
+parseGenesisParameters =
+  GenesisParameters
+    <$> parseUTCTime
+          "start-time"
+          "Start time of the new cluster to be enshrined in the new genesis."
+    <*> parseFilePath
+          "protocol-parameters-file"
+          "JSON file with protocol parameters."
+    <*> parseK
+    <*> parseProtocolMagic
+    <*> parseTestnetBalanceOptions
+    <*> parseFakeAvvmOptions
+    <*> (rationalToLovelacePortion <$>
+         parseFractionWithDefault
+          "avvm-balance-factor"
+          "AVVM balances will be multiplied by this factor (defaults to 1)."
+          1)
+    <*> optional
+        ( parseIntegral
+            "secret-seed"
+            "Optionally specify the seed of generation."
+        )
+
+parseGenesisRelatedValues :: Mod CommandFields ByronCommand
+parseGenesisRelatedValues =
+  mconcat
+    [ command' "genesis" "Create genesis."
+      $ Genesis
+          <$> parseNewDirectory
+              "genesis-output-dir"
+              "Non-existent directory where genesis JSON file and secrets shall be placed."
+          <*> parseGenesisParameters
+          <*> parseCardanoEra
+    , command' "print-genesis-hash" "Compute hash of a genesis file."
+        $ PrintGenesisHash
+            <$> parseGenesisFile "genesis-json"
+    ]
+
+-- | Values required to create keys and perform
+-- transformation on keys.
+parseKeyRelatedValues :: Mod CommandFields ByronCommand
+parseKeyRelatedValues =
+    mconcat
+        [ command' "keygen" "Generate a signing key."
+            $ Keygen
+                <$> parseCardanoEra
+                <*> parseNewSigningKeyFile "secret"
+                <*> parseFlag' GetPassword EmptyPassword
+                      "no-password"
+                      "Disable password protection."
+        , command'
+            "to-verification"
+            "Extract a verification key in its base64 form."
+            $ ToVerification
+                <$> parseCardanoEra
+                <*> parseSigningKeyFile
+                      "secret"
+                      "Signing key file to extract the verification part from."
+                <*> parseNewVerificationKeyFile "to"
+        , command'
+            "signing-key-public"
+            "Pretty-print a signing key's verification key (not a secret)."
+            $ PrettySigningKeyPublic
+                <$> parseCardanoEra
+                <*> parseSigningKeyFile
+                      "secret"
+                      "Signing key to pretty-print."
+        , command'
+            "signing-key-address"
+            "Print address of a signing key."
+            $ PrintSigningKeyAddress
+                <$> parseCardanoEra
+                <*> parseNetworkMagic
+                <*> parseSigningKeyFile
+                      "secret"
+                      "Signing key, whose address is to be printed."
+        , command'
+            "migrate-delegate-key-from"
+            "Migrate a delegate key from an older version."
+            $ MigrateDelegateKeyFrom
+                <$> parseCardanoEra -- Old CardanoEra
+                <*> parseSigningKeyFile "from" "Signing key file to migrate."
+                <*> parseCardanoEra -- New CardanoEra
+                <*> parseNewSigningKeyFile "to"
+        ]
+parseLocalNodeQueryValues :: Mod CommandFields ByronCommand
+parseLocalNodeQueryValues =
+    mconcat
+        [ command' "get-tip" "Get the tip of your local node's blockchain"
+            $ GetLocalNodeTip
+                <$> (ConfigYamlFilePath <$> parseConfigFile)
+                <*> optional (parseSocketPath "Socket of target node")
+        ]
+
+parseMiscellaneous :: Mod CommandFields ByronCommand
+parseMiscellaneous = mconcat
+  [ command'
+      "validate-cbor"
+      "Validate a CBOR blockchain object."
+      $ ValidateCBOR
+          <$> parseCBORObject
+          <*> parseFilePath "filepath" "Filepath of CBOR file."
+  , command'
+      "pretty-print-cbor"
+      "Pretty print a CBOR file."
+      $ PrettyPrintCBOR
+          <$> parseFilePath "filepath" "Filepath of CBOR file."
+  ]
+
+
+
+parseTestnetBalanceOptions :: Parser TestnetBalanceOptions
+parseTestnetBalanceOptions =
+  TestnetBalanceOptions
+    <$> parseIntegral
+          "n-poor-addresses"
+          "Number of poor nodes (with small balance)."
+    <*> parseIntegral
+          "n-delegate-addresses"
+          "Number of delegate nodes (with huge balance)."
+    <*> parseLovelace
+          "total-balance"
+          "Total balance owned by these nodes."
+    <*> parseFraction
+          "delegate-share"
+          "Portion of stake owned by all delegates together."
+
+parseTxIn :: Parser TxIn
+parseTxIn =
+  option
+  ( uncurry TxInUtxo
+    . first cliParseTxId
+    <$> auto
+  )
+  $ long "txin"
+    <> metavar "(TXID,INDEX)"
+    <> help "Transaction input is a pair of an UTxO TxId and a zero-based output index."
+
+parseTxOut :: Parser TxOut
+parseTxOut =
+  option
+    ( uncurry TxOut
+      . first cliParseBase58Address
+      . second cliParseLovelace
+      <$> auto
+    )
+    $ long "txout"
+      <> metavar "ADDR:LOVELACE"
+      <> help "Specify a transaction output, as a pair of an address and lovelace."
+
+parseTxRelatedValues :: Mod CommandFields ByronCommand
+parseTxRelatedValues =
+  mconcat
+    [ command'
+        "submit-tx"
+        "Submit a raw, signed transaction, in its on-wire representation."
+        $ SubmitTx
+            <$> parseTxFile "tx"
+            <*> (ConfigYamlFilePath <$> parseConfigFile)
+            <*> optional (parseSocketPath "Socket of target node")
+    , command'
+        "issue-genesis-utxo-expenditure"
+        "Write a file with a signed transaction, spending genesis UTxO."
+        $ SpendGenesisUTxO
+            <$> (ConfigYamlFilePath <$> parseConfigFile)
+            <*> parseNewTxFile "tx"
+            <*> parseSigningKeyFile
+                  "wallet-key"
+                  "Key that has access to all mentioned genesis UTxO inputs."
+            <*> parseAddress
+                  "rich-addr-from"
+                  "Tx source: genesis UTxO richman address (non-HD)."
+            <*> (NE.fromList <$> some parseTxOut)
+
+    , command'
+        "issue-utxo-expenditure"
+        "Write a file with a signed transaction, spending normal UTxO."
+        $ SpendUTxO
+            <$> (ConfigYamlFilePath <$> parseConfigFile)
+            <*> parseNewTxFile "tx"
+            <*> parseSigningKeyFile
+                  "wallet-key"
+                  "Key that has access to all mentioned genesis UTxO inputs."
+            <*> (NE.fromList <$> some parseTxIn)
+            <*> (NE.fromList <$> some parseTxOut)
+      ]
+
+parseVerificationKeyFile :: String -> String -> Parser VerificationKeyFile
+parseVerificationKeyFile opt desc = VerificationKeyFile <$> parseFilePath opt desc
 pNodeCmd :: Parser NodeCmd
 pNodeCmd =
   Opt.subparser $
@@ -321,3 +591,140 @@ parseUnlockStakeEpoch = optional $
 parseWord :: Integral a => String -> String -> String -> Parser a
 parseWord optname desc metvar = option (fromInteger <$> auto)
   $ long optname <> metavar metvar <> help desc
+
+
+
+parseAddress :: String -> String -> Parser Address
+parseAddress opt desc =
+  option (cliParseBase58Address <$> auto)
+    $ long opt <> metavar "ADDR" <> help desc
+
+parseCardanoEra :: Parser CardanoEra
+parseCardanoEra = asum
+  [ flag' ByronEraLegacy $
+        long "byron-legacy-formats"
+     <> help "Byron/cardano-sl formats and compatibility"
+
+  , flag' ByronEra $
+        long "byron-formats"
+     <> help "Byron era formats and compatibility"
+
+  , flag' ShelleyEra $
+        long "shelley-formats"
+     <> help "Shelley-era formats and compatibility"
+
+    -- And various hidden compatibility flag aliases:
+  , flag' ByronEraLegacy $ hidden <> long "byron-legacy"
+  , flag' ShelleyEra     $ hidden <> long "bft"
+  , flag' ShelleyEra     $ hidden <> long "praos"
+  , flag' ShelleyEra     $ hidden <> long "mock-pbft"
+  , flag' ByronEra       $ hidden <> long "real-pbft"
+  ]
+
+parseCertificateFile :: String -> String -> Parser CertificateFile
+parseCertificateFile opt desc = CertificateFile <$> parseFilePath opt desc
+
+parseFakeAvvmOptions :: Parser FakeAvvmOptions
+parseFakeAvvmOptions =
+  FakeAvvmOptions
+    <$> parseIntegral "avvm-entry-count" "Number of AVVM addresses."
+    <*> parseLovelace "avvm-entry-balance" "AVVM address."
+
+parseK :: Parser BlockCount
+parseK =
+  BlockCount
+    <$> parseIntegral "k" "The security parameter of the Ouroboros protocol."
+
+parseNewDirectory :: String -> String -> Parser NewDirectory
+parseNewDirectory opt desc = NewDirectory <$> parseFilePath opt desc
+
+parseFractionWithDefault
+  :: String
+  -> String
+  -> Double
+  -> Parser Rational
+parseFractionWithDefault optname desc w =
+  toRational <$> ( option readDouble
+                 $ long optname
+                <> metavar "DOUBLE"
+                <> help desc
+                <> value w
+                )
+
+parseNetworkMagic :: Parser NetworkMagic
+parseNetworkMagic =
+  asum [ flag' NetworkMainOrStage $ mconcat
+           [ long "main-or-staging"
+           , help ""
+           ]
+       , option (fmap NetworkTestnet auto)
+           $ long "testnet-magic"
+             <> metavar "MAGIC"
+             <> help "The testnet network magic, decibal"
+       ]
+
+parseNewCertificateFile :: String -> Parser NewCertificateFile
+parseNewCertificateFile opt =
+  NewCertificateFile
+    <$> parseFilePath opt "Non-existent file to write the certificate to."
+
+parseNewSigningKeyFile :: String -> Parser NewSigningKeyFile
+parseNewSigningKeyFile opt =
+  NewSigningKeyFile
+    <$> parseFilePath opt "Non-existent file to write the signing key to."
+
+parseNewTxFile :: String -> Parser NewTxFile
+parseNewTxFile opt =
+  NewTxFile
+    <$> parseFilePath opt "Non-existent file to write the signed transaction to."
+
+parseNewVerificationKeyFile :: String -> Parser NewVerificationKeyFile
+parseNewVerificationKeyFile opt =
+  NewVerificationKeyFile
+    <$> parseFilePath opt "Non-existent file to write the verification key to."
+
+parseProtocolMagicId :: String -> Parser ProtocolMagicId
+parseProtocolMagicId arg =
+  ProtocolMagicId
+    <$> parseIntegral arg "The magic number unique to any instance of Cardano."
+
+parseProtocolMagic :: Parser ProtocolMagic
+parseProtocolMagic =
+  flip AProtocolMagic RequiresMagic . flip Annotated ()
+    <$> parseProtocolMagicId "protocol-magic"
+
+parseTxFile :: String -> Parser TxFile
+parseTxFile opt =
+  TxFile
+    <$> parseFilePath opt "File containing the signed transaction."
+
+parseUTCTime :: String -> String -> Parser UTCTime
+parseUTCTime optname desc =
+  option (posixSecondsToUTCTime . fromInteger <$> auto)
+    $ long optname <> metavar "POSIXSECONDS" <> help desc
+
+
+-- | See the rationale for cliParseBase58Address.
+cliParseLovelace :: Word64 -> Lovelace
+cliParseLovelace =
+  either (panic . ("Bad Lovelace value: " <>) . show) identity
+  . mkLovelace
+
+-- | Here, we hope to get away with the usage of 'error' in a pure expression,
+--   because the CLI-originated values are either used, in which case the error is
+--   unavoidable rather early in the CLI tooling scenario (and especially so, if
+--   the relevant command ADT constructor is strict, like with ClientCommand), or
+--   they are ignored, in which case they are arguably irrelevant.
+--   And we're getting a correct-by-construction value that doesn't need to be
+--   scrutinised later, so that's an abstraction benefit as well.
+cliParseBase58Address :: Text -> Address
+cliParseBase58Address =
+  either (panic . ("Bad Base58 address: " <>) . show) identity
+  . decodeAddressBase58
+
+
+-- | See the rationale for cliParseBase58Address.
+cliParseTxId :: String -> TxId
+cliParseTxId =
+  either (panic . ("Bad Lovelace value: " <>) . show) identity
+  . decodeHash . Text.pack

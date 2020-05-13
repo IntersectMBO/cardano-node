@@ -6,7 +6,7 @@ module Cardano.CLI.Environment
 
 import           Cardano.Prelude
 
-import           Cardano.CLI.Ops (CliError (..))
+import           Cardano.CLI.Errors (CliError (CliEnvVarLookup))
 
 import           Cardano.Config.Types (SocketPath (..))
 

@@ -1,11 +1,5 @@
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StrictData #-}
 
-{-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
 {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 
 module Cardano.CLI.Shelley.KeyGen
@@ -19,11 +13,10 @@ import           Control.Monad.Trans.Except.Extra (firstExceptT)
 
 import qualified Shelley.Spec.Ledger.Keys as Ledger
 
-import           Cardano.CLI.Key (VerificationKeyFile(..))
-import           Cardano.CLI.Ops (CliError (..))
+import           Cardano.CLI.Shelley.Commands
+import           Cardano.CLI.Errors (CliError(..))
 
 import           Cardano.Config.Shelley.ColdKeys
-import           Cardano.Config.Types (SigningKeyFile(..))
 
 
 runColdKeyGen :: KeyRole -> VerificationKeyFile -> SigningKeyFile

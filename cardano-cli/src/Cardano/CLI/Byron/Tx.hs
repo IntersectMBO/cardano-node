@@ -1,10 +1,7 @@
-{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
-{-# LANGUAGE RankNTypes #-}
-{-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
 
-module Cardano.CLI.Tx
+module Cardano.CLI.Byron.Tx
   ( TxFile(..)
   , NewTxFile(..)
   , prettyAddress
@@ -58,6 +55,7 @@ import           Ouroboros.Consensus.Node.ProtocolInfo (pInfoConfig)
 import qualified Ouroboros.Consensus.Mempool as Consensus
 import           Ouroboros.Consensus.Util.Condense (condense)
 
+import           Cardano.CLI.Errors
 import           Cardano.CLI.Ops
 import           Cardano.Node.Submission
 import           Cardano.Config.Types

@@ -1,8 +1,3 @@
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-
 module Cardano.CLI.Shelley.Run.StakeAddress
   ( runStakeAddressCmd
   ) where
@@ -18,8 +13,7 @@ import           Cardano.Api (StakingVerificationKey (..),
                    shelleyRegisterStakingAddress, writeCertificate)
 import           Shelley.Spec.Ledger.Keys (hashKey)
 
-import           Cardano.CLI.Key (VerificationKeyFile(..))
-import           Cardano.CLI.Ops (CliError (..))
+import           Cardano.CLI.Errors (CliError(..))
 import           Cardano.CLI.Shelley.Parsers
 
 

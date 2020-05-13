@@ -1,14 +1,8 @@
-{-# LANGUAGE CPP                        #-}
-{-# LANGUAGE GeneralisedNewtypeDeriving #-}
-{-# LANGUAGE LambdaCase                 #-}
 {-# LANGUAGE RankNTypes                 #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
-{-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
 
-module Cardano.CLI.Delegation
-  ( CertificateFile(..)
-  , NewCertificateFile(..)
-  , issueByronGenesisDelegation
+module Cardano.CLI.Byron.Delegation
+  ( issueByronGenesisDelegation
   , checkByronGenesisDelegation
   )
 where
@@ -26,12 +20,9 @@ import           Cardano.Config.Types (CertificateFile (..))
 import qualified Cardano.Crypto as Crypto
 import           Cardano.Crypto (ProtocolMagicId)
 
-import           Cardano.CLI.Ops
+import           Cardano.CLI.Errors (CliError(..))
 
 
-newtype NewCertificateFile =
-  NewCertificateFile { nFp :: FilePath }
-  deriving (Eq, Ord, Show, IsString)
 
 
 -- TODO:  we need to support password-protected secrets.

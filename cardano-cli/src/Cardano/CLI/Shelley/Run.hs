@@ -1,10 +1,3 @@
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StrictData #-}
-
-{-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
 
 module Cardano.CLI.Shelley.Run
   ( runShelleyClientCommand
@@ -14,7 +7,7 @@ import           Cardano.Prelude
 
 import           Control.Monad.Trans.Except (ExceptT)
 
-import           Cardano.CLI.Ops (CliError (..))
+import           Cardano.CLI.Errors (CliError(..))
 import           Cardano.CLI.Shelley.Parsers
 
 import           Cardano.CLI.Shelley.Run.Address

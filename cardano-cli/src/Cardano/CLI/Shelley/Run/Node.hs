@@ -1,8 +1,3 @@
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-
 module Cardano.CLI.Shelley.Run.Node
   ( runNodeCmd
   ) where
@@ -22,8 +17,7 @@ import           Cardano.Config.Shelley.OCert
 import           Cardano.Config.Shelley.VRF
 import           Cardano.Config.Types (SigningKeyFile(..))
 
-import           Cardano.CLI.Key (VerificationKeyFile(..))
-import           Cardano.CLI.Ops (CliError (..))
+import           Cardano.CLI.Errors (CliError(..))
 import           Cardano.CLI.Shelley.Commands
 import           Cardano.CLI.Shelley.KeyGen
 

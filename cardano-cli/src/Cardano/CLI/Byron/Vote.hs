@@ -19,7 +19,7 @@ import           Cardano.Chain.Update
                    (AVote(..), UpId, Vote, mkVote, recoverUpId, recoverVoteId)
 import           Cardano.CLI.Byron.UpdateProposal
                    (deserialiseByronUpdateProposal, readByronUpdateProposal)
-import           Cardano.CLI.Key (readEraSigningKey)
+import           Cardano.CLI.Byron.Key (readEraSigningKey)
 import           Cardano.CLI.Ops (CardanoEra(..), ensureNewFileLBS)
 import           Cardano.Crypto.Signing (SigningKey)
 import           Ouroboros.Consensus.Byron.Ledger.Block (ByronBlock)
@@ -31,7 +31,8 @@ import           Ouroboros.Consensus.Util.Condense (condense)
 import           Ouroboros.Network.IOManager (IOManager)
 import           Cardano.Node.Submission (submitGeneralTx)
 
-import           Cardano.CLI.Ops (CliError(..), readGenesis, withRealPBFT)
+import           Cardano.CLI.Errors (CliError(..))
+import           Cardano.CLI.Ops (readGenesis, withRealPBFT)
 import           Cardano.Common.LocalSocket (chooseSocketPath)
 
 runVoteCreation

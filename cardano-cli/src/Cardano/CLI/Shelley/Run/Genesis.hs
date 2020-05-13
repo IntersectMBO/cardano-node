@@ -1,9 +1,4 @@
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE StrictData #-}
-{-# LANGUAGE TupleSections #-}
 
 {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 
@@ -53,7 +48,7 @@ import           Cardano.Config.Shelley.ColdKeys
 import           Cardano.Config.Shelley.OCert
 
 import           Cardano.CLI.Shelley.Commands
-import           Cardano.CLI.Ops (CliError (..))
+import           Cardano.CLI.Errors (CliError(..))
 import           Cardano.CLI.Shelley.KeyGen (runColdKeyGen)
 
 
@@ -330,7 +325,7 @@ readIndexedVerKey :: Typeable r
 readIndexedVerKey role fpath =
    case extractIndex fpath of
      Nothing -> panic "readIndexedVerKey role fpath"
-     Just i -> (i,) <$> firstExceptT KeyCliError (readVerKey role fpath)
+     Just i -> (,) i <$> firstExceptT KeyCliError (readVerKey role fpath)
   where
     extractIndex :: FilePath -> Maybe Int
     extractIndex fp =

@@ -1,8 +1,3 @@
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-
 module Cardano.CLI.Shelley.Run.Pool
   ( runPoolCmd
   ) where
@@ -26,8 +21,7 @@ import qualified Shelley.Spec.Ledger.Slot as Shelley
 
 import           Cardano.Config.Shelley.VRF
 
-import           Cardano.CLI.Key (VerificationKeyFile(..))
-import           Cardano.CLI.Ops (CliError (..))
+import           Cardano.CLI.Errors (CliError(..))
 import           Cardano.CLI.Shelley.Commands
 
 
