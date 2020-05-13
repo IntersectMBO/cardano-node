@@ -76,6 +76,7 @@ let
   extraBuilds = {
     # only build nixos tests for linux
     inherit (pkgsFor "x86_64-linux") nixosTests;
+    cardano-deployment = pkgs.iohkNix.cardanoLib.mkConfigHtml { inherit (pkgs.iohkNix.cardanoLib.environments) mainnet testnet ff; };
   } // (builtins.listToAttrs (map makeRelease [
     "mainnet"
     "staging"
