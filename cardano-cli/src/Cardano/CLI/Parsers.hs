@@ -38,18 +38,25 @@ parseShelley =
     , command'
         "shelley"
         "Shelley specific commands"
-        $ ShelleyCommand <$> parseShelleyCommands
+        (ShelleyCommand <$> parseShelleyCommands)
     ]
 
+-- Yes! A --version flag or version command. Either guess is right!
 parseDisplayVersion :: Parser ClientCommand
 parseDisplayVersion =
-  subparser $ mconcat
-    [ commandGroup "Miscellaneous commands"
-    , metavar "Miscellaneous commands"
-    , command'
-      "version"
-      "Show cardano-cli version"
-      $ pure DisplayVersion
-    ]
-
+      subparser
+        (mconcat
+         [ commandGroup "Miscellaneous commands"
+         , metavar "Miscellaneous commands"
+         , command'
+           "version"
+           "Show the cardano-cli version"
+           (pure DisplayVersion)
+         ]
+        )
+  <|> flag' DisplayVersion
+        (  long "version"
+        <> help "Show the cardano-cli version"
+        <> hidden
+        )
 
