@@ -30,7 +30,6 @@ library
                        Cardano.Node.Features.Node
                        Cardano.Node.Run
                        Cardano.Node.Shutdown
-                       Cardano.Node.Submission
                        Cardano.Tracing.Tracers
 
 
