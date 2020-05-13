@@ -38,9 +38,9 @@ import           Ouroboros.Consensus.Node.ProtocolInfo (pInfoConfig)
 import           Ouroboros.Network.NodeToClient (IOManager)
 
 import           Cardano.CLI.Byron.Key (readEraSigningKey)
-import           Cardano.CLI.Ops
-                   (CardanoEra(..), CliError(..), ensureNewFileLBS,
-                    readGenesis, withRealPBFT)
+import           Cardano.CLI.Era (CardanoEra(..))
+import           Cardano.CLI.Errors (CliError(..))
+import           Cardano.CLI.Ops (ensureNewFileLBS, readGenesis, withRealPBFT)
 import           Cardano.Common.LocalSocket
 
 

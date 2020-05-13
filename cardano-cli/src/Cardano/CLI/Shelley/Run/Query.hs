@@ -9,7 +9,7 @@ import           Cardano.Api
                     queryPParamsFromLocalState)
 
 import           Cardano.CLI.Environment (readEnvSocketPath)
-import           Cardano.CLI.Ops (CliError (..))
+import           Cardano.CLI.Errors (CliError(..))
 import           Cardano.CLI.Shelley.Parsers (OutputFile (..), QueryCmd (..))
 
 import           Cardano.Config.Shelley.Protocol (mkNodeClientProtocolTPraos)

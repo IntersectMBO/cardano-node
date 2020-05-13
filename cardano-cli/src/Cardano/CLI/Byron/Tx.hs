@@ -55,6 +55,7 @@ import           Ouroboros.Consensus.Node.ProtocolInfo (pInfoConfig)
 import qualified Ouroboros.Consensus.Mempool as Consensus
 import           Ouroboros.Consensus.Util.Condense (condense)
 
+import           Cardano.CLI.Errors
 import           Cardano.CLI.Ops
 import           Cardano.Node.Submission
 import           Cardano.Config.Types

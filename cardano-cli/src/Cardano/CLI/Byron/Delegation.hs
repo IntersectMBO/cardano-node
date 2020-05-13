@@ -20,7 +20,7 @@ import           Cardano.Config.Types (CertificateFile (..))
 import qualified Cardano.Crypto as Crypto
 import           Cardano.Crypto (ProtocolMagicId)
 
-import           Cardano.CLI.Ops
+import           Cardano.CLI.Errors (CliError(..))
 
 
 

@@ -6,12 +6,6 @@ module Cardano.CLI.Shelley.Run.Address.Info
 import           Cardano.Prelude hiding (putStrLn)
 import           Prelude (putStrLn)
 
-import           Control.Monad.Trans.Except (ExceptT)
-import           Control.Monad.Trans.Except.Extra (left)
-
-import           Cardano.Api
-import           Cardano.CLI.Ops (CliError (..))
-
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Base58 as Base58
 import qualified Data.ByteString.Base16 as Base16
@@ -20,6 +14,11 @@ import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import qualified Data.Text.IO as Text
 
+import           Control.Monad.Trans.Except (ExceptT)
+import           Control.Monad.Trans.Except.Extra (left)
+
+import           Cardano.Api
+import           Cardano.CLI.Errors (CliError(..))
 
 
 runAddressInfo :: Text -> ExceptT CliError IO ()

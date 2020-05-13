@@ -48,7 +48,7 @@ import           Cardano.Config.Shelley.ColdKeys
 import           Cardano.Config.Shelley.OCert
 
 import           Cardano.CLI.Shelley.Commands
-import           Cardano.CLI.Ops (CliError (..))
+import           Cardano.CLI.Errors (CliError(..))
 import           Cardano.CLI.Shelley.KeyGen (runColdKeyGen)
 
 

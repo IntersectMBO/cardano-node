@@ -33,6 +33,8 @@ import           Cardano.CLI.Byron.Query
 import           Cardano.CLI.Byron.Tx
 import           Cardano.CLI.Byron.UpdateProposal
 import           Cardano.CLI.Byron.Vote (runVoteCreation, submitByronVote)
+
+import           Cardano.CLI.Errors (CliError(..))
 import           Cardano.CLI.Ops
 
 

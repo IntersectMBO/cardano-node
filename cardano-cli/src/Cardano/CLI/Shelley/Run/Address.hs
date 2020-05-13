@@ -13,7 +13,7 @@ import           Control.Monad.Trans.Except.Extra (firstExceptT, newExceptT)
 
 import           Cardano.Api
 
-import           Cardano.CLI.Ops (CliError (..))
+import           Cardano.CLI.Errors (CliError(..))
 import           Cardano.CLI.Shelley.Parsers
                    (SigningKeyFile (..), VerificationKeyFile (..),
                     AddressCmd(..))

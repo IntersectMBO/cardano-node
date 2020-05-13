@@ -41,6 +41,7 @@ import           Cardano.Crypto (SigningKey(..))
 import qualified Cardano.Crypto.Random as Crypto
 import qualified Cardano.Crypto.Signing as Crypto
 
+import           Cardano.CLI.Errors
 import           Cardano.CLI.Ops
 
 

@@ -8,7 +8,7 @@ import qualified Options.Applicative as Opt
 import           Options.Applicative (ParserInfo, ParserPrefs, showHelpOnEmpty)
 import           System.Exit (exitFailure)
 
-import           Cardano.CLI.Ops
+import           Cardano.CLI.Errors
 import           Cardano.CLI.Parsers (ClientCommand, parseClientCommand)
 import           Cardano.CLI.Run (runClientCommand)
 import           Cardano.Common.TopHandler

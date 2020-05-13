@@ -30,7 +30,7 @@ import           Cardano.Config.Protocol
 import           Cardano.Config.Types
 
 import           Cardano.Api (Network(..), getLocalTip)
-import           Cardano.CLI.Ops
+import           Cardano.CLI.Errors
 
 
 --------------------------------------------------------------------------------

@@ -31,7 +31,8 @@ import           Ouroboros.Consensus.Util.Condense (condense)
 import           Ouroboros.Network.IOManager (IOManager)
 import           Cardano.Node.Submission (submitGeneralTx)
 
-import           Cardano.CLI.Ops (CliError(..), readGenesis, withRealPBFT)
+import           Cardano.CLI.Errors (CliError(..))
+import           Cardano.CLI.Ops (readGenesis, withRealPBFT)
 import           Cardano.Common.LocalSocket (chooseSocketPath)
 
 runVoteCreation

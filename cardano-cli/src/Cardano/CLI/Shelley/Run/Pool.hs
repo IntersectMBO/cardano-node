@@ -21,7 +21,7 @@ import qualified Shelley.Spec.Ledger.Slot as Shelley
 
 import           Cardano.Config.Shelley.VRF
 
-import           Cardano.CLI.Ops (CliError (..))
+import           Cardano.CLI.Errors (CliError(..))
 import           Cardano.CLI.Shelley.Commands
 
 

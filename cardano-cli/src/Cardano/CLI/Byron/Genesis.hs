@@ -44,6 +44,7 @@ import           Cardano.Crypto (SigningKey (..))
 import qualified Cardano.Crypto as Crypto
 
 import           Cardano.CLI.Byron.Key
+import           Cardano.CLI.Errors (CliError(..))
 import           Cardano.CLI.Ops
 
 

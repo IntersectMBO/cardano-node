@@ -10,7 +10,7 @@ import           Cardano.Prelude
 import qualified Data.Text as Text
 import           Control.Monad.Trans.Except (ExceptT)
 
-import           Cardano.CLI.Ops (CliError)
+import           Cardano.CLI.Errors (CliError(..))
 import           Cardano.CLI.Commands (ClientCommand(..))
 import           Cardano.CLI.Byron.Run (runByronClientCommand)
 import           Cardano.CLI.Shelley.Run (runShelleyClientCommand)

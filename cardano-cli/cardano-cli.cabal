@@ -23,11 +23,15 @@ library
   hs-source-dirs:      src
 
   exposed-modules:     Cardano.CLI.Commands
-                       Cardano.CLI.Environment
-                       Cardano.CLI.Legacy.Byron
-                       Cardano.CLI.Ops
                        Cardano.CLI.Parsers
                        Cardano.CLI.Run
+                       Cardano.CLI.Errors
+
+                       Cardano.CLI.Era
+                       Cardano.CLI.Environment
+                       Cardano.CLI.Ops
+
+                       Cardano.CLI.Legacy.Byron
 
                        Cardano.CLI.Byron.Commands
                        Cardano.CLI.Byron.Parsers

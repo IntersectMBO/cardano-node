@@ -14,7 +14,7 @@ import           Control.Monad.Trans.Except.Extra (firstExceptT)
 import qualified Shelley.Spec.Ledger.Keys as Ledger
 
 import           Cardano.CLI.Shelley.Commands
-import           Cardano.CLI.Ops (CliError (..))
+import           Cardano.CLI.Errors (CliError(..))
 
 import           Cardano.Config.Shelley.ColdKeys
 
