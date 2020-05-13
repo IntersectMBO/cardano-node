@@ -6,13 +6,16 @@
 
 import           Cardano.Prelude hiding (option)
 import           Prelude (String)
-import           Data.Text (pack)
+import qualified Data.Text as Text
 
 import           Data.Semigroup ((<>))
-import           Data.Version (showVersion)
 import           Options.Applicative (Parser)
 import qualified Options.Applicative as Opt
+
+import           Data.Version (showVersion)
 import           Paths_cardano_node (version)
+import           System.Info (arch, compilerName, compilerVersion, os)
+import           Cardano.Config.GitRev (gitRev)
 
 import           Cardano.Shell.Lib (runCardanoApplicationWithFeatures)
 import           Cardano.Shell.Types (CardanoApplication (..),
@@ -28,24 +31,18 @@ import           Cardano.Node.Features.Node
 main :: IO ()
 main = toplevelExceptionHandler $ do
 
-    cli <- Opt.customExecParser p opts
+    cmd <- Opt.customExecParser p opts
 
-    (features, nodeLayer) <- initializeAllFeatures cli env
-
-    runCardanoApplicationWithFeatures features (cardanoApplication nodeLayer)
+    case cmd of
+      RunCmd args -> runRunCommand args
+      VersionCmd  -> runVersionCommand
 
     where
       p = Opt.prefs Opt.showHelpOnEmpty
 
-      env :: CardanoEnvironment
-      env = NoEnvironment
-
-      cardanoApplication :: NodeLayer -> CardanoApplication
-      cardanoApplication = CardanoApplication . nlRunNode
-
-      opts :: Opt.ParserInfo NodeCLI
+      opts :: Opt.ParserInfo Command
       opts =
-        Opt.info (nodeCLIParser
+        Opt.info (fmap RunCmd nodeCLIParser <|> parseVersionCmd
                     <**> helperBrief "help" "Show this help text" nodeCliHelpMain)
 
           ( Opt.fullDesc <>
@@ -64,6 +61,55 @@ main = toplevelExceptionHandler $ do
         <$$> parserHelpOptions nodeCLIParser
 
 
+data Command = RunCmd NodeCLI
+             | VersionCmd
+
+-- Yes! A --version flag or version command. Either guess is right!
+parseVersionCmd :: Parser Command
+parseVersionCmd =
+      Opt.subparser
+        (mconcat
+         [ Opt.commandGroup "Miscellaneous commands"
+         , Opt.metavar "version"
+         , Opt.hidden
+         , command'
+           "version"
+           "Show the cardano-node version"
+           (pure VersionCmd)
+         ]
+        )
+  <|> Opt.flag' VersionCmd
+        (  Opt.long "version"
+        <> Opt.help "Show the cardano-node version"
+        <> Opt.hidden
+        )
+
+runVersionCommand :: IO ()
+runVersionCommand =
+    putTextLn $ mconcat
+      [ "cardano-cli ", renderVersion version
+      , " - ", Text.pack os, "-", Text.pack arch
+      , " - ", Text.pack compilerName, "-", renderVersion compilerVersion
+      , "\ngit rev ", gitRev
+      ]
+  where
+    renderVersion = Text.pack . showVersion
+
+
+runRunCommand :: NodeCLI -> IO ()
+runRunCommand cli = do
+    (features, nodeLayer) <- initializeAllFeatures cli env
+
+    runCardanoApplicationWithFeatures features (cardanoApplication nodeLayer)
+
+    where
+      env :: CardanoEnvironment
+      env = NoEnvironment
+
+      cardanoApplication :: NodeLayer -> CardanoApplication
+      cardanoApplication = CardanoApplication . nlRunNode
+
+
 initializeAllFeatures
   :: NodeCLI
   -> CardanoEnvironment
@@ -71,7 +117,7 @@ initializeAllFeatures
 initializeAllFeatures npm cardanoEnvironment = do
 
   eitherFeatures <- runExceptT $ createLoggingFeature
-                      (pack $ showVersion version)
+                      (Text.pack (showVersion version))
                       cardanoEnvironment
                       npm
 
