@@ -1,6 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE StrictData #-}
-
 module Cardano.CLI.Shelley.Run.TextView
   ( runTextViewCmd
   ) where

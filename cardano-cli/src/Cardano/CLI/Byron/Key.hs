@@ -1,12 +1,6 @@
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE NoMonomorphismRestriction #-}
 
-{-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
 {-# OPTIONS_GHC -Wno-missing-local-signatures #-}
-
-
 
 module Cardano.CLI.Byron.Key
   ( -- * Keys
@@ -108,9 +102,8 @@ keygen passphrase =
 -- | Get a passphrase from the standard input,
 --   depending on whether it's required.
 getPassphrase :: PasswordPrompt -> PasswordRequirement -> IO Crypto.PassPhrase
-getPassphrase desc = \case
-  GetPassword -> readPassword desc
-  EmptyPassword -> pure Crypto.emptyPassphrase
+getPassphrase desc GetPassword   = readPassword desc
+getPassphrase _    EmptyPassword = pure Crypto.emptyPassphrase
 
 -- | Obtain a 'Crypto.PassPhrase' from the standard input.
 --   Terminal echoing is disabled.

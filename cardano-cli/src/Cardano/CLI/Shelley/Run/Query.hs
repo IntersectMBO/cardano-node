@@ -1,5 +1,3 @@
-{-# LANGUAGE TypeFamilies #-}
-
 module Cardano.CLI.Shelley.Run.Query
   ( runQueryCmd
   ) where

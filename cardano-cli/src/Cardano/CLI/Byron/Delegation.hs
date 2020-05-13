@@ -1,9 +1,5 @@
-{-# LANGUAGE CPP                        #-}
-{-# LANGUAGE GeneralisedNewtypeDeriving #-}
-{-# LANGUAGE LambdaCase                 #-}
 {-# LANGUAGE RankNTypes                 #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
-{-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
 
 module Cardano.CLI.Byron.Delegation
   ( issueByronGenesisDelegation

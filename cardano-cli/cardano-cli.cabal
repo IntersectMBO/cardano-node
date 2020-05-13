@@ -108,6 +108,7 @@ library
                        -Wredundant-constraints
                        -Wpartial-fields
                        -Wcompat
+                       -Wno-all-missed-specialisations
 
   if os(windows)
      build-depends:    Win32

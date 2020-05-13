@@ -1,10 +1,3 @@
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StrictData #-}
-
-{-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
 
 module Cardano.CLI.Shelley.Run
   ( runShelleyClientCommand

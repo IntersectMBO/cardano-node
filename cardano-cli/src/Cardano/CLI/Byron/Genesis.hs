@@ -1,7 +1,5 @@
 {-# LANGUAGE CPP                        #-}
-{-# LANGUAGE GADTs                      #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
-{-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
 
 #if !defined(mingw32_HOST_OS)
 #define UNIX
