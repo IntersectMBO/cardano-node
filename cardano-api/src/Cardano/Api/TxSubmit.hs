@@ -8,6 +8,7 @@
 
 module Cardano.Api.TxSubmit
   ( submitTx
+  , submitGenTx
   , TxSubmitResult(..)
   ) where
 
@@ -63,32 +64,26 @@ submitTx network socketPath tx =
         TxSignedByron txbody _txCbor _txHash vwit -> do
           let aTxAux = Byron.annotateTxAux (Byron.mkTxAux txbody vwit)
               genTx  = Byron.ByronTx (Byron.byronIdTx aTxAux) aTxAux
-          resultVar <- newEmptyTMVarIO
-          submitGenTx
-            nullTracer
-            iocp
-            (protocolClientInfo $ mkNodeClientProtocolRealPBFT $ EpochSlots 21600)
-            network
-            socketPath
-            resultVar
-            genTx
-          result <- atomically (readTMVar resultVar)
+          result <- submitGenTx
+                      nullTracer
+                      iocp
+                      (protocolClientInfo $ mkNodeClientProtocolRealPBFT $ EpochSlots 21600)
+                      network
+                      socketPath
+                      genTx
           case result of
             Nothing  -> return TxSubmitSuccess
             Just err -> return (TxSubmitFailureByron err)
 
         TxSignedShelley stx -> do
           let genTx = mkShelleyTx stx
-          resultVar <- newEmptyTMVarIO
-          submitGenTx
-            nullTracer
-            iocp
-            (protocolClientInfo mkNodeClientProtocolTPraos)
-            network
-            socketPath
-            resultVar
-            genTx
-          result <- atomically (readTMVar resultVar)
+          result <- submitGenTx
+                      nullTracer
+                      iocp
+                      (protocolClientInfo mkNodeClientProtocolTPraos)
+                      network
+                      socketPath
+                      genTx
           case result of
             Nothing  -> return TxSubmitSuccess
             Just err -> return (TxSubmitFailureShelley err)
@@ -102,19 +97,20 @@ submitGenTx
   -> ProtocolClientInfo blk
   -> Network
   -> SocketPath
-  -> TMVar (Maybe (ApplyTxErr blk)) -- ^ Result will be placed here
   -> GenTx blk
-  -> IO ()
-submitGenTx tracer iomgr cfg nm (SocketPath path) resultVar genTx =
-      connectTo
-        (localSnocket iomgr path)
-        NetworkConnectTracers {
-            nctMuxTracer       = nullTracer,
-            nctHandshakeTracer = nullTracer
-            }
-        (localInitiatorNetworkApplication tracer cfg nm resultVar genTx)
-        path
-        --`catch` handleMuxError tracer chainsVar socketPath
+  -> IO (Maybe (ApplyTxErr blk))
+submitGenTx tracer iomgr cfg nm (SocketPath path) genTx = do
+    resultVar <- newEmptyTMVarIO
+    connectTo
+      (localSnocket iomgr path)
+      NetworkConnectTracers {
+          nctMuxTracer       = nullTracer,
+          nctHandshakeTracer = nullTracer
+          }
+      (localInitiatorNetworkApplication tracer cfg nm resultVar genTx)
+      path
+      --`catch` handleMuxError tracer chainsVar socketPath
+    atomically (readTMVar resultVar)
 
 localInitiatorNetworkApplication
   :: forall blk.

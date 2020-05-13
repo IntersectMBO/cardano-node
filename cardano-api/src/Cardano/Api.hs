@@ -27,6 +27,7 @@ module Cardano.Api
   , Network (..)
   , NetworkMagic (..)
   , toNetworkMagic
+  , toByronNetworkMagic
 
     -- * Transactions
   , TxSigned (..)

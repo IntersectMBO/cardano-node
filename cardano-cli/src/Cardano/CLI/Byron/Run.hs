@@ -22,9 +22,9 @@ import           Cardano.Chain.UTxO (TxIn, TxOut)
 import qualified Cardano.Crypto.Hashing as Crypto
 import qualified Cardano.Crypto.Signing as Crypto
 
-import           Cardano.Common.LocalSocket
 import           Cardano.Config.Types
 
+import           Cardano.Api (Network, toByronNetworkMagic)
 import           Cardano.CLI.Byron.Commands
 import           Cardano.CLI.Byron.Delegation
 import           Cardano.CLI.Byron.Genesis
@@ -43,7 +43,7 @@ runByronClientCommand c =
   case c of
     NodeCmd bc -> runNodeCmd bc
     Genesis outDir params era -> runGenesisCommand outDir params era
-    GetLocalNodeTip configFp mSockPath -> runGetLocalNodeTip configFp mSockPath
+    GetLocalNodeTip network -> runGetLocalNodeTip network
     ValidateCBOR cborObject fp -> runValidateCBOR cborObject fp
     PrettyPrintCBOR fp -> runPrettyPrintCBOR fp
     PrettySigningKeyPublic era skF -> runPrettySigningKeyPublic era skF
@@ -54,7 +54,7 @@ runByronClientCommand c =
     ToVerification era skFp nvkFp -> runToVerification era skFp nvkFp
     IssueDelegationCertificate configFp epoch issuerSK delVK cert -> runIssueDelegationCertificate configFp epoch issuerSK delVK cert
     CheckDelegation configFp cert issuerVF delegateVF -> runCheckDelegation configFp cert issuerVF delegateVF
-    SubmitTx fp configFp mCliSockPath -> runSubmitTx fp configFp mCliSockPath
+    SubmitTx network fp -> runSubmitTx network fp
     SpendGenesisUTxO configFp nftx ctKey genRichAddr outs -> runSpendGenesisUTxO configFp nftx ctKey genRichAddr outs
     SpendUTxO configFp nftx ctKey ins outs -> runSpendUTxO configFp nftx ctKey ins outs
 
@@ -63,11 +63,11 @@ runNodeCmd :: NodeCmd -> ExceptT CliError IO ()
 runNodeCmd (CreateVote configFp sKey upPropFp voteBool outputFp) =
   runVoteCreation configFp sKey upPropFp voteBool outputFp
 
-runNodeCmd (SubmitUpdateProposal configFp proposalFp mSocket) =
-  withIOManagerE $ \iocp -> submitByronUpdateProposal iocp configFp proposalFp mSocket
+runNodeCmd (SubmitUpdateProposal network proposalFp) =
+  withIOManagerE $ \iomgr -> submitByronUpdateProposal iomgr network proposalFp
 
-runNodeCmd (SubmitVote configFp voteFp mSocket) =
-  withIOManagerE $ \iocp -> submitByronVote iocp configFp voteFp mSocket
+runNodeCmd (SubmitVote network voteFp) =
+  withIOManagerE $ \iomgr -> submitByronVote iomgr network voteFp
 
 runNodeCmd (UpdateProposal configFp sKey pVer sVer sysTag insHash outputFp params) =
   runProposalCreation configFp sKey pVer sVer sysTag insHash outputFp params
@@ -109,10 +109,13 @@ runPrintGenesisHash genFp = do
     formatter :: (a, Genesis.GenesisHash)-> Text
     formatter = F.sformat Crypto.hashHexF . Genesis.unGenesisHash . snd
 
-runPrintSigningKeyAddress :: CardanoEra -> Common.NetworkMagic -> SigningKeyFile -> ExceptT CliError IO ()
-runPrintSigningKeyAddress era netMagic skF = do
+runPrintSigningKeyAddress :: CardanoEra -> Network -> SigningKeyFile -> ExceptT CliError IO ()
+runPrintSigningKeyAddress era network skF = do
   sK <- readEraSigningKey era skF
-  let sKeyAddress = prettyAddress . Common.makeVerKeyAddress netMagic $ Crypto.toVerification sK
+  let sKeyAddress = prettyAddress
+                  . Common.makeVerKeyAddress (toByronNetworkMagic network)
+                  . Crypto.toVerification
+                  $ sK
   liftIO $ putTextLn sKeyAddress
 
 runKeygen :: CardanoEra -> NewSigningKeyFile -> PasswordRequirement -> ExceptT CliError IO ()
@@ -151,16 +154,11 @@ runCheckDelegation configFp cert issuerVF delegateVF = do
   pmId <- readProtocolMagicId $ ncGenesisFile nc
   checkByronGenesisDelegation cert pmId issuerVK delegateVK
 
-runSubmitTx :: TxFile -> ConfigYamlFilePath -> Maybe SocketPath -> ExceptT CliError IO ()
-runSubmitTx fp configFp mCliSockPath =
-  withIOManagerE $ \iocp -> do
-    nc <- liftIO $ parseNodeConfigurationFP configFp
+runSubmitTx :: Network -> TxFile -> ExceptT CliError IO ()
+runSubmitTx network fp =
+  withIOManagerE $ \iomgr -> do
     tx <- readByronTx fp
-    --TODO: just override the nc { ncSocketPath }
-    let sockPath = chooseSocketPath (ncSocketPath nc) mCliSockPath
-
-    firstExceptT NodeSubmitTxError $
-      nodeSubmitTx iocp nc sockPath tx
+    nodeSubmitTx iomgr network tx
 
 runSpendGenesisUTxO
         :: ConfigYamlFilePath -> NewTxFile -> SigningKeyFile -> Common.Address -> NonEmpty TxOut

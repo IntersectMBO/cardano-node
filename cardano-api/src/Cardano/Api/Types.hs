@@ -16,6 +16,7 @@ module Cardano.Api.Types
   , Network (..)
   , NetworkMagic (..)
   , toNetworkMagic
+  , toByronNetworkMagic
   , SigningKey (..)
   , PaymentVerificationKey (..)
   , StakingVerificationKey (..)
@@ -247,6 +248,12 @@ toNetworkMagic nw =
   case nw of
     Mainnet    -> NetworkMagic 764824073 -- The network magic for mainnet
     Testnet nm -> nm
+
+toByronNetworkMagic :: Network -> Byron.NetworkMagic
+toByronNetworkMagic nw =
+  case nw of
+    Mainnet                   -> Byron.NetworkMainOrStage
+    Testnet (NetworkMagic nm) -> Byron.NetworkTestnet nm
 
 toByronTxIn  :: TxIn  -> ByronTxIn
 toByronTxIn (TxIn txid txix) =

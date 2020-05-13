@@ -12,8 +12,8 @@ module Cardano.CLI.Byron.UpdateProposal
 import           Cardano.Prelude
 
 import           Control.Monad.Trans.Except.Extra
-                   (firstExceptT, handleIOExceptT, hoistEither)
-import           Control.Tracer (nullTracer, stdoutTracer, traceWith)
+                   (handleIOExceptT, hoistEither)
+import           Control.Tracer (stdoutTracer, traceWith)
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.Map.Strict as M
 
@@ -29,19 +29,17 @@ import           Cardano.Chain.Update
 import           Cardano.Config.Types
 import           Ouroboros.Consensus.Util.Condense (condense)
 import           Cardano.Crypto.Signing (SigningKey, noPassSafeSigner)
-import           Cardano.Node.Submission (submitGeneralTx)
 import           Ouroboros.Consensus.Byron.Ledger.Block (ByronBlock)
 import qualified Ouroboros.Consensus.Byron.Ledger.Mempool as Mempool
-import qualified Ouroboros.Consensus.Cardano as Consensus
 import qualified Ouroboros.Consensus.Mempool as Mempool
-import           Ouroboros.Consensus.Node.ProtocolInfo (pInfoConfig)
 import           Ouroboros.Network.NodeToClient (IOManager)
 
+import           Cardano.Api (Network)
 import           Cardano.CLI.Byron.Key (readEraSigningKey)
 import           Cardano.CLI.Era (CardanoEra(..))
 import           Cardano.CLI.Errors (CliError(..))
-import           Cardano.CLI.Ops (ensureNewFileLBS, readGenesis, withRealPBFT)
-import           Cardano.Common.LocalSocket
+import           Cardano.CLI.Ops (ensureNewFileLBS, readGenesis)
+import           Cardano.CLI.Byron.Tx (nodeSubmitTx)
 
 
 runProposalCreation
@@ -175,24 +173,14 @@ readByronUpdateProposal fp =
 
 submitByronUpdateProposal
   :: IOManager
-  -> ConfigYamlFilePath
+  -> Network
   -> FilePath
-  -> Maybe SocketPath
   -> ExceptT CliError IO ()
-submitByronUpdateProposal iocp config proposalFp mSocket = do
-    nc <- liftIO $ parseNodeConfigurationFP config
-
+submitByronUpdateProposal iomgr network proposalFp = do
     proposalBs <- readByronUpdateProposal proposalFp
     aProposal <- hoistEither $ deserialiseByronUpdateProposal proposalBs
     let genTx = convertProposalToGenTx aProposal
-    let skt   = chooseSocketPath (ncSocketPath nc) mSocket
+    traceWith stdoutTracer $
+      "Update proposal TxId: " ++ condense (Mempool.txId genTx)
+    nodeSubmitTx iomgr network genTx
 
-    firstExceptT UpdateProposalSubmissionError $
-      withRealPBFT nc $ \p@Consensus.ProtocolRealPBFT{} -> liftIO $ do
-        traceWith stdoutTracer $
-          "Update proposal TxId: " ++ condense (Mempool.txId genTx)
-        submitGeneralTx
-          iocp skt
-          (pInfoConfig (Consensus.protocolInfo p))
-          genTx
-          nullTracer -- stdoutTracer
