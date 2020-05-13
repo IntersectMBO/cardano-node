@@ -36,15 +36,15 @@
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "iohk-nix": {
-        "branch": "master",
+        "branch": "ffff-genesis",
         "description": "nix scripts shared across projects",
         "homepage": null,
         "owner": "input-output-hk",
         "repo": "iohk-nix",
-        "rev": "bf907a77b7fcd48b3fc120108514cc96d9c55f1d",
-        "sha256": "0zfil30f74rgzjb7zxf6fn4n1fs9x0r6gnrz3ca3hhan1q8ryc7f",
+        "rev": "2d26c56b263759999ec11e9ab5c254db759611c8",
+        "sha256": "0iqyaswp6wqvbspqiwnk7ynm2x3gwa4fgnrimrv6yczinv2qm6yz",
         "type": "tarball",
-        "url": "https://github.com/input-output-hk/iohk-nix/archive/bf907a77b7fcd48b3fc120108514cc96d9c55f1d.tar.gz",
+        "url": "https://github.com/input-output-hk/iohk-nix/archive/2d26c56b263759999ec11e9ab5c254db759611c8.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     }
 }
