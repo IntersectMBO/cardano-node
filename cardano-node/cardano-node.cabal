@@ -24,7 +24,6 @@ library
 
   exposed-modules:     Cardano.Chairman
                        Cardano.Common.Help
-                       Cardano.Common.LocalSocket
                        Cardano.Common.Parsers
                        Cardano.Common.TopHandler
                        Cardano.Node.Features.Node
@@ -32,8 +31,8 @@ library
                        Cardano.Node.Shutdown
                        Cardano.Tracing.Tracers
 
-
   other-modules:       Paths_cardano_node
+                       Cardano.Node.LocalSocket
                        Cardano.Tracing.MicroBenchmarking
 
   build-depends:       aeson

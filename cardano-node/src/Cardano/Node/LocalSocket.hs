@@ -1,9 +1,8 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Cardano.Common.LocalSocket
-  ( chooseSocketPath
-  , nodeLocalSocketAddrInfo
+module Cardano.Node.LocalSocket
+  ( nodeLocalSocketAddrInfo
   , removeStaleLocalSocket
   )
 where
