@@ -4,9 +4,12 @@
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE Rank2Types          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TupleSections #-}
 
 {-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
+
+#if !defined(mingw32_HOST_OS)
+#define UNIX
+#endif
 
 module Cardano.Config.Logging
   ( LoggingLayer (..)
@@ -35,6 +38,9 @@ import           Cardano.BM.Backend.TraceForwarder (plugin)
 import           Cardano.BM.Backend.Switchboard (Switchboard)
 import qualified Cardano.BM.Backend.Switchboard as Switchboard
 import           Cardano.BM.Configuration (Configuration)
+#ifdef UNIX
+import qualified Cardano.BM.Configuration.Model as CM
+#endif
 import qualified Cardano.BM.Configuration as Config
 import           Cardano.BM.Counters (readCounters)
 import qualified Cardano.BM.Configuration.Model as Config
@@ -43,6 +49,9 @@ import           Cardano.BM.Data.Counter
 import           Cardano.BM.Data.LogItem ( LOContent (..), LOMeta (..),
                     LoggerName, PrivacyAnnotation (..), mkLOMeta)
 import           Cardano.BM.Data.Observable
+#ifdef UNIX
+import           Cardano.BM.Data.Output
+#endif
 import           Cardano.BM.Data.Severity (Severity (..))
 import           Cardano.BM.Data.SubTrace
 import qualified Cardano.BM.Observer.Monadic as Monadic
@@ -58,8 +67,8 @@ import           Cardano.Shell.Types (CardanoFeature (..))
 
 import           Cardano.Config.GitRev (gitRev)
 import           Cardano.Config.Types (ConfigYamlFilePath (..), ConfigError (..), CardanoEnvironment,
-                                       NodeConfiguration (..), NodeCLI (..),parseNodeConfiguration)
-
+                                       NodeConfiguration (..), NodeCLI (..), ViewMode (..),
+                                       parseNodeConfiguration)
 
 --------------------------------
 -- Layer
@@ -132,6 +141,9 @@ createLoggingFeature ver _ nodecli@NodeCLI{configFile} = do
     then Just $ unConfigPath configFile
     else Nothing
 
+  -- adapt logging configuration before setup
+  liftIO $ adaptLogConfig nodeConfig logConfig
+
   -- These have to be set before the switchboard is set up.
   liftIO $ do
     Config.setTextOption logConfig "appversion" ver
@@ -192,6 +204,22 @@ createLoggingFeature ver _ nodecli@NodeCLI{configFile} = do
      when (ncLogMetrics nodeConfig) $
        -- Record node metrics, if configured
        startCapturingMetrics trace
+
+   adaptLogConfig :: NodeConfiguration -> Configuration -> IO ()
+   adaptLogConfig nodeConfig =
+     liveViewdisablesStdout (ncViewMode nodeConfig)
+   liveViewdisablesStdout SimpleView _ = pure ()
+#ifdef UNIX
+   liveViewdisablesStdout LiveView logConfig = do -- filter out console scribes
+     scribes <- CM.getSetupScribes logConfig
+     let newscribes = flip filter scribes $ \case
+                        (ScribeDefinition StdoutSK _ _ _ _) -> False
+                        (ScribeDefinition StderrSK _ _ _ _) -> False
+                        _ -> True
+     CM.setSetupScribes logConfig newscribes
+#else
+   liveViewdisablesStdout LiveView _ = pure ()
+#endif
 
    logLayerShutdown :: Switchboard Text -> LoggingLayer -> IO ()
    logLayerShutdown switchBoard _ = shutdown switchBoard
