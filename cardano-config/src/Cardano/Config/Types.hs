@@ -1,11 +1,14 @@
 {-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE StandaloneDeriving #-}
 
 module Cardano.Config.Types
     ( CardanoEnvironment (..)
@@ -148,8 +151,8 @@ newtype DbFile = DbFile
 
 newtype GenesisFile = GenesisFile
   { unGenesisFile :: FilePath }
-  deriving newtype Show
-  deriving (Eq, Ord, IsString)
+  deriving stock (Eq, Ord)
+  deriving newtype (IsString, Show)
 
 instance FromJSON GenesisFile where
   parseJSON (String genFp) = pure . GenesisFile $ T.unpack genFp
@@ -168,13 +171,13 @@ newtype UpdateProposalFile = UpdateProposalFile
 
 newtype SocketPath = SocketPath
   { unSocketPath :: FilePath }
-  deriving newtype (Show, FromJSON)
-  deriving (Eq, Ord, IsString)
+  deriving stock (Eq, Ord)
+  deriving newtype (FromJSON, fIsString, Show)
 
 newtype SigningKeyFile = SigningKeyFile
   { unSigningKeyFile ::  FilePath }
-  deriving newtype Show
-  deriving (Eq, Ord, IsString)
+  deriving stock (Eq, Ord)
+  deriving newtype (IsString, Show)
 
 data NodeConfiguration =
   NodeConfiguration
@@ -251,7 +254,10 @@ data Protocol = BFT
               | MockPBFT
               | RealPBFT
               | TPraos
-              deriving (Eq, Show)
+              deriving (Eq, Generic, Show)
+
+deriving instance NFData Protocol
+deriving instance NoUnexpectedThunks Protocol
 
 instance FromJSON Protocol where
   parseJSON (String str) = case str of
