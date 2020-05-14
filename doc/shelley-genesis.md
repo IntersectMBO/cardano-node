@@ -64,13 +64,15 @@ $ cardano-cli shelley genesis create --genesis-dir example/
 This gives us
 ```
 $ ls example/*
-example/genesis.json  example/genesis.spec.json
+example/genesis.json
 
-example/delegate-keys:
+example/genesis.spec.json
 
-example/genesis-keys:
+example/delegate-keys/
 
-example/utxo-keys:
+example/genesis-keys/
+
+example/utxo-keys/
 ```
 Note that it created both a `genesis.spec.json` and a `genesis.json`. This
 command can be re-run at any time and it will re-generate the `genesis.json`
