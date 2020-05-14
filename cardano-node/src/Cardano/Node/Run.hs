@@ -17,22 +17,21 @@
 
 module Cardano.Node.Run
   ( runNode
-  , ViewMode(..)
   )
 where
 
-import           Cardano.Prelude hiding (ByteString, atomically, take, unlines, trace)
-import           Prelude (String, error, unlines)
+import           Cardano.Prelude hiding (ByteString, atomically, take, trace)
+import           Prelude (error)
 
 import qualified Control.Concurrent.Async as Async
 import           Control.Tracer
 import qualified Data.ByteString.Char8 as BSC
 import           Data.Either (partitionEithers)
 import           Data.Functor.Contravariant (contramap)
-import qualified Data.List as List
+import qualified Data.List as List (lookup, null)
 import           Data.Proxy (Proxy (..))
 import           Data.Semigroup ((<>))
-import           Data.Text (Text, breakOn, pack, take)
+import           Data.Text (Text, breakOn, pack, take, unlines)
 import           GHC.Clock (getMonotonicTimeNSec)
 import           Data.Version (showVersion)
 import           Network.HostName (getHostName)
@@ -55,7 +54,9 @@ import           Cardano.BM.Trace
 
 import           Cardano.Config.GitRev (gitRev)
 import           Cardano.Config.Logging (LoggingLayer (..), Severity (..))
-import           Cardano.Config.TraceConfig (traceConfigVerbosity)
+import           Cardano.Config.TraceConfig (traceBlockFetchDecisions,
+                     traceChainDB, traceConfigVerbosity, traceForge,
+                     traceMempool, traceEnabled)
 import           Cardano.Config.Types (NodeConfiguration (..), ViewMode (..))
 
 import           Ouroboros.Network.Magic (NetworkMagic (..))
@@ -115,7 +116,7 @@ runNode loggingLayer npm@NodeCLI{protocolFiles} = do
 
     SomeConsensusProtocol (p :: Consensus.Protocol blk (BlockProtocol blk)) <-
       case eitherSomeProtocol of
-        Left err -> (putTextLn $ renderProtocolInstantiationError err) >> exitFailure
+        Left err -> putTextLn (renderProtocolInstantiationError err) >> exitFailure
         Right (SomeConsensusProtocol p) -> pure $ SomeConsensusProtocol p
 
     txsProcessedCounter :: MVar Integer <- newMVar 0
@@ -142,6 +143,17 @@ runNode loggingLayer npm@NodeCLI{protocolFiles} = do
       LiveView   -> do
 #ifdef UNIX
         let c = llConfiguration loggingLayer
+        -- check required tracers are turned on
+        let reqtrs = [("TraceBlockFetchDecisions",traceBlockFetchDecisions), ("TraceChainDb",traceChainDB), ("TraceForge",traceForge), ("TraceMempool",traceMempool)]
+            trsinactive = filter (\(_,f) -> not $ traceEnabled (ncTraceConfig nc) f) reqtrs
+        unless (List.null trsinactive) $ do
+            putTextLn "for full functional 'LiveView', please turn on the following tracers in the configuration file:"
+            forM_ trsinactive $ \(m, _) ->
+                putTextLn $ m <> " : True"
+            putTextLn "     (press enter to continue)"
+            _ <- getLine
+            pure ()
+
         -- We run 'handleSimpleNode' as usual and run TUI thread as well.
         -- turn off logging to the console, only forward it through a pipe to a central logging process
         CM.setDefaultBackends c [KatipBK, TraceForwarderBK, UserDefinedBK "LiveViewBackend"]
@@ -214,7 +226,7 @@ handleSimpleNode
 handleSimpleNode p trace nodeTracers npm onKernel = do
 
   let pInfo@ProtocolInfo{ pInfoConfig = cfg } = Consensus.protocolInfo p
-      tracer = contramap pack $ toLogObject trace
+      tracer = toLogObject trace
 
   -- Node configuration
   nc <- parseNodeConfiguration npm
@@ -243,7 +255,7 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
 
   removedStaleSocket <- runExceptT $ removeStaleLocalSocket nc npm
   case removedStaleSocket of
-    Left err   -> (putTextLn $ show err) >> exitFailure
+    Left err   -> putTextLn (show err) >> exitFailure
     Right addr -> return addr
 
   withShutdownHandling npm trace $ \sfds ->
@@ -300,7 +312,7 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
     :: NodeCLI
     -> NodeConfiguration
     -> Trace IO Text
-    -> Tracer IO String
+    -> Tracer IO Text
     -> Consensus.TopLevelConfig blk
     -> IO ()
   createTracers npm'@NodeCLI{nodeMode = RealProtocolMode, nodeAddr, validateDB}
