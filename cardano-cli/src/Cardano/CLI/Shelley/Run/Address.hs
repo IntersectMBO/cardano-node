@@ -30,7 +30,6 @@ runAddressCmd cmd =
     AddressKeyGen vkf skf -> runAddressKeyGen  vkf skf
     AddressKeyHash vkf -> runAddressKeyHash vkf
     AddressBuildStaking payVk stkVk -> runAddressBuildStaking payVk stkVk
-    AddressBuildReward stkVk -> runAddressBuildReward stkVk
     AddressBuildEnterprise payVk -> runAddressBuildEnterprise payVk
     AddressBuildMultiSig {} -> runAddressBuildMultiSig
     AddressInfo txt -> runAddressInfo txt
@@ -58,13 +57,6 @@ runAddressBuildStaking (VerificationKeyFile payVkeyFp) (VerificationKeyFile stkV
     payVKey <- newExceptT $ readPaymentVerificationKey payVkeyFp
     let addr = shelleyVerificationKeyAddress payVKey (Just stkVKey)
     liftIO $ Text.putStrLn $ addressToHex addr
-
-runAddressBuildReward :: VerificationKeyFile -> ExceptT CliError IO ()
-runAddressBuildReward (VerificationKeyFile stkVkeyFp) =
-  firstExceptT CardanoApiError $ do
-    stkVKey <- ExceptT $ readStakingVerificationKey stkVkeyFp
-    let rwdAddr = AddressShelleyReward $ shelleyVerificationKeyRewardAddress stkVKey
-    liftIO . Text.putStrLn $ addressToHex rwdAddr
 
 runAddressBuildEnterprise :: VerificationKeyFile -> ExceptT CliError IO ()
 runAddressBuildEnterprise (VerificationKeyFile payVkeyFp) =

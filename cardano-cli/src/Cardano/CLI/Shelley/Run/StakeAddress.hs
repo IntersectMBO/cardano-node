@@ -4,22 +4,28 @@ module Cardano.CLI.Shelley.Run.StakeAddress
 
 import           Cardano.Prelude
 
+import qualified Data.Text.IO as Text
+
 import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, newExceptT)
+
+import           Cardano.Api
 
 import           Cardano.Api (StakingVerificationKey (..),
                    readStakingVerificationKey, readVerificationKeyStakePool,
                    shelleyDeregisterStakingAddress, shelleyDelegateStake,
                    shelleyRegisterStakingAddress, writeCertificate)
 import           Shelley.Spec.Ledger.Keys (hashKey)
+import           Cardano.Config.Shelley.ColdKeys (genKeyPair)
 
 import           Cardano.CLI.Errors (CliError(..))
 import           Cardano.CLI.Shelley.Parsers
 
 
-
 runStakeAddressCmd :: StakeAddressCmd -> ExceptT CliError IO ()
 
+runStakeAddressCmd (StakeAddressKeyGen vk sk) = runStakeAddressKeyGen vk sk
+runStakeAddressCmd (StakeAddressBuild vk) = runStakeAddressBuild vk
 runStakeAddressCmd (StakeKeyRegistrationCert stkKeyVerKeyFp outputFp) =
   runStakeKeyRegistrationCert stkKeyVerKeyFp outputFp
 runStakeAddressCmd (StakeKeyDelegationCert stkKeyVerKeyFp stkPoolVerKeyFp outputFp) =
@@ -32,6 +38,24 @@ runStakeAddressCmd cmd = liftIO $ putStrLn $ "runStakeAddressCmd: " ++ show cmd
 --
 -- Stake address command implementations
 --
+
+runStakeAddressKeyGen :: VerificationKeyFile -> SigningKeyFile -> ExceptT CliError IO ()
+runStakeAddressKeyGen (VerificationKeyFile vkFp) (SigningKeyFile skFp) = do
+  (vkey, skey) <- liftIO genKeyPair
+  firstExceptT CardanoApiError
+    . newExceptT
+    $ writeStakingVerificationKey vkFp (StakingVerificationKeyShelley vkey)
+  --TODO: writeSigningKey should really come from Cardano.Config.Shelley.ColdKeys
+  firstExceptT CardanoApiError . newExceptT $ writeSigningKey skFp (SigningKeyShelley skey)
+
+
+runStakeAddressBuild :: VerificationKeyFile -> ExceptT CliError IO ()
+runStakeAddressBuild (VerificationKeyFile stkVkeyFp) =
+  firstExceptT CardanoApiError $ do
+    stkVKey <- ExceptT $ readStakingVerificationKey stkVkeyFp
+    let rwdAddr = AddressShelleyReward $ shelleyVerificationKeyRewardAddress stkVKey
+    liftIO . Text.putStrLn $ addressToHex rwdAddr
+
 
 runStakeKeyRegistrationCert :: VerificationKeyFile -> OutputFile -> ExceptT CliError IO ()
 runStakeKeyRegistrationCert (VerificationKeyFile vkFp) (OutputFile oFp) = do

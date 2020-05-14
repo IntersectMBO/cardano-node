@@ -70,14 +70,15 @@ data AddressCmd
   = AddressKeyGen VerificationKeyFile SigningKeyFile
   | AddressKeyHash VerificationKeyFile
   | AddressBuildStaking VerificationKeyFile VerificationKeyFile
-  | AddressBuildReward VerificationKeyFile
   | AddressBuildEnterprise VerificationKeyFile
   | AddressBuildMultiSig  --TODO
   | AddressInfo Text
   deriving (Eq, Show)
 
 data StakeAddressCmd
-  = StakeKeyRegister PrivKeyFile NodeAddress
+  = StakeAddressKeyGen VerificationKeyFile SigningKeyFile
+  | StakeAddressBuild VerificationKeyFile
+  | StakeKeyRegister PrivKeyFile NodeAddress
   | StakeKeyDelegate PrivKeyFile PoolId Lovelace NodeAddress
   | StakeKeyDeRegister PrivKeyFile NodeAddress
   | StakeKeyRegistrationCert VerificationKeyFile OutputFile
@@ -111,7 +112,6 @@ data NodeCmd
   | NodeKeyGenVRF  VerificationKeyFile SigningKeyFile
   | NodeIssueOpCert VerificationKeyFile SigningKeyFile OpCertCounterFile
                     KESPeriod OutputFile
-  | NodeStakingKeyGen  VerificationKeyFile SigningKeyFile
   | NodeStakePoolKeyGen  VerificationKeyFile SigningKeyFile
   deriving (Eq, Show)
 

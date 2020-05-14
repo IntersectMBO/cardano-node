@@ -41,7 +41,7 @@ parseShelleyCommands =
   Opt.subparser $
     mconcat
       [ Opt.command "address"
-          (Opt.info (AddressCmd <$> pAddressCmd) $ Opt.progDesc "Shelley address commands")
+          (Opt.info (AddressCmd <$> pAddressCmd) $ Opt.progDesc "Shelley payment address commands")
       , Opt.command "stake-address"
           (Opt.info (StakeAddressCmd <$> pStakeAddress) $ Opt.progDesc "Shelley stake address commands")
       , Opt.command "transaction"
@@ -97,8 +97,6 @@ pAddressCmd =
           (Opt.info pAddressKeyHash $ Opt.progDesc "Print the hash of an address key to stdout.")
       , Opt.command "build-staking"
           (Opt.info pAddressBuildStaking $ Opt.progDesc "Build a standard Shelley address (capable of receiving payments and staking).")
-      , Opt.command "build-reward"
-          (Opt.info pAddressBuildReward $ Opt.progDesc "Build a Shelley reward address (special address for recieving staking rewards).")
       , Opt.command "build-enterprise"
           (Opt.info pAddressBuildEnterprise $ Opt.progDesc "Build a Shelley enterprise address (can recieve payments but not able to stake, eg for exchanges).")
       , Opt.command "build-multisig"
@@ -118,10 +116,6 @@ pAddressCmd =
       AddressBuildStaking
         <$> pPaymentVerificationKeyFile
         <*> pStakingVerificationKeyFile
-
-
-    pAddressBuildReward :: Parser AddressCmd
-    pAddressBuildReward = AddressBuildReward <$> pStakingVerificationKeyFile
 
     pAddressBuildEnterprise :: Parser AddressCmd
     pAddressBuildEnterprise = AddressBuildEnterprise <$> pPaymentVerificationKeyFile
@@ -146,7 +140,11 @@ pStakeAddress :: Parser StakeAddressCmd
 pStakeAddress =
   Opt.subparser $
     mconcat
-      [ Opt.command "register"
+      [ Opt.command "key-gen"
+          (Opt.info pStakeAddressKeyGen $ Opt.progDesc "Create a stake address key pair")
+      , Opt.command "build"
+          (Opt.info pStakeAddressBuild $ Opt.progDesc "Build a stake address")
+      , Opt.command "register"
           (Opt.info pStakeAddressRegister $ Opt.progDesc "Register a stake address")
       , Opt.command "delegate"
           (Opt.info pStakeAddressDelegate $ Opt.progDesc "Delegate from a stake address to a stake pool")
@@ -160,6 +158,15 @@ pStakeAddress =
           (Opt.info pStakeAddressDelegationCert $ Opt.progDesc "Create a stake address delegation certificate")
       ]
   where
+    pStakeAddressKeyGen :: Parser StakeAddressCmd
+    pStakeAddressKeyGen = StakeAddressKeyGen
+                            <$> pVerificationKeyFile Output
+                            <*> pSigningKeyFile Output
+
+    pStakeAddressBuild :: Parser StakeAddressCmd
+    pStakeAddressBuild = StakeAddressBuild <$> pStakingVerificationKeyFile
+
+
     pStakeAddressRegister :: Parser StakeAddressCmd
     pStakeAddressRegister = StakeKeyRegister <$> pPrivKeyFile <*> parseNodeAddress
 
@@ -283,9 +290,6 @@ pNodeCmd =
       , Opt.command "issue-op-cert"
           (Opt.info pIssueOpCert $
              Opt.progDesc "Issue a node operational certificate")
-      , Opt.command "key-gen-staking"
-          (Opt.info pStakingKeyPair $
-             Opt.progDesc "Create an address staking key pair")
       , Opt.command "key-gen-stake-pool"
           (Opt.info pStakePoolKeyPair $
              Opt.progDesc "Create a stake pool key pair")
@@ -312,11 +316,6 @@ pNodeCmd =
                       <*> pOperatorCertIssueCounterFile
                       <*> pKesPeriod
                       <*> pOutputFile
-
-    pStakingKeyPair :: Parser NodeCmd
-    pStakingKeyPair = NodeStakingKeyGen
-                        <$> pVerificationKeyFile Output
-                        <*> pSigningKeyFile Output
 
     pStakePoolKeyPair :: Parser NodeCmd
     pStakePoolKeyPair = NodeStakePoolKeyGen

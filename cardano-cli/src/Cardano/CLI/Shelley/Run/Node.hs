@@ -28,7 +28,6 @@ runNodeCmd (NodeKeyGenKES  vk sk)     = runNodeKeyGenKES  vk sk
 runNodeCmd (NodeKeyGenVRF  vk sk)     = runNodeKeyGenVRF  vk sk
 runNodeCmd (NodeIssueOpCert vk sk ctr p out) =
   runNodeIssueOpCert vk sk ctr p out
-runNodeCmd (NodeStakingKeyGen vk sk) = runNodeStakingKeyGen vk sk
 runNodeCmd (NodeStakePoolKeyGen vk sk) = runNodeStakePoolKeyGen vk sk
 
 
@@ -103,15 +102,6 @@ runNodeIssueOpCert (VerificationKeyFile vkeyKESPath)
       -- a new cert but without updating the counter.
       writeOperationalCertIssueCounter ocertCtrPath (succ issueNumber)
       writeOperationalCert certFile cert vkey
-
-runNodeStakingKeyGen :: VerificationKeyFile -> SigningKeyFile -> ExceptT CliError IO ()
-runNodeStakingKeyGen (VerificationKeyFile vkFp) (SigningKeyFile skFp) = do
-  (vkey, skey) <- liftIO genKeyPair
-  firstExceptT CardanoApiError
-    . newExceptT
-    $ writeStakingVerificationKey vkFp (StakingVerificationKeyShelley vkey)
-  --TODO: writeSigningKey should really come from Cardano.Config.Shelley.ColdKeys
-  firstExceptT CardanoApiError . newExceptT $ writeSigningKey skFp (SigningKeyShelley skey)
 
 runNodeStakePoolKeyGen :: VerificationKeyFile -> SigningKeyFile -> ExceptT CliError IO ()
 runNodeStakePoolKeyGen (VerificationKeyFile vkFp) (SigningKeyFile skFp) = do
