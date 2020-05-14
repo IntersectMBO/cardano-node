@@ -29,8 +29,7 @@ runAddressCmd cmd =
   case cmd of
     AddressKeyGen vkf skf -> runAddressKeyGen  vkf skf
     AddressKeyHash vkf -> runAddressKeyHash vkf
-    AddressBuildStaking payVk stkVk -> runAddressBuildStaking payVk stkVk
-    AddressBuildEnterprise payVk -> runAddressBuildEnterprise payVk
+    AddressBuild payVk stkVk -> runAddressBuild payVk stkVk
     AddressBuildMultiSig {} -> runAddressBuildMultiSig
     AddressInfo txt -> runAddressInfo txt
 
@@ -49,20 +48,18 @@ runAddressKeyHash (VerificationKeyFile vkeyPath) =
       let Ledger.KeyHash khash = Ledger.hashKey vkey
       liftIO $ BS.putStrLn $ Crypto.getHashBytesAsHex khash
 
-
-runAddressBuildStaking :: VerificationKeyFile -> VerificationKeyFile -> ExceptT CliError IO ()
-runAddressBuildStaking (VerificationKeyFile payVkeyFp) (VerificationKeyFile stkVkeyFp) =
-  firstExceptT CardanoApiError $ do
-    stkVKey <- newExceptT $ readStakingVerificationKey stkVkeyFp
-    payVKey <- newExceptT $ readPaymentVerificationKey payVkeyFp
-    let addr = shelleyVerificationKeyAddress payVKey (Just stkVKey)
-    liftIO $ Text.putStrLn $ addressToHex addr
-
-runAddressBuildEnterprise :: VerificationKeyFile -> ExceptT CliError IO ()
-runAddressBuildEnterprise (VerificationKeyFile payVkeyFp) =
+runAddressBuild :: VerificationKeyFile
+                -> Maybe VerificationKeyFile
+                -> ExceptT CliError IO ()
+runAddressBuild (VerificationKeyFile payVkeyFp) mstkVkeyFp =
   firstExceptT CardanoApiError $ do
     payVKey <- newExceptT $ readPaymentVerificationKey payVkeyFp
-    let addr = shelleyVerificationKeyAddress payVKey Nothing
+    mstkVKey <- case mstkVkeyFp of
+                  Just (VerificationKeyFile stkVkeyFp) ->
+                    Just <$> newExceptT (readStakingVerificationKey stkVkeyFp)
+                  Nothing ->
+                    return Nothing
+    let addr = shelleyVerificationKeyAddress payVKey mstkVKey
     liftIO $ Text.putStrLn $ addressToHex addr
 
 runAddressBuildMultiSig :: ExceptT CliError IO ()

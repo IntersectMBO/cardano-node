@@ -69,8 +69,7 @@ data ShelleyCommand
 data AddressCmd
   = AddressKeyGen VerificationKeyFile SigningKeyFile
   | AddressKeyHash VerificationKeyFile
-  | AddressBuildStaking VerificationKeyFile VerificationKeyFile
-  | AddressBuildEnterprise VerificationKeyFile
+  | AddressBuild VerificationKeyFile (Maybe VerificationKeyFile)
   | AddressBuildMultiSig  --TODO
   | AddressInfo Text
   deriving (Eq, Show)
