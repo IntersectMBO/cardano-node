@@ -10,7 +10,7 @@ banner "${testname}"
 
 error=0
 
-${CARDANO_CLI} shelley node key-gen-stake-pool \
+${CARDANO_CLI} shelley stake-pool key-gen \
     --verification-key-file "${TEST_DIR}/key-gen-stake-pool.vkey" \
     --signing-key-file "${TEST_DIR}/key-gen-stake-pool.skey"
 
