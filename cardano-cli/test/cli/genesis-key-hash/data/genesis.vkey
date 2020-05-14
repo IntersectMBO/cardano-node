@@ -1,0 +1,4 @@
+type: Genesis verification key
+title: Genesis key
+cbor-hex:
+ 58209e5c73f0e26251194d7164faa2bd278b7062187a9a0654c022301efb2b15ad48

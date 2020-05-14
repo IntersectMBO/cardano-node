@@ -17,7 +17,8 @@ ${CARDANO_CLI} shelley address key-hash \
     > "${TEST_DIR}/vkey-hash"
 
 assert_file_exists "${TEST_DIR}/vkey-hash"
-
 assert_line_count 1 "${TEST_DIR}/vkey-hash"
+assert_string "f8d336c2e57d6f675bbe48c88584d8f4ee199b76676526c3b9fadb1d1a7b7ebb" "${TEST_DIR}/vkey-hash"
+
 
 report_result ${error}

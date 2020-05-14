@@ -1,0 +1,24 @@
+#!/bin/sh -u
+
+cwd=$(dirname "$0")
+
+# shellcheck source=/dev/null
+. "${cwd}/../core/common"
+
+# shellcheck disable=SC2154
+banner "${testname}"
+
+error=0
+
+setup_data_dir "${testname}"
+assert_file_exists "${DATA_DIR}/utxo.vkey"
+
+${CARDANO_CLI} shelley genesis key-hash \
+    --verification-key-file "${DATA_DIR}/utxo.vkey" \
+    > "${TEST_DIR}/initial-utxo-addr"
+
+assert_file_exists "${TEST_DIR}/initial-utxo-addr"
+assert_line_count 1 "${TEST_DIR}/initial-utxo-addr"
+assert_string "34257772315e97141af2d6f6ddd097d9a8923c5828434a143ab29e2d4e27f406" "${TEST_DIR}/initial-utxo-addr"
+
+report_result ${error}
