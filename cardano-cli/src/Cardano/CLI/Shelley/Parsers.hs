@@ -290,9 +290,6 @@ pNodeCmd =
       , Opt.command "issue-op-cert"
           (Opt.info pIssueOpCert $
              Opt.progDesc "Issue a node operational certificate")
-      , Opt.command "key-gen-stake-pool"
-          (Opt.info pStakePoolKeyPair $
-             Opt.progDesc "Create a stake pool key pair")
       ]
   where
     pKeyGenOperator :: Parser NodeCmd
@@ -317,17 +314,14 @@ pNodeCmd =
                       <*> pKesPeriod
                       <*> pOutputFile
 
-    pStakePoolKeyPair :: Parser NodeCmd
-    pStakePoolKeyPair = NodeStakePoolKeyGen
-                          <$> pVerificationKeyFile Output
-                          <*> pSigningKeyFile Output
-
 
 pPoolCmd :: Parser PoolCmd
 pPoolCmd =
   Opt.subparser $
     mconcat
-      [ Opt.command "register"
+      [ Opt.command "key-gen"
+          (Opt.info pPoolKeyGen $ Opt.progDesc "Create a stake pool operator's offline key pair")
+      , Opt.command "register"
           (Opt.info pPoolRegster $ Opt.progDesc "Register a stake pool")
       , Opt.command "re-register"
           (Opt.info pPoolReRegster $ Opt.progDesc "Re-register a stake pool")
@@ -339,6 +333,11 @@ pPoolCmd =
           (Opt.info pStakePoolRetirmentCert $ Opt.progDesc "Create a stake pool deregistration certificate")
       ]
   where
+    pPoolKeyGen :: Parser PoolCmd
+    pPoolKeyGen = PoolKeyGen
+                    <$> pVerificationKeyFile Output
+                    <*> pSigningKeyFile Output
+
     pPoolRegster :: Parser PoolCmd
     pPoolRegster = PoolRegister <$> pPoolId
 

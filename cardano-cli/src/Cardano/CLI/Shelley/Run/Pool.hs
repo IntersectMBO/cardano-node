@@ -13,12 +13,15 @@ import           Cardano.Api (ShelleyCoin, ShelleyStakePoolMargin,
                    ShelleyStakePoolRelay, StakingVerificationKey (..),
                    mkShelleyStakingCredential, readStakingVerificationKey,
                    readVerificationKeyStakePool, shelleyRegisterStakePool,
-                   shelleyRetireStakePool, writeCertificate)
+                   shelleyRetireStakePool, writeCertificate,
+                   SigningKey(..), writeSigningKey,
+                   writeVerificationKeyStakePool)
 
 import qualified Shelley.Spec.Ledger.Address as Shelley
 import           Shelley.Spec.Ledger.Keys (hash, hashKey)
 import qualified Shelley.Spec.Ledger.Slot as Shelley
 
+import           Cardano.Config.Shelley.ColdKeys (genKeyPair)
 import           Cardano.Config.Shelley.VRF
 
 import           Cardano.CLI.Errors (CliError(..))
@@ -27,6 +30,7 @@ import           Cardano.CLI.Shelley.Commands
 
 
 runPoolCmd :: PoolCmd -> ExceptT CliError IO ()
+runPoolCmd (PoolKeyGen vk sk) = runStakePoolKeyGen vk sk
 runPoolCmd (PoolRegistrationCert sPvkey vrfVkey pldg pCost pMrgn rwdVerFp ownerVerFps relays outfp) =
   runStakePoolRegistrationCert sPvkey vrfVkey pldg pCost pMrgn rwdVerFp ownerVerFps relays outfp
 runPoolCmd (PoolRetirmentCert sPvkeyFp retireEpoch outfp) =
@@ -37,6 +41,13 @@ runPoolCmd cmd = liftIO $ putStrLn $ "runPoolCmd: " ++ show cmd
 --
 -- Stake pool command implementations
 --
+
+runStakePoolKeyGen :: VerificationKeyFile -> SigningKeyFile -> ExceptT CliError IO ()
+runStakePoolKeyGen (VerificationKeyFile vkFp) (SigningKeyFile skFp) = do
+  (vkey, skey) <- liftIO genKeyPair
+  firstExceptT CardanoApiError . newExceptT $ writeVerificationKeyStakePool vkFp vkey
+  --TODO: writeSigningKey should really come from Cardano.Config.Shelley.ColdKeys
+  firstExceptT CardanoApiError . newExceptT $ writeSigningKey skFp (SigningKeyShelley skey)
 
 -- | Create a stake pool registration cert.
 -- TODO: Metadata and more stake pool relay support to be

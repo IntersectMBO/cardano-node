@@ -5,11 +5,7 @@ module Cardano.CLI.Shelley.Run.Node
 import           Cardano.Prelude
 
 import           Control.Monad.Trans.Except (ExceptT)
-import           Control.Monad.Trans.Except.Extra (firstExceptT, newExceptT)
-
-import           Cardano.Api (SigningKey(..), StakingVerificationKey (..), 
-                   writeSigningKey, writeVerificationKeyStakePool,
-                   writeStakingVerificationKey)
+import           Control.Monad.Trans.Except.Extra (firstExceptT)
 
 import           Cardano.Config.Shelley.ColdKeys hiding (writeSigningKey)
 import           Cardano.Config.Shelley.KES
@@ -28,7 +24,6 @@ runNodeCmd (NodeKeyGenKES  vk sk)     = runNodeKeyGenKES  vk sk
 runNodeCmd (NodeKeyGenVRF  vk sk)     = runNodeKeyGenVRF  vk sk
 runNodeCmd (NodeIssueOpCert vk sk ctr p out) =
   runNodeIssueOpCert vk sk ctr p out
-runNodeCmd (NodeStakePoolKeyGen vk sk) = runNodeStakePoolKeyGen vk sk
 
 
 --
@@ -102,11 +97,4 @@ runNodeIssueOpCert (VerificationKeyFile vkeyKESPath)
       -- a new cert but without updating the counter.
       writeOperationalCertIssueCounter ocertCtrPath (succ issueNumber)
       writeOperationalCert certFile cert vkey
-
-runNodeStakePoolKeyGen :: VerificationKeyFile -> SigningKeyFile -> ExceptT CliError IO ()
-runNodeStakePoolKeyGen (VerificationKeyFile vkFp) (SigningKeyFile skFp) = do
-  (vkey, skey) <- liftIO genKeyPair
-  firstExceptT CardanoApiError . newExceptT $ writeVerificationKeyStakePool vkFp vkey
-  --TODO: writeSigningKey should really come from Cardano.Config.Shelley.ColdKeys
-  firstExceptT CardanoApiError . newExceptT $ writeSigningKey skFp (SigningKeyShelley skey)
 

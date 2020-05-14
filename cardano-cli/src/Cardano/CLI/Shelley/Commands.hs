@@ -112,12 +112,12 @@ data NodeCmd
   | NodeKeyGenVRF  VerificationKeyFile SigningKeyFile
   | NodeIssueOpCert VerificationKeyFile SigningKeyFile OpCertCounterFile
                     KESPeriod OutputFile
-  | NodeStakePoolKeyGen  VerificationKeyFile SigningKeyFile
   deriving (Eq, Show)
 
 
 data PoolCmd
-  = PoolRegister PoolId   -- { operator :: PubKey, owner :: [PubKey], kes :: PubKey, vrf :: PubKey, rewards :: PubKey, cost :: Lovelace, margin :: Margin, nodeAddr :: NodeAddress }
+  = PoolKeyGen VerificationKeyFile SigningKeyFile
+  | PoolRegister PoolId   -- { operator :: PubKey, owner :: [PubKey], kes :: PubKey, vrf :: PubKey, rewards :: PubKey, cost :: Lovelace, margin :: Margin, nodeAddr :: NodeAddress }
   | PoolReRegister PoolId -- { operator :: PubKey, owner :: [PubKey], kes :: PubKey, vrf :: PubKey, rewards :: PubKey, cost :: Lovelace, margin :: Margin, nodeAddr :: NodeAddress }
   | PoolRetire PoolId EpochNo NodeAddress
   | PoolRegistrationCert
