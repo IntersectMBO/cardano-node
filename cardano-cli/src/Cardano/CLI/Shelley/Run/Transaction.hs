@@ -14,14 +14,15 @@ import           Cardano.Config.TextView
 import           Cardano.CLI.Environment (readEnvSocketPath)
 import           Cardano.CLI.Errors (CliError(..))
 
-import           Cardano.Config.Types
+import           Cardano.Config.Types hiding (Update)
 
 import           Cardano.CLI.Shelley.Parsers
 import           Cardano.Config.Types (CertificateFile (..))
 
 import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra
-                   (firstExceptT, handleIOExceptT, hoistEither, newExceptT)
+                   (bimapExceptT, firstExceptT, handleIOExceptT, hoistEither,
+                    newExceptT, right)
 
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Lazy.Char8 as LBS
@@ -33,8 +34,8 @@ import           Shelley.Spec.Ledger.PParams (PParams)
 runTransactionCmd :: TransactionCmd -> ExceptT CliError IO ()
 runTransactionCmd cmd =
   case cmd of
-    TxBuildRaw txins txouts ttl fee out certs ->
-      runTxBuildRaw txins txouts ttl fee out certs
+    TxBuildRaw txins txouts ttl fee out certs mUpProp ->
+      runTxBuildRaw txins txouts ttl fee out certs mUpProp
     TxSign txinfile skfiles network txoutfile ->
       runTxSign txinfile skfiles network txoutfile
     TxSubmit txFp network ->
@@ -51,14 +52,19 @@ runTxBuildRaw
   -> Lovelace
   -> TxBodyFile
   -> [CertificateFile]
+  -> Maybe UpdateProposalFile
   -> ExceptT CliError IO ()
-runTxBuildRaw txins txouts ttl fee (TxBodyFile fpath) certFps = do
+runTxBuildRaw txins txouts ttl fee (TxBodyFile fpath) certFps mUpdateProp  = do
   certs <- mapM readShelleyCert certFps
+  upUpProp <- maybeUpdate mUpdateProp
   firstExceptT CardanoApiError
     . newExceptT
     . writeTxUnsigned fpath
-    $ buildShelleyTransaction txins txouts ttl fee certs
-
+    $ buildShelleyTransaction txins txouts ttl fee certs upUpProp
+  where
+    maybeUpdate :: Maybe UpdateProposalFile -> ExceptT CliError IO (Maybe Update)
+    maybeUpdate (Just (UpdateProposalFile uFp )) = bimapExceptT CardanoApiError Just . newExceptT $ readUpdate uFp
+    maybeUpdate Nothing = right Nothing
 
 runTxSign :: TxBodyFile -> [SigningKeyFile] -> Network -> TxFile -> ExceptT CliError IO ()
 runTxSign (TxBodyFile infile) skfiles  network (TxFile outfile) = do

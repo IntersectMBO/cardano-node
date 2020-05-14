@@ -9,6 +9,7 @@ module Cardano.CLI.Shelley.Parsers
 import           Prelude (String)
 import           Cardano.Prelude hiding (option)
 
+import qualified Data.ByteString.Char8 as C8
 import qualified Data.IP as IP
 import           Data.Ratio (approxRational)
 import qualified Data.Text as Text
@@ -25,12 +26,14 @@ import qualified Shelley.Spec.Ledger.TxData as Shelley
 import           Cardano.Api
 import           Cardano.Slotting.Slot (EpochNo (..))
 
-import           Cardano.Config.Types (SigningKeyFile(..), CertificateFile (..))
+import           Cardano.Config.Types (SigningKeyFile(..), CertificateFile (..),
+                   UpdateProposalFile (..))
 import           Cardano.Config.Parsers (parseNodeAddress)
 import           Cardano.Config.Shelley.OCert (KESPeriod(..))
 
 import           Cardano.CLI.Shelley.Commands
 
+import           Cardano.Crypto.Hash (hashFromBytes)
 
 --
 -- Shelley CLI command parsers
@@ -232,7 +235,8 @@ pTransaction =
                                    <*> pTxTTL
                                    <*> pTxFee
                                    <*> pTxBodyFile Output
-                                   <*> many pCertificate
+                                   <*> many pCertificateFile
+                                   <*> optional pUpdateProposalFile
 
     pTransactionSign  :: Parser TransactionCmd
     pTransactionSign = TxSign <$> pTxBodyFile Input
@@ -261,7 +265,7 @@ pTransaction =
         <*> pTxTTL
         <*> pNetwork
         <*> pSomeSigningKeyFiles
-        <*> many pCertificate
+        <*> many pCertificateFile
         <*> pProtocolParamsFile
 
     pTransactionInfo  :: Parser TransactionCmd
@@ -285,6 +289,9 @@ pNodeCmd =
       , Opt.command "issue-op-cert"
           (Opt.info pIssueOpCert $
              Opt.progDesc "Issue a node operational certificate")
+      , Opt.command "create-update-proposal"
+          (Opt.info pUpdateProposal $
+            Opt.progDesc "Create an update proposal")
       ]
   where
     pKeyGenOperator :: Parser NodeCmd
@@ -308,6 +315,13 @@ pNodeCmd =
                       <*> pOperatorCertIssueCounterFile
                       <*> pKesPeriod
                       <*> pOutputFile
+
+    pUpdateProposal :: Parser NodeCmd
+    pUpdateProposal = NodeUpdateProposal
+                        <$> pOutputFile
+                        <*> pEpochNoUpdateProp
+                        <*> some pGenesisVerificationKeyFile
+                        <*> pShelleyPParamsUpdate
 
 
 pPoolCmd :: Parser PoolCmd
@@ -580,8 +594,8 @@ pProtocolParamsFile =
      <> Opt.help "Filepath of the JSON-encoded protocol parameters file"
      )
 
-pCertificate :: Parser CertificateFile
-pCertificate =
+pCertificateFile :: Parser CertificateFile
+pCertificateFile =
  CertificateFile <$>
    Opt.strOption
      (  Opt.long "certificate"
@@ -589,6 +603,15 @@ pCertificate =
      <> Opt.help "Filepath of the certificate. This encompasses all \
                  \types of certificates (stake pool certificates, \
                  \stake key certificates etc)"
+     )
+
+pUpdateProposalFile :: Parser UpdateProposalFile
+pUpdateProposalFile =
+ UpdateProposalFile <$>
+   Opt.strOption
+     (  Opt.long "update-proposal"
+     <> Opt.metavar "FILEPATH"
+     <> Opt.help "Filepath of the update proposal."
      )
 
 pColdSigningKeyFile :: Parser SigningKeyFile
@@ -643,6 +666,17 @@ pEpochNo =
       (  Opt.long "epoch"
       <> Opt.metavar "INT"
       <> Opt.help "The epoch number."
+      )
+
+
+
+pEpochNoUpdateProp :: Parser EpochNo
+pEpochNoUpdateProp =
+  EpochNo <$>
+    Opt.option Opt.auto
+      (  Opt.long "epoch"
+      <> Opt.metavar "INT"
+      <> Opt.help "The epoch number in which the update proposal is valid."
       )
 
 pGenesisFile :: Parser GenesisFile
@@ -716,6 +750,15 @@ pVerificationKeyFile fdir =
       <> Opt.metavar "FILEPATH"
       <> Opt.help (show fdir ++ " filepath of the verification key.")
       )
+pGenesisVerificationKeyFile :: Parser VerificationKeyFile
+pGenesisVerificationKeyFile =
+  VerificationKeyFile <$>
+    Opt.strOption
+      (  Opt.long "genesis-verification-key-file"
+      <> Opt.metavar "FILEPATH"
+      <> Opt.help "Filepath of the genesis verification key."
+      )
+
 
 pKESVerificationKeyFile :: Parser VerificationKeyFile
 pKESVerificationKeyFile =
@@ -956,3 +999,205 @@ pStakePoolRetirmentCert =
     <$> pPoolStakingVerificationKeyFile
     <*> pEpochNo
     <*> pOutputFile
+
+
+pShelleyPParamsUpdate :: Parser ShelleyPParamsUpdate
+pShelleyPParamsUpdate =
+  PParams
+    <$> (maybeToStrictMaybe <$> pMinFeeLinearFactor)
+    <*> (maybeToStrictMaybe <$> pMinFeeConstantFactor)
+    <*> (maybeToStrictMaybe <$> pMaxBodySize)
+    <*> (maybeToStrictMaybe <$> pMaxTransactionSize)
+    <*> (maybeToStrictMaybe <$> pMaxBlockHeaderSize)
+    <*> (maybeToStrictMaybe <$> pKeyRegistDeposit)
+    <*> (maybeToStrictMaybe <$> pMinRefund)
+    <*> (maybeToStrictMaybe <$> pDepositDecay)
+    <*> (maybeToStrictMaybe <$> pPoolDeposit)
+    <*> (maybeToStrictMaybe <$> pPoolMinRefund)
+    <*> (maybeToStrictMaybe <$> pPoolDecayRate)
+    <*> (maybeToStrictMaybe <$> pEpochBoundRetirement)
+    <*> (maybeToStrictMaybe <$> pNumberOfPools)
+    <*> (maybeToStrictMaybe <$> pPoolInfluence)
+    <*> (maybeToStrictMaybe <$> pTreasuryExpansion)
+    <*> (maybeToStrictMaybe <$> pMonetaryExpansion)
+    <*> (maybeToStrictMaybe <$> pDecentralParam)
+    <*> (maybeToStrictMaybe <$> pExtraEntropy)
+    <*> (maybeToStrictMaybe <$> pProtocolVersion)
+
+pMinFeeLinearFactor :: Parser (Maybe Natural)
+pMinFeeLinearFactor =
+  Opt.option Opt.auto
+    (  Opt.long "min-fee-linear"
+    <> Opt.metavar "NATURAL"
+    <> Opt.help "The linear factor for the minimum fee calculation."
+    )
+
+pMinFeeConstantFactor :: Parser (Maybe Natural)
+pMinFeeConstantFactor =
+  Opt.option Opt.auto
+    (  Opt.long "min-fee-constant"
+    <> Opt.metavar "NATURAL"
+    <> Opt.help "The constant factor for the minimum fee calculation."
+    )
+
+pMaxBodySize :: Parser (Maybe Natural)
+pMaxBodySize =
+  Opt.option Opt.auto
+    (  Opt.long "max-block-body-size"
+    <> Opt.metavar "NATURAL"
+    <> Opt.help "Maximal block body size."
+    )
+
+pMaxTransactionSize :: Parser (Maybe Natural)
+pMaxTransactionSize =
+  Opt.option Opt.auto
+    (  Opt.long "max-tx-size"
+    <> Opt.metavar "NATURAL"
+    <> Opt.help "Maximum transaction size."
+    )
+
+pMaxBlockHeaderSize :: Parser (Maybe Natural)
+pMaxBlockHeaderSize =
+  Opt.option Opt.auto
+    (  Opt.long "max-block-header-size"
+    <> Opt.metavar "NATURAL"
+    <> Opt.help "Maximum block header size."
+    )
+
+pKeyRegistDeposit :: Parser (Maybe ShelleyCoin)
+pKeyRegistDeposit =
+  optional $
+    Shelley.Coin
+      <$> Opt.option Opt.auto
+            (  Opt.long "key-reg-deposit-amt"
+            <> Opt.metavar "INT"
+            <> Opt.help "Key registration deposit amount."
+            )
+
+
+
+pMinRefund :: Parser (Maybe UnitInterval)
+pMinRefund =
+  Opt.option (mkUnitInterval <$> Opt.auto)
+    (  Opt.long "min-percent-refund"
+    <> Opt.metavar "DOUBLE"
+    <> Opt.help "The refund guarantee minimum percent."
+    )
+
+pDepositDecay :: Parser (Maybe Rational)
+pDepositDecay =
+  Opt.option Opt.auto
+    (  Opt.long "deposit-decay-rate"
+    <> Opt.metavar "DOUBLE"
+    <> Opt.help "The deposit decay rate."
+    )
+
+pPoolDeposit :: Parser (Maybe ShelleyCoin)
+pPoolDeposit =
+  optional $
+    Shelley.Coin
+      <$> Opt.option Opt.auto
+            (  Opt.long "pool-reg-deposit"
+            <> Opt.metavar "INT"
+            <> Opt.help "The amount of a pool registration deposit."
+            )
+
+
+pPoolMinRefund :: Parser (Maybe UnitInterval)
+pPoolMinRefund =
+  Opt.option (mkUnitInterval <$> Opt.auto)
+    (  Opt.long "min-pool-percent-refund"
+    <> Opt.metavar "DOUBLE"
+    <> Opt.help "The pool refund minimum percent."
+    )
+
+pPoolDecayRate :: Parser (Maybe Rational)
+pPoolDecayRate =
+  Opt.option Opt.auto
+    (  Opt.long "pool-deposit-decay-rate"
+    <> Opt.metavar "DOUBLE"
+    <> Opt.help "Decay rate for pool deposits."
+    )
+
+
+pEpochBoundRetirement :: Parser (Maybe EpochNo)
+pEpochBoundRetirement =
+  optional $
+    EpochNo
+       <$> Opt.option Opt.auto
+             (  Opt.long "pool-retirement-epoch-boundary"
+             <> Opt.metavar "INT"
+             <> Opt.help "Epoch bound on pool retirement."
+             )
+
+
+
+pNumberOfPools :: Parser (Maybe Natural)
+pNumberOfPools =
+  Opt.option Opt.auto
+    (  Opt.long "number-of-pools"
+    <> Opt.metavar "NATURAL"
+    <> Opt.help "Desired number of pools."
+    )
+
+pPoolInfluence :: Parser (Maybe Rational)
+pPoolInfluence =
+  Opt.option Opt.auto
+    (  Opt.long "pool-influence"
+    <> Opt.metavar "DOUBLE"
+    <> Opt.help "Pool influence."
+    )
+
+pTreasuryExpansion :: Parser (Maybe UnitInterval)
+pTreasuryExpansion =
+  Opt.option (mkUnitInterval <$> Opt.auto)
+    (  Opt.long "treasury-expansion"
+    <> Opt.metavar "DOUBLE"
+    <> Opt.help "Treasury expansion."
+    )
+
+pMonetaryExpansion :: Parser (Maybe UnitInterval)
+pMonetaryExpansion =
+  Opt.option (mkUnitInterval <$> Opt.auto)
+    (  Opt.long "monetary-expansion"
+    <> Opt.metavar "DOUBLE"
+    <> Opt.help "Monetary expansion."
+    )
+
+pDecentralParam :: Parser (Maybe UnitInterval)
+pDecentralParam =
+  Opt.option (mkUnitInterval <$> Opt.auto)
+    (  Opt.long "decentralization-parameter"
+    <> Opt.metavar "DOUBLE"
+    <> Opt.help "Decentralization parameter."
+    )
+
+pExtraEntropy :: Parser (Maybe Nonce)
+pExtraEntropy =
+   optional
+     $ Opt.option
+         (Opt.maybeReader nonceHash)
+           (  Opt.long "extra-entropy"
+           <> Opt.metavar "HASH"
+           <> Opt.help "Extra entropy."
+           <> Opt.value Shelley.NeutralNonce
+           )
+  where
+    nonceHash :: String -> Maybe Nonce
+    nonceHash str = Nonce <$> (hashFromBytes $ C8.pack str)
+
+pProtocolVersion :: Parser (Maybe ProtVer)
+pProtocolVersion =
+  optional $
+    ProtVer
+      <$> Opt.option Opt.auto
+            (  Opt.long "protocol-major-version"
+            <> Opt.metavar "NATURAL"
+            <> Opt.help "Major protocol version. An increase indicates a hard fork."
+            )
+      <*> Opt.option Opt.auto
+            (  Opt.long "protocol-minor-version"
+            <> Opt.metavar "NATURAL"
+            <> Opt.help "Minor protocol version. An increase indicates a soft fork\
+                        \ (old software canvalidate but not produce new blocks)."
+            )

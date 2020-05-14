@@ -18,6 +18,7 @@ module Cardano.Api.Types
   , toNetworkMagic
   , toByronNetworkMagic
   , SigningKey (..)
+  , GenesisVerificationKey (..)
   , PaymentVerificationKey (..)
   , StakingVerificationKey (..)
   , Certificate (..)
@@ -28,6 +29,8 @@ module Cardano.Api.Types
   , TxId (..)
   , TxIx
   , TxOut (..)
+  , Update (..)
+  , EpochNo (..)
   , SlotNo (..)
   , Lovelace (..)
 
@@ -55,11 +58,13 @@ module Cardano.Api.Types
   , ShelleyGenesisVerificationHash
   , ShelleyMIRCertificate
   , ShelleyMIRMap
+  , ShelleyPParamsUpdate
   , ShelleyStakePoolMargin
   , ShelleyStakePoolCertificate
   , ShelleyStakePoolMetaData
   , ShelleyStakePoolOwners
   , ShelleyStakePoolRelay
+  , ShelleyUpdate
   , ShelleyVerificationKeyPayment
   , ShelleyVerificationKeyHashStaking
   , ShelleyVerificationKeyHashStakePool
@@ -95,7 +100,7 @@ import           Data.Vector (Vector)
 
 import           Cardano.Config.Orphanage ()
 
-import           Cardano.Slotting.Slot (SlotNo (..))
+import           Cardano.Slotting.Slot (SlotNo (..), EpochNo (..))
 import           Ouroboros.Network.Magic (NetworkMagic(..))
 
 import qualified Cardano.Crypto.Hash.Class   as Crypto
@@ -112,6 +117,7 @@ import qualified Shelley.Spec.Ledger.BaseTypes               as Shelley
 import qualified Shelley.Spec.Ledger.Coin                    as Shelley
 import qualified Shelley.Spec.Ledger.Delegation.Certificates as Shelley
 import qualified Shelley.Spec.Ledger.Keys                    as Shelley
+import qualified Shelley.Spec.Ledger.PParams                 as Shelley
 import qualified Shelley.Spec.Ledger.TxData                  as Shelley
 import qualified Shelley.Spec.Ledger.Tx                      as Shelley
 
@@ -130,6 +136,8 @@ type ShelleyCertificate                  = Shelley.DCert Shelley.TPraosStandardC
 type ShelleyCoin                         = Shelley.Coin
 type ShelleyCredentialStaking            = Shelley.Credential Shelley.Staking Shelley.TPraosStandardCrypto
 type ShelleyCredentialStakePool          = Shelley.Credential Shelley.StakePool Shelley.TPraosStandardCrypto
+type ShelleyUpdate                       = Shelley.Update Shelley.TPraosStandardCrypto
+type ShelleyPParamsUpdate                = Shelley.PParamsUpdate
 type ShelleyVerificationKeyPayment       = Shelley.VKey Shelley.Payment Shelley.TPraosStandardCrypto
 type ShelleyVerificationKeyStaking       = Shelley.VKey Shelley.Staking Shelley.TPraosStandardCrypto
 type ShelleyVerificationKeyStakePool     = Shelley.VKey Shelley.StakePool Shelley.TPraosStandardCrypto
@@ -196,6 +204,13 @@ data SigningKey
   deriving (Generic, NFData, Show)
   deriving anyclass NoUnexpectedThunks
 
+-- | A verification key for use in genesis.
+--
+data GenesisVerificationKey
+  = GenesisVerificationKeyShelley !ShelleyGenesisVerificationKey
+  deriving (Eq, Generic, NFData, Show)
+  deriving anyclass NoUnexpectedThunks
+
 -- | A verification key for use in addresses (payment).
 --
 -- Verification keys are also commonly known as \"public keys\".
@@ -213,6 +228,10 @@ data PaymentVerificationKey
 data StakingVerificationKey
   = StakingVerificationKeyShelley !ShelleyVerificationKeyStaking
   deriving (Generic, NFData, Show)
+  deriving anyclass NoUnexpectedThunks
+
+data Update = ShelleyUpdate (Shelley.Update Shelley.TPraosStandardCrypto)
+  deriving (Eq, Generic, Show)
   deriving anyclass NoUnexpectedThunks
 
 -- The cardano-sl codebase (and cardano-ledger) has something a little like

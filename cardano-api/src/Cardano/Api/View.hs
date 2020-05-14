@@ -2,8 +2,10 @@ module Cardano.Api.View
   ( parseAddressView
   , parseCertificateView
   , parseSigningKeyView
+  , parseGenesisVerificationKeyView
   , parsePaymentVerificationKeyView
   , parseStakingVerificationKeyView
+  , parseUpdateView
   , parseVerificationKeyStakePoolView
   , parseVerificationKeyVRFView
   , parseTxSignedView
@@ -12,19 +14,23 @@ module Cardano.Api.View
   , readAddress
   , readCertificate
   , readSigningKey
+  , readGenesisVerificationKey
   , readPaymentVerificationKey
   , readStakingVerificationKey
   , readVRFVerificationKey
   , readVerificationKeyStakePool
   , readTxSigned
   , readTxUnsigned
+  , readUpdate
 
   , renderAddressView
   , renderCertificateView
+  , renderGenesisVerificationKeyView
   , renderSigningKeyView
   , renderPaymentVerificationKeyView
   , renderVerificationKeyStakePoolView
   , renderStakingVerificationKeyView
+  , renderUpdateView
   , renderVerificationKeyVRFView
   , renderTxSignedView
   , renderTxUnsignedView
@@ -38,6 +44,7 @@ module Cardano.Api.View
   , writeVRFVerificationKey
   , writeTxSigned
   , writeTxUnsigned
+  , writeUpdate
   ) where
 
 import           Cardano.Api.CBOR
@@ -69,6 +76,10 @@ parseSigningKeyView :: ByteString -> Either ApiError SigningKey
 parseSigningKeyView bs =
   signingKeyFromCBOR . tvRawCBOR =<< first ApiTextView (parseTextView bs)
 
+parseGenesisVerificationKeyView :: ByteString -> Either ApiError GenesisVerificationKey
+parseGenesisVerificationKeyView bs =
+  genesisVerificationKeyFromCBOR . tvRawCBOR =<< first ApiTextView (parseTextView bs)
+
 parsePaymentVerificationKeyView :: ByteString -> Either ApiError PaymentVerificationKey
 parsePaymentVerificationKeyView bs =
   paymentVerificationKeyFromCBOR . tvRawCBOR =<< first ApiTextView (parseTextView bs)
@@ -76,6 +87,10 @@ parsePaymentVerificationKeyView bs =
 parseStakingVerificationKeyView :: ByteString -> Either ApiError StakingVerificationKey
 parseStakingVerificationKeyView bs =
   stakingVerificationKeyFromCBOR . tvRawCBOR =<< first ApiTextView (parseTextView bs)
+
+parseUpdateView :: ByteString -> Either ApiError Update
+parseUpdateView bs =
+  updateFromCBOR . tvRawCBOR =<< first ApiTextView (parseTextView bs)
 
 parseVRFVerificationKeyView :: ByteString -> Either ApiError ShelleyVRFVerificationKey
 parseVRFVerificationKeyView bs =
@@ -120,6 +135,13 @@ renderCertificateView cert =
     cbor :: ByteString
     cbor = certificateToCBOR cert
 
+renderGenesisVerificationKeyView :: GenesisVerificationKey -> ByteString
+renderGenesisVerificationKeyView pk =
+  renderTextView $ TextView "GenesisVerificationKeyShelley" "Free form text" cbor
+  where
+    cbor :: ByteString
+    cbor = genesisVerificationKeyToCBOR pk
+
 renderSigningKeyView :: SigningKey -> ByteString
 renderSigningKeyView kp =
   case kp of
@@ -128,6 +150,13 @@ renderSigningKeyView kp =
   where
     cbor :: ByteString
     cbor = signingKeyToCBOR kp
+
+renderUpdateView :: Update -> ByteString
+renderUpdateView up =
+    renderTextView $ TextView "UpdateShelley" "Free form text" cbor
+  where
+    cbor :: ByteString
+    cbor = updateToCBOR up
 
 renderPaymentVerificationKeyView :: PaymentVerificationKey -> ByteString
 renderPaymentVerificationKeyView pk =
@@ -202,6 +231,12 @@ readSigningKey path =
     bs <- handleIOExceptT (ApiErrorIO path) $ BS.readFile path
     hoistEither $ parseSigningKeyView bs
 
+readGenesisVerificationKey :: FilePath -> IO (Either ApiError GenesisVerificationKey)
+readGenesisVerificationKey path =
+  runExceptT $ do
+    bs <- handleIOExceptT (ApiErrorIO path) $ BS.readFile path
+    hoistEither $ parseGenesisVerificationKeyView bs
+
 readPaymentVerificationKey :: FilePath -> IO (Either ApiError PaymentVerificationKey)
 readPaymentVerificationKey path =
   runExceptT $ do
@@ -237,6 +272,12 @@ readTxUnsigned path =
   runExceptT $ do
     bs <- handleIOExceptT (ApiErrorIO path) $ BS.readFile path
     hoistEither $ parseTxUnsignedView bs
+
+readUpdate :: FilePath -> IO (Either ApiError Update)
+readUpdate path =
+  runExceptT $ do
+    bs <- handleIOExceptT (ApiErrorIO path) $ BS.readFile path
+    hoistEither $ parseUpdateView bs
 
 writeAddress :: FilePath -> Address -> IO (Either ApiError ())
 writeAddress path kp =
@@ -282,3 +323,8 @@ writeTxUnsigned :: FilePath -> TxUnsigned -> IO (Either ApiError ())
 writeTxUnsigned path kp =
   runExceptT .
     handleIOExceptT (ApiErrorIO path) $ BS.writeFile path (renderTxUnsignedView kp)
+
+writeUpdate :: FilePath -> Update -> IO (Either ApiError ())
+writeUpdate path kp =
+  runExceptT .
+    handleIOExceptT (ApiErrorIO path) $ BS.writeFile path (renderUpdateView kp)

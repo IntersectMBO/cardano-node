@@ -10,8 +10,10 @@ module Cardano.Api
 
     -- * Keys
   , SigningKey (..)
+  , GenesisVerificationKey (..)
   , PaymentVerificationKey (..)
   , StakingVerificationKey (..)
+  , getGenesisVerificationKey
   , getPaymentVerificationKey
   , getStakingVerificationKey
   , byronGenSigningKey
@@ -39,7 +41,7 @@ module Cardano.Api
   , TxIx
   , Lovelace (..)
   , SlotNo (..)
-
+  , Update (..)
   , ShelleyTxBody
 
   , getTxSignedBody
@@ -56,6 +58,9 @@ module Cardano.Api
   , witnessTransaction
   , signTransactionWithWitness
 
+    -- * Slot related
+  , EpochNo
+
     -- * Node local state queries
   , LocalStateQueryError (..)
   , renderLocalStateQueryError
@@ -67,11 +72,14 @@ module Cardano.Api
 
   , ShelleyCoin
   , ShelleyCredentialStaking
+  , ShelleyGenesisVerificationHash
+  , ShelleyPParamsUpdate
   , ShelleyRewardAccount
   , ShelleyStakePoolMargin
   , ShelleyStakePoolMetaData
   , ShelleyStakePoolOwners
   , ShelleyStakePoolRelay
+  , ShelleyUpdate
   , ShelleyVerificationKeyHashStaking
   , ShelleyVerificationKeyHashStakePool
   , ShelleyVerificationKeyStakePool
@@ -80,7 +88,7 @@ module Cardano.Api
   , ShelleyVRFVerificationKey
   , mkShelleyStakingCredential
 
-  -- * Shelley Delegation Certificate Related
+  -- * Shelley delegation certificate related
   , Certificate(..)
   , shelleyDeregisterStakingAddress
   , shelleyDelegateStake
@@ -89,6 +97,21 @@ module Cardano.Api
   , shelleyRegisterStakingAddress
   , shelleyRegisterStakePool
   , shelleyRetireStakePool
+
+  -- * Shelley update proposal related
+  , Shelley.Nonce (..)
+  , Shelley.PParams'(..)
+  , Shelley.ProtVer (..)
+  , createShelleyUpdateProposal
+
+  -- * Hashing
+  , Shelley.hashKey
+
+  -- * General helpers
+  , Shelley.StrictMaybe(..)
+  , Shelley.UnitInterval
+  , Shelley.mkUnitInterval
+  , Shelley.maybeToStrictMaybe
   ) where
 
 import           Cardano.Prelude
@@ -148,6 +171,11 @@ shelleyGenSigningKey = do
   where
     dsignProxy :: Proxy (Shelley.DSIGN Shelley.TPraosStandardCrypto)
     dsignProxy = Proxy
+
+
+---
+-- Shelley staking related
+---
 
 -- | Register a shelley staking pool.
 shelleyRegisterStakePool
@@ -239,6 +267,20 @@ shelleyMIRCertificate
 shelleyMIRCertificate mirMap =
   ShelleyMIRCertificate . Shelley.DCertMir $ Shelley.MIRCert mirMap
 
+---
+-- Shelley update related
+---
+
+createShelleyUpdateProposal
+  :: Shelley.EpochNo
+  -- ^ Epoch in which the proposal is valid.
+  -> [ShelleyGenesisVerificationHash]
+  -> ShelleyPParamsUpdate
+  -> Shelley.Update Shelley.TPraosStandardCrypto
+createShelleyUpdateProposal epNo genKeyHashes pParamsUpdate = do
+  let propUpdates = Shelley.ProposedPPUpdates . Map.fromList $ zip genKeyHashes (repeat pParamsUpdate)
+  Shelley.Update propUpdates epNo
+
 
 -- Given key information (public key, and other network parameters), generate an Address.
 -- Originally: mkAddress :: Network -> VerificationKey -> VerificationKeyInfo -> Address
@@ -284,6 +326,15 @@ shelleyVerificationKeyRewardAddress (StakingVerificationKeyShelley stkVKey) = do
   let stakingCredential = Shelley.KeyHashObj $ Shelley.hashKey stkVKey
   Shelley.mkRwdAcnt stakingCredential
 
+getGenesisVerificationKey :: SigningKey -> GenesisVerificationKey
+getGenesisVerificationKey kp =
+  case kp of
+    -- TODO: Implement this
+    SigningKeyByron _ -> panic "getGenesisVerificationKey SigningKeyByron"
+
+    SigningKeyShelley sk -> GenesisVerificationKeyShelley (Shelley.VKey vk)
+      where
+        vk = deriveVerKeyDSIGN sk
 
 getPaymentVerificationKey :: SigningKey -> PaymentVerificationKey
 getPaymentVerificationKey kp =
@@ -344,8 +395,10 @@ buildShelleyTransaction
   -> SlotNo
   -> Lovelace
   -> [Certificate]
+  -> Maybe Update
+  -- ^ Update proposals
   -> TxUnsigned
-buildShelleyTransaction txins txouts ttl fee certs = do
+buildShelleyTransaction txins txouts ttl fee certs pParamUpdate = do
   let relevantCerts = [ certDiscrim c | c <- certs ]
   TxUnsignedShelley $
     Shelley.TxBody
@@ -355,7 +408,7 @@ buildShelleyTransaction txins txouts ttl fee certs = do
       (Shelley.Wdrl Map.empty)      -- withdrawals
       (toShelleyLovelace fee)
       ttl
-      Shelley.SNothing              -- update proposals
+      (toStrictMaybe pParamUpdate)
       Shelley.SNothing              -- metadata hash
  where
    certDiscrim :: Certificate -> ShelleyCertificate
@@ -363,6 +416,10 @@ buildShelleyTransaction txins txouts ttl fee certs = do
    certDiscrim (ShelleyStakePoolCertificate sPoolCert) = sPoolCert
    certDiscrim (ShelleyGenesisDelegationCertificate sGenDelegCert) = sGenDelegCert
    certDiscrim (ShelleyMIRCertificate mirCert) = mirCert
+
+   toStrictMaybe :: Maybe Update ->  Shelley.StrictMaybe ShelleyUpdate
+   toStrictMaybe (Just (ShelleyUpdate shellyUp)) = Shelley.SJust shellyUp
+   toStrictMaybe Nothing = Shelley.SNothing
 
 -- | Calculate the minimum fee of a Shelley transaction.
 calculateShelleyMinFee :: Shelley.PParams -> TxSigned -> Lovelace
@@ -385,7 +442,7 @@ buildDummyShelleyTxForFeeCalc
   -> [Certificate]
   -> TxSigned
 buildDummyShelleyTxForFeeCalc txInCount txOutCount ttl network skeys certs =
-    signTransaction (buildShelleyTransaction txIns txOuts ttl fee certs) network skeys
+    signTransaction (buildShelleyTransaction txIns txOuts ttl fee certs Nothing) network skeys
   where
     vkey :: PaymentVerificationKey
     vkey =
