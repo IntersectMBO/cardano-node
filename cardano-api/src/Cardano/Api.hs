@@ -150,13 +150,15 @@ import qualified Cardano.Chain.UTxO    as Byron
 
 import qualified Ouroboros.Consensus.Shelley.Protocol.Crypto as Shelley
 import qualified Shelley.Spec.Ledger.Address     as Shelley
+import qualified Shelley.Spec.Ledger.BaseTypes   as Shelley
+import qualified Shelley.Spec.Ledger.Credential  as Shelley
 import qualified Shelley.Spec.Ledger.Keys        as Shelley
 import qualified Shelley.Spec.Ledger.LedgerState as Shelley (minfee)
 import qualified Shelley.Spec.Ledger.PParams     as Shelley
 import qualified Shelley.Spec.Ledger.Slot        as Shelley
 import qualified Shelley.Spec.Ledger.TxData      as Shelley
 import qualified Shelley.Spec.Ledger.Tx          as Shelley
-import qualified Shelley.Spec.Ledger.BaseTypes   as Shelley
+import qualified Shelley.Spec.Ledger.UTxO        as Shelley (hashTxBody)
 
 
 byronGenSigningKey :: IO SigningKey
@@ -526,7 +528,7 @@ shelleyWitnessTransaction txbody (SigningKeyShelley sk) =
     Shelley.WitVKey vk sig
   where
     vk  = Shelley.VKey (deriveVerKeyDSIGN sk)
-    sig = Shelley.signedDSIGN @Shelley.TPraosStandardCrypto sk txbody
+    sig = Shelley.signedDSIGN @Shelley.TPraosStandardCrypto sk (Shelley.hashTxBody txbody)
 
 
 -- Sign Transaction - signTransaction is built over witnesseTransaction/signTransactionWithWitness

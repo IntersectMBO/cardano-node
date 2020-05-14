@@ -32,6 +32,7 @@ import           Ouroboros.Network.Mux
 import           Ouroboros.Network.NodeToClient hiding (NodeToClientVersion (..))
 import qualified Ouroboros.Network.NodeToClient as NtC
 import           Ouroboros.Network.Protocol.LocalTxSubmission.Client
+import           Ouroboros.Network.Protocol.LocalTxSubmission.Type (SubmitResult (..))
 
 import           Cardano.Chain.Slotting (EpochSlots (..))
 
@@ -72,8 +73,8 @@ submitTx network socketPath tx =
                       socketPath
                       genTx
           case result of
-            Nothing  -> return TxSubmitSuccess
-            Just err -> return (TxSubmitFailureByron err)
+            SubmitSuccess  -> return TxSubmitSuccess
+            SubmitFail err -> return (TxSubmitFailureByron err)
 
         TxSignedShelley stx -> do
           let genTx = mkShelleyTx stx
@@ -85,8 +86,8 @@ submitTx network socketPath tx =
                       socketPath
                       genTx
           case result of
-            Nothing  -> return TxSubmitSuccess
-            Just err -> return (TxSubmitFailureShelley err)
+            SubmitSuccess  -> return TxSubmitSuccess
+            SubmitFail err -> return (TxSubmitFailureShelley err)
 
 
 submitGenTx
@@ -98,7 +99,7 @@ submitGenTx
   -> Network
   -> SocketPath
   -> GenTx blk
-  -> IO (Maybe (ApplyTxErr blk))
+  -> IO (SubmitResult (ApplyTxErr blk))
 submitGenTx tracer iomgr cfg nm (SocketPath path) genTx = do
     resultVar <- newEmptyTMVarIO
     connectTo
@@ -121,7 +122,7 @@ localInitiatorNetworkApplication
   -- in 'ouroboros-network' package).
   -> ProtocolClientInfo blk
   -> Network
-  -> TMVar (Maybe (ApplyTxErr blk)) -- ^ Result will be placed here
+  -> TMVar (SubmitResult (ApplyTxErr blk)) -- ^ Result will be placed here
   -> GenTx blk
   -> Versions NtC.NodeToClientVersion DictVersion
               (LocalConnectionId
@@ -160,8 +161,8 @@ localInitiatorNetworkApplication tracer cfg nm resultVar genTx =
                             (localTxSubmissionClientPeer
                                (txSubmissionClientSingle tx))
                 case result of
-                  Nothing -> traceWith tracer "Transaction accepted"
-                  Just _  -> traceWith tracer "Transaction rejected"
+                  SubmitSuccess -> traceWith tracer "Transaction accepted"
+                  SubmitFail _  -> traceWith tracer "Transaction rejected"
                 atomically $ putTMVar resultVar result
 
         , localStateQueryProtocol =
@@ -182,7 +183,7 @@ txSubmissionClientSingle
   :: forall tx reject m.
      Applicative m
   => tx
-  -> LocalTxSubmissionClient tx reject m (Maybe reject)
+  -> LocalTxSubmissionClient tx reject m (SubmitResult reject)
 txSubmissionClientSingle tx =
     LocalTxSubmissionClient $
     pure $ SendMsgSubmitTx tx $ \result ->

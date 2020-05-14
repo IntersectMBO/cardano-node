@@ -14,8 +14,10 @@ import qualified Hedgehog as Hedgehog
 
 import           Test.Cardano.Api.Gen
 
-prop_roundtrip_AddressByron_hex :: Property
-prop_roundtrip_AddressByron_hex =
+-- This test has been disabled because 'Shelley.Spec.Ledger.Address.getByron'
+-- has not been implemented yet and just 'panic's.
+_prop_roundtrip_AddressByron_hex :: Property
+_prop_roundtrip_AddressByron_hex =
   Hedgehog.withTests 500 . Hedgehog.property $ do
     addr <- Hedgehog.forAll genVerificationKeyAddressByron
     Hedgehog.tripping addr addressToHex addressFromHex

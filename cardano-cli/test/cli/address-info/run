@@ -17,27 +17,27 @@ error=0
 
 #-------------------------
 
-byron_base58=$(head -1 "${DATA_DIR}/byron-base58.address")
+# byron_base58=$(head -1 "${DATA_DIR}/byron-base58.address")
 
-${CARDANO_CLI} shelley address info \
-    --address "${byron_base58}" \
-    > "${TEST_DIR}/describe"
+# ${CARDANO_CLI} shelley address info \
+#     --address "${byron_base58}" \
+#     > "${TEST_DIR}/describe"
 
-assert_file_exists "${TEST_DIR}/describe"
-assert_string 'Encoding: Base58' "${TEST_DIR}/describe"
-assert_string 'Era: Byron' "${TEST_DIR}/describe"
+# assert_file_exists "${TEST_DIR}/describe"
+# assert_string 'Encoding: Base58' "${TEST_DIR}/describe"
+# assert_string 'Era: Byron' "${TEST_DIR}/describe"
 
 #-------------------------
 
-byron_hex=$(head -1 "${DATA_DIR}/byron-hex.address")
+# byron_hex=$(head -1 "${DATA_DIR}/byron-hex.address")
 
-${CARDANO_CLI} shelley address info \
-    --address "${byron_hex}" \
-    > "${TEST_DIR}/describe"
+# ${CARDANO_CLI} shelley address info \
+#     --address "${byron_hex}" \
+#     > "${TEST_DIR}/describe"
 
-assert_file_exists "${TEST_DIR}/describe"
-assert_string 'Encoding: Hex' "${TEST_DIR}/describe"
-assert_string 'Era: Byron' "${TEST_DIR}/describe"
+# assert_file_exists "${TEST_DIR}/describe"
+# assert_string 'Encoding: Hex' "${TEST_DIR}/describe"
+# assert_string 'Era: Byron' "${TEST_DIR}/describe"
 
 #-------------------------
 

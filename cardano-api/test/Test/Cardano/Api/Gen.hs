@@ -51,7 +51,7 @@ import           Shelley.Spec.Ledger.BaseTypes (Nonce (..),StrictMaybe (..),
                     UnitInterval(..), maybeToStrictMaybe, mkNonce,
                     mkUnitInterval, textToDns, textToUrl)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
-import           Shelley.Spec.Ledger.Crypto
+import           Shelley.Spec.Ledger.Crypto hiding (Network (..))
 import           Shelley.Spec.Ledger.Keys (KeyHash, SignKeyVRF, VerKeyVRF,
                    VKey(..), hash, hashKey)
 import           Shelley.Spec.Ledger.PParams (PParamsUpdate,
@@ -74,8 +74,10 @@ import qualified Hedgehog.Range as Range
 genAddress :: Gen Address
 genAddress =
   Gen.choice
-    [ genVerificationKeyAddressByron
-    , genVerificationKeyAddressShelley
+    [ genVerificationKeyAddressShelley
+    -- TODO: Uncomment the line below once `Shelley.Spec.Ledger.Address.getByron`
+    --       has been implemented and doesn't just `panic`.
+    -- , genVerificationKeyAddressByron
     ]
 
 genCertificate :: Gen Certificate

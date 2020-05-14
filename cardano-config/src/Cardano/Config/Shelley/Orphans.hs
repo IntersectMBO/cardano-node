@@ -35,14 +35,14 @@ import           Ouroboros.Network.Magic (NetworkMagic (..))
 import           Ouroboros.Consensus.Protocol.Abstract (SecurityParam (..))
 import           Ouroboros.Consensus.Shelley.Node
                    (ShelleyGenesis (..), emptyGenesisStaking)
-import           Shelley.Spec.Ledger.Address (serialiseAddr, deserialiseAddr)
+import           Shelley.Spec.Ledger.Address (Addr(..), serialiseAddr, deserialiseAddr)
 import           Shelley.Spec.Ledger.BaseTypes
                    (Nonce (..), UnitInterval (..), truncateUnitInterval)
 import           Shelley.Spec.Ledger.Coin (Coin(..))
 import           Shelley.Spec.Ledger.Crypto (Crypto)
 import           Shelley.Spec.Ledger.Keys (KeyHash(..))
 import           Shelley.Spec.Ledger.PParams (PParams, PParams' (..), ProtVer (..))
-import           Shelley.Spec.Ledger.TxData (Addr(..), TxId(..), TxIn(..), TxOut(..))
+import           Shelley.Spec.Ledger.TxData (TxId(..), TxIn(..), TxOut(..))
 import           Shelley.Spec.Ledger.UTxO (UTxO(..))
 
 instance Crypto crypto => ToJSON (ShelleyGenesis crypto) where

@@ -20,13 +20,12 @@ import           Ouroboros.Consensus.Shelley.Protocol (TPraosStandardCrypto)
 import           Ouroboros.Consensus.Shelley.Node (emptyGenesisStaking)
 import           Ouroboros.Network.Magic (NetworkMagic (..))
 
+import           Shelley.Spec.Ledger.Address (Addr (..))
 import           Shelley.Spec.Ledger.BaseTypes (truncateUnitInterval)
 import           Shelley.Spec.Ledger.Coin (Coin(..))
+import           Shelley.Spec.Ledger.Credential (Credential (..), StakeReference(..))
 import           Shelley.Spec.Ledger.Keys (KeyHash(..), KeyRole(..))
-
 import           Shelley.Spec.Ledger.PParams (PParams' (..), emptyPParams)
-import           Shelley.Spec.Ledger.TxData
-                   (Addr (..), Credential (..), StakeReference(..))
 
 import           Cardano.Config.Shelley.Genesis
 

@@ -113,8 +113,10 @@ import qualified Cardano.Crypto       as Byron
 --import qualified Cardano.Crypto.Hash                         as HASH
 --import qualified Cardano.Crypto.VRF                          as VRF
 import qualified Ouroboros.Consensus.Shelley.Protocol.Crypto as Shelley
+import qualified Shelley.Spec.Ledger.Address                 as Shelley
 import qualified Shelley.Spec.Ledger.BaseTypes               as Shelley
 import qualified Shelley.Spec.Ledger.Coin                    as Shelley
+import qualified Shelley.Spec.Ledger.Credential              as Shelley
 import qualified Shelley.Spec.Ledger.Delegation.Certificates as Shelley
 import qualified Shelley.Spec.Ledger.Keys                    as Shelley
 import qualified Shelley.Spec.Ledger.PParams                 as Shelley

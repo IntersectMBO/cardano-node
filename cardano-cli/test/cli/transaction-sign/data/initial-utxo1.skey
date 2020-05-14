@@ -1,4 +1,4 @@
 type: Genesis UTxO signing key
 title: Genesis initial UTxO key
 cbor-hex:
- 5820416860f7811b7652fa94a9c851ebccd43e30826054e6842a7d1a91cb6f14d2f5
+ 5820b930f931fd32d7b78d147ec283ef7c0822df68c1a21f226d12269be47557a036

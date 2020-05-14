@@ -41,7 +41,7 @@ import           Ouroboros.Consensus.Block
                    (BlockProtocol, GetHeader (..), CodecConfig)
 import           Ouroboros.Consensus.BlockchainTime
 import           Ouroboros.Consensus.Config
-                   (configConsensus, configBlock, configCodec)
+                   (configConsensus, configCodec, configLedger)
 import           Ouroboros.Consensus.Mempool
 import           Ouroboros.Consensus.Network.NodeToClient
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
@@ -83,7 +83,7 @@ import           Cardano.Config.Types (SocketPath(..))
 -- that failures can be detected as early as possible. The progress condition
 -- is only checked at the end.
 --
-chairmanTest :: RunNode blk
+chairmanTest :: forall blk. RunNode blk
              => Tracer IO String
              -> Protocol blk (BlockProtocol blk)
              -> DiffTime
@@ -99,7 +99,7 @@ chairmanTest tracer ptcl runningTime optionalProgressThreshold socketPaths = do
     chainsSnapshot <- runChairman
                         tracer
                         (configCodec cfg)
-                        (nodeNetworkMagic (Proxy :: Proxy blk) cfg)
+                        (nodeNetworkMagic cfg)
                         securityParam
                         runningTime
                         socketPaths
@@ -129,7 +129,7 @@ chairmanTest tracer ptcl runningTime optionalProgressThreshold socketPaths = do
                           optionalProgressThreshold
 
     slotLength =
-      case hardForkShape (configBlock cfg) of
+      case hardForkShape (Proxy :: Proxy blk) (configLedger cfg) of
       -- This will need to be generalised to cope with protocols that do
       -- hard forks. This currently expects a single protocol era.
         Shape eras ->
@@ -560,7 +560,7 @@ localInitiatorNetworkApplication chairmanTracer chainSyncTracer
                 localTxSubmissionTracer
                 cTxSubmissionCodec
                 localTxSubmissionPeerNull
-        , localStateQueryProtocol = 
+        , localStateQueryProtocol =
             InitiatorProtocolOnly $
               MuxPeer
                 nullTracer

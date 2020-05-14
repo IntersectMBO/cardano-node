@@ -30,6 +30,7 @@ import           Control.Monad.Trans.Except.Extra (hoistEither)
 import           Ouroboros.Consensus.BlockchainTime (SlotLength, slotLengthFromSec)
 import           Ouroboros.Consensus.Cardano hiding (Protocol)
 import qualified Ouroboros.Consensus.Cardano as Consensus
+import           Ouroboros.Consensus.HardFork.History (defaultEraParams)
 import           Ouroboros.Consensus.Mock.Ledger.Block
 import           Ouroboros.Consensus.Mock.Ledger.Block.BFT
 import           Ouroboros.Consensus.Mock.Ledger.Block.Praos
@@ -86,7 +87,7 @@ mkConsensusProtocolBFT NodeConfiguration {
         numCoreNodes
         nodeId
         mockSecurityParam
-        (defaultSimpleBlockConfig mockSecurityParam mockSlotLength)
+        (defaultEraParams mockSecurityParam mockSlotLength)
 
 
 mkConsensusProtocolPBFT
@@ -111,7 +112,7 @@ mkConsensusProtocolPBFT NodeConfiguration {
         , pbftNumNodes           = numCoreNodes
         , pbftSignatureThreshold = (1.0 / fromIntegral numNodes) + 0.1
         }
-        (defaultSimpleBlockConfig mockSecurityParam mockSlotLength)
+        (defaultEraParams mockSecurityParam mockSlotLength)
         nodeId
 
 
@@ -139,7 +140,7 @@ mkConsensusProtocolPraos NodeConfiguration {
           , praosLeaderF       = 0.5
           , praosLifetimeKES   = 1000000
           }
-        (defaultSimpleBlockConfig mockSecurityParam (slotLengthFromSec 2))
+        (defaultEraParams mockSecurityParam (slotLengthFromSec 2))
 
 
 mockSecurityParam :: SecurityParam
