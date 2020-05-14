@@ -39,6 +39,7 @@ import qualified Cardano.Binary as Binary
 import           Cardano.Chain.Common (Address)
 import qualified Cardano.Chain.Common as Common
 import           Cardano.Chain.Genesis as Genesis
+import           Cardano.Chain.Slotting (EpochSlots(..))
 import           Cardano.Chain.UTxO ( mkTxAux, annotateTxAux
                                     , Tx(..), TxId, TxIn, TxOut)
 import qualified Cardano.Chain.UTxO as UTxO
@@ -51,15 +52,17 @@ import           Ouroboros.Network.NodeToClient (IOManager)
 import qualified Ouroboros.Consensus.Byron.Ledger as Byron
 import           Ouroboros.Consensus.Byron.Ledger (GenTx(..), ByronBlock)
 import qualified Ouroboros.Consensus.Cardano as Consensus
-import           Ouroboros.Consensus.Node.ProtocolInfo (pInfoConfig)
 import qualified Ouroboros.Consensus.Mempool as Consensus
 import           Ouroboros.Consensus.Util.Condense (condense)
+import           Ouroboros.Consensus.Cardano (protocolClientInfo)
 
+import           Cardano.Config.Byron.Protocol (mkNodeClientProtocolRealPBFT)
+
+import           Cardano.Api (Network, submitGenTx)
 import           Cardano.CLI.Errors
+import           Cardano.CLI.Environment
 import           Cardano.CLI.Ops
-import           Cardano.Node.Submission
-import           Cardano.Config.Types
-                   (NodeConfiguration, SocketPath)
+import           Cardano.Config.Types (NodeConfiguration)
 
 
 newtype TxFile =
@@ -211,19 +214,25 @@ issueUTxOExpenditure nc ins outs key =
 -- | Submit a transaction to a node specified by topology info.
 nodeSubmitTx
   :: IOManager
-  -> NodeConfiguration
-  -> SocketPath
+  -> Network
   -> GenTx ByronBlock
-  -> ExceptT RealPBFTError IO ()
-nodeSubmitTx iocp nc targetSocketFp gentx =
-    withRealPBFT nc $
-      \p@Consensus.ProtocolRealPBFT{} -> liftIO $ do
-        -- TODO: Update submitGenTx to use `ExceptT`
-        traceWith stdoutTracer ("TxId: " ++ condense (Consensus.txId gentx))
-        submitGeneralTx iocp targetSocketFp
-                        (pInfoConfig (Consensus.protocolInfo p))
-                        gentx
-                        nullTracer -- stdoutTracer
+  -> ExceptT CliError IO ()
+nodeSubmitTx iomgr network gentx = do
+    socketPath <- readEnvSocketPath
+    liftIO $ do
+      traceWith stdoutTracer ("TxId: " ++ condense (Consensus.txId gentx))
+      _res <- submitGenTx
+                nullTracer -- stdoutTracer
+                iomgr
+                (protocolClientInfo ptcl)
+                network
+                socketPath
+                gentx
+      --TODO: print failures
+      return ()
+  where
+    ptcl = mkNodeClientProtocolRealPBFT (EpochSlots 21600)
+
 
 --TODO: remove these local definitions when the updated ledger lib is available
 fromCborTxAux :: LB.ByteString ->  Either Binary.DecoderError (UTxO.ATxAux B.ByteString)

@@ -74,7 +74,6 @@ library
                      , cardano-crypto-class
                      , cardano-crypto-wrapper
                      , cardano-ledger
-                     , cardano-node
                      , cardano-prelude
                      , cardano-slotting
                      , contra-tracer
@@ -130,7 +129,7 @@ executable cardano-cli
                        "-with-rtsopts=-T"
   build-depends:       base >=4.12 && <5
                      , cardano-cli
-                     , cardano-node
+                     , cardano-config
                      , cardano-prelude
                      , optparse-applicative
                      , transformers-except

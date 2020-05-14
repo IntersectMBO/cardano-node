@@ -16,6 +16,7 @@ import           Cardano.Chain.Update
                    (InstallerHash(..), ProtocolVersion(..), SoftwareVersion(..),
                     SystemTag(..))
 
+import           Cardano.Api (Network)
 import           Cardano.Config.Types
 
 import           Cardano.CLI.Byron.UpdateProposal
@@ -25,7 +26,7 @@ import           Cardano.CLI.Byron.Key
 import           Cardano.CLI.Ops (CardanoEra(..))
 import           Cardano.CLI.Byron.Tx
 
-import           Cardano.Chain.Common (Address(..), NetworkMagic(..))
+import           Cardano.Chain.Common (Address(..))
 import           Cardano.Chain.UTxO (TxIn(..), TxOut(..))
 
 data ByronCommand =
@@ -67,8 +68,7 @@ data ByronCommand =
 
   | PrintSigningKeyAddress
         CardanoEra
-        NetworkMagic  -- TODO:  consider deprecation in favor of ProtocolMagicId,
-                      --        once Byron is out of the picture.
+        Network
         SigningKeyFile
 
     --- Delegation Related Commands ---
@@ -90,16 +90,14 @@ data ByronCommand =
         VerificationKeyFile
 
   | GetLocalNodeTip
-        ConfigYamlFilePath
-        (Maybe SocketPath)
+        Network
 
     -----------------------------------
 
   | SubmitTx
+        Network
         TxFile
         -- ^ Filepath of transaction to submit.
-        ConfigYamlFilePath
-        (Maybe SocketPath)
 
   | SpendGenesisUTxO
         ConfigYamlFilePath
@@ -150,15 +148,13 @@ data NodeCmd = CreateVote
                FilePath
                [ParametersToUpdate]
              | SubmitUpdateProposal
-               ConfigYamlFilePath
-               -- ^ Update proposal filepath.
+               Network
                FilePath
-               (Maybe SocketPath)
+               -- ^ Update proposal filepath.
              | SubmitVote
-               ConfigYamlFilePath
+               Network
                FilePath
                -- ^ Vote filepath.
-               (Maybe SocketPath)
               deriving Show
 
 

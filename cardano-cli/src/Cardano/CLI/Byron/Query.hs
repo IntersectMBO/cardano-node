@@ -8,28 +8,22 @@ module Cardano.CLI.Byron.Query
   ( runGetLocalNodeTip
   ) where
 
-import           Prelude (show, unlines)
-import           Cardano.Prelude hiding (show, unlines)
+import           Prelude (unlines)
+import           Cardano.Prelude hiding (unlines)
 
 import qualified Data.Text as T
-import           Control.Monad.Trans.Except.Extra (firstExceptT)
 
-import           Ouroboros.Consensus.Block (BlockProtocol)
-import qualified Ouroboros.Consensus.Cardano as Consensus
-import           Ouroboros.Consensus.Config (configCodec)
-import           Ouroboros.Consensus.Node.ProtocolInfo (ProtocolInfo(..))
-import           Ouroboros.Consensus.Node.Run
-                   (RunNode(..))
+import           Cardano.Chain.Slotting (EpochSlots(..))
+import           Ouroboros.Consensus.Cardano (protocolClientInfo)
+import           Ouroboros.Consensus.Node.ProtocolInfo (pClientInfoCodecConfig)
 import           Ouroboros.Consensus.Util.Condense (Condense(..))
 import           Ouroboros.Network.Block
 import           Ouroboros.Network.NodeToClient (withIOManager)
 
-import           Cardano.Common.LocalSocket (chooseSocketPath)
-import           Cardano.Config.Protocol
-                   (SomeConsensusProtocol(..), mkConsensusProtocol)
-import           Cardano.Config.Types
+import           Cardano.Config.Byron.Protocol (mkNodeClientProtocolRealPBFT)
 
 import           Cardano.Api (Network(..), getLocalTip)
+import           Cardano.CLI.Environment
 import           Cardano.CLI.Errors
 
 
@@ -37,27 +31,16 @@ import           Cardano.CLI.Errors
 -- Query local node's chain tip
 --------------------------------------------------------------------------------
 
-runGetLocalNodeTip :: ConfigYamlFilePath -> Maybe SocketPath -> ExceptT e IO ()
-runGetLocalNodeTip configFp mSockPath = liftIO $ do
-    nc <- parseNodeConfigurationFP configFp
-    sockPath <- return $ chooseSocketPath (ncSocketPath nc) mSockPath
-    frmPtclRes <- runExceptT $ firstExceptT ProtocolError $
-                    mkConsensusProtocol nc Nothing
+runGetLocalNodeTip :: Network -> ExceptT CliError IO ()
+runGetLocalNodeTip network = do
+    sockPath <- readEnvSocketPath
+    let ptclClientInfo = pClientInfoCodecConfig . protocolClientInfo $
+          mkNodeClientProtocolRealPBFT (EpochSlots 21600)
 
-    --TODO: simplify using the Consensus.ProtocolClient
-    SomeConsensusProtocol (p :: Consensus.Protocol blk (BlockProtocol blk))
-                     <- case frmPtclRes of
-                          Right p -> pure p
-                          Left err -> do putTextLn . toS $ show err
-                                         exitFailure
-
-    let ProtocolInfo{pInfoConfig = ptclcfg} = Consensus.protocolInfo p
-        cfg = configCodec ptclcfg
-        --FIXME: this works, but we should get the magic properly:
-        nm  = Testnet (nodeNetworkMagic (Proxy :: Proxy blk) ptclcfg)
-
-    tip <- withIOManager $ \iomgr -> getLocalTip iomgr cfg nm sockPath
-    putTextLn (getTipOutput tip)
+    liftIO $ do
+      tip <- withIOManager $ \iomgr ->
+               getLocalTip iomgr ptclClientInfo network sockPath
+      putTextLn (getTipOutput tip)
   where
     getTipOutput :: forall blk. Condense (HeaderHash blk) => Tip blk -> Text
     getTipOutput (TipGenesis) = "Current tip: genesis (origin)"

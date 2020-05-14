@@ -1,4 +1,4 @@
-module Cardano.Common.TopHandler
+module Cardano.Config.TopHandler
   ( toplevelExceptionHandler
   )
 where

@@ -19,7 +19,7 @@ import           Cardano.Config.Protocol
 import           Cardano.Config.Types
                   (ConfigYamlFilePath(..), SocketPath(..),
                    parseNodeConfigurationFP)
-import           Cardano.Common.Parsers
+import           Cardano.Config.Parsers
 import           Cardano.Chairman (chairmanTest)
 
 main :: IO ()

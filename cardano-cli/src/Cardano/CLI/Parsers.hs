@@ -7,8 +7,8 @@ import           Cardano.Prelude
 
 import           Options.Applicative
 
+import           Cardano.Config.Parsers (command')
 import           Cardano.CLI.Commands
-import           Cardano.Common.Parsers
 import           Cardano.CLI.Byron.Parsers   (parseByronCommands)
 import           Cardano.CLI.Shelley.Parsers (parseShelleyCommands)
 

@@ -11,7 +11,7 @@ import           System.Exit (exitFailure)
 import           Cardano.CLI.Errors
 import           Cardano.CLI.Parsers (ClientCommand, parseClientCommand)
 import           Cardano.CLI.Run (runClientCommand)
-import           Cardano.Common.TopHandler
+import           Cardano.Config.TopHandler
 
 
 main :: IO ()
