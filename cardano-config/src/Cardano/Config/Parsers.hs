@@ -249,6 +249,7 @@ parsePort =
           long "port"
        <> metavar "PORT"
        <> help "The port number"
+       <> value 0 -- Use an ephemeral port
     )
 
 parseValidateDB :: Parser Bool
