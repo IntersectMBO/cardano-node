@@ -63,7 +63,7 @@ let
       source <(cardano-node --bash-completion-script cardano-node)
 
       ${lib.optionalString (__hasAttr "network" customConfig) ''
-        export CARDANO_NODE_SOCKET_PATH=./state-node-${customConfig.network}/node.socket
+        export CARDANO_NODE_SOCKET_PATH=$(realpath ./state-node-${customConfig.network}/node.socket)
 
       ''}
 
