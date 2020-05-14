@@ -48,6 +48,7 @@ data KESError = ReadKESSigningKeyError !TextViewFileError
               | ReadKESVerKeyError !TextViewFileError
               | WriteKESSigningKeyError !TextViewFileError
               | WriteKESVerKeyError !TextViewFileError
+              deriving Show
 
 renderKESError :: KESError -> Text
 renderKESError kesErr =

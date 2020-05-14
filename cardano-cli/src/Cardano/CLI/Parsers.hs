@@ -1,6 +1,5 @@
 module Cardano.CLI.Parsers
-  ( ClientCommand
-  , parseClientCommand
+  ( parseClientCommand
   ) where
 
 import           Cardano.Prelude
@@ -8,8 +7,8 @@ import           Cardano.Prelude
 import           Options.Applicative
 
 import           Cardano.Config.Parsers (command')
-import           Cardano.CLI.Commands
 import           Cardano.CLI.Byron.Parsers   (parseByronCommands)
+import           Cardano.CLI.Run (ClientCommand(..))
 import           Cardano.CLI.Shelley.Parsers (parseShelleyCommands)
 
 
@@ -59,4 +58,3 @@ parseDisplayVersion =
         <> help "Show the cardano-cli version"
         <> hidden
         )
-

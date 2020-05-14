@@ -51,7 +51,6 @@ import           Cardano.Config.Types
                     SomeConsensusProtocol(..), SomeNodeClientProtocol(..))
 import           Cardano.TracingOrphanInstances.Byron ()
 
-
 ------------------------------------------------------------------------------
 -- Real Byron protocol, client support
 --

@@ -6,10 +6,14 @@
 #endif
 
 module Cardano.CLI.Byron.Genesis
-  ( NewDirectory(..)
+  ( ByronGenesisError(..)
   , GenesisParameters(..)
+  , NewDirectory(..)
   , dumpGenesis
+  , getGenesisHashText
   , mkGenesis
+  , readGenesis
+  , readProtocolMagicId
   )
 where
 
@@ -18,8 +22,9 @@ import           Cardano.Prelude hiding (option, show, trace)
 
 import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra
-                   (hoistEither, left, right)
+                   (firstExceptT, hoistEither, left, right)
 import qualified Data.ByteString.Lazy as LB
+import qualified Formatting as F
 import qualified Data.Map.Strict as Map
 import           Data.String (IsString)
 import           Data.Text.Encoding (encodeUtf8)
@@ -28,7 +33,8 @@ import           Data.Time (UTCTime)
 import           Formatting.Buildable
 import           Text.Printf (printf)
 
-import           System.Directory (createDirectory, doesPathExist)
+import           System.Directory (canonicalizePath, createDirectory,
+                   doesPathExist, makeAbsolute)
 import           System.FilePath ((</>))
 #ifdef UNIX
 import           System.Posix.Files (ownerReadMode, setFileMode)
@@ -40,13 +46,29 @@ import qualified Cardano.Chain.Common as Common
 import           Cardano.Chain.Delegation hiding (Map, epoch)
 import qualified Cardano.Chain.Genesis as Genesis
 import           Cardano.Chain.Genesis (GeneratedSecrets(..))
+import           Cardano.Config.Protocol (CardanoEra(..))
+import           Cardano.Config.Types (GenesisFile(..))
 import           Cardano.Crypto (SigningKey (..))
 import qualified Cardano.Crypto as Crypto
 
+import           Cardano.CLI.Byron.Delegation
 import           Cardano.CLI.Byron.Key
-import           Cardano.CLI.Errors (CliError(..))
-import           Cardano.CLI.Ops
+import           Cardano.CLI.Helpers (HelpersError(..), serialiseSigningKey)
 
+
+data ByronGenesisError
+  = ProtocolParametersParseFailed !FilePath !Text
+  | ByronDelegationError !ByronDelegationError
+  | KeyFailure !ByronKeyFailure
+  | DelegationError !Genesis.GenesisDelegationError
+  | GenesisGenerationError !Genesis.GenesisDataGenerationError
+  | GenesisHelpersError !HelpersError
+  | GenesisOutputDirAlreadyExists FilePath
+  | GenesisReadError !FilePath !Genesis.GenesisDataError
+  | GenesisSerializationError !HelpersError
+  | GenesisSpecError !Text
+  | NoGenesisDelegationForKey !Text
+  deriving Show
 
 newtype NewDirectory =
   NewDirectory FilePath
@@ -64,7 +86,15 @@ data GenesisParameters = GenesisParameters
   , gpSeed :: !(Maybe Integer)
   } deriving Show
 
-mkGenesisSpec :: GenesisParameters -> ExceptT CliError IO Genesis.GenesisSpec
+
+getGenesisHashText :: GenesisFile -> ExceptT ByronGenesisError IO Text
+getGenesisHashText (GenesisFile genFile) = do
+  canonGenFile <- liftIO $ canonicalizePath genFile
+  gFile <- liftIO $ makeAbsolute canonGenFile
+  (_, Genesis.GenesisHash gHash) <- readGenesis $ GenesisFile gFile
+  return $ F.sformat Crypto.hashHexF gHash
+
+mkGenesisSpec :: GenesisParameters -> ExceptT ByronGenesisError IO Genesis.GenesisSpec
 mkGenesisSpec gp = do
   protoParamsRaw <- lift . LB.readFile $ gpProtocolParamsFile gp
 
@@ -102,12 +132,16 @@ mkGenesisSpec gp = do
 -- or if the genesis fails generation.
 mkGenesis
   :: GenesisParameters
-  -> ExceptT CliError IO (Genesis.GenesisData, Genesis.GeneratedSecrets)
+  -> ExceptT ByronGenesisError IO (Genesis.GenesisData, Genesis.GeneratedSecrets)
 mkGenesis gp = do
   genesisSpec <- mkGenesisSpec gp
 
   withExceptT GenesisGenerationError $
     Genesis.generateGenesisData (gpStartTime gp) genesisSpec
+
+-- | Read genesis from a file.
+readGenesis :: GenesisFile -> ExceptT ByronGenesisError IO (Genesis.GenesisData, Genesis.GenesisHash)
+readGenesis (GenesisFile fp) = firstExceptT (GenesisReadError fp) $ Genesis.readGenesisData fp
 
 -- | Write out genesis into a directory that must not yet exist.  An error is
 -- thrown if the directory already exists, or the genesis has delegate keys that
@@ -117,26 +151,26 @@ dumpGenesis
   -> NewDirectory
   -> Genesis.GenesisData
   -> Genesis.GeneratedSecrets
-  -> ExceptT CliError IO ()
+  -> ExceptT ByronGenesisError IO ()
 dumpGenesis era (NewDirectory outDir) genesisData gs = do
   exists <- liftIO $ doesPathExist outDir
   if exists
-  then left $ OutputMustNotAlreadyExist outDir
+  then left $ GenesisOutputDirAlreadyExists outDir
   else liftIO $ createDirectory outDir
   genesis <- hoistEither $ serialiseGenesis era genesisData
   liftIO $ LB.writeFile genesisJSONFile genesis
 
   dlgCerts <- mapM findDelegateCert $ gsRichSecrets gs
 
-  liftIO $ wOut "genesis-keys" "key" (pure . serialiseSigningKey era) (gsDlgIssuersSecrets gs)
-  liftIO $ wOut "delegate-keys" "key" (pure . serialiseDelegateKey era) (gsRichSecrets gs)
-  liftIO $ wOut "poor-keys" "key" (pure . serialisePoorKey era) (gsPoorSecrets gs)
-  liftIO $ wOut "delegation-cert" "json" (pure . serialiseDelegationCert era) dlgCerts
+  liftIO $ wOut "genesis-keys" "key" (pure . first GenesisHelpersError .  serialiseSigningKey era) (gsDlgIssuersSecrets gs)
+  liftIO $ wOut "delegate-keys" "key" (pure . first ByronDelegationError . serialiseDelegateKey era) (gsRichSecrets gs)
+  liftIO $ wOut "poor-keys" "key" (pure . first KeyFailure . serialisePoorKey era) (gsPoorSecrets gs)
+  liftIO $ wOut "delegation-cert" "json" (pure . first ByronDelegationError . serialiseDelegationCert era) dlgCerts
   liftIO $ wOut "avvm-secrets" "secret" (pure . printFakeAvvmSecrets) (gsFakeAvvmSecrets gs)
  where
   dlgCertMap :: Map Common.KeyHash Certificate
   dlgCertMap = Genesis.unGenesisDelegation $ Genesis.gdHeavyDelegation genesisData
-  findDelegateCert :: SigningKey -> ExceptT CliError IO Certificate
+  findDelegateCert :: SigningKey -> ExceptT ByronGenesisError IO Certificate
   findDelegateCert sk =
     case flip find (Map.elems dlgCertMap) . isCertForSK $ sk of
       Nothing -> left . NoGenesisDelegationForKey
@@ -145,17 +179,25 @@ dumpGenesis era (NewDirectory outDir) genesisData gs = do
   genesisJSONFile :: FilePath
   genesisJSONFile = outDir <> "/genesis.json"
 
-  printFakeAvvmSecrets :: Crypto.RedeemSigningKey -> Either CliError LB.ByteString
+  printFakeAvvmSecrets :: Crypto.RedeemSigningKey -> Either ByronGenesisError LB.ByteString
   printFakeAvvmSecrets rskey = Right . LB.fromStrict . encodeUtf8 . toStrict . toLazyText $ build rskey
 
   -- Compare a given 'SigningKey' with a 'Certificate' 'VerificationKey'
   isCertForSK :: SigningKey -> Certificate -> Bool
   isCertForSK sk cert = delegateVK cert == Crypto.toVerification sk
-  wOut :: String -> String -> (a -> IO (Either CliError LB.ByteString)) -> [a] -> IO ()
+  wOut :: String -> String -> (a -> IO (Either ByronGenesisError LB.ByteString)) -> [a] -> IO ()
   wOut = writeSecrets outDir
 
 
-writeSecrets :: FilePath -> String -> String -> (a -> IO (Either CliError LB.ByteString)) -> [a] -> IO ()
+serialiseGenesis
+  :: CardanoEra
+  -> Genesis.GenesisData
+  -> Either ByronGenesisError LB.ByteString
+serialiseGenesis ByronEraLegacy gData = pure $ canonicalEncodePretty gData
+serialiseGenesis ByronEra gData = pure $ canonicalEncodePretty gData
+serialiseGenesis ShelleyEra _ = Left . GenesisHelpersError $ CardanoEraNotSupportedFail ShelleyEra
+
+writeSecrets :: FilePath -> String -> String -> (a -> IO (Either ByronGenesisError LB.ByteString)) -> [a] -> IO ()
 writeSecrets outDir prefix suffix secretOp xs =
   forM_ (zip xs $ [0::Int ..]) $
   \(secret, nr)-> do
@@ -169,3 +211,9 @@ writeSecrets outDir prefix suffix secretOp xs =
 #else
     setPermissions filename (emptyPermissions {readable = True})
 #endif
+
+
+readProtocolMagicId :: GenesisFile -> ExceptT ByronGenesisError IO Crypto.ProtocolMagicId
+readProtocolMagicId gFile = do
+  (genData, _) <- readGenesis gFile
+  pure $ Genesis.gdProtocolMagicId genData

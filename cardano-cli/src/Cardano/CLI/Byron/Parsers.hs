@@ -45,11 +45,11 @@ import           Cardano.Crypto.ProtocolMagic
 import           Cardano.Chain.Slotting
                    (EpochNumber(..), EpochSlots(..), SlotNumber(..))
 import           Cardano.Chain.Common
-                   (Address(..), decodeAddressBase58, 
+                   (Address(..), decodeAddressBase58,
                     Lovelace, mkLovelace, rationalToLovelacePortion,
                     BlockCount(..), TxFeePolicy(..), TxSizeLinear(..))
 import           Cardano.Chain.Update
-                   (ApplicationName(..), checkApplicationName, 
+                   (ApplicationName(..), checkApplicationName,
                     InstallerHash(..), NumSoftwareVersion,
                     ProtocolVersion(..), SoftforkRule(..), SoftwareVersion(..),
                     SystemTag(..), checkSystemTag)
@@ -63,13 +63,13 @@ import           Cardano.Config.Parsers
                    (parseIntegral, parseFraction, parseLovelace, readDouble,
                     parseFilePath,  parseConfigFile, parseSigningKeyFile,
                     parseGenesisFile, command', parseFlag')
+import           Cardano.Config.Protocol (CardanoEra(..))
 
 import           Cardano.CLI.Byron.Commands
-import           Cardano.CLI.Byron.UpdateProposal
 import           Cardano.CLI.Byron.Genesis
 import           Cardano.CLI.Byron.Key
 import           Cardano.CLI.Byron.Tx
-import           Cardano.CLI.Ops (CardanoEra(..))
+import           Cardano.CLI.Byron.UpdateProposal
 
 
 parseByronCommands :: Mod CommandFields ByronCommand
@@ -89,7 +89,6 @@ parseNode :: Mod CommandFields ByronCommand
 parseNode = mconcat
     [ Opt.command "byron"
         (Opt.info (NodeCmd <$> pNodeCmd) $ Opt.progDesc "Byron node operation commands")
-
     ]
 
 parseCBORObject :: Parser CBORObject

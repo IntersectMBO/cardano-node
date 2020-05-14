@@ -1,12 +1,11 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Cardano.CLI.Environment
-  ( readEnvSocketPath
+  ( EnvSocketError(..)
+  , readEnvSocketPath
   ) where
 
 import           Cardano.Prelude
-
-import           Cardano.CLI.Errors (CliError (CliEnvVarLookup))
 
 import           Cardano.Config.Types (SocketPath (..))
 
@@ -19,9 +18,13 @@ import           Prelude (String)
 
 import           System.Environment (lookupEnv)
 
+data EnvSocketError
+  =  CliEnvVarLookup !Text deriving Show
+
+
 -- | Read the node socket path from the environment.
 -- Fails if the environment variable is not set.
-readEnvSocketPath :: ExceptT CliError IO SocketPath
+readEnvSocketPath :: ExceptT EnvSocketError IO SocketPath
 readEnvSocketPath =
     maybe (left $ CliEnvVarLookup (Text.pack envName)) (pure . SocketPath)
       =<< liftIO (lookupEnv envName)

@@ -2,7 +2,8 @@
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
 
 module Cardano.CLI.Byron.Tx
-  ( TxFile(..)
+  ( ByronTxError(..)
+  , TxFile(..)
   , NewTxFile(..)
   , prettyAddress
   , readByronTx
@@ -22,7 +23,7 @@ where
 import           Prelude (error)
 import           Cardano.Prelude hiding (option, trace, (%))
 
-import           Control.Monad.Trans.Except.Extra (left, right)
+import           Control.Monad.Trans.Except.Extra (firstExceptT, left, right)
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.ByteString as B
 import qualified Data.Map.Strict as Map
@@ -57,13 +58,17 @@ import           Ouroboros.Consensus.Util.Condense (condense)
 import           Ouroboros.Consensus.Cardano (protocolClientInfo)
 
 import           Cardano.Config.Byron.Protocol (mkNodeClientProtocolRealPBFT)
+import           Cardano.Config.Protocol (RealPBFTError(..), withRealPBFT)
 
 import           Cardano.Api (Network, submitGenTx)
-import           Cardano.CLI.Errors
 import           Cardano.CLI.Environment
-import           Cardano.CLI.Ops
 import           Cardano.Config.Types (NodeConfiguration)
 
+
+data ByronTxError
+  = TxDeserialisationFailed !FilePath !Binary.DecoderError
+  | EnvSocketError !EnvSocketError
+  deriving Show
 
 newtype TxFile =
   TxFile FilePath
@@ -81,7 +86,7 @@ prettyAddress addr = sformat
   (Common.addressF %"\n"%Common.addressDetailedF)
   addr addr
 
-readByronTx :: TxFile -> ExceptT CliError IO (GenTx ByronBlock)
+readByronTx :: TxFile -> ExceptT ByronTxError IO (GenTx ByronBlock)
 readByronTx (TxFile fp) = do
   txBS <- liftIO $ LB.readFile fp
   case fromCborTxAux txBS of
@@ -216,9 +221,9 @@ nodeSubmitTx
   :: IOManager
   -> Network
   -> GenTx ByronBlock
-  -> ExceptT CliError IO ()
+  -> ExceptT ByronTxError IO ()
 nodeSubmitTx iomgr network gentx = do
-    socketPath <- readEnvSocketPath
+    socketPath <- firstExceptT EnvSocketError readEnvSocketPath
     liftIO $ do
       traceWith stdoutTracer ("TxId: " ++ condense (Consensus.txId gentx))
       _res <- submitGenTx

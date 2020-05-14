@@ -1,7 +1,8 @@
 {-# LANGUAGE GADTs #-}
 
 module Cardano.CLI.Byron.UpdateProposal
-  ( ParametersToUpdate(..)
+  ( ByronUpdateProposalError(..)
+  , ParametersToUpdate(..)
   , runProposalCreation
   , createUpdateProposal
   , deserialiseByronUpdateProposal
@@ -12,7 +13,7 @@ module Cardano.CLI.Byron.UpdateProposal
 import           Cardano.Prelude
 
 import           Control.Monad.Trans.Except.Extra
-                   (handleIOExceptT, hoistEither)
+                   (firstExceptT, handleIOExceptT, hoistEither)
 import           Control.Tracer (stdoutTracer, traceWith)
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.Map.Strict as M
@@ -27,6 +28,7 @@ import           Cardano.Chain.Update
                     SoftforkRule(..), SoftwareVersion(..), SystemTag(..), recoverUpId,
                     signProposal)
 import           Cardano.Config.Types
+import           Cardano.Config.Protocol (CardanoEra(..), RealPBFTError)
 import           Ouroboros.Consensus.Util.Condense (condense)
 import           Cardano.Crypto.Signing (SigningKey, noPassSafeSigner)
 import           Ouroboros.Consensus.Byron.Ledger.Block (ByronBlock)
@@ -35,12 +37,20 @@ import qualified Ouroboros.Consensus.Mempool as Mempool
 import           Ouroboros.Network.NodeToClient (IOManager)
 
 import           Cardano.Api (Network)
-import           Cardano.CLI.Byron.Key (readEraSigningKey)
-import           Cardano.CLI.Era (CardanoEra(..))
-import           Cardano.CLI.Errors (CliError(..))
-import           Cardano.CLI.Ops (ensureNewFileLBS, readGenesis)
-import           Cardano.CLI.Byron.Tx (nodeSubmitTx)
+import           Cardano.CLI.Byron.Key (ByronKeyFailure, readEraSigningKey)
+import           Cardano.CLI.Byron.Genesis (ByronGenesisError, readGenesis)
+import           Cardano.CLI.Byron.Tx (ByronTxError, nodeSubmitTx)
+import           Cardano.CLI.Helpers (HelpersError, ensureNewFileLBS)
 
+data ByronUpdateProposalError
+  = ByronReadUpdateProposalFileFailure !FilePath !Text
+  | ByronUpdateProposalHelperError !HelpersError
+  | ByronUpdateProposalGenesisError !ByronGenesisError
+  | ByronUpdateProposalTxError !ByronTxError
+  | KeyFailure !ByronKeyFailure
+  | UpdateProposalDecodingError !Binary.DecoderError
+  | UpdateProposalSubmissionError !RealPBFTError
+  deriving Show
 
 runProposalCreation
   :: ConfigYamlFilePath
@@ -51,11 +61,11 @@ runProposalCreation
   -> InstallerHash
   -> FilePath
   -> [ParametersToUpdate]
-  -> ExceptT CliError IO ()
+  -> ExceptT ByronUpdateProposalError IO ()
 runProposalCreation configFp sKey pVer sVer sysTag insHash outputFp params = do
-  sK <- readEraSigningKey ByronEra sKey
+  sK <- firstExceptT KeyFailure $ readEraSigningKey ByronEra sKey
   proposal <- createUpdateProposal configFp sK pVer sVer sysTag insHash params
-  ensureNewFileLBS outputFp (serialiseByronUpdateProposal proposal)
+  firstExceptT ByronUpdateProposalHelperError $ ensureNewFileLBS outputFp (serialiseByronUpdateProposal proposal)
 
 
 data ParametersToUpdate =
@@ -113,11 +123,11 @@ createUpdateProposal
   -> SystemTag
   -> InstallerHash
   -> [ParametersToUpdate]
-  -> ExceptT CliError IO Proposal
+  -> ExceptT ByronUpdateProposalError IO Proposal
 createUpdateProposal yamlConfigFile sKey pVer sVer sysTag inshash paramsToUpdate = do
 
   nc <- liftIO $ parseNodeConfigurationFP yamlConfigFile
-  (genData, _) <- readGenesis $ ncGenesisFile nc
+  (genData, _) <- firstExceptT ByronUpdateProposalGenesisError . readGenesis $ ncGenesisFile nc
 
   let metaData :: M.Map SystemTag InstallerHash
       metaData = M.singleton sysTag inshash
@@ -156,7 +166,7 @@ serialiseByronUpdateProposal :: Proposal -> LByteString
 serialiseByronUpdateProposal = Binary.serialize
 
 deserialiseByronUpdateProposal :: LByteString
-                               -> Either CliError (AProposal ByteString)
+                               -> Either ByronUpdateProposalError (AProposal ByteString)
 deserialiseByronUpdateProposal bs =
   case Binary.decodeFull bs of
     Left deserFail -> Left $ UpdateProposalDecodingError deserFail
@@ -165,7 +175,7 @@ deserialiseByronUpdateProposal bs =
   annotateProposal :: AProposal Binary.ByteSpan -> AProposal ByteString
   annotateProposal proposal = Binary.annotationBytes bs proposal
 
-readByronUpdateProposal :: FilePath -> ExceptT CliError IO LByteString
+readByronUpdateProposal :: FilePath -> ExceptT ByronUpdateProposalError IO LByteString
 readByronUpdateProposal fp =
   handleIOExceptT (ByronReadUpdateProposalFileFailure fp . toS . displayException)
                   (LB.readFile fp)
@@ -175,12 +185,11 @@ submitByronUpdateProposal
   :: IOManager
   -> Network
   -> FilePath
-  -> ExceptT CliError IO ()
+  -> ExceptT ByronUpdateProposalError IO ()
 submitByronUpdateProposal iomgr network proposalFp = do
     proposalBs <- readByronUpdateProposal proposalFp
     aProposal <- hoistEither $ deserialiseByronUpdateProposal proposalBs
     let genTx = convertProposalToGenTx aProposal
     traceWith stdoutTracer $
       "Update proposal TxId: " ++ condense (Mempool.txId genTx)
-    nodeSubmitTx iomgr network genTx
-
+    firstExceptT ByronUpdateProposalTxError $ nodeSubmitTx iomgr network genTx
