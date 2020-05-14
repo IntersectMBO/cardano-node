@@ -22,8 +22,7 @@ library
 
   hs-source-dirs:      src
 
-  exposed-modules:     Cardano.Chairman
-                       Cardano.Common.Help
+  exposed-modules:     Cardano.Common.Help
                        Cardano.Node.Features.Node
                        Cardano.Node.Run
                        Cardano.Node.Shutdown
@@ -114,8 +113,10 @@ executable cardano-node
      build-depends:    unix
 
 executable chairman
-  hs-source-dirs:      app
+  hs-source-dirs:      chairman
   main-is:             chairman.hs
+  other-modules:       Cardano.Chairman
+                       Paths_cardano_node
   default-language:    Haskell2010
   ghc-options:         -threaded
                        -Wall
@@ -125,15 +126,16 @@ executable chairman
   build-depends:       base >=4.12 && <5
                      , async
                      , bytestring
+                     , containers
                      , cardano-config
                      , cardano-prelude
                      , contra-tracer
-                     , cardano-node
                      , cardano-prelude
                      , io-sim-classes
                      , network-mux
                      , optparse-applicative
                      , ouroboros-consensus
+                     , ouroboros-consensus-cardano
                      , ouroboros-network
                      , text
                      , transformers-except
