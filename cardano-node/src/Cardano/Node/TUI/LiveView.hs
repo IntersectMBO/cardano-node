@@ -6,6 +6,7 @@
 {-# LANGUAGE DeriveFoldable        #-}
 {-# LANGUAGE DeriveGeneric         #-}
 {-# LANGUAGE DeriveTraversable     #-}
+{-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns        #-}
@@ -14,12 +15,13 @@
 
 {-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
-module Cardano.Node.TUI.LiveView (
-      LiveViewBackend (..)
+module Cardano.Node.TUI.LiveView
+    ( HasTxMaxSize
+    , LiveViewBackend (..)
     , realize
     , effectuate
     , captureCounters
-    , setTopology
+    , liveViewPostSetup
     , setNodeThread
     , setNodeKernel
     ) where
@@ -37,7 +39,8 @@ import           Control.Monad.IO.Class (liftIO)
 import qualified Control.Monad.Class.MonadSTM.Strict as STM
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
-import           Data.Text (Text, pack, unpack)
+import           Data.Text (Text)
+import qualified Data.Text as Text
 import           Data.Time.Calendar (Day (..))
 import           Data.Time.Clock (NominalDiffTime, UTCTime (..), addUTCTime,
                                   diffUTCTime, getCurrentTime)
@@ -84,8 +87,12 @@ import qualified Ouroboros.Network.Block as Net
 import           Ouroboros.Network.NodeToClient (LocalConnectionId)
 import           Ouroboros.Network.NodeToNode (RemoteConnectionId)
 import           Ouroboros.Consensus.Block (GetHeader(..))
+import           Ouroboros.Consensus.Ledger.Extended (ExtLedgerState)
 import           Ouroboros.Consensus.Node (NodeKernel(..), remoteAddress)
-import           Ouroboros.Consensus.NodeId
+import           Ouroboros.Consensus.Mempool.API (MempoolCapacityBytes (..), getCapacity)
+import           Ouroboros.Consensus.NodeId (CoreNodeId (..), NodeId (..))
+import           Ouroboros.Consensus.Storage.ChainDB.API (getCurrentLedger)
+
 import qualified Ouroboros.Network.BlockFetch.ClientState as Net
 import qualified Ouroboros.Network.BlockFetch.ClientRegistry as Net
 import           Paths_cardano_node (version)
@@ -127,6 +134,7 @@ data Screen
 data LiveViewState blk a = LiveViewState
     { lvsScreen               :: !Screen
     , lvsRelease              :: !String
+    , lvsProtocol             :: !Protocol
     , lvsNodeId               :: !Text
     , lvsVersion              :: !String
     , lvsCommit               :: !String
@@ -510,18 +518,14 @@ calcNetRate currentTimeInNs lastTimeInNs lastUsageBytes bytes =
 initLiveViewState :: IO (LiveViewState blk a)
 initLiveViewState = do
     now <- getCurrentTime
-
-    let -- TODO:  obtain from configuration
-        !mempoolCapacity    = 200 :: Word64
-        !maxBytesPerTx      = 4096 :: Word64
-
     return $ LiveViewState
                 { lvsScreen                 = MainView
-                , lvsRelease                = "Byron"
-                , lvsNodeId                 = ""
+                , lvsRelease                = "Release not set yet"
+                , lvsProtocol               = MockPBFT -- Needs a real value. Will be overwritten later.
+                , lvsNodeId                 = "NodeId not set yet"
                 , lvsVersion                = showVersion version
-                , lvsCommit                 = unpack gitRev
-                , lvsPlatform               = "?"
+                , lvsCommit                 = Text.unpack gitRev
+                , lvsPlatform               = "Platform not set yet"
                 , lvsUpTime                 = diffUTCTime now now
                 , lvsEpoch                  = 0
                 , lvsSlotNum                = 0
@@ -534,7 +538,7 @@ initLiveViewState = do
                 , lvsMempoolPerc            = 0.0
                 , lvsMempoolBytes           = 0
                 , lvsMempoolBytesPerc       = 0.0
-                , lvsCPUUsagePerc           = 0.042
+                , lvsCPUUsagePerc           = 0.0
                 , lvsMemoryUsageCurr        = 0.0
                 , lvsMemoryUsageMax         = 0.2
                 , lvsDiskUsageRPerc         = 0.0
@@ -560,8 +564,8 @@ initLiveViewState = do
                 , lvsNetworkUsageInNs       = 10000
                 , lvsNetworkUsageOutLast    = 0
                 , lvsNetworkUsageOutNs      = 10000
-                , lvsMempoolCapacity        = mempoolCapacity
-                , lvsMempoolCapacityBytes   = mempoolCapacity * maxBytesPerTx
+                , lvsMempoolCapacity        = 0
+                , lvsMempoolCapacityBytes   = 0
                 , lvsMessage                = Nothing
                 , lvsUIThread               = LiveViewThread Nothing
                 , lvsMetricsThread          = LiveViewThread Nothing
@@ -572,32 +576,64 @@ initLiveViewState = do
                 , lvsColorTheme             = DarkTheme
                 }
 
-setTopology :: NFData a => LiveViewBackend blk a -> NodeCLI -> IO ()
-setTopology lvbe NodeCLI{nodeAddr, nodeMode = RealProtocolMode} =
-  modifyMVar_ (getbe lvbe) $ \lvs ->
-    return lvs { lvsNodeId = pack $ "Port: " <> show (naPort nodeAddr) }
-setTopology lvbe npm@NodeCLI{nodeMode = MockProtocolMode} = do
-  nc <- parseNodeConfiguration npm
-  modifyMVar_ (getbe lvbe) $ \lvs ->
-    return $ lvs { lvsNodeId = namenum (ncNodeId nc) }
+
+-- | Change a few fields in the LiveViewState after it has been initialized above.
+liveViewPostSetup :: NFData a => LiveViewBackend blk a -> NodeCLI -> NodeConfiguration-> IO ()
+liveViewPostSetup lvbe ncli nc = do
+    modifyMVar_ (getbe lvbe) $ \lvs ->
+      pure lvs
+            { lvsNodeId = nodeId
+            , lvsProtocol = ncProtocol nc
+            , lvsRelease = if ncProtocol nc == TPraos then "Shelley" else "Byron"
+
+            -- Hard code these here, but they get properly updated in setNodeKernel
+            -- about 30 seconds after the node starts.
+            , lvsMempoolCapacity = 2000
+            , lvsMempoolCapacityBytes = 4096000
+
+
+            }
  where
-  namenum (Just (CoreId (CoreNodeId num))) = "C" <> pack (show num)
-  namenum (Just (RelayId num)) = "R" <> pack (show num)
-  namenum Nothing = panic $ "Cardano.Node.TUI.LiveView.namenum: "
-                          <> "Mock protocols require a NodeId value in the configuration .yaml file"
+    nodeId :: Text
+    nodeId =
+      case nodeMode ncli of
+        MockProtocolMode -> namenum (ncNodeId nc)
+        RealProtocolMode -> Text.pack $ "Port: " <> show (naPort $ nodeAddr ncli)
+
+    namenum :: Maybe NodeId -> Text
+    namenum mnid =
+      case mnid of
+        Just (CoreId (CoreNodeId num))-> "C" <> Text.pack (show num)
+        Just (RelayId num) -> "R" <> Text.pack (show num)
+        Nothing ->
+          panic $ "Cardano.Node.TUI.LiveView.namenum: "
+                <> "Mock protocols require a NodeId value in the configuration .yaml file"
+
+
 
 setNodeThread :: NFData a => LiveViewBackend blk a -> Async.Async () -> IO ()
 setNodeThread lvbe nodeThr =
   modifyMVar_ (getbe lvbe) $ \lvs ->
       return $ lvs { lvsNodeThread = LiveViewThread $ Just nodeThr }
 
-setNodeKernel :: NFData a
+setNodeKernel :: (NFData a, HasTxMaxSize (ExtLedgerState blk))
               => LiveViewBackend blk a
               -> NodeKernel IO RemoteConnectionId LocalConnectionId blk
               -> IO ()
 setNodeKernel lvbe nodeKern =
-    modifyMVar_ (getbe lvbe) $ \lvs ->
-        return $ lvs { lvsNodeKernel = SJust (LVNodeKernel nodeKern) }
+    modifyMVar_ (getbe lvbe) $ \lvs -> do
+        -- This is correct for Byron and Shelley.
+        MempoolCapacityBytes mempoolCapacity <- STM.atomically $ getCapacity (getMempool nodeKern)
+
+        currentLedger <- STM.atomically $ getCurrentLedger (getChainDB nodeKern)
+
+        pure lvs
+              { lvsNodeKernel = SJust (LVNodeKernel nodeKern)
+              , lvsMempoolCapacity =
+                  fromIntegral $
+                    mempoolCapacity `div` getMaxTxSize currentLedger
+              , lvsMempoolCapacityBytes = fromIntegral mempoolCapacity
+              }
 
 captureCounters :: NFData a => LiveViewBackend blk a -> Trace IO Text -> IO ()
 captureCounters lvbe trace0 = do
@@ -755,7 +791,7 @@ instance NFData (LVPeer blk) where
 
 ppPeer :: LVPeer blk -> Text
 ppPeer (LVPeer cid _af status inflight) =
-  pack $ printf "%-15s %-8s %s" (ppCid cid) (ppStatus status) (ppInFlight inflight)
+  Text.pack $ printf "%-15s %-8s %s" (ppCid cid) (ppStatus status) (ppInFlight inflight)
  where
    ppCid :: RemoteConnectionId -> String
    ppCid = takeWhile (/= ':') . show . remoteAddress
@@ -809,9 +845,9 @@ peerListContentW lvs
   . vBox
   . ([ txt "Known peers"
        & padBottom (T.Pad 1)
-     , txt . pack $ printf "%-15s %-8s %-5s  %-10s"
+     , txt . Text.pack $ printf "%-15s %-8s %-5s  %-10s"
        ("Address" :: String) ("Status" :: String) ("Slot" :: String) ("In flight:" :: String)
-     , (txt . pack $ printf "%31s Reqs Blocks   Bytes" ("" :: String))
+     , (txt . Text.pack $ printf "%31s Reqs Blocks   Bytes" ("" :: String))
        & padBottom (T.Pad 1)
      ] <>)
   $ txt . ppPeer <$> lvsPeers lvs
