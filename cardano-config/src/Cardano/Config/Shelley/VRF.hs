@@ -41,6 +41,7 @@ data VRFError = ReadVRFSigningKeyError !TextViewFileError
               | ReadVRFVerKeyError !TextViewFileError
               | WriteVRFSigningKeyError !TextViewFileError
               | WriteVRFVerKeyError !TextViewFileError
+              deriving Show
 
 encodeVRFSigningKey :: SignKey -> TextView
 encodeVRFSigningKey vKeyEs =

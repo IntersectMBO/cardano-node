@@ -24,14 +24,23 @@ module Cardano.Config.Protocol
     -- * Client support
     -- | Support for the context needed to run a client of a node that is using
     -- a protocol.
+  , CardanoEra(..)
   , SomeNodeClientProtocol(..)
+  , cardanoEraForProtocol
   , mkNodeClientProtocol
+  , ncCardanoEra
+  , withRealPBFT
+
+    -- * Errors
+  , RealPBFTError(..)
+  , renderRealPBFTError
   ) where
 
 import           Cardano.Prelude
 
 import           Control.Monad.Trans.Except (ExceptT)
-import           Control.Monad.Trans.Except.Extra (firstExceptT)
+import           Control.Monad.Trans.Except.Extra (firstExceptT, left)
+import qualified Data.Text as Text
 
 import           Cardano.Config.Types
                    (NodeConfiguration(..), Protocol (..), ProtocolFilepaths(..),
@@ -43,6 +52,26 @@ import           Cardano.Config.Byron.Protocol
 import           Cardano.Config.Mock.Protocol
 import           Cardano.Config.Shelley.Protocol
 
+import qualified Ouroboros.Consensus.Cardano as Consensus
+import           Ouroboros.Consensus.Byron.Ledger (ByronBlock)
+import           Ouroboros.Consensus.Node.Run (RunNode)
+
+
+
+-- | Perform an action that expects ProtocolInfo for Byron/PBFT,
+--   with attendant configuration.
+withRealPBFT
+  :: NodeConfiguration
+  -> (RunNode ByronBlock
+        => Consensus.Protocol ByronBlock Consensus.ProtocolRealPBFT
+        -> ExceptT RealPBFTError IO a)
+  -> ExceptT RealPBFTError IO a
+withRealPBFT nc action = do
+  SomeConsensusProtocol p <- firstExceptT FromProtocolError $
+                               mkConsensusProtocol nc Nothing
+  case p of
+    proto@Consensus.ProtocolRealPBFT{} -> action proto
+    _ -> left $ IncorrectProtocolSpecified (ncProtocol nc)
 
 ------------------------------------------------------------------------------
 -- Conversions from configuration into specific protocols and their params
@@ -102,6 +131,21 @@ mkNodeClientProtocol protocol =
 
       _        -> panic ("mkNodeClientProtocol TODO: " <> show protocol)
 
+-- | Many commands have variants or file formats that depend on the era.
+--
+
+data CardanoEra = ByronEraLegacy | ByronEra | ShelleyEra
+  deriving Show
+
+cardanoEraForProtocol :: Protocol -> CardanoEra
+cardanoEraForProtocol BFT      = ShelleyEra
+cardanoEraForProtocol Praos    = ShelleyEra
+cardanoEraForProtocol MockPBFT = ShelleyEra
+cardanoEraForProtocol RealPBFT = ByronEra
+cardanoEraForProtocol TPraos   = ShelleyEra
+
+ncCardanoEra :: NodeConfiguration -> CardanoEra
+ncCardanoEra = cardanoEraForProtocol . ncProtocol
 
 ------------------------------------------------------------------------------
 -- Errors
@@ -111,6 +155,7 @@ data ProtocolInstantiationError =
     ByronProtocolInstantiationError   ByronProtocolInstantiationError
   | ShelleyProtocolInstantiationError ShelleyProtocolInstantiationError
   | MockProtocolInstantiationError    MockProtocolInstantiationError
+  deriving Show
 
 
 renderProtocolInstantiationError :: ProtocolInstantiationError -> Text
@@ -125,3 +170,18 @@ renderProtocolInstantiationError pie =
     MockProtocolInstantiationError mpie ->
       renderMockProtocolInstantiationError mpie
 
+
+data RealPBFTError
+  = IncorrectProtocolSpecified !Protocol
+  | FromProtocolError !ProtocolInstantiationError
+  | InvariantViolation !Text
+  | TransactionTypeNotHandledYet !Text
+  deriving Show
+
+renderRealPBFTError :: RealPBFTError -> Text
+renderRealPBFTError err =
+  case err of
+    IncorrectProtocolSpecified ptcl -> "Incorrect protocol specified: " <> (Text.pack $ show ptcl)
+    FromProtocolError ptclInstErr -> renderProtocolInstantiationError ptclInstErr
+    InvariantViolation invErr -> "Invariant violation: " <> invErr
+    TransactionTypeNotHandledYet err' -> "Transaction type not handled yet: " <> err'

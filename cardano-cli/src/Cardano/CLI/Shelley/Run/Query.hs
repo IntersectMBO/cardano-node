@@ -1,15 +1,16 @@
 module Cardano.CLI.Shelley.Run.Query
-  ( runQueryCmd
+  ( ShelleyQueryCmdError
+  , runQueryCmd
   ) where
 
 import           Cardano.Prelude
 
 import           Cardano.Api
-                   (Address, Network(..), getLocalTip, queryFilteredUTxOFromLocalState,
+                   (Address, LocalStateQueryError, Network(..), getLocalTip, queryFilteredUTxOFromLocalState,
                     queryPParamsFromLocalState)
 
-import           Cardano.CLI.Environment (readEnvSocketPath)
-import           Cardano.CLI.Errors (CliError(..))
+import           Cardano.CLI.Environment (EnvSocketError, readEnvSocketPath)
+import           Cardano.CLI.Helpers
 import           Cardano.CLI.Shelley.Parsers (OutputFile (..), QueryCmd (..))
 
 import           Cardano.Config.Shelley.Protocol (mkNodeClientProtocolTPraos)
@@ -32,12 +33,17 @@ import           Ouroboros.Network.NodeToClient (withIOManager)
 import           Ouroboros.Network.Block (getTipPoint)
 
 import           Shelley.Spec.Ledger.Coin (Coin (..))
-import           Shelley.Spec.Ledger.PParams (PParams)
 import           Shelley.Spec.Ledger.TxData (TxId (..), TxIn (..), TxOut (..))
 import           Shelley.Spec.Ledger.UTxO (UTxO (..))
 
+data ShelleyQueryCmdError
+  = ShelleyQueryEnvVarSocketErr !EnvSocketError
+  | NodeLocalStateQueryError !LocalStateQueryError
+  | ShelleyHelperError !HelpersError
+  deriving Show
 
-runQueryCmd :: QueryCmd -> ExceptT CliError IO ()
+
+runQueryCmd :: QueryCmd -> ExceptT ShelleyQueryCmdError IO ()
 runQueryCmd cmd =
   case cmd of
     QueryProtocolParameters network mOutFile ->
@@ -51,21 +57,21 @@ runQueryCmd cmd =
 runQueryProtocolParameters
   :: Network
   -> Maybe OutputFile
-  -> ExceptT CliError IO ()
+  -> ExceptT ShelleyQueryCmdError IO ()
 runQueryProtocolParameters network mOutFile = do
-  sockPath <- readEnvSocketPath
+  sockPath <- firstExceptT ShelleyQueryEnvVarSocketErr readEnvSocketPath
   let ptclClientInfo = pClientInfoCodecConfig . protocolClientInfo $ mkNodeClientProtocolTPraos
   tip <- liftIO $ withIOManager $ \iomgr ->
     getLocalTip iomgr ptclClientInfo network sockPath
   pparams <- firstExceptT NodeLocalStateQueryError $
     queryPParamsFromLocalState network sockPath (getTipPoint tip)
-  writeProtocolParameters mOutFile pparams
+  firstExceptT ShelleyHelperError $ writeProtocolParameters mOutFile pparams
 
 runQueryTip
   :: Network
-  -> ExceptT CliError IO ()
+  -> ExceptT ShelleyQueryCmdError IO ()
 runQueryTip network = do
-  sockPath <- readEnvSocketPath
+  sockPath <- firstExceptT ShelleyQueryEnvVarSocketErr readEnvSocketPath
   let ptclClientInfo = pClientInfoCodecConfig . protocolClientInfo $ mkNodeClientProtocolTPraos
   tip <- liftIO $ withIOManager $ \iomgr ->
     getLocalTip iomgr ptclClientInfo network sockPath
@@ -75,9 +81,9 @@ runQueryFilteredUTxO
   :: Address
   -> Network
   -> Maybe OutputFile
-  -> ExceptT CliError IO ()
+  -> ExceptT ShelleyQueryCmdError IO ()
 runQueryFilteredUTxO addr network mOutFile = do
-  sockPath <- readEnvSocketPath
+  sockPath <- firstExceptT ShelleyQueryEnvVarSocketErr readEnvSocketPath
   let ptclClientInfo = pClientInfoCodecConfig . protocolClientInfo $ mkNodeClientProtocolTPraos
   tip <- liftIO $ withIOManager $ \iomgr ->
     getLocalTip iomgr ptclClientInfo network sockPath
@@ -85,19 +91,12 @@ runQueryFilteredUTxO addr network mOutFile = do
     queryFilteredUTxOFromLocalState network sockPath (Set.singleton addr) (getTipPoint tip)
   writeFilteredUTxOs mOutFile filteredUtxo
 
-writeProtocolParameters :: Maybe OutputFile -> PParams -> ExceptT CliError IO ()
-writeProtocolParameters mOutFile pparams =
-    case mOutFile of
-      Nothing -> liftIO $ LBS.putStrLn (encodePretty pparams)
-      Just (OutputFile fpath) ->
-        handleIOExceptT (IOError fpath) $ LBS.writeFile fpath (encodePretty pparams)
-
-writeFilteredUTxOs :: Maybe OutputFile -> UTxO TPraosStandardCrypto -> ExceptT CliError IO ()
+writeFilteredUTxOs :: Maybe OutputFile -> UTxO TPraosStandardCrypto -> ExceptT ShelleyQueryCmdError IO ()
 writeFilteredUTxOs mOutFile utxo =
     case mOutFile of
       Nothing -> liftIO $ printFilteredUTxOs utxo
       Just (OutputFile fpath) ->
-        handleIOExceptT (IOError fpath) $ LBS.writeFile fpath (encodePretty utxo)
+        handleIOExceptT (ShelleyHelperError . IOError' fpath) $ LBS.writeFile fpath (encodePretty utxo)
 
 printFilteredUTxOs :: UTxO TPraosStandardCrypto -> IO ()
 printFilteredUTxOs (UTxO utxo) = do

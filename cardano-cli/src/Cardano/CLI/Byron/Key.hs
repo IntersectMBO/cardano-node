@@ -4,13 +4,16 @@
 
 module Cardano.CLI.Byron.Key
   ( -- * Keys
-    VerificationKeyFile(..)
+    ByronKeyFailure(..)
   , NewSigningKeyFile(..)
   , NewVerificationKeyFile(..)
+  , VerificationKeyFile(..)
+  , deserialiseSigningKey
+  , keygen
   , prettyPublicKey
   , readEraSigningKey
   , readPaymentVerificationKey
-  , keygen
+  , serialisePoorKey
     -- * Passwords
   , PasswordRequirement(..)
   , PasswordPrompt
@@ -21,6 +24,7 @@ where
 import           Prelude (String, show)
 import           Cardano.Prelude hiding (option, show, trace, (%))
 
+import           Codec.CBOR.Read (DeserialiseFailure, deserialiseFromBytes)
 import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra
                    (firstExceptT, handleIOExceptT, hoistEither)
@@ -36,14 +40,24 @@ import           Formatting (build, (%), sformat)
 import           System.IO (hSetEcho, hFlush, stdout, stdin)
 
 import qualified Cardano.Chain.Common as Common
+import qualified Cardano.Chain.Genesis as Genesis
+import           Cardano.CLI.Helpers (HelpersError, serialiseSigningKey)
+import qualified Cardano.CLI.Legacy.Byron as Legacy
+import           Cardano.Config.Protocol (CardanoEra(..))
 import           Cardano.Config.Types (SigningKeyFile(..))
 import           Cardano.Crypto (SigningKey(..))
 import qualified Cardano.Crypto.Random as Crypto
 import qualified Cardano.Crypto.Signing as Crypto
 
-import           Cardano.CLI.Errors
-import           Cardano.CLI.Ops
 
+data ByronKeyFailure
+  = CardanoEraNotSupported !CardanoEra
+  | HelpersError !HelpersError
+  | ReadSigningKeyFailure !FilePath !Text
+  | ReadVerificationKeyFailure !FilePath !Text
+  | SigningKeyDeserialisationFailed !FilePath !DeserialiseFailure
+  | VerificationKeyDeserialisationFailed !FilePath !Text
+  deriving Show
 
 newtype NewSigningKeyFile =
   NewSigningKeyFile FilePath
@@ -65,6 +79,21 @@ data PasswordRequirement
 
 type PasswordPrompt = String
 
+deserialiseSigningKey :: CardanoEra -> FilePath -> LB.ByteString
+                      -> Either ByronKeyFailure SigningKey
+deserialiseSigningKey ByronEraLegacy fp delSkey =
+  case deserialiseFromBytes Legacy.decodeLegacyDelegateKey delSkey of
+    Left deSerFail -> Left $ SigningKeyDeserialisationFailed fp deSerFail
+    Right (_, Legacy.LegacyDelegateKey sKey ) -> pure sKey
+
+deserialiseSigningKey ByronEra fp delSkey =
+  case deserialiseFromBytes Crypto.fromCBORXPrv delSkey of
+    Left deSerFail -> Left $ SigningKeyDeserialisationFailed fp deSerFail
+    Right (_, sKey) -> Right $ SigningKey sKey
+
+deserialiseSigningKey ShelleyEra _ _ = Left $ CardanoEraNotSupported ShelleyEra
+
+
 -- | Print some invariant properties of a public key:
 --   its hash and formatted view.
 prettyPublicKey :: Crypto.VerificationKey -> Text
@@ -77,7 +106,7 @@ prettyPublicKey vk =
 -- TODO:  we need to support password-protected secrets.
 -- | Read signing key from a file.  Throw an error if the file can't be read or
 -- fails to deserialise.
-readEraSigningKey :: CardanoEra -> SigningKeyFile -> ExceptT CliError IO SigningKey
+readEraSigningKey :: CardanoEra -> SigningKeyFile -> ExceptT ByronKeyFailure IO SigningKey
 readEraSigningKey era (SigningKeyFile fp) = do
   sK <- handleIOExceptT (ReadSigningKeyFailure fp . T.pack . displayException) $ LB.readFile fp
 
@@ -86,13 +115,22 @@ readEraSigningKey era (SigningKeyFile fp) = do
 
 -- | Read verification key from a file.  Throw an error if the file can't be read
 -- or the key fails to deserialise.
-readPaymentVerificationKey :: VerificationKeyFile -> ExceptT CliError IO Crypto.VerificationKey
+readPaymentVerificationKey :: VerificationKeyFile -> ExceptT ByronKeyFailure IO Crypto.VerificationKey
 readPaymentVerificationKey (VerificationKeyFile fp) = do
   vkB <- handleIOExceptT (ReadVerificationKeyFailure fp . T.pack . displayException) (SB.readFile fp)
   -- Verification Key
   let eVk = hoistEither . Crypto.parseFullVerificationKey . fromString $ UTF8.toString vkB
   -- Convert error to 'CliError'
   firstExceptT (VerificationKeyDeserialisationFailed fp . T.pack . show) $ eVk
+
+
+serialisePoorKey :: CardanoEra -> Genesis.PoorSecret
+                 -> Either ByronKeyFailure LB.ByteString
+serialisePoorKey ByronEraLegacy ps =
+  first HelpersError . serialiseSigningKey ByronEraLegacy $ Genesis.poorSecretToKey ps
+serialisePoorKey ByronEra ps =
+  first HelpersError . serialiseSigningKey ByronEra $ Genesis.poorSecretToKey ps
+serialisePoorKey ShelleyEra _  = Left $ CardanoEraNotSupported ShelleyEra
 
 -- | Generate a cryptographically random signing key,
 --   protected with a (potentially empty) passphrase.

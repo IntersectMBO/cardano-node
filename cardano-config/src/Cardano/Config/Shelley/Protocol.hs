@@ -196,6 +196,7 @@ data ShelleyProtocolInstantiationError = GenesisReadError !FilePath !String
                                        | OCertNotSpecified
                                        | VRFKeyNotSpecified
                                        | KESKeyNotSpecified
+                                       deriving Show
 
 
 renderShelleyProtocolInstantiationError :: ShelleyProtocolInstantiationError

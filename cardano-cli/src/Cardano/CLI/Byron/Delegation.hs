@@ -1,28 +1,40 @@
-{-# LANGUAGE RankNTypes                 #-}
-{-# LANGUAGE ScopedTypeVariables        #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Cardano.CLI.Byron.Delegation
-  ( issueByronGenesisDelegation
+  ( ByronDelegationError(..)
   , checkByronGenesisDelegation
+  , issueByronGenesisDelegation
+  , serialiseDelegationCert
+  , serialiseDelegateKey
   )
 where
 
 import           Cardano.Prelude hiding (option, show, trace)
 
+import           Codec.CBOR.Write (toLazyByteString)
 import           Control.Monad.Trans.Except.Extra (left)
 import qualified Data.ByteString.Lazy as LB
 import           Formatting (Format, sformat)
+import qualified Text.JSON.Canonical as CanonicalJSON
 
 import           Cardano.Binary (Annotated(..), serialize')
 import qualified Cardano.Chain.Delegation as Dlg
 import           Cardano.Chain.Slotting (EpochNumber)
+import           Cardano.CLI.Helpers (HelpersError(..), serialiseSigningKey)
+import qualified Cardano.CLI.Legacy.Byron as Legacy
+import           Cardano.Config.Protocol (CardanoEra(..))
 import           Cardano.Config.Types (CertificateFile (..))
 import qualified Cardano.Crypto as Crypto
-import           Cardano.Crypto (ProtocolMagicId)
-
-import           Cardano.CLI.Errors (CliError(..))
+import           Cardano.Crypto (ProtocolMagicId, SigningKey)
 
 
+data ByronDelegationError
+  = CertificateValidationErrors !FilePath ![Text]
+  | DlgCertificateDeserialisationFailed !FilePath !Text
+  | HelpersError !HelpersError
+  deriving Show
 
 
 -- TODO:  we need to support password-protected secrets.
@@ -46,7 +58,7 @@ checkByronGenesisDelegation
   -> ProtocolMagicId
   -> Crypto.VerificationKey
   -> Crypto.VerificationKey
-  -> ExceptT CliError IO ()
+  -> ExceptT ByronDelegationError IO ()
 checkByronGenesisDelegation (CertificateFile certF) magic issuer delegate = do
   ecert <- liftIO $ canonicalDecodePretty <$> LB.readFile certF
   case ecert of
@@ -89,3 +101,18 @@ checkDlgCert cert magic issuerVK' delegateVK' =
 
     vkF :: forall r. Format r (Crypto.VerificationKey -> r)
     vkF = Crypto.fullVerificationKeyF
+
+
+serialiseDelegationCert :: CanonicalJSON.ToJSON Identity a
+                        => CardanoEra -> a -> Either ByronDelegationError LB.ByteString
+serialiseDelegationCert ByronEraLegacy dlgCert = pure $ canonicalEncodePretty dlgCert
+serialiseDelegationCert ByronEra       dlgCert = pure $ canonicalEncodePretty dlgCert
+serialiseDelegationCert ShelleyEra     _       = Left . HelpersError $ CardanoEraNotSupportedFail ShelleyEra
+
+serialiseDelegateKey :: CardanoEra -> SigningKey -> Either ByronDelegationError LB.ByteString
+serialiseDelegateKey ByronEraLegacy sk = pure
+                                       . toLazyByteString
+                                       . Legacy.encodeLegacyDelegateKey
+                                       $ Legacy.LegacyDelegateKey sk
+serialiseDelegateKey ByronEra  sk = first HelpersError $ serialiseSigningKey ByronEra sk
+serialiseDelegateKey ShelleyEra _ = Left . HelpersError $ CardanoEraNotSupportedFail ShelleyEra

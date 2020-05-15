@@ -1,5 +1,6 @@
 module Cardano.CLI.Shelley.Run.Pool
-  ( runPoolCmd
+  ( ShelleyPoolCmdError
+  , runPoolCmd
   ) where
 
 import           Cardano.Prelude
@@ -9,7 +10,7 @@ import qualified Data.Set as Set
 import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, newExceptT)
 
-import           Cardano.Api (ShelleyCoin, ShelleyStakePoolMargin,
+import           Cardano.Api (ApiError(..), ShelleyCoin, ShelleyStakePoolMargin,
                    ShelleyStakePoolRelay, StakingVerificationKey (..),
                    mkShelleyStakingCredential, readStakingVerificationKey,
                    readVerificationKeyStakePool, shelleyRegisterStakePool,
@@ -24,12 +25,14 @@ import qualified Shelley.Spec.Ledger.Slot as Shelley
 import           Cardano.Config.Shelley.ColdKeys (genKeyPair)
 import           Cardano.Config.Shelley.VRF
 
-import           Cardano.CLI.Errors (CliError(..))
 import           Cardano.CLI.Shelley.Commands
 
+data ShelleyPoolCmdError
+  = ShelleyPoolCmdApiError !ApiError
+  | ShelleyPoolCmdVRFError !VRFError
+  deriving Show
 
-
-runPoolCmd :: PoolCmd -> ExceptT CliError IO ()
+runPoolCmd :: PoolCmd -> ExceptT ShelleyPoolCmdError IO ()
 runPoolCmd (PoolKeyGen vk sk) = runStakePoolKeyGen vk sk
 runPoolCmd (PoolRegistrationCert sPvkey vrfVkey pldg pCost pMrgn rwdVerFp ownerVerFps relays outfp) =
   runStakePoolRegistrationCert sPvkey vrfVkey pldg pCost pMrgn rwdVerFp ownerVerFps relays outfp
@@ -42,12 +45,12 @@ runPoolCmd cmd = liftIO $ putStrLn $ "runPoolCmd: " ++ show cmd
 -- Stake pool command implementations
 --
 
-runStakePoolKeyGen :: VerificationKeyFile -> SigningKeyFile -> ExceptT CliError IO ()
+runStakePoolKeyGen :: VerificationKeyFile -> SigningKeyFile -> ExceptT ShelleyPoolCmdError IO ()
 runStakePoolKeyGen (VerificationKeyFile vkFp) (SigningKeyFile skFp) = do
   (vkey, skey) <- liftIO genKeyPair
-  firstExceptT CardanoApiError . newExceptT $ writeVerificationKeyStakePool vkFp vkey
+  firstExceptT ShelleyPoolCmdApiError . newExceptT $ writeVerificationKeyStakePool vkFp vkey
   --TODO: writeSigningKey should really come from Cardano.Config.Shelley.ColdKeys
-  firstExceptT CardanoApiError . newExceptT $ writeSigningKey skFp (SigningKeyShelley skey)
+  firstExceptT ShelleyPoolCmdApiError . newExceptT $ writeSigningKey skFp (SigningKeyShelley skey)
 
 -- | Create a stake pool registration cert.
 -- TODO: Metadata and more stake pool relay support to be
@@ -70,7 +73,7 @@ runStakePoolRegistrationCert
   -> [ShelleyStakePoolRelay]
   -- ^ Stake pool relays.
   -> OutputFile
-  -> ExceptT CliError IO ()
+  -> ExceptT ShelleyPoolCmdError IO ()
 runStakePoolRegistrationCert
   (VerificationKeyFile sPvkeyFp)
   (VerificationKeyFile vrfVkeyFp)
@@ -82,15 +85,15 @@ runStakePoolRegistrationCert
   relays
   (OutputFile outfp) = do
     -- Pool verification key
-    stakePoolVerKey <- firstExceptT CardanoApiError . newExceptT $ readVerificationKeyStakePool sPvkeyFp
+    stakePoolVerKey <- firstExceptT ShelleyPoolCmdApiError . newExceptT $ readVerificationKeyStakePool sPvkeyFp
 
     -- VRF verification key
     -- TODO: VRF key reading and writing has two versions and needs to be sorted out.
-    vrfVerKey <- firstExceptT VRFCliError $ readVRFVerKey vrfVkeyFp
+    vrfVerKey <- firstExceptT ShelleyPoolCmdVRFError $ readVRFVerKey vrfVkeyFp
 
     -- Pool reward account
     StakingVerificationKeyShelley rewardAcctVerKey <-
-      firstExceptT CardanoApiError . newExceptT $ readStakingVerificationKey rwdVerFp
+      firstExceptT ShelleyPoolCmdApiError . newExceptT $ readStakingVerificationKey rwdVerFp
     let rewardAccount = Shelley.mkRwdAcnt . mkShelleyStakingCredential $ hashKey rewardAcctVerKey
 
     -- Pool owner(s)
@@ -98,7 +101,7 @@ runStakePoolRegistrationCert
       mapM
         (\(VerificationKeyFile fp) -> do
           StakingVerificationKeyShelley svk <-
-            firstExceptT CardanoApiError $ newExceptT $ readStakingVerificationKey fp
+            firstExceptT ShelleyPoolCmdApiError $ newExceptT $ readStakingVerificationKey fp
           pure svk
         )
         ownerVerFps
@@ -115,17 +118,17 @@ runStakePoolRegistrationCert
                              relays
                              Nothing
 
-    firstExceptT CardanoApiError . newExceptT $ writeCertificate outfp registrationCert
+    firstExceptT ShelleyPoolCmdApiError . newExceptT $ writeCertificate outfp registrationCert
 
 runStakePoolRetirementCert
   :: VerificationKeyFile
   -> Shelley.EpochNo
   -> OutputFile
-  -> ExceptT CliError IO ()
+  -> ExceptT ShelleyPoolCmdError IO ()
 runStakePoolRetirementCert (VerificationKeyFile sPvkeyFp) retireEpoch (OutputFile outfp) = do
     -- Pool verification key
-    stakePoolVerKey <- firstExceptT CardanoApiError . newExceptT $ readVerificationKeyStakePool sPvkeyFp
+    stakePoolVerKey <- firstExceptT ShelleyPoolCmdApiError . newExceptT $ readVerificationKeyStakePool sPvkeyFp
 
     let retireCert = shelleyRetireStakePool stakePoolVerKey retireEpoch
 
-    firstExceptT CardanoApiError . newExceptT $ writeCertificate outfp retireCert
+    firstExceptT ShelleyPoolCmdApiError . newExceptT $ writeCertificate outfp retireCert

@@ -65,6 +65,7 @@ data KeyError = ReadSigningKeyError  !TextViewFileError
               | ReadVerKeyError      !TextViewFileError
               | WriteSigningKeyError !TextViewFileError
               | WriteVerKeyError     !TextViewFileError
+              deriving Show
 
 renderKeyError :: KeyError -> Text
 renderKeyError keyErr =
@@ -164,7 +165,7 @@ writeSigningKey role fp sKey =
   firstExceptT WriteSigningKeyError $ newExceptT $
     writeTextViewEncodedFile (encodeSigningKey role) fp sKey
 
-readVerKey :: Typeable r 
+readVerKey :: Typeable r
            => KeyRole -> FilePath -> ExceptT KeyError IO (VerKey r)
 readVerKey role fp = do
   firstExceptT ReadVerKeyError $ newExceptT $
@@ -207,4 +208,3 @@ renderKeyDescr GenesisKey                         = "Genesis key"
 renderKeyDescr GenesisUTxOKey                     = "Genesis initial UTxO key"
 renderKeyDescr (OperatorKey GenesisDelegateKey)   = "Genesis delegate operator key"
 renderKeyDescr (OperatorKey StakePoolOperatorKey) = "Stake pool operator key"
-

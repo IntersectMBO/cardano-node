@@ -17,13 +17,13 @@ import           Cardano.Chain.Update
                     SystemTag(..))
 
 import           Cardano.Api (Network)
+import           Cardano.Config.Protocol (CardanoEra(..))
 import           Cardano.Config.Types
 
 import           Cardano.CLI.Byron.UpdateProposal
 
 import           Cardano.CLI.Byron.Genesis
 import           Cardano.CLI.Byron.Key
-import           Cardano.CLI.Ops (CardanoEra(..))
 import           Cardano.CLI.Byron.Tx
 
 import           Cardano.Chain.Common (Address(..))
@@ -161,4 +161,3 @@ data NodeCmd = CreateVote
 newtype NewCertificateFile
   = NewCertificateFile { nFp :: FilePath }
   deriving (Eq, Show, IsString)
-

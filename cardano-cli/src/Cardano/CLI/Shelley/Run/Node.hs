@@ -1,5 +1,6 @@
 module Cardano.CLI.Shelley.Run.Node
-  ( runNodeCmd
+  ( ShelleyNodeCmdError
+  , runNodeCmd
   ) where
 
 import           Cardano.Prelude
@@ -7,7 +8,7 @@ import           Cardano.Prelude
 import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, newExceptT)
 
-import           Cardano.Api (GenesisVerificationKey(..), EpochNo,
+import           Cardano.Api (ApiError, GenesisVerificationKey(..), EpochNo,
                   ShelleyPParamsUpdate, Update (..), createShelleyUpdateProposal,
                   hashKey, readGenesisVerificationKey, writeUpdate)
 
@@ -18,11 +19,20 @@ import           Cardano.Config.Shelley.VRF
 
 import           Cardano.Config.Types (SigningKeyFile(..))
 
-import           Cardano.CLI.Errors (CliError(..))
 import           Cardano.CLI.Shelley.Commands
 import           Cardano.CLI.Shelley.KeyGen
 
-runNodeCmd :: NodeCmd -> ExceptT CliError IO ()
+data ShelleyNodeCmdError
+  = ShelleyNodeCmdKeyError !KeyError
+  | ShelleyNodeCmdOperationalCertError !OperationalCertError
+  | ShelleyNodeCmdCardanoApiError !ApiError
+  | ShelleyNodeCmdKESError !KESError
+  | ShelleyNodeCmdVRFError !VRFError
+  | ShelleyNodeCmdKeyGenError !ShelleyKeyGenError
+  deriving Show
+
+
+runNodeCmd :: NodeCmd -> ExceptT ShelleyNodeCmdError IO ()
 runNodeCmd (NodeKeyGenCold vk sk ctr) = runNodeKeyGenCold vk sk ctr
 runNodeCmd (NodeKeyGenKES  vk sk)     = runNodeKeyGenKES  vk sk
 runNodeCmd (NodeKeyGenVRF  vk sk)     = runNodeKeyGenVRF  vk sk
@@ -39,10 +49,10 @@ runNodeCmd (NodeUpdateProposal out eNo genVKeys ppUp) = runNodeUpdateProposal ou
 runNodeKeyGenCold :: VerificationKeyFile
                   -> SigningKeyFile
                   -> OpCertCounterFile
-                  -> ExceptT CliError IO ()
+                  -> ExceptT ShelleyNodeCmdError IO ()
 runNodeKeyGenCold vkeyPath skeyPath (OpCertCounterFile ocertCtrPath) = do
-    runColdKeyGen (OperatorKey StakePoolOperatorKey) vkeyPath skeyPath
-    firstExceptT OperationalCertError $
+    firstExceptT ShelleyNodeCmdKeyGenError $ runColdKeyGen (OperatorKey StakePoolOperatorKey) vkeyPath skeyPath
+    firstExceptT ShelleyNodeCmdOperationalCertError $
       writeOperationalCertIssueCounter ocertCtrPath initialCounter
   where
     initialCounter = 0
@@ -50,18 +60,18 @@ runNodeKeyGenCold vkeyPath skeyPath (OpCertCounterFile ocertCtrPath) = do
 
 runNodeKeyGenKES :: VerificationKeyFile
                  -> SigningKeyFile
-                 -> ExceptT CliError IO ()
+                 -> ExceptT ShelleyNodeCmdError IO ()
 runNodeKeyGenKES (VerificationKeyFile vkeyPath) (SigningKeyFile skeyPath) =
-    firstExceptT KESCliError $ do
+    firstExceptT ShelleyNodeCmdKESError $ do
       (vkey, skey) <- liftIO $ genKESKeyPair
       writeKESVerKey     vkeyPath vkey
       writeKESSigningKey skeyPath skey
 
 
 runNodeKeyGenVRF :: VerificationKeyFile -> SigningKeyFile
-                 -> ExceptT CliError IO ()
+                 -> ExceptT ShelleyNodeCmdError IO ()
 runNodeKeyGenVRF (VerificationKeyFile vkeyPath) (SigningKeyFile skeyPath) =
-    firstExceptT VRFCliError $ do
+    firstExceptT ShelleyNodeCmdVRFError $ do
       --FIXME: genVRFKeyPair genKESKeyPair results are in an inconsistent order
       (skey, vkey) <- liftIO genVRFKeyPair
       writeVRFVerKey     vkeyPath vkey
@@ -78,19 +88,19 @@ runNodeIssueOpCert :: VerificationKeyFile
                    -> KESPeriod
                    -- ^ Start of the validity period for this certificate.
                    -> OutputFile
-                   -> ExceptT CliError IO ()
+                   -> ExceptT ShelleyNodeCmdError IO ()
 runNodeIssueOpCert (VerificationKeyFile vkeyKESPath)
                    (SigningKeyFile skeyPath)
                    (OpCertCounterFile ocertCtrPath)
                    kesPeriod
                    (OutputFile certFile) = do
-    issueNumber <- firstExceptT OperationalCertError $
+    issueNumber <- firstExceptT ShelleyNodeCmdOperationalCertError $
       readOperationalCertIssueCounter ocertCtrPath
 
-    verKeyKes <- firstExceptT KESCliError $
+    verKeyKes <- firstExceptT ShelleyNodeCmdKESError $
       readKESVerKey vkeyKESPath
 
-    signKey <- firstExceptT KeyCliError $
+    signKey <- firstExceptT ShelleyNodeCmdKeyError $
       readSigningKey (OperatorKey StakePoolOperatorKey) skeyPath
 
     let cert = signOperationalCertificate
@@ -98,7 +108,7 @@ runNodeIssueOpCert (VerificationKeyFile vkeyKESPath)
                  issueNumber kesPeriod
         vkey = deriveVerKey signKey
 
-    firstExceptT OperationalCertError $ do
+    firstExceptT ShelleyNodeCmdOperationalCertError $ do
       -- Write the counter first, to reduce the chance of ending up with
       -- a new cert but without updating the counter.
       writeOperationalCertIssueCounter ocertCtrPath (succ issueNumber)
@@ -110,15 +120,15 @@ runNodeUpdateProposal
   -> [VerificationKeyFile]
   -- ^ Genesis verification keys
   -> ShelleyPParamsUpdate
-  -> ExceptT CliError IO ()
+  -> ExceptT ShelleyNodeCmdError IO ()
 runNodeUpdateProposal (OutputFile upFile) eNo genVerKeyFiles upPprams = do
   genVKeys <- mapM
                 (\(VerificationKeyFile fp) -> do
                   GenesisVerificationKeyShelley gvk <-
-                    firstExceptT CardanoApiError $ newExceptT $ readGenesisVerificationKey fp
+                    firstExceptT ShelleyNodeCmdCardanoApiError $ newExceptT $ readGenesisVerificationKey fp
                   pure gvk
                 )
                 genVerKeyFiles
   let genKeyHashes = map hashKey genVKeys
       upProp = ShelleyUpdate $ createShelleyUpdateProposal eNo genKeyHashes upPprams
-  firstExceptT CardanoApiError . newExceptT $ writeUpdate upFile upProp
+  firstExceptT ShelleyNodeCmdCardanoApiError . newExceptT $ writeUpdate upFile upProp

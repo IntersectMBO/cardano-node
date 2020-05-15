@@ -5,12 +5,14 @@
 {-# LANGUAGE TypeApplications #-}
 
 module Cardano.CLI.Byron.Query
-  ( runGetLocalNodeTip
+  ( ByronQueryError(..)
+  , runGetLocalNodeTip
   ) where
 
 import           Prelude (unlines)
 import           Cardano.Prelude hiding (unlines)
 
+import           Control.Monad.Trans.Except.Extra (firstExceptT)
 import qualified Data.Text as T
 
 import           Cardano.Chain.Slotting (EpochSlots(..))
@@ -23,17 +25,19 @@ import           Ouroboros.Network.NodeToClient (withIOManager)
 import           Cardano.Config.Byron.Protocol (mkNodeClientProtocolRealPBFT)
 
 import           Cardano.Api (Network(..), getLocalTip)
-import           Cardano.CLI.Environment
-import           Cardano.CLI.Errors
+import           Cardano.CLI.Environment (EnvSocketError, readEnvSocketPath)
 
+data ByronQueryError
+  = ByronQueryEnvVarSocketErr !EnvSocketError
+  deriving Show
 
 --------------------------------------------------------------------------------
 -- Query local node's chain tip
 --------------------------------------------------------------------------------
 
-runGetLocalNodeTip :: Network -> ExceptT CliError IO ()
+runGetLocalNodeTip :: Network -> ExceptT ByronQueryError IO ()
 runGetLocalNodeTip network = do
-    sockPath <- readEnvSocketPath
+    sockPath <- firstExceptT ByronQueryEnvVarSocketErr $ readEnvSocketPath
     let ptclClientInfo = pClientInfoCodecConfig . protocolClientInfo $
           mkNodeClientProtocolRealPBFT (EpochSlots 21600)
 
@@ -51,4 +55,3 @@ runGetLocalNodeTip network = do
                         , "Slot: " <> condense slotNo
                         , "Block number: " <> condense blkNo
                         ]
-
