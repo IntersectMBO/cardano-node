@@ -1,10 +1,4 @@
-{-# LANGUAGE BangPatterns #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TemplateHaskell #-}
-
-{-# OPTIONS_GHC -fno-warn-orphans #-}
-{-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
 
 module Cardano.Config.Topology
   ( TopologyError(..)
@@ -19,7 +13,7 @@ module Cardano.Config.Topology
   )
 where
 
-import           Cardano.Prelude hiding (toS)
+import           Cardano.Prelude
 import           Prelude (String)
 
 import           Control.Exception (IOException)
@@ -27,26 +21,26 @@ import qualified Control.Exception as Exception
 import           Data.Aeson
 import qualified Data.ByteString as BS
 import qualified Data.IP as IP
-import           Data.String.Conv (toS)
 import qualified Data.Text as T
 import           Text.Read (readMaybe)
-import           Network.Socket
+import           Network.Socket (AddrInfo (..), AddrInfoFlag (..), PortNumber, SockAddr (..),
+                    SocketType (..), defaultHints, getAddrInfo)
 
 import           Cardano.Config.Types
 
 import           Ouroboros.Consensus.Util.Condense (Condense (..))
 
 
-newtype TopologyError = NodeIdNotFoundInToplogyFile FilePath deriving Show
+newtype TopologyError
+  = NodeIdNotFoundInToplogyFile FilePath
+  deriving Show
 
 nodeAddressToSockAddr :: NodeAddress -> SockAddr
 nodeAddressToSockAddr (NodeAddress addr port) =
-  case addr of
-    Just nha ->
-      case unNodeHostAddress nha of
-        IP.IPv4 ipv4 -> SockAddrInet port $ IP.toHostAddress ipv4
-        IP.IPv6 ipv6 -> SockAddrInet6 port 0 (IP.toHostAddress6 ipv6) 0
-    Nothing -> SockAddrInet port 0 -- Could also be any IPv6 addr
+  case unNodeHostAddress addr of
+    Just (IP.IPv4 ipv4) -> SockAddrInet port $ IP.toHostAddress ipv4
+    Just (IP.IPv6 ipv6) -> SockAddrInet6 port 0 (IP.toHostAddress6 ipv6) 0
+    Nothing             -> SockAddrInet port 0 -- Could also be any IPv6 addr
 
 nodeAddressInfo :: NodeCLI -> IO [AddrInfo]
 nodeAddressInfo NodeCLI{nodeAddr = NodeAddress hostAddr port} = do
@@ -54,7 +48,7 @@ nodeAddressInfo NodeCLI{nodeAddr = NodeAddress hostAddr port} = do
                 addrFlags = [AI_PASSIVE, AI_ADDRCONFIG]
               , addrSocketType = Stream
               }
-  getAddrInfo (Just hints) (maybe Nothing (Just . show . unNodeHostAddress) hostAddr) (Just $ show port)
+  getAddrInfo (Just hints) (fmap show $ unNodeHostAddress hostAddr) (Just $ show port)
 
 -- | Domain name with port number
 --
@@ -80,7 +74,7 @@ remoteAddressToNodeAddress (RemoteAddress addrStr port val) =
   case readMaybe addrStr of
     Nothing -> Nothing
     Just addr -> if val /= 0
-                 then Just $ NodeAddress (Just $ NodeHostAddress addr) port
+                 then Just $ NodeAddress (NodeHostAddress $ Just addr) port
                  else Nothing
 
 
@@ -102,7 +96,6 @@ instance ToJSON RemoteAddress where
       , "port" .= (fromIntegral (raPort ra) :: Int)
       , "valency" .= raValency ra
       ]
-
 
 data NodeSetup = NodeSetup
   { nodeId :: !Word64
@@ -145,10 +138,8 @@ instance ToJSON NetworkTopology where
 -- While running a real protocol, this gives your node its own address and
 -- other remote peers it will attempt to connect to.
 readTopologyFile :: NodeCLI -> IO (Either Text NetworkTopology)
-readTopologyFile NodeCLI{topologyFile} = do
-  let topo = unTopology topologyFile
-
-  eBs <- Exception.try $ BS.readFile topo
+readTopologyFile ncli = do
+  eBs <- Exception.try $ BS.readFile (unTopology $ topologyFile ncli)
 
   case eBs of
     Left e -> pure . Left $ handler e
