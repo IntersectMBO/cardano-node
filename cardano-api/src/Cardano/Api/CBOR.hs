@@ -43,7 +43,8 @@ import           Cardano.Api.Types
 import           Cardano.Binary (DecoderError (..), Decoder, Encoding, FromCBOR (..), ToCBOR (..))
 import qualified Cardano.Binary as CBOR
 
-import           Cardano.Crypto.DSIGN.Class (DSIGNAlgorithm (..))
+import           Cardano.Crypto.DSIGN.Class (decodeSignKeyDSIGN, decodeVerKeyDSIGN,
+                     encodeSignKeyDSIGN, encodeVerKeyDSIGN)
 import           Cardano.Prelude
 
 import           Data.ByteString (ByteString)

@@ -17,9 +17,8 @@ import qualified Cardano.Binary as CBOR
 import           Control.Monad.Trans.Except.Extra (firstExceptT, newExceptT)
 import           Ouroboros.Consensus.Shelley.Protocol.Crypto
                    (TPraosStandardCrypto)
-import           Shelley.Spec.Ledger.Address (toAddr)
+import           Shelley.Spec.Ledger.Address (Addr (..), toAddr)
 import           Shelley.Spec.Ledger.Keys (KeyPair(..), hashKey)
-import           Shelley.Spec.Ledger.TxData (Addr(..))
 
 import           Cardano.Config.Shelley.ColdKeys (genKeyPair)
 import           Cardano.Config.TextView

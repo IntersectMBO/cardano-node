@@ -40,6 +40,7 @@ import qualified Ouroboros.Consensus.Cardano as Consensus
 import           Ouroboros.Consensus.Shelley.Ledger
 import           Ouroboros.Consensus.Shelley.Protocol
                    (TPraosStandardCrypto, TPraosIsCoreNode(..))
+import           Ouroboros.Consensus.Shelley.Protocol.Crypto (HotKey (..))
 import           Ouroboros.Consensus.Shelley.Node
                    (TPraosLeaderCredentials(..))
 
@@ -162,7 +163,7 @@ readLeaderCredentials (Just ProtocolFilepaths {
 
     (opcert, vkey) <- firstExceptT OCertError $ readOperationalCert certFile
     vrfKey <- firstExceptT VRFError $ readVRFSigningKey vrfFile
-    kesKey <- firstExceptT KESError $ readKESSigningKey kesFile
+    kesKey <- firstExceptT KESError $ HotKey 0 <$> readKESSigningKey kesFile
 
     return $ Just TPraosLeaderCredentials {
                tpraosLeaderCredentialsIsCoreNode =

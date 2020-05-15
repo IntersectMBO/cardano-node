@@ -278,7 +278,7 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
        rnTraceDB              = chainDBTracer nodeTracers,
        rnTraceDiffusion       = diffusionTracers,
        rnDiffusionArguments   = diffusionArguments,
-       rnNetworkMagic         = nodeNetworkMagic (Proxy @blk) cfg,
+       rnNetworkMagic         = nodeNetworkMagic cfg,
        rnDatabasePath         = dbPath,
        rnProtocolInfo         = pInfo,
        rnCustomiseChainDbArgs = customiseChainDbArgs $ validateDB npm,
@@ -337,7 +337,7 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
          let (dnsProducerAddrs, ipProducerAddrs) = producerAddresses nt
 
          traceWith tracer $
-           "System started at " <> show (nodeStartTime (Proxy @blk) cfg)
+           "System started at " <> show (nodeStartTime cfg)
 
          traceWith tracer $ unlines
            [ ""
@@ -353,7 +353,7 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
              vTr = appendName "version" tr
              cTr = appendName "commit"  tr
          traceNamedObject rTr (meta, LogMessage (show (ncProtocol nc)))
-         traceNamedObject rTr (meta, LogMessage ("NetworkMagic " <> show (unNetworkMagic $ nodeNetworkMagic (Proxy @blk) cfg)))
+         traceNamedObject rTr (meta, LogMessage ("NetworkMagic " <> show (unNetworkMagic $ nodeNetworkMagic cfg)))
          traceNamedObject vTr (meta, LogMessage . pack . showVersion $ version)
          traceNamedObject cTr (meta, LogMessage gitRev)
 
@@ -370,7 +370,7 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
                                             pure
                                             eitherTopology
 
-         traceWith tracer $ "System started at " <> show (nodeStartTime (Proxy @blk) cfg)
+         traceWith tracer $ "System started at " <> show (nodeStartTime cfg)
          let producersList = map (\ns -> (nodeId ns, producers ns)) nodeSetups
              producers' = case (List.lookup nodeid producersList) of
                             Just ps ->  ps
