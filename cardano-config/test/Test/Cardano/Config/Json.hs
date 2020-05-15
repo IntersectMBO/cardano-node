@@ -1,9 +1,11 @@
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
 module Test.Cardano.Config.Json
   ( tests
   ) where
 
 import           Cardano.Prelude
+import           Cardano.Config.Types
 
 import           Data.Aeson (encode, fromJSON, decode, toJSON)
 
@@ -18,6 +20,8 @@ prop_roundtrip_NodeAddress_JSON =
     na <- Hedgehog.forAll genNodeAddress
     Hedgehog.tripping na toJSON fromJSON
     Hedgehog.tripping na encode decode
+    Hedgehog.cover 1 "  has address" $ isJust (unNodeHostAddress $ naHostAddress na)
+    Hedgehog.cover 1 "  no address" $ isNothing (unNodeHostAddress $ naHostAddress na)
 
 prop_roundtrip_NodeHostAddress_JSON :: Property
 prop_roundtrip_NodeHostAddress_JSON =
@@ -25,6 +29,8 @@ prop_roundtrip_NodeHostAddress_JSON =
     nha <- Hedgehog.forAll genNodeHostAddress
     Hedgehog.tripping nha toJSON fromJSON
     Hedgehog.tripping nha encode decode
+    Hedgehog.cover 1 "  has address" $ isJust (unNodeHostAddress nha)
+    Hedgehog.cover 1 "  no address" $ isNothing (unNodeHostAddress nha)
 
 prop_roundtrip_NodeSetup_JSON :: Property
 prop_roundtrip_NodeSetup_JSON =
@@ -39,6 +45,7 @@ prop_roundtrip_NetworkTopology_JSON =
     ntop <- Hedgehog.forAll genNetworkTopology
     Hedgehog.tripping ntop toJSON fromJSON
     Hedgehog.tripping ntop encode decode
+
 
 -- -----------------------------------------------------------------------------
 

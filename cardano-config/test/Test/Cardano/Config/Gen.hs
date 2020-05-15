@@ -246,15 +246,15 @@ genNetworkMagic =
 genNodeAddress :: Gen NodeAddress
 genNodeAddress =
   NodeAddress
-    <$> Gen.maybe genNodeHostAddress
+    <$> genNodeHostAddress
     <*> fmap fromIntegral (Gen.word16 $ Range.linear 100 20000)
 
 genNodeHostAddress :: Gen NodeHostAddress
 genNodeHostAddress =
   NodeHostAddress
     <$> Gen.choice
-          [ IP.IPv4 . IP.toIPv4w <$> Gen.enumBounded
-          , IP.IPv6 . IP.toIPv6w <$> genFourWord32
+          [ fmap (IP.IPv4 . IP.toIPv4w) <$> Gen.maybe Gen.enumBounded
+          , fmap (IP.IPv6 . IP.toIPv6w) <$> Gen.maybe genFourWord32
           ]
   where
     genFourWord32 :: Gen (Word32, Word32, Word32, Word32)

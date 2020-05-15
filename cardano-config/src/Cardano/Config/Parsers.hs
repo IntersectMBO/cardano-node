@@ -232,15 +232,15 @@ parseNodeId desc =
     )
 
 parseNodeAddress :: Parser NodeAddress
-parseNodeAddress = NodeAddress <$> optional parseHostAddr <*> parsePort
+parseNodeAddress = NodeAddress <$> parseHostAddr <*> parsePort
 
 parseHostAddr :: Parser NodeHostAddress
 parseHostAddr =
-    option (NodeHostAddress <$> auto) (
+    option (eitherReader parseNodeHostAddress) (
           long "host-addr"
        <> metavar "HOST-NAME"
        <> help "Optionally limit node to one ipv6 or ipv4 address"
-       <> value (NodeHostAddress "127.0.0.1")
+       <> value (NodeHostAddress Nothing)
     )
 
 parsePort :: Parser PortNumber
