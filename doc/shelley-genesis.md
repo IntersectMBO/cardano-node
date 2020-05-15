@@ -955,7 +955,7 @@ be 30 seconds into the future, and then we can start our nodes. This assumes
 you did not do any manual tweaking of the generated `genesis.json`, as it will
 be overwritten.
 ```
-$ cardano-cli shelley genesis create --genesis-dir example/
+$ cardano-cli shelley genesis create --genesis-dir example/ --supply 1000000000
 ```
 
 So, now in two separate terminal windows we can launch our nodes. Node 1:
