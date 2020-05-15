@@ -17,6 +17,9 @@ extra-deps:
   - git: https://github.com/input-output-hk/cardano-crypto
     commit: 2547ad1e80aeabca2899951601079408becbc92c
 
+  - git: https://github.com/erebe/systemd
+    commit: dba4b563dac99ff52328db916d99d928bc4a80fb
+
   - QuickCheck-2.12.6.1
   - quickcheck-instances-0.3.19
   - hspec-2.7.0
