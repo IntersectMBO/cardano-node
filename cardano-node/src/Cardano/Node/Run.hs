@@ -80,6 +80,7 @@ import qualified Ouroboros.Consensus.Config as Consensus
 import qualified Ouroboros.Consensus.Cardano as Consensus
 import           Ouroboros.Consensus.Util.Orphans ()
 
+
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 import           Ouroboros.Consensus.Storage.ImmutableDB (ValidationPolicy (..))
 import           Ouroboros.Consensus.Storage.VolatileDB (BlockValidationPolicy (..))
@@ -164,7 +165,7 @@ runNode loggingLayer npm@NodeCLI{protocolFiles} = do
         be :: LiveViewBackend blk Text <- realize c
         let lvbe = MkBackend { bEffectuate = effectuate be, bUnrealize = unrealize be }
         llAddBackend loggingLayer lvbe (UserDefinedBK "LiveViewBackend")
-        setTopology be npm
+        liveViewPostSetup be npm nc
         captureCounters be trace
 
         -- User will see a terminal graphics and will be able to interact with it.

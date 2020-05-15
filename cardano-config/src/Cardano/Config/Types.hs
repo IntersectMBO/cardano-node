@@ -3,6 +3,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
@@ -18,6 +19,7 @@ module Cardano.Config.Types
     , ConfigError (..)
     , DbFile (..)
     , GenesisFile (..)
+    , HasTxMaxSize (..)
     , LastKnownBlockVersion (..)
     , NodeAddress (..)
     , NodeConfiguration (..)
@@ -56,20 +58,30 @@ import qualified Cardano.Chain.Update as Update
 import           Cardano.Chain.Slotting (EpochSlots)
 import           Cardano.Crypto.ProtocolMagic (RequiresNetworkMagic)
 import           Ouroboros.Consensus.Block (Header, BlockProtocol)
+import           Ouroboros.Consensus.Byron.Ledger.Block (ByronBlock)
+import           Ouroboros.Consensus.Byron.Ledger (byronLedgerState)
 import qualified Ouroboros.Consensus.Cardano as Consensus (Protocol, ProtocolClient)
 import           Ouroboros.Consensus.HeaderValidation (OtherHeaderEnvelopeError)
 import           Ouroboros.Consensus.Ledger.Abstract (LedgerError)
 import           Ouroboros.Consensus.Mempool.API
                    (GenTx, GenTxId, HasTxId, HasTxs(..), ApplyTxErr, TxId)
+import           Ouroboros.Consensus.Ledger.Extended (ExtLedgerState, ledgerState)
+import           Ouroboros.Consensus.Mock.Ledger.Block (SimpleBlock)
 import           Ouroboros.Consensus.Node.Run (RunNode)
 import           Ouroboros.Consensus.NodeId (NodeId(..))
 import           Ouroboros.Consensus.Protocol.Abstract (ValidationErr)
 import           Ouroboros.Consensus.Util.Condense (Condense (..))
+import           Ouroboros.Consensus.Shelley.Ledger (shelleyState, getPParams)
+import           Ouroboros.Consensus.Shelley.Ledger.Block (ShelleyBlock)
 import           Ouroboros.Network.Block (HeaderHash, MaxSlotNo(..))
 
+import           Cardano.Chain.Block (adoptedProtocolParameters, cvsUpdateState)
+import           Cardano.Chain.Update (ppMaxBlockSize)
 import           Cardano.Config.Orphanage ()
 import           Cardano.Config.TraceConfig
 import           Cardano.Crypto (RequiresNetworkMagic(..))
+
+import           Shelley.Spec.Ledger.PParams (_maxTxSize)
 
 -- | Errors for the cardano-config module.
 data ConfigError
@@ -172,7 +184,7 @@ newtype UpdateProposalFile = UpdateProposalFile
 newtype SocketPath = SocketPath
   { unSocketPath :: FilePath }
   deriving stock (Eq, Ord)
-  deriving newtype (FromJSON, fIsString, Show)
+  deriving newtype (FromJSON, IsString, Show)
 
 newtype SigningKeyFile = SigningKeyFile
   { unSigningKeyFile ::  FilePath }
@@ -356,10 +368,23 @@ instance ToJSON NodeHostAddress where
 
 data SomeConsensusProtocol where
 
-     SomeConsensusProtocol :: (RunNode blk, TraceConstraints blk)
+     SomeConsensusProtocol :: (RunNode blk, TraceConstraints blk, HasTxMaxSize (ExtLedgerState blk))
                            => Consensus.Protocol blk (BlockProtocol blk)
                            -> SomeConsensusProtocol
 
+class HasTxMaxSize ledgerState where
+  getMaxTxSize :: ledgerState -> Word32
+
+instance HasTxMaxSize (ExtLedgerState (ShelleyBlock c)) where
+  getMaxTxSize = fromIntegral . _maxTxSize . getPParams . shelleyState . ledgerState
+
+instance HasTxMaxSize (ExtLedgerState ByronBlock) where
+  getMaxTxSize =
+    fromIntegral . ppMaxBlockSize . adoptedProtocolParameters
+      . cvsUpdateState . byronLedgerState . ledgerState
+
+instance HasTxMaxSize (ExtLedgerState (SimpleBlock a b)) where
+  getMaxTxSize = const 4242 -- Does not matter for mock blocks.
 
 -- | Tracing-related constraints for monitoring purposes.
 --
