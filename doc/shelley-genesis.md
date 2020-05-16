@@ -289,13 +289,14 @@ When we regenerate the genesis file it will fill in the:
  * `startTime`
  * and optionally it can override the `maxLovelaceSupply`
 
-Let's regenerate the genesis file
+Let's regenerate the genesis file (note, this command does not set an initial
+Lovelace supply, that will be done later)
 ```
 $ cardano-cli shelley genesis create --genesis-dir example/
 ```
 and then look at it and understand what the command has done
 ```
-$ cat example/genesis.json 
+$ cat example/genesis.json
 {
     "activeSlotsCoeff": 5.0e-2,
     "protocolParams": {
