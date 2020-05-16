@@ -809,7 +809,7 @@ pTestnetMagic =
 pTxSubmitFile :: Parser FilePath
 pTxSubmitFile =
   Opt.strOption
-    (  Opt.long "tx-filepath"
+    (  Opt.long "tx-file"
     <> Opt.metavar "FILEPATH"
     <> Opt.help "Filepath of the transaction you intend to submit."
     <> Opt.completer (Opt.bashCompleter "file")
