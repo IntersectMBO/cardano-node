@@ -6,8 +6,6 @@
 {-# LANGUAGE RankNTypes        #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-{-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
-
 module Cardano.Config.Protocol
   (
     -- * The enumeration of supported protocols

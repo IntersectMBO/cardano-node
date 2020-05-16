@@ -1,5 +1,3 @@
-{-# LANGUAGE BangPatterns #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
@@ -122,7 +120,7 @@ initializeAllFeatures npm cardanoEnvironment = do
                       npm
 
   (loggingLayer, loggingFeature) <- case eitherFeatures of
-                                      Left err -> (putTextLn $ show err) >> exitFailure
+                                      Left err -> putTextLn (show err) >> exitFailure
                                       Right res -> return res
 
   (nodeLayer, nodeFeature) <- createNodeFeature

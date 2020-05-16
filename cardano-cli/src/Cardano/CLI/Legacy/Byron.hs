@@ -1,14 +1,8 @@
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE GADTs               #-}
-{-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE NoImplicitPrelude   #-}
-{-# LANGUAGE NumericUnderscores  #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications    #-}
-
-{-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
-{-# OPTIONS_GHC -Wno-simplifiable-class-constraints #-}
 
 module Cardano.CLI.Legacy.Byron (
       LegacyDelegateKey(..)

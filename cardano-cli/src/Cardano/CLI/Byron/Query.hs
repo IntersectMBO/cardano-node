@@ -2,7 +2,6 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 
 module Cardano.CLI.Byron.Query
   ( ByronQueryError(..)

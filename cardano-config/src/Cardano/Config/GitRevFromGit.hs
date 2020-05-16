@@ -1,18 +1,3 @@
-{-# LANGUAGE DeriveLift          #-}
-{-# LANGUAGE FlexibleContexts    #-}
-{-# LANGUAGE GADTs               #-}
-{-# LANGUAGE LambdaCase          #-}
-{-# LANGUAGE NamedFieldPuns      #-}
-{-# LANGUAGE NumericUnderscores  #-}
-{-# LANGUAGE OverloadedStrings   #-}
-{-# LANGUAGE QuasiQuotes         #-}
-{-# LANGUAGE RankNTypes          #-}
-{-# LANGUAGE RecordWildCards     #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TemplateHaskell     #-}
-
-{-# OPTIONS_GHC -Wno-simplifiable-class-constraints #-}
-
 module Cardano.Config.GitRevFromGit (
       gitRevFromGit
     ) where

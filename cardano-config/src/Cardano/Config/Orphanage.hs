@@ -1,15 +1,10 @@
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TypeSynonymInstances #-}
 
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-missing-methods #-}
 
 module Cardano.Config.Orphanage () where
 
@@ -23,10 +18,7 @@ import qualified Data.Text as Text
 
 import           Cardano.BM.Data.Tracer (TracingVerbosity(..))
 import qualified Cardano.Chain.Update as Update
-import qualified Ouroboros.Consensus.BlockchainTime as Consensus
 import           Ouroboros.Consensus.NodeId (NodeId(..), CoreNodeId (..))
-
-deriving anyclass instance Num Consensus.SlotLength
 
 deriving instance Show TracingVerbosity
 

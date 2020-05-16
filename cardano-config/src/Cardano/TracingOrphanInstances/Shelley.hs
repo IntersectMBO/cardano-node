@@ -1,19 +1,14 @@
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE FlexibleInstances     #-}
-{-# LANGUAGE LambdaCase            #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
 {-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE UndecidableInstances  #-}
-{-# LANGUAGE NamedFieldPuns        #-}
 {-# LANGUAGE EmptyCase             #-}
-{-# LANGUAGE StandaloneDeriving    #-}
 {-# LANGUAGE DerivingStrategies    #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
-{-# OPTIONS_GHC -fno-warn-orphans  #-}
-{-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
+{-# OPTIONS_GHC -Wno-orphans  #-}
 
 module Cardano.TracingOrphanInstances.Shelley () where
 

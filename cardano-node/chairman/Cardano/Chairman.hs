@@ -1,4 +1,3 @@
-{-# LANGUAGE BangPatterns        #-}
 {-# LANGUAGE DataKinds           #-}
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE GADTs               #-}
@@ -7,10 +6,8 @@
 {-# LANGUAGE MultiWayIf          #-}
 {-# LANGUAGE RankNTypes          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications    #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-{-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
 {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 
 module Cardano.Chairman (chairmanTest) where

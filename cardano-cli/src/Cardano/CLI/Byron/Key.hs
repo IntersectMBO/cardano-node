@@ -1,7 +1,5 @@
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
 
-{-# OPTIONS_GHC -Wno-missing-local-signatures #-}
-
 module Cardano.CLI.Byron.Key
   ( -- * Keys
     ByronKeyFailure(..)

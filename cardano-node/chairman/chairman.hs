@@ -1,6 +1,4 @@
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 import           Cardano.Prelude hiding (option)

@@ -8,7 +8,7 @@
 {-# LANGUAGE UndecidableInstances  #-}
 {-# LANGUAGE NamedFieldPuns        #-}
 
-{-# OPTIONS_GHC -fno-warn-orphans  #-}
+{-# OPTIONS_GHC -Wno-orphans  #-}
 
 module Cardano.TracingOrphanInstances.Consensus () where
 
