@@ -3,8 +3,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 
-{-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
-
 module Cardano.Config.Parsers
   ( command'
   , nodeCLIParser

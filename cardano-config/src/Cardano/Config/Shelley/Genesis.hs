@@ -1,9 +1,7 @@
-{-# LANGUAGE StandaloneDeriving         #-}
 {-# LANGUAGE DerivingStrategies         #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings          #-}
 
-{-# OPTIONS_GHC -fno-warn-orphans #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Config.Shelley.Genesis
   ( ShelleyGenesis(..)

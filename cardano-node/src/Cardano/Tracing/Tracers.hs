@@ -9,8 +9,7 @@
 {-# LANGUAGE TupleSections         #-}
 {-# LANGUAGE UndecidableInstances  #-}
 
-{-# OPTIONS_GHC -fno-warn-orphans  #-}
-{-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
+{-# OPTIONS_GHC -Wno-orphans  #-}
 
 module Cardano.Tracing.Tracers
   ( BlockchainCounters

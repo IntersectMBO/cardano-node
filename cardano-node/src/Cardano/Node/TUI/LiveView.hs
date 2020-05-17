@@ -9,7 +9,6 @@
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE NamedFieldPuns        #-}
 {-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE RankNTypes            #-}
 
@@ -381,11 +380,11 @@ instance IsEffectuator (LiveViewBackend blk) Text where
 
                     LogValue "Sys.Platform" (PureI pfid) ->
                         modifyMVar_ (getbe lvbe) $ \lvs -> do
-                            let platform = toEnum $ fromIntegral pfid :: Platform
+                            let pltfrm = toEnum $ fromIntegral pfid :: Platform
 
                             checkForUnexpectedThunks ["Sys.Platform LiveViewBackend"] lvs
 
-                            return $ lvs { lvsPlatform = show platform }
+                            return $ lvs { lvsPlatform = show pltfrm }
 
                     LogValue "txsInMempool" (PureI txsInMempool) ->
                         modifyMVar_ (getbe lvbe) $ \lvs -> do

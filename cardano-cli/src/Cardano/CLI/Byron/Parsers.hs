@@ -98,7 +98,7 @@ parseCBORObject = asum
       <> (help $  "The CBOR file is a byron era block."
                <> " Enter the number of slots in an epoch. The default value is 21600")
       <> metavar "INT"
-      <> (value $ EpochSlots 21600)
+      <> value (EpochSlots 21600)
       )
 
   , flag' CBORDelegationCertificateByron $

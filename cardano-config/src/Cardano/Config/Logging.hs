@@ -5,8 +5,6 @@
 {-# LANGUAGE Rank2Types          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-{-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
-
 #if !defined(mingw32_HOST_OS)
 #define UNIX
 #endif
