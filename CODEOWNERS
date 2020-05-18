@@ -9,3 +9,5 @@
 ci                           @devops
 configuration                @devops
 nix                          @devops
+*.nix                        @devops
+bors.toml                    @devops
