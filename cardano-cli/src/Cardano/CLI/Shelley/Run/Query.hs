@@ -35,6 +35,8 @@ import           Ouroboros.Network.Block (getTipPoint)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
 import           Shelley.Spec.Ledger.TxData (TxId (..), TxIn (..), TxOut (..))
 import           Shelley.Spec.Ledger.UTxO (UTxO (..))
+import           Shelley.Spec.Ledger.PParams (PParams)
+
 
 data ShelleyQueryCmdError
   = ShelleyQueryEnvVarSocketErr !EnvSocketError
@@ -65,7 +67,15 @@ runQueryProtocolParameters network mOutFile = do
     getLocalTip iomgr ptclClientInfo network sockPath
   pparams <- firstExceptT NodeLocalStateQueryError $
     queryPParamsFromLocalState network sockPath (getTipPoint tip)
-  firstExceptT ShelleyHelperError $ writeProtocolParameters mOutFile pparams
+  writeProtocolParameters mOutFile pparams
+
+writeProtocolParameters :: Maybe OutputFile -> PParams -> ExceptT ShelleyQueryCmdError IO ()
+writeProtocolParameters mOutFile pparams =
+  case mOutFile of
+    Nothing -> liftIO $ LBS.putStrLn (encodePretty pparams)
+    Just (OutputFile fpath) ->
+      handleIOExceptT (ShelleyHelperError . IOError' fpath) $
+        LBS.writeFile fpath (encodePretty pparams)
 
 runQueryTip
   :: Network
