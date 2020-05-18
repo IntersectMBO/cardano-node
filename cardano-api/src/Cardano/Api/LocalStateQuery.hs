@@ -94,15 +94,13 @@ queryFilteredUTxOFromLocalState
 queryFilteredUTxOFromLocalState network socketPath addrs point =
   whenAllShelleyAddresses addrs $ \shelleyAddrs -> do
     let pointAndQuery = (point, GetFilteredUTxO shelleyAddrs)
-    utxoVar <- liftIO newEmptyTMVarM
-    liftIO $ queryNodeLocalState
-      utxoVar
-      nullTracer
-      (pClientInfoCodecConfig . protocolClientInfo $ mkNodeClientProtocolTPraos)
-      network
-      socketPath
-      pointAndQuery
-    newExceptT $ atomically $ takeTMVar utxoVar
+    newExceptT $ liftIO $
+      queryNodeLocalState
+        nullTracer
+        (pClientInfoCodecConfig . protocolClientInfo $ mkNodeClientProtocolTPraos)
+        network
+        socketPath
+        pointAndQuery
 
 -- | Query the current protocol parameters from a Shelley node via the local
 -- state query protocol.
@@ -117,15 +115,13 @@ queryPParamsFromLocalState
   -> ExceptT LocalStateQueryError IO Ledger.PParams
 queryPParamsFromLocalState network socketPath point = do
   let pointAndQuery = (point, GetCurrentPParams)
-  pParamsVar <- liftIO newEmptyTMVarM
-  liftIO $ queryNodeLocalState
-    pParamsVar
-    nullTracer
-    (pClientInfoCodecConfig . protocolClientInfo $ mkNodeClientProtocolTPraos)
-    network
-    socketPath
-    pointAndQuery
-  newExceptT $ atomically $ takeTMVar pParamsVar
+  newExceptT $ liftIO $
+    queryNodeLocalState
+      nullTracer
+      (pClientInfoCodecConfig . protocolClientInfo $ mkNodeClientProtocolTPraos)
+      network
+      socketPath
+      pointAndQuery
 
 -- | Establish a connection to a node and execute the provided query
 -- via the local state query protocol.
@@ -134,16 +130,16 @@ queryPParamsFromLocalState network socketPath point = do
 --
 queryNodeLocalState
   :: forall blk result. RunNode blk
-  => StrictTMVar IO (Either LocalStateQueryError result)
-  -> Trace IO Text
+  => Trace IO Text
   -> CodecConfig blk
   -> Network
   -> SocketPath
   -> (Point blk, Query blk result)
-  -> IO ()
-queryNodeLocalState resultVar trce cfg nm (SocketPath socketPath) pointAndQuery = do
+  -> IO (Either LocalStateQueryError result)
+queryNodeLocalState trce cfg nm (SocketPath socketPath) pointAndQuery = do
     logInfo trce $ "queryNodeLocalState: Connecting to node via " <> textShow socketPath
     NodeToClient.withIOManager $ \iocp -> do
+      resultVar <- newEmptyTMVarM
       NodeToClient.connectTo
         (NodeToClient.localSnocket iocp socketPath)
         NetworkConnectTracers
@@ -152,6 +148,7 @@ queryNodeLocalState resultVar trce cfg nm (SocketPath socketPath) pointAndQuery 
           }
         (localInitiatorNetworkApplication trce cfg nm resultVar pointAndQuery)
         socketPath
+      atomically $ takeTMVar resultVar
   where
     muxTracer :: Show peer => Tracer IO (WithMuxBearer peer MuxTrace)
     muxTracer = toLogObject $ appendName "Mux" trce
