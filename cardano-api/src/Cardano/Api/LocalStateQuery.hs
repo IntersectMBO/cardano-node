@@ -8,7 +8,11 @@ module Cardano.Api.LocalStateQuery
   ( LocalStateQueryError (..)
   , renderLocalStateQueryError
   , queryFilteredUTxOFromLocalState
+  , Ledger.UTxO(..)
   , queryPParamsFromLocalState
+  , Ledger.PParams
+  , queryStakeDistributionFromLocalState
+  , Ledger.PoolDistr(..)
   ) where
 
 import           Cardano.Prelude hiding (atomically, option, threadDelay)
@@ -64,7 +68,8 @@ import           Ouroboros.Network.Protocol.LocalStateQuery.Client
 import           Ouroboros.Network.Protocol.LocalStateQuery.Type (AcquireFailure (..))
 
 import qualified Shelley.Spec.Ledger.PParams as Ledger (PParams)
-import qualified Shelley.Spec.Ledger.UTxO as Ledger (UTxO)
+import qualified Shelley.Spec.Ledger.UTxO as Ledger (UTxO(..))
+import qualified Shelley.Spec.Ledger.Delegation.Certificates as Ledger (PoolDistr(..))
 
 -- | An error that can occur while querying a node's local state.
 data LocalStateQueryError
@@ -115,6 +120,27 @@ queryPParamsFromLocalState
   -> ExceptT LocalStateQueryError IO Ledger.PParams
 queryPParamsFromLocalState network socketPath point = do
   let pointAndQuery = (point, GetCurrentPParams)
+  newExceptT $ liftIO $
+    queryNodeLocalState
+      nullTracer
+      (pClientInfoCodecConfig . protocolClientInfo $ mkNodeClientProtocolTPraos)
+      network
+      socketPath
+      pointAndQuery
+
+-- | Query the current stake distribution from a Shelley node via the local
+-- state query protocol.
+--
+-- This one is Shelley-specific because the query is Shelley-specific.
+--
+queryStakeDistributionFromLocalState
+  :: blk ~ ShelleyBlock TPraosStandardCrypto
+  => Network
+  -> SocketPath
+  -> Point blk
+  -> ExceptT LocalStateQueryError IO (Ledger.PoolDistr TPraosStandardCrypto)
+queryStakeDistributionFromLocalState network socketPath point = do
+  let pointAndQuery = (point, GetStakeDistribution)
   newExceptT $ liftIO $
     queryNodeLocalState
       nullTracer

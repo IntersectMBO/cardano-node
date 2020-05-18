@@ -370,6 +370,8 @@ pQueryCmd =
           (Opt.info pQueryTip $ Opt.progDesc "Get the node's current tip (slot no, hash, block no)")
       , Opt.command "filtered-utxo"
           (Opt.info pQueryFilteredUTxO $ Opt.progDesc "Get the node's current UTxO filtered by address")
+      , Opt.command "stake-distribution"
+          (Opt.info pQueryStakeDistribution $ Opt.progDesc "Get the node's current aggregated stake distribution")
       , Opt.command "version"
           (Opt.info pQueryVersion $ Opt.progDesc "Get the node version")
       , Opt.command "status"
@@ -393,6 +395,12 @@ pQueryCmd =
       QueryFilteredUTxO
         <$> pHexEncodedAddress
         <*> pNetwork
+        <*> pMaybeOutputFile
+
+    pQueryStakeDistribution :: Parser QueryCmd
+    pQueryStakeDistribution =
+      QueryStakeDistribution
+        <$> pNetwork
         <*> pMaybeOutputFile
 
     pQueryVersion :: Parser QueryCmd

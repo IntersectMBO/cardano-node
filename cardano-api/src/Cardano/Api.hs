@@ -63,6 +63,7 @@ module Cardano.Api
   , renderLocalStateQueryError
   , queryFilteredUTxOFromLocalState
   , queryPParamsFromLocalState
+  , queryStakeDistributionFromLocalState
 
     -- * Node local chain sync related
   , getLocalTip
