@@ -417,11 +417,12 @@ source-repository-package
   subdir: http-client
 
 constraints:
-  ip < 1.5,
-  hedgehog >= 1.0,
-  bimap >= 0.4.0,
-  brick >= 0.47,
-  libsystemd-journal >= 1.4.4
+    ip < 1.5
+  , hedgehog >= 1.0
+  , bimap >= 0.4.0
+  , brick >= 0.47
+  , libsystemd-journal >= 1.4.4
+  , systemd >= 2.3.0
 
 package comonad
   flags: -test-doctests

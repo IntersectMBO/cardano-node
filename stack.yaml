@@ -14,12 +14,6 @@ ghc-options:
 allow-newer: true
 
 extra-deps:
-  - git: https://github.com/input-output-hk/cardano-crypto
-    commit: 2547ad1e80aeabca2899951601079408becbc92c
-
-  - git: https://github.com/erebe/systemd
-    commit: dba4b563dac99ff52328db916d99d928bc4a80fb
-
   - QuickCheck-2.12.6.1
   - quickcheck-instances-0.3.19
   - hspec-2.7.0
@@ -58,6 +52,7 @@ extra-deps:
   - word-wrap-0.4.1
   - websockets-0.12.6.1
   - th-lift-instances-0.1.14
+  - systemd-2.3.0
 
     # Cardano-ledger dependencies
   - git: https://github.com/input-output-hk/cardano-ledger
@@ -80,6 +75,9 @@ extra-deps:
       - shelley/chain-and-ledger/dependencies/non-integer
       - shelley/chain-and-ledger/executable-spec
       - shelley/chain-and-ledger/executable-spec/test
+
+  - git: https://github.com/input-output-hk/cardano-crypto
+    commit: 2547ad1e80aeabca2899951601079408becbc92c
 
   - git: https://github.com/input-output-hk/cardano-prelude
     commit: bd7eb69d27bfaee46d435bc1d2720520b1446426
