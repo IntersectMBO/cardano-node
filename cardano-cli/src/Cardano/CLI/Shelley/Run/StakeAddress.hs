@@ -13,16 +13,17 @@ import           Control.Monad.Trans.Except.Extra (firstExceptT, newExceptT)
 import           Cardano.Api
 
 import           Cardano.Api (StakingVerificationKey (..),
-                   readStakingVerificationKey, readVerificationKeyStakePool,
+                   readStakingVerificationKey,
                    shelleyDeregisterStakingAddress, shelleyDelegateStake,
                    shelleyRegisterStakingAddress, writeCertificate)
 import           Shelley.Spec.Ledger.Keys (hashKey)
-import           Cardano.Config.Shelley.ColdKeys (genKeyPair)
+import           Cardano.Config.Shelley.ColdKeys hiding (writeSigningKey)
 
 import           Cardano.CLI.Shelley.Parsers
 
 data ShelleyStakeAddressCmdError
   = ShelleyStakeAddressCardanoApiError !ApiError
+  | ShelleyStakeAddressKeyError        !KeyError
   deriving Show
 
 runStakeAddressCmd :: StakeAddressCmd -> ExceptT ShelleyStakeAddressCmdError IO ()
@@ -78,7 +79,8 @@ runStakeKeyDelegationCert
 runStakeKeyDelegationCert (VerificationKeyFile stkKey) (VerificationKeyFile poolVKey) (OutputFile outFp) = do
   StakingVerificationKeyShelley stakeVkey <-
     firstExceptT ShelleyStakeAddressCardanoApiError . newExceptT $ readStakingVerificationKey stkKey
-  poolStakeVkey <- firstExceptT ShelleyStakeAddressCardanoApiError . newExceptT $ readVerificationKeyStakePool poolVKey
+  poolStakeVkey <- firstExceptT ShelleyStakeAddressKeyError $
+    readVerKey (OperatorKey StakePoolOperatorKey) poolVKey
   let delegCert = shelleyDelegateStake (hashKey stakeVkey) (hashKey poolStakeVkey)
   firstExceptT ShelleyStakeAddressCardanoApiError . newExceptT $ writeCertificate outFp delegCert
 
