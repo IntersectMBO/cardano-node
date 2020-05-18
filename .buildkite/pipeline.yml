@@ -1,9 +1,4 @@
 steps:
-  - label: hydra-eval-errors
-    command: 'nix-build ./nix -A iohkNix.hydraEvalErrors && ./result/bin/hydra-eval-errors.py'
-    agents:
-      system: x86_64-linux
-
   - label: 'check-cabal-project'
     command: 'nix-build ./nix -A iohkNix.checkCabalProject -o check-cabal-project.sh && ./check-cabal-project.sh'
     agents:
