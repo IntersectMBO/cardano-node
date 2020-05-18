@@ -1011,14 +1011,15 @@ we expect. We'll need a third terminal.
 
 We'll start with querying the node to see the current set of protocol parameters.
 ```
-cardano-cli shelley query protocol-parameters
-Usage: cardano-cli shelley query protocol-parameters [--network-magic INT]
+$ cardano-cli shelley query protocol-parameters
+Usage: cardano-cli shelley query protocol-parameters (--mainnet | 
+                                                       --testnet-magic INT) 
                                                      [--out-file FILE]
   Get the node's current protocol parameters
 
 Available options:
-  --network-magic INT      The network magic id [default is mainnet].
-
+  --mainnet                Use the mainnet magic id.
+  --testnet-magic INT      Specify a testnet magic id.
   --out-file FILE          Optional output file. Default is to write to stdout.
 ```
 
@@ -1028,7 +1029,7 @@ given as 42. The network "magic" number is used as a simple sanity check (not a
 security measure of course) when nodes connect to each other, to stop nodes
 accidentally connecting to nodes running different blockchains, e.g. testnet
 vs mainnet. We have the same sanity check when we connect to the local node.
-So we have to specify `--network-magic 42`, otherwise it defaults to mainnet
+So we have to specify `--testnet-magic 42`, otherwise it defaults to mainnet
 and then the handshake would fail.
 
 This command of course connects to a local node. The socket for the local
@@ -1043,7 +1044,7 @@ time in the command.
 ```
 $ CARDANO_NODE_SOCKET_PATH=example/node1/node.sock \
     cardano-cli shelley query protocol-parameters \
-    --network-magic 42
+    --testnet-magic 42
 {
     "poolDecayRate": 0,
     "poolDeposit": 0,
@@ -1083,15 +1084,16 @@ the `genesis.json`.
 There is a command to query the UTxO and return all the UTxOs at a given
 address.
 ```
-$ cardano-cli shelley query filtered-utxo 
+$ cardano-cli shelley query filtered-utxo
 Usage: cardano-cli shelley query filtered-utxo --address ADDRESS 
-                                               [--network-magic INT] 
+                                               (--mainnet | --testnet-magic INT)
                                                [--out-file FILE]
   Get the node's current UTxO filtered by address
 
 Available options:
   --address ADDRESS        A hex-encoded Cardano address.
-  --network-magic INT      The network magic id [default is mainnet].
+  --mainnet                Use the mainnet magic id.
+  --testnet-magic INT      Specify a testnet magic id.
   --out-file FILE          Optional output file. Default is to write to stdout.
 ```
 
@@ -1101,7 +1103,7 @@ this command to use the right address(es) from your `genesis.json`.
 ```
 $ CARDANO_NODE_SOCKET_PATH=example/node1/node.sock \
     cardano-cli shelley query filtered-utxo \
-    --network-magic 42 \
+    --testnet-magic 42 \
     --address 8206582080edb9890519e08847aff26f55a076a439b9835baa7113d04ad1ed9b2ea55817
 
                            TxHash                                 TxIx        Lovelace
@@ -1178,20 +1180,23 @@ $ cardano-cli shelley address key-gen \
 We can now build an address from our key.
 ```
 $ cardano-cli shelley address build
-Usage: cardano-cli shelley address build --verification-key-file FILEPATH
-  Build an address
+Usage: cardano-cli shelley address build --payment-verification-key-file FILEPATH
+                                         [--staking-verification-key-file FILEPATH]
+  Build a Shelley payment addres, with optional delegation to a stake address.
 
 Available options:
-  --verification-key-file FILEPATH
-                           Input filepath of the verification key.
+  --payment-verification-key-file FILEPATH
+                           Filepath of the payment verification key.
+  --staking-verification-key-file FILEPATH
+                           Filepath of the staking verification key.
 ```
-This command is currently rather boring, but will sprout more options later
-for building payment addresses that are associated with stake addresses.
+This command can also build payment addresses that are associated with stake
+addresses, and thus have the ability to delegate the stake rights.
 
-So for now let's see our boring address with no stake rights
+For now however let's see our boring address with no stake rights:
 ```
 $ cardano-cli shelley address build \
-    --verification-key-file example/addr1.vkey
+    --payment-verification-key-file example/addr1.vkey
 82065820cd44104b49b97dae659dabf040cc7d588ea28e52addffc66fd126bb23be87451
 ```
 The CLI uses a low-tech hex encoding for addresses, rather than fancy bech32.
@@ -1269,7 +1274,7 @@ inputs from the same address).
 $ cardano-cli shelley transaction sign
 Usage: cardano-cli shelley transaction sign --tx-body-file FILEPATH
                                             --signing-key-file FILEPATH 
-                                            [--network-magic INT]
+                                            (--mainnet | --testnet-magic INT)
                                             --tx-file FILEPATH
   Sign a transaction
 
@@ -1277,15 +1282,17 @@ Available options:
   --tx-body-file FILEPATH  Input filepath of the TxBody.
   --signing-key-file FILEPATH
                            Input filepath of the signing key (one or more).
-  --network-magic INT      The network magic id [default is mainnet].
+  --mainnet                Use the mainnet magic id.
+  --testnet-magic INT      Specify a testnet magic id.
   --tx-file FILEPATH       Output filepath of the Tx.
 ```
 
 In our example we need just the one signature, using the `utxo1.skey`.
 ```
-cardano-cli shelley transaction sign \
+$ cardano-cli shelley transaction sign \
   --tx-body-file example/tx1.txbody \
   --signing-key-file example/utxo-keys/utxo1.skey \
+  --testnet-magic 42 \
   --tx-file example/tx1.tx
 ```
 
@@ -1293,26 +1300,28 @@ cardano-cli shelley transaction sign \
 
 Finally we need to submit the signed transaction
 ```
-$  cardano-cli shelley transaction submit
-Usage: cardano-cli shelley transaction submit --tx-filepath FILEPATH 
-                                              [--network-magic INT]
-  Submit a transaction
+$ cardano-cli shelley transaction submit
+Usage: cardano-cli shelley transaction submit --tx-file FILEPATH 
+                                              (--mainnet | --testnet-magic INT)
+  Submit a transaction to the local node whose Unix domain socket is obtained
+  from the CARDANO_NODE_SOCKET_PATH enviromnent variable.
 
 Available options:
-  --tx-filepath FILEPATH   Filepath of the transaction you intend to submit.
-  --network-magic INT      The network magic id [default is mainnet].
+  --tx-file FILEPATH       Filepath of the transaction you intend to submit.
+  --mainnet                Use the mainnet magic id.
+  --testnet-magic INT      Specify a testnet magic id.
 ```
 This command also needs the `CARDANO_NODE_SOCKET_PATH` like the other commands
 that need to talk to a local node. And as mentioned above in the section on
-querying the node, we have to specify `--network-magic 42`, otherwise it
+querying the node, we have to specify `--testnet-magic 42`, otherwise it
 defaults to mainnet and then the handshake with the node would fail.
 
 So let's do it.
 ```
 CARDANO_NODE_SOCKET_PATH=example/node1/node.sock \
     cardano-cli shelley transaction submit \
-      --tx-filepath example/tx1.tx \
-      --network-magic 42
+      --tx-file example/tx1.tx \
+      --testnet-magic 42
 ```
 
 If we now go look at the node logs (or stdout) for node1 we should see that
@@ -1324,7 +1333,7 @@ the funds to
 ```
 CARDANO_NODE_SOCKET_PATH=example/node1/node.sock \
     cardano-cli shelley query filtered-utxo \
-      --network-magic 42 \
+      --testnet-magic 42 \
       --address 82065820cd44104b49b97dae659dabf040cc7d588ea28e52addffc66fd126bb23be87451
 
                            TxHash                                 TxIx        Lovelace
