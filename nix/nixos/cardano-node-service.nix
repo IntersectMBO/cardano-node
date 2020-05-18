@@ -55,7 +55,7 @@ let
           rm -rf ${cfg.stateDir}/*
           GENESIS_FILE=$(${pkgs.jq}/bin/jq -r .GenesisFile < ${cfg.nodeConfigFile})
           START_TIME=$(date --utc +"%Y-%m-%dT%H:%M:%SZ" --date="30 seconds")
-          ${pkgs.jq}/bin/jq -r --arg StartTime "''${START_TIME}" '. + {StartTime: $StartTime}' < $GENESIS_FILE > ${cfg.stateDir}/genesis.json
+          ${pkgs.jq}/bin/jq -r --arg startTime "''${START_TIME}" '. + {startTime: $startTime}' < $GENESIS_FILE > ${cfg.stateDir}/genesis.json
           ${pkgs.jq}/bin/jq -r --arg GenesisFile genesis.json '. + {GenesisFile: $GenesisFile}' < ${cfg.nodeConfigFile} > ${realNodeConfigFile}
         ''}
         exec ${toString cmd}'';
