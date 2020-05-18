@@ -412,8 +412,6 @@ mkTracers traceConf tracer bcCounters = do
           meta <- mkLOMeta Info Confidential
           let tr' = appendName "peers" tr
           traceNamedObject tr' (meta, LogValue "connectedPeers" . PureI $ fromIntegral $ length peers)
-          let tr2' = appendName "peersList" tr
-          traceNamedObject tr2' (meta, LogStructured $ toObject MaximalVerbosity peers)
     teeTraceBlockFetchDecisionElide
         :: TracingVerbosity
         -> MVar (Maybe (WithSeverity [TraceLabelPeer peer (FetchDecision [Point (Header blk)])]),Integer)
