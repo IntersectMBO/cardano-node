@@ -63,7 +63,13 @@ let
       source <(cardano-node --bash-completion-script cardano-node)
 
       ${lib.optionalString (__hasAttr "network" customConfig) ''
-        export CARDANO_NODE_SOCKET_PATH=./state-node-${customConfig.network}/node.socket
+        export CARDANO_NODE_SOCKET_PATH="$PWD/state-node-${customConfig.network}/node.socket"
+        ${lib.optionalString (__hasAttr "utxo" pkgs.commonLib.cardanoLib.environments.${customConfig.network}) ''
+          # Selfnode and other test clusters have public secret keys that we pull from iohk-nix
+          echo "To access funds use UTXO_SKEY and UTXO_VKEY environment variables"
+          export UTXO_SKEY="${pkgs.commonLib.cardanoLib.environments.${customConfig.network}.utxo.signing}"
+          export UTXO_VKEY="${pkgs.commonLib.cardanoLib.environments.${customConfig.network}.utxo.verification}"
+        ''}
 
       ''}
 
