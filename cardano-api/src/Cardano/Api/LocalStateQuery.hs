@@ -6,9 +6,10 @@
 
 module Cardano.Api.LocalStateQuery
   ( LocalStateQueryError (..)
+  , QueryFilter (..)
   , renderLocalStateQueryError
   , queryLocalLedgerState
-  , queryFilteredUTxOFromLocalState
+  , queryUTxOFromLocalState
   , Ledger.UTxO(..)
   , queryPParamsFromLocalState
   , Ledger.PParams
@@ -32,7 +33,7 @@ import qualified Codec.CBOR.Term as CBOR
 
 import           Control.Monad.Class.MonadSTM.Strict
                    (MonadSTM, StrictTMVar, atomically, newEmptyTMVarM, tryPutTMVar, takeTMVar)
-import           Control.Monad.Trans.Except.Extra (left, newExceptT)
+import           Control.Monad.Trans.Except.Extra (hoistEither, newExceptT)
 import           Control.Tracer (Tracer)
 
 import           Data.Functor.Contravariant (contramap)
@@ -80,6 +81,12 @@ data LocalStateQueryError
   -- ^ The query does not support Byron addresses.
   deriving (Eq, Show)
 
+-- | UTxO query filtering options.
+data QueryFilter
+  = FilterByAddress !(Set Address)
+  | NoFilter
+  deriving (Eq, Show)
+
 renderLocalStateQueryError :: LocalStateQueryError -> Text
 renderLocalStateQueryError lsqErr =
   case lsqErr of
@@ -92,22 +99,21 @@ renderLocalStateQueryError lsqErr =
 --
 -- This one is Shelley-specific because the query is Shelley-specific.
 --
-queryFilteredUTxOFromLocalState
+queryUTxOFromLocalState
   :: Network
   -> SocketPath
-  -> Set Address
+  -> QueryFilter
   -> Point (ShelleyBlock TPraosStandardCrypto)
   -> ExceptT LocalStateQueryError IO (Ledger.UTxO TPraosStandardCrypto)
-queryFilteredUTxOFromLocalState network socketPath addrs point =
-  whenAllShelleyAddresses addrs $ \shelleyAddrs -> do
-    let pointAndQuery = (point, GetFilteredUTxO shelleyAddrs)
-    newExceptT $ liftIO $
-      queryNodeLocalState
-        nullTracer
-        (pClientInfoCodecConfig . protocolClientInfo $ mkNodeClientProtocolTPraos)
-        network
-        socketPath
-        pointAndQuery
+queryUTxOFromLocalState network socketPath qFilter point = do
+  utxoFilter <- hoistEither $ applyUTxOFilter qFilter
+  let pointAndQuery = (point, utxoFilter)
+  newExceptT $ queryNodeLocalState
+    nullTracer
+    (pClientInfoCodecConfig . protocolClientInfo $ mkNodeClientProtocolTPraos)
+    network
+    socketPath
+    pointAndQuery
 
 -- | Query the current protocol parameters from a Shelley node via the local
 -- state query protocol.
@@ -288,17 +294,21 @@ localStateQueryClient (point, query) resultVar =
           pure $ SendMsgDone (Left $ AcquireFailureError failure)
       }
 
-whenAllShelleyAddresses
-  :: Monad m
-  => Set Address
-  -> (Set ShelleyAddress -> ExceptT LocalStateQueryError m a)
-  -> ExceptT LocalStateQueryError m a
-whenAllShelleyAddresses addrs fn =
-    if Set.null byronAddrs
-    then fn shelleyAddrs
-    else left $ ByronAddressesNotSupportedError byronAddrs
+applyUTxOFilter
+  :: (blk ~ ShelleyBlock TPraosStandardCrypto, c ~ TPraosStandardCrypto)
+  => QueryFilter
+  -> Either LocalStateQueryError (Query blk (Ledger.UTxO c))
+applyUTxOFilter qFilter =
+    case qFilter of
+      FilterByAddress addrs -> do shelleyAddrs <- checkAddresses $ partitionAddresses addrs
+                                  Right $ GetFilteredUTxO shelleyAddrs
+      NoFilter -> Right GetUTxO
   where
-    (byronAddrs, shelleyAddrs) = partitionAddresses addrs
+    checkAddresses :: (Set ByronAddress, Set ShelleyAddress) -> Either LocalStateQueryError (Set ShelleyAddress)
+    checkAddresses (byronAddrs, shelleyAddrs) = if Set.null byronAddrs
+                                                then Right $ shelleyAddrs
+                                                else Left $ ByronAddressesNotSupportedError byronAddrs
+
 
 -- | Partitions a 'Set' of addresses such that Byron addresses are on the left
 -- and Shelley on the right.
