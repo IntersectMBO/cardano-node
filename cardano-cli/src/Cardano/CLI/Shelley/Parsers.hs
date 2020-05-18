@@ -1049,6 +1049,7 @@ pShelleyPParamsUpdate =
     <*> (maybeToStrictMaybe <$> pDecentralParam)
     <*> (maybeToStrictMaybe <$> pExtraEntropy)
     <*> (maybeToStrictMaybe <$> pProtocolVersion)
+    <*> (maybeToStrictMaybe <$> pMinUTxOValue)
 
 pMinFeeLinearFactor :: Parser (Maybe Natural)
 pMinFeeLinearFactor =
@@ -1065,6 +1066,15 @@ pMinFeeConstantFactor =
     <> Opt.metavar "NATURAL"
     <> Opt.help "The constant factor for the minimum fee calculation."
     )
+
+pMinUTxOValue :: Parser (Maybe Natural)
+pMinUTxOValue =
+  Opt.optional $
+    Opt.option Opt.auto
+      (  Opt.long "min-utxo-value"
+      <> Opt.metavar "NATURAL"
+      <> Opt.help "The minimum allowed UTxO value."
+      )
 
 pMaxBodySize :: Parser (Maybe Natural)
 pMaxBodySize =

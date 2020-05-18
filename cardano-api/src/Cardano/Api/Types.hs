@@ -177,7 +177,7 @@ data Address
   | AddressShelley !ShelleyAddress
   | AddressShelleyReward !ShelleyRewardAccount
     -- ^ The Shelley reward account is not a UTxO
-  deriving (Eq, Generic , NFData, Show)  -- Byron.Address' needs NFData
+  deriving (Eq, Generic , Ord, NFData, Show)  -- Byron.Address' needs NFData
   deriving NoUnexpectedThunks via UseIsNormalForm Address
 
 

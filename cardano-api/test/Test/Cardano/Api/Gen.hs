@@ -311,6 +311,10 @@ genPParamsUpdate =
     <*> genStrictMaybe genUnitInterval
     <*> genStrictMaybe genNonce
     <*> genStrictMaybe genProtVer
+    <*> genStrictMaybe genMinUTxOValue
+
+genMinUTxOValue :: Gen Natural
+genMinUTxOValue = Gen.integral (Range.linear 1 1000)
 
 genStrictMaybe :: Gen a -> Gen (StrictMaybe a)
 genStrictMaybe gen = maybeToStrictMaybe <$> Gen.maybe gen

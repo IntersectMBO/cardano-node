@@ -107,6 +107,7 @@ instance ToJSON PParams where
       , "decentralisationParam" .= _d pp
       , "extraEntropy" .= _extraEntropy pp
       , "protocolVersion" .= _protocolVersion pp
+      , "minUTxOValue" .= _minUTxOValue pp
       ]
 
 instance FromJSON PParams where
@@ -132,6 +133,7 @@ instance FromJSON PParams where
           <*> obj .: "decentralisationParam"
           <*> obj .: "extraEntropy"
           <*> obj .: "protocolVersion"
+          <*> obj .:? "minUTxOValue" .!= 0
       where
         parseRationalFromDouble :: Parser Double -> Parser Rational
         parseRationalFromDouble p = realToFrac <$> p
