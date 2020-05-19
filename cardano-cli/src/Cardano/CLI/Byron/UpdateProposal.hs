@@ -7,6 +7,7 @@ module Cardano.CLI.Byron.UpdateProposal
   , createUpdateProposal
   , deserialiseByronUpdateProposal
   , readByronUpdateProposal
+  , renderByronUpdateProposalError
   , submitByronUpdateProposal
   ) where
 
@@ -18,6 +19,7 @@ import           Control.Tracer (stdoutTracer, traceWith)
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.Map.Strict as M
 
+import           Cardano.Api (textShow)
 import qualified Cardano.Binary as Binary
 import           Cardano.Chain.Common (LovelacePortion, TxFeePolicy(..))
 import           Cardano.Chain.Genesis (GenesisData(..))
@@ -28,7 +30,7 @@ import           Cardano.Chain.Update
                     SoftforkRule(..), SoftwareVersion(..), SystemTag(..), recoverUpId,
                     signProposal)
 import           Cardano.Config.Types
-import           Cardano.Config.Protocol (CardanoEra(..), RealPBFTError)
+import           Cardano.Config.Protocol (CardanoEra(..))
 import           Ouroboros.Consensus.Util.Condense (condense)
 import           Cardano.Crypto.Signing (SigningKey, noPassSafeSigner)
 import           Ouroboros.Consensus.Byron.Ledger.Block (ByronBlock)
@@ -40,17 +42,32 @@ import           Cardano.Api (Network)
 import           Cardano.CLI.Byron.Key (ByronKeyFailure, readEraSigningKey)
 import           Cardano.CLI.Byron.Genesis (ByronGenesisError, readGenesis)
 import           Cardano.CLI.Byron.Tx (ByronTxError, nodeSubmitTx)
-import           Cardano.CLI.Helpers (HelpersError, ensureNewFileLBS)
+import           Cardano.CLI.Helpers (HelpersError, ensureNewFileLBS, renderHelpersError)
 
 data ByronUpdateProposalError
   = ByronReadUpdateProposalFileFailure !FilePath !Text
-  | ByronUpdateProposalHelperError !HelpersError
-  | ByronUpdateProposalGenesisError !ByronGenesisError
+  | ByronUpdateProposalWriteError !HelpersError
+  | ByronUpdateProposalGenesisReadError !FilePath !ByronGenesisError
   | ByronUpdateProposalTxError !ByronTxError
-  | KeyFailure !ByronKeyFailure
+  | ReadSigningKeyFailure !FilePath !ByronKeyFailure
   | UpdateProposalDecodingError !Binary.DecoderError
-  | UpdateProposalSubmissionError !RealPBFTError
   deriving Show
+
+renderByronUpdateProposalError :: ByronUpdateProposalError -> Text
+renderByronUpdateProposalError err =
+  case err of
+    ByronReadUpdateProposalFileFailure fp rErr ->
+      "Error reading update proposal at " <> textShow fp <> " Error: " <> textShow rErr
+    ByronUpdateProposalWriteError hErr ->
+      "Error writing update proposal: " <> renderHelpersError hErr
+    ByronUpdateProposalGenesisReadError fp rErr ->
+      "Error reading update proposal at: " <> textShow fp <> " Error: " <> textShow rErr
+    ByronUpdateProposalTxError txErr ->
+      "Error submitting update proposal: " <> textShow txErr
+    ReadSigningKeyFailure fp rErr ->
+      "Error reading signing key at: " <> textShow fp <> " Error: " <> textShow rErr
+    UpdateProposalDecodingError decErr ->
+      "Error decoding update proposal: " <> textShow decErr
 
 runProposalCreation
   :: ConfigYamlFilePath
@@ -63,9 +80,10 @@ runProposalCreation
   -> [ParametersToUpdate]
   -> ExceptT ByronUpdateProposalError IO ()
 runProposalCreation configFp sKey pVer sVer sysTag insHash outputFp params = do
-  sK <- firstExceptT KeyFailure $ readEraSigningKey ByronEra sKey
+  let sKeyfp = unSigningKeyFile sKey
+  sK <- firstExceptT (ReadSigningKeyFailure sKeyfp) $ readEraSigningKey ByronEra sKey
   proposal <- createUpdateProposal configFp sK pVer sVer sysTag insHash params
-  firstExceptT ByronUpdateProposalHelperError $ ensureNewFileLBS outputFp (serialiseByronUpdateProposal proposal)
+  firstExceptT ByronUpdateProposalWriteError $ ensureNewFileLBS outputFp (serialiseByronUpdateProposal proposal)
 
 
 data ParametersToUpdate =
@@ -127,7 +145,8 @@ createUpdateProposal
 createUpdateProposal yamlConfigFile sKey pVer sVer sysTag inshash paramsToUpdate = do
 
   nc <- liftIO $ parseNodeConfigurationFP yamlConfigFile
-  (genData, _) <- firstExceptT ByronUpdateProposalGenesisError . readGenesis $ ncGenesisFile nc
+  let updatePropFp = unGenesisFile $ ncGenesisFile nc
+  (genData, _) <- firstExceptT (ByronUpdateProposalGenesisReadError updatePropFp) . readGenesis $ ncGenesisFile nc
 
   let metaData :: M.Map SystemTag InstallerHash
       metaData = M.singleton sysTag inshash

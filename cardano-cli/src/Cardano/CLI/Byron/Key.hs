@@ -11,6 +11,7 @@ module Cardano.CLI.Byron.Key
   , prettyPublicKey
   , readEraSigningKey
   , readPaymentVerificationKey
+  , renderByronKeyFailure
   , serialisePoorKey
     -- * Passwords
   , PasswordRequirement(..)
@@ -37,9 +38,10 @@ import           Formatting (build, (%), sformat)
 
 import           System.IO (hSetEcho, hFlush, stdout, stdin)
 
+import           Cardano.Api (textShow)
 import qualified Cardano.Chain.Common as Common
 import qualified Cardano.Chain.Genesis as Genesis
-import           Cardano.CLI.Helpers (HelpersError, serialiseSigningKey)
+import           Cardano.CLI.Helpers (HelpersError, renderHelpersError, serialiseSigningKey)
 import qualified Cardano.CLI.Legacy.Byron as Legacy
 import           Cardano.Config.Protocol (CardanoEra(..))
 import           Cardano.Config.Types (SigningKeyFile(..))
@@ -56,6 +58,22 @@ data ByronKeyFailure
   | SigningKeyDeserialisationFailed !FilePath !DeserialiseFailure
   | VerificationKeyDeserialisationFailed !FilePath !Text
   deriving Show
+
+renderByronKeyFailure :: ByronKeyFailure -> Text
+renderByronKeyFailure err =
+  case err of
+    CardanoEraNotSupported era ->
+      "Error in serialization, " <> textShow era <> " is not supported."
+    HelpersError helpersErr ->
+      "Poor key serialization error: " <> renderHelpersError helpersErr
+    ReadSigningKeyFailure sKeyFp readErr ->
+      "Error reading signing key at: " <> textShow sKeyFp <> " Error: " <> textShow readErr
+    ReadVerificationKeyFailure vKeyFp readErr ->
+      "Error reading verification key at: " <> textShow vKeyFp <> " Error: " <> textShow readErr
+    SigningKeyDeserialisationFailed sKeyFp deSerError ->
+      "Error derserializing signing key at: " <> textShow sKeyFp <> " Error: " <> textShow deSerError
+    VerificationKeyDeserialisationFailed vKeyFp deSerError ->
+      "Error derserializing verification key at: " <> textShow vKeyFp <> " Error: " <> textShow deSerError
 
 newtype NewSigningKeyFile =
   NewSigningKeyFile FilePath

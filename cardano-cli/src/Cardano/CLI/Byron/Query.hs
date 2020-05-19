@@ -5,6 +5,7 @@
 
 module Cardano.CLI.Byron.Query
   ( ByronQueryError(..)
+  , renderByronQueryError
   , runGetLocalNodeTip
   ) where
 
@@ -24,11 +25,17 @@ import           Ouroboros.Network.NodeToClient (withIOManager)
 import           Cardano.Config.Byron.Protocol (mkNodeClientProtocolRealPBFT)
 
 import           Cardano.Api (Network(..), getLocalTip)
-import           Cardano.CLI.Environment (EnvSocketError, readEnvSocketPath)
+import           Cardano.CLI.Environment
+                   (EnvSocketError, readEnvSocketPath, renderEnvSocketError)
 
 data ByronQueryError
   = ByronQueryEnvVarSocketErr !EnvSocketError
   deriving Show
+
+renderByronQueryError :: ByronQueryError -> Text
+renderByronQueryError err =
+  case err of
+    ByronQueryEnvVarSocketErr sockEnvErr -> renderEnvSocketError sockEnvErr
 
 --------------------------------------------------------------------------------
 -- Query local node's chain tip

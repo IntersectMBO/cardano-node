@@ -14,6 +14,7 @@ module Cardano.CLI.Byron.Genesis
   , mkGenesis
   , readGenesis
   , readProtocolMagicId
+  , renderByronGenesisError
   )
 where
 
@@ -41,7 +42,7 @@ import           System.Posix.Files (ownerReadMode, setFileMode)
 #else
 import           System.Directory (emptyPermissions, readable, setPermissions)
 #endif
-
+import           Cardano.Api (textShow)
 import qualified Cardano.Chain.Common as Common
 import           Cardano.Chain.Delegation hiding (Map, epoch)
 import qualified Cardano.Chain.Genesis as Genesis
@@ -53,22 +54,50 @@ import qualified Cardano.Crypto as Crypto
 
 import           Cardano.CLI.Byron.Delegation
 import           Cardano.CLI.Byron.Key
-import           Cardano.CLI.Helpers (HelpersError(..), serialiseSigningKey)
-
+import           Cardano.CLI.Helpers (HelpersError(..), renderHelpersError, serialiseSigningKey)
 
 data ByronGenesisError
-  = ProtocolParametersParseFailed !FilePath !Text
-  | ByronDelegationError !ByronDelegationError
-  | KeyFailure !ByronKeyFailure
-  | DelegationError !Genesis.GenesisDelegationError
+  = ByronDelegationCertSerializationError !ByronDelegationError
+  | ByronDelegationKeySerializationError ByronDelegationError
+  | ByronGenesisCardanoEraNotSupported !CardanoEra
   | GenesisGenerationError !Genesis.GenesisDataGenerationError
   | GenesisHelpersError !HelpersError
   | GenesisOutputDirAlreadyExists FilePath
   | GenesisReadError !FilePath !Genesis.GenesisDataError
-  | GenesisSerializationError !HelpersError
   | GenesisSpecError !Text
+  | MakeGenesisDelegationError !Genesis.GenesisDelegationError
   | NoGenesisDelegationForKey !Text
+  | ProtocolParametersParseFailed !FilePath !Text
+  | PoorKeyFailure !ByronKeyFailure
+
   deriving Show
+
+renderByronGenesisError :: ByronGenesisError -> Text
+renderByronGenesisError err =
+  case err of
+    ProtocolParametersParseFailed pParamFp parseError ->
+      "Protocol parameters parse failed at: " <> textShow pParamFp <> " Error: " <> parseError
+    ByronDelegationCertSerializationError bDelegSerErr ->
+      "Error while serializing the delegation certificate: " <> textShow bDelegSerErr
+    ByronDelegationKeySerializationError bKeySerErr ->
+      "Error while serializing the delegation key: " <> textShow bKeySerErr
+    PoorKeyFailure bKeyFailure ->
+      "Error creating poor keys: " <> textShow bKeyFailure
+    MakeGenesisDelegationError genDelegError ->
+      "Error creating genesis delegation: " <> textShow genDelegError
+    GenesisGenerationError genDataGenError ->
+      "Error generating genesis: " <> textShow genDataGenError
+    ByronGenesisCardanoEraNotSupported era ->
+      "Error while serialising genesis, " <> textShow era <> " is not supported."
+    GenesisOutputDirAlreadyExists genOutDir ->
+      "Genesis output directory already exists: " <> textShow genOutDir
+    GenesisHelpersError hlprsErr -> renderHelpersError hlprsErr
+    GenesisReadError genFp genDataError ->
+      "Error while reading genesis file at: " <> textShow genFp <> " Error: " <> textShow genDataError
+    GenesisSpecError genSpecError ->
+      "Error while creating genesis spec" <> textShow genSpecError
+    NoGenesisDelegationForKey verKey ->
+      "Error while creating genesis, no delegation certificate for this verification key:" <> textShow verKey
 
 newtype NewDirectory =
   NewDirectory FilePath
@@ -103,7 +132,7 @@ mkGenesisSpec gp = do
     ExceptT . pure $ canonicalDecodePretty protoParamsRaw
 
   -- We're relying on the generator to fake AVVM and delegation.
-  genesisDelegation <- withExceptT (DelegationError) $
+  genesisDelegation <- withExceptT (MakeGenesisDelegationError) $
     Genesis.mkGenesisDelegation []
 
   withExceptT GenesisSpecError $
@@ -143,6 +172,7 @@ mkGenesis gp = do
 readGenesis :: GenesisFile -> ExceptT ByronGenesisError IO (Genesis.GenesisData, Genesis.GenesisHash)
 readGenesis (GenesisFile fp) = firstExceptT (GenesisReadError fp) $ Genesis.readGenesisData fp
 
+--TODO: dumpGenesis needs refactoring.
 -- | Write out genesis into a directory that must not yet exist.  An error is
 -- thrown if the directory already exists, or the genesis has delegate keys that
 -- are not delegated to.
@@ -163,9 +193,9 @@ dumpGenesis era (NewDirectory outDir) genesisData gs = do
   dlgCerts <- mapM findDelegateCert $ gsRichSecrets gs
 
   liftIO $ wOut "genesis-keys" "key" (pure . first GenesisHelpersError .  serialiseSigningKey era) (gsDlgIssuersSecrets gs)
-  liftIO $ wOut "delegate-keys" "key" (pure . first ByronDelegationError . serialiseDelegateKey era) (gsRichSecrets gs)
-  liftIO $ wOut "poor-keys" "key" (pure . first KeyFailure . serialisePoorKey era) (gsPoorSecrets gs)
-  liftIO $ wOut "delegation-cert" "json" (pure . first ByronDelegationError . serialiseDelegationCert era) dlgCerts
+  liftIO $ wOut "delegate-keys" "key" (pure . first ByronDelegationKeySerializationError . serialiseDelegateKey era) (gsRichSecrets gs)
+  liftIO $ wOut "poor-keys" "key" (pure . first PoorKeyFailure . serialisePoorKey era) (gsPoorSecrets gs)
+  liftIO $ wOut "delegation-cert" "json" (pure . first ByronDelegationCertSerializationError . serialiseDelegationCert era) dlgCerts
   liftIO $ wOut "avvm-secrets" "secret" (pure . printFakeAvvmSecrets) (gsFakeAvvmSecrets gs)
  where
   dlgCertMap :: Map Common.KeyHash Certificate
@@ -195,7 +225,7 @@ serialiseGenesis
   -> Either ByronGenesisError LB.ByteString
 serialiseGenesis ByronEraLegacy gData = pure $ canonicalEncodePretty gData
 serialiseGenesis ByronEra gData = pure $ canonicalEncodePretty gData
-serialiseGenesis ShelleyEra _ = Left . GenesisHelpersError $ CardanoEraNotSupportedFail ShelleyEra
+serialiseGenesis ShelleyEra _ = Left $ ByronGenesisCardanoEraNotSupported ShelleyEra
 
 writeSecrets :: FilePath -> String -> String -> (a -> IO (Either ByronGenesisError LB.ByteString)) -> [a] -> IO ()
 writeSecrets outDir prefix suffix secretOp xs =
