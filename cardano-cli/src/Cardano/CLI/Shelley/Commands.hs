@@ -11,7 +11,7 @@ module Cardano.CLI.Shelley.Commands
   , QueryCmd (..)
   , BlockCmd (..)
   , SystemCmd (..)
-  , DevOpsCmd (..)
+  , GovernanceCmd (..)
   , GenesisCmd (..)
   , TextViewCmd (..)
 
@@ -60,7 +60,7 @@ data ShelleyCommand
   | QueryCmd        QueryCmd
   | BlockCmd        BlockCmd
   | SystemCmd       SystemCmd
-  | DevOpsCmd       DevOpsCmd
+  | GovernanceCmd   GovernanceCmd
   | GenesisCmd      GenesisCmd
   | TextViewCmd     TextViewCmd
   deriving (Eq, Show)
@@ -111,7 +111,6 @@ data NodeCmd
   | NodeKeyGenVRF  VerificationKeyFile SigningKeyFile
   | NodeIssueOpCert VerificationKeyFile SigningKeyFile OpCertCounterFile
                     KESPeriod OutputFile
-  | NodeUpdateProposal OutputFile EpochNo [VerificationKeyFile] ShelleyPParamsUpdate
   deriving (Eq, Show)
 
 data PoolCmd
@@ -162,9 +161,10 @@ data BlockCmd
   deriving (Eq, Show)
 
 
-data DevOpsCmd
-  = DevOpsProtocolUpdate PrivKeyFile -- { parameters :: ProtocolParams, nodeAddr :: NodeAddress }
-  | DevOpsColdKeys GenesisKeyFile     -- { genesis :: GenesisKeyFile, keys :: [PubKey], nodeAddr :: NodeAddress }
+data GovernanceCmd
+  = GovernanceProtocolUpdate PrivKeyFile -- { parameters :: ProtocolParams, nodeAddr :: NodeAddress }
+  | GovernanceUpdateProposal OutputFile EpochNo [VerificationKeyFile] ShelleyPParamsUpdate
+  | GovernanceColdKeys GenesisKeyFile     -- { genesis :: GenesisKeyFile, keys :: [PubKey], nodeAddr :: NodeAddress }
   deriving (Eq, Show)
 
 
