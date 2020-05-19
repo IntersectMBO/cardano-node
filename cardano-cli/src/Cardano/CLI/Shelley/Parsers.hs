@@ -130,7 +130,7 @@ pPaymentVerificationKeyFile =
   VerificationKeyFile <$>
     Opt.strOption
       (  Opt.long "payment-verification-key-file"
-      <> Opt.metavar "FILEPATH"
+      <> Opt.metavar "FILE"
       <> Opt.help "Filepath of the payment verification key."
       <> Opt.completer (Opt.bashCompleter "file")
       )
@@ -329,9 +329,7 @@ pPoolCmd :: Parser PoolCmd
 pPoolCmd =
   Opt.subparser $
     mconcat
-      [ Opt.command "key-gen"
-          (Opt.info pPoolKeyGen $ Opt.progDesc "Create a stake pool operator's offline key pair")
-      , Opt.command "register"
+      [ Opt.command "register"
           (Opt.info pPoolRegster $ Opt.progDesc "Register a stake pool")
       , Opt.command "re-register"
           (Opt.info pPoolReRegster $ Opt.progDesc "Re-register a stake pool")
@@ -343,11 +341,6 @@ pPoolCmd =
           (Opt.info pStakePoolRetirmentCert $ Opt.progDesc "Create a stake pool deregistration certificate")
       ]
   where
-    pPoolKeyGen :: Parser PoolCmd
-    pPoolKeyGen = PoolKeyGen
-                    <$> pVerificationKeyFile Output
-                    <*> pSigningKeyFile Output
-
     pPoolRegster :: Parser PoolCmd
     pPoolRegster = PoolRegister <$> pPoolId
 
@@ -599,7 +592,7 @@ pProtocolParamsFile =
   ProtocolParamsFile <$>
     Opt.strOption
       (  Opt.long "protocol-params-file"
-      <> Opt.metavar "FILEPATH"
+      <> Opt.metavar "FILE"
       <> Opt.help "Filepath of the JSON-encoded protocol parameters file"
       <> Opt.completer (Opt.bashCompleter "file")
       )
@@ -609,7 +602,7 @@ pCertificateFile =
   CertificateFile <$>
     Opt.strOption
       (  Opt.long "certificate"
-      <> Opt.metavar "FILEPATH"
+      <> Opt.metavar "FILE"
       <> Opt.help "Filepath of the certificate. This encompasses all \
                   \types of certificates (stake pool certificates, \
                   \stake key certificates etc)"
@@ -621,7 +614,7 @@ pUpdateProposalFile =
   UpdateProposalFile <$>
     Opt.strOption
       (  Opt.long "update-proposal"
-      <> Opt.metavar "FILEPATH"
+      <> Opt.metavar "FILE"
       <> Opt.help "Filepath of the update proposal."
       <> Opt.completer (Opt.bashCompleter "file")
       )
@@ -631,7 +624,7 @@ pColdSigningKeyFile =
   SigningKeyFile <$>
     Opt.strOption
       (  Opt.long "cold-signing-key-file"
-      <> Opt.metavar "FILEPATH"
+      <> Opt.metavar "FILE"
       <> Opt.help "Filepath of the cold signing key."
       <> Opt.completer (Opt.bashCompleter "file")
       )
@@ -642,7 +635,7 @@ pSomeSigningKeyFiles =
     SigningKeyFile <$>
       Opt.strOption
       (  Opt.long "signing-key-file"
-      <> Opt.metavar "FILEPATH"
+      <> Opt.metavar "FILE"
       <> Opt.help ("Input filepath of the signing key (one or more).")
       <> Opt.completer (Opt.bashCompleter "file")
       )
@@ -652,7 +645,7 @@ pSigningKeyFile fdir =
   SigningKeyFile <$>
     Opt.strOption
       (  Opt.long "signing-key-file"
-      <> Opt.metavar "FILEPATH"
+      <> Opt.metavar "FILE"
       <> Opt.help (show fdir ++ " filepath of the signing key.")
       <> Opt.completer (Opt.bashCompleter "file")
       )
@@ -739,7 +732,7 @@ pFilePath :: FileDirection -> Parser FilePath
 pFilePath fdir =
   Opt.strOption
     (  Opt.long "file"
-    <> Opt.metavar "FILENAME"
+    <> Opt.metavar "FILE"
     <> Opt.help (show fdir ++ " file.")
     <> Opt.completer (Opt.bashCompleter "file")
     )
@@ -768,7 +761,7 @@ pVerificationKeyFile fdir =
   VerificationKeyFile <$>
     Opt.strOption
       (  Opt.long "verification-key-file"
-      <> Opt.metavar "FILEPATH"
+      <> Opt.metavar "FILE"
       <> Opt.help (show fdir ++ " filepath of the verification key.")
       <> Opt.completer (Opt.bashCompleter "file")
       )
@@ -778,7 +771,7 @@ pGenesisVerificationKeyFile =
   VerificationKeyFile <$>
     Opt.strOption
       (  Opt.long "genesis-verification-key-file"
-      <> Opt.metavar "FILEPATH"
+      <> Opt.metavar "FILE"
       <> Opt.help "Filepath of the genesis verification key."
       <> Opt.completer (Opt.bashCompleter "file")
       )
@@ -789,7 +782,7 @@ pKESVerificationKeyFile =
   VerificationKeyFile <$>
     Opt.strOption
       (  Opt.long "hot-kes-verification-key-file"
-      <> Opt.metavar "FILEPATH"
+      <> Opt.metavar "FILE"
       <> Opt.help "Filepath of the hot KES verification key."
       <> Opt.completer (Opt.bashCompleter "file")
       )
@@ -818,7 +811,7 @@ pTxSubmitFile :: Parser FilePath
 pTxSubmitFile =
   Opt.strOption
     (  Opt.long "tx-file"
-    <> Opt.metavar "FILEPATH"
+    <> Opt.metavar "FILE"
     <> Opt.help "Filepath of the transaction you intend to submit."
     <> Opt.completer (Opt.bashCompleter "file")
     )
@@ -862,7 +855,7 @@ pTxBodyFile fdir =
   TxBodyFile <$>
     Opt.strOption
       (  Opt.long "tx-body-file"
-      <> Opt.metavar "FILEPATH"
+      <> Opt.metavar "FILE"
       <> Opt.help (show fdir ++ " filepath of the TxBody.")
       <> Opt.completer (Opt.bashCompleter "file")
       )
@@ -872,7 +865,7 @@ pTxFile fdir =
   TxFile <$>
     Opt.strOption
       (  Opt.long "tx-file"
-      <> Opt.metavar "FILEPATH"
+      <> Opt.metavar "FILE"
       <> Opt.help (show fdir ++ " filepath of the Tx.")
       <> Opt.completer (Opt.bashCompleter "file")
       )
@@ -918,7 +911,7 @@ pStakingVerificationKeyFile =
   VerificationKeyFile <$>
     Opt.strOption
       (  Opt.long "staking-verification-key-file"
-      <> Opt.metavar "FILEPATH"
+      <> Opt.metavar "FILE"
       <> Opt.help ("Filepath of the staking verification key.")
       <> Opt.completer (Opt.bashCompleter "file")
       )
@@ -928,7 +921,7 @@ pPoolStakingVerificationKeyFile =
   VerificationKeyFile <$>
     Opt.strOption
       (  Opt.long "stake-pool-verification-key-file"
-      <> Opt.metavar "FILEPATH"
+      <> Opt.metavar "FILE"
       <> Opt.help ("Filepath of the stake pool verification key.")
       <> Opt.completer (Opt.bashCompleter "file")
       )
@@ -938,7 +931,7 @@ pVRFVerificationKeyFile =
   VerificationKeyFile <$>
     Opt.strOption
       (  Opt.long "vrf-verification-key-file"
-      <> Opt.metavar "FILEPATH"
+      <> Opt.metavar "FILE"
       <> Opt.help ("Filepath of the VRF verification key.")
       <> Opt.completer (Opt.bashCompleter "file")
       )
@@ -948,7 +941,7 @@ pRewardAcctVerificationKeyFile =
   VerificationKeyFile <$>
     Opt.strOption
       (  Opt.long "reward-account-verification-key-file"
-      <> Opt.metavar "FILEPATH"
+      <> Opt.metavar "FILE"
       <> Opt.help ("Filepath of the reward account staking verification key.")
       <> Opt.completer (Opt.bashCompleter "file")
       )
@@ -958,7 +951,7 @@ pPoolOwner =
   VerificationKeyFile <$>
     Opt.strOption
       (  Opt.long "pool-owner-staking-verification-key"
-      <> Opt.metavar "FILEPATH"
+      <> Opt.metavar "FILE"
       <> Opt.help ("Filepath of the pool owner staking verification key.")
       <> Opt.completer (Opt.bashCompleter "file")
       )

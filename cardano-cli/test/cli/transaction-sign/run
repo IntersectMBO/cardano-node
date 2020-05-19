@@ -14,9 +14,9 @@ error=0
 
 # Defaults to signing a Mainnet transaction.
 ${CARDANO_CLI} shelley transaction sign \
+    --mainnet \
     --tx-body-file "test/cli/${testname}/data/unsigned.tx" \
     --signing-key-file "test/cli/${testname}/data/initial-utxo1.skey" \
-    --mainnet \
     --tx-file "${TEST_DIR}/signed.tx"
 fail_on_error $?
 
@@ -25,12 +25,27 @@ assert_string 'TxSignedShelley' "${TEST_DIR}/signed.tx"
 
 # Sign for a testnet with a testnet network magic of 11, but use two signing keys.
 ${CARDANO_CLI} shelley transaction sign \
+    --testnet-magic 11 \
     --tx-body-file "test/cli/${testname}/data/unsigned.tx" \
     --signing-key-file "test/cli/${testname}/data/initial-utxo1.skey" \
     --signing-key-file "test/cli/${testname}/data/initial-utxo2.skey" \
-    --testnet-magic 11 \
     --tx-file "${TEST_DIR}/signed.tx"
 fail_on_error $?
 
+assert_file_exists "${TEST_DIR}/signed.tx"
+assert_string 'TxSignedShelley' "${TEST_DIR}/signed.tx"
+
+# Sign a pool registration transaction.
+${CARDANO_CLI} shelley transaction sign \
+    --mainnet \
+    --tx-body-file "test/cli/${testname}/data/tx-pool-reg.unsigned" \
+    --signing-key-file "test/cli/${testname}/data/utxo.skey" \
+    --signing-key-file "test/cli/${testname}/data/stake.skey" \
+    --signing-key-file "test/cli/${testname}/data/node-cold.skey" \
+    --tx-file "${TEST_DIR}/tx-pool-reg.signed"
+fail_on_error $?
+
+assert_file_exists "${TEST_DIR}/signed.tx"
+assert_string 'TxSignedShelley' "${TEST_DIR}/signed.tx"
 
 report_result ${error}

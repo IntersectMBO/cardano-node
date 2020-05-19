@@ -1,0 +1,4 @@
+type: Node operator signing key
+title: Stake pool operator key
+cbor-hex:
+ 5820d5c114708f532a292bfc0d9a6bb123879de3d4e9451cdaa0e91c37d26625daeb

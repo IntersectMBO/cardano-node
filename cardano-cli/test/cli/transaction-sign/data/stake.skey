@@ -1,0 +1,4 @@
+type: SigningKeyShelley
+title: Free form text
+cbor-hex:
+ 18ad5820cb3eea77330b1643cfe67ebf04a429eaef47cf049b1da95ea7c24aab01ca680e

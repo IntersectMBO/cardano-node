@@ -65,12 +65,6 @@ prop_roundtrip_StakingVerificationKey_view =
     pk <- H.forAll genStakingVerificationKey
     H.tripping pk renderStakingVerificationKeyView parseStakingVerificationKeyView
 
-prop_roundtrip_VerificationKeyStakePool_view :: Property
-prop_roundtrip_VerificationKeyStakePool_view =
-  H.property $ do
-    pk <- H.forAll genVerificationKeyShelleyStakePool
-    H.tripping pk renderVerificationKeyStakePoolView parseVerificationKeyStakePoolView
-
 prop_roundtrip_VerificationKeyVRF_view :: Property
 prop_roundtrip_VerificationKeyVRF_view =
   H.property $ do
