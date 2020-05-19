@@ -10,7 +10,7 @@ import           Cardano.Binary (FromCBOR(..))
 
 import           Cardano.Api
 import           Cardano.Config.Shelley.ColdKeys
-                   (KeyType(..), KeyRole(..), KeyError(..), renderKeyType)
+                   (KeyType(..), KeyRole(..), KeyError(..), OperatorKeyRole (..), renderKeyType)
 import           Cardano.Config.TextView
 import           Cardano.CLI.Environment (EnvSocketError, readEnvSocketPath)
 
@@ -167,4 +167,6 @@ decodeAddressSigningKey tView = do
     fileTypes =
       [ ("SigningKeyShelley", False)
       , ("SigningKeyByron",   False)
-      , (renderKeyType (KeyTypeSigning GenesisUTxOKey), True) ]
+      , (renderKeyType (KeyTypeSigning GenesisUTxOKey), True)
+      , (renderKeyType (KeyTypeSigning (OperatorKey StakePoolOperatorKey)), True)
+      ]
