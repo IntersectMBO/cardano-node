@@ -6,6 +6,7 @@ module Cardano.CLI.Byron.Delegation
   ( ByronDelegationError(..)
   , checkByronGenesisDelegation
   , issueByronGenesisDelegation
+  , renderByronDelegationError
   , serialiseDelegationCert
   , serialiseDelegateKey
   )
@@ -19,10 +20,11 @@ import qualified Data.ByteString.Lazy as LB
 import           Formatting (Format, sformat)
 import qualified Text.JSON.Canonical as CanonicalJSON
 
+import           Cardano.Api (textShow)
 import           Cardano.Binary (Annotated(..), serialize')
 import qualified Cardano.Chain.Delegation as Dlg
 import           Cardano.Chain.Slotting (EpochNumber)
-import           Cardano.CLI.Helpers (HelpersError(..), serialiseSigningKey)
+import           Cardano.CLI.Helpers (HelpersError(..), renderHelpersError, serialiseSigningKey)
 import qualified Cardano.CLI.Legacy.Byron as Legacy
 import           Cardano.Config.Protocol (CardanoEra(..))
 import           Cardano.Config.Types (CertificateFile (..))
@@ -36,6 +38,14 @@ data ByronDelegationError
   | HelpersError !HelpersError
   deriving Show
 
+renderByronDelegationError :: ByronDelegationError -> Text
+renderByronDelegationError err =
+  case err of
+    CertificateValidationErrors certFp errs ->
+      "Certificate validation error(s) at: " <> textShow certFp <> " Errors: " <> textShow errs
+    DlgCertificateDeserialisationFailed certFp deSererr ->
+      "Certificate deserialisation error at: " <> textShow certFp <> " Error: " <> textShow deSererr
+    HelpersError hlpsErr -> renderHelpersError hlpsErr
 
 -- TODO:  we need to support password-protected secrets.
 -- | Issue a certificate for genesis delegation to a delegate key, signed by the

@@ -3,6 +3,7 @@
 module Cardano.Api.Error
   ( ApiError (..)
   , renderApiError
+  , textShow
   ) where
 
 import           Cardano.Binary (DecoderError (..))

@@ -14,7 +14,8 @@ import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT)
 
 import           Cardano.CLI.Byron.Commands (ByronCommand)
-import           Cardano.CLI.Byron.Run (ByronClientCmdError, runByronClientCommand)
+import           Cardano.CLI.Byron.Run (ByronClientCmdError, renderByronClientCmdError,
+                   runByronClientCommand)
 import           Cardano.CLI.Shelley.Commands (ShelleyCommand)
 import           Cardano.CLI.Shelley.Run (ShelleyClientCmdError, runShelleyClientCommand)
 
@@ -46,7 +47,7 @@ runClientCommand (ShelleyCommand c) = firstExceptT ShelleyClientError $ runShell
 runClientCommand DisplayVersion     = runDisplayVersion
 
 renderClientCommandError :: ClientCommandErrors -> Text
-renderClientCommandError (ByronClientError err) = (Text.pack $ show err) --TODO: renderByronClientCmdError err
+renderClientCommandError (ByronClientError err) = renderByronClientCmdError err
 renderClientCommandError (ShelleyClientError err) = (Text.pack $ show err) -- TODO: renderShelleyClientCmdError err
 
 runDisplayVersion :: ExceptT ClientCommandErrors IO ()

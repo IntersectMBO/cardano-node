@@ -13,6 +13,7 @@ module Cardano.CLI.Byron.Tx
   , txSpendUTxOByronPBFT
   , issueUTxOExpenditure
   , nodeSubmitTx
+  , renderByronTxError
 
     --TODO: remove when they are exported from the ledger
   , fromCborTxAux
@@ -35,6 +36,7 @@ import           Formatting ((%), sformat)
 
 import           Control.Tracer (traceWith, nullTracer, stdoutTracer)
 
+import           Cardano.Api (textShow)
 import qualified Cardano.Binary as Binary
 
 import           Cardano.Chain.Common (Address)
@@ -69,6 +71,14 @@ data ByronTxError
   = TxDeserialisationFailed !FilePath !Binary.DecoderError
   | EnvSocketError !EnvSocketError
   deriving Show
+
+renderByronTxError :: ByronTxError -> Text
+renderByronTxError err =
+  case err of
+    TxDeserialisationFailed txFp decErr ->
+      "Transaction deserialisation failed at " <> textShow txFp <> " Error: " <> textShow decErr
+    EnvSocketError envSockErr -> renderEnvSocketError envSockErr
+
 
 newtype TxFile =
   TxFile FilePath

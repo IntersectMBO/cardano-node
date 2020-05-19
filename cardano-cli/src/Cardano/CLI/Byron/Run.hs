@@ -1,5 +1,6 @@
 module Cardano.CLI.Byron.Run
   ( ByronClientCmdError
+  , renderByronClientCmdError
   , runByronClientCommand
   ) where
 
@@ -23,7 +24,8 @@ import           Cardano.Chain.UTxO (TxIn, TxOut)
 import qualified Cardano.Crypto.Hashing as Crypto
 import qualified Cardano.Crypto.Signing as Crypto
 
-import           Cardano.Config.Protocol (CardanoEra, RealPBFTError, ncCardanoEra)
+import           Cardano.Config.Protocol (CardanoEra, RealPBFTError,
+                   ncCardanoEra, renderRealPBFTError)
 import           Cardano.Config.Types
 
 import           Cardano.Api (Network, toByronNetworkMagic)
@@ -34,7 +36,7 @@ import           Cardano.CLI.Byron.Key
 import           Cardano.CLI.Byron.Query
 import           Cardano.CLI.Byron.Tx
 import           Cardano.CLI.Byron.UpdateProposal
-import           Cardano.CLI.Byron.Vote (ByronVoteError, runVoteCreation, submitByronVote)
+import           Cardano.CLI.Byron.Vote
 
 import           Cardano.CLI.Helpers
 
@@ -51,6 +53,19 @@ data ByronClientCmdError
   | ByronCmdUpdateProposalError !ByronUpdateProposalError
   | ByronCmdVoteError !ByronVoteError
   deriving Show
+
+renderByronClientCmdError :: ByronClientCmdError -> Text
+renderByronClientCmdError err =
+  case err of
+    ByronCmdDelegationError e -> renderByronDelegationError e
+    ByronCmdGenesisError e -> renderByronGenesisError e
+    ByronCmdHelpersError e -> renderHelpersError e
+    ByronCmdKeyFailure e -> renderByronKeyFailure e
+    ByronCmdQueryError e -> renderByronQueryError e
+    ByronCmdRealPBFTError e -> renderRealPBFTError e
+    ByronCmdTxError e -> renderByronTxError e
+    ByronCmdUpdateProposalError e -> renderByronUpdateProposalError e
+    ByronCmdVoteError e -> renderByronVoteError e
 
 runByronClientCommand :: ByronCommand -> ExceptT ByronClientCmdError IO ()
 runByronClientCommand c =
