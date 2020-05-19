@@ -10,7 +10,6 @@ module Cardano.CLI.Helpers
   , renderHelpersError
   , serialiseSigningKey
   , validateCBOR
-  , writeProtocolParameters
   ) where
 
 import           Cardano.Prelude
@@ -20,9 +19,7 @@ import           Codec.CBOR.Read (DeserialiseFailure, deserialiseFromBytes)
 import           Codec.CBOR.Term (decodeTerm, encodeTerm)
 import           Codec.CBOR.Write (toLazyByteString)
 import           Control.Monad.Trans.Except.Extra (handleIOExceptT, left)
-import           Data.Aeson.Encode.Pretty (encodePretty)
 import qualified Data.ByteString.Lazy as LB
-import qualified Data.ByteString.Lazy.Char8 as LBS
 import qualified Data.Text as Text
 import           System.Directory (doesPathExist)
 
@@ -31,13 +28,11 @@ import qualified Cardano.Chain.Delegation as Delegation
 import qualified Cardano.Chain.Update as Update
 import           Cardano.Chain.Block (fromCBORABlockOrBoundary)
 import qualified Cardano.Chain.UTxO as UTxO
-import           Cardano.CLI.Shelley.Commands (OutputFile(..))
 import           Cardano.Config.Protocol (CardanoEra(..))
 import           Cardano.Config.Types
 import           Cardano.Crypto (SigningKey(..))
 import qualified Cardano.Crypto as Crypto
 
-import           Shelley.Spec.Ledger.PParams (PParams)
 
 data HelpersError
   = CardanoEraNotSupportedFail !CardanoEra
@@ -122,9 +117,3 @@ validateCBOR cborObject bs =
       (const () ) <$> decodeCBOR bs (fromCBOR :: Decoder s Update.Vote)
       Right "Valid Byron vote."
 
-writeProtocolParameters :: Maybe OutputFile -> PParams -> ExceptT HelpersError IO ()
-writeProtocolParameters mOutFile pparams =
-  case mOutFile of
-    Nothing -> liftIO $ LBS.putStrLn (encodePretty pparams)
-    Just (OutputFile fpath) ->
-      handleIOExceptT (IOError' fpath) $ LBS.writeFile fpath (encodePretty pparams)
