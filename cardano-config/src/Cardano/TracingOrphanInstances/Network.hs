@@ -469,6 +469,10 @@ instance (Show txid, Show tx)
     mkObject
       [ "kind" .= String "MsgDone"
       ]
+  --TODO: Can't use 'MsgKThxBye' because NodeToNodeV_2 is not introduced yet.
+  toObject _verb (AnyMessage _) =
+    mkObject
+      [ "kind" .= String "MsgKThxBye" ]
 
 
 instance Condense (HeaderHash blk)

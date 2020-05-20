@@ -15,19 +15,25 @@ module Cardano.TracingOrphanInstances.Shelley () where
 import           Cardano.Prelude
 
 import qualified Data.Set as Set
+import           Data.Text (Text)
+import qualified Data.Text as Text
 
+import           Cardano.Slotting.Block (BlockNo(..))
 import           Cardano.TracingOrphanInstances.Common
 import           Cardano.TracingOrphanInstances.Consensus ()
 import           Cardano.Config.Shelley.Orphans ()
 
 import           Ouroboros.Network.Block
-                   (blockHash, blockSlot, blockNo, blockPrevHash)
+                   (SlotNo(..), blockHash, blockSlot, blockNo, blockPrevHash)
+import           Ouroboros.Network.Point (WithOrigin, withOriginToMaybe)
 import           Ouroboros.Consensus.Block (Header)
 import           Ouroboros.Consensus.Mempool.API (GenTx, TxId, txId)
 import           Ouroboros.Consensus.Util.Condense (condense)
 
 import           Ouroboros.Consensus.Shelley.Ledger
 import           Shelley.Spec.Ledger.API
+import           Shelley.Spec.Ledger.BlockChain (LastAppliedBlock(..))
+import           Shelley.Spec.Ledger.Keys (KeyHash(..))
 import           Shelley.Spec.Ledger.STS.Bbody
 import           Shelley.Spec.Ledger.STS.Chain
 import           Shelley.Spec.Ledger.STS.Deleg
@@ -89,7 +95,7 @@ instance ToObject (PredicateFailure r) => ToObject [[PredicateFailure r]] where
       ]
 
 
-instance ToObject (ShelleyLedgerError c) where
+instance Crypto c =>  ToObject (ShelleyLedgerError c) where
   toObject verb (BBodyError (BlockTransitionError fs)) =
     mkObject [ "kind" .= String "BBodyError"
              , "failures" .= map (toObject verb) fs
@@ -100,7 +106,7 @@ instance ToObject (ShelleyLedgerError c) where
              ]
 
 
-instance ToObject (PredicateFailure (CHAIN c)) where
+instance Crypto c => ToObject (PredicateFailure (CHAIN c)) where
   toObject _verb HeaderSizeTooLargeCHAIN =
     mkObject [ "kind" .= String "HeaderSizeTooLarge" ]
   toObject _verb BlockSizeTooLargeCHAIN =
@@ -119,9 +125,26 @@ instance ToObject (PredicateFailure (CHAIN c)) where
   toObject verb (BbodyFailure f) = toObject verb f
   toObject verb (TickFailure  f) = toObject verb f
   toObject verb (PrtclFailure f) = toObject verb f
+  toObject verb (PrtclSeqFailure f) = toObject verb f
 
+instance Crypto c => ToObject (PrtlSeqFailure c) where
+  toObject _verb (WrongSlotIntervalPrtclSeq (SlotNo lastSlot) (SlotNo currSlot)) =
+    mkObject [ "kind" .= String "WrongSlotInterval"
+             , "Conflicting slot numbers - Last slot number: " .= lastSlot
+             , "Current slot number: " .= currSlot
+             ]
+  toObject _verb (WrongBlockNoPrtclSeq lab currentBlockNo) =
+    mkObject [ "kind" .= String "WrongBlockNo"
+             , "Last applied block number" .= showLastAppBlockNo lab
+             , "Current block number" .= (String . textShow $ unBlockNo currentBlockNo)
+             ]
+  toObject _verb (WrongBlockSequencePrtclSeq lastAppliedHash currentHash) =
+    mkObject [ "kind" .= String "WrongBlockSequence"
+             , "Last applied block hash: " .= (String $ textShow lastAppliedHash)
+             , "Current block hash: " .= (String $ textShow currentHash)
+             ]
 
-instance ToObject (PredicateFailure (BBODY c)) where
+instance Crypto c =>  ToObject (PredicateFailure (BBODY c)) where
   toObject _verb WrongBlockBodySizeBBODY =
     mkObject [ "kind" .= String "WrongBlockBodySizeBBODY" ]
   toObject _verb InvalidBodyHashBBODY =
@@ -129,20 +152,24 @@ instance ToObject (PredicateFailure (BBODY c)) where
   toObject verb (LedgersFailure f) = toObject verb f
 
 
-instance ToObject (PredicateFailure (LEDGERS c)) where
+instance Crypto c =>  ToObject (PredicateFailure (LEDGERS c)) where
   toObject verb (LedgerFailure f) = toObject verb f
 
 
-instance ToObject (PredicateFailure (LEDGER c)) where
+instance Crypto c =>  ToObject (PredicateFailure (LEDGER c)) where
   toObject verb (UtxowFailure f) = toObject verb f
   toObject verb (DelegsFailure f) = toObject verb f
 
 
-instance ToObject (PredicateFailure (UTXOW c)) where
-  toObject _verb InvalidWitnessesUTXOW =
-    mkObject [ "kind" .= String "InvalidWitnessesUTXOW" ]
-  toObject _verb MissingVKeyWitnessesUTXOW =
-    mkObject [ "kind" .= String "MissingVKeyWitnessesUTXOW" ]
+instance Crypto c => ToObject (PredicateFailure (UTXOW c)) where
+  toObject _verb (InvalidWitnessesUTXOW wits) =
+    mkObject [ "kind" .= String "InvalidWitnessesUTXOW"
+             , "invalid witnesses" .= (String $ show wits)
+             ]
+  toObject _verb (MissingVKeyWitnessesUTXOW wits) =
+    mkObject [ "kind" .= String "MissingVKeyWitnessesUTXOW"
+             , "missing witnesses" .= (String $ show wits)
+             ]
   toObject _verb MissingScriptWitnessesUTXOW =
     mkObject [ "kind" .= String "MissingScriptWitnessesUTXOW" ]
   toObject _verb ScriptWitnessNotValidatingUTXOW =
@@ -167,6 +194,12 @@ instance ToObject (PredicateFailure (UTXO c)) where
     mkObject [ "kind" .= String "MaxTxSizeUTxO"
              , "size" .= txsize
              , "maxSize" .= maxtxsize ]
+  -- TODO: Add the minimum allowed UTxO value to OutputTooSmallUTxO
+  toObject _verb OutputTooSmallUTxO =
+    mkObject [ "kind" .= String "OutputTooSmallUTxO"
+             , "error" .= String "The output is smaller than the allow minimum \
+                                 \UTxO value defined in the protocol parameters"
+             ]
   toObject _verb InputSetEmptyUTxO =
     mkObject [ "kind" .= String "InputSetEmptyUTxO" ]
   toObject _verb (FeeTooSmallUTxO minfee txfee) =
@@ -177,8 +210,6 @@ instance ToObject (PredicateFailure (UTXO c)) where
     mkObject [ "kind" .= String "ValueNotConservedUTxO"
              , "consumed" .= consumed
              , "produced" .= produced ]
-  toObject _verb NegativeOutputsUTxO =
-    mkObject [ "kind" .= String "NegativeOutputsUTxO" ]
   toObject verb (UpdateFailure f) = toObject verb f
 
 
@@ -284,30 +315,55 @@ instance ToObject (PredicateFailure (RUPD c)) where
   toObject _verb x = case x of {} -- no constructors
 
 
-instance ToObject (PredicateFailure (PRTCL c)) where
-  toObject _verb  WrongSlotIntervalPRTCL =
-    mkObject [ "kind" .= String "WrongSlotIntervalPRTCL" ]
-  toObject _verb (WrongBlockNoPRTCL _lab bn) =
-    mkObject [ "kind" .= String "WrongBlockNoPRTCL"
---           , "lastBlock" .= lab -- no available instance
-             , "blockno" .= condense bn ]
-  toObject _verb  WrongBlockSequencePRTCL =
-    mkObject [ "kind" .= String "WrongBlockSequencePRTCL" ]
+instance Crypto c => ToObject (PredicateFailure (PRTCL c)) where
   toObject  verb (OverlayFailure f) = toObject verb f
   toObject  verb (UpdnFailure f) = toObject verb f
 
 
-instance ToObject (PredicateFailure (OVERLAY c)) where
-  toObject _verb NotPraosLeaderOVERLAY =
-    mkObject [ "kind" .= String "NotPraosLeaderOVERLAY" ]
-  toObject _verb NotActiveSlotOVERLAY =
-    mkObject [ "kind" .= String "NotActiveSlotOVERLAY" ]
+instance Crypto c => ToObject (PredicateFailure (OVERLAY c)) where
+  toObject _verb (UnknownGenesisKeyOVERLAY (KeyHash genKeyHash)) =
+    mkObject [ "kind" .= String "UnknownGenesisKeyOVERLAY"
+             , "Unknown genesis key hash" .= (String $ textShow genKeyHash)
+             ]
+  toObject _verb (VRFKeyBadLeaderValue seedNonce (SlotNo currSlotNo) prevHashNonce leaderElecVal) =
+    mkObject [ "kind" .= String "VRFKeyBadLeaderValueOVERLAY"
+             , "Seed nonce" .= (String $ textShow seedNonce)
+             , "Current slot number" .= (String $ textShow currSlotNo)
+             , "Previous hash as nonce" .= (String $ textShow prevHashNonce)
+             , "Leader election value" .= (String $ textShow leaderElecVal)
+             ]
+  toObject _verb (VRFKeyBadNonce seedNonce (SlotNo currSlotNo) prevHashNonce blockNonce) =
+    mkObject [ "kind" .= String "VRFKeyBadNonceOVERLAY"
+             , "Seed nonce" .= (String $ textShow seedNonce)
+             , "Current slot number" .= (String $ textShow currSlotNo)
+             , "Previous hash as nonce" .= (String $ textShow prevHashNonce)
+             , "Block nonce" .= (String $ textShow blockNonce)
+             ]
+  toObject _verb (VRFKeyWrongVRFKey regVRFKeyHash unregVRFKeyHash) =
+    mkObject [ "kind" .= String "VRFKeyWrongVRFKeyOVERLAY"
+             , "registered/correct VRF key hash (exists in stake pool distribution)" .= (String $ textShow regVRFKeyHash )
+             , "unregistered/incorrect VRF key hash (does not exist in stake pool distribution)" .= (String $ textShow unregVRFKeyHash)
+             ]
+  --TODO: Pipe slot number with VRFKeyUnknown
+  toObject _verb (VRFKeyUnknown (KeyHash kHash)) =
+    mkObject [ "kind" .= String "VRFKeyUnknownOVERLAY"
+             , "key hash" .= (String $ textShow kHash)
+             ]
+  toObject _verb (VRFLeaderValueTooBig leadElecVal weightOfDelegPool actSlotCoefff) =
+    mkObject [ "kind" .= String "VRFLeaderValueTooBigOVERLAY"
+             , "Leader election value" .= (String $ textShow leadElecVal)
+             , "Weight of delegation pool" .= (String $ textShow weightOfDelegPool)
+             , "Active slot coefficient" .= (String $ textShow actSlotCoefff)
+             ]
+  toObject _verb (NotActiveSlotOVERLAY notActiveSlotNo) =
+    -- TODO: Elaborate on NotActiveSlot error
+    mkObject [ "kind" .= String "NotActiveSlotOVERLAY"
+             , "slot" .= (String $ textShow notActiveSlotNo)
+             ]
   toObject _verb (WrongGenesisColdKeyOVERLAY actual expected) =
     mkObject [ "kind" .= String "WrongGenesisColdKeyOVERLAY"
              , "actual" .= actual
              , "expected" .= expected ]
-  toObject _verb NoGenesisStakingOVERLAY =
-    mkObject [ "kind" .= String "NoGenesisStakingOVERLAY" ]
   toObject verb (OcertFailure f) = toObject verb f
 
 
@@ -330,3 +386,15 @@ instance ToObject (PredicateFailure (OCERT c)) where
 
 instance ToObject (PredicateFailure (UPDN c)) where
   toObject _verb x = case x of {} -- no constructors
+
+--------------------------------------------------------------------------------
+-- Helper functions
+--------------------------------------------------------------------------------
+
+textShow :: Show a => a -> Text
+textShow = Text.pack . show
+
+showLastAppBlockNo :: WithOrigin (LastAppliedBlock crypto) -> Text
+showLastAppBlockNo wOblk =  case withOriginToMaybe wOblk of
+                     Nothing -> "Genesis Block"
+                     Just blk -> textShow . unBlockNo $ labBlockNo blk
