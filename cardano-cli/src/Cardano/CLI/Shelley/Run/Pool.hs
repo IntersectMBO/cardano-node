@@ -17,7 +17,7 @@ import           Cardano.Api (ApiError(..), ShelleyCoin, ShelleyStakePoolMargin,
                    shelleyRetireStakePool, writeCertificate)
 
 import qualified Shelley.Spec.Ledger.Address as Shelley
-import           Shelley.Spec.Ledger.Keys (hash, hashKey)
+import           Shelley.Spec.Ledger.Keys (hashKey, hashVerKeyVRF)
 import qualified Shelley.Spec.Ledger.Slot as Shelley
 
 import           Cardano.Config.Shelley.ColdKeys
@@ -101,7 +101,7 @@ runStakePoolRegistrationCert
 
     let registrationCert = shelleyRegisterStakePool
                              (hashKey stakePoolVerKey)
-                             (hash vrfVerKey)
+                             (hashVerKeyVRF vrfVerKey)
                              pldg
                              pCost
                              pMrgn
