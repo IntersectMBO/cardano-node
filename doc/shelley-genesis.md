@@ -32,7 +32,7 @@ Available commands:
   query                    Shelley node query commands
   block                    Shelley block commands
   system                   Shelley system commands
-  devops                   Shelley devops commands
+  governance               Shelley governance commands
   genesis                  Shelley genesis block commands
 ```
 
@@ -124,7 +124,7 @@ identifying different keys. Don't edit the binary data of course, but you
 can inspect it using any CBOR tool, e.g. [cbor.me] or the `cardano-cli`
 itself:
 ```
-cardano-cli shelley text-view decode-cbor 
+cardano-cli shelley text-view decode-cbor
 Usage: cardano-cli shelley text-view decode-cbor --file FILENAME
   Print a TextView file as decoded CBOR.
 
@@ -136,8 +136,8 @@ Like so
 $ cardano-cli shelley text-view decode-cbor \
     --file example/genesis-keys/genesis1.vkey
 
-58 20 46 4e f4 95 59 f4 e3 6f b7 02 1f cb 12 71 
-c5 ba 84 f3 66 22 0a 15 0e 66 bb a8 71 87 2f 27 
+58 20 46 4e f4 95 59 f4 e3 6f b7 02 1f cb 12 71
+c5 ba 84 f3 66 22 0a 15 0e 66 bb a8 71 87 2f 27
 7c ed  # bytes(32)
 ```
 So we can see this is just a 32 byte string. Not surprising, since this is of
@@ -1012,8 +1012,8 @@ we expect. We'll need a third terminal.
 We'll start with querying the node to see the current set of protocol parameters.
 ```
 $ cardano-cli shelley query protocol-parameters
-Usage: cardano-cli shelley query protocol-parameters (--mainnet | 
-                                                       --testnet-magic INT) 
+Usage: cardano-cli shelley query protocol-parameters (--mainnet |
+                                                       --testnet-magic INT)
                                                      [--out-file FILE]
   Get the node's current protocol parameters
 
@@ -1085,7 +1085,7 @@ There is a command to query the UTxO and return all the UTxOs at a given
 address.
 ```
 $ cardano-cli shelley query filtered-utxo
-Usage: cardano-cli shelley query filtered-utxo --address ADDRESS 
+Usage: cardano-cli shelley query filtered-utxo --address ADDRESS
                                                (--mainnet | --testnet-magic INT)
                                                [--out-file FILE]
   Get the node's current UTxO filtered by address
@@ -1210,7 +1210,7 @@ to use the low level command to select the exact UTxO to spend.
 $ cardano-cli shelley transaction build-raw
 Usage: cardano-cli shelley transaction build-raw --tx-in TX_IN --tx-out TX_OUT
                                                  --ttl SLOT_COUNT --fee LOVELACE
-                                                 --tx-body-file FILEPATH 
+                                                 --tx-body-file FILEPATH
                                                  [--certificate FILEPATH]
   Build a transaction (low-level, inconvenient)
 
@@ -1273,7 +1273,7 @@ inputs from the same address).
 ```
 $ cardano-cli shelley transaction sign
 Usage: cardano-cli shelley transaction sign --tx-body-file FILEPATH
-                                            --signing-key-file FILEPATH 
+                                            --signing-key-file FILEPATH
                                             (--mainnet | --testnet-magic INT)
                                             --tx-file FILEPATH
   Sign a transaction
@@ -1301,7 +1301,7 @@ $ cardano-cli shelley transaction sign \
 Finally we need to submit the signed transaction
 ```
 $ cardano-cli shelley transaction submit
-Usage: cardano-cli shelley transaction submit --tx-file FILEPATH 
+Usage: cardano-cli shelley transaction submit --tx-file FILEPATH
                                               (--mainnet | --testnet-magic INT)
   Submit a transaction to the local node whose Unix domain socket is obtained
   from the CARDANO_NODE_SOCKET_PATH enviromnent variable.
@@ -1349,4 +1349,3 @@ or build and submit transactions with special certificates in them.
 ## Submitting a "normal" transaction
 
 TODO: normal txs, much like above, then certs, stake addresses etc.
-

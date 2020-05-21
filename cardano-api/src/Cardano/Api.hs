@@ -99,6 +99,7 @@ module Cardano.Api
   -- * Shelley update proposal related
   , Shelley.Nonce (..)
   , Shelley.PParams'(..)
+  , Shelley.PParamsUpdate
   , Shelley.ProtVer (..)
   , createShelleyUpdateProposal
 
