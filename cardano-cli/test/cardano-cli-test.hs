@@ -11,6 +11,8 @@ import qualified Data.Text as Text
 import qualified Data.Text.IO as Text
 import           Data.Text.ANSI (bold, green, red)
 
+import           Hedgehog.Main (defaultMain)
+
 import           Prelude (String)
 
 import           System.Directory (canonicalizePath, getCurrentDirectory, listDirectory)
@@ -22,8 +24,13 @@ import           System.Process (rawSystem)
 import           System.IO (BufferMode (..))
 import qualified System.IO as IO
 
+import qualified Test.Scenarios.ShelleyAddressBuild
+
 main :: IO ()
 main = do
+
+  defaultMain [Test.Scenarios.ShelleyAddressBuild.tests]
+
   IO.hSetBuffering IO.stdout LineBuffering
   IO.hSetBuffering IO.stderr LineBuffering
 

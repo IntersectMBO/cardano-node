@@ -131,7 +131,6 @@ executable cardano-cli
                      , optparse-applicative
                      , text
                      , transformers-except
-
   default-extensions:  NoImplicitPrelude
 
 test-suite cardano-cli-test
@@ -147,10 +146,16 @@ test-suite cardano-cli-test
                       , cardano-prelude
                       , directory
                       , filepath
+                      , hedgehog
+                      , optparse-applicative
                       , process
                       , text
                       , text-ansi
+                      , transformers-except
                       , unix
+
+  other-modules:        Test.Scenarios.OptParseTesters
+                        Test.Scenarios.ShelleyAddressBuild
 
   default-language:     Haskell2010
   default-extensions:   NoImplicitPrelude
