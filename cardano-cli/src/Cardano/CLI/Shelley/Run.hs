@@ -1,6 +1,7 @@
 
 module Cardano.CLI.Shelley.Run
   ( ShelleyClientCmdError
+  , renderShelleyClientCmdError
   , runShelleyClientCommand
   , emptyPParamsUpdate
   ) where
@@ -13,10 +14,11 @@ import           Control.Monad.Trans.Except.Extra (firstExceptT, left, right,
 import           Cardano.Api (ApiError, EpochNo, PParams'(..),
                    ShelleyPParamsUpdate, StrictMaybe (..),
                    Update (..), createShelleyUpdateProposal, hashKey,
-                   writeUpdate)
+                   renderApiError, textShow, writeUpdate)
 
 
-import           Cardano.Config.Shelley.ColdKeys (KeyError, KeyRole(..), readVerKey)
+import           Cardano.Config.Shelley.ColdKeys (KeyError, KeyRole(..), readVerKey,
+                   renderKeyError)
 
 import           Control.Monad.Trans.Except (ExceptT)
 
@@ -44,6 +46,18 @@ data ShelleyClientCmdError
   | ShelleyCmdQueryError !ShelleyQueryCmdError
   deriving Show
 
+renderShelleyClientCmdError :: ShelleyClientCmdError -> Text
+renderShelleyClientCmdError err =
+  case err of
+    ShelleyCmdAddressError addrCmdErr -> renderShelleyAddressCmdError addrCmdErr
+    ShelleyCmdGenesisError genesisCmdErr -> renderShelleyGenesisCmdError genesisCmdErr
+    ShelleyCmdGovernanceError govCmdErr -> renderShelleyGovernanceError govCmdErr
+    ShelleyCmdNodeError nodeCmdErr -> renderShelleyNodeCmdError nodeCmdErr
+    ShelleyCmdPoolError poolCmdErr -> renderShelleyPoolCmdError poolCmdErr
+    ShelleyCmdStakeAddressError stakeAddrCmdErr -> renderShelleyStakeAddressCmdError stakeAddrCmdErr
+    ShelleyCmdTextViewError txtViewErr -> renderShelleyTextViewFileError txtViewErr
+    ShelleyCmdTransactionError txErr -> renderShelleyTxCmdError txErr
+    ShelleyCmdQueryError queryErr -> renderShelleyQueryCmdError queryErr
 
 --
 -- CLI shelley command dispatch
@@ -78,11 +92,21 @@ runGovernanceCmd (GovernanceUpdateProposal out eNo genVKeys ppUp) =
 runGovernanceCmd cmd = liftIO $ putStrLn $ "TODO: runGovernanceCmd: " ++ show cmd
 
 data ShelleyGovernanceError
-  = CardanoApiError !ApiError
-  | EmptyUpdateProposal
-  | ReadKeyError !KeyError
-
+  = GovernanceWriteUpdateError !FilePath !ApiError
+  | GovernanceEmptyUpdateProposal
+  | GovernanceReadGenVerKeyError !FilePath !KeyError
   deriving Show
+
+renderShelleyGovernanceError :: ShelleyGovernanceError -> Text
+renderShelleyGovernanceError err =
+  case err of
+    GovernanceReadGenVerKeyError fp keyErr ->
+      "Error reading genesis verification key at: " <> textShow fp <> " Error: " <> renderKeyError keyErr
+    GovernanceWriteUpdateError fp apiError ->
+      "Error writing shelley update proposal at: " <> textShow fp <> " Error: " <> renderApiError apiError
+    -- TODO: The equality check is still not working for empty update proposals.
+    GovernanceEmptyUpdateProposal ->
+      "Empty update proposals are not allowed"
 
 runGovernanceUpdateProposal
   :: OutputFile
@@ -95,17 +119,17 @@ runGovernanceUpdateProposal (OutputFile upFile) eNo genVerKeyFiles upPprams' = d
     upPprams <- checkForEmptyProposal $! upPprams'
     genVKeys <- mapM
                   (\(VerificationKeyFile fp) -> do
-                    gvk <- firstExceptT ReadKeyError $ readVerKey GenesisKey fp
+                    gvk <- firstExceptT (GovernanceReadGenVerKeyError fp) $ readVerKey GenesisKey fp
                     pure gvk
                   )
                   genVerKeyFiles
     let genKeyHashes = map hashKey genVKeys
         upProp = ShelleyUpdate $ createShelleyUpdateProposal eNo genKeyHashes upPprams
-    firstExceptT CardanoApiError . newExceptT $ writeUpdate upFile upProp
+    firstExceptT (GovernanceWriteUpdateError upFile)  . newExceptT $ writeUpdate upFile upProp
   where
     checkForEmptyProposal :: ShelleyPParamsUpdate -> ExceptT ShelleyGovernanceError IO ShelleyPParamsUpdate
     checkForEmptyProposal sPParams
-      | sPParams == emptyPParamsUpdate = left EmptyUpdateProposal
+      | sPParams == emptyPParamsUpdate = left GovernanceEmptyUpdateProposal
       | otherwise = right sPParams
 
 -- TODO: Import from shelley ledger specs

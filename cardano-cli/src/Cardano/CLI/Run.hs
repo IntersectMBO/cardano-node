@@ -17,7 +17,8 @@ import           Cardano.CLI.Byron.Commands (ByronCommand)
 import           Cardano.CLI.Byron.Run (ByronClientCmdError, renderByronClientCmdError,
                    runByronClientCommand)
 import           Cardano.CLI.Shelley.Commands (ShelleyCommand)
-import           Cardano.CLI.Shelley.Run (ShelleyClientCmdError, runShelleyClientCommand)
+import           Cardano.CLI.Shelley.Run (ShelleyClientCmdError, renderShelleyClientCmdError,
+                   runShelleyClientCommand)
 
 import           Data.Version (showVersion)
 import           Paths_cardano_cli (version)
@@ -48,7 +49,7 @@ runClientCommand DisplayVersion     = runDisplayVersion
 
 renderClientCommandError :: ClientCommandErrors -> Text
 renderClientCommandError (ByronClientError err) = renderByronClientCmdError err
-renderClientCommandError (ShelleyClientError err) = (Text.pack $ show err) -- TODO: renderShelleyClientCmdError err
+renderClientCommandError (ShelleyClientError err) = renderShelleyClientCmdError err
 
 runDisplayVersion :: ExceptT ClientCommandErrors IO ()
 runDisplayVersion = do

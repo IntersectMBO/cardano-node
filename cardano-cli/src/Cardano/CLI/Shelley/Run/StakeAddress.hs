@@ -1,5 +1,6 @@
 module Cardano.CLI.Shelley.Run.StakeAddress
   ( ShelleyStakeAddressCmdError
+  , renderShelleyStakeAddressCmdError
   , runStakeAddressCmd
   ) where
 
@@ -22,12 +23,28 @@ import           Cardano.Config.Shelley.ColdKeys hiding (writeSigningKey)
 import           Cardano.CLI.Shelley.Parsers
 
 data ShelleyStakeAddressCmdError
-  = ShelleyStakeAddressCardanoApiError !ApiError
-  | ShelleyStakeAddressKeyError        !KeyError
+  = ShelleyStakeReadPoolOperatorKeyError !FilePath !KeyError
+  | ShelleyStakeAddressReadVerKeyError !FilePath !ApiError
+  | ShelleyStakeAddressWriteCertError !FilePath !ApiError
+  | ShelleyStakeAddressWriteSignKeyError !FilePath !ApiError
+  | ShelleyStakeAddressWriteVerKeyError !FilePath !ApiError
   deriving Show
 
-runStakeAddressCmd :: StakeAddressCmd -> ExceptT ShelleyStakeAddressCmdError IO ()
+renderShelleyStakeAddressCmdError :: ShelleyStakeAddressCmdError -> Text
+renderShelleyStakeAddressCmdError err =
+  case err of
+    ShelleyStakeReadPoolOperatorKeyError fp keyErr ->
+      "Error reading pool operator key at: " <> textShow fp <> " Error: " <> renderKeyError keyErr
+    ShelleyStakeAddressReadVerKeyError fp apiErr ->
+      "Error while reading verification stake key at: " <> textShow fp <> " Error: " <> renderApiError apiErr
+    ShelleyStakeAddressWriteCertError fp apiErr ->
+      "Error while writing delegation certificate at: " <> textShow fp <> " Error: " <> renderApiError apiErr
+    ShelleyStakeAddressWriteSignKeyError fp apiErr ->
+      "Error while writing signing stake key at: " <> textShow fp <> " Error: " <> renderApiError apiErr
+    ShelleyStakeAddressWriteVerKeyError fp apiErr ->
+      "Error while writing verification stake key at: " <> textShow fp <> " Error: " <> renderApiError apiErr
 
+runStakeAddressCmd :: StakeAddressCmd -> ExceptT ShelleyStakeAddressCmdError IO ()
 runStakeAddressCmd (StakeAddressKeyGen vk sk) = runStakeAddressKeyGen vk sk
 runStakeAddressCmd (StakeAddressBuild vk) = runStakeAddressBuild vk
 runStakeAddressCmd (StakeKeyRegistrationCert stkKeyVerKeyFp outputFp) =
@@ -46,16 +63,16 @@ runStakeAddressCmd cmd = liftIO $ putStrLn $ "runStakeAddressCmd: " ++ show cmd
 runStakeAddressKeyGen :: VerificationKeyFile -> SigningKeyFile -> ExceptT ShelleyStakeAddressCmdError IO ()
 runStakeAddressKeyGen (VerificationKeyFile vkFp) (SigningKeyFile skFp) = do
   (vkey, skey) <- liftIO genKeyPair
-  firstExceptT ShelleyStakeAddressCardanoApiError
+  firstExceptT (ShelleyStakeAddressWriteVerKeyError vkFp)
     . newExceptT
     $ writeStakingVerificationKey vkFp (StakingVerificationKeyShelley vkey)
   --TODO: writeSigningKey should really come from Cardano.Config.Shelley.ColdKeys
-  firstExceptT ShelleyStakeAddressCardanoApiError . newExceptT $ writeSigningKey skFp (SigningKeyShelley skey)
+  firstExceptT (ShelleyStakeAddressWriteSignKeyError skFp) . newExceptT $ writeSigningKey skFp (SigningKeyShelley skey)
 
 
 runStakeAddressBuild :: VerificationKeyFile -> ExceptT ShelleyStakeAddressCmdError IO ()
 runStakeAddressBuild (VerificationKeyFile stkVkeyFp) =
-  firstExceptT ShelleyStakeAddressCardanoApiError $ do
+  firstExceptT (ShelleyStakeAddressReadVerKeyError stkVkeyFp) $ do
     stkVKey <- ExceptT $ readStakingVerificationKey stkVkeyFp
     let rwdAddr = AddressShelleyReward $ shelleyVerificationKeyRewardAddress stkVKey
     liftIO . Text.putStrLn $ addressToHex rwdAddr
@@ -64,9 +81,9 @@ runStakeAddressBuild (VerificationKeyFile stkVkeyFp) =
 runStakeKeyRegistrationCert :: VerificationKeyFile -> OutputFile -> ExceptT ShelleyStakeAddressCmdError IO ()
 runStakeKeyRegistrationCert (VerificationKeyFile vkFp) (OutputFile oFp) = do
   StakingVerificationKeyShelley stakeVkey <-
-    firstExceptT ShelleyStakeAddressCardanoApiError . newExceptT $ readStakingVerificationKey vkFp
+    firstExceptT (ShelleyStakeAddressReadVerKeyError vkFp) . newExceptT $ readStakingVerificationKey vkFp
   let regCert = shelleyRegisterStakingAddress (hashKey stakeVkey)
-  firstExceptT ShelleyStakeAddressCardanoApiError . newExceptT $ writeCertificate oFp regCert
+  firstExceptT (ShelleyStakeAddressWriteCertError oFp) . newExceptT $ writeCertificate oFp regCert
 
 
 runStakeKeyDelegationCert
@@ -78,16 +95,16 @@ runStakeKeyDelegationCert
   -> ExceptT ShelleyStakeAddressCmdError IO ()
 runStakeKeyDelegationCert (VerificationKeyFile stkKey) (VerificationKeyFile poolVKey) (OutputFile outFp) = do
   StakingVerificationKeyShelley stakeVkey <-
-    firstExceptT ShelleyStakeAddressCardanoApiError . newExceptT $ readStakingVerificationKey stkKey
-  poolStakeVkey <- firstExceptT ShelleyStakeAddressKeyError $
+    firstExceptT (ShelleyStakeAddressReadVerKeyError stkKey) . newExceptT $ readStakingVerificationKey stkKey
+  poolStakeVkey <- firstExceptT (ShelleyStakeReadPoolOperatorKeyError poolVKey) $
     readVerKey (OperatorKey StakePoolOperatorKey) poolVKey
   let delegCert = shelleyDelegateStake (hashKey stakeVkey) (hashKey poolStakeVkey)
-  firstExceptT ShelleyStakeAddressCardanoApiError . newExceptT $ writeCertificate outFp delegCert
+  firstExceptT (ShelleyStakeAddressWriteCertError outFp) . newExceptT $ writeCertificate outFp delegCert
 
 
 runStakeKeyDeRegistrationCert :: VerificationKeyFile -> OutputFile -> ExceptT ShelleyStakeAddressCmdError IO ()
 runStakeKeyDeRegistrationCert (VerificationKeyFile vkFp) (OutputFile oFp) = do
   StakingVerificationKeyShelley stakeVkey <-
-    firstExceptT ShelleyStakeAddressCardanoApiError . newExceptT $ readStakingVerificationKey vkFp
+    firstExceptT (ShelleyStakeAddressReadVerKeyError vkFp)  . newExceptT $ readStakingVerificationKey vkFp
   let deRegCert = shelleyDeregisterStakingAddress (hashKey stakeVkey)
-  firstExceptT ShelleyStakeAddressCardanoApiError . newExceptT $ writeCertificate oFp deRegCert
+  firstExceptT (ShelleyStakeAddressWriteCertError oFp) . newExceptT $ writeCertificate oFp deRegCert

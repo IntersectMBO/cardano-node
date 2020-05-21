@@ -2,6 +2,7 @@
 
 module Cardano.CLI.Shelley.Run.Query
   ( ShelleyQueryCmdError
+  , renderShelleyQueryCmdError
   , runQueryCmd
   ) where
 
@@ -22,18 +23,17 @@ import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT
 import           Cardano.Api
                    (LocalStateQueryError, Network(..), QueryFilter, getLocalTip,
                     queryLocalLedgerState, queryPParamsFromLocalState,
-                    queryStakeDistributionFromLocalState, queryUTxOFromLocalState)
+                    queryStakeDistributionFromLocalState, queryUTxOFromLocalState,
+                    renderLocalStateQueryError, textShow)
 
-import           Cardano.CLI.Environment (EnvSocketError, readEnvSocketPath)
-import           Cardano.CLI.Helpers
+import           Cardano.CLI.Environment (EnvSocketError, readEnvSocketPath, renderEnvSocketError)
+import           Cardano.CLI.Helpers (HelpersError, pPrintCBOR, renderHelpersError)
 import           Cardano.CLI.Shelley.Parsers (OutputFile (..), QueryCmd (..))
 
 import           Cardano.Config.Shelley.Orphans ()
 import           Cardano.Config.Shelley.Protocol (mkNodeClientProtocolTPraos)
 
 import           Cardano.Crypto.Hash.Class (getHashBytesAsHex)
-
-import           Data.Aeson (ToJSON)
 
 import           Ouroboros.Consensus.Cardano (protocolClientInfo)
 import           Ouroboros.Consensus.Node.ProtocolInfo (pClientInfoCodecConfig)
@@ -43,19 +43,38 @@ import           Ouroboros.Network.NodeToClient (withIOManager)
 import           Ouroboros.Network.Block (getTipPoint)
 
 import           Shelley.Spec.Ledger.Coin (Coin (..))
-import           Shelley.Spec.Ledger.TxData (TxId (..), TxIn (..), TxOut (..))
-import           Shelley.Spec.Ledger.UTxO (UTxO (..))
-import           Shelley.Spec.Ledger.PParams (PParams)
 import           Shelley.Spec.Ledger.Delegation.Certificates (PoolDistr(..))
 import           Shelley.Spec.Ledger.Keys (Hash, KeyHash(..), KeyRole (..), VerKeyVRF)
+import           Shelley.Spec.Ledger.LedgerState (LedgerState)
+import           Shelley.Spec.Ledger.PParams (PParams)
+import           Shelley.Spec.Ledger.TxData (TxId (..), TxIn (..), TxOut (..))
+import           Shelley.Spec.Ledger.UTxO (UTxO (..))
 
 
 data ShelleyQueryCmdError
   = ShelleyQueryEnvVarSocketErr !EnvSocketError
   | NodeLocalStateQueryError !LocalStateQueryError
-  | ShelleyHelperError !HelpersError
+  | ShelleyQueryWriteProtocolParamsError !FilePath !IOException
+  | ShelleyQueryWriteFilteredUTxOsError !FilePath !IOException
+  | ShelleyQueryWriteStakeDistributionError !FilePath !IOException
+  | ShelleyQueryWriteLedgerStateError !FilePath !IOException
+  | ShelleyHelpersError !HelpersError
   deriving Show
 
+renderShelleyQueryCmdError :: ShelleyQueryCmdError -> Text
+renderShelleyQueryCmdError err =
+  case err of
+    ShelleyQueryEnvVarSocketErr envSockErr -> renderEnvSocketError envSockErr
+    NodeLocalStateQueryError lsqErr -> renderLocalStateQueryError lsqErr
+    ShelleyQueryWriteProtocolParamsError fp ioException ->
+      "Error writing protocol parameters at: " <> textShow fp <> " Error: " <> textShow ioException
+    ShelleyQueryWriteFilteredUTxOsError fp ioException ->
+      "Error writing filtered UTxOs at: " <> textShow fp <> " Error: " <> textShow ioException
+    ShelleyQueryWriteStakeDistributionError fp ioException ->
+      "Error writing stake distribution at: " <> textShow fp <> " Error: " <> textShow ioException
+    ShelleyQueryWriteLedgerStateError fp ioException ->
+      "Error writing ledger state at: " <> textShow fp <> " Error: " <> textShow ioException
+    ShelleyHelpersError helpersErr -> renderHelpersError helpersErr
 
 runQueryCmd :: QueryCmd -> ExceptT ShelleyQueryCmdError IO ()
 runQueryCmd cmd =
@@ -90,7 +109,7 @@ writeProtocolParameters mOutFile pparams =
   case mOutFile of
     Nothing -> liftIO $ LBS.putStrLn (encodePretty pparams)
     Just (OutputFile fpath) ->
-      handleIOExceptT (ShelleyHelperError . IOError' fpath) $
+      handleIOExceptT (ShelleyQueryWriteProtocolParamsError fpath) $
         LBS.writeFile fpath (encodePretty pparams)
 
 runQueryTip
@@ -130,29 +149,27 @@ runQueryLedgerState network mOutFile = do
   els <- firstExceptT NodeLocalStateQueryError $
                       queryLocalLedgerState network sockPath (getTipPoint tip)
   case els of
-    Right lstate -> maybePrintFileJson mOutFile lstate
+    Right lstate -> writeLedgerState mOutFile lstate
     Left lbs -> do
       liftIO $ putTextLn "Verion mismatch beteen node and consensus, so dumping this as generic CBOR."
-      firstExceptT ShelleyHelperError $ pPrintCBOR lbs
+      firstExceptT ShelleyHelpersError $ pPrintCBOR lbs
 
 -- -------------------------------------------------------------------------------------------------
 
-maybePrintFileJson :: ToJSON a => Maybe OutputFile -> a -> ExceptT ShelleyQueryCmdError IO ()
-maybePrintFileJson mOutputFile x = do
-  let jsonX = encodePretty x
-  case mOutputFile of
+writeLedgerState :: Maybe OutputFile -> LedgerState TPraosStandardCrypto -> ExceptT ShelleyQueryCmdError IO ()
+writeLedgerState mOutFile lstate =
+  case mOutFile of
+    Nothing -> liftIO $ LBS.putStrLn (encodePretty lstate)
     Just (OutputFile fpath) ->
-      handleIOExceptT (ShelleyHelperError . IOError' fpath)
-          $ LBS.writeFile fpath jsonX
-    Nothing -> liftIO $ LBS.putStrLn jsonX
-
+      handleIOExceptT (ShelleyQueryWriteLedgerStateError fpath)
+        $ LBS.writeFile fpath (encodePretty lstate)
 
 writeFilteredUTxOs :: Maybe OutputFile -> UTxO TPraosStandardCrypto -> ExceptT ShelleyQueryCmdError IO ()
 writeFilteredUTxOs mOutFile utxo =
     case mOutFile of
       Nothing -> liftIO $ printFilteredUTxOs utxo
       Just (OutputFile fpath) ->
-        handleIOExceptT (ShelleyHelperError . IOError' fpath) $ LBS.writeFile fpath (encodePretty utxo)
+        handleIOExceptT (ShelleyQueryWriteFilteredUTxOsError fpath) $ LBS.writeFile fpath (encodePretty utxo)
 
 printFilteredUTxOs :: UTxO TPraosStandardCrypto -> IO ()
 printFilteredUTxOs (UTxO utxo) = do
@@ -196,7 +213,7 @@ writeStakeDistribution :: Maybe OutputFile
                        -> PoolDistr TPraosStandardCrypto
                        -> ExceptT ShelleyQueryCmdError IO ()
 writeStakeDistribution (Just (OutputFile outFile)) (PoolDistr stakeDist) =
-    handleIOExceptT (ShelleyHelperError . IOError' outFile) $
+    handleIOExceptT (ShelleyQueryWriteStakeDistributionError outFile) $
       LBS.writeFile outFile (encodePretty stakeDist)
 
 writeStakeDistribution Nothing stakeDist =

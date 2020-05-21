@@ -1,6 +1,7 @@
 {-# LANGUAGE MultiWayIf #-}
 module Cardano.CLI.Shelley.Run.Address.Info
   ( ShelleyAddressInfoError
+  , renderShelleyAddressInfoError
   , runAddressInfo
   ) where
 
@@ -23,6 +24,12 @@ import           Cardano.Api
 data ShelleyAddressInfoError
   = ShelleyAddressDescribeError !Text
   deriving Show
+
+renderShelleyAddressInfoError :: ShelleyAddressInfoError -> Text
+renderShelleyAddressInfoError err =
+  case err of
+    ShelleyAddressDescribeError descErr ->
+      "Error occurred while describing address: " <> descErr
 
 runAddressInfo :: Text -> ExceptT ShelleyAddressInfoError IO ()
 runAddressInfo addrTxt = do
