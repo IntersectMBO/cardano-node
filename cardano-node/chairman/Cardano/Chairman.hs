@@ -39,15 +39,18 @@ import           Ouroboros.Consensus.Block
 import           Ouroboros.Consensus.BlockchainTime
 import           Ouroboros.Consensus.Config
                    (configConsensus, configCodec, configLedger)
+import           Ouroboros.Consensus.Ledger.Extended (ExtLedgerState (..))
 import           Ouroboros.Consensus.Mempool
 import           Ouroboros.Consensus.Network.NodeToClient
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
                   (HasNetworkProtocolVersion (..))
 import           Ouroboros.Consensus.Node.ProtocolInfo
 import           Ouroboros.Consensus.HardFork.Abstract (HasHardForkHistory(..))
-import           Ouroboros.Consensus.HardFork.History (EraParams(..), Shape(..))
+import           Ouroboros.Consensus.HardFork.History
+                  (EraParams(..), EraSummary(..), Summary(..))
 import           Ouroboros.Consensus.Node.Run
 import           Ouroboros.Consensus.Cardano
+import           Ouroboros.Consensus.Util.Counting (nonEmptyHead)
 
 import           Ouroboros.Network.Magic (NetworkMagic)
 import           Ouroboros.Network.Mux
@@ -117,7 +120,13 @@ chairmanTest tracer ptcl runningTime optionalProgressThreshold socketPaths = do
     traceWith tracer ("================== chairman results ==================")
 
   where
-    ProtocolInfo { pInfoConfig = cfg } = protocolInfo ptcl
+    ProtocolInfo
+      { pInfoConfig = cfg
+      , pInfoInitLedger = extLedgerSt
+      } = protocolInfo ptcl
+
+    startTime = nodeStartTime cfg
+
     securityParam = protocolSecurityParam (configConsensus cfg)
 
     progressThreshold = deriveProgressThreshold
@@ -125,14 +134,13 @@ chairmanTest tracer ptcl runningTime optionalProgressThreshold socketPaths = do
                           runningTime
                           optionalProgressThreshold
 
+    hfSummary = hardForkSummary startTime (configLedger cfg) (ledgerState extLedgerSt)
+
     slotLength =
-      case hardForkShape (Proxy :: Proxy blk) (configLedger cfg) of
+      case hfSummary of
       -- This will need to be generalised to cope with protocols that do
       -- hard forks. This currently expects a single protocol era.
-        Shape eras ->
-          case toList eras of
-            [EraParams{eraSlotLength}] -> eraSlotLength
-            _ -> error "chairmanTest: TODO protocols with hard forks"
+        Summary eras -> eraSlotLength . eraParams . nonEmptyHead $ eras
 
 
 -- | The caller specifies how long to run the chairman for and optionally a

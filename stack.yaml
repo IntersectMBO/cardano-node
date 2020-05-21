@@ -54,22 +54,17 @@ extra-deps:
   - th-lift-instances-0.1.14
   - systemd-2.3.0
 
-    # Cardano-ledger dependencies
-  - git: https://github.com/input-output-hk/cardano-ledger
-    commit: d309449e6c303a9f0dcc8dcf172df6f0b3195ed5
-    subdirs:
-      - cardano-ledger
-      - cardano-ledger/test
-      - crypto
-      - crypto/test
-
   - git: https://github.com/input-output-hk/cardano-ledger-specs
-    commit: 88abb4da0901aaea540dc883d70f8f7a49184551
+    commit: b687fa55369f480cb134c007e534662bef961cea
     subdirs:
       # small-steps
       - semantics/executable-spec
       # cs-ledger
       - byron/ledger/executable-spec
+      - byron/ledger/impl
+      - byron/crypto
+      - byron/ledger/impl/test
+      - byron/crypto/test
       # cs-blockchain
       - byron/chain/executable-spec
       - shelley/chain-and-ledger/dependencies/non-integer
@@ -128,7 +123,7 @@ extra-deps:
     #Ouroboros-network dependencies
 
   - git: https://github.com/input-output-hk/ouroboros-network
-    commit: 9a7c676c387b9e196ca391649c5a19adc6b06fc5
+    commit: 9d9754c9ddcfff82b27c371a545aa4680d86d996
     subdirs:
         - io-sim
         - io-sim-classes
