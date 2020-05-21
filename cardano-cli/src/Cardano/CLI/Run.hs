@@ -40,6 +40,7 @@ data ClientCommand =
 data ClientCommandErrors
   = ByronClientError ByronClientCmdError
   | ShelleyClientError ShelleyClientCmdError
+  deriving Show
   --TODO: We should include an AgnosticClientError
 
 runClientCommand :: ClientCommand -> ExceptT ClientCommandErrors IO ()
