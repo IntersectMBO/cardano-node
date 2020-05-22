@@ -37,9 +37,6 @@ package byron-spec-chain
 package byron-spec-ledger
   tests: False
 
-package canonical-json
-  tests: False
-
 package cardano-crypto
   tests: False
 
@@ -395,12 +392,6 @@ source-repository-package
   tag: 9d9754c9ddcfff82b27c371a545aa4680d86d996
   --sha256: 18ws841jn6hhmm3pqd22lmy20cgnp430dk3s07jzw3d5bpf3i34v
   subdir: Win32-network
-
-source-repository-package
-  type: git
-  location: http://github.com/well-typed/canonical-json
-  tag: ddfe3593b80b5ceb88842bb7a6f2268df75d2c2f
-  --sha256: 02fzn1xskis1lc1pkz0j92v6ipd89ww0k2p3dvwpm3yap5dpnm7k
 
 source-repository-package
   type: git

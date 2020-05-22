@@ -63,7 +63,7 @@ library
                      , bytestring
                      , base16-bytestring
                      , base58-bytestring
-                     , canonical-json
+                     , canonical-json >= 0.6 && < 0.7
                      , cardano-api
                      , cardano-binary
                      , cardano-config
