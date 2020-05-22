@@ -14,6 +14,7 @@ module Cardano.TracingOrphanInstances.Shelley () where
 
 import           Cardano.Prelude
 
+import           Data.Set (Set)
 import qualified Data.Set as Set
 import           Data.Text (Text)
 import qualified Data.Text as Text
@@ -34,6 +35,7 @@ import           Ouroboros.Consensus.Shelley.Ledger
 -- TODO: this should be exposed via Cardano.Api
 import           Shelley.Spec.Ledger.API
 import           Shelley.Spec.Ledger.BlockChain (LastAppliedBlock(..))
+import           Shelley.Spec.Ledger.Coin
 import           Shelley.Spec.Ledger.Keys (KeyHash(..))
 import           Shelley.Spec.Ledger.OCert
 import           Shelley.Spec.Ledger.STS.Bbody
@@ -59,6 +61,7 @@ import           Shelley.Spec.Ledger.STS.Tick
 import           Shelley.Spec.Ledger.STS.Updn
 import           Shelley.Spec.Ledger.STS.Utxo
 import           Shelley.Spec.Ledger.STS.Utxow
+import           Shelley.Spec.Ledger.TxData (TxIn(..))
 
 
 --
@@ -215,7 +218,8 @@ instance Crypto c => ToObject (PredicateFailure (UTXOW c)) where
 instance Crypto c => ToObject (PredicateFailure (UTXO c)) where
   toObject _verb (BadInputsUTxO badInputs) =
     mkObject [ "kind" .= String "BadInputsUTxO"
-             , "badInputs" .= badInputs
+             , "error" .= renderBadInputsUTxOErr badInputs
+
              ]
   toObject _verb (ExpiredUTxO ttl slot) =
     mkObject [ "kind" .= String "ExpiredUTxO"
@@ -241,8 +245,24 @@ instance Crypto c => ToObject (PredicateFailure (UTXO c)) where
   toObject _verb (ValueNotConservedUTxO consumed produced) =
     mkObject [ "kind" .= String "ValueNotConservedUTxO"
              , "consumed" .= consumed
-             , "produced" .= produced ]
+             , "produced" .= produced
+             , "error" .= renderValueNotConservedErr consumed produced
+             ]
   toObject verb (UpdateFailure f) = toObject verb f
+
+renderBadInputsUTxOErr ::  Set (TxIn c) -> Value
+renderBadInputsUTxOErr txIns
+  | Set.null txIns = String "There are no transaction inputs in this transaction."
+  | otherwise = String $ "These transaction inputs do not exist in the UTxO set: " <> unwrapTxIns txIns
+  where
+    unwrapTxIns :: Set (TxIn c) -> Text
+    unwrapTxIns badTxins = textShow . Set.toList $ Set.map (\(TxIn txId' index) -> (txId', index)) badTxins
+
+renderValueNotConservedErr :: Coin -> Coin -> Value
+renderValueNotConservedErr consumed produced
+  | consumed > produced = String "This transaction has consumed more ADA than it has produced."
+  | consumed < produced = String "This transaction has produced more ADA than it has consumed."
+  | otherwise = String "consumed == produced, this is not an error and this error should be impossible."
 
 
 instance ToObject (PredicateFailure (PPUP c)) where
