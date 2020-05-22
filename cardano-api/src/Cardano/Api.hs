@@ -62,6 +62,7 @@ module Cardano.Api
   , LocalStateQueryError (..)
   , renderLocalStateQueryError
   , queryFilteredUTxOFromLocalState
+  , queryLocalLedgerState
   , queryPParamsFromLocalState
   , queryStakeDistributionFromLocalState
 

@@ -358,6 +358,8 @@ pQueryCmd =
           (Opt.info pQueryStakeDistribution $ Opt.progDesc "Get the node's current aggregated stake distribution")
       , Opt.command "version"
           (Opt.info pQueryVersion $ Opt.progDesc "Get the node version")
+      , Opt.command "ledger-state"
+          (Opt.info pQueryLedgerState $ Opt.progDesc "Dump the current state of the node")
       , Opt.command "status"
           (Opt.info pQueryStatus $ Opt.progDesc "Get the status of the node")
       ]
@@ -389,6 +391,9 @@ pQueryCmd =
 
     pQueryVersion :: Parser QueryCmd
     pQueryVersion = QueryVersion <$> parseNodeAddress
+
+    pQueryLedgerState :: Parser QueryCmd
+    pQueryLedgerState = QueryLedgerState <$> pNetwork <*> pMaybeOutputFile
 
     pQueryStatus :: Parser QueryCmd
     pQueryStatus = QueryStatus <$> parseNodeAddress

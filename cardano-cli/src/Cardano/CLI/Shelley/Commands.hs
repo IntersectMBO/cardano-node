@@ -152,6 +152,7 @@ data QueryCmd
   | QueryFilteredUTxO Address Network (Maybe OutputFile)
   | QueryStakeDistribution Network (Maybe OutputFile)
   | QueryVersion NodeAddress
+  | QueryLedgerState Network (Maybe OutputFile)
   | QueryStatus NodeAddress
   deriving (Eq, Show)
 
