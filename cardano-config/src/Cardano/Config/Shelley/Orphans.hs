@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -35,9 +36,12 @@ import           Shelley.Spec.Ledger.Address (Addr(..), serialiseAddr, deseriali
 import           Shelley.Spec.Ledger.BaseTypes
                    (Nonce (..), UnitInterval (..), truncateUnitInterval)
 import           Shelley.Spec.Ledger.Coin (Coin(..))
+import           Shelley.Spec.Ledger.Credential (RewardAcnt (..), StakeCredential, Credential (..))
 import           Shelley.Spec.Ledger.Crypto (Crypto)
 import           Shelley.Spec.Ledger.Keys (KeyHash(..))
+import           Shelley.Spec.Ledger.MetaData (MetaDataHash(..))
 import           Shelley.Spec.Ledger.PParams (PParams, PParams' (..), ProtVer (..))
+import           Shelley.Spec.Ledger.Scripts (ScriptHash (..))
 import           Shelley.Spec.Ledger.TxData (TxId(..), TxIn(..), TxOut(..))
 import           Shelley.Spec.Ledger.UTxO (UTxO(..))
 
@@ -181,6 +185,10 @@ instance Crypto c => ToJSON (TxOut c) where
       , "amount" .= amount
       ]
 
+deriving instance ToJSONKey (StakeCredential c)
+
+deriving instance ToJSON (StakeCredential c)
+
 
 --
 -- Simple newtype wrappers JSON conversion
@@ -217,6 +225,13 @@ instance Aeson.FromJSON SlotLength where
 deriving newtype instance Aeson.ToJSON   SystemStart
 deriving newtype instance Aeson.FromJSON SystemStart
 
+deriving newtype instance ToJSONKey (RewardAcnt c)
+
+deriving newtype instance ToJSON (RewardAcnt c)
+
+deriving newtype instance ToJSON (ScriptHash c)
+
+deriving newtype instance ToJSON (MetaDataHash c)
 
 --
 -- Genesis key hashes JSON conversion, including as map keys

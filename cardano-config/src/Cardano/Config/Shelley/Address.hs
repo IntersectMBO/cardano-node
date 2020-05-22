@@ -5,7 +5,6 @@ module Cardano.Config.Shelley.Address
   , AddressRole(..)
   , ShelleyAddress
   , genAddress
-  , genBootstrapAddress
   , readAddress
   , renderAddressError
   , writeAddress
@@ -14,11 +13,13 @@ module Cardano.Config.Shelley.Address
 import           Cardano.Prelude
 
 import qualified Cardano.Binary as CBOR
+
 import           Control.Monad.Trans.Except.Extra (firstExceptT, newExceptT)
+
 import           Ouroboros.Consensus.Shelley.Protocol.Crypto
                    (TPraosStandardCrypto)
 import           Shelley.Spec.Ledger.Address (Addr (..), toAddr)
-import           Shelley.Spec.Ledger.Keys (KeyPair(..), hashKey)
+import           Shelley.Spec.Ledger.Keys (KeyPair(..))
 
 import           Cardano.Config.Shelley.ColdKeys (genKeyPair)
 import           Cardano.Config.TextView
@@ -53,11 +54,6 @@ genAddress = do
   pure $ toAddr ( KeyPair {sKey = paymentSkey, vKey = paymentVkey}
                 , KeyPair {sKey = stakingSkey, vKey = stakingVkey}
                 )
-
-genBootstrapAddress :: IO ShelleyAddress
-genBootstrapAddress = do
-  (vKey', _) <- genKeyPair
-  pure . AddrBootstrap $ hashKey vKey'
 
 readAddress :: AddressRole -> FilePath -> ExceptT AddressError IO ShelleyAddress
 readAddress role fp = do

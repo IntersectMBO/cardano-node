@@ -1,5 +1,75 @@
 # Changelog for cardano-node
 
+## 1.12.0 -- May 2020
+
+### node changes
+
+- Support initial Shelley protocol parameters in the Shelley genesis (#906)
+- New `--shutdown-on-slot-synced` flag for benchmarking and CI tests (#776)
+- systemd socket activiation support (#856)
+- systemd support on Linux is now optional (#911)
+- Minor improvement to `FetchDecision` tracing output (#863)
+- Improved suppression of frequent repeated log messages (#842)
+- Trace the node uptime (#892)
+- Trace the number of transactions processed and blocks forged (#937, #943)
+- Fix structured tracing of txs within adopted blocs for analysis tools (#993)
+- Log the node's network magic number on startup (#921)
+- Adjust configuration to keep metrics out of the log files (#930)
+- Added OSX (Darwin) support for OS metics in the "live view" (#888)
+- Various live view fixes (#964, #965, #974)
+
+### consensus changes
+- Hard fork support, and related refactoring (#1994, #1999, #2003, #2020,
+  #2021, #2037, #2042, #2057, #2059, #2064, #2065, #2070, #2088, #2093, #2100,
+  #2102, #2103, #2122, #2128, #2034)
+- Improve DB file locking behaviour (#1906, #2031, #2033)
+- Memory leak detection for Shelley transactions (for mempool) (#2010)
+- Tests for the Shelley consensus protocol with d < 1 (#1991, #2105)
+- Split Shelley tests into a separate test library (#2129)
+- Fix the construction of the Shelley initial UTxO (#2038, #2046)
+- Include the Shelley protocol parameters into the Shelley genesis (#2040)
+- Use an improved more realistic KES implementation (#2092)
+- Fix handling of operational certs for KES validity periods (#2092, #2094)
+- Shelley-compliant handling of OCert issue number in chain selection (#2108)
+- Provide interface for node clients needing less configuration (#2050, #2056)
+- Local state query for UTxO, whole or filtered (#2016, #2110)
+- Improve calculation of tx sizes (#2114, #2115, #2116)
+- Fix long thread delays on 32bit systems (#2095)
+
+### ledger changes (Byron)
+- Repository merged with Shelley ledger repository
+- Expose bits of the ledger state needed for the node live view (#772).
+
+### ledger changes (Shelley)
+- Relay nodes' IP/DNS included in pool reg certs (#1391, #1397, #1398, #1413)
+- Make the active slot coefficient not an on-chain updateable parameter (#1394)
+- Simplified specification and implementation of tx size calculation (#1405)
+- Fix tx signing in spec and impl to sign the body hash, not body (1418)
+- Change the definition of total stake slightly (#1428, #1437)
+- Support for minimum utxo outputs, aka non-decaying deposits (#1447)
+- Decide final network Id number assignments in address format (#1465)
+- Document specific crypto choices in the specification appendix (#1389)
+- Local state query for querying the UTxO, all or by address (#1402, #1422)
+- Local state query for dumping whole ledger state for test and debug (#2113)
+- Complete the support for caching serialised representation (#1380, #1408)
+- Improved test coverage (#1387, #1393)
+- Fix handling of the overlay schedule when there are no BFT nodes (#1401)
+- Eliminate use of partial functions (#1407, #1477)
+- Internal improvements to handling of crypto key roles (#1410)
+- Improved details in ledger validation error reports (#1442, #1458, #1463,
+  #1469, #1470, 1476)
+- Refactor PRTCL state transitions for better consensus integration (#1450, #1457)
+- Initial support for Byron addresses (#1473)
+
+### network changes
+- Support for using existing sockets, for systemd socket activation (#1995)
+- Use TCP_NODELAY for faster block relaying (#2069)
+- Add a new cardano-client package to provide a simpler node client API (#2109)
+- Ability to shut down tx submission protocol cleanly by receiving side (#2090)
+- Make protocol handlers depend on the negotiated protocol version (#2090)
+- Split up the new peer selection into more manageable modules (#2018)
+- Refactoring of protocol handshake (#2044)
+
 ## 1.11.0 -- April 2020
 
 ### node changes
