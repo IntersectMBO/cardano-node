@@ -1,5 +1,8 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveTraversable #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE NamedFieldPuns #-}
@@ -24,7 +27,7 @@ import           Control.Tracer
 import qualified Data.ByteString.Char8 as BSC
 import           Data.Either (partitionEithers)
 import           Data.Functor.Contravariant (contramap)
-import           Data.IORef (IORef, newIORef)
+import           Data.IORef (IORef, newIORef, readIORef)
 import qualified Data.List as List (lookup, null)
 import           Data.Proxy (Proxy (..))
 import           Data.Semigroup ((<>))
@@ -77,7 +80,6 @@ import qualified Ouroboros.Consensus.Config as Consensus
 import qualified Ouroboros.Consensus.Cardano as Consensus
 import           Ouroboros.Consensus.Util.Orphans ()
 
-
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 import           Ouroboros.Consensus.Storage.ImmutableDB (ValidationPolicy (..))
 import           Ouroboros.Consensus.Storage.VolatileDB (BlockValidationPolicy (..))
@@ -90,6 +92,7 @@ import           Cardano.Config.Types
 import           Cardano.Node.LocalSocket
                    (nodeLocalSocketAddrInfo, removeStaleLocalSocket)
 import           Cardano.Node.Shutdown
+import           Cardano.Tracing.Peer
 import           Cardano.Tracing.Tracers
 #ifdef UNIX
 import           Cardano.Node.TUI.LiveView
@@ -132,17 +135,26 @@ runNode loggingLayer npm@NodeCLI{protocolFiles} = do
 
     upTimeThread <- Async.async $ traceNodeUpTime (appendName "metrics" trace) =<< getMonotonicTimeNSec
 
+    -- This IORef contains node kernel structure which holds node kernel.
+    -- We use it to extract an actual information about connected peers periodically.
+    nodeKernelData :: IORef (NodeKernelData blk) <- newIORef initialNodeKernelData
+
     case viewmode of
       SimpleView -> do
-
-        handleSimpleNode p trace tracers npm (const $ pure ())
+        peersThread <- Async.async $ handlePeersListSimple trace nodeKernelData
+        handleSimpleNode p trace tracers npm (setNodeKernel nodeKernelData)
         Async.uninterruptibleCancel upTimeThread
+        Async.uninterruptibleCancel peersThread
 
       LiveView   -> do
 #ifdef UNIX
         let c = llConfiguration loggingLayer
         -- check required tracers are turned on
-        let reqtrs = [("TraceBlockFetchDecisions",traceBlockFetchDecisions), ("TraceChainDb",traceChainDB), ("TraceForge",traceForge), ("TraceMempool",traceMempool)]
+        let reqtrs = [ ("TraceBlockFetchDecisions",traceBlockFetchDecisions)
+                     , ("TraceChainDb",traceChainDB)
+                     , ("TraceForge",traceForge)
+                     , ("TraceMempool",traceMempool)
+                     ]
             trsinactive = filter (\(_,f) -> not $ traceEnabled (ncTraceConfig nc) f) reqtrs
         unless (List.null trsinactive) $ do
             putTextLn "for full functional 'LiveView', please turn on the following tracers in the configuration file:"
@@ -164,13 +176,17 @@ runNode loggingLayer npm@NodeCLI{protocolFiles} = do
 
         -- User will see a terminal graphics and will be able to interact with it.
         nodeThread <- Async.async $ handleSimpleNode p trace tracers npm
-                       (setNodeKernel be)
+                       (setNodeKernel nodeKernelData)
         setNodeThread be nodeThread
 
-        void $ Async.waitAny [nodeThread, upTimeThread]
+        peersThread <- Async.async $ handlePeersList trace nodeKernelData be
+
+        void $ Async.waitAny [nodeThread, upTimeThread, peersThread]
 #else
+        peersThread <- Async.async $ handlePeersListSimple trace nodeKernelData
         handleSimpleNode p trace tracers npm (const $ pure ())
         Async.uninterruptibleCancel upTimeThread
+        Async.uninterruptibleCancel peersThread
 #endif
   where
     hostname = do
@@ -189,6 +205,37 @@ traceNodeUpTime tr nodeLaunchTime = do
   traceNamedObject tr (meta, LogValue "upTime" (Nanoseconds upTimeInNs))
   threadDelay 1000000
   traceNodeUpTime tr nodeLaunchTime
+
+#ifdef UNIX
+-- | Every 2 seconds get the current peers list and store it to LiveViewBackend
+--   (if it's activated) and trace it (for example, for forwarding to an exterrnal process).
+handlePeersList
+  :: NFData a
+  => Trace IO Text
+  -> IORef (NodeKernelData blk)
+  -> LiveViewBackend blk a
+  -> IO ()
+handlePeersList tr nodeKernIORef lvbe = forever $ do
+  peers <- getCurrentPeers nodeKernIORef
+  storePeersInLiveView peers lvbe
+  tracePeers tr peers
+  -- We couldn't get these values during initialisation, so pass them now.
+  (capacity, capacityBytes) <- getMempoolData
+  storeMempoolDataInLiveView capacity capacityBytes lvbe
+  threadDelay 2000000 -- 2 seconds.
+ where
+  getMempoolData = do
+    nkd <- readIORef nodeKernIORef
+    return (nkdMempoolCapacity nkd, nkdMempoolCapacityBytes nkd)
+#endif
+
+handlePeersListSimple
+  :: Trace IO Text
+  -> IORef (NodeKernelData blk)
+  -> IO ()
+handlePeersListSimple tr nodeKernIORef = forever $ do
+  getCurrentPeers nodeKernIORef >>= tracePeers tr
+  threadDelay 2000000 -- 2 seconds.
 
 -- | Sets up a simple node, which will run the chain sync protocol and block
 -- fetch protocol, and, if core, will also look at the mempool when trying to

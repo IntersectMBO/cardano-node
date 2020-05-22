@@ -36,6 +36,7 @@ library
                        Cardano.Node.Features.Node
                        Cardano.Node.Run
                        Cardano.Node.Shutdown
+                       Cardano.Tracing.Peer
                        Cardano.Tracing.Tracers
 
   other-modules:       Paths_cardano_node

@@ -22,7 +22,8 @@ module Cardano.Node.TUI.LiveView
     , captureCounters
     , liveViewPostSetup
     , setNodeThread
-    , setNodeKernel
+    , storePeersInLiveView
+    , storeMempoolDataInLiveView
     ) where
 
 import           Cardano.Prelude hiding (modifyMVar_, newMVar, on, readMVar, show)
@@ -35,9 +36,6 @@ import           Control.Concurrent.MVar.Strict (MVar, modifyMVar_, newMVar, rea
 import           Control.DeepSeq (rwhnf)
 import           Control.Monad (forever, void)
 import           Control.Monad.IO.Class (liftIO)
-import qualified Control.Monad.Class.MonadSTM.Strict as STM
-import qualified Data.Map.Strict as Map
-import qualified Data.Set as Set
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Data.Time.Calendar (Day (..))
@@ -77,23 +75,12 @@ import           Cardano.BM.Data.Observable
 import           Cardano.BM.Data.Severity
 import           Cardano.BM.Data.SubTrace
 import           Cardano.BM.Trace
+import           Cardano.Tracing.Peer (Peer (..), ppPeer)
 
 import           Cardano.Config.Types
 import           Cardano.Config.GitRev (gitRev)
-import           Cardano.Slotting.Slot (unSlotNo)
-import qualified Ouroboros.Network.AnchoredFragment as Net
-import qualified Ouroboros.Network.Block as Net
-import           Ouroboros.Network.NodeToClient (LocalConnectionId)
-import           Ouroboros.Network.NodeToNode (RemoteConnectionId)
-import           Ouroboros.Consensus.Block (GetHeader(..))
-import           Ouroboros.Consensus.Ledger.Extended (ExtLedgerState)
-import           Ouroboros.Consensus.Node (NodeKernel(..), remoteAddress)
-import           Ouroboros.Consensus.Mempool.API (MempoolCapacityBytes (..), getCapacity)
 import           Ouroboros.Consensus.NodeId (CoreNodeId (..), NodeId (..))
-import           Ouroboros.Consensus.Storage.ChainDB.API (getCurrentLedger)
 
-import qualified Ouroboros.Network.BlockFetch.ClientState as Net
-import qualified Ouroboros.Network.BlockFetch.ClientRegistry as Net
 import           Paths_cardano_node (version)
 
 import           Text.Printf (printf)
@@ -144,6 +131,9 @@ data LiveViewState blk a = LiveViewState
     , lvsBlockNum             :: !Word64
     , lvsChainDensity         :: !Double
     , lvsBlocksMinted         :: !Word64
+    , lvsLeaderNum            :: !Word64
+    , lvsSlotsMissedNum       :: !Word64
+    , lvsCreatedForksNum      :: !Word64
     , lvsTransactions         :: !Word64
     , lvsPeersConnected       :: !Word64
     , lvsMempool              :: !Word64
@@ -185,30 +175,9 @@ data LiveViewState blk a = LiveViewState
     , lvsMetricsThread        :: !LiveViewThread
     , lvsNodeThread           :: !LiveViewThread
 
-    , lvsNodeKernel           :: !(SMaybe (LVNodeKernel blk))
-    , lvsPeersLastTime        :: !Word64
-    , lvsPeers                :: [LVPeer blk]
+    , lvsPeers                :: [Peer blk]
     , lvsColorTheme           :: !ColorTheme
     } deriving (Generic, NFData, NoUnexpectedThunks)
-
-data SMaybe a
-  = SNothing
-  | SJust !a
-  deriving (Foldable, Functor, Generic, NFData, NoUnexpectedThunks, Traversable)
-
-fromSMaybe :: a -> SMaybe a -> a
-fromSMaybe x SNothing = x
-fromSMaybe _ (SJust x) = x
-
-data LVNodeKernel blk = LVNodeKernel
-  { getNodeKernel :: !(NodeKernel IO RemoteConnectionId LocalConnectionId blk) }
-  deriving (Generic)
-
-instance NoUnexpectedThunks (LVNodeKernel blk) where
-    whnfNoUnexpectedThunks _ _ = pure NoUnexpectedThunks
-
-instance NFData (LVNodeKernel blk) where
-    rnf _ = ()
 
 -- | Type wrapper to simplify derivations.
 newtype LiveViewThread = LiveViewThread
@@ -414,6 +383,33 @@ instance IsEffectuator (LiveViewBackend blk) Text where
 
                                 return $ lvs { lvsTransactions = fromIntegral txsProcessedNum }
 
+                    LogValue "blocksForgedNum" (PureI forgedBlocksNum) ->
+                        modifyMVar_ (getbe lvbe) $ \lvs -> do
+
+                                checkForUnexpectedThunks ["blocksForgedNum LiveViewBackend"] lvs
+
+                                return $ lvs { lvsBlocksMinted = fromIntegral forgedBlocksNum }
+                    LogValue "nodeIsLeaderNum" (PureI leaderNum) ->
+                        modifyMVar_ (getbe lvbe) $ \lvs -> do
+
+                                checkForUnexpectedThunks ["nodeIsLeaderNum LiveViewBackend"] lvs
+
+                                return $ lvs { lvsLeaderNum = fromIntegral leaderNum }
+
+                    LogValue "slotsMissedNum" (PureI missedSlotsNum) ->
+                        modifyMVar_ (getbe lvbe) $ \lvs -> do
+
+                                checkForUnexpectedThunks ["slotsMissedNum LiveViewBackend"] lvs
+
+                                return $ lvs { lvsSlotsMissedNum = fromIntegral missedSlotsNum }
+
+                    LogValue "forksCreatedNum" (PureI createdForksNum) ->
+                        modifyMVar_ (getbe lvbe) $ \lvs -> do
+
+                                checkForUnexpectedThunks ["forksCreatedNum LiveViewBackend"] lvs
+
+                                return $ lvs { lvsCreatedForksNum = fromIntegral createdForksNum }
+
                     _ -> pure ()
 
                 checkForUnexpectedThunks ["Cardano node metrics dispatch LiveViewBackend"] lvbe
@@ -426,39 +422,12 @@ instance IsEffectuator (LiveViewBackend blk) Text where
                         checkForUnexpectedThunks ["density LiveViewBackend"] lvs
 
                         return $ lvs { lvsChainDensity = chainDensity }
-            LogObject _ meta (LogValue "connectedPeers" (PureI npeers)) ->
-                modifyMVar_ (getbe lvbe) $ \lvs ->
-                        let currentTimeInNs = utc2ns (tstamp meta)
-                        in
-                        if currentTimeInNs - lvsPeersLastTime lvs > 2001000000
-                          then do
-                            peers <- fromSMaybe mempty <$> sequence (extractPeers . getNodeKernel <$> lvsNodeKernel lvs)
-                            checkForUnexpectedThunks ["connectedPeers LiveViewBackend"] lvs
-                            return $ lvs { lvsPeersConnected = fromIntegral npeers
-                                        , lvsPeersLastTime  = currentTimeInNs
-                                        , lvsPeers          = peers }
-                          else
-                            return $ lvs { lvsPeersConnected = fromIntegral npeers }
+            LogObject _ _ (LogValue "connectedPeers" (PureI npeers)) ->
+                modifyMVar_ (getbe lvbe) $ \lvs -> do
 
-                      where
-                        tuple3pop :: (a, b, c) -> (a, b)
-                        tuple3pop (a, b, _) = (a, b)
+                        checkForUnexpectedThunks ["connectedPeers LiveViewBackend"] lvs
 
-                        getCandidates
-                          :: STM.StrictTVar IO (Map peer (STM.StrictTVar IO (Net.AnchoredFragment (Header blk))))
-                          -> STM.STM IO (Map peer (Net.AnchoredFragment (Header blk)))
-                        getCandidates var = STM.readTVar var >>= traverse STM.readTVar
-
-                        extractPeers :: NodeKernel IO RemoteConnectionId LocalConnectionId blk
-                                      -> IO [LVPeer blk]
-                        extractPeers kernel = do
-                          peerStates <- fmap tuple3pop <$> (atomically . (>>= traverse Net.readFetchClientState) . Net.readFetchClientsStateVars . getFetchClientRegistry $ kernel)
-                          candidates <- atomically . getCandidates . getNodeCandidates $ kernel
-
-                          pure $ Map.elems . flip Map.mapMaybeWithKey candidates $
-                            \cid af -> Map.lookup cid peerStates <&>
-                            \(status, inflight) -> LVPeer cid af status inflight
-
+                        return $ lvs { lvsPeersConnected = fromIntegral npeers }
             LogObject _ _ (LogValue "blockNum" (PureI slotnum)) ->
                 modifyMVar_ (getbe lvbe) $ \lvs -> do
 
@@ -531,6 +500,9 @@ initLiveViewState = do
                 , lvsBlockNum               = 0
                 , lvsChainDensity           = 0.0
                 , lvsBlocksMinted           = 0
+                , lvsLeaderNum              = 0
+                , lvsSlotsMissedNum         = 0
+                , lvsCreatedForksNum        = 0
                 , lvsTransactions           = 0
                 , lvsPeersConnected         = 0
                 , lvsMempool                = 0
@@ -569,9 +541,7 @@ initLiveViewState = do
                 , lvsUIThread               = LiveViewThread Nothing
                 , lvsMetricsThread          = LiveViewThread Nothing
                 , lvsNodeThread             = LiveViewThread Nothing
-                , lvsNodeKernel             = SNothing
                 , lvsPeers                  = mempty
-                , lvsPeersLastTime          = 0
                 , lvsColorTheme             = DarkTheme
                 }
 
@@ -615,24 +585,15 @@ setNodeThread lvbe nodeThr =
   modifyMVar_ (getbe lvbe) $ \lvs ->
       return $ lvs { lvsNodeThread = LiveViewThread $ Just nodeThr }
 
-setNodeKernel :: (NFData a, HasTxMaxSize (ExtLedgerState blk))
-              => LiveViewBackend blk a
-              -> NodeKernel IO RemoteConnectionId LocalConnectionId blk
-              -> IO ()
-setNodeKernel lvbe nodeKern =
-    modifyMVar_ (getbe lvbe) $ \lvs -> do
-        -- This is correct for Byron and Shelley.
-        MempoolCapacityBytes mempoolCapacity <- STM.atomically $ getCapacity (getMempool nodeKern)
+storePeersInLiveView :: NFData a => [Peer blk] -> LiveViewBackend blk a -> IO ()
+storePeersInLiveView peers lvbe = modifyMVar_ (getbe lvbe) $ \lvs -> pure $ lvs { lvsPeers = peers }
 
-        currentLedger <- STM.atomically $ getCurrentLedger (getChainDB nodeKern)
-
-        pure lvs
-              { lvsNodeKernel = SJust (LVNodeKernel nodeKern)
-              , lvsMempoolCapacity =
-                  fromIntegral $
-                    mempoolCapacity `div` getMaxTxSize currentLedger
-              , lvsMempoolCapacityBytes = fromIntegral mempoolCapacity
-              }
+storeMempoolDataInLiveView :: NFData a => Word64 -> Word64 -> LiveViewBackend blk a -> IO ()
+storeMempoolDataInLiveView capacity capacityBytes lvbe =
+  modifyMVar_ (getbe lvbe) $ \lvs ->
+    pure $ lvs { lvsMempoolCapacity = capacity
+               , lvsMempoolCapacityBytes = capacityBytes
+               }
 
 captureCounters :: NFData a => LiveViewBackend blk a -> Trace IO Text -> IO ()
 captureCounters lvbe trace0 = do
@@ -773,45 +734,6 @@ darkTheme = newTheme (V.white `on` darkMainBG)
 -------------------------------------------------------------------------------
 -- UI drawing
 -------------------------------------------------------------------------------
-
-data LVPeer blk =
-  LVPeer
-  !RemoteConnectionId
-  !(Net.AnchoredFragment (Header blk))
-  !(Net.PeerFetchStatus (Header blk))
-  !(Net.PeerFetchInFlight (Header blk))
-  deriving (Generic)
-
-instance NoUnexpectedThunks (LVPeer blk) where
-    whnfNoUnexpectedThunks _ _ = pure NoUnexpectedThunks
-
-instance NFData (LVPeer blk) where
-    rnf _ = ()
-
-ppPeer :: LVPeer blk -> Text
-ppPeer (LVPeer cid _af status inflight) =
-  Text.pack $ printf "%-15s %-8s %s" (ppCid cid) (ppStatus status) (ppInFlight inflight)
- where
-   ppCid :: RemoteConnectionId -> String
-   ppCid = takeWhile (/= ':') . show . remoteAddress
-
-   ppInFlight :: Net.PeerFetchInFlight header -> String
-   ppInFlight f = printf
-     "%5s  %3d  %5d  %6d"
-     (ppMaxSlotNo $ Net.peerFetchMaxSlotNo f)
-     (Net.peerFetchReqsInFlight f)
-     (Set.size $ Net.peerFetchBlocksInFlight f)
-     (Net.peerFetchBytesInFlight f)
-
-   ppMaxSlotNo :: Net.MaxSlotNo -> String
-   ppMaxSlotNo Net.NoMaxSlotNo = "???"
-   ppMaxSlotNo (Net.MaxSlotNo x) = show (unSlotNo x)
-
-   ppStatus :: Net.PeerFetchStatus header -> String
-   ppStatus Net.PeerFetchStatusShutdown = "shutdown"
-   ppStatus Net.PeerFetchStatusAberrant = "aberrant"
-   ppStatus Net.PeerFetchStatusBusy     = "fetching"
-   ppStatus Net.PeerFetchStatusReady {} = "ready"
 
 drawUI :: LiveViewState blk a -> [Widget ()]
 drawUI p = case lvsScreen p of
@@ -1031,6 +953,10 @@ nodeInfoLabels =
            , padTop (T.Pad 1) $ txt "epoch / slot:"
            ,                    txt "block number:"
            ,                    txt "chain density:"
+           , padTop (T.Pad 1) $ txt "blocks minted:"
+           ,                    txt "node is leader:"
+           ,                    txt "slots missed:"
+           ,                    txt "forks created:"
            , padTop (T.Pad 1) $ txt "TXs processed:"
            , padTop (T.Pad 1) $ txt "peers:"
            ]
@@ -1047,6 +973,10 @@ nodeInfoValues lvs =
            , padTop (T.Pad 1) $ str $ show (lvsEpoch lvs) ++ " / " ++ show (lvsSlotNum lvs)
            ,                    str (show . lvsBlockNum $ lvs)
            ,                    str $ withOneDecimal (lvsChainDensity lvs) ++ " %"
+           , padTop (T.Pad 1) $ str (show . lvsBlocksMinted $ lvs)
+           ,                    str (show . lvsLeaderNum $ lvs)
+           ,                    str (show . lvsSlotsMissedNum $ lvs)
+           ,                    str (show . lvsCreatedForksNum $ lvs)
            , padTop (T.Pad 1) $ str (show . lvsTransactions $ lvs)
            , padTop (T.Pad 1) $ str (show . lvsPeersConnected $ lvs)
            ]
