@@ -32,11 +32,11 @@ let
           "${cfg.package}/bin/${exec}"
           "--config ${realNodeConfigFile}"
           "--database-path ${cfg.databasePath}"
-          "--socket-path ${cfg.socketPath}"
           "--topology ${cfg.topology}"
           "--host-addr ${cfg.hostAddr}"
           "--port ${toString cfg.port}"
-        ] ++ consensusParams.${cfg.nodeConfig.Protocol} ++ cfg.extraArgs ++ cfg.rtsArgs;
+        ] ++ lib.optional (!cfg.systemdSocketActivation) "--socket-path ${cfg.socketPath}"
+          ++ consensusParams.${cfg.nodeConfig.Protocol} ++ cfg.extraArgs ++ cfg.rtsArgs;
     in ''
         choice() { i=$1; shift; eval "echo \''${$((i + 1))}"; }
         echo "Starting ${exec}: ${concatStringsSep "\"\n   echo \"" cmd}"
@@ -232,6 +232,12 @@ in {
         description = ''Local communication socket path.'';
       };
 
+      systemdSocketActivation = mkOption {
+        type = types.bool;
+        default = false;
+        description = ''Use systemd socket activation'';
+      };
+
       dbPrefix = mkOption {
         type = types.str;
         default = "db-${cfg.environment}";
@@ -343,7 +349,9 @@ in {
     ##   2. heartbeat & watchdog functionality
     systemd.services."${systemdServiceName}" = {
       description   = "cardano-node node service";
-      after         = [ "network.target" ];
+      after         = [ "network.target" ]
+        ++ lib.optional cfg.systemdSocketActivation "${systemdServiceName}.socket";
+      requires = lib.mkIf cfg.systemdSocketActivation [ "${systemdServiceName}.socket" ];
       script = cfg.script;
       serviceConfig = {
         User = "cardano-node";
@@ -354,10 +362,25 @@ in {
         # This assumes /var/lib/ is a prefix of cfg.stateDir.
         # This is checked as an assertion below.
         StateDirectory =  lib.removePrefix stateDirBase cfg.stateDir;
+        NonBlocking = lib.mkIf cfg.systemdSocketActivation true;
+        # time to sleep before restarting a service
+        RestartSec = 1;
       };
     } // optionalAttrs (! cfg.instanced) {
       wantedBy = [ "multi-user.target" ];
     };
+
+    systemd.sockets."${systemdServiceName}" = lib.mkIf cfg.systemdSocketActivation {
+      description = "Socket of the ${systemdServiceName} service.";
+      wantedBy = [ "sockets.target" ];
+      socketConfig = {
+        ListenStream = [ cfg.socketPath ];
+        SocketMode = "0660";
+        SocketUser = "cardano-node";
+        SocketGroup = "cardano-node";
+      };
+    };
+
     assertions = [
       {
         assertion = lib.hasPrefix stateDirBase cfg.stateDir;

@@ -116,7 +116,7 @@ data CardanoEnvironment = NoEnvironment
 
 data NodeCLI = NodeCLI
   { nodeMode        :: !NodeProtocolMode
-  , nodeAddr        :: !NodeAddress
+  , nodeAddr        :: !(Maybe NodeAddress)
     -- | Filepath of the configuration yaml file. This file determines
     -- all the configuration settings required for the cardano node
     -- (logging, tracing, protocol, slot length etc)

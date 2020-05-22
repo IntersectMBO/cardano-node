@@ -40,7 +40,7 @@ library
                        Cardano.Tracing.Tracers
 
   other-modules:       Paths_cardano_node
-                       Cardano.Node.LocalSocket
+                       Cardano.Node.Socket
                        Cardano.Tracing.MicroBenchmarking
 
   build-depends:       aeson

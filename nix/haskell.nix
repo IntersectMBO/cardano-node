@@ -21,6 +21,11 @@ let
       src = ../.;
     };
     ghc = buildPackages.haskell-nix.compiler.${compiler};
+    pkg-def-extras = lib.optional stdenv.hostPlatform.isLinux (hackage: {
+      packages = {
+        "systemd" = (((hackage.systemd)."2.2.0").revisions).default;
+      };
+    });
     modules = [
 
       # Allow reinstallation of Win32
@@ -70,6 +75,9 @@ let
         enableLibraryProfiling = true;
         packages.cardano-node.components.exes.cardano-node.enableExecutableProfiling = true;
         profilingDetail = "default";
+      })
+      (lib.optionalAttrs stdenv.hostPlatform.isLinux {
+        packages.cardano-node.flags.systemd = true;
       })
       (lib.optionalAttrs stdenv.hostPlatform.isWindows {
         # Disable cabal-doctest tests by turning off custom setups
