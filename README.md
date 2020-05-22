@@ -93,8 +93,7 @@ Usage: cardano-node --topology FILEPATH --database-path FILEPATH
 
 ## Configuration `.yaml` files
 
-The `--config` flag points to a `.yaml` file that is responsible to configuring the logging & other important settings for the node.
-Some of the more important settings are as follows:
+The `--config` flag points to a `.yaml` file that is responsible to configuring the logging & other important settings for the node. E.g. see the mainnet configuration in this [configuration.yaml](https://github.com/input-output-hk/cardano-node/blob/master/configuration/defaults/byron-mainnet/configuration.yaml). Some of the more important settings are as follows:
 
 `NodeId: 0`  -- Used in mock protocols only to differentiate nodes.
 
