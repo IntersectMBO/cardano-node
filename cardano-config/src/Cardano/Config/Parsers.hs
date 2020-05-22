@@ -84,7 +84,7 @@ nodeMockParser = do
   nodeConfigFp <- parseConfigFile
 
   -- Node Address
-  nAddress <- parseNodeAddress
+  nAddress <- optional parseNodeAddress
 
   validate <- parseValidateDB
   shutdownIPC <- parseShutdownIPC
@@ -125,7 +125,7 @@ nodeRealParser = do
   shelleyCertFile <- optional Shelley.parseOperationalCertFilePath
 
   -- Node Address
-  nAddress <- parseNodeAddress
+  nAddress <- optional parseNodeAddress
 
   -- NodeConfiguration filepath
   nodeConfigFp <- parseConfigFile

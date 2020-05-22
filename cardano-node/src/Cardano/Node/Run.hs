@@ -34,9 +34,6 @@ import           Data.Version (showVersion)
 import           Network.HostName (getHostName)
 import           Network.Socket (AddrInfo, Socket)
 import           System.Directory (canonicalizePath, makeAbsolute)
-#ifdef SYSTEMD
-import           System.Systemd.Daemon (getActivatedSockets)
-#endif
 
 import           Paths_cardano_node (version)
 import           Cardano.BM.Data.Aggregated (Measurable (..))
@@ -87,8 +84,7 @@ import           Cardano.Config.Protocol
                     renderProtocolInstantiationError)
 import           Cardano.Config.Topology
 import           Cardano.Config.Types
-import           Cardano.Node.LocalSocket
-                   (nodeLocalSocketAddrInfo, removeStaleLocalSocket)
+import           Cardano.Node.Socket (gatherConfiguredSockets, SocketOrSocketInfo(..))
 import           Cardano.Node.Shutdown
 import           Cardano.Tracing.Tracers
 #ifdef UNIX
@@ -215,12 +211,9 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
 
   createTracers npm nc trace tracer cfg
 
-  sds_m <- systemdSockets
-
-  addrs <- case sds_m of
-                Nothing      -> Right <$> nodeAddressInfo npm
-                Just (_,[])  -> Right <$> nodeAddressInfo npm
-                Just (_,sds) -> return $ Left sds
+  (publicSocketsOrAddrs,
+   localSocketOrPath) <- either throwIO return =<<
+                           runExceptT (gatherConfiguredSockets nc npm)
 
   dbPath <- canonDbPath npm
 
@@ -228,12 +221,10 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
 
   nt <- either (\err -> panic $ "Cardano.Node.Run.readTopologyFile: " <> err) pure eitherTopology
 
-  let myLocalAddr = case sds_m of
-                      Nothing     -> Right $ nodeLocalSocketAddrInfo nc npm
-                      Just (sd,_) -> Left sd
-
   let diffusionArguments :: DiffusionArguments
-      diffusionArguments = createDiffusionArguments addrs myLocalAddr ipProducers dnsProducers
+      diffusionArguments = createDiffusionArguments publicSocketsOrAddrs
+                                                    localSocketOrPath
+                                                    ipProducers dnsProducers
       diffusionTracers :: DiffusionTracers
       diffusionTracers = createDiffusionTracers nodeTracers
       dnsProducers :: [DnsSubscriptionTarget]
@@ -241,11 +232,6 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
       ipProducers :: IPSubscriptionTarget
       ipProducers = ipSubscriptionTargets ipProducerAddrs
       (dnsProducerAddrs, ipProducerAddrs) = producerAddresses nt
-
-  removedStaleSocket <- runExceptT $ removeStaleLocalSocket nc npm
-  case removedStaleSocket of
-    Left err   -> putTextLn (show err) >> exitFailure
-    Right addr -> return addr
 
   withShutdownHandling npm trace $ \sfds ->
    Node.run
@@ -386,19 +372,24 @@ canonDbPath npm@NodeCLI{databaseFile, nodeMode} = do
   canonicalizePath =<< makeAbsolute dbFp
 
 createDiffusionArguments
-  :: Either [Socket] [AddrInfo]
+  :: SocketOrSocketInfo [Socket] [AddrInfo]
    -- ^ Either a list of sockets provided by systemd or addresses to bind to
    -- for NodeToNode communication.
-  -> Either Socket FilePath
+  -> SocketOrSocketInfo Socket SocketPath
   -- ^ Either a SOCKET_UNIX socket provided by systemd or a path for
   -- NodeToClient communication.
   -> IPSubscriptionTarget
   -> [DnsSubscriptionTarget]
   -> DiffusionArguments
-createDiffusionArguments addrs myLocalAddr ipProducers dnsProducers =
+createDiffusionArguments publicSocketsOrAddrs localSocketOrPath
+                         ipProducers dnsProducers =
   DiffusionArguments
-    { daAddresses    = addrs
-    , daLocalAddress = myLocalAddr
+    { daAddresses    = case publicSocketsOrAddrs of
+                         ActualSocket sockets -> Left sockets
+                         SocketInfo addrs     -> Right addrs
+    , daLocalAddress = case localSocketOrPath of
+                        ActualSocket socket          -> Left socket
+                        SocketInfo (SocketPath path) -> Right path
     , daIpProducers  = ipProducers
     , daDnsProducers = dnsProducers
     -- TODO: these limits are arbitrary at the moment;
@@ -449,18 +440,3 @@ producerAddresses nt =
                        Just na -> Right na
                        Nothing -> Left ra
 
--- |
--- Possibly return a SOCKET_UNIX socket for NodeToClient communication
--- and a list of SOCKET_STREAM sockets for NodeToNode communication.
--- The SOCKEt_UNIX socket should be defined first in the `.socket` systemd file.
-systemdSockets :: IO (Maybe (Socket, [Socket]))
-#ifdef SYSTEMD
-systemdSockets = do
-  sds_m <- getActivatedSockets
-  case sds_m of
-       Nothing       -> return Nothing
-       Just []       -> return Nothing
-       Just (sd:sds) -> return $ Just (sd, sds)
-#else
-systemdSockets = return Nothing
-#endif

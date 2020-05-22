@@ -6,7 +6,6 @@ module Cardano.Config.Topology
   , NodeHostAddress(..)
   , NodeSetup(..)
   , RemoteAddress(..)
-  , nodeAddressInfo
   , nodeAddressToSockAddr
   , readTopologyFile
   , remoteAddressToNodeAddress
@@ -23,8 +22,7 @@ import qualified Data.ByteString as BS
 import qualified Data.IP as IP
 import qualified Data.Text as T
 import           Text.Read (readMaybe)
-import           Network.Socket (AddrInfo (..), AddrInfoFlag (..), PortNumber, SockAddr (..),
-                    SocketType (..), defaultHints, getAddrInfo)
+import           Network.Socket (PortNumber, SockAddr (..))
 
 import           Cardano.Config.Types
 
@@ -41,14 +39,6 @@ nodeAddressToSockAddr (NodeAddress addr port) =
     Just (IP.IPv4 ipv4) -> SockAddrInet port $ IP.toHostAddress ipv4
     Just (IP.IPv6 ipv6) -> SockAddrInet6 port 0 (IP.toHostAddress6 ipv6) 0
     Nothing             -> SockAddrInet port 0 -- Could also be any IPv6 addr
-
-nodeAddressInfo :: NodeCLI -> IO [AddrInfo]
-nodeAddressInfo NodeCLI{nodeAddr = NodeAddress hostAddr port} = do
-  let hints = defaultHints {
-                addrFlags = [AI_PASSIVE, AI_ADDRCONFIG]
-              , addrSocketType = Stream
-              }
-  getAddrInfo (Just hints) (fmap show $ unNodeHostAddress hostAddr) (Just $ show port)
 
 -- | Domain name with port number
 --

@@ -593,11 +593,14 @@ liveViewPostSetup lvbe ncli nc = do
 
             }
  where
+    --TODO: this is meaningless. Nodes do not have ids. The port number is not
+    -- an ID. We don't even have a port number that we know if we're given our
+    -- listening socket via systemd socket activation.
     nodeId :: Text
     nodeId =
       case nodeMode ncli of
         MockProtocolMode -> namenum (ncNodeId nc)
-        RealProtocolMode -> Text.pack $ "Port: " <> show (naPort $ nodeAddr ncli)
+        RealProtocolMode -> Text.pack $ "Port: " <> show (naPort <$> nodeAddr ncli)
 
     namenum :: Maybe NodeId -> Text
     namenum mnid =
