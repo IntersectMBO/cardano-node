@@ -260,8 +260,8 @@ renderBadInputsUTxOErr txIns
 
 renderValueNotConservedErr :: Coin -> Coin -> Value
 renderValueNotConservedErr consumed produced
-  | consumed > produced = String "This transaction has consumed more ADA than it has produced."
-  | consumed < produced = String "This transaction has produced more ADA than it has consumed."
+  | consumed > produced = String "This transaction has consumed more Lovelace than it has produced."
+  | consumed < produced = String "This transaction has produced more Lovelace than it has consumed."
   | otherwise = String "consumed == produced, this is not an error and this error should be impossible."
 
 
