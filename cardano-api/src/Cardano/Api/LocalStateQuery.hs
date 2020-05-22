@@ -7,6 +7,7 @@
 module Cardano.Api.LocalStateQuery
   ( LocalStateQueryError (..)
   , renderLocalStateQueryError
+  , queryLocalLedgerState
   , queryFilteredUTxOFromLocalState
   , Ledger.UTxO(..)
   , queryPParamsFromLocalState
@@ -19,7 +20,7 @@ import           Cardano.Prelude hiding (atomically, option, threadDelay)
 
 import           Cardano.Api.Types (Network, toNetworkMagic, Address (..), ByronAddress, ShelleyAddress)
 import           Cardano.Api.TxSubmit.Types (textShow)
-
+import           Cardano.Binary (decodeFull)
 import           Cardano.BM.Data.Tracer (ToLogObject (..), nullTracer)
 import           Cardano.BM.Trace (Trace, appendName, logInfo)
 
@@ -53,7 +54,7 @@ import           Ouroboros.Consensus.Node.Run (RunNode)
 import           Ouroboros.Consensus.Shelley.Ledger
 import           Ouroboros.Consensus.Shelley.Protocol.Crypto (TPraosStandardCrypto)
 
-import           Ouroboros.Network.Block (Point)
+import           Ouroboros.Network.Block (Point, Serialised (..))
 import           Ouroboros.Network.Mux
                    ( AppType(..), OuroborosApplication(..),
                      MuxPeer(..), RunMiniProtocol(..))
@@ -70,6 +71,7 @@ import           Ouroboros.Network.Protocol.LocalStateQuery.Type (AcquireFailure
 import qualified Shelley.Spec.Ledger.PParams as Ledger (PParams)
 import qualified Shelley.Spec.Ledger.UTxO as Ledger (UTxO(..))
 import qualified Shelley.Spec.Ledger.Delegation.Certificates as Ledger (PoolDistr(..))
+import qualified Shelley.Spec.Ledger.LedgerState as Ledger
 
 -- | An error that can occur while querying a node's local state.
 data LocalStateQueryError
@@ -148,6 +150,29 @@ queryStakeDistributionFromLocalState network socketPath point = do
       network
       socketPath
       pointAndQuery
+
+queryLocalLedgerState
+  :: blk ~ ShelleyBlock TPraosStandardCrypto
+  => Network
+  -> SocketPath
+  -> Point blk
+  -> ExceptT LocalStateQueryError IO (Either LByteString (Ledger.LedgerState TPraosStandardCrypto))
+queryLocalLedgerState network socketPath point = do
+  lbs <- fmap unSerialised <$>
+            newExceptT . liftIO $
+              queryNodeLocalState
+                nullTracer
+                (pClientInfoCodecConfig . protocolClientInfo $ mkNodeClientProtocolTPraos)
+                network
+                socketPath
+                (point, GetCBOR GetCurrentLedgerState) -- Get CBOR-in-CBOR version
+  -- If decode as a LedgerState fails we return the ByteString so we can do a generic
+  -- CBOR decode.
+  case decodeFull lbs of
+    Right lstate -> pure $ Right lstate
+    Left _ -> pure $ Left lbs
+
+-- -------------------------------------------------------------------------------------------------
 
 -- | Establish a connection to a node and execute the provided query
 -- via the local state query protocol.

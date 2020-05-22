@@ -20,18 +20,21 @@ import           Numeric (showEFloat)
 import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT)
 
-import           Cardano.Crypto.Hash.Class (getHashBytesAsHex)
-
 import           Cardano.Api
                    (Address, LocalStateQueryError, Network(..), getLocalTip,
-                    queryFilteredUTxOFromLocalState, queryPParamsFromLocalState,
-                    queryStakeDistributionFromLocalState)
+                    queryFilteredUTxOFromLocalState, queryLocalLedgerState,
+                    queryPParamsFromLocalState, queryStakeDistributionFromLocalState)
 
 import           Cardano.CLI.Environment (EnvSocketError, readEnvSocketPath)
 import           Cardano.CLI.Helpers
 import           Cardano.CLI.Shelley.Parsers (OutputFile (..), QueryCmd (..))
 
+import           Cardano.Config.Shelley.Orphans ()
 import           Cardano.Config.Shelley.Protocol (mkNodeClientProtocolTPraos)
+
+import           Cardano.Crypto.Hash.Class (getHashBytesAsHex)
+
+import           Data.Aeson (ToJSON)
 
 import           Ouroboros.Consensus.Cardano (protocolClientInfo)
 import           Ouroboros.Consensus.Node.ProtocolInfo (pClientInfoCodecConfig)
@@ -45,8 +48,7 @@ import           Shelley.Spec.Ledger.TxData (TxId (..), TxIn (..), TxOut (..))
 import           Shelley.Spec.Ledger.UTxO (UTxO (..))
 import           Shelley.Spec.Ledger.PParams (PParams)
 import           Shelley.Spec.Ledger.Delegation.Certificates (PoolDistr(..))
-import           Shelley.Spec.Ledger.Keys
-                   (Hash, KeyHash(..), KeyRole (..), VerKeyVRF)
+import           Shelley.Spec.Ledger.Keys (Hash, KeyHash(..), KeyRole (..), VerKeyVRF)
 
 
 data ShelleyQueryCmdError
@@ -67,6 +69,8 @@ runQueryCmd cmd =
       runQueryFilteredUTxO addr network mOutFile
     QueryStakeDistribution network mOutFile ->
       runQueryStakeDistribution network mOutFile
+    QueryLedgerState network mOutFile ->
+      runQueryLedgerState network mOutFile
     _ -> liftIO $ putStrLn $ "runQueryCmd: " ++ show cmd
 
 runQueryProtocolParameters
@@ -109,10 +113,39 @@ runQueryFilteredUTxO addr network mOutFile = do
   sockPath <- firstExceptT ShelleyQueryEnvVarSocketErr readEnvSocketPath
   let ptclClientInfo = pClientInfoCodecConfig . protocolClientInfo $ mkNodeClientProtocolTPraos
   tip <- liftIO $ withIOManager $ \iomgr ->
-    getLocalTip iomgr ptclClientInfo network sockPath
+            getLocalTip iomgr ptclClientInfo network sockPath
   filteredUtxo <- firstExceptT NodeLocalStateQueryError $
-    queryFilteredUTxOFromLocalState network sockPath (Set.singleton addr) (getTipPoint tip)
+            queryFilteredUTxOFromLocalState network sockPath (Set.singleton addr) (getTipPoint tip)
   writeFilteredUTxOs mOutFile filteredUtxo
+
+runQueryLedgerState
+  :: Network
+  -> Maybe OutputFile
+  -> ExceptT ShelleyQueryCmdError IO ()
+runQueryLedgerState network mOutFile = do
+  sockPath <- firstExceptT ShelleyQueryEnvVarSocketErr readEnvSocketPath
+  let ptclClientInfo = pClientInfoCodecConfig . protocolClientInfo $ mkNodeClientProtocolTPraos
+  tip <- liftIO $ withIOManager $ \iomgr ->
+            getLocalTip iomgr ptclClientInfo network sockPath
+  els <- firstExceptT NodeLocalStateQueryError $
+                      queryLocalLedgerState network sockPath (getTipPoint tip)
+  case els of
+    Right lstate -> maybePrintFileJson mOutFile lstate
+    Left lbs -> do
+      liftIO $ putTextLn "Verion mismatch beteen node and consensus, so dumping this as generic CBOR."
+      firstExceptT ShelleyHelperError $ pPrintCBOR lbs
+
+-- -------------------------------------------------------------------------------------------------
+
+maybePrintFileJson :: ToJSON a => Maybe OutputFile -> a -> ExceptT ShelleyQueryCmdError IO ()
+maybePrintFileJson mOutputFile x = do
+  let jsonX = encodePretty x
+  case mOutputFile of
+    Just (OutputFile fpath) ->
+      handleIOExceptT (ShelleyHelperError . IOError' fpath)
+          $ LBS.writeFile fpath jsonX
+    Nothing -> liftIO $ LBS.putStrLn jsonX
+
 
 writeFilteredUTxOs :: Maybe OutputFile -> UTxO TPraosStandardCrypto -> ExceptT ShelleyQueryCmdError IO ()
 writeFilteredUTxOs mOutFile utxo =
@@ -155,27 +188,27 @@ runQueryStakeDistribution network mOutFile = do
   let ptclClientInfo = pClientInfoCodecConfig . protocolClientInfo $ mkNodeClientProtocolTPraos
   tip <- liftIO $ withIOManager $ \iomgr ->
     getLocalTip iomgr ptclClientInfo network sockPath
-  stakeDistr <- firstExceptT NodeLocalStateQueryError $
+  stakeDist <- firstExceptT NodeLocalStateQueryError $
     queryStakeDistributionFromLocalState network sockPath (getTipPoint tip)
-  writeStakeDistribution mOutFile stakeDistr
+  writeStakeDistribution mOutFile stakeDist
 
 writeStakeDistribution :: Maybe OutputFile
                        -> PoolDistr TPraosStandardCrypto
                        -> ExceptT ShelleyQueryCmdError IO ()
-writeStakeDistribution (Just (OutputFile outFile)) (PoolDistr stakeDistr) =
+writeStakeDistribution (Just (OutputFile outFile)) (PoolDistr stakeDist) =
     handleIOExceptT (ShelleyHelperError . IOError' outFile) $
-      LBS.writeFile outFile (encodePretty stakeDistr)
+      LBS.writeFile outFile (encodePretty stakeDist)
 
-writeStakeDistribution Nothing stakeDistr =
-    liftIO $ printStakeDistribution stakeDistr
+writeStakeDistribution Nothing stakeDist =
+    liftIO $ printStakeDistribution stakeDist
 
 printStakeDistribution :: PoolDistr TPraosStandardCrypto -> IO ()
-printStakeDistribution (PoolDistr stakeDistr) = do
+printStakeDistribution (PoolDistr stakeDist) = do
     Text.putStrLn title
     putStrLn $ replicate (Text.length title + 2) '-'
     sequence_
       [ putStrLn $ showStakeDistr poolId stakeFraction vrfKeyId
-      | (poolId, (stakeFraction, vrfKeyId)) <- Map.toList stakeDistr ]
+      | (poolId, (stakeFraction, vrfKeyId)) <- Map.toList stakeDist ]
   where
     title :: Text
     title =

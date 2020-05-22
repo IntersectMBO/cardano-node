@@ -42,6 +42,7 @@ library
                        Cardano.CLI.Byron.Vote
 
                        Cardano.CLI.Shelley.Commands
+                       Cardano.CLI.Shelley.KeyGen
                        Cardano.CLI.Shelley.Parsers
                        Cardano.CLI.Shelley.Run
                        Cardano.CLI.Shelley.Run.Address
@@ -53,7 +54,6 @@ library
                        Cardano.CLI.Shelley.Run.Query
                        Cardano.CLI.Shelley.Run.Genesis
                        Cardano.CLI.Shelley.Run.TextView
-                       Cardano.CLI.Shelley.KeyGen
 
   other-modules:       Paths_cardano_cli
 
