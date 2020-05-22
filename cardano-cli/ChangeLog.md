@@ -8,7 +8,7 @@
 - New commands for Shelley  address construction (#870, #872, #887)
 - New Shelley transaction sign command (#894, #900)
 - New Shelley transaction submission command (#904)
-- New node query commands (#880, #884, #903, #918, #920, #933, #994)
+- New node query commands (#880, #884, #903, #918, #920, #933, #994, #1008, #1016)
 - New commands to create stake address certificates (#890, #919, #967)
 - New commands to create stake pool certificates (#922)
 - New system commands to update genesis delgations and create MIR certs (#895)
