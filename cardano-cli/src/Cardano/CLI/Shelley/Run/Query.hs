@@ -12,7 +12,6 @@ import           Data.Aeson.Encode.Pretty (encodePretty)
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import qualified Data.Map as Map
-import qualified Data.Set as Set
 import qualified Data.Text as Text
 import qualified Data.Text.IO as Text
 import           Numeric (showEFloat)
@@ -21,9 +20,9 @@ import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT)
 
 import           Cardano.Api
-                   (Address, LocalStateQueryError, Network(..), getLocalTip,
-                    queryFilteredUTxOFromLocalState, queryLocalLedgerState,
-                    queryPParamsFromLocalState, queryStakeDistributionFromLocalState)
+                   (LocalStateQueryError, Network(..), QueryFilter, getLocalTip,
+                    queryLocalLedgerState, queryPParamsFromLocalState,
+                    queryStakeDistributionFromLocalState, queryUTxOFromLocalState)
 
 import           Cardano.CLI.Environment (EnvSocketError, readEnvSocketPath)
 import           Cardano.CLI.Helpers
@@ -65,12 +64,12 @@ runQueryCmd cmd =
       runQueryProtocolParameters network mOutFile
     QueryTip network ->
       runQueryTip network
-    QueryFilteredUTxO addr network mOutFile ->
-      runQueryFilteredUTxO addr network mOutFile
     QueryStakeDistribution network mOutFile ->
       runQueryStakeDistribution network mOutFile
     QueryLedgerState network mOutFile ->
       runQueryLedgerState network mOutFile
+    QueryUTxO qFilter network mOutFile ->
+      runQueryUTxO qFilter network mOutFile
     _ -> liftIO $ putStrLn $ "runQueryCmd: " ++ show cmd
 
 runQueryProtocolParameters
@@ -104,18 +103,19 @@ runQueryTip network = do
     getLocalTip iomgr ptclClientInfo network sockPath
   liftIO $ putTextLn (show tip)
 
-runQueryFilteredUTxO
-  :: Address
+
+runQueryUTxO
+  :: QueryFilter
   -> Network
   -> Maybe OutputFile
   -> ExceptT ShelleyQueryCmdError IO ()
-runQueryFilteredUTxO addr network mOutFile = do
+runQueryUTxO qfilter network mOutFile = do
   sockPath <- firstExceptT ShelleyQueryEnvVarSocketErr readEnvSocketPath
   let ptclClientInfo = pClientInfoCodecConfig . protocolClientInfo $ mkNodeClientProtocolTPraos
   tip <- liftIO $ withIOManager $ \iomgr ->
             getLocalTip iomgr ptclClientInfo network sockPath
   filteredUtxo <- firstExceptT NodeLocalStateQueryError $
-            queryFilteredUTxOFromLocalState network sockPath (Set.singleton addr) (getTipPoint tip)
+    queryUTxOFromLocalState network sockPath qfilter (getTipPoint tip)
   writeFilteredUTxOs mOutFile filteredUtxo
 
 runQueryLedgerState
@@ -226,4 +226,3 @@ printStakeDistribution (PoolDistr stakeDist) = do
 -- TODO: we could show the VRF id, but it will then not fit in 80 cols
 --      , show vrfKeyId
         ]
-

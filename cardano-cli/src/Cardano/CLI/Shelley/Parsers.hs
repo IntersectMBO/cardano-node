@@ -13,6 +13,7 @@ import           Control.Monad.Fail (fail)
 import qualified Data.ByteString.Char8 as C8
 import qualified Data.IP as IP
 import           Data.Ratio (approxRational)
+import qualified Data.Set as Set
 import qualified Data.Text as Text
 import           Data.Time.Clock (UTCTime)
 import           Data.Time.Format (defaultTimeLocale, iso8601DateFormat, parseTimeOrError)
@@ -352,10 +353,11 @@ pQueryCmd =
           (Opt.info pQueryProtocolParameters $ Opt.progDesc "Get the node's current protocol parameters")
       , Opt.command "tip"
           (Opt.info pQueryTip $ Opt.progDesc "Get the node's current tip (slot no, hash, block no)")
-      , Opt.command "filtered-utxo"
-          (Opt.info pQueryFilteredUTxO $ Opt.progDesc "Get the node's current UTxO filtered by address")
       , Opt.command "stake-distribution"
           (Opt.info pQueryStakeDistribution $ Opt.progDesc "Get the node's current aggregated stake distribution")
+      , Opt.command "utxo"
+          (Opt.info pQueryUTxO $ Opt.progDesc "Get the node's current UTxO with the option of \
+                                              \filtering by address(es)")
       , Opt.command "version"
           (Opt.info pQueryVersion $ Opt.progDesc "Get the node version")
       , Opt.command "ledger-state"
@@ -376,10 +378,10 @@ pQueryCmd =
     pQueryTip :: Parser QueryCmd
     pQueryTip = QueryTip <$> pNetwork
 
-    pQueryFilteredUTxO :: Parser QueryCmd
-    pQueryFilteredUTxO =
-      QueryFilteredUTxO
-        <$> pHexEncodedAddress
+    pQueryUTxO :: Parser QueryCmd
+    pQueryUTxO =
+      QueryUTxO
+        <$> pQueryFilter
         <*> pNetwork
         <*> pMaybeOutputFile
 
@@ -894,13 +896,22 @@ pTxOutCount =
       <> Opt.help "The number of transaction outputs."
       )
 
-pHexEncodedAddress :: Parser Address
-pHexEncodedAddress =
-  Opt.option (Opt.maybeReader (addressFromHex . Text.pack))
+pQueryFilter :: Parser QueryFilter
+pQueryFilter = pAddresses <|> pure NoFilter
+  where
+    pAddresses :: Parser QueryFilter
+    pAddresses = FilterByAddress . Set.fromList <$> some pFilterByHexEncodedAddress
+
+pFilterByHexEncodedAddress :: Parser Address
+pFilterByHexEncodedAddress =
+  Opt.option maybeHexEncodedAddressReader
     (  Opt.long "address"
     <> Opt.metavar "ADDRESS"
-    <> Opt.help "A hex-encoded Cardano address."
+    <> Opt.help "Filter by Cardano address(es) (hex-encoded)."
     )
+
+maybeHexEncodedAddressReader :: Opt.ReadM Address
+maybeHexEncodedAddressReader = Opt.maybeReader (addressFromHex . Text.pack)
 
 pAddress :: Parser Text
 pAddress =
