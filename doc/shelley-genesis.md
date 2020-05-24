@@ -912,7 +912,7 @@ We will share this `configuration.yaml` file between both nodes we run.
 
 The topology files tell nodes which other nodes to talk to. We will need one
 for each node we run. For this demo we will be running two nodes on the same
-machine, one one port 3001 and the other on 3002. We will configure them to
+machine, one on port 3001 and the other on 3002. We will configure them to
 talk to each other.
 
 So create the following two files as `example/node1/topology.json` and
