@@ -95,6 +95,8 @@ let
         packages.terminal-size.components.library.build-tools = lib.mkForce [];
         packages.network.components.library.build-tools = lib.mkForce [];
       })
+      # FIXME: HACK
+      { packages.ouroboros-consensus.patches = [ ./patches/no-fear-2.patch ]; }
     ];
     # TODO add flags to packages (like cs-ledger) so we can turn off tests that will
     # not build for windows on a per package bases (rather than using --disable-tests).

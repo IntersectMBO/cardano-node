@@ -1,0 +1,47 @@
+From 9ae88361e49ed08eaaadf6ff0a33303ddb8799bf Mon Sep 17 00:00:00 2001
+From: Moritz Angermann <moritz.angermann@gmail.com>
+Date: Sun, 24 May 2020 18:49:33 +0800
+Subject: [PATCH] Update NodeKernel.hs
+
+---
+ .../src/Ouroboros/Consensus/NodeKernel.hs     | 21 -------------------
+ 1 file changed, 21 deletions(-)
+
+diff --git a/src/Ouroboros/Consensus/NodeKernel.hs b/src/Ouroboros/Consensus/NodeKernel.hs
+index 65e9d69884..880a002b22 100644
+--- a/src/Ouroboros/Consensus/NodeKernel.hs
++++ b/src/Ouroboros/Consensus/NodeKernel.hs
+@@ -51,7 +51,6 @@ import qualified Ouroboros.Network.TxSubmission.Mempool.Reader as MempoolReader
+ import           Ouroboros.Consensus.Block
+ import           Ouroboros.Consensus.BlockchainTime
+ import           Ouroboros.Consensus.Config
+-import           Ouroboros.Consensus.Forecast
+ import           Ouroboros.Consensus.HeaderValidation
+ import           Ouroboros.Consensus.Ledger.Abstract
+ import           Ouroboros.Consensus.Ledger.Extended
+@@ -401,26 +400,6 @@ forkBlockProduction maxBlockSizeOverride IS{..} BlockProduction{..} =
+               exitEarly
+         let unticked = ledgerState extLedger
+
+-        -- Check if we are not too far ahead of the chain
+-        --
+-        -- TODO: This check is not strictly necessary, but omitting it breaks
+-        -- the consensus tests at the moment.
+-        -- <https://github.com/input-output-hk/ouroboros-network/issues/1941>
+-        case runExcept $ forecastFor
+-                           (ledgerViewForecastAtTip (configLedger cfg) unticked)
+-                           currentSlot of
+-          Left err -> do
+-            -- There are so many empty slots between the tip of our chain and
+-            -- the current slot that we cannot get an ledger view anymore
+-            -- In principle, this is no problem; we can still produce a block
+-            -- (we use the ticked ledger state). However, we probably don't
+-            -- /want/ to produce a block in this case; we are most likely
+-            -- missing a blocks on our chain.
+-            trace $ TraceNoLedgerView currentSlot err
+-            exitEarly
+-          Right _ ->
+-            return ()
+-
+         -- Tick the ledger state for the 'SlotNo' we're producing a block for
+         let ticked = applyChainTick (configLedger cfg) currentSlot unticked
