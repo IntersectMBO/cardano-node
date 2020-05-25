@@ -101,7 +101,7 @@ pAddressCmd =
       , Opt.command "key-hash"
           (Opt.info pAddressKeyHash $ Opt.progDesc "Print the hash of an address key to stdout.")
       , Opt.command "build"
-          (Opt.info pAddressBuild $ Opt.progDesc "Build a Shelley payment addres, with optional delegation to a stake address.")
+          (Opt.info pAddressBuild $ Opt.progDesc "Build a Shelley payment address, with optional delegation to a stake address.")
       , Opt.command "build-multisig"
           (Opt.info pAddressBuildMultiSig $ Opt.progDesc "Build a Shelley payment multi-sig address.")
       , Opt.command "info"
