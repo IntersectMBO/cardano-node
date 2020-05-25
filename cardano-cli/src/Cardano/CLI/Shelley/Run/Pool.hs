@@ -34,7 +34,7 @@ data ShelleyPoolCmdError
 runPoolCmd :: PoolCmd -> ExceptT ShelleyPoolCmdError IO ()
 runPoolCmd (PoolRegistrationCert sPvkey vrfVkey pldg pCost pMrgn rwdVerFp ownerVerFps relays outfp) =
   runStakePoolRegistrationCert sPvkey vrfVkey pldg pCost pMrgn rwdVerFp ownerVerFps relays outfp
-runPoolCmd (PoolRetirmentCert sPvkeyFp retireEpoch outfp) =
+runPoolCmd (PoolRetirementCert sPvkeyFp retireEpoch outfp) =
   runStakePoolRetirementCert sPvkeyFp retireEpoch outfp
 runPoolCmd cmd = liftIO $ putStrLn $ "runPoolCmd: " ++ show cmd
 
