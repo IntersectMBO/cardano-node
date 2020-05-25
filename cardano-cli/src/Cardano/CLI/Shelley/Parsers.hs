@@ -330,7 +330,7 @@ pPoolCmd =
       , Opt.command "registration-certificate"
           (Opt.info pStakePoolRegistrationCert $ Opt.progDesc "Create a stake pool registration certificate")
       , Opt.command "deregistration-certificate"
-          (Opt.info pStakePoolRetirmentCert $ Opt.progDesc "Create a stake pool deregistration certificate")
+          (Opt.info pStakePoolRetirementCert $ Opt.progDesc "Create a stake pool deregistration certificate")
       ]
   where
     pPoolRegster :: Parser PoolCmd
@@ -1036,9 +1036,9 @@ pStakePoolRegistrationCert =
   <*> pure []
   <*> pOutputFile
 
-pStakePoolRetirmentCert :: Parser PoolCmd
-pStakePoolRetirmentCert =
-  PoolRetirmentCert
+pStakePoolRetirementCert :: Parser PoolCmd
+pStakePoolRetirementCert =
+  PoolRetirementCert
     <$> pPoolStakingVerificationKeyFile
     <*> pEpochNo
     <*> pOutputFile

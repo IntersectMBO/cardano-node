@@ -135,7 +135,7 @@ data PoolCmd
       [ShelleyStakePoolRelay]
       -- ^ Stake pool relays.
       OutputFile
-  | PoolRetirmentCert
+  | PoolRetirementCert
       VerificationKeyFile
       -- ^ Stake pool verification key.
       EpochNo
