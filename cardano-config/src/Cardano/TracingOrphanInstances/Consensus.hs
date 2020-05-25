@@ -203,8 +203,8 @@ instance Condense (HeaderHash blk)
   trTransformer = trStructured
 
 
-instance (ToObject (GenTx blk), ToJSON (GenTxId blk), Show (ApplyTxErr blk))
-      => Transformable Text IO (TraceEventMempool blk) where
+instance ( ToObject (ApplyTxErr blk), Show (ApplyTxErr blk), ToObject (GenTx blk),
+           ToJSON (GenTxId blk)) => Transformable Text IO (TraceEventMempool blk) where
   trTransformer = trStructured
 
 
@@ -270,7 +270,7 @@ instance ( Condense (HeaderHash blk)
          , LedgerSupportsProtocol blk
          , ToObject (Header blk))
       => Transformable Text IO (ChainDB.TraceEvent blk) where
-  trTransformer = trStructuredText 
+  trTransformer = trStructuredText
 
 
 instance (Condense (HeaderHash blk), LedgerSupportsProtocol blk)
@@ -337,7 +337,7 @@ instance (Condense (HeaderHash blk), LedgerSupportsProtocol blk)
         ChainDB.NoBlocksToCopyToImmDB -> \_o ->
           "There are no blocks to copy to the ImmutableDB"
       ChainDB.TraceGCEvent ev -> case ev of
-        ChainDB.PerformedGC slot -> \_o -> 
+        ChainDB.PerformedGC slot -> \_o ->
           "Performed a garbage collection for " <> condenseT slot
         ChainDB.ScheduledGC slot _difft -> \_o ->
           "Scheduled a garbage collection for " <> condenseT slot
@@ -704,18 +704,19 @@ instance Condense (HeaderHash blk)
                , "rolledBackBlock" .= (String (pack $ showPoint verb pt)) ]
 
 
-instance (ToObject (GenTx blk), ToJSON (GenTxId blk), Show (ApplyTxErr blk))
-      => ToObject (TraceEventMempool blk) where
+instance ( Show (ApplyTxErr blk), ToObject (ApplyTxErr blk), ToObject (GenTx blk),
+           ToJSON (GenTxId blk)
+         ) => ToObject (TraceEventMempool blk) where
   toObject verb (TraceMempoolAddedTx tx _mpSzBefore mpSzAfter) =
     mkObject
       [ "kind" .= String "TraceMempoolAddedTx"
       , "tx" .= toObject verb tx
       , "mempoolSize" .= toObject verb mpSzAfter
       ]
-  toObject verb (TraceMempoolRejectedTx tx err mpSz) =
+  toObject verb (TraceMempoolRejectedTx tx txApplyErr mpSz) =
     mkObject
       [ "kind" .= String "TraceMempoolRejectedTx"
-      , "err" .= show err --TODO: provide a proper ToObject instance
+      , "err" .= toObject verb txApplyErr
       , "tx" .= toObject verb tx
       , "mempoolSize" .= toObject verb mpSz
       ]
@@ -733,14 +734,12 @@ instance (ToObject (GenTx blk), ToJSON (GenTxId blk), Show (ApplyTxErr blk))
       , "mempoolSize" .= toObject verb mpSz
       ]
 
-
 instance ToObject MempoolSize where
   toObject _verb MempoolSize{msNumTxs, msNumBytes} =
     mkObject
       [ "numTxs" .= msNumTxs
       , "bytes" .= msNumBytes
       ]
-
 
 instance ( Condense (HeaderHash blk)
          , HasTxId tx
@@ -822,5 +821,3 @@ instance ( Condense (HeaderHash blk)
 instance ToObject (TraceLocalTxSubmissionServerEvent blk) where
   toObject _verb _ =
     mkObject [ "kind" .= String "TraceLocalTxSubmissionServerEvent" ]
-
-

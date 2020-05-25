@@ -1,12 +1,14 @@
-{-# LANGUAGE StandaloneDeriving         #-}
 {-# LANGUAGE DerivingStrategies         #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE EmptyCase                  #-}
+{-# LANGUAGE FlexibleInstances          #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE StandaloneDeriving         #-}
 
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.TracingOrphanInstances.Common
-  ( 
+  (
     -- * ToObject and helpers
     ToObject(..)
   , TracingVerbosity(..)
@@ -35,8 +37,8 @@ module Cardano.TracingOrphanInstances.Common
   , mkLOMeta
   ) where
 
+import           Data.Aeson (FromJSON(..), ToJSON(..), Value (..), (.=))
 import           Data.Void (Void)
-import           Data.Aeson (ToJSON(..), FromJSON(..), toJSON, Value (..), (.=))
 
 import           Cardano.BM.Tracing
                    (ToObject(..), TracingVerbosity(..), Transformable(..),
@@ -62,11 +64,9 @@ deriving newtype instance FromJSON SlotNo
 deriving newtype instance ToJSON   EpochNo
 deriving newtype instance FromJSON EpochNo
 
-
 -- | A bit of a weird one, but needed because some of the very general
 -- consensus interfaces are sometimes instantaited to 'Void', when there are
 -- no cases needed.
 --
 instance ToObject Void where
   toObject _verb x = case x of {}
-

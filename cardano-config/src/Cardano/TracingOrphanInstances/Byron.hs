@@ -27,6 +27,7 @@ import           Ouroboros.Consensus.Util.Condense (condense)
 import           Cardano.Chain.Block
                   (ChainValidationError(..), ABlockOrBoundaryHdr(..),
                    AHeader(..), delegationCertificate)
+import           Cardano.Chain.Byron.API (ApplyMempoolPayloadErr(..))
 import           Cardano.Chain.Delegation (delegateVK)
 import           Cardano.Crypto.Signing (VerificationKey)
 
@@ -37,6 +38,28 @@ import           Ouroboros.Consensus.Byron.Ledger (TxId(..))
 -- | instances of @ToObject@
 --
 -- NOTE: this list is sorted by the unqualified name of the outermost type.
+
+instance ToObject ApplyMempoolPayloadErr where
+  toObject _verb (MempoolTxErr utxoValidationErr) =
+    mkObject
+      [ "kind" .= String "MempoolTxErr"
+      , "error" .= String (show utxoValidationErr)
+      ]
+  toObject _verb (MempoolDlgErr delegScheduleError) =
+    mkObject
+      [ "kind" .= String "MempoolDlgErr"
+      , "error" .= String (show delegScheduleError)
+      ]
+  toObject _verb (MempoolUpdateProposalErr iFaceErr) =
+    mkObject
+      [ "kind" .= String "MempoolUpdateProposalErr"
+      , "error" .= String (show iFaceErr)
+      ]
+  toObject _verb (MempoolUpdateVoteErr iFaceErrr) =
+    mkObject
+      [ "kind" .= String "MempoolUpdateVoteErr"
+      , "error" .= String (show iFaceErrr)
+      ]
 
 instance ToObject (GenTx ByronBlock) where
   toObject verb tx =
@@ -143,4 +166,3 @@ instance ToObject ByronOtherHeaderEnvelopeError where
       [ "kind" .= String "UnexpectedEBBInSlot"
       , "slot" .= slot
       ]
-

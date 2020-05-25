@@ -418,6 +418,7 @@ type TraceConstraints blk =
     , Show (Header blk)
     , Show (TxId (GenTx blk))
     , ToJSON   (TxId (GenTx blk))
+    , ToObject (ApplyTxErr blk)
     , ToObject (GenTx blk)
     , ToObject (Header blk)
     , ToObject (LedgerError blk)
