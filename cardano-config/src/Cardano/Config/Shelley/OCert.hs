@@ -122,7 +122,7 @@ signOperationalCertificate hotKESVerKey signingKey counter kesPeriod' =
 
 data OperationalCertError =
        ReadOperationalCertError  !TextViewFileError
-     | WriteOpertaionalCertError !TextViewFileError
+     | WriteOperationalCertError !TextViewFileError
      | ReadOperationalCertIssueCounterError  !TextViewFileError
      | WriteOpertaionalCertIssueCounterError !TextViewFileError
     deriving Show
@@ -133,7 +133,7 @@ renderOperationalCertError err =
   case err of
     ReadOperationalCertError rErr ->
       "Operational certificate read error: " <> renderTextViewFileError rErr
-    WriteOpertaionalCertError wErr ->
+    WriteOperationalCertError wErr ->
       "Operational certificate write error:" <> renderTextViewFileError wErr
     ReadOperationalCertIssueCounterError rErr ->
         "Operational certificate issue counter read error: "
@@ -152,7 +152,7 @@ readOperationalCert fp = do
 writeOperationalCert :: FilePath -> Cert -> VerKey
                      -> ExceptT OperationalCertError IO ()
 writeOperationalCert fp oCert vkey =
-    firstExceptT WriteOpertaionalCertError $ newExceptT $
+    firstExceptT WriteOperationalCertError $ newExceptT $
       writeTextViewEncodedFile encodeOperationalCert fp (oCert, vkey)
 
 
