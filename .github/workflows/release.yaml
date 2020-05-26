@@ -3,7 +3,7 @@ name: Post Release
 on:
   release:
     types:
-      - created
+      - published
 
 jobs:
     test-job:
