@@ -11,6 +11,10 @@ import qualified Data.Set as Set
 import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, newExceptT)
 
+import qualified Data.ByteString.Char8 as BS
+
+import           Cardano.Api (ShelleyVerificationKeyHashStakePool)
+
 import           Cardano.Api (ApiError(..), ShelleyCoin, ShelleyStakePoolMargin,
                    ShelleyStakePoolRelay, StakingVerificationKey (..),
                    mkShelleyStakingCredential, readStakingVerificationKey,
@@ -18,13 +22,15 @@ import           Cardano.Api (ApiError(..), ShelleyCoin, ShelleyStakePoolMargin,
                    shelleyRetireStakePool, textShow, writeCertificate)
 
 import qualified Shelley.Spec.Ledger.Address as Shelley
-import           Shelley.Spec.Ledger.Keys (hashKey, hashVerKeyVRF)
+import           Shelley.Spec.Ledger.Keys (KeyHash (..), hashKey, hashVerKeyVRF)
 import qualified Shelley.Spec.Ledger.Slot as Shelley
 
 import           Cardano.Config.Shelley.ColdKeys
 import           Cardano.Config.Shelley.VRF
 
 import           Cardano.CLI.Shelley.Commands
+
+import qualified Cardano.Crypto.Hash.Class as Crypto
 
 data ShelleyPoolCmdError
   = ShelleyPoolReadStakeVerKeyError !FilePath !ApiError
@@ -55,6 +61,7 @@ runPoolCmd (PoolRegistrationCert sPvkey vrfVkey pldg pCost pMrgn rwdVerFp ownerV
   runStakePoolRegistrationCert sPvkey vrfVkey pldg pCost pMrgn rwdVerFp ownerVerFps relays outfp
 runPoolCmd (PoolRetirementCert sPvkeyFp retireEpoch outfp) =
   runStakePoolRetirementCert sPvkeyFp retireEpoch outfp
+runPoolCmd (PoolGetId sPvkey) = runPoolId sPvkey
 runPoolCmd cmd = liftIO $ putStrLn $ "runPoolCmd: " ++ show cmd
 
 
@@ -144,3 +151,10 @@ runStakePoolRetirementCert (VerificationKeyFile sPvkeyFp) retireEpoch (OutputFil
     let retireCert = shelleyRetireStakePool stakePoolVerKey retireEpoch
 
     firstExceptT (ShelleyPoolWriteRetirementCertError outfp) . newExceptT $ writeCertificate outfp retireCert
+
+runPoolId :: VerificationKeyFile -> ExceptT ShelleyPoolCmdError IO ()
+runPoolId (VerificationKeyFile vkeyPath) = do
+    stakePoolVerKey <- firstExceptT (ShelleyPoolReadStakePoolVerKeyError vkeyPath) $
+                        readVerKey (OperatorKey StakePoolOperatorKey) vkeyPath
+    let KeyHash hash = hashKey stakePoolVerKey :: ShelleyVerificationKeyHashStakePool
+    liftIO $ BS.putStrLn $ Crypto.getHashBytesAsHex hash
