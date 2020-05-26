@@ -14,6 +14,7 @@ module Cardano.TracingOrphanInstances.Shelley () where
 
 import           Cardano.Prelude
 
+import qualified Data.HashMap.Strict as HMS
 import           Data.Set (Set)
 import qualified Data.Set as Set
 import           Data.Text (Text)
@@ -88,10 +89,12 @@ instance Crypto c => ToObject (Header (ShelleyBlock c)) where
         , "blockNo" .= condense (blockNo b)
 --      , "delegate" .= condense (headerSignerVk h)
         ]
+instance Crypto c => ToObject (ApplyTxError c) where
+  toObject verb (ApplyTxError predicateFailures) =
+    HMS.unions $ map (toObject verb) predicateFailures
 
-
--- This instance is completly insane. We realy need to have lists as a generic
--- instance.
+-- This instance is completely insane. We really need to have lists as a
+-- generic instance.
 instance ToObject (PredicateFailure r) => ToObject [[PredicateFailure r]] where
   toObject verb fss =
     mkObject
@@ -114,13 +117,13 @@ instance Crypto c =>  ToObject (ShelleyLedgerError c) where
 instance Crypto c => ToObject (PredicateFailure (CHAIN c)) where
   toObject _verb (HeaderSizeTooLargeCHAIN hdrSz maxHdrSz) =
     mkObject [ "kind" .= String "HeaderSizeTooLarge"
-             , "headerSize" .= textShow hdrSz
-             , "maxHeaderSize" .= textShow maxHdrSz
+             , "headerSize" .= hdrSz
+             , "maxHeaderSize" .= maxHdrSz
              ]
   toObject _verb (BlockSizeTooLargeCHAIN blkSz maxBlkSz) =
     mkObject [ "kind" .= String "BlockSizeTooLarge"
-             , "blockSize" .= textShow blkSz
-             , "maxBlockSize" .= textShow maxBlkSz
+             , "blockSize" .= blkSz
+             , "maxBlockSize" .= maxBlkSz
              ]
   toObject _verb (ObsoleteNodeCHAIN currentPtcl supportedPtcl) =
     mkObject [ "kind" .= String "ObsoleteNode"
@@ -141,25 +144,25 @@ instance Crypto c => ToObject (PredicateFailure (CHAIN c)) where
 instance Crypto c => ToObject (PrtlSeqFailure c) where
   toObject _verb (WrongSlotIntervalPrtclSeq (SlotNo lastSlot) (SlotNo currSlot)) =
     mkObject [ "kind" .= String "WrongSlotInterval"
-             , "Conflicting slot numbers - Last slot number: " .= lastSlot
-             , "Current slot number: " .= currSlot
+             , "lastSlot" .= lastSlot
+             , "currentSlot" .= currSlot
              ]
   toObject _verb (WrongBlockNoPrtclSeq lab currentBlockNo) =
     mkObject [ "kind" .= String "WrongBlockNo"
-             , "Last applied block number" .= showLastAppBlockNo lab
-             , "Current block number" .= (String . textShow $ unBlockNo currentBlockNo)
+             , "lastAppliedBlockNo" .= showLastAppBlockNo lab
+             , "currentBlockNo" .= (String . textShow $ unBlockNo currentBlockNo)
              ]
   toObject _verb (WrongBlockSequencePrtclSeq lastAppliedHash currentHash) =
     mkObject [ "kind" .= String "WrongBlockSequence"
-             , "Last applied block hash: " .= (String $ textShow lastAppliedHash)
-             , "Current block hash: " .= (String $ textShow currentHash)
+             , "lastAppliedBlockHash" .= (String $ textShow lastAppliedHash)
+             , "currentBlockHash" .= (String $ textShow currentHash)
              ]
 
 instance Crypto c =>  ToObject (PredicateFailure (BBODY c)) where
   toObject _verb (WrongBlockBodySizeBBODY actualBodySz claimedBodySz) =
     mkObject [ "kind" .= String "WrongBlockBodySizeBBODY"
-             , "actualBlockBodySize" .= textShow actualBodySz
-             , "claimedBlockBodySize" .= textShow claimedBodySz
+             , "actualBlockBodySize" .= actualBodySz
+             , "claimedBlockBodySize" .= claimedBodySz
              ]
   toObject _verb (InvalidBodyHashBBODY actualHash claimedHash) =
     mkObject [ "kind" .= String "InvalidBodyHashBBODY"
@@ -181,11 +184,11 @@ instance Crypto c =>  ToObject (PredicateFailure (LEDGER c)) where
 instance Crypto c => ToObject (PredicateFailure (UTXOW c)) where
   toObject _verb (InvalidWitnessesUTXOW wits) =
     mkObject [ "kind" .= String "InvalidWitnessesUTXOW"
-             , "invalid witnesses" .= (String $ show wits)
+             , "invalidWitnesses" .= map textShow wits
              ]
   toObject _verb (MissingVKeyWitnessesUTXOW wits) =
     mkObject [ "kind" .= String "MissingVKeyWitnessesUTXOW"
-             , "missing witnesses" .= (String $ show wits)
+             , "missingWitnesses" .= wits
              ]
   toObject _verb (MissingScriptWitnessesUTXOW missingScripts) =
     mkObject [ "kind" .= String "MissingScriptWitnessesUTXOW"
@@ -214,12 +217,11 @@ instance Crypto c => ToObject (PredicateFailure (UTXOW c)) where
              , "fullMetaDataHash" .= fullMetaDataHash
              ]
 
-
 instance Crypto c => ToObject (PredicateFailure (UTXO c)) where
   toObject _verb (BadInputsUTxO badInputs) =
     mkObject [ "kind" .= String "BadInputsUTxO"
+             , "badInputs" .= badInputs
              , "error" .= renderBadInputsUTxOErr badInputs
-
              ]
   toObject _verb (ExpiredUTxO ttl slot) =
     mkObject [ "kind" .= String "ExpiredUTxO"
@@ -252,18 +254,14 @@ instance Crypto c => ToObject (PredicateFailure (UTXO c)) where
 
 renderBadInputsUTxOErr ::  Set (TxIn c) -> Value
 renderBadInputsUTxOErr txIns
-  | Set.null txIns = String "There are no transaction inputs in this transaction."
-  | otherwise = String $ "These transaction inputs do not exist in the UTxO set: " <> unwrapTxIns txIns
-  where
-    unwrapTxIns :: Set (TxIn c) -> Text
-    unwrapTxIns badTxins = textShow . Set.toList $ Set.map (\(TxIn txId' index) -> (txId', index)) badTxins
+  | Set.null txIns = String "The transaction contains no inputs."
+  | otherwise = String "The transaction contains inputs that do not exist in the UTxO set."
 
 renderValueNotConservedErr :: Coin -> Coin -> Value
 renderValueNotConservedErr consumed produced
   | consumed > produced = String "This transaction has consumed more Lovelace than it has produced."
   | consumed < produced = String "This transaction has produced more Lovelace than it has consumed."
-  | otherwise = String "consumed == produced, this is not an error and this error should be impossible."
-
+  | otherwise = String "Impossible: Somehow this error has occurred in spite of the transaction being balanced."
 
 instance ToObject (PredicateFailure (PPUP c)) where
   toObject _verb (NonGenesisUpdatePPUP proposalKeys genesisKeys) =
@@ -304,38 +302,38 @@ instance ToObject (PredicateFailure (DELPL c)) where
 instance ToObject (PredicateFailure (DELEG c)) where
   toObject _verb (StakeKeyAlreadyRegisteredDELEG alreadyRegistered) =
     mkObject [ "kind" .= String "StakeKeyAlreadyRegisteredDELEG"
-             , "Credential" .= String (textShow alreadyRegistered)
+             , "credential" .= String (textShow alreadyRegistered)
              , "error" .= String "Staking credential already registered"
              ]
   toObject _verb (StakeKeyNotRegisteredDELEG notRegistered) =
     mkObject [ "kind" .= String "StakeKeyNotRegisteredDELEG"
-             , "Credential" .= String (textShow notRegistered)
+             , "credential" .= String (textShow notRegistered)
              , "error" .= String "Staking credential not registered"
              ]
   toObject _verb (StakeKeyNonZeroAccountBalanceDELEG remBalance) =
     mkObject [ "kind" .= String "StakeKeyNonZeroAccountBalanceDELEG"
-             , "Stake key remaining balance, if it exists" .= String (textShow remBalance)
+             , "remainingBalance" .= remBalance
              ]
   toObject _verb (StakeDelegationImpossibleDELEG unregistered) =
     mkObject [ "kind" .= String "StakeDelegationImpossibleDELEG"
-             , "Unregistered credential" .= String (textShow unregistered)
+             , "credential" .= String (textShow unregistered)
              , "error" .= String "Cannot delegate this stake credential because it is not registered"
              ]
   toObject _verb WrongCertificateTypeDELEG =
     mkObject [ "kind" .= String "WrongCertificateTypeDELEG" ]
   toObject _verb (GenesisKeyNotInpMappingDELEG (KeyHash genesisKeyHash)) =
     mkObject [ "kind" .= String "GenesisKeyNotInpMappingDELEG"
-             , "Unknown genesis key hash" .= String (textShow genesisKeyHash)
+             , "unknownKeyHash" .= String (textShow genesisKeyHash)
              , "error" .= String "This genesis key is not in the delegation mapping"
              ]
   toObject _verb (DuplicateGenesisDelegateDELEG (KeyHash genesisKeyHash)) =
     mkObject [ "kind" .= String "DuplicateGenesisDelegateDELEG"
-             , "Duplicate genesis key hash" .= String (textShow genesisKeyHash)
+             , "duplicateKeyHash" .= String (textShow genesisKeyHash)
              , "error" .= String "This genesis key has already been delegated to"
              ]
   toObject _verb (InsufficientForInstantaneousRewardsDELEG neededMirAmount reserves) =
     mkObject [ "kind" .= String "InsufficientForInstantaneousRewardsDELEG"
-             , "neededMirAmount" .= neededMirAmount
+             , "neededAmount" .= neededMirAmount
              , "reserves" .= reserves
              ]
   toObject _verb (MIRCertificateTooLateinEpochDELEG currSlot boundSlotNo) =
@@ -348,14 +346,14 @@ instance ToObject (PredicateFailure (DELEG c)) where
 instance ToObject (PredicateFailure (POOL c)) where
   toObject _verb (StakePoolNotRegisteredOnKeyPOOL (KeyHash unregStakePool)) =
     mkObject [ "kind" .= String "StakePoolNotRegisteredOnKeyPOOL"
-             , "Stake pool key hash" .= String (textShow unregStakePool)
+             , "unregisteredKeyHash" .= String (textShow unregStakePool)
              , "error" .= String "This stake pool key hash is unregistered"
              ]
   toObject _verb (StakePoolRetirementWrongEpochPOOL currentEpoch intendedRetireEpoch maxRetireEpoch) =
     mkObject [ "kind" .= String "StakePoolRetirementWrongEpochPOOL"
-             , "Current epoch" .= String (textShow currentEpoch)
-             , "Intended retirement epoch" .= String (textShow intendedRetireEpoch)
-             , "Maximum epoch for retirement" .= String (textShow maxRetireEpoch)
+             , "currentEpoch" .= String (textShow currentEpoch)
+             , "intendedRetirementEpoch" .= String (textShow intendedRetireEpoch)
+             , "maxEpochForRetirement" .= String (textShow maxRetireEpoch)
              ]
 -- Apparently this should never happen accoring to the shelley exec spec
   toObject _verb (WrongCertificateTypePOOL index) =
@@ -405,8 +403,8 @@ instance ToObject (PredicateFailure (SNAP c)) where
 instance ToObject (PredicateFailure (NEWPP c)) where
   toObject _verb (UnexpectedDepositPot outstandingDeposits depositPot) =
     mkObject [ "kind" .= String "UnexpectedDepositPot"
-             , "Outstanding deposits" .= String (textShow outstandingDeposits)
-             , "Deposit pot" .= String (textShow depositPot)
+             , "outstandingDeposits" .= String (textShow outstandingDeposits)
+             , "depositPot" .= String (textShow depositPot)
              ]
 
 
@@ -426,37 +424,37 @@ instance Crypto c => ToObject (PredicateFailure (PRTCL c)) where
 instance Crypto c => ToObject (PredicateFailure (OVERLAY c)) where
   toObject _verb (UnknownGenesisKeyOVERLAY (KeyHash genKeyHash)) =
     mkObject [ "kind" .= String "UnknownGenesisKeyOVERLAY"
-             , "Unknown genesis key hash" .= (String $ textShow genKeyHash)
+             , "unknownKeyHash" .= (String $ textShow genKeyHash)
              ]
   toObject _verb (VRFKeyBadLeaderValue seedNonce (SlotNo currSlotNo) prevHashNonce leaderElecVal) =
     mkObject [ "kind" .= String "VRFKeyBadLeaderValueOVERLAY"
-             , "Seed nonce" .= (String $ textShow seedNonce)
-             , "Current slot number" .= (String $ textShow currSlotNo)
-             , "Previous hash as nonce" .= (String $ textShow prevHashNonce)
-             , "Leader election value" .= (String $ textShow leaderElecVal)
+             , "seedNonce" .= (String $ textShow seedNonce)
+             , "currentSlot" .= (String $ textShow currSlotNo)
+             , "previousHashAsNonce" .= (String $ textShow prevHashNonce)
+             , "leaderElectionValue" .= (String $ textShow leaderElecVal)
              ]
   toObject _verb (VRFKeyBadNonce seedNonce (SlotNo currSlotNo) prevHashNonce blockNonce) =
     mkObject [ "kind" .= String "VRFKeyBadNonceOVERLAY"
-             , "Seed nonce" .= (String $ textShow seedNonce)
-             , "Current slot number" .= (String $ textShow currSlotNo)
-             , "Previous hash as nonce" .= (String $ textShow prevHashNonce)
-             , "Block nonce" .= (String $ textShow blockNonce)
+             , "seedNonce" .= (String $ textShow seedNonce)
+             , "currentSlot" .= (String $ textShow currSlotNo)
+             , "previousHashAsNonce" .= (String $ textShow prevHashNonce)
+             , "blockNonce" .= (String $ textShow blockNonce)
              ]
   toObject _verb (VRFKeyWrongVRFKey regVRFKeyHash unregVRFKeyHash) =
     mkObject [ "kind" .= String "VRFKeyWrongVRFKeyOVERLAY"
-             , "registered/correct VRF key hash (exists in stake pool distribution)" .= (String $ textShow regVRFKeyHash )
-             , "unregistered/incorrect VRF key hash (does not exist in stake pool distribution)" .= (String $ textShow unregVRFKeyHash)
+             , "registeredVRFKeHash" .= (String $ textShow regVRFKeyHash )
+             , "unregisteredVRFKeyHash" .= (String $ textShow unregVRFKeyHash)
              ]
   --TODO: Pipe slot number with VRFKeyUnknown
   toObject _verb (VRFKeyUnknown (KeyHash kHash)) =
     mkObject [ "kind" .= String "VRFKeyUnknownOVERLAY"
-             , "key hash" .= (String $ textShow kHash)
+             , "keyHash" .= (String $ textShow kHash)
              ]
   toObject _verb (VRFLeaderValueTooBig leadElecVal weightOfDelegPool actSlotCoefff) =
     mkObject [ "kind" .= String "VRFLeaderValueTooBigOVERLAY"
-             , "Leader election value" .= (String $ textShow leadElecVal)
-             , "Weight of delegation pool" .= (String $ textShow weightOfDelegPool)
-             , "Active slot coefficient" .= (String $ textShow actSlotCoefff)
+             , "leaderElectionValue" .= (String $ textShow leadElecVal)
+             , "delegationPoolWeight" .= (String $ textShow weightOfDelegPool)
+             , "activeSlotCoefficient" .= (String $ textShow actSlotCoefff)
              ]
   toObject _verb (NotActiveSlotOVERLAY notActiveSlotNo) =
     -- TODO: Elaborate on NotActiveSlot error
@@ -473,40 +471,40 @@ instance Crypto c => ToObject (PredicateFailure (OVERLAY c)) where
 instance ToObject (PredicateFailure (OCERT c)) where
   toObject _verb (KESBeforeStartOCERT (KESPeriod oCertstart) (KESPeriod current)) =
     mkObject [ "kind" .= String "KESBeforeStartOCERT"
-             , "Operational certificate KES start period" .= String (textShow oCertstart)
-             , "KES current period" .= String (textShow current)
+             , "opCertKESStartPeriod" .= String (textShow oCertstart)
+             , "currentKESPeriod" .= String (textShow current)
              , "error" .= String "Your operational certificate's KES start period \
                                  \is before the KES current period."
              ]
   toObject _verb (KESAfterEndOCERT (KESPeriod current) (KESPeriod oCertstart) maxKESEvolutions) =
     mkObject [ "kind" .= String "KESAfterEndOCERT"
-             , "KES current period" .= String (textShow current)
-             , "Operational certificate KES start period" .= String (textShow oCertstart)
-             , "Max KES Evolutions" .= String  (textShow maxKESEvolutions)
+             , "currentKESPeriod" .= String (textShow current)
+             , "opCertKESStartPeriod" .= String (textShow oCertstart)
+             , "maxKESEvolutions" .= String  (textShow maxKESEvolutions)
              , "error" .= String "The operational certificate's KES start period is \
                                  \greater than the max number of KES + the KES current period"
              ]
   toObject _verb (KESPeriodWrongOCERT lastKEScounterUsed currentKESCounter) =
     mkObject [ "kind" .= String "KESPeriodWrongOCERT"
-             , "Current KES counter" .= String (textShow currentKESCounter)
-             , "Last KES counter" .= String (textShow lastKEScounterUsed)
+             , "currentKESCounter" .= String (textShow currentKESCounter)
+             , "lastKESCounter" .= String (textShow lastKEScounterUsed)
              , "error" .= String "The operational certificate's last KES counter is greater \
                                  \than the current KES counter."
              ]
   toObject _verb (InvalidSignatureOCERT oCertCounter oCertKESStartPeriod) =
     mkObject [ "kind" .= String "InvalidSignatureOCERT"
-             , "Operational certificate KES start period" .= String (textShow oCertKESStartPeriod)
-             , "Operational certificate counter" .= String (textShow oCertCounter)
+             , "opCertKESStartPeriod" .= String (textShow oCertKESStartPeriod)
+             , "opCertCounter" .= String (textShow oCertCounter)
              ]
   toObject _verb (InvalidKesSignatureOCERT currKESPeriod startKESPeriod expectedKESEvolutions err) =
     mkObject [ "kind" .= String "InvalidKesSignatureOCERT"
-             , "Operational certificate KES start period" .= String (textShow startKESPeriod)
-             , "Operational certificate KES current period" .= String (textShow currKESPeriod)
-             , "Operational certificate expected KES evolutions" .= String (textShow expectedKESEvolutions)
-             , "error"  .= err ]
+             , "opCertKESStartPeriod" .= String (textShow startKESPeriod)
+             , "opCertKESCurrentPeriod" .= String (textShow currKESPeriod)
+             , "opCertExpectedKESEvolutions" .= String (textShow expectedKESEvolutions)
+             , "error" .= err ]
   toObject _verb (NoCounterForKeyHashOCERT (KeyHash stakePoolKeyHash)) =
     mkObject [ "kind" .= String "NoCounterForKeyHashOCERT"
-             , "Stake pool key hash" .= String (textShow stakePoolKeyHash)
+             , "stakePoolKeyHash" .= String (textShow stakePoolKeyHash)
              , "error" .= String "A counter was not found for this stake pool key hash"
              ]
 

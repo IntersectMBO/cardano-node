@@ -101,6 +101,7 @@ library
                      , transformers
                      , transformers-except
                      , typed-protocols
+                     , unordered-containers
                      , yaml
 
   default-language:    Haskell2010

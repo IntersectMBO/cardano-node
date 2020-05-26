@@ -15,18 +15,23 @@ import           Prelude (String)
 import           Cardano.Prelude hiding (local)
 
 import           Control.Monad.Trans.Except.Extra (handleIOExceptT)
-import           System.Directory (removeFile)
-import           System.IO.Error (isDoesNotExistError)
+import           Network.Socket (Socket, AddrInfo (..), AddrInfoFlag (..),
+                    SocketType (..), defaultHints, getAddrInfo)
 
 import           Cardano.Config.Types
+
+#if defined(mingw32_HOST_OS)
+#else
+import           System.Directory (removeFile)
+import           System.IO.Error (isDoesNotExistError)
+#endif
 
 #ifdef SYSTEMD
 import           System.Systemd.Daemon (getActivatedSockets)
 #endif
 
 
-import           Network.Socket (Socket, AddrInfo (..), AddrInfoFlag (..),
-                    SocketType (..), defaultHints, getAddrInfo)
+
 
 -- | Since we support systemd socket activation, we have to handle being
 -- given actual already-constructed sockets, or the info needed to make new

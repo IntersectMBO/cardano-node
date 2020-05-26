@@ -30,7 +30,8 @@ import qualified Data.Text.Encoding as Text
 
 import           Cardano.Crypto.Hash.Class as Crypto
 import           Cardano.Slotting.Slot (EpochSize (..))
-import           Cardano.TracingOrphanInstances.Common () -- For ToJSON EpochNo
+import           Cardano.TracingOrphanInstances.Common ()
+
 import           Ouroboros.Consensus.BlockchainTime (SlotLength (..), SystemStart (..))
 import           Ouroboros.Consensus.BlockchainTime.WallClock.Types
 import           Ouroboros.Network.Magic (NetworkMagic (..))
