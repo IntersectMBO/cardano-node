@@ -826,7 +826,7 @@ pTxSubmitFile =
 
 pTxIn :: Parser TxIn
 pTxIn =
-  Opt.option (Opt.maybeReader (parseTxIn . Text.pack))
+  Opt.option (Opt.eitherReader (parseTxIn . Text.pack))
     (  Opt.long "tx-in"
     <> Opt.metavar "TX_IN"
     <> Opt.help "The input transaction as TxId#TxIx where TxId is the transaction hash and TxIx is the index."

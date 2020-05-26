@@ -10,12 +10,14 @@ module Cardano.Api.Convert
 import           Cardano.Api.Types
 import qualified Cardano.Binary as Binary
 import           Cardano.Prelude
+import           Prelude (String)
 
 import           Control.Monad.Fail (fail)
 
 import           Data.Attoparsec.ByteString.Char8 (Parser)
 import qualified Data.Attoparsec.ByteString.Char8 as Atto
 import qualified Data.ByteString.Base16 as Base16
+import qualified Data.ByteString.Char8 as C8
 import           Data.Char (isAlphaNum)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
@@ -44,11 +46,8 @@ addressToHex addr =
       AddressShelley sa -> Shelley.serialiseAddr sa
       AddressShelleyReward sRwdAcct -> Binary.serialize' sRwdAcct
 
-parseTxIn :: Text -> Maybe TxIn
-parseTxIn txt =
-  case Atto.parseOnly pTxIn $ Text.encodeUtf8 txt of
-    Left _Str -> Nothing
-    Right txIn -> Just txIn
+parseTxIn :: Text -> Either String TxIn
+parseTxIn txt = Atto.parseOnly pTxIn $ Text.encodeUtf8 txt
 
 parseTxOut :: Text -> Maybe TxOut
 parseTxOut =
@@ -77,9 +76,17 @@ pTxId :: Parser TxId
 pTxId = TxId <$> pCBlakeHash
 
 pCBlakeHash :: Parser (Crypto.Hash Crypto.Blake2b_256 ())
-pCBlakeHash =
-  maybe (fail "pCBlakeHash") pure
-    =<< Crypto.hashFromBytesAsHex <$> pHexToByteString
+pCBlakeHash = do
+   potentialHex <- pAlphaNumToByteString
+   resultHash <- return $ Crypto.hashFromBytesAsHex potentialHex
+   case resultHash of
+     Nothing -> handleHexParseFailure potentialHex $ Atto.parseOnly pAddress potentialHex
+     Just hash -> return hash
+  where
+   -- We fail in both cases: 1) The input is not hex encoded 2) A user mistakenly enters an address
+   handleHexParseFailure :: ByteString -> Either String Address -> Parser (Crypto.Hash Crypto.Blake2b_256 ())
+   handleHexParseFailure input (Left _) = fail $ "Your input is either malformed or not hex encoded: " ++ C8.unpack input
+   handleHexParseFailure _ (Right _) = fail $ " You have entered an address, please enter a tx input"
 
 pTxOut :: Parser TxOut
 pTxOut =
@@ -91,7 +98,7 @@ pLovelace = Lovelace <$> Atto.decimal
 pAddress :: Parser Address
 pAddress =
   maybe (fail "pAddress") pure
-    =<< addressFromHex . Text.decodeUtf8 <$> pHexToByteString
+    =<< addressFromHex . Text.decodeUtf8 <$> pAlphaNumToByteString
 
-pHexToByteString :: Parser ByteString
-pHexToByteString = Atto.takeWhile1 isAlphaNum
+pAlphaNumToByteString :: Parser ByteString
+pAlphaNumToByteString = Atto.takeWhile1 isAlphaNum
