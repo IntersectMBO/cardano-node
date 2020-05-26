@@ -1,5 +1,6 @@
 module Cardano.CLI.Shelley.Run.Pool
   ( ShelleyPoolCmdError
+  , renderShelleyPoolCmdError
   , runPoolCmd
   ) where
 
@@ -13,8 +14,8 @@ import           Control.Monad.Trans.Except.Extra (firstExceptT, newExceptT)
 import           Cardano.Api (ApiError(..), ShelleyCoin, ShelleyStakePoolMargin,
                    ShelleyStakePoolRelay, StakingVerificationKey (..),
                    mkShelleyStakingCredential, readStakingVerificationKey,
-                   shelleyRegisterStakePool,
-                   shelleyRetireStakePool, writeCertificate)
+                   renderApiError, shelleyRegisterStakePool,
+                   shelleyRetireStakePool, textShow, writeCertificate)
 
 import qualified Shelley.Spec.Ledger.Address as Shelley
 import           Shelley.Spec.Ledger.Keys (hashKey, hashVerKeyVRF)
@@ -26,10 +27,28 @@ import           Cardano.Config.Shelley.VRF
 import           Cardano.CLI.Shelley.Commands
 
 data ShelleyPoolCmdError
-  = ShelleyPoolCmdApiError !ApiError
-  | ShelleyPoolCmdVRFError !VRFError
-  | ShelleyPoolCmdKeyError !KeyError
+  = ShelleyPoolReadStakeVerKeyError !FilePath !ApiError
+  | ShelleyPoolReadStakePoolVerKeyError !FilePath !KeyError
+  | ShelleyPoolReadVRFVerKeyError !FilePath !VRFError
+  | ShelleyPoolWriteRegistrationCertError !FilePath !ApiError
+  | ShelleyPoolWriteRetirementCertError !FilePath !ApiError
   deriving Show
+
+renderShelleyPoolCmdError :: ShelleyPoolCmdError -> Text
+renderShelleyPoolCmdError err =
+  case err of
+    ShelleyPoolReadVRFVerKeyError fp vrfErr ->
+      "Error reading VRF verification key at: " <> textShow fp <> " Error: " <> renderVRFError vrfErr
+    ShelleyPoolReadStakePoolVerKeyError fp keyErr ->
+      "Error reading stake pool verification key at: " <> textShow fp <> " Error: " <> renderKeyError keyErr
+    ShelleyPoolReadStakeVerKeyError fp apiErr ->
+      "Error reading stake verification key at: " <> textShow fp <> " Error: " <> renderApiError apiErr
+    ShelleyPoolWriteRegistrationCertError fp apiErr ->
+      "Error writing stake pool registration certificate at: " <> textShow fp <> " Error: " <> renderApiError apiErr
+    ShelleyPoolWriteRetirementCertError fp apiErr ->
+      "Error writing stake pool retirement certificate at: " <> textShow fp <> " Error: " <> renderApiError apiErr
+
+
 
 runPoolCmd :: PoolCmd -> ExceptT ShelleyPoolCmdError IO ()
 runPoolCmd (PoolRegistrationCert sPvkey vrfVkey pldg pCost pMrgn rwdVerFp ownerVerFps relays outfp) =
@@ -76,16 +95,16 @@ runStakePoolRegistrationCert
   relays
   (OutputFile outfp) = do
     -- Pool verification key
-    stakePoolVerKey <- firstExceptT ShelleyPoolCmdKeyError $
+    stakePoolVerKey <- firstExceptT (ShelleyPoolReadStakePoolVerKeyError sPvkeyFp) $
       readVerKey (OperatorKey StakePoolOperatorKey) sPvkeyFp
 
     -- VRF verification key
     -- TODO: VRF key reading and writing has two versions and needs to be sorted out.
-    vrfVerKey <- firstExceptT ShelleyPoolCmdVRFError $ readVRFVerKey vrfVkeyFp
+    vrfVerKey <- firstExceptT (ShelleyPoolReadVRFVerKeyError vrfVkeyFp) $ readVRFVerKey vrfVkeyFp
 
     -- Pool reward account
     StakingVerificationKeyShelley rewardAcctVerKey <-
-      firstExceptT ShelleyPoolCmdApiError . newExceptT $ readStakingVerificationKey rwdVerFp
+      firstExceptT (ShelleyPoolReadStakeVerKeyError rwdVerFp)  . newExceptT $ readStakingVerificationKey rwdVerFp
     let rewardAccount = Shelley.mkRwdAcnt . mkShelleyStakingCredential $ hashKey rewardAcctVerKey
 
     -- Pool owner(s)
@@ -93,7 +112,7 @@ runStakePoolRegistrationCert
       mapM
         (\(VerificationKeyFile fp) -> do
           StakingVerificationKeyShelley svk <-
-            firstExceptT ShelleyPoolCmdApiError $ newExceptT $ readStakingVerificationKey fp
+            firstExceptT (ShelleyPoolReadStakeVerKeyError fp) $ newExceptT $ readStakingVerificationKey fp
           pure svk
         )
         ownerVerFps
@@ -110,7 +129,7 @@ runStakePoolRegistrationCert
                              relays
                              Nothing
 
-    firstExceptT ShelleyPoolCmdApiError . newExceptT $ writeCertificate outfp registrationCert
+    firstExceptT (ShelleyPoolWriteRegistrationCertError outfp) . newExceptT $ writeCertificate outfp registrationCert
 
 runStakePoolRetirementCert
   :: VerificationKeyFile
@@ -119,9 +138,9 @@ runStakePoolRetirementCert
   -> ExceptT ShelleyPoolCmdError IO ()
 runStakePoolRetirementCert (VerificationKeyFile sPvkeyFp) retireEpoch (OutputFile outfp) = do
     -- Pool verification key
-    stakePoolVerKey <- firstExceptT ShelleyPoolCmdKeyError $
+    stakePoolVerKey <- firstExceptT (ShelleyPoolReadStakePoolVerKeyError sPvkeyFp) $
       readVerKey (OperatorKey StakePoolOperatorKey) sPvkeyFp
 
     let retireCert = shelleyRetireStakePool stakePoolVerKey retireEpoch
 
-    firstExceptT ShelleyPoolCmdApiError . newExceptT $ writeCertificate outfp retireCert
+    firstExceptT (ShelleyPoolWriteRetirementCertError outfp) . newExceptT $ writeCertificate outfp retireCert

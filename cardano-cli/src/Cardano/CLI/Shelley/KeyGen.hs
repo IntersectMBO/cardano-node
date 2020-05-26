@@ -4,6 +4,7 @@
 
 module Cardano.CLI.Shelley.KeyGen
   ( ShelleyKeyGenError
+  , renderShelleyKeyGenError
   , runColdKeyGen
   ) where
 
@@ -20,6 +21,12 @@ import           Cardano.Config.Shelley.ColdKeys
 
 data ShelleyKeyGenError = ShelleyColdKeyGenError !KeyError
                         deriving Show
+
+renderShelleyKeyGenError :: ShelleyKeyGenError -> Text
+renderShelleyKeyGenError err =
+  case err of
+    ShelleyColdKeyGenError keyErr ->
+      "Error generating shelley cold keys: " <> renderKeyError keyErr
 
 runColdKeyGen :: KeyRole -> VerificationKeyFile -> SigningKeyFile
               -> ExceptT ShelleyKeyGenError IO ()

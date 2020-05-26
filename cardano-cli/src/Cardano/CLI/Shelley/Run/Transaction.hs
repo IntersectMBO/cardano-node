@@ -2,17 +2,20 @@
 
 module Cardano.CLI.Shelley.Run.Transaction
   ( ShelleyTxCmdError
+  , renderShelleyTxCmdError
   , runTransactionCmd
   ) where
 
 import           Cardano.Prelude
 import           Cardano.Binary (FromCBOR(..))
 
-import           Cardano.Api
+import           Cardano.Api hiding (textShow)
 import           Cardano.Config.Shelley.ColdKeys
-                   (KeyType(..), KeyRole(..), KeyError(..), OperatorKeyRole (..), renderKeyType)
+                   (KeyType(..), KeyRole(..), KeyError(..), OperatorKeyRole (..),
+                   renderKeyError, renderKeyType)
 import           Cardano.Config.TextView
-import           Cardano.CLI.Environment (EnvSocketError, readEnvSocketPath)
+import           Cardano.CLI.Environment (EnvSocketError, readEnvSocketPath,
+                   renderEnvSocketError)
 
 import           Cardano.Config.Types hiding (Update)
 
@@ -32,15 +35,40 @@ import           Shelley.Spec.Ledger.PParams (PParams)
 
 
 data ShelleyTxCmdError
-  = ShelleyTxSocketEnvError !EnvSocketError
-  | ShelleyTxCardanoApiError !ApiError
-  | ShelleyTxCardanoIOError !FilePath !IOException
-  | ShelleyTxCardanoAesonDecode !FilePath !Text
-  | ShelleyTxCertReadError !ApiError
-  | ShelleyTxTxKeyError !KeyError
+  = ShelleyTxAesonDecodeProtocolParamsError !FilePath !Text
+  | ShelleyTxSocketEnvError !EnvSocketError
+  | ShelleyTxReadProtocolParamsError !FilePath !IOException
+  | ShelleyTxReadSignedTxError !ApiError
+  | ShelleyTxReadUpdateError !ApiError
+  | ShelleyTxReadUnsignedTxError !ApiError
+  | ShelleyTxCertReadError !FilePath !ApiError
+  | ShelleyTxSignKeyError !KeyError
+  | ShelleyTxWriteSignedTxError !ApiError
+  | ShelleyTxWriteUnsignedTxError !ApiError
   deriving Show
 
-
+renderShelleyTxCmdError :: ShelleyTxCmdError -> Text
+renderShelleyTxCmdError err =
+  case err of
+    ShelleyTxReadProtocolParamsError fp ioException ->
+      "Error while reading protocol parameters at: " <> textShow fp <> " Error: " <> textShow ioException
+    ShelleyTxReadUnsignedTxError apiError ->
+      "Error while reading unsigned shelley tx: " <> renderApiError apiError
+    ShelleyTxReadSignedTxError apiError ->
+      "Error while reading signed shelley tx: " <> renderApiError apiError
+    ShelleyTxReadUpdateError apiError ->
+      "Error while reading shelley update: " <> renderApiError apiError
+    ShelleyTxSocketEnvError envSockErr -> renderEnvSocketError envSockErr
+    ShelleyTxAesonDecodeProtocolParamsError fp decErr ->
+      "Error while decoding the protocol parameters at: " <> textShow fp <> " Error: " <> textShow decErr
+    ShelleyTxCertReadError fp apiErr ->
+      "Error reading shelley certificate at: " <> textShow fp <> " Error: " <> renderApiError apiErr
+    ShelleyTxSignKeyError keyErr ->
+      "Errog reading shelley signing key: " <> renderKeyError keyErr
+    ShelleyTxWriteSignedTxError apiError ->
+      "Error while writing signed shelley tx: " <> renderApiError apiError
+    ShelleyTxWriteUnsignedTxError apiError ->
+      "Error while writing unsigned shelley tx: " <> renderApiError apiError
 
 runTransactionCmd :: TransactionCmd -> ExceptT ShelleyTxCmdError IO ()
 runTransactionCmd cmd =
@@ -68,20 +96,20 @@ runTxBuildRaw
 runTxBuildRaw txins txouts ttl fee (TxBodyFile fpath) certFps mUpdateProp  = do
   certs <- mapM readShelleyCert certFps
   upUpProp <- maybeUpdate mUpdateProp
-  firstExceptT ShelleyTxCardanoApiError
+  firstExceptT ShelleyTxWriteUnsignedTxError
     . newExceptT
     . writeTxUnsigned fpath
     $ buildShelleyTransaction txins txouts ttl fee certs upUpProp
   where
     maybeUpdate :: Maybe UpdateProposalFile -> ExceptT ShelleyTxCmdError IO (Maybe Update)
-    maybeUpdate (Just (UpdateProposalFile uFp )) = bimapExceptT ShelleyTxCardanoApiError Just . newExceptT $ readUpdate uFp
+    maybeUpdate (Just (UpdateProposalFile uFp )) = bimapExceptT ShelleyTxReadUpdateError Just . newExceptT $ readUpdate uFp
     maybeUpdate Nothing = right Nothing
 
 runTxSign :: TxBodyFile -> [SigningKeyFile] -> Network -> TxFile -> ExceptT ShelleyTxCmdError IO ()
 runTxSign (TxBodyFile infile) skfiles  network (TxFile outfile) = do
-    txu <- firstExceptT ShelleyTxCardanoApiError . newExceptT $ readTxUnsigned infile
+    txu <- firstExceptT ShelleyTxReadUnsignedTxError . newExceptT $ readTxUnsigned infile
     sks <- readSigningKeyFiles skfiles
-    firstExceptT ShelleyTxCardanoApiError
+    firstExceptT ShelleyTxWriteSignedTxError
       . newExceptT
       . writeTxSigned outfile
       $ signTransaction txu network sks
@@ -89,7 +117,7 @@ runTxSign (TxBodyFile infile) skfiles  network (TxFile outfile) = do
 runTxSubmit :: FilePath -> Network -> ExceptT ShelleyTxCmdError IO ()
 runTxSubmit txFp network = do
   sktFp <- firstExceptT ShelleyTxSocketEnvError $ readEnvSocketPath
-  signedTx <- firstExceptT ShelleyTxCardanoApiError . newExceptT $ readTxSigned txFp
+  signedTx <- firstExceptT ShelleyTxReadSignedTxError . newExceptT $ readTxSigned txFp
   result   <- liftIO $ submitTx network sktFp signedTx
   case result of
     TxSubmitSuccess            -> return ()
@@ -120,15 +148,15 @@ runTxCalculateMinFee (TxInCount txInCount) (TxOutCount txOutCount)
 
 readProtocolParameters :: ProtocolParamsFile -> ExceptT ShelleyTxCmdError IO PParams
 readProtocolParameters (ProtocolParamsFile fpath) = do
-  pparams <- handleIOExceptT (ShelleyTxCardanoIOError fpath) $ LBS.readFile fpath
-  firstExceptT (ShelleyTxCardanoAesonDecode fpath . Text.pack) . hoistEither $
+  pparams <- handleIOExceptT (ShelleyTxReadProtocolParamsError fpath) $ LBS.readFile fpath
+  firstExceptT (ShelleyTxAesonDecodeProtocolParamsError fpath . Text.pack) . hoistEither $
     Aeson.eitherDecode' pparams
 
 -- TODO: This should exist in its own module along with
 -- a custom error type and an error rendering function.
 readShelleyCert :: CertificateFile -> ExceptT ShelleyTxCmdError IO Certificate
 readShelleyCert (CertificateFile fp) =
-  firstExceptT ShelleyTxCertReadError . newExceptT $ readCertificate fp
+  firstExceptT (ShelleyTxCertReadError fp) . newExceptT $ readCertificate fp
 
 -- TODO : This is nuts. The 'cardano-api' and 'cardano-config' packages both have functions
 -- for reading/writing keys, but they are incompatible.
@@ -139,7 +167,9 @@ readSigningKeyFiles files =
   newExceptT $ do
     xs <- mapM readSigningKeyFile files
     case partitionEithers xs of
-      (e:_, _) -> pure $ Left (ShelleyTxTxKeyError (ReadSigningKeyError e))
+      -- TODO: Would be nice to also provide a filepath to the signing key
+      -- resulting in the error.
+      (e:_, _) -> pure $ Left (ShelleyTxSignKeyError (ReadSigningKeyError e))
       ([], ys) -> pure $ Right ys
 
 readSigningKeyFile :: SigningKeyFile -> IO (Either TextViewFileError SigningKey)

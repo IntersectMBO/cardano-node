@@ -1,5 +1,6 @@
 module Cardano.CLI.Shelley.Run.Address
   ( ShelleyAddressCmdError
+  , renderShelleyAddressCmdError
   , runAddressCmd
   ) where
 
@@ -17,16 +18,31 @@ import           Cardano.Api
 import           Cardano.CLI.Shelley.Parsers
                    (SigningKeyFile (..), VerificationKeyFile (..),
                     AddressCmd(..))
-import           Cardano.CLI.Shelley.Run.Address.Info (ShelleyAddressInfoError, runAddressInfo)
+import           Cardano.CLI.Shelley.Run.Address.Info (ShelleyAddressInfoError, renderShelleyAddressInfoError,
+                   runAddressInfo)
 
 import qualified Cardano.Crypto.Hash.Class as Crypto
 
 import qualified Shelley.Spec.Ledger.Keys as Ledger
 
 data ShelleyAddressCmdError
-  = ShelleyAddressCmdCardanoApiError !ApiError
-  | ShelleyAddressCmdAddressInfoError !ShelleyAddressInfoError
+  = ShelleyAddressCmdAddressInfoError !ShelleyAddressInfoError
+  | ShelleyAddressCmdPaySigningKeyWriteErr !ApiError
+  | ShelleyAddressCmdPayVerificationKeyReadErrr !ApiError
+  | ShelleyAddressCmdPayVerificationKeyWriteErr !ApiError
   deriving Show
+
+renderShelleyAddressCmdError :: ShelleyAddressCmdError -> Text
+renderShelleyAddressCmdError err =
+  case err of
+    ShelleyAddressCmdAddressInfoError addrInfoErr ->
+      "Error occurred while printing address info: " <> renderShelleyAddressInfoError addrInfoErr
+    ShelleyAddressCmdPaySigningKeyWriteErr apiErr ->
+      "Error occured while writing the payment signing key: " <> renderApiError apiErr
+    ShelleyAddressCmdPayVerificationKeyReadErrr apiErr ->
+      "Error occured while reading the payment verification key: " <> renderApiError apiErr
+    ShelleyAddressCmdPayVerificationKeyWriteErr apiErr ->
+      "Error occured while writing the payment verification key: " <> renderApiError apiErr
 
 runAddressCmd :: AddressCmd -> ExceptT ShelleyAddressCmdError IO ()
 runAddressCmd cmd =
@@ -41,13 +57,14 @@ runAddressKeyGen :: VerificationKeyFile -> SigningKeyFile -> ExceptT ShelleyAddr
 runAddressKeyGen (VerificationKeyFile vkeyPath) (SigningKeyFile skeyPath) = do
     sk <- liftIO shelleyGenSigningKey
     let vk = getPaymentVerificationKey sk
-    firstExceptT ShelleyAddressCmdCardanoApiError $ do
-      ExceptT $ writePaymentVerificationKey vkeyPath vk
-      ExceptT $ writeSigningKey skeyPath sk
+    firstExceptT ShelleyAddressCmdPayVerificationKeyWriteErr
+      . ExceptT $ writePaymentVerificationKey vkeyPath vk
+    firstExceptT ShelleyAddressCmdPaySigningKeyWriteErr
+      . ExceptT $ writeSigningKey skeyPath sk
 
 runAddressKeyHash :: VerificationKeyFile -> ExceptT ShelleyAddressCmdError IO ()
 runAddressKeyHash (VerificationKeyFile vkeyPath) =
-    firstExceptT ShelleyAddressCmdCardanoApiError $ do
+    firstExceptT ShelleyAddressCmdPayVerificationKeyReadErrr $ do
       PaymentVerificationKeyShelley vkey <- ExceptT $ readPaymentVerificationKey vkeyPath
       let Ledger.KeyHash khash = Ledger.hashKey vkey
       liftIO $ BS.putStrLn $ Crypto.getHashBytesAsHex khash
@@ -56,7 +73,7 @@ runAddressBuild :: VerificationKeyFile
                 -> Maybe VerificationKeyFile
                 -> ExceptT ShelleyAddressCmdError IO ()
 runAddressBuild (VerificationKeyFile payVkeyFp) mstkVkeyFp =
-  firstExceptT ShelleyAddressCmdCardanoApiError $ do
+  firstExceptT ShelleyAddressCmdPayVerificationKeyReadErrr $ do
     payVKey <- newExceptT $ readPaymentVerificationKey payVkeyFp
     mstkVKey <- case mstkVkeyFp of
                   Just (VerificationKeyFile stkVkeyFp) ->
