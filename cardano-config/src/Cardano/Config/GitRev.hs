@@ -1,5 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell   #-}
+{-# LANGUAGE CPP               #-}
 
 module Cardano.Config.GitRev (
       gitRev
@@ -27,7 +28,12 @@ gitRev | gitRevEmbed /= zeroRev = gitRevEmbed
 
         -- Git revision found during compilation by running git. If
         -- git could not be run, then this will be empty.
+#if defined(arm_HOST_ARCH)
+        -- cross compiling to arm fails; due to a linker bug
+        fromGit = ""
+#else        
         fromGit = T.strip (T.pack $(gitRevFromGit))
+#endif
 
 zeroRev :: Text
 zeroRev = "0000000000000000000000000000000000000000"
