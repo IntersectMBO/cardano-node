@@ -32,9 +32,12 @@ renderShelleyTextViewFileError err =
 runTextViewCmd :: TextViewCmd -> ExceptT ShelleyTextViewFileError IO ()
 runTextViewCmd cmd =
   case cmd of
-    TextViewInfo fpath -> runTextViewInfo fpath
+    TextViewInfo fpath mOutfile -> runTextViewInfo fpath mOutfile
 
-runTextViewInfo :: FilePath -> ExceptT ShelleyTextViewFileError IO ()
-runTextViewInfo fpath = do
+runTextViewInfo :: FilePath -> Maybe OutputFile -> ExceptT ShelleyTextViewFileError IO ()
+runTextViewInfo fpath mOutFile = do
   tv <- firstExceptT ShelleyTextViewFileError' $ newExceptT (readTextViewFile fpath)
-  firstExceptT ShelleyTextViewCBORPrettyPrintError $ pPrintCBOR $ LBS.fromStrict (tvRawCBOR tv)
+  let lbCBOR = LBS.fromStrict (tvRawCBOR tv)
+  case mOutFile of
+    Just (OutputFile oFpath) -> liftIO $ LBS.writeFile oFpath lbCBOR
+    Nothing -> firstExceptT ShelleyTextViewCBORPrettyPrintError $ pPrintCBOR lbCBOR

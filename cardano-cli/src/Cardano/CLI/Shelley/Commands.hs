@@ -68,15 +68,15 @@ data ShelleyCommand
 
 data AddressCmd
   = AddressKeyGen VerificationKeyFile SigningKeyFile
-  | AddressKeyHash VerificationKeyFile
-  | AddressBuild VerificationKeyFile (Maybe VerificationKeyFile)
+  | AddressKeyHash VerificationKeyFile (Maybe OutputFile)
+  | AddressBuild VerificationKeyFile (Maybe VerificationKeyFile) (Maybe OutputFile)
   | AddressBuildMultiSig  --TODO
   | AddressInfo Text
   deriving (Eq, Show)
 
 data StakeAddressCmd
   = StakeAddressKeyGen VerificationKeyFile SigningKeyFile
-  | StakeAddressBuild VerificationKeyFile
+  | StakeAddressBuild VerificationKeyFile (Maybe OutputFile)
   | StakeKeyRegister PrivKeyFile NodeAddress
   | StakeKeyDelegate PrivKeyFile PoolId Lovelace NodeAddress
   | StakeKeyDeRegister PrivKeyFile NodeAddress
@@ -87,7 +87,7 @@ data StakeAddressCmd
 
 
 data TransactionCmd
-  = TxBuildRaw [TxIn] [TxOut] SlotNo Lovelace TxBodyFile [CertificateFile] (Maybe UpdateProposalFile)
+  = TxBuildRaw [TxIn] [TxOut] SlotNo Lovelace [CertificateFile] (Maybe UpdateProposalFile) TxBodyFile
   | TxSign TxBodyFile [SigningKeyFile] Network TxFile
   | TxWitness       -- { transaction :: Transaction, key :: PrivKeyFile, nodeAddr :: NodeAddress }
   | TxSignWitness   -- { transaction :: Transaction, witnesses :: [Witness], nodeAddr :: NodeAddress }
@@ -148,7 +148,7 @@ data PoolCmd
 data QueryCmd
   = QueryPoolId NodeAddress
   | QueryProtocolParameters Network (Maybe OutputFile)
-  | QueryTip Network
+  | QueryTip Network (Maybe OutputFile)
   | QueryStakeDistribution Network (Maybe OutputFile)
   | QueryUTxO QueryFilter Network (Maybe OutputFile)
   | QueryVersion NodeAddress
@@ -163,14 +163,14 @@ data BlockCmd
 
 
 data GovernanceCmd
-  = GovernanceProtocolUpdate PrivKeyFile -- { parameters :: ProtocolParams, nodeAddr :: NodeAddress }
+  = GovernanceProtocolUpdate SigningKeyFile -- { parameters :: ProtocolParams, nodeAddr :: NodeAddress }
   | GovernanceUpdateProposal OutputFile EpochNo [VerificationKeyFile] ShelleyPParamsUpdate
-  | GovernanceColdKeys GenesisKeyFile     -- { genesis :: GenesisKeyFile, keys :: [PubKey], nodeAddr :: NodeAddress }
+  | GovernanceColdKeys SigningKeyFile     -- { genesis :: GenesisKeyFile, keys :: [PubKey], nodeAddr :: NodeAddress }
   deriving (Eq, Show)
 
 
 data TextViewCmd
-  = TextViewInfo !FilePath
+  = TextViewInfo !FilePath (Maybe OutputFile)
   deriving (Eq, Show)
 
 data SystemCmd
@@ -186,8 +186,8 @@ data GenesisCmd
   | GenesisKeyGenUTxO VerificationKeyFile SigningKeyFile
   | GenesisKeyHash VerificationKeyFile
   | GenesisVerKey VerificationKeyFile SigningKeyFile
-  | GenesisTxIn VerificationKeyFile
-  | GenesisAddr VerificationKeyFile
+  | GenesisTxIn VerificationKeyFile (Maybe OutputFile)
+  | GenesisAddr VerificationKeyFile (Maybe OutputFile)
   deriving (Eq, Show)
 
 --

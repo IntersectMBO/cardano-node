@@ -9,6 +9,8 @@ module Cardano.CLI.Helpers
   , readCBOR
   , renderHelpersError
   , serialiseSigningKey
+  , textToByteString
+  , textToLByteString
   , validateCBOR
   ) where
 
@@ -19,7 +21,9 @@ import           Codec.CBOR.Read (DeserialiseFailure, deserialiseFromBytes)
 import           Codec.CBOR.Term (decodeTerm, encodeTerm)
 import           Codec.CBOR.Write (toLazyByteString)
 import           Control.Monad.Trans.Except.Extra (handleIOExceptT, left)
+import qualified Data.ByteString.Char8 as SC
 import qualified Data.ByteString.Lazy as LB
+import qualified Data.ByteString.Lazy.Char8 as LC
 import qualified Data.Text as Text
 import           System.Directory (doesPathExist)
 
@@ -79,6 +83,12 @@ serialiseSigningKey ByronEraLegacy (SigningKey k) = pure $ toLazyByteString (Cry
 serialiseSigningKey ByronEra (SigningKey k) = pure $ toLazyByteString (Crypto.toCBORXPrv k)
 serialiseSigningKey ShelleyEra _ = Left $ CardanoEraNotSupportedFail ShelleyEra
 
+textToLByteString :: Text -> LB.ByteString
+textToLByteString = LC.pack . Text.unpack
+
+textToByteString :: Text -> SC.ByteString
+textToByteString = SC.pack . Text.unpack
+
 pPrintCBOR :: LByteString -> ExceptT HelpersError IO ()
 pPrintCBOR bs = do
   case deserialiseFromBytes decodeTerm bs of
@@ -116,4 +126,3 @@ validateCBOR cborObject bs =
     CBORVoteByron -> do
       (const () ) <$> decodeCBOR bs (fromCBOR :: Decoder s Update.Vote)
       Right "Valid Byron vote."
-

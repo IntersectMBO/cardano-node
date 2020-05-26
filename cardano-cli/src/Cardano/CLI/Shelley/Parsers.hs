@@ -85,12 +85,24 @@ pTextViewCmd =
   Opt.subparser $
     mconcat
       [ Opt.command "decode-cbor"
-          (Opt.info (TextViewInfo <$> pFilePath Input)
+          (Opt.info (TextViewInfo <$> pCBORInFile <*> pMaybeOutputFile)
             $ Opt.progDesc "Print a TextView file as decoded CBOR."
             )
       ]
 
-
+pCBORInFile :: Parser FilePath
+pCBORInFile =
+  Opt.strOption
+    (  Opt.long "in-file"
+    <> Opt.metavar "FILE"
+    <> Opt.help "CBOR input file."
+    <> Opt.completer (Opt.bashCompleter "file")
+    )
+  <|>
+  Opt.strOption
+    (  Opt.long "file"
+    <> Opt.internal
+    )
 
 pAddressCmd :: Parser AddressCmd
 pAddressCmd =
@@ -112,13 +124,15 @@ pAddressCmd =
     pAddressKeyGen = AddressKeyGen <$> pVerificationKeyFile Output <*> pSigningKeyFile Output
 
     pAddressKeyHash :: Parser AddressCmd
-    pAddressKeyHash = AddressKeyHash <$> pVerificationKeyFile Input
+    pAddressKeyHash = AddressKeyHash <$> pPaymentVerificationKeyFile <*> pMaybeOutputFile
 
     pAddressBuild :: Parser AddressCmd
     pAddressBuild =
       AddressBuild
         <$> pPaymentVerificationKeyFile
-        <*> Opt.optional pStakingVerificationKeyFile
+        <*> Opt.optional pStakeVerificationKeyFile
+        <*> pMaybeOutputFile
+
 
     pAddressBuildMultiSig :: Parser AddressCmd
     pAddressBuildMultiSig = pure AddressBuildMultiSig
@@ -130,12 +144,19 @@ pAddressCmd =
 pPaymentVerificationKeyFile :: Parser VerificationKeyFile
 pPaymentVerificationKeyFile =
   VerificationKeyFile <$>
-    Opt.strOption
-      (  Opt.long "payment-verification-key-file"
-      <> Opt.metavar "FILE"
-      <> Opt.help "Filepath of the payment verification key."
-      <> Opt.completer (Opt.bashCompleter "file")
-      )
+    ( Opt.strOption
+        (  Opt.long "payment-verification-key-file"
+        <> Opt.metavar "FILE"
+        <> Opt.help "Filepath of the payment verification key."
+        <> Opt.completer (Opt.bashCompleter "file")
+        )
+    <|>
+      Opt.strOption
+        (  Opt.long "verification-key-file"
+        <> Opt.internal
+        )
+    )
+
 
 pStakeAddress :: Parser StakeAddressCmd
 pStakeAddress =
@@ -165,8 +186,7 @@ pStakeAddress =
                             <*> pSigningKeyFile Output
 
     pStakeAddressBuild :: Parser StakeAddressCmd
-    pStakeAddressBuild = StakeAddressBuild <$> pStakingVerificationKeyFile
-
+    pStakeAddressBuild = StakeAddressBuild <$> pStakeVerificationKeyFile <*> pMaybeOutputFile
 
     pStakeAddressRegister :: Parser StakeAddressCmd
     pStakeAddressRegister = StakeKeyRegister <$> pPrivKeyFile <*> parseNodeAddress
@@ -180,17 +200,17 @@ pStakeAddress =
 
     pStakeAddressRegistrationCert :: Parser StakeAddressCmd
     pStakeAddressRegistrationCert = StakeKeyRegistrationCert
-                                      <$> pStakingVerificationKeyFile
+                                      <$> pStakeVerificationKeyFile
                                       <*> pOutputFile
 
     pStakeAddressDeregistrationCert :: Parser StakeAddressCmd
     pStakeAddressDeregistrationCert = StakeKeyDeRegistrationCert
-                                        <$> pStakingVerificationKeyFile
+                                        <$> pStakeVerificationKeyFile
                                         <*> pOutputFile
 
     pStakeAddressDelegationCert :: Parser StakeAddressCmd
     pStakeAddressDelegationCert = StakeKeyDelegationCert
-                                    <$> pStakingVerificationKeyFile
+                                    <$> pStakeVerificationKeyFile
                                     <*> pPoolStakingVerificationKeyFile
                                     <*> pOutputFile
 
@@ -237,9 +257,9 @@ pTransaction =
                                    <*> some pTxOut
                                    <*> pTxTTL
                                    <*> pTxFee
-                                   <*> pTxBodyFile Output
                                    <*> many pCertificateFile
                                    <*> optional pUpdateProposalFile
+                                   <*> pTxBodyFile Output
 
     pTransactionSign  :: Parser TransactionCmd
     pTransactionSign = TxSign <$> pTxBodyFile Input
@@ -296,8 +316,8 @@ pNodeCmd =
   where
     pKeyGenOperator :: Parser NodeCmd
     pKeyGenOperator =
-      NodeKeyGenCold <$> pVerificationKeyFile Output
-                     <*> pSigningKeyFile Output
+      NodeKeyGenCold <$> pColdVerificationKeyFile
+                     <*> pColdSigningKeyFile
                      <*> pOperatorCertIssueCounterFile
 
     pKeyGenKES :: Parser NodeCmd
@@ -376,7 +396,7 @@ pQueryCmd =
         <*> pMaybeOutputFile
 
     pQueryTip :: Parser QueryCmd
-    pQueryTip = QueryTip <$> pNetwork
+    pQueryTip = QueryTip <$> pNetwork <*> pMaybeOutputFile
 
     pQueryUTxO :: Parser QueryCmd
     pQueryUTxO =
@@ -433,19 +453,19 @@ pGovernanceCmd =
                         <*> pShelleyPParamsUpdate
 
     pProtocolUpdate :: Parser GovernanceCmd
-    pProtocolUpdate = GovernanceProtocolUpdate <$> pPrivKeyFile
+    pProtocolUpdate = GovernanceProtocolUpdate <$> pColdSigningKeyFile
 
     pColdKeys :: Parser GovernanceCmd
     pColdKeys = GovernanceColdKeys <$> pGenesisKeyFile
 
-    pGenesisKeyFile :: Parser GenesisKeyFile
+    pGenesisKeyFile :: Parser SigningKeyFile
     pGenesisKeyFile =
-      GenesisKeyFile <$>
-        Opt.strOption
-          (  Opt.long "genesis-key"
-          <> Opt.metavar "FILE"
-          <> Opt.help "The genesis key file."
-          )
+      pColdSigningKeyFile
+        <|> Opt.strOption
+              (  Opt.long "genesis-key"
+              <> Opt.internal
+              )
+
 
 
 pSystemCmd :: Parser SystemCmd
@@ -520,11 +540,11 @@ pGenesisCmd =
 
     pGenesisAddr :: Parser GenesisCmd
     pGenesisAddr =
-      GenesisAddr <$> pVerificationKeyFile Input
+      GenesisAddr <$> pVerificationKeyFile Input <*> pMaybeOutputFile
 
     pGenesisTxIn :: Parser GenesisCmd
     pGenesisTxIn =
-      GenesisTxIn <$> pVerificationKeyFile Input
+      GenesisTxIn <$> pVerificationKeyFile Input <*> pMaybeOutputFile
 
     pGenesisCreate :: Parser GenesisCmd
     pGenesisCreate =
@@ -549,7 +569,7 @@ pGenesisCmd =
         SystemStart . convertTime <$>
           Opt.strOption
             (  Opt.long "start-time"
-            <> Opt.metavar "UTC_TIME"
+            <> Opt.metavar "UTC-TIME"
             <> Opt.help "The genesis start time in YYYY-MM-DDThh:mm:ssZ format. If unspecified, will be the current time +30 seconds."
             )
 
@@ -608,34 +628,54 @@ pProtocolParamsFile =
 pCertificateFile :: Parser CertificateFile
 pCertificateFile =
   CertificateFile <$>
-    Opt.strOption
-      (  Opt.long "certificate"
-      <> Opt.metavar "FILE"
-      <> Opt.help "Filepath of the certificate. This encompasses all \
-                  \types of certificates (stake pool certificates, \
-                  \stake key certificates etc)"
-      <> Opt.completer (Opt.bashCompleter "file")
-      )
+    (  Opt.strOption
+         (  Opt.long "certificate-file"
+         <> Opt.metavar "FILE"
+         <> Opt.help "Filepath of the certificate. This encompasses all \
+                     \types of certificates (stake pool certificates, \
+                     \stake key certificates etc)"
+         <> Opt.completer (Opt.bashCompleter "file")
+         )
+    <|>
+       Opt.strOption
+         (  Opt.long "certificate"
+         <> Opt.internal
+         )
+    )
+
 
 pUpdateProposalFile :: Parser UpdateProposalFile
 pUpdateProposalFile =
   UpdateProposalFile <$>
+  ( Opt.strOption
+     (  Opt.long "update-proposal-file"
+     <> Opt.metavar "FILE"
+     <> Opt.help "Filepath of the update proposal."
+     <> Opt.completer (Opt.bashCompleter "file")
+     )
+  <|>
     Opt.strOption
       (  Opt.long "update-proposal"
-      <> Opt.metavar "FILE"
-      <> Opt.help "Filepath of the update proposal."
-      <> Opt.completer (Opt.bashCompleter "file")
+      <> Opt.internal
       )
+  )
+
 
 pColdSigningKeyFile :: Parser SigningKeyFile
 pColdSigningKeyFile =
   SigningKeyFile <$>
-    Opt.strOption
-      (  Opt.long "cold-signing-key-file"
-      <> Opt.metavar "FILE"
-      <> Opt.help "Filepath of the cold signing key."
-      <> Opt.completer (Opt.bashCompleter "file")
+    ( Opt.strOption
+        (  Opt.long "cold-signing-key-file"
+        <> Opt.metavar "FILE"
+        <> Opt.help "Filepath of the cold signing key."
+        <> Opt.completer (Opt.bashCompleter "file")
+        )
+    <|>
+      Opt.strOption
+      (  Opt.long "signing-key-file"
+      <> Opt.internal
       )
+    )
 
 pSomeSigningKeyFiles :: Parser [SigningKeyFile]
 pSomeSigningKeyFiles =
@@ -681,7 +721,7 @@ pEpochNo =
   EpochNo <$>
     Opt.option Opt.auto
       (  Opt.long "epoch"
-      <> Opt.metavar "INT"
+      <> Opt.metavar "NATURAL"
       <> Opt.help "The epoch number."
       )
 
@@ -691,7 +731,7 @@ pEpochNoUpdateProp =
   EpochNo <$>
     Opt.option Opt.auto
       (  Opt.long "epoch"
-      <> Opt.metavar "INT"
+      <> Opt.metavar "NATURAL"
       <> Opt.help "The epoch number in which the update proposal is valid."
       )
 
@@ -708,12 +748,19 @@ pGenesisFile =
 pOperatorCertIssueCounterFile :: Parser OpCertCounterFile
 pOperatorCertIssueCounterFile =
   OpCertCounterFile <$>
-    Opt.strOption
-      (  Opt.long "operational-certificate-issue-counter"
-      <> Opt.metavar "FILE"
-      <> Opt.help "The file with the issue counter for the operational certificate."
-      <> Opt.completer (Opt.bashCompleter "file")
-      )
+    ( Opt.strOption
+        (  Opt.long "operational-certificate-issue-counter-file"
+        <> Opt.metavar "FILE"
+        <> Opt.help "The file with the issue counter for the operational certificate."
+        <> Opt.completer (Opt.bashCompleter "file")
+        )
+    <|>
+      Opt.strOption
+        (  Opt.long "operational-certificate-issue-counter"
+        <> Opt.internal
+        )
+    )
+
 
 pMaybeOutputFile :: Parser (Maybe OutputFile)
 pMaybeOutputFile =
@@ -736,15 +783,6 @@ pOutputFile =
       <> Opt.completer (Opt.bashCompleter "file")
       )
 
-pFilePath :: FileDirection -> Parser FilePath
-pFilePath fdir =
-  Opt.strOption
-    (  Opt.long "file"
-    <> Opt.metavar "FILE"
-    <> Opt.help (show fdir ++ " file.")
-    <> Opt.completer (Opt.bashCompleter "file")
-    )
-
 pPoolId :: Parser PoolId
 pPoolId =
   PoolId <$>
@@ -757,12 +795,35 @@ pPoolId =
 pPrivKeyFile :: Parser PrivKeyFile
 pPrivKeyFile =
   PrivKeyFile <$>
-    Opt.strOption
-      (  Opt.long "private-key"
-      <> Opt.metavar "FILE"
-      <> Opt.help "The private key file."
-      <> Opt.completer (Opt.bashCompleter "file")
-      )
+    ( Opt.strOption
+        (  Opt.long "signing-key-file"
+        <> Opt.metavar "FILE"
+        <> Opt.help "The private key file."
+        <> Opt.completer (Opt.bashCompleter "file")
+        )
+    <|>
+      Opt.strOption
+        (  Opt.long "private-key"
+        <> Opt.internal
+        )
+
+    )
+
+pColdVerificationKeyFile :: Parser VerificationKeyFile
+pColdVerificationKeyFile =
+  VerificationKeyFile <$>
+    ( Opt.strOption
+        (  Opt.long "cold-verification-key-file"
+        <> Opt.metavar "FILE"
+        <> Opt.help ("Filepath of the cold verification key.")
+        <> Opt.completer (Opt.bashCompleter "file")
+        )
+    <|>
+      Opt.strOption
+        (  Opt.long "verification-key-file"
+        <> Opt.internal
+        )
+    )
 
 pVerificationKeyFile :: FileDirection -> Parser VerificationKeyFile
 pVerificationKeyFile fdir =
@@ -788,12 +849,19 @@ pGenesisVerificationKeyFile =
 pKESVerificationKeyFile :: Parser VerificationKeyFile
 pKESVerificationKeyFile =
   VerificationKeyFile <$>
+    ( Opt.strOption
+        (  Opt.long "kes-verification-key-file"
+        <> Opt.metavar "FILE"
+        <> Opt.help "Filepath of the hot KES verification key."
+        <> Opt.completer (Opt.bashCompleter "file")
+        )
+    <|>
     Opt.strOption
-      (  Opt.long "hot-kes-verification-key-file"
-      <> Opt.metavar "FILE"
-      <> Opt.help "Filepath of the hot KES verification key."
-      <> Opt.completer (Opt.bashCompleter "file")
-      )
+        (  Opt.long "hot-kes-verification-key-file"
+        <> Opt.internal
+        )
+    )
+
 
 pNetwork :: Parser Network
 pNetwork =
@@ -811,7 +879,7 @@ pTestnetMagic =
   NetworkMagic <$>
     Opt.option Opt.auto
       (  Opt.long "testnet-magic"
-      <> Opt.metavar "INT"
+      <> Opt.metavar "NATURAL"
       <> Opt.help "Specify a testnet magic id."
       )
 
@@ -828,7 +896,7 @@ pTxIn :: Parser TxIn
 pTxIn =
   Opt.option (Opt.maybeReader (parseTxIn . Text.pack))
     (  Opt.long "tx-in"
-    <> Opt.metavar "TX_IN"
+    <> Opt.metavar "TX-IN"
     <> Opt.help "The input transaction as TxId#TxIx where TxId is the transaction hash and TxIx is the index."
     )
 
@@ -836,7 +904,7 @@ pTxOut :: Parser TxOut
 pTxOut =
   Opt.option (Opt.maybeReader (parseTxOut . Text.pack))
     (  Opt.long "tx-out"
-    <> Opt.metavar "TX_OUT"
+    <> Opt.metavar "TX-OUT"
     <> Opt.help "The ouput transaction as TxOut+Lovelace where TxOut is the hex encoded address followed by the amount in Lovelace."
     )
 
@@ -845,7 +913,7 @@ pTxTTL =
   SlotNo <$>
     Opt.option Opt.auto
       (  Opt.long "ttl"
-      <> Opt.metavar "SLOT_COUNT"
+      <> Opt.metavar "SLOT"
       <> Opt.help "Time to live (in slots)."
       )
 
@@ -860,30 +928,53 @@ pTxFee =
 
 pTxBodyFile :: FileDirection -> Parser TxBodyFile
 pTxBodyFile fdir =
-  TxBodyFile <$>
-    Opt.strOption
-      (  Opt.long "tx-body-file"
-      <> Opt.metavar "FILE"
-      <> Opt.help (show fdir ++ " filepath of the TxBody.")
-      <> Opt.completer (Opt.bashCompleter "file")
+    TxBodyFile <$>
+      (  Opt.strOption
+           (  Opt.long optName
+           <> Opt.metavar "FILE"
+           <> Opt.help (show fdir ++ " filepath of the TxBody.")
+           <> Opt.completer (Opt.bashCompleter "file")
+           )
+      <|>
+         Opt.strOption
+           (  Opt.long "tx-body-file"
+           <> Opt.internal
+           )
       )
+  where
+    optName =
+      case fdir of
+        Input -> "tx-body-file"
+        Output -> "out-file"
+
 
 pTxFile :: FileDirection -> Parser TxFile
 pTxFile fdir =
-  TxFile <$>
-    Opt.strOption
-      (  Opt.long "tx-file"
-      <> Opt.metavar "FILE"
-      <> Opt.help (show fdir ++ " filepath of the Tx.")
-      <> Opt.completer (Opt.bashCompleter "file")
+    TxFile <$>
+      (  Opt.strOption
+           (  Opt.long optName
+           <> Opt.metavar "FILE"
+           <> Opt.help (show fdir ++ " filepath of the Tx.")
+           <> Opt.completer (Opt.bashCompleter "file")
+           )
+      <|>
+         Opt.strOption
+           (  Opt.long "tx-file"
+           <> Opt.internal
+           )
       )
+  where
+    optName =
+      case fdir of
+        Input -> "tx-file"
+        Output -> "out-file"
 
 pTxInCount :: Parser TxInCount
 pTxInCount =
   TxInCount <$>
     Opt.option Opt.auto
       (  Opt.long "tx-in-count"
-      <> Opt.metavar "INT"
+      <> Opt.metavar "NATURAL"
       <> Opt.help "The number of transaction inputs."
       )
 
@@ -892,7 +983,7 @@ pTxOutCount =
   TxOutCount <$>
     Opt.option Opt.auto
       (  Opt.long "tx-out-count"
-      <> Opt.metavar "INT"
+      <> Opt.metavar "NATURAL"
       <> Opt.help "The number of transaction outputs."
       )
 
@@ -923,25 +1014,38 @@ pAddress =
       )
 
 
-pStakingVerificationKeyFile :: Parser VerificationKeyFile
-pStakingVerificationKeyFile =
+pStakeVerificationKeyFile :: Parser VerificationKeyFile
+pStakeVerificationKeyFile =
   VerificationKeyFile <$>
-    Opt.strOption
-      (  Opt.long "staking-verification-key-file"
-      <> Opt.metavar "FILE"
-      <> Opt.help ("Filepath of the staking verification key.")
-      <> Opt.completer (Opt.bashCompleter "file")
-      )
+    ( Opt.strOption
+        (  Opt.long "stake-verification-key-file"
+        <> Opt.metavar "FILE"
+        <> Opt.help ("Filepath of the staking verification key.")
+        <> Opt.completer (Opt.bashCompleter "file")
+        )
+    <|>
+      Opt.strOption
+        (  Opt.long "staking-verification-key-file"
+        <> Opt.internal
+        )
+    )
+
 
 pPoolStakingVerificationKeyFile :: Parser VerificationKeyFile
 pPoolStakingVerificationKeyFile =
   VerificationKeyFile <$>
-    Opt.strOption
-      (  Opt.long "stake-pool-verification-key-file"
-      <> Opt.metavar "FILE"
-      <> Opt.help ("Filepath of the stake pool verification key.")
-      <> Opt.completer (Opt.bashCompleter "file")
-      )
+    (  Opt.strOption
+         (  Opt.long "cold-verification-key-file"
+         <> Opt.metavar "FILE"
+         <> Opt.help ("Filepath of the stake pool verification key.")
+         <> Opt.completer (Opt.bashCompleter "file")
+         )
+    <|>
+       Opt.strOption
+         (  Opt.long "stake-pool-verification-key-file"
+         <> Opt.internal
+         )
+    )
 
 pVRFVerificationKeyFile :: Parser VerificationKeyFile
 pVRFVerificationKeyFile =
@@ -956,29 +1060,43 @@ pVRFVerificationKeyFile =
 pRewardAcctVerificationKeyFile :: Parser VerificationKeyFile
 pRewardAcctVerificationKeyFile =
   VerificationKeyFile <$>
-    Opt.strOption
-      (  Opt.long "reward-account-verification-key-file"
-      <> Opt.metavar "FILE"
-      <> Opt.help ("Filepath of the reward account staking verification key.")
-      <> Opt.completer (Opt.bashCompleter "file")
-      )
+    ( Opt.strOption
+        (  Opt.long "pool-reward-account-verification-key-file"
+        <> Opt.metavar "FILE"
+        <> Opt.help ("Filepath of the reward account staking verification key.")
+        <> Opt.completer (Opt.bashCompleter "file")
+        )
+    <|>
+      Opt.strOption
+        (  Opt.long "reward-account-verification-key-file"
+        <> Opt.internal
+        )
+    )
+
 
 pPoolOwner :: Parser VerificationKeyFile
 pPoolOwner =
   VerificationKeyFile <$>
-    Opt.strOption
-      (  Opt.long "pool-owner-staking-verification-key"
-      <> Opt.metavar "FILE"
-      <> Opt.help ("Filepath of the pool owner staking verification key.")
-      <> Opt.completer (Opt.bashCompleter "file")
-      )
+    ( Opt.strOption
+        (  Opt.long "pool-owner-stake-verification-key-file"
+        <> Opt.metavar "FILE"
+        <> Opt.help ("Filepath of the pool owner staking verification key.")
+        <> Opt.completer (Opt.bashCompleter "file")
+        )
+    <|>
+      Opt.strOption
+          (  Opt.long "pool-owner-staking-verification-key"
+          <> Opt.internal
+          )
+    )
+
 
 pPoolPledge :: Parser ShelleyCoin
 pPoolPledge =
   Shelley.Coin <$>
     Opt.option Opt.auto
       (  Opt.long "pool-pledge"
-      <> Opt.metavar "INT"
+      <> Opt.metavar "LOVELACE"
       <> Opt.help "The stake pool's pledge."
       )
 
@@ -988,7 +1106,7 @@ pPoolCost =
   Shelley.Coin <$>
     Opt.option Opt.auto
       (  Opt.long "pool-cost"
-      <> Opt.metavar "INT"
+      <> Opt.metavar "LOVELACE"
       <> Opt.help "The stake pool's cost."
       )
 
@@ -1082,7 +1200,7 @@ pMinFeeConstantFactor =
   optional
   $ Opt.option Opt.auto
       (  Opt.long "min-fee-constant"
-      <> Opt.metavar "NATURAL"
+      <> Opt.metavar "LOVELACE"
       <> Opt.help "The constant factor for the minimum fee calculation."
       )
 
@@ -1128,7 +1246,7 @@ pKeyRegistDeposit =
     $ Shelley.Coin
         <$> Opt.option Opt.auto
               (  Opt.long "key-reg-deposit-amt"
-              <> Opt.metavar "INT"
+              <> Opt.metavar "NATURAL"
               <> Opt.help "Key registration deposit amount."
               )
 
@@ -1159,7 +1277,7 @@ pPoolDeposit =
     Shelley.Coin
       <$> Opt.option Opt.auto
             (  Opt.long "pool-reg-deposit"
-            <> Opt.metavar "INT"
+            <> Opt.metavar "NATURAL"
             <> Opt.help "The amount of a pool registration deposit."
             )
 

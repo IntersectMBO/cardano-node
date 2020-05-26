@@ -81,8 +81,8 @@ runQueryCmd cmd =
   case cmd of
     QueryProtocolParameters network mOutFile ->
       runQueryProtocolParameters network mOutFile
-    QueryTip network ->
-      runQueryTip network
+    QueryTip network mOutFile ->
+      runQueryTip network mOutFile
     QueryStakeDistribution network mOutFile ->
       runQueryStakeDistribution network mOutFile
     QueryLedgerState network mOutFile ->
@@ -114,13 +114,16 @@ writeProtocolParameters mOutFile pparams =
 
 runQueryTip
   :: Network
+  -> Maybe OutputFile
   -> ExceptT ShelleyQueryCmdError IO ()
-runQueryTip network = do
+runQueryTip network mOutFile = do
   sockPath <- firstExceptT ShelleyQueryEnvVarSocketErr readEnvSocketPath
   let ptclClientInfo = pClientInfoCodecConfig . protocolClientInfo $ mkNodeClientProtocolTPraos
   tip <- liftIO $ withIOManager $ \iomgr ->
     getLocalTip iomgr ptclClientInfo network sockPath
-  liftIO $ putTextLn (show tip)
+  case mOutFile of
+    Just (OutputFile fpath) -> liftIO . writeFile fpath $ show tip
+    Nothing -> liftIO $ putTextLn (show tip)
 
 
 runQueryUTxO

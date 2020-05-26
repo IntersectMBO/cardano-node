@@ -50,6 +50,7 @@ import           Cardano.Config.Shelley.Genesis
 import           Cardano.Config.Shelley.ColdKeys
 import           Cardano.Config.Shelley.OCert
 
+import           Cardano.CLI.Helpers (textToByteString)
 import           Cardano.CLI.Shelley.Commands
 import           Cardano.CLI.Shelley.KeyGen (ShelleyKeyGenError,
                    renderShelleyKeyGenError, runColdKeyGen)
@@ -116,8 +117,8 @@ runGenesisCmd (GenesisKeyGenDelegate vk sk ctr) = runGenesisKeyGenDelegate vk sk
 runGenesisCmd (GenesisKeyGenUTxO vk sk) = runGenesisKeyGenUTxO vk sk
 runGenesisCmd (GenesisKeyHash vk) = runGenesisKeyHash vk
 runGenesisCmd (GenesisVerKey vk sk) = runGenesisVerKey vk sk
-runGenesisCmd (GenesisTxIn vk) = runGenesisTxIn vk
-runGenesisCmd (GenesisAddr vk) = runGenesisAddr vk
+runGenesisCmd (GenesisTxIn vk mOutFile) = runGenesisTxIn vk mOutFile
+runGenesisCmd (GenesisAddr vk mOutFile) = runGenesisAddr vk mOutFile
 runGenesisCmd (GenesisCreate gd gn un ms am) = runGenesisCreate gd gn un ms am
 
 --
@@ -174,12 +175,14 @@ genesisKeyRoles =
   ]
 
 
-runGenesisTxIn :: VerificationKeyFile -> ExceptT ShelleyGenesisCmdError IO ()
-runGenesisTxIn (VerificationKeyFile vkeyPath) = do
+runGenesisTxIn :: VerificationKeyFile -> Maybe OutputFile -> ExceptT ShelleyGenesisCmdError IO ()
+runGenesisTxIn (VerificationKeyFile vkeyPath) mOutFile = do
       vkey <- firstExceptT ShelleyGenesisCmdReadGenesisUTxOVerKeyError $ readVerKey GenesisUTxOKey vkeyPath
       case shelleyVerificationKeyAddress (PaymentVerificationKeyShelley vkey) Nothing of
-        AddressShelley addr -> do let txin = fromShelleyTxIn (initialFundsPseudoTxIn addr)
-                                  liftIO $ Text.putStrLn $ renderTxIn txin
+        AddressShelley addr -> do let txin = renderTxIn $ fromShelleyTxIn (initialFundsPseudoTxIn addr)
+                                  case mOutFile of
+                                    Just (OutputFile fpath) -> liftIO . BS.writeFile fpath $ textToByteString txin
+                                    Nothing -> liftIO $ Text.putStrLn txin
         AddressShelleyReward _rwdAcct -> left ShelleyGenesisCmdOnlyShelleyAddressesNotReward
         AddressByron _addr -> left ShelleyGenesisCmdOnlyShelleyAddresses
   where
@@ -192,13 +195,16 @@ runGenesisTxIn (VerificationKeyFile vkeyPath) = do
         TxId (Crypto.UnsafeHash h)
 
 
-runGenesisAddr :: VerificationKeyFile -> ExceptT ShelleyGenesisCmdError IO ()
-runGenesisAddr (VerificationKeyFile vkeyPath) =
+runGenesisAddr :: VerificationKeyFile -> Maybe OutputFile -> ExceptT ShelleyGenesisCmdError IO ()
+runGenesisAddr (VerificationKeyFile vkeyPath) mOutFile =
     firstExceptT ShelleyGenesisCmdReadGenesisUTxOVerKeyError $ do
       vkey <- readVerKey GenesisUTxOKey vkeyPath
       let addr = shelleyVerificationKeyAddress
                    (PaymentVerificationKeyShelley vkey) Nothing
-      liftIO $ Text.putStrLn $ addressToHex addr
+          hexAddr = addressToHex addr
+      case mOutFile of
+        Just (OutputFile fpath) -> liftIO . BS.writeFile fpath $ textToByteString hexAddr
+        Nothing -> liftIO $ Text.putStrLn hexAddr
 
 
 --
