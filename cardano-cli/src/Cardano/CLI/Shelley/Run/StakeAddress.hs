@@ -6,6 +6,7 @@ module Cardano.CLI.Shelley.Run.StakeAddress
 
 import           Cardano.Prelude
 
+import qualified Data.ByteString.Lazy.Char8 as LBS
 import qualified Data.Text.IO as Text
 
 import           Control.Monad.Trans.Except (ExceptT)
@@ -20,6 +21,7 @@ import           Cardano.Api (StakingVerificationKey (..),
 import           Shelley.Spec.Ledger.Keys (hashKey)
 import           Cardano.Config.Shelley.ColdKeys hiding (writeSigningKey)
 
+import           Cardano.CLI.Helpers (textToLByteString)
 import           Cardano.CLI.Shelley.Parsers
 
 data ShelleyStakeAddressCmdError
@@ -46,7 +48,7 @@ renderShelleyStakeAddressCmdError err =
 
 runStakeAddressCmd :: StakeAddressCmd -> ExceptT ShelleyStakeAddressCmdError IO ()
 runStakeAddressCmd (StakeAddressKeyGen vk sk) = runStakeAddressKeyGen vk sk
-runStakeAddressCmd (StakeAddressBuild vk) = runStakeAddressBuild vk
+runStakeAddressCmd (StakeAddressBuild vk mOutputFp) = runStakeAddressBuild vk mOutputFp
 runStakeAddressCmd (StakeKeyRegistrationCert stkKeyVerKeyFp outputFp) =
   runStakeKeyRegistrationCert stkKeyVerKeyFp outputFp
 runStakeAddressCmd (StakeKeyDelegationCert stkKeyVerKeyFp stkPoolVerKeyFp outputFp) =
@@ -70,12 +72,15 @@ runStakeAddressKeyGen (VerificationKeyFile vkFp) (SigningKeyFile skFp) = do
   firstExceptT (ShelleyStakeAddressWriteSignKeyError skFp) . newExceptT $ writeSigningKey skFp (SigningKeyShelley skey)
 
 
-runStakeAddressBuild :: VerificationKeyFile -> ExceptT ShelleyStakeAddressCmdError IO ()
-runStakeAddressBuild (VerificationKeyFile stkVkeyFp) =
+runStakeAddressBuild :: VerificationKeyFile -> Maybe OutputFile -> ExceptT ShelleyStakeAddressCmdError IO ()
+runStakeAddressBuild (VerificationKeyFile stkVkeyFp) mOutputFp =
   firstExceptT (ShelleyStakeAddressReadVerKeyError stkVkeyFp) $ do
     stkVKey <- ExceptT $ readStakingVerificationKey stkVkeyFp
     let rwdAddr = AddressShelleyReward $ shelleyVerificationKeyRewardAddress stkVKey
-    liftIO . Text.putStrLn $ addressToHex rwdAddr
+        hexAddr = addressToHex rwdAddr
+    case mOutputFp of
+      Just (OutputFile fpath) -> liftIO . LBS.writeFile fpath $ textToLByteString hexAddr
+      Nothing -> liftIO $ Text.putStrLn hexAddr
 
 
 runStakeKeyRegistrationCert :: VerificationKeyFile -> OutputFile -> ExceptT ShelleyStakeAddressCmdError IO ()

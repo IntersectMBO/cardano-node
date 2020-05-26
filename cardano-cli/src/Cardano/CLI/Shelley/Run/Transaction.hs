@@ -73,8 +73,8 @@ renderShelleyTxCmdError err =
 runTransactionCmd :: TransactionCmd -> ExceptT ShelleyTxCmdError IO ()
 runTransactionCmd cmd =
   case cmd of
-    TxBuildRaw txins txouts ttl fee out certs mUpProp ->
-      runTxBuildRaw txins txouts ttl fee out certs mUpProp
+    TxBuildRaw txins txouts ttl fee certs mUpProp out ->
+      runTxBuildRaw txins txouts ttl fee certs mUpProp out
     TxSign txinfile skfiles network txoutfile ->
       runTxSign txinfile skfiles network txoutfile
     TxSubmit txFp network ->
@@ -89,11 +89,11 @@ runTxBuildRaw
   -> [TxOut]
   -> SlotNo
   -> Lovelace
-  -> TxBodyFile
   -> [CertificateFile]
   -> Maybe UpdateProposalFile
+  -> TxBodyFile
   -> ExceptT ShelleyTxCmdError IO ()
-runTxBuildRaw txins txouts ttl fee (TxBodyFile fpath) certFps mUpdateProp  = do
+runTxBuildRaw txins txouts ttl fee certFps mUpdateProp (TxBodyFile fpath) = do
   certs <- mapM readShelleyCert certFps
   upUpProp <- maybeUpdate mUpdateProp
   firstExceptT ShelleyTxWriteUnsignedTxError
