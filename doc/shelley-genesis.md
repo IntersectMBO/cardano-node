@@ -155,7 +155,7 @@ rewards). The genesis file contains a special mapping from genesis keys to
 genesis delegate keys.
 
 So we need to make genesis delegate keys, as many as you made genesis keys
-(just one in our example).
+(just two in our example).
 ```
 $ cardano-cli shelley genesis key-gen-delegate
 Usage: cardano-cli shelley genesis key-gen-delegate --verification-key-file FILEPATH
