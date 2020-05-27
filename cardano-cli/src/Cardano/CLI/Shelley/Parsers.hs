@@ -351,6 +351,9 @@ pPoolCmd =
           (Opt.info pStakePoolRegistrationCert $ Opt.progDesc "Create a stake pool registration certificate")
       , Opt.command "deregistration-certificate"
           (Opt.info pStakePoolRetirementCert $ Opt.progDesc "Create a stake pool deregistration certificate")
+      , Opt.command "id"
+          (Opt.info pId $
+             Opt.progDesc "Build pool id from the offline key")
       ]
   where
     pPoolRegster :: Parser PoolCmd
@@ -361,6 +364,9 @@ pPoolCmd =
 
     pPoolRetire :: Parser PoolCmd
     pPoolRetire = PoolRetire <$> pPoolId <*> pEpochNo <*> parseNodeAddress
+
+    pId :: Parser PoolCmd
+    pId = PoolGetId <$> pVerificationKeyFile Output
 
 
 pQueryCmd :: Parser QueryCmd

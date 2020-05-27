@@ -141,6 +141,7 @@ data PoolCmd
       EpochNo
       -- ^ Epoch in which to retire the stake pool. --TODO: Double check this
       OutputFile
+  | PoolGetId VerificationKeyFile
 
   deriving (Eq, Show)
 
