@@ -252,6 +252,10 @@ instance Crypto c => ToObject (PredicateFailure (UTXO c)) where
              ]
   toObject verb (UpdateFailure f) = toObject verb f
 
+  toObject _verb (WrongNetwork _ _) =
+    mkObject [ "kind" .= String "WrongNetwork" ]
+
+
 renderBadInputsUTxOErr ::  Set (TxIn c) -> Value
 renderBadInputsUTxOErr txIns
   | Set.null txIns = String "The transaction contains no inputs."

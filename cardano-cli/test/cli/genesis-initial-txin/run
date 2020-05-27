@@ -13,6 +13,7 @@ setup_data_dir "${testname}"
 error=0
 
 ${CARDANO_CLI} shelley genesis initial-txin \
+    --testnet-magic 16 \
     --verification-key-file "${DATA_DIR}/genesis-utxo.vkey" \
     > "${TEST_DIR}/utxo-hash.hex"
 fail_on_error $?

@@ -27,11 +27,13 @@ error=0
 
 # Create the genesis json file and required keys.
 ${CARDANO_CLI} shelley genesis create \
+    --testnet-magic 12 \
     --start-time "${start_time}" \
     --supply "${supply}" \
     --gen-genesis-keys ${gendlg_count} \
     --gen-utxo-keys ${gendlg_count} \
     --genesis-dir "${TEST_DIR}/"
+fail_on_error $?
 
 check_supply=$(grep maxLovelaceSupply "${OUTPUT_JSON}" | sed "s/${supply}/correct/;s/[ \"]//g")
 if test "${check_supply}" != "maxLovelaceSupply:correct," ; then
@@ -39,9 +41,9 @@ if test "${check_supply}" != "maxLovelaceSupply:correct," ; then
     error=1
     fi
 
-check_start_time=$(grep startTime "${OUTPUT_JSON}" | sed "s/${start_time}/correct/;s/[ \"]//g")
-if test "${check_start_time}" != "startTime:correct," ; then
-    echo "Bad $(grep startTime "${OUTPUT_JSON}")"
+check_start_time=$(grep systemStart "${OUTPUT_JSON}" | sed "s/${start_time}/correct/;s/[ \"]//g")
+if test "${check_start_time}" != "systemStart:correct," ; then
+    echo "Bad $(grep systemStart "${OUTPUT_JSON}")"
     error=1
     fi
 

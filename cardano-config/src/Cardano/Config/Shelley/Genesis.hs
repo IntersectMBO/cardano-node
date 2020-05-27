@@ -34,7 +34,7 @@ import           Ouroboros.Consensus.Shelley.Node
                    (ShelleyGenesis (..), emptyGenesisStaking)
 import           Ouroboros.Consensus.Shelley.Protocol (TPraosStandardCrypto)
 
-import           Shelley.Spec.Ledger.BaseTypes as Ledger (truncateUnitInterval)
+import           Shelley.Spec.Ledger.BaseTypes as Ledger
 import           Shelley.Spec.Ledger.PParams as Ledger (PParams' (..), emptyPParams)
 
 data ShelleyGenesisError
@@ -57,7 +57,7 @@ renderShelleyGenesisError err =
 --
 -- You must override at least the following fields for this to be useful:
 --
--- * 'sgStartTime' the time of the first block
+-- * 'sgSystemStart' the time of the first block
 -- * 'sgNetworkMagic' to a suitable testnet or mainnet network magic number.
 -- * 'sgGenDelegs' to have some initial nodes
 -- * 'sgInitialFunds' to have any money in the system
@@ -69,8 +69,9 @@ shelleyGenesisDefaults =
   ShelleyGenesis
     {
       -- params for this specific chain
-      sgStartTime             = SystemStart zeroTime
+      sgSystemStart           = SystemStart zeroTime
     , sgNetworkMagic          = NetworkMagic 42
+    , sgNetworkId             = Ledger.Testnet
     , sgProtocolMagicId       = ProtocolMagicId 42
 
       -- consensus protocol params

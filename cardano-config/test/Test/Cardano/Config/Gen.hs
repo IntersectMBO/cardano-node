@@ -55,7 +55,8 @@ import           Ouroboros.Consensus.Shelley.Node (emptyGenesisStaking)
 import           Ouroboros.Network.Magic (NetworkMagic (..))
 
 import           Shelley.Spec.Ledger.Address (Addr, toAddr)
-import           Shelley.Spec.Ledger.BaseTypes (Nonce (..), UnitInterval (..), mkNonce)
+import           Shelley.Spec.Ledger.BaseTypes (Nonce (..), Network (..), UnitInterval (..),
+                    mkNonce)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
 import           Shelley.Spec.Ledger.Keys
                    (KeyHash, KeyPair(..), VKey(..), hashKey)
@@ -71,6 +72,7 @@ genShelleyGenesis =
   ShelleyGenesis
     <$> fmap SystemStart genUTCTime
     <*> genNetworkMagic
+    <*> Gen.element [Mainnet, Testnet]
     <*> genProtocolMagicId
     <*> fmap (realToFrac . getSlotLength) genSlotLength
     <*> fmap SecurityParam (Gen.word64 $ Range.linear 1 1000000)
@@ -232,9 +234,10 @@ genAddress :: Gen (Addr TPraosStandardCrypto)
 genAddress = do
   (secKey1, verKey1) <- genKeyPair
   (secKey2, verKey2) <- genKeyPair
+  nw <- Gen.element [Mainnet, Testnet]
   let keyPair1 = KeyPair {sKey = secKey1, vKey = verKey1}
       keyPair2 = KeyPair {sKey = secKey2, vKey = verKey2}
-  pure $ toAddr (keyPair1, keyPair2)
+  pure $ toAddr nw (keyPair1, keyPair2)
 
 
 genCoin :: Gen Coin

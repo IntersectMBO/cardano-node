@@ -34,11 +34,10 @@ import           Control.Tracer
 
 import           Network.Mux (MuxError)
 
-import           Ouroboros.Consensus.Block
-                   (BlockProtocol, GetHeader (..), CodecConfig)
-import           Ouroboros.Consensus.BlockchainTime
-import           Ouroboros.Consensus.Config
-                   (configConsensus, configCodec, configLedger)
+import           Ouroboros.Consensus.Block (BlockProtocol, GetHeader (..))
+import           Ouroboros.Consensus.BlockchainTime (SlotLength, getSlotLength)
+import           Ouroboros.Consensus.Config (configBlock, configConsensus, configLedger)
+import           Ouroboros.Consensus.Config.SupportsNode (ConfigSupportsNode (..))
 import           Ouroboros.Consensus.Ledger.Extended (ExtLedgerState (..))
 import           Ouroboros.Consensus.Mempool
 import           Ouroboros.Consensus.Network.NodeToClient
@@ -98,8 +97,8 @@ chairmanTest tracer ptcl runningTime optionalProgressThreshold socketPaths = do
     -- Run the chairman and get the final snapshot of the chain from each node.
     chainsSnapshot <- runChairman
                         tracer
-                        (configCodec cfg)
-                        (nodeNetworkMagic cfg)
+                        (getCodecConfig $ configBlock cfg)
+                        (getNetworkMagic $ configBlock cfg)
                         securityParam
                         runningTime
                         socketPaths
@@ -125,7 +124,7 @@ chairmanTest tracer ptcl runningTime optionalProgressThreshold socketPaths = do
       , pInfoInitLedger = extLedgerSt
       } = protocolInfo ptcl
 
-    startTime = nodeStartTime cfg
+    startTime = getSystemStart $ configBlock cfg
 
     securityParam = protocolSecurityParam (configConsensus cfg)
 
@@ -529,7 +528,7 @@ localInitiatorNetworkApplication
   -> ChainsVar m blk
   -> SecurityParam
   -> Versions NtC.NodeToClientVersion DictVersion
-              (LocalConnectionId -> OuroborosApplication InitiatorApp ByteString m () Void)
+              (OuroborosApplication InitiatorApp LocalAddress ByteString m () Void)
 localInitiatorNetworkApplication chairmanTracer chainSyncTracer
                                  localTxSubmissionTracer
                                  cfg networkMagic
@@ -539,7 +538,7 @@ localInitiatorNetworkApplication chairmanTracer chainSyncTracer
         versionedNodeToClientProtocols
           (nodeToClientProtocolVersion proxy v)
           versionData
-          (protocols v))
+          (const $ protocols v))
       (supportedNodeToClientVersions proxy)
   where
     proxy :: Proxy blk

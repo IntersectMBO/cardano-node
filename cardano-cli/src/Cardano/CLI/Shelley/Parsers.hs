@@ -131,6 +131,7 @@ pAddressCmd =
       AddressBuild
         <$> pPaymentVerificationKeyFile
         <*> Opt.optional pStakeVerificationKeyFile
+        <*> pNetwork
         <*> pMaybeOutputFile
 
 
@@ -186,7 +187,9 @@ pStakeAddress =
                             <*> pSigningKeyFile Output
 
     pStakeAddressBuild :: Parser StakeAddressCmd
-    pStakeAddressBuild = StakeAddressBuild <$> pStakeVerificationKeyFile <*> pMaybeOutputFile
+    pStakeAddressBuild = StakeAddressBuild <$> pStakeVerificationKeyFile
+                                           <*> pNetwork
+                                           <*> pMaybeOutputFile
 
     pStakeAddressRegister :: Parser StakeAddressCmd
     pStakeAddressRegister = StakeKeyRegister <$> pPrivKeyFile <*> parseNodeAddress
@@ -562,11 +565,11 @@ pGenesisCmd =
 
     pGenesisAddr :: Parser GenesisCmd
     pGenesisAddr =
-      GenesisAddr <$> pVerificationKeyFile Input <*> pMaybeOutputFile
+      GenesisAddr <$> pVerificationKeyFile Input <*> pNetwork <*> pMaybeOutputFile
 
     pGenesisTxIn :: Parser GenesisCmd
     pGenesisTxIn =
-      GenesisTxIn <$> pVerificationKeyFile Input <*> pMaybeOutputFile
+      GenesisTxIn <$> pVerificationKeyFile Input <*> pNetwork <*> pMaybeOutputFile
 
     pGenesisCreate :: Parser GenesisCmd
     pGenesisCreate =
@@ -575,6 +578,7 @@ pGenesisCmd =
                     <*> pGenesisNumUTxOKeys
                     <*> pMaybeSystemStart
                     <*> pInitialSupply
+                    <*> pNetwork
 
     pGenesisDir :: Parser GenesisDir
     pGenesisDir =
@@ -1173,7 +1177,8 @@ pStakePoolRegistrationCert =
   <*> pPoolMargin
   <*> pRewardAcctVerificationKeyFile
   <*> some pPoolOwner
-  <*> pure []
+  <*> pure []  --TODO: the relays
+  <*> pNetwork
   <*> pOutputFile
 
 pStakePoolRetirementCert :: Parser PoolCmd

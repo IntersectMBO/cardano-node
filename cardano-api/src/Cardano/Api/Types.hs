@@ -16,6 +16,7 @@ module Cardano.Api.Types
   , NetworkMagic (..)
   , toNetworkMagic
   , toByronNetworkMagic
+  , toShelleyNetwork
   , SigningKey (..)
   , GenesisVerificationKey (..)
   , PaymentVerificationKey (..)
@@ -274,6 +275,10 @@ toByronNetworkMagic nw =
   case nw of
     Mainnet                   -> Byron.NetworkMainOrStage
     Testnet (NetworkMagic nm) -> Byron.NetworkTestnet nm
+
+toShelleyNetwork :: Network -> Shelley.Network
+toShelleyNetwork  Mainnet    = Shelley.Mainnet
+toShelleyNetwork (Testnet _) = Shelley.Testnet
 
 toByronTxIn  :: TxIn  -> ByronTxIn
 toByronTxIn (TxIn txid txix) =

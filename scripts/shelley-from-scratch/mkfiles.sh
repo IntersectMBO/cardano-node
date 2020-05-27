@@ -25,7 +25,7 @@ sed -i ${ROOT}/configuration.yaml \
     -e 's/minSeverity: Info/minSeverity: Debug/'
 
 # Set up our template
-cardano-cli shelley genesis create --genesis-dir ${ROOT}
+cardano-cli shelley genesis create --testnet-magic 42 --genesis-dir ${ROOT}
 
 # Then edit the genesis.spec.json ...
 
@@ -45,6 +45,7 @@ sed -i ${ROOT}/genesis.spec.json \
 # Now generate for real:
 
 cardano-cli shelley genesis create \
+    --testnet-magic 42 \
     --genesis-dir ${ROOT}/ \
     --gen-genesis-keys ${NUM_BFT_NODES} \
     --gen-utxo-keys 1
@@ -204,11 +205,13 @@ for ADDR in ${ADDRS}; do
   cardano-cli shelley address build \
       --payment-verification-key-file addresses/${ADDR}.vkey \
       --staking-verification-key-file addresses/${ADDR}-stake.vkey \
+      --testnet-magic 42 \
       > addresses/${ADDR}.addr
 
   # Stake addresses
   cardano-cli shelley stake-address build \
       --staking-verification-key-file addresses/${ADDR}-stake.vkey \
+      --testnet-magic 42 \
       > addresses/${ADDR}-stake.addr
 
   # Stake addresses registration certs
@@ -246,6 +249,7 @@ echo "====================================================================="
 for NODE in ${POOL_NODES}; do
 
   cardano-cli shelley stake-pool registration-certificate \
+    --testnet-magic 42 \
     --pool-pledge 0 --pool-cost 0 --pool-margin 0 \
     --stake-pool-verification-key-file     ${NODE}/operator.vkey \
     --vrf-verification-key-file            ${NODE}/vrf.vkey \
@@ -273,6 +277,7 @@ cardano-cli shelley transaction build-raw \
     --ttl 1000 \
     --fee 0 \
     --tx-in $(cardano-cli shelley genesis initial-txin \
+                --testnet-magic 42 \
                 --verification-key-file utxo-keys/utxo1.vkey) \
     --tx-out $(cat addresses/user1.addr)+${SUPPLY} \
     --certificate addresses/pool-owner1-stake.reg.cert \

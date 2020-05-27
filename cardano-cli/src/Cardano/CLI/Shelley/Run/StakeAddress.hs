@@ -48,7 +48,7 @@ renderShelleyStakeAddressCmdError err =
 
 runStakeAddressCmd :: StakeAddressCmd -> ExceptT ShelleyStakeAddressCmdError IO ()
 runStakeAddressCmd (StakeAddressKeyGen vk sk) = runStakeAddressKeyGen vk sk
-runStakeAddressCmd (StakeAddressBuild vk mOutputFp) = runStakeAddressBuild vk mOutputFp
+runStakeAddressCmd (StakeAddressBuild vk nw mOutputFp) = runStakeAddressBuild vk nw mOutputFp
 runStakeAddressCmd (StakeKeyRegistrationCert stkKeyVerKeyFp outputFp) =
   runStakeKeyRegistrationCert stkKeyVerKeyFp outputFp
 runStakeAddressCmd (StakeKeyDelegationCert stkKeyVerKeyFp stkPoolVerKeyFp outputFp) =
@@ -72,11 +72,12 @@ runStakeAddressKeyGen (VerificationKeyFile vkFp) (SigningKeyFile skFp) = do
   firstExceptT (ShelleyStakeAddressWriteSignKeyError skFp) . newExceptT $ writeSigningKey skFp (SigningKeyShelley skey)
 
 
-runStakeAddressBuild :: VerificationKeyFile -> Maybe OutputFile -> ExceptT ShelleyStakeAddressCmdError IO ()
-runStakeAddressBuild (VerificationKeyFile stkVkeyFp) mOutputFp =
+runStakeAddressBuild :: VerificationKeyFile -> Network -> Maybe OutputFile
+                     -> ExceptT ShelleyStakeAddressCmdError IO ()
+runStakeAddressBuild (VerificationKeyFile stkVkeyFp) network mOutputFp =
   firstExceptT (ShelleyStakeAddressReadVerKeyError stkVkeyFp) $ do
     stkVKey <- ExceptT $ readStakingVerificationKey stkVkeyFp
-    let rwdAddr = AddressShelleyReward $ shelleyVerificationKeyRewardAddress stkVKey
+    let rwdAddr = AddressShelleyReward (shelleyVerificationKeyRewardAddress network stkVKey)
         hexAddr = addressToHex rwdAddr
     case mOutputFp of
       Just (OutputFile fpath) -> liftIO . LBS.writeFile fpath $ textToLByteString hexAddr

@@ -45,7 +45,7 @@ import           Data.Void (Void)
 
 import           Network.Mux (MuxTrace, WithMuxBearer)
 
-import           Ouroboros.Consensus.Cardano (protocolClientInfo)
+import           Ouroboros.Consensus.Cardano (CodecConfig, protocolClientInfo)
 import           Ouroboros.Consensus.Ledger.Abstract (Query)
 import           Ouroboros.Consensus.Network.NodeToClient
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
@@ -60,7 +60,7 @@ import           Ouroboros.Network.Mux
                    ( AppType(..), OuroborosApplication(..),
                      MuxPeer(..), RunMiniProtocol(..))
 import           Ouroboros.Network.NodeToClient (ConnectionId, DictVersion, Handshake,
-                   LocalAddress, LocalConnectionId, NetworkConnectTracers (..),
+                   LocalAddress, NetworkConnectTracers (..),
                    NodeToClientProtocols (..), NodeToClientVersion, NodeToClientVersionData (..),
                    TraceSendRecv, Versions)
 import qualified Ouroboros.Network.NodeToClient as NodeToClient
@@ -225,8 +225,7 @@ localInitiatorNetworkApplication
   -> Versions
       NodeToClientVersion
       DictVersion
-      (LocalConnectionId
-        -> OuroborosApplication 'InitiatorApp LByteString IO (Either LocalStateQueryError result) Void)
+      (OuroborosApplication 'InitiatorApp LocalAddress LByteString IO (Either LocalStateQueryError result) Void)
 localInitiatorNetworkApplication trce cfg nm
                                  resultVar pointAndQuery =
     NodeToClient.foldMapVersions
@@ -234,7 +233,7 @@ localInitiatorNetworkApplication trce cfg nm
         NodeToClient.versionedNodeToClientProtocols
           (nodeToClientProtocolVersion proxy v)
           versionData
-          (protocols v))
+          (const $ protocols v))
       (supportedNodeToClientVersions proxy)
   where
     proxy :: Proxy blk

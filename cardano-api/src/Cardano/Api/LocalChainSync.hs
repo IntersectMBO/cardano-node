@@ -23,7 +23,7 @@ import           Control.Tracer (nullTracer)
 
 import           Network.Mux (MuxError)
 
-import           Ouroboros.Consensus.Block (CodecConfig)
+import           Ouroboros.Consensus.Cardano (CodecConfig)
 import           Ouroboros.Consensus.Network.NodeToClient
                    (Codecs'(..), defaultCodecs)
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
@@ -36,7 +36,7 @@ import           Ouroboros.Network.Mux
                    (AppType(InitiatorApp), OuroborosApplication(..),
                     MuxPeer(..), RunMiniProtocol(..))
 import           Ouroboros.Network.NodeToClient
-                   (IOManager, LocalConnectionId, NetworkConnectTracers(..),
+                   (IOManager, LocalAddress, NetworkConnectTracers(..),
                     NodeToClientProtocols(..), NodeToClientVersionData(..),
                     NodeToClientVersion, connectTo, localSnocket,
                     localStateQueryPeerNull, localTxSubmissionPeerNull,
@@ -90,14 +90,14 @@ localInitiatorNetworkApplication
   -> Network
   -> StrictTMVar m (Tip blk)
   -> Versions NodeToClientVersion DictVersion
-              (LocalConnectionId -> OuroborosApplication 'InitiatorApp LBS.ByteString m () Void)
+              (OuroborosApplication 'InitiatorApp LocalAddress LBS.ByteString m () Void)
 localInitiatorNetworkApplication cfg nm tipVar =
     foldMapVersions
       (\v ->
         versionedNodeToClientProtocols
           (nodeToClientProtocolVersion proxy v)
           versionData
-          (protocols v))
+          (const $ protocols v))
       (supportedNodeToClientVersions proxy)
  where
   proxy :: Proxy blk

@@ -50,7 +50,7 @@ runAddressCmd cmd =
   case cmd of
     AddressKeyGen vkf skf -> runAddressKeyGen  vkf skf
     AddressKeyHash vkf mOFp -> runAddressKeyHash vkf mOFp
-    AddressBuild payVk stkVk mOutFp -> runAddressBuild payVk stkVk mOutFp
+    AddressBuild payVk stkVk nw mOutFp -> runAddressBuild payVk stkVk nw mOutFp
     AddressBuildMultiSig {} -> runAddressBuildMultiSig
     AddressInfo txt -> firstExceptT ShelleyAddressCmdAddressInfoError $ runAddressInfo txt
 
@@ -75,9 +75,10 @@ runAddressKeyHash (VerificationKeyFile vkeyPath) mOutputFp =
 
 runAddressBuild :: VerificationKeyFile
                 -> Maybe VerificationKeyFile
+                -> Network
                 -> Maybe OutputFile
                 -> ExceptT ShelleyAddressCmdError IO ()
-runAddressBuild (VerificationKeyFile payVkeyFp) mstkVkeyFp mOutFp =
+runAddressBuild (VerificationKeyFile payVkeyFp) mstkVkeyFp nw mOutFp =
   firstExceptT ShelleyAddressCmdPayVerificationKeyReadErrr $ do
     payVKey <- newExceptT $ readPaymentVerificationKey payVkeyFp
     mstkVKey <- case mstkVkeyFp of
@@ -85,7 +86,7 @@ runAddressBuild (VerificationKeyFile payVkeyFp) mstkVkeyFp mOutFp =
                     Just <$> newExceptT (readStakingVerificationKey stkVkeyFp)
                   Nothing ->
                     return Nothing
-    let addr = shelleyVerificationKeyAddress payVKey mstkVKey
+    let addr = shelleyVerificationKeyAddress nw payVKey mstkVKey
         hexAddr = addressToHex addr
     case mOutFp of
       Just (OutputFile fpath) -> liftIO . BS.writeFile fpath $ textToByteString hexAddr
