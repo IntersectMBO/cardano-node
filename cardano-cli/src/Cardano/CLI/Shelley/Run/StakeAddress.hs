@@ -93,7 +93,7 @@ runStakeKeyRegistrationCert (VerificationKeyFile vkFp) (OutputFile oFp) = do
 
 runStakeKeyDelegationCert
   :: VerificationKeyFile
-  -- ^ Delegator staking verification key file.
+  -- ^ Delegator stake verification key file.
   -> VerificationKeyFile
   -- ^ Delegatee stake pool verification key file.
   -> OutputFile

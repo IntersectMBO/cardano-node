@@ -442,7 +442,10 @@ pGovernanceCmd :: Parser GovernanceCmd
 pGovernanceCmd =
   Opt.subparser $
     mconcat
-      [ Opt.command "create-update-proposal"
+      [ Opt.command "create-mir-certificate"
+          (Opt.info pMIRCertificate $
+            Opt.progDesc "Create an MIR certificate")
+      , Opt.command "create-update-proposal"
           (Opt.info pUpdateProposal $
             Opt.progDesc "Create an update proposal")
       , Opt.command "protocol-update"
@@ -451,6 +454,12 @@ pGovernanceCmd =
           (Opt.info pColdKeys $ Opt.progDesc "Cold keys")
       ]
   where
+    pMIRCertificate :: Parser GovernanceCmd
+    pMIRCertificate = GovernanceMIRCertificate
+                        <$> some pStakeVerificationKeyFile
+                        <*> some pRewardAmt
+                        <*> pOutputFile
+
     pUpdateProposal :: Parser GovernanceCmd
     pUpdateProposal = GovernanceUpdateProposal
                         <$> pOutputFile
@@ -472,7 +481,14 @@ pGovernanceCmd =
               <> Opt.internal
               )
 
-
+pRewardAmt :: Parser ShelleyCoin
+pRewardAmt =
+  Shelley.Coin <$>
+    Opt.option Opt.auto
+      (  Opt.long "reward"
+      <> Opt.metavar "LOVELACE"
+      <> Opt.help "The reward for the relevant reward account."
+      )
 
 pSystemCmd :: Parser SystemCmd
 pSystemCmd =
