@@ -570,7 +570,10 @@ liveViewPostSetup lvbe ncli nc = do
     nodeId =
       case nodeMode ncli of
         MockProtocolMode -> namenum (ncNodeId nc)
-        RealProtocolMode -> Text.pack $ "Port: " <> show (naPort <$> nodeAddr ncli)
+        RealProtocolMode -> Text.pack $ "Port: " <>
+          case naPort <$> nodeAddr ncli of
+            Nothing -> "-"
+            Just port -> show port
 
     namenum :: Maybe NodeId -> Text
     namenum mnid =
