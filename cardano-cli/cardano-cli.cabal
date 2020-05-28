@@ -47,13 +47,14 @@ library
                        Cardano.CLI.Shelley.Run
                        Cardano.CLI.Shelley.Run.Address
                        Cardano.CLI.Shelley.Run.Address.Info
-                       Cardano.CLI.Shelley.Run.StakeAddress
-                       Cardano.CLI.Shelley.Run.Transaction
+                       Cardano.CLI.Shelley.Run.Genesis
+                       Cardano.CLI.Shelley.Run.Governance
                        Cardano.CLI.Shelley.Run.Node
                        Cardano.CLI.Shelley.Run.Pool
                        Cardano.CLI.Shelley.Run.Query
-                       Cardano.CLI.Shelley.Run.Genesis
+                       Cardano.CLI.Shelley.Run.StakeAddress
                        Cardano.CLI.Shelley.Run.TextView
+                       Cardano.CLI.Shelley.Run.Transaction
 
   other-modules:       Paths_cardano_cli
 
