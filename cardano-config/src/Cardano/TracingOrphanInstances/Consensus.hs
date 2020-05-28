@@ -40,6 +40,7 @@ import           Ouroboros.Consensus.Ledger.Extended
 import           Ouroboros.Consensus.Mempool.API
                    (GenTx, GenTxId, HasTxId, TraceEventMempool (..), ApplyTxErr,
                    MempoolSize(..), TxId, txId)
+import           Ouroboros.Consensus.Node.Run (RunNode(..))
 import           Ouroboros.Consensus.Node.Tracers (TraceForgeEvent (..))
 import           Ouroboros.Consensus.Protocol.Abstract
 import           Ouroboros.Consensus.MiniProtocol.LocalTxSubmission.Server
@@ -217,7 +218,9 @@ showT = pack . show
 
 instance ( Condense (HeaderHash blk)
          , HasTxId tx
+         , tx ~ GenTx blk
          , LedgerSupportsProtocol blk
+         , RunNode blk
          , Show (TxId tx)
          , ToObject (LedgerError blk)
          , ToObject (OtherHeaderEnvelopeError blk)
@@ -743,7 +746,9 @@ instance ToObject MempoolSize where
 
 instance ( Condense (HeaderHash blk)
          , HasTxId tx
+         , tx ~ GenTx blk
          , LedgerSupportsProtocol blk
+         , RunNode blk
          , Show (TxId tx)
          , ToObject (LedgerError blk)
          , ToObject (OtherHeaderEnvelopeError blk)
@@ -754,6 +759,7 @@ instance ( Condense (HeaderHash blk)
       [ "kind" .= String "TraceAdoptedBlock"
       , "slot" .= toJSON (unSlotNo slotNo)
       , "block hash" .=  (condense $ blockHash blk)
+      , "sum tx sizes" .= toJSON (foldl' (\acc tx -> acc + nodeTxInBlockSize tx) 0 txs)
       , "tx ids" .= toJSON (map (show . txId) txs)
       ]
   toObject _verb (TraceAdoptedBlock slotNo blk _txs) =
