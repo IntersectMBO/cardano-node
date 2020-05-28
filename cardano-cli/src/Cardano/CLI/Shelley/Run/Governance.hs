@@ -29,6 +29,12 @@ data ShelleyGovernanceError
   | GovernanceEmptyUpdateProposalError
   | GovernanceReadGenVerKeyError !FilePath !KeyError
   | GovernanceReadStakeVerKeyError !FilePath !ApiError
+  | GovernanceMIRCertificateKeyRewardMistmach
+      !FilePath
+      !Int
+      -- ^ Number of stake verification keys
+      !Int
+      -- ^ Number of reward amounts
   deriving Show
 
 renderShelleyGovernanceError :: ShelleyGovernanceError -> Text
@@ -45,6 +51,13 @@ renderShelleyGovernanceError err =
     -- TODO: The equality check is still not working for empty update proposals.
     GovernanceEmptyUpdateProposalError ->
       "Empty update proposals are not allowed"
+    GovernanceMIRCertificateKeyRewardMistmach fp numVKeys numRwdAmts ->
+       "Error creating the MIR certificate at: " <> textShow fp
+       <> " The number of staking keys: " <> textShow numVKeys
+       <> " and the number of reward amounts: " <> textShow numRwdAmts
+       <> " are not equivalent."
+
+
 
 runGovernanceCmd :: GovernanceCmd -> ExceptT ShelleyGovernanceError IO ()
 runGovernanceCmd (GovernanceMIRCertificate vKeys rewards out) = runGovernanceMIRCertificate vKeys rewards out
@@ -61,10 +74,19 @@ runGovernanceMIRCertificate
 runGovernanceMIRCertificate vKeys rwdAmts (OutputFile oFp) = do
     sCreds <- mapM readStakeKeyToCred vKeys
 
+    checkEqualKeyRewards vKeys rwdAmts
+
     let mirCert = shelleyMIRCertificate $ mirMap sCreds rwdAmts
 
     firstExceptT (GovernanceWriteMIRCertError oFp) . newExceptT $ writeCertificate oFp mirCert
   where
+    checkEqualKeyRewards :: [VerificationKeyFile] -> [ShelleyCoin] -> ExceptT ShelleyGovernanceError IO ()
+    checkEqualKeyRewards keys rwds = do
+       let numVKeys = length keys
+           numRwdAmts = length rwds
+       if numVKeys == numRwdAmts
+       then return () else left $ GovernanceMIRCertificateKeyRewardMistmach oFp numVKeys numRwdAmts
+
     readStakeKeyToCred :: VerificationKeyFile -> ExceptT ShelleyGovernanceError IO ShelleyCredentialStaking
     readStakeKeyToCred (VerificationKeyFile stVKey) = do
       StakingVerificationKeyShelley stakeVkey <-

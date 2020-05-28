@@ -444,7 +444,7 @@ pGovernanceCmd =
     mconcat
       [ Opt.command "create-mir-certificate"
           (Opt.info pMIRCertificate $
-            Opt.progDesc "Create an MIR certificate")
+            Opt.progDesc "Create an MIR (Move Instantaneous Rewards) certificate")
       , Opt.command "create-update-proposal"
           (Opt.info pUpdateProposal $
             Opt.progDesc "Create an update proposal")
