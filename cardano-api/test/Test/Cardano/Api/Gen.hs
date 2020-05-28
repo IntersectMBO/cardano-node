@@ -51,8 +51,9 @@ import qualified Data.Set as Set
 import           Shelley.Spec.Ledger.BaseTypes (Nonce (..),StrictMaybe (..),
                     UnitInterval(..), maybeToStrictMaybe, mkNonce,
                     mkUnitInterval, textToDns, textToUrl)
+import qualified Shelley.Spec.Ledger.BaseTypes as Shelley
 import           Shelley.Spec.Ledger.Coin (Coin (..))
-import           Shelley.Spec.Ledger.Crypto hiding (Network (..))
+import           Shelley.Spec.Ledger.Crypto (DSIGN, VRF)
 import           Shelley.Spec.Ledger.Keys (KeyHash, SignKeyVRF, VerKeyVRF,
                    VKey(..), hash, hashKey)
 import           Shelley.Spec.Ledger.PParams (PParamsUpdate,
@@ -148,9 +149,12 @@ genNetworkMagic =
   NetworkMagic <$> Gen.word32 Range.constantBounded
 
 genRewardAccountShelley :: Gen ShelleyRewardAccount
-genRewardAccountShelley = do
-  cred <- genCredentialShelley
-  return $ RewardAcnt cred
+genRewardAccountShelley =
+  RewardAcnt <$> genShelleyNetwork <*> genCredentialShelley
+
+genShelleyNetwork :: Gen Shelley.Network
+genShelleyNetwork =
+  Gen.element [ Shelley.Mainnet, Shelley.Testnet ]
 
 genSigningKey :: Gen SigningKey
 genSigningKey =
@@ -365,7 +369,8 @@ genVerificationKeyAddressByron =
 genVerificationKeyAddressShelley :: Gen Address
 genVerificationKeyAddressShelley =
   shelleyVerificationKeyAddress
-    <$> genPaymentVerificationKeyShelley
+    <$> genNetwork
+    <*> genPaymentVerificationKeyShelley
     <*> Gen.choice
           [ pure Nothing
           , Just <$> genStakingVerificationKey

@@ -13,10 +13,10 @@ import           Control.Monad.Trans.Except.Extra (firstExceptT, newExceptT)
 
 import qualified Data.ByteString.Char8 as BS
 
-import           Cardano.Api (ShelleyVerificationKeyHashStakePool)
-
 import           Cardano.Api (ApiError(..), ShelleyCoin, ShelleyStakePoolMargin,
                    ShelleyStakePoolRelay, StakingVerificationKey (..),
+                   ShelleyVerificationKeyHashStakePool,
+                   Network, toShelleyNetwork,
                    mkShelleyStakingCredential, readStakingVerificationKey,
                    renderApiError, shelleyRegisterStakePool,
                    shelleyRetireStakePool, textShow, writeCertificate)
@@ -57,8 +57,8 @@ renderShelleyPoolCmdError err =
 
 
 runPoolCmd :: PoolCmd -> ExceptT ShelleyPoolCmdError IO ()
-runPoolCmd (PoolRegistrationCert sPvkey vrfVkey pldg pCost pMrgn rwdVerFp ownerVerFps relays outfp) =
-  runStakePoolRegistrationCert sPvkey vrfVkey pldg pCost pMrgn rwdVerFp ownerVerFps relays outfp
+runPoolCmd (PoolRegistrationCert sPvkey vrfVkey pldg pCost pMrgn rwdVerFp ownerVerFps relays network outfp) =
+  runStakePoolRegistrationCert sPvkey vrfVkey pldg pCost pMrgn rwdVerFp ownerVerFps relays network outfp
 runPoolCmd (PoolRetirementCert sPvkeyFp retireEpoch outfp) =
   runStakePoolRetirementCert sPvkeyFp retireEpoch outfp
 runPoolCmd (PoolGetId sPvkey) = runPoolId sPvkey
@@ -84,11 +84,12 @@ runStakePoolRegistrationCert
   -> ShelleyStakePoolMargin
   -- ^ Pool margin.
   -> VerificationKeyFile
-  -- ^ Reward account verification staking key.
+  -- ^ Stake verification key for reward account.
   -> [VerificationKeyFile]
-  -- ^ Pool owner verification staking key(s).
+  -- ^ Pool owner stake verification key(s).
   -> [ShelleyStakePoolRelay]
   -- ^ Stake pool relays.
+  -> Network
   -> OutputFile
   -> ExceptT ShelleyPoolCmdError IO ()
 runStakePoolRegistrationCert
@@ -100,6 +101,7 @@ runStakePoolRegistrationCert
   (VerificationKeyFile rwdVerFp)
   ownerVerFps
   relays
+  network
   (OutputFile outfp) = do
     -- Pool verification key
     stakePoolVerKey <- firstExceptT (ShelleyPoolReadStakePoolVerKeyError sPvkeyFp) $
@@ -112,7 +114,10 @@ runStakePoolRegistrationCert
     -- Pool reward account
     StakingVerificationKeyShelley rewardAcctVerKey <-
       firstExceptT (ShelleyPoolReadStakeVerKeyError rwdVerFp)  . newExceptT $ readStakingVerificationKey rwdVerFp
-    let rewardAccount = Shelley.mkRwdAcnt . mkShelleyStakingCredential $ hashKey rewardAcctVerKey
+    let rewardAccount = Shelley.mkRwdAcnt (toShelleyNetwork network)
+                      . mkShelleyStakingCredential
+                      . hashKey
+                      $ rewardAcctVerKey
 
     -- Pool owner(s)
     sPoolOwnerVkeys <-

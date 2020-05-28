@@ -27,6 +27,7 @@ module Cardano.Api
   , NetworkMagic (..)
   , toNetworkMagic
   , toByronNetworkMagic
+  , toShelleyNetwork
 
     -- * Transactions
   , TxSigned (..)
@@ -298,12 +299,13 @@ byronVerificationKeyAddress vkey nw =
     PaymentVerificationKeyShelley _ -> panic "Cardano.Api.byronVerificationKeyAddress: VerificationKeyInfoShelley"
 
 shelleyVerificationKeyAddress
-  :: PaymentVerificationKey
+  :: Network
+  -> PaymentVerificationKey
   -> Maybe StakingVerificationKey
   -> Address
-shelleyVerificationKeyAddress (PaymentVerificationKeyByron _) _ =
+shelleyVerificationKeyAddress _ (PaymentVerificationKeyByron _) _ =
   panic "Cardano.Api.shelleyVerificationKeyAddress: PaymentVerificationKeyByron"
-shelleyVerificationKeyAddress (PaymentVerificationKeyShelley payVKey) mbStkVKey = do
+shelleyVerificationKeyAddress nw (PaymentVerificationKeyShelley payVKey) mbStkVKey = do
   case mbStkVKey of
     -- Build a Shelley base address.
     Just (StakingVerificationKeyShelley stkVKey) -> do
@@ -312,7 +314,7 @@ shelleyVerificationKeyAddress (PaymentVerificationKeyShelley payVKey) mbStkVKey 
       -- is all we have here
       let paymentCredential = Shelley.KeyHashObj $ Shelley.hashKey payVKey
           stakingCredential = Shelley.StakeRefBase . Shelley.KeyHashObj $ Shelley.hashKey stkVKey
-      AddressShelley $ Shelley.Addr paymentCredential stakingCredential
+      AddressShelley $ Shelley.Addr (toShelleyNetwork nw) paymentCredential stakingCredential
 
     -- Build a Shelley enterprise address.
     Nothing ->
@@ -320,14 +322,15 @@ shelleyVerificationKeyAddress (PaymentVerificationKeyShelley payVKey) mbStkVKey 
         -- TODO: we cannot use toAddr or toCred here because they unnecessarily
         -- require a full key pair, when only the pub key is needed, and that
         -- is all we have here
-        Shelley.Addr (Shelley.KeyHashObj (Shelley.hashKey payVKey))
+        Shelley.Addr (toShelleyNetwork nw)
+                     (Shelley.KeyHashObj (Shelley.hashKey payVKey))
                      Shelley.StakeRefNull
 
 -- | Shelley reward accounts are not UTxO addresses so they are handled differently.
-shelleyVerificationKeyRewardAddress :: StakingVerificationKey -> ShelleyRewardAccount
-shelleyVerificationKeyRewardAddress (StakingVerificationKeyShelley stkVKey) = do
+shelleyVerificationKeyRewardAddress :: Network -> StakingVerificationKey -> ShelleyRewardAccount
+shelleyVerificationKeyRewardAddress nw (StakingVerificationKeyShelley stkVKey) = do
   let stakingCredential = Shelley.KeyHashObj $ Shelley.hashKey stkVKey
-  Shelley.mkRwdAcnt stakingCredential
+  Shelley.mkRwdAcnt (toShelleyNetwork nw) stakingCredential
 
 getGenesisVerificationKey :: SigningKey -> GenesisVerificationKey
 getGenesisVerificationKey kp =
@@ -455,7 +458,7 @@ buildDummyShelleyTxForFeeCalc txInCount txOutCount ttl network skeys certs =
         (headMay skeys)
 
     addr :: Address
-    addr = shelleyVerificationKeyAddress vkey Nothing
+    addr = shelleyVerificationKeyAddress network vkey Nothing
 
     txIns :: [TxIn]
     txIns = map (mkTxIn . mkTxId) [0..txInCount - 1]
@@ -624,3 +627,4 @@ getTxUnsignedBody txu =
 -- or separate accessor functions
 -- the txid should be cached, it might be already. There was a ticket about doing that in the ledger
 -- so consensus doesn’t have to do it elsewhere
+

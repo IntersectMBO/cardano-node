@@ -41,6 +41,7 @@ prop_buildShelleyPaymentAddress =
       "prop_buildShelleyPaymentAddress.build_payment_address"
         $ evalCardanoCLIParser [ "shelley", "address", "build"
                                , "--payment-verification-key-file", verKey
+                               , "--mainnet"
                                ]
 
     liftIO $ fileCleanup [verKey, signKey]
@@ -90,6 +91,7 @@ prop_buildShelleyStakeAddress =
         $ evalCardanoCLIParser [ "shelley", "address", "build"
                                , "--payment-verification-key-file", paymentVerKey
                                , "--stake-verification-key-file", stakeVerKey
+                               , "--mainnet"
                                ]
 
     liftIO $ fileCleanup allFiles

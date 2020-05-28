@@ -125,17 +125,17 @@ localInitiatorNetworkApplication
   -> TMVar (SubmitResult (ApplyTxErr blk)) -- ^ Result will be placed here
   -> GenTx blk
   -> Versions NtC.NodeToClientVersion DictVersion
-              (LocalConnectionId
-               -> OuroborosApplication InitiatorApp LByteString IO () Void)
+               (OuroborosApplication InitiatorApp LocalAddress LByteString IO () Void)
 localInitiatorNetworkApplication tracer cfg nm resultVar genTx =
     foldMapVersions
       (\v ->
         NtC.versionedNodeToClientProtocols
           (nodeToClientProtocolVersion proxy v)
           versionData
-          (protocols v genTx))
+          (const $ protocols v genTx))
       (supportedNodeToClientVersions proxy)
   where
+
     proxy :: Proxy blk
     proxy = Proxy
 

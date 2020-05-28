@@ -13,6 +13,7 @@ setup_data_dir "${testname}"
 error=0
 
 ${CARDANO_CLI} shelley stake-address build \
+    --mainnet \
     --staking-verification-key-file "${DATA_DIR}/staking.vkey" \
     > "${TEST_DIR}/reward-address.hex"
 fail_on_error $?

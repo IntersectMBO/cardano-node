@@ -117,9 +117,9 @@ runGenesisCmd (GenesisKeyGenDelegate vk sk ctr) = runGenesisKeyGenDelegate vk sk
 runGenesisCmd (GenesisKeyGenUTxO vk sk) = runGenesisKeyGenUTxO vk sk
 runGenesisCmd (GenesisKeyHash vk) = runGenesisKeyHash vk
 runGenesisCmd (GenesisVerKey vk sk) = runGenesisVerKey vk sk
-runGenesisCmd (GenesisTxIn vk mOutFile) = runGenesisTxIn vk mOutFile
-runGenesisCmd (GenesisAddr vk mOutFile) = runGenesisAddr vk mOutFile
-runGenesisCmd (GenesisCreate gd gn un ms am) = runGenesisCreate gd gn un ms am
+runGenesisCmd (GenesisTxIn vk nw mOutFile) = runGenesisTxIn vk nw mOutFile
+runGenesisCmd (GenesisAddr vk nw mOutFile) = runGenesisAddr vk nw mOutFile
+runGenesisCmd (GenesisCreate gd gn un ms am nw) = runGenesisCreate gd gn un ms am nw
 
 --
 -- Genesis command implementations
@@ -175,10 +175,10 @@ genesisKeyRoles =
   ]
 
 
-runGenesisTxIn :: VerificationKeyFile -> Maybe OutputFile -> ExceptT ShelleyGenesisCmdError IO ()
-runGenesisTxIn (VerificationKeyFile vkeyPath) mOutFile = do
+runGenesisTxIn :: VerificationKeyFile -> Network -> Maybe OutputFile -> ExceptT ShelleyGenesisCmdError IO ()
+runGenesisTxIn (VerificationKeyFile vkeyPath) network mOutFile = do
       vkey <- firstExceptT ShelleyGenesisCmdReadGenesisUTxOVerKeyError $ readVerKey GenesisUTxOKey vkeyPath
-      case shelleyVerificationKeyAddress (PaymentVerificationKeyShelley vkey) Nothing of
+      case shelleyVerificationKeyAddress network (PaymentVerificationKeyShelley vkey) Nothing of
         AddressShelley addr -> do let txin = renderTxIn $ fromShelleyTxIn (initialFundsPseudoTxIn addr)
                                   case mOutFile of
                                     Just (OutputFile fpath) -> liftIO . BS.writeFile fpath $ textToByteString txin
@@ -195,11 +195,11 @@ runGenesisTxIn (VerificationKeyFile vkeyPath) mOutFile = do
         TxId (Crypto.UnsafeHash h)
 
 
-runGenesisAddr :: VerificationKeyFile -> Maybe OutputFile -> ExceptT ShelleyGenesisCmdError IO ()
-runGenesisAddr (VerificationKeyFile vkeyPath) mOutFile =
+runGenesisAddr :: VerificationKeyFile -> Network -> Maybe OutputFile -> ExceptT ShelleyGenesisCmdError IO ()
+runGenesisAddr (VerificationKeyFile vkeyPath) network mOutFile =
     firstExceptT ShelleyGenesisCmdReadGenesisUTxOVerKeyError $ do
       vkey <- readVerKey GenesisUTxOKey vkeyPath
-      let addr = shelleyVerificationKeyAddress
+      let addr = shelleyVerificationKeyAddress network
                    (PaymentVerificationKeyShelley vkey) Nothing
           hexAddr = addressToHex addr
       case mOutFile of
@@ -216,10 +216,11 @@ runGenesisCreate :: GenesisDir
                  -> Word  -- ^ num utxo keys to make
                  -> Maybe SystemStart
                  -> Maybe Lovelace
+                 -> Network
                  -> ExceptT ShelleyGenesisCmdError IO ()
 runGenesisCreate (GenesisDir rootdir)
                  genNumGenesisKeys genNumUTxOKeys
-                 mStart mAmount = do
+                 mStart mAmount network = do
   liftIO $ do
     createDirectoryIfMissing False rootdir
     createDirectoryIfMissing False gendir
@@ -236,7 +237,7 @@ runGenesisCreate (GenesisDir rootdir)
     createUtxoKeys utxodir index
 
   genDlgs <- readGenDelegsMap gendir deldir
-  utxoAddrs <- readInitialFundAddresses utxodir
+  utxoAddrs <- readInitialFundAddresses utxodir network
   start <- maybe (SystemStart <$> getCurrentTimePlus30) pure mStart
 
   let finalGenesis = updateTemplate start mAmount genDlgs utxoAddrs template
@@ -325,7 +326,7 @@ updateTemplate
     -> ShelleyGenesis TPraosStandardCrypto
 updateTemplate start mAmount delKeys utxoAddrs template =
     template
-      { sgStartTime = start
+      { sgSystemStart = start
       , sgMaxLovelaceSupply = fromIntegral totalCoin
       , sgGenDelegs = delKeys
       , sgInitialFunds = Map.fromList utxoList
@@ -398,14 +399,14 @@ readIndexedVerKey role fpath =
         [] -> Nothing
         xs -> readMaybe xs
 
-readInitialFundAddresses :: FilePath -> ExceptT ShelleyGenesisCmdError IO [ShelleyAddress]
-readInitialFundAddresses utxodir = do
+readInitialFundAddresses :: FilePath -> Network -> ExceptT ShelleyGenesisCmdError IO [ShelleyAddress]
+readInitialFundAddresses utxodir nw = do
     files <- filter isVkey <$> liftIO (listDirectory utxodir)
     vkeys <- firstExceptT ShelleyGenesisCmdGenesisUTxOKeyError $
                traverse (readVerKey GenesisUTxOKey)
                         (map (utxodir </>) files)
     return [ addr | vkey <- vkeys
-           , addr <- case shelleyVerificationKeyAddress (PaymentVerificationKeyShelley vkey) Nothing of
+           , addr <- case shelleyVerificationKeyAddress nw (PaymentVerificationKeyShelley vkey) Nothing of
                        AddressShelley addr' -> return addr'
                        _ -> panic "Please supply only shelley verification keys"
            ]

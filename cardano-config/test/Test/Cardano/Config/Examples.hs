@@ -21,7 +21,7 @@ import           Ouroboros.Consensus.Shelley.Node (emptyGenesisStaking)
 import           Ouroboros.Network.Magic (NetworkMagic (..))
 
 import           Shelley.Spec.Ledger.Address (Addr (..))
-import           Shelley.Spec.Ledger.BaseTypes (truncateUnitInterval)
+import           Shelley.Spec.Ledger.BaseTypes (Network (..), truncateUnitInterval)
 import           Shelley.Spec.Ledger.Coin (Coin(..))
 import           Shelley.Spec.Ledger.Credential (Credential (..), StakeReference(..))
 import           Shelley.Spec.Ledger.Keys (KeyHash(..), KeyRole(..))
@@ -33,8 +33,9 @@ import           Cardano.Config.Shelley.Genesis
 exampleShelleyGenesis :: ShelleyGenesis TPraosStandardCrypto
 exampleShelleyGenesis =
   ShelleyGenesis
-    { sgStartTime = SystemStart . posixSecondsToUTCTime $ realToFrac (1234566789 :: Integer)
+    { sgSystemStart = SystemStart . posixSecondsToUTCTime $ realToFrac (1234566789 :: Integer)
     , sgNetworkMagic = NetworkMagic 4036000900
+    , sgNetworkId = Testnet
     , sgProtocolMagicId = ProtocolMagicId 838299499
     , sgActiveSlotsCoeff = 6.259
     , sgSecurityParam = SecurityParam 120842
@@ -62,7 +63,7 @@ exampleShelleyGenesis =
   delegVerKeyHash :: KeyHash GenesisDelegate TPraosStandardCrypto
   delegVerKeyHash = KeyHash "839b047f56e50654bdb504832186dc1ee0c73c8de2daec7ae62738273be825b2"
   initialFundedAddress :: Addr TPraosStandardCrypto
-  initialFundedAddress = Addr paymentCredential (StakeRefBase stakingCredential)
+  initialFundedAddress = Addr Testnet paymentCredential (StakeRefBase stakingCredential)
     where
       paymentCredential =
         KeyHashObj $ KeyHash

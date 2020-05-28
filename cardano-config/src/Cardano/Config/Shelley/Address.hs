@@ -19,6 +19,7 @@ import           Control.Monad.Trans.Except.Extra (firstExceptT, newExceptT)
 import           Ouroboros.Consensus.Shelley.Protocol.Crypto
                    (TPraosStandardCrypto)
 import           Shelley.Spec.Ledger.Address (Addr (..), toAddr)
+import           Shelley.Spec.Ledger.BaseTypes (Network (..))
 import           Shelley.Spec.Ledger.Keys (KeyPair(..))
 
 import           Cardano.Config.Shelley.ColdKeys (genKeyPair)
@@ -47,13 +48,13 @@ decodeAddress addrRole tView = do
  where
   fileType = renderAddressRole addrRole
 
-genAddress :: IO ShelleyAddress
-genAddress = do
+genAddress :: Network -> IO ShelleyAddress
+genAddress nw = do
   (paymentVkey, paymentSkey) <- genKeyPair
   (stakingVkey, stakingSkey) <- genKeyPair
-  pure $ toAddr ( KeyPair {sKey = paymentSkey, vKey = paymentVkey}
-                , KeyPair {sKey = stakingSkey, vKey = stakingVkey}
-                )
+  pure $ toAddr nw ( KeyPair {sKey = paymentSkey, vKey = paymentVkey}
+                   , KeyPair {sKey = stakingSkey, vKey = stakingVkey}
+                   )
 
 readAddress :: AddressRole -> FilePath -> ExceptT AddressError IO ShelleyAddress
 readAddress role fp = do

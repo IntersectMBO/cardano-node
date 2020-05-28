@@ -66,12 +66,13 @@ import           Ouroboros.Consensus.Block (BlockProtocol)
 import           Ouroboros.Consensus.Node (NodeKernel,
                      DiffusionTracers (..), DiffusionArguments (..),
                      DnsSubscriptionTarget (..), IPSubscriptionTarget (..),
-                     RunNode (nodeNetworkMagic, nodeStartTime),
+                     RunNode (..),
                      RunNodeArgs (..))
 import qualified Ouroboros.Consensus.Node as Node (getChainDB, run)
 import           Ouroboros.Consensus.Node.ProtocolInfo
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
 import           Ouroboros.Consensus.NodeId
+import           Ouroboros.Consensus.Config.SupportsNode (ConfigSupportsNode (..))
 import           Ouroboros.Consensus.Fragment.InFuture (defaultClockSkew)
 import qualified Ouroboros.Consensus.Config as Consensus
 import qualified Ouroboros.Consensus.Cardano as Consensus
@@ -289,7 +290,7 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
        rnTraceDB              = chainDBTracer nodeTracers,
        rnTraceDiffusion       = diffusionTracers,
        rnDiffusionArguments   = diffusionArguments,
-       rnNetworkMagic         = nodeNetworkMagic cfg,
+       rnNetworkMagic         = getNetworkMagic (Consensus.configBlock cfg),
        rnDatabasePath         = dbPath,
        rnProtocolInfo         = pInfo,
        rnCustomiseChainDbArgs = customiseChainDbArgs $ validateDB npm,
@@ -348,7 +349,7 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
          let (dnsProducerAddrs, ipProducerAddrs) = producerAddresses nt
 
          traceWith tracer $
-           "System started at " <> show (nodeStartTime cfg)
+           "System started at " <> show (getSystemStart $ Consensus.configBlock cfg)
 
          traceWith tracer $ unlines
            [ ""
@@ -364,7 +365,7 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
              vTr = appendName "version" tr
              cTr = appendName "commit"  tr
          traceNamedObject rTr (meta, LogMessage (show (ncProtocol nc)))
-         traceNamedObject rTr (meta, LogMessage ("NetworkMagic " <> show (unNetworkMagic $ nodeNetworkMagic cfg)))
+         traceNamedObject rTr (meta, LogMessage ("NetworkMagic " <> show (unNetworkMagic . getNetworkMagic $ Consensus.configBlock cfg)))
          traceNamedObject vTr (meta, LogMessage . pack . showVersion $ version)
          traceNamedObject cTr (meta, LogMessage gitRev)
 
@@ -381,7 +382,7 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
                                             pure
                                             eitherTopology
 
-         traceWith tracer $ "System started at " <> show (nodeStartTime cfg)
+         traceWith tracer $ "System started at " <> show (getSystemStart $ Consensus.configBlock cfg)
          let producersList = map (\ns -> (nodeId ns, producers ns)) nodeSetups
              producers' = case (List.lookup nodeid producersList) of
                             Just ps ->  ps
