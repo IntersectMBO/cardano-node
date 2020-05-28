@@ -1,6 +1,6 @@
 # Making a Shelley blockchain from scratch
 
-**Last validated: 2020/05/10**
+**Last validated: 2020/05/28**
 
 ## Preliminaries
 
@@ -11,7 +11,8 @@ We also assume a Linux system, though it should work fine on OSX too.
 
 ```
 $ cardano-cli version
-cardano-cli 1.11.0 - linux-x86_64 - ghc-8.6
+cardano-cli 1.12.0 - linux-x86_64 - ghc-8.6
+git rev f6ef186d1f7280585a245c8565d92117133cf359
 ```
 
 Everything we'll be doing uses the `shelley` sub-command
@@ -24,16 +25,21 @@ Available options:
   -h,--help                Show this help text
 
 Available commands:
-  address                  Shelley address commands
+  address                  Shelley payment address commands
   stake-address            Shelley stake address commands
   transaction              Shelley transaction commands
   node                     Shelley node operaton commands
   stake-pool               Shelley stake pool commands
-  query                    Shelley node query commands
+  query                    Shelley node query commands. Will query the local
+                           node whose Unix domain socket is obtained from the
+                           CARDANO_NODE_SOCKET_PATH enviromnent variable.
   block                    Shelley block commands
   system                   Shelley system commands
-  governance               Shelley governance commands
   genesis                  Shelley genesis block commands
+  governance               Shelley governance commands
+  text-view                Commands for dealing with Shelley TextView files.
+                           Transactions, addresses etc are stored on disk as
+                           TextView files.
 ```
 
 We'll put all files under an `example` directory.
@@ -88,14 +94,14 @@ governance, so we still have genesis keys with special governance powers.
 So the first step will be to make the genesis keys.
 ```
 $ cardano-cli shelley genesis key-gen-genesis
-Usage: cardano-cli shelley genesis key-gen-genesis --verification-key-file FILEPATH
-                                                   --signing-key-file FILEPATH
+Usage: cardano-cli shelley genesis key-gen-genesis --verification-key-file FILE
+                                                   --signing-key-file FILE
   Create a Shelley genesis key pair
 
 Available options:
-  --verification-key-file FILEPATH
+  --verification-key-file FILE
                            Output filepath of the verification key.
-  --signing-key-file FILEPATH
+  --signing-key-file FILE
                            Output filepath of the signing key.
 ```
 So let's make two example genesis key pairs
@@ -158,15 +164,15 @@ So we need to make genesis delegate keys, as many as you made genesis keys
 (just one in our example).
 ```
 $ cardano-cli shelley genesis key-gen-delegate
-Usage: cardano-cli shelley genesis key-gen-delegate --verification-key-file FILEPATH
-                                                    --signing-key-file FILEPATH
+Usage: cardano-cli shelley genesis key-gen-delegate --verification-key-file FILE
+                                                    --signing-key-file FILE
                                                     --operational-certificate-issue-counter FILE
   Create a Shelley genesis delegate key pair
 
 Available options:
-  --verification-key-file FILEPATH
+  --verification-key-file FILE
                            Output filepath of the verification key.
-  --signing-key-file FILEPATH
+  --signing-key-file FILE
                            Output filepath of the signing key.
   --operational-certificate-issue-counter FILE
                            The file with the issue counter for the operational
@@ -207,14 +213,14 @@ UTxO values.
 So we need to make genesis initial UTxO keys.
 ```
 $ cardano-cli shelley genesis key-gen-utxo
-Usage: cardano-cli shelley genesis key-gen-utxo --verification-key-file FILEPATH
-                                                --signing-key-file FILEPATH
+Usage: cardano-cli shelley genesis key-gen-utxo --verification-key-file FILE
+                                                --signing-key-file FILE
   Create a Shelley genesis UTxO key pair
 
 Available options:
-  --verification-key-file FILEPATH
+  --verification-key-file FILE
                            Output filepath of the verification key.
-  --signing-key-file FILEPATH
+  --signing-key-file FILE
                            Output filepath of the signing key.
 ```
 
@@ -355,11 +361,11 @@ So to understand where it got the key hashes from we can use a command to
 get the key hash for each key:
 ```
 $ cardano-cli shelley genesis key-hash
-Usage: cardano-cli shelley genesis key-hash --verification-key-file FILEPATH
+Usage: cardano-cli shelley genesis key-hash --verification-key-file FILE
   Print the identifier (hash) of a public key
 
 Available options:
-  --verification-key-file FILEPATH
+  --verification-key-file FILE
                            Input filepath of the verification key.
 ```
 Let's do that for our genesis key and genesis delegate key
@@ -384,11 +390,11 @@ initial _addresses_ to the initial values at those address. So we need a
 command to get the address corresponding to an initial UTxO verification key:
 ```
 $ cardano-cli shelley genesis initial-addr
-Usage: cardano-cli shelley genesis initial-addr --verification-key-file FILEPATH
+Usage: cardano-cli shelley genesis initial-addr --verification-key-file FILE
   Get the address for an initial UTxO based on the verification key
 
 Available options:
-  --verification-key-file FILEPATH
+  --verification-key-file FILE
                            Input filepath of the verification key.
 ```
 So let's do that for the UTxO key
@@ -462,6 +468,8 @@ Available commands:
   key-gen-utxo             Create a Shelley genesis UTxO key pair
   key-hash                 Print the identifier (hash) of a public key
   get-ver-key              Derive the verification key from a signing key
+  initial-addr             Get the address for an initial UTxO based on the
+                           verification key
   initial-txin             Get the TxIn for an initial UTxO based on the
                            verification key
   create                   Create a Shelley genesis file from a genesis template
@@ -748,16 +756,16 @@ both get used to issue operational certs.
 We can create stake pool operator keys using:
 ```
 $ cardano-cli shelley node key-gen
-Usage: cardano-cli shelley node key-gen --verification-key-file FILEPATH
-                                        --signing-key-file FILEPATH
+Usage: cardano-cli shelley node key-gen --verification-key-file FILE
+                                        --signing-key-file FILE
                                         --operational-certificate-issue-counter FILE
   Create a key pair for a node operator's offline key and a new certificate
   issue counter
 
 Available options:
-  --verification-key-file FILEPATH
+  --verification-key-file FILE
                            Output filepath of the verification key.
-  --signing-key-file FILEPATH
+  --signing-key-file FILE
                            Output filepath of the signing key.
   --operational-certificate-issue-counter FILE
                            The file with the issue counter for the operational
@@ -771,14 +779,14 @@ bootstrapped with the BFT overlay.
 There's a command to generate new KES keys
 ```
 cardano-cli shelley node key-gen-KES
-Usage: cardano-cli shelley node key-gen-KES --verification-key-file FILEPATH
-                                            --signing-key-file FILEPATH
+Usage: cardano-cli shelley node key-gen-KES --verification-key-file FILE
+                                            --signing-key-file FILE
   Create a key pair for a node KES operational key
 
 Available options:
-  --verification-key-file FILEPATH
+  --verification-key-file FILE
                            Output filepath of the verification key.
-  --signing-key-file FILEPATH
+  --signing-key-file FILE
                            Output filepath of the signing key.
 ```
 
@@ -802,14 +810,14 @@ especially compared to our normal ed25519 keys.
 And there's a command to generate new VRF keys
 ```
 $ cardano-cli shelley node key-gen-VRF
-Usage: cardano-cli shelley node key-gen-VRF --verification-key-file FILEPATH
-                                            --signing-key-file FILEPATH
+Usage: cardano-cli shelley node key-gen-VRF --verification-key-file FILE
+                                            --signing-key-file FILE
   Create a key pair for a node VRF operational key
 
 Available options:
-  --verification-key-file FILEPATH
+  --verification-key-file FILE
                            Output filepath of the verification key.
-  --signing-key-file FILEPATH
+  --signing-key-file FILE
                            Output filepath of the signing key.
 ```
 
@@ -834,17 +842,17 @@ the offline key, and copy the resulting certificate to the operational machine.
 
 ```
 $ cardano-cli shelley node issue-op-cert
-Usage: cardano-cli shelley node issue-op-cert --hot-kes-verification-key-file FILEPATH
-                                              --cold-signing-key-file FILEPATH
+Usage: cardano-cli shelley node issue-op-cert --hot-kes-verification-key-file FILE
+                                              --cold-signing-key-file FILE
                                               --operational-certificate-issue-counter FILE
                                               --kes-period NATURAL
                                               --out-file FILE
   Issue a node operational certificate
 
 Available options:
-  --hot-kes-verification-key-file FILEPATH
+  --hot-kes-verification-key-file FILE
                            Filepath of the hot KES verification key.
-  --cold-signing-key-file FILEPATH
+  --cold-signing-key-file FILE
                            Filepath of the cold signing key.
   --operational-certificate-issue-counter FILE
                            The file with the issue counter for the operational
@@ -1084,14 +1092,14 @@ the `genesis.json`.
 There is a command to query the UTxO and return all the UTxOs at a given
 address.
 ```
-$ cardano-cli shelley query filtered-utxo
-Usage: cardano-cli shelley query filtered-utxo --address ADDRESS
-                                               (--mainnet | --testnet-magic INT)
-                                               [--out-file FILE]
-  Get the node's current UTxO filtered by address
+$ cardano-cli shelley query utxo
+Usage: cardano-cli shelley query utxo [--address ADDRESS]
+                                      (--mainnet | --testnet-magic INT)
+                                      [--out-file FILE]
+  Get the node's current UTxO with the option of filtering by address(es)
 
 Available options:
-  --address ADDRESS        A hex-encoded Cardano address.
+  --address ADDRESS        Filter by Cardano address(es) (hex-encoded).
   --mainnet                Use the mainnet magic id.
   --testnet-magic INT      Specify a testnet magic id.
   --out-file FILE          Optional output file. Default is to write to stdout.
@@ -1102,7 +1110,7 @@ So what address do we need? The one(s) from the `initialFunds` in the
 this command to use the right address(es) from your `genesis.json`.
 ```
 $ CARDANO_NODE_SOCKET_PATH=example/node1/node.sock \
-    cardano-cli shelley query filtered-utxo \
+    cardano-cli shelley query utxo \
     --testnet-magic 42 \
     --address 8206582080edb9890519e08847aff26f55a076a439b9835baa7113d04ad1ed9b2ea55817
 
@@ -1140,11 +1148,11 @@ To avoid confusion about which UTxO goes with which key, we have this handy
 command
 ```
 $ cardano-cli shelley genesis initial-txin
-Usage: cardano-cli shelley genesis initial-txin --verification-key-file FILEPATH
+Usage: cardano-cli shelley genesis initial-txin --verification-key-file FILE
   Get the TxIn for an initial UTxO based on the verification key
 
 Available options:
-  --verification-key-file FILEPATH
+  --verification-key-file FILE
                            Input filepath of the verification key.
 ```
 Which we can use with our `example/utxo-keys/utxo1.vkey`
@@ -1161,14 +1169,14 @@ We will make a key pair and then build an address from that. Let's start with
 the keypair.
 ```
 $ cardano-cli shelley address key-gen
-Usage: cardano-cli shelley address key-gen --verification-key-file FILEPATH
-                                           --signing-key-file FILEPATH
+Usage: cardano-cli shelley address key-gen --verification-key-file FILE
+                                           --signing-key-file FILE
   Create a single address key pair
 
 Available options:
-  --verification-key-file FILEPATH
+  --verification-key-file FILE
                            Input filepath of the verification key.
-  --signing-key-file FILEPATH
+  --signing-key-file FILE
                            Input filepath of the signing key.
 ```
 So let's do it
@@ -1180,14 +1188,14 @@ $ cardano-cli shelley address key-gen \
 We can now build an address from our key.
 ```
 $ cardano-cli shelley address build
-Usage: cardano-cli shelley address build --payment-verification-key-file FILEPATH
-                                         [--staking-verification-key-file FILEPATH]
+Usage: cardano-cli shelley address build --payment-verification-key-file FILE
+                                         [--staking-verification-key-file FILE]
   Build a Shelley payment addres, with optional delegation to a stake address.
 
 Available options:
-  --payment-verification-key-file FILEPATH
+  --payment-verification-key-file FILE
                            Filepath of the payment verification key.
-  --staking-verification-key-file FILEPATH
+  --staking-verification-key-file FILE
                            Filepath of the staking verification key.
 ```
 This command can also build payment addresses that are associated with stake
@@ -1210,8 +1218,9 @@ to use the low level command to select the exact UTxO to spend.
 $ cardano-cli shelley transaction build-raw
 Usage: cardano-cli shelley transaction build-raw --tx-in TX_IN --tx-out TX_OUT
                                                  --ttl SLOT_COUNT --fee LOVELACE
-                                                 --tx-body-file FILEPATH
-                                                 [--certificate FILEPATH]
+                                                 --tx-body-file FILE
+                                                 [--certificate FILE]
+                                                 [--update-proposal FILE]
   Build a transaction (low-level, inconvenient)
 
 Available options:
@@ -1222,10 +1231,11 @@ Available options:
                            Lovelace.
   --ttl SLOT_COUNT         Time to live (in slots).
   --fee LOVELACE           The fee amount in Lovelace.
-  --tx-body-file FILEPATH  Output filepath of the TxBody.
-  --certificate FILEPATH   Filepath of the certificate. This encompasses all
+  --tx-body-file FILE      Output filepath of the TxBody.
+  --certificate FILE       Filepath of the certificate. This encompasses all
                            types of certificates (stake pool certificates, stake
                            key certificates etc)
+  --update-proposal FILE   Filepath of the update proposal.
 ```
 Yes, this is a very inconvenient way to build transactions, but at least you'll
 be able to say you understand the UTxO model a little better.
@@ -1272,19 +1282,19 @@ inputs from the same address).
 
 ```
 $ cardano-cli shelley transaction sign
-Usage: cardano-cli shelley transaction sign --tx-body-file FILEPATH
-                                            --signing-key-file FILEPATH
+Usage: cardano-cli shelley transaction sign --tx-body-file FILE
+                                            --signing-key-file FILE
                                             (--mainnet | --testnet-magic INT)
-                                            --tx-file FILEPATH
+                                            --tx-file FILE
   Sign a transaction
 
 Available options:
-  --tx-body-file FILEPATH  Input filepath of the TxBody.
-  --signing-key-file FILEPATH
+  --tx-body-file FILE  Input filepath of the TxBody.
+  --signing-key-file FILE
                            Input filepath of the signing key (one or more).
   --mainnet                Use the mainnet magic id.
   --testnet-magic INT      Specify a testnet magic id.
-  --tx-file FILEPATH       Output filepath of the Tx.
+  --tx-file FILE       Output filepath of the Tx.
 ```
 
 In our example we need just the one signature, using the `utxo1.skey`.
@@ -1301,13 +1311,13 @@ $ cardano-cli shelley transaction sign \
 Finally we need to submit the signed transaction
 ```
 $ cardano-cli shelley transaction submit
-Usage: cardano-cli shelley transaction submit --tx-file FILEPATH
+Usage: cardano-cli shelley transaction submit --tx-file FILE
                                               (--mainnet | --testnet-magic INT)
   Submit a transaction to the local node whose Unix domain socket is obtained
   from the CARDANO_NODE_SOCKET_PATH enviromnent variable.
 
 Available options:
-  --tx-file FILEPATH       Filepath of the transaction you intend to submit.
+  --tx-file FILE       Filepath of the transaction you intend to submit.
   --mainnet                Use the mainnet magic id.
   --testnet-magic INT      Specify a testnet magic id.
 ```
@@ -1332,7 +1342,7 @@ We can also check using the UTxO query, but now using the new address we moved
 the funds to
 ```
 CARDANO_NODE_SOCKET_PATH=example/node1/node.sock \
-    cardano-cli shelley query filtered-utxo \
+    cardano-cli shelley query utxo \
       --testnet-magic 42 \
       --address 82065820cd44104b49b97dae659dabf040cc7d588ea28e52addffc66fd126bb23be87451
 
