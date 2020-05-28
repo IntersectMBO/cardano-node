@@ -15,6 +15,7 @@ library
   hs-source-dirs:       src
 
   exposed-modules:      Cardano.Api
+                        Cardano.Api.Typed
 
   other-modules:        Cardano.Api.CBOR
                         Cardano.Api.Convert
@@ -104,6 +105,7 @@ test-suite cardano-api-test
                         Test.Cardano.Api.Gen
                         Test.Cardano.Api.Orphans
                         Test.Cardano.Api.View
+                        Test.Cardano.Api.Typed
 
   default-language:     Haskell2010
   default-extensions:   NoImplicitPrelude
