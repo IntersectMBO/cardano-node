@@ -22,6 +22,9 @@ package cardano-node
 package ouroboros-consensus
   tests: False
 
+package ouroboros-consensus-cardano
+  tests: False
+
 package ouroboros-consensus-byron
   tests: False
 
@@ -318,21 +321,7 @@ source-repository-package
   location: https://github.com/input-output-hk/ouroboros-network
   tag: 0143c516f860a2c790911bc4cc177569d7d04710
   --sha256: 0608rashhvybqd1h6fjq9bvnzbyywhxbjxxr9h55m5fjp7i2v3sz
-  subdir: ouroboros-network-testing
-
-source-repository-package
-  type: git
-  location: https://github.com/input-output-hk/ouroboros-network
-  tag: 0143c516f860a2c790911bc4cc177569d7d04710
-  --sha256: 0608rashhvybqd1h6fjq9bvnzbyywhxbjxxr9h55m5fjp7i2v3sz
   subdir: ouroboros-consensus
-
-source-repository-package
-  type: git
-  location: https://github.com/input-output-hk/ouroboros-network
-  tag: 0143c516f860a2c790911bc4cc177569d7d04710
-  --sha256: 0608rashhvybqd1h6fjq9bvnzbyywhxbjxxr9h55m5fjp7i2v3sz
-  subdir: ouroboros-consensus/ouroboros-consensus-test-infra
 
 source-repository-package
   type: git
@@ -354,13 +343,6 @@ source-repository-package
   tag: 0143c516f860a2c790911bc4cc177569d7d04710
   --sha256: 0608rashhvybqd1h6fjq9bvnzbyywhxbjxxr9h55m5fjp7i2v3sz
   subdir: ouroboros-consensus-shelley
-
-source-repository-package
-  type: git
-  location: https://github.com/input-output-hk/ouroboros-network
-  tag: 0143c516f860a2c790911bc4cc177569d7d04710
-  --sha256: 0608rashhvybqd1h6fjq9bvnzbyywhxbjxxr9h55m5fjp7i2v3sz
-  subdir: ouroboros-consensus-shelley-test
 
 source-repository-package
   type: git
