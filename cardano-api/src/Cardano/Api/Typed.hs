@@ -73,6 +73,7 @@ module Cardano.Api.Typed (
     StakeAddress(..),
     StakeCredential(..),
     makeStakeAddress,
+    StakeKey,
 
     -- * Building transactions
     -- | Constructing and inspecting transactions
@@ -775,10 +776,12 @@ instance Key ByronKey where
 
     newtype VerificationKey ByronKey =
            ByronVerificationKey Byron.VerificationKey
+      deriving stock (Eq, Show)
       deriving newtype (ToCBOR, FromCBOR)
 
     newtype SigningKey ByronKey =
            ByronSigningKey Byron.SigningKey
+      deriving stock (Show)
       deriving newtype (ToCBOR, FromCBOR)
 
     deterministicSigningKey :: AsType ByronKey -> Crypto.Seed -> SigningKey ByronKey
@@ -823,10 +826,12 @@ instance Key PaymentKey where
 
     newtype VerificationKey PaymentKey =
         PaymentVerificationKey (Shelley.VKey Shelley.Payment Shelley.TPraosStandardCrypto)
+      deriving stock (Eq, Show)
       deriving newtype (ToCBOR, FromCBOR)
 
     newtype SigningKey PaymentKey =
         PaymentSigningKey (Shelley.SignKeyDSIGN Shelley.TPraosStandardCrypto)
+      deriving stock (Show)
       deriving newtype (ToCBOR, FromCBOR)
 
     deterministicSigningKey :: AsType PaymentKey -> Crypto.Seed -> SigningKey PaymentKey
@@ -881,10 +886,12 @@ instance Key StakeKey where
 
     newtype VerificationKey StakeKey =
         StakeVerificationKey (Shelley.VKey Shelley.Staking Shelley.TPraosStandardCrypto)
+      deriving stock (Eq, Show)
       deriving newtype (ToCBOR, FromCBOR)
 
     newtype SigningKey StakeKey =
         StakeSigningKey (Shelley.SignKeyDSIGN Shelley.TPraosStandardCrypto)
+      deriving stock (Show)
       deriving newtype (ToCBOR, FromCBOR)
 
     deterministicSigningKey :: AsType StakeKey -> Crypto.Seed -> SigningKey StakeKey
@@ -926,10 +933,12 @@ instance Key GenesisKey where
 
     newtype VerificationKey GenesisKey =
         GenesisVerificationKey (Shelley.VKey Shelley.Genesis Shelley.TPraosStandardCrypto)
+      deriving stock (Eq, Show)
       deriving newtype (ToCBOR, FromCBOR)
 
     newtype SigningKey GenesisKey =
         GenesisSigningKey (Shelley.SignKeyDSIGN Shelley.TPraosStandardCrypto)
+      deriving stock (Show)
       deriving newtype (ToCBOR, FromCBOR)
 
     deterministicSigningKey :: AsType GenesisKey -> Crypto.Seed -> SigningKey GenesisKey
@@ -971,10 +980,12 @@ instance Key GenesisDelegateKey where
 
     newtype VerificationKey GenesisDelegateKey =
         GenesisDelegateVerificationKey (Shelley.VKey Shelley.GenesisDelegate Shelley.TPraosStandardCrypto)
+      deriving stock (Eq, Show)
       deriving newtype (ToCBOR, FromCBOR)
 
     newtype SigningKey GenesisDelegateKey =
         GenesisDelegateSigningKey (Shelley.SignKeyDSIGN Shelley.TPraosStandardCrypto)
+      deriving stock (Show)
       deriving newtype (ToCBOR, FromCBOR)
 
     deterministicSigningKey :: AsType GenesisDelegateKey -> Crypto.Seed -> SigningKey GenesisDelegateKey
@@ -1017,10 +1028,12 @@ instance Key StakePoolKey where
 
     newtype VerificationKey StakePoolKey =
         StakePoolVerificationKey (Shelley.VKey Shelley.StakePool Shelley.TPraosStandardCrypto)
+      deriving stock (Eq, Show)
       deriving newtype (ToCBOR, FromCBOR)
 
     newtype SigningKey StakePoolKey =
         StakePoolSigningKey (Shelley.SignKeyDSIGN Shelley.TPraosStandardCrypto)
+      deriving stock (Show)
       deriving newtype (ToCBOR, FromCBOR)
 
     deterministicSigningKey :: AsType StakePoolKey -> Crypto.Seed -> SigningKey StakePoolKey
@@ -1061,10 +1074,12 @@ instance Key KesKey where
 
     newtype VerificationKey KesKey =
         KesVerificationKey (Shelley.VerKeyKES Shelley.TPraosStandardCrypto)
+      deriving stock (Eq, Show)
       deriving newtype (ToCBOR, FromCBOR)
 
     newtype SigningKey KesKey =
         KesSigningKey (Shelley.SignKeyKES Shelley.TPraosStandardCrypto)
+      deriving stock (Show)
       deriving newtype (ToCBOR, FromCBOR)
 
     deterministicSigningKey :: AsType KesKey -> Crypto.Seed -> SigningKey KesKey
@@ -1105,12 +1120,12 @@ instance Key VrfKey where
 
     newtype VerificationKey VrfKey =
         VrfVerificationKey (Shelley.VerKeyVRF Shelley.TPraosStandardCrypto)
-      deriving (Show)
+      deriving stock (Eq, Show)
       deriving newtype (ToCBOR, FromCBOR)
 
     newtype SigningKey VrfKey =
         VrfSigningKey (Shelley.SignKeyVRF Shelley.TPraosStandardCrypto)
-      deriving (Show)
+      deriving stock (Show)
       deriving newtype (ToCBOR, FromCBOR)
 
     deterministicSigningKey :: AsType VrfKey -> Crypto.Seed -> SigningKey VrfKey
