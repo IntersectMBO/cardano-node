@@ -46,10 +46,10 @@ import           Cardano.BM.Data.Transformers
 
 import           Ouroboros.Consensus.Block (Header, realPointSlot)
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..), TraceBlockchainTimeEvent (..))
-import           Ouroboros.Consensus.Ledger.Abstract
 import           Ouroboros.Consensus.Ledger.SupportsProtocol (LedgerSupportsProtocol)
 import           Ouroboros.Consensus.Mempool.API
                    (GenTx, MempoolSize (..), TraceEventMempool (..))
+import qualified Ouroboros.Consensus.Node.Run as Consensus (RunNode)
 import qualified Ouroboros.Consensus.Node.Tracers as Consensus
 import qualified Ouroboros.Consensus.Network.NodeToClient as NodeToClient
 import qualified Ouroboros.Consensus.Network.NodeToNode as NodeToNode
@@ -243,9 +243,8 @@ initialBlockchainCounters = BlockchainCounters 0 0 0 0 0
 --
 mkTracers
   :: forall peer localPeer blk.
-     ( LedgerSupportsProtocol blk
+     ( Consensus.RunNode blk
      , TraceConstraints blk
-     , ShowQuery (Query blk)
      , Show peer, Eq peer
      , Show localPeer
      )
