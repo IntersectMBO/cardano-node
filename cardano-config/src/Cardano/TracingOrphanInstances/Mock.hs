@@ -20,7 +20,7 @@ import           Cardano.TracingOrphanInstances.Consensus ()
 import           Data.Aeson (Value (..), ToJSON, toJSON, (.=))
 
 import           Ouroboros.Consensus.Block (Header)
-import           Ouroboros.Consensus.Mempool.API (GenTx, TxId, txId)
+import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTx, TxId, txId)
 import qualified Ouroboros.Consensus.Mock.Ledger as Mock
 import qualified Ouroboros.Consensus.Mock.Protocol.Praos as Praos
 import           Ouroboros.Consensus.Util.Condense
@@ -109,4 +109,3 @@ instance ToObject (GenTx (Mock.SimpleBlock c ext)) where
 
 instance ToJSON (TxId (GenTx (Mock.SimpleBlock c ext))) where
   toJSON txid = toJSON (condense txid)
-

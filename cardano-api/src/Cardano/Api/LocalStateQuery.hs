@@ -43,7 +43,7 @@ import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Data.Void (Void)
 
-import           Network.Mux (MuxTrace, WithMuxBearer)
+import           Network.Mux (MuxMode(..), MuxTrace, WithMuxBearer)
 
 import           Ouroboros.Consensus.Cardano (CodecConfig, protocolClientInfo)
 import           Ouroboros.Consensus.Ledger.Abstract (Query)
@@ -56,9 +56,8 @@ import           Ouroboros.Consensus.Shelley.Ledger
 import           Ouroboros.Consensus.Shelley.Protocol.Crypto (TPraosStandardCrypto)
 
 import           Ouroboros.Network.Block (Point, Serialised (..))
-import           Ouroboros.Network.Mux
-                   ( AppType(..), OuroborosApplication(..),
-                     MuxPeer(..), RunMiniProtocol(..))
+import           Ouroboros.Network.Mux (OuroborosApplication(..),
+                   MuxPeer(..), RunMiniProtocol(..))
 import           Ouroboros.Network.NodeToClient (ConnectionId, DictVersion, Handshake,
                    LocalAddress, NetworkConnectTracers (..),
                    NodeToClientProtocols (..), NodeToClientVersion, NodeToClientVersionData (..),
@@ -225,7 +224,7 @@ localInitiatorNetworkApplication
   -> Versions
       NodeToClientVersion
       DictVersion
-      (OuroborosApplication 'InitiatorApp LocalAddress LByteString IO (Either LocalStateQueryError result) Void)
+      (OuroborosApplication 'InitiatorMode LocalAddress LByteString IO (Either LocalStateQueryError result) Void)
 localInitiatorNetworkApplication trce cfg nm
                                  resultVar pointAndQuery =
     NodeToClient.foldMapVersions

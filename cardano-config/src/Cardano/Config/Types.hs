@@ -27,6 +27,7 @@ module Cardano.Config.Types
     , NodeCLI (..)
     , NodeProtocolMode (..)
     , SigningKeyFile (..)
+    , SomeConsensusProtocolConstraints
     , ProtocolFilepaths (..)
     , SomeConsensusProtocol (..)
     , TopologyFile (..)
@@ -54,26 +55,28 @@ import           Network.Socket (PortNumber)
 import           System.FilePath ((</>), takeDirectory)
 import           System.Posix.Types (Fd(Fd))
 
-import           Cardano.BM.Tracing (ToObject)
+import           Cardano.BM.Tracing (ToObject, Transformable)
 import qualified Cardano.Chain.Update as Update
 import           Cardano.Chain.Slotting (EpochSlots)
 import           Cardano.Crypto.ProtocolMagic (RequiresNetworkMagic)
-import           Ouroboros.Consensus.Block (Header, BlockProtocol)
+import           Ouroboros.Consensus.Block (Header, BlockProtocol, ForgeState)
 import           Ouroboros.Consensus.Byron.Ledger.Block (ByronBlock)
 import           Ouroboros.Consensus.Byron.Ledger (byronLedgerState)
 import qualified Ouroboros.Consensus.Cardano as Consensus (Protocol, ProtocolClient)
 import           Ouroboros.Consensus.HeaderValidation (OtherHeaderEnvelopeError)
 import           Ouroboros.Consensus.Ledger.Abstract (LedgerError)
-import           Ouroboros.Consensus.Mempool.API
-                   (GenTx, GenTxId, HasTxId, HasTxs(..), ApplyTxErr, TxId)
 import           Ouroboros.Consensus.Ledger.Extended (ExtLedgerState, ledgerState)
+import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTxId, HasTxId, HasTxs(..),
+                   LedgerSupportsMempool(..))
 import           Ouroboros.Consensus.Mock.Ledger.Block (SimpleBlock)
 import           Ouroboros.Consensus.Node.Run (RunNode)
 import           Ouroboros.Consensus.NodeId (NodeId(..))
-import           Ouroboros.Consensus.Protocol.Abstract (ValidationErr)
+import           Ouroboros.Consensus.Protocol.Abstract (CannotLead, ValidationErr)
 import           Ouroboros.Consensus.Util.Condense (Condense (..))
 import           Ouroboros.Consensus.Shelley.Ledger (shelleyState, getPParams)
 import           Ouroboros.Consensus.Shelley.Ledger.Block (ShelleyBlock)
+import           Ouroboros.Consensus.Shelley.Ledger.Mempool (GenTx, TxId)
+
 import           Ouroboros.Network.Block (HeaderHash, MaxSlotNo(..))
 
 import           Cardano.Chain.Block (adoptedProtocolParameters, cvsUpdateState)
@@ -377,10 +380,17 @@ instance ToJSON NodeHostAddress where
 -- Protocol & Tracing Related
 --------------------------------------------------------------------------------
 
+type SomeConsensusProtocolConstraints blk =
+     ( HasTxMaxSize (ExtLedgerState blk)
+     , RunNode blk
+     , TraceConstraints blk
+     , Transformable Text IO (ForgeState blk)
+     )
+
 data SomeConsensusProtocol where
 
-     SomeConsensusProtocol :: (RunNode blk, TraceConstraints blk, HasTxMaxSize (ExtLedgerState blk))
-                           => Consensus.Protocol blk (BlockProtocol blk)
+     SomeConsensusProtocol :: SomeConsensusProtocolConstraints blk
+                           => Consensus.Protocol IO blk (BlockProtocol blk)
                            -> SomeConsensusProtocol
 
 class HasTxMaxSize ledgerState where
@@ -424,6 +434,7 @@ type TraceConstraints blk =
     , ToObject (LedgerError blk)
     , ToObject (OtherHeaderEnvelopeError blk)
     , ToObject (ValidationErr (BlockProtocol blk))
+    , ToObject (CannotLead (BlockProtocol blk))
     )
 
 --------------------------------------------------------------------------------

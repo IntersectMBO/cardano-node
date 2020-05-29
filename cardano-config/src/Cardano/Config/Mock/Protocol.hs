@@ -71,7 +71,7 @@ mkSomeConsensusProtocolPraos nc =
 mkConsensusProtocolBFT
   :: NodeConfiguration
   -> ExceptT MockProtocolInstantiationError IO
-             (Consensus.Protocol
+             (Consensus.Protocol IO
                (SimpleBlock SimpleMockCrypto
                             (SimpleBftExt SimpleMockCrypto BftMockCrypto))
                (Bft BftMockCrypto))
@@ -93,7 +93,7 @@ mkConsensusProtocolBFT NodeConfiguration {
 mkConsensusProtocolPBFT
   :: NodeConfiguration
   -> ExceptT MockProtocolInstantiationError IO
-             (Consensus.Protocol
+             (Consensus.Protocol IO
                (SimpleBlock SimpleMockCrypto
                             (SimplePBftExt SimpleMockCrypto PBftMockCrypto))
                (PBft PBftMockCrypto))
@@ -119,7 +119,7 @@ mkConsensusProtocolPBFT NodeConfiguration {
 mkConsensusProtocolPraos
   :: NodeConfiguration
   -> ExceptT MockProtocolInstantiationError IO
-             (Consensus.Protocol
+             (Consensus.Protocol IO
                (SimpleBlock SimpleMockCrypto
                             (SimplePraosExt SimpleMockCrypto PraosMockCrypto))
                (Praos PraosMockCrypto))

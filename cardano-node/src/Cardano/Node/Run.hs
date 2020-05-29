@@ -115,7 +115,7 @@ runNode loggingLayer npm@NodeCLI{protocolFiles} = do
                            MaximalVerbosity -> "maximal"
     eitherSomeProtocol <- runExceptT $ mkConsensusProtocol nc (Just protocolFiles)
 
-    SomeConsensusProtocol (p :: Consensus.Protocol blk (BlockProtocol blk)) <-
+    SomeConsensusProtocol (p :: Consensus.Protocol IO blk (BlockProtocol blk)) <-
       case eitherSomeProtocol of
         Left err -> putTextLn (renderProtocolInstantiationError err) >> exitFailure
         Right (SomeConsensusProtocol p) -> pure $ SomeConsensusProtocol p
@@ -240,7 +240,7 @@ handlePeersListSimple tr nodeKernIORef = forever $ do
 
 handleSimpleNode
   :: forall blk. RunNode blk
-  => Consensus.Protocol blk (BlockProtocol blk)
+  => Consensus.Protocol IO blk (BlockProtocol blk)
   -> Trace IO Text
   -> Tracers RemoteConnectionId LocalConnectionId blk
   -> NodeCLI
@@ -487,4 +487,3 @@ producerAddresses nt =
    remoteOrNode ra = case remoteAddressToNodeAddress ra of
                        Just na -> Right na
                        Nothing -> Left ra
-

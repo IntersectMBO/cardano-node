@@ -35,9 +35,10 @@ import           Cardano.BM.Data.Tracer (emptyObject, mkObject)
 
 import           Ouroboros.Consensus.Block (Header)
 import           Ouroboros.Consensus.Ledger.Extended (ExtLedgerState (..))
+import           Ouroboros.Consensus.Ledger.SupportsMempool (maxTxSize)
 import           Ouroboros.Consensus.Mempool.API
                    (MempoolCapacityBytes (..), getCapacity)
-import           Ouroboros.Consensus.Node (NodeKernel(..), RunNode, nodeMaxTxSize, remoteAddress)
+import           Ouroboros.Consensus.Node (NodeKernel(..), RunNode, remoteAddress)
 import           Ouroboros.Consensus.Util.Orphans ()
 
 import qualified Ouroboros.Network.AnchoredFragment as Net
@@ -46,7 +47,7 @@ import           Ouroboros.Network.Block (unSlotNo)
 import qualified Ouroboros.Network.BlockFetch.ClientRegistry as Net
 import           Ouroboros.Network.BlockFetch.ClientState (PeerFetchInFlight (..), PeerFetchStatus (..), readFetchClientState)
 import           Ouroboros.Network.NodeToClient (LocalConnectionId)
-import           Ouroboros.Network.NodeToNode (RemoteConnectionId) 
+import           Ouroboros.Network.NodeToNode (RemoteConnectionId)
 
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 
@@ -128,9 +129,9 @@ setNodeKernel nodeKernIORef nodeKern = do
 
   currentLedger <- STM.atomically $ ChainDB.getCurrentLedger (getChainDB nodeKern)
 
-  let maxTxSize = nodeMaxTxSize $ ledgerState currentLedger
+  let maxTxSize' = maxTxSize $ ledgerState currentLedger
       actualNodeKernelData = NodeKernelData
-        { nkdMempoolCapacity = fromIntegral $ mempoolCapacityBytes `div` maxTxSize
+        { nkdMempoolCapacity = fromIntegral $ mempoolCapacityBytes `div` maxTxSize'
         , nkdMempoolCapacityBytes = fromIntegral mempoolCapacityBytes
         , nkdKernel = SJust (LVNodeKernel nodeKern)
         }

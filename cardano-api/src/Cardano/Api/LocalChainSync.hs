@@ -21,7 +21,7 @@ import           Control.Monad.Class.MonadThrow (catch)
 import           Control.Monad.Class.MonadTimer (MonadTimer)
 import           Control.Tracer (nullTracer)
 
-import           Network.Mux (MuxError)
+import           Network.Mux (MuxError, MuxMode(..))
 
 import           Ouroboros.Consensus.Cardano (CodecConfig)
 import           Ouroboros.Consensus.Network.NodeToClient
@@ -33,7 +33,7 @@ import           Ouroboros.Consensus.Node.Run
 
 import           Ouroboros.Network.Block (Serialised, Tip)
 import           Ouroboros.Network.Mux
-                   (AppType(InitiatorApp), OuroborosApplication(..),
+                   (OuroborosApplication(..),
                     MuxPeer(..), RunMiniProtocol(..))
 import           Ouroboros.Network.NodeToClient
                    (IOManager, LocalAddress, NetworkConnectTracers(..),
@@ -90,7 +90,7 @@ localInitiatorNetworkApplication
   -> Network
   -> StrictTMVar m (Tip blk)
   -> Versions NodeToClientVersion DictVersion
-              (OuroborosApplication 'InitiatorApp LocalAddress LBS.ByteString m () Void)
+              (OuroborosApplication 'InitiatorMode LocalAddress LBS.ByteString m () Void)
 localInitiatorNetworkApplication cfg nm tipVar =
     foldMapVersions
       (\v ->

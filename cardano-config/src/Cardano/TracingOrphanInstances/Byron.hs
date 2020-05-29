@@ -21,7 +21,7 @@ import           Ouroboros.Consensus.Block (Header)
 import           Ouroboros.Consensus.Byron.Ledger
                    (ByronBlock(..), byronHeaderRaw,
                     ByronOtherHeaderEnvelopeError(..))
-import           Ouroboros.Consensus.Mempool.API (GenTx, TxId, txId)
+import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTx, TxId, txId)
 import           Ouroboros.Consensus.Util.Condense (condense)
 
 import           Cardano.Chain.Block

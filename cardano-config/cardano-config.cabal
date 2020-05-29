@@ -69,6 +69,7 @@ library
                      , cborg
                      , containers
                      , contra-tracer
+                     , cryptonite
                      , directory
                      , file-embed
                      , filepath

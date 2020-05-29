@@ -35,7 +35,7 @@ import           Ouroboros.Consensus.Util.Condense (condense)
 import           Cardano.Crypto.Signing (SigningKey, noPassSafeSigner)
 import           Ouroboros.Consensus.Byron.Ledger.Block (ByronBlock)
 import qualified Ouroboros.Consensus.Byron.Ledger.Mempool as Mempool
-import qualified Ouroboros.Consensus.Mempool as Mempool
+import           Ouroboros.Consensus.Ledger.SupportsMempool (txId)
 import           Ouroboros.Network.NodeToClient (IOManager)
 
 import           Cardano.Api (Network)
@@ -210,5 +210,5 @@ submitByronUpdateProposal iomgr network proposalFp = do
     aProposal <- hoistEither $ deserialiseByronUpdateProposal proposalBs
     let genTx = convertProposalToGenTx aProposal
     traceWith stdoutTracer $
-      "Update proposal TxId: " ++ condense (Mempool.txId genTx)
+      "Update proposal TxId: " ++ condense (txId genTx)
     firstExceptT ByronUpdateProposalTxError $ nodeSubmitTx iomgr network genTx
