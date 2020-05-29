@@ -22,14 +22,14 @@ import           Cardano.TracingOrphanInstances.Common
 import           Cardano.TracingOrphanInstances.Network (showTip, showPoint)
 
 import           Ouroboros.Consensus.Block
-                   (BlockProtocol, Header, headerPoint,
+                   (BlockProtocol, Header, getHeader, headerPoint,
                     RealPoint, realPointSlot, realPointHash)
 import           Ouroboros.Consensus.MiniProtocol.BlockFetch.Server
                    (TraceBlockFetchServerEvent)
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client
                    (TraceChainSyncClientEvent (..))
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Server
-                   (TraceChainSyncServerEvent(..))
+                   (TraceChainSyncServerEvent (..))
 import           Ouroboros.Consensus.Ledger.SupportsProtocol
                    (LedgerSupportsProtocol)
 import           Ouroboros.Consensus.HeaderValidation
@@ -40,6 +40,7 @@ import           Ouroboros.Consensus.Ledger.Extended
 import           Ouroboros.Consensus.Mempool.API
                    (GenTx, GenTxId, HasTxId, TraceEventMempool (..), ApplyTxErr,
                    MempoolSize(..), TxId, txId)
+import           Ouroboros.Consensus.Node.Run (RunNode (..))
 import           Ouroboros.Consensus.Node.Tracers (TraceForgeEvent (..))
 import           Ouroboros.Consensus.Protocol.Abstract
 import           Ouroboros.Consensus.MiniProtocol.LocalTxSubmission.Server
@@ -217,7 +218,7 @@ showT = pack . show
 
 instance ( Condense (HeaderHash blk)
          , HasTxId tx
-         , LedgerSupportsProtocol blk
+         , RunNode blk
          , Show (TxId tx)
          , ToObject (LedgerError blk)
          , ToObject (OtherHeaderEnvelopeError blk)
@@ -743,7 +744,7 @@ instance ToObject MempoolSize where
 
 instance ( Condense (HeaderHash blk)
          , HasTxId tx
-         , LedgerSupportsProtocol blk
+         , RunNode blk
          , Show (TxId tx)
          , ToObject (LedgerError blk)
          , ToObject (OtherHeaderEnvelopeError blk)
@@ -754,6 +755,7 @@ instance ( Condense (HeaderHash blk)
       [ "kind" .= String "TraceAdoptedBlock"
       , "slot" .= toJSON (unSlotNo slotNo)
       , "block hash" .=  (condense $ blockHash blk)
+      , "block size" .= toJSON (nodeBlockFetchSize (getHeader blk))
       , "tx ids" .= toJSON (map (show . txId) txs)
       ]
   toObject _verb (TraceAdoptedBlock slotNo blk _txs) =
@@ -761,6 +763,7 @@ instance ( Condense (HeaderHash blk)
       [ "kind" .= String "TraceAdoptedBlock"
       , "slot" .= toJSON (unSlotNo slotNo)
       , "block hash" .=  (condense $ blockHash blk)
+      , "block size" .= toJSON (nodeBlockFetchSize (getHeader blk))
       ]
   toObject _verb (TraceBlockFromFuture currentSlot tip) =
     mkObject
