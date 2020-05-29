@@ -63,7 +63,7 @@ setExecutableEnvVar envName target = do
     case filter match xs of
       [] -> panic "Unable to find cardano-cli binary"
       [x] -> setEnv envName x
-      _ -> panic $ "Multiple binaries: " <> Text.pack (show xs)
+      ys-> panic $ "Multiple binaries: " <> Text.pack (show ys)
  where
   match :: FilePath -> Bool
   match fp = takeFileName fp == target
