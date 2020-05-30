@@ -28,7 +28,7 @@ import qualified Data.ByteString.Char8 as BSC
 import           Data.Either (partitionEithers)
 import           Data.Functor.Contravariant (contramap)
 import           Data.IORef (IORef, newIORef, readIORef)
-import qualified Data.List as List (lookup, null)
+import qualified Data.List as List
 import           Data.Proxy (Proxy (..))
 import           Data.Semigroup ((<>))
 import           Data.Text (Text, breakOn, pack, take, unlines)
@@ -47,16 +47,14 @@ import           Cardano.BM.Data.BackendKind (BackendKind (..))
 #endif
 import           Cardano.BM.Data.LogItem (LOContent (..),
                      PrivacyAnnotation (..), mkLOMeta)
-import           Cardano.BM.Data.Tracer (ToLogObject (..),
-                     TracingVerbosity (..))
+import           Cardano.BM.Data.Tracer (ToLogObject (..), TracingVerbosity(..))
 import           Cardano.BM.Data.Transformers (setHostname)
 import           Cardano.BM.Trace
 
 import           Cardano.Config.GitRev (gitRev)
 import           Cardano.Config.Logging (LoggingLayer (..), Severity (..))
 import           Cardano.Config.TraceConfig (traceBlockFetchDecisions,
-                     traceChainDB, traceConfigVerbosity, traceForge,
-                     traceMempool, traceEnabled)
+                     TraceOptions(..), TraceSelection(..))
 import           Cardano.Config.Types (NodeConfiguration (..), ViewMode (..))
 
 import           Ouroboros.Network.Magic (NetworkMagic (..))
@@ -102,17 +100,21 @@ runNode
   -> IO ()
 runNode loggingLayer npm@NodeCLI{protocolFiles} = do
     hn <- hostname
+
     let !trace = setHostname hn $
                  llAppendName loggingLayer "node" (llBasicTrace loggingLayer)
     let tracer = contramap pack $ toLogObject trace
 
     nc <- parseNodeConfiguration npm
 
-    traceWith tracer $ "tracing verbosity = " ++
-                         case traceConfigVerbosity $ ncTraceConfig nc of
-                           NormalVerbosity -> "normal"
-                           MinimalVerbosity -> "minimal"
-                           MaximalVerbosity -> "maximal"
+    case ncTraceConfig nc of
+      TracingOff -> return ()
+      TracingOn traceConf ->
+        case traceVerbosity traceConf of
+          NormalVerbosity -> traceWith tracer $ "tracing verbosity = normal verbosity "
+          MinimalVerbosity -> traceWith tracer $ "tracing verbosity = minimal verbosity "
+          MaximalVerbosity -> traceWith tracer $ "tracing verbosity = maximal verbosity "
+
     eitherSomeProtocol <- runExceptT $ mkConsensusProtocol nc (Just protocolFiles)
 
     SomeConsensusProtocol (p :: Consensus.Protocol IO blk (BlockProtocol blk)) <-
@@ -146,17 +148,28 @@ runNode loggingLayer npm@NodeCLI{protocolFiles} = do
       LiveView   -> do
 #ifdef UNIX
         let c = llConfiguration loggingLayer
+        -- TODO: This desperately needs to be refactored.
         -- check required tracers are turned on
         let reqtrs = [ ("TraceBlockFetchDecisions",traceBlockFetchDecisions)
                      , ("TraceChainDb",traceChainDB)
                      , ("TraceForge",traceForge)
                      , ("TraceMempool",traceMempool)
                      ]
-            trsinactive = filter (\(_,f) -> not $ traceEnabled (ncTraceConfig nc) f) reqtrs
-        unless (List.null trsinactive) $ do
+
+            tracersOff = [ ("TraceBlockFetchDecisions", False)
+                         , ("TraceChainDb", False)
+                         , ("TraceForge", False)
+                         , ("TraceMempool", False)
+                         ]
+
+        trsactive <- case ncTraceConfig nc of
+                       TracingOff -> return tracersOff
+                       TracingOn traceConf -> return $ map (\(t,f) -> (t, f traceConf)) reqtrs
+
+        unless (List.all (\(_, tracerOn) -> tracerOn == True) trsactive) $ do
             putTextLn "for full functional 'LiveView', please turn on the following tracers in the configuration file:"
-            forM_ trsinactive $ \(m, _) ->
-                putTextLn $ m <> " : True"
+            forM_ trsactive $ \(m, _) ->
+                putTextLn m
             putTextLn "     (press enter to continue)"
             _ <- getLine
             pure ()

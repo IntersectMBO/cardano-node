@@ -206,7 +206,7 @@ data NodeConfiguration =
     , ncLoggingSwitch :: Bool
     , ncLogMetrics :: Bool
     , ncSocketPath :: Maybe SocketPath
-    , ncTraceConfig :: TraceConfig
+    , ncTraceConfig :: TraceOptions
     , ncViewMode :: ViewMode
     , ncUpdate :: Update
     } deriving Show
@@ -233,7 +233,7 @@ instance FromJSON NodeConfiguration where
                 loggingSwitch <- v .:? "TurnOnLogging" .!= True
                 logMetrics <- v .:? "TurnOnLogMetrics" .!= True
                 traceConfig <- if not loggingSwitch
-                               then pure traceConfigMute
+                               then return TracingOff
                                else traceConfigParser v
 
                 pure $ NodeConfiguration
@@ -411,21 +411,21 @@ instance HasTxMaxSize (ExtLedgerState (SimpleBlock a b)) where
 --
 -- When you need a 'Show' or 'Condense' instance for more types, just add the
 -- appropriate constraint here. There's no need to modify the consensus
--- code-base, unless the corresponding instance is missing.
+-- code-base, unless the corresponding instance is missing. Note we are aiming to
+-- remove all `Condense` constaints by defining the relevant 'ToObject' instance
+-- in 'cardano-node'
 type TraceConstraints blk =
     ( Condense blk
     , Condense [blk]
     , Condense (Header blk)
     , Condense (HeaderHash blk)
     , Condense (GenTx blk)
-    , Condense (TxId (GenTx blk))
     , HasTxs blk
     , HasTxId (GenTx blk)
     , Show (ApplyTxErr blk)
     , Show (GenTx blk)
     , Show (GenTxId blk)
     , Show blk
-    , Show (Header blk)
     , Show (TxId (GenTx blk))
     , ToJSON   (TxId (GenTx blk))
     , ToObject (ApplyTxErr blk)

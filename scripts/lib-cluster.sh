@@ -3,6 +3,7 @@
 
 TMUX_CONFIG="$(mktemp -t --suffix=tmuXXXXXXXX)"
 run_3node_cluster() {
+        command -v tmux >/dev/null 2>&1 || { echo >&2 "ERROR: This script requires tmux, which is missing. Please install it."; exit 1; }
         dprint "run_3node_cluster: $*"
         local config="$1" topo="${2:-indexed}" delegate="${3:-indexed}"
 

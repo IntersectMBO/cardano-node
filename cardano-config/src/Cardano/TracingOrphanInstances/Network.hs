@@ -35,6 +35,12 @@ import           Ouroboros.Network.NodeToNode
                    (WithAddr(..), ErrorPolicyTrace(..), TraceSendRecv (..))
 import           Ouroboros.Network.Protocol.BlockFetch.Type
                    (BlockFetch, Message(..))
+import           Ouroboros.Network.Protocol.ChainSync.Type (ChainSync)
+import qualified Ouroboros.Network.Protocol.ChainSync.Type as ChainSync
+import           Ouroboros.Network.Protocol.LocalStateQuery.Type (LocalStateQuery)
+import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as LocalStateQuery
+import           Ouroboros.Network.Protocol.LocalTxSubmission.Type (LocalTxSubmission)
+import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Type as LocalTxSub
 import           Ouroboros.Network.Protocol.TxSubmission.Type
                    (Message (..), TxSubmission)
 import           Ouroboros.Network.Snocket (LocalAddress (..))
@@ -49,8 +55,6 @@ import           Ouroboros.Network.TxSubmission.Outbound
 -- We do need some consensus imports to provide useful trace messages for some
 -- network protocols
 import           Ouroboros.Consensus.Util.Condense (Condense, condense)
-import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTx, HasTxId, HasTxs(..),
-                   TxId, txId)
 
 
 showTip :: Condense (HeaderHash blk)
@@ -382,22 +386,10 @@ instance (Show peer)
 --
 -- NOTE: this list is sorted by the unqualified name of the outermost type.
 
-instance ( Condense (HeaderHash blk)
-         , Condense (TxId (GenTx blk))
-         , HasHeader blk
-         , HasTxs blk
-         , HasTxId (GenTx blk)
-         )
+instance ( Condense (HeaderHash blk))
       => ToObject (AnyMessage (BlockFetch blk)) where
-  toObject _verb (AnyMessage (MsgBlock blk)) =
-    mkObject
-      [ "kind" .= String "MsgBlock"
-      , "blkid" .= String (pack . condense $ blockHash blk)
-      , "txids" .= toJSON (presentTx <$> extractTxs blk)
-      ]
-   where
-     presentTx :: GenTx blk -> Value
-     presentTx =  String . pack . condense . txId
+  toObject _verb (AnyMessage (MsgBlock _blk)) =
+    mkObject [ "kind" .= String "MsgBlock" ]
   toObject _v (AnyMessage MsgRequestRange{}) =
     mkObject [ "kind" .= String "MsgRequestRange" ]
   toObject _v (AnyMessage MsgStartBatch{}) =
@@ -409,6 +401,51 @@ instance ( Condense (HeaderHash blk)
   toObject _v (AnyMessage MsgClientDone{}) =
     mkObject [ "kind" .= String "MsgClientDone" ]
 
+instance ToObject (AnyMessage (LocalStateQuery blk query)) where
+  toObject _verb (AnyMessage LocalStateQuery.MsgAcquire{}) =
+    mkObject [ "kind" .= String "MsgAcquire" ]
+  toObject _verb (AnyMessage LocalStateQuery.MsgAcquired{}) =
+    mkObject [ "kind" .= String "MsgAcquired" ]
+  toObject _verb (AnyMessage LocalStateQuery.MsgFailure{}) =
+    mkObject [ "kind" .= String "MsgFailure" ]
+  toObject _verb (AnyMessage LocalStateQuery.MsgQuery{}) =
+    mkObject [ "kind" .= String "MsgQuery" ]
+  toObject _verb (AnyMessage LocalStateQuery.MsgResult{}) =
+    mkObject [ "kind" .= String "MsgResult" ]
+  toObject _verb (AnyMessage LocalStateQuery.MsgRelease{}) =
+    mkObject [ "kind" .= String "MsgRelease" ]
+  toObject _verb (AnyMessage LocalStateQuery.MsgReAcquire{}) =
+    mkObject [ "kind" .= String "MsgReAcquire" ]
+  toObject _verb (AnyMessage LocalStateQuery.MsgDone{}) =
+    mkObject [ "kind" .= String "MsgDone" ]
+
+instance ToObject (AnyMessage (LocalTxSubmission tx err)) where
+  toObject _verb (AnyMessage LocalTxSub.MsgSubmitTx{}) =
+    mkObject [ "kind" .= String "MsgSubmitTx" ]
+  toObject _verb (AnyMessage LocalTxSub.MsgAcceptTx{}) =
+    mkObject [ "kind" .= String "MsgAcceptTx" ]
+  toObject _verb (AnyMessage LocalTxSub.MsgRejectTx{}) =
+    mkObject [ "kind" .= String "MsgRejectTx" ]
+  toObject _verb (AnyMessage LocalTxSub.MsgDone{}) =
+    mkObject [ "kind" .= String "MsgDone" ]
+
+instance ToObject (AnyMessage (ChainSync blk tip)) where
+   toObject _verb (AnyMessage ChainSync.MsgRequestNext{}) =
+     mkObject [ "kind" .= String "MsgRequestNext" ]
+   toObject _verb (AnyMessage ChainSync.MsgAwaitReply{}) =
+     mkObject [ "kind" .= String "MsgAwaitReply" ]
+   toObject _verb (AnyMessage ChainSync.MsgRollForward{}) =
+     mkObject [ "kind" .= String "MsgRollForward" ]
+   toObject _verb (AnyMessage ChainSync.MsgRollBackward{}) =
+     mkObject [ "kind" .= String "MsgRollBackward" ]
+   toObject _verb (AnyMessage ChainSync.MsgFindIntersect{}) =
+     mkObject [ "kind" .= String "MsgFindIntersect" ]
+   toObject _verb (AnyMessage ChainSync.MsgIntersectFound{}) =
+     mkObject [ "kind" .= String "MsgIntersectFound" ]
+   toObject _verb (AnyMessage ChainSync.MsgIntersectNotFound{}) =
+     mkObject [ "kind" .= String "MsgIntersectNotFound" ]
+   toObject _verb (AnyMessage ChainSync.MsgDone{}) =
+     mkObject [ "kind" .= String "MsgDone" ]
 
 instance ToObject (FetchDecision [Point header]) where
   toObject _verb (Left decline) =
