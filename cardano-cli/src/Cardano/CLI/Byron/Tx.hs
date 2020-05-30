@@ -55,7 +55,7 @@ import           Ouroboros.Network.NodeToClient (IOManager)
 import qualified Ouroboros.Consensus.Byron.Ledger as Byron
 import           Ouroboros.Consensus.Byron.Ledger (GenTx(..), ByronBlock)
 import qualified Ouroboros.Consensus.Cardano as Consensus
-import qualified Ouroboros.Consensus.Mempool as Consensus
+import           Ouroboros.Consensus.Ledger.SupportsMempool (txId)
 import           Ouroboros.Consensus.Util.Condense (condense)
 import           Ouroboros.Consensus.Cardano (protocolClientInfo)
 
@@ -235,7 +235,7 @@ nodeSubmitTx
 nodeSubmitTx iomgr network gentx = do
     socketPath <- firstExceptT EnvSocketError readEnvSocketPath
     liftIO $ do
-      traceWith stdoutTracer ("TxId: " ++ condense (Consensus.txId gentx))
+      traceWith stdoutTracer ("TxId: " ++ condense (txId gentx))
       _res <- submitGenTx
                 nullTracer -- stdoutTracer
                 iomgr

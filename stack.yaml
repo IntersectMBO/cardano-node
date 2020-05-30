@@ -1,4 +1,4 @@
-resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/594f587bfab626a405ac532112cc0b942ad3efdb/snapshot.yaml
+resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/e0257be9d745a04f85ab8287a48a9c193acafec8/snapshot.yaml
 compiler: ghc-8.6.5
 
 packages:
@@ -75,7 +75,7 @@ extra-deps:
     commit: 2547ad1e80aeabca2899951601079408becbc92c
 
   - git: https://github.com/input-output-hk/cardano-prelude
-    commit: 594f587bfab626a405ac532112cc0b942ad3efdb
+    commit: e0257be9d745a04f85ab8287a48a9c193acafec8
     subdirs:
       - .
       - test
@@ -100,7 +100,7 @@ extra-deps:
 
     # iohk-monitoring-framework currently not pinned to a release
   - git: https://github.com/input-output-hk/iohk-monitoring-framework
-    commit: 20309d5aa56b0ae5fd982465297a1d87aa5658a1
+    commit: 71df15f7b888d2671f619cc632080aaaaca48087
     subdirs:
       - contra-tracer
       - iohk-monitoring
@@ -123,7 +123,7 @@ extra-deps:
     #Ouroboros-network dependencies
 
   - git: https://github.com/input-output-hk/ouroboros-network
-    commit: 0143c516f860a2c790911bc4cc177569d7d04710
+    commit: 7fa7f8182d20290e6a4b22168a1f9f61317307cf
     subdirs:
         - io-sim
         - io-sim-classes

@@ -101,7 +101,7 @@ mkConsensusProtocolTPraos
   :: NodeConfiguration
   -> Maybe ProtocolFilepaths
   -> ExceptT ShelleyProtocolInstantiationError IO
-             (Consensus.Protocol (ShelleyBlock TPraosStandardCrypto)
+             (Consensus.Protocol IO (ShelleyBlock TPraosStandardCrypto)
                                  ProtocolRealTPraos)
 mkConsensusProtocolTPraos NodeConfiguration {
                               ncGenesisFile,

@@ -20,12 +20,12 @@ import           Control.Concurrent.STM
 import           Cardano.Api.Types
 
 import           Ouroboros.Consensus.Cardano (protocolClientInfo)
+import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx)
 import           Ouroboros.Consensus.Network.NodeToClient
 import           Ouroboros.Consensus.Node.ProtocolInfo (ProtocolClientInfo(..))
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
                   (nodeToClientProtocolVersion, supportedNodeToClientVersions)
 import           Ouroboros.Consensus.Node.Run
-import           Ouroboros.Consensus.Mempool (GenTx, ApplyTxErr)
 
 import           Ouroboros.Network.Driver (runPeer)
 import           Ouroboros.Network.Mux
@@ -125,7 +125,7 @@ localInitiatorNetworkApplication
   -> TMVar (SubmitResult (ApplyTxErr blk)) -- ^ Result will be placed here
   -> GenTx blk
   -> Versions NtC.NodeToClientVersion DictVersion
-               (OuroborosApplication InitiatorApp LocalAddress LByteString IO () Void)
+               (OuroborosApplication InitiatorMode LocalAddress LByteString IO () Void)
 localInitiatorNetworkApplication tracer cfg nm resultVar genTx =
     foldMapVersions
       (\v ->

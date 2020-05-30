@@ -26,8 +26,8 @@ import           Cardano.CLI.Byron.UpdateProposal
                    (ByronUpdateProposalError, deserialiseByronUpdateProposal, readByronUpdateProposal)
 import           Cardano.Crypto.Signing (SigningKey)
 import           Ouroboros.Consensus.Byron.Ledger.Block (ByronBlock)
-import qualified Ouroboros.Consensus.Byron.Ledger.Mempool as Mempool
-import qualified Ouroboros.Consensus.Mempool as Mempool
+import           Ouroboros.Consensus.Byron.Ledger.Mempool (GenTx(..))
+import           Ouroboros.Consensus.Ledger.SupportsMempool (txId)
 import           Ouroboros.Consensus.Util.Condense (condense)
 import           Ouroboros.Network.IOManager (IOManager)
 
@@ -79,8 +79,8 @@ runVoteCreation configFp sKey upPropFp voteBool outputFp = do
   vote <- createByronVote configFp sK updatePropId voteBool
   firstExceptT ByronVoteUpdateHelperError $ ensureNewFileLBS outputFp (serialiseByronVote vote)
 
-convertVoteToGenTx :: AVote ByteString -> Mempool.GenTx ByronBlock
-convertVoteToGenTx vote = Mempool.ByronUpdateVote (recoverVoteId vote) vote
+convertVoteToGenTx :: AVote ByteString -> GenTx ByronBlock
+convertVoteToGenTx vote = ByronUpdateVote (recoverVoteId vote) vote
 
 createByronVote
   :: ConfigYamlFilePath
@@ -117,5 +117,5 @@ submitByronVote iomgr network voteFp = do
     voteBs <- liftIO $ LB.readFile voteFp
     vote <- hoistEither $ deserialiseByronVote voteBs
     let genTx = convertVoteToGenTx vote
-    traceWith stdoutTracer ("Vote TxId: " ++ condense (Mempool.txId genTx))
+    traceWith stdoutTracer ("Vote TxId: " ++ condense (txId genTx))
     firstExceptT ByronVoteTxSubmissionError $ nodeSubmitTx iomgr network genTx

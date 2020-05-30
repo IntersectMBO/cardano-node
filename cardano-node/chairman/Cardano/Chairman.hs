@@ -32,14 +32,13 @@ import           Control.Monad.Class.MonadTime (DiffTime)
 import           Control.Monad.Class.MonadTimer
 import           Control.Tracer
 
-import           Network.Mux (MuxError)
+import           Network.Mux (MuxError, MuxMode(..))
 
 import           Ouroboros.Consensus.Block (BlockProtocol, GetHeader (..))
 import           Ouroboros.Consensus.BlockchainTime (SlotLength, getSlotLength)
 import           Ouroboros.Consensus.Config (configBlock, configConsensus, configLedger)
 import           Ouroboros.Consensus.Config.SupportsNode (ConfigSupportsNode (..))
 import           Ouroboros.Consensus.Ledger.Extended (ExtLedgerState (..))
-import           Ouroboros.Consensus.Mempool
 import           Ouroboros.Consensus.Network.NodeToClient
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
                   (HasNetworkProtocolVersion (..))
@@ -49,6 +48,7 @@ import           Ouroboros.Consensus.HardFork.History
                   (EraParams(..), EraSummary(..), Summary(..))
 import           Ouroboros.Consensus.Node.Run
 import           Ouroboros.Consensus.Cardano
+import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx)
 import           Ouroboros.Consensus.Util.Counting (nonEmptyHead)
 
 import           Ouroboros.Network.Magic (NetworkMagic)
@@ -84,7 +84,7 @@ import           Cardano.Config.Types (SocketPath(..))
 --
 chairmanTest :: forall blk. RunNode blk
              => Tracer IO String
-             -> Protocol blk (BlockProtocol blk)
+             -> Protocol IO blk (BlockProtocol blk)
              -> DiffTime
              -> Maybe BlockNo
              -> [SocketPath]
@@ -124,8 +124,6 @@ chairmanTest tracer ptcl runningTime optionalProgressThreshold socketPaths = do
       , pInfoInitLedger = extLedgerSt
       } = protocolInfo ptcl
 
-    startTime = getSystemStart $ configBlock cfg
-
     securityParam = protocolSecurityParam (configConsensus cfg)
 
     progressThreshold = deriveProgressThreshold
@@ -133,7 +131,7 @@ chairmanTest tracer ptcl runningTime optionalProgressThreshold socketPaths = do
                           runningTime
                           optionalProgressThreshold
 
-    hfSummary = hardForkSummary startTime (configLedger cfg) (ledgerState extLedgerSt)
+    hfSummary = hardForkSummary (configLedger cfg) (ledgerState extLedgerSt)
 
     slotLength =
       case hfSummary of
@@ -528,7 +526,7 @@ localInitiatorNetworkApplication
   -> ChainsVar m blk
   -> SecurityParam
   -> Versions NtC.NodeToClientVersion DictVersion
-              (OuroborosApplication InitiatorApp LocalAddress ByteString m () Void)
+              (OuroborosApplication InitiatorMode LocalAddress ByteString m () Void)
 localInitiatorNetworkApplication chairmanTracer chainSyncTracer
                                  localTxSubmissionTracer
                                  cfg networkMagic
@@ -547,7 +545,7 @@ localInitiatorNetworkApplication chairmanTracer chainSyncTracer
     versionData = NodeToClientVersionData networkMagic
 
     protocols :: NodeToClientVersion blk
-              -> NodeToClientProtocols InitiatorApp ByteString m () Void
+              -> NodeToClientProtocols InitiatorMode ByteString m () Void
     protocols byronClientVersion  =
         NodeToClientProtocols {
           localChainSyncProtocol =

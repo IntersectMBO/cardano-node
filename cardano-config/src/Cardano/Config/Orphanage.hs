@@ -20,6 +20,7 @@ import           Cardano.BM.Data.Tracer (TracingVerbosity(..))
 import qualified Cardano.Chain.Update as Update
 import           Ouroboros.Consensus.NodeId (NodeId(..), CoreNodeId (..))
 
+
 deriving instance Show TracingVerbosity
 
 instance FromJSON TracingVerbosity where
@@ -49,4 +50,3 @@ instance FromJSON Update.ApplicationName where
   parseJSON invalid  =
     panic $ "Parsing of application name failed due to type mismatch. "
     <> "Encountered: " <> (Text.pack $ Prelude.show invalid)
-

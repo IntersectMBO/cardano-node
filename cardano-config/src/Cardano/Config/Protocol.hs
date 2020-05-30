@@ -61,7 +61,7 @@ import           Ouroboros.Consensus.Node.Run (RunNode)
 withRealPBFT
   :: NodeConfiguration
   -> (RunNode ByronBlock
-        => Consensus.Protocol ByronBlock Consensus.ProtocolRealPBFT
+        => Consensus.Protocol IO ByronBlock Consensus.ProtocolRealPBFT
         -> ExceptT RealPBFTError IO a)
   -> ExceptT RealPBFTError IO a
 withRealPBFT nc action = do

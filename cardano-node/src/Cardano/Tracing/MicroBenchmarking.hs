@@ -37,9 +37,10 @@ import           Control.Tracer.Transformers.ObserveOutcome
 
 import           Ouroboros.Network.Block (SlotNo (..))
 
+import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTx, GenTxId,
+                   HasTxId, txId)
 import           Ouroboros.Consensus.Mempool.API
-                   (ApplyTx (..), GenTx, GenTxId, HasTxId (..),
-                    MempoolSize (..), TraceEventMempool (..), txId)
+                   (MempoolSize (..), TraceEventMempool (..))
 import           Ouroboros.Consensus.Node.Tracers (TraceForgeEvent (..))
 
 --------------------------------------------------------------------------------
@@ -100,10 +101,10 @@ measureTxsStart tracer = measureTxsStartInter $ toLogObject tracer
 
 -- | Transformer for the end of the transaction, when the transaction was added to the
 -- block and the block was forged.
-measureTxsEnd :: forall blk. Trace IO Text -> Tracer IO (TraceForgeEvent blk (GenTx blk))
+measureTxsEnd :: forall blk. Trace IO Text -> Tracer IO (TraceForgeEvent blk)
 measureTxsEnd tracer = measureTxsEndInter $ toLogObject tracer
   where
-    measureTxsEndInter :: Tracer IO (MeasureTxs blk) -> Tracer IO (TraceForgeEvent blk (GenTx blk))
+    measureTxsEndInter :: Tracer IO (MeasureTxs blk) -> Tracer IO (TraceForgeEvent blk)
     measureTxsEndInter tracer' = Tracer $ \case
         TraceAdoptedBlock slotNo blk txs    ->
             traceWith tracer' =<< measureTxsEvent
@@ -117,7 +118,7 @@ measureTxsEnd tracer = measureTxsEndInter $ toLogObject tracer
 -- Any Monad m, could be Identity in this case where we have all the data beforehand.
 -- The result of this operation is the list of transactions that _made it in the block_
 -- and the time it took them to get into the block.
-instance (Monad m, ApplyTx blk, HasTxId (GenTx blk)) => Outcome m (MeasureTxs blk) where
+instance (Monad m, HasTxId (GenTx blk)) => Outcome m (MeasureTxs blk) where
     type IntermediateValue  (MeasureTxs blk)    = [(GenTx blk, Time)]
     type OutcomeMetric      (MeasureTxs blk)    = [(GenTxId blk, DiffTime)]
 
@@ -170,9 +171,9 @@ instance (Monad m, ApplyTx blk, HasTxId (GenTx blk)) => Outcome m (MeasureTxs bl
 -- Measure block forging time
 --------------------------------------------------------------------------------
 
-instance (Monad m, MonadTime m) => Outcome m (TraceForgeEvent blk (GenTx blk)) where
-    type IntermediateValue  (TraceForgeEvent blk (GenTx blk))    = (SlotNo, Time, MempoolSize)
-    type OutcomeMetric      (TraceForgeEvent blk (GenTx blk))    = Maybe (SlotNo, DiffTime, MempoolSize)
+instance (Monad m, MonadTime m) => Outcome m (TraceForgeEvent blk) where
+    type IntermediateValue  (TraceForgeEvent blk)    = (SlotNo, Time, MempoolSize)
+    type OutcomeMetric      (TraceForgeEvent blk)    = Maybe (SlotNo, DiffTime, MempoolSize)
 
     --classifyObservable     :: a -> m OutcomeProgressionStatus
     classifyObservable = pure . \case
@@ -201,12 +202,12 @@ instance (Monad m, MonadTime m) => Outcome m (TraceForgeEvent blk (GenTx blk)) w
         | otherwise             = pure Nothing
 
 instance HasPrivacyAnnotation (Either
-                             (TraceForgeEvent blk (GenTx blk))
+                             (TraceForgeEvent blk)
                              (OutcomeFidelity
                                 (Maybe
                                    (SlotNo, DiffTime, MempoolSize))))
 instance HasSeverityAnnotation (Either
-                             (TraceForgeEvent blk (GenTx blk))
+                             (TraceForgeEvent blk)
                              (OutcomeFidelity
                                 (Maybe
                                    (SlotNo, DiffTime, MempoolSize)))) where
@@ -214,7 +215,7 @@ instance HasSeverityAnnotation (Either
 
 instance Transformable Text IO
                         (Either
-                             (TraceForgeEvent blk (GenTx blk))
+                             (TraceForgeEvent blk)
                              (OutcomeFidelity
                                 (Maybe
                                    (SlotNo, DiffTime, MempoolSize)))) where
@@ -222,7 +223,7 @@ instance Transformable Text IO
 
 instance ToObject
                         (Either
-                             (TraceForgeEvent blk (GenTx blk))
+                             (TraceForgeEvent blk)
                              (OutcomeFidelity
                                 (Maybe
                                    (SlotNo, DiffTime, MempoolSize)))) where
@@ -237,4 +238,3 @@ instance ToObject
         , "mempoolbytes" .= toJSON (msNumBytes mpsize)
         ]
   toObject _verb (Right _) = emptyObject
-

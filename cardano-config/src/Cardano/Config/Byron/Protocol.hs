@@ -97,7 +97,7 @@ mkConsensusProtocolRealPBFT
   :: NodeConfiguration
   -> Maybe ProtocolFilepaths
   -> ExceptT ByronProtocolInstantiationError IO
-             (Consensus.Protocol ByronBlock ProtocolRealPBFT)
+             (Consensus.Protocol IO ByronBlock ProtocolRealPBFT)
 mkConsensusProtocolRealPBFT NodeConfiguration {
                               ncGenesisFile = GenesisFile genesisFile,
                               ncReqNetworkMagic,
@@ -145,7 +145,7 @@ protocolConfigRealPbft :: Update
                        -> Maybe Double
                        -> Genesis.Config
                        -> Maybe PBftLeaderCredentials
-                       -> Consensus.Protocol ByronBlock ProtocolRealPBFT
+                       -> Consensus.Protocol IO ByronBlock ProtocolRealPBFT
 protocolConfigRealPbft (Update appName appVer lastKnownBlockVersion)
                        pbftSignatureThresh
                        genesis leaderCredentials =

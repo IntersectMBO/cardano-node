@@ -44,11 +44,10 @@ import           Cardano.BM.Trace (traceNamedObject, appendName)
 import           Cardano.BM.Data.Tracer (WithSeverity (..), annotateSeverity)
 import           Cardano.BM.Data.Transformers
 
-import           Ouroboros.Consensus.Block (Header, realPointSlot)
+import           Ouroboros.Consensus.Block (ForgeState, Header, realPointSlot)
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..), TraceBlockchainTimeEvent (..))
-import           Ouroboros.Consensus.Ledger.SupportsProtocol (LedgerSupportsProtocol)
 import           Ouroboros.Consensus.Mempool.API
-                   (GenTx, MempoolSize (..), TraceEventMempool (..))
+                   (MempoolSize (..), TraceEventMempool (..))
 import qualified Ouroboros.Consensus.Node.Run as Consensus (RunNode)
 import qualified Ouroboros.Consensus.Node.Tracers as Consensus
 import qualified Ouroboros.Consensus.Network.NodeToClient as NodeToClient
@@ -109,6 +108,7 @@ data ForgeTracers = ForgeTracers
   , ftDidntAdoptBlock :: Trace IO Text
   , ftForgedInvalid   :: Trace IO Text
   , ftTraceNodeNotLeader  :: Trace IO Text
+  , ftTraceNotCannotLead :: Trace IO Text
   , ftTraceBlockFromFuture :: Trace IO Text
   , ftTraceSlotIsImmutable :: Trace IO Text
   , ftTraceNodeIsLeader :: Trace IO Text
@@ -247,6 +247,7 @@ mkTracers
      , TraceConstraints blk
      , Show peer, Eq peer
      , Show localPeer
+     , Transformable Text IO (ForgeState blk)
      )
   => TraceConfig
   -> Trace IO Text
@@ -265,6 +266,7 @@ mkTracers traceConf tracer bcCounters = do
       <*> (counting $ liftCounting staticMetaCC name "didnt-adopt" tracer)
       <*> (counting $ liftCounting staticMetaCC name "forged-invalid" tracer)
       <*> (counting $ liftCounting staticMetaCC name "node-not-leader" tracer)
+      <*> (counting $ liftCounting staticMetaCC name "not-cannot-lead" tracer)
       <*> (counting $ liftCounting staticMetaCC name "block-from-future" tracer)
       <*> (counting $ liftCounting staticMetaCC name "slot-is-immutable" tracer)
       <*> (counting $ liftCounting staticMetaCC name "node-is-leader" tracer)
@@ -467,7 +469,7 @@ mkTracers traceConf tracer bcCounters = do
     forgeTracer
         :: ForgeTracers
         -> TraceConfig
-        -> Tracer IO (Consensus.TraceForgeEvent blk (GenTx blk))
+        -> Tracer IO (Consensus.TraceForgeEvent blk)
     forgeTracer forgeTracers tc = Tracer $ \ev -> do
         traceWith (measureTxsEnd tracer) ev
         traceWith (notifyBlockForging) ev
@@ -513,7 +515,7 @@ mkTracers traceConf tracer bcCounters = do
       :: ForgeTracers
       -> TracingVerbosity
       -> Trace IO Text
-      -> Tracer IO (WithSeverity (Consensus.TraceForgeEvent blk (GenTx blk)))
+      -> Tracer IO (WithSeverity (Consensus.TraceForgeEvent blk))
     teeForge ft tverb tr = Tracer $ \ev -> do
       traceWith (teeForge' tr) ev
       flip traceWith ev $ fanning $ \(WithSeverity _ e) ->
@@ -526,6 +528,7 @@ mkTracers traceConf tracer bcCounters = do
           Consensus.TraceDidntAdoptBlock{} -> teeForge' (ftDidntAdoptBlock ft)
           Consensus.TraceForgedInvalidBlock{} -> teeForge' (ftForgedInvalid ft)
           Consensus.TraceNodeNotLeader{} -> teeForge' (ftTraceNodeNotLeader ft)
+          Consensus.TraceNotCannotLead{} -> teeForge' (ftTraceNotCannotLead ft)
           Consensus.TraceBlockFromFuture{} -> teeForge' (ftTraceBlockFromFuture ft)
           Consensus.TraceSlotIsImmutable{} -> teeForge' (ftTraceSlotIsImmutable ft)
           Consensus.TraceNodeIsLeader{} -> teeForge' (ftTraceNodeIsLeader ft)
@@ -534,7 +537,7 @@ mkTracers traceConf tracer bcCounters = do
 
     teeForge'
       :: Trace IO Text
-      -> Tracer IO (WithSeverity (Consensus.TraceForgeEvent blk (GenTx blk)))
+      -> Tracer IO (WithSeverity (Consensus.TraceForgeEvent blk))
     teeForge' tr =
       Tracer $ \(WithSeverity _ ev) -> do
         meta <- mkLOMeta Critical Confidential
@@ -556,6 +559,8 @@ mkTracers traceConf tracer bcCounters = do
               LogValue "forgedInvalidSlotLast" $ PureI $ fromIntegral $ unSlotNo slot
             Consensus.TraceNodeNotLeader slot ->
               LogValue "nodeNotLeader" $ PureI $ fromIntegral $ unSlotNo slot
+            Consensus.TraceNotCannotLead slot _ ->
+              LogValue "notCannotLead" $ PureI $ fromIntegral $ unSlotNo slot
             Consensus.TraceBlockFromFuture slot _slotNo ->
               LogValue "blockFromFuture" $ PureI $ fromIntegral $ unSlotNo slot
             Consensus.TraceSlotIsImmutable slot _tipPoint _tipBlkNo ->
@@ -565,7 +570,7 @@ mkTracers traceConf tracer bcCounters = do
 
     mkConsensusTracers
         :: MVar (Maybe (WithSeverity [TraceLabelPeer peer (FetchDecision [Point (Header blk)])]),Integer)
-        -> (OutcomeEnhancedTracer IO (Consensus.TraceForgeEvent blk (GenTx blk)) -> Tracer IO (Consensus.TraceForgeEvent blk (GenTx blk)))
+        -> (OutcomeEnhancedTracer IO (Consensus.TraceForgeEvent blk) -> Tracer IO (Consensus.TraceForgeEvent blk))
         -> ForgeTracers
         -> Consensus.Tracers' peer localPeer blk (Tracer IO)
     mkConsensusTracers elidingFetchDecision measureBlockForging forgeTracers = Consensus.Tracers
@@ -609,6 +614,10 @@ mkTracers traceConf tracer bcCounters = do
       , Consensus.mempoolTracer
         = tracerOnOff traceConf traceMempool
           $ mempoolTracer traceConf
+      , Consensus.forgeStateTracer
+        = tracerOnOff traceConf traceForgeState
+          $ toLogObject' tracingVerbosity
+          $ appendName "ForgeState" tracer
       , Consensus.forgeTracer
         = Tracer $ \ev -> do
             traceWith (forgeTracer forgeTracers traceConf) ev

@@ -2,11 +2,11 @@
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE LambdaCase            #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns        #-}
 {-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
 {-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE UndecidableInstances  #-}
-{-# LANGUAGE NamedFieldPuns        #-}
 
 {-# OPTIONS_GHC -Wno-orphans  #-}
 
@@ -18,6 +18,8 @@ import           Prelude (show)
 import qualified Data.Text as Text
 import           Data.Text (pack)
 
+import           Cardano.Config.Orphanage ()
+import           Cardano.Crypto.KES (deriveVerKeyKES)
 import           Cardano.TracingOrphanInstances.Common
 import           Cardano.TracingOrphanInstances.Network (showTip, showPoint)
 
@@ -37,14 +39,20 @@ import           Ouroboros.Consensus.Ledger.Abstract
 import qualified Ouroboros.Consensus.Protocol.BFT  as BFT
 import qualified Ouroboros.Consensus.Protocol.PBFT as PBFT
 import           Ouroboros.Consensus.Ledger.Extended
-import           Ouroboros.Consensus.Mempool.API
-                   (GenTx, GenTxId, HasTxId, TraceEventMempool (..), ApplyTxErr,
-                   MempoolSize(..), TxId, txId)
+import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx, GenTxId,
+                   HasTxId, TxId, txId)
+import           Ouroboros.Consensus.Mempool.API (TraceEventMempool (..), MempoolSize(..))
+import           Ouroboros.Consensus.MiniProtocol.LocalTxSubmission.Server
+                   (TraceLocalTxSubmissionServerEvent (..))
 import           Ouroboros.Consensus.Node.Run (RunNode (..))
 import           Ouroboros.Consensus.Node.Tracers (TraceForgeEvent (..))
 import           Ouroboros.Consensus.Protocol.Abstract
-import           Ouroboros.Consensus.MiniProtocol.LocalTxSubmission.Server
-                   (TraceLocalTxSubmissionServerEvent (..))
+
+import           Ouroboros.Consensus.Mock.Protocol.Praos (PraosCrypto (..), PraosForgeState (..))
+
+import           Ouroboros.Consensus.Shelley.Ledger (TPraosForgeState(..))
+import           Ouroboros.Consensus.Shelley.Protocol.Crypto (HotKey(..), TPraosCrypto)
+
 import           Ouroboros.Consensus.Util.Condense
 import           Ouroboros.Consensus.Util.Orphans ()
 
@@ -147,12 +155,24 @@ instance HasPrivacyAnnotation (TraceEventMempool blk)
 instance HasSeverityAnnotation (TraceEventMempool blk) where
   getSeverityAnnotation _ = Info
 
+instance HasPrivacyAnnotation (TPraosForgeState c)
+instance HasSeverityAnnotation (TPraosForgeState c) where
+  getSeverityAnnotation TPraosForgeState {} = Info
 
-instance HasPrivacyAnnotation (TraceForgeEvent blk tx)
-instance HasSeverityAnnotation (TraceForgeEvent blk tx) where
+instance HasPrivacyAnnotation ()
+instance HasSeverityAnnotation () where
+  getSeverityAnnotation () = Info
+
+instance HasPrivacyAnnotation (PraosForgeState c)
+instance HasSeverityAnnotation (PraosForgeState c) where
+  getSeverityAnnotation PraosKey {} = Info
+
+instance HasPrivacyAnnotation (TraceForgeEvent blk)
+instance HasSeverityAnnotation (TraceForgeEvent blk) where
   getSeverityAnnotation TraceForgedBlock {}            = Info
   getSeverityAnnotation TraceStartLeadershipCheck {}   = Info
   getSeverityAnnotation TraceNodeNotLeader {}          = Info
+  getSeverityAnnotation TraceNotCannotLead {}          = Error
   getSeverityAnnotation TraceNodeIsLeader {}           = Info
   getSeverityAnnotation TraceNoLedgerState {}          = Error
   getSeverityAnnotation TraceNoLedgerView {}           = Error
@@ -216,22 +236,36 @@ showT :: Show a => a -> Text
 showT = pack . show
 
 
-instance ( Condense (HeaderHash blk)
+instance ( tx ~ GenTx blk
+         , Condense (HeaderHash blk)
          , HasTxId tx
          , RunNode blk
          , Show (TxId tx)
          , ToObject (LedgerError blk)
          , ToObject (OtherHeaderEnvelopeError blk)
-         , ToObject (ValidationErr (BlockProtocol blk)))
-      => Transformable Text IO (TraceForgeEvent blk tx) where
+         , ToObject (ValidationErr (BlockProtocol blk))
+         , ToObject (CannotLead (BlockProtocol blk)))
+      => Transformable Text IO (TraceForgeEvent blk) where
   trTransformer = trStructuredText
 
+instance HasTextFormatter (TPraosForgeState c) where
+  formatText _ = pack . show . toList
 
-instance ( Condense (HeaderHash blk)
+instance TPraosCrypto c => Transformable Text IO (TPraosForgeState c) where
+  trTransformer = trStructuredText
+
+instance HasTextFormatter (PraosForgeState c) where
+  formatText _ = pack . show . toList
+
+instance PraosCrypto c => Transformable Text IO (PraosForgeState c) where
+  trTransformer = trStructuredText
+
+instance ( tx ~ GenTx blk
+         , Condense (HeaderHash blk)
          , HasTxId tx
          , LedgerSupportsProtocol blk
-         , Show (TxId tx) )
-      => HasTextFormatter (TraceForgeEvent blk tx) where
+         , Show (TxId tx))
+      => HasTextFormatter (TraceForgeEvent blk) where
   formatText = \case
     TraceAdoptedBlock slotNo blk txs -> const $
       "Adopted forged block for slot " <> showT (unSlotNo slotNo)
@@ -255,6 +289,11 @@ instance ( Condense (HeaderHash blk)
       "Leading slot " <> showT (unSlotNo slotNo)
     TraceNodeNotLeader slotNo -> const $
       "Not leading slot " <> showT (unSlotNo slotNo)
+    TraceNotCannotLead slotNo reason -> const $
+      "We are the leader for slot "
+        <> showT (unSlotNo slotNo)
+        <> ", but we cannot lead because: "
+        <> showT reason
     TraceNoLedgerState slotNo _blk -> const $
       "No ledger state at slot " <> showT (unSlotNo slotNo)
     TraceNoLedgerView slotNo _ -> const $
@@ -272,6 +311,9 @@ instance ( Condense (HeaderHash blk)
          , ToObject (Header blk))
       => Transformable Text IO (ChainDB.TraceEvent blk) where
   trTransformer = trStructuredText
+
+
+
 
 
 instance (Condense (HeaderHash blk), LedgerSupportsProtocol blk)
@@ -742,14 +784,38 @@ instance ToObject MempoolSize where
       , "bytes" .= msNumBytes
       ]
 
-instance ( Condense (HeaderHash blk)
+instance HasTextFormatter () where
+  formatText _ = pack . show . toList
+
+-- ForgeState default value = ()
+instance Transformable Text IO () where
+  trTransformer = trStructuredText
+
+instance TPraosCrypto c => ToObject (TPraosForgeState c) where
+  toObject _verb (TPraosForgeState (HotKey period signKey)) =
+    mkObject
+      [ "kind" .= String "TPraosForgeState"
+      , "hotKESVerificationKey" .= String (showT $ deriveVerKeyKES signKey)
+      , "hotKESKeyPeriod" .= period
+      ]
+
+instance PraosCrypto c => ToObject (PraosForgeState c) where
+  toObject _verb (PraosKey signKey) =
+    mkObject
+      [ "kind" .= String "PraosKey"
+      , "praosKESVerificationKey" .= String (showT $ deriveVerKeyKES signKey)
+      ]
+
+instance ( tx ~ GenTx blk
+         , Condense (HeaderHash blk)
          , HasTxId tx
          , RunNode blk
          , Show (TxId tx)
          , ToObject (LedgerError blk)
          , ToObject (OtherHeaderEnvelopeError blk)
-         , ToObject (ValidationErr (BlockProtocol blk)))
-      => ToObject (TraceForgeEvent blk tx) where
+         , ToObject (ValidationErr (BlockProtocol blk))
+         , ToObject (CannotLead (BlockProtocol blk)))
+      => ToObject (TraceForgeEvent blk) where
   toObject MaximalVerbosity (TraceAdoptedBlock slotNo blk txs) =
     mkObject
       [ "kind" .= String "TraceAdoptedBlock"
@@ -803,6 +869,12 @@ instance ( Condense (HeaderHash blk)
     mkObject
       [ "kind" .= String "TraceNodeNotLeader"
       , "slot" .= toJSON (unSlotNo slotNo)
+      ]
+  toObject verb (TraceNotCannotLead slotNo reason) =
+    mkObject
+      [ "kind" .= String "TraceNotCannotLead"
+      , "slot" .= toJSON (unSlotNo slotNo)
+      , "reason" .= toObject verb reason
       ]
   toObject _verb (TraceNoLedgerState slotNo _blk) =
     mkObject
