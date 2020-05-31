@@ -1138,7 +1138,7 @@ pPoolCost =
 
 pPoolMargin :: Parser ShelleyStakePoolMargin
 pPoolMargin =
-  (\dbl -> maybeOrFail . Shelley.mkUnitInterval $ approxRational (dbl :: Double) 1) <$>
+  (\dbl -> maybeOrFail . Shelley.mkUnitInterval $ approxRational (dbl :: Double) 0) <$>
     Opt.option Opt.auto
       (  Opt.long "pool-margin"
       <> Opt.metavar "DOUBLE"
