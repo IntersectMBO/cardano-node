@@ -34,6 +34,8 @@ import           Data.Text (Text, pack)
 import           Network.Mux (MuxTrace, WithMuxBearer)
 import qualified Network.Socket as Socket (SockAddr)
 
+import           Cardano.Slotting.Slot (EpochNo)
+
 import           Cardano.BM.Data.Aggregated (Measurable (..))
 import           Cardano.BM.Data.LogItem (LOContent (..), LoggerName,
                                           PrivacyAnnotation (Confidential),
@@ -380,8 +382,10 @@ mkTracers traceConf tracer bcCounters = do
         Tracer $ \(WithSeverity _ ev') ->
           case ev' of
               (ChainDB.TraceAddBlockEvent ev) -> case ev of
-                  ChainDB.SwitchedToAFork     _ _ c -> traceChainInformation tr (chainInformation c)
-                  ChainDB.AddedToCurrentChain _ _ c -> traceChainInformation tr (chainInformation c)
+                  ChainDB.SwitchedToAFork     newTipInfo _ newChain ->
+                    traceChainInformation tr (chainInformation newTipInfo newChain)
+                  ChainDB.AddedToCurrentChain newTipInfo _ newChain ->
+                    traceChainInformation tr (chainInformation newTipInfo newChain)
                   _ -> pure ()
               _ -> pure ()
 
@@ -691,16 +695,26 @@ data ChainInformation = ChainInformation
   { slots :: Word64
   , blocks :: Word64
   , density :: Rational
-    -- ^ the actual number of blocks created over the maximum
-    -- expected number of blocks that could be created
+    -- ^ the actual number of blocks created over the maximum expected number
+    -- of blocks that could be created over the span of the last @k@ blocks.
+  , epoch :: EpochNo
+    -- ^ In which epoch is the tip of the current chain
+  , slotInEpoch :: Word64
+    -- ^ Relative slot number of the tip of the current chain within the
+    -- epoch.
   }
 
-chainInformation :: forall block . AF.HasHeader block
-                 => AF.AnchoredFragment block -> ChainInformation
-chainInformation frag = ChainInformation
-    { slots     = slotN
-    , blocks    = blockN
-    , density   = calcDensity blockD slotD
+chainInformation
+  :: forall blk. HasHeader (Header blk)
+  => ChainDB.NewTipInfo blk
+  -> AF.AnchoredFragment (Header blk)
+  -> ChainInformation
+chainInformation newTipInfo frag = ChainInformation
+    { slots       = slotN
+    , blocks      = blockN
+    , density     = calcDensity blockD slotD
+    , epoch       = ChainDB.newTipEpoch newTipInfo
+    , slotInEpoch = ChainDB.newTipSlotInEpoch newTipInfo
     }
   where
     calcDensity :: Word64 -> Word64 -> Rational
