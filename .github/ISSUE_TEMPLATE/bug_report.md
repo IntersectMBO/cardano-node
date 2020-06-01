@@ -7,6 +7,10 @@ assignees: ''
 
 ---
 
+**Internal/Exernal**
+*Internal*   if an IOHK staff member.
+*External*   otherwise.
+
 **Summary**
 A clear and specific description of what the bug is.
 
