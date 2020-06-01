@@ -59,14 +59,14 @@ module Cardano.Api.Typed (
     -- * Payment addresses
     -- | Constructing and inspecting normal payment addresses
     Address,
-    NetworkId,
+    NetworkId(..),
     -- * Byron addresses
     makeByronAddress,
     ByronKey,
     -- * Shelley addresses
     makeShelleyAddress,
     PaymentCredential(..),
-    StakeCredentialReference(..),
+    StakeAddressReference(..),
     PaymentKey,
 
     -- * Stake addresses
@@ -268,14 +268,17 @@ import qualified Cardano.Chain.Common as Byron
 -- Shelley imports
 --
 import qualified Ouroboros.Consensus.Shelley.Protocol.Crypto as Shelley
---import qualified Shelley.Spec.Ledger.BaseTypes               as Shelley
+import qualified Shelley.Spec.Ledger.Address                 as Shelley
+import qualified Shelley.Spec.Ledger.Credential              as Shelley
+import qualified Shelley.Spec.Ledger.BaseTypes               as Shelley
 --import qualified Shelley.Spec.Ledger.Coin                    as Shelley
 --import qualified Shelley.Spec.Ledger.Delegation.Certificates as Shelley
 import qualified Shelley.Spec.Ledger.Keys                    as Shelley
-import qualified Shelley.Spec.Ledger.TxData                  as Shelley
+--import qualified Shelley.Spec.Ledger.TxData                  as Shelley
 --import qualified Shelley.Spec.Ledger.Tx                      as Shelley
 import qualified Shelley.Spec.Ledger.PParams                 as Shelley
-import qualified Shelley.Spec.Ledger.OCert                 as Shelley
+import qualified Shelley.Spec.Ledger.OCert                   as Shelley
+import qualified Shelley.Spec.Ledger.Scripts                 as Shelley
 
 -- TODO: replace the above with
 --import qualified Cardano.Api.Byron   as Byron
@@ -402,16 +405,16 @@ data Address era where
      -- | Shelley addresses are only valid in the Shelley era.
      --
      ShelleyAddress
-       :: PaymentCredential
-       -> StakeCredentialReference
-       -> NetworkId
+       :: Shelley.Network
+       -> Shelley.PaymentCredential ShelleyCrypto
+       -> Shelley.StakeReference    ShelleyCrypto
        -> Address Shelley
 
 data StakeAddress where
 
      StakeAddress
-       :: StakeCredential
-       -> NetworkId
+       :: Shelley.Network
+       -> Shelley.StakeCredential ShelleyCrypto
        -> StakeAddress
 
 data NetworkId
@@ -426,37 +429,129 @@ data StakeCredential
        = StakeCredentialByKey    (Hash StakeKey)
        | StakeCredentialByScript (Hash Script)
 
-data StakeCredentialReference
-       = StakeCredentialByValue   StakeCredential
-       | StakeCredentialByPointer StakeCredentialPointer
-       | NoStakeCredential
+data StakeAddressReference
+       = StakeAddressByValue   StakeCredential
+       | StakeAddressByPointer StakeAddressPointer
+       | NoStakeAddress
 
-type StakeCredentialPointer = Shelley.Ptr
+type StakeAddressPointer = Shelley.Ptr
+
+
+instance HasTypeProxy (Address Byron) where
+    data AsType (Address Byron) = AsByronAddress
+    proxyToAsType _ = AsByronAddress
+
+
+instance HasTypeProxy (Address Shelley) where
+    data AsType (Address Shelley) = AsShelleyAddress
+    proxyToAsType _ = AsShelleyAddress
+
+
+instance HasTypeProxy StakeAddress where
+    data AsType StakeAddress = AsStakeAddress
+    proxyToAsType _ = AsStakeAddress
+
+
+instance SerialiseAsRawBytes (Address Byron) where
+    serialiseToRawBytes (ByronAddress addr) = CBOR.serialize' addr
+
+    deserialiseFromRawBytes AsByronAddress bs =
+      case CBOR.decodeFull' bs of
+        Left  _    -> Nothing
+        Right addr -> Just (ByronAddress addr)
+
+
+instance SerialiseAsRawBytes (Address Shelley) where
+    serialiseToRawBytes (ByronAddress addr) =
+        Shelley.serialiseAddr (Shelley.AddrBootstrap addr)
+
+    serialiseToRawBytes (ShelleyAddress nw pc scr) =
+        Shelley.serialiseAddr (Shelley.Addr nw pc scr)
+
+    deserialiseFromRawBytes AsShelleyAddress bs =
+        case Shelley.deserialiseAddr bs of
+          Nothing -> Nothing
+          Just (Shelley.Addr nw pc scr)     -> Just (ShelleyAddress nw pc scr)
+          Just (Shelley.AddrBootstrap addr) -> Just (ByronAddress addr)
+
+
+instance SerialiseAsRawBytes StakeAddress where
+    serialiseToRawBytes (StakeAddress nw sc) =
+        serialiseRewardAcnt (Shelley.RewardAcnt nw sc)
+      where
+        serialiseRewardAcnt =
+          error "TODO: Use Shelley.serialiseRewardAcnt when it is available"
+
+    deserialiseFromRawBytes AsStakeAddress bs =
+        case deserialiseRewardAcnt bs of
+          Nothing -> Nothing
+          Just (Shelley.RewardAcnt nw sc) -> Just (StakeAddress nw sc)
+      where
+        deserialiseRewardAcnt =
+          error "TODO: Use Shelley.deserialiseRewardAcnt when it is available"
 
 
 makeByronAddress :: VerificationKey ByronKey
                  -> NetworkId
                  -> Address era
 makeByronAddress (ByronVerificationKey vk) nid =
-    ByronAddress (Byron.makeVerKeyAddress (byronNetworkMagic nid) vk)
-  where
-    byronNetworkMagic :: NetworkId -> Byron.NetworkMagic
-    byronNetworkMagic Mainnet                     = Byron.NetworkMainOrStage
-    byronNetworkMagic (Testnet (NetworkMagic nm)) = Byron.NetworkTestnet nm
+    ByronAddress $
+      Byron.makeVerKeyAddress
+        (toByronNetworkMagic nid)
+        vk
 
 
-makeShelleyAddress :: PaymentCredential
-                   -> StakeCredentialReference
-                   -> NetworkId
+makeShelleyAddress :: NetworkId
+                   -> PaymentCredential
+                   -> StakeAddressReference
                    -> Address Shelley
-makeShelleyAddress = ShelleyAddress
+makeShelleyAddress nw pc scr =
+    ShelleyAddress
+      (toShelleyNetwork nw)
+      (toShelleyPaymentCredential pc)
+      (toShelleyStakeReference scr)
 
 
-makeStakeAddress :: StakeCredential
-                 -> NetworkId
+makeStakeAddress :: NetworkId
+                 -> StakeCredential
                  -> StakeAddress
-makeStakeAddress = StakeAddress
+makeStakeAddress nw sc =
+    StakeAddress
+      (toShelleyNetwork nw)
+      (toShelleyStakeCredential sc)
 
+
+toByronNetworkMagic :: NetworkId -> Byron.NetworkMagic
+toByronNetworkMagic Mainnet                     = Byron.NetworkMainOrStage
+toByronNetworkMagic (Testnet (NetworkMagic nm)) = Byron.NetworkTestnet nm
+
+toShelleyNetwork :: NetworkId -> Shelley.Network
+toShelleyNetwork  Mainnet    = Shelley.Mainnet
+toShelleyNetwork (Testnet _) = Shelley.Testnet
+
+
+toShelleyPaymentCredential :: PaymentCredential
+                           -> Shelley.PaymentCredential ShelleyCrypto
+toShelleyPaymentCredential (PaymentCredentialByKey (PaymentKeyHash kh)) =
+    Shelley.KeyHashObj kh
+toShelleyPaymentCredential (PaymentCredentialByScript (ScriptHash sh)) =
+    Shelley.ScriptHashObj sh
+
+toShelleyStakeCredential :: StakeCredential
+                         -> Shelley.StakeCredential ShelleyCrypto
+toShelleyStakeCredential (StakeCredentialByKey (StakeKeyHash kh)) =
+    Shelley.KeyHashObj kh
+toShelleyStakeCredential (StakeCredentialByScript (ScriptHash kh)) =
+    Shelley.ScriptHashObj kh
+
+toShelleyStakeReference :: StakeAddressReference
+                        -> Shelley.StakeReference ShelleyCrypto
+toShelleyStakeReference (StakeAddressByValue stakecred) =
+    Shelley.StakeRefBase (toShelleyStakeCredential stakecred)
+toShelleyStakeReference (StakeAddressByPointer ptr) =
+    Shelley.StakeRefPtr ptr
+toShelleyStakeReference  NoStakeAddress =
+    Shelley.StakeRefNull
 
 
 -- ----------------------------------------------------------------------------
@@ -586,6 +681,8 @@ shelleyScriptWitness = undefined
 
 data Script
 
+newtype instance Hash Script = ScriptHash (Shelley.ScriptHash ShelleyCrypto)
+
 -- ----------------------------------------------------------------------------
 -- Operational certificates
 --
@@ -706,7 +803,7 @@ deserialiseFromJSON :: FromJSON a
 deserialiseFromJSON _proxy = either (Left . JsonDecodeError) Right
                            . Aeson.eitherDecodeStrict'
 
-class SerialiseAsRawBytes a where
+class HasTypeProxy a => SerialiseAsRawBytes a where
 
   serialiseToRawBytes :: a -> ByteString
 
