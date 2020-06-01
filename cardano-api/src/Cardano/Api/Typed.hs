@@ -3,6 +3,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE ConstraintKinds #-}
 
@@ -129,6 +130,7 @@ module Cardano.Api.Typed (
 
     -- * Serialisation
     -- | Support for serialising data in JSON, CBOR and text files.
+
     -- ** CBOR
     ToCBOR,
     FromCBOR,
@@ -152,6 +154,10 @@ module Cardano.Api.Typed (
     -- | Support for a envelope file format with text headers and a hex-encoded
     -- binary payload.
     HasTextEnvelope,
+    TextEnvelope,
+    TextEnvelopeType,
+    TextEnvelopeDescr,
+    TextEnvelopeError,
     serialiseToTextEnvelope,
     deserialiseFromTextEnvelope,
     readFileTextEnvelope,
@@ -162,8 +168,9 @@ module Cardano.Api.Typed (
     readFileTextEnvelopeAnyOf,
 
     -- * Errors
-    Error,
+    Error(..),
     throwErrorAsException,
+    FileError(..),
 
     -- * Node interaction
     -- | Operations that involve talking to a local Cardano node.
@@ -187,11 +194,17 @@ module Cardano.Api.Typed (
     VrfKey,
 
     -- ** Operational certificates
+    OperationalCertificate(..),
+    OperationalCertificateIssueCounter(..),
+    Shelley.KESPeriod(..),
+    OperationalCertIssueError(..),
+    issueOperationalCertificate,
 
     -- * Genesis file
     -- | Types and functions needed to inspect or create a genesis file.
     GenesisKey,
     GenesisDelegateKey,
+    GenesisUTxOKey,
 
     -- * Special transactions
     -- | There are various additional things that can be embedded in a
@@ -208,6 +221,7 @@ import           Data.Maybe
 import           Data.List as List
 --import           Data.Either
 import           Data.String (IsString(fromString))
+import           Numeric.Natural
 
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
@@ -229,6 +243,7 @@ import           Data.Aeson (ToJSON(..), FromJSON(..))
 --
 import qualified Cardano.Binary as CBOR
 import           Cardano.Binary (ToCBOR(..), FromCBOR(..))
+import           Shelley.Spec.Ledger.Serialization (CBORGroup(..))
 import           Cardano.Slotting.Slot (SlotNo)
 import           Ouroboros.Network.Magic (NetworkMagic(..))
 
@@ -259,6 +274,7 @@ import qualified Shelley.Spec.Ledger.Keys                    as Shelley
 import qualified Shelley.Spec.Ledger.TxData                  as Shelley
 --import qualified Shelley.Spec.Ledger.Tx                      as Shelley
 import qualified Shelley.Spec.Ledger.PParams                 as Shelley
+import qualified Shelley.Spec.Ledger.OCert                 as Shelley
 
 -- TODO: replace the above with
 --import qualified Cardano.Api.Byron   as Byron
@@ -315,7 +331,9 @@ class HasTypeProxy t where
 -- this API is concerned with the management of keys: generating and
 -- serialising.
 --
-class Key keyrole where
+class (HasTextEnvelope (VerificationKey keyrole),
+       HasTextEnvelope (SigningKey keyrole))
+    => Key keyrole where
 
     -- | The type of cryptographic verification key, for each key role.
     data VerificationKey keyrole :: *
@@ -563,6 +581,102 @@ shelleyScriptWitness = undefined
 
 data Script
 
+-- ----------------------------------------------------------------------------
+-- Operational certificates
+--
+
+data OperationalCertificate =
+     OperationalCertificate
+       !(Shelley.OCert Shelley.TPraosStandardCrypto)
+       !(VerificationKey StakePoolKey)
+  deriving (Eq, Show)
+
+data OperationalCertificateIssueCounter =
+     OperationalCertificateIssueCounter
+       !Natural
+       !(VerificationKey StakePoolKey) -- For consistency checking
+  deriving (Eq, Show)
+
+instance ToCBOR OperationalCertificate where
+    toCBOR (OperationalCertificate ocert vkey) =
+      toCBOR (CBORGroup ocert, vkey)
+
+instance FromCBOR OperationalCertificate where
+    fromCBOR = do
+      (CBORGroup ocert, vkey) <- fromCBOR
+      return (OperationalCertificate ocert vkey)
+
+instance ToCBOR OperationalCertificateIssueCounter where
+    toCBOR (OperationalCertificateIssueCounter counter vkey) =
+      toCBOR (counter, vkey)
+
+instance FromCBOR OperationalCertificateIssueCounter where
+    fromCBOR = do
+      (counter, vkey) <- fromCBOR
+      return (OperationalCertificateIssueCounter counter vkey)
+
+instance HasTypeProxy OperationalCertificate where
+    data AsType OperationalCertificate = AsOperationalCertificate
+    proxyToAsType _ = AsOperationalCertificate
+
+instance HasTypeProxy OperationalCertificateIssueCounter where
+    data AsType OperationalCertificateIssueCounter = AsOperationalCertificateIssueCounter
+    proxyToAsType _ = AsOperationalCertificateIssueCounter
+
+instance HasTextEnvelope OperationalCertificate where
+    textEnvelopeType _ = "Node operational certificate"
+
+instance HasTextEnvelope OperationalCertificateIssueCounter where
+    textEnvelopeType _ = "Node operational certificate issue counter"
+
+data OperationalCertIssueError =
+       -- | The stake pool verification key expected for the
+       -- 'OperationalCertificateIssueCounter' does not match the signing key
+       -- supplied for signing.
+       --
+       -- Order: pool vkey expected, pool skey supplied
+       --
+       OperationalCertKeyMismatch (VerificationKey StakePoolKey)
+                                  (VerificationKey StakePoolKey)
+  deriving Show
+
+instance Error OperationalCertIssueError where
+    displayError (OperationalCertKeyMismatch _counterKey _signingKey) =
+      "Key mismatch: the signing key does not match the one that goes with the counter"
+      --TODO: include key ids
+
+issueOperationalCertificate :: VerificationKey KesKey
+                            -> SigningKey StakePoolKey
+                            -> Shelley.KESPeriod
+                            -> OperationalCertificateIssueCounter
+                            -> Either OperationalCertIssueError
+                                      (OperationalCertificate,
+                                      OperationalCertificateIssueCounter)
+issueOperationalCertificate (KesVerificationKey kesVKey)
+                            (StakePoolSigningKey poolSKey)
+                            kesPeriod
+                            (OperationalCertificateIssueCounter counter poolVKey)
+  | poolVKey /= poolVKey'
+  = Left (OperationalCertKeyMismatch poolVKey poolVKey')
+
+  | otherwise
+  = Right (OperationalCertificate ocert poolVKey,
+           OperationalCertificateIssueCounter (succ counter) poolVKey)
+  where
+    poolVKey' = getVerificationKey (StakePoolSigningKey poolSKey)
+
+    ocert     :: Shelley.OCert Shelley.TPraosStandardCrypto
+    ocert     = Shelley.OCert kesVKey counter kesPeriod signature
+
+    signature :: Crypto.SignedDSIGN
+                   (Shelley.DSIGN Shelley.TPraosStandardCrypto)
+                   (Shelley.VerKeyKES Shelley.TPraosStandardCrypto,
+                    Natural,
+                    Shelley.KESPeriod)
+    signature = Crypto.signedDSIGN ()
+                  (kesVKey, counter, kesPeriod)
+                  poolSKey
+
 
 -- ----------------------------------------------------------------------------
 -- CBOR and JSON Serialisation
@@ -623,7 +737,16 @@ type TextEnvelopeError = TextView.TextViewError
 
 data FileError e = FileError   FilePath e
                  | FileIOError FilePath IOException
+  deriving Show
 
+instance Error e => Error (FileError e) where
+  displayError (FileIOError path ioe) =
+    path ++ ": " ++ displayException ioe
+  displayError (FileError path e) =
+    path ++ ": " ++ displayError e
+
+instance Error TextView.TextViewError where
+  displayError _ = "TODO"
 
 serialiseToTextEnvelope :: forall a. HasTextEnvelope a
                         => Maybe TextEnvelopeDescr -> a -> TextEnvelope
@@ -711,6 +834,8 @@ class Show e => Error e where
 
     displayError :: e -> String
 
+instance Error () where
+    displayError () = ""
 
 -- | The preferred approach is to use 'Except' or 'ExceptT', but you can if
 -- necessary use IO exceptions.
@@ -1009,6 +1134,55 @@ instance HasTextEnvelope (VerificationKey GenesisDelegateKey) where
 
 instance HasTextEnvelope (SigningKey GenesisDelegateKey) where
     textEnvelopeType _ = "Node operator signing key"
+    -- TODO: include the actual crypto algorithm name, to catch changes
+    -- TODO: use a different type from the stake pool key, since some operations
+    -- need a genesis key specifically
+
+
+--
+-- Genesis UTxO keys
+--
+
+data GenesisUTxOKey
+
+instance HasTypeProxy GenesisUTxOKey where
+    data AsType GenesisUTxOKey = AsGenesisUTxOKey
+    proxyToAsType _ = AsGenesisUTxOKey
+
+
+instance Key GenesisUTxOKey where
+
+    newtype VerificationKey GenesisUTxOKey =
+        GenesisUTxOVerificationKey (Shelley.VKey Shelley.Payment Shelley.TPraosStandardCrypto)
+      deriving stock (Eq, Show)
+      deriving newtype (ToCBOR, FromCBOR)
+
+    newtype SigningKey GenesisUTxOKey =
+        GenesisUTxOSigningKey (Shelley.SignKeyDSIGN Shelley.TPraosStandardCrypto)
+      deriving stock (Show)
+      deriving newtype (ToCBOR, FromCBOR)
+
+    deterministicSigningKey :: AsType GenesisUTxOKey -> Crypto.Seed -> SigningKey GenesisUTxOKey
+    deterministicSigningKey AsGenesisUTxOKey seed =
+        GenesisUTxOSigningKey (Crypto.genKeyDSIGN seed)
+
+    deterministicSigningKeySeedSize :: AsType GenesisUTxOKey -> Word
+    deterministicSigningKeySeedSize AsGenesisUTxOKey =
+        Crypto.seedSizeDSIGN proxy
+      where
+        proxy :: Proxy (Shelley.DSIGN Shelley.TPraosStandardCrypto)
+        proxy = Proxy
+
+    getVerificationKey :: SigningKey GenesisUTxOKey -> VerificationKey GenesisUTxOKey
+    getVerificationKey (GenesisUTxOSigningKey sk) =
+        GenesisUTxOVerificationKey (Shelley.VKey (Crypto.deriveVerKeyDSIGN sk))
+
+instance HasTextEnvelope (VerificationKey GenesisUTxOKey) where
+    textEnvelopeType _ = "Genesis UTxO verification key"
+    -- TODO: include the actual crypto algorithm name, to catch changes
+
+instance HasTextEnvelope (SigningKey GenesisUTxOKey) where
+    textEnvelopeType _ = "Genesis UTxO signing key"
     -- TODO: include the actual crypto algorithm name, to catch changes
     -- TODO: use a different type from the stake pool key, since some operations
     -- need a genesis key specifically

@@ -97,7 +97,6 @@ prop_roundtrip_VrfSigningKey_envelope =
 -- -----------------------------------------------------------------------------
 
 roundtrip_VerificationKey_envelope :: (Key keyrole,
-                                       HasTextEnvelope (VerificationKey keyrole),
                                        Show (VerificationKey keyrole),
                                        Eq (VerificationKey keyrole))
                                    => AsType keyrole -> Property
@@ -108,7 +107,6 @@ roundtrip_VerificationKey_envelope roletoken =
                     (deserialiseFromTextEnvelope (AsVerificationKey roletoken))
 
 roundtrip_SigningKey_envelope :: (Key keyrole,
-                                  HasTextEnvelope (SigningKey keyrole),
                                   Show (SigningKey keyrole),
                                   Eq (SigningKey keyrole))
                               => AsType keyrole -> Property
