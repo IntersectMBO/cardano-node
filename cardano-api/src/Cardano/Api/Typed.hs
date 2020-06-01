@@ -38,7 +38,7 @@ module Cardano.Api.Typed (
     VerificationKey(..),
     SigningKey(..),
     getVerificationKey,
---  verificationKeyHash,
+    verificationKeyHash,
     castVerificationKey,
     castSigningKey,
 
@@ -251,7 +251,7 @@ import           Ouroboros.Network.Magic (NetworkMagic(..))
 -- Crypto API used by consensus and Shelley (and should be used by Byron)
 --
 import qualified Cardano.Crypto.Seed        as Crypto
---import qualified Cardano.Crypto.Hash.Class  as Crypto
+import qualified Cardano.Crypto.Hash.Class  as Crypto
 import qualified Cardano.Crypto.DSIGN.Class as Crypto
 import qualified Cardano.Crypto.KES.Class   as Crypto
 import qualified Cardano.Crypto.VRF.Class   as Crypto
@@ -350,7 +350,7 @@ class (HasTextEnvelope (VerificationKey keyrole),
     deterministicSigningKey :: AsType keyrole -> Crypto.Seed -> SigningKey keyrole
     deterministicSigningKeySeedSize :: AsType keyrole -> Word
 
---    verificationKeyHash :: VerificationKey keyrole -> Hash keyrole
+    verificationKeyHash :: VerificationKey keyrole -> Hash keyrole
 
 
 -- | Generate a 'SigningKey' using a seed from operating system entropy.
@@ -872,6 +872,7 @@ type family ShelleyKeyRole (keyrole :: *) :: Shelley.KeyRole
 
 type instance ShelleyKeyRole PaymentKey         = Shelley.Payment
 type instance ShelleyKeyRole GenesisKey         = Shelley.Genesis
+type instance ShelleyKeyRole GenesisUTxOKey     = Shelley.Payment
 type instance ShelleyKeyRole GenesisDelegateKey = Shelley.GenesisDelegate
 type instance ShelleyKeyRole StakeKey           = Shelley.Staking
 type instance ShelleyKeyRole StakePoolKey       = Shelley.StakePool
@@ -920,9 +921,11 @@ instance Key ByronKey where
     getVerificationKey (ByronSigningKey sk) =
       ByronVerificationKey (Byron.toVerification sk)
 
---    verificationKeyHash :: VerificationKey keyrole -> Hash keyrole
+    verificationKeyHash :: VerificationKey ByronKey -> Hash ByronKey
+    verificationKeyHash (ByronVerificationKey vkey) =
+      ByronKeyHash (Byron.hashKey vkey)
 
---data instance Hash ByronKey = ByronKeyHash
+newtype instance Hash ByronKey = ByronKeyHash Byron.KeyHash
 
 instance HasTextEnvelope (VerificationKey ByronKey) where
     textEnvelopeType _ = "PaymentVerificationKeyByron"
@@ -974,12 +977,12 @@ instance Key PaymentKey where
     getVerificationKey (PaymentSigningKey sk) =
         PaymentVerificationKey (Shelley.VKey (Crypto.deriveVerKeyDSIGN sk))
 
---    verificationKeyHash :: VerificationKey PaymentKey -> Hash PaymentKey
---    verificationKeyHash (PaymentVerificationKey vk) =
---        PaymentKeyHash (Shelley.hashKey vk)
+    verificationKeyHash :: VerificationKey PaymentKey -> Hash PaymentKey
+    verificationKeyHash (PaymentVerificationKey vkey) =
+        PaymentKeyHash (Shelley.hashKey vkey)
 
---newtype instance Hash PaymentKey =
---    PaymentKeyHash (Shelley.KeyHash Shelley.Payment Shelley.TPraosStandardCrypto)
+newtype instance Hash PaymentKey =
+    PaymentKeyHash (Shelley.KeyHash Shelley.Payment Shelley.TPraosStandardCrypto)
 
 instance HasTextEnvelope (VerificationKey PaymentKey) where
     textEnvelopeType _ = "PaymentVerificationKeyShelley"
@@ -1034,6 +1037,13 @@ instance Key StakeKey where
     getVerificationKey (StakeSigningKey sk) =
         StakeVerificationKey (Shelley.VKey (Crypto.deriveVerKeyDSIGN sk))
 
+    verificationKeyHash :: VerificationKey StakeKey -> Hash StakeKey
+    verificationKeyHash (StakeVerificationKey vkey) =
+        StakeKeyHash (Shelley.hashKey vkey)
+
+newtype instance Hash StakeKey =
+    StakeKeyHash (Shelley.KeyHash Shelley.Staking Shelley.TPraosStandardCrypto)
+
 instance HasTextEnvelope (VerificationKey StakeKey) where
     textEnvelopeType _ = "StakingVerificationKeyShelley"
     -- TODO: include the actual crypto algorithm name, to catch changes
@@ -1081,6 +1091,13 @@ instance Key GenesisKey where
     getVerificationKey (GenesisSigningKey sk) =
         GenesisVerificationKey (Shelley.VKey (Crypto.deriveVerKeyDSIGN sk))
 
+    verificationKeyHash :: VerificationKey GenesisKey -> Hash GenesisKey
+    verificationKeyHash (GenesisVerificationKey vkey) =
+        GenesisKeyHash (Shelley.hashKey vkey)
+
+newtype instance Hash GenesisKey =
+    GenesisKeyHash (Shelley.KeyHash Shelley.Genesis Shelley.TPraosStandardCrypto)
+
 instance HasTextEnvelope (VerificationKey GenesisKey) where
     textEnvelopeType _ = "Genesis verification key"
     -- TODO: include the actual crypto algorithm name, to catch changes
@@ -1127,6 +1144,13 @@ instance Key GenesisDelegateKey where
     getVerificationKey :: SigningKey GenesisDelegateKey -> VerificationKey GenesisDelegateKey
     getVerificationKey (GenesisDelegateSigningKey sk) =
         GenesisDelegateVerificationKey (Shelley.VKey (Crypto.deriveVerKeyDSIGN sk))
+
+    verificationKeyHash :: VerificationKey GenesisDelegateKey -> Hash GenesisDelegateKey
+    verificationKeyHash (GenesisDelegateVerificationKey vkey) =
+        GenesisDelegateKeyHash (Shelley.hashKey vkey)
+
+newtype instance Hash GenesisDelegateKey =
+    GenesisDelegateKeyHash (Shelley.KeyHash Shelley.GenesisDelegate Shelley.TPraosStandardCrypto)
 
 instance HasTextEnvelope (VerificationKey GenesisDelegateKey) where
     textEnvelopeType _ = "Node operator verification key"
@@ -1177,6 +1201,13 @@ instance Key GenesisUTxOKey where
     getVerificationKey (GenesisUTxOSigningKey sk) =
         GenesisUTxOVerificationKey (Shelley.VKey (Crypto.deriveVerKeyDSIGN sk))
 
+    verificationKeyHash :: VerificationKey GenesisUTxOKey -> Hash GenesisUTxOKey
+    verificationKeyHash (GenesisUTxOVerificationKey vkey) =
+        GenesisUTxOKeyHash (Shelley.hashKey vkey)
+
+newtype instance Hash GenesisUTxOKey =
+    GenesisUTxOKeyHash (Shelley.KeyHash Shelley.Payment Shelley.TPraosStandardCrypto)
+
 instance HasTextEnvelope (VerificationKey GenesisUTxOKey) where
     textEnvelopeType _ = "Genesis UTxO verification key"
     -- TODO: include the actual crypto algorithm name, to catch changes
@@ -1225,6 +1256,13 @@ instance Key StakePoolKey where
     getVerificationKey (StakePoolSigningKey sk) =
         StakePoolVerificationKey (Shelley.VKey (Crypto.deriveVerKeyDSIGN sk))
 
+    verificationKeyHash :: VerificationKey StakePoolKey -> Hash StakePoolKey
+    verificationKeyHash (StakePoolVerificationKey vkey) =
+        StakePoolKeyHash (Shelley.hashKey vkey)
+
+newtype instance Hash StakePoolKey =
+    StakePoolKeyHash (Shelley.KeyHash Shelley.StakePool Shelley.TPraosStandardCrypto)
+
 instance HasTextEnvelope (VerificationKey StakePoolKey) where
     textEnvelopeType _ = "Node operator verification key"
     -- TODO: include the actual crypto algorithm name, to catch changes
@@ -1271,6 +1309,14 @@ instance Key KesKey where
     getVerificationKey (KesSigningKey sk) =
         KesVerificationKey (Crypto.deriveVerKeyKES sk)
 
+    verificationKeyHash :: VerificationKey KesKey -> Hash KesKey
+    verificationKeyHash (KesVerificationKey vkey) =
+        KesKeyHash (Crypto.hashVerKeyKES vkey)
+
+newtype instance Hash KesKey =
+    KesKeyHash (Crypto.Hash (Shelley.HASH Shelley.TPraosStandardCrypto)
+                            (Shelley.VerKeyKES Shelley.TPraosStandardCrypto))
+
 instance HasTextEnvelope (VerificationKey KesKey) where
     textEnvelopeType _ = "VKeyES TPraosStandardCrypto"
     -- TODO: include the actual crypto algorithm name, to catch changes
@@ -1316,6 +1362,14 @@ instance Key VrfKey where
     getVerificationKey :: SigningKey VrfKey -> VerificationKey VrfKey
     getVerificationKey (VrfSigningKey sk) =
         VrfVerificationKey (Crypto.deriveVerKeyVRF sk)
+
+    verificationKeyHash :: VerificationKey VrfKey -> Hash VrfKey
+    verificationKeyHash (VrfVerificationKey vkey) =
+        VrfKeyHash (Crypto.hashVerKeyVRF vkey)
+
+newtype instance Hash VrfKey =
+    VrfKeyHash (Crypto.Hash (Shelley.HASH Shelley.TPraosStandardCrypto)
+                            (Shelley.VerKeyVRF Shelley.TPraosStandardCrypto))
 
 instance HasTextEnvelope (VerificationKey VrfKey) where
     textEnvelopeType _ = "VerKeyVRF " <> fromString (Crypto.algorithmNameVRF proxy)
