@@ -12,7 +12,6 @@ import           Cardano.Prelude hiding (option)
 import           Control.Monad.Fail (fail)
 import qualified Data.ByteString.Char8 as C8
 import qualified Data.IP as IP
-import           Data.Ratio (approxRational)
 import qualified Data.Set as Set
 import qualified Data.Text as Text
 import           Data.Time.Clock (UTCTime)
@@ -1138,7 +1137,7 @@ pPoolCost =
 
 pPoolMargin :: Parser ShelleyStakePoolMargin
 pPoolMargin =
-  (\dbl -> maybeOrFail . Shelley.mkUnitInterval $ approxRational (dbl :: Double) 1) <$>
+  (\dbl -> maybeOrFail . Shelley.mkUnitInterval $ toRational (dbl :: Double)) <$>
     Opt.option Opt.auto
       (  Opt.long "pool-margin"
       <> Opt.metavar "DOUBLE"
