@@ -1,6 +1,3 @@
-{-# LANGUAGE DataKinds #-}
-
-{-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 
 module Cardano.CLI.Shelley.KeyGen
   ( ShelleyKeyGenError
@@ -10,30 +7,32 @@ module Cardano.CLI.Shelley.KeyGen
 
 import           Cardano.Prelude
 
-import           Control.Monad.Trans.Except (ExceptT)
-import           Control.Monad.Trans.Except.Extra (firstExceptT)
+import qualified Data.Text as Text
 
-import qualified Shelley.Spec.Ledger.Keys as Ledger
+import           Control.Monad.Trans.Except (ExceptT)
+import           Control.Monad.Trans.Except.Extra (firstExceptT, newExceptT)
+
+import           Cardano.Api.Typed as Api
 
 import           Cardano.CLI.Shelley.Commands
+                   (VerificationKeyFile(..), SigningKeyFile(..))
 
-import           Cardano.Config.Shelley.ColdKeys
-
-data ShelleyKeyGenError = ShelleyColdKeyGenError !KeyError
+data ShelleyKeyGenError = ShelleyColdKeyGenError !(FileError ())
                         deriving Show
 
 renderShelleyKeyGenError :: ShelleyKeyGenError -> Text
 renderShelleyKeyGenError err =
   case err of
     ShelleyColdKeyGenError keyErr ->
-      "Error generating shelley cold keys: " <> renderKeyError keyErr
+      "Error generating shelley cold keys: " <> Text.pack (displayError keyErr)
 
-runColdKeyGen :: KeyRole -> VerificationKeyFile -> SigningKeyFile
+runColdKeyGen :: Key keyrole => AsType keyrole
+              -> VerificationKeyFile -> SigningKeyFile
               -> ExceptT ShelleyKeyGenError IO ()
-runColdKeyGen role (VerificationKeyFile vkeyPath) (SigningKeyFile skeyPath) =
-    firstExceptT ShelleyColdKeyGenError $ do
-      (vkey, skey) <- liftIO genKeyPair
-      -- The Ledger.Genesis role type param here is actually arbitrary
-      -- the representation is the same for them all.
-      writeVerKey     role vkeyPath (vkey :: VerKey Ledger.Genesis)
-      writeSigningKey role skeyPath skey
+runColdKeyGen role (VerificationKeyFile vkeyPath) (SigningKeyFile skeyPath) = do
+    skey <- liftIO $ Api.generateSigningKey role
+    let vkey = getVerificationKey skey
+    firstExceptT ShelleyColdKeyGenError $ newExceptT $
+      Api.writeFileTextEnvelope vkeyPath Nothing vkey
+    firstExceptT ShelleyColdKeyGenError $ newExceptT $
+      Api.writeFileTextEnvelope skeyPath Nothing skey

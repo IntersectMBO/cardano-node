@@ -7,12 +7,14 @@ module Cardano.CLI.Shelley.Run.StakeAddress
 import           Cardano.Prelude
 
 import qualified Data.ByteString.Lazy.Char8 as LBS
+import qualified Data.Text as Text
 import qualified Data.Text.IO as Text
 
 import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, newExceptT)
 
 import           Cardano.Api
+import qualified Cardano.Api.Typed as Api
 
 import           Cardano.Api (StakingVerificationKey (..),
                    readStakingVerificationKey,
@@ -28,8 +30,8 @@ data ShelleyStakeAddressCmdError
   = ShelleyStakeReadPoolOperatorKeyError !FilePath !KeyError
   | ShelleyStakeAddressReadVerKeyError !FilePath !ApiError
   | ShelleyStakeAddressWriteCertError !FilePath !ApiError
-  | ShelleyStakeAddressWriteSignKeyError !FilePath !ApiError
-  | ShelleyStakeAddressWriteVerKeyError !FilePath !ApiError
+  | ShelleyStakeAddressWriteSignKeyError !FilePath !(Api.FileError ())
+  | ShelleyStakeAddressWriteVerKeyError !FilePath !(Api.FileError ())
   deriving Show
 
 renderShelleyStakeAddressCmdError :: ShelleyStakeAddressCmdError -> Text
@@ -41,10 +43,12 @@ renderShelleyStakeAddressCmdError err =
       "Error while reading verification stake key at: " <> textShow fp <> " Error: " <> renderApiError apiErr
     ShelleyStakeAddressWriteCertError fp apiErr ->
       "Error while writing delegation certificate at: " <> textShow fp <> " Error: " <> renderApiError apiErr
-    ShelleyStakeAddressWriteSignKeyError fp apiErr ->
-      "Error while writing signing stake key at: " <> textShow fp <> " Error: " <> renderApiError apiErr
-    ShelleyStakeAddressWriteVerKeyError fp apiErr ->
-      "Error while writing verification stake key at: " <> textShow fp <> " Error: " <> renderApiError apiErr
+    ShelleyStakeAddressWriteSignKeyError fp ferr ->
+      "Error while writing signing stake key at: "
+        <> textShow fp <> " Error: " <> Text.pack (Api.displayError ferr)
+    ShelleyStakeAddressWriteVerKeyError fp ferr ->
+      "Error while writing verification stake key at: "
+        <> textShow fp <> " Error: " <> Text.pack (Api.displayError ferr)
 
 runStakeAddressCmd :: StakeAddressCmd -> ExceptT ShelleyStakeAddressCmdError IO ()
 runStakeAddressCmd (StakeAddressKeyGen vk sk) = runStakeAddressKeyGen vk sk
@@ -64,12 +68,11 @@ runStakeAddressCmd cmd = liftIO $ putStrLn $ "runStakeAddressCmd: " ++ show cmd
 
 runStakeAddressKeyGen :: VerificationKeyFile -> SigningKeyFile -> ExceptT ShelleyStakeAddressCmdError IO ()
 runStakeAddressKeyGen (VerificationKeyFile vkFp) (SigningKeyFile skFp) = do
-  (vkey, skey) <- liftIO genKeyPair
-  firstExceptT (ShelleyStakeAddressWriteVerKeyError vkFp)
-    . newExceptT
-    $ writeStakingVerificationKey vkFp (StakingVerificationKeyShelley vkey)
-  --TODO: writeSigningKey should really come from Cardano.Config.Shelley.ColdKeys
-  firstExceptT (ShelleyStakeAddressWriteSignKeyError skFp) . newExceptT $ writeSigningKey skFp (SigningKeyShelley skey)
+  skey <- liftIO $ Api.generateSigningKey Api.AsStakeKey
+  firstExceptT (ShelleyStakeAddressWriteVerKeyError vkFp) $ newExceptT $
+    Api.writeFileTextEnvelope vkFp Nothing (Api.getVerificationKey skey)
+  firstExceptT (ShelleyStakeAddressWriteSignKeyError skFp) . newExceptT $
+    Api.writeFileTextEnvelope skFp Nothing skey
 
 
 runStakeAddressBuild :: VerificationKeyFile -> Network -> Maybe OutputFile

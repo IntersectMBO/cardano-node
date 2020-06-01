@@ -37,12 +37,12 @@ import           Prelude
 import           Data.Text (Text)
 
 import           Cardano.Api
+import           Cardano.Api.Typed (KESPeriod)
 import           Cardano.Slotting.Slot (EpochNo (..))
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
 
 import           Cardano.Config.Types
                   (NodeAddress, SigningKeyFile(..), CertificateFile (..), UpdateProposalFile(..))
-import           Cardano.Config.Shelley.OCert (KESPeriod(..))
 
 
 --

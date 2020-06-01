@@ -30,6 +30,8 @@ import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT,
                    hoistEither, left)
 
+import qualified Cardano.Api.Typed as Api
+
 import           Cardano.Api hiding (writeAddress)
 --TODO: prefer versions from Cardano.Api where possible
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
@@ -44,11 +46,7 @@ import qualified Shelley.Spec.Ledger.Keys as Ledger
 import qualified Shelley.Spec.Ledger.TxData as Shelley
 
 import           Cardano.Config.Shelley.Address (ShelleyAddress)
-import           Cardano.Config.Shelley.ColdKeys (KeyRole (..), OperatorKeyRole (..),
-                    readVerKey)
 import           Cardano.Config.Shelley.Genesis
-import           Cardano.Config.Shelley.ColdKeys
-import           Cardano.Config.Shelley.OCert
 
 import           Cardano.CLI.Helpers (textToByteString)
 import           Cardano.CLI.Shelley.Commands
@@ -128,7 +126,8 @@ runGenesisCmd (GenesisCreate gd gn un ms am nw) = runGenesisCreate gd gn un ms a
 runGenesisKeyGenGenesis :: VerificationKeyFile -> SigningKeyFile
                         -> ExceptT ShelleyGenesisCmdError IO ()
 runGenesisKeyGenGenesis vkf skf =
-  firstExceptT ShelleyGenesisCmdGenesisKeyGenError $ runColdKeyGen GenesisKey vkf skf
+  firstExceptT ShelleyGenesisCmdGenesisKeyGenError $
+    runColdKeyGen Api.AsGenesisKey vkf skf
 
 
 runGenesisKeyGenDelegate :: VerificationKeyFile
@@ -136,7 +135,8 @@ runGenesisKeyGenDelegate :: VerificationKeyFile
                          -> OpCertCounterFile
                          -> ExceptT ShelleyGenesisCmdError IO ()
 runGenesisKeyGenDelegate vkeyPath skeyPath (OpCertCounterFile ocertCtrPath) = do
-    firstExceptT ShelleyGenesisCmdOperatorKeyGenError $ runColdKeyGen (OperatorKey GenesisDelegateKey) vkeyPath skeyPath
+    firstExceptT ShelleyGenesisCmdOperatorKeyGenError $
+      runColdKeyGen Api.AsGenesisDelegateKey vkeyPath skeyPath
     firstExceptT (ShelleyGenesisCmdWriteOperationalCertError ocertCtrPath) $
       writeOperationalCertIssueCounter ocertCtrPath initialCounter
   where
@@ -146,7 +146,8 @@ runGenesisKeyGenDelegate vkeyPath skeyPath (OpCertCounterFile ocertCtrPath) = do
 runGenesisKeyGenUTxO :: VerificationKeyFile -> SigningKeyFile
                      -> ExceptT ShelleyGenesisCmdError IO ()
 runGenesisKeyGenUTxO vkf skf =
-  firstExceptT ShelleyGenesisCmdUTxOKeyGenError $ runColdKeyGen GenesisUTxOKey vkf skf
+    firstExceptT ShelleyGenesisCmdUTxOKeyGenError $
+      runColdKeyGen Api.AsGenesisUTxOKey vkf skf
 
 
 runGenesisKeyHash :: VerificationKeyFile -> ExceptT ShelleyGenesisCmdError IO ()
