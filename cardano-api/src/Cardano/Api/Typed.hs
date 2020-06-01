@@ -259,6 +259,7 @@ import qualified Cardano.Crypto.VRF.Class   as Crypto
 --
 -- Byron imports
 --
+import qualified Cardano.Crypto.Hashing as Byron
 import qualified Cardano.Crypto.Signing as Byron
 import qualified Cardano.Chain.Common as Byron
 --import qualified Cardano.Chain.UTxO   as Byron
@@ -331,7 +332,11 @@ class HasTypeProxy t where
 -- this API is concerned with the management of keys: generating and
 -- serialising.
 --
-class (HasTextEnvelope (VerificationKey keyrole),
+class (Eq (VerificationKey keyrole),
+       Show (VerificationKey keyrole),
+       Show (SigningKey keyrole),
+       SerialiseAsRawBytes (Hash keyrole),
+       HasTextEnvelope (VerificationKey keyrole),
        HasTextEnvelope (SigningKey keyrole))
     => Key keyrole where
 
@@ -865,6 +870,10 @@ instance HasTypeProxy a => HasTypeProxy (SigningKey a) where
     data AsType (SigningKey a) = AsSigningKey (AsType a)
     proxyToAsType _ = AsSigningKey (proxyToAsType (Proxy :: Proxy a))
 
+instance HasTypeProxy a => HasTypeProxy (Hash a) where
+    data AsType (Hash a) = AsHash (AsType a)
+    proxyToAsType _ = AsHash (proxyToAsType (Proxy :: Proxy a))
+
 -- | Map the various Shelley key role types into corresponding 'Shelley.KeyRole'
 -- types.
 --
@@ -927,6 +936,13 @@ instance Key ByronKey where
 
 newtype instance Hash ByronKey = ByronKeyHash Byron.KeyHash
 
+instance SerialiseAsRawBytes (Hash ByronKey) where
+    serialiseToRawBytes (ByronKeyHash (Byron.KeyHash vkh)) =
+      Byron.abstractHashToBytes vkh
+
+    deserialiseFromRawBytes (AsHash AsByronKey) bs =
+      ByronKeyHash . Byron.KeyHash <$> Byron.abstractHashFromBytes bs
+
 instance HasTextEnvelope (VerificationKey ByronKey) where
     textEnvelopeType _ = "PaymentVerificationKeyByron"
 
@@ -983,6 +999,13 @@ instance Key PaymentKey where
 
 newtype instance Hash PaymentKey =
     PaymentKeyHash (Shelley.KeyHash Shelley.Payment Shelley.TPraosStandardCrypto)
+
+instance SerialiseAsRawBytes (Hash PaymentKey) where
+    serialiseToRawBytes (PaymentKeyHash (Shelley.KeyHash vkh)) =
+      Crypto.getHash vkh
+
+    deserialiseFromRawBytes (AsHash AsPaymentKey) bs =
+      PaymentKeyHash . Shelley.KeyHash <$> Crypto.hashFromBytes bs
 
 instance HasTextEnvelope (VerificationKey PaymentKey) where
     textEnvelopeType _ = "PaymentVerificationKeyShelley"
@@ -1044,6 +1067,13 @@ instance Key StakeKey where
 newtype instance Hash StakeKey =
     StakeKeyHash (Shelley.KeyHash Shelley.Staking Shelley.TPraosStandardCrypto)
 
+instance SerialiseAsRawBytes (Hash StakeKey) where
+    serialiseToRawBytes (StakeKeyHash (Shelley.KeyHash vkh)) =
+      Crypto.getHash vkh
+
+    deserialiseFromRawBytes (AsHash AsStakeKey) bs =
+      StakeKeyHash . Shelley.KeyHash <$> Crypto.hashFromBytes bs
+
 instance HasTextEnvelope (VerificationKey StakeKey) where
     textEnvelopeType _ = "StakingVerificationKeyShelley"
     -- TODO: include the actual crypto algorithm name, to catch changes
@@ -1098,6 +1128,13 @@ instance Key GenesisKey where
 newtype instance Hash GenesisKey =
     GenesisKeyHash (Shelley.KeyHash Shelley.Genesis Shelley.TPraosStandardCrypto)
 
+instance SerialiseAsRawBytes (Hash GenesisKey) where
+    serialiseToRawBytes (GenesisKeyHash (Shelley.KeyHash vkh)) =
+      Crypto.getHash vkh
+
+    deserialiseFromRawBytes (AsHash AsGenesisKey) bs =
+      GenesisKeyHash . Shelley.KeyHash <$> Crypto.hashFromBytes bs
+
 instance HasTextEnvelope (VerificationKey GenesisKey) where
     textEnvelopeType _ = "Genesis verification key"
     -- TODO: include the actual crypto algorithm name, to catch changes
@@ -1151,6 +1188,13 @@ instance Key GenesisDelegateKey where
 
 newtype instance Hash GenesisDelegateKey =
     GenesisDelegateKeyHash (Shelley.KeyHash Shelley.GenesisDelegate Shelley.TPraosStandardCrypto)
+
+instance SerialiseAsRawBytes (Hash GenesisDelegateKey) where
+    serialiseToRawBytes (GenesisDelegateKeyHash (Shelley.KeyHash vkh)) =
+      Crypto.getHash vkh
+
+    deserialiseFromRawBytes (AsHash AsGenesisDelegateKey) bs =
+      GenesisDelegateKeyHash . Shelley.KeyHash <$> Crypto.hashFromBytes bs
 
 instance HasTextEnvelope (VerificationKey GenesisDelegateKey) where
     textEnvelopeType _ = "Node operator verification key"
@@ -1208,6 +1252,13 @@ instance Key GenesisUTxOKey where
 newtype instance Hash GenesisUTxOKey =
     GenesisUTxOKeyHash (Shelley.KeyHash Shelley.Payment Shelley.TPraosStandardCrypto)
 
+instance SerialiseAsRawBytes (Hash GenesisUTxOKey) where
+    serialiseToRawBytes (GenesisUTxOKeyHash (Shelley.KeyHash vkh)) =
+      Crypto.getHash vkh
+
+    deserialiseFromRawBytes (AsHash AsGenesisUTxOKey) bs =
+      GenesisUTxOKeyHash . Shelley.KeyHash <$> Crypto.hashFromBytes bs
+
 instance HasTextEnvelope (VerificationKey GenesisUTxOKey) where
     textEnvelopeType _ = "Genesis UTxO verification key"
     -- TODO: include the actual crypto algorithm name, to catch changes
@@ -1263,6 +1314,13 @@ instance Key StakePoolKey where
 newtype instance Hash StakePoolKey =
     StakePoolKeyHash (Shelley.KeyHash Shelley.StakePool Shelley.TPraosStandardCrypto)
 
+instance SerialiseAsRawBytes (Hash StakePoolKey) where
+    serialiseToRawBytes (StakePoolKeyHash (Shelley.KeyHash vkh)) =
+      Crypto.getHash vkh
+
+    deserialiseFromRawBytes (AsHash AsStakePoolKey) bs =
+      StakePoolKeyHash . Shelley.KeyHash <$> Crypto.hashFromBytes bs
+
 instance HasTextEnvelope (VerificationKey StakePoolKey) where
     textEnvelopeType _ = "Node operator verification key"
     -- TODO: include the actual crypto algorithm name, to catch changes
@@ -1317,6 +1375,13 @@ newtype instance Hash KesKey =
     KesKeyHash (Crypto.Hash (Shelley.HASH Shelley.TPraosStandardCrypto)
                             (Shelley.VerKeyKES Shelley.TPraosStandardCrypto))
 
+instance SerialiseAsRawBytes (Hash KesKey) where
+    serialiseToRawBytes (KesKeyHash vkh) =
+      Crypto.getHash vkh
+
+    deserialiseFromRawBytes (AsHash AsKesKey) bs =
+      KesKeyHash <$> Crypto.hashFromBytes bs
+
 instance HasTextEnvelope (VerificationKey KesKey) where
     textEnvelopeType _ = "VKeyES TPraosStandardCrypto"
     -- TODO: include the actual crypto algorithm name, to catch changes
@@ -1370,6 +1435,13 @@ instance Key VrfKey where
 newtype instance Hash VrfKey =
     VrfKeyHash (Crypto.Hash (Shelley.HASH Shelley.TPraosStandardCrypto)
                             (Shelley.VerKeyVRF Shelley.TPraosStandardCrypto))
+
+instance SerialiseAsRawBytes (Hash VrfKey) where
+    serialiseToRawBytes (VrfKeyHash vkh) =
+      Crypto.getHash vkh
+
+    deserialiseFromRawBytes (AsHash AsVrfKey) bs =
+      VrfKeyHash <$> Crypto.hashFromBytes bs
 
 instance HasTextEnvelope (VerificationKey VrfKey) where
     textEnvelopeType _ = "VerKeyVRF " <> fromString (Crypto.algorithmNameVRF proxy)
