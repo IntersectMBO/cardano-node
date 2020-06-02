@@ -10,6 +10,7 @@ module Cardano.Api.LocalStateQuery
   , renderLocalStateQueryError
   , queryLocalLedgerState
   , queryUTxOFromLocalState
+  , queryDelegationsAndRewardAccountsFromLocalState
   , Ledger.UTxO(..)
   , queryPParamsFromLocalState
   , Ledger.PParams
@@ -18,8 +19,11 @@ module Cardano.Api.LocalStateQuery
   ) where
 
 import           Cardano.Prelude hiding (atomically, option, threadDelay)
+import           Prelude (id)
 
-import           Cardano.Api.Types (Network, toNetworkMagic, Address (..), ByronAddress, ShelleyAddress)
+import           Cardano.Api.Types
+                   (Network, toNetworkMagic, Address (..), ByronAddress, ShelleyAddress,
+                    ShelleyCredentialStaking, ShelleyVerificationKeyHashStakePool)
 import           Cardano.Api.TxSubmit.Types (textShow)
 import           Cardano.Binary (decodeFull)
 import           Cardano.BM.Data.Tracer (ToLogObject (..), nullTracer)
@@ -68,6 +72,8 @@ import           Ouroboros.Network.Protocol.LocalStateQuery.Client
                     ClientStQuerying (..), LocalStateQueryClient(..), localStateQueryClientPeer)
 import           Ouroboros.Network.Protocol.LocalStateQuery.Type (AcquireFailure (..))
 
+import qualified Shelley.Spec.Ledger.Address as Ledger (Addr (..))
+import qualified Shelley.Spec.Ledger.Credential as Ledger (StakeReference (..))
 import qualified Shelley.Spec.Ledger.PParams as Ledger (PParams)
 import qualified Shelley.Spec.Ledger.UTxO as Ledger (UTxO(..))
 import qualified Shelley.Spec.Ledger.Delegation.Certificates as Ledger (PoolDistr(..))
@@ -78,6 +84,10 @@ data LocalStateQueryError
   = AcquireFailureError !AcquireFailure
   | ByronAddressesNotSupportedError !(Set ByronAddress)
   -- ^ The query does not support Byron addresses.
+  | NonStakeAddressesNotSupportedError !(Set Address)
+  -- ^ The query does not support non-stake addresses.
+  -- Associated with this error are the specific non-stake addresses that were
+  -- provided.
   deriving (Eq, Show)
 
 -- | UTxO query filtering options.
@@ -92,6 +102,8 @@ renderLocalStateQueryError lsqErr =
     AcquireFailureError err -> "Local state query acquire failure: " <> show err
     ByronAddressesNotSupportedError byronAddrs ->
       "The attempted local state query does not support Byron addresses: " <> show byronAddrs
+    NonStakeAddressesNotSupportedError addrs ->
+      "The attempted local state query does not support non-stake addresses: " <> show addrs
 
 -- | Query the UTxO, filtered by a given set of addresses, from a Shelley node
 -- via the local state query protocol.
@@ -176,6 +188,33 @@ queryLocalLedgerState network socketPath point = do
   case decodeFull lbs of
     Right lstate -> pure $ Right lstate
     Left _ -> pure $ Left lbs
+
+-- | Query the current delegations and reward accounts, filtered by a given
+-- set of addresses, from a Shelley node via the local state query protocol.
+--
+-- This one is Shelley-specific because the query is Shelley-specific.
+--
+queryDelegationsAndRewardAccountsFromLocalState
+  :: Network
+  -> SocketPath
+  -> Set Address
+  -> Point (ShelleyBlock TPraosStandardCrypto)
+  -> ExceptT
+      LocalStateQueryError
+      IO
+      ( Map ShelleyCredentialStaking ShelleyVerificationKeyHashStakePool
+      , Ledger.RewardAccounts TPraosStandardCrypto
+      )
+queryDelegationsAndRewardAccountsFromLocalState network socketPath addrs point = do
+  creds <- hoistEither $ getShelleyStakeCredentials addrs
+  let pointAndQuery = (point, GetFilteredDelegationsAndRewardAccounts creds)
+  newExceptT $ liftIO $
+    queryNodeLocalState
+      nullTracer
+      (pClientInfoCodecConfig . protocolClientInfo $ mkNodeClientProtocolTPraos)
+      network
+      socketPath
+      pointAndQuery
 
 -- -------------------------------------------------------------------------------------------------
 
@@ -306,6 +345,27 @@ applyUTxOFilter qFilter =
     checkAddresses (byronAddrs, shelleyAddrs) = if Set.null byronAddrs
                                                 then Right $ shelleyAddrs
                                                 else Left $ ByronAddressesNotSupportedError byronAddrs
+
+getShelleyStakeCredentials
+  :: Set Address
+  -> Either LocalStateQueryError (Set ShelleyCredentialStaking)
+getShelleyStakeCredentials = getStakeCreds
+  where
+    isStakeAddress :: Address -> Bool
+    isStakeAddress (AddressShelley (Ledger.Addr _ _ (Ledger.StakeRefBase _))) = True
+    isStakeAddress _ = False
+
+    getStakeCred :: Address -> ShelleyCredentialStaking
+    getStakeCred (AddressShelley (Ledger.Addr _ _ (Ledger.StakeRefBase cred))) = cred
+    getStakeCred _ =
+      panic "Cardano.Api.LocalStateQuery.getShelleyStakeCredentials.getStakeCred: Impossible"
+
+    getStakeCreds :: Set Address -> Either LocalStateQueryError (Set ShelleyCredentialStaking)
+    getStakeCreds addrs = do
+      let (stakeCreds, nonStakeAddrs) = partitionMap isStakeAddress getStakeCred id addrs
+      if Set.null nonStakeAddrs
+      then Right stakeCreds
+      else Left $ NonStakeAddressesNotSupportedError nonStakeAddrs
 
 
 -- | Partitions a 'Set' of addresses such that Byron addresses are on the left
