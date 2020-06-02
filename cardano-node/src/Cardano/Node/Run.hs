@@ -362,10 +362,11 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
 
          meta <- mkLOMeta Notice Public
          let rTr = appendName "release" tr
+             nTr = appendName "networkMagic" tr 
              vTr = appendName "version" tr
              cTr = appendName "commit"  tr
          traceNamedObject rTr (meta, LogMessage (show (ncProtocol nc)))
-         traceNamedObject rTr (meta, LogMessage ("NetworkMagic " <> show (unNetworkMagic . getNetworkMagic $ Consensus.configBlock cfg)))
+         traceNamedObject nTr (meta, LogMessage ("NetworkMagic " <> show (unNetworkMagic . getNetworkMagic $ Consensus.configBlock cfg)))
          traceNamedObject vTr (meta, LogMessage . pack . showVersion $ version)
          traceNamedObject cTr (meta, LogMessage gitRev)
 
