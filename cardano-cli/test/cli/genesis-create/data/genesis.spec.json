@@ -1,22 +1,22 @@
 {
     "activeSlotsCoeff": 0.99,
-    "protocolMagicId": 838299499,
+    "protocolMagicId": 13,
     "systemStart": "2020-01-01T00:20:40Z",
     "genDelegs": {},
     "updateQuorum": 12,
     "maxMajorPV": 25446,
-    "maxLovelaceSupply": 100000000,
+    "maxLovelaceSupply": 1000000000,
     "initialFunds": {},
-    "networkMagic": 403,
+    "networkMagic": 13,
     "networkId": "Testnet",
     "epochLength": 21600,
     "securityParam": 2160,
-    "slotLength": 20,
+    "slotLength": 20.0,
     "slotsPerKESPeriod": 216000,
     "maxKESEvolutions": 1080000,
     "protocolParams": {
         "a0": 0,
-        "decentralisationParam": 0.99,
+        "decentralisationParam": 0.1,
         "eMax": 0,
         "extraEntropy": {
             "tag": "NeutralNonce"
