@@ -23,6 +23,10 @@ import           Network.Mux (WithMuxBearer (..), MuxTrace (..))
 
 import           Cardano.TracingOrphanInstances.Common
 
+import           Ouroboros.Consensus.Block (getHeader)
+import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTx, HasTxs(..),
+                   TxId, txId)
+import           Ouroboros.Consensus.Node.Run (RunNode (..))
 import           Ouroboros.Network.Block
 import           Ouroboros.Network.BlockFetch.ClientState
                    (TraceFetchClientState (..), TraceLabelPeer (..))
@@ -386,10 +390,28 @@ instance (Show peer)
 --
 -- NOTE: this list is sorted by the unqualified name of the outermost type.
 
-instance ( Condense (HeaderHash blk))
+instance ( Condense (HeaderHash blk)
+         , Condense (TxId (GenTx blk))
+         , HasHeader blk
+         , RunNode blk
+         , HasTxs blk
+         )
       => ToObject (AnyMessage (BlockFetch blk)) where
-  toObject _verb (AnyMessage (MsgBlock _blk)) =
-    mkObject [ "kind" .= String "MsgBlock" ]
+  toObject MaximalVerbosity (AnyMessage (MsgBlock blk)) =
+    mkObject [ "kind" .= String "MsgBlock"
+             , "block hash" .=  (condense $ blockHash blk)
+             , "block size" .= toJSON (nodeBlockFetchSize (getHeader blk))
+             , "tx ids" .= toJSON (presentTx <$> extractTxs blk)
+             ]
+      where
+        presentTx :: GenTx blk -> Value
+        presentTx =  String . pack . condense . txId
+
+  toObject _v (AnyMessage (MsgBlock blk)) =
+    mkObject [ "kind" .= String "MsgBlock"
+             , "block hash" .=  (condense $ blockHash blk)
+             , "block size" .= toJSON (nodeBlockFetchSize (getHeader blk))
+             ]
   toObject _v (AnyMessage MsgRequestRange{}) =
     mkObject [ "kind" .= String "MsgRequestRange" ]
   toObject _v (AnyMessage MsgStartBatch{}) =
