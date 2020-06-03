@@ -7,6 +7,10 @@ assignees: ''
 
 ---
 
+**Internal/Exernal**
+*Internal*   if an IOHK staff member.
+*External*   otherwise.
+
 **Describe the feature you'd like**
 A clear and detailed description of what you are suggesting.
 
