@@ -21,8 +21,8 @@ module Cardano.Tracing.Tracers
   , nullTracers
   ) where
 
-import           Cardano.Prelude hiding (atomically)
-import           Prelude (String)
+import           Cardano.Prelude hiding (atomically, show)
+import           Prelude (String, show)
 
 import           GHC.Clock (getMonotonicTimeNSec)
 import           Control.Tracer
@@ -52,7 +52,7 @@ import           Ouroboros.Consensus.HeaderValidation (OtherHeaderEnvelopeError)
 import           Ouroboros.Consensus.Ledger.Abstract (LedgerErr, LedgerState)
 import           Ouroboros.Consensus.Ledger.SupportsProtocol (LedgerSupportsProtocol)
 import           Ouroboros.Consensus.Mempool.API (MempoolSize (..), TraceEventMempool (..))
-import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx, GenTxId, TxId)
+import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx, GenTxId, HasTxs, TxId)
 import qualified Ouroboros.Consensus.Node.Run as Consensus (RunNode)
 import qualified Ouroboros.Consensus.Node.Tracers as Consensus
 import qualified Ouroboros.Consensus.Network.NodeToClient as NodeToClient
@@ -65,8 +65,8 @@ import qualified Ouroboros.Network.AnchoredFragment as AF
 import           Ouroboros.Network.Block (Point, BlockNo(..), HasHeader(..),
                                           HeaderHash, StandardHash, blockNo,
                                           pointSlot, unBlockNo, unSlotNo)
-import           Ouroboros.Network.BlockFetch.Decision (FetchDecision, FetchDecline (..))
 import           Ouroboros.Network.BlockFetch.ClientState (TraceLabelPeer (..))
+import           Ouroboros.Network.BlockFetch.Decision (FetchDecision, FetchDecline (..))
 import qualified Ouroboros.Network.NodeToClient as NtC
 import qualified Ouroboros.Network.NodeToNode as NtN
 import           Ouroboros.Network.Point (fromWithOrigin, withOrigin)
@@ -429,8 +429,8 @@ mkConsensusTracers' elidingFetchDecision measureBlockForging forgeTracers tracer
   Consensus.Tracers
     { Consensus.chainSyncClientTracer = tracerOnOff (traceChainSyncClient traceConf) "ChainSyncClient" tracer
     , Consensus.chainSyncServerHeaderTracer = tracerOnOff (traceChainSyncHeaderServer traceConf) "ChainSyncHeaderServer" tracer
-    , Consensus.chainSyncServerBlockTracer = tracerOnOff (traceChainSyncHeaderServer traceConf) "ChainSyncHeaderServer" tracer
-    , Consensus.blockFetchDecisionTracer = annotateSeverity $ teeTraceBlockFetchDecision t elidingFetchDecision $ appendName "ChainSyncBlockServer" tracer
+    , Consensus.chainSyncServerBlockTracer = tracerOnOff (traceChainSyncHeaderServer traceConf) "ChainSyncBlockServer" tracer
+    , Consensus.blockFetchDecisionTracer = annotateSeverity $ teeTraceBlockFetchDecision t elidingFetchDecision $ appendName "BlockFetchDecision" tracer
     , Consensus.blockFetchClientTracer = tracerOnOff (traceBlockFetchClient traceConf) "BlockFetchClient" tracer
     , Consensus.blockFetchServerTracer = tracerOnOff (traceBlockFetchServer traceConf) "BlockFetchServer" tracer
     , Consensus.forgeStateTracer = createForgeStateTracer (traceForgeState traceConf) tracer
@@ -693,19 +693,20 @@ nodeToClientTracers' TracingOff _ = NodeToClient.Tracers
 --------------------------------------------------------------------------------
 
 nodeToNodeTracers'
-  :: ( Show (GenTx blk)
-     , Condense (HeaderHash blk) -- needs to be removed
+  :: ( Consensus.RunNode blk
+     , Condense (HeaderHash blk)
+     , Condense (TxId (GenTx blk))
+     , HasTxs blk
      , Show peer
-     , Show (TxId (GenTx blk))
      )
   => TraceOptions
   -> Trace IO Text
   -> NodeToNode.Tracers' peer blk DeserialiseFailure (Tracer IO)
 nodeToNodeTracers' (TracingOn traceConf) tracer = NodeToNode.Tracers
   { NodeToNode.tChainSyncTracer = tracerOnOff (traceChainSyncProtocol traceConf) "ChainSyncProtocol" tracer
-  , NodeToNode.tChainSyncSerialisedTracer = tracerOnOff (traceChainSyncProtocol traceConf) "ChainSyncProtocol" tracer
+  , NodeToNode.tChainSyncSerialisedTracer = showOnOff (traceChainSyncProtocol traceConf) "ChainSyncProtocolSerialised" tracer
   , NodeToNode.tBlockFetchTracer = tracerOnOff (traceBlockFetchProtocol traceConf) "BlockFetchProtocol" tracer
-  , NodeToNode.tBlockFetchSerialisedTracer = tracerOnOff (traceBlockFetchProtocolSerialised traceConf) "BlockFetchProtocolSerialised" tracer
+  , NodeToNode.tBlockFetchSerialisedTracer = showOnOff (traceBlockFetchProtocolSerialised traceConf) "BlockFetchProtocolSerialised" tracer
   , NodeToNode.tTxSubmissionTracer = tracerOnOff (traceTxSubmissionProtocol traceConf) "TxSubmissionProtocol" tracer
   }
 
@@ -812,10 +813,10 @@ chainInformation newTipInfo frag = ChainInformation
 readableTraceBlockchainTimeEvent :: TraceBlockchainTimeEvent -> Text
 readableTraceBlockchainTimeEvent ev = case ev of
     TraceStartTimeInTheFuture (SystemStart start) toWait ->
-      "Waiting " <> show toWait <> " until genesis start time at " <> show start
+      "Waiting " <> (Text.pack . show) toWait <> " until genesis start time at " <> (Text.pack . show) start
     TraceCurrentSlotUnknown time _ ->
       "Too far from the chain tip to determine the current slot number for the time "
-       <> show time
+       <> (Text.pack . show) time
 
 traceCounter
   :: Text
@@ -835,5 +836,16 @@ tracerOnOff True name trcer = annotateSeverity
                                 $ toLogObject' MinimalVerbosity
                                 $ appendName name trcer
 
-withName :: String -> Trace IO Text -> Tracer IO String
-withName name tr = contramap Text.pack $ toLogObject $ appendName (Text.pack name) tr
+instance Show a => Show (WithSeverity a) where
+  show (WithSeverity _sev a) = show a
+
+showOnOff
+  :: (Show a, HasSeverityAnnotation a)
+  => Bool -> LoggerName -> Trace IO Text -> Tracer IO a
+showOnOff False _ _ = nullTracer
+showOnOff True name trcer = annotateSeverity
+                                $ showTracing
+                                $ withName name trcer
+
+withName :: Text -> Trace IO Text -> Tracer IO String
+withName name tr = contramap Text.pack $ toLogObject $ appendName name tr

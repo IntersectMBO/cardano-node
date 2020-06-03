@@ -420,6 +420,7 @@ type TraceConstraints blk =
     , Condense (Header blk)
     , Condense (HeaderHash blk)
     , Condense (GenTx blk)
+    , Condense (TxId (GenTx blk))
     , HasTxs blk
     , HasTxId (GenTx blk)
     , Show (ApplyTxErr blk)
