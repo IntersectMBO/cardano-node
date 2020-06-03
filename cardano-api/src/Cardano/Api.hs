@@ -67,6 +67,7 @@ module Cardano.Api
   , queryLocalLedgerState
   , queryPParamsFromLocalState
   , queryStakeDistributionFromLocalState
+  , queryDelegationsAndRewardAccountsFromLocalState
 
     -- * Node local chain sync related
   , getLocalTip
@@ -628,4 +629,3 @@ getTxUnsignedBody txu =
 -- or separate accessor functions
 -- the txid should be cached, it might be already. There was a ticket about doing that in the ledger
 -- so consensus doesn’t have to do it elsewhere
-

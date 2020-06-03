@@ -152,6 +152,7 @@ data QueryCmd
   | QueryProtocolParameters Network (Maybe OutputFile)
   | QueryTip Network (Maybe OutputFile)
   | QueryStakeDistribution Network (Maybe OutputFile)
+  | QueryStakeAddressInfo Address Network
   | QueryUTxO QueryFilter Network (Maybe OutputFile)
   | QueryVersion NodeAddress
   | QueryLedgerState Network (Maybe OutputFile)

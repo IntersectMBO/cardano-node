@@ -13,6 +13,7 @@ import           Data.Aeson.Encode.Pretty (encodePretty)
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import qualified Data.Map as Map
+import qualified Data.Set as Set
 import qualified Data.Text as Text
 import qualified Data.Text.IO as Text
 import           Numeric (showEFloat)
@@ -21,10 +22,11 @@ import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT)
 
 import           Cardano.Api
-                   (LocalStateQueryError, Network(..), QueryFilter, getLocalTip,
+                   (Address (..), LocalStateQueryError, Network(..), QueryFilter, getLocalTip,
                     queryLocalLedgerState, queryPParamsFromLocalState,
                     queryStakeDistributionFromLocalState, queryUTxOFromLocalState,
-                    renderLocalStateQueryError, textShow)
+                    renderLocalStateQueryError, queryDelegationsAndRewardAccountsFromLocalState,
+                    textShow)
 
 import           Cardano.CLI.Environment (EnvSocketError, readEnvSocketPath, renderEnvSocketError)
 import           Cardano.CLI.Helpers (HelpersError, pPrintCBOR, renderHelpersError)
@@ -85,6 +87,8 @@ runQueryCmd cmd =
       runQueryTip network mOutFile
     QueryStakeDistribution network mOutFile ->
       runQueryStakeDistribution network mOutFile
+    QueryStakeAddressInfo addr network ->
+      runQueryStakeAddressInfo addr network
     QueryLedgerState network mOutFile ->
       runQueryLedgerState network mOutFile
     QueryUTxO qFilter network mOutFile ->
@@ -156,6 +160,24 @@ runQueryLedgerState network mOutFile = do
     Left lbs -> do
       liftIO $ putTextLn "Verion mismatch beteen node and consensus, so dumping this as generic CBOR."
       firstExceptT ShelleyHelpersError $ pPrintCBOR lbs
+
+runQueryStakeAddressInfo
+  :: Address
+  -> Network
+  -> ExceptT ShelleyQueryCmdError IO ()
+runQueryStakeAddressInfo addr network = do
+    sockPath <- firstExceptT ShelleyQueryEnvVarSocketErr readEnvSocketPath
+    let ptclClientInfo = pClientInfoCodecConfig . protocolClientInfo $ mkNodeClientProtocolTPraos
+    tip <- liftIO $ withIOManager $ \iomgr ->
+      getLocalTip iomgr ptclClientInfo network sockPath
+    (delegations, rwdAccts) <- firstExceptT NodeLocalStateQueryError $
+      queryDelegationsAndRewardAccountsFromLocalState
+        network
+        sockPath
+        (Set.singleton addr)
+        (getTipPoint tip)
+    liftIO $ Text.putStrLn $ "Delegations: " <> show delegations
+    liftIO $ Text.putStrLn $ "Reward accounts: " <> show rwdAccts
 
 -- -------------------------------------------------------------------------------------------------
 

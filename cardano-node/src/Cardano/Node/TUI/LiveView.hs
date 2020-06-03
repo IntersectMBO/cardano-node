@@ -960,7 +960,7 @@ nodeInfoLabels =
            ,                    txt "block number:"
            ,                    txt "chain density:"
            , padTop (T.Pad 1) $ txt "blocks minted:"
-           ,                    txt "node is leader:"
+           ,                    txt "slots lead:"
            ,                    txt "slots missed:"
            ,                    txt "forks created:"
            , padTop (T.Pad 1) $ txt "TXs processed:"

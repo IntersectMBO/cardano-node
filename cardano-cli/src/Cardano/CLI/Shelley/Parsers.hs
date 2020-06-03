@@ -383,6 +383,10 @@ pQueryCmd =
           (Opt.info pQueryTip $ Opt.progDesc "Get the node's current tip (slot no, hash, block no)")
       , Opt.command "stake-distribution"
           (Opt.info pQueryStakeDistribution $ Opt.progDesc "Get the node's current aggregated stake distribution")
+      , Opt.command "stake-address-info"
+          (Opt.info pQueryStakeAddressInfo $ Opt.progDesc "Get the current delegations and \
+                                                          \reward accounts filtered by stake \
+                                                          \address.")
       , Opt.command "utxo"
           (Opt.info pQueryUTxO $ Opt.progDesc "Get the node's current UTxO with the option of \
                                               \filtering by address(es)")
@@ -418,6 +422,12 @@ pQueryCmd =
       QueryStakeDistribution
         <$> pNetwork
         <*> pMaybeOutputFile
+
+    pQueryStakeAddressInfo :: Parser QueryCmd
+    pQueryStakeAddressInfo =
+      QueryStakeAddressInfo
+        <$> pFilterByHexEncodedAddress
+        <*> pNetwork
 
     pQueryVersion :: Parser QueryCmd
     pQueryVersion = QueryVersion <$> parseNodeAddress
