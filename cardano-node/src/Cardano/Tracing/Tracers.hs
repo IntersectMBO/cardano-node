@@ -34,7 +34,7 @@ import qualified Data.Text as Text
 import           Network.Mux (MuxTrace, WithMuxBearer)
 import qualified Network.Socket as Socket (SockAddr)
 
-import           Cardano.Slotting.Slot (EpochNo)
+import           Cardano.Slotting.Slot (EpochNo (..))
 
 import           Cardano.BM.Data.Aggregated (Measurable (..))
 import           Cardano.BM.Data.LogItem (LOContent (..), LoggerName,
@@ -354,7 +354,7 @@ teeTraceChainTipElide
 teeTraceChainTipElide = elideToLogObject
 
 traceChainInformation :: Trace IO Text -> ChainInformation -> IO ()
-traceChainInformation tr ChainInformation { slots, blocks, density } = do
+traceChainInformation tr ChainInformation { slots, blocks, density, epoch, slotInEpoch } = do
   -- TODO this is executed each time the chain changes. How cheap is it?
   meta <- mkLOMeta Critical Confidential
   let tr' = appendName "metrics" tr
@@ -366,10 +366,8 @@ traceChainInformation tr ChainInformation { slots, blocks, density } = do
   traceD "density"     (fromRational density)
   traceI "slotNum"     slots
   traceI "blockNum"    blocks
-  traceI "slotInEpoch" (slots `rem` epochSlots)
-  traceI "epoch"       (slots `div` epochSlots)
- where
-   epochSlots :: Word64 = 21600  -- TODO
+  traceI "slotInEpoch" slotInEpoch
+  traceI "epoch"       (unEpochNo epoch)
 
 teeTraceChainTip'
   :: HasHeader (Header blk)
