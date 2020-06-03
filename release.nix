@@ -100,7 +100,7 @@ let
     ) ds);
 
   # Remove build jobs for which cross compiling does not make sense.
-  filterJobsCross = filterAttrs (n: _: n != "dockerImage" && n != "shell");
+  filterJobsCross = filterAttrs (n: _: n != "dockerImage" && n != "shell" && n != "checkCabalProject");
 
   inherit (systems.examples) mingwW64 musl64;
 
@@ -109,30 +109,40 @@ let
   jobs = {
     inherit dockerImageArtifact;
     native = mapTestOn (__trace (__toJSON (packagePlatforms project)) (packagePlatforms project));
-    # TODO: fix broken evals
-    #musl64 = mapTestOnCross musl64 (packagePlatformsCross (filterJobsCross project));
+    musl64 = mapTestOnCross musl64 (packagePlatformsCross (filterJobsCross project));
     ifd-pins = mkPins {
       inherit (sources) iohk-nix "haskell.nix";
       inherit nixpkgs;
       inherit (pkgs.haskell-nix) hackageSrc stackageSrc;
     };
+    cardano-node-macos = import ./nix/binary-release.nix {
+      inherit pkgs project;
+      platform = "macos";
+      exes = filter (p: p.system == "x86_64-darwin") (collectJobs jobs.native.exes);
+    };
+    cardano-node-linux = import ./nix/binary-release.nix {
+      inherit pkgs project;
+      platform = "linux";
+      exes = filter (p: p.system == "x86_64-linux") (collectJobs jobs.native.exes);
+    };
   } // (optionalAttrs windowsBuild {
     "${mingwW64.config}" = mapTestOnCross mingwW64 (packagePlatformsCross (filterJobsCross project));
-    cardano-node-win64 = import ./nix/windows-release.nix {
+    cardano-node-win64 = import ./nix/binary-release.nix {
       inherit pkgs project;
-      cardano-node = head (collectJobs jobs.${mingwW64.config}.cardano-node);
-      chairman = head (collectJobs jobs.${mingwW64.config}.chairman);
+      platform = "win64";
+      exes = collectJobs jobs.${mingwW64.config}.exes;
     };
   }) // extraBuilds // (mkRequiredJob (concatLists [
       (collectJobs jobs.native.checks)
-      (optionals windowsBuild (collectJobs jobs.${mingwW64.config}.checks))
       (collectJobs jobs.native.benchmarks)
-      (collectJobs jobs.native.cardano-node)
-      (optionals windowsBuild (collectJobs jobs.${mingwW64.config}.cardano-node))
+      (collectJobs jobs.native.exes)
       (optional windowsBuild jobs.cardano-node-win64)
+      (optionals windowsBuild (collectJobs jobs.${mingwW64.config}.checks))
       (map (cluster: collectJobs jobs.${cluster}.scripts.node.${head supportedSystems}) [ "mainnet" "testnet" "staging" ])
       (collectJobs jobs.nixosTests.chairmansCluster)
       [
+        jobs.cardano-node-linux
+        jobs.cardano-node-macos
         jobs.dockerImageArtifact
       ]
     ]));

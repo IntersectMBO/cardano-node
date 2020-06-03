@@ -23,20 +23,20 @@ let
 
   # This creates the Haskell package set.
   # https://input-output-hk.github.io/haskell.nix/user-guide/projects/
-  pkgSet = haskell-nix.cabalProject {
-    inherit src;
-    # FIXME: using
-    #compiler-nix-name = compiler;
-    # fails evaluation with
-    # "The option `packages.Win32.package.identifier.name' is used but not defined."
+  pkgSet = haskell-nix.cabalProject  (lib.optionalAttrs stdenv.hostPlatform.isWindows {
+    # FIXME: without this deprecated attribute, db-converter fails to compile directory with:
+    # Encountered missing dependencies: unix >=2.5.1 && <2.9
     ghc = buildPackages.haskell-nix.compiler.${compiler};
+  } // {
+    inherit src;
+    #ghc = buildPackages.haskell-nix.compiler.${compiler};
     pkg-def-extras = lib.optional stdenv.hostPlatform.isLinux (hackage: {
       packages = {
         "systemd" = (((hackage.systemd)."2.2.0").revisions).default;
       };
     });
     modules = [
-
+      { compiler.nix-name = compiler; }
       # Allow reinstallation of Win32
       { nonReinstallablePkgs =
         [ "rts" "ghc-heap" "ghc-prim" "integer-gmp" "integer-simple" "base"
@@ -90,16 +90,27 @@ let
         packages.cardano-node.components.exes.cardano-node.enableExecutableProfiling = true;
       })
       (lib.optionalAttrs stdenv.hostPlatform.isLinux {
-        packages.cardano-node.flags.systemd = true;
+        # systemd can't be statically linked
+        packages.cardano-config.flags.systemd = !stdenv.hostPlatform.isMusl;
+        packages.cardano-node.flags.systemd = !stdenv.hostPlatform.isMusl;
       })
-      (lib.optionalAttrs stdenv.hostPlatform.isWindows {
-        # Disable cabal-doctest tests by turning off custom setups
-        packages.comonad.package.buildType = lib.mkForce "Simple";
-        packages.distributive.package.buildType = lib.mkForce "Simple";
-        packages.lens.package.buildType = lib.mkForce "Simple";
-        packages.nonempty-vector.package.buildType = lib.mkForce "Simple";
-        packages.semigroupoids.package.buildType = lib.mkForce "Simple";
+      # Musl libc fully static build
+      (lib.optionalAttrs stdenv.hostPlatform.isMusl (let
+        # Module options which adds GHC flags and libraries for a fully static build
+        fullyStaticOptions = {
+          enableShared = false;
+          enableStatic = true;
+        };
+      in
+        {
+          packages = lib.genAttrs projectPackages (name: fullyStaticOptions);
 
+          # Haddock not working and not needed for cross builds
+          doHaddock = false;
+        }
+      ))
+
+      (lib.optionalAttrs (stdenv.hostPlatform != stdenv.buildPlatform) {
         # Make sure we use a buildPackages version of happy
         packages.pretty-show.components.library.build-tools = [ buildPackages.haskell-nix.haskellPackages.happy ];
 
@@ -107,11 +118,18 @@ let
         packages.Win32.components.library.build-tools = lib.mkForce [];
         packages.terminal-size.components.library.build-tools = lib.mkForce [];
         packages.network.components.library.build-tools = lib.mkForce [];
+
+        # Disable cabal-doctest tests by turning off custom setups
+        packages.comonad.package.buildType = lib.mkForce "Simple";
+        packages.distributive.package.buildType = lib.mkForce "Simple";
+        packages.lens.package.buildType = lib.mkForce "Simple";
+        packages.nonempty-vector.package.buildType = lib.mkForce "Simple";
+        packages.semigroupoids.package.buildType = lib.mkForce "Simple";
       })
     ];
     # TODO add flags to packages (like cs-ledger) so we can turn off tests that will
     # not build for windows on a per package bases (rather than using --disable-tests).
     # configureArgs = lib.optionalString stdenv.hostPlatform.isWindows "--disable-tests";
-  };
+  });
 in
   pkgSet

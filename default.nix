@@ -39,6 +39,15 @@ let
     scripts = callPackage ./nix/scripts.nix { customConfig = customConfig'; };
   };
 
+  rewrite-libs = _: p: if (isDerivation p && pkgs.stdenv.hostPlatform.isDarwin) then
+    pkgs.runCommandCC p.name {
+      nativeBuildInputs = [ pkgs.haskellBuildUtils.package pkgs.buildPackages.binutils pkgs.buildPackages.nix ];
+    } ''
+      cp -R ${p} $out
+      chmod -R +w $out
+      rewrite-libs $out/bin $out/bin/*
+    '' else p;
+
   self = {
     inherit haskellPackages scripts nixosTests environments dockerImage;
 
@@ -52,6 +61,8 @@ let
     inherit (cardanoNodeHaskellPackages.ouroboros-consensus-byron.components.exes) db-converter;
 
     inherit (pkgs.iohkNix) checkCabalProject;
+
+    exes = mapAttrsRecursiveCond (as: !(isDerivation as)) rewrite-libs (collectComponents' "exes" haskellPackages);
 
     # `tests` are the test suites which have been built.
     tests = collectComponents' "tests" haskellPackages;
