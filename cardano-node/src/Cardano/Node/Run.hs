@@ -124,7 +124,7 @@ runNode loggingLayer npm@NodeCLI{protocolFiles} = do
 
     bcCounters :: IORef BlockchainCounters <- newIORef initialBlockchainCounters
 
-    tracers <- mkTracers (ncTraceConfig nc) trace bcCounters
+    tracers <- mkTracers (Consensus.protocolInfo p) (ncTraceConfig nc) trace bcCounters
 
 #ifdef UNIX
     let viewmode = ncViewMode nc
@@ -375,7 +375,7 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
 
          meta <- mkLOMeta Notice Public
          let rTr = appendName "release" tr
-             nTr = appendName "networkMagic" tr 
+             nTr = appendName "networkMagic" tr
              vTr = appendName "version" tr
              cTr = appendName "commit"  tr
          traceNamedObject rTr (meta, LogMessage (show (ncProtocol nc)))
