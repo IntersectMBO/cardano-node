@@ -12,36 +12,29 @@ let
     else
       pkgs.fetchurl { inherit (spec) url sha256; };
 
-  fetch_tarball = pkgs: spec:
-    if spec.builtin or true then
-      builtins_fetchTarball { inherit (spec) url sha256; }
-    else
-      pkgs.fetchzip { inherit (spec) url sha256; };
+  fetch_tarball = pkgs: name: spec:
+    let
+      ok = str: ! builtins.isNull (builtins.match "[a-zA-Z0-9+-._?=]" str);
+      # sanitize the name, though nix will still fail if name starts with period
+      name' = stringAsChars (x: if ! ok x then "-" else x) "${name}-src";
+    in
+      if spec.builtin or true then
+        builtins_fetchTarball { name = name'; inherit (spec) url sha256; }
+      else
+        pkgs.fetchzip { name = name'; inherit (spec) url sha256; };
 
   fetch_git = spec:
     builtins.fetchGit { url = spec.repo; inherit (spec) rev ref; };
 
-  fetch_builtin-tarball = spec:
-    builtins.trace
-      ''
-        WARNING:
-          The niv type "builtin-tarball" will soon be deprecated. You should
-          instead use `builtin = true`.
+  fetch_local = spec: spec.path;
 
-          $ niv modify <package> -a type=tarball -a builtin=true
-      ''
-      builtins_fetchTarball { inherit (spec) url sha256; };
+  fetch_builtin-tarball = name: throw
+    ''[${name}] The niv type "builtin-tarball" is deprecated. You should instead use `builtin = true`.
+        $ niv modify ${name} -a type=tarball -a builtin=true'';
 
-  fetch_builtin-url = spec:
-    builtins.trace
-      ''
-        WARNING:
-          The niv type "builtin-url" will soon be deprecated. You should
-          instead use `builtin = true`.
-
-          $ niv modify <package> -a type=file -a builtin=true
-      ''
-      (builtins_fetchurl { inherit (spec) url sha256; });
+  fetch_builtin-url = name: throw
+    ''[${name}] The niv type "builtin-url" will soon be deprecated. You should instead use `builtin = true`.
+        $ niv modify ${name} -a type=file -a builtin=true'';
 
   #
   # Various helpers
@@ -72,10 +65,11 @@ let
     if ! builtins.hasAttr "type" spec then
       abort "ERROR: niv spec ${name} does not have a 'type' attribute"
     else if spec.type == "file" then fetch_file pkgs spec
-    else if spec.type == "tarball" then fetch_tarball pkgs spec
+    else if spec.type == "tarball" then fetch_tarball pkgs name spec
     else if spec.type == "git" then fetch_git spec
-    else if spec.type == "builtin-tarball" then fetch_builtin-tarball spec
-    else if spec.type == "builtin-url" then fetch_builtin-url spec
+    else if spec.type == "local" then fetch_local spec
+    else if spec.type == "builtin-tarball" then fetch_builtin-tarball name
+    else if spec.type == "builtin-url" then fetch_builtin-url name
     else
       abort "ERROR: niv spec ${name} has unknown type ${builtins.toJSON spec.type}";
 
@@ -87,13 +81,23 @@ let
     listToAttrs (map (attr: { name = attr; value = f attr set.${attr}; }) (attrNames set))
   );
 
+  # https://github.com/NixOS/nixpkgs/blob/0258808f5744ca980b9a1f24fe0b1e6f0fecee9c/lib/lists.nix#L295
+  range = first: last: if first > last then [] else builtins.genList (n: first + n) (last - first + 1);
+
+  # https://github.com/NixOS/nixpkgs/blob/0258808f5744ca980b9a1f24fe0b1e6f0fecee9c/lib/strings.nix#L257
+  stringToCharacters = s: map (p: builtins.substring p 1 s) (range 0 (builtins.stringLength s - 1));
+
+  # https://github.com/NixOS/nixpkgs/blob/0258808f5744ca980b9a1f24fe0b1e6f0fecee9c/lib/strings.nix#L269
+  stringAsChars = f: s: concatStrings (map f (stringToCharacters s));
+  concatStrings = builtins.concatStringsSep "";
+
   # fetchTarball version that is compatible between all the versions of Nix
-  builtins_fetchTarball = { url, sha256 }@attrs:
+  builtins_fetchTarball = { url, name, sha256 }@attrs:
     let
       inherit (builtins) lessThan nixVersion fetchTarball;
     in
       if lessThan nixVersion "1.12" then
-        fetchTarball { inherit url; }
+        fetchTarball { inherit name url; }
       else
         fetchTarball attrs;
 
