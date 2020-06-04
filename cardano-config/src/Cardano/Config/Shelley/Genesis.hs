@@ -94,6 +94,7 @@ shelleyGenesisDefaults =
         , Ledger._maxBHSize = 1000                  -- TODO: compute from crypto
         , Ledger._maxBBSize = 64 * 1024             -- max 64kb blocks
         , Ledger._maxTxSize = 16 * 1024             -- max 16kb txs
+        , Ledger._eMax      = 18
         }
 
       -- genesis keys and initial funds
