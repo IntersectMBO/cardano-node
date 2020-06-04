@@ -727,7 +727,7 @@ forgeStateTracer
   -> Trace IO Text
   -> Tracer IO (ForgeState blk)
 forgeStateTracer p _ts tracer = Tracer $ \ev -> do
-    let tr = appendName "ForgeState" tracer
+    let tr = appendName "Forge" tracer
     traceWith (forgeStateMetricsTraceTransformer p tr) ev
     traceWith (fsTracer tr) ev
   where
