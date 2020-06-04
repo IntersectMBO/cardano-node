@@ -126,7 +126,7 @@ readShelleyGenesis :: GenesisFile
                               (ShelleyGenesis TPraosStandardCrypto)
 readShelleyGenesis (GenesisFile file) =
     firstExceptT (GenesisReadError file) $
-      ExceptT $
+      ExceptT $ handle (\(e :: IOException) -> return $ Left $ show e) $
         Aeson.eitherDecodeFileStrict' file
 
 
