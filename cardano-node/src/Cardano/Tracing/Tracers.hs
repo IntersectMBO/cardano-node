@@ -698,7 +698,7 @@ forgeStateMetricsTraceTransformer protoInfo tr = Tracer $ \forgeState -> do
       TPraosKESMetricsData kesPeriodOfKey
                            (MaxKESEvolutions maxKesEvos)
                            (OperationalCertStartKESPeriod oCertStartKesPeriod) -> do
-        let tr' = appendName "metrics" tr
+        let metricsTr = appendName "metrics" tr
 
             -- The KES period of the hot key is relative to the start KES
             -- period of the operational certificate.
@@ -726,7 +726,26 @@ forgeStateMetricsTraceTransformer protoInfo tr = Tracer $ \forgeState -> do
               ]
 
         meta <- mkLOMeta Critical Confidential
-        mapM_ (traceNamedObject tr' . (meta,)) logValues
+        mapM_ (traceNamedObject metricsTr . (meta,)) logValues
+
+        -- Trace warning messages on the last 7 KES periods and, in the
+        -- final and subsequent KES periods, trace alert messages.
+        metaWarning <- mkLOMeta Warning Public
+        metaAlert <- mkLOMeta Alert Public
+        when (kesPeriodsUntilExpiry <= 7) $
+          traceWith tr
+            ( mempty
+            , LogObject
+                mempty
+                (if kesPeriodsUntilExpiry <= 1 then metaAlert else metaWarning)
+                (LogStructuredText mempty (expiryLogMessage kesPeriodsUntilExpiry))
+            )
+  where
+    expiryLogMessage :: Word -> Text
+    expiryLogMessage kesPeriodsUntilExpiry =
+      "Operational key will expire in "
+        <> (Text.pack . show) kesPeriodsUntilExpiry
+        <> " KES periods."
 
 forgeStateTracer
   :: forall blk.
