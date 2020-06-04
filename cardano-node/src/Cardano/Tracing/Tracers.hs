@@ -46,13 +46,14 @@ import           Cardano.BM.Trace (traceNamedObject, appendName)
 import           Cardano.BM.Data.Tracer (WithSeverity (..), annotateSeverity)
 import           Cardano.BM.Data.Transformers
 
-import           Ouroboros.Consensus.Block (BlockProtocol, Header, realPointSlot)
+import           Ouroboros.Consensus.Block (BlockProtocol, ForgeState, Header, realPointSlot)
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..), TraceBlockchainTimeEvent (..))
 import           Ouroboros.Consensus.HeaderValidation (OtherHeaderEnvelopeError)
 import           Ouroboros.Consensus.Ledger.Abstract (LedgerErr, LedgerState)
+import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx, GenTxId, HasTxs, TxId)
 import           Ouroboros.Consensus.Ledger.SupportsProtocol (LedgerSupportsProtocol)
 import           Ouroboros.Consensus.Mempool.API (MempoolSize (..), TraceEventMempool (..))
-import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx, GenTxId, HasTxs, TxId)
+import           Ouroboros.Consensus.Node.ProtocolInfo (ProtocolInfo (..))
 import qualified Ouroboros.Consensus.Node.Run as Consensus (RunNode)
 import qualified Ouroboros.Consensus.Node.Tracers as Consensus
 import qualified Ouroboros.Consensus.Network.NodeToClient as NodeToClient
@@ -77,6 +78,8 @@ import qualified Ouroboros.Consensus.Storage.LedgerDB.OnDisk as LedgerDB
 
 import           Cardano.Config.Protocol (TraceConstraints)
 import           Cardano.Config.TraceConfig
+import           Cardano.Config.Types (HasKESMetricsData (..), KESMetricsData (..),
+                                       MaxKESEvolutions (..), OperationalCertStartKESPeriod (..))
 import           Cardano.Tracing.MicroBenchmarking
 
 import           Control.Tracer.Transformers
@@ -252,15 +255,17 @@ initialBlockchainCounters = BlockchainCounters 0 0 0 0 0
 mkTracers
   :: forall peer localPeer blk.
      ( Consensus.RunNode blk
+     , HasKESMetricsData blk
      , TraceConstraints blk
      , Show peer, Eq peer
      , Show localPeer
      )
-  => TraceOptions
+  => ProtocolInfo IO blk
+  -> TraceOptions
   -> Trace IO Text
   -> IORef BlockchainCounters
   -> IO (Tracers peer localPeer blk)
-mkTracers traceConf' tracer bcCounters = do
+mkTracers protoInfo traceConf' tracer bcCounters = do
   -- We probably don't want to pay the extra IO cost per-counter-increment. -- sk
   staticMetaCC <- mkLOMeta Critical Confidential
   let name :: LoggerName = "metrics.Forge"
@@ -289,7 +294,7 @@ mkTracers traceConf' tracer bcCounters = do
         { chainDBTracer
             = annotateSeverity . teeTraceChainTip traceConf' bcCounters elidedChainDB $ appendName "ChainDB" tracer
         , consensusTracers
-            = mkConsensusTracers' elidedFetchDecision blockForgeOutcomeExtractor forgeTracers tracer (TracingOn traceConf) bcCounters
+            = mkConsensusTracers' protoInfo elidedFetchDecision blockForgeOutcomeExtractor forgeTracers tracer (TracingOn traceConf) bcCounters
         , nodeToClientTracers = nodeToClientTracers' (TracingOn traceConf) tracer
         , nodeToNodeTracers = nodeToNodeTracers' (TracingOn traceConf) tracer
         , ipSubscriptionTracer = tracerOnOff (traceIpSubscription traceConf) "IpSubscription" tracer
@@ -305,7 +310,7 @@ mkTracers traceConf' tracer bcCounters = do
     TracingOff ->
       pure Tracers
         { chainDBTracer = nullTracer
-        , consensusTracers = mkConsensusTracers' elidedFetchDecision blockForgeOutcomeExtractor forgeTracers nullTracer TracingOff  bcCounters
+        , consensusTracers = mkConsensusTracers' protoInfo elidedFetchDecision blockForgeOutcomeExtractor forgeTracers nullTracer TracingOff  bcCounters
         , nodeToClientTracers = nodeToClientTracers' TracingOff nullTracer
         , nodeToNodeTracers = nodeToNodeTracers' TracingOff nullTracer
         , ipSubscriptionTracer = nullTracer
@@ -415,15 +420,19 @@ mkConsensusTracers'
      , ToObject (OtherHeaderEnvelopeError blk)
      , ToObject (ValidationErr (BlockProtocol blk))
      , Consensus.RunNode blk
+     , HasKESMetricsData blk
      )
-  => MVar (Maybe (WithSeverity [TraceLabelPeer peer (FetchDecision [Point (Header blk)])]),Integer)
+  => ProtocolInfo IO blk
+  -> MVar (Maybe (WithSeverity [TraceLabelPeer peer (FetchDecision [Point (Header blk)])]),Integer)
   -> (OutcomeEnhancedTracer IO (Consensus.TraceForgeEvent blk) -> Tracer IO (Consensus.TraceForgeEvent blk))
   -> ForgeTracers
   -> Trace IO Text
   -> TraceOptions
   -> IORef BlockchainCounters
   -> Consensus.Tracers' peer localPeer blk (Tracer IO)
-mkConsensusTracers' elidingFetchDecision measureBlockForging forgeTracers tracer t@(TracingOn traceConf) bChainCounters = do
+mkConsensusTracers' protoInfo elidingFetchDecision measureBlockForging
+                    forgeTracers tracer t@(TracingOn traceConf)
+                    bChainCounters = do
   Consensus.Tracers
     { Consensus.chainSyncClientTracer = tracerOnOff (traceChainSyncClient traceConf) "ChainSyncClient" tracer
     , Consensus.chainSyncServerHeaderTracer = tracerOnOff (traceChainSyncHeaderServer traceConf) "ChainSyncHeaderServer" tracer
@@ -431,7 +440,7 @@ mkConsensusTracers' elidingFetchDecision measureBlockForging forgeTracers tracer
     , Consensus.blockFetchDecisionTracer = annotateSeverity $ teeTraceBlockFetchDecision t elidingFetchDecision $ appendName "BlockFetchDecision" tracer
     , Consensus.blockFetchClientTracer = tracerOnOff (traceBlockFetchClient traceConf) "BlockFetchClient" tracer
     , Consensus.blockFetchServerTracer = tracerOnOff (traceBlockFetchServer traceConf) "BlockFetchServer" tracer
-    , Consensus.forgeStateTracer = createForgeStateTracer (traceForgeState traceConf) tracer
+    , Consensus.forgeStateTracer = forgeStateTracer protoInfo traceConf tracer
     , Consensus.txInboundTracer = tracerOnOff (traceTxInbound traceConf) "TxInbound" tracer
     , Consensus.txOutboundTracer = tracerOnOff (traceTxOutbound traceConf) "TxOutbound" tracer
     , Consensus.localTxSubmissionServerTracer = tracerOnOff (traceLocalTxSubmissionServer traceConf) "LocalTxSubmissionServer" tracer
@@ -452,7 +461,7 @@ mkConsensusTracers' elidingFetchDecision measureBlockForging forgeTracers tracer
   tracingVerbosity :: TracingVerbosity
   tracingVerbosity = traceVerbosity traceConf
 
-mkConsensusTracers' _ _ _ _ TracingOff _ = Consensus.Tracers
+mkConsensusTracers' _ _ _ _ _ TracingOff _ = Consensus.Tracers
   { Consensus.chainSyncClientTracer = nullTracer
   , Consensus.chainSyncServerHeaderTracer = nullTracer
   , Consensus.chainSyncServerBlockTracer = nullTracer
@@ -467,10 +476,6 @@ mkConsensusTracers' _ _ _ _ TracingOff _ = Consensus.Tracers
   , Consensus.forgeTracer = nullTracer
   , Consensus.blockchainTimeTracer = nullTracer
   }
-
-createForgeStateTracer :: Show a => Bool -> Trace IO Text -> Tracer IO a
-createForgeStateTracer True tracer = showTracing $ withName "ForgeState" tracer
-createForgeStateTracer False _ = nullTracer
 
 teeForge
   :: ( Condense (HeaderHash blk)
@@ -664,6 +669,73 @@ mpTracer :: ( Show (ApplyTxErr blk)
             )
          => TraceSelection -> Trace IO Text -> Tracer IO (TraceEventMempool blk)
 mpTracer tc tr = annotateSeverity $ toLogObject' (traceVerbosity tc) tr
+
+--------------------------------------------------------------------------------
+-- ForgeState Tracers
+--------------------------------------------------------------------------------
+
+forgeStateMetricsTraceTransformer
+  :: forall a blk. HasKESMetricsData blk
+  => ProtocolInfo IO blk
+  -> Trace IO a
+  -> Tracer IO (ForgeState blk)
+forgeStateMetricsTraceTransformer protoInfo tr = Tracer $ \forgeState -> do
+    case getKESMetricsData protoInfo forgeState of
+      NoKESMetricsData -> pure ()
+      TPraosKESMetricsData _ _ NoOperationalCertConfigured -> pure ()
+      TPraosKESMetricsData kesPeriodOfKey
+                           (MaxKESEvolutions maxKesEvos)
+                           (OperationalCertStartKESPeriod oCertStartKesPeriod) -> do
+        let tr' = appendName "metrics" tr
+
+            -- The KES period of the hot key is relative to the start KES
+            -- period of the operational certificate.
+            currentKesPeriod = oCertStartKesPeriod + kesPeriodOfKey
+
+            oCertExpiryKesPeriod = oCertStartKesPeriod + fromIntegral maxKesEvos
+
+            kesPeriodsUntilExpiry =
+              max 0 (oCertExpiryKesPeriod - currentKesPeriod)
+
+            logValues :: [LOContent a]
+            logValues =
+              [ LogValue "operationalCertificateStartKESPeriod"
+                  $ PureI
+                  $ fromIntegral oCertStartKesPeriod
+              , LogValue "operationalCertificateExpiryKESPeriod"
+                  $ PureI
+                  $ fromIntegral oCertExpiryKesPeriod
+              , LogValue "currentKESPeriod"
+                  $ PureI
+                  $ fromIntegral currentKesPeriod
+              , LogValue "remainingKESPeriods"
+                  $ PureI
+                  $ fromIntegral kesPeriodsUntilExpiry
+              ]
+
+        meta <- mkLOMeta Critical Confidential
+        mapM_ (traceNamedObject tr' . (meta,)) logValues
+
+forgeStateTracer
+  :: forall blk.
+     ( HasKESMetricsData blk
+     , Show (ForgeState blk)
+     )
+  => ProtocolInfo IO blk
+  -> TraceSelection
+  -> Trace IO Text
+  -> Tracer IO (ForgeState blk)
+forgeStateTracer p _ts tracer = Tracer $ \ev -> do
+    let tr = appendName "ForgeState" tracer
+    traceWith (forgeStateMetricsTraceTransformer p tr) ev
+    traceWith (fsTracer tr) ev
+  where
+    fsTracer :: Trace IO Text -> Tracer IO (ForgeState blk)
+    fsTracer tr = showTracing $ contramap Text.pack $ toLogObject tr
+
+--------------------------------------------------------------------------------
+-- NodeToClient Tracers
+--------------------------------------------------------------------------------
 
 nodeToClientTracers'
   :: Show localPeer
