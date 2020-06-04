@@ -59,7 +59,7 @@ import           Shelley.Spec.Ledger.BaseTypes (Nonce (..), Network (..), UnitIn
                     mkNonce)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
 import           Shelley.Spec.Ledger.Keys
-                   (KeyHash, KeyPair(..), VKey(..), hashKey)
+                   (KeyHash, KeyPair(..), VKey(..), hashKey, Hash, hashVerKeyVRF)
 import qualified Shelley.Spec.Ledger.Keys as Ledger (KeyRole(..))
 import           Shelley.Spec.Ledger.Crypto
 import           Shelley.Spec.Ledger.PParams (PParams, PParams' (..), ProtVer (..))
@@ -152,12 +152,17 @@ genFundsList = Gen.list (Range.linear 1 100) genGenesisFundPair
 
 
 genGenesisDelegationList :: Gen [(KeyHash Ledger.Genesis         TPraosStandardCrypto,
-                                  KeyHash Ledger.GenesisDelegate TPraosStandardCrypto)]
+                                 (KeyHash Ledger.GenesisDelegate TPraosStandardCrypto,
+                                  Hash TPraosStandardCrypto
+                                       (VerKeyVRF (VRF TPraosStandardCrypto))))]
 genGenesisDelegationList = Gen.list (Range.linear 1 10) genGenesisDelegationPair
 
 genGenesisDelegationPair :: Gen (KeyHash Ledger.Genesis         TPraosStandardCrypto,
-                                 KeyHash Ledger.GenesisDelegate TPraosStandardCrypto)
-genGenesisDelegationPair = (,) <$> genKeyHash <*> genKeyHash
+                                (KeyHash Ledger.GenesisDelegate TPraosStandardCrypto,
+                                 Hash TPraosStandardCrypto
+                                      (VerKeyVRF (VRF TPraosStandardCrypto))))
+genGenesisDelegationPair =
+  (,) <$> genKeyHash <*> ((,) <$> genKeyHash <*> genVRFKeyHash)
 
 
 genKESKeyPair :: forall k. KESAlgorithm k => Gen (VerKeyKES k, SignKeyKES k)
@@ -213,6 +218,9 @@ genTextView =
     <*> fmap TextViewTitle (Gen.utf8 (Range.linear 1 80) (Gen.filter (/= '\n') Gen.ascii))
     <*> Gen.bytes (Range.linear 0 500)
 
+
+genVRFKeyHash :: Gen (Hash TPraosStandardCrypto (VerKeyVRF (VRF TPraosStandardCrypto)))
+genVRFKeyHash = hashVerKeyVRF . snd <$> genVRFKeyPair
 
 genVRFKeyPair :: Gen (SignKeyVRF (VRF TPraosStandardCrypto),
                       VerKeyVRF  (VRF TPraosStandardCrypto))

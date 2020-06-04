@@ -24,7 +24,7 @@ import           Shelley.Spec.Ledger.Address (Addr (..))
 import           Shelley.Spec.Ledger.BaseTypes (Network (..), truncateUnitInterval)
 import           Shelley.Spec.Ledger.Coin (Coin(..))
 import           Shelley.Spec.Ledger.Credential (Credential (..), StakeReference(..))
-import           Shelley.Spec.Ledger.Keys (KeyHash(..), KeyRole(..))
+import           Shelley.Spec.Ledger.Keys (KeyHash(..), KeyRole(..), Hash, VerKeyVRF)
 import           Shelley.Spec.Ledger.PParams (PParams' (..), emptyPParams)
 
 import           Cardano.Config.Shelley.Genesis
@@ -51,7 +51,7 @@ exampleShelleyGenesis =
         , _maxBBSize = 239857
         , _maxBHSize = 217569
         }
-    , sgGenDelegs = Map.fromList [(genesisVerKeyHash, delegVerKeyHash)]
+    , sgGenDelegs = Map.fromList [(genesisVerKeyHash, (delegVerKeyHash, delegVrfKeyHash))]
     , sgInitialFunds = Map.fromList [(initialFundedAddress,initialFunds)]
     , sgStaking = emptyGenesisStaking
     }
@@ -62,6 +62,8 @@ exampleShelleyGenesis =
   -- hash of the delegators verififation key
   delegVerKeyHash :: KeyHash GenesisDelegate TPraosStandardCrypto
   delegVerKeyHash = KeyHash "839b047f56e50654bdb504832186dc1ee0c73c8de2daec7ae62738273be825b2"
+  delegVrfKeyHash :: Hash TPraosStandardCrypto (VerKeyVRF TPraosStandardCrypto)
+  delegVrfKeyHash = "231391e7ec1c450a8518134cf6fad1a8e0ed7ffd66d740f8e8271347a6de7bf2"
   initialFundedAddress :: Addr TPraosStandardCrypto
   initialFundedAddress = Addr Testnet paymentCredential (StakeRefBase stakingCredential)
     where

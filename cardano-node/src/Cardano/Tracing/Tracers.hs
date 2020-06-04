@@ -119,7 +119,7 @@ data ForgeTracers = ForgeTracers
   , ftDidntAdoptBlock :: Trace IO Text
   , ftForgedInvalid   :: Trace IO Text
   , ftTraceNodeNotLeader  :: Trace IO Text
-  , ftTraceNotCannotLead :: Trace IO Text
+  , ftTraceNodeCannotLead :: Trace IO Text
   , ftTraceBlockFromFuture :: Trace IO Text
   , ftTraceSlotIsImmutable :: Trace IO Text
   , ftTraceNodeIsLeader :: Trace IO Text
@@ -493,7 +493,7 @@ teeForge ft tverb tr = Tracer $ \ev -> do
   traceWith (teeForge' tr) ev
   flip traceWith ev $ fanning $ \(WithSeverity _ e) ->
     case e of
-      Consensus.TraceNotCannotLead _ _ -> teeForge' (ftTraceNotCannotLead ft)
+      Consensus.TraceNodeCannotLead _ _ -> teeForge' (ftTraceNodeCannotLead ft)
       Consensus.TraceForgedBlock{} -> teeForge' (ftForged ft)
       Consensus.TraceStartLeadershipCheck{} -> teeForge' (ftForgeAboutToLead ft)
       Consensus.TraceNoLedgerState{} -> teeForge' (ftCouldNotForge ft)
@@ -515,7 +515,8 @@ teeForge' tr =
     meta <- mkLOMeta Critical Confidential
     traceNamedObject (appendName "metrics" tr) . (meta,) $
       case ev of
-        Consensus.TraceNotCannotLead _ _ -> panic "FIXME"
+        Consensus.TraceNodeCannotLead slot _reason ->
+          LogValue "nodeCannotLead" $ PureI $ fromIntegral $ unSlotNo slot
         Consensus.TraceForgedBlock slot _ _ _ ->
           LogValue "forgedSlotLast" $ PureI $ fromIntegral $ unSlotNo slot
         Consensus.TraceStartLeadershipCheck slot ->

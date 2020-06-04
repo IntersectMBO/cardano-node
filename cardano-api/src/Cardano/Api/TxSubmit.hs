@@ -19,7 +19,7 @@ import           Control.Concurrent.STM
 
 import           Cardano.Api.Types
 
-import           Ouroboros.Consensus.Cardano (protocolClientInfo)
+import           Ouroboros.Consensus.Cardano (protocolClientInfo, SecurityParam(..))
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx)
 import           Ouroboros.Consensus.Network.NodeToClient
 import           Ouroboros.Consensus.Node.ProtocolInfo (ProtocolClientInfo(..))
@@ -68,7 +68,9 @@ submitTx network socketPath tx =
           result <- submitGenTx
                       nullTracer
                       iocp
-                      (protocolClientInfo $ mkNodeClientProtocolRealPBFT $ EpochSlots 21600)
+                      (protocolClientInfo (mkNodeClientProtocolRealPBFT
+                                             (EpochSlots 21600)
+                                             (SecurityParam 2160)))
                       network
                       socketPath
                       genTx

@@ -55,7 +55,7 @@ extra-deps:
   - systemd-2.3.0
 
   - git: https://github.com/input-output-hk/cardano-ledger-specs
-    commit: 37ea0bb59ff2cc7f6690240f8c4d55e15cd30f2c
+    commit: 3671fe88f7d62769ed207cda0ee94a0effbb4c7f
     subdirs:
       # small-steps
       - semantics/executable-spec
@@ -81,7 +81,7 @@ extra-deps:
       - test
 
   - git: https://github.com/input-output-hk/cardano-base
-    commit: 8061c5dd00f7aad134b18a4e6818879641f8589f
+    commit: 4a457f44e68132ce2bd978ab45a3188e64327abc
     subdirs:
       - binary
       - binary/test
@@ -123,7 +123,7 @@ extra-deps:
     #Ouroboros-network dependencies
 
   - git: https://github.com/input-output-hk/ouroboros-network
-    commit: 7fa7f8182d20290e6a4b22168a1f9f61317307cf
+    commit: 16bca08140fb37746538edff9fe77220acf91d55
     subdirs:
         - io-sim
         - io-sim-classes

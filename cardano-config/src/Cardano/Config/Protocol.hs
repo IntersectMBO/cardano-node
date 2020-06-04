@@ -123,6 +123,7 @@ mkNodeClientProtocol protocol =
                     -- the genesis file, but we don't have that in the
                     -- client case.
                     (EpochSlots 21600)
+                    (Consensus.SecurityParam 2160)
 
       TPraos   -> mkSomeNodeClientProtocolTPraos
 

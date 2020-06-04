@@ -57,7 +57,8 @@ import           Ouroboros.Consensus.Byron.Ledger (GenTx(..), ByronBlock)
 import qualified Ouroboros.Consensus.Cardano as Consensus
 import           Ouroboros.Consensus.Ledger.SupportsMempool (txId)
 import           Ouroboros.Consensus.Util.Condense (condense)
-import           Ouroboros.Consensus.Cardano (protocolClientInfo)
+import           Ouroboros.Consensus.Cardano
+                   (protocolClientInfo, SecurityParam(..))
 
 import           Cardano.Config.Byron.Protocol (mkNodeClientProtocolRealPBFT)
 import           Cardano.Config.Protocol (RealPBFTError(..), withRealPBFT)
@@ -246,7 +247,9 @@ nodeSubmitTx iomgr network gentx = do
       --TODO: print failures
       return ()
   where
-    ptcl = mkNodeClientProtocolRealPBFT (EpochSlots 21600)
+    ptcl = mkNodeClientProtocolRealPBFT
+             (EpochSlots 21600)
+             (SecurityParam 2160)
 
 
 --TODO: remove these local definitions when the updated ledger lib is available

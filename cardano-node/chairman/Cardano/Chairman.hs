@@ -34,7 +34,8 @@ import           Control.Tracer
 
 import           Network.Mux (MuxError, MuxMode(..))
 
-import           Ouroboros.Consensus.Block (BlockProtocol, GetHeader (..))
+import           Ouroboros.Consensus.Block
+                   (CodecConfig, getCodecConfig, BlockProtocol, GetHeader (..))
 import           Ouroboros.Consensus.BlockchainTime (SlotLength, getSlotLength)
 import           Ouroboros.Consensus.Config (configBlock, configConsensus, configLedger)
 import           Ouroboros.Consensus.Config.SupportsNode (ConfigSupportsNode (..))

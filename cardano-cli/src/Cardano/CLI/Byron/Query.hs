@@ -16,7 +16,8 @@ import           Control.Monad.Trans.Except.Extra (firstExceptT)
 import qualified Data.Text as T
 
 import           Cardano.Chain.Slotting (EpochSlots(..))
-import           Ouroboros.Consensus.Cardano (protocolClientInfo)
+import           Ouroboros.Consensus.Cardano
+                   (protocolClientInfo, SecurityParam(..))
 import           Ouroboros.Consensus.Node.ProtocolInfo (pClientInfoCodecConfig)
 import           Ouroboros.Consensus.Util.Condense (Condense(..))
 import           Ouroboros.Network.Block
@@ -45,7 +46,9 @@ runGetLocalNodeTip :: Network -> ExceptT ByronQueryError IO ()
 runGetLocalNodeTip network = do
     sockPath <- firstExceptT ByronQueryEnvVarSocketErr $ readEnvSocketPath
     let ptclClientInfo = pClientInfoCodecConfig . protocolClientInfo $
-          mkNodeClientProtocolRealPBFT (EpochSlots 21600)
+          mkNodeClientProtocolRealPBFT
+            (EpochSlots 21600)
+            (SecurityParam 2160)
 
     liftIO $ do
       tip <- withIOManager $ \iomgr ->

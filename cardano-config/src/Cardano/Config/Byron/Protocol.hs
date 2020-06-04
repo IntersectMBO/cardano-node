@@ -56,14 +56,18 @@ import           Cardano.TracingOrphanInstances.Byron ()
 --
 
 mkNodeClientProtocolRealPBFT :: EpochSlots
+                             -> SecurityParam
                              -> ProtocolClient ByronBlock ProtocolRealPBFT
-mkNodeClientProtocolRealPBFT epochSlots =
-    ProtocolClientRealPBFT epochSlots
+mkNodeClientProtocolRealPBFT epochSlots securityParam =
+    ProtocolClientRealPBFT epochSlots securityParam
 
 
-mkSomeNodeClientProtocolRealPBFT :: EpochSlots -> SomeNodeClientProtocol
-mkSomeNodeClientProtocolRealPBFT epochSlots =
-    SomeNodeClientProtocol (mkNodeClientProtocolRealPBFT epochSlots)
+mkSomeNodeClientProtocolRealPBFT :: EpochSlots
+                                 -> SecurityParam
+                                 -> SomeNodeClientProtocol
+mkSomeNodeClientProtocolRealPBFT epochSlots securityParam =
+    SomeNodeClientProtocol
+      (mkNodeClientProtocolRealPBFT epochSlots securityParam)
 
 
 ------------------------------------------------------------------------------

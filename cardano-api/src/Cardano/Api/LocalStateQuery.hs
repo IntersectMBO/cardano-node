@@ -49,7 +49,8 @@ import           Data.Void (Void)
 
 import           Network.Mux (MuxMode(..), MuxTrace, WithMuxBearer)
 
-import           Ouroboros.Consensus.Cardano (CodecConfig, protocolClientInfo)
+import           Ouroboros.Consensus.Block (CodecConfig)
+import           Ouroboros.Consensus.Cardano (protocolClientInfo)
 import           Ouroboros.Consensus.Ledger.Abstract (Query)
 import           Ouroboros.Consensus.Network.NodeToClient
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
