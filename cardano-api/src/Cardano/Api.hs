@@ -262,16 +262,19 @@ mkShelleyStakingCredential vKey =
 shelleyGenesisDelegateStake
   :: ShelleyGenesisVerificationHash
   -> ShelleyGenesisDelegateVerKeyHash
+  -> ShelleyVRFVerificationKeyHash
   -> Certificate
-shelleyGenesisDelegateStake genDelegatorHash genDelegateeHash = do
-  ShelleyGenesisDelegationCertificate . Shelley.DCertGenesis $ Shelley.GenesisDelegCert genDelegatorHash genDelegateeHash
+shelleyGenesisDelegateStake genDelegatorHash genDelegateeHash vrfVkeyHash =
+  ShelleyGenesisDelegationCertificate . Shelley.DCertGenesis $
+    Shelley.GenesisDelegCert genDelegatorHash genDelegateeHash vrfVkeyHash
 
 -- | Move instantaneous rewards.
 shelleyMIRCertificate
-  :: ShelleyMIRMap
+  :: Shelley.MIRPot -- ^ Reserves or treasury
+  -> ShelleyMIRMap
   -> Certificate
-shelleyMIRCertificate mirMap =
-  ShelleyMIRCertificate . Shelley.DCertMir $ Shelley.MIRCert mirMap
+shelleyMIRCertificate mirPot mirMap =
+  ShelleyMIRCertificate . Shelley.DCertMir $ Shelley.MIRCert mirPot mirMap
 
 ---
 -- Shelley update related

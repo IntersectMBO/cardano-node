@@ -118,8 +118,8 @@ gatherConfiguredSockets config cli = do
 
     -- Select the socket or path for local node-to-client comms
     --
-    let mbLocalSocketFileConfigOrCLI  = ncSocketPath config `mplus`
-                                        socketFile cli
+    let mbLocalSocketFileConfigOrCLI  = socketFile cli `mplus`
+                                        ncSocketPath config
         mbLocalSocketFromSystemD      = fst <$> mbAllSocketsFromSystemD
 
     local  <- case (mbLocalSocketFileConfigOrCLI,

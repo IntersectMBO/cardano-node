@@ -8,6 +8,8 @@ import           Cardano.Prelude
 
 import           Data.Aeson (encode, fromJSON, decode, toJSON)
 
+import qualified Data.ByteString.Lazy.Char8 as LBS
+
 import           Cardano.Config.Shelley.KES (decodeKESVerificationKey, encodeKESVerificationKey)
 import           Cardano.Config.Shelley.VRF (decodeVRFVerificationKey, encodeVRFVerificationKey)
 import           Shelley.Spec.Ledger.Address (serialiseAddr, deserialiseAddr)
@@ -79,5 +81,10 @@ prop_roundtrip_VKeyES_TPraosStandardCrypto_CBOR =
 -- -----------------------------------------------------------------------------
 
 tests :: IO Bool
-tests =
+tests = do
+  -- Set to True when the struct or the JSON encoding changes and you need the new
+  -- version.
+  if False
+    then LBS.writeFile "test/Golden/ShelleyGenesis" (encode exampleShelleyGenesis)
+    else pure ()
   Hedgehog.checkParallel $$discover

@@ -33,6 +33,7 @@ import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTx, TxId, txId)
 import           Ouroboros.Consensus.Util.Condense (condense)
 
 import           Ouroboros.Consensus.Shelley.Ledger
+import           Ouroboros.Consensus.Shelley.Protocol (TPraosCannotLead(..))
 -- TODO: this should be exposed via Cardano.Api
 import           Shelley.Spec.Ledger.API
 import           Shelley.Spec.Ledger.BlockChain (LastAppliedBlock(..))
@@ -62,7 +63,7 @@ import           Shelley.Spec.Ledger.STS.Tick
 import           Shelley.Spec.Ledger.STS.Updn
 import           Shelley.Spec.Ledger.STS.Utxo
 import           Shelley.Spec.Ledger.STS.Utxow
-import           Shelley.Spec.Ledger.TxData (TxIn(..))
+import           Shelley.Spec.Ledger.TxData (TxIn(..), MIRPot(..))
 
 
 --
@@ -92,6 +93,23 @@ instance Crypto c => ToObject (Header (ShelleyBlock c)) where
 instance Crypto c => ToObject (ApplyTxError c) where
   toObject verb (ApplyTxError predicateFailures) =
     HMS.unions $ map (toObject verb) predicateFailures
+
+instance ToObject (TPraosCannotLead c) where
+  toObject _verb (TPraosCannotLeadInvalidOcert
+                    curPeriod certFirstPeriod certLastPeriod) =
+    mkObject
+      [ "kind" .= String "TPraosCannotLeadInvalidOcert"
+      , "curentKesPeriod" .= curPeriod
+      , "firstCertPeriod" .= certFirstPeriod
+      , "lastCertPeriod"  .= certLastPeriod
+      ]
+  toObject _verb (TPraosCannotLeadWrongVRF genDlgVRFHash coreNodeVRFHash) =
+    mkObject
+      [ "kind" .= String "TPraosCannotLeadWrongVRF"
+      , "expected" .= genDlgVRFHash
+      , "actual" .= coreNodeVRFHash
+      ]
+
 
 -- This instance is completely insane. We really need to have lists as a
 -- generic instance.
@@ -335,8 +353,11 @@ instance ToObject (PredicateFailure (DELEG c)) where
              , "duplicateKeyHash" .= String (textShow genesisKeyHash)
              , "error" .= String "This genesis key has already been delegated to"
              ]
-  toObject _verb (InsufficientForInstantaneousRewardsDELEG neededMirAmount reserves) =
+  toObject _verb (InsufficientForInstantaneousRewardsDELEG mirpot neededMirAmount reserves) =
     mkObject [ "kind" .= String "InsufficientForInstantaneousRewardsDELEG"
+             , "pot" .= String (case mirpot of
+                                  ReservesMIR -> "Reserves"
+                                  TreasuryMIR -> "Treasury")
              , "neededAmount" .= neededMirAmount
              , "reserves" .= reserves
              ]
@@ -344,6 +365,10 @@ instance ToObject (PredicateFailure (DELEG c)) where
     mkObject [ "kind" .= String "MIRCertificateTooLateinEpochDELEG"
              , "currentSlotNo" .= currSlot
              , "mustBeSubmittedBeforeSlotNo" .= boundSlotNo
+             ]
+  toObject _verb (DuplicateGenesisVRFDELEG vrfKeyHash) =
+    mkObject [ "kind" .= String "DuplicateGenesisVRFDELEG"
+             , "keyHash" .= vrfKeyHash
              ]
 
 
@@ -444,10 +469,11 @@ instance Crypto c => ToObject (PredicateFailure (OVERLAY c)) where
              , "previousHashAsNonce" .= (String $ textShow prevHashNonce)
              , "blockNonce" .= (String $ textShow blockNonce)
              ]
-  toObject _verb (VRFKeyWrongVRFKey regVRFKeyHash unregVRFKeyHash) =
+  toObject _verb (VRFKeyWrongVRFKey issuerHash regVRFKeyHash unregVRFKeyHash) =
     mkObject [ "kind" .= String "VRFKeyWrongVRFKeyOVERLAY"
-             , "registeredVRFKeHash" .= (String $ textShow regVRFKeyHash )
-             , "unregisteredVRFKeyHash" .= (String $ textShow unregVRFKeyHash)
+             , "poolHash" .= textShow issuerHash
+             , "registeredVRFKeHash" .= textShow regVRFKeyHash
+             , "unregisteredVRFKeyHash" .= textShow unregVRFKeyHash
              ]
   --TODO: Pipe slot number with VRFKeyUnknown
   toObject _verb (VRFKeyUnknown (KeyHash kHash)) =
@@ -467,6 +493,11 @@ instance Crypto c => ToObject (PredicateFailure (OVERLAY c)) where
              ]
   toObject _verb (WrongGenesisColdKeyOVERLAY actual expected) =
     mkObject [ "kind" .= String "WrongGenesisColdKeyOVERLAY"
+             , "actual" .= actual
+             , "expected" .= expected ]
+  toObject _verb (WrongGenesisVRFKeyOVERLAY issuer actual expected) =
+    mkObject [ "kind" .= String "WrongGenesisVRFKeyOVERLAY"
+             , "issuer" .= issuer
              , "actual" .= actual
              , "expected" .= expected ]
   toObject verb (OcertFailure f) = toObject verb f

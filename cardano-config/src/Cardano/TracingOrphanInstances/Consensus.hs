@@ -172,7 +172,7 @@ instance HasSeverityAnnotation (TraceForgeEvent blk) where
   getSeverityAnnotation TraceForgedBlock {}            = Info
   getSeverityAnnotation TraceStartLeadershipCheck {}   = Info
   getSeverityAnnotation TraceNodeNotLeader {}          = Info
-  getSeverityAnnotation TraceNotCannotLead {}          = Error
+  getSeverityAnnotation TraceNodeCannotLead {}         = Error
   getSeverityAnnotation TraceNodeIsLeader {}           = Info
   getSeverityAnnotation TraceNoLedgerState {}          = Error
   getSeverityAnnotation TraceNoLedgerView {}           = Error
@@ -289,7 +289,7 @@ instance ( tx ~ GenTx blk
       "Leading slot " <> showT (unSlotNo slotNo)
     TraceNodeNotLeader slotNo -> const $
       "Not leading slot " <> showT (unSlotNo slotNo)
-    TraceNotCannotLead slotNo reason -> const $
+    TraceNodeCannotLead slotNo reason -> const $
       "We are the leader for slot "
         <> showT (unSlotNo slotNo)
         <> ", but we cannot lead because: "
@@ -519,15 +519,29 @@ instance (Show (PBFT.PBftVerKeyHash c))
       [ "kind" .= String "PBftNotGenesisDelegate"
       , "vk" .= String (pack $ show vkhash)
       ]
-  toObject _verb (PBFT.PBftExceededSignThreshold vkhash n) =
+  toObject _verb (PBFT.PBftExceededSignThreshold vkhash numForged) =
     mkObject
       [ "kind" .= String "PBftExceededSignThreshold"
       , "vk" .= String (pack $ show vkhash)
-      , "n" .= String (pack $ show n)
+      , "numForged" .= String (pack (show numForged))
       ]
   toObject _verb PBFT.PBftInvalidSlot =
     mkObject
       [ "kind" .= String "PBftInvalidSlot"
+      ]
+
+
+instance (Show (PBFT.PBftVerKeyHash c))
+      => ToObject (PBFT.PBftCannotLead c) where
+  toObject _verb (PBFT.PBftCannotLeadInvalidDelegation vkhash) =
+    mkObject
+      [ "kind" .= String "PBftCannotLeadInvalidDelegation"
+      , "vk" .= String (pack $ show vkhash)
+      ]
+  toObject _verb (PBFT.PBftCannotLeadThresholdExceeded numForged) =
+    mkObject
+      [ "kind" .= String "PBftCannotLeadThresholdExceeded"
+      , "numForged" .= numForged
       ]
 
 
@@ -870,9 +884,9 @@ instance ( tx ~ GenTx blk
       [ "kind" .= String "TraceNodeNotLeader"
       , "slot" .= toJSON (unSlotNo slotNo)
       ]
-  toObject verb (TraceNotCannotLead slotNo reason) =
+  toObject verb (TraceNodeCannotLead slotNo reason) =
     mkObject
-      [ "kind" .= String "TraceNotCannotLead"
+      [ "kind" .= String "TraceNodeCannotLead"
       , "slot" .= toJSON (unSlotNo slotNo)
       , "reason" .= toObject verb reason
       ]

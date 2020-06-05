@@ -23,6 +23,9 @@ import           Cardano.Config.Shelley.ColdKeys (KeyError, KeyRole(..), readVer
                    renderKeyError)
 import           Cardano.CLI.Shelley.Parsers
 
+import qualified Shelley.Spec.Ledger.TxData as Shelley
+
+
 data ShelleyGovernanceError
   = GovernanceWriteMIRCertError !FilePath !ApiError
   | GovernanceWriteUpdateError !FilePath !ApiError
@@ -60,23 +63,24 @@ renderShelleyGovernanceError err =
 
 
 runGovernanceCmd :: GovernanceCmd -> ExceptT ShelleyGovernanceError IO ()
-runGovernanceCmd (GovernanceMIRCertificate vKeys rewards out) = runGovernanceMIRCertificate vKeys rewards out
+runGovernanceCmd (GovernanceMIRCertificate mirpot vKeys rewards out) = runGovernanceMIRCertificate mirpot vKeys rewards out
 runGovernanceCmd (GovernanceUpdateProposal out eNo genVKeys ppUp) = runGovernanceUpdateProposal out eNo genVKeys ppUp
 runGovernanceCmd cmd = liftIO $ putStrLn $ "TODO: runGovernanceCmd: " ++ show cmd
 
 runGovernanceMIRCertificate
-  :: [VerificationKeyFile]
+  :: Shelley.MIRPot
+  -> [VerificationKeyFile]
   -- ^ Stake verification keys
   -> [ShelleyCoin]
   -- ^ Reward amounts
   -> OutputFile
   -> ExceptT ShelleyGovernanceError IO ()
-runGovernanceMIRCertificate vKeys rwdAmts (OutputFile oFp) = do
+runGovernanceMIRCertificate mirPot vKeys rwdAmts (OutputFile oFp) = do
     sCreds <- mapM readStakeKeyToCred vKeys
 
     checkEqualKeyRewards vKeys rwdAmts
 
-    let mirCert = shelleyMIRCertificate $ mirMap sCreds rwdAmts
+    let mirCert = shelleyMIRCertificate mirPot (mirMap sCreds rwdAmts)
 
     firstExceptT (GovernanceWriteMIRCertError oFp) . newExceptT $ writeCertificate oFp mirCert
   where

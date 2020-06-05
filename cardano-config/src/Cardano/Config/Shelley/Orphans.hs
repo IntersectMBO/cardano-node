@@ -27,9 +27,9 @@ import           Data.IP (IPv4, IPv6)
 import           Data.Sequence.Strict (StrictSeq (..))
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
+import qualified Data.Map as Map
 
 import           Cardano.Crypto.Hash.Class as Crypto
-import           Cardano.Slotting.Slot (EpochSize (..))
 import           Cardano.TracingOrphanInstances.Common ()
 
 import           Ouroboros.Consensus.BlockchainTime (SlotLength (..), SystemStart (..))
@@ -78,10 +78,12 @@ instance Crypto crypto => ToJSON (ShelleyGenesis crypto) where
       , "maxMajorPV"            .= sgMaxMajorPV sg
       , "maxLovelaceSupply"     .= sgMaxLovelaceSupply sg
       , "protocolParams"        .= sgProtocolParams sg
-      , "genDelegs"             .= sgGenDelegs sg
+      , "genDelegs"             .= Map.map toGenDelegPair (sgGenDelegs sg)
       , "initialFunds"          .= sgInitialFunds sg
       , "staking"               .= Null
       ]
+    where
+      toGenDelegPair (d,v) = GenDelegPair d v
 
 instance Crypto crypto => FromJSON (ShelleyGenesis crypto) where
   parseJSON =
@@ -101,9 +103,31 @@ instance Crypto crypto => FromJSON (ShelleyGenesis crypto) where
         <*> obj .: "maxMajorPV"
         <*> obj .: "maxLovelaceSupply"
         <*> obj .: "protocolParams"
-        <*> obj .: "genDelegs"
+        <*> (Map.map fromGenDelegPair <$>
+            obj .: "genDelegs")
         <*> obj .: "initialFunds"
         <*> pure emptyGenesisStaking  --TODO
+    where
+      fromGenDelegPair (GenDelegPair d v) = (d,v)
+
+-- | Type to adjust the JSON presentation of the genesis delegate mapping.
+data GenDelegPair crypto =
+       GenDelegPair (KeyHash 'Ledger.GenesisDelegate crypto)
+                    (Ledger.Hash crypto (Ledger.VerKeyVRF crypto))
+
+instance Crypto crypto => ToJSON (GenDelegPair crypto) where
+  toJSON (GenDelegPair d v) =
+    Aeson.object
+      [ "delegate" .= d
+      , "vrf" .= v
+      ]
+
+instance Crypto crypto => FromJSON (GenDelegPair crypto) where
+  parseJSON =
+      Aeson.withObject "GenDelegPair" $ \ obj ->
+        GenDelegPair
+          <$> obj .: "delegate"
+          <*> obj .: "vrf"
 
 instance ToJSON PParams where
   toJSON pp =
@@ -220,9 +244,6 @@ deriving newtype instance Crypto c => ToJSON (UTxO c)
 deriving newtype instance ToJSON   Coin
 deriving newtype instance FromJSON Coin
 
-deriving newtype instance ToJSON   EpochSize
-deriving newtype instance FromJSON EpochSize
-
 deriving newtype instance ToJSON   NetworkMagic
 deriving newtype instance FromJSON NetworkMagic
 
@@ -263,28 +284,8 @@ deriving newtype instance ToJSON (KeyHash disc crypto)
 deriving newtype instance Crypto crypto =>
                           FromJSON (KeyHash disc crypto)
 
-instance ToJSONKey (Hash crypto a) where
-  toJSONKey = ToJSONKeyText hashToText (Aeson.text . hashToText)
-
-instance HashAlgorithm crypto => FromJSONKey (Hash crypto a) where
-  fromJSONKey = FromJSONKeyTextParser parseHash
-
-instance ToJSON   (Hash crypto a) where
-  toJSON = toJSON . hashToText
-
-instance HashAlgorithm crypto => FromJSON (Hash crypto a) where
-  parseJSON = Aeson.withText "hash" parseHash
-
 hashToText :: Hash crypto a -> Text
 hashToText = Text.decodeLatin1 . Crypto.getHashBytesAsHex
-
-parseHash :: HashAlgorithm crypto => Text -> Parser (Hash crypto a)
-parseHash t = do
-    bytes <- either badHex return (parseBase16 t)
-    maybe badSize return (Crypto.hashFromBytes bytes)
-  where
-    badHex _ = fail "Hashes are expected in hex encoding"
-    badSize  = fail "Hash is the wrong length"
 
 
 --
@@ -349,6 +350,7 @@ deriving instance ToJSON Ledger.StakePoolRelay
 deriving instance ToJSON (Ledger.DPState TPraosStandardCrypto)
 deriving instance ToJSON (Ledger.DState TPraosStandardCrypto)
 deriving instance ToJSON (Ledger.FutureGenDeleg TPraosStandardCrypto)
+deriving instance ToJSON (Ledger.InstantaneousRewards TPraosStandardCrypto)
 deriving instance ToJSON (Ledger.LedgerState TPraosStandardCrypto)
 deriving instance ToJSON (Ledger.PoolParams TPraosStandardCrypto)
 deriving instance ToJSON (Ledger.PParams' StrictMaybe)

@@ -43,7 +43,7 @@ import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
 import           Cardano.Config.Types
                   (NodeAddress, SigningKeyFile(..), CertificateFile (..), UpdateProposalFile(..))
 import           Cardano.Config.Shelley.OCert (KESPeriod(..))
-
+import           Shelley.Spec.Ledger.TxData (MIRPot)
 
 --
 -- Shelley CLI command data types
@@ -166,7 +166,7 @@ data BlockCmd
 
 
 data GovernanceCmd
-  = GovernanceMIRCertificate [VerificationKeyFile] [ShelleyCoin] OutputFile
+  = GovernanceMIRCertificate MIRPot [VerificationKeyFile] [ShelleyCoin] OutputFile
   | GovernanceProtocolUpdate SigningKeyFile -- { parameters :: ProtocolParams, nodeAddr :: NodeAddress }
   | GovernanceUpdateProposal OutputFile EpochNo [VerificationKeyFile] ShelleyPParamsUpdate
   | GovernanceColdKeys SigningKeyFile     -- { genesis :: GenesisKeyFile, keys :: [PubKey], nodeAddr :: NodeAddress }

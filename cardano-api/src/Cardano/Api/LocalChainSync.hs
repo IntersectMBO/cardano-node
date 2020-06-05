@@ -23,7 +23,7 @@ import           Control.Tracer (nullTracer)
 
 import           Network.Mux (MuxError, MuxMode(..))
 
-import           Ouroboros.Consensus.Cardano (CodecConfig)
+import           Ouroboros.Consensus.Block (CodecConfig)
 import           Ouroboros.Consensus.Network.NodeToClient
                    (Codecs'(..), defaultCodecs)
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion

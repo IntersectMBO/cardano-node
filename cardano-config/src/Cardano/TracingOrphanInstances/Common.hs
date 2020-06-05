@@ -37,7 +37,7 @@ module Cardano.TracingOrphanInstances.Common
   , mkLOMeta
   ) where
 
-import           Data.Aeson (FromJSON(..), ToJSON(..), Value (..), (.=))
+import           Data.Aeson (ToJSON(..), Value (..), (.=))
 import           Data.Void (Void)
 
 import           Cardano.BM.Tracing
@@ -50,19 +50,6 @@ import           Cardano.BM.Data.Tracer
                    (trStructured, HasTextFormatter (..), trStructuredText,
                     emptyObject, mkObject)
 
-import           Cardano.Slotting.Slot (SlotNo(..), EpochNo(..))
-
-
-
--- These ones are all just newtype wrappers of numbers,
--- so newtype deriving for the JSON format is ok.
-deriving newtype instance ToJSON   SlotNo
-deriving newtype instance FromJSON SlotNo
-
--- These ones are all just newtype wrappers of numbers,
--- so newtype deriving for the JSON format is ok.
-deriving newtype instance ToJSON   EpochNo
-deriving newtype instance FromJSON EpochNo
 
 -- | A bit of a weird one, but needed because some of the very general
 -- consensus interfaces are sometimes instantaited to 'Void', when there are

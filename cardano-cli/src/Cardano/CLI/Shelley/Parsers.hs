@@ -468,9 +468,21 @@ pGovernanceCmd =
   where
     pMIRCertificate :: Parser GovernanceCmd
     pMIRCertificate = GovernanceMIRCertificate
-                        <$> some pStakeVerificationKeyFile
+                        <$> pMIRPot
+                        <*> some pStakeVerificationKeyFile
                         <*> some pRewardAmt
                         <*> pOutputFile
+
+    pMIRPot :: Parser Shelley.MIRPot
+    pMIRPot =
+          Opt.flag' Shelley.ReservesMIR
+            (  Opt.long "reserves"
+            <> Opt.help "Use the reserves pot."
+            )
+      <|> Opt.flag' Shelley.ReservesMIR
+            (  Opt.long "treasury"
+            <> Opt.help "Use the treasury pot."
+            )
 
     pUpdateProposal :: Parser GovernanceCmd
     pUpdateProposal = GovernanceUpdateProposal
