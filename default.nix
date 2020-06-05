@@ -39,13 +39,18 @@ let
     scripts = callPackage ./nix/scripts.nix { customConfig = customConfig'; };
   };
 
-  rewrite-libs = _: p: if (isDerivation p && pkgs.stdenv.hostPlatform.isDarwin) then
+  rewrite-static = _: p: if (pkgs.stdenv.hostPlatform.isDarwin) then
     pkgs.runCommandCC p.name {
       nativeBuildInputs = [ pkgs.haskellBuildUtils.package pkgs.buildPackages.binutils pkgs.buildPackages.nix ];
     } ''
       cp -R ${p} $out
       chmod -R +w $out
       rewrite-libs $out/bin $out/bin/*
+    '' else if (pkgs.stdenv.hostPlatform.isMusl) then
+    pkgs.runCommandCC p.name { } ''
+      cp -R ${p} $out
+      chmod -R +w $out
+      $STRIP $out/bin/*
     '' else p;
 
   self = {
@@ -62,7 +67,7 @@ let
 
     inherit (pkgs.iohkNix) checkCabalProject;
 
-    exes = mapAttrsRecursiveCond (as: !(isDerivation as)) rewrite-libs (collectComponents' "exes" haskellPackages);
+    exes = mapAttrsRecursiveCond (as: !(isDerivation as)) rewrite-static (collectComponents' "exes" haskellPackages);
 
     # `tests` are the test suites which have been built.
     tests = collectComponents' "tests" haskellPackages;
