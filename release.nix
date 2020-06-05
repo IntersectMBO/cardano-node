@@ -123,7 +123,7 @@ let
     cardano-node-linux = import ./nix/binary-release.nix {
       inherit pkgs project;
       platform = "linux";
-      exes = filter (p: p.system == "x86_64-linux") (collectJobs jobs.native.exes);
+      exes = filter (p: p.system == "x86_64-linux") (collectJobs jobs.musl64.exes);
     };
   } // (optionalAttrs windowsBuild {
     "${mingwW64.config}" = mapTestOnCross mingwW64 (packagePlatformsCross (filterJobsCross project));
