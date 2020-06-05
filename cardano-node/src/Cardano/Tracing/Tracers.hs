@@ -291,14 +291,14 @@ mkTracers protoInfo traceConf' tracer bcCounters = do
   case traceConf' of
     TracingOn traceConf ->
       pure Tracers
-        { chainDBTracer
-            = annotateSeverity . teeTraceChainTip traceConf' bcCounters elidedChainDB $ appendName "ChainDB" tracer
+        { chainDBTracer = tracerOnOff' (traceChainDB traceConf) $
+            annotateSeverity . teeTraceChainTip traceConf' bcCounters elidedChainDB $ appendName "ChainDB" tracer
         , consensusTracers
             = mkConsensusTracers' protoInfo elidedFetchDecision blockForgeOutcomeExtractor forgeTracers tracer (TracingOn traceConf) bcCounters
         , nodeToClientTracers = nodeToClientTracers' (TracingOn traceConf) tracer
         , nodeToNodeTracers = nodeToNodeTracers' (TracingOn traceConf) tracer
         , ipSubscriptionTracer = tracerOnOff (traceIpSubscription traceConf) "IpSubscription" tracer
-        , dnsSubscriptionTracer=  tracerOnOff (traceDnsSubscription traceConf) "DnsSubscription" tracer
+        , dnsSubscriptionTracer = tracerOnOff (traceDnsSubscription traceConf) "DnsSubscription" tracer
         , dnsResolverTracer = tracerOnOff (traceDnsResolver traceConf) "DnsResolver" tracer
         , errorPolicyTracer = tracerOnOff (traceErrorPolicy traceConf) "ErrorPolicy" tracer
         , localErrorPolicyTracer = tracerOnOff (traceLocalErrorPolicy traceConf) "LocalErrorPolicy" tracer
@@ -437,16 +437,17 @@ mkConsensusTracers' protoInfo elidingFetchDecision measureBlockForging
     { Consensus.chainSyncClientTracer = tracerOnOff (traceChainSyncClient traceConf) "ChainSyncClient" tracer
     , Consensus.chainSyncServerHeaderTracer = tracerOnOff (traceChainSyncHeaderServer traceConf) "ChainSyncHeaderServer" tracer
     , Consensus.chainSyncServerBlockTracer = tracerOnOff (traceChainSyncHeaderServer traceConf) "ChainSyncBlockServer" tracer
-    , Consensus.blockFetchDecisionTracer = annotateSeverity $ teeTraceBlockFetchDecision t elidingFetchDecision $ appendName "BlockFetchDecision" tracer
+    , Consensus.blockFetchDecisionTracer = tracerOnOff' (traceBlockFetchDecisions traceConf) $
+        annotateSeverity $ teeTraceBlockFetchDecision t elidingFetchDecision $ appendName "BlockFetchDecision" tracer
     , Consensus.blockFetchClientTracer = tracerOnOff (traceBlockFetchClient traceConf) "BlockFetchClient" tracer
     , Consensus.blockFetchServerTracer = tracerOnOff (traceBlockFetchServer traceConf) "BlockFetchServer" tracer
-    , Consensus.forgeStateTracer = forgeStateTracer protoInfo traceConf tracer
+    , Consensus.forgeStateTracer = tracerOnOff' (traceForgeState traceConf) $ forgeStateTracer protoInfo traceConf tracer
     , Consensus.txInboundTracer = tracerOnOff (traceTxInbound traceConf) "TxInbound" tracer
     , Consensus.txOutboundTracer = tracerOnOff (traceTxOutbound traceConf) "TxOutbound" tracer
     , Consensus.localTxSubmissionServerTracer = tracerOnOff (traceLocalTxSubmissionServer traceConf) "LocalTxSubmissionServer" tracer
-    , Consensus.mempoolTracer = mempoolTracer traceConf tracer bChainCounters
-    , Consensus.forgeTracer
-      = Tracer $ \ev -> do
+    , Consensus.mempoolTracer = tracerOnOff' (traceMempool traceConf) $ mempoolTracer traceConf tracer bChainCounters
+    , Consensus.forgeTracer = tracerOnOff' (traceForge traceConf) $
+        Tracer $ \ev -> do
           traceWith (forgeTracer forgeTracers t bChainCounters tracer) ev
           traceWith ( measureBlockForging
                     $ toLogObject' tracingVerbosity
