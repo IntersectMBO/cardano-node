@@ -32,9 +32,28 @@ addressFromHex :: Text -> Either Binary.DecoderError Address
 addressFromHex txt =
   case Base16.decode (Text.encodeUtf8 txt) of
     (raw, _) ->
-      case Shelley.deserialiseAddr raw of
-        Just addr -> Right $ AddressShelley addr
-        Nothing ->  AddressByron <$> Binary.decodeFull' raw
+      tryDeserialise
+        raw
+        [ maybe (Left addrShelleyErr) (Right . AddressShelley) . Shelley.deserialiseAddr
+        , fmap AddressShelleyReward . Binary.decodeFull'
+        , fmap AddressByron . Binary.decodeFull'
+        ]
+  where
+    addrShelleyErr :: Binary.DecoderError
+    addrShelleyErr =
+      Binary.DecoderErrorCustom "AddressShelley" "Failed to decode"
+
+    tryDeserialise
+      :: ByteString
+      -> [ByteString -> Either Binary.DecoderError Address]
+      -> Either Binary.DecoderError Address
+    tryDeserialise raw (f:fs) =
+      case f raw of
+        Left err
+          | null fs -> Left err
+          | otherwise -> tryDeserialise raw fs
+        Right res -> Right res
+    tryDeserialise _ [] = panic "addressFromHex.tryDeserialise: Empty list"
 
 addressToHex :: Address -> Text
 addressToHex addr =
