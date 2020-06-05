@@ -73,7 +73,7 @@ import           Ouroboros.Network.Protocol.LocalStateQuery.Client
                     ClientStQuerying (..), LocalStateQueryClient(..), localStateQueryClientPeer)
 import           Ouroboros.Network.Protocol.LocalStateQuery.Type (AcquireFailure (..))
 
-import qualified Shelley.Spec.Ledger.Address as Ledger (Addr (..))
+import qualified Shelley.Spec.Ledger.Address as Ledger (Addr (..), RewardAcnt (..))
 import qualified Shelley.Spec.Ledger.Credential as Ledger (StakeReference (..))
 import qualified Shelley.Spec.Ledger.PParams as Ledger (PParams)
 import qualified Shelley.Spec.Ledger.UTxO as Ledger (UTxO(..))
@@ -354,10 +354,12 @@ getShelleyStakeCredentials = getStakeCreds
   where
     isStakeAddress :: Address -> Bool
     isStakeAddress (AddressShelley (Ledger.Addr _ _ (Ledger.StakeRefBase _))) = True
+    isStakeAddress (AddressShelleyReward (Ledger.RewardAcnt _ _)) = True
     isStakeAddress _ = False
 
     getStakeCred :: Address -> ShelleyCredentialStaking
     getStakeCred (AddressShelley (Ledger.Addr _ _ (Ledger.StakeRefBase cred))) = cred
+    getStakeCred (AddressShelleyReward (Ledger.RewardAcnt _ cred)) = cred
     getStakeCred _ =
       panic "Cardano.Api.LocalStateQuery.getShelleyStakeCredentials.getStakeCred: Impossible"
 
