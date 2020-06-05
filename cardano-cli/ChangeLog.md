@@ -1,7 +1,20 @@
 # Changelog for cardano-cli
 
+## 1.13.0 -- June 2020
 
-## cardano-cli 1.12.0
+- Fix the parsing of the pool margin in pool registration certs (#1063, #1110)
+- Change the Shelley cli command and flag names to be more consistent (#1068)
+- Add a command to query stake addresses, balance and delegation (#1053, #1129)
+- Add a command to get the stake pool id (#1069)
+- Add a command to create MIR certificates (#1075)
+- Improved human readable error messages for Shelley commands (#1021)
+- Improve error message for tx-in parser errors (#1066)
+- Use a better default value of eMax in generated example genesis files (#1145)
+- Regression tests covering the "pioneer" exercises 1 (#1073)
+- Prerequisites for Tx metadata support (but not full support yet) (#1080)
+- Updated Shelley from scratch documentation (#1062)
+
+## 1.12.0 -- May 2020
 
 - Reorganise the `shelley` subcommands (#840, #845)
 - New `shelley genesis create` command (#852, #864, #908, #926, #929)
