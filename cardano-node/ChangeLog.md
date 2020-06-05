@@ -1,5 +1,57 @@
 # Changelog for cardano-node
 
+## 1.13.0 -- June 2020
+
+### node changes
+
+- Fix override order for the node socket: CLI then config file (#1124, #1145)
+- New monitoring metric for KES key periods, including remaining (#1030, #1144)
+- Improved logging for mempool tx validation failures (#1035)
+- Log the epoch number as well as the slot number (#1095, #1108)
+- Fix logging of node info on startup (#1122)
+- Extended tracing for benchmarking analysis (#1091)
+- Fix error handling on genesis file parse errors (#1134)
+- Various live view fixes (#1076, #1126)
+
+### consensus changes
+- Hard fork related refactoring and improvements (#2139, #2150, #2151, #2152,
+  #2158, #2165, #2177, #2183, #2192, #2199)
+- Preparation for the Byron-to-Shelley hard-fork (#2163, #2145, #2182, #2185,
+  #2187, #2189)
+- Basic tests for the hard fork combinator (#2063, #2079, #2134, #2167, #2197)
+- Deterministic Praos chain selection using the leader VRF (#2195)
+- Fix Praos stability window calculations (#2201, #2202, #2219, #2220)
+- Add more local ledger state queries (#2161)
+- Mempool refactoring and fixes (#1498, #2006, #2153)
+- Evolve the KES keys eagerly rather than on-demand (#2160)
+- Extended documentation of the "ThreadNet" consensus tests (#2053)
+- Distinguish cases when a node should be slot leader but cannot forge (#2169,
+  #2171, #2172, #2176, #2193)
+- Improved tracing of block forging, and forge errors (#2168, #2170)
+
+### ledger changes (Byron)
+- None
+
+### ledger changes (Shelley)
+- Give delegators a whole epoch to react to pool parameter changes (#1494)
+- Fix off-by-one error in pool retirement epoch (spec and impl) (#1511)
+- Genesis delegate mapping now includes the VRF key hash (#1495, #1501)
+- MIR certs can now draw from the treasury or reserves (#1513)
+- MIR certs are witnessed by the genesis delegates not genesis keys (#1513)
+- Drop the use of the "set" tag from the CDDL (#1505)
+- Use the right binary format for stake addresses (#1491)
+- Include the network id in addresses (by value, not type) (#1487)
+- Document the network id and binary format in the specification doc (#1500)
+- Move serialisation property tests from ouroboros-consensus (#1497, #1506)
+
+### network changes
+- Increase the header size estimate to avoid ingress queue overruns (#2206)
+- Mux refactoring for on-demand and bi-directional mini-protocols (#1731, #2166)
+- Fix long thread delays on 32bit systems more widely (#2135, #2162)
+- New keep alive mini-protocol (#2175)
+- Refactoring of OuroborosApplication type (#2121)
+- Allow compilation with GHC 8.10.x (#2141)
+
 ## 1.12.0 -- May 2020
 
 ### node changes
