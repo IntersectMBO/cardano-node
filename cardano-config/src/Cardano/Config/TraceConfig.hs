@@ -30,6 +30,7 @@ data TraceSelection
 
   -- Per-trace toggles, alpha-sorted.
   , traceAcceptPolicy :: !Bool
+  , traceBlockchainTime :: !Bool
   , traceBlockFetchClient :: !Bool
   , traceBlockFetchDecisions :: !Bool
   , traceBlockFetchProtocol :: !Bool
@@ -67,6 +68,7 @@ traceConfigParser v =
     <$> v .:? "TracingVerbosity" .!= NormalVerbosity
     -- Per-trace toggles, alpha-sorted.
     <*> v .:? "TraceAcceptPolicy" .!= False
+    <*> v .:? "TraceBlockchainTime" .!= False
     <*> v .:? "TraceBlockFetchClient" .!= False
     <*> v .:? "TraceBlockFetchDecisions" .!= True
     <*> v .:? "TraceBlockFetchProtocol" .!= False

@@ -452,8 +452,8 @@ mkConsensusTracers' protoInfo elidingFetchDecision measureBlockForging
                     $ toLogObject' tracingVerbosity
                     $ appendName "ForgeTime" tracer ) ev
 
-    , Consensus.blockchainTimeTracer
-      = Tracer $ \ev ->
+    , Consensus.blockchainTimeTracer = tracerOnOff' (traceBlockchainTime traceConf) $
+      Tracer $ \ev ->
           traceWith (toLogObject tracer) (readableTraceBlockchainTimeEvent ev)
 
     }
@@ -906,6 +906,11 @@ tracerOnOff False _ _ = nullTracer
 tracerOnOff True name trcer = annotateSeverity
                                 $ toLogObject' MinimalVerbosity
                                 $ appendName name trcer
+
+tracerOnOff'
+  :: Bool -> Tracer IO a -> Tracer IO a
+tracerOnOff' False _ = nullTracer
+tracerOnOff' True tr = tr
 
 instance Show a => Show (WithSeverity a) where
   show (WithSeverity _sev a) = show a
