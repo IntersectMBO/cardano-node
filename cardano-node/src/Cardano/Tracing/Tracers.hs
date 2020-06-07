@@ -240,15 +240,16 @@ instance (StandardHash header, Eq peer) => ElidingTracer
 -- | This structure stores counters of blockchain-related events.
 --   These values will be traced periodically.
 data BlockchainCounters = BlockchainCounters
-  { bcTxsProcessedNum :: !Word64
-  , bcBlocksForgedNum :: !Word64
-  , bcNodeIsLeaderNum :: !Word64
-  , bcSlotsMissedNum  :: !Word64
-  , bcForksCreatedNum :: !Word64
+  { bcTxsProcessedNum        :: !Word64
+  , bcBlocksForgedNum        :: !Word64
+  , bcNodeCannotLeadNum      :: !Word64
+  , bcNodeIsLeaderNum        :: !Word64
+  , bcSlotsMissedNum         :: !Word64
+  , bcForksCreatedNum        :: !Word64
   }
 
 initialBlockchainCounters :: BlockchainCounters
-initialBlockchainCounters = BlockchainCounters 0 0 0 0 0
+initialBlockchainCounters = BlockchainCounters 0 0 0 0 0 0
 
 -- | Smart constructor of 'NodeTraces'.
 --
@@ -579,6 +580,13 @@ notifyBlockForging bcCounters tr = Tracer $ \case
                                                                    in (cnts { bcBlocksForgedNum = nc }, nc)
                                                          )
     traceCounter "blocksForgedNum" updatedBlocksForged tr
+  Consensus.TraceNodeCannotLead {} -> do
+    -- It means that node have tried to forge new block, but because of misconfiguration
+    -- (for example, invalid key) it's impossible.
+    updatedNodeCannotLead <- atomicModifyIORef' bcCounters $ \cnts ->
+      let nc = bcNodeCannotLeadNum cnts + 1
+      in (cnts { bcNodeCannotLeadNum = nc }, nc)
+    traceCounter "nodeCannotLead" updatedNodeCannotLead tr
   -- The rest of the constructors.
   _ -> pure ()
 
