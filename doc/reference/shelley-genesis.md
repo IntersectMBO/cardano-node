@@ -41,7 +41,7 @@ We'll put all files under an `example` directory.
 ## Making a genesis file manually
 
 To start a new blockchain we of course need a genesis file. A Shelley genesis
-file is JSON file.
+file is a JSON file.
 
 There is a manual method and a semi-automagic method, but we'll start by
 explaining the manual method since that makes it easier to explain what the
@@ -57,7 +57,7 @@ should be created offline, kept offline and only the verification keys shared.
 
 For a demo we're going to put all the keys together in once place
 
-To start with we will set up our template directory:
+To start with, we will set up our template directory:
 ```
 $ cardano-cli shelley genesis create --genesis-dir example/
 ```
