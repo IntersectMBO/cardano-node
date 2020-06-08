@@ -65,7 +65,7 @@ prop_buildShelleyStakeAddress =
         paymentSignKey = "payment-signing-key-file"
         allFiles = [stakeVerKey, stakeSignKey, paymentVerKey, paymentSignKey]
 
-    -- Generate stake verification key
+    -- Generate payment verification key
     execCardanoCLIParser
       allFiles
       "prop_buildShelleyStakeAddress.payment_keypair__gen"
@@ -73,7 +73,7 @@ prop_buildShelleyStakeAddress =
                                , "--verification-key-file", paymentVerKey
                                , "--signing-key-file", paymentSignKey
                                ]
-    -- Generate payment verification key
+    -- Generate stake verification key
     execCardanoCLIParser
       allFiles
       "prop_buildShelleyStakeAddress.stake_keypair_gen"

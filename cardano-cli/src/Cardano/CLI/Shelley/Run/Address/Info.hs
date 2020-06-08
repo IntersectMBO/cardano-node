@@ -51,8 +51,8 @@ runAddressInfo addrTxt = do
 runAddressInfoHex :: Text -> ExceptT ShelleyAddressInfoError IO ()
 runAddressInfoHex addrTxt = do
   case addressFromHex addrTxt of
-    Just addr -> describeAddr addr
-    Nothing -> left $ ShelleyAddressDescribeError "Failed Base16 decode. Impossible!"
+    Right addr -> describeAddr addr
+    Left err -> left . ShelleyAddressDescribeError $ textShow err
 
 runAddressInfoBase58 :: Text -> ExceptT ShelleyAddressInfoError IO ()
 runAddressInfoBase58 addrTxt = do
