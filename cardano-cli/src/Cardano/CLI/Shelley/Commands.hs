@@ -19,6 +19,7 @@ module Cardano.CLI.Shelley.Commands
   , GenesisDir (..)
   , TxInCount (..)
   , TxOutCount (..)
+  , ITNKeyFile (..)
   , OpCertCounterFile (..)
   , OutputFile (..)
   , ProtocolParamsFile (..)
@@ -83,6 +84,7 @@ data StakeAddressCmd
   | StakeKeyRegistrationCert VerificationKeyFile OutputFile
   | StakeKeyDelegationCert VerificationKeyFile VerificationKeyFile OutputFile
   | StakeKeyDeRegistrationCert VerificationKeyFile OutputFile
+  | StakeKeyITNConversion ITNKeyFile (Maybe OutputFile)
   deriving (Eq, Show)
 
 
@@ -232,6 +234,11 @@ newtype PoolId
 
 newtype GenesisDir
   = GenesisDir FilePath
+  deriving (Eq, Show)
+
+data ITNKeyFile
+  = ITNVerificationKeyFile VerificationKeyFile
+  | ITNSigningKeyFile SigningKeyFile
   deriving (Eq, Show)
 
 newtype OpCertCounterFile
