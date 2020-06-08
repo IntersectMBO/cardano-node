@@ -22,11 +22,11 @@ import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT)
 
 import           Cardano.Api
-                   (Address (..), LocalStateQueryError, Network(..), QueryFilter, getLocalTip,
-                    queryLocalLedgerState, queryPParamsFromLocalState,
-                    queryStakeDistributionFromLocalState, queryUTxOFromLocalState,
-                    renderLocalStateQueryError, queryDelegationsAndRewardAccountsFromLocalState,
-                    textShow)
+                   (Address (..), DelegationsAndRewards (..), LocalStateQueryError,
+                    Network(..), QueryFilter, getLocalTip, queryLocalLedgerState,
+                    queryPParamsFromLocalState, queryStakeDistributionFromLocalState,
+                    queryUTxOFromLocalState, renderLocalStateQueryError,
+                    queryDelegationsAndRewardsFromLocalState, textShow)
 
 import           Cardano.CLI.Environment (EnvSocketError, readEnvSocketPath, renderEnvSocketError)
 import           Cardano.CLI.Helpers (HelpersError, pPrintCBOR, renderHelpersError)
@@ -60,6 +60,7 @@ data ShelleyQueryCmdError
   | ShelleyQueryWriteFilteredUTxOsError !FilePath !IOException
   | ShelleyQueryWriteStakeDistributionError !FilePath !IOException
   | ShelleyQueryWriteLedgerStateError !FilePath !IOException
+  | ShelleyQueryWriteStakeAddressInfoError !FilePath !IOException
   | ShelleyHelpersError !HelpersError
   deriving Show
 
@@ -76,6 +77,8 @@ renderShelleyQueryCmdError err =
       "Error writing stake distribution at: " <> textShow fp <> " Error: " <> textShow ioException
     ShelleyQueryWriteLedgerStateError fp ioException ->
       "Error writing ledger state at: " <> textShow fp <> " Error: " <> textShow ioException
+    ShelleyQueryWriteStakeAddressInfoError fp ioException ->
+      "Error writing stake address info at: " <> textShow fp <> " Error: " <> textShow ioException
     ShelleyHelpersError helpersErr -> renderHelpersError helpersErr
 
 runQueryCmd :: QueryCmd -> ExceptT ShelleyQueryCmdError IO ()
@@ -87,8 +90,8 @@ runQueryCmd cmd =
       runQueryTip network mOutFile
     QueryStakeDistribution network mOutFile ->
       runQueryStakeDistribution network mOutFile
-    QueryStakeAddressInfo addr network ->
-      runQueryStakeAddressInfo addr network
+    QueryStakeAddressInfo addr network mOutFile ->
+      runQueryStakeAddressInfo addr network mOutFile
     QueryLedgerState network mOutFile ->
       runQueryLedgerState network mOutFile
     QueryUTxO qFilter network mOutFile ->
@@ -164,22 +167,33 @@ runQueryLedgerState network mOutFile = do
 runQueryStakeAddressInfo
   :: Address
   -> Network
+  -> Maybe OutputFile
   -> ExceptT ShelleyQueryCmdError IO ()
-runQueryStakeAddressInfo addr network = do
+runQueryStakeAddressInfo addr network mOutFile = do
     sockPath <- firstExceptT ShelleyQueryEnvVarSocketErr readEnvSocketPath
     let ptclClientInfo = pClientInfoCodecConfig . protocolClientInfo $ mkNodeClientProtocolTPraos
     tip <- liftIO $ withIOManager $ \iomgr ->
       getLocalTip iomgr ptclClientInfo network sockPath
-    (delegations, rwdAccts) <- firstExceptT NodeLocalStateQueryError $
-      queryDelegationsAndRewardAccountsFromLocalState
+    delegsAndRwds <- firstExceptT NodeLocalStateQueryError $
+      queryDelegationsAndRewardsFromLocalState
         network
         sockPath
         (Set.singleton addr)
         (getTipPoint tip)
-    liftIO $ Text.putStrLn $ "Delegations: " <> show delegations
-    liftIO $ Text.putStrLn $ "Reward accounts: " <> show rwdAccts
+    writeStakeAddressInfo mOutFile delegsAndRwds
 
 -- -------------------------------------------------------------------------------------------------
+
+writeStakeAddressInfo
+  :: Maybe OutputFile
+  -> DelegationsAndRewards
+  -> ExceptT ShelleyQueryCmdError IO ()
+writeStakeAddressInfo mOutFile dr@(DelegationsAndRewards _delegsAndRwds) =
+  case mOutFile of
+    Nothing -> liftIO $ LBS.putStrLn (encodePretty dr)
+    Just (OutputFile fpath) ->
+      handleIOExceptT (ShelleyQueryWriteStakeAddressInfoError fpath)
+        $ LBS.writeFile fpath (encodePretty dr)
 
 writeLedgerState :: Maybe OutputFile -> LedgerState TPraosStandardCrypto -> ExceptT ShelleyQueryCmdError IO ()
 writeLedgerState mOutFile lstate =

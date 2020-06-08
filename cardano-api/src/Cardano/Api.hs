@@ -62,12 +62,13 @@ module Cardano.Api
     -- * Node local state queries
   , LocalStateQueryError (..)
   , QueryFilter (..)
+  , DelegationsAndRewards (..)
   , renderLocalStateQueryError
   , queryUTxOFromLocalState
   , queryLocalLedgerState
   , queryPParamsFromLocalState
   , queryStakeDistributionFromLocalState
-  , queryDelegationsAndRewardAccountsFromLocalState
+  , queryDelegationsAndRewardsFromLocalState
 
     -- * Node local chain sync related
   , getLocalTip

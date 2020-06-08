@@ -1,4 +1,7 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -7,10 +10,11 @@
 module Cardano.Api.LocalStateQuery
   ( LocalStateQueryError (..)
   , QueryFilter (..)
+  , DelegationsAndRewards (..)
   , renderLocalStateQueryError
   , queryLocalLedgerState
   , queryUTxOFromLocalState
-  , queryDelegationsAndRewardAccountsFromLocalState
+  , queryDelegationsAndRewardsFromLocalState
   , Ledger.UTxO(..)
   , queryPParamsFromLocalState
   , Ledger.PParams
@@ -21,9 +25,11 @@ module Cardano.Api.LocalStateQuery
 import           Cardano.Prelude hiding (atomically, option, threadDelay)
 import           Prelude (id)
 
+import           Cardano.Api.Convert (addressToHex)
 import           Cardano.Api.Types
                    (Network, toNetworkMagic, Address (..), ByronAddress, ShelleyAddress,
-                    ShelleyCredentialStaking, ShelleyVerificationKeyHashStakePool)
+                    ShelleyCoin, ShelleyCredentialStaking, ShelleyRewardAccount,
+                    ShelleyVerificationKeyHashStakePool)
 import           Cardano.Api.TxSubmit.Types (textShow)
 import           Cardano.Binary (decodeFull)
 import           Cardano.BM.Data.Tracer (ToLogObject (..), nullTracer)
@@ -40,7 +46,12 @@ import           Control.Monad.Class.MonadSTM.Strict
 import           Control.Monad.Trans.Except.Extra (hoistEither, newExceptT)
 import           Control.Tracer (Tracer)
 
+import           Data.Aeson (ToJSON (..), (.=))
+import qualified Data.Aeson as Aeson
 import           Data.Functor.Contravariant (contramap)
+import           Data.HashMap.Strict (HashMap)
+import qualified Data.HashMap.Strict as HMS
+import qualified Data.Map as Map
 import           Data.Set (Set)
 import qualified Data.Set as Set
 import           Data.Text (Text)
@@ -74,10 +85,10 @@ import           Ouroboros.Network.Protocol.LocalStateQuery.Client
 import           Ouroboros.Network.Protocol.LocalStateQuery.Type (AcquireFailure (..))
 
 import qualified Shelley.Spec.Ledger.Address as Ledger (RewardAcnt (..))
-import qualified Shelley.Spec.Ledger.PParams as Ledger (PParams)
-import qualified Shelley.Spec.Ledger.UTxO as Ledger (UTxO(..))
 import qualified Shelley.Spec.Ledger.Delegation.Certificates as Ledger (PoolDistr(..))
 import qualified Shelley.Spec.Ledger.LedgerState as Ledger
+import qualified Shelley.Spec.Ledger.PParams as Ledger (PParams)
+import qualified Shelley.Spec.Ledger.UTxO as Ledger (UTxO(..))
 
 -- | An error that can occur while querying a node's local state.
 data LocalStateQueryError
@@ -90,12 +101,6 @@ data LocalStateQueryError
   -- provided.
   deriving (Eq, Show)
 
--- | UTxO query filtering options.
-data QueryFilter
-  = FilterByAddress !(Set Address)
-  | NoFilter
-  deriving (Eq, Show)
-
 renderLocalStateQueryError :: LocalStateQueryError -> Text
 renderLocalStateQueryError lsqErr =
   case lsqErr of
@@ -104,6 +109,36 @@ renderLocalStateQueryError lsqErr =
       "The attempted local state query does not support Byron addresses: " <> show byronAddrs
     NonStakeAddressesNotSupportedError addrs ->
       "The attempted local state query does not support non-stake addresses: " <> show addrs
+
+-- | UTxO query filtering options.
+data QueryFilter
+  = FilterByAddress !(Set Address)
+  | NoFilter
+  deriving (Eq, Show)
+
+-- | A mapping of Shelley reward accounts to both the stake pool that they
+-- delegate to and their reward account balance.
+newtype DelegationsAndRewards
+  = DelegationsAndRewards
+      (Map ShelleyRewardAccount (Maybe ShelleyVerificationKeyHashStakePool, ShelleyCoin))
+  deriving Generic
+  deriving newtype NoUnexpectedThunks
+
+instance ToJSON DelegationsAndRewards where
+  toJSON (DelegationsAndRewards delegsAndRwds) =
+      Aeson.Object $
+        Map.foldlWithKey' delegAndRwdToJson HMS.empty delegsAndRwds
+    where
+      delegAndRwdToJson
+        :: HashMap Text Aeson.Value
+        -> ShelleyRewardAccount
+        -> (Maybe ShelleyVerificationKeyHashStakePool, ShelleyCoin)
+        -> HashMap Text Aeson.Value
+      delegAndRwdToJson acc k (d, r) =
+        HMS.insert
+          (addressToHex $ AddressShelleyReward k)
+          (Aeson.object ["delegation" .= d, "rewardAccountBalance" .= r])
+          acc
 
 -- | Query the UTxO, filtered by a given set of addresses, from a Shelley node
 -- via the local state query protocol.
@@ -194,27 +229,29 @@ queryLocalLedgerState network socketPath point = do
 --
 -- This one is Shelley-specific because the query is Shelley-specific.
 --
-queryDelegationsAndRewardAccountsFromLocalState
+queryDelegationsAndRewardsFromLocalState
   :: Network
   -> SocketPath
   -> Set Address
   -> Point (ShelleyBlock TPraosStandardCrypto)
-  -> ExceptT
-      LocalStateQueryError
-      IO
-      ( Map ShelleyCredentialStaking ShelleyVerificationKeyHashStakePool
-      , Ledger.RewardAccounts TPraosStandardCrypto
-      )
-queryDelegationsAndRewardAccountsFromLocalState network socketPath addrs point = do
-  creds <- hoistEither $ getShelleyStakeCredentials addrs
-  let pointAndQuery = (point, GetFilteredDelegationsAndRewardAccounts creds)
-  newExceptT $ liftIO $
-    queryNodeLocalState
-      nullTracer
-      (pClientInfoCodecConfig . protocolClientInfo $ mkNodeClientProtocolTPraos)
-      network
-      socketPath
-      pointAndQuery
+  -> ExceptT LocalStateQueryError IO DelegationsAndRewards
+queryDelegationsAndRewardsFromLocalState network socketPath addrs point = do
+    creds <- hoistEither $ getShelleyStakeCredentials addrs
+    let pointAndQuery = (point, GetFilteredDelegationsAndRewardAccounts creds)
+    res <- newExceptT $ liftIO $
+      queryNodeLocalState
+        nullTracer
+        (pClientInfoCodecConfig . protocolClientInfo $ mkNodeClientProtocolTPraos)
+        network
+        socketPath
+        pointAndQuery
+    pure $ toDelegsAndRwds res
+  where
+    toDelegsAndRwds (delegs, rwdAcnts) =
+      DelegationsAndRewards $
+        Map.mapWithKey
+          (\k v -> (Map.lookup (Ledger.getRwdCred k) delegs, v))
+          rwdAcnts
 
 -- -------------------------------------------------------------------------------------------------
 

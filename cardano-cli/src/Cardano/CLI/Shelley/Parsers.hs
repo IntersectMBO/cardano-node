@@ -436,6 +436,7 @@ pQueryCmd =
       QueryStakeAddressInfo
         <$> pFilterByHexEncodedAddress
         <*> pNetwork
+        <*> pMaybeOutputFile
 
     pQueryVersion :: Parser QueryCmd
     pQueryVersion = QueryVersion <$> parseNodeAddress
