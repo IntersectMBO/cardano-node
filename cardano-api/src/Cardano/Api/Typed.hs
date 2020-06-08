@@ -3,6 +3,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE ConstraintKinds #-}
 
@@ -37,7 +38,7 @@ module Cardano.Api.Typed (
     VerificationKey(..),
     SigningKey(..),
     getVerificationKey,
---  verificationKeyHash,
+    verificationKeyHash,
     castVerificationKey,
     castSigningKey,
 
@@ -58,14 +59,14 @@ module Cardano.Api.Typed (
     -- * Payment addresses
     -- | Constructing and inspecting normal payment addresses
     Address,
-    NetworkId,
+    NetworkId(..),
     -- * Byron addresses
     makeByronAddress,
     ByronKey,
     -- * Shelley addresses
     makeShelleyAddress,
     PaymentCredential(..),
-    StakeCredentialReference(..),
+    StakeAddressReference(..),
     PaymentKey,
 
     -- * Stake addresses
@@ -73,6 +74,7 @@ module Cardano.Api.Typed (
     StakeAddress(..),
     StakeCredential(..),
     makeStakeAddress,
+    StakeKey,
 
     -- * Building transactions
     -- | Constructing and inspecting transactions
@@ -128,6 +130,7 @@ module Cardano.Api.Typed (
 
     -- * Serialisation
     -- | Support for serialising data in JSON, CBOR and text files.
+
     -- ** CBOR
     ToCBOR,
     FromCBOR,
@@ -151,6 +154,10 @@ module Cardano.Api.Typed (
     -- | Support for a envelope file format with text headers and a hex-encoded
     -- binary payload.
     HasTextEnvelope,
+    TextEnvelope,
+    TextEnvelopeType,
+    TextEnvelopeDescr,
+    TextEnvelopeError,
     serialiseToTextEnvelope,
     deserialiseFromTextEnvelope,
     readFileTextEnvelope,
@@ -161,8 +168,9 @@ module Cardano.Api.Typed (
     readFileTextEnvelopeAnyOf,
 
     -- * Errors
-    Error,
+    Error(..),
     throwErrorAsException,
+    FileError(..),
 
     -- * Node interaction
     -- | Operations that involve talking to a local Cardano node.
@@ -186,11 +194,17 @@ module Cardano.Api.Typed (
     VrfKey,
 
     -- ** Operational certificates
+    OperationalCertificate(..),
+    OperationalCertificateIssueCounter(..),
+    Shelley.KESPeriod(..),
+    OperationalCertIssueError(..),
+    issueOperationalCertificate,
 
     -- * Genesis file
     -- | Types and functions needed to inspect or create a genesis file.
     GenesisKey,
     GenesisDelegateKey,
+    GenesisUTxOKey,
 
     -- * Special transactions
     -- | There are various additional things that can be embedded in a
@@ -207,6 +221,7 @@ import           Data.Maybe
 import           Data.List as List
 --import           Data.Either
 import           Data.String (IsString(fromString))
+import           Numeric.Natural
 
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
@@ -228,6 +243,7 @@ import           Data.Aeson (ToJSON(..), FromJSON(..))
 --
 import qualified Cardano.Binary as CBOR
 import           Cardano.Binary (ToCBOR(..), FromCBOR(..))
+import           Shelley.Spec.Ledger.Serialization (CBORGroup(..))
 import           Cardano.Slotting.Slot (SlotNo)
 import           Ouroboros.Network.Magic (NetworkMagic(..))
 
@@ -235,7 +251,7 @@ import           Ouroboros.Network.Magic (NetworkMagic(..))
 -- Crypto API used by consensus and Shelley (and should be used by Byron)
 --
 import qualified Cardano.Crypto.Seed        as Crypto
---import qualified Cardano.Crypto.Hash.Class  as Crypto
+import qualified Cardano.Crypto.Hash.Class  as Crypto
 import qualified Cardano.Crypto.DSIGN.Class as Crypto
 import qualified Cardano.Crypto.KES.Class   as Crypto
 import qualified Cardano.Crypto.VRF.Class   as Crypto
@@ -243,6 +259,7 @@ import qualified Cardano.Crypto.VRF.Class   as Crypto
 --
 -- Byron imports
 --
+import qualified Cardano.Crypto.Hashing as Byron
 import qualified Cardano.Crypto.Signing as Byron
 import qualified Cardano.Chain.Common as Byron
 --import qualified Cardano.Chain.UTxO   as Byron
@@ -251,13 +268,17 @@ import qualified Cardano.Chain.Common as Byron
 -- Shelley imports
 --
 import qualified Ouroboros.Consensus.Shelley.Protocol.Crypto as Shelley
---import qualified Shelley.Spec.Ledger.BaseTypes               as Shelley
+import qualified Shelley.Spec.Ledger.Address                 as Shelley
+import qualified Shelley.Spec.Ledger.Credential              as Shelley
+import qualified Shelley.Spec.Ledger.BaseTypes               as Shelley
 --import qualified Shelley.Spec.Ledger.Coin                    as Shelley
 --import qualified Shelley.Spec.Ledger.Delegation.Certificates as Shelley
 import qualified Shelley.Spec.Ledger.Keys                    as Shelley
-import qualified Shelley.Spec.Ledger.TxData                  as Shelley
+--import qualified Shelley.Spec.Ledger.TxData                  as Shelley
 --import qualified Shelley.Spec.Ledger.Tx                      as Shelley
 import qualified Shelley.Spec.Ledger.PParams                 as Shelley
+import qualified Shelley.Spec.Ledger.OCert                   as Shelley
+import qualified Shelley.Spec.Ledger.Scripts                 as Shelley
 
 -- TODO: replace the above with
 --import qualified Cardano.Api.Byron   as Byron
@@ -314,7 +335,13 @@ class HasTypeProxy t where
 -- this API is concerned with the management of keys: generating and
 -- serialising.
 --
-class Key keyrole where
+class (Eq (VerificationKey keyrole),
+       Show (VerificationKey keyrole),
+       Show (SigningKey keyrole),
+       SerialiseAsRawBytes (Hash keyrole),
+       HasTextEnvelope (VerificationKey keyrole),
+       HasTextEnvelope (SigningKey keyrole))
+    => Key keyrole where
 
     -- | The type of cryptographic verification key, for each key role.
     data VerificationKey keyrole :: *
@@ -331,7 +358,7 @@ class Key keyrole where
     deterministicSigningKey :: AsType keyrole -> Crypto.Seed -> SigningKey keyrole
     deterministicSigningKeySeedSize :: AsType keyrole -> Word
 
---    verificationKeyHash :: VerificationKey keyrole -> Hash keyrole
+    verificationKeyHash :: VerificationKey keyrole -> Hash keyrole
 
 
 -- | Generate a 'SigningKey' using a seed from operating system entropy.
@@ -378,16 +405,16 @@ data Address era where
      -- | Shelley addresses are only valid in the Shelley era.
      --
      ShelleyAddress
-       :: PaymentCredential
-       -> StakeCredentialReference
-       -> NetworkId
+       :: Shelley.Network
+       -> Shelley.PaymentCredential ShelleyCrypto
+       -> Shelley.StakeReference    ShelleyCrypto
        -> Address Shelley
 
 data StakeAddress where
 
      StakeAddress
-       :: StakeCredential
-       -> NetworkId
+       :: Shelley.Network
+       -> Shelley.StakeCredential ShelleyCrypto
        -> StakeAddress
 
 data NetworkId
@@ -402,37 +429,129 @@ data StakeCredential
        = StakeCredentialByKey    (Hash StakeKey)
        | StakeCredentialByScript (Hash Script)
 
-data StakeCredentialReference
-       = StakeCredentialByValue   StakeCredential
-       | StakeCredentialByPointer StakeCredentialPointer
-       | NoStakeCredential
+data StakeAddressReference
+       = StakeAddressByValue   StakeCredential
+       | StakeAddressByPointer StakeAddressPointer
+       | NoStakeAddress
 
-type StakeCredentialPointer = Shelley.Ptr
+type StakeAddressPointer = Shelley.Ptr
+
+
+instance HasTypeProxy (Address Byron) where
+    data AsType (Address Byron) = AsByronAddress
+    proxyToAsType _ = AsByronAddress
+
+
+instance HasTypeProxy (Address Shelley) where
+    data AsType (Address Shelley) = AsShelleyAddress
+    proxyToAsType _ = AsShelleyAddress
+
+
+instance HasTypeProxy StakeAddress where
+    data AsType StakeAddress = AsStakeAddress
+    proxyToAsType _ = AsStakeAddress
+
+
+instance SerialiseAsRawBytes (Address Byron) where
+    serialiseToRawBytes (ByronAddress addr) = CBOR.serialize' addr
+
+    deserialiseFromRawBytes AsByronAddress bs =
+      case CBOR.decodeFull' bs of
+        Left  _    -> Nothing
+        Right addr -> Just (ByronAddress addr)
+
+
+instance SerialiseAsRawBytes (Address Shelley) where
+    serialiseToRawBytes (ByronAddress addr) =
+        Shelley.serialiseAddr (Shelley.AddrBootstrap addr)
+
+    serialiseToRawBytes (ShelleyAddress nw pc scr) =
+        Shelley.serialiseAddr (Shelley.Addr nw pc scr)
+
+    deserialiseFromRawBytes AsShelleyAddress bs =
+        case Shelley.deserialiseAddr bs of
+          Nothing -> Nothing
+          Just (Shelley.Addr nw pc scr)     -> Just (ShelleyAddress nw pc scr)
+          Just (Shelley.AddrBootstrap addr) -> Just (ByronAddress addr)
+
+
+instance SerialiseAsRawBytes StakeAddress where
+    serialiseToRawBytes (StakeAddress nw sc) =
+        serialiseRewardAcnt (Shelley.RewardAcnt nw sc)
+      where
+        serialiseRewardAcnt =
+          error "TODO: Use Shelley.serialiseRewardAcnt when it is available"
+
+    deserialiseFromRawBytes AsStakeAddress bs =
+        case deserialiseRewardAcnt bs of
+          Nothing -> Nothing
+          Just (Shelley.RewardAcnt nw sc) -> Just (StakeAddress nw sc)
+      where
+        deserialiseRewardAcnt =
+          error "TODO: Use Shelley.deserialiseRewardAcnt when it is available"
 
 
 makeByronAddress :: VerificationKey ByronKey
                  -> NetworkId
                  -> Address era
 makeByronAddress (ByronVerificationKey vk) nid =
-    ByronAddress (Byron.makeVerKeyAddress (byronNetworkMagic nid) vk)
-  where
-    byronNetworkMagic :: NetworkId -> Byron.NetworkMagic
-    byronNetworkMagic Mainnet                     = Byron.NetworkMainOrStage
-    byronNetworkMagic (Testnet (NetworkMagic nm)) = Byron.NetworkTestnet nm
+    ByronAddress $
+      Byron.makeVerKeyAddress
+        (toByronNetworkMagic nid)
+        vk
 
 
-makeShelleyAddress :: PaymentCredential
-                   -> StakeCredentialReference
-                   -> NetworkId
+makeShelleyAddress :: NetworkId
+                   -> PaymentCredential
+                   -> StakeAddressReference
                    -> Address Shelley
-makeShelleyAddress = ShelleyAddress
+makeShelleyAddress nw pc scr =
+    ShelleyAddress
+      (toShelleyNetwork nw)
+      (toShelleyPaymentCredential pc)
+      (toShelleyStakeReference scr)
 
 
-makeStakeAddress :: StakeCredential
-                 -> NetworkId
+makeStakeAddress :: NetworkId
+                 -> StakeCredential
                  -> StakeAddress
-makeStakeAddress = StakeAddress
+makeStakeAddress nw sc =
+    StakeAddress
+      (toShelleyNetwork nw)
+      (toShelleyStakeCredential sc)
 
+
+toByronNetworkMagic :: NetworkId -> Byron.NetworkMagic
+toByronNetworkMagic Mainnet                     = Byron.NetworkMainOrStage
+toByronNetworkMagic (Testnet (NetworkMagic nm)) = Byron.NetworkTestnet nm
+
+toShelleyNetwork :: NetworkId -> Shelley.Network
+toShelleyNetwork  Mainnet    = Shelley.Mainnet
+toShelleyNetwork (Testnet _) = Shelley.Testnet
+
+
+toShelleyPaymentCredential :: PaymentCredential
+                           -> Shelley.PaymentCredential ShelleyCrypto
+toShelleyPaymentCredential (PaymentCredentialByKey (PaymentKeyHash kh)) =
+    Shelley.KeyHashObj kh
+toShelleyPaymentCredential (PaymentCredentialByScript (ScriptHash sh)) =
+    Shelley.ScriptHashObj sh
+
+toShelleyStakeCredential :: StakeCredential
+                         -> Shelley.StakeCredential ShelleyCrypto
+toShelleyStakeCredential (StakeCredentialByKey (StakeKeyHash kh)) =
+    Shelley.KeyHashObj kh
+toShelleyStakeCredential (StakeCredentialByScript (ScriptHash kh)) =
+    Shelley.ScriptHashObj kh
+
+toShelleyStakeReference :: StakeAddressReference
+                        -> Shelley.StakeReference ShelleyCrypto
+toShelleyStakeReference (StakeAddressByValue stakecred) =
+    Shelley.StakeRefBase (toShelleyStakeCredential stakecred)
+toShelleyStakeReference (StakeAddressByPointer ptr) =
+    Shelley.StakeRefPtr ptr
+toShelleyStakeReference  NoStakeAddress =
+    Shelley.StakeRefNull
 
 
 -- ----------------------------------------------------------------------------
@@ -477,7 +596,7 @@ data TxOptional =
 
 data TxMetadata
 data Certificate
-type ProtocolUpdates = Shelley.ProposedPPUpdates Shelley.TPraosStandardCrypto
+type ProtocolUpdates = Shelley.ProposedPPUpdates ShelleyCrypto
 
 makeShelleyTransaction :: TxOptional
                        -> SlotNo
@@ -562,6 +681,104 @@ shelleyScriptWitness = undefined
 
 data Script
 
+newtype instance Hash Script = ScriptHash (Shelley.ScriptHash ShelleyCrypto)
+
+-- ----------------------------------------------------------------------------
+-- Operational certificates
+--
+
+data OperationalCertificate =
+     OperationalCertificate
+       !(Shelley.OCert ShelleyCrypto)
+       !(VerificationKey StakePoolKey)
+  deriving (Eq, Show)
+
+data OperationalCertificateIssueCounter =
+     OperationalCertificateIssueCounter
+       !Natural
+       !(VerificationKey StakePoolKey) -- For consistency checking
+  deriving (Eq, Show)
+
+instance ToCBOR OperationalCertificate where
+    toCBOR (OperationalCertificate ocert vkey) =
+      toCBOR (CBORGroup ocert, vkey)
+
+instance FromCBOR OperationalCertificate where
+    fromCBOR = do
+      (CBORGroup ocert, vkey) <- fromCBOR
+      return (OperationalCertificate ocert vkey)
+
+instance ToCBOR OperationalCertificateIssueCounter where
+    toCBOR (OperationalCertificateIssueCounter counter vkey) =
+      toCBOR (counter, vkey)
+
+instance FromCBOR OperationalCertificateIssueCounter where
+    fromCBOR = do
+      (counter, vkey) <- fromCBOR
+      return (OperationalCertificateIssueCounter counter vkey)
+
+instance HasTypeProxy OperationalCertificate where
+    data AsType OperationalCertificate = AsOperationalCertificate
+    proxyToAsType _ = AsOperationalCertificate
+
+instance HasTypeProxy OperationalCertificateIssueCounter where
+    data AsType OperationalCertificateIssueCounter = AsOperationalCertificateIssueCounter
+    proxyToAsType _ = AsOperationalCertificateIssueCounter
+
+instance HasTextEnvelope OperationalCertificate where
+    textEnvelopeType _ = "Node operational certificate"
+
+instance HasTextEnvelope OperationalCertificateIssueCounter where
+    textEnvelopeType _ = "Node operational certificate issue counter"
+
+data OperationalCertIssueError =
+       -- | The stake pool verification key expected for the
+       -- 'OperationalCertificateIssueCounter' does not match the signing key
+       -- supplied for signing.
+       --
+       -- Order: pool vkey expected, pool skey supplied
+       --
+       OperationalCertKeyMismatch (VerificationKey StakePoolKey)
+                                  (VerificationKey StakePoolKey)
+  deriving Show
+
+instance Error OperationalCertIssueError where
+    displayError (OperationalCertKeyMismatch _counterKey _signingKey) =
+      "Key mismatch: the signing key does not match the one that goes with the counter"
+      --TODO: include key ids
+
+issueOperationalCertificate :: VerificationKey KesKey
+                            -> SigningKey StakePoolKey
+                            -> Shelley.KESPeriod
+                            -> OperationalCertificateIssueCounter
+                            -> Either OperationalCertIssueError
+                                      (OperationalCertificate,
+                                      OperationalCertificateIssueCounter)
+issueOperationalCertificate (KesVerificationKey kesVKey)
+                            (StakePoolSigningKey poolSKey)
+                            kesPeriod
+                            (OperationalCertificateIssueCounter counter poolVKey)
+  | poolVKey /= poolVKey'
+  = Left (OperationalCertKeyMismatch poolVKey poolVKey')
+
+  | otherwise
+  = Right (OperationalCertificate ocert poolVKey,
+           OperationalCertificateIssueCounter (succ counter) poolVKey)
+  where
+    poolVKey' = getVerificationKey (StakePoolSigningKey poolSKey)
+
+    ocert     :: Shelley.OCert ShelleyCrypto
+    ocert     = Shelley.OCert kesVKey counter kesPeriod signature
+
+    signature :: Crypto.SignedDSIGN
+                   (Shelley.DSIGN ShelleyCrypto)
+                   (Shelley.VerKeyKES ShelleyCrypto,
+                    Natural,
+                    Shelley.KESPeriod)
+    signature = Crypto.signedDSIGN ()
+                  (kesVKey, counter, kesPeriod)
+                  poolSKey
+
 
 -- ----------------------------------------------------------------------------
 -- CBOR and JSON Serialisation
@@ -586,7 +803,7 @@ deserialiseFromJSON :: FromJSON a
 deserialiseFromJSON _proxy = either (Left . JsonDecodeError) Right
                            . Aeson.eitherDecodeStrict'
 
-class SerialiseAsRawBytes a where
+class HasTypeProxy a => SerialiseAsRawBytes a where
 
   serialiseToRawBytes :: a -> ByteString
 
@@ -622,7 +839,16 @@ type TextEnvelopeError = TextView.TextViewError
 
 data FileError e = FileError   FilePath e
                  | FileIOError FilePath IOException
+  deriving Show
 
+instance Error e => Error (FileError e) where
+  displayError (FileIOError path ioe) =
+    path ++ ": " ++ displayException ioe
+  displayError (FileError path e) =
+    path ++ ": " ++ displayError e
+
+instance Error TextView.TextViewError where
+  displayError _ = "TODO"
 
 serialiseToTextEnvelope :: forall a. HasTextEnvelope a
                         => Maybe TextEnvelopeDescr -> a -> TextEnvelope
@@ -710,6 +936,8 @@ class Show e => Error e where
 
     displayError :: e -> String
 
+instance Error () where
+    displayError () = ""
 
 -- | The preferred approach is to use 'Except' or 'ExceptT', but you can if
 -- necessary use IO exceptions.
@@ -728,6 +956,13 @@ instance Exception ErrorAsException where
 
 
 -- ----------------------------------------------------------------------------
+-- Shelley type aliases
+--
+
+type ShelleyCrypto = Shelley.TPraosStandardCrypto
+
+
+-- ----------------------------------------------------------------------------
 -- Key instances
 --
 
@@ -739,6 +974,10 @@ instance HasTypeProxy a => HasTypeProxy (SigningKey a) where
     data AsType (SigningKey a) = AsSigningKey (AsType a)
     proxyToAsType _ = AsSigningKey (proxyToAsType (Proxy :: Proxy a))
 
+instance HasTypeProxy a => HasTypeProxy (Hash a) where
+    data AsType (Hash a) = AsHash (AsType a)
+    proxyToAsType _ = AsHash (proxyToAsType (Proxy :: Proxy a))
+
 -- | Map the various Shelley key role types into corresponding 'Shelley.KeyRole'
 -- types.
 --
@@ -746,6 +985,7 @@ type family ShelleyKeyRole (keyrole :: *) :: Shelley.KeyRole
 
 type instance ShelleyKeyRole PaymentKey         = Shelley.Payment
 type instance ShelleyKeyRole GenesisKey         = Shelley.Genesis
+type instance ShelleyKeyRole GenesisUTxOKey     = Shelley.Payment
 type instance ShelleyKeyRole GenesisDelegateKey = Shelley.GenesisDelegate
 type instance ShelleyKeyRole StakeKey           = Shelley.Staking
 type instance ShelleyKeyRole StakePoolKey       = Shelley.StakePool
@@ -775,10 +1015,12 @@ instance Key ByronKey where
 
     newtype VerificationKey ByronKey =
            ByronVerificationKey Byron.VerificationKey
+      deriving stock (Eq, Show)
       deriving newtype (ToCBOR, FromCBOR)
 
     newtype SigningKey ByronKey =
            ByronSigningKey Byron.SigningKey
+      deriving stock (Show)
       deriving newtype (ToCBOR, FromCBOR)
 
     deterministicSigningKey :: AsType ByronKey -> Crypto.Seed -> SigningKey ByronKey
@@ -792,9 +1034,18 @@ instance Key ByronKey where
     getVerificationKey (ByronSigningKey sk) =
       ByronVerificationKey (Byron.toVerification sk)
 
---    verificationKeyHash :: VerificationKey keyrole -> Hash keyrole
+    verificationKeyHash :: VerificationKey ByronKey -> Hash ByronKey
+    verificationKeyHash (ByronVerificationKey vkey) =
+      ByronKeyHash (Byron.hashKey vkey)
 
---data instance Hash ByronKey = ByronKeyHash
+newtype instance Hash ByronKey = ByronKeyHash Byron.KeyHash
+
+instance SerialiseAsRawBytes (Hash ByronKey) where
+    serialiseToRawBytes (ByronKeyHash (Byron.KeyHash vkh)) =
+      Byron.abstractHashToBytes vkh
+
+    deserialiseFromRawBytes (AsHash AsByronKey) bs =
+      ByronKeyHash . Byron.KeyHash <$> Byron.abstractHashFromBytes bs
 
 instance HasTextEnvelope (VerificationKey ByronKey) where
     textEnvelopeType _ = "PaymentVerificationKeyByron"
@@ -822,11 +1073,13 @@ instance HasTypeProxy PaymentKey where
 instance Key PaymentKey where
 
     newtype VerificationKey PaymentKey =
-        PaymentVerificationKey (Shelley.VKey Shelley.Payment Shelley.TPraosStandardCrypto)
+        PaymentVerificationKey (Shelley.VKey Shelley.Payment ShelleyCrypto)
+      deriving stock (Eq, Show)
       deriving newtype (ToCBOR, FromCBOR)
 
     newtype SigningKey PaymentKey =
-        PaymentSigningKey (Shelley.SignKeyDSIGN Shelley.TPraosStandardCrypto)
+        PaymentSigningKey (Shelley.SignKeyDSIGN ShelleyCrypto)
+      deriving stock (Show)
       deriving newtype (ToCBOR, FromCBOR)
 
     deterministicSigningKey :: AsType PaymentKey -> Crypto.Seed -> SigningKey PaymentKey
@@ -837,19 +1090,26 @@ instance Key PaymentKey where
     deterministicSigningKeySeedSize AsPaymentKey =
         Crypto.seedSizeDSIGN proxy
       where
-        proxy :: Proxy (Shelley.DSIGN Shelley.TPraosStandardCrypto)
+        proxy :: Proxy (Shelley.DSIGN ShelleyCrypto)
         proxy = Proxy
 
     getVerificationKey :: SigningKey PaymentKey -> VerificationKey PaymentKey
     getVerificationKey (PaymentSigningKey sk) =
         PaymentVerificationKey (Shelley.VKey (Crypto.deriveVerKeyDSIGN sk))
 
---    verificationKeyHash :: VerificationKey PaymentKey -> Hash PaymentKey
---    verificationKeyHash (PaymentVerificationKey vk) =
---        PaymentKeyHash (Shelley.hashKey vk)
+    verificationKeyHash :: VerificationKey PaymentKey -> Hash PaymentKey
+    verificationKeyHash (PaymentVerificationKey vkey) =
+        PaymentKeyHash (Shelley.hashKey vkey)
 
---newtype instance Hash PaymentKey =
---    PaymentKeyHash (Shelley.KeyHash Shelley.Payment Shelley.TPraosStandardCrypto)
+newtype instance Hash PaymentKey =
+    PaymentKeyHash (Shelley.KeyHash Shelley.Payment ShelleyCrypto)
+
+instance SerialiseAsRawBytes (Hash PaymentKey) where
+    serialiseToRawBytes (PaymentKeyHash (Shelley.KeyHash vkh)) =
+      Crypto.getHash vkh
+
+    deserialiseFromRawBytes (AsHash AsPaymentKey) bs =
+      PaymentKeyHash . Shelley.KeyHash <$> Crypto.hashFromBytes bs
 
 instance HasTextEnvelope (VerificationKey PaymentKey) where
     textEnvelopeType _ = "PaymentVerificationKeyShelley"
@@ -857,7 +1117,7 @@ instance HasTextEnvelope (VerificationKey PaymentKey) where
 {-
                       <> fromString (Crypto.algorithmNameDSIGN proxy)
       where
-        proxy :: Proxy (Shelley.DSIGN Shelley.TPraosStandardCrypto)
+        proxy :: Proxy (Shelley.DSIGN ShelleyCrypto)
         proxy = Proxy
 -}
 
@@ -880,11 +1140,13 @@ instance HasTypeProxy StakeKey where
 instance Key StakeKey where
 
     newtype VerificationKey StakeKey =
-        StakeVerificationKey (Shelley.VKey Shelley.Staking Shelley.TPraosStandardCrypto)
+        StakeVerificationKey (Shelley.VKey Shelley.Staking ShelleyCrypto)
+      deriving stock (Eq, Show)
       deriving newtype (ToCBOR, FromCBOR)
 
     newtype SigningKey StakeKey =
-        StakeSigningKey (Shelley.SignKeyDSIGN Shelley.TPraosStandardCrypto)
+        StakeSigningKey (Shelley.SignKeyDSIGN ShelleyCrypto)
+      deriving stock (Show)
       deriving newtype (ToCBOR, FromCBOR)
 
     deterministicSigningKey :: AsType StakeKey -> Crypto.Seed -> SigningKey StakeKey
@@ -895,12 +1157,26 @@ instance Key StakeKey where
     deterministicSigningKeySeedSize AsStakeKey =
         Crypto.seedSizeDSIGN proxy
       where
-        proxy :: Proxy (Shelley.DSIGN Shelley.TPraosStandardCrypto)
+        proxy :: Proxy (Shelley.DSIGN ShelleyCrypto)
         proxy = Proxy
 
     getVerificationKey :: SigningKey StakeKey -> VerificationKey StakeKey
     getVerificationKey (StakeSigningKey sk) =
         StakeVerificationKey (Shelley.VKey (Crypto.deriveVerKeyDSIGN sk))
+
+    verificationKeyHash :: VerificationKey StakeKey -> Hash StakeKey
+    verificationKeyHash (StakeVerificationKey vkey) =
+        StakeKeyHash (Shelley.hashKey vkey)
+
+newtype instance Hash StakeKey =
+    StakeKeyHash (Shelley.KeyHash Shelley.Staking ShelleyCrypto)
+
+instance SerialiseAsRawBytes (Hash StakeKey) where
+    serialiseToRawBytes (StakeKeyHash (Shelley.KeyHash vkh)) =
+      Crypto.getHash vkh
+
+    deserialiseFromRawBytes (AsHash AsStakeKey) bs =
+      StakeKeyHash . Shelley.KeyHash <$> Crypto.hashFromBytes bs
 
 instance HasTextEnvelope (VerificationKey StakeKey) where
     textEnvelopeType _ = "StakingVerificationKeyShelley"
@@ -925,11 +1201,13 @@ instance HasTypeProxy GenesisKey where
 instance Key GenesisKey where
 
     newtype VerificationKey GenesisKey =
-        GenesisVerificationKey (Shelley.VKey Shelley.Genesis Shelley.TPraosStandardCrypto)
+        GenesisVerificationKey (Shelley.VKey Shelley.Genesis ShelleyCrypto)
+      deriving stock (Eq, Show)
       deriving newtype (ToCBOR, FromCBOR)
 
     newtype SigningKey GenesisKey =
-        GenesisSigningKey (Shelley.SignKeyDSIGN Shelley.TPraosStandardCrypto)
+        GenesisSigningKey (Shelley.SignKeyDSIGN ShelleyCrypto)
+      deriving stock (Show)
       deriving newtype (ToCBOR, FromCBOR)
 
     deterministicSigningKey :: AsType GenesisKey -> Crypto.Seed -> SigningKey GenesisKey
@@ -940,12 +1218,26 @@ instance Key GenesisKey where
     deterministicSigningKeySeedSize AsGenesisKey =
         Crypto.seedSizeDSIGN proxy
       where
-        proxy :: Proxy (Shelley.DSIGN Shelley.TPraosStandardCrypto)
+        proxy :: Proxy (Shelley.DSIGN ShelleyCrypto)
         proxy = Proxy
 
     getVerificationKey :: SigningKey GenesisKey -> VerificationKey GenesisKey
     getVerificationKey (GenesisSigningKey sk) =
         GenesisVerificationKey (Shelley.VKey (Crypto.deriveVerKeyDSIGN sk))
+
+    verificationKeyHash :: VerificationKey GenesisKey -> Hash GenesisKey
+    verificationKeyHash (GenesisVerificationKey vkey) =
+        GenesisKeyHash (Shelley.hashKey vkey)
+
+newtype instance Hash GenesisKey =
+    GenesisKeyHash (Shelley.KeyHash Shelley.Genesis ShelleyCrypto)
+
+instance SerialiseAsRawBytes (Hash GenesisKey) where
+    serialiseToRawBytes (GenesisKeyHash (Shelley.KeyHash vkh)) =
+      Crypto.getHash vkh
+
+    deserialiseFromRawBytes (AsHash AsGenesisKey) bs =
+      GenesisKeyHash . Shelley.KeyHash <$> Crypto.hashFromBytes bs
 
 instance HasTextEnvelope (VerificationKey GenesisKey) where
     textEnvelopeType _ = "Genesis verification key"
@@ -970,11 +1262,13 @@ instance HasTypeProxy GenesisDelegateKey where
 instance Key GenesisDelegateKey where
 
     newtype VerificationKey GenesisDelegateKey =
-        GenesisDelegateVerificationKey (Shelley.VKey Shelley.GenesisDelegate Shelley.TPraosStandardCrypto)
+        GenesisDelegateVerificationKey (Shelley.VKey Shelley.GenesisDelegate ShelleyCrypto)
+      deriving stock (Eq, Show)
       deriving newtype (ToCBOR, FromCBOR)
 
     newtype SigningKey GenesisDelegateKey =
-        GenesisDelegateSigningKey (Shelley.SignKeyDSIGN Shelley.TPraosStandardCrypto)
+        GenesisDelegateSigningKey (Shelley.SignKeyDSIGN ShelleyCrypto)
+      deriving stock (Show)
       deriving newtype (ToCBOR, FromCBOR)
 
     deterministicSigningKey :: AsType GenesisDelegateKey -> Crypto.Seed -> SigningKey GenesisDelegateKey
@@ -985,12 +1279,26 @@ instance Key GenesisDelegateKey where
     deterministicSigningKeySeedSize AsGenesisDelegateKey =
         Crypto.seedSizeDSIGN proxy
       where
-        proxy :: Proxy (Shelley.DSIGN Shelley.TPraosStandardCrypto)
+        proxy :: Proxy (Shelley.DSIGN ShelleyCrypto)
         proxy = Proxy
 
     getVerificationKey :: SigningKey GenesisDelegateKey -> VerificationKey GenesisDelegateKey
     getVerificationKey (GenesisDelegateSigningKey sk) =
         GenesisDelegateVerificationKey (Shelley.VKey (Crypto.deriveVerKeyDSIGN sk))
+
+    verificationKeyHash :: VerificationKey GenesisDelegateKey -> Hash GenesisDelegateKey
+    verificationKeyHash (GenesisDelegateVerificationKey vkey) =
+        GenesisDelegateKeyHash (Shelley.hashKey vkey)
+
+newtype instance Hash GenesisDelegateKey =
+    GenesisDelegateKeyHash (Shelley.KeyHash Shelley.GenesisDelegate ShelleyCrypto)
+
+instance SerialiseAsRawBytes (Hash GenesisDelegateKey) where
+    serialiseToRawBytes (GenesisDelegateKeyHash (Shelley.KeyHash vkh)) =
+      Crypto.getHash vkh
+
+    deserialiseFromRawBytes (AsHash AsGenesisDelegateKey) bs =
+      GenesisDelegateKeyHash . Shelley.KeyHash <$> Crypto.hashFromBytes bs
 
 instance HasTextEnvelope (VerificationKey GenesisDelegateKey) where
     textEnvelopeType _ = "Node operator verification key"
@@ -998,6 +1306,69 @@ instance HasTextEnvelope (VerificationKey GenesisDelegateKey) where
 
 instance HasTextEnvelope (SigningKey GenesisDelegateKey) where
     textEnvelopeType _ = "Node operator signing key"
+    -- TODO: include the actual crypto algorithm name, to catch changes
+    -- TODO: use a different type from the stake pool key, since some operations
+    -- need a genesis key specifically
+
+
+--
+-- Genesis UTxO keys
+--
+
+data GenesisUTxOKey
+
+instance HasTypeProxy GenesisUTxOKey where
+    data AsType GenesisUTxOKey = AsGenesisUTxOKey
+    proxyToAsType _ = AsGenesisUTxOKey
+
+
+instance Key GenesisUTxOKey where
+
+    newtype VerificationKey GenesisUTxOKey =
+        GenesisUTxOVerificationKey (Shelley.VKey Shelley.Payment ShelleyCrypto)
+      deriving stock (Eq, Show)
+      deriving newtype (ToCBOR, FromCBOR)
+
+    newtype SigningKey GenesisUTxOKey =
+        GenesisUTxOSigningKey (Shelley.SignKeyDSIGN ShelleyCrypto)
+      deriving stock (Show)
+      deriving newtype (ToCBOR, FromCBOR)
+
+    deterministicSigningKey :: AsType GenesisUTxOKey -> Crypto.Seed -> SigningKey GenesisUTxOKey
+    deterministicSigningKey AsGenesisUTxOKey seed =
+        GenesisUTxOSigningKey (Crypto.genKeyDSIGN seed)
+
+    deterministicSigningKeySeedSize :: AsType GenesisUTxOKey -> Word
+    deterministicSigningKeySeedSize AsGenesisUTxOKey =
+        Crypto.seedSizeDSIGN proxy
+      where
+        proxy :: Proxy (Shelley.DSIGN ShelleyCrypto)
+        proxy = Proxy
+
+    getVerificationKey :: SigningKey GenesisUTxOKey -> VerificationKey GenesisUTxOKey
+    getVerificationKey (GenesisUTxOSigningKey sk) =
+        GenesisUTxOVerificationKey (Shelley.VKey (Crypto.deriveVerKeyDSIGN sk))
+
+    verificationKeyHash :: VerificationKey GenesisUTxOKey -> Hash GenesisUTxOKey
+    verificationKeyHash (GenesisUTxOVerificationKey vkey) =
+        GenesisUTxOKeyHash (Shelley.hashKey vkey)
+
+newtype instance Hash GenesisUTxOKey =
+    GenesisUTxOKeyHash (Shelley.KeyHash Shelley.Payment ShelleyCrypto)
+
+instance SerialiseAsRawBytes (Hash GenesisUTxOKey) where
+    serialiseToRawBytes (GenesisUTxOKeyHash (Shelley.KeyHash vkh)) =
+      Crypto.getHash vkh
+
+    deserialiseFromRawBytes (AsHash AsGenesisUTxOKey) bs =
+      GenesisUTxOKeyHash . Shelley.KeyHash <$> Crypto.hashFromBytes bs
+
+instance HasTextEnvelope (VerificationKey GenesisUTxOKey) where
+    textEnvelopeType _ = "Genesis UTxO verification key"
+    -- TODO: include the actual crypto algorithm name, to catch changes
+
+instance HasTextEnvelope (SigningKey GenesisUTxOKey) where
+    textEnvelopeType _ = "Genesis UTxO signing key"
     -- TODO: include the actual crypto algorithm name, to catch changes
     -- TODO: use a different type from the stake pool key, since some operations
     -- need a genesis key specifically
@@ -1016,11 +1387,13 @@ instance HasTypeProxy StakePoolKey where
 instance Key StakePoolKey where
 
     newtype VerificationKey StakePoolKey =
-        StakePoolVerificationKey (Shelley.VKey Shelley.StakePool Shelley.TPraosStandardCrypto)
+        StakePoolVerificationKey (Shelley.VKey Shelley.StakePool ShelleyCrypto)
+      deriving stock (Eq, Show)
       deriving newtype (ToCBOR, FromCBOR)
 
     newtype SigningKey StakePoolKey =
-        StakePoolSigningKey (Shelley.SignKeyDSIGN Shelley.TPraosStandardCrypto)
+        StakePoolSigningKey (Shelley.SignKeyDSIGN ShelleyCrypto)
+      deriving stock (Show)
       deriving newtype (ToCBOR, FromCBOR)
 
     deterministicSigningKey :: AsType StakePoolKey -> Crypto.Seed -> SigningKey StakePoolKey
@@ -1031,12 +1404,26 @@ instance Key StakePoolKey where
     deterministicSigningKeySeedSize AsStakePoolKey =
         Crypto.seedSizeDSIGN proxy
       where
-        proxy :: Proxy (Shelley.DSIGN Shelley.TPraosStandardCrypto)
+        proxy :: Proxy (Shelley.DSIGN ShelleyCrypto)
         proxy = Proxy
 
     getVerificationKey :: SigningKey StakePoolKey -> VerificationKey StakePoolKey
     getVerificationKey (StakePoolSigningKey sk) =
         StakePoolVerificationKey (Shelley.VKey (Crypto.deriveVerKeyDSIGN sk))
+
+    verificationKeyHash :: VerificationKey StakePoolKey -> Hash StakePoolKey
+    verificationKeyHash (StakePoolVerificationKey vkey) =
+        StakePoolKeyHash (Shelley.hashKey vkey)
+
+newtype instance Hash StakePoolKey =
+    StakePoolKeyHash (Shelley.KeyHash Shelley.StakePool ShelleyCrypto)
+
+instance SerialiseAsRawBytes (Hash StakePoolKey) where
+    serialiseToRawBytes (StakePoolKeyHash (Shelley.KeyHash vkh)) =
+      Crypto.getHash vkh
+
+    deserialiseFromRawBytes (AsHash AsStakePoolKey) bs =
+      StakePoolKeyHash . Shelley.KeyHash <$> Crypto.hashFromBytes bs
 
 instance HasTextEnvelope (VerificationKey StakePoolKey) where
     textEnvelopeType _ = "Node operator verification key"
@@ -1060,11 +1447,13 @@ instance HasTypeProxy KesKey where
 instance Key KesKey where
 
     newtype VerificationKey KesKey =
-        KesVerificationKey (Shelley.VerKeyKES Shelley.TPraosStandardCrypto)
+        KesVerificationKey (Shelley.VerKeyKES ShelleyCrypto)
+      deriving stock (Eq, Show)
       deriving newtype (ToCBOR, FromCBOR)
 
     newtype SigningKey KesKey =
-        KesSigningKey (Shelley.SignKeyKES Shelley.TPraosStandardCrypto)
+        KesSigningKey (Shelley.SignKeyKES ShelleyCrypto)
+      deriving stock (Show)
       deriving newtype (ToCBOR, FromCBOR)
 
     deterministicSigningKey :: AsType KesKey -> Crypto.Seed -> SigningKey KesKey
@@ -1075,12 +1464,27 @@ instance Key KesKey where
     deterministicSigningKeySeedSize AsKesKey =
         Crypto.seedSizeKES proxy
       where
-        proxy :: Proxy (Shelley.KES Shelley.TPraosStandardCrypto)
+        proxy :: Proxy (Shelley.KES ShelleyCrypto)
         proxy = Proxy
 
     getVerificationKey :: SigningKey KesKey -> VerificationKey KesKey
     getVerificationKey (KesSigningKey sk) =
         KesVerificationKey (Crypto.deriveVerKeyKES sk)
+
+    verificationKeyHash :: VerificationKey KesKey -> Hash KesKey
+    verificationKeyHash (KesVerificationKey vkey) =
+        KesKeyHash (Crypto.hashVerKeyKES vkey)
+
+newtype instance Hash KesKey =
+    KesKeyHash (Crypto.Hash (Shelley.HASH ShelleyCrypto)
+                            (Shelley.VerKeyKES ShelleyCrypto))
+
+instance SerialiseAsRawBytes (Hash KesKey) where
+    serialiseToRawBytes (KesKeyHash vkh) =
+      Crypto.getHash vkh
+
+    deserialiseFromRawBytes (AsHash AsKesKey) bs =
+      KesKeyHash <$> Crypto.hashFromBytes bs
 
 instance HasTextEnvelope (VerificationKey KesKey) where
     textEnvelopeType _ = "VKeyES TPraosStandardCrypto"
@@ -1104,13 +1508,13 @@ instance HasTypeProxy VrfKey where
 instance Key VrfKey where
 
     newtype VerificationKey VrfKey =
-        VrfVerificationKey (Shelley.VerKeyVRF Shelley.TPraosStandardCrypto)
-      deriving (Show)
+        VrfVerificationKey (Shelley.VerKeyVRF ShelleyCrypto)
+      deriving stock (Eq, Show)
       deriving newtype (ToCBOR, FromCBOR)
 
     newtype SigningKey VrfKey =
-        VrfSigningKey (Shelley.SignKeyVRF Shelley.TPraosStandardCrypto)
-      deriving (Show)
+        VrfSigningKey (Shelley.SignKeyVRF ShelleyCrypto)
+      deriving stock (Show)
       deriving newtype (ToCBOR, FromCBOR)
 
     deterministicSigningKey :: AsType VrfKey -> Crypto.Seed -> SigningKey VrfKey
@@ -1121,21 +1525,37 @@ instance Key VrfKey where
     deterministicSigningKeySeedSize AsVrfKey =
         Crypto.seedSizeVRF proxy
       where
-        proxy :: Proxy (Shelley.VRF Shelley.TPraosStandardCrypto)
+        proxy :: Proxy (Shelley.VRF ShelleyCrypto)
         proxy = Proxy
 
     getVerificationKey :: SigningKey VrfKey -> VerificationKey VrfKey
     getVerificationKey (VrfSigningKey sk) =
         VrfVerificationKey (Crypto.deriveVerKeyVRF sk)
 
+    verificationKeyHash :: VerificationKey VrfKey -> Hash VrfKey
+    verificationKeyHash (VrfVerificationKey vkey) =
+        VrfKeyHash (Crypto.hashVerKeyVRF vkey)
+
+newtype instance Hash VrfKey =
+    VrfKeyHash (Crypto.Hash (Shelley.HASH ShelleyCrypto)
+                            (Shelley.VerKeyVRF ShelleyCrypto))
+
+instance SerialiseAsRawBytes (Hash VrfKey) where
+    serialiseToRawBytes (VrfKeyHash vkh) =
+      Crypto.getHash vkh
+
+    deserialiseFromRawBytes (AsHash AsVrfKey) bs =
+      VrfKeyHash <$> Crypto.hashFromBytes bs
+
 instance HasTextEnvelope (VerificationKey VrfKey) where
     textEnvelopeType _ = "VerKeyVRF " <> fromString (Crypto.algorithmNameVRF proxy)
       where
-        proxy :: Proxy (Shelley.VRF Shelley.TPraosStandardCrypto)
+        proxy :: Proxy (Shelley.VRF ShelleyCrypto)
         proxy = Proxy
 
 instance HasTextEnvelope (SigningKey VrfKey) where
     textEnvelopeType _ = "SignKeyVRF " <> fromString (Crypto.algorithmNameVRF proxy)
       where
-        proxy :: Proxy (Shelley.VRF Shelley.TPraosStandardCrypto)
+        proxy :: Proxy (Shelley.VRF ShelleyCrypto)
         proxy = Proxy
+
