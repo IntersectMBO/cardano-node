@@ -25,10 +25,10 @@ import qualified Cardano.Crypto.Hashing as Crypto
 import qualified Cardano.Crypto.Signing as Crypto
 
 import           Cardano.Config.Protocol (CardanoEra, RealPBFTError,
-                   ncCardanoEra, renderRealPBFTError)
+                                          ncCardanoEra, renderRealPBFTError)
 import           Cardano.Config.Types
 
-import           Cardano.Api (Network, toByronNetworkMagic)
+import           Cardano.Api (Network, toByronNetworkMagicType)
 import           Cardano.CLI.Byron.Commands
 import           Cardano.CLI.Byron.Delegation
 import           Cardano.CLI.Byron.Genesis
@@ -146,7 +146,7 @@ runPrintSigningKeyAddress :: CardanoEra -> Network -> SigningKeyFile -> ExceptT 
 runPrintSigningKeyAddress era network skF = do
   sK <- firstExceptT ByronCmdKeyFailure $ readEraSigningKey era skF
   let sKeyAddress = prettyAddress
-                  . Common.makeVerKeyAddress (toByronNetworkMagic network)
+                  . Common.makeVerKeyAddress (toByronNetworkMagicType network)
                   . Crypto.toVerification
                   $ sK
   liftIO $ putTextLn sKeyAddress

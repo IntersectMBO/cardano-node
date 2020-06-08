@@ -71,7 +71,7 @@ submitTx network socketPath tx =
                       (protocolClientInfo (mkNodeClientProtocolRealPBFT
                                              (EpochSlots 21600)
                                              (SecurityParam 2160)))
-                      network
+                      (toByronNetworkMagic network)
                       socketPath
                       genTx
           case result of
@@ -84,7 +84,7 @@ submitTx network socketPath tx =
                       nullTracer
                       iocp
                       (protocolClientInfo mkNodeClientProtocolTPraos)
-                      network
+                      (toShelleyNetworkMagic network)
                       socketPath
                       genTx
           case result of
@@ -98,7 +98,7 @@ submitGenTx
   => Tracer IO Text
   -> IOManager
   -> ProtocolClientInfo blk
-  -> Network
+  -> NetworkMagic
   -> SocketPath
   -> GenTx blk
   -> IO (SubmitResult (ApplyTxErr blk))
@@ -123,7 +123,7 @@ localInitiatorNetworkApplication
   -- received by the client (see 'Ouroboros.Network.Protocol.LocalTxSubmission.Type'
   -- in 'ouroboros-network' package).
   -> ProtocolClientInfo blk
-  -> Network
+  -> NetworkMagic
   -> TMVar (SubmitResult (ApplyTxErr blk)) -- ^ Result will be placed here
   -> GenTx blk
   -> Versions NtC.NodeToClientVersion DictVersion
@@ -141,7 +141,7 @@ localInitiatorNetworkApplication tracer cfg nm resultVar genTx =
     proxy :: Proxy blk
     proxy = Proxy
 
-    versionData = NodeToClientVersionData { networkMagic = toNetworkMagic nm }
+    versionData = NodeToClientVersionData { networkMagic }
 
     protocols clientVersion tx =
         NodeToClientProtocols {

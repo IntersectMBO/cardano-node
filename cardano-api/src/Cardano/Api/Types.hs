@@ -14,8 +14,9 @@ module Cardano.Api.Types
     Address (..)
   , Network (..)
   , NetworkMagic (..)
-  , toNetworkMagic
   , toByronNetworkMagic
+  , toShelleyNetworkMagic
+  , toByronNetworkMagicType
   , toShelleyNetwork
   , SigningKey (..)
   , GenesisVerificationKey (..)
@@ -270,8 +271,20 @@ toNetworkMagic nw =
     Mainnet    -> NetworkMagic 764824073 -- The network magic for mainnet
     Testnet nm -> nm
 
-toByronNetworkMagic :: Network -> Byron.NetworkMagic
+toByronNetworkMagic :: Network -> NetworkMagic
 toByronNetworkMagic nw =
+  case nw of
+    Mainnet    -> NetworkMagic 764824073 -- The network magic for mainnet
+    Testnet nm -> nm
+
+toShelleyNetworkMagic :: Network -> NetworkMagic
+toShelleyNetworkMagic nw =
+  case nw of
+    Mainnet    -> NetworkMagic 1 -- The network magic for mainnet
+    Testnet nm -> nm
+
+toByronNetworkMagicType :: Network -> Byron.NetworkMagic
+toByronNetworkMagicType nw =
   case nw of
     Mainnet                   -> Byron.NetworkMainOrStage
     Testnet (NetworkMagic nm) -> Byron.NetworkTestnet nm
