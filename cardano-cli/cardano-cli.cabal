@@ -179,7 +179,8 @@ test-suite cardano-cli-pioneers
                       , text
                       , transformers-except
 
-  other-modules:        Test.OptParse
+  other-modules:        Test.ITN
+                        Test.OptParse
                         Test.Pioneers.Exercise1
                         Test.Pioneers.Exercise2
 
