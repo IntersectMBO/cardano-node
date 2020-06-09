@@ -61,6 +61,7 @@ library
   build-depends:       base >=4.12 && <5
                      , aeson
                      , aeson-pretty
+                     , bech32
                      , bytestring
                      , base16-bytestring
                      , base58-bytestring
@@ -169,6 +170,7 @@ test-suite cardano-cli-pioneers
   type:                 exitcode-stdio-1.0
 
   build-depends:        base
+                      , bech32
                       , cardano-cli
                       , cardano-prelude
                       , directory
@@ -177,7 +179,8 @@ test-suite cardano-cli-pioneers
                       , text
                       , transformers-except
 
-  other-modules:        Test.OptParse
+  other-modules:        Test.ITN
+                        Test.OptParse
                         Test.Pioneers.Exercise1
                         Test.Pioneers.Exercise2
 

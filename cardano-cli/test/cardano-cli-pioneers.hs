@@ -7,6 +7,7 @@ import qualified System.IO as IO
 
 import qualified Test.Pioneers.Exercise1
 import qualified Test.Pioneers.Exercise2
+import qualified Test.ITN
 
 main :: IO ()
 main = do
@@ -15,4 +16,5 @@ main = do
 
   defaultMain [ Test.Pioneers.Exercise1.tests
               , Test.Pioneers.Exercise2.tests
+              , Test.ITN.tests
               ]

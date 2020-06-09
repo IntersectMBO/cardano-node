@@ -45,7 +45,7 @@ execCardanoCLIParser fps cmdName pureParseResult =
 
     -- The pure 'ParserResult' succeeds and we can then execute the result.
     -- This would be equivalent to `cabal exec cardano-cli ...`
-    Success cmd -> execClientCommand cmd
+    Success cmd -> execClientCommand fps cmd
 
     -- The pure `ParserResult` failed and we clean up any created files
     -- and fail with `optparse-applicative`'s error message
@@ -61,11 +61,18 @@ execCardanoCLIParser fps cmdName pureParseResult =
 
 -- | Executes a `ClientCommand`. If successful the property passes
 -- if not, the property fails and the error is rendered.
-execClientCommand :: ClientCommand -> H.PropertyT IO ()
-execClientCommand cmd = do e <- lift . runExceptT $ runClientCommand cmd
-                           case e of
-                             Left cmdErrors -> failWith Nothing . Text.unpack $ renderClientCommandError cmdErrors
-                             Right _ -> H.success
+execClientCommand
+  :: [FilePath]
+  -- ^ Files to clean up on failure
+  -> ClientCommand
+  -> H.PropertyT IO ()
+execClientCommand fps cmd = do e <- lift . runExceptT $ runClientCommand cmd
+                               case e of
+                                 Left cmdErrors -> do
+                                   liftIO (fileCleanup fps)
+                                   failWith Nothing . Text.unpack $ renderClientCommandError cmdErrors
+                                 Right _ ->
+                                   H.success
 
 --------------------------------------------------------------------------------
 -- Error rendering & Clean up
