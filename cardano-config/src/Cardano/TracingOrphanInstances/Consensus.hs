@@ -120,10 +120,10 @@ instance HasSeverityAnnotation (ChainDB.TraceEvent blk) where
     ChainDB.OpenedLgrDB -> Info
 
   getSeverityAnnotation (ChainDB.TraceReaderEvent ev) = case ev of
-    ChainDB.NewReader {} -> Info
-    ChainDB.ReaderNoLongerInMem {} -> Info
-    ChainDB.ReaderSwitchToMem {} -> Info
-    ChainDB.ReaderNewImmIterator {} -> Info
+    ChainDB.NewReader {} -> Debug
+    ChainDB.ReaderNoLongerInMem {} -> Debug
+    ChainDB.ReaderSwitchToMem {} -> Debug
+    ChainDB.ReaderNewImmIterator {} -> Debug
   getSeverityAnnotation (ChainDB.TraceInitChainSelEvent ev) = case ev of
     ChainDB.InitChainSelValidation {} -> Debug
   getSeverityAnnotation (ChainDB.TraceIteratorEvent ev) = case ev of
