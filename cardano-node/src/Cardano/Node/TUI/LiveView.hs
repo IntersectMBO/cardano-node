@@ -23,7 +23,6 @@ module Cardano.Node.TUI.LiveView
     , liveViewPostSetup
     , setNodeThread
     , storePeersInLiveView
-    , storeMempoolDataInLiveView
     ) where
 
 import           Cardano.Prelude hiding (modifyMVar_, newMVar, on, readMVar, show)
@@ -167,8 +166,8 @@ data LiveViewState blk a = LiveViewState
     , lvsNetworkUsageInNs     :: !Word64
     , lvsNetworkUsageOutLast  :: !Word64
     , lvsNetworkUsageOutNs    :: !Word64
-    , lvsMempoolCapacity      :: !Word64
-    , lvsMempoolCapacityBytes :: !Word64
+    , lvsMempoolMaxTxs        :: !Word64
+    , lvsMempoolMaxBytes      :: !Word64
     , lvsMessage              :: !(Maybe a)
     -- Async threads.
     , lvsUIThread             :: !LiveViewThread
@@ -358,22 +357,26 @@ instance IsEffectuator (LiveViewBackend blk) Text where
                     LogValue "txsInMempool" (PureI txsInMempool) ->
                         modifyMVar_ (getbe lvbe) $ \lvs -> do
                                 let lvsMempool' = fromIntegral txsInMempool :: Word64
-                                    percentage = fromIntegral lvsMempool' / fromIntegral (lvsMempoolCapacity lvs) :: Float
+                                    maxTxs = max lvsMempool' (lvsMempoolMaxTxs lvs)
+                                    percentage = fromIntegral lvsMempool' / fromIntegral maxTxs :: Float
 
                                 checkForUnexpectedThunks ["txsInMempool LiveViewBackend"] lvs
 
                                 return $ lvs { lvsMempool = lvsMempool'
-                                            , lvsMempoolPerc = percentage
-                                            }
+                                             , lvsMempoolMaxTxs = maxTxs
+                                             , lvsMempoolPerc = percentage
+                                             }
                     LogValue "mempoolBytes" (PureI mempoolBytes) ->
                         modifyMVar_ (getbe lvbe) $ \lvs -> do
                                 let lvsMempoolBytes' = fromIntegral mempoolBytes :: Word64
-                                    percentage = fromIntegral lvsMempoolBytes' / fromIntegral (lvsMempoolCapacityBytes lvs) :: Float
+                                    maxBytes = max lvsMempoolBytes' (lvsMempoolMaxBytes lvs)
+                                    percentage = fromIntegral lvsMempoolBytes' / fromIntegral maxBytes :: Float
 
                                 checkForUnexpectedThunks ["mempoolBytes LiveViewBackend"] lvs
 
                                 return $ lvs
                                     { lvsMempoolBytes = lvsMempoolBytes'
+                                    , lvsMempoolMaxBytes = maxBytes
                                     , lvsMempoolBytesPerc = percentage
                                     }
                     LogValue "txsProcessedNum" (PureI txsProcessedNum) ->
@@ -535,8 +538,8 @@ initLiveViewState = do
                 , lvsNetworkUsageInNs       = 10000
                 , lvsNetworkUsageOutLast    = 0
                 , lvsNetworkUsageOutNs      = 10000
-                , lvsMempoolCapacity        = 0
-                , lvsMempoolCapacityBytes   = 0
+                , lvsMempoolMaxTxs          = 0
+                , lvsMempoolMaxBytes        = 0
                 , lvsMessage                = Nothing
                 , lvsUIThread               = LiveViewThread Nothing
                 , lvsMetricsThread          = LiveViewThread Nothing
@@ -554,13 +557,6 @@ liveViewPostSetup lvbe ncli nc = do
             { lvsNodeId = nodeId
             , lvsProtocol = ncProtocol nc
             , lvsRelease = if ncProtocol nc == TPraos then "Shelley" else "Byron"
-
-            -- Hard code these here, but they get properly updated in setNodeKernel
-            -- about 30 seconds after the node starts.
-            , lvsMempoolCapacity = 2000
-            , lvsMempoolCapacityBytes = 4096000
-
-
             }
  where
     --TODO: this is meaningless. Nodes do not have ids. The port number is not
@@ -593,13 +589,6 @@ setNodeThread lvbe nodeThr =
 
 storePeersInLiveView :: NFData a => [Peer blk] -> LiveViewBackend blk a -> IO ()
 storePeersInLiveView peers lvbe = modifyMVar_ (getbe lvbe) $ \lvs -> pure $ lvs { lvsPeers = peers }
-
-storeMempoolDataInLiveView :: NFData a => Word64 -> Word64 -> LiveViewBackend blk a -> IO ()
-storeMempoolDataInLiveView capacity capacityBytes lvbe =
-  modifyMVar_ (getbe lvbe) $ \lvs ->
-    pure $ lvs { lvsMempoolCapacity = capacity
-               , lvsMempoolCapacityBytes = capacityBytes
-               }
 
 captureCounters :: NFData a => LiveViewBackend blk a -> Trace IO Text -> IO ()
 captureCounters lvbe trace0 = do
@@ -820,14 +809,15 @@ systemStatsW p =
     . padRight (T.Pad 1)
     $ vBox [ hBox [ vBox [ hBox [ txt "Mempool (Bytes):"
                                 , withAttr barValueAttr . padLeft T.Max . str .
-                                  show . (floor :: Float -> Int) . fromIntegral $ lvsMempoolCapacityBytes p
-
+                                  show . (floor :: Float -> Int) . fromIntegral $ lvsMempoolMaxBytes p
+                                , txt " max"
                                 ]
                          , padBottom (T.Pad 1) memPoolBytesBar
                          ]
                   , padLeft (T.Pad 2) $
                     vBox [ hBox [ txt "Mempool (Txs):"
-                                , withAttr barValueAttr . padLeft T.Max . str . show $ lvsMempoolCapacity p
+                                , withAttr barValueAttr . padLeft T.Max . str . show $ lvsMempoolMaxTxs p
+                                , txt " max"
                                 ]
                          , padBottom (T.Pad 1) memPoolBar
                          ]
@@ -876,8 +866,6 @@ systemStatsW p =
                                  ]
                  ) $ bar mempoolLabel (lvsMempoolPerc p)
     mempoolLabel = Just $ (show . lvsMempool $ p)
-                        ++ " / "
-                        ++ withOneDecimal (lvsMempoolPerc p * 100) ++ "%"
     memPoolBytesBar :: forall n. Widget n
     memPoolBytesBar = updateAttrMap
                  (A.mapAttrNames [ (mempoolDoneAttr, P.progressCompleteAttr)
@@ -885,8 +873,6 @@ systemStatsW p =
                                  ]
                  ) $ bar mempoolBytesLabel (lvsMempoolBytesPerc p)
     mempoolBytesLabel = Just $ (show . lvsMempoolBytes $ p)
-                        ++ " / "
-                        ++ withOneDecimal (lvsMempoolBytesPerc p * 100) ++ "%"
     memUsageBar :: forall n. Widget n
     memUsageBar = updateAttrMap
                   (A.mapAttrNames [ (memDoneAttr, P.progressCompleteAttr)
