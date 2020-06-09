@@ -95,7 +95,7 @@ module Cardano.Api.Typed (
 
     -- * Signing transactions
     -- | Creating transaction witnesses one by one, or all in one go.
-    TxSigned(..),
+    Tx(..),
     getTxBody,
     getTxWitnesses,
 
@@ -248,6 +248,7 @@ import           Data.Aeson (ToJSON(..), FromJSON(..))
 --
 import qualified Cardano.Binary as CBOR
 import           Cardano.Binary (ToCBOR(toCBOR), FromCBOR(fromCBOR))
+import qualified Cardano.Prelude as CBOR (cborError)
 import           Shelley.Spec.Ledger.Serialization (CBORGroup(..))
 import           Cardano.Slotting.Slot (SlotNo)
 import           Ouroboros.Network.Magic (NetworkMagic(..))
@@ -283,6 +284,7 @@ import qualified Shelley.Spec.Ledger.PParams                 as Shelley
 import qualified Shelley.Spec.Ledger.OCert                   as Shelley
 import qualified Shelley.Spec.Ledger.Scripts                 as Shelley
 import qualified Shelley.Spec.Ledger.TxData                  as Shelley
+import qualified Shelley.Spec.Ledger.Tx                      as Shelley
 import qualified Shelley.Spec.Ledger.UTxO                    as Shelley
 
 -- TODO: replace the above with
@@ -637,7 +639,8 @@ instance HasTypeProxy (TxBody Shelley) where
 instance SerialiseAsCBOR (TxBody Byron) where
     serialiseToCBOR (ByronTxBody txbody) = CBOR.serialize' txbody
 
-    deserialiseFromCBOR AsByronTxBody _bs = undefined
+    deserialiseFromCBOR AsByronTxBody bs =
+      ByronTxBody <$> CBOR.decodeFull' bs
 
 instance SerialiseAsCBOR (TxBody Shelley) where
     serialiseToCBOR (ShelleyTxBody txbody) =
@@ -683,48 +686,121 @@ makeShelleyTransaction = undefined
 -- Signed transactions
 --
 
-data TxSigned era where
+data Tx era where
 
-     ByronTxSigned
-       :: TxSigned Byron
+     ByronTx
+       :: Byron.ATxAux ByteString
+       -> Tx Byron
 
-     ShelleyTxSigned
-       :: TxSigned Shelley
+     ShelleyTx
+       :: Shelley.Tx ShelleyCrypto
+       -> Tx Shelley
 
--- order of signing keys must match txins
-signByronTransaction :: NetworkId
-                     -> TxBody Byron
-                     -> [SigningKey ByronKey]
-                     -> TxSigned Byron
-signByronTransaction = undefined
 
--- signing keys is a set
-signShelleyTransaction :: TxBody Shelley
-                       -> [SigningKey Shelley]
-                       -> TxSigned Shelley
-signShelleyTransaction = undefined
+instance HasTypeProxy (Tx Byron) where
+    data AsType (Tx Byron) = AsByronTx
+    proxyToAsType _ = AsByronTx
+
+instance HasTypeProxy (Tx Shelley) where
+    data AsType (Tx Shelley) = AsShelleyTx
+    proxyToAsType _ = AsShelleyTx
+
+
+instance SerialiseAsCBOR (Tx Byron) where
+    serialiseToCBOR (ByronTx tx) = CBOR.recoverBytes tx
+
+    deserialiseFromCBOR AsByronTx bs =
+      ByronTx <$>
+        CBOR.decodeFullAnnotatedBytes "Byron Tx" fromCBOR (LBS.fromStrict bs)
+
+instance SerialiseAsCBOR (Tx Shelley) where
+    serialiseToCBOR (ShelleyTx tx) =
+      CBOR.serialize' tx
+
+    deserialiseFromCBOR AsShelleyTx bs =
+      ShelleyTx <$>
+        CBOR.decodeAnnotator "Shelley Tx" fromCBOR (LBS.fromStrict bs)
+
+
+instance HasTextEnvelope (Tx Byron) where
+    textEnvelopeType _ = "TxSignedByron"
+
+instance HasTextEnvelope (Tx Shelley) where
+    textEnvelopeType _ = "TxSignedShelley"
 
 
 data Witness era where
 
      ByronKeyWitness
-       :: Witness Byron
+       :: Byron.TxInWitness
+       -> Witness Byron
 
      ShelleyKeyWitness
-       :: Witness Shelley
+       :: Shelley.WitVKey ShelleyCrypto
+       -> Witness Shelley
 
      ShelleyScriptWitness
-       :: Witness Shelley
+       :: Shelley.MultiSig ShelleyCrypto
+       -> Witness Shelley
 
-getTxBody :: TxSigned era -> TxBody era
-getTxBody = undefined
 
-getTxWitnesses :: TxSigned era -> [Witness era]
-getTxWitnesses = undefined
+instance HasTypeProxy (Witness Byron) where
+    data AsType (Witness Byron) = AsByronWitness
+    proxyToAsType _ = AsByronWitness
+
+instance HasTypeProxy (Witness Shelley) where
+    data AsType (Witness Shelley) = AsShelleyWitness
+    proxyToAsType _ = AsShelleyWitness
+
+instance SerialiseAsCBOR (Witness Byron) where
+    serialiseToCBOR (ByronKeyWitness wit) = CBOR.serialize' wit
+
+    deserialiseFromCBOR AsByronWitness bs =
+      ByronKeyWitness <$> CBOR.decodeFull' bs
+
+instance SerialiseAsCBOR (Witness Shelley) where
+    serialiseToCBOR = CBOR.serializeEncoding' . encodeShelleyWitness
+      where
+        encodeShelleyWitness :: Witness Shelley -> CBOR.Encoding
+        encodeShelleyWitness (ShelleyKeyWitness    wit) =
+            CBOR.encodeListLen 2 <> CBOR.encodeWord 0 <> toCBOR wit
+        encodeShelleyWitness (ShelleyScriptWitness wit) =
+            CBOR.encodeListLen 2 <> CBOR.encodeWord 1 <> toCBOR wit
+
+    deserialiseFromCBOR AsShelleyWitness bs =
+        CBOR.decodeAnnotator "Shelley Witness"
+                             decodeShelleyWitness (LBS.fromStrict bs)
+      where
+        decodeShelleyWitness :: CBOR.Decoder s (CBOR.Annotator (Witness Shelley))
+        decodeShelleyWitness =  do
+          CBOR.decodeListLenOf 2
+          t <- CBOR.decodeWord
+          case t of
+            0 -> fmap (fmap ShelleyKeyWitness) fromCBOR
+            1 -> fmap (pure . ShelleyScriptWitness) fromCBOR
+            _ -> CBOR.cborError $ CBOR.DecoderErrorUnknownTag
+                                    "Shelley Witness" (fromIntegral t)
+
+instance HasTextEnvelope (Witness Byron) where
+    textEnvelopeType _ = "TxWinessByron"
+
+instance HasTextEnvelope (Witness Shelley) where
+    textEnvelopeType _ = "TxWinessShelley"
+
+
+getTxBody :: Tx era -> TxBody era
+getTxBody (ByronTx _tx) = undefined
+getTxBody (ShelleyTx _tx) = undefined
+
+
+getTxWitnesses :: Tx era -> [Witness era]
+getTxWitnesses (ByronTx _tx) = undefined
+getTxWitnesses (ShelleyTx _tx) = undefined
+
 
 makeSignedTransaction :: [Witness era]
                       -> TxBody era
-                      -> TxSigned era
+                      -> Tx era
 makeSignedTransaction = undefined
 
 
@@ -745,6 +821,20 @@ shelleyKeyWitness = undefined
 
 shelleyScriptWitness :: Script -> TxId -> Witness Shelley
 shelleyScriptWitness = undefined
+
+
+-- order of signing keys must match txins
+signByronTransaction :: NetworkId
+                     -> TxBody Byron
+                     -> [SigningKey ByronKey]
+                     -> Tx Byron
+signByronTransaction = undefined
+
+-- signing keys is a set
+signShelleyTransaction :: TxBody Shelley
+                       -> [SigningKey Shelley]
+                       -> Tx Shelley
+signShelleyTransaction = undefined
 
 
 -- ----------------------------------------------------------------------------
