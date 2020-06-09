@@ -53,6 +53,7 @@ data TxSubmitResult
    = TxSubmitSuccess
    | TxSubmitFailureByron   (ApplyTxErr ByronBlock)
    | TxSubmitFailureShelley (ApplyTxErr (ShelleyBlock TPraosStandardCrypto))
+   deriving Show
 
 submitTx
   :: Network
