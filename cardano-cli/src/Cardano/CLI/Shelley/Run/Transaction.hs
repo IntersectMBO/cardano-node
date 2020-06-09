@@ -70,8 +70,8 @@ renderShelleyTxCmdError err =
       "Error while writing signed shelley tx: " <> renderApiError apiError
     ShelleyTxWriteUnsignedTxError apiError ->
       "Error while writing unsigned shelley tx: " <> renderApiError apiError
-    ShelleyTxSubmitError txSubmitRes ->
-      "Error while submitting Shelley tx: " <> textShow txSubmitRes
+    ShelleyTxSubmitError res ->
+      "Error while submitting tx: " <> renderTxSubmitResult res
 
 runTransactionCmd :: TransactionCmd -> ExceptT ShelleyTxCmdError IO ()
 runTransactionCmd cmd =
