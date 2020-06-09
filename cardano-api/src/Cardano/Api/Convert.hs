@@ -28,13 +28,13 @@ import qualified Cardano.Crypto.Hash.Blake2b as Crypto
 import qualified Shelley.Spec.Ledger.Address as Shelley
 
 
-addressFromHex :: Text -> Maybe Address
+addressFromHex :: Text -> Either Binary.DecoderError Address
 addressFromHex txt =
   case Base16.decode (Text.encodeUtf8 txt) of
     (raw, _) ->
       case Shelley.deserialiseAddr raw of
-        Just addr -> Just $ AddressShelley addr
-        Nothing -> either (const Nothing) (Just . AddressByron) $ Binary.decodeFull' raw
+        Just addr -> Right $ AddressShelley addr
+        Nothing ->  AddressByron <$> Binary.decodeFull' raw
 
 addressToHex :: Address -> Text
 addressToHex addr =
@@ -49,9 +49,8 @@ addressToHex addr =
 parseTxIn :: Text -> Either String TxIn
 parseTxIn txt = Atto.parseOnly pTxIn $ Text.encodeUtf8 txt
 
-parseTxOut :: Text -> Maybe TxOut
-parseTxOut =
-  either (const Nothing) Just . Atto.parseOnly pTxOut . Text.encodeUtf8
+parseTxOut :: Text -> Either String TxOut
+parseTxOut tOut = Atto.parseOnly pTxOut $ Text.encodeUtf8 tOut
 
 renderTxIn :: TxIn -> Text
 renderTxIn (TxIn (TxId txid) txix) =
@@ -96,9 +95,12 @@ pLovelace :: Parser Lovelace
 pLovelace = Lovelace <$> Atto.decimal
 
 pAddress :: Parser Address
-pAddress =
-  maybe (fail "pAddress") pure
-    =<< addressFromHex . Text.decodeUtf8 <$> pAlphaNumToByteString
+pAddress = do
+  potentialHex <- pAlphaNumToByteString
+  case addressFromHex $ Text.decodeUtf8 potentialHex of
+    Right addr -> return addr
+    Left err -> fail $ "Error deserialising address: " <> (C8.unpack potentialHex)
+                     <> " Error: " <> show err
 
 pAlphaNumToByteString :: Parser ByteString
 pAlphaNumToByteString = Atto.takeWhile1 isAlphaNum

@@ -949,7 +949,7 @@ pTxIn =
 
 pTxOut :: Parser TxOut
 pTxOut =
-  Opt.option (Opt.maybeReader (parseTxOut . Text.pack))
+  Opt.option (Opt.eitherReader (parseTxOut . Text.pack))
     (  Opt.long "tx-out"
     <> Opt.metavar "TX-OUT"
     <> Opt.help "The ouput transaction as TxOut+Lovelace where TxOut is the hex encoded address followed by the amount in Lovelace."
@@ -1042,14 +1042,11 @@ pQueryFilter = pAddresses <|> pure NoFilter
 
 pFilterByHexEncodedAddress :: Parser Address
 pFilterByHexEncodedAddress =
-  Opt.option maybeHexEncodedAddressReader
+  Opt.option (Opt.eitherReader (first show . addressFromHex . Text.pack))
     (  Opt.long "address"
     <> Opt.metavar "ADDRESS"
     <> Opt.help "Filter by Cardano address(es) (hex-encoded)."
     )
-
-maybeHexEncodedAddressReader :: Opt.ReadM Address
-maybeHexEncodedAddressReader = Opt.maybeReader (addressFromHex . Text.pack)
 
 pAddress :: Parser Text
 pAddress =
