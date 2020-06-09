@@ -6,6 +6,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE NamedFieldPuns #-}
 
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DeriveAnyClass #-}
@@ -80,7 +81,7 @@ module Cardano.Api.Typed (
 
     -- * Building transactions
     -- | Constructing and inspecting transactions
-    TxUnsigned(..),
+    TxBody(..),
     TxId,
     getTxId,
     TxIn(..),
@@ -95,7 +96,7 @@ module Cardano.Api.Typed (
     -- * Signing transactions
     -- | Creating transaction witnesses one by one, or all in one go.
     TxSigned(..),
-    getTxUnsigned,
+    getTxBody,
     getTxWitnesses,
 
     -- ** Signing in one go
@@ -246,7 +247,7 @@ import           Data.Aeson (ToJSON(..), FromJSON(..))
 -- Common types, consensus, network
 --
 import qualified Cardano.Binary as CBOR
-import           Cardano.Binary (ToCBOR(..), FromCBOR(..))
+import           Cardano.Binary (ToCBOR(toCBOR), FromCBOR(fromCBOR))
 import           Shelley.Spec.Ledger.Serialization (CBORGroup(..))
 import           Cardano.Slotting.Slot (SlotNo)
 import           Ouroboros.Network.Magic (NetworkMagic(..))
@@ -266,7 +267,7 @@ import qualified Cardano.Crypto.VRF.Class   as Crypto
 import qualified Cardano.Crypto.Hashing as Byron
 import qualified Cardano.Crypto.Signing as Byron
 import qualified Cardano.Chain.Common as Byron
---import qualified Cardano.Chain.UTxO   as Byron
+import qualified Cardano.Chain.UTxO   as Byron
 
 --
 -- Shelley imports
@@ -278,11 +279,11 @@ import qualified Shelley.Spec.Ledger.BaseTypes               as Shelley
 --import qualified Shelley.Spec.Ledger.Coin                    as Shelley
 --import qualified Shelley.Spec.Ledger.Delegation.Certificates as Shelley
 import qualified Shelley.Spec.Ledger.Keys                    as Shelley
---import qualified Shelley.Spec.Ledger.TxData                  as Shelley
---import qualified Shelley.Spec.Ledger.Tx                      as Shelley
 import qualified Shelley.Spec.Ledger.PParams                 as Shelley
 import qualified Shelley.Spec.Ledger.OCert                   as Shelley
 import qualified Shelley.Spec.Ledger.Scripts                 as Shelley
+import qualified Shelley.Spec.Ledger.TxData                  as Shelley
+import qualified Shelley.Spec.Ledger.UTxO                    as Shelley
 
 -- TODO: replace the above with
 --import qualified Cardano.Api.Byron   as Byron
@@ -559,36 +560,103 @@ toShelleyStakeReference  NoStakeAddress =
 
 
 -- ----------------------------------------------------------------------------
+-- Transaction Ids
+--
+
+newtype TxId = TxId (Shelley.Hash ShelleyCrypto ())
+               -- We use the Shelley representation and convert the Byron one
+
+instance HasTypeProxy TxId where
+    data AsType TxId = AsTxId
+    proxyToAsType _ = AsTxId
+
+instance SerialiseAsRawBytes TxId where
+    serialiseToRawBytes (TxId h) = Crypto.getHash h
+    deserialiseFromRawBytes AsTxId bs = TxId <$> Crypto.hashFromBytes bs
+
+-- | Calculate the transaction identifier for a 'TxBody'.
+--
+getTxId :: TxBody era -> TxId
+getTxId (ByronTxBody tx) =
+    TxId
+  . Crypto.UnsafeHash
+  . Byron.hashToBytes
+  . Byron.serializeCborHash
+  $ tx
+
+getTxId (ShelleyTxBody tx) =
+    TxId
+  . Crypto.castHash
+  . (\(Shelley.TxId txhash) -> txhash)
+  . Shelley.txid
+  $ tx
+
+
+-- ----------------------------------------------------------------------------
+-- Transaction constituent types
+--
+
+data TxIn = TxIn TxId TxIx
+--TODO  deriving (Show)
+
+newtype TxIx = TxIx Word
+  deriving stock (Eq, Ord, Show)
+  deriving newtype (Enum)
+
+data TxOut era = TxOut (Address era) Lovelace
+--TODO  deriving (Show)
+
+newtype Lovelace = Lovelace Integer
+  deriving (Eq, Ord, Enum, Show)
+
+
+-- ----------------------------------------------------------------------------
 -- Unsigned transactions
 --
 
-data TxUnsigned era where
+data TxBody era where
 
-     ByronTxUnsigned
-       :: TxUnsigned Byron
+     ByronTxBody
+       :: Byron.Tx
+       -> TxBody Byron
 
-     ShelleyTxUnsigned
-       :: TxUnsigned Shelley
-       -- we'll include optional metadata here, even though technically it is
-       -- placed with the witnesses
-
-data TxId
-
-getTxId :: TxUnsigned era -> TxId
-getTxId = undefined
-
-data TxIn = TxIn TxId TxIx
-
-data TxIx
-
-data TxOut era = TxOut (Address era) Lovelace
-
-data Lovelace
+     ShelleyTxBody
+       :: Shelley.TxBody ShelleyCrypto
+       -> TxBody Shelley
 
 
-makeByronTransaction :: [TxIn] -> [TxOut Byron] -> TxUnsigned Byron
+instance HasTypeProxy (TxBody Byron) where
+    data AsType (TxBody Byron) = AsByronTxBody
+    proxyToAsType _ = AsByronTxBody
+
+instance HasTypeProxy (TxBody Shelley) where
+    data AsType (TxBody Shelley) = AsShelleyTxBody
+    proxyToAsType _ = AsShelleyTxBody
+
+
+instance SerialiseAsCBOR (TxBody Byron) where
+    serialiseToCBOR (ByronTxBody txbody) = CBOR.serialize' txbody
+
+    deserialiseFromCBOR AsByronTxBody _bs = undefined
+
+instance SerialiseAsCBOR (TxBody Shelley) where
+    serialiseToCBOR (ShelleyTxBody txbody) =
+      CBOR.serialize' txbody
+
+    deserialiseFromCBOR AsShelleyTxBody bs =
+      ShelleyTxBody <$>
+        CBOR.decodeAnnotator "Shelley TxBody" fromCBOR (LBS.fromStrict bs)
+
+
+instance HasTextEnvelope (TxBody Byron) where
+    textEnvelopeType _ = "TxUnsignedByron"
+
+instance HasTextEnvelope (TxBody Shelley) where
+    textEnvelopeType _ = "TxUnsignedShelley"
+
+
+makeByronTransaction :: [TxIn] -> [TxOut Byron] -> TxBody Byron
 makeByronTransaction = undefined
-
 
 data TxOptional =
      TxOptional {
@@ -607,7 +675,7 @@ makeShelleyTransaction :: TxOptional
                        -> Lovelace
                        -> [TxIn]
                        -> [TxOut anyera]
-                       -> TxUnsigned Shelley
+                       -> TxBody Shelley
 makeShelleyTransaction = undefined
 
 
@@ -625,13 +693,13 @@ data TxSigned era where
 
 -- order of signing keys must match txins
 signByronTransaction :: NetworkId
-                     -> TxUnsigned Byron
+                     -> TxBody Byron
                      -> [SigningKey ByronKey]
                      -> TxSigned Byron
 signByronTransaction = undefined
 
 -- signing keys is a set
-signShelleyTransaction :: TxUnsigned Shelley
+signShelleyTransaction :: TxBody Shelley
                        -> [SigningKey Shelley]
                        -> TxSigned Shelley
 signShelleyTransaction = undefined
@@ -648,23 +716,23 @@ data Witness era where
      ShelleyScriptWitness
        :: Witness Shelley
 
-getTxUnsigned :: TxSigned era -> TxUnsigned era
-getTxUnsigned = undefined
+getTxBody :: TxSigned era -> TxBody era
+getTxBody = undefined
 
 getTxWitnesses :: TxSigned era -> [Witness era]
 getTxWitnesses = undefined
 
 makeSignedTransaction :: [Witness era]
-                      -> TxUnsigned era
+                      -> TxBody era
                       -> TxSigned era
 makeSignedTransaction = undefined
 
 
-byronKeyWitness :: NetworkId -> SigningKey ByronKey -> TxUnsigned era -> Witness Byron
+byronKeyWitness :: NetworkId -> SigningKey ByronKey -> TxBody era -> Witness Byron
 byronKeyWitness = undefined
 
 
-shelleyKeyWitness :: SigningKey keyrole -> TxUnsigned era -> Witness Shelley
+shelleyKeyWitness :: SigningKey keyrole -> TxBody era -> Witness Shelley
 shelleyKeyWitness = undefined
 -- this may need some class constraint on the keyrole, we can sign with:
 --
