@@ -1,11 +1,8 @@
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE FlexibleContexts #-}
 
-{-# OPTIONS_GHC -Wno-orphans #-}
-
-module Test.Cardano.Api.Typed
+module Test.Cardano.Api.Typed.Envelope
   ( tests
   ) where
 
@@ -16,12 +13,9 @@ import           Cardano.Prelude
 import           Hedgehog (Property, discover)
 import qualified Hedgehog as H
 
-import           Cardano.Crypto.Hash
-import           Cardano.Crypto.KES
-
-import           Test.Cardano.Api.Gen (genSeed)
 import           Test.Cardano.Api.Orphans ()
-
+import           Test.Cardano.Api.Typed.Orphans ()
+import           Test.Cardano.Api.Typed.Gen
 
 prop_roundtrip_ByronVerificationKey_envelope :: Property
 prop_roundtrip_ByronVerificationKey_envelope =
@@ -30,7 +24,6 @@ prop_roundtrip_ByronVerificationKey_envelope =
 prop_roundtrip_ByronSigningKey_envelope :: Property
 prop_roundtrip_ByronSigningKey_envelope =
   roundtrip_SigningKey_envelope AsByronKey
-
 
 prop_roundtrip_PaymentVerificationKey_envelope :: Property
 prop_roundtrip_PaymentVerificationKey_envelope =
@@ -113,40 +106,7 @@ roundtrip_SigningKey_envelope roletoken =
     H.tripping vkey (serialiseToTextEnvelope Nothing)
                     (deserialiseFromTextEnvelope (AsSigningKey roletoken))
 
-
 -- -----------------------------------------------------------------------------
-
-genSigningKey :: Key keyrole => AsType keyrole -> H.Gen (SigningKey keyrole)
-genSigningKey roletoken = do
-  seed <- genSeed (fromIntegral seedSize)
-  let sk = deterministicSigningKey roletoken seed
-  return sk
-  where
-    seedSize :: Word
-    seedSize = deterministicSigningKeySeedSize roletoken
-
-genVerificationKey :: Key keyrole
-                   => AsType keyrole -> H.Gen (VerificationKey keyrole)
-genVerificationKey roletoken = getVerificationKey <$> genSigningKey roletoken
-
---TODO: move this to the Orphans module once we expand and split up the typed
--- API tests.
-
-deriving instance Eq (SigningKey ByronKey)
-deriving instance Eq (SigningKey PaymentKey)
-deriving instance Eq (SigningKey StakeKey)
-deriving instance Eq (SigningKey StakePoolKey)
-deriving instance Eq (SigningKey GenesisKey)
-deriving instance Eq (SigningKey GenesisDelegateKey)
-deriving instance Eq (SigningKey KesKey)
-deriving instance Eq (SigningKey VrfKey)
-
-
-instance (HashAlgorithm h, KESAlgorithm d) => Eq (SignKeyKES (SumKES h d)) where
-  k1 == k2 = rawSerialiseSignKeyKES k1 == rawSerialiseSignKeyKES k2
-
-
-
 
 tests :: IO Bool
 tests =

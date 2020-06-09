@@ -18,7 +18,7 @@
 -- | This module provides a library interface for interacting with Cardano as
 -- a user of the system.
 --
--- It is intended to be used to write tools and 
+-- It is intended to be used to write tools and
 --
 -- In the interest of simplicity it glosses over some details of the system.
 -- Most simple tools should be able to work just using this interface,
@@ -53,12 +53,12 @@ module Cardano.Api.Typed (
     -- ** Hashes
     -- | In Cardano most keys are identified by their hash, and hashes are
     -- used in many other places.
-    Hash,
+    Hash(..),
     castHash,
 
     -- * Payment addresses
     -- | Constructing and inspecting normal payment addresses
-    Address,
+    Address(..),
     NetworkId(..),
     -- * Byron addresses
     makeByronAddress,
@@ -145,6 +145,7 @@ module Cardano.Api.Typed (
 
     -- ** Raw binary
     -- | Some types have a natural raw binary format.
+    SerialiseAsRawBytes,
     serialiseToRawBytes,
     deserialiseFromRawBytes,
     serialiseToRawBytesHex,
@@ -305,7 +306,7 @@ class HasTypeProxy t where
   -- | A family of singleton types used in this API to indicate which type to
   -- use where it would otherwise be ambiguous or merely unclear.
   --
-  -- Values of this type are passed to 
+  -- Values of this type are passed to
   --
   data AsType t
 
@@ -1558,4 +1559,3 @@ instance HasTextEnvelope (SigningKey VrfKey) where
       where
         proxy :: Proxy (Shelley.VRF ShelleyCrypto)
         proxy = Proxy
-
