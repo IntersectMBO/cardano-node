@@ -7,8 +7,10 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE ConstraintKinds #-}
 
-{-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE DefaultSignatures #-}
 
 -- The Shelley ledger uses promoted data kinds which we have to use, but we do
 -- not export any from this API. We also use them unticked as nature intended.
@@ -219,6 +221,7 @@ import Prelude
 import           Data.Proxy (Proxy(..))
 import           Data.Kind (Constraint)
 import           Data.Maybe
+import           Data.Bifunctor (first)
 import           Data.List as List
 --import           Data.Either
 import           Data.String (IsString(fromString))
@@ -693,12 +696,14 @@ data OperationalCertificate =
        !(Shelley.OCert ShelleyCrypto)
        !(VerificationKey StakePoolKey)
   deriving (Eq, Show)
+  deriving anyclass SerialiseAsCBOR
 
 data OperationalCertificateIssueCounter =
      OperationalCertificateIssueCounter
        !Natural
        !(VerificationKey StakePoolKey) -- For consistency checking
   deriving (Eq, Show)
+  deriving anyclass SerialiseAsCBOR
 
 instance ToCBOR OperationalCertificate where
     toCBOR (OperationalCertificate ocert vkey) =
@@ -785,12 +790,18 @@ issueOperationalCertificate (KesVerificationKey kesVKey)
 -- CBOR and JSON Serialisation
 --
 
+class HasTypeProxy a => SerialiseAsCBOR a where
+    serialiseToCBOR :: a -> ByteString
+    deserialiseFromCBOR :: AsType a -> ByteString -> Either CBOR.DecoderError a
 
-serialiseToCBOR :: ToCBOR a => a -> ByteString
-serialiseToCBOR = CBOR.serialize'
+    default serialiseToCBOR :: ToCBOR a => a -> ByteString
+    serialiseToCBOR = CBOR.serialize'
 
-deserialiseFromCBOR :: FromCBOR a => AsType a -> ByteString -> Maybe a
-deserialiseFromCBOR _proxy = either (const Nothing) Just . CBOR.decodeFull'
+    default deserialiseFromCBOR :: FromCBOR a
+                                => AsType a
+                                -> ByteString
+                                -> Either CBOR.DecoderError a
+    deserialiseFromCBOR _proxy = CBOR.decodeFull'
 
 newtype JsonDecodeError = JsonDecodeError String
 
@@ -830,7 +841,7 @@ type TextEnvelope = TextView.TextView
 type TextEnvelopeType = TextView.TextViewType
 type TextEnvelopeDescr = TextView.TextViewTitle
 
-class (ToCBOR a, FromCBOR a, HasTypeProxy a) => HasTextEnvelope a where
+class SerialiseAsCBOR a => HasTextEnvelope a where
     textEnvelopeType :: AsType a -> TextEnvelopeType
 
     textEnvelopeDefaultDescr :: AsType a -> TextEnvelopeDescr
@@ -853,11 +864,12 @@ instance Error TextView.TextViewError where
 
 serialiseToTextEnvelope :: forall a. HasTextEnvelope a
                         => Maybe TextEnvelopeDescr -> a -> TextEnvelope
-serialiseToTextEnvelope mbDescr =
-    TextView.encodeToTextView
-      (textEnvelopeType ttoken)
-      (fromMaybe (textEnvelopeDefaultDescr ttoken) mbDescr)
-      toCBOR
+serialiseToTextEnvelope mbDescr a =
+    TextView.TextView {
+      TextView.tvType    = textEnvelopeType ttoken
+    , TextView.tvTitle   = fromMaybe (textEnvelopeDefaultDescr ttoken) mbDescr
+    , TextView.tvRawCBOR = serialiseToCBOR a
+    }
   where
     ttoken :: AsType a
     ttoken = proxyToAsType Proxy
@@ -869,8 +881,8 @@ deserialiseFromTextEnvelope :: HasTextEnvelope a
                             -> Either TextEnvelopeError a
 deserialiseFromTextEnvelope ttoken te = do
     TextView.expectTextViewOfType (textEnvelopeType ttoken) te
-    TextView.decodeFromTextView fromCBOR te
-
+    first TextView.TextViewDecodeError $
+      deserialiseFromCBOR ttoken (TextView.tvRawCBOR te)
 
 data FromSomeType (c :: * -> Constraint) b where
      FromSomeType :: c a => AsType a -> (a -> b) -> FromSomeType c b
@@ -884,8 +896,9 @@ deserialiseFromTextEnvelopeAnyOf types te =
       Nothing ->
         Left (TextView.TextViewTypeError expectedTypes actualType)
 
-      Just (FromSomeType _ttoken f) ->
-        f <$> TextView.decodeFromTextView fromCBOR te
+      Just (FromSomeType ttoken f) ->
+        first TextView.TextViewDecodeError $
+          f <$> deserialiseFromCBOR ttoken (TextView.tvRawCBOR te)
   where
     actualType    = TextView.tvType te
     expectedTypes = [ textEnvelopeType ttoken
@@ -1018,11 +1031,13 @@ instance Key ByronKey where
            ByronVerificationKey Byron.VerificationKey
       deriving stock (Eq, Show)
       deriving newtype (ToCBOR, FromCBOR)
+      deriving anyclass SerialiseAsCBOR
 
     newtype SigningKey ByronKey =
            ByronSigningKey Byron.SigningKey
       deriving stock (Show)
       deriving newtype (ToCBOR, FromCBOR)
+      deriving anyclass SerialiseAsCBOR
 
     deterministicSigningKey :: AsType ByronKey -> Crypto.Seed -> SigningKey ByronKey
     deterministicSigningKey AsByronKey seed =
@@ -1077,11 +1092,13 @@ instance Key PaymentKey where
         PaymentVerificationKey (Shelley.VKey Shelley.Payment ShelleyCrypto)
       deriving stock (Eq, Show)
       deriving newtype (ToCBOR, FromCBOR)
+      deriving anyclass SerialiseAsCBOR
 
     newtype SigningKey PaymentKey =
         PaymentSigningKey (Shelley.SignKeyDSIGN ShelleyCrypto)
       deriving stock (Show)
       deriving newtype (ToCBOR, FromCBOR)
+      deriving anyclass SerialiseAsCBOR
 
     deterministicSigningKey :: AsType PaymentKey -> Crypto.Seed -> SigningKey PaymentKey
     deterministicSigningKey AsPaymentKey seed =
@@ -1144,11 +1161,13 @@ instance Key StakeKey where
         StakeVerificationKey (Shelley.VKey Shelley.Staking ShelleyCrypto)
       deriving stock (Eq, Show)
       deriving newtype (ToCBOR, FromCBOR)
+      deriving anyclass SerialiseAsCBOR
 
     newtype SigningKey StakeKey =
         StakeSigningKey (Shelley.SignKeyDSIGN ShelleyCrypto)
       deriving stock (Show)
       deriving newtype (ToCBOR, FromCBOR)
+      deriving anyclass SerialiseAsCBOR
 
     deterministicSigningKey :: AsType StakeKey -> Crypto.Seed -> SigningKey StakeKey
     deterministicSigningKey AsStakeKey seed =
@@ -1205,11 +1224,13 @@ instance Key GenesisKey where
         GenesisVerificationKey (Shelley.VKey Shelley.Genesis ShelleyCrypto)
       deriving stock (Eq, Show)
       deriving newtype (ToCBOR, FromCBOR)
+      deriving anyclass SerialiseAsCBOR
 
     newtype SigningKey GenesisKey =
         GenesisSigningKey (Shelley.SignKeyDSIGN ShelleyCrypto)
       deriving stock (Show)
       deriving newtype (ToCBOR, FromCBOR)
+      deriving anyclass SerialiseAsCBOR
 
     deterministicSigningKey :: AsType GenesisKey -> Crypto.Seed -> SigningKey GenesisKey
     deterministicSigningKey AsGenesisKey seed =
@@ -1266,11 +1287,13 @@ instance Key GenesisDelegateKey where
         GenesisDelegateVerificationKey (Shelley.VKey Shelley.GenesisDelegate ShelleyCrypto)
       deriving stock (Eq, Show)
       deriving newtype (ToCBOR, FromCBOR)
+      deriving anyclass SerialiseAsCBOR
 
     newtype SigningKey GenesisDelegateKey =
         GenesisDelegateSigningKey (Shelley.SignKeyDSIGN ShelleyCrypto)
       deriving stock (Show)
       deriving newtype (ToCBOR, FromCBOR)
+      deriving anyclass SerialiseAsCBOR
 
     deterministicSigningKey :: AsType GenesisDelegateKey -> Crypto.Seed -> SigningKey GenesisDelegateKey
     deterministicSigningKey AsGenesisDelegateKey seed =
@@ -1329,11 +1352,13 @@ instance Key GenesisUTxOKey where
         GenesisUTxOVerificationKey (Shelley.VKey Shelley.Payment ShelleyCrypto)
       deriving stock (Eq, Show)
       deriving newtype (ToCBOR, FromCBOR)
+      deriving anyclass SerialiseAsCBOR
 
     newtype SigningKey GenesisUTxOKey =
         GenesisUTxOSigningKey (Shelley.SignKeyDSIGN ShelleyCrypto)
       deriving stock (Show)
       deriving newtype (ToCBOR, FromCBOR)
+      deriving anyclass SerialiseAsCBOR
 
     deterministicSigningKey :: AsType GenesisUTxOKey -> Crypto.Seed -> SigningKey GenesisUTxOKey
     deterministicSigningKey AsGenesisUTxOKey seed =
@@ -1391,11 +1416,13 @@ instance Key StakePoolKey where
         StakePoolVerificationKey (Shelley.VKey Shelley.StakePool ShelleyCrypto)
       deriving stock (Eq, Show)
       deriving newtype (ToCBOR, FromCBOR)
+      deriving anyclass SerialiseAsCBOR
 
     newtype SigningKey StakePoolKey =
         StakePoolSigningKey (Shelley.SignKeyDSIGN ShelleyCrypto)
       deriving stock (Show)
       deriving newtype (ToCBOR, FromCBOR)
+      deriving anyclass SerialiseAsCBOR
 
     deterministicSigningKey :: AsType StakePoolKey -> Crypto.Seed -> SigningKey StakePoolKey
     deterministicSigningKey AsStakePoolKey seed =
@@ -1451,11 +1478,13 @@ instance Key KesKey where
         KesVerificationKey (Shelley.VerKeyKES ShelleyCrypto)
       deriving stock (Eq, Show)
       deriving newtype (ToCBOR, FromCBOR)
+      deriving anyclass SerialiseAsCBOR
 
     newtype SigningKey KesKey =
         KesSigningKey (Shelley.SignKeyKES ShelleyCrypto)
       deriving stock (Show)
       deriving newtype (ToCBOR, FromCBOR)
+      deriving anyclass SerialiseAsCBOR
 
     deterministicSigningKey :: AsType KesKey -> Crypto.Seed -> SigningKey KesKey
     deterministicSigningKey AsKesKey seed =
@@ -1512,11 +1541,13 @@ instance Key VrfKey where
         VrfVerificationKey (Shelley.VerKeyVRF ShelleyCrypto)
       deriving stock (Eq, Show)
       deriving newtype (ToCBOR, FromCBOR)
+      deriving anyclass SerialiseAsCBOR
 
     newtype SigningKey VrfKey =
         VrfSigningKey (Shelley.SignKeyVRF ShelleyCrypto)
       deriving stock (Show)
       deriving newtype (ToCBOR, FromCBOR)
+      deriving anyclass SerialiseAsCBOR
 
     deterministicSigningKey :: AsType VrfKey -> Crypto.Seed -> SigningKey VrfKey
     deterministicSigningKey AsVrfKey seed =
