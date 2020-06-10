@@ -25,7 +25,7 @@ import           Cardano.Config.Types (CertificateFile (..))
 import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra
                    (bimapExceptT, firstExceptT, handleIOExceptT, hoistEither,
-                    newExceptT, right)
+                    left, newExceptT, right)
 
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Lazy.Char8 as LBS
@@ -45,6 +45,7 @@ data ShelleyTxCmdError
   | ShelleyTxSignKeyError !KeyError
   | ShelleyTxWriteSignedTxError !ApiError
   | ShelleyTxWriteUnsignedTxError !ApiError
+  | ShelleyTxSubmitError !TxSubmitResult
   deriving Show
 
 renderShelleyTxCmdError :: ShelleyTxCmdError -> Text
@@ -69,6 +70,8 @@ renderShelleyTxCmdError err =
       "Error while writing signed shelley tx: " <> renderApiError apiError
     ShelleyTxWriteUnsignedTxError apiError ->
       "Error while writing unsigned shelley tx: " <> renderApiError apiError
+    ShelleyTxSubmitError res ->
+      "Error while submitting tx: " <> renderTxSubmitResult res
 
 runTransactionCmd :: TransactionCmd -> ExceptT ShelleyTxCmdError IO ()
 runTransactionCmd cmd =
@@ -120,10 +123,9 @@ runTxSubmit txFp network = do
   signedTx <- firstExceptT ShelleyTxReadSignedTxError . newExceptT $ readTxSigned txFp
   result   <- liftIO $ submitTx network sktFp signedTx
   case result of
-    TxSubmitSuccess            -> return ()
-    --TODO: use the Cardano.Api.TxSubmit.ErrorRender here
-    TxSubmitFailureByron   err -> liftIO $ print err
-    TxSubmitFailureShelley err -> liftIO $ print err
+    TxSubmitSuccess          -> return ()
+    TxSubmitFailureShelley _ -> left (ShelleyTxSubmitError result)
+    TxSubmitFailureByron   _ -> left (ShelleyTxSubmitError result)
 
 runTxCalculateMinFee
   :: TxInCount

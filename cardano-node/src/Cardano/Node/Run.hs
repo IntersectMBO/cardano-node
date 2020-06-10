@@ -27,7 +27,7 @@ import           Control.Tracer
 import qualified Data.ByteString.Char8 as BSC
 import           Data.Either (partitionEithers)
 import           Data.Functor.Contravariant (contramap)
-import           Data.IORef (IORef, newIORef, readIORef)
+import           Data.IORef (IORef, newIORef)
 import qualified Data.List as List
 import           Data.Proxy (Proxy (..))
 import           Data.Semigroup ((<>))
@@ -229,14 +229,7 @@ handlePeersList tr nodeKernIORef lvbe = forever $ do
   peers <- getCurrentPeers nodeKernIORef
   storePeersInLiveView peers lvbe
   tracePeers tr peers
-  -- We couldn't get these values during initialisation, so pass them now.
-  (capacity, capacityBytes) <- getMempoolData
-  storeMempoolDataInLiveView capacity capacityBytes lvbe
   threadDelay 2000000 -- 2 seconds.
- where
-  getMempoolData = do
-    nkd <- readIORef nodeKernIORef
-    return (nkdMempoolCapacity nkd, nkdMempoolCapacityBytes nkd)
 #endif
 
 handlePeersListSimple

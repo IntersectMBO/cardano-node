@@ -6,9 +6,12 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE NamedFieldPuns #-}
 
-{-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE DefaultSignatures #-}
 
 -- The Shelley ledger uses promoted data kinds which we have to use, but we do
 -- not export any from this API. We also use them unticked as nature intended.
@@ -78,7 +81,7 @@ module Cardano.Api.Typed (
 
     -- * Building transactions
     -- | Constructing and inspecting transactions
-    TxUnsigned(..),
+    TxBody(..),
     TxId,
     getTxId,
     TxIn(..),
@@ -92,8 +95,8 @@ module Cardano.Api.Typed (
 
     -- * Signing transactions
     -- | Creating transaction witnesses one by one, or all in one go.
-    TxSigned(..),
-    getTxUnsigned,
+    Tx(..),
+    getTxBody,
     getTxWitnesses,
 
     -- ** Signing in one go
@@ -219,6 +222,7 @@ import Prelude
 import           Data.Proxy (Proxy(..))
 import           Data.Kind (Constraint)
 import           Data.Maybe
+import           Data.Bifunctor (first)
 import           Data.List as List
 --import           Data.Either
 import           Data.String (IsString(fromString))
@@ -243,7 +247,8 @@ import           Data.Aeson (ToJSON(..), FromJSON(..))
 -- Common types, consensus, network
 --
 import qualified Cardano.Binary as CBOR
-import           Cardano.Binary (ToCBOR(..), FromCBOR(..))
+import           Cardano.Binary (ToCBOR(toCBOR), FromCBOR(fromCBOR))
+import qualified Cardano.Prelude as CBOR (cborError)
 import           Shelley.Spec.Ledger.Serialization (CBORGroup(..))
 import           Cardano.Slotting.Slot (SlotNo)
 import           Ouroboros.Network.Magic (NetworkMagic(..))
@@ -263,7 +268,7 @@ import qualified Cardano.Crypto.VRF.Class   as Crypto
 import qualified Cardano.Crypto.Hashing as Byron
 import qualified Cardano.Crypto.Signing as Byron
 import qualified Cardano.Chain.Common as Byron
---import qualified Cardano.Chain.UTxO   as Byron
+import qualified Cardano.Chain.UTxO   as Byron
 
 --
 -- Shelley imports
@@ -275,11 +280,12 @@ import qualified Shelley.Spec.Ledger.BaseTypes               as Shelley
 --import qualified Shelley.Spec.Ledger.Coin                    as Shelley
 --import qualified Shelley.Spec.Ledger.Delegation.Certificates as Shelley
 import qualified Shelley.Spec.Ledger.Keys                    as Shelley
---import qualified Shelley.Spec.Ledger.TxData                  as Shelley
---import qualified Shelley.Spec.Ledger.Tx                      as Shelley
 import qualified Shelley.Spec.Ledger.PParams                 as Shelley
 import qualified Shelley.Spec.Ledger.OCert                   as Shelley
 import qualified Shelley.Spec.Ledger.Scripts                 as Shelley
+import qualified Shelley.Spec.Ledger.TxData                  as Shelley
+import qualified Shelley.Spec.Ledger.Tx                      as Shelley
+import qualified Shelley.Spec.Ledger.UTxO                    as Shelley
 
 -- TODO: replace the above with
 --import qualified Cardano.Api.Byron   as Byron
@@ -556,36 +562,104 @@ toShelleyStakeReference  NoStakeAddress =
 
 
 -- ----------------------------------------------------------------------------
+-- Transaction Ids
+--
+
+newtype TxId = TxId (Shelley.Hash ShelleyCrypto ())
+               -- We use the Shelley representation and convert the Byron one
+
+instance HasTypeProxy TxId where
+    data AsType TxId = AsTxId
+    proxyToAsType _ = AsTxId
+
+instance SerialiseAsRawBytes TxId where
+    serialiseToRawBytes (TxId h) = Crypto.getHash h
+    deserialiseFromRawBytes AsTxId bs = TxId <$> Crypto.hashFromBytes bs
+
+-- | Calculate the transaction identifier for a 'TxBody'.
+--
+getTxId :: TxBody era -> TxId
+getTxId (ByronTxBody tx) =
+    TxId
+  . Crypto.UnsafeHash
+  . Byron.hashToBytes
+  . Byron.serializeCborHash
+  $ tx
+
+getTxId (ShelleyTxBody tx) =
+    TxId
+  . Crypto.castHash
+  . (\(Shelley.TxId txhash) -> txhash)
+  . Shelley.txid
+  $ tx
+
+
+-- ----------------------------------------------------------------------------
+-- Transaction constituent types
+--
+
+data TxIn = TxIn TxId TxIx
+--TODO  deriving (Show)
+
+newtype TxIx = TxIx Word
+  deriving stock (Eq, Ord, Show)
+  deriving newtype (Enum)
+
+data TxOut era = TxOut (Address era) Lovelace
+--TODO  deriving (Show)
+
+newtype Lovelace = Lovelace Integer
+  deriving (Eq, Ord, Enum, Show)
+
+
+-- ----------------------------------------------------------------------------
 -- Unsigned transactions
 --
 
-data TxUnsigned era where
+data TxBody era where
 
-     ByronTxUnsigned
-       :: TxUnsigned Byron
+     ByronTxBody
+       :: Byron.Tx
+       -> TxBody Byron
 
-     ShelleyTxUnsigned
-       :: TxUnsigned Shelley
-       -- we'll include optional metadata here, even though technically it is
-       -- placed with the witnesses
-
-data TxId
-
-getTxId :: TxUnsigned era -> TxId
-getTxId = undefined
-
-data TxIn = TxIn TxId TxIx
-
-data TxIx
-
-data TxOut era = TxOut (Address era) Lovelace
-
-data Lovelace
+     ShelleyTxBody
+       :: Shelley.TxBody ShelleyCrypto
+       -> TxBody Shelley
 
 
-makeByronTransaction :: [TxIn] -> [TxOut Byron] -> TxUnsigned Byron
+instance HasTypeProxy (TxBody Byron) where
+    data AsType (TxBody Byron) = AsByronTxBody
+    proxyToAsType _ = AsByronTxBody
+
+instance HasTypeProxy (TxBody Shelley) where
+    data AsType (TxBody Shelley) = AsShelleyTxBody
+    proxyToAsType _ = AsShelleyTxBody
+
+
+instance SerialiseAsCBOR (TxBody Byron) where
+    serialiseToCBOR (ByronTxBody txbody) = CBOR.serialize' txbody
+
+    deserialiseFromCBOR AsByronTxBody bs =
+      ByronTxBody <$> CBOR.decodeFull' bs
+
+instance SerialiseAsCBOR (TxBody Shelley) where
+    serialiseToCBOR (ShelleyTxBody txbody) =
+      CBOR.serialize' txbody
+
+    deserialiseFromCBOR AsShelleyTxBody bs =
+      ShelleyTxBody <$>
+        CBOR.decodeAnnotator "Shelley TxBody" fromCBOR (LBS.fromStrict bs)
+
+
+instance HasTextEnvelope (TxBody Byron) where
+    textEnvelopeType _ = "TxUnsignedByron"
+
+instance HasTextEnvelope (TxBody Shelley) where
+    textEnvelopeType _ = "TxUnsignedShelley"
+
+
+makeByronTransaction :: [TxIn] -> [TxOut Byron] -> TxBody Byron
 makeByronTransaction = undefined
-
 
 data TxOptional =
      TxOptional {
@@ -604,7 +678,7 @@ makeShelleyTransaction :: TxOptional
                        -> Lovelace
                        -> [TxIn]
                        -> [TxOut anyera]
-                       -> TxUnsigned Shelley
+                       -> TxBody Shelley
 makeShelleyTransaction = undefined
 
 
@@ -612,56 +686,129 @@ makeShelleyTransaction = undefined
 -- Signed transactions
 --
 
-data TxSigned era where
+data Tx era where
 
-     ByronTxSigned
-       :: TxSigned Byron
+     ByronTx
+       :: Byron.ATxAux ByteString
+       -> Tx Byron
 
-     ShelleyTxSigned
-       :: TxSigned Shelley
+     ShelleyTx
+       :: Shelley.Tx ShelleyCrypto
+       -> Tx Shelley
 
--- order of signing keys must match txins
-signByronTransaction :: NetworkId
-                     -> TxUnsigned Byron
-                     -> [SigningKey ByronKey]
-                     -> TxSigned Byron
-signByronTransaction = undefined
 
--- signing keys is a set
-signShelleyTransaction :: TxUnsigned Shelley
-                       -> [SigningKey Shelley]
-                       -> TxSigned Shelley
-signShelleyTransaction = undefined
+instance HasTypeProxy (Tx Byron) where
+    data AsType (Tx Byron) = AsByronTx
+    proxyToAsType _ = AsByronTx
+
+instance HasTypeProxy (Tx Shelley) where
+    data AsType (Tx Shelley) = AsShelleyTx
+    proxyToAsType _ = AsShelleyTx
+
+
+instance SerialiseAsCBOR (Tx Byron) where
+    serialiseToCBOR (ByronTx tx) = CBOR.recoverBytes tx
+
+    deserialiseFromCBOR AsByronTx bs =
+      ByronTx <$>
+        CBOR.decodeFullAnnotatedBytes "Byron Tx" fromCBOR (LBS.fromStrict bs)
+
+instance SerialiseAsCBOR (Tx Shelley) where
+    serialiseToCBOR (ShelleyTx tx) =
+      CBOR.serialize' tx
+
+    deserialiseFromCBOR AsShelleyTx bs =
+      ShelleyTx <$>
+        CBOR.decodeAnnotator "Shelley Tx" fromCBOR (LBS.fromStrict bs)
+
+
+instance HasTextEnvelope (Tx Byron) where
+    textEnvelopeType _ = "TxSignedByron"
+
+instance HasTextEnvelope (Tx Shelley) where
+    textEnvelopeType _ = "TxSignedShelley"
 
 
 data Witness era where
 
      ByronKeyWitness
-       :: Witness Byron
+       :: Byron.TxInWitness
+       -> Witness Byron
 
      ShelleyKeyWitness
-       :: Witness Shelley
+       :: Shelley.WitVKey ShelleyCrypto
+       -> Witness Shelley
 
      ShelleyScriptWitness
-       :: Witness Shelley
+       :: Shelley.MultiSig ShelleyCrypto
+       -> Witness Shelley
 
-getTxUnsigned :: TxSigned era -> TxUnsigned era
-getTxUnsigned = undefined
 
-getTxWitnesses :: TxSigned era -> [Witness era]
-getTxWitnesses = undefined
+instance HasTypeProxy (Witness Byron) where
+    data AsType (Witness Byron) = AsByronWitness
+    proxyToAsType _ = AsByronWitness
+
+instance HasTypeProxy (Witness Shelley) where
+    data AsType (Witness Shelley) = AsShelleyWitness
+    proxyToAsType _ = AsShelleyWitness
+
+instance SerialiseAsCBOR (Witness Byron) where
+    serialiseToCBOR (ByronKeyWitness wit) = CBOR.serialize' wit
+
+    deserialiseFromCBOR AsByronWitness bs =
+      ByronKeyWitness <$> CBOR.decodeFull' bs
+
+instance SerialiseAsCBOR (Witness Shelley) where
+    serialiseToCBOR = CBOR.serializeEncoding' . encodeShelleyWitness
+      where
+        encodeShelleyWitness :: Witness Shelley -> CBOR.Encoding
+        encodeShelleyWitness (ShelleyKeyWitness    wit) =
+            CBOR.encodeListLen 2 <> CBOR.encodeWord 0 <> toCBOR wit
+        encodeShelleyWitness (ShelleyScriptWitness wit) =
+            CBOR.encodeListLen 2 <> CBOR.encodeWord 1 <> toCBOR wit
+
+    deserialiseFromCBOR AsShelleyWitness bs =
+        CBOR.decodeAnnotator "Shelley Witness"
+                             decodeShelleyWitness (LBS.fromStrict bs)
+      where
+        decodeShelleyWitness :: CBOR.Decoder s (CBOR.Annotator (Witness Shelley))
+        decodeShelleyWitness =  do
+          CBOR.decodeListLenOf 2
+          t <- CBOR.decodeWord
+          case t of
+            0 -> fmap (fmap ShelleyKeyWitness) fromCBOR
+            1 -> fmap (pure . ShelleyScriptWitness) fromCBOR
+            _ -> CBOR.cborError $ CBOR.DecoderErrorUnknownTag
+                                    "Shelley Witness" (fromIntegral t)
+
+instance HasTextEnvelope (Witness Byron) where
+    textEnvelopeType _ = "TxWinessByron"
+
+instance HasTextEnvelope (Witness Shelley) where
+    textEnvelopeType _ = "TxWinessShelley"
+
+
+getTxBody :: Tx era -> TxBody era
+getTxBody (ByronTx _tx) = undefined
+getTxBody (ShelleyTx _tx) = undefined
+
+
+getTxWitnesses :: Tx era -> [Witness era]
+getTxWitnesses (ByronTx _tx) = undefined
+getTxWitnesses (ShelleyTx _tx) = undefined
+
 
 makeSignedTransaction :: [Witness era]
-                      -> TxUnsigned era
-                      -> TxSigned era
+                      -> TxBody era
+                      -> Tx era
 makeSignedTransaction = undefined
 
 
-byronKeyWitness :: NetworkId -> SigningKey ByronKey -> TxUnsigned era -> Witness Byron
+byronKeyWitness :: NetworkId -> SigningKey ByronKey -> TxBody era -> Witness Byron
 byronKeyWitness = undefined
 
 
-shelleyKeyWitness :: SigningKey keyrole -> TxUnsigned era -> Witness Shelley
+shelleyKeyWitness :: SigningKey keyrole -> TxBody era -> Witness Shelley
 shelleyKeyWitness = undefined
 -- this may need some class constraint on the keyrole, we can sign with:
 --
@@ -674,6 +821,20 @@ shelleyKeyWitness = undefined
 
 shelleyScriptWitness :: Script -> TxId -> Witness Shelley
 shelleyScriptWitness = undefined
+
+
+-- order of signing keys must match txins
+signByronTransaction :: NetworkId
+                     -> TxBody Byron
+                     -> [SigningKey ByronKey]
+                     -> Tx Byron
+signByronTransaction = undefined
+
+-- signing keys is a set
+signShelleyTransaction :: TxBody Shelley
+                       -> [SigningKey Shelley]
+                       -> Tx Shelley
+signShelleyTransaction = undefined
 
 
 -- ----------------------------------------------------------------------------
@@ -693,12 +854,14 @@ data OperationalCertificate =
        !(Shelley.OCert ShelleyCrypto)
        !(VerificationKey StakePoolKey)
   deriving (Eq, Show)
+  deriving anyclass SerialiseAsCBOR
 
 data OperationalCertificateIssueCounter =
      OperationalCertificateIssueCounter
        !Natural
        !(VerificationKey StakePoolKey) -- For consistency checking
   deriving (Eq, Show)
+  deriving anyclass SerialiseAsCBOR
 
 instance ToCBOR OperationalCertificate where
     toCBOR (OperationalCertificate ocert vkey) =
@@ -785,12 +948,18 @@ issueOperationalCertificate (KesVerificationKey kesVKey)
 -- CBOR and JSON Serialisation
 --
 
+class HasTypeProxy a => SerialiseAsCBOR a where
+    serialiseToCBOR :: a -> ByteString
+    deserialiseFromCBOR :: AsType a -> ByteString -> Either CBOR.DecoderError a
 
-serialiseToCBOR :: ToCBOR a => a -> ByteString
-serialiseToCBOR = CBOR.serialize'
+    default serialiseToCBOR :: ToCBOR a => a -> ByteString
+    serialiseToCBOR = CBOR.serialize'
 
-deserialiseFromCBOR :: FromCBOR a => AsType a -> ByteString -> Maybe a
-deserialiseFromCBOR _proxy = either (const Nothing) Just . CBOR.decodeFull'
+    default deserialiseFromCBOR :: FromCBOR a
+                                => AsType a
+                                -> ByteString
+                                -> Either CBOR.DecoderError a
+    deserialiseFromCBOR _proxy = CBOR.decodeFull'
 
 newtype JsonDecodeError = JsonDecodeError String
 
@@ -830,7 +999,7 @@ type TextEnvelope = TextView.TextView
 type TextEnvelopeType = TextView.TextViewType
 type TextEnvelopeDescr = TextView.TextViewTitle
 
-class (ToCBOR a, FromCBOR a, HasTypeProxy a) => HasTextEnvelope a where
+class SerialiseAsCBOR a => HasTextEnvelope a where
     textEnvelopeType :: AsType a -> TextEnvelopeType
 
     textEnvelopeDefaultDescr :: AsType a -> TextEnvelopeDescr
@@ -853,11 +1022,12 @@ instance Error TextView.TextViewError where
 
 serialiseToTextEnvelope :: forall a. HasTextEnvelope a
                         => Maybe TextEnvelopeDescr -> a -> TextEnvelope
-serialiseToTextEnvelope mbDescr =
-    TextView.encodeToTextView
-      (textEnvelopeType ttoken)
-      (fromMaybe (textEnvelopeDefaultDescr ttoken) mbDescr)
-      toCBOR
+serialiseToTextEnvelope mbDescr a =
+    TextView.TextView {
+      TextView.tvType    = textEnvelopeType ttoken
+    , TextView.tvTitle   = fromMaybe (textEnvelopeDefaultDescr ttoken) mbDescr
+    , TextView.tvRawCBOR = serialiseToCBOR a
+    }
   where
     ttoken :: AsType a
     ttoken = proxyToAsType Proxy
@@ -869,8 +1039,8 @@ deserialiseFromTextEnvelope :: HasTextEnvelope a
                             -> Either TextEnvelopeError a
 deserialiseFromTextEnvelope ttoken te = do
     TextView.expectTextViewOfType (textEnvelopeType ttoken) te
-    TextView.decodeFromTextView fromCBOR te
-
+    first TextView.TextViewDecodeError $
+      deserialiseFromCBOR ttoken (TextView.tvRawCBOR te)
 
 data FromSomeType (c :: * -> Constraint) b where
      FromSomeType :: c a => AsType a -> (a -> b) -> FromSomeType c b
@@ -884,8 +1054,9 @@ deserialiseFromTextEnvelopeAnyOf types te =
       Nothing ->
         Left (TextView.TextViewTypeError expectedTypes actualType)
 
-      Just (FromSomeType _ttoken f) ->
-        f <$> TextView.decodeFromTextView fromCBOR te
+      Just (FromSomeType ttoken f) ->
+        first TextView.TextViewDecodeError $
+          f <$> deserialiseFromCBOR ttoken (TextView.tvRawCBOR te)
   where
     actualType    = TextView.tvType te
     expectedTypes = [ textEnvelopeType ttoken
@@ -1018,11 +1189,13 @@ instance Key ByronKey where
            ByronVerificationKey Byron.VerificationKey
       deriving stock (Eq, Show)
       deriving newtype (ToCBOR, FromCBOR)
+      deriving anyclass SerialiseAsCBOR
 
     newtype SigningKey ByronKey =
            ByronSigningKey Byron.SigningKey
       deriving stock (Show)
       deriving newtype (ToCBOR, FromCBOR)
+      deriving anyclass SerialiseAsCBOR
 
     deterministicSigningKey :: AsType ByronKey -> Crypto.Seed -> SigningKey ByronKey
     deterministicSigningKey AsByronKey seed =
@@ -1077,11 +1250,13 @@ instance Key PaymentKey where
         PaymentVerificationKey (Shelley.VKey Shelley.Payment ShelleyCrypto)
       deriving stock (Eq, Show)
       deriving newtype (ToCBOR, FromCBOR)
+      deriving anyclass SerialiseAsCBOR
 
     newtype SigningKey PaymentKey =
         PaymentSigningKey (Shelley.SignKeyDSIGN ShelleyCrypto)
       deriving stock (Show)
       deriving newtype (ToCBOR, FromCBOR)
+      deriving anyclass SerialiseAsCBOR
 
     deterministicSigningKey :: AsType PaymentKey -> Crypto.Seed -> SigningKey PaymentKey
     deterministicSigningKey AsPaymentKey seed =
@@ -1144,11 +1319,13 @@ instance Key StakeKey where
         StakeVerificationKey (Shelley.VKey Shelley.Staking ShelleyCrypto)
       deriving stock (Eq, Show)
       deriving newtype (ToCBOR, FromCBOR)
+      deriving anyclass SerialiseAsCBOR
 
     newtype SigningKey StakeKey =
         StakeSigningKey (Shelley.SignKeyDSIGN ShelleyCrypto)
       deriving stock (Show)
       deriving newtype (ToCBOR, FromCBOR)
+      deriving anyclass SerialiseAsCBOR
 
     deterministicSigningKey :: AsType StakeKey -> Crypto.Seed -> SigningKey StakeKey
     deterministicSigningKey AsStakeKey seed =
@@ -1205,11 +1382,13 @@ instance Key GenesisKey where
         GenesisVerificationKey (Shelley.VKey Shelley.Genesis ShelleyCrypto)
       deriving stock (Eq, Show)
       deriving newtype (ToCBOR, FromCBOR)
+      deriving anyclass SerialiseAsCBOR
 
     newtype SigningKey GenesisKey =
         GenesisSigningKey (Shelley.SignKeyDSIGN ShelleyCrypto)
       deriving stock (Show)
       deriving newtype (ToCBOR, FromCBOR)
+      deriving anyclass SerialiseAsCBOR
 
     deterministicSigningKey :: AsType GenesisKey -> Crypto.Seed -> SigningKey GenesisKey
     deterministicSigningKey AsGenesisKey seed =
@@ -1266,11 +1445,13 @@ instance Key GenesisDelegateKey where
         GenesisDelegateVerificationKey (Shelley.VKey Shelley.GenesisDelegate ShelleyCrypto)
       deriving stock (Eq, Show)
       deriving newtype (ToCBOR, FromCBOR)
+      deriving anyclass SerialiseAsCBOR
 
     newtype SigningKey GenesisDelegateKey =
         GenesisDelegateSigningKey (Shelley.SignKeyDSIGN ShelleyCrypto)
       deriving stock (Show)
       deriving newtype (ToCBOR, FromCBOR)
+      deriving anyclass SerialiseAsCBOR
 
     deterministicSigningKey :: AsType GenesisDelegateKey -> Crypto.Seed -> SigningKey GenesisDelegateKey
     deterministicSigningKey AsGenesisDelegateKey seed =
@@ -1329,11 +1510,13 @@ instance Key GenesisUTxOKey where
         GenesisUTxOVerificationKey (Shelley.VKey Shelley.Payment ShelleyCrypto)
       deriving stock (Eq, Show)
       deriving newtype (ToCBOR, FromCBOR)
+      deriving anyclass SerialiseAsCBOR
 
     newtype SigningKey GenesisUTxOKey =
         GenesisUTxOSigningKey (Shelley.SignKeyDSIGN ShelleyCrypto)
       deriving stock (Show)
       deriving newtype (ToCBOR, FromCBOR)
+      deriving anyclass SerialiseAsCBOR
 
     deterministicSigningKey :: AsType GenesisUTxOKey -> Crypto.Seed -> SigningKey GenesisUTxOKey
     deterministicSigningKey AsGenesisUTxOKey seed =
@@ -1391,11 +1574,13 @@ instance Key StakePoolKey where
         StakePoolVerificationKey (Shelley.VKey Shelley.StakePool ShelleyCrypto)
       deriving stock (Eq, Show)
       deriving newtype (ToCBOR, FromCBOR)
+      deriving anyclass SerialiseAsCBOR
 
     newtype SigningKey StakePoolKey =
         StakePoolSigningKey (Shelley.SignKeyDSIGN ShelleyCrypto)
       deriving stock (Show)
       deriving newtype (ToCBOR, FromCBOR)
+      deriving anyclass SerialiseAsCBOR
 
     deterministicSigningKey :: AsType StakePoolKey -> Crypto.Seed -> SigningKey StakePoolKey
     deterministicSigningKey AsStakePoolKey seed =
@@ -1451,11 +1636,13 @@ instance Key KesKey where
         KesVerificationKey (Shelley.VerKeyKES ShelleyCrypto)
       deriving stock (Eq, Show)
       deriving newtype (ToCBOR, FromCBOR)
+      deriving anyclass SerialiseAsCBOR
 
     newtype SigningKey KesKey =
         KesSigningKey (Shelley.SignKeyKES ShelleyCrypto)
       deriving stock (Show)
       deriving newtype (ToCBOR, FromCBOR)
+      deriving anyclass SerialiseAsCBOR
 
     deterministicSigningKey :: AsType KesKey -> Crypto.Seed -> SigningKey KesKey
     deterministicSigningKey AsKesKey seed =
@@ -1512,11 +1699,13 @@ instance Key VrfKey where
         VrfVerificationKey (Shelley.VerKeyVRF ShelleyCrypto)
       deriving stock (Eq, Show)
       deriving newtype (ToCBOR, FromCBOR)
+      deriving anyclass SerialiseAsCBOR
 
     newtype SigningKey VrfKey =
         VrfSigningKey (Shelley.SignKeyVRF ShelleyCrypto)
       deriving stock (Show)
       deriving newtype (ToCBOR, FromCBOR)
+      deriving anyclass SerialiseAsCBOR
 
     deterministicSigningKey :: AsType VrfKey -> Crypto.Seed -> SigningKey VrfKey
     deterministicSigningKey AsVrfKey seed =

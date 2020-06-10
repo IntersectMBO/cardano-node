@@ -10,6 +10,7 @@ module Cardano.Api.TxSubmit
   ( submitTx
   , submitGenTx
   , TxSubmitResult(..)
+  , renderTxSubmitResult
   ) where
 
 import           Cardano.Prelude
@@ -18,6 +19,7 @@ import           Control.Tracer
 import           Control.Concurrent.STM
 
 import           Cardano.Api.Types
+import           Cardano.Api.TxSubmit.ErrorRender (renderApplyMempoolPayloadErr)
 
 import           Ouroboros.Consensus.Cardano (protocolClientInfo, SecurityParam(..))
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx)
@@ -53,6 +55,17 @@ data TxSubmitResult
    = TxSubmitSuccess
    | TxSubmitFailureByron   (ApplyTxErr ByronBlock)
    | TxSubmitFailureShelley (ApplyTxErr (ShelleyBlock TPraosStandardCrypto))
+   deriving Show
+
+renderTxSubmitResult :: TxSubmitResult -> Text
+renderTxSubmitResult res =
+  case res of
+    TxSubmitSuccess -> "Transaction submitted successfully."
+    TxSubmitFailureByron err ->
+      "Failed to submit Byron transaction: " <> renderApplyMempoolPayloadErr err
+    TxSubmitFailureShelley err ->
+      -- TODO: Write render function for Shelley tx submission errors.
+      "Failed to submit Shelley transaction: " <> show err
 
 submitTx
   :: Network
