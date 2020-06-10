@@ -1,7 +1,8 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Cardano.Api.MetaData
-  ( readJSONMetaData
+  ( MetaDataError
+  , readJSONMetaData
   , renderMetaDataError
   ) where
 

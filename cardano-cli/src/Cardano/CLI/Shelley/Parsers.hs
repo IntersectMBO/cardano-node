@@ -28,7 +28,7 @@ import qualified Shelley.Spec.Ledger.TxData as Shelley
 import           Cardano.Api
 import           Cardano.Slotting.Slot (EpochNo (..))
 
-import           Cardano.Config.Types (CertificateFile (..), SigningKeyFile(..),
+import           Cardano.Config.Types (CertificateFile (..), MetaDataFile(..), SigningKeyFile(..),
                    PoolMetaDataFile(..), UpdateProposalFile (..))
 import           Cardano.Config.Parsers (parseNodeAddress)
 import           Cardano.Config.Shelley.OCert (KESPeriod(..))
@@ -270,6 +270,7 @@ pTransaction =
                                    <*> pTxFee
                                    <*> many pCertificateFile
                                    <*> pWithdrawals
+                                   <*> optional pMetaDataFile
                                    <*> optional pUpdateProposalFile
                                    <*> pTxBodyFile Output
 
@@ -714,6 +715,16 @@ pPoolMetaDataFile =
       (  Opt.long "pool-metadata-file"
       <> Opt.metavar "FILE"
       <> Opt.help "Filepath of the pool metadata."
+      <> Opt.completer (Opt.bashCompleter "file")
+      )
+
+pMetaDataFile :: Parser MetaDataFile
+pMetaDataFile =
+  MetaDataFile <$>
+    Opt.strOption
+      (  Opt.long "metadata-file"
+      <> Opt.metavar "FILE"
+      <> Opt.help "Filepath of the metadata."
       <> Opt.completer (Opt.bashCompleter "file")
       )
 

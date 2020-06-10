@@ -87,6 +87,7 @@ module Cardano.Api
   , ShelleyStakePoolOwners
   , ShelleyStakePoolRelay
   , ShelleyWithdrawals
+  , ShelleyMetaDataHash
   , ShelleyUpdate
   , ShelleyVerificationKeyHashStaking
   , ShelleyVerificationKeyHashStakePool
@@ -417,19 +418,21 @@ buildShelleyTransaction
   -> Withdrawals
   -> Maybe Update
   -- ^ Update proposals
+  -> Maybe ShelleyMetaDataHash
   -> TxUnsigned
-buildShelleyTransaction txins txouts ttl fee certs wdrls pParamUpdate = do
+buildShelleyTransaction txins txouts ttl fee certs wdrls pParamUpdate hMetaData = do
   let relevantCerts = [ certDiscrim c | c <- certs ]
   TxUnsignedShelley $
     Shelley.TxBody
-      (Set.fromList (map toShelleyTxIn  txins))
-      (Seq.fromList (map toShelleyTxOut txouts))
-      (Seq.fromList relevantCerts)  -- certificates
-      shelleyWdrl                   -- withdrawals
-      (toShelleyLovelace fee)
-      ttl
-      (toStrictMaybe pParamUpdate)
-      Shelley.SNothing              -- metadata hash
+      { Shelley._inputs = Set.fromList $ map toShelleyTxIn txins
+      , Shelley._outputs = Seq.fromList $ map toShelleyTxOut txouts
+      , Shelley._certs = Seq.fromList relevantCerts
+      , Shelley._wdrls = shelleyWdrl
+      , Shelley._txfee = toShelleyLovelace fee
+      , Shelley._ttl = ttl
+      , Shelley._txUpdate = toStrictMaybe pParamUpdate
+      , Shelley._mdHash = Shelley.maybeToStrictMaybe hMetaData
+      }
  where
    certDiscrim :: Certificate -> ShelleyCertificate
    certDiscrim (ShelleyDelegationCertificate delegCert) = delegCert
@@ -473,7 +476,7 @@ buildDummyShelleyTxForFeeCalc
   -> TxSigned
 buildDummyShelleyTxForFeeCalc txInCount txOutCount ttl network skeys certs wdrls =
     signTransaction
-      (buildShelleyTransaction txIns txOuts ttl fee certs wdrls Nothing)
+      (buildShelleyTransaction txIns txOuts ttl fee certs wdrls Nothing Nothing)
       network
       skeys
   where
