@@ -1445,7 +1445,7 @@ pNumberOfPools =
 pPoolInfluence :: Parser (Maybe Rational)
 pPoolInfluence =
   optional
-    $ Opt.option Opt.auto
+    $ Opt.option readRationalAsDouble
         (  Opt.long "pool-influence"
         <> Opt.metavar "DOUBLE"
         <> Opt.help "Pool influence."
@@ -1524,3 +1524,6 @@ pFieldUnitInterval = Opt.auto >>= checkUnitInterval
      case mkUnitInterval $ toRational dbl of
        Just interval -> return interval
        Nothing -> fail "Please enter a value in the range [0,1]"
+
+readRationalAsDouble :: Opt.ReadM Rational
+readRationalAsDouble = toRational <$> (Opt.auto :: Opt.ReadM Double)
