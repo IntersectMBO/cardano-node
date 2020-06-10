@@ -34,7 +34,7 @@ import           Cardano.Config.Shelley.OCert (KESPeriod(..))
 
 import           Cardano.CLI.Shelley.Commands
 
-import           Cardano.Crypto.Hash (hashFromBytes)
+import           Cardano.Crypto.Hash (Blake2b_256, Hash (..), hashFromBytes, hashFromBytesAsHex)
 
 --
 -- Shelley CLI command parsers
@@ -365,7 +365,7 @@ pPoolCmd =
           (Opt.info pId $
              Opt.progDesc "Build pool id from the offline key")
       , Opt.command "metadata-hash"
-          (Opt.info pPoolMetaDataHash $ Opt.progDesc "Print the hash of pool metadata.")
+          (Opt.info pPoolMetaDataHashSubCmd $ Opt.progDesc "Print the hash of pool metadata.")
       ]
   where
     pPoolRegster :: Parser PoolCmd
@@ -380,8 +380,8 @@ pPoolCmd =
     pId :: Parser PoolCmd
     pId = PoolGetId <$> pVerificationKeyFile Output
 
-    pPoolMetaDataHash :: Parser PoolCmd
-    pPoolMetaDataHash = PoolMetaDataHash <$> pPoolMetaDataFile
+    pPoolMetaDataHashSubCmd :: Parser PoolCmd
+    pPoolMetaDataHashSubCmd = PoolMetaDataHash <$> pPoolMetaDataFile
 
 
 pQueryCmd :: Parser QueryCmd
@@ -1227,6 +1227,37 @@ _pIpV6 = Opt.option (Opt.maybeReader readMaybe :: Opt.ReadM IP.IPv6)
           <> Opt.help "The stake pool relay's IpV6 address"
           )
 
+pPoolMetaData :: Parser (Maybe ShelleyStakePoolMetaData)
+pPoolMetaData =
+  optional $
+    Shelley.PoolMetaData
+      <$> pPoolMetaDataUrl
+      <*> pPoolMetaDataHash
+
+pPoolMetaDataUrl :: Parser Shelley.Url
+pPoolMetaDataUrl =
+  Opt.option
+    (Opt.maybeReader (Shelley.textToUrl . Text.pack))
+        (  Opt.long "metadata-url"
+        <> Opt.metavar "URL"
+        <> Opt.help "Pool metadata URL (maximum length of 64 characters)."
+        )
+
+pPoolMetaDataHash :: Parser ByteString
+pPoolMetaDataHash =
+    Opt.option
+      (Opt.maybeReader metadataHash)
+        (  Opt.long "metadata-hash"
+        <> Opt.metavar "HASH"
+        <> Opt.help "Pool metadata hash."
+        )
+  where
+    getHashFromHexString :: String -> Maybe (Hash Blake2b_256 ByteString)
+    getHashFromHexString = hashFromBytesAsHex . C8.pack
+
+    metadataHash :: String -> Maybe ByteString
+    metadataHash str = getHash <$> getHashFromHexString str
+
 pStakePoolRegistrationCert :: Parser PoolCmd
 pStakePoolRegistrationCert =
  PoolRegistrationCert
@@ -1238,6 +1269,7 @@ pStakePoolRegistrationCert =
   <*> pRewardAcctVerificationKeyFile
   <*> some pPoolOwner
   <*> pure []  --TODO: the relays
+  <*> pPoolMetaData
   <*> pNetwork
   <*> pOutputFile
 

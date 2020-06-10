@@ -14,7 +14,7 @@ import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT
 import qualified Data.ByteString.Char8 as BS
 
 import           Cardano.Api (ApiError(..), ShelleyCoin, ShelleyStakePoolMargin,
-                   ShelleyStakePoolRelay, StakingVerificationKey (..),
+                   ShelleyStakePoolMetaData, ShelleyStakePoolRelay, StakingVerificationKey (..),
                    ShelleyVerificationKeyHashStakePool,
                    Network, toShelleyNetwork,
                    mkShelleyStakingCredential, readStakingVerificationKey,
@@ -62,8 +62,8 @@ renderShelleyPoolCmdError err =
 
 
 runPoolCmd :: PoolCmd -> ExceptT ShelleyPoolCmdError IO ()
-runPoolCmd (PoolRegistrationCert sPvkey vrfVkey pldg pCost pMrgn rwdVerFp ownerVerFps relays network outfp) =
-  runStakePoolRegistrationCert sPvkey vrfVkey pldg pCost pMrgn rwdVerFp ownerVerFps relays network outfp
+runPoolCmd (PoolRegistrationCert sPvkey vrfVkey pldg pCost pMrgn rwdVerFp ownerVerFps relays mbMetadata network outfp) =
+  runStakePoolRegistrationCert sPvkey vrfVkey pldg pCost pMrgn rwdVerFp ownerVerFps relays mbMetadata network outfp
 runPoolCmd (PoolRetirementCert sPvkeyFp retireEpoch outfp) =
   runStakePoolRetirementCert sPvkeyFp retireEpoch outfp
 runPoolCmd (PoolGetId sPvkey) = runPoolId sPvkey
@@ -95,6 +95,8 @@ runStakePoolRegistrationCert
   -- ^ Pool owner stake verification key(s).
   -> [ShelleyStakePoolRelay]
   -- ^ Stake pool relays.
+  -> (Maybe ShelleyStakePoolMetaData)
+  -- ^ Stake pool metadata.
   -> Network
   -> OutputFile
   -> ExceptT ShelleyPoolCmdError IO ()
@@ -107,6 +109,7 @@ runStakePoolRegistrationCert
   (VerificationKeyFile rwdVerFp)
   ownerVerFps
   relays
+  mbMetadata
   network
   (OutputFile outfp) = do
     -- Pool verification key
@@ -145,7 +148,7 @@ runStakePoolRegistrationCert
                              rewardAccount
                              stakePoolOwners
                              relays
-                             Nothing
+                             mbMetadata
 
     firstExceptT (ShelleyPoolWriteRegistrationCertError outfp) . newExceptT $ writeCertificate outfp registrationCert
 

@@ -137,6 +137,8 @@ data PoolCmd
       -- ^ Pool owner verification staking key(s).
       [ShelleyStakePoolRelay]
       -- ^ Stake pool relays.
+      (Maybe ShelleyStakePoolMetaData)
+      -- ^ Stake pool metadata.
       Network
       OutputFile
   | PoolRetirementCert
