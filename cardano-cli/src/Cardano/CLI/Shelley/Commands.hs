@@ -103,7 +103,7 @@ data TransactionCmd
       [SigningKeyFile]
       [CertificateFile]
       ProtocolParamsFile
-  | TxInfo          -- { transaction :: Transaction, nodeAddr :: NodeAddress }
+  | TxGetTxId TxBodyFile
   deriving (Eq, Show)
 
 

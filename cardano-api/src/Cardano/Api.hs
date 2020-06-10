@@ -42,6 +42,7 @@ module Cardano.Api
   , Update (..)
   , ShelleyTxBody
 
+  , getTransactionId
   , getTxSignedBody
   , getTxSignedHash
   , getTxSignedWitnesses
@@ -131,6 +132,8 @@ import qualified Cardano.Binary as Binary
 
 import           Cardano.Crypto.DSIGN (DSIGNAlgorithm (..))
 import           Cardano.Crypto.Seed (readSeedFromSystemEntropy)
+
+import qualified Cardano.Crypto.Hash.Class as Crypto.Hash
 
 import qualified Cardano.Crypto.Hash as Crypto (Blake2b_256, hash)
 import qualified Cardano.Crypto.Hashing as Crypto hiding (hash)
@@ -431,6 +434,13 @@ buildShelleyTransaction txins txouts ttl fee certs pParamUpdate = do
    toStrictMaybe :: Maybe Update ->  Shelley.StrictMaybe ShelleyUpdate
    toStrictMaybe (Just (ShelleyUpdate shellyUp)) = Shelley.SJust shellyUp
    toStrictMaybe Nothing = Shelley.SNothing
+
+getTransactionId :: TxUnsigned -> TxId
+getTransactionId (TxUnsignedByron _ _ txbodyhash) =
+    TxId (Crypto.Hash.UnsafeHash (Crypto.hashToBytes txbodyhash))
+
+getTransactionId (TxUnsignedShelley txbody) =
+    TxId (Crypto.Hash.castHash (Shelley.hashTxBody txbody))
 
 -- | Calculate the minimum fee of a Shelley transaction.
 calculateShelleyMinFee :: Shelley.PParams -> TxSigned -> Lovelace
