@@ -42,7 +42,8 @@ import           Cardano.Slotting.Slot (EpochNo (..))
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
 
 import           Cardano.Config.Types
-                  (NodeAddress, SigningKeyFile(..), CertificateFile (..), UpdateProposalFile(..))
+                  (CertificateFile (..), NodeAddress, PoolMetaDataFile (..),
+                   SigningKeyFile(..), UpdateProposalFile(..))
 import           Cardano.Config.Shelley.OCert (KESPeriod(..))
 import           Shelley.Spec.Ledger.TxData (MIRPot)
 
@@ -145,7 +146,7 @@ data PoolCmd
       -- ^ Epoch in which to retire the stake pool. --TODO: Double check this
       OutputFile
   | PoolGetId VerificationKeyFile
-
+  | PoolMetaDataHash PoolMetaDataFile
   deriving (Eq, Show)
 
 

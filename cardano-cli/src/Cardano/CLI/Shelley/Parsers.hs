@@ -27,8 +27,8 @@ import qualified Shelley.Spec.Ledger.TxData as Shelley
 import           Cardano.Api
 import           Cardano.Slotting.Slot (EpochNo (..))
 
-import           Cardano.Config.Types (SigningKeyFile(..), CertificateFile (..),
-                   UpdateProposalFile (..))
+import           Cardano.Config.Types (CertificateFile (..), SigningKeyFile(..),
+                   PoolMetaDataFile(..), UpdateProposalFile (..))
 import           Cardano.Config.Parsers (parseNodeAddress)
 import           Cardano.Config.Shelley.OCert (KESPeriod(..))
 
@@ -364,6 +364,8 @@ pPoolCmd =
       , Opt.command "id"
           (Opt.info pId $
              Opt.progDesc "Build pool id from the offline key")
+      , Opt.command "metadata-hash"
+          (Opt.info pPoolMetaDataHash $ Opt.progDesc "Print the hash of pool metadata.")
       ]
   where
     pPoolRegster :: Parser PoolCmd
@@ -377,6 +379,9 @@ pPoolCmd =
 
     pId :: Parser PoolCmd
     pId = PoolGetId <$> pVerificationKeyFile Output
+
+    pPoolMetaDataHash :: Parser PoolCmd
+    pPoolMetaDataHash = PoolMetaDataHash <$> pPoolMetaDataFile
 
 
 pQueryCmd :: Parser QueryCmd
@@ -699,6 +704,15 @@ pCertificateFile =
          )
     )
 
+pPoolMetaDataFile :: Parser PoolMetaDataFile
+pPoolMetaDataFile =
+  PoolMetaDataFile <$>
+    Opt.strOption
+      (  Opt.long "pool-metadata-file"
+      <> Opt.metavar "FILE"
+      <> Opt.help "Filepath of the pool metadata."
+      <> Opt.completer (Opt.bashCompleter "file")
+      )
 
 pUpdateProposalFile :: Parser UpdateProposalFile
 pUpdateProposalFile =
