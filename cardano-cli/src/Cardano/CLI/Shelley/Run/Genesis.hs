@@ -126,10 +126,10 @@ renderShelleyGenesisCmdError err =
         <> "delegate VRF key file indexes: " <> textShow vfiles
     ShelleyGenesisFilesNoIndex files ->
       "The genesis keys files are expected to have a numeric index but these do not:\n"
-        <> unlines (map Text.pack files)
+        <> Text.unlines (map Text.pack files)
     ShelleyGenesisFilesDupIndex files ->
       "The genesis keys files are expected to have a unique numeric index but these do not:\n"
-        <> unlines (map Text.pack files)
+        <> Text.unlines (map Text.pack files)
 
 
 runGenesisCmd :: GenesisCmd -> ExceptT ShelleyGenesisCmdError IO ()

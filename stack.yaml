@@ -21,7 +21,10 @@ extra-deps:
   - hspec-discover-2.7.0
   - text-1.2.4.0
   - base58-bytestring-0.1.0
+  - base64-0.4.2
+  - bech32-1.0.2
   # Waiting on Stackage release
+  - ghc-byteorder-4.11.0.0.10
   - hedgehog-1.0.2
   - hedgehog-corpus-0.2.0
   - micro-recursion-schemes-5.0.2.2
