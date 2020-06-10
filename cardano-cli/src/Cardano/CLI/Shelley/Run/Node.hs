@@ -9,14 +9,14 @@ import           Cardano.Prelude
 import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT)
 
-import           Cardano.Config.Shelley.ColdKeys hiding (writeSigningKey)
-import           Cardano.Config.Shelley.KES
-import           Cardano.Config.Shelley.OCert
-import           Cardano.Config.Shelley.VRF
+import           Cardano.Api.Shelley.ColdKeys hiding (writeSigningKey)
+import           Cardano.Api.Shelley.KES
+import           Cardano.Api.Shelley.OCert
+import           Cardano.Api.Shelley.VRF
 
-import           Cardano.Config.Shelley.ColdKeys (KeyError)
-import           Cardano.Config.TextView (textShow)
-import           Cardano.Config.Types (SigningKeyFile(..))
+import           Cardano.Api.Shelley.ColdKeys (KeyError)
+import           Cardano.Api.TextView (textShow)
+import           Cardano.Api.Config.Types (SigningKeyFile(..))
 
 import           Cardano.CLI.Shelley.Commands
 import           Cardano.CLI.Shelley.KeyGen

@@ -32,8 +32,8 @@ import           Cardano.CLI.Environment (EnvSocketError, readEnvSocketPath, ren
 import           Cardano.CLI.Helpers (HelpersError, pPrintCBOR, renderHelpersError)
 import           Cardano.CLI.Shelley.Parsers (OutputFile (..), QueryCmd (..))
 
-import           Cardano.Config.Shelley.Orphans ()
-import           Cardano.Config.Shelley.Protocol (mkNodeClientProtocolTPraos)
+import           Cardano.Api.Shelley.Orphans ()
+import           Cardano.Api.Shelley.Protocol (mkNodeClientProtocolTPraos)
 
 import           Cardano.Crypto.Hash.Class (getHashBytesAsHex)
 

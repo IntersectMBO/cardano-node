@@ -26,8 +26,8 @@ import qualified Cardano.Chain.Delegation as Dlg
 import           Cardano.Chain.Slotting (EpochNumber)
 import           Cardano.CLI.Helpers (HelpersError(..), renderHelpersError, serialiseSigningKey)
 import qualified Cardano.CLI.Legacy.Byron as Legacy
-import           Cardano.Config.Protocol (CardanoEra(..))
-import           Cardano.Config.Types (CertificateFile (..))
+import           Cardano.Api.Protocol.Types (CardanoEra(..))
+import           Cardano.Api.Config.Types (CertificateFile (..))
 import qualified Cardano.Crypto as Crypto
 import           Cardano.Crypto (ProtocolMagicId, SigningKey)
 

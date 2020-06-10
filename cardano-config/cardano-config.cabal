@@ -22,35 +22,9 @@ library
     cpp-options:       -DSYSTEMD
     build-depends:     lobemo-scribe-systemd
 
-  exposed-modules:     Cardano.Config.Byron.Parsers
-                       Cardano.Config.Byron.Protocol
-                       Cardano.Config.GitRev
+  exposed-modules:     Cardano.Config.GitRev
                        Cardano.Config.GitRevFromGit
-                       Cardano.Config.Logging
-                       Cardano.Config.Mock.Protocol
-                       Cardano.Config.Orphanage
-                       Cardano.Config.Parsers
-                       Cardano.Config.Protocol
-                       Cardano.Config.Shelley.Address
-                       Cardano.Config.Shelley.ColdKeys
-                       Cardano.Config.Shelley.Genesis
-                       Cardano.Config.Shelley.KES
-                       Cardano.Config.Shelley.OCert
-                       Cardano.Config.Shelley.Orphans
-                       Cardano.Config.Shelley.Parsers
-                       Cardano.Config.Shelley.Protocol
-                       Cardano.Config.Shelley.VRF
-                       Cardano.Config.TextView
-                       Cardano.Config.Topology
                        Cardano.Config.TopHandler
-                       Cardano.Config.TraceConfig
-                       Cardano.Config.Types
-                       Cardano.TracingOrphanInstances.Byron
-                       Cardano.TracingOrphanInstances.Common
-                       Cardano.TracingOrphanInstances.Consensus
-                       Cardano.TracingOrphanInstances.Mock
-                       Cardano.TracingOrphanInstances.Network
-                       Cardano.TracingOrphanInstances.Shelley
 
   build-depends:       base >=4.12 && <5
                      , attoparsec
@@ -114,48 +88,3 @@ library
                      -Wredundant-constraints
                      -Wpartial-fields
                      -Wcompat
-
-test-suite cardano-config-test
-  hs-source-dirs:       test
-  main-is:              cardano-config-test.hs
-  type:                 exitcode-stdio-1.0
-
-  build-depends:
-                        base >= 4.12 && < 5
-                      , aeson
-                      , bytestring
-                      , cardano-config
-                      , cardano-crypto-class
-                      , cardano-crypto-test
-                      , cardano-crypto-wrapper
-                      , cardano-prelude
-                      , cardano-prelude-test
-                      , cardano-slotting
-                      , containers
-                      , cryptonite
-                      , iproute
-                      , ouroboros-consensus
-                      , ouroboros-consensus-shelley
-                      , ouroboros-network
-                      , shelley-spec-ledger
-                      , shelley-spec-ledger-test
-                      , time
-                      , hedgehog
-                      , hedgehog-corpus
-
-  other-modules:        Test.Cardano.Config.Examples
-                        Test.Cardano.Config.Gen
-                        Test.Cardano.Config.Json
-                        Test.Cardano.Config.Types
-                        Test.Cardano.Config.TextView
-
-  default-language:     Haskell2010
-  default-extensions:   NoImplicitPrelude
-
-  ghc-options:          -Wall
-                        -Wincomplete-record-updates
-                        -Wincomplete-uni-patterns
-                        -Wredundant-constraints
-                        -Wpartial-fields
-                        -Wcompat
-                        -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T

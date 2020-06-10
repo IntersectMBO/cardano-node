@@ -98,7 +98,7 @@ import           Cardano.Prelude
 
 import           Data.Vector (Vector)
 
-import           Cardano.Config.Orphanage ()
+import           Cardano.Api.Orphans ()
 
 import           Cardano.Slotting.Slot (SlotNo (..), EpochNo (..))
 import           Ouroboros.Network.Magic (NetworkMagic(..))

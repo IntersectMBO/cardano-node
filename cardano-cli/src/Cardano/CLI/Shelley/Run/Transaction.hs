@@ -10,17 +10,17 @@ import           Cardano.Prelude
 import           Cardano.Binary (FromCBOR(..))
 
 import           Cardano.Api hiding (textShow)
-import           Cardano.Config.Shelley.ColdKeys
+import           Cardano.Api.Shelley.ColdKeys
                    (KeyType(..), KeyRole(..), KeyError(..), OperatorKeyRole (..),
                    renderKeyError, renderKeyType)
-import           Cardano.Config.TextView
+import           Cardano.Api.TextView
 import           Cardano.CLI.Environment (EnvSocketError, readEnvSocketPath,
                    renderEnvSocketError)
 
-import           Cardano.Config.Types hiding (Update)
+import           Cardano.Api.Config.Types hiding (Update)
 
 import           Cardano.CLI.Shelley.Parsers
-import           Cardano.Config.Types (CertificateFile (..))
+import           Cardano.Api.Config.Types (CertificateFile (..))
 
 import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra

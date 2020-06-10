@@ -52,10 +52,10 @@ import           Cardano.BM.Data.Transformers (setHostname)
 import           Cardano.BM.Trace
 
 import           Cardano.Config.GitRev (gitRev)
-import           Cardano.Config.Logging (LoggingLayer (..), Severity (..))
-import           Cardano.Config.TraceConfig (traceBlockFetchDecisions,
+import            Cardano.Node.Logging (LoggingLayer (..), Severity (..))
+import           Cardano.Api.Config.TraceConfig (traceBlockFetchDecisions,
                      TraceOptions(..), TraceSelection(..))
-import           Cardano.Config.Types (NodeConfiguration (..), ViewMode (..))
+import           Cardano.Api.Config.Types (NodeConfiguration (..), ViewMode (..))
 
 import           Ouroboros.Network.Magic (NetworkMagic (..))
 import           Ouroboros.Network.NodeToClient (LocalConnectionId)
@@ -80,11 +80,11 @@ import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 import           Ouroboros.Consensus.Storage.ImmutableDB (ValidationPolicy (..))
 import           Ouroboros.Consensus.Storage.VolatileDB (BlockValidationPolicy (..))
 
-import           Cardano.Config.Protocol
+import           Cardano.Api.Protocol.Types
                    (SomeConsensusProtocol(..), mkConsensusProtocol,
                     renderProtocolInstantiationError)
-import           Cardano.Config.Topology
-import           Cardano.Config.Types
+import            Cardano.Api.Config.Topology
+import           Cardano.Api.Config.Types
 import           Cardano.Node.Socket (gatherConfiguredSockets, SocketOrSocketInfo(..))
 import           Cardano.Node.Shutdown
 import           Cardano.Tracing.Peer

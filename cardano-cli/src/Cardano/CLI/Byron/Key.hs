@@ -43,8 +43,8 @@ import qualified Cardano.Chain.Common as Common
 import qualified Cardano.Chain.Genesis as Genesis
 import           Cardano.CLI.Helpers (HelpersError, renderHelpersError, serialiseSigningKey)
 import qualified Cardano.CLI.Legacy.Byron as Legacy
-import           Cardano.Config.Protocol (CardanoEra(..))
-import           Cardano.Config.Types (SigningKeyFile(..))
+import           Cardano.Api.Protocol.Types (CardanoEra(..))
+import           Cardano.Api.Config.Types (SigningKeyFile(..))
 import           Cardano.Crypto (SigningKey(..))
 import qualified Cardano.Crypto.Random as Crypto
 import qualified Cardano.Crypto.Signing as Crypto

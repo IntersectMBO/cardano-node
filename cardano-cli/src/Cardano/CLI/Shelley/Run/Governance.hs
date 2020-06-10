@@ -19,7 +19,7 @@ import           Cardano.Api (ApiError, EpochNo, PParams'(..), ShelleyCoin,
                    textShow, writeCertificate, writeUpdate)
 
 
-import           Cardano.Config.Shelley.ColdKeys (KeyError, KeyRole(..), readVerKey,
+import           Cardano.Api.Shelley.ColdKeys (KeyError, KeyRole(..), readVerKey,
                    renderKeyError)
 import           Cardano.CLI.Shelley.Parsers
 

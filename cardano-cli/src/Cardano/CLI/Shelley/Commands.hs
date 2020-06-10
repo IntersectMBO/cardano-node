@@ -41,9 +41,9 @@ import           Cardano.Api
 import           Cardano.Slotting.Slot (EpochNo (..))
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
 
-import           Cardano.Config.Types
+import           Cardano.Api.Config.Types
                   (NodeAddress, SigningKeyFile(..), CertificateFile (..), UpdateProposalFile(..))
-import           Cardano.Config.Shelley.OCert (KESPeriod(..))
+import           Cardano.Api.Shelley.OCert (KESPeriod(..))
 import           Shelley.Spec.Ledger.TxData (MIRPot)
 
 --

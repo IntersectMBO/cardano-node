@@ -11,8 +11,7 @@ import           Cardano.Prelude hiding (atomically, catch)
 import qualified Data.ByteString.Lazy as LBS
 
 import           Cardano.Api.Types (Network(..), toNetworkMagic)
-
-import           Cardano.Config.Types (SocketPath (..))
+import           Cardano.Api.Config.Types (SocketPath(..))
 
 import           Control.Monad.Class.MonadST (MonadST)
 import           Control.Monad.Class.MonadSTM.Strict

@@ -30,14 +30,14 @@ import           Cardano.Api.Types
                    (Network, toNetworkMagic, Address (..), ByronAddress, ShelleyAddress,
                     ShelleyCoin, ShelleyCredentialStaking, ShelleyRewardAccount,
                     ShelleyVerificationKeyHashStakePool)
+import           Cardano.Api.Config.Types (SocketPath(..))
 import           Cardano.Api.TxSubmit.Types (textShow)
 import           Cardano.Binary (decodeFull)
 import           Cardano.BM.Data.Tracer (ToLogObject (..), nullTracer)
 import           Cardano.BM.Trace (Trace, appendName, logInfo)
 
-import           Cardano.Config.Protocol ()
-import           Cardano.Config.Shelley.Protocol (mkNodeClientProtocolTPraos)
-import           Cardano.Config.Types (SocketPath (..))
+import           Cardano.Api.Protocol.Types ()
+import           Cardano.Api.Shelley.Protocol (mkNodeClientProtocolTPraos)
 
 import qualified Codec.CBOR.Term as CBOR
 

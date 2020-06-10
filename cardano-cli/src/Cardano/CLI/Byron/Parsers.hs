@@ -58,12 +58,12 @@ import           Cardano.Chain.Genesis
 import           Cardano.Chain.UTxO (TxId, TxIn(..), TxOut(..))
 
 import           Cardano.Api (Network(..), NetworkMagic(..))
-import           Cardano.Config.Types
-import           Cardano.Config.Parsers
+import           Cardano.Api.Config.Types
+import           Cardano.Api.Config.Parsers
                    (parseIntegral, parseFraction, parseLovelace, readDouble,
                     parseFilePath,  parseConfigFile, parseSigningKeyFile,
                     parseGenesisFile, command', parseFlag')
-import           Cardano.Config.Protocol (CardanoEra(..))
+import           Cardano.Api.Protocol.Types (CardanoEra(..))
 
 import           Cardano.CLI.Byron.Commands
 import           Cardano.CLI.Byron.Genesis

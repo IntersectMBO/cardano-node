@@ -17,7 +17,7 @@ import qualified Shelley.Spec.Ledger.Keys as Ledger
 
 import           Cardano.CLI.Shelley.Commands
 
-import           Cardano.Config.Shelley.ColdKeys
+import           Cardano.Api.Shelley.ColdKeys
 
 data ShelleyKeyGenError = ShelleyColdKeyGenError !KeyError
                         deriving Show

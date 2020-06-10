@@ -24,9 +24,9 @@ import           Cardano.Chain.UTxO (TxIn, TxOut)
 import qualified Cardano.Crypto.Hashing as Crypto
 import qualified Cardano.Crypto.Signing as Crypto
 
-import           Cardano.Config.Protocol (CardanoEra, RealPBFTError,
+import           Cardano.Api.Protocol.Types (CardanoEra, RealPBFTError,
                    ncCardanoEra, renderRealPBFTError)
-import           Cardano.Config.Types
+import           Cardano.Api.Config.Types
 
 import           Cardano.Api (Network, toByronNetworkMagic)
 import           Cardano.CLI.Byron.Commands

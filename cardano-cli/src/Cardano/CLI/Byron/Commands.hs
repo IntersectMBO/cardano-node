@@ -17,8 +17,8 @@ import           Cardano.Chain.Update
                     SystemTag(..))
 
 import           Cardano.Api (Network)
-import           Cardano.Config.Protocol (CardanoEra(..))
-import           Cardano.Config.Types
+import           Cardano.Api.Protocol.Types (CardanoEra(..))
+import           Cardano.Api.Config.Types
 
 import           Cardano.CLI.Byron.UpdateProposal
 

@@ -18,6 +18,8 @@ import           Cardano.Prelude
 import           Control.Tracer
 import           Control.Concurrent.STM
 
+import           Cardano.Api.Protocol.Byron (mkNodeClientProtocolRealPBFT)
+import           Cardano.Api.Config.Types (SocketPath(..))
 import           Cardano.Api.Types
 import           Cardano.Api.TxSubmit.ErrorRender (renderApplyMempoolPayloadErr)
 
@@ -46,9 +48,7 @@ import           Ouroboros.Consensus.Shelley.Ledger (ShelleyBlock)
 import           Ouroboros.Consensus.Byron.Ledger (ByronBlock)
 import           Ouroboros.Consensus.Shelley.Protocol.Crypto (TPraosStandardCrypto)
 
-import           Cardano.Config.Byron.Protocol (mkNodeClientProtocolRealPBFT)
-import           Cardano.Config.Shelley.Protocol (mkNodeClientProtocolTPraos)
-import           Cardano.Config.Types (SocketPath(..))
+import           Cardano.Api.Shelley.Protocol (mkNodeClientProtocolTPraos)
 
 
 data TxSubmitResult

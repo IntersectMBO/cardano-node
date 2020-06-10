@@ -9,7 +9,7 @@ module Cardano.CLI.Environment
 import           Cardano.Prelude
 
 import           Cardano.Api (textShow)
-import           Cardano.Config.Types (SocketPath (..))
+import           Cardano.Api.Config.Types (SocketPath (..))
 
 import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (left)

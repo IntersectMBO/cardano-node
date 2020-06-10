@@ -60,12 +60,12 @@ import           Ouroboros.Consensus.Util.Condense (condense)
 import           Ouroboros.Consensus.Cardano
                    (protocolClientInfo, SecurityParam(..))
 
-import           Cardano.Config.Byron.Protocol (mkNodeClientProtocolRealPBFT)
-import           Cardano.Config.Protocol (RealPBFTError(..), withRealPBFT)
+import           Cardano.Api.Protocol.Byron (mkNodeClientProtocolRealPBFT)
+import           Cardano.Api.Protocol.Types (RealPBFTError(..), withRealPBFT)
 
 import           Cardano.Api (Network, submitGenTx)
 import           Cardano.CLI.Environment
-import           Cardano.Config.Types (NodeConfiguration)
+import           Cardano.Api.Config.Types (NodeConfiguration)
 
 
 data ByronTxError

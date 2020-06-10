@@ -9,7 +9,7 @@ import           Cardano.Prelude
 import           Cardano.CLI.Helpers (HelpersError, pPrintCBOR, renderHelpersError)
 import           Cardano.CLI.Shelley.Parsers
 
-import           Cardano.Config.TextView
+import           Cardano.Api.TextView
 
 import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, newExceptT)

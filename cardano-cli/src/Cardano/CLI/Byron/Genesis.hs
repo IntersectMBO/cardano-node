@@ -47,8 +47,8 @@ import qualified Cardano.Chain.Common as Common
 import           Cardano.Chain.Delegation hiding (Map, epoch)
 import qualified Cardano.Chain.Genesis as Genesis
 import           Cardano.Chain.Genesis (GeneratedSecrets(..))
-import           Cardano.Config.Protocol (CardanoEra(..))
-import           Cardano.Config.Types (GenesisFile(..))
+import           Cardano.Api.Protocol.Types (CardanoEra(..))
+import           Cardano.Api.Config.Types (GenesisFile(..))
 import           Cardano.Crypto (SigningKey (..))
 import qualified Cardano.Crypto as Crypto
 

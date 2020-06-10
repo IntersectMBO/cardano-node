@@ -34,6 +34,7 @@ library
 
   exposed-modules:     Cardano.Common.Help
                        Cardano.Node.Features.Node
+                       Cardano.Node.Logging
                        Cardano.Node.Run
                        Cardano.Node.Shutdown
                        Cardano.Tracing.Peer
@@ -48,6 +49,7 @@ library
                      , base >=4.12 && <5
                      , bytestring
                      , deepseq
+                     , cardano-api
                      , cardano-config
                      , cardano-ledger
                      , cardano-prelude
@@ -61,6 +63,10 @@ library
                      , hostname
                      , io-sim-classes
                      , iohk-monitoring
+                     , lobemo-backend-aggregation
+                     , lobemo-backend-ekg
+                     , lobemo-backend-monitoring
+                     , lobemo-backend-trace-forwarder
                      , network
                      , network-mux
                      , optparse-applicative
@@ -70,6 +76,7 @@ library
                      , ouroboros-network
                      , ouroboros-network-framework
                      , process
+                     , safe-exceptions
                      , shelley-spec-ledger
                      , strict-concurrency
                      , text
@@ -114,6 +121,7 @@ executable cardano-node
   other-modules:       Paths_cardano_node
 
   build-depends:       base >=4.12 && <5
+                     , cardano-api
                      , cardano-config
                      , cardano-node
                      , cardano-prelude
@@ -142,6 +150,7 @@ executable chairman
                      , bytestring
                      , containers
                      , cardano-config
+                     , cardano-api
                      , cardano-prelude
                      , contra-tracer
                      , cardano-prelude

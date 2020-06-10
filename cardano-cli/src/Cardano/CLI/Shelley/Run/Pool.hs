@@ -25,8 +25,8 @@ import qualified Shelley.Spec.Ledger.Address as Shelley
 import           Shelley.Spec.Ledger.Keys (KeyHash (..), hashKey, hashVerKeyVRF)
 import qualified Shelley.Spec.Ledger.Slot as Shelley
 
-import           Cardano.Config.Shelley.ColdKeys
-import           Cardano.Config.Shelley.VRF
+import           Cardano.Api.Shelley.ColdKeys
+import           Cardano.Api.Shelley.VRF
 
 import           Cardano.CLI.Shelley.Commands
 

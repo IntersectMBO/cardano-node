@@ -8,8 +8,8 @@ module Cardano.Node.Features.Node
 
 import           Cardano.Prelude
 
-import           Cardano.Config.Types (CardanoEnvironment, NodeCLI)
-import           Cardano.Config.Logging (LoggingLayer (..),)
+import           Cardano.Api.Config.Types (CardanoEnvironment, NodeCLI)
+import            Cardano.Node.Logging (LoggingLayer (..),)
 import           Cardano.Node.Run
 import           Cardano.Shell.Types (CardanoFeature (..))
 

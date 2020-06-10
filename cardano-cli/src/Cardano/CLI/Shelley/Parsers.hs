@@ -27,10 +27,10 @@ import qualified Shelley.Spec.Ledger.TxData as Shelley
 import           Cardano.Api
 import           Cardano.Slotting.Slot (EpochNo (..))
 
-import           Cardano.Config.Types (SigningKeyFile(..), CertificateFile (..),
+import           Cardano.Api.Config.Types (SigningKeyFile(..), CertificateFile (..),
                    UpdateProposalFile (..))
-import           Cardano.Config.Parsers (parseNodeAddress)
-import           Cardano.Config.Shelley.OCert (KESPeriod(..))
+import           Cardano.Api.Config.Parsers (parseNodeAddress)
+import           Cardano.Api.Shelley.OCert (KESPeriod(..))
 
 import           Cardano.CLI.Shelley.Commands
 

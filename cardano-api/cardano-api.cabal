@@ -17,12 +17,37 @@ library
   exposed-modules:      Cardano.Api
                         Cardano.Api.Typed
 
+                        Cardano.Api.Config.Parsers
+                        Cardano.Api.Config.Topology
+                        Cardano.Api.Config.TraceConfig
+                        Cardano.Api.Config.Types
+                        Cardano.Api.Protocol.Byron
+                        Cardano.Api.Protocol.Types
+                        Cardano.Api.Shelley.Address
+                        Cardano.Api.Shelley.ColdKeys
+                        Cardano.Api.Shelley.Genesis
+                        Cardano.Api.Shelley.OCert
+                        Cardano.Api.Shelley.Orphans
+                        Cardano.Api.Shelley.Protocol
+                        Cardano.Api.Shelley.KES
+                        Cardano.Api.Shelley.VRF
+                        Cardano.Api.TextView
+
   other-modules:        Cardano.Api.CBOR
+                        Cardano.Api.Config.TracingOrphanInstances.Byron
+                        Cardano.Api.Config.TracingOrphanInstances.Common
+                        Cardano.Api.Config.TracingOrphanInstances.Consensus
+                        Cardano.Api.Config.TracingOrphanInstances.Mock
+                        Cardano.Api.Config.TracingOrphanInstances.Network
+                        Cardano.Api.Config.TracingOrphanInstances.Shelley
                         Cardano.Api.Convert
                         Cardano.Api.Error
                         Cardano.Api.LocalChainSync
                         Cardano.Api.LocalStateQuery
                         Cardano.Api.MetaData
+                        Cardano.Api.Orphans
+                        Cardano.Api.Protocol.Mock
+                        Cardano.Api.Shelley.Parsers
                         Cardano.Api.TxSubmit
                         Cardano.Api.TxSubmit.ErrorRender
                         Cardano.Api.TxSubmit.Types
@@ -37,7 +62,6 @@ library
                       , base64
                       , bytestring
                       , cardano-binary
-                      , cardano-config
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
                       , cardano-ledger
@@ -48,15 +72,19 @@ library
                       , contra-tracer
                       , containers
                       , cryptonite
+                      , filepath
                       , formatting
                       , io-sim-classes
                       , iohk-monitoring
+                      , iproute
                       , memory
                       , network
                       , network-mux
+                      , optparse-applicative
                       , ouroboros-consensus
                       , ouroboros-consensus-byron
                       , ouroboros-consensus-cardano
+                      , ouroboros-consensus-mock
                       , ouroboros-consensus-shelley
                       , ouroboros-network
                       , ouroboros-network-framework
@@ -65,11 +93,14 @@ library
                       , shelley-spec-ledger
                       , stm
                       , text
+                      , time
+                      , transformers
                       , transformers-except
                       , typed-protocols
                       , typed-protocols-examples
                       , unordered-containers
                       , vector
+                      , yaml
 
   default-language:     Haskell2010
   default-extensions:   NoImplicitPrelude
@@ -98,23 +129,33 @@ test-suite cardano-api-test
                       , cardano-crypto-wrapper
                       , cardano-ledger-test
                       , cardano-prelude
+                      , cardano-prelude-test
+                      , cardano-slotting
                       , containers
                       , cryptonite
                       , hedgehog
+                      , hedgehog-corpus
+                      , iproute
+                      , ouroboros-consensus
                       , ouroboros-consensus-shelley
                       , ouroboros-network
                       , shelley-spec-ledger
+                      , time
 
   other-modules:        Test.Cardano.Api
                         Test.Cardano.Api.CBOR
+                        Test.Cardano.Api.ConfigGen
                         Test.Cardano.Api.Convert
+                        Test.Cardano.Api.Examples
                         Test.Cardano.Api.Gen
                         Test.Cardano.Api.Orphans
+                        Test.Cardano.Api.TextView
                         Test.Cardano.Api.View
                         Test.Cardano.Api.Typed.CBOR
                         Test.Cardano.Api.Typed.Envelope
                         Test.Cardano.Api.Typed.Gen
                         Test.Cardano.Api.Typed.Orphans
+                        Test.Cardano.Api.Types
 
   default-language:     Haskell2010
   default-extensions:   NoImplicitPrelude

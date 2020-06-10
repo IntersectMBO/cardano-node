@@ -294,7 +294,7 @@ import qualified Shelley.Spec.Ledger.UTxO                    as Shelley
 --
 -- Other config and common types
 --
-import qualified Cardano.Config.TextView as TextView
+import qualified Cardano.Api.TextView as TextView
 
 
 -- ----------------------------------------------------------------------------

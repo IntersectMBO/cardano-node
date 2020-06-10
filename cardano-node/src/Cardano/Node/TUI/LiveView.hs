@@ -76,7 +76,7 @@ import           Cardano.BM.Data.SubTrace
 import           Cardano.BM.Trace
 import           Cardano.Tracing.Peer (Peer (..), ppPeer)
 
-import           Cardano.Config.Types
+import           Cardano.Api.Config.Types
 import           Cardano.Config.GitRev (gitRev)
 import           Ouroboros.Consensus.NodeId (CoreNodeId (..), NodeId (..))
 

@@ -66,7 +66,7 @@ import           Ouroboros.Network.Protocol.Handshake.Version
 import           Ouroboros.Network.NodeToClient hiding (NodeToClientVersion (..))
 import qualified Ouroboros.Network.NodeToClient as NtC
 
-import           Cardano.Config.Types (SocketPath(..))
+import           Cardano.Api.Config.Types (SocketPath(..))
 
 
 -- | The chairman checks for consensus and progress.

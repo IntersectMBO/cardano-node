@@ -46,8 +46,8 @@ import qualified Cardano.Chain.Delegation as Delegation
 import qualified Cardano.Chain.Update as Update
 import           Cardano.Chain.Block (fromCBORABlockOrBoundary)
 import qualified Cardano.Chain.UTxO as UTxO
-import           Cardano.Config.Protocol (CardanoEra(..))
-import           Cardano.Config.Types
+import           Cardano.Api.Protocol.Types (CardanoEra(..))
+import           Cardano.Api.Config.Types
 import qualified Cardano.Crypto as Crypto
 import qualified Cardano.Crypto.DSIGN as DSIGN
 
