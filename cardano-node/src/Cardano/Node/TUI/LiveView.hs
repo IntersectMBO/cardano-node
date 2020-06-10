@@ -130,6 +130,7 @@ data LiveViewState blk a = LiveViewState
     , lvsBlockNum             :: !Word64
     , lvsChainDensity         :: !Double
     , lvsBlocksMinted         :: !Word64
+    , lvsNodeCannotLead       :: !Word64
     , lvsLeaderNum            :: !Word64
     , lvsSlotsMissedNum       :: !Word64
     , lvsCreatedForksNum      :: !Word64
@@ -392,6 +393,12 @@ instance IsEffectuator (LiveViewBackend blk) Text where
                                 checkForUnexpectedThunks ["blocksForgedNum LiveViewBackend"] lvs
 
                                 return $ lvs { lvsBlocksMinted = fromIntegral forgedBlocksNum }
+                    LogValue "nodeCannotLead" (PureI nodeCannotLead) ->
+                        modifyMVar_ (getbe lvbe) $ \lvs -> do
+
+                                checkForUnexpectedThunks ["nodeCannotLead LiveViewBackend"] lvs
+
+                                return $ lvs { lvsNodeCannotLead = fromIntegral nodeCannotLead }
                     LogValue "nodeIsLeaderNum" (PureI leaderNum) ->
                         modifyMVar_ (getbe lvbe) $ \lvs -> do
 
@@ -503,6 +510,7 @@ initLiveViewState = do
                 , lvsBlockNum               = 0
                 , lvsChainDensity           = 0.0
                 , lvsBlocksMinted           = 0
+                , lvsNodeCannotLead         = 0
                 , lvsLeaderNum              = 0
                 , lvsSlotsMissedNum         = 0
                 , lvsCreatedForksNum        = 0
@@ -948,6 +956,7 @@ nodeInfoLabels =
            , padTop (T.Pad 1) $ txt "blocks minted:"
            ,                    txt "slots lead:"
            ,                    txt "slots missed:"
+           ,                    txt "cannot lead:"
            ,                    txt "forks created:"
            , padTop (T.Pad 1) $ txt "TXs processed:"
            , padTop (T.Pad 1) $ txt "peers:"
@@ -968,6 +977,7 @@ nodeInfoValues lvs =
            , padTop (T.Pad 1) $ str (show . lvsBlocksMinted $ lvs)
            ,                    str (show . lvsLeaderNum $ lvs)
            ,                    str (show . lvsSlotsMissedNum $ lvs)
+           ,                    str (show . lvsNodeCannotLead $ lvs)
            ,                    str (show . lvsCreatedForksNum $ lvs)
            , padTop (T.Pad 1) $ str (show . lvsTransactions $ lvs)
            , padTop (T.Pad 1) $ str (show . lvsPeersConnected $ lvs)
