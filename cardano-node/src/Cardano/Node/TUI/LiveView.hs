@@ -15,8 +15,7 @@
 {-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
 module Cardano.Node.TUI.LiveView
-    ( HasTxMaxSize
-    , LiveViewBackend (..)
+    ( LiveViewBackend (..)
     , realize
     , effectuate
     , captureCounters

@@ -18,7 +18,6 @@ module Cardano.Config.Types
     , ConfigError (..)
     , DbFile (..)
     , GenesisFile (..)
-    , HasTxMaxSize (..)
     , KESMetricsData (..)
     , MaxKESEvolutions (..)
     , OperationalCertStartKESPeriod (..)
@@ -66,12 +65,10 @@ import           Cardano.Crypto.KES.Class (Period)
 import           Cardano.Crypto.ProtocolMagic (RequiresNetworkMagic)
 import           Ouroboros.Consensus.Block (Header, BlockProtocol, ForgeState)
 import           Ouroboros.Consensus.Byron.Ledger.Block (ByronBlock)
-import           Ouroboros.Consensus.Byron.Ledger (byronLedgerState)
 import qualified Ouroboros.Consensus.Cardano as Consensus (Protocol, ProtocolClient)
 import           Ouroboros.Consensus.Config (TopLevelConfig (..))
 import           Ouroboros.Consensus.HeaderValidation (OtherHeaderEnvelopeError)
 import           Ouroboros.Consensus.Ledger.Abstract (LedgerError)
-import           Ouroboros.Consensus.Ledger.Extended (ExtLedgerState, ledgerState)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTxId, HasTxId, HasTxs(..),
                    LedgerSupportsMempool(..))
 import           Ouroboros.Consensus.Mock.Ledger.Block (SimpleBlock)
@@ -80,7 +77,7 @@ import           Ouroboros.Consensus.Node.Run (RunNode)
 import           Ouroboros.Consensus.NodeId (NodeId(..))
 import           Ouroboros.Consensus.Protocol.Abstract (CannotLead, ValidationErr)
 import           Ouroboros.Consensus.Util.Condense (Condense (..))
-import           Ouroboros.Consensus.Shelley.Ledger (TPraosForgeState (..), shelleyState, getPParams)
+import           Ouroboros.Consensus.Shelley.Ledger (TPraosForgeState (..))
 import           Ouroboros.Consensus.Shelley.Ledger.Block (ShelleyBlock)
 import           Ouroboros.Consensus.Shelley.Ledger.Mempool (GenTx, TxId)
 import           Ouroboros.Consensus.Shelley.Protocol (ConsensusConfig (..),
@@ -89,14 +86,12 @@ import           Ouroboros.Consensus.Shelley.Protocol.Crypto (HotKey (..))
 
 import           Ouroboros.Network.Block (HeaderHash, MaxSlotNo(..))
 
-import           Cardano.Chain.Block (adoptedProtocolParameters, cvsUpdateState)
-import           Cardano.Chain.Update (ppMaxBlockSize)
 import           Cardano.Config.Orphanage ()
 import           Cardano.Config.TraceConfig
 import           Cardano.Crypto (RequiresNetworkMagic(..))
 
 import           Shelley.Spec.Ledger.OCert (KESPeriod (..), OCert (..))
-import           Shelley.Spec.Ledger.PParams (_maxTxSize)
+
 
 -- | Errors for the cardano-config module.
 data ConfigError
@@ -393,7 +388,6 @@ instance ToJSON NodeHostAddress where
 
 type SomeConsensusProtocolConstraints blk =
      ( HasKESMetricsData blk
-     , HasTxMaxSize (ExtLedgerState blk)
      , RunNode blk
      , TraceConstraints blk
      , Transformable Text IO (ForgeState blk)
@@ -405,19 +399,6 @@ data SomeConsensusProtocol where
                            => Consensus.Protocol IO blk (BlockProtocol blk)
                            -> SomeConsensusProtocol
 
-class HasTxMaxSize ledgerState where
-  getMaxTxSize :: ledgerState -> Word32
-
-instance HasTxMaxSize (ExtLedgerState (ShelleyBlock c)) where
-  getMaxTxSize = fromIntegral . _maxTxSize . getPParams . shelleyState . ledgerState
-
-instance HasTxMaxSize (ExtLedgerState ByronBlock) where
-  getMaxTxSize =
-    fromIntegral . ppMaxBlockSize . adoptedProtocolParameters
-      . cvsUpdateState . byronLedgerState . ledgerState
-
-instance HasTxMaxSize (ExtLedgerState (SimpleBlock a b)) where
-  getMaxTxSize = const 4242 -- Does not matter for mock blocks.
 
 -- | KES-related data to be traced as metrics.
 data KESMetricsData
