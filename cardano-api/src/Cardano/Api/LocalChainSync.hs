@@ -97,7 +97,7 @@ localInitiatorNetworkApplication cfg nm tipVar =
         versionedNodeToClientProtocols
           (nodeToClientProtocolVersion proxy v)
           versionData
-          (const $ protocols v))
+          (\_ _ -> protocols v))
       (supportedNodeToClientVersions proxy)
  where
   proxy :: Proxy blk

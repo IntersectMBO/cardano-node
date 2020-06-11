@@ -147,7 +147,7 @@ localInitiatorNetworkApplication tracer cfg nm resultVar genTx =
         NtC.versionedNodeToClientProtocols
           (nodeToClientProtocolVersion proxy v)
           versionData
-          (const $ protocols v genTx))
+          (\_ _ -> protocols v genTx))
       (supportedNodeToClientVersions proxy)
   where
 

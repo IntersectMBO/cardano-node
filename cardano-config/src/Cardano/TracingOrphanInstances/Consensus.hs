@@ -146,8 +146,8 @@ instance HasSeverityAnnotation (TraceChainSyncClientEvent blk) where
   getSeverityAnnotation (TraceException _) = Warning
 
 
-instance HasPrivacyAnnotation (TraceChainSyncServerEvent blk b)
-instance HasSeverityAnnotation (TraceChainSyncServerEvent blk b) where
+instance HasPrivacyAnnotation (TraceChainSyncServerEvent blk)
+instance HasSeverityAnnotation (TraceChainSyncServerEvent blk) where
   getSeverityAnnotation _ = Info
 
 
@@ -220,7 +220,7 @@ instance (Condense (HeaderHash blk), LedgerSupportsProtocol blk)
 
 
 instance Condense (HeaderHash blk)
-      => Transformable Text IO (TraceChainSyncServerEvent blk b) where
+      => Transformable Text IO (TraceChainSyncServerEvent blk) where
   trTransformer = trStructured
 
 
@@ -741,7 +741,7 @@ instance (Condense (HeaderHash blk), LedgerSupportsProtocol blk)
 
 
 instance Condense (HeaderHash blk)
-      => ToObject (TraceChainSyncServerEvent blk b) where
+      => ToObject (TraceChainSyncServerEvent blk) where
   toObject verb ev = case ev of
     TraceChainSyncServerRead tip (AddBlock hdr) ->
       mkObject [ "kind" .= String "ChainSyncServerEvent.TraceChainSyncServerRead.AddBlock"
