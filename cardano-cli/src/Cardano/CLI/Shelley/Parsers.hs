@@ -258,8 +258,8 @@ pTransaction =
             )
       , Opt.command "calculate-min-fee"
           (Opt.info pTransactionCalculateMinFee $ Opt.progDesc "Calulate the min fee for a transaction")
-      , Opt.command "info"
-          (Opt.info pTransactionInfo $ Opt.progDesc "Print information about a transaction")
+      , Opt.command "txid"
+          (Opt.info pTransactionId $ Opt.progDesc "Print a transaction identifier")
       ]
   where
     pTransactionBuild :: Parser TransactionCmd
@@ -301,8 +301,8 @@ pTransaction =
         <*> many pCertificateFile
         <*> pProtocolParamsFile
 
-    pTransactionInfo  :: Parser TransactionCmd
-    pTransactionInfo = pure TxInfo
+    pTransactionId  :: Parser TransactionCmd
+    pTransactionId = TxGetTxId <$> pTxBodyFile Input
 
 
 pNodeCmd :: Parser NodeCmd

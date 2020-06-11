@@ -1,6 +1,7 @@
 module Cardano.Api.Convert
   ( addressFromHex
   , addressToHex
+  , renderTxId
   , parseTxIn
   , parseTxOut
   , renderTxIn
@@ -64,6 +65,9 @@ addressToHex addr =
       AddressByron ba -> Binary.serialize' ba
       AddressShelley sa -> Shelley.serialiseAddr sa
       AddressShelleyReward sRwdAcct -> Binary.serialize' sRwdAcct
+
+renderTxId :: TxId -> Text
+renderTxId (TxId txid) = Text.decodeUtf8 (Crypto.getHashBytesAsHex txid)
 
 parseTxIn :: Text -> Either String TxIn
 parseTxIn txt = Atto.parseOnly pTxIn $ Text.encodeUtf8 txt

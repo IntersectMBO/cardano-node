@@ -84,6 +84,8 @@ runTransactionCmd cmd =
       runTxSubmit txFp network
     TxCalculateMinFee txInCount txOutCount ttl network skFiles certFiles pParamsFile ->
       runTxCalculateMinFee txInCount txOutCount ttl network skFiles certFiles pParamsFile
+    TxGetTxId txinfile ->
+      runTxGetTxId txinfile
 
     _ -> liftIO $ putStrLn $ "runTransactionCmd: " ++ show cmd
 
@@ -202,3 +204,11 @@ decodeAddressSigningKey tView = do
       , (renderKeyType (KeyTypeSigning GenesisUTxOKey), True)
       , (renderKeyType (KeyTypeSigning (OperatorKey StakePoolOperatorKey)), True)
       ]
+
+
+runTxGetTxId :: TxBodyFile -> ExceptT ShelleyTxCmdError IO ()
+runTxGetTxId (TxBodyFile infile) = do
+    tx <- firstExceptT ShelleyTxReadUnsignedTxError . newExceptT $
+      readTxUnsigned infile
+    liftIO $ putStrLn $ renderTxId (getTransactionId tx)
+
