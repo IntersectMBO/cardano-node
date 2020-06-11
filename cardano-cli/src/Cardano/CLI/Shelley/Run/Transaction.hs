@@ -76,14 +76,14 @@ renderShelleyTxCmdError err =
 runTransactionCmd :: TransactionCmd -> ExceptT ShelleyTxCmdError IO ()
 runTransactionCmd cmd =
   case cmd of
-    TxBuildRaw txins txouts ttl fee certs mUpProp out ->
-      runTxBuildRaw txins txouts ttl fee certs mUpProp out
+    TxBuildRaw txins txouts ttl fee certs wdrls mUpProp out ->
+      runTxBuildRaw txins txouts ttl fee certs wdrls mUpProp out
     TxSign txinfile skfiles network txoutfile ->
       runTxSign txinfile skfiles network txoutfile
     TxSubmit txFp network ->
       runTxSubmit txFp network
-    TxCalculateMinFee txInCount txOutCount ttl network skFiles certFiles pParamsFile ->
-      runTxCalculateMinFee txInCount txOutCount ttl network skFiles certFiles pParamsFile
+    TxCalculateMinFee txInCount txOutCount ttl network skFiles certFiles wdrls pParamsFile ->
+      runTxCalculateMinFee txInCount txOutCount ttl network skFiles certFiles wdrls pParamsFile
     TxGetTxId txinfile ->
       runTxGetTxId txinfile
 
@@ -95,16 +95,17 @@ runTxBuildRaw
   -> SlotNo
   -> Lovelace
   -> [CertificateFile]
+  -> Withdrawals
   -> Maybe UpdateProposalFile
   -> TxBodyFile
   -> ExceptT ShelleyTxCmdError IO ()
-runTxBuildRaw txins txouts ttl fee certFps mUpdateProp (TxBodyFile fpath) = do
+runTxBuildRaw txins txouts ttl fee certFps wdrls mUpdateProp (TxBodyFile fpath) = do
   certs <- mapM readShelleyCert certFps
   upUpProp <- maybeUpdate mUpdateProp
   firstExceptT ShelleyTxWriteUnsignedTxError
     . newExceptT
     . writeTxUnsigned fpath
-    $ buildShelleyTransaction txins txouts ttl fee certs upUpProp
+    $ buildShelleyTransaction txins txouts ttl fee certs wdrls upUpProp
   where
     maybeUpdate :: Maybe UpdateProposalFile -> ExceptT ShelleyTxCmdError IO (Maybe Update)
     maybeUpdate (Just (UpdateProposalFile uFp )) = bimapExceptT ShelleyTxReadUpdateError Just . newExceptT $ readUpdate uFp
@@ -136,10 +137,11 @@ runTxCalculateMinFee
   -> Network
   -> [SigningKeyFile]
   -> [CertificateFile]
+  -> Withdrawals
   -> ProtocolParamsFile
   -> ExceptT ShelleyTxCmdError IO ()
 runTxCalculateMinFee (TxInCount txInCount) (TxOutCount txOutCount)
-                     txTtl network skFiles certFiles pParamsFile = do
+                     txTtl network skFiles certFiles wdrls pParamsFile = do
     skeys <- readSigningKeyFiles skFiles
     certs <- mapM readShelleyCert certFiles
     pparams <- readProtocolParameters pParamsFile
@@ -148,7 +150,7 @@ runTxCalculateMinFee (TxInCount txInCount) (TxOutCount txOutCount)
       ++ show (calculateShelleyMinFee pparams (dummyShelleyTxForFeeCalc skeys certs))
   where
     dummyShelleyTxForFeeCalc skeys certs =
-      buildDummyShelleyTxForFeeCalc txInCount txOutCount txTtl network skeys certs
+      buildDummyShelleyTxForFeeCalc txInCount txOutCount txTtl network skeys certs wdrls
 
 readProtocolParameters :: ProtocolParamsFile -> ExceptT ShelleyTxCmdError IO PParams
 readProtocolParameters (ProtocolParamsFile fpath) = do
@@ -211,4 +213,3 @@ runTxGetTxId (TxBodyFile infile) = do
     tx <- firstExceptT ShelleyTxReadUnsignedTxError . newExceptT $
       readTxUnsigned infile
     liftIO $ putStrLn $ renderTxId (getTransactionId tx)
-

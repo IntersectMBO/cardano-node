@@ -29,6 +29,7 @@ module Cardano.Api.Types
   , TxId (..)
   , TxIx
   , TxOut (..)
+  , Withdrawals (..)
   , Update (..)
   , EpochNo (..)
   , SlotNo (..)
@@ -78,6 +79,7 @@ module Cardano.Api.Types
   , ShelleyCredentialStakePool
   , ShelleyDelegationCertificate
   , ShelleyRewardAccount
+  , ShelleyWithdrawals
   , ShelleyTxBody
   , ShelleyTx
   , ShelleyTxId
@@ -138,6 +140,7 @@ type ShelleyCertificate                  = Shelley.DCert Shelley.TPraosStandardC
 type ShelleyCoin                         = Shelley.Coin
 type ShelleyCredentialStaking            = Shelley.Credential Shelley.Staking Shelley.TPraosStandardCrypto
 type ShelleyCredentialStakePool          = Shelley.Credential Shelley.StakePool Shelley.TPraosStandardCrypto
+type ShelleyWithdrawals                  = Shelley.Wdrl Shelley.TPraosStandardCrypto
 type ShelleyUpdate                       = Shelley.Update Shelley.TPraosStandardCrypto
 type ShelleyPParamsUpdate                = Shelley.PParamsUpdate
 type ShelleyVerificationKeyPayment       = Shelley.VKey Shelley.Payment Shelley.TPraosStandardCrypto
@@ -230,6 +233,11 @@ data PaymentVerificationKey
 data StakingVerificationKey
   = StakingVerificationKeyShelley !ShelleyVerificationKeyStaking
   deriving (Generic, NFData, Show)
+  deriving anyclass NoUnexpectedThunks
+
+data Withdrawals
+  = WithdrawalsShelley !ShelleyWithdrawals
+  deriving (Eq, Generic, {-NFData, TODO-} Show)
   deriving anyclass NoUnexpectedThunks
 
 data Update = ShelleyUpdate (Shelley.Update Shelley.TPraosStandardCrypto)
