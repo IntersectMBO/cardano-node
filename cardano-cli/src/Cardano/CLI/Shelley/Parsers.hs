@@ -1384,7 +1384,7 @@ pMinRefund =
 pDepositDecay :: Parser (Maybe Rational)
 pDepositDecay =
   optional
-    $ Opt.option Opt.auto
+    $ Opt.option readRationalAsDouble
         (  Opt.long "deposit-decay-rate"
         <> Opt.metavar "DOUBLE"
         <> Opt.help "The deposit decay rate."
@@ -1414,7 +1414,7 @@ pPoolMinRefund =
 pPoolDecayRate :: Parser (Maybe Rational)
 pPoolDecayRate =
   optional
-    $ Opt.option Opt.auto
+    $ Opt.option readRationalAsDouble
         (  Opt.long "pool-deposit-decay-rate"
         <> Opt.metavar "DOUBLE"
         <> Opt.help "Decay rate for pool deposits."
