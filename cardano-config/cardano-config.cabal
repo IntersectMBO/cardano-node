@@ -18,10 +18,6 @@ flag systemd
 library
   hs-source-dirs:      src
 
-  if os(linux) && flag(systemd)
-    cpp-options:       -DSYSTEMD
-    build-depends:     lobemo-scribe-systemd
-
   exposed-modules:     Cardano.Config.GitRev
                        Cardano.Config.GitRevFromGit
                        Cardano.Config.TopHandler
