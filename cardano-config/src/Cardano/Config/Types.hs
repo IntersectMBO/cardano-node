@@ -13,6 +13,7 @@
 module Cardano.Config.Types
     ( CardanoEnvironment (..)
     , CBORObject (..)
+    , PoolMetaDataFile (..)
     , CertificateFile (..)
     , ConfigYamlFilePath (..)
     , ConfigError (..)
@@ -185,6 +186,10 @@ instance FromJSON GenesisFile where
 -- genesis delegate certificates and MIR certificates.
 newtype CertificateFile = CertificateFile
   { unCertificateFile :: FilePath }
+  deriving newtype (Eq, Show)
+
+newtype PoolMetaDataFile = PoolMetaDataFile
+  { unPoolMetaDataFile :: FilePath }
   deriving newtype (Eq, Show)
 
 newtype UpdateProposalFile = UpdateProposalFile

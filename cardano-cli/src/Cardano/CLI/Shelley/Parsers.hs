@@ -27,14 +27,14 @@ import qualified Shelley.Spec.Ledger.TxData as Shelley
 import           Cardano.Api
 import           Cardano.Slotting.Slot (EpochNo (..))
 
-import           Cardano.Config.Types (SigningKeyFile(..), CertificateFile (..),
-                   UpdateProposalFile (..))
+import           Cardano.Config.Types (CertificateFile (..), SigningKeyFile(..),
+                   PoolMetaDataFile(..), UpdateProposalFile (..))
 import           Cardano.Config.Parsers (parseNodeAddress)
 import           Cardano.Config.Shelley.OCert (KESPeriod(..))
 
 import           Cardano.CLI.Shelley.Commands
 
-import           Cardano.Crypto.Hash (hashFromBytes)
+import           Cardano.Crypto.Hash (Blake2b_256, Hash (..), hashFromBytes, hashFromBytesAsHex)
 
 --
 -- Shelley CLI command parsers
@@ -364,6 +364,8 @@ pPoolCmd =
       , Opt.command "id"
           (Opt.info pId $
              Opt.progDesc "Build pool id from the offline key")
+      , Opt.command "metadata-hash"
+          (Opt.info pPoolMetaDataHashSubCmd $ Opt.progDesc "Print the hash of pool metadata.")
       ]
   where
     pPoolRegster :: Parser PoolCmd
@@ -377,6 +379,9 @@ pPoolCmd =
 
     pId :: Parser PoolCmd
     pId = PoolGetId <$> pVerificationKeyFile Output
+
+    pPoolMetaDataHashSubCmd :: Parser PoolCmd
+    pPoolMetaDataHashSubCmd = PoolMetaDataHash <$> pPoolMetaDataFile
 
 
 pQueryCmd :: Parser QueryCmd
@@ -699,6 +704,15 @@ pCertificateFile =
          )
     )
 
+pPoolMetaDataFile :: Parser PoolMetaDataFile
+pPoolMetaDataFile =
+  PoolMetaDataFile <$>
+    Opt.strOption
+      (  Opt.long "pool-metadata-file"
+      <> Opt.metavar "FILE"
+      <> Opt.help "Filepath of the pool metadata."
+      <> Opt.completer (Opt.bashCompleter "file")
+      )
 
 pUpdateProposalFile :: Parser UpdateProposalFile
 pUpdateProposalFile =
@@ -1213,6 +1227,37 @@ _pIpV6 = Opt.option (Opt.maybeReader readMaybe :: Opt.ReadM IP.IPv6)
           <> Opt.help "The stake pool relay's IpV6 address"
           )
 
+pPoolMetaData :: Parser (Maybe ShelleyStakePoolMetaData)
+pPoolMetaData =
+  optional $
+    Shelley.PoolMetaData
+      <$> pPoolMetaDataUrl
+      <*> pPoolMetaDataHash
+
+pPoolMetaDataUrl :: Parser Shelley.Url
+pPoolMetaDataUrl =
+  Opt.option
+    (Opt.maybeReader (Shelley.textToUrl . Text.pack))
+        (  Opt.long "metadata-url"
+        <> Opt.metavar "URL"
+        <> Opt.help "Pool metadata URL (maximum length of 64 characters)."
+        )
+
+pPoolMetaDataHash :: Parser ByteString
+pPoolMetaDataHash =
+    Opt.option
+      (Opt.maybeReader metadataHash)
+        (  Opt.long "metadata-hash"
+        <> Opt.metavar "HASH"
+        <> Opt.help "Pool metadata hash."
+        )
+  where
+    getHashFromHexString :: String -> Maybe (Hash Blake2b_256 ByteString)
+    getHashFromHexString = hashFromBytesAsHex . C8.pack
+
+    metadataHash :: String -> Maybe ByteString
+    metadataHash str = getHash <$> getHashFromHexString str
+
 pStakePoolRegistrationCert :: Parser PoolCmd
 pStakePoolRegistrationCert =
  PoolRegistrationCert
@@ -1224,6 +1269,7 @@ pStakePoolRegistrationCert =
   <*> pRewardAcctVerificationKeyFile
   <*> some pPoolOwner
   <*> pure []  --TODO: the relays
+  <*> pPoolMetaData
   <*> pNetwork
   <*> pOutputFile
 

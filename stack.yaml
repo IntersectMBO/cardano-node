@@ -27,6 +27,7 @@ extra-deps:
   - micro-recursion-schemes-5.0.2.2
   - streaming-binary-0.3.0.1
   - canonical-json-0.6.0.0
+  - base64-0.4.1
   - brick-0.47
   - binary-0.8.7.0
   - bimap-0.4.0
