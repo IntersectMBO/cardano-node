@@ -37,6 +37,8 @@ module Cardano.TracingOrphanInstances.Common
   , mkLOMeta
   ) where
 
+import           Prelude
+
 import           Data.Aeson (ToJSON(..), Value (..), (.=))
 import           Data.Void (Void)
 
@@ -45,7 +47,8 @@ import           Cardano.BM.Tracing
                     HasSeverityAnnotation(..), Severity(..),
                     HasPrivacyAnnotation(..), Tracer(..), )
 import           Cardano.BM.Data.LogItem
-                   (LOContent (..), LogObject (..), mkLOMeta)
+                   (LOContent (..), LogObject (..), mkLOMeta,
+                    PrivacyAnnotation(..))
 import           Cardano.BM.Data.Tracer
                    (trStructured, HasTextFormatter (..), trStructuredText,
                     emptyObject, mkObject)
@@ -57,3 +60,7 @@ import           Cardano.BM.Data.Tracer
 --
 instance ToObject Void where
   toObject _verb x = case x of {}
+
+
+--TODO: move this instance to the definition
+deriving instance Ord PrivacyAnnotation
