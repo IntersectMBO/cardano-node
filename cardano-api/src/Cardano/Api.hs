@@ -39,6 +39,7 @@ module Cardano.Api
   , TxIx
   , Lovelace (..)
   , SlotNo (..)
+  , Withdrawals (..)
   , Update (..)
   , ShelleyTxBody
 
@@ -56,6 +57,8 @@ module Cardano.Api
   , signTransaction
   , witnessTransaction
   , signTransactionWithWitness
+
+  , toShelleyLovelace
 
     -- * Slot related
   , EpochNo
@@ -83,6 +86,7 @@ module Cardano.Api
   , ShelleyStakePoolMetaData
   , ShelleyStakePoolOwners
   , ShelleyStakePoolRelay
+  , ShelleyWithdrawals
   , ShelleyUpdate
   , ShelleyVerificationKeyHashStaking
   , ShelleyVerificationKeyHashStakePool
@@ -410,17 +414,18 @@ buildShelleyTransaction
   -> SlotNo
   -> Lovelace
   -> [Certificate]
+  -> Withdrawals
   -> Maybe Update
   -- ^ Update proposals
   -> TxUnsigned
-buildShelleyTransaction txins txouts ttl fee certs pParamUpdate = do
+buildShelleyTransaction txins txouts ttl fee certs wdrls pParamUpdate = do
   let relevantCerts = [ certDiscrim c | c <- certs ]
   TxUnsignedShelley $
     Shelley.TxBody
       (Set.fromList (map toShelleyTxIn  txins))
       (Seq.fromList (map toShelleyTxOut txouts))
       (Seq.fromList relevantCerts)  -- certificates
-      (Shelley.Wdrl Map.empty)      -- withdrawals
+      shelleyWdrl                   -- withdrawals
       (toShelleyLovelace fee)
       ttl
       (toStrictMaybe pParamUpdate)
@@ -435,6 +440,8 @@ buildShelleyTransaction txins txouts ttl fee certs pParamUpdate = do
    toStrictMaybe :: Maybe Update ->  Shelley.StrictMaybe ShelleyUpdate
    toStrictMaybe (Just (ShelleyUpdate shellyUp)) = Shelley.SJust shellyUp
    toStrictMaybe Nothing = Shelley.SNothing
+
+   WithdrawalsShelley shelleyWdrl = wdrls
 
 getTransactionId :: TxUnsigned -> TxId
 getTransactionId (TxUnsignedByron _ _ txbodyhash) =
@@ -462,9 +469,13 @@ buildDummyShelleyTxForFeeCalc
   -> Network
   -> [SigningKey]
   -> [Certificate]
+  -> Withdrawals
   -> TxSigned
-buildDummyShelleyTxForFeeCalc txInCount txOutCount ttl network skeys certs =
-    signTransaction (buildShelleyTransaction txIns txOuts ttl fee certs Nothing) network skeys
+buildDummyShelleyTxForFeeCalc txInCount txOutCount ttl network skeys certs wdrls =
+    signTransaction
+      (buildShelleyTransaction txIns txOuts ttl fee certs wdrls Nothing)
+      network
+      skeys
   where
     vkey :: PaymentVerificationKey
     vkey =

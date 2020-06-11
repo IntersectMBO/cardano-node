@@ -2,6 +2,7 @@ module Cardano.Api.Convert
   ( addressFromHex
   , addressToHex
   , renderTxId
+  , parseWithdrawal
   , parseTxIn
   , parseTxOut
   , renderTxIn
@@ -69,6 +70,9 @@ addressToHex addr =
 renderTxId :: TxId -> Text
 renderTxId (TxId txid) = Text.decodeUtf8 (Crypto.getHashBytesAsHex txid)
 
+parseWithdrawal :: Text -> Either String (Address, Lovelace)
+parseWithdrawal txt = Atto.parseOnly pWithdrawal $ Text.encodeUtf8 txt
+
 parseTxIn :: Text -> Either String TxIn
 parseTxIn txt = Atto.parseOnly pTxIn $ Text.encodeUtf8 txt
 
@@ -127,3 +131,14 @@ pAddress = do
 
 pAlphaNumToByteString :: Parser ByteString
 pAlphaNumToByteString = Atto.takeWhile1 isAlphaNum
+
+pWithdrawal :: Parser (Address, Lovelace)
+pWithdrawal =
+  (,) <$> pAddressShelleyReward <* Atto.char '+' <*> pLovelace
+
+pAddressShelleyReward :: Parser Address
+pAddressShelleyReward = do
+  addr <- pAddress
+  case addr of
+    AddressShelleyReward _ -> pure addr
+    _ -> fail . Text.unpack $ "You have entered an invalid stake address: " <> addressToHex addr

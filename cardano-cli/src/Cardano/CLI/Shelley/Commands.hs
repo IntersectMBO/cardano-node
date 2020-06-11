@@ -90,7 +90,15 @@ data StakeAddressCmd
 
 
 data TransactionCmd
-  = TxBuildRaw [TxIn] [TxOut] SlotNo Lovelace [CertificateFile] (Maybe UpdateProposalFile) TxBodyFile
+  = TxBuildRaw
+      [TxIn]
+      [TxOut]
+      SlotNo
+      Lovelace
+      [CertificateFile]
+      Withdrawals
+      (Maybe UpdateProposalFile)
+      TxBodyFile
   | TxSign TxBodyFile [SigningKeyFile] Network TxFile
   | TxWitness       -- { transaction :: Transaction, key :: PrivKeyFile, nodeAddr :: NodeAddress }
   | TxSignWitness   -- { transaction :: Transaction, witnesses :: [Witness], nodeAddr :: NodeAddress }
@@ -103,6 +111,7 @@ data TransactionCmd
       Network
       [SigningKeyFile]
       [CertificateFile]
+      Withdrawals
       ProtocolParamsFile
   | TxGetTxId TxBodyFile
   deriving (Eq, Show)

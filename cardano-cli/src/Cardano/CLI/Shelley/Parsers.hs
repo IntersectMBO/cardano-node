@@ -12,6 +12,7 @@ import           Cardano.Prelude hiding (option)
 import           Control.Monad.Fail (fail)
 import qualified Data.ByteString.Char8 as C8
 import qualified Data.IP as IP
+import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified Data.Text as Text
 import           Data.Time.Clock (UTCTime)
@@ -268,6 +269,7 @@ pTransaction =
                                    <*> pTxTTL
                                    <*> pTxFee
                                    <*> many pCertificateFile
+                                   <*> pWithdrawals
                                    <*> optional pUpdateProposalFile
                                    <*> pTxBodyFile Output
 
@@ -299,6 +301,7 @@ pTransaction =
         <*> pNetwork
         <*> pSomeSigningKeyFiles
         <*> many pCertificateFile
+        <*> pWithdrawals
         <*> pProtocolParamsFile
 
     pTransactionId  :: Parser TransactionCmd
@@ -713,6 +716,28 @@ pPoolMetaDataFile =
       <> Opt.help "Filepath of the pool metadata."
       <> Opt.completer (Opt.bashCompleter "file")
       )
+
+pWithdrawals :: Parser Withdrawals
+pWithdrawals =
+    WithdrawalsShelley . Shelley.Wdrl . Map.fromList <$> many pWithdrawal
+  where
+    pWithdrawal =
+      bimap getShelleyRewardAccount toShelleyLovelace <$>
+        Opt.option (Opt.eitherReader (parseWithdrawal . Text.pack))
+          (  Opt.long "withdrawal"
+          <> Opt.metavar "WITHDRAWAL"
+          <> Opt.help "The reward withdrawal as StakeAddress+Lovelace where \
+                      \StakeAddress is the hex encoded stake address \
+                      \followed by the amount in Lovelace."
+          )
+
+    getShelleyRewardAccount :: Address -> ShelleyRewardAccount
+    getShelleyRewardAccount (AddressShelleyReward rwdAcnt) = rwdAcnt
+    getShelleyRewardAccount _ =
+      panic "pWithdrawals.getShelleyRewardAccount: Impossible: \
+            \parseWithdrawal parsed an Address that is not an \
+            \AddressShelleyReward"
+
 
 pUpdateProposalFile :: Parser UpdateProposalFile
 pUpdateProposalFile =
@@ -1384,7 +1409,7 @@ pMinRefund =
 pDepositDecay :: Parser (Maybe Rational)
 pDepositDecay =
   optional
-    $ Opt.option Opt.auto
+    $ Opt.option readRationalAsDouble
         (  Opt.long "deposit-decay-rate"
         <> Opt.metavar "DOUBLE"
         <> Opt.help "The deposit decay rate."
@@ -1414,7 +1439,7 @@ pPoolMinRefund =
 pPoolDecayRate :: Parser (Maybe Rational)
 pPoolDecayRate =
   optional
-    $ Opt.option Opt.auto
+    $ Opt.option readRationalAsDouble
         (  Opt.long "pool-deposit-decay-rate"
         <> Opt.metavar "DOUBLE"
         <> Opt.help "Decay rate for pool deposits."
@@ -1445,7 +1470,7 @@ pNumberOfPools =
 pPoolInfluence :: Parser (Maybe Rational)
 pPoolInfluence =
   optional
-    $ Opt.option Opt.auto
+    $ Opt.option readRationalAsDouble
         (  Opt.long "pool-influence"
         <> Opt.metavar "DOUBLE"
         <> Opt.help "Pool influence."
@@ -1524,3 +1549,6 @@ pFieldUnitInterval = Opt.auto >>= checkUnitInterval
      case mkUnitInterval $ toRational dbl of
        Just interval -> return interval
        Nothing -> fail "Please enter a value in the range [0,1]"
+
+readRationalAsDouble :: Opt.ReadM Rational
+readRationalAsDouble = toRational <$> (Opt.auto :: Opt.ReadM Double)
