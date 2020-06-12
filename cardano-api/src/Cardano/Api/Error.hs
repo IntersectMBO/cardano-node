@@ -47,6 +47,7 @@ renderApiError ae =
           ]
 
       TextViewDecodeError de -> sformat build de
+      TextViewMiscErr mErr -> mErr
 
 textShow :: Show a => a -> Text
 textShow = Text.pack . show

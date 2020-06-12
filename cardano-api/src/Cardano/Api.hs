@@ -11,6 +11,7 @@ module Cardano.Api
   , PaymentVerificationKey (..)
   , StakingVerificationKey (..)
   , getGenesisVerificationKey
+  , getPaymentVerificationKey'
   , getPaymentVerificationKey
   , getStakingVerificationKey
   , byronGenSigningKey
@@ -55,7 +56,7 @@ module Cardano.Api
 
   , buildByronTransaction
   , buildShelleyTransaction
-  , buildDummyShelleyTxForFeeCalc
+ -- , buildDummyShelleyTxForFeeCalc
   , calculateShelleyMinFee
   , signTransaction
   , witnessTransaction
@@ -130,6 +131,9 @@ module Cardano.Api
 
 import           Cardano.Prelude
 
+-- Convert/replace functions in this module from functions in 'Cardano.Api.Typed'
+import qualified Cardano.Api.Typed as Typed
+
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import           Data.Coerce (coerce)
 import qualified Data.List.NonEmpty as NonEmpty
@@ -145,7 +149,7 @@ import           Cardano.Crypto.Seed (readSeedFromSystemEntropy)
 
 import qualified Cardano.Crypto.Hash.Class as Crypto.Hash
 
-import qualified Cardano.Crypto.Hash as Crypto (Blake2b_256, hash)
+--import qualified Cardano.Crypto.Hash as Crypto (Blake2b_256, hash)
 import qualified Cardano.Crypto.Hashing as Crypto hiding (hash)
 import           Cardano.Crypto.Random (runSecureRandom)
 import qualified Cardano.Crypto.Signing as Crypto
@@ -169,11 +173,11 @@ import qualified Shelley.Spec.Ledger.BaseTypes   as Shelley
 import qualified Shelley.Spec.Ledger.Credential  as Shelley
 import qualified Shelley.Spec.Ledger.Keys        as Shelley
 import qualified Shelley.Spec.Ledger.LedgerState as Shelley (minfee)
-import qualified Shelley.Spec.Ledger.MetaData    as Shelley
+--import qualified Shelley.Spec.Ledger.MetaData    as Shelley
 import qualified Shelley.Spec.Ledger.PParams     as Shelley
 import qualified Shelley.Spec.Ledger.Slot        as Shelley
 import qualified Shelley.Spec.Ledger.TxData      as Shelley
-import qualified Shelley.Spec.Ledger.Tx          as Shelley
+--import qualified Shelley.Spec.Ledger.Tx          as Shelley
 import qualified Shelley.Spec.Ledger.UTxO        as Shelley (hashTxBody)
 
 
@@ -359,6 +363,12 @@ getGenesisVerificationKey kp =
       where
         vk = deriveVerKeyDSIGN sk
 
+getPaymentVerificationKey'
+  :: Typed.Key keyrole
+  => Typed.SigningKey keyrole
+  -> Typed.VerificationKey keyrole
+getPaymentVerificationKey' = Typed.getVerificationKey
+
 getPaymentVerificationKey :: SigningKey -> PaymentVerificationKey
 getPaymentVerificationKey kp =
   case kp of
@@ -465,6 +475,7 @@ calculateShelleyMinFee pparams (TxSignedShelley tx) =
 
 -- | Build a dummy Shelley transaction to be used for the minimum fee
 -- calculation.
+{-
 buildDummyShelleyTxForFeeCalc
   :: Int
   -- ^ The number of dummy transaction inputs to use.
@@ -472,27 +483,30 @@ buildDummyShelleyTxForFeeCalc
   -- ^ The number of dummy transaction outputs to use.
   -> SlotNo
   -- ^ The transaction TTL.
-  -> Network
-  -> [SigningKey]
+  -> Typed.NetworkId
+  -> [Typed.SigningKey Typed.PaymentKey]
   -> [Certificate]
   -> Withdrawals
   -> HasMetaData
   -> TxSigned
-buildDummyShelleyTxForFeeCalc txInCount txOutCount ttl network skeys certs wdrls hasMD =
-    signTransaction
-      (buildShelleyTransaction txIns txOuts ttl fee certs wdrls Nothing mbMDHash)
-      network
-      skeys
+buildDummyShelleyTxForFeeCalc txInCount txOutCount ttl networkId skeys certs wdrls hasMD = undefined
+    --signTransaction
+    --  (buildShelleyTransaction txIns txOuts ttl fee certs wdrls Nothing mbMDHash)
+    --  networkId
+    --  skeys
   where
-    vkey :: PaymentVerificationKey
+    vkey :: Typed.VerificationKey Typed.PaymentKey
     vkey =
       maybe
         (panic "buildDummyShelleyTxForFeeCalc: No signing keys provided.")
         getPaymentVerificationKey
         (headMay skeys)
 
-    addr :: Address
-    addr = shelleyVerificationKeyAddress network vkey Nothing
+    paymentCredential :: Typed.PaymentCredential
+    paymentCredential = Typed.PaymentCredentialByKey $ Typed.verificationKeyHash vkey
+
+    addr :: Typed.Address Typed.Shelley
+    addr = Typed.makeShelleyAddress networkId paymentCredential Typed.NoStakeAddress
 
     txIns :: [TxIn]
     txIns = map (mkTxIn . mkTxId) [0..txInCount - 1]
@@ -517,7 +531,7 @@ buildDummyShelleyTxForFeeCalc txInCount txOutCount ttl network skeys certs wdrls
           $ Shelley.MetaDataHash
           $ Crypto.Hash.castHash
           $ Crypto.Hash.hash (0 :: Int)
-
+-}
 {-
 inputs outputs, attributes:
 ATxAux { Tx TxWiness Annotation }
@@ -581,8 +595,9 @@ shelleyWitnessTransaction txbody (SigningKeyShelley sk) =
 -- them to be the right ones, since in Byron txs, witnesses are a list that has match up with the
 -- tx inputs, i.e same number and in the right order. In Shelley they’re a set, so don’t need to
 -- provide duplicate sigs for multiple inputs that share the same input address.
-signTransaction :: TxUnsigned -> Network -> [SigningKey] -> TxSigned
-signTransaction txu nw sks =
+signTransaction :: TxUnsigned -> Network -> [Typed.SigningKey Typed.PaymentKey] -> TxSigned
+signTransaction _txu _nw _sks = panic "Fix ME"
+ {-
   case txu of
     TxUnsignedByron tx txcbor txHash ->
       TxSignedByron tx txcbor txHash (Vector.fromList $ map (byronWitnessTransaction txHash nw) sks)
@@ -599,7 +614,7 @@ signTransaction txu nw sks =
                          Map.empty         -- Shelley script witnesses
                          Set.empty         -- Byron key witnesses
         keyWitnesses = Set.fromList (map (shelleyWitnessTransaction txbody) sks)
-
+-}
 
 -- Verify that the transaction has been fully witnessed
 -- same decision about checking or not, that all witnesses are the right ones and in the right order etc

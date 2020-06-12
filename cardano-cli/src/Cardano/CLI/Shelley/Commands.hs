@@ -39,6 +39,7 @@ import           Data.Text (Text)
 
 import           Cardano.Api
 import           Cardano.Api.Shelley.OCert (KESPeriod(..))
+import qualified Cardano.Api.Typed as Typed
 import           Cardano.Slotting.Slot (EpochNo (..))
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
 
@@ -72,14 +73,14 @@ data ShelleyCommand
 data AddressCmd
   = AddressKeyGen VerificationKeyFile SigningKeyFile
   | AddressKeyHash VerificationKeyFile (Maybe OutputFile)
-  | AddressBuild VerificationKeyFile (Maybe VerificationKeyFile) Network (Maybe OutputFile)
+  | AddressBuild VerificationKeyFile (Maybe VerificationKeyFile) Typed.NetworkId (Maybe OutputFile)
   | AddressBuildMultiSig  --TODO
   | AddressInfo Text
   deriving (Eq, Show)
 
 data StakeAddressCmd
   = StakeAddressKeyGen VerificationKeyFile SigningKeyFile
-  | StakeAddressBuild VerificationKeyFile Network (Maybe OutputFile)
+  | StakeAddressBuild VerificationKeyFile Typed.NetworkId (Maybe OutputFile)
   | StakeKeyRegister PrivKeyFile NodeAddress
   | StakeKeyDelegate PrivKeyFile PoolId Lovelace NodeAddress
   | StakeKeyDeRegister PrivKeyFile NodeAddress
@@ -110,7 +111,7 @@ data TransactionCmd
       TxInCount
       TxOutCount
       SlotNo
-      Network
+      Typed.NetworkId
       [SigningKeyFile]
       [CertificateFile]
       Withdrawals

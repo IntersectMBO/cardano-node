@@ -8,14 +8,14 @@ import           Cardano.Prelude hiding (putStrLn)
 import           Prelude (putStrLn)
 
 import qualified Data.ByteString.Char8 as BS
-import qualified Data.Text.IO as Text
 
 import           Control.Monad.Trans.Except (ExceptT)
-import           Control.Monad.Trans.Except.Extra (firstExceptT, newExceptT)
+import           Control.Monad.Trans.Except.Extra (firstExceptT, newExceptT, right)
 
 import           Cardano.Api
 
-import           Cardano.CLI.Helpers (textToByteString)
+import qualified Cardano.Api.Typed as Typed
+
 import           Cardano.CLI.Shelley.Parsers
                    (OutputFile (..), SigningKeyFile (..), VerificationKeyFile (..),
                     AddressCmd (..))
@@ -56,12 +56,13 @@ runAddressCmd cmd =
 
 runAddressKeyGen :: VerificationKeyFile -> SigningKeyFile -> ExceptT ShelleyAddressCmdError IO ()
 runAddressKeyGen (VerificationKeyFile vkeyPath) (SigningKeyFile skeyPath) = do
-    sk <- liftIO shelleyGenSigningKey
-    let vk = getPaymentVerificationKey sk
+    sk <- liftIO $ Typed.generateSigningKey Typed.AsPaymentKey
+    let vk = getPaymentVerificationKey' sk :: Typed.VerificationKey Typed.PaymentKey
+
     firstExceptT ShelleyAddressCmdPayVerificationKeyWriteErr
-      . ExceptT $ writePaymentVerificationKey vkeyPath vk
+      . ExceptT $ writeVerificationKey' vkeyPath vk
     firstExceptT ShelleyAddressCmdPaySigningKeyWriteErr
-      . ExceptT $ writeSigningKey skeyPath sk
+      . ExceptT $ writeSigningKey' skeyPath sk
 
 runAddressKeyHash :: VerificationKeyFile -> Maybe OutputFile -> ExceptT ShelleyAddressCmdError IO ()
 runAddressKeyHash (VerificationKeyFile vkeyPath) mOutputFp =
@@ -73,24 +74,36 @@ runAddressKeyHash (VerificationKeyFile vkeyPath) mOutputFp =
         Just (OutputFile fpath) -> liftIO $ BS.writeFile fpath b16Hash
         Nothing -> liftIO $ BS.putStrLn b16Hash
 
+{-
+makeShelleyAddress :: NetworkId
+                   -> PaymentCredential
+                   -> StakeAddressReference
+                   -> Address Shelley
+-}
+
 runAddressBuild :: VerificationKeyFile
                 -> Maybe VerificationKeyFile
-                -> Network
+                -> Typed.NetworkId
                 -> Maybe OutputFile
                 -> ExceptT ShelleyAddressCmdError IO ()
-runAddressBuild (VerificationKeyFile payVkeyFp) mstkVkeyFp nw mOutFp =
+runAddressBuild (VerificationKeyFile payVkeyFp) mstkVkeyFp nwId mOutFp =
   firstExceptT ShelleyAddressCmdPayVerificationKeyReadErrr $ do
-    payVKey <- newExceptT $ readPaymentVerificationKey payVkeyFp
-    mstkVKey <- case mstkVkeyFp of
-                  Just (VerificationKeyFile stkVkeyFp) ->
-                    Just <$> newExceptT (readStakingVerificationKey stkVkeyFp)
-                  Nothing ->
-                    return Nothing
-    let addr = shelleyVerificationKeyAddress nw payVKey mstkVKey
-        hexAddr = addressToHex addr
+    payVKey <- newExceptT $ readVerificationKey' (Typed.AsVerificationKey Typed.AsPaymentKey) payVkeyFp
+    let paymentCred = Typed.PaymentCredentialByKey $ Typed.verificationKeyHash payVKey
+
+    stkAddrRef <- case mstkVkeyFp of
+                    Just (VerificationKeyFile stkVkeyFp) -> do
+                      stkKey <- newExceptT $ readVerificationKey' (Typed.AsVerificationKey Typed.AsStakeKey) stkVkeyFp
+                      right . Typed.StakeAddressByValue . Typed.StakeCredentialByKey $ Typed.verificationKeyHash stkKey
+                    Nothing ->
+                      right Typed.NoStakeAddress
+
+    let addr = Typed.makeShelleyAddress nwId paymentCred stkAddrRef
+        hexAddr = Typed.serialiseToRawBytesHex addr
+
     case mOutFp of
-      Just (OutputFile fpath) -> liftIO . BS.writeFile fpath $ textToByteString hexAddr
-      Nothing -> liftIO $ Text.putStrLn hexAddr
+      Just (OutputFile fpath) -> liftIO $ BS.writeFile fpath hexAddr
+      Nothing -> liftIO . putTextLn $ textShow hexAddr
 
 runAddressBuildMultiSig :: ExceptT ShelleyAddressCmdError IO ()
 runAddressBuildMultiSig =

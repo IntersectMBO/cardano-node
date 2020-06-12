@@ -27,6 +27,7 @@ import qualified Shelley.Spec.Ledger.TxData as Shelley
 
 import           Cardano.Api
 import           Cardano.Api.Shelley.OCert (KESPeriod(..))
+import qualified Cardano.Api.Typed as Typed
 import           Cardano.Slotting.Slot (EpochNo (..))
 
 import           Cardano.Config.Types (CertificateFile (..), MetaDataFile(..), SigningKeyFile(..),
@@ -131,7 +132,7 @@ pAddressCmd =
       AddressBuild
         <$> pPaymentVerificationKeyFile
         <*> Opt.optional pStakeVerificationKeyFile
-        <*> pNetwork
+        <*> pNetworkId
         <*> pMaybeOutputFile
 
 
@@ -190,7 +191,7 @@ pStakeAddress =
 
     pStakeAddressBuild :: Parser StakeAddressCmd
     pStakeAddressBuild = StakeAddressBuild <$> pStakeVerificationKeyFile
-                                           <*> pNetwork
+                                           <*> pNetworkId
                                            <*> pMaybeOutputFile
 
     pStakeAddressRegister :: Parser StakeAddressCmd
@@ -299,7 +300,7 @@ pTransaction =
         <$> pTxInCount
         <*> pTxOutCount
         <*> pTxTTL
-        <*> pNetwork
+        <*> pNetworkId
         <*> pSomeSigningKeyFiles
         <*> many pCertificateFile
         <*> pWithdrawals
@@ -998,6 +999,24 @@ pITNVerificationKeyFile =
 pNetwork :: Parser Network
 pNetwork =
   pMainnet <|> fmap Testnet pTestnetMagic
+
+pNetworkId :: Parser Typed.NetworkId
+pNetworkId =
+  pMainnet' <|> pTestnetMagic'
+ where
+   pMainnet' :: Parser Typed.NetworkId
+   pMainnet' = Opt.flag' Typed.Mainnet
+                (  Opt.long "mainnet"
+                <> Opt.help "Use the mainnet magic id."
+                )
+   pTestnetMagic' :: Parser Typed.NetworkId
+   pTestnetMagic' = Typed.Testnet . Typed.NetworkMagic <$>
+                      Opt.option Opt.auto
+                        (  Opt.long "testnet-magic"
+                        <> Opt.metavar "NATURAL"
+                        <> Opt.help "Specify a testnet magic id."
+                        )
+
 
 pMainnet :: Parser Network
 pMainnet =

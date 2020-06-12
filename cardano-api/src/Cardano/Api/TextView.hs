@@ -79,6 +79,7 @@ data TextViewError
   = TextViewFormatError !Text
   | TextViewTypeError   ![TextViewType] !TextViewType -- ^ expected, actual
   | TextViewDecodeError !DecoderError
+  | TextViewMiscErr !Text
   deriving (Eq, Show)
 
 renderTextViewError :: TextViewError -> Text
@@ -184,7 +185,6 @@ renderTextViewFileError tvfe =
     TextViewFileError fp err -> toS fp <> ": " <> renderTextViewError err
     TextViewFileIOError fp ioExcpt ->
       "TextView IO exception at: " <> toS fp <> " Error: " <> textShow ioExcpt
-
 -- | Read a file in the external serialised format for 'TextView'.
 --
 readTextViewFile :: FilePath -> IO (Either TextViewFileError TextView)

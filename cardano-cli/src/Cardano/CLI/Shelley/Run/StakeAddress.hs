@@ -7,13 +7,13 @@ module Cardano.CLI.Shelley.Run.StakeAddress
 
 import           Cardano.Prelude
 
-import qualified Data.ByteString.Lazy.Char8 as LBS
-import qualified Data.Text.IO as Text
+import qualified Data.ByteString.Char8 as BS
 
 import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, hoistEither, left, newExceptT)
 
 import           Cardano.Api
+import qualified Cardano.Api.Typed as Typed
 
 import           Cardano.Api (StakingVerificationKey (..),
                    readStakingVerificationKey,
@@ -82,24 +82,25 @@ runStakeAddressCmd cmd = liftIO $ putStrLn $ "runStakeAddressCmd: " ++ show cmd
 
 runStakeAddressKeyGen :: VerificationKeyFile -> SigningKeyFile -> ExceptT ShelleyStakeAddressCmdError IO ()
 runStakeAddressKeyGen (VerificationKeyFile vkFp) (SigningKeyFile skFp) = do
-  (vkey, skey) <- liftIO genKeyPair
+  skey <- liftIO $ Typed.generateSigningKey Typed.AsStakeKey
+  let vkey = Typed.getVerificationKey skey
   firstExceptT (ShelleyStakeAddressWriteVerKeyError vkFp)
-    . newExceptT
-    $ writeStakingVerificationKey vkFp (StakingVerificationKeyShelley vkey)
-  --TODO: writeSigningKey should really come from Cardano.Api.Shelley.ColdKeys
-  firstExceptT (ShelleyStakeAddressWriteSignKeyError skFp) . newExceptT $ writeSigningKey skFp (SigningKeyShelley skey)
+    . newExceptT $ writeVerificationKey' vkFp vkey
+  --TODO: writeSigningKey should really come from Cardano.Config.Shelley.ColdKeys
+  firstExceptT (ShelleyStakeAddressWriteSignKeyError skFp) . newExceptT $ writeSigningKey' skFp skey
 
 
-runStakeAddressBuild :: VerificationKeyFile -> Network -> Maybe OutputFile
+runStakeAddressBuild :: VerificationKeyFile -> Typed.NetworkId -> Maybe OutputFile
                      -> ExceptT ShelleyStakeAddressCmdError IO ()
-runStakeAddressBuild (VerificationKeyFile stkVkeyFp) network mOutputFp =
+runStakeAddressBuild (VerificationKeyFile stkVkeyFp) nwId mOutputFp =
   firstExceptT (ShelleyStakeAddressReadVerKeyError stkVkeyFp) $ do
-    stkVKey <- ExceptT $ readStakingVerificationKey stkVkeyFp
-    let rwdAddr = AddressShelleyReward (shelleyVerificationKeyRewardAddress network stkVKey)
-        hexAddr = addressToHex rwdAddr
+    stkVKey <- newExceptT $ readVerificationKey' (Typed.AsVerificationKey Typed.AsStakeKey) stkVkeyFp
+
+    let stkAddr = Typed.makeStakeAddress nwId (Typed.StakeCredentialByKey (Typed.verificationKeyHash stkVKey))
+        rwdAddr = Typed.serialiseToRawBytes stkAddr
     case mOutputFp of
-      Just (OutputFile fpath) -> liftIO . LBS.writeFile fpath $ textToLByteString hexAddr
-      Nothing -> liftIO $ Text.putStrLn hexAddr
+      Just (OutputFile fpath) -> liftIO $ BS.writeFile fpath rwdAddr
+      Nothing -> liftIO . putTextLn $ textShow rwdAddr
 
 
 runStakeKeyRegistrationCert :: VerificationKeyFile -> OutputFile -> ExceptT ShelleyStakeAddressCmdError IO ()

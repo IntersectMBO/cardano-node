@@ -92,6 +92,7 @@ module Cardano.Api.Typed (
     makeShelleyTransaction,
     SlotNo,
     TxOptional(..),
+    NetworkMagic(..),
 
     -- * Signing transactions
     -- | Creating transaction witnesses one by one, or all in one go.
@@ -429,6 +430,7 @@ data StakeAddress where
 data NetworkId
        = Mainnet
        | Testnet !NetworkMagic
+       deriving (Eq, Show)
 
 data PaymentCredential
        = PaymentCredentialByKey    (Hash PaymentKey)
@@ -492,19 +494,12 @@ instance SerialiseAsRawBytes (Address Shelley) where
 
 instance SerialiseAsRawBytes StakeAddress where
     serialiseToRawBytes (StakeAddress nw sc) =
-        serialiseRewardAcnt (Shelley.RewardAcnt nw sc)
-      where
-        serialiseRewardAcnt =
-          error "TODO: Use Shelley.serialiseRewardAcnt when it is available"
+        Shelley.serialiseRewardAcnt (Shelley.RewardAcnt nw sc)
 
     deserialiseFromRawBytes AsStakeAddress bs =
-        case deserialiseRewardAcnt bs of
+        case Shelley.deserialiseRewardAcnt bs of
           Nothing -> Nothing
           Just (Shelley.RewardAcnt nw sc) -> Just (StakeAddress nw sc)
-      where
-        deserialiseRewardAcnt =
-          error "TODO: Use Shelley.deserialiseRewardAcnt when it is available"
-
 
 makeByronAddress :: VerificationKey ByronKey
                  -> NetworkId
@@ -514,7 +509,6 @@ makeByronAddress (ByronVerificationKey vk) nid =
       Byron.makeVerKeyAddress
         (toByronNetworkMagic nid)
         vk
-
 
 makeShelleyAddress :: NetworkId
                    -> PaymentCredential

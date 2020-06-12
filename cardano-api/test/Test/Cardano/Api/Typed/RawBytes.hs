@@ -28,17 +28,10 @@ prop_roundtrip_byron_address_raw = H.property $ do
   addr <- H.forAll genAddressByron
   H.tripping addr serialiseToRawBytes (deserialiseFromRawBytes AsByronAddress)
 
-{-
---TODO: Follow up
-This property will fail due to:
- Shelley.deserialiseRewardAcnt not being available
-
 prop_roundtrip_stake_address_raw :: Property
 prop_roundtrip_stake_address_raw = H.property $ do
   addr <- H.forAll genStakeAddress
   H.tripping addr serialiseToRawBytes (deserialiseFromRawBytes AsStakeAddress)
--}
-
 
 prop_roundtrip_verification_ByronKey_hash_raw :: Property
 prop_roundtrip_verification_ByronKey_hash_raw =

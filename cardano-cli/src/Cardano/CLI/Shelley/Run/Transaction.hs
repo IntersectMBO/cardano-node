@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
-
 module Cardano.CLI.Shelley.Run.Transaction
   ( ShelleyTxCmdError
   , renderShelleyTxCmdError
@@ -14,6 +12,7 @@ import           Cardano.Api.Shelley.ColdKeys
                    (KeyType(..), KeyRole(..), KeyError(..), OperatorKeyRole (..),
                    renderKeyError, renderKeyType)
 import           Cardano.Api.TextView
+import qualified Cardano.Api.Typed as Typed
 import           Cardano.CLI.Environment (EnvSocketError, readEnvSocketPath,
                    renderEnvSocketError)
 
@@ -44,7 +43,7 @@ data ShelleyTxCmdError
   | ShelleyTxReadUpdateError !ApiError
   | ShelleyTxReadUnsignedTxError !ApiError
   | ShelleyTxCertReadError !FilePath !ApiError
-  | ShelleyTxSignKeyError !KeyError
+  | ShelleyTxSignKeyError !ApiError
   | ShelleyTxWriteSignedTxError !ApiError
   | ShelleyTxWriteUnsignedTxError !ApiError
   | ShelleyTxSubmitError !TxSubmitResult
@@ -68,8 +67,8 @@ renderShelleyTxCmdError err =
       "Error while decoding the protocol parameters at: " <> textShow fp <> " Error: " <> textShow decErr
     ShelleyTxCertReadError fp apiErr ->
       "Error reading shelley certificate at: " <> textShow fp <> " Error: " <> renderApiError apiErr
-    ShelleyTxSignKeyError keyErr ->
-      "Errog reading shelley signing key: " <> renderKeyError keyErr
+    ShelleyTxSignKeyError apiErr ->
+      "Error reading shelley signing key: " <> renderApiError apiErr
     ShelleyTxWriteSignedTxError apiError ->
       "Error while writing signed shelley tx: " <> renderApiError apiError
     ShelleyTxWriteUnsignedTxError apiError ->
@@ -86,8 +85,8 @@ runTransactionCmd cmd =
       runTxSign txinfile skfiles network txoutfile
     TxSubmit txFp network ->
       runTxSubmit txFp network
-    TxCalculateMinFee txInCount txOutCount ttl network skFiles certFiles wdrls hasMD pParamsFile ->
-      runTxCalculateMinFee txInCount txOutCount ttl network skFiles certFiles wdrls hasMD pParamsFile
+    TxCalculateMinFee txInCount txOutCount ttl networkId skFiles certFiles wdrls hasMD pParamsFile ->
+      runTxCalculateMinFee txInCount txOutCount ttl networkId skFiles certFiles wdrls hasMD pParamsFile
     TxGetTxId txinfile ->
       runTxGetTxId txinfile
 
@@ -147,15 +146,15 @@ runTxCalculateMinFee
   :: TxInCount
   -> TxOutCount
   -> SlotNo
-  -> Network
+  -> Typed.NetworkId
   -> [SigningKeyFile]
   -> [CertificateFile]
   -> Withdrawals
   -> HasMetaData
   -> ProtocolParamsFile
   -> ExceptT ShelleyTxCmdError IO ()
-runTxCalculateMinFee (TxInCount txInCount) (TxOutCount txOutCount)
-                     txTtl network skFiles certFiles wdrls hasMD
+runTxCalculateMinFee (TxInCount _txInCount) (TxOutCount _txOutCount)
+                     _txTtl _network skFiles certFiles _wdrls _hasMD
                      pParamsFile = do
     skeys <- readSigningKeyFiles skFiles
     certs <- mapM readShelleyCert certFiles
@@ -164,8 +163,8 @@ runTxCalculateMinFee (TxInCount txInCount) (TxOutCount txOutCount)
       $  "runTxCalculateMinFee: "
       ++ show (calculateShelleyMinFee pparams (dummyShelleyTxForFeeCalc skeys certs))
   where
-    dummyShelleyTxForFeeCalc skeys certs =
-      buildDummyShelleyTxForFeeCalc txInCount txOutCount txTtl network skeys certs wdrls hasMD
+    dummyShelleyTxForFeeCalc _skeys _certs = panic "FIX ME"
+     -- buildDummyShelleyTxForFeeCalc txInCount txOutCount txTtl network skeys certs wdrls hasMD
 
 readProtocolParameters :: ProtocolParamsFile -> ExceptT ShelleyTxCmdError IO PParams
 readProtocolParameters (ProtocolParamsFile fpath) = do
@@ -183,19 +182,18 @@ readShelleyCert (CertificateFile fp) =
 -- for reading/writing keys, but they are incompatible.
 -- The 'config' version just operates on Shelley only 'SignKey's, but 'api' operates on
 -- 'SigningKey's which have a Byron and a Shelley constructor.
-readSigningKeyFiles :: [SigningKeyFile] -> ExceptT ShelleyTxCmdError IO [SigningKey]
+readSigningKeyFiles :: [SigningKeyFile] -> ExceptT ShelleyTxCmdError IO [Typed.SigningKey Typed.PaymentKey]
 readSigningKeyFiles files =
   newExceptT $ do
     xs <- mapM readSigningKeyFile files
     case partitionEithers xs of
       -- TODO: Would be nice to also provide a filepath to the signing key
       -- resulting in the error.
-      (e:_, _) -> pure $ Left (ShelleyTxSignKeyError (ReadSigningKeyError e))
+      (e:_, _) -> pure . Left $ ShelleyTxSignKeyError e
       ([], ys) -> pure $ Right ys
 
-readSigningKeyFile :: SigningKeyFile -> IO (Either TextViewFileError SigningKey)
-readSigningKeyFile (SigningKeyFile skfile) =
-      readTextViewEncodedFile decodeAddressSigningKey skfile
+readSigningKeyFile :: SigningKeyFile -> IO (Either ApiError (Typed.SigningKey Typed.PaymentKey))
+readSigningKeyFile (SigningKeyFile skfile) = readSigningKey' (Typed.AsSigningKey Typed.AsPaymentKey) skfile
 
 -- The goal here is to read either a Byron or Shelley address signing key or a
 -- Genesis UTxO signing key. The TextView provides functions to read one of
@@ -207,14 +205,20 @@ readSigningKeyFile (SigningKeyFile skfile) =
 -- compose that with readTextViewEncodedFile. It provides the lower level
 -- signingKeyFromCBOR which returns too big an error type to fit here, so
 -- we have to fudge it with a partial conversion.
-decodeAddressSigningKey :: TextView -> Either TextViewError SigningKey
-decodeAddressSigningKey tView = do
+_decodeAddressSigningKey :: TextView -> Either TextViewError SigningKey
+_decodeAddressSigningKey tView = do
     isGenesisUTxOKey <- expectTextViewOfTypes fileTypes tView
     if isGenesisUTxOKey
       then decodeFromTextView (SigningKeyShelley <$> fromCBOR) tView
-      else first (\(ApiTextView tve) -> tve)
-                 (signingKeyFromCBOR (tvRawCBOR tView))
+      else first toTextViewError (signingKeyFromCBOR (tvRawCBOR tView))
   where
+    toTextViewError :: ApiError -> TextViewError
+    toTextViewError err =
+      case err of
+        ApiError e -> TextViewMiscErr e
+        ApiErrorCBOR e -> TextViewMiscErr $ textShow e
+        ApiErrorIO fp e -> TextViewMiscErr $ "Error at: " <> textShow fp <> "Error: " <> textShow e
+        ApiTextView tve -> tve
     fileTypes =
       [ ("SigningKeyShelley", False)
       , ("SigningKeyByron",   False)

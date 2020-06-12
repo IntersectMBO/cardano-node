@@ -1,3 +1,5 @@
+{-# LANGUAGE FlexibleContexts #-}
+
 module Cardano.Api.View
   ( parseAddressView
   , parseCertificateView
@@ -12,9 +14,11 @@ module Cardano.Api.View
 
   , readAddress
   , readCertificate
-  , readSigningKey
+  , readSigningKey'
+  , readSigningKey -- deprecated
   , readGenesisVerificationKey
-  , readPaymentVerificationKey
+  , readVerificationKey'
+  , readPaymentVerificationKey -- deprecated
   , readStakingVerificationKey
   , readVRFVerificationKey
   , readTxSigned
@@ -25,7 +29,6 @@ module Cardano.Api.View
   , renderCertificateView
   , renderGenesisVerificationKeyView
   , renderSigningKeyView
-  , renderPaymentVerificationKeyView
   , renderStakingVerificationKeyView
   , renderUpdateView
   , renderVerificationKeyVRFView
@@ -34,8 +37,9 @@ module Cardano.Api.View
 
   , writeAddress
   , writeCertificate
+  , writeSigningKey'
+  , writeVerificationKey'
   , writeSigningKey
-  , writePaymentVerificationKey
   , writeStakingVerificationKey
   , writeVRFVerificationKey
   , writeTxSigned
@@ -44,10 +48,12 @@ module Cardano.Api.View
   ) where
 
 import           Cardano.Api.CBOR
-import           Cardano.Api.Types
+import           Cardano.Api.Types -- deprecated
 import           Cardano.Api.Error
 
 import           Cardano.Api.TextView
+import           Cardano.Api.Typed (displayError, writeFileTextEnvelope)
+import qualified Cardano.Api.Typed as Typed
 
 import           Cardano.Prelude
 
@@ -150,17 +156,6 @@ renderUpdateView up =
     cbor :: ByteString
     cbor = updateToCBOR up
 
-renderPaymentVerificationKeyView :: PaymentVerificationKey -> ByteString
-renderPaymentVerificationKeyView pk =
-  case pk of
-    PaymentVerificationKeyByron {} ->
-      renderTextView $ TextView "PaymentVerificationKeyByron" "Free form text" cbor
-    PaymentVerificationKeyShelley {} ->
-      renderTextView $ TextView "PaymentVerificationKeyShelley" "Free form text" cbor
-  where
-    cbor :: ByteString
-    cbor = paymentVerificationKeyToCBOR pk
-
 renderStakingVerificationKeyView :: StakingVerificationKey -> ByteString
 renderStakingVerificationKeyView svk =
   case svk of
@@ -210,6 +205,17 @@ readCertificate path =
     bs <- handleIOExceptT (ApiErrorIO path) $ BS.readFile path
     hoistEither $ parseCertificateView bs
 
+readSigningKey'
+  :: Typed.HasTextEnvelope a
+  => Typed.AsType a
+  -> FilePath
+  -> IO (Either ApiError a)
+readSigningKey' ttoken fp = do
+  res <- Typed.readFileTextEnvelope ttoken fp
+  case res of
+    Left fileErr -> return . Left . ApiError . textShow $ displayError fileErr
+    Right sKey -> return $ Right sKey
+
 readSigningKey :: FilePath -> IO (Either ApiError SigningKey)
 readSigningKey path =
   runExceptT $ do
@@ -221,6 +227,18 @@ readGenesisVerificationKey path =
   runExceptT $ do
     bs <- handleIOExceptT (ApiErrorIO path) $ BS.readFile path
     hoistEither $ parseGenesisVerificationKeyView bs
+
+readVerificationKey'
+  :: Typed.HasTextEnvelope a
+  => Typed.AsType a
+  -> FilePath
+  -> IO (Either ApiError a)
+readVerificationKey' ttoken path = do
+  res <- Typed.readFileTextEnvelope ttoken path
+  case res of
+    Left fileErr -> return . Left . ApiError . textShow $ displayError fileErr
+    Right verKey -> return $ Right verKey
+
 
 readPaymentVerificationKey :: FilePath -> IO (Either ApiError PaymentVerificationKey)
 readPaymentVerificationKey path =
@@ -268,15 +286,32 @@ writeCertificate path cert =
   runExceptT .
     handleIOExceptT (ApiErrorIO path) $ BS.writeFile path (renderCertificateView cert)
 
+writeSigningKey'
+  :: Typed.HasTextEnvelope (Typed.SigningKey keyrole)
+  => FilePath
+  -> Typed.SigningKey keyrole
+  -> IO (Either ApiError ())
+writeSigningKey' path sKey = do
+  res <- writeFileTextEnvelope path Nothing sKey
+  case res of
+    Left fileErr -> return . Left . ApiError . textShow $ displayError fileErr
+    Right _ -> return $ Right ()
+
 writeSigningKey :: FilePath -> SigningKey -> IO (Either ApiError ())
 writeSigningKey path kp =
   runExceptT .
     handleIOExceptT (ApiErrorIO path) $ BS.writeFile path (renderSigningKeyView kp)
 
-writePaymentVerificationKey :: FilePath -> PaymentVerificationKey -> IO (Either ApiError ())
-writePaymentVerificationKey path kp =
-  runExceptT .
-    handleIOExceptT (ApiErrorIO path) $ BS.writeFile path (renderPaymentVerificationKeyView kp)
+writeVerificationKey'
+  :: Typed.HasTextEnvelope (Typed.VerificationKey keyrole)
+  => FilePath
+  -> Typed.VerificationKey keyrole
+  -> IO (Either ApiError ())
+writeVerificationKey' path vKey = do
+  res <- writeFileTextEnvelope path Nothing vKey
+  case res of
+    Left fileErr -> return . Left . ApiError . textShow $ displayError fileErr
+    Right _ -> return $ Right ()
 
 writeStakingVerificationKey :: FilePath -> StakingVerificationKey -> IO (Either ApiError ())
 writeStakingVerificationKey path kp =
