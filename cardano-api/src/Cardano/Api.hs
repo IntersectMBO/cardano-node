@@ -40,6 +40,7 @@ module Cardano.Api
   , Lovelace (..)
   , SlotNo (..)
   , Withdrawals (..)
+  , HasMetaData (..)
   , Update (..)
   , ShelleyTxBody
 
@@ -87,6 +88,7 @@ module Cardano.Api
   , ShelleyStakePoolOwners
   , ShelleyStakePoolRelay
   , ShelleyWithdrawals
+  , ShelleyMetaDataHash
   , ShelleyUpdate
   , ShelleyVerificationKeyHashStaking
   , ShelleyVerificationKeyHashStakePool
@@ -166,6 +168,7 @@ import qualified Shelley.Spec.Ledger.BaseTypes   as Shelley
 import qualified Shelley.Spec.Ledger.Credential  as Shelley
 import qualified Shelley.Spec.Ledger.Keys        as Shelley
 import qualified Shelley.Spec.Ledger.LedgerState as Shelley (minfee)
+import qualified Shelley.Spec.Ledger.MetaData    as Shelley
 import qualified Shelley.Spec.Ledger.PParams     as Shelley
 import qualified Shelley.Spec.Ledger.Slot        as Shelley
 import qualified Shelley.Spec.Ledger.TxData      as Shelley
@@ -417,19 +420,21 @@ buildShelleyTransaction
   -> Withdrawals
   -> Maybe Update
   -- ^ Update proposals
+  -> Maybe ShelleyMetaDataHash
   -> TxUnsigned
-buildShelleyTransaction txins txouts ttl fee certs wdrls pParamUpdate = do
+buildShelleyTransaction txins txouts ttl fee certs wdrls pParamUpdate hMetaData = do
   let relevantCerts = [ certDiscrim c | c <- certs ]
   TxUnsignedShelley $
     Shelley.TxBody
-      (Set.fromList (map toShelleyTxIn  txins))
-      (Seq.fromList (map toShelleyTxOut txouts))
-      (Seq.fromList relevantCerts)  -- certificates
-      shelleyWdrl                   -- withdrawals
-      (toShelleyLovelace fee)
-      ttl
-      (toStrictMaybe pParamUpdate)
-      Shelley.SNothing              -- metadata hash
+      { Shelley._inputs = Set.fromList $ map toShelleyTxIn txins
+      , Shelley._outputs = Seq.fromList $ map toShelleyTxOut txouts
+      , Shelley._certs = Seq.fromList relevantCerts
+      , Shelley._wdrls = shelleyWdrl
+      , Shelley._txfee = toShelleyLovelace fee
+      , Shelley._ttl = ttl
+      , Shelley._txUpdate = toStrictMaybe pParamUpdate
+      , Shelley._mdHash = Shelley.maybeToStrictMaybe hMetaData
+      }
  where
    certDiscrim :: Certificate -> ShelleyCertificate
    certDiscrim (ShelleyDelegationCertificate delegCert) = delegCert
@@ -470,10 +475,11 @@ buildDummyShelleyTxForFeeCalc
   -> [SigningKey]
   -> [Certificate]
   -> Withdrawals
+  -> HasMetaData
   -> TxSigned
-buildDummyShelleyTxForFeeCalc txInCount txOutCount ttl network skeys certs wdrls =
+buildDummyShelleyTxForFeeCalc txInCount txOutCount ttl network skeys certs wdrls hasMD =
     signTransaction
-      (buildShelleyTransaction txIns txOuts ttl fee certs wdrls Nothing)
+      (buildShelleyTransaction txIns txOuts ttl fee certs wdrls Nothing mbMDHash)
       network
       skeys
   where
@@ -501,6 +507,15 @@ buildDummyShelleyTxForFeeCalc txInCount txOutCount ttl network skeys certs wdrls
 
     fee :: Lovelace
     fee = Lovelace 0
+
+    mbMDHash :: Maybe ShelleyMetaDataHash
+    mbMDHash =
+      case hasMD of
+        HasNoMetaData -> Nothing
+        HasMetaData -> Just
+          $ Shelley.MetaDataHash
+          $ Crypto.Hash.castHash
+          $ Crypto.Hash.hash (0 :: Int)
 
 {-
 inputs outputs, attributes:

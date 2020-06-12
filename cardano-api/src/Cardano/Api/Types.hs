@@ -30,6 +30,7 @@ module Cardano.Api.Types
   , TxIx
   , TxOut (..)
   , Withdrawals (..)
+  , HasMetaData (..)
   , Update (..)
   , EpochNo (..)
   , SlotNo (..)
@@ -85,6 +86,7 @@ module Cardano.Api.Types
   , ShelleyTxId
   , ShelleyTxIn
   , ShelleyTxOut
+  , ShelleyMetaDataHash
   , ShelleyWitnessVKey
   , toShelleyTxIn
   , toShelleyTxOut
@@ -121,6 +123,7 @@ import qualified Shelley.Spec.Ledger.Coin                    as Shelley
 import qualified Shelley.Spec.Ledger.Credential              as Shelley
 import qualified Shelley.Spec.Ledger.Delegation.Certificates as Shelley
 import qualified Shelley.Spec.Ledger.Keys                    as Shelley
+import qualified Shelley.Spec.Ledger.MetaData                as Shelley
 import qualified Shelley.Spec.Ledger.PParams                 as Shelley
 import qualified Shelley.Spec.Ledger.TxData                  as Shelley
 import qualified Shelley.Spec.Ledger.Tx                      as Shelley
@@ -173,6 +176,7 @@ type ShelleyStakePoolMargin              = Shelley.UnitInterval
 type ShelleyStakePoolMetaData            = Shelley.PoolMetaData
 type ShelleyStakePoolRelay               = Shelley.StakePoolRelay
 type ShelleyRewardAccount                = Shelley.RewardAcnt Shelley.TPraosStandardCrypto
+type ShelleyMetaDataHash                 = Shelley.MetaDataHash Shelley.TPraosStandardCrypto
 
 -- The 'Address' data type in 'cardano-sl' is a design train wreck.
 -- We need something that is compatible and discard as much of the insanity as possible.
@@ -238,6 +242,12 @@ data StakingVerificationKey
 data Withdrawals
   = WithdrawalsShelley !ShelleyWithdrawals
   deriving (Eq, Generic, {-NFData, TODO-} Show)
+  deriving anyclass NoUnexpectedThunks
+
+data HasMetaData
+  = HasMetaData
+  | HasNoMetaData
+  deriving (Eq, Generic, NFData, Show)
   deriving anyclass NoUnexpectedThunks
 
 data Update = ShelleyUpdate (Shelley.Update Shelley.TPraosStandardCrypto)

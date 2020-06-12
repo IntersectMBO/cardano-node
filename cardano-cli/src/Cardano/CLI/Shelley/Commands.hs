@@ -42,8 +42,9 @@ import           Cardano.Slotting.Slot (EpochNo (..))
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
 
 import           Cardano.Config.Types
-                  (CertificateFile (..), NodeAddress, PoolMetaDataFile (..),
-                   SigningKeyFile(..), UpdateProposalFile(..))
+                  (CertificateFile (..), MetaDataFile, NodeAddress,
+                   PoolMetaDataFile (..), SigningKeyFile(..),
+                   UpdateProposalFile(..))
 import           Cardano.Config.Shelley.OCert (KESPeriod(..))
 import           Shelley.Spec.Ledger.TxData (MIRPot)
 
@@ -97,6 +98,7 @@ data TransactionCmd
       Lovelace
       [CertificateFile]
       Withdrawals
+      (Maybe MetaDataFile)
       (Maybe UpdateProposalFile)
       TxBodyFile
   | TxSign TxBodyFile [SigningKeyFile] Network TxFile
@@ -112,6 +114,7 @@ data TransactionCmd
       [SigningKeyFile]
       [CertificateFile]
       Withdrawals
+      HasMetaData
       ProtocolParamsFile
   | TxGetTxId TxBodyFile
   deriving (Eq, Show)

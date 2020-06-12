@@ -21,6 +21,7 @@ module Cardano.Config.Types
     , GenesisFile (..)
     , KESMetricsData (..)
     , MaxKESEvolutions (..)
+    , MetaDataFile (..)
     , OperationalCertStartKESPeriod (..)
     , HasKESMetricsData (..)
     , LastKnownBlockVersion (..)
@@ -182,7 +183,7 @@ instance FromJSON GenesisFile where
   parseJSON invalid = panic $ "Parsing of GenesisFile failed due to type mismatch. "
                            <> "Encountered: " <> (Text.pack $ show invalid)
 
--- Encompasses staking certificates, stake pool certificates,
+-- Encompasses stake certificates, stake pool certificates,
 -- genesis delegate certificates and MIR certificates.
 newtype CertificateFile = CertificateFile
   { unCertificateFile :: FilePath }
@@ -190,6 +191,10 @@ newtype CertificateFile = CertificateFile
 
 newtype PoolMetaDataFile = PoolMetaDataFile
   { unPoolMetaDataFile :: FilePath }
+  deriving newtype (Eq, Show)
+
+newtype MetaDataFile = MetaDataFile
+  { unMetaDataFile :: FilePath }
   deriving newtype (Eq, Show)
 
 newtype UpdateProposalFile = UpdateProposalFile
