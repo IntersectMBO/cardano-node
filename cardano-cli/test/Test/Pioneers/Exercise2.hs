@@ -34,6 +34,8 @@ prop_createTransaction =
                                , "--signing-key-file", paymentSignKey
                                ]
 
+    doFilesExist [paymentVerKey, paymentSignKey]
+
     -- Create transaction body
     execCardanoCLIParser
       allFiles
@@ -45,6 +47,8 @@ prop_createTransaction =
                                , "--ttl", "500000"
                                , "--out-file", transactionBodyFile
                                ]
+
+    doFilesExist [transactionBodyFile]
 
     -- Sign transaction
     execCardanoCLIParser
