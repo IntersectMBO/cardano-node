@@ -44,7 +44,6 @@ import           Cardano.Crypto.Seed as Crypto
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import           Data.Coerce (coerce)
 import qualified Data.Map.Strict as Map
-import           Data.Ratio (approxRational)
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 
@@ -185,7 +184,7 @@ genShelleyStakePoolRegistrationCertificate =
     <*> genVRFVerificationKeyHashShelley
     <*> (Coin <$> Gen.integral (Range.linear 0 10000000000))
     <*> (Coin <$> Gen.integral (Range.linear 0 10000000000))
-    <*> genStakePoolMarginShelley
+    <*> genUnitInterval
     <*> genRewardAccountShelley
     <*> genStakePoolOwnersShelley
     <*> Gen.list (Range.linear 1 5) genStakePoolRelayShelley
@@ -218,11 +217,6 @@ genStakePoolOwnersShelley :: Gen ShelleyStakePoolOwners
 genStakePoolOwnersShelley = do
   keyHashes <- Gen.list (Range.linear 1 5) genVerificationKeyHashStakingShelley
   return $ Set.fromList keyHashes
-
-genStakePoolMarginShelley :: Gen UnitInterval
-genStakePoolMarginShelley = do
-  numerator' <- Gen.double (Range.constantFrom 0 0 1)
-  Gen.just . pure $ mkUnitInterval $ approxRational numerator' 1
 
 genTxIn :: Gen TxIn
 genTxIn =
@@ -303,11 +297,7 @@ genPParamsUpdate =
     <*> (genStrictMaybe $ fmap fromIntegral (Gen.word $ Range.linear 100 1000000))
     <*> (genStrictMaybe $ fmap fromIntegral (Gen.word $ Range.linear 100 1000000))
     <*> genStrictMaybe genShelleyCoin
-    <*> genStrictMaybe genUnitInterval
-    <*> genStrictMaybe genRational
     <*> genStrictMaybe genShelleyCoin
-    <*> genStrictMaybe genUnitInterval
-    <*> genStrictMaybe genRational
     <*> genStrictMaybe genEpochNoShelly
     <*> (genStrictMaybe $ genNatural (Range.linear 0 10))
     <*> genStrictMaybe genRational
@@ -316,10 +306,8 @@ genPParamsUpdate =
     <*> genStrictMaybe genUnitInterval
     <*> genStrictMaybe genNonce
     <*> genStrictMaybe genProtVer
-    <*> genStrictMaybe genMinUTxOValue
-
-genMinUTxOValue :: Gen Natural
-genMinUTxOValue = Gen.integral (Range.linear 1 1000)
+    <*> genStrictMaybe genShelleyCoin
+    <*> genStrictMaybe genShelleyCoin
 
 genStrictMaybe :: Gen a -> Gen (StrictMaybe a)
 genStrictMaybe gen = maybeToStrictMaybe <$> Gen.maybe gen
@@ -341,8 +329,12 @@ genShelleyCoin =  Coin <$> Gen.integral (Range.linear 1 1000000000)
 
 genUnitInterval :: Gen UnitInterval
 genUnitInterval =
-  UnsafeUnitInterval
-    <$> Gen.realFrac_ (Range.linearFrac 0 1)
+    Gen.just (mkUnitInterval <$> genRatio64)
+  where
+    genRatio64 :: Gen (Ratio Word64)
+    genRatio64 = do
+      n <- Gen.word64 Range.constantBounded
+      return (n % maxBound)
 
 genGenesisVerificationKey :: Gen GenesisVerificationKey
 genGenesisVerificationKey = genGenesisVerificationKeyShelley

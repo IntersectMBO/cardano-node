@@ -11,9 +11,9 @@ import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, left, right,
                    newExceptT)
 
-import           Cardano.Api (ApiError, EpochNo, PParams'(..), ShelleyCoin,
-                   ShelleyCredentialStaking, ShelleyPParamsUpdate,
-                   StakingVerificationKey (..), StrictMaybe (..), Update (..),
+import           Cardano.Api (ApiError, EpochNo, ShelleyCoin,
+                   ShelleyCredentialStaking, ShelleyPParamsUpdate, emptyPParamsUpdate,
+                   StakingVerificationKey (..), Update (..),
                    createShelleyUpdateProposal, hashKey, mkShelleyStakingCredential,
                    readStakingVerificationKey, renderApiError, shelleyMIRCertificate,
                    textShow, writeCertificate, writeUpdate)
@@ -124,28 +124,3 @@ runGovernanceUpdateProposal (OutputFile upFile) eNo genVerKeyFiles upPprams' = d
       | sPParams == emptyPParamsUpdate = left GovernanceEmptyUpdateProposalError
       | otherwise = right sPParams
 
--- TODO: Import from shelley ledger specs
-emptyPParamsUpdate :: ShelleyPParamsUpdate
-emptyPParamsUpdate =
-  PParams
-    { _minfeeA = SNothing,
-      _minfeeB = SNothing,
-      _maxBBSize = SNothing,
-      _maxTxSize = SNothing,
-      _maxBHSize = SNothing,
-      _keyDeposit = SNothing,
-      _keyMinRefund = SNothing,
-      _keyDecayRate = SNothing,
-      _poolDeposit = SNothing,
-      _poolMinRefund = SNothing,
-      _poolDecayRate = SNothing,
-      _eMax = SNothing,
-      _nOpt = SNothing,
-      _a0 = SNothing,
-      _rho = SNothing,
-      _tau = SNothing,
-      _d = SNothing,
-      _extraEntropy = SNothing,
-      _protocolVersion = SNothing,
-      _minUTxOValue = SNothing
-    }

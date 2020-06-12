@@ -14,11 +14,9 @@ import           Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 
 import           Cardano.Crypto.ProtocolMagic (ProtocolMagicId (..))
 import           Cardano.Slotting.Slot (EpochSize (..))
-import           Ouroboros.Consensus.BlockchainTime (SystemStart (..), slotLengthFromSec)
-import           Ouroboros.Consensus.Protocol.Abstract (SecurityParam (..))
 import           Ouroboros.Consensus.Shelley.Protocol (TPraosStandardCrypto)
 import           Ouroboros.Consensus.Shelley.Node (emptyGenesisStaking)
-import           Ouroboros.Network.Magic (NetworkMagic (..))
+import           Ouroboros.Consensus.Util.Time
 
 import           Shelley.Spec.Ledger.Address (Addr (..))
 import           Shelley.Spec.Ledger.BaseTypes (Network (..), truncateUnitInterval)
@@ -33,18 +31,17 @@ import           Cardano.Config.Shelley.Genesis
 exampleShelleyGenesis :: ShelleyGenesis TPraosStandardCrypto
 exampleShelleyGenesis =
   ShelleyGenesis
-    { sgSystemStart = SystemStart . posixSecondsToUTCTime $ realToFrac (1234566789 :: Integer)
-    , sgNetworkMagic = NetworkMagic 4036000900
+    { sgSystemStart = posixSecondsToUTCTime $ realToFrac (1234566789 :: Integer)
+    , sgNetworkMagic = 4036000900
     , sgNetworkId = Testnet
     , sgProtocolMagicId = ProtocolMagicId 838299499
     , sgActiveSlotsCoeff = 6.259
-    , sgSecurityParam = SecurityParam 120842
+    , sgSecurityParam = 120842
     , sgEpochLength = EpochSize 1215
     , sgSlotsPerKESPeriod = 8541
     , sgMaxKESEvolutions = 28899
-    , sgSlotLength =  slotLengthFromSec 8
+    , sgSlotLength =  secondsToNominalDiffTime 8
     , sgUpdateQuorum = 16991
-    , sgMaxMajorPV = 25446
     , sgMaxLovelaceSupply = 71
     , sgProtocolParams = emptyPParams
         { _d = truncateUnitInterval . realToFrac $ (1.9e-2 :: Double)

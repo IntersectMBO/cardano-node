@@ -40,6 +40,7 @@ import           Ouroboros.Consensus.Shelley.Node
 import qualified Cardano.Crypto.Hash.Class as Crypto
 
 import           Shelley.Spec.Ledger.Coin (Coin (..))
+import qualified Shelley.Spec.Ledger.Genesis as Ledger
 import qualified Shelley.Spec.Ledger.Keys as Ledger
 import qualified Shelley.Spec.Ledger.TxData as Shelley
 
@@ -210,7 +211,10 @@ runGenesisTxIn :: VerificationKeyFile -> Network -> Maybe OutputFile -> ExceptT 
 runGenesisTxIn (VerificationKeyFile vkeyPath) network mOutFile = do
       vkey <- firstExceptT ShelleyGenesisCmdReadGenesisUTxOVerKeyError $ readVerKey GenesisUTxOKey vkeyPath
       case shelleyVerificationKeyAddress network (PaymentVerificationKeyShelley vkey) Nothing of
-        AddressShelley addr -> do let txin = renderTxIn $ fromShelleyTxIn (initialFundsPseudoTxIn addr)
+        AddressShelley addr -> do let txin = renderTxIn
+                                           . fromShelleyTxIn
+                                           . Ledger.initialFundsPseudoTxIn
+                                           $ addr
                                   case mOutFile of
                                     Just (OutputFile fpath) -> liftIO . BS.writeFile fpath $ textToByteString txin
                                     Nothing -> liftIO $ Text.putStrLn txin
@@ -354,12 +358,13 @@ type KeyHashGenesisDelegate = KeyHash Ledger.GenesisDelegate
 type KeyHashVRF             = Ledger.Hash TPraosStandardCrypto VerKeyVRF
 
 updateTemplate
-    :: SystemStart -> Maybe Lovelace
+    :: SystemStart
+    -> Maybe Lovelace
     -> Map KeyHashGenesis (KeyHashGenesisDelegate, KeyHashVRF)
     -> [ShelleyAddress]
     -> ShelleyGenesis TPraosStandardCrypto
     -> ShelleyGenesis TPraosStandardCrypto
-updateTemplate start mAmount delKeys utxoAddrs template =
+updateTemplate (SystemStart start) mAmount delKeys utxoAddrs template =
     template
       { sgSystemStart = start
       , sgMaxLovelaceSupply = fromIntegral totalCoin

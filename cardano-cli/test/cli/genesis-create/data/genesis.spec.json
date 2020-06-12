@@ -21,18 +21,16 @@
         "extraEntropy": {
             "tag": "NeutralNonce"
         },
-        "keyDecayRate": 0,
         "keyDeposit": 0,
-        "keyMinRefund": 0,
         "maxBlockBodySize": 2097152,
         "maxBlockHeaderSize": 8192,
         "maxTxSize": 2048,
         "minFeeA": 0,
         "minFeeB": 0,
+	"minUTxOValue": 1,
+	"minPoolCost": 100,
         "nOpt": 100,
-        "poolDecayRate": 0,
         "poolDeposit": 0,
-        "poolMinRefund": 0,
         "protocolVersion": {
             "major": 0,
             "minor": 0

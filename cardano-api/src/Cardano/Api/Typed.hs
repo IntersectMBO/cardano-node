@@ -471,7 +471,10 @@ instance SerialiseAsRawBytes (Address Byron) where
 
 instance SerialiseAsRawBytes (Address Shelley) where
     serialiseToRawBytes (ByronAddress addr) =
-        Shelley.serialiseAddr (Shelley.AddrBootstrap addr)
+        Shelley.serialiseAddr
+      . Shelley.AddrBootstrap
+      . Shelley.BootstrapAddress
+      $ addr
 
     serialiseToRawBytes (ShelleyAddress nw pc scr) =
         Shelley.serialiseAddr (Shelley.Addr nw pc scr)
@@ -479,8 +482,11 @@ instance SerialiseAsRawBytes (Address Shelley) where
     deserialiseFromRawBytes AsShelleyAddress bs =
         case Shelley.deserialiseAddr bs of
           Nothing -> Nothing
-          Just (Shelley.Addr nw pc scr)     -> Just (ShelleyAddress nw pc scr)
-          Just (Shelley.AddrBootstrap addr) -> Just (ByronAddress addr)
+          Just (Shelley.Addr nw pc scr) ->
+            Just (ShelleyAddress nw pc scr)
+
+          Just (Shelley.AddrBootstrap (Shelley.BootstrapAddress addr)) ->
+            Just (ByronAddress addr)
 
 
 instance SerialiseAsRawBytes StakeAddress where

@@ -225,6 +225,7 @@ data NodeConfiguration =
     , ncTraceConfig :: TraceOptions
     , ncViewMode :: ViewMode
     , ncUpdate :: Update
+    , ncMaxMajorPV :: Natural
     } deriving Show
 
 instance FromJSON NodeConfiguration where
@@ -244,6 +245,7 @@ instance FromJSON NodeConfiguration where
                 lkBlkVersionMajor <- v .:? "LastKnownBlockVersion-Major" .!= 0
                 lkBlkVersionMinor <- v .:? "LastKnownBlockVersion-Minor" .!= 2
                 lkBlkVersionAlt <- v .:? "LastKnownBlockVersion-Alt" .!= 0
+                maxMajorPV <- v .:? "MaxKnownMajorProtocolVersion" .!= 1
 
                 -- Logging
                 loggingSwitch <- v .:? "TurnOnLogging" .!= True
@@ -268,6 +270,7 @@ instance FromJSON NodeConfiguration where
                                                                     lkBlkVersionMajor
                                                                     lkBlkVersionMinor
                                                                     lkBlkVersionAlt))
+                         , ncMaxMajorPV = maxMajorPV
                          }
 
 parseNodeConfigurationFP :: ConfigYamlFilePath -> IO NodeConfiguration
