@@ -48,6 +48,7 @@ library
                        Cardano.TracingOrphanInstances.Byron
                        Cardano.TracingOrphanInstances.Common
                        Cardano.TracingOrphanInstances.Consensus
+                       Cardano.TracingOrphanInstances.HardFork
                        Cardano.TracingOrphanInstances.Mock
                        Cardano.TracingOrphanInstances.Network
                        Cardano.TracingOrphanInstances.Shelley

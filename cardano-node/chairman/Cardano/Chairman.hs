@@ -42,7 +42,8 @@ import           Ouroboros.Consensus.Config.SupportsNode (ConfigSupportsNode (..
 import           Ouroboros.Consensus.Ledger.Extended (ExtLedgerState (..))
 import           Ouroboros.Consensus.Network.NodeToClient
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
-                  (HasNetworkProtocolVersion (..))
+                  (HasNetworkProtocolVersion (..),
+                   supportedNodeToClientVersions, nodeToClientProtocolVersion)
 import           Ouroboros.Consensus.Node.ProtocolInfo
 import           Ouroboros.Consensus.HardFork.Abstract (HasHardForkHistory(..))
 import           Ouroboros.Consensus.HardFork.History
@@ -63,8 +64,7 @@ import           Ouroboros.Network.Protocol.LocalTxSubmission.Type
 import           Ouroboros.Network.Protocol.ChainSync.Type
 import           Ouroboros.Network.Protocol.ChainSync.Client
 import           Ouroboros.Network.Protocol.Handshake.Version
-import           Ouroboros.Network.NodeToClient hiding (NodeToClientVersion (..))
-import qualified Ouroboros.Network.NodeToClient as NtC
+import           Ouroboros.Network.NodeToClient
 
 import           Cardano.Config.Types (SocketPath(..))
 
@@ -526,7 +526,7 @@ localInitiatorNetworkApplication
   -> SocketPath
   -> ChainsVar m blk
   -> SecurityParam
-  -> Versions NtC.NodeToClientVersion DictVersion
+  -> Versions NodeToClientVersion DictVersion
               (OuroborosApplication InitiatorMode LocalAddress ByteString m () Void)
 localInitiatorNetworkApplication chairmanTracer chainSyncTracer
                                  localTxSubmissionTracer
@@ -537,7 +537,7 @@ localInitiatorNetworkApplication chairmanTracer chainSyncTracer
         versionedNodeToClientProtocols
           (nodeToClientProtocolVersion proxy v)
           versionData
-          (const $ protocols v))
+          (\_ _ -> protocols v))
       (supportedNodeToClientVersions proxy)
   where
     proxy :: Proxy blk
@@ -545,7 +545,7 @@ localInitiatorNetworkApplication chairmanTracer chainSyncTracer
 
     versionData = NodeToClientVersionData networkMagic
 
-    protocols :: NodeToClientVersion blk
+    protocols :: BlockNodeToClientVersion blk
               -> NodeToClientProtocols InitiatorMode ByteString m () Void
     protocols byronClientVersion  =
         NodeToClientProtocols {
