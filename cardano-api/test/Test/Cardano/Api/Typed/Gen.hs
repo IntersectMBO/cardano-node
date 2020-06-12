@@ -1,6 +1,8 @@
 module Test.Cardano.Api.Typed.Gen
   ( genAddressByron
   , genAddressShelley
+  , genOperationalCertificate
+  , genOperationalCertificateIssueCounter
   , genSigningKey
   , genStakeAddress
   , genVerificationKey
@@ -10,8 +12,9 @@ import           Cardano.Api.Typed
 
 import           Cardano.Prelude
 
-import           Ouroboros.Network.Magic (NetworkMagic(..))
+import           Control.Monad.Fail (fail)
 
+import           Ouroboros.Network.Magic (NetworkMagic(..))
 
 import           Hedgehog (Gen)
 import qualified Hedgehog.Gen as Gen
@@ -30,6 +33,9 @@ genAddressShelley =
     , makeByronAddress <$> genVerificationKey AsByronKey <*> genNetworkId
     ]
 
+genKESPeriod :: Gen KESPeriod
+genKESPeriod = KESPeriod <$> Gen.word Range.constantBounded
+
 genNetworkId :: Gen NetworkId
 genNetworkId =
   Gen.choice
@@ -39,6 +45,28 @@ genNetworkId =
 
 genNetworkMagic :: Gen NetworkMagic
 genNetworkMagic = NetworkMagic <$> Gen.word32 Range.constantBounded
+
+genOperationalCertificate :: Gen OperationalCertificate
+genOperationalCertificate = fst <$> genOperationalCertificateWithCounter
+
+genOperationalCertificateIssueCounter :: Gen OperationalCertificateIssueCounter
+genOperationalCertificateIssueCounter = snd <$> genOperationalCertificateWithCounter
+
+genOperationalCertificateWithCounter :: Gen (OperationalCertificate, OperationalCertificateIssueCounter)
+genOperationalCertificateWithCounter = do
+  kesVKey <- genVerificationKey AsKesKey
+  stakePoolSign <- genSigningKey AsStakePoolKey
+  kesP <- genKESPeriod
+  c <- Gen.integral $ Range.linear 0 1000
+  let stakePoolVer = getVerificationKey stakePoolSign
+      iCounter = OperationalCertificateIssueCounter c stakePoolVer
+
+  case issueOperationalCertificate kesVKey stakePoolSign kesP iCounter of
+    -- This case should be impossible as we clearly derive the verification
+    -- key from the generated signing key.
+    Left err -> fail $ displayError err
+    Right pair -> return pair
+
 
 -- TODO: Generate payment credential via script
 genPaymentCredential :: Gen PaymentCredential
@@ -72,5 +100,28 @@ genStakeCredential = do
   vKey <- genVerificationKey AsStakeKey
   return . StakeCredentialByKey $ verificationKeyHash vKey
 
+{-
+--TODO: Currently undefined
+genTxBodyByron :: TxBody Byron
+genTxBodyByron = getTxBody <$> genTxByron
+
+genTxBodyShelley :: TxBody Shelley
+genTxBodyShelley =
+  Gen.choice
+    [ genTxBodyByron
+    , getTxBody <$> genTxShelley
+    ]
+
+--TODO: Currently undefined
+genTxByron :: Gen (Tx Byron)
+genTxByron = makeByronTransaction
+
+genTxShelley :: Gen (Tx Shelley)
+genTxShelley =
+  Gen.choice
+    [ genTxByron
+    , makeShelleyTransaction
+    ]
+-}
 genVerificationKey :: Key keyrole => AsType keyrole -> Gen (VerificationKey keyrole)
 genVerificationKey roletoken = getVerificationKey <$> genSigningKey roletoken

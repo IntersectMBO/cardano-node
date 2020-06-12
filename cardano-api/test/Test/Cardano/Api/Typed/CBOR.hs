@@ -9,85 +9,115 @@ import           Cardano.Api.Typed
 
 import           Cardano.Prelude
 
-import           Hedgehog (Property, discover)
+import           Hedgehog (Gen, Property, discover)
 import qualified Hedgehog as H
 
 import           Test.Cardano.Api.Orphans ()
 import           Test.Cardano.Api.Typed.Gen
 import           Test.Cardano.Api.Typed.Orphans ()
 
--- Address CBOR round trips
 
-prop_roundtrip_shelley_address_raw :: Property
-prop_roundtrip_shelley_address_raw = H.property $ do
-  addr <- H.forAll genAddressShelley
-  H.tripping addr serialiseToRawBytes (deserialiseFromRawBytes AsShelleyAddress)
 
-prop_roundtrip_byron_address_raw :: Property
-prop_roundtrip_byron_address_raw = H.property $ do
-  addr <- H.forAll genAddressByron
-  H.tripping addr serialiseToRawBytes (deserialiseFromRawBytes AsByronAddress)
 {-
---TODO: Follow up
-This property will fail due to:
- Shelley.deserialiseRewardAcnt not being available
+-- CBOR tests to fill in
 
-prop_roundtrip_stake_address_raw :: Property
-prop_roundtrip_stake_address_raw = H.property $ do
-  addr <- H.forAll genStakeAddress
-  H.tripping addr serialiseToRawBytes (deserialiseFromRawBytes AsStakeAddress)
+-- TODO: Currently undefined
+(TxBody Byron)
+(TxBody Shelley)
+-- TODO: Currently undefined
+(Tx Byron)
+(Tx Shelley)
+-- TODO: Currently undefined
+(Witness Byron)
+(Witness Shelley)
+
 -}
 
--- Key hash CBOR roundtrips
+prop_roundtrip_operational_certificate_CBOR :: Property
+prop_roundtrip_operational_certificate_CBOR =
+  roundtrip_CBOR AsOperationalCertificate genOperationalCertificate
 
-prop_roundtrip_verification_ByronKey_hash_raw :: Property
-prop_roundtrip_verification_ByronKey_hash_raw =
-  roundtrip_verification_key_hash_raw AsByronKey
+prop_roundtrip_operational_certificate_issue_counter_CBOR :: Property
+prop_roundtrip_operational_certificate_issue_counter_CBOR =
+  roundtrip_CBOR AsOperationalCertificateIssueCounter genOperationalCertificateIssueCounter
 
-prop_roundtrip_verification_PaymentKey_hash_raw :: Property
-prop_roundtrip_verification_PaymentKey_hash_raw =
-  roundtrip_verification_key_hash_raw AsPaymentKey
+prop_roundtrip_verification_key_byron_CBOR :: Property
+prop_roundtrip_verification_key_byron_CBOR =
+  roundtrip_CBOR (AsVerificationKey AsByronKey) (genVerificationKey AsByronKey)
 
-prop_roundtrip_verification_StakeKey_hash_raw :: Property
-prop_roundtrip_verification_StakeKey_hash_raw =
-  roundtrip_verification_key_hash_raw AsStakeKey
+prop_roundtrip_signing_key_byron_CBOR :: Property
+prop_roundtrip_signing_key_byron_CBOR =
+  roundtrip_CBOR (AsSigningKey AsByronKey) (genSigningKey AsByronKey)
 
-prop_roundtrip_verification_StakePoolKey_hash_raw :: Property
-prop_roundtrip_verification_StakePoolKey_hash_raw =
-  roundtrip_verification_key_hash_raw AsStakePoolKey
+prop_roundtrip_verification_key_payment_CBOR :: Property
+prop_roundtrip_verification_key_payment_CBOR =
+  roundtrip_CBOR (AsVerificationKey AsPaymentKey) (genVerificationKey AsPaymentKey)
 
-prop_roundtrip_verification_GenesisKey_hash_raw :: Property
-prop_roundtrip_verification_GenesisKey_hash_raw =
-  roundtrip_verification_key_hash_raw AsGenesisKey
+prop_roundtrip_signing_key_payment_CBOR :: Property
+prop_roundtrip_signing_key_payment_CBOR =
+  roundtrip_CBOR (AsSigningKey AsPaymentKey) (genSigningKey AsPaymentKey)
 
-prop_roundtrip_verification_GenesisDelegateKey_hash_raw :: Property
-prop_roundtrip_verification_GenesisDelegateKey_hash_raw =
-  roundtrip_verification_key_hash_raw AsGenesisDelegateKey
+prop_roundtrip_verification_key_stake_CBOR :: Property
+prop_roundtrip_verification_key_stake_CBOR =
+  roundtrip_CBOR (AsVerificationKey AsStakeKey) (genVerificationKey AsStakeKey)
 
-prop_roundtrip_verification_KesKey_hash_raw :: Property
-prop_roundtrip_verification_KesKey_hash_raw =
-  roundtrip_verification_key_hash_raw AsKesKey
+prop_roundtrip_signing_key_stake_CBOR :: Property
+prop_roundtrip_signing_key_stake_CBOR =
+  roundtrip_CBOR (AsSigningKey AsStakeKey) (genSigningKey AsStakeKey)
 
-prop_roundtrip_verification_VrfKey_hash_raw :: Property
-prop_roundtrip_verification_VrfKey_hash_raw =
-  roundtrip_verification_key_hash_raw AsVrfKey
+prop_roundtrip_verification_key_genesis_CBOR :: Property
+prop_roundtrip_verification_key_genesis_CBOR =
+  roundtrip_CBOR (AsVerificationKey AsGenesisKey) (genVerificationKey AsGenesisKey)
 
-prop_roundtrip_verification_GenesisUTxOKey_hash_raw :: Property
-prop_roundtrip_verification_GenesisUTxOKey_hash_raw =
-  roundtrip_verification_key_hash_raw AsGenesisUTxOKey
+prop_roundtrip_signing_key_genesis_CBOR :: Property
+prop_roundtrip_signing_key_genesis_CBOR =
+  roundtrip_CBOR (AsSigningKey AsGenesisKey) (genSigningKey AsGenesisKey)
+
+prop_roundtrip_verification_key_genesis_delegate_CBOR :: Property
+prop_roundtrip_verification_key_genesis_delegate_CBOR =
+  roundtrip_CBOR (AsVerificationKey AsGenesisDelegateKey) (genVerificationKey AsGenesisDelegateKey)
+
+prop_roundtrip_signing_key_genesis_delegate_CBOR :: Property
+prop_roundtrip_signing_key_genesis_delegate_CBOR =
+  roundtrip_CBOR (AsSigningKey AsGenesisDelegateKey) (genSigningKey AsGenesisDelegateKey)
+
+prop_roundtrip_verification_key_stake_pool_CBOR :: Property
+prop_roundtrip_verification_key_stake_pool_CBOR =
+  roundtrip_CBOR (AsVerificationKey AsStakePoolKey) (genVerificationKey AsStakePoolKey)
+
+prop_roundtrip_signing_key_stake_pool_CBOR :: Property
+prop_roundtrip_signing_key_stake_pool_CBOR =
+  roundtrip_CBOR (AsSigningKey AsStakePoolKey) (genSigningKey AsStakePoolKey)
+
+prop_roundtrip_verification_key_vrf_CBOR :: Property
+prop_roundtrip_verification_key_vrf_CBOR =
+  roundtrip_CBOR (AsVerificationKey AsVrfKey) (genVerificationKey AsVrfKey)
+
+prop_roundtrip_signing_key_vrf_CBOR :: Property
+prop_roundtrip_signing_key_vrf_CBOR =
+  roundtrip_CBOR (AsSigningKey AsVrfKey) (genSigningKey AsVrfKey)
+
+prop_roundtrip_verification_key_kes_CBOR :: Property
+prop_roundtrip_verification_key_kes_CBOR =
+  roundtrip_CBOR (AsVerificationKey AsKesKey) (genVerificationKey AsKesKey)
+
+prop_roundtrip_signing_key_kes_CBOR :: Property
+prop_roundtrip_signing_key_kes_CBOR =
+  roundtrip_CBOR (AsSigningKey AsKesKey) (genSigningKey AsKesKey)
+
 -- -----------------------------------------------------------------------------
 
-roundtrip_verification_key_hash_raw
-  :: (Key keyrole, Eq (Hash keyrole), Show (Hash keyrole))
-  => AsType keyrole -> Property
-roundtrip_verification_key_hash_raw roletoken =
+roundtrip_CBOR
+  :: (SerialiseAsCBOR a, Eq a, Show a)
+  => AsType a -> Gen a -> Property
+roundtrip_CBOR typeProxy gen =
   H.property $ do
-    vKey <- H.forAll $ genVerificationKey roletoken
-    let vKeyHash = verificationKeyHash vKey
-    H.tripping vKeyHash serialiseToRawBytes (deserialiseFromRawBytes (AsHash roletoken))
+    val <- H.forAll gen
+    H.tripping val serialiseToCBOR (deserialiseFromCBOR typeProxy)
+
+
 
 -- -----------------------------------------------------------------------------
-
 
 tests :: IO Bool
 tests =

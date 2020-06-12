@@ -64,6 +64,7 @@ deriving instance Eq (SigningKey StakeKey)
 deriving instance Eq (SigningKey StakePoolKey)
 deriving instance Eq (SigningKey GenesisKey)
 deriving instance Eq (SigningKey GenesisDelegateKey)
+deriving instance Eq (SigningKey GenesisUTxOKey)
 deriving instance Eq (SigningKey KesKey)
 deriving instance Eq (SigningKey VrfKey)
 

@@ -135,6 +135,7 @@ module Cardano.Api.Typed (
     -- | Support for serialising data in JSON, CBOR and text files.
 
     -- ** CBOR
+    SerialiseAsCBOR,
     ToCBOR,
     FromCBOR,
     serialiseToCBOR,

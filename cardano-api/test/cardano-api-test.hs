@@ -8,6 +8,7 @@ import qualified Test.Cardano.Api.CBOR
 import qualified Test.Cardano.Api.Convert
 import qualified Test.Cardano.Api.View
 import qualified Test.Cardano.Api.Typed.CBOR
+import qualified Test.Cardano.Api.Typed.RawBytes
 import qualified Test.Cardano.Api.Typed.Envelope
 
 main :: IO ()
@@ -19,4 +20,5 @@ main =
     , Test.Cardano.Api.tests
     , Test.Cardano.Api.Typed.CBOR.tests
     , Test.Cardano.Api.Typed.Envelope.tests
+    , Test.Cardano.Api.Typed.RawBytes.tests
     ]
