@@ -303,6 +303,7 @@ pTransaction =
         <*> pSomeSigningKeyFiles
         <*> many pCertificateFile
         <*> pWithdrawals
+        <*> pHasMetaData
         <*> pProtocolParamsFile
 
     pTransactionId  :: Parser TransactionCmd
@@ -749,6 +750,12 @@ pWithdrawals =
             \parseWithdrawal parsed an Address that is not an \
             \AddressShelleyReward"
 
+pHasMetaData :: Parser HasMetaData
+pHasMetaData =
+  Opt.flag HasNoMetaData HasMetaData
+    (  Opt.long "has-metadata"
+    <> Opt.help "Whether the transaction will have metadata."
+    )
 
 pUpdateProposalFile :: Parser UpdateProposalFile
 pUpdateProposalFile =

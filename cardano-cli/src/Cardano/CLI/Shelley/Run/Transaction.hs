@@ -86,8 +86,8 @@ runTransactionCmd cmd =
       runTxSign txinfile skfiles network txoutfile
     TxSubmit txFp network ->
       runTxSubmit txFp network
-    TxCalculateMinFee txInCount txOutCount ttl network skFiles certFiles wdrls pParamsFile ->
-      runTxCalculateMinFee txInCount txOutCount ttl network skFiles certFiles wdrls pParamsFile
+    TxCalculateMinFee txInCount txOutCount ttl network skFiles certFiles wdrls hasMD pParamsFile ->
+      runTxCalculateMinFee txInCount txOutCount ttl network skFiles certFiles wdrls hasMD pParamsFile
     TxGetTxId txinfile ->
       runTxGetTxId txinfile
 
@@ -151,10 +151,12 @@ runTxCalculateMinFee
   -> [SigningKeyFile]
   -> [CertificateFile]
   -> Withdrawals
+  -> HasMetaData
   -> ProtocolParamsFile
   -> ExceptT ShelleyTxCmdError IO ()
 runTxCalculateMinFee (TxInCount txInCount) (TxOutCount txOutCount)
-                     txTtl network skFiles certFiles wdrls pParamsFile = do
+                     txTtl network skFiles certFiles wdrls hasMD
+                     pParamsFile = do
     skeys <- readSigningKeyFiles skFiles
     certs <- mapM readShelleyCert certFiles
     pparams <- readProtocolParameters pParamsFile
@@ -163,7 +165,7 @@ runTxCalculateMinFee (TxInCount txInCount) (TxOutCount txOutCount)
       ++ show (calculateShelleyMinFee pparams (dummyShelleyTxForFeeCalc skeys certs))
   where
     dummyShelleyTxForFeeCalc skeys certs =
-      buildDummyShelleyTxForFeeCalc txInCount txOutCount txTtl network skeys certs wdrls
+      buildDummyShelleyTxForFeeCalc txInCount txOutCount txTtl network skeys certs wdrls hasMD
 
 readProtocolParameters :: ProtocolParamsFile -> ExceptT ShelleyTxCmdError IO PParams
 readProtocolParameters (ProtocolParamsFile fpath) = do

@@ -40,6 +40,7 @@ module Cardano.Api
   , Lovelace (..)
   , SlotNo (..)
   , Withdrawals (..)
+  , HasMetaData (..)
   , Update (..)
   , ShelleyTxBody
 
@@ -167,6 +168,7 @@ import qualified Shelley.Spec.Ledger.BaseTypes   as Shelley
 import qualified Shelley.Spec.Ledger.Credential  as Shelley
 import qualified Shelley.Spec.Ledger.Keys        as Shelley
 import qualified Shelley.Spec.Ledger.LedgerState as Shelley (minfee)
+import qualified Shelley.Spec.Ledger.MetaData    as Shelley
 import qualified Shelley.Spec.Ledger.PParams     as Shelley
 import qualified Shelley.Spec.Ledger.Slot        as Shelley
 import qualified Shelley.Spec.Ledger.TxData      as Shelley
@@ -473,10 +475,11 @@ buildDummyShelleyTxForFeeCalc
   -> [SigningKey]
   -> [Certificate]
   -> Withdrawals
+  -> HasMetaData
   -> TxSigned
-buildDummyShelleyTxForFeeCalc txInCount txOutCount ttl network skeys certs wdrls =
+buildDummyShelleyTxForFeeCalc txInCount txOutCount ttl network skeys certs wdrls hasMD =
     signTransaction
-      (buildShelleyTransaction txIns txOuts ttl fee certs wdrls Nothing Nothing)
+      (buildShelleyTransaction txIns txOuts ttl fee certs wdrls Nothing mbMDHash)
       network
       skeys
   where
@@ -504,6 +507,15 @@ buildDummyShelleyTxForFeeCalc txInCount txOutCount ttl network skeys certs wdrls
 
     fee :: Lovelace
     fee = Lovelace 0
+
+    mbMDHash :: Maybe ShelleyMetaDataHash
+    mbMDHash =
+      case hasMD of
+        HasNoMetaData -> Nothing
+        HasMetaData -> Just
+          $ Shelley.MetaDataHash
+          $ Crypto.Hash.castHash
+          $ Crypto.Hash.hash (0 :: Int)
 
 {-
 inputs outputs, attributes:

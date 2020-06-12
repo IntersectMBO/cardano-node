@@ -114,6 +114,7 @@ data TransactionCmd
       [SigningKeyFile]
       [CertificateFile]
       Withdrawals
+      HasMetaData
       ProtocolParamsFile
   | TxGetTxId TxBodyFile
   deriving (Eq, Show)

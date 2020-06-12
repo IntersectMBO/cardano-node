@@ -30,6 +30,7 @@ module Cardano.Api.Types
   , TxIx
   , TxOut (..)
   , Withdrawals (..)
+  , HasMetaData (..)
   , Update (..)
   , EpochNo (..)
   , SlotNo (..)
@@ -241,6 +242,12 @@ data StakingVerificationKey
 data Withdrawals
   = WithdrawalsShelley !ShelleyWithdrawals
   deriving (Eq, Generic, {-NFData, TODO-} Show)
+  deriving anyclass NoUnexpectedThunks
+
+data HasMetaData
+  = HasMetaData
+  | HasNoMetaData
+  deriving (Eq, Generic, NFData, Show)
   deriving anyclass NoUnexpectedThunks
 
 data Update = ShelleyUpdate (Shelley.Update Shelley.TPraosStandardCrypto)
