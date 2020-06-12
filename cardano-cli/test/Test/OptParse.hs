@@ -71,8 +71,7 @@ execClientCommand fps cmd = do e <- lift . runExceptT $ runClientCommand cmd
                                  Left cmdErrors -> do
                                    liftIO (fileCleanup fps)
                                    failWith Nothing . Text.unpack $ renderClientCommandError cmdErrors
-                                 Right _ ->
-                                   H.success
+                                 Right _ -> H.success
 
 --------------------------------------------------------------------------------
 -- Error rendering & Clean up

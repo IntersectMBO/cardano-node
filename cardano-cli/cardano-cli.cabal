@@ -183,6 +183,7 @@ test-suite cardano-cli-pioneers
                         Test.OptParse
                         Test.Pioneers.Exercise1
                         Test.Pioneers.Exercise2
+                        Test.Pioneers.Exercise3
 
   default-language:     Haskell2010
   default-extensions:   NoImplicitPrelude
