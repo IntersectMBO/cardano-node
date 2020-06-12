@@ -114,6 +114,7 @@ module Cardano.Api
   , Shelley.PParamsUpdate
   , Shelley.ProtVer (..)
   , createShelleyUpdateProposal
+  , Shelley.emptyPParamsUpdate
 
   -- * Hashing
   , Shelley.hashKey
@@ -594,10 +595,13 @@ signTransaction txu nw sks =
         TxSignedShelley $
           Shelley.Tx
             txbody
-            keyWitnesses
-            Map.empty         -- script witnesses
+            witnesses
             Shelley.SNothing  -- metadata
       where
+        witnesses    = Shelley.WitnessSet
+                         keyWitnesses      -- Shelley key witnesses
+                         Map.empty         -- Shelley script witnesses
+                         Set.empty         -- Byron key witnesses
         keyWitnesses = Set.fromList (map (shelleyWitnessTransaction txbody) sks)
 
 

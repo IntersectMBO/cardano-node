@@ -1,12 +1,14 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeApplications #-}
+
 module Test.Cardano.Config.Types
   ( tests
   ) where
 
 import           Cardano.Prelude
 
-import           Data.Aeson (encode, fromJSON, decode, toJSON)
+import           Data.Aeson (encode)
 
 import qualified Data.ByteString.Lazy.Char8 as LBS
 
@@ -16,6 +18,11 @@ import           Shelley.Spec.Ledger.Address (serialiseAddr, deserialiseAddr)
 
 import           Hedgehog (Property, discover)
 import qualified Hedgehog
+
+import           Ouroboros.Consensus.Shelley.Protocol (TPraosStandardCrypto)
+
+import qualified Test.Shelley.Spec.Ledger.Genesis.Properties as Ledger
+import           Test.Shelley.Spec.Ledger.Generator.Genesis
 
 import           Test.Cardano.Config.Examples
 import           Test.Cardano.Config.Gen
@@ -32,44 +39,30 @@ prop_roundtrip_Address_CBOR :: Property
 prop_roundtrip_Address_CBOR =
   -- If this fails, FundPair and ShelleyGenesis can also fail.
   Hedgehog.property $ do
-    addr <- Hedgehog.forAll genAddress
+    addr <- Hedgehog.forAll (genAddress @TPraosStandardCrypto)
     Hedgehog.tripping addr serialiseAddr deserialiseAddr
 
+-- If this fails, FundPair and ShelleyGenesis can also fail.
 prop_roundtrip_Address_JSON :: Property
 prop_roundtrip_Address_JSON =
-  -- If this fails, FundPair and ShelleyGenesis can also fail.
-  Hedgehog.property $ do
-    addr <- Hedgehog.forAll genAddress
-    Hedgehog.tripping addr toJSON fromJSON
-    Hedgehog.tripping addr encode decode
+  Ledger.prop_roundtrip_Address_JSON @TPraosStandardCrypto Proxy
 
 prop_roundtrip_GenesisDelegationPair_JSON :: Property
 prop_roundtrip_GenesisDelegationPair_JSON =
-  -- If this fails, ShelleyGenesis can also fail.
-  Hedgehog.property $ do
-    dp <- Hedgehog.forAll genGenesisDelegationPair
-    Hedgehog.tripping dp toJSON fromJSON
-    Hedgehog.tripping dp encode decode
+  Ledger.prop_roundtrip_GenesisDelegationPair_JSON @TPraosStandardCrypto Proxy
 
 prop_roundtrip_FundPair_JSON :: Property
 prop_roundtrip_FundPair_JSON =
-  -- If this fails, ShelleyGenesis can also fail.
-  Hedgehog.property $ do
-    fp <- Hedgehog.forAll genGenesisFundPair
-    Hedgehog.tripping fp toJSON fromJSON
-    Hedgehog.tripping fp encode decode
+  Ledger.prop_roundtrip_FundPair_JSON @TPraosStandardCrypto Proxy
 
 prop_roundtrip_ShelleyGenesis_JSON :: Property
 prop_roundtrip_ShelleyGenesis_JSON =
-  Hedgehog.property $ do
-    sg <- Hedgehog.forAll genShelleyGenesis
-    Hedgehog.tripping sg toJSON fromJSON
-    Hedgehog.tripping sg encode decode
+  Ledger.prop_roundtrip_ShelleyGenesis_JSON @TPraosStandardCrypto Proxy
 
 prop_roundtrip_VerKeyVRF_SimpleVRF_CBOR :: Property
 prop_roundtrip_VerKeyVRF_SimpleVRF_CBOR =
   Hedgehog.withTests 50 . Hedgehog.property $ do
-    vKeyVRF <- snd <$> Hedgehog.forAll genVRFKeyPair
+    vKeyVRF <- snd <$> Hedgehog.forAll (genVRFKeyPair @TPraosStandardCrypto)
     Hedgehog.tripping vKeyVRF encodeVRFVerificationKey decodeVRFVerificationKey
 
 prop_roundtrip_VKeyES_TPraosStandardCrypto_CBOR :: Property

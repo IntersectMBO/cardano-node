@@ -18,20 +18,15 @@ import qualified Data.Text as Text
 import qualified Data.Map.Strict as Map
 import qualified Data.Time as Time
 
-import           Data.Aeson (Value, ToJSON(..), toJSON,
-                             FromJSON(..))
+import           Data.Aeson (Value, ToJSON(..), toJSON, FromJSON(..))
 import           Data.Aeson.Types    (Parser)
 
 import           Cardano.Config.Shelley.Orphans ()
 import           Cardano.Crypto.ProtocolMagic (ProtocolMagicId(..))
 import           Cardano.Slotting.Slot (EpochSize (..))
 
-import           Ouroboros.Network.Magic (NetworkMagic (..))
-import           Ouroboros.Consensus.BlockchainTime
-                   (SystemStart (..), slotLengthFromSec)
-import           Ouroboros.Consensus.Protocol.Abstract (SecurityParam (..))
-import           Ouroboros.Consensus.Shelley.Node
-                   (ShelleyGenesis (..), emptyGenesisStaking)
+import           Ouroboros.Consensus.Shelley.Node (ShelleyGenesis (..),
+                   emptyGenesisStaking)
 import           Ouroboros.Consensus.Shelley.Protocol (TPraosStandardCrypto)
 
 import           Shelley.Spec.Ledger.BaseTypes as Ledger
@@ -69,20 +64,19 @@ shelleyGenesisDefaults =
   ShelleyGenesis
     {
       -- params for this specific chain
-      sgSystemStart           = SystemStart zeroTime
-    , sgNetworkMagic          = NetworkMagic 42
+      sgSystemStart           = zeroTime
+    , sgNetworkMagic          = 42
     , sgNetworkId             = Ledger.Testnet
     , sgProtocolMagicId       = ProtocolMagicId 42
 
       -- consensus protocol params
-    , sgSlotLength            = slotLengthFromSec 1 -- 1s slots
+    , sgSlotLength            = 1.0 :: Time.NominalDiffTime -- 1s slots
     , sgActiveSlotsCoeff      = 1/20                -- 20s block times on average
-    , sgSecurityParam         = SecurityParam k
+    , sgSecurityParam         = k
     , sgEpochLength           = EpochSize (k * 10 * 20) -- 10k/f
     , sgSlotsPerKESPeriod     = 60 * 60 * 36        -- 1.5 days with 1s slots
     , sgMaxKESEvolutions      = 60                  -- 90 days
     , sgUpdateQuorum          = 5                   -- assuming 7 genesis keys
-    , sgMaxMajorPV            = 1                   -- starting at 0
 
     -- ledger protocol params
     , sgProtocolParams        =

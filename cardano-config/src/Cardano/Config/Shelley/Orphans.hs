@@ -13,12 +13,10 @@ module Cardano.Config.Shelley.Orphans () where
 
 import           Cardano.Prelude
 
-import           Control.Monad.Fail (fail)
-import           Data.Aeson (FromJSON (..), FromJSONKey (..), FromJSONKeyFunction (..), ToJSON (..),
-                    ToJSONKey (..), ToJSONKeyFunction (..), Value (..), (.=), (.:), (.!=), (.:?))
+import           Data.Aeson (ToJSON (..), ToJSONKey (..),
+                   ToJSONKeyFunction (..), (.=))
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Encoding as Aeson
-import           Data.Aeson.Types (Parser)
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Base16 as Base16
 import           Data.ByteString.Char8 as BS
@@ -27,185 +25,25 @@ import           Data.IP (IPv4, IPv6)
 import           Data.Sequence.Strict (StrictSeq (..))
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
-import qualified Data.Map as Map
 
 import           Cardano.Crypto.Hash.Class as Crypto
 import           Cardano.TracingOrphanInstances.Common ()
 
-import           Ouroboros.Consensus.BlockchainTime (SlotLength (..), SystemStart (..))
-import           Ouroboros.Consensus.BlockchainTime.WallClock.Types
-import           Ouroboros.Network.Magic (NetworkMagic (..))
-import           Ouroboros.Consensus.Protocol.Abstract (SecurityParam (..))
-import           Ouroboros.Consensus.Shelley.Node (ShelleyGenesis (..), emptyGenesisStaking)
 import           Ouroboros.Consensus.Shelley.Protocol.Crypto (TPraosStandardCrypto)
 
-import           Shelley.Spec.Ledger.Address (Addr(..), serialiseAddr, deserialiseAddr)
-import           Shelley.Spec.Ledger.BaseTypes (DnsName, Network (..), Nonce (..), Port,
-                    StrictMaybe, UnitInterval (..), truncateUnitInterval)
-import           Shelley.Spec.Ledger.Coin (Coin(..))
+import           Shelley.Spec.Ledger.BaseTypes (DnsName, Port, StrictMaybe)
 import           Shelley.Spec.Ledger.Credential (StakeCredential, Credential (..))
 import qualified Shelley.Spec.Ledger.Credential as Ledger
 import           Shelley.Spec.Ledger.Crypto (Crypto)
-import           Shelley.Spec.Ledger.Keys (KeyHash(..))
 import qualified Shelley.Spec.Ledger.Keys as Ledger
 import qualified Shelley.Spec.Ledger.LedgerState as Ledger
 import           Shelley.Spec.Ledger.MetaData (MetaDataHash(..))
-import           Shelley.Spec.Ledger.PParams (PParams, PParams' (..), ProtVer (..))
+import           Shelley.Spec.Ledger.PParams (PParams' (..))
 import qualified Shelley.Spec.Ledger.PParams as Ledger
 import           Shelley.Spec.Ledger.Scripts (ScriptHash (..))
 import           Shelley.Spec.Ledger.TxData (TxId(..), TxIn(..), TxOut(..))
 import qualified Shelley.Spec.Ledger.TxData as Ledger
 import           Shelley.Spec.Ledger.UTxO (UTxO(..))
-
-
-
-instance Crypto crypto => ToJSON (ShelleyGenesis crypto) where
-  toJSON sg =
-    Aeson.object
-      [ "systemStart"           .= sgSystemStart sg
-        --TODO: this should not have both network magic and protocol magic
-        -- they are different names for the same thing used in two ways.
-      , "networkMagic"          .= sgNetworkMagic sg
-      , "networkId"             .= sgNetworkId sg
-      , "protocolMagicId"       .= sgProtocolMagicId sg
-      , "activeSlotsCoeff"      .= sgActiveSlotsCoeff sg
-      , "securityParam"         .= sgSecurityParam sg
-      , "epochLength"           .= sgEpochLength sg
-      , "slotsPerKESPeriod"     .= sgSlotsPerKESPeriod sg
-      , "maxKESEvolutions"      .= sgMaxKESEvolutions sg
-      , "slotLength"            .= sgSlotLength sg
-      , "updateQuorum"          .= sgUpdateQuorum sg
-      , "maxMajorPV"            .= sgMaxMajorPV sg
-      , "maxLovelaceSupply"     .= sgMaxLovelaceSupply sg
-      , "protocolParams"        .= sgProtocolParams sg
-      , "genDelegs"             .= Map.map toGenDelegPair (sgGenDelegs sg)
-      , "initialFunds"          .= sgInitialFunds sg
-      , "staking"               .= Null
-      ]
-    where
-      toGenDelegPair (d,v) = GenDelegPair d v
-
-instance Crypto crypto => FromJSON (ShelleyGenesis crypto) where
-  parseJSON =
-    Aeson.withObject "ShelleyGenesis" $ \ obj ->
-      ShelleyGenesis
-        <$> obj .: "systemStart"
-        <*> obj .: "networkMagic"
-        <*> obj .: "networkId"
-        <*> obj .: "protocolMagicId"
-        <*> obj .: "activeSlotsCoeff"
-        <*> obj .: "securityParam"
-        <*> obj .: "epochLength"
-        <*> obj .: "slotsPerKESPeriod"
-        <*> obj .: "maxKESEvolutions"
-        <*> obj .: "slotLength"
-        <*> obj .: "updateQuorum"
-        <*> obj .: "maxMajorPV"
-        <*> obj .: "maxLovelaceSupply"
-        <*> obj .: "protocolParams"
-        <*> (Map.map fromGenDelegPair <$>
-            obj .: "genDelegs")
-        <*> obj .: "initialFunds"
-        <*> pure emptyGenesisStaking  --TODO
-    where
-      fromGenDelegPair (GenDelegPair d v) = (d,v)
-
--- | Type to adjust the JSON presentation of the genesis delegate mapping.
-data GenDelegPair crypto =
-       GenDelegPair (KeyHash 'Ledger.GenesisDelegate crypto)
-                    (Ledger.Hash crypto (Ledger.VerKeyVRF crypto))
-
-instance Crypto crypto => ToJSON (GenDelegPair crypto) where
-  toJSON (GenDelegPair d v) =
-    Aeson.object
-      [ "delegate" .= d
-      , "vrf" .= v
-      ]
-
-instance Crypto crypto => FromJSON (GenDelegPair crypto) where
-  parseJSON =
-      Aeson.withObject "GenDelegPair" $ \ obj ->
-        GenDelegPair
-          <$> obj .: "delegate"
-          <*> obj .: "vrf"
-
-instance ToJSON PParams where
-  toJSON pp =
-    Aeson.object
-      [ "minFeeA" .= _minfeeA pp
-      , "minFeeB" .= _minfeeB pp
-      , "maxBlockBodySize" .= _maxBBSize pp
-      , "maxTxSize" .= _maxTxSize pp
-      , "maxBlockHeaderSize" .= _maxBHSize pp
-      , "keyDeposit" .= _keyDeposit pp
-      , "keyMinRefund" .= _keyMinRefund pp
-      , "keyDecayRate" .= (fromRational $ _keyDecayRate pp :: Double)
-      , "poolDeposit" .= _poolDeposit pp
-      , "poolMinRefund" .= _poolMinRefund pp
-      , "poolDecayRate" .= (fromRational $ _poolDecayRate pp :: Double)
-      , "eMax" .= _eMax pp
-      , "nOpt" .= _nOpt pp
-      , "a0" .= (fromRational $ _a0 pp :: Double)
-      , "rho" .= _rho pp
-      , "tau" .= _tau pp
-      , "decentralisationParam" .= _d pp
-      , "extraEntropy" .= _extraEntropy pp
-      , "protocolVersion" .= _protocolVersion pp
-      , "minUTxOValue" .= _minUTxOValue pp
-      ]
-
-instance FromJSON PParams where
-  parseJSON =
-      Aeson.withObject "PParams" $ \ obj ->
-        PParams
-          <$> obj .: "minFeeA"
-          <*> obj .: "minFeeB"
-          <*> obj .: "maxBlockBodySize"
-          <*> obj .: "maxTxSize"
-          <*> obj .: "maxBlockHeaderSize"
-          <*> obj .: "keyDeposit"
-          <*> obj .: "keyMinRefund"
-          <*> parseRationalFromDouble (obj .: "keyDecayRate")
-          <*> obj .: "poolDeposit"
-          <*> obj .: "poolMinRefund"
-          <*> parseRationalFromDouble (obj .: "poolDecayRate")
-          <*> obj .: "eMax"
-          <*> obj .: "nOpt"
-          <*> parseRationalFromDouble (obj .: "a0")
-          <*> obj .: "rho"
-          <*> obj .: "tau"
-          <*> obj .: "decentralisationParam"
-          <*> obj .: "extraEntropy"
-          <*> obj .: "protocolVersion"
-          <*> obj .:? "minUTxOValue" .!= 0
-      where
-        parseRationalFromDouble :: Parser Double -> Parser Rational
-        parseRationalFromDouble p = realToFrac <$> p
-
-instance ToJSON UnitInterval where
-  toJSON (UnsafeUnitInterval r) = toJSON (fromRational r :: Double)
-
-instance FromJSON UnitInterval where
-  parseJSON v =
-    truncateUnitInterval . realToFrac
-      <$> (parseJSON v :: Parser Double)
-
-instance ToJSON ProtVer where
-  toJSON (ProtVer major minor) =
-    Aeson.object
-      [ "major" .= major
-      , "minor" .= minor
-      ]
-
-instance FromJSON ProtVer where
-  parseJSON =
-    Aeson.withObject "ProtVer" $ \ obj ->
-      ProtVer
-        <$> obj .: "major"
-        <*> obj .: "minor"
-
-deriving instance ToJSON Nonce
-deriving instance FromJSON Nonce
 
 instance Crypto c => ToJSONKey (TxIn c) where
   toJSONKey = ToJSONKeyText txInToText (Aeson.text . txInToText)
@@ -237,33 +75,6 @@ deriving newtype instance ToJSON (TxId c)
 
 deriving newtype instance Crypto c => ToJSON (UTxO c)
 
--- These are for ShelleyGenesis.
--- These ones are all just newtype wrappers of numbers,
--- so newtype deriving for the JSON format is ok.
-
-deriving newtype instance ToJSON   Coin
-deriving newtype instance FromJSON Coin
-
-deriving newtype instance ToJSON   NetworkMagic
-deriving newtype instance FromJSON NetworkMagic
-
-deriving instance FromJSON Network
-deriving instance ToJSON Network
-
-deriving newtype instance ToJSON   SecurityParam
-deriving newtype instance FromJSON SecurityParam
-
--- A 'NominalDiffTime' time
-instance ToJSON   SlotLength where
-  toJSON = toJSON . getSlotLength
-
-instance FromJSON SlotLength where
-  parseJSON = fmap mkSlotLength . parseJSON
-
--- A UTCTime, with format like "2020-04-15 11:44:07"
-deriving newtype instance ToJSON   SystemStart
-deriving newtype instance FromJSON SystemStart
-
 deriving anyclass instance ToJSONKey (Ledger.RewardAcnt c)
 
 deriving anyclass instance ToJSON (Ledger.RewardAcnt c)
@@ -272,49 +83,12 @@ deriving newtype instance ToJSON (ScriptHash c)
 
 deriving newtype instance ToJSON (MetaDataHash c)
 
---
--- Genesis key hashes JSON conversion, including as map keys
---
-
-deriving newtype instance ToJSONKey (KeyHash disc crypto)
-deriving newtype instance Crypto crypto =>
-                          FromJSONKey (KeyHash disc crypto)
-
-deriving newtype instance ToJSON (KeyHash disc crypto)
-deriving newtype instance Crypto crypto =>
-                          FromJSON (KeyHash disc crypto)
-
 hashToText :: Hash crypto a -> Text
 hashToText = Text.decodeLatin1 . Crypto.getHashBytesAsHex
-
 
 --
 -- Addresses JSON conversion, including as map keys
 --
-
-instance Crypto crypto => ToJSONKey (Addr crypto) where
-  toJSONKey = ToJSONKeyText addrToText (Aeson.text . addrToText)
-
-instance Crypto crypto => FromJSONKey (Addr crypto) where
-  fromJSONKey = FromJSONKeyTextParser parseAddr
-
-instance Crypto crypto => ToJSON (Addr crypto) where
-  toJSON = toJSON . addrToText
-
-instance Crypto crypto => FromJSON (Addr crypto) where
-  parseJSON = Aeson.withText "address" parseAddr
-
-addrToText :: Addr crypto -> Text
-addrToText =
-     Text.decodeLatin1 . Base16.encode . serialiseAddr
-
-parseAddr :: Crypto crypto => Text -> Parser (Addr crypto)
-parseAddr t = do
-    bytes <- either badHex return (parseBase16 t)
-    maybe badFormat return (deserialiseAddr bytes)
-  where
-    badHex h = fail $ "Addresses are expected in hex encoding for now: " ++ show h
-    badFormat = fail "Address is not in the right format"
 
 -- We are deriving ToJSON instances for all of these types mainly so we can dump
 -- a JSON representation for the purposes of debug. Therefore ByteString that are

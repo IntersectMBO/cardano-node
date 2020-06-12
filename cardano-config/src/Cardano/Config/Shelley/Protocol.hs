@@ -105,7 +105,8 @@ mkConsensusProtocolTPraos
                                  ProtocolRealTPraos)
 mkConsensusProtocolTPraos NodeConfiguration {
                               ncGenesisFile,
-                              ncUpdate
+                              ncUpdate,
+                              ncMaxMajorPV
                             }
                             files = do
     genesis <- readShelleyGenesis ncGenesisFile
@@ -118,6 +119,7 @@ mkConsensusProtocolTPraos NodeConfiguration {
       ProtocolRealTPraos
         genesis
         protocolVersion
+        ncMaxMajorPV
         optionalLeaderCredentials
 
 

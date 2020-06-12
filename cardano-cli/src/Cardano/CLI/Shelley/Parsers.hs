@@ -1241,7 +1241,7 @@ pPoolCost =
 
 pPoolMargin :: Parser ShelleyStakePoolMargin
 pPoolMargin =
-  (\dbl -> maybeOrFail . Shelley.mkUnitInterval $ toRational (dbl :: Double)) <$>
+  (\dbl -> maybeOrFail . Shelley.mkUnitInterval $ realToFrac (dbl :: Double)) <$>
     Opt.option Opt.auto
       (  Opt.long "pool-margin"
       <> Opt.metavar "DOUBLE"
@@ -1333,11 +1333,7 @@ pShelleyPParamsUpdate =
     <*> (maybeToStrictMaybe <$> pMaxTransactionSize)
     <*> (maybeToStrictMaybe <$> pMaxBlockHeaderSize)
     <*> (maybeToStrictMaybe <$> pKeyRegistDeposit)
-    <*> (maybeToStrictMaybe <$> pMinRefund)
-    <*> (maybeToStrictMaybe <$> pDepositDecay)
     <*> (maybeToStrictMaybe <$> pPoolDeposit)
-    <*> (maybeToStrictMaybe <$> pPoolMinRefund)
-    <*> (maybeToStrictMaybe <$> pPoolDecayRate)
     <*> (maybeToStrictMaybe <$> pEpochBoundRetirement)
     <*> (maybeToStrictMaybe <$> pNumberOfPools)
     <*> (maybeToStrictMaybe <$> pPoolInfluence)
@@ -1347,6 +1343,7 @@ pShelleyPParamsUpdate =
     <*> (maybeToStrictMaybe <$> pExtraEntropy)
     <*> (maybeToStrictMaybe <$> pProtocolVersion)
     <*> (maybeToStrictMaybe <$> pMinUTxOValue)
+    <*> (maybeToStrictMaybe <$> pMinPoolCost)
 
 pMinFeeLinearFactor :: Parser (Maybe Natural)
 pMinFeeLinearFactor =
@@ -1366,13 +1363,24 @@ pMinFeeConstantFactor =
       <> Opt.help "The constant factor for the minimum fee calculation."
       )
 
-pMinUTxOValue :: Parser (Maybe Natural)
+pMinUTxOValue :: Parser (Maybe ShelleyCoin)
 pMinUTxOValue =
   Opt.optional $
+    Shelley.Coin <$>
     Opt.option Opt.auto
       (  Opt.long "min-utxo-value"
       <> Opt.metavar "NATURAL"
       <> Opt.help "The minimum allowed UTxO value."
+      )
+
+pMinPoolCost :: Parser (Maybe ShelleyCoin)
+pMinPoolCost =
+  Opt.optional $
+    Shelley.Coin <$>
+    Opt.option Opt.auto
+      (  Opt.long "min-pool-cost"
+      <> Opt.metavar "NATURAL"
+      <> Opt.help "The minimum allowed cost parameter for stake pools."
       )
 
 pMaxBodySize :: Parser (Maybe Natural)
@@ -1413,26 +1421,6 @@ pKeyRegistDeposit =
               )
 
 
-
-pMinRefund :: Parser (Maybe UnitInterval)
-pMinRefund =
-   optional
-     $ Opt.option pFieldUnitInterval
-       (  Opt.long "min-percent-refund"
-       <> Opt.metavar "DOUBLE"
-       <> Opt.help "The refund guarantee minimum percent."
-       )
-
-
-pDepositDecay :: Parser (Maybe Rational)
-pDepositDecay =
-  optional
-    $ Opt.option readRationalAsDouble
-        (  Opt.long "deposit-decay-rate"
-        <> Opt.metavar "DOUBLE"
-        <> Opt.help "The deposit decay rate."
-        )
-
 pPoolDeposit :: Parser (Maybe ShelleyCoin)
 pPoolDeposit =
   optional $
@@ -1442,26 +1430,6 @@ pPoolDeposit =
             <> Opt.metavar "NATURAL"
             <> Opt.help "The amount of a pool registration deposit."
             )
-
-
-pPoolMinRefund :: Parser (Maybe UnitInterval)
-pPoolMinRefund =
-  optional
-    $ Opt.option pFieldUnitInterval
-        (  Opt.long "min-pool-percent-refund"
-        <> Opt.metavar "DOUBLE"
-        <> Opt.help "The pool refund minimum percent."
-        )
-
-
-pPoolDecayRate :: Parser (Maybe Rational)
-pPoolDecayRate =
-  optional
-    $ Opt.option readRationalAsDouble
-        (  Opt.long "pool-deposit-decay-rate"
-        <> Opt.metavar "DOUBLE"
-        <> Opt.help "Decay rate for pool deposits."
-        )
 
 
 pEpochBoundRetirement :: Parser (Maybe EpochNo)
@@ -1564,7 +1532,7 @@ pFieldUnitInterval = Opt.auto >>= checkUnitInterval
   where
    checkUnitInterval :: Double -> Opt.ReadM UnitInterval
    checkUnitInterval dbl =
-     case mkUnitInterval $ toRational dbl of
+     case mkUnitInterval $ realToFrac dbl of
        Just interval -> return interval
        Nothing -> fail "Please enter a value in the range [0,1]"
 

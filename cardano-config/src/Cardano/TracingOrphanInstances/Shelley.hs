@@ -384,6 +384,14 @@ instance ToObject (PredicateFailure (POOL c)) where
              , "intendedRetirementEpoch" .= String (textShow intendedRetireEpoch)
              , "maxEpochForRetirement" .= String (textShow maxRetireEpoch)
              ]
+  toObject _verb (StakePoolCostTooLowPOOL certCost protCost) =
+    mkObject [ "kind" .= String "StakePoolCostTooLowPOOL"
+             , "certificateCost" .= String (textShow certCost)
+             , "protocolParCost" .= String (textShow protCost)
+             , "error" .= String "The stake pool cost is too low"
+             ]
+
+
 -- Apparently this should never happen accoring to the shelley exec spec
   toObject _verb (WrongCertificateTypePOOL index) =
     case index of
