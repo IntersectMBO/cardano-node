@@ -53,13 +53,6 @@ instance Condense (OneEraHash xs) where
 -- instances for Header HardForkBlock
 --
 
-instance All (Condense `Compose` Header) xs => Condense (Header (HardForkBlock xs)) where
-    condense =
-          hcollapse
-        . hcmap (Proxy @ (Condense `Compose` Header)) (K . condense)
-        . getOneEraHeader
-        . getHardForkHeader
-
 instance All (ToObject `Compose` Header) xs => ToObject (Header (HardForkBlock xs)) where
     toObject verb =
           hcollapse
