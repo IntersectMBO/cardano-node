@@ -23,6 +23,10 @@ module Cardano.Config.Byron.Protocol
     -- * Errors
   , ByronProtocolInstantiationError(..)
   , renderByronProtocolInstantiationError
+
+    -- * Reusable parts
+  , readGenesis
+  , readLeaderCredentials
   ) where
 
 import           Cardano.Prelude
@@ -39,6 +43,7 @@ import           Cardano.Chain.Slotting (EpochSlots)
 import qualified Cardano.Chain.Update as Update
 import qualified Cardano.Chain.UTxO as UTxO
 import qualified Cardano.Crypto.Signing as Signing
+import           Cardano.Crypto.ProtocolMagic (RequiresNetworkMagic)
 
 import           Ouroboros.Consensus.Cardano hiding (Protocol)
 import qualified Ouroboros.Consensus.Cardano as Consensus
@@ -103,36 +108,15 @@ mkConsensusProtocolRealPBFT
   -> ExceptT ByronProtocolInstantiationError IO
              (Consensus.Protocol IO ByronBlock ProtocolRealPBFT)
 mkConsensusProtocolRealPBFT NodeConfiguration {
-                              ncGenesisFile = GenesisFile genesisFile,
+                              ncGenesisFile,
                               ncReqNetworkMagic,
                               ncPbftSignatureThresh,
                               ncUpdate
                             }
                             files = do
-    (genesisData, genesisHash) <-
-      firstExceptT (GenesisReadError genesisFile) $
-        Genesis.readGenesisData genesisFile
+    genesisConfig <- readGenesis ncGenesisFile ncReqNetworkMagic
 
-    let genesisConfig :: Genesis.Config
-        genesisConfig =
-          Genesis.Config {
-            Genesis.configGenesisData       = genesisData,
-            Genesis.configGenesisHash       = genesisHash,
-            Genesis.configReqNetMagic       = ncReqNetworkMagic,
-            Genesis.configUTxOConfiguration = UTxO.defaultUTxOConfiguration
-            --TODO: add config support for the UTxOConfiguration if needed
-          }
-
-    optionalLeaderCredentials <-
-      case files of
-        Just ProtocolFilepaths {
-               byronCertFile,
-               byronKeyFile
-             }  -> readLeaderCredentials
-                     genesisConfig
-                     byronCertFile
-                     byronKeyFile
-        Nothing -> return Nothing
+    optionalLeaderCredentials <- readLeaderCredentials genesisConfig files
 
     return $
       protocolConfigRealPbft
@@ -165,13 +149,34 @@ protocolConfigRealPbft (Update appName appVer lastKnownBlockVersion)
       Update.ProtocolVersion lkbvMajor lkbvMinor lkbvAlt
 
 
+readGenesis :: GenesisFile
+            -> RequiresNetworkMagic
+            -> ExceptT ByronProtocolInstantiationError IO
+                       Genesis.Config
+readGenesis (GenesisFile file) ncReqNetworkMagic =
+    firstExceptT (GenesisReadError file) $ do
+      (genesisData, genesisHash) <- Genesis.readGenesisData file
+      return Genesis.Config {
+        Genesis.configGenesisData       = genesisData,
+        Genesis.configGenesisHash       = genesisHash,
+        Genesis.configReqNetMagic       = ncReqNetworkMagic,
+        Genesis.configUTxOConfiguration = UTxO.defaultUTxOConfiguration
+        --TODO: add config support for the UTxOConfiguration if needed
+      }
+
+
+
 readLeaderCredentials :: Genesis.Config
-                      -> Maybe FilePath
-                      -> Maybe FilePath
+                      -> Maybe ProtocolFilepaths
                       -> ExceptT ByronProtocolInstantiationError IO
                                  (Maybe PBftLeaderCredentials)
-readLeaderCredentials genesisConfig mDelCertFp mSKeyFp =
-  case (mDelCertFp, mSKeyFp) of
+readLeaderCredentials _ Nothing = return Nothing
+readLeaderCredentials genesisConfig
+                      (Just ProtocolFilepaths {
+                        byronCertFile,
+                        byronKeyFile
+                      }) =
+  case (byronCertFile, byronKeyFile) of
     (Nothing, Nothing) -> pure Nothing
     (Just _, Nothing) -> left SigningKeyFilepathNotSpecified
     (Nothing, Just _) -> left DelegationCertificateFilepathNotSpecified

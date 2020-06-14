@@ -23,6 +23,10 @@ module Cardano.Config.Shelley.Protocol
     -- * Errors
   , ShelleyProtocolInstantiationError(..)
   , renderShelleyProtocolInstantiationError
+
+    -- * Reusable parts
+  , readGenesis
+  , readLeaderCredentials
   ) where
 
 import           Cardano.Prelude
@@ -105,43 +109,40 @@ mkConsensusProtocolTPraos
                                  ProtocolRealTPraos)
 mkConsensusProtocolTPraos NodeConfiguration {
                               ncGenesisFile,
-                              ncUpdate,
+                              ncUpdate = Update {upLastKnownBlockVersion},
                               ncMaxMajorPV
                             }
                             files = do
-    genesis <- readShelleyGenesis ncGenesisFile
-
-    let protocolVersion = toShelleyProtocolVersion ncUpdate
-
+    genesis <- readGenesis ncGenesisFile
     optionalLeaderCredentials <- readLeaderCredentials files
 
     return $
       ProtocolRealTPraos
         genesis
-        protocolVersion
+        (toProtocolVersion upLastKnownBlockVersion)
         ncMaxMajorPV
         optionalLeaderCredentials
-
-
-readShelleyGenesis :: GenesisFile
-                   -> ExceptT ShelleyProtocolInstantiationError IO
-                              (ShelleyGenesis TPraosStandardCrypto)
-readShelleyGenesis (GenesisFile file) =
-    firstExceptT (GenesisReadError file) $
-      ExceptT $ handle (\(e :: IOException) -> return $ Left $ show e) $
-        Aeson.eitherDecodeFileStrict' file
 
 
 -- | We reuse the Byron config file's last known block version config
 -- which has a three-component version number, but we only use two.
 --
-toShelleyProtocolVersion :: Update -> ProtVer
-toShelleyProtocolVersion (Update _appName _appVer lastKnownBlockVersion) =
+toProtocolVersion :: LastKnownBlockVersion -> ProtVer
+toProtocolVersion LastKnownBlockVersion {
+                    lkbvMajor,
+                    lkbvMinor
+                  } =
     ProtVer (fromIntegral lkbvMajor)
             (fromIntegral lkbvMinor)
-  where
-    LastKnownBlockVersion
-      {lkbvMajor, lkbvMinor, lkbvAlt = _unused} = lastKnownBlockVersion
+
+
+readGenesis :: GenesisFile
+            -> ExceptT ShelleyProtocolInstantiationError IO
+                       (ShelleyGenesis TPraosStandardCrypto)
+readGenesis (GenesisFile file) =
+    firstExceptT (GenesisReadError file) $
+      ExceptT $ handle (\(e :: IOException) -> return $ Left $ show e) $
+        Aeson.eitherDecodeFileStrict' file
 
 
 readLeaderCredentials :: Maybe ProtocolFilepaths
