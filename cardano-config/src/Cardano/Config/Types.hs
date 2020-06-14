@@ -229,49 +229,58 @@ data NodeConfiguration =
     } deriving Show
 
 instance FromJSON NodeConfiguration where
-  parseJSON = withObject "NodeConfiguration" $ \v -> do
-                nId <- v .:? "NodeId"
-                ptcl <- v .: "Protocol" .!= RealPBFT
-                genFile <- v .: "GenesisFile" .!= "genesis/genesis.json"
-                numCoreNode <- v .:? "NumCoreNodes"
-                rNetworkMagic <- v .:? "RequiresNetworkMagic" .!= RequiresNoMagic
-                pbftSignatureThresh <- v .:? "PBftSignatureThreshold"
-                vMode <- v .:? "ViewMode" .!= LiveView
-                socketPath <- v .:? "SocketPath"
+  parseJSON =
+    withObject "NodeConfiguration" $ \v -> do
 
-                -- Update Parameters
-                appName <- v .:? "ApplicationName" .!= Update.ApplicationName "cardano-sl"
-                appVersion <- v .:? "ApplicationVersion" .!= 1
-                lkBlkVersionMajor <- v .:? "LastKnownBlockVersion-Major" .!= 0
-                lkBlkVersionMinor <- v .:? "LastKnownBlockVersion-Minor" .!= 2
-                lkBlkVersionAlt <- v .:? "LastKnownBlockVersion-Alt" .!= 0
-                maxMajorPV <- v .:? "MaxKnownMajorProtocolVersion" .!= 1
+      -- Node parameters, not protocol-specific
+      socketPath <- v .:? "SocketPath"
 
-                -- Logging
-                loggingSwitch <- v .:? "TurnOnLogging" .!= True
-                logMetrics <- v .:? "TurnOnLogMetrics" .!= True
-                traceConfig <- if not loggingSwitch
-                               then return TracingOff
-                               else traceConfigParser v
+      -- Protocol parameters
+      ptcl <- v .: "Protocol" .!= RealPBFT
+      genFile <- v .: "GenesisFile" .!= "genesis/genesis.json"
 
-                pure $ NodeConfiguration
-                         { ncProtocol = ptcl
-                         , ncGenesisFile = genFile
-                         , ncNodeId = nId
-                         , ncNumCoreNodes = numCoreNode
-                         , ncReqNetworkMagic = rNetworkMagic
-                         , ncPbftSignatureThresh = pbftSignatureThresh
-                         , ncLoggingSwitch = loggingSwitch
-                         , ncLogMetrics = logMetrics
-                         , ncSocketPath = socketPath
-                         , ncTraceConfig = traceConfig
-                         , ncViewMode = vMode
-                         , ncUpdate = (Update appName appVersion (LastKnownBlockVersion
-                                                                    lkBlkVersionMajor
-                                                                    lkBlkVersionMinor
-                                                                    lkBlkVersionAlt))
-                         , ncMaxMajorPV = maxMajorPV
-                         }
+      -- Byron-specific protocol parameters
+      rNetworkMagic <- v .:? "RequiresNetworkMagic" .!= RequiresNoMagic
+      pbftSignatureThresh <- v .:? "PBftSignatureThreshold"
+
+      -- Mock protocol parameters
+      nId <- v .:? "NodeId"
+      numCoreNode <- v .:? "NumCoreNodes"
+
+      -- Update system parameters
+      appName <- v .:? "ApplicationName" .!= Update.ApplicationName "cardano-sl"
+      appVersion <- v .:? "ApplicationVersion" .!= 1
+      lkBlkVersionMajor <- v .:? "LastKnownBlockVersion-Major" .!= 0
+      lkBlkVersionMinor <- v .:? "LastKnownBlockVersion-Minor" .!= 2
+      lkBlkVersionAlt <- v .:? "LastKnownBlockVersion-Alt" .!= 0
+      maxMajorPV <- v .:? "MaxKnownMajorProtocolVersion" .!= 1
+
+      -- Logging
+      vMode <- v .:? "ViewMode" .!= LiveView
+      loggingSwitch <- v .:? "TurnOnLogging" .!= True
+      logMetrics <- v .:? "TurnOnLogMetrics" .!= True
+      traceConfig <- if not loggingSwitch
+                     then return TracingOff
+                     else traceConfigParser v
+
+      pure NodeConfiguration {
+             ncProtocol = ptcl
+           , ncGenesisFile = genFile
+           , ncNodeId = nId
+           , ncNumCoreNodes = numCoreNode
+           , ncReqNetworkMagic = rNetworkMagic
+           , ncPbftSignatureThresh = pbftSignatureThresh
+           , ncLoggingSwitch = loggingSwitch
+           , ncLogMetrics = logMetrics
+           , ncSocketPath = socketPath
+           , ncTraceConfig = traceConfig
+           , ncViewMode = vMode
+           , ncUpdate = (Update appName appVersion (LastKnownBlockVersion
+                                                      lkBlkVersionMajor
+                                                      lkBlkVersionMinor
+                                                      lkBlkVersionAlt))
+           , ncMaxMajorPV = maxMajorPV
+           }
 
 parseNodeConfigurationFP :: ConfigYamlFilePath -> IO NodeConfiguration
 parseNodeConfigurationFP (ConfigYamlFilePath fp) = do
