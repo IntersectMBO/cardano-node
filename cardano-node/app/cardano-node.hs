@@ -85,7 +85,7 @@ parseVersionCmd =
 runVersionCommand :: IO ()
 runVersionCommand =
     putTextLn $ mconcat
-      [ "cardano-cli ", renderVersion version
+      [ "cardano-node ", renderVersion version
       , " - ", Text.pack os, "-", Text.pack arch
       , " - ", Text.pack compilerName, "-", renderVersion compilerVersion
       , "\ngit rev ", gitRev
