@@ -56,7 +56,7 @@ extra-deps:
   - systemd-2.3.0
 
   - git: https://github.com/input-output-hk/cardano-ledger-specs
-    commit: 036ff8223310ecdaf7f0ed8c211c691cb0dcb8f3
+    commit: a570441e9aa0853124c134c3e2e675c91a044f62
     subdirs:
       # small-steps
       - semantics/executable-spec
