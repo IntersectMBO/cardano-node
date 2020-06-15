@@ -240,9 +240,9 @@ instance FromJSON NodeConfiguration where
       ncProtocol <- v .: "Protocol" .!= RealPBFT
       ncGenesisFile <-
         case ncProtocol of
-          BFT      -> v .: "GenesisFile" .!= "genesis/genesis.json"
-          Praos    -> v .: "GenesisFile" .!= "genesis/genesis.json"
-          MockPBFT -> v .: "GenesisFile" .!= "genesis/genesis.json"
+          BFT      -> v .: "GenesisFile"
+          Praos    -> v .: "GenesisFile"
+          MockPBFT -> v .: "GenesisFile"
           RealPBFT -> do
             primary   <- v .:? "ByronGenesisFile"
             secondary <- v .:? "GenesisFile"
@@ -276,13 +276,13 @@ instance FromJSON NodeConfiguration where
       -- Update system parameters
       appName <- v .:? "ApplicationName" .!= Update.ApplicationName "cardano-sl"
       appVersion <- v .:? "ApplicationVersion" .!= 1
-      lkBlkVersionMajor <- v .:? "LastKnownBlockVersion-Major" .!= 0
-      lkBlkVersionMinor <- v .:? "LastKnownBlockVersion-Minor" .!= 2
+      lkBlkVersionMajor <- v .: "LastKnownBlockVersion-Major"
+      lkBlkVersionMinor <- v .: "LastKnownBlockVersion-Minor"
       lkBlkVersionAlt <- v .:? "LastKnownBlockVersion-Alt" .!= 0
       maxMajorPV <- v .:? "MaxKnownMajorProtocolVersion" .!= 1
 
       -- Logging
-      ncViewMode      <- v .:? "ViewMode"         .!= LiveView
+      ncViewMode      <- v .:? "ViewMode"         .!= SimpleView
       ncLoggingSwitch <- v .:? "TurnOnLogging"    .!= True
       ncLogMetrics    <- v .:? "TurnOnLogMetrics" .!= True
       ncTraceConfig   <- if ncLoggingSwitch
