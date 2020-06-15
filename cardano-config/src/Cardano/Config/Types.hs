@@ -56,6 +56,7 @@ import           Data.IP (IP)
 import           Data.String (String)
 import qualified Data.Text as Text
 import           Data.Yaml (decodeFileThrow)
+import           Control.Monad.Fail
 import           Network.Socket (PortNumber)
 import           System.FilePath ((</>), takeDirectory)
 import           System.Posix.Types (Fd(Fd))
@@ -233,19 +234,44 @@ instance FromJSON NodeConfiguration where
     withObject "NodeConfiguration" $ \v -> do
 
       -- Node parameters, not protocol-specific
-      socketPath <- v .:? "SocketPath"
+      ncSocketPath <- v .:? "SocketPath"
 
       -- Protocol parameters
-      ptcl <- v .: "Protocol" .!= RealPBFT
-      genFile <- v .: "GenesisFile" .!= "genesis/genesis.json"
+      ncProtocol <- v .: "Protocol" .!= RealPBFT
+      ncGenesisFile <-
+        case ncProtocol of
+          BFT      -> v .: "GenesisFile" .!= "genesis/genesis.json"
+          Praos    -> v .: "GenesisFile" .!= "genesis/genesis.json"
+          MockPBFT -> v .: "GenesisFile" .!= "genesis/genesis.json"
+          RealPBFT -> do
+            primary   <- v .:? "ByronGenesisFile"
+            secondary <- v .:? "GenesisFile"
+            case (primary, secondary) of
+              (Just g, Nothing)  -> return g
+              (Nothing, Just g)  -> return g
+              (Nothing, Nothing) -> fail $ "Missing required field, either "
+                                        ++ "ByronGenesisFile or GenesisFile"
+              (Just _, Just _)   -> fail $ "Specify either ByronGenesisFile"
+                                        ++ "or GenesisFile, but not both"
+          TPraos   -> do
+            primary   <- v .:? "ShelleyGenesisFile"
+            secondary <- v .:? "GenesisFile"
+            case (primary, secondary) of
+              (Just g, Nothing)  -> return g
+              (Nothing, Just g)  -> return g
+              (Nothing, Nothing) -> fail $ "Missing required field, either "
+                                        ++ "ShelleyGenesisFile or GenesisFile"
+              (Just _, Just _)   -> fail $ "Specify either ShelleyGenesisFile"
+                                        ++ "or GenesisFile, but not both"
 
       -- Byron-specific protocol parameters
-      rNetworkMagic <- v .:? "RequiresNetworkMagic" .!= RequiresNoMagic
-      pbftSignatureThresh <- v .:? "PBftSignatureThreshold"
+      ncReqNetworkMagic     <- v .:? "RequiresNetworkMagic"
+                                 .!= RequiresNoMagic
+      ncPbftSignatureThresh <- v .:? "PBftSignatureThreshold"
 
       -- Mock protocol parameters
-      nId <- v .:? "NodeId"
-      numCoreNode <- v .:? "NumCoreNodes"
+      ncNodeId       <- v .:? "NodeId"
+      ncNumCoreNodes <- v .:? "NumCoreNodes"
 
       -- Update system parameters
       appName <- v .:? "ApplicationName" .!= Update.ApplicationName "cardano-sl"
@@ -256,25 +282,25 @@ instance FromJSON NodeConfiguration where
       maxMajorPV <- v .:? "MaxKnownMajorProtocolVersion" .!= 1
 
       -- Logging
-      vMode <- v .:? "ViewMode" .!= LiveView
-      loggingSwitch <- v .:? "TurnOnLogging" .!= True
-      logMetrics <- v .:? "TurnOnLogMetrics" .!= True
-      traceConfig <- if not loggingSwitch
-                     then return TracingOff
-                     else traceConfigParser v
+      ncViewMode      <- v .:? "ViewMode"         .!= LiveView
+      ncLoggingSwitch <- v .:? "TurnOnLogging"    .!= True
+      ncLogMetrics    <- v .:? "TurnOnLogMetrics" .!= True
+      ncTraceConfig   <- if ncLoggingSwitch
+                           then traceConfigParser v
+                           else return TracingOff
 
       pure NodeConfiguration {
-             ncProtocol = ptcl
-           , ncGenesisFile = genFile
-           , ncNodeId = nId
-           , ncNumCoreNodes = numCoreNode
-           , ncReqNetworkMagic = rNetworkMagic
-           , ncPbftSignatureThresh = pbftSignatureThresh
-           , ncLoggingSwitch = loggingSwitch
-           , ncLogMetrics = logMetrics
-           , ncSocketPath = socketPath
-           , ncTraceConfig = traceConfig
-           , ncViewMode = vMode
+             ncProtocol
+           , ncGenesisFile
+           , ncNodeId
+           , ncNumCoreNodes
+           , ncReqNetworkMagic
+           , ncPbftSignatureThresh
+           , ncLoggingSwitch
+           , ncLogMetrics
+           , ncSocketPath
+           , ncTraceConfig
+           , ncViewMode
            , ncUpdate = (Update appName appVersion (LastKnownBlockVersion
                                                       lkBlkVersionMajor
                                                       lkBlkVersionMinor
