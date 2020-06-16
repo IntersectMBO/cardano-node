@@ -27,6 +27,8 @@ module Cardano.Api
   , NetworkMagic (..)
   , toNetworkMagic
   , toByronNetworkMagic
+  , toByronRequiresNetworkMagic
+  , toByronProtocolMagic
   , toShelleyNetwork
 
     -- * Transactions
@@ -145,7 +147,6 @@ import qualified Cardano.Crypto.Hash.Class as Crypto.Hash
 
 import qualified Cardano.Crypto.Hash as Crypto (Blake2b_256, hash)
 import qualified Cardano.Crypto.Hashing as Crypto hiding (hash)
-import           Cardano.Crypto.ProtocolMagic (ProtocolMagicId (..))
 import           Cardano.Crypto.Random (runSecureRandom)
 import qualified Cardano.Crypto.Signing as Crypto
 
@@ -160,7 +161,6 @@ import           Cardano.Api.LocalChainSync
 import           Cardano.Api.LocalStateQuery
 
 import qualified Cardano.Chain.Common  as Byron
-import qualified Cardano.Chain.Genesis as Byron
 import qualified Cardano.Chain.UTxO    as Byron
 
 import qualified Ouroboros.Consensus.Shelley.Protocol.Crypto as Shelley
@@ -560,14 +560,10 @@ byronWitnessTransaction _ _ (SigningKeyShelley _) = panic "Cardano.Api.byronWitn
 byronWitnessTransaction txHash nw (SigningKeyByron signKey) =
     Byron.VKWitness
       (Crypto.toVerification signKey)
-      (Crypto.sign protocolMagic Crypto.SignTx signKey (Byron.TxSigData txHash))
-  where
-    -- This is unlikely to be specific to Byron or Shelley
-    protocolMagic :: ProtocolMagicId
-    protocolMagic =
-      case nw of
-        Mainnet -> Byron.mainnetProtocolMagicId
-        Testnet (NetworkMagic pm) -> ProtocolMagicId pm
+      (Crypto.sign (toByronProtocolMagic nw)
+                   Crypto.SignTx
+                   signKey
+                   (Byron.TxSigData txHash))
 
 shelleyWitnessTransaction :: ShelleyTxBody -> SigningKey -> ShelleyWitnessVKey
 shelleyWitnessTransaction _ (SigningKeyByron _) = panic "Cardano.Api.shelleyWitnessTransaction: Please use a shelley signing key"

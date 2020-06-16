@@ -16,6 +16,8 @@ module Cardano.Api.Types
   , NetworkMagic (..)
   , toNetworkMagic
   , toByronNetworkMagic
+  , toByronRequiresNetworkMagic
+  , toByronProtocolMagic
   , toShelleyNetwork
   , SigningKey (..)
   , GenesisVerificationKey (..)
@@ -111,6 +113,7 @@ import qualified Cardano.Crypto.Hash.Class   as Crypto
 import qualified Cardano.Crypto.Hash.Blake2b as Crypto
 
 import qualified Cardano.Chain.Common as Byron
+import qualified Cardano.Chain.Genesis as Byron
 import qualified Cardano.Chain.UTxO   as Byron
 import qualified Cardano.Crypto       as Byron
 
@@ -293,6 +296,14 @@ toByronNetworkMagic nw =
   case nw of
     Mainnet                   -> Byron.NetworkMainOrStage
     Testnet (NetworkMagic nm) -> Byron.NetworkTestnet nm
+
+toByronRequiresNetworkMagic :: Network -> Byron.RequiresNetworkMagic
+toByronRequiresNetworkMagic Mainnet   = Byron.RequiresNoMagic
+toByronRequiresNetworkMagic Testnet{} = Byron.RequiresMagic
+
+toByronProtocolMagic :: Network -> Byron.ProtocolMagicId
+toByronProtocolMagic Mainnet = Byron.mainnetProtocolMagicId
+toByronProtocolMagic (Testnet (NetworkMagic pm)) = Byron.ProtocolMagicId pm
 
 toShelleyNetwork :: Network -> Shelley.Network
 toShelleyNetwork  Mainnet    = Shelley.Mainnet
