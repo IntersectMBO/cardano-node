@@ -47,6 +47,7 @@ import           Cardano.Chain.Slotting (EpochSlots(..))
 import           Cardano.Config.Byron.Protocol
 import           Cardano.Config.Mock.Protocol
 import           Cardano.Config.Shelley.Protocol
+import           Cardano.Config.Cardano.Protocol
 
 import qualified Ouroboros.Consensus.Cardano as Consensus
 
@@ -77,6 +78,10 @@ mkConsensusProtocol NodeConfiguration{ncProtocolConfig} files =
       NodeProtocolConfigurationShelley config ->
         firstExceptT ShelleyProtocolInstantiationError $
           mkSomeConsensusProtocolShelley config files
+
+      NodeProtocolConfigurationCardano byronConfig shelleyConfig ->
+        firstExceptT CardanoProtocolInstantiationError $
+          mkSomeConsensusProtocolCardano byronConfig shelleyConfig files
 
 
 mkNodeClientProtocol :: Protocol -> SomeNodeClientProtocol
@@ -109,6 +114,17 @@ mkNodeClientProtocol protocol =
       ShelleyProtocol ->
         mkSomeNodeClientProtocolShelley
 
+      CardanoProtocol ->
+        mkSomeNodeClientProtocolCardano
+          --TODO: this is only the correct value for mainnet
+          -- not for Byron testnets. This value is needed because
+          -- to decode legacy EBBs one needs to know how many
+          -- slots there are per-epoch. This info comes from
+          -- the genesis file, but we don't have that in the
+          -- client case.
+          (EpochSlots 21600)
+          (Consensus.SecurityParam 2160)
+
 
 -- | Many commands have variants or file formats that depend on the era.
 --
@@ -124,6 +140,7 @@ data CardanoEra = ByronEraLegacy | ByronEra | ShelleyEra
 data ProtocolInstantiationError =
     ByronProtocolInstantiationError   ByronProtocolInstantiationError
   | ShelleyProtocolInstantiationError ShelleyProtocolInstantiationError
+  | CardanoProtocolInstantiationError CardanoProtocolInstantiationError
   deriving Show
 
 
@@ -135,6 +152,9 @@ renderProtocolInstantiationError pie =
 
     ShelleyProtocolInstantiationError spie ->
       renderShelleyProtocolInstantiationError spie
+
+    CardanoProtocolInstantiationError cpie ->
+      renderCardanoProtocolInstantiationError cpie
 
 
 data RealPBFTError

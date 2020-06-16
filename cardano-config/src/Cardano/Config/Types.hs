@@ -237,6 +237,8 @@ data NodeProtocolConfiguration =
        NodeProtocolConfigurationMock    NodeMockProtocolConfiguration
      | NodeProtocolConfigurationByron   NodeByronProtocolConfiguration
      | NodeProtocolConfigurationShelley NodeShelleyProtocolConfiguration
+     | NodeProtocolConfigurationCardano NodeByronProtocolConfiguration
+                                        NodeShelleyProtocolConfiguration
   deriving Show
 
 data NodeMockProtocolConfiguration =
@@ -321,6 +323,9 @@ instance FromJSON NodeConfiguration where
           ShelleyProtocol ->
             NodeProtocolConfigurationShelley <$> parseShelleyProtocol v
 
+          CardanoProtocol ->
+            NodeProtocolConfigurationCardano <$> parseByronProtocol v
+                                             <*> parseShelleyProtocol v
       pure NodeConfiguration {
              ncProtocolConfig
            , ncSocketPath
@@ -428,6 +433,10 @@ instance AdjustFilePaths NodeProtocolConfiguration where
   adjustFilePaths f (NodeProtocolConfigurationShelley pc) =
     NodeProtocolConfigurationShelley (adjustFilePaths f pc)
 
+  adjustFilePaths f (NodeProtocolConfigurationCardano pcb pcs) =
+    NodeProtocolConfigurationCardano (adjustFilePaths f pcb)
+                                     (adjustFilePaths f pcs)
+
 instance AdjustFilePaths NodeMockProtocolConfiguration where
   adjustFilePaths _f x = x -- Contains no file paths
 
@@ -459,6 +468,7 @@ parseNodeConfiguration NodeCLI{configFile} = parseNodeConfigurationFP configFile
 data Protocol = MockProtocol !MockProtocol
               | ByronProtocol
               | ShelleyProtocol
+              | CardanoProtocol
   deriving (Eq, Show, Generic)
 
 deriving instance NFData Protocol
@@ -482,6 +492,7 @@ instance FromJSON Protocol where
       "MockPraos" -> pure (MockProtocol MockPraos)
       "Byron"     -> pure ByronProtocol
       "Shelley"   -> pure ShelleyProtocol
+      "Cardano"   -> pure CardanoProtocol
 
       -- The old names
       "BFT"       -> pure (MockProtocol MockBFT)
@@ -501,6 +512,7 @@ protocolName (MockProtocol MockPBFT)  = "Mock PBFT"
 protocolName (MockProtocol MockPraos) = "Mock Praos"
 protocolName  ByronProtocol           = "Byron"
 protocolName  ShelleyProtocol         = "Shelley"
+protocolName  CardanoProtocol         = "Byron; Shelley"
 
 ncProtocol :: NodeConfiguration -> Protocol
 ncProtocol nc =
@@ -508,6 +520,7 @@ ncProtocol nc =
       NodeProtocolConfigurationMock npc  -> MockProtocol (npcMockProtocol npc)
       NodeProtocolConfigurationByron{}   -> ByronProtocol
       NodeProtocolConfigurationShelley{} -> ShelleyProtocol
+      NodeProtocolConfigurationCardano{} -> CardanoProtocol
 
 
 -- Node can be run in two modes.
