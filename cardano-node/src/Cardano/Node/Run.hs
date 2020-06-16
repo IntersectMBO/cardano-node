@@ -37,6 +37,7 @@ import           Data.Version (showVersion)
 import           Network.HostName (getHostName)
 import           Network.Socket (AddrInfo, Socket)
 import           System.Directory (canonicalizePath, makeAbsolute)
+import           System.Environment (lookupEnv)
 
 import           Paths_cardano_node (version)
 import           Cardano.BM.Data.Aggregated (Measurable (..))
@@ -99,10 +100,7 @@ runNode
   -> NodeCLI
   -> IO ()
 runNode loggingLayer npm@NodeCLI{protocolFiles} = do
-    hn <- hostname
-
-    let !trace = setHostname hn $
-                 llAppendName loggingLayer "node" (llBasicTrace loggingLayer)
+    !trace <- setupTrace loggingLayer
     let tracer = contramap pack $ toLogObject trace
 
     nc <- parseNodeConfiguration npm
@@ -198,6 +196,21 @@ runNode loggingLayer npm@NodeCLI{protocolFiles} = do
         Async.uninterruptibleCancel upTimeThread
         Async.uninterruptibleCancel peersThread
 #endif
+
+-- | Add the application name and unqualified hostname to the logging
+-- layer basic trace.
+--
+-- If the @CARDANO_NODE_LOGGING_HOSTNAME@ environment variable is set,
+-- it overrides the system hostname. This is useful when running a
+-- local test cluster with all nodes on the same host.
+setupTrace
+  :: LoggingLayer
+  -> IO (Trace IO Text)
+setupTrace loggingLayer = do
+    hn <- maybe hostname (pure . pack) =<< lookupEnv "CARDANO_NODE_LOGGING_HOSTNAME"
+    return $
+        setHostname hn $
+        llAppendName loggingLayer "node" (llBasicTrace loggingLayer)
   where
     hostname = do
       hn0 <- pack <$> getHostName

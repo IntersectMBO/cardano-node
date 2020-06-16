@@ -10,6 +10,8 @@
 , compiler ? config.haskellNix.compiler or "ghc865"
 # Enable profiling
 , profiling ? config.haskellNix.profiling or false
+# Version info, to be passed when not building from a git work tree
+, gitrev ? null
 }:
 let
 
@@ -66,6 +68,10 @@ let
         # Coreutils because we need 'paste'.
         packages.cardano-cli.components.tests.cardano-cli-test.build-tools =
           lib.mkForce [buildPackages.bc buildPackages.jq buildPackages.coreutils buildPackages.shellcheck];
+
+        # Stamp executables with the git revision
+        packages.cardano-cli.components.exes.cardano-cli.postInstall = setGitRev;
+        packages.cardano-node.components.exes.cardano-node.postInstall = setGitRev;
       }
       {
         # Packages we wish to ignore version bounds of.
@@ -131,5 +137,16 @@ let
     # not build for windows on a per package bases (rather than using --disable-tests).
     # configureArgs = lib.optionalString stdenv.hostPlatform.isWindows "--disable-tests";
   });
+
+  # setGitRev is a postInstall script to stamp executables with
+  # version info. It uses the "gitrev" argument, if set. Otherwise,
+  # the revision is sourced from the local git work tree.
+  setGitRev = ''
+    ${haskellBuildUtils}/bin/set-git-rev "${gitrev'}" $out/bin/* || true
+  '';
+  gitrev' = if (gitrev == null)
+    then buildPackages.commonLib.commitIdFromGitRepoOrZero ../.git
+    else gitrev;
+  haskellBuildUtils = buildPackages.haskellBuildUtils.package;
 in
   pkgSet

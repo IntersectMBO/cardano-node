@@ -6,6 +6,7 @@ pkgs: _: with pkgs; {
       stdenv
       haskell-nix
       buildPackages
+      gitrev
       ;
   };
   cardanoNodeProfiledHaskellPackages = import ./haskell.nix {
@@ -14,6 +15,7 @@ pkgs: _: with pkgs; {
       stdenv
       haskell-nix
       buildPackages
+      gitrev
       ;
     profiling = true;
   };
