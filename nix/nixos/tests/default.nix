@@ -20,4 +20,10 @@ in rec {
 
   # Subsumes what cardanoNodeEdge does
   chairmansCluster = callTest ./chairmans-cluster.nix {};
+
+  qaCluster = callTest ./qa-cluster.nix {
+    # TODO fill arguments:
+    # additionalSystemPackages = ;
+    # testScript = ;
+  };
 }
