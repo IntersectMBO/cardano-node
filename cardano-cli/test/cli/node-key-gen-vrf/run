@@ -17,8 +17,8 @@ ${CARDANO_CLI} shelley node key-gen-VRF \
 assert_file_exists "${TEST_DIR}/vrf.vkey"
 assert_file_exists "${TEST_DIR}/vrf.skey"
 
-assert_string 'VerKeyVRF SimpleVRF' "${TEST_DIR}/vrf.vkey"
-assert_string 'SignKeyVRF SimpleVRF' "${TEST_DIR}/vrf.skey"
+assert_string 'VerKeyVRF simple' "${TEST_DIR}/vrf.vkey"
+assert_string 'SignKeyVRF simple' "${TEST_DIR}/vrf.skey"
 
 
 report_result ${error}
