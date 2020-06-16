@@ -72,6 +72,9 @@ let
         # Stamp executables with the git revision
         packages.cardano-cli.components.exes.cardano-cli.postInstall = setGitRev;
         packages.cardano-node.components.exes.cardano-node.postInstall = setGitRev;
+        # Work around Haskell.nix issue when setting postInstall on components
+        packages.cardano-cli.components.all.postInstall = lib.mkForce setGitRev;
+        packages.cardano-node.components.all.postInstall = lib.mkForce setGitRev;
       }
       {
         # Packages we wish to ignore version bounds of.
