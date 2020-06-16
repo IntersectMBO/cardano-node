@@ -73,7 +73,7 @@ runNodeKeyGenCold (VerificationKeyFile vkeyPath) (SigningKeyFile skeyPath)
       $ writeFileTextEnvelope ocertCtrPath (Just ocertCtrDesc)
       $ OperationalCertificateIssueCounter initialCounter vkey
   where
-    skeyDesc, vkeyDesc :: TextViewTitle
+    skeyDesc, vkeyDesc, ocertCtrDesc :: TextViewTitle
     skeyDesc = TextViewTitle "Stake Pool Operator Signing Key"
     vkeyDesc = TextViewTitle "Stake Pool Operator Verification Key"
     ocertCtrDesc = TextViewTitle $ "Next certificate issue number: " <> show initialCounter

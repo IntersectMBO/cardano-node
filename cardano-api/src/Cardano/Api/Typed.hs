@@ -1500,6 +1500,13 @@ instance HasTextEnvelope (SigningKey GenesisDelegateKey) where
     -- TODO: use a different type from the stake pool key, since some operations
     -- need a genesis key specifically
 
+instance CastKeyRole GenesisDelegateKey StakePoolKey where
+    castVerificationKey (GenesisDelegateVerificationKey (Shelley.VKey vkey)) =
+      StakePoolVerificationKey (Shelley.VKey vkey)
+
+    castSigningKey (GenesisDelegateSigningKey skey) =
+      StakePoolSigningKey skey
+
 
 --
 -- Genesis UTxO keys
