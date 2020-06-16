@@ -33,7 +33,7 @@ import           Cardano.CLI.Helpers (HelpersError, pPrintCBOR, renderHelpersErr
 import           Cardano.CLI.Shelley.Parsers (OutputFile (..), QueryCmd (..))
 
 import           Cardano.Config.Shelley.Orphans ()
-import           Cardano.Config.Shelley.Protocol (mkNodeClientProtocolShelley)
+import           Cardano.Api.Protocol.Shelley (mkNodeClientProtocolShelley)
 
 import           Cardano.Crypto.Hash.Class (getHashBytesAsHex)
 

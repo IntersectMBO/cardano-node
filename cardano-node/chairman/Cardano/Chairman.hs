@@ -34,24 +34,19 @@ import           Control.Tracer
 
 import           Network.Mux (MuxError, MuxMode(..))
 
-import           Ouroboros.Consensus.Block
-                   (CodecConfig, getCodecConfig, BlockProtocol, GetHeader (..))
+import           Cardano.Api.Protocol.Types (SomeNodeClientProtocol(..))
+import           Ouroboros.Consensus.Block (BlockProtocol)
+
+import           Ouroboros.Consensus.Block (CodecConfig, GetHeader (..))
 import           Ouroboros.Consensus.BlockchainTime (SlotLength, getSlotLength)
-import           Ouroboros.Consensus.Config (configBlock, configConsensus, configLedger)
-import           Ouroboros.Consensus.Config.SupportsNode (ConfigSupportsNode (..))
-import           Ouroboros.Consensus.Ledger.Extended (ExtLedgerState (..))
 import           Ouroboros.Consensus.Network.NodeToClient
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
                   (HasNetworkProtocolVersion (..),
                    supportedNodeToClientVersions, nodeToClientProtocolVersion)
-import           Ouroboros.Consensus.Node.ProtocolInfo
-import           Ouroboros.Consensus.HardFork.Abstract (HasHardForkHistory(..))
-import           Ouroboros.Consensus.HardFork.History
-                  (EraParams(..), EraSummary(..), Summary(..))
+import           Ouroboros.Consensus.Node.ProtocolInfo (pClientInfoCodecConfig)
 import           Ouroboros.Consensus.Node.Run
 import           Ouroboros.Consensus.Cardano
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx)
-import           Ouroboros.Consensus.Util.Counting (nonEmptyHead)
 
 import           Ouroboros.Network.Magic (NetworkMagic)
 import           Ouroboros.Network.Mux
@@ -83,23 +78,27 @@ import           Cardano.Config.Types (SocketPath(..))
 -- that failures can be detected as early as possible. The progress condition
 -- is only checked at the end.
 --
-chairmanTest :: forall blk. RunNode blk
-             => Tracer IO String
-             -> Protocol IO blk (BlockProtocol blk)
+chairmanTest :: Tracer IO String
+             -> SlotLength
+             -> SecurityParam
              -> DiffTime
              -> Maybe BlockNo
              -> [SocketPath]
+             -> SomeNodeClientProtocol
+             -> NetworkMagic
              -> IO ()
-chairmanTest tracer ptcl runningTime optionalProgressThreshold socketPaths = do
+chairmanTest tracer slotLength securityParam runningTime optionalProgressThreshold socketPaths someNodeClientProtocol nw = do
 
     traceWith tracer ("Will observe nodes for " ++ show runningTime)
     traceWith tracer ("Will require chain growth of " ++ show progressThreshold)
 
+    SomeNodeClientProtocol (p :: ProtocolClient blk (BlockProtocol blk)) <- return $ someNodeClientProtocol
+
     -- Run the chairman and get the final snapshot of the chain from each node.
     chainsSnapshot <- runChairman
                         tracer
-                        (getCodecConfig $ configBlock cfg)
-                        (getNetworkMagic $ configBlock cfg)
+                        (pClientInfoCodecConfig $ protocolClientInfo p)
+                        nw
                         securityParam
                         runningTime
                         socketPaths
@@ -120,26 +119,10 @@ chairmanTest tracer ptcl runningTime optionalProgressThreshold socketPaths = do
     traceWith tracer ("================== chairman results ==================")
 
   where
-    ProtocolInfo
-      { pInfoConfig = cfg
-      , pInfoInitLedger = extLedgerSt
-      } = protocolInfo ptcl
-
-    securityParam = protocolSecurityParam (configConsensus cfg)
-
     progressThreshold = deriveProgressThreshold
                           slotLength
                           runningTime
                           optionalProgressThreshold
-
-    hfSummary = hardForkSummary (configLedger cfg) (ledgerState extLedgerSt)
-
-    slotLength =
-      case hfSummary of
-      -- This will need to be generalised to cope with protocols that do
-      -- hard forks. This currently expects a single protocol era.
-        Summary eras -> eraSlotLength . eraParams . nonEmptyHead $ eras
-
 
 -- | The caller specifies how long to run the chairman for and optionally a
 -- chain growth progress threshold. If the threshold is not given, we can

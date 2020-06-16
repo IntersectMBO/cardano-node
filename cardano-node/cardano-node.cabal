@@ -34,6 +34,12 @@ library
 
   exposed-modules:     Cardano.Common.Help
                        Cardano.Node.Features.Node
+                       Cardano.Node.Protocol
+                       Cardano.Node.Protocol.Byron
+                       Cardano.Node.Protocol.Cardano
+                       Cardano.Node.Protocol.Mock
+                       Cardano.Node.Protocol.Shelley
+                       Cardano.Node.Protocol.Types
                        Cardano.Node.Run
                        Cardano.Node.Shutdown
                        Cardano.Tracing.Peer
@@ -48,7 +54,9 @@ library
                      , base >=4.12 && <5
                      , bytestring
                      , deepseq
+                     , cardano-api
                      , cardano-config
+                     , cardano-crypto-wrapper
                      , cardano-ledger
                      , cardano-prelude
                      , cardano-shell
@@ -67,6 +75,8 @@ library
                      , ouroboros-consensus
                      , ouroboros-consensus-byron
                      , ouroboros-consensus-cardano
+                     , ouroboros-consensus-mock
+                     , ouroboros-consensus-shelley
                      , ouroboros-network
                      , ouroboros-network-framework
                      , process
@@ -141,6 +151,7 @@ executable chairman
                      , async
                      , bytestring
                      , containers
+                     , cardano-api
                      , cardano-config
                      , cardano-prelude
                      , contra-tracer

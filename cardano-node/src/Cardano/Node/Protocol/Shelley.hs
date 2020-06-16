@@ -1,12 +1,7 @@
-{-# LANGUAGE ConstraintKinds   #-}
-{-# LANGUAGE FlexibleContexts  #-}
-{-# LANGUAGE GADTs             #-}
-{-# LANGUAGE NamedFieldPuns    #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RankNTypes        #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Cardano.Config.Shelley.Protocol
+module Cardano.Node.Protocol.Shelley
   (
     -- * Protocol exposing the specific type
     -- | Use this when you need the specific instance
@@ -15,10 +10,6 @@ module Cardano.Config.Shelley.Protocol
     -- * Protocols hiding the specific type
     -- | Use this when you want to handle protocols generically
   , mkSomeConsensusProtocolShelley
-
-    -- * Client support
-  , mkNodeClientProtocolShelley
-  , mkSomeNodeClientProtocolShelley
 
     -- * Errors
   , ShelleyProtocolInstantiationError(..)
@@ -50,27 +41,13 @@ import           Shelley.Spec.Ledger.PParams (ProtVer(..))
 
 import           Cardano.Config.Types
                    (NodeShelleyProtocolConfiguration(..),
-                    ProtocolFilepaths(..), GenesisFile (..),
-                    SomeConsensusProtocol(..), SomeNodeClientProtocol(..))
+                    ProtocolFilepaths(..), GenesisFile (..))
 import           Cardano.Config.Shelley.OCert
 import           Cardano.Config.Shelley.VRF
 import           Cardano.Config.Shelley.KES
 import           Cardano.TracingOrphanInstances.Shelley ()
 
-
-------------------------------------------------------------------------------
--- Shelley protocol, client support
---
-
-mkNodeClientProtocolShelley :: Consensus.ProtocolClient
-                                 (ShelleyBlock TPraosStandardCrypto)
-                                 Consensus.ProtocolRealTPraos
-mkNodeClientProtocolShelley = Consensus.ProtocolClientRealTPraos
-
-
-mkSomeNodeClientProtocolShelley :: SomeNodeClientProtocol
-mkSomeNodeClientProtocolShelley =
-    SomeNodeClientProtocol mkNodeClientProtocolShelley
+import           Cardano.Node.Protocol.Types
 
 
 ------------------------------------------------------------------------------

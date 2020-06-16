@@ -23,9 +23,8 @@ import           Ouroboros.Consensus.Util.Condense (Condense(..))
 import           Ouroboros.Network.Block
 import           Ouroboros.Network.NodeToClient (withIOManager)
 
-import           Cardano.Config.Byron.Protocol (mkNodeClientProtocolByron)
-
 import           Cardano.Api (Network(..), getLocalTip)
+import           Cardano.Api.Protocol.Byron (mkNodeClientProtocolByron)
 import           Cardano.CLI.Environment
                    (EnvSocketError, readEnvSocketPath, renderEnvSocketError)
 

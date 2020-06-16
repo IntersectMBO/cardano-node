@@ -24,7 +24,6 @@ import           Cardano.Chain.UTxO (TxIn, TxOut)
 import qualified Cardano.Crypto.Hashing as Crypto
 import qualified Cardano.Crypto.Signing as Crypto
 
-import           Cardano.Config.Protocol (RealPBFTError, renderRealPBFTError)
 import           Cardano.Config.Types
 
 import           Cardano.Api (Network(..), toByronNetworkMagic, toByronProtocolMagic)
@@ -47,7 +46,6 @@ data ByronClientCmdError
   | ByronCmdHelpersError !HelpersError
   | ByronCmdKeyFailure !ByronKeyFailure
   | ByronCmdQueryError !ByronQueryError
-  | ByronCmdRealPBFTError !RealPBFTError
   | ByronCmdTxError !ByronTxError
   | ByronCmdUpdateProposalError !ByronUpdateProposalError
   | ByronCmdVoteError !ByronVoteError
@@ -61,7 +59,6 @@ renderByronClientCmdError err =
     ByronCmdHelpersError e -> renderHelpersError e
     ByronCmdKeyFailure e -> renderByronKeyFailure e
     ByronCmdQueryError e -> renderByronQueryError e
-    ByronCmdRealPBFTError e -> renderRealPBFTError e
     ByronCmdTxError e -> renderByronTxError e
     ByronCmdUpdateProposalError e -> renderByronUpdateProposalError e
     ByronCmdVoteError e -> renderByronVoteError e

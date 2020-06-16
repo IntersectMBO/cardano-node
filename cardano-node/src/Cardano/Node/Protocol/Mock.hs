@@ -3,7 +3,7 @@
 {-# LANGUAGE NamedFieldPuns    #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Cardano.Config.Mock.Protocol
+module Cardano.Node.Protocol.Mock
   (
     -- * Protocols exposing the specific type
     -- | Use these when you need the specific instance
@@ -32,9 +32,10 @@ import           Ouroboros.Consensus.Node.ProtocolInfo (NumCoreNodes (..))
 
 import           Ouroboros.Consensus.Protocol.Abstract (SecurityParam (..))
 
-import           Cardano.Config.Types (NodeMockProtocolConfiguration(..),
-                   SomeConsensusProtocol(..))
+import           Cardano.Config.Types (NodeMockProtocolConfiguration(..))
 import           Cardano.TracingOrphanInstances.Mock ()
+
+import           Cardano.Node.Protocol.Types
 
 
 ------------------------------------------------------------------------------

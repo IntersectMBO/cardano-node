@@ -57,9 +57,8 @@ import           Ouroboros.Consensus.Util.Condense (condense)
 import           Ouroboros.Consensus.Cardano
                    (protocolClientInfo, SecurityParam(..))
 
-import           Cardano.Config.Byron.Protocol (mkNodeClientProtocolByron)
-
 import           Cardano.Api (Network, submitGenTx)
+import           Cardano.Api.Protocol.Byron (mkNodeClientProtocolByron)
 import           Cardano.CLI.Environment
 
 

@@ -3,7 +3,7 @@
 
 {-# OPTIONS_GHC -Wno-orphans  #-}
 
-module Cardano.Config.Cardano.Protocol
+module Cardano.Node.Protocol.Cardano
   (
     -- * Protocol exposing the specific type
     -- | Use this when you need the specific instance
@@ -12,10 +12,6 @@ module Cardano.Config.Cardano.Protocol
     -- * Protocols hiding the specific type
     -- | Use this when you want to handle protocols generically
   , mkSomeConsensusProtocolCardano
-
-    -- * Client support
-  , mkNodeClientProtocolCardano
-  , mkSomeNodeClientProtocolCardano
 
     -- * Errors
   , CardanoProtocolInstantiationError(..)
@@ -27,8 +23,6 @@ import           Prelude
 import qualified Data.Text as T
 import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT)
-
-import           Cardano.Chain.Slotting (EpochSlots)
 
 import qualified Cardano.Chain.Update as Byron
 
@@ -46,16 +40,18 @@ import qualified Shelley.Spec.Ledger.PParams as Shelley
 import           Cardano.Config.Types
                    (NodeByronProtocolConfiguration(..),
                     NodeShelleyProtocolConfiguration(..),
-                    ProtocolFilepaths(..), SomeConsensusProtocol(..),
-                    SomeNodeClientProtocol(..),
+                    ProtocolFilepaths(..),
                     HasKESMetricsData(..), KESMetricsData(..))
 
 import           Cardano.TracingOrphanInstances.Byron ()
 import           Cardano.TracingOrphanInstances.Shelley ()
 import           Cardano.TracingOrphanInstances.HardFork ()
 
-import qualified Cardano.Config.Byron.Protocol as Byron
-import qualified Cardano.Config.Shelley.Protocol as Shelley
+import qualified Cardano.Node.Protocol.Byron as Byron
+import qualified Cardano.Node.Protocol.Shelley as Shelley
+
+import           Cardano.Node.Protocol.Types
+
 
 
 --TODO: move ToObject tracing instances to Cardano.TracingOrphanInstances.Consensus
@@ -63,26 +59,6 @@ import qualified Cardano.Config.Shelley.Protocol as Shelley
 instance HasKESMetricsData (CardanoBlock c) where
     getKESMetricsData _forgeState = NoKESMetricsData
     --TODO distinguish on the era and use getKESMetricsData on the appropriate era
-
-
-------------------------------------------------------------------------------
--- Real Cardano protocol, client support
---
-
-mkNodeClientProtocolCardano :: EpochSlots
-                            -> SecurityParam
-                            -> ProtocolClient (CardanoBlock TPraosStandardCrypto)
-                                              ProtocolCardano
-mkNodeClientProtocolCardano epochSlots securityParam =
-    ProtocolClientCardano epochSlots securityParam
-
-
-mkSomeNodeClientProtocolCardano :: EpochSlots
-                                -> SecurityParam
-                                -> SomeNodeClientProtocol
-mkSomeNodeClientProtocolCardano epochSlots securityParam =
-    SomeNodeClientProtocol
-      (mkNodeClientProtocolCardano epochSlots securityParam)
 
 
 ------------------------------------------------------------------------------
@@ -205,4 +181,3 @@ renderCardanoProtocolInstantiationError
 renderCardanoProtocolInstantiationError
   (CardanoProtocolInstantiationErrorShelley err) =
     Shelley.renderShelleyProtocolInstantiationError err
-

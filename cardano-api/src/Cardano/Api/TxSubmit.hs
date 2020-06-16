@@ -46,8 +46,8 @@ import           Ouroboros.Consensus.Shelley.Ledger (ShelleyBlock)
 import           Ouroboros.Consensus.Byron.Ledger (ByronBlock)
 import           Ouroboros.Consensus.Shelley.Protocol.Crypto (TPraosStandardCrypto)
 
-import           Cardano.Config.Byron.Protocol (mkNodeClientProtocolByron)
-import           Cardano.Config.Shelley.Protocol (mkNodeClientProtocolShelley)
+import           Cardano.Api.Protocol.Byron (mkNodeClientProtocolByron)
+import           Cardano.Api.Protocol.Shelley (mkNodeClientProtocolShelley)
 import           Cardano.Config.Types (SocketPath(..))
 
 

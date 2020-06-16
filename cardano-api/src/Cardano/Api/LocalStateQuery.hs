@@ -35,8 +35,8 @@ import           Cardano.Binary (decodeFull)
 import           Cardano.BM.Data.Tracer (ToLogObject (..), nullTracer)
 import           Cardano.BM.Trace (Trace, appendName, logInfo)
 
-import           Cardano.Config.Protocol ()
-import           Cardano.Config.Shelley.Protocol (mkNodeClientProtocolShelley)
+import           Cardano.Api.Protocol.Shelley (mkNodeClientProtocolShelley)
+import           Cardano.Api.Types ()
 import           Cardano.Config.Types (SocketPath (..))
 
 import qualified Codec.CBOR.Term as CBOR
