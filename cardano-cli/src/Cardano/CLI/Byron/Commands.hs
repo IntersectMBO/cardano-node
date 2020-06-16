@@ -74,7 +74,8 @@ data ByronCommand =
     --- Delegation Related Commands ---
 
   | IssueDelegationCertificate
-        ConfigYamlFilePath
+        Network
+        CardanoEra
         EpochNumber
         -- ^ The epoch from which the delegation is valid.
         SigningKeyFile
@@ -84,7 +85,7 @@ data ByronCommand =
         NewCertificateFile
         -- ^ Filepath of the newly created delegation certificate.
   | CheckDelegation
-        ConfigYamlFilePath
+        Network
         CertificateFile
         VerificationKeyFile
         VerificationKeyFile
@@ -100,7 +101,9 @@ data ByronCommand =
         -- ^ Filepath of transaction to submit.
 
   | SpendGenesisUTxO
-        ConfigYamlFilePath
+        GenesisFile
+        Network
+        CardanoEra
         NewTxFile
         -- ^ Filepath of the newly created transaction.
         SigningKeyFile
@@ -110,7 +113,8 @@ data ByronCommand =
         (NonEmpty TxOut)
         -- ^ Tx output.
   | SpendUTxO
-        ConfigYamlFilePath
+        Network
+        CardanoEra
         NewTxFile
         -- ^ Filepath of the newly created transaction.
         SigningKeyFile
@@ -133,13 +137,13 @@ data ByronCommand =
 
 
 data NodeCmd = CreateVote
-               ConfigYamlFilePath
+               Network
                SigningKeyFile
                FilePath -- filepath to update proposal
                Bool
                FilePath
              | UpdateProposal
-               ConfigYamlFilePath
+               Network
                SigningKeyFile
                ProtocolVersion
                SoftwareVersion

@@ -9,9 +9,7 @@ module Cardano.CLI.Byron.Tx
   , readByronTx
   , normalByronTxToGenTx
   , txSpendGenesisUTxOByronPBFT
-  , issueGenesisUTxOExpenditure
   , txSpendUTxOByronPBFT
-  , issueUTxOExpenditure
   , nodeSubmitTx
   , renderByronTxError
 
@@ -24,7 +22,7 @@ where
 import           Prelude (error)
 import           Cardano.Prelude hiding (option, trace, (%))
 
-import           Control.Monad.Trans.Except.Extra (firstExceptT, left, right)
+import           Control.Monad.Trans.Except.Extra (firstExceptT, left)
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.ByteString as B
 import qualified Data.Map.Strict as Map
@@ -36,7 +34,7 @@ import           Formatting ((%), sformat)
 
 import           Control.Tracer (traceWith, nullTracer, stdoutTracer)
 
-import           Cardano.Api (textShow)
+import           Cardano.Api (textShow, toByronProtocolMagic)
 import qualified Cardano.Binary as Binary
 
 import           Cardano.Chain.Common (Address)
@@ -54,18 +52,15 @@ import           Ouroboros.Network.NodeToClient (IOManager)
 
 import qualified Ouroboros.Consensus.Byron.Ledger as Byron
 import           Ouroboros.Consensus.Byron.Ledger (GenTx(..), ByronBlock)
-import qualified Ouroboros.Consensus.Cardano as Consensus
 import           Ouroboros.Consensus.Ledger.SupportsMempool (txId)
 import           Ouroboros.Consensus.Util.Condense (condense)
 import           Ouroboros.Consensus.Cardano
                    (protocolClientInfo, SecurityParam(..))
 
 import           Cardano.Config.Byron.Protocol (mkNodeClientProtocolRealPBFT)
-import           Cardano.Config.Protocol (RealPBFTError(..), withRealPBFT)
 
 import           Cardano.Api (Network, submitGenTx)
 import           Cardano.CLI.Environment
-import           Cardano.Config.Types (NodeConfiguration)
 
 
 data ByronTxError
@@ -164,68 +159,40 @@ genesisUTxOTxIn gc vk genAddr =
 --   to given outputs, signed by the given key.
 txSpendGenesisUTxOByronPBFT
   :: Genesis.Config
+  -> Network
   -> SigningKey
   -> Address
   -> NonEmpty TxOut
   -> UTxO.ATxAux ByteString
-txSpendGenesisUTxOByronPBFT gc sk genAddr outs =
+txSpendGenesisUTxOByronPBFT gc nw sk genAddr outs =
     annotateTxAux $ mkTxAux tx (pure wit)
   where
     tx = UnsafeTx (pure txIn) outs txattrs
 
-    wit = signTxId (configProtocolMagicId gc) sk (Crypto.serializeCborHash tx)
+    wit = signTxId (toByronProtocolMagic nw) sk (Crypto.serializeCborHash tx)
 
     txIn :: UTxO.TxIn
     txIn  = genesisUTxOTxIn gc (Crypto.toVerification sk) genAddr
 
     txattrs = Common.mkAttributes ()
 
--- | Generate a transaction spending genesis UTxO at a given address,
---   to given outputs, signed by the given key.
-issueGenesisUTxOExpenditure
-  :: NodeConfiguration
-  -> Address
-  -> NonEmpty TxOut
-  -> Crypto.SigningKey
-  -> ExceptT RealPBFTError IO (UTxO.ATxAux ByteString)
-issueGenesisUTxOExpenditure nc genRichAddr outs sk =
-    withRealPBFT nc
-      $ \(Consensus.ProtocolRealPBFT gc _ _ _ _)-> do
-          let tx = txSpendGenesisUTxOByronPBFT gc sk genRichAddr outs
-          traceWith stdoutTracer ("TxId: " ++ condense (Byron.byronIdTx tx))
-          right tx
-
 -- | Generate a transaction from given Tx inputs to outputs,
 --   signed by the given key.
 txSpendUTxOByronPBFT
-  :: Genesis.Config
+  :: Network
   -> SigningKey
   -> NonEmpty TxIn
   -> NonEmpty TxOut
   -> UTxO.ATxAux ByteString
-txSpendUTxOByronPBFT gc sk ins outs =
+txSpendUTxOByronPBFT nw sk ins outs =
     annotateTxAux $ mkTxAux tx (Vector.singleton wit)
   where
     tx = UnsafeTx ins outs txattrs
 
-    wit = signTxId (configProtocolMagicId gc) sk (Crypto.serializeCborHash tx)
+    wit = signTxId (toByronProtocolMagic nw) sk (Crypto.serializeCborHash tx)
 
     txattrs = Common.mkAttributes ()
 
--- | Generate a transaction from given Tx inputs to outputs,
---   signed by the given key.
-issueUTxOExpenditure
-  :: NodeConfiguration
-  -> NonEmpty TxIn
-  -> NonEmpty TxOut
-  -> Crypto.SigningKey
-  -> ExceptT RealPBFTError IO (UTxO.ATxAux ByteString)
-issueUTxOExpenditure nc ins outs key =
-    withRealPBFT nc $
-      \(Consensus.ProtocolRealPBFT gc _ _ _ _)-> do
-        let tx = txSpendUTxOByronPBFT gc key ins outs
-        traceWith stdoutTracer ("TxId: " ++ condense (Byron.byronIdTx tx))
-        pure tx
 
 -- | Submit a transaction to a node specified by topology info.
 nodeSubmitTx

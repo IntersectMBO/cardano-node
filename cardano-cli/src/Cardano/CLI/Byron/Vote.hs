@@ -19,20 +19,19 @@ import qualified Cardano.Binary as Binary
 import           Cardano.Config.Protocol
                    (CardanoEra(..), RealPBFTError, renderRealPBFTError)
 import           Cardano.Config.Types
-import           Cardano.Chain.Genesis (GenesisData(..))
 import           Cardano.Chain.Update
-                   (AVote(..), UpId, Vote, mkVote, recoverUpId, recoverVoteId)
+                   (AVote(..), Vote, mkVote, recoverUpId, recoverVoteId)
 import           Cardano.CLI.Byron.UpdateProposal
                    (ByronUpdateProposalError, deserialiseByronUpdateProposal, readByronUpdateProposal)
-import           Cardano.Crypto.Signing (SigningKey)
 import           Ouroboros.Consensus.Byron.Ledger.Block (ByronBlock)
 import           Ouroboros.Consensus.Byron.Ledger.Mempool (GenTx(..))
 import           Ouroboros.Consensus.Ledger.SupportsMempool (txId)
 import           Ouroboros.Consensus.Util.Condense (condense)
 import           Ouroboros.Network.IOManager (IOManager)
 
-import           Cardano.Api (Network)
-import           Cardano.CLI.Byron.Genesis (ByronGenesisError, readGenesis)
+import           Cardano.Api (Network, toByronProtocolMagic)
+
+import           Cardano.CLI.Byron.Genesis (ByronGenesisError)
 import           Cardano.CLI.Byron.Tx (ByronTxError, nodeSubmitTx)
 import           Cardano.CLI.Byron.Key (ByronKeyFailure, readEraSigningKey)
 import           Cardano.CLI.Helpers (HelpersError, ensureNewFileLBS)
@@ -64,36 +63,23 @@ renderByronVoteError bVerr =
 
 
 runVoteCreation
-  :: ConfigYamlFilePath
+  :: Network
   -> SigningKeyFile
   -> FilePath
   -> Bool
   -> FilePath
   -> ExceptT ByronVoteError IO ()
-runVoteCreation configFp sKey upPropFp voteBool outputFp = do
+runVoteCreation nw sKey upPropFp voteBool outputFp = do
   sK <- firstExceptT ByronVoteKeyReadFailure $ readEraSigningKey ByronEra sKey
   -- TODO: readByronUpdateProposal & deserialiseByronUpdateProposal should be one function
   upProp <- firstExceptT ByronVoteUpdateProposalFailure $ readByronUpdateProposal upPropFp
   proposal <- hoistEither . first ByronVoteUpdateProposalFailure $ deserialiseByronUpdateProposal upProp
   let updatePropId = recoverUpId proposal
-  vote <- createByronVote configFp sK updatePropId voteBool
+      vote = mkVote (toByronProtocolMagic nw) sK updatePropId voteBool
   firstExceptT ByronVoteUpdateHelperError $ ensureNewFileLBS outputFp (serialiseByronVote vote)
 
 convertVoteToGenTx :: AVote ByteString -> GenTx ByronBlock
 convertVoteToGenTx vote = ByronUpdateVote (recoverVoteId vote) vote
-
-createByronVote
-  :: ConfigYamlFilePath
-  -> SigningKey
-  -> UpId
-  -> Bool
-  -> ExceptT ByronVoteError IO Vote
-createByronVote config sKey upId voteChoice = do
-  nc <- liftIO $ parseNodeConfigurationFP config
-  (genData, _) <- firstExceptT ByronVoteGenesisReadError . readGenesis $ ncGenesisFile nc
-  let pmId = gdProtocolMagicId genData
-  --TODO: this reads the config file just to get the networkMagic
-  pure $ mkVote pmId sKey upId voteChoice
 
 deserialiseByronVote :: LByteString -> Either ByronVoteError (AVote ByteString)
 deserialiseByronVote bs =
