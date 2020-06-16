@@ -24,9 +24,7 @@ module Cardano.Config.Protocol
     -- a protocol.
   , CardanoEra(..)
   , SomeNodeClientProtocol(..)
-  , cardanoEraForProtocol
   , mkNodeClientProtocol
-  , ncCardanoEra
 
     -- * Errors
   , RealPBFTError(..)
@@ -117,15 +115,6 @@ mkNodeClientProtocol protocol =
 data CardanoEra = ByronEraLegacy | ByronEra | ShelleyEra
   deriving Show
 
-cardanoEraForProtocol :: Protocol -> CardanoEra
-cardanoEraForProtocol BFT      = ShelleyEra
-cardanoEraForProtocol Praos    = ShelleyEra
-cardanoEraForProtocol MockPBFT = ShelleyEra
-cardanoEraForProtocol RealPBFT = ByronEra
-cardanoEraForProtocol TPraos   = ShelleyEra
-
-ncCardanoEra :: NodeConfiguration -> CardanoEra
-ncCardanoEra = cardanoEraForProtocol . ncProtocol
 
 ------------------------------------------------------------------------------
 -- Errors
