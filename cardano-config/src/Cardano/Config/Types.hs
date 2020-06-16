@@ -24,11 +24,17 @@ module Cardano.Config.Types
     , MetaDataFile (..)
     , OperationalCertStartKESPeriod (..)
     , HasKESMetricsData (..)
-    , LastKnownBlockVersion (..)
     , NodeAddress (..)
     , NodeConfiguration (..)
+    , NodeProtocolConfiguration (..)
+    , NodeMockProtocolConfiguration (..)
+    , NodeByronProtocolConfiguration (..)
+    , NodeShelleyProtocolConfiguration (..)
     , NodeHostAddress (..)
     , Protocol (..)
+    , MockProtocol (..)
+    , ncProtocol
+    , protocolName
     , NodeCLI (..)
     , NodeProtocolMode (..)
     , SigningKeyFile (..)
@@ -38,7 +44,6 @@ module Cardano.Config.Types
     , TopologyFile (..)
     , TraceConstraints
     , SocketPath (..)
-    , Update (..)
     , UpdateProposalFile (..)
     , ViewMode (..)
     , Fd (..)
@@ -77,7 +82,7 @@ import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTxId, HasTxId, H
 import           Ouroboros.Consensus.Mock.Ledger.Block (SimpleBlock)
 import           Ouroboros.Consensus.Node.ProtocolInfo (ProtocolInfo (..))
 import           Ouroboros.Consensus.Node.Run (RunNode)
-import           Ouroboros.Consensus.NodeId (NodeId(..))
+import           Ouroboros.Consensus.NodeId (CoreNodeId(..))
 import           Ouroboros.Consensus.Protocol.Abstract (CannotLead, ValidationErr)
 import           Ouroboros.Consensus.Util.Condense (Condense (..))
 import           Ouroboros.Consensus.Shelley.Ledger (TPraosForgeState (..))
@@ -213,21 +218,80 @@ newtype SigningKeyFile = SigningKeyFile
   deriving newtype (IsString, Show)
 
 data NodeConfiguration =
-  NodeConfiguration
-    { ncProtocol :: Protocol
-    , ncGenesisFile :: GenesisFile
-    , ncNodeId :: Maybe NodeId
-    , ncNumCoreNodes :: Maybe Word64
-    , ncReqNetworkMagic :: RequiresNetworkMagic
-    , ncPbftSignatureThresh :: Maybe Double
-    , ncLoggingSwitch :: Bool
-    , ncLogMetrics :: Bool
-    , ncSocketPath :: Maybe SocketPath
-    , ncTraceConfig :: TraceOptions
-    , ncViewMode :: ViewMode
-    , ncUpdate :: Update
-    , ncMaxMajorPV :: Natural
-    } deriving Show
+     NodeConfiguration {
+       -- Protocol-specific parameters:
+       ncProtocolConfig :: NodeProtocolConfiguration
+
+       -- Node parameters, not protocol-specific:
+     , ncSocketPath     :: Maybe SocketPath
+
+       -- Logging parameters:
+     , ncViewMode       :: ViewMode
+     , ncLoggingSwitch  :: Bool
+     , ncLogMetrics     :: Bool
+     , ncTraceConfig    :: TraceOptions
+     }
+  deriving Show
+
+data NodeProtocolConfiguration =
+       NodeProtocolConfigurationMock    NodeMockProtocolConfiguration
+     | NodeProtocolConfigurationByron   NodeByronProtocolConfiguration
+     | NodeProtocolConfigurationShelley NodeShelleyProtocolConfiguration
+  deriving Show
+
+data NodeMockProtocolConfiguration =
+     NodeMockProtocolConfiguration {
+       npcMockProtocol     :: MockProtocol
+     , npcMockNodeId       :: CoreNodeId
+     , npcMockNumCoreNodes :: Word64
+     }
+  deriving Show
+
+data NodeByronProtocolConfiguration =
+     NodeByronProtocolConfiguration {
+       npcByronGenesisFile         :: !GenesisFile
+     , npcByronReqNetworkMagic     :: !RequiresNetworkMagic
+     , npcByronPbftSignatureThresh :: !(Maybe Double)
+
+       -- | Update application name.
+     , npcByronApplicationName     :: !Update.ApplicationName
+
+       -- | Application (ie software) version.
+     , npcByronApplicationVersion  :: !Update.NumSoftwareVersion
+
+       -- | These declare the version of the protocol that the node is prepared
+       -- to run. This is usually the version of the protocol in use on the
+       -- chain now, but during protocol updates this version will be the one
+       -- that we declare that we are ready to move to. This is the endorsement
+       -- mechanism for determining when enough block producers are ready to
+       -- move to the next version.
+       --
+     , npcByronSupportedProtocolVersionMajor :: !Word16
+     , npcByronSupportedProtocolVersionMinor :: !Word16
+     , npcByronSupportedProtocolVersionAlt   :: !Word8
+     }
+  deriving Show
+
+data NodeShelleyProtocolConfiguration =
+     NodeShelleyProtocolConfiguration {
+       npcShelleyGenesisFile  :: !GenesisFile
+
+       -- | These declare the version of the protocol that the node is prepared
+       -- to run. This is usually the version of the protocol in use on the
+       -- chain now, but during protocol updates this version will be the one
+       -- that we declare that we are ready to move to. This is the endorsement
+       -- mechanism for determining when enough block producers are ready to
+       -- move to the next version.
+       --
+     , npcShelleySupportedProtocolVersionMajor :: !Natural
+     , npcShelleySupportedProtocolVersionMinor :: !Natural
+
+       -- | The maximum major version of the protocol this node supports.
+       -- If the actual version ever goes higher than this then the node
+       -- will stop with an appropriate error message.
+     , npcShelleyMaxSupportedProtocolVersion :: !Natural
+     }
+  deriving Show
 
 instance FromJSON NodeConfiguration where
   parseJSON =
@@ -236,52 +300,7 @@ instance FromJSON NodeConfiguration where
       -- Node parameters, not protocol-specific
       ncSocketPath <- v .:? "SocketPath"
 
-      -- Protocol parameters
-      ncProtocol <- v .: "Protocol" .!= RealPBFT
-      ncGenesisFile <-
-        case ncProtocol of
-          BFT      -> v .: "GenesisFile"
-          Praos    -> v .: "GenesisFile"
-          MockPBFT -> v .: "GenesisFile"
-          RealPBFT -> do
-            primary   <- v .:? "ByronGenesisFile"
-            secondary <- v .:? "GenesisFile"
-            case (primary, secondary) of
-              (Just g, Nothing)  -> return g
-              (Nothing, Just g)  -> return g
-              (Nothing, Nothing) -> fail $ "Missing required field, either "
-                                        ++ "ByronGenesisFile or GenesisFile"
-              (Just _, Just _)   -> fail $ "Specify either ByronGenesisFile"
-                                        ++ "or GenesisFile, but not both"
-          TPraos   -> do
-            primary   <- v .:? "ShelleyGenesisFile"
-            secondary <- v .:? "GenesisFile"
-            case (primary, secondary) of
-              (Just g, Nothing)  -> return g
-              (Nothing, Just g)  -> return g
-              (Nothing, Nothing) -> fail $ "Missing required field, either "
-                                        ++ "ShelleyGenesisFile or GenesisFile"
-              (Just _, Just _)   -> fail $ "Specify either ShelleyGenesisFile"
-                                        ++ "or GenesisFile, but not both"
-
-      -- Byron-specific protocol parameters
-      ncReqNetworkMagic     <- v .:? "RequiresNetworkMagic"
-                                 .!= RequiresNoMagic
-      ncPbftSignatureThresh <- v .:? "PBftSignatureThreshold"
-
-      -- Mock protocol parameters
-      ncNodeId       <- v .:? "NodeId"
-      ncNumCoreNodes <- v .:? "NumCoreNodes"
-
-      -- Update system parameters
-      appName <- v .:? "ApplicationName" .!= Update.ApplicationName "cardano-sl"
-      appVersion <- v .:? "ApplicationVersion" .!= 1
-      lkBlkVersionMajor <- v .: "LastKnownBlockVersion-Major"
-      lkBlkVersionMinor <- v .: "LastKnownBlockVersion-Minor"
-      lkBlkVersionAlt <- v .:? "LastKnownBlockVersion-Alt" .!= 0
-      maxMajorPV <- v .:? "MaxKnownMajorProtocolVersion" .!= 1
-
-      -- Logging
+      -- Logging parameters
       ncViewMode      <- v .:? "ViewMode"         .!= SimpleView
       ncLoggingSwitch <- v .:? "TurnOnLogging"    .!= True
       ncLogMetrics    <- v .:? "TurnOnLogMetrics" .!= True
@@ -289,78 +308,207 @@ instance FromJSON NodeConfiguration where
                            then traceConfigParser v
                            else return TracingOff
 
+      -- Protocol parameters
+      protocol <- v .: "Protocol" .!= ByronProtocol
+      ncProtocolConfig <-
+        case protocol of
+          MockProtocol ptcl -> 
+            NodeProtocolConfigurationMock <$> parseMockProtocol ptcl v
+
+          ByronProtocol ->
+            NodeProtocolConfigurationByron <$> parseByronProtocol v
+
+          ShelleyProtocol ->
+            NodeProtocolConfigurationShelley <$> parseShelleyProtocol v
+
       pure NodeConfiguration {
-             ncProtocol
-           , ncGenesisFile
-           , ncNodeId
-           , ncNumCoreNodes
-           , ncReqNetworkMagic
-           , ncPbftSignatureThresh
+             ncProtocolConfig
+           , ncSocketPath
+           , ncViewMode
            , ncLoggingSwitch
            , ncLogMetrics
-           , ncSocketPath
            , ncTraceConfig
-           , ncViewMode
-           , ncUpdate = (Update appName appVersion (LastKnownBlockVersion
-                                                      lkBlkVersionMajor
-                                                      lkBlkVersionMinor
-                                                      lkBlkVersionAlt))
-           , ncMaxMajorPV = maxMajorPV
            }
+    where
+      parseMockProtocol npcMockProtocol v = do
+        npcMockNodeId       <- v .: "NodeId"
+        npcMockNumCoreNodes <- v .: "NumCoreNodes"
+        pure NodeMockProtocolConfiguration {
+               npcMockProtocol
+             , npcMockNodeId
+             , npcMockNumCoreNodes
+             }
+
+      parseByronProtocol v = do
+        primary   <- v .:? "ByronGenesisFile"
+        secondary <- v .:? "GenesisFile"
+        npcByronGenesisFile <-
+          case (primary, secondary) of
+            (Just g, Nothing)  -> return g
+            (Nothing, Just g)  -> return g
+            (Nothing, Nothing) -> fail $ "Missing required field, either "
+                                      ++ "ByronGenesisFile or GenesisFile"
+            (Just _, Just _)   -> fail $ "Specify either ByronGenesisFile"
+                                      ++ "or GenesisFile, but not both"
+
+        npcByronReqNetworkMagic     <- v .:? "RequiresNetworkMagic"
+                                         .!= RequiresNoMagic
+        npcByronPbftSignatureThresh <- v .:? "PBftSignatureThreshold"
+        npcByronApplicationName     <- v .:? "ApplicationName"
+                                         .!= Update.ApplicationName "cardano-sl"
+        npcByronApplicationVersion  <- v .:? "ApplicationVersion" .!= 1
+        protVerMajor                <- v .: "LastKnownBlockVersion-Major"
+        protVerMinor                <- v .: "LastKnownBlockVersion-Minor"
+        protVerAlt                  <- v .: "LastKnownBlockVersion-Alt" .!= 0
+
+        pure NodeByronProtocolConfiguration {
+               npcByronGenesisFile
+             , npcByronReqNetworkMagic
+             , npcByronPbftSignatureThresh
+             , npcByronApplicationName
+             , npcByronApplicationVersion
+             , npcByronSupportedProtocolVersionMajor = protVerMajor
+             , npcByronSupportedProtocolVersionMinor = protVerMinor
+             , npcByronSupportedProtocolVersionAlt   = protVerAlt
+             }
+
+      parseShelleyProtocol v = do
+        primary   <- v .:? "ShelleyGenesisFile"
+        secondary <- v .:? "GenesisFile"
+        npcShelleyGenesisFile <-
+          case (primary, secondary) of
+            (Just g, Nothing)  -> return g
+            (Nothing, Just g)  -> return g
+            (Nothing, Nothing) -> fail $ "Missing required field, either "
+                                      ++ "ShelleyGenesisFile or GenesisFile"
+            (Just _, Just _)   -> fail $ "Specify either ShelleyGenesisFile"
+                                      ++ "or GenesisFile, but not both"
+
+        --TODO: these are silly names, allow better aliases:
+        protVerMajor    <- v .:  "LastKnownBlockVersion-Major"
+        protVerMinor    <- v .:  "LastKnownBlockVersion-Minor"
+        protVerMajroMax <- v .:? "MaxKnownMajorProtocolVersion" .!= 1
+
+        pure NodeShelleyProtocolConfiguration {
+               npcShelleyGenesisFile
+             , npcShelleySupportedProtocolVersionMajor = protVerMajor
+             , npcShelleySupportedProtocolVersionMinor = protVerMinor
+             , npcShelleyMaxSupportedProtocolVersion   = protVerMajroMax
+             }
+
 
 parseNodeConfigurationFP :: ConfigYamlFilePath -> IO NodeConfiguration
 parseNodeConfigurationFP (ConfigYamlFilePath fp) = do
- nc  <- decodeFileThrow fp
- let genFile = unGenesisFile $ ncGenesisFile nc
- -- Make genesis file relative to configuration yaml filepath.
- let d = takeDirectory fp
- pure $ nc { ncGenesisFile = GenesisFile $ d </> genFile }
+    nc <- decodeFileThrow fp
+    -- Make all the files be relative to the location of the config file.
+    pure $ adjustFilePaths (takeDirectory fp </>) nc
+
+class AdjustFilePaths a where
+  adjustFilePaths :: (FilePath -> FilePath) -> a -> a
+
+
+instance AdjustFilePaths NodeConfiguration where
+  adjustFilePaths f x@NodeConfiguration {
+                        ncProtocolConfig,
+                        ncSocketPath
+                      } =
+    x {
+      ncProtocolConfig = adjustFilePaths f ncProtocolConfig,
+      ncSocketPath     = adjustFilePaths f ncSocketPath
+    }
+
+instance AdjustFilePaths NodeProtocolConfiguration where
+
+  adjustFilePaths f (NodeProtocolConfigurationMock pc) =
+    NodeProtocolConfigurationMock (adjustFilePaths f pc)
+
+  adjustFilePaths f (NodeProtocolConfigurationByron pc) =
+    NodeProtocolConfigurationByron (adjustFilePaths f pc)
+
+  adjustFilePaths f (NodeProtocolConfigurationShelley pc) =
+    NodeProtocolConfigurationShelley (adjustFilePaths f pc)
+
+instance AdjustFilePaths NodeMockProtocolConfiguration where
+  adjustFilePaths _f x = x -- Contains no file paths
+
+instance AdjustFilePaths NodeByronProtocolConfiguration where
+  adjustFilePaths f x@NodeByronProtocolConfiguration {
+                        npcByronGenesisFile
+                      } =
+    x { npcByronGenesisFile = adjustFilePaths f npcByronGenesisFile }
+
+instance AdjustFilePaths NodeShelleyProtocolConfiguration where
+  adjustFilePaths f x@NodeShelleyProtocolConfiguration {
+                        npcShelleyGenesisFile
+                      } =
+    x { npcShelleyGenesisFile = adjustFilePaths f npcShelleyGenesisFile }
+
+instance AdjustFilePaths SocketPath where
+  adjustFilePaths f (SocketPath p) = SocketPath (f p)
+
+instance AdjustFilePaths GenesisFile where
+  adjustFilePaths f (GenesisFile p) = GenesisFile (f p)
+
+instance AdjustFilePaths a => AdjustFilePaths (Maybe a) where
+  adjustFilePaths f = fmap (adjustFilePaths f)
+
 
 parseNodeConfiguration :: NodeCLI -> IO NodeConfiguration
 parseNodeConfiguration NodeCLI{configFile} = parseNodeConfigurationFP configFile
 
-data Protocol = BFT
-              | Praos
-              | MockPBFT
-              | RealPBFT
-              | TPraos
-              deriving (Eq, Generic, Show)
+data Protocol = MockProtocol !MockProtocol
+              | ByronProtocol
+              | ShelleyProtocol
+  deriving (Eq, Show, Generic)
 
 deriving instance NFData Protocol
 deriving instance NoUnexpectedThunks Protocol
 
+data MockProtocol = MockBFT
+                  | MockPBFT
+                  | MockPraos
+  deriving (Eq, Show, Generic)
+
+deriving instance NFData MockProtocol
+deriving instance NoUnexpectedThunks MockProtocol
+
 instance FromJSON Protocol where
-  parseJSON (String str) = case str of
-                            "BFT" -> pure BFT
-                            "Praos" -> pure Praos
-                            "MockPBFT" -> pure MockPBFT
-                            "RealPBFT" -> pure RealPBFT
-                            "TPraos"   -> pure TPraos
-                            ptcl -> panic $ "Parsing of Protocol: "
-                                          <> ptcl <> " failed. "
-                                          <> ptcl <> " is not a valid protocol"
-  parseJSON invalid  = panic $ "Parsing of Protocol failed due to type mismatch. "
-                             <> "Encountered: " <> (Text.pack $ show invalid)
+  parseJSON =
+    withText "Protocol" $ \str -> case str of
 
--- TODO: migrate to Update.SoftwareVersion
-data Update = Update
-    { upApplicationName       :: !Update.ApplicationName
-    -- ^ Update application name.
-    , upApplicationVersion    :: !Update.NumSoftwareVersion
-    -- application version.
-    , upLastKnownBlockVersion :: !LastKnownBlockVersion
-    -- ^ Update last known block version.
-    } deriving (Eq, Show)
+      -- The new names
+      "MockBFT"   -> pure (MockProtocol MockBFT)
+      "MockPBFT"  -> pure (MockProtocol MockPBFT)
+      "MockPraos" -> pure (MockProtocol MockPraos)
+      "Byron"     -> pure ByronProtocol
+      "Shelley"   -> pure ShelleyProtocol
 
--- TODO: migrate to Update.ProtocolVersion
-data LastKnownBlockVersion = LastKnownBlockVersion
-    { lkbvMajor :: !Word16
-    -- ^ Last known block version major.
-    , lkbvMinor :: !Word16
-    -- ^ Last known block version minor.
-    , lkbvAlt   :: !Word8
-    -- ^ Last known block version alternative.
-    } deriving (Eq, Show)
+      -- The old names
+      "BFT"       -> pure (MockProtocol MockBFT)
+    --"MockPBFT"  -- same as new name
+      "Praos"     -> pure (MockProtocol MockPraos)
+      "RealPBFT"  -> pure ByronProtocol
+      "TPraos"    -> pure ShelleyProtocol
+
+      _           -> fail $ "Parsing of Protocol failed. "
+                         <> show str <> " is not a valid protocol"
+
+-- | A human readable name for the protocol
+--
+protocolName :: Protocol -> String
+protocolName (MockProtocol MockBFT)   = "Mock BFT"
+protocolName (MockProtocol MockPBFT)  = "Mock PBFT"
+protocolName (MockProtocol MockPraos) = "Mock Praos"
+protocolName  ByronProtocol           = "Byron"
+protocolName  ShelleyProtocol         = "Shelley"
+
+ncProtocol :: NodeConfiguration -> Protocol
+ncProtocol nc =
+    case ncProtocolConfig nc of
+      NodeProtocolConfigurationMock npc  -> MockProtocol (npcMockProtocol npc)
+      NodeProtocolConfigurationByron{}   -> ByronProtocol
+      NodeProtocolConfigurationShelley{} -> ShelleyProtocol
+
 
 -- Node can be run in two modes.
 data ViewMode = LiveView    -- Live mode with TUI

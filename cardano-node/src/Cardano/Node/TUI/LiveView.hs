@@ -9,6 +9,7 @@
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns        #-}
 {-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE RankNTypes            #-}
 
@@ -77,7 +78,6 @@ import           Cardano.Tracing.Peer (Peer (..), ppPeer)
 
 import           Cardano.Config.Types
 import           Cardano.Config.GitRev (gitRev)
-import           Ouroboros.Consensus.NodeId (CoreNodeId (..), NodeId (..))
 
 import           Paths_cardano_node (version)
 
@@ -498,7 +498,7 @@ initLiveViewState = do
     return $ LiveViewState
                 { lvsScreen                 = MainView
                 , lvsRelease                = "Release not set yet"
-                , lvsProtocol               = MockPBFT -- Needs a real value. Will be overwritten later.
+                , lvsProtocol               = MockProtocol MockPBFT -- Needs a real value. Will be overwritten later.
                 , lvsNodeId                 = "NodeId not set yet"
                 , lvsVersion                = showVersion version
                 , lvsCommit                 = Text.unpack gitRev
@@ -563,7 +563,7 @@ liveViewPostSetup lvbe ncli nc = do
       pure lvs
             { lvsNodeId = nodeId
             , lvsProtocol = ncProtocol nc
-            , lvsRelease = if ncProtocol nc == TPraos then "Shelley" else "Byron"
+            , lvsRelease = protocolName (ncProtocol nc)
             }
  where
     --TODO: this is meaningless. Nodes do not have ids. The port number is not
@@ -571,22 +571,15 @@ liveViewPostSetup lvbe ncli nc = do
     -- listening socket via systemd socket activation.
     nodeId :: Text
     nodeId =
-      case nodeMode ncli of
-        MockProtocolMode -> namenum (ncNodeId nc)
-        RealProtocolMode -> Text.pack $ "Port: " <>
+      case ncProtocolConfig nc of
+        NodeProtocolConfigurationMock
+          NodeMockProtocolConfiguration { npcMockNodeId } ->
+            Text.pack (show npcMockNodeId)
+
+        _ -> Text.pack $ "Port: " <>
           case naPort <$> nodeAddr ncli of
             Nothing -> "-"
             Just port -> show port
-
-    namenum :: Maybe NodeId -> Text
-    namenum mnid =
-      case mnid of
-        Just (CoreId (CoreNodeId num))-> "C" <> Text.pack (show num)
-        Just (RelayId num) -> "R" <> Text.pack (show num)
-        Nothing ->
-          panic $ "Cardano.Node.TUI.LiveView.namenum: "
-                <> "Mock protocols require a NodeId value in the configuration .yaml file"
-
 
 
 setNodeThread :: NFData a => LiveViewBackend blk a -> Async.Async () -> IO ()

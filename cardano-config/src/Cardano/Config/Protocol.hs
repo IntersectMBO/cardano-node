@@ -38,9 +38,10 @@ import           Control.Monad.Trans.Except.Extra (firstExceptT)
 import qualified Data.Text as Text
 
 import           Cardano.Config.Types
-                   (NodeConfiguration(..), Protocol (..), ProtocolFilepaths(..),
-                    SomeConsensusProtocol(..), SomeNodeClientProtocol(..),
-                    TraceConstraints)
+                   (NodeConfiguration(..), NodeProtocolConfiguration(..),
+                    NodeMockProtocolConfiguration(..), ProtocolFilepaths(..),
+                    Protocol(..), MockProtocol(..), SomeConsensusProtocol(..),
+                    SomeNodeClientProtocol(..), TraceConstraints)
 import           Cardano.Chain.Slotting (EpochSlots(..))
 
 import           Cardano.Config.Byron.Protocol
@@ -58,24 +59,24 @@ mkConsensusProtocol
   :: NodeConfiguration
   -> Maybe ProtocolFilepaths
   -> ExceptT ProtocolInstantiationError IO SomeConsensusProtocol
-mkConsensusProtocol config@NodeConfiguration{ncProtocol} files =
-    case ncProtocol of
+mkConsensusProtocol NodeConfiguration{ncProtocolConfig} files =
+    case ncProtocolConfig of
+
       -- Mock protocols
-      BFT      -> firstExceptT MockProtocolInstantiationError $
-                    mkSomeConsensusProtocolBFT   config
-
-      MockPBFT -> firstExceptT MockProtocolInstantiationError $
-                    mkSomeConsensusProtocolPBFT  config
-
-      Praos    -> firstExceptT MockProtocolInstantiationError $
-                    mkSomeConsensusProtocolPraos config
+      NodeProtocolConfigurationMock config ->
+        case npcMockProtocol config of
+          MockBFT   -> pure $ mkSomeConsensusProtocolBFT   config
+          MockPBFT  -> pure $ mkSomeConsensusProtocolPBFT  config
+          MockPraos -> pure $ mkSomeConsensusProtocolPraos config
 
       -- Real protocols
-      RealPBFT -> firstExceptT ByronProtocolInstantiationError $
-                    mkSomeConsensusProtocolRealPBFT config files
+      NodeProtocolConfigurationByron config ->
+        firstExceptT ByronProtocolInstantiationError $
+          mkSomeConsensusProtocolRealPBFT config files
 
-      TPraos   -> firstExceptT ShelleyProtocolInstantiationError $
-                    mkSomeConsensusProtocolTPraos config files
+      NodeProtocolConfigurationShelley config ->
+        firstExceptT ShelleyProtocolInstantiationError $
+          mkSomeConsensusProtocolTPraos config files
 
 
 mkNodeClientProtocol :: Protocol -> SomeNodeClientProtocol
@@ -84,30 +85,30 @@ mkNodeClientProtocol protocol =
 {-
       --TODO
       -- Mock protocols
-      BFT      -> firstExceptT MockProtocolInstantiationError $
-                    mkNodeClientProtocolBFT
-
-      MockPBFT -> firstExceptT MockProtocolInstantiationError $
-                    mkNodeClientProtocolPBFT
-
-      Praos    -> firstExceptT MockProtocolInstantiationError $
-                    mkNodeClientProtocolPraos
+      NodeProtocolConfigurationMock config ->
+        case npcMockProtocol config of
+          BFT      -> mkNodeClientProtocolBFT
+          MockPBFT -> mkNodeClientProtocolPBFT
+          Praos    -> mkNodeClientProtocolPraos
 -}
+      MockProtocol _ ->
+        panic "TODO: mkNodeClientProtocol NodeProtocolConfigurationMock"
 
       -- Real protocols
-      RealPBFT -> mkSomeNodeClientProtocolRealPBFT
-                    --TODO: this is only the correct value for mainnet
-                    -- not for Byron testnets. This value is needed because
-                    -- to decode legacy EBBs one needs to know how many
-                    -- slots there are per-epoch. This info comes from
-                    -- the genesis file, but we don't have that in the
-                    -- client case.
-                    (EpochSlots 21600)
-                    (Consensus.SecurityParam 2160)
+      ByronProtocol ->
+        mkSomeNodeClientProtocolRealPBFT
+          --TODO: this is only the correct value for mainnet
+          -- not for Byron testnets. This value is needed because
+          -- to decode legacy EBBs one needs to know how many
+          -- slots there are per-epoch. This info comes from
+          -- the genesis file, but we don't have that in the
+          -- client case.
+          (EpochSlots 21600)
+          (Consensus.SecurityParam 2160)
 
-      TPraos   -> mkSomeNodeClientProtocolTPraos
+      ShelleyProtocol ->
+        mkSomeNodeClientProtocolTPraos
 
-      _        -> panic ("mkNodeClientProtocol TODO: " <> show protocol)
 
 -- | Many commands have variants or file formats that depend on the era.
 --
@@ -123,7 +124,6 @@ data CardanoEra = ByronEraLegacy | ByronEra | ShelleyEra
 data ProtocolInstantiationError =
     ByronProtocolInstantiationError   ByronProtocolInstantiationError
   | ShelleyProtocolInstantiationError ShelleyProtocolInstantiationError
-  | MockProtocolInstantiationError    MockProtocolInstantiationError
   deriving Show
 
 
@@ -135,9 +135,6 @@ renderProtocolInstantiationError pie =
 
     ShelleyProtocolInstantiationError spie ->
       renderShelleyProtocolInstantiationError spie
-
-    MockProtocolInstantiationError mpie ->
-      renderMockProtocolInstantiationError mpie
 
 
 data RealPBFTError

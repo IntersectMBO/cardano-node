@@ -16,16 +16,9 @@ module Cardano.Config.Mock.Protocol
   , mkSomeConsensusProtocolBFT
   , mkSomeConsensusProtocolPBFT
   , mkSomeConsensusProtocolPraos
-
-    -- * Errors
-  , MockProtocolInstantiationError(..)
-  , renderMockProtocolInstantiationError
   ) where
 
 import           Cardano.Prelude
-
-import           Control.Monad.Trans.Except (ExceptT)
-import           Control.Monad.Trans.Except.Extra (hoistEither)
 
 import           Ouroboros.Consensus.BlockchainTime (SlotLength, slotLengthFromSec)
 import           Ouroboros.Consensus.Cardano hiding (Protocol)
@@ -37,10 +30,10 @@ import           Ouroboros.Consensus.Mock.Ledger.Block.Praos
 import           Ouroboros.Consensus.Mock.Ledger.Block.PBFT
 import           Ouroboros.Consensus.Node.ProtocolInfo (NumCoreNodes (..))
 
-import           Ouroboros.Consensus.NodeId (CoreNodeId (..), NodeId (..))
 import           Ouroboros.Consensus.Protocol.Abstract (SecurityParam (..))
 
-import           Cardano.Config.Types (NodeConfiguration(..),SomeConsensusProtocol(..))
+import           Cardano.Config.Types (NodeMockProtocolConfiguration(..),
+                   SomeConsensusProtocol(..))
 import           Cardano.TracingOrphanInstances.Mock ()
 
 
@@ -51,88 +44,72 @@ import           Cardano.TracingOrphanInstances.Mock ()
 mkSomeConsensusProtocolBFT,
   mkSomeConsensusProtocolPBFT,
   mkSomeConsensusProtocolPraos
-  :: NodeConfiguration
-  -> ExceptT MockProtocolInstantiationError IO SomeConsensusProtocol
+  :: NodeMockProtocolConfiguration
+  -> SomeConsensusProtocol
 
 -- Applying the SomeConsensusProtocol here is a check that
 -- the type of mkConsensusProtocolRealPBFT fits all the class
 -- constraints we need to run the protocol.
 
 mkSomeConsensusProtocolBFT nc =
-    SomeConsensusProtocol <$> mkConsensusProtocolBFT nc
+    SomeConsensusProtocol $ mkConsensusProtocolBFT nc
 
 mkSomeConsensusProtocolPBFT nc =
-    SomeConsensusProtocol <$> mkConsensusProtocolPBFT nc
+    SomeConsensusProtocol $ mkConsensusProtocolPBFT nc
 
 mkSomeConsensusProtocolPraos nc =
-    SomeConsensusProtocol <$> mkConsensusProtocolPraos nc
+    SomeConsensusProtocol $ mkConsensusProtocolPraos nc
 
 
 mkConsensusProtocolBFT
-  :: NodeConfiguration
-  -> ExceptT MockProtocolInstantiationError IO
-             (Consensus.Protocol IO
+  :: NodeMockProtocolConfiguration
+  -> Consensus.Protocol IO
                (SimpleBlock SimpleMockCrypto
                             (SimpleBftExt SimpleMockCrypto BftMockCrypto))
-               (Bft BftMockCrypto))
-mkConsensusProtocolBFT NodeConfiguration {
-                         ncNodeId,
-                         ncNumCoreNodes
-                       } = do
-
-    (nodeId, numCoreNodes) <- hoistEither $
-                                checkProtocolParams ncNodeId ncNumCoreNodes
-    return $
+               (Bft BftMockCrypto)
+mkConsensusProtocolBFT NodeMockProtocolConfiguration {
+                             npcMockNodeId       = nodeId,
+                             npcMockNumCoreNodes = numCoreNodes
+                           } =
       Consensus.ProtocolMockBFT
-        numCoreNodes
+        (NumCoreNodes numCoreNodes)
         nodeId
         mockSecurityParam
         (defaultEraParams mockSecurityParam mockSlotLength)
 
 
 mkConsensusProtocolPBFT
-  :: NodeConfiguration
-  -> ExceptT MockProtocolInstantiationError IO
-             (Consensus.Protocol IO
+  :: NodeMockProtocolConfiguration
+  -> Consensus.Protocol IO
                (SimpleBlock SimpleMockCrypto
                             (SimplePBftExt SimpleMockCrypto PBftMockCrypto))
-               (PBft PBftMockCrypto))
-mkConsensusProtocolPBFT NodeConfiguration {
-                              ncNodeId,
-                              ncNumCoreNodes
-                            } = do
-
-    (nodeId, numCoreNodes) <- hoistEither $
-                                checkProtocolParams ncNodeId ncNumCoreNodes
-    let (NumCoreNodes numNodes) = numCoreNodes
-    return $
+               (PBft PBftMockCrypto)
+mkConsensusProtocolPBFT NodeMockProtocolConfiguration {
+                              npcMockNodeId       = nodeId,
+                              npcMockNumCoreNodes = numCoreNodes
+                            } =
       Consensus.ProtocolMockPBFT
         PBftParams {
           pbftSecurityParam      = mockSecurityParam
-        , pbftNumNodes           = numCoreNodes
-        , pbftSignatureThreshold = (1.0 / fromIntegral numNodes) + 0.1
+        , pbftNumNodes           = NumCoreNodes numCoreNodes
+        , pbftSignatureThreshold = (1.0 / fromIntegral numCoreNodes) + 0.1
         }
         (defaultEraParams mockSecurityParam mockSlotLength)
         nodeId
 
 
 mkConsensusProtocolPraos
-  :: NodeConfiguration
-  -> ExceptT MockProtocolInstantiationError IO
-             (Consensus.Protocol IO
+  :: NodeMockProtocolConfiguration
+  -> Consensus.Protocol IO
                (SimpleBlock SimpleMockCrypto
                             (SimplePraosExt SimpleMockCrypto PraosMockCrypto))
-               (Praos PraosMockCrypto))
-mkConsensusProtocolPraos NodeConfiguration {
-                           ncNodeId,
-                           ncNumCoreNodes
-                         } = do
-
-    (nodeId, numCoreNodes) <- hoistEither $
-                                checkProtocolParams ncNodeId ncNumCoreNodes
-    return $
+               (Praos PraosMockCrypto)
+mkConsensusProtocolPraos NodeMockProtocolConfiguration {
+                               npcMockNodeId       = nodeId,
+                               npcMockNumCoreNodes = numCoreNodes
+                             } =
       Consensus.ProtocolMockPraos
-        numCoreNodes
+        (NumCoreNodes numCoreNodes)
         nodeId
         PraosParams {
             praosSecurityParam = mockSecurityParam
@@ -149,36 +126,3 @@ mockSecurityParam = SecurityParam 5
 mockSlotLength :: SlotLength
 mockSlotLength = slotLengthFromSec 20
 
-
--- | Helper for creating a 'Consensus.Protocol' for a mock protocol that
--- needs the 'CoreNodeId' and NumCoreNodes'. If one of them is missing from the
--- 'CardanoConfiguration', a 'MockProtocolInstantiationError' exception is thrown.
-checkProtocolParams
-  :: Maybe NodeId
-  -> Maybe Word64
-  -> Either MockProtocolInstantiationError (CoreNodeId, NumCoreNodes)
-checkProtocolParams nId mNumCoreNodes = do
-
-    nodeId <- case nId of
-                Just (CoreId nodeId) -> pure nodeId
-                _                        -> Left MissingCoreNodeId
-    numCoreNodes <- maybe (Left MissingNumCoreNodes) Right mNumCoreNodes
-
-    return (nodeId, NumCoreNodes numCoreNodes)
-
-
-------------------------------------------------------------------------------
--- Errors
---
-
-data MockProtocolInstantiationError =
-    MissingCoreNodeId
-  | MissingNumCoreNodes
-  deriving Show
-
-
-renderMockProtocolInstantiationError :: MockProtocolInstantiationError -> Text
-renderMockProtocolInstantiationError pie =
-  case pie of
-    MissingCoreNodeId   -> "Missing core node id"
-    MissingNumCoreNodes -> "NumCoreNodes: not specified in configuration yaml file."

@@ -51,10 +51,11 @@ import qualified Ouroboros.Consensus.Cardano as Consensus
 import           Ouroboros.Consensus.Byron.Ledger (ByronBlock)
 
 import           Cardano.Config.Types
-                   (NodeConfiguration(..), ProtocolFilepaths(..),
-                    GenesisFile (..), Update (..), LastKnownBlockVersion (..),
+                   (NodeByronProtocolConfiguration (..),
+                    ProtocolFilepaths(..), GenesisFile (..), 
                     SomeConsensusProtocol(..), SomeNodeClientProtocol(..))
 import           Cardano.TracingOrphanInstances.Byron ()
+
 
 ------------------------------------------------------------------------------
 -- Real Byron protocol, client support
@@ -87,7 +88,7 @@ mkSomeNodeClientProtocolRealPBFT epochSlots securityParam =
 -- type class instances available.
 --
 mkSomeConsensusProtocolRealPBFT
-  :: NodeConfiguration
+  :: NodeByronProtocolConfiguration
   -> Maybe ProtocolFilepaths
   -> ExceptT ByronProtocolInstantiationError IO SomeConsensusProtocol
 mkSomeConsensusProtocolRealPBFT nc files =
@@ -103,50 +104,35 @@ mkSomeConsensusProtocolRealPBFT nc files =
 -- Use this when you need to run the consensus with this specific protocol.
 --
 mkConsensusProtocolRealPBFT
-  :: NodeConfiguration
+  :: NodeByronProtocolConfiguration
   -> Maybe ProtocolFilepaths
   -> ExceptT ByronProtocolInstantiationError IO
              (Consensus.Protocol IO ByronBlock ProtocolRealPBFT)
-mkConsensusProtocolRealPBFT NodeConfiguration {
-                              ncGenesisFile,
-                              ncReqNetworkMagic,
-                              ncPbftSignatureThresh,
-                              ncUpdate
-                            }
-                            files = do
-    genesisConfig <- readGenesis ncGenesisFile ncReqNetworkMagic
+mkConsensusProtocolRealPBFT NodeByronProtocolConfiguration {
+                           npcByronGenesisFile,
+                           npcByronReqNetworkMagic,
+                           npcByronPbftSignatureThresh,
+                           npcByronApplicationName,
+                           npcByronApplicationVersion,
+                           npcByronSupportedProtocolVersionMajor,
+                           npcByronSupportedProtocolVersionMinor,
+                           npcByronSupportedProtocolVersionAlt
+                         }
+                         files = do
+    genesisConfig <- readGenesis npcByronGenesisFile npcByronReqNetworkMagic
 
     optionalLeaderCredentials <- readLeaderCredentials genesisConfig files
 
     return $
-      protocolConfigRealPbft
-        ncUpdate
-        ncPbftSignatureThresh
+      Consensus.ProtocolRealPBFT
         genesisConfig
+        (PBftSignatureThreshold <$> npcByronPbftSignatureThresh)
+        (Update.ProtocolVersion npcByronSupportedProtocolVersionMajor
+                                npcByronSupportedProtocolVersionMinor
+                                npcByronSupportedProtocolVersionAlt)
+        (Update.SoftwareVersion npcByronApplicationName
+                                npcByronApplicationVersion)
         optionalLeaderCredentials
-
-
--- | The plumbing to select and convert the appropriate configuration subset
--- for the 'RealPBFT' protocol.
---
-protocolConfigRealPbft :: Update
-                       -> Maybe Double
-                       -> Genesis.Config
-                       -> Maybe PBftLeaderCredentials
-                       -> Consensus.Protocol IO ByronBlock ProtocolRealPBFT
-protocolConfigRealPbft (Update appName appVer lastKnownBlockVersion)
-                       pbftSignatureThresh
-                       genesis leaderCredentials =
-    Consensus.ProtocolRealPBFT
-      genesis
-      (PBftSignatureThreshold <$> pbftSignatureThresh)
-      (convertProtocolVersion lastKnownBlockVersion)
-      (Update.SoftwareVersion appName appVer)
-      leaderCredentials
-  where
-    convertProtocolVersion
-      LastKnownBlockVersion {lkbvMajor, lkbvMinor, lkbvAlt} =
-      Update.ProtocolVersion lkbvMajor lkbvMinor lkbvAlt
 
 
 readGenesis :: GenesisFile

@@ -51,8 +51,8 @@ import           Ouroboros.Consensus.Shelley.Node
 import           Shelley.Spec.Ledger.PParams (ProtVer(..))
 
 import           Cardano.Config.Types
-                   (NodeConfiguration(..), ProtocolFilepaths(..),
-                    GenesisFile (..), Update (..), LastKnownBlockVersion (..),
+                   (NodeShelleyProtocolConfiguration(..),
+                    ProtocolFilepaths(..), GenesisFile (..),
                     SomeConsensusProtocol(..), SomeNodeClientProtocol(..))
 import           Cardano.Config.Shelley.OCert
 import           Cardano.Config.Shelley.VRF
@@ -86,7 +86,7 @@ mkSomeNodeClientProtocolTPraos =
 -- type class instances available.
 --
 mkSomeConsensusProtocolTPraos
-  :: NodeConfiguration
+  :: NodeShelleyProtocolConfiguration
   -> Maybe ProtocolFilepaths
   -> ExceptT ShelleyProtocolInstantiationError IO SomeConsensusProtocol
 mkSomeConsensusProtocolTPraos nc files =
@@ -102,38 +102,28 @@ mkSomeConsensusProtocolTPraos nc files =
 -- Use this when you need to run the consensus with this specific protocol.
 --
 mkConsensusProtocolTPraos
-  :: NodeConfiguration
+  :: NodeShelleyProtocolConfiguration
   -> Maybe ProtocolFilepaths
   -> ExceptT ShelleyProtocolInstantiationError IO
              (Consensus.Protocol IO (ShelleyBlock TPraosStandardCrypto)
                                  ProtocolRealTPraos)
-mkConsensusProtocolTPraos NodeConfiguration {
-                              ncGenesisFile,
-                              ncUpdate = Update {upLastKnownBlockVersion},
-                              ncMaxMajorPV
-                            }
-                            files = do
-    genesis <- readGenesis ncGenesisFile
+mkConsensusProtocolTPraos NodeShelleyProtocolConfiguration {
+                            npcShelleyGenesisFile,
+                            npcShelleySupportedProtocolVersionMajor,
+                            npcShelleySupportedProtocolVersionMinor,
+                            npcShelleyMaxSupportedProtocolVersion
+                          }
+                          files = do
+    genesis <- readGenesis npcShelleyGenesisFile
     optionalLeaderCredentials <- readLeaderCredentials files
 
     return $
       ProtocolRealTPraos
         genesis
-        (toProtocolVersion upLastKnownBlockVersion)
-        ncMaxMajorPV
+        (ProtVer npcShelleySupportedProtocolVersionMajor
+                 npcShelleySupportedProtocolVersionMinor)
+        npcShelleyMaxSupportedProtocolVersion
         optionalLeaderCredentials
-
-
--- | We reuse the Byron config file's last known block version config
--- which has a three-component version number, but we only use two.
---
-toProtocolVersion :: LastKnownBlockVersion -> ProtVer
-toProtocolVersion LastKnownBlockVersion {
-                    lkbvMajor,
-                    lkbvMinor
-                  } =
-    ProtVer (fromIntegral lkbvMajor)
-            (fromIntegral lkbvMinor)
 
 
 readGenesis :: GenesisFile

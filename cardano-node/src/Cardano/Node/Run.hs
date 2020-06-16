@@ -394,9 +394,15 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
   --TODO: there's still lots of duplication here, when only minor things are
   -- different
   createTracers npm'@NodeCLI{nodeMode = MockProtocolMode, nodeAddr, validateDB}
-                _nc _tr tracer cfg = do
+                NodeConfiguration {
+                  ncProtocolConfig =
+                    NodeProtocolConfigurationMock
+                      NodeMockProtocolConfiguration {
+                        npcMockNodeId = CoreNodeId nodeid
+                      }
+                }
+                _tr tracer cfg = do
          eitherTopology <- readTopologyFile npm'
-         nodeid <- nid npm'
          (MockNodeTopology nodeSetups) <- either
                                             (\err -> panic $ "Cardano.Node.Run.readTopologyFile: " <> err)
                                             pure
@@ -423,20 +429,17 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
 
          when validateDB $ traceWith tracer "Performing DB validation"
 
+  createTracers NodeCLI{nodeMode = MockProtocolMode} _ _ _ _ =
+    --TODO: this ability to have a mismatch is silly. We should merge the info
+    -- from the config file and the cli early and resolve it all.
+    panic "createTracers: run in mock mode but config in non-mock mode"
+
 --------------------------------------------------------------------------------
 -- Helper functions
 --------------------------------------------------------------------------------
 
 canonDbPath :: NodeCLI -> IO FilePath
-canonDbPath npm@NodeCLI{databaseFile, nodeMode} = do
-  dbFp <- case nodeMode of
-            MockProtocolMode -> do
-              --TODO: we should eliminate auto-naming here too
-              nodeid <- nid npm
-              pure $ unDB databaseFile <> "-" <> show nodeid
-
-            RealProtocolMode -> pure (unDB databaseFile)
-
+canonDbPath NodeCLI{databaseFile = DbFile dbFp} =
   canonicalizePath =<< makeAbsolute dbFp
 
 createDiffusionArguments
@@ -482,19 +485,6 @@ ipSubscriptionTargets ipProdAddrs =
   in IPSubscriptionTarget { ispIps = ips
                           , ispValency = length ips
                           }
-
--- | NodeIds are only required for mock protocols
-nid :: NodeCLI -> IO Word64
-nid NodeCLI{nodeMode = RealProtocolMode} =
-    panic $ "Cardano.Node.Run.nid: Real protocols do not require node ids"
-nid npm@NodeCLI{nodeMode = MockProtocolMode} = do
-   nc <- parseNodeConfiguration npm
-   case ncNodeId nc of
-        Just (CoreId (CoreNodeId n)) -> pure n
-        Just (RelayId _) -> panic $ "Cardano.Node.Run.nid: "
-                                 <> "Non-core nodes currently not supported"
-        Nothing -> panic $ "Cardano.Node.Run.nid: "
-                         <> "Please specify a NodeId in your configuration .yaml file"
 
 producerAddresses :: NetworkTopology -> ([RemoteAddress], [NodeAddress])
 producerAddresses nt =
