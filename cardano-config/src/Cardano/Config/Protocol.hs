@@ -65,18 +65,18 @@ mkConsensusProtocol NodeConfiguration{ncProtocolConfig} files =
       -- Mock protocols
       NodeProtocolConfigurationMock config ->
         case npcMockProtocol config of
-          MockBFT   -> pure $ mkSomeConsensusProtocolBFT   config
-          MockPBFT  -> pure $ mkSomeConsensusProtocolPBFT  config
-          MockPraos -> pure $ mkSomeConsensusProtocolPraos config
+          MockBFT   -> pure $ mkSomeConsensusProtocolMockBFT   config
+          MockPBFT  -> pure $ mkSomeConsensusProtocolMockPBFT  config
+          MockPraos -> pure $ mkSomeConsensusProtocolMockPraos config
 
       -- Real protocols
       NodeProtocolConfigurationByron config ->
         firstExceptT ByronProtocolInstantiationError $
-          mkSomeConsensusProtocolRealPBFT config files
+          mkSomeConsensusProtocolByron config files
 
       NodeProtocolConfigurationShelley config ->
         firstExceptT ShelleyProtocolInstantiationError $
-          mkSomeConsensusProtocolTPraos config files
+          mkSomeConsensusProtocolShelley config files
 
 
 mkNodeClientProtocol :: Protocol -> SomeNodeClientProtocol
@@ -87,16 +87,16 @@ mkNodeClientProtocol protocol =
       -- Mock protocols
       NodeProtocolConfigurationMock config ->
         case npcMockProtocol config of
-          BFT      -> mkNodeClientProtocolBFT
-          MockPBFT -> mkNodeClientProtocolPBFT
-          Praos    -> mkNodeClientProtocolPraos
+          BFT      -> mkNodeClientProtocolMockBFT
+          MockPBFT -> mkNodeClientProtocolMockPBFT
+          Praos    -> mkNodeClientProtocolMockPraos
 -}
       MockProtocol _ ->
         panic "TODO: mkNodeClientProtocol NodeProtocolConfigurationMock"
 
       -- Real protocols
       ByronProtocol ->
-        mkSomeNodeClientProtocolRealPBFT
+        mkSomeNodeClientProtocolByron
           --TODO: this is only the correct value for mainnet
           -- not for Byron testnets. This value is needed because
           -- to decode legacy EBBs one needs to know how many
@@ -107,7 +107,7 @@ mkNodeClientProtocol protocol =
           (Consensus.SecurityParam 2160)
 
       ShelleyProtocol ->
-        mkSomeNodeClientProtocolTPraos
+        mkSomeNodeClientProtocolShelley
 
 
 -- | Many commands have variants or file formats that depend on the era.

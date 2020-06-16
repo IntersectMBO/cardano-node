@@ -57,7 +57,7 @@ import           Ouroboros.Consensus.Util.Condense (condense)
 import           Ouroboros.Consensus.Cardano
                    (protocolClientInfo, SecurityParam(..))
 
-import           Cardano.Config.Byron.Protocol (mkNodeClientProtocolRealPBFT)
+import           Cardano.Config.Byron.Protocol (mkNodeClientProtocolByron)
 
 import           Cardano.Api (Network, submitGenTx)
 import           Cardano.CLI.Environment
@@ -214,7 +214,7 @@ nodeSubmitTx iomgr network gentx = do
       --TODO: print failures
       return ()
   where
-    ptcl = mkNodeClientProtocolRealPBFT
+    ptcl = mkNodeClientProtocolByron
              (EpochSlots 21600)
              (SecurityParam 2160)
 

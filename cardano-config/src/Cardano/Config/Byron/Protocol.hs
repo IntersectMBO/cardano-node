@@ -10,15 +10,15 @@ module Cardano.Config.Byron.Protocol
   (
     -- * Protocol exposing the specific type
     -- | Use this when you need the specific instance
-    mkConsensusProtocolRealPBFT
+    mkConsensusProtocolByron
 
     -- * Protocols hiding the specific type
     -- | Use this when you want to handle protocols generically
-  , mkSomeConsensusProtocolRealPBFT
+  , mkSomeConsensusProtocolByron
 
     -- * Client support
-  , mkNodeClientProtocolRealPBFT
-  , mkSomeNodeClientProtocolRealPBFT
+  , mkNodeClientProtocolByron
+  , mkSomeNodeClientProtocolByron
 
     -- * Errors
   , ByronProtocolInstantiationError(..)
@@ -61,19 +61,19 @@ import           Cardano.TracingOrphanInstances.Byron ()
 -- Real Byron protocol, client support
 --
 
-mkNodeClientProtocolRealPBFT :: EpochSlots
-                             -> SecurityParam
-                             -> ProtocolClient ByronBlock ProtocolRealPBFT
-mkNodeClientProtocolRealPBFT epochSlots securityParam =
+mkNodeClientProtocolByron :: EpochSlots
+                          -> SecurityParam
+                          -> ProtocolClient ByronBlock ProtocolRealPBFT
+mkNodeClientProtocolByron epochSlots securityParam =
     ProtocolClientRealPBFT epochSlots securityParam
 
 
-mkSomeNodeClientProtocolRealPBFT :: EpochSlots
-                                 -> SecurityParam
-                                 -> SomeNodeClientProtocol
-mkSomeNodeClientProtocolRealPBFT epochSlots securityParam =
+mkSomeNodeClientProtocolByron :: EpochSlots
+                              -> SecurityParam
+                              -> SomeNodeClientProtocol
+mkSomeNodeClientProtocolByron epochSlots securityParam =
     SomeNodeClientProtocol
-      (mkNodeClientProtocolRealPBFT epochSlots securityParam)
+      (mkNodeClientProtocolByron epochSlots securityParam)
 
 
 ------------------------------------------------------------------------------
@@ -87,28 +87,28 @@ mkSomeNodeClientProtocolRealPBFT epochSlots securityParam =
 -- This also serves a purpose as a sanity check that we have all the necessary
 -- type class instances available.
 --
-mkSomeConsensusProtocolRealPBFT
+mkSomeConsensusProtocolByron
   :: NodeByronProtocolConfiguration
   -> Maybe ProtocolFilepaths
   -> ExceptT ByronProtocolInstantiationError IO SomeConsensusProtocol
-mkSomeConsensusProtocolRealPBFT nc files =
+mkSomeConsensusProtocolByron nc files =
 
     -- Applying the SomeConsensusProtocol here is a check that
-    -- the type of mkConsensusProtocolRealPBFT fits all the class
+    -- the type of mkConsensusProtocolByron fits all the class
     -- constraints we need to run the protocol.
-    SomeConsensusProtocol <$> mkConsensusProtocolRealPBFT nc files
+    SomeConsensusProtocol <$> mkConsensusProtocolByron nc files
 
 
 -- | Instantiate 'Consensus.Protocol' for Byron specifically.
 --
 -- Use this when you need to run the consensus with this specific protocol.
 --
-mkConsensusProtocolRealPBFT
+mkConsensusProtocolByron
   :: NodeByronProtocolConfiguration
   -> Maybe ProtocolFilepaths
   -> ExceptT ByronProtocolInstantiationError IO
              (Consensus.Protocol IO ByronBlock ProtocolRealPBFT)
-mkConsensusProtocolRealPBFT NodeByronProtocolConfiguration {
+mkConsensusProtocolByron NodeByronProtocolConfiguration {
                            npcByronGenesisFile,
                            npcByronReqNetworkMagic,
                            npcByronPbftSignatureThresh,

@@ -7,15 +7,15 @@ module Cardano.Config.Mock.Protocol
   (
     -- * Protocols exposing the specific type
     -- | Use these when you need the specific instance
-    mkConsensusProtocolBFT
-  , mkConsensusProtocolPBFT
-  , mkConsensusProtocolPraos
+    mkConsensusProtocolMockBFT
+  , mkConsensusProtocolMockPBFT
+  , mkConsensusProtocolMockPraos
 
     -- * Protocols hiding the specific type
     -- | Use these when you want to handle protocols generically
-  , mkSomeConsensusProtocolBFT
-  , mkSomeConsensusProtocolPBFT
-  , mkSomeConsensusProtocolPraos
+  , mkSomeConsensusProtocolMockBFT
+  , mkSomeConsensusProtocolMockPBFT
+  , mkSomeConsensusProtocolMockPraos
   ) where
 
 import           Cardano.Prelude
@@ -41,9 +41,9 @@ import           Cardano.TracingOrphanInstances.Mock ()
 -- Mock/testing protocols
 --
 
-mkSomeConsensusProtocolBFT,
-  mkSomeConsensusProtocolPBFT,
-  mkSomeConsensusProtocolPraos
+mkSomeConsensusProtocolMockBFT,
+  mkSomeConsensusProtocolMockPBFT,
+  mkSomeConsensusProtocolMockPraos
   :: NodeMockProtocolConfiguration
   -> SomeConsensusProtocol
 
@@ -51,23 +51,23 @@ mkSomeConsensusProtocolBFT,
 -- the type of mkConsensusProtocolRealPBFT fits all the class
 -- constraints we need to run the protocol.
 
-mkSomeConsensusProtocolBFT nc =
-    SomeConsensusProtocol $ mkConsensusProtocolBFT nc
+mkSomeConsensusProtocolMockBFT nc =
+    SomeConsensusProtocol $ mkConsensusProtocolMockBFT nc
 
-mkSomeConsensusProtocolPBFT nc =
-    SomeConsensusProtocol $ mkConsensusProtocolPBFT nc
+mkSomeConsensusProtocolMockPBFT nc =
+    SomeConsensusProtocol $ mkConsensusProtocolMockPBFT nc
 
-mkSomeConsensusProtocolPraos nc =
-    SomeConsensusProtocol $ mkConsensusProtocolPraos nc
+mkSomeConsensusProtocolMockPraos nc =
+    SomeConsensusProtocol $ mkConsensusProtocolMockPraos nc
 
 
-mkConsensusProtocolBFT
+mkConsensusProtocolMockBFT
   :: NodeMockProtocolConfiguration
   -> Consensus.Protocol IO
                (SimpleBlock SimpleMockCrypto
                             (SimpleBftExt SimpleMockCrypto BftMockCrypto))
                (Bft BftMockCrypto)
-mkConsensusProtocolBFT NodeMockProtocolConfiguration {
+mkConsensusProtocolMockBFT NodeMockProtocolConfiguration {
                              npcMockNodeId       = nodeId,
                              npcMockNumCoreNodes = numCoreNodes
                            } =
@@ -78,13 +78,13 @@ mkConsensusProtocolBFT NodeMockProtocolConfiguration {
         (defaultEraParams mockSecurityParam mockSlotLength)
 
 
-mkConsensusProtocolPBFT
+mkConsensusProtocolMockPBFT
   :: NodeMockProtocolConfiguration
   -> Consensus.Protocol IO
                (SimpleBlock SimpleMockCrypto
                             (SimplePBftExt SimpleMockCrypto PBftMockCrypto))
                (PBft PBftMockCrypto)
-mkConsensusProtocolPBFT NodeMockProtocolConfiguration {
+mkConsensusProtocolMockPBFT NodeMockProtocolConfiguration {
                               npcMockNodeId       = nodeId,
                               npcMockNumCoreNodes = numCoreNodes
                             } =
@@ -98,13 +98,13 @@ mkConsensusProtocolPBFT NodeMockProtocolConfiguration {
         nodeId
 
 
-mkConsensusProtocolPraos
+mkConsensusProtocolMockPraos
   :: NodeMockProtocolConfiguration
   -> Consensus.Protocol IO
                (SimpleBlock SimpleMockCrypto
                             (SimplePraosExt SimpleMockCrypto PraosMockCrypto))
                (Praos PraosMockCrypto)
-mkConsensusProtocolPraos NodeMockProtocolConfiguration {
+mkConsensusProtocolMockPraos NodeMockProtocolConfiguration {
                                npcMockNodeId       = nodeId,
                                npcMockNumCoreNodes = numCoreNodes
                              } =

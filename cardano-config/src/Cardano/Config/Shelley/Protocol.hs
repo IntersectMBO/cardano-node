@@ -10,15 +10,15 @@ module Cardano.Config.Shelley.Protocol
   (
     -- * Protocol exposing the specific type
     -- | Use this when you need the specific instance
-    mkConsensusProtocolTPraos
+    mkConsensusProtocolShelley
 
     -- * Protocols hiding the specific type
     -- | Use this when you want to handle protocols generically
-  , mkSomeConsensusProtocolTPraos
+  , mkSomeConsensusProtocolShelley
 
     -- * Client support
-  , mkNodeClientProtocolTPraos
-  , mkSomeNodeClientProtocolTPraos
+  , mkNodeClientProtocolShelley
+  , mkSomeNodeClientProtocolShelley
 
     -- * Errors
   , ShelleyProtocolInstantiationError(..)
@@ -64,14 +64,14 @@ import           Cardano.TracingOrphanInstances.Shelley ()
 -- Shelley protocol, client support
 --
 
-mkNodeClientProtocolTPraos :: ProtocolClient (ShelleyBlock TPraosStandardCrypto)
-                                             ProtocolRealTPraos
-mkNodeClientProtocolTPraos = ProtocolClientRealTPraos
+mkNodeClientProtocolShelley :: ProtocolClient (ShelleyBlock TPraosStandardCrypto)
+                                              ProtocolRealTPraos
+mkNodeClientProtocolShelley = ProtocolClientRealTPraos
 
 
-mkSomeNodeClientProtocolTPraos :: SomeNodeClientProtocol
-mkSomeNodeClientProtocolTPraos =
-    SomeNodeClientProtocol mkNodeClientProtocolTPraos
+mkSomeNodeClientProtocolShelley :: SomeNodeClientProtocol
+mkSomeNodeClientProtocolShelley =
+    SomeNodeClientProtocol mkNodeClientProtocolShelley
 
 
 ------------------------------------------------------------------------------
@@ -85,29 +85,29 @@ mkSomeNodeClientProtocolTPraos =
 -- This also serves a purpose as a sanity check that we have all the necessary
 -- type class instances available.
 --
-mkSomeConsensusProtocolTPraos
+mkSomeConsensusProtocolShelley
   :: NodeShelleyProtocolConfiguration
   -> Maybe ProtocolFilepaths
   -> ExceptT ShelleyProtocolInstantiationError IO SomeConsensusProtocol
-mkSomeConsensusProtocolTPraos nc files =
+mkSomeConsensusProtocolShelley nc files =
 
     -- Applying the SomeConsensusProtocol here is a check that
-    -- the type of mkConsensusProtocolTPraos fits all the class
+    -- the type of mkConsensusProtocolShelley fits all the class
     -- constraints we need to run the protocol.
-    SomeConsensusProtocol <$> mkConsensusProtocolTPraos nc files
+    SomeConsensusProtocol <$> mkConsensusProtocolShelley nc files
 
 
 -- | Instantiate 'Consensus.Protocol' for Shelley specifically.
 --
 -- Use this when you need to run the consensus with this specific protocol.
 --
-mkConsensusProtocolTPraos
+mkConsensusProtocolShelley
   :: NodeShelleyProtocolConfiguration
   -> Maybe ProtocolFilepaths
   -> ExceptT ShelleyProtocolInstantiationError IO
              (Consensus.Protocol IO (ShelleyBlock TPraosStandardCrypto)
                                  ProtocolRealTPraos)
-mkConsensusProtocolTPraos NodeShelleyProtocolConfiguration {
+mkConsensusProtocolShelley NodeShelleyProtocolConfiguration {
                             npcShelleyGenesisFile,
                             npcShelleySupportedProtocolVersionMajor,
                             npcShelleySupportedProtocolVersionMinor,
