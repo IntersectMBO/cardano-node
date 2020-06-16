@@ -23,7 +23,9 @@ import           Cardano.CLI.Run (ClientCommand(..),
                    renderClientCommandError, runClientCommand)
 
 import qualified Hedgehog as H
-import           Hedgehog.Internal.Property (failWith)
+import qualified Hedgehog.Internal.Property as H
+import           Hedgehog.Internal.Property (Diff, MonadTest, failWith, liftTest, mkTest)
+import           Hedgehog.Internal.Source (getCaller)
 
 -- | Purely evalutate the cardano-cli parser.
 -- e.g evalCardanoCLIParser ["shelley"] would be equivalent to cabal exec cardano-cli shelley
@@ -33,7 +35,8 @@ evalCardanoCLIParser args = Opt.execParserPure pref opts args
 
 -- | This takes a 'ParserResult', which is pure, and executes it.
 execCardanoCLIParser
-  :: [FilePath]
+  :: HasCallStack
+  => [FilePath]
   -- ^ Files to clean up on failure
   -> String
   -- ^ Name of command, used in error rendering
@@ -45,7 +48,7 @@ execCardanoCLIParser fps cmdName pureParseResult =
 
     -- The pure 'ParserResult' succeeds and we can then execute the result.
     -- This would be equivalent to `cabal exec cardano-cli ...`
-    Success cmd -> execClientCommand fps cmd
+    Success cmd -> execClientCommand callStack fps cmd
 
     -- The pure `ParserResult` failed and we clean up any created files
     -- and fail with `optparse-applicative`'s error message
@@ -58,20 +61,22 @@ execCardanoCLIParser fps cmdName pureParseResult =
     CompletionInvoked compl -> do msg <- lift $ Opt.execCompletion compl cmdName
                                   liftIO (fileCleanup fps) >> failWith Nothing msg
 
-
 -- | Executes a `ClientCommand`. If successful the property passes
 -- if not, the property fails and the error is rendered.
 execClientCommand
-  :: [FilePath]
+  :: CallStack
+  -- ^ CallStack allows us to render the error
+  -- at the appropriate function call site
+  -> [FilePath]
   -- ^ Files to clean up on failure
   -> ClientCommand
   -> H.PropertyT IO ()
-execClientCommand fps cmd = do e <- lift . runExceptT $ runClientCommand cmd
-                               case e of
-                                 Left cmdErrors -> do
-                                   liftIO (fileCleanup fps)
-                                   failWith Nothing . Text.unpack $ renderClientCommandError cmdErrors
-                                 Right _ -> H.success
+execClientCommand cS fps cmd = do e <- lift . runExceptT $ runClientCommand cmd
+                                  case e of
+                                    Left cmdErrors -> do
+                                      liftIO (fileCleanup fps)
+                                      failWithCustom cS Nothing . Text.unpack $ renderClientCommandError cmdErrors
+                                    Right _ -> H.success
 
 --------------------------------------------------------------------------------
 -- Error rendering & Clean up
@@ -97,6 +102,11 @@ fileCleanup fps = mapM_ (\fp -> removeFile fp `catch` fileExists) fps
 
 customHelpText :: Opt.ParserHelp -> Doc
 customHelpText (ParserHelp e s h _ b f) = extractChunk . vsepChunks $ [e, s, h, b, f]
+
+-- | Takes a 'CallStack' so the error can be rendered at the appropriate call site.
+failWithCustom :: (MonadTest m) => CallStack -> Maybe Diff -> String -> m a
+failWithCustom cs mdiff msg =
+  liftTest $ mkTest (Left $ H.Failure (getCaller cs) msg mdiff, mempty)
 
 -- | Convert a help text to 'String'.
 renderHelp :: Int -> Opt.ParserHelp -> String -> String
