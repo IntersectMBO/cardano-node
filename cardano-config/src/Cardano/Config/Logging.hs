@@ -211,8 +211,8 @@ createLoggingFeature ver _ nodecli@NodeCLI{configFile} = do
    liveViewdisablesStdout LiveView logConfig = do -- filter out console scribes
      scribes <- CM.getSetupScribes logConfig
      let newscribes = flip filter scribes $ \case
-                        (ScribeDefinition StdoutSK _ _ _ _) -> False
-                        (ScribeDefinition StderrSK _ _ _ _) -> False
+                        (ScribeDefinition StdoutSK _ _ _ _ _ _) -> False
+                        (ScribeDefinition StderrSK _ _ _ _ _ _) -> False
                         _ -> True
      CM.setSetupScribes logConfig newscribes
 #else

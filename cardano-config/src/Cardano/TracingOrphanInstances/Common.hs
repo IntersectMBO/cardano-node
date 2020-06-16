@@ -1,9 +1,4 @@
-{-# LANGUAGE DerivingStrategies         #-}
 {-# LANGUAGE EmptyCase                  #-}
-{-# LANGUAGE FlexibleInstances          #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE OverloadedStrings          #-}
-{-# LANGUAGE StandaloneDeriving         #-}
 
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -29,6 +24,7 @@ module Cardano.TracingOrphanInstances.Common
   , HasSeverityAnnotation(..)
   , Severity(..)
   , HasPrivacyAnnotation(..)
+  , PrivacyAnnotation(..)
 
     -- * Tracer and related
   , Tracer
@@ -36,8 +32,6 @@ module Cardano.TracingOrphanInstances.Common
   , LOContent(..)
   , mkLOMeta
   ) where
-
-import           Prelude
 
 import           Data.Aeson (ToJSON(..), Value (..), (.=))
 import           Data.Void (Void)
@@ -60,7 +54,3 @@ import           Cardano.BM.Data.Tracer
 --
 instance ToObject Void where
   toObject _verb x = case x of {}
-
-
---TODO: move this instance to the definition
-deriving instance Ord PrivacyAnnotation
