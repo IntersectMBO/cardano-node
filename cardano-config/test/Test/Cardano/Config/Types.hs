@@ -30,7 +30,7 @@ import           Test.Cardano.Prelude
 
 
 prop_golden_ShelleyGenesis :: Property
-prop_golden_ShelleyGenesis = goldenTestJSON exampleShelleyGenesis "test/Golden/ShelleyGenesis"
+prop_golden_ShelleyGenesis = goldenTestJSONPretty exampleShelleyGenesis "test/Golden/ShelleyGenesis"
 
 -- Keep this here to make sure serialiseAddr/deserialiseAddr are working.
 -- They are defined in the Shelley executable spec and have been wrong at
