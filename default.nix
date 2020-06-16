@@ -11,8 +11,9 @@
 # }'
 , sourcesOverride ? {}
 # pinned version of nixpkgs augmented with overlays (iohk-nix and our packages).
-, pkgs ? import ./nix { inherit system crossSystem config sourcesOverride; }
-, gitrev ? pkgs.iohkNix.commitIdFromGitRepoOrZero ./.git
+, pkgs ? import ./nix/default.nix { inherit system crossSystem config sourcesOverride gitrev; }
+# Git sha1 hash, to be passed when not building from a git work tree.
+, gitrev ? null
 }:
 with pkgs; with commonLib;
 let

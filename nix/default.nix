@@ -2,6 +2,7 @@
 , crossSystem ? null
 , config ? {}
 , sourcesOverride ? {}
+, gitrev ? null
 }:
 let
   sources = import ./sources.nix { inherit pkgs; }
@@ -26,6 +27,7 @@ let
     # our own overlays:
     ++ [
       (pkgs: _: with pkgs; {
+        inherit gitrev;
 
         # commonLib: mix pkgs.lib with iohk-nix utils and our own:
         commonLib = lib // iohkNix // iohkNix.cardanoLib
