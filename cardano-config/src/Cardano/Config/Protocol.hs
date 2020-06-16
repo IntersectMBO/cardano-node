@@ -27,7 +27,6 @@ module Cardano.Config.Protocol
   , cardanoEraForProtocol
   , mkNodeClientProtocol
   , ncCardanoEra
-  , withRealPBFT
 
     -- * Errors
   , RealPBFTError(..)
@@ -37,7 +36,7 @@ module Cardano.Config.Protocol
 import           Cardano.Prelude
 
 import           Control.Monad.Trans.Except (ExceptT)
-import           Control.Monad.Trans.Except.Extra (firstExceptT, left)
+import           Control.Monad.Trans.Except.Extra (firstExceptT)
 import qualified Data.Text as Text
 
 import           Cardano.Config.Types
@@ -51,24 +50,7 @@ import           Cardano.Config.Mock.Protocol
 import           Cardano.Config.Shelley.Protocol
 
 import qualified Ouroboros.Consensus.Cardano as Consensus
-import           Ouroboros.Consensus.Byron.Ledger (ByronBlock)
-import           Ouroboros.Consensus.Node.Run (RunNode)
 
-
--- | Perform an action that expects ProtocolInfo for Byron/PBFT,
---   with attendant configuration.
-withRealPBFT
-  :: NodeConfiguration
-  -> (RunNode ByronBlock
-        => Consensus.Protocol IO ByronBlock Consensus.ProtocolRealPBFT
-        -> ExceptT RealPBFTError IO a)
-  -> ExceptT RealPBFTError IO a
-withRealPBFT nc action = do
-  SomeConsensusProtocol p <- firstExceptT FromProtocolError $
-                               mkConsensusProtocol nc Nothing
-  case p of
-    proto@Consensus.ProtocolRealPBFT{} -> action proto
-    _ -> left $ IncorrectProtocolSpecified (ncProtocol nc)
 
 ------------------------------------------------------------------------------
 -- Conversions from configuration into specific protocols and their params
