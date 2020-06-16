@@ -227,6 +227,7 @@ import           Data.Bifunctor (first)
 import           Data.List as List
 --import           Data.Either
 import           Data.String (IsString(fromString))
+import qualified Data.Text as Text (unpack)
 import           Numeric.Natural
 
 import           Data.ByteString (ByteString)
@@ -1025,7 +1026,7 @@ instance Error e => Error (FileError e) where
     path ++ ": " ++ displayError e
 
 instance Error TextView.TextViewError where
-  displayError _ = "TODO"
+  displayError = Text.unpack . TextView.renderTextViewError
 
 serialiseToTextEnvelope :: forall a. HasTextEnvelope a
                         => Maybe TextEnvelopeDescr -> a -> TextEnvelope
