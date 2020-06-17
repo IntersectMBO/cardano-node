@@ -16,44 +16,47 @@ allow-newer: true
 extra-deps:
   - QuickCheck-2.12.6.1
   - quickcheck-instances-0.3.19
-  - hspec-2.7.0
-  - hspec-core-2.7.0
-  - hspec-discover-2.7.0
-  - text-1.2.4.0
   - base58-bytestring-0.1.0
-  # Waiting on Stackage release
-  - hedgehog-1.0.2
-  - hedgehog-corpus-0.2.0
-  - micro-recursion-schemes-5.0.2.2
-  - streaming-binary-0.3.0.1
-  - canonical-json-0.6.0.0
-  - base64-0.4.1
+  - base64-0.4.2
+  - bech32-1.0.2
   - brick-0.47
   - binary-0.8.7.0
   - bimap-0.4.0
+  - canonical-json-0.6.0.0
   - clock-0.8
   - config-ini-0.2.4.0
   - containers-0.5.11.0
   - data-clist-0.1.2.2
   - generic-monoid-0.1.0.0
+  - ghc-byteorder-4.11.0.0.10
   - gray-code-0.3.1
+  - hedgehog-1.0.2
+  - hedgehog-corpus-0.2.0
+  - hedgehog-quickcheck-0.1.1
+  - hspec-2.7.0
+  - hspec-core-2.7.0
+  - hspec-discover-2.7.0
   - io-streams-1.5.1.0
   - io-streams-haproxy-1.0.1.0
+  - micro-recursion-schemes-5.0.2.2
   - moo-1.2
   - network-3.1.1.1
   - quiet-0.2
   - snap-core-1.0.4.1
   - snap-server-1.1.1.1
   - statistics-linreg-0.3
-  - time-units-1.0.0
+  - streaming-binary-0.3.0.1
+  - systemd-2.3.0
   - tasty-hedgehog-1.0.0.2
-  - transformers-except-0.1.1
+  - text-1.2.4.0
+  - text-ansi-0.1.0
   - text-zipper-0.10.1
+  - th-lift-instances-0.1.14
+  - time-units-1.0.0
+  - transformers-except-0.1.1
   - Unique-0.4.7.6
   - word-wrap-0.4.1
   - websockets-0.12.6.1
-  - th-lift-instances-0.1.14
-  - systemd-2.3.0
 
   - git: https://github.com/input-output-hk/cardano-ledger-specs
     commit: 036ff8223310ecdaf7f0ed8c211c691cb0dcb8f3
@@ -101,7 +104,7 @@ extra-deps:
 
     # iohk-monitoring-framework currently not pinned to a release
   - git: https://github.com/input-output-hk/iohk-monitoring-framework
-    commit: 2a1afe23d88b91027f972dd7c70cd4aadfb19768
+    commit: efa4b5ecd7f0a13124616b12679cd42517cd905a
     subdirs:
       - contra-tracer
       - iohk-monitoring
