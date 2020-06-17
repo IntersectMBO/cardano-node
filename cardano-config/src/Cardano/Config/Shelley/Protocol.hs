@@ -10,19 +10,23 @@ module Cardano.Config.Shelley.Protocol
   (
     -- * Protocol exposing the specific type
     -- | Use this when you need the specific instance
-    mkConsensusProtocolTPraos
+    mkConsensusProtocolShelley
 
     -- * Protocols hiding the specific type
     -- | Use this when you want to handle protocols generically
-  , mkSomeConsensusProtocolTPraos
+  , mkSomeConsensusProtocolShelley
 
     -- * Client support
-  , mkNodeClientProtocolTPraos
-  , mkSomeNodeClientProtocolTPraos
+  , mkNodeClientProtocolShelley
+  , mkSomeNodeClientProtocolShelley
 
     -- * Errors
   , ShelleyProtocolInstantiationError(..)
   , renderShelleyProtocolInstantiationError
+
+    -- * Reusable parts
+  , readGenesis
+  , readLeaderCredentials
   ) where
 
 import           Cardano.Prelude
@@ -47,8 +51,8 @@ import           Ouroboros.Consensus.Shelley.Node
 import           Shelley.Spec.Ledger.PParams (ProtVer(..))
 
 import           Cardano.Config.Types
-                   (NodeConfiguration(..), ProtocolFilepaths(..),
-                    GenesisFile (..), Update (..), LastKnownBlockVersion (..),
+                   (NodeShelleyProtocolConfiguration(..),
+                    ProtocolFilepaths(..), GenesisFile (..),
                     SomeConsensusProtocol(..), SomeNodeClientProtocol(..))
 import           Cardano.Config.Shelley.OCert
 import           Cardano.Config.Shelley.VRF
@@ -60,14 +64,14 @@ import           Cardano.TracingOrphanInstances.Shelley ()
 -- Shelley protocol, client support
 --
 
-mkNodeClientProtocolTPraos :: ProtocolClient (ShelleyBlock TPraosStandardCrypto)
-                                             ProtocolRealTPraos
-mkNodeClientProtocolTPraos = ProtocolClientRealTPraos
+mkNodeClientProtocolShelley :: ProtocolClient (ShelleyBlock TPraosStandardCrypto)
+                                              ProtocolRealTPraos
+mkNodeClientProtocolShelley = ProtocolClientRealTPraos
 
 
-mkSomeNodeClientProtocolTPraos :: SomeNodeClientProtocol
-mkSomeNodeClientProtocolTPraos =
-    SomeNodeClientProtocol mkNodeClientProtocolTPraos
+mkSomeNodeClientProtocolShelley :: SomeNodeClientProtocol
+mkSomeNodeClientProtocolShelley =
+    SomeNodeClientProtocol mkNodeClientProtocolShelley
 
 
 ------------------------------------------------------------------------------
@@ -81,67 +85,54 @@ mkSomeNodeClientProtocolTPraos =
 -- This also serves a purpose as a sanity check that we have all the necessary
 -- type class instances available.
 --
-mkSomeConsensusProtocolTPraos
-  :: NodeConfiguration
+mkSomeConsensusProtocolShelley
+  :: NodeShelleyProtocolConfiguration
   -> Maybe ProtocolFilepaths
   -> ExceptT ShelleyProtocolInstantiationError IO SomeConsensusProtocol
-mkSomeConsensusProtocolTPraos nc files =
+mkSomeConsensusProtocolShelley nc files =
 
     -- Applying the SomeConsensusProtocol here is a check that
-    -- the type of mkConsensusProtocolTPraos fits all the class
+    -- the type of mkConsensusProtocolShelley fits all the class
     -- constraints we need to run the protocol.
-    SomeConsensusProtocol <$> mkConsensusProtocolTPraos nc files
+    SomeConsensusProtocol <$> mkConsensusProtocolShelley nc files
 
 
 -- | Instantiate 'Consensus.Protocol' for Shelley specifically.
 --
 -- Use this when you need to run the consensus with this specific protocol.
 --
-mkConsensusProtocolTPraos
-  :: NodeConfiguration
+mkConsensusProtocolShelley
+  :: NodeShelleyProtocolConfiguration
   -> Maybe ProtocolFilepaths
   -> ExceptT ShelleyProtocolInstantiationError IO
              (Consensus.Protocol IO (ShelleyBlock TPraosStandardCrypto)
                                  ProtocolRealTPraos)
-mkConsensusProtocolTPraos NodeConfiguration {
-                              ncGenesisFile,
-                              ncUpdate,
-                              ncMaxMajorPV
-                            }
-                            files = do
-    genesis <- readShelleyGenesis ncGenesisFile
-
-    let protocolVersion = toShelleyProtocolVersion ncUpdate
-
+mkConsensusProtocolShelley NodeShelleyProtocolConfiguration {
+                            npcShelleyGenesisFile,
+                            npcShelleySupportedProtocolVersionMajor,
+                            npcShelleySupportedProtocolVersionMinor,
+                            npcShelleyMaxSupportedProtocolVersion
+                          }
+                          files = do
+    genesis <- readGenesis npcShelleyGenesisFile
     optionalLeaderCredentials <- readLeaderCredentials files
 
     return $
       ProtocolRealTPraos
         genesis
-        protocolVersion
-        ncMaxMajorPV
+        (ProtVer npcShelleySupportedProtocolVersionMajor
+                 npcShelleySupportedProtocolVersionMinor)
+        npcShelleyMaxSupportedProtocolVersion
         optionalLeaderCredentials
 
 
-readShelleyGenesis :: GenesisFile
-                   -> ExceptT ShelleyProtocolInstantiationError IO
-                              (ShelleyGenesis TPraosStandardCrypto)
-readShelleyGenesis (GenesisFile file) =
+readGenesis :: GenesisFile
+            -> ExceptT ShelleyProtocolInstantiationError IO
+                       (ShelleyGenesis TPraosStandardCrypto)
+readGenesis (GenesisFile file) =
     firstExceptT (GenesisReadError file) $
       ExceptT $ handle (\(e :: IOException) -> return $ Left $ show e) $
         Aeson.eitherDecodeFileStrict' file
-
-
--- | We reuse the Byron config file's last known block version config
--- which has a three-component version number, but we only use two.
---
-toShelleyProtocolVersion :: Update -> ProtVer
-toShelleyProtocolVersion (Update _appName _appVer lastKnownBlockVersion) =
-    ProtVer (fromIntegral lkbvMajor)
-            (fromIntegral lkbvMinor)
-  where
-    LastKnownBlockVersion
-      {lkbvMajor, lkbvMinor, lkbvAlt = _unused} = lastKnownBlockVersion
 
 
 readLeaderCredentials :: Maybe ProtocolFilepaths

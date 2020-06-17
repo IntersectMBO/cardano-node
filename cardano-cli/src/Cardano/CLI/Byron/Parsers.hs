@@ -61,7 +61,7 @@ import           Cardano.Api (Network(..), NetworkMagic(..))
 import           Cardano.Config.Types
 import           Cardano.Config.Parsers
                    (parseIntegral, parseFraction, parseLovelace, readDouble,
-                    parseFilePath,  parseConfigFile, parseSigningKeyFile,
+                    parseFilePath,  parseSigningKeyFile,
                     parseGenesisFile, command', parseFlag')
 import           Cardano.Config.Protocol (CardanoEra(..))
 
@@ -125,7 +125,8 @@ parseDelegationRelatedValues =
         "Create a delegation certificate allowing the\
         \ delegator to sign blocks on behalf of the issuer"
         $ IssueDelegationCertificate
-        <$> (ConfigYamlFilePath <$> parseConfigFile)
+        <$> parseNetwork
+        <*> parseCardanoEra
         <*> ( EpochNumber
                 <$> parseIntegral
                       "since-epoch"
@@ -144,7 +145,7 @@ parseDelegationRelatedValues =
         "Verify that a given certificate constitutes a valid\
         \ delegation relationship between keys."
         $ CheckDelegation
-            <$> (ConfigYamlFilePath <$> parseConfigFile)
+            <$> parseNetwork
             <*> parseCertificateFile
                   "certificate"
                   "The certificate embodying delegation to verify."
@@ -321,7 +322,9 @@ parseTxRelatedValues =
         "issue-genesis-utxo-expenditure"
         "Write a file with a signed transaction, spending genesis UTxO."
         $ SpendGenesisUTxO
-            <$> (ConfigYamlFilePath <$> parseConfigFile)
+            <$> parseGenesisFile "genesis-json"
+            <*> parseNetwork
+            <*> parseCardanoEra
             <*> parseNewTxFile "tx"
             <*> parseSigningKeyFile
                   "wallet-key"
@@ -335,7 +338,8 @@ parseTxRelatedValues =
         "issue-utxo-expenditure"
         "Write a file with a signed transaction, spending normal UTxO."
         $ SpendUTxO
-            <$> (ConfigYamlFilePath <$> parseConfigFile)
+            <$> parseNetwork
+            <*> parseCardanoEra
             <*> parseNewTxFile "tx"
             <*> parseSigningKeyFile
                   "wallet-key"
@@ -366,7 +370,7 @@ pNodeCmd =
 parseByronUpdateProposal :: Parser NodeCmd
 parseByronUpdateProposal = do
   UpdateProposal
-    <$> (ConfigYamlFilePath <$> parseConfigFile)
+    <$> parseNetwork
     <*> parseSigningKeyFile "signing-key" "Path to signing key."
     <*> parseProtocolVersion
     <*> parseSoftwareVersion
@@ -411,7 +415,7 @@ parseByronUpdateProposalSubmission =
 parseByronVote :: Parser NodeCmd
 parseByronVote =
   CreateVote
-    <$> (ConfigYamlFilePath <$> parseConfigFile)
+    <$> parseNetwork
     <*> (SigningKeyFile <$> parseFilePath "signing-key" "Filepath of signing key.")
     <*> parseFilePath "proposal-filepath" "Filepath of Byron update proposal."
     <*> parseVoteBool

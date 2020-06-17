@@ -36,7 +36,7 @@ import           Cardano.BM.Data.Tracer (ToLogObject (..), nullTracer)
 import           Cardano.BM.Trace (Trace, appendName, logInfo)
 
 import           Cardano.Config.Protocol ()
-import           Cardano.Config.Shelley.Protocol (mkNodeClientProtocolTPraos)
+import           Cardano.Config.Shelley.Protocol (mkNodeClientProtocolShelley)
 import           Cardano.Config.Types (SocketPath (..))
 
 import qualified Codec.CBOR.Term as CBOR
@@ -156,7 +156,7 @@ queryUTxOFromLocalState network socketPath qFilter point = do
   let pointAndQuery = (point, utxoFilter)
   newExceptT $ queryNodeLocalState
     nullTracer
-    (pClientInfoCodecConfig . protocolClientInfo $ mkNodeClientProtocolTPraos)
+    (pClientInfoCodecConfig . protocolClientInfo $ mkNodeClientProtocolShelley)
     network
     socketPath
     pointAndQuery
@@ -177,7 +177,7 @@ queryPParamsFromLocalState network socketPath point = do
   newExceptT $ liftIO $
     queryNodeLocalState
       nullTracer
-      (pClientInfoCodecConfig . protocolClientInfo $ mkNodeClientProtocolTPraos)
+      (pClientInfoCodecConfig . protocolClientInfo $ mkNodeClientProtocolShelley)
       network
       socketPath
       pointAndQuery
@@ -198,7 +198,7 @@ queryStakeDistributionFromLocalState network socketPath point = do
   newExceptT $ liftIO $
     queryNodeLocalState
       nullTracer
-      (pClientInfoCodecConfig . protocolClientInfo $ mkNodeClientProtocolTPraos)
+      (pClientInfoCodecConfig . protocolClientInfo $ mkNodeClientProtocolShelley)
       network
       socketPath
       pointAndQuery
@@ -214,7 +214,7 @@ queryLocalLedgerState network socketPath point = do
             newExceptT . liftIO $
               queryNodeLocalState
                 nullTracer
-                (pClientInfoCodecConfig . protocolClientInfo $ mkNodeClientProtocolTPraos)
+                (pClientInfoCodecConfig . protocolClientInfo $ mkNodeClientProtocolShelley)
                 network
                 socketPath
                 (point, GetCBOR GetCurrentLedgerState) -- Get CBOR-in-CBOR version
@@ -241,7 +241,7 @@ queryDelegationsAndRewardsFromLocalState network socketPath addrs point = do
     res <- newExceptT $ liftIO $
       queryNodeLocalState
         nullTracer
-        (pClientInfoCodecConfig . protocolClientInfo $ mkNodeClientProtocolTPraos)
+        (pClientInfoCodecConfig . protocolClientInfo $ mkNodeClientProtocolShelley)
         network
         socketPath
         pointAndQuery

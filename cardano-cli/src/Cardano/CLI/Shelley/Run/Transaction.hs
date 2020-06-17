@@ -17,7 +17,7 @@ import           Cardano.Config.TextView
 import           Cardano.CLI.Environment (EnvSocketError, readEnvSocketPath,
                    renderEnvSocketError)
 
-import           Cardano.Config.Types hiding (Update)
+import           Cardano.Config.Types
 
 import           Cardano.CLI.Shelley.Parsers
 import           Cardano.Config.Types (CertificateFile (..))

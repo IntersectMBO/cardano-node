@@ -23,7 +23,7 @@ import           Ouroboros.Consensus.Util.Condense (Condense(..))
 import           Ouroboros.Network.Block
 import           Ouroboros.Network.NodeToClient (withIOManager)
 
-import           Cardano.Config.Byron.Protocol (mkNodeClientProtocolRealPBFT)
+import           Cardano.Config.Byron.Protocol (mkNodeClientProtocolByron)
 
 import           Cardano.Api (Network(..), getLocalTip)
 import           Cardano.CLI.Environment
@@ -46,7 +46,7 @@ runGetLocalNodeTip :: Network -> ExceptT ByronQueryError IO ()
 runGetLocalNodeTip network = do
     sockPath <- firstExceptT ByronQueryEnvVarSocketErr $ readEnvSocketPath
     let ptclClientInfo = pClientInfoCodecConfig . protocolClientInfo $
-          mkNodeClientProtocolRealPBFT
+          mkNodeClientProtocolByron
             (EpochSlots 21600)
             (SecurityParam 2160)
 

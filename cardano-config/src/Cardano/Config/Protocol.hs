@@ -24,10 +24,7 @@ module Cardano.Config.Protocol
     -- a protocol.
   , CardanoEra(..)
   , SomeNodeClientProtocol(..)
-  , cardanoEraForProtocol
   , mkNodeClientProtocol
-  , ncCardanoEra
-  , withRealPBFT
 
     -- * Errors
   , RealPBFTError(..)
@@ -37,38 +34,23 @@ module Cardano.Config.Protocol
 import           Cardano.Prelude
 
 import           Control.Monad.Trans.Except (ExceptT)
-import           Control.Monad.Trans.Except.Extra (firstExceptT, left)
+import           Control.Monad.Trans.Except.Extra (firstExceptT)
 import qualified Data.Text as Text
 
 import           Cardano.Config.Types
-                   (NodeConfiguration(..), Protocol (..), ProtocolFilepaths(..),
-                    SomeConsensusProtocol(..), SomeNodeClientProtocol(..),
-                    TraceConstraints)
+                   (NodeConfiguration(..), NodeProtocolConfiguration(..),
+                    NodeMockProtocolConfiguration(..), ProtocolFilepaths(..),
+                    Protocol(..), MockProtocol(..), SomeConsensusProtocol(..),
+                    SomeNodeClientProtocol(..), TraceConstraints)
 import           Cardano.Chain.Slotting (EpochSlots(..))
 
 import           Cardano.Config.Byron.Protocol
 import           Cardano.Config.Mock.Protocol
 import           Cardano.Config.Shelley.Protocol
+import           Cardano.Config.Cardano.Protocol
 
 import qualified Ouroboros.Consensus.Cardano as Consensus
-import           Ouroboros.Consensus.Byron.Ledger (ByronBlock)
-import           Ouroboros.Consensus.Node.Run (RunNode)
 
-
--- | Perform an action that expects ProtocolInfo for Byron/PBFT,
---   with attendant configuration.
-withRealPBFT
-  :: NodeConfiguration
-  -> (RunNode ByronBlock
-        => Consensus.Protocol IO ByronBlock Consensus.ProtocolRealPBFT
-        -> ExceptT RealPBFTError IO a)
-  -> ExceptT RealPBFTError IO a
-withRealPBFT nc action = do
-  SomeConsensusProtocol p <- firstExceptT FromProtocolError $
-                               mkConsensusProtocol nc Nothing
-  case p of
-    proto@Consensus.ProtocolRealPBFT{} -> action proto
-    _ -> left $ IncorrectProtocolSpecified (ncProtocol nc)
 
 ------------------------------------------------------------------------------
 -- Conversions from configuration into specific protocols and their params
@@ -78,24 +60,28 @@ mkConsensusProtocol
   :: NodeConfiguration
   -> Maybe ProtocolFilepaths
   -> ExceptT ProtocolInstantiationError IO SomeConsensusProtocol
-mkConsensusProtocol config@NodeConfiguration{ncProtocol} files =
-    case ncProtocol of
+mkConsensusProtocol NodeConfiguration{ncProtocolConfig} files =
+    case ncProtocolConfig of
+
       -- Mock protocols
-      BFT      -> firstExceptT MockProtocolInstantiationError $
-                    mkSomeConsensusProtocolBFT   config
-
-      MockPBFT -> firstExceptT MockProtocolInstantiationError $
-                    mkSomeConsensusProtocolPBFT  config
-
-      Praos    -> firstExceptT MockProtocolInstantiationError $
-                    mkSomeConsensusProtocolPraos config
+      NodeProtocolConfigurationMock config ->
+        case npcMockProtocol config of
+          MockBFT   -> pure $ mkSomeConsensusProtocolMockBFT   config
+          MockPBFT  -> pure $ mkSomeConsensusProtocolMockPBFT  config
+          MockPraos -> pure $ mkSomeConsensusProtocolMockPraos config
 
       -- Real protocols
-      RealPBFT -> firstExceptT ByronProtocolInstantiationError $
-                    mkSomeConsensusProtocolRealPBFT config files
+      NodeProtocolConfigurationByron config ->
+        firstExceptT ByronProtocolInstantiationError $
+          mkSomeConsensusProtocolByron config files
 
-      TPraos   -> firstExceptT ShelleyProtocolInstantiationError $
-                    mkSomeConsensusProtocolTPraos config files
+      NodeProtocolConfigurationShelley config ->
+        firstExceptT ShelleyProtocolInstantiationError $
+          mkSomeConsensusProtocolShelley config files
+
+      NodeProtocolConfigurationCardano byronConfig shelleyConfig ->
+        firstExceptT CardanoProtocolInstantiationError $
+          mkSomeConsensusProtocolCardano byronConfig shelleyConfig files
 
 
 mkNodeClientProtocol :: Protocol -> SomeNodeClientProtocol
@@ -104,30 +90,41 @@ mkNodeClientProtocol protocol =
 {-
       --TODO
       -- Mock protocols
-      BFT      -> firstExceptT MockProtocolInstantiationError $
-                    mkNodeClientProtocolBFT
-
-      MockPBFT -> firstExceptT MockProtocolInstantiationError $
-                    mkNodeClientProtocolPBFT
-
-      Praos    -> firstExceptT MockProtocolInstantiationError $
-                    mkNodeClientProtocolPraos
+      NodeProtocolConfigurationMock config ->
+        case npcMockProtocol config of
+          BFT      -> mkNodeClientProtocolMockBFT
+          MockPBFT -> mkNodeClientProtocolMockPBFT
+          Praos    -> mkNodeClientProtocolMockPraos
 -}
+      MockProtocol _ ->
+        panic "TODO: mkNodeClientProtocol NodeProtocolConfigurationMock"
 
       -- Real protocols
-      RealPBFT -> mkSomeNodeClientProtocolRealPBFT
-                    --TODO: this is only the correct value for mainnet
-                    -- not for Byron testnets. This value is needed because
-                    -- to decode legacy EBBs one needs to know how many
-                    -- slots there are per-epoch. This info comes from
-                    -- the genesis file, but we don't have that in the
-                    -- client case.
-                    (EpochSlots 21600)
-                    (Consensus.SecurityParam 2160)
+      ByronProtocol ->
+        mkSomeNodeClientProtocolByron
+          --TODO: this is only the correct value for mainnet
+          -- not for Byron testnets. This value is needed because
+          -- to decode legacy EBBs one needs to know how many
+          -- slots there are per-epoch. This info comes from
+          -- the genesis file, but we don't have that in the
+          -- client case.
+          (EpochSlots 21600)
+          (Consensus.SecurityParam 2160)
 
-      TPraos   -> mkSomeNodeClientProtocolTPraos
+      ShelleyProtocol ->
+        mkSomeNodeClientProtocolShelley
 
-      _        -> panic ("mkNodeClientProtocol TODO: " <> show protocol)
+      CardanoProtocol ->
+        mkSomeNodeClientProtocolCardano
+          --TODO: this is only the correct value for mainnet
+          -- not for Byron testnets. This value is needed because
+          -- to decode legacy EBBs one needs to know how many
+          -- slots there are per-epoch. This info comes from
+          -- the genesis file, but we don't have that in the
+          -- client case.
+          (EpochSlots 21600)
+          (Consensus.SecurityParam 2160)
+
 
 -- | Many commands have variants or file formats that depend on the era.
 --
@@ -135,15 +132,6 @@ mkNodeClientProtocol protocol =
 data CardanoEra = ByronEraLegacy | ByronEra | ShelleyEra
   deriving Show
 
-cardanoEraForProtocol :: Protocol -> CardanoEra
-cardanoEraForProtocol BFT      = ShelleyEra
-cardanoEraForProtocol Praos    = ShelleyEra
-cardanoEraForProtocol MockPBFT = ShelleyEra
-cardanoEraForProtocol RealPBFT = ByronEra
-cardanoEraForProtocol TPraos   = ShelleyEra
-
-ncCardanoEra :: NodeConfiguration -> CardanoEra
-ncCardanoEra = cardanoEraForProtocol . ncProtocol
 
 ------------------------------------------------------------------------------
 -- Errors
@@ -152,7 +140,7 @@ ncCardanoEra = cardanoEraForProtocol . ncProtocol
 data ProtocolInstantiationError =
     ByronProtocolInstantiationError   ByronProtocolInstantiationError
   | ShelleyProtocolInstantiationError ShelleyProtocolInstantiationError
-  | MockProtocolInstantiationError    MockProtocolInstantiationError
+  | CardanoProtocolInstantiationError CardanoProtocolInstantiationError
   deriving Show
 
 
@@ -165,8 +153,8 @@ renderProtocolInstantiationError pie =
     ShelleyProtocolInstantiationError spie ->
       renderShelleyProtocolInstantiationError spie
 
-    MockProtocolInstantiationError mpie ->
-      renderMockProtocolInstantiationError mpie
+    CardanoProtocolInstantiationError cpie ->
+      renderCardanoProtocolInstantiationError cpie
 
 
 data RealPBFTError

@@ -46,8 +46,8 @@ import           Ouroboros.Consensus.Shelley.Ledger (ShelleyBlock)
 import           Ouroboros.Consensus.Byron.Ledger (ByronBlock)
 import           Ouroboros.Consensus.Shelley.Protocol.Crypto (TPraosStandardCrypto)
 
-import           Cardano.Config.Byron.Protocol (mkNodeClientProtocolRealPBFT)
-import           Cardano.Config.Shelley.Protocol (mkNodeClientProtocolTPraos)
+import           Cardano.Config.Byron.Protocol (mkNodeClientProtocolByron)
+import           Cardano.Config.Shelley.Protocol (mkNodeClientProtocolShelley)
 import           Cardano.Config.Types (SocketPath(..))
 
 
@@ -81,7 +81,7 @@ submitTx network socketPath tx =
           result <- submitGenTx
                       nullTracer
                       iocp
-                      (protocolClientInfo (mkNodeClientProtocolRealPBFT
+                      (protocolClientInfo (mkNodeClientProtocolByron
                                              (EpochSlots 21600)
                                              (SecurityParam 2160)))
                       network
@@ -96,7 +96,7 @@ submitTx network socketPath tx =
           result <- submitGenTx
                       nullTracer
                       iocp
-                      (protocolClientInfo mkNodeClientProtocolTPraos)
+                      (protocolClientInfo mkNodeClientProtocolShelley)
                       network
                       socketPath
                       genTx

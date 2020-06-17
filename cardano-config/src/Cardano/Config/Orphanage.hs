@@ -18,7 +18,7 @@ import qualified Data.Text as Text
 
 import           Cardano.BM.Data.Tracer (TracingVerbosity(..))
 import qualified Cardano.Chain.Update as Update
-import           Ouroboros.Consensus.NodeId (NodeId(..), CoreNodeId (..))
+import           Ouroboros.Consensus.NodeId (CoreNodeId (..))
 
 
 deriving instance Show TracingVerbosity
@@ -33,8 +33,8 @@ instance FromJSON TracingVerbosity where
   parseJSON invalid  = panic $ "Parsing of TracingVerbosity failed due to type mismatch. "
                              <> "Encountered: " <> (Text.pack $ Prelude.show invalid)
 
-instance FromJSON NodeId where
-  parseJSON v = CoreId . CoreNodeId <$> parseJSON v
+instance FromJSON CoreNodeId where
+  parseJSON v = CoreNodeId <$> parseJSON v
 
 
 instance FromJSON PortNumber where

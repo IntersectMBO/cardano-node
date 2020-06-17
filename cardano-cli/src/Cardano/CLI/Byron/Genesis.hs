@@ -10,10 +10,8 @@ module Cardano.CLI.Byron.Genesis
   , GenesisParameters(..)
   , NewDirectory(..)
   , dumpGenesis
-  , getGenesisHashText
   , mkGenesis
   , readGenesis
-  , readProtocolMagicId
   , renderByronGenesisError
   )
 where
@@ -25,7 +23,6 @@ import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra
                    (firstExceptT, hoistEither, left, right)
 import qualified Data.ByteString.Lazy as LB
-import qualified Formatting as F
 import qualified Data.Map.Strict as Map
 import           Data.String (IsString)
 import           Data.Text.Encoding (encodeUtf8)
@@ -34,19 +31,21 @@ import           Data.Time (UTCTime)
 import           Formatting.Buildable
 import           Text.Printf (printf)
 
-import           System.Directory (canonicalizePath, createDirectory,
-                   doesPathExist, makeAbsolute)
+import           System.Directory (createDirectory, doesPathExist)
 import           System.FilePath ((</>))
 #ifdef UNIX
 import           System.Posix.Files (ownerReadMode, setFileMode)
 #else
 import           System.Directory (emptyPermissions, readable, setPermissions)
 #endif
-import           Cardano.Api (textShow)
+import           Cardano.Api (Network, textShow, toByronRequiresNetworkMagic)
+
 import qualified Cardano.Chain.Common as Common
 import           Cardano.Chain.Delegation hiding (Map, epoch)
 import qualified Cardano.Chain.Genesis as Genesis
 import           Cardano.Chain.Genesis (GeneratedSecrets(..))
+import qualified Cardano.Chain.UTxO as UTxO
+
 import           Cardano.Config.Protocol (CardanoEra(..))
 import           Cardano.Config.Types (GenesisFile(..))
 import           Cardano.Crypto (SigningKey (..))
@@ -116,13 +115,6 @@ data GenesisParameters = GenesisParameters
   } deriving Show
 
 
-getGenesisHashText :: GenesisFile -> ExceptT ByronGenesisError IO Text
-getGenesisHashText (GenesisFile genFile) = do
-  canonGenFile <- liftIO $ canonicalizePath genFile
-  gFile <- liftIO $ makeAbsolute canonGenFile
-  (_, Genesis.GenesisHash gHash) <- readGenesis $ GenesisFile gFile
-  return $ F.sformat Crypto.hashHexF gHash
-
 mkGenesisSpec :: GenesisParameters -> ExceptT ByronGenesisError IO Genesis.GenesisSpec
 mkGenesisSpec gp = do
   protoParamsRaw <- lift . LB.readFile $ gpProtocolParamsFile gp
@@ -169,8 +161,18 @@ mkGenesis gp = do
     Genesis.generateGenesisData (gpStartTime gp) genesisSpec
 
 -- | Read genesis from a file.
-readGenesis :: GenesisFile -> ExceptT ByronGenesisError IO (Genesis.GenesisData, Genesis.GenesisHash)
-readGenesis (GenesisFile fp) = firstExceptT (GenesisReadError fp) $ Genesis.readGenesisData fp
+readGenesis :: GenesisFile
+            -> Network
+            -> ExceptT ByronGenesisError IO Genesis.Config
+readGenesis (GenesisFile file) nw =
+  firstExceptT (GenesisReadError file) $ do
+    (genesisData, genesisHash) <- Genesis.readGenesisData file
+    return Genesis.Config {
+      Genesis.configGenesisData       = genesisData,
+      Genesis.configGenesisHash       = genesisHash,
+      Genesis.configReqNetMagic       = toByronRequiresNetworkMagic nw,
+      Genesis.configUTxOConfiguration = UTxO.defaultUTxOConfiguration
+    }
 
 --TODO: dumpGenesis needs refactoring.
 -- | Write out genesis into a directory that must not yet exist.  An error is
@@ -242,8 +244,3 @@ writeSecrets outDir prefix suffix secretOp xs =
     setPermissions filename (emptyPermissions {readable = True})
 #endif
 
-
-readProtocolMagicId :: GenesisFile -> ExceptT ByronGenesisError IO Crypto.ProtocolMagicId
-readProtocolMagicId gFile = do
-  (genData, _) <- readGenesis gFile
-  pure $ Genesis.gdProtocolMagicId genData

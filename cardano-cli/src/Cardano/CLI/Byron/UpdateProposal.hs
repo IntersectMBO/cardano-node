@@ -22,7 +22,6 @@ import qualified Data.Map.Strict as M
 import           Cardano.Api (textShow)
 import qualified Cardano.Binary as Binary
 import           Cardano.Chain.Common (LovelacePortion, TxFeePolicy(..))
-import           Cardano.Chain.Genesis (GenesisData(..))
 import           Cardano.Chain.Slotting (EpochNumber(..), SlotNumber(..))
 import           Cardano.Chain.Update
                    (AProposal(..), ProtocolParametersUpdate(..),
@@ -38,9 +37,9 @@ import qualified Ouroboros.Consensus.Byron.Ledger.Mempool as Mempool
 import           Ouroboros.Consensus.Ledger.SupportsMempool (txId)
 import           Ouroboros.Network.NodeToClient (IOManager)
 
-import           Cardano.Api (Network)
+import           Cardano.Api (Network, toByronProtocolMagic)
 import           Cardano.CLI.Byron.Key (ByronKeyFailure, readEraSigningKey)
-import           Cardano.CLI.Byron.Genesis (ByronGenesisError, readGenesis)
+import           Cardano.CLI.Byron.Genesis (ByronGenesisError)
 import           Cardano.CLI.Byron.Tx (ByronTxError, nodeSubmitTx)
 import           Cardano.CLI.Helpers (HelpersError, ensureNewFileLBS, renderHelpersError)
 
@@ -70,7 +69,7 @@ renderByronUpdateProposalError err =
       "Error decoding update proposal: " <> textShow decErr
 
 runProposalCreation
-  :: ConfigYamlFilePath
+  :: Network
   -> SigningKeyFile
   -> ProtocolVersion
   -> SoftwareVersion
@@ -79,11 +78,12 @@ runProposalCreation
   -> FilePath
   -> [ParametersToUpdate]
   -> ExceptT ByronUpdateProposalError IO ()
-runProposalCreation configFp sKey pVer sVer sysTag insHash outputFp params = do
-  let sKeyfp = unSigningKeyFile sKey
+runProposalCreation nw sKey@(SigningKeyFile sKeyfp) pVer sVer
+                    sysTag insHash outputFp params = do
   sK <- firstExceptT (ReadSigningKeyFailure sKeyfp) $ readEraSigningKey ByronEra sKey
-  proposal <- createUpdateProposal configFp sK pVer sVer sysTag insHash params
-  firstExceptT ByronUpdateProposalWriteError $ ensureNewFileLBS outputFp (serialiseByronUpdateProposal proposal)
+  let proposal = createUpdateProposal nw sK pVer sVer sysTag insHash params
+  firstExceptT ByronUpdateProposalWriteError $
+    ensureNewFileLBS outputFp (serialiseByronUpdateProposal proposal)
 
 
 data ParametersToUpdate =
@@ -134,33 +134,24 @@ convertProposalToGenTx :: AProposal ByteString -> Mempool.GenTx ByronBlock
 convertProposalToGenTx prop = Mempool.ByronUpdateProposal (recoverUpId prop) prop
 
 createUpdateProposal
-  :: ConfigYamlFilePath
+  :: Network
   -> SigningKey
   -> ProtocolVersion
   -> SoftwareVersion
   -> SystemTag
   -> InstallerHash
   -> [ParametersToUpdate]
-  -> ExceptT ByronUpdateProposalError IO Proposal
-createUpdateProposal yamlConfigFile sKey pVer sVer sysTag inshash paramsToUpdate = do
+  -> Proposal
+createUpdateProposal nw sKey pVer sVer sysTag inshash paramsToUpdate =
+    signProposal (toByronProtocolMagic nw) proposalBody noPassSigningKey
+  where
+    proposalBody = ProposalBody pVer protocolParamsUpdate sVer metaData
 
-  nc <- liftIO $ parseNodeConfigurationFP yamlConfigFile
-  let updatePropFp = unGenesisFile $ ncGenesisFile nc
-  (genData, _) <- firstExceptT (ByronUpdateProposalGenesisReadError updatePropFp) . readGenesis $ ncGenesisFile nc
-
-  let metaData :: M.Map SystemTag InstallerHash
-      metaData = M.singleton sysTag inshash
-      noPassSigningKey = noPassSafeSigner sKey
-      pmId = gdProtocolMagicId genData
-      protocolParamsUpdate = createProtocolParametersUpdate
-                               emptyProtocolParametersUpdate paramsToUpdate
-
-
-  let proposalBody = ProposalBody pVer protocolParamsUpdate sVer metaData
-
-  let proposal = signProposal pmId proposalBody noPassSigningKey
-
-  pure proposal
+    metaData :: M.Map SystemTag InstallerHash
+    metaData = M.singleton sysTag inshash
+    noPassSigningKey = noPassSafeSigner sKey
+    protocolParamsUpdate = createProtocolParametersUpdate
+                             emptyProtocolParametersUpdate paramsToUpdate
 
 emptyProtocolParametersUpdate :: ProtocolParametersUpdate
 emptyProtocolParametersUpdate =

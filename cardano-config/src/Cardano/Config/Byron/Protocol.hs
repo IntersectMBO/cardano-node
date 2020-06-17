@@ -10,19 +10,23 @@ module Cardano.Config.Byron.Protocol
   (
     -- * Protocol exposing the specific type
     -- | Use this when you need the specific instance
-    mkConsensusProtocolRealPBFT
+    mkConsensusProtocolByron
 
     -- * Protocols hiding the specific type
     -- | Use this when you want to handle protocols generically
-  , mkSomeConsensusProtocolRealPBFT
+  , mkSomeConsensusProtocolByron
 
     -- * Client support
-  , mkNodeClientProtocolRealPBFT
-  , mkSomeNodeClientProtocolRealPBFT
+  , mkNodeClientProtocolByron
+  , mkSomeNodeClientProtocolByron
 
     -- * Errors
   , ByronProtocolInstantiationError(..)
   , renderByronProtocolInstantiationError
+
+    -- * Reusable parts
+  , readGenesis
+  , readLeaderCredentials
   ) where
 
 import           Cardano.Prelude
@@ -39,6 +43,7 @@ import           Cardano.Chain.Slotting (EpochSlots)
 import qualified Cardano.Chain.Update as Update
 import qualified Cardano.Chain.UTxO as UTxO
 import qualified Cardano.Crypto.Signing as Signing
+import           Cardano.Crypto.ProtocolMagic (RequiresNetworkMagic)
 
 import           Ouroboros.Consensus.Cardano hiding (Protocol)
 import qualified Ouroboros.Consensus.Cardano as Consensus
@@ -46,28 +51,29 @@ import qualified Ouroboros.Consensus.Cardano as Consensus
 import           Ouroboros.Consensus.Byron.Ledger (ByronBlock)
 
 import           Cardano.Config.Types
-                   (NodeConfiguration(..), ProtocolFilepaths(..),
-                    GenesisFile (..), Update (..), LastKnownBlockVersion (..),
+                   (NodeByronProtocolConfiguration (..),
+                    ProtocolFilepaths(..), GenesisFile (..), 
                     SomeConsensusProtocol(..), SomeNodeClientProtocol(..))
 import           Cardano.TracingOrphanInstances.Byron ()
+
 
 ------------------------------------------------------------------------------
 -- Real Byron protocol, client support
 --
 
-mkNodeClientProtocolRealPBFT :: EpochSlots
-                             -> SecurityParam
-                             -> ProtocolClient ByronBlock ProtocolRealPBFT
-mkNodeClientProtocolRealPBFT epochSlots securityParam =
+mkNodeClientProtocolByron :: EpochSlots
+                          -> SecurityParam
+                          -> ProtocolClient ByronBlock ProtocolRealPBFT
+mkNodeClientProtocolByron epochSlots securityParam =
     ProtocolClientRealPBFT epochSlots securityParam
 
 
-mkSomeNodeClientProtocolRealPBFT :: EpochSlots
-                                 -> SecurityParam
-                                 -> SomeNodeClientProtocol
-mkSomeNodeClientProtocolRealPBFT epochSlots securityParam =
+mkSomeNodeClientProtocolByron :: EpochSlots
+                              -> SecurityParam
+                              -> SomeNodeClientProtocol
+mkSomeNodeClientProtocolByron epochSlots securityParam =
     SomeNodeClientProtocol
-      (mkNodeClientProtocolRealPBFT epochSlots securityParam)
+      (mkNodeClientProtocolByron epochSlots securityParam)
 
 
 ------------------------------------------------------------------------------
@@ -81,97 +87,82 @@ mkSomeNodeClientProtocolRealPBFT epochSlots securityParam =
 -- This also serves a purpose as a sanity check that we have all the necessary
 -- type class instances available.
 --
-mkSomeConsensusProtocolRealPBFT
-  :: NodeConfiguration
+mkSomeConsensusProtocolByron
+  :: NodeByronProtocolConfiguration
   -> Maybe ProtocolFilepaths
   -> ExceptT ByronProtocolInstantiationError IO SomeConsensusProtocol
-mkSomeConsensusProtocolRealPBFT nc files =
+mkSomeConsensusProtocolByron nc files =
 
     -- Applying the SomeConsensusProtocol here is a check that
-    -- the type of mkConsensusProtocolRealPBFT fits all the class
+    -- the type of mkConsensusProtocolByron fits all the class
     -- constraints we need to run the protocol.
-    SomeConsensusProtocol <$> mkConsensusProtocolRealPBFT nc files
+    SomeConsensusProtocol <$> mkConsensusProtocolByron nc files
 
 
 -- | Instantiate 'Consensus.Protocol' for Byron specifically.
 --
 -- Use this when you need to run the consensus with this specific protocol.
 --
-mkConsensusProtocolRealPBFT
-  :: NodeConfiguration
+mkConsensusProtocolByron
+  :: NodeByronProtocolConfiguration
   -> Maybe ProtocolFilepaths
   -> ExceptT ByronProtocolInstantiationError IO
              (Consensus.Protocol IO ByronBlock ProtocolRealPBFT)
-mkConsensusProtocolRealPBFT NodeConfiguration {
-                              ncGenesisFile = GenesisFile genesisFile,
-                              ncReqNetworkMagic,
-                              ncPbftSignatureThresh,
-                              ncUpdate
-                            }
-                            files = do
-    (genesisData, genesisHash) <-
-      firstExceptT (GenesisReadError genesisFile) $
-        Genesis.readGenesisData genesisFile
+mkConsensusProtocolByron NodeByronProtocolConfiguration {
+                           npcByronGenesisFile,
+                           npcByronReqNetworkMagic,
+                           npcByronPbftSignatureThresh,
+                           npcByronApplicationName,
+                           npcByronApplicationVersion,
+                           npcByronSupportedProtocolVersionMajor,
+                           npcByronSupportedProtocolVersionMinor,
+                           npcByronSupportedProtocolVersionAlt
+                         }
+                         files = do
+    genesisConfig <- readGenesis npcByronGenesisFile npcByronReqNetworkMagic
 
-    let genesisConfig :: Genesis.Config
-        genesisConfig =
-          Genesis.Config {
-            Genesis.configGenesisData       = genesisData,
-            Genesis.configGenesisHash       = genesisHash,
-            Genesis.configReqNetMagic       = ncReqNetworkMagic,
-            Genesis.configUTxOConfiguration = UTxO.defaultUTxOConfiguration
-            --TODO: add config support for the UTxOConfiguration if needed
-          }
-
-    optionalLeaderCredentials <-
-      case files of
-        Just ProtocolFilepaths {
-               byronCertFile,
-               byronKeyFile
-             }  -> readLeaderCredentials
-                     genesisConfig
-                     byronCertFile
-                     byronKeyFile
-        Nothing -> return Nothing
+    optionalLeaderCredentials <- readLeaderCredentials genesisConfig files
 
     return $
-      protocolConfigRealPbft
-        ncUpdate
-        ncPbftSignatureThresh
+      Consensus.ProtocolRealPBFT
         genesisConfig
+        (PBftSignatureThreshold <$> npcByronPbftSignatureThresh)
+        (Update.ProtocolVersion npcByronSupportedProtocolVersionMajor
+                                npcByronSupportedProtocolVersionMinor
+                                npcByronSupportedProtocolVersionAlt)
+        (Update.SoftwareVersion npcByronApplicationName
+                                npcByronApplicationVersion)
         optionalLeaderCredentials
 
 
--- | The plumbing to select and convert the appropriate configuration subset
--- for the 'RealPBFT' protocol.
---
-protocolConfigRealPbft :: Update
-                       -> Maybe Double
-                       -> Genesis.Config
-                       -> Maybe PBftLeaderCredentials
-                       -> Consensus.Protocol IO ByronBlock ProtocolRealPBFT
-protocolConfigRealPbft (Update appName appVer lastKnownBlockVersion)
-                       pbftSignatureThresh
-                       genesis leaderCredentials =
-    Consensus.ProtocolRealPBFT
-      genesis
-      (PBftSignatureThreshold <$> pbftSignatureThresh)
-      (convertProtocolVersion lastKnownBlockVersion)
-      (Update.SoftwareVersion appName appVer)
-      leaderCredentials
-  where
-    convertProtocolVersion
-      LastKnownBlockVersion {lkbvMajor, lkbvMinor, lkbvAlt} =
-      Update.ProtocolVersion lkbvMajor lkbvMinor lkbvAlt
+readGenesis :: GenesisFile
+            -> RequiresNetworkMagic
+            -> ExceptT ByronProtocolInstantiationError IO
+                       Genesis.Config
+readGenesis (GenesisFile file) ncReqNetworkMagic =
+    firstExceptT (GenesisReadError file) $ do
+      (genesisData, genesisHash) <- Genesis.readGenesisData file
+      return Genesis.Config {
+        Genesis.configGenesisData       = genesisData,
+        Genesis.configGenesisHash       = genesisHash,
+        Genesis.configReqNetMagic       = ncReqNetworkMagic,
+        Genesis.configUTxOConfiguration = UTxO.defaultUTxOConfiguration
+        --TODO: add config support for the UTxOConfiguration if needed
+      }
+
 
 
 readLeaderCredentials :: Genesis.Config
-                      -> Maybe FilePath
-                      -> Maybe FilePath
+                      -> Maybe ProtocolFilepaths
                       -> ExceptT ByronProtocolInstantiationError IO
                                  (Maybe PBftLeaderCredentials)
-readLeaderCredentials genesisConfig mDelCertFp mSKeyFp =
-  case (mDelCertFp, mSKeyFp) of
+readLeaderCredentials _ Nothing = return Nothing
+readLeaderCredentials genesisConfig
+                      (Just ProtocolFilepaths {
+                        byronCertFile,
+                        byronKeyFile
+                      }) =
+  case (byronCertFile, byronKeyFile) of
     (Nothing, Nothing) -> pure Nothing
     (Just _, Nothing) -> left SigningKeyFilepathNotSpecified
     (Nothing, Just _) -> left DelegationCertificateFilepathNotSpecified

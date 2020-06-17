@@ -33,7 +33,7 @@ import           Cardano.CLI.Helpers (HelpersError, pPrintCBOR, renderHelpersErr
 import           Cardano.CLI.Shelley.Parsers (OutputFile (..), QueryCmd (..))
 
 import           Cardano.Config.Shelley.Orphans ()
-import           Cardano.Config.Shelley.Protocol (mkNodeClientProtocolTPraos)
+import           Cardano.Config.Shelley.Protocol (mkNodeClientProtocolShelley)
 
 import           Cardano.Crypto.Hash.Class (getHashBytesAsHex)
 
@@ -104,7 +104,9 @@ runQueryProtocolParameters
   -> ExceptT ShelleyQueryCmdError IO ()
 runQueryProtocolParameters network mOutFile = do
   sockPath <- firstExceptT ShelleyQueryEnvVarSocketErr readEnvSocketPath
-  let ptclClientInfo = pClientInfoCodecConfig . protocolClientInfo $ mkNodeClientProtocolTPraos
+  let ptclClientInfo = pClientInfoCodecConfig
+                     . protocolClientInfo
+                     $ mkNodeClientProtocolShelley
   tip <- liftIO $ withIOManager $ \iomgr ->
     getLocalTip iomgr ptclClientInfo network sockPath
   pparams <- firstExceptT NodeLocalStateQueryError $
@@ -125,7 +127,9 @@ runQueryTip
   -> ExceptT ShelleyQueryCmdError IO ()
 runQueryTip network mOutFile = do
   sockPath <- firstExceptT ShelleyQueryEnvVarSocketErr readEnvSocketPath
-  let ptclClientInfo = pClientInfoCodecConfig . protocolClientInfo $ mkNodeClientProtocolTPraos
+  let ptclClientInfo = pClientInfoCodecConfig
+                     . protocolClientInfo
+                     $ mkNodeClientProtocolShelley
   tip <- liftIO $ withIOManager $ \iomgr ->
     getLocalTip iomgr ptclClientInfo network sockPath
   case mOutFile of
@@ -140,7 +144,9 @@ runQueryUTxO
   -> ExceptT ShelleyQueryCmdError IO ()
 runQueryUTxO qfilter network mOutFile = do
   sockPath <- firstExceptT ShelleyQueryEnvVarSocketErr readEnvSocketPath
-  let ptclClientInfo = pClientInfoCodecConfig . protocolClientInfo $ mkNodeClientProtocolTPraos
+  let ptclClientInfo = pClientInfoCodecConfig
+                     . protocolClientInfo
+                     $ mkNodeClientProtocolShelley
   tip <- liftIO $ withIOManager $ \iomgr ->
             getLocalTip iomgr ptclClientInfo network sockPath
   filteredUtxo <- firstExceptT NodeLocalStateQueryError $
@@ -153,7 +159,9 @@ runQueryLedgerState
   -> ExceptT ShelleyQueryCmdError IO ()
 runQueryLedgerState network mOutFile = do
   sockPath <- firstExceptT ShelleyQueryEnvVarSocketErr readEnvSocketPath
-  let ptclClientInfo = pClientInfoCodecConfig . protocolClientInfo $ mkNodeClientProtocolTPraos
+  let ptclClientInfo = pClientInfoCodecConfig
+                     . protocolClientInfo
+                     $ mkNodeClientProtocolShelley
   tip <- liftIO $ withIOManager $ \iomgr ->
             getLocalTip iomgr ptclClientInfo network sockPath
   els <- firstExceptT NodeLocalStateQueryError $
@@ -171,7 +179,9 @@ runQueryStakeAddressInfo
   -> ExceptT ShelleyQueryCmdError IO ()
 runQueryStakeAddressInfo addr network mOutFile = do
     sockPath <- firstExceptT ShelleyQueryEnvVarSocketErr readEnvSocketPath
-    let ptclClientInfo = pClientInfoCodecConfig . protocolClientInfo $ mkNodeClientProtocolTPraos
+    let ptclClientInfo = pClientInfoCodecConfig
+                       . protocolClientInfo
+                       $ mkNodeClientProtocolShelley
     tip <- liftIO $ withIOManager $ \iomgr ->
       getLocalTip iomgr ptclClientInfo network sockPath
     delegsAndRwds <- firstExceptT NodeLocalStateQueryError $
@@ -241,7 +251,9 @@ runQueryStakeDistribution
   -> ExceptT ShelleyQueryCmdError IO ()
 runQueryStakeDistribution network mOutFile = do
   sockPath <- firstExceptT ShelleyQueryEnvVarSocketErr readEnvSocketPath
-  let ptclClientInfo = pClientInfoCodecConfig . protocolClientInfo $ mkNodeClientProtocolTPraos
+  let ptclClientInfo = pClientInfoCodecConfig
+                     . protocolClientInfo
+                     $ mkNodeClientProtocolShelley
   tip <- liftIO $ withIOManager $ \iomgr ->
     getLocalTip iomgr ptclClientInfo network sockPath
   stakeDist <- firstExceptT NodeLocalStateQueryError $
