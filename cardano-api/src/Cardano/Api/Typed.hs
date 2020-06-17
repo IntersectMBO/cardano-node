@@ -1753,13 +1753,20 @@ instance SerialiseAsRawBytes (Hash VrfKey) where
       VrfKeyHash <$> Crypto.hashFromBytes bs
 
 instance HasTextEnvelope (VerificationKey VrfKey) where
-    textEnvelopeType _ = "VerKeyVRF " <> fromString (Crypto.algorithmNameVRF proxy)
+    textEnvelopeType _ = "VerKeyVRF " <> fromString (backCompatAlgorithmNameVrf proxy)
       where
         proxy :: Proxy (Shelley.VRF ShelleyCrypto)
         proxy = Proxy
 
 instance HasTextEnvelope (SigningKey VrfKey) where
-    textEnvelopeType _ = "SignKeyVRF " <> fromString (Crypto.algorithmNameVRF proxy)
+    textEnvelopeType _ = "SignKeyVRF " <> fromString (backCompatAlgorithmNameVrf proxy)
       where
         proxy :: Proxy (Shelley.VRF ShelleyCrypto)
         proxy = Proxy
+
+-- | Temporary solution for maintaining backward compatibility with the output
+-- of 'Cardano.Config.Shelley.VRF.encodeVRFVerificationKey'.
+backCompatAlgorithmNameVrf :: Proxy (Shelley.VRF ShelleyCrypto) -> String
+backCompatAlgorithmNameVrf p =
+  let algoName = Crypto.algorithmNameVRF p
+  in if algoName == "simple" then "SimpleVRF" else algoName
