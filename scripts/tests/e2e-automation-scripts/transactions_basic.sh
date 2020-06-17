@@ -1,10 +1,10 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Scenario:
 #	1. create 2 addresses (only with payment keys) - addr1 and addr2
 #	2. send 100000 Lovelace from user1.addr (embeded into genesis / faucet) to one of the addresses created above (addr1)
 #	3. send all the funds from addr1 to addr2 (1 tx_input and 1 tx_output)
-#	4. check that the balances were correctly updated 
+#	4. check that the balances were correctly updated
 
 # Current working dir: cardano-node
 
@@ -125,5 +125,3 @@ if [ $?	!= 0 ]; then
     error_msg "Error when sending funds from user1 to addr1"
     exit 1
 fi
-
-

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Scenario:
 #	1. create 2 addresses (only with payment keys) - addr1 and addr2
@@ -141,4 +141,3 @@ if [ $?	!= 0 ]; then
 	error_msg "Error when sending funds from user1 to addr1"
 	exit 1
 fi
-

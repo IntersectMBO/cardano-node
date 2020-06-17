@@ -1,4 +1,4 @@
-#!/bin/bash -eu
+#!/usr/bin/env bash -eu
 
 if test "${CARDANO_CLI:-x}" = "x" ; then
   # Need this for when the test scripts are run directly instead of via the
