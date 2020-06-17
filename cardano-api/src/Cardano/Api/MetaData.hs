@@ -1,7 +1,8 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Cardano.Api.MetaData
-  ( MetaDataError
+  ( module X
+  , MetaDataError
   , readJSONMetaData
   , renderMetaDataError
   ) where
@@ -21,6 +22,8 @@ import           Data.Scientific (floatingOrInteger)
 import qualified Data.Vector as Vector
 
 import           Cardano.Api.Error (textShow)
+import           Cardano.Api.MetaData.Pool as X
+
 import           Shelley.Spec.Ledger.MetaData (MetaData(..), MetaDatum(..))
 
 

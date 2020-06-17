@@ -9,16 +9,17 @@ import           Cardano.Prelude
 import qualified Data.Set as Set
 
 import           Control.Monad.Trans.Except (ExceptT)
-import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, newExceptT)
+import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistEither,
+                   newExceptT)
 
 import qualified Data.ByteString.Char8 as BS
 
 import           Cardano.Api (ApiError(..), ShelleyCoin, ShelleyStakePoolMargin,
                    ShelleyStakePoolMetaData, ShelleyStakePoolRelay, StakingVerificationKey (..),
-                   ShelleyVerificationKeyHashStakePool,
-                   Network, toShelleyNetwork,
-                   mkShelleyStakingCredential, readStakingVerificationKey,
-                   renderApiError, shelleyRegisterStakePool,
+                   ShelleyVerificationKeyHashStakePool, StakePoolMetadataValidationError,
+                   Network, decodeAndValidateStakePoolMetadata, toShelleyNetwork,
+                   mkShelleyStakingCredential, readStakingVerificationKey, renderApiError,
+                   renderStakePoolMetadataValidationError, shelleyRegisterStakePool,
                    shelleyRetireStakePool, textShow, writeCertificate)
 
 import qualified Shelley.Spec.Ledger.Address as Shelley
@@ -41,6 +42,7 @@ data ShelleyPoolCmdError
   | ShelleyPoolReadMetaDataError !FilePath !IOException
   | ShelleyPoolWriteRegistrationCertError !FilePath !ApiError
   | ShelleyPoolWriteRetirementCertError !FilePath !ApiError
+  | ShelleyPoolMetaDataValidationError !StakePoolMetadataValidationError
   deriving Show
 
 renderShelleyPoolCmdError :: ShelleyPoolCmdError -> Text
@@ -58,6 +60,8 @@ renderShelleyPoolCmdError err =
       "Error writing stake pool registration certificate at: " <> textShow fp <> " Error: " <> renderApiError apiErr
     ShelleyPoolWriteRetirementCertError fp apiErr ->
       "Error writing stake pool retirement certificate at: " <> textShow fp <> " Error: " <> renderApiError apiErr
+    ShelleyPoolMetaDataValidationError validationErr ->
+      "Error validating stake pool metadata: " <> renderStakePoolMetadataValidationError validationErr
 
 
 
@@ -177,6 +181,9 @@ runPoolMetaDataHash :: PoolMetaDataFile -> ExceptT ShelleyPoolCmdError IO ()
 runPoolMetaDataHash (PoolMetaDataFile poolMDPath) = do
   metaDataBytes <- handleIOExceptT (ShelleyPoolReadMetaDataError poolMDPath) $
     BS.readFile poolMDPath
+  _ <- firstExceptT ShelleyPoolMetaDataValidationError
+    . hoistEither
+    $ decodeAndValidateStakePoolMetadata metaDataBytes
   let metaDataHash :: Crypto.Hash Crypto.Blake2b_256 ByteString
       metaDataHash = Crypto.hash metaDataBytes
   liftIO $ BS.putStrLn (Crypto.getHashBytesAsHex metaDataHash)
