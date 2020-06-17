@@ -32,11 +32,12 @@
 , cardano-node
 , scripts
 
-# Get the current commit
-, gitrev ? iohkNix.commitIdFromGitRepoOrZero ../.git
+# Set gitrev to null, to ensure the version below is used
+, gitrev ? null
 
 # Other things to include in the image.
 , bashInteractive
+, buildPackages
 , cacert
 , coreutils
 , curl
@@ -99,10 +100,13 @@ let
         echo "Or mount a /configuration volume containing: configuration.yaml, genesis.json, and topology.json"
       fi
     '';
+    gitrev' = if (gitrev == null)
+      then buildPackages.commonLib.commitIdFromGitRepoOrZero ../.git
+      else gitrev;
   in dockerTools.buildImage {
     name = "${repoName}";
     fromImage = baseImage;
-    tag = "${gitrev}";
+    tag = "${gitrev'}";
     created = "now";   # Set creation date to build time. Breaks reproducibility
     contents = [ entry-point ];
     config = {
