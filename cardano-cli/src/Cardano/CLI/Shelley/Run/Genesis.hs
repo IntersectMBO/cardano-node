@@ -33,9 +33,8 @@ import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT
 import           Cardano.Api hiding (writeAddress)
 import           Cardano.Api.Typed (AsType (..), Error (..), FileError, Hash (..),
                    OperationalCertificateIssueCounter (..), TextEnvelopeError,
-                   VerificationKey, VrfKey, castVerificationKey, generateSigningKey,
-                   getVerificationKey, readFileTextEnvelope, verificationKeyHash,
-                   writeFileTextEnvelope)
+                   VerificationKey, VrfKey, generateSigningKey, getVerificationKey,
+                   readFileTextEnvelope, verificationKeyHash, writeFileTextEnvelope)
 
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
 import           Ouroboros.Consensus.Shelley.Protocol (TPraosStandardCrypto)
@@ -194,7 +193,9 @@ runGenesisKeyGenDelegate (VerificationKeyFile vkeyPath)
       $ writeFileTextEnvelope ocertCtrPath (Just ocertCtrDesc)
       $ OperationalCertificateIssueCounter
           initialCounter
-          (castVerificationKey vkey)  -- Cast to a 'StakePoolKey'
+          -- TODO: Commenting this out as we're temporarily supporting the old op
+          -- cert issue counter format.
+          -- (castVerificationKey vkey)  -- Cast to a 'StakePoolKey'
   where
     skeyDesc, vkeyDesc, ocertCtrDesc :: TextViewTitle
     skeyDesc = TextViewTitle "Genesis delegate operator key"

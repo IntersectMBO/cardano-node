@@ -867,7 +867,9 @@ data OperationalCertificate =
 data OperationalCertificateIssueCounter =
      OperationalCertificateIssueCounter
        !Natural
-       !(VerificationKey StakePoolKey) -- For consistency checking
+       -- TODO: Commenting this out as we're temporarily supporting the old op
+       -- cert issue counter format.
+       -- !(VerificationKey StakePoolKey) -- For consistency checking
   deriving (Eq, Show)
   deriving anyclass SerialiseAsCBOR
 
@@ -881,13 +883,20 @@ instance FromCBOR OperationalCertificate where
       return (OperationalCertificate ocert vkey)
 
 instance ToCBOR OperationalCertificateIssueCounter where
-    toCBOR (OperationalCertificateIssueCounter counter vkey) =
-      toCBOR (counter, vkey)
+    -- TODO: Commenting this out as we're temporarily supporting the old op
+    -- cert issue counter format.
+    -- toCBOR (OperationalCertificateIssueCounter counter vkey) =
+    --   toCBOR (counter, vkey)
+    toCBOR (OperationalCertificateIssueCounter counter) =
+      toCBOR counter
 
 instance FromCBOR OperationalCertificateIssueCounter where
-    fromCBOR = do
-      (counter, vkey) <- fromCBOR
-      return (OperationalCertificateIssueCounter counter vkey)
+    -- TODO: Commenting this out as we're temporarily supporting the old op
+    -- cert issue counter format.
+    -- fromCBOR = do
+    --   (counter, vkey) <- fromCBOR
+    --   return (OperationalCertificateIssueCounter counter vkey)
+    fromCBOR = OperationalCertificateIssueCounter <$> fromCBOR
 
 instance HasTypeProxy OperationalCertificate where
     data AsType OperationalCertificate = AsOperationalCertificate
@@ -929,13 +938,20 @@ issueOperationalCertificate :: VerificationKey KesKey
 issueOperationalCertificate (KesVerificationKey kesVKey)
                             (StakePoolSigningKey poolSKey)
                             kesPeriod
-                            (OperationalCertificateIssueCounter counter poolVKey)
-  | poolVKey /= poolVKey'
-  = Left (OperationalCertKeyMismatch poolVKey poolVKey')
-
-  | otherwise
-  = Right (OperationalCertificate ocert poolVKey,
-           OperationalCertificateIssueCounter (succ counter) poolVKey)
+                            -- TODO: Commenting this out as we're temporarily supporting the old op
+                            -- cert issue counter format.
+                            -- (OperationalCertificateIssueCounter counter poolVKey)
+                            (OperationalCertificateIssueCounter counter)
+  -- TODO: Commenting this out as we're temporarily supporting the old op
+  -- cert issue counter format.
+  -- \| poolVKey /= poolVKey'
+  -- = Left (OperationalCertKeyMismatch poolVKey poolVKey')
+  --
+  -- \| otherwise
+  -- = Right (OperationalCertificate ocert poolVKey,
+  --          OperationalCertificateIssueCounter (succ counter) poolVKey)
+    = Right (OperationalCertificate ocert poolVKey',
+             OperationalCertificateIssueCounter (succ counter))
   where
     poolVKey' = getVerificationKey (StakePoolSigningKey poolSKey)
 

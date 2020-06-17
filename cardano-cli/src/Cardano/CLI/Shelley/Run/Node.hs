@@ -71,7 +71,10 @@ runNodeKeyGenCold (VerificationKeyFile vkeyPath) (SigningKeyFile skeyPath)
     firstExceptT ShelleyNodeWriteFileError
       . newExceptT
       $ writeFileTextEnvelope ocertCtrPath (Just ocertCtrDesc)
-      $ OperationalCertificateIssueCounter initialCounter vkey
+      -- TODO: Commenting this out as we're temporarily supporting the old op
+      -- cert issue counter format.
+      -- \$ OperationalCertificateIssueCounter initialCounter vkey
+      $ OperationalCertificateIssueCounter initialCounter
   where
     skeyDesc, vkeyDesc, ocertCtrDesc :: TextViewTitle
     skeyDesc = TextViewTitle "Stake Pool Operator Signing Key"
@@ -168,7 +171,10 @@ runNodeIssueOpCert (VerificationKeyFile vkeyKesPath)
       $ writeFileTextEnvelope certFile Nothing ocert
   where
     getCounter :: OperationalCertificateIssueCounter -> Natural
-    getCounter (OperationalCertificateIssueCounter n _) = n
+    -- TODO: Commenting this out as we're temporarily supporting the old op
+    -- cert issue counter format.
+    -- getCounter (OperationalCertificateIssueCounter n _) = n
+    getCounter (OperationalCertificateIssueCounter n) = n
 
     ocertCtrDesc :: Natural -> TextViewTitle
     ocertCtrDesc n = TextViewTitle $ "Next certificate issue number: " <> show n
