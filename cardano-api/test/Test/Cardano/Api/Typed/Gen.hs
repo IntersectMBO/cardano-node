@@ -58,7 +58,7 @@ genOperationalCertificateWithCounter = do
   stakePoolSign <- genSigningKey AsStakePoolKey
   kesP <- genKESPeriod
   c <- Gen.integral $ Range.linear 0 1000
-  let stakePoolVer = getVerificationKey stakePoolSign
+  let -- stakePoolVer = getVerificationKey stakePoolSign
       -- TODO: Commenting this out as we're temporarily supporting the old op
       -- cert issue counter format.
       -- iCounter = OperationalCertificateIssueCounter c stakePoolVer
