@@ -95,7 +95,7 @@ hashToText = Text.decodeLatin1 . Crypto.getHashBytesAsHex
 -- not printable should be hex encoded for readability.
 instance ToJSON ByteString where
   toJSON bs =
-    toJSON $
+    toJSON . Text.decodeLatin1 $
       if BS.all isPrint bs
         then bs
         else Base16.encode bs
