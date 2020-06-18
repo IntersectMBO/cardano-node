@@ -9,7 +9,7 @@ stylish-haskell: ## Apply stylish-haskell on all *.hs files
 	@find . -type f -name "*.hs" -not -path '.git' -not -path '*.stack-work*' -print0 | xargs -0 stylish-haskell -i
 
 cabal-hashes:
-	$$(nix-build default.nix -A checkCabalProject --no-out-link)
+	$$(nix-build ./nix -A iohkNix.checkCabalProject --no-out-link)
 
 ghci: ## Run repl
 	@stack ghci $(PROJECT_NAME):lib --haddock-deps --ghci-options=-fobject-code --nix

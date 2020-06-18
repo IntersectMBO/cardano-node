@@ -36,7 +36,7 @@ let
     };
     customConfig' = defaultConfig // customConfig;
   in pkgs.callPackage ./nix/docker.nix {
-    inherit (self) cardano-node;
+    inherit (packages) cardano-node;
     scripts = callPackage ./nix/scripts.nix { customConfig = customConfig'; };
   };
 
@@ -54,19 +54,13 @@ let
       $STRIP $out/bin/*
     '' else p;
 
-  self = {
-    inherit haskellPackages scripts nixosTests environments dockerImage;
+  packages = {
+    inherit haskellPackages cardano-node cardano-cli chairman db-converter
+      scripts nixosTests environments dockerImage;
 
     inherit (haskellPackages.cardano-node.identifier) version;
-    # Grab the executable component of our package.
-    inherit (haskellPackages.cardano-node.components.exes) cardano-node;
-    cardano-node-profiled = cardanoNodeProfiledHaskellPackages.cardano-node.components.exes.cardano-node;
-    inherit (haskellPackages.cardano-cli.components.exes) cardano-cli;
-    inherit (haskellPackages.cardano-node.components.exes) chairman;
-    # expose the db-converter from the ouroboros-network we depend on
-    inherit (cardanoNodeHaskellPackages.ouroboros-consensus-byron.components.exes) db-converter;
 
-    inherit (pkgs.iohkNix) checkCabalProject;
+    cluster = mkCluster customConfig;
 
     exes = mapAttrsRecursiveCond (as: !(isDerivation as)) rewrite-static (collectComponents' "exes" haskellPackages);
 
@@ -85,4 +79,4 @@ let
       withHoogle = true;
     };
 };
-in self
+in packages
