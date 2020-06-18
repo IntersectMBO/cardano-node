@@ -19,4 +19,14 @@ pkgs: _: with pkgs; {
       ;
     profiling = true;
   };
+
+  #Grab the executable component of our package.
+  inherit (cardanoNodeHaskellPackages.cardano-node.components.exes) cardano-node chairman;
+  inherit (cardanoNodeHaskellPackages.cardano-cli.components.exes) cardano-cli;
+  cardano-node-profiled = cardanoNodeProfiledHaskellPackages.cardano-node.components.exes.cardano-node;
+
+  # expose the db-converter from the ouroboros-network we depend on
+  inherit (cardanoNodeHaskellPackages.ouroboros-consensus-byron.components.exes) db-converter;
+
+  mkCluster = callPackage ./supervisord-cluster;
 }
