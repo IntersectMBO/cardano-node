@@ -205,7 +205,7 @@ data GenesisCmd
   | GenesisKeyGenGenesis VerificationKeyFile SigningKeyFile
   | GenesisKeyGenDelegate VerificationKeyFile SigningKeyFile OpCertCounterFile
   | GenesisKeyGenUTxO VerificationKeyFile SigningKeyFile
-  | GenesisKeyHash VerificationKeyFile
+  | GenesisCmdKeyHash VerificationKeyFile
   | GenesisVerKey VerificationKeyFile SigningKeyFile
   | GenesisTxIn VerificationKeyFile Network (Maybe OutputFile)
   | GenesisAddr VerificationKeyFile Network (Maybe OutputFile)

@@ -59,7 +59,10 @@ genOperationalCertificateWithCounter = do
   kesP <- genKESPeriod
   c <- Gen.integral $ Range.linear 0 1000
   let stakePoolVer = getVerificationKey stakePoolSign
-      iCounter = OperationalCertificateIssueCounter c stakePoolVer
+      -- TODO: Commenting this out as we're temporarily supporting the old op
+      -- cert issue counter format.
+      -- iCounter = OperationalCertificateIssueCounter c stakePoolVer
+      iCounter = OperationalCertificateIssueCounter c
 
   case issueOperationalCertificate kesVKey stakePoolSign kesP iCounter of
     -- This case should be impossible as we clearly derive the verification

@@ -227,6 +227,7 @@ import           Data.Bifunctor (first)
 import           Data.List as List
 --import           Data.Either
 import           Data.String (IsString(fromString))
+import qualified Data.Text as Text (unpack)
 import           Numeric.Natural
 
 import           Data.ByteString (ByteString)
@@ -866,7 +867,9 @@ data OperationalCertificate =
 data OperationalCertificateIssueCounter =
      OperationalCertificateIssueCounter
        !Natural
-       !(VerificationKey StakePoolKey) -- For consistency checking
+       -- TODO: Commenting this out as we're temporarily supporting the old op
+       -- cert issue counter format.
+       -- !(VerificationKey StakePoolKey) -- For consistency checking
   deriving (Eq, Show)
   deriving anyclass SerialiseAsCBOR
 
@@ -880,13 +883,20 @@ instance FromCBOR OperationalCertificate where
       return (OperationalCertificate ocert vkey)
 
 instance ToCBOR OperationalCertificateIssueCounter where
-    toCBOR (OperationalCertificateIssueCounter counter vkey) =
-      toCBOR (counter, vkey)
+    -- TODO: Commenting this out as we're temporarily supporting the old op
+    -- cert issue counter format.
+    -- toCBOR (OperationalCertificateIssueCounter counter vkey) =
+    --   toCBOR (counter, vkey)
+    toCBOR (OperationalCertificateIssueCounter counter) =
+      toCBOR counter
 
 instance FromCBOR OperationalCertificateIssueCounter where
-    fromCBOR = do
-      (counter, vkey) <- fromCBOR
-      return (OperationalCertificateIssueCounter counter vkey)
+    -- TODO: Commenting this out as we're temporarily supporting the old op
+    -- cert issue counter format.
+    -- fromCBOR = do
+    --   (counter, vkey) <- fromCBOR
+    --   return (OperationalCertificateIssueCounter counter vkey)
+    fromCBOR = OperationalCertificateIssueCounter <$> fromCBOR
 
 instance HasTypeProxy OperationalCertificate where
     data AsType OperationalCertificate = AsOperationalCertificate
@@ -928,13 +938,20 @@ issueOperationalCertificate :: VerificationKey KesKey
 issueOperationalCertificate (KesVerificationKey kesVKey)
                             (StakePoolSigningKey poolSKey)
                             kesPeriod
-                            (OperationalCertificateIssueCounter counter poolVKey)
-  | poolVKey /= poolVKey'
-  = Left (OperationalCertKeyMismatch poolVKey poolVKey')
-
-  | otherwise
-  = Right (OperationalCertificate ocert poolVKey,
-           OperationalCertificateIssueCounter (succ counter) poolVKey)
+                            -- TODO: Commenting this out as we're temporarily supporting the old op
+                            -- cert issue counter format.
+                            -- (OperationalCertificateIssueCounter counter poolVKey)
+                            (OperationalCertificateIssueCounter counter)
+  -- TODO: Commenting this out as we're temporarily supporting the old op
+  -- cert issue counter format.
+  -- \| poolVKey /= poolVKey'
+  -- = Left (OperationalCertKeyMismatch poolVKey poolVKey')
+  --
+  -- \| otherwise
+  -- = Right (OperationalCertificate ocert poolVKey,
+  --          OperationalCertificateIssueCounter (succ counter) poolVKey)
+    = Right (OperationalCertificate ocert poolVKey',
+             OperationalCertificateIssueCounter (succ counter))
   where
     poolVKey' = getVerificationKey (StakePoolSigningKey poolSKey)
 
@@ -1025,7 +1042,7 @@ instance Error e => Error (FileError e) where
     path ++ ": " ++ displayError e
 
 instance Error TextView.TextViewError where
-  displayError _ = "TODO"
+  displayError = Text.unpack . TextView.renderTextViewError
 
 serialiseToTextEnvelope :: forall a. HasTextEnvelope a
                         => Maybe TextEnvelopeDescr -> a -> TextEnvelope
@@ -1499,6 +1516,13 @@ instance HasTextEnvelope (SigningKey GenesisDelegateKey) where
     -- TODO: use a different type from the stake pool key, since some operations
     -- need a genesis key specifically
 
+instance CastKeyRole GenesisDelegateKey StakePoolKey where
+    castVerificationKey (GenesisDelegateVerificationKey (Shelley.VKey vkey)) =
+      StakePoolVerificationKey (Shelley.VKey vkey)
+
+    castSigningKey (GenesisDelegateSigningKey skey) =
+      StakePoolSigningKey skey
+
 
 --
 -- Genesis UTxO keys
@@ -1745,13 +1769,20 @@ instance SerialiseAsRawBytes (Hash VrfKey) where
       VrfKeyHash <$> Crypto.hashFromBytes bs
 
 instance HasTextEnvelope (VerificationKey VrfKey) where
-    textEnvelopeType _ = "VerKeyVRF " <> fromString (Crypto.algorithmNameVRF proxy)
+    textEnvelopeType _ = "VerKeyVRF " <> fromString (backCompatAlgorithmNameVrf proxy)
       where
         proxy :: Proxy (Shelley.VRF ShelleyCrypto)
         proxy = Proxy
 
 instance HasTextEnvelope (SigningKey VrfKey) where
-    textEnvelopeType _ = "SignKeyVRF " <> fromString (Crypto.algorithmNameVRF proxy)
+    textEnvelopeType _ = "SignKeyVRF " <> fromString (backCompatAlgorithmNameVrf proxy)
       where
         proxy :: Proxy (Shelley.VRF ShelleyCrypto)
         proxy = Proxy
+
+-- | Temporary solution for maintaining backward compatibility with the output
+-- of 'Cardano.Config.Shelley.VRF.encodeVRFVerificationKey'.
+backCompatAlgorithmNameVrf :: Proxy (Shelley.VRF ShelleyCrypto) -> String
+backCompatAlgorithmNameVrf p =
+  let algoName = Crypto.algorithmNameVRF p
+  in if algoName == "simple" then "SimpleVRF" else algoName

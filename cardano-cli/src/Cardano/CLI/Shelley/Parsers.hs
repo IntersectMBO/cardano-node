@@ -597,7 +597,7 @@ pGenesisCmd =
 
     pGenesisKeyHash :: Parser GenesisCmd
     pGenesisKeyHash =
-      GenesisKeyHash <$> pVerificationKeyFile Input
+      GenesisCmdKeyHash <$> pVerificationKeyFile Input
 
     pGenesisVerKey :: Parser GenesisCmd
     pGenesisVerKey =

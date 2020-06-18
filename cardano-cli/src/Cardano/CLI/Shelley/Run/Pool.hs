@@ -6,6 +6,7 @@ module Cardano.CLI.Shelley.Run.Pool
 
 import           Cardano.Prelude
 
+import qualified Data.Text as Text
 import qualified Data.Set as Set
 
 import           Control.Monad.Trans.Except (ExceptT)
@@ -21,13 +22,14 @@ import           Cardano.Api (ApiError(..), ShelleyCoin, ShelleyStakePoolMargin,
                    mkShelleyStakingCredential, readStakingVerificationKey, renderApiError,
                    renderStakePoolMetadataValidationError, shelleyRegisterStakePool,
                    shelleyRetireStakePool, textShow, writeCertificate)
+import           Cardano.Api.Typed (AsType (..), Error (..), FileError, Hash (..), Key (..),
+                   TextEnvelopeError, readFileTextEnvelope)
 
 import qualified Shelley.Spec.Ledger.Address as Shelley
-import           Shelley.Spec.Ledger.Keys (KeyHash (..), hashKey, hashVerKeyVRF)
+import           Shelley.Spec.Ledger.Keys (KeyHash (..), hashKey)
 import qualified Shelley.Spec.Ledger.Slot as Shelley
 
 import           Cardano.Config.Shelley.ColdKeys
-import           Cardano.Config.Shelley.VRF
 import           Cardano.Config.Types (PoolMetaDataFile (..))
 
 import           Cardano.CLI.Shelley.Commands
@@ -38,7 +40,7 @@ import qualified Cardano.Crypto.Hash.Class as Crypto
 data ShelleyPoolCmdError
   = ShelleyPoolReadStakeVerKeyError !FilePath !ApiError
   | ShelleyPoolReadStakePoolVerKeyError !FilePath !KeyError
-  | ShelleyPoolReadVRFVerKeyError !FilePath !VRFError
+  | ShelleyPoolReadVRFVerKeyError !(FileError TextEnvelopeError)
   | ShelleyPoolReadMetaDataError !FilePath !IOException
   | ShelleyPoolWriteRegistrationCertError !FilePath !ApiError
   | ShelleyPoolWriteRetirementCertError !FilePath !ApiError
@@ -48,8 +50,8 @@ data ShelleyPoolCmdError
 renderShelleyPoolCmdError :: ShelleyPoolCmdError -> Text
 renderShelleyPoolCmdError err =
   case err of
-    ShelleyPoolReadVRFVerKeyError fp vrfErr ->
-      "Error reading VRF verification key at: " <> textShow fp <> " Error: " <> renderVRFError vrfErr
+    ShelleyPoolReadVRFVerKeyError fileErr ->
+      "Error reading VRF verification key: " <> Text.pack (displayError fileErr)
     ShelleyPoolReadStakePoolVerKeyError fp keyErr ->
       "Error reading stake pool verification key at: " <> textShow fp <> " Error: " <> renderKeyError keyErr
     ShelleyPoolReadStakeVerKeyError fp apiErr ->
@@ -121,8 +123,10 @@ runStakePoolRegistrationCert
       readVerKey (OperatorKey StakePoolOperatorKey) sPvkeyFp
 
     -- VRF verification key
-    -- TODO: VRF key reading and writing has two versions and needs to be sorted out.
-    vrfVerKey <- firstExceptT (ShelleyPoolReadVRFVerKeyError vrfVkeyFp) $ readVRFVerKey vrfVkeyFp
+    vrfVerKey <- firstExceptT ShelleyPoolReadVRFVerKeyError
+      . newExceptT
+      $ readFileTextEnvelope (AsVerificationKey AsVrfKey) vrfVkeyFp
+    let VrfKeyHash shelleyVrfKeyHash = verificationKeyHash vrfVerKey
 
     -- Pool reward account
     StakingVerificationKeyShelley rewardAcctVerKey <-
@@ -145,7 +149,7 @@ runStakePoolRegistrationCert
 
     let registrationCert = shelleyRegisterStakePool
                              (hashKey stakePoolVerKey)
-                             (hashVerKeyVRF vrfVerKey)
+                             shelleyVrfKeyHash
                              pldg
                              pCost
                              pMrgn

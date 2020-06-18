@@ -11,6 +11,7 @@ module Cardano.Config.TextView
   , TextViewTitle (..)
   , parseTextView
   , renderTextView
+  , renderTextViewError
   , expectTextViewOfType
   , expectTextViewOfTypes
   , decodeFromTextView
@@ -79,6 +80,25 @@ data TextViewError
   | TextViewTypeError   ![TextViewType] !TextViewType -- ^ expected, actual
   | TextViewDecodeError !DecoderError
   deriving (Eq, Show)
+
+renderTextViewError :: TextViewError -> Text
+renderTextViewError tve =
+  case tve of
+    TextViewFormatError err -> "TextView format error: " <> toS err
+
+    TextViewTypeError [expType] actType ->
+        "TextView type error: "
+     <> " Expected: " <> Text.decodeLatin1 (unTextViewType expType)
+     <> " Actual: " <> Text.decodeLatin1 (unTextViewType actType)
+
+    TextViewTypeError expTypes actType ->
+        "TextView type error: "
+     <> " Expected one of: "
+     <> Text.intercalate ", "
+          [ Text.decodeLatin1 (unTextViewType expType) | expType <- expTypes ]
+     <> " Actual: " <> (Text.decodeLatin1 (unTextViewType actType))
+
+    TextViewDecodeError decErr -> "TextView decode error: " <> textShow decErr
 
 -- | Parse a 'TextView' from the external serialised format.
 --
@@ -161,24 +181,7 @@ data TextViewFileError
 renderTextViewFileError :: TextViewFileError -> Text
 renderTextViewFileError tvfe =
   case tvfe of
-    TextViewFileError fp (TextViewFormatError err) ->
-      "TextView format error at: " <> toS fp <> " Error: " <> toS err
-
-    TextViewFileError fp (TextViewTypeError [expType] actType) ->
-        "TextView type error at: " <> toS fp
-     <> " Expected: " <> Text.decodeLatin1 (unTextViewType expType)
-     <> " Actual: " <> Text.decodeLatin1 (unTextViewType actType)
-
-    TextViewFileError fp (TextViewTypeError expTypes actType) ->
-        "TextView type error at: " <> toS fp
-     <> " Expected one of: "
-     <> Text.intercalate ", "
-          [ Text.decodeLatin1 (unTextViewType expType) | expType <- expTypes ]
-     <> " Actual: " <> (Text.decodeLatin1 (unTextViewType actType))
-
-    TextViewFileError fp (TextViewDecodeError decErr)->
-      "TextView file error at: " <> toS fp <> " Error: " <> textShow decErr
-
+    TextViewFileError fp err -> toS fp <> ": " <> renderTextViewError err
     TextViewFileIOError fp ioExcpt ->
       "TextView IO exception at: " <> toS fp <> " Error: " <> textShow ioExcpt
 
