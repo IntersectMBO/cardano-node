@@ -178,7 +178,10 @@ mkConsensusProtocolCardano NodeByronProtocolConfiguration {
         shelleyLeaderCredentials
 
         -- Hard fork parameters
-        Consensus.NoHardCodedTransition --TODO
+        (Just 190) --TODO: Optimisation: once the epoch of the transition is
+                   -- known, set this to the first shelley epoch.
+        (Consensus.NoHardCodedTransition (fromIntegral npcShelleyMaxSupportedProtocolVersion))
+        --TODO is this the right value?
 
 
 ------------------------------------------------------------------------------

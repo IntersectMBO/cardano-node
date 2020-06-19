@@ -49,7 +49,7 @@ import qualified Data.Set as Set
 
 
 import           Shelley.Spec.Ledger.BaseTypes (Nonce (..),StrictMaybe (..),
-                    UnitInterval(..), maybeToStrictMaybe, mkNonce,
+                    UnitInterval(..), maybeToStrictMaybe, mkNonceFromNumber,
                     mkUnitInterval, textToDns, textToUrl)
 import qualified Shelley.Spec.Ledger.BaseTypes as Shelley
 import           Shelley.Spec.Ledger.Coin (Coin (..))
@@ -284,7 +284,7 @@ genUpdate = do
 genNonce :: Gen Nonce
 genNonce =
   Gen.choice
-    [ mkNonce <$> genNatural (Range.linear 1 123)
+    [ mkNonceFromNumber <$> Gen.word64 (Range.linear 1 123)
     , pure NeutralNonce
     ]
 

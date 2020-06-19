@@ -169,8 +169,8 @@ localInitiatorNetworkApplication tracer cfg nm resultVar genTx =
             InitiatorProtocolOnly $
               MuxPeerRaw $ \channel -> do
                 traceWith tracer "Submitting transaction"
-                result <- runPeer
-                            nullTracer -- (contramap show tracer)
+                (result, trailing)
+                 <- runPeer nullTracer -- (contramap show tracer)
                             cTxSubmissionCodec
                             channel
                             (localTxSubmissionClientPeer
@@ -179,6 +179,7 @@ localInitiatorNetworkApplication tracer cfg nm resultVar genTx =
                   SubmitSuccess -> traceWith tracer "Transaction accepted"
                   SubmitFail _  -> traceWith tracer "Transaction rejected"
                 atomically $ putTMVar resultVar result
+                return ((), trailing)
 
         , localStateQueryProtocol =
             InitiatorProtocolOnly $

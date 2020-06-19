@@ -38,15 +38,13 @@ import qualified Data.Text as T
 
 import qualified Data.Aeson as Aeson
 
-import           Ouroboros.Consensus.Cardano hiding (Protocol)
 import qualified Ouroboros.Consensus.Cardano as Consensus
 
 import           Ouroboros.Consensus.Shelley.Ledger
 import           Ouroboros.Consensus.Shelley.Protocol
                    (TPraosStandardCrypto, TPraosIsCoreNode(..))
-import           Ouroboros.Consensus.Shelley.Protocol.Crypto (HotKey (..))
 import           Ouroboros.Consensus.Shelley.Node
-                   (TPraosLeaderCredentials(..))
+                   (TPraosLeaderCredentials(..), ShelleyGenesis)
 
 import           Shelley.Spec.Ledger.PParams (ProtVer(..))
 
@@ -64,9 +62,10 @@ import           Cardano.TracingOrphanInstances.Shelley ()
 -- Shelley protocol, client support
 --
 
-mkNodeClientProtocolShelley :: ProtocolClient (ShelleyBlock TPraosStandardCrypto)
-                                              ProtocolRealTPraos
-mkNodeClientProtocolShelley = ProtocolClientRealTPraos
+mkNodeClientProtocolShelley :: Consensus.ProtocolClient
+                                 (ShelleyBlock TPraosStandardCrypto)
+                                 Consensus.ProtocolRealTPraos
+mkNodeClientProtocolShelley = Consensus.ProtocolClientRealTPraos
 
 
 mkSomeNodeClientProtocolShelley :: SomeNodeClientProtocol
@@ -106,7 +105,7 @@ mkConsensusProtocolShelley
   -> Maybe ProtocolFilepaths
   -> ExceptT ShelleyProtocolInstantiationError IO
              (Consensus.Protocol IO (ShelleyBlock TPraosStandardCrypto)
-                                 ProtocolRealTPraos)
+                                 Consensus.ProtocolRealTPraos)
 mkConsensusProtocolShelley NodeShelleyProtocolConfiguration {
                             npcShelleyGenesisFile,
                             npcShelleySupportedProtocolVersionMajor,
@@ -118,7 +117,7 @@ mkConsensusProtocolShelley NodeShelleyProtocolConfiguration {
     optionalLeaderCredentials <- readLeaderCredentials files
 
     return $
-      ProtocolRealTPraos
+      Consensus.ProtocolRealTPraos
         genesis
         (ProtVer npcShelleySupportedProtocolVersionMajor
                  npcShelleySupportedProtocolVersionMinor)
@@ -156,7 +155,7 @@ readLeaderCredentials (Just ProtocolFilepaths {
 
     (opcert, vkey) <- firstExceptT OCertError $ readOperationalCert certFile
     vrfKey <- firstExceptT VRFError $ readVRFSigningKey vrfFile
-    kesKey <- firstExceptT KESError $ HotKey 0 <$> readKESSigningKey kesFile
+    kesKey <- firstExceptT KESError $ readKESSigningKey kesFile
 
     return $ Just TPraosLeaderCredentials {
                tpraosLeaderCredentialsIsCoreNode =

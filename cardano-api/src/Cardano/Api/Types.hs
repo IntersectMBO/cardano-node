@@ -163,7 +163,7 @@ type ShelleyTxOut                        = Shelley.TxOut  Shelley.TPraosStandard
 type ShelleyTxBody                       = Shelley.TxBody Shelley.TPraosStandardCrypto
 type ShelleyTx                           = Shelley.Tx     Shelley.TPraosStandardCrypto
 type ShelleyTxId                         = Shelley.TxId   Shelley.TPraosStandardCrypto
-type ShelleyWitnessVKey                  = Shelley.WitVKey Shelley.TPraosStandardCrypto
+type ShelleyWitnessVKey                  = Shelley.WitVKey Shelley.TPraosStandardCrypto Shelley.Witness
 type ShelleyDelegationCertificate        = Shelley.DCert      Shelley.TPraosStandardCrypto
 
 type ShelleyStakePoolCertificate         = Shelley.PoolCert Shelley.TPraosStandardCrypto

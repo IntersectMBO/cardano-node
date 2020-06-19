@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE LambdaCase            #-}
+{-# LANGUAGE MonoLocalBinds        #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns        #-}
 {-# LANGUAGE OverloadedStrings     #-}

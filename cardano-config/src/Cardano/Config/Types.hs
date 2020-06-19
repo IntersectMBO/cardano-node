@@ -71,7 +71,7 @@ import qualified Cardano.Chain.Update as Update
 import           Cardano.Chain.Slotting (EpochSlots)
 import           Cardano.Crypto.KES.Class (Period)
 import           Cardano.Crypto.ProtocolMagic (RequiresNetworkMagic)
-import           Ouroboros.Consensus.Block (Header, BlockProtocol, ForgeState)
+import           Ouroboros.Consensus.Block (Header, BlockProtocol, ForgeState(..))
 import           Ouroboros.Consensus.Byron.Ledger.Block (ByronBlock)
 import qualified Ouroboros.Consensus.Cardano as Consensus (Protocol, ProtocolClient)
 import           Ouroboros.Consensus.Config (TopLevelConfig (..))
@@ -85,12 +85,11 @@ import           Ouroboros.Consensus.Node.Run (RunNode)
 import           Ouroboros.Consensus.NodeId (CoreNodeId(..))
 import           Ouroboros.Consensus.Protocol.Abstract (CannotLead, ValidationErr)
 import           Ouroboros.Consensus.Util.Condense (Condense (..))
-import           Ouroboros.Consensus.Shelley.Ledger (TPraosForgeState (..))
 import           Ouroboros.Consensus.Shelley.Ledger.Block (ShelleyBlock)
 import           Ouroboros.Consensus.Shelley.Ledger.Mempool (GenTx, TxId)
 import           Ouroboros.Consensus.Shelley.Protocol (ConsensusConfig (..),
                    TPraosIsCoreNode (..), TPraosParams (..))
-import           Ouroboros.Consensus.Shelley.Protocol.Crypto (HotKey (..))
+import           Ouroboros.Consensus.Shelley.Protocol.Crypto.HotKey (HotKey (..))
 
 import           Ouroboros.Network.Block (HeaderHash, MaxSlotNo(..))
 
@@ -641,9 +640,7 @@ instance HasKESMetricsData (ShelleyBlock c) where
   getKESMetricsData protoInfo forgeState =
       TPraosKESMetricsData currKesPeriod maxKesEvos oCertStartKesPeriod
     where
-      TPraosForgeState { tpraosHotKey } = forgeState
-
-      HotKey currKesPeriod _ = tpraosHotKey
+      HotKey { hkEvolution = currKesPeriod } = chainIndepState forgeState
 
       oCertStartKesPeriod =
         case pInfoLeaderCreds of

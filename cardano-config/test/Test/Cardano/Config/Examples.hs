@@ -21,8 +21,11 @@ import           Ouroboros.Consensus.Util.Time
 import           Shelley.Spec.Ledger.Address (Addr (..))
 import           Shelley.Spec.Ledger.BaseTypes (Network (..), truncateUnitInterval)
 import           Shelley.Spec.Ledger.Coin (Coin(..))
-import           Shelley.Spec.Ledger.Credential (Credential (..), StakeReference(..))
-import           Shelley.Spec.Ledger.Keys (KeyHash(..), KeyRole(..), Hash, VerKeyVRF)
+import           Shelley.Spec.Ledger.Credential
+                   (Credential (..), StakeReference(..),
+                    PaymentCredential, StakeCredential)
+import           Shelley.Spec.Ledger.Keys (KeyHash(..), KeyRole(..), Hash,
+                   VerKeyVRF, GenDelegPair(..))
 import           Shelley.Spec.Ledger.PParams (PParams' (..), emptyPParams)
 
 import           Cardano.Config.Shelley.Genesis
@@ -48,7 +51,10 @@ exampleShelleyGenesis =
         , _maxBBSize = 239857
         , _maxBHSize = 217569
         }
-    , sgGenDelegs = Map.fromList [(genesisVerKeyHash, (delegVerKeyHash, delegVrfKeyHash))]
+    , sgGenDelegs = Map.fromList
+                      [( genesisVerKeyHash
+                       , GenDelegPair delegVerKeyHash delegVrfKeyHash)
+                      ]
     , sgInitialFunds = Map.fromList [(initialFundedAddress,initialFunds)]
     , sgStaking = emptyGenesisStaking
     }
@@ -64,9 +70,12 @@ exampleShelleyGenesis =
   initialFundedAddress :: Addr TPraosStandardCrypto
   initialFundedAddress = Addr Testnet paymentCredential (StakeRefBase stakingCredential)
     where
+      paymentCredential :: PaymentCredential TPraosStandardCrypto
       paymentCredential =
         KeyHashObj $ KeyHash
           "1c14ee8e58fbcbd48dc7367c95a63fd1d937ba989820015db16ac7e5a2e89798"
+
+      stakingCredential :: StakeCredential TPraosStandardCrypto
       stakingCredential =
         KeyHashObj $ KeyHash
           "e37a65ea2f9bcefb645de4312cf13d8ac12ae61cf242a9aa2973c9ee32e99ce2"

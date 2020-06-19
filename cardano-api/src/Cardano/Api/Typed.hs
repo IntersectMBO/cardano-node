@@ -744,7 +744,7 @@ data Witness era where
        -> Witness Byron
 
      ShelleyKeyWitness
-       :: Shelley.WitVKey ShelleyCrypto
+       :: Shelley.WitVKey ShelleyCrypto Shelley.Witness
        -> Witness Shelley
 
      ShelleyScriptWitness
