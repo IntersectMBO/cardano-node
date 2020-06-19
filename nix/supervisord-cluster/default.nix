@@ -201,9 +201,9 @@ let
 
       echo "Generating Pool $i Metadata"
       jq -n \
-         --arg name "CoolPool$i" \
-         --arg description "Cool Pool $i" \
-         --arg ticker "COOL$i" \
+         --arg name "TestPool$i" \
+         --arg description "Test Pool $i" \
+         --arg ticker "TEST$i" \
          --arg homepage "http://localhost:${toString basePort}/pool$i.html" \
          '{"name": $name, "description": $description, "ticker": $ticker, "homepage": $homepage}' > "${stateDir}/webserver/pool$i.json"
 
