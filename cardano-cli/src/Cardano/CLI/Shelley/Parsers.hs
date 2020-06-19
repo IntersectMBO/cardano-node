@@ -109,7 +109,7 @@ pAddressCmd =
   Opt.subparser $
     mconcat
       [ Opt.command "key-gen"
-          (Opt.info pAddressKeyGen $ Opt.progDesc "Create a single address key pair.")
+          (Opt.info pAddressKeyGen $ Opt.progDesc "Create an address key pair.")
       , Opt.command "key-hash"
           (Opt.info pAddressKeyHash $ Opt.progDesc "Print the hash of an address key to stdout.")
       , Opt.command "build"
@@ -1251,24 +1251,78 @@ pPoolMargin =
     maybeOrFail (Just mgn) = mgn
     maybeOrFail Nothing = panic "Pool margin outside of [0,1] range."
 
-_pPoolRelay :: Parser ShelleyStakePoolRelay
-_pPoolRelay = Shelley.SingleHostAddr Shelley.SNothing
-               <$> (Shelley.maybeToStrictMaybe <$> optional _pIpV4)
-               <*> (Shelley.maybeToStrictMaybe <$> optional _pIpV6)
+pPoolRelay :: Parser ShelleyStakePoolRelay
+pPoolRelay = pSingleHostAddress <|> pSingleHostName <|> pMultiHostName
 
-_pIpV4 :: Parser IP.IPv4
-_pIpV4 = Opt.option (Opt.maybeReader readMaybe :: Opt.ReadM IP.IPv4)
+pMultiHostName :: Parser ShelleyStakePoolRelay
+pMultiHostName =
+  Shelley.MultiHostName <$> (Shelley.maybeToStrictMaybe <$> optional pPort) <*> pDNSName
+ where
+  pDNSName :: Parser Shelley.DnsName
+  pDNSName = Opt.option (Opt.eitherReader eDNSName)
+               (  Opt.long "multi-host-pool-relay"
+               <> Opt.metavar "STRING"
+               <> Opt.help "The stake pool relay's DNS name that corresponds to \
+                            \an SRV DNS record"
+               )
+
+pSingleHostName :: Parser ShelleyStakePoolRelay
+pSingleHostName =
+  Shelley.SingleHostName <$> (Shelley.maybeToStrictMaybe <$> optional pPort) <*> pDNSName
+ where
+  pDNSName :: Parser Shelley.DnsName
+  pDNSName = Opt.option (Opt.eitherReader eDNSName)
+               (  Opt.long "single-host-pool-relay"
+               <> Opt.metavar "STRING"
+               <> Opt.help "The stake pool relay's DNS name that corresponds to an\
+                            \ A or AAAA DNS record"
+               )
+
+eDNSName :: String -> Either String Shelley.DnsName
+eDNSName str = maybe (Left "DNS name is more than 64 bytes") Right (Shelley.textToDns $ toS str)
+
+pSingleHostAddress :: Parser ShelleyStakePoolRelay
+pSingleHostAddress =
+  liftA3
+    (\port ip4 ip6 -> singleHostAddress port ip4 ip6)
+    pPort
+    (optional pIpV4)
+    (optional pIpV6)
+ where
+  singleHostAddress :: Shelley.Port -> Maybe IP.IPv4 -> Maybe IP.IPv6 -> ShelleyStakePoolRelay
+  singleHostAddress port ipv4 ipv6 =
+    case (ipv4, ipv6) of
+      (Nothing, Nothing) ->
+        panic $ "Please enter either an IPv4 or IPv6 address for the pool relay"
+      (Just i4, Nothing) ->
+        Shelley.SingleHostAddr (Shelley.SJust port) (Shelley.SJust i4) Shelley.SNothing
+      (Nothing, Just i6) ->
+        Shelley.SingleHostAddr (Shelley.SJust port) Shelley.SNothing (Shelley.SJust i6)
+      (Just i4, Just i6) ->
+        Shelley.SingleHostAddr (Shelley.SJust port) (Shelley.SJust i4) (Shelley.SJust i6)
+
+
+
+pIpV4 :: Parser IP.IPv4
+pIpV4 = Opt.option (Opt.maybeReader readMaybe :: Opt.ReadM IP.IPv4)
           (  Opt.long "pool-relay-ipv4"
           <> Opt.metavar "STRING"
-          <> Opt.help "The stake pool relay's IpV4 address"
+          <> Opt.help "The stake pool relay's IPv4 address"
           )
 
-_pIpV6 :: Parser IP.IPv6
-_pIpV6 = Opt.option (Opt.maybeReader readMaybe :: Opt.ReadM IP.IPv6)
-          (  Opt.long "pool-relay-ipv6"
-          <> Opt.metavar "STRING"
-          <> Opt.help "The stake pool relay's IpV6 address"
-          )
+pIpV6 :: Parser IP.IPv6
+pIpV6 = Opt.option (Opt.maybeReader readMaybe :: Opt.ReadM IP.IPv6)
+           (  Opt.long "pool-relay-ipv6"
+           <> Opt.metavar "STRING"
+           <> Opt.help "The stake pool relay's IPv6 address"
+           )
+
+pPort :: Parser Shelley.Port
+pPort = Opt.option (fromInteger <$> Opt.eitherReader readEither)
+           (  Opt.long "pool-relay-port"
+           <> Opt.metavar "INT"
+           <> Opt.help "The stake pool relay's port"
+           )
 
 pPoolMetaData :: Parser (Maybe ShelleyStakePoolMetaData)
 pPoolMetaData =
@@ -1311,7 +1365,7 @@ pStakePoolRegistrationCert =
   <*> pPoolMargin
   <*> pRewardAcctVerificationKeyFile
   <*> some pPoolOwner
-  <*> pure []  --TODO: the relays
+  <*> many pPoolRelay
   <*> pPoolMetaData
   <*> pNetwork
   <*> pOutputFile
