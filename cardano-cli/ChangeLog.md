@@ -1,6 +1,6 @@
 # Changelog for cardano-cli
 
-## 1.13.0 -- June 2020
+## 1.14.0 -- June 2020
 
 - New flags for transaction metadata in tx construction (#1233)
 - New flags for reward account withdrawals in tx construction (#1237)
