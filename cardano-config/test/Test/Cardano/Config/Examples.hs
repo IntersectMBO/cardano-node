@@ -47,7 +47,7 @@ exampleShelleyGenesis =
     , sgUpdateQuorum = 16991
     , sgMaxLovelaceSupply = 71
     , sgProtocolParams = emptyPParams
-        { _d = truncateUnitInterval . realToFrac $ (1.9e-2 :: Double)
+        { _d = truncateUnitInterval (fromRational 1.9e-2)
         , _maxBBSize = 239857
         , _maxBHSize = 217569
         }
@@ -61,10 +61,10 @@ exampleShelleyGenesis =
  where
   -- hash of the genesis verification key
   genesisVerKeyHash :: KeyHash Genesis TPraosStandardCrypto
-  genesisVerKeyHash = KeyHash "23d51e91ae5adc7ae801e9de4cd54175fb7464ec2680b25686bbb19452b4ed96"
+  genesisVerKeyHash = KeyHash "23d51e91ae5adc7ae801e9de4cd54175fb7464ec2680b25686bbb194"
   -- hash of the delegators verififation key
   delegVerKeyHash :: KeyHash GenesisDelegate TPraosStandardCrypto
-  delegVerKeyHash = KeyHash "839b047f56e50654bdb504832186dc1ee0c73c8de2daec7ae62738273be825b2"
+  delegVerKeyHash = KeyHash "839b047f56e50654bdb504832186dc1ee0c73c8de2daec7ae6273827"
   delegVrfKeyHash :: Hash TPraosStandardCrypto (VerKeyVRF TPraosStandardCrypto)
   delegVrfKeyHash = "231391e7ec1c450a8518134cf6fad1a8e0ed7ffd66d740f8e8271347a6de7bf2"
   initialFundedAddress :: Addr TPraosStandardCrypto
@@ -73,12 +73,12 @@ exampleShelleyGenesis =
       paymentCredential :: PaymentCredential TPraosStandardCrypto
       paymentCredential =
         KeyHashObj $ KeyHash
-          "1c14ee8e58fbcbd48dc7367c95a63fd1d937ba989820015db16ac7e5a2e89798"
+          "1c14ee8e58fbcbd48dc7367c95a63fd1d937ba989820015db16ac7e5"
 
       stakingCredential :: StakeCredential TPraosStandardCrypto
       stakingCredential =
         KeyHashObj $ KeyHash
-          "e37a65ea2f9bcefb645de4312cf13d8ac12ae61cf242a9aa2973c9ee32e99ce2"
+          "e37a65ea2f9bcefb645de4312cf13d8ac12ae61cf242a9aa2973c9ee"
 
   initialFunds :: Coin
   initialFunds = Coin 12157196
