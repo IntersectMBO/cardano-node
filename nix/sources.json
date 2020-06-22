@@ -36,15 +36,15 @@
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "iohk-nix": {
-        "branch": "master",
+        "branch": "crypto-overlay",
         "description": "nix scripts shared across projects",
         "homepage": null,
         "owner": "input-output-hk",
         "repo": "iohk-nix",
-        "rev": "ccad0bf9ceb3a68a837886f8032da0e70529d183",
-        "sha256": "0hyzqbws8j1bvkb4m0ngck7mgs41p2wp9gy6ncvx1pf2svwz9916",
+        "rev": "56692a59c172b91d904bb80990d4c772382233ce",
+        "sha256": "0n17wl45hhqcrxlhb7f5xk8ln2k2nv8fqmx81ffnvjjfrfzdpfkm",
         "type": "tarball",
-        "url": "https://github.com/input-output-hk/iohk-nix/archive/ccad0bf9ceb3a68a837886f8032da0e70529d183.tar.gz",
+        "url": "https://github.com/input-output-hk/iohk-nix/archive/56692a59c172b91d904bb80990d4c772382233ce.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     }
 }
