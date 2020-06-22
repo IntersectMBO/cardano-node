@@ -93,10 +93,13 @@ library
   if os(windows)
      build-depends:    Win32
   else
-     build-depends:    unix
+    build-depends:     unix
                      , brick
                      , vty
-     exposed-modules:  Cardano.Node.TUI.LiveView
+    exposed-modules:   Cardano.Node.TUI.Drawing
+                     , Cardano.Node.TUI.EventHandler
+                     , Cardano.Node.TUI.Run
+
 
 executable cardano-node
   hs-source-dirs:      app
