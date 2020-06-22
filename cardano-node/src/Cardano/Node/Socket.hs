@@ -137,10 +137,11 @@ gatherConfiguredSockets config cli = do
 -- if it exists already. So we delete it first if it exists. But only on unix.
 --
 removeStaleLocalSocket :: SocketPath -> ExceptT SocketConfigError IO ()
-removeStaleLocalSocket (SocketPath path) =
 #if defined(mingw32_HOST_OS)
+removeStaleLocalSocket _ =
     return ()
 #else
+removeStaleLocalSocket (SocketPath path) =
     handleIOExceptT (LocalSocketError path) $
       removeFile path `catch` \e ->
         if isDoesNotExistError e then return ()

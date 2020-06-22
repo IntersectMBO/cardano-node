@@ -54,8 +54,10 @@ import           Cardano.BM.Trace
 
 import           Cardano.Config.GitRev (gitRev)
 import           Cardano.Config.Logging (LoggingLayer (..), Severity (..))
-import           Cardano.Config.TraceConfig (traceBlockFetchDecisions,
-                     TraceOptions(..), TraceSelection(..))
+#ifdef UNIX
+import           Cardano.Config.TraceConfig (traceBlockFetchDecisions)
+#endif
+import           Cardano.Config.TraceConfig (TraceOptions(..), TraceSelection(..))
 import           Cardano.Config.Types (NodeConfiguration (..), ViewMode (..))
 
 import           Ouroboros.Network.Magic (NetworkMagic (..))
