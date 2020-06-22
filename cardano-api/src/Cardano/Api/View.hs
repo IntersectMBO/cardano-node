@@ -47,7 +47,7 @@ import           Cardano.Api.CBOR
 import           Cardano.Api.Types
 import           Cardano.Api.Error
 
-import           Cardano.Config.TextView
+import           Cardano.Api.TextView
 
 import           Cardano.Prelude
 
@@ -56,7 +56,7 @@ import           Control.Monad.Trans.Except.Extra (handleIOExceptT, hoistEither,
 import           Data.ByteString.Char8 (ByteString)
 import qualified Data.ByteString.Char8 as BS
 
---TODO: There are VRF reading and writing functions that also exist in Cardano.Config.Shelley.VRF
+--TODO: There are VRF reading and writing functions that also exist in Cardano.Api.Shelley.VRF
 -- This needs to be sorted out
 
 

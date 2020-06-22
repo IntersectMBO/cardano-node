@@ -13,7 +13,7 @@ import           Cardano.Api hiding (textShow)
 import           Cardano.Api.Shelley.ColdKeys
                    (KeyType(..), KeyRole(..), KeyError(..), OperatorKeyRole (..),
                    renderKeyError, renderKeyType)
-import           Cardano.Config.TextView
+import           Cardano.Api.TextView
 import           Cardano.CLI.Environment (EnvSocketError, readEnvSocketPath,
                    renderEnvSocketError)
 

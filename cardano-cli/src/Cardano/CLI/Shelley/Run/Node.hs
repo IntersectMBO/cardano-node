@@ -18,7 +18,7 @@ import           Cardano.Api.Typed (AsType (..), Error (..), FileError,
                    issueOperationalCertificate, readFileTextEnvelope,
                    writeFileTextEnvelope)
 
-import           Cardano.Config.TextView (TextViewTitle (..))
+import           Cardano.Api.TextView (TextViewTitle (..))
 import           Cardano.Config.Types (SigningKeyFile(..))
 
 import           Cardano.CLI.Shelley.Commands

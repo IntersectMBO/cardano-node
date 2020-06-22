@@ -22,6 +22,10 @@ library
                         Cardano.Api.Protocol.Shelley
                         Cardano.Api.Shelley.Address
                         Cardano.Api.Shelley.ColdKeys
+                        Cardano.Api.Shelley.OCert
+                        Cardano.Api.Shelley.KES
+                        Cardano.Api.Shelley.VRF
+                        Cardano.Api.TextView
                         Cardano.Api.Typed
 
   other-modules:        Cardano.Api.CBOR

@@ -23,7 +23,7 @@ import           Shelley.Spec.Ledger.BaseTypes (Network (..))
 import           Shelley.Spec.Ledger.Keys (KeyPair(..))
 
 import           Cardano.Api.Shelley.ColdKeys (genKeyPair)
-import           Cardano.Config.TextView
+import           Cardano.Api.TextView
 
 data AddressRole = BootstrapAddr
                  | NormalAddr

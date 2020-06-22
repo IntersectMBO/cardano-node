@@ -12,8 +12,6 @@ import           Data.Aeson (encode)
 
 import qualified Data.ByteString.Lazy.Char8 as LBS
 
-import           Cardano.Config.Shelley.KES (decodeKESVerificationKey, encodeKESVerificationKey)
-import           Cardano.Config.Shelley.VRF (decodeVRFVerificationKey, encodeVRFVerificationKey)
 import           Shelley.Spec.Ledger.Address (serialiseAddr, deserialiseAddr)
 
 import           Hedgehog (Property, discover)
@@ -25,7 +23,6 @@ import qualified Test.Shelley.Spec.Ledger.Genesis.Properties as Ledger
 import           Test.Shelley.Spec.Ledger.Generator.Genesis
 
 import           Test.Cardano.Config.Examples
-import           Test.Cardano.Config.Gen
 import           Test.Cardano.Prelude
 
 
@@ -58,18 +55,6 @@ prop_roundtrip_FundPair_JSON =
 prop_roundtrip_ShelleyGenesis_JSON :: Property
 prop_roundtrip_ShelleyGenesis_JSON =
   Ledger.prop_roundtrip_ShelleyGenesis_JSON @TPraosStandardCrypto Proxy
-
-prop_roundtrip_VerKeyVRF_SimpleVRF_CBOR :: Property
-prop_roundtrip_VerKeyVRF_SimpleVRF_CBOR =
-  Hedgehog.withTests 50 . Hedgehog.property $ do
-    vKeyVRF <- snd <$> Hedgehog.forAll (genVRFKeyPair @TPraosStandardCrypto)
-    Hedgehog.tripping vKeyVRF encodeVRFVerificationKey decodeVRFVerificationKey
-
-prop_roundtrip_VKeyES_TPraosStandardCrypto_CBOR :: Property
-prop_roundtrip_VKeyES_TPraosStandardCrypto_CBOR =
-  Hedgehog.withTests 20 . Hedgehog.property $ do
-    vKeyES <- fst <$> Hedgehog.forAll genKESKeyPair
-    Hedgehog.tripping vKeyES encodeKESVerificationKey decodeKESVerificationKey
 
 -- -----------------------------------------------------------------------------
 

@@ -28,14 +28,9 @@ library
                        Cardano.Config.Logging
                        Cardano.Config.Orphanage
                        Cardano.Config.Parsers
-                       Cardano.Config.Protocol
                        Cardano.Config.Shelley.Genesis
-                       Cardano.Config.Shelley.KES
-                       Cardano.Config.Shelley.OCert
                        Cardano.Config.Shelley.Orphans
                        Cardano.Config.Shelley.Parsers
-                       Cardano.Config.Shelley.VRF
-                       Cardano.Config.TextView
                        Cardano.Config.Topology
                        Cardano.Config.TopHandler
                        Cardano.Config.TraceConfig
@@ -143,7 +138,6 @@ test-suite cardano-config-test
                         Test.Cardano.Config.Gen
                         Test.Cardano.Config.Json
                         Test.Cardano.Config.Types
-                        Test.Cardano.Config.TextView
 
   default-language:     Haskell2010
   default-extensions:   NoImplicitPrelude
