@@ -117,17 +117,15 @@ let
           --arg decentralisationParam ${toString d} \
           --arg updateQuorum ${toString numBft} \
           --arg systemStart $(date --utc +"%Y-%m-%dT%H:%M:%SZ" --date="5 seconds") \
-          '. + {
-            systemStart: $systemStart,
-            slotLength: $slotLength|tonumber,
-            activeSlotsCoeff: $activeSlotsCoeff|tonumber,
-            securityParam: $securityParam|tonumber,
-            epochLength: $epochLength|tonumber,
-            maxLovelaceSupply: $maxLovelaceSupply|tonumber,
-            decentralisationParam: $decentralisationParam|tonumber,
-            updateQuorum: $updateQuorum|tonumber,
-            initialFunds: ${__toJSON initialFunds}
-          }' \
+           '.systemStart = $systemStart |
+            .slotLength = ($slotLength|tonumber) |
+            .activeSlotsCoeff = ($activeSlotsCoeff|tonumber) |
+            .securityParam = ($securityParam|tonumber) |
+            .epochLength = ($epochLength|tonumber) |
+            .maxLovelaceSupply = ($maxLovelaceSupply|tonumber) |
+            .protocolParams.decentralisationParam = ($decentralisationParam|tonumber) |
+            .updateQuorum = ($updateQuorum|tonumber) |
+            .initialFunds = (${__toJSON initialFunds})' \
     ${stateDir}/keys/genesis.json | sponge ${stateDir}/keys/genesis.json
     for i in {1..${toString numBft}}
     do
