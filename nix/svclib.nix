@@ -98,9 +98,9 @@ let
   # Note how some values are literal strings, and some integral.
   # This is an important detail.
   #
-  ## defaultGenesisProtocolParams
-  ##   :: ProtocolParams
-  defaultGenesisProtocolParams = {
+  ## defaultByronGenesisProtocolParams
+  ##   :: ByronProtocolParams
+  defaultByronGenesisProtocolParams = {
     heavyDelThd = "300000000000";
     maxBlockSize = "2000000";
     maxHeaderSize = "2000000";
@@ -124,10 +124,10 @@ let
     updateVoteThd = "1000000000000";
   };
 
-  ## defaultGenesisArgs
+  ## defaultByronGenesisArgs
   ##   :: CLIArgs "cardano-cli"
-  defaultGenesisArgs = {
-    protocol_params_file  = toFile "genesis-protocol-params.json" (toJSON defaultGenesisProtocolParams);
+  defaultByronGenesisArgs = {
+    protocol_params_file  = toFile "byron-genesis-protocol-params.json" (toJSON defaultByronGenesisProtocolParams);
     k                     = 2160;
     protocol_magic        = 314159265;
     n_poors               = 128;
@@ -139,10 +139,10 @@ let
     secret_seed           = 271828182;
   };
 
-  ## mkFixedGenesisOfDate
+  ## mkFixedByronGenesisOfDate
   ##   :: String Date -> FilePath (Genesis Legacy)
-  mkFixedGenesisOfTime = start_time: args:
-    pkgs.runCommand "genesis-of-${start_time}" {} ''
+  mkFixedByronGenesisOfTime = start_time: args:
+    pkgs.runCommand "byron-genesis-of-${start_time}" {} ''
       args=(
       genesis
       --genesis-output-dir         "''${out}"
@@ -178,7 +178,7 @@ let
 
   ## mkPeriodicGenesis
   ##  :: CLIArgs "cardano-cli" -> FilePath (GenesisDir Rewrite)
-  mkPeriodicGenesisDir = mkFixedGenesisOfTime (periodicNewsTimestamp genesisUpdatePeriod);
+  mkPeriodicGenesisDir = mkFixedByronGenesisOfTime (periodicNewsTimestamp genesisUpdatePeriod);
 
   ## leakDelegateSigningKey
   ##  :: FilePath ByronLegacyKey -> FilePath ByronRewriteKey
@@ -331,7 +331,7 @@ in
   mkFullyConnectedLocalClusterTopologyWithProxy
   mkFullyConnectedLocalClusterLegacyTopologyWithProxy
   mkPeriodicGenesisDir
-  defaultGenesisArgs
+  defaultByronGenesisArgs
   leakDelegateSigningKey
   extractDelegateCertificate
   genesisHash

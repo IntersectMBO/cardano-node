@@ -121,7 +121,6 @@ parseChairmanArgs =
 opts :: ParserInfo ChairmanArgs
 opts = info (parseChairmanArgs <**> helper)
   ( fullDesc
-  <> progDesc "Chairman Shelley application is a CI tool which checks \
-              \if Shelly nodes find consensus and do expected progress."
+  <> progDesc "Chairman checks Cardano clusters for progress and consensus."
   <> header "Chairman sits in a room full of Shelley nodes, and checks \
             \if they are all behaving ...")

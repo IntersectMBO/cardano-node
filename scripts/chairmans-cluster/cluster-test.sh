@@ -1,4 +1,5 @@
-#!/bin/sh
+#!/usr/bin/env bash
+# shellcheck disable=SC1090,SC2034
 
 ## Prerequisites:
 #
@@ -8,7 +9,7 @@
 #     ..otherwise the build might fail, or will take hours.
 #  4. Nix 'kvm' feature is available.
 
-if ! (grep 'hydra.iohk.io' /etc/nix/nix.conf >/dev/null || grep 'hydra.iohk.io' $HOME/.config/nix/nix.conf >/dev/null)
+if ! (grep 'hydra.iohk.io' /etc/nix/nix.conf >/dev/null || grep 'hydra.iohk.io' "$HOME"/.config/nix/nix.conf >/dev/null)
 then cat <<EOF
 ERROR: the IOHK Hydra binary cache is not registered with Nix.
 
@@ -20,7 +21,7 @@ Please ensure that your /etc/nix/nix.conf has:
 EOF
      exit 1; fi
 
-if ! (grep 'system-features =.*kvm' /etc/nix/nix.conf >/dev/null || grep 'system-features.*=.*kvm' $HOME/.config/nix/nix.conf >/dev/null)
+if ! (grep 'system-features =.*kvm' /etc/nix/nix.conf >/dev/null || grep 'system-features.*=.*kvm' "$HOME"/.config/nix/nix.conf >/dev/null)
 then cat <<EOF
 ERROR: the 'kvm' feature is not advertised by Nix.
 
@@ -29,13 +30,18 @@ Please ensure that your /etc/nix/nix.conf has 'kvm' in its 'system-features' opt
 EOF
      exit 1; fi
 
-. $(dirname $0)/../common.sh
-. $(dirname $0)/../lib.sh
-. $(dirname $0)/../lib-cli.sh
+scripts_dir=$(dirname "$0")/..
+
+__COMMON_SRCROOT=$(realpath "${scripts_dir}/..")
+. "${scripts_dir}"/common.sh
+. "${scripts_dir}"/lib.sh
+. "${scripts_dir}"/lib-cli.sh
 ###
 ###
 
-logfile="cluster.$(generate_mnemonic).log"
+mkdir -p 'logs'
+mnemonic=$(generate_mnemonic)
+logfile="logs/cluster.${mnemonic}.log"
 rm -f cluster.log
 ln -s ${logfile} cluster.log
 announce() {
@@ -52,7 +58,8 @@ EOF
 announce
 trap announce EXIT
 
+interactive=false
 nix-build -A nixosTests.chairmansCluster --show-trace --arg config "{ interactive = ${interactive}; }" "$@" 2>&1 |
-        tee ${logfile}
+        tee "${logfile}"
 
-$(dirname $0)/cluster-log-split.sh '--print' ${logfile}
+"${scripts_dir}"/cluster-log-split.sh '--print' "${logfile}"
