@@ -324,7 +324,7 @@ for N in ${USER_POOL_N}; do
   # Stake address delegation certs
   cardano-cli shelley stake-address delegation-certificate \
       --stake-verification-key-file addresses/user${N}-stake.vkey \
-      --cold-verification-key-file  node-pool${N}/operator.vkey \
+      --cold-verification-key-file  node-pool${N}/shelley/operator.vkey \
       --out-file addresses/user${N}-stake.deleg.cert
 
   ln -s ../addresses/pool-owner${N}-stake.vkey node-pool${N}/owner.vkey
@@ -346,8 +346,8 @@ for NODE in ${POOL_NODES}; do
   cardano-cli shelley stake-pool registration-certificate \
     --testnet-magic 42 \
     --pool-pledge 0 --pool-cost 0 --pool-margin 0 \
-    --cold-verification-key-file             ${NODE}/operator.vkey \
-    --vrf-verification-key-file              ${NODE}/vrf.vkey \
+    --cold-verification-key-file             ${NODE}/shelley/operator.vkey \
+    --vrf-verification-key-file              ${NODE}/shelley/vrf.vkey \
     --reward-account-verification-key-file   ${NODE}/owner.vkey \
     --pool-owner-stake-verification-key-file ${NODE}/owner.vkey \
     --out-file                               ${NODE}/registration.cert
@@ -373,8 +373,8 @@ cardano-cli shelley transaction build-raw \
     --fee 0 \
     --tx-in $(cardano-cli shelley genesis initial-txin \
                 --testnet-magic 42 \
-                --verification-key-file utxo-keys/utxo1.vkey) \
-    --tx-out $(cat addresses/user1.addr)+${SUPPLY} \
+                --verification-key-file shelley/utxo-keys/utxo1.vkey) \
+    --tx-out $(cat addresses/user1.addr)+${MAX_SUPPLY} \
     --certificate-file addresses/pool-owner1-stake.reg.cert \
     --certificate-file node-pool1/registration.cert \
     --certificate-file addresses/user1-stake.reg.cert \
@@ -388,10 +388,10 @@ cardano-cli shelley transaction build-raw \
 # 3. the pool1 operator key, due to the pool registration cert
 
 cardano-cli shelley transaction sign \
-    --signing-key-file utxo-keys/utxo1.skey \
+    --signing-key-file shelley/utxo-keys/utxo1.skey \
     --signing-key-file addresses/user1-stake.skey \
     --signing-key-file node-pool1/owner.skey \
-    --signing-key-file node-pool1/operator.skey \
+    --signing-key-file node-pool1/shelley/operator.skey \
     --testnet-magic 42 \
     --tx-body-file  tx1.txbody \
     --out-file      tx1.tx
@@ -407,16 +407,31 @@ echo " * Query the node's ledger state"
 echo
 echo "To start the nodes, in separate terminals use:"
 echo
-for NODE in ${ALL_NODES}; do
+for NODE in ${BFT_NODES}; do
 
   echo "cardano-node run \\"
   echo "  --config                          ${ROOT}/configuration.yaml \\"
   echo "  --topology                        ${ROOT}/${NODE}/topology.json \\"
   echo "  --database-path                   ${ROOT}/${NODE}/db \\"
   echo "  --socket-path                     ${ROOT}/${NODE}/node.sock \\"
-  echo "  --shelley-kes-key                 ${ROOT}/${NODE}/kes.skey \\"
-  echo "  --shelley-vrf-key                 ${ROOT}/${NODE}/vrf.skey \\"
-  echo "  --shelley-operational-certificate ${ROOT}/${NODE}/node.cert \\"
+  echo "  --shelley-kes-key                 ${ROOT}/${NODE}/shelley/kes.skey \\"
+  echo "  --shelley-vrf-key                 ${ROOT}/${NODE}/shelley/vrf.skey \\"
+  echo "  --shelley-operational-certificate ${ROOT}/${NODE}/shelley/node.cert \\"
+  echo "  --port                            $(cat ${NODE}/port) \\"
+  echo "  --delegation-certificate          ${ROOT}/${NODE}/byron/delegate.cert \\"
+  echo "  --signing-key                     ${ROOT}/${NODE}/byron/delegate.key"
+
+done
+for NODE in ${POOL_NODES}; do
+
+  echo "cardano-node run \\"
+  echo "  --config                          ${ROOT}/configuration.yaml \\"
+  echo "  --topology                        ${ROOT}/${NODE}/topology.json \\"
+  echo "  --database-path                   ${ROOT}/${NODE}/db \\"
+  echo "  --socket-path                     ${ROOT}/${NODE}/node.sock \\"
+  echo "  --shelley-kes-key                 ${ROOT}/${NODE}/shelley/kes.skey \\"
+  echo "  --shelley-vrf-key                 ${ROOT}/${NODE}/shelley/vrf.skey \\"
+  echo "  --shelley-operational-certificate ${ROOT}/${NODE}/shelley/node.cert \\"
   echo "  --port                            $(cat ${NODE}/port)"
 
 done
