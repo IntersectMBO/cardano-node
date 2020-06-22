@@ -2,6 +2,7 @@
 pkgs: _: with pkgs; {
   cardanoNodeHaskellPackages = import ./haskell.nix {
     inherit config
+      pkgs
       lib
       stdenv
       haskell-nix
@@ -11,6 +12,7 @@ pkgs: _: with pkgs; {
   };
   cardanoNodeProfiledHaskellPackages = import ./haskell.nix {
     inherit config
+      pkgs
       lib
       stdenv
       haskell-nix
