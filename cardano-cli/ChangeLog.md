@@ -2,6 +2,21 @@
 
 ## 1.13.0 -- June 2020
 
+- New flags for transaction metadata in tx construction (#1233)
+- New flags for reward account withdrawals in tx construction (#1237)
+- New command for pool metadata JSON validation and hashing (#1234, #1299)
+- New flags for pool metadata in pool registration cert command (#1234)
+- New flags for pool relays in pool registration cert command (#1282, #1296)
+- New command to convert ITN keys (#1070, #1136)
+- New command to get the txid of a tx body (#1231)
+- Return appropriate exit code for tx submission failures (#1226)
+- Fix the query stake-address-info to accept stake addresses (#1194, #1197)
+- More regression tests (pioneer exercises 2, 3, 4) (#1209, #1247, #1279, #1287)
+- Start to migrate to using the new typed API from cardano-api lib (#1284, #1298)
+- Fix reporting of git revision via version command (#1283)
+
+## 1.13.0 -- June 2020
+
 - Fix the parsing of the pool margin in pool registration certs (#1063, #1110)
 - Change the Shelley cli command and flag names to be more consistent (#1068)
 - Add a command to query stake addresses, balance and delegation (#1053, #1129)
