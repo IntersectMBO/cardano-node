@@ -29,7 +29,7 @@ import           Cardano.Config.Types
 
 import           Cardano.Crypto.DSIGN.Class
 import           Cardano.Crypto.KES.Class
-import           Cardano.Config.Shelley.ColdKeys (KeyRole (..), OperatorKeyRole (..))
+import           Cardano.Api.Shelley.ColdKeys (KeyRole (..), OperatorKeyRole (..))
 
 import qualified Data.IP as IP
 

@@ -49,10 +49,10 @@ import qualified Shelley.Spec.Ledger.Keys as Ledger
 import qualified Shelley.Spec.Ledger.TxData as Shelley
 
 import           Cardano.Config.Shelley.Address (ShelleyAddress)
-import           Cardano.Config.Shelley.ColdKeys (KeyRole (..), OperatorKeyRole (..),
+import           Cardano.Api.Shelley.ColdKeys (KeyRole (..), OperatorKeyRole (..),
                     readVerKey)
 import           Cardano.Config.Shelley.Genesis
-import           Cardano.Config.Shelley.ColdKeys
+import           Cardano.Api.Shelley.ColdKeys
 import           Cardano.Config.Shelley.OCert
 import           Cardano.Config.Shelley.VRF
 import           Cardano.Config.TextView (TextViewTitle (..))

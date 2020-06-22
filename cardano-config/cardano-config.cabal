@@ -28,8 +28,7 @@ library
                        Cardano.Config.Logging
                        Cardano.Config.Orphanage
                        Cardano.Config.Parsers
-                       Cardano.Config.Shelley.Address
-                       Cardano.Config.Shelley.ColdKeys
+                       Cardano.Config.Protocol
                        Cardano.Config.Shelley.Genesis
                        Cardano.Config.Shelley.KES
                        Cardano.Config.Shelley.OCert

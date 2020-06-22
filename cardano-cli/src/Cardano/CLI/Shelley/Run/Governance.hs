@@ -19,7 +19,7 @@ import           Cardano.Api (ApiError, EpochNo, ShelleyCoin,
                    textShow, writeCertificate, writeUpdate)
 
 
-import           Cardano.Config.Shelley.ColdKeys (KeyError, KeyRole(..), readVerKey,
+import           Cardano.Api.Shelley.ColdKeys (KeyError, KeyRole(..), readVerKey,
                    renderKeyError)
 import           Cardano.CLI.Shelley.Parsers
 
@@ -123,4 +123,3 @@ runGovernanceUpdateProposal (OutputFile upFile) eNo genVerKeyFiles upPprams' = d
     checkForEmptyProposal sPParams
       | sPParams == emptyPParamsUpdate = left GovernanceEmptyUpdateProposalError
       | otherwise = right sPParams
-

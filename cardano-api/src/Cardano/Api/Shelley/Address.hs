@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Cardano.Config.Shelley.Address
+module Cardano.Api.Shelley.Address
   ( AddressError(..)
   , AddressRole(..)
   , ShelleyAddress
@@ -22,7 +22,7 @@ import           Shelley.Spec.Ledger.Address (Addr (..), toAddr)
 import           Shelley.Spec.Ledger.BaseTypes (Network (..))
 import           Shelley.Spec.Ledger.Keys (KeyPair(..))
 
-import           Cardano.Config.Shelley.ColdKeys (genKeyPair)
+import           Cardano.Api.Shelley.ColdKeys (genKeyPair)
 import           Cardano.Config.TextView
 
 data AddressRole = BootstrapAddr

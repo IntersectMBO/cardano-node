@@ -6,7 +6,7 @@ module Test.Cardano.Config.TextView
 import           Cardano.Prelude
 
 import           Cardano.Config.TextView
-import           Cardano.Config.Shelley.ColdKeys
+import           Cardano.Api.Shelley.ColdKeys
 
 import qualified Data.ByteString.Char8 as BS
 
