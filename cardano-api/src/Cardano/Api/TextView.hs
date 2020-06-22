@@ -85,6 +85,7 @@ data TextViewError
 renderTextViewError :: TextViewError -> Text
 renderTextViewError tve =
   case tve of
+    TextViewMiscErr err -> toS err
     TextViewFormatError err -> "TextView format error: " <> toS err
 
     TextViewTypeError [expType] actType ->
