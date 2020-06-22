@@ -226,6 +226,8 @@ let
         --pool-owner-stake-verification-key-file "${stateDir}/keys/node-pool$i/owner-stake.vkey" \
         --metadata-url "$METADATA_URL" \
         --metadata-hash "$METADATA_HASH" \
+        --pool-relay-port "$POOL_PORT" \
+        --pool-relay-ipv4 "127.0.0.1" \
         --testnet-magic 42 \
         --out-file "${stateDir}/keys/node-pool$i/register.cert"
 
