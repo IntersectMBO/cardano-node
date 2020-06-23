@@ -505,18 +505,12 @@ instance SerialiseAsRawBytes (Address Shelley) where
 
 instance SerialiseAsRawBytes StakeAddress where
     serialiseToRawBytes (StakeAddress nw sc) =
-        serialiseRewardAcnt (Shelley.RewardAcnt nw sc)
-      where
-        serialiseRewardAcnt =
-          error "TODO: Use Shelley.serialiseRewardAcnt when it is available"
+        Shelley.serialiseRewardAcnt (Shelley.RewardAcnt nw sc)
 
     deserialiseFromRawBytes AsStakeAddress bs =
-        case deserialiseRewardAcnt bs of
+        case Shelley.deserialiseRewardAcnt bs of
           Nothing -> Nothing
           Just (Shelley.RewardAcnt nw sc) -> Just (StakeAddress nw sc)
-      where
-        deserialiseRewardAcnt =
-          error "TODO: Use Shelley.deserialiseRewardAcnt when it is available"
 
 
 makeByronAddress :: VerificationKey ByronKey
