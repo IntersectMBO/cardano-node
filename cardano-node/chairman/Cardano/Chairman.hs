@@ -34,11 +34,9 @@ import           Control.Tracer
 
 import           Network.Mux (MuxError, MuxMode(..))
 
-import           Cardano.Api.Protocol.Types (SomeNodeClientProtocol(..))
 import           Ouroboros.Consensus.Block (BlockProtocol)
 
 import           Ouroboros.Consensus.Block (CodecConfig, GetHeader (..))
-import           Ouroboros.Consensus.BlockchainTime (SlotLength, getSlotLength)
 import           Ouroboros.Consensus.Network.NodeToClient
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
                   (HasNetworkProtocolVersion (..),
@@ -78,26 +76,25 @@ import           Cardano.Config.Types (SocketPath(..))
 -- that failures can be detected as early as possible. The progress condition
 -- is only checked at the end.
 --
-chairmanTest :: Tracer IO String
-             -> SlotLength
+chairmanTest :: forall blk. RunNode blk
+             => Tracer IO String
+             -> ProtocolClient blk (BlockProtocol blk)
+             -> NetworkMagic
              -> SecurityParam
              -> DiffTime
-             -> Maybe BlockNo
+             -> BlockNo
              -> [SocketPath]
-             -> SomeNodeClientProtocol
-             -> NetworkMagic
              -> IO ()
-chairmanTest tracer slotLength securityParam runningTime optionalProgressThreshold socketPaths someNodeClientProtocol nw = do
+chairmanTest tracer ptcl nw securityParam
+             runningTime progressThreshold socketPaths = do
 
     traceWith tracer ("Will observe nodes for " ++ show runningTime)
     traceWith tracer ("Will require chain growth of " ++ show progressThreshold)
 
-    SomeNodeClientProtocol (p :: ProtocolClient blk (BlockProtocol blk)) <- return $ someNodeClientProtocol
-
     -- Run the chairman and get the final snapshot of the chain from each node.
     chainsSnapshot <- runChairman
                         tracer
-                        (pClientInfoCodecConfig $ protocolClientInfo p)
+                        (pClientInfoCodecConfig (protocolClientInfo ptcl))
                         nw
                         securityParam
                         runningTime
@@ -117,30 +114,6 @@ chairmanTest tracer slotLength securityParam runningTime optionalProgressThresho
 
     traceWith tracer (show progressSuccess)
     traceWith tracer ("================== chairman results ==================")
-
-  where
-    progressThreshold = deriveProgressThreshold
-                          slotLength
-                          runningTime
-                          optionalProgressThreshold
-
--- | The caller specifies how long to run the chairman for and optionally a
--- chain growth progress threshold. If the threshold is not given, we can
--- derive a reasonable default from the running time and slot length.
---
-deriveProgressThreshold :: SlotLength
-                        -> DiffTime
-                        -> Maybe BlockNo
-                        -> BlockNo
-deriveProgressThreshold _ _ (Just progressThreshold) = progressThreshold
-
--- If only the progress threshold is not specified, derive it from the running time
-deriveProgressThreshold slotLength runningTime Nothing =
-    Block.BlockNo (floor (runningTime / getSlotLengthDiffTime slotLength) - 1)
-
-
-getSlotLengthDiffTime :: SlotLength -> DiffTime
-getSlotLengthDiffTime = realToFrac . getSlotLength
 
 type ChainsSnapshot blk = Map PeerId (AnchoredFragment (Header blk))
 

@@ -12,12 +12,12 @@ import           Control.Tracer (stdoutTracer)
 import           Options.Applicative
 import qualified Options.Applicative as Opt
 
-import           Ouroboros.Consensus.BlockchainTime (SlotLength, slotLengthFromSec)
 import           Ouroboros.Consensus.Cardano (SecurityParam(..))
 import           Ouroboros.Network.Block (BlockNo)
 
 import           Cardano.Api (NetworkMagic(..))
-import           Cardano.Api.Protocol (mkNodeClientProtocol)
+import           Cardano.Api.Protocol
+                   (mkNodeClientProtocol, SomeNodeClientProtocol(..))
 import           Cardano.Config.Types (ConfigYamlFilePath(..), SocketPath(..),
                    ncProtocol, parseNodeConfigurationFP)
 import           Cardano.Config.Parsers
@@ -29,24 +29,22 @@ main = do
                  , caMinProgress
                  , caSocketPaths
                  , caConfigYaml
-                 , caSlotLength
                  , caSecurityParam
                  , caNetworkMagic
                  } <- execParser opts
 
     nc <- liftIO $ parseNodeConfigurationFP caConfigYaml
 
-    let someNodeClientProtocol = mkNodeClientProtocol $ ncProtocol nc
-
-    chairmanTest
-      stdoutTracer
-      caSlotLength
-      caSecurityParam
-      caRunningTime
-      caMinProgress
-      caSocketPaths
-      someNodeClientProtocol
-      caNetworkMagic
+    case mkNodeClientProtocol (ncProtocol nc) of
+      SomeNodeClientProtocol ptcl ->
+        chairmanTest
+          stdoutTracer
+          ptcl
+          caNetworkMagic
+          caSecurityParam
+          caRunningTime
+          caMinProgress
+          caSocketPaths
 
 data ChairmanArgs = ChairmanArgs {
       -- | Stop the test after given number of seconds. The chairman will
@@ -55,10 +53,9 @@ data ChairmanArgs = ChairmanArgs {
       --
       caRunningTime :: !DiffTime
       -- | Expect this amount of progress (chain growth) by the end of the test.
-    , caMinProgress :: !(Maybe BlockNo)
+    , caMinProgress :: !BlockNo
     , caSocketPaths :: ![SocketPath]
     , caConfigYaml :: !ConfigYamlFilePath
-    , caSlotLength :: !SlotLength
     , caSecurityParam :: !SecurityParam
     , caNetworkMagic :: !NetworkMagic
     }
@@ -71,14 +68,6 @@ parseRunningTime =
         <> metavar "Time"
         <> help "Run the chairman for this length of time in seconds."
       )
-
-parseSlotLength :: Parser SlotLength
-parseSlotLength =
-  option (slotLengthFromSec <$> Opt.auto)
-    ( long "slot-length"
-    <> metavar "INT"
-    <> help "Slot length in seconds."
-    )
 
 parseSecurityParam :: Parser SecurityParam
 parseSecurityParam =
@@ -111,10 +100,9 @@ parseChairmanArgs :: Parser ChairmanArgs
 parseChairmanArgs =
     ChairmanArgs
       <$> parseRunningTime
-      <*> optional parseProgress
+      <*> parseProgress
       <*> (some $ parseSocketPath "Path to a cardano-node socket")
       <*> (ConfigYamlFilePath <$> parseConfigFile)
-      <*> parseSlotLength
       <*> parseSecurityParam
       <*> parseTestnetMagic
 

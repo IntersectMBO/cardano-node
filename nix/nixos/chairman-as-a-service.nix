@@ -12,7 +12,7 @@ let
   envConfig = environments.${cfg.environment};
   mkChairmanConfig = nodeConfig: chairmanConfig: {
     inherit (nodeConfig) package genesisFile genesisHash genesisHashPath stateDir pbftThreshold;
-    inherit (chairmanConfig) timeout security-parameter slot-length testnet-magic node-ids nodeConfigFile nodeConfig;
+    inherit (chairmanConfig) timeout require-progress security-parameter testnet-magic node-ids nodeConfigFile nodeConfig;
   };
   mkScript = cfg:
     let runtimeDir = if ncfg.runtimeDir == null then ncfg.stateDir else "/run/${ncfg.runtimeDir}";
@@ -24,8 +24,8 @@ let
           "${chairman}/bin/chairman"
           (socketArgs)
           "--timeout ${toString cfg.timeout}"
+          "--require-progress ${toString cfg.require-progress}"
           "--config ${cfg.nodeConfigFile}"
-          "--slot-length ${toString cfg.slot-length}"
           "--security-parameter ${toString cfg.security-parameter}"
           "--testnet-magic ${toString cfg.testnet-magic}"
         ];
@@ -61,7 +61,7 @@ in {
       timeout = mkOption {
         type = int;
         default = 360;
-        description = ''How long to wait for consensus.'';
+        description = ''How long to run the test for (interacts with require-progress).'';
       };
       environment = mkOption {
         type = types.enum (builtins.attrNames environments);
@@ -92,10 +92,10 @@ in {
         default = 2160;
         description = ''Chairman's --security-parameter'';
       };
-      slot-length = mkOption {
+      require-progress = mkOption {
         type = int;
-        default = 20;
-        description = ''Duration of a slot, in seconds.'';
+        default = 17;
+        description = ''Required number of blocks within the timeout (use timeout / blocktime - 1).'';
       };
       testnet-magic = mkOption {
         type = int;
