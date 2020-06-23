@@ -25,6 +25,7 @@ library
   exposed-modules:     Cardano.Config.Byron.Parsers
                        Cardano.Config.GitRev
                        Cardano.Config.GitRevFromGit
+                       Cardano.Config.LedgerQueries
                        Cardano.Config.Logging
                        Cardano.Config.Orphanage
                        Cardano.Config.Parsers
@@ -48,6 +49,7 @@ library
                      , aeson
                      , async
                      , base16-bytestring
+                     , byron-spec-ledger
                      , bytestring
                      , canonical-json >= 0.6 && < 0.7
                      , cardano-binary

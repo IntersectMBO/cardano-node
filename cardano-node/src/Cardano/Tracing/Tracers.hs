@@ -78,6 +78,7 @@ import           Ouroboros.Network.Subscription
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 import qualified Ouroboros.Consensus.Storage.LedgerDB.OnDisk as LedgerDB
 
+import           Cardano.Config.LedgerQueries
 import           Cardano.Config.TraceConfig
 import           Cardano.Config.Types
                    (TraceConstraints, HasKESMetricsData (..), KESMetricsData (..),
