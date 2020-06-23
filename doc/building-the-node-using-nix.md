@@ -1,4 +1,4 @@
-# Building Cardano Node
+# Building Cardano Node using Nix
 
 There are a number of ways the Cardano Node can be built and run, but the following document
 details the Nix and Ubuntu/Debian methods. The Nix method is probably more robust and foolproof
