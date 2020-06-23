@@ -1,5 +1,48 @@
 # Changelog for cardano-node
 
+## 1.14.0 -- June 2020
+
+### node changes
+- Initial integration of the "Byron;Shelley" composite protocol (#1242, #1294)
+- Fix a minor regression in the logging so all tracers are configurable (#1192)
+- Minor adjustment to logging verbosity defaults (#1225)
+- Log warnings and alerts for certificate expiry (#1228)
+- Report number of missed opportunities to make blocks in the live view (#1202)
+- Allow overriding the hostname shown in logs with an env var (#1278)
+- Fix reporting of git revision (#1263)
+
+### consensus changes
+- Refactoring of serialisation and other details for the Byron-to-Shelley
+  hard-fork (#2147, #2207, #2224, #2226, #2237, #2240, #2241, #2243, #2244, #2246,
+  #2248, #2250, #2252, #2263)
+- Extend the automated testing (#2027, #2029, #2066, #2222, #2277, #2282, #2293)
+- New common protocol params interface for querying ledger-specific params (#2275)
+- Change the ledger state dump query to return the whole state (#2288)
+
+### ledger changes
+- Remove the decaying deposits feature. Deposits are returned in full. (#1512)
+- New feature for a minimum pool cost, via updateable protocol parameter (#1546)
+- Change address hashes to be 224 bit, as in the design spec (#1549)
+- Track historical pool performance for pool ranking (#1565)
+- Support pool ranking with hypothetical amount to delegate (#1543)
+- Remove unnecessary pool relay port number override in DNS SRV case (#1570)
+- Move genesis JSON support into the ledger (#1534, #1536)
+- Add genesis JSON support for initial stake pools and delegation (#1552)
+- Fix genesis JSON conversion of fractional values to preserve precision (#1569)
+- Benchmarks and optimisations (#1527, #1566)
+- Update to latest VRF API changes (#1577)
+- Update the formal specification to cover MIR drawing from the treasury (#1526)
+- Update the design specification address terminology, and multi-sig (#1547, #1554)
+- Update the design specification on stake pool metadata (#1507)
+
+### network changes
+- Timeouts for chain sync are drawn from a Praos-specific distribution (#2249)
+- New keep-alive mini-protocol (#2230)
+- New support for restarting mini-protocols (#2205, #2221, #2286)
+- Testing for bi-directional use of mini-protocols (#2203)
+- Adjust and simplify the block fetch calculation for determining if we are in
+  deadline mode or in bulk sync mode (#2267)
+
 ## 1.13.0 -- June 2020
 
 ### node changes
