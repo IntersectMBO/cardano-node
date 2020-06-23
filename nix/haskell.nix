@@ -90,12 +90,10 @@ let
         # cardano-cli-tests depends on cardano-cli
         packages.cardano-cli.preCheck = "export CARDANO_CLI=${pkgSet.cardano-cli.components.exes.cardano-cli}/bin/cardano-cli";
       }
-      # TODO: Compile all local packages with -Werror:
-      { packages.cardano-config.configureFlags = [ "--ghc-option=-Werror" ]; }
-      #{
-      #  packages = lib.genAttrs projectPackages
-      #    (name: { configureFlags = [ "--ghc-option=-Werror" ]; });
-      #}
+      {
+        packages = lib.genAttrs projectPackages
+          (name: { configureFlags = [ "--ghc-option=-Werror" ]; });
+      }
       (lib.optionalAttrs profiling {
         enableLibraryProfiling = true;
         packages.cardano-node.components.exes.cardano-node.enableExecutableProfiling = true;
