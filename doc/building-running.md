@@ -1,5 +1,3 @@
-**Validated: 2020/03/26**
-
 # Building Cardano Node
 
 There are a number of ways the Cardano Node can be built and run, but the following document

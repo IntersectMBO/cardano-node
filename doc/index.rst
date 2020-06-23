@@ -1,6 +1,11 @@
 .. Cardano Node
 
-Cardano Node Technical Documentation
-=============================================
+Cardano Node
+============
 
-This repo contains the technical documentation for Cardano Node.
+.. toctree::
+   :maxdepth: 3
+   :titlesonly:
+
+   building-running
+   shelley-genesis
