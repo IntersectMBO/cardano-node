@@ -93,7 +93,7 @@ import           Cardano.Node.Shutdown
 import           Cardano.Tracing.Peer
 import           Cardano.Tracing.Tracers
 #ifdef UNIX
-import           Cardano.Node.TUI.LiveView
+import           Cardano.Node.TUI.Run
 #endif
 
 
