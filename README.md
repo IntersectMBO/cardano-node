@@ -37,6 +37,21 @@ The latest supported networks can be found at https://hydra.iohk.io/job/Cardano/
 
 ## Cabal
 
+#### Dependencies:
+* libsodum
+* libsodium-dev
+
+For ease of use create a `cabal.project.local` at the toplevel with:
+```
+package cardano-crypto-praos
+  flags: -external-libsodium-vrf
+```
+
+There are two choices for building `cardano-crypto-praos`, selected via a cabal flag `external-libsodium-vrf`:
+1. `+external-libsodium-vrf` Which requires a special fork of `libsodium` with the VRF code to be installed on the system
+2. `-external-libsodium-vrf` Which uses a bundled version of the VRF C code and uses the vanilla system `libsodium`
+The second option is currently only suitable for development -- but not deployment -- because it uses the libsodium C code in an unsupported configuration
+
 Use [Cabal - Version 3.0](https://www.haskell.org/cabal/) to build this project:
 
 ```
