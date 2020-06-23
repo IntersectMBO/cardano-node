@@ -79,12 +79,14 @@ let
   extraBuilds = {
     # only build nixos tests on first supported system (linux)
     inherit (pkgsFor (builtins.head  supportedSystems)) nixosTests;
-    cardano-deployment = pkgs.iohkNix.cardanoLib.mkConfigHtml { inherit (pkgs.iohkNix.cardanoLib.environments) mainnet testnet ff shelley_testnet; };
+    cardano-deployment = pkgs.iohkNix.cardanoLib.mkConfigHtml { inherit (pkgs.iohkNix.cardanoLib.environments) mainnet testnet ff shelley_qa shelley_testnet; };
   } // (builtins.listToAttrs (map makeRelease [
     "mainnet"
     "staging"
+    "shelley_qa"
     "shelley_staging_short"
     "shelley_staging"
+    "shelley_testnet"
     "testnet"
   ]));
 
