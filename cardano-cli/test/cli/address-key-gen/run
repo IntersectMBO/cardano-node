@@ -20,4 +20,7 @@ assert_file_exists "${TEST_DIR}/address.skey"
 assert_string 'PaymentVerificationKeyShelley' "${TEST_DIR}/address.vkey"
 assert_string 'SigningKeyShelley' "${TEST_DIR}/address.skey"
 
+# Generate the input file for the 'address-key-hash' test.
+# cp ${TEST_DIR}/address.vkey test/cli/address-key-hash/data/address.vkey
+
 report_result ${error}

@@ -38,7 +38,7 @@ assert_string 'TxSignedShelley' "${TEST_DIR}/signed.tx"
 # Sign a pool registration transaction.
 ${CARDANO_CLI} shelley transaction sign \
     --mainnet \
-    --tx-body-file "${DATA_DIR}/tx-pool-reg.unsigned" \
+    --tx-body-file "${DATA_DIR}/pool-reg.cert" \
     --signing-key-file "${DATA_DIR}/utxo.skey" \
     --signing-key-file "${DATA_DIR}/stake.skey" \
     --signing-key-file "${DATA_DIR}/node-cold.skey" \
