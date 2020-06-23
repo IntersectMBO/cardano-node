@@ -24,8 +24,7 @@ import           Cardano.Chain.UTxO (TxIn, TxOut)
 import qualified Cardano.Crypto.Hashing as Crypto
 import qualified Cardano.Crypto.Signing as Crypto
 
-import           Cardano.Config.Protocol (CardanoEra, RealPBFTError,
-                   renderRealPBFTError)
+import           Cardano.Config.Protocol (RealPBFTError, renderRealPBFTError)
 import           Cardano.Config.Types
 
 import           Cardano.Api (Network(..), toByronNetworkMagic, toByronProtocolMagic)
@@ -187,8 +186,7 @@ runIssueDelegationCertificate nw era epoch issuerSK delegateVK cert = do
   sk <- firstExceptT ByronCmdKeyFailure $ readEraSigningKey era issuerSK
   let byGenDelCert :: Delegation.Certificate
       byGenDelCert = issueByronGenesisDelegation (toByronProtocolMagic nw) epoch sk vk
-  sCert <- hoistEither . first ByronCmdDelegationError
-             $ serialiseDelegationCert era byGenDelCert
+      sCert        = serialiseDelegationCert byGenDelCert
   firstExceptT ByronCmdHelpersError $ ensureNewFileLBS (nFp cert) sCert
 
 

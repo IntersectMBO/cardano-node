@@ -6,6 +6,8 @@ module Cardano.CLI.Byron.Key
   , NewSigningKeyFile(..)
   , NewVerificationKeyFile(..)
   , VerificationKeyFile(..)
+  , CardanoEra(..)
+  , serialiseSigningKey
   , deserialiseSigningKey
   , keygen
   , prettyPublicKey
@@ -24,6 +26,8 @@ import           Prelude (String, show)
 import           Cardano.Prelude hiding (option, show, trace, (%))
 
 import           Codec.CBOR.Read (DeserialiseFailure, deserialiseFromBytes)
+import           Codec.CBOR.Write (toLazyByteString)
+
 import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra
                    (firstExceptT, handleIOExceptT, hoistEither)
@@ -41,9 +45,7 @@ import           System.IO (hSetEcho, hFlush, stdout, stdin)
 import           Cardano.Api (textShow)
 import qualified Cardano.Chain.Common as Common
 import qualified Cardano.Chain.Genesis as Genesis
-import           Cardano.CLI.Helpers (HelpersError, renderHelpersError, serialiseSigningKey)
 import qualified Cardano.CLI.Legacy.Byron as Legacy
-import           Cardano.Config.Protocol (CardanoEra(..))
 import           Cardano.Config.Types (SigningKeyFile(..))
 import           Cardano.Crypto (SigningKey(..))
 import qualified Cardano.Crypto.Random as Crypto
@@ -51,9 +53,7 @@ import qualified Cardano.Crypto.Signing as Crypto
 
 
 data ByronKeyFailure
-  = CardanoEraNotSupported !CardanoEra
-  | HelpersError !HelpersError
-  | ReadSigningKeyFailure !FilePath !Text
+  = ReadSigningKeyFailure !FilePath !Text
   | ReadVerificationKeyFailure !FilePath !Text
   | SigningKeyDeserialisationFailed !FilePath !DeserialiseFailure
   | VerificationKeyDeserialisationFailed !FilePath !Text
@@ -62,10 +62,6 @@ data ByronKeyFailure
 renderByronKeyFailure :: ByronKeyFailure -> Text
 renderByronKeyFailure err =
   case err of
-    CardanoEraNotSupported era ->
-      "Error in serialization, " <> textShow era <> " is not supported."
-    HelpersError helpersErr ->
-      "Poor key serialization error: " <> renderHelpersError helpersErr
     ReadSigningKeyFailure sKeyFp readErr ->
       "Error reading signing key at: " <> textShow sKeyFp <> " Error: " <> textShow readErr
     ReadVerificationKeyFailure vKeyFp readErr ->
@@ -95,6 +91,20 @@ data PasswordRequirement
 
 type PasswordPrompt = String
 
+-- | Some commands have variants or file formats that depend on the era.
+--
+-- TODO: this looks like it's only used for Byron era keys, so could be renamed
+--
+data CardanoEra = ByronEraLegacy | ByronEra
+  deriving Show
+
+serialiseSigningKey
+  :: CardanoEra
+  -> Crypto.SigningKey
+  -> Either ByronKeyFailure LB.ByteString
+serialiseSigningKey ByronEraLegacy (Crypto.SigningKey k) = pure $ toLazyByteString (Crypto.toCBORXPrv k)
+serialiseSigningKey ByronEra (Crypto.SigningKey k) = pure $ toLazyByteString (Crypto.toCBORXPrv k)
+
 deserialiseSigningKey :: CardanoEra -> FilePath -> LB.ByteString
                       -> Either ByronKeyFailure SigningKey
 deserialiseSigningKey ByronEraLegacy fp delSkey =
@@ -106,8 +116,6 @@ deserialiseSigningKey ByronEra fp delSkey =
   case deserialiseFromBytes Crypto.fromCBORXPrv delSkey of
     Left deSerFail -> Left $ SigningKeyDeserialisationFailed fp deSerFail
     Right (_, sKey) -> Right $ SigningKey sKey
-
-deserialiseSigningKey ShelleyEra _ _ = Left $ CardanoEraNotSupported ShelleyEra
 
 
 -- | Print some invariant properties of a public key:
@@ -143,10 +151,9 @@ readPaymentVerificationKey (VerificationKeyFile fp) = do
 serialisePoorKey :: CardanoEra -> Genesis.PoorSecret
                  -> Either ByronKeyFailure LB.ByteString
 serialisePoorKey ByronEraLegacy ps =
-  first HelpersError . serialiseSigningKey ByronEraLegacy $ Genesis.poorSecretToKey ps
+  serialiseSigningKey ByronEraLegacy $ Genesis.poorSecretToKey ps
 serialisePoorKey ByronEra ps =
-  first HelpersError . serialiseSigningKey ByronEra $ Genesis.poorSecretToKey ps
-serialisePoorKey ShelleyEra _  = Left $ CardanoEraNotSupported ShelleyEra
+  serialiseSigningKey ByronEra $ Genesis.poorSecretToKey ps
 
 -- | Generate a cryptographically random signing key,
 --   protected with a (potentially empty) passphrase.

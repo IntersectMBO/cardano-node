@@ -17,7 +17,7 @@ import qualified Data.Text as Text
 
 import qualified Cardano.Binary as Binary
 import           Cardano.Config.Protocol
-                   (CardanoEra(..), RealPBFTError, renderRealPBFTError)
+                   (RealPBFTError, renderRealPBFTError)
 import           Cardano.Config.Types
 import           Cardano.Chain.Update
                    (AVote(..), Vote, mkVote, recoverUpId, recoverVoteId)
@@ -33,7 +33,7 @@ import           Cardano.Api (Network, toByronProtocolMagic)
 
 import           Cardano.CLI.Byron.Genesis (ByronGenesisError)
 import           Cardano.CLI.Byron.Tx (ByronTxError, nodeSubmitTx)
-import           Cardano.CLI.Byron.Key (ByronKeyFailure, readEraSigningKey)
+import           Cardano.CLI.Byron.Key (CardanoEra(..), ByronKeyFailure, readEraSigningKey)
 import           Cardano.CLI.Helpers (HelpersError, ensureNewFileLBS)
 
 
