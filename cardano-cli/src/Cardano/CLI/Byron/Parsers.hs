@@ -63,7 +63,6 @@ import           Cardano.Config.Parsers
                    (parseIntegral, parseFraction, parseLovelace, readDouble,
                     parseFilePath,  parseSigningKeyFile,
                     parseGenesisFile, command', parseFlag')
-import           Cardano.Config.Protocol (CardanoEra(..))
 
 import           Cardano.CLI.Byron.Commands
 import           Cardano.CLI.Byron.Genesis
@@ -606,15 +605,8 @@ parseCardanoEra = asum
         long "byron-formats"
      <> help "Byron era formats and compatibility"
 
-  , flag' ShelleyEra $
-        long "shelley-formats"
-     <> help "Shelley-era formats and compatibility"
-
-    -- And various hidden compatibility flag aliases:
+    -- And hidden compatibility flag aliases:
   , flag' ByronEraLegacy $ hidden <> long "byron-legacy"
-  , flag' ShelleyEra     $ hidden <> long "bft"
-  , flag' ShelleyEra     $ hidden <> long "praos"
-  , flag' ShelleyEra     $ hidden <> long "mock-pbft"
   , flag' ByronEra       $ hidden <> long "real-pbft"
   ]
 

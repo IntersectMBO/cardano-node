@@ -15,6 +15,11 @@ library
   hs-source-dirs:       src
 
   exposed-modules:      Cardano.Api
+                        Cardano.Api.Protocol
+                        Cardano.Api.Protocol.Types
+                        Cardano.Api.Protocol.Byron
+                        Cardano.Api.Protocol.Cardano
+                        Cardano.Api.Protocol.Shelley
                         Cardano.Api.Typed
 
   other-modules:        Cardano.Api.CBOR
@@ -58,6 +63,7 @@ library
                       , ouroboros-consensus
                       , ouroboros-consensus-byron
                       , ouroboros-consensus-cardano
+                      , ouroboros-consensus-mock
                       , ouroboros-consensus-shelley
                       , ouroboros-network
                       , ouroboros-network-framework
@@ -66,6 +72,7 @@ library
                       , shelley-spec-ledger
                       , stm
                       , text
+                      , transformers
                       , transformers-except
                       , typed-protocols
                       , typed-protocols-examples

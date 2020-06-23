@@ -26,7 +26,6 @@ import           Cardano.Prelude hiding (atomically, show)
 import           Prelude (String, show)
 
 import           GHC.Clock (getMonotonicTimeNSec)
-import           Control.Tracer
 
 import           Codec.CBOR.Read (DeserialiseFailure)
 import           Data.Aeson (ToJSON)
@@ -34,6 +33,9 @@ import           Data.IORef (IORef, atomicModifyIORef', readIORef)
 import qualified Data.Text as Text
 import           Network.Mux (MuxTrace, WithMuxBearer)
 import qualified Network.Socket as Socket (SockAddr)
+
+import           Control.Tracer
+import           Control.Tracer.Transformers
 
 import           Cardano.Slotting.Slot (EpochNo (..))
 
@@ -76,13 +78,16 @@ import           Ouroboros.Network.Subscription
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 import qualified Ouroboros.Consensus.Storage.LedgerDB.OnDisk as LedgerDB
 
-import           Cardano.Config.Protocol (TraceConstraints)
 import           Cardano.Config.TraceConfig
-import           Cardano.Config.Types (HasKESMetricsData (..), KESMetricsData (..),
-                                       MaxKESEvolutions (..), OperationalCertStartKESPeriod (..))
+import           Cardano.Config.Types
+                   (TraceConstraints, HasKESMetricsData (..), KESMetricsData (..),
+                    MaxKESEvolutions (..), OperationalCertStartKESPeriod (..))
 import           Cardano.Tracing.MicroBenchmarking
 
-import           Control.Tracer.Transformers
+-- For tracing instances
+import           Cardano.Node.Protocol.Byron ()
+import           Cardano.Node.Protocol.Shelley ()
+
 
 data Tracers peer localPeer blk = Tracers
   { -- | Trace the ChainDB

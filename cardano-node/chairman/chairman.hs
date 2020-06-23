@@ -1,22 +1,25 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 import           Cardano.Prelude hiding (option)
 
 import           Control.Applicative (some)
-import           Control.Monad.Trans.Except.Extra (runExceptT)
 import           Control.Monad.Class.MonadTime (DiffTime)
 import           Control.Tracer (stdoutTracer)
 
+import           Options.Applicative
+import qualified Options.Applicative as Opt
+
+import           Ouroboros.Consensus.BlockchainTime (SlotLength, slotLengthFromSec)
+import           Ouroboros.Consensus.Cardano (SecurityParam(..))
 import           Ouroboros.Network.Block (BlockNo)
 
-import           Options.Applicative
-import           Cardano.Config.Protocol
-                   (SomeConsensusProtocol(..), mkConsensusProtocol,
-                    renderProtocolInstantiationError)
-import           Cardano.Config.Types
-                  (ConfigYamlFilePath(..), SocketPath(..),
-                   parseNodeConfigurationFP)
+import           Cardano.Api (NetworkMagic(..))
+import           Cardano.Api.Protocol (mkNodeClientProtocol)
+import           Cardano.Config.Types (ConfigYamlFilePath(..), SocketPath(..),
+                   ncProtocol, parseNodeConfigurationFP)
 import           Cardano.Config.Parsers
 import           Cardano.Chairman (chairmanTest)
 
@@ -26,22 +29,24 @@ main = do
                  , caMinProgress
                  , caSocketPaths
                  , caConfigYaml
+                 , caSlotLength
+                 , caSecurityParam
+                 , caNetworkMagic
                  } <- execParser opts
 
     nc <- liftIO $ parseNodeConfigurationFP caConfigYaml
-    frmPtclRes <- runExceptT $ mkConsensusProtocol nc Nothing
 
-    SomeConsensusProtocol p <- case frmPtclRes of
-                        Right p  -> pure p
-                        Left err -> do putTextLn $ renderProtocolInstantiationError err
-                                       exitFailure
+    let someNodeClientProtocol = mkNodeClientProtocol $ ncProtocol nc
 
     chairmanTest
       stdoutTracer
-      p
+      caSlotLength
+      caSecurityParam
       caRunningTime
       caMinProgress
       caSocketPaths
+      someNodeClientProtocol
+      caNetworkMagic
 
 data ChairmanArgs = ChairmanArgs {
       -- | Stop the test after given number of seconds. The chairman will
@@ -53,6 +58,9 @@ data ChairmanArgs = ChairmanArgs {
     , caMinProgress :: !(Maybe BlockNo)
     , caSocketPaths :: ![SocketPath]
     , caConfigYaml :: !ConfigYamlFilePath
+    , caSlotLength :: !SlotLength
+    , caSecurityParam :: !SecurityParam
+    , caNetworkMagic :: !NetworkMagic
     }
 
 parseRunningTime :: Parser DiffTime
@@ -62,6 +70,32 @@ parseRunningTime =
         <> short 't'
         <> metavar "Time"
         <> help "Run the chairman for this length of time in seconds."
+      )
+
+parseSlotLength :: Parser SlotLength
+parseSlotLength =
+  option (slotLengthFromSec <$> Opt.auto)
+    ( long "slot-length"
+    <> metavar "INT"
+    <> help "Slot length in seconds."
+    )
+
+parseSecurityParam :: Parser SecurityParam
+parseSecurityParam =
+  option (SecurityParam <$> Opt.auto)
+    ( long "security-parameter"
+    <> metavar "INT"
+    <> help "Security parameter"
+    )
+
+
+parseTestnetMagic :: Parser NetworkMagic
+parseTestnetMagic =
+  NetworkMagic <$>
+    Opt.option Opt.auto
+      (  Opt.long "testnet-magic"
+      <> Opt.metavar "INT"
+      <> Opt.help "The testnet network magic number"
       )
 
 parseProgress :: Parser BlockNo
@@ -80,12 +114,13 @@ parseChairmanArgs =
       <*> optional parseProgress
       <*> (some $ parseSocketPath "Path to a cardano-node socket")
       <*> (ConfigYamlFilePath <$> parseConfigFile)
+      <*> parseSlotLength
+      <*> parseSecurityParam
+      <*> parseTestnetMagic
 
 opts :: ParserInfo ChairmanArgs
 opts = info (parseChairmanArgs <**> helper)
   ( fullDesc
-  <> progDesc "Chairman Shelley application is a CI tool which checks \
-              \if Shelly nodes find consensus and do expected progress."
+  <> progDesc "Chairman checks Cardano clusters for progress and consensus."
   <> header "Chairman sits in a room full of Shelley nodes, and checks \
             \if they are all behaving ...")
-

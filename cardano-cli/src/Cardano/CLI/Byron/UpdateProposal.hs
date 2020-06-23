@@ -29,7 +29,6 @@ import           Cardano.Chain.Update
                     SoftforkRule(..), SoftwareVersion(..), SystemTag(..), recoverUpId,
                     signProposal)
 import           Cardano.Config.Types
-import           Cardano.Config.Protocol (CardanoEra(..))
 import           Ouroboros.Consensus.Util.Condense (condense)
 import           Cardano.Crypto.Signing (SigningKey, noPassSafeSigner)
 import           Ouroboros.Consensus.Byron.Ledger.Block (ByronBlock)
@@ -38,7 +37,7 @@ import           Ouroboros.Consensus.Ledger.SupportsMempool (txId)
 import           Ouroboros.Network.NodeToClient (IOManager)
 
 import           Cardano.Api (Network, toByronProtocolMagic)
-import           Cardano.CLI.Byron.Key (ByronKeyFailure, readEraSigningKey)
+import           Cardano.CLI.Byron.Key (CardanoEra(..), ByronKeyFailure, readEraSigningKey)
 import           Cardano.CLI.Byron.Genesis (ByronGenesisError)
 import           Cardano.CLI.Byron.Tx (ByronTxError, nodeSubmitTx)
 import           Cardano.CLI.Helpers (HelpersError, ensureNewFileLBS, renderHelpersError)

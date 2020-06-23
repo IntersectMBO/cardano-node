@@ -83,11 +83,11 @@ import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 import           Ouroboros.Consensus.Storage.ImmutableDB (ValidationPolicy (..))
 import           Ouroboros.Consensus.Storage.VolatileDB (BlockValidationPolicy (..))
 
-import           Cardano.Config.Protocol
-                   (SomeConsensusProtocol(..), mkConsensusProtocol,
-                    renderProtocolInstantiationError)
 import           Cardano.Config.Topology
 import           Cardano.Config.Types
+import           Cardano.Node.Protocol
+                   (mkConsensusProtocol,
+                    SomeConsensusProtocol(..), renderProtocolInstantiationError)
 import           Cardano.Node.Socket (gatherConfiguredSockets, SocketOrSocketInfo(..))
 import           Cardano.Node.Shutdown
 import           Cardano.Tracing.Peer

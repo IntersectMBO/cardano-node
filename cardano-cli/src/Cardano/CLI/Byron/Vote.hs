@@ -16,8 +16,6 @@ import qualified Data.Text as Text
 
 
 import qualified Cardano.Binary as Binary
-import           Cardano.Config.Protocol
-                   (CardanoEra(..), RealPBFTError, renderRealPBFTError)
 import           Cardano.Config.Types
 import           Cardano.Chain.Update
                    (AVote(..), Vote, mkVote, recoverUpId, recoverVoteId)
@@ -33,7 +31,7 @@ import           Cardano.Api (Network, toByronProtocolMagic)
 
 import           Cardano.CLI.Byron.Genesis (ByronGenesisError)
 import           Cardano.CLI.Byron.Tx (ByronTxError, nodeSubmitTx)
-import           Cardano.CLI.Byron.Key (ByronKeyFailure, readEraSigningKey)
+import           Cardano.CLI.Byron.Key (CardanoEra(..), ByronKeyFailure, readEraSigningKey)
 import           Cardano.CLI.Helpers (HelpersError, ensureNewFileLBS)
 
 
@@ -43,7 +41,6 @@ data ByronVoteError
   | ByronVoteGenesisReadError !ByronGenesisError
   | ByronVoteKeyReadFailure !ByronKeyFailure
   | ByronVoteReadFileFailure !FilePath !Text
-  | ByronVoteSubmissionError !RealPBFTError
   | ByronVoteTxSubmissionError !ByronTxError
   | ByronVoteUpdateProposalFailure !ByronUpdateProposalError
   | ByronVoteUpdateHelperError !HelpersError
@@ -55,7 +52,6 @@ renderByronVoteError bVerr =
     ByronVoteDecodingError decoderErr -> "Error decoding Byron vote: " <> (Text.pack $ show decoderErr)
     ByronVoteGenesisReadError genErr -> "Error reading the genesis file:" <> (Text.pack $ show genErr)
     ByronVoteReadFileFailure fp err -> "Error reading Byron vote at " <> Text.pack fp <> " Error: " <> err
-    ByronVoteSubmissionError realPBFTErr -> "Error submitting Byron vote: " <> renderRealPBFTError realPBFTErr
     ByronVoteTxSubmissionError txErr -> "Error submitting the transaction: " <> (Text.pack $ show txErr)
     ByronVoteUpdateProposalFailure err -> "Error reading the update proposal: " <> (Text.pack $ show err)
     ByronVoteUpdateHelperError err ->"Error creating the vote: " <> (Text.pack $ show err)

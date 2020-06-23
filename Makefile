@@ -31,7 +31,7 @@ test-ghcid-nix: ## Run ghcid on test suites with Nix
 	@ghcid --command="stack ghci --test --main-is $(PROJECT_NAME):test:$(PROJECT_NAME)-test --nix -j$(NUM_PROC)"
 
 test-chairmans-cluster:
-	@scripts/cluster-test.sh
+	@scripts/chairmans-cluster/cluster-test.sh
 
 BENCH_REPEATS ?= 3
 BENCH_CONFIG ?= both

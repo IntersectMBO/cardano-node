@@ -33,8 +33,10 @@ let
   };
   chairman-runner = svcLib.mkChairmanScript {
     inherit cardano-cluster-config;
-    chairman-config = {
-      timeout    = 450;
+    chairman-config  = {
+      timeout        = 450;
+      testnet-magic  = 10000000;
+      security-parameter = 2160;
     };
   };
 in {

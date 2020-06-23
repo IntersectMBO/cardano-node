@@ -23,14 +23,11 @@ library
     build-depends:     lobemo-scribe-systemd
 
   exposed-modules:     Cardano.Config.Byron.Parsers
-                       Cardano.Config.Byron.Protocol
                        Cardano.Config.GitRev
                        Cardano.Config.GitRevFromGit
                        Cardano.Config.Logging
-                       Cardano.Config.Mock.Protocol
                        Cardano.Config.Orphanage
                        Cardano.Config.Parsers
-                       Cardano.Config.Protocol
                        Cardano.Config.Shelley.Address
                        Cardano.Config.Shelley.ColdKeys
                        Cardano.Config.Shelley.Genesis
@@ -38,9 +35,7 @@ library
                        Cardano.Config.Shelley.OCert
                        Cardano.Config.Shelley.Orphans
                        Cardano.Config.Shelley.Parsers
-                       Cardano.Config.Shelley.Protocol
                        Cardano.Config.Shelley.VRF
-                       Cardano.Config.Cardano.Protocol
                        Cardano.Config.TextView
                        Cardano.Config.Topology
                        Cardano.Config.TopHandler

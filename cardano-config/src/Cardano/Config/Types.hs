@@ -38,9 +38,7 @@ module Cardano.Config.Types
     , NodeCLI (..)
     , NodeProtocolMode (..)
     , SigningKeyFile (..)
-    , SomeConsensusProtocolConstraints
     , ProtocolFilepaths (..)
-    , SomeConsensusProtocol (..)
     , TopologyFile (..)
     , TraceConstraints
     , SocketPath (..)
@@ -49,7 +47,6 @@ module Cardano.Config.Types
     , Fd (..)
     , parseNodeConfiguration
     , parseNodeConfigurationFP
-    , SomeNodeClientProtocol(..)
     , parseNodeHostAddress
     ) where
 
@@ -66,20 +63,18 @@ import           Network.Socket (PortNumber)
 import           System.FilePath ((</>), takeDirectory)
 import           System.Posix.Types (Fd(Fd))
 
-import           Cardano.BM.Tracing (ToObject, Transformable)
+import           Cardano.BM.Tracing (ToObject)
 import qualified Cardano.Chain.Update as Update
 import           Cardano.Chain.Slotting (EpochSlots)
 import           Cardano.Crypto.KES.Class (Period)
 import           Cardano.Crypto.ProtocolMagic (RequiresNetworkMagic)
 import           Ouroboros.Consensus.Block (Header, BlockProtocol, ForgeState(..))
 import           Ouroboros.Consensus.Byron.Ledger.Block (ByronBlock)
-import qualified Ouroboros.Consensus.Cardano as Consensus (Protocol, ProtocolClient)
 import           Ouroboros.Consensus.HeaderValidation (OtherHeaderEnvelopeError)
 import           Ouroboros.Consensus.Ledger.Abstract (LedgerError)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTxId, HasTxId, HasTxs(..),
                    LedgerSupportsMempool(..))
 import           Ouroboros.Consensus.Mock.Ledger.Block (SimpleBlock)
-import           Ouroboros.Consensus.Node.Run (RunNode)
 import           Ouroboros.Consensus.NodeId (CoreNodeId(..))
 import           Ouroboros.Consensus.Protocol.Abstract (CannotLead, ValidationErr)
 import           Ouroboros.Consensus.Util.Condense (Condense (..))
@@ -590,19 +585,7 @@ instance ToJSON NodeHostAddress where
 -- Protocol & Tracing Related
 --------------------------------------------------------------------------------
 
-type SomeConsensusProtocolConstraints blk =
-     ( HasKESMetricsData blk
-     , RunNode blk
-     , TraceConstraints blk
-     , Transformable Text IO (ForgeState blk)
-     )
-
-data SomeConsensusProtocol where
-
-     SomeConsensusProtocol :: SomeConsensusProtocolConstraints blk
-                           => Consensus.Protocol IO blk (BlockProtocol blk)
-                           -> SomeConsensusProtocol
-
+--TODO: move all of these to cardano-node
 
 -- | KES-related data to be traced as metrics.
 data KESMetricsData
@@ -680,13 +663,3 @@ type TraceConstraints blk =
     , ToObject (CannotLead (BlockProtocol blk))
     )
 
---------------------------------------------------------------------------------
--- Node client requirements
---------------------------------------------------------------------------------
-
-data SomeNodeClientProtocol where
-
-     SomeNodeClientProtocol
-       :: RunNode blk
-       => Consensus.ProtocolClient blk (BlockProtocol blk)
-       -> SomeNodeClientProtocol

@@ -161,7 +161,7 @@ in {
       };
       slot-length = mkOption {
         type = int;
-        default = 2;
+        default = 20;
         description = ''
           Slot length
         '';

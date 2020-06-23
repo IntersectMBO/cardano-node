@@ -18,24 +18,25 @@ import           Codec.CBOR.Write (toLazyByteString)
 import           Control.Monad.Trans.Except.Extra (left)
 import qualified Data.ByteString.Lazy as LB
 import           Formatting (Format, sformat)
-import qualified Text.JSON.Canonical as CanonicalJSON
 
 import           Cardano.Api (textShow)
 import           Cardano.Binary (Annotated(..), serialize')
 import qualified Cardano.Chain.Delegation as Dlg
 import           Cardano.Chain.Slotting (EpochNumber)
-import           Cardano.CLI.Helpers (HelpersError(..), renderHelpersError, serialiseSigningKey)
 import qualified Cardano.CLI.Legacy.Byron as Legacy
-import           Cardano.Config.Protocol (CardanoEra(..))
 import           Cardano.Config.Types (CertificateFile (..))
 import qualified Cardano.Crypto as Crypto
 import           Cardano.Crypto (ProtocolMagicId, SigningKey)
+
+import           Cardano.CLI.Byron.Key
+                   (CardanoEra(..), serialiseSigningKey,
+                   ByronKeyFailure, renderByronKeyFailure)
 
 
 data ByronDelegationError
   = CertificateValidationErrors !FilePath ![Text]
   | DlgCertificateDeserialisationFailed !FilePath !Text
-  | HelpersError !HelpersError
+  | ByronDelegationKeyError !ByronKeyFailure
   deriving Show
 
 renderByronDelegationError :: ByronDelegationError -> Text
@@ -45,7 +46,7 @@ renderByronDelegationError err =
       "Certificate validation error(s) at: " <> textShow certFp <> " Errors: " <> textShow errs
     DlgCertificateDeserialisationFailed certFp deSererr ->
       "Certificate deserialisation error at: " <> textShow certFp <> " Error: " <> textShow deSererr
-    HelpersError hlpsErr -> renderHelpersError hlpsErr
+    ByronDelegationKeyError kerr -> renderByronKeyFailure kerr
 
 -- TODO:  we need to support password-protected secrets.
 -- | Issue a certificate for genesis delegation to a delegate key, signed by the
@@ -113,16 +114,15 @@ checkDlgCert cert magic issuerVK' delegateVK' =
     vkF = Crypto.fullVerificationKeyF
 
 
-serialiseDelegationCert :: CanonicalJSON.ToJSON Identity a
-                        => CardanoEra -> a -> Either ByronDelegationError LB.ByteString
-serialiseDelegationCert ByronEraLegacy dlgCert = pure $ canonicalEncodePretty dlgCert
-serialiseDelegationCert ByronEra       dlgCert = pure $ canonicalEncodePretty dlgCert
-serialiseDelegationCert ShelleyEra     _       = Left . HelpersError $ CardanoEraNotSupportedFail ShelleyEra
+serialiseDelegationCert :: Dlg.Certificate -> LB.ByteString
+serialiseDelegationCert = canonicalEncodePretty
 
 serialiseDelegateKey :: CardanoEra -> SigningKey -> Either ByronDelegationError LB.ByteString
 serialiseDelegateKey ByronEraLegacy sk = pure
                                        . toLazyByteString
                                        . Legacy.encodeLegacyDelegateKey
                                        $ Legacy.LegacyDelegateKey sk
-serialiseDelegateKey ByronEra  sk = first HelpersError $ serialiseSigningKey ByronEra sk
-serialiseDelegateKey ShelleyEra _ = Left . HelpersError $ CardanoEraNotSupportedFail ShelleyEra
+serialiseDelegateKey ByronEra  sk =
+  first ByronDelegationKeyError $
+    serialiseSigningKey ByronEra sk
+

@@ -15,7 +15,6 @@ module Cardano.CLI.Helpers
   , readBech32
   , renderConversionError
   , renderHelpersError
-  , serialiseSigningKey
   , textToByteString
   , textToLByteString
   , validateCBOR
@@ -29,7 +28,6 @@ import qualified Codec.Binary.Bech32 as Bech32
 import           Codec.CBOR.Pretty (prettyHexEnc)
 import           Codec.CBOR.Read (DeserialiseFailure, deserialiseFromBytes)
 import           Codec.CBOR.Term (decodeTerm, encodeTerm)
-import           Codec.CBOR.Write (toLazyByteString)
 import           Control.Exception (IOException)
 import qualified Control.Exception as Exception
 import           Control.Monad.Trans.Except.Extra (handleIOExceptT, left)
@@ -46,16 +44,13 @@ import qualified Cardano.Chain.Delegation as Delegation
 import qualified Cardano.Chain.Update as Update
 import           Cardano.Chain.Block (fromCBORABlockOrBoundary)
 import qualified Cardano.Chain.UTxO as UTxO
-import           Cardano.Config.Protocol (CardanoEra(..))
 import           Cardano.Config.Types
-import qualified Cardano.Crypto as Crypto
 import qualified Cardano.Crypto.DSIGN as DSIGN
 
 import qualified Shelley.Spec.Ledger.Keys as Shelley
 
 data HelpersError
-  = CardanoEraNotSupportedFail !CardanoEra
-  | CBORPrettyPrintError !DeserialiseFailure
+  = CBORPrettyPrintError !DeserialiseFailure
   | CBORDecodingError !DeserialiseFailure
   | IOError' !FilePath !IOException
   | OutputMustNotAlreadyExist FilePath
@@ -65,7 +60,6 @@ data HelpersError
 renderHelpersError :: HelpersError -> Text
 renderHelpersError err =
   case err of
-    CardanoEraNotSupportedFail era -> "Cardano era not supported: " <> (Text.pack $ show era)
     OutputMustNotAlreadyExist fp -> "Output file/directory must not already exist: " <> Text.pack fp
     ReadCBORFileFailure fp err' -> "CBOR read failure at: " <> Text.pack fp <> (Text.pack $ show err')
     CBORPrettyPrintError err' -> "Error with CBOR decoding: " <> (Text.pack $ show err')
@@ -89,14 +83,6 @@ ensureNewFile writer outFile blob = do
 
 ensureNewFileLBS :: FilePath -> LB.ByteString -> ExceptT HelpersError IO ()
 ensureNewFileLBS = ensureNewFile LB.writeFile
-
-serialiseSigningKey
-  :: CardanoEra
-  -> Crypto.SigningKey
-  -> Either HelpersError LB.ByteString
-serialiseSigningKey ByronEraLegacy (Crypto.SigningKey k) = pure $ toLazyByteString (Crypto.toCBORXPrv k)
-serialiseSigningKey ByronEra (Crypto.SigningKey k) = pure $ toLazyByteString (Crypto.toCBORXPrv k)
-serialiseSigningKey ShelleyEra _ = Left $ CardanoEraNotSupportedFail ShelleyEra
 
 textToLByteString :: Text -> LB.ByteString
 textToLByteString = LC.pack . Text.unpack

@@ -1,12 +1,6 @@
-{-# LANGUAGE ConstraintKinds   #-}
-{-# LANGUAGE FlexibleContexts  #-}
-{-# LANGUAGE GADTs             #-}
-{-# LANGUAGE NamedFieldPuns    #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RankNTypes        #-}
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE NamedFieldPuns #-}
 
-module Cardano.Config.Byron.Protocol
+module Cardano.Node.Protocol.Byron
   (
     -- * Protocol exposing the specific type
     -- | Use this when you need the specific instance
@@ -15,11 +9,6 @@ module Cardano.Config.Byron.Protocol
     -- * Protocols hiding the specific type
     -- | Use this when you want to handle protocols generically
   , mkSomeConsensusProtocolByron
-
-    -- * Client support
-  , mkNodeClientProtocolByron
-  , mkSomeNodeClientProtocolByron
-
     -- * Errors
   , ByronProtocolInstantiationError(..)
   , renderByronProtocolInstantiationError
@@ -29,6 +18,7 @@ module Cardano.Config.Byron.Protocol
   , readLeaderCredentials
   ) where
 
+
 import           Cardano.Prelude
 
 import           Codec.CBOR.Read (DeserialiseFailure, deserialiseFromBytes)
@@ -36,10 +26,9 @@ import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (bimapExceptT, firstExceptT,
                                                    hoistEither, left)
 import qualified Data.ByteString.Lazy as LB
-import qualified Data.Text as T
+import qualified Data.Text as Text
 
 import qualified Cardano.Chain.Genesis as Genesis
-import           Cardano.Chain.Slotting (EpochSlots)
 import qualified Cardano.Chain.Update as Update
 import qualified Cardano.Chain.UTxO as UTxO
 import qualified Cardano.Crypto.Signing as Signing
@@ -52,32 +41,14 @@ import           Ouroboros.Consensus.Byron.Ledger (ByronBlock)
 
 import           Cardano.Config.Types
                    (NodeByronProtocolConfiguration (..),
-                    ProtocolFilepaths(..), GenesisFile (..), 
-                    SomeConsensusProtocol(..), SomeNodeClientProtocol(..))
+                    ProtocolFilepaths(..), GenesisFile (..))
 import           Cardano.TracingOrphanInstances.Byron ()
 
-
-------------------------------------------------------------------------------
--- Real Byron protocol, client support
---
-
-mkNodeClientProtocolByron :: EpochSlots
-                          -> SecurityParam
-                          -> ProtocolClient ByronBlock ProtocolRealPBFT
-mkNodeClientProtocolByron epochSlots securityParam =
-    ProtocolClientRealPBFT epochSlots securityParam
-
-
-mkSomeNodeClientProtocolByron :: EpochSlots
-                              -> SecurityParam
-                              -> SomeNodeClientProtocol
-mkSomeNodeClientProtocolByron epochSlots securityParam =
-    SomeNodeClientProtocol
-      (mkNodeClientProtocolByron epochSlots securityParam)
+import           Cardano.Node.Protocol.Types
 
 
 ------------------------------------------------------------------------------
--- Real Byron protocol
+-- Byron protocol
 --
 
 -- | Make 'SomeConsensusProtocol' using the Byron instance.
@@ -188,9 +159,8 @@ readLeaderCredentials genesisConfig
         fmap (Signing.SigningKey . snd)
       . deserialiseFromBytes Signing.fromCBORXPrv
 
-
 ------------------------------------------------------------------------------
--- Errors
+-- Byron Errors
 --
 
 data ByronProtocolInstantiationError =
@@ -212,11 +182,11 @@ renderByronProtocolInstantiationError pie =
     DelegationCertificateFilepathNotSpecified -> "Delegation certificate filepath not specified"
     --TODO: Implement configuration error render function in cardano-ledger
     GenesisConfigurationError fp genesisConfigError -> "Genesis configuration error in: " <> toS fp
-                                                       <> " Error: " <> (T.pack $ show genesisConfigError)
+                                                       <> " Error: " <> (Text.pack $ show genesisConfigError)
     GenesisReadError fp err ->  "There was an error parsing the genesis file: " <> toS fp
-                                <> " Error: " <> (T.pack $ show err)
+                                <> " Error: " <> (Text.pack $ show err)
     -- TODO: Implement PBftLeaderCredentialsError render function in ouroboros-network
-    PbftError pbftLeaderCredentialsError -> "PBFT leader credentials error: " <> (T.pack $ show pbftLeaderCredentialsError)
+    PbftError pbftLeaderCredentialsError -> "PBFT leader credentials error: " <> (Text.pack $ show pbftLeaderCredentialsError)
     SigningKeyDeserialiseFailure fp deserialiseFailure -> "Signing key deserialisation error in: " <> toS fp
-                                                           <> " Error: " <> (T.pack $ show deserialiseFailure)
+                                                           <> " Error: " <> (Text.pack $ show deserialiseFailure)
     SigningKeyFilepathNotSpecified -> "Signing key filepath not specified"
