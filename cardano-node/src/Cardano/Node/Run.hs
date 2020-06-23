@@ -90,6 +90,7 @@ import           Cardano.Node.Protocol
                     SomeConsensusProtocol(..), renderProtocolInstantiationError)
 import           Cardano.Node.Socket (gatherConfiguredSockets, SocketOrSocketInfo(..))
 import           Cardano.Node.Shutdown
+import           Cardano.Tracing.Kernel
 import           Cardano.Tracing.Peer
 import           Cardano.Tracing.Tracers
 #ifdef UNIX
@@ -237,11 +238,11 @@ traceNodeUpTime tr nodeLaunchTime = do
 handlePeersList
   :: NFData a
   => Trace IO Text
-  -> IORef (NodeKernelData blk)
+  -> NodeKernelData blk
   -> LiveViewBackend blk a
   -> IO ()
-handlePeersList tr nodeKernIORef lvbe = forever $ do
-  peers <- getCurrentPeers nodeKernIORef
+handlePeersList tr nodeKern lvbe = forever $ do
+  peers <- getCurrentPeers nodeKern
   storePeersInLiveView peers lvbe
   tracePeers tr peers
   threadDelay 2000000 -- 2 seconds.
@@ -249,10 +250,10 @@ handlePeersList tr nodeKernIORef lvbe = forever $ do
 
 handlePeersListSimple
   :: Trace IO Text
-  -> IORef (NodeKernelData blk)
+  -> NodeKernelData blk
   -> IO ()
-handlePeersListSimple tr nodeKernIORef = forever $ do
-  getCurrentPeers nodeKernIORef >>= tracePeers tr
+handlePeersListSimple tr nodeKern = forever $ do
+  getCurrentPeers nodeKern >>= tracePeers tr
   threadDelay 2000000 -- 2 seconds.
 
 -- | Sets up a simple node, which will run the chain sync protocol and block

@@ -42,6 +42,7 @@ library
                        Cardano.Node.Protocol.Types
                        Cardano.Node.Run
                        Cardano.Node.Shutdown
+                       Cardano.Tracing.Kernel
                        Cardano.Tracing.Peer
                        Cardano.Tracing.Tracers
 
