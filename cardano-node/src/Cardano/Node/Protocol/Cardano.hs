@@ -40,6 +40,7 @@ import qualified Shelley.Spec.Ledger.PParams as Shelley
 import           Cardano.Config.Types
                    (NodeByronProtocolConfiguration(..),
                     NodeShelleyProtocolConfiguration(..),
+                    NodeHardForkProtocolConfiguration(..),
                     ProtocolFilepaths(..),
                     HasKESMetricsData(..), KESMetricsData(..))
 
@@ -80,14 +81,15 @@ instance HasKESMetricsData (CardanoBlock c) where
 mkSomeConsensusProtocolCardano
   :: NodeByronProtocolConfiguration
   -> NodeShelleyProtocolConfiguration
+  -> NodeHardForkProtocolConfiguration
   -> Maybe ProtocolFilepaths
   -> ExceptT CardanoProtocolInstantiationError IO SomeConsensusProtocol
-mkSomeConsensusProtocolCardano ncb ncs files =
+mkSomeConsensusProtocolCardano ncb ncs nch files =
 
     -- Applying the SomeConsensusProtocol here is a check that
     -- the type of mkConsensusProtocolCardano fits all the class
     -- constraints we need to run the protocol.
-    SomeConsensusProtocol <$> mkConsensusProtocolCardano ncb ncs files
+    SomeConsensusProtocol <$> mkConsensusProtocolCardano ncb ncs nch files
 
 
 -- | Instantiate 'Consensus.Protocol' for Byron specifically.
@@ -97,6 +99,7 @@ mkSomeConsensusProtocolCardano ncb ncs files =
 mkConsensusProtocolCardano
   :: NodeByronProtocolConfiguration
   -> NodeShelleyProtocolConfiguration
+  -> NodeHardForkProtocolConfiguration
   -> Maybe ProtocolFilepaths
   -> ExceptT CardanoProtocolInstantiationError IO
              (Consensus.Protocol IO (CardanoBlock TPraosStandardCrypto)
@@ -116,6 +119,9 @@ mkConsensusProtocolCardano NodeByronProtocolConfiguration {
                              npcShelleySupportedProtocolVersionMajor,
                              npcShelleySupportedProtocolVersionMinor,
                              npcShelleyMaxSupportedProtocolVersion
+                           }
+                           NodeHardForkProtocolConfiguration {
+                             npcTestShelleyHardForkAtEpoch
                            }
                            files = do
     byronGenesis <-
@@ -156,8 +162,22 @@ mkConsensusProtocolCardano NodeByronProtocolConfiguration {
         -- Hard fork parameters
         (Just 190) --TODO: Optimisation: once the epoch of the transition is
                    -- known, set this to the first shelley epoch.
-        (Consensus.NoHardCodedTransition (fromIntegral npcShelleyMaxSupportedProtocolVersion))
-        --TODO is this the right value?
+
+        -- What will trigger the hard fork?
+        (case npcTestShelleyHardForkAtEpoch of
+
+           -- This specifies the major protocol version number update that will
+           -- trigger us moving to the Shelley protocol.
+           --
+           -- Version 0 is Byron with Ouroboros classic
+           -- Version 1 is Byron with Ouroboros Permissive BFT
+           -- Version 2 is Shelley
+           --
+           Nothing -> Consensus.NoHardCodedTransition 2
+
+           -- Alternatively, for testing we can transition at a specific epoch.
+           --
+           Just epochNo -> Consensus.HardCodedTransitionAt epochNo)
 
 
 ------------------------------------------------------------------------------

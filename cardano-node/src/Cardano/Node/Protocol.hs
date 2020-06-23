@@ -50,10 +50,15 @@ mkConsensusProtocol NodeConfiguration{ncProtocolConfig} files =
         firstExceptT ShelleyProtocolInstantiationError $
           mkSomeConsensusProtocolShelley config files
 
-      NodeProtocolConfigurationCardano byronConfig shelleyConfig ->
+      NodeProtocolConfigurationCardano byronConfig
+                                       shelleyConfig
+                                       hardForkConfig ->
         firstExceptT CardanoProtocolInstantiationError $
           mkSomeConsensusProtocolCardano
-            byronConfig shelleyConfig files
+            byronConfig
+            shelleyConfig
+            hardForkConfig
+            files
 
 ------------------------------------------------------------------------------
 -- Errors
