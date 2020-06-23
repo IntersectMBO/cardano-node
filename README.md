@@ -57,7 +57,7 @@ The download includes cardano-node.exe and a .dll. To run the node with cardano-
 cardano-node.exe run --topology ./mainnet-topology.json --database-path ./state --port 3001 --config ./configuration-mainnet.yaml --socket-path \\.\pipe\cardano-node
 ```
 
-# `cardano-node`
+## `cardano-node`
 
 This refers to the client that is used for running a node.
 
@@ -118,7 +118,7 @@ Please see `scripts/README.md` for how to obtain profiling information using the
 
 Please see `scripts/README.md` for information on the various scripts.
 
-# `cardano-cli`
+## `cardano-cli`
 
 A CLI utility to support a variety of key material operations (genesis, migration, pretty-printing..) for different system generations.
 
@@ -297,7 +297,7 @@ source and target signing keys and lovelace value to send.
 The target address defaults to the 1-st richman key (`configuration/delegate-keys.001.key`)
 of the testnet, and lovelace amount is almost the entirety of its funds.
 
-# Local node queries
+## Local node queries
 
 You can query the tip of your local node via the `get-tip` command as follows
 
@@ -384,15 +384,15 @@ cabal exec cardano-cli -- byron node submit-proposal-vote
                         --socket-path socket/node-0-socket
 ```
 
-# Development
+## Development
 
 run *ghcid* with: `ghcid -c "cabal v2-repl exe:cardano-node --reorder-goals"`
 
-# Testing
+## Testing
 
 Cardano-Node is essentially a container which implements several components such networking, consensus, and storage. These components have individual test coverage. The node goes through integration and release testing by Devops/QA while automated CLI tests are ongoing alongside development.
 
-# Debugging
+## Debugging
 
 ### Pretty printing CBOR encoded files
 
