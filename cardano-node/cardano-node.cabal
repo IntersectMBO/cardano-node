@@ -88,6 +88,7 @@ library
                      , tracer-transformers
                      , transformers
                      , transformers-except
+                     , unordered-containers
 
 
   default-language:    Haskell2010

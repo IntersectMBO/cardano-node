@@ -1,8 +1,5 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE CPP #-}
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DeriveTraversable #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE NamedFieldPuns #-}
@@ -27,7 +24,6 @@ import           Control.Tracer
 import qualified Data.ByteString.Char8 as BSC
 import           Data.Either (partitionEithers)
 import           Data.Functor.Contravariant (contramap)
-import           Data.IORef (IORef, newIORef)
 import qualified Data.List as List
 import           Data.Proxy (Proxy (..))
 import           Data.Semigroup ((<>))
@@ -123,10 +119,6 @@ runNode loggingLayer npm@NodeCLI{protocolFiles} = do
         Left err -> putTextLn (renderProtocolInstantiationError err) >> exitFailure
         Right (SomeConsensusProtocol p) -> pure $ SomeConsensusProtocol p
 
-    bcCounters :: IORef BlockchainCounters <- newIORef initialBlockchainCounters
-
-    tracers <- mkTracers (ncTraceConfig nc) trace bcCounters
-
 #ifdef UNIX
     let viewmode = ncViewMode nc
 #else
@@ -136,8 +128,10 @@ runNode loggingLayer npm@NodeCLI{protocolFiles} = do
     upTimeThread <- Async.async $ traceNodeUpTime (appendName "metrics" trace) =<< getMonotonicTimeNSec
 
     -- This IORef contains node kernel structure which holds node kernel.
-    -- We use it to extract an actual information about connected peers periodically.
-    nodeKernelData :: IORef (NodeKernelData blk) <- newIORef initialNodeKernelData
+    -- We use it to extract information about connected peers periodically.
+    nodeKernelData :: NodeKernelData blk <- mkNodeKernelData
+
+    tracers <- mkTracers (ncTraceConfig nc) trace
 
     case viewmode of
       SimpleView -> do
