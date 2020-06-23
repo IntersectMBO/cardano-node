@@ -155,6 +155,40 @@ for N in ${BFT_NODES_N}; do
 
 done
 
+# Create keys and addresses to withdraw the initial UTxO into
+for N in ${BFT_NODES_N}; do
+
+  cardano-cli keygen \
+    --byron-formats \
+    --secret byron/payment-keys.00$((${N} - 1)).key \
+    --no-password
+
+  cardano-cli signing-key-address \
+    --byron-formats \
+    --testnet-magic 42 \
+    --secret byron/payment-keys.00$((${N} - 1)).key > byron/address-00$((${N} - 1))
+
+  # Write Genesis addresses to files
+
+  cardano-cli signing-key-address \
+    --byron-formats  \
+    --testnet-magic 42 \
+    --secret byron/genesis-keys.00$((${N} - 1)).key > byron/genesis-address-00$((${N} - 1))
+
+done
+
+# Create Byron address that moves funds out of the genesis UTxO into a regular
+# address.
+
+cardano-cli issue-genesis-utxo-expenditure \
+            --genesis-json byron/genesis.json \
+            --testnet-magic 42 \
+            --byron-formats \
+            --tx tx0.tx \
+            --wallet-key byron/delegate-keys.000.key \
+            --rich-addr-from \"$(head -n 1 byron/genesis-address-000)\" \
+            --txout "(\"$(head -n 1 byron/address-000)\", 500000000)"
+
 echo "====================================================================="
 echo "Generated genesis keys and genesis files:"
 echo
@@ -435,8 +469,14 @@ for NODE in ${POOL_NODES}; do
   echo "  --port                            $(cat ${NODE}/port)"
 
 done
+echo "To transfer funds out of the genesis UTxO to a regular address"
 echo
-echo "To submit the transaction"
+echo "CARDANO_NODE_SOCKET_PATH=${ROOT}/node-bft1/node.sock \\"
+echo "  cardano-cli submit-tx \\"
+echo "    --testnet-magic 42 \\"
+echo "    --tx ${ROOT}/tx0.tx"
+echo
+echo "To submit the transaction that registers the pool, in the Shelley era"
 echo
 echo "CARDANO_NODE_SOCKET_PATH=${ROOT}/node-bft1/node.sock \\"
 echo "  cardano-cli shelley transaction submit \\"
