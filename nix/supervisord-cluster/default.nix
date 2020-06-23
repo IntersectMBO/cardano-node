@@ -8,6 +8,7 @@
 , basePort ? 30000
 , stateDir ? "./state-cluster"
 , initialFunds ? import ./initial-funds.nix
+, ...
 }:
 let
   baseEnvConfig = pkgs.callPackage ./base-env.nix { inherit (pkgs.commonLib.cardanoLib) defaultLogConfig; inherit stateDir; };
