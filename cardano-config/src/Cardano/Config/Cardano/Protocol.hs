@@ -61,7 +61,7 @@ import qualified Cardano.Config.Shelley.Protocol as Shelley
 --TODO: move ToObject tracing instances to Cardano.TracingOrphanInstances.Consensus
 --      and do them generically for the hard fork combinator
 instance HasKESMetricsData (CardanoBlock c) where
-    getKESMetricsData _protoInfo _forgeState = NoKESMetricsData
+    getKESMetricsData _forgeState = NoKESMetricsData
     --TODO distinguish on the era and use getKESMetricsData on the appropriate era
 
 
