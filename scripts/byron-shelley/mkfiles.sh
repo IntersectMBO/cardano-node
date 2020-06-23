@@ -39,6 +39,8 @@ sed -i ${ROOT}/configuration.yaml \
     -e '/ByronGenesisFile/ aShelleyGenesisFile: shelley/genesis.json' \
     -e 's/RequiresNoMagic/RequiresMagic/'
 
+echo "TestShelleyHardForkAtEpoch: 2" >> ${ROOT}/configuration.yaml
+
 pushd ${ROOT}
 
 # create the node directories
