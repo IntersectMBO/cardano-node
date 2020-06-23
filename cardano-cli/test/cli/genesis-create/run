@@ -47,7 +47,10 @@ if test "${check_start_time}" != "systemStart:correct," ; then
     error=1
     fi
 
-# tree "${TEST_DIR}"
+# Uncomment the following line to generate and copy the 'genesis.vkey' data file for the
+# 'genesis-key-hash' test.
+# cp "${TEST_DIR}/genesis-keys/genesis1.vkey" "test/cli/genesis-key-hash/data/genesis.vkey"
+
 # cat "${OUTPUT_JSON}"
 # echo
 

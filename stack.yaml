@@ -1,4 +1,4 @@
-resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/e0257be9d745a04f85ab8287a48a9c193acafec8/snapshot.yaml
+resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/316c854d1d3089f480708ad5cd5ecf8a74423ddd/snapshot.yaml
 compiler: ghc-8.6.5
 
 packages:
@@ -59,7 +59,7 @@ extra-deps:
   - websockets-0.12.6.1
 
   - git: https://github.com/input-output-hk/cardano-ledger-specs
-    commit: 036ff8223310ecdaf7f0ed8c211c691cb0dcb8f3
+    commit: ee92681752dc1a27ac77cb3466af8dca4ade997f
     subdirs:
       # small-steps
       - semantics/executable-spec
@@ -79,13 +79,13 @@ extra-deps:
     commit: 2547ad1e80aeabca2899951601079408becbc92c
 
   - git: https://github.com/input-output-hk/cardano-prelude
-    commit: e0257be9d745a04f85ab8287a48a9c193acafec8
+    commit: 316c854d1d3089f480708ad5cd5ecf8a74423ddd
     subdirs:
       - .
       - test
 
   - git: https://github.com/input-output-hk/cardano-base
-    commit: 4a457f44e68132ce2bd978ab45a3188e64327abc
+    commit: 5e0b8bc8c7862be12da6989440f8644ba7c1e1cf
     subdirs:
       - binary
       - binary/test
@@ -127,7 +127,7 @@ extra-deps:
     #Ouroboros-network dependencies
 
   - git: https://github.com/input-output-hk/ouroboros-network
-    commit: f9469fa3885aefdfa852216a66c4e319a0d19c11
+    commit: ceafa31844e6e9883d5d5634544045eab9c5f2e9
     subdirs:
         - io-sim
         - io-sim-classes

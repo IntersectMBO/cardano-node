@@ -33,3 +33,6 @@ supervisord.pid
 tags
 /config
 /data
+./*.skey
+./*.vkey
+./*.cert

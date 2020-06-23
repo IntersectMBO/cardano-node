@@ -14,10 +14,15 @@ import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT)
 
 import qualified Shelley.Spec.Ledger.Keys as Ledger
+import           Ouroboros.Consensus.Shelley.Protocol.Crypto
+                   (TPraosStandardCrypto)
 
 import           Cardano.CLI.Shelley.Commands
 
 import           Cardano.Config.Shelley.ColdKeys
+
+
+type VerKeyGenesis = Ledger.VKey Ledger.Genesis TPraosStandardCrypto
 
 data ShelleyKeyGenError = ShelleyColdKeyGenError !KeyError
                         deriving Show
@@ -35,5 +40,5 @@ runColdKeyGen role (VerificationKeyFile vkeyPath) (SigningKeyFile skeyPath) =
       (vkey, skey) <- liftIO genKeyPair
       -- The Ledger.Genesis role type param here is actually arbitrary
       -- the representation is the same for them all.
-      writeVerKey     role vkeyPath (vkey :: VerKey Ledger.Genesis)
+      writeVerKey     role vkeyPath (vkey :: VerKeyGenesis)
       writeSigningKey role skeyPath skey

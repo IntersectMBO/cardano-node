@@ -15,7 +15,6 @@ module Cardano.TracingOrphanInstances.HardFork () where
 
 import           Prelude
 
-import           Data.Text (Text)
 import           Data.SOP.Strict
 
 import           Cardano.Config.Orphanage ()
@@ -23,9 +22,9 @@ import qualified Cardano.Crypto.Hash.Class as Crypto
 import           Cardano.TracingOrphanInstances.Common
 import           Cardano.TracingOrphanInstances.Consensus ()
 
-import           Ouroboros.Consensus.Block (BlockProtocol, ForgeState)
+import           Ouroboros.Consensus.Block (BlockProtocol)
 import           Ouroboros.Consensus.Protocol.Abstract
-                   (ValidationErr, CannotLead)
+                   (ValidationErr, CannotLead, ChainIndepState)
 import           Ouroboros.Consensus.Ledger.Abstract (LedgerError)
 import           Ouroboros.Consensus.Ledger.SupportsMempool
                    (GenTx, TxId, ApplyTxErr)
@@ -217,37 +216,19 @@ instance ToObject (CannotLead (BlockProtocol blk)) => ToObject (WrapCannotLead b
 
 
 --
--- instances for PerEraForgeState
+-- instances for PerEraChainIndepState
 --
 
-instance (All (HasPrivacyAnnotation `Compose` WrapForgeState) xs,
-          All (HasSeverityAnnotation `Compose` WrapForgeState) xs)
-      => Transformable Text IO (PerEraForgeState xs)
+instance All (ToObject `Compose` WrapChainIndepState) xs
+      => ToObject (PerEraChainIndepState xs) where
+  toObject verb =
+      mconcat -- Mash all the eras together, hope they do not clash
+    . hcollapse
+    . hcmap (Proxy @ (ToObject `Compose` WrapChainIndepState))
+            (K . toObject verb)
+    . getPerEraChainIndepState
 
-instance All (HasPrivacyAnnotation `Compose` WrapForgeState) xs
-      => HasPrivacyAnnotation (PerEraForgeState xs) where
-    getPrivacyAnnotation =
-        minimum -- so Confidential dominates
-      . hcollapse
-      . hcmap (Proxy @ (HasPrivacyAnnotation `Compose` WrapForgeState))
-              (K . getPrivacyAnnotation)
-      . getPerEraForgeState
-
-instance HasPrivacyAnnotation (ForgeState blk)
-      => HasPrivacyAnnotation (WrapForgeState blk) where
-    getPrivacyAnnotation = getPrivacyAnnotation . unwrapForgeState
-
-
-instance All (HasSeverityAnnotation `Compose` WrapForgeState) xs
-      => HasSeverityAnnotation (PerEraForgeState xs) where
-    getSeverityAnnotation =
-        maximum  -- So max severity dominates
-      . hcollapse
-      . hcmap (Proxy @ (HasSeverityAnnotation `Compose` WrapForgeState))
-              (K . getSeverityAnnotation)
-      . getPerEraForgeState
-
-instance HasSeverityAnnotation (ForgeState blk)
-      => HasSeverityAnnotation (WrapForgeState blk) where
-    getSeverityAnnotation = getSeverityAnnotation . unwrapForgeState
+instance ToObject (ChainIndepState (BlockProtocol blk))
+      => ToObject (WrapChainIndepState blk) where
+    toObject verb = toObject verb . unwrapChainIndepState
 

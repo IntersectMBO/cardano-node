@@ -79,12 +79,14 @@ let
   extraBuilds = {
     # only build nixos tests on first supported system (linux)
     inherit (pkgsFor (builtins.head  supportedSystems)) nixosTests;
-    cardano-deployment = pkgs.iohkNix.cardanoLib.mkConfigHtml { inherit (pkgs.iohkNix.cardanoLib.environments) mainnet testnet ff; };
+    cardano-deployment = pkgs.iohkNix.cardanoLib.mkConfigHtml { inherit (pkgs.iohkNix.cardanoLib.environments) mainnet testnet ff shelley_qa shelley_testnet; };
   } // (builtins.listToAttrs (map makeRelease [
     "mainnet"
     "staging"
+    "shelley_qa"
     "shelley_staging_short"
     "shelley_staging"
+    "shelley_testnet"
     "testnet"
   ]));
 
@@ -138,7 +140,7 @@ let
       (collectJobs jobs.native.exes)
       (optional windowsBuild jobs.cardano-node-win64)
       (optionals windowsBuild (collectJobs jobs.${mingwW64.config}.checks))
-      (map (cluster: collectJobs jobs.${cluster}.scripts.node.${head supportedSystems}) [ "mainnet" "testnet" "staging" ])
+      (map (cluster: collectJobs jobs.${cluster}.scripts.node.${head supportedSystems}) [ "mainnet" "testnet" "staging" "shelley_qa" "shelley_testnet" ])
       (collectJobs jobs.nixosTests.chairmansCluster)
       [
         jobs.cardano-node-linux

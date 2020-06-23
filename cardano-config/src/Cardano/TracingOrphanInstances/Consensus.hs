@@ -19,13 +19,13 @@ import qualified Data.Text as Text
 import           Data.Text (pack)
 
 import           Cardano.Config.Orphanage ()
-import           Cardano.Crypto.KES (deriveVerKeyKES)
 import           Cardano.TracingOrphanInstances.Common
 import           Cardano.TracingOrphanInstances.Network (showTip, showPoint)
 
 import           Ouroboros.Consensus.Block
                    (BlockProtocol, Header, getHeader, headerPoint,
-                    RealPoint, realPointSlot, realPointHash)
+                    RealPoint, realPointSlot, realPointHash,
+                    ForgeState(..))
 import           Ouroboros.Consensus.MiniProtocol.BlockFetch.Server
                    (TraceBlockFetchServerEvent)
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client
@@ -47,11 +47,6 @@ import           Ouroboros.Consensus.MiniProtocol.LocalTxSubmission.Server
 import           Ouroboros.Consensus.Node.Run (RunNode (..))
 import           Ouroboros.Consensus.Node.Tracers (TraceForgeEvent (..))
 import           Ouroboros.Consensus.Protocol.Abstract
-
-import           Ouroboros.Consensus.Mock.Protocol.Praos (PraosCrypto (..), PraosForgeState (..))
-
-import           Ouroboros.Consensus.Shelley.Ledger (TPraosForgeState(..))
-import           Ouroboros.Consensus.Shelley.Protocol.Crypto (HotKey(..), TPraosCrypto)
 
 import           Ouroboros.Consensus.Util.Condense
 import           Ouroboros.Consensus.Util.Orphans ()
@@ -155,17 +150,13 @@ instance HasPrivacyAnnotation (TraceEventMempool blk)
 instance HasSeverityAnnotation (TraceEventMempool blk) where
   getSeverityAnnotation _ = Info
 
-instance HasPrivacyAnnotation (TPraosForgeState c)
-instance HasSeverityAnnotation (TPraosForgeState c) where
-  getSeverityAnnotation TPraosForgeState {} = Info
+instance HasPrivacyAnnotation (ForgeState c)
+instance HasSeverityAnnotation (ForgeState c) where
+  getSeverityAnnotation _ = Info
 
 instance HasPrivacyAnnotation ()
 instance HasSeverityAnnotation () where
   getSeverityAnnotation () = Info
-
-instance HasPrivacyAnnotation (PraosForgeState c)
-instance HasSeverityAnnotation (PraosForgeState c) where
-  getSeverityAnnotation PraosKey {} = Info
 
 instance HasPrivacyAnnotation (TraceForgeEvent blk)
 instance HasSeverityAnnotation (TraceForgeEvent blk) where
@@ -248,16 +239,11 @@ instance ( tx ~ GenTx blk
       => Transformable Text IO (TraceForgeEvent blk) where
   trTransformer = trStructuredText
 
-instance HasTextFormatter (TPraosForgeState c) where
+instance HasTextFormatter (ForgeState blk) where
   formatText _ = pack . show . toList
 
-instance TPraosCrypto c => Transformable Text IO (TPraosForgeState c) where
-  trTransformer = trStructuredText
-
-instance HasTextFormatter (PraosForgeState c) where
-  formatText _ = pack . show . toList
-
-instance PraosCrypto c => Transformable Text IO (PraosForgeState c) where
+instance ToObject (ChainIndepState (BlockProtocol blk))
+      => Transformable Text IO (ForgeState blk) where
   trTransformer = trStructuredText
 
 instance ( tx ~ GenTx blk
@@ -805,20 +791,11 @@ instance HasTextFormatter () where
 instance Transformable Text IO () where
   trTransformer = trStructuredText
 
-instance TPraosCrypto c => ToObject (TPraosForgeState c) where
-  toObject _verb (TPraosForgeState (HotKey period signKey)) =
-    mkObject
-      [ "kind" .= String "TPraosForgeState"
-      , "hotKESVerificationKey" .= String (showT $ deriveVerKeyKES signKey)
-      , "hotKESKeyPeriod" .= period
-      ]
-
-instance PraosCrypto c => ToObject (PraosForgeState c) where
-  toObject _verb (PraosKey signKey) =
-    mkObject
-      [ "kind" .= String "PraosKey"
-      , "praosKESVerificationKey" .= String (showT $ deriveVerKeyKES signKey)
-      ]
+instance ToObject (ChainIndepState (BlockProtocol blk))
+      => ToObject (ForgeState blk) where
+  toObject verb ForgeState { chainIndepState, extraForgeState = _ } =
+    -- We assume there's nothing interesting in the extraForgeState
+    toObject verb chainIndepState
 
 instance ( tx ~ GenTx blk
          , Condense (HeaderHash blk)

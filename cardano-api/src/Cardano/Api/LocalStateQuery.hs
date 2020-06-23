@@ -217,7 +217,7 @@ queryLocalLedgerState network socketPath point = do
                 (pClientInfoCodecConfig . protocolClientInfo $ mkNodeClientProtocolShelley)
                 network
                 socketPath
-                (point, GetCBOR GetCurrentLedgerState) -- Get CBOR-in-CBOR version
+                (point, GetCBOR GetCurrentEpochState) -- Get CBOR-in-CBOR version
   -- If decode as a LedgerState fails we return the ByteString so we can do a generic
   -- CBOR decode.
   case decodeFull lbs of

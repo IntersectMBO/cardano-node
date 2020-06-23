@@ -47,24 +47,24 @@ encodeVRFSigningKey :: SignKey -> TextView
 encodeVRFSigningKey vKeyEs =
   encodeToTextView tvType' tvTitle' CBOR.toCBOR vKeyEs
  where
-  tvType' = "SignKeyVRF SimpleVRF"
+  tvType' = "SignKeyVRF PraosVRF"
   tvTitle' = "VRF Signing Key"
 
 decodeVRFSigningKey :: TextView -> Either TextViewError SignKey
 decodeVRFSigningKey tView = do
-  expectTextViewOfType "SignKeyVRF SimpleVRF" tView
+  expectTextViewOfType "SignKeyVRF PraosVRF" tView
   decodeFromTextView CBOR.fromCBOR tView
 
 encodeVRFVerificationKey :: VerKey -> TextView
 encodeVRFVerificationKey vKeyEs =
   encodeToTextView tvType' tvTitle' CBOR.toCBOR vKeyEs
  where
-  tvType' = "VerKeyVRF SimpleVRF"
+  tvType' = "VerKeyVRF PraosVRF"
   tvTitle' = "VRF Verification Key"
 
 decodeVRFVerificationKey :: TextView -> Either TextViewError VerKey
 decodeVRFVerificationKey tView = do
-  expectTextViewOfType "VerKeyVRF SimpleVRF" tView
+  expectTextViewOfType "VerKeyVRF PraosVRF" tView
   decodeFromTextView CBOR.fromCBOR tView
 
 genVRFKeyPair :: IO (SignKey, VerKey)

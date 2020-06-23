@@ -246,7 +246,7 @@ runGenesisKeyHash :: VerificationKeyFile -> ExceptT ShelleyGenesisCmdError IO ()
 runGenesisKeyHash (VerificationKeyFile vkeyPath) =
     firstExceptT ShelleyGenesisCmdReadVerKeyError $ do
       (vkey, _role) <- readVerKeySomeRole genesisKeyRoles vkeyPath
-      let Ledger.KeyHash khash = Ledger.hashKey (vkey :: VerKey Ledger.Genesis)
+      let Ledger.KeyHash khash = Ledger.hashKey (vkey :: VerKeyGenesis)
       liftIO $ BS.putStrLn $ Crypto.getHashBytesAsHex khash
 
 
@@ -255,7 +255,7 @@ runGenesisVerKey :: VerificationKeyFile -> SigningKeyFile
 runGenesisVerKey (VerificationKeyFile vkeyPath) (SigningKeyFile skeyPath) =
     firstExceptT ShelleyGenesisCmdReadSignKeyError $ do
       (skey, role) <- readSigningKeySomeRole genesisKeyRoles skeyPath
-      let vkey :: VerKey Ledger.Genesis
+      let vkey :: VerKeyGenesis
           vkey = deriveVerKey skey
       writeVerKey role vkeyPath vkey
 
@@ -409,12 +409,11 @@ readShelleyGenesis fpath = do
 
 
 -- Local type aliases
-type VerKeyGenesis         = VerKey Ledger.Genesis
-type VerKeyGenesisDelegate = VerKey Ledger.GenesisDelegate
+type VerKeyGenesis         = Ledger.VKey Ledger.Genesis TPraosStandardCrypto
+type VerKeyGenesisDelegate = Ledger.VKey Ledger.GenesisDelegate TPraosStandardCrypto
 
-type KeyHash r              = Ledger.KeyHash r TPraosStandardCrypto
-type KeyHashGenesis         = KeyHash Ledger.Genesis
-type KeyHashGenesisDelegate = KeyHash Ledger.GenesisDelegate
+type KeyHashGenesis         = Ledger.KeyHash Ledger.Genesis TPraosStandardCrypto
+type KeyHashGenesisDelegate = Ledger.KeyHash Ledger.GenesisDelegate TPraosStandardCrypto
 
 updateTemplate
     :: SystemStart
@@ -431,7 +430,7 @@ updateTemplate (SystemStart start) mAmount delKeys utxoAddrs template =
       , sgInitialFunds = Map.fromList utxoList
       }
   where
-    shelleyDelKeys = map (\(gd, VrfKeyHash h) -> (gd, h)) delKeys
+    shelleyDelKeys = map (\(gd, VrfKeyHash h) -> Ledger.GenDelegPair gd h) delKeys
 
     totalCoin :: Integer
     totalCoin = maybe (fromIntegral (sgMaxLovelaceSupply template))

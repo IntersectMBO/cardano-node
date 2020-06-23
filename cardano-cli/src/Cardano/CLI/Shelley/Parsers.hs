@@ -1256,7 +1256,7 @@ pPoolRelay = pSingleHostAddress <|> pSingleHostName <|> pMultiHostName
 
 pMultiHostName :: Parser ShelleyStakePoolRelay
 pMultiHostName =
-  Shelley.MultiHostName <$> (Shelley.maybeToStrictMaybe <$> optional pPort) <*> pDNSName
+  Shelley.MultiHostName <$> pDNSName
  where
   pDNSName :: Parser Shelley.DnsName
   pDNSName = Opt.option (Opt.eitherReader eDNSName)

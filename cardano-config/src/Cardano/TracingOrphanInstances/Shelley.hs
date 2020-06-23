@@ -1,8 +1,11 @@
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE GeneralisedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns        #-}
 {-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE StandaloneDeriving    #-}
 {-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE UndecidableInstances  #-}
 {-# LANGUAGE EmptyCase             #-}
@@ -25,6 +28,10 @@ import           Cardano.TracingOrphanInstances.Common
 import           Cardano.TracingOrphanInstances.Consensus ()
 import           Cardano.Config.Shelley.Orphans ()
 
+import           Cardano.Crypto.Hash.Class (Hash)
+import           Cardano.Crypto.KES.Class
+                   (VerKeyKES, deriveVerKeyKES, hashVerKeyKES)
+
 import           Ouroboros.Network.Block
                    (SlotNo(..), blockHash, blockSlot, blockNo, blockPrevHash)
 import           Ouroboros.Network.Point (WithOrigin, withOriginToMaybe)
@@ -33,13 +40,20 @@ import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTx, TxId, txId)
 import           Ouroboros.Consensus.Util.Condense (condense)
 
 import           Ouroboros.Consensus.Shelley.Ledger
-import           Ouroboros.Consensus.Shelley.Protocol (TPraosCannotLead(..))
+import           Ouroboros.Consensus.Shelley.Protocol
+                   (TPraosStandardCrypto, TPraosCannotLead(..),
+                    TPraosUnusableKey(..))
+import           Ouroboros.Consensus.Shelley.Protocol.Crypto
+import           Ouroboros.Consensus.Shelley.Protocol.Crypto.HotKey (HotKey(..))
+
 -- TODO: this should be exposed via Cardano.Api
 import           Shelley.Spec.Ledger.API
 import           Shelley.Spec.Ledger.BlockChain (LastAppliedBlock(..))
 import           Shelley.Spec.Ledger.Coin
 import           Shelley.Spec.Ledger.Keys (KeyHash(..))
+import           Shelley.Spec.Ledger.LedgerState (WitHashes(..))
 import           Shelley.Spec.Ledger.OCert
+
 import           Shelley.Spec.Ledger.STS.Bbody
 import           Shelley.Spec.Ledger.STS.Chain
 import           Shelley.Spec.Ledger.STS.Deleg
@@ -94,14 +108,37 @@ instance Crypto c => ToObject (ApplyTxError c) where
   toObject verb (ApplyTxError predicateFailures) =
     HMS.unions $ map (toObject verb) predicateFailures
 
-instance ToObject (TPraosCannotLead c) where
-  toObject _verb (TPraosCannotLeadInvalidOcert
-                    curPeriod certFirstPeriod certLastPeriod) =
+instance ToObject (HotKey TPraosStandardCrypto) where
+  toObject _verb HotKey {
+                   hkStart,
+                   hkEnd,
+                   hkEvolution,
+                   hkKey
+                 } =
     mkObject
-      [ "kind" .= String "TPraosCannotLeadInvalidOcert"
-      , "curentKesPeriod" .= curPeriod
-      , "firstCertPeriod" .= certFirstPeriod
-      , "lastCertPeriod"  .= certLastPeriod
+      [ "kind"      .= String "HotKey"
+      , "start"     .= hkStart
+      , "end"       .= hkEnd
+      , "evolution" .= hkEvolution
+      , "vkey"      .= (hashVerKeyKES (deriveVerKeyKES hkKey)
+                        :: Hash (HASH TPraosStandardCrypto)
+                                (VerKeyKES (KES TPraosStandardCrypto)))
+      ]
+
+instance ToObject (TPraosCannotLead c) where
+  toObject _verb (TPraosCannotLeadUnusableKESKey
+                    TPraosUnusableKey {
+                      tpraosUnusableKeyStart,
+                      tpraosUnusableKeyEnd,
+                      tpraosUnusableKeyCurrent,
+                      tpraosUnusableWallClock
+                    }) =
+    mkObject
+      [ "kind" .= String "TPraosCannotLeadUnusableKESKey"
+      , "keyStart"   .= tpraosUnusableKeyStart
+      , "keyEnd"     .= tpraosUnusableKeyEnd
+      , "keyCurrent" .= tpraosUnusableKeyCurrent
+      , "wallClock"  .= tpraosUnusableWallClock
       ]
   toObject _verb (TPraosCannotLeadWrongVRF genDlgVRFHash coreNodeVRFHash) =
     mkObject
@@ -110,6 +147,7 @@ instance ToObject (TPraosCannotLead c) where
       , "actual" .= coreNodeVRFHash
       ]
 
+deriving newtype instance ToJSON KESPeriod
 
 -- This instance is completely insane. We really need to have lists as a
 -- generic instance.
@@ -204,7 +242,7 @@ instance Crypto c => ToObject (PredicateFailure (UTXOW c)) where
     mkObject [ "kind" .= String "InvalidWitnessesUTXOW"
              , "invalidWitnesses" .= map textShow wits
              ]
-  toObject _verb (MissingVKeyWitnessesUTXOW wits) =
+  toObject _verb (MissingVKeyWitnessesUTXOW (WitHashes wits)) =
     mkObject [ "kind" .= String "MissingVKeyWitnessesUTXOW"
              , "missingWitnesses" .= wits
              ]
@@ -305,7 +343,7 @@ instance ToObject (PredicateFailure (PPUP c)) where
              ]
 
 
-instance ToObject (PredicateFailure (DELEGS c)) where
+instance Crypto c => ToObject (PredicateFailure (DELEGS c)) where
   toObject _verb (DelegateeNotRegisteredDELEG targetPool) =
     mkObject [ "kind" .= String "DelegateeNotRegisteredDELEG"
              , "targetPool" .= targetPool

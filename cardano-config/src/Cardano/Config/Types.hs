@@ -71,26 +71,21 @@ import qualified Cardano.Chain.Update as Update
 import           Cardano.Chain.Slotting (EpochSlots)
 import           Cardano.Crypto.KES.Class (Period)
 import           Cardano.Crypto.ProtocolMagic (RequiresNetworkMagic)
-import           Ouroboros.Consensus.Block (Header, BlockProtocol, ForgeState)
+import           Ouroboros.Consensus.Block (Header, BlockProtocol, ForgeState(..))
 import           Ouroboros.Consensus.Byron.Ledger.Block (ByronBlock)
 import qualified Ouroboros.Consensus.Cardano as Consensus (Protocol, ProtocolClient)
-import           Ouroboros.Consensus.Config (TopLevelConfig (..))
 import           Ouroboros.Consensus.HeaderValidation (OtherHeaderEnvelopeError)
 import           Ouroboros.Consensus.Ledger.Abstract (LedgerError)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTxId, HasTxId, HasTxs(..),
                    LedgerSupportsMempool(..))
 import           Ouroboros.Consensus.Mock.Ledger.Block (SimpleBlock)
-import           Ouroboros.Consensus.Node.ProtocolInfo (ProtocolInfo (..))
 import           Ouroboros.Consensus.Node.Run (RunNode)
 import           Ouroboros.Consensus.NodeId (CoreNodeId(..))
 import           Ouroboros.Consensus.Protocol.Abstract (CannotLead, ValidationErr)
 import           Ouroboros.Consensus.Util.Condense (Condense (..))
-import           Ouroboros.Consensus.Shelley.Ledger (TPraosForgeState (..))
 import           Ouroboros.Consensus.Shelley.Ledger.Block (ShelleyBlock)
 import           Ouroboros.Consensus.Shelley.Ledger.Mempool (GenTx, TxId)
-import           Ouroboros.Consensus.Shelley.Protocol (ConsensusConfig (..),
-                   TPraosIsCoreNode (..), TPraosParams (..))
-import           Ouroboros.Consensus.Shelley.Protocol.Crypto (HotKey (..))
+import           Ouroboros.Consensus.Shelley.Protocol.Crypto.HotKey (HotKey (..))
 
 import           Ouroboros.Network.Block (HeaderHash, MaxSlotNo(..))
 
@@ -98,7 +93,7 @@ import           Cardano.Config.Orphanage ()
 import           Cardano.Config.TraceConfig
 import           Cardano.Crypto (RequiresNetworkMagic(..))
 
-import           Shelley.Spec.Ledger.OCert (KESPeriod (..), OCert (..))
+import           Shelley.Spec.Ledger.OCert (KESPeriod (..))
 
 
 -- | Errors for the cardano-config module.
@@ -627,42 +622,28 @@ data KESMetricsData
 newtype MaxKESEvolutions = MaxKESEvolutions Word64
 
 -- | The start KES period of the configured operational certificate.
-data OperationalCertStartKESPeriod
-  = NoOperationalCertConfigured
-  | OperationalCertStartKESPeriod !Period
+newtype OperationalCertStartKESPeriod = OperationalCertStartKESPeriod Period
 
 class HasKESMetricsData blk where
-  getKESMetricsData :: ProtocolInfo m blk -> ForgeState blk -> KESMetricsData
+  getKESMetricsData :: ForgeState blk -> KESMetricsData
 
   -- Default to 'NoKESMetricsData'
-  getKESMetricsData _ _ = NoKESMetricsData
+  getKESMetricsData _ = NoKESMetricsData
 
 instance HasKESMetricsData (ShelleyBlock c) where
-  getKESMetricsData protoInfo forgeState =
+  getKESMetricsData forgeState =
       TPraosKESMetricsData currKesPeriod maxKesEvos oCertStartKesPeriod
     where
-      TPraosForgeState { tpraosHotKey } = forgeState
+      HotKey
+        { hkStart     = KESPeriod startKesPeriod
+        , hkEvolution = currKesPeriod
+        , hkEnd       = KESPeriod endKesPeriod
+        } = chainIndepState forgeState
 
-      HotKey currKesPeriod _ = tpraosHotKey
+      maxKesEvos = MaxKESEvolutions $
+          fromIntegral $ endKesPeriod - startKesPeriod
 
-      oCertStartKesPeriod =
-        case pInfoLeaderCreds of
-          Nothing -> NoOperationalCertConfigured
-          Just (TPraosIsCoreNode{tpraosIsCoreNodeOpCert}, _) ->
-            let KESPeriod kp = ocertKESPeriod tpraosIsCoreNodeOpCert
-            in OperationalCertStartKESPeriod kp
-
-      maxKesEvos =
-        MaxKESEvolutions
-          . tpraosMaxKESEvo
-          . tpraosParams
-          . configConsensus
-          $ pInfoConfig
-
-      ProtocolInfo
-        { pInfoConfig
-        , pInfoLeaderCreds
-        } = protoInfo
+      oCertStartKesPeriod = OperationalCertStartKESPeriod startKesPeriod
 
 instance HasKESMetricsData ByronBlock where
 

@@ -61,7 +61,7 @@ import qualified Cardano.Config.Shelley.Protocol as Shelley
 --TODO: move ToObject tracing instances to Cardano.TracingOrphanInstances.Consensus
 --      and do them generically for the hard fork combinator
 instance HasKESMetricsData (CardanoBlock c) where
-    getKESMetricsData _protoInfo _forgeState = NoKESMetricsData
+    getKESMetricsData _forgeState = NoKESMetricsData
     --TODO distinguish on the era and use getKESMetricsData on the appropriate era
 
 
@@ -178,7 +178,10 @@ mkConsensusProtocolCardano NodeByronProtocolConfiguration {
         shelleyLeaderCredentials
 
         -- Hard fork parameters
-        Consensus.NoHardCodedTransition --TODO
+        (Just 190) --TODO: Optimisation: once the epoch of the transition is
+                   -- known, set this to the first shelley epoch.
+        (Consensus.NoHardCodedTransition (fromIntegral npcShelleyMaxSupportedProtocolVersion))
+        --TODO is this the right value?
 
 
 ------------------------------------------------------------------------------

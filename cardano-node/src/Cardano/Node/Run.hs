@@ -122,7 +122,7 @@ runNode loggingLayer npm@NodeCLI{protocolFiles} = do
 
     bcCounters :: IORef BlockchainCounters <- newIORef initialBlockchainCounters
 
-    tracers <- mkTracers (Consensus.protocolInfo p) (ncTraceConfig nc) trace bcCounters
+    tracers <- mkTracers (ncTraceConfig nc) trace bcCounters
 
 #ifdef UNIX
     let viewmode = ncViewMode nc

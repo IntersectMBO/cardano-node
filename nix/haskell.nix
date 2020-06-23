@@ -1,7 +1,8 @@
 ############################################################################
 # Builds Haskell packages with Haskell.nix
 ############################################################################
-{ lib
+{ pkgs
+, lib
 , stdenv
 , haskell-nix
 , buildPackages
@@ -12,6 +13,7 @@
 , profiling ? config.haskellNix.profiling or false
 # Version info, to be passed when not building from a git work tree
 , gitrev ? null
+, libsodium ? pkgs.libsodium
 }:
 let
 
@@ -134,6 +136,15 @@ let
         packages.lens.package.buildType = lib.mkForce "Simple";
         packages.nonempty-vector.package.buildType = lib.mkForce "Simple";
         packages.semigroupoids.package.buildType = lib.mkForce "Simple";
+      })
+      (lib.optionalAttrs stdenv.hostPlatform.isWindows {
+        # Make sure that libsodium DLLs are available for tests
+        packages.cardano-api.components.all.postInstall = lib.mkForce "";
+        packages.cardano-api.components.tests.cardano-api-test.postInstall = ''ln -s ${libsodium}/bin/libsodium-23.dll $out/bin/libsodium-23.dll'';
+        packages.cardano-cli.components.all.postInstall = lib.mkForce "";
+        packages.cardano-cli.components.tests.cardano-cli-pioneers.postInstall = ''ln -s ${libsodium}/bin/libsodium-23.dll $out/bin/libsodium-23.dll'';
+        packages.cardano-config.components.all.postInstall = lib.mkForce "";
+        packages.cardano-config.components.tests.cardano-config-test.postInstall = ''ln -s ${libsodium}/bin/libsodium-23.dll $out/bin/libsodium-23.dll'';
       })
     ];
     # TODO add flags to packages (like cs-ledger) so we can turn off tests that will

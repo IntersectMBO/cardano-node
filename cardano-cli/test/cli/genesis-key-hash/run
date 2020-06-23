@@ -19,6 +19,6 @@ ${CARDANO_CLI} shelley genesis key-hash \
 
 assert_file_exists "${TEST_DIR}/genesis-vkey-hash"
 assert_line_count 1 "${TEST_DIR}/genesis-vkey-hash"
-assert_string "1ec53db0a4620ab5e0ecde4ac2b4897b9c36394d6c07d60ba6773529de9321c7" "${TEST_DIR}/genesis-vkey-hash"
+assert_string "f1b1b8fa2787aeaada49d4c852c57a552b43d0efc664bde22cd64286" "${TEST_DIR}/genesis-vkey-hash"
 
 report_result ${error}
