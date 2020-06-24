@@ -17,6 +17,8 @@
 -- not export any from this API. We also use them unticked as nature intended.
 {-# LANGUAGE DataKinds #-}
 {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
+{-# OPTIONS_GHC -fno-warn-deprecations #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 
 -- | This module provides a library interface for interacting with Cardano as
 -- a user of the system.
@@ -58,6 +60,7 @@ module Cardano.Api.Typed (
     -- used in many other places.
     Hash(..),
     castHash,
+    Shelley.hash,
 
     -- * Payment addresses
     -- | Constructing and inspecting normal payment addresses
@@ -82,18 +85,32 @@ module Cardano.Api.Typed (
     -- * Building transactions
     -- | Constructing and inspecting transactions
     TxBody(..),
-    TxId,
+    TxId(..),
     getTxId,
     TxIn(..),
     TxOut(..),
-    TxIx,
+    TxIx(..),
     Lovelace,
+    ProtocolUpdates(..),
     makeByronTransaction,
     makeShelleyTransaction,
     SlotNo,
     TxExtraContent(..),
     txExtraContentEmpty,
+    WitnessSigningKey(..),
 
+    -- * Tx Metadata
+    TxMetadata,
+    MetaDataError,
+    readJSONMetaData,
+    readJSONTxMetaData,
+    renderMetaDataError,
+
+    -- * Stake pool Metadata
+    StakePoolMetadata,
+    StakePoolMetadataValidationError(..),
+    decodeAndValidateStakePoolMetadata,
+    renderStakePoolMetadataValidationError,
     -- * Signing transactions
     -- | Creating transaction witnesses one by one, or all in one go.
     Tx(..),
@@ -158,7 +175,7 @@ module Cardano.Api.Typed (
     -- ** Text envelope
     -- | Support for a envelope file format with text headers and a hex-encoded
     -- binary payload.
-    HasTextEnvelope,
+    HasTextEnvelope(..),
     TextEnvelope,
     TextEnvelopeType,
     TextEnvelopeDescr,
@@ -214,23 +231,34 @@ module Cardano.Api.Typed (
     -- * Special transactions
     -- | There are various additional things that can be embedded in a
     -- transaction for special operations.
+    Shelley.Wdrl(..),
 
+    -- * Type aliases
+    ShelleyCrypto,
+
+    -- * Utils
+    rwdToStakeAddress,
+    toByronTxId,
+    toShelleyAddr
   ) where
 
 
-import           Prelude
+import           Cardano.Prelude hiding (MetaData, show)
+import           Prelude (String, error, show)
 
 import           Data.Proxy (Proxy(..))
 import           Data.Kind (Constraint)
-import           Data.Word
-import           Data.Maybe
+--import           Data.Word
+--import           Data.Maybe
 import           Data.Bifunctor (first)
-import           Data.List as List
+import qualified Data.ByteString.Base64 as B64
+import qualified Data.ByteString.Char8 as SC8
+import qualified Data.ByteString.Lazy.Char8 as LC8
+import qualified Data.HashMap.Strict as HMS
+import qualified Data.List as List
 import qualified Data.List.NonEmpty as NonEmpty
---import           Data.Either
 import           Data.String (IsString(fromString))
-import qualified Data.Text as Text (unpack)
-import           Numeric.Natural
+import qualified Data.Text as Text
 
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
@@ -240,22 +268,25 @@ import qualified Data.ByteString.Base16 as Base16
 import qualified Data.Set as Set
 import qualified Data.Map.Strict as Map
 import           Data.Map.Strict (Map)
+import           Data.Scientific (floatingOrInteger)
 import qualified Data.Sequence.Strict as Seq
 import qualified Data.Vector as Vector
 
 --import Control.Monad
 --import Control.Monad.IO.Class
 --import           Control.Monad.Trans.Except
+import           Control.Monad.Fail (fail)
 import           Control.Monad.Trans.Except.Extra
-import           Control.Exception (Exception(..), IOException, throwIO)
-
+import           Control.Exception (Exception(..), IOException)
+import qualified Control.Exception as Exception
+import           Data.Aeson
 import qualified Data.Aeson as Aeson
-import           Data.Aeson (ToJSON(..), FromJSON(..))
-
+import qualified Data.Aeson.Types as Aeson
 
 --
 -- Common types, consensus, network
 --
+import           Cardano.Api.Error (textShow)
 import qualified Cardano.Binary as CBOR
 import           Cardano.Binary
                    (ToCBOR(toCBOR), FromCBOR(fromCBOR),
@@ -308,6 +339,8 @@ import qualified Shelley.Spec.Ledger.UTxO                    as Shelley
 -- Types we will re-export as-is
 import           Shelley.Spec.Ledger.TxData
                    (MIRPot(..))
+import           Shelley.Spec.Ledger.MetaData
+                   (MetaDatum(..))
 
 -- TODO: replace the above with
 --import qualified Cardano.Api.Byron   as Byron
@@ -439,16 +472,16 @@ data Address era where
        -> Shelley.StakeReference    ShelleyCrypto
        -> Address Shelley
 
-data StakeAddress where
-
-     StakeAddress
-       :: Shelley.Network
-       -> Shelley.StakeCredential ShelleyCrypto
-       -> StakeAddress
+data StakeAddress
+  = StakeAddress
+      Shelley.Network
+      (Shelley.StakeCredential ShelleyCrypto)
+  deriving (Eq, Ord)
 
 data NetworkId
        = Mainnet
        | Testnet !NetworkMagic
+       deriving (Eq, Show)
 
 data PaymentCredential
        = PaymentCredentialByKey    (Hash PaymentKey)
@@ -606,6 +639,7 @@ toShelleyStakeReference  NoStakeAddress =
 --
 
 newtype TxId = TxId (Shelley.Hash ShelleyCrypto ())
+             deriving (Eq, Show)
                -- We use the Shelley representation and convert the Byron one
 
 instance HasTypeProxy TxId where
@@ -645,12 +679,11 @@ getTxId (ShelleyTxBody tx) =
 -- Transaction constituent types
 --
 
-data TxIn = TxIn TxId TxIx
---TODO  deriving (Show)
+data TxIn = TxIn TxId TxIx deriving (Eq, Show)
 
 newtype TxIx = TxIx Word
-  deriving stock (Eq, Ord, Show)
-  deriving newtype (Enum)
+  deriving stock (Eq, Ord)
+  deriving newtype (Enum, Num, Show)
 
 data TxOut era = TxOut (Address era) Lovelace
 --TODO  deriving (Show)
@@ -782,9 +815,7 @@ txExtraContentEmpty =
       txProtocolUpdates = Nothing
     }
 
-type TxMetadata = Map Word64 Shelley.MetaDatum
-
-type ProtocolUpdates = Shelley.ProposedPPUpdates ShelleyCrypto
+data ProtocolUpdates = ShelleyProtocolUpdate (Shelley.Update Shelley.TPraosStandardCrypto)
 
 type TxFee = Lovelace
 type TTL   = SlotNo
@@ -1300,6 +1331,205 @@ toShelleyCertificate (CertificateMIR mirpot amounts) =
 toShelleyPoolParams :: StakePoolParameters -> Shelley.PoolParams ShelleyCrypto
 toShelleyPoolParams = error "toShelleyPoolParams: TODO"
 
+
+
+-- ----------------------------------------------------------------------------
+-- Transaction metadata
+--
+
+type TxMetadata = Map Word64 Shelley.MetaDatum
+
+data MetaDataError
+  = ConversionErrBoolNotAllowed
+  | ConversionErrNullNotAllowed
+  | ConversionErrNumberNotInteger
+  | ConversionErrLongerThan64Bytes
+  | DecodeErrJSON !FilePath !String
+  | ReadFileErr !FilePath !String
+  deriving (Eq, Ord, Show)
+
+
+renderMetaDataError :: MetaDataError -> Text
+renderMetaDataError err =
+  case err of
+    ConversionErrBoolNotAllowed -> "JSON Bool value is not allowed in MetaData"
+    ConversionErrNullNotAllowed -> "JSON Null value is not allowed in MetaData"
+    ConversionErrNumberNotInteger -> "Only integers are allowed in MetaData"
+    ConversionErrLongerThan64Bytes -> "JSON string is longer than 64 bytes"
+    DecodeErrJSON fp decErr ->
+      "Error decoding JSON at: " <> textShow fp <> " Error: " <> textShow decErr
+    ReadFileErr fp rErr ->
+      "Error reading file at: " <> textShow fp <> " Error: " <> textShow rErr
+
+-- No 'ToJSON' instance is written for 'MetaData'.
+-- It does not make sense to JSON roundtrip test 'MetaData'
+-- as 'String's and 'ByteString's are indistinguishable.
+instance FromJSON Shelley.MetaData where
+  parseJSON v = Shelley.MetaData <$> parseJSON v
+
+instance FromJSON Shelley.MetaDatum where
+  parseJSON v =
+    case valueToMetaDatum v of
+      Right mDatum -> return mDatum
+      Left decErr -> fail . show $ renderMetaDataError decErr
+
+readJSONMetaData :: FilePath -> IO (Either MetaDataError Shelley.MetaData)
+readJSONMetaData fp = do
+  eBs <- Exception.try $ LC8.readFile fp
+  case eBs of
+    Left ioEx -> return . Left . ReadFileErr fp $ handler ioEx
+    Right bs -> return . first (DecodeErrJSON fp) $ eitherDecode' bs
+ where
+  handler :: IOException -> String
+  handler e = "Cardano.Api.MetaData.readJSONMetaData: " <> displayException e
+
+
+valueToMetaDatum :: Value -> Either MetaDataError Shelley.MetaDatum
+valueToMetaDatum Null = Left ConversionErrNullNotAllowed
+valueToMetaDatum (Bool _) = Left ConversionErrBoolNotAllowed
+valueToMetaDatum (Number sci) =
+  case (floatingOrInteger sci :: Either Double Integer) of
+    Left _ -> Left ConversionErrNumberNotInteger
+    Right int -> Right $ I int
+valueToMetaDatum (String txt) = byteStringOrText txt
+valueToMetaDatum (Array vector) =
+  case Vector.mapM valueToMetaDatum vector of
+    Left err -> Left err
+    Right vecDatums -> Right . List $ Vector.toList vecDatums
+valueToMetaDatum (Object hm) =
+  case mapM tupleToMetaDatum $ HMS.toList hm of
+    Left err -> Left err
+    Right tuples -> Right $ Map tuples
+
+-- Helpers
+
+tupleToMetaDatum :: (Text, Value) -> Either MetaDataError (Shelley.MetaDatum, Shelley.MetaDatum)
+tupleToMetaDatum (k, v) = do
+  metaKey <- valueToMetaDatum $ String k
+  metaValue <- valueToMetaDatum v
+  Right (metaKey, metaValue)
+
+-- | If text is encoded in base64, we convert it to a 'ByteString'.
+byteStringOrText :: Text -> Either MetaDataError Shelley.MetaDatum
+byteStringOrText txt =
+  case B64.decodeBase64 utf8 of
+    Left _ -> if SC8.length utf8 > 64
+              then Left ConversionErrLongerThan64Bytes
+              else Right $ S txt
+    Right bs -> if SC8.length bs > 64
+                then Left ConversionErrLongerThan64Bytes
+                else Right $ B bs
+ where
+  utf8 = encodeUtf8 txt
+
+-- ----------------------------------------------------------------------------
+-- Stake pool metadata
+--
+
+-- | A representation of the required fields for stake pool metadata.
+data StakePoolMetadata = StakePoolMetadata
+  { _spmName :: !Text
+    -- ^ A name of up to 50 characters.
+  , _spmDescription :: !Text
+    -- ^ A description of up to 255 characters.
+  , _spmTicker :: !Text
+    -- ^ A ticker of 3-5 characters, for a compact display of stake pools in
+    -- a wallet.
+  , _spmHomepage :: !Text
+    -- ^ A URL to a homepage with additional information about the pool.
+    -- n.b. the spec does not specify a character limit for this field.
+  }
+
+instance FromJSON StakePoolMetadata where
+  parseJSON =
+    Aeson.withObject "StakePoolMetadata" $ \obj ->
+      StakePoolMetadata
+        <$> parseName obj
+        <*> parseDescription obj
+        <*> parseTicker obj
+        <*> obj .: "homepage"
+
+-- | Parse and validate the stake pool metadata name from a JSON object.
+--
+-- If the name consists of more than 50 characters, the parser will fail.
+parseName :: Aeson.Object -> Aeson.Parser Text
+parseName obj = do
+  name <- obj .: "name"
+  if Text.length name <= 50
+    then pure name
+    else fail $
+         "\"name\" must have at most 50 characters, but it has "
+      <> show (Text.length name)
+      <> " characters."
+
+-- | Parse and validate the stake pool metadata description from a JSON
+-- object.
+--
+-- If the description consists of more than 255 characters, the parser will
+-- fail.
+parseDescription :: Aeson.Object -> Aeson.Parser Text
+parseDescription obj = do
+  description <- obj .: "description"
+  if Text.length description <= 255
+    then pure description
+    else fail $
+         "\"description\" must have at most 255 characters, but it has "
+      <> show (Text.length description)
+      <> " characters."
+
+-- | Parse and validate the stake pool ticker description from a JSON object.
+--
+-- If the ticker consists of less than 3 or more than 5 characters, the parser
+-- will fail.
+parseTicker :: Aeson.Object -> Aeson.Parser Text
+parseTicker obj = do
+  ticker <- obj .: "ticker"
+  let tickerLen = Text.length ticker
+  if tickerLen >= 3 && tickerLen <= 5
+    then pure ticker
+    else fail $
+         "\"ticker\" must have at least 3 and at most 5 "
+      <> "characters, but it has "
+      <> show (Text.length ticker)
+      <> " characters."
+
+-- | A stake pool metadata validation error.
+data StakePoolMetadataValidationError
+  = StakePoolMetadataJsonDecodeError !String
+  | StakePoolMetadataInvalidLengthError
+    -- ^ The length of the JSON-encoded stake pool metadata exceeds the
+    -- maximum.
+      !Int
+      -- ^ Maximum byte length.
+      !Int
+      -- ^ Actual byte length.
+  deriving Show
+
+renderStakePoolMetadataValidationError
+  :: StakePoolMetadataValidationError
+  -> Text
+renderStakePoolMetadataValidationError err =
+  case err of
+    StakePoolMetadataJsonDecodeError errStr -> Text.pack errStr
+    StakePoolMetadataInvalidLengthError maxLen actualLen ->
+      Text.pack $ "Stake pool metadata must consist of at most "
+                <> show maxLen
+                <> " bytes, but it consists of "
+                <> show actualLen
+                <> " bytes."
+
+-- | Decode and validate the provided JSON-encoded 'ByteString' as
+-- 'StakePoolMetadata'.
+decodeAndValidateStakePoolMetadata
+  :: ByteString
+  -> Either StakePoolMetadataValidationError StakePoolMetadata
+decodeAndValidateStakePoolMetadata bs
+  | BS.length bs <= 512 =
+      either
+        (Left . StakePoolMetadataJsonDecodeError)
+        Right
+        (Aeson.eitherDecodeStrict' bs)
+  | otherwise = Left $ StakePoolMetadataInvalidLengthError 512 (BS.length bs)
 
 
 -- ----------------------------------------------------------------------------
@@ -2236,3 +2466,21 @@ backCompatAlgorithmNameVrf p =
 (?!) :: Maybe a -> e -> Either e a
 Nothing ?! e = Left e
 Just x  ?! _ = Right x
+
+readJSONTxMetaData :: FilePath -> IO (Either MetaDataError TxMetadata)
+readJSONTxMetaData fp = do
+  eBs <- Exception.try $ LC8.readFile fp
+  case eBs of
+    Left ioEx -> return . Left . ReadFileErr fp $ handler ioEx
+    Right bs -> return . first (DecodeErrJSON fp) $ Aeson.eitherDecode' bs
+ where
+  handler :: IOException -> String
+  handler e = "Cardano.Api.MetaData.readJSONTxMetaData: " <> displayException e
+
+rwdToStakeAddress :: Shelley.RewardAcnt ShelleyCrypto -> StakeAddress
+rwdToStakeAddress (Shelley.RewardAcnt nw cred) =
+  case cred of
+    Shelley.ScriptHashObj scriptHash ->
+      StakeAddress nw (Shelley.ScriptHashObj scriptHash)
+    Shelley.KeyHashObj keyHash ->
+      StakeAddress nw (Shelley.KeyHashObj keyHash)

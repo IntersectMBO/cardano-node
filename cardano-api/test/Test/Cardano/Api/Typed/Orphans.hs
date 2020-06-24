@@ -23,7 +23,6 @@ deriving instance Show (Address Byron)
 deriving instance Eq (Address Shelley)
 deriving instance Show (Address Shelley)
 
-deriving instance Eq StakeAddress
 deriving instance Show StakeAddress
 
 

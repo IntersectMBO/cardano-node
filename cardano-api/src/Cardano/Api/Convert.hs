@@ -10,6 +10,7 @@ module Cardano.Api.Convert
   ) where
 
 import           Cardano.Api.Types
+import qualified Cardano.Api.Typed as Typed
 import qualified Cardano.Binary as Binary
 import           Cardano.Prelude
 import           Prelude (String)
@@ -67,25 +68,25 @@ addressToHex addr =
       AddressShelley sa -> Shelley.serialiseAddr sa
       AddressShelleyReward sRwdAcct -> Binary.serialize' sRwdAcct
 
-renderTxId :: TxId -> Text
-renderTxId (TxId txid) = Text.decodeUtf8 (Crypto.getHashBytesAsHex txid)
+renderTxId :: Typed.TxId -> Text
+renderTxId (Typed.TxId txid) = Text.decodeUtf8 (Crypto.getHashBytesAsHex txid)
 
 parseWithdrawal :: Text -> Either String (Address, Lovelace)
 parseWithdrawal txt = Atto.parseOnly pWithdrawal $ Text.encodeUtf8 txt
 
-parseTxIn :: Text -> Either String TxIn
+parseTxIn :: Text -> Either String Typed.TxIn
 parseTxIn txt = Atto.parseOnly pTxIn $ Text.encodeUtf8 txt
 
-parseTxOut :: Text -> Either String TxOut
-parseTxOut tOut = Atto.parseOnly pTxOut $ Text.encodeUtf8 tOut
-
-renderTxIn :: TxIn -> Text
-renderTxIn (TxIn (TxId txid) txix) =
+renderTxIn :: Typed.TxIn -> Text
+renderTxIn (Typed.TxIn (Typed.TxId txid) (Typed.TxIx index)) =
   mconcat
     [ Text.decodeUtf8 (Crypto.getHashBytesAsHex txid)
     , "#"
-    , Text.pack (show txix)
+    , Text.pack (show index)
     ]
+
+parseTxOut :: Text -> Either String TxOut
+parseTxOut tOut = Atto.parseOnly pTxOut $ Text.encodeUtf8 tOut
 
 renderTxOut :: TxOut -> Text
 renderTxOut (TxOut addr ll) =
@@ -95,11 +96,11 @@ renderTxOut (TxOut addr ll) =
     , Text.pack (show ll)
     ]
 
-pTxIn :: Parser TxIn
-pTxIn = TxIn <$> pTxId <*> (Atto.char '#' *> Atto.decimal)
+pTxIn :: Parser Typed.TxIn
+pTxIn = Typed.TxIn <$> pTxId <*> (Typed.TxIx <$> (Atto.char '#' *> Atto.decimal))
 
-pTxId :: Parser TxId
-pTxId = TxId <$> pCBlakeHash
+pTxId :: Parser Typed.TxId
+pTxId = Typed.TxId <$> pCBlakeHash
 
 pCBlakeHash :: Parser (Crypto.Hash Crypto.Blake2b_256 ())
 pCBlakeHash = do

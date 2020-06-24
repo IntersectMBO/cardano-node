@@ -12,7 +12,8 @@ import           Test.Cardano.Api.Orphans ()
 import           Hedgehog (Property, discover)
 import qualified Hedgehog as Hedgehog
 
-import           Test.Cardano.Api.Gen
+import           Test.Cardano.Api.Gen hiding (genTxIn)
+import           Test.Cardano.Api.Typed.Gen (genTxIn)
 
 -- This test has been disabled because 'Shelley.Spec.Ledger.Address.getByron'
 -- has not been implemented yet and just 'panic's.

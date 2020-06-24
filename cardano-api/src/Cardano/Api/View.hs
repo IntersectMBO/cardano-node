@@ -1,3 +1,5 @@
+{-# LANGUAGE FlexibleContexts #-}
+
 module Cardano.Api.View
   ( parseAddressView
   , parseCertificateView
@@ -45,13 +47,16 @@ module Cardano.Api.View
 
 import           Cardano.Api.CBOR
 import           Cardano.Api.Types
+import           Cardano.Api.Typed (AsType(..))
+import qualified Cardano.Api.Typed as Typed
 import           Cardano.Api.Error
 
 import           Cardano.Api.TextView
 
 import           Cardano.Prelude
 
-import           Control.Monad.Trans.Except.Extra (handleIOExceptT, hoistEither, runExceptT)
+import           Control.Monad.Trans.Except.Extra (handleIOExceptT,
+                   hoistEither, runExceptT)
 
 import           Data.ByteString.Char8 (ByteString)
 import qualified Data.ByteString.Char8 as BS
@@ -240,17 +245,15 @@ readVRFVerificationKey path =
     bs <- handleIOExceptT (ApiErrorIO path) $ BS.readFile path
     hoistEither $ parseVRFVerificationKeyView bs
 
-readTxSigned :: FilePath -> IO (Either ApiError TxSigned)
-readTxSigned path =
-  runExceptT $ do
-    bs <- handleIOExceptT (ApiErrorIO path) $ BS.readFile path
-    hoistEither $ parseTxSignedView bs
+readTxSigned
+  :: Typed.HasTextEnvelope tx
+  => AsType tx -> FilePath -> IO (Either TextViewFileError tx)
+readTxSigned proxy path = readTextViewEncodedFile (Typed.deserialiseFromTextEnvelope proxy) path
 
-readTxUnsigned :: FilePath -> IO (Either ApiError TxUnsigned)
-readTxUnsigned path =
-  runExceptT $ do
-    bs <- handleIOExceptT (ApiErrorIO path) $ BS.readFile path
-    hoistEither $ parseTxUnsignedView bs
+readTxUnsigned
+  :: Typed.HasTextEnvelope txbody
+  => AsType txbody -> FilePath -> IO (Either TextViewFileError txbody)
+readTxUnsigned proxy path = readTextViewEncodedFile (Typed.deserialiseFromTextEnvelope proxy) path
 
 readUpdate :: FilePath -> IO (Either ApiError Update)
 readUpdate path =
@@ -288,15 +291,19 @@ writeVRFVerificationKey path kp =
   runExceptT .
     handleIOExceptT (ApiErrorIO path) $ BS.writeFile path (renderVerificationKeyVRFView kp)
 
-writeTxSigned :: FilePath -> TxSigned -> IO (Either ApiError ())
-writeTxSigned path kp =
-  runExceptT .
-    handleIOExceptT (ApiErrorIO path) $ BS.writeFile path (renderTxSignedView kp)
+writeTxSigned
+  :: Typed.HasTextEnvelope tx
+  => AsType tx -> FilePath -> tx -> IO (Either TextViewFileError ())
+writeTxSigned _ path tx =
+  let tEnvelopeTx = Typed.serialiseToTextEnvelope Nothing tx
+  in writeTextViewFile path tEnvelopeTx
 
-writeTxUnsigned :: FilePath -> TxUnsigned -> IO (Either ApiError ())
-writeTxUnsigned path kp =
-  runExceptT .
-    handleIOExceptT (ApiErrorIO path) $ BS.writeFile path (renderTxUnsignedView kp)
+writeTxUnsigned
+  :: Typed.HasTextEnvelope txbody
+  => AsType txbody -> FilePath -> txbody -> IO (Either TextViewFileError ())
+writeTxUnsigned _ path tbody =
+  let tEnvelopeTxBody = Typed.serialiseToTextEnvelope Nothing tbody
+  in writeTextViewFile path tEnvelopeTxBody
 
 writeUpdate :: FilePath -> Update -> IO (Either ApiError ())
 writeUpdate path kp =

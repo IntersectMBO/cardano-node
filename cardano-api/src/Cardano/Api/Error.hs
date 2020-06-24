@@ -18,7 +18,7 @@ import           Cardano.Api.TextView (TextViewError(..), TextViewType(..))
 
 data ApiError
   = ApiError !Text
-  | ApiErrorCBOR !DecoderError
+  | ApiErrorCBOR !DecoderError -- TODO: This should have a filepath
   | ApiErrorIO !FilePath !IOException
   | ApiTextView !TextViewError
   deriving (Eq, Show)

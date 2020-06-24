@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -19,6 +20,7 @@ import           Control.Tracer
 import           Control.Concurrent.STM
 
 import           Cardano.Api.Types
+import qualified Cardano.Api.Typed as Typed
 import           Cardano.Api.TxSubmit.ErrorRender (renderApplyMempoolPayloadErr)
 
 import           Ouroboros.Consensus.Cardano (protocolClientInfo, SecurityParam(..))
@@ -39,7 +41,6 @@ import           Ouroboros.Network.Protocol.LocalTxSubmission.Type (SubmitResult
 import           Cardano.Chain.Slotting (EpochSlots (..))
 
 import qualified Ouroboros.Consensus.Byron.Ledger as Byron
-import qualified Cardano.Chain.UTxO as Byron
 
 import           Ouroboros.Consensus.Shelley.Ledger.Mempool (mkShelleyTx)
 import           Ouroboros.Consensus.Shelley.Ledger (ShelleyBlock)
@@ -70,14 +71,14 @@ renderTxSubmitResult res =
 submitTx
   :: Network
   -> SocketPath
-  -> TxSigned
+  -> Typed.Tx era
   -> IO TxSubmitResult
 submitTx network socketPath tx =
     NtC.withIOManager $ \iocp ->
       case tx of
-        TxSignedByron txbody _txCbor _txHash vwit -> do
-          let aTxAux = Byron.annotateTxAux (Byron.mkTxAux txbody vwit)
-              genTx  = Byron.ByronTx (Byron.byronIdTx aTxAux) aTxAux
+        bt@(Typed.ByronTx aTxAux) -> do
+          let byronTxId = Typed.toByronTxId . Typed.getTxId $ Typed.getTxBody bt
+              genTx  = Byron.ByronTx byronTxId aTxAux
           result <- submitGenTx
                       nullTracer
                       iocp
@@ -91,8 +92,8 @@ submitTx network socketPath tx =
             SubmitSuccess  -> return TxSubmitSuccess
             SubmitFail err -> return (TxSubmitFailureByron err)
 
-        TxSignedShelley stx -> do
-          let genTx = mkShelleyTx stx
+        Typed.ShelleyTx sTx -> do
+          let genTx = mkShelleyTx sTx
           result <- submitGenTx
                       nullTracer
                       iocp

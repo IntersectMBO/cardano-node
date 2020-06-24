@@ -9,6 +9,7 @@ module Cardano.CLI.Shelley.Run.Transaction
 import           Cardano.Prelude
 
 import           Cardano.Api hiding (textShow)
+import qualified Cardano.Api.Typed as Typed
 import           Cardano.Api.TextView
 import qualified Cardano.Api.Typed as Api
 import           Cardano.CLI.Environment (EnvSocketError, readEnvSocketPath,
@@ -26,23 +27,27 @@ import           Control.Monad.Trans.Except.Extra
 
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Lazy.Char8 as LBS
+import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
 
-import           Shelley.Spec.Ledger.MetaData (hashMetaData)
+import qualified Shelley.Spec.Ledger.Address as Shelley
+import qualified Ouroboros.Consensus.Shelley.Protocol.Crypto as Shelley
 import           Shelley.Spec.Ledger.PParams (PParams)
+import qualified Shelley.Spec.Ledger.PParams as Shelley
 
 
 data ShelleyTxCmdError
   = ShelleyTxAesonDecodeProtocolParamsError !FilePath !Text
-  | ShelleyTxMetaDataError !FilePath !MetaDataError
+  | ShelleyTxMetaDataError !FilePath !Typed.MetaDataError
+  | ShelleyTxMissingNetworkId
   | ShelleyTxSocketEnvError !EnvSocketError
   | ShelleyTxReadProtocolParamsError !FilePath !IOException
-  | ShelleyTxReadSignedTxError !ApiError
+  | ShelleyTxReadSignedTxError !TextViewFileError
   | ShelleyTxReadUpdateError !ApiError
-  | ShelleyTxReadUnsignedTxError !ApiError
+  | ShelleyTxReadUnsignedTxError !TextViewFileError
   | ShelleyTxCertReadError !FilePath !ApiError
-  | ShelleyTxWriteSignedTxError !ApiError
-  | ShelleyTxWriteUnsignedTxError !ApiError
+  | ShelleyTxWriteSignedTxError !TextViewFileError
+  | ShelleyTxWriteUnsignedTxError !TextViewFileError
   | ShelleyTxSubmitError !TxSubmitResult
   | ShelleyTxReadFileError !(Api.FileError Api.TextEnvelopeError)
   deriving Show
@@ -53,11 +58,11 @@ renderShelleyTxCmdError err =
     ShelleyTxReadProtocolParamsError fp ioException ->
       "Error while reading protocol parameters at: " <> textShow fp <> " Error: " <> textShow ioException
     ShelleyTxMetaDataError fp metaDataErr ->
-       "Error reading metadata at: " <> textShow fp <> " Error: " <> renderMetaDataError metaDataErr
-    ShelleyTxReadUnsignedTxError apiError ->
-      "Error while reading unsigned shelley tx: " <> renderApiError apiError
-    ShelleyTxReadSignedTxError apiError ->
-      "Error while reading signed shelley tx: " <> renderApiError apiError
+       "Error reading metadata at: " <> textShow fp <> " Error: " <> Typed.renderMetaDataError metaDataErr
+    ShelleyTxReadUnsignedTxError tvfError ->
+      "Error while reading unsigned shelley tx: " <> renderTextViewFileError tvfError
+    ShelleyTxReadSignedTxError tvfError ->
+      "Error while reading signed shelley tx: " <> renderTextViewFileError tvfError
     ShelleyTxReadUpdateError apiError ->
       "Error while reading shelley update: " <> renderApiError apiError
     ShelleyTxSocketEnvError envSockErr -> renderEnvSocketError envSockErr
@@ -65,13 +70,14 @@ renderShelleyTxCmdError err =
       "Error while decoding the protocol parameters at: " <> textShow fp <> " Error: " <> textShow decErr
     ShelleyTxCertReadError fp apiErr ->
       "Error reading shelley certificate at: " <> textShow fp <> " Error: " <> renderApiError apiErr
-    ShelleyTxWriteSignedTxError apiError ->
-      "Error while writing signed shelley tx: " <> renderApiError apiError
-    ShelleyTxWriteUnsignedTxError apiError ->
-      "Error while writing unsigned shelley tx: " <> renderApiError apiError
+    ShelleyTxWriteSignedTxError tvfError ->
+      "Error while writing signed shelley tx: " <> renderTextViewFileError tvfError
+    ShelleyTxWriteUnsignedTxError tvfError ->
+      "Error while writing unsigned shelley tx: " <> renderTextViewFileError tvfError
     ShelleyTxSubmitError res ->
       "Error while submitting tx: " <> renderTxSubmitResult res
     ShelleyTxReadFileError fileErr -> Text.pack (Api.displayError fileErr)
+    ShelleyTxMissingNetworkId -> "Please enter network id with your byron transaction"
 
 runTransactionCmd :: TransactionCmd -> ExceptT ShelleyTxCmdError IO ()
 runTransactionCmd cmd =
@@ -90,7 +96,7 @@ runTransactionCmd cmd =
     _ -> liftIO $ putStrLn $ "runTransactionCmd: " ++ show cmd
 
 runTxBuildRaw
-  :: [TxIn]
+  :: [Typed.TxIn]
   -> [TxOut]
   -> SlotNo
   -> Lovelace
@@ -100,39 +106,73 @@ runTxBuildRaw
   -> Maybe UpdateProposalFile
   -> TxBodyFile
   -> ExceptT ShelleyTxCmdError IO ()
-runTxBuildRaw txins txouts ttl fee certFps wdrls mMetaData mUpdateProp (TxBodyFile fpath) = do
-  certs <- mapM readShelleyCert certFps
+runTxBuildRaw txins txouts ttl fee certFps (WithdrawalsShelley wdrls) mMetaData mUpdateProp (TxBodyFile fpath) = do
+  _certs <- mapM readShelleyCert certFps
   mUpProp <- maybeUpdate mUpdateProp
-  mDataHash <- maybeMetaData mMetaData
+  txMetadata <- maybeMetaData mMetaData
+
+  let txExtraContent = Typed.TxExtraContent
+                         { Typed.txMetadata = txMetadata
+                         , Typed.txWithdrawals = withDrls
+                         , Typed.txCertificates = []
+                         , Typed.txProtocolUpdates = Typed.ShelleyProtocolUpdate <$> mUpProp
+                         }
+      txBody = Typed.makeShelleyTransaction txExtraContent ttl (toEnum $ fromEnum fee) txins txOuts
+
   firstExceptT ShelleyTxWriteUnsignedTxError
     . newExceptT
-    . writeTxUnsigned fpath
-    $ buildShelleyTransaction txins txouts ttl fee certs wdrls mUpProp mDataHash
+    $ writeTxUnsigned Typed.AsShelleyTxBody fpath txBody
   where
-    maybeMetaData :: Maybe MetaDataFile -> ExceptT ShelleyTxCmdError IO (Maybe ShelleyMetaDataHash)
+    withDrls :: [(Typed.StakeAddress, Typed.Lovelace)]
+    withDrls = let w = Map.toList $ Map.mapKeys Typed.rwdToStakeAddress (Typed.unWdrl wdrls)
+               in map (\(addr, coin) -> (addr, toEnum $ fromEnum coin)) w
+
+    txOuts :: [Typed.TxOut Typed.Shelley]
+    txOuts = map convTxOut txouts
+
+    maybeMetaData :: Maybe MetaDataFile -> ExceptT ShelleyTxCmdError IO (Maybe Typed.TxMetadata)
     maybeMetaData (Just (MetaDataFile mFp)) =
-      bimapExceptT (ShelleyTxMetaDataError mFp) (Just . hashMetaData) . newExceptT $ readJSONMetaData mFp
+      bimapExceptT (ShelleyTxMetaDataError mFp) Just . newExceptT $ Typed.readJSONTxMetaData mFp
     maybeMetaData Nothing = right Nothing
 
-
-    maybeUpdate :: Maybe UpdateProposalFile -> ExceptT ShelleyTxCmdError IO (Maybe Update)
-    maybeUpdate (Just (UpdateProposalFile uFp )) =
-      bimapExceptT ShelleyTxReadUpdateError Just . newExceptT $ readUpdate uFp
+    maybeUpdate :: Maybe UpdateProposalFile -> ExceptT ShelleyTxCmdError IO (Maybe (Shelley.Update Shelley.TPraosStandardCrypto))
+    maybeUpdate (Just (UpdateProposalFile uFp )) = do
+      mUpdate <- bimapExceptT ShelleyTxReadUpdateError Just . newExceptT $ readUpdate uFp
+      case mUpdate of
+        Just (ShelleyUpdate update) -> right $ Just update
+        Nothing -> right Nothing
     maybeUpdate Nothing = right Nothing
 
-runTxSign :: TxBodyFile -> [SigningKeyFile] -> Network -> TxFile -> ExceptT ShelleyTxCmdError IO ()
-runTxSign (TxBodyFile infile) skfiles  network (TxFile outfile) = do
-    txu <- firstExceptT ShelleyTxReadUnsignedTxError . newExceptT $ readTxUnsigned infile
+convTxOut :: TxOut -> Typed.TxOut Typed.Shelley
+convTxOut (TxOut addr lLace) =
+  case addr of
+    AddressByron ba ->
+      Typed.TxOut (Typed.ByronAddress ba) (toEnum $ fromEnum lLace)
+    AddressShelley (Shelley.Addr nw pc scr) ->
+      Typed.TxOut (Typed.ShelleyAddress nw pc scr) (toEnum $ fromEnum lLace)
+    AddressShelley (Shelley.AddrBootstrap (Shelley.BootstrapAddress bootStrapAddr)) ->
+      Typed.TxOut (Typed.ByronAddress bootStrapAddr) (toEnum $ fromEnum lLace)
+    AddressShelleyReward _ -> panic "Cardano.CLI.Shelley.Run.Transaction.convTxOut: Reward addresses are not valid tx outputs."
+
+runTxSign :: TxBodyFile -> [SigningKeyFile] -> (Maybe Typed.NetworkId) -> TxFile -> ExceptT ShelleyTxCmdError IO ()
+runTxSign (TxBodyFile infile) skfiles mNid (TxFile outfile) = do
+    txu <- firstExceptT ShelleyTxReadUnsignedTxError . newExceptT $ readTxUnsigned Typed.AsShelleyTxBody infile
     sks <- readSigningKeyFiles skfiles
+
+
+    witnessSigningkeys <- hoistEither $ mapM (toWitnessSigningKey mNid) sks
+
+    let witnesses = map (Typed.makeKeyWitness txu) witnessSigningkeys
+
     firstExceptT ShelleyTxWriteSignedTxError
       . newExceptT
-      . writeTxSigned outfile
-      $ signTransaction txu network (map toOldApiSigningKey sks)
+      . writeTxSigned Typed.AsShelleyTx outfile
+      $ Typed.makeSignedTransaction witnesses txu
 
 runTxSubmit :: FilePath -> Network -> ExceptT ShelleyTxCmdError IO ()
 runTxSubmit txFp network = do
   sktFp <- firstExceptT ShelleyTxSocketEnvError $ readEnvSocketPath
-  signedTx <- firstExceptT ShelleyTxReadSignedTxError . newExceptT $ readTxSigned txFp
+  signedTx <- firstExceptT ShelleyTxReadSignedTxError . newExceptT $ readTxSigned Typed.AsShelleyTx txFp
   result   <- liftIO $ submitTx network sktFp signedTx
   case result of
     TxSubmitSuccess          -> return ()
@@ -188,6 +228,9 @@ data SomeSigningKey
   = ApiPaymentSigningKey !(Api.SigningKey Api.PaymentKey)
   | ApiGenesisUTxOSigningKey !(Api.SigningKey Api.GenesisUTxOKey)
   | ApiStakePoolSigningKey !(Api.SigningKey Api.StakePoolKey)
+  | ApiByronSigningKey !(Api.SigningKey Api.ByronKey)
+  | ApiStakeSigningKey !(Api.SigningKey Api.StakeKey)
+  | ApiGenesisDelegateSigningKey !(Api.SigningKey Api.GenesisDelegateKey)
 
 readSigningKeyFiles :: [SigningKeyFile] -> ExceptT ShelleyTxCmdError IO [SomeSigningKey]
 readSigningKeyFiles files =
@@ -210,6 +253,9 @@ readSigningKeyFile (SigningKeyFile skfile) =
       -- TODO: Byron signing key
       , Api.FromSomeType (Api.AsSigningKey Api.AsGenesisUTxOKey) ApiGenesisUTxOSigningKey
       , Api.FromSomeType (Api.AsSigningKey Api.AsStakePoolKey) ApiStakePoolSigningKey
+      , Api.FromSomeType (Api.AsSigningKey Api.AsByronKey) ApiByronSigningKey
+      , Api.FromSomeType (Api.AsSigningKey Api.AsStakeKey) ApiStakeSigningKey
+      , Api.FromSomeType (Api.AsSigningKey Api.AsGenesisDelegateKey) ApiGenesisDelegateSigningKey
       ]
 
 -- | Convert a 'SomeSigningKey' (which wraps a new-style typed API signing
@@ -223,10 +269,22 @@ toOldApiSigningKey someSKey =
       SigningKeyShelley sk
     ApiStakePoolSigningKey (Api.StakePoolSigningKey sk) ->
       SigningKeyShelley sk
+    _ -> panic "toOldApiSigningKey: This will be deprecated"
 
+toWitnessSigningKey :: Maybe Typed.NetworkId -> SomeSigningKey -> Either ShelleyTxCmdError (Typed.WitnessSigningKey Typed.Shelley)
+toWitnessSigningKey mNid sss =
+  case sss of
+    ApiPaymentSigningKey sKey -> Right $ Typed.WitnessPaymentKey sKey
+    ApiGenesisUTxOSigningKey sKey -> Right $ Typed.WitnessGenesisUTxOKey sKey
+    ApiStakePoolSigningKey sKey -> Right $ Typed.WitnessStakePoolKey sKey
+    ApiStakeSigningKey sKey -> Right $ Typed.WitnessStakeKey sKey
+    ApiGenesisDelegateSigningKey sKey -> Right $ Typed.WitnessGenesisDelegateKey sKey
+    ApiByronSigningKey sKey -> case mNid of
+                                 Just nid -> Right $ Typed.WitnessByronKey sKey nid
+                                 Nothing -> Left ShelleyTxMissingNetworkId
 
 runTxGetTxId :: TxBodyFile -> ExceptT ShelleyTxCmdError IO ()
 runTxGetTxId (TxBodyFile infile) = do
     tx <- firstExceptT ShelleyTxReadUnsignedTxError . newExceptT $
-      readTxUnsigned infile
-    liftIO $ putStrLn $ renderTxId (getTransactionId tx)
+      readTxUnsigned Typed.AsShelleyTxBody infile
+    liftIO . putStrLn . renderTxId $ Typed.getTxId tx

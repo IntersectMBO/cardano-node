@@ -33,8 +33,6 @@ library
                         Cardano.Api.Error
                         Cardano.Api.LocalChainSync
                         Cardano.Api.LocalStateQuery
-                        Cardano.Api.MetaData
-                        Cardano.Api.MetaData.Pool
                         Cardano.Api.TxSubmit
                         Cardano.Api.TxSubmit.ErrorRender
                         Cardano.Api.TxSubmit.Types

@@ -281,7 +281,7 @@ data TxOut = TxOut !Address !Lovelace
 
 newtype Lovelace
   = Lovelace { unLoveLace :: Integer }
-  deriving (Eq, Generic)
+  deriving (Enum, Eq, Generic)
   deriving newtype (Read, Show)
   deriving anyclass (NFData, NoUnexpectedThunks)
 
