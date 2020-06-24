@@ -39,7 +39,7 @@ sed -i ${ROOT}/configuration.yaml \
     -e '/ByronGenesisFile/ aShelleyGenesisFile: shelley/genesis.json' \
     -e 's/RequiresNoMagic/RequiresMagic/'
 
-echo "TestShelleyHardForkAtEpoch: 2" >> ${ROOT}/configuration.yaml
+# echo "TestShelleyHardForkAtEpoch: 2" >> ${ROOT}/configuration.yaml
 
 pushd ${ROOT}
 
@@ -190,6 +190,28 @@ cardano-cli issue-genesis-utxo-expenditure \
             --wallet-key byron/delegate-keys.000.key \
             --rich-addr-from \"$(head -n 1 byron/genesis-address-000)\" \
             --txout "(\"$(head -n 1 byron/address-000)\", 500000000)"
+
+# Update Proposal and votes
+cardano-cli byron create-update-proposal \
+            --filepath update-proposal \
+            --testnet-magic 42 \
+            --signing-key byron/delegate-keys.000.key \
+            --protocol-version-major 1 \
+            --protocol-version-minor 0 \
+            --protocol-version-alt 0 \
+            --application-name "Cardano" \
+            --software-version-num 1 \
+            --system-tag "linux" \
+            --installer-hash 0
+
+for N in ${BFT_NODES_N}; do
+    cardano-cli byron create-proposal-vote \
+                --proposal-filepath update-proposal \
+                --testnet-magic 42 \
+                --signing-key byron/delegate-keys.00$((${N} - 1)).key \
+                --vote-yes \
+                --output-filepath update-vote.00$((${N} - 1))
+done
 
 echo "====================================================================="
 echo "Generated genesis keys and genesis files:"
@@ -477,6 +499,22 @@ echo "CARDANO_NODE_SOCKET_PATH=${ROOT}/node-bft1/node.sock \\"
 echo "  cardano-cli submit-tx \\"
 echo "    --testnet-magic 42 \\"
 echo "    --tx ${ROOT}/tx0.tx"
+echo
+echo "To submit the update proposal for the transition"
+echo
+echo "CARDANO_NODE_SOCKET_PATH=${ROOT}/node-bft1/node.sock \\"
+echo "  cardano-cli byron submit-update-proposal \\"
+echo "    --testnet-magic 42 \\"
+echo "    --filepath ${ROOT}/update-proposal"
+echo
+echo "To submit votes on the update proposal"
+echo
+for N in ${BFT_NODES_N}; do
+    echo "CARDANO_NODE_SOCKET_PATH=${ROOT}/node-bft1/node.sock \\"
+    echo "cardano-cli byron submit-proposal-vote \\"
+    echo "    --testnet-magic 42 \\"
+    echo "    --filepath example/update-vote.00$((${N} - 1))"
+done
 echo
 echo "To submit the transaction that registers the pool, in the Shelley era"
 echo
