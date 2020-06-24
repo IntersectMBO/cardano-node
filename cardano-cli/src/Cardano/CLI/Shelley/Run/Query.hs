@@ -47,7 +47,7 @@ import           Ouroboros.Network.Block (getTipPoint)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
 import           Shelley.Spec.Ledger.Delegation.Certificates (PoolDistr(..))
 import           Shelley.Spec.Ledger.Keys (Hash, KeyHash(..), KeyRole (..), VerKeyVRF)
-import           Shelley.Spec.Ledger.LedgerState (LedgerState)
+import           Shelley.Spec.Ledger.LedgerState (EpochState)
 import           Shelley.Spec.Ledger.PParams (PParams)
 import           Shelley.Spec.Ledger.TxData (TxId (..), TxIn (..), TxOut (..))
 import           Shelley.Spec.Ledger.UTxO (UTxO (..))
@@ -205,7 +205,7 @@ writeStakeAddressInfo mOutFile dr@(DelegationsAndRewards _delegsAndRwds) =
       handleIOExceptT (ShelleyQueryWriteStakeAddressInfoError fpath)
         $ LBS.writeFile fpath (encodePretty dr)
 
-writeLedgerState :: Maybe OutputFile -> LedgerState TPraosStandardCrypto -> ExceptT ShelleyQueryCmdError IO ()
+writeLedgerState :: Maybe OutputFile -> EpochState TPraosStandardCrypto -> ExceptT ShelleyQueryCmdError IO ()
 writeLedgerState mOutFile lstate =
   case mOutFile of
     Nothing -> liftIO $ LBS.putStrLn (encodePretty lstate)

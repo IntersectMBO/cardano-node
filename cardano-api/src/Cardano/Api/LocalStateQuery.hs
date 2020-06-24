@@ -208,7 +208,7 @@ queryLocalLedgerState
   => Network
   -> SocketPath
   -> Point blk
-  -> ExceptT LocalStateQueryError IO (Either LByteString (Ledger.LedgerState TPraosStandardCrypto))
+  -> ExceptT LocalStateQueryError IO (Either LByteString (Ledger.EpochState TPraosStandardCrypto))
 queryLocalLedgerState network socketPath point = do
   lbs <- fmap unSerialised <$>
             newExceptT . liftIO $
