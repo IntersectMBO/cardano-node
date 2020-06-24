@@ -258,7 +258,9 @@ import           Data.Aeson (ToJSON(..), FromJSON(..))
 -- Common types, consensus, network
 --
 import qualified Cardano.Binary as CBOR
-import           Cardano.Binary (ToCBOR(toCBOR), FromCBOR(fromCBOR))
+import           Cardano.Binary
+                   (ToCBOR(toCBOR), FromCBOR(fromCBOR),
+                    Annotated(..), reAnnotate, recoverBytes)
 import qualified Cardano.Prelude as CBOR (cborError)
 import           Shelley.Spec.Ledger.Serialization (CBORGroup(..))
 import           Cardano.Slotting.Slot (SlotNo)
@@ -625,8 +627,7 @@ getTxId :: TxBody era -> TxId
 getTxId (ByronTxBody tx) =
     TxId
   . Crypto.UnsafeHash
-  . Byron.hashToBytes
-  . Byron.serializeCborHash
+  . recoverBytes
   $ tx
 
 getTxId (ShelleyTxBody tx) =
@@ -689,7 +690,7 @@ toShelleyLovelace (Lovelace l) = Shelley.Coin l
 data TxBody era where
 
      ByronTxBody
-       :: Byron.Tx
+       :: Annotated Byron.Tx ByteString
        -> TxBody Byron
 
      ShelleyTxBody
@@ -707,10 +708,15 @@ instance HasTypeProxy (TxBody Shelley) where
 
 
 instance SerialiseAsCBOR (TxBody Byron) where
-    serialiseToCBOR (ByronTxBody txbody) = CBOR.serialize' txbody
+    serialiseToCBOR (ByronTxBody txbody) =
+      recoverBytes txbody
 
-    deserialiseFromCBOR AsByronTxBody bs =
-      ByronTxBody <$> CBOR.decodeFull' bs
+    deserialiseFromCBOR AsByronTxBody bs = do
+      ByronTxBody <$>
+        CBOR.decodeFullAnnotatedBytes
+          "Byron TxBody"
+          CBOR.fromCBORAnnotated
+          (LBS.fromStrict bs)
 
 instance SerialiseAsCBOR (TxBody Shelley) where
     serialiseToCBOR (ShelleyTxBody txbody) =
@@ -718,7 +724,10 @@ instance SerialiseAsCBOR (TxBody Shelley) where
 
     deserialiseFromCBOR AsShelleyTxBody bs =
       ShelleyTxBody <$>
-        CBOR.decodeAnnotator "Shelley TxBody" fromCBOR (LBS.fromStrict bs)
+        CBOR.decodeAnnotator
+          "Shelley TxBody"
+          fromCBOR
+          (LBS.fromStrict bs)
 
 
 instance HasTextEnvelope (TxBody Byron) where
@@ -747,7 +756,10 @@ makeByronTransaction ins outs = do
                 outs'
     return $
       ByronTxBody $
-        Byron.UnsafeTx ins'' outs'' (Byron.mkAttributes ())
+        reAnnotate $
+          Annotated
+            (Byron.UnsafeTx ins'' outs'' (Byron.mkAttributes ()))
+            ()
 
 
 data TxExtraContent =
@@ -760,7 +772,7 @@ data TxExtraContent =
 
 type TxMetadata = Map Word64 Shelley.MetaDatum
 data Certificate
-type ProtocolUpdates = Shelley.ProposedPPUpdates ShelleyCrypto
+data ProtocolUpdates
 
 type TxFee = Lovelace
 type TTL   = SlotNo
@@ -792,7 +804,7 @@ makeShelleyTransaction TxExtraContent {
            Shelley.maybeToStrictMaybe txMetadata))
 
 toShelleyCertificate :: Certificate -> Shelley.DCert ShelleyCrypto
-toShelleyCertificate = undefined
+toShelleyCertificate = error "TODO: toShelleyCertificate"
 
 toShelleyWdrl :: [(StakeAddress, Lovelace)] -> Shelley.Wdrl ShelleyCrypto
 toShelleyWdrl wdrls =
@@ -860,6 +872,10 @@ data Witness era where
      ByronKeyWitness
        :: Byron.TxInWitness
        -> Witness Byron
+
+     ShelleyBootstrapWitness
+       :: Shelley.BootstrapWitness ShelleyCrypto
+       -> Witness Shelley
 
      ShelleyKeyWitness
        :: Shelley.WitVKey ShelleyCrypto Shelley.Witness
@@ -931,7 +947,7 @@ makeSignedTransaction witnesses (ByronTxBody txbody) =
     ByronTx
   . Byron.annotateTxAux 
   $ Byron.mkTxAux
-      txbody
+      (unAnnotated txbody)
       (Vector.fromList (map selectByronWitness witnesses))
   where
     selectByronWitness :: Witness Byron -> Byron.TxInWitness
@@ -959,16 +975,39 @@ makeSignedTransaction witnesses (ShelleyTxBody txbody) =
 
 
 byronKeyWitness :: NetworkId -> SigningKey ByronKey -> TxBody era -> Witness Byron
-byronKeyWitness nw (ByronSigningKey _sk) _txbody = undefined
-{-
+byronKeyWitness nw (ByronSigningKey sk) (ByronTxBody txbody) =
     ByronKeyWitness $
       Byron.VKWitness
         (Byron.toVerification sk)
         (Byron.sign pm Byron.SignTx sk (Byron.TxSigData txHash))
--}
   where
---    txHash = undefined
-    _pm = toByronProtocolMagicId nw
+    txHash :: Byron.Hash Byron.Tx
+    txHash = Byron.hashDecoded txbody
+
+    pm = toByronProtocolMagicId nw
+
+byronKeyWitness nw (ByronSigningKey sk) (ShelleyTxBody txbody) = undefined
+    ShelleyBootstrapWitness $
+      Shelley.BootstrapWitness {
+        Shelley.bwKey       = svk
+        Shelley.bwSig       = Crypto.signedDSIGN () txHash ssk
+        Shelley.bwChainCode = chainCode
+        Shelley.bwPadding   = padding
+      }
+  where
+    -- TODO: have to convert the signing key from Byron to Shelley
+    -- and the verification key, with chain code
+    (svk, chainCode) = Shelley.unpackByronKey (Byron.toVerification sk)
+
+    txHash :: Crypto.Hash (Shelley.TxBody ShelleyCrypto)
+    txHash = Crypto.hashRaw recoverBytes txbody
+
+    --TODO: the padding can be a constant, for constant attributes
+    padding = Shelley.getPadding 
+
+--      Byron.makeVerKeyAddress
+--        (toByronNetworkMagic nid)
+--        vk
 
 shelleyKeyWitness :: SigningKey keyrole -> TxBody era -> Witness Shelley
 shelleyKeyWitness = undefined
