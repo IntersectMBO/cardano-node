@@ -7,13 +7,10 @@ module Cardano.CLI.Shelley.Run.Transaction
   ) where
 
 import           Cardano.Prelude
-import           Cardano.Binary (FromCBOR(..))
 
 import           Cardano.Api hiding (textShow)
-import           Cardano.Api.Shelley.ColdKeys
-                   (KeyType(..), KeyRole(..), KeyError(..), OperatorKeyRole (..),
-                   renderKeyError, renderKeyType)
 import           Cardano.Api.TextView
+import qualified Cardano.Api.Typed as Api
 import           Cardano.CLI.Environment (EnvSocketError, readEnvSocketPath,
                    renderEnvSocketError)
 
@@ -44,10 +41,10 @@ data ShelleyTxCmdError
   | ShelleyTxReadUpdateError !ApiError
   | ShelleyTxReadUnsignedTxError !ApiError
   | ShelleyTxCertReadError !FilePath !ApiError
-  | ShelleyTxSignKeyError !KeyError
   | ShelleyTxWriteSignedTxError !ApiError
   | ShelleyTxWriteUnsignedTxError !ApiError
   | ShelleyTxSubmitError !TxSubmitResult
+  | ShelleyTxReadFileError !(Api.FileError Api.TextEnvelopeError)
   deriving Show
 
 renderShelleyTxCmdError :: ShelleyTxCmdError -> Text
@@ -68,14 +65,13 @@ renderShelleyTxCmdError err =
       "Error while decoding the protocol parameters at: " <> textShow fp <> " Error: " <> textShow decErr
     ShelleyTxCertReadError fp apiErr ->
       "Error reading shelley certificate at: " <> textShow fp <> " Error: " <> renderApiError apiErr
-    ShelleyTxSignKeyError keyErr ->
-      "Errog reading shelley signing key: " <> renderKeyError keyErr
     ShelleyTxWriteSignedTxError apiError ->
       "Error while writing signed shelley tx: " <> renderApiError apiError
     ShelleyTxWriteUnsignedTxError apiError ->
       "Error while writing unsigned shelley tx: " <> renderApiError apiError
     ShelleyTxSubmitError res ->
       "Error while submitting tx: " <> renderTxSubmitResult res
+    ShelleyTxReadFileError fileErr -> Text.pack (Api.displayError fileErr)
 
 runTransactionCmd :: TransactionCmd -> ExceptT ShelleyTxCmdError IO ()
 runTransactionCmd cmd =
@@ -131,7 +127,7 @@ runTxSign (TxBodyFile infile) skfiles  network (TxFile outfile) = do
     firstExceptT ShelleyTxWriteSignedTxError
       . newExceptT
       . writeTxSigned outfile
-      $ signTransaction txu network sks
+      $ signTransaction txu network (map toOldApiSigningKey sks)
 
 runTxSubmit :: FilePath -> Network -> ExceptT ShelleyTxCmdError IO ()
 runTxSubmit txFp network = do
@@ -165,7 +161,15 @@ runTxCalculateMinFee (TxInCount txInCount) (TxOutCount txOutCount)
       ++ show (calculateShelleyMinFee pparams (dummyShelleyTxForFeeCalc skeys certs))
   where
     dummyShelleyTxForFeeCalc skeys certs =
-      buildDummyShelleyTxForFeeCalc txInCount txOutCount txTtl network skeys certs wdrls hasMD
+      buildDummyShelleyTxForFeeCalc
+        txInCount
+        txOutCount
+        txTtl
+        network
+        (map toOldApiSigningKey skeys)
+        certs
+        wdrls
+        hasMD
 
 readProtocolParameters :: ProtocolParamsFile -> ExceptT ShelleyTxCmdError IO PParams
 readProtocolParameters (ProtocolParamsFile fpath) = do
@@ -179,48 +183,46 @@ readShelleyCert :: CertificateFile -> ExceptT ShelleyTxCmdError IO Certificate
 readShelleyCert (CertificateFile fp) =
   firstExceptT (ShelleyTxCertReadError fp) . newExceptT $ readCertificate fp
 
--- TODO : This is nuts. The 'cardano-api' and 'cardano-config' packages both have functions
--- for reading/writing keys, but they are incompatible.
--- The 'config' version just operates on Shelley only 'SignKey's, but 'api' operates on
--- 'SigningKey's which have a Byron and a Shelley constructor.
-readSigningKeyFiles :: [SigningKeyFile] -> ExceptT ShelleyTxCmdError IO [SigningKey]
+
+data SomeSigningKey
+  = ApiPaymentSigningKey !(Api.SigningKey Api.PaymentKey)
+  | ApiGenesisUTxOSigningKey !(Api.SigningKey Api.GenesisUTxOKey)
+  | ApiStakePoolSigningKey !(Api.SigningKey Api.StakePoolKey)
+
+readSigningKeyFiles :: [SigningKeyFile] -> ExceptT ShelleyTxCmdError IO [SomeSigningKey]
 readSigningKeyFiles files =
   newExceptT $ do
     xs <- mapM readSigningKeyFile files
     case partitionEithers xs of
       -- TODO: Would be nice to also provide a filepath to the signing key
       -- resulting in the error.
-      (e:_, _) -> pure $ Left (ShelleyTxSignKeyError (ReadSigningKeyError e))
+      (e:_, _) -> pure $ Left (ShelleyTxReadFileError e)
       ([], ys) -> pure $ Right ys
 
-readSigningKeyFile :: SigningKeyFile -> IO (Either TextViewFileError SigningKey)
+readSigningKeyFile
+  :: SigningKeyFile
+  -> IO (Either (Api.FileError Api.TextEnvelopeError) SomeSigningKey)
 readSigningKeyFile (SigningKeyFile skfile) =
-      readTextViewEncodedFile decodeAddressSigningKey skfile
-
--- The goal here is to read either a Byron or Shelley address signing key or a
--- Genesis UTxO signing key. The TextView provides functions to read one of
--- several file types, however this does not currently mesh well with the
--- key reading functions from the API package.
---
--- The API package provides parseSigningKeyView but this takes the whole
--- ByteString textview, rather than the structured TextView, so we cannot
--- compose that with readTextViewEncodedFile. It provides the lower level
--- signingKeyFromCBOR which returns too big an error type to fit here, so
--- we have to fudge it with a partial conversion.
-decodeAddressSigningKey :: TextView -> Either TextViewError SigningKey
-decodeAddressSigningKey tView = do
-    isGenesisUTxOKey <- expectTextViewOfTypes fileTypes tView
-    if isGenesisUTxOKey
-      then decodeFromTextView (SigningKeyShelley <$> fromCBOR) tView
-      else first (\(ApiTextView tve) -> tve)
-                 (signingKeyFromCBOR (tvRawCBOR tView))
+    Api.readFileTextEnvelopeAnyOf fileTypes skfile
   where
     fileTypes =
-      [ ("SigningKeyShelley", False)
-      , ("SigningKeyByron",   False)
-      , (renderKeyType (KeyTypeSigning GenesisUTxOKey), True)
-      , (renderKeyType (KeyTypeSigning (OperatorKey StakePoolOperatorKey)), True)
+      [ Api.FromSomeType (Api.AsSigningKey Api.AsPaymentKey) ApiPaymentSigningKey
+      -- TODO: Byron signing key
+      , Api.FromSomeType (Api.AsSigningKey Api.AsGenesisUTxOKey) ApiGenesisUTxOSigningKey
+      , Api.FromSomeType (Api.AsSigningKey Api.AsStakePoolKey) ApiStakePoolSigningKey
       ]
+
+-- | Convert a 'SomeSigningKey' (which wraps a new-style typed API signing
+-- key) to a 'SigningKey' (old-style API signing key).
+toOldApiSigningKey :: SomeSigningKey -> SigningKey
+toOldApiSigningKey someSKey =
+  case someSKey of
+    ApiPaymentSigningKey (Api.PaymentSigningKey sk) ->
+      SigningKeyShelley sk
+    ApiGenesisUTxOSigningKey (Api.GenesisUTxOSigningKey sk) ->
+      SigningKeyShelley sk
+    ApiStakePoolSigningKey (Api.StakePoolSigningKey sk) ->
+      SigningKeyShelley sk
 
 
 runTxGetTxId :: TxBodyFile -> ExceptT ShelleyTxCmdError IO ()
