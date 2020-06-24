@@ -592,7 +592,7 @@ parseWord optname desc metvar = option (fromInteger <$> auto)
 
 parseAddress :: String -> String -> Parser Address
 parseAddress opt desc =
-  option (cliParseBase58Address <$> auto)
+  option (cliParseBase58Address <$> str)
     $ long opt <> metavar "ADDR" <> help desc
 
 parseCardanoEra :: Parser CardanoEra
