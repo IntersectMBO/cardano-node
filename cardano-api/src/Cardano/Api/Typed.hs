@@ -296,7 +296,7 @@ import qualified Shelley.Spec.Ledger.UTxO                    as Shelley
 --
 -- Other config and common types
 --
-import qualified Cardano.Config.TextView as TextView
+import qualified Cardano.Api.TextView as TextView
 
 
 -- ----------------------------------------------------------------------------
@@ -1781,7 +1781,7 @@ instance HasTextEnvelope (SigningKey VrfKey) where
         proxy = Proxy
 
 -- | Temporary solution for maintaining backward compatibility with the output
--- of 'Cardano.Config.Shelley.VRF.encodeVRFVerificationKey'.
+-- of 'Cardano.Api.Shelley.VRF.encodeVRFVerificationKey'.
 backCompatAlgorithmNameVrf :: Proxy (Shelley.VRF ShelleyCrypto) -> String
 backCompatAlgorithmNameVrf p =
   let algoName = Crypto.algorithmNameVRF p

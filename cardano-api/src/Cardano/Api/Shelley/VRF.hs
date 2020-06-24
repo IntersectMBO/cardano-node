@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Cardano.Config.Shelley.VRF
+module Cardano.Api.Shelley.VRF
   ( VRFError(..)
   , decodeVRFVerificationKey
   , encodeVRFVerificationKey
@@ -17,7 +17,7 @@ import           Cardano.Prelude
 import qualified Cardano.Binary as CBOR
 import           Control.Monad.Trans.Except.Extra (firstExceptT, newExceptT)
 
-import           Cardano.Config.TextView
+import           Cardano.Api.TextView
 
 import           Cardano.Crypto.Seed (readSeedFromSystemEntropy)
 import           Cardano.Crypto.VRF.Class

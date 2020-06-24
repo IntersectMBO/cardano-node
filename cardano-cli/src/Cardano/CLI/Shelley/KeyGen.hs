@@ -19,7 +19,7 @@ import           Ouroboros.Consensus.Shelley.Protocol.Crypto
 
 import           Cardano.CLI.Shelley.Commands
 
-import           Cardano.Config.Shelley.ColdKeys
+import           Cardano.Api.Shelley.ColdKeys
 
 
 type VerKeyGenesis = Ledger.VKey Ledger.Genesis TPraosStandardCrypto

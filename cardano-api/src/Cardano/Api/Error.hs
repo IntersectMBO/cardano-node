@@ -14,7 +14,7 @@ import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import           Formatting (build, sformat)
 
-import           Cardano.Config.TextView (TextViewError(..), TextViewType(..))
+import           Cardano.Api.TextView (TextViewError(..), TextViewType(..))
 
 data ApiError
   = ApiError !Text

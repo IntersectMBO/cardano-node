@@ -1,12 +1,12 @@
 {-# LANGUAGE TemplateHaskell #-}
-module Test.Cardano.Config.TextView
+module Test.Cardano.Api.TextView
   ( tests
   ) where
 
 import           Cardano.Prelude
 
-import           Cardano.Config.TextView
-import           Cardano.Config.Shelley.ColdKeys
+import           Cardano.Api.TextView
+import           Cardano.Api.Shelley.ColdKeys
 
 import qualified Data.ByteString.Char8 as BS
 

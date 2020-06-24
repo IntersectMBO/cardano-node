@@ -3,7 +3,7 @@
 
 {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 
-module Cardano.Config.Shelley.ColdKeys
+module Cardano.Api.Shelley.ColdKeys
   ( VerKey
   , SignKey
   , KeyRole(..)
@@ -40,7 +40,7 @@ import qualified Shelley.Spec.Ledger.Crypto as Ledger
 import           Ouroboros.Consensus.Shelley.Protocol.Crypto
                    (TPraosStandardCrypto)
 
-import           Cardano.Config.TextView
+import           Cardano.Api.TextView
 
 
 data KeyRole

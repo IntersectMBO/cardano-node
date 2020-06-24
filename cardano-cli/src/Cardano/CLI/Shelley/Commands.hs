@@ -38,6 +38,7 @@ import           Prelude
 import           Data.Text (Text)
 
 import           Cardano.Api
+import           Cardano.Api.Shelley.OCert (KESPeriod(..))
 import           Cardano.Slotting.Slot (EpochNo (..))
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
 
@@ -45,7 +46,6 @@ import           Cardano.Config.Types
                   (CertificateFile (..), MetaDataFile, NodeAddress,
                    PoolMetaDataFile (..), SigningKeyFile(..),
                    UpdateProposalFile(..))
-import           Cardano.Config.Shelley.OCert (KESPeriod(..))
 import           Shelley.Spec.Ledger.TxData (MIRPot)
 
 --

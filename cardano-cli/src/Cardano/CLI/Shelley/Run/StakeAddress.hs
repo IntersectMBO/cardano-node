@@ -20,7 +20,7 @@ import           Cardano.Api (StakingVerificationKey (..),
                    shelleyDeregisterStakingAddress, shelleyDelegateStake,
                    shelleyRegisterStakingAddress, writeCertificate)
 import           Shelley.Spec.Ledger.Keys (VKey(..), hashKey)
-import           Cardano.Config.Shelley.ColdKeys hiding (writeSigningKey)
+import           Cardano.Api.Shelley.ColdKeys hiding (writeSigningKey)
 import qualified Cardano.Crypto.DSIGN as DSIGN
 
 
@@ -86,7 +86,7 @@ runStakeAddressKeyGen (VerificationKeyFile vkFp) (SigningKeyFile skFp) = do
   firstExceptT (ShelleyStakeAddressWriteVerKeyError vkFp)
     . newExceptT
     $ writeStakingVerificationKey vkFp (StakingVerificationKeyShelley vkey)
-  --TODO: writeSigningKey should really come from Cardano.Config.Shelley.ColdKeys
+  --TODO: writeSigningKey should really come from Cardano.Api.Shelley.ColdKeys
   firstExceptT (ShelleyStakeAddressWriteSignKeyError skFp) . newExceptT $ writeSigningKey skFp (SigningKeyShelley skey)
 
 

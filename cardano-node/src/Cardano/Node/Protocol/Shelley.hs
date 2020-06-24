@@ -39,12 +39,12 @@ import           Ouroboros.Consensus.Shelley.Node
 
 import           Shelley.Spec.Ledger.PParams (ProtVer(..))
 
+import           Cardano.Api.Shelley.OCert
+import           Cardano.Api.Shelley.VRF
+import           Cardano.Api.Shelley.KES
 import           Cardano.Config.Types
                    (NodeShelleyProtocolConfiguration(..),
                     ProtocolFilepaths(..), GenesisFile (..))
-import           Cardano.Config.Shelley.OCert
-import           Cardano.Config.Shelley.VRF
-import           Cardano.Config.Shelley.KES
 import           Cardano.TracingOrphanInstances.Shelley ()
 
 import           Cardano.Node.Protocol.Types

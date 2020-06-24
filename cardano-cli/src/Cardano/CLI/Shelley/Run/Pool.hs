@@ -29,7 +29,7 @@ import qualified Shelley.Spec.Ledger.Address as Shelley
 import           Shelley.Spec.Ledger.Keys (KeyHash (..), hashKey)
 import qualified Shelley.Spec.Ledger.Slot as Shelley
 
-import           Cardano.Config.Shelley.ColdKeys
+import           Cardano.Api.Shelley.ColdKeys
 import           Cardano.Config.Types (PoolMetaDataFile (..))
 
 import           Cardano.CLI.Shelley.Commands

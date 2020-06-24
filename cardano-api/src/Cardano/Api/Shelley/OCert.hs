@@ -4,7 +4,7 @@
 
 {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 
-module Cardano.Config.Shelley.OCert
+module Cardano.Api.Shelley.OCert
   (
     -- * Reading and writing operational certificates
     readOperationalCert
@@ -30,7 +30,7 @@ import qualified Data.ByteString.Char8 as BSC
 import qualified Cardano.Binary as CBOR
 import           Control.Monad.Trans.Except.Extra (firstExceptT, newExceptT)
 
-import           Cardano.Config.TextView
+import           Cardano.Api.TextView
 import qualified Shelley.Spec.Ledger.Keys as Ledger
 import           Shelley.Spec.Ledger.OCert
 import           Shelley.Spec.Ledger.Serialization

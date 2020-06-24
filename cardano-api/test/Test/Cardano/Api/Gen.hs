@@ -2,6 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Test.Cardano.Api.Gen
   ( genAddress
@@ -28,12 +29,20 @@ module Test.Cardano.Api.Gen
   , genVerificationKeyShelleyStaking
   , genVRFKeyPair
   , genSeed
+  -- to remove
+  , genKeyRole
+  , genKESKeyPair
+  , genTextView
   ) where
 
+
 import           Cardano.Api
+import           Cardano.Api.Shelley.ColdKeys (KeyRole (..), OperatorKeyRole (..)) -- to remove
+import           Cardano.Api.TextView -- to remove
+import           Cardano.Crypto.DSIGN.Class
+import           Cardano.Crypto.KES.Class
 import           Cardano.Binary (serialize)
 import qualified Cardano.Crypto as Byron
-import           Cardano.Crypto.DSIGN
 import           Cardano.Crypto.VRF.Class (deriveVerKeyVRF, genKeyVRF, seedSizeVRF)
 import           Cardano.Prelude hiding (MetaData)
 
@@ -454,3 +463,33 @@ genLovelace =
 
 genSeed :: Int -> Gen Crypto.Seed
 genSeed n = Crypto.mkSeedFromBytes <$> Gen.bytes (Range.singleton n)
+
+
+-- -------------------------------------------------------------------------------------------------
+-- To remove
+
+genKeyRole :: Gen KeyRole
+genKeyRole =
+  Gen.element
+    [ GenesisKey
+    , GenesisUTxOKey
+    , OperatorKey GenesisDelegateKey
+    , OperatorKey StakePoolOperatorKey
+    ]
+
+genKESKeyPair :: forall k. KESAlgorithm k => Gen (VerKeyKES k, SignKeyKES k)
+genKESKeyPair = do
+    seed <- genSeed seedSize
+    let sk = genKeyKES seed
+        vk = deriveVerKeyKES sk
+    pure (vk, sk)
+  where
+    seedSize :: Int
+    seedSize = fromIntegral (seedSizeKES (Proxy :: Proxy k))
+
+genTextView :: Gen TextView
+genTextView =
+  TextView
+    <$> fmap TextViewType (Gen.utf8 (Range.linear 1 20) Gen.alpha)
+    <*> fmap TextViewTitle (Gen.utf8 (Range.linear 1 80) (Gen.filter (/= '\n') Gen.ascii))
+    <*> Gen.bytes (Range.linear 0 500)

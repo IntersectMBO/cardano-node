@@ -9,27 +9,21 @@ module Test.Cardano.Config.Gen
   ( genAddress
   , genGenesisDelegationPair
   , genGenesisFundPair
-  , genKESKeyPair
-  , genKeyRole
   , genNetworkTopology
   , genNodeAddress
   , genNodeHostAddress
   , genNodeSetup
   , genShelleyGenesis
   , genSigningKey
-  , genTextView
   , genVRFKeyPair
   ) where
 
 import           Cardano.Prelude
 
-import           Cardano.Config.TextView
 import           Cardano.Config.Topology
 import           Cardano.Config.Types
 
 import           Cardano.Crypto.DSIGN.Class
-import           Cardano.Crypto.KES.Class
-import           Cardano.Config.Shelley.ColdKeys (KeyRole (..), OperatorKeyRole (..))
 
 import qualified Data.IP as IP
 
@@ -45,25 +39,6 @@ import           Shelley.Spec.Ledger.Crypto
 
 import           Test.Shelley.Spec.Ledger.Generator.Genesis
 
-genKESKeyPair :: forall k. KESAlgorithm k => Gen (VerKeyKES k, SignKeyKES k)
-genKESKeyPair = do
-    seed <- genSeed seedSize
-    let sk = genKeyKES seed
-        vk = deriveVerKeyKES sk
-    pure (vk, sk)
-  where
-    seedSize :: Int
-    seedSize = fromIntegral (seedSizeKES (Proxy :: Proxy k))
-
-genKeyRole :: Gen KeyRole
-genKeyRole =
-  Gen.element
-    [ GenesisKey
-    , GenesisUTxOKey
-    , OperatorKey GenesisDelegateKey
-    , OperatorKey StakePoolOperatorKey
-    ]
-
 genNetworkTopology :: Gen NetworkTopology
 genNetworkTopology =
   Gen.choice
@@ -75,13 +50,6 @@ genSigningKey :: Gen (SignKeyDSIGN (DSIGN TPraosStandardCrypto))
 genSigningKey = do
   seed <- genSeed $ fromIntegral (seedSizeDSIGN (Proxy :: Proxy (DSIGN TPraosStandardCrypto)))
   return $ genKeyDSIGN seed
-
-genTextView :: Gen TextView
-genTextView =
-  TextView
-    <$> fmap TextViewType (Gen.utf8 (Range.linear 1 20) Gen.alpha)
-    <*> fmap TextViewTitle (Gen.utf8 (Range.linear 1 80) (Gen.filter (/= '\n') Gen.ascii))
-    <*> Gen.bytes (Range.linear 0 500)
 
 genNodeAddress :: Gen NodeAddress
 genNodeAddress =

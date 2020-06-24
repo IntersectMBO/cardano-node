@@ -3,7 +3,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 
-module Cardano.Config.TextView
+module Cardano.Api.TextView
   ( -- * \"TextView\" format
     TextView (..)
   , TextViewError (..)
