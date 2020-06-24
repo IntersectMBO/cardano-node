@@ -30,6 +30,7 @@ module Cardano.Config.Types
     , NodeMockProtocolConfiguration (..)
     , NodeByronProtocolConfiguration (..)
     , NodeShelleyProtocolConfiguration (..)
+    , NodeHardForkProtocolConfiguration (..)
     , NodeHostAddress (..)
     , Protocol (..)
     , MockProtocol (..)
@@ -64,10 +65,15 @@ import           System.FilePath ((</>), takeDirectory)
 import           System.Posix.Types (Fd(Fd))
 
 import           Cardano.BM.Tracing (ToObject)
-import qualified Cardano.Chain.Update as Update
-import           Cardano.Chain.Slotting (EpochSlots)
+
+import           Cardano.Slotting.Slot (EpochNo)
+
+import qualified Cardano.Chain.Update as Byron
+import qualified Cardano.Chain.Slotting as Byron (EpochSlots)
+
 import           Cardano.Crypto.KES.Class (Period)
 import           Cardano.Crypto.ProtocolMagic (RequiresNetworkMagic)
+
 import           Ouroboros.Consensus.Block (Header, BlockProtocol, ForgeState(..))
 import           Ouroboros.Consensus.Byron.Ledger.Block (ByronBlock)
 import           Ouroboros.Consensus.HeaderValidation (OtherHeaderEnvelopeError)
@@ -102,7 +108,7 @@ instance Show ConfigError where
 
 -- | Specify what the CBOR file is
 -- i.e a block, a tx, etc
-data CBORObject = CBORBlockByron EpochSlots
+data CBORObject = CBORBlockByron Byron.EpochSlots
                 | CBORDelegationCertificateByron
                 | CBORTxByron
                 | CBORUpdateProposalByron
@@ -229,6 +235,7 @@ data NodeProtocolConfiguration =
      | NodeProtocolConfigurationShelley NodeShelleyProtocolConfiguration
      | NodeProtocolConfigurationCardano NodeByronProtocolConfiguration
                                         NodeShelleyProtocolConfiguration
+                                        NodeHardForkProtocolConfiguration
   deriving Show
 
 data NodeMockProtocolConfiguration =
@@ -246,10 +253,10 @@ data NodeByronProtocolConfiguration =
      , npcByronPbftSignatureThresh :: !(Maybe Double)
 
        -- | Update application name.
-     , npcByronApplicationName     :: !Update.ApplicationName
+     , npcByronApplicationName     :: !Byron.ApplicationName
 
        -- | Application (ie software) version.
-     , npcByronApplicationVersion  :: !Update.NumSoftwareVersion
+     , npcByronApplicationVersion  :: !Byron.NumSoftwareVersion
 
        -- | These declare the version of the protocol that the node is prepared
        -- to run. This is usually the version of the protocol in use on the
@@ -285,6 +292,21 @@ data NodeShelleyProtocolConfiguration =
      }
   deriving Show
 
+-- | Configuration relating to a hard forks themselves, not the specific eras.
+--
+data NodeHardForkProtocolConfiguration =
+     NodeHardForkProtocolConfiguration {
+
+       -- | For testing purposes we support specifying that the hard fork
+       -- happens at an exact epoch number (ie the first epoch of the new era).
+       --
+       -- Obviously if this is used, all the nodes in the test cluster much be
+       -- configured the same, or they will disagree.
+       --
+       npcTestShelleyHardForkAtEpoch :: Maybe EpochNo
+     }
+  deriving Show
+
 instance FromJSON NodeConfiguration where
   parseJSON =
     withObject "NodeConfiguration" $ \v -> do
@@ -316,6 +338,7 @@ instance FromJSON NodeConfiguration where
           CardanoProtocol ->
             NodeProtocolConfigurationCardano <$> parseByronProtocol v
                                              <*> parseShelleyProtocol v
+                                             <*> parseHardForkProtocol v
       pure NodeConfiguration {
              ncProtocolConfig
            , ncSocketPath
@@ -350,7 +373,7 @@ instance FromJSON NodeConfiguration where
                                          .!= RequiresNoMagic
         npcByronPbftSignatureThresh <- v .:? "PBftSignatureThreshold"
         npcByronApplicationName     <- v .:? "ApplicationName"
-                                         .!= Update.ApplicationName "cardano-sl"
+                                         .!= Byron.ApplicationName "cardano-sl"
         npcByronApplicationVersion  <- v .:? "ApplicationVersion" .!= 1
         protVerMajor                <- v .: "LastKnownBlockVersion-Major"
         protVerMinor                <- v .: "LastKnownBlockVersion-Minor"
@@ -391,6 +414,12 @@ instance FromJSON NodeConfiguration where
              , npcShelleyMaxSupportedProtocolVersion   = protVerMajroMax
              }
 
+      parseHardForkProtocol v = do
+        npcTestShelleyHardForkAtEpoch <- v .:? "TestShelleyHardForkAtEpoch"
+        pure NodeHardForkProtocolConfiguration {
+               npcTestShelleyHardForkAtEpoch
+             }
+
 
 parseNodeConfigurationFP :: ConfigYamlFilePath -> IO NodeConfiguration
 parseNodeConfigurationFP (ConfigYamlFilePath fp) = do
@@ -423,9 +452,10 @@ instance AdjustFilePaths NodeProtocolConfiguration where
   adjustFilePaths f (NodeProtocolConfigurationShelley pc) =
     NodeProtocolConfigurationShelley (adjustFilePaths f pc)
 
-  adjustFilePaths f (NodeProtocolConfigurationCardano pcb pcs) =
+  adjustFilePaths f (NodeProtocolConfigurationCardano pcb pcs pch) =
     NodeProtocolConfigurationCardano (adjustFilePaths f pcb)
                                      (adjustFilePaths f pcs)
+                                     pch
 
 instance AdjustFilePaths NodeMockProtocolConfiguration where
   adjustFilePaths _f x = x -- Contains no file paths
@@ -662,4 +692,3 @@ type TraceConstraints blk =
     , ToObject (ValidationErr (BlockProtocol blk))
     , ToObject (CannotLead (BlockProtocol blk))
     )
-
