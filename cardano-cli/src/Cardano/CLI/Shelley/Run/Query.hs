@@ -169,7 +169,7 @@ runQueryLedgerState network mOutFile = do
   case els of
     Right lstate -> writeLedgerState mOutFile lstate
     Left lbs -> do
-      liftIO $ putTextLn "Verion mismatch beteen node and consensus, so dumping this as generic CBOR."
+      liftIO $ putTextLn "Version mismatch between node and consensus, so dumping this as generic CBOR."
       firstExceptT ShelleyHelpersError $ pPrintCBOR lbs
 
 runQueryStakeAddressInfo
