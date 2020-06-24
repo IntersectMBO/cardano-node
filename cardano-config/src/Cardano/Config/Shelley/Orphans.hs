@@ -1,7 +1,8 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -27,8 +28,10 @@ import           Ouroboros.Consensus.Shelley.Protocol.Crypto (TPraosStandardCryp
 import           Shelley.Spec.Ledger.BaseTypes (StrictMaybe)
 import qualified Shelley.Spec.Ledger.Credential as Ledger
 import           Shelley.Spec.Ledger.Crypto (Crypto)
+import qualified Shelley.Spec.Ledger.EpochBoundary as Ledger
 import qualified Shelley.Spec.Ledger.Keys as Ledger
 import qualified Shelley.Spec.Ledger.LedgerState as Ledger
+import qualified Shelley.Spec.Ledger.Rewards as Ledger
 import           Shelley.Spec.Ledger.MetaData (MetaDataHash(..))
 import           Shelley.Spec.Ledger.PParams (PParams' (..))
 import qualified Shelley.Spec.Ledger.PParams as Ledger
@@ -67,18 +70,26 @@ deriving newtype instance ToJSON (TxId c)
 deriving newtype instance Crypto c => ToJSON (UTxO c)
 
 deriving newtype instance ToJSON (MetaDataHash c)
+deriving newtype instance ToJSON Ledger.LogWeight
+deriving newtype instance ToJSON Ledger.Likelihood
+deriving newtype instance ToJSON (Ledger.Stake TPraosStandardCrypto)
 
 deriving anyclass instance ToJSON (Ledger.GenDelegs TPraosStandardCrypto)
 deriving anyclass instance ToJSON (Ledger.ProposedPPUpdates TPraosStandardCrypto)
 deriving anyclass instance ToJSON (Ledger.StakePools TPraosStandardCrypto)
 
 deriving instance ToJSON Ledger.Ptr
+deriving instance ToJSON Ledger.AccountState
 
 deriving instance ToJSON (Ledger.DPState TPraosStandardCrypto)
 deriving instance ToJSON (Ledger.DState TPraosStandardCrypto)
 deriving instance ToJSON (Ledger.FutureGenDeleg TPraosStandardCrypto)
 deriving instance ToJSON (Ledger.InstantaneousRewards TPraosStandardCrypto)
+deriving instance ToJSON (Ledger.SnapShot TPraosStandardCrypto)
+deriving instance ToJSON (Ledger.SnapShots TPraosStandardCrypto)
+deriving instance ToJSON (Ledger.NonMyopic TPraosStandardCrypto)
 deriving instance ToJSON (Ledger.LedgerState TPraosStandardCrypto)
+deriving instance ToJSON (Ledger.EpochState TPraosStandardCrypto)
 deriving instance ToJSON (Ledger.PParams' StrictMaybe)
 deriving instance ToJSON (Ledger.PState TPraosStandardCrypto)
 deriving instance ToJSON (Ledger.StakeReference TPraosStandardCrypto)
