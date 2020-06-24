@@ -128,10 +128,10 @@ runNode loggingLayer npm@NodeCLI{protocolFiles} = do
     upTimeThread <- Async.async $ traceNodeUpTime (appendName "metrics" trace) =<< getMonotonicTimeNSec
 
     -- This IORef contains node kernel structure which holds node kernel.
-    -- We use it to extract information about connected peers periodically.
+    -- Used for ledger queries and peer connection status.
     nodeKernelData :: NodeKernelData blk <- mkNodeKernelData
 
-    tracers <- mkTracers (ncTraceConfig nc) trace
+    tracers <- mkTracers (ncTraceConfig nc) trace nodeKernelData
 
     case viewmode of
       SimpleView -> do
