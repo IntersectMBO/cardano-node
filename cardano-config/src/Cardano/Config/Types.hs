@@ -301,10 +301,21 @@ data NodeHardForkProtocolConfiguration =
        -- | For testing purposes we support specifying that the hard fork
        -- happens at an exact epoch number (ie the first epoch of the new era).
        --
-       -- Obviously if this is used, all the nodes in the test cluster much be
+       -- Obviously if this is used, all the nodes in the test cluster must be
        -- configured the same, or they will disagree.
        --
        npcTestShelleyHardForkAtEpoch :: Maybe EpochNo
+
+       -- | For testing purposes we support specifying that the hard fork
+       -- happens at a given major protocol version. For example this can be
+       -- used to cause the Shelley hard fork to occur at the transition from
+       -- protocol version 0 to version 1 (rather than the default of from 1 to
+       -- 2) which can make the test setup simpler.
+       --
+       -- Obviously if this is used, all the nodes in the test cluster must be
+       -- configured the same, or they will disagree.
+       --
+     , npcTestShelleyHardForkAtVersion :: Maybe Word
      }
   deriving Show
 
@@ -416,9 +427,11 @@ instance FromJSON NodeConfiguration where
              }
 
       parseHardForkProtocol v = do
-        npcTestShelleyHardForkAtEpoch <- v .:? "TestShelleyHardForkAtEpoch"
+        npcTestShelleyHardForkAtEpoch   <- v .:? "TestShelleyHardForkAtEpoch"
+        npcTestShelleyHardForkAtVersion <- v .:? "TestShelleyHardForkAtVersion"
         pure NodeHardForkProtocolConfiguration {
-               npcTestShelleyHardForkAtEpoch
+               npcTestShelleyHardForkAtEpoch,
+               npcTestShelleyHardForkAtVersion
              }
 
 
