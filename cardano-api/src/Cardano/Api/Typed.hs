@@ -929,13 +929,31 @@ instance HasTextEnvelope (Witness Shelley) where
 
 
 getTxBody :: Tx era -> TxBody era
-getTxBody (ByronTx _tx) = undefined
-getTxBody (ShelleyTx _tx) = undefined
+getTxBody (ByronTx Byron.ATxAux { Byron.aTaTx = txbody }) =
+    ByronTxBody txbody
+
+getTxBody (ShelleyTx Shelley.Tx { Shelley._body = txbody }) =
+    ShelleyTxBody txbody
 
 
 getTxWitnesses :: Tx era -> [Witness era]
-getTxWitnesses (ByronTx _tx) = undefined
-getTxWitnesses (ShelleyTx _tx) = undefined
+getTxWitnesses (ByronTx Byron.ATxAux { Byron.aTaWitness = witnesses }) =
+    map ByronKeyWitness
+  . Vector.toList
+  . unAnnotated
+  $ witnesses
+
+getTxWitnesses (ShelleyTx Shelley.Tx {
+                       Shelley._witnessSet =
+                         Shelley.WitnessSet {
+                           Shelley.addrWits,
+                           Shelley.bootWits,
+                           Shelley.msigWits
+                         }
+                     }) =
+    map ShelleyBootstrapWitness (Set.elems bootWits)
+ ++ map ShelleyKeyWitness       (Set.elems addrWits)
+ ++ map ShelleyScriptWitness    (Map.elems msigWits)
 
 
 makeSignedTransaction :: [Witness era]
