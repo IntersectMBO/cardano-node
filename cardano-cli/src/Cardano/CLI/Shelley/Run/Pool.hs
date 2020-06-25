@@ -189,5 +189,5 @@ runPoolMetaDataHash (PoolMetaDataFile poolMDPath) = do
     . hoistEither
     $ decodeAndValidateStakePoolMetadata metaDataBytes
   let metaDataHash :: Crypto.Hash Crypto.Blake2b_256 ByteString
-      metaDataHash = Crypto.hash metaDataBytes
+      metaDataHash = Crypto.hashRaw (\x -> x) metaDataBytes
   liftIO $ BS.putStrLn (Crypto.getHashBytesAsHex metaDataHash)
