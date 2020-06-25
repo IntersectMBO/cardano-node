@@ -121,7 +121,8 @@ mkConsensusProtocolCardano NodeByronProtocolConfiguration {
                              npcShelleyMaxSupportedProtocolVersion
                            }
                            NodeHardForkProtocolConfiguration {
-                             npcTestShelleyHardForkAtEpoch
+                             npcTestShelleyHardForkAtEpoch,
+                             npcTestShelleyHardForkAtVersion
                            }
                            files = do
     byronGenesis <-
@@ -173,7 +174,11 @@ mkConsensusProtocolCardano NodeByronProtocolConfiguration {
            -- Version 1 is Byron with Ouroboros Permissive BFT
            -- Version 2 is Shelley
            --
-           Nothing -> Consensus.NoHardCodedTransition 2
+           -- But we also provide an override to allow for simpler test setups
+           -- such as triggering at the 0 -> 1 transition .
+           --
+           Nothing -> Consensus.NoHardCodedTransition
+                        (maybe 2 fromIntegral npcTestShelleyHardForkAtVersion)
 
            -- Alternatively, for testing we can transition at a specific epoch.
            --
