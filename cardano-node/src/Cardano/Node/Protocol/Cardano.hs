@@ -177,12 +177,12 @@ mkConsensusProtocolCardano NodeByronProtocolConfiguration {
            -- But we also provide an override to allow for simpler test setups
            -- such as triggering at the 0 -> 1 transition .
            --
-           Nothing -> Consensus.NoHardCodedTransition
+           Nothing -> Consensus.TriggerHardForkAtVersion
                         (maybe 2 fromIntegral npcTestShelleyHardForkAtVersion)
 
            -- Alternatively, for testing we can transition at a specific epoch.
            --
-           Just epochNo -> Consensus.HardCodedTransitionAt epochNo)
+           Just epochNo -> Consensus.TriggerHardForkAtEpoch epochNo)
 
 
 ------------------------------------------------------------------------------
