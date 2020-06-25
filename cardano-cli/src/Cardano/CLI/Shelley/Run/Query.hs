@@ -27,6 +27,9 @@ import           Cardano.Api
                     queryPParamsFromLocalState, queryStakeDistributionFromLocalState,
                     queryUTxOFromLocalState, renderLocalStateQueryError,
                     queryDelegationsAndRewardsFromLocalState, textShow)
+import           Cardano.Api.Protocol.Cardano (mkNodeClientProtocolCardano)
+
+import           Cardano.Chain.Slotting (EpochSlots (..))
 
 import           Cardano.CLI.Environment (EnvSocketError, readEnvSocketPath, renderEnvSocketError)
 import           Cardano.CLI.Helpers (HelpersError, pPrintCBOR, renderHelpersError)
@@ -37,7 +40,8 @@ import           Cardano.Api.Protocol.Shelley (mkNodeClientProtocolShelley)
 
 import           Cardano.Crypto.Hash.Class (getHashBytesAsHex)
 
-import           Ouroboros.Consensus.Cardano (protocolClientInfo)
+import           Ouroboros.Consensus.Cardano (CardanoBlock, ProtocolCardano,
+                   ProtocolClient, SecurityParam (..), protocolClientInfo)
 import           Ouroboros.Consensus.Node.ProtocolInfo (pClientInfoCodecConfig)
 import           Ouroboros.Consensus.Shelley.Protocol.Crypto (TPraosStandardCrypto)
 import           Ouroboros.Network.NodeToClient (withIOManager)
@@ -51,6 +55,12 @@ import           Shelley.Spec.Ledger.LedgerState (EpochState)
 import           Shelley.Spec.Ledger.PParams (PParams)
 import           Shelley.Spec.Ledger.TxData (TxId (..), TxIn (..), TxOut (..))
 import           Shelley.Spec.Ledger.UTxO (UTxO (..))
+
+
+nodeClientProtocolCardano
+  :: ProtocolClient (CardanoBlock TPraosStandardCrypto) ProtocolCardano
+nodeClientProtocolCardano =
+  mkNodeClientProtocolCardano (EpochSlots 21600) (SecurityParam 2160)
 
 
 data ShelleyQueryCmdError
@@ -106,7 +116,7 @@ runQueryProtocolParameters network mOutFile = do
   sockPath <- firstExceptT ShelleyQueryEnvVarSocketErr readEnvSocketPath
   let ptclClientInfo = pClientInfoCodecConfig
                      . protocolClientInfo
-                     $ mkNodeClientProtocolShelley
+                     $ nodeClientProtocolCardano
   tip <- liftIO $ withIOManager $ \iomgr ->
     getLocalTip iomgr ptclClientInfo network sockPath
   pparams <- firstExceptT NodeLocalStateQueryError $
@@ -146,7 +156,7 @@ runQueryUTxO qfilter network mOutFile = do
   sockPath <- firstExceptT ShelleyQueryEnvVarSocketErr readEnvSocketPath
   let ptclClientInfo = pClientInfoCodecConfig
                      . protocolClientInfo
-                     $ mkNodeClientProtocolShelley
+                     $ nodeClientProtocolCardano
   tip <- liftIO $ withIOManager $ \iomgr ->
             getLocalTip iomgr ptclClientInfo network sockPath
   filteredUtxo <- firstExceptT NodeLocalStateQueryError $
@@ -161,7 +171,7 @@ runQueryLedgerState network mOutFile = do
   sockPath <- firstExceptT ShelleyQueryEnvVarSocketErr readEnvSocketPath
   let ptclClientInfo = pClientInfoCodecConfig
                      . protocolClientInfo
-                     $ mkNodeClientProtocolShelley
+                     $ nodeClientProtocolCardano
   tip <- liftIO $ withIOManager $ \iomgr ->
             getLocalTip iomgr ptclClientInfo network sockPath
   els <- firstExceptT NodeLocalStateQueryError $
@@ -181,7 +191,7 @@ runQueryStakeAddressInfo addr network mOutFile = do
     sockPath <- firstExceptT ShelleyQueryEnvVarSocketErr readEnvSocketPath
     let ptclClientInfo = pClientInfoCodecConfig
                        . protocolClientInfo
-                       $ mkNodeClientProtocolShelley
+                       $ nodeClientProtocolCardano
     tip <- liftIO $ withIOManager $ \iomgr ->
       getLocalTip iomgr ptclClientInfo network sockPath
     delegsAndRwds <- firstExceptT NodeLocalStateQueryError $
@@ -253,7 +263,7 @@ runQueryStakeDistribution network mOutFile = do
   sockPath <- firstExceptT ShelleyQueryEnvVarSocketErr readEnvSocketPath
   let ptclClientInfo = pClientInfoCodecConfig
                      . protocolClientInfo
-                     $ mkNodeClientProtocolShelley
+                     $ nodeClientProtocolCardano
   tip <- liftIO $ withIOManager $ \iomgr ->
     getLocalTip iomgr ptclClientInfo network sockPath
   stakeDist <- firstExceptT NodeLocalStateQueryError $

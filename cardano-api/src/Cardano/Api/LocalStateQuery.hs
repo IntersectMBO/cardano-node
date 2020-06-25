@@ -35,9 +35,11 @@ import           Cardano.Binary (decodeFull)
 import           Cardano.BM.Data.Tracer (ToLogObject (..), nullTracer)
 import           Cardano.BM.Trace (Trace, appendName, logInfo)
 
-import           Cardano.Api.Protocol.Shelley (mkNodeClientProtocolShelley)
+import           Cardano.Api.Protocol.Cardano (mkNodeClientProtocolCardano)
 import           Cardano.Api.Types ()
 import           Cardano.Config.Types (SocketPath (..))
+
+import           Cardano.Chain.Slotting (EpochSlots (..))
 
 import qualified Codec.CBOR.Term as CBOR
 
@@ -61,8 +63,10 @@ import           Data.Void (Void)
 import           Network.Mux (MuxMode(..), MuxTrace, WithMuxBearer)
 
 import           Ouroboros.Consensus.Block (CodecConfig)
-import           Ouroboros.Consensus.Cardano (protocolClientInfo)
-import           Ouroboros.Consensus.Ledger.Abstract (Query)
+import           Ouroboros.Consensus.Cardano (ProtocolClient, ProtocolCardano,
+                   SecurityParam (..), protocolClientInfo)
+import           Ouroboros.Consensus.Cardano.Block (CardanoQuery,
+                   CardanoQueryResult, CardanoBlock, Query (..), Either(..))
 import           Ouroboros.Consensus.Network.NodeToClient
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
                   (nodeToClientProtocolVersion, supportedNodeToClientVersions)
@@ -140,6 +144,11 @@ instance ToJSON DelegationsAndRewards where
           (Aeson.object ["delegation" .= d, "rewardAccountBalance" .= r])
           acc
 
+nodeClientProtocolCardano
+  :: ProtocolClient (CardanoBlock TPraosStandardCrypto) ProtocolCardano
+nodeClientProtocolCardano =
+  mkNodeClientProtocolCardano (EpochSlots 21600) (SecurityParam 2160)
+
 -- | Query the UTxO, filtered by a given set of addresses, from a Shelley node
 -- via the local state query protocol.
 --
@@ -149,17 +158,20 @@ queryUTxOFromLocalState
   :: Network
   -> SocketPath
   -> QueryFilter
-  -> Point (ShelleyBlock TPraosStandardCrypto)
+  -> Point (CardanoBlock TPraosStandardCrypto)
   -> ExceptT LocalStateQueryError IO (Ledger.UTxO TPraosStandardCrypto)
 queryUTxOFromLocalState network socketPath qFilter point = do
   utxoFilter <- hoistEither $ applyUTxOFilter qFilter
   let pointAndQuery = (point, utxoFilter)
-  newExceptT $ queryNodeLocalState
-    nullTracer
-    (pClientInfoCodecConfig . protocolClientInfo $ mkNodeClientProtocolShelley)
-    network
-    socketPath
-    pointAndQuery
+  res <- newExceptT $ queryNodeLocalState
+              nullTracer
+              (pClientInfoCodecConfig . protocolClientInfo $ nodeClientProtocolCardano)
+              network
+              socketPath
+              pointAndQuery
+  case res of
+    QueryResultSuccess r -> pure r
+    QueryResultEraMismatch em -> panic $ "QueryResultEraMismatch: " <> show em
 
 -- | Query the current protocol parameters from a Shelley node via the local
 -- state query protocol.
@@ -167,20 +179,23 @@ queryUTxOFromLocalState network socketPath qFilter point = do
 -- This one is Shelley-specific because the query is Shelley-specific.
 --
 queryPParamsFromLocalState
-  :: blk ~ ShelleyBlock TPraosStandardCrypto
+  :: blk ~ CardanoBlock TPraosStandardCrypto
   => Network
   -> SocketPath
   -> Point blk
   -> ExceptT LocalStateQueryError IO Ledger.PParams
 queryPParamsFromLocalState network socketPath point = do
-  let pointAndQuery = (point, GetCurrentPParams)
-  newExceptT $ liftIO $
+  let pointAndQuery = (point, QueryIfCurrentShelley GetCurrentPParams)
+  res <- newExceptT $ liftIO $
     queryNodeLocalState
       nullTracer
-      (pClientInfoCodecConfig . protocolClientInfo $ mkNodeClientProtocolShelley)
+      (pClientInfoCodecConfig . protocolClientInfo $ nodeClientProtocolCardano)
       network
       socketPath
       pointAndQuery
+  case res of
+    QueryResultSuccess r -> pure r
+    QueryResultEraMismatch em -> panic $ "QueryResultEraMismatch: " <> show em
 
 -- | Query the current stake distribution from a Shelley node via the local
 -- state query protocol.
@@ -188,41 +203,49 @@ queryPParamsFromLocalState network socketPath point = do
 -- This one is Shelley-specific because the query is Shelley-specific.
 --
 queryStakeDistributionFromLocalState
-  :: blk ~ ShelleyBlock TPraosStandardCrypto
+  :: blk ~ CardanoBlock TPraosStandardCrypto
   => Network
   -> SocketPath
   -> Point blk
   -> ExceptT LocalStateQueryError IO (Ledger.PoolDistr TPraosStandardCrypto)
 queryStakeDistributionFromLocalState network socketPath point = do
-  let pointAndQuery = (point, GetStakeDistribution)
-  newExceptT $ liftIO $
+  let pointAndQuery = (point, QueryIfCurrentShelley GetStakeDistribution)
+  res <- newExceptT $ liftIO $
     queryNodeLocalState
       nullTracer
-      (pClientInfoCodecConfig . protocolClientInfo $ mkNodeClientProtocolShelley)
+      (pClientInfoCodecConfig . protocolClientInfo $ nodeClientProtocolCardano)
       network
       socketPath
       pointAndQuery
+  case res of
+    QueryResultSuccess r -> pure r
+    QueryResultEraMismatch em -> panic $ "QueryResultEraMismatch: " <> show em
 
 queryLocalLedgerState
-  :: blk ~ ShelleyBlock TPraosStandardCrypto
+  :: blk ~ CardanoBlock TPraosStandardCrypto
   => Network
   -> SocketPath
   -> Point blk
   -> ExceptT LocalStateQueryError IO (Either LByteString (Ledger.EpochState TPraosStandardCrypto))
 queryLocalLedgerState network socketPath point = do
-  lbs <- fmap unSerialised <$>
+  lbs <- fmap (unSerialised . getRes) <$>
             newExceptT . liftIO $
               queryNodeLocalState
                 nullTracer
-                (pClientInfoCodecConfig . protocolClientInfo $ mkNodeClientProtocolShelley)
+                (pClientInfoCodecConfig . protocolClientInfo $ nodeClientProtocolCardano)
                 network
                 socketPath
-                (point, GetCBOR GetCurrentEpochState) -- Get CBOR-in-CBOR version
+                (point, QueryIfCurrentShelley (GetCBOR GetCurrentEpochState)) -- Get CBOR-in-CBOR version
   -- If decode as a LedgerState fails we return the ByteString so we can do a generic
   -- CBOR decode.
   case decodeFull lbs of
     Right lstate -> pure $ Right lstate
     Left _ -> pure $ Left lbs
+  where
+    getRes res =
+      case res of
+        QueryResultSuccess r -> r
+        QueryResultEraMismatch em -> panic $ "QueryResultEraMismatch: " <> show em
 
 -- | Query the current delegations and reward accounts, filtered by a given
 -- set of addresses, from a Shelley node via the local state query protocol.
@@ -233,25 +256,30 @@ queryDelegationsAndRewardsFromLocalState
   :: Network
   -> SocketPath
   -> Set Address
-  -> Point (ShelleyBlock TPraosStandardCrypto)
+  -> Point (CardanoBlock TPraosStandardCrypto)
   -> ExceptT LocalStateQueryError IO DelegationsAndRewards
 queryDelegationsAndRewardsFromLocalState network socketPath addrs point = do
     creds <- hoistEither $ getShelleyStakeCredentials addrs
-    let pointAndQuery = (point, GetFilteredDelegationsAndRewardAccounts creds)
+    let pointAndQuery = (point, QueryIfCurrentShelley (GetFilteredDelegationsAndRewardAccounts creds))
     res <- newExceptT $ liftIO $
       queryNodeLocalState
         nullTracer
-        (pClientInfoCodecConfig . protocolClientInfo $ mkNodeClientProtocolShelley)
+        (pClientInfoCodecConfig . protocolClientInfo $ nodeClientProtocolCardano)
         network
         socketPath
         pointAndQuery
-    pure $ toDelegsAndRwds res
+    pure $ toDelegsAndRwds (getRes res)
   where
     toDelegsAndRwds (delegs, rwdAcnts) =
       DelegationsAndRewards $
         Map.mapWithKey
           (\k v -> (Map.lookup (Ledger.getRwdCred k) delegs, v))
           rwdAcnts
+
+    getRes res =
+      case res of
+        QueryResultSuccess r -> r
+        QueryResultEraMismatch em -> panic $ "QueryResultEraMismatch: " <> show em
 
 -- -------------------------------------------------------------------------------------------------
 
@@ -369,14 +397,15 @@ localStateQueryClient (point, query) resultVar =
       }
 
 applyUTxOFilter
-  :: (blk ~ ShelleyBlock TPraosStandardCrypto, c ~ TPraosStandardCrypto)
+  :: c ~ TPraosStandardCrypto
   => QueryFilter
-  -> Either LocalStateQueryError (Query blk (Ledger.UTxO c))
+  -- -> Either LocalStateQueryError (Query blk (Ledger.UTxO c))
+  -> Either LocalStateQueryError (CardanoQuery c (CardanoQueryResult c (Ledger.UTxO c)))
 applyUTxOFilter qFilter =
     case qFilter of
       FilterByAddress addrs -> do shelleyAddrs <- checkAddresses $ partitionAddresses addrs
-                                  Right $ GetFilteredUTxO shelleyAddrs
-      NoFilter -> Right GetUTxO
+                                  Right $ QueryIfCurrentShelley $ GetFilteredUTxO shelleyAddrs
+      NoFilter -> Right $ QueryIfCurrentShelley GetUTxO
   where
     checkAddresses :: (Set ByronAddress, Set ShelleyAddress) -> Either LocalStateQueryError (Set ShelleyAddress)
     checkAddresses (byronAddrs, shelleyAddrs) = if Set.null byronAddrs
