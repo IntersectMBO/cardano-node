@@ -70,13 +70,20 @@ let
         # Coreutils because we need 'paste'.
         packages.cardano-cli.components.tests.cardano-cli-test.build-tools =
           lib.mkForce [buildPackages.bc buildPackages.jq buildPackages.coreutils buildPackages.shellcheck];
-
+      }
+      {
         # Stamp executables with the git revision
-        packages.cardano-cli.components.exes.cardano-cli.postInstall = setGitRev;
-        packages.cardano-node.components.exes.cardano-node.postInstall = setGitRev;
-        # Work around Haskell.nix issue when setting postInstall on components
-        packages.cardano-cli.components.all.postInstall = lib.mkForce setGitRev;
-        packages.cardano-node.components.all.postInstall = lib.mkForce setGitRev;
+        # And make sure that libsodium DLLs are available for windows binaries:
+        packages = lib.genAttrs projectPackages (name: {
+            postInstall = ''
+              if [ -d $out/bin ]; then
+                ${setGitRev}
+                ${lib.optionalString stdenv.hostPlatform.isWindows
+                  "ln -s ${libsodium}/bin/libsodium-23.dll $out/bin/libsodium-23.dll"
+                }
+              fi
+            '';
+          });
       }
       {
         # Packages we wish to ignore version bounds of.
@@ -134,15 +141,6 @@ let
         packages.lens.package.buildType = lib.mkForce "Simple";
         packages.nonempty-vector.package.buildType = lib.mkForce "Simple";
         packages.semigroupoids.package.buildType = lib.mkForce "Simple";
-      })
-      (lib.optionalAttrs stdenv.hostPlatform.isWindows {
-        # Make sure that libsodium DLLs are available for tests
-        packages.cardano-api.components.all.postInstall = lib.mkForce "";
-        packages.cardano-api.components.tests.cardano-api-test.postInstall = ''ln -s ${libsodium}/bin/libsodium-23.dll $out/bin/libsodium-23.dll'';
-        packages.cardano-cli.components.all.postInstall = lib.mkForce "";
-        packages.cardano-cli.components.tests.cardano-cli-pioneers.postInstall = ''ln -s ${libsodium}/bin/libsodium-23.dll $out/bin/libsodium-23.dll'';
-        packages.cardano-config.components.all.postInstall = lib.mkForce "";
-        packages.cardano-config.components.tests.cardano-config-test.postInstall = ''ln -s ${libsodium}/bin/libsodium-23.dll $out/bin/libsodium-23.dll'';
       })
     ];
     # TODO add flags to packages (like cs-ledger) so we can turn off tests that will

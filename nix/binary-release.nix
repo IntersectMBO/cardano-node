@@ -14,7 +14,6 @@
 
 let
   lib = pkgs.lib;
-  libsodiumWin64 = pkgs.pkgsCross.mingwW64.libsodium;
   name = "cardano-node-${project.version}-${platform}";
 
 in pkgs.runCommand name {
@@ -31,9 +30,6 @@ in pkgs.runCommand name {
   cp -Rv ${../configuration}/* ./configuration/
   chmod -R +w .
 
-  ${lib.optionalString (platform == "win64") ''
-    cp ${libsodiumWin64}/bin/libsodium-23.dll .
-  ''}
   ${if (platform == "win64")
     then "zip -r $out/${name}.zip ."
     else "tar -czf $out/${name}.tar.gz ."
