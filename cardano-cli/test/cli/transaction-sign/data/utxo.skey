@@ -1,4 +1,4 @@
 type: SigningKeyShelley
-title: Free form text
+title: Payment Signing Key
 cbor-hex:
- 18ad5820a7dd5534d0a1d165551b72558ad0aa3b56eeecbb6cdb69f5ade19f7d7b564a6c
+ 582017b180d6f13bc8e3d3d80d604ae2e7a1bd448e679640d8be82c9884b52db722f

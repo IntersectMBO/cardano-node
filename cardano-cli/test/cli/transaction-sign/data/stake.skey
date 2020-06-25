@@ -1,4 +1,4 @@
 type: SigningKeyShelley
-title: Free form text
+title: Stake Signing Key
 cbor-hex:
- 18ad5820cb3eea77330b1643cfe67ebf04a429eaef47cf049b1da95ea7c24aab01ca680e
+ 58205fed25a6529f521cff366edd1223498c076cfc6b6f65a0b0e3523ae820d2e627
