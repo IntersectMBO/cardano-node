@@ -90,6 +90,7 @@ import           Ouroboros.Consensus.Shelley.Protocol.Crypto.HotKey (HotKey (..)
 
 import           Ouroboros.Network.Block (HeaderHash, MaxSlotNo(..))
 
+import           Cardano.Config.LedgerQueries
 import           Cardano.Config.Orphanage ()
 import           Cardano.Config.TraceConfig
 import           Cardano.Crypto (RequiresNetworkMagic(..))
@@ -678,6 +679,7 @@ type TraceConstraints blk =
     , Condense (TxId (GenTx blk))
     , HasTxs blk
     , HasTxId (GenTx blk)
+    , LedgerQueries blk
     , Show (ApplyTxErr blk)
     , Show (GenTx blk)
     , Show (GenTxId blk)
