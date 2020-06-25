@@ -92,6 +92,7 @@ module Cardano.Api.Typed (
     makeShelleyTransaction,
     SlotNo,
     TxExtraContent(..),
+    txExtraContentEmpty,
 
     -- * Signing transactions
     -- | Creating transaction witnesses one by one, or all in one go.
@@ -261,7 +262,7 @@ import           Cardano.Binary
                     Annotated(..), reAnnotate, recoverBytes)
 import qualified Cardano.Prelude as CBOR (cborError)
 import           Shelley.Spec.Ledger.Serialization (CBORGroup(..))
-import           Cardano.Slotting.Slot (SlotNo)
+import           Cardano.Slotting.Slot (SlotNo, EpochNo)
 import           Ouroboros.Network.Magic (NetworkMagic(..))
 
 --
@@ -303,6 +304,10 @@ import qualified Shelley.Spec.Ledger.Scripts                 as Shelley
 import qualified Shelley.Spec.Ledger.TxData                  as Shelley
 import qualified Shelley.Spec.Ledger.Tx                      as Shelley
 import qualified Shelley.Spec.Ledger.UTxO                    as Shelley
+
+-- Types we will re-export as-is
+import           Shelley.Spec.Ledger.TxData
+                   (MIRPot(..))
 
 -- TODO: replace the above with
 --import qualified Cardano.Api.Byron   as Byron
@@ -448,15 +453,18 @@ data NetworkId
 data PaymentCredential
        = PaymentCredentialByKey    (Hash PaymentKey)
        | PaymentCredentialByScript (Hash Script)
+  deriving (Eq, Show)
 
 data StakeCredential
        = StakeCredentialByKey    (Hash StakeKey)
        | StakeCredentialByScript (Hash Script)
+  deriving (Eq, Show)
 
 data StakeAddressReference
        = StakeAddressByValue   StakeCredential
        | StakeAddressByPointer StakeAddressPointer
        | NoStakeAddress
+  deriving (Eq, Show)
 
 type StakeAddressPointer = Shelley.Ptr
 
@@ -765,13 +773,23 @@ data TxExtraContent =
        txProtocolUpdates :: Maybe ProtocolUpdates
      }
 
+txExtraContentEmpty :: TxExtraContent
+txExtraContentEmpty =
+    TxExtraContent {
+      txMetadata        = Nothing,
+      txWithdrawals     = [],
+      txCertificates    = [],
+      txProtocolUpdates = Nothing
+    }
+
 type TxMetadata = Map Word64 Shelley.MetaDatum
-data Certificate
+
 type ProtocolUpdates = Shelley.ProposedPPUpdates ShelleyCrypto
 
 type TxFee = Lovelace
 type TTL   = SlotNo
 
+type PoolId = Hash StakePoolKey
 
 makeShelleyTransaction :: TxExtraContent
                        -> TTL
@@ -797,9 +815,6 @@ makeShelleyTransaction TxExtraContent {
         (toShelleyUpdate <$> Shelley.maybeToStrictMaybe txProtocolUpdates)
         (Shelley.hashMetaData . toShelleyMetaData <$>
            Shelley.maybeToStrictMaybe txMetadata))
-
-toShelleyCertificate :: Certificate -> Shelley.DCert ShelleyCrypto
-toShelleyCertificate = error "TODO: toShelleyCertificate"
 
 toShelleyWdrl :: [(StakeAddress, Lovelace)] -> Shelley.Wdrl ShelleyCrypto
 toShelleyWdrl wdrls =
@@ -1158,10 +1173,133 @@ signShelleyTransaction txbody sks =
 data Script
 
 newtype instance Hash Script = ScriptHash (Shelley.ScriptHash ShelleyCrypto)
+  deriving (Eq, Ord, Show)
 
 
 makeScriptWitness :: TxBody Shelley -> Script -> Witness Shelley
 makeScriptWitness = undefined
+
+
+-- ----------------------------------------------------------------------------
+-- Certificates embedded in transactions
+--
+
+data Certificate =
+
+       CertificateStakeAddressRegistration
+         StakeCredential
+
+     | CertificateStakeAddressDeregistration
+         StakeCredential
+
+     | CertificateStakeAddressDelegation
+         StakeCredential
+         PoolId
+
+     | CertificateStakePoolRegistration
+         StakePoolParameters
+
+     | CertificateStakePoolRetirement
+         PoolId
+         EpochNo
+
+     | CertificateGenesisKeyDelegation
+         (Hash GenesisKey)
+         (Hash GenesisDelegateKey)
+         (Hash VrfKey)
+
+     | CertificateMIR
+         MIRPot
+         [(StakeCredential, Lovelace)]
+
+  deriving Show
+
+data StakePoolParameters = StakePoolParameters {
+       stakePoolId            :: PoolId,
+       stakePoolVRF           :: Hash VrfKey,
+       stakePoolCost          :: Lovelace,
+       stakePoolMargin        :: Rational,
+       stakePoolRewardAccount :: StakeCredential,
+       stakePoolPledge        :: Lovelace,
+       stakePoolOwners        :: [Hash StakeKey],
+       stakePoolRelays        :: [StakePoolRelay],
+       stakePoolMetadata      :: Maybe StakePoolMetadataReference
+     }
+  deriving (Eq, Show)
+
+data StakePoolRelay = StakePoolRelay
+  deriving (Eq, Show)
+{-TODO
+data StakePoolRelay
+  = -- | One or both of IPv4 & IPv6
+    SingleHostAddr !(StrictMaybe Port) !(StrictMaybe IPv4) !(StrictMaybe IPv6)
+  | -- | An @A@ or @AAAA@ DNS record
+    SingleHostName !(StrictMaybe Port) !DnsName
+  | -- | A @SRV@ DNS record
+    MultiHostName !DnsName
+-}
+
+data StakePoolMetadataReference = StakePoolMetadataReference
+  deriving (Eq, Show)
+{-TODO
+data PoolMetaData = PoolMetaData
+  { _poolMDUrl :: !Url,
+    _poolMDHash :: !ByteString
+  }
+-}
+
+toShelleyCertificate :: Certificate -> Shelley.DCert ShelleyCrypto
+toShelleyCertificate (CertificateStakeAddressRegistration stakecred) =
+    Shelley.DCertDeleg $
+      Shelley.RegKey
+        (toShelleyStakeCredential stakecred)
+
+toShelleyCertificate (CertificateStakeAddressDeregistration stakecred) =
+    Shelley.DCertDeleg $
+      Shelley.DeRegKey
+        (toShelleyStakeCredential stakecred)
+
+toShelleyCertificate (CertificateStakeAddressDelegation
+                        stakecred (StakePoolKeyHash poolid)) =
+    Shelley.DCertDeleg $
+      Shelley.Delegate $
+        Shelley.Delegation
+          (toShelleyStakeCredential stakecred)
+          poolid
+
+toShelleyCertificate (CertificateStakePoolRegistration poolparams) =
+    Shelley.DCertPool $
+      Shelley.RegPool
+        (toShelleyPoolParams poolparams)
+
+toShelleyCertificate (CertificateStakePoolRetirement
+                        (StakePoolKeyHash poolid) epochno) =
+    Shelley.DCertPool $
+      Shelley.RetirePool
+        poolid
+        epochno
+
+toShelleyCertificate (CertificateGenesisKeyDelegation
+                        (GenesisKeyHash         genesiskh)
+                        (GenesisDelegateKeyHash delegatekh)
+                        (VrfKeyHash             vrfkh)) =
+    Shelley.DCertGenesis $
+      Shelley.GenesisDelegCert
+        genesiskh
+        delegatekh
+        vrfkh
+
+toShelleyCertificate (CertificateMIR mirpot amounts) =
+    Shelley.DCertMir $
+      Shelley.MIRCert
+        mirpot
+        (Map.fromListWith (+)
+           [ (toShelleyStakeCredential sc, toShelleyLovelace v)
+           | (sc, v) <- amounts ])
+
+toShelleyPoolParams :: StakePoolParameters -> Shelley.PoolParams ShelleyCrypto
+toShelleyPoolParams = error "toShelleyPoolParams: TODO"
+
 
 
 -- ----------------------------------------------------------------------------
@@ -1532,6 +1670,7 @@ instance Key ByronKey where
       ByronKeyHash (Byron.hashKey vkey)
 
 newtype instance Hash ByronKey = ByronKeyHash Byron.KeyHash
+  deriving (Eq, Ord, Show)
 
 instance SerialiseAsRawBytes (Hash ByronKey) where
     serialiseToRawBytes (ByronKeyHash (Byron.KeyHash vkh)) =
@@ -1598,6 +1737,7 @@ instance Key PaymentKey where
 
 newtype instance Hash PaymentKey =
     PaymentKeyHash (Shelley.KeyHash Shelley.Payment ShelleyCrypto)
+  deriving (Eq, Ord, Show)
 
 instance SerialiseAsRawBytes (Hash PaymentKey) where
     serialiseToRawBytes (PaymentKeyHash (Shelley.KeyHash vkh)) =
@@ -1667,6 +1807,7 @@ instance Key StakeKey where
 
 newtype instance Hash StakeKey =
     StakeKeyHash (Shelley.KeyHash Shelley.Staking ShelleyCrypto)
+  deriving (Eq, Ord, Show)
 
 instance SerialiseAsRawBytes (Hash StakeKey) where
     serialiseToRawBytes (StakeKeyHash (Shelley.KeyHash vkh)) =
@@ -1730,6 +1871,7 @@ instance Key GenesisKey where
 
 newtype instance Hash GenesisKey =
     GenesisKeyHash (Shelley.KeyHash Shelley.Genesis ShelleyCrypto)
+  deriving (Eq, Ord, Show)
 
 instance SerialiseAsRawBytes (Hash GenesisKey) where
     serialiseToRawBytes (GenesisKeyHash (Shelley.KeyHash vkh)) =
@@ -1793,6 +1935,7 @@ instance Key GenesisDelegateKey where
 
 newtype instance Hash GenesisDelegateKey =
     GenesisDelegateKeyHash (Shelley.KeyHash Shelley.GenesisDelegate ShelleyCrypto)
+  deriving (Eq, Ord, Show)
 
 instance SerialiseAsRawBytes (Hash GenesisDelegateKey) where
     serialiseToRawBytes (GenesisDelegateKeyHash (Shelley.KeyHash vkh)) =
@@ -1865,6 +2008,7 @@ instance Key GenesisUTxOKey where
 
 newtype instance Hash GenesisUTxOKey =
     GenesisUTxOKeyHash (Shelley.KeyHash Shelley.Payment ShelleyCrypto)
+  deriving (Eq, Ord, Show)
 
 instance SerialiseAsRawBytes (Hash GenesisUTxOKey) where
     serialiseToRawBytes (GenesisUTxOKeyHash (Shelley.KeyHash vkh)) =
@@ -1929,6 +2073,7 @@ instance Key StakePoolKey where
 
 newtype instance Hash StakePoolKey =
     StakePoolKeyHash (Shelley.KeyHash Shelley.StakePool ShelleyCrypto)
+  deriving (Eq, Ord, Show)
 
 instance SerialiseAsRawBytes (Hash StakePoolKey) where
     serialiseToRawBytes (StakePoolKeyHash (Shelley.KeyHash vkh)) =
@@ -1992,6 +2137,7 @@ instance Key KesKey where
 newtype instance Hash KesKey =
     KesKeyHash (Crypto.Hash (Shelley.HASH ShelleyCrypto)
                             (Shelley.VerKeyKES ShelleyCrypto))
+  deriving (Eq, Ord, Show)
 
 instance SerialiseAsRawBytes (Hash KesKey) where
     serialiseToRawBytes (KesKeyHash vkh) =
@@ -2055,6 +2201,7 @@ instance Key VrfKey where
 newtype instance Hash VrfKey =
     VrfKeyHash (Crypto.Hash (Shelley.HASH ShelleyCrypto)
                             (Shelley.VerKeyVRF ShelleyCrypto))
+  deriving (Eq, Ord, Show)
 
 instance SerialiseAsRawBytes (Hash VrfKey) where
     serialiseToRawBytes (VrfKeyHash vkh) =
