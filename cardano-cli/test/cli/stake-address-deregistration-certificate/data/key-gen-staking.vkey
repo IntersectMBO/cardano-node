@@ -1,4 +1,4 @@
-type: VerificationKeyStakingShelley
-title: Free form text
+type: StakingVerificationKeyShelley
+title: Stake Verification Key
 cbor-hex:
- 18b958202e21d6d5d8d292a4037b1ae9554ec5d7d9ccf412583a2484b7d51ce9efc2a58f
+ 5820a316ee1fb7eba90ea002a683a4594892e8e3f85f96bf25e9a525e2a8c4656ec7
