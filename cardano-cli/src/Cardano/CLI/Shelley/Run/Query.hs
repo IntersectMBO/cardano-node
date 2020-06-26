@@ -133,8 +133,8 @@ runQueryTip network mOutFile = do
   tip <- liftIO $ withIOManager $ \iomgr ->
     getLocalTip iomgr ptclClientInfo network sockPath
   case mOutFile of
-    Just (OutputFile fpath) -> liftIO . writeFile fpath $ show tip
-    Nothing -> liftIO $ putTextLn (show tip)
+    Just (OutputFile fpath) -> liftIO . LBS.writeFile fpath $ encodePretty tip
+    Nothing -> liftIO $ LBS.putStrLn (encodePretty tip)
 
 
 runQueryUTxO
