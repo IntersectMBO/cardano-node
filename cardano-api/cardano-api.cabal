@@ -50,6 +50,7 @@ library
                       , bytestring
                       , cardano-binary
                       , cardano-config
+                      , cardano-crypto
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
                       , cardano-ledger
