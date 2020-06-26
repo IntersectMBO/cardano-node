@@ -7,7 +7,8 @@ Cardano Node
    :maxdepth: 3
    :titlesonly:
 
-   ../README
+   cardano-node README <../README>
+   cardano-node-quickstart.md
    building-the-node-using-nix
    building-the-node-from-source
    running-the-node-using-docker
