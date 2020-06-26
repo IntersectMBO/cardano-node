@@ -1,5 +1,4 @@
-{ system ? builtins.currentSystem
-, crossSystem ? null
+{ target ? builtins.currentSystem
 # allows to cutomize haskellNix (ghc and profiling, see ./nix/haskell.nix)
 , config ? {}
 # override scripts with custom configuration
@@ -10,11 +9,22 @@
 #   iohk-nix = ../iohk-nix;
 # }'
 , sourcesOverride ? {}
-# pinned version of nixpkgs augmented with overlays (iohk-nix and our packages).
-, pkgs ? import ./nix/default.nix { inherit system crossSystem config sourcesOverride gitrev; }
 # Git sha1 hash, to be passed when not building from a git work tree.
 , gitrev ? null
 }:
+let
+  systemTable = {
+    x86_64-windows = builtins.currentSystem;
+  };
+  crossSystemTable = {
+    x86_64-windows = (import ./nix {}).lib.systems.examples.mingwW64;
+  };
+  pkgs = import ./nix {
+    inherit config sourcesOverride gitrev;
+    system = systemTable.${target} or target;
+    crossSystem = crossSystemTable.${target} or target;
+  };
+in
 with pkgs; with commonLib;
 let
 
