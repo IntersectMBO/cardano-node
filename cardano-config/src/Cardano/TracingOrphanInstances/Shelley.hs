@@ -327,15 +327,11 @@ instance ToObject (PredicateFailure (PPUP c)) where
   toObject _verb (NonGenesisUpdatePPUP proposalKeys genesisKeys) =
     mkObject [ "kind" .= String "NonGenesisUpdatePPUP"
              , "keys" .= proposalKeys Set.\\ genesisKeys ]
-  toObject _verb (PPUpdateTooLatePPUP currSlot votesAllowedBoundSlot) =
-    mkObject [ "kind" .= String "PPUpdateTooLatePPUP"
-             , "currentSlotNo" .= currSlot
-             , "votesAllowedBoundSlotNo" .= votesAllowedBoundSlot
-             ]
-  toObject _verb (PPUpdateWrongEpoch currEpoch intendedEpoch) =
+  toObject _verb (PPUpdateWrongEpoch currEpoch intendedEpoch votingPeriod) =
     mkObject [ "kind" .= String "PPUpdateWrongEpoch"
              , "currentEpoch" .= currEpoch
              , "intendedEpoch" .= intendedEpoch
+             , "votingPeriod"  .= String (show votingPeriod)
              ]
   toObject _verb (PVCannotFollowPPUP badPv) =
     mkObject [ "kind" .= String "PVCannotFollowPPUP"

@@ -76,6 +76,7 @@ deriving newtype instance ToJSON (Ledger.Stake TPraosStandardCrypto)
 
 deriving anyclass instance ToJSON (Ledger.GenDelegs TPraosStandardCrypto)
 deriving anyclass instance ToJSON (Ledger.ProposedPPUpdates TPraosStandardCrypto)
+deriving anyclass instance ToJSON (Ledger.PPUPState TPraosStandardCrypto)
 deriving anyclass instance ToJSON (Ledger.StakePools TPraosStandardCrypto)
 
 deriving instance ToJSON Ledger.Ptr
