@@ -8,6 +8,7 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE NamedFieldPuns #-}
 
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -87,7 +88,7 @@ module Cardano.Api.Typed (
     TxIn(..),
     TxOut(..),
     TxIx,
-    Lovelace,
+    Lovelace(..),
     makeByronTransaction,
     makeShelleyTransaction,
     SlotNo,
@@ -439,16 +440,24 @@ data Address era where
        -> Shelley.StakeReference    ShelleyCrypto
        -> Address Shelley
 
+deriving instance Eq (Address Byron)
+deriving instance Show (Address Byron)
+
+deriving instance Eq (Address Shelley)
+deriving instance Show (Address Shelley)
+
 data StakeAddress where
 
      StakeAddress
        :: Shelley.Network
        -> Shelley.StakeCredential ShelleyCrypto
        -> StakeAddress
+  deriving (Eq, Show)
 
 data NetworkId
        = Mainnet
        | Testnet !NetworkMagic
+  deriving (Eq, Show)
 
 data PaymentCredential
        = PaymentCredentialByKey    (Hash PaymentKey)
@@ -606,6 +615,7 @@ toShelleyStakeReference  NoStakeAddress =
 --
 
 newtype TxId = TxId (Shelley.Hash ShelleyCrypto ())
+  deriving (Eq, Ord, Show)
                -- We use the Shelley representation and convert the Byron one
 
 instance HasTypeProxy TxId where
@@ -646,14 +656,20 @@ getTxId (ShelleyTxBody tx) =
 --
 
 data TxIn = TxIn TxId TxIx
---TODO  deriving (Show)
+
+deriving instance Eq TxIn
+deriving instance Show TxIn
 
 newtype TxIx = TxIx Word
   deriving stock (Eq, Ord, Show)
   deriving newtype (Enum)
 
 data TxOut era = TxOut (Address era) Lovelace
---TODO  deriving (Show)
+
+deriving instance Eq (TxOut Byron)
+deriving instance Eq (TxOut Shelley)
+deriving instance Show (TxOut Byron)
+deriving instance Show (TxOut Shelley)
 
 newtype Lovelace = Lovelace Integer
   deriving (Eq, Ord, Enum, Show)
