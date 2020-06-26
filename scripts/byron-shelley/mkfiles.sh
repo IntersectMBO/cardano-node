@@ -3,6 +3,42 @@
 set -e
 #set -x
 
+# This script sets up a cluster that starts out in Byron, and can transition to Shelley.
+#
+# The script generates all the files needed for the setup, and prints commands
+# to be run manually (to start the nodes, post transactions, etc.).
+#
+# There are three ways of triggering the transition to Shelley:
+# 1. Trigger transition at protocol version 2.0.0 (as on mainnet)
+#    The system starts at 0.0.0, and we can only increase it by 1 in the major
+#    version, so this does require to
+#    a) post an update proposal and votes to transition to 1.0.0
+#    b) wait for the protocol to change (end of the epoch, or end of the last
+#      epoch if it's posted near the end of the epoch)
+#    c) change configuration.yaml to have 'LastKnownBlockVersion-Major: 2',
+#      and restart the nodes
+#    d) post an update proposal and votes to transition to 2.0.0
+#    This is what will happen on the mainnet, so it's vital to test this, but
+#    it does contain some manual steps.
+# 2. Trigger transition at protocol version 2.0.0
+#    For testing purposes, we can also modify the system to do the transition to
+#    Shelley at protocol version 1.0.0, by uncommenting the line containing
+#    'TestShelleyHardForkAtEpoch' below. Then, we just need to execute step a)
+#    above in order to trigger the transition.
+#    This is still close to the procedure on the mainnet, and requires less
+#    manual steps.
+# 3. Schedule transition in the configuration
+#    To do this, uncomment the line containing 'TestShelleyHardForkAtEpoch'
+#    below. It's good for a quick test, and does not rely on posting update
+#    proposals to the chain.
+#    This is quite convenient, but it does not test that we can do the
+#    transition by posting update proposals to the network.
+#
+# TODO: The script allows transitioning to Shelley, but not yet to register a
+# pool and delegate, so all blocks will still be produced by the BFT nodes.
+# We will need CLI support for Byron witnesses in Shelley transactions to do
+#that.
+
 ROOT=example
 
 BFT_NODES="node-bft1 node-bft2"
@@ -16,6 +52,9 @@ ALL_NODES="${BFT_NODES} ${POOL_NODES}"
 NUM_UTXO_KEYS=1
 MAX_SUPPLY=1000000000
 INIT_SUPPLY=1000000000
+FUNDS_PER_GENESIS_ADDRESS=$((${INIT_SUPPLY} / ${NUM_BFT_NODES}))
+FUNDS_PER_BYRON_ADDRESS=$((${FUNDS_PER_GENESIS_ADDRESS} * 9 / 10))
+# We need to allow for a fee to transfer the funds out of the genesis.
 
 
 NETWORK_MAGIC=42
@@ -37,9 +76,21 @@ sed -i ${ROOT}/configuration.yaml \
     -e 's/minSeverity: Info/minSeverity: Debug/' \
     -e 's|GenesisFile: genesis.json|ByronGenesisFile: byron/genesis.json|' \
     -e '/ByronGenesisFile/ aShelleyGenesisFile: shelley/genesis.json' \
-    -e 's/RequiresNoMagic/RequiresMagic/'
+    -e 's/RequiresNoMagic/RequiresMagic/' \
+    -e 's/LastKnownBlockVersion-Major: 0/LastKnownBlockVersion-Major: 1/' \
+    -e 's/LastKnownBlockVersion-Minor: 2/LastKnownBlockVersion-Minor: 0/'
+# Options for making it easier to trigger the transition to Shelley
+# If neither of those are used, we have to
+# - post an update proposal + votes to go to protocol version 1
+# - after that's activated, change the configuration to have
+#   'LastKnownBlockVersion-Major: 2', and restart the nodes
+# - post another proposal + vote to go to protocol version 2
 
-# echo "TestShelleyHardForkAtEpoch: 2" >> ${ROOT}/configuration.yaml
+#uncomment this for an automatic transition after the first epoch
+# echo "TestShelleyHardForkAtEpoch: 1" >> ${ROOT}/configuration.yaml
+#uncomment this to trigger the hardfork with protocol version 1
+#echo "TestShelleyHardForkAtVersion: 1"  >> ${ROOT}/configuration.yaml
+
 
 pushd ${ROOT}
 
@@ -188,8 +239,8 @@ cardano-cli issue-genesis-utxo-expenditure \
             --byron-formats \
             --tx tx0.tx \
             --wallet-key byron/delegate-keys.000.key \
-            --rich-addr-from \"$(head -n 1 byron/genesis-address-000)\" \
-            --txout "(\"$(head -n 1 byron/address-000)\", 500000000)"
+            --rich-addr-from $(head -n 1 byron/genesis-address-000) \
+            --txout "(\"$(head -n 1 byron/address-000)\", $FUNDS_PER_BYRON_ADDRESS)"
 
 # Update Proposal and votes
 cardano-cli byron create-update-proposal \
@@ -199,7 +250,7 @@ cardano-cli byron create-update-proposal \
             --protocol-version-major 1 \
             --protocol-version-minor 0 \
             --protocol-version-alt 0 \
-            --application-name "Cardano" \
+            --application-name "cardano-sl" \
             --software-version-num 1 \
             --system-tag "linux" \
             --installer-hash 0
@@ -211,6 +262,27 @@ for N in ${BFT_NODES_N}; do
                 --signing-key byron/delegate-keys.00$((${N} - 1)).key \
                 --vote-yes \
                 --output-filepath update-vote.00$((${N} - 1))
+done
+
+cardano-cli byron create-update-proposal \
+            --filepath update-proposal-1 \
+            --testnet-magic 42 \
+            --signing-key byron/delegate-keys.000.key \
+            --protocol-version-major 2 \
+            --protocol-version-minor 0 \
+            --protocol-version-alt 0 \
+            --application-name "cardano-sl" \
+            --software-version-num 1 \
+            --system-tag "linux" \
+            --installer-hash 0
+
+for N in ${BFT_NODES_N}; do
+    cardano-cli byron create-proposal-vote \
+                --proposal-filepath update-proposal-1 \
+                --testnet-magic 42 \
+                --signing-key byron/delegate-keys.00$((${N} - 1)).key \
+                --vote-yes \
+                --output-filepath update-vote-1.00$((${N} - 1))
 done
 
 echo "====================================================================="
@@ -500,20 +572,31 @@ echo "  cardano-cli submit-tx \\"
 echo "    --testnet-magic 42 \\"
 echo "    --tx ${ROOT}/tx0.tx"
 echo
-echo "To submit the update proposal for the transition"
+echo "To submit the update proposal for the transition to version 1"
 echo
 echo "CARDANO_NODE_SOCKET_PATH=${ROOT}/node-bft1/node.sock \\"
-echo "  cardano-cli byron submit-update-proposal \\"
-echo "    --testnet-magic 42 \\"
-echo "    --filepath ${ROOT}/update-proposal"
+echo "  cardano-cli byron submit-update-proposal --testnet-magic 42 --filepath ${ROOT}/update-proposal"
 echo
 echo "To submit votes on the update proposal"
 echo
 for N in ${BFT_NODES_N}; do
     echo "CARDANO_NODE_SOCKET_PATH=${ROOT}/node-bft1/node.sock \\"
-    echo "cardano-cli byron submit-proposal-vote \\"
-    echo "    --testnet-magic 42 \\"
-    echo "    --filepath example/update-vote.00$((${N} - 1))"
+    echo "cardano-cli byron submit-proposal-vote  --testnet-magic 42 --filepath example/update-vote.00$((${N} - 1))"
+done
+echo
+echo "To submit the update proposal for the transition to version 2"
+echo "Make sure to wait until the protocol version has been set to 1.0.0"
+echo "Also, for this to be  endorsed, you will need to set "
+echo "'LastKnownBlockVersion-Major: 2' in configuration.yaml, and restart the nodes."
+echo
+echo "CARDANO_NODE_SOCKET_PATH=${ROOT}/node-bft1/node.sock \\"
+echo "  cardano-cli byron submit-update-proposal --testnet-magic 42 --filepath ${ROOT}/update-proposal-1"
+echo
+echo "To submit votes on the update proposal"
+echo
+for N in ${BFT_NODES_N}; do
+    echo "CARDANO_NODE_SOCKET_PATH=${ROOT}/node-bft1/node.sock \\"
+    echo "cardano-cli byron submit-proposal-vote  --testnet-magic 42 --filepath example/update-vote-1.00$((${N} - 1))"
 done
 echo
 echo "To submit the transaction that registers the pool, in the Shelley era"
