@@ -1,0 +1,4 @@
+type: SigningKeyShelley
+title: Payment Signing Key
+cbor-hex:
+ 5820279db234e473c362de1fe37b8a76d9a4bd11a4156d2e9462874b85e5e5282aa1

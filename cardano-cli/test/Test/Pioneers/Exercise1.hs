@@ -33,7 +33,7 @@ prop_buildShelleyPaymentAddress =
                                , "--signing-key-file", signKey
                                ]
 
-    doFilesExist [verKey, signKey]
+    assertFilesExist [verKey, signKey]
 
     -- Build shelley payment address
     execCardanoCLIParser
@@ -82,7 +82,7 @@ prop_buildShelleyStakeAddress =
                                , "--signing-key-file", stakeSignKey
                                ]
 
-    doFilesExist allFiles
+    assertFilesExist allFiles
 
     -- Build shelley stake address
     execCardanoCLIParser

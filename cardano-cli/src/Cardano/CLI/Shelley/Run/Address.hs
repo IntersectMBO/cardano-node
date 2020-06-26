@@ -46,7 +46,7 @@ renderShelleyAddressCmdError err =
 runAddressCmd :: AddressCmd -> ExceptT ShelleyAddressCmdError IO ()
 runAddressCmd cmd =
   case cmd of
-    AddressKeyGen vkf skf -> runAddressKeyGen  vkf skf
+    AddressKeyGen vkf skf -> runAddressKeyGen vkf skf
     AddressKeyHash vkf mOFp -> runAddressKeyHash vkf mOFp
     AddressBuild payVk stkVk nw mOutFp -> runAddressBuild payVk stkVk nw mOutFp
     AddressBuildMultiSig {} -> runAddressBuildMultiSig

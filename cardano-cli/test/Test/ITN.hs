@@ -43,7 +43,7 @@ prop_convertITNKeys =
     -- Write ITN keys to disk
     liftIO $ writeFile itnVerKeyFp itnVerKey
     liftIO $ writeFile itnSignKeyFp itnSignKey
-    doFilesExist [itnVerKeyFp, itnSignKeyFp]
+    assertFilesExist [itnVerKeyFp, itnSignKeyFp]
 
     -- Generate haskell stake verification key
     execCardanoCLIParser
@@ -63,7 +63,7 @@ prop_convertITNKeys =
                                ]
 
     -- Check for existence of the converted ITN keys
-    doFilesExist [outputHaskellVerKeyFp, outputHaskellSignKeyFp]
+    assertFilesExist [outputHaskellVerKeyFp, outputHaskellSignKeyFp]
 
     liftIO $ fileCleanup allFiles
 
