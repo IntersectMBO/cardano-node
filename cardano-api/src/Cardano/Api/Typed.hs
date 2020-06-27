@@ -1065,36 +1065,24 @@ makeShelleyBootstrapWitness nw (ShelleyTxBody txbody) (ByronSigningKey sk) =
     signature :: Shelley.SignedDSIGN ShelleyCrypto
                   (Shelley.Hash ShelleyCrypto (Shelley.TxBody ShelleyCrypto))
     signature = fromByronSignature $
-                  Byron.sign
-                    (toByronProtocolMagicId nw)
-                    Byron.SignTx
-                    sk
-                    (Byron.TxSigData (toByronHash txhash))
+                  Byron.Crypto.Wallet.sign
+                    BS.empty  -- passphrase for (unused) in-mem encryption
+                    (Byron.unSigningKey sk)
+                    (Crypto.getHash txhash)
 
     txhash :: Shelley.Hash ShelleyCrypto (Shelley.TxBody ShelleyCrypto)
     txhash = Crypto.hash txbody
 
-    -- The Byron crypto signing code wants a Byron hash of a Byron tx body
-    -- but we have a Shelley hash of a Shelley tx body. Of course the
-    -- representations are the same, but we have to do some type conversions.
-    --
-    toByronHash :: Shelley.Hash ShelleyCrypto (Shelley.TxBody ShelleyCrypto)
-                -> Byron.Hash Byron.Tx
-    toByronHash = Byron.unsafeAbstractHashFromBytes
-                . Crypto.getHash
-                . Crypto.castHash
-
     -- The crypto lib types are different so we also have to convert the type
     -- of the resulting signature.
     --
-    fromByronSignature :: Byron.Signature a
+    fromByronSignature :: Byron.Crypto.Wallet.XSignature
                        -> Shelley.SignedDSIGN ShelleyCrypto b
     fromByronSignature =
         Crypto.SignedDSIGN
       . fromMaybe impossible
       . Crypto.rawDeserialiseSigDSIGN
       . Byron.Crypto.Wallet.unXSignature
-      . (\(Byron.Signature sig) -> sig)
 
     impossible =
       error "fromByronSignature: byron and shelley signature sizes do not match"
