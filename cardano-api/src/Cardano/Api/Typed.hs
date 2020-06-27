@@ -1451,7 +1451,7 @@ type TextEnvelopeDescr = TextView.TextViewTitle
 class SerialiseAsCBOR a => HasTextEnvelope a where
     textEnvelopeType :: AsType a -> TextEnvelopeType
 
-    textEnvelopeDefaultDescr :: AsType a -> TextEnvelopeDescr
+    textEnvelopeDefaultDescr :: a -> TextEnvelopeDescr
     textEnvelopeDefaultDescr _ = ""
 
 type TextEnvelopeError = TextView.TextViewError
@@ -1474,7 +1474,7 @@ serialiseToTextEnvelope :: forall a. HasTextEnvelope a
 serialiseToTextEnvelope mbDescr a =
     TextView.TextView {
       TextView.tvType    = textEnvelopeType ttoken
-    , TextView.tvTitle   = fromMaybe (textEnvelopeDefaultDescr ttoken) mbDescr
+    , TextView.tvTitle   = fromMaybe (textEnvelopeDefaultDescr a) mbDescr
     , TextView.tvRawCBOR = serialiseToCBOR a
     }
   where
