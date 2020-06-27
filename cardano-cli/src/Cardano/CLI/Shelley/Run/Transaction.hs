@@ -47,6 +47,7 @@ data ShelleyTxCmdError
   | ShelleyTxReadUpdateError !ApiError
   | ShelleyTxReadUnsignedTxError !(Api.FileError Api.TextEnvelopeError)
   | ShelleyTxCertReadError !FilePath !ApiError
+  | ShelleyTxCertReadError' !(Api.FileError Api.TextEnvelopeError)
   | ShelleyTxWriteSignedTxError !(Api.FileError ())
   | ShelleyTxWriteUnsignedTxError !(Api.FileError ())
   | ShelleyTxSubmitError !TxSubmitResult
@@ -71,6 +72,8 @@ renderShelleyTxCmdError err =
       "Error while decoding the protocol parameters at: " <> textShow fp <> " Error: " <> textShow decErr
     ShelleyTxCertReadError fp apiErr ->
       "Error reading shelley certificate at: " <> textShow fp <> " Error: " <> renderApiError apiErr
+    ShelleyTxCertReadError' err' ->
+      "Error reading shelley certificate at: " <> Text.pack (Api.displayError err')
     ShelleyTxWriteSignedTxError err' ->
       "Error while writing signed shelley tx: " <> Text.pack (Api.displayError err')
     ShelleyTxWriteUnsignedTxError err' ->
@@ -108,16 +111,22 @@ runTxBuildRaw
   -> TxBodyFile
   -> ExceptT ShelleyTxCmdError IO ()
 runTxBuildRaw txins txouts ttl fee
-              _certFps@[] _wdrls _mMetaData@Nothing _mUpdateProp@Nothing
+              certFiles _wdrls _mMetaData@Nothing _mUpdateProp@Nothing
               (TxBodyFile fpath) = do
 
-    --TODO: reinstate withdrawal, certs, metadata and protocol updates
-    --_certs <- mapM readShelleyCert certFps
+    --TODO: reinstate withdrawal, metadata and protocol updates
     --mUpProp <- maybeUpdate mUpdateProp
     --txMetadata <- maybeMetaData mMetaData
 
+    certs <- sequence
+               [ firstExceptT ShelleyTxCertReadError' . newExceptT $
+                   Api.readFileTextEnvelope Api.AsCertificate certFile
+               | CertificateFile certFile <- certFiles ]
+
     let txBody = Api.makeShelleyTransaction
-                   Api.txExtraContentEmpty
+                   Api.txExtraContentEmpty {
+                     Api.txCertificates = certs
+                   }
                    ttl
                    fee
                    txins

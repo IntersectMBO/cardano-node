@@ -94,6 +94,7 @@ module Cardano.Api.Typed (
     SlotNo,
     TxExtraContent(..),
     txExtraContentEmpty,
+    Certificate,
 
     -- * Signing transactions
     -- | Creating transaction witnesses one by one, or all in one go.
@@ -120,10 +121,15 @@ module Cardano.Api.Typed (
     -- | Certificates that are embedded in transactions for registering and
     -- unregistering stake address, and for setting the stake pool delegation
     -- choice for a stake address.
+    makeStakeAddressRegistrationCertificate,
+    makeStakeAddressDeregistrationCertificate,
+    makeStakeAddressDelegationCertificate,
 
     -- * Registering stake pools
     -- | Certificates that are embedded in transactions for registering and
     -- retiring stake pools. This incldes updating the stake pool parameters.
+    makeStakePoolRegistrationCertificate,
+    makeStakePoolRetirementCertificate,
 
     -- * Scripts
     -- | Both 'PaymentCredential's and 'StakeCredential's can use scripts.
@@ -218,6 +224,8 @@ module Cardano.Api.Typed (
     -- * Special transactions
     -- | There are various additional things that can be embedded in a
     -- transaction for special operations.
+    makeMIRCertificate,
+    makeGenesisKeyDelegationCertificate,
 
   ) where
 
@@ -827,7 +835,7 @@ makeShelleyTransaction TxExtraContent {
       (Shelley.TxBody
         (Set.fromList (map toShelleyTxIn ins))
         (Seq.fromList (map toShelleyTxOut outs))
-        (Seq.fromList (map toShelleyCertificate txCertificates))
+        (Seq.fromList [ cert | Certificate cert <- txCertificates ])
         (toShelleyWdrl txWithdrawals)
         (toShelleyLovelace fee)
         ttl
@@ -1164,35 +1172,103 @@ makeShelleyScriptWitness = undefined
 -- Certificates embedded in transactions
 --
 
-data Certificate =
+newtype Certificate = Certificate (Shelley.DCert ShelleyCrypto)
+  deriving stock (Eq, Show)
+  deriving newtype (ToCBOR, FromCBOR)
+  deriving anyclass SerialiseAsCBOR
 
-       CertificateStakeAddressRegistration
-         StakeCredential
+instance HasTypeProxy Certificate where
+    data AsType Certificate = AsCertificate
+    proxyToAsType _ = AsCertificate
 
-     | CertificateStakeAddressDeregistration
-         StakeCredential
+instance HasTextEnvelope Certificate where
+    textEnvelopeType _ = "Certificate"
+    textEnvelopeDefaultDescr (Certificate cert) = case cert of
+      Shelley.DCertDeleg (Shelley.RegKey {})    -> "Stake address registration"
+      Shelley.DCertDeleg (Shelley.DeRegKey {})  -> "Stake address de-registration"
+      Shelley.DCertDeleg (Shelley.Delegate {})  -> "Stake address delegation"
+      Shelley.DCertPool (Shelley.RegPool {})    -> "Pool registration"
+      Shelley.DCertPool (Shelley.RetirePool {}) -> "Pool retirement"
+      Shelley.DCertGenesis{}                    -> "Genesis key delegation"
+      Shelley.DCertMir{}                        -> "MIR"
 
-     | CertificateStakeAddressDelegation
-         StakeCredential
-         PoolId
+makeStakeAddressRegistrationCertificate
+  :: StakeCredential
+  -> Certificate
+makeStakeAddressRegistrationCertificate stakecred =
+    Certificate
+  . Shelley.DCertDeleg
+  $ Shelley.RegKey
+      (toShelleyStakeCredential stakecred)
 
-     | CertificateStakePoolRegistration
-         StakePoolParameters
+makeStakeAddressDeregistrationCertificate
+  :: StakeCredential
+  -> Certificate
+makeStakeAddressDeregistrationCertificate stakecred =
+    Certificate
+  . Shelley.DCertDeleg
+  $ Shelley.DeRegKey
+      (toShelleyStakeCredential stakecred)
 
-     | CertificateStakePoolRetirement
-         PoolId
-         EpochNo
+makeStakeAddressDelegationCertificate
+  :: StakeCredential
+  -> PoolId
+  -> Certificate
+makeStakeAddressDelegationCertificate stakecred (StakePoolKeyHash poolid) =
+    Certificate
+  . Shelley.DCertDeleg
+  . Shelley.Delegate
+  $ Shelley.Delegation
+      (toShelleyStakeCredential stakecred)
+      poolid
 
-     | CertificateGenesisKeyDelegation
-         (Hash GenesisKey)
-         (Hash GenesisDelegateKey)
-         (Hash VrfKey)
+makeGenesisKeyDelegationCertificate
+  :: Hash GenesisKey
+  -> Hash GenesisDelegateKey
+  -> Hash VrfKey
+  -> Certificate
+makeGenesisKeyDelegationCertificate (GenesisKeyHash         genesiskh)
+                                    (GenesisDelegateKeyHash delegatekh)
+                                    (VrfKeyHash             vrfkh) =
+    Certificate
+  . Shelley.DCertGenesis
+  $ Shelley.GenesisDelegCert
+      genesiskh
+      delegatekh
+      vrfkh
 
-     | CertificateMIR
-         MIRPot
-         [(StakeCredential, Lovelace)]
+makeMIRCertificate
+  :: MIRPot
+  -> [(StakeCredential, Lovelace)]
+  -> Certificate
+makeMIRCertificate mirpot amounts =
+    Certificate
+  . Shelley.DCertMir
+  $ Shelley.MIRCert
+      mirpot
+      (Map.fromListWith (+)
+         [ (toShelleyStakeCredential sc, toShelleyLovelace v)
+         | (sc, v) <- amounts ])
 
-  deriving Show
+makeStakePoolRegistrationCertificate
+  :: StakePoolParameters
+  -> Certificate
+makeStakePoolRegistrationCertificate poolparams =
+    Certificate
+  . Shelley.DCertPool
+  $ Shelley.RegPool
+      (toShelleyPoolParams poolparams)
+
+makeStakePoolRetirementCertificate
+  :: PoolId
+  -> EpochNo
+  -> Certificate
+makeStakePoolRetirementCertificate (StakePoolKeyHash poolid) epochno =
+    Certificate
+  . Shelley.DCertPool
+  $ Shelley.RetirePool
+      poolid
+      epochno
 
 data StakePoolParameters = StakePoolParameters {
        stakePoolId            :: PoolId,
@@ -1228,54 +1304,6 @@ data PoolMetaData = PoolMetaData
   }
 -}
 
-toShelleyCertificate :: Certificate -> Shelley.DCert ShelleyCrypto
-toShelleyCertificate (CertificateStakeAddressRegistration stakecred) =
-    Shelley.DCertDeleg $
-      Shelley.RegKey
-        (toShelleyStakeCredential stakecred)
-
-toShelleyCertificate (CertificateStakeAddressDeregistration stakecred) =
-    Shelley.DCertDeleg $
-      Shelley.DeRegKey
-        (toShelleyStakeCredential stakecred)
-
-toShelleyCertificate (CertificateStakeAddressDelegation
-                        stakecred (StakePoolKeyHash poolid)) =
-    Shelley.DCertDeleg $
-      Shelley.Delegate $
-        Shelley.Delegation
-          (toShelleyStakeCredential stakecred)
-          poolid
-
-toShelleyCertificate (CertificateStakePoolRegistration poolparams) =
-    Shelley.DCertPool $
-      Shelley.RegPool
-        (toShelleyPoolParams poolparams)
-
-toShelleyCertificate (CertificateStakePoolRetirement
-                        (StakePoolKeyHash poolid) epochno) =
-    Shelley.DCertPool $
-      Shelley.RetirePool
-        poolid
-        epochno
-
-toShelleyCertificate (CertificateGenesisKeyDelegation
-                        (GenesisKeyHash         genesiskh)
-                        (GenesisDelegateKeyHash delegatekh)
-                        (VrfKeyHash             vrfkh)) =
-    Shelley.DCertGenesis $
-      Shelley.GenesisDelegCert
-        genesiskh
-        delegatekh
-        vrfkh
-
-toShelleyCertificate (CertificateMIR mirpot amounts) =
-    Shelley.DCertMir $
-      Shelley.MIRCert
-        mirpot
-        (Map.fromListWith (+)
-           [ (toShelleyStakeCredential sc, toShelleyLovelace v)
-           | (sc, v) <- amounts ])
 
 toShelleyPoolParams :: StakePoolParameters -> Shelley.PoolParams ShelleyCrypto
 toShelleyPoolParams = error "toShelleyPoolParams: TODO"
