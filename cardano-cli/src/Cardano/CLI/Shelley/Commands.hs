@@ -39,6 +39,7 @@ import           Data.Text (Text)
 
 import           Cardano.Api
 import           Cardano.Api.Shelley.OCert (KESPeriod(..))
+import qualified Cardano.Api.Typed as Typed
 import           Cardano.Slotting.Slot (EpochNo (..))
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
 
@@ -92,16 +93,16 @@ data StakeAddressCmd
 
 data TransactionCmd
   = TxBuildRaw
-      [TxIn]
-      [TxOut]
+      [Typed.TxIn]
+      [Typed.TxOut Typed.Shelley]
       SlotNo
-      Lovelace
+      Typed.Lovelace
       [CertificateFile]
       Withdrawals
       (Maybe MetaDataFile)
       (Maybe UpdateProposalFile)
       TxBodyFile
-  | TxSign TxBodyFile [SigningKeyFile] Network TxFile
+  | TxSign TxBodyFile [SigningKeyFile] (Maybe Typed.NetworkId) TxFile
   | TxWitness       -- { transaction :: Transaction, key :: PrivKeyFile, nodeAddr :: NodeAddress }
   | TxSignWitness   -- { transaction :: Transaction, witnesses :: [Witness], nodeAddr :: NodeAddress }
   | TxCheck         -- { transaction :: Transaction, nodeAddr :: NodeAddress }

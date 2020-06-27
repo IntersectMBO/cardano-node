@@ -10,7 +10,8 @@ import           Prelude (String)
 import           Cardano.Prelude hiding (option)
 
 import           Control.Monad.Fail (fail)
-import qualified Data.ByteString.Char8 as C8
+import qualified Data.ByteString.Char8 as BSC
+import qualified Data.Char as Char
 import qualified Data.IP as IP
 import qualified Data.Map as Map
 import qualified Data.Set as Set
@@ -19,14 +20,16 @@ import           Data.Time.Clock (UTCTime)
 import           Data.Time.Format (defaultTimeLocale, iso8601DateFormat, parseTimeOrError)
 import           Options.Applicative (Parser)
 import qualified Options.Applicative as Opt
+import qualified Data.Attoparsec.ByteString.Char8 as Atto
 
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
 import qualified Shelley.Spec.Ledger.BaseTypes as Shelley
 import qualified Shelley.Spec.Ledger.Coin as Shelley
 import qualified Shelley.Spec.Ledger.TxData as Shelley
 
-import           Cardano.Api
+import           Cardano.Api hiding (parseTxIn, parseTxOut)
 import           Cardano.Api.Shelley.OCert (KESPeriod(..))
+import qualified Cardano.Api.Typed as Typed
 import           Cardano.Slotting.Slot (EpochNo (..))
 
 import           Cardano.Config.Types (CertificateFile (..), MetaDataFile(..), SigningKeyFile(..),
@@ -277,7 +280,7 @@ pTransaction =
     pTransactionSign  :: Parser TransactionCmd
     pTransactionSign = TxSign <$> pTxBodyFile Input
                               <*> pSomeSigningKeyFiles
-                              <*> pNetwork
+                              <*> optional pNetworkId
                               <*> pTxFile Output
 
     pTransactionWitness :: Parser TransactionCmd
@@ -999,6 +1002,17 @@ pNetwork :: Parser Network
 pNetwork =
   pMainnet <|> fmap Testnet pTestnetMagic
 
+pNetworkId :: Parser Typed.NetworkId
+pNetworkId =
+  pMainnet' <|> fmap Typed.Testnet pTestnetMagic
+ where
+   pMainnet' :: Parser Typed.NetworkId
+   pMainnet' =
+    Opt.flag' Typed.Mainnet
+      (  Opt.long "mainnet"
+      <> Opt.help "Use the mainnet magic id."
+      )
+
 pMainnet :: Parser Network
 pMainnet =
   Opt.flag' Mainnet
@@ -1024,21 +1038,49 @@ pTxSubmitFile =
     <> Opt.completer (Opt.bashCompleter "file")
     )
 
-pTxIn :: Parser TxIn
+pTxIn :: Parser Typed.TxIn
 pTxIn =
-  Opt.option (Opt.eitherReader (parseTxIn . Text.pack))
+  Opt.option (Opt.eitherReader (Atto.parseOnly parseTxIn . BSC.pack))
     (  Opt.long "tx-in"
     <> Opt.metavar "TX-IN"
     <> Opt.help "The input transaction as TxId#TxIx where TxId is the transaction hash and TxIx is the index."
     )
+  where
+    parseTxIn :: Atto.Parser Typed.TxIn
+    parseTxIn = Typed.TxIn <$> parseTxId <*> (Atto.char '#' *> parseTxIx)
 
-pTxOut :: Parser TxOut
+    parseTxId :: Atto.Parser Typed.TxId
+    parseTxId = do
+      bstr <- Atto.takeWhile1 Char.isHexDigit
+      case Typed.deserialiseFromRawBytesHex Typed.AsTxId bstr of
+        Just addr -> return addr
+        Nothing -> fail $ "Incorrect transaction id format:: " ++ show bstr
+
+    parseTxIx :: Atto.Parser Typed.TxIx
+    parseTxIx = toEnum <$> Atto.decimal
+
+
+pTxOut :: Parser (Typed.TxOut Typed.Shelley)
 pTxOut =
-  Opt.option (Opt.eitherReader (parseTxOut . Text.pack))
+  Opt.option (Opt.eitherReader (Atto.parseOnly parseTxOut . BSC.pack))
     (  Opt.long "tx-out"
     <> Opt.metavar "TX-OUT"
     <> Opt.help "The ouput transaction as TxOut+Lovelace where TxOut is the hex encoded address followed by the amount in Lovelace."
     )
+  where
+    parseTxOut :: Atto.Parser (Typed.TxOut Typed.Shelley)
+    parseTxOut =
+      Typed.TxOut <$> parseAddress <* Atto.char '+' <*> parseLovelace
+
+    parseAddress :: Atto.Parser (Typed.Address Typed.Shelley)
+    parseAddress = do
+      bstr <- Atto.takeWhile1 Char.isHexDigit
+      case Typed.deserialiseFromRawBytesHex Typed.AsShelleyAddress bstr of
+        Just addr -> return addr
+        Nothing -> fail $ "Incorrect address format: " ++ show bstr
+
+    parseLovelace :: Atto.Parser Typed.Lovelace
+    parseLovelace = Typed.Lovelace <$> Atto.decimal
 
 pTxTTL :: Parser SlotNo
 pTxTTL =
@@ -1049,9 +1091,9 @@ pTxTTL =
       <> Opt.help "Time to live (in slots)."
       )
 
-pTxFee :: Parser Lovelace
+pTxFee :: Parser Typed.Lovelace
 pTxFee =
-  Lovelace <$>
+  Typed.Lovelace . (fromIntegral :: Natural -> Integer) <$>
     Opt.option Opt.auto
       (  Opt.long "fee"
       <> Opt.metavar "LOVELACE"
@@ -1350,7 +1392,7 @@ pPoolMetaDataHash =
         )
   where
     getHashFromHexString :: String -> Maybe (Hash Blake2b_256 ByteString)
-    getHashFromHexString = hashFromBytesAsHex . C8.pack
+    getHashFromHexString = hashFromBytesAsHex . BSC.pack
 
     metadataHash :: String -> Maybe ByteString
     metadataHash str = getHash <$> getHashFromHexString str
@@ -1559,7 +1601,7 @@ pExtraEntropy =
            )
   where
     nonceHash :: String -> Maybe Nonce
-    nonceHash str = Nonce <$> (hashFromBytes $ C8.pack str)
+    nonceHash str = Nonce <$> (hashFromBytes $ BSC.pack str)
 
 pProtocolVersion :: Parser (Maybe ProtVer)
 pProtocolVersion =

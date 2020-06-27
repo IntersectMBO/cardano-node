@@ -61,6 +61,7 @@ library
   build-depends:       base >=4.12 && <5
                      , aeson
                      , aeson-pretty
+                     , attoparsec
                      , bech32
                      , bytestring
                      , base16-bytestring
