@@ -98,7 +98,7 @@ data TransactionCmd
       SlotNo
       Typed.Lovelace
       [CertificateFile]
-      Withdrawals
+      [(Typed.StakeAddress, Typed.Lovelace)]
       (Maybe MetaDataFile)
       (Maybe UpdateProposalFile)
       TxBodyFile
@@ -114,7 +114,7 @@ data TransactionCmd
       Network
       [SigningKeyFile]
       [CertificateFile]
-      Withdrawals
+      [(Typed.StakeAddress, Typed.Lovelace)]
       HasMetaData
       ProtocolParamsFile
   | TxGetTxId TxBodyFile

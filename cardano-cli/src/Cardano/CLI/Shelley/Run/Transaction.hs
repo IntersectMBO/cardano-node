@@ -95,13 +95,13 @@ runTxBuildRaw
   -> SlotNo
   -> Api.Lovelace
   -> [CertificateFile]
-  -> Withdrawals
+  -> [(Api.StakeAddress, Api.Lovelace)]
   -> Maybe MetaDataFile
   -> Maybe UpdateProposalFile
   -> TxBodyFile
   -> ExceptT ShelleyTxCmdError IO ()
 runTxBuildRaw txins txouts ttl fee
-              certFiles _wdrls _mMetaData@Nothing _mUpdateProp@Nothing
+              certFiles withdrawals _mMetaData@Nothing _mUpdateProp@Nothing
               (TxBodyFile fpath) = do
 
     --TODO: reinstate withdrawal, metadata and protocol updates
@@ -115,7 +115,8 @@ runTxBuildRaw txins txouts ttl fee
 
     let txBody = Api.makeShelleyTransaction
                    Api.txExtraContentEmpty {
-                     Api.txCertificates = certs
+                     Api.txCertificates = certs,
+                     Api.txWithdrawals  = withdrawals
                    }
                    ttl
                    fee
@@ -191,7 +192,7 @@ runTxCalculateMinFee
   -> Network
   -> [SigningKeyFile]
   -> [CertificateFile]
-  -> Withdrawals
+  -> [(Api.StakeAddress, Api.Lovelace)]
   -> HasMetaData
   -> ProtocolParamsFile
   -> ExceptT ShelleyTxCmdError IO ()

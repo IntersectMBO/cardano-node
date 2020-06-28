@@ -13,7 +13,6 @@ import           Control.Monad.Fail (fail)
 import qualified Data.ByteString.Char8 as BSC
 import qualified Data.Char as Char
 import qualified Data.IP as IP
-import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified Data.Text as Text
 import           Data.Time.Clock (UTCTime)
@@ -27,7 +26,7 @@ import qualified Shelley.Spec.Ledger.BaseTypes as Shelley
 import qualified Shelley.Spec.Ledger.Coin as Shelley
 import qualified Shelley.Spec.Ledger.TxData as Shelley
 
-import           Cardano.Api hiding (parseTxIn, parseTxOut)
+import           Cardano.Api hiding (parseTxIn, parseTxOut, parseWithdrawal)
 import           Cardano.Api.Shelley.OCert (KESPeriod(..))
 import qualified Cardano.Api.Typed as Typed
 import           Cardano.Slotting.Slot (EpochNo (..))
@@ -272,7 +271,7 @@ pTransaction =
                                    <*> pTxTTL
                                    <*> pTxFee
                                    <*> many pCertificateFile
-                                   <*> pWithdrawals
+                                   <*> many pWithdrawal
                                    <*> optional pMetaDataFile
                                    <*> optional pUpdateProposalFile
                                    <*> pTxBodyFile Output
@@ -305,7 +304,7 @@ pTransaction =
         <*> pNetwork
         <*> pSomeSigningKeyFiles
         <*> many pCertificateFile
-        <*> pWithdrawals
+        <*> many pWithdrawal
         <*> pHasMetaData
         <*> pProtocolParamsFile
 
@@ -732,26 +731,30 @@ pMetaDataFile =
       <> Opt.completer (Opt.bashCompleter "file")
       )
 
-pWithdrawals :: Parser Withdrawals
-pWithdrawals =
-    WithdrawalsShelley . Shelley.Wdrl . Map.fromList <$> many pWithdrawal
+pWithdrawal :: Parser (Typed.StakeAddress, Typed.Lovelace)
+pWithdrawal =
+    Opt.option (Opt.eitherReader (Atto.parseOnly parseWithdrawal . BSC.pack))
+      (  Opt.long "withdrawal"
+      <> Opt.metavar "WITHDRAWAL"
+      <> Opt.help "The reward withdrawal as StakeAddress+Lovelace where \
+                  \StakeAddress is the hex encoded stake address \
+                  \followed by the amount in Lovelace."
+      )
   where
-    pWithdrawal =
-      bimap getShelleyRewardAccount toShelleyLovelace <$>
-        Opt.option (Opt.eitherReader (parseWithdrawal . Text.pack))
-          (  Opt.long "withdrawal"
-          <> Opt.metavar "WITHDRAWAL"
-          <> Opt.help "The reward withdrawal as StakeAddress+Lovelace where \
-                      \StakeAddress is the hex encoded stake address \
-                      \followed by the amount in Lovelace."
-          )
+    parseWithdrawal :: Atto.Parser (Typed.StakeAddress, Typed.Lovelace)
+    parseWithdrawal =
+      (,) <$> parseStakeAddress <* Atto.char '+' <*> parseLovelace
 
-    getShelleyRewardAccount :: Address -> ShelleyRewardAccount
-    getShelleyRewardAccount (AddressShelleyReward rwdAcnt) = rwdAcnt
-    getShelleyRewardAccount _ =
-      panic "pWithdrawals.getShelleyRewardAccount: Impossible: \
-            \parseWithdrawal parsed an Address that is not an \
-            \AddressShelleyReward"
+    parseStakeAddress :: Atto.Parser Typed.StakeAddress
+    parseStakeAddress = do
+      bstr <- Atto.takeWhile1 Char.isHexDigit
+      case Typed.deserialiseFromRawBytesHex Typed.AsStakeAddress bstr of
+        Just addr -> return addr
+        Nothing -> fail $ "Incorrect stake address format: " ++ show bstr
+
+    parseLovelace :: Atto.Parser Typed.Lovelace
+    parseLovelace = Typed.Lovelace <$> Atto.decimal
+
 
 pHasMetaData :: Parser HasMetaData
 pHasMetaData =
