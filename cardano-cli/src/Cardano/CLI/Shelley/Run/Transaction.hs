@@ -21,20 +21,10 @@ import           Cardano.Config.Types (CertificateFile (..))
 
 import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra
-                   (firstExceptT, handleIOExceptT, hoistEither,
-                    left, newExceptT)
+                   (firstExceptT, left, newExceptT)
 
-import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Char8 as BS
-import qualified Data.ByteString.Lazy.Char8 as LBS
---import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
-
---import qualified Shelley.Spec.Ledger.Address as Shelley
---import qualified Ouroboros.Consensus.Shelley.Protocol.Crypto as Shelley
---import           Shelley.Spec.Ledger.MetaData (hashMetaData)
-import           Shelley.Spec.Ledger.PParams (PParams)
---import qualified Shelley.Spec.Ledger.PParams as Shelley
 
 
 data ShelleyTxCmdError
@@ -205,6 +195,10 @@ runTxCalculateMinFee
   -> HasMetaData
   -> ProtocolParamsFile
   -> ExceptT ShelleyTxCmdError IO ()
+runTxCalculateMinFee =
+    panic "TODO: runTxCalculateMinFee"
+    --TODO reinstate on top of new API
+{-
 runTxCalculateMinFee (TxInCount txInCount) (TxOutCount txOutCount)
                      txTtl network skFiles certFiles wdrls hasMD
                      pParamsFile = do
@@ -226,19 +220,7 @@ runTxCalculateMinFee (TxInCount txInCount) (TxOutCount txOutCount)
         certs
         wdrls
         hasMD
-
-readProtocolParameters :: ProtocolParamsFile -> ExceptT ShelleyTxCmdError IO PParams
-readProtocolParameters (ProtocolParamsFile fpath) = do
-  pparams <- handleIOExceptT (ShelleyTxReadProtocolParamsError fpath) $ LBS.readFile fpath
-  firstExceptT (ShelleyTxAesonDecodeProtocolParamsError fpath . Text.pack) . hoistEither $
-    Aeson.eitherDecode' pparams
-
--- TODO: This should exist in its own module along with
--- a custom error type and an error rendering function.
-readShelleyCert :: CertificateFile -> ExceptT ShelleyTxCmdError IO Certificate
-readShelleyCert (CertificateFile fp) =
-  firstExceptT (ShelleyTxCertReadError fp) . newExceptT $ readCertificate fp
-
+-}
 
 data SomeWitnessSigningKey
   = AByronSigningKey           (Api.SigningKey Api.ByronKey)
@@ -269,25 +251,6 @@ readSigningKeyFile (SigningKeyFile skfile) =
       , Api.FromSomeType (Api.AsSigningKey Api.AsGenesisUTxOKey)
                           AGenesisUTxOSigningKey
       ]
-
--- | Convert a 'SomeSigningKey' (which wraps a new-style typed API signing
--- key) to a 'SigningKey' (old-style API signing key).
-toOldApiSigningKey :: SomeWitnessSigningKey -> SigningKey
-toOldApiSigningKey someSKey =
-  case someSKey of
-    AByronSigningKey (Api.ByronSigningKey sk) ->
-      SigningKeyByron sk
-    APaymentSigningKey (Api.PaymentSigningKey sk) ->
-      SigningKeyShelley sk
-    AStakeSigningKey (Api.StakeSigningKey sk) ->
-      SigningKeyShelley sk
-    AStakePoolSigningKey (Api.StakePoolSigningKey sk) ->
-      SigningKeyShelley sk
-    AGenesisDelegateSigningKey (Api.GenesisDelegateSigningKey sk) ->
-      SigningKeyShelley sk
-    AGenesisUTxOSigningKey (Api.GenesisUTxOSigningKey sk) ->
-      SigningKeyShelley sk
-
 
 runTxGetTxId :: TxBodyFile -> ExceptT ShelleyTxCmdError IO ()
 runTxGetTxId (TxBodyFile txbodyFile) = do
