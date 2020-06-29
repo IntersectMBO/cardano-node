@@ -6,11 +6,12 @@ import           System.IO (BufferMode (..))
 import qualified System.IO as IO
 
 import qualified Test.CLI.Shelley.TextEnvelope.Golden.Tests
+import qualified Test.ITN
+import qualified Test.Metadata
 import qualified Test.Pioneers.Exercise1
 import qualified Test.Pioneers.Exercise2
 import qualified Test.Pioneers.Exercise3
 import qualified Test.Pioneers.Exercise4
-import qualified Test.ITN
 
 main :: IO ()
 main = do
@@ -27,4 +28,5 @@ main = do
               , Test.Pioneers.Exercise4.tests
 
               , Test.ITN.tests
+              , Test.Metadata.tests
               ]
