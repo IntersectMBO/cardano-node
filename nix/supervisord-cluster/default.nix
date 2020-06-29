@@ -9,11 +9,12 @@ let
       a0 = 0.3;
       minFeeA = 44;
       minFeeB = 155381;
+      decentralisationParam = 0.8;
     };
     slotLength = 0.2;
     activeSlotsCoeff = 0.1;
     securityParam = 10;
-    epochLength = 1500;
+    epochLength = 1000;
     maxLovelaceSupply = 45000000000000000;
   };
 
@@ -129,7 +130,7 @@ let
     cp genesis.spec.json $out
   '';
   genesisSpecJSON = __fromJSON (__readFile genesisSpec);
-  genesisSpecMergedJSON = lib.foldl' lib.recursiveUpdate genesisSpecJSON [ genesisParams defaultGenesisParams ];
+  genesisSpecMergedJSON = lib.foldl' lib.recursiveUpdate genesisSpecJSON [ defaultGenesisParams genesisParams ];
   path = lib.makeBinPath [ cardano-cli pkgs.jq pkgs.gnused pkgs.coreutils pkgs.bash pkgs.moreutils ];
   genFiles = ''
     PATH=${path}
@@ -317,11 +318,12 @@ let
     fi
     ${genFiles}
     ${pkgs.python3Packages.supervisor}/bin/supervisord --config ${supervisorConfig} $@
-    while [ ! -S $CARDANO_NODE_SOCKET_PATH ]; do echo "Waiting 10 seconds for bft node to start"; sleep 10; done
+    while [ ! -S $CARDANO_NODE_SOCKET_PATH ]; do echo "Waiting 5 seconds for bft node to start"; sleep 5; done
     echo "Transfering genesis funds to pool owners, register pools and delegations"
     cardano-cli shelley transaction submit \
       --tx-file ${stateDir}/keys/transfer-register-delegate-tx.tx \
       --testnet-magic ${toString genesisSpecMergedJSON.networkMagic}
+    sleep 5
     echo 'Cluster started. Run `stop-cluster` to stop'
   '';
   stop = pkgs.writeScriptBin "stop-cluster" ''
