@@ -1,5 +1,15 @@
 # Changelog for cardano-node
 
+## 1.14.2 -- June 2020
+
+No changes in the node. There were changes in the cardano-api and cardano-cli.
+
+## 1.14.1 -- June 2020
+
+- Include the libsodium.dll info Windows build artefacts (#1327)
+- Fix compiler warnings on Windows (#1303)
+- Split live view code into more modules (#1323)
+
 ## 1.14.0 -- June 2020
 
 ### node changes

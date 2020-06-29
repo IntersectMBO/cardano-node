@@ -1,5 +1,13 @@
 # Changelog for cardano-api
 
+## 1.14.2 -- June 2020
+
+- Fix the query that dumps the ledger state as JSON (#1333)
+
+## 1.14.1 -- June 2020
+
+No changes in the cardano-api. There were changes in the cardano-node.
+
 ## 1.14.0 -- June 2020
 
 - Improvements to the strongly-typed API (#1112, #1220, #1227, #1246)
