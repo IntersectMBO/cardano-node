@@ -56,11 +56,12 @@ let
 
   packages = {
     inherit haskellPackages cardano-node cardano-cli chairman db-converter
-      scripts nixosTests environments dockerImage;
+      scripts nixosTests environments dockerImage mkCluster;
 
     inherit (haskellPackages.cardano-node.identifier) version;
 
     cluster = mkCluster customConfig;
+    clusterTests = pkgs.callPackage ./nix/supervisord-cluster/tests { inherit mkCluster; };
 
     exes = mapAttrsRecursiveCond (as: !(isDerivation as)) rewrite-static (collectComponents' "exes" haskellPackages);
 
