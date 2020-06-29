@@ -7,6 +7,18 @@ module Cardano.CLI.Shelley.Run.Transaction
   ) where
 
 import           Cardano.Prelude
+import           Prelude (String)
+
+import qualified Data.Aeson as Aeson
+import qualified Data.Attoparsec.Text as Atto
+import qualified Data.Text as Text
+import qualified Data.ByteString.Char8 as BS
+import qualified Data.ByteString.Lazy as LBS
+import qualified Data.ByteString.Base16 as Base16
+import qualified Data.Scientific as Scientific
+import qualified Data.Map.Strict as Map
+import qualified Data.HashMap.Strict as HashMap
+import qualified Data.Vector as Vector
 
 import           Cardano.Api hiding (textShow)
 import qualified Cardano.Api.Typed as Api
@@ -21,15 +33,13 @@ import           Cardano.Config.Types (CertificateFile (..))
 
 import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra
-                   (firstExceptT, left, newExceptT)
-
-import qualified Data.ByteString.Char8 as BS
-import qualified Data.Text as Text
+                   (firstExceptT, left, newExceptT, hoistEither, handleIOExceptT)
 
 
 data ShelleyTxCmdError
   = ShelleyTxAesonDecodeProtocolParamsError !FilePath !Text
-  | ShelleyTxMetaDataError !FilePath !MetaDataError
+  | ShelleyTxMetaDataFileError !FilePath !IOException
+  | ShelleyTxMetaDataConversionError !FilePath !MetaDataJsonConversionError
   | ShelleyTxMissingNetworkId
   | ShelleyTxSocketEnvError !EnvSocketError
   | ShelleyTxReadProtocolParamsError !FilePath !IOException
@@ -49,8 +59,10 @@ renderShelleyTxCmdError err =
   case err of
     ShelleyTxReadProtocolParamsError fp ioException ->
       "Error while reading protocol parameters at: " <> textShow fp <> " Error: " <> textShow ioException
-    ShelleyTxMetaDataError fp metaDataErr ->
-       "Error reading metadata at: " <> textShow fp <> " Error: " <> renderMetaDataError metaDataErr
+    ShelleyTxMetaDataFileError fp ioException ->
+       "Error reading metadata at: " <> textShow fp <> " Error: " <> textShow ioException
+    ShelleyTxMetaDataConversionError fp metaDataErr ->
+       "Error reading metadata at: " <> textShow fp <> " Error: " <> renderMetaDataJsonConversionError metaDataErr
     ShelleyTxReadUnsignedTxError err' ->
       "Error while reading unsigned shelley tx: " <> Text.pack (Api.displayError err')
     ShelleyTxReadSignedTxError apiError ->
@@ -101,22 +113,28 @@ runTxBuildRaw
   -> TxBodyFile
   -> ExceptT ShelleyTxCmdError IO ()
 runTxBuildRaw txins txouts ttl fee
-              certFiles withdrawals _mMetaData@Nothing _mUpdateProp@Nothing
+              certFiles withdrawals mMetaDataFile _mUpdateProp@Nothing
               (TxBodyFile fpath) = do
 
     --TODO: reinstate withdrawal, metadata and protocol updates
     --mUpProp <- maybeUpdate mUpdateProp
     --txMetadata <- maybeMetaData mMetaData
-
     certs <- sequence
                [ firstExceptT ShelleyTxCertReadError' . newExceptT $
                    Api.readFileTextEnvelope Api.AsCertificate certFile
                | CertificateFile certFile <- certFiles ]
 
+    --TODO: support raw metadata CBOR files, and support multiple files and
+    -- merge them.
+    mMetaData <- case mMetaDataFile of
+                   Nothing   -> return Nothing
+                   Just file -> Just <$> readFileJSONMetaData file
+
     let txBody = Api.makeShelleyTransaction
                    Api.txExtraContentEmpty {
                      Api.txCertificates = certs,
-                     Api.txWithdrawals  = withdrawals
+                     Api.txWithdrawals  = withdrawals,
+                     Api.txMetadata     = mMetaData
                    }
                    ttl
                    fee
@@ -258,3 +276,93 @@ runTxGetTxId (TxBodyFile txbodyFile) = do
     txbody <- firstExceptT ShelleyTxReadUnsignedTxError . newExceptT $
                 Api.readFileTextEnvelope Api.AsShelleyTxBody txbodyFile
     liftIO $ BS.putStrLn $ Api.serialiseToRawBytesHex (Api.getTxId txbody)
+
+
+-- ----------------------------------------------------------------------------
+-- Transaction metadata
+--
+
+data MetaDataJsonConversionError
+  = ConversionErrDecodeJSON !String
+  | ConversionErrToplevelNotMap
+  | ConversionErrToplevelBadKey
+  | ConversionErrBoolNotAllowed
+  | ConversionErrNullNotAllowed
+  | ConversionErrNumberNotInteger Double
+  | ConversionErrLongerThan64Bytes
+  deriving (Eq, Ord, Show)
+
+renderMetaDataJsonConversionError :: MetaDataJsonConversionError -> Text
+renderMetaDataJsonConversionError err =
+  case err of
+    ConversionErrDecodeJSON decErr -> "Error decoding JSON: " <> textShow decErr
+    ConversionErrToplevelNotMap -> "The JSON metadata top level must be a map (object) from word to value"
+    ConversionErrToplevelBadKey -> "The JSON metadata top level must be a map with unsigned integer keys"
+    ConversionErrBoolNotAllowed -> "JSON Bool value is not allowed in MetaData"
+    ConversionErrNullNotAllowed -> "JSON Null value is not allowed in MetaData"
+    ConversionErrNumberNotInteger _ -> "Only integers are allowed in MetaData"
+    ConversionErrLongerThan64Bytes -> "JSON string is longer than 64 bytes"
+
+
+readFileJSONMetaData :: MetaDataFile
+                     -> ExceptT ShelleyTxCmdError IO Api.TxMetadata
+readFileJSONMetaData (MetaDataFile fp) = do
+    bs <- handleIOExceptT (ShelleyTxMetaDataFileError fp) $
+          LBS.readFile fp
+    v  <- firstExceptT (ShelleyTxMetaDataConversionError fp . ConversionErrDecodeJSON) $
+          hoistEither $
+            Aeson.eitherDecode' bs
+    firstExceptT (ShelleyTxMetaDataConversionError fp) $ hoistEither $
+      jsonToMetadata v
+
+
+jsonToMetadata :: Aeson.Value
+               -> Either MetaDataJsonConversionError Api.TxMetadata
+jsonToMetadata (Aeson.Object kvs) =
+    fmap (Api.makeTransactionMetadata . Map.fromList)
+  . mapM (\(k,v) -> (,) <$> expectWord64 k <*> jsonToMetadataValue v)
+  . HashMap.toList
+  $ kvs
+  where
+    expectWord64 :: Text -> Either MetaDataJsonConversionError Word64
+    expectWord64 =
+        first (const ConversionErrToplevelBadKey)
+      . Atto.parseOnly ((Atto.decimal <|> Atto.hexadecimal) <* Atto.endOfInput)
+
+jsonToMetadata _ = Left ConversionErrToplevelNotMap
+
+
+jsonToMetadataValue :: Aeson.Value
+                    -> Either MetaDataJsonConversionError Api.TxMetadataValue
+jsonToMetadataValue  Aeson.Null    = Left ConversionErrNullNotAllowed
+jsonToMetadataValue (Aeson.Bool _) = Left ConversionErrBoolNotAllowed
+
+jsonToMetadataValue (Aeson.Number sci) =
+    case Scientific.floatingOrInteger sci :: Either Double Integer of
+      Left  n -> Left (ConversionErrNumberNotInteger n)
+      Right n -> Right (Api.TxMetaNumber n)
+
+jsonToMetadataValue (Aeson.String txt)
+    -- If the text is encoded in hex, we convert it to a byte string.
+  | BS.take 2 utf8 == "0x"
+  , let (raw, trailing) = Base16.decode (BS.drop 2 utf8)
+  , BS.null trailing
+  = if BS.length raw > 64
+      then Left ConversionErrLongerThan64Bytes
+      else Right (Api.TxMetaBytes raw)
+
+  | otherwise
+  = if BS.length utf8 > 64
+            then Left ConversionErrLongerThan64Bytes
+            else Right (Api.TxMetaText txt)
+  where
+    utf8 = encodeUtf8 txt
+
+jsonToMetadataValue (Aeson.Array vs) =
+    Api.TxMetaList <$> mapM jsonToMetadataValue (Vector.toList vs)
+
+jsonToMetadataValue (Aeson.Object kvs) =
+    Api.TxMetaMap <$> mapM (\(k,v) -> (,) <$> jsonToMetadataValue (Aeson.String k)
+                                          <*> jsonToMetadataValue v)
+                           (HashMap.toList kvs)
+

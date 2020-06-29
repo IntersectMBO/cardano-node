@@ -117,6 +117,12 @@ module Cardano.Api.Typed (
 
     -- * Fee calculation
 
+    -- * Transaction metadata
+    -- | Embedding additional structured data within transactions.
+    TxMetadata,
+    TxMetadataValue(..),
+    makeTransactionMetadata,
+
     -- * Registering stake address and delegating
     -- | Certificates that are embedded in transactions for registering and
     -- unregistering stake address, and for setting the stake pool delegation
@@ -241,7 +247,8 @@ import           Data.List as List
 import qualified Data.List.NonEmpty as NonEmpty
 --import           Data.Either
 import           Data.String (IsString(fromString))
-import qualified Data.Text as Text (unpack)
+import qualified Data.Text as Text
+import           Data.Text (Text)
 import           Numeric.Natural
 
 import           Data.ByteString (ByteString)
@@ -809,8 +816,6 @@ txExtraContentEmpty =
       txProtocolUpdates = Nothing
     }
 
-type TxMetadata = Map Word64 Shelley.MetaDatum
-
 type ProtocolUpdates = Shelley.ProposedPPUpdates ShelleyCrypto
 
 type TxFee = Lovelace
@@ -840,7 +845,7 @@ makeShelleyTransaction TxExtraContent {
         (toShelleyLovelace fee)
         ttl
         (toShelleyUpdate <$> Shelley.maybeToStrictMaybe txProtocolUpdates)
-        (Shelley.hashMetaData . toShelleyMetaData <$>
+        ((\(TxMetadata m) -> Shelley.hashMetaData m) <$>
            Shelley.maybeToStrictMaybe txMetadata))
 
 toShelleyWdrl :: [(StakeAddress, Lovelace)] -> Shelley.Wdrl ShelleyCrypto
@@ -852,9 +857,6 @@ toShelleyWdrl wdrls =
 
 toShelleyUpdate :: ProtocolUpdates -> Shelley.Update ShelleyCrypto
 toShelleyUpdate = error "TODO: toShelleyUpdate"
-
-toShelleyMetaData :: TxMetadata -> Shelley.MetaData
-toShelleyMetaData = Shelley.MetaData
 
 
 -- ----------------------------------------------------------------------------
@@ -1308,6 +1310,49 @@ data PoolMetaData = PoolMetaData
 toShelleyPoolParams :: StakePoolParameters -> Shelley.PoolParams ShelleyCrypto
 toShelleyPoolParams = error "toShelleyPoolParams: TODO"
 
+
+-- ----------------------------------------------------------------------------
+-- Metadata embedded in transactions
+--
+
+newtype TxMetadata = TxMetadata Shelley.MetaData
+    deriving stock (Eq, Show)
+
+data TxMetadataValue = TxMetaNumber Integer -- -2^64 .. 2^64-1
+                     | TxMetaBytes  ByteString
+                     | TxMetaText   Text
+                     | TxMetaList   [TxMetadataValue]
+                     | TxMetaMap    [(TxMetadataValue, TxMetadataValue)]
+    deriving stock (Eq, Show)
+
+instance HasTypeProxy TxMetadata where
+    data AsType TxMetadata = AsTxMetadata
+    proxyToAsType _ = AsTxMetadata
+
+instance SerialiseAsCBOR TxMetadata where
+    serialiseToCBOR (TxMetadata tx) =
+      CBOR.serialize' tx
+
+    deserialiseFromCBOR AsTxMetadata bs =
+      TxMetadata <$>
+        CBOR.decodeAnnotator "TxMetadata" fromCBOR (LBS.fromStrict bs)
+
+makeTransactionMetadata :: Map Word64 TxMetadataValue -> TxMetadata
+makeTransactionMetadata =
+    TxMetadata
+  . Shelley.MetaData
+  . Map.map toShelleyMetaDatum
+  where
+    toShelleyMetaDatum :: TxMetadataValue -> Shelley.MetaDatum
+    toShelleyMetaDatum (TxMetaNumber x) = Shelley.I x
+    toShelleyMetaDatum (TxMetaBytes  x) = Shelley.B x
+    toShelleyMetaDatum (TxMetaText   x) = Shelley.S x
+    toShelleyMetaDatum (TxMetaList  xs) = Shelley.List
+                                            [ toShelleyMetaDatum x | x <- xs ]
+    toShelleyMetaDatum (TxMetaMap   xs) = Shelley.Map
+                                            [ (toShelleyMetaDatum k,
+                                               toShelleyMetaDatum v)
+                                            | (k,v) <- xs ]
 
 
 -- ----------------------------------------------------------------------------

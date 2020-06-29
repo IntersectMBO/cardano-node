@@ -93,6 +93,7 @@ library
                      , ouroboros-consensus-cardano
                      , ouroboros-consensus-shelley
                      , ouroboros-network
+                     , scientific
                      , shelley-spec-ledger
                      , text
                      , time
@@ -100,6 +101,7 @@ library
                      , transformers-except
                      , ouroboros-network-framework
                      , utf8-string
+                     , unordered-containers
                      , vector
 
   default-language:    Haskell2010
