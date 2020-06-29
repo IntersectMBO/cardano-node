@@ -1,7 +1,6 @@
-.. Cardano Node
-
-Cardano Node
-============
+############
+cardano-node
+############
 
 .. include:: ../README.rst
 
