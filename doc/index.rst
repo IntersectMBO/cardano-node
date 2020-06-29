@@ -3,11 +3,12 @@
 Cardano Node
 ============
 
+.. include:: <../README.rst>
+
 .. toctree::
    :maxdepth: 3
    :titlesonly:
 
-   cardano-node README <../README>
    cardano-node-quickstart.md
    building-the-node-using-nix
    building-the-node-from-source
