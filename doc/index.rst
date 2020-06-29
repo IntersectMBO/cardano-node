@@ -2,7 +2,7 @@
 cardano-node
 ############
 
-.. include:: ../README.rst
+.. include:: ../doc/README.rst
 
 .. toctree::
    :maxdepth: 3
