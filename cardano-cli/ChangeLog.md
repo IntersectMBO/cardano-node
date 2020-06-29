@@ -1,6 +1,15 @@
 # Changelog for cardano-cli
 
-## 1.13.0 -- June 2020
+## 1.14.2 -- June 2020
+
+- Fix the hashing of stake pool metadata
+- Fix the query that dumps the ledger state as JSON (#1333)
+
+## 1.14.1 -- June 2020
+
+No changes in the cardano-cli. There were changes in the cardano-node.
+
+## 1.14.0 -- June 2020
 
 - New flags for transaction metadata in tx construction (#1233)
 - New flags for reward account withdrawals in tx construction (#1237)
