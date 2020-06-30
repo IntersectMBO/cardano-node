@@ -136,6 +136,13 @@ module Cardano.Api.Typed (
     -- retiring stake pools. This incldes updating the stake pool parameters.
     makeStakePoolRegistrationCertificate,
     makeStakePoolRetirementCertificate,
+    StakePoolParameters(..),
+    StakePoolMetadataReference(..),
+
+    -- ** Stake pool off-chain metadata
+    StakePoolMetadata(..),
+    validateAndHashStakePoolMetadata,
+    StakePoolMetadataValidationError(..),
 
     -- * Scripts
     -- | Both 'PaymentCredential's and 'StakeCredential's can use scripts.
@@ -253,7 +260,13 @@ import qualified Data.List.NonEmpty as NonEmpty
 import           Data.String (IsString(fromString))
 import qualified Data.Text as Text
 import           Data.Text (Text)
+import qualified Data.Text.Encoding as Text
 import           Numeric.Natural
+
+import           Data.IP (IPv4, IPv6)
+import           Network.Socket (PortNumber)
+import qualified Network.URI as URI
+
 
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
@@ -273,7 +286,8 @@ import           Control.Monad.Trans.Except.Extra
 import           Control.Exception (Exception(..), IOException, throwIO)
 
 import qualified Data.Aeson as Aeson
-import           Data.Aeson (ToJSON(..), FromJSON(..))
+import qualified Data.Aeson.Types as Aeson
+import           Data.Aeson (ToJSON(..), FromJSON(..), (.:))
 
 
 --
@@ -824,8 +838,6 @@ txExtraContentEmpty =
 type TxFee = Lovelace
 type TTL   = SlotNo
 
-type PoolId = Hash StakePoolKey
-
 makeShelleyTransaction :: TxExtraContent
                        -> TTL
                        -> TxFee
@@ -1028,7 +1040,7 @@ makeSignedTransaction witnesses (ShelleyTxBody txbody) =
                                [ (Shelley.hashScript sw, sw)
                                | ShelleyScriptWitness sw <- witnesses ]
         }
-        Shelley.SNothing -- (Shelley.maybeToStrictMaybe txmetadata)
+        Shelley.SNothing -- (maybeToStrictMaybe txmetadata)
 
 makeByronKeyWitness :: NetworkId
                     -> TxBody Byron
@@ -1254,6 +1266,12 @@ makeMIRCertificate mirpot amounts =
          [ (toShelleyStakeCredential sc, toShelleyLovelace v)
          | (sc, v) <- amounts ])
 
+
+
+-- ----------------------------------------------------------------------------
+-- Stake pool certificates
+--
+
 makeStakePoolRegistrationCertificate
   :: StakePoolParameters
   -> Certificate
@@ -1274,12 +1292,15 @@ makeStakePoolRetirementCertificate (StakePoolKeyHash poolid) epochno =
       poolid
       epochno
 
-data StakePoolParameters = StakePoolParameters {
+type PoolId = Hash StakePoolKey
+
+data StakePoolParameters =
+     StakePoolParameters {
        stakePoolId            :: PoolId,
        stakePoolVRF           :: Hash VrfKey,
        stakePoolCost          :: Lovelace,
        stakePoolMargin        :: Rational,
-       stakePoolRewardAccount :: StakeCredential,
+       stakePoolRewardAccount :: StakeAddress,
        stakePoolPledge        :: Lovelace,
        stakePoolOwners        :: [Hash StakeKey],
        stakePoolRelays        :: [StakePoolRelay],
@@ -1287,30 +1308,214 @@ data StakePoolParameters = StakePoolParameters {
      }
   deriving (Eq, Show)
 
-data StakePoolRelay = StakePoolRelay
-  deriving (Eq, Show)
-{-TODO
-data StakePoolRelay
-  = -- | One or both of IPv4 & IPv6
-    SingleHostAddr !(StrictMaybe Port) !(StrictMaybe IPv4) !(StrictMaybe IPv6)
-  | -- | An @A@ or @AAAA@ DNS record
-    SingleHostName !(StrictMaybe Port) !DnsName
-  | -- | A @SRV@ DNS record
-    MultiHostName !DnsName
--}
+data StakePoolRelay =
 
-data StakePoolMetadataReference = StakePoolMetadataReference
-  deriving (Eq, Show)
-{-TODO
-data PoolMetaData = PoolMetaData
-  { _poolMDUrl :: !Url,
-    _poolMDHash :: !ByteString
-  }
--}
+       -- | One or both of IPv4 & IPv6
+       StakePoolRelayIp
+          (Maybe IPv4) (Maybe IPv6) (Maybe PortNumber)
 
+       -- | An DNS name pointing to a @A@ or @AAAA@ record.
+     | StakePoolRelayDnsARecord
+          ByteString (Maybe PortNumber)
+
+       -- | A DNS name pointing to a @SRV@ record.
+     | StakePoolRelayDnsSrvRecord
+          ByteString
+
+  deriving (Eq, Show)
+
+data StakePoolMetadataReference =
+     StakePoolMetadataReference {
+       stakePoolMetadataURL  :: URI.URI,
+       stakePoolMetadataHash :: Hash StakePoolMetadata
+     }
+  deriving (Eq, Show)
 
 toShelleyPoolParams :: StakePoolParameters -> Shelley.PoolParams ShelleyCrypto
-toShelleyPoolParams = error "toShelleyPoolParams: TODO"
+toShelleyPoolParams StakePoolParameters {
+                      stakePoolId            = StakePoolKeyHash poolkh
+                    , stakePoolVRF           = VrfKeyHash vrfkh
+                    , stakePoolCost
+                    , stakePoolMargin
+                    , stakePoolRewardAccount
+                    , stakePoolPledge
+                    , stakePoolOwners
+                    , stakePoolRelays
+                    , stakePoolMetadata
+                    } =
+    --TODO: validate pool parameters
+    Shelley.PoolParams {
+      Shelley._poolPubKey = poolkh
+    , Shelley._poolVrf    = vrfkh
+    , Shelley._poolPledge = toShelleyLovelace stakePoolPledge
+    , Shelley._poolCost   = toShelleyLovelace stakePoolCost
+    , Shelley._poolMargin = Shelley.truncateUnitInterval
+                              (fromRational stakePoolMargin)
+    , Shelley._poolRAcnt  = toShelleyStakeAddr stakePoolRewardAccount
+    , Shelley._poolOwners = Set.fromList
+                              [ kh | StakeKeyHash kh <- stakePoolOwners ]
+    , Shelley._poolRelays = Seq.fromList
+                              (map toShelleyStakePoolRelay stakePoolRelays)
+    , Shelley._poolMD     = toShelleyPoolMetaData <$>
+                              maybeToStrictMaybe stakePoolMetadata
+    }
+  where
+    toShelleyStakePoolRelay :: StakePoolRelay -> Shelley.StakePoolRelay
+    toShelleyStakePoolRelay (StakePoolRelayIp mipv4 mipv6 mport) =
+      Shelley.SingleHostAddr
+        (fromIntegral <$> maybeToStrictMaybe mport)
+        (maybeToStrictMaybe mipv4)
+        (maybeToStrictMaybe mipv6)
+
+    toShelleyStakePoolRelay (StakePoolRelayDnsARecord dnsname mport) =
+      Shelley.SingleHostName
+        (fromIntegral <$> maybeToStrictMaybe mport)
+        (toShelleyDnsName dnsname)
+
+    toShelleyStakePoolRelay (StakePoolRelayDnsSrvRecord dnsname) =
+      Shelley.MultiHostName
+        (toShelleyDnsName dnsname)
+
+    toShelleyPoolMetaData :: StakePoolMetadataReference -> Shelley.PoolMetaData
+    toShelleyPoolMetaData StakePoolMetadataReference {
+                            stakePoolMetadataURL
+                          , stakePoolMetadataHash = StakePoolMetadataHash mdh
+                          } =
+      Shelley.PoolMetaData {
+        Shelley._poolMDUrl  = toShelleyUrl stakePoolMetadataURL
+      , Shelley._poolMDHash = Crypto.getHash mdh
+      }
+
+    toShelleyDnsName :: ByteString -> Shelley.DnsName
+    toShelleyDnsName = fromMaybe (error "toShelleyDnsName: invalid dns name. TODO: proper validation")
+                     . Shelley.textToDns
+                     . Text.decodeLatin1
+
+    toShelleyUrl :: URI.URI -> Shelley.Url
+    toShelleyUrl uri = fromMaybe (error "toShelleyUrl: invalid url. TODO: proper validation")
+                     . Shelley.textToUrl
+                     . Text.pack
+                     $ URI.uriToString id uri ""
+
+
+-- ----------------------------------------------------------------------------
+-- Stake pool metadata
+--
+
+-- | A representation of the required fields for off-chain stake pool metadata.
+--
+data StakePoolMetadata =
+     StakePoolMetadata {
+
+        -- | A name of up to 50 characters.
+        stakePoolName :: !Text
+
+        -- | A description of up to 255 characters.
+     , stakePoolDescription :: !Text
+
+        -- | A ticker of 3-5 characters, for a compact display of stake pools in
+        -- a wallet.
+     , stakePoolTicker :: !Text
+
+       -- | A URL to a homepage with additional information about the pool.
+       -- n.b. the spec does not specify a character limit for this field.
+     , stakePoolHomepage :: !Text
+     }
+  deriving (Eq, Show)
+
+newtype instance Hash StakePoolMetadata =
+                 StakePoolMetadataHash (Crypto.Hash (Shelley.HASH ShelleyCrypto)
+                                                    ByteString)
+    deriving (Eq, Show)
+
+--TODO: instance ToJSON StakePoolMetadata where
+
+instance FromJSON StakePoolMetadata where
+    parseJSON =
+        Aeson.withObject "StakePoolMetadata" $ \obj ->
+          StakePoolMetadata
+            <$> parseName obj
+            <*> parseDescription obj
+            <*> parseTicker obj
+            <*> obj .: "homepage"
+
+      where
+        -- Parse and validate the stake pool metadata name from a JSON object.
+        -- The name must be 50 characters or fewer.
+        --
+        parseName :: Aeson.Object -> Aeson.Parser Text
+        parseName obj = do
+          name <- obj .: "name"
+          if Text.length name <= 50
+            then pure name
+            else fail $ "\"name\" must have at most 50 characters, but it has "
+                     <> show (Text.length name)
+                     <> " characters."
+
+        -- Parse and validate the stake pool metadata description
+        -- The description must be 255 characters or fewer.
+        --
+        parseDescription :: Aeson.Object -> Aeson.Parser Text
+        parseDescription obj = do
+          description <- obj .: "description"
+          if Text.length description <= 255
+            then pure description
+            else fail $
+                 "\"description\" must have at most 255 characters, but it has "
+              <> show (Text.length description)
+              <> " characters."
+
+        -- | Parse and validate the stake pool ticker description
+        -- The ticker must be 3 to 5 characters long.
+        --
+        parseTicker :: Aeson.Object -> Aeson.Parser Text
+        parseTicker obj = do
+          ticker <- obj .: "ticker"
+          let tickerLen = Text.length ticker
+          if tickerLen >= 3 && tickerLen <= 5
+            then pure ticker
+            else fail $
+                 "\"ticker\" must have at least 3 and at most 5 "
+              <> "characters, but it has "
+              <> show (Text.length ticker)
+              <> " characters."
+
+-- | A stake pool metadata validation error.
+data StakePoolMetadataValidationError
+  = StakePoolMetadataJsonDecodeError !String
+  | StakePoolMetadataInvalidLengthError
+    -- ^ The length of the JSON-encoded stake pool metadata exceeds the
+    -- maximum.
+      !Int
+      -- ^ Maximum byte length.
+      !Int
+      -- ^ Actual byte length.
+  deriving Show
+
+instance Error StakePoolMetadataValidationError where
+    displayError (StakePoolMetadataJsonDecodeError errStr) = errStr
+    displayError (StakePoolMetadataInvalidLengthError maxLen actualLen) =
+         "Stake pool metadata must consist of at most "
+      <> show maxLen
+      <> " bytes, but it consists of "
+      <> show actualLen
+      <> " bytes."
+
+-- | Decode and validate the provided JSON-encoded bytes as 'StakePoolMetadata'.
+-- Return the decoded metadata and the hash of the original bytes.
+--
+validateAndHashStakePoolMetadata
+  :: ByteString
+  -> Either StakePoolMetadataValidationError
+            (StakePoolMetadata, Hash StakePoolMetadata)
+validateAndHashStakePoolMetadata bs
+  | BS.length bs <= 512 = do
+      md <- first StakePoolMetadataJsonDecodeError
+                  (Aeson.eitherDecodeStrict' bs)
+      let mdh = StakePoolMetadataHash (Crypto.hashRaw id bs)
+      return (md, mdh)
+  | otherwise = Left $ StakePoolMetadataInvalidLengthError 512 (BS.length bs)
+
 
 
 -- ----------------------------------------------------------------------------

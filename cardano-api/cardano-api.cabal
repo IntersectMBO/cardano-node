@@ -64,9 +64,11 @@ library
                       , formatting
                       , io-sim-classes
                       , iohk-monitoring
+                      , iproute
                       , memory
                       , network
                       , network-mux
+                      , network-uri
                       , ouroboros-consensus
                       , ouroboros-consensus-byron
                       , ouroboros-consensus-cardano
