@@ -361,7 +361,8 @@ The remaining arguments are optional parameters you want to update in your updat
 
 You can also check your proposal's validity using the [`validate-cbor`](#validate-cbor-files) command.
 
-See the [Byron specification](https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/byronLedgerSpec/latest/download-by-type/doc-pdf/ledger-spec) for more details on update proposals.
+See the `Byron specification <https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/byronLedgerSpec/latest/download-by-type/doc-pdf/ledger-spec>`_
+for more details on update proposals.
 
 Update proposal submission
 --------------------------
@@ -379,7 +380,8 @@ Example:
 
 The socket path  must either be specified as an argument (`--socket-path`) or specified in the supplied config file.
 
-See the [Byron specification](https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/byronLedgerSpec/latest/download-by-type/doc-pdf/ledger-spec) for more deatils on update proposals.
+See the `Byron specification <https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/byronLedgerSpec/latest/download-by-type/doc-pdf/ledger-spec>`_
+for more deatils on update proposals.
 
 Update proposal voting
 ======================
