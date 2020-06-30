@@ -111,7 +111,7 @@ Some of the more important settings are as follows:
 * ``ViewMode: SimpleView`` -- Choose between ``SimpleView`` or ``LiveView``
 
 
- Logging
+Logging
 ========
 
 Logs are output to the ``logs/`` dir.
