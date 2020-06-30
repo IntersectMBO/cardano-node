@@ -44,7 +44,7 @@ data ShelleyTxCmdError
   | ShelleyTxSocketEnvError !EnvSocketError
   | ShelleyTxReadProtocolParamsError !FilePath !IOException
   | ShelleyTxReadSignedTxError !ApiError
-  | ShelleyTxReadUpdateError !ApiError
+  | ShelleyTxReadUpdateError !(Api.FileError Api.TextEnvelopeError)
   | ShelleyTxReadUnsignedTxError !(Api.FileError Api.TextEnvelopeError)
   | ShelleyTxCertReadError !FilePath !ApiError
   | ShelleyTxCertReadError' !(Api.FileError Api.TextEnvelopeError)
@@ -68,7 +68,7 @@ renderShelleyTxCmdError err =
     ShelleyTxReadSignedTxError apiError ->
       "Error while reading signed shelley tx: " <> renderApiError apiError
     ShelleyTxReadUpdateError apiError ->
-      "Error while reading shelley update: " <> renderApiError apiError
+      "Error while reading shelley update proposal: " <> Text.pack (Api.displayError apiError)
     ShelleyTxSocketEnvError envSockErr -> renderEnvSocketError envSockErr
     ShelleyTxAesonDecodeProtocolParamsError fp decErr ->
       "Error while decoding the protocol parameters at: " <> textShow fp <> " Error: " <> textShow decErr
@@ -113,12 +113,9 @@ runTxBuildRaw
   -> TxBodyFile
   -> ExceptT ShelleyTxCmdError IO ()
 runTxBuildRaw txins txouts ttl fee
-              certFiles withdrawals mMetaDataFile _mUpdateProp@Nothing
+              certFiles withdrawals mMetaDataFile mUpdatePropFile
               (TxBodyFile fpath) = do
 
-    --TODO: reinstate withdrawal, metadata and protocol updates
-    --mUpProp <- maybeUpdate mUpdateProp
-    --txMetadata <- maybeMetaData mMetaData
     certs <- sequence
                [ firstExceptT ShelleyTxCertReadError' . newExceptT $
                    Api.readFileTextEnvelope Api.AsCertificate certFile
@@ -130,11 +127,19 @@ runTxBuildRaw txins txouts ttl fee
                    Nothing   -> return Nothing
                    Just file -> Just <$> readFileJSONMetaData file
 
+    mUpdateProp <-
+      case mUpdatePropFile of
+        Nothing                        -> return Nothing
+        Just (UpdateProposalFile file) ->
+          fmap Just <$> firstExceptT ShelleyTxReadUpdateError $ newExceptT $
+            Api.readFileTextEnvelope Api.AsUpdateProposal file
+
     let txBody = Api.makeShelleyTransaction
                    Api.txExtraContentEmpty {
-                     Api.txCertificates = certs,
-                     Api.txWithdrawals  = withdrawals,
-                     Api.txMetadata     = mMetaData
+                     Api.txCertificates   = certs,
+                     Api.txWithdrawals    = withdrawals,
+                     Api.txMetadata       = mMetaData,
+                     Api.txUpdateProposal = mUpdateProp
                    }
                    ttl
                    fee
@@ -145,8 +150,6 @@ runTxBuildRaw txins txouts ttl fee
       . newExceptT
       $ Api.writeFileTextEnvelope fpath Nothing txBody
 
-runTxBuildRaw _ _ _ _ _ _ _ _ _ =
-    panic "TODO: reinstate support for withdrawals, certificates, metadata and protocol updates"
 
 runTxSign :: TxBodyFile
           -> [SigningKeyFile]
