@@ -6,7 +6,7 @@
    </p>
 
 ***********************
-`cardano-node` Overview
+``cardano-node`` Overview
 ***********************
 
 Integration of the `ledger <https://github.com/input-output-hk/cardano-ledger>`_, `consensus <https://github.com/input-output-hk/ouroboros-network/tree/master/ouroboros-consensus>`_,
