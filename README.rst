@@ -92,7 +92,7 @@ The general synopsis is as follows:
 * ``--port`` - Specify which port to assign to the node.
 
 * ``--config`` - Specify the filepath to the config ``.yaml`` file. This file is responsible for all the other node's required settings. See examples in ``configuration``
-(e.g. `config-0.yaml` <configuration/defaults/liveview/config-0.yaml>`_).
+(e.g. `config-0.yaml <configuration/defaults/liveview/config-0.yaml>`_).
 
 
 Configuration ``.yaml`` files
