@@ -204,8 +204,22 @@ module Cardano.Api.Typed (
     -- | Operations that involve talking to a local Cardano node.
 
     -- ** Queries
-    -- ** Protocol parameters
     -- ** Submitting transactions
+
+    -- ** Low level protocol interaction with a Cardano node
+    connectToLocalNode,
+    LocalNodeClientProtocols(..),
+    nullLocalNodeClientProtocols,
+--  connectToRemoteNode,
+
+    -- *** Chain sync protocol
+    ChainSyncClient(..),
+
+    -- *** Local tx submission
+    LocalTxSubmissionClient(..),
+
+    -- *** Local state query
+    LocalStateQueryClient(..),
 
     -- * Node operation
     -- | Support for the steps needed to operate a node, including the
@@ -214,6 +228,7 @@ module Cardano.Api.Typed (
 
     -- ** Stake pool operator's keys
     StakePoolKey,
+    PoolId,
 
     -- ** KES keys
     KesKey,
@@ -251,6 +266,7 @@ import           Prelude
 
 import           Data.Proxy (Proxy(..))
 import           Data.Kind (Constraint)
+import           Data.Void (Void)
 import           Data.Word
 import           Data.Maybe
 import           Data.Bifunctor (first)
@@ -284,6 +300,7 @@ import           Control.Monad
 --import           Control.Monad.Trans.Except
 import           Control.Monad.Trans.Except.Extra
 import           Control.Exception (Exception(..), IOException, throwIO)
+import           Control.Tracer (nullTracer)
 
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Types as Aeson
@@ -299,8 +316,34 @@ import           Cardano.Binary
                     Annotated(..), reAnnotate, recoverBytes)
 import qualified Cardano.Prelude as CBOR (cborError)
 import           Shelley.Spec.Ledger.Serialization (CBORGroup(..))
+
 import           Cardano.Slotting.Slot (SlotNo, EpochNo)
+
+-- TODO: it'd be nice if the network imports needed were a bit more coherent
+import           Ouroboros.Network.Block (Tip)
 import           Ouroboros.Network.Magic (NetworkMagic(..))
+import           Ouroboros.Network.NodeToClient
+                   (NodeToClientProtocols(..), NodeToClientVersionData(..),
+                    NetworkConnectTracers(..), withIOManager, connectTo,
+                    localSnocket, foldMapVersions,
+                    versionedNodeToClientProtocols, chainSyncPeerNull,
+                    localTxSubmissionPeerNull, localStateQueryPeerNull)
+import           Ouroboros.Network.Mux
+                   (MuxMode(InitiatorMode), MuxPeer(..),
+                    RunMiniProtocol(InitiatorProtocolOnly))
+
+-- TODO: it'd be nice if the consensus imports needed were a bit more coherent
+import           Ouroboros.Consensus.Cardano (ProtocolClient, protocolClientInfo)
+import           Ouroboros.Consensus.Block (BlockProtocol)
+import           Ouroboros.Consensus.Ledger.Abstract (Query)
+import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx)
+import           Ouroboros.Consensus.Network.NodeToClient
+                   (Codecs'(..), clientCodecs)
+import           Ouroboros.Consensus.Node.ProtocolInfo (ProtocolClientInfo(..))
+import           Ouroboros.Consensus.Node.NetworkProtocolVersion
+                  (BlockNodeToClientVersion, TranslateNetworkProtocolVersion,
+                   nodeToClientProtocolVersion, supportedNodeToClientVersions)
+import           Ouroboros.Consensus.Node.Run (SerialiseNodeToClientConstraints)
 
 --
 -- Crypto API used by consensus and Shelley (and should be used by Byron)
@@ -355,6 +398,13 @@ import           Shelley.Spec.Ledger.TxData
 -- Other config and common types
 --
 import qualified Cardano.Api.TextView as TextView
+
+import           Ouroboros.Network.Protocol.ChainSync.Client
+import           Ouroboros.Network.Protocol.LocalTxSubmission.Client
+import           Ouroboros.Network.Protocol.LocalStateQuery.Client
+
+
+
 
 
 -- ----------------------------------------------------------------------------
@@ -610,6 +660,10 @@ toByronNetworkMagic (Testnet (NetworkMagic nm)) = Byron.NetworkTestnet nm
 toShelleyNetwork :: NetworkId -> Shelley.Network
 toShelleyNetwork  Mainnet    = Shelley.Mainnet
 toShelleyNetwork (Testnet _) = Shelley.Testnet
+
+toNetworkMagic :: NetworkId -> NetworkMagic
+toNetworkMagic  Mainnet     = NetworkMagic 764824073
+toNetworkMagic (Testnet nm) = nm
 
 toShelleyAddr :: Address era -> Shelley.Addr ShelleyCrypto
 toShelleyAddr (ByronAddress addr)        = Shelley.AddrBootstrap
@@ -1909,6 +1963,114 @@ issueOperationalCertificate (KesVerificationKey kesVKey)
     signature = Crypto.signedDSIGN ()
                   (kesVKey, counter, kesPeriod)
                   poolSKey
+
+
+-- ----------------------------------------------------------------------------
+-- Node IPC protocols
+--
+
+data LocalNodeClientProtocols blk =
+     LocalNodeClientProtocols {
+       localChainSyncClient
+         :: Maybe (ChainSyncClient
+                    blk
+                    (Tip blk)
+                    IO ())
+
+     , localTxSubmissionClient
+         :: Maybe (LocalTxSubmissionClient
+                    (GenTx blk)
+                    (ApplyTxErr blk)
+                    IO ())
+
+     , localStateQueryClient
+         :: Maybe (LocalStateQueryClient
+                    blk
+                    (Query blk)
+                    IO ())
+     }
+
+nullLocalNodeClientProtocols :: LocalNodeClientProtocols blk
+nullLocalNodeClientProtocols =
+    LocalNodeClientProtocols {
+      localChainSyncClient    = Nothing,
+      localTxSubmissionClient = Nothing,
+      localStateQueryClient   = Nothing
+    }
+
+connectToLocalNode :: forall blk.
+                      (SerialiseNodeToClientConstraints blk,
+                       TranslateNetworkProtocolVersion blk)
+                   => FilePath  -- ^ The local socket path.
+                   -> NetworkId
+                   -> ProtocolClient blk (BlockProtocol blk)
+                   -> (BlockNodeToClientVersion blk -> LocalNodeClientProtocols blk)
+                   -> IO ()
+connectToLocalNode path nw ptcl clientptcls =
+    withIOManager $ \iomgr ->
+      connectTo
+        (localSnocket iomgr path)
+        NetworkConnectTracers {
+          nctMuxTracer       = nullTracer,
+          nctHandshakeTracer = nullTracer
+        }
+        (foldMapVersions
+            (\v -> versionedNodeToClientProtocols
+                     (nodeToClientProtocolVersion proxy v)
+                     NodeToClientVersionData {
+                       networkMagic = toNetworkMagic nw
+                     }
+                     (\_conn _runOrStop -> protocols v))
+            (supportedNodeToClientVersions proxy))
+        path
+  where
+    proxy :: Proxy blk
+    proxy = Proxy
+
+    protocols :: BlockNodeToClientVersion blk
+              -> NodeToClientProtocols InitiatorMode LBS.ByteString IO () Void
+    protocols clientVersion =
+      let Codecs {
+              cChainSyncCodec
+            , cTxSubmissionCodec
+            , cStateQueryCodec
+            } = clientCodecs (pClientInfoCodecConfig (protocolClientInfo ptcl))
+                             clientVersion
+
+          LocalNodeClientProtocols {
+            localChainSyncClient,
+            localTxSubmissionClient,
+            localStateQueryClient
+          } = clientptcls clientVersion
+
+       in NodeToClientProtocols {
+            localChainSyncProtocol =
+              InitiatorProtocolOnly $
+                MuxPeer
+                  nullTracer
+                  cChainSyncCodec
+                  (maybe chainSyncPeerNull
+                         chainSyncClientPeer
+                         localChainSyncClient)
+
+          , localTxSubmissionProtocol =
+              InitiatorProtocolOnly $
+                MuxPeer
+                  nullTracer
+                  cTxSubmissionCodec
+                  (maybe localTxSubmissionPeerNull
+                         localTxSubmissionClientPeer
+                         localTxSubmissionClient)
+
+          , localStateQueryProtocol =
+              InitiatorProtocolOnly $
+                MuxPeer
+                  nullTracer
+                  cStateQueryCodec
+                  (maybe localStateQueryPeerNull
+                         localStateQueryClientPeer
+                         localStateQueryClient)
+          }
 
 
 -- ----------------------------------------------------------------------------
