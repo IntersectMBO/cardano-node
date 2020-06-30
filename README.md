@@ -41,7 +41,7 @@ The latest supported networks can be found at https://hydra.iohk.io/job/Cardano/
 
 You will need to install one or both of these libraries on your system:
 
-* libsodum
+* libsodium
 * libsodium-dev
 
 For example, on Ubuntu:
