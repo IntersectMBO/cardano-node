@@ -7,8 +7,8 @@ module Cardano.CLI.Shelley.Run.StakeAddress
 
 import           Cardano.Prelude
 
-import qualified Data.ByteString.Lazy.Char8 as LBS
 import qualified Data.Text as Text
+import qualified Data.Text.IO as Text
 
 import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, hoistEither, left, newExceptT)
@@ -24,7 +24,7 @@ import           Cardano.Api.Typed (AsType (..), Error (..), FileError,
                    makeStakeAddressDelegationCertificate,
                    makeStakeAddressDeregistrationCertificate,
                    makeStakeAddressRegistrationCertificate,
-                   readFileTextEnvelope, serialiseToRawBytesHex,
+                   readFileTextEnvelope, serialiseAddress,
                    writeFileTextEnvelope)
 
 import qualified Cardano.Crypto.DSIGN as DSIGN
@@ -102,12 +102,12 @@ runStakeAddressBuild (VerificationKeyFile stkVkeyFp) network mOutputFp = do
       $ readFileTextEnvelope (AsVerificationKey AsStakeKey) stkVkeyFp
 
     let stakeCred = StakeCredentialByKey (verificationKeyHash stakeVerKey)
-        rwdAddr = makeStakeAddress nwId stakeCred
-        hexAddr = LBS.fromStrict (serialiseToRawBytesHex rwdAddr)
+        stakeAddr = makeStakeAddress nwId stakeCred
+        stakeAddrText = serialiseAddress stakeAddr
 
     case mOutputFp of
-      Just (OutputFile fpath) -> liftIO $ LBS.writeFile fpath hexAddr
-      Nothing -> liftIO $ LBS.putStrLn hexAddr
+      Just (OutputFile fpath) -> liftIO $ Text.writeFile fpath stakeAddrText
+      Nothing -> liftIO $ Text.putStrLn stakeAddrText
   where
     -- TODO: Remove this once we remove usage of 'Cardano.Api.Types.Network'
     --       from this module.

@@ -9,6 +9,7 @@ import           Prelude (putStrLn)
 
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.Text as Text
+import qualified Data.Text.IO as Text
 
 import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, newExceptT)
@@ -21,12 +22,13 @@ import           Cardano.Api.Typed (AsType (..), Error (..), FileError,
                    StakeAddressReference (..), StakeKey, TextEnvelopeError,
                    VerificationKey, generateSigningKey, getVerificationKey,
                    makeShelleyAddress, readFileTextEnvelope,
-                   serialiseToRawBytesHex, writeFileTextEnvelope)
+                   writeFileTextEnvelope, serialiseAddress,
+                   serialiseToRawBytesHex)
 
 import           Cardano.CLI.Shelley.Parsers
                    (OutputFile (..), SigningKeyFile (..), VerificationKeyFile (..),
                     AddressCmd (..))
-import           Cardano.CLI.Shelley.Run.Address.Info (ShelleyAddressInfoError, renderShelleyAddressInfoError,
+import           Cardano.CLI.Shelley.Run.Address.Info (ShelleyAddressInfoError,
                    runAddressInfo)
 
 data ShelleyAddressCmdError
@@ -39,7 +41,7 @@ renderShelleyAddressCmdError :: ShelleyAddressCmdError -> Text
 renderShelleyAddressCmdError err =
   case err of
     ShelleyAddressCmdAddressInfoError addrInfoErr ->
-      "Error occurred while printing address info: " <> renderShelleyAddressInfoError addrInfoErr
+      Text.pack (displayError addrInfoErr)
     ShelleyAddressCmdReadFileError fileErr -> Text.pack (displayError fileErr)
     ShelleyAddressCmdWriteFileError fileErr -> Text.pack (displayError fileErr)
 
@@ -98,11 +100,11 @@ runAddressBuild (VerificationKeyFile payVkeyFp) mstkVkeyFp nw mOutFp = do
         Nothing -> pure NoStakeAddress
 
     let addr = makeShelleyAddress nwId paymentCred stakeAddrRef
-        hexAddr = serialiseToRawBytesHex addr
+        addrText = serialiseAddress addr
 
     case mOutFp of
-      Just (OutputFile fpath) -> liftIO . BS.writeFile fpath $ hexAddr
-      Nothing -> liftIO $ BS.putStrLn hexAddr
+      Just (OutputFile fpath) -> liftIO $ Text.writeFile fpath addrText
+      Nothing -> liftIO $ Text.putStrLn addrText
   where
     toStakeAddrRef :: VerificationKey StakeKey -> StakeAddressReference
     toStakeAddrRef = StakeAddressByValue . StakeCredentialByKey . verificationKeyHash
