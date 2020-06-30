@@ -359,7 +359,7 @@ The mandatory arguments are `config`, `signing-key`, `protocol-version-major`, `
 
 The remaining arguments are optional parameters you want to update in your update proposal.
 
-You can also check your proposal's validity using the [`validate-cbor`](#validate-cbor-files) command.
+You can also check your proposal's validity using the `Validate cbor files`_ command.
 
 See the `Byron specification <https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/byronLedgerSpec/latest/download-by-type/doc-pdf/ledger-spec>`_
 for more details on update proposals.
