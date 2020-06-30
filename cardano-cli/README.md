@@ -56,7 +56,7 @@ Miscellaneous commands
   version                  Show the cardano-cli version
 ```
 
-See `../README.md` for full usage instructions and examples of use.
+See [`../README.md`](../README.md) for full usage instructions and examples of use.
 
 ## How to build
 
