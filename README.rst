@@ -9,9 +9,12 @@
 `cardano-node` Overview
 ***********************
 
-Integration of the `ledger <https://github.com/input-output-hk/cardano-ledger>`_, [consensus](https://github.com/input-output-hk/ouroboros-network/tree/master/ouroboros-consensus), [networking](https://github.com/input-output-hk/ouroboros-network/tree/master/ouroboros-network) and [node shell](https://github.com/input-output-hk/cardano-shell) repositories.
+Integration of the `ledger <https://github.com/input-output-hk/cardano-ledger>`_, `consensus <https://github.com/input-output-hk/ouroboros-network/tree/master/ouroboros-consensus>`_,
+`networking <https://github.com/input-output-hk/ouroboros-network/tree/master/ouroboros-network>_ and
+`node shell <https://github.com/input-output-hk/cardano-shell>`_ repositories.
 
-[Logging](https://github.com/input-output-hk/iohk-monitoring-framework) is provided as a [feature](https://github.com/input-output-hk/cardano-shell/blob/master/app/Cardano/Shell/Features/Logging.hs) by the node shell to the other packages.
+`Logging <https://github.com/input-output-hk/iohk-monitoring-framework>`_ is provided as a
+`feature <https://github.com/input-output-hk/cardano-shell/blob/master/app/Cardano/Shell/Features/Logging.hs>`_ by the node shell to the other packages.
 
 - The cardano-node is the top level for the node and
   aggregates the other components from other packages: consensus, ledger and
@@ -24,7 +27,7 @@ Integration of the `ledger <https://github.com/input-output-hk/cardano-ledger>`_
 Network Configuration, Genesis and Topology Files
 =================================================
 
-The latest supported networks can be found at https://hydra.iohk.io/job/Cardano/cardano-node/cardano-deployment/latest-finished/download/1/index.html
+The latest supported networks can be found at `<https://hydra.iohk.io/job/Cardano/cardano-node/cardano-deployment/latest-finished/download/1/index.html>'_
 
 How to build
 ============
@@ -32,7 +35,7 @@ How to build
 Cabal
 -----
 
-Use [Cabal - Version 3.0](https://www.haskell.org/cabal/) to build this project:
+Use `Cabal - Version 3.0 <https://www.haskell.org/cabal/>`_ to build this project:
 
 .. code-block:: console
 
@@ -45,7 +48,7 @@ Windows Executable
 Download
 --------
 
-You can download [here](https://hydra.iohk.io/job/Cardano/cardano-node/cardano-node-win64/latest-finished).
+You can download `here <https://hydra.iohk.io/job/Cardano/cardano-node/cardano-node-win64/latest-finished>`_.
 
 Instructions
 ------------
@@ -88,13 +91,16 @@ The general synopsis is as follows:
 
 `--port` - Specify which port to assign to the node.
 
-`--config` - Specify the filepath to the config `.yaml` file. This file is responsible for all the other node's required settings. See examples in `configuration` (e.g. [`config-0.yaml`](configuration/defaults/liveview/config-0.yaml)).
+`--config` - Specify the filepath to the config `.yaml` file. This file is responsible for all the other node's required settings. See examples in `configuration`
+(e.g. `config-0.yaml` <configuration/defaults/liveview/config-0.yaml>`_).
 
 
 Configuration `.yaml` files
 ===========================
 
-The `--config` flag points to a `.yaml` file that is responsible to configuring the logging & other important settings for the node. E.g. see the mainnet configuration in this [configuration.yaml](https://github.com/input-output-hk/cardano-node/blob/master/configuration/defaults/byron-mainnet/configuration.yaml). Some of the more important settings are as follows:
+The `--config` flag points to a `.yaml` file that is responsible to configuring the logging & other important settings for the node. E.g. see the mainnet configuration in this
+`configuration.yaml` <https://github.com/input-output-hk/cardano-node/blob/master/configuration/defaults/byron-mainnet/configuration.yaml>`_.
+Some of the more important settings are as follows:
 
 `NodeId: 0`  -- Used in mock protocols only to differentiate nodes.
 
