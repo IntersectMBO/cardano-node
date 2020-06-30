@@ -59,8 +59,8 @@ The download includes cardano-node.exe and a .dll. To run the node with cardano-
 
     cardano-node.exe run --topology ./mainnet-topology.json --database-path ./state --port 3001 --config ./configuration-mainnet.yaml --socket-path \\.\pipe\cardano-node
 
-`cardano-node`
-==============
+``cardano-node``
+================
 This refers to the client that is used for running a node.
 
 The general synopsis is as follows:
@@ -75,61 +75,61 @@ The general synopsis is as follows:
                     [--help-advanced]
    Start node of the Cardano blockchain.
 
-`--topology` - Filepath to a topology file describing which peers the node should connect to.
+``--topology`` - Filepath to a topology file describing which peers the node should connect to.
 
-`--database-path` - Path to the blockchain database.
+``--database-path`` - Path to the blockchain database.
 
-`--genesis-file` - Path to the genesis file of the chain you are connecting to.
+``--genesis-file`` - Path to the genesis file of the chain you are connecting to.
 
-`--delegation-certificate` - Optional path to the delegation certificate. The delegation certificate allows the delegator (the issuer of said certificate) to give his/her own block signing rights to somebody else (the delegatee). The delegatee can then sign blocks on behalf of the delegator.
+``--delegation-certificate`` - Optional path to the delegation certificate. The delegation certificate allows the delegator (the issuer of said certificate) to give his/her own block signing rights to somebody else (the delegatee). The delegatee can then sign blocks on behalf of the delegator.
 
-`--signing-key` - Optional path to the signing key.
+``--signing-key`` - Optional path to the signing key.
 
-`--socket-path` - Path to the socket file.
+``--socket-path`` - Path to the socket file.
 
-`--host-addr` - Optionally specify your node's IPv4 or IPv6 address.
+``--host-addr`` - Optionally specify your node's IPv4 or IPv6 address.
 
-`--port` - Specify which port to assign to the node.
+``--port`` - Specify which port to assign to the node.
 
-`--config` - Specify the filepath to the config `.yaml` file. This file is responsible for all the other node's required settings. See examples in `configuration`
+``--config`` - Specify the filepath to the config ``.yaml`` file. This file is responsible for all the other node's required settings. See examples in ``configuration``
 (e.g. `config-0.yaml` <configuration/defaults/liveview/config-0.yaml>`_).
 
 
-Configuration `.yaml` files
-===========================
+Configuration ``.yaml`` files
+=============================
 
-The `--config` flag points to a `.yaml` file that is responsible to configuring the logging & other important settings for the node. E.g. see the mainnet configuration in this
+The ``--config`` flag points to a ``.yaml`` file that is responsible to configuring the logging & other important settings for the node. E.g. see the mainnet configuration in this
 `configuration.yaml <https://github.com/input-output-hk/cardano-node/blob/master/configuration/defaults/byron-mainnet/configuration.yaml>`_.
 Some of the more important settings are as follows:
 
-`NodeId: 0`  -- Used in mock protocols only to differentiate nodes.
+``NodeId: 0``  -- Used in mock protocols only to differentiate nodes.
 
-`Protocol: RealPBFT` -- Protocol the node will execute
+``Protocol: RealPBFT`` -- Protocol the node will execute
 
-`RequiresNetworkMagic`: RequiresNoMagic -- Used to distinguish between mainnet (`RequiresNoMagic`) and testnets (`RequiresMagic`)
+``RequiresNetworkMagic``: RequiresNoMagic -- Used to distinguish between mainnet (``RequiresNoMagic``) and testnets (``RequiresMagic``)
 
-`ViewMode: SimpleView` -- Choose between SimpleView or LiveView
+``ViewMode: SimpleView`` -- Choose between ``SimpleView`` or ``LiveView``
 
 
  Logging
 ========
 
-Logs are output to the `logs/` dir.
+Logs are output to the ``logs/`` dir.
 
 Profiling & statistics
 ======================
 
-Profiling data and RTS run stats are stored in the `profile/` dir.
+Profiling data and RTS run stats are stored in the ``profile/`` dir.
 
-Please see `scripts/README.md` for how to obtain profiling information using the scripts.
+Please see ``scripts/README.md`` for how to obtain profiling information using the scripts.
 
 Scripts
 =======
 
-Please see `scripts/README.md` for information on the various scripts.
+Please see ``scripts/README.md`` for information on the various scripts.
 
-`cardano-cli`
-=============
+``cardano-cli``
+===============
 
 A CLI utility to support a variety of key material operations (genesis, migration, pretty-printing..) for different system generations.
 
@@ -138,9 +138,10 @@ The general synopsis is as follows:
 .. code-block:: console
    Usage: cardano-cli (Genesis related CMDs | Key related CMDs | Delegation related CMDs | Transaction related CMDs | Local node related CMDs)
 
-> NOTE: the exact invocation command depends on the environment.  If you have only built `cardano-cli`, without installing it, then you have to prepend `cabal run -- ` before `cardano-cli`.  We henceforth assume that the necessary environment-specific adjustment has been made, so we only mention `cardano-cli`.
+> NOTE: the exact invocation command depends on the environment.  If you have only built ``cardano-cli``, without installing it, then you have to prepend ``cabal run -- ``
+before ``cardano-cli``.  We henceforth assume that the necessary environment-specific adjustment has been made, so we only mention ``cardano-cli``.
 
-The subcommands are subdivided in groups, and their full list can be seen in the output of `cardano-cli --help`.
+The subcommands are subdivided in groups, and their full list can be seen in the output of ``cardano-cli --help``.
 
 All subcommands have help available:
 
@@ -177,52 +178,52 @@ Generation
 
 The genesis generation operations will create a directory that contains:
 
-  `genesis.json`
+  ``genesis.json``
   :: The genesis JSON file itself.
 
-  `avvm-seed.*.seed`
-  :: Ada Voucher Vending Machine seeds (secret). Affected by `--avvm-entry-count` and `--avvm-entry-balance`.
+  ``avvm-seed.*.seed``
+  :: Ada Voucher Vending Machine seeds (secret). Affected by ``--avvm-entry-count`` and ``--avvm-entry-balance``.
 
-  `delegate-keys.*.key`
-  :: Delegate private keys. Affected by: `--n-delegate-addresses`.
+  ``delegate-keys.*.key``
+  :: Delegate private keys. Affected by: ``--n-delegate-addresses``.
 
-  `delegation-cert.*.json`
-  :: Delegation certificates. Affected by: `--n-delegate-addresses`.
+  ``delegation-cert.*.json``
+  :: Delegation certificates. Affected by: ``--n-delegate-addresses``.
 
-  `genesis-keys.*.key`
-  :: Genesis stake private keys. Affected by: `--n-delegate-addresses`, `--total-balance`.
+  ``genesis-keys.*.key``
+  :: Genesis stake private keys. Affected by: ``--n-delegate-addresses``, ``--total-balance``.
 
-  `poor-keys.*.key`
-  :: Non-delegate private keys with genesis UTxO. Affected by: `--n-poor-addresses`, `--total-balance`.
+  ``poor-keys.*.key``
+  :: Non-delegate private keys with genesis UTxO. Affected by: ``--n-poor-addresses``, ``--total-balance``.
 
-More details on the Genesis `JSON` file can be found in `docs/GenesisData.md`
+More details on the Genesis ``JSON`` file can be found in ``docs/GenesisData.md``
 
 Genesis delegation and related concepts are described in detail in:
 
   `<https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/byronLedgerSpec/latest/download-by-type/doc-pdf/ledger-spec>`_
 
-The canned `scripts/genesis.sh` example provides a nice set of defaults and
+The canned ``scripts/genesis.sh`` example provides a nice set of defaults and
 illustrates available options.
 
 Key operations
 ==============
 
 Note that no key operation currently supports accepting password-protected keys.
-The `keygen` subcommand, though, can generate such keys.
+The ``keygen`` subcommand, though, can generate such keys.
 
 Signing key generation & verification key extraction
 ----------------------------------------------------
 
-Signing keys can be generated using the `keygen` subcommand, password protection being
-controlled by the `--no-password` flag.
+Signing keys can be generated using the ``keygen`` subcommand, password protection being
+controlled by the ``--no-password`` flag.
 
-Extracting a verification key out of the signing key is performed by the `to-verification` subcommand.
+Extracting a verification key out of the signing key is performed by the ``to-verification`` subcommand.
 
 Delegate key migration
 ----------------------
 
 In order to continue using a delegate key from the Byron Legacy era in the new implementation,
-it needs to be migrated over, which is done by the `migrate-delegate-key-from` subcommand:
+it needs to be migrated over, which is done by the ``migrate-delegate-key-from`` subcommand:
 
 
 .. code-block:: console
@@ -233,8 +234,8 @@ it needs to be migrated over, which is done by the `migrate-delegate-key-from` s
 Signing key queries
 -------------------
 
-One can gather information about a signing key's properties through the `signing-key-public`
-and `signing-key-address` subcommands (the latter requires the network magic):
+One can gather information about a signing key's properties through the ``signing-key-public``
+and ``signing-key-address`` subcommands (the latter requires the network magic):
 
 .. code-block:: console
 
@@ -251,7 +252,7 @@ and `signing-key-address` subcommands (the latter requires the network magic):
 Delegation
 ==========
 
-The `issue-delegation-certificate` subcommand enables generation of Byron genesis
+The ``issue-delegation-certificate`` subcommand enables generation of Byron genesis
 delegation certificates, given the following inputs:
 
    - node configuration yaml file
@@ -259,13 +260,13 @@ delegation certificates, given the following inputs:
    - genesis delegator signing key
    - delegate verification key
 
-To check the generated delegation certificate, you can use the `check-delegation` subcommand,
+To check the generated delegation certificate, you can use the ``check-delegation`` subcommand,
 which would verify:
 
    - certificate signature validity
    - correspondence of the expected issuer/delegate with those on the certificate.
 
-The expected issuer and delegate are supplied through the `--issuer-key` and `--delegate-key`
+The expected issuer and delegate are supplied through the ``--issuer-key`` and ``--delegate-key``
 options.
 
 Transactions
@@ -274,55 +275,56 @@ Transactions
 Creation
 --------
 
-Transactions can be created via the  `issue-genesis-utxo-expenditure` & `issue-utxo-expenditure` commands.
+Transactions can be created via the  ``issue-genesis-utxo-expenditure`` & ``issue-utxo-expenditure`` commands.
 
-The easiest way to create a transaction is via the `scripts/issue-genesis-utxo-expenditure.sh` script as follows:
+The easiest way to create a transaction is via the ``scripts/issue-genesis-utxo-expenditure.sh`` script as follows:
 
-`./scripts/issue-genesis-utxo-expenditure.sh transaction_file`
+``./scripts/issue-genesis-utxo-expenditure.sh transaction_file``
 
-NB: This by default creates a transaction based on `configuration/defaults/liveview/config-0.yaml`
+NB: This by default creates a transaction based on ``configuration/defaults/liveview/config-0.yaml``
 
-If you do not have a `genesis_file` you can run `scripts/genesis.sh` which will create an example `genesis_file` for you. The script `scripts/issue-genesis-utxo-expenditure.sh` has defaults for all the requirements of the `issue-genesis-utxo-expenditure` command.
+If you do not have a ``genesis_file`` you can run ``scripts/genesis.sh`` which will create an example ``genesis_file`` for you.
+The script ``scripts/issue-genesis-utxo-expenditure.sh`` has defaults for all the requirements of the ``issue-genesis-utxo-expenditure`` command.
 
 Submission
 ----------
 
-The `submit-tx` subcommand provides the option of submitting a pre-signed
+The ``submit-tx`` subcommand provides the option of submitting a pre-signed
 transaction, in its raw wire format (see GenTx for Byron transactions).
 
-The canned `scripts/submit-tx.sh` script will submit the supplied transaction to a testnet
-launched by `scripts/shelley-testnet-liveview.sh` script.
+The canned ``scripts/submit-tx.sh`` script will submit the supplied transaction to a testnet
+launched by ``scripts/shelley-testnet-liveview.sh`` script.
 
 Issuing UTxO expenditure (genesis and regular)
 ----------------------------------------------
 
 To make a transaction spending UTxO, you can either use the:
 
-  - `issue-genesis-utxo-expenditure`, for genesis UTxO
-  - `issue-utxo-expenditure`, for normal UTxO
+  - ``issue-genesis-utxo-expenditure``, for genesis UTxO
+  - ``issue-utxo-expenditure``, for normal UTxO
 
 subcommands directly, or, again use canned scripts that will make transactions tailored
 for the aforementioned testnet cluster:
 
-  - `scripts/issue-genesis-utxo-expenditure.sh`.
-  - `scripts/issue-utxo-expenditure.sh`.
+  - ``scripts/issue-genesis-utxo-expenditure.sh``.
+  - ``scripts/issue-utxo-expenditure.sh``.
 
 The script requires the target file name to write the transaction to, input TxId
 (for normal UTxO), and optionally allows specifying the source txin output index,
 source and target signing keys and lovelace value to send.
 
-The target address defaults to the 1-st richman key (`configuration/delegate-keys.001.key`)
+The target address defaults to the 1-st richman key (``configuration/delegate-keys.001.key``)
 of the testnet, and lovelace amount is almost the entirety of its funds.
 
 Local node queries
 ==================
 
-You can query the tip of your local node via the `get-tip` command as follows
+You can query the tip of your local node via the ``get-tip`` command as follows
 
 1. Open `tmux`
-2. Run `cabal build cardano-node`
-3. Run `./scripts/shelley-testnet-live.sh`
-4. `cabal exec cardano-cli -- get-tip --config configuration/defaults/liveview/config-0.yaml --socket-path socket/0`
+2. Run ``cabal build cardano-node``
+3. Run ``./scripts/shelley-testnet-live.sh``
+4. ``cabal exec cardano-cli -- get-tip --config configuration/defaults/liveview/config-0.yaml --socket-path socket/0``
 
 You will see output from stdout in this format:
 
@@ -355,7 +357,7 @@ A Byron update proposal can be created as follows:
                   --filepath FILEPATH
                   ..
 
-The mandatory arguments are `config`, `signing-key`, `protocol-version-major`, `protocol-version-minor`, `protocol-version-alt`, `application-name`, `software-version-num`, `system-tag`, `installer-hash` and `filepath`.
+The mandatory arguments are ``config``, ``signing-key``, ``protocol-version-major``, ``protocol-version-minor``, ``protocol-version-alt``, ``application-name``, ``software-version-num``, ``system-tag``, ``installer-hash`` and ``filepath``.
 
 The remaining arguments are optional parameters you want to update in your update proposal.
 
@@ -367,7 +369,7 @@ for more details on update proposals.
 Update proposal submission
 --------------------------
 
-You can submit your proposal using the `submit-update-proposal` command.
+You can submit your proposal using the ``submit-update-proposal`` command.
 
 Example:
 
@@ -378,7 +380,7 @@ Example:
                --filepath my-update-proposal
                --socket-path socket/0
 
-The socket path  must either be specified as an argument (`--socket-path`) or specified in the supplied config file.
+The socket path  must either be specified as an argument (``--socket-path``) or specified in the supplied config file.
 
 See the `Byron specification <https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/byronLedgerSpec/latest/download-by-type/doc-pdf/ledger-spec>`_
 for more deatils on update proposals.
@@ -386,7 +388,7 @@ for more deatils on update proposals.
 Update proposal voting
 ======================
 
-You can create and submit byron update proposal votes with the `create-proposal-vote` & `submit-proposal-vote` commands. The following are two example commands:
+You can create and submit byron update proposal votes with the ``create-proposal-vote`` & ``submit-proposal-vote`` commands. The following are two example commands:
 
 
 Byron vote creation:
