@@ -199,7 +199,7 @@ More details on the Genesis `JSON` file can be found in `docs/GenesisData.md`
 
 Genesis delegation and related concepts are described in detail in:
 
-  https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/byronLedgerSpec/latest/download-by-type/doc-pdf/ledger-spec
+  `<https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/byronLedgerSpec/latest/download-by-type/doc-pdf/ledger-spec>`_
 
 The canned `scripts/genesis.sh` example provides a nice set of defaults and
 illustrates available options.
