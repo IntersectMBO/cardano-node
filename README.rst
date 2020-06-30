@@ -178,23 +178,23 @@ Generation
 
 The genesis generation operations will create a directory that contains:
 
-  ``genesis.json``
-  :: The genesis JSON file itself.
+* ``genesis.json``:
+  The genesis JSON file itself.
 
-  ``avvm-seed.*.seed``
-  :: Ada Voucher Vending Machine seeds (secret). Affected by ``--avvm-entry-count`` and ``--avvm-entry-balance``.
+* ``avvm-seed.*.seed``:
+  Ada Voucher Vending Machine seeds (secret). Affected by ``--avvm-entry-count`` and ``--avvm-entry-balance``.
 
-  ``delegate-keys.*.key``
-  :: Delegate private keys. Affected by: ``--n-delegate-addresses``.
+* ``delegate-keys.*.key``:
+  Delegate private keys. Affected by: ``--n-delegate-addresses``.
 
-  ``delegation-cert.*.json``
-  :: Delegation certificates. Affected by: ``--n-delegate-addresses``.
+* ``delegation-cert.*.json``:
+  Delegation certificates. Affected by: ``--n-delegate-addresses``.
 
-  ``genesis-keys.*.key``
-  :: Genesis stake private keys. Affected by: ``--n-delegate-addresses``, ``--total-balance``.
+* ``genesis-keys.*.key``:
+  Genesis stake private keys. Affected by: ``--n-delegate-addresses``, ``--total-balance``.
 
-  ``poor-keys.*.key``
-  :: Non-delegate private keys with genesis UTxO. Affected by: ``--n-poor-addresses``, ``--total-balance``.
+* ``poor-keys.*.key``:
+  Non-delegate private keys with genesis UTxO. Affected by: ``--n-poor-addresses``, ``--total-balance``.
 
 More details on the Genesis ``JSON`` file can be found in ``docs/GenesisData.md``
 
