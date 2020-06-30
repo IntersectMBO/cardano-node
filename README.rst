@@ -1,9 +1,11 @@
-#####################
 `cardano-node` README
-#####################
+---------------------
 
-![Cardano ADA](https://github.com/input-output-hk/cardano-node/blob/media/Cardano-ADA.png?raw=true)
+.. figure:: https://github.com/input-output-hk/cardano-node/blob/media/Cardano-ADA.png?raw=true
+   :alt: Cardano ADA
 
+   Cardano ADA
+   
 .. raw:: html
 
    <p align="center">
