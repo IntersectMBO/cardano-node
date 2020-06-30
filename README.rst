@@ -1,6 +1,3 @@
-`cardano-node` README
----------------------
-
 .. raw:: html
 
    <p align="center">
