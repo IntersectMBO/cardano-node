@@ -8,7 +8,7 @@ cardano-node
    :maxdepth: 3
    :titlesonly:
 
-   cardano-node-quickstart.md
+   cardano-node-quickstart
    building-the-node-using-nix
    building-the-node-from-source
    running-the-node-using-docker
