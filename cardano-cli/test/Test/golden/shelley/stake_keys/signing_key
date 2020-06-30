@@ -1,0 +1,4 @@
+type: SigningKeyShelley
+title: Stake Signing Key
+cbor-hex:
+ 5820d6a8314394e8356d4dabd084bde5769dad6ac8a0ad296103e602e0049a3842c9

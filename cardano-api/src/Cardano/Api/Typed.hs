@@ -158,7 +158,7 @@ module Cardano.Api.Typed (
     -- ** Text envelope
     -- | Support for a envelope file format with text headers and a hex-encoded
     -- binary payload.
-    HasTextEnvelope,
+    HasTextEnvelope(..),
     TextEnvelope,
     TextEnvelopeType,
     TextEnvelopeDescr,

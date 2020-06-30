@@ -31,7 +31,7 @@ prop_createStakeAddressRegistrationCertificate =
                                , "--verification-key-file", verKey
                                , "--signing-key-file", signKey
                                ]
-    doFilesExist [verKey, signKey]
+    assertFilesExist [verKey, signKey]
 
     -- Create stake address registration certificate
     execCardanoCLIParser
@@ -42,7 +42,7 @@ prop_createStakeAddressRegistrationCertificate =
                                , "--out-file", stakeRegCert
                                ]
 
-    doFilesExist allFiles
+    assertFilesExist allFiles
     liftIO $ fileCleanup allFiles
     H.success
 

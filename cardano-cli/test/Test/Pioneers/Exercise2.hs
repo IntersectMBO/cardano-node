@@ -34,7 +34,7 @@ prop_createTransaction =
                                , "--signing-key-file", paymentSignKey
                                ]
 
-    doFilesExist [paymentVerKey, paymentSignKey]
+    assertFilesExist [paymentVerKey, paymentSignKey]
 
     -- Create transaction body
     execCardanoCLIParser
@@ -48,7 +48,7 @@ prop_createTransaction =
                                , "--out-file", transactionBodyFile
                                ]
 
-    doFilesExist [transactionBodyFile]
+    assertFilesExist [transactionBodyFile]
 
     -- Sign transaction
     execCardanoCLIParser
@@ -62,7 +62,7 @@ prop_createTransaction =
                                ]
 
 
-    doFilesExist allFiles
+    assertFilesExist allFiles
 
     liftIO $ fileCleanup allFiles
     H.success

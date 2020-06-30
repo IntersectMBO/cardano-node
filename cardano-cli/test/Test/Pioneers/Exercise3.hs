@@ -36,7 +36,7 @@ prop_createOperationalCertificate =
                                , "--signing-key-file", kesSignKey
                                ]
 
-    doFilesExist [kesSignKey, kesVerKey]
+    assertFilesExist [kesSignKey, kesVerKey]
 
     -- Create cold key pair
     execCardanoCLIParser
@@ -48,7 +48,7 @@ prop_createOperationalCertificate =
                                , "--operational-certificate-issue-counter", operationalCertCounter
                                ]
 
-    doFilesExist [coldVerKey, coldSignKey, operationalCertCounter]
+    assertFilesExist [coldVerKey, coldSignKey, operationalCertCounter]
 
     -- Create operational certificate
     execCardanoCLIParser
@@ -62,7 +62,7 @@ prop_createOperationalCertificate =
                                , "--out-file", operationalCert
                                ]
 
-    doFilesExist allFiles
+    assertFilesExist allFiles
 
     liftIO $ fileCleanup allFiles
     H.success
