@@ -10,7 +10,7 @@
 ***********************
 
 Integration of the `ledger <https://github.com/input-output-hk/cardano-ledger>`_, `consensus <https://github.com/input-output-hk/ouroboros-network/tree/master/ouroboros-consensus>`_,
-`networking <https://github.com/input-output-hk/ouroboros-network/tree/master/ouroboros-network>_ and
+`networking <https://github.com/input-output-hk/ouroboros-network/tree/master/ouroboros-network>`_ and
 `node shell <https://github.com/input-output-hk/cardano-shell>`_ repositories.
 
 `Logging <https://github.com/input-output-hk/iohk-monitoring-framework>`_ is provided as a
