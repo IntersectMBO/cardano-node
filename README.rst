@@ -410,7 +410,7 @@ Byron vote submission:
 Development
 ===========
 
-run *ghcid* with: `ghcid -c "cabal v2-repl exe:cardano-node --reorder-goals"`
+run *ghcid* with: ``ghcid -c "cabal v2-repl exe:cardano-node --reorder-goals"``
 
 Testing
 ========
@@ -426,11 +426,11 @@ Pretty printing CBOR encoded files
 It may be useful to print the on chain representations of blocks, delegation certificates, txs and update proposals. There are two commands that do this (for any cbor encoded file):
 
 To pretty print as CBOR:
-`cabal exec cardano-cli -- pretty-print-cbor --filepath CBOREncodedFile`
+``cabal exec cardano-cli -- pretty-print-cbor --filepath CBOREncodedFile``
 
 Validate cbor files
 -------------------
 
-You can validate Byron era blocks, delegation certificates, txs and update proposals with the `validate-cbor` command.
+You can validate Byron era blocks, delegation certificates, txs and update proposals with the ``validate-cbor`` command.
 
-`cabal exec cardano-cli -- validate-cbor --byron-block 21600 --filepath CBOREncodedByronBlockFile`
+``cabal exec cardano-cli -- validate-cbor --byron-block 21600 --filepath CBOREncodedByronBlockFile``
