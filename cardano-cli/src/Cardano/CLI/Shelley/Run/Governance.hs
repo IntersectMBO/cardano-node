@@ -7,20 +7,19 @@ module Cardano.CLI.Shelley.Run.Governance
 import           Cardano.Prelude
 
 import qualified Data.Map.Strict as Map
+import qualified Data.Text as Text
+
 import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, left, right,
                    newExceptT)
 
 import           Cardano.Api (ApiError, EpochNo, ShelleyCoin,
-                   ShelleyCredentialStaking, ShelleyPParamsUpdate, emptyPParamsUpdate,
-                   StakingVerificationKey (..), Update (..),
-                   createShelleyUpdateProposal, hashKey, mkShelleyStakingCredential,
+                   ShelleyCredentialStaking, StakingVerificationKey (..),
+                   hashKey, mkShelleyStakingCredential,
                    readStakingVerificationKey, renderApiError, shelleyMIRCertificate,
-                   textShow, writeCertificate, writeUpdate)
+                   textShow, writeCertificate)
+import qualified Cardano.Api.Typed as Api
 
-
-import           Cardano.Api.Shelley.ColdKeys (KeyError, KeyRole(..), readVerKey,
-                   renderKeyError)
 import           Cardano.CLI.Shelley.Parsers
 
 import qualified Shelley.Spec.Ledger.TxData as Shelley
@@ -28,9 +27,9 @@ import qualified Shelley.Spec.Ledger.TxData as Shelley
 
 data ShelleyGovernanceError
   = GovernanceWriteMIRCertError !FilePath !ApiError
-  | GovernanceWriteUpdateError !FilePath !ApiError
+  | GovernanceWriteUpdateError !(Api.FileError ())
   | GovernanceEmptyUpdateProposalError
-  | GovernanceReadGenVerKeyError !FilePath !KeyError
+  | GovernanceReadGenVerKeyError !(Api.FileError Api.TextEnvelopeError)
   | GovernanceReadStakeVerKeyError !FilePath !ApiError
   | GovernanceMIRCertificateKeyRewardMistmach
       !FilePath
@@ -43,14 +42,14 @@ data ShelleyGovernanceError
 renderShelleyGovernanceError :: ShelleyGovernanceError -> Text
 renderShelleyGovernanceError err =
   case err of
-    GovernanceReadGenVerKeyError fp keyErr ->
-      "Error reading genesis verification key at: " <> textShow fp <> " Error: " <> renderKeyError keyErr
+    GovernanceReadGenVerKeyError apiErr ->
+      "Error reading genesis verification key: " <> Text.pack (Api.displayError apiErr)
     GovernanceReadStakeVerKeyError stKeyFp apiErr ->
       "Error reading stake key at: " <> textShow stKeyFp <> " Error: " <> renderApiError apiErr
     GovernanceWriteMIRCertError certFp apiErr ->
       "Error writing MIR certificate at: " <> textShow certFp <> " Error: " <> renderApiError apiErr
-    GovernanceWriteUpdateError fp apiError ->
-      "Error writing shelley update proposal at: " <> textShow fp <> " Error: " <> renderApiError apiError
+    GovernanceWriteUpdateError apiErr ->
+      "Error writing shelley update proposal: " <> Text.pack (Api.displayError apiErr)
     -- TODO: The equality check is still not working for empty update proposals.
     GovernanceEmptyUpdateProposalError ->
       "Empty update proposals are not allowed"
@@ -105,21 +104,18 @@ runGovernanceUpdateProposal
   -> EpochNo
   -> [VerificationKeyFile]
   -- ^ Genesis verification keys
-  -> ShelleyPParamsUpdate
+  -> Api.ProtocolParametersUpdate
   -> ExceptT ShelleyGovernanceError IO ()
-runGovernanceUpdateProposal (OutputFile upFile) eNo genVerKeyFiles upPprams' = do
-    upPprams <- checkForEmptyProposal $! upPprams'
-    genVKeys <- mapM
-                  (\(VerificationKeyFile fp) -> do
-                    gvk <- firstExceptT (GovernanceReadGenVerKeyError fp) $ readVerKey GenesisKey fp
-                    pure gvk
-                  )
-                  genVerKeyFiles
-    let genKeyHashes = map hashKey genVKeys
-        upProp = ShelleyUpdate $ createShelleyUpdateProposal eNo genKeyHashes upPprams
-    firstExceptT (GovernanceWriteUpdateError upFile)  . newExceptT $ writeUpdate upFile upProp
-  where
-    checkForEmptyProposal :: ShelleyPParamsUpdate -> ExceptT ShelleyGovernanceError IO ShelleyPParamsUpdate
-    checkForEmptyProposal sPParams
-      | sPParams == emptyPParamsUpdate = left GovernanceEmptyUpdateProposalError
-      | otherwise = right sPParams
+runGovernanceUpdateProposal (OutputFile upFile) eNo genVerKeyFiles upPprams = do
+    when (upPprams == mempty) $ left GovernanceEmptyUpdateProposalError
+    genVKeys <- sequence
+                  [ firstExceptT GovernanceReadGenVerKeyError . newExceptT $
+                      Api.readFileTextEnvelope
+                        (Api.AsVerificationKey Api.AsGenesisKey)
+                        vkeyFile
+                  | VerificationKeyFile vkeyFile <- genVerKeyFiles ]
+    let genKeyHashes = map Api.verificationKeyHash genVKeys
+        upProp = Api.makeShelleyUpdateProposal upPprams genKeyHashes eNo
+    firstExceptT GovernanceWriteUpdateError . newExceptT $
+      Api.writeFileTextEnvelope upFile Nothing upProp
+

@@ -186,7 +186,9 @@ data BlockCmd
 data GovernanceCmd
   = GovernanceMIRCertificate MIRPot [VerificationKeyFile] [ShelleyCoin] OutputFile
   | GovernanceProtocolUpdate SigningKeyFile -- { parameters :: ProtocolParams, nodeAddr :: NodeAddress }
-  | GovernanceUpdateProposal OutputFile EpochNo [VerificationKeyFile] ShelleyPParamsUpdate
+  | GovernanceUpdateProposal OutputFile EpochNo
+                             [VerificationKeyFile]
+                             Typed.ProtocolParametersUpdate
   | GovernanceColdKeys SigningKeyFile     -- { genesis :: GenesisKeyFile, keys :: [PubKey], nodeAddr :: NodeAddress }
   deriving (Eq, Show)
 

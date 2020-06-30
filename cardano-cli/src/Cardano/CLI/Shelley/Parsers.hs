@@ -11,6 +11,7 @@ import           Cardano.Prelude hiding (option)
 
 import           Control.Monad.Fail (fail)
 import qualified Data.ByteString.Char8 as BSC
+import qualified Data.ByteString.Base16 as Base16
 import qualified Data.Char as Char
 import qualified Data.IP as IP
 import qualified Data.Set as Set
@@ -37,7 +38,7 @@ import           Cardano.Config.Parsers (parseNodeAddress)
 
 import           Cardano.CLI.Shelley.Commands
 
-import           Cardano.Crypto.Hash (Blake2b_256, Hash (..), hashFromBytes, hashFromBytesAsHex)
+import           Cardano.Crypto.Hash (Blake2b_256, Hash (..), hashFromBytesAsHex)
 
 --
 -- Shelley CLI command parsers
@@ -510,7 +511,7 @@ pGovernanceCmd =
                         <$> pOutputFile
                         <*> pEpochNoUpdateProp
                         <*> some pGenesisVerificationKeyFile
-                        <*> pShelleyPParamsUpdate
+                        <*> pShelleyProtocolParametersUpdate
 
     pProtocolUpdate :: Parser GovernanceCmd
     pProtocolUpdate = GovernanceProtocolUpdate <$> pColdSigningKeyFile
@@ -733,7 +734,7 @@ pMetaDataFile =
 
 pWithdrawal :: Parser (Typed.StakeAddress, Typed.Lovelace)
 pWithdrawal =
-    Opt.option (Opt.eitherReader (Atto.parseOnly parseWithdrawal . BSC.pack))
+    Opt.option (readerFromAttoParser parseWithdrawal)
       (  Opt.long "withdrawal"
       <> Opt.metavar "WITHDRAWAL"
       <> Opt.help "The reward withdrawal as StakeAddress+Lovelace where \
@@ -751,9 +752,6 @@ pWithdrawal =
       case Typed.deserialiseFromRawBytesHex Typed.AsStakeAddress bstr of
         Just addr -> return addr
         Nothing -> fail $ "Incorrect stake address format: " ++ show bstr
-
-    parseLovelace :: Atto.Parser Typed.Lovelace
-    parseLovelace = Typed.Lovelace <$> Atto.decimal
 
 
 pHasMetaData :: Parser HasMetaData
@@ -1043,7 +1041,7 @@ pTxSubmitFile =
 
 pTxIn :: Parser Typed.TxIn
 pTxIn =
-  Opt.option (Opt.eitherReader (Atto.parseOnly parseTxIn . BSC.pack))
+  Opt.option (readerFromAttoParser parseTxIn)
     (  Opt.long "tx-in"
     <> Opt.metavar "TX-IN"
     <> Opt.help "The input transaction as TxId#TxIx where TxId is the transaction hash and TxIx is the index."
@@ -1065,7 +1063,7 @@ pTxIn =
 
 pTxOut :: Parser (Typed.TxOut Typed.Shelley)
 pTxOut =
-  Opt.option (Opt.eitherReader (Atto.parseOnly parseTxOut . BSC.pack))
+  Opt.option (readerFromAttoParser parseTxOut)
     (  Opt.long "tx-out"
     <> Opt.metavar "TX-OUT"
     <> Opt.help "The ouput transaction as TxOut+Lovelace where TxOut is the hex encoded address followed by the amount in Lovelace."
@@ -1081,9 +1079,6 @@ pTxOut =
       case Typed.deserialiseFromRawBytesHex Typed.AsShelleyAddress bstr of
         Just addr -> return addr
         Nothing -> fail $ "Incorrect address format: " ++ show bstr
-
-    parseLovelace :: Atto.Parser Typed.Lovelace
-    parseLovelace = Typed.Lovelace <$> Atto.decimal
 
 pTxTTL :: Parser SlotNo
 pTxTTL =
@@ -1423,217 +1418,206 @@ pStakePoolRetirementCert =
     <*> pOutputFile
 
 
-pShelleyPParamsUpdate :: Parser ShelleyPParamsUpdate
-pShelleyPParamsUpdate =
-  PParams
-    <$> (maybeToStrictMaybe <$> pMinFeeLinearFactor)
-    <*> (maybeToStrictMaybe <$> pMinFeeConstantFactor)
-    <*> (maybeToStrictMaybe <$> pMaxBodySize)
-    <*> (maybeToStrictMaybe <$> pMaxTransactionSize)
-    <*> (maybeToStrictMaybe <$> pMaxBlockHeaderSize)
-    <*> (maybeToStrictMaybe <$> pKeyRegistDeposit)
-    <*> (maybeToStrictMaybe <$> pPoolDeposit)
-    <*> (maybeToStrictMaybe <$> pEpochBoundRetirement)
-    <*> (maybeToStrictMaybe <$> pNumberOfPools)
-    <*> (maybeToStrictMaybe <$> pPoolInfluence)
-    <*> (maybeToStrictMaybe <$> pMonetaryExpansion)
-    <*> (maybeToStrictMaybe <$> pTreasuryExpansion)
-    <*> (maybeToStrictMaybe <$> pDecentralParam)
-    <*> (maybeToStrictMaybe <$> pExtraEntropy)
-    <*> (maybeToStrictMaybe <$> pProtocolVersion)
-    <*> (maybeToStrictMaybe <$> pMinUTxOValue)
-    <*> (maybeToStrictMaybe <$> pMinPoolCost)
+pShelleyProtocolParametersUpdate :: Parser Typed.ProtocolParametersUpdate
+pShelleyProtocolParametersUpdate =
+  Typed.ProtocolParametersUpdate
+    <$> optional pProtocolVersion
+    <*> optional pDecentralParam
+    <*> optional pExtraEntropy
+    <*> optional pMaxBlockHeaderSize
+    <*> optional pMaxBodySize
+    <*> optional pMaxTransactionSize
+    <*> optional pMinFeeConstantFactor
+    <*> optional pMinFeeLinearFactor
+    <*> optional pMinUTxOValue
+    <*> optional pKeyRegistDeposit
+    <*> optional pPoolDeposit
+    <*> optional pMinPoolCost
+    <*> optional pEpochBoundRetirement
+    <*> optional pNumberOfPools
+    <*> optional pPoolInfluence
+    <*> optional pMonetaryExpansion
+    <*> optional pTreasuryExpansion
 
-pMinFeeLinearFactor :: Parser (Maybe Natural)
+pMinFeeLinearFactor :: Parser Natural
 pMinFeeLinearFactor =
-  optional
-    $ Opt.option Opt.auto
-        (  Opt.long "min-fee-linear"
-        <> Opt.metavar "NATURAL"
-        <> Opt.help "The linear factor for the minimum fee calculation."
-        )
+    Opt.option Opt.auto
+      (  Opt.long "min-fee-linear"
+      <> Opt.metavar "NATURAL"
+      <> Opt.help "The linear factor for the minimum fee calculation."
+      )
 
-pMinFeeConstantFactor :: Parser (Maybe Natural)
+pMinFeeConstantFactor :: Parser Natural
 pMinFeeConstantFactor =
-  optional
-  $ Opt.option Opt.auto
+    Opt.option Opt.auto
       (  Opt.long "min-fee-constant"
       <> Opt.metavar "LOVELACE"
       <> Opt.help "The constant factor for the minimum fee calculation."
       )
 
-pMinUTxOValue :: Parser (Maybe ShelleyCoin)
+pMinUTxOValue :: Parser Typed.Lovelace
 pMinUTxOValue =
-  Opt.optional $
-    Shelley.Coin <$>
-    Opt.option Opt.auto
+    Opt.option (readerFromAttoParser parseLovelace)
       (  Opt.long "min-utxo-value"
       <> Opt.metavar "NATURAL"
       <> Opt.help "The minimum allowed UTxO value."
       )
 
-pMinPoolCost :: Parser (Maybe ShelleyCoin)
+pMinPoolCost :: Parser Typed.Lovelace
 pMinPoolCost =
-  Opt.optional $
-    Shelley.Coin <$>
-    Opt.option Opt.auto
+    Opt.option (readerFromAttoParser parseLovelace)
       (  Opt.long "min-pool-cost"
       <> Opt.metavar "NATURAL"
       <> Opt.help "The minimum allowed cost parameter for stake pools."
       )
 
-pMaxBodySize :: Parser (Maybe Natural)
+pMaxBodySize :: Parser Natural
 pMaxBodySize =
-  optional
-    $ Opt.option Opt.auto
-        (  Opt.long "max-block-body-size"
-        <> Opt.metavar "NATURAL"
-        <> Opt.help "Maximal block body size."
-        )
+    Opt.option Opt.auto
+      (  Opt.long "max-block-body-size"
+      <> Opt.metavar "NATURAL"
+      <> Opt.help "Maximal block body size."
+      )
 
-pMaxTransactionSize :: Parser (Maybe Natural)
+pMaxTransactionSize :: Parser Natural
 pMaxTransactionSize =
-  optional
-    $ Opt.option Opt.auto
-        (  Opt.long "max-tx-size"
-        <> Opt.metavar "NATURAL"
-        <> Opt.help "Maximum transaction size."
-        )
+    Opt.option Opt.auto
+      (  Opt.long "max-tx-size"
+      <> Opt.metavar "NATURAL"
+      <> Opt.help "Maximum transaction size."
+      )
 
-pMaxBlockHeaderSize :: Parser (Maybe Natural)
+pMaxBlockHeaderSize :: Parser Natural
 pMaxBlockHeaderSize =
-  optional
-    $ Opt.option Opt.auto
-        (  Opt.long "max-block-header-size"
-        <> Opt.metavar "NATURAL"
-        <> Opt.help "Maximum block header size."
-        )
+    Opt.option Opt.auto
+      (  Opt.long "max-block-header-size"
+      <> Opt.metavar "NATURAL"
+      <> Opt.help "Maximum block header size."
+      )
 
-pKeyRegistDeposit :: Parser (Maybe ShelleyCoin)
+pKeyRegistDeposit :: Parser Typed.Lovelace
 pKeyRegistDeposit =
-  optional
-    $ Shelley.Coin
-        <$> Opt.option Opt.auto
-              (  Opt.long "key-reg-deposit-amt"
-              <> Opt.metavar "NATURAL"
-              <> Opt.help "Key registration deposit amount."
-              )
+    Opt.option (readerFromAttoParser parseLovelace)
+      (  Opt.long "key-reg-deposit-amt"
+      <> Opt.metavar "NATURAL"
+      <> Opt.help "Key registration deposit amount."
+      )
 
-
-pPoolDeposit :: Parser (Maybe ShelleyCoin)
+pPoolDeposit :: Parser Typed.Lovelace
 pPoolDeposit =
-  optional $
-    Shelley.Coin
-      <$> Opt.option Opt.auto
-            (  Opt.long "pool-reg-deposit"
-            <> Opt.metavar "NATURAL"
-            <> Opt.help "The amount of a pool registration deposit."
-            )
+    Opt.option (readerFromAttoParser parseLovelace)
+      (  Opt.long "pool-reg-deposit"
+      <> Opt.metavar "NATURAL"
+      <> Opt.help "The amount of a pool registration deposit."
+      )
 
-
-pEpochBoundRetirement :: Parser (Maybe EpochNo)
+pEpochBoundRetirement :: Parser EpochNo
 pEpochBoundRetirement =
-  optional $
-    EpochNo
-       <$> Opt.option Opt.auto
-             (  Opt.long "pool-retirement-epoch-boundary"
-             <> Opt.metavar "INT"
-             <> Opt.help "Epoch bound on pool retirement."
-             )
+    EpochNo <$>
+    Opt.option Opt.auto
+      (  Opt.long "pool-retirement-epoch-boundary"
+      <> Opt.metavar "INT"
+      <> Opt.help "Epoch bound on pool retirement."
+      )
 
-
-
-pNumberOfPools :: Parser (Maybe Natural)
+pNumberOfPools :: Parser Natural
 pNumberOfPools =
-  optional
-    $ Opt.option Opt.auto
-        (  Opt.long "number-of-pools"
-        <> Opt.metavar "NATURAL"
-        <> Opt.help "Desired number of pools."
-        )
+    Opt.option Opt.auto
+      (  Opt.long "number-of-pools"
+      <> Opt.metavar "NATURAL"
+      <> Opt.help "Desired number of pools."
+      )
 
-pPoolInfluence :: Parser (Maybe Rational)
+pPoolInfluence :: Parser Rational
 pPoolInfluence =
-  optional
-    $ Opt.option readRationalAsDouble
-        (  Opt.long "pool-influence"
-        <> Opt.metavar "DOUBLE"
-        <> Opt.help "Pool influence."
-        )
+    Opt.option readRational
+      (  Opt.long "pool-influence"
+      <> Opt.metavar "DOUBLE"
+      <> Opt.help "Pool influence."
+      )
 
-pTreasuryExpansion :: Parser (Maybe UnitInterval)
+pTreasuryExpansion :: Parser Rational
 pTreasuryExpansion =
-  optional
-    $ Opt.option pFieldUnitInterval
-        (  Opt.long "treasury-expansion"
-        <> Opt.metavar "DOUBLE"
-        <> Opt.help "Treasury expansion."
-        )
+    Opt.option readRationalUnitInterval
+      (  Opt.long "treasury-expansion"
+      <> Opt.metavar "DOUBLE"
+      <> Opt.help "Treasury expansion."
+      )
 
-
-pMonetaryExpansion :: Parser (Maybe UnitInterval)
+pMonetaryExpansion :: Parser Rational
 pMonetaryExpansion =
-  optional
-    $ Opt.option pFieldUnitInterval
-       (  Opt.long "monetary-expansion"
-       <> Opt.metavar "DOUBLE"
-       <> Opt.help "Monetary expansion."
-       )
+    Opt.option readRationalUnitInterval
+      (  Opt.long "monetary-expansion"
+      <> Opt.metavar "DOUBLE"
+      <> Opt.help "Monetary expansion."
+      )
 
-
-pDecentralParam :: Parser (Maybe UnitInterval)
+pDecentralParam :: Parser Rational
 pDecentralParam =
-  optional
-    $ Opt.option pFieldUnitInterval
-        (  Opt.long "decentralization-parameter"
-        <> Opt.metavar "DOUBLE"
-        <> Opt.help "Decentralization parameter."
+    Opt.option readRationalUnitInterval
+      (  Opt.long "decentralization-parameter"
+      <> Opt.metavar "DOUBLE"
+      <> Opt.help "Decentralization parameter."
+      )
+
+pExtraEntropy :: Parser (Maybe ByteString)
+pExtraEntropy =
+      Opt.option (Just <$> readerFromAttoParser parseEntropyBytes)
+        (  Opt.long "extra-entropy"
+        <> Opt.metavar "HEX"
+        <> Opt.help "Praos extra entropy, as a hex byte string."
+        )
+  <|> Opt.flag' Nothing
+        (  Opt.long "reset-extra-entropy"
+        <> Opt.help "Reset the Praos extra entropy to none."
+        )
+  where
+    parseEntropyBytes :: Atto.Parser ByteString
+    parseEntropyBytes =
+      (fst . Base16.decode) <$> Atto.takeWhile1 Char.isHexDigit
+
+pProtocolVersion :: Parser (Natural, Natural)
+pProtocolVersion =
+    (,) <$> pProtocolMajorVersion <*> pProtocolMinorVersion
+  where
+    pProtocolMajorVersion =
+      Opt.option Opt.auto
+        (  Opt.long "protocol-major-version"
+        <> Opt.metavar "NATURAL"
+        <> Opt.help "Major protocol version. An increase indicates a hard fork."
+        )
+    pProtocolMinorVersion =
+      Opt.option Opt.auto
+        (  Opt.long "protocol-minor-version"
+        <> Opt.metavar "NATURAL"
+        <> Opt.help "Minor protocol version. An increase indicates a soft fork\
+                    \ (old software canvalidate but not produce new blocks)."
         )
 
 
+--
+-- Shelley CLI flag field parsers
+--
 
-pExtraEntropy :: Parser (Maybe Nonce)
-pExtraEntropy =
-   optional
-     $ Opt.option
-         (Opt.maybeReader nonceHash)
-           (  Opt.long "extra-entropy"
-           <> Opt.metavar "HASH"
-           <> Opt.help "Extra entropy."
-           <> Opt.value Shelley.NeutralNonce
-           )
-  where
-    nonceHash :: String -> Maybe Nonce
-    nonceHash str = Nonce <$> (hashFromBytes $ BSC.pack str)
-
-pProtocolVersion :: Parser (Maybe ProtVer)
-pProtocolVersion =
-  optional $
-    ProtVer
-      <$> Opt.option Opt.auto
-            (  Opt.long "protocol-major-version"
-            <> Opt.metavar "NATURAL"
-            <> Opt.help "Major protocol version. An increase indicates a hard fork."
-            )
-      <*> Opt.option Opt.auto
-            (  Opt.long "protocol-minor-version"
-            <> Opt.metavar "NATURAL"
-            <> Opt.help "Minor protocol version. An increase indicates a soft fork\
-                        \ (old software canvalidate but not produce new blocks)."
-            )
+parseLovelace :: Atto.Parser Typed.Lovelace
+parseLovelace = Typed.Lovelace <$> Atto.decimal
 
 --------------------------------------------------------------------------------
 -- Helpers
 --------------------------------------------------------------------------------
 
-pFieldUnitInterval :: Opt.ReadM UnitInterval
-pFieldUnitInterval = Opt.auto >>= checkUnitInterval
-  where
-   checkUnitInterval :: Double -> Opt.ReadM UnitInterval
-   checkUnitInterval dbl =
-     case mkUnitInterval $ realToFrac dbl of
-       Just interval -> return interval
-       Nothing -> fail "Please enter a value in the range [0,1]"
 
-readRationalAsDouble :: Opt.ReadM Rational
-readRationalAsDouble = toRational <$> (Opt.auto :: Opt.ReadM Double)
+readRationalUnitInterval :: Opt.ReadM Rational
+readRationalUnitInterval = readRational >>= checkUnitInterval
+  where
+   checkUnitInterval :: Rational -> Opt.ReadM Rational
+   checkUnitInterval q
+     | q >= 0 && q <= 1 = return q
+     | otherwise        = fail "Please enter a value in the range [0,1]"
+
+readRational :: Opt.ReadM Rational
+readRational = toRational <$> readerFromAttoParser Atto.scientific
+
+readerFromAttoParser :: Atto.Parser a -> Opt.ReadM a
+readerFromAttoParser p =
+    Opt.eitherReader (Atto.parseOnly (p <* Atto.endOfInput) . BSC.pack)
