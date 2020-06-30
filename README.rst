@@ -75,23 +75,23 @@ The general synopsis is as follows:
                     [--help-advanced]
    Start node of the Cardano blockchain.
 
-``--topology`` - Filepath to a topology file describing which peers the node should connect to.
+* ``--topology`` - Filepath to a topology file describing which peers the node should connect to.
 
-``--database-path`` - Path to the blockchain database.
+* ``--database-path`` - Path to the blockchain database.
 
-``--genesis-file`` - Path to the genesis file of the chain you are connecting to.
+* ``--genesis-file`` - Path to the genesis file of the chain you are connecting to.
 
-``--delegation-certificate`` - Optional path to the delegation certificate. The delegation certificate allows the delegator (the issuer of said certificate) to give his/her own block signing rights to somebody else (the delegatee). The delegatee can then sign blocks on behalf of the delegator.
+* ``--delegation-certificate`` - Optional path to the delegation certificate. The delegation certificate allows the delegator (the issuer of said certificate) to give his/her own block signing rights to somebody else (the delegatee). The delegatee can then sign blocks on behalf of the delegator.
 
-``--signing-key`` - Optional path to the signing key.
+* ``--signing-key`` - Optional path to the signing key.
 
-``--socket-path`` - Path to the socket file.
+* ``--socket-path`` - Path to the socket file.
 
-``--host-addr`` - Optionally specify your node's IPv4 or IPv6 address.
+* ``--host-addr`` - Optionally specify your node's IPv4 or IPv6 address.
 
-``--port`` - Specify which port to assign to the node.
+* ``--port`` - Specify which port to assign to the node.
 
-``--config`` - Specify the filepath to the config ``.yaml`` file. This file is responsible for all the other node's required settings. See examples in ``configuration``
+* ``--config`` - Specify the filepath to the config ``.yaml`` file. This file is responsible for all the other node's required settings. See examples in ``configuration``
 (e.g. `config-0.yaml` <configuration/defaults/liveview/config-0.yaml>`_).
 
 
@@ -102,13 +102,13 @@ The ``--config`` flag points to a ``.yaml`` file that is responsible to configur
 `configuration.yaml <https://github.com/input-output-hk/cardano-node/blob/master/configuration/defaults/byron-mainnet/configuration.yaml>`_.
 Some of the more important settings are as follows:
 
-``NodeId: 0``  -- Used in mock protocols only to differentiate nodes.
+* ``NodeId: 0``  -- Used in mock protocols only to differentiate nodes.
 
-``Protocol: RealPBFT`` -- Protocol the node will execute
+* ``Protocol: RealPBFT`` -- Protocol the node will execute
 
-``RequiresNetworkMagic``: RequiresNoMagic -- Used to distinguish between mainnet (``RequiresNoMagic``) and testnets (``RequiresMagic``)
+* ``RequiresNetworkMagic``: RequiresNoMagic -- Used to distinguish between mainnet (``RequiresNoMagic``) and testnets (``RequiresMagic``)
 
-``ViewMode: SimpleView`` -- Choose between ``SimpleView`` or ``LiveView``
+* ``ViewMode: SimpleView`` -- Choose between ``SimpleView`` or ``LiveView``
 
 
  Logging
