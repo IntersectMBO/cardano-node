@@ -28,7 +28,7 @@ import           Cardano.CLI.Run (ClientCommand(..),
 
 import qualified Hedgehog as H
 import qualified Hedgehog.Internal.Property as H
-import           Hedgehog.Internal.Property (Diff, MonadTest, failWith, liftTest, mkTest)
+import           Hedgehog.Internal.Property (Diff, MonadTest, liftTest, mkTest)
 import           Hedgehog.Internal.Show (ValueDiff(ValueSame), mkValue, showPretty, valueDiff)
 import           Hedgehog.Internal.Source (getCaller)
 
@@ -43,12 +43,10 @@ execCardanoCLIParser
   :: HasCallStack
   => [FilePath]
   -- ^ Files to clean up on failure
-  -> String
-  -- ^ Name of command, used in error rendering
   -> Opt.ParserResult ClientCommand
   -- ^ ParserResult to execute
   -> H.PropertyT IO ()
-execCardanoCLIParser fps cmdName pureParseResult =
+execCardanoCLIParser fps pureParseResult =
   case pureParseResult of
 
     -- The pure 'ParserResult' succeeds and we can then execute the result.
@@ -57,13 +55,13 @@ execCardanoCLIParser fps cmdName pureParseResult =
 
     -- The pure `ParserResult` failed and we clean up any created files
     -- and fail with `optparse-applicative`'s error message
-    Failure failure -> let (parserHelp, _exitCode, cols) = Opt.execFailure failure cmdName
-                           helpMessage = renderHelp cols parserHelp cmdName
+    Failure failure -> let (parserHelp, _exitCode, cols) = Opt.execFailure failure ""
+                           helpMessage = renderHelp cols parserHelp ""
 
                        in liftIO (fileCleanup fps) >> failWithCustom callStack Nothing helpMessage
 
 
-    CompletionInvoked compl -> do msg <- lift $ Opt.execCompletion compl cmdName
+    CompletionInvoked compl -> do msg <- lift $ Opt.execCompletion compl ""
                                   liftIO (fileCleanup fps) >> failWithCustom callStack Nothing msg
 
 -- | Executes a `ClientCommand`. If successful the property passes
@@ -118,13 +116,13 @@ checkTextEnvelopeFormat fps tve reference created = do
 --------------------------------------------------------------------------------
 
 -- | Checks if all files gives exists. If this fails, all files are deleted.
-assertFilesExist :: [FilePath] -> H.PropertyT IO ()
+assertFilesExist :: HasCallStack => [FilePath] -> H.PropertyT IO ()
 assertFilesExist [] = return ()
 assertFilesExist allFiles@(file:rest) = do
   exists <- liftIO $ doesFileExist file
   if exists == True
-  then assertFilesExist rest
-  else liftIO (fileCleanup allFiles) >> failWith Nothing (file <> " has not been successfully created.")
+  then withFrozenCallStack $ assertFilesExist rest
+  else liftIO (fileCleanup allFiles) >> failWithCustom callStack Nothing (file <> " has not been successfully created.")
 
 fileCleanup :: [FilePath] -> IO ()
 fileCleanup fps = mapM_ (\fp -> removeFile fp `catch` fileExists) fps

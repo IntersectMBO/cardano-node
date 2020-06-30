@@ -1,0 +1,4 @@
+type: Certificate
+title: Stake Address Registration Certificate
+cbor-hex:
+ 82008200581c591c90bd047aa2bd89a7586849862794e635890bd18de24d298bb951

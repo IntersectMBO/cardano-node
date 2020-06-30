@@ -1,0 +1,4 @@
+type: Certificate
+title: Stake Pool Retirement Certificate
+cbor-hex:
+ 8304581c9c9d3afa97839125f7931be9aad8666760c4c1fba11a0253a08fe7a7182a

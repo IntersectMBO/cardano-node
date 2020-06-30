@@ -1,43 +1,51 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Test.Pioneers.Exercise2
-  ( tests
+module Test.CLI.Shelley.TextEnvelope.Golden.Tx.Tx
+  ( golden_shelleyTx
   ) where
 
 import           Cardano.Prelude
+
+import           Cardano.Api.Typed (AsType(..), HasTextEnvelope (..))
 
 import           Hedgehog (Property)
 import qualified Hedgehog as H
 
 import           Test.OptParse
 
--- | 1. We generate a payment signing key
---   2. We create a tx body
---   3. We sign the tx body with the generated payment signing key
-prop_createTransaction :: Property
-prop_createTransaction =
+-- | 1. Generate a key pair
+--   2. Create tx body
+--   3. Sign tx body
+--   4. Check the TextEnvelope serialization format has not changed.
+golden_shelleyTx :: Property
+golden_shelleyTx =
   propertyOnce $ do
+    -- Reference keys
+    let referenceTx = "test/Test/golden/shelley/tx/tx"
 
     -- Key filepaths
     let paymentVerKey = "payment-verification-key-file"
         paymentSignKey = "payment-signing-key-file"
-        transactionBodyFile = "transaction-body"
-        transactionFile = "transactionFile"
-        allFiles = [paymentVerKey, paymentSignKey, transactionBodyFile, transactionFile]
+        transactionFile = "tx-file"
+        transactionBodyFile = "tx-body-file"
+        createdFiles = [ paymentVerKey
+                       , paymentSignKey
+                       , transactionBodyFile
+                       , transactionBodyFile
+                       , transactionFile]
+
 
     -- Generate payment signing key to sign transaction
     execCardanoCLIParser
-      allFiles
+      createdFiles
         $ evalCardanoCLIParser [ "shelley","address","key-gen"
                                , "--verification-key-file", paymentVerKey
                                , "--signing-key-file", paymentSignKey
                                ]
 
-    assertFilesExist [paymentVerKey, paymentSignKey]
-
     -- Create transaction body
     execCardanoCLIParser
-      allFiles
+      createdFiles
         $ evalCardanoCLIParser [ "shelley","transaction", "build-raw"
                                , "--tx-in", "91999ea21177b33ebe6b8690724a0c026d410a11ad7521caa350abdafa5394c3#0"
                                , "--tx-out", "615dbe1e2117641f8d618034b801a870ca731ce758c3bedd5c7e4429c103149804+100000000"
@@ -46,11 +54,9 @@ prop_createTransaction =
                                , "--out-file", transactionBodyFile
                                ]
 
-    assertFilesExist [transactionBodyFile]
-
     -- Sign transaction
     execCardanoCLIParser
-      allFiles
+      createdFiles
         $ evalCardanoCLIParser [ "shelley","transaction", "sign"
                                , "--tx-body-file", transactionBodyFile
                                , "--signing-key-file", paymentSignKey
@@ -58,17 +64,13 @@ prop_createTransaction =
                                , "--out-file", transactionFile
                                ]
 
+    assertFilesExist createdFiles
 
-    assertFilesExist allFiles
+    let txType = textEnvelopeType AsShelleyTx
 
-    liftIO $ fileCleanup allFiles
+    -- Check the newly created files have not deviated from the
+    -- golden files
+    checkTextEnvelopeFormat createdFiles txType referenceTx transactionFile
+
+    liftIO $ fileCleanup createdFiles
     H.success
-
--- -----------------------------------------------------------------------------
-
-tests :: IO Bool
-tests =
-  H.checkSequential
-    $ H.Group "Pioneers Example 2"
-        [ ("prop_createTransaction", prop_createTransaction)
-        ]

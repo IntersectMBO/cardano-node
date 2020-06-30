@@ -843,7 +843,6 @@ instance SerialiseAsCBOR (TxBody Shelley) where
           fromCBOR
           (LBS.fromStrict bs)
 
-
 instance HasTextEnvelope (TxBody Byron) where
     textEnvelopeType _ = "TxUnsignedByron"
 
@@ -969,7 +968,6 @@ instance SerialiseAsCBOR (Tx Shelley) where
     deserialiseFromCBOR AsShelleyTx bs =
       ShelleyTx <$>
         CBOR.decodeAnnotator "Shelley Tx" fromCBOR (LBS.fromStrict bs)
-
 
 instance HasTextEnvelope (Tx Byron) where
     textEnvelopeType _ = "TxSignedByron"
