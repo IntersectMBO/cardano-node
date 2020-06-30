@@ -223,13 +223,6 @@ instance IsEffectuator (LiveViewBackend blk) Text where
 
                                 return $ lvs { lvsSlotsMissedNum = fromIntegral missedSlotsNum }
 
-                    LogValue "forksCreatedNum" (PureI createdForksNum) ->
-                        modifyMVar_ (getbe lvbe) $ \lvs -> do
-
-                                checkForUnexpectedThunks ["forksCreatedNum LiveViewBackend"] lvs
-
-                                return $ lvs { lvsCreatedForksNum = fromIntegral createdForksNum }
-
                     _ -> pure ()
 
                 checkForUnexpectedThunks ["Cardano node metrics dispatch LiveViewBackend"] lvbe
@@ -354,7 +347,6 @@ initLiveViewState = do
                 , lvsNodeCannotLead         = 0
                 , lvsLeaderNum              = 0
                 , lvsSlotsMissedNum         = 0
-                , lvsCreatedForksNum        = 0
                 , lvsTransactions           = 0
                 , lvsPeersConnected         = 0
                 , lvsMempool                = 0
