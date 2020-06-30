@@ -15,16 +15,17 @@ import           Control.Monad.Trans.Except.Extra (firstExceptT, hoistEither, le
 
 import           Cardano.Api (ApiError, Network (..), SigningKey (..),
                    StakingVerificationKey (..), renderApiError,
-                   shelleyDeregisterStakingAddress, shelleyDelegateStake,
-                   shelleyRegisterStakingAddress, writeCertificate,
                    writeSigningKey, writeStakingVerificationKey)
 import           Cardano.Api.TextView (TextViewTitle (..), textShow)
 import qualified Cardano.Api.Typed as Api (NetworkId (..))
 import           Cardano.Api.Typed (AsType (..), Error (..), FileError,
-                   Hash (..), Key (..), StakeCredential (..),
-                   TextEnvelopeError, generateSigningKey, getVerificationKey,
-                   makeStakeAddress, readFileTextEnvelope,
-                   serialiseToRawBytesHex, writeFileTextEnvelope)
+                   Key (..), StakeCredential (..), TextEnvelopeError,
+                   generateSigningKey, getVerificationKey, makeStakeAddress,
+                   makeStakeAddressDelegationCertificate,
+                   makeStakeAddressDeregistrationCertificate,
+                   makeStakeAddressRegistrationCertificate,
+                   readFileTextEnvelope, serialiseToRawBytesHex,
+                   writeFileTextEnvelope)
 
 import qualified Cardano.Crypto.DSIGN as DSIGN
 
@@ -40,7 +41,6 @@ data ShelleyStakeAddressCmdError
       -- ^ bech32 private key
       !Text
       -- ^ bech32 public key
-  | ShelleyStakeAddressWriteCertError !FilePath !ApiError
   | ShelleyStakeAddressWriteSignKeyError !FilePath !ApiError
   | ShelleyStakeAddressWriteVerKeyError !FilePath !ApiError
   | ShelleyStakeAddressReadFileError !(FileError TextEnvelopeError)
@@ -51,8 +51,6 @@ renderShelleyStakeAddressCmdError :: ShelleyStakeAddressCmdError -> Text
 renderShelleyStakeAddressCmdError err =
   case err of
     ShelleyStakeAddressConvError convErr -> renderConversionError convErr
-    ShelleyStakeAddressWriteCertError fp apiErr ->
-      "Error while writing delegation certificate at: " <> textShow fp <> " Error: " <> renderApiError apiErr
     ShelleyStakeAddressWriteSignKeyError fp apiErr ->
       "Error while writing signing stake key at: " <> textShow fp <> " Error: " <> renderApiError apiErr
     ShelleyStakeAddressWriteVerKeyError fp apiErr ->
@@ -122,12 +120,17 @@ runStakeAddressBuild (VerificationKeyFile stkVkeyFp) network mOutputFp = do
 
 runStakeKeyRegistrationCert :: VerificationKeyFile -> OutputFile -> ExceptT ShelleyStakeAddressCmdError IO ()
 runStakeKeyRegistrationCert (VerificationKeyFile vkFp) (OutputFile oFp) = do
-  stakeVerKey <- firstExceptT ShelleyStakeAddressReadFileError
-    . newExceptT
-    $ readFileTextEnvelope (AsVerificationKey AsStakeKey) vkFp
-  let StakeKeyHash shelleyStakeKeyHash = verificationKeyHash stakeVerKey
-      regCert = shelleyRegisterStakingAddress shelleyStakeKeyHash
-  firstExceptT (ShelleyStakeAddressWriteCertError oFp) . newExceptT $ writeCertificate oFp regCert
+    stakeVerKey <- firstExceptT ShelleyStakeAddressReadFileError
+      . newExceptT
+      $ readFileTextEnvelope (AsVerificationKey AsStakeKey) vkFp
+    let stakeCred = StakeCredentialByKey (verificationKeyHash stakeVerKey)
+        regCert = makeStakeAddressRegistrationCertificate stakeCred
+    firstExceptT ShelleyStakeAddressWriteFileError
+      . newExceptT
+      $ writeFileTextEnvelope oFp (Just regCertDesc) regCert
+  where
+    regCertDesc :: TextViewTitle
+    regCertDesc = TextViewTitle "Stake Address Registration Certificate"
 
 
 runStakeKeyDelegationCert
@@ -138,33 +141,38 @@ runStakeKeyDelegationCert
   -> OutputFile
   -> ExceptT ShelleyStakeAddressCmdError IO ()
 runStakeKeyDelegationCert (VerificationKeyFile stkKey) (VerificationKeyFile poolVKey) (OutputFile outFp) = do
-  stakeVkey <- firstExceptT ShelleyStakeAddressReadFileError
-    . newExceptT
-    $ readFileTextEnvelope (AsVerificationKey AsStakeKey) stkKey
-  let StakeKeyHash shelleyStakeKeyHash = verificationKeyHash stakeVkey
+    stakeVkey <- firstExceptT ShelleyStakeAddressReadFileError
+      . newExceptT
+      $ readFileTextEnvelope (AsVerificationKey AsStakeKey) stkKey
 
-  poolStakeVkey <- firstExceptT ShelleyStakeAddressReadFileError
-    . newExceptT
-    $ readFileTextEnvelope (AsVerificationKey AsStakePoolKey) poolVKey
-  let StakePoolKeyHash shelleyStakePoolKeyHash = verificationKeyHash poolStakeVkey
+    poolStakeVkey <- firstExceptT ShelleyStakeAddressReadFileError
+      . newExceptT
+      $ readFileTextEnvelope (AsVerificationKey AsStakePoolKey) poolVKey
 
-  let delegCert = shelleyDelegateStake shelleyStakeKeyHash shelleyStakePoolKeyHash
-  firstExceptT (ShelleyStakeAddressWriteCertError outFp)
-    . newExceptT
-    $ writeCertificate outFp delegCert
+    let stakeCred = StakeCredentialByKey (verificationKeyHash stakeVkey)
+        stakePoolId = verificationKeyHash poolStakeVkey
+        delegCert = makeStakeAddressDelegationCertificate stakeCred stakePoolId
+    firstExceptT ShelleyStakeAddressWriteFileError
+      . newExceptT
+      $ writeFileTextEnvelope outFp (Just delegCertDesc) delegCert
+  where
+    delegCertDesc :: TextViewTitle
+    delegCertDesc = TextViewTitle "Stake Address Delegation Certificate"
 
 
 runStakeKeyDeRegistrationCert :: VerificationKeyFile -> OutputFile -> ExceptT ShelleyStakeAddressCmdError IO ()
 runStakeKeyDeRegistrationCert (VerificationKeyFile vkFp) (OutputFile oFp) = do
-  stakeVkey <- firstExceptT ShelleyStakeAddressReadFileError
-    . newExceptT
-    $ readFileTextEnvelope (AsVerificationKey AsStakeKey) vkFp
-  let StakeKeyHash shelleyStakeKeyHash = verificationKeyHash stakeVkey
-      deRegCert = shelleyDeregisterStakingAddress shelleyStakeKeyHash
-  firstExceptT (ShelleyStakeAddressWriteCertError oFp)
-    . newExceptT
-    $ writeCertificate oFp deRegCert
-
+    stakeVkey <- firstExceptT ShelleyStakeAddressReadFileError
+      . newExceptT
+      $ readFileTextEnvelope (AsVerificationKey AsStakeKey) vkFp
+    let stakeCred = StakeCredentialByKey (verificationKeyHash stakeVkey)
+        deRegCert = makeStakeAddressDeregistrationCertificate stakeCred
+    firstExceptT ShelleyStakeAddressWriteFileError
+      . newExceptT
+      $ writeFileTextEnvelope oFp (Just deregCertDesc) deRegCert
+  where
+    deregCertDesc :: TextViewTitle
+    deregCertDesc = TextViewTitle "Stake Address Deregistration Certificate"
 
 
 runSingleITNKeyConversion
