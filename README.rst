@@ -136,6 +136,7 @@ A CLI utility to support a variety of key material operations (genesis, migratio
 The general synopsis is as follows:
 
 .. code-block:: console
+
    Usage: cardano-cli (Genesis related CMDs | Key related CMDs | Delegation related CMDs | Transaction related CMDs | Local node related CMDs)
 
 > NOTE: the exact invocation command depends on the environment.  If you have only built ``cardano-cli``, without installing it, then you have to prepend ``cabal run -- ``
@@ -146,6 +147,7 @@ The subcommands are subdivided in groups, and their full list can be seen in the
 All subcommands have help available:
 
 .. code-block:: console
+
    $ cabal v2-run -- cardano-cli migrate-delegate-key-from --help
    Usage: cardano-cli migrate-delegate-key-from (--byron-legacy | --bft | --praos |
                                                  --mock-pbft | --real-pbft)
@@ -329,6 +331,7 @@ You can query the tip of your local node via the ``get-tip`` command as follows
 You will see output from stdout in this format:
 
 .. code-block:: console
+
    Current tip:
    Block hash: 4ab21a10e1b25e39
    Slot: 6
@@ -343,6 +346,7 @@ Update proposal creation
 A Byron update proposal can be created as follows:
 
 .. code-block:: console
+
    cardano-cli -- byron node
                   create-update-proposal
                   --config NODE-CONFIGURATION
@@ -374,6 +378,7 @@ You can submit your proposal using the ``submit-update-proposal`` command.
 Example:
 
 .. code-block:: console
+
    cardano-cli -- byron node
                submit-update-proposal
                --config configuration/defaults/mainnet/configuration.yaml
