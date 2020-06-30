@@ -12,7 +12,7 @@
 `cardano-node` Overview
 ***********************
 
-Integration of the [ledger](https://github.com/input-output-hk/cardano-ledger), [consensus](https://github.com/input-output-hk/ouroboros-network/tree/master/ouroboros-consensus), [networking](https://github.com/input-output-hk/ouroboros-network/tree/master/ouroboros-network) and [node shell](https://github.com/input-output-hk/cardano-shell) repositories.
+Integration of the `ledger <https://github.com/input-output-hk/cardano-ledger>`_, [consensus](https://github.com/input-output-hk/ouroboros-network/tree/master/ouroboros-consensus), [networking](https://github.com/input-output-hk/ouroboros-network/tree/master/ouroboros-network) and [node shell](https://github.com/input-output-hk/cardano-shell) repositories.
 
 [Logging](https://github.com/input-output-hk/iohk-monitoring-framework) is provided as a [feature](https://github.com/input-output-hk/cardano-shell/blob/master/app/Cardano/Shell/Features/Logging.hs) by the node shell to the other packages.
 
@@ -239,7 +239,7 @@ and `signing-key-address` subcommands (the latter requires the network magic):
 
      public key hash: a2b1af0df8ca764876a45608fae36cf04400ed9f413de2e37d92ce04
      public key: sc4pa1pAriXO7IzMpByKo4cG90HCFD465Iad284uDYz06dHCqBwMHRukReQ90+TA/vQpj4L1YNaLHI7DS0Z2Vg==
-   
+
    $ cabal v2-run -- cardano-cli signing-key-address --real-pbft --secret key0.pbft --testnet-magic 459045235
 
    2cWKMJemoBakxhXgZSsMteLP9TUvz7owHyEYbUDwKRLsw2UGDrG93gPqmpv1D9ohWNddx
