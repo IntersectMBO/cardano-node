@@ -27,7 +27,7 @@ Integration of the `ledger <https://github.com/input-output-hk/cardano-ledger>`_
 Network Configuration, Genesis and Topology Files
 =================================================
 
-The latest supported networks can be found at `<https://hydra.iohk.io/job/Cardano/cardano-node/cardano-deployment/latest-finished/download/1/index.html>'_
+The latest supported networks can be found at `<https://hydra.iohk.io/job/Cardano/cardano-node/cardano-deployment/latest-finished/download/1/index.html>`_
 
 How to build
 ============
@@ -99,7 +99,7 @@ Configuration `.yaml` files
 ===========================
 
 The `--config` flag points to a `.yaml` file that is responsible to configuring the logging & other important settings for the node. E.g. see the mainnet configuration in this
-`configuration.yaml` <https://github.com/input-output-hk/cardano-node/blob/master/configuration/defaults/byron-mainnet/configuration.yaml>`_.
+`configuration.yaml <https://github.com/input-output-hk/cardano-node/blob/master/configuration/defaults/byron-mainnet/configuration.yaml>`_.
 Some of the more important settings are as follows:
 
 `NodeId: 0`  -- Used in mock protocols only to differentiate nodes.
