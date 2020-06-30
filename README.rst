@@ -394,6 +394,7 @@ You can create and submit byron update proposal votes with the ``create-proposal
 Byron vote creation:
 
 .. code-block:: console
+
    cabal exec cardano-cli -- byron node create-proposal-vote
                         --config configuration/defaults/liveview/config-0.yaml
                         --signing-key configuration/defaults/liveview/genesis/delegate-keys.000.key
@@ -404,6 +405,7 @@ Byron vote creation:
 Byron vote submission:
 
 .. code-block:: console
+
    cabal exec cardano-cli -- byron node submit-proposal-vote
                         --config  configuration/defaults/liveview/config-0.yaml
                         --filepath UpdateProposalVoteFile
