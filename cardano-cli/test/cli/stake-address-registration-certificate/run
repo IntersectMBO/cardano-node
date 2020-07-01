@@ -18,6 +18,6 @@ ${CARDANO_CLI} shelley stake-address registration-certificate  \
 fail_on_error $?
 
 assert_file_exists "${TEST_DIR}/registration.cert"
-assert_string 'DelegationCertificateShelley' "${TEST_DIR}/registration.cert"
+assert_string 'Stake Address Registration Certificate' "${TEST_DIR}/registration.cert"
 
 report_result ${error}

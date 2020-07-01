@@ -19,6 +19,8 @@ module Cardano.CLI.Shelley.Commands
   , GenesisDir (..)
   , TxInCount (..)
   , TxOutCount (..)
+  , TxShelleyWinessCount (..)
+  , TxByronWinessCount (..)
   , ITNKeyFile (..)
   , OpCertCounterFile (..)
   , OutputFile (..)
@@ -39,6 +41,8 @@ import           Data.Text (Text)
 
 import           Cardano.Api
 import           Cardano.Api.Shelley.OCert (KESPeriod(..))
+import           Cardano.Api.Typed (StakePoolMetadataReference, StakePoolRelay)
+import qualified Cardano.Api.Typed as Typed
 import           Cardano.Slotting.Slot (EpochNo (..))
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
 
@@ -92,30 +96,28 @@ data StakeAddressCmd
 
 data TransactionCmd
   = TxBuildRaw
-      [TxIn]
-      [TxOut]
+      [Typed.TxIn]
+      [Typed.TxOut Typed.Shelley]
       SlotNo
-      Lovelace
+      Typed.Lovelace
       [CertificateFile]
-      Withdrawals
+      [(Typed.StakeAddress, Typed.Lovelace)]
       (Maybe MetaDataFile)
       (Maybe UpdateProposalFile)
       TxBodyFile
-  | TxSign TxBodyFile [SigningKeyFile] Network TxFile
+  | TxSign TxBodyFile [SigningKeyFile] (Maybe Typed.NetworkId) TxFile
   | TxWitness       -- { transaction :: Transaction, key :: PrivKeyFile, nodeAddr :: NodeAddress }
   | TxSignWitness   -- { transaction :: Transaction, witnesses :: [Witness], nodeAddr :: NodeAddress }
   | TxCheck         -- { transaction :: Transaction, nodeAddr :: NodeAddress }
   | TxSubmit FilePath Network
   | TxCalculateMinFee
+      TxBodyFile
+      (Maybe Typed.NetworkId)
+      ProtocolParamsFile
       TxInCount
       TxOutCount
-      SlotNo
-      Network
-      [SigningKeyFile]
-      [CertificateFile]
-      Withdrawals
-      HasMetaData
-      ProtocolParamsFile
+      TxShelleyWinessCount
+      TxByronWinessCount
   | TxGetTxId TxBodyFile
   deriving (Eq, Show)
 
@@ -137,19 +139,19 @@ data PoolCmd
       -- ^ Stake pool verification key.
       VerificationKeyFile
       -- ^ VRF Verification key.
-      ShelleyCoin
+      Typed.Lovelace
       -- ^ Pool pledge.
-      ShelleyCoin
+      Typed.Lovelace
       -- ^ Pool cost.
-      ShelleyStakePoolMargin
+      Rational
       -- ^ Pool margin.
       VerificationKeyFile
       -- ^ Reward account verification staking key.
       [VerificationKeyFile]
       -- ^ Pool owner verification staking key(s).
-      [ShelleyStakePoolRelay]
+      [StakePoolRelay]
       -- ^ Stake pool relays.
-      (Maybe ShelleyStakePoolMetaData)
+      (Maybe StakePoolMetadataReference)
       -- ^ Stake pool metadata.
       Network
       OutputFile
@@ -183,9 +185,11 @@ data BlockCmd
 
 
 data GovernanceCmd
-  = GovernanceMIRCertificate MIRPot [VerificationKeyFile] [ShelleyCoin] OutputFile
+  = GovernanceMIRCertificate MIRPot [VerificationKeyFile] [Typed.Lovelace] OutputFile
   | GovernanceProtocolUpdate SigningKeyFile -- { parameters :: ProtocolParams, nodeAddr :: NodeAddress }
-  | GovernanceUpdateProposal OutputFile EpochNo [VerificationKeyFile] ShelleyPParamsUpdate
+  | GovernanceUpdateProposal OutputFile EpochNo
+                             [VerificationKeyFile]
+                             Typed.ProtocolParametersUpdate
   | GovernanceColdKeys SigningKeyFile     -- { genesis :: GenesisKeyFile, keys :: [PubKey], nodeAddr :: NodeAddress }
   deriving (Eq, Show)
 
@@ -225,6 +229,14 @@ newtype TxInCount
 
 newtype TxOutCount
   = TxOutCount Int
+  deriving (Eq, Show)
+
+newtype TxShelleyWinessCount
+  = TxShelleyWinessCount Int
+  deriving (Eq, Show)
+
+newtype TxByronWinessCount
+  = TxByronWinessCount Int
   deriving (Eq, Show)
 
 newtype BlockId
