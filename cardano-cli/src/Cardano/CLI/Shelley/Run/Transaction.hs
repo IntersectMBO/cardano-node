@@ -20,9 +20,10 @@ import qualified Data.Map.Strict as Map
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Vector as Vector
 
-import           Cardano.Api hiding (textShow)
+import qualified Cardano.Api as OldApi
 import qualified Cardano.Api.Typed as Api
-import           Cardano.Api.TextView
+import           Cardano.Api.Typed (SlotNo)
+
 import           Cardano.CLI.Environment (EnvSocketError, readEnvSocketPath,
                    renderEnvSocketError)
 
@@ -30,6 +31,8 @@ import           Cardano.Config.Types
 
 import           Cardano.CLI.Shelley.Parsers
 import           Cardano.Config.Types (CertificateFile (..))
+
+import qualified Shelley.Spec.Ledger.PParams as Shelley
 
 import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra
@@ -43,14 +46,13 @@ data ShelleyTxCmdError
   | ShelleyTxMissingNetworkId
   | ShelleyTxSocketEnvError !EnvSocketError
   | ShelleyTxReadProtocolParamsError !FilePath !IOException
-  | ShelleyTxReadSignedTxError !ApiError
+  | ShelleyTxReadSignedTxError !OldApi.ApiError
   | ShelleyTxReadUpdateError !(Api.FileError Api.TextEnvelopeError)
   | ShelleyTxReadUnsignedTxError !(Api.FileError Api.TextEnvelopeError)
-  | ShelleyTxCertReadError !FilePath !ApiError
-  | ShelleyTxCertReadError' !(Api.FileError Api.TextEnvelopeError)
+  | ShelleyTxCertReadError !(Api.FileError Api.TextEnvelopeError)
   | ShelleyTxWriteSignedTxError !(Api.FileError ())
   | ShelleyTxWriteUnsignedTxError !(Api.FileError ())
-  | ShelleyTxSubmitError !TxSubmitResult
+  | ShelleyTxSubmitError !OldApi.TxSubmitResult
   | ShelleyTxReadFileError !(Api.FileError Api.TextEnvelopeError)
   deriving Show
 
@@ -58,30 +60,28 @@ renderShelleyTxCmdError :: ShelleyTxCmdError -> Text
 renderShelleyTxCmdError err =
   case err of
     ShelleyTxReadProtocolParamsError fp ioException ->
-      "Error while reading protocol parameters at: " <> textShow fp <> " Error: " <> textShow ioException
+      "Error while reading protocol parameters at: " <> OldApi.textShow fp <> " Error: " <> OldApi.textShow ioException
     ShelleyTxMetaDataFileError fp ioException ->
-       "Error reading metadata at: " <> textShow fp <> " Error: " <> textShow ioException
+       "Error reading metadata at: " <> OldApi.textShow fp <> " Error: " <> OldApi.textShow ioException
     ShelleyTxMetaDataConversionError fp metaDataErr ->
-       "Error reading metadata at: " <> textShow fp <> " Error: " <> renderMetaDataJsonConversionError metaDataErr
+       "Error reading metadata at: " <> OldApi.textShow fp <> " Error: " <> renderMetaDataJsonConversionError metaDataErr
     ShelleyTxReadUnsignedTxError err' ->
       "Error while reading unsigned shelley tx: " <> Text.pack (Api.displayError err')
     ShelleyTxReadSignedTxError apiError ->
-      "Error while reading signed shelley tx: " <> renderApiError apiError
+      "Error while reading signed shelley tx: " <> OldApi.renderApiError apiError
     ShelleyTxReadUpdateError apiError ->
       "Error while reading shelley update proposal: " <> Text.pack (Api.displayError apiError)
     ShelleyTxSocketEnvError envSockErr -> renderEnvSocketError envSockErr
     ShelleyTxAesonDecodeProtocolParamsError fp decErr ->
-      "Error while decoding the protocol parameters at: " <> textShow fp <> " Error: " <> textShow decErr
-    ShelleyTxCertReadError fp apiErr ->
-      "Error reading shelley certificate at: " <> textShow fp <> " Error: " <> renderApiError apiErr
-    ShelleyTxCertReadError' err' ->
+      "Error while decoding the protocol parameters at: " <> OldApi.textShow fp <> " Error: " <> OldApi.textShow decErr
+    ShelleyTxCertReadError err' ->
       "Error reading shelley certificate at: " <> Text.pack (Api.displayError err')
     ShelleyTxWriteSignedTxError err' ->
       "Error while writing signed shelley tx: " <> Text.pack (Api.displayError err')
     ShelleyTxWriteUnsignedTxError err' ->
       "Error while writing unsigned shelley tx: " <> Text.pack (Api.displayError err')
     ShelleyTxSubmitError res ->
-      "Error while submitting tx: " <> renderTxSubmitResult res
+      "Error while submitting tx: " <> OldApi.renderTxSubmitResult res
     ShelleyTxReadFileError fileErr -> Text.pack (Api.displayError fileErr)
     ShelleyTxMissingNetworkId -> "Please enter network id with your byron transaction"
 
@@ -94,8 +94,10 @@ runTransactionCmd cmd =
       runTxSign txinfile skfiles network txoutfile
     TxSubmit txFp network ->
       runTxSubmit txFp network
-    TxCalculateMinFee txInCount txOutCount ttl network skFiles certFiles wdrls hasMD pParamsFile ->
-      runTxCalculateMinFee txInCount txOutCount ttl network skFiles certFiles wdrls hasMD pParamsFile
+    TxCalculateMinFee txbody mnw pParamsFile nInputs nOutputs
+                      nShelleyKeyWitnesses nByronKeyWitnesses ->
+      runTxCalculateMinFee txbody mnw pParamsFile nInputs nOutputs
+                           nShelleyKeyWitnesses nByronKeyWitnesses
     TxGetTxId txinfile ->
       runTxGetTxId txinfile
 
@@ -117,7 +119,7 @@ runTxBuildRaw txins txouts ttl fee
               (TxBodyFile fpath) = do
 
     certs <- sequence
-               [ firstExceptT ShelleyTxCertReadError' . newExceptT $
+               [ firstExceptT ShelleyTxCertReadError . newExceptT $
                    Api.readFileTextEnvelope Api.AsCertificate certFile
                | CertificateFile certFile <- certFiles ]
 
@@ -195,54 +197,56 @@ runTxSign (TxBodyFile txbodyFile) skFiles mnw (TxFile txFile) = do
         AGenesisDelegateSigningKey sk -> Right (Api.WitnessGenesisDelegateKey sk)
         AGenesisUTxOSigningKey     sk -> Right (Api.WitnessGenesisUTxOKey     sk)
 
-
-runTxSubmit :: FilePath -> Network -> ExceptT ShelleyTxCmdError IO ()
+runTxSubmit :: FilePath -> OldApi.Network -> ExceptT ShelleyTxCmdError IO ()
 runTxSubmit txFp network = do
   sktFp <- firstExceptT ShelleyTxSocketEnvError $ readEnvSocketPath
-  signedTx <- firstExceptT ShelleyTxReadSignedTxError . newExceptT $ readTxSigned txFp
-  result   <- liftIO $ submitTx network sktFp signedTx
+  signedTx <- firstExceptT ShelleyTxReadSignedTxError . newExceptT $
+                OldApi.readTxSigned txFp
+  result   <- liftIO $ OldApi.submitTx network sktFp signedTx
   case result of
-    TxSubmitSuccess          -> return ()
-    TxSubmitFailureShelley _ -> left (ShelleyTxSubmitError result)
-    TxSubmitFailureByron   _ -> left (ShelleyTxSubmitError result)
+    OldApi.TxSubmitSuccess          -> return ()
+    OldApi.TxSubmitFailureShelley _ -> left (ShelleyTxSubmitError result)
+    OldApi.TxSubmitFailureByron   _ -> left (ShelleyTxSubmitError result)
+
 
 runTxCalculateMinFee
-  :: TxInCount
-  -> TxOutCount
-  -> SlotNo
-  -> Network
-  -> [SigningKeyFile]
-  -> [CertificateFile]
-  -> [(Api.StakeAddress, Api.Lovelace)]
-  -> HasMetaData
+  :: TxBodyFile
+  -> Maybe Api.NetworkId
   -> ProtocolParamsFile
+  -> TxInCount
+  -> TxOutCount
+  -> TxShelleyWinessCount
+  -> TxByronWinessCount
   -> ExceptT ShelleyTxCmdError IO ()
-runTxCalculateMinFee =
-    panic "TODO: runTxCalculateMinFee"
-    --TODO reinstate on top of new API
-{-
-runTxCalculateMinFee (TxInCount txInCount) (TxOutCount txOutCount)
-                     txTtl network skFiles certFiles wdrls hasMD
-                     pParamsFile = do
-    skeys <- firstExceptT ShelleyTxReadFileError $
-               mapM readSigningKeyFile skFiles
-    certs <- mapM readShelleyCert certFiles
+runTxCalculateMinFee (TxBodyFile txbodyFile) nw pParamsFile
+                     (TxInCount nInputs) (TxOutCount nOutputs)
+                     (TxShelleyWinessCount nShelleyKeyWitnesses)
+                     (TxByronWinessCount nByronKeyWitnesses) = do
+
+    txbody <- firstExceptT ShelleyTxReadUnsignedTxError . newExceptT $
+                Api.readFileTextEnvelope Api.AsShelleyTxBody txbodyFile
+
     pparams <- readProtocolParameters pParamsFile
-    liftIO $ putStrLn
-      $  "runTxCalculateMinFee: "
-      ++ show (calculateShelleyMinFee pparams (dummyShelleyTxForFeeCalc skeys certs))
-  where
-    dummyShelleyTxForFeeCalc skeys certs =
-      buildDummyShelleyTxForFeeCalc
-        txInCount
-        txOutCount
-        txTtl
-        network
-        (map toOldApiSigningKey skeys)
-        certs
-        wdrls
-        hasMD
--}
+
+    let tx  = Api.makeSignedTransaction [] txbody
+        fee = Api.estimateTransactionFee
+                (fromMaybe Api.Mainnet nw)
+                (Shelley._minfeeB pparams) --TODO: do this better
+                (Shelley._minfeeA pparams)
+                tx
+                nInputs nOutputs
+                nByronKeyWitnesses nShelleyKeyWitnesses
+
+    liftIO $ putStrLn (show fee :: String)
+
+--TODO: eliminate this and get only the necessary params, and get them in a more
+-- helpful way rather than requiring them as a local file.
+readProtocolParameters :: ProtocolParamsFile
+                       -> ExceptT ShelleyTxCmdError IO Shelley.PParams
+readProtocolParameters (ProtocolParamsFile fpath) = do
+  pparams <- handleIOExceptT (ShelleyTxReadProtocolParamsError fpath) $ LBS.readFile fpath
+  firstExceptT (ShelleyTxAesonDecodeProtocolParamsError fpath . Text.pack) . hoistEither $
+    Aeson.eitherDecode' pparams
 
 data SomeWitnessSigningKey
   = AByronSigningKey           (Api.SigningKey Api.ByronKey)
@@ -298,7 +302,7 @@ data MetaDataJsonConversionError
 renderMetaDataJsonConversionError :: MetaDataJsonConversionError -> Text
 renderMetaDataJsonConversionError err =
   case err of
-    ConversionErrDecodeJSON decErr -> "Error decoding JSON: " <> textShow decErr
+    ConversionErrDecodeJSON decErr -> "Error decoding JSON: " <> OldApi.textShow decErr
     ConversionErrToplevelNotMap -> "The JSON metadata top level must be a map (object) from word to value"
     ConversionErrToplevelBadKey -> "The JSON metadata top level must be a map with unsigned integer keys"
     ConversionErrBoolNotAllowed -> "JSON Bool value is not allowed in MetaData"

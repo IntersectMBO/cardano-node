@@ -299,15 +299,13 @@ pTransaction =
     pTransactionCalculateMinFee :: Parser TransactionCmd
     pTransactionCalculateMinFee =
       TxCalculateMinFee
-        <$> pTxInCount
-        <*> pTxOutCount
-        <*> pTxTTL
-        <*> pNetwork
-        <*> pSomeSigningKeyFiles
-        <*> many pCertificateFile
-        <*> many pWithdrawal
-        <*> pHasMetaData
+        <$> pTxBodyFile Input
+        <*> optional pNetworkId
         <*> pProtocolParamsFile
+        <*> pTxInCount
+        <*> pTxOutCount
+        <*> pTxShelleyWinessCount
+        <*> pTxByronWinessCount
 
     pTransactionId  :: Parser TransactionCmd
     pTransactionId = TxGetTxId <$> pTxBodyFile Input
@@ -754,13 +752,6 @@ pWithdrawal =
         Nothing -> fail $ "Incorrect stake address format: " ++ show bstr
 
 
-pHasMetaData :: Parser HasMetaData
-pHasMetaData =
-  Opt.flag HasNoMetaData HasMetaData
-    (  Opt.long "has-metadata"
-    <> Opt.help "Whether the transaction will have metadata."
-    )
-
 pUpdateProposalFile :: Parser UpdateProposalFile
 pUpdateProposalFile =
   UpdateProposalFile <$>
@@ -1157,6 +1148,24 @@ pTxOutCount =
       (  Opt.long "tx-out-count"
       <> Opt.metavar "NATURAL"
       <> Opt.help "The number of transaction outputs."
+      )
+
+pTxShelleyWinessCount :: Parser TxShelleyWinessCount
+pTxShelleyWinessCount =
+  TxShelleyWinessCount <$>
+    Opt.option Opt.auto
+      (  Opt.long "witness-count"
+      <> Opt.metavar "NATURAL"
+      <> Opt.help "The number of Shelley key witnesses."
+      )
+
+pTxByronWinessCount :: Parser TxByronWinessCount
+pTxByronWinessCount =
+  TxByronWinessCount <$>
+    Opt.option Opt.auto
+      (  Opt.long "byron-witness-count"
+      <> Opt.metavar "NATURAL"
+      <> Opt.help "The number of Byron key witnesses."
       )
 
 pQueryFilter :: Parser QueryFilter

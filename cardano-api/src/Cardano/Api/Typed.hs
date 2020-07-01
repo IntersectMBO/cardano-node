@@ -116,6 +116,8 @@ module Cardano.Api.Typed (
     makeShelleyScriptWitness,
 
     -- * Fee calculation
+    transactionFee,
+    estimateTransactionFee,
 
     -- * Transaction metadata
     -- | Embedding additional structured data within transactions.
@@ -377,6 +379,7 @@ import qualified Shelley.Spec.Ledger.BaseTypes               as Shelley
 import           Shelley.Spec.Ledger.BaseTypes (maybeToStrictMaybe)
 import qualified Shelley.Spec.Ledger.Coin                    as Shelley
 import qualified Shelley.Spec.Ledger.Credential              as Shelley
+import qualified Shelley.Spec.Ledger.LedgerState             as Shelley
 import qualified Shelley.Spec.Ledger.Keys                    as Shelley
 import qualified Shelley.Spec.Ledger.MetaData                as Shelley
 import qualified Shelley.Spec.Ledger.OCert                   as Shelley
@@ -1222,6 +1225,95 @@ signShelleyTransaction txbody sks =
     makeSignedTransaction witnesses txbody
   where
     witnesses = map (makeShelleyKeyWitness txbody) sks
+
+
+-- ----------------------------------------------------------------------------
+-- Transaction fees
+--
+
+-- | For a concrete fully-constructed transaction, determine the minimum fee
+-- that it needs to pay.
+--
+-- This function is simple, but if you are doing input selection then you
+-- probably want to consider estimateTransactionFee.
+--
+transactionFee :: Natural -- ^ The fixed tx fee
+               -> Natural -- ^ The tx fee per byte
+               -> Tx Shelley
+               -> Lovelace
+transactionFee txFeeFixed txFeePerByte (ShelleyTx tx) =
+    Lovelace (a * x + b)
+  where
+    a = toInteger txFeePerByte
+    x = Shelley.txsize tx
+    b = toInteger txFeeFixed
+
+--TODO: in the Byron case the per-byte is non-integral, would need different
+-- parameters. e.g. a new data type for fee params, byron vs shelley
+
+-- | This can estimate what the transaction fee will be, based on a starting
+-- base transaction, plus the numbers of the additional components of the
+-- transaction that may be added.
+--
+-- So for example with wallet coin selection, the base transaction should
+-- contain all the things not subject to coin selection (such as script inputs,
+-- metadata, withdrawals, certs etc)
+--
+estimateTransactionFee :: NetworkId
+                       -> Natural -- ^ The fixed tx fee
+                       -> Natural -- ^ The tx fee per byte
+                       -> Tx Shelley
+                       -> Int -- ^ The number of extra UTxO transaction inputs
+                       -> Int -- ^ The number of extra transaction outputs
+                       -> Int -- ^ The number of extra Shelley key witnesses
+                       -> Int -- ^ The number of extra Byron key witnesses
+                       -> Lovelace
+estimateTransactionFee nw txFeeFixed txFeePerByte (ShelleyTx tx) =
+    let Lovelace baseFee = transactionFee txFeeFixed txFeePerByte (ShelleyTx tx)
+     in \nInputs nOutputs nShelleyKeyWitnesses nByronKeyWitnesses ->
+
+        --TODO: this is fragile. Move something like this to the ledger and
+        -- make it robust, based on the txsize calculation.
+        let extraBytes :: Int
+            extraBytes = nInputs               * sizeInput
+                       + nOutputs              * sizeOutput
+                       + nByronKeyWitnesses    * sizeByronKeyWitnesses
+                       + nShelleyKeyWitnesses  * sizeShelleyKeyWitnesses
+
+         in Lovelace (baseFee + toInteger txFeePerByte * toInteger extraBytes)
+  where
+    sizeInput               = smallArray + uint + hashObj
+    sizeOutput              = smallArray + uint + address
+    sizeByronKeyWitnesses   = smallArray + keyObj + sigObj + ccodeObj
+                                         + paddingPref + paddingSuff
+    sizeShelleyKeyWitnesses = smallArray + keyObj + sigObj
+
+    smallArray  = 1
+    uint        = 5
+
+    hashObj     = 2 + hashLen
+    hashLen     = 32
+
+    keyObj      = 2 + keyLen
+    keyLen      = 32
+
+    sigObj      = 2 + sigLen
+    sigLen      = 64
+
+    ccodeObj    = 2 + ccodeLen
+    ccodeLen    = 32
+
+    address     = 2 + addrHeader + 2 * addrHashLen
+    addrHeader  = 1
+    addrHashLen = 28
+
+    paddingPref = 2 + BS.length (Shelley.paddingPrefix padding)
+    paddingSuff = 2 + BS.length (Shelley.paddingSuffix padding)
+    padding     = Shelley.byronVerKeyAddressPadding $
+                    Byron.mkAttributes Byron.AddrAttributes {
+                      Byron.aaVKDerivationPath = Nothing,
+                      Byron.aaNetworkMagic     = toByronNetworkMagic nw
+                    }
 
 
 -- ----------------------------------------------------------------------------

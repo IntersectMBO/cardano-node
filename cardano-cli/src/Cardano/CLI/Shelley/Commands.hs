@@ -19,6 +19,8 @@ module Cardano.CLI.Shelley.Commands
   , GenesisDir (..)
   , TxInCount (..)
   , TxOutCount (..)
+  , TxShelleyWinessCount (..)
+  , TxByronWinessCount (..)
   , ITNKeyFile (..)
   , OpCertCounterFile (..)
   , OutputFile (..)
@@ -108,15 +110,13 @@ data TransactionCmd
   | TxCheck         -- { transaction :: Transaction, nodeAddr :: NodeAddress }
   | TxSubmit FilePath Network
   | TxCalculateMinFee
+      TxBodyFile
+      (Maybe Typed.NetworkId)
+      ProtocolParamsFile
       TxInCount
       TxOutCount
-      SlotNo
-      Network
-      [SigningKeyFile]
-      [CertificateFile]
-      [(Typed.StakeAddress, Typed.Lovelace)]
-      HasMetaData
-      ProtocolParamsFile
+      TxShelleyWinessCount
+      TxByronWinessCount
   | TxGetTxId TxBodyFile
   deriving (Eq, Show)
 
@@ -228,6 +228,14 @@ newtype TxInCount
 
 newtype TxOutCount
   = TxOutCount Int
+  deriving (Eq, Show)
+
+newtype TxShelleyWinessCount
+  = TxShelleyWinessCount Int
+  deriving (Eq, Show)
+
+newtype TxByronWinessCount
+  = TxByronWinessCount Int
   deriving (Eq, Show)
 
 newtype BlockId
