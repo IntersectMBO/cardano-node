@@ -41,6 +41,7 @@ import           Data.Text (Text)
 
 import           Cardano.Api
 import           Cardano.Api.Shelley.OCert (KESPeriod(..))
+import           Cardano.Api.Typed (StakePoolMetadataReference, StakePoolRelay)
 import qualified Cardano.Api.Typed as Typed
 import           Cardano.Slotting.Slot (EpochNo (..))
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
@@ -138,19 +139,19 @@ data PoolCmd
       -- ^ Stake pool verification key.
       VerificationKeyFile
       -- ^ VRF Verification key.
-      ShelleyCoin
+      Typed.Lovelace
       -- ^ Pool pledge.
-      ShelleyCoin
+      Typed.Lovelace
       -- ^ Pool cost.
-      ShelleyStakePoolMargin
+      Rational
       -- ^ Pool margin.
       VerificationKeyFile
       -- ^ Reward account verification staking key.
       [VerificationKeyFile]
       -- ^ Pool owner verification staking key(s).
-      [ShelleyStakePoolRelay]
+      [StakePoolRelay]
       -- ^ Stake pool relays.
-      (Maybe ShelleyStakePoolMetaData)
+      (Maybe StakePoolMetadataReference)
       -- ^ Stake pool metadata.
       Network
       OutputFile

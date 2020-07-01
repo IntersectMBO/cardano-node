@@ -139,6 +139,7 @@ module Cardano.Api.Typed (
     makeStakePoolRegistrationCertificate,
     makeStakePoolRetirementCertificate,
     StakePoolParameters(..),
+    StakePoolRelay(..),
     StakePoolMetadataReference(..),
 
     -- ** Stake pool off-chain metadata

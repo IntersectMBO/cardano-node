@@ -16,19 +16,25 @@ import qualified Data.Char as Char
 import qualified Data.IP as IP
 import qualified Data.Set as Set
 import qualified Data.Text as Text
+import qualified Data.Text.Encoding as Text
 import           Data.Time.Clock (UTCTime)
 import           Data.Time.Format (defaultTimeLocale, iso8601DateFormat, parseTimeOrError)
 import           Options.Applicative (Parser)
 import qualified Options.Applicative as Opt
 import qualified Data.Attoparsec.ByteString.Char8 as Atto
 
+import           Network.Socket (PortNumber)
+import           Network.URI (URI, parseURI)
+
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
 import qualified Shelley.Spec.Ledger.BaseTypes as Shelley
 import qualified Shelley.Spec.Ledger.Coin as Shelley
 import qualified Shelley.Spec.Ledger.TxData as Shelley
 
-import           Cardano.Api hiding (parseTxIn, parseTxOut, parseWithdrawal)
+import           Cardano.Api hiding (StakePoolMetadata, parseTxIn, parseTxOut, parseWithdrawal)
 import           Cardano.Api.Shelley.OCert (KESPeriod(..))
+import           Cardano.Api.Typed (StakePoolMetadata, StakePoolMetadataReference (..),
+                   StakePoolRelay (..))
 import qualified Cardano.Api.Typed as Typed
 import           Cardano.Slotting.Slot (EpochNo (..))
 
@@ -1269,45 +1275,39 @@ pPoolOwner =
     )
 
 
-pPoolPledge :: Parser ShelleyCoin
+pPoolPledge :: Parser Typed.Lovelace
 pPoolPledge =
-  Shelley.Coin <$>
-    Opt.option Opt.auto
+    Opt.option (readerFromAttoParser parseLovelace)
       (  Opt.long "pool-pledge"
       <> Opt.metavar "LOVELACE"
       <> Opt.help "The stake pool's pledge."
       )
 
 
-pPoolCost :: Parser ShelleyCoin
+pPoolCost :: Parser Typed.Lovelace
 pPoolCost =
-  Shelley.Coin <$>
-    Opt.option Opt.auto
+    Opt.option (readerFromAttoParser parseLovelace)
       (  Opt.long "pool-cost"
       <> Opt.metavar "LOVELACE"
       <> Opt.help "The stake pool's cost."
       )
 
-pPoolMargin :: Parser ShelleyStakePoolMargin
+pPoolMargin :: Parser Rational
 pPoolMargin =
-  (\dbl -> maybeOrFail . Shelley.mkUnitInterval $ realToFrac (dbl :: Double)) <$>
-    Opt.option Opt.auto
+    Opt.option readRationalUnitInterval
       (  Opt.long "pool-margin"
       <> Opt.metavar "DOUBLE"
       <> Opt.help "The stake pool's margin."
       )
-  where
-    maybeOrFail (Just mgn) = mgn
-    maybeOrFail Nothing = panic "Pool margin outside of [0,1] range."
 
-pPoolRelay :: Parser ShelleyStakePoolRelay
+pPoolRelay :: Parser StakePoolRelay
 pPoolRelay = pSingleHostAddress <|> pSingleHostName <|> pMultiHostName
 
-pMultiHostName :: Parser ShelleyStakePoolRelay
+pMultiHostName :: Parser StakePoolRelay
 pMultiHostName =
-  Shelley.MultiHostName <$> pDNSName
+  StakePoolRelayDnsSrvRecord <$> pDNSName
  where
-  pDNSName :: Parser Shelley.DnsName
+  pDNSName :: Parser ByteString
   pDNSName = Opt.option (Opt.eitherReader eDNSName)
                (  Opt.long "multi-host-pool-relay"
                <> Opt.metavar "STRING"
@@ -1315,11 +1315,11 @@ pMultiHostName =
                             \an SRV DNS record"
                )
 
-pSingleHostName :: Parser ShelleyStakePoolRelay
+pSingleHostName :: Parser StakePoolRelay
 pSingleHostName =
-  Shelley.SingleHostName <$> (Shelley.maybeToStrictMaybe <$> optional pPort) <*> pDNSName
+  StakePoolRelayDnsARecord <$> pDNSName <*> optional pPort
  where
-  pDNSName :: Parser Shelley.DnsName
+  pDNSName :: Parser ByteString
   pDNSName = Opt.option (Opt.eitherReader eDNSName)
                (  Opt.long "single-host-pool-relay"
                <> Opt.metavar "STRING"
@@ -1327,28 +1327,32 @@ pSingleHostName =
                             \ A or AAAA DNS record"
                )
 
-eDNSName :: String -> Either String Shelley.DnsName
-eDNSName str = maybe (Left "DNS name is more than 64 bytes") Right (Shelley.textToDns $ toS str)
+eDNSName :: String -> Either String ByteString
+eDNSName str =
+  -- We're using 'Shelley.textToDns' to validate the string.
+  case Shelley.textToDns (toS str) of
+    Nothing -> Left "DNS name is more than 64 bytes"
+    Just dnsName -> Right . Text.encodeUtf8 . Shelley.dnsToText $ dnsName
 
-pSingleHostAddress :: Parser ShelleyStakePoolRelay
+pSingleHostAddress :: Parser StakePoolRelay
 pSingleHostAddress =
   liftA3
-    (\port ip4 ip6 -> singleHostAddress port ip4 ip6)
-    pPort
+    (\ip4 ip6 port -> singleHostAddress ip4 ip6 port)
     (optional pIpV4)
     (optional pIpV6)
+    pPort
  where
-  singleHostAddress :: Shelley.Port -> Maybe IP.IPv4 -> Maybe IP.IPv6 -> ShelleyStakePoolRelay
-  singleHostAddress port ipv4 ipv6 =
+  singleHostAddress :: Maybe IP.IPv4 -> Maybe IP.IPv6 -> PortNumber -> StakePoolRelay
+  singleHostAddress ipv4 ipv6 port =
     case (ipv4, ipv6) of
       (Nothing, Nothing) ->
         panic $ "Please enter either an IPv4 or IPv6 address for the pool relay"
       (Just i4, Nothing) ->
-        Shelley.SingleHostAddr (Shelley.SJust port) (Shelley.SJust i4) Shelley.SNothing
+        StakePoolRelayIp (Just i4) Nothing (Just port)
       (Nothing, Just i6) ->
-        Shelley.SingleHostAddr (Shelley.SJust port) Shelley.SNothing (Shelley.SJust i6)
+        StakePoolRelayIp Nothing (Just i6) (Just port)
       (Just i4, Just i6) ->
-        Shelley.SingleHostAddr (Shelley.SJust port) (Shelley.SJust i4) (Shelley.SJust i6)
+        StakePoolRelayIp (Just i4) (Just i6) (Just port)
 
 
 
@@ -1366,31 +1370,30 @@ pIpV6 = Opt.option (Opt.maybeReader readMaybe :: Opt.ReadM IP.IPv6)
            <> Opt.help "The stake pool relay's IPv6 address"
            )
 
-pPort :: Parser Shelley.Port
+pPort :: Parser PortNumber
 pPort = Opt.option (fromInteger <$> Opt.eitherReader readEither)
            (  Opt.long "pool-relay-port"
            <> Opt.metavar "INT"
            <> Opt.help "The stake pool relay's port"
            )
 
-pPoolMetaData :: Parser (Maybe ShelleyStakePoolMetaData)
-pPoolMetaData =
+pStakePoolMetadataReference :: Parser (Maybe StakePoolMetadataReference)
+pStakePoolMetadataReference =
   optional $
-    Shelley.PoolMetaData
-      <$> pPoolMetaDataUrl
-      <*> pPoolMetaDataHash
+    StakePoolMetadataReference
+      <$> pStakePoolMetadataUrl
+      <*> pStakePoolMetadataHash
 
-pPoolMetaDataUrl :: Parser Shelley.Url
-pPoolMetaDataUrl =
-  Opt.option
-    (Opt.maybeReader (Shelley.textToUrl . Text.pack))
-        (  Opt.long "metadata-url"
-        <> Opt.metavar "URL"
-        <> Opt.help "Pool metadata URL (maximum length of 64 characters)."
-        )
+pStakePoolMetadataUrl :: Parser URI
+pStakePoolMetadataUrl =
+  Opt.option (readURIOfMaxLength 64)
+    (  Opt.long "metadata-url"
+    <> Opt.metavar "URL"
+    <> Opt.help "Pool metadata URL (maximum length of 64 characters)."
+    )
 
-pPoolMetaDataHash :: Parser ByteString
-pPoolMetaDataHash =
+pStakePoolMetadataHash :: Parser (Typed.Hash StakePoolMetadata)
+pStakePoolMetadataHash =
     Opt.option
       (Opt.maybeReader metadataHash)
         (  Opt.long "metadata-hash"
@@ -1401,8 +1404,8 @@ pPoolMetaDataHash =
     getHashFromHexString :: String -> Maybe (Hash Blake2b_256 ByteString)
     getHashFromHexString = hashFromBytesAsHex . BSC.pack
 
-    metadataHash :: String -> Maybe ByteString
-    metadataHash str = getHash <$> getHashFromHexString str
+    metadataHash :: String -> Maybe (Typed.Hash StakePoolMetadata)
+    metadataHash str = Typed.StakePoolMetadataHash <$> getHashFromHexString str
 
 pStakePoolRegistrationCert :: Parser PoolCmd
 pStakePoolRegistrationCert =
@@ -1415,7 +1418,7 @@ pStakePoolRegistrationCert =
   <*> pRewardAcctVerificationKeyFile
   <*> some pPoolOwner
   <*> many pPoolRelay
-  <*> pPoolMetaData
+  <*> pStakePoolMetadataReference
   <*> pNetwork
   <*> pOutputFile
 
@@ -1615,6 +1618,21 @@ parseLovelace = Typed.Lovelace <$> Atto.decimal
 -- Helpers
 --------------------------------------------------------------------------------
 
+readURIOfMaxLength :: Int -> Opt.ReadM URI
+readURIOfMaxLength maxLen = do
+  s <- readStringOfMaxLength maxLen
+  maybe (fail "The provided string must be a valid URI.") pure (parseURI s)
+
+readStringOfMaxLength :: Int -> Opt.ReadM String
+readStringOfMaxLength maxLen = do
+  s <- Opt.str
+  let strLen = length s
+  if strLen <= maxLen
+    then pure s
+    else fail $
+      "The provided string must have at most 64 characters, but it has "
+        <> show strLen
+        <> " characters."
 
 readRationalUnitInterval :: Opt.ReadM Rational
 readRationalUnitInterval = readRational >>= checkUnitInterval
