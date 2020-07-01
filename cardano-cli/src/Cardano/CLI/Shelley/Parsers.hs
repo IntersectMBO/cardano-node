@@ -28,7 +28,6 @@ import           Network.URI (URI, parseURI)
 
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
 import qualified Shelley.Spec.Ledger.BaseTypes as Shelley
-import qualified Shelley.Spec.Ledger.Coin as Shelley
 import qualified Shelley.Spec.Ledger.TxData as Shelley
 
 import           Cardano.Api hiding (StakePoolMetadata, parseTxIn, parseTxOut, parseWithdrawal)
@@ -531,10 +530,9 @@ pGovernanceCmd =
               <> Opt.internal
               )
 
-pRewardAmt :: Parser ShelleyCoin
+pRewardAmt :: Parser Typed.Lovelace
 pRewardAmt =
-  Shelley.Coin <$>
-    Opt.option Opt.auto
+    Opt.option (readerFromAttoParser parseLovelace)
       (  Opt.long "reward"
       <> Opt.metavar "LOVELACE"
       <> Opt.help "The reward for the relevant reward account."

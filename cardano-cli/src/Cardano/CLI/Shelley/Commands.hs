@@ -185,7 +185,7 @@ data BlockCmd
 
 
 data GovernanceCmd
-  = GovernanceMIRCertificate MIRPot [VerificationKeyFile] [ShelleyCoin] OutputFile
+  = GovernanceMIRCertificate MIRPot [VerificationKeyFile] [Typed.Lovelace] OutputFile
   | GovernanceProtocolUpdate SigningKeyFile -- { parameters :: ProtocolParams, nodeAddr :: NodeAddress }
   | GovernanceUpdateProposal OutputFile EpochNo
                              [VerificationKeyFile]
