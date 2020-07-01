@@ -15,10 +15,11 @@ error=0
 ${CARDANO_CLI} shelley transaction calculate-min-fee \
     --tx-in-count 32 \
     --tx-out-count 27 \
-    --ttl 10 \
+    --byron-witness-count 5 \
+    --witness-count 10 \
     --testnet-magic 4036000900 \
     --protocol-params-file "${DATA_DIR}/protocol-params.json" \
-    --signing-key-file "${DATA_DIR}/utxo.skey" \
+    --tx-body-file "${DATA_DIR}/tx-body-file" \
     > "${TEST_DIR}/min-fee.txt"
 fail_on_error $?
 
@@ -31,6 +32,6 @@ if test "${line_count}" -ne 1 ; then
   error=1
   fi
 
-assert_string '1573502' "${TEST_DIR}/min-fee.txt"
+assert_string '2594002' "${TEST_DIR}/min-fee.txt"
 
 report_result ${error}
