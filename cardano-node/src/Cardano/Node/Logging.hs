@@ -9,7 +9,7 @@
 #define UNIX
 #endif
 
-module Cardano.Config.Logging
+module Cardano.Node.Logging
   ( LoggingLayer (..)
   , createLoggingFeature
   -- re-exports

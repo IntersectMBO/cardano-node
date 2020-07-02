@@ -338,7 +338,7 @@ instance FromJSON NodeConfiguration where
       protocol <- v .: "Protocol" .!= ByronProtocol
       ncProtocolConfig <-
         case protocol of
-          MockProtocol ptcl -> 
+          MockProtocol ptcl ->
             NodeProtocolConfigurationMock <$> parseMockProtocol ptcl v
 
           ByronProtocol ->

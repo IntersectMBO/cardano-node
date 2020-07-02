@@ -26,7 +26,6 @@ library
                        Cardano.Config.GitRev
                        Cardano.Config.GitRevFromGit
                        Cardano.Config.LedgerQueries
-                       Cardano.Config.Logging
                        Cardano.Config.Orphanage
                        Cardano.Config.Parsers
                        Cardano.Config.Shelley.Orphans
