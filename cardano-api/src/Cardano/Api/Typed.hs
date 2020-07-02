@@ -261,6 +261,8 @@ module Cardano.Api.Typed (
     -- ** Protocol parameter updates
     UpdateProposal,
     ProtocolParametersUpdate(..),
+    EpochNo,
+    NetworkMagic(..),
     makeShelleyUpdateProposal,
   ) where
 

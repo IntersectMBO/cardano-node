@@ -27,7 +27,7 @@ import           Data.Yaml (decodeFileThrow)
 import           System.FilePath ((</>), takeDirectory)
 import           System.Posix.Types (Fd)
 
-import           Cardano.Api
+import           Cardano.Api.Typed (EpochNo)
 import           Cardano.Api.Protocol
 import           Cardano.Config.Types
 import           Cardano.Crypto (RequiresNetworkMagic(..))
