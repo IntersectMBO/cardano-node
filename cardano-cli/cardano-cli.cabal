@@ -186,14 +186,24 @@ test-suite cardano-cli-pioneers
                       , transformers-except
 
   other-modules:        Test.CLI.Byron.TextEnvelope.Golden.PaymentKeys
-                        Test.CLI.Shelley.TextEnvelope.Golden.GenesisDelegateKeys
-                        Test.CLI.Shelley.TextEnvelope.Golden.GenesisKeys
-                        Test.CLI.Shelley.TextEnvelope.Golden.GenesisUTxOKeys
-                        Test.CLI.Shelley.TextEnvelope.Golden.KESKeys
-                        Test.CLI.Shelley.TextEnvelope.Golden.PaymentKeys
-                        Test.CLI.Shelley.TextEnvelope.Golden.StakeKeys
+                        Test.CLI.Byron.TextEnvelope.Golden.Tx
+                        Test.CLI.Byron.TextEnvelope.Golden.TxBody
+                        Test.CLI.Byron.TextEnvelope.Golden.Witness
+                        Test.CLI.Shelley.TextEnvelope.Golden.Certificates.MIRCertificate
+                        Test.CLI.Shelley.TextEnvelope.Golden.Certificates.OperationalCertificate
+                        Test.CLI.Shelley.TextEnvelope.Golden.Certificates.StakeAddressCertificates
+                        Test.CLI.Shelley.TextEnvelope.Golden.Certificates.StakePoolCertificates
+                        Test.CLI.Shelley.TextEnvelope.Golden.Keys.GenesisDelegateKeys
+                        Test.CLI.Shelley.TextEnvelope.Golden.Keys.GenesisKeys
+                        Test.CLI.Shelley.TextEnvelope.Golden.Keys.GenesisUTxOKeys
+                        Test.CLI.Shelley.TextEnvelope.Golden.Keys.KESKeys
+                        Test.CLI.Shelley.TextEnvelope.Golden.Keys.PaymentKeys
+                        Test.CLI.Shelley.TextEnvelope.Golden.Keys.StakeKeys
+                        Test.CLI.Shelley.TextEnvelope.Golden.Keys.VRFKeys
                         Test.CLI.Shelley.TextEnvelope.Golden.Tests
-                        Test.CLI.Shelley.TextEnvelope.Golden.VRFKeys
+                        Test.CLI.Shelley.TextEnvelope.Golden.Tx.Tx
+                        Test.CLI.Shelley.TextEnvelope.Golden.Tx.TxBody
+                        Test.CLI.Shelley.TextEnvelope.Golden.Tx.Witness
                         Test.ITN
                         Test.OptParse
                         Test.Pioneers.Exercise1

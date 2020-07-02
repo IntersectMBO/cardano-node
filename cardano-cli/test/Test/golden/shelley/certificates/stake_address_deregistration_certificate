@@ -1,0 +1,4 @@
+type: Certificate
+title: Stake Address Deregistration Certificate
+cbor-hex:
+ 82018200581c95f33ea170445aa3dcf5d11b0c9743c8e3799820353a732707310516

@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Test.CLI.Shelley.TextEnvelope.Golden.KESKeys
+module Test.CLI.Shelley.TextEnvelope.Golden.Keys.KESKeys
   ( golden_shelleyKESKeys
   ) where
 
@@ -14,16 +14,16 @@ import qualified Hedgehog as H
 import           Test.OptParse
 
 
--- | 1. We generate a key pair
---   2. We check for the existence of the key pair
---   3. We check the TextEnvelope serialization format has not changed.
+-- | 1. Generate a key pair
+--   2. Check for the existence of the key pair
+--   3. Check the TextEnvelope serialization format has not changed.
 golden_shelleyKESKeys :: Property
 golden_shelleyKESKeys =
   propertyOnce $ do
 
     -- Reference keys
-    let referenceVerKey = "test/Test/golden/shelley/kes_keys/verification_key"
-        rreferenceSignKey = "test/Test/golden/shelley/kes_keys/signing_key"
+    let referenceVerKey = "test/Test/golden/shelley/keys/kes_keys/verification_key"
+        referenceSignKey = "test/Test/golden/shelley/keys/kes_keys/signing_key"
 
     -- Key filepaths
     let verKey = "kes-verification-key-file"
@@ -33,7 +33,6 @@ golden_shelleyKESKeys =
     -- Generate payment verification key
     execCardanoCLIParser
       createdFiles
-      "golden_shelleyKESKeys.kes_keypair_gen"
         $ evalCardanoCLIParser [ "shelley","node","key-gen-KES"
                                , "--verification-key-file", verKey
                                , "--signing-key-file", signKey
@@ -48,7 +47,7 @@ golden_shelleyKESKeys =
     -- Check the newly created files have not deviated from the
     -- golden files
     checkTextEnvelopeFormat createdFiles verificationKeyType referenceVerKey verKey
-    checkTextEnvelopeFormat createdFiles signingKeyType rreferenceSignKey signKey
+    checkTextEnvelopeFormat createdFiles signingKeyType referenceSignKey signKey
 
     liftIO $ fileCleanup createdFiles
     H.success

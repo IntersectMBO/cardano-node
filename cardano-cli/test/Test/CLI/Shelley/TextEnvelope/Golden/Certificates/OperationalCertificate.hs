@@ -1,10 +1,12 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Test.Pioneers.Exercise3
-  ( tests
+module Test.CLI.Shelley.TextEnvelope.Golden.Certificates.OperationalCertificate
+  ( golden_shelleyOperationalCertificate
   ) where
 
 import           Cardano.Prelude
+
+import           Cardano.Api.Typed (AsType(..), HasTextEnvelope (..))
 
 import           Hedgehog (Property)
 import qualified Hedgehog as H
@@ -14,10 +16,14 @@ import           Test.OptParse
 -- | 1. Create KES key pair.
 --   2. Create cold keys.
 --   3. Create operational certificate.
---   4. Create VRF key pair.
-prop_createOperationalCertificate :: Property
-prop_createOperationalCertificate =
+--   4. Check the TextEnvelope serialization format has not changed.
+golden_shelleyOperationalCertificate :: Property
+golden_shelleyOperationalCertificate =
   propertyOnce $ do
+
+    -- Reference keys
+    let referenceOperationalCertificate = "test/Test/golden/shelley/certificates/operational_certificate"
+
     -- Key filepaths
     let kesVerKey = "KES-verification-key-file"
         kesSignKey = "KES-signing-key-file"
@@ -25,11 +31,11 @@ prop_createOperationalCertificate =
         coldSignKey = "cold-signing-key-file"
         operationalCertCounter = "operational-certificate-counter-file"
         operationalCert = "operational-certificate-file"
-        allFiles = [kesVerKey, kesSignKey, coldVerKey, coldSignKey, operationalCertCounter, operationalCert]
+        createdFiles = [kesVerKey, kesSignKey, coldVerKey, coldSignKey, operationalCertCounter, operationalCert]
 
     -- Create KES key pair
     execCardanoCLIParser
-      allFiles
+      createdFiles
         $ evalCardanoCLIParser [ "shelley","node","key-gen-KES"
                                , "--verification-key-file", kesVerKey
                                , "--signing-key-file", kesSignKey
@@ -39,7 +45,7 @@ prop_createOperationalCertificate =
 
     -- Create cold key pair
     execCardanoCLIParser
-      allFiles
+      createdFiles
         $ evalCardanoCLIParser [ "shelley","node","key-gen"
                                , "--cold-verification-key-file", coldVerKey
                                , "--cold-signing-key-file", coldSignKey
@@ -50,7 +56,7 @@ prop_createOperationalCertificate =
 
     -- Create operational certificate
     execCardanoCLIParser
-      allFiles
+      createdFiles
         $ evalCardanoCLIParser [ "shelley","node","issue-op-cert"
                                , "--kes-verification-key-file", kesVerKey
                                , "--cold-signing-key-file", coldSignKey
@@ -59,16 +65,12 @@ prop_createOperationalCertificate =
                                , "--out-file", operationalCert
                                ]
 
-    assertFilesExist allFiles
+    assertFilesExist createdFiles
+    let operationalCertificateType = textEnvelopeType AsOperationalCertificate
 
-    liftIO $ fileCleanup allFiles
+    -- Check the newly created files have not deviated from the
+    -- golden files
+    checkTextEnvelopeFormat createdFiles operationalCertificateType referenceOperationalCertificate operationalCert
+
+    liftIO $ fileCleanup createdFiles
     H.success
-
--- -----------------------------------------------------------------------------
-
-tests :: IO Bool
-tests =
-  H.checkSequential
-    $ H.Group "Pioneers Example 3"
-        [ ("prop_createOperationalCertificate", prop_createOperationalCertificate)
-        ]
