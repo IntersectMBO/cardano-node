@@ -30,6 +30,7 @@ in {
 , initialFunds ? import ./initial-funds.nix
 , delegatePoolAmount ? 1000000000000
 , genesisParams ? {}
+, extraSupervisorConfig ? {}
 , ...
 }:
 let
@@ -121,7 +122,7 @@ let
       directory = "${stateDir}/webserver";
     };
 
-  }));
+  } // extraSupervisorConfig));
   # creates a dummy genesis used as a template
   genesisSpec = pkgs.runCommand "create-genesis" { buildInputs = [ cardano-cli ]; } ''
     cardano-cli shelley genesis create --testnet-magic 42 \
