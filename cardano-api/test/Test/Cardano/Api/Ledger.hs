@@ -2,7 +2,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Cardano.Config.Types
+module Test.Cardano.Api.Ledger
   ( tests
   ) where
 
@@ -22,7 +22,7 @@ import           Ouroboros.Consensus.Shelley.Protocol (TPraosStandardCrypto)
 import qualified Test.Shelley.Spec.Ledger.Genesis.Properties as Ledger
 import           Test.Shelley.Spec.Ledger.Generator.Genesis
 
-import           Test.Cardano.Config.Examples
+import           Test.Cardano.Api.Examples
 import           Test.Cardano.Prelude
 
 

@@ -3,7 +3,7 @@
 
 {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 
-module Test.Cardano.Config.Examples
+module Test.Cardano.Api.Examples
   ( exampleShelleyGenesis
   ) where
 
@@ -28,7 +28,7 @@ import           Shelley.Spec.Ledger.Keys (KeyHash(..), KeyRole(..), Hash,
                    VerKeyVRF, GenDelegPair(..))
 import           Shelley.Spec.Ledger.PParams (PParams' (..), emptyPParams)
 
-import           Cardano.Config.Shelley.Genesis
+import           Cardano.Api.Shelley.Genesis
 
 
 exampleShelleyGenesis :: ShelleyGenesis TPraosStandardCrypto

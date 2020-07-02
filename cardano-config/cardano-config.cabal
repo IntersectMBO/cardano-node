@@ -29,7 +29,6 @@ library
                        Cardano.Config.Logging
                        Cardano.Config.Orphanage
                        Cardano.Config.Parsers
-                       Cardano.Config.Shelley.Genesis
                        Cardano.Config.Shelley.Orphans
                        Cardano.Config.Shelley.Parsers
                        Cardano.Config.Topology
@@ -136,10 +135,8 @@ test-suite cardano-config-test
                       , hedgehog
                       , hedgehog-corpus
 
-  other-modules:        Test.Cardano.Config.Examples
-                        Test.Cardano.Config.Gen
+  other-modules:        Test.Cardano.Config.Gen
                         Test.Cardano.Config.Json
-                        Test.Cardano.Config.Types
 
   default-language:     Haskell2010
   default-extensions:   NoImplicitPrelude
