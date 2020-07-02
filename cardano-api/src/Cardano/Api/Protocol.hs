@@ -1,15 +1,20 @@
-{-# LANGUAGE ConstraintKinds   #-}
-{-# LANGUAGE FlexibleContexts  #-}
-{-# LANGUAGE GADTs             #-}
-{-# LANGUAGE NamedFieldPuns    #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RankNTypes        #-}
+{-# LANGUAGE ConstraintKinds     #-}
+{-# LANGUAGE DeriveAnyClass      #-}
+{-# LANGUAGE DeriveGeneric       #-}
+{-# LANGUAGE FlexibleContexts    #-}
+{-# LANGUAGE GADTs               #-}
+{-# LANGUAGE NamedFieldPuns      #-}
+{-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE RankNTypes          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving  #-}
+
 
 module Cardano.Api.Protocol
   (
     -- * The enumeration of supported protocols
     Protocol(..)
+  , MockProtocol(..)
 
     -- * Node client support
     -- | Support for the context needed to run a client of a node that is using
@@ -20,7 +25,9 @@ module Cardano.Api.Protocol
 
 import           Cardano.Prelude
 
-import           Cardano.Config.Types (Protocol(..))
+import           Control.Monad.Fail (fail)
+import           Data.Aeson
+
 import           Cardano.Chain.Slotting (EpochSlots(..))
 
 import           Cardano.Api.Protocol.Types
@@ -30,6 +37,45 @@ import           Cardano.Api.Protocol.Shelley
 
 import qualified Ouroboros.Consensus.Cardano as Consensus
 
+data Protocol = MockProtocol !MockProtocol
+              | ByronProtocol
+              | ShelleyProtocol
+              | CardanoProtocol
+  deriving (Eq, Show, Generic)
+
+instance FromJSON Protocol where
+  parseJSON =
+    withText "Protocol" $ \str -> case str of
+
+      -- The new names
+      "MockBFT"   -> pure (MockProtocol MockBFT)
+      "MockPBFT"  -> pure (MockProtocol MockPBFT)
+      "MockPraos" -> pure (MockProtocol MockPraos)
+      "Byron"     -> pure ByronProtocol
+      "Shelley"   -> pure ShelleyProtocol
+      "Cardano"   -> pure CardanoProtocol
+
+      -- The old names
+      "BFT"       -> pure (MockProtocol MockBFT)
+    --"MockPBFT"  -- same as new name
+      "Praos"     -> pure (MockProtocol MockPraos)
+      "RealPBFT"  -> pure ByronProtocol
+      "TPraos"    -> pure ShelleyProtocol
+
+      _           -> fail $ "Parsing of Protocol failed. "
+                         <> show str <> " is not a valid protocol"
+
+
+deriving instance NFData Protocol
+deriving instance NoUnexpectedThunks Protocol
+
+data MockProtocol = MockBFT
+                  | MockPBFT
+                  | MockPraos
+  deriving (Eq, Show, Generic)
+
+deriving instance NFData MockProtocol
+deriving instance NoUnexpectedThunks MockProtocol
 
 mkNodeClientProtocol :: Protocol -> SomeNodeClientProtocol
 mkNodeClientProtocol protocol =
@@ -71,4 +117,3 @@ mkNodeClientProtocol protocol =
           -- client case.
           (EpochSlots 21600)
           (Consensus.SecurityParam 2160)
-

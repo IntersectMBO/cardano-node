@@ -5,24 +5,18 @@
 
 {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 
-module Test.Cardano.Config.Gen
-  ( genAddress
-  , genGenesisDelegationPair
-  , genGenesisFundPair
-  , genNetworkTopology
+module Test.Cardano.Node.Gen
+  ( genNetworkTopology
   , genNodeAddress
   , genNodeHostAddress
   , genNodeSetup
-  , genShelleyGenesis
-  , genSigningKey
-  , genVRFKeyPair
   ) where
 
 import           Cardano.Prelude
 
-import           Cardano.Config.Types
-
-import           Cardano.Crypto.DSIGN.Class
+import           Cardano.Config.Types (NodeAddress(..), NodeHostAddress(..))
+import           Cardano.Node.Topology (NetworkTopology(..), NodeSetup(..),
+                   RemoteAddress(..))
 
 import qualified Data.IP as IP
 
@@ -32,23 +26,12 @@ import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 import           Hedgehog.Internal.Gen ()
 
-import           Ouroboros.Consensus.Shelley.Protocol (TPraosStandardCrypto)
-
-import           Shelley.Spec.Ledger.Crypto
-
-import           Test.Shelley.Spec.Ledger.Generator.Genesis
-
 genNetworkTopology :: Gen NetworkTopology
 genNetworkTopology =
   Gen.choice
     [ MockNodeTopology <$> Gen.list (Range.linear 0 10) genNodeSetup
     , RealNodeTopology <$> Gen.list (Range.linear 0 10) genRemoteAddress
     ]
-
-genSigningKey :: Gen (SignKeyDSIGN (DSIGN TPraosStandardCrypto))
-genSigningKey = do
-  seed <- genSeed $ fromIntegral (seedSizeDSIGN (Proxy :: Proxy (DSIGN TPraosStandardCrypto)))
-  return $ genKeyDSIGN seed
 
 genNodeAddress :: Gen NodeAddress
 genNodeAddress =

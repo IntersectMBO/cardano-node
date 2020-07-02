@@ -37,12 +37,13 @@ import           Ouroboros.Consensus.Cardano.Condense ()
 import           Ouroboros.Consensus.Shelley.Protocol (TPraosStandardCrypto)
 import qualified Shelley.Spec.Ledger.PParams as Shelley
 
-import           Cardano.Config.Types
+import           Cardano.Node.Types
                    (NodeByronProtocolConfiguration(..),
                     NodeShelleyProtocolConfiguration(..),
-                    NodeHardForkProtocolConfiguration(..),
-                    ProtocolFilepaths(..),
-                    HasKESMetricsData(..), KESMetricsData(..))
+                    NodeHardForkProtocolConfiguration(..))
+import           Cardano.Config.Types
+                   (ProtocolFilepaths(..), HasKESMetricsData(..),
+                    KESMetricsData(..))
 
 import           Cardano.TracingOrphanInstances.Byron ()
 import           Cardano.TracingOrphanInstances.Shelley ()

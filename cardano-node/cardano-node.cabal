@@ -28,7 +28,8 @@ library
 
   if os(linux) && flag(systemd)
     cpp-options: -DSYSTEMD
-    build-depends:     systemd
+    build-depends:     lobemo-scribe-systemd
+                     , systemd
 
   hs-source-dirs:      src
 
@@ -41,8 +42,12 @@ library
                        Cardano.Node.Protocol.Mock
                        Cardano.Node.Protocol.Shelley
                        Cardano.Node.Protocol.Types
+                       Cardano.Node.Parsers
                        Cardano.Node.Run
                        Cardano.Node.Shutdown
+                       Cardano.Node.Topology
+                       Cardano.Node.TraceConfig
+                       Cardano.Node.Types
                        Cardano.Tracing.Kernel
                        Cardano.Tracing.Peer
                        Cardano.Tracing.Tracers
@@ -69,6 +74,7 @@ library
                      , directory
                      , filepath
                      , hostname
+                     , iproute
                      , io-sim-classes
                      , iohk-monitoring
                      , lobemo-backend-aggregation
@@ -77,6 +83,7 @@ library
                      , lobemo-backend-trace-forwarder
                      , network
                      , network-mux
+                     , node-config
                      , optparse-applicative
                      , ouroboros-consensus
                      , ouroboros-consensus-byron
@@ -95,6 +102,7 @@ library
                      , transformers
                      , transformers-except
                      , unordered-containers
+                     , yaml
 
 
   default-language:    Haskell2010
@@ -118,6 +126,39 @@ library
                      , Cardano.Node.TUI.EventHandler
                      , Cardano.Node.TUI.Run
 
+
+library node-config
+
+  hs-source-dirs:      src
+
+  exposed-modules:     Cardano.Node.Types
+                       Cardano.Node.TraceConfig
+
+  build-depends:       aeson
+                     , base >=4.12 && <5
+                     , cardano-api
+                     , cardano-crypto-wrapper
+                     , cardano-ledger
+                     , cardano-config
+                     , cardano-prelude
+                     , filepath
+                     , iohk-monitoring
+                     , ouroboros-consensus
+                     , ouroboros-network
+                     , text
+                     , yaml
+
+
+  default-language:    Haskell2010
+  default-extensions:  NoImplicitPrelude
+                       OverloadedStrings
+
+  ghc-options:         -Wall
+                       -Wincomplete-record-updates
+                       -Wincomplete-uni-patterns
+                       -Wredundant-constraints
+                       -Wpartial-fields
+                       -Wcompat
 
 executable cardano-node
   hs-source-dirs:      app
@@ -169,6 +210,7 @@ executable chairman
                      , cardano-prelude
                      , io-sim-classes
                      , network-mux
+                     , node-config
                      , optparse-applicative
                      , ouroboros-consensus
                      , ouroboros-consensus-cardano
@@ -184,3 +226,46 @@ executable chairman
      build-depends:    Win32
   else
      build-depends:    unix
+
+test-suite cardano-node-test
+  hs-source-dirs:       test
+  main-is:              cardano-node-test.hs
+  type:                 exitcode-stdio-1.0
+
+  build-depends:
+                        base >= 4.12 && < 5
+                      , aeson
+                      , bytestring
+                      , cardano-node
+                      , cardano-config
+                      , cardano-crypto-class
+                      , cardano-crypto-test
+                      , cardano-crypto-wrapper
+                      , cardano-prelude
+                      , cardano-prelude-test
+                      , cardano-slotting
+                      , containers
+                      , cryptonite
+                      , iproute
+                      , ouroboros-consensus
+                      , ouroboros-consensus-shelley
+                      , ouroboros-network
+                      , shelley-spec-ledger
+                      , shelley-spec-ledger-test
+                      , time
+                      , hedgehog
+                      , hedgehog-corpus
+
+  other-modules:        Test.Cardano.Node.Gen
+                        Test.Cardano.Node.Json
+
+  default-language:     Haskell2010
+  default-extensions:   NoImplicitPrelude
+
+  ghc-options:          -Wall
+                        -Wincomplete-record-updates
+                        -Wincomplete-uni-patterns
+                        -Wredundant-constraints
+                        -Wpartial-fields
+                        -Wcompat
+                        -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T

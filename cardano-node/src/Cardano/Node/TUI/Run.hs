@@ -35,7 +35,8 @@ import           Cardano.Node.TUI.Drawing (LiveViewState(..), LiveViewThread(..)
 import           Cardano.Node.TUI.EventHandler (LiveViewBackend(..))
 import           Cardano.Tracing.Peer (Peer (..))
 
-import           Cardano.Config.Types
+import           Cardano.Config.Types (NodeAddress(..))
+import           Cardano.Node.Types
 
 -- | Change a few fields in the LiveViewState after it has been initialized above.
 liveViewPostSetup :: NFData a => LiveViewBackend blk a -> NodeCLI -> NodeConfiguration-> IO ()

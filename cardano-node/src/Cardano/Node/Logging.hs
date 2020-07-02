@@ -64,9 +64,9 @@ import qualified Cardano.BM.Trace as Trace
 import           Cardano.Shell.Types (CardanoFeature (..))
 
 import           Cardano.Config.GitRev (gitRev)
-import           Cardano.Config.Types (ConfigYamlFilePath (..), ConfigError (..), CardanoEnvironment,
-                                       NodeConfiguration (..), NodeCLI (..), ViewMode (..),
-                                       parseNodeConfiguration)
+import           Cardano.Config.Types (ConfigError (..), CardanoEnvironment, ViewMode (..))
+import           Cardano.Node.Types (ConfigYamlFilePath (..), NodeConfiguration (..),
+                   NodeCLI (..), parseNodeConfiguration)
 
 --------------------------------
 -- Layer

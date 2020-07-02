@@ -18,7 +18,8 @@ import           Ouroboros.Network.Block (BlockNo)
 
 import           Cardano.Api (NetworkMagic(..))
 import           Cardano.Api.Protocol (mkNodeClientProtocol)
-import           Cardano.Config.Types (ConfigYamlFilePath(..), SocketPath(..),
+import           Cardano.Config.Types (SocketPath(..))
+import           Cardano.Node.Types (ConfigYamlFilePath(..),
                    ncProtocol, parseNodeConfigurationFP)
 import           Cardano.Config.Parsers
 import           Cardano.Chairman (chairmanTest)

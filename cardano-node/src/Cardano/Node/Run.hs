@@ -51,10 +51,13 @@ import           Cardano.BM.Trace
 import           Cardano.Config.GitRev (gitRev)
 import           Cardano.Node.Logging (LoggingLayer (..), Severity (..))
 #ifdef UNIX
-import           Cardano.Config.TraceConfig (traceBlockFetchDecisions)
+import           Cardano.Node.TraceConfig (traceBlockFetchDecisions)
 #endif
-import           Cardano.Config.TraceConfig (TraceOptions(..), TraceSelection(..))
-import           Cardano.Config.Types (NodeConfiguration (..), ViewMode (..))
+import           Cardano.Node.TraceConfig (TraceOptions(..), TraceSelection(..))
+import           Cardano.Node.Types (NodeConfiguration (..), NodeCLI(..),
+                   NodeMockProtocolConfiguration(..), NodeProtocolConfiguration(..),
+                   ncProtocol, parseNodeConfiguration)
+import           Cardano.Config.Types (ViewMode (..))
 
 import           Ouroboros.Network.Magic (NetworkMagic (..))
 import           Ouroboros.Network.NodeToClient (LocalConnectionId)
@@ -79,7 +82,7 @@ import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 import           Ouroboros.Consensus.Storage.ImmutableDB (ValidationPolicy (..))
 import           Ouroboros.Consensus.Storage.VolatileDB (BlockValidationPolicy (..))
 
-import           Cardano.Config.Topology
+import           Cardano.Node.Topology
 import           Cardano.Config.Types
 import           Cardano.Node.Protocol
                    (mkConsensusProtocol,

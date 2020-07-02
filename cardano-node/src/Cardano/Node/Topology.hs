@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Cardano.Config.Topology
+module Cardano.Node.Topology
   ( TopologyError(..)
   , NetworkTopology(..)
   , NodeHostAddress(..)
@@ -24,7 +24,9 @@ import qualified Data.Text as T
 import           Text.Read (readMaybe)
 import           Network.Socket (PortNumber, SockAddr (..))
 
-import           Cardano.Config.Types
+import           Cardano.Node.Types
+import           Cardano.Config.Types (NodeAddress(..), NodeHostAddress(..),
+                   TopologyFile(..))
 
 import           Ouroboros.Consensus.Util.Condense (Condense (..))
 

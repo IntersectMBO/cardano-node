@@ -30,9 +30,7 @@ library
                        Cardano.Config.Parsers
                        Cardano.Config.Shelley.Orphans
                        Cardano.Config.Shelley.Parsers
-                       Cardano.Config.Topology
                        Cardano.Config.TopHandler
-                       Cardano.Config.TraceConfig
                        Cardano.Config.Types
                        Cardano.TracingOrphanInstances.Byron
                        Cardano.TracingOrphanInstances.Common
@@ -105,45 +103,3 @@ library
                      -Wredundant-constraints
                      -Wpartial-fields
                      -Wcompat
-
-test-suite cardano-config-test
-  hs-source-dirs:       test
-  main-is:              cardano-config-test.hs
-  type:                 exitcode-stdio-1.0
-
-  build-depends:
-                        base >= 4.12 && < 5
-                      , aeson
-                      , bytestring
-                      , cardano-config
-                      , cardano-crypto-class
-                      , cardano-crypto-test
-                      , cardano-crypto-wrapper
-                      , cardano-prelude
-                      , cardano-prelude-test
-                      , cardano-slotting
-                      , containers
-                      , cryptonite
-                      , iproute
-                      , ouroboros-consensus
-                      , ouroboros-consensus-shelley
-                      , ouroboros-network
-                      , shelley-spec-ledger
-                      , shelley-spec-ledger-test
-                      , time
-                      , hedgehog
-                      , hedgehog-corpus
-
-  other-modules:        Test.Cardano.Config.Gen
-                        Test.Cardano.Config.Json
-
-  default-language:     Haskell2010
-  default-extensions:   NoImplicitPrelude
-
-  ghc-options:          -Wall
-                        -Wincomplete-record-updates
-                        -Wincomplete-uni-patterns
-                        -Wredundant-constraints
-                        -Wpartial-fields
-                        -Wcompat
-                        -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
