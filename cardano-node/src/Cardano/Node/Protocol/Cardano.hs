@@ -191,6 +191,10 @@ mkConsensusProtocolCardano NodeByronProtocolConfiguration {
     --
     -- WARNING: chains using different values of this parameter will be
     -- mutually incompatible.
+    --
+    -- TODO: This should be replaced with the hash of the Shelley genesis
+    -- config JSON file, which should be taken as an argument/configuration
+    -- parameter.
     initialNonce = NeutralNonce
 
 

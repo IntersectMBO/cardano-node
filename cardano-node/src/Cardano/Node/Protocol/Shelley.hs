@@ -107,6 +107,11 @@ mkConsensusProtocolShelley NodeShelleyProtocolConfiguration {
     --
     -- WARNING: chains using different values of this parameter will be
     -- mutually incompatible.
+    --
+    -- TODO: This should also be replaced with the hash of the Shelley genesis
+    -- config JSON file, which should be taken as an argument/configuration
+    -- parameter. But be careful, all testnets so far have used NeutralNonce,
+    -- changing the value will require starting a new testnet.
     initialNonce = NeutralNonce
 
 readGenesis :: GenesisFile
