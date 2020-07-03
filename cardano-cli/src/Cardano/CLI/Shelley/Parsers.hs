@@ -392,7 +392,7 @@ pPoolCmd =
     pId = PoolGetId <$> pVerificationKeyFile Output
 
     pPoolMetaDataHashSubCmd :: Parser PoolCmd
-    pPoolMetaDataHashSubCmd = PoolMetaDataHash <$> pPoolMetaDataFile
+    pPoolMetaDataHashSubCmd = PoolMetaDataHash <$> pPoolMetaDataFile <*> pMaybeOutputFile
 
 
 pQueryCmd :: Parser QueryCmd

@@ -18,7 +18,7 @@ import qualified Data.ByteString.Char8 as BS
 
 import           Cardano.Api (StakePoolMetadataValidationError, Network(..),
                    decodeAndValidateStakePoolMetadata, renderStakePoolMetadataValidationError)
-import           Cardano.Api.TextView (TextViewTitle (..))
+import           Cardano.Api.TextView (TextViewTitle (..), textShow)
 import           Cardano.Api.Typed (AsType (..), Error (..), FileError (..), Key (..),
                    Lovelace, StakeCredential (..), StakePoolMetadataReference (..),
                    StakePoolParameters (..), StakePoolRelay (..), TextEnvelopeError,
@@ -39,6 +39,7 @@ import qualified Cardano.Crypto.Hash.Class as Crypto
 data ShelleyPoolCmdError
   = ShelleyPoolReadFileError !(FileError TextEnvelopeError)
   | ShelleyPoolWriteFileError !(FileError ())
+  | ShelleyPoolWriteMetaDataHashError !FilePath !IOException
   | ShelleyPoolMetaDataValidationError !StakePoolMetadataValidationError
   deriving Show
 
@@ -47,6 +48,8 @@ renderShelleyPoolCmdError err =
   case err of
     ShelleyPoolReadFileError fileErr -> Text.pack (displayError fileErr)
     ShelleyPoolWriteFileError fileErr -> Text.pack (displayError fileErr)
+    ShelleyPoolWriteMetaDataHashError fp ioException ->
+      "Error writing stake pool metadata hash at: " <> textShow fp <> " Error: " <> textShow ioException
     ShelleyPoolMetaDataValidationError validationErr ->
       "Error validating stake pool metadata: " <> renderStakePoolMetadataValidationError validationErr
 
@@ -58,7 +61,7 @@ runPoolCmd (PoolRegistrationCert sPvkey vrfVkey pldg pCost pMrgn rwdVerFp ownerV
 runPoolCmd (PoolRetirementCert sPvkeyFp retireEpoch outfp) =
   runStakePoolRetirementCert sPvkeyFp retireEpoch outfp
 runPoolCmd (PoolGetId sPvkey) = runPoolId sPvkey
-runPoolCmd (PoolMetaDataHash poolMdFile) = runPoolMetaDataHash poolMdFile
+runPoolCmd (PoolMetaDataHash poolMdFile mOutFile) = runPoolMetaDataHash poolMdFile mOutFile
 runPoolCmd cmd = liftIO $ putStrLn $ "runPoolCmd: " ++ show cmd
 
 
@@ -191,8 +194,8 @@ runPoolId (VerificationKeyFile vkeyPath) = do
       $ readFileTextEnvelope (AsVerificationKey AsStakePoolKey) vkeyPath
     liftIO $ BS.putStrLn $ serialiseToRawBytesHex (verificationKeyHash stakePoolVerKey)
 
-runPoolMetaDataHash :: PoolMetaDataFile -> ExceptT ShelleyPoolCmdError IO ()
-runPoolMetaDataHash (PoolMetaDataFile poolMDPath) = do
+runPoolMetaDataHash :: PoolMetaDataFile -> Maybe OutputFile -> ExceptT ShelleyPoolCmdError IO ()
+runPoolMetaDataHash (PoolMetaDataFile poolMDPath) mOutFile = do
   metaDataBytes <- handleIOExceptT (ShelleyPoolReadFileError . FileIOError poolMDPath) $
     BS.readFile poolMDPath
   _ <- firstExceptT ShelleyPoolMetaDataValidationError
@@ -200,4 +203,8 @@ runPoolMetaDataHash (PoolMetaDataFile poolMDPath) = do
     $ decodeAndValidateStakePoolMetadata metaDataBytes
   let metaDataHash :: Crypto.Hash Crypto.Blake2b_256 ByteString
       metaDataHash = Crypto.hashRaw (\x -> x) metaDataBytes
-  liftIO $ BS.putStrLn (Crypto.getHashBytesAsHex metaDataHash)
+  case mOutFile of
+    Nothing -> liftIO $ BS.putStrLn (Crypto.getHashBytesAsHex metaDataHash)
+    Just (OutputFile fpath) ->
+      handleIOExceptT (ShelleyPoolWriteMetaDataHashError fpath)
+        $ BS.writeFile fpath (Crypto.getHashBytesAsHex metaDataHash)
