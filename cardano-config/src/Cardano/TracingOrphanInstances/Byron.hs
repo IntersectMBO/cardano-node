@@ -16,7 +16,7 @@ import           Cardano.TracingOrphanInstances.Common
 import           Cardano.TracingOrphanInstances.Consensus ()
 
 import           Ouroboros.Network.Block
-                   (blockHash, blockSlot, blockNo, blockPrevHash)
+                   (blockHash, blockSlot, blockNo)
 import           Ouroboros.Consensus.Block (Header)
 import           Ouroboros.Consensus.Byron.Ledger
                    (ByronBlock(..), byronHeaderRaw,
@@ -146,7 +146,6 @@ instance ToObject (Header ByronBlock) where
     mkObject $
         [ "kind" .= String "ByronBlock"
         , "hash" .= condense (blockHash b)
-        , "prevhash" .= condense (blockPrevHash b)
         , "slotNo" .= condense (blockSlot b)
         , "blockNo" .= condense (blockNo b)
         ] <>

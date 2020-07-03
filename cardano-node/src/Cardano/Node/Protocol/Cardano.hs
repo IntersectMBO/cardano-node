@@ -156,6 +156,7 @@ mkConsensusProtocolCardano NodeByronProtocolConfiguration {
 
         -- Shelley parameters
         shelleyGenesis
+        initialNonce
         (Shelley.ProtVer npcShelleySupportedProtocolVersionMajor
                          npcShelleySupportedProtocolVersionMinor)
         npcShelleyMaxSupportedProtocolVersion
@@ -184,6 +185,13 @@ mkConsensusProtocolCardano NodeByronProtocolConfiguration {
            -- Alternatively, for testing we can transition at a specific epoch.
            --
            Just epochNo -> Consensus.TriggerHardForkAtEpoch epochNo)
+  where
+    -- The initial nonce, typically derived from the hash of Genesis config
+    -- JSON file.
+    --
+    -- WARNING: chains using different values of this parameter will be
+    -- mutually incompatible.
+    initialNonce = NeutralNonce
 
 
 ------------------------------------------------------------------------------

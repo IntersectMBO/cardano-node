@@ -44,7 +44,6 @@ instance ( Mock.SimpleCrypto c
     mkObject $
         [ "kind" .= String "SimpleBlockHeader"
         , "hash" .= condense (blockHash b)
-        , "prevhash" .= condense (blockPrevHash b)
         , "slotNo" .= condense (blockSlot b)
         , "blockNo" .= condense (blockNo b) ]
 

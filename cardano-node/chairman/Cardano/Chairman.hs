@@ -374,7 +374,6 @@ type ChainsVar m blk = StrictTVar m (Map SocketPath (AnchoredFragment (Header bl
 addBlock
     :: forall blk m.
        ( MonadSTM m
-       , HasHeader (Header blk)
        , GetHeader blk
        )
     => SocketPath
@@ -425,7 +424,6 @@ chainSyncClient
      , MonadAsync m
      , GetHeader blk
      , HasHeader blk
-     , HasHeader (Header blk)
      )
   => Tracer m (ChairmanTrace blk)
   -> SocketPath
