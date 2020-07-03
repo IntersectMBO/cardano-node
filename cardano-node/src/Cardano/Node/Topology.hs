@@ -19,6 +19,7 @@ import           Control.Exception (IOException)
 import qualified Control.Exception as Exception
 import           Data.Aeson
 import qualified Data.ByteString as BS
+import qualified Data.ByteString.Lazy.Char8 as LBS
 import qualified Data.IP as IP
 import qualified Data.Text as T
 import           Text.Read (readMaybe)
@@ -135,7 +136,7 @@ readTopologyFile ncli = do
 
   case eBs of
     Left e -> pure . Left $ handler e
-    Right bs -> pure . first T.pack . eitherDecode $ toS bs
+    Right bs -> pure . first T.pack . eitherDecode $ LBS.fromStrict bs
 
  where
   handler :: IOException -> Text
