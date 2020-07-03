@@ -35,7 +35,7 @@ import           Ouroboros.Consensus.Shelley.Ledger
 import           Ouroboros.Consensus.Shelley.Protocol
                    (TPraosStandardCrypto, TPraosIsCoreNode(..))
 import           Ouroboros.Consensus.Shelley.Node
-                   (TPraosLeaderCredentials(..), ShelleyGenesis)
+                   (TPraosLeaderCredentials(..), ShelleyGenesis, Nonce (..))
 
 import           Shelley.Spec.Ledger.PParams (ProtVer(..))
 
@@ -96,11 +96,23 @@ mkConsensusProtocolShelley NodeShelleyProtocolConfiguration {
     return $
       Consensus.ProtocolRealTPraos
         genesis
+        initialNonce
         (ProtVer npcShelleySupportedProtocolVersionMajor
                  npcShelleySupportedProtocolVersionMinor)
         npcShelleyMaxSupportedProtocolVersion
         optionalLeaderCredentials
-
+  where
+    -- The initial nonce, typically derived from the hash of Genesis config
+    -- JSON file.
+    --
+    -- WARNING: chains using different values of this parameter will be
+    -- mutually incompatible.
+    --
+    -- TODO: This should also be replaced with the hash of the Shelley genesis
+    -- config JSON file, which should be taken as an argument/configuration
+    -- parameter. But be careful, all testnets so far have used NeutralNonce,
+    -- changing the value will require starting a new testnet.
+    initialNonce = NeutralNonce
 
 readGenesis :: GenesisFile
             -> ExceptT ShelleyProtocolInstantiationError IO

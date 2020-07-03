@@ -33,7 +33,7 @@ import           Cardano.Crypto.KES.Class
                    (VerKeyKES, deriveVerKeyKES, hashVerKeyKES)
 
 import           Ouroboros.Network.Block
-                   (SlotNo(..), blockHash, blockSlot, blockNo, blockPrevHash)
+                   (SlotNo(..), blockHash, blockSlot, blockNo)
 import           Ouroboros.Network.Point (WithOrigin, withOriginToMaybe)
 import           Ouroboros.Consensus.Block (Header)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTx, TxId, txId)
@@ -74,6 +74,7 @@ import           Shelley.Spec.Ledger.STS.Prtcl
 import           Shelley.Spec.Ledger.STS.Rupd
 import           Shelley.Spec.Ledger.STS.Snap
 import           Shelley.Spec.Ledger.STS.Tick
+import           Shelley.Spec.Ledger.STS.Tickn
 import           Shelley.Spec.Ledger.STS.Updn
 import           Shelley.Spec.Ledger.STS.Utxo
 import           Shelley.Spec.Ledger.STS.Utxow
@@ -99,7 +100,6 @@ instance Crypto c => ToObject (Header (ShelleyBlock c)) where
     mkObject $
         [ "kind" .= String "ShelleyBlock"
         , "hash" .= condense (blockHash b)
-        , "prevhash" .= condense (blockPrevHash b)
         , "slotNo" .= condense (blockSlot b)
         , "blockNo" .= condense (blockNo b)
 --      , "delegate" .= condense (headerSignerVk h)
@@ -149,16 +149,6 @@ instance ToObject (TPraosCannotLead c) where
 
 deriving newtype instance ToJSON KESPeriod
 
--- This instance is completely insane. We really need to have lists as a
--- generic instance.
-instance ToObject (PredicateFailure r) => ToObject [[PredicateFailure r]] where
-  toObject verb fss =
-    mkObject
-      [ "kind" .= String "PredicateFailure"
-      , "failures" .= map (toObject verb) (concat fss)
-      ]
-
-
 instance Crypto c =>  ToObject (ShelleyLedgerError c) where
   toObject verb (BBodyError (BlockTransitionError fs)) =
     mkObject [ "kind" .= String "BBodyError"
@@ -169,6 +159,11 @@ instance Crypto c =>  ToObject (ShelleyLedgerError c) where
              , "failures" .= map (toObject verb) fs
              ]
 
+instance Crypto c => ToObject (ChainTransitionError c) where
+  toObject verb (ChainTransitionError fs) =
+    mkObject [ "kind" .= String "ChainTransitionError"
+             , "failures" .= map (toObject verb) fs
+             ]
 
 instance Crypto c => ToObject (PredicateFailure (CHAIN c)) where
   toObject _verb (HeaderSizeTooLargeCHAIN hdrSz maxHdrSz) =
@@ -194,6 +189,7 @@ instance Crypto c => ToObject (PredicateFailure (CHAIN c)) where
                       \protocol version."
   toObject verb (BbodyFailure f) = toObject verb f
   toObject verb (TickFailure  f) = toObject verb f
+  toObject verb (TicknFailure f) = toObject verb f
   toObject verb (PrtclFailure f) = toObject verb f
   toObject verb (PrtclSeqFailure f) = toObject verb f
 
@@ -361,6 +357,11 @@ instance ToObject (PredicateFailure (DELEG c)) where
              , "credential" .= String (textShow alreadyRegistered)
              , "error" .= String "Staking credential already registered"
              ]
+  toObject _verb (StakeKeyInRewardsDELEG alreadyRegistered) =
+    mkObject [ "kind" .= String "StakeKeyInRewardsDELEG"
+             , "credential" .= String (textShow alreadyRegistered)
+             , "error" .= String "Staking credential registered in rewards map"
+             ]
   toObject _verb (StakeKeyNotRegisteredDELEG notRegistered) =
     mkObject [ "kind" .= String "StakeKeyNotRegisteredDELEG"
              , "credential" .= String (textShow notRegistered)
@@ -448,6 +449,8 @@ instance ToObject (PredicateFailure (TICK c)) where
   toObject verb (NewEpochFailure f) = toObject verb f
   toObject verb (RupdFailure f) = toObject verb f
 
+instance ToObject (PredicateFailure TICKN) where
+  toObject _verb x = case x of {} -- no constructors
 
 instance ToObject (PredicateFailure (NEWEPOCH c)) where
   toObject verb (EpochFailure f) = toObject verb f
@@ -561,8 +564,8 @@ instance ToObject (PredicateFailure (OCERT c)) where
              , "error" .= String "The operational certificate's KES start period is \
                                  \greater than the max number of KES + the KES current period"
              ]
-  toObject _verb (KESPeriodWrongOCERT lastKEScounterUsed currentKESCounter) =
-    mkObject [ "kind" .= String "KESPeriodWrongOCERT"
+  toObject _verb (CounterTooSmallOCERT lastKEScounterUsed currentKESCounter) =
+    mkObject [ "kind" .= String "CounterTooSmallOCert"
              , "currentKESCounter" .= String (textShow currentKESCounter)
              , "lastKESCounter" .= String (textShow lastKEScounterUsed)
              , "error" .= String "The operational certificate's last KES counter is greater \
