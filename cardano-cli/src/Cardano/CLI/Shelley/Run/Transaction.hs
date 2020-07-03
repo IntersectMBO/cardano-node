@@ -1,3 +1,4 @@
+{-# LANGUAGE GADTs #-}
 {-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 
 module Cardano.CLI.Shelley.Run.Transaction
@@ -199,14 +200,18 @@ runTxSign (TxBodyFile txbodyFile) skFiles mnw (TxFile txFile) = do
 
 runTxSubmit :: FilePath -> OldApi.Network -> ExceptT ShelleyTxCmdError IO ()
 runTxSubmit txFp network = do
-  sktFp <- firstExceptT ShelleyTxSocketEnvError $ readEnvSocketPath
-  signedTx <- firstExceptT ShelleyTxReadSignedTxError . newExceptT $
-                OldApi.readTxSigned txFp
-  result   <- liftIO $ OldApi.submitTx network sktFp signedTx
-  case result of
-    OldApi.TxSubmitSuccess          -> return ()
-    OldApi.TxSubmitFailureShelley _ -> left (ShelleyTxSubmitError result)
-    OldApi.TxSubmitFailureByron   _ -> left (ShelleyTxSubmitError result)
+    sktFp <- firstExceptT ShelleyTxSocketEnvError $ readEnvSocketPath
+    signedTx <- firstExceptT ShelleyTxReadFileError
+      . newExceptT
+      $ Api.readFileTextEnvelope Api.AsShelleyTx txFp
+    result <- liftIO $ OldApi.submitTx network sktFp (toOldApiSignedTx signedTx)
+    case result of
+      OldApi.TxSubmitSuccess          -> return ()
+      OldApi.TxSubmitFailureShelley _ -> left (ShelleyTxSubmitError result)
+      OldApi.TxSubmitFailureByron   _ -> left (ShelleyTxSubmitError result)
+  where
+    toOldApiSignedTx :: Api.Tx Api.Shelley -> OldApi.TxSigned
+    toOldApiSignedTx (Api.ShelleyTx tx) = OldApi.TxSignedShelley tx
 
 
 runTxCalculateMinFee
@@ -372,4 +377,3 @@ jsonToMetadataValue (Aeson.Object kvs) =
     Api.TxMetaMap <$> mapM (\(k,v) -> (,) <$> jsonToMetadataValue (Aeson.String k)
                                           <*> jsonToMetadataValue v)
                            (HashMap.toList kvs)
-
