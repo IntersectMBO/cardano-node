@@ -3,7 +3,7 @@
 
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Config.Shelley.Genesis
+module Cardano.Api.Shelley.Genesis
   ( ShelleyGenesis(..)
   , ShelleyGenesisError(..)
   , renderShelleyGenesisError
@@ -19,7 +19,7 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Time as Time
 
 import           Data.Aeson (Value, ToJSON(..), toJSON, FromJSON(..))
-import           Data.Aeson.Types    (Parser)
+import           Data.Aeson.Types (Parser)
 
 import           Cardano.Config.Shelley.Orphans ()
 import           Cardano.Crypto.ProtocolMagic (ProtocolMagicId(..))

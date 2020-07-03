@@ -42,9 +42,9 @@ import           Shelley.Spec.Ledger.PParams (ProtVer(..))
 import           Cardano.Api.Shelley.OCert
 import           Cardano.Api.Shelley.VRF
 import           Cardano.Api.Shelley.KES
+import           Cardano.Node.Types (NodeShelleyProtocolConfiguration(..))
 import           Cardano.Config.Types
-                   (NodeShelleyProtocolConfiguration(..),
-                    ProtocolFilepaths(..), GenesisFile (..))
+                   (ProtocolFilepaths(..), GenesisFile (..))
 import           Cardano.TracingOrphanInstances.Shelley ()
 
 import           Cardano.Node.Protocol.Types

@@ -9,7 +9,7 @@
 #define UNIX
 #endif
 
-module Cardano.Config.Logging
+module Cardano.Node.Logging
   ( LoggingLayer (..)
   , createLoggingFeature
   -- re-exports
@@ -64,9 +64,9 @@ import qualified Cardano.BM.Trace as Trace
 import           Cardano.Shell.Types (CardanoFeature (..))
 
 import           Cardano.Config.GitRev (gitRev)
-import           Cardano.Config.Types (ConfigYamlFilePath (..), ConfigError (..), CardanoEnvironment,
-                                       NodeConfiguration (..), NodeCLI (..), ViewMode (..),
-                                       parseNodeConfiguration)
+import           Cardano.Config.Types (ConfigError (..), CardanoEnvironment, ViewMode (..))
+import           Cardano.Node.Types (ConfigYamlFilePath (..), NodeConfiguration (..),
+                   NodeCLI (..), parseNodeConfiguration)
 
 --------------------------------
 -- Layer

@@ -1,18 +1,19 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
-module Test.Cardano.Config.Json
+module Test.Cardano.Node.Json
   ( tests
   ) where
 
 import           Cardano.Prelude
-import           Cardano.Config.Types
 
 import           Data.Aeson (encode, fromJSON, decode, toJSON)
+
+import           Cardano.Config.Types (NodeAddress(..), NodeHostAddress(..))
 
 import           Hedgehog (Property, discover)
 import qualified Hedgehog
 
-import           Test.Cardano.Config.Gen
+import           Test.Cardano.Node.Gen
 
 prop_roundtrip_NodeAddress_JSON :: Property
 prop_roundtrip_NodeAddress_JSON =

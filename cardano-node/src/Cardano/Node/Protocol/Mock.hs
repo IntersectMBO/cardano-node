@@ -32,7 +32,7 @@ import           Ouroboros.Consensus.Node.ProtocolInfo (NumCoreNodes (..))
 
 import           Ouroboros.Consensus.Protocol.Abstract (SecurityParam (..))
 
-import           Cardano.Config.Types (NodeMockProtocolConfiguration(..))
+import           Cardano.Node.Types (NodeMockProtocolConfiguration(..))
 import           Cardano.TracingOrphanInstances.Mock ()
 
 import           Cardano.Node.Protocol.Types
@@ -126,4 +126,3 @@ mockSecurityParam = SecurityParam 5
 
 mockSlotLength :: SlotLength
 mockSlotLength = slotLengthFromSec 20
-

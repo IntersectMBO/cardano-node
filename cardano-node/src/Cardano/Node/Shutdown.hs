@@ -8,7 +8,7 @@ module Cardano.Node.Shutdown
     ShutdownFDs
   , withShutdownHandling
 
-  -- * Requesting shutdown 
+  -- * Requesting shutdown
   , ShutdownDoorbell
   , getShutdownDoorbell
   , triggerShutdown
@@ -28,6 +28,7 @@ import qualified GHC.IO.Handle.FD as IO (fdToHandle)
 import qualified System.Process as IO (createPipeFd)
 import qualified System.IO as IO
 import qualified System.IO.Error  as IO
+import           System.Posix.Types (Fd(Fd))
 
 import           Cardano.BM.Trace
 import           Cardano.BM.Data.Tracer (
@@ -39,11 +40,11 @@ import           Ouroboros.Consensus.Util.ResourceRegistry (ResourceRegistry)
 import           Ouroboros.Consensus.Util.STM (onEachChange)
 import           Ouroboros.Network.Block (MaxSlotNo(..), SlotNo, pointSlot)
 
-import           Cardano.Config.Types
+import           Cardano.Node.Types
 
 -- | 'ShutdownFDs' mediate the graceful shutdown requests,
 -- either external or internal to the process.
--- 
+--
 -- In the external mediation case, the parent process passes us the file descriptor
 -- number of the read end of a pipe, via the CLI with @--shutdown-ipc FD@.
 -- In the internal mediation case, we create our own pipe.
@@ -153,7 +154,7 @@ withShutdownHandling cli trace action = do
 
 -- | If configuration in 'NodeCLI' and 'ShutdownFDs' agree,
 -- spawn a thread that would cause node to shutdown upon ChainDB reaching the
--- configuration-defined slot. 
+-- configuration-defined slot.
 maybeSpawnOnSlotSyncedShutdownHandler
   :: NodeCLI
   -> ShutdownFDs
