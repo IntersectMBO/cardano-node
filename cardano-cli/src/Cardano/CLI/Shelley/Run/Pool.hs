@@ -17,7 +17,7 @@ import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT
 import qualified Data.ByteString.Char8 as BS
 
 import           Cardano.Api.Typed
-import           Cardano.Api.TextView (TextViewTitle (..), textShow)
+import           Cardano.Api.TextView (TextViewDescription (..), textShow)
 
 import qualified Shelley.Spec.Ledger.Slot as Shelley
 
@@ -145,8 +145,8 @@ runStakePoolRegistrationCert
       . newExceptT
       $ writeFileTextEnvelope outfp (Just registrationCertDesc) registrationCert
   where
-    registrationCertDesc :: TextViewTitle
-    registrationCertDesc = TextViewTitle "Stake Pool Registration Certificate"
+    registrationCertDesc :: TextViewDescription
+    registrationCertDesc = TextViewDescription "Stake Pool Registration Certificate"
 
 runStakePoolRetirementCert
   :: VerificationKeyFile
@@ -166,8 +166,8 @@ runStakePoolRetirementCert (VerificationKeyFile sPvkeyFp) retireEpoch (OutputFil
       . newExceptT
       $ writeFileTextEnvelope outfp (Just retireCertDesc) retireCert
   where
-    retireCertDesc :: TextViewTitle
-    retireCertDesc = TextViewTitle "Stake Pool Retirement Certificate"
+    retireCertDesc :: TextViewDescription
+    retireCertDesc = TextViewDescription "Stake Pool Retirement Certificate"
 
 runPoolId :: VerificationKeyFile -> ExceptT ShelleyPoolCmdError IO ()
 runPoolId (VerificationKeyFile vkeyPath) = do
