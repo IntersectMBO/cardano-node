@@ -9,6 +9,7 @@ import           Cardano.Prelude
 import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, hoistEither, newExceptT)
 
+import qualified Data.ByteString.Char8 as BS
 import qualified Data.Text as Text
 
 import           Cardano.Api.Typed (AsType (..), Error (..), FileError,
@@ -76,7 +77,7 @@ runNodeKeyGenCold (VerificationKeyFile vkeyPath) (SigningKeyFile skeyPath)
     skeyDesc, vkeyDesc, ocertCtrDesc :: TextViewTitle
     skeyDesc = TextViewTitle "Stake Pool Operator Signing Key"
     vkeyDesc = TextViewTitle "Stake Pool Operator Verification Key"
-    ocertCtrDesc = TextViewTitle $ "Next certificate issue number: " <> show initialCounter
+    ocertCtrDesc = TextViewTitle $ "Next certificate issue number: " <> BS.pack (show initialCounter)
 
     initialCounter :: Natural
     initialCounter = 0
@@ -171,4 +172,4 @@ runNodeIssueOpCert (VerificationKeyFile vkeyKesPath)
     getCounter (OperationalCertificateIssueCounter n _) = n
 
     ocertCtrDesc :: Natural -> TextViewTitle
-    ocertCtrDesc n = TextViewTitle $ "Next certificate issue number: " <> show n
+    ocertCtrDesc n = TextViewTitle $ "Next certificate issue number: " <> BS.pack (show n)

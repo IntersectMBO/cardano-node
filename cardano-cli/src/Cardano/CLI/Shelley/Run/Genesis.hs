@@ -199,7 +199,7 @@ runGenesisKeyGenDelegate (VerificationKeyFile vkeyPath)
     skeyDesc, vkeyDesc, ocertCtrDesc :: TextViewTitle
     skeyDesc = TextViewTitle "Genesis delegate operator key"
     vkeyDesc = TextViewTitle "Genesis delegate operator key"
-    ocertCtrDesc = TextViewTitle $ "Next certificate issue number: " <> show initialCounter
+    ocertCtrDesc = TextViewTitle $ "Next certificate issue number: " <> BS.pack (show initialCounter)
 
     initialCounter :: Natural
     initialCounter = 0
