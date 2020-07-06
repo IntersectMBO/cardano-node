@@ -47,7 +47,7 @@ import           Cardano.Config.Parsers (parseNodeAddress)
 
 import           Cardano.CLI.Shelley.Commands
 
-import           Cardano.Crypto.Hash as Crypto
+import qualified Cardano.Crypto.Hash as Crypto
                    (Blake2b_256, Hash (..), hashFromBytesAsHex)
 
 --
@@ -240,9 +240,9 @@ pStakeAddress =
     pITNKeyFIle :: Parser ITNKeyFile
     pITNKeyFIle = pITNSigningKeyFile <|> pITNVerificationKeyFile
 
-pDelegationFee :: Parser OldApi.Lovelace
+pDelegationFee :: Parser Lovelace
 pDelegationFee =
-  OldApi.Lovelace <$>
+  Lovelace <$>
     Opt.option Opt.auto
       (  Opt.long "delegation-fee"
       <> Opt.metavar "LOVELACE"
@@ -1401,8 +1401,8 @@ pStakePoolMetadataHash =
         <> Opt.help "Pool metadata hash."
         )
   where
-    getHashFromHexString :: String -> Maybe (Crypto.Hash Blake2b_256 ByteString)
-    getHashFromHexString = hashFromBytesAsHex . BSC.pack
+    getHashFromHexString :: String -> Maybe (Crypto.Hash Crypto.Blake2b_256 ByteString)
+    getHashFromHexString = Crypto.hashFromBytesAsHex . BSC.pack
 
     metadataHash :: String -> Maybe (Typed.Hash StakePoolMetadata)
     metadataHash str = Typed.StakePoolMetadataHash <$> getHashFromHexString str
