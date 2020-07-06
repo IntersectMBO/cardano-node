@@ -12,9 +12,6 @@ import           Cardano.Prelude
 import           Hedgehog (Property, discover)
 import qualified Hedgehog as H
 
-import           Cardano.Api.Shelley.KES (decodeKESVerificationKey, encodeKESVerificationKey) -- to remove
-import           Cardano.Api.Shelley.VRF (decodeVRFVerificationKey, encodeVRFVerificationKey) -- to remove
-
 import           Test.Cardano.Api.Gen
 import           Test.Cardano.Api.Orphans ()
 
@@ -97,21 +94,6 @@ prop_TxUnsigned_CBOR =
   H.property $ do
     txu <- H.forAll genTxUnsigned
     H.tripping txu txUnsignedToCBOR txUnsignedFromCBOR
-
-
--- To Remove
-
-prop_roundtrip_VKeyES_TPraosStandardCrypto_CBOR :: Property
-prop_roundtrip_VKeyES_TPraosStandardCrypto_CBOR =
-  H.withTests 20 . H.property $ do
-    vKeyES <- fst <$> H.forAll genKESKeyPair
-    H.tripping vKeyES encodeKESVerificationKey decodeKESVerificationKey
-
-prop_roundtrip_VerKeyVRF_SimpleVRF_CBOR :: Property
-prop_roundtrip_VerKeyVRF_SimpleVRF_CBOR =
-  H.withTests 50 . H.property $ do
-    vKeyVRF <- snd <$> H.forAll genVRFKeyPair
-    H.tripping vKeyVRF encodeVRFVerificationKey decodeVRFVerificationKey
 
 
 -- -----------------------------------------------------------------------------
