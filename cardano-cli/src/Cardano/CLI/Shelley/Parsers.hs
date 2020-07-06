@@ -142,7 +142,7 @@ pAddressCmd =
       AddressBuild
         <$> pPaymentVerificationKeyFile
         <*> Opt.optional pStakeVerificationKeyFile
-        <*> pNetwork
+        <*> pNetworkId
         <*> pMaybeOutputFile
 
 
@@ -201,7 +201,7 @@ pStakeAddress =
 
     pStakeAddressBuild :: Parser StakeAddressCmd
     pStakeAddressBuild = StakeAddressBuild <$> pStakeVerificationKeyFile
-                                           <*> pNetwork
+                                           <*> pNetworkId
                                            <*> pMaybeOutputFile
 
     pStakeAddressRegister :: Parser StakeAddressCmd

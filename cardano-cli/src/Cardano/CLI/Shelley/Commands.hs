@@ -77,14 +77,14 @@ data ShelleyCommand
 data AddressCmd
   = AddressKeyGen VerificationKeyFile SigningKeyFile
   | AddressKeyHash VerificationKeyFile (Maybe OutputFile)
-  | AddressBuild VerificationKeyFile (Maybe VerificationKeyFile) Network (Maybe OutputFile)
+  | AddressBuild VerificationKeyFile (Maybe VerificationKeyFile) NetworkId (Maybe OutputFile)
   | AddressBuildMultiSig  --TODO
   | AddressInfo Text
   deriving (Eq, Show)
 
 data StakeAddressCmd
   = StakeAddressKeyGen VerificationKeyFile SigningKeyFile
-  | StakeAddressBuild VerificationKeyFile Network (Maybe OutputFile)
+  | StakeAddressBuild VerificationKeyFile NetworkId (Maybe OutputFile)
   | StakeKeyRegister PrivKeyFile NodeAddress
   | StakeKeyDelegate PrivKeyFile PoolId Lovelace NodeAddress
   | StakeKeyDeRegister PrivKeyFile NodeAddress

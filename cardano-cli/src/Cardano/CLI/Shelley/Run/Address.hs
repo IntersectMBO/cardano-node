@@ -14,16 +14,8 @@ import qualified Data.Text.IO as Text
 import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, newExceptT)
 
-import           Cardano.Api
 import           Cardano.Api.TextView (TextViewTitle (..))
-import qualified Cardano.Api.Typed as Api (NetworkId (..))
-import           Cardano.Api.Typed (AsType (..), Error (..), FileError,
-                   Key (..), PaymentCredential (..), StakeCredential (..),
-                   StakeAddressReference (..), StakeKey, TextEnvelopeError,
-                   VerificationKey, generateSigningKey, getVerificationKey,
-                   makeShelleyAddress, readFileTextEnvelope,
-                   writeFileTextEnvelope, serialiseAddress,
-                   serialiseToRawBytesHex)
+import           Cardano.Api.Typed
 
 import           Cardano.CLI.Shelley.Parsers
                    (OutputFile (..), SigningKeyFile (..), VerificationKeyFile (..),
@@ -83,7 +75,7 @@ runAddressKeyHash (VerificationKeyFile vkeyPath) mOutputFp = do
 
 runAddressBuild :: VerificationKeyFile
                 -> Maybe VerificationKeyFile
-                -> Network
+                -> NetworkId
                 -> Maybe OutputFile
                 -> ExceptT ShelleyAddressCmdError IO ()
 runAddressBuild (VerificationKeyFile payVkeyFp) mstkVkeyFp nw mOutFp = do
@@ -99,7 +91,7 @@ runAddressBuild (VerificationKeyFile payVkeyFp) mstkVkeyFp nw mOutFp = do
             <$> newExceptT (readFileTextEnvelope (AsVerificationKey AsStakeKey) stkVkeyFp)
         Nothing -> pure NoStakeAddress
 
-    let addr = makeShelleyAddress nwId paymentCred stakeAddrRef
+    let addr = makeShelleyAddress nw paymentCred stakeAddrRef
         addrText = serialiseAddress addr
 
     case mOutFp of
@@ -108,14 +100,6 @@ runAddressBuild (VerificationKeyFile payVkeyFp) mstkVkeyFp nw mOutFp = do
   where
     toStakeAddrRef :: VerificationKey StakeKey -> StakeAddressReference
     toStakeAddrRef = StakeAddressByValue . StakeCredentialByKey . verificationKeyHash
-
-    -- TODO: Remove this once we remove usage of 'Cardano.Api.Types.Network'
-    --       from this module.
-    nwId :: Api.NetworkId
-    nwId =
-      case nw of
-        Mainnet -> Api.Mainnet
-        Testnet nm -> Api.Testnet nm
 
 runAddressBuildMultiSig :: ExceptT ShelleyAddressCmdError IO ()
 runAddressBuildMultiSig =
