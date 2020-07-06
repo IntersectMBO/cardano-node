@@ -44,34 +44,20 @@ import           Cardano.CLI.Shelley.Commands
 import           Cardano.CLI.Shelley.Parsers (renderTxIn)
 
 data ShelleyGenesisCmdError
-  = ShelleyGenesisCmdGenesisUTxOKeyError !(FileError TextEnvelopeError)
-  | ShelleyGenesisCmdReadGenesisAesonDecodeError !FilePath !Text
+  = ShelleyGenesisCmdReadGenesisAesonDecodeError !FilePath !Text
   | ShelleyGenesisCmdReadGenesisIOError !FilePath !IOException
-  | ShelleyGenesisCmdReadGenesisUTxOVerKeyError !(FileError TextEnvelopeError)
-  | ShelleyGenesisCmdReadIndexedVerKeyError !(FileError TextEnvelopeError)
-  | ShelleyGenesisCmdReadIndexedVrfKeyError !(FileError TextEnvelopeError)
-  | ShelleyGenesisCmdReadVerKeyError !(FileError TextEnvelopeError)
   | ShelleyGenesisCmdWriteDefaultGenesisIOError !FilePath !IOException
   | ShelleyGenesisCmdWriteGenesisIOError !FilePath !IOException
-  | ShelleyGenesisMismatchedGenesisKeyFiles [Int] [Int] [Int]
-  | ShelleyGenesisFilesNoIndex [FilePath]
-  | ShelleyGenesisFilesDupIndex [FilePath]
+  | ShelleyGenesisCmdMismatchedGenesisKeyFiles [Int] [Int] [Int]
+  | ShelleyGenesisCmdFilesNoIndex [FilePath]
+  | ShelleyGenesisCmdFilesDupIndex [FilePath]
+  | ShelleyGenesisCmdReadFileError !(FileError TextEnvelopeError)
   | ShelleyGenesisCmdWriteFileError !(FileError ())
   deriving Show
 
 renderShelleyGenesisCmdError :: ShelleyGenesisCmdError -> Text
 renderShelleyGenesisCmdError err =
   case err of
-    ShelleyGenesisCmdReadVerKeyError keyErr ->
-      "Error while reading genesis verification key: " <> Text.pack (displayError keyErr)
-    ShelleyGenesisCmdReadGenesisUTxOVerKeyError keyErr ->
-      "Error while reading the genesis UTxO verification key: " <> Text.pack (displayError keyErr)
-    ShelleyGenesisCmdReadIndexedVerKeyError keyErr ->
-      "Error reading indexed verification key: " <> Text.pack (displayError keyErr)
-    ShelleyGenesisCmdReadIndexedVrfKeyError fileErr ->
-      "Error reading indexed VRF verification key: " <> Text.pack (displayError fileErr)
-    ShelleyGenesisCmdGenesisUTxOKeyError keyErr ->
-      "Error reading genesis UTxO key: " <> Text.pack (displayError keyErr)
     ShelleyGenesisCmdReadGenesisAesonDecodeError fp decErr ->
       "Error while decoding Shelley genesis at: " <> textShow fp <> " Error: " <> textShow decErr
     ShelleyGenesisCmdReadGenesisIOError fp ioException ->
@@ -80,17 +66,19 @@ renderShelleyGenesisCmdError err =
       "Error while writing default genesis at: " <> textShow fp <> " Error: " <> textShow ioException
     ShelleyGenesisCmdWriteGenesisIOError fp ioException ->
       "Error while writing Shelley genesis at: " <> textShow fp <> " Error: " <> textShow ioException
-    ShelleyGenesisMismatchedGenesisKeyFiles gfiles dfiles vfiles ->
+    ShelleyGenesisCmdMismatchedGenesisKeyFiles gfiles dfiles vfiles ->
       "Mismatch between the files found:\n"
         <> "Genesis key file indexes:      " <> textShow gfiles
         <> "delegate key file indexes:     " <> textShow dfiles
         <> "delegate VRF key file indexes: " <> textShow vfiles
-    ShelleyGenesisFilesNoIndex files ->
+    ShelleyGenesisCmdFilesNoIndex files ->
       "The genesis keys files are expected to have a numeric index but these do not:\n"
         <> Text.unlines (map Text.pack files)
-    ShelleyGenesisFilesDupIndex files ->
+    ShelleyGenesisCmdFilesDupIndex files ->
       "The genesis keys files are expected to have a unique numeric index but these do not:\n"
         <> Text.unlines (map Text.pack files)
+    ShelleyGenesisCmdReadFileError fileErr ->
+      Text.pack (displayError fileErr)
     ShelleyGenesisCmdWriteFileError fileErr ->
       Text.pack (displayError fileErr)
 
@@ -196,7 +184,7 @@ runGenesisKeyGenUTxO (VerificationKeyFile vkeyPath)
 
 runGenesisKeyHash :: VerificationKeyFile -> ExceptT ShelleyGenesisCmdError IO ()
 runGenesisKeyHash (VerificationKeyFile vkeyPath) = do
-    vkey <- firstExceptT ShelleyGenesisCmdReadVerKeyError . newExceptT $
+    vkey <- firstExceptT ShelleyGenesisCmdReadFileError . newExceptT $
             readFileTextEnvelopeAnyOf
               [ FromSomeType (AsVerificationKey AsGenesisKey)
                              AGenesisKey
@@ -221,7 +209,7 @@ runGenesisKeyHash (VerificationKeyFile vkeyPath) = do
 runGenesisVerKey :: VerificationKeyFile -> SigningKeyFile
                  -> ExceptT ShelleyGenesisCmdError IO ()
 runGenesisVerKey (VerificationKeyFile vkeyPath) (SigningKeyFile skeyPath) = do
-    skey <- firstExceptT ShelleyGenesisCmdReadVerKeyError . newExceptT $
+    skey <- firstExceptT ShelleyGenesisCmdReadFileError . newExceptT $
             readFileTextEnvelopeAnyOf
               [ FromSomeType (AsSigningKey AsGenesisKey)
                              AGenesisKey
@@ -253,7 +241,7 @@ data SomeGenesisKey f
 runGenesisTxIn :: VerificationKeyFile -> NetworkId -> Maybe OutputFile
                -> ExceptT ShelleyGenesisCmdError IO ()
 runGenesisTxIn (VerificationKeyFile vkeyPath) network mOutFile = do
-    vkey <- firstExceptT ShelleyGenesisCmdReadGenesisUTxOVerKeyError . newExceptT $
+    vkey <- firstExceptT ShelleyGenesisCmdReadFileError . newExceptT $
             readFileTextEnvelope (AsVerificationKey AsGenesisUTxOKey) vkeyPath
     let txin = genesisUTxOPseudoTxIn network (verificationKeyHash vkey)
     liftIO $ writeOutput mOutFile (renderTxIn txin)
@@ -262,7 +250,7 @@ runGenesisTxIn (VerificationKeyFile vkeyPath) network mOutFile = do
 runGenesisAddr :: VerificationKeyFile -> NetworkId -> Maybe OutputFile
                -> ExceptT ShelleyGenesisCmdError IO ()
 runGenesisAddr (VerificationKeyFile vkeyPath) network mOutFile = do
-    vkey <- firstExceptT ShelleyGenesisCmdReadGenesisUTxOVerKeyError . newExceptT $
+    vkey <- firstExceptT ShelleyGenesisCmdReadFileError . newExceptT $
             readFileTextEnvelope (AsVerificationKey AsGenesisUTxOKey) vkeyPath
     let vkh  = verificationKeyHash (castVerificationKey vkey)
         addr = makeShelleyAddress network (PaymentCredentialByKey vkh)
@@ -460,7 +448,7 @@ readGenDelegsMap gendir deldir = do
         dkmExtra = dkm Map.\\ combinedMap
         vkmExtra = vkm Map.\\ combinedMap
     unless (Map.null gkmExtra && Map.null dkmExtra && Map.null vkmExtra) $
-      throwError $ ShelleyGenesisMismatchedGenesisKeyFiles
+      throwError $ ShelleyGenesisCmdMismatchedGenesisKeyFiles
                      (Map.keys gkm) (Map.keys dkm) (Map.keys vkm)
 
     let delegsMap :: Map (Hash GenesisKey)
@@ -483,7 +471,7 @@ readGenesisKeys gendir = do
   fileIxs <- extractFileNameIndexes [ gendir </> file
                                     | file <- files
                                     , takeExtension file == ".vkey" ]
-  firstExceptT ShelleyGenesisCmdReadIndexedVerKeyError $
+  firstExceptT ShelleyGenesisCmdReadFileError $
     Map.fromList <$>
       sequence
         [ (,) ix <$> readKeyFile file
@@ -500,7 +488,7 @@ readDelegateKeys deldir = do
   fileIxs <- extractFileNameIndexes [ deldir </> file
                                     | file <- files
                                     , takeExtensions file == ".vkey" ]
-  firstExceptT ShelleyGenesisCmdReadIndexedVerKeyError $
+  firstExceptT ShelleyGenesisCmdReadFileError $
     Map.fromList <$>
       sequence
         [ (,) ix <$> readKeyFile file
@@ -516,7 +504,7 @@ readDelegateVrfKeys deldir = do
   fileIxs <- extractFileNameIndexes [ deldir </> file
                                     | file <- files
                                     , takeExtensions file == ".vrf.vkey" ]
-  firstExceptT ShelleyGenesisCmdReadIndexedVrfKeyError $
+  firstExceptT ShelleyGenesisCmdReadFileError $
     Map.fromList <$>
       sequence
         [ (,) ix <$> readKeyFile file
@@ -540,13 +528,13 @@ extractFileNameIndexes :: [FilePath]
 extractFileNameIndexes files = do
     case [ file | (file, Nothing) <- filesIxs ] of
       []     -> return ()
-      files' -> throwError (ShelleyGenesisFilesNoIndex files')
+      files' -> throwError (ShelleyGenesisCmdFilesNoIndex files')
     case filter (\g -> length g > 1)
        . groupBy ((==) `on` snd)
        . sortBy (compare `on` snd)
        $ [ (file, ix) | (file, Just ix) <- filesIxs ] of
       [] -> return ()
-      (g:_) -> throwError (ShelleyGenesisFilesDupIndex (map fst g))
+      (g:_) -> throwError (ShelleyGenesisCmdFilesDupIndex (map fst g))
 
     return [ (file, ix) | (file, Just ix) <- filesIxs ]
   where
@@ -556,7 +544,7 @@ readInitialFundAddresses :: FilePath -> NetworkId
                          -> ExceptT ShelleyGenesisCmdError IO [Address Shelley]
 readInitialFundAddresses utxodir nw = do
     files <- liftIO (listDirectory utxodir)
-    vkeys <- firstExceptT ShelleyGenesisCmdGenesisUTxOKeyError $
+    vkeys <- firstExceptT ShelleyGenesisCmdReadFileError $
                sequence
                  [ newExceptT $
                      readFileTextEnvelope (AsVerificationKey AsGenesisUTxOKey)
