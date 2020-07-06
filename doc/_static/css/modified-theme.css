@@ -1,0 +1,35 @@
+@import 'theme.css';       /* for the Read the Docs theme */
+
+body, input, textarea {
+    font-family: Open Sans, sans-serif;
+    font-size: 1rem;
+    font-weight: 200;
+    line-height: 1.6;
+}
+
+.rst-content .toctree-wrapper > p.caption, h1, h2, h3, h4, h5, h6, legend {
+    font-family: Open Sans, sans-serif;
+    font-size: 2rem;
+    letter-spacing: 0.17rem;
+    font-weight: 300;
+    line-height: 1.4;
+    margin: 2.75rem 0px 1.05rem;
+    text-transform: none;
+}
+
+.wy-nav-content {
+    max-width: none;
+}
+
+@media screen and (min-width: 767px) {
+
+    .wy-table-responsive table td {
+       /* !important prevents the common CSS stylesheets from overriding
+          this as on RTD they are loaded after this stylesheet */
+       white-space: normal !important;
+    }
+ 
+    .wy-table-responsive {
+       overflow: visible !important;
+    }
+ }
