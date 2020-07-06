@@ -42,27 +42,17 @@ import qualified Shelley.Spec.Ledger.Keys    as Ledger
 
 import           Cardano.CLI.Shelley.Commands
 import           Cardano.CLI.Shelley.Parsers (renderTxIn)
-import           Cardano.CLI.Shelley.KeyGen (ShelleyKeyGenError,
-                   renderShelleyKeyGenError)
 
 data ShelleyGenesisCmdError
-  = ShelleyGenesisCmdGenesisKeyGenError !ShelleyKeyGenError
-  | ShelleyGenesisCmdGenesisUTxOKeyError !(FileError TextEnvelopeError)
-  | ShelleyGenesisCmdOnlyShelleyAddresses
-  | ShelleyGenesisCmdOnlyShelleyAddressesNotReward
-  | ShelleyGenesisCmdOperatorKeyGenError !ShelleyKeyGenError
-  | ShelleyGenesisCmdOperatorVrfKeyGenError !(FileError TextEnvelopeError)
+  = ShelleyGenesisCmdGenesisUTxOKeyError !(FileError TextEnvelopeError)
   | ShelleyGenesisCmdReadGenesisAesonDecodeError !FilePath !Text
   | ShelleyGenesisCmdReadGenesisIOError !FilePath !IOException
   | ShelleyGenesisCmdReadGenesisUTxOVerKeyError !(FileError TextEnvelopeError)
   | ShelleyGenesisCmdReadIndexedVerKeyError !(FileError TextEnvelopeError)
   | ShelleyGenesisCmdReadIndexedVrfKeyError !(FileError TextEnvelopeError)
-  | ShelleyGenesisCmdReadSignKeyError !(FileError TextEnvelopeError)
   | ShelleyGenesisCmdReadVerKeyError !(FileError TextEnvelopeError)
-  | ShelleyGenesisCmdUTxOKeyGenError !ShelleyKeyGenError
   | ShelleyGenesisCmdWriteDefaultGenesisIOError !FilePath !IOException
   | ShelleyGenesisCmdWriteGenesisIOError !FilePath !IOException
-  | ShelleyGenesisCmdWriteOperationalCertError !FilePath !OperationalCertIssueError
   | ShelleyGenesisMismatchedGenesisKeyFiles [Int] [Int] [Int]
   | ShelleyGenesisFilesNoIndex [FilePath]
   | ShelleyGenesisFilesDupIndex [FilePath]
@@ -72,22 +62,10 @@ data ShelleyGenesisCmdError
 renderShelleyGenesisCmdError :: ShelleyGenesisCmdError -> Text
 renderShelleyGenesisCmdError err =
   case err of
-    ShelleyGenesisCmdUTxOKeyGenError keyErr ->
-      "Error while generating the genesis UTxO keys:" <> renderShelleyKeyGenError keyErr
     ShelleyGenesisCmdReadVerKeyError keyErr ->
       "Error while reading genesis verification key: " <> Text.pack (displayError keyErr)
-    ShelleyGenesisCmdReadSignKeyError keyErr ->
-      "Error while reading the genesis signing key: " <> Text.pack (displayError keyErr)
     ShelleyGenesisCmdReadGenesisUTxOVerKeyError keyErr ->
       "Error while reading the genesis UTxO verification key: " <> Text.pack (displayError keyErr)
-    ShelleyGenesisCmdOnlyShelleyAddressesNotReward ->
-      "Please only supply Shelley addresses. Reward account found."
-    ShelleyGenesisCmdOnlyShelleyAddresses ->
-      "Please supply only shelley addresses."
-    ShelleyGenesisCmdOperatorKeyGenError keyErr ->
-      "Error generating genesis operational key: " <> renderShelleyKeyGenError keyErr
-    ShelleyGenesisCmdOperatorVrfKeyGenError keyErr ->
-      "Error generating genesis delegate VRF key: " <> Text.pack (displayError keyErr)
     ShelleyGenesisCmdReadIndexedVerKeyError keyErr ->
       "Error reading indexed verification key: " <> Text.pack (displayError keyErr)
     ShelleyGenesisCmdReadIndexedVrfKeyError fileErr ->
@@ -102,13 +80,6 @@ renderShelleyGenesisCmdError err =
       "Error while writing default genesis at: " <> textShow fp <> " Error: " <> textShow ioException
     ShelleyGenesisCmdWriteGenesisIOError fp ioException ->
       "Error while writing Shelley genesis at: " <> textShow fp <> " Error: " <> textShow ioException
-    ShelleyGenesisCmdWriteOperationalCertError fp opCertErr ->
-      "Error while writing Shelley genesis operational certificate at: "
-         <> textShow fp
-         <> " Error: "
-         <> Text.pack (displayError opCertErr)
-    ShelleyGenesisCmdGenesisKeyGenError keyGenErr ->
-      "Error generating the genesis keys: " <> renderShelleyKeyGenError keyGenErr
     ShelleyGenesisMismatchedGenesisKeyFiles gfiles dfiles vfiles ->
       "Mismatch between the files found:\n"
         <> "Genesis key file indexes:      " <> textShow gfiles
