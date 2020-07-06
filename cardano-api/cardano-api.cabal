@@ -47,7 +47,9 @@ library
                       , aeson
                       , attoparsec
                       , base16-bytestring
+                      , base58-bytestring
                       , base64
+                      , bech32
                       , bytestring
                       , cardano-binary
                       , cardano-config

@@ -16,7 +16,7 @@ import           Ouroboros.Consensus.BlockchainTime (SlotLength, slotLengthFromS
 import           Ouroboros.Consensus.Cardano (SecurityParam(..))
 import           Ouroboros.Network.Block (BlockNo)
 
-import           Cardano.Api (NetworkMagic(..))
+import           Cardano.Api.Typed (NetworkMagic(..))
 import           Cardano.Api.Protocol (mkNodeClientProtocol)
 import           Cardano.Config.Types (SocketPath(..))
 import           Cardano.Node.Types (ConfigYamlFilePath(..),

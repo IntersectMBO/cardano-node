@@ -32,8 +32,8 @@ import qualified Shelley.Spec.Ledger.TxData as Shelley
 
 import           Cardano.Api hiding (StakePoolMetadata, parseTxIn, parseTxOut, parseWithdrawal)
 import           Cardano.Api.Shelley.OCert (KESPeriod(..))
-import           Cardano.Api.Typed (StakePoolMetadata, StakePoolMetadataReference (..),
-                   StakePoolRelay (..))
+import           Cardano.Api.Typed (AsType (..), StakePoolMetadata,
+                   StakePoolMetadataReference (..), StakePoolRelay (..))
 import qualified Cardano.Api.Typed as Typed
 import           Cardano.Slotting.Slot (EpochNo (..))
 
@@ -740,20 +740,13 @@ pWithdrawal =
       (  Opt.long "withdrawal"
       <> Opt.metavar "WITHDRAWAL"
       <> Opt.help "The reward withdrawal as StakeAddress+Lovelace where \
-                  \StakeAddress is the hex encoded stake address \
+                  \StakeAddress is the Bech32-encoded stake address \
                   \followed by the amount in Lovelace."
       )
   where
     parseWithdrawal :: Atto.Parser (Typed.StakeAddress, Typed.Lovelace)
     parseWithdrawal =
       (,) <$> parseStakeAddress <* Atto.char '+' <*> parseLovelace
-
-    parseStakeAddress :: Atto.Parser Typed.StakeAddress
-    parseStakeAddress = do
-      bstr <- Atto.takeWhile1 Char.isHexDigit
-      case Typed.deserialiseFromRawBytesHex Typed.AsStakeAddress bstr of
-        Just addr -> return addr
-        Nothing -> fail $ "Incorrect stake address format: " ++ show bstr
 
 
 pUpdateProposalFile :: Parser UpdateProposalFile
@@ -1061,19 +1054,14 @@ pTxOut =
   Opt.option (readerFromAttoParser parseTxOut)
     (  Opt.long "tx-out"
     <> Opt.metavar "TX-OUT"
-    <> Opt.help "The ouput transaction as TxOut+Lovelace where TxOut is the hex encoded address followed by the amount in Lovelace."
+    <> Opt.help "The ouput transaction as Address+Lovelace where Address is \
+                \the Bech32-encoded address followed by the amount in \
+                \Lovelace."
     )
   where
     parseTxOut :: Atto.Parser (Typed.TxOut Typed.Shelley)
     parseTxOut =
       Typed.TxOut <$> parseAddress <* Atto.char '+' <*> parseLovelace
-
-    parseAddress :: Atto.Parser (Typed.Address Typed.Shelley)
-    parseAddress = do
-      bstr <- Atto.takeWhile1 Char.isHexDigit
-      case Typed.deserialiseFromRawBytesHex Typed.AsShelleyAddress bstr of
-        Just addr -> return addr
-        Nothing -> fail $ "Incorrect address format: " ++ show bstr
 
 pTxTTL :: Parser SlotNo
 pTxTTL =
@@ -1611,6 +1599,32 @@ pProtocolVersion =
 
 parseLovelace :: Atto.Parser Typed.Lovelace
 parseLovelace = Typed.Lovelace <$> Atto.decimal
+
+parseAddress :: Atto.Parser (Typed.Address Typed.Shelley)
+parseAddress = do
+    str <- lexPlausibleAddressString
+    case Typed.deserialiseAddress AsShelleyAddress str of
+      Nothing   -> fail "invalid address"
+      Just addr -> pure addr
+
+parseStakeAddress :: Atto.Parser Typed.StakeAddress
+parseStakeAddress = do
+    str <- lexPlausibleAddressString
+    case Typed.deserialiseAddress AsStakeAddress str of
+      Nothing   -> fail "invalid address"
+      Just addr -> pure addr
+
+lexPlausibleAddressString :: Atto.Parser Text
+lexPlausibleAddressString =
+    Text.decodeLatin1 <$> Atto.takeWhile1 isPlausibleAddressChar
+  where
+    -- Covers both base58 and bech32 (with constrained prefixes)
+    isPlausibleAddressChar c =
+         (c >= 'a' && c <= 'z')
+      || (c >= 'A' && c <= 'Z')
+      || (c >= '0' && c <= '9')
+      || c == '_'
+
 
 --------------------------------------------------------------------------------
 -- Helpers

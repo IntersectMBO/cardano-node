@@ -173,6 +173,18 @@ module Cardano.Api.Typed (
     serialiseToJSON,
     deserialiseFromJSON,
 
+    -- ** Bech32
+    SerialiseAsBech32,
+    serialiseToBech32,
+    deserialiseFromBech32,
+    Bech32DecodeError(..),
+
+    -- ** Addresses
+    -- | Address serialisation is (sadly) special
+    SerialiseAddress,
+    serialiseAddress,
+    deserialiseAddress,
+
     -- ** Raw binary
     -- | Some types have a natural raw binary format.
     SerialiseAsRawBytes,
@@ -261,6 +273,8 @@ module Cardano.Api.Typed (
     -- ** Protocol parameter updates
     UpdateProposal,
     ProtocolParametersUpdate(..),
+    EpochNo,
+    NetworkMagic(..),
     makeShelleyUpdateProposal,
   ) where
 
@@ -277,8 +291,8 @@ import           Data.List as List
 import qualified Data.List.NonEmpty as NonEmpty
 --import           Data.Either
 import           Data.String (IsString(fromString))
-import qualified Data.Text as Text
 import           Data.Text (Text)
+import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import           Numeric.Natural
 
@@ -291,6 +305,7 @@ import           Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Base16 as Base16
+import qualified Data.ByteString.Base58 as Base58
 
 import qualified Data.Set as Set
 import qualified Data.Map.Strict as Map
@@ -298,6 +313,9 @@ import           Data.Map.Strict (Map)
 import qualified Data.Sequence.Strict as Seq
 import qualified Data.Vector as Vector
 
+import qualified Codec.Binary.Bech32 as Bech32
+
+import           Control.Applicative
 import           Control.Monad
 --import Control.Monad.IO.Class
 --import           Control.Monad.Trans.Except
@@ -621,6 +639,65 @@ instance SerialiseAsRawBytes StakeAddress where
         case Shelley.deserialiseRewardAcnt bs of
           Nothing -> Nothing
           Just (Shelley.RewardAcnt nw sc) -> Just (StakeAddress nw sc)
+
+
+instance SerialiseAsBech32 (Address Shelley) where
+    bech32PrefixFor (ShelleyAddress Shelley.Mainnet _ _) = "addr"
+    bech32PrefixFor (ShelleyAddress Shelley.Testnet _ _) = "addr_test"
+    bech32PrefixFor (ByronAddress _)                     = "addr_bootstrap"
+
+    bech32PrefixesPermitted AsShelleyAddress = ["addr", "addr_test",
+                                                "addr_bootstrap"]
+
+
+instance SerialiseAsBech32 StakeAddress where
+    bech32PrefixFor (StakeAddress Shelley.Mainnet _) = "stake"
+    bech32PrefixFor (StakeAddress Shelley.Testnet _) = "stake_test"
+
+    bech32PrefixesPermitted AsStakeAddress = ["stake", "stake_test"]
+
+
+instance SerialiseAddress (Address Byron) where
+    serialiseAddress addr@ByronAddress{} =
+         Text.decodeLatin1
+       . Base58.encodeBase58 Base58.bitcoinAlphabet
+       . serialiseToRawBytes
+       $ addr
+
+    deserialiseAddress AsByronAddress txt = do
+      bs <- Base58.decodeBase58 Base58.bitcoinAlphabet (Text.encodeUtf8 txt)
+      deserialiseFromRawBytes AsByronAddress bs
+
+instance SerialiseAddress (Address Shelley) where
+    serialiseAddress (ByronAddress addr) =
+      serialiseAddress (ByronAddress addr :: Address Byron)
+
+    serialiseAddress addr@ShelleyAddress{} =
+      serialiseToBech32 addr
+
+    deserialiseAddress AsShelleyAddress t =
+          deserialiseAsShelleyAddress
+      <|> deserialiseAsByronAddress
+      where
+        deserialiseAsShelleyAddress =
+          either (const Nothing) Just $
+          deserialiseFromBech32 AsShelleyAddress t
+
+        deserialiseAsByronAddress =
+          castByronToShelleyAddress <$>
+          deserialiseAddress AsByronAddress t
+
+        castByronToShelleyAddress :: Address Byron -> Address Shelley
+        castByronToShelleyAddress (ByronAddress addr) = ByronAddress addr
+
+
+instance SerialiseAddress StakeAddress where
+    serialiseAddress addr@StakeAddress{} =
+      serialiseToBech32 addr
+
+    deserialiseAddress AsStakeAddress t =
+      either (const Nothing) Just $
+      deserialiseFromBech32 AsStakeAddress t
 
 
 makeByronAddress :: VerificationKey ByronKey
@@ -2212,6 +2289,124 @@ deserialiseFromRawBytesHex proxy hex =
 
 
 -- ----------------------------------------------------------------------------
+-- Bech32 Serialisation
+--
+
+class (HasTypeProxy a, SerialiseAsRawBytes a) => SerialiseAsBech32 a where
+
+    -- | The human readable prefix to use when encoding this value to Bech32.
+    --
+    bech32PrefixFor :: a -> Text
+
+    -- | The set of human readable prefixes that can be used for this type.
+    --
+    bech32PrefixesPermitted :: AsType a -> [Text]
+
+
+serialiseToBech32 :: SerialiseAsBech32 a => a -> Text
+serialiseToBech32 a =
+    Bech32.encodeLenient
+      humanReadablePart
+      (Bech32.dataPartFromBytes (serialiseToRawBytes a))
+  where
+    humanReadablePart =
+      case Bech32.humanReadablePartFromText (bech32PrefixFor a) of
+        Right p  -> p
+        Left err -> error $ "serialiseToBech32: invalid prefix "
+                         ++ show (bech32PrefixFor a)
+                         ++ ", " ++ show err
+
+
+deserialiseFromBech32 :: SerialiseAsBech32 a
+                      => AsType a -> Text -> Either Bech32DecodeError a
+deserialiseFromBech32 asType bech32Str = do
+    (prefix, dataPart) <- Bech32.decodeLenient bech32Str
+                            ?!. Bech32DecodingError
+
+    let actualPrefix      = Bech32.humanReadablePartToText prefix
+        permittedPrefixes = bech32PrefixesPermitted asType
+    guard (actualPrefix `elem` permittedPrefixes)
+      ?! Bech32UnexpectedPrefix actualPrefix permittedPrefixes
+
+    payload <- Bech32.dataPartToBytes dataPart
+                 ?! Bech32DataPartToBytesError (Bech32.dataPartToText dataPart)
+
+    value <- deserialiseFromRawBytes asType payload
+               ?! Bech32DeserialiseFromBytesError payload
+
+    let expectedPrefix = bech32PrefixFor value
+    guard (actualPrefix == expectedPrefix)
+      ?! Bech32WrongPrefix actualPrefix expectedPrefix
+
+    return value
+
+
+-- | Bech32 decoding error.
+data Bech32DecodeError =
+
+       -- | There was an error decoding the string as Bech32.
+       Bech32DecodingError Bech32.DecodingError
+
+       -- | The human-readable prefix in the Bech32-encoded string is not one
+       -- of the ones expected.
+     | Bech32UnexpectedPrefix Text [Text]
+
+       -- | There was an error in extracting a 'ByteString' from the data part of
+       -- the Bech32-encoded string.
+     | Bech32DataPartToBytesError Text
+
+       -- | There was an error in deserialising the bytes into a value of the
+       -- expected type.
+     | Bech32DeserialiseFromBytesError ByteString
+
+       -- | The human-readable prefix in the Bech32-encoded string does not
+       -- correspond to the prefix that should be used for the payload value.
+     | Bech32WrongPrefix Text Text
+
+  deriving Show
+
+instance Error Bech32DecodeError where
+  displayError err = case err of
+    Bech32DecodingError decErr -> show decErr -- TODO
+
+    Bech32UnexpectedPrefix actual permitted ->
+        "Unexpected Bech32 prefix: the actual prefix is " <> show actual
+     <> ", but it was expected to be "
+     <> intercalate " or " (map show permitted)
+
+    Bech32DataPartToBytesError _dataPart ->
+        "There was an error in extracting the bytes from the data part of the \
+        \Bech32-encoded string."
+
+    Bech32DeserialiseFromBytesError _bytes ->
+        "There was an error in deserialising the data part of the \
+        \Bech32-encoded string into a value of the expected type."
+
+    Bech32WrongPrefix actual expected ->
+        "Mismatch in the Bech32 prefix: the actual prefix is " <> show actual
+     <> ", but the prefix for this payload value should be " <> show expected
+
+
+
+-- ----------------------------------------------------------------------------
+-- Address Serialisation
+--
+
+-- | Address serialisation uses different serialisation formats for different
+-- kinds of addresses, so it needs its own class.
+--
+-- In particular, Byron addresses are typically formatted in base 58, while
+-- Shelley addresses (payment and stake) are formatted using Bech32.
+--
+class HasTypeProxy addr => SerialiseAddress addr where
+
+    serialiseAddress :: addr -> Text
+
+    deserialiseAddress :: AsType addr -> Text -> Maybe addr
+    -- TODO: consider adding data AddressDecodeError
+
+
+-- ----------------------------------------------------------------------------
 -- TextEnvelope Serialisation
 --
 
@@ -2999,3 +3194,7 @@ backCompatAlgorithmNameVrf p =
 (?!) :: Maybe a -> e -> Either e a
 Nothing ?! e = Left e
 Just x  ?! _ = Right x
+
+(?!.) :: Either e a -> (e -> e') -> Either e' a
+Left  e ?!. f = Left (f e)
+Right x ?!. _ = Right x

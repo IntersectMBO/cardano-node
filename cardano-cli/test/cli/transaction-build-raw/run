@@ -16,8 +16,7 @@ tx_in="2392d2b1200b5139fe555c81261697b29a8ccf561c5c783d46e78a479d977053#0"
 #-----------------------------
 # Using a Byron output address
 
-out_address=$(head -1 "test/cli/${testname}/data/byron-hex.address")
-tx_out="${out_address}+100"
+tx_out="addr1q94cxl99qvtwunsqqv6g9mgj3zrawtpt4edsgwxkjtwpy5dsezcht90tmwfur7t5hc9fk8hjd3r5vjwec2h8vmk3xh8s7er7t3+100"
 
 ${CARDANO_CLI} shelley transaction build-raw \
     --tx-in "${tx_in}" \
@@ -31,8 +30,7 @@ fail_on_error $?
 
 #-----------------------------
 # Using a Shelley output address
-out_address=$(head -1 "test/cli/${testname}/data/shelley-hex.address")
-tx_out="${out_address}+100"
+tx_out="addr1q94cxl99qvtwunsqqv6g9mgj3zrawtpt4edsgwxkjtwpy5dsezcht90tmwfur7t5hc9fk8hjd3r5vjwec2h8vmk3xh8s7er7t3+100"
 
 ${CARDANO_CLI} shelley transaction build-raw \
     --tx-in "${tx_in}" \

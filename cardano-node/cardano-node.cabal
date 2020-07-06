@@ -83,7 +83,7 @@ library
                      , lobemo-backend-trace-forwarder
                      , network
                      , network-mux
-                     , node-config
+                     , cardano-node-config
                      , optparse-applicative
                      , ouroboros-consensus
                      , ouroboros-consensus-byron
@@ -127,7 +127,7 @@ library
                      , Cardano.Node.TUI.Run
 
 
-library node-config
+library cardano-node-config
 
   hs-source-dirs:      src
 
@@ -210,7 +210,7 @@ executable chairman
                      , cardano-prelude
                      , io-sim-classes
                      , network-mux
-                     , node-config
+                     , cardano-node-config
                      , optparse-applicative
                      , ouroboros-consensus
                      , ouroboros-consensus-cardano

@@ -62,7 +62,6 @@ library
                      , directory
                      , file-embed
                      , filepath
-                     , generic-monoid
                      , iohk-monitoring
                      , lobemo-backend-aggregation
                      , lobemo-backend-ekg
@@ -80,19 +79,16 @@ library
                      , ouroboros-network-framework
                      , process
                      , iproute
-                     , safe-exceptions
                      , scientific
                      , shelley-spec-ledger
                      , string-conv
                      , stm
                      , template-haskell
                      , text
-                     , time
                      , transformers
                      , transformers-except
                      , typed-protocols
                      , unordered-containers
-                     , yaml
 
   default-language:    Haskell2010
   default-extensions:  NoImplicitPrelude
