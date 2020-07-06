@@ -1,8 +1,10 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -12,13 +14,15 @@ import           Cardano.Prelude
 import qualified Prelude
 
 import           Data.Aeson
-import           Network.Socket (PortNumber)
 import           Data.Scientific (coefficient)
 import qualified Data.Text as Text
+import           Network.Socket (PortNumber)
 
 import           Cardano.BM.Data.Tracer (TracingVerbosity(..))
 import qualified Cardano.Chain.Update as Update
+import           Cardano.Slotting.Block (BlockNo (..))
 import           Ouroboros.Consensus.NodeId (CoreNodeId (..))
+import           Ouroboros.Network.Block (HeaderHash, Tip (..))
 
 
 deriving instance Show TracingVerbosity
@@ -50,3 +54,14 @@ instance FromJSON Update.ApplicationName where
   parseJSON invalid  =
     panic $ "Parsing of application name failed due to type mismatch. "
     <> "Encountered: " <> (Text.pack $ Prelude.show invalid)
+
+instance ToJSON (HeaderHash blk) => ToJSON (Tip blk) where
+  toJSON TipGenesis = object [ "genesis" .= True ]
+  toJSON (Tip slotNo headerHash blockNo) =
+    object
+      [ "slotNo"     .= slotNo
+      , "headerHash" .= headerHash
+      , "blockNo"    .= blockNo
+      ]
+
+deriving newtype instance ToJSON BlockNo
