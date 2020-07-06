@@ -1,5 +1,55 @@
 # Changelog for cardano-node
 
+## 1.15.0 -- July 2020
+
+### node changes
+
+- Support for triggering a hard fork at a specific epoch (#1328)
+- Support for triggering a hard fork at a specific protocol version (#1345)
+- Changes resulting from refactoring in the Cardano API library (#1289, #1316,
+  #1380, #1384)
+- Update the README build instructions, including libsodium (#1325, #1361, #1362)
+- Trace the UTxO size in block forging to help the benchmarking tools (#1329)
+- Remove the "forks created" metric from the live view (#1315)
+
+### consensus changes
+- Fix an off-by-one error in the KES cert validity period (#2306)
+- Fix KES-related tests (#2306)
+- Fix bugs found by the hard fork tests (#2310, #2312)
+- Fix bugs found by the hard fork tests in the hard fork tests themselves (#2305)
+- Extend hard fork tests to include network partitions at interesting times
+  around or during the hard fork (#2292, #2337, #2342)
+- Prefer blocks we created, irrespective of the VRF value (#1286, #2348)
+- Allow setting the intial Praos nonce (#2005, #2289)
+- Richer support for queries when using multiple protocol eras to allow some
+  queries to be answered outside of the era to which they belong (#2349)
+- Optimisation in chain selection for forks (#1223, #2323)
+- Preparation for removing EBBs (#2322, #2336, #2339)
+- Clarify and document the interface for triggering a hard fork (#2307)
+- Internal cleanups and refactoring (#2327, #2328, #2329)
+
+### ledger changes
+- Fix bug in the pool reaping that could cause a crash on epoch boundaries (#1593)
+- Fix a preservation of value bug in rewards to retired stake pools (#1598, #1604)
+- Fix a bug in pool reaping when multiple pools share a reward account (#1605)
+- Fix the calculation of non-myopic rewards that is queried by the wallet (#1601)
+- Allow update proposals to be submitted near the end of an epoch, but apply
+  them only at the end of the following epoch (#1574)
+- Simpler calculation for turning the VRF output into the leader value (#1579)
+- Check the VRF for BFT blocks too (#1590)
+- Tests and other clean-up for witnesses for spending from Byron address in
+  Shelley transactions (#1573, #1591)
+- Additional tests for serialisation of parts of the ledger state (#1603)
+- Fix the presentation of pool metadata hashes in JSON output (#1596)
+- Clean up the serialisation used with hashing (#1602)
+
+### network changes
+- Additional concurrency utilities (#2298)
+- Improved tests for error handling of socket send/recv (#2317)
+- Port existing DNS-related bug fixes to the new DNS provider in the p2p
+  governor (#1873, #1893, #2311)
+- Internal cleanups (#2096)
+
 ## 1.14.2 -- June 2020
 
 No changes in the node. There were changes in the cardano-api and cardano-cli.

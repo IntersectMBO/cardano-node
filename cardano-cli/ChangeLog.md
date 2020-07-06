@@ -1,5 +1,13 @@
 # Changelog for cardano-cli
 
+## 1.15.0 -- July 2020
+
+- Fix the ledger state dump query (#1333, #1334)
+- Fix the format of Byron addresses used in Byron CLI commands (#1326)
+- Port CLI commands to use the new API (#1341, #1375, #1396, #1397)
+- Change to JSON output for the "query tip" command (#1340, #1365)
+- Moving code around to eliminate the cardano-config package (#1289, #1316)
+
 ## 1.14.2 -- June 2020
 
 - Fix the hashing of stake pool metadata
