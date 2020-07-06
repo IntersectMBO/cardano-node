@@ -16,13 +16,18 @@ import qualified Cardano.Binary as CBOR
 
 import           Control.Monad.Trans.Except.Extra (firstExceptT, newExceptT)
 
+import           Cardano.Crypto.Seed (readSeedFromSystemEntropy)
+import           Cardano.Crypto.DSIGN.Class
+
 import           Ouroboros.Consensus.Shelley.Protocol.Crypto
                    (TPraosStandardCrypto)
+
 import           Shelley.Spec.Ledger.Address (Addr (..), toAddr)
 import           Shelley.Spec.Ledger.BaseTypes (Network (..))
+import qualified Shelley.Spec.Ledger.Crypto as Ledger
 import           Shelley.Spec.Ledger.Keys (KeyPair(..))
+import qualified Shelley.Spec.Ledger.Keys as Ledger
 
-import           Cardano.Api.Shelley.ColdKeys (genKeyPair)
 import           Cardano.Api.TextView
 
 data AddressRole = BootstrapAddr
@@ -55,6 +60,17 @@ genAddress nw = do
   pure $ toAddr nw ( KeyPair {sKey = paymentSkey, vKey = paymentVkey}
                    , KeyPair {sKey = stakingSkey, vKey = stakingVkey}
                    )
+
+type VerKey r = Ledger.VKey r TPraosStandardCrypto
+type SignKey  = Ledger.SignKeyDSIGN TPraosStandardCrypto
+type DSIGN    = Ledger.DSIGN TPraosStandardCrypto
+
+genKeyPair :: IO (VerKey r, SignKey)
+genKeyPair = do
+  seed <- readSeedFromSystemEntropy (seedSizeDSIGN (Proxy :: Proxy DSIGN))
+  let signKey = genKeyDSIGN seed
+      verKey  = deriveVerKeyDSIGN signKey
+  return (Ledger.VKey verKey, signKey)
 
 readAddress :: AddressRole -> FilePath -> ExceptT AddressError IO ShelleyAddress
 readAddress role fp = do

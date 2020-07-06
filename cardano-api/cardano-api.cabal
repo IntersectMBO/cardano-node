@@ -21,7 +21,6 @@ library
                         Cardano.Api.Protocol.Cardano
                         Cardano.Api.Protocol.Shelley
                         Cardano.Api.Shelley.Address
-                        Cardano.Api.Shelley.ColdKeys
                         Cardano.Api.Shelley.Genesis
                         Cardano.Api.TextView
                         Cardano.Api.Typed
