@@ -4,8 +4,8 @@
 module Cardano.CLI.Helpers
   ( ConversionError(..)
   , HelpersError(..)
-  , convertITNverificationKey
-  , convertITNsigningKey
+  , convertITNVerificationKey
+  , convertITNSigningKey
   , dataPartToBase16
   , decodeBech32Key
   , ensureNewFile
@@ -35,7 +35,8 @@ import qualified Data.ByteString.Lazy as LB
 import qualified Data.Text as Text
 import           System.Directory (doesPathExist)
 
-import           Cardano.Api (SigningKey(..), StakingVerificationKey(..), textShow)
+import           Cardano.Api (textShow)
+import           Cardano.Api.Typed (SigningKey(..), StakeKey, VerificationKey(..))
 import           Cardano.Binary (Decoder, fromCBOR)
 import qualified Cardano.Chain.Delegation as Delegation
 import qualified Cardano.Chain.Update as Update
@@ -153,19 +154,19 @@ renderConversionError err =
       "Error deserialising verification key: " <> textShow (SC.unpack vKey)
 
 -- | Convert public ed25519 key to a Shelley stake verification key
-convertITNverificationKey :: Text -> Either ConversionError StakingVerificationKey
-convertITNverificationKey pubKey = do
+convertITNVerificationKey :: Text -> Either ConversionError (VerificationKey StakeKey)
+convertITNVerificationKey pubKey = do
   (_, _, keyBS) <- decodeBech32Key pubKey
   case DSIGN.rawDeserialiseVerKeyDSIGN keyBS of
-    Just verKey -> Right . StakingVerificationKeyShelley $ Shelley.VKey verKey
+    Just verKey -> Right . StakeVerificationKey $ Shelley.VKey verKey
     Nothing -> Left $ VerificationKeyDeserializationError keyBS
 
 -- | Convert private ed22519 key to a Shelley signing key.
-convertITNsigningKey :: Text -> Either ConversionError SigningKey
-convertITNsigningKey privKey = do
+convertITNSigningKey :: Text -> Either ConversionError (SigningKey StakeKey)
+convertITNSigningKey privKey = do
   (_, _, keyBS) <- decodeBech32Key privKey
   case DSIGN.rawDeserialiseSignKeyDSIGN keyBS of
-    Just signKey -> Right $ SigningKeyShelley signKey
+    Just signKey -> Right $ StakeSigningKey signKey
     Nothing -> Left $ SigningKeyDeserializationError keyBS
 
 -- | Convert ITN Bech32 public or private keys to 'ByteString's

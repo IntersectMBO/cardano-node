@@ -1,6 +1,5 @@
 module Cardano.CLI.Shelley.Run.StakeAddress
   ( ShelleyStakeAddressCmdError
-  , checkKeyPair
   , renderShelleyStakeAddressCmdError
   , runStakeAddressCmd
   ) where
@@ -11,11 +10,9 @@ import qualified Data.Text as Text
 import qualified Data.Text.IO as Text
 
 import           Control.Monad.Trans.Except (ExceptT)
-import           Control.Monad.Trans.Except.Extra (firstExceptT, hoistEither, left, newExceptT)
+import           Control.Monad.Trans.Except.Extra (firstExceptT, hoistEither, newExceptT)
 
-import           Cardano.Api (ApiError, Network (..), SigningKey (..),
-                   StakingVerificationKey (..), renderApiError,
-                   writeSigningKey, writeStakingVerificationKey)
+import           Cardano.Api (ApiError, Network (..), renderApiError)
 import           Cardano.Api.TextView (TextViewTitle (..), textShow)
 import qualified Cardano.Api.Typed as Api (NetworkId (..))
 import           Cardano.Api.Typed (AsType (..), Error (..), FileError,
@@ -26,10 +23,6 @@ import           Cardano.Api.Typed (AsType (..), Error (..), FileError,
                    makeStakeAddressRegistrationCertificate,
                    readFileTextEnvelope, serialiseAddress,
                    writeFileTextEnvelope)
-
-import qualified Cardano.Crypto.DSIGN as DSIGN
-
-import           Shelley.Spec.Ledger.Keys (VKey(..))
 
 import           Cardano.CLI.Helpers
 import           Cardano.CLI.Shelley.Parsers
@@ -181,32 +174,24 @@ runSingleITNKeyConversion
   -> ExceptT ShelleyStakeAddressCmdError IO ()
 runSingleITNKeyConversion (ITNVerificationKeyFile (VerificationKeyFile vk)) mOutFile = do
   bech32publicKey <- firstExceptT ShelleyStakeAddressConvError . newExceptT $ readBech32 vk
-  v@(StakingVerificationKeyShelley (VKey _vkey)) <- hoistEither . first ShelleyStakeAddressConvError $ convertITNverificationKey bech32publicKey
+  vkey <- hoistEither
+    . first ShelleyStakeAddressConvError
+    $ convertITNVerificationKey bech32publicKey
   case mOutFile of
-    Just (OutputFile fp) -> firstExceptT (ShelleyStakeAddressWriteVerKeyError fp) . newExceptT $ writeStakingVerificationKey fp v
-    Nothing -> print v
+    Just (OutputFile fp) ->
+      firstExceptT ShelleyStakeAddressWriteFileError
+        . newExceptT
+        $ writeFileTextEnvelope fp Nothing vkey
+    Nothing -> print vkey
 
 runSingleITNKeyConversion (ITNSigningKeyFile (SigningKeyFile sk)) mOutFile = do
   bech32privateKey <- firstExceptT ShelleyStakeAddressConvError . newExceptT $ readBech32 sk
-  s@(SigningKeyShelley _sKey) <- hoistEither . first ShelleyStakeAddressConvError $ convertITNsigningKey bech32privateKey
+  skey <- hoistEither
+    . first ShelleyStakeAddressConvError
+    $ convertITNSigningKey bech32privateKey
   case mOutFile of
-    Just (OutputFile fp) -> firstExceptT (ShelleyStakeAddressWriteSignKeyError fp) . newExceptT $ writeSigningKey fp s
-    Nothing -> print s
-
--- | Checks that the verification key corresponds to the given signing key
--- This does not need to be in 'IO' however the 'MonadFail' constraint
--- imposed by the ITN conversion functions forces us to use 'IO'
--- in order to report useful errors with 'Either'.
-checkKeyPair
-  :: Text
-  -- ^ Bech32 public key
-  -> Text
-  -- ^ Bech32 private key
-  -> ExceptT ShelleyStakeAddressCmdError IO (SigningKey, StakingVerificationKey)
-checkKeyPair bech32publicKey bech32privateKey = do
-  v@(StakingVerificationKeyShelley (VKey vkey)) <- hoistEither . first ShelleyStakeAddressConvError $ convertITNverificationKey bech32publicKey
-  s@(SigningKeyShelley sKey) <- hoistEither . first ShelleyStakeAddressConvError $ convertITNsigningKey bech32privateKey
-
-  if DSIGN.deriveVerKeyDSIGN sKey == vkey
-  then return (s, v)
-  else left $ ShelleyStakeAddressKeyPairError bech32privateKey bech32publicKey
+    Just (OutputFile fp) ->
+      firstExceptT ShelleyStakeAddressWriteFileError
+        . newExceptT
+        $ writeFileTextEnvelope fp Nothing skey
+    Nothing -> print skey
