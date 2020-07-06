@@ -87,7 +87,7 @@ module Cardano.Api.Typed (
     getTxId,
     TxIn(..),
     TxOut(..),
-    TxIx,
+    TxIx(..),
     Lovelace(..),
     makeByronTransaction,
     makeShelleyTransaction,

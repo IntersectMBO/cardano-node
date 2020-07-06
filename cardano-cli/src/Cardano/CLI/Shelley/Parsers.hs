@@ -1042,7 +1042,7 @@ parseTxIn :: Atto.Parser Typed.TxIn
 parseTxIn = Typed.TxIn <$> parseTxId <*> (Atto.char '#' *> parseTxIx)
 
 renderTxIn :: Typed.TxIn -> Text
-renderTxIn (Typed.TxIn txid txix) =
+renderTxIn (Typed.TxIn txid (Typed.TxIx txix)) =
   mconcat
     [ Text.decodeUtf8 (Typed.serialiseToRawBytesHex txid)
     , "#"
