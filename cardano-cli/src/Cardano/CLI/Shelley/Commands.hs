@@ -40,8 +40,9 @@ import           Prelude
 import           Data.Text (Text)
 
 import           Cardano.Api
-import           Cardano.Api.Shelley.OCert (KESPeriod(..))
-import           Cardano.Api.Typed (StakePoolMetadataReference, StakePoolRelay)
+import           Cardano.Api.Typed
+                   (StakePoolMetadataReference, StakePoolRelay,
+                    KESPeriod(..), NetworkId)
 import qualified Cardano.Api.Typed as Typed
 import           Cardano.Slotting.Slot (EpochNo (..))
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
@@ -205,14 +206,14 @@ data SystemCmd
 
 
 data GenesisCmd
-  = GenesisCreate GenesisDir Word Word (Maybe SystemStart) (Maybe Lovelace) Network
+  = GenesisCreate GenesisDir Word Word (Maybe SystemStart) (Maybe Typed.Lovelace) NetworkId
   | GenesisKeyGenGenesis VerificationKeyFile SigningKeyFile
   | GenesisKeyGenDelegate VerificationKeyFile SigningKeyFile OpCertCounterFile
   | GenesisKeyGenUTxO VerificationKeyFile SigningKeyFile
   | GenesisCmdKeyHash VerificationKeyFile
   | GenesisVerKey VerificationKeyFile SigningKeyFile
-  | GenesisTxIn VerificationKeyFile Network (Maybe OutputFile)
-  | GenesisAddr VerificationKeyFile Network (Maybe OutputFile)
+  | GenesisTxIn VerificationKeyFile NetworkId (Maybe OutputFile)
+  | GenesisAddr VerificationKeyFile NetworkId (Maybe OutputFile)
   deriving (Eq, Show)
 
 --

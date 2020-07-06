@@ -4,6 +4,10 @@ module Cardano.CLI.Shelley.Parsers
 
     -- * CLI command and flag types
   , module Cardano.CLI.Shelley.Commands
+
+    -- * Field parser and renderers
+  , parseTxIn
+  , renderTxIn
   ) where
 
 import           Prelude (String)
@@ -30,10 +34,9 @@ import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
 import qualified Shelley.Spec.Ledger.BaseTypes as Shelley
 import qualified Shelley.Spec.Ledger.TxData as Shelley
 
-import           Cardano.Api hiding (StakePoolMetadata, parseTxIn, parseTxOut, parseWithdrawal)
-import           Cardano.Api.Shelley.OCert (KESPeriod(..))
+import           Cardano.Api hiding (StakePoolMetadata, parseTxIn, renderTxIn, parseTxOut, parseWithdrawal)
 import           Cardano.Api.Typed (AsType (..), StakePoolMetadata,
-                   StakePoolMetadataReference (..), StakePoolRelay (..))
+                   StakePoolMetadataReference (..), StakePoolRelay (..), KESPeriod(..))
 import qualified Cardano.Api.Typed as Typed
 import           Cardano.Slotting.Slot (EpochNo (..))
 
@@ -610,11 +613,11 @@ pGenesisCmd =
 
     pGenesisAddr :: Parser GenesisCmd
     pGenesisAddr =
-      GenesisAddr <$> pVerificationKeyFile Input <*> pNetwork <*> pMaybeOutputFile
+      GenesisAddr <$> pVerificationKeyFile Input <*> pNetworkId <*> pMaybeOutputFile
 
     pGenesisTxIn :: Parser GenesisCmd
     pGenesisTxIn =
-      GenesisTxIn <$> pVerificationKeyFile Input <*> pNetwork <*> pMaybeOutputFile
+      GenesisTxIn <$> pVerificationKeyFile Input <*> pNetworkId <*> pMaybeOutputFile
 
     pGenesisCreate :: Parser GenesisCmd
     pGenesisCreate =
@@ -623,7 +626,7 @@ pGenesisCmd =
                     <*> pGenesisNumUTxOKeys
                     <*> pMaybeSystemStart
                     <*> pInitialSupply
-                    <*> pNetwork
+                    <*> pNetworkId
 
     pGenesisDir :: Parser GenesisDir
     pGenesisDir =
@@ -666,10 +669,10 @@ pGenesisCmd =
     convertTime =
       parseTimeOrError False defaultTimeLocale (iso8601DateFormat $ Just "%H:%M:%SZ")
 
-    pInitialSupply :: Parser (Maybe Lovelace)
+    pInitialSupply :: Parser (Maybe Typed.Lovelace)
     pInitialSupply =
       Opt.optional $
-      Lovelace <$>
+      Typed.Lovelace <$>
         Opt.option Opt.auto
           (  Opt.long "supply"
           <> Opt.metavar "LOVELACE"
@@ -1034,19 +1037,27 @@ pTxIn =
     <> Opt.metavar "TX-IN"
     <> Opt.help "The input transaction as TxId#TxIx where TxId is the transaction hash and TxIx is the index."
     )
-  where
-    parseTxIn :: Atto.Parser Typed.TxIn
-    parseTxIn = Typed.TxIn <$> parseTxId <*> (Atto.char '#' *> parseTxIx)
 
-    parseTxId :: Atto.Parser Typed.TxId
-    parseTxId = do
-      bstr <- Atto.takeWhile1 Char.isHexDigit
-      case Typed.deserialiseFromRawBytesHex Typed.AsTxId bstr of
-        Just addr -> return addr
-        Nothing -> fail $ "Incorrect transaction id format:: " ++ show bstr
+parseTxIn :: Atto.Parser Typed.TxIn
+parseTxIn = Typed.TxIn <$> parseTxId <*> (Atto.char '#' *> parseTxIx)
 
-    parseTxIx :: Atto.Parser Typed.TxIx
-    parseTxIx = toEnum <$> Atto.decimal
+renderTxIn :: Typed.TxIn -> Text
+renderTxIn (Typed.TxIn txid (Typed.TxIx txix)) =
+  mconcat
+    [ Text.decodeUtf8 (Typed.serialiseToRawBytesHex txid)
+    , "#"
+    , Text.pack (show txix)
+    ]
+
+parseTxId :: Atto.Parser Typed.TxId
+parseTxId = do
+  bstr <- Atto.takeWhile1 Char.isHexDigit
+  case Typed.deserialiseFromRawBytesHex Typed.AsTxId bstr of
+    Just addr -> return addr
+    Nothing -> fail $ "Incorrect transaction id format:: " ++ show bstr
+
+parseTxIx :: Atto.Parser Typed.TxIx
+parseTxIx = toEnum <$> Atto.decimal
 
 
 pTxOut :: Parser (Typed.TxOut Typed.Shelley)

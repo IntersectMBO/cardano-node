@@ -1,6 +1,5 @@
-{-# LANGUAGE DataKinds #-}
-
-{-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
+{-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE GADTs #-}
 
 module Cardano.CLI.Shelley.Run.Genesis
   ( ShelleyGenesisCmdError
@@ -30,57 +29,40 @@ import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT,
                    hoistEither, left, newExceptT)
 
-import           Cardano.Api hiding (writeAddress)
-import           Cardano.Api.Typed (AsType (..), Error (..), FileError, Hash (..),
-                   OperationalCertificateIssueCounter (..), TextEnvelopeError,
-                   VerificationKey, VrfKey, castVerificationKey, generateSigningKey,
-                   getVerificationKey, readFileTextEnvelope, verificationKeyHash,
-                   writeFileTextEnvelope)
+import           Cardano.Api.Typed
+import           Cardano.Api.TextView
+import           Cardano.Api.Shelley.Genesis
 
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
 import           Ouroboros.Consensus.Shelley.Protocol (TPraosStandardCrypto)
 
-import           Ouroboros.Consensus.Shelley.Node
+import qualified Shelley.Spec.Ledger.Coin    as Ledger
+import qualified Shelley.Spec.Ledger.Address as Ledger
+import qualified Shelley.Spec.Ledger.Keys    as Ledger
 
-import qualified Cardano.Crypto.Hash.Class as Crypto
-
-import           Shelley.Spec.Ledger.Coin (Coin (..))
-import qualified Shelley.Spec.Ledger.Genesis as Ledger
-import qualified Shelley.Spec.Ledger.Keys as Ledger
-import qualified Shelley.Spec.Ledger.TxData as Shelley
-
-import           Cardano.Api.Shelley.Address (ShelleyAddress)
-import           Cardano.Api.Shelley.ColdKeys (KeyRole (..), OperatorKeyRole (..),
-                    readVerKey)
-import           Cardano.Api.Shelley.Genesis
-import           Cardano.Api.Shelley.ColdKeys
-import           Cardano.Api.Shelley.OCert
-import           Cardano.Api.Shelley.VRF
-import           Cardano.Api.TextView (TextViewTitle (..))
-
-import           Cardano.CLI.Helpers (textToByteString)
 import           Cardano.CLI.Shelley.Commands
+import           Cardano.CLI.Shelley.Parsers (renderTxIn)
 import           Cardano.CLI.Shelley.KeyGen (ShelleyKeyGenError,
                    renderShelleyKeyGenError)
 
 data ShelleyGenesisCmdError
   = ShelleyGenesisCmdGenesisKeyGenError !ShelleyKeyGenError
-  | ShelleyGenesisCmdGenesisUTxOKeyError !KeyError
+  | ShelleyGenesisCmdGenesisUTxOKeyError !(FileError TextEnvelopeError)
   | ShelleyGenesisCmdOnlyShelleyAddresses
   | ShelleyGenesisCmdOnlyShelleyAddressesNotReward
   | ShelleyGenesisCmdOperatorKeyGenError !ShelleyKeyGenError
-  | ShelleyGenesisCmdOperatorVrfKeyGenError !VRFError
+  | ShelleyGenesisCmdOperatorVrfKeyGenError !(FileError TextEnvelopeError)
   | ShelleyGenesisCmdReadGenesisAesonDecodeError !FilePath !Text
   | ShelleyGenesisCmdReadGenesisIOError !FilePath !IOException
-  | ShelleyGenesisCmdReadGenesisUTxOVerKeyError !KeyError
-  | ShelleyGenesisCmdReadIndexedVerKeyError !KeyError
+  | ShelleyGenesisCmdReadGenesisUTxOVerKeyError !(FileError TextEnvelopeError)
+  | ShelleyGenesisCmdReadIndexedVerKeyError !(FileError TextEnvelopeError)
   | ShelleyGenesisCmdReadIndexedVrfKeyError !(FileError TextEnvelopeError)
-  | ShelleyGenesisCmdReadSignKeyError !KeyError
-  | ShelleyGenesisCmdReadVerKeyError !KeyError
+  | ShelleyGenesisCmdReadSignKeyError !(FileError TextEnvelopeError)
+  | ShelleyGenesisCmdReadVerKeyError !(FileError TextEnvelopeError)
   | ShelleyGenesisCmdUTxOKeyGenError !ShelleyKeyGenError
   | ShelleyGenesisCmdWriteDefaultGenesisIOError !FilePath !IOException
   | ShelleyGenesisCmdWriteGenesisIOError !FilePath !IOException
-  | ShelleyGenesisCmdWriteOperationalCertError !FilePath !OperationalCertError
+  | ShelleyGenesisCmdWriteOperationalCertError !FilePath !OperationalCertIssueError
   | ShelleyGenesisMismatchedGenesisKeyFiles [Int] [Int] [Int]
   | ShelleyGenesisFilesNoIndex [FilePath]
   | ShelleyGenesisFilesDupIndex [FilePath]
@@ -93,11 +75,11 @@ renderShelleyGenesisCmdError err =
     ShelleyGenesisCmdUTxOKeyGenError keyErr ->
       "Error while generating the genesis UTxO keys:" <> renderShelleyKeyGenError keyErr
     ShelleyGenesisCmdReadVerKeyError keyErr ->
-      "Error while reading genesis verification key: " <> renderKeyError keyErr
+      "Error while reading genesis verification key: " <> Text.pack (displayError keyErr)
     ShelleyGenesisCmdReadSignKeyError keyErr ->
-      "Error while reading the genesis signing key: " <> renderKeyError keyErr
+      "Error while reading the genesis signing key: " <> Text.pack (displayError keyErr)
     ShelleyGenesisCmdReadGenesisUTxOVerKeyError keyErr ->
-      "Error while reading the genesis UTxO verification key: " <> renderKeyError keyErr
+      "Error while reading the genesis UTxO verification key: " <> Text.pack (displayError keyErr)
     ShelleyGenesisCmdOnlyShelleyAddressesNotReward ->
       "Please only supply Shelley addresses. Reward account found."
     ShelleyGenesisCmdOnlyShelleyAddresses ->
@@ -105,13 +87,13 @@ renderShelleyGenesisCmdError err =
     ShelleyGenesisCmdOperatorKeyGenError keyErr ->
       "Error generating genesis operational key: " <> renderShelleyKeyGenError keyErr
     ShelleyGenesisCmdOperatorVrfKeyGenError keyErr ->
-      "Error generating genesis delegate VRF key: " <> renderVRFError keyErr
+      "Error generating genesis delegate VRF key: " <> Text.pack (displayError keyErr)
     ShelleyGenesisCmdReadIndexedVerKeyError keyErr ->
-      "Error reading indexed verification key: " <> renderKeyError keyErr
+      "Error reading indexed verification key: " <> Text.pack (displayError keyErr)
     ShelleyGenesisCmdReadIndexedVrfKeyError fileErr ->
       "Error reading indexed VRF verification key: " <> Text.pack (displayError fileErr)
     ShelleyGenesisCmdGenesisUTxOKeyError keyErr ->
-      "Error reading genesis UTxO key: " <> renderKeyError keyErr
+      "Error reading genesis UTxO key: " <> Text.pack (displayError keyErr)
     ShelleyGenesisCmdReadGenesisAesonDecodeError fp decErr ->
       "Error while decoding Shelley genesis at: " <> textShow fp <> " Error: " <> textShow decErr
     ShelleyGenesisCmdReadGenesisIOError fp ioException ->
@@ -124,7 +106,7 @@ renderShelleyGenesisCmdError err =
       "Error while writing Shelley genesis operational certificate at: "
          <> textShow fp
          <> " Error: "
-         <> renderOperationalCertError opCertErr
+         <> Text.pack (displayError opCertErr)
     ShelleyGenesisCmdGenesisKeyGenError keyGenErr ->
       "Error generating the genesis keys: " <> renderShelleyKeyGenError keyGenErr
     ShelleyGenesisMismatchedGenesisKeyFiles gfiles dfiles vfiles ->
@@ -242,64 +224,83 @@ runGenesisKeyGenUTxO (VerificationKeyFile vkeyPath)
 
 
 runGenesisKeyHash :: VerificationKeyFile -> ExceptT ShelleyGenesisCmdError IO ()
-runGenesisKeyHash (VerificationKeyFile vkeyPath) =
-    firstExceptT ShelleyGenesisCmdReadVerKeyError $ do
-      (vkey, _role) <- readVerKeySomeRole genesisKeyRoles vkeyPath
-      let Ledger.KeyHash khash = Ledger.hashKey (vkey :: VerKeyGenesis)
-      liftIO $ BS.putStrLn $ Crypto.getHashBytesAsHex khash
+runGenesisKeyHash (VerificationKeyFile vkeyPath) = do
+    vkey <- firstExceptT ShelleyGenesisCmdReadVerKeyError . newExceptT $
+            readFileTextEnvelopeAnyOf
+              [ FromSomeType (AsVerificationKey AsGenesisKey)
+                             AGenesisKey
+              , FromSomeType (AsVerificationKey AsGenesisDelegateKey)
+                             AGenesisDelegateKey
+              , FromSomeType (AsVerificationKey AsGenesisUTxOKey)
+                             AGenesisUTxOKey
+              ]
+              vkeyPath
+    liftIO $ BS.putStrLn (renderKeyHash vkey)
+  where
+    renderKeyHash :: SomeGenesisKey VerificationKey -> ByteString
+    renderKeyHash (AGenesisKey         vk) = renderVerificationKeyHash vk
+    renderKeyHash (AGenesisDelegateKey vk) = renderVerificationKeyHash vk
+    renderKeyHash (AGenesisUTxOKey     vk) = renderVerificationKeyHash vk
+
+    renderVerificationKeyHash :: Key keyrole => VerificationKey keyrole -> ByteString
+    renderVerificationKeyHash = serialiseToRawBytesHex
+                              . verificationKeyHash
 
 
 runGenesisVerKey :: VerificationKeyFile -> SigningKeyFile
                  -> ExceptT ShelleyGenesisCmdError IO ()
-runGenesisVerKey (VerificationKeyFile vkeyPath) (SigningKeyFile skeyPath) =
-    firstExceptT ShelleyGenesisCmdReadSignKeyError $ do
-      (skey, role) <- readSigningKeySomeRole genesisKeyRoles skeyPath
-      let vkey :: VerKeyGenesis
-          vkey = deriveVerKey skey
-      writeVerKey role vkeyPath vkey
+runGenesisVerKey (VerificationKeyFile vkeyPath) (SigningKeyFile skeyPath) = do
+    skey <- firstExceptT ShelleyGenesisCmdReadVerKeyError . newExceptT $
+            readFileTextEnvelopeAnyOf
+              [ FromSomeType (AsSigningKey AsGenesisKey)
+                             AGenesisKey
+              , FromSomeType (AsSigningKey AsGenesisDelegateKey)
+                             AGenesisDelegateKey
+              , FromSomeType (AsSigningKey AsGenesisUTxOKey)
+                             AGenesisUTxOKey
+              ]
+              skeyPath
+
+    let vkey :: SomeGenesisKey VerificationKey
+        vkey = case skey of
+          AGenesisKey         sk -> AGenesisKey         (getVerificationKey sk)
+          AGenesisDelegateKey sk -> AGenesisDelegateKey (getVerificationKey sk)
+          AGenesisUTxOKey     sk -> AGenesisUTxOKey     (getVerificationKey sk)
+
+    firstExceptT ShelleyGenesisCmdWriteFileError . newExceptT . liftIO $
+      case vkey of
+        AGenesisKey         vk -> writeFileTextEnvelope vkeyPath Nothing vk
+        AGenesisDelegateKey vk -> writeFileTextEnvelope vkeyPath Nothing vk
+        AGenesisUTxOKey     vk -> writeFileTextEnvelope vkeyPath Nothing vk
+
+data SomeGenesisKey f
+     = AGenesisKey         (f GenesisKey)
+     | AGenesisDelegateKey (f GenesisDelegateKey)
+     | AGenesisUTxOKey     (f GenesisUTxOKey)
 
 
-genesisKeyRoles :: [KeyRole]
-genesisKeyRoles =
-  [ GenesisKey
-  , GenesisUTxOKey
-  , OperatorKey GenesisDelegateKey
-  ]
-
-
-runGenesisTxIn :: VerificationKeyFile -> Network -> Maybe OutputFile -> ExceptT ShelleyGenesisCmdError IO ()
+runGenesisTxIn :: VerificationKeyFile -> NetworkId -> Maybe OutputFile
+               -> ExceptT ShelleyGenesisCmdError IO ()
 runGenesisTxIn (VerificationKeyFile vkeyPath) network mOutFile = do
-      vkey <- firstExceptT ShelleyGenesisCmdReadGenesisUTxOVerKeyError $ readVerKey GenesisUTxOKey vkeyPath
-      case shelleyVerificationKeyAddress network (PaymentVerificationKeyShelley vkey) Nothing of
-        AddressShelley addr -> do let txin = renderTxIn
-                                           . fromShelleyTxIn
-                                           . Ledger.initialFundsPseudoTxIn
-                                           $ addr
-                                  case mOutFile of
-                                    Just (OutputFile fpath) -> liftIO . BS.writeFile fpath $ textToByteString txin
-                                    Nothing -> liftIO $ Text.putStrLn txin
-        AddressShelleyReward _rwdAcct -> left ShelleyGenesisCmdOnlyShelleyAddressesNotReward
-        AddressByron _addr -> left ShelleyGenesisCmdOnlyShelleyAddresses
-  where
-    fromShelleyTxIn :: Shelley.TxIn TPraosStandardCrypto -> TxIn
-    fromShelleyTxIn (Shelley.TxIn txid txix) =
-        TxIn (fromShelleyTxId txid) (fromIntegral txix)
-
-    fromShelleyTxId :: Shelley.TxId TPraosStandardCrypto -> TxId
-    fromShelleyTxId (Shelley.TxId (Crypto.UnsafeHash h)) =
-        TxId (Crypto.UnsafeHash h)
+    vkey <- firstExceptT ShelleyGenesisCmdReadGenesisUTxOVerKeyError . newExceptT $
+            readFileTextEnvelope (AsVerificationKey AsGenesisUTxOKey) vkeyPath
+    let txin = genesisUTxOPseudoTxIn network (verificationKeyHash vkey)
+    liftIO $ writeOutput mOutFile (renderTxIn txin)
 
 
-runGenesisAddr :: VerificationKeyFile -> Network -> Maybe OutputFile -> ExceptT ShelleyGenesisCmdError IO ()
-runGenesisAddr (VerificationKeyFile vkeyPath) network mOutFile =
-    firstExceptT ShelleyGenesisCmdReadGenesisUTxOVerKeyError $ do
-      vkey <- readVerKey GenesisUTxOKey vkeyPath
-      let addr = shelleyVerificationKeyAddress network
-                   (PaymentVerificationKeyShelley vkey) Nothing
-          hexAddr = addressToHex addr
-      case mOutFile of
-        Just (OutputFile fpath) -> liftIO . BS.writeFile fpath $ textToByteString hexAddr
-        Nothing -> liftIO $ Text.putStrLn hexAddr
+runGenesisAddr :: VerificationKeyFile -> NetworkId -> Maybe OutputFile
+               -> ExceptT ShelleyGenesisCmdError IO ()
+runGenesisAddr (VerificationKeyFile vkeyPath) network mOutFile = do
+    vkey <- firstExceptT ShelleyGenesisCmdReadGenesisUTxOVerKeyError . newExceptT $
+            readFileTextEnvelope (AsVerificationKey AsGenesisUTxOKey) vkeyPath
+    let vkh  = verificationKeyHash (castVerificationKey vkey)
+        addr = makeShelleyAddress network (PaymentCredentialByKey vkh)
+                                  NoStakeAddress
+    liftIO $ writeOutput mOutFile (serialiseAddress addr)
+
+writeOutput :: Maybe OutputFile -> Text -> IO ()
+writeOutput (Just (OutputFile fpath)) = Text.writeFile fpath
+writeOutput Nothing                   = Text.putStrLn
 
 
 --
@@ -311,7 +312,7 @@ runGenesisCreate :: GenesisDir
                  -> Word  -- ^ num utxo keys to make
                  -> Maybe SystemStart
                  -> Maybe Lovelace
-                 -> Network
+                 -> NetworkId
                  -> ExceptT ShelleyGenesisCmdError IO ()
 runGenesisCreate (GenesisDir rootdir)
                  genNumGenesisKeys genNumUTxOKeys
@@ -407,18 +408,11 @@ readShelleyGenesis fpath = do
       return defaults
 
 
--- Local type aliases
-type VerKeyGenesis         = Ledger.VKey Ledger.Genesis TPraosStandardCrypto
-type VerKeyGenesisDelegate = Ledger.VKey Ledger.GenesisDelegate TPraosStandardCrypto
-
-type KeyHashGenesis         = Ledger.KeyHash Ledger.Genesis TPraosStandardCrypto
-type KeyHashGenesisDelegate = Ledger.KeyHash Ledger.GenesisDelegate TPraosStandardCrypto
-
 updateTemplate
     :: SystemStart
     -> Maybe Lovelace
-    -> Map KeyHashGenesis (KeyHashGenesisDelegate, Hash VrfKey)
-    -> [ShelleyAddress]
+    -> Map (Hash GenesisKey) (Hash GenesisDelegateKey, Hash VrfKey)
+    -> [Address Shelley]
     -> ShelleyGenesis TPraosStandardCrypto
     -> ShelleyGenesis TPraosStandardCrypto
 updateTemplate (SystemStart start) mAmount delKeys utxoAddrs template =
@@ -426,41 +420,64 @@ updateTemplate (SystemStart start) mAmount delKeys utxoAddrs template =
       { sgSystemStart = start
       , sgMaxLovelaceSupply = fromIntegral totalCoin
       , sgGenDelegs = shelleyDelKeys
-      , sgInitialFunds = Map.fromList utxoList
+      , sgInitialFunds = Map.fromList
+                          [ (toShelleyAddr addr, toShelleyLovelace v)
+                          | (addr, v) <- utxoList ]
       }
   where
-    shelleyDelKeys = map (\(gd, VrfKeyHash h) -> Ledger.GenDelegPair gd h) delKeys
+    shelleyDelKeys =
+      Map.fromList
+        [ (gh, Ledger.GenDelegPair gdh h)
+        | (GenesisKeyHash gh,
+           (GenesisDelegateKeyHash gdh, VrfKeyHash h)) <- Map.toList delKeys
+        ]
 
     totalCoin :: Integer
-    totalCoin = maybe (fromIntegral (sgMaxLovelaceSupply template))
-                      unLoveLace mAmount
+    totalCoin = case mAmount of
+                  Nothing           -> fromIntegral (sgMaxLovelaceSupply template)
+                  Just (Lovelace x) -> x
 
     eachAddrCoin :: Integer
     eachAddrCoin = totalCoin `div` fromIntegral (length utxoAddrs)
 
-    utxoList :: [(ShelleyAddress, Coin)]
+    utxoList :: [(Address Shelley, Lovelace)]
     utxoList = fst $ List.foldl' folder ([], totalCoin) utxoAddrs
 
-    folder :: ([(ShelleyAddress, Coin)], Integer) -> ShelleyAddress -> ([(ShelleyAddress, Coin)], Integer)
+    folder :: ([(Address Shelley, Lovelace)], Integer)
+           -> Address Shelley
+           -> ([(Address Shelley, Lovelace)], Integer)
     folder (acc, rest) addr
-      | rest > eachAddrCoin + fromIntegral (length utxoAddrs) = ((addr, Coin eachAddrCoin) : acc, rest - eachAddrCoin)
-      | otherwise = ((addr, Coin rest) : acc, 0)
+      | rest > eachAddrCoin + fromIntegral (length utxoAddrs) =
+                    ((addr, Lovelace eachAddrCoin) : acc, rest - eachAddrCoin)
+      | otherwise = ((addr, Lovelace rest) : acc, 0)
 
 writeShelleyGenesis :: FilePath -> ShelleyGenesis TPraosStandardCrypto -> ExceptT ShelleyGenesisCmdError IO ()
 writeShelleyGenesis fpath sg =
   handleIOExceptT (ShelleyGenesisCmdWriteGenesisIOError fpath) $ LBS.writeFile fpath (encodePretty sg)
 
+toShelleyAddr :: Address Shelley -> Ledger.Addr TPraosStandardCrypto
+toShelleyAddr (ByronAddress addr)        = Ledger.AddrBootstrap
+                                             (Ledger.BootstrapAddress addr)
+toShelleyAddr (ShelleyAddress nw pc scr) = Ledger.Addr nw pc scr
+
+toShelleyLovelace :: Lovelace -> Ledger.Coin
+toShelleyLovelace (Lovelace l) = Ledger.Coin l
+
+
 -- -------------------------------------------------------------------------------------------------
 
 readGenDelegsMap :: FilePath -> FilePath
                  -> ExceptT ShelleyGenesisCmdError IO
-                           (Map KeyHashGenesis (KeyHashGenesisDelegate, Hash VrfKey))
+                            (Map (Hash GenesisKey)
+                                 (Hash GenesisDelegateKey, Hash VrfKey))
 readGenDelegsMap gendir deldir = do
     gkm <- readGenesisKeys gendir
     dkm <- readDelegateKeys deldir
     vkm <- readDelegateVrfKeys deldir
 
-    let combinedMap :: Map Int (VerKeyGenesis, (VerKeyGenesisDelegate, VerificationKey VrfKey))
+    let combinedMap :: Map Int (VerificationKey GenesisKey,
+                                (VerificationKey GenesisDelegateKey,
+                                 VerificationKey VrfKey))
         combinedMap =
           Map.intersectionWith (,)
             gkm
@@ -475,12 +492,13 @@ readGenDelegsMap gendir deldir = do
       throwError $ ShelleyGenesisMismatchedGenesisKeyFiles
                      (Map.keys gkm) (Map.keys dkm) (Map.keys vkm)
 
-    let delegsMap :: Map KeyHashGenesis (KeyHashGenesisDelegate, Hash VrfKey)
+    let delegsMap :: Map (Hash GenesisKey)
+                         (Hash GenesisDelegateKey, Hash VrfKey)
         delegsMap =
           Map.fromList [ (gh, (dh, vh))
                        | (g,(d,v)) <- Map.elems combinedMap
-                       , let gh = Ledger.hashKey g
-                             dh = Ledger.hashKey d
+                       , let gh = verificationKeyHash g
+                             dh = verificationKeyHash d
                              vh = verificationKeyHash v
                        ]
 
@@ -488,7 +506,7 @@ readGenDelegsMap gendir deldir = do
 
 
 readGenesisKeys :: FilePath -> ExceptT ShelleyGenesisCmdError IO
-                                       (Map Int VerKeyGenesis)
+                                       (Map Int (VerificationKey GenesisKey))
 readGenesisKeys gendir = do
   files <- liftIO (listDirectory gendir)
   fileIxs <- extractFileNameIndexes [ gendir </> file
@@ -497,12 +515,15 @@ readGenesisKeys gendir = do
   firstExceptT ShelleyGenesisCmdReadIndexedVerKeyError $
     Map.fromList <$>
       sequence
-        [ (,) ix <$>  readVerKey GenesisKey file
+        [ (,) ix <$> readKeyFile file
         | (file, ix) <- fileIxs ]
+  where
+    readKeyFile = newExceptT
+                . readFileTextEnvelope (AsVerificationKey AsGenesisKey)
 
-
-readDelegateKeys :: FilePath -> ExceptT ShelleyGenesisCmdError IO
-                                        (Map Int VerKeyGenesisDelegate)
+readDelegateKeys :: FilePath
+                 -> ExceptT ShelleyGenesisCmdError IO
+                            (Map Int (VerificationKey GenesisDelegateKey))
 readDelegateKeys deldir = do
   files <- liftIO (listDirectory deldir)
   fileIxs <- extractFileNameIndexes [ deldir </> file
@@ -511,8 +532,11 @@ readDelegateKeys deldir = do
   firstExceptT ShelleyGenesisCmdReadIndexedVerKeyError $
     Map.fromList <$>
       sequence
-        [ (,) ix <$> readVerKey (OperatorKey GenesisDelegateKey) file
+        [ (,) ix <$> readKeyFile file
         | (file, ix) <- fileIxs ]
+  where
+    readKeyFile = newExceptT
+                . readFileTextEnvelope (AsVerificationKey AsGenesisDelegateKey)
 
 readDelegateVrfKeys :: FilePath -> ExceptT ShelleyGenesisCmdError IO
                                            (Map Int (VerificationKey VrfKey))
@@ -524,8 +548,11 @@ readDelegateVrfKeys deldir = do
   firstExceptT ShelleyGenesisCmdReadIndexedVrfKeyError $
     Map.fromList <$>
       sequence
-        [ (,) ix <$> newExceptT (readFileTextEnvelope (AsVerificationKey AsVrfKey) file)
+        [ (,) ix <$> readKeyFile file
         | (file, ix) <- fileIxs ]
+  where
+    readKeyFile = newExceptT
+                . readFileTextEnvelope (AsVerificationKey AsVrfKey)
 
 
 -- | The file path is of the form @"delegate-keys/delegate3.vkey"@.
@@ -554,19 +581,19 @@ extractFileNameIndexes files = do
   where
     filesIxs = [ (file, extractFileNameIndex file) | file <- files ]
 
-readInitialFundAddresses :: FilePath -> Network -> ExceptT ShelleyGenesisCmdError IO [ShelleyAddress]
+readInitialFundAddresses :: FilePath -> NetworkId
+                         -> ExceptT ShelleyGenesisCmdError IO [Address Shelley]
 readInitialFundAddresses utxodir nw = do
     files <- liftIO (listDirectory utxodir)
     vkeys <- firstExceptT ShelleyGenesisCmdGenesisUTxOKeyError $
                sequence
-                 [ readVerKey GenesisUTxOKey (utxodir </> file)
+                 [ newExceptT $
+                     readFileTextEnvelope (AsVerificationKey AsGenesisUTxOKey)
+                                          (utxodir </> file)
                  | file <- files
                  , takeExtension file == ".vkey" ]
     return [ addr | vkey <- vkeys
-           , addr <- case shelleyVerificationKeyAddress nw (PaymentVerificationKeyShelley vkey) Nothing of
-                       AddressShelley addr' -> return addr'
-                       _ -> panic "Please supply only shelley verification keys"
+           , let vkh  = verificationKeyHash (castVerificationKey vkey)
+                 addr = makeShelleyAddress nw (PaymentCredentialByKey vkh)
+                                           NoStakeAddress
            ]
-    --TODO: need to support testnets, not just Mainnet
-    --TODO: need less insane version of shelleyVerificationKeyAddress with
-    -- shelley-specific types

@@ -87,7 +87,7 @@ module Cardano.Api.Typed (
     getTxId,
     TxIn(..),
     TxOut(..),
-    TxIx,
+    TxIx(..),
     Lovelace(..),
     makeByronTransaction,
     makeShelleyTransaction,
@@ -263,6 +263,7 @@ module Cardano.Api.Typed (
     GenesisKey,
     GenesisDelegateKey,
     GenesisUTxOKey,
+    genesisUTxOPseudoTxIn,
 
     -- * Special transactions
     -- | There are various additional things that can be embedded in a
@@ -398,6 +399,7 @@ import qualified Shelley.Spec.Ledger.BaseTypes               as Shelley
 import           Shelley.Spec.Ledger.BaseTypes (maybeToStrictMaybe)
 import qualified Shelley.Spec.Ledger.Coin                    as Shelley
 import qualified Shelley.Spec.Ledger.Credential              as Shelley
+import qualified Shelley.Spec.Ledger.Genesis                 as Shelley
 import qualified Shelley.Spec.Ledger.LedgerState             as Shelley
 import qualified Shelley.Spec.Ledger.Keys                    as Shelley
 import qualified Shelley.Spec.Ledger.MetaData                as Shelley
@@ -2984,6 +2986,41 @@ instance HasTextEnvelope (SigningKey GenesisUTxOKey) where
     -- TODO: include the actual crypto algorithm name, to catch changes
     -- TODO: use a different type from the stake pool key, since some operations
     -- need a genesis key specifically
+
+instance CastKeyRole GenesisUTxOKey PaymentKey where
+    castVerificationKey (GenesisUTxOVerificationKey (Shelley.VKey vkey)) =
+      PaymentVerificationKey (Shelley.VKey vkey)
+
+    castSigningKey (GenesisUTxOSigningKey skey) =
+      PaymentSigningKey skey
+
+-- | Compute the 'TxIn' of the initial UTxO pseudo-transaction corresponding
+-- to the given address in the genesis initial funds.
+--
+-- The Shelley initial UTxO is constructed from the 'sgInitialFunds' which
+-- is not a full UTxO but just a map from addresses to coin values.
+--
+-- This gets turned into a UTxO by making a pseudo-transaction for each address,
+-- with the 0th output being the coin value. So to spend from the initial UTxO
+-- we need this same 'TxIn' to use as an input to the spending transaction.
+--
+genesisUTxOPseudoTxIn :: NetworkId -> Hash GenesisUTxOKey -> TxIn
+genesisUTxOPseudoTxIn nw (GenesisUTxOKeyHash kh) =
+    --TODO: should handle Byron UTxO case too.
+    fromShelleyTxIn (Shelley.initialFundsPseudoTxIn addr)
+  where
+    addr = Shelley.Addr
+             (toShelleyNetwork nw)
+             (Shelley.KeyHashObj kh)
+             Shelley.StakeRefNull
+
+    fromShelleyTxIn  :: Shelley.TxIn ShelleyCrypto -> TxIn
+    fromShelleyTxIn (Shelley.TxIn txid txix) =
+        TxIn (fromShelleyTxId txid) (TxIx (fromIntegral txix))
+
+    fromShelleyTxId :: Shelley.TxId ShelleyCrypto -> TxId
+    fromShelleyTxId (Shelley.TxId h) =
+        TxId (Crypto.castHash h)
 
 
 --
