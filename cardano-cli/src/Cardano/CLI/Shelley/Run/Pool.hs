@@ -16,16 +16,8 @@ import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT
 
 import qualified Data.ByteString.Char8 as BS
 
-import           Cardano.Api (StakePoolMetadataValidationError, Network(..),
-                   decodeAndValidateStakePoolMetadata, renderStakePoolMetadataValidationError)
+import           Cardano.Api.Typed
 import           Cardano.Api.TextView (TextViewTitle (..), textShow)
-import           Cardano.Api.Typed (AsType (..), Error (..), FileError (..), Key (..),
-                   Lovelace, StakeCredential (..), StakePoolMetadataReference (..),
-                   StakePoolParameters (..), StakePoolRelay (..), TextEnvelopeError,
-                   makeStakeAddress, makeStakePoolRegistrationCertificate,
-                   makeStakePoolRetirementCertificate, readFileTextEnvelope, serialiseToRawBytesHex,
-                   writeFileTextEnvelope)
-import qualified Cardano.Api.Typed as Api (NetworkId (..))
 
 import qualified Shelley.Spec.Ledger.Slot as Shelley
 
@@ -33,8 +25,6 @@ import           Cardano.Config.Types (PoolMetaDataFile (..))
 
 import           Cardano.CLI.Shelley.Commands
 
-import qualified Cardano.Crypto.Hash.Blake2b as Crypto
-import qualified Cardano.Crypto.Hash.Class as Crypto
 
 data ShelleyPoolCmdError
   = ShelleyPoolReadFileError !(FileError TextEnvelopeError)
@@ -51,7 +41,7 @@ renderShelleyPoolCmdError err =
     ShelleyPoolWriteMetaDataHashError fp ioException ->
       "Error writing stake pool metadata hash at: " <> textShow fp <> " Error: " <> textShow ioException
     ShelleyPoolMetaDataValidationError validationErr ->
-      "Error validating stake pool metadata: " <> renderStakePoolMetadataValidationError validationErr
+      "Error validating stake pool metadata: " <> Text.pack (displayError validationErr)
 
 
 
@@ -91,7 +81,7 @@ runStakePoolRegistrationCert
   -- ^ Stake pool relays.
   -> (Maybe StakePoolMetadataReference)
   -- ^ Stake pool metadata.
-  -> Network
+  -> NetworkId
   -> OutputFile
   -> ExceptT ShelleyPoolCmdError IO ()
 runStakePoolRegistrationCert
@@ -123,7 +113,7 @@ runStakePoolRegistrationCert
       . newExceptT
       $ readFileTextEnvelope (AsVerificationKey AsStakeKey) rwdVerFp
     let stakeCred = StakeCredentialByKey (verificationKeyHash stakeVerKey)
-        rewardAccountAddr = makeStakeAddress nwId stakeCred
+        rewardAccountAddr = makeStakeAddress network stakeCred
 
     -- Pool owner(s)
     sPoolOwnerVkeys <-
@@ -158,14 +148,6 @@ runStakePoolRegistrationCert
     registrationCertDesc :: TextViewTitle
     registrationCertDesc = TextViewTitle "Stake Pool Registration Certificate"
 
-    -- TODO: Remove this once we remove usage of 'Cardano.Api.Types.Network'
-    --       from this module.
-    nwId :: Api.NetworkId
-    nwId =
-      case network of
-        Mainnet -> Api.Mainnet
-        Testnet nm -> Api.Testnet nm
-
 runStakePoolRetirementCert
   :: VerificationKeyFile
   -> Shelley.EpochNo
@@ -198,13 +180,12 @@ runPoolMetaDataHash :: PoolMetaDataFile -> Maybe OutputFile -> ExceptT ShelleyPo
 runPoolMetaDataHash (PoolMetaDataFile poolMDPath) mOutFile = do
   metaDataBytes <- handleIOExceptT (ShelleyPoolReadFileError . FileIOError poolMDPath) $
     BS.readFile poolMDPath
-  _ <- firstExceptT ShelleyPoolMetaDataValidationError
+  (_metaData, metaDataHash) <-
+      firstExceptT ShelleyPoolMetaDataValidationError
     . hoistEither
-    $ decodeAndValidateStakePoolMetadata metaDataBytes
-  let metaDataHash :: Crypto.Hash Crypto.Blake2b_256 ByteString
-      metaDataHash = Crypto.hashRaw (\x -> x) metaDataBytes
+    $ validateAndHashStakePoolMetadata metaDataBytes
   case mOutFile of
-    Nothing -> liftIO $ BS.putStrLn (Crypto.getHashBytesAsHex metaDataHash)
+    Nothing -> liftIO $ BS.putStrLn (serialiseToRawBytesHex metaDataHash)
     Just (OutputFile fpath) ->
       handleIOExceptT (ShelleyPoolWriteMetaDataHashError fpath)
-        $ BS.writeFile fpath (Crypto.getHashBytesAsHex metaDataHash)
+        $ BS.writeFile fpath (serialiseToRawBytesHex metaDataHash)

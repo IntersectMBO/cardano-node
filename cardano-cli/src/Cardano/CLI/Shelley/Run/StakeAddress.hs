@@ -12,17 +12,8 @@ import qualified Data.Text.IO as Text
 import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, hoistEither, newExceptT)
 
-import           Cardano.Api (ApiError, Network (..), renderApiError)
-import           Cardano.Api.TextView (TextViewTitle (..), textShow)
-import qualified Cardano.Api.Typed as Api (NetworkId (..))
-import           Cardano.Api.Typed (AsType (..), Error (..), FileError,
-                   Key (..), StakeCredential (..), TextEnvelopeError,
-                   generateSigningKey, getVerificationKey, makeStakeAddress,
-                   makeStakeAddressDelegationCertificate,
-                   makeStakeAddressDeregistrationCertificate,
-                   makeStakeAddressRegistrationCertificate,
-                   readFileTextEnvelope, serialiseAddress,
-                   writeFileTextEnvelope)
+import           Cardano.Api.TextView (TextViewTitle (..))
+import           Cardano.Api.Typed
 
 import           Cardano.CLI.Helpers
 import           Cardano.CLI.Shelley.Parsers
@@ -34,8 +25,6 @@ data ShelleyStakeAddressCmdError
       -- ^ bech32 private key
       !Text
       -- ^ bech32 public key
-  | ShelleyStakeAddressWriteSignKeyError !FilePath !ApiError
-  | ShelleyStakeAddressWriteVerKeyError !FilePath !ApiError
   | ShelleyStakeAddressReadFileError !(FileError TextEnvelopeError)
   | ShelleyStakeAddressWriteFileError !(FileError ())
   deriving Show
@@ -44,10 +33,6 @@ renderShelleyStakeAddressCmdError :: ShelleyStakeAddressCmdError -> Text
 renderShelleyStakeAddressCmdError err =
   case err of
     ShelleyStakeAddressConvError convErr -> renderConversionError convErr
-    ShelleyStakeAddressWriteSignKeyError fp apiErr ->
-      "Error while writing signing stake key at: " <> textShow fp <> " Error: " <> renderApiError apiErr
-    ShelleyStakeAddressWriteVerKeyError fp apiErr ->
-      "Error while writing verification stake key at: " <> textShow fp <> " Error: " <> renderApiError apiErr
     ShelleyStakeAddressKeyPairError bech32PrivKey bech32PubKey ->
       "Error while deriving the shelley verification key from bech32 private Key: " <> bech32PrivKey <>
       " Corresponding bech32 public key: " <> bech32PubKey
@@ -87,7 +72,7 @@ runStakeAddressKeyGen (VerificationKeyFile vkFp) (SigningKeyFile skFp) = do
     skeyDesc = TextViewTitle "Stake Signing Key"
     vkeyDesc = TextViewTitle "Stake Verification Key"
 
-runStakeAddressBuild :: VerificationKeyFile -> Network -> Maybe OutputFile
+runStakeAddressBuild :: VerificationKeyFile -> NetworkId -> Maybe OutputFile
                      -> ExceptT ShelleyStakeAddressCmdError IO ()
 runStakeAddressBuild (VerificationKeyFile stkVkeyFp) network mOutputFp = do
     stakeVerKey <- firstExceptT ShelleyStakeAddressReadFileError
@@ -95,20 +80,12 @@ runStakeAddressBuild (VerificationKeyFile stkVkeyFp) network mOutputFp = do
       $ readFileTextEnvelope (AsVerificationKey AsStakeKey) stkVkeyFp
 
     let stakeCred = StakeCredentialByKey (verificationKeyHash stakeVerKey)
-        stakeAddr = makeStakeAddress nwId stakeCred
+        stakeAddr = makeStakeAddress network stakeCred
         stakeAddrText = serialiseAddress stakeAddr
 
     case mOutputFp of
       Just (OutputFile fpath) -> liftIO $ Text.writeFile fpath stakeAddrText
       Nothing -> liftIO $ Text.putStrLn stakeAddrText
-  where
-    -- TODO: Remove this once we remove usage of 'Cardano.Api.Types.Network'
-    --       from this module.
-    nwId :: Api.NetworkId
-    nwId =
-      case network of
-        Mainnet -> Api.Mainnet
-        Testnet nm -> Api.Testnet nm
 
 
 runStakeKeyRegistrationCert :: VerificationKeyFile -> OutputFile -> ExceptT ShelleyStakeAddressCmdError IO ()
@@ -143,8 +120,9 @@ runStakeKeyDelegationCert (VerificationKeyFile stkKey) (VerificationKeyFile pool
       $ readFileTextEnvelope (AsVerificationKey AsStakePoolKey) poolVKey
 
     let stakeCred = StakeCredentialByKey (verificationKeyHash stakeVkey)
-        stakePoolId = verificationKeyHash poolStakeVkey
-        delegCert = makeStakeAddressDelegationCertificate stakeCred stakePoolId
+        delegCert = makeStakeAddressDelegationCertificate
+                      stakeCred
+                      (verificationKeyHash poolStakeVkey)
     firstExceptT ShelleyStakeAddressWriteFileError
       . newExceptT
       $ writeFileTextEnvelope outFp (Just delegCertDesc) delegCert

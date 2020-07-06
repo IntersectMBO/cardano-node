@@ -30,17 +30,13 @@ module Test.Cardano.Api.Gen
   , genVRFKeyPair
   , genSeed
   -- to remove
-  , genKeyRole
-  , genKESKeyPair
   , genTextView
   ) where
 
 
 import           Cardano.Api
-import           Cardano.Api.Shelley.ColdKeys (KeyRole (..), OperatorKeyRole (..)) -- to remove
 import           Cardano.Api.TextView -- to remove
 import           Cardano.Crypto.DSIGN.Class
-import           Cardano.Crypto.KES.Class
 import           Cardano.Binary (serialize)
 import qualified Cardano.Crypto as Byron
 import           Cardano.Crypto.VRF.Class (deriveVerKeyVRF, genKeyVRF, seedSizeVRF)
@@ -467,25 +463,6 @@ genSeed n = Crypto.mkSeedFromBytes <$> Gen.bytes (Range.singleton n)
 
 -- -------------------------------------------------------------------------------------------------
 -- To remove
-
-genKeyRole :: Gen KeyRole
-genKeyRole =
-  Gen.element
-    [ GenesisKey
-    , GenesisUTxOKey
-    , OperatorKey GenesisDelegateKey
-    , OperatorKey StakePoolOperatorKey
-    ]
-
-genKESKeyPair :: forall k. KESAlgorithm k => Gen (VerKeyKES k, SignKeyKES k)
-genKESKeyPair = do
-    seed <- genSeed seedSize
-    let sk = genKeyKES seed
-        vk = deriveVerKeyKES sk
-    pure (vk, sk)
-  where
-    seedSize :: Int
-    seedSize = fromIntegral (seedSizeKES (Proxy :: Proxy k))
 
 genTextView :: Gen TextView
 genTextView =

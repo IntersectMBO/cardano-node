@@ -30,14 +30,15 @@ import qualified Data.Attoparsec.ByteString.Char8 as Atto
 import           Network.Socket (PortNumber)
 import           Network.URI (URI, parseURI)
 
+import           Cardano.Slotting.Slot (SlotNo(..))
+
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
 import qualified Shelley.Spec.Ledger.BaseTypes as Shelley
 import qualified Shelley.Spec.Ledger.TxData as Shelley
 
-import           Cardano.Api hiding (StakePoolMetadata, parseTxIn, renderTxIn, parseTxOut, parseWithdrawal)
-import           Cardano.Api.Typed (AsType (..), StakePoolMetadata,
-                   StakePoolMetadataReference (..), StakePoolRelay (..), KESPeriod(..))
-import qualified Cardano.Api.Typed as Typed
+import qualified Cardano.Api as OldApi
+import           Cardano.Api.Typed hiding (PoolId)
+
 import           Cardano.Slotting.Slot (EpochNo (..))
 
 import           Cardano.Config.Types (CertificateFile (..), MetaDataFile(..), SigningKeyFile(..),
@@ -46,7 +47,8 @@ import           Cardano.Config.Parsers (parseNodeAddress)
 
 import           Cardano.CLI.Shelley.Commands
 
-import           Cardano.Crypto.Hash (Blake2b_256, Hash (..), hashFromBytesAsHex)
+import qualified Cardano.Crypto.Hash as Crypto
+                   (Blake2b_256, Hash (..), hashFromBytesAsHex)
 
 --
 -- Shelley CLI command parsers
@@ -142,7 +144,7 @@ pAddressCmd =
       AddressBuild
         <$> pPaymentVerificationKeyFile
         <*> Opt.optional pStakeVerificationKeyFile
-        <*> pNetwork
+        <*> pNetworkId
         <*> pMaybeOutputFile
 
 
@@ -201,7 +203,7 @@ pStakeAddress =
 
     pStakeAddressBuild :: Parser StakeAddressCmd
     pStakeAddressBuild = StakeAddressBuild <$> pStakeVerificationKeyFile
-                                           <*> pNetwork
+                                           <*> pNetworkId
                                            <*> pMaybeOutputFile
 
     pStakeAddressRegister :: Parser StakeAddressCmd
@@ -533,7 +535,7 @@ pGovernanceCmd =
               <> Opt.internal
               )
 
-pRewardAmt :: Parser Typed.Lovelace
+pRewardAmt :: Parser Lovelace
 pRewardAmt =
     Opt.option (readerFromAttoParser parseLovelace)
       (  Opt.long "reward"
@@ -669,10 +671,10 @@ pGenesisCmd =
     convertTime =
       parseTimeOrError False defaultTimeLocale (iso8601DateFormat $ Just "%H:%M:%SZ")
 
-    pInitialSupply :: Parser (Maybe Typed.Lovelace)
+    pInitialSupply :: Parser (Maybe Lovelace)
     pInitialSupply =
       Opt.optional $
-      Typed.Lovelace <$>
+      Lovelace <$>
         Opt.option Opt.auto
           (  Opt.long "supply"
           <> Opt.metavar "LOVELACE"
@@ -737,7 +739,7 @@ pMetaDataFile =
       <> Opt.completer (Opt.bashCompleter "file")
       )
 
-pWithdrawal :: Parser (Typed.StakeAddress, Typed.Lovelace)
+pWithdrawal :: Parser (StakeAddress, Lovelace)
 pWithdrawal =
     Opt.option (readerFromAttoParser parseWithdrawal)
       (  Opt.long "withdrawal"
@@ -747,7 +749,7 @@ pWithdrawal =
                   \followed by the amount in Lovelace."
       )
   where
-    parseWithdrawal :: Atto.Parser (Typed.StakeAddress, Typed.Lovelace)
+    parseWithdrawal :: Atto.Parser (StakeAddress, Lovelace)
     parseWithdrawal =
       (,) <$> parseStakeAddress <* Atto.char '+' <*> parseLovelace
 
@@ -990,24 +992,24 @@ pITNVerificationKeyFile =
       <> Opt.completer (Opt.bashCompleter "file")
       )
 
-pNetwork :: Parser Network
+pNetwork :: Parser OldApi.Network
 pNetwork =
-  pMainnet <|> fmap Testnet pTestnetMagic
+  pMainnet <|> fmap OldApi.Testnet pTestnetMagic
 
-pNetworkId :: Parser Typed.NetworkId
+pNetworkId :: Parser NetworkId
 pNetworkId =
-  pMainnet' <|> fmap Typed.Testnet pTestnetMagic
+  pMainnet' <|> fmap Testnet pTestnetMagic
  where
-   pMainnet' :: Parser Typed.NetworkId
+   pMainnet' :: Parser NetworkId
    pMainnet' =
-    Opt.flag' Typed.Mainnet
+    Opt.flag' Mainnet
       (  Opt.long "mainnet"
       <> Opt.help "Use the mainnet magic id."
       )
 
-pMainnet :: Parser Network
+pMainnet :: Parser OldApi.Network
 pMainnet =
-  Opt.flag' Mainnet
+  Opt.flag' OldApi.Mainnet
     (  Opt.long "mainnet"
     <> Opt.help "Use the mainnet magic id."
     )
@@ -1030,7 +1032,7 @@ pTxSubmitFile =
     <> Opt.completer (Opt.bashCompleter "file")
     )
 
-pTxIn :: Parser Typed.TxIn
+pTxIn :: Parser TxIn
 pTxIn =
   Opt.option (readerFromAttoParser parseTxIn)
     (  Opt.long "tx-in"
@@ -1038,29 +1040,29 @@ pTxIn =
     <> Opt.help "The input transaction as TxId#TxIx where TxId is the transaction hash and TxIx is the index."
     )
 
-parseTxIn :: Atto.Parser Typed.TxIn
-parseTxIn = Typed.TxIn <$> parseTxId <*> (Atto.char '#' *> parseTxIx)
+parseTxIn :: Atto.Parser TxIn
+parseTxIn = TxIn <$> parseTxId <*> (Atto.char '#' *> parseTxIx)
 
-renderTxIn :: Typed.TxIn -> Text
-renderTxIn (Typed.TxIn txid (Typed.TxIx txix)) =
+renderTxIn :: TxIn -> Text
+renderTxIn (TxIn txid (TxIx txix)) =
   mconcat
-    [ Text.decodeUtf8 (Typed.serialiseToRawBytesHex txid)
+    [ Text.decodeUtf8 (serialiseToRawBytesHex txid)
     , "#"
     , Text.pack (show txix)
     ]
 
-parseTxId :: Atto.Parser Typed.TxId
+parseTxId :: Atto.Parser TxId
 parseTxId = do
   bstr <- Atto.takeWhile1 Char.isHexDigit
-  case Typed.deserialiseFromRawBytesHex Typed.AsTxId bstr of
+  case deserialiseFromRawBytesHex AsTxId bstr of
     Just addr -> return addr
     Nothing -> fail $ "Incorrect transaction id format:: " ++ show bstr
 
-parseTxIx :: Atto.Parser Typed.TxIx
+parseTxIx :: Atto.Parser TxIx
 parseTxIx = toEnum <$> Atto.decimal
 
 
-pTxOut :: Parser (Typed.TxOut Typed.Shelley)
+pTxOut :: Parser (TxOut Shelley)
 pTxOut =
   Opt.option (readerFromAttoParser parseTxOut)
     (  Opt.long "tx-out"
@@ -1070,9 +1072,9 @@ pTxOut =
                 \Lovelace."
     )
   where
-    parseTxOut :: Atto.Parser (Typed.TxOut Typed.Shelley)
+    parseTxOut :: Atto.Parser (TxOut Shelley)
     parseTxOut =
-      Typed.TxOut <$> parseAddress <* Atto.char '+' <*> parseLovelace
+      TxOut <$> parseAddress <* Atto.char '+' <*> parseLovelace
 
 pTxTTL :: Parser SlotNo
 pTxTTL =
@@ -1083,9 +1085,9 @@ pTxTTL =
       <> Opt.help "Time to live (in slots)."
       )
 
-pTxFee :: Parser Typed.Lovelace
+pTxFee :: Parser Lovelace
 pTxFee =
-  Typed.Lovelace . (fromIntegral :: Natural -> Integer) <$>
+  Lovelace . (fromIntegral :: Natural -> Integer) <$>
     Opt.option Opt.auto
       (  Opt.long "fee"
       <> Opt.metavar "LOVELACE"
@@ -1171,15 +1173,16 @@ pTxByronWinessCount =
       <> Opt.help "The number of Byron key witnesses."
       )
 
-pQueryFilter :: Parser QueryFilter
-pQueryFilter = pAddresses <|> pure NoFilter
+pQueryFilter :: Parser OldApi.QueryFilter
+pQueryFilter = pAddresses <|> pure OldApi.NoFilter
   where
-    pAddresses :: Parser QueryFilter
-    pAddresses = FilterByAddress . Set.fromList <$> some pFilterByHexEncodedAddress
+    pAddresses :: Parser OldApi.QueryFilter
+    pAddresses = OldApi.FilterByAddress . Set.fromList <$>
+                   some pFilterByHexEncodedAddress
 
-pFilterByHexEncodedAddress :: Parser Address
+pFilterByHexEncodedAddress :: Parser OldApi.Address
 pFilterByHexEncodedAddress =
-  Opt.option (Opt.eitherReader (first show . addressFromHex . Text.pack))
+  Opt.option (Opt.eitherReader (first show . OldApi.addressFromHex . Text.pack))
     (  Opt.long "address"
     <> Opt.metavar "ADDRESS"
     <> Opt.help "Filter by Cardano address(es) (hex-encoded)."
@@ -1272,7 +1275,7 @@ pPoolOwner =
     )
 
 
-pPoolPledge :: Parser Typed.Lovelace
+pPoolPledge :: Parser Lovelace
 pPoolPledge =
     Opt.option (readerFromAttoParser parseLovelace)
       (  Opt.long "pool-pledge"
@@ -1281,7 +1284,7 @@ pPoolPledge =
       )
 
 
-pPoolCost :: Parser Typed.Lovelace
+pPoolCost :: Parser Lovelace
 pPoolCost =
     Opt.option (readerFromAttoParser parseLovelace)
       (  Opt.long "pool-cost"
@@ -1389,7 +1392,7 @@ pStakePoolMetadataUrl =
     <> Opt.help "Pool metadata URL (maximum length of 64 characters)."
     )
 
-pStakePoolMetadataHash :: Parser (Typed.Hash StakePoolMetadata)
+pStakePoolMetadataHash :: Parser (Hash StakePoolMetadata)
 pStakePoolMetadataHash =
     Opt.option
       (Opt.maybeReader metadataHash)
@@ -1398,11 +1401,11 @@ pStakePoolMetadataHash =
         <> Opt.help "Pool metadata hash."
         )
   where
-    getHashFromHexString :: String -> Maybe (Hash Blake2b_256 ByteString)
-    getHashFromHexString = hashFromBytesAsHex . BSC.pack
+    getHashFromHexString :: String -> Maybe (Crypto.Hash Crypto.Blake2b_256 ByteString)
+    getHashFromHexString = Crypto.hashFromBytesAsHex . BSC.pack
 
-    metadataHash :: String -> Maybe (Typed.Hash StakePoolMetadata)
-    metadataHash str = Typed.StakePoolMetadataHash <$> getHashFromHexString str
+    metadataHash :: String -> Maybe (Hash StakePoolMetadata)
+    metadataHash str = StakePoolMetadataHash <$> getHashFromHexString str
 
 pStakePoolRegistrationCert :: Parser PoolCmd
 pStakePoolRegistrationCert =
@@ -1416,7 +1419,7 @@ pStakePoolRegistrationCert =
   <*> some pPoolOwner
   <*> many pPoolRelay
   <*> pStakePoolMetadataReference
-  <*> pNetwork
+  <*> pNetworkId
   <*> pOutputFile
 
 pStakePoolRetirementCert :: Parser PoolCmd
@@ -1427,9 +1430,9 @@ pStakePoolRetirementCert =
     <*> pOutputFile
 
 
-pShelleyProtocolParametersUpdate :: Parser Typed.ProtocolParametersUpdate
+pShelleyProtocolParametersUpdate :: Parser ProtocolParametersUpdate
 pShelleyProtocolParametersUpdate =
-  Typed.ProtocolParametersUpdate
+  ProtocolParametersUpdate
     <$> optional pProtocolVersion
     <*> optional pDecentralParam
     <*> optional pExtraEntropy
@@ -1464,7 +1467,7 @@ pMinFeeConstantFactor =
       <> Opt.help "The constant factor for the minimum fee calculation."
       )
 
-pMinUTxOValue :: Parser Typed.Lovelace
+pMinUTxOValue :: Parser Lovelace
 pMinUTxOValue =
     Opt.option (readerFromAttoParser parseLovelace)
       (  Opt.long "min-utxo-value"
@@ -1472,7 +1475,7 @@ pMinUTxOValue =
       <> Opt.help "The minimum allowed UTxO value."
       )
 
-pMinPoolCost :: Parser Typed.Lovelace
+pMinPoolCost :: Parser Lovelace
 pMinPoolCost =
     Opt.option (readerFromAttoParser parseLovelace)
       (  Opt.long "min-pool-cost"
@@ -1504,7 +1507,7 @@ pMaxBlockHeaderSize =
       <> Opt.help "Maximum block header size."
       )
 
-pKeyRegistDeposit :: Parser Typed.Lovelace
+pKeyRegistDeposit :: Parser Lovelace
 pKeyRegistDeposit =
     Opt.option (readerFromAttoParser parseLovelace)
       (  Opt.long "key-reg-deposit-amt"
@@ -1512,7 +1515,7 @@ pKeyRegistDeposit =
       <> Opt.help "Key registration deposit amount."
       )
 
-pPoolDeposit :: Parser Typed.Lovelace
+pPoolDeposit :: Parser Lovelace
 pPoolDeposit =
     Opt.option (readerFromAttoParser parseLovelace)
       (  Opt.long "pool-reg-deposit"
@@ -1608,20 +1611,20 @@ pProtocolVersion =
 -- Shelley CLI flag field parsers
 --
 
-parseLovelace :: Atto.Parser Typed.Lovelace
-parseLovelace = Typed.Lovelace <$> Atto.decimal
+parseLovelace :: Atto.Parser Lovelace
+parseLovelace = Lovelace <$> Atto.decimal
 
-parseAddress :: Atto.Parser (Typed.Address Typed.Shelley)
+parseAddress :: Atto.Parser (Address Shelley)
 parseAddress = do
     str <- lexPlausibleAddressString
-    case Typed.deserialiseAddress AsShelleyAddress str of
+    case deserialiseAddress AsShelleyAddress str of
       Nothing   -> fail "invalid address"
       Just addr -> pure addr
 
-parseStakeAddress :: Atto.Parser Typed.StakeAddress
+parseStakeAddress :: Atto.Parser StakeAddress
 parseStakeAddress = do
     str <- lexPlausibleAddressString
-    case Typed.deserialiseAddress AsStakeAddress str of
+    case deserialiseAddress AsStakeAddress str of
       Nothing   -> fail "invalid address"
       Just addr -> pure addr
 

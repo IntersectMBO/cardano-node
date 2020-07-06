@@ -5,21 +5,13 @@
 
 module Cardano.Api.Shelley.Genesis
   ( ShelleyGenesis(..)
-  , ShelleyGenesisError(..)
-  , renderShelleyGenesisError
   , shelleyGenesisDefaults
-  , shelleyGenesisToJSON
-  , shelleyGenesisFromJSON
   ) where
 
 import           Cardano.Prelude
 
-import qualified Data.Text as Text
 import qualified Data.Map.Strict as Map
 import qualified Data.Time as Time
-
-import           Data.Aeson (Value, ToJSON(..), toJSON, FromJSON(..))
-import           Data.Aeson.Types (Parser)
 
 import           Cardano.Config.Shelley.Orphans ()
 import           Cardano.Crypto.ProtocolMagic (ProtocolMagicId(..))
@@ -27,26 +19,10 @@ import           Cardano.Slotting.Slot (EpochSize (..))
 
 import           Ouroboros.Consensus.Shelley.Node (ShelleyGenesis (..),
                    emptyGenesisStaking)
-import           Ouroboros.Consensus.Shelley.Protocol (TPraosStandardCrypto)
 
 import           Shelley.Spec.Ledger.BaseTypes as Ledger
 import           Shelley.Spec.Ledger.PParams as Ledger (PParams' (..), emptyPParams)
 
-data ShelleyGenesisError
-  = MissingGenesisKey !Text
-  | MissingDelegateKey !Text
-  | MissingGenesisAndDelegationKey !Text !Text
-  | MultipleMissingKeys ![ShelleyGenesisError]
-  deriving Eq
-
-renderShelleyGenesisError :: ShelleyGenesisError -> Text
-renderShelleyGenesisError err =
-  case err of
-    MissingGenesisKey missingGenKey -> "Missing genesis key with basename: " <> missingGenKey
-    MissingDelegateKey missingDelegKey -> "Missing delegate key with basename: " <> missingDelegKey
-    MissingGenesisAndDelegationKey mGenKey mDelegKey -> "Missing genesis key with basename: " <> mGenKey
-                                                        <> " Missing delegate key with basename: " <> mDelegKey
-    MultipleMissingKeys multipleKeys -> Text.intercalate ", " $ map renderShelleyGenesisError multipleKeys
 
 -- | Some reasonable starting defaults for constructing a 'ShelleyGenesis'.
 --
@@ -101,13 +77,3 @@ shelleyGenesisDefaults =
     k = 2160
     zeroTime = Time.UTCTime (Time.fromGregorian 1970 1 1) 0 -- tradition
 
-
---
--- ShelleyGenesis JSON conversion
---
-
-shelleyGenesisToJSON :: ShelleyGenesis TPraosStandardCrypto -> Value
-shelleyGenesisToJSON = toJSON
-
-shelleyGenesisFromJSON :: Value -> Parser (ShelleyGenesis TPraosStandardCrypto)
-shelleyGenesisFromJSON = parseJSON

@@ -1652,6 +1652,16 @@ newtype instance Hash StakePoolMetadata =
                                                     ByteString)
     deriving (Eq, Show)
 
+instance HasTypeProxy StakePoolMetadata where
+    data AsType StakePoolMetadata = AsStakePoolMetadata
+    proxyToAsType _ = AsStakePoolMetadata
+
+instance SerialiseAsRawBytes (Hash StakePoolMetadata) where
+    serialiseToRawBytes (StakePoolMetadataHash h) = Crypto.getHash h
+
+    deserialiseFromRawBytes (AsHash AsStakePoolMetadata) bs =
+      StakePoolMetadataHash <$> Crypto.hashFromBytes bs
+
 --TODO: instance ToJSON StakePoolMetadata where
 
 instance FromJSON StakePoolMetadata where

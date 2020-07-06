@@ -40,7 +40,9 @@ import           Ouroboros.Consensus.Shelley.Node
 import           Shelley.Spec.Ledger.PParams (ProtVer(..))
 import           Shelley.Spec.Ledger.Keys (coerceKeyRole)
 
-import qualified Cardano.Api.Typed as Typed
+import           Cardano.Api.Typed hiding (FileError)
+import qualified Cardano.Api.Typed as Api (FileError)
+
 import           Cardano.Node.Types (NodeShelleyProtocolConfiguration(..))
 import           Cardano.Config.Types
                    (ProtocolFilepaths(..), GenesisFile (..))
@@ -141,12 +143,12 @@ readLeaderCredentials (Just ProtocolFilepaths {
                               shelleyKESFile  = Just kesFile
                             }) = do
 
-    Typed.OperationalCertificate opcert (Typed.StakePoolVerificationKey vkey) <-
-      firstExceptT FileError . newExceptT $ Typed.readFileTextEnvelope Typed.AsOperationalCertificate certFile
-    Typed.VrfSigningKey vrfKey <-
-      firstExceptT FileError . newExceptT $ Typed.readFileTextEnvelope (Typed.AsSigningKey Typed.AsVrfKey) vrfFile
-    Typed.KesSigningKey kesKey <-
-      firstExceptT FileError . newExceptT $ Typed.readFileTextEnvelope (Typed.AsSigningKey Typed.AsKesKey) kesFile
+    OperationalCertificate opcert (StakePoolVerificationKey vkey) <-
+      firstExceptT FileError . newExceptT $ readFileTextEnvelope AsOperationalCertificate certFile
+    VrfSigningKey vrfKey <-
+      firstExceptT FileError . newExceptT $ readFileTextEnvelope (AsSigningKey AsVrfKey) vrfFile
+    KesSigningKey kesKey <-
+      firstExceptT FileError . newExceptT $ readFileTextEnvelope (AsSigningKey AsKesKey) kesFile
 
     return $ Just TPraosLeaderCredentials {
                tpraosLeaderCredentialsIsCoreNode =
@@ -172,7 +174,8 @@ readLeaderCredentials (Just ProtocolFilepaths {shelleyKESFile = Nothing}) =
 --
 
 data ShelleyProtocolInstantiationError = GenesisReadError !FilePath !String
-                                       | FileError (Typed.FileError Typed.TextEnvelopeError)
+                                       | FileError (Api.FileError TextEnvelopeError)
+                          --TODO: pick a less generic constructor than FileError
 
                                        | OCertNotSpecified
                                        | VRFKeyNotSpecified
@@ -188,7 +191,7 @@ renderShelleyProtocolInstantiationError pie =
         "There was an error parsing the genesis file: "
      <> toS fp <> " Error: " <> (T.pack $ show err)
 
-    FileError fileErr -> T.pack $ Typed.displayError fileErr
+    FileError fileErr -> T.pack $ displayError fileErr
 
     OCertNotSpecified  -> missingFlagMessage "shelley-operational-certificate"
     VRFKeyNotSpecified -> missingFlagMessage "shelley-vrf-key"

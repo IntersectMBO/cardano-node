@@ -12,13 +12,8 @@ import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, left, right,
                    newExceptT)
 
-import           Cardano.Api (EpochNo, textShow)
-import           Cardano.Api.TextView (TextViewTitle (..))
-import           Cardano.Api.Typed (AsType (..), Error (..), FileError,
-                   Lovelace, StakeCredential (..), TextEnvelopeError,
-                   makeMIRCertificate, verificationKeyHash,
-                   readFileTextEnvelope, writeFileTextEnvelope)
-import qualified Cardano.Api.Typed as Api
+import           Cardano.Api.Typed
+import           Cardano.Api.TextView (TextViewTitle (..), textShow)
 
 import           Cardano.CLI.Shelley.Parsers
 
@@ -99,17 +94,17 @@ runGovernanceUpdateProposal
   -> EpochNo
   -> [VerificationKeyFile]
   -- ^ Genesis verification keys
-  -> Api.ProtocolParametersUpdate
+  -> ProtocolParametersUpdate
   -> ExceptT ShelleyGovernanceError IO ()
 runGovernanceUpdateProposal (OutputFile upFile) eNo genVerKeyFiles upPprams = do
     when (upPprams == mempty) $ left GovernanceEmptyUpdateProposalError
     genVKeys <- sequence
                   [ firstExceptT GovernanceReadFileError . newExceptT $
-                      Api.readFileTextEnvelope
-                        (Api.AsVerificationKey Api.AsGenesisKey)
+                      readFileTextEnvelope
+                        (AsVerificationKey AsGenesisKey)
                         vkeyFile
                   | VerificationKeyFile vkeyFile <- genVerKeyFiles ]
-    let genKeyHashes = map Api.verificationKeyHash genVKeys
-        upProp = Api.makeShelleyUpdateProposal upPprams genKeyHashes eNo
+    let genKeyHashes = map verificationKeyHash genVKeys
+        upProp = makeShelleyUpdateProposal upPprams genKeyHashes eNo
     firstExceptT GovernanceWriteFileError . newExceptT $
-      Api.writeFileTextEnvelope upFile Nothing upProp
+      writeFileTextEnvelope upFile Nothing upProp

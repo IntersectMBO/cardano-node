@@ -13,19 +13,14 @@ module Cardano.Api.TextView
   , renderTextView
   , renderTextViewError
   , expectTextViewOfType
-  , expectTextViewOfTypes
-  , decodeFromTextView
-  , encodeToTextView
   , textShow
 
     -- * File IO support
   , TextViewFileError (..)
   , readTextViewFile
   , readTextViewFileOfType
-  , readTextViewEncodedFile
   , renderTextViewFileError
   , writeTextViewFile
-  , writeTextViewEncodedFile
 
     -- * Exported for testing.
   , rawToMultilineHex
@@ -39,9 +34,7 @@ import qualified Data.Attoparsec.ByteString.Char8 as Atto
 import qualified Data.ByteString.Base16 as Base16
 import           Data.ByteString.Char8 (ByteString)
 import qualified Data.ByteString.Char8 as BS
-import qualified Data.ByteString.Lazy as LBS
 import           Data.Char (isSpace)
-import qualified Data.List as List
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 
@@ -131,44 +124,6 @@ expectTextViewOfType expectedType tv = do
       throwError (TextViewTypeError [expectedType] actualType)
 
 
--- | Check that the \"type\" of the 'TextView' is one of a list of expected
--- types, and return which one it was.
---
-expectTextViewOfTypes :: [(TextViewType, t)]
-                      -> TextView
-                      -> Either TextViewError t
-expectTextViewOfTypes expectedTypes tv =
-    let actualType = tvType tv in
-    case List.lookup actualType expectedTypes of
-      Nothing  -> throwError $ TextViewTypeError (map fst expectedTypes)
-                                                 actualType
-      Just tag -> return tag
-
-
--- | Decode the body of a 'TextView' with a CBOR 'Decoder'.
---
-decodeFromTextView :: (forall s . Decoder s a)
-                   -> TextView -> Either TextViewError a
-decodeFromTextView decoder tv =
-    first TextViewDecodeError $
-      decodeFullDecoder errlabel decoder (LBS.fromStrict $ tvRawCBOR tv)
-  where
-    errlabel :: Text
-    errlabel = Text.decodeLatin1 (unTextViewType $ tvType tv)
-
--- | Encode a value to a 'TextView' using a CBOR encoder. The type and title
--- fields must also be specified.
---
-encodeToTextView :: TextViewType -> TextViewTitle -> (a -> Encoding)
-                 -> a -> TextView
-encodeToTextView tvType tvTitle encode a =
-  TextView
-    { tvType
-    , tvTitle
-    , tvRawCBOR = serializeEncoding' (encode a)
-    }
-
-
 -- ----------------------------------------------------------------------------
 
 -- | The errors that the IO 'TextView' reading\/decoding actions can return.
@@ -210,17 +165,6 @@ readTextViewFileOfType expectedType path =
       return tv
 
 
--- | Read a file in the external serialised format for 'TextView', check
--- that it's declared to be the expected type, and decode the body.
---
-readTextViewEncodedFile :: (TextView -> Either TextViewError a)
-                        -> FilePath -> IO (Either TextViewFileError a)
-readTextViewEncodedFile decoder path =
-    runExceptT $ do
-      tv <- ExceptT $ readTextViewFile path
-      firstExceptT (TextViewFileError path) $ hoistEither $ decoder tv
-
-
 -- | Write a file in the external serialised format for 'TextView'.
 --
 writeTextViewFile :: FilePath -> TextView -> IO (Either TextViewFileError ())
@@ -228,19 +172,6 @@ writeTextViewFile path tv =
     runExceptT $
       handleIOExceptT (TextViewFileIOError path) $
         BS.writeFile path (renderTextView tv)
-
-
--- | Write a file in the external serialised format for 'TextView'.
--- Use supplied encoder to encode the value in TextView's tvRawCBOR field.
---
-writeTextViewEncodedFile :: (a -> TextView) -> FilePath -> a
-                         -> IO (Either TextViewFileError ())
-writeTextViewEncodedFile encode path a =
-    runExceptT $
-      handleIOExceptT (TextViewFileIOError path) $
-        BS.writeFile path (renderTextView tv)
-  where
-    tv = encode a
 
 
 -- ----------------------------------------------------------------------------
