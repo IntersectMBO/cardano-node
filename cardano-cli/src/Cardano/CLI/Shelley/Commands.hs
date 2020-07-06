@@ -41,7 +41,7 @@ import           Data.Text (Text)
 
 import qualified Cardano.Api as OldApi
 import           Cardano.Api.Typed hiding (PoolId, Hash)
-import qualified Cardano.Api.Typed as Typed
+
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
 
 import           Cardano.Config.Types
@@ -94,23 +94,23 @@ data StakeAddressCmd
 
 data TransactionCmd
   = TxBuildRaw
-      [Typed.TxIn]
-      [Typed.TxOut Typed.Shelley]
+      [TxIn]
+      [TxOut Shelley]
       SlotNo
-      Typed.Lovelace
+      Lovelace
       [CertificateFile]
-      [(Typed.StakeAddress, Typed.Lovelace)]
+      [(StakeAddress, Lovelace)]
       (Maybe MetaDataFile)
       (Maybe UpdateProposalFile)
       TxBodyFile
-  | TxSign TxBodyFile [SigningKeyFile] (Maybe Typed.NetworkId) TxFile
+  | TxSign TxBodyFile [SigningKeyFile] (Maybe NetworkId) TxFile
   | TxWitness       -- { transaction :: Transaction, key :: PrivKeyFile, nodeAddr :: NodeAddress }
   | TxSignWitness   -- { transaction :: Transaction, witnesses :: [Witness], nodeAddr :: NodeAddress }
   | TxCheck         -- { transaction :: Transaction, nodeAddr :: NodeAddress }
   | TxSubmit FilePath OldApi.Network
   | TxCalculateMinFee
       TxBodyFile
-      (Maybe Typed.NetworkId)
+      (Maybe NetworkId)
       ProtocolParamsFile
       TxInCount
       TxOutCount
@@ -137,9 +137,9 @@ data PoolCmd
       -- ^ Stake pool verification key.
       VerificationKeyFile
       -- ^ VRF Verification key.
-      Typed.Lovelace
+      Lovelace
       -- ^ Pool pledge.
-      Typed.Lovelace
+      Lovelace
       -- ^ Pool cost.
       Rational
       -- ^ Pool margin.
@@ -183,11 +183,11 @@ data BlockCmd
 
 
 data GovernanceCmd
-  = GovernanceMIRCertificate MIRPot [VerificationKeyFile] [Typed.Lovelace] OutputFile
+  = GovernanceMIRCertificate MIRPot [VerificationKeyFile] [Lovelace] OutputFile
   | GovernanceProtocolUpdate SigningKeyFile -- { parameters :: ProtocolParams, nodeAddr :: NodeAddress }
   | GovernanceUpdateProposal OutputFile EpochNo
                              [VerificationKeyFile]
-                             Typed.ProtocolParametersUpdate
+                             ProtocolParametersUpdate
   | GovernanceColdKeys SigningKeyFile     -- { genesis :: GenesisKeyFile, keys :: [PubKey], nodeAddr :: NodeAddress }
   deriving (Eq, Show)
 
@@ -203,7 +203,7 @@ data SystemCmd
 
 
 data GenesisCmd
-  = GenesisCreate GenesisDir Word Word (Maybe SystemStart) (Maybe Typed.Lovelace) NetworkId
+  = GenesisCreate GenesisDir Word Word (Maybe SystemStart) (Maybe Lovelace) NetworkId
   | GenesisKeyGenGenesis VerificationKeyFile SigningKeyFile
   | GenesisKeyGenDelegate VerificationKeyFile SigningKeyFile OpCertCounterFile
   | GenesisKeyGenUTxO VerificationKeyFile SigningKeyFile
