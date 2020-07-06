@@ -1,14 +1,14 @@
-.. Cardano Node
+############
+cardano-node
+############
 
-Cardano Node
-============
+.. include:: ../README.rst
 
 .. toctree::
    :maxdepth: 3
    :titlesonly:
 
-   cardano-node README <../README>
-   cardano-node-quickstart.md
+   cardano-node-quickstart
    building-the-node-using-nix
    building-the-node-from-source
    running-the-node-using-docker
