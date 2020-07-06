@@ -17,6 +17,7 @@ import           Control.Monad.Trans.Except.Extra (firstExceptT, newExceptT)
 import           Cardano.Api.TextView (TextViewDescription (..))
 import           Cardano.Api.Typed
 
+import           Cardano.CLI.Byron.Key (CardanoEra (..), readEraSigningKey, ByronKeyFailure, renderByronKeyFailure)
 import           Cardano.CLI.Shelley.Parsers
                    (OutputFile (..), SigningKeyFile (..), VerificationKeyFile (..),
                     AddressCmd (..))
@@ -27,6 +28,7 @@ data ShelleyAddressCmdError
   = ShelleyAddressCmdAddressInfoError !ShelleyAddressInfoError
   | ShelleyAddressCmdReadFileError !(FileError TextEnvelopeError)
   | ShelleyAddressCmdWriteFileError !(FileError ())
+  | ShelleyAddressByronKeyFailure !ByronKeyFailure
   deriving Show
 
 renderShelleyAddressCmdError :: ShelleyAddressCmdError -> Text
@@ -36,6 +38,7 @@ renderShelleyAddressCmdError err =
       Text.pack (displayError addrInfoErr)
     ShelleyAddressCmdReadFileError fileErr -> Text.pack (displayError fileErr)
     ShelleyAddressCmdWriteFileError fileErr -> Text.pack (displayError fileErr)
+    ShelleyAddressByronKeyFailure e -> renderByronKeyFailure e
 
 runAddressCmd :: AddressCmd -> ExceptT ShelleyAddressCmdError IO ()
 runAddressCmd cmd =
@@ -45,6 +48,12 @@ runAddressCmd cmd =
     AddressBuild payVk stkVk nw mOutFp -> runAddressBuild payVk stkVk nw mOutFp
     AddressBuildMultiSig {} -> runAddressBuildMultiSig
     AddressInfo txt -> firstExceptT ShelleyAddressCmdAddressInfoError $ runAddressInfo txt
+    AddressConvertKey skF (SigningKeyFile skeyPath) -> do
+      sK <- firstExceptT ShelleyAddressByronKeyFailure $ readEraSigningKey ByronEra skF
+      firstExceptT ShelleyAddressCmdWriteFileError . newExceptT
+        $ writeFileTextEnvelope skeyPath (Just skeyDesc) (ByronSigningKey sK)
+        where
+          skeyDesc = TextViewDescription "Payment Signing Key"
 
 runAddressKeyGen :: VerificationKeyFile -> SigningKeyFile -> ExceptT ShelleyAddressCmdError IO ()
 runAddressKeyGen (VerificationKeyFile vkeyPath) (SigningKeyFile skeyPath) = do

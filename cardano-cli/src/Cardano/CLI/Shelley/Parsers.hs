@@ -134,6 +134,8 @@ pAddressCmd =
           (Opt.info pAddressBuildMultiSig $ Opt.progDesc "Build a Shelley payment multi-sig address.")
       , Opt.command "info"
           (Opt.info pAddressInfo $ Opt.progDesc "Print information about an address.")
+      , Opt.command "convert"
+          (Opt.info pAddressConvert $ Opt.progDesc "Convert a byron signing key file.")
       ]
   where
     pAddressKeyGen :: Parser AddressCmd
@@ -157,6 +159,8 @@ pAddressCmd =
     pAddressInfo :: Parser AddressCmd
     pAddressInfo = AddressInfo <$> pAddress
 
+    pAddressConvert :: Parser AddressCmd
+    pAddressConvert = AddressConvertKey <$> pByronKeyFile Input <*> pSigningKeyFile Output
 
 pPaymentVerificationKeyFile :: Parser VerificationKeyFile
 pPaymentVerificationKeyFile =
@@ -818,6 +822,16 @@ pSigningKeyFile fdir =
       (  Opt.long "signing-key-file"
       <> Opt.metavar "FILE"
       <> Opt.help (show fdir ++ " filepath of the signing key.")
+      <> Opt.completer (Opt.bashCompleter "file")
+      )
+
+pByronKeyFile :: FileDirection -> Parser SigningKeyFile
+pByronKeyFile fdir =
+  SigningKeyFile <$>
+    Opt.strOption
+      (  Opt.long "byron-key-file"
+      <> Opt.metavar "FILE"
+      <> Opt.help (show fdir ++ " filepath of the byron key.")
       <> Opt.completer (Opt.bashCompleter "file")
       )
 
