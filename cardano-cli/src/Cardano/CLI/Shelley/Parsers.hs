@@ -34,7 +34,7 @@ import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
 import qualified Shelley.Spec.Ledger.BaseTypes as Shelley
 import qualified Shelley.Spec.Ledger.TxData as Shelley
 
-import           Cardano.Api hiding (StakePoolMetadata, parseTxIn, renderTxIn, parseTxOut, parseWithdrawal)
+import           Cardano.Api hiding (parseTxIn, renderTxIn, parseTxOut, parseWithdrawal)
 import           Cardano.Api.Typed (AsType (..), StakePoolMetadata,
                    StakePoolMetadataReference (..), StakePoolRelay (..), KESPeriod(..))
 import qualified Cardano.Api.Typed as Typed
@@ -1416,7 +1416,7 @@ pStakePoolRegistrationCert =
   <*> some pPoolOwner
   <*> many pPoolRelay
   <*> pStakePoolMetadataReference
-  <*> pNetwork
+  <*> pNetworkId
   <*> pOutputFile
 
 pStakePoolRetirementCert :: Parser PoolCmd

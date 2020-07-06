@@ -154,7 +154,7 @@ data PoolCmd
       -- ^ Stake pool relays.
       (Maybe StakePoolMetadataReference)
       -- ^ Stake pool metadata.
-      Network
+      NetworkId
       OutputFile
   | PoolRetirementCert
       VerificationKeyFile
