@@ -24,8 +24,7 @@ library
                         Cardano.Api.TextView
                         Cardano.Api.Typed
 
-  other-modules:        Cardano.Api.CBOR
-                        Cardano.Api.Convert
+  other-modules:        Cardano.Api.Convert
                         Cardano.Api.Error
                         Cardano.Api.LocalChainSync
                         Cardano.Api.LocalStateQuery
@@ -33,7 +32,6 @@ library
                         Cardano.Api.TxSubmit.ErrorRender
                         Cardano.Api.TxSubmit.Types
                         Cardano.Api.Types
-                        Cardano.Api.View
 
 
   build-depends:        base >=4.12 && <5
@@ -125,13 +123,11 @@ test-suite cardano-api-test
                       , time
 
   other-modules:        Test.Cardano.Api
-                        Test.Cardano.Api.CBOR
                         Test.Cardano.Api.Convert
                         Test.Cardano.Api.Examples
                         Test.Cardano.Api.Gen
                         Test.Cardano.Api.Ledger
                         Test.Cardano.Api.Orphans
-                        Test.Cardano.Api.View
                         Test.Cardano.Api.Typed.CBOR
                         Test.Cardano.Api.Typed.Envelope
                         Test.Cardano.Api.Typed.Gen
@@ -149,23 +145,3 @@ test-suite cardano-api-test
                         -Wcompat
                         -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
 
-
-
-executable cardano-api-demo
-  hs-source-dirs:       app
-  main-is:              cardano-api-demo.hs
-
-  build-depends:
-                        base >=4.12 && <5
-                      , bytestring
-                      , cardano-api
-                      , cardano-prelude
-
-  default-language:     Haskell2010
-  default-extensions:   NoImplicitPrelude
-
-  ghc-options:          -Weverything
-                        -fno-warn-missing-import-lists
-                        -fno-warn-safe
-                        -fno-warn-unsafe
-                        -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T

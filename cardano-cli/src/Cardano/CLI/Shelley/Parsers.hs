@@ -30,14 +30,15 @@ import qualified Data.Attoparsec.ByteString.Char8 as Atto
 import           Network.Socket (PortNumber)
 import           Network.URI (URI, parseURI)
 
+import           Cardano.Slotting.Slot (SlotNo(..))
+
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
 import qualified Shelley.Spec.Ledger.BaseTypes as Shelley
 import qualified Shelley.Spec.Ledger.TxData as Shelley
 
-import           Cardano.Api hiding (parseTxIn, renderTxIn, parseTxOut, parseWithdrawal)
-import           Cardano.Api.Typed (AsType (..), StakePoolMetadata,
-                   StakePoolMetadataReference (..), StakePoolRelay (..), KESPeriod(..))
-import qualified Cardano.Api.Typed as Typed
+import qualified Cardano.Api as OldApi
+import           Cardano.Api.Typed as Typed hiding (PoolId)
+
 import           Cardano.Slotting.Slot (EpochNo (..))
 
 import           Cardano.Config.Types (CertificateFile (..), MetaDataFile(..), SigningKeyFile(..),
@@ -46,7 +47,8 @@ import           Cardano.Config.Parsers (parseNodeAddress)
 
 import           Cardano.CLI.Shelley.Commands
 
-import           Cardano.Crypto.Hash (Blake2b_256, Hash (..), hashFromBytesAsHex)
+import           Cardano.Crypto.Hash as Crypto
+                   (Blake2b_256, Hash (..), hashFromBytesAsHex)
 
 --
 -- Shelley CLI command parsers
@@ -238,9 +240,9 @@ pStakeAddress =
     pITNKeyFIle :: Parser ITNKeyFile
     pITNKeyFIle = pITNSigningKeyFile <|> pITNVerificationKeyFile
 
-pDelegationFee :: Parser Lovelace
+pDelegationFee :: Parser OldApi.Lovelace
 pDelegationFee =
-  Lovelace <$>
+  OldApi.Lovelace <$>
     Opt.option Opt.auto
       (  Opt.long "delegation-fee"
       <> Opt.metavar "LOVELACE"
@@ -990,9 +992,9 @@ pITNVerificationKeyFile =
       <> Opt.completer (Opt.bashCompleter "file")
       )
 
-pNetwork :: Parser Network
+pNetwork :: Parser OldApi.Network
 pNetwork =
-  pMainnet <|> fmap Testnet pTestnetMagic
+  pMainnet <|> fmap OldApi.Testnet pTestnetMagic
 
 pNetworkId :: Parser Typed.NetworkId
 pNetworkId =
@@ -1005,9 +1007,9 @@ pNetworkId =
       <> Opt.help "Use the mainnet magic id."
       )
 
-pMainnet :: Parser Network
+pMainnet :: Parser OldApi.Network
 pMainnet =
-  Opt.flag' Mainnet
+  Opt.flag' OldApi.Mainnet
     (  Opt.long "mainnet"
     <> Opt.help "Use the mainnet magic id."
     )
@@ -1171,15 +1173,16 @@ pTxByronWinessCount =
       <> Opt.help "The number of Byron key witnesses."
       )
 
-pQueryFilter :: Parser QueryFilter
-pQueryFilter = pAddresses <|> pure NoFilter
+pQueryFilter :: Parser OldApi.QueryFilter
+pQueryFilter = pAddresses <|> pure OldApi.NoFilter
   where
-    pAddresses :: Parser QueryFilter
-    pAddresses = FilterByAddress . Set.fromList <$> some pFilterByHexEncodedAddress
+    pAddresses :: Parser OldApi.QueryFilter
+    pAddresses = OldApi.FilterByAddress . Set.fromList <$>
+                   some pFilterByHexEncodedAddress
 
-pFilterByHexEncodedAddress :: Parser Address
+pFilterByHexEncodedAddress :: Parser OldApi.Address
 pFilterByHexEncodedAddress =
-  Opt.option (Opt.eitherReader (first show . addressFromHex . Text.pack))
+  Opt.option (Opt.eitherReader (first show . OldApi.addressFromHex . Text.pack))
     (  Opt.long "address"
     <> Opt.metavar "ADDRESS"
     <> Opt.help "Filter by Cardano address(es) (hex-encoded)."
@@ -1398,7 +1401,7 @@ pStakePoolMetadataHash =
         <> Opt.help "Pool metadata hash."
         )
   where
-    getHashFromHexString :: String -> Maybe (Hash Blake2b_256 ByteString)
+    getHashFromHexString :: String -> Maybe (Crypto.Hash Blake2b_256 ByteString)
     getHashFromHexString = hashFromBytesAsHex . BSC.pack
 
     metadataHash :: String -> Maybe (Typed.Hash StakePoolMetadata)
