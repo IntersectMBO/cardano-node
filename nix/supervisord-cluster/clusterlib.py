@@ -14,7 +14,7 @@ class clusterlib:
         self.genesisUtxoVkey = f"{stateDir}/keys/genesis-utxo.vkey"
         self.genesisUtxoSkey = f"{stateDir}/keys/genesis-utxo.skey"
         self.genesisUtxoAddr = self.getGenesisAddress(self.genesisUtxoVkey)
-        self.pparamsFile = f"{self.stateDir}pparams.json"
+        self.pparamsFile = f"{self.stateDir}/pparams.json"
         self.refreshPParams()
         self.slotLength = self.genesis["slotLength"]
         self.epochLength = self.genesis["epochLength"]
@@ -35,12 +35,10 @@ class clusterlib:
     def queryCLI(self, args):
         return self.CLI(["cardano-cli", "shelley", "query"] + args + ["--testnet-magic", str(self.networkMagic) ])
 
-    def estimateFee(self, ttl, txins=1, txouts=1, certificates=[], signing_keys=[]):
+    def estimateFee(self, txbody, txins=1, txouts=1, witnesses=1, byron_witnesses=0):
         self.refreshPParams()
-        signing_key_args = self.prependFlag("--signing-key-file", signing_keys)
-        cert_args = self.prependFlag("--certificate-file", certificates)
-        stdout = self.CLI(["cardano-cli", "shelley", "transaction", "calculate-min-fee", "--ttl", str(ttl), "--testnet-magic", self.networkMagic, "--protocol-params-file", self.pparamsFile,  "--tx-in-count", str(txins), "--tx-out-count", str(txouts)] + signing_key_args + cert_args)
-        return int(stdout[22:].rstrip())
+        stdout = self.CLI(["cardano-cli", "shelley", "transaction", "calculate-min-fee", "--testnet-magic", str(self.networkMagic), "--protocol-params-file", self.pparamsFile,  "--tx-in-count", str(txins), "--tx-out-count", str(txouts), "--byron-witness-count", str(byron_witnesses), "--witness-count", str(witnesses), "--tx-body-file", txbody])
+        return int(stdout.decode().split(" ")[1])
 
     # TODO: add withdrawal support
     # TODO: Move fee calculation here
@@ -54,7 +52,18 @@ class clusterlib:
         ttl=100000
         # Estimate Fee
         #fee = self.estimateFee(ttl=ttl, txins=len(txins), txouts=len(txouts), signing_keys = [ self.genesisUtxoSkey ] + signing_keys)
-        txins_combined = list(map( lambda x: "#".join(x), txins))
+        # TODO: unhardcode genesis utxo
+        change = (self.genesisUtxoAddr, 0)
+        txouts.append(change)
+        total_input_amount = 0
+        # TODO: use a fold to be less hacky
+        for txin in txins:
+            total_input_amount += txin[2]
+
+        deposit_amount = 0
+
+
+        txins_combined = list(map( lambda x: f"{x[0]}#{x[1]}", txins))
         txouts_combined = list(map( lambda x: f"{x[0]}+{x[1]}", txouts))
 
         txin_args = self.prependFlag("--tx-in", txins_combined)
@@ -63,14 +72,31 @@ class clusterlib:
 
         cert_args = self.prependFlag("--certificate-file", certificates)
 
+        build_args = [ "--ttl", str(ttl), "--fee", "0", "--out-file", "tx.body" ] + txin_args + txout_args + cert_args
+
+        if proposal:
+            build_args.extend(["--update-proposal-file", proposal])
+
+
+        # Build TX
+
+        self.CLI(["cardano-cli", "shelley", "transaction", "build-raw"] + build_args )
+        # Estimate Fee
+        fee = self.estimateFee("tx.body", txins=len(txins), txouts=len(txouts), witnesses=len(signing_keys))
+
+        txouts[-1] = (self.genesisUtxoAddr, (total_input_amount - fee - deposit_amount))
+        txouts_combined = list(map( lambda x: f"{x[0]}+{x[1]}", txouts))
+        txout_args = self.prependFlag("--tx-out", txouts_combined)
         build_args = [ "--ttl", str(ttl), "--fee", str(fee), "--out-file", "tx.body" ] + txin_args + txout_args + cert_args
 
         if proposal:
             build_args.extend(["--update-proposal-file", proposal])
 
-        # Build TX
-
         self.CLI(["cardano-cli", "shelley", "transaction", "build-raw"] + build_args )
+
+        if proposal:
+            build_args.extend(["--update-proposal-file", proposal])
+
 
         # Sign TXw
 
@@ -106,31 +132,22 @@ class clusterlib:
 
 
     def sendTxGenesis(self, txouts=[], certificates=[], signing_keys=[], deposit_amount=0, proposal=None):
-        utxo = self.getUtxo(address=self.genesisUtxoAddr)
-        total_input_amount = 0
-        txins = []
-        for k,v in utxo.items():
-            total_input_amount += v["amount"]
-            txin = k.split("#")
-            txin = (txin[0], txin[1])
-            txins.append(txin)
-
 
         # TODO: calculate from current tip
         ttl=100000
         signing_keys.append(self.genesisUtxoSkey)
-        # Estimate Fee
-        fee = self.estimateFee(ttl=ttl, txins=len(txins), txouts=1 + len(txouts), signing_keys=signing_keys)
-        fee = fee * 2
 
-        change = (self.genesisUtxoAddr, (total_input_amount - fee - deposit_amount))
-
-        txouts.append(change)
+        utxo = self.getUtxo(address=self.genesisUtxoAddr)
+        txins = []
+        for k,v in utxo.items():
+            txin = k.split("#")
+            txin = (txin[0], txin[1], v["amount"])
+            txins.append(txin)
 
         # Build, Sign and Send TX to chain
 
         try:
-            self.sendTx(txins=txins, txouts=txouts, certificates=certificates, signing_keys=signing_keys, fee=fee, proposal=proposal)
+            self.sendTx(txins=txins, txouts=txouts, certificates=certificates, signing_keys=signing_keys, proposal=proposal, change_address=self.genesisUtxoAddr)
         except CLIError as e:
             print("Sending a genesis transaction failed!")
             print(f"utxo: {utxo}")

@@ -56,7 +56,7 @@ let
 
   packages = {
     inherit haskellPackages cardano-node cardano-cli chairman db-converter
-      scripts nixosTests environments dockerImage mkCluster;
+      scripts nixosTests environments dockerImage mkCluster bech32;
 
     inherit (haskellPackages.cardano-node.identifier) version;
 

@@ -22,6 +22,7 @@ in {
   pkgs
 , lib
 , cardano-cli
+, bech32
 , numBft ? 1
 , numPools ? 2
 , d ? "0.5"
@@ -30,6 +31,7 @@ in {
 , initialFunds ? import ./initial-funds.nix
 , delegatePoolAmount ? 1000000000000
 , genesisParams ? {}
+, extraSupervisorConfig ? {}
 , ...
 }:
 let
@@ -121,7 +123,7 @@ let
       directory = "${stateDir}/webserver";
     };
 
-  }));
+  } // extraSupervisorConfig));
   # creates a dummy genesis used as a template
   genesisSpec = pkgs.runCommand "create-genesis" { buildInputs = [ cardano-cli ]; } ''
     cardano-cli shelley genesis create --testnet-magic 42 \
@@ -131,7 +133,7 @@ let
   '';
   genesisSpecJSON = __fromJSON (__readFile genesisSpec);
   genesisSpecMergedJSON = lib.foldl' lib.recursiveUpdate genesisSpecJSON [ defaultGenesisParams genesisParams ];
-  path = lib.makeBinPath [ cardano-cli pkgs.jq pkgs.gnused pkgs.coreutils pkgs.bash pkgs.moreutils ];
+  path = lib.makeBinPath [ cardano-cli bech32 pkgs.jq pkgs.gnused pkgs.coreutils pkgs.bash pkgs.moreutils ];
   genFiles = ''
     PATH=${path}
     rm -rf ${stateDir}
@@ -259,30 +261,39 @@ let
 
     jq .protocolParams < ${stateDir}/keys/genesis.json > ${stateDir}/pparams.json
 
+    TXIN_ADDR=$(cardano-cli shelley genesis initial-addr \
+                    --testnet-magic ${toString genesisSpecMergedJSON.networkMagic} \
+                    --verification-key-file ${./genesis-utxo.vkey})
+
+    cardano-cli shelley transaction build-raw \
+        --ttl 1000 \
+        --fee 0 \
+        --tx-in $(cardano-cli shelley genesis initial-txin \
+                    --testnet-magic ${toString genesisSpecMergedJSON.networkMagic} \
+                    --verification-key-file ${./genesis-utxo.vkey}) \
+        --tx-out "$TXIN_ADDR+0" \
+        ${lib.concatMapStringsSep "" (i: ''
+          --tx-out $(cat "${stateDir}/keys/node-pool${toString i}/owner.addr")+${toString delegatePoolAmount} \
+          --certificate-file "${stateDir}/keys/node-pool${toString i}/stake.reg.cert" \
+          --certificate-file "${stateDir}/keys/node-pool${toString i}/stake-reward.reg.cert" \
+          --certificate-file "${stateDir}/keys/node-pool${toString i}/register.cert" \
+          --certificate-file "${stateDir}/keys/node-pool${toString i}/owner-stake.deleg.cert" \'') (lib.genList (i: i + 1) numPools)}
+        --out-file "${stateDir}/keys/transfer-register-delegate-tx.txbody"
     FEE=$(cardano-cli shelley transaction calculate-min-fee \
                 --testnet-magic ${toString genesisSpecMergedJSON.networkMagic} \
                 --protocol-params-file ${stateDir}/pparams.json \
                 --tx-in-count 1 \
                 --tx-out-count ${toString (numPools + 1)} \
-                --ttl 1000 \
-                ${lib.concatMapStringsSep "" (i: ''
-                  --certificate-file "${stateDir}/keys/node-pool${toString i}/stake.reg.cert" \
-                  --certificate-file "${stateDir}/keys/node-pool${toString i}/stake-reward.reg.cert" \
-                  --certificate-file "${stateDir}/keys/node-pool${toString i}/register.cert" \
-                  --certificate-file "${stateDir}/keys/node-pool${toString i}/owner-stake.deleg.cert" \
-                  --signing-key-file "${stateDir}/keys/node-pool${toString i}/owner-stake.skey" \
-                  --signing-key-file "${stateDir}/keys/node-pool${toString i}/reward.skey" \
-                  --signing-key-file "${stateDir}/keys/node-pool${toString i}/cold.skey" \
-                '') (lib.genList (i: i + 1) numPools)} \
-                --signing-key-file ${./genesis-utxo.skey} | \
+                --witness-count ${toString (3 * numPools + 1)} \
+                --byron-witness-count 0 \
+                --tx-body-file "${stateDir}/keys/transfer-register-delegate-tx.txbody" |
                 cut -d' ' -f2)
-    TXIN_ADDR=$(cardano-cli shelley genesis initial-addr \
-                    --testnet-magic ${toString genesisSpecMergedJSON.networkMagic} \
-                    --verification-key-file ${./genesis-utxo.vkey})
-    TXOUT_AMOUNT=$(jq --arg addr "$TXIN_ADDR" \
+
+    TXIN_ADDR_HEX=$(bech32 <<< "$TXIN_ADDR")
+
+    TXOUT_AMOUNT=$(jq --arg addr "$TXIN_ADDR_HEX" \
                       --arg fee "$FEE" \
     '.initialFunds[$addr] - ($fee|tonumber) - (.protocolParams.poolDeposit + (2 * .protocolParams.keyDeposit) + ${toString delegatePoolAmount}) * ${toString numPools}' < ${stateDir}/keys/genesis.json)
-
     cardano-cli shelley transaction build-raw \
         --ttl 1000 \
         --fee "$FEE" \

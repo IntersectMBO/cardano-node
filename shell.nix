@@ -52,6 +52,7 @@ let
     buildInputs = [
       niv
       cardano-cli
+      bech32
       cardano-node
       python3Packages.supervisor
       cluster.start
