@@ -6,6 +6,7 @@ module Cardano.CLI.Shelley.Run.StakeAddress
 
 import           Cardano.Prelude
 
+import qualified Data.ByteString.Char8 as BS
 import qualified Data.Text as Text
 import qualified Data.Text.IO as Text
 
@@ -42,6 +43,7 @@ renderShelleyStakeAddressCmdError err =
 
 runStakeAddressCmd :: StakeAddressCmd -> ExceptT ShelleyStakeAddressCmdError IO ()
 runStakeAddressCmd (StakeAddressKeyGen vk sk) = runStakeAddressKeyGen vk sk
+runStakeAddressCmd (StakeAddressKeyHash vk mOutputFp) = runStakeAddressKeyHash vk mOutputFp
 runStakeAddressCmd (StakeAddressBuild vk nw mOutputFp) = runStakeAddressBuild vk nw mOutputFp
 runStakeAddressCmd (StakeKeyRegistrationCert stkKeyVerKeyFp outputFp) =
   runStakeKeyRegistrationCert stkKeyVerKeyFp outputFp
@@ -71,6 +73,18 @@ runStakeAddressKeyGen (VerificationKeyFile vkFp) (SigningKeyFile skFp) = do
     skeyDesc, vkeyDesc :: TextViewDescription
     skeyDesc = TextViewDescription "Stake Signing Key"
     vkeyDesc = TextViewDescription "Stake Verification Key"
+
+runStakeAddressKeyHash :: VerificationKeyFile -> Maybe OutputFile -> ExceptT ShelleyStakeAddressCmdError IO ()
+runStakeAddressKeyHash (VerificationKeyFile vkeyPath) mOutputFp = do
+  vkey <- firstExceptT ShelleyStakeAddressReadFileError
+    . newExceptT
+    $ readFileTextEnvelope (AsVerificationKey AsStakeKey) vkeyPath
+
+  let hexKeyHash = serialiseToRawBytesHex (verificationKeyHash vkey)
+
+  case mOutputFp of
+    Just (OutputFile fpath) -> liftIO $ BS.writeFile fpath hexKeyHash
+    Nothing -> liftIO $ BS.putStrLn hexKeyHash
 
 runStakeAddressBuild :: VerificationKeyFile -> NetworkId -> Maybe OutputFile
                      -> ExceptT ShelleyStakeAddressCmdError IO ()

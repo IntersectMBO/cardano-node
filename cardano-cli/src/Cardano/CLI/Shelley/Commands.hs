@@ -81,6 +81,7 @@ data AddressCmd
 
 data StakeAddressCmd
   = StakeAddressKeyGen VerificationKeyFile SigningKeyFile
+  | StakeAddressKeyHash VerificationKeyFile (Maybe OutputFile)
   | StakeAddressBuild VerificationKeyFile NetworkId (Maybe OutputFile)
   | StakeKeyRegister PrivKeyFile NodeAddress
   | StakeKeyDelegate PrivKeyFile PoolId Lovelace NodeAddress

@@ -127,7 +127,7 @@ pAddressCmd =
       [ Opt.command "key-gen"
           (Opt.info pAddressKeyGen $ Opt.progDesc "Create an address key pair.")
       , Opt.command "key-hash"
-          (Opt.info pAddressKeyHash $ Opt.progDesc "Print the hash of an address key to stdout.")
+          (Opt.info pAddressKeyHash $ Opt.progDesc "Print the hash of an address key.")
       , Opt.command "build"
           (Opt.info pAddressBuild $ Opt.progDesc "Build a Shelley payment address, with optional delegation to a stake address.")
       , Opt.command "build-multisig"
@@ -183,6 +183,8 @@ pStakeAddress =
           (Opt.info pStakeAddressKeyGen $ Opt.progDesc "Create a stake address key pair")
       , Opt.command "build"
           (Opt.info pStakeAddressBuild $ Opt.progDesc "Build a stake address")
+      , Opt.command "key-hash"
+          (Opt.info pStakeAddressKeyHash $ Opt.progDesc "Print the hash of a stake address key.")
       , Opt.command "register"
           (Opt.info pStakeAddressRegister $ Opt.progDesc "Register a stake address")
       , Opt.command "delegate"
@@ -203,6 +205,9 @@ pStakeAddress =
     pStakeAddressKeyGen = StakeAddressKeyGen
                             <$> pVerificationKeyFile Output
                             <*> pSigningKeyFile Output
+
+    pStakeAddressKeyHash :: Parser StakeAddressCmd
+    pStakeAddressKeyHash = StakeAddressKeyHash <$> pStakeVerificationKeyFile <*> pMaybeOutputFile
 
     pStakeAddressBuild :: Parser StakeAddressCmd
     pStakeAddressBuild = StakeAddressBuild <$> pStakeVerificationKeyFile
