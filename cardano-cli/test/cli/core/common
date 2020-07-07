@@ -65,7 +65,7 @@ assert_string () {
 }
 
 assert_line_count () {
-  line_count=$(wc -l < "$2")
+  line_count=$(wc -l < "$2" | xargs)
   if test "${line_count}" != "$1" ; then
     echo "$2: line count is ${line_count} "
     cat "$2"

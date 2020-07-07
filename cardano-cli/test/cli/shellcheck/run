@@ -8,7 +8,7 @@ cwd=$(dirname "$0")
 # shellcheck disable=SC2154
 banner "${testname}"
 
-type shellcheck > /dev/null 2>&1 || {
+shellcheck --version > /dev/null 2>&1 || {
     echo "Missing 'shellcheck' executable."
     exit 1
 }
