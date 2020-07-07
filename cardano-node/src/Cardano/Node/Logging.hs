@@ -11,7 +11,7 @@
 
 module Cardano.Node.Logging
   ( LoggingLayer (..)
-  , createLoggingFeature
+  , createLoggingLayer
   -- re-exports
   , Trace
   , Configuration
@@ -58,13 +58,12 @@ import           Cardano.BM.Plugin (loadPlugin)
 #if defined(SYSTEMD)
 import           Cardano.BM.Scribe.Systemd (plugin)
 #endif
-import           Cardano.BM.Setup (setupTrace_, shutdown)
+import           Cardano.BM.Setup (setupTrace_)
 import           Cardano.BM.Trace (Trace, appendName, traceNamedObject)
 import qualified Cardano.BM.Trace as Trace
-import           Cardano.Shell.Types (CardanoFeature (..))
 
 import           Cardano.Config.GitRev (gitRev)
-import           Cardano.Config.Types (ConfigError (..), CardanoEnvironment, ViewMode (..))
+import           Cardano.Config.Types (ConfigError (..), ViewMode (..))
 import           Cardano.Node.Types (ConfigYamlFilePath (..), NodeConfiguration (..),
                    NodeCLI (..), parseNodeConfiguration)
 
@@ -123,12 +122,11 @@ loggingCLIConfiguration = maybe emptyConfig readConfig
      pure c
 
 -- | Create logging feature for `cardano-node`
-createLoggingFeature
+createLoggingLayer
   :: Text
-  -> CardanoEnvironment
   -> NodeCLI
-  -> ExceptT ConfigError IO (LoggingLayer, CardanoFeature)
-createLoggingFeature ver _ nodecli@NodeCLI{configFile} = do
+  -> ExceptT ConfigError IO LoggingLayer
+createLoggingLayer ver nodecli@NodeCLI{configFile} = do
 
   -- TODO:  we shouldn't be parsing configuration multiple times!
   nodeConfig <- liftIO $ parseNodeConfiguration nodecli
@@ -159,18 +157,7 @@ createLoggingFeature ver _ nodecli@NodeCLI{configFile} = do
   when loggingEnabled $ liftIO $
     loggingPreInit nodeConfig logConfig switchBoard trace
 
-  let loggingLayer = mkLogLayer logConfig switchBoard trace
-      loggingCleanup = logLayerShutdown switchBoard
-
-  -- we construct the cardano feature
-  let cardanoFeature = CardanoFeature
-                          { featureName = "LoggingMonitoringFeature"
-                          , featureStart = liftIO . void $ pure loggingLayer
-                          , featureShutdown = liftIO $ loggingCleanup loggingLayer
-                          }
-
-  -- we return both
-  pure (loggingLayer, cardanoFeature)
+  pure $ mkLogLayer logConfig switchBoard trace
  where
    loggingPreInit
      :: NodeConfiguration
@@ -218,9 +205,6 @@ createLoggingFeature ver _ nodecli@NodeCLI{configFile} = do
 #else
    liveViewdisablesStdout LiveView _ = pure ()
 #endif
-
-   logLayerShutdown :: Switchboard Text -> LoggingLayer -> IO ()
-   logLayerShutdown switchBoard _ = shutdown switchBoard
 
    mkLogLayer :: Configuration -> Switchboard Text -> Trace IO Text -> LoggingLayer
    mkLogLayer logConfig switchBoard trace =

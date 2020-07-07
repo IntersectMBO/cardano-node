@@ -34,7 +34,6 @@ library
   hs-source-dirs:      src
 
   exposed-modules:     Cardano.Common.Help
-                       Cardano.Node.Features.Node
                        Cardano.Node.Logging
                        Cardano.Node.Protocol
                        Cardano.Node.Protocol.Byron
@@ -66,7 +65,6 @@ library
                      , cardano-crypto-wrapper
                      , cardano-ledger
                      , cardano-prelude
-                     , cardano-shell
                      , cardano-slotting
                      , contra-tracer
                      , cborg >= 0.2.2 && < 0.3

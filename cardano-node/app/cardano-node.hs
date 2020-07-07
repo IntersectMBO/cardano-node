@@ -15,18 +15,13 @@ import           Paths_cardano_node (version)
 import           System.Info (arch, compilerName, compilerVersion, os)
 import           Cardano.Config.GitRev (gitRev)
 
-import           Cardano.Shell.Lib (runCardanoApplicationWithFeatures)
-import           Cardano.Shell.Types (CardanoApplication (..),
-                                      CardanoFeature (..))
-
 import           Cardano.Common.Help
 import           Cardano.Config.TopHandler
 import           Cardano.Config.Parsers
-import           Cardano.Config.Types (CardanoEnvironment(..))
-import           Cardano.Node.Logging (createLoggingFeature)
+import           Cardano.Node.Logging (createLoggingLayer)
 import           Cardano.Node.Parsers (nodeCLIParser)
+import           Cardano.Node.Run (runNode)
 import           Cardano.Node.Types (NodeCLI(..))
-import           Cardano.Node.Features.Node
 
 main :: IO ()
 main = toplevelExceptionHandler $ do
@@ -97,37 +92,14 @@ runVersionCommand =
 
 
 runRunCommand :: NodeCLI -> IO ()
-runRunCommand cli = do
-    (features, nodeLayer) <- initializeAllFeatures cli env
+runRunCommand npm = do
 
-    runCardanoApplicationWithFeatures features (cardanoApplication nodeLayer)
+  eLoggingLayer <- runExceptT $ createLoggingLayer
+                     (Text.pack (showVersion version))
+                     npm
 
-    where
-      env :: CardanoEnvironment
-      env = NoEnvironment
+  loggingLayer <- case eLoggingLayer of
+                    Left err -> putTextLn (show err) >> exitFailure
+                    Right res -> return res
 
-      cardanoApplication :: NodeLayer -> CardanoApplication
-      cardanoApplication = CardanoApplication . nlRunNode
-
-
-initializeAllFeatures
-  :: NodeCLI
-  -> CardanoEnvironment
-  -> IO ([CardanoFeature], NodeLayer)
-initializeAllFeatures npm cardanoEnvironment = do
-
-  eitherFeatures <- runExceptT $ createLoggingFeature
-                      (Text.pack (showVersion version))
-                      cardanoEnvironment
-                      npm
-
-  (loggingLayer, loggingFeature) <- case eitherFeatures of
-                                      Left err -> putTextLn (show err) >> exitFailure
-                                      Right res -> return res
-
-  (nodeLayer, nodeFeature) <- createNodeFeature
-                                loggingLayer
-                                cardanoEnvironment
-                                npm
-
-  pure ([loggingFeature, nodeFeature] :: [CardanoFeature], nodeLayer)
+  liftIO $ runNode loggingLayer npm
