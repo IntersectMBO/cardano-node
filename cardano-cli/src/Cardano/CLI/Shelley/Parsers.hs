@@ -458,7 +458,7 @@ pQueryCmd =
     pQueryStakeAddressInfo :: Parser QueryCmd
     pQueryStakeAddressInfo =
       QueryStakeAddressInfo
-        <$> pFilterByHexEncodedAddress
+        <$> pFilterByStakeAddress
         <*> pNetwork
         <*> pMaybeOutputFile
 
@@ -1198,13 +1198,19 @@ pFilterByAddress =
     toOldApiAddress (ShelleyAddress nw payCred stkRef) =
       OldApi.AddressShelley (Shelley.Addr nw payCred stkRef)
 
-pFilterByHexEncodedAddress :: Parser OldApi.Address
-pFilterByHexEncodedAddress =
-  Opt.option (Opt.eitherReader (first show . OldApi.addressFromHex . Text.pack))
-    (  Opt.long "address"
-    <> Opt.metavar "ADDRESS"
-    <> Opt.help "Filter by Cardano address(es) (hex-encoded)."
-    )
+pFilterByStakeAddress :: Parser OldApi.Address
+pFilterByStakeAddress =
+    Opt.option (readerFromAttoParser $ toOldApiAddress <$> parseStakeAddress)
+      (  Opt.long "address"
+      <> Opt.metavar "ADDRESS"
+      <> Opt.help "Filter by Cardano stake address (Bech32-encoded)."
+      )
+  where
+    -- TODO: When removing this in the future, also remove the LANGUAGE pragma
+    --       for GADTs.
+    toOldApiAddress :: StakeAddress -> OldApi.Address
+    toOldApiAddress (StakeAddress nw stkCred) =
+      OldApi.AddressShelleyReward (Shelley.mkRwdAcnt nw stkCred)
 
 pAddress :: Parser Text
 pAddress =
