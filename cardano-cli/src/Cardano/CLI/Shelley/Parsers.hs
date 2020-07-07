@@ -343,6 +343,9 @@ pNodeCmd =
       , Opt.command "key-gen-VRF"
           (Opt.info pKeyGenVRF $
              Opt.progDesc "Create a key pair for a node VRF operational key")
+      , Opt.command "key-hash-VRF"
+          (Opt.info pKeyHashVRF $
+             Opt.progDesc "Print hash of a node's operational VRF key.")
       , Opt.command "issue-op-cert"
           (Opt.info pIssueOpCert $
              Opt.progDesc "Issue a node operational certificate")
@@ -361,6 +364,10 @@ pNodeCmd =
     pKeyGenVRF :: Parser NodeCmd
     pKeyGenVRF =
       NodeKeyGenVRF <$> pVerificationKeyFile Output <*> pSigningKeyFile Output
+
+    pKeyHashVRF :: Parser NodeCmd
+    pKeyHashVRF =
+      NodeKeyHashVRF <$> pVerificationKeyFile Input <*> pMaybeOutputFile
 
     pIssueOpCert :: Parser NodeCmd
     pIssueOpCert =

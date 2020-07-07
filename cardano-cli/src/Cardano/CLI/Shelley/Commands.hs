@@ -125,6 +125,7 @@ data NodeCmd
   = NodeKeyGenCold VerificationKeyFile SigningKeyFile OpCertCounterFile
   | NodeKeyGenKES  VerificationKeyFile SigningKeyFile
   | NodeKeyGenVRF  VerificationKeyFile SigningKeyFile
+  | NodeKeyHashVRF  VerificationKeyFile (Maybe OutputFile)
   | NodeIssueOpCert VerificationKeyFile SigningKeyFile OpCertCounterFile
                     KESPeriod OutputFile
   deriving (Eq, Show)
