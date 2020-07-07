@@ -11,8 +11,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 
 module Cardano.Config.Types
-    ( CardanoEnvironment (..)
-    , CBORObject (..)
+    ( CBORObject (..)
     , PoolMetaDataFile (..)
     , CertificateFile (..)
     , ConfigError (..)
@@ -89,13 +88,6 @@ data CBORObject = CBORBlockByron Byron.EpochSlots
                 | CBORVoteByron
                 deriving Show
 
---------------------------------------------------------------------------------
--- Cardano Environment
---------------------------------------------------------------------------------
-
--- | Just a placeholder for now.
-data CardanoEnvironment = NoEnvironment
-    deriving (Eq, Show)
 
 --------------------------------------------------------------------------------
 -- Cardano Configuration Data Structures
