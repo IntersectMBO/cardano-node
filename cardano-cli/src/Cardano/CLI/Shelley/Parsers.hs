@@ -1,3 +1,5 @@
+{-# LANGUAGE GADTs #-}
+
 module Cardano.CLI.Shelley.Parsers
   ( -- * CLI command parser
     parseShelleyCommands
@@ -33,6 +35,7 @@ import           Network.URI (URI, parseURI)
 import           Cardano.Slotting.Slot (SlotNo(..))
 
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
+import qualified Shelley.Spec.Ledger.Address as Shelley
 import qualified Shelley.Spec.Ledger.BaseTypes as Shelley
 import qualified Shelley.Spec.Ledger.TxData as Shelley
 
@@ -1178,7 +1181,22 @@ pQueryFilter = pAddresses <|> pure OldApi.NoFilter
   where
     pAddresses :: Parser OldApi.QueryFilter
     pAddresses = OldApi.FilterByAddress . Set.fromList <$>
-                   some pFilterByHexEncodedAddress
+                   some pFilterByAddress
+
+pFilterByAddress :: Parser OldApi.Address
+pFilterByAddress =
+    Opt.option (readerFromAttoParser $ toOldApiAddress <$> parseAddress)
+      (  Opt.long "address"
+      <> Opt.metavar "ADDRESS"
+      <> Opt.help "Filter by Cardano address(es) (Bech32-encoded)."
+      )
+  where
+    -- TODO: When removing this in the future, also remove the LANGUAGE pragma
+    --       for GADTs.
+    toOldApiAddress :: Address Shelley -> OldApi.Address
+    toOldApiAddress (ByronAddress addr) = OldApi.AddressByron addr
+    toOldApiAddress (ShelleyAddress nw payCred stkRef) =
+      OldApi.AddressShelley (Shelley.Addr nw payCred stkRef)
 
 pFilterByHexEncodedAddress :: Parser OldApi.Address
 pFilterByHexEncodedAddress =
