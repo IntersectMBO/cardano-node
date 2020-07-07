@@ -1,4 +1,5 @@
-type: Genesis UTxO signing key
-title: Genesis Initial UTxO Signing Key
-cbor-hex:
- 582064dfad8286c45fdab4f681ab3ee2f8931daf78c10b0769108c0dd9197729f53d
+{
+    "type": "Genesis UTxO signing key",
+    "description": "Genesis Initial UTxO Signing Key",
+    "cborHex": "5820466e4c73210cb767721d023531a4a2b4adaa6b7a0125b90f584c38d1eb713e58"
+}

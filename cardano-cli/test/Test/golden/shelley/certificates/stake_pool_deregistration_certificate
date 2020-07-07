@@ -1,4 +1,5 @@
-type: Certificate
-title: Stake Pool Retirement Certificate
-cbor-hex:
- 8304581c9c9d3afa97839125f7931be9aad8666760c4c1fba11a0253a08fe7a7182a
+{
+    "type": "Certificate",
+    "description": "Stake Pool Retirement Certificate",
+    "cborHex": "8304581c8ffff1f19a1b751ff9ecb0504cab3d3d34952ac735f92da54c67f9fa182a"
+}

@@ -1,4 +1,5 @@
-type: Certificate
-title: Stake Address Deregistration Certificate
-cbor-hex:
- 82018200581c95f33ea170445aa3dcf5d11b0c9743c8e3799820353a732707310516
+{
+    "type": "Certificate",
+    "description": "Stake Address Deregistration Certificate",
+    "cborHex": "82018200581cd0efd9836e62225a47baf9bedfeaccbb86ba3f49d9edc4ac0aa26df5"
+}

@@ -1,4 +1,5 @@
-type: Node operational certificate issue counter
-title: Next certificate issue number: 6
-cbor-hex:
- 8206582074525f5cbbf5d3480459d3199fcd36aa8e29b1afa0d5bd67cf1b0495fe79bb13
+{
+    "type": "Node operational certificate issue counter",
+    "description": "Next certificate issue number: 0",
+    "cborHex": "820058200ef55ad974b238209f51d0eed5ffbb00220a9811c0481eaf127ceb1c525f1eb6"
+}

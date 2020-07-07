@@ -1,4 +1,5 @@
-type: Genesis verification key
-title: Genesis Verification Key
-cbor-hex:
- 58201a0217b08a64170d6f8079a855b5276ca1698fbaada78a459a37d3f406205f98
+{
+    "type": "Genesis verification key",
+    "description": "Genesis Verification Key",
+    "cborHex": "58203e310cfdefad4336c55d240ee98d7e30e5ef45ca3919a9221bbcfc259f6c8c67"
+}
