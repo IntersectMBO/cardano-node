@@ -242,16 +242,16 @@ runTxCalculateMinFee (TxBodyFile txbodyFile) nw pParamsFile
 
     pparams <- readProtocolParameters pParamsFile
 
-    let tx  = Api.makeSignedTransaction [] txbody
-        fee = Api.estimateTransactionFee
-                (fromMaybe Api.Mainnet nw)
-                (Shelley._minfeeB pparams) --TODO: do this better
-                (Shelley._minfeeA pparams)
-                tx
-                nInputs nOutputs
-                nByronKeyWitnesses nShelleyKeyWitnesses
+    let tx = Api.makeSignedTransaction [] txbody
+        Api.Lovelace fee = Api.estimateTransactionFee
+                             (fromMaybe Api.Mainnet nw)
+                             (Shelley._minfeeB pparams) --TODO: do this better
+                             (Shelley._minfeeA pparams)
+                             tx
+                             nInputs nOutputs
+                             nByronKeyWitnesses nShelleyKeyWitnesses
 
-    liftIO $ putStrLn (show fee :: String)
+    liftIO $ putStrLn $ (show fee :: String) <> " Lovelace"
 
 --TODO: eliminate this and get only the necessary params, and get them in a more
 -- helpful way rather than requiring them as a local file.
