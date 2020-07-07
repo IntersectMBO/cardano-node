@@ -21,8 +21,6 @@ import           Cardano.Api.TextView (TextViewDescription (..), textShow)
 
 import qualified Shelley.Spec.Ledger.Slot as Shelley
 
-import           Cardano.Config.Types (PoolMetaDataFile (..))
-
 import           Cardano.CLI.Shelley.Commands
 
 

@@ -1791,6 +1791,16 @@ data TxMetadataValue = TxMetaNumber Integer -- -2^64 .. 2^64-1
                      | TxMetaMap    [(TxMetadataValue, TxMetadataValue)]
     deriving stock (Eq, Show)
 
+-- | Merge metadata maps. When there are clashing entries the left hand side
+-- takes precedence.
+--
+instance Semigroup TxMetadata where
+    TxMetadata (Shelley.MetaData m1) <> TxMetadata (Shelley.MetaData m2) =
+      TxMetadata (Shelley.MetaData (m1 <> m2))
+
+instance Monoid TxMetadata where
+    mempty = TxMetadata (Shelley.MetaData mempty)
+
 instance HasTypeProxy TxMetadata where
     data AsType TxMetadata = AsTxMetadata
     proxyToAsType _ = AsTxMetadata

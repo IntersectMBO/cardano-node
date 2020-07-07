@@ -25,6 +25,9 @@ import qualified Cardano.Api as OldApi
 import qualified Cardano.Api.Typed as Api
 import           Cardano.Api.Typed (SlotNo)
 
+--TODO: do this nicely via the API too:
+import qualified Cardano.Binary as CBOR
+
 import           Cardano.CLI.Environment (EnvSocketError, readEnvSocketPath,
                    renderEnvSocketError)
 
@@ -44,6 +47,7 @@ data ShelleyTxCmdError
   = ShelleyTxAesonDecodeProtocolParamsError !FilePath !Text
   | ShelleyTxMetaDataFileError !FilePath !IOException
   | ShelleyTxMetaDataConversionError !FilePath !MetaDataJsonConversionError
+  | ShelleyTxMetaDecodeError !FilePath !CBOR.DecoderError
   | ShelleyTxMissingNetworkId
   | ShelleyTxSocketEnvError !EnvSocketError
   | ShelleyTxReadProtocolParamsError !FilePath !IOException
@@ -65,7 +69,11 @@ renderShelleyTxCmdError err =
     ShelleyTxMetaDataFileError fp ioException ->
        "Error reading metadata at: " <> OldApi.textShow fp <> " Error: " <> OldApi.textShow ioException
     ShelleyTxMetaDataConversionError fp metaDataErr ->
-       "Error reading metadata at: " <> OldApi.textShow fp <> " Error: " <> renderMetaDataJsonConversionError metaDataErr
+       "Error reading metadata at: " <> OldApi.textShow fp
+                       <> " Error: " <> renderMetaDataJsonConversionError metaDataErr
+    ShelleyTxMetaDecodeError fp metaDataErr ->
+       "Error decoding CBOR metadata at: " <> OldApi.textShow fp
+                             <> " Error: " <> OldApi.textShow metaDataErr
     ShelleyTxReadUnsignedTxError err' ->
       "Error while reading unsigned shelley tx: " <> Text.pack (Api.displayError err')
     ShelleyTxReadSignedTxError apiError ->
@@ -111,12 +119,12 @@ runTxBuildRaw
   -> Api.Lovelace
   -> [CertificateFile]
   -> [(Api.StakeAddress, Api.Lovelace)]
-  -> Maybe MetaDataFile
+  -> [MetaDataFile]
   -> Maybe UpdateProposalFile
   -> TxBodyFile
   -> ExceptT ShelleyTxCmdError IO ()
 runTxBuildRaw txins txouts ttl fee
-              certFiles withdrawals mMetaDataFile mUpdatePropFile
+              certFiles withdrawals metaDataFiles mUpdatePropFile
               (TxBodyFile fpath) = do
 
     certs <- sequence
@@ -124,11 +132,12 @@ runTxBuildRaw txins txouts ttl fee
                    Api.readFileTextEnvelope Api.AsCertificate certFile
                | CertificateFile certFile <- certFiles ]
 
-    --TODO: support raw metadata CBOR files, and support multiple files and
-    -- merge them.
-    mMetaData <- case mMetaDataFile of
-                   Nothing   -> return Nothing
-                   Just file -> Just <$> readFileJSONMetaData file
+
+    mMetaData <- case metaDataFiles of
+      []    -> return Nothing
+      files -> Just . mconcat <$> mapM readFileTxMetaData files
+               -- read all the files and merge their metadata maps
+               -- in case of clashes earlier entries take precedence
 
     mUpdateProp <-
       case mUpdatePropFile of
@@ -316,9 +325,9 @@ renderMetaDataJsonConversionError err =
     ConversionErrLongerThan64Bytes -> "JSON string is longer than 64 bytes"
 
 
-readFileJSONMetaData :: MetaDataFile
-                     -> ExceptT ShelleyTxCmdError IO Api.TxMetadata
-readFileJSONMetaData (MetaDataFile fp) = do
+readFileTxMetaData :: MetaDataFile
+                   -> ExceptT ShelleyTxCmdError IO Api.TxMetadata
+readFileTxMetaData (MetaDataFileJSON fp) = do
     bs <- handleIOExceptT (ShelleyTxMetaDataFileError fp) $
           LBS.readFile fp
     v  <- firstExceptT (ShelleyTxMetaDataConversionError fp . ConversionErrDecodeJSON) $
@@ -326,6 +335,11 @@ readFileJSONMetaData (MetaDataFile fp) = do
             Aeson.eitherDecode' bs
     firstExceptT (ShelleyTxMetaDataConversionError fp) $ hoistEither $
       jsonToMetadata v
+readFileTxMetaData (MetaDataFileCBOR fp) = do
+    bs <- handleIOExceptT (ShelleyTxMetaDataFileError fp) $
+          BS.readFile fp
+    firstExceptT (ShelleyTxMetaDecodeError fp) $ hoistEither $
+      Api.deserialiseFromCBOR Api.AsTxMetadata bs
 
 
 jsonToMetadata :: Aeson.Value

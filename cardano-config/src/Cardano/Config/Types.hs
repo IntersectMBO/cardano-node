@@ -12,14 +12,12 @@
 
 module Cardano.Config.Types
     ( CBORObject (..)
-    , PoolMetaDataFile (..)
     , CertificateFile (..)
     , ConfigError (..)
     , DbFile (..)
     , GenesisFile (..)
     , KESMetricsData (..)
     , MaxKESEvolutions (..)
-    , MetaDataFile (..)
     , OperationalCertStartKESPeriod (..)
     , HasKESMetricsData (..)
     , NodeAddress (..)
@@ -129,14 +127,6 @@ instance FromJSON GenesisFile where
 -- genesis delegate certificates and MIR certificates.
 newtype CertificateFile = CertificateFile
   { unCertificateFile :: FilePath }
-  deriving newtype (Eq, Show)
-
-newtype PoolMetaDataFile = PoolMetaDataFile
-  { unPoolMetaDataFile :: FilePath }
-  deriving newtype (Eq, Show)
-
-newtype MetaDataFile = MetaDataFile
-  { unMetaDataFile :: FilePath }
   deriving newtype (Eq, Show)
 
 newtype UpdateProposalFile = UpdateProposalFile
