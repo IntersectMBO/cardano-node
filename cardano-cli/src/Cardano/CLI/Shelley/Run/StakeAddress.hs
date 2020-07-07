@@ -12,7 +12,7 @@ import qualified Data.Text.IO as Text
 import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, hoistEither, newExceptT)
 
-import           Cardano.Api.TextView (TextViewTitle (..))
+import           Cardano.Api.TextView (TextViewDescription (..))
 import           Cardano.Api.Typed
 
 import           Cardano.CLI.Helpers
@@ -68,9 +68,9 @@ runStakeAddressKeyGen (VerificationKeyFile vkFp) (SigningKeyFile skFp) = do
       . newExceptT
       $ writeFileTextEnvelope vkFp (Just vkeyDesc) vkey
   where
-    skeyDesc, vkeyDesc :: TextViewTitle
-    skeyDesc = TextViewTitle "Stake Signing Key"
-    vkeyDesc = TextViewTitle "Stake Verification Key"
+    skeyDesc, vkeyDesc :: TextViewDescription
+    skeyDesc = TextViewDescription "Stake Signing Key"
+    vkeyDesc = TextViewDescription "Stake Verification Key"
 
 runStakeAddressBuild :: VerificationKeyFile -> NetworkId -> Maybe OutputFile
                      -> ExceptT ShelleyStakeAddressCmdError IO ()
@@ -99,8 +99,8 @@ runStakeKeyRegistrationCert (VerificationKeyFile vkFp) (OutputFile oFp) = do
       . newExceptT
       $ writeFileTextEnvelope oFp (Just regCertDesc) regCert
   where
-    regCertDesc :: TextViewTitle
-    regCertDesc = TextViewTitle "Stake Address Registration Certificate"
+    regCertDesc :: TextViewDescription
+    regCertDesc = TextViewDescription "Stake Address Registration Certificate"
 
 
 runStakeKeyDelegationCert
@@ -127,8 +127,8 @@ runStakeKeyDelegationCert (VerificationKeyFile stkKey) (VerificationKeyFile pool
       . newExceptT
       $ writeFileTextEnvelope outFp (Just delegCertDesc) delegCert
   where
-    delegCertDesc :: TextViewTitle
-    delegCertDesc = TextViewTitle "Stake Address Delegation Certificate"
+    delegCertDesc :: TextViewDescription
+    delegCertDesc = TextViewDescription "Stake Address Delegation Certificate"
 
 
 runStakeKeyDeRegistrationCert :: VerificationKeyFile -> OutputFile -> ExceptT ShelleyStakeAddressCmdError IO ()
@@ -142,8 +142,8 @@ runStakeKeyDeRegistrationCert (VerificationKeyFile vkFp) (OutputFile oFp) = do
       . newExceptT
       $ writeFileTextEnvelope oFp (Just deregCertDesc) deRegCert
   where
-    deregCertDesc :: TextViewTitle
-    deregCertDesc = TextViewTitle "Stake Address Deregistration Certificate"
+    deregCertDesc :: TextViewDescription
+    deregCertDesc = TextViewDescription "Stake Address Deregistration Certificate"
 
 
 runSingleITNKeyConversion

@@ -1,4 +1,5 @@
-type: StakingVerificationKeyShelley
-title: Stake Verification Key
-cbor-hex:
- 5820da5be0f4d96ed9188e7d46dac9059d2d8e9194af2fd479b8a07dfd58604bbdb3
+{
+    "type": "StakingVerificationKeyShelley",
+    "description": "Stake Verification Key",
+    "cborHex": "5820bd07998bca8de945482d950a3051f0e4d18afedecbc08d4c99c23f1804f3c8e5"
+}

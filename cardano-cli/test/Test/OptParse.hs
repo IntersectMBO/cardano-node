@@ -20,8 +20,8 @@ import           Options.Applicative.Help.Chunk
 import           Options.Applicative.Help.Pretty
 import           System.Directory (doesFileExist, removeFile)
 
-import           Cardano.Api.TextView (TextView(..), TextViewFileError, TextViewType(..),
-                   readTextViewFileOfType, renderTextViewFileError)
+import           Cardano.Api.TextView (TextView(..), TextViewError, TextViewType(..))
+import           Cardano.Api.Typed (FileError, displayError, readTextEnvelopeOfTypeFromFile)
 import           Cardano.CLI.Parsers (opts, pref)
 import           Cardano.CLI.Run (ClientCommand(..),
                    renderClientCommandError, runClientCommand)
@@ -81,7 +81,7 @@ execClientCommand cS fps cmd = do e <- lift . runExceptT $ runClientCommand cmd
                                       failWithCustom cS Nothing . Text.unpack $ renderClientCommandError cmdErrors
                                     Right _ -> H.success
 
--- | Checks that the 'tvType' and 'tvTitle' are equivalent between two files.
+-- | Checks that the 'tvType' and 'tvDescription' are equivalent between two files.
 checkTextEnvelopeFormat
   :: HasCallStack
   => [FilePath]
@@ -92,19 +92,19 @@ checkTextEnvelopeFormat
   -> H.PropertyT IO ()
 checkTextEnvelopeFormat fps tve reference created = do
 
-  eRefTextEnvelope <- liftIO $ readTextViewFileOfType tve reference
+  eRefTextEnvelope <- liftIO $ readTextEnvelopeOfTypeFromFile tve reference
   refTextEnvelope <- handleTextEnvelope eRefTextEnvelope
 
-  eCreatedTextEnvelope <- liftIO $ readTextViewFileOfType tve created
+  eCreatedTextEnvelope <- liftIO $ readTextEnvelopeOfTypeFromFile tve created
   createdTextEnvelope <- handleTextEnvelope eCreatedTextEnvelope
 
   typeTitleEquivalence refTextEnvelope createdTextEnvelope
  where
-   handleTextEnvelope :: Either TextViewFileError TextView -> H.PropertyT IO TextView
+   handleTextEnvelope :: Either (FileError TextViewError) TextView -> H.PropertyT IO TextView
    handleTextEnvelope (Right refTextEnvelope) = return refTextEnvelope
-   handleTextEnvelope (Left tvfErr) = do
+   handleTextEnvelope (Left fileErr) = do
      liftIO $ fileCleanup fps
-     failWithCustom callStack Nothing . Text.unpack $ renderTextViewFileError tvfErr
+     failWithCustom callStack Nothing . displayError $ fileErr
 
    typeTitleEquivalence :: TextView -> TextView -> H.PropertyT IO ()
    typeTitleEquivalence (TextView refType refTitle _) (TextView createdType createdTitle _) = do

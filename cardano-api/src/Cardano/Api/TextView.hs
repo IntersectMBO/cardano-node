@@ -8,11 +8,13 @@ module Cardano.Api.TextView
     TextView (..)
   , TextViewError (..)
   , TextViewType (..)
-  , TextViewTitle (..)
+  , TextViewDescription (..)
   , parseTextView
   , renderTextView
   , renderTextViewError
   , expectTextViewOfType
+  , textViewJSONConfig
+  , textViewJSONKeyOrder
   , textShow
 
     -- * File IO support
@@ -28,7 +30,11 @@ module Cardano.Api.TextView
   ) where
 
 import           Cardano.Prelude
+import           Prelude (String)
 
+import           Data.Aeson (FromJSON(..), ToJSON(..), object,
+                   withObject, (.=), (.:))
+import           Data.Aeson.Encode.Pretty (Config(..), defConfig, keyOrder)
 import           Data.Attoparsec.ByteString (Parser)
 import qualified Data.Attoparsec.ByteString.Char8 as Atto
 import qualified Data.ByteString.Base16 as Base16
@@ -46,8 +52,8 @@ newtype TextViewType
   = TextViewType { unTextViewType :: ByteString }
   deriving (Eq, IsString, Show, Semigroup)
 
-newtype TextViewTitle
-  = TextViewTitle { unTextViewTitle :: ByteString }
+newtype TextViewDescription
+  = TextViewDescription { unTextViewDescription :: ByteString }
   deriving (Eq, IsString, Show, Semigroup)
 
 -- | A 'TextView' is a structured envalope for serialised binary values
@@ -62,9 +68,29 @@ newtype TextViewTitle
 --
 data TextView = TextView
   { tvType :: !TextViewType
-  , tvTitle :: !TextViewTitle
+  , tvDescription :: !TextViewDescription
   , tvRawCBOR :: !ByteString
   } deriving (Eq, Show)
+
+instance ToJSON TextView where
+  toJSON (TextView (TextViewType tvType) (TextViewDescription desc) rawCBOR) =
+    object [ "type" .= Text.decodeUtf8 tvType
+           , "description" .= Text.decodeUtf8 desc
+           , "cborHex" .= (Text.decodeUtf8 $ Base16.encode rawCBOR)
+           ]
+
+instance FromJSON TextView where
+  parseJSON = withObject "TextView" $ \v -> TextView
+                <$> (TextViewType . Text.encodeUtf8 <$> v .: "type")
+                <*> (TextViewDescription . Text.encodeUtf8 <$> v .: "description")
+                <*> (fst . Base16.decode . Text.encodeUtf8 <$> v .: "cborHex")
+
+textViewJSONConfig :: Config
+textViewJSONConfig = defConfig { confCompare = textViewJSONKeyOrder }
+
+textViewJSONKeyOrder :: Text -> Text -> Ordering
+textViewJSONKeyOrder = keyOrder ["type", "description", "cborHex"]
+
 
 -- | The errors that the pure 'TextView' parsing\/decoding functions can return.
 --
@@ -72,6 +98,7 @@ data TextViewError
   = TextViewFormatError !Text
   | TextViewTypeError   ![TextViewType] !TextViewType -- ^ expected, actual
   | TextViewDecodeError !DecoderError
+  | TextViewAesonDecodeError !String
   deriving (Eq, Show)
 
 renderTextViewError :: TextViewError -> Text
@@ -90,14 +117,16 @@ renderTextViewError tve =
      <> Text.intercalate ", "
           [ Text.decodeLatin1 (unTextViewType expType) | expType <- expTypes ]
      <> " Actual: " <> (Text.decodeLatin1 (unTextViewType actType))
-
+    TextViewAesonDecodeError decErr -> "TextView aeson decode error: " <> textShow decErr
     TextViewDecodeError decErr -> "TextView decode error: " <> textShow decErr
 
 -- | Parse a 'TextView' from the external serialised format.
 --
+-- TODO: Do not use this to parse TextView as TextView is now serialized to JSON
+-- Need to remove once the old api has been removed
 parseTextView :: ByteString -> Either TextViewError TextView
 parseTextView =
-  first (TextViewFormatError . Text.pack) . Atto.parseOnly pTextView
+  first (\str -> TextViewFormatError . Text.pack $ "Cardano.Api.TextView.parseTextView: " ++ str) . Atto.parseOnly pTextView
 
 
 -- | Render a 'TextView' into the external serialised format.
@@ -106,7 +135,7 @@ renderTextView :: TextView -> ByteString
 renderTextView tv =
   BS.unlines $
     [ "type: " <> unTextViewType (tvType tv)
-    , "title: " <> unTextViewTitle (tvTitle tv)
+    , "title: " <> unTextViewDescription (tvDescription tv)
     , "cbor-hex:"
     ]
     <> rawToMultilineHex (tvRawCBOR tv)
@@ -188,7 +217,7 @@ pTextView = do
   title <- Atto.string "title: " *> Atto.takeWhile (/= '\n') <* Atto.endOfLine
   hex <- Atto.string "cbor-hex:\n" *> Atto.takeByteString <* Atto.endOfInput
   case Base16.decode . BS.concat . map (BS.dropWhile isSpace) $ BS.lines hex of
-    (raw, "") -> pure $ TextView (TextViewType typ) (TextViewTitle title) raw
+    (raw, "") -> pure $ TextView (TextViewType typ) (TextViewDescription title) raw
     (_, err) -> panic $ "pTextView: Base16.deocde failed on " <> textShow err
 
 -- | Convert a raw ByteString to hexadecimal and then line wrap

@@ -45,7 +45,7 @@ renderApiError ae =
               [ Text.decodeLatin1 (unTextViewType t) | t <- expected ]
           , ", but got type ", Text.decodeLatin1 (unTextViewType actual)
           ]
-
+      TextViewAesonDecodeError de -> sformat build de
       TextViewDecodeError de -> sformat build de
 
 textShow :: Show a => a -> Text

@@ -1,4 +1,5 @@
-type: SigningKeyShelley
-title: Stake Signing Key
-cbor-hex:
- 5820d6a8314394e8356d4dabd084bde5769dad6ac8a0ad296103e602e0049a3842c9
+{
+    "type": "SigningKeyShelley",
+    "description": "Stake Signing Key",
+    "cborHex": "58207471c38de33d944639446955aa54b668e871d0c36feefbabf0748897d5916e94"
+}

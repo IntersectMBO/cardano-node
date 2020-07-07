@@ -205,6 +205,8 @@ module Cardano.Api.Typed (
     deserialiseFromTextEnvelope,
     readFileTextEnvelope,
     writeFileTextEnvelope,
+    readTextEnvelopeFromFile,
+    readTextEnvelopeOfTypeFromFile,
     -- *** Reading one of several key types
     FromSomeType(..),
     deserialiseFromTextEnvelopeAnyOf,
@@ -282,6 +284,7 @@ module Cardano.Api.Typed (
 
 import           Prelude
 
+import           Data.Aeson.Encode.Pretty (encodePretty')
 import           Data.Proxy (Proxy(..))
 import           Data.Kind (Constraint)
 import           Data.Void (Void)
@@ -319,7 +322,7 @@ import qualified Codec.Binary.Bech32 as Bech32
 import           Control.Applicative
 import           Control.Monad
 --import Control.Monad.IO.Class
---import           Control.Monad.Trans.Except
+import           Control.Monad.Trans.Except (ExceptT(..))
 import           Control.Monad.Trans.Except.Extra
 import           Control.Exception (Exception(..), IOException, throwIO)
 import           Control.Tracer (nullTracer)
@@ -2424,7 +2427,7 @@ class HasTypeProxy addr => SerialiseAddress addr where
 
 type TextEnvelope = TextView.TextView
 type TextEnvelopeType = TextView.TextViewType
-type TextEnvelopeDescr = TextView.TextViewTitle
+type TextEnvelopeDescr = TextView.TextViewDescription
 
 class SerialiseAsCBOR a => HasTextEnvelope a where
     textEnvelopeType :: AsType a -> TextEnvelopeType
@@ -2452,7 +2455,7 @@ serialiseToTextEnvelope :: forall a. HasTextEnvelope a
 serialiseToTextEnvelope mbDescr a =
     TextView.TextView {
       TextView.tvType    = textEnvelopeType ttoken
-    , TextView.tvTitle   = fromMaybe (textEnvelopeDefaultDescr a) mbDescr
+    , TextView.tvDescription   = fromMaybe (textEnvelopeDefaultDescr a) mbDescr
     , TextView.tvRawCBOR = serialiseToCBOR a
     }
   where
@@ -2467,7 +2470,7 @@ deserialiseFromTextEnvelope :: HasTextEnvelope a
 deserialiseFromTextEnvelope ttoken te = do
     TextView.expectTextViewOfType (textEnvelopeType ttoken) te
     first TextView.TextViewDecodeError $
-      deserialiseFromCBOR ttoken (TextView.tvRawCBOR te)
+      deserialiseFromCBOR ttoken (TextView.tvRawCBOR te) --TODO: You have switched from CBOR to JSON
 
 data FromSomeType (c :: * -> Constraint) b where
      FromSomeType :: c a => AsType a -> (a -> b) -> FromSomeType c b
@@ -2501,8 +2504,8 @@ writeFileTextEnvelope path mbDescr a =
     runExceptT $ do
       handleIOExceptT (FileIOError path) $ BS.writeFile path content
   where
-    content = TextView.renderTextView (serialiseToTextEnvelope mbDescr a)
-
+    content = LBS.toStrict $
+      encodePretty' TextView.textViewJSONConfig (serialiseToTextEnvelope mbDescr a)
 
 readFileTextEnvelope :: HasTextEnvelope a
                      => AsType a
@@ -2512,7 +2515,7 @@ readFileTextEnvelope ttoken path =
     runExceptT $ do
       content <- handleIOExceptT (FileIOError path) $ BS.readFile path
       firstExceptT (FileError path) $ hoistEither $ do
-        te <- TextView.parseTextView content
+        te <- first TextView.TextViewAesonDecodeError $ Aeson.eitherDecodeStrict' content
         deserialiseFromTextEnvelope ttoken te
 
 
@@ -2523,8 +2526,28 @@ readFileTextEnvelopeAnyOf types path =
     runExceptT $ do
       content <- handleIOExceptT (FileIOError path) $ BS.readFile path
       firstExceptT (FileError path) $ hoistEither $ do
-        te <- TextView.parseTextView content
+        te <- first TextView.TextViewAesonDecodeError $ Aeson.eitherDecodeStrict' content
         deserialiseFromTextEnvelopeAnyOf types te
+
+readTextEnvelopeFromFile :: FilePath
+                         -> IO (Either (FileError TextEnvelopeError) TextEnvelope)
+readTextEnvelopeFromFile path =
+  runExceptT $ do
+    bs <- handleIOExceptT (FileIOError path) $
+            BS.readFile path
+    firstExceptT (FileError path . TextView.TextViewAesonDecodeError)
+      . hoistEither $ Aeson.eitherDecodeStrict' bs
+
+readTextEnvelopeOfTypeFromFile
+  :: TextEnvelopeType
+  -> FilePath
+  -> IO (Either (FileError TextEnvelopeError) TextEnvelope)
+readTextEnvelopeOfTypeFromFile expectedType path =
+  runExceptT $ do
+    te <- ExceptT (readTextEnvelopeFromFile path)
+    firstExceptT (FileError path) $ hoistEither $
+      TextView.expectTextViewOfType expectedType te
+    return te
 
 
 -- ----------------------------------------------------------------------------

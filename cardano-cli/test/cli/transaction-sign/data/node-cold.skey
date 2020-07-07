@@ -1,4 +1,5 @@
-type: Node operator signing key
-title: Stake pool operator key
-cbor-hex:
- 5820d5c114708f532a292bfc0d9a6bb123879de3d4e9451cdaa0e91c37d26625daeb
+{
+    "type": "Node operator signing key",
+    "description": "Genesis delegate operator key",
+    "cborHex": "582086f64a96dd4b476cbd6e8adf36d0aa9ecc091f9865e1ffc14057ef9710daa7e3"
+}

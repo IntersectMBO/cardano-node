@@ -468,5 +468,5 @@ genTextView :: Gen TextView
 genTextView =
   TextView
     <$> fmap TextViewType (Gen.utf8 (Range.linear 1 20) Gen.alpha)
-    <*> fmap TextViewTitle (Gen.utf8 (Range.linear 1 80) (Gen.filter (/= '\n') Gen.ascii))
+    <*> fmap TextViewDescription (Gen.utf8 (Range.linear 1 80) (Gen.filter (/= '\n') Gen.ascii))
     <*> Gen.bytes (Range.linear 0 500)

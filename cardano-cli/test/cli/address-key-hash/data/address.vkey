@@ -1,4 +1,5 @@
-type: PaymentVerificationKeyShelley
-title: Payment Verification Key
-cbor-hex:
- 5820031e5c8010b91912133845399012d375ddb223b2de1e57cd22fb6856ea6893fa
+{
+    "type": "PaymentVerificationKeyShelley",
+    "description": "Payment Verification Key",
+    "cborHex": "58208dc60533b5dfa60a530955a696323a2ef4f14e8bc95a8f84cf6c441fea423427"
+}

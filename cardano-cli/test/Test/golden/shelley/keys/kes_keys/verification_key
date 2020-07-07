@@ -1,4 +1,5 @@
-type: VKeyES TPraosStandardCrypto
-title: KES Verification Key
-cbor-hex:
- 582029e773d638bb7b203d62711077518510e6311a710ecfbfe1189e08d8a009a636
+{
+    "type": "VKeyES TPraosStandardCrypto",
+    "description": "KES Verification Key",
+    "cborHex": "5820db9a67e7a991341c95d2afb4be90bc6cf80ee60339e51145f163ba4394f5b64d"
+}

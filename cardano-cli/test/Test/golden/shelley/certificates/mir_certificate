@@ -1,4 +1,5 @@
-type: Certificate
-title: Move Instantaneous Rewards Certificate
-cbor-hex:
- 82068200a18200581c0427b2124b85b4edbeb729194875238ff93d81a46fe6962fb9b8fdb31903e8
+{
+    "type": "Certificate",
+    "description": "Move Instantaneous Rewards Certificate",
+    "cborHex": "82068200a18200581cee475cade27e95faf1093541b0783498016cdcfba0d6441055b2dfcb1903e8"
+}
