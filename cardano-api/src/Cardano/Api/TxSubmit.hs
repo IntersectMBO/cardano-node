@@ -18,11 +18,13 @@ import           Cardano.Prelude
 import           Control.Tracer
 import           Control.Concurrent.STM
 
+import           Cardano.Api.Protocol.Cardano (mkNodeClientProtocolCardano)
 import           Cardano.Api.Types
 import           Cardano.Api.TxSubmit.ErrorRender (renderApplyMempoolPayloadErr)
 
-import           Ouroboros.Consensus.Cardano (protocolClientInfo, SecurityParam(..))
-import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx)
+import           Ouroboros.Consensus.Cardano (CardanoBlock, ProtocolCardano, ProtocolClient, protocolClientInfo, SecurityParam(..))
+import           Ouroboros.Consensus.Cardano.Block (GenTx(..), HardForkApplyTxErr(..))
+import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr) -- , GenTx)
 import           Ouroboros.Consensus.Network.NodeToClient
 import           Ouroboros.Consensus.Node.ProtocolInfo (ProtocolClientInfo(..))
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
@@ -47,9 +49,14 @@ import           Ouroboros.Consensus.Byron.Ledger (ByronBlock)
 import           Ouroboros.Consensus.Shelley.Protocol.Crypto (TPraosStandardCrypto)
 
 import           Cardano.Api.Protocol.Byron (mkNodeClientProtocolByron)
-import           Cardano.Api.Protocol.Shelley (mkNodeClientProtocolShelley)
+-- import           Cardano.Api.Protocol.Shelley (mkNodeClientProtocolShelley)
 import           Cardano.Config.Types (SocketPath(..))
 
+
+nodeClientProtocolCardano
+  :: ProtocolClient (CardanoBlock TPraosStandardCrypto) ProtocolCardano
+nodeClientProtocolCardano =
+  mkNodeClientProtocolCardano (EpochSlots 21600) (SecurityParam 2160)
 
 data TxSubmitResult
    = TxSubmitSuccess
@@ -96,13 +103,15 @@ submitTx network socketPath tx =
           result <- submitGenTx
                       nullTracer
                       iocp
-                      (protocolClientInfo mkNodeClientProtocolShelley)
+                      (protocolClientInfo nodeClientProtocolCardano)
                       network
                       socketPath
-                      genTx
+                      (GenTxShelley genTx)
           case result of
             SubmitSuccess  -> return TxSubmitSuccess
-            SubmitFail err -> return (TxSubmitFailureShelley err)
+            SubmitFail (ApplyTxErrShelley err) -> return (TxSubmitFailureShelley err)
+            SubmitFail (ApplyTxErrByron err) -> panic $ "Impossible: A Byron transaction wasn't submitted, but we got error: " <> show err
+            SubmitFail (ApplyTxErrWrongEra err) -> panic $ "Wrong era: " <> show err
 
 
 submitGenTx
