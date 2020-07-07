@@ -1,5 +1,11 @@
 #!/bin/bash -eu
 
+OS=$(uname -s)
+
+case $OS in
+  Darwin )       export DATE=gdate; export SED=gsed;;
+  * )            export DATE=date ; export SED=sed ;; esac
+
 if test "${CARDANO_CLI:-x}" = "x" ; then
   # Need this for when the test scripts are run directly instead of via the
   # Haskell test runner.
@@ -65,7 +71,7 @@ assert_string () {
 }
 
 assert_line_count () {
-  line_count=$(wc -l < "$2")
+  line_count=$(wc -l < "$2" | xargs)
   if test "${line_count}" != "$1" ; then
     echo "$2: line count is ${line_count} "
     cat "$2"

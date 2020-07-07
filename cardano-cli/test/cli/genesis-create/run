@@ -12,15 +12,15 @@ setup_data_dir "${testname}"
 
 OUTPUT_JSON="${TEST_DIR}/genesis.json"
 
-start_time=$(TZ=UTC date --iso-8601=seconds | sed 's/+.*/Z/')
+start_time=$(TZ=UTC $DATE --iso-8601=seconds | $SED 's/+.*/Z/')
 
 cp "${DATA_DIR}/genesis.spec.json" "${TEST_DIR}/"
 
 # Random number for the total supply.
-supply=$(head -100 /dev/urandom | cksum | sed 's/ .*//')
+supply=$(head -100 /dev/urandom | cksum | $SED 's/ .*//')
 
 # Random number for the number of genesis delegates.
-seconds=$(date +"%s")
+seconds=$($DATE +"%s")
 gendlg_count=$(( 4 + seconds % 16))
 
 error=0
@@ -69,14 +69,14 @@ if test "${check_supply}" != "${supply}" ; then
 
 jq '.genDelegs' < "${OUTPUT_JSON}" | grep ': {' > "${TEST_DIR}/genesis-delegate.pairs"
 
-keyhash_count=$(sed 's/:.*//' < "${TEST_DIR}/genesis-delegate.pairs" | sort | uniq | wc -l)
+keyhash_count=$(sed 's/:.*//' < "${TEST_DIR}/genesis-delegate.pairs" | sort | uniq | wc -l | xargs)
 if test "${keyhash_count}" != "${gendlg_count}" ; then
     echo "Genesis keyhashes are not unique."
     cat "${TEST_DIR}/genesis-delegate.pairs"
     error=1
     fi
 
-keyhash_delegate_count=$(sort "${TEST_DIR}/genesis-delegate.pairs" | uniq | wc -l)
+keyhash_delegate_count=$(sort "${TEST_DIR}/genesis-delegate.pairs" | uniq | wc -l | xargs)
 if test "${keyhash_delegate_count}" != "${gendlg_count}" ; then
     echo "Genesis delegate keyhashes are not unique (${keyhash_delegate_count} != ${gendlg_count})."
     cat "${TEST_DIR}/genesis-delegate.pairs"
