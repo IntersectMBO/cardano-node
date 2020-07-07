@@ -1,6 +1,6 @@
 # General reviewers per PR
-#                       Duncan   Jordan     Luke       Erik   Thomas
-*                       @dcoutts @Jimbo4350 @intricate @erikd @mrBliss
+#                       Duncan   Jordan     Luke       Erik   Thomas   John
+*                       @dcoutts @Jimbo4350 @intricate @erikd @mrBliss @newhoggy
 
 # Specific reviewers for code pieces
 # NB - The last matching pattern takes precedence
