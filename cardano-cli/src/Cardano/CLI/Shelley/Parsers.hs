@@ -44,8 +44,8 @@ import           Cardano.Api.Typed hiding (PoolId)
 
 import           Cardano.Slotting.Slot (EpochNo (..))
 
-import           Cardano.Config.Types (CertificateFile (..), MetaDataFile(..), SigningKeyFile(..),
-                   PoolMetaDataFile(..), UpdateProposalFile (..))
+import           Cardano.Config.Types (CertificateFile (..), SigningKeyFile(..),
+                   UpdateProposalFile (..))
 import           Cardano.Config.Parsers (parseNodeAddress)
 
 import           Cardano.CLI.Shelley.Commands
@@ -286,7 +286,7 @@ pTransaction =
                                    <*> pTxFee
                                    <*> many pCertificateFile
                                    <*> many pWithdrawal
-                                   <*> optional pMetaDataFile
+                                   <*> many pMetaDataFile
                                    <*> optional pUpdateProposalFile
                                    <*> pTxBodyFile Output
 
@@ -734,13 +734,27 @@ pPoolMetaDataFile =
 
 pMetaDataFile :: Parser MetaDataFile
 pMetaDataFile =
-  MetaDataFile <$>
-    Opt.strOption
-      (  Opt.long "metadata-file"
-      <> Opt.metavar "FILE"
-      <> Opt.help "Filepath of the metadata."
-      <> Opt.completer (Opt.bashCompleter "file")
-      )
+      MetaDataFileJSON <$>
+        ( Opt.strOption
+            (  Opt.long "metadata-json-file"
+            <> Opt.metavar "FILE"
+            <> Opt.help "Filepath of the metadata file, in JSON format."
+            <> Opt.completer (Opt.bashCompleter "file")
+            )
+        <|>
+          Opt.strOption
+            (  Opt.long "metadata-file" -- backward compat name
+            <> Opt.internal
+            )
+        )
+  <|>
+      MetaDataFileCBOR <$>
+        Opt.strOption
+          (  Opt.long "metadata-cbor-file"
+          <> Opt.metavar "FILE"
+          <> Opt.help "Filepath of the metadata, in raw CBOR format."
+          <> Opt.completer (Opt.bashCompleter "file")
+          )
 
 pWithdrawal :: Parser (StakeAddress, Lovelace)
 pWithdrawal =

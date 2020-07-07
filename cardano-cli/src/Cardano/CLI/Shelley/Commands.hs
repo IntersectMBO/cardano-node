@@ -30,7 +30,9 @@ module Cardano.CLI.Shelley.Commands
   , TxFile (..)
   , VerificationKeyFile (..)
   , GenesisKeyFile (..)
+  , MetaDataFile (..)
   , PoolId (..)
+  , PoolMetaDataFile (..)
   , GenesisFile (..)
   , PrivKeyFile (..)
   , BlockId (..)
@@ -45,8 +47,7 @@ import           Cardano.Api.Typed hiding (PoolId, Hash)
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
 
 import           Cardano.Config.Types
-                  (CertificateFile (..), MetaDataFile, NodeAddress,
-                   PoolMetaDataFile (..), SigningKeyFile(..),
+                  (CertificateFile (..), NodeAddress, SigningKeyFile(..),
                    UpdateProposalFile(..))
 import           Shelley.Spec.Ledger.TxData (MIRPot)
 
@@ -100,7 +101,7 @@ data TransactionCmd
       Lovelace
       [CertificateFile]
       [(StakeAddress, Lovelace)]
-      (Maybe MetaDataFile)
+      [MetaDataFile]
       (Maybe UpdateProposalFile)
       TxBodyFile
   | TxSign TxBodyFile [SigningKeyFile] (Maybe NetworkId) TxFile
@@ -249,12 +250,21 @@ newtype GenesisKeyFile
   = GenesisKeyFile FilePath
   deriving (Eq, Show)
 
+data MetaDataFile = MetaDataFileJSON FilePath
+                  | MetaDataFileCBOR FilePath
+
+  deriving (Eq, Show)
+
 newtype OutputFile
   = OutputFile FilePath
   deriving (Eq, Show)
 
 newtype PoolId
   = PoolId String -- Probably not a String
+  deriving (Eq, Show)
+
+newtype PoolMetaDataFile = PoolMetaDataFile
+  { unPoolMetaDataFile :: FilePath }
   deriving (Eq, Show)
 
 newtype GenesisDir

@@ -340,7 +340,8 @@ import           Cardano.Binary
                    (ToCBOR(toCBOR), FromCBOR(fromCBOR),
                     Annotated(..), reAnnotate, recoverBytes)
 import qualified Cardano.Prelude as CBOR (cborError)
-import           Shelley.Spec.Ledger.Serialization (CBORGroup(..))
+import qualified Shelley.Spec.Ledger.Serialization as CBOR
+                   (CBORGroup(..), encodeNullMaybe, decodeNullMaybe)
 
 import           Cardano.Slotting.Slot (SlotNo, EpochNo)
 
@@ -399,7 +400,8 @@ import qualified Ouroboros.Consensus.Shelley.Protocol.Crypto as Shelley
 import qualified Shelley.Spec.Ledger.Address                 as Shelley
 import qualified Shelley.Spec.Ledger.Address.Bootstrap       as Shelley
 import qualified Shelley.Spec.Ledger.BaseTypes               as Shelley
-import           Shelley.Spec.Ledger.BaseTypes (maybeToStrictMaybe)
+import           Shelley.Spec.Ledger.BaseTypes
+                   (maybeToStrictMaybe, strictMaybeToMaybe)
 import qualified Shelley.Spec.Ledger.Coin                    as Shelley
 import qualified Shelley.Spec.Ledger.Credential              as Shelley
 import qualified Shelley.Spec.Ledger.Genesis                 as Shelley
@@ -820,7 +822,7 @@ getTxId (ByronTxBody tx) =
   . recoverBytes
   $ tx
 
-getTxId (ShelleyTxBody tx) =
+getTxId (ShelleyTxBody tx _) =
     TxId
   . Crypto.castHash
   . (\(Shelley.TxId txhash) -> txhash)
@@ -891,6 +893,7 @@ data TxBody era where
 
      ShelleyTxBody
        :: Shelley.TxBody ShelleyCrypto
+       -> Maybe Shelley.MetaData
        -> TxBody Shelley
 
 
@@ -915,15 +918,28 @@ instance SerialiseAsCBOR (TxBody Byron) where
           (LBS.fromStrict bs)
 
 instance SerialiseAsCBOR (TxBody Shelley) where
-    serialiseToCBOR (ShelleyTxBody txbody) =
-      CBOR.serialize' txbody
+    serialiseToCBOR (ShelleyTxBody txbody txmetadata) =
+      CBOR.serializeEncoding' $
+          CBOR.encodeListLen 2
+       <> CBOR.toCBOR txbody
+       <> CBOR.encodeNullMaybe CBOR.toCBOR txmetadata
 
     deserialiseFromCBOR AsShelleyTxBody bs =
-      ShelleyTxBody <$>
-        CBOR.decodeAnnotator
-          "Shelley TxBody"
-          fromCBOR
-          (LBS.fromStrict bs)
+      CBOR.decodeAnnotator
+        "Shelley TxBody"
+        decodeAnnotatedPair
+        (LBS.fromStrict bs)
+      where
+        decodeAnnotatedPair :: CBOR.Decoder s (CBOR.Annotator (TxBody Shelley))
+        decodeAnnotatedPair =  do
+          CBOR.decodeListLenOf 2
+          txbody     <- fromCBOR
+          txmetadata <- CBOR.decodeNullMaybe fromCBOR
+          return $ CBOR.Annotator $ \fbs ->
+            ShelleyTxBody
+              (flip CBOR.runAnnotator fbs txbody)
+              (flip CBOR.runAnnotator fbs <$> txmetadata)
+
 
 instance HasTextEnvelope (TxBody Byron) where
     textEnvelopeType _ = "TxUnsignedByron"
@@ -1000,8 +1016,11 @@ makeShelleyTransaction TxExtraContent {
         ttl
         (toShelleyUpdate <$> maybeToStrictMaybe txUpdateProposal)
         (toShelleyMetadataHash <$> maybeToStrictMaybe txMetadata))
+      (toShelleyMetadata <$> txMetadata)
   where
     toShelleyUpdate (UpdateProposal p) = p
+
+    toShelleyMetadata     (TxMetadata m) = m
     toShelleyMetadataHash (TxMetadata m) = Shelley.hashMetaData m
 
     toShelleyWdrl :: [(StakeAddress, Lovelace)] -> Shelley.Wdrl ShelleyCrypto
@@ -1128,8 +1147,11 @@ getTxBody :: Tx era -> TxBody era
 getTxBody (ByronTx Byron.ATxAux { Byron.aTaTx = txbody }) =
     ByronTxBody txbody
 
-getTxBody (ShelleyTx Shelley.Tx { Shelley._body = txbody }) =
-    ShelleyTxBody txbody
+getTxBody (ShelleyTx Shelley.Tx {
+                       Shelley._body     = txbody,
+                       Shelley._metadata = txmetadata
+                     }) =
+    ShelleyTxBody txbody (strictMaybeToMaybe txmetadata)
 
 
 getTxWitnesses :: Tx era -> [Witness era]
@@ -1165,7 +1187,7 @@ makeSignedTransaction witnesses (ByronTxBody txbody) =
     selectByronWitness :: Witness Byron -> Byron.TxInWitness
     selectByronWitness (ByronKeyWitness w) = w
 
-makeSignedTransaction witnesses (ShelleyTxBody txbody) =
+makeSignedTransaction witnesses (ShelleyTxBody txbody txmetadata) =
     ShelleyTx $
       Shelley.Tx
         txbody
@@ -1178,7 +1200,7 @@ makeSignedTransaction witnesses (ShelleyTxBody txbody) =
                                [ (Shelley.hashScript sw, sw)
                                | ShelleyScriptWitness sw <- witnesses ]
         }
-        Shelley.SNothing -- (maybeToStrictMaybe txmetadata)
+        (maybeToStrictMaybe txmetadata)
 
 makeByronKeyWitness :: NetworkId
                     -> TxBody Byron
@@ -1203,7 +1225,7 @@ makeShelleyBootstrapWitness :: NetworkId
                             -> TxBody Shelley
                             -> SigningKey ByronKey
                             -> Witness Shelley
-makeShelleyBootstrapWitness nw (ShelleyTxBody txbody) (ByronSigningKey sk) =
+makeShelleyBootstrapWitness nw (ShelleyTxBody txbody _) (ByronSigningKey sk) =
     ShelleyBootstrapWitness $
       -- Byron era witnesses were weird. This reveals all that weirdness.
       Shelley.BootstrapWitness {
@@ -1265,7 +1287,7 @@ data ShelleyWitnessSigningKey =
 makeShelleyKeyWitness :: TxBody Shelley
                       -> ShelleyWitnessSigningKey
                       -> Witness Shelley
-makeShelleyKeyWitness (ShelleyTxBody txbody) wsk =
+makeShelleyKeyWitness (ShelleyTxBody txbody _) wsk =
     ShelleyKeyWitness $
       Shelley.WitVKey vk signature
   where
@@ -1769,6 +1791,16 @@ data TxMetadataValue = TxMetaNumber Integer -- -2^64 .. 2^64-1
                      | TxMetaMap    [(TxMetadataValue, TxMetadataValue)]
     deriving stock (Eq, Show)
 
+-- | Merge metadata maps. When there are clashing entries the left hand side
+-- takes precedence.
+--
+instance Semigroup TxMetadata where
+    TxMetadata (Shelley.MetaData m1) <> TxMetadata (Shelley.MetaData m2) =
+      TxMetadata (Shelley.MetaData (m1 <> m2))
+
+instance Monoid TxMetadata where
+    mempty = TxMetadata (Shelley.MetaData mempty)
+
 instance HasTypeProxy TxMetadata where
     data AsType TxMetadata = AsTxMetadata
     proxyToAsType _ = AsTxMetadata
@@ -2069,11 +2101,11 @@ data OperationalCertificateIssueCounter =
 
 instance ToCBOR OperationalCertificate where
     toCBOR (OperationalCertificate ocert vkey) =
-      toCBOR (CBORGroup ocert, vkey)
+      toCBOR (CBOR.CBORGroup ocert, vkey)
 
 instance FromCBOR OperationalCertificate where
     fromCBOR = do
-      (CBORGroup ocert, vkey) <- fromCBOR
+      (CBOR.CBORGroup ocert, vkey) <- fromCBOR
       return (OperationalCertificate ocert vkey)
 
 instance ToCBOR OperationalCertificateIssueCounter where
