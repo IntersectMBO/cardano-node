@@ -1,5 +1,22 @@
 # Changelog for cardano-api
 
+## 1.15.0 -- July 2020
+
+- Fix the ledger state dump query (#1333, #1334)
+- Support for Byron witnesses in Shelley txs in the typed API (#1339)
+- Support for Bech32 serialisation in the typed API (#1382)
+- Support for other additional functionality in the typed API (#1337, #1375)
+- More tests for the typed API (#1360, #1369, #1378)
+- Moving code around to eliminate the cardano-config package (#1289, #1380)
+
+## 1.14.2 -- June 2020
+
+- Fix the query that dumps the ledger state as JSON (#1333)
+
+## 1.14.1 -- June 2020
+
+No changes in the cardano-api. There were changes in the cardano-node.
+
 ## 1.14.0 -- June 2020
 
 - Improvements to the strongly-typed API (#1112, #1220, #1227, #1246)
