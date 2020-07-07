@@ -87,7 +87,7 @@ sed -i ${ROOT}/configuration.yaml \
 # - post another proposal + vote to go to protocol version 2
 
 #uncomment this for an automatic transition after the first epoch
-# echo "TestShelleyHardForkAtEpoch: 1" >> ${ROOT}/configuration.yaml
+echo "TestShelleyHardForkAtEpoch: 1" >> ${ROOT}/configuration.yaml
 #uncomment this to trigger the hardfork with protocol version 1
 #echo "TestShelleyHardForkAtVersion: 1"  >> ${ROOT}/configuration.yaml
 
@@ -511,6 +511,16 @@ cardano-cli shelley transaction build-raw \
     --certificate-file addresses/user1-stake.deleg.cert \
     --out-file tx1.txbody
 
+
+# TODO: this will become the transaction to register the pool, etc. We'll need to pick the tx-in from the actual UTxO -- since it contains the txid, we'll have to query this via cardano-cli shelley query utxo.
+# cardano-cli shelley transaction build-raw --ttl 1000000 --fee 0 --tx-in 67209bfcdf78f8cd86f649da75053a80fb9bb3fad68465554f9301c31b496c65#0 --tx-out $(cat example/addresses/user1.addr)+450000000 --certificate-file example/addresses/pool-owner1-stake.reg.cert     --certificate-file example/node-pool1/registration.cert     --certificate-file example/addresses/user1-stake.reg.cert     --certificate-file example/addresses/user1-stake.deleg.cert --out-file example/register-pool.txbody
+
+# cardano-cli shelley address convert --byron-key-file example/byron/payment-keys.000.key --signing-key-file example/byron/payment-keys.000-converted.key
+
+# cardano-cli shelley transaction sign --tx-body-file example/register-pool.txbody --testnet-magic 42 --signing-key-file example/byron/payment-keys.000-converted.key --signing-key-file example/shelley/utxo-keys/utxo1.skey --signing-key-file example/addresses/user1-stake.skey --signing-key-file example/node-pool1/owner.skey --signing-key-file example/node-pool1/shelley/operator.skey --out-file example/register-pool.tx
+
+# cardano-cli shelley transaction submit --tx-file example/register-pool.tx --testnet-magic 42
+
 # So we'll need to sign this with a bunch of keys:
 # 1. the initial utxo spending key, for the funds
 # 2. the user1 stake address key, due to the delegatation cert
@@ -549,7 +559,8 @@ for NODE in ${BFT_NODES}; do
   echo "  --shelley-operational-certificate ${ROOT}/${NODE}/shelley/node.cert \\"
   echo "  --port                            $(cat ${NODE}/port) \\"
   echo "  --delegation-certificate          ${ROOT}/${NODE}/byron/delegate.cert \\"
-  echo "  --signing-key                     ${ROOT}/${NODE}/byron/delegate.key"
+  echo "  --signing-key                     ${ROOT}/${NODE}/byron/delegate.key \\"
+  echo "  | tee ${NODE}.log"
 
 done
 for NODE in ${POOL_NODES}; do
@@ -562,7 +573,8 @@ for NODE in ${POOL_NODES}; do
   echo "  --shelley-kes-key                 ${ROOT}/${NODE}/shelley/kes.skey \\"
   echo "  --shelley-vrf-key                 ${ROOT}/${NODE}/shelley/vrf.skey \\"
   echo "  --shelley-operational-certificate ${ROOT}/${NODE}/shelley/node.cert \\"
-  echo "  --port                            $(cat ${NODE}/port)"
+  echo "  --port                            $(cat ${NODE}/port) \\"
+  echo "  | tee ${NODE}.log"
 
 done
 echo "To transfer funds out of the genesis UTxO to a regular address"
