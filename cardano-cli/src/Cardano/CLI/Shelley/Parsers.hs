@@ -458,29 +458,33 @@ pQueryCmd =
     pQueryProtocolParameters :: Parser QueryCmd
     pQueryProtocolParameters =
       QueryProtocolParameters
-        <$> pNetworkId
+        <$> pProtocolData
+        <*> pNetworkId
         <*> pMaybeOutputFile
 
     pQueryTip :: Parser QueryCmd
-    pQueryTip = QueryTip <$> pNetworkId <*> pMaybeOutputFile
+    pQueryTip = QueryTip <$> pProtocolData <*> pNetworkId <*> pMaybeOutputFile
 
     pQueryUTxO :: Parser QueryCmd
     pQueryUTxO =
       QueryUTxO
         <$> pQueryFilter
+        <*> pProtocolData
         <*> pNetworkId
         <*> pMaybeOutputFile
 
     pQueryStakeDistribution :: Parser QueryCmd
     pQueryStakeDistribution =
       QueryStakeDistribution
-        <$> pNetworkId
+        <$> pProtocolData
+        <*> pNetworkId
         <*> pMaybeOutputFile
 
     pQueryStakeAddressInfo :: Parser QueryCmd
     pQueryStakeAddressInfo =
       QueryStakeAddressInfo
         <$> pFilterByStakeAddress
+        <*> pProtocolData
         <*> pNetworkId
         <*> pMaybeOutputFile
 
@@ -488,7 +492,7 @@ pQueryCmd =
     pQueryVersion = QueryVersion <$> parseNodeAddress
 
     pQueryLedgerState :: Parser QueryCmd
-    pQueryLedgerState = QueryLedgerState <$> pNetworkId <*> pMaybeOutputFile
+    pQueryLedgerState = QueryLedgerState <$> pProtocolData <*> pNetworkId <*> pMaybeOutputFile
 
     pQueryStatus :: Parser QueryCmd
     pQueryStatus = QueryStatus <$> parseNodeAddress

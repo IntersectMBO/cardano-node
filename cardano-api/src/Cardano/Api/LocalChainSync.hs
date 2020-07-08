@@ -2,33 +2,83 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Cardano.Api.LocalChainSync
-  ( getLocalTip
+  ( LocalTip (..)
+  , getLocalTip
+  , getLocalTip'
   ) where
 
 import           Cardano.Prelude hiding (atomically, catch)
 
+import           Data.Aeson (ToJSON (..))
+
 import           Control.Concurrent.STM
 
+import           Cardano.Api.Protocol (ProtocolData (..))
+import           Cardano.Api.Protocol.Byron (mkNodeClientProtocolByron)
+import           Cardano.Api.Protocol.Cardano (mkNodeClientProtocolCardano)
+import           Cardano.Api.Protocol.Shelley (mkNodeClientProtocolShelley)
 import           Cardano.Api.Typed
+
+import           Cardano.Config.Orphanage ()
+import           Cardano.Config.Shelley.Orphans ()
 
 import           Ouroboros.Network.Block (Tip)
 import           Ouroboros.Network.Protocol.ChainSync.Client
                    (ChainSyncClient(..), ClientStIdle(..), ClientStNext(..))
 
-import           Ouroboros.Consensus.Cardano (ProtocolClient)
 import           Ouroboros.Consensus.Block (BlockProtocol)
+import           Ouroboros.Consensus.Byron.Ledger (ByronBlock)
+import           Ouroboros.Consensus.Cardano (CardanoBlock, ProtocolClient)
 import           Ouroboros.Consensus.Node.Run (RunNode)
+import           Ouroboros.Consensus.Shelley.Ledger (ShelleyBlock)
+import           Ouroboros.Consensus.Shelley.Protocol (TPraosStandardCrypto)
 
+
+data LocalTip
+  = ByronLocalTip (Tip ByronBlock)
+  | ShelleyLocalTip (Tip (ShelleyBlock TPraosStandardCrypto))
+  | CardanoLocalTip (Tip (CardanoBlock TPraosStandardCrypto))
+  deriving (Eq, Show)
+
+instance ToJSON LocalTip where
+  toJSON lt =
+    case lt of
+      ByronLocalTip t -> toJSON t
+      ShelleyLocalTip t -> toJSON t
+      CardanoLocalTip t -> toJSON t
 
 -- | Get the node's tip using the local chain sync protocol.
 getLocalTip
+  :: FilePath
+  -> NetworkId
+  -> ProtocolData
+  -> IO LocalTip
+getLocalTip sockPath nw protocolData =
+  case protocolData of
+    ProtocolDataByron epSlots secParam ->
+      let ptcl = mkNodeClientProtocolByron epSlots secParam
+      in ByronLocalTip <$> getLocalTip' sockPath nw ptcl
+
+    ProtocolDataShelley ->
+      let ptcl = mkNodeClientProtocolShelley
+      in ShelleyLocalTip <$> getLocalTip' sockPath nw ptcl
+
+    ProtocolDataCardano epSlots secParam ->
+      let ptcl = mkNodeClientProtocolCardano epSlots secParam
+      in CardanoLocalTip <$> getLocalTip' sockPath nw ptcl
+
+-- | Get the node's tip using the local chain sync protocol.
+--
+-- This is an alternative version of the 'getLocalTip' function that instead
+-- accepts a 'CodecConfig blk' parameter and returns a 'Tip blk'.
+getLocalTip'
   :: forall blk.
      RunNode blk
   => FilePath
   -> NetworkId
   -> ProtocolClient blk (BlockProtocol blk)
   -> IO (Tip blk)
-getLocalTip sockPath network ptcl = do
+getLocalTip' sockPath network ptcl = do
     resultVar <- newEmptyTMVarIO
     connectToLocalNode
       sockPath
