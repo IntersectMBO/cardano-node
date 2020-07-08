@@ -82,6 +82,7 @@ data AddressCmd
 
 data StakeAddressCmd
   = StakeAddressKeyGen VerificationKeyFile SigningKeyFile
+  | StakeAddressKeyHash VerificationKeyFile (Maybe OutputFile)
   | StakeAddressBuild VerificationKeyFile NetworkId (Maybe OutputFile)
   | StakeKeyRegister PrivKeyFile NodeAddress
   | StakeKeyDelegate PrivKeyFile PoolId Lovelace NodeAddress
@@ -125,6 +126,7 @@ data NodeCmd
   = NodeKeyGenCold VerificationKeyFile SigningKeyFile OpCertCounterFile
   | NodeKeyGenKES  VerificationKeyFile SigningKeyFile
   | NodeKeyGenVRF  VerificationKeyFile SigningKeyFile
+  | NodeKeyHashVRF  VerificationKeyFile (Maybe OutputFile)
   | NodeIssueOpCert VerificationKeyFile SigningKeyFile OpCertCounterFile
                     KESPeriod OutputFile
   deriving (Eq, Show)

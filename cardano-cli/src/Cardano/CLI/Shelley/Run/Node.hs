@@ -42,6 +42,7 @@ runNodeCmd :: NodeCmd -> ExceptT ShelleyNodeCmdError IO ()
 runNodeCmd (NodeKeyGenCold vk sk ctr) = runNodeKeyGenCold vk sk ctr
 runNodeCmd (NodeKeyGenKES  vk sk)     = runNodeKeyGenKES  vk sk
 runNodeCmd (NodeKeyGenVRF  vk sk)     = runNodeKeyGenVRF  vk sk
+runNodeCmd (NodeKeyHashVRF vk mOutFp) = runNodeKeyHashVRF vk mOutFp
 runNodeCmd (NodeIssueOpCert vk sk ctr p out) =
   runNodeIssueOpCert vk sk ctr p out
 
@@ -112,6 +113,19 @@ runNodeKeyGenVRF (VerificationKeyFile vkeyPath) (SigningKeyFile skeyPath) = do
     skeyDesc, vkeyDesc :: TextViewDescription
     skeyDesc = TextViewDescription "VRF Signing Key"
     vkeyDesc = TextViewDescription "VRF Verification Key"
+
+runNodeKeyHashVRF :: VerificationKeyFile -> Maybe OutputFile
+                  -> ExceptT ShelleyNodeCmdError IO ()
+runNodeKeyHashVRF (VerificationKeyFile vkeyPath) mOutputFp = do
+  vkey <- firstExceptT ShelleyNodeReadFileError
+    . newExceptT
+    $ readFileTextEnvelope (AsVerificationKey AsVrfKey) vkeyPath
+
+  let hexKeyHash = serialiseToRawBytesHex (verificationKeyHash vkey)
+
+  case mOutputFp of
+    Just (OutputFile fpath) -> liftIO $ BS.writeFile fpath hexKeyHash
+    Nothing -> liftIO $ BS.putStrLn hexKeyHash
 
 runNodeIssueOpCert :: VerificationKeyFile
                    -- ^ This is the hot KES verification key.
