@@ -709,13 +709,13 @@ instance SerialiseAddress StakeAddress where
       deserialiseFromBech32 AsStakeAddress t
 
 
-makeByronAddress :: VerificationKey ByronKey
-                 -> NetworkId
+makeByronAddress :: NetworkId
+                 -> VerificationKey ByronKey
                  -> Address era
-makeByronAddress (ByronVerificationKey vk) nid =
+makeByronAddress nw (ByronVerificationKey vk) =
     ByronAddress $
       Byron.makeVerKeyAddress
-        (toByronNetworkMagic nid)
+        (toByronNetworkMagic nw)
         vk
 
 
