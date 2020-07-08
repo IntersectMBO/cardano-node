@@ -26,6 +26,18 @@ let
         "${lib.optionalString (cfg.operationalCertificate != null)
           "--shelley-operational-certificate ${cfg.operationalCertificate}"}"
       ];
+      Cardano = [
+        "${lib.optionalString (cfg.signingKey != null)
+          "--signing-key ${cfg.signingKey}"}"
+        "${lib.optionalString (cfg.delegationCertificate != null)
+          "--delegation-certificate ${cfg.delegationCertificate}"}"
+        "${lib.optionalString (cfg.vrfKey != null)
+          "--shelley-vrf-key ${cfg.vrfKey}"}"
+        "${lib.optionalString (cfg.kesKey != null)
+          "--shelley-kes-key ${cfg.kesKey}"}"
+        "${lib.optionalString (cfg.operationalCertificate != null)
+          "--shelley-operational-certificate ${cfg.operationalCertificate}"}"
+      ];
     };
     exec = "cardano-node run";
         cmd = builtins.filter (x: x != "") [
@@ -123,33 +135,6 @@ in {
         default = "testnet";
         description = ''
           environment node will connect to
-        '';
-      };
-
-     # TODO: remove
-     genesisFile = mkOption {
-        type = types.path;
-        default = envConfig.genesisFile;
-        description = ''
-          Genesis json file
-        '';
-      };
-
-     # TODO: remove
-      genesisHash = mkOption {
-        type = types.nullOr types.str;
-        default = envConfig.genesisHash;
-        description = ''
-          Hash of the genesis file
-        '';
-      };
-
-     # TODO: remove
-      genesisHashPath = mkOption {
-        type = types.nullOr types.path;
-        default = null;
-        description = ''
-          Path to the Hash of the genesis file
         '';
       };
 

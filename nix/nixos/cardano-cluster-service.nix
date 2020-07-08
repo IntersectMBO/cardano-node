@@ -193,9 +193,6 @@ in {
       topology              = shelley-topology;
       port                  = toString shelley-port;
       hostAddr              = "127.1.0.$((1 + $1))";
-      inherit genesisFile;
-      genesisHash           = null;
-      genesisHashPath       = genesisHashPath;
       delegationCertificate = pbft-cert-shexpr;
       signingKey            = pbft-sig-key-shexpr;
       runtimeDir            = null;

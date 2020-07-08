@@ -11,8 +11,7 @@ let
     { inherit NodeId; } //
     (optionalAttrs (cfg.protover-major or null != null) { LastKnownBlockVersion-Major = cfg.protover-major; }) //
     (optionalAttrs (cfg.protover-minor or null != null) { LastKnownBlockVersion-Minor = cfg.protover-minor; }) //
-    (optionalAttrs (cfg.protover-alt   or null != null) { LastKnownBlockVersion-Alt   = cfg.protover-alt;   }) //
-    (optionalAttrs (cfg.genesisFile != null) { GenesisFile = cfg.genesisFile;   });
+    (optionalAttrs (cfg.protover-alt   or null != null) { LastKnownBlockVersion-Alt   = cfg.protover-alt;   });
 
   ## mkFullyConnectedLocalClusterTopologyWithProxy
   ##   :: (Int NodeId -> String Address)
