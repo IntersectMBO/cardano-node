@@ -45,6 +45,7 @@ import           Data.Set (Set)
 import           Data.Text (Text)
 
 import qualified Cardano.Api as OldApi
+import           Cardano.Api.Protocol (ProtocolData)
 import           Cardano.Api.Typed hiding (PoolId, Hash)
 
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
@@ -113,7 +114,7 @@ data TransactionCmd
   | TxWitness       -- { transaction :: Transaction, key :: PrivKeyFile, nodeAddr :: NodeAddress }
   | TxSignWitness   -- { transaction :: Transaction, witnesses :: [Witness], nodeAddr :: NodeAddress }
   | TxCheck         -- { transaction :: Transaction, nodeAddr :: NodeAddress }
-  | TxSubmit FilePath OldApi.Network
+  | TxSubmit FilePath OldApi.Network ProtocolData
   | TxCalculateMinFee
       TxBodyFile
       (Maybe NetworkId)

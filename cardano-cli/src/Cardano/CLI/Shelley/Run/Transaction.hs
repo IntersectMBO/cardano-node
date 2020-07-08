@@ -22,6 +22,7 @@ import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Vector as Vector
 
 import qualified Cardano.Api as OldApi
+import           Cardano.Api.Protocol (ProtocolData (..))
 import qualified Cardano.Api.Typed as Api
 import           Cardano.Api.Typed (SlotNo)
 
@@ -101,8 +102,8 @@ runTransactionCmd cmd =
       runTxBuildRaw txins txouts ttl fee certs wdrls mMetaData mUpProp out
     TxSign txinfile skfiles network txoutfile ->
       runTxSign txinfile skfiles network txoutfile
-    TxSubmit txFp network ->
-      runTxSubmit txFp network
+    TxSubmit txFp network protocolData ->
+      runTxSubmit txFp network protocolData
     TxCalculateMinFee txbody mnw pParamsFile nInputs nOutputs
                       nShelleyKeyWitnesses nByronKeyWitnesses ->
       runTxCalculateMinFee txbody mnw pParamsFile nInputs nOutputs
@@ -207,17 +208,19 @@ runTxSign (TxBodyFile txbodyFile) skFiles mnw (TxFile txFile) = do
         AGenesisDelegateSigningKey sk -> Right (Api.WitnessGenesisDelegateKey sk)
         AGenesisUTxOSigningKey     sk -> Right (Api.WitnessGenesisUTxOKey     sk)
 
-runTxSubmit :: FilePath -> OldApi.Network -> ExceptT ShelleyTxCmdError IO ()
-runTxSubmit txFp network = do
+runTxSubmit :: FilePath -> OldApi.Network -> ProtocolData -> ExceptT ShelleyTxCmdError IO ()
+runTxSubmit txFp network protocolData = do
     sktFp <- firstExceptT ShelleyTxSocketEnvError $ readEnvSocketPath
     signedTx <- firstExceptT ShelleyTxReadFileError
       . newExceptT
       $ Api.readFileTextEnvelope Api.AsShelleyTx txFp
-    result <- liftIO $ OldApi.submitTx network sktFp (toOldApiSignedTx signedTx)
+    result <- liftIO $ OldApi.submitTx network protocolData sktFp (toOldApiSignedTx signedTx)
     case result of
-      OldApi.TxSubmitSuccess          -> return ()
-      OldApi.TxSubmitFailureShelley _ -> left (ShelleyTxSubmitError result)
-      OldApi.TxSubmitFailureByron   _ -> left (ShelleyTxSubmitError result)
+      OldApi.TxSubmitSuccess                          -> return ()
+      OldApi.TxSubmitFailureShelley _                 -> left (ShelleyTxSubmitError result)
+      OldApi.TxSubmitFailureByron   _                 -> left (ShelleyTxSubmitError result)
+      OldApi.TxSubmitFailureCardano _                 -> left (ShelleyTxSubmitError result)
+      OldApi.TxSubmitFailureProtocolAndTxMismatch _ _ -> left (ShelleyTxSubmitError result)
   where
     toOldApiSignedTx :: Api.Tx Api.Shelley -> OldApi.TxSigned
     toOldApiSignedTx (Api.ShelleyTx tx) = OldApi.TxSignedShelley tx

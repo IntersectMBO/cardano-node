@@ -21,6 +21,9 @@ module Cardano.Api.Protocol
     -- a protocol.
   , mkNodeClientProtocol
   , SomeNodeClientProtocol(..)
+
+    -- TODO: Does this really belong here?
+  , ProtocolData(..)
   ) where
 
 import           Cardano.Prelude
@@ -117,3 +120,9 @@ mkNodeClientProtocol protocol =
           -- client case.
           (EpochSlots 21600)
           (Consensus.SecurityParam 2160)
+
+data ProtocolData
+  = ProtocolDataByron !EpochSlots !Consensus.SecurityParam
+  | ProtocolDataShelley
+  | ProtocolDataCardano !EpochSlots !Consensus.SecurityParam
+  deriving (Eq, Show)

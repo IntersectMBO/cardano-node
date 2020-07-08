@@ -18,11 +18,14 @@ import           Cardano.Prelude
 import           Control.Tracer
 import           Control.Concurrent.STM
 
+import           Cardano.Api.Protocol (ProtocolData (..))
+import           Cardano.Api.Protocol.Cardano (mkNodeClientProtocolCardano)
 import           Cardano.Api.Types
 import           Cardano.Api.TxSubmit.ErrorRender (renderApplyMempoolPayloadErr)
 
-import           Ouroboros.Consensus.Cardano (protocolClientInfo, SecurityParam(..))
-import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx)
+import           Ouroboros.Consensus.Cardano (CardanoBlock, protocolClientInfo)
+import           Ouroboros.Consensus.Cardano.Block (GenTx(..))
+import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr)
 import           Ouroboros.Consensus.Network.NodeToClient
 import           Ouroboros.Consensus.Node.ProtocolInfo (ProtocolClientInfo(..))
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
@@ -35,8 +38,6 @@ import           Ouroboros.Network.NodeToClient hiding (NodeToClientVersion (..)
 import qualified Ouroboros.Network.NodeToClient as NtC
 import           Ouroboros.Network.Protocol.LocalTxSubmission.Client
 import           Ouroboros.Network.Protocol.LocalTxSubmission.Type (SubmitResult (..))
-
-import           Cardano.Chain.Slotting (EpochSlots (..))
 
 import qualified Ouroboros.Consensus.Byron.Ledger as Byron
 import qualified Cardano.Chain.UTxO as Byron
@@ -53,8 +54,10 @@ import           Cardano.Config.Types (SocketPath(..))
 
 data TxSubmitResult
    = TxSubmitSuccess
-   | TxSubmitFailureByron   (ApplyTxErr ByronBlock)
-   | TxSubmitFailureShelley (ApplyTxErr (ShelleyBlock TPraosStandardCrypto))
+   | TxSubmitFailureByron   !(ApplyTxErr ByronBlock)
+   | TxSubmitFailureShelley !(ApplyTxErr (ShelleyBlock TPraosStandardCrypto))
+   | TxSubmitFailureCardano !(ApplyTxErr (CardanoBlock TPraosStandardCrypto))
+   | TxSubmitFailureProtocolAndTxMismatch !ProtocolData !TxSigned
    deriving Show
 
 renderTxSubmitResult :: TxSubmitResult -> Text
@@ -66,44 +69,84 @@ renderTxSubmitResult res =
     TxSubmitFailureShelley err ->
       -- TODO: Write render function for Shelley tx submission errors.
       "Failed to submit Shelley transaction: " <> show err
+    TxSubmitFailureCardano err ->
+      "Failed to submit Cardano transaction: " <> show err
+    TxSubmitFailureProtocolAndTxMismatch _pd _tx ->
+      "The specified transaction does not correspond to the specified protocol."
 
 submitTx
   :: Network
+  -> ProtocolData
   -> SocketPath
   -> TxSigned
   -> IO TxSubmitResult
-submitTx network socketPath tx =
+submitTx network protocolData socketPath tx =
     NtC.withIOManager $ \iocp ->
       case tx of
         TxSignedByron txbody _txCbor _txHash vwit -> do
           let aTxAux = Byron.annotateTxAux (Byron.mkTxAux txbody vwit)
               genTx  = Byron.ByronTx (Byron.byronIdTx aTxAux) aTxAux
-          result <- submitGenTx
-                      nullTracer
-                      iocp
-                      (protocolClientInfo (mkNodeClientProtocolByron
-                                             (EpochSlots 21600)
-                                             (SecurityParam 2160)))
-                      network
-                      socketPath
-                      genTx
-          case result of
-            SubmitSuccess  -> return TxSubmitSuccess
-            SubmitFail err -> return (TxSubmitFailureByron err)
+          case protocolData of
+            ProtocolDataByron epSlots secParam -> do
+              result <- submitGenTx
+                          nullTracer
+                          iocp
+                          (protocolClientInfo (mkNodeClientProtocolByron
+                                                epSlots
+                                                secParam))
+                          network
+                          socketPath
+                          genTx
+              case result of
+                SubmitSuccess  -> return TxSubmitSuccess
+                SubmitFail err -> return (TxSubmitFailureByron err)
+
+            ProtocolDataCardano epSlots secParam -> do
+              result <- submitGenTx
+                          nullTracer
+                          iocp
+                          (protocolClientInfo (mkNodeClientProtocolCardano
+                                                epSlots
+                                                secParam))
+                          network
+                          socketPath
+                          (GenTxByron genTx)
+              case result of
+                SubmitSuccess -> return TxSubmitSuccess
+                SubmitFail err -> return (TxSubmitFailureCardano err)
+
+            _ -> return (TxSubmitFailureProtocolAndTxMismatch protocolData tx)
 
         TxSignedShelley stx -> do
           let genTx = mkShelleyTx stx
-          result <- submitGenTx
-                      nullTracer
-                      iocp
-                      (protocolClientInfo mkNodeClientProtocolShelley)
-                      network
-                      socketPath
-                      genTx
-          case result of
-            SubmitSuccess  -> return TxSubmitSuccess
-            SubmitFail err -> return (TxSubmitFailureShelley err)
+          case protocolData of
+            ProtocolDataShelley -> do
+              result <- submitGenTx
+                          nullTracer
+                          iocp
+                          (protocolClientInfo mkNodeClientProtocolShelley)
+                          network
+                          socketPath
+                          genTx
+              case result of
+                SubmitSuccess  -> return TxSubmitSuccess
+                SubmitFail err -> return (TxSubmitFailureShelley err)
 
+            ProtocolDataCardano epSlots secParam -> do
+              result <- submitGenTx
+                          nullTracer
+                          iocp
+                          (protocolClientInfo (mkNodeClientProtocolCardano
+                                                epSlots
+                                                secParam))
+                          network
+                          socketPath
+                          (GenTxShelley genTx)
+              case result of
+                SubmitSuccess -> return TxSubmitSuccess
+                SubmitFail err -> return (TxSubmitFailureCardano err)
+
+            _ -> return (TxSubmitFailureProtocolAndTxMismatch protocolData tx)
 
 submitGenTx
   :: forall blk.
