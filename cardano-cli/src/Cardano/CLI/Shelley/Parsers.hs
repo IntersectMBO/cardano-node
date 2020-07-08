@@ -137,7 +137,9 @@ pAddressCmd =
       ]
   where
     pAddressKeyGen :: Parser AddressCmd
-    pAddressKeyGen = AddressKeyGen <$> pVerificationKeyFile Output <*> pSigningKeyFile Output
+    pAddressKeyGen = AddressKeyGen <$> pAddressKeyType
+                                   <*> pVerificationKeyFile Output
+                                   <*> pSigningKeyFile Output
 
     pAddressKeyHash :: Parser AddressCmd
     pAddressKeyHash = AddressKeyHash <$> pPaymentVerificationKeyFile <*> pMaybeOutputFile
@@ -693,6 +695,26 @@ data FileDirection
   = Input
   | Output
   deriving (Eq, Show)
+
+pAddressKeyType :: Parser AddressKeyType
+pAddressKeyType =
+    Opt.flag' AddressKeyShelley
+      (  Opt.long "normal-key"
+      <> Opt.help "Use a normal Shelley-era key (default)."
+      )
+  <|>
+    Opt.flag' AddressKeyShelleyExtended
+      (  Opt.long "extended-key"
+      <> Opt.help "Use an extended ed25519 Shelley-era key."
+      )
+  <|>
+    Opt.flag' AddressKeyByron
+      (  Opt.long "byron-key"
+      <> Opt.help "Use a Byron-era key."
+      )
+  <|>
+    pure AddressKeyShelley
+
 
 pProtocolParamsFile :: Parser ProtocolParamsFile
 pProtocolParamsFile =

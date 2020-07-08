@@ -16,6 +16,7 @@ module Cardano.CLI.Shelley.Commands
   , TextViewCmd (..)
 
     -- * CLI flag types
+  , AddressKeyType (..)
   , GenesisDir (..)
   , TxInCount (..)
   , TxOutCount (..)
@@ -73,7 +74,7 @@ data ShelleyCommand
 
 
 data AddressCmd
-  = AddressKeyGen VerificationKeyFile SigningKeyFile
+  = AddressKeyGen AddressKeyType VerificationKeyFile SigningKeyFile
   | AddressKeyHash VerificationKeyFile (Maybe OutputFile)
   | AddressBuild VerificationKeyFile (Maybe VerificationKeyFile) NetworkId (Maybe OutputFile)
   | AddressBuildMultiSig  --TODO
@@ -274,6 +275,12 @@ newtype GenesisDir
 data ITNKeyFile
   = ITNVerificationKeyFile VerificationKeyFile
   | ITNSigningKeyFile SigningKeyFile
+  deriving (Eq, Show)
+
+data AddressKeyType
+  = AddressKeyShelley
+  | AddressKeyShelleyExtended
+  | AddressKeyByron
   deriving (Eq, Show)
 
 newtype OpCertCounterFile
