@@ -34,6 +34,9 @@ package ouroboros-consensus-shelley
 package ouroboros-consensus-mock
   tests: False
 
+package bech32
+  tests: False
+
 package byron-spec-chain
   tests: False
 
