@@ -24,13 +24,18 @@ import           Test.Cardano.Api.Gen (genSeed)
 import           Test.Cardano.Api.Orphans ()
 
 genAddressByron :: Gen (Address Byron)
-genAddressByron = makeByronAddress <$> genVerificationKey AsByronKey <*> genNetworkId
+genAddressByron = makeByronAddress <$> genNetworkId
+                                   <*> genVerificationKey AsByronKey
 
 genAddressShelley :: Gen (Address Shelley)
 genAddressShelley =
   Gen.choice
-    [ makeShelleyAddress <$> genNetworkId <*> genPaymentCredential <*> genStakeAddressReference
-    , makeByronAddress <$> genVerificationKey AsByronKey <*> genNetworkId
+    [ makeShelleyAddress <$> genNetworkId
+                         <*> genPaymentCredential
+                         <*> genStakeAddressReference
+
+    , makeByronAddress   <$> genNetworkId
+                         <*> genVerificationKey AsByronKey
     ]
 
 genKESPeriod :: Gen KESPeriod

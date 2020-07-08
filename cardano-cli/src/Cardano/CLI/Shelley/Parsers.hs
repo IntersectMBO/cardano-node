@@ -134,10 +134,14 @@ pAddressCmd =
           (Opt.info pAddressBuildMultiSig $ Opt.progDesc "Build a Shelley payment multi-sig address.")
       , Opt.command "info"
           (Opt.info pAddressInfo $ Opt.progDesc "Print information about an address.")
+      , Opt.command "convert"
+          (Opt.info pAddressConvert $ Opt.progDesc "Convert a Byron signing key file.")
       ]
   where
     pAddressKeyGen :: Parser AddressCmd
-    pAddressKeyGen = AddressKeyGen <$> pVerificationKeyFile Output <*> pSigningKeyFile Output
+    pAddressKeyGen = AddressKeyGen <$> pAddressKeyType
+                                   <*> pVerificationKeyFile Output
+                                   <*> pSigningKeyFile Output
 
     pAddressKeyHash :: Parser AddressCmd
     pAddressKeyHash = AddressKeyHash <$> pPaymentVerificationKeyFile <*> pMaybeOutputFile
@@ -157,6 +161,9 @@ pAddressCmd =
     pAddressInfo :: Parser AddressCmd
     pAddressInfo = AddressInfo <$> pAddress
 
+    pAddressConvert :: Parser AddressCmd
+    pAddressConvert = AddressConvertKey <$> pByronKeyFile Input
+                                        <*> pSigningKeyFile Output
 
 pPaymentVerificationKeyFile :: Parser VerificationKeyFile
 pPaymentVerificationKeyFile =
@@ -706,6 +713,26 @@ data FileDirection
   | Output
   deriving (Eq, Show)
 
+pAddressKeyType :: Parser AddressKeyType
+pAddressKeyType =
+    Opt.flag' AddressKeyShelley
+      (  Opt.long "normal-key"
+      <> Opt.help "Use a normal Shelley-era key (default)."
+      )
+  <|>
+    Opt.flag' AddressKeyShelleyExtended
+      (  Opt.long "extended-key"
+      <> Opt.help "Use an extended ed25519 Shelley-era key."
+      )
+  <|>
+    Opt.flag' AddressKeyByron
+      (  Opt.long "byron-key"
+      <> Opt.help "Use a Byron-era key."
+      )
+  <|>
+    pure AddressKeyShelley
+
+
 pProtocolParamsFile :: Parser ProtocolParamsFile
 pProtocolParamsFile =
   ProtocolParamsFile <$>
@@ -844,6 +871,16 @@ pSigningKeyFile fdir =
       (  Opt.long "signing-key-file"
       <> Opt.metavar "FILE"
       <> Opt.help (show fdir ++ " filepath of the signing key.")
+      <> Opt.completer (Opt.bashCompleter "file")
+      )
+
+pByronKeyFile :: FileDirection -> Parser SigningKeyFile
+pByronKeyFile fdir =
+  SigningKeyFile <$>
+    Opt.strOption
+      (  Opt.long "byron-signing-key-file"
+      <> Opt.metavar "FILE"
+      <> Opt.help (show fdir ++ " filepath of the Byron format signing key.")
       <> Opt.completer (Opt.bashCompleter "file")
       )
 
