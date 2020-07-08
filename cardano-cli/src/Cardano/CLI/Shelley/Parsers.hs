@@ -1239,11 +1239,11 @@ pTxByronWinessCount =
       <> Opt.help "The number of Byron key witnesses."
       )
 
-pQueryFilter :: Parser OldApi.QueryFilter
-pQueryFilter = pAddresses <|> pure OldApi.NoFilter
+pQueryFilter :: Parser QueryFilter
+pQueryFilter = pAddresses <|> pure NoFilter
   where
-    pAddresses :: Parser OldApi.QueryFilter
-    pAddresses = OldApi.FilterByAddress . Set.fromList <$>
+    pAddresses :: Parser QueryFilter
+    pAddresses = FilterByAddress . Set.fromList <$>
                    some pFilterByAddress
 
 pFilterByAddress :: Parser OldApi.Address

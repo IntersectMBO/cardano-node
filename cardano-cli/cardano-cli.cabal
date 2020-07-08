@@ -81,6 +81,7 @@ library
                      , directory
                      , filepath
                      , formatting
+                     , iohk-monitoring
                      , io-sim-classes
                      , iproute
                      , lens

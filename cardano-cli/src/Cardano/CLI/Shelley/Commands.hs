@@ -37,16 +37,19 @@ module Cardano.CLI.Shelley.Commands
   , GenesisFile (..)
   , PrivKeyFile (..)
   , BlockId (..)
+  , QueryFilter (..)
   ) where
 
 import           Prelude
+import           Data.Set (Set)
 import           Data.Text (Text)
 
 import qualified Cardano.Api as OldApi
-import           Cardano.Api.Typed hiding (PoolId, Hash)
+import           Cardano.Api.Typed hiding (Address, PoolId, Hash)
 
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
 
+import           Cardano.Api (Address)
 import           Cardano.Config.Types
                   (CertificateFile (..), NodeAddress, SigningKeyFile(..),
                    UpdateProposalFile(..))
@@ -175,7 +178,7 @@ data QueryCmd
   | QueryTip OldApi.Network (Maybe OutputFile)
   | QueryStakeDistribution OldApi.Network (Maybe OutputFile)
   | QueryStakeAddressInfo OldApi.Address OldApi.Network (Maybe OutputFile)
-  | QueryUTxO OldApi.QueryFilter OldApi.Network (Maybe OutputFile)
+  | QueryUTxO QueryFilter OldApi.Network (Maybe OutputFile)
   | QueryVersion NodeAddress
   | QueryLedgerState OldApi.Network (Maybe OutputFile)
   | QueryStatus NodeAddress
@@ -304,4 +307,10 @@ newtype TxFile
 
 newtype VerificationKeyFile
   = VerificationKeyFile FilePath
+  deriving (Eq, Show)
+
+-- | UTxO query filtering options.
+data QueryFilter
+  = FilterByAddress !(Set Address)
+  | NoFilter
   deriving (Eq, Show)
