@@ -6,8 +6,8 @@ Options:
 """
 
 from docopt import docopt
-from clusterlib import clusterlib
+from clusterlib import ClusterLib
 
 arguments = docopt(__doc__)
-cluster = clusterlib(arguments['--network-magic'], arguments["--state-dir"])
-cluster.refreshPParams()
+cluster = ClusterLib(arguments['--network-magic'], arguments["--state-dir"])
+cluster.refresh_pparams()
