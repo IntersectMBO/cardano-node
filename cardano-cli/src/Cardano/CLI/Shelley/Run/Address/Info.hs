@@ -12,6 +12,7 @@ import qualified Data.ByteString.Lazy.Char8 as LBS
 
 import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (left)
+import qualified Data.Text.Encoding as Text
 
 import           Cardano.Api.Typed
 
@@ -30,6 +31,7 @@ data AddressInfo = AddressInfo
   , aiEra :: !Text
   , aiEncoding :: !Text
   , aiAddress :: !Text
+  , aiBase16 :: !Text
   }
 
 instance ToJSON AddressInfo where
@@ -57,6 +59,7 @@ runAddressInfo addrTxt mOutputFp = do
               , aiEra = "byron"
               , aiEncoding = "base58"
               , aiAddress = addrTxt
+              , aiBase16 = asBase16 payaddr
               }
           ShelleyAddress{} ->
             pure $ AddressInfo
@@ -64,16 +67,22 @@ runAddressInfo addrTxt mOutputFp = do
               , aiEra = "shelley"
               , aiEncoding = "bech32"
               , aiAddress = addrTxt
+              , aiBase16 = asBase16 payaddr
               }
 
-      Just (Right _stakeaddr) ->
+      Just (Right addr) ->
         pure $ AddressInfo
           { aiType = "stake"
           , aiEra = "shelley"
           , aiEncoding = "bech32"
           , aiAddress = addrTxt
+          , aiBase16 = asBase16 addr
           }
 
     case mOutputFp of
       Just (OutputFile fpath) -> liftIO $ LBS.writeFile fpath $ encodePretty addrInfo
       Nothing -> liftIO $ LBS.putStrLn $ encodePretty addrInfo
+
+  where
+    asBase16 :: SerialiseAsRawBytes a => a -> Text
+    asBase16 = Text.decodeUtf8 . serialiseToRawBytesHex
