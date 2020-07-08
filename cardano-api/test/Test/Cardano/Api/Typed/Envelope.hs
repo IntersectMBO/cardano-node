@@ -98,7 +98,8 @@ roundtrip_VerificationKey_envelope roletoken =
                     (deserialiseFromTextEnvelope (AsVerificationKey roletoken))
 
 roundtrip_SigningKey_envelope :: (Key keyrole,
-                                  Eq (SigningKey keyrole))
+                                  Eq (SigningKey keyrole),
+                                  Show (SigningKey keyrole))
                               => AsType keyrole -> Property
 roundtrip_SigningKey_envelope roletoken =
   H.property $ do

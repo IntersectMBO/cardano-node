@@ -72,6 +72,7 @@ module Cardano.Api.Typed (
     PaymentCredential(..),
     StakeAddressReference(..),
     PaymentKey,
+    PaymentExtendedKey,
 
     -- * Stake addresses
     -- | Constructing and inspecting stake addresses
@@ -379,6 +380,7 @@ import qualified Cardano.Crypto.Hash.Class  as Crypto
 import qualified Cardano.Crypto.DSIGN.Class as Crypto
 import qualified Cardano.Crypto.KES.Class   as Crypto
 import qualified Cardano.Crypto.VRF.Class   as Crypto
+import qualified Cardano.Crypto.Wallet      as Crypto.HD
 
 --
 -- Byron imports
@@ -386,7 +388,6 @@ import qualified Cardano.Crypto.VRF.Class   as Crypto
 import qualified Cardano.Crypto.Hashing as Byron
 import qualified Cardano.Crypto.Signing as Byron
 import qualified Cardano.Crypto.ProtocolMagic as Byron
-import qualified Cardano.Crypto.Wallet as Byron.Crypto.Wallet
 
 import qualified Cardano.Chain.Common as Byron
 import qualified Cardano.Chain.Genesis as Byron
@@ -483,7 +484,6 @@ class HasTypeProxy t where
 --
 class (Eq (VerificationKey keyrole),
        Show (VerificationKey keyrole),
-       Show (SigningKey keyrole),
        SerialiseAsRawBytes (Hash keyrole),
        HasTextEnvelope (VerificationKey keyrole),
        HasTextEnvelope (SigningKey keyrole))
@@ -520,10 +520,12 @@ generateSigningKey keytype = do
 -- | Some key roles share the same representation and it is sometimes
 -- legitimate to change the role of a key.
 --
-class CastKeyRole keyroleA keyroleB where
+class CastVerificationKeyRole keyroleA keyroleB where
 
     -- | Change the role of a 'VerificationKey', if the representation permits.
     castVerificationKey :: VerificationKey keyroleA -> VerificationKey keyroleB
+
+class CastSigningKeyRole keyroleA keyroleB where
 
     -- | Change the role of a 'SigningKey', if the representation permits.
     castSigningKey :: SigningKey keyroleA -> SigningKey keyroleB
@@ -1242,34 +1244,25 @@ makeShelleyBootstrapWitness nw (ShelleyTxBody txbody _) (ByronSigningKey sk) =
 
     -- Now the hairy bits.
     --
-    -- We start with a Byron era /extended/ signing key. This /cannot/ be
-    -- converted to a plain (non-extended) signing key. So we have to produce a
-    -- signature using this extended signing key directly.
+    -- Byron era signing keys were all /extended/ ed25519 keys. We have to
+    -- produce a signature using this extended signing key directly. They
+    -- /cannot/ be converted to a plain (non-extended) signing keys. Since we
+    -- now support extended signing keys for the Shelley too, we are able to
+    -- reuse that here.
     --
     signature :: Shelley.SignedDSIGN ShelleyCrypto
                   (Shelley.Hash ShelleyCrypto (Shelley.TxBody ShelleyCrypto))
-    signature = fromByronSignature $
-                  Byron.Crypto.Wallet.sign
-                    BS.empty  -- passphrase for (unused) in-mem encryption
-                    (Byron.unSigningKey sk)
-                    (Crypto.getHash txhash)
+    signature = makeShelleyKeyWitnessSignature
+                  txhash
+                  -- Make the signature with the extended key directly:
+                  (ShelleyExtendedSigningKey (Byron.unSigningKey sk))
 
     txhash :: Shelley.Hash ShelleyCrypto (Shelley.TxBody ShelleyCrypto)
     txhash = Crypto.hash txbody
 
-    -- The crypto lib types are different so we also have to convert the type
-    -- of the resulting signature.
-    --
-    fromByronSignature :: Byron.Crypto.Wallet.XSignature
-                       -> Shelley.SignedDSIGN ShelleyCrypto b
-    fromByronSignature =
-        Crypto.SignedDSIGN
-      . fromMaybe impossible
-      . Crypto.rawDeserialiseSigDSIGN
-      . Byron.Crypto.Wallet.unXSignature
-
-    impossible =
-      error "fromByronSignature: byron and shelley signature sizes do not match"
+    -- And finally the really funky bits. We need to provide the extra prefix
+    -- and suffix bytes necessary to reconstruct the mini-Merkel tree that is
+    -- a Byron address. The suffix bytes depend on the address attributes.
 
     padding = Shelley.byronVerKeyAddressPadding $
                 Byron.mkAttributes Byron.AddrAttributes {
@@ -1279,35 +1272,102 @@ makeShelleyBootstrapWitness nw (ShelleyTxBody txbody _) (ByronSigningKey sk) =
 
 data ShelleyWitnessSigningKey =
        WitnessPaymentKey         (SigningKey PaymentKey)
+     | WitnessPaymentExtendedKey (SigningKey PaymentExtendedKey)
      | WitnessStakeKey           (SigningKey StakeKey)
      | WitnessStakePoolKey       (SigningKey StakePoolKey)
      | WitnessGenesisDelegateKey (SigningKey GenesisDelegateKey)
      | WitnessGenesisUTxOKey     (SigningKey GenesisUTxOKey)
 
+
 makeShelleyKeyWitness :: TxBody Shelley
                       -> ShelleyWitnessSigningKey
                       -> Witness Shelley
-makeShelleyKeyWitness (ShelleyTxBody txbody _) wsk =
-    ShelleyKeyWitness $
-      Shelley.WitVKey vk signature
+makeShelleyKeyWitness (ShelleyTxBody txbody _) =
+    let txhash :: Shelley.Hash ShelleyCrypto (Shelley.TxBody ShelleyCrypto)
+        txhash = Crypto.hash txbody
+
+        -- To allow sharing of the txhash computation across many signatures we
+        -- define and share the txhash outside the lambda for the signing key:
+     in \wsk ->
+        let sk        = toShelleySigningKey wsk
+            vk        = getShelleyKeyWitnessVerificationKey sk
+            signature = makeShelleyKeyWitnessSignature txhash sk
+         in ShelleyKeyWitness $
+              Shelley.WitVKey vk signature
+
+
+-- | We support making key witnesses with both normal and extended signing keys.
+--
+data ShelleySigningKey =
+       -- | A normal ed25519 signing key
+       ShelleyNormalSigningKey   (Shelley.SignKeyDSIGN ShelleyCrypto)
+
+       -- | An extended ed25519 signing key
+     | ShelleyExtendedSigningKey Crypto.HD.XPrv
+
+
+toShelleySigningKey :: ShelleyWitnessSigningKey -> ShelleySigningKey
+toShelleySigningKey key = case key of
+  WitnessPaymentKey     (PaymentSigningKey     sk) -> ShelleyNormalSigningKey sk
+  WitnessStakeKey       (StakeSigningKey       sk) -> ShelleyNormalSigningKey sk
+  WitnessStakePoolKey   (StakePoolSigningKey   sk) -> ShelleyNormalSigningKey sk
+  WitnessGenesisUTxOKey (GenesisUTxOSigningKey sk) -> ShelleyNormalSigningKey sk
+  WitnessGenesisDelegateKey (GenesisDelegateSigningKey sk) ->
+    ShelleyNormalSigningKey sk
+
+  -- The special case
+  WitnessPaymentExtendedKey (PaymentExtendedSigningKey sk) ->
+    ShelleyExtendedSigningKey sk
+
+
+getShelleyKeyWitnessVerificationKey
+  :: ShelleySigningKey
+  -> Shelley.VKey Shelley.Witness ShelleyCrypto
+getShelleyKeyWitnessVerificationKey (ShelleyNormalSigningKey sk) =
+      (Shelley.coerceKeyRole :: Shelley.VKey Shelley.Payment ShelleyCrypto
+                             -> Shelley.VKey Shelley.Witness ShelleyCrypto)
+    . (\(PaymentVerificationKey vk) -> vk)
+    . getVerificationKey
+    . PaymentSigningKey
+    $ sk
+
+getShelleyKeyWitnessVerificationKey (ShelleyExtendedSigningKey sk) =
+      (Shelley.coerceKeyRole :: Shelley.VKey Shelley.Payment ShelleyCrypto
+                             -> Shelley.VKey Shelley.Witness ShelleyCrypto)
+    . (\(PaymentVerificationKey vk) -> vk)
+    . (castVerificationKey :: VerificationKey PaymentExtendedKey
+                           -> VerificationKey PaymentKey)
+    . getVerificationKey
+    . PaymentExtendedSigningKey
+    $ sk
+
+
+makeShelleyKeyWitnessSignature
+  :: Shelley.Hash ShelleyCrypto (Shelley.TxBody ShelleyCrypto)
+  -> ShelleySigningKey
+  -> Shelley.SignedDSIGN ShelleyCrypto
+                         (Shelley.Hash ShelleyCrypto
+                                       (Shelley.TxBody ShelleyCrypto))
+makeShelleyKeyWitnessSignature txhash (ShelleyNormalSigningKey sk) =
+    Crypto.signedDSIGN () txhash sk
+
+makeShelleyKeyWitnessSignature txhash (ShelleyExtendedSigningKey sk) =
+    fromXSignature $
+      Crypto.HD.sign
+        BS.empty  -- passphrase for (unused) in-mem encryption
+        sk
+        (Crypto.getHash txhash)
   where
-    sk = toShelleySignKey wsk
-    vk = Shelley.VKey (Crypto.deriveVerKeyDSIGN sk)
+    fromXSignature :: Crypto.HD.XSignature
+                   -> Shelley.SignedDSIGN ShelleyCrypto b
+    fromXSignature =
+        Crypto.SignedDSIGN
+      . fromMaybe impossible
+      . Crypto.rawDeserialiseSigDSIGN
+      . Crypto.HD.unXSignature
 
-    signature :: Shelley.SignedDSIGN ShelleyCrypto
-                  (Shelley.Hash ShelleyCrypto (Shelley.TxBody ShelleyCrypto))
-    signature = Crypto.signedDSIGN () txhash sk
-
-    txhash :: Shelley.Hash ShelleyCrypto (Shelley.TxBody ShelleyCrypto)
-    txhash = Crypto.hash txbody
-
-toShelleySignKey :: ShelleyWitnessSigningKey
-                 -> Shelley.SignKeyDSIGN ShelleyCrypto
-toShelleySignKey (WitnessPaymentKey         (PaymentSigningKey         sk)) = sk
-toShelleySignKey (WitnessStakeKey           (StakeSigningKey           sk)) = sk
-toShelleySignKey (WitnessStakePoolKey       (StakePoolSigningKey       sk)) = sk
-toShelleySignKey (WitnessGenesisDelegateKey (GenesisDelegateSigningKey sk)) = sk
-toShelleySignKey (WitnessGenesisUTxOKey     (GenesisUTxOSigningKey     sk)) = sk
+    impossible =
+      error "makeShelleyKeyWitnessSignature: byron and shelley signature sizes do not match"
 
 
 -- order of signing keys must match txins
@@ -2788,6 +2848,121 @@ instance HasTextEnvelope (SigningKey PaymentKey) where
 
 
 --
+-- Shelley payment extended ed25519 keys
+--
+
+-- | Shelley-era payment keys using extended ed25519 cryptographic keys.
+--
+-- They can be used for Shelley payment addresses and witnessing
+-- transactions that spend from these addresses.
+--
+-- These extended keys are used by HD wallets. So this type provides
+-- interoperability with HD wallets. The ITN CLI also supported this key type.
+--
+-- The extended verification keys can be converted (via 'castVerificationKey')
+-- to ordinary keys (i.e. 'VerificationKey' 'PaymentKey') but this is /not/ the
+-- case for the signing keys. The signing keys can be used to witness
+-- transactions directly, with verification via their non-extended verification
+-- key ('VerificationKey' 'PaymentKey').
+--
+-- This is a type level tag, used with other interfaces like 'Key'.
+--
+data PaymentExtendedKey
+
+instance HasTypeProxy PaymentExtendedKey where
+    data AsType PaymentExtendedKey = AsPaymentExtendedKey
+    proxyToAsType _ = AsPaymentExtendedKey
+
+instance Key PaymentExtendedKey where
+
+    newtype VerificationKey PaymentExtendedKey =
+        PaymentExtendedVerificationKey Crypto.HD.XPub
+      deriving stock (Eq, Show)
+      deriving anyclass SerialiseAsCBOR
+
+    newtype SigningKey PaymentExtendedKey =
+        PaymentExtendedSigningKey Crypto.HD.XPrv
+      deriving anyclass SerialiseAsCBOR
+
+    deterministicSigningKey :: AsType PaymentExtendedKey
+                            -> Crypto.Seed
+                            -> SigningKey PaymentExtendedKey
+    deterministicSigningKey AsPaymentExtendedKey seed =
+        PaymentExtendedSigningKey
+          (Crypto.HD.generate seedbs BS.empty)
+      where
+       (seedbs, _) = Crypto.getBytesFromSeedT 32 seed
+
+    deterministicSigningKeySeedSize :: AsType PaymentExtendedKey -> Word
+    deterministicSigningKeySeedSize AsPaymentExtendedKey = 32
+
+    getVerificationKey :: SigningKey PaymentExtendedKey
+                       -> VerificationKey PaymentExtendedKey
+    getVerificationKey (PaymentExtendedSigningKey sk) =
+        PaymentExtendedVerificationKey (Crypto.HD.toXPub sk)
+
+    -- | We use the hash of the normal non-extended pub key so that it is
+    -- consistent with the one used in addresses and signatures.
+    --
+    verificationKeyHash :: VerificationKey PaymentExtendedKey
+                        -> Hash PaymentExtendedKey
+    verificationKeyHash (PaymentExtendedVerificationKey vk) =
+        PaymentExtendedKeyHash
+      . Shelley.KeyHash
+      . Crypto.castHash
+      $ Crypto.hashRaw Crypto.HD.xpubPublicKey vk
+
+instance ToCBOR (VerificationKey PaymentExtendedKey) where
+    toCBOR (PaymentExtendedVerificationKey xpub) =
+      toCBOR (Crypto.HD.unXPub xpub)
+
+instance FromCBOR (VerificationKey PaymentExtendedKey) where
+    fromCBOR = do
+      bs <- fromCBOR
+      either fail (return . PaymentExtendedVerificationKey)
+             (Crypto.HD.xpub (bs :: ByteString))
+
+instance ToCBOR (SigningKey PaymentExtendedKey) where
+    toCBOR (PaymentExtendedSigningKey xprv) =
+      toCBOR (Crypto.HD.unXPrv xprv)
+
+instance FromCBOR (SigningKey PaymentExtendedKey) where
+    fromCBOR = do
+      bs <- fromCBOR
+      either fail (return . PaymentExtendedSigningKey)
+             (Crypto.HD.xprv (bs :: ByteString))
+
+newtype instance Hash PaymentExtendedKey =
+    PaymentExtendedKeyHash (Shelley.KeyHash Shelley.Payment ShelleyCrypto)
+  deriving (Eq, Ord, Show)
+
+instance SerialiseAsRawBytes (Hash PaymentExtendedKey) where
+    serialiseToRawBytes (PaymentExtendedKeyHash (Shelley.KeyHash vkh)) =
+      Crypto.getHash vkh
+
+    deserialiseFromRawBytes (AsHash AsPaymentExtendedKey) bs =
+      PaymentExtendedKeyHash . Shelley.KeyHash <$> Crypto.hashFromBytes bs
+
+instance HasTextEnvelope (VerificationKey PaymentExtendedKey) where
+    textEnvelopeType _ = "PaymentVerificationKeyShelley extended ed25519"
+
+instance HasTextEnvelope (SigningKey PaymentExtendedKey) where
+    textEnvelopeType _ = "PaymentSigningKeyShelley extended ed25519"
+
+instance CastVerificationKeyRole PaymentExtendedKey PaymentKey where
+    castVerificationKey (PaymentExtendedVerificationKey vk) =
+        PaymentVerificationKey
+      . Shelley.VKey
+      . fromMaybe impossible
+      . Crypto.rawDeserialiseVerKeyDSIGN
+      . Crypto.HD.xpubPublicKey
+      $ vk
+      where
+        impossible =
+          error "castVerificationKey: byron and shelley key sizes do not match!"
+
+
+--
 -- Stake keys
 --
 
@@ -2979,10 +3154,11 @@ instance HasTextEnvelope (SigningKey GenesisDelegateKey) where
     -- TODO: use a different type from the stake pool key, since some operations
     -- need a genesis key specifically
 
-instance CastKeyRole GenesisDelegateKey StakePoolKey where
+instance CastVerificationKeyRole GenesisDelegateKey StakePoolKey where
     castVerificationKey (GenesisDelegateVerificationKey (Shelley.VKey vkey)) =
       StakePoolVerificationKey (Shelley.VKey vkey)
 
+instance CastSigningKeyRole GenesisDelegateKey StakePoolKey where
     castSigningKey (GenesisDelegateSigningKey skey) =
       StakePoolSigningKey skey
 
@@ -3052,10 +3228,11 @@ instance HasTextEnvelope (SigningKey GenesisUTxOKey) where
     -- TODO: use a different type from the stake pool key, since some operations
     -- need a genesis key specifically
 
-instance CastKeyRole GenesisUTxOKey PaymentKey where
+instance CastVerificationKeyRole GenesisUTxOKey PaymentKey where
     castVerificationKey (GenesisUTxOVerificationKey (Shelley.VKey vkey)) =
       PaymentVerificationKey (Shelley.VKey vkey)
 
+instance CastSigningKeyRole GenesisUTxOKey PaymentKey where
     castSigningKey (GenesisUTxOSigningKey skey) =
       PaymentSigningKey skey
 
