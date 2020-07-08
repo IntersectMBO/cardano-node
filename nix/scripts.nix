@@ -38,6 +38,7 @@ let
       dbPrefix = "db-${envConfig.name}";
       extraArgs = [];
       profiling = "none";
+      asserts = false;
       rtsArgs = [];
     } // (builtins.removeAttrs envConfig ["nodeConfig"]);
 
@@ -81,6 +82,7 @@ let
         extraArgs
         rtsArgs
         profiling
+        asserts
         ;
       runtimeDir = null;
       environment = envConfig.name;

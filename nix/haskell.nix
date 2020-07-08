@@ -11,6 +11,8 @@
 , compiler ? config.haskellNix.compiler or "ghc865"
 # Enable profiling
 , profiling ? config.haskellNix.profiling or false
+# Enable asserts for given packages
+, assertedPackages ? []
 # Version info, to be passed when not building from a git work tree
 , gitrev ? null
 , libsodium ? pkgs.libsodium
@@ -105,6 +107,10 @@ let
         enableLibraryProfiling = true;
         packages.cardano-node.components.exes.cardano-node.enableExecutableProfiling = true;
       })
+      {
+        packages = lib.genAttrs assertedPackages
+          (name: { flags.asserts = true; });
+      }
       (lib.optionalAttrs stdenv.hostPlatform.isLinux {
         # systemd can't be statically linked
         packages.cardano-config.flags.systemd = !stdenv.hostPlatform.isMusl;
