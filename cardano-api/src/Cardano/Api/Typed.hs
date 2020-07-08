@@ -2771,6 +2771,18 @@ instance HasTextEnvelope (SigningKey ByronKey) where
     textEnvelopeType _ = "SigningKeyByron"
     -- TODO: fix these inconsistent names for the public testnet re-spin
 
+instance CastVerificationKeyRole ByronKey PaymentExtendedKey where
+    castVerificationKey (ByronVerificationKey vk) =
+        PaymentExtendedVerificationKey
+          (Byron.unVerificationKey vk)
+
+instance CastVerificationKeyRole ByronKey PaymentKey where
+    castVerificationKey =
+        (castVerificationKey :: VerificationKey PaymentExtendedKey
+                             -> VerificationKey PaymentKey)
+      . (castVerificationKey :: VerificationKey ByronKey
+                             -> VerificationKey PaymentExtendedKey)
+
 
 --
 -- Shelley payment keys
