@@ -78,7 +78,7 @@ data AddressCmd
   | AddressKeyHash VerificationKeyFile (Maybe OutputFile)
   | AddressBuild VerificationKeyFile (Maybe VerificationKeyFile) NetworkId (Maybe OutputFile)
   | AddressBuildMultiSig  --TODO
-  | AddressInfo Text
+  | AddressInfo Text (Maybe OutputFile)
   | AddressConvertKey SigningKeyFile SigningKeyFile
   deriving (Eq, Show)
 
