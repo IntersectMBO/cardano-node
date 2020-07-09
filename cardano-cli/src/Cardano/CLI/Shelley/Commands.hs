@@ -37,9 +37,11 @@ module Cardano.CLI.Shelley.Commands
   , GenesisFile (..)
   , PrivKeyFile (..)
   , BlockId (..)
+  , QueryFilter (..)
   ) where
 
 import           Prelude
+import           Data.Set (Set)
 import           Data.Text (Text)
 
 import qualified Cardano.Api as OldApi
@@ -171,13 +173,13 @@ data PoolCmd
 
 data QueryCmd
   = QueryPoolId NodeAddress
-  | QueryProtocolParameters OldApi.Network (Maybe OutputFile)
-  | QueryTip OldApi.Network (Maybe OutputFile)
-  | QueryStakeDistribution OldApi.Network (Maybe OutputFile)
-  | QueryStakeAddressInfo OldApi.Address OldApi.Network (Maybe OutputFile)
-  | QueryUTxO OldApi.QueryFilter OldApi.Network (Maybe OutputFile)
+  | QueryProtocolParameters NetworkId (Maybe OutputFile)
+  | QueryTip NetworkId (Maybe OutputFile)
+  | QueryStakeDistribution NetworkId (Maybe OutputFile)
+  | QueryStakeAddressInfo StakeAddress NetworkId (Maybe OutputFile)
+  | QueryUTxO QueryFilter NetworkId (Maybe OutputFile)
   | QueryVersion NodeAddress
-  | QueryLedgerState OldApi.Network (Maybe OutputFile)
+  | QueryLedgerState NetworkId (Maybe OutputFile)
   | QueryStatus NodeAddress
   deriving (Eq, Show)
 
@@ -304,4 +306,10 @@ newtype TxFile
 
 newtype VerificationKeyFile
   = VerificationKeyFile FilePath
+  deriving (Eq, Show)
+
+-- | UTxO query filtering options.
+data QueryFilter
+  = FilterByAddress !(Set (Address Shelley))
+  | NoFilter
   deriving (Eq, Show)

@@ -23,11 +23,10 @@ library
                         Cardano.Api.Shelley.Genesis
                         Cardano.Api.TextView
                         Cardano.Api.Typed
+                        Cardano.Api.LocalChainSync
 
   other-modules:        Cardano.Api.Convert
                         Cardano.Api.Error
-                        Cardano.Api.LocalChainSync
-                        Cardano.Api.LocalStateQuery
                         Cardano.Api.TxSubmit
                         Cardano.Api.TxSubmit.ErrorRender
                         Cardano.Api.TxSubmit.Types

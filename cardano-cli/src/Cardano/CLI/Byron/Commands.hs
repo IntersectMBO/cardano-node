@@ -17,6 +17,7 @@ import           Cardano.Chain.Update
                     SystemTag(..))
 
 import           Cardano.Api (Network)
+import           Cardano.Api.Typed (NetworkId)
 import           Cardano.Config.Types
 
 import           Cardano.CLI.Byron.UpdateProposal
@@ -90,7 +91,7 @@ data ByronCommand =
         VerificationKeyFile
 
   | GetLocalNodeTip
-        Network
+        NetworkId
 
     -----------------------------------
 

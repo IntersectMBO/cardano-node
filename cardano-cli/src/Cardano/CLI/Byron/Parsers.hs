@@ -58,6 +58,7 @@ import           Cardano.Chain.Genesis
 import           Cardano.Chain.UTxO (TxId, TxIn(..), TxOut(..))
 
 import           Cardano.Api (Network(..), NetworkMagic(..))
+import qualified Cardano.Api.Typed as Typed
 import           Cardano.Config.Types
 import           Cardano.Config.Parsers
                    (parseIntegral, parseFraction, parseLovelace, readDouble,
@@ -249,7 +250,7 @@ parseLocalNodeQueryValues =
     mconcat
         [ command' "get-tip" "Get the tip of your local node's blockchain"
             $ GetLocalNodeTip
-                <$> parseNetwork
+                <$> pNetworkId
         ]
 
 parseMiscellaneous :: Mod CommandFields ByronCommand
@@ -643,6 +644,26 @@ parseFractionWithDefault optname desc w =
 parseNetwork :: Parser Network
 parseNetwork =
   parseMainnet <|> fmap Testnet parseTestnetMagic
+
+pNetworkId :: Parser Typed.NetworkId
+pNetworkId =
+  pMainnet' <|> fmap Typed.Testnet pTestnetMagic
+ where
+   pMainnet' :: Parser Typed.NetworkId
+   pMainnet' =
+    Opt.flag' Typed.Mainnet
+      (  Opt.long "mainnet"
+      <> Opt.help "Use the mainnet magic id."
+      )
+
+pTestnetMagic :: Parser NetworkMagic
+pTestnetMagic =
+  NetworkMagic <$>
+    Opt.option Opt.auto
+      (  Opt.long "testnet-magic"
+      <> Opt.metavar "NATURAL"
+      <> Opt.help "Specify a testnet magic id."
+      )
 
 parseMainnet :: Parser Network
 parseMainnet =
