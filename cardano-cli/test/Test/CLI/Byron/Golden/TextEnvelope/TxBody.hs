@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Test.CLI.Byron.TextEnvelope.Golden.TxBody
+module Test.CLI.Byron.Golden.TextEnvelope.TxBody
   ( golden_byronTxBody
   ) where
 

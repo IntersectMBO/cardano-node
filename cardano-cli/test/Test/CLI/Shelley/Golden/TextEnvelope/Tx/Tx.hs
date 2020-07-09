@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Test.CLI.Shelley.TextEnvelope.Golden.Tx.Tx
+module Test.CLI.Shelley.Golden.TextEnvelope.Tx.Tx
   ( golden_shelleyTx
   ) where
 

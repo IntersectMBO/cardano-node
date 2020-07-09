@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Test.CLI.Shelley.TextEnvelope.Golden.Keys.StakeKeys
-  ( golden_shelleyStakeKeys
+module Test.CLI.Shelley.Golden.TextEnvelope.Keys.PaymentKeys
+  ( golden_shelleyPaymentKeys
   ) where
 
 import           Cardano.Prelude
@@ -17,23 +17,23 @@ import           Test.OptParse
 -- | 1. Generate a key pair
 --   2. Check for the existence of the key pair
 --   3. Check the TextEnvelope serialization format has not changed.
-golden_shelleyStakeKeys :: Property
-golden_shelleyStakeKeys =
+golden_shelleyPaymentKeys :: Property
+golden_shelleyPaymentKeys =
   propertyOnce $ do
 
     -- Reference keys
-    let referenceVerKey = "test/Test/golden/shelley/keys/stake_keys/verification_key"
-        referenceSignKey = "test/Test/golden/shelley/keys/stake_keys/signing_key"
+    let referenceVerKey = "test/Test/golden/shelley/keys/payment_keys/verification_key"
+        referenceSignKey = "test/Test/golden/shelley/keys/payment_keys/signing_key"
 
     -- Key filepaths
-    let verKey = "stake-verification-key-file"
-        signKey = "stake-signing-key-file"
+    let verKey = "payment-verification-key-file"
+        signKey = "payment-signing-key-file"
         createdFiles = [verKey, signKey]
 
-    -- Generate stake key pair
+    -- Generate payment verification key
     execCardanoCLIParser
       createdFiles
-        $ evalCardanoCLIParser [ "shelley","stake-address","key-gen"
+        $ evalCardanoCLIParser [ "shelley","address","key-gen"
                                , "--verification-key-file", verKey
                                , "--signing-key-file", signKey
                                ]
@@ -41,8 +41,8 @@ golden_shelleyStakeKeys =
     assertFilesExist createdFiles
 
 
-    let signingKeyType = textEnvelopeType (AsSigningKey AsStakeKey)
-        verificationKeyType = textEnvelopeType (AsVerificationKey AsStakeKey)
+    let signingKeyType = textEnvelopeType (AsSigningKey AsPaymentKey)
+        verificationKeyType = textEnvelopeType (AsVerificationKey AsPaymentKey)
 
     -- Check the newly created files have not deviated from the
     -- golden files

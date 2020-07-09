@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Test.CLI.Shelley.TextEnvelope.Golden.Keys.GenesisDelegateKeys
+module Test.CLI.Shelley.Golden.TextEnvelope.Keys.GenesisDelegateKeys
   ( golden_shelleyGenesisDelegateKeys
   ) where
 

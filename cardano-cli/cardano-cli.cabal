@@ -184,27 +184,27 @@ test-suite cardano-cli-pioneers
                       , text
                       , transformers-except
 
-  other-modules:        Test.CLI.Byron.TextEnvelope.Golden.PaymentKeys
-                        Test.CLI.Byron.TextEnvelope.Golden.Tx
-                        Test.CLI.Byron.TextEnvelope.Golden.TxBody
-                        Test.CLI.Byron.TextEnvelope.Golden.Witness
-                        Test.CLI.Shelley.TextEnvelope.Golden.Certificates.MIRCertificate
-                        Test.CLI.Shelley.TextEnvelope.Golden.Certificates.OperationalCertificate
-                        Test.CLI.Shelley.TextEnvelope.Golden.Certificates.StakeAddressCertificates
-                        Test.CLI.Shelley.TextEnvelope.Golden.Certificates.StakePoolCertificates
-                        Test.CLI.Shelley.TextEnvelope.Golden.Keys.GenesisDelegateKeys
-                        Test.CLI.Shelley.TextEnvelope.Golden.Keys.GenesisKeys
-                        Test.CLI.Shelley.TextEnvelope.Golden.Keys.GenesisUTxOKeys
-                        Test.CLI.Shelley.TextEnvelope.Golden.Keys.KESKeys
-                        Test.CLI.Shelley.TextEnvelope.Golden.Keys.PaymentKeys
-                        Test.CLI.Shelley.TextEnvelope.Golden.Keys.StakeKeys
-                        Test.CLI.Shelley.TextEnvelope.Golden.Keys.VRFKeys
-                        Test.CLI.Shelley.TextEnvelope.Golden.Tests
-                        Test.CLI.Shelley.TextEnvelope.Golden.Tx.Tx
-                        Test.CLI.Shelley.TextEnvelope.Golden.Tx.TxBody
-                        Test.CLI.Shelley.TextEnvelope.Golden.Tx.Witness
+  other-modules:        Test.CLI.Byron.Golden.TextEnvelope.PaymentKeys
+                        Test.CLI.Byron.Golden.TextEnvelope.Tx
+                        Test.CLI.Byron.Golden.TextEnvelope.TxBody
+                        Test.CLI.Byron.Golden.TextEnvelope.Witness
+                        Test.CLI.Shelley.Golden.Metadata.StakePoolMetadata
+                        Test.CLI.Shelley.Golden.TextEnvelope.Certificates.MIRCertificate
+                        Test.CLI.Shelley.Golden.TextEnvelope.Certificates.OperationalCertificate
+                        Test.CLI.Shelley.Golden.TextEnvelope.Certificates.StakeAddressCertificates
+                        Test.CLI.Shelley.Golden.TextEnvelope.Certificates.StakePoolCertificates
+                        Test.CLI.Shelley.Golden.TextEnvelope.Keys.GenesisDelegateKeys
+                        Test.CLI.Shelley.Golden.TextEnvelope.Keys.GenesisKeys
+                        Test.CLI.Shelley.Golden.TextEnvelope.Keys.GenesisUTxOKeys
+                        Test.CLI.Shelley.Golden.TextEnvelope.Keys.KESKeys
+                        Test.CLI.Shelley.Golden.TextEnvelope.Keys.PaymentKeys
+                        Test.CLI.Shelley.Golden.TextEnvelope.Keys.StakeKeys
+                        Test.CLI.Shelley.Golden.TextEnvelope.Keys.VRFKeys
+                        Test.CLI.Shelley.Golden.TextEnvelope.Tx.Tx
+                        Test.CLI.Shelley.Golden.TextEnvelope.Tx.TxBody
+                        Test.CLI.Shelley.Golden.TextEnvelope.Tx.Witness
+                        Test.CLI.Shelley.Tests
                         Test.ITN
-                        Test.Metadata
                         Test.OptParse
                         Test.Pioneers.Exercise1
                         Test.Pioneers.Exercise2

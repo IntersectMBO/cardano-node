@@ -1,39 +1,42 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Test.CLI.Shelley.TextEnvelope.Golden.Tests
+module Test.CLI.Shelley.Tests
   ( keyTests
   , certificateTests
+  , metaDatatests
   , txTests
   ) where
 
 import           Cardano.Prelude
 
-import           Test.CLI.Shelley.TextEnvelope.Golden.Certificates.StakeAddressCertificates
+import           Test.CLI.Shelley.Golden.TextEnvelope.Certificates.StakeAddressCertificates
                    (golden_shelleyStakeAddressCertificates)
-import           Test.CLI.Shelley.TextEnvelope.Golden.Certificates.MIRCertificate
+import           Test.CLI.Shelley.Golden.TextEnvelope.Certificates.MIRCertificate
                    (golden_shelleyMIRCertificate)
-import           Test.CLI.Shelley.TextEnvelope.Golden.Certificates.OperationalCertificate
+import           Test.CLI.Shelley.Golden.TextEnvelope.Certificates.OperationalCertificate
                    (golden_shelleyOperationalCertificate)
-import           Test.CLI.Shelley.TextEnvelope.Golden.Certificates.StakePoolCertificates
+import           Test.CLI.Shelley.Golden.TextEnvelope.Certificates.StakePoolCertificates
                    (golden_shelleyStakePoolCertificates)
 
-import           Test.CLI.Shelley.TextEnvelope.Golden.Keys.GenesisDelegateKeys
+import           Test.CLI.Shelley.Golden.Metadata.StakePoolMetadata
+                   (golden_stakePoolMetadataHash)
+import           Test.CLI.Shelley.Golden.TextEnvelope.Keys.GenesisDelegateKeys
                    (golden_shelleyGenesisDelegateKeys)
-import           Test.CLI.Shelley.TextEnvelope.Golden.Keys.GenesisUTxOKeys
+import           Test.CLI.Shelley.Golden.TextEnvelope.Keys.GenesisUTxOKeys
                    (golden_shelleyGenesisUTxOKeys)
-import           Test.CLI.Shelley.TextEnvelope.Golden.Keys.GenesisKeys
+import           Test.CLI.Shelley.Golden.TextEnvelope.Keys.GenesisKeys
                    (golden_shelleyGenesisKeys)
-import           Test.CLI.Shelley.TextEnvelope.Golden.Keys.KESKeys
+import           Test.CLI.Shelley.Golden.TextEnvelope.Keys.KESKeys
                    (golden_shelleyKESKeys)
-import           Test.CLI.Shelley.TextEnvelope.Golden.Keys.PaymentKeys
+import           Test.CLI.Shelley.Golden.TextEnvelope.Keys.PaymentKeys
                    (golden_shelleyPaymentKeys)
-import           Test.CLI.Shelley.TextEnvelope.Golden.Keys.StakeKeys
+import           Test.CLI.Shelley.Golden.TextEnvelope.Keys.StakeKeys
                    (golden_shelleyStakeKeys)
-import           Test.CLI.Shelley.TextEnvelope.Golden.Keys.VRFKeys
+import           Test.CLI.Shelley.Golden.TextEnvelope.Keys.VRFKeys
                    (golden_shelleyVRFKeys)
 
-import           Test.CLI.Shelley.TextEnvelope.Golden.Tx.Tx (golden_shelleyTx)
-import           Test.CLI.Shelley.TextEnvelope.Golden.Tx.TxBody (golden_shelleyTxBody)
+import           Test.CLI.Shelley.Golden.TextEnvelope.Tx.Tx (golden_shelleyTx)
+import           Test.CLI.Shelley.Golden.TextEnvelope.Tx.TxBody (golden_shelleyTxBody)
 
 import qualified Hedgehog as H
 
@@ -66,4 +69,11 @@ certificateTests =
         , ("golden_shelleyOperationalCertificate", golden_shelleyOperationalCertificate)
         , ("golden_shelleyStakePoolCertificates", golden_shelleyStakePoolCertificates)
         , ("golden_shelleyMIRCertificate", golden_shelleyMIRCertificate)
+        ]
+
+metaDatatests :: IO Bool
+metaDatatests =
+  H.checkSequential
+    $ H.Group "Metadata Goldens"
+        [ ("golden_stakePoolMetadataHash", golden_stakePoolMetadataHash)
         ]

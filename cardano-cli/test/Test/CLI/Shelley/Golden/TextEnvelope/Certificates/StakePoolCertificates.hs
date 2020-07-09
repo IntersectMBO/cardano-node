@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Test.CLI.Shelley.TextEnvelope.Golden.Certificates.StakePoolCertificates
+module Test.CLI.Shelley.Golden.TextEnvelope.Certificates.StakePoolCertificates
   ( golden_shelleyStakePoolCertificates
   ) where
 

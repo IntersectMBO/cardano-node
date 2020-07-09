@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Test.CLI.Byron.TextEnvelope.Golden.PaymentKeys
+module Test.CLI.Byron.Golden.TextEnvelope.PaymentKeys
   ( golden_byronPaymentKeys
   ) where
 

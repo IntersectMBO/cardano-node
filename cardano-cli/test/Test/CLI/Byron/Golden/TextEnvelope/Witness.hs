@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Test.CLI.Byron.TextEnvelope.Golden.Witness
+module Test.CLI.Byron.Golden.TextEnvelope.Witness
   ( golden_byronWitness
   ) where
 

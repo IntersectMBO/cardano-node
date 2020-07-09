@@ -1,6 +1,7 @@
 module Test.OptParse
   ( checkTextEnvelopeFormat
   , assertFilesExist
+  , equivalence
   , evalCardanoCLIParser
   , execCardanoCLIParser
   , fileCleanup
@@ -108,8 +109,8 @@ checkTextEnvelopeFormat fps tve reference created = do
 
    typeTitleEquivalence :: TextView -> TextView -> H.PropertyT IO ()
    typeTitleEquivalence (TextView refType refTitle _) (TextView createdType createdTitle _) = do
-     equivalence callStack fps refType createdType
-     equivalence callStack fps refTitle createdTitle
+     equivalence fps refType createdType
+     equivalence fps refTitle createdTitle
 
 --------------------------------------------------------------------------------
 -- Helpers, Error rendering & Clean up
@@ -149,20 +150,19 @@ propertyOnce =  H.withTests 1 . H.property
 
 -- | Check for equivalence between two types and perform a file cleanup on failure.
 equivalence
-  :: (Eq a, Show a)
-  => CallStack
-  -> [FilePath]
+  :: (Eq a, Show a, HasCallStack)
+  => [FilePath]
   -- ^ Files to clean up on failure.
   -> a
   -> a
   -> H.PropertyT IO ()
-equivalence cS fps x y = do
+equivalence fps x y = do
   ok <- H.eval (x == y)
   if ok then
     H.success
   else do
     liftIO $ fileCleanup fps
-    failDiffCustom cS x y
+    failDiffCustom callStack x y
 
 -- | Takes a 'CallStack' so the error can be rendered at the appropriate call site.
 failWithCustom :: MonadTest m => CallStack -> Maybe Diff -> String -> m a

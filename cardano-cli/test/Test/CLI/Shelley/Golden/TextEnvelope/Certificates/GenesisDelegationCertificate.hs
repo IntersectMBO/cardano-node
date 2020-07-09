@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Test.CLI.Shelley.TextEnvelope.Golden.Certificates.GenesisDelegation
+module Test.CLI.Shelley.Golden.TextEnvelope.Certificates.GenesisDelegation
   ( golden_shelleyGenesisDelegationCertificate
   ) where
 
