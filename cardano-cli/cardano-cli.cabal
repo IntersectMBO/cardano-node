@@ -42,6 +42,7 @@ library
                        Cardano.CLI.Byron.Vote
 
                        Cardano.CLI.Shelley.Commands
+                       Cardano.CLI.Shelley.Orphans
                        Cardano.CLI.Shelley.Parsers
                        Cardano.CLI.Shelley.Run
                        Cardano.CLI.Shelley.Run.Address

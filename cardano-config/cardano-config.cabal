@@ -22,14 +22,11 @@ library
     cpp-options:       -DSYSTEMD
     build-depends:     lobemo-scribe-systemd
 
-  exposed-modules:     Cardano.Config.Byron.Parsers
-                       Cardano.Config.GitRev
+  exposed-modules:     Cardano.Config.GitRev
                        Cardano.Config.GitRevFromGit
                        Cardano.Config.LedgerQueries
                        Cardano.Config.Orphanage
                        Cardano.Config.Parsers
-                       Cardano.Config.Shelley.Orphans
-                       Cardano.Config.Shelley.Parsers
                        Cardano.Config.TopHandler
                        Cardano.Config.Types
                        Cardano.TracingOrphanInstances.Byron

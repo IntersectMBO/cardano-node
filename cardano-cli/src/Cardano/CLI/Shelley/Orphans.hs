@@ -9,7 +9,7 @@
 
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Config.Shelley.Orphans () where
+module Cardano.CLI.Shelley.Orphans () where
 
 import           Cardano.Prelude
 
