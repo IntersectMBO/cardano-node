@@ -35,6 +35,7 @@ library
 
   exposed-modules:     Cardano.Common.Help
                        Cardano.Node.Logging
+                       Cardano.Node.Orphans
                        Cardano.Node.Protocol
                        Cardano.Node.Protocol.Byron
                        Cardano.Node.Protocol.Cardano
@@ -129,7 +130,8 @@ library cardano-node-config
 
   hs-source-dirs:      src
 
-  exposed-modules:     Cardano.Node.Types
+  exposed-modules:     Cardano.Node.Orphans
+                       Cardano.Node.Types
                        Cardano.Node.TraceConfig
 
   build-depends:       aeson

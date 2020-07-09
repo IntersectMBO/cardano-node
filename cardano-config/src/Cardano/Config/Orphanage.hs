@@ -23,7 +23,6 @@ import           Network.Socket (PortNumber)
 import           Cardano.BM.Data.Tracer (TracingVerbosity(..))
 import qualified Cardano.Chain.Update as Update
 import           Cardano.Slotting.Block (BlockNo (..))
-import           Ouroboros.Consensus.Byron.Ledger.Block (ByronHash(..))
 import           Ouroboros.Consensus.HardFork.Combinator (OneEraHash (..))
 import           Ouroboros.Consensus.NodeId (CoreNodeId (..))
 import           Ouroboros.Network.Block (HeaderHash, Tip (..))
@@ -59,6 +58,8 @@ instance FromJSON Update.ApplicationName where
     panic $ "Parsing of application name failed due to type mismatch. "
     <> "Encountered: " <> (Text.pack $ Prelude.show invalid)
 
+-- This instance is temporarily duplicated in cardano-cli
+
 instance ToJSON (HeaderHash blk) => ToJSON (Tip blk) where
   toJSON TipGenesis = object [ "genesis" .= True ]
   toJSON (Tip slotNo headerHash blockNo) =
@@ -71,5 +72,5 @@ instance ToJSON (HeaderHash blk) => ToJSON (Tip blk) where
 instance ToJSON (OneEraHash xs) where
   toJSON (OneEraHash bs) = toJSON . Text.decodeLatin1 . B16.encode $ bs
 
-deriving newtype instance ToJSON ByronHash
+-- This instance is temporarily duplicated in cardano-cli\
 deriving newtype instance ToJSON BlockNo

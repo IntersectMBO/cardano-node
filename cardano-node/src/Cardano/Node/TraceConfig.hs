@@ -14,9 +14,9 @@ import           Cardano.Prelude hiding (show)
 import           Data.Aeson
 import           Data.Aeson.Types (Parser)
 
-import           Cardano.BM.Data.Tracer (TracingVerbosity (..))
+import           Cardano.Node.Orphans ()
 
-import           Cardano.Config.Orphanage ()
+import           Cardano.BM.Data.Tracer (TracingVerbosity (..))
 
 
 data TraceOptions

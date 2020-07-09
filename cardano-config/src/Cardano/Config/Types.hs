@@ -63,7 +63,6 @@ import           Ouroboros.Consensus.Shelley.Protocol.Crypto.HotKey (HotKey (..)
 import           Ouroboros.Network.Block (HeaderHash)
 
 import           Cardano.Config.LedgerQueries
-import           Cardano.Config.Orphanage ()
 
 import           Shelley.Spec.Ledger.OCert (KESPeriod (..))
 
