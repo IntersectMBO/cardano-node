@@ -92,11 +92,6 @@ extra-deps:
       - cardano-crypto-class
       - slotting
 
-    # Following deps are for cardano-shell
-  - git: https://github.com/input-output-hk/cardano-shell
-    commit: 5257fc818ef7df60986834310432e197aac90711
-    subdirs:
-      - cardano-shell
 
     # Needed for `cardano-ledger-specs`
   - git: https://github.com/input-output-hk/goblins

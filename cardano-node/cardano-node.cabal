@@ -177,7 +177,6 @@ executable cardano-node
                      , cardano-config
                      , cardano-node
                      , cardano-prelude
-                     , cardano-shell
                      , optparse-applicative
                      , text
 
