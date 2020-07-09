@@ -157,7 +157,7 @@ pAddressCmd =
     pAddressBuildMultiSig = pure AddressBuildMultiSig
 
     pAddressInfo :: Parser AddressCmd
-    pAddressInfo = AddressInfo <$> pAddress
+    pAddressInfo = AddressInfo <$> pAddress <*> pMaybeOutputFile
 
     pAddressConvert :: Parser AddressCmd
     pAddressConvert = AddressConvertKey <$> pByronKeyFile Input
