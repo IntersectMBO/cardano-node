@@ -10,14 +10,10 @@
 # cardano-node
 
 Integration of the [ledger](https://github.com/input-output-hk/cardano-ledger),
-[consensus](https://github.com/input-output-hk/ouroboros-network/tree/master/ouroboros-consensus),
+[consensus](https://github.com/input-output-hk/ouroboros-network/tree/master/ouroboros-consensus) and
 [networking](https://github.com/input-output-hk/ouroboros-network/tree/master/ouroboros-network)
-and [node shell](https://github.com/input-output-hk/cardano-shell)
 repositories.
-[Logging](https://github.com/input-output-hk/iohk-monitoring-framework) is
-provided as
-a [feature](https://github.com/input-output-hk/cardano-shell/blob/master/app/Cardano/Shell/Features/Logging.hs)
-by the node shell to the other packages.
+We use the [iohk-monitoring-framework](https://github.com/input-output-hk/iohk-monitoring-framework) for logging.
 
 - The cardano-node is the top level for the node and
   aggregates the other components from other packages: consensus, ledger and
@@ -166,7 +162,7 @@ output of `cardano-cli --help`.
 $ cardano-cli --help
 cardano-cli - utility to support a variety of key operations (genesis generation, migration, pretty-printing..) for different system generations.
 
-Usage: cardano-cli (Byron specific commands | Shelley specific commands | 
+Usage: cardano-cli (Byron specific commands | Shelley specific commands |
                      Miscellaneous commands)
 
 Available options:

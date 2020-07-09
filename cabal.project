@@ -85,9 +85,6 @@ package cardano-binary
 package cardano-sl-x509
   tests: False
 
-package cardano-shell
-  tests: False
-
 package cardano-crypto-class
   tests: False
 
@@ -247,13 +244,6 @@ source-repository-package
   tag: 316c854d1d3089f480708ad5cd5ecf8a74423ddd
   --sha256: 1srbl3jrkmpwypdz0yrx4nmah3qcsr93dp48zx2bamg51c4hcsyj
   subdir: test
-
-source-repository-package
-  type: git
-  location: https://github.com/input-output-hk/cardano-shell
-  tag: 5257fc818ef7df60986834310432e197aac90711
-  --sha256: 1si7jb084m2z9h773b1v4mgdkcjbbfpsyys3d6iz6gn0pzkijvc8
-  subdir: cardano-shell
 
 source-repository-package
   type: git

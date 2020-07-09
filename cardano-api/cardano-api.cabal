@@ -50,7 +50,6 @@ library
                       , cardano-crypto-wrapper
                       , cardano-ledger
                       , cardano-prelude
-                      , cardano-shell
                       , cardano-slotting
                       , cborg
                       , contra-tracer
@@ -145,4 +144,3 @@ test-suite cardano-api-test
                         -Wpartial-fields
                         -Wcompat
                         -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
-
