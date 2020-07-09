@@ -1,4 +1,3 @@
-{-# LANGUAGE GADTs #-}
 
 module Cardano.CLI.Shelley.Parsers
   ( -- * CLI command parser
@@ -35,7 +34,6 @@ import           Network.URI (URI, parseURI)
 import           Cardano.Slotting.Slot (SlotNo(..))
 
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
-import qualified Shelley.Spec.Ledger.Address as Shelley
 import qualified Shelley.Spec.Ledger.BaseTypes as Shelley
 import qualified Shelley.Spec.Ledger.TxData as Shelley
 
@@ -455,37 +453,37 @@ pQueryCmd =
     pQueryProtocolParameters :: Parser QueryCmd
     pQueryProtocolParameters =
       QueryProtocolParameters
-        <$> pNetwork
+        <$> pNetworkId
         <*> pMaybeOutputFile
 
     pQueryTip :: Parser QueryCmd
-    pQueryTip = QueryTip <$> pNetwork <*> pMaybeOutputFile
+    pQueryTip = QueryTip <$> pNetworkId <*> pMaybeOutputFile
 
     pQueryUTxO :: Parser QueryCmd
     pQueryUTxO =
       QueryUTxO
         <$> pQueryFilter
-        <*> pNetwork
+        <*> pNetworkId
         <*> pMaybeOutputFile
 
     pQueryStakeDistribution :: Parser QueryCmd
     pQueryStakeDistribution =
       QueryStakeDistribution
-        <$> pNetwork
+        <$> pNetworkId
         <*> pMaybeOutputFile
 
     pQueryStakeAddressInfo :: Parser QueryCmd
     pQueryStakeAddressInfo =
       QueryStakeAddressInfo
         <$> pFilterByStakeAddress
-        <*> pNetwork
+        <*> pNetworkId
         <*> pMaybeOutputFile
 
     pQueryVersion :: Parser QueryCmd
     pQueryVersion = QueryVersion <$> parseNodeAddress
 
     pQueryLedgerState :: Parser QueryCmd
-    pQueryLedgerState = QueryLedgerState <$> pNetwork <*> pMaybeOutputFile
+    pQueryLedgerState = QueryLedgerState <$> pNetworkId <*> pMaybeOutputFile
 
     pQueryStatus :: Parser QueryCmd
     pQueryStatus = QueryStatus <$> parseNodeAddress
@@ -1246,34 +1244,21 @@ pQueryFilter = pAddresses <|> pure NoFilter
     pAddresses = FilterByAddress . Set.fromList <$>
                    some pFilterByAddress
 
-pFilterByAddress :: Parser OldApi.Address
+pFilterByAddress :: Parser (Address Shelley)
 pFilterByAddress =
-    Opt.option (readerFromAttoParser $ toOldApiAddress <$> parseAddress)
+    Opt.option (readerFromAttoParser parseAddress)
       (  Opt.long "address"
       <> Opt.metavar "ADDRESS"
       <> Opt.help "Filter by Cardano address(es) (Bech32-encoded)."
       )
-  where
-    -- TODO: When removing this in the future, also remove the LANGUAGE pragma
-    --       for GADTs.
-    toOldApiAddress :: Address Shelley -> OldApi.Address
-    toOldApiAddress (ByronAddress addr) = OldApi.AddressByron addr
-    toOldApiAddress (ShelleyAddress nw payCred stkRef) =
-      OldApi.AddressShelley (Shelley.Addr nw payCred stkRef)
 
-pFilterByStakeAddress :: Parser OldApi.Address
+pFilterByStakeAddress :: Parser StakeAddress
 pFilterByStakeAddress =
-    Opt.option (readerFromAttoParser $ toOldApiAddress <$> parseStakeAddress)
+    Opt.option (readerFromAttoParser parseStakeAddress)
       (  Opt.long "address"
       <> Opt.metavar "ADDRESS"
       <> Opt.help "Filter by Cardano stake address (Bech32-encoded)."
       )
-  where
-    -- TODO: When removing this in the future, also remove the LANGUAGE pragma
-    --       for GADTs.
-    toOldApiAddress :: StakeAddress -> OldApi.Address
-    toOldApiAddress (StakeAddress nw stkCred) =
-      OldApi.AddressShelleyReward (Shelley.mkRwdAcnt nw stkCred)
 
 pAddress :: Parser Text
 pAddress =

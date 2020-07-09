@@ -66,9 +66,7 @@ module Cardano.Api
     -- * Slot related
   , EpochNo
 
-    -- * Node local chain sync related
-  , getLocalTip
-
+    -- * Shelley-specific types
   , ByronAddress
   , ShelleyAddress
   , ShelleyCoin
@@ -145,7 +143,6 @@ import           Cardano.Api.Types
 import           Cardano.Api.Convert as X
 import           Cardano.Api.Error as X
 import           Cardano.Api.TxSubmit as X
-import           Cardano.Api.LocalChainSync
 
 import qualified Cardano.Chain.Common  as Byron
 import qualified Cardano.Chain.UTxO    as Byron

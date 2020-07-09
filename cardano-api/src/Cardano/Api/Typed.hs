@@ -561,9 +561,11 @@ data Address era where
        -> Address Shelley
 
 deriving instance Eq (Address Byron)
+deriving instance Ord (Address Byron)
 deriving instance Show (Address Byron)
 
 deriving instance Eq (Address Shelley)
+deriving instance Ord (Address Shelley)
 deriving instance Show (Address Shelley)
 
 data StakeAddress where
@@ -572,7 +574,7 @@ data StakeAddress where
        :: Shelley.Network
        -> Shelley.StakeCredential ShelleyCrypto
        -> StakeAddress
-  deriving (Eq, Show)
+  deriving (Eq, Ord, Show)
 
 data NetworkId
        = Mainnet
@@ -3387,6 +3389,9 @@ instance SerialiseAsRawBytes (Hash StakePoolKey) where
 
     deserialiseFromRawBytes (AsHash AsStakePoolKey) bs =
       StakePoolKeyHash . Shelley.KeyHash <$> Crypto.hashFromBytes bs
+
+instance ToJSON (Hash StakePoolKey) where
+    toJSON = toJSON . Text.decodeLatin1 . serialiseToRawBytesHex
 
 instance HasTextEnvelope (VerificationKey StakePoolKey) where
     textEnvelopeType _ = "Node operator verification key"

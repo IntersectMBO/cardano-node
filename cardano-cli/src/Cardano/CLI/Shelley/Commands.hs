@@ -45,11 +45,10 @@ import           Data.Set (Set)
 import           Data.Text (Text)
 
 import qualified Cardano.Api as OldApi
-import           Cardano.Api.Typed hiding (Address, PoolId, Hash)
+import           Cardano.Api.Typed hiding (PoolId, Hash)
 
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
 
-import           Cardano.Api (Address)
 import           Cardano.Config.Types
                   (CertificateFile (..), NodeAddress, SigningKeyFile(..),
                    UpdateProposalFile(..))
@@ -174,13 +173,13 @@ data PoolCmd
 
 data QueryCmd
   = QueryPoolId NodeAddress
-  | QueryProtocolParameters OldApi.Network (Maybe OutputFile)
-  | QueryTip OldApi.Network (Maybe OutputFile)
-  | QueryStakeDistribution OldApi.Network (Maybe OutputFile)
-  | QueryStakeAddressInfo OldApi.Address OldApi.Network (Maybe OutputFile)
-  | QueryUTxO QueryFilter OldApi.Network (Maybe OutputFile)
+  | QueryProtocolParameters NetworkId (Maybe OutputFile)
+  | QueryTip NetworkId (Maybe OutputFile)
+  | QueryStakeDistribution NetworkId (Maybe OutputFile)
+  | QueryStakeAddressInfo StakeAddress NetworkId (Maybe OutputFile)
+  | QueryUTxO QueryFilter NetworkId (Maybe OutputFile)
   | QueryVersion NodeAddress
-  | QueryLedgerState OldApi.Network (Maybe OutputFile)
+  | QueryLedgerState NetworkId (Maybe OutputFile)
   | QueryStatus NodeAddress
   deriving (Eq, Show)
 
@@ -311,6 +310,6 @@ newtype VerificationKeyFile
 
 -- | UTxO query filtering options.
 data QueryFilter
-  = FilterByAddress !(Set Address)
+  = FilterByAddress !(Set (Address Shelley))
   | NoFilter
   deriving (Eq, Show)
