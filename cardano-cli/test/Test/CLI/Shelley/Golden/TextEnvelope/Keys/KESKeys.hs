@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Test.CLI.Shelley.TextEnvelope.Golden.Keys.KESKeys
+module Test.CLI.Shelley.Golden.TextEnvelope.Keys.KESKeys
   ( golden_shelleyKESKeys
   ) where
 

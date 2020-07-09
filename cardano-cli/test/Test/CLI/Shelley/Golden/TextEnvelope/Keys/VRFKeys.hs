@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Test.CLI.Shelley.TextEnvelope.Golden.Keys.GenesisUTxOKeys
-  ( golden_shelleyGenesisUTxOKeys
+module Test.CLI.Shelley.Golden.TextEnvelope.Keys.VRFKeys
+  ( golden_shelleyVRFKeys
   ) where
 
 import           Cardano.Prelude
@@ -17,32 +17,31 @@ import           Test.OptParse
 -- | 1. Generate a key pair
 --   2. Check for the existence of the key pair
 --   3. Check the TextEnvelope serialization format has not changed.
-golden_shelleyGenesisUTxOKeys :: Property
-golden_shelleyGenesisUTxOKeys =
+golden_shelleyVRFKeys :: Property
+golden_shelleyVRFKeys =
   propertyOnce $ do
 
     -- Reference keys
-    let referenceVerKey = "test/Test/golden/shelley/keys/genesis_utxo_keys/verification_key"
-        referenceSignKey = "test/Test/golden/shelley/keys/genesis_utxo_keys/signing_key"
+    let referenceVerKey = "test/Test/golden/shelley/keys/vrf_keys/verification_key"
+        referenceSignKey = "test/Test/golden/shelley/keys/vrf_keys/signing_key"
 
     -- Key filepaths
-    let verKey = "genesis-utxo-verification-key-file"
-        signKey = "genesis-utxo-signing-key-file"
+    let verKey = "vrf-verification-key-file"
+        signKey = "vrf-signing-key-file"
         createdFiles = [verKey, signKey]
 
-    -- Generate payment verification key
+    -- Generate vrf verification key
     execCardanoCLIParser
       createdFiles
-        $ evalCardanoCLIParser [ "shelley","genesis","key-gen-utxo"
+        $ evalCardanoCLIParser [ "shelley","node","key-gen-VRF"
                                , "--verification-key-file", verKey
                                , "--signing-key-file", signKey
                                ]
 
     assertFilesExist createdFiles
 
-
-    let signingKeyType = textEnvelopeType (AsSigningKey AsGenesisUTxOKey)
-        verificationKeyType = textEnvelopeType (AsVerificationKey AsGenesisUTxOKey)
+    let signingKeyType = textEnvelopeType (AsSigningKey AsVrfKey)
+        verificationKeyType = textEnvelopeType (AsVerificationKey AsVrfKey)
 
     -- Check the newly created files have not deviated from the
     -- golden files

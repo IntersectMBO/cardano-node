@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Test.CLI.Byron.TextEnvelope.Golden.Tx
+module Test.CLI.Byron.Golden.TextEnvelope.Tx
   ( golden_byronTx
   ) where
 

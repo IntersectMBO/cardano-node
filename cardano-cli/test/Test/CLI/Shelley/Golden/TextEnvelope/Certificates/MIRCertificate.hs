@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Test.CLI.Shelley.TextEnvelope.Golden.Certificates.MIRCertificate
+module Test.CLI.Shelley.Golden.TextEnvelope.Certificates.MIRCertificate
   ( golden_shelleyMIRCertificate
   ) where
 
