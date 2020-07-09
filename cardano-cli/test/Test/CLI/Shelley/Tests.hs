@@ -20,6 +20,8 @@ import           Test.CLI.Shelley.Golden.TextEnvelope.Certificates.StakePoolCert
 
 import           Test.CLI.Shelley.Golden.Metadata.StakePoolMetadata
                    (golden_stakePoolMetadataHash)
+import           Test.CLI.Shelley.Golden.TextEnvelope.Keys.ExtendedPaymentKeys
+                   (golden_shelleyExtendedPaymentKeys)
 import           Test.CLI.Shelley.Golden.TextEnvelope.Keys.GenesisDelegateKeys
                    (golden_shelleyGenesisDelegateKeys)
 import           Test.CLI.Shelley.Golden.TextEnvelope.Keys.GenesisUTxOKeys
@@ -44,7 +46,8 @@ keyTests :: IO Bool
 keyTests =
   H.checkSequential
     $ H.Group "TextEnvelope Key Goldens"
-        [ ("golden_shelleyPaymentKeys", golden_shelleyPaymentKeys)
+        [ ("golden_shelleyExtendedPaymentKeys", golden_shelleyExtendedPaymentKeys)
+        , ("golden_shelleyPaymentKeys", golden_shelleyPaymentKeys)
         , ("golden_shelleyStakeKeys", golden_shelleyStakeKeys)
         , ("golden_shelleyGenesisKeys", golden_shelleyGenesisKeys)
         , ("golden_shelleyGenesisDelegateKeys", golden_shelleyGenesisDelegateKeys)

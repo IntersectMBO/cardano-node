@@ -84,11 +84,13 @@ module Cardano.Api.Typed (
     -- * Building transactions
     -- | Constructing and inspecting transactions
     TxBody(..),
-    TxId,
+    TxId(..),
     getTxId,
     TxIn(..),
     TxOut(..),
     TxIx(..),
+    TTL,
+    TxFee,
     Lovelace(..),
     makeByronTransaction,
     makeShelleyTransaction,
@@ -898,6 +900,11 @@ data TxBody era where
        -> Maybe Shelley.MetaData
        -> TxBody Shelley
 
+deriving instance Eq (TxBody Byron)
+deriving instance Show (TxBody Byron)
+
+deriving instance Eq (TxBody Shelley)
+deriving instance Show (TxBody Shelley)
 
 instance HasTypeProxy (TxBody Byron) where
     data AsType (TxBody Byron) = AsByronTxBody
@@ -954,6 +961,7 @@ data ByronTxBodyConversionError =
        ByronTxBodyEmptyTxIns
      | ByronTxBodyEmptyTxOuts
      | ByronTxBodyLovelaceOverflow (TxOut Byron)
+     deriving Show
 
 makeByronTransaction :: [TxIn]
                      -> [TxOut Byron]
@@ -1047,6 +1055,11 @@ data Tx era where
        :: Shelley.Tx ShelleyCrypto
        -> Tx Shelley
 
+deriving instance Eq (Tx Byron)
+deriving instance Show (Tx Byron)
+
+deriving instance Eq (Tx Shelley)
+deriving instance Show (Tx Shelley)
 
 instance HasTypeProxy (Tx Byron) where
     data AsType (Tx Byron) = AsByronTx
@@ -1097,6 +1110,11 @@ data Witness era where
        :: Shelley.MultiSig ShelleyCrypto
        -> Witness Shelley
 
+deriving instance Eq (Witness Byron)
+deriving instance Show (Witness Byron)
+
+deriving instance Eq (Witness Shelley)
+deriving instance Show (Witness Shelley)
 
 instance HasTypeProxy (Witness Byron) where
     data AsType (Witness Byron) = AsByronWitness
@@ -2423,7 +2441,6 @@ serialiseToBech32 a =
                          ++ show (bech32PrefixFor a)
                          ++ ", " ++ show err
 
-
 deserialiseFromBech32 :: SerialiseAsBech32 a
                       => AsType a -> Text -> Either Bech32DecodeError a
 deserialiseFromBech32 asType bech32Str = do
@@ -2470,7 +2487,7 @@ data Bech32DecodeError =
        -- correspond to the prefix that should be used for the payload value.
      | Bech32WrongPrefix Text Text
 
-  deriving Show
+  deriving (Eq, Show)
 
 instance Error Bech32DecodeError where
   displayError err = case err of
