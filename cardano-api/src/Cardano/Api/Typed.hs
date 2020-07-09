@@ -238,6 +238,7 @@ module Cardano.Api.Typed (
 
     -- *** Local state query
     LocalStateQueryClient(..),
+    queryNodeLocalState,
 
     -- * Node operation
     -- | Support for the steps needed to operate a node, including the
@@ -327,6 +328,7 @@ import           Control.Monad.Trans.Except (ExceptT(..))
 import           Control.Monad.Trans.Except.Extra
 import           Control.Exception (Exception(..), IOException, throwIO)
 import           Control.Tracer (nullTracer)
+import           Control.Concurrent.STM
 
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Types as Aeson
@@ -347,7 +349,7 @@ import qualified Shelley.Spec.Ledger.Serialization as CBOR
 import           Cardano.Slotting.Slot (SlotNo, EpochNo)
 
 -- TODO: it'd be nice if the network imports needed were a bit more coherent
-import           Ouroboros.Network.Block (Tip)
+import           Ouroboros.Network.Block (Point, Tip)
 import           Ouroboros.Network.Magic (NetworkMagic(..))
 import           Ouroboros.Network.NodeToClient
                    (NodeToClientProtocols(..), NodeToClientVersionData(..),
@@ -429,10 +431,10 @@ import           Shelley.Spec.Ledger.TxData
 --
 import qualified Cardano.Api.TextView as TextView
 
-import           Ouroboros.Network.Protocol.ChainSync.Client
-import           Ouroboros.Network.Protocol.LocalTxSubmission.Client
-import           Ouroboros.Network.Protocol.LocalStateQuery.Client
-
+import           Ouroboros.Network.Protocol.ChainSync.Client as ChainSync
+import           Ouroboros.Network.Protocol.LocalTxSubmission.Client as TxSubmission
+import           Ouroboros.Network.Protocol.LocalStateQuery.Client as StateQuery
+import           Ouroboros.Network.Protocol.LocalStateQuery.Type (AcquireFailure)
 
 
 
@@ -2273,6 +2275,10 @@ nullLocalNodeClientProtocols =
       localStateQueryClient   = Nothing
     }
 
+
+-- | Establish a connection to a node and execute the given set of protocol
+-- handlers.
+--
 connectToLocalNode :: forall blk.
                       (SerialiseNodeToClientConstraints blk,
                        TranslateNetworkProtocolVersion blk)
@@ -2346,6 +2352,57 @@ connectToLocalNode path nw ptcl clientptcls =
                          localStateQueryClientPeer
                          localStateQueryClient)
           }
+
+
+--TODO: change this query to be just a protocol client handler to be used with
+-- connectToLocalNode. This would involve changing connectToLocalNode to be
+-- able to return protocol handler results properly.
+
+-- | Establish a connection to a node and execute a single query using the
+-- local state query protocol.
+--
+queryNodeLocalState :: forall blk result.
+                      (SerialiseNodeToClientConstraints blk,
+                       TranslateNetworkProtocolVersion blk)
+                    => FilePath  -- ^ The local socket path.
+                    -> NetworkId
+                    -> ProtocolClient blk (BlockProtocol blk)
+                    -> (Point blk, Query blk result)
+                    -> IO (Either AcquireFailure result)
+queryNodeLocalState path nw ptcl pointAndQuery = do
+    resultVar <- newEmptyTMVarIO
+    connectToLocalNode
+      path nw ptcl
+      (\_ -> nullLocalNodeClientProtocols {
+        localStateQueryClient =
+          Just (localStateQuerySingle resultVar pointAndQuery)
+      })
+    atomically (takeTMVar resultVar)
+  where
+    localStateQuerySingle
+      :: TMVar (Either AcquireFailure result)
+      -> (Point blk, Query blk result)
+      -> LocalStateQueryClient blk (Query blk) IO ()
+    localStateQuerySingle resultVar (point, query) =
+      LocalStateQueryClient $ pure $
+        SendMsgAcquire point $
+        ClientStAcquiring {
+          recvMsgAcquired =
+            SendMsgQuery query $
+            ClientStQuerying {
+              recvMsgResult = \result -> do
+                --TODO: return the result via the SendMsgDone rather than
+                -- writing into an mvar
+                atomically $ putTMVar resultVar (Right result)
+                pure $ SendMsgRelease $
+                       StateQuery.SendMsgDone ()
+            }
+        , recvMsgFailure = \failure -> do
+            --TODO: return the result via the SendMsgDone rather than
+            -- writing into an mvar
+            atomically $ putTMVar resultVar (Left failure)
+            pure $ StateQuery.SendMsgDone ()
+        }
 
 
 -- ----------------------------------------------------------------------------
