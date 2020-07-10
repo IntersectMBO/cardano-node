@@ -8,7 +8,6 @@ module Cardano.Api.LocalChainSync
 import           Cardano.Prelude hiding (atomically, catch)
 
 import           Control.Concurrent.STM
-
 import           Cardano.Api.Typed
 
 import           Ouroboros.Network.Block (Tip)

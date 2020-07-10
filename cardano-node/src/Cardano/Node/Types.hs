@@ -1,11 +1,16 @@
+{-# LANGUAGE DeriveAnyClass     #-}
+{-# LANGUAGE DeriveGeneric      #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE StandaloneDeriving #-}
 
 module Cardano.Node.Types
   ( ConfigYamlFilePath(..)
   , NodeCLI(..)
   , NodeConfiguration(..)
+  , Protocol(..)
+  , MockProtocol(..)
   , NodeByronProtocolConfiguration(..)
   , NodeHardForkProtocolConfiguration(..)
   , NodeProtocolConfiguration(..)
@@ -28,7 +33,7 @@ import           System.FilePath ((</>), takeDirectory)
 import           System.Posix.Types (Fd)
 
 import           Cardano.Api.Typed (EpochNo)
-import           Cardano.Api.Protocol
+--import           Cardano.Api.Protocol
 import           Cardano.Config.Types
 import           Cardano.Crypto (RequiresNetworkMagic(..))
 import qualified Cardano.Chain.Update as Byron
@@ -204,6 +209,45 @@ instance FromJSON NodeConfiguration where
                npcTestShelleyHardForkAtEpoch,
                npcTestShelleyHardForkAtVersion
              }
+
+data Protocol = MockProtocol !MockProtocol
+              | ByronProtocol
+              | ShelleyProtocol
+              | CardanoProtocol
+  deriving (Eq, Show, Generic)
+
+instance FromJSON Protocol where
+  parseJSON =
+    withText "Protocol" $ \str -> case str of
+
+      -- The new names
+      "MockBFT"   -> pure (MockProtocol MockBFT)
+      "MockPBFT"  -> pure (MockProtocol MockPBFT)
+      "MockPraos" -> pure (MockProtocol MockPraos)
+      "Byron"     -> pure ByronProtocol
+      "Shelley"   -> pure ShelleyProtocol
+      "Cardano"   -> pure CardanoProtocol
+
+      -- The old names
+      "BFT"       -> pure (MockProtocol MockBFT)
+    --"MockPBFT"  -- same as new name
+      "Praos"     -> pure (MockProtocol MockPraos)
+      "RealPBFT"  -> pure ByronProtocol
+      "TPraos"    -> pure ShelleyProtocol
+
+      _           -> fail $ "Parsing of Protocol failed. "
+                         <> show str <> " is not a valid protocol"
+
+deriving instance NFData Protocol
+deriving instance NoUnexpectedThunks Protocol
+
+data MockProtocol = MockBFT
+                  | MockPBFT
+                  | MockPraos
+  deriving (Eq, Show, Generic)
+
+deriving instance NFData MockProtocol
+deriving instance NoUnexpectedThunks MockProtocol
 
 data NodeProtocolConfiguration =
        NodeProtocolConfigurationMock    NodeMockProtocolConfiguration
