@@ -15,29 +15,16 @@ import           Ouroboros.Network.Block (Tip)
 import           Ouroboros.Network.Protocol.ChainSync.Client
                    (ChainSyncClient(..), ClientStIdle(..), ClientStNext(..))
 
-import           Ouroboros.Consensus.Cardano (ProtocolClient)
-import           Ouroboros.Consensus.Block (BlockProtocol)
-import           Ouroboros.Consensus.Node.Run (RunNode)
-
 
 -- | Get the node's tip using the local chain sync protocol.
-getLocalTip
-  :: forall blk.
-     RunNode blk
-  => FilePath
-  -> NetworkId
-  -> ProtocolClient blk (BlockProtocol blk)
-  -> IO (Tip blk)
-getLocalTip sockPath network ptcl = do
+getLocalTip :: LocalNodeConnectInfo mode block -> IO (Tip block)
+getLocalTip connctInfo = do
     resultVar <- newEmptyTMVarIO
     connectToLocalNode
-      sockPath
-      network
-      ptcl
-      (\_ -> nullLocalNodeClientProtocols {
+      connctInfo
+      nullLocalNodeClientProtocols {
         localChainSyncClient = Just (chainSyncGetCurrentTip resultVar)
-      })
-
+      }
     atomically (takeTMVar resultVar)
 
 chainSyncGetCurrentTip :: forall blk.

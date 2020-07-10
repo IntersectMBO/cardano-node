@@ -34,9 +34,9 @@ import           Cardano.Crypto.Signing (SigningKey, noPassSafeSigner)
 import           Ouroboros.Consensus.Byron.Ledger.Block (ByronBlock)
 import qualified Ouroboros.Consensus.Byron.Ledger.Mempool as Mempool
 import           Ouroboros.Consensus.Ledger.SupportsMempool (txId)
-import           Ouroboros.Network.NodeToClient (IOManager)
 
 import           Cardano.Api (Network, toByronProtocolMagic)
+import           Cardano.Api.Typed (NetworkId)
 import           Cardano.CLI.Byron.Key (CardanoEra(..), ByronKeyFailure, readEraSigningKey)
 import           Cardano.CLI.Byron.Genesis (ByronGenesisError)
 import           Cardano.CLI.Byron.Tx (ByronTxError, nodeSubmitTx)
@@ -191,14 +191,13 @@ readByronUpdateProposal fp =
 
 
 submitByronUpdateProposal
-  :: IOManager
-  -> Network
+  :: NetworkId
   -> FilePath
   -> ExceptT ByronUpdateProposalError IO ()
-submitByronUpdateProposal iomgr network proposalFp = do
+submitByronUpdateProposal network proposalFp = do
     proposalBs <- readByronUpdateProposal proposalFp
     aProposal <- hoistEither $ deserialiseByronUpdateProposal proposalBs
     let genTx = convertProposalToGenTx aProposal
     traceWith stdoutTracer $
       "Update proposal TxId: " ++ condense (txId genTx)
-    firstExceptT ByronUpdateProposalTxError $ nodeSubmitTx iomgr network genTx
+    firstExceptT ByronUpdateProposalTxError $ nodeSubmitTx network genTx

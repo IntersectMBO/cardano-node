@@ -25,9 +25,9 @@ import           Ouroboros.Consensus.Byron.Ledger.Block (ByronBlock)
 import           Ouroboros.Consensus.Byron.Ledger.Mempool (GenTx(..))
 import           Ouroboros.Consensus.Ledger.SupportsMempool (txId)
 import           Ouroboros.Consensus.Util.Condense (condense)
-import           Ouroboros.Network.IOManager (IOManager)
 
 import           Cardano.Api (Network, toByronProtocolMagic)
+import           Cardano.Api.Typed (NetworkId)
 
 import           Cardano.CLI.Byron.Genesis (ByronGenesisError)
 import           Cardano.CLI.Byron.Tx (ByronTxError, nodeSubmitTx)
@@ -91,13 +91,12 @@ serialiseByronVote :: Vote -> LByteString
 serialiseByronVote = Binary.serialize
 
 submitByronVote
-  :: IOManager
-  -> Network
+  :: NetworkId
   -> FilePath
   -> ExceptT ByronVoteError IO ()
-submitByronVote iomgr network voteFp = do
+submitByronVote network voteFp = do
     voteBs <- liftIO $ LB.readFile voteFp
     vote <- hoistEither $ deserialiseByronVote voteBs
     let genTx = convertVoteToGenTx vote
     traceWith stdoutTracer ("Vote TxId: " ++ condense (txId genTx))
-    firstExceptT ByronVoteTxSubmissionError $ nodeSubmitTx iomgr network genTx
+    firstExceptT ByronVoteTxSubmissionError $ nodeSubmitTx network genTx

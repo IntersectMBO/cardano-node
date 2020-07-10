@@ -32,8 +32,6 @@ import qualified Data.Text as T
 import qualified Data.Vector as Vector
 import           Formatting ((%), sformat)
 
-import           Control.Tracer (traceWith, nullTracer, stdoutTracer)
-
 import           Cardano.Api (textShow, toByronProtocolMagic)
 import qualified Cardano.Binary as Binary
 
@@ -48,17 +46,15 @@ import           Cardano.Crypto (SigningKey(..), ProtocolMagicId)
 import qualified Cardano.Crypto.Hashing as Crypto
 import qualified Cardano.Crypto.Signing as Crypto
 
-import           Ouroboros.Network.NodeToClient (IOManager)
-
 import qualified Ouroboros.Consensus.Byron.Ledger as Byron
 import           Ouroboros.Consensus.Byron.Ledger (GenTx(..), ByronBlock)
-import           Ouroboros.Consensus.Ledger.SupportsMempool (txId)
-import           Ouroboros.Consensus.Util.Condense (condense)
-import           Ouroboros.Consensus.Cardano
-                   (protocolClientInfo, SecurityParam(..))
+import           Ouroboros.Consensus.Cardano (SecurityParam(..))
 
-import           Cardano.Api (Network, submitGenTx)
-import           Cardano.Api.Protocol.Byron (mkNodeClientProtocolByron)
+import           Cardano.Api (Network)
+import           Cardano.Api.Typed
+                   (NetworkId, LocalNodeConnectInfo(..), NodeConsensusMode(..),
+                    submitTxToNodeLocal)
+import           Cardano.Config.Types (SocketPath(..))
 import           Cardano.CLI.Environment
 
 
@@ -195,27 +191,22 @@ txSpendUTxOByronPBFT nw sk ins outs =
 
 -- | Submit a transaction to a node specified by topology info.
 nodeSubmitTx
-  :: IOManager
-  -> Network
+  :: NetworkId
   -> GenTx ByronBlock
   -> ExceptT ByronTxError IO ()
-nodeSubmitTx iomgr network gentx = do
-    socketPath <- firstExceptT EnvSocketError readEnvSocketPath
-    liftIO $ do
-      traceWith stdoutTracer ("TxId: " ++ condense (txId gentx))
-      _res <- submitGenTx
-                nullTracer -- stdoutTracer
-                iomgr
-                (protocolClientInfo ptcl)
-                network
-                socketPath
-                gentx
-      --TODO: print failures
-      return ()
-  where
-    ptcl = mkNodeClientProtocolByron
-             (EpochSlots 21600)
-             (SecurityParam 2160)
+nodeSubmitTx network gentx = do
+    SocketPath socketPath <- firstExceptT EnvSocketError readEnvSocketPath
+    let connctInfo =
+          LocalNodeConnectInfo {
+            localNodeSocketPath    = socketPath,
+            localNodeNetworkId     = network,
+            localNodeConsensusMode = ByronMode
+                                       (EpochSlots 21600)
+                                       (SecurityParam 2160)
+          }
+    _res <- liftIO $ submitTxToNodeLocal connctInfo gentx
+    --TODO: print failures
+    return ()
 
 
 --TODO: remove these local definitions when the updated ledger lib is available

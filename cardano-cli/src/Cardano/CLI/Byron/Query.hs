@@ -23,7 +23,6 @@ import           Ouroboros.Network.Block
 
 import           Cardano.Config.Types (SocketPath (..))
 import           Cardano.Api.LocalChainSync (getLocalTip)
-import           Cardano.Api.Protocol.Byron (mkNodeClientProtocolByron)
 import           Cardano.CLI.Environment
                    (EnvSocketError, readEnvSocketPath, renderEnvSocketError)
 
@@ -44,12 +43,16 @@ runGetLocalNodeTip :: NetworkId -> ExceptT ByronQueryError IO ()
 runGetLocalNodeTip networkId = do
     SocketPath sockPath <- firstExceptT ByronQueryEnvVarSocketErr $
                            readEnvSocketPath
-    let ptcl = mkNodeClientProtocolByron
-                  (EpochSlots 21600)
-                  (SecurityParam 2160)
-
+    let connctInfo =
+          LocalNodeConnectInfo {
+            localNodeSocketPath    = sockPath,
+            localNodeNetworkId     = networkId,
+            localNodeConsensusMode = ByronMode
+                                       (EpochSlots 21600)
+                                       (SecurityParam 2160)
+          }
     liftIO $ do
-      tip <- getLocalTip sockPath networkId ptcl
+      tip <- getLocalTip connctInfo
       putTextLn (getTipOutput tip)
   where
     getTipOutput :: forall blk. Condense (HeaderHash blk) => Tip blk -> Text

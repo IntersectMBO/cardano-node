@@ -21,9 +21,8 @@ import qualified Data.Map.Strict as Map
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Vector as Vector
 
-import qualified Cardano.Api as OldApi
-import qualified Cardano.Api.Typed as Api
-import           Cardano.Api.Typed (SlotNo)
+import           Cardano.Api.Typed as Api
+import           Cardano.Api.TxSubmit as Api
 
 --TODO: do this nicely via the API too:
 import qualified Cardano.Binary as CBOR
@@ -51,13 +50,12 @@ data ShelleyTxCmdError
   | ShelleyTxMissingNetworkId
   | ShelleyTxSocketEnvError !EnvSocketError
   | ShelleyTxReadProtocolParamsError !FilePath !IOException
-  | ShelleyTxReadSignedTxError !OldApi.ApiError
   | ShelleyTxReadUpdateError !(Api.FileError Api.TextEnvelopeError)
   | ShelleyTxReadUnsignedTxError !(Api.FileError Api.TextEnvelopeError)
   | ShelleyTxCertReadError !(Api.FileError Api.TextEnvelopeError)
   | ShelleyTxWriteSignedTxError !(Api.FileError ())
   | ShelleyTxWriteUnsignedTxError !(Api.FileError ())
-  | ShelleyTxSubmitError !OldApi.TxSubmitResult
+  | ShelleyTxSubmitError !(TxSubmitResultForMode ShelleyMode)
   | ShelleyTxReadFileError !(Api.FileError Api.TextEnvelopeError)
   deriving Show
 
@@ -65,24 +63,24 @@ renderShelleyTxCmdError :: ShelleyTxCmdError -> Text
 renderShelleyTxCmdError err =
   case err of
     ShelleyTxReadProtocolParamsError fp ioException ->
-      "Error while reading protocol parameters at: " <> OldApi.textShow fp <> " Error: " <> OldApi.textShow ioException
+      "Error while reading protocol parameters at: " <> show fp
+                                       <> " Error: " <> show ioException
     ShelleyTxMetaDataFileError fp ioException ->
-       "Error reading metadata at: " <> OldApi.textShow fp <> " Error: " <> OldApi.textShow ioException
+       "Error reading metadata at: " <> show fp <> " Error: " <> show ioException
     ShelleyTxMetaDataConversionError fp metaDataErr ->
-       "Error reading metadata at: " <> OldApi.textShow fp
+       "Error reading metadata at: " <> show fp
                        <> " Error: " <> renderMetaDataJsonConversionError metaDataErr
     ShelleyTxMetaDecodeError fp metaDataErr ->
-       "Error decoding CBOR metadata at: " <> OldApi.textShow fp
-                             <> " Error: " <> OldApi.textShow metaDataErr
+       "Error decoding CBOR metadata at: " <> show fp
+                             <> " Error: " <> show metaDataErr
     ShelleyTxReadUnsignedTxError err' ->
       "Error while reading unsigned shelley tx: " <> Text.pack (Api.displayError err')
-    ShelleyTxReadSignedTxError apiError ->
-      "Error while reading signed shelley tx: " <> OldApi.renderApiError apiError
     ShelleyTxReadUpdateError apiError ->
       "Error while reading shelley update proposal: " <> Text.pack (Api.displayError apiError)
     ShelleyTxSocketEnvError envSockErr -> renderEnvSocketError envSockErr
     ShelleyTxAesonDecodeProtocolParamsError fp decErr ->
-      "Error while decoding the protocol parameters at: " <> OldApi.textShow fp <> " Error: " <> OldApi.textShow decErr
+      "Error while decoding the protocol parameters at: " <> show fp
+                                            <> " Error: " <> show decErr
     ShelleyTxCertReadError err' ->
       "Error reading shelley certificate at: " <> Text.pack (Api.displayError err')
     ShelleyTxWriteSignedTxError err' ->
@@ -90,7 +88,7 @@ renderShelleyTxCmdError err =
     ShelleyTxWriteUnsignedTxError err' ->
       "Error while writing unsigned shelley tx: " <> Text.pack (Api.displayError err')
     ShelleyTxSubmitError res ->
-      "Error while submitting tx: " <> OldApi.renderTxSubmitResult res
+      "Error while submitting tx: " <> Text.pack (show res)
     ShelleyTxReadFileError fileErr -> Text.pack (Api.displayError fileErr)
     ShelleyTxMissingNetworkId -> "Please enter network id with your byron transaction"
 
@@ -207,20 +205,22 @@ runTxSign (TxBodyFile txbodyFile) skFiles mnw (TxFile txFile) = do
         AGenesisDelegateSigningKey sk -> Right (Api.WitnessGenesisDelegateKey sk)
         AGenesisUTxOSigningKey     sk -> Right (Api.WitnessGenesisUTxOKey     sk)
 
-runTxSubmit :: FilePath -> OldApi.Network -> ExceptT ShelleyTxCmdError IO ()
+runTxSubmit :: FilePath -> NetworkId -> ExceptT ShelleyTxCmdError IO ()
 runTxSubmit txFp network = do
-    sktFp <- firstExceptT ShelleyTxSocketEnvError $ readEnvSocketPath
+    SocketPath sktFp <- firstExceptT ShelleyTxSocketEnvError $ readEnvSocketPath
     signedTx <- firstExceptT ShelleyTxReadFileError
       . newExceptT
       $ Api.readFileTextEnvelope Api.AsShelleyTx txFp
-    result <- liftIO $ OldApi.submitTx network sktFp (toOldApiSignedTx signedTx)
+    let connectInfo =
+          LocalNodeConnectInfo {
+            localNodeSocketPath    = sktFp,
+            localNodeNetworkId     = network,
+            localNodeConsensusMode = ShelleyMode
+          }
+    result <- liftIO $ Api.submitTx connectInfo (TxForShelleyMode signedTx)
     case result of
-      OldApi.TxSubmitSuccess          -> return ()
-      OldApi.TxSubmitFailureShelley _ -> left (ShelleyTxSubmitError result)
-      OldApi.TxSubmitFailureByron   _ -> left (ShelleyTxSubmitError result)
-  where
-    toOldApiSignedTx :: Api.Tx Api.Shelley -> OldApi.TxSigned
-    toOldApiSignedTx (Api.ShelleyTx tx) = OldApi.TxSignedShelley tx
+      TxSubmitSuccess              -> return ()
+      TxSubmitFailureShelleyMode{} -> left (ShelleyTxSubmitError result)
 
 
 runTxCalculateMinFee
@@ -316,7 +316,7 @@ data MetaDataJsonConversionError
 renderMetaDataJsonConversionError :: MetaDataJsonConversionError -> Text
 renderMetaDataJsonConversionError err =
   case err of
-    ConversionErrDecodeJSON decErr -> "Error decoding JSON: " <> OldApi.textShow decErr
+    ConversionErrDecodeJSON decErr -> "Error decoding JSON: " <> show decErr
     ConversionErrToplevelNotMap -> "The JSON metadata top level must be a map (object) from word to value"
     ConversionErrToplevelBadKey -> "The JSON metadata top level must be a map with unsigned integer keys"
     ConversionErrBoolNotAllowed -> "JSON Bool value is not allowed in MetaData"

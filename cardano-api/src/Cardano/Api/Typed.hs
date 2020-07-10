@@ -4,6 +4,7 @@
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE NamedFieldPuns #-}
@@ -228,6 +229,11 @@ module Cardano.Api.Typed (
 
     -- ** Low level protocol interaction with a Cardano node
     connectToLocalNode,
+    LocalNodeConnectInfo(..),
+    ByronMode,
+    ShelleyMode,
+    CardanoMode,
+    NodeConsensusMode(..),
     LocalNodeClientProtocols(..),
     nullLocalNodeClientProtocols,
 --  connectToRemoteNode,
@@ -237,6 +243,7 @@ module Cardano.Api.Typed (
 
     -- *** Local tx submission
     LocalTxSubmissionClient(..),
+    submitTxToNodeLocal,
 
     -- *** Local state query
     LocalStateQueryClient(..),
@@ -364,7 +371,8 @@ import           Ouroboros.Network.Mux
                     RunMiniProtocol(InitiatorProtocolOnly))
 
 -- TODO: it'd be nice if the consensus imports needed were a bit more coherent
-import           Ouroboros.Consensus.Cardano (ProtocolClient, protocolClientInfo)
+import           Ouroboros.Consensus.Cardano
+                   (SecurityParam, ProtocolClient, protocolClientInfo)
 import           Ouroboros.Consensus.Block (BlockProtocol)
 import           Ouroboros.Consensus.Ledger.Abstract (Query)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx)
@@ -375,6 +383,10 @@ import           Ouroboros.Consensus.Node.NetworkProtocolVersion
                   (BlockNodeToClientVersion, TranslateNetworkProtocolVersion,
                    nodeToClientProtocolVersion, supportedNodeToClientVersions)
 import           Ouroboros.Consensus.Node.Run (SerialiseNodeToClientConstraints)
+
+import           Ouroboros.Consensus.Byron.Ledger.Block (ByronBlock)
+import           Ouroboros.Consensus.Shelley.Ledger (ShelleyBlock)
+import           Ouroboros.Consensus.Cardano.Block (CardanoBlock)
 
 --
 -- Crypto API used by consensus and Shelley (and should be used by Byron)
@@ -396,6 +408,8 @@ import qualified Cardano.Crypto.ProtocolMagic as Byron
 import qualified Cardano.Chain.Common as Byron
 import qualified Cardano.Chain.Genesis as Byron
 import qualified Cardano.Chain.UTxO   as Byron
+import qualified Cardano.Chain.Slotting as Byron
+
 
 --
 -- Shelley imports
@@ -432,6 +446,9 @@ import           Shelley.Spec.Ledger.TxData
 -- Other config and common types
 --
 import qualified Cardano.Api.TextView as TextView
+import           Cardano.Api.Protocol.Byron   (mkNodeClientProtocolByron)
+import           Cardano.Api.Protocol.Shelley (mkNodeClientProtocolShelley)
+import           Cardano.Api.Protocol.Cardano (mkNodeClientProtocolCardano)
 
 import           Ouroboros.Network.Protocol.ChainSync.Client as ChainSync
 import           Ouroboros.Network.Protocol.LocalTxSubmission.Client as TxSubmission
@@ -2266,28 +2283,71 @@ issueOperationalCertificate (KesVerificationKey kesVKey)
 -- Node IPC protocols
 --
 
-data LocalNodeClientProtocols blk =
+data ByronMode
+data ShelleyMode
+data CardanoMode
+
+data LocalNodeConnectInfo mode block =
+     LocalNodeConnectInfo {
+       localNodeSocketPath    :: FilePath,
+       localNodeNetworkId     :: NetworkId,
+       localNodeConsensusMode :: NodeConsensusMode mode block
+     }
+
+data NodeConsensusMode mode block where
+
+     ByronMode
+       :: Byron.EpochSlots
+       -> SecurityParam
+       -> NodeConsensusMode ByronMode ByronBlock
+
+     ShelleyMode
+       :: NodeConsensusMode ShelleyMode (ShelleyBlock ShelleyCrypto)
+
+     CardanoMode
+       :: Byron.EpochSlots
+       -> SecurityParam
+       -> NodeConsensusMode CardanoMode (CardanoBlock ShelleyCrypto)
+
+
+withNodeProtocolClient
+  :: NodeConsensusMode mode block
+  -> (   (SerialiseNodeToClientConstraints block,
+          TranslateNetworkProtocolVersion block)
+      => ProtocolClient block (BlockProtocol block) -> a)
+  -> a
+withNodeProtocolClient (ByronMode epochSlots securityParam) f =
+    f (mkNodeClientProtocolByron epochSlots securityParam)
+
+withNodeProtocolClient ShelleyMode f =
+    f (mkNodeClientProtocolShelley)
+
+withNodeProtocolClient (CardanoMode epochSlots securityParam) f =
+    f (mkNodeClientProtocolCardano epochSlots securityParam)
+
+
+data LocalNodeClientProtocols block =
      LocalNodeClientProtocols {
        localChainSyncClient
          :: Maybe (ChainSyncClient
-                    blk
-                    (Tip blk)
+                    block
+                    (Tip block)
                     IO ())
 
      , localTxSubmissionClient
          :: Maybe (LocalTxSubmissionClient
-                    (GenTx blk)
-                    (ApplyTxErr blk)
+                    (GenTx block)
+                    (ApplyTxErr block)
                     IO ())
 
      , localStateQueryClient
          :: Maybe (LocalStateQueryClient
-                    blk
-                    (Query blk)
+                    block
+                    (Query block)
                     IO ())
      }
 
-nullLocalNodeClientProtocols :: LocalNodeClientProtocols blk
+nullLocalNodeClientProtocols :: LocalNodeClientProtocols block
 nullLocalNodeClientProtocols =
     LocalNodeClientProtocols {
       localChainSyncClient    = Nothing,
@@ -2299,16 +2359,17 @@ nullLocalNodeClientProtocols =
 -- | Establish a connection to a node and execute the given set of protocol
 -- handlers.
 --
-connectToLocalNode :: forall blk.
-                      (SerialiseNodeToClientConstraints blk,
-                       TranslateNetworkProtocolVersion blk)
-                   => FilePath  -- ^ The local socket path.
-                   -> NetworkId
-                   -> ProtocolClient blk (BlockProtocol blk)
-                   -> (BlockNodeToClientVersion blk -> LocalNodeClientProtocols blk)
+connectToLocalNode :: forall mode block.
+                      LocalNodeConnectInfo mode block
+                   -> LocalNodeClientProtocols block
                    -> IO ()
-connectToLocalNode path nw ptcl clientptcls =
+connectToLocalNode LocalNodeConnectInfo {
+                     localNodeSocketPath    = path,
+                     localNodeNetworkId     = network,
+                     localNodeConsensusMode = mode
+                   } clientptcls =
     withIOManager $ \iomgr ->
+      withNodeProtocolClient mode $ \ptcl ->
       connectTo
         (localSnocket iomgr path)
         NetworkConnectTracers {
@@ -2319,18 +2380,20 @@ connectToLocalNode path nw ptcl clientptcls =
             (\v -> versionedNodeToClientProtocols
                      (nodeToClientProtocolVersion proxy v)
                      NodeToClientVersionData {
-                       networkMagic = toNetworkMagic nw
+                       networkMagic = toNetworkMagic network
                      }
-                     (\_conn _runOrStop -> protocols v))
+                     (\_conn _runOrStop -> protocols ptcl v))
             (supportedNodeToClientVersions proxy))
         path
   where
-    proxy :: Proxy blk
+    proxy :: Proxy block
     proxy = Proxy
 
-    protocols :: BlockNodeToClientVersion blk
+    protocols :: SerialiseNodeToClientConstraints block
+              => ProtocolClient block (BlockProtocol block)
+              -> BlockNodeToClientVersion block
               -> NodeToClientProtocols InitiatorMode LBS.ByteString IO () Void
-    protocols clientVersion =
+    protocols ptcl clientVersion =
       let Codecs {
               cChainSyncCodec
             , cTxSubmissionCodec
@@ -2342,7 +2405,7 @@ connectToLocalNode path nw ptcl clientptcls =
             localChainSyncClient,
             localTxSubmissionClient,
             localStateQueryClient
-          } = clientptcls clientVersion
+          } = clientptcls
 
        in NodeToClientProtocols {
             localChainSyncProtocol =
@@ -2381,28 +2444,24 @@ connectToLocalNode path nw ptcl clientptcls =
 -- | Establish a connection to a node and execute a single query using the
 -- local state query protocol.
 --
-queryNodeLocalState :: forall blk result.
-                      (SerialiseNodeToClientConstraints blk,
-                       TranslateNetworkProtocolVersion blk)
-                    => FilePath  -- ^ The local socket path.
-                    -> NetworkId
-                    -> ProtocolClient blk (BlockProtocol blk)
-                    -> (Point blk, Query blk result)
+queryNodeLocalState :: forall mode block result.
+                       LocalNodeConnectInfo mode block
+                    -> (Point block, Query block result)
                     -> IO (Either AcquireFailure result)
-queryNodeLocalState path nw ptcl pointAndQuery = do
+queryNodeLocalState connctInfo pointAndQuery = do
     resultVar <- newEmptyTMVarIO
     connectToLocalNode
-      path nw ptcl
-      (\_ -> nullLocalNodeClientProtocols {
+      connctInfo
+      nullLocalNodeClientProtocols {
         localStateQueryClient =
           Just (localStateQuerySingle resultVar pointAndQuery)
-      })
+      }
     atomically (takeTMVar resultVar)
   where
     localStateQuerySingle
       :: TMVar (Either AcquireFailure result)
-      -> (Point blk, Query blk result)
-      -> LocalStateQueryClient blk (Query blk) IO ()
+      -> (Point block, Query block result)
+      -> LocalStateQueryClient block (Query block) IO ()
     localStateQuerySingle resultVar (point, query) =
       LocalStateQueryClient $ pure $
         SendMsgAcquire point $
@@ -2423,6 +2482,29 @@ queryNodeLocalState path nw ptcl pointAndQuery = do
             atomically $ putTMVar resultVar (Left failure)
             pure $ StateQuery.SendMsgDone ()
         }
+
+submitTxToNodeLocal :: forall mode block.
+                       LocalNodeConnectInfo mode block
+                    -> GenTx block
+                    -> IO (SubmitResult (ApplyTxErr block))
+submitTxToNodeLocal connctInfo tx = do
+    resultVar <- newEmptyTMVarIO
+    connectToLocalNode
+      connctInfo
+      nullLocalNodeClientProtocols {
+        localTxSubmissionClient =
+          Just (localTxSubmissionClientSingle resultVar)
+      }
+    atomically (takeTMVar resultVar)
+  where
+    localTxSubmissionClientSingle
+      :: TMVar (SubmitResult (ApplyTxErr block))
+      -> LocalTxSubmissionClient (GenTx block) (ApplyTxErr block) IO ()
+    localTxSubmissionClientSingle resultVar =
+        LocalTxSubmissionClient $
+        pure $ SendMsgSubmitTx tx $ \result -> do
+        atomically $ putTMVar resultVar result
+        pure (TxSubmission.SendMsgDone ())
 
 
 -- ----------------------------------------------------------------------------
