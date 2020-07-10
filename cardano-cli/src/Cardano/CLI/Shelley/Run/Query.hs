@@ -52,7 +52,7 @@ import           Cardano.Config.Shelley.Orphans ()
 import           Cardano.Config.Types (SocketPath(..))
 import           Cardano.Binary (decodeFull)
 
-import           Ouroboros.Consensus.Shelley.Ledger (ShelleyBlock)
+import           Ouroboros.Consensus.Cardano.Block (Either (..), EraMismatch (..))
 import           Ouroboros.Consensus.Shelley.Protocol.Crypto (TPraosStandardCrypto)
 import           Ouroboros.Network.Block (Point, getTipPoint)
 
@@ -78,7 +78,7 @@ import           Ouroboros.Network.Protocol.LocalStateQuery.Type as LocalStateQu
 
 data ShelleyQueryCmdError
   = ShelleyQueryEnvVarSocketErr !EnvSocketError
-  | NodeLocalStateQueryError !LocalStateQuery.AcquireFailure
+  | ShelleyQueryNodeLocalStateQueryError !LocalStateQueryError
   | ShelleyQueryWriteProtocolParamsError !FilePath !IOException
   | ShelleyQueryWriteFilteredUTxOsError !FilePath !IOException
   | ShelleyQueryWriteStakeDistributionError !FilePath !IOException
@@ -91,8 +91,7 @@ renderShelleyQueryCmdError :: ShelleyQueryCmdError -> Text
 renderShelleyQueryCmdError err =
   case err of
     ShelleyQueryEnvVarSocketErr envSockErr -> renderEnvSocketError envSockErr
-    NodeLocalStateQueryError lsqErr ->
-      "Local state query acquire failure: " <> show lsqErr
+    ShelleyQueryNodeLocalStateQueryError lsqErr -> renderLocalStateQueryError lsqErr
     ShelleyQueryWriteProtocolParamsError fp ioException ->
       "Error writing protocol parameters at: " <> show fp <> " Error: " <> show ioException
     ShelleyQueryWriteFilteredUTxOsError fp ioException ->
@@ -122,6 +121,7 @@ runQueryCmd cmd =
       runQueryUTxO qFilter networkId mOutFile
     _ -> liftIO $ putStrLn $ "runQueryCmd: " ++ show cmd
 
+
 runQueryProtocolParameters
   :: NetworkId
   -> Maybe OutputFile
@@ -135,7 +135,7 @@ runQueryProtocolParameters network mOutFile = do
           localNodeConsensusMode = ShelleyMode
         }
   tip <- liftIO $ getLocalTip connectInfo
-  pparams <- firstExceptT NodeLocalStateQueryError $
+  pparams <- firstExceptT (ShelleyQueryNodeLocalStateQueryError . AcquireFailureError) $
     queryPParamsFromLocalState connectInfo (getTipPoint tip)
   writeProtocolParameters mOutFile pparams
 
@@ -179,7 +179,7 @@ runQueryUTxO qfilter network mOutFile = do
           localNodeConsensusMode = ShelleyMode
         }
   tip <- liftIO $ getLocalTip connectInfo
-  filteredUtxo <- firstExceptT NodeLocalStateQueryError $
+  filteredUtxo <- firstExceptT (ShelleyQueryNodeLocalStateQueryError . AcquireFailureError) $
     queryUTxOFromLocalState connectInfo qfilter (getTipPoint tip)
   writeFilteredUTxOs mOutFile filteredUtxo
 
@@ -196,7 +196,7 @@ runQueryLedgerState network mOutFile = do
           localNodeConsensusMode = ShelleyMode
         }
   tip <- liftIO $ getLocalTip connectInfo
-  els <- firstExceptT NodeLocalStateQueryError $
+  els <- firstExceptT (ShelleyQueryNodeLocalStateQueryError . AcquireFailureError) $
                       queryLocalLedgerState connectInfo (getTipPoint tip)
   case els of
     Right lstate -> writeLedgerState mOutFile lstate
@@ -218,7 +218,7 @@ runQueryStakeAddressInfo addr network mOutFile = do
             localNodeConsensusMode = ShelleyMode
           }
     tip <- liftIO $ getLocalTip connectInfo
-    delegsAndRwds <- firstExceptT NodeLocalStateQueryError $
+    delegsAndRwds <- firstExceptT (ShelleyQueryNodeLocalStateQueryError . AcquireFailureError) $
       queryDelegationsAndRewardsFromLocalState
         connectInfo
         (Set.singleton addr)
@@ -230,7 +230,21 @@ runQueryStakeAddressInfo addr network mOutFile = do
 -- | An error that can occur while querying a node's local state.
 data LocalStateQueryError
   = AcquireFailureError !LocalStateQuery.AcquireFailure
+  | EraMismatchError !EraMismatch
+  -- ^ A query from a certain era was applied to a ledger from a different
+  -- era.
+  | ByronProtocolNotSupportedError
+  -- ^ The query does not support the Byron protocol.
   deriving (Eq, Show)
+
+renderLocalStateQueryError :: LocalStateQueryError -> Text
+renderLocalStateQueryError lsqErr =
+  case lsqErr of
+    AcquireFailureError err -> "Local state query acquire failure: " <> show err
+    EraMismatchError err ->
+      "A query from a certain era was applied to a ledger from a different era: " <> show err
+    ByronProtocolNotSupportedError ->
+      "The attempted local state query does not support the Byron protocol."
 
 writeStakeAddressInfo
   :: Maybe OutputFile
@@ -296,7 +310,7 @@ runQueryStakeDistribution network mOutFile = do
           localNodeConsensusMode = ShelleyMode
         }
   tip <- liftIO $ getLocalTip connectInfo
-  stakeDist <- firstExceptT NodeLocalStateQueryError $
+  stakeDist <- firstExceptT (ShelleyQueryNodeLocalStateQueryError . AcquireFailureError) $
     queryStakeDistributionFromLocalState connectInfo (getTipPoint tip)
   writeStakeDistribution mOutFile stakeDist
 
