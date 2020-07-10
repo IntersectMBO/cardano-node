@@ -1,10 +1,16 @@
 module Test.Cardano.Api.Typed.Gen
   ( genAddressByron
   , genAddressShelley
+  , genByronKeyWitness
   , genOperationalCertificate
   , genOperationalCertificateIssueCounter
+  , genShelleyWitness
   , genSigningKey
   , genStakeAddress
+  , genTxByron
+  , genTxShelley
+  , genTxBodyByron
+  , genTxBodyShelley
   , genVerificationKey
   ) where
 
@@ -14,6 +20,8 @@ import           Cardano.Prelude
 
 import           Control.Monad.Fail (fail)
 
+import qualified Cardano.Crypto.Hash as Crypto
+import           Cardano.Slotting.Slot (SlotNo(..))
 import           Ouroboros.Network.Magic (NetworkMagic(..))
 
 import           Hedgehog (Gen)
@@ -22,6 +30,8 @@ import qualified Hedgehog.Range as Range
 
 import           Test.Cardano.Api.Gen (genSeed)
 import           Test.Cardano.Api.Orphans ()
+import           Test.Cardano.Chain.UTxO.Gen (genVKWitness)
+import           Test.Cardano.Crypto.Gen (genProtocolMagicId)
 
 genAddressByron :: Gen (Address Byron)
 genAddressByron = makeByronAddress <$> genNetworkId
@@ -40,6 +50,9 @@ genAddressShelley =
 
 genKESPeriod :: Gen KESPeriod
 genKESPeriod = KESPeriod <$> Gen.word Range.constantBounded
+
+genLovelace :: Gen Lovelace
+genLovelace = Lovelace <$> Gen.integral (Range.linear 0 5000)
 
 genNetworkId :: Gen NetworkId
 genNetworkId =
@@ -105,28 +118,110 @@ genStakeCredential = do
   vKey <- genVerificationKey AsStakeKey
   return . StakeCredentialByKey $ verificationKeyHash vKey
 
-{-
---TODO: Currently undefined
-genTxBodyByron :: TxBody Byron
-genTxBodyByron = getTxBody <$> genTxByron
-
-genTxBodyShelley :: TxBody Shelley
+genTxBodyShelley :: Gen (TxBody Shelley)
 genTxBodyShelley =
-  Gen.choice
-    [ genTxBodyByron
-    , getTxBody <$> genTxShelley
-    ]
+   makeShelleyTransaction
+     <$> genTxExtraContent
+     <*> genTTL
+     <*> genTxFee
+     <*> Gen.list (Range.constant 1 10) genTxIn
+     <*> Gen.list (Range.constant 1 10) genShelleyTxOut
 
---TODO: Currently undefined
+genByronTxOut :: Gen (TxOut Byron)
+genByronTxOut =
+  TxOut <$> genAddressByron <*> genLovelace
+
+genShelleyTxOut :: Gen (TxOut Shelley)
+genShelleyTxOut =
+  TxOut <$> genAddressShelley <*> genLovelace
+
+genShelleyHash :: Gen (Crypto.Hash Crypto.Blake2b_256 ())
+genShelleyHash = return $ Crypto.hash ()
+
+genSlotNo :: Gen SlotNo
+genSlotNo = SlotNo <$> Gen.word64 Range.constantBounded
+
+-- TODO: Should probably have a naive generator that generates no inputs, no outputs etc
+genTxBodyByron :: Gen (TxBody Byron)
+genTxBodyByron = do
+  txIns <- Gen.list (Range.constant 1 10) genTxIn
+  txOuts <- Gen.list (Range.constant 1 10) genByronTxOut
+  case makeByronTransaction txIns txOuts of
+    Left err -> panic $ show err
+    Right txBody -> return txBody
+
 genTxByron :: Gen (Tx Byron)
-genTxByron = makeByronTransaction
+genTxByron =
+  makeSignedTransaction
+    <$> Gen.list (Range.constant 1 10) genByronKeyWitness
+    <*> genTxBodyByron
+
+genTxIn :: Gen TxIn
+genTxIn = TxIn <$> genTxId <*> genTxIndex
+
+genTxId :: Gen TxId
+genTxId = TxId <$> genShelleyHash
+
+genTxIndex :: Gen TxIx
+genTxIndex = TxIx <$> Gen.word Range.constantBounded
 
 genTxShelley :: Gen (Tx Shelley)
 genTxShelley =
-  Gen.choice
-    [ genTxByron
-    , makeShelleyTransaction
-    ]
--}
+  makeSignedTransaction
+    <$> genWitnessList
+    <*> genTxBodyShelley
+ where
+   genWitnessList :: Gen [Witness Shelley]
+   genWitnessList = do
+     bsWits <- Gen.list (Range.constant 0 10) genShelleyBootstrapWitness
+     keyWits <- Gen.list (Range.constant 0 10) genShelleyKeyWitness
+     return $ bsWits ++ keyWits
+
+genTxExtraContent :: Gen TxExtraContent
+genTxExtraContent = return txExtraContentEmpty
+
+genTTL :: Gen TTL
+genTTL = genSlotNo
+
+genTxFee :: Gen TxFee
+genTxFee = genLovelace
+
 genVerificationKey :: Key keyrole => AsType keyrole -> Gen (VerificationKey keyrole)
 genVerificationKey roletoken = getVerificationKey <$> genSigningKey roletoken
+
+genByronKeyWitness :: Gen (Witness Byron)
+genByronKeyWitness = do
+  pmId <- genProtocolMagicId
+  txinWitness <- genVKWitness pmId
+  return $ ByronKeyWitness txinWitness
+
+genShelleyBootstrapWitness :: Gen (Witness Shelley)
+genShelleyBootstrapWitness =
+ makeShelleyBootstrapWitness
+   <$> genNetworkId
+   <*> genTxBodyShelley
+   <*> genSigningKey AsByronKey
+
+genShelleyKeyWitness :: Gen (Witness Shelley)
+genShelleyKeyWitness =
+  makeShelleyKeyWitness
+    <$> genTxBodyShelley
+    <*> genShelleyWitnessSigningKey
+
+genShelleyWitness :: Gen (Witness Shelley)
+genShelleyWitness = Gen.choice [genShelleyKeyWitness, genShelleyBootstrapWitness]
+
+genShelleyWitnessSigningKey :: Gen ShelleyWitnessSigningKey
+genShelleyWitnessSigningKey =
+  Gen.choice [ WitnessPaymentKey <$>  (genSigningKey AsPaymentKey)
+             , WitnessPaymentExtendedKey <$>  (genSigningKey AsPaymentExtendedKey)
+             , WitnessStakeKey <$>  (genSigningKey AsStakeKey)
+             , WitnessStakePoolKey <$>  (genSigningKey AsStakePoolKey)
+             , WitnessGenesisDelegateKey <$>  (genSigningKey AsGenesisDelegateKey)
+             , WitnessGenesisUTxOKey <$>  (genSigningKey AsGenesisUTxOKey)
+             ]
+{-
+-- TODO: makeShelleyScriptWitness = undefined
+genShelleyScriptWitness :: Gen (Witness Shelley)
+genShelleyScriptWitness = makeShelleyScriptWitness
+-}

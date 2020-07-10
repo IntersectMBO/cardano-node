@@ -17,21 +17,30 @@ import           Test.Cardano.Api.Typed.Gen
 import           Test.Cardano.Api.Typed.Orphans ()
 
 
+prop_roundtrip_txbody_byron_CBOR :: Property
+prop_roundtrip_txbody_byron_CBOR =
+  roundtrip_CBOR AsByronTxBody genTxBodyByron
 
-{-
--- CBOR tests to fill in
+prop_roundtrip_txbody_shelley_CBOR :: Property
+prop_roundtrip_txbody_shelley_CBOR =
+  roundtrip_CBOR AsShelleyTxBody genTxBodyShelley
 
--- TODO: Currently undefined
-(TxBody Byron)
-(TxBody Shelley)
--- TODO: Currently undefined
-(Tx Byron)
-(Tx Shelley)
--- TODO: Currently undefined
-(Witness Byron)
-(Witness Shelley)
+prop_roundtrip_tx_byron_CBOR :: Property
+prop_roundtrip_tx_byron_CBOR =
+  roundtrip_CBOR AsByronTx genTxByron
 
--}
+prop_roundtrip_tx_shelley_CBOR :: Property
+prop_roundtrip_tx_shelley_CBOR =
+  roundtrip_CBOR AsShelleyTx genTxShelley
+
+
+prop_roundtrip_witness_shelley_CBOR :: Property
+prop_roundtrip_witness_shelley_CBOR =
+  roundtrip_CBOR AsShelleyWitness genShelleyWitness
+
+prop_roundtrip_witness_byron_CBOR :: Property
+prop_roundtrip_witness_byron_CBOR =
+  roundtrip_CBOR AsByronWitness genByronKeyWitness
 
 prop_roundtrip_operational_certificate_CBOR :: Property
 prop_roundtrip_operational_certificate_CBOR =

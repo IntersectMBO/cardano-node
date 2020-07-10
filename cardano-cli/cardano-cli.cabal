@@ -193,6 +193,7 @@ test-suite cardano-cli-pioneers
                         Test.CLI.Shelley.Golden.TextEnvelope.Certificates.OperationalCertificate
                         Test.CLI.Shelley.Golden.TextEnvelope.Certificates.StakeAddressCertificates
                         Test.CLI.Shelley.Golden.TextEnvelope.Certificates.StakePoolCertificates
+                        Test.CLI.Shelley.Golden.TextEnvelope.Keys.ExtendedPaymentKeys
                         Test.CLI.Shelley.Golden.TextEnvelope.Keys.GenesisDelegateKeys
                         Test.CLI.Shelley.Golden.TextEnvelope.Keys.GenesisKeys
                         Test.CLI.Shelley.Golden.TextEnvelope.Keys.GenesisUTxOKeys
