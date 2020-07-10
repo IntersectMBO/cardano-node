@@ -17,9 +17,10 @@ cardano-node
 
 .. toctree::
    :maxdepth: 3
-   :caption: Guides & References
+   :caption: Reference
    :titlesonly:
 
+   tutorials/index
    configuring-a-node-using-yaml
    monitoring-the-cardano-node
    building-and-signing-tx

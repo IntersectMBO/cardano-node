@@ -1,6 +1,6 @@
 .. toctree::
    :maxdepth: 3
-   :caption: Cardano Tutorials
+   :caption: Cardano Node Tutorials
    :titlesonly:
    :hidden:
 
