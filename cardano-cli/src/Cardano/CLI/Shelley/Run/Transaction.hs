@@ -1,4 +1,6 @@
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE NamedFieldPuns #-}
+
 {-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 
 module Cardano.CLI.Shelley.Run.Transaction
@@ -21,25 +23,31 @@ import qualified Data.Map.Strict as Map
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Vector as Vector
 
-import           Cardano.Api.Typed as Api
-import           Cardano.Api.TxSubmit as Api
+import           Control.Monad.Trans.Except (ExceptT)
+import           Control.Monad.Trans.Except.Extra
+                   (firstExceptT, left, newExceptT, hoistEither, handleIOExceptT)
 
 --TODO: do this nicely via the API too:
 import qualified Cardano.Binary as CBOR
 
+import qualified Shelley.Spec.Ledger.PParams as Shelley
+
+import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr)
+import           Ouroboros.Consensus.Byron.Ledger (ByronBlock)
+import           Ouroboros.Consensus.Shelley.Ledger (ShelleyBlock)
+import           Ouroboros.Consensus.Shelley.Protocol.Crypto (TPraosStandardCrypto)
+import           Ouroboros.Consensus.Cardano.Block
+                   (HardForkApplyTxErr (ApplyTxErrByron,
+                      ApplyTxErrShelley, ApplyTxErrWrongEra), EraMismatch (..))
+
+import           Cardano.Config.Types
+import           Cardano.CLI.Shelley.Parsers
 import           Cardano.CLI.Environment (EnvSocketError, readEnvSocketPath,
                    renderEnvSocketError)
 
-import           Cardano.Config.Types
-
-import           Cardano.CLI.Shelley.Parsers
-import           Cardano.Config.Types (CertificateFile (..))
-
-import qualified Shelley.Spec.Ledger.PParams as Shelley
-
-import           Control.Monad.Trans.Except (ExceptT)
-import           Control.Monad.Trans.Except.Extra
-                   (firstExceptT, left, newExceptT, hoistEither, handleIOExceptT)
+import           Cardano.Api.Typed as Api
+import           Cardano.Api.Protocol
+import           Cardano.Api.TxSubmit as Api
 
 
 data ShelleyTxCmdError
@@ -55,7 +63,9 @@ data ShelleyTxCmdError
   | ShelleyTxCertReadError !(Api.FileError Api.TextEnvelopeError)
   | ShelleyTxWriteSignedTxError !(Api.FileError ())
   | ShelleyTxWriteUnsignedTxError !(Api.FileError ())
-  | ShelleyTxSubmitError !(TxSubmitResultForMode ShelleyMode)
+  | ShelleyTxSubmitErrorByron   !(ApplyTxErr ByronBlock)
+  | ShelleyTxSubmitErrorShelley !(ApplyTxErr (ShelleyBlock TPraosStandardCrypto))
+  | ShelleyTxSubmitErrorEraMismatch !EraMismatch
   | ShelleyTxReadFileError !(Api.FileError Api.TextEnvelopeError)
   deriving Show
 
@@ -87,8 +97,14 @@ renderShelleyTxCmdError err =
       "Error while writing signed shelley tx: " <> Text.pack (Api.displayError err')
     ShelleyTxWriteUnsignedTxError err' ->
       "Error while writing unsigned shelley tx: " <> Text.pack (Api.displayError err')
-    ShelleyTxSubmitError res ->
+    ShelleyTxSubmitErrorByron res ->
       "Error while submitting tx: " <> Text.pack (show res)
+    ShelleyTxSubmitErrorShelley res ->
+      "Error while submitting tx: " <> Text.pack (show res)
+    ShelleyTxSubmitErrorEraMismatch EraMismatch{ledgerEraName, otherEraName} ->
+      "The era of the node and the tx do not match. " <>
+      "The node is running in the " <> ledgerEraName <>
+      " era, but the transaction is for the " <> otherEraName <> " era."
     ShelleyTxReadFileError fileErr -> Text.pack (Api.displayError fileErr)
     ShelleyTxMissingNetworkId -> "Please enter network id with your byron transaction"
 
@@ -99,8 +115,8 @@ runTransactionCmd cmd =
       runTxBuildRaw txins txouts ttl fee certs wdrls mMetaData mUpProp out
     TxSign txinfile skfiles network txoutfile ->
       runTxSign txinfile skfiles network txoutfile
-    TxSubmit txFp network ->
-      runTxSubmit txFp network
+    TxSubmit protocol network txFp ->
+      runTxSubmit protocol network txFp
     TxCalculateMinFee txbody mnw pParamsFile nInputs nOutputs
                       nShelleyKeyWitnesses nByronKeyWitnesses ->
       runTxCalculateMinFee txbody mnw pParamsFile nInputs nOutputs
@@ -205,22 +221,55 @@ runTxSign (TxBodyFile txbodyFile) skFiles mnw (TxFile txFile) = do
         AGenesisDelegateSigningKey sk -> Right (Api.WitnessGenesisDelegateKey sk)
         AGenesisUTxOSigningKey     sk -> Right (Api.WitnessGenesisUTxOKey     sk)
 
-runTxSubmit :: FilePath -> NetworkId -> ExceptT ShelleyTxCmdError IO ()
-runTxSubmit txFp network = do
-    SocketPath sktFp <- firstExceptT ShelleyTxSocketEnvError $ readEnvSocketPath
-    signedTx <- firstExceptT ShelleyTxReadFileError
+runTxSubmit :: Protocol -> NetworkId -> FilePath
+            -> ExceptT ShelleyTxCmdError IO ()
+runTxSubmit protocol network txFile = do
+    SocketPath sockPath <- firstExceptT ShelleyTxSocketEnvError $ readEnvSocketPath
+    tx <- firstExceptT ShelleyTxReadFileError
       . newExceptT
-      $ Api.readFileTextEnvelope Api.AsShelleyTx txFp
-    let connectInfo =
-          LocalNodeConnectInfo {
-            localNodeSocketPath    = sktFp,
-            localNodeNetworkId     = network,
-            localNodeConsensusMode = ShelleyMode
-          }
-    result <- liftIO $ Api.submitTx connectInfo (TxForShelleyMode signedTx)
-    case result of
-      TxSubmitSuccess              -> return ()
-      TxSubmitFailureShelleyMode{} -> left (ShelleyTxSubmitError result)
+      $ Api.readFileTextEnvelopeAnyOf
+          [ Api.FromSomeType Api.AsByronTx   Left
+          , Api.FromSomeType Api.AsShelleyTx Right ]
+          txFile
+
+    withlocalNodeConnectInfo protocol network sockPath $ \connectInfo ->
+      case (localNodeConsensusMode connectInfo, tx) of
+        (ByronMode{}, Left tx') -> do
+          result <- liftIO $ Api.submitTx connectInfo (TxForByronMode tx')
+          case result of
+            TxSubmitSuccess -> return ()
+            TxSubmitFailureByronMode err ->
+              left (ShelleyTxSubmitErrorByron err)
+
+        (ByronMode{}, Right{}) ->
+          left $ ShelleyTxSubmitErrorEraMismatch EraMismatch {
+                   ledgerEraName = "Byron",
+                   otherEraName  = "Shelley"
+                 }
+
+        (ShelleyMode{}, Right tx') -> do
+          result <- liftIO $ Api.submitTx connectInfo (TxForShelleyMode tx')
+          case result of
+            TxSubmitSuccess -> return ()
+            TxSubmitFailureShelleyMode err ->
+              left (ShelleyTxSubmitErrorShelley err)
+
+        (ShelleyMode{}, Left{}) ->
+          left $ ShelleyTxSubmitErrorEraMismatch EraMismatch {
+                   ledgerEraName = "Shelley",
+                   otherEraName  = "Byron"
+                 }
+
+        (CardanoMode{}, tx') -> do
+          result <- liftIO $ Api.submitTx connectInfo (TxForCardanoMode tx')
+          case result of
+            TxSubmitSuccess -> return ()
+            TxSubmitFailureCardanoMode (ApplyTxErrByron err) ->
+              left (ShelleyTxSubmitErrorByron err)
+            TxSubmitFailureCardanoMode (ApplyTxErrShelley err) ->
+              left (ShelleyTxSubmitErrorShelley err)
+            TxSubmitFailureCardanoMode (ApplyTxErrWrongEra mismatch) ->
+              left (ShelleyTxSubmitErrorEraMismatch mismatch)
 
 
 runTxCalculateMinFee

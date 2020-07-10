@@ -113,7 +113,7 @@ data TransactionCmd
   | TxWitness       -- { transaction :: Transaction, key :: PrivKeyFile, nodeAddr :: NodeAddress }
   | TxSignWitness   -- { transaction :: Transaction, witnesses :: [Witness], nodeAddr :: NodeAddress }
   | TxCheck         -- { transaction :: Transaction, nodeAddr :: NodeAddress }
-  | TxSubmit FilePath NetworkId
+  | TxSubmit Protocol NetworkId FilePath
   | TxCalculateMinFee
       TxBodyFile
       (Maybe NetworkId)

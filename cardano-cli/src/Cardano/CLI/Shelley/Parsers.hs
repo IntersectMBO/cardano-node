@@ -319,8 +319,9 @@ pTransaction =
     pTransactionCheck = pure TxCheck
 
     pTransactionSubmit  :: Parser TransactionCmd
-    pTransactionSubmit = TxSubmit <$> pTxSubmitFile
+    pTransactionSubmit = TxSubmit <$> pProtocol
                                   <*> pNetworkId
+                                  <*> pTxSubmitFile
 
     pTransactionCalculateMinFee :: Parser TransactionCmd
     pTransactionCalculateMinFee =
