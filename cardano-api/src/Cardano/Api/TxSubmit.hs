@@ -18,7 +18,7 @@ import           Cardano.Prelude
 import           Control.Tracer
 import           Control.Concurrent.STM
 
-import           Cardano.Api.Protocol (ProtocolData (..))
+import           Cardano.Api.Protocol (Protocol (..))
 import           Cardano.Api.Protocol.Cardano (mkNodeClientProtocolCardano)
 import           Cardano.Api.Types
 import           Cardano.Api.TxSubmit.ErrorRender (renderApplyMempoolPayloadErr)
@@ -57,7 +57,7 @@ data TxSubmitResult
    | TxSubmitFailureByron   !(ApplyTxErr ByronBlock)
    | TxSubmitFailureShelley !(ApplyTxErr (ShelleyBlock TPraosStandardCrypto))
    | TxSubmitFailureCardano !(ApplyTxErr (CardanoBlock TPraosStandardCrypto))
-   | TxSubmitFailureProtocolAndTxMismatch !ProtocolData !TxSigned
+   | TxSubmitFailureProtocolAndTxMismatch !Protocol !TxSigned
    deriving Show
 
 renderTxSubmitResult :: TxSubmitResult -> Text
@@ -76,18 +76,18 @@ renderTxSubmitResult res =
 
 submitTx
   :: Network
-  -> ProtocolData
+  -> Protocol
   -> SocketPath
   -> TxSigned
   -> IO TxSubmitResult
-submitTx network protocolData socketPath tx =
+submitTx network protocol socketPath tx =
     NtC.withIOManager $ \iocp ->
       case tx of
         TxSignedByron txbody _txCbor _txHash vwit -> do
           let aTxAux = Byron.annotateTxAux (Byron.mkTxAux txbody vwit)
               genTx  = Byron.ByronTx (Byron.byronIdTx aTxAux) aTxAux
-          case protocolData of
-            ProtocolDataByron epSlots secParam -> do
+          case protocol of
+            ByronProtocol epSlots secParam -> do
               result <- submitGenTx
                           nullTracer
                           iocp
@@ -101,7 +101,7 @@ submitTx network protocolData socketPath tx =
                 SubmitSuccess  -> return TxSubmitSuccess
                 SubmitFail err -> return (TxSubmitFailureByron err)
 
-            ProtocolDataCardano epSlots secParam -> do
+            CardanoProtocol epSlots secParam -> do
               result <- submitGenTx
                           nullTracer
                           iocp
@@ -115,12 +115,12 @@ submitTx network protocolData socketPath tx =
                 SubmitSuccess -> return TxSubmitSuccess
                 SubmitFail err -> return (TxSubmitFailureCardano err)
 
-            _ -> return (TxSubmitFailureProtocolAndTxMismatch protocolData tx)
+            _ -> return (TxSubmitFailureProtocolAndTxMismatch protocol tx)
 
         TxSignedShelley stx -> do
           let genTx = mkShelleyTx stx
-          case protocolData of
-            ProtocolDataShelley -> do
+          case protocol of
+            ShelleyProtocol -> do
               result <- submitGenTx
                           nullTracer
                           iocp
@@ -132,7 +132,7 @@ submitTx network protocolData socketPath tx =
                 SubmitSuccess  -> return TxSubmitSuccess
                 SubmitFail err -> return (TxSubmitFailureShelley err)
 
-            ProtocolDataCardano epSlots secParam -> do
+            CardanoProtocol epSlots secParam -> do
               result <- submitGenTx
                           nullTracer
                           iocp
@@ -146,7 +146,7 @@ submitTx network protocolData socketPath tx =
                 SubmitSuccess -> return TxSubmitSuccess
                 SubmitFail err -> return (TxSubmitFailureCardano err)
 
-            _ -> return (TxSubmitFailureProtocolAndTxMismatch protocolData tx)
+            _ -> return (TxSubmitFailureProtocolAndTxMismatch protocol tx)
 
 submitGenTx
   :: forall blk.

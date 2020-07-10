@@ -16,6 +16,7 @@ library
 
   exposed-modules:      Cardano.Api
                         Cardano.Api.Protocol
+                        Cardano.Api.Protocol.Orphans
                         Cardano.Api.Protocol.Types
                         Cardano.Api.Protocol.Byron
                         Cardano.Api.Protocol.Cardano

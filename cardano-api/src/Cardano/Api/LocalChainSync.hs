@@ -13,7 +13,7 @@ import           Data.Aeson (ToJSON (..))
 
 import           Control.Concurrent.STM
 
-import           Cardano.Api.Protocol (ProtocolData (..))
+import           Cardano.Api.Protocol (Protocol (..))
 import           Cardano.Api.Protocol.Byron (mkNodeClientProtocolByron)
 import           Cardano.Api.Protocol.Cardano (mkNodeClientProtocolCardano)
 import           Cardano.Api.Protocol.Shelley (mkNodeClientProtocolShelley)
@@ -51,21 +51,23 @@ instance ToJSON LocalTip where
 getLocalTip
   :: FilePath
   -> NetworkId
-  -> ProtocolData
+  -> Protocol
   -> IO LocalTip
-getLocalTip sockPath nw protocolData =
-  case protocolData of
-    ProtocolDataByron epSlots secParam ->
+getLocalTip sockPath nw protocol =
+  case protocol of
+    ByronProtocol epSlots secParam ->
       let ptcl = mkNodeClientProtocolByron epSlots secParam
       in ByronLocalTip <$> getLocalTip' sockPath nw ptcl
 
-    ProtocolDataShelley ->
+    ShelleyProtocol ->
       let ptcl = mkNodeClientProtocolShelley
       in ShelleyLocalTip <$> getLocalTip' sockPath nw ptcl
 
-    ProtocolDataCardano epSlots secParam ->
+    CardanoProtocol epSlots secParam ->
       let ptcl = mkNodeClientProtocolCardano epSlots secParam
       in CardanoLocalTip <$> getLocalTip' sockPath nw ptcl
+
+    p -> panic $ "TODO: Unsupported protocol: " <> show p
 
 -- | Get the node's tip using the local chain sync protocol.
 --

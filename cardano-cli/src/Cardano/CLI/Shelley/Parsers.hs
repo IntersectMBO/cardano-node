@@ -41,7 +41,7 @@ import qualified Shelley.Spec.Ledger.BaseTypes as Shelley
 import qualified Shelley.Spec.Ledger.TxData as Shelley
 
 import qualified Cardano.Api as OldApi
-import           Cardano.Api.Protocol (ProtocolData (..))
+import           Cardano.Api.Protocol (Protocol (..))
 import           Cardano.Api.Typed hiding (PoolId)
 
 import           Cardano.Slotting.Slot (EpochNo (..))
@@ -322,7 +322,7 @@ pTransaction =
     pTransactionSubmit  :: Parser TransactionCmd
     pTransactionSubmit = TxSubmit <$> pTxSubmitFile
                                   <*> pNetwork
-                                  <*> pProtocolData
+                                  <*> pProtocol
 
     pTransactionCalculateMinFee :: Parser TransactionCmd
     pTransactionCalculateMinFee =
@@ -458,25 +458,25 @@ pQueryCmd =
     pQueryProtocolParameters :: Parser QueryCmd
     pQueryProtocolParameters =
       QueryProtocolParameters
-        <$> pProtocolData
+        <$> pProtocol
         <*> pNetworkId
         <*> pMaybeOutputFile
 
     pQueryTip :: Parser QueryCmd
-    pQueryTip = QueryTip <$> pProtocolData <*> pNetworkId <*> pMaybeOutputFile
+    pQueryTip = QueryTip <$> pProtocol <*> pNetworkId <*> pMaybeOutputFile
 
     pQueryUTxO :: Parser QueryCmd
     pQueryUTxO =
       QueryUTxO
         <$> pQueryFilter
-        <*> pProtocolData
+        <*> pProtocol
         <*> pNetworkId
         <*> pMaybeOutputFile
 
     pQueryStakeDistribution :: Parser QueryCmd
     pQueryStakeDistribution =
       QueryStakeDistribution
-        <$> pProtocolData
+        <$> pProtocol
         <*> pNetworkId
         <*> pMaybeOutputFile
 
@@ -484,7 +484,7 @@ pQueryCmd =
     pQueryStakeAddressInfo =
       QueryStakeAddressInfo
         <$> pFilterByStakeAddress
-        <*> pProtocolData
+        <*> pProtocol
         <*> pNetworkId
         <*> pMaybeOutputFile
 
@@ -492,7 +492,7 @@ pQueryCmd =
     pQueryVersion = QueryVersion <$> parseNodeAddress
 
     pQueryLedgerState :: Parser QueryCmd
-    pQueryLedgerState = QueryLedgerState <$> pProtocolData <*> pNetworkId <*> pMaybeOutputFile
+    pQueryLedgerState = QueryLedgerState <$> pProtocol <*> pNetworkId <*> pMaybeOutputFile
 
     pQueryStatus :: Parser QueryCmd
     pQueryStatus = QueryStatus <$> parseNodeAddress
@@ -1065,11 +1065,11 @@ pITNVerificationKeyFile =
       <> Opt.completer (Opt.bashCompleter "file")
       )
 
-pProtocolData :: Parser ProtocolData
-pProtocolData = pProtocolData'
+pProtocol :: Parser Protocol
+pProtocol = pProtocol'
   where
-    pProtocolData' :: Parser ProtocolData
-    pProtocolData' =
+    pProtocol' :: Parser Protocol
+    pProtocol' =
         (  Opt.flag' ()
             (  Opt.long "shelley"
             <> Opt.help "Use the Shelley protocol (default)."
@@ -1091,16 +1091,17 @@ pProtocolData = pProtocolData'
         *> pCardano
         )
       <|>
-        pure ProtocolDataShelley
+        -- Default to the Shelley protocol.
+        pure ShelleyProtocol
 
-    pByron :: Parser ProtocolData
-    pByron = ProtocolDataByron <$> pEpochSlots <*> pSecurityParam
+    pByron :: Parser Protocol
+    pByron = ByronProtocol <$> pEpochSlots <*> pSecurityParam
 
-    pShelley :: Parser ProtocolData
-    pShelley = pure ProtocolDataShelley
+    pShelley :: Parser Protocol
+    pShelley = pure ShelleyProtocol
 
-    pCardano :: Parser ProtocolData
-    pCardano = ProtocolDataCardano <$> pEpochSlots <*> pSecurityParam
+    pCardano :: Parser Protocol
+    pCardano = CardanoProtocol <$> pEpochSlots <*> pSecurityParam
 
     pEpochSlots :: Parser EpochSlots
     pEpochSlots =

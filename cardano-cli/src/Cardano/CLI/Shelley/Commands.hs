@@ -45,7 +45,7 @@ import           Data.Set (Set)
 import           Data.Text (Text)
 
 import qualified Cardano.Api as OldApi
-import           Cardano.Api.Protocol (ProtocolData)
+import           Cardano.Api.Protocol (Protocol)
 import           Cardano.Api.Typed hiding (PoolId, Hash)
 
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
@@ -114,7 +114,7 @@ data TransactionCmd
   | TxWitness       -- { transaction :: Transaction, key :: PrivKeyFile, nodeAddr :: NodeAddress }
   | TxSignWitness   -- { transaction :: Transaction, witnesses :: [Witness], nodeAddr :: NodeAddress }
   | TxCheck         -- { transaction :: Transaction, nodeAddr :: NodeAddress }
-  | TxSubmit FilePath OldApi.Network ProtocolData
+  | TxSubmit FilePath OldApi.Network Protocol
   | TxCalculateMinFee
       TxBodyFile
       (Maybe NetworkId)
@@ -174,13 +174,13 @@ data PoolCmd
 
 data QueryCmd
   = QueryPoolId NodeAddress
-  | QueryProtocolParameters ProtocolData NetworkId (Maybe OutputFile)
-  | QueryTip ProtocolData NetworkId (Maybe OutputFile)
-  | QueryStakeDistribution ProtocolData NetworkId (Maybe OutputFile)
-  | QueryStakeAddressInfo StakeAddress ProtocolData NetworkId (Maybe OutputFile)
-  | QueryUTxO QueryFilter ProtocolData NetworkId (Maybe OutputFile)
+  | QueryProtocolParameters Protocol NetworkId (Maybe OutputFile)
+  | QueryTip Protocol NetworkId (Maybe OutputFile)
+  | QueryStakeDistribution Protocol NetworkId (Maybe OutputFile)
+  | QueryStakeAddressInfo StakeAddress Protocol NetworkId (Maybe OutputFile)
+  | QueryUTxO QueryFilter Protocol NetworkId (Maybe OutputFile)
   | QueryVersion NodeAddress
-  | QueryLedgerState ProtocolData NetworkId (Maybe OutputFile)
+  | QueryLedgerState Protocol NetworkId (Maybe OutputFile)
   | QueryStatus NodeAddress
   deriving (Eq, Show)
 

@@ -29,11 +29,13 @@ import           System.Posix.Types (Fd)
 
 import           Cardano.Api.Typed (EpochNo)
 import           Cardano.Api.Protocol
+import           Cardano.Chain.Slotting (EpochSlots(..))
 import           Cardano.Config.Types
 import           Cardano.Crypto (RequiresNetworkMagic(..))
 import qualified Cardano.Chain.Update as Byron
 import           Cardano.Node.TraceConfig (TraceOptions(..), traceConfigParser)
 import           Ouroboros.Network.Block (MaxSlotNo(..))
+import           Ouroboros.Consensus.Config (SecurityParam(..))
 import           Ouroboros.Consensus.NodeId (CoreNodeId(..))
 
 --TODO: things will probably be clearer if we don't use these newtype wrappers and instead
@@ -106,19 +108,19 @@ instance FromJSON NodeConfiguration where
                            else return TracingOff
 
       -- Protocol parameters
-      protocol <- v .: "Protocol" .!= ByronProtocol
+      protocol <- parseProtocol v <|> pure (ByronProtocol byronEpochSlots byronSecurityParam)
       ncProtocolConfig <-
         case protocol of
           MockProtocol ptcl ->
             NodeProtocolConfigurationMock <$> parseMockProtocol ptcl v
 
-          ByronProtocol ->
+          ByronProtocol _ _ ->
             NodeProtocolConfigurationByron <$> parseByronProtocol v
 
           ShelleyProtocol ->
             NodeProtocolConfigurationShelley <$> parseShelleyProtocol v
 
-          CardanoProtocol ->
+          CardanoProtocol _ _ ->
             NodeProtocolConfigurationCardano <$> parseByronProtocol v
                                              <*> parseShelleyProtocol v
                                              <*> parseHardForkProtocol v
@@ -131,6 +133,33 @@ instance FromJSON NodeConfiguration where
            , ncTraceConfig
            }
     where
+      byronEpochSlots :: EpochSlots
+      byronEpochSlots = EpochSlots 21600
+
+      byronSecurityParam :: SecurityParam
+      byronSecurityParam = SecurityParam 2160
+
+      parseProtocol v = do
+        str <- v .: "Protocol"
+        case (str :: Text) of
+          -- The new names
+          "MockBFT"   -> pure (MockProtocol MockBFT)
+          "MockPBFT"  -> pure (MockProtocol MockPBFT)
+          "MockPraos" -> pure (MockProtocol MockPraos)
+          "Byron"     -> pure (ByronProtocol byronEpochSlots byronSecurityParam)
+          "Shelley"   -> pure ShelleyProtocol
+          "Cardano"   -> pure (CardanoProtocol byronEpochSlots byronSecurityParam)
+
+          -- The old names
+          "BFT"       -> pure (MockProtocol MockBFT)
+        --"MockPBFT"  -- same as new name
+          "Praos"     -> pure (MockProtocol MockPraos)
+          "RealPBFT"  -> pure (ByronProtocol byronEpochSlots byronSecurityParam)
+          "TPraos"    -> pure ShelleyProtocol
+
+          _           -> fail $ "Parsing of Protocol failed. "
+                            <> show str <> " is not a valid protocol"
+
       parseMockProtocol npcMockProtocol v = do
         npcMockNodeId       <- v .: "NodeId"
         npcMockNumCoreNodes <- v .: "NumCoreNodes"
@@ -339,9 +368,15 @@ ncProtocol :: NodeConfiguration -> Protocol
 ncProtocol nc =
     case ncProtocolConfig nc of
       NodeProtocolConfigurationMock npc  -> MockProtocol (npcMockProtocol npc)
-      NodeProtocolConfigurationByron{}   -> ByronProtocol
+      NodeProtocolConfigurationByron{}   -> ByronProtocol  byronEpochSlots byronSecurityParam
       NodeProtocolConfigurationShelley{} -> ShelleyProtocol
-      NodeProtocolConfigurationCardano{} -> CardanoProtocol
+      NodeProtocolConfigurationCardano{} -> CardanoProtocol byronEpochSlots byronSecurityParam
+  where
+      byronEpochSlots :: EpochSlots
+      byronEpochSlots = EpochSlots 21600
+
+      byronSecurityParam :: SecurityParam
+      byronSecurityParam = SecurityParam 2160
 
 parseNodeConfiguration :: NodeCLI -> IO NodeConfiguration
 parseNodeConfiguration NodeCLI{configFile} = parseNodeConfigurationFP configFile
@@ -358,6 +393,6 @@ protocolName :: Protocol -> String
 protocolName (MockProtocol MockBFT)   = "Mock BFT"
 protocolName (MockProtocol MockPBFT)  = "Mock PBFT"
 protocolName (MockProtocol MockPraos) = "Mock Praos"
-protocolName  ByronProtocol           = "Byron"
+protocolName (ByronProtocol _ _)      = "Byron"
 protocolName  ShelleyProtocol         = "Shelley"
-protocolName  CardanoProtocol         = "Byron; Shelley"
+protocolName (CardanoProtocol _ _)    = "Byron; Shelley"

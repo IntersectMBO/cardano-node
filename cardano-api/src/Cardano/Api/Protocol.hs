@@ -21,53 +21,25 @@ module Cardano.Api.Protocol
     -- a protocol.
   , mkNodeClientProtocol
   , SomeNodeClientProtocol(..)
-
-    -- TODO: Does this really belong here?
-  , ProtocolData(..)
   ) where
 
 import           Cardano.Prelude
-
-import           Control.Monad.Fail (fail)
-import           Data.Aeson
 
 import           Cardano.Chain.Slotting (EpochSlots(..))
 
 import           Cardano.Api.Protocol.Types
 import           Cardano.Api.Protocol.Byron
 import           Cardano.Api.Protocol.Cardano
+import           Cardano.Api.Protocol.Orphans ()
 import           Cardano.Api.Protocol.Shelley
 
 import qualified Ouroboros.Consensus.Cardano as Consensus
 
 data Protocol = MockProtocol !MockProtocol
-              | ByronProtocol
+              | ByronProtocol !EpochSlots !Consensus.SecurityParam
               | ShelleyProtocol
-              | CardanoProtocol
+              | CardanoProtocol !EpochSlots !Consensus.SecurityParam
   deriving (Eq, Show, Generic)
-
-instance FromJSON Protocol where
-  parseJSON =
-    withText "Protocol" $ \str -> case str of
-
-      -- The new names
-      "MockBFT"   -> pure (MockProtocol MockBFT)
-      "MockPBFT"  -> pure (MockProtocol MockPBFT)
-      "MockPraos" -> pure (MockProtocol MockPraos)
-      "Byron"     -> pure ByronProtocol
-      "Shelley"   -> pure ShelleyProtocol
-      "Cardano"   -> pure CardanoProtocol
-
-      -- The old names
-      "BFT"       -> pure (MockProtocol MockBFT)
-    --"MockPBFT"  -- same as new name
-      "Praos"     -> pure (MockProtocol MockPraos)
-      "RealPBFT"  -> pure ByronProtocol
-      "TPraos"    -> pure ShelleyProtocol
-
-      _           -> fail $ "Parsing of Protocol failed. "
-                         <> show str <> " is not a valid protocol"
-
 
 deriving instance NFData Protocol
 deriving instance NoUnexpectedThunks Protocol
@@ -96,33 +68,11 @@ mkNodeClientProtocol protocol =
         panic "TODO: mkNodeClientProtocol NodeProtocolConfigurationMock"
 
       -- Real protocols
-      ByronProtocol ->
-        mkSomeNodeClientProtocolByron
-          --TODO: this is only the correct value for mainnet
-          -- not for Byron testnets. This value is needed because
-          -- to decode legacy EBBs one needs to know how many
-          -- slots there are per-epoch. This info comes from
-          -- the genesis file, but we don't have that in the
-          -- client case.
-          (EpochSlots 21600)
-          (Consensus.SecurityParam 2160)
+      ByronProtocol epSlots secParam ->
+        mkSomeNodeClientProtocolByron epSlots secParam
 
       ShelleyProtocol ->
         mkSomeNodeClientProtocolShelley
 
-      CardanoProtocol ->
-        mkSomeNodeClientProtocolCardano
-          --TODO: this is only the correct value for mainnet
-          -- not for Byron testnets. This value is needed because
-          -- to decode legacy EBBs one needs to know how many
-          -- slots there are per-epoch. This info comes from
-          -- the genesis file, but we don't have that in the
-          -- client case.
-          (EpochSlots 21600)
-          (Consensus.SecurityParam 2160)
-
-data ProtocolData
-  = ProtocolDataByron !EpochSlots !Consensus.SecurityParam
-  | ProtocolDataShelley
-  | ProtocolDataCardano !EpochSlots !Consensus.SecurityParam
-  deriving (Eq, Show)
+      CardanoProtocol epSlots secParam ->
+        mkSomeNodeClientProtocolCardano epSlots secParam

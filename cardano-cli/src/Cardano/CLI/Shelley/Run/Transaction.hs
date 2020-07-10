@@ -22,7 +22,7 @@ import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Vector as Vector
 
 import qualified Cardano.Api as OldApi
-import           Cardano.Api.Protocol (ProtocolData (..))
+import           Cardano.Api.Protocol (Protocol (..))
 import qualified Cardano.Api.Typed as Api
 import           Cardano.Api.Typed (SlotNo)
 
@@ -102,8 +102,8 @@ runTransactionCmd cmd =
       runTxBuildRaw txins txouts ttl fee certs wdrls mMetaData mUpProp out
     TxSign txinfile skfiles network txoutfile ->
       runTxSign txinfile skfiles network txoutfile
-    TxSubmit txFp network protocolData ->
-      runTxSubmit txFp network protocolData
+    TxSubmit txFp network protocol ->
+      runTxSubmit txFp network protocol
     TxCalculateMinFee txbody mnw pParamsFile nInputs nOutputs
                       nShelleyKeyWitnesses nByronKeyWitnesses ->
       runTxCalculateMinFee txbody mnw pParamsFile nInputs nOutputs
@@ -208,13 +208,13 @@ runTxSign (TxBodyFile txbodyFile) skFiles mnw (TxFile txFile) = do
         AGenesisDelegateSigningKey sk -> Right (Api.WitnessGenesisDelegateKey sk)
         AGenesisUTxOSigningKey     sk -> Right (Api.WitnessGenesisUTxOKey     sk)
 
-runTxSubmit :: FilePath -> OldApi.Network -> ProtocolData -> ExceptT ShelleyTxCmdError IO ()
-runTxSubmit txFp network protocolData = do
+runTxSubmit :: FilePath -> OldApi.Network -> Protocol -> ExceptT ShelleyTxCmdError IO ()
+runTxSubmit txFp network protocol = do
     sktFp <- firstExceptT ShelleyTxSocketEnvError $ readEnvSocketPath
     signedTx <- firstExceptT ShelleyTxReadFileError
       . newExceptT
       $ Api.readFileTextEnvelope Api.AsShelleyTx txFp
-    result <- liftIO $ OldApi.submitTx network protocolData sktFp (toOldApiSignedTx signedTx)
+    result <- liftIO $ OldApi.submitTx network protocol sktFp (toOldApiSignedTx signedTx)
     case result of
       OldApi.TxSubmitSuccess                          -> return ()
       OldApi.TxSubmitFailureShelley _                 -> left (ShelleyTxSubmitError result)
