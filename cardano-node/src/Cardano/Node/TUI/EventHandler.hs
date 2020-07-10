@@ -24,12 +24,12 @@ import           Data.Time.Clock (diffUTCTime, getCurrentTime)
 import           Data.Version (showVersion)
 import qualified Graphics.Vty as Vty
 
-import           Cardano.Api.Protocol (Protocol(..), MockProtocol(..))
 import           Cardano.BM.Data.Aggregated (Measurable(..))
 import           Cardano.BM.Data.Backend (BackendKind(..), IsBackend(..), IsEffectuator(..))
 import           Cardano.BM.Data.Counter (Platform(..))
 import           Cardano.BM.Data.LogItem (LogObject(..), LOContent(..), LOMeta(..), utc2ns)
 import           Cardano.Config.GitRev (gitRev)
+import           Cardano.Node.Types (Protocol(..), MockProtocol(..))
 import           Cardano.Node.TUI.Drawing (ColorTheme(..), LiveViewState(..), LiveViewThread(..),
                    Screen(..), darkTheme, drawUI, lightTheme)
 

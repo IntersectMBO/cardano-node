@@ -12,9 +12,8 @@ import           Cardano.Prelude
 import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT)
 
-import           Cardano.Api.Protocol (MockProtocol(..))
 import           Cardano.Node.Types (NodeConfiguration(..), NodeProtocolConfiguration(..),
-                    NodeMockProtocolConfiguration(..))
+                    NodeMockProtocolConfiguration(..), MockProtocol(..))
 import           Cardano.Config.Types (ProtocolFilepaths(..))
 
 import           Cardano.Node.Protocol.Types (SomeConsensusProtocol(..))

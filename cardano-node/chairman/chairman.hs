@@ -15,12 +15,17 @@ import qualified Options.Applicative as Opt
 import           Ouroboros.Consensus.BlockchainTime (SlotLength, slotLengthFromSec)
 import           Ouroboros.Consensus.Cardano (SecurityParam(..))
 import           Ouroboros.Network.Block (BlockNo)
+import           Cardano.Chain.Slotting (EpochSlots(..))
 
 import           Cardano.Api.Typed (NetworkMagic(..))
-import           Cardano.Api.Protocol (mkNodeClientProtocol)
+import           Cardano.Api.Protocol.Types
+import           Cardano.Api.Protocol.Byron
+import           Cardano.Api.Protocol.Cardano
+import           Cardano.Api.Protocol.Shelley
 import           Cardano.Config.Types (SocketPath(..))
-import           Cardano.Node.Types (ConfigYamlFilePath(..),
-                   ncProtocol, parseNodeConfigurationFP)
+import           Cardano.Node.Types
+                   (ConfigYamlFilePath(..), parseNodeConfigurationFP,
+                    Protocol(..), ncProtocol)
 import           Cardano.Config.Parsers
 import           Cardano.Chairman (chairmanTest)
 
@@ -48,6 +53,25 @@ main = do
       caSocketPaths
       someNodeClientProtocol
       caNetworkMagic
+
+--TODO: replace this with the new stuff from Cardano.Api.Protocol
+mkNodeClientProtocol :: Protocol -> SomeNodeClientProtocol
+mkNodeClientProtocol protocol =
+    case protocol of
+      MockProtocol _ ->
+        panic "TODO: mkNodeClientProtocol NodeProtocolConfigurationMock"
+
+      -- Real protocols
+      ByronProtocol ->
+        mkSomeNodeClientProtocolByron
+          (EpochSlots 21600) (SecurityParam 2160)
+
+      ShelleyProtocol ->
+        mkSomeNodeClientProtocolShelley
+
+      CardanoProtocol ->
+        mkSomeNodeClientProtocolCardano
+          (EpochSlots 21600) (SecurityParam 2160)
 
 data ChairmanArgs = ChairmanArgs {
       -- | Stop the test after given number of seconds. The chairman will

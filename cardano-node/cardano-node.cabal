@@ -202,6 +202,7 @@ executable chairman
                      , containers
                      , cardano-api
                      , cardano-config
+                     , cardano-ledger
                      , cardano-prelude
                      , contra-tracer
                      , cardano-prelude
