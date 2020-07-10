@@ -81,7 +81,6 @@ html_theme_options = {
     'display_version': False,
     'prev_next_buttons_location': 'bottom',
     'style_external_links': False,
-    'vcs_pageview_mode': '',
     'style_nav_header_background': '#fcfcfc',
     # Toc options
     'collapse_navigation': True,

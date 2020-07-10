@@ -10,11 +10,9 @@ cardano-node
    :titlesonly:
    :hidden:
 
-   cardano-node-quickstart
-   building-the-node-using-nix
-   building-the-node-from-source
-   running-the-node-using-docker
-   running-the-node-on-an-aws-instance
+   getting-started/building-the-node-using-nix
+   getting-started/building-the-node-from-source
+   getting-started/configuring-a-node-using-yaml
 
 .. toctree::
    :maxdepth: 3
@@ -22,12 +20,10 @@ cardano-node
    :titlesonly:
    :hidden:
 
-   configuring-a-node-using-yaml
-   monitoring-the-cardano-node
-   building-and-signing-tx
-   diagnosing-transactions
-   cardano-node-cli-reference
-   shelley-genesis
+   reference/cardano-node-cli-reference
+   reference/building-and-signing-tx
+   reference/diagnosing-transactions
+   reference/shelley-genesis
 
    .. toctree::
    :maxdepth: 3

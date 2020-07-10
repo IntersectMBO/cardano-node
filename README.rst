@@ -5,9 +5,9 @@
      <a href="https://buildkite.com/input-output-hk/cardano-node"><img src="https://img.shields.io/buildkite/a978cbb4def7018be3d0a004127da356f4db32f1c318c1a48a/master?label=BUILD&style=for-the-badge"/></a>
    </p>
 
-***********************
+*************************
 ``cardano-node`` Overview
-***********************
+*************************
 
 Integration of the `ledger <https://github.com/input-output-hk/cardano-ledger>`_, `consensus <https://github.com/input-output-hk/ouroboros-network/tree/master/ouroboros-consensus>`_,
 `networking <https://github.com/input-output-hk/ouroboros-network/tree/master/ouroboros-network>`_ and
@@ -91,9 +91,7 @@ The general synopsis is as follows:
 
 * ``--port`` - Specify which port to assign to the node.
 
-* ``--config`` - Specify the filepath to the config ``.yaml`` file. This file is responsible for all the other node's required settings. See examples in ``configuration``
-(e.g. `config-0.yaml <configuration/defaults/liveview/config-0.yaml>`_).
-
+* ``--config`` - Specify the filepath to the config ``.yaml`` file. This file is responsible for all the other node's required settings. See examples in ``configuration`` (e.g. `config-0.yaml <configuration/defaults/liveview/config-0.yaml>`_).
 
 Configuration ``.yaml`` files
 =============================
