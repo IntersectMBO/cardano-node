@@ -14,13 +14,17 @@ import           Cardano.Prelude
 import qualified Prelude
 
 import           Data.Aeson
+import qualified Data.ByteString.Base16 as B16
 import           Data.Scientific (coefficient)
 import qualified Data.Text as Text
+import qualified Data.Text.Encoding as Text
 import           Network.Socket (PortNumber)
 
 import           Cardano.BM.Data.Tracer (TracingVerbosity(..))
 import qualified Cardano.Chain.Update as Update
 import           Cardano.Slotting.Block (BlockNo (..))
+import           Ouroboros.Consensus.Byron.Ledger.Block (ByronHash(..))
+import           Ouroboros.Consensus.HardFork.Combinator (OneEraHash (..))
 import           Ouroboros.Consensus.NodeId (CoreNodeId (..))
 import           Ouroboros.Network.Block (HeaderHash, Tip (..))
 
@@ -64,4 +68,8 @@ instance ToJSON (HeaderHash blk) => ToJSON (Tip blk) where
       , "blockNo"    .= blockNo
       ]
 
+instance ToJSON (OneEraHash xs) where
+  toJSON (OneEraHash bs) = toJSON . Text.decodeLatin1 . B16.encode $ bs
+
+deriving newtype instance ToJSON ByronHash
 deriving newtype instance ToJSON BlockNo

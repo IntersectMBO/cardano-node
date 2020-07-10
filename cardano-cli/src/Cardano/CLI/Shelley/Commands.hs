@@ -174,12 +174,12 @@ data PoolCmd
 data QueryCmd
   = QueryPoolId NodeAddress
   | QueryProtocolParameters Protocol NetworkId (Maybe OutputFile)
-  | QueryTip NetworkId (Maybe OutputFile)
-  | QueryStakeDistribution NetworkId (Maybe OutputFile)
-  | QueryStakeAddressInfo StakeAddress NetworkId (Maybe OutputFile)
-  | QueryUTxO QueryFilter NetworkId (Maybe OutputFile)
+  | QueryTip Protocol NetworkId (Maybe OutputFile)
+  | QueryStakeDistribution Protocol NetworkId (Maybe OutputFile)
+  | QueryStakeAddressInfo Protocol StakeAddress NetworkId (Maybe OutputFile)
+  | QueryUTxO Protocol QueryFilter NetworkId (Maybe OutputFile)
   | QueryVersion NodeAddress
-  | QueryLedgerState NetworkId (Maybe OutputFile)
+  | QueryLedgerState Protocol NetworkId (Maybe OutputFile)
   | QueryStatus NodeAddress
   deriving (Eq, Show)
 
