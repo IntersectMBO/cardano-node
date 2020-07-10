@@ -99,7 +99,7 @@ report_result () {
 
 setup_data_dir () {
   DATA_DIR="test/cli/${1}/data"
-  if test -d cardano-cli ; then
+  if test ! -f cardano-cli.cabal ; then
     DATA_DIR="cardano-cli/${DATA_DIR}"
     fi
 }
