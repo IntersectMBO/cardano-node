@@ -136,7 +136,7 @@ deriveProgressThreshold _ _ (Just progressThreshold) = progressThreshold
 
 -- If only the progress threshold is not specified, derive it from the running time
 deriveProgressThreshold slotLength runningTime Nothing =
-    Block.BlockNo (floor (runningTime / getSlotLengthDiffTime slotLength) - 1)
+    Block.BlockNo (floor (runningTime / getSlotLengthDiffTime slotLength) - 2)
 
 
 getSlotLengthDiffTime :: SlotLength -> DiffTime
