@@ -1,5 +1,9 @@
 # Changelog for cardano-node
 
+## 1.15.1 -- July 2020
+
+No changes in the node. There were changes in the cardano-api and cardano-cli.
+
 ## 1.15.0 -- July 2020
 
 ### node changes

@@ -1,5 +1,11 @@
 # Changelog for cardano-api
 
+## 1.15.1 -- July 2020
+
+- Include tx metadata in transactions in the new api (#1406)
+- Add support for extended ed25519 keys for payment keys (#1411)
+- Improve tx submission API in the new API (#1430)
+
 ## 1.15.0 -- July 2020
 
 - Fix the ledger state dump query (#1333, #1334)
