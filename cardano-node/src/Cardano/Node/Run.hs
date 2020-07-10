@@ -49,7 +49,7 @@ import           Cardano.BM.Data.Transformers (setHostname)
 import           Cardano.BM.Trace
 
 import           Cardano.Config.GitRev (gitRev)
-import           Cardano.Node.Logging (LoggingLayer (..), Severity (..))
+import           Cardano.Node.Logging (LoggingLayer (..), Severity (..), shutdownLoggingLayer)
 #ifdef UNIX
 import           Cardano.Node.TraceConfig (traceBlockFetchDecisions)
 #endif
@@ -196,6 +196,7 @@ runNode loggingLayer npm@NodeCLI{protocolFiles} = do
         Async.uninterruptibleCancel upTimeThread
         Async.uninterruptibleCancel peersThread
 #endif
+    shutdownLoggingLayer loggingLayer
 
 -- | Add the application name and unqualified hostname to the logging
 -- layer basic trace.

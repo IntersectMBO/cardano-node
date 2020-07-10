@@ -12,6 +12,7 @@
 module Cardano.Node.Logging
   ( LoggingLayer (..)
   , createLoggingLayer
+  , shutdownLoggingLayer
   -- re-exports
   , Trace
   , Configuration
@@ -58,7 +59,7 @@ import           Cardano.BM.Plugin (loadPlugin)
 #if defined(SYSTEMD)
 import           Cardano.BM.Scribe.Systemd (plugin)
 #endif
-import           Cardano.BM.Setup (setupTrace_)
+import           Cardano.BM.Setup (setupTrace_, shutdown)
 import           Cardano.BM.Trace (Trace, appendName, traceNamedObject)
 import qualified Cardano.BM.Trace as Trace
 
@@ -98,6 +99,7 @@ data LoggingLayer = LoggingLayer
       => Trace IO a -> Severity -> Text -> STM (t,[(LOMeta, LOContent a)]) -> IO t
   , llConfiguration :: Configuration
   , llAddBackend :: Backend Text -> BackendKind -> IO ()
+  , llSwitchboard :: Switchboard Text
   }
 
 --------------------------------
@@ -223,6 +225,7 @@ createLoggingLayer ver nodecli@NodeCLI{configFile} = do
        , llBracketStmLogIO = Stm.bracketObserveLogIO logConfig
        , llConfiguration = logConfig
        , llAddBackend = Switchboard.addExternalBackend switchBoard
+       , llSwitchboard = switchBoard
        }
 
    startCapturingMetrics :: Trace IO Text -> IO ()
@@ -241,3 +244,6 @@ createLoggingLayer ver nodecli@NodeCLI{configFile} = do
         mle <- mkLOMeta Notice Confidential
         traceNamedObject tr (mle, LogValue (nameCounter c <> "." <> cn) cv)
         traceCounters tr cs
+
+shutdownLoggingLayer :: LoggingLayer -> IO ()
+shutdownLoggingLayer = shutdown . llSwitchboard
