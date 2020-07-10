@@ -5,8 +5,10 @@ cardano-node
 .. include:: ../README.rst
 
 .. toctree::
+   :maxdepth: 3
    :caption: Getting Started
    :titlesonly:
+   :hidden:
 
    cardano-node-quickstart
    building-the-node-using-nix
@@ -15,8 +17,10 @@ cardano-node
    running-the-node-on-an-aws-instance
 
 .. toctree::
+   :maxdepth: 3
    :caption: Reference
    :titlesonly:
+   :hidden:
 
    tutorials/index
    configuring-a-node-using-yaml
@@ -27,6 +31,7 @@ cardano-node
    shelley-genesis
 
 .. toctree::
+   :maxdepth: 3
    :caption: Cardano Components
    :titlesonly:
    :hidden:
