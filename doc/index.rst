@@ -9,7 +9,7 @@ cardano-node
    :titlesonly:
    :hidden:
 
-   Go Back to Cardano Documentation <https://cardano-node.readthedocs.io>
+   Go Back to Cardano Documentation <https://cardano.readthedocs.io>
 
 .. toctree::
    :maxdepth: 3
