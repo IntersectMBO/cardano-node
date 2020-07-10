@@ -1,5 +1,15 @@
 # Changelog for cardano-cli
 
+## 1.15.1 -- July 2020
+
+- Support for interacting with nodes running in Byron-only, Shelley-only or
+  the composite Cardano mode (Byron;Shelley) (#1435)
+- Add support for byron keys and extended ed25519 keys (#1411)
+- Port the CLI command implementations to the new API (#1416)
+- Fix the output of the calculate-min-fee command (#1408)
+- New stake and VRF key hashing commands (#1407)
+- Use JSON output format for the address info command (#1426)
+
 ## 1.15.0 -- July 2020
 
 - Fix the ledger state dump query (#1333, #1334)
