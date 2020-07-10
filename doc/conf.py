@@ -77,8 +77,8 @@ exclude_patterns = []
 html_theme = "sphinx_rtd_theme"
 
 html_theme_options = {
-    'logo_only': True,
-    'display_version': True,
+    'logo_only': False,
+    'display_version': False,
     'prev_next_buttons_location': 'bottom',
     'style_external_links': False,
     'vcs_pageview_mode': '',
@@ -95,7 +95,7 @@ html_theme_options = {
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 
-html_logo = "cardano-logo.png"
+html_logo = ".sphinx/cardano-logo.png"
 
 html_context = {
   "display_github": True, # Add 'Edit on Github' link instead of 'View page source'

@@ -6,6 +6,7 @@ cardano-node
 
 .. toctree::
    :maxdepth: 3
+   :caption: Getting Started
    :titlesonly:
 
    cardano-node-quickstart
@@ -13,6 +14,12 @@ cardano-node
    building-the-node-from-source
    running-the-node-using-docker
    running-the-node-on-an-aws-instance
+
+.. toctree::
+   :maxdepth: 3
+   :caption: Guides & References
+   :titlesonly:
+
    configuring-a-node-using-yaml
    monitoring-the-cardano-node
    building-and-signing-tx
