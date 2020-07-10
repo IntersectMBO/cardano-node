@@ -31,12 +31,16 @@ import qualified Data.Attoparsec.ByteString.Char8 as Atto
 import           Network.Socket (PortNumber)
 import           Network.URI (URI, parseURI)
 
+import           Cardano.Chain.Slotting (EpochSlots(..))
 import           Cardano.Slotting.Slot (SlotNo(..))
 
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
+import           Ouroboros.Consensus.Cardano (SecurityParam (..))
+
 import qualified Shelley.Spec.Ledger.BaseTypes as Shelley
 import qualified Shelley.Spec.Ledger.TxData as Shelley
 
+import           Cardano.Api.Protocol (Protocol (..))
 import           Cardano.Api.Typed hiding (PoolId)
 
 import           Cardano.Slotting.Slot (EpochNo (..))
@@ -452,7 +456,8 @@ pQueryCmd =
     pQueryProtocolParameters :: Parser QueryCmd
     pQueryProtocolParameters =
       QueryProtocolParameters
-        <$> pNetworkId
+        <$> pProtocol
+        <*> pNetworkId
         <*> pMaybeOutputFile
 
     pQueryTip :: Parser QueryCmd
@@ -1647,6 +1652,68 @@ pExtraEntropy =
     parseEntropyBytes :: Atto.Parser ByteString
     parseEntropyBytes =
       (fst . Base16.decode) <$> Atto.takeWhile1 Char.isHexDigit
+
+
+pProtocol :: Parser Protocol
+pProtocol =
+    (  Opt.flag' ()
+        (  Opt.long "shelley-mode"
+        <> Opt.help "For talking to a node running in Shelley-only mode (default)."
+        )
+    *> pShelley
+    )
+  <|>
+    (  Opt.flag' ()
+        (  Opt.long "byron-mode"
+        <> Opt.help "For talking to a node running in Byron-only mode."
+        )
+    *> pByron
+    )
+  <|>
+    (  Opt.flag' ()
+        (  Opt.long "cardano-mode"
+        <> Opt.help "For talking to a node running in full Cardano mode."
+        )
+    *> pCardano
+    )
+  <|>
+    -- Default to the Shelley protocol for now, due to the testnet.
+    pure ShelleyProtocol
+  where
+    pByron :: Parser Protocol
+    pByron = ByronProtocol <$> pEpochSlots <*> pSecurityParam
+
+    pShelley :: Parser Protocol
+    pShelley = pure ShelleyProtocol
+
+    pCardano :: Parser Protocol
+    pCardano = CardanoProtocol <$> pEpochSlots <*> pSecurityParam
+
+    pEpochSlots :: Parser EpochSlots
+    pEpochSlots =
+      EpochSlots <$>
+        ( Opt.option Opt.auto
+            (  Opt.long "epoch-slots"
+            <> Opt.metavar "NATURAL"
+            <> Opt.help "The number of slots per epoch (default is 21600)."
+            )
+        <|>
+          -- Default to the mainnet value.
+          pure 21600
+        )
+
+    pSecurityParam :: Parser SecurityParam
+    pSecurityParam =
+      SecurityParam <$>
+        ( Opt.option Opt.auto
+            (  Opt.long "security-param"
+            <> Opt.metavar "NATURAL"
+            <> Opt.help "The security parameter (default is 2160)."
+            )
+        <|>
+          -- Default to the mainnet value.
+          pure 2160
+        )
 
 pProtocolVersion :: Parser (Natural, Natural)
 pProtocolVersion =

@@ -44,6 +44,7 @@ import           Prelude
 import           Data.Set (Set)
 import           Data.Text (Text)
 
+import           Cardano.Api.Protocol (Protocol)
 import           Cardano.Api.Typed hiding (PoolId, Hash)
 
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
@@ -172,7 +173,7 @@ data PoolCmd
 
 data QueryCmd
   = QueryPoolId NodeAddress
-  | QueryProtocolParameters NetworkId (Maybe OutputFile)
+  | QueryProtocolParameters Protocol NetworkId (Maybe OutputFile)
   | QueryTip NetworkId (Maybe OutputFile)
   | QueryStakeDistribution NetworkId (Maybe OutputFile)
   | QueryStakeAddressInfo StakeAddress NetworkId (Maybe OutputFile)

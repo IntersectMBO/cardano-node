@@ -41,6 +41,7 @@ import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT
                    newExceptT)
 
 import           Cardano.Api.Typed
+import           Cardano.Api.Protocol
 import           Cardano.Api.LocalChainSync (getLocalTip)
 
 import           Cardano.CLI.Shelley.Commands (QueryFilter(..))
@@ -52,7 +53,7 @@ import           Cardano.Config.Shelley.Orphans ()
 import           Cardano.Config.Types (SocketPath(..))
 import           Cardano.Binary (decodeFull)
 
-import           Ouroboros.Consensus.Cardano.Block (Either (..), EraMismatch (..))
+import           Ouroboros.Consensus.Cardano.Block (Either (..), EraMismatch (..), Query (..))
 import           Ouroboros.Consensus.Shelley.Protocol.Crypto (TPraosStandardCrypto)
 import           Ouroboros.Network.Block (Point, getTipPoint)
 
@@ -107,8 +108,8 @@ renderShelleyQueryCmdError err =
 runQueryCmd :: QueryCmd -> ExceptT ShelleyQueryCmdError IO ()
 runQueryCmd cmd =
   case cmd of
-    QueryProtocolParameters network mOutFile ->
-      runQueryProtocolParameters network mOutFile
+    QueryProtocolParameters protocol network mOutFile ->
+      runQueryProtocolParameters protocol network mOutFile
     QueryTip network mOutFile ->
       runQueryTip network mOutFile
     QueryStakeDistribution network mOutFile ->
@@ -123,21 +124,17 @@ runQueryCmd cmd =
 
 
 runQueryProtocolParameters
-  :: NetworkId
+  :: Protocol
+  -> NetworkId
   -> Maybe OutputFile
   -> ExceptT ShelleyQueryCmdError IO ()
-runQueryProtocolParameters network mOutFile = do
-  SocketPath sockPath <- firstExceptT ShelleyQueryEnvVarSocketErr readEnvSocketPath
-  let connectInfo =
-        LocalNodeConnectInfo {
-          localNodeSocketPath    = sockPath,
-          localNodeNetworkId     = network,
-          localNodeConsensusMode = ShelleyMode
-        }
-  tip <- liftIO $ getLocalTip connectInfo
-  pparams <- firstExceptT (ShelleyQueryNodeLocalStateQueryError . AcquireFailureError) $
-    queryPParamsFromLocalState connectInfo (getTipPoint tip)
-  writeProtocolParameters mOutFile pparams
+runQueryProtocolParameters protocol network mOutFile = do
+    SocketPath sockPath <- firstExceptT ShelleyQueryEnvVarSocketErr
+                           readEnvSocketPath
+    pparams <- firstExceptT ShelleyQueryNodeLocalStateQueryError $
+               withlocalNodeConnectInfo protocol network sockPath $
+                 queryPParamsFromLocalState 
+    writeProtocolParameters mOutFile pparams
 
 writeProtocolParameters :: Maybe OutputFile -> PParams -> ExceptT ShelleyQueryCmdError IO ()
 writeProtocolParameters mOutFile pparams =
@@ -414,16 +411,34 @@ instance ToJSON DelegationsAndRewards where
 -- This one is Shelley-specific because the query is Shelley-specific.
 --
 queryPParamsFromLocalState
-  :: blk ~ ShelleyBlock TPraosStandardCrypto
-  => LocalNodeConnectInfo ShelleyMode blk
-  -> Point blk
-  -> ExceptT LocalStateQuery.AcquireFailure IO PParams
-queryPParamsFromLocalState connctInfo point = do
-  let pointAndQuery = (point, GetCurrentPParams)
-  newExceptT $ liftIO $
-    queryNodeLocalState
-      connctInfo
-      pointAndQuery
+  :: LocalNodeConnectInfo mode block
+  -> ExceptT LocalStateQueryError IO PParams
+queryPParamsFromLocalState LocalNodeConnectInfo{
+                             localNodeConsensusMode = ByronMode{}
+                           } =
+    throwError ByronProtocolNotSupportedError
+
+queryPParamsFromLocalState connectInfo@LocalNodeConnectInfo{
+                             localNodeConsensusMode = ShelleyMode
+                           } = do
+    tip <- liftIO $ getLocalTip connectInfo
+    firstExceptT AcquireFailureError . newExceptT . liftIO $
+      queryNodeLocalState
+        connectInfo
+        (getTipPoint tip, GetCurrentPParams)
+
+queryPParamsFromLocalState connectInfo@LocalNodeConnectInfo{
+                             localNodeConsensusMode = CardanoMode{}
+                           } = do
+    tip <- liftIO $ getLocalTip connectInfo
+    result <- firstExceptT AcquireFailureError . newExceptT . liftIO $
+      queryNodeLocalState
+        connectInfo
+        (getTipPoint tip, QueryIfCurrentShelley GetCurrentPParams)
+    case result of
+      QueryResultEraMismatch eraerr  -> throwError (EraMismatchError eraerr)
+      QueryResultSuccess     pparams -> return pparams
+
 
 -- | Query the current stake distribution from a Shelley node via the local
 -- state query protocol.
