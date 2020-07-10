@@ -41,6 +41,7 @@ instance ToJSON AddressInfo where
       , "era" .= aiEra addrInfo
       , "encoding" .= aiEncoding addrInfo
       , "address" .= aiAddress addrInfo
+      , "base16" .= aiBase16 addrInfo
       ]
 
 runAddressInfo :: Text -> Maybe OutputFile -> ExceptT ShelleyAddressInfoError IO ()
