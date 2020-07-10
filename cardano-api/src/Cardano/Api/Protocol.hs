@@ -19,66 +19,57 @@ module Cardano.Api.Protocol
     -- * Node client support
     -- | Support for the context needed to run a client of a node that is using
     -- a protocol.
-  , mkNodeClientProtocol
-  , SomeNodeClientProtocol(..)
+  , localNodeConnectInfo
+  , withlocalNodeConnectInfo
+  , LocalNodeConnectInfoForSomeMode(..)
   ) where
 
 import           Cardano.Prelude
 
-import           Control.Monad.Fail (fail)
-import           Data.Aeson
-
 import           Cardano.Chain.Slotting (EpochSlots(..))
 
-import           Cardano.Api.Protocol.Types
-import           Cardano.Api.Protocol.Byron
-import           Cardano.Api.Protocol.Cardano
-import           Cardano.Api.Protocol.Shelley
+import           Cardano.Api.Typed
 
 import qualified Ouroboros.Consensus.Cardano as Consensus
+import           Ouroboros.Consensus.Node.Run (RunNode)
+
 
 data Protocol = MockProtocol !MockProtocol
-              | ByronProtocol
+              | ByronProtocol !EpochSlots !Consensus.SecurityParam
               | ShelleyProtocol
-              | CardanoProtocol
-  deriving (Eq, Show, Generic)
-
-instance FromJSON Protocol where
-  parseJSON =
-    withText "Protocol" $ \str -> case str of
-
-      -- The new names
-      "MockBFT"   -> pure (MockProtocol MockBFT)
-      "MockPBFT"  -> pure (MockProtocol MockPBFT)
-      "MockPraos" -> pure (MockProtocol MockPraos)
-      "Byron"     -> pure ByronProtocol
-      "Shelley"   -> pure ShelleyProtocol
-      "Cardano"   -> pure CardanoProtocol
-
-      -- The old names
-      "BFT"       -> pure (MockProtocol MockBFT)
-    --"MockPBFT"  -- same as new name
-      "Praos"     -> pure (MockProtocol MockPraos)
-      "RealPBFT"  -> pure ByronProtocol
-      "TPraos"    -> pure ShelleyProtocol
-
-      _           -> fail $ "Parsing of Protocol failed. "
-                         <> show str <> " is not a valid protocol"
-
-
-deriving instance NFData Protocol
-deriving instance NoUnexpectedThunks Protocol
+              | CardanoProtocol !EpochSlots !Consensus.SecurityParam
+  deriving (Eq, Show)
 
 data MockProtocol = MockBFT
                   | MockPBFT
                   | MockPraos
-  deriving (Eq, Show, Generic)
+  deriving (Eq, Show)
 
-deriving instance NFData MockProtocol
-deriving instance NoUnexpectedThunks MockProtocol
 
-mkNodeClientProtocol :: Protocol -> SomeNodeClientProtocol
-mkNodeClientProtocol protocol =
+data LocalNodeConnectInfoForSomeMode where
+
+     LocalNodeConnectInfoForSomeMode
+       :: RunNode block
+       => LocalNodeConnectInfo mode block
+       -> LocalNodeConnectInfoForSomeMode
+
+withlocalNodeConnectInfo :: Protocol
+                         -> NetworkId
+                         -> FilePath
+                         -> (forall mode block.
+                                RunNode block
+                             => LocalNodeConnectInfo mode block
+                             -> a)
+                         -> a
+withlocalNodeConnectInfo protocol network socketPath f =
+    case localNodeConnectInfo protocol network socketPath of
+      LocalNodeConnectInfoForSomeMode connctInfo -> f connctInfo
+
+localNodeConnectInfo :: Protocol
+                     -> NetworkId
+                     -> FilePath
+                     -> LocalNodeConnectInfoForSomeMode
+localNodeConnectInfo protocol network socketPath =
     case protocol of
 {-
       --TODO
@@ -93,27 +84,21 @@ mkNodeClientProtocol protocol =
         panic "TODO: mkNodeClientProtocol NodeProtocolConfigurationMock"
 
       -- Real protocols
-      ByronProtocol ->
-        mkSomeNodeClientProtocolByron
-          --TODO: this is only the correct value for mainnet
-          -- not for Byron testnets. This value is needed because
-          -- to decode legacy EBBs one needs to know how many
-          -- slots there are per-epoch. This info comes from
-          -- the genesis file, but we don't have that in the
-          -- client case.
-          (EpochSlots 21600)
-          (Consensus.SecurityParam 2160)
+      ByronProtocol epSlots secParam ->
+        LocalNodeConnectInfoForSomeMode $
+          LocalNodeConnectInfo
+            socketPath network
+            (ByronMode epSlots secParam)
 
       ShelleyProtocol ->
-        mkSomeNodeClientProtocolShelley
+        LocalNodeConnectInfoForSomeMode $
+          LocalNodeConnectInfo
+            socketPath network
+            ShelleyMode
 
-      CardanoProtocol ->
-        mkSomeNodeClientProtocolCardano
-          --TODO: this is only the correct value for mainnet
-          -- not for Byron testnets. This value is needed because
-          -- to decode legacy EBBs one needs to know how many
-          -- slots there are per-epoch. This info comes from
-          -- the genesis file, but we don't have that in the
-          -- client case.
-          (EpochSlots 21600)
-          (Consensus.SecurityParam 2160)
+      CardanoProtocol epSlots secParam ->
+        LocalNodeConnectInfoForSomeMode $
+          LocalNodeConnectInfo
+            socketPath network
+            (CardanoMode epSlots secParam)
+
