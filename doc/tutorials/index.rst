@@ -1,5 +1,5 @@
 ======================
-cardano-node tutorials
+cardano-node Tutorials
 ======================
 
 .. toctree::

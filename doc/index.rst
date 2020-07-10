@@ -13,6 +13,8 @@ cardano-node
    getting-started/building-the-node-using-nix
    getting-started/building-the-node-from-source
    getting-started/configuring-a-node-using-yaml
+   tutorials/index
+
 
 .. toctree::
    :maxdepth: 3
@@ -24,14 +26,6 @@ cardano-node
    reference/building-and-signing-tx
    reference/diagnosing-transactions
    reference/shelley-genesis
-
-   .. toctree::
-   :maxdepth: 3
-   :caption: cardano-node Tutorials
-   :titlesonly:
-   :hidden:
-
-   tutorials/index
 
 .. toctree::
    :maxdepth: 3
