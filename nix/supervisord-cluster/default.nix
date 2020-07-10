@@ -287,7 +287,7 @@ let
                 --witness-count ${toString (3 * numPools + 1)} \
                 --byron-witness-count 0 \
                 --tx-body-file "${stateDir}/keys/transfer-register-delegate-tx.txbody" |
-                cut -d' ' -f2)
+                cut -d' ' -f1)
 
     TXIN_ADDR_HEX=$(bech32 <<< "$TXIN_ADDR")
 

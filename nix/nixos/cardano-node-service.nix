@@ -6,7 +6,7 @@
 with lib; with builtins;
 let
   cfg = config.services.cardano-node;
-  inherit (cfg.cardanoNodePkgs) svcLib commonLib cardanoNodeHaskellPackages cardanoNodeProfiledHaskellPackages;
+  inherit (cfg.cardanoNodePkgs) svcLib commonLib cardano-node cardano-node-profiled cardano-node-asserted;
   envConfig = cfg.environments.${cfg.environment}; systemdServiceName = "cardano-node${optionalString cfg.instanced "@"}";
   runtimeDir = if cfg.runtimeDir == null then cfg.stateDir else "/run/${cfg.runtimeDir}";
   mkScript = cfg: let
@@ -19,6 +19,18 @@ let
           "--delegation-certificate ${cfg.delegationCertificate}"}"
       ];
       TPraos = [
+        "${lib.optionalString (cfg.vrfKey != null)
+          "--shelley-vrf-key ${cfg.vrfKey}"}"
+        "${lib.optionalString (cfg.kesKey != null)
+          "--shelley-kes-key ${cfg.kesKey}"}"
+        "${lib.optionalString (cfg.operationalCertificate != null)
+          "--shelley-operational-certificate ${cfg.operationalCertificate}"}"
+      ];
+      Cardano = [
+        "${lib.optionalString (cfg.signingKey != null)
+          "--signing-key ${cfg.signingKey}"}"
+        "${lib.optionalString (cfg.delegationCertificate != null)
+          "--delegation-certificate ${cfg.delegationCertificate}"}"
         "${lib.optionalString (cfg.vrfKey != null)
           "--shelley-vrf-key ${cfg.vrfKey}"}"
         "${lib.optionalString (cfg.kesKey != null)
@@ -88,6 +100,14 @@ in {
         default = "none";
       };
 
+      asserts = mkOption {
+        type = types.bool;
+        default = false;
+        description = ''
+          Whether to use an executable with asserts enabled.
+        '';
+      };
+
       cardanoNodePkgs = mkOption {
         type = types.attrs;
         default = import ../. {};
@@ -102,8 +122,9 @@ in {
       package = mkOption {
         type = types.package;
         default = if (cfg.profiling != "none")
-          then cardanoNodeProfiledHaskellPackages.cardano-node.components.exes.cardano-node
-          else cardanoNodeHaskellPackages.cardano-node.components.exes.cardano-node;
+          then cardano-node-profiled
+          else if cfg.asserts then cardano-node-asserted
+          else cardano-node;
         defaultText = "cardano-node";
         description = ''
           The cardano-node package that should be used
