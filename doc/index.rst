@@ -22,13 +22,20 @@ cardano-node
    :titlesonly:
    :hidden:
 
-   tutorials/index
    configuring-a-node-using-yaml
    monitoring-the-cardano-node
    building-and-signing-tx
    diagnosing-transactions
    cardano-node-cli-reference
    shelley-genesis
+
+   .. toctree::
+   :maxdepth: 3
+   :caption: cardano-node Tutorials
+   :titlesonly:
+   :hidden:
+
+   tutorials/index
 
 .. toctree::
    :maxdepth: 3
