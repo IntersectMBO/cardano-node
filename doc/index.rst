@@ -6,6 +6,13 @@ cardano-node
 
 .. toctree::
    :maxdepth: 3
+   :titlesonly:
+   :hidden:
+
+   Go Back to Cardano Documentation <https://cardano-node.readthedocs.io>
+
+.. toctree::
+   :maxdepth: 3
    :caption: Getting Started
    :titlesonly:
    :hidden:
