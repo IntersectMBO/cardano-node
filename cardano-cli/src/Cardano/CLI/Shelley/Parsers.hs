@@ -37,7 +37,6 @@ import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
 import qualified Shelley.Spec.Ledger.BaseTypes as Shelley
 import qualified Shelley.Spec.Ledger.TxData as Shelley
 
-import qualified Cardano.Api as OldApi
 import           Cardano.Api.Typed hiding (PoolId)
 
 import           Cardano.Slotting.Slot (EpochNo (..))
@@ -317,7 +316,7 @@ pTransaction =
 
     pTransactionSubmit  :: Parser TransactionCmd
     pTransactionSubmit = TxSubmit <$> pTxSubmitFile
-                                  <*> pNetwork
+                                  <*> pNetworkId
 
     pTransactionCalculateMinFee :: Parser TransactionCmd
     pTransactionCalculateMinFee =
@@ -1056,27 +1055,16 @@ pITNVerificationKeyFile =
       <> Opt.completer (Opt.bashCompleter "file")
       )
 
-pNetwork :: Parser OldApi.Network
-pNetwork =
-  pMainnet <|> fmap OldApi.Testnet pTestnetMagic
-
 pNetworkId :: Parser NetworkId
 pNetworkId =
-  pMainnet' <|> fmap Testnet pTestnetMagic
+  pMainnet <|> fmap Testnet pTestnetMagic
  where
-   pMainnet' :: Parser NetworkId
-   pMainnet' =
+   pMainnet :: Parser NetworkId
+   pMainnet =
     Opt.flag' Mainnet
       (  Opt.long "mainnet"
       <> Opt.help "Use the mainnet magic id."
       )
-
-pMainnet :: Parser OldApi.Network
-pMainnet =
-  Opt.flag' OldApi.Mainnet
-    (  Opt.long "mainnet"
-    <> Opt.help "Use the mainnet magic id."
-    )
 
 pTestnetMagic :: Parser NetworkMagic
 pTestnetMagic =

@@ -24,10 +24,10 @@ library
                         Cardano.Api.TextView
                         Cardano.Api.Typed
                         Cardano.Api.LocalChainSync
+                        Cardano.Api.TxSubmit
 
   other-modules:        Cardano.Api.Convert
                         Cardano.Api.Error
-                        Cardano.Api.TxSubmit
                         Cardano.Api.TxSubmit.ErrorRender
                         Cardano.Api.TxSubmit.Types
                         Cardano.Api.Types

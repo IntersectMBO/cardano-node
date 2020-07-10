@@ -42,7 +42,6 @@ import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT
 
 import           Cardano.Api.Typed
 import           Cardano.Api.LocalChainSync (getLocalTip)
-import           Cardano.Api.Protocol.Shelley (mkNodeClientProtocolShelley)
 
 import           Cardano.CLI.Shelley.Commands (QueryFilter(..))
 import           Cardano.CLI.Environment (EnvSocketError, readEnvSocketPath, renderEnvSocketError)
@@ -129,10 +128,15 @@ runQueryProtocolParameters
   -> ExceptT ShelleyQueryCmdError IO ()
 runQueryProtocolParameters network mOutFile = do
   SocketPath sockPath <- firstExceptT ShelleyQueryEnvVarSocketErr readEnvSocketPath
-  let ptcl = mkNodeClientProtocolShelley
-  tip <- liftIO $ getLocalTip sockPath network ptcl
+  let connectInfo =
+        LocalNodeConnectInfo {
+          localNodeSocketPath    = sockPath,
+          localNodeNetworkId     = network,
+          localNodeConsensusMode = ShelleyMode
+        }
+  tip <- liftIO $ getLocalTip connectInfo
   pparams <- firstExceptT NodeLocalStateQueryError $
-    queryPParamsFromLocalState network sockPath (getTipPoint tip)
+    queryPParamsFromLocalState connectInfo (getTipPoint tip)
   writeProtocolParameters mOutFile pparams
 
 writeProtocolParameters :: Maybe OutputFile -> PParams -> ExceptT ShelleyQueryCmdError IO ()
@@ -149,8 +153,13 @@ runQueryTip
   -> ExceptT ShelleyQueryCmdError IO ()
 runQueryTip network mOutFile = do
   SocketPath sockPath <- firstExceptT ShelleyQueryEnvVarSocketErr readEnvSocketPath
-  let ptcl = mkNodeClientProtocolShelley
-  tip <- liftIO $ getLocalTip sockPath network ptcl
+  let connectInfo =
+        LocalNodeConnectInfo {
+          localNodeSocketPath    = sockPath,
+          localNodeNetworkId     = network,
+          localNodeConsensusMode = ShelleyMode
+        }
+  tip <- liftIO $ getLocalTip connectInfo
   case mOutFile of
     Just (OutputFile fpath) -> liftIO . LBS.writeFile fpath $ encodePretty tip
     Nothing -> liftIO $ LBS.putStrLn (encodePretty tip)
@@ -163,10 +172,15 @@ runQueryUTxO
   -> ExceptT ShelleyQueryCmdError IO ()
 runQueryUTxO qfilter network mOutFile = do
   SocketPath sockPath <- firstExceptT ShelleyQueryEnvVarSocketErr readEnvSocketPath
-  let ptcl = mkNodeClientProtocolShelley
-  tip <- liftIO $ getLocalTip sockPath network ptcl
+  let connectInfo =
+        LocalNodeConnectInfo {
+          localNodeSocketPath    = sockPath,
+          localNodeNetworkId     = network,
+          localNodeConsensusMode = ShelleyMode
+        }
+  tip <- liftIO $ getLocalTip connectInfo
   filteredUtxo <- firstExceptT NodeLocalStateQueryError $
-    queryUTxOFromLocalState network sockPath qfilter (getTipPoint tip)
+    queryUTxOFromLocalState connectInfo qfilter (getTipPoint tip)
   writeFilteredUTxOs mOutFile filteredUtxo
 
 runQueryLedgerState
@@ -175,10 +189,15 @@ runQueryLedgerState
   -> ExceptT ShelleyQueryCmdError IO ()
 runQueryLedgerState network mOutFile = do
   SocketPath sockPath <- firstExceptT ShelleyQueryEnvVarSocketErr readEnvSocketPath
-  let ptcl = mkNodeClientProtocolShelley
-  tip <- liftIO $ getLocalTip sockPath network ptcl
+  let connectInfo =
+        LocalNodeConnectInfo {
+          localNodeSocketPath    = sockPath,
+          localNodeNetworkId     = network,
+          localNodeConsensusMode = ShelleyMode
+        }
+  tip <- liftIO $ getLocalTip connectInfo
   els <- firstExceptT NodeLocalStateQueryError $
-                      queryLocalLedgerState network sockPath (getTipPoint tip)
+                      queryLocalLedgerState connectInfo (getTipPoint tip)
   case els of
     Right lstate -> writeLedgerState mOutFile lstate
     Left lbs -> do
@@ -192,12 +211,16 @@ runQueryStakeAddressInfo
   -> ExceptT ShelleyQueryCmdError IO ()
 runQueryStakeAddressInfo addr network mOutFile = do
     SocketPath sockPath <- firstExceptT ShelleyQueryEnvVarSocketErr readEnvSocketPath
-    let ptcl = mkNodeClientProtocolShelley
-    tip <- liftIO $ getLocalTip sockPath network ptcl
+    let connectInfo =
+          LocalNodeConnectInfo {
+            localNodeSocketPath    = sockPath,
+            localNodeNetworkId     = network,
+            localNodeConsensusMode = ShelleyMode
+          }
+    tip <- liftIO $ getLocalTip connectInfo
     delegsAndRwds <- firstExceptT NodeLocalStateQueryError $
       queryDelegationsAndRewardsFromLocalState
-        network
-        sockPath
+        connectInfo
         (Set.singleton addr)
         (getTipPoint tip)
     writeStakeAddressInfo mOutFile delegsAndRwds
@@ -266,10 +289,15 @@ runQueryStakeDistribution
   -> ExceptT ShelleyQueryCmdError IO ()
 runQueryStakeDistribution network mOutFile = do
   SocketPath sockPath <- firstExceptT ShelleyQueryEnvVarSocketErr readEnvSocketPath
-  let ptcl = mkNodeClientProtocolShelley
-  tip <- liftIO $ getLocalTip sockPath network ptcl
+  let connectInfo =
+        LocalNodeConnectInfo {
+          localNodeSocketPath    = sockPath,
+          localNodeNetworkId     = network,
+          localNodeConsensusMode = ShelleyMode
+        }
+  tip <- liftIO $ getLocalTip connectInfo
   stakeDist <- firstExceptT NodeLocalStateQueryError $
-    queryStakeDistributionFromLocalState network sockPath (getTipPoint tip)
+    queryStakeDistributionFromLocalState connectInfo (getTipPoint tip)
   writeStakeDistribution mOutFile stakeDist
 
 writeStakeDistribution :: Maybe OutputFile
@@ -316,17 +344,14 @@ printStakeDistribution (PoolDistr stakeDist) = do
 -- This one is Shelley-specific because the query is Shelley-specific.
 --
 queryUTxOFromLocalState
-  :: NetworkId
-  -> FilePath
+  :: LocalNodeConnectInfo ShelleyMode (ShelleyBlock TPraosStandardCrypto)
   -> QueryFilter
   -> Point (ShelleyBlock TPraosStandardCrypto)
   -> ExceptT LocalStateQuery.AcquireFailure IO (Ledger.UTxO TPraosStandardCrypto)
-queryUTxOFromLocalState network socketPath qFilter point =
+queryUTxOFromLocalState connctInfo qFilter point =
     newExceptT $
       queryNodeLocalState
-        socketPath
-        network
-        mkNodeClientProtocolShelley
+        connctInfo
         (point, applyUTxOFilter qFilter)
   where
     applyUTxOFilter (FilterByAddress as) = GetFilteredUTxO (toShelleyAddrs as)
@@ -376,17 +401,14 @@ instance ToJSON DelegationsAndRewards where
 --
 queryPParamsFromLocalState
   :: blk ~ ShelleyBlock TPraosStandardCrypto
-  => NetworkId
-  -> FilePath
+  => LocalNodeConnectInfo ShelleyMode blk
   -> Point blk
   -> ExceptT LocalStateQuery.AcquireFailure IO PParams
-queryPParamsFromLocalState network socketPath point = do
+queryPParamsFromLocalState connctInfo point = do
   let pointAndQuery = (point, GetCurrentPParams)
   newExceptT $ liftIO $
     queryNodeLocalState
-      socketPath
-      network
-      mkNodeClientProtocolShelley
+      connctInfo
       pointAndQuery
 
 -- | Query the current stake distribution from a Shelley node via the local
@@ -396,33 +418,27 @@ queryPParamsFromLocalState network socketPath point = do
 --
 queryStakeDistributionFromLocalState
   :: blk ~ ShelleyBlock TPraosStandardCrypto
-  => NetworkId
-  -> FilePath
+  => LocalNodeConnectInfo ShelleyMode blk
   -> Point blk
   -> ExceptT LocalStateQuery.AcquireFailure IO (Ledger.PoolDistr TPraosStandardCrypto)
-queryStakeDistributionFromLocalState network socketPath point = do
+queryStakeDistributionFromLocalState connctInfo point = do
   let pointAndQuery = (point, GetStakeDistribution)
   newExceptT $ liftIO $
     queryNodeLocalState
-      socketPath
-      network
-      mkNodeClientProtocolShelley
+      connctInfo
       pointAndQuery
 
 queryLocalLedgerState
   :: blk ~ ShelleyBlock TPraosStandardCrypto
-  => NetworkId
-  -> FilePath
+  => LocalNodeConnectInfo ShelleyMode blk
   -> Point blk
   -> ExceptT LocalStateQuery.AcquireFailure IO
              (Either LByteString (Ledger.EpochState TPraosStandardCrypto))
-queryLocalLedgerState network socketPath point =
+queryLocalLedgerState connctInfo point =
     fmap decodeLedgerState $
     newExceptT . liftIO $
       queryNodeLocalState
-        socketPath
-        network
-        mkNodeClientProtocolShelley
+        connctInfo
         (point, GetCBOR GetCurrentEpochState) -- Get CBOR-in-CBOR version
   where
     -- If decode as a LedgerState fails we return the ByteString so we can do a generic
@@ -437,18 +453,15 @@ queryLocalLedgerState network socketPath point =
 -- This one is Shelley-specific because the query is Shelley-specific.
 --
 queryDelegationsAndRewardsFromLocalState
-  :: NetworkId
-  -> FilePath
+  :: LocalNodeConnectInfo ShelleyMode (ShelleyBlock TPraosStandardCrypto)
   -> Set StakeAddress
   -> Point (ShelleyBlock TPraosStandardCrypto)
   -> ExceptT LocalStateQuery.AcquireFailure IO DelegationsAndRewards
-queryDelegationsAndRewardsFromLocalState network socketPath stakeaddrs point =
+queryDelegationsAndRewardsFromLocalState connctInfo stakeaddrs point =
     fmap (uncurry toDelegsAndRwds) $
     newExceptT $ liftIO $
       queryNodeLocalState
-        socketPath
-        network
-        mkNodeClientProtocolShelley
+        connctInfo
         (point, GetFilteredDelegationsAndRewardAccounts
                   (toShelleyStakeCredentials stakeaddrs))
   where

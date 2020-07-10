@@ -96,7 +96,7 @@ data ByronCommand =
     -----------------------------------
 
   | SubmitTx
-        Network
+        NetworkId
         TxFile
         -- ^ Filepath of transaction to submit.
 
@@ -152,11 +152,11 @@ data NodeCmd = CreateVote
                FilePath
                [ParametersToUpdate]
              | SubmitUpdateProposal
-               Network
+               NetworkId
                FilePath
                -- ^ Update proposal filepath.
              | SubmitVote
-               Network
+               NetworkId
                FilePath
                -- ^ Vote filepath.
               deriving Show

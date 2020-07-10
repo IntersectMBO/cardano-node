@@ -13,8 +13,6 @@ import qualified Data.Text.Lazy.IO as TL
 import qualified Data.Text.Lazy.Builder as Builder
 import qualified Formatting as F
 
-import           Ouroboros.Network.NodeToClient (IOManager, withIOManager)
-
 import qualified Cardano.Chain.Common as Common
 import qualified Cardano.Chain.Delegation as Delegation
 import qualified Cardano.Chain.Genesis as Genesis
@@ -27,6 +25,8 @@ import qualified Cardano.Crypto.Signing as Crypto
 import           Cardano.Config.Types
 
 import           Cardano.Api (Network(..), toByronNetworkMagic, toByronProtocolMagic)
+import           Cardano.Api.Typed (NetworkId)
+
 import           Cardano.CLI.Byron.Commands
 import           Cardano.CLI.Byron.Delegation
 import           Cardano.CLI.Byron.Genesis
@@ -92,13 +92,11 @@ runNodeCmd (CreateVote nw sKey upPropFp voteBool outputFp) =
   firstExceptT ByronCmdVoteError $ runVoteCreation nw sKey upPropFp voteBool outputFp
 
 runNodeCmd (SubmitUpdateProposal network proposalFp) =
-  withIOManagerE $ \iomgr ->
     firstExceptT ByronCmdUpdateProposalError
-      $ submitByronUpdateProposal iomgr network proposalFp
+      $ submitByronUpdateProposal network proposalFp
 
 runNodeCmd (SubmitVote network voteFp) =
-  withIOManagerE $ \iomgr ->
-    firstExceptT ByronCmdVoteError $ submitByronVote iomgr network voteFp
+    firstExceptT ByronCmdVoteError $ submitByronVote network voteFp
 
 runNodeCmd (UpdateProposal nw sKey pVer sVer sysTag insHash outputFp params) =
   firstExceptT ByronCmdUpdateProposalError
@@ -200,11 +198,10 @@ runCheckDelegation nw cert issuerVF delegateVF = do
     checkByronGenesisDelegation cert (toByronProtocolMagic nw)
                                 issuerVK delegateVK
 
-runSubmitTx :: Network -> TxFile -> ExceptT ByronClientCmdError IO ()
-runSubmitTx network fp =
-  withIOManagerE $ \iomgr -> do
+runSubmitTx :: NetworkId -> TxFile -> ExceptT ByronClientCmdError IO ()
+runSubmitTx network fp = do
     tx <- firstExceptT ByronCmdTxError $ readByronTx fp
-    firstExceptT ByronCmdTxError $ nodeSubmitTx iomgr network tx
+    firstExceptT ByronCmdTxError $ nodeSubmitTx network tx
 
 
 runSpendGenesisUTxO
@@ -237,5 +234,3 @@ runSpendUTxO nw era (NewTxFile ctTx) ctKey ins outs = do
     let gTx = txSpendUTxOByronPBFT nw sk ins outs
     firstExceptT ByronCmdHelpersError . ensureNewFileLBS ctTx $ toCborTxAux gTx
 
-withIOManagerE :: (IOManager -> ExceptT e IO a) -> ExceptT e IO a
-withIOManagerE k = ExceptT $ withIOManager (runExceptT . k)

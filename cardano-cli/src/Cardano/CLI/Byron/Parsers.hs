@@ -316,7 +316,7 @@ parseTxRelatedValues =
         "submit-tx"
         "Submit a raw, signed transaction, in its on-wire representation."
         $ SubmitTx
-            <$> parseNetwork
+            <$> pNetworkId
             <*> parseTxFile "tx"
     , command'
         "issue-genesis-utxo-expenditure"
@@ -382,7 +382,7 @@ parseByronUpdateProposal = do
 parseByronVoteSubmission :: Parser NodeCmd
 parseByronVoteSubmission = do
   SubmitVote
-    <$> parseNetwork
+    <$> pNetworkId
     <*> parseFilePath "filepath" "Filepath of Byron update proposal vote."
 
 parseParametersToUpdate :: Parser [ParametersToUpdate]
@@ -408,7 +408,7 @@ parseParametersToUpdate =
 parseByronUpdateProposalSubmission :: Parser NodeCmd
 parseByronUpdateProposalSubmission =
   SubmitUpdateProposal
-    <$> parseNetwork
+    <$> pNetworkId
     <*> parseFilePath "filepath" "Filepath of Byron update proposal."
 
 
