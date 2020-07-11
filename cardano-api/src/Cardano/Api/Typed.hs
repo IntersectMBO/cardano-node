@@ -297,6 +297,7 @@ import           Prelude
 
 import           Data.Aeson.Encode.Pretty (encodePretty')
 import           Data.Proxy (Proxy(..))
+import           Data.Typeable (Typeable)
 import           Data.Kind (Constraint)
 import           Data.Void (Void)
 import           Data.Word
@@ -380,8 +381,8 @@ import           Ouroboros.Consensus.Network.NodeToClient
                    (Codecs'(..), clientCodecs)
 import           Ouroboros.Consensus.Node.ProtocolInfo (ProtocolClientInfo(..))
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
-                  (BlockNodeToClientVersion, TranslateNetworkProtocolVersion,
-                   nodeToClientProtocolVersion, supportedNodeToClientVersions)
+                  (BlockNodeToClientVersion, SupportedNetworkProtocolVersion,
+                   supportedNodeToClientVersions)
 import           Ouroboros.Consensus.Node.Run (SerialiseNodeToClientConstraints)
 
 import           Ouroboros.Consensus.Byron.Ledger.Block (ByronBlock)
@@ -2313,7 +2314,7 @@ data NodeConsensusMode mode block where
 withNodeProtocolClient
   :: NodeConsensusMode mode block
   -> (   (SerialiseNodeToClientConstraints block,
-          TranslateNetworkProtocolVersion block)
+          SupportedNetworkProtocolVersion block)
       => ProtocolClient block (BlockProtocol block) -> a)
   -> a
 withNodeProtocolClient (ByronMode epochSlots securityParam) f =
@@ -2360,7 +2361,8 @@ nullLocalNodeClientProtocols =
 -- handlers.
 --
 connectToLocalNode :: forall mode block.
-                      LocalNodeConnectInfo mode block
+                      (Typeable block, Typeable (ApplyTxErr block))
+                   => LocalNodeConnectInfo mode block
                    -> LocalNodeClientProtocols block
                    -> IO ()
 connectToLocalNode LocalNodeConnectInfo {
@@ -2377,13 +2379,14 @@ connectToLocalNode LocalNodeConnectInfo {
           nctHandshakeTracer = nullTracer
         }
         (foldMapVersions
-            (\v -> versionedNodeToClientProtocols
-                     (nodeToClientProtocolVersion proxy v)
+            (\(version, blockVersion) ->
+                versionedNodeToClientProtocols
+                     version
                      NodeToClientVersionData {
                        networkMagic = toNetworkMagic network
                      }
-                     (\_conn _runOrStop -> protocols ptcl v))
-            (supportedNodeToClientVersions proxy))
+                     (\_conn _runOrStop -> protocols ptcl blockVersion))
+            (Map.toList (supportedNodeToClientVersions proxy)))
         path
   where
     proxy :: Proxy block
@@ -2445,7 +2448,8 @@ connectToLocalNode LocalNodeConnectInfo {
 -- local state query protocol.
 --
 queryNodeLocalState :: forall mode block result.
-                       LocalNodeConnectInfo mode block
+                       (Typeable block, Typeable (ApplyTxErr block))
+                    => LocalNodeConnectInfo mode block
                     -> (Point block, Query block result)
                     -> IO (Either AcquireFailure result)
 queryNodeLocalState connctInfo pointAndQuery = do
@@ -2484,7 +2488,8 @@ queryNodeLocalState connctInfo pointAndQuery = do
         }
 
 submitTxToNodeLocal :: forall mode block.
-                       LocalNodeConnectInfo mode block
+                       (Typeable block, Typeable (ApplyTxErr block))
+                    => LocalNodeConnectInfo mode block
                     -> GenTx block
                     -> IO (SubmitResult (ApplyTxErr block))
 submitTxToNodeLocal connctInfo tx = do

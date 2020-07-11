@@ -35,14 +35,14 @@ import           Control.Tracer
 import           Network.Mux (MuxError, MuxMode(..))
 
 import           Cardano.Api.Protocol.Types (SomeNodeClientProtocol(..))
-import           Ouroboros.Consensus.Block (BlockProtocol)
+import           Ouroboros.Consensus.Block (BlockProtocol, Header)
 
 import           Ouroboros.Consensus.Block (CodecConfig, GetHeader (..))
 import           Ouroboros.Consensus.BlockchainTime (SlotLength, getSlotLength)
 import           Ouroboros.Consensus.Network.NodeToClient
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
                   (HasNetworkProtocolVersion (..),
-                   supportedNodeToClientVersions, nodeToClientProtocolVersion)
+                   supportedNodeToClientVersions)
 import           Ouroboros.Consensus.Node.ProtocolInfo (pClientInfoCodecConfig)
 import           Ouroboros.Consensus.Node.Run
 import           Ouroboros.Consensus.Cardano
@@ -514,12 +514,12 @@ localInitiatorNetworkApplication chairmanTracer chainSyncTracer
                                  cfg networkMagic
                                  sockPath chainsVar securityParam =
     foldMapVersions
-      (\v ->
+      (\(version, blockVersion) ->
         versionedNodeToClientProtocols
-          (nodeToClientProtocolVersion proxy v)
+          version
           versionData
-          (\_ _ -> protocols v))
-      (supportedNodeToClientVersions proxy)
+          (\_ _ -> protocols blockVersion))
+      (Map.toList (supportedNodeToClientVersions proxy))
   where
     proxy :: Proxy blk
     proxy = Proxy
