@@ -87,7 +87,7 @@ let
       runtimeDir = null;
       environment = envConfig.name;
       topology = topologyFile;
-      nodeConfigFile = "${__toFile "config-${toString config.nodeId}.json" (__toJSON (svcLib.mkNodeConfig config config.nodeId))}";
+      nodeConfigFile = "${__toFile "config-${toString config.nodeId}.json" (__toJSON envConfig.nodeConfig)}";
     };
     nodeConf = { config.services.cardano-node = serviceConfig; };
     nodeScript = (modules.evalModules {
