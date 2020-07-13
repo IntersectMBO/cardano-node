@@ -222,6 +222,7 @@ runTxSign (TxBodyFile txbodyFile) skFiles mnw (TxFile txFile) = do
       case swsk of
         AByronSigningKey           sk -> Left sk
         APaymentSigningKey         sk -> Right (Api.WitnessPaymentKey         sk)
+        APaymentExtendedSigningKey sk -> Right (Api.WitnessPaymentExtendedKey sk)
         AStakeSigningKey           sk -> Right (Api.WitnessStakeKey           sk)
         AStakePoolSigningKey       sk -> Right (Api.WitnessStakePoolKey       sk)
         AGenesisDelegateSigningKey sk -> Right (Api.WitnessGenesisDelegateKey sk)
@@ -320,6 +321,7 @@ readProtocolParameters (ProtocolParamsFile fpath) = do
 data SomeWitnessSigningKey
   = AByronSigningKey           (Api.SigningKey Api.ByronKey)
   | APaymentSigningKey         (Api.SigningKey Api.PaymentKey)
+  | APaymentExtendedSigningKey (Api.SigningKey Api.PaymentExtendedKey)
   | AStakeSigningKey           (Api.SigningKey Api.StakeKey)
   | AStakePoolSigningKey       (Api.SigningKey Api.StakePoolKey)
   | AGenesisDelegateSigningKey (Api.SigningKey Api.GenesisDelegateKey)
@@ -337,6 +339,8 @@ readSigningKeyFile (SigningKeyFile skfile) =
                           AByronSigningKey
       , Api.FromSomeType (Api.AsSigningKey Api.AsPaymentKey)
                           APaymentSigningKey
+      , Api.FromSomeType (Api.AsSigningKey Api.AsPaymentExtendedKey)
+                          APaymentExtendedSigningKey
       , Api.FromSomeType (Api.AsSigningKey Api.AsStakeKey)
                           AStakeSigningKey
       , Api.FromSomeType (Api.AsSigningKey Api.AsStakePoolKey)
