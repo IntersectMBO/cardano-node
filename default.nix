@@ -61,7 +61,7 @@ let
     inherit (haskellPackages.cardano-node.identifier) version;
 
     cluster = mkCluster customConfig;
-    clusterTests = pkgs.callPackage ./nix/supervisord-cluster/tests { inherit mkCluster; };
+    clusterTests = import ./nix/supervisord-cluster/tests { inherit pkgs mkCluster cardano-cli cardano-node; };
 
     exes = mapAttrsRecursiveCond (as: !(isDerivation as)) rewrite-static (collectComponents' "exes" haskellPackages);
 
