@@ -19,7 +19,6 @@ import           Control.Tracer (stdoutTracer, traceWith)
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.Map.Strict as M
 
-import           Cardano.Api (textShow)
 import qualified Cardano.Binary as Binary
 import           Cardano.Chain.Common (LovelacePortion, TxFeePolicy(..))
 import           Cardano.Chain.Slotting (EpochNumber(..), SlotNumber(..))
@@ -28,6 +27,7 @@ import           Cardano.Chain.Update
                     InstallerHash(..), Proposal, ProposalBody(..), ProtocolVersion(..),
                     SoftforkRule(..), SoftwareVersion(..), SystemTag(..), recoverUpId,
                     signProposal)
+import           Cardano.CLI.Helpers (textShow)
 import           Cardano.Config.Types
 import           Ouroboros.Consensus.Util.Condense (condense)
 import           Cardano.Crypto.Signing (SigningKey, noPassSafeSigner)
@@ -35,8 +35,7 @@ import           Ouroboros.Consensus.Byron.Ledger.Block (ByronBlock)
 import qualified Ouroboros.Consensus.Byron.Ledger.Mempool as Mempool
 import           Ouroboros.Consensus.Ledger.SupportsMempool (txId)
 
-import           Cardano.Api (Network, toByronProtocolMagic)
-import           Cardano.Api.Typed (NetworkId)
+import           Cardano.Api.Typed (NetworkId, toByronProtocolMagicId)
 import           Cardano.CLI.Byron.Key (CardanoEra(..), ByronKeyFailure, readEraSigningKey)
 import           Cardano.CLI.Byron.Genesis (ByronGenesisError)
 import           Cardano.CLI.Byron.Tx (ByronTxError, nodeSubmitTx)
@@ -68,7 +67,7 @@ renderByronUpdateProposalError err =
       "Error decoding update proposal: " <> textShow decErr
 
 runProposalCreation
-  :: Network
+  :: NetworkId
   -> SigningKeyFile
   -> ProtocolVersion
   -> SoftwareVersion
@@ -133,7 +132,7 @@ convertProposalToGenTx :: AProposal ByteString -> Mempool.GenTx ByronBlock
 convertProposalToGenTx prop = Mempool.ByronUpdateProposal (recoverUpId prop) prop
 
 createUpdateProposal
-  :: Network
+  :: NetworkId
   -> SigningKey
   -> ProtocolVersion
   -> SoftwareVersion
@@ -142,7 +141,7 @@ createUpdateProposal
   -> [ParametersToUpdate]
   -> Proposal
 createUpdateProposal nw sKey pVer sVer sysTag inshash paramsToUpdate =
-    signProposal (toByronProtocolMagic nw) proposalBody noPassSigningKey
+    signProposal (toByronProtocolMagicId nw) proposalBody noPassSigningKey
   where
     proposalBody = ProposalBody pVer protocolParamsUpdate sVer metaData
 

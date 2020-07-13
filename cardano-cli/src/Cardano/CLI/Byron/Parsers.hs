@@ -57,7 +57,7 @@ import           Cardano.Chain.Genesis
                    (TestnetBalanceOptions(..), FakeAvvmOptions(..))
 import           Cardano.Chain.UTxO (TxId, TxIn(..), TxOut(..))
 
-import           Cardano.Api (Network(..), NetworkMagic(..))
+import           Cardano.Api (NetworkMagic(..))
 import qualified Cardano.Api.Typed as Typed
 import           Cardano.Config.Types
 import           Cardano.Config.Parsers
@@ -125,7 +125,7 @@ parseDelegationRelatedValues =
         "Create a delegation certificate allowing the\
         \ delegator to sign blocks on behalf of the issuer"
         $ IssueDelegationCertificate
-        <$> parseNetwork
+        <$> pNetworkId
         <*> parseCardanoEra
         <*> ( EpochNumber
                 <$> parseIntegral
@@ -145,7 +145,7 @@ parseDelegationRelatedValues =
         "Verify that a given certificate constitutes a valid\
         \ delegation relationship between keys."
         $ CheckDelegation
-            <$> parseNetwork
+            <$> pNetworkId
             <*> parseCertificateFile
                   "certificate"
                   "The certificate embodying delegation to verify."
@@ -232,7 +232,7 @@ parseKeyRelatedValues =
             "Print address of a signing key."
             $ PrintSigningKeyAddress
                 <$> parseCardanoEra
-                <*> parseNetwork
+                <*> pNetworkId
                 <*> parseSigningKeyFile
                       "secret"
                       "Signing key, whose address is to be printed."
@@ -323,7 +323,7 @@ parseTxRelatedValues =
         "Write a file with a signed transaction, spending genesis UTxO."
         $ SpendGenesisUTxO
             <$> parseGenesisFile "genesis-json"
-            <*> parseNetwork
+            <*> pNetworkId
             <*> parseCardanoEra
             <*> parseNewTxFile "tx"
             <*> parseSigningKeyFile
@@ -338,7 +338,7 @@ parseTxRelatedValues =
         "issue-utxo-expenditure"
         "Write a file with a signed transaction, spending normal UTxO."
         $ SpendUTxO
-            <$> parseNetwork
+            <$> pNetworkId
             <*> parseCardanoEra
             <*> parseNewTxFile "tx"
             <*> parseSigningKeyFile
@@ -370,7 +370,7 @@ pNodeCmd =
 parseByronUpdateProposal :: Parser NodeCmd
 parseByronUpdateProposal = do
   UpdateProposal
-    <$> parseNetwork
+    <$> pNetworkId
     <*> parseSigningKeyFile "signing-key" "Path to signing key."
     <*> parseProtocolVersion
     <*> parseSoftwareVersion
@@ -415,7 +415,7 @@ parseByronUpdateProposalSubmission =
 parseByronVote :: Parser NodeCmd
 parseByronVote =
   CreateVote
-    <$> parseNetwork
+    <$> pNetworkId
     <*> (SigningKeyFile <$> parseFilePath "signing-key" "Filepath of signing key.")
     <*> parseFilePath "proposal-filepath" "Filepath of Byron update proposal."
     <*> parseVoteBool
@@ -641,10 +641,6 @@ parseFractionWithDefault optname desc w =
                 <> value w
                 )
 
-parseNetwork :: Parser Network
-parseNetwork =
-  parseMainnet <|> fmap Testnet parseTestnetMagic
-
 pNetworkId :: Parser Typed.NetworkId
 pNetworkId =
   pMainnet' <|> fmap Typed.Testnet pTestnetMagic
@@ -663,22 +659,6 @@ pTestnetMagic =
       (  Opt.long "testnet-magic"
       <> Opt.metavar "NATURAL"
       <> Opt.help "Specify a testnet magic id."
-      )
-
-parseMainnet :: Parser Network
-parseMainnet =
-  Opt.flag' Mainnet
-    (  Opt.long "mainnet"
-    <> Opt.help "Use the mainnet magic id."
-    )
-
-parseTestnetMagic :: Parser NetworkMagic
-parseTestnetMagic =
-  NetworkMagic <$>
-    Opt.option Opt.auto
-      (  Opt.long "testnet-magic"
-      <> Opt.metavar "INT"
-      <> Opt.help "The testnet network magic number"
       )
 
 parseNewCertificateFile :: String -> Parser NewCertificateFile

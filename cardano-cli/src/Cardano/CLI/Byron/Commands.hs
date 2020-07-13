@@ -16,7 +16,6 @@ import           Cardano.Chain.Update
                    (InstallerHash(..), ProtocolVersion(..), SoftwareVersion(..),
                     SystemTag(..))
 
-import           Cardano.Api (Network)
 import           Cardano.Api.Typed (NetworkId)
 import           Cardano.Config.Types
 
@@ -68,13 +67,13 @@ data ByronCommand =
 
   | PrintSigningKeyAddress
         CardanoEra
-        Network
+        NetworkId
         SigningKeyFile
 
     --- Delegation Related Commands ---
 
   | IssueDelegationCertificate
-        Network
+        NetworkId
         CardanoEra
         EpochNumber
         -- ^ The epoch from which the delegation is valid.
@@ -85,7 +84,7 @@ data ByronCommand =
         NewCertificateFile
         -- ^ Filepath of the newly created delegation certificate.
   | CheckDelegation
-        Network
+        NetworkId
         CertificateFile
         VerificationKeyFile
         VerificationKeyFile
@@ -102,7 +101,7 @@ data ByronCommand =
 
   | SpendGenesisUTxO
         GenesisFile
-        Network
+        NetworkId
         CardanoEra
         NewTxFile
         -- ^ Filepath of the newly created transaction.
@@ -113,7 +112,7 @@ data ByronCommand =
         (NonEmpty TxOut)
         -- ^ Tx output.
   | SpendUTxO
-        Network
+        NetworkId
         CardanoEra
         NewTxFile
         -- ^ Filepath of the newly created transaction.
@@ -137,13 +136,13 @@ data ByronCommand =
 
 
 data NodeCmd = CreateVote
-               Network
+               NetworkId
                SigningKeyFile
                FilePath -- filepath to update proposal
                Bool
                FilePath
              | UpdateProposal
-               Network
+               NetworkId
                SigningKeyFile
                ProtocolVersion
                SoftwareVersion

@@ -38,7 +38,7 @@ import           System.Posix.Files (ownerReadMode, setFileMode)
 #else
 import           System.Directory (emptyPermissions, readable, setPermissions)
 #endif
-import           Cardano.Api (Network, textShow, toByronRequiresNetworkMagic)
+import           Cardano.Api.Typed (NetworkId, toByronRequiresNetworkMagic)
 
 import qualified Cardano.Chain.Common as Common
 import           Cardano.Chain.Delegation hiding (Map, epoch)
@@ -52,6 +52,7 @@ import qualified Cardano.Crypto as Crypto
 
 import           Cardano.CLI.Byron.Delegation
 import           Cardano.CLI.Byron.Key
+import           Cardano.CLI.Helpers (textShow)
 
 data ByronGenesisError
   = ByronDelegationCertSerializationError !ByronDelegationError
@@ -158,7 +159,7 @@ mkGenesis gp = do
 
 -- | Read genesis from a file.
 readGenesis :: GenesisFile
-            -> Network
+            -> NetworkId
             -> ExceptT ByronGenesisError IO Genesis.Config
 readGenesis (GenesisFile file) nw =
   firstExceptT (GenesisReadError file) $ do
@@ -247,4 +248,3 @@ writeSecrets outDir prefix suffix secretOp xs =
 #else
     setPermissions filename (emptyPermissions {readable = True})
 #endif
-
