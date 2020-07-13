@@ -27,6 +27,7 @@ module Cardano.CLI.Shelley.Commands
   , OutputFile (..)
   , ProtocolParamsFile (..)
   , SigningKeyFile (..)
+  , WitnessFile (..)
   , TxBodyFile (..)
   , TxFile (..)
   , VerificationKeyFile (..)
@@ -111,7 +112,7 @@ data TransactionCmd
       TxBodyFile
   | TxSign TxBodyFile [SigningKeyFile] (Maybe NetworkId) TxFile
   | TxWitness TxBodyFile SigningKeyFile OutputFile
-  | TxSignWitness   -- { transaction :: Transaction, witnesses :: [Witness], nodeAddr :: NodeAddress }
+  | TxSignWitness TxBodyFile [WitnessFile] OutputFile
   | TxCheck         -- { transaction :: Transaction, nodeAddr :: NodeAddress }
   | TxSubmit Protocol NetworkId FilePath
   | TxCalculateMinFee
@@ -294,6 +295,10 @@ newtype OpCertCounterFile
 
 newtype PrivKeyFile
   = PrivKeyFile FilePath
+  deriving (Eq, Show)
+
+newtype WitnessFile
+  = WitnessFile FilePath
   deriving (Eq, Show)
 
 newtype TxBodyFile

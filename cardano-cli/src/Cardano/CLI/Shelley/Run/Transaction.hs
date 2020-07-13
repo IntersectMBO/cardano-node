@@ -127,6 +127,8 @@ runTransactionCmd cmd =
       runTxGetTxId txinfile
     TxWitness txBodyfile witSignKeyFile outFile ->
       runTxWitness txBodyfile witSignKeyFile outFile
+    TxSignWitness txBodyFile witnessFile outFile ->
+      runTxSignWitness txBodyFile witnessFile outFile
 
     _ -> liftIO $ putStrLn $ "runTransactionCmd: " ++ show cmd
 
@@ -370,6 +372,24 @@ runTxWitness (TxBodyFile txbodyFile) (SigningKeyFile witSignKeyFp) (OutputFile o
                                , FromSomeType (AsSigningKey AsGenesisDelegateKey) WitnessGenesisDelegateKey
                                , FromSomeType (AsSigningKey AsGenesisUTxOKey) WitnessGenesisUTxOKey
                                ]
+
+runTxSignWitness :: TxBodyFile -> [WitnessFile] -> OutputFile -> ExceptT ShelleyTxCmdError IO ()
+runTxSignWitness (TxBodyFile txBodyFile) witnessFiles (OutputFile oFp) = do
+    txBody <- firstExceptT ShelleyTxReadFileError
+      . newExceptT
+      $ Api.readFileTextEnvelope Api.AsShelleyTxBody txBodyFile
+    witnesses <- firstExceptT ShelleyTxReadFileError
+      $ mapM readWitnessFile witnessFiles
+    let tx = Api.makeSignedTransaction witnesses txBody
+    firstExceptT ShelleyTxWriteFileError
+      . newExceptT
+      $ Api.writeFileTextEnvelope oFp Nothing tx
+  where
+    readWitnessFile
+      :: WitnessFile
+      -> ExceptT (Api.FileError Api.TextEnvelopeError) IO (Witness Shelley)
+    readWitnessFile (WitnessFile fp) =
+      newExceptT (Api.readFileTextEnvelope AsShelleyWitness fp)
 
 -- ----------------------------------------------------------------------------
 -- Transaction metadata

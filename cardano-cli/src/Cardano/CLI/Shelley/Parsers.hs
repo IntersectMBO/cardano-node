@@ -315,7 +315,9 @@ pTransaction =
                                     <*> pOutputFile
 
     pTransactionSignWit :: Parser TransactionCmd
-    pTransactionSignWit = pure TxSignWitness
+    pTransactionSignWit = TxSignWitness <$> pTxBodyFile Input
+                                        <*> some pWitnessFile
+                                        <*> pOutputFile
 
     pTransactionCheck  :: Parser TransactionCmd
     pTransactionCheck = pure TxCheck
@@ -1166,6 +1168,16 @@ pTxFee =
       (  Opt.long "fee"
       <> Opt.metavar "LOVELACE"
       <> Opt.help "The fee amount in Lovelace."
+      )
+
+pWitnessFile :: Parser WitnessFile
+pWitnessFile =
+  WitnessFile <$>
+    Opt.strOption
+      (  Opt.long "witness-file"
+      <> Opt.metavar "FILE"
+      <> Opt.help ("Filepath of the witness.")
+      <> Opt.completer (Opt.bashCompleter "file")
       )
 
 pTxBodyFile :: FileDirection -> Parser TxBodyFile
