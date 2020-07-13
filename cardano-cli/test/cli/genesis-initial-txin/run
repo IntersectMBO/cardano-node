@@ -19,6 +19,6 @@ ${CARDANO_CLI} shelley genesis initial-txin \
 fail_on_error $?
 
 assert_line_count 1 "${TEST_DIR}/utxo-hash.hex"
-assert_string "8dfec84eb4586cdd21ff5388c8db82617b827a4fccb3700ff1515381022db92d#0" "${TEST_DIR}/utxo-hash.hex"
+assert_string "a8905555bf684e27ffbe192c412bf979d120d4788e6e5ccbe8c19cb03906342b#0" "${TEST_DIR}/utxo-hash.hex"
 
 report_result ${error}

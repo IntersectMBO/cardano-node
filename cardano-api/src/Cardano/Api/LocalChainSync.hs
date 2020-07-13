@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -13,10 +14,12 @@ import           Cardano.Api.Typed
 import           Ouroboros.Network.Block (Tip)
 import           Ouroboros.Network.Protocol.ChainSync.Client
                    (ChainSyncClient(..), ClientStIdle(..), ClientStNext(..))
+import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr)
 
 
 -- | Get the node's tip using the local chain sync protocol.
-getLocalTip :: LocalNodeConnectInfo mode block -> IO (Tip block)
+getLocalTip :: (Typeable block, Typeable (ApplyTxErr block))
+            => LocalNodeConnectInfo mode block -> IO (Tip block)
 getLocalTip connctInfo = do
     resultVar <- newEmptyTMVarIO
     connectToLocalNode

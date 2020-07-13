@@ -150,6 +150,7 @@ import qualified Cardano.Chain.UTxO    as Byron
 import qualified Ouroboros.Consensus.Shelley.Protocol.Crypto as Shelley
 import qualified Shelley.Spec.Ledger.Address     as Shelley
 import qualified Shelley.Spec.Ledger.BaseTypes   as Shelley
+import qualified Shelley.Spec.Ledger.Coin        as Shelley
 import qualified Shelley.Spec.Ledger.Credential  as Shelley
 import qualified Shelley.Spec.Ledger.Keys        as Shelley
 import qualified Shelley.Spec.Ledger.LedgerState as Shelley (minfee)
@@ -445,7 +446,7 @@ calculateShelleyMinFee :: Shelley.PParams -> TxSigned -> Lovelace
 calculateShelleyMinFee _ (TxSignedByron _ _ _ _) =
   panic "calculateShelleyMinFee: TxSignedByron"
 calculateShelleyMinFee pparams (TxSignedShelley tx) =
-  Lovelace . fromIntegral $ Shelley.minfee pparams tx
+  (\(Shelley.Coin c) -> Lovelace c) $ Shelley.minfee pparams tx
 
 -- | Build a dummy Shelley transaction to be used for the minimum fee
 -- calculation.
