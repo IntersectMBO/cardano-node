@@ -21,6 +21,7 @@ import           Cardano.Prelude
 import           Control.Monad.Fail (fail)
 
 import qualified Cardano.Crypto.Hash as Crypto
+import qualified Cardano.Crypto.Seed as Crypto
 import           Cardano.Slotting.Slot (SlotNo(..))
 import           Ouroboros.Network.Magic (NetworkMagic(..))
 
@@ -28,8 +29,6 @@ import           Hedgehog (Gen)
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 
-import           Test.Cardano.Api.Gen (genSeed)
-import           Test.Cardano.Api.Orphans ()
 import           Test.Cardano.Chain.UTxO.Gen (genVKWitness)
 import           Test.Cardano.Crypto.Gen (genProtocolMagicId)
 
@@ -225,3 +224,6 @@ genShelleyWitnessSigningKey =
 genShelleyScriptWitness :: Gen (Witness Shelley)
 genShelleyScriptWitness = makeShelleyScriptWitness
 -}
+
+genSeed :: Int -> Gen Crypto.Seed
+genSeed n = Crypto.mkSeedFromBytes <$> Gen.bytes (Range.singleton n)

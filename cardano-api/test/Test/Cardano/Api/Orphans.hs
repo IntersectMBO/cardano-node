@@ -1,12 +1,12 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
-module Test.Cardano.Api.Orphans
-  (
-  ) where
 
-import           Cardano.Api
+{-# OPTIONS_GHC -Wno-orphans #-}
+
+module Test.Cardano.Api.Orphans () where
+
+import           Cardano.Api (SigningKey(..), PaymentVerificationKey(..), StakingVerificationKey(..))
 
 import           Cardano.Prelude
 

@@ -33,7 +33,6 @@ import           System.FilePath ((</>), takeDirectory)
 import           System.Posix.Types (Fd)
 
 import           Cardano.Api.Typed (EpochNo)
---import           Cardano.Api.Protocol
 import           Cardano.Config.Types
 import           Cardano.Crypto (RequiresNetworkMagic(..))
 import qualified Cardano.Chain.Update as Byron

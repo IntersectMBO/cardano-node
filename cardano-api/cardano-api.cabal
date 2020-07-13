@@ -26,8 +26,7 @@ library
                         Cardano.Api.LocalChainSync
                         Cardano.Api.TxSubmit
 
-  other-modules:        Cardano.Api.Convert
-                        Cardano.Api.Error
+  other-modules:        Cardano.Api.Error
                         Cardano.Api.TxSubmit.ErrorRender
                         Cardano.Api.TxSubmit.Types
                         Cardano.Api.Types
@@ -121,9 +120,7 @@ test-suite cardano-api-test
                       , shelley-spec-ledger-test
                       , time
 
-  other-modules:        Test.Cardano.Api
-                        Test.Cardano.Api.Convert
-                        Test.Cardano.Api.Examples
+  other-modules:        Test.Cardano.Api.Examples
                         Test.Cardano.Api.Gen
                         Test.Cardano.Api.Ledger
                         Test.Cardano.Api.Orphans

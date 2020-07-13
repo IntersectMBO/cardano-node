@@ -57,7 +57,6 @@ import           Cardano.Chain.Genesis
                    (TestnetBalanceOptions(..), FakeAvvmOptions(..))
 import           Cardano.Chain.UTxO (TxId, TxIn(..), TxOut(..))
 
-import           Cardano.Api (NetworkMagic(..))
 import qualified Cardano.Api.Typed as Typed
 import           Cardano.Config.Types
 import           Cardano.Config.Parsers
@@ -652,9 +651,9 @@ pNetworkId =
       <> Opt.help "Use the mainnet magic id."
       )
 
-pTestnetMagic :: Parser NetworkMagic
+pTestnetMagic :: Parser Typed.NetworkMagic
 pTestnetMagic =
-  NetworkMagic <$>
+  Typed.NetworkMagic <$>
     Opt.option Opt.auto
       (  Opt.long "testnet-magic"
       <> Opt.metavar "NATURAL"
