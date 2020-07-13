@@ -40,17 +40,17 @@ class ClusterLib:
 
     def check_state_dir(self):
         if not self.state_dir.exists():
-            raise CLIError(f"The state dir `{str(self.state_dir)}` doesn't exist.")
+            raise CLIError(f"The state dir `{self.state_dir}` doesn't exist.")
 
-        for f in (
+        for file_name in (
             self.genesis_json,
             self.genesis_utxo_vkey,
             self.genesis_utxo_skey,
             self.genesis_vkey,
             self.delegate_skey,
         ):
-            if not f.exists():
-                raise CLIError(f"The file `{str(f)}` doesn't exist.")
+            if not file_name.exists():
+                raise CLIError(f"The file `{file_name}` doesn't exist.")
 
     @staticmethod
     def cli(cli_args):
@@ -251,14 +251,14 @@ class ClusterLib:
             ]
         )
 
-    def get_address(self, payment=None, stake=None):
+    def get_payment_address(self, payment=None, stake=None):
         cli_args = []
-        if not (payment or stake):
-            raise CLIError("Must set payment, stake or both.")
+        if not payment:
+            raise CLIError("Must set payment.")
 
         if payment:
             cli_args.extend("--payment-verification-key-file", payment)
-        elif stake:
+        if stake:
             cli_args.extend("--stake-verification-key-file", stake)
 
         return (
@@ -341,11 +341,11 @@ class ClusterLib:
             )
             self.sign_tx(signing_keys=signing_keys)
             self.submit_tx()
-        except CLIError as e:
+        except CLIError as err:
             raise CLIError(
                 f"Sending a genesis transaction failed!\n"
                 f"utxo: {utxo}\n"
-                f"txins: {txins} txouts: {txouts} signing keys: {signing_keys}\n{str(e)}"
+                f"txins: {txins} txouts: {txouts} signing keys: {signing_keys}\n{err}"
             )
 
     def submit_update_proposal(self, cli_args, epoch=1):
