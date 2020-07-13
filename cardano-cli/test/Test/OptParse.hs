@@ -1,13 +1,16 @@
 module Test.OptParse
   ( checkTextEnvelopeFormat
   , assertFilesExist
+  , assertFileOccurences
   , equivalence
   , evalCardanoCLIParser
   , execCardanoCLIParser
   , execCardanoCLI
   , fileCleanup
+  , formatIso8601
   , propertyOnce
   , workspace
+  , withSnd
   ) where
 
 import           Cardano.Prelude
@@ -29,10 +32,14 @@ import           Cardano.CLI.Parsers (opts, pref)
 import           Cardano.CLI.Run (ClientCommand(..),
                    renderClientCommandError, runClientCommand)
 
-import qualified System.Process as IO
-import qualified System.Environment as IO
-import qualified System.IO.Temp as IO
+import qualified Data.List as L
+import qualified Data.Time.Clock as DT
+import qualified Data.Time.Format as DT
 import qualified System.Directory as IO
+import qualified System.Environment as IO
+import qualified System.IO as IO
+import qualified System.IO.Temp as IO
+import qualified System.Process as IO
 
 import qualified Hedgehog as H
 import qualified Hedgehog.Internal.Property as H
@@ -152,6 +159,14 @@ workspace prefixPath f = do
   f ws
   liftIO $ IO.removeDirectoryRecursive ws
 
+-- | Return the supply value with the result of the supplied function as a tuple
+withSnd :: (a -> b) -> a -> (a, b)
+withSnd f a = (a, f a)
+
+-- | Format the given time as an ISO 8601 date-time string
+formatIso8601 :: DT.UTCTime -> String
+formatIso8601 = DT.formatTime DT.defaultTimeLocale (DT.iso8601DateFormat (Just "%H:%M:%SZ"))
+
 -- | Checks if all files gives exists. If this fails, all files are deleted.
 assertFilesExist :: HasCallStack => [FilePath] -> H.PropertyT IO ()
 assertFilesExist [] = return ()
@@ -160,6 +175,13 @@ assertFilesExist allFiles@(file:rest) = do
   if exists == True
   then withFrozenCallStack $ assertFilesExist rest
   else liftIO (fileCleanup allFiles) >> failWithCustom callStack Nothing (file <> " has not been successfully created.")
+
+-- | Assert the file contains the given number of occurences of the given string
+assertFileOccurences :: Int -> String -> FilePath -> H.PropertyT IO ()
+assertFileOccurences n s fp = do
+  signingKeyContents <- liftIO $ IO.readFile fp
+
+  length (filter (s `L.isInfixOf`) (L.lines signingKeyContents)) H.=== n
 
 fileCleanup :: [FilePath] -> IO ()
 fileCleanup fps = mapM_ (\fp -> removeFile fp `catch` fileExists) fps
