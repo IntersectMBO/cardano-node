@@ -12,22 +12,22 @@ Make sure you have access to:
 
 At this moment we have:
 
-    | File           | Content                           |
-    | -------------- | --------------------------------  |
-    | `payment.vkey` | payment verification key          |
-    | `payment.skey` | payment signing key               |
-    | `stake.vkey`   | staking verification key          |
-    | `stake.skey`   | staking signing key               |
-    | `stake.addr`   | registered stake address          |
-    | `payment.addr` | funded address linked to `stake`  |
-    | `cold.vkey`    | cold verification key             |
-    | `cold.skey`    | cold signing key                  |
-    | `cold.counter` | issue counter                     |
-    | `node.cert`    | operational certificate           |
-    | `kes.vkey`     | KES verification key              |
-    | `kes.skey`     | KES signing key                   |
-    | `vrf.vkey`     | VRF verification key              |
-    | `vrf.skey`     | VRF signing key                   |
+|      File      |             Content              |
+| -------------- | -------------------------------- |
+| `payment.vkey` | payment verification key         |
+| `payment.skey` | payment signing key              |
+| `stake.vkey`   | staking verification key         |
+| `stake.skey`   | staking signing key              |
+| `stake.addr`   | registered stake address         |
+| `payment.addr` | funded address linked to `stake` |
+| `cold.vkey`    | cold verification key            |
+| `cold.skey`    | cold signing key                 |
+| `cold.counter` | issue counter                    |
+| `node.cert`    | operational certificate          |
+| `kes.vkey`     | KES verification key             |
+| `kes.skey`     | KES signing key                  |
+| `vrf.vkey`     | VRF verification key             |
+| `vrf.skey`     | VRF signing key                  |
 
 
 Registering your stake pool requires:
@@ -79,20 +79,20 @@ Create a _stake pool registration certificate_:
     --metadata-hash 6bf124f217d0e5a0a8adb1dbd8540e1334280d49ab861127868339f43b3948af \
     --out-file pool.cert
 
-| Parameter                            | Explanation                                       |
-|--------------------------------------|---------------------------------------------------|
-| stake-pool-verification-key-file     | verification _cold_ key                           |
-| vrf-verification-key-file            | verification _VRS_ key                            |
-| pool-pledge                          | pledge (lovelace)                                 |
-| pool-cost                            | operational costs per epoch (lovelace)            |
-| pool-margin                          | operator margin                                   |
+|                 Parameter                 |                    Explanation                    |
+| ----------------------------------------- | ------------------------------------------------- |
+| stake-pool-verification-key-file          | verification _cold_ key                           |
+| vrf-verification-key-file                 | verification _VRS_ key                            |
+| pool-pledge                               | pledge (lovelace)                                 |
+| pool-cost                                 | operational costs per epoch (lovelace)            |
+| pool-margin                               | operator margin                                   |
 | pool-reward-account-verification-key-file | verification staking key for the rewards          |
 | pool-owner-staking-verification-key-file  | verification staking key(s) for the pool owner(s) |
-| out-file                             | output file to write the certificate to           |
-| pool-relay-port                      | port                                              |
-| pool-relay-ipv4                      | relay node ip address                             |
-| metadata-url                         | url of your json file                             |
-| metadata-hash                        | the hash of pools json metadata file              |
+| out-file                                  | output file to write the certificate to           |
+| pool-relay-port                           | port                                              |
+| pool-relay-ipv4                           | relay node ip address                             |
+| metadata-url                              | url of your json file                             |
+| metadata-hash                             | the hash of pools json metadata file              |
 
 
 So in the example above, we use the cold- and VRF-keys that we created [here](060_node_keys.md),

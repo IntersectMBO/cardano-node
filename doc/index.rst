@@ -16,11 +16,37 @@ cardano-node
    :titlesonly:
    :hidden:
 
+   getting-started/install
    getting-started/building-the-node-using-nix
-   getting-started/building-the-node-from-source
-   getting-started/configuring-a-node-using-yaml
-   tutorials/index
+   getting-started/understanding-config-files
+   getting-started/AWS
+   getting-started/cli
 
+.. toctree::
+   :maxdepth: 3
+   :caption: Stakepool Operations
+   :titlesonly:
+   :hidden:
+   stake-pool-operations/getConfigFiles_AND_Connect
+   stake-pool-operations/keys_and_addresses
+   stake-pool-operations/register_key
+   stake-pool-operations/node_keys
+   stake-pool-operations/KES_period
+   stake-pool-operations/core_relay
+   stake-pool-operations/register_stakepool
+   stake-pool-operations/start_your_nodes
+   stake-pool-operations/retire_stakepool
+
+.. toctree::
+   :maxdepth: 3
+   :caption: Logging & Monitoring
+   :titlesonly:
+   :hidden:
+
+   logging-monitoring/logging
+   logging-monitoring/prometheus
+   logging-monitoring/grafana
+   logging-monitoring/ekg
 
 .. toctree::
    :maxdepth: 3
@@ -32,6 +58,8 @@ cardano-node
    reference/building-and-signing-tx
    reference/diagnosing-transactions
    reference/shelley-genesis
+   reference/configuring-a-node-using-yaml
+   reference/transactions
 
 .. toctree::
    :maxdepth: 3
@@ -43,3 +71,6 @@ cardano-node
    cardano-adrestia <https://cardano.readthedocs.io/projects/adrestia/en/latest/>
    cardano-wallet <https://cardano.readthedocs.io/projects/cardano-wallet/en/latest/>
    plutus <https://cardano.readthedocs.io/projects/plutus/en/latest/>
+
+
+
