@@ -272,13 +272,13 @@ runTxCalculateMinFee
   -> ProtocolParamsFile
   -> TxInCount
   -> TxOutCount
-  -> TxShelleyWinessCount
-  -> TxByronWinessCount
+  -> TxShelleyWitnessCount
+  -> TxByronWitnessCount
   -> ExceptT ShelleyTxCmdError IO ()
 runTxCalculateMinFee (TxBodyFile txbodyFile) nw pParamsFile
                      (TxInCount nInputs) (TxOutCount nOutputs)
-                     (TxShelleyWinessCount nShelleyKeyWitnesses)
-                     (TxByronWinessCount nByronKeyWitnesses) = do
+                     (TxShelleyWitnessCount nShelleyKeyWitnesses)
+                     (TxByronWitnessCount nByronKeyWitnesses) = do
 
     txbody <- firstExceptT ShelleyTxReadUnsignedTxError . newExceptT $
                 Api.readFileTextEnvelope Api.AsShelleyTxBody txbodyFile

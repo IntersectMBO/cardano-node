@@ -20,8 +20,8 @@ module Cardano.CLI.Shelley.Commands
   , GenesisDir (..)
   , TxInCount (..)
   , TxOutCount (..)
-  , TxShelleyWinessCount (..)
-  , TxByronWinessCount (..)
+  , TxShelleyWitnessCount (..)
+  , TxByronWitnessCount (..)
   , ITNKeyFile (..)
   , OpCertCounterFile (..)
   , OutputFile (..)
@@ -121,8 +121,8 @@ data TransactionCmd
       ProtocolParamsFile
       TxInCount
       TxOutCount
-      TxShelleyWinessCount
-      TxByronWinessCount
+      TxShelleyWitnessCount
+      TxByronWitnessCount
   | TxGetTxId TxBodyFile
   deriving (Eq, Show)
 
@@ -237,12 +237,12 @@ newtype TxOutCount
   = TxOutCount Int
   deriving (Eq, Show)
 
-newtype TxShelleyWinessCount
-  = TxShelleyWinessCount Int
+newtype TxShelleyWitnessCount
+  = TxShelleyWitnessCount Int
   deriving (Eq, Show)
 
-newtype TxByronWinessCount
-  = TxByronWinessCount Int
+newtype TxByronWitnessCount
+  = TxByronWitnessCount Int
   deriving (Eq, Show)
 
 newtype BlockId

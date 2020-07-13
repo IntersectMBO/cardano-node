@@ -336,8 +336,8 @@ pTransaction =
         <*> pProtocolParamsFile
         <*> pTxInCount
         <*> pTxOutCount
-        <*> pTxShelleyWinessCount
-        <*> pTxByronWinessCount
+        <*> pTxShelleyWitnessCount
+        <*> pTxByronWitnessCount
 
     pTransactionId  :: Parser TransactionCmd
     pTransactionId = TxGetTxId <$> pTxBodyFile Input
@@ -1242,18 +1242,18 @@ pTxOutCount =
       <> Opt.help "The number of transaction outputs."
       )
 
-pTxShelleyWinessCount :: Parser TxShelleyWinessCount
-pTxShelleyWinessCount =
-  TxShelleyWinessCount <$>
+pTxShelleyWitnessCount :: Parser TxShelleyWitnessCount
+pTxShelleyWitnessCount =
+  TxShelleyWitnessCount <$>
     Opt.option Opt.auto
       (  Opt.long "witness-count"
       <> Opt.metavar "NATURAL"
       <> Opt.help "The number of Shelley key witnesses."
       )
 
-pTxByronWinessCount :: Parser TxByronWinessCount
-pTxByronWinessCount =
-  TxByronWinessCount <$>
+pTxByronWitnessCount :: Parser TxByronWitnessCount
+pTxByronWitnessCount =
+  TxByronWitnessCount <$>
     Opt.option Opt.auto
       (  Opt.long "byron-witness-count"
       <> Opt.metavar "NATURAL"
