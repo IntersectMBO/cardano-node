@@ -83,8 +83,8 @@ library
                      , formatting
                      , io-sim-classes
                      , iproute
-                     , lens
                      , memory
+                     , microlens
                      , network
                      , network-mux
                      , network-uri
