@@ -310,7 +310,9 @@ pTransaction =
                               <*> pTxFile Output
 
     pTransactionWitness :: Parser TransactionCmd
-    pTransactionWitness = pure TxWitness
+    pTransactionWitness = TxWitness <$> pTxBodyFile Input
+                                    <*> pWitnessSigningKeyFile
+                                    <*> pOutputFile
 
     pTransactionSignWit :: Parser TransactionCmd
     pTransactionSignWit = pure TxSignWitness
@@ -889,6 +891,17 @@ pByronKeyFile fdir =
       <> Opt.help (show fdir ++ " filepath of the Byron format signing key.")
       <> Opt.completer (Opt.bashCompleter "file")
       )
+
+pWitnessSigningKeyFile :: Parser SigningKeyFile
+pWitnessSigningKeyFile =
+  SigningKeyFile <$>
+    ( Opt.strOption
+        (  Opt.long "witness-signing-key-file"
+        <> Opt.metavar "FILE"
+        <> Opt.help "Filepath of the witness signing key."
+        <> Opt.completer (Opt.bashCompleter "file")
+        )
+    )
 
 pBlockId :: Parser BlockId
 pBlockId =

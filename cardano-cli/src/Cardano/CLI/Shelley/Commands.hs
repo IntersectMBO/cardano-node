@@ -110,7 +110,7 @@ data TransactionCmd
       (Maybe UpdateProposalFile)
       TxBodyFile
   | TxSign TxBodyFile [SigningKeyFile] (Maybe NetworkId) TxFile
-  | TxWitness       -- { transaction :: Transaction, key :: PrivKeyFile, nodeAddr :: NodeAddress }
+  | TxWitness TxBodyFile SigningKeyFile OutputFile
   | TxSignWitness   -- { transaction :: Transaction, witnesses :: [Witness], nodeAddr :: NodeAddress }
   | TxCheck         -- { transaction :: Transaction, nodeAddr :: NodeAddress }
   | TxSubmit Protocol NetworkId FilePath
