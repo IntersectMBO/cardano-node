@@ -1,5 +1,4 @@
 """Wrapper for node-cli."""
-
 import functools
 import json
 import subprocess
@@ -12,7 +11,7 @@ class CLIError(Exception):
 
 
 class ClusterLib:
-    """Cluster Lib"""
+    """Cluster Lib."""
 
     def __init__(self, network_magic, state_dir):
         self.network_magic = network_magic
@@ -105,7 +104,8 @@ class ClusterLib:
                 str(txbody_file),
             ]
         )
-        return int(stdout.decode().split(" ")[1])
+        fee, __ = stdout.decode().split(" ")
+        return int(fee)
 
     def get_tx_fee(
         self, txins=None, txouts=None, certificates=None, signing_keys=None, proposal_file=None,
@@ -251,15 +251,13 @@ class ClusterLib:
             ]
         )
 
-    def get_payment_address(self, payment=None, stake=None):
-        cli_args = []
-        if not payment:
-            raise CLIError("Must set payment.")
+    def get_payment_address(self, payment_vkey, stake_vkey=None):
+        if not payment_vkey:
+            raise CLIError("Must set payment key.")
 
-        if payment:
-            cli_args.extend("--payment-verification-key-file", payment)
-        if stake:
-            cli_args.extend("--stake-verification-key-file", stake)
+        cli_args = ["--payment-verification-key-file", str(payment_vkey)]
+        if stake_vkey:
+            cli_args.extend("--stake-verification-key-file", str(stake_vkey))
 
         return (
             self.cli(
@@ -302,7 +300,7 @@ class ClusterLib:
         return utxo
 
     def get_tip(self):
-        return self.query_cli(["tip"])
+        return json.loads(self.query_cli(["tip"]))
 
     def send_tx_genesis(
         self, txouts=None, certificates=None, signing_keys=None, proposal_file=None,
@@ -348,7 +346,11 @@ class ClusterLib:
                 f"txins: {txins} txouts: {txouts} signing keys: {signing_keys}\n{err}"
             )
 
-    def submit_update_proposal(self, cli_args, epoch=1):
+    def get_current_epoch_no(self):
+        tip = self.get_tip()
+        return int(tip["slotNo"] / self.epoch_length)
+
+    def submit_update_proposal(self, cli_args, epoch=None):
         self.cli(
             [
                 "cardano-cli",
@@ -359,7 +361,7 @@ class ClusterLib:
                 "--out-file",
                 "update.proposal",
                 "--epoch",
-                str(epoch),
+                str(epoch or self.get_current_epoch_no()),
                 "--genesis-verification-key-file",
                 str(self.genesis_vkey),
             ]
