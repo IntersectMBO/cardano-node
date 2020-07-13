@@ -312,6 +312,7 @@ pTransaction =
     pTransactionWitness :: Parser TransactionCmd
     pTransactionWitness = TxWitness <$> pTxBodyFile Input
                                     <*> pWitnessSigningKeyFile
+                                    <*> optional pNetworkId
                                     <*> pOutputFile
 
     pTransactionSignWit :: Parser TransactionCmd
