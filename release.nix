@@ -78,7 +78,7 @@ let
   };
   extraBuilds = {
     # only build nixos tests on first supported system (linux)
-    inherit (pkgsFor (builtins.head  supportedSystems)) nixosTests clusterTests;
+    inherit (pkgsFor (builtins.head  supportedSystems)) nixosTests;
     # Environments listed in Network Configuration page
     cardano-deployment = pkgs.iohkNix.cardanoLib.mkConfigHtml { inherit (pkgs.iohkNix.cardanoLib.environments) mainnet testnet ff shelley_testnet mainnet_candidate; };
   } // (builtins.listToAttrs (map makeRelease [
