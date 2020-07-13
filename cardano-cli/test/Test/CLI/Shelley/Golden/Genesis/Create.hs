@@ -84,7 +84,6 @@ golden_shelleyGenesisCreate = OP.propertyOnce $ do
   liftIO $ IO.createDirectoryIfMissing True "tmp"
   tempDir <- liftIO $ IO.createTempDirectory "tmp" "test"
   let genesisFile = tempDir <> "/genesis.json"
-  let cleanupPaths = [tempDir]
   
   fmtStartTime <- fmap formatIso8601 $ liftIO DT.getCurrentTime
 
@@ -93,8 +92,7 @@ golden_shelleyGenesisCreate = OP.propertyOnce $ do
   (utxoCount, fmtUtxoCount) <- fmap (withSnd show) $ forAll $ G.int (R.linear 4 19)
 
   -- Create the genesis json file and required keys
-  OP.execCardanoCLIParser cleanupPaths $
-    OP.evalCardanoCLIParser
+  void $ liftIO $ OP.execCardanoCLI
       [ "shelley","genesis","create"
       , "--testnet-magic", "12"
       , "--start-time", fmtStartTime

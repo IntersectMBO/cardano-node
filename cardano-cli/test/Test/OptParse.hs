@@ -4,6 +4,7 @@ module Test.OptParse
   , equivalence
   , evalCardanoCLIParser
   , execCardanoCLIParser
+  , execCardanoCLI
   , fileCleanup
   , propertyOnce
   ) where
@@ -27,6 +28,8 @@ import           Cardano.CLI.Parsers (opts, pref)
 import           Cardano.CLI.Run (ClientCommand(..),
                    renderClientCommandError, runClientCommand)
 
+import qualified System.Process as IO
+
 import qualified Hedgehog as H
 import qualified Hedgehog.Internal.Property as H
 import           Hedgehog.Internal.Property (Diff, MonadTest, liftTest, mkTest)
@@ -38,6 +41,16 @@ import           Hedgehog.Internal.Source (getCaller)
 -- without running underlying IO.
 evalCardanoCLIParser :: [String] -> Opt.ParserResult ClientCommand
 evalCardanoCLIParser args = Opt.execParserPure pref opts args
+
+-- | Execute cardano-cli via the command line.
+--
+-- Waits for the process to finish and returns the stdout.
+execCardanoCLI
+  :: [String]
+  -- ^ Arguments to the CLI command
+  -> IO String
+  -- ^ Captured stdout
+execCardanoCLI arguments = IO.readProcess "cabal" ("exec":"--":"cardano-cli":arguments) ""
 
 -- | This takes a 'ParserResult', which is pure, and executes it.
 execCardanoCLIParser

@@ -184,6 +184,7 @@ test-suite cardano-cli-pioneers
                       , directory
                       , hedgehog
                       , optparse-applicative
+                      , process
                       , temporary
                       , text
                       , time
