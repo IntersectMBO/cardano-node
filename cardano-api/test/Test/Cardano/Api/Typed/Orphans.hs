@@ -13,7 +13,7 @@ import           Cardano.Api.Typed
 import           Cardano.Crypto.Hash hiding (Hash)
 import           Cardano.Crypto.KES
 
-import           Test.Cardano.Api.Orphans ()
+import           Test.Cardano.Crypto.Orphans ()
 
 -- Signing Key instances
 

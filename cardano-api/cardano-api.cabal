@@ -14,8 +14,7 @@ extra-source-files:     README.md, ChangeLog.md
 library
   hs-source-dirs:       src
 
-  exposed-modules:      Cardano.Api
-                        Cardano.Api.Protocol
+  exposed-modules:      Cardano.Api.Protocol
                         Cardano.Api.Protocol.Types
                         Cardano.Api.Protocol.Byron
                         Cardano.Api.Protocol.Cardano
@@ -26,10 +25,8 @@ library
                         Cardano.Api.LocalChainSync
                         Cardano.Api.TxSubmit
 
-  other-modules:        Cardano.Api.Error
-                        Cardano.Api.TxSubmit.ErrorRender
+  other-modules:        Cardano.Api.TxSubmit.ErrorRender
                         Cardano.Api.TxSubmit.Types
-                        Cardano.Api.Types
 
 
   build-depends:        base >=4.12 && <5
@@ -123,7 +120,6 @@ test-suite cardano-api-test
   other-modules:        Test.Cardano.Api.Examples
                         Test.Cardano.Api.Gen
                         Test.Cardano.Api.Ledger
-                        Test.Cardano.Api.Orphans
                         Test.Cardano.Api.Typed.Bech32
                         Test.Cardano.Api.Typed.CBOR
                         Test.Cardano.Api.Typed.Envelope
