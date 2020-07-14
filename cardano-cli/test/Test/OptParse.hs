@@ -11,6 +11,9 @@ module Test.OptParse
   , propertyOnce
   , workspace
   , withSnd
+  , newFileWithContents
+  , noteEval
+  , noteEvalM
   ) where
 
 import           Cardano.Prelude
@@ -143,6 +146,21 @@ checkTextEnvelopeFormat fps tve reference created = do
 --------------------------------------------------------------------------------
 -- Helpers, Error rendering & Clean up
 --------------------------------------------------------------------------------
+
+-- | Evaluate the value 'f' and annotate the value returned.
+noteEval :: (Show a, Monad m, HasCallStack) => a -> H.PropertyT m a
+noteEval a = withFrozenCallStack (H.annotateShow a >> pure a)
+
+-- | Run the computation 'f' and annotate the value returned.
+noteEvalM :: (Show a, Monad m, HasCallStack) => H.PropertyT m a -> H.PropertyT m a
+noteEvalM f = withFrozenCallStack $ do
+  a <- f
+  H.annotateShow a
+  return a
+
+-- | Create a new file with the given text contents at the specified path
+newFileWithContents :: MonadIO m => FilePath -> String -> m FilePath
+newFileWithContents filePath contents = liftIO $ IO.writeFile filePath contents >> return filePath
 
 -- | Create a workspace directory which will exist for at least the duration of
 -- the supplied block.

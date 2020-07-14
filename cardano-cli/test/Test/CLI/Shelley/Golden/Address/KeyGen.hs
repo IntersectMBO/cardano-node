@@ -9,6 +9,7 @@ import Cardano.Prelude hiding (to)
 import Hedgehog (Property)
 
 import qualified Test.OptParse as OP
+import qualified System.IO as IO
 
 {- HLINT ignore "Use camelCase" -}
 
@@ -23,6 +24,9 @@ golden_shelleyAddressKeyGen = OP.propertyOnce $ OP.workspace "tmp/address-key-ge
     , "--verification-key-file", addressVKeyFile
     , "--signing-key-file", addressSKeyFile
     ]
+
+  void $ OP.noteEvalM $ liftIO $ IO.readFile addressVKeyFile
+  void $ OP.noteEvalM $ liftIO $ IO.readFile addressSKeyFile
 
   OP.assertFilesExist outputFiles
 
