@@ -56,10 +56,10 @@ cardano-node
 
    reference/cardano-node-cli-reference
    reference/building-and-signing-tx
+   reference/transactions
    reference/diagnosing-transactions
    reference/shelley-genesis
    reference/configuring-a-node-using-yaml
-   reference/transactions
 
 .. toctree::
    :maxdepth: 3
@@ -71,6 +71,3 @@ cardano-node
    cardano-adrestia <https://cardano.readthedocs.io/projects/adrestia/en/latest/>
    cardano-wallet <https://cardano.readthedocs.io/projects/cardano-wallet/en/latest/>
    plutus <https://cardano.readthedocs.io/projects/plutus/en/latest/>
-
-
-
