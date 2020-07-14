@@ -245,7 +245,7 @@ pStakeAddress =
     pStakeAddressDelegationCert :: Parser StakeAddressCmd
     pStakeAddressDelegationCert = StakeKeyDelegationCert
                                     <$> pStakeVerificationKeyFile
-                                    <*> pPoolStakingVerificationKeyFile
+                                    <*> pPoolStakeVerificationKeyFile
                                     <*> pOutputFile
 
     pConvertITNKey :: Parser StakeAddressCmd
@@ -1310,8 +1310,8 @@ pStakeVerificationKeyFile =
     )
 
 
-pPoolStakingVerificationKeyFile :: Parser VerificationKeyFile
-pPoolStakingVerificationKeyFile =
+pPoolStakeVerificationKeyFile :: Parser VerificationKeyFile
+pPoolStakeVerificationKeyFile =
   VerificationKeyFile <$>
     (  Opt.strOption
          (  Opt.long "cold-verification-key-file"
@@ -1505,7 +1505,7 @@ pStakePoolMetadataHash =
 pStakePoolRegistrationCert :: Parser PoolCmd
 pStakePoolRegistrationCert =
  PoolRegistrationCert
-  <$> pPoolStakingVerificationKeyFile
+  <$> pPoolStakeVerificationKeyFile
   <*> pVRFVerificationKeyFile
   <*> pPoolPledge
   <*> pPoolCost
@@ -1520,7 +1520,7 @@ pStakePoolRegistrationCert =
 pStakePoolRetirementCert :: Parser PoolCmd
 pStakePoolRetirementCert =
   PoolRetirementCert
-    <$> pPoolStakingVerificationKeyFile
+    <$> pPoolStakeVerificationKeyFile
     <*> pEpochNo
     <*> pOutputFile
 
