@@ -39,6 +39,7 @@ module Cardano.CLI.Shelley.Commands
   , PrivKeyFile (..)
   , BlockId (..)
   , QueryFilter (..)
+  , StakePoolVerificationKeyHashOrFile (..)
   ) where
 
 import           Prelude
@@ -46,7 +47,7 @@ import           Data.Set (Set)
 import           Data.Text (Text)
 
 import           Cardano.Api.Protocol (Protocol)
-import           Cardano.Api.Typed hiding (PoolId, Hash)
+import           Cardano.Api.Typed hiding (PoolId)
 
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
 
@@ -93,7 +94,7 @@ data StakeAddressCmd
   | StakeKeyDelegate PrivKeyFile PoolId Lovelace NodeAddress
   | StakeKeyDeRegister PrivKeyFile NodeAddress
   | StakeKeyRegistrationCert VerificationKeyFile OutputFile
-  | StakeKeyDelegationCert VerificationKeyFile VerificationKeyFile OutputFile
+  | StakeKeyDelegationCert VerificationKeyFile StakePoolVerificationKeyHashOrFile OutputFile
   | StakeKeyDeRegistrationCert VerificationKeyFile OutputFile
   | StakeKeyITNConversion ITNKeyFile (Maybe OutputFile)
   deriving (Eq, Show)
@@ -317,4 +318,10 @@ newtype VerificationKeyFile
 data QueryFilter
   = FilterByAddress !(Set (Address Shelley))
   | NoFilter
+  deriving (Eq, Show)
+
+-- | Either a stake pool verification key hash or verification key file.
+data StakePoolVerificationKeyHashOrFile
+  = StakePoolVerificationKeyHash !(Hash StakePoolKey)
+  | StakePoolVerificationKeyFile !VerificationKeyFile
   deriving (Eq, Show)

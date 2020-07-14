@@ -245,7 +245,7 @@ pStakeAddress =
     pStakeAddressDelegationCert :: Parser StakeAddressCmd
     pStakeAddressDelegationCert = StakeKeyDelegationCert
                                     <$> pStakeVerificationKeyFile
-                                    <*> pPoolStakeVerificationKeyFile
+                                    <*> pStakePoolVerificationKeyHashOrFile
                                     <*> pOutputFile
 
     pConvertITNKey :: Parser StakeAddressCmd
@@ -1325,6 +1325,23 @@ pPoolStakeVerificationKeyFile =
          <> Opt.internal
          )
     )
+
+pStakePoolVerificationKeyHash :: Parser (Hash StakePoolKey)
+pStakePoolVerificationKeyHash =
+    Opt.option
+      (Opt.maybeReader spvkHash)
+        (  Opt.long "cold-verification-key-hash"
+        <> Opt.metavar "HASH"
+        <> Opt.help "Stake pool verification key hash (hex-encoded)."
+        )
+  where
+    spvkHash :: String -> Maybe (Hash StakePoolKey)
+    spvkHash = deserialiseFromRawBytesHex (AsHash AsStakePoolKey) . BSC.pack
+
+pStakePoolVerificationKeyHashOrFile :: Parser StakePoolVerificationKeyHashOrFile
+pStakePoolVerificationKeyHashOrFile =
+  StakePoolVerificationKeyFile <$> pPoolStakeVerificationKeyFile
+    <|> StakePoolVerificationKeyHash <$> pStakePoolVerificationKeyHash
 
 pVRFVerificationKeyFile :: Parser VerificationKeyFile
 pVRFVerificationKeyFile =
