@@ -78,63 +78,165 @@ parseTotalSupply = J.withObject "Object" $ \ o -> do
   fmap sum (sequence (fmap (J.parseJSON @Int . snd) (HM.toList initialFunds)))
 
 golden_shelleyGenesisCreate :: Property
-golden_shelleyGenesisCreate = OP.propertyOnce $ OP.workspace "tmp/genesis-create" $ \tempDir -> do
-  let genesisFile = tempDir <> "/genesis.json"
-  
-  fmtStartTime <- fmap formatIso8601 $ liftIO DT.getCurrentTime
+golden_shelleyGenesisCreate = OP.propertyOnce $ do
+  OP.workspace "tmp/genesis-create" $ \tempDir -> do
+    void $ OP.noteEvalM $ OP.newFileWithContents (tempDir <> "/genesis.spec.json") "\
+      \{\
+      \    \"activeSlotsCoeff\": 0.99,\
+      \    \"protocolMagicId\": 838299499,\
+      \    \"systemStart\": \"2020-01-01T00:20:40Z\",\
+      \    \"genDelegs\": {},\
+      \    \"updateQuorum\": 12,\
+      \    \"maxMajorPV\": 25446,\
+      \    \"maxLovelaceSupply\": 100000000,\
+      \    \"initialFunds\": {},\
+      \    \"networkMagic\": 403,\
+      \    \"networkId\": \"Testnet\",\
+      \    \"epochLength\": 21600,\
+      \    \"securityParam\": 2160,\
+      \    \"slotLength\": 20,\
+      \    \"slotsPerKESPeriod\": 216000,\
+      \    \"maxKESEvolutions\": 1080000,\
+      \    \"protocolParams\": {\
+      \        \"a0\": 0,\
+      \        \"decentralisationParam\": 0.99,\
+      \        \"eMax\": 0,\
+      \        \"extraEntropy\": {\
+      \            \"tag\": \"NeutralNonce\"\
+      \        },\
+      \        \"keyDeposit\": 0,\
+      \        \"maxBlockBodySize\": 2097152,\
+      \        \"maxBlockHeaderSize\": 8192,\
+      \        \"maxTxSize\": 2048,\
+      \        \"minFeeA\": 0,\
+      \        \"minFeeB\": 0,\
+      \        \"minUTxOValue\": 1,\
+      \        \"minPoolCost\": 100,\
+      \        \"nOpt\": 100,\
+      \        \"poolDeposit\": 0,\
+      \        \"protocolVersion\": {\
+      \            \"major\": 0,\
+      \            \"minor\": 0\
+      \        },\
+      \        \"rho\": 0,\
+      \        \"tau\": 0\
+      \    }\
+      \}"
+    let genesisFile = tempDir <> "/genesis.json"
+    
+    fmtStartTime <- fmap formatIso8601 $ liftIO DT.getCurrentTime
 
-  (supply, fmtSupply) <- fmap (withSnd show) $ forAll $ G.int (R.linear 10000000 4000000000)
-  (delegateCount, fmtDelegateCount) <- fmap (withSnd show) $ forAll $ G.int (R.linear 4 19)
-  (utxoCount, fmtUtxoCount) <- fmap (withSnd show) $ forAll $ G.int (R.linear 4 19)
+    (supply, fmtSupply) <- fmap (withSnd show) $ forAll $ G.int (R.linear 10000000 4000000000)
+    (delegateCount, fmtDelegateCount) <- fmap (withSnd show) $ forAll $ G.int (R.linear 4 19)
+    (utxoCount, fmtUtxoCount) <- fmap (withSnd show) $ forAll $ G.int (R.linear 4 19)
 
-  -- Create the genesis json file and required keys
-  void $ liftIO $ OP.execCardanoCLI
-      [ "shelley","genesis","create"
-      , "--testnet-magic", "12"
-      , "--start-time", fmtStartTime
-      , "--supply", fmtSupply
-      , "--gen-genesis-keys", fmtDelegateCount
-      , "--gen-utxo-keys", fmtUtxoCount
-      , "--genesis-dir", tempDir
-      ]
+    -- Create the genesis json file and required keys
+    void $ liftIO $ OP.execCardanoCLI
+        [ "shelley","genesis","create"
+        , "--testnet-magic", "12"
+        , "--start-time", fmtStartTime
+        , "--supply", fmtSupply
+        , "--gen-genesis-keys", fmtDelegateCount
+        , "--gen-utxo-keys", fmtUtxoCount
+        , "--genesis-dir", tempDir
+        ]
 
-  OP.assertFilesExist [genesisFile]
+    OP.assertFilesExist [genesisFile]
 
-  genesisContents <- liftIO $ LBS.readFile genesisFile
+    genesisContents <- liftIO $ LBS.readFile genesisFile
 
-  actualJson <- H.evalEither $ J.eitherDecode genesisContents
-  actualSupply <- H.evalEither $ J.parseEither parseMaxLovelaceSupply actualJson
-  actualStartTime <- H.evalEither $ J.parseEither parseSystemStart actualJson
-  actualDelegateCount <- H.evalEither $ J.parseEither parseDelegateCount actualJson
-  actualTotalSupply <- H.evalEither $ J.parseEither parseTotalSupply actualJson
-  actualHashKeys <- H.evalEither $ J.parseEither parseHashKeys actualJson
-  actualDelegateKeys <- H.evalEither $ J.parseEither parseDelegateKeys actualJson
+    actualJson <- H.evalEither $ J.eitherDecode genesisContents
+    actualSupply <- H.evalEither $ J.parseEither parseMaxLovelaceSupply actualJson
+    actualStartTime <- H.evalEither $ J.parseEither parseSystemStart actualJson
+    actualDelegateCount <- H.evalEither $ J.parseEither parseDelegateCount actualJson
+    actualTotalSupply <- H.evalEither $ J.parseEither parseTotalSupply actualJson
+    actualHashKeys <- H.evalEither $ J.parseEither parseHashKeys actualJson
+    actualDelegateKeys <- H.evalEither $ J.parseEither parseDelegateKeys actualJson
 
-  actualSupply === supply
-  actualStartTime === fmtStartTime
-  actualDelegateCount === delegateCount
-  actualDelegateCount === utxoCount
-  actualTotalSupply === supply -- Check that the sum of the initial fund amounts matches the total supply
+    actualSupply === supply
+    actualStartTime === fmtStartTime
+    actualDelegateCount === delegateCount
+    actualDelegateCount === utxoCount
+    actualTotalSupply === supply -- Check that the sum of the initial fund amounts matches the total supply
 
-  -- Check uniqueness and count of hash keys
+    -- Check uniqueness and count of hash keys
+    S.size (S.fromList actualHashKeys) === length actualHashKeys -- This isn't strictly necessary because we use aeson which guarantees uniqueness of keys
+    S.size (S.fromList actualHashKeys) === delegateCount
 
-  S.size (S.fromList actualHashKeys) === length actualHashKeys -- This isn't strictly necessary because we use aeson which guarantees uniqueness of keys
-  S.size (S.fromList actualHashKeys) === delegateCount
+    -- Check uniqueness and count of hash keys
+    S.size (S.fromList actualDelegateKeys) === length actualDelegateKeys
+    S.size (S.fromList actualDelegateKeys) === delegateCount
 
-  -- Check uniqueness and count of hash keys
-  S.size (S.fromList actualDelegateKeys) === length actualDelegateKeys
-  S.size (S.fromList actualDelegateKeys) === delegateCount
+    for_ [1 .. delegateCount] $ \i -> do
+      -- Check Genesis keys
+      assertFileOccurences 1 "Genesis signing key" $ tempDir <> "/genesis-keys/genesis" <> show i <> ".skey"
+      assertFileOccurences 1 "Genesis verification key" $ tempDir <> "/genesis-keys/genesis" <> show i <> ".vkey"
 
-  for_ [1 .. delegateCount] $ \i -> do
-    -- Check Genesis keys
-    assertFileOccurences 1 "Genesis signing key" $ tempDir <> "/genesis-keys/genesis" <> show i <> ".skey"
-    assertFileOccurences 1 "Genesis verification key" $ tempDir <> "/genesis-keys/genesis" <> show i <> ".vkey"
+      -- Check delegate keys
+      assertFileOccurences 1 "Node operator signing key" $ tempDir <> "/delegate-keys/delegate" <> show i <> ".skey"
+      assertFileOccurences 1 "Node operator verification key" $ tempDir <> "/delegate-keys/delegate" <> show i <> ".vkey"
+      assertFileOccurences 1 "Node operational certificate issue counter" $ tempDir <> "/delegate-keys/delegate" <> show i <> ".counter"
 
-    -- Check delegate keys
-    assertFileOccurences 1 "Node operator signing key" $ tempDir <> "/delegate-keys/delegate" <> show i <> ".skey"
-    assertFileOccurences 1 "Node operator verification key" $ tempDir <> "/delegate-keys/delegate" <> show i <> ".vkey"
-    assertFileOccurences 1 "Node operational certificate issue counter" $ tempDir <> "/delegate-keys/delegate" <> show i <> ".counter"
+      -- Check utxo keys
+      assertFileOccurences 1 "Genesis UTxO signing key" $ tempDir <> "/utxo-keys/utxo" <> show i <> ".skey"
+      assertFileOccurences 1 "Genesis UTxO verification key"  $ tempDir <> "/utxo-keys/utxo" <> show i <> ".vkey"
 
-    -- Check utxo keys
-    assertFileOccurences 1 "Genesis UTxO signing key" $ tempDir <> "/utxo-keys/utxo" <> show i <> ".skey"
-    assertFileOccurences 1 "Genesis UTxO verification key"  $ tempDir <> "/utxo-keys/utxo" <> show i <> ".vkey"
+  OP.workspace "tmp/genesis-create" $ \tempDir -> do
+    let genesisFile = tempDir <> "/genesis.json"
+    
+    fmtStartTime <- fmap formatIso8601 $ liftIO DT.getCurrentTime
+
+    (supply, fmtSupply) <- fmap (withSnd show) $ forAll $ G.int (R.linear 10000000 4000000000)
+    (delegateCount, fmtDelegateCount) <- fmap (withSnd show) $ forAll $ G.int (R.linear 4 19)
+    (utxoCount, fmtUtxoCount) <- fmap (withSnd show) $ forAll $ G.int (R.linear 4 19)
+
+    -- Create the genesis json file and required keys
+    void $ liftIO $ OP.execCardanoCLI
+        [ "shelley","genesis","create"
+        , "--testnet-magic", "12"
+        , "--start-time", fmtStartTime
+        , "--supply", fmtSupply
+        , "--gen-genesis-keys", fmtDelegateCount
+        , "--gen-utxo-keys", fmtUtxoCount
+        , "--genesis-dir", tempDir
+        ]
+
+    OP.assertFilesExist [genesisFile]
+
+    genesisContents <- liftIO $ LBS.readFile genesisFile
+
+    actualJson <- H.evalEither $ J.eitherDecode genesisContents
+    actualSupply <- H.evalEither $ J.parseEither parseMaxLovelaceSupply actualJson
+    actualStartTime <- H.evalEither $ J.parseEither parseSystemStart actualJson
+    actualDelegateCount <- H.evalEither $ J.parseEither parseDelegateCount actualJson
+    actualTotalSupply <- H.evalEither $ J.parseEither parseTotalSupply actualJson
+    actualHashKeys <- H.evalEither $ J.parseEither parseHashKeys actualJson
+    actualDelegateKeys <- H.evalEither $ J.parseEither parseDelegateKeys actualJson
+
+    actualSupply === supply
+    actualStartTime === fmtStartTime
+    actualDelegateCount === delegateCount
+    actualDelegateCount === utxoCount
+    actualTotalSupply === supply -- Check that the sum of the initial fund amounts matches the total supply
+
+    -- Check uniqueness and count of hash keys
+    S.size (S.fromList actualHashKeys) === length actualHashKeys -- This isn't strictly necessary because we use aeson which guarantees uniqueness of keys
+    S.size (S.fromList actualHashKeys) === delegateCount
+
+    -- Check uniqueness and count of hash keys
+    S.size (S.fromList actualDelegateKeys) === length actualDelegateKeys
+    S.size (S.fromList actualDelegateKeys) === delegateCount
+
+    for_ [1 .. delegateCount] $ \i -> do
+      -- Check Genesis keys
+      assertFileOccurences 1 "Genesis signing key" $ tempDir <> "/genesis-keys/genesis" <> show i <> ".skey"
+      assertFileOccurences 1 "Genesis verification key" $ tempDir <> "/genesis-keys/genesis" <> show i <> ".vkey"
+
+      -- Check delegate keys
+      assertFileOccurences 1 "Node operator signing key" $ tempDir <> "/delegate-keys/delegate" <> show i <> ".skey"
+      assertFileOccurences 1 "Node operator verification key" $ tempDir <> "/delegate-keys/delegate" <> show i <> ".vkey"
+      assertFileOccurences 1 "Node operational certificate issue counter" $ tempDir <> "/delegate-keys/delegate" <> show i <> ".counter"
+
+      -- Check utxo keys
+      assertFileOccurences 1 "Genesis UTxO signing key" $ tempDir <> "/utxo-keys/utxo" <> show i <> ".skey"
+      assertFileOccurences 1 "Genesis UTxO verification key"  $ tempDir <> "/utxo-keys/utxo" <> show i <> ".vkey"
