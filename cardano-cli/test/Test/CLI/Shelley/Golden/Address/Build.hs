@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Test.CLI.Shelley.Golden.Address.Build
   ( golden_shelleyAddressBuild
@@ -6,35 +7,40 @@ module Test.CLI.Shelley.Golden.Address.Build
 
 import Cardano.Prelude hiding (to)
 
-import Hedgehog (Property, (===))
+import Hedgehog (Property)
 
-import qualified Data.List as L
+import qualified Control.DeepSeq as CSD
+import qualified Control.Exception as E
+import qualified System.IO as IO
 import qualified Test.OptParse as OP
 
 {- HLINT ignore "Use camelCase" -}
 
 golden_shelleyAddressBuild :: Property
-golden_shelleyAddressBuild = OP.propertyOnce $ OP.workspace "tmp/address-key-gen" $ \tempDir -> do
-  addressVKeyFile <- OP.noteEvalM $ OP.newFileWithContents (tempDir <> "/address.vkey") "{\
-    \    \"type\": \"PaymentVerificationKeyShelley\",\
-    \    \"description\": \"Payment Verification Key\",\
-    \    \"cborHex\": \"58208dc60533b5dfa60a530955a696323a2ef4f14e8bc95a8f84cf6c441fea423427\"\
-    \}"
-  addressSKeyFile <- OP.noteEvalM $ OP.newFileWithContents (tempDir <> "/address.skey") "\
-    \{\
-    \    \"type\": \"StakingVerificationKeyShelley\",\
-    \    \"description\": \"Stake Verification Key\",\
-    \    \"cborHex\": \"5820bd07998bca8de945482d950a3051f0e4d18afedecbc08d4c99c23f1804f3c8e5\"\
-    \}"
+golden_shelleyAddressBuild = OP.propertyOnce $ OP.workspace "tmp/address-build" $ \tempDir -> do
+  let addressVKeyFile = "test/Test/golden/shelley/keys/payment_keys/verification_key"
+  let addressSKeyFile = "test/Test/golden/shelley/keys/stake_keys/verification_key"
+  let goldenStakingAddressHexFile = "test/Test/golden/shelley/addresses/staking-address.hex"
+  let goldenEnterpriseAddressHexFile = "test/Test/golden/shelley/addresses/enterprise-address.hex"
+  let stakingAddressHexFile = tempDir <> "/staking-address.hex"
+  let enterpriseAddressHexFile = tempDir <> "/enterprise-address.hex"
 
-  stackingAddressText <- OP.noteEvalM . liftIO $ OP.execCardanoCLI
+  void $ OP.noteEvalM $ liftIO $ E.evaluate . CSD.force =<< IO.readFile addressVKeyFile
+
+  stakingAddressText <- OP.noteEvalM . liftIO $ OP.execCardanoCLI
     [ "shelley","address","build"
     , "--testnet-magic", "14"
     , "--payment-verification-key-file", addressVKeyFile
     , "--staking-verification-key-file", addressSKeyFile
     ]
 
-  length (L.lines stackingAddressText) === 1
+  goldenStakingAddressHex <- OP.noteEvalM . liftIO $ IO.readFile goldenStakingAddressHexFile
+  
+  liftIO $ IO.writeFile stakingAddressHexFile stakingAddressText
+
+  OP.equivalence [] stakingAddressText goldenStakingAddressHex
+
+  void $ OP.noteEvalM $ liftIO $ E.evaluate . CSD.force =<< IO.readFile addressSKeyFile
 
   enterpriseAddressText <- OP.noteEvalM . liftIO $ OP.execCardanoCLI
     [ "shelley","address","build"
@@ -43,4 +49,8 @@ golden_shelleyAddressBuild = OP.propertyOnce $ OP.workspace "tmp/address-key-gen
     , "--staking-verification-key-file", addressSKeyFile
     ]
 
-  length (L.lines enterpriseAddressText) === 1
+  goldenEnterpriseAddressHex <- OP.noteEvalM . liftIO $ IO.readFile goldenEnterpriseAddressHexFile
+
+  liftIO $ IO.writeFile enterpriseAddressHexFile enterpriseAddressText
+
+  OP.equivalence [] enterpriseAddressText goldenEnterpriseAddressHex

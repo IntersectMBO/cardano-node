@@ -16,6 +16,7 @@ import qualified Data.List as L
 import qualified Data.Set as S
 import qualified Data.Time.Clock as DT
 import qualified Data.Time.Format as DT
+import qualified System.Directory as IO
 import qualified System.IO as IO
 
 import Hedgehog (Property, forAll, (===))
@@ -80,48 +81,10 @@ parseTotalSupply = J.withObject "Object" $ \ o -> do
 golden_shelleyGenesisCreate :: Property
 golden_shelleyGenesisCreate = OP.propertyOnce $ do
   OP.workspace "tmp/genesis-create" $ \tempDir -> do
-    void $ OP.noteEvalM $ OP.newFileWithContents (tempDir <> "/genesis.spec.json") "\
-      \{\
-      \    \"activeSlotsCoeff\": 0.99,\
-      \    \"protocolMagicId\": 838299499,\
-      \    \"systemStart\": \"2020-01-01T00:20:40Z\",\
-      \    \"genDelegs\": {},\
-      \    \"updateQuorum\": 12,\
-      \    \"maxMajorPV\": 25446,\
-      \    \"maxLovelaceSupply\": 100000000,\
-      \    \"initialFunds\": {},\
-      \    \"networkMagic\": 403,\
-      \    \"networkId\": \"Testnet\",\
-      \    \"epochLength\": 21600,\
-      \    \"securityParam\": 2160,\
-      \    \"slotLength\": 20,\
-      \    \"slotsPerKESPeriod\": 216000,\
-      \    \"maxKESEvolutions\": 1080000,\
-      \    \"protocolParams\": {\
-      \        \"a0\": 0,\
-      \        \"decentralisationParam\": 0.99,\
-      \        \"eMax\": 0,\
-      \        \"extraEntropy\": {\
-      \            \"tag\": \"NeutralNonce\"\
-      \        },\
-      \        \"keyDeposit\": 0,\
-      \        \"maxBlockBodySize\": 2097152,\
-      \        \"maxBlockHeaderSize\": 8192,\
-      \        \"maxTxSize\": 2048,\
-      \        \"minFeeA\": 0,\
-      \        \"minFeeB\": 0,\
-      \        \"minUTxOValue\": 1,\
-      \        \"minPoolCost\": 100,\
-      \        \"nOpt\": 100,\
-      \        \"poolDeposit\": 0,\
-      \        \"protocolVersion\": {\
-      \            \"major\": 0,\
-      \            \"minor\": 0\
-      \        },\
-      \        \"rho\": 0,\
-      \        \"tau\": 0\
-      \    }\
-      \}"
+    let sourceGenesisSpecFile = "test/Test/golden/shelley/genesis/genesis.spec.json"
+
+    liftIO $ IO.copyFile sourceGenesisSpecFile (tempDir <> "/genesis.spec.json")
+
     let genesisFile = tempDir <> "/genesis.json"
     
     fmtStartTime <- fmap formatIso8601 $ liftIO DT.getCurrentTime
