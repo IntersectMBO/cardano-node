@@ -151,6 +151,7 @@ parseTopologyFile =
             long "topology"
          <> metavar "FILEPATH"
          <> help "The path to a file describing the topology."
+         <> completer (bashCompleter "file")
     )
 
 parseDelegationCert :: Parser FilePath
@@ -159,6 +160,7 @@ parseDelegationCert =
     ( long "delegation-certificate"
         <> metavar "FILEPATH"
         <> help "Path to the delegation certificate."
+        <> completer (bashCompleter "file")
     )
 
 parseSigningKey :: Parser FilePath
@@ -167,6 +169,7 @@ parseSigningKey =
     ( long "signing-key"
         <> metavar "FILEPATH"
         <> help "Path to the signing key."
+        <> completer (bashCompleter "file")
     )
 
 parseOperationalCertFilePath :: Parser FilePath
@@ -175,6 +178,7 @@ parseOperationalCertFilePath =
     ( long "shelley-operational-certificate"
         <> metavar "FILEPATH"
         <> help "Path to the delegation certificate."
+        <> completer (bashCompleter "file")
     )
 
 --TODO: pass the current KES evolution, not the KES_0
@@ -184,6 +188,7 @@ parseKesKeyFilePath =
     ( long "shelley-kes-key"
         <> metavar "FILEPATH"
         <> help "Path to the KES signing key."
+        <> completer (bashCompleter "file")
     )
 
 parseVrfKeyFilePath :: Parser FilePath
@@ -192,4 +197,5 @@ parseVrfKeyFilePath =
     ( long "shelley-vrf-key"
         <> metavar "FILEPATH"
         <> help "Path to the VRF signing key."
+        <> completer (bashCompleter "file")
     )
