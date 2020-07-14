@@ -1,7 +1,5 @@
 # Register a Stake Pool with Metadata
 
-__USE TAG: 1.14.2__ 
-
 ### Prerequisites
 
 Make sure you have access to:
@@ -54,12 +52,12 @@ Store the file in a url you control, for example [https://gist.githubusercontent
 
 ### 2. Get the hash of your file:
 
-This validates that the JSON fits the required schema, if it does, you will get the hash of your file. 
+This validates that the JSON fits the required schema, if it does, you will get the hash of your file.
 
     cardano-cli shelley stake-pool metadata-hash --pool-metadata-file testPool.json
 
     >6bf124f217d0e5a0a8adb1dbd8540e1334280d49ab861127868339f43b3948af
-    
+
 ### 3. Generate Stake pool registration certificate
 
 Create a _stake pool registration certificate_:
@@ -73,8 +71,8 @@ Create a _stake pool registration certificate_:
     --pool-reward-account-verification-key-file stake.vkey \
     --pool-owner-stake-verification-key-file stake.vkey \
     --testnet-magic 42 \
-    --pool-relay-port 3001 \
     --pool-relay-ipv4 123.123.123.123 \
+    --pool-relay-port 3001 \
     --metadata-url https://gist.githubusercontent.com/testPool/.../testPool.json \
     --metadata-hash 6bf124f217d0e5a0a8adb1dbd8540e1334280d49ab861127868339f43b3948af \
     --out-file pool.cert
@@ -131,19 +129,27 @@ we would need to create delegation certificates for all of them instead.
 
 Finally we need to submit the pool registration certificate and the delegation certificate(s) to the blockchain by including them in one or more transactions. We can use one transaction for multiple certificates, the certificates will be applied in order.
 
-As before, we start by calculating the fees (as explained [here](040_transactions.md)):
+
+**Build raw transaction**
+
+    cardano-cli shelley transaction build-raw \
+    --tx-in 9db6cf...#0 \
+    --tx-out $(cat payment.addr)+0 \
+    --ttl 200000 \
+    --fee 0 \
+    --out-file tx.raw \
+    --certificate-file pool.cert \
+    --certificate-file delegation.cert
+
+**calculate the fees**
 
     cardano-cli shelley transaction calculate-min-fee \
     --tx-in-count 1 \
     --tx-out-count 1 \
-    --ttl 200000 \
     --testnet-magic 42 \
-    --signing-key-file payment.skey \
-    --signing-key-file stake.skey \
-    --signing-key-file cold.skey \
-    --certificate-file pool.cert \
-    --certificate-file delegation.cert \
     --protocol-params-file protocol.json
+    --witness-count 1 \
+    --byron-witness-count 0
 
     > 184685
 
@@ -153,9 +159,12 @@ We will also have to pay a deposit for the stake pool registration. The deposit 
 
     "poolDeposit": 500000000
 
-to calculate the correct amounts, we first query our address as explained [here](040_transactions.md).
+to calculate the correct amounts, we first query our address:
 
-We might get something like
+    cardano-cli shelley query utxo \
+    --address $(cat payment.addr) \
+    --testnet-magic 42
+
 
                                 TxHash                                 TxIx        Lovelace
     ----------------------------------------------------------------------------------------
@@ -168,7 +177,7 @@ In this example, we can now calculate our change:
     expr 999999267766 - 500000000 - 184685
     > 999499083081
 
-Now we can build the transaction:
+**Rebuild the transaction including fees and deposit**
 
     cardano-cli shelley transaction build-raw \
     --tx-in 9db6cf...#0 \
@@ -203,11 +212,9 @@ will output your poolID. You can then check for the presence of your poolID in t
 
     cardano-cli shelley query ledger-state --testnet-magic 42 | grep publicKey | grep <poolId>
 
-or 
+or
 
     cardano-cli shelley query ledger-state --testnet-magic 42 \
-    | jq '._delegationState._pstate._pParams.<poolid>' 
+    | jq '._delegationState._pstate._pParams.<poolid>'
 
 which should return a non-empty string if your poolID is located in the ledger. You can then then head over to a pool listing website such as https://ff.pooltool.io/ and (providing it is up and running and showing a list of registered stake pools) you should hopefully be able to find your pool in there by searching using your poolID, and subsequently claiming it (might require registration on the website) and giving it a customized name.
-
-
