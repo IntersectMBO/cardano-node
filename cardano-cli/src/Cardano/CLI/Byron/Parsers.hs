@@ -349,6 +349,7 @@ parseTxRelatedValues =
 
 parseVerificationKeyFile :: String -> String -> Parser VerificationKeyFile
 parseVerificationKeyFile opt desc = VerificationKeyFile <$> parseFilePath opt desc
+
 pNodeCmd :: Parser NodeCmd
 pNodeCmd =
   Opt.subparser $

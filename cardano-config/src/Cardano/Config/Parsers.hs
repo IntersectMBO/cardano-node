@@ -63,6 +63,7 @@ parseDbPath =
     ( long "database-path"
     <> metavar "FILEPATH"
     <> help "Directory where the state is stored."
+    <> completer (bashCompleter "file")
     )
 
 
@@ -74,7 +75,12 @@ parseGenesisFile opt =
 
 parseFilePath :: String -> String -> Parser FilePath
 parseFilePath optname desc =
-  strOption $ long optname <> metavar "FILEPATH" <> help desc
+  strOption
+    ( long optname
+    <> metavar "FILEPATH"
+    <> help desc
+    <> completer (bashCompleter "file")
+    )
 
 parseFraction :: String -> String -> Parser Rational
 parseFraction optname desc =
