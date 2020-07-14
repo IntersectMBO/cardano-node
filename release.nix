@@ -80,13 +80,13 @@ let
     # only build nixos tests on first supported system (linux)
     inherit (pkgsFor (builtins.head  supportedSystems)) nixosTests;
     # Environments listed in Network Configuration page
-    cardano-deployment = pkgs.iohkNix.cardanoLib.mkConfigHtml { inherit (pkgs.iohkNix.cardanoLib.environments) mainnet testnet ff shelley_testnet mainnet_candidate; };
+    cardano-deployment = pkgs.iohkNix.cardanoLib.mkConfigHtml { inherit (pkgs.iohkNix.cardanoLib.environments) mainnet testnet shelley_testnet mainnet_candidate; };
   } // (builtins.listToAttrs (map makeRelease [
     # Environments we want to build scripts for on hydra
     "mainnet"
+    "mainnet_candidate"
     "staging"
     "shelley_qa"
-    "shelley_staging_short"
     "shelley_staging"
     "shelley_testnet"
     "testnet"
