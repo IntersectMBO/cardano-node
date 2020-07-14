@@ -10,84 +10,82 @@ Transactions vary in complexity, depending on their intended outcomes, but all t
 
 When building and submitting a transaction you need to check the current tip of the blockchain, for example, if the tip is slot 4000, and you want to submit a transaction to send some ADA, you should set the TTL to 4100, so that you have enough time to build and submit a transaction. Submitting a transaction with a TTL set in the past would result in a tx submission error.
 
-In the following example, the ttl value for this transaction is 200000. The output is written to a `tx001.raw` file.
-
-`cardano-cli shelley transaction build-raw \
-     --tx-in 4e3a6e7fdcb0d0efa17bf79c13aed2b4cb9baf37fb1aa2e39553d5bd720c5c99#4 \
-     --tx-out $(cat payment2.addr)+100000000 \
-     --tx-out $(cat payment.addr)+999899832035 \
-     --ttl 200000 \
-     --fee 167965 \
-     --out-file tx001.raw`
-
-**Signing**
-A transaction must prove that it has the right to spend its inputs. In the most common case, this means that a transaction must be signed by the signing keys belonging to the payment addresses of the inputs. If a transaction contains certificates, it must additionally be signed by somebody with the right to issue those certificates. For example, a stake address registration certificate must be signed by the signing key of the corresponding stake key pair
-
-**Fee calculation**
-Every transaction on the blockchain carries a fee, which needs to be calculated each time. This fee calculation requires protocol parameters.
-
-The Cardano CLI is used to query the protocol parameters which are then written to the protocol.json file, for example:
-
-`cardano-cli shelley query protocol-parameters \
-     --testnet-magic 42 \
-     --out-file protocol.json`
-
-where `magic42` identifies the testnet. Other testnets would be identified by different names and numbers.
-
-This is an example of a fee calculation transaction:
-
- `cardano-cli shelley transaction calculate-min-fee \
-     --tx-in-count 1 \
-     --tx-out-count 2 \
-     --ttl 250000 \
-     --testnet-magic 42 \
-     --signing-key-file payment.skey \
-     --protocol-params-file protocol.json`
 
 **Building a raw transaction**
 
-A transaction is considered 'raw' until it reaches the signing stage.
+Before submitting a transaction, it must be built. Create a raw file that contains all relevant data for the transaction:
 
-Use the build-raw command to create raw transactions. In this example, the transaction is written to a tx001.raw file.
+    cardano-cli shelley transaction build-raw \
 
- `cardano-cli shelley transaction build-raw \
-     --tx-in 4e3a6e7fdcb0d0efa17bf79c13aed2b4cb9baf37fb1aa2e39553d5bd720c5c99#4 \
-     --tx-out $(cat payment2.addr)+100000000 \
-     --tx-out $(cat payment.addr)+999899832035 \
-     --ttl 200000 \
-     --fee 167965 \
-     --out-file tx001.raw`
+    --tx-in TX-IN            The input transaction as TxId#TxIx where TxId is the
+                             transaction hash and TxIx is the index.
+    --tx-out TX-OUT          The ouput transaction as Address+Lovelace where
+                             Address is the Bech32-encoded address followed by the
+                             amount in Lovelace.
+    --ttl SLOT               Time to live (in slots).
+    --fee LOVELACE           The fee amount in Lovelace.
+    --certificate-file FILE  Filepath of the certificate. This encompasses all
+                             types of certificates (stake pool certificates, stake
+                             key certificates etc)
+    --withdrawal WITHDRAWAL  The reward withdrawal as StakeAddress+Lovelace where
+                             StakeAddress is the Bech32-encoded stake address
+                             followed by the amount in Lovelace.
+    --metadata-json-file FILE
+                             Filepath of the metadata file, in JSON format.
+    --metadata-cbor-file FILE
+                             Filepath of the metadata, in raw CBOR format.
+    --update-proposal-file FILE
+                             Filepath of the update proposal.
+    --out-file FILE          Output filepath of the TxBody.
+
+
+
+**Fee calculation**
+
+Every transaction on the blockchain carries a fee, which needs to be calculated each time. This fee calculation requires protocol parameters.
+
+
+    cardano-cli shelley query protocol-parameters \
+
+    --shelley-mode           For talking to a node running in Shelley-only mode
+                             (default).
+    --byron-mode             For talking to a node running in Byron-only mode.
+    --epoch-slots NATURAL    The number of slots per epoch (default is 21600).
+    --security-param NATURAL The security parameter (default is 2160).
+    --cardano-mode           For talking to a node running in full Cardano mode.
+    --epoch-slots NATURAL    The number of slots per epoch (default is 21600).
+    --security-param NATURAL The security parameter (default is 2160).
+    --mainnet                Use the mainnet magic id.
+    --testnet-magic NATURAL  Specify a testnet magic id.
+    --out-file FILE          Optional output file. Default is to write to stdout.
 
 **Signing a transaction**
 
-Keys are created in pairs (public verification key and private signing key). For example, payment.vkey and payment.skey, respectively.
+A transaction must prove that it has the right to spend its inputs. In the most common case, this means that a transaction must be signed by the signing keys belonging to the payment addresses of the inputs.
+If a transaction contains certificates, it must additionally be signed by somebody with the right to issue those certificates. For example, a stake address registration certificate must be signed by the signing key of the corresponding stake key pair.
 
-Use the key-gen command to generate the keys.
+    cardano-cli shelley transaction sign \
+    --tx-body-file FILE      Input filepath of the TxBody.
+    --signing-key-file FILE  Input filepath of the signing key (one or more).
+    --mainnet                Use the mainnet magic id.
+    --testnet-magic NATURAL  Specify a testnet magic id.
+    --out-file FILE          Output filepath of the Tx.
 
- `cardano-cli shelley address key-gen \
-     --verification-key-file payment.vkey \
-     --signing-key-file payment.skey`
+**Submit a transaction**
 
-The following example uses the payment key payment.skey to sign the raw transaction tx001.raw and writes it out to a tx001.signed file.
+Submitting a transaction means sending the signed transaction through the local node whose Unix domain socket is obtained
+from the CARDANO_NODE_SOCKET_PATH enviromnent variable.
 
-`cardano-cli shelley transaction sign \
-     --tx-body-file tx001.raw \
-     --signing-key-file payment.skey \
-     --testnet-magic 42 \
-     --out-file tx001.signed`
+    cardano-cli shelley transaction submit
 
-Once a transaction is signed, it can be submitted to a node, which will share it with the network so it can be included in a block on the chain.
-
-**Registering a stake address**
-
-A stake address must be registered on the blockchain if you intend to delegate your stake to one or more pools later on. Registering a stake address requires a certificate and a deposit.
-
-To create a registration certificate, use the following code:
-
-`cardano-cli shelley stake-address registration-certificate \
-     --staking-verification-key-file stake.vkey \
-     --out-file stake.cert`
-
-A deposit amount is specified in the protocol.json file, under keyDeposit. This amount has to be included in the transaction containing the certificate, but will be refunded when the key is deregistered.
-
-`"keyDeposit": 400000,`
+    --shelley-mode           For talking to a node running in Shelley-only mode
+                             (default).
+    --byron-mode             For talking to a node running in Byron-only mode.
+    --epoch-slots NATURAL    The number of slots per epoch (default is 21600).
+    --security-param NATURAL The security parameter (default is 2160).
+    --cardano-mode           For talking to a node running in full Cardano mode.
+    --epoch-slots NATURAL    The number of slots per epoch (default is 21600).
+    --security-param NATURAL The security parameter (default is 2160).
+    --mainnet                Use the mainnet magic id.
+    --testnet-magic NATURAL  Specify a testnet magic id.
+    --tx-file FILE           Filepath of the transaction you intend to submit.
