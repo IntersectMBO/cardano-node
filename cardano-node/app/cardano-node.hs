@@ -13,10 +13,10 @@ import qualified Options.Applicative as Opt
 import           Data.Version (showVersion)
 import           Paths_cardano_node (version)
 import           System.Info (arch, compilerName, compilerVersion, os)
-import           Cardano.Config.GitRev (gitRev)
+import           Cardano.Config.Git.Rev (gitRev)
 
 import           Cardano.Common.Help
-import           Cardano.Config.TopHandler
+import           Cardano.Node.TopHandler
 import           Cardano.Node.Logging (createLoggingLayer)
 import           Cardano.Node.Parsers (nodeCLIParser)
 import           Cardano.Node.Run (runNode)

@@ -22,10 +22,9 @@ library
     cpp-options:       -DSYSTEMD
     build-depends:     lobemo-scribe-systemd
 
-  exposed-modules:     Cardano.Config.GitRev
-                       Cardano.Config.GitRevFromGit
+  exposed-modules:     Cardano.Config.Git.Rev
+                       Cardano.Config.Git.RevFromGit
                        Cardano.Config.Parsers
-                       Cardano.Config.TopHandler
                        Cardano.Config.Types
 
   build-depends:       base >=4.12 && <5

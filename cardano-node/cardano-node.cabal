@@ -45,6 +45,7 @@ library
                        Cardano.Node.Parsers
                        Cardano.Node.Run
                        Cardano.Node.Shutdown
+                       Cardano.Node.TopHandler
                        Cardano.Node.Topology
                        Cardano.Node.TraceConfig
                        Cardano.Node.Types

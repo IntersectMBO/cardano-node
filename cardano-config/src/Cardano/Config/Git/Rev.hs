@@ -2,7 +2,7 @@
 {-# LANGUAGE TemplateHaskell   #-}
 {-# LANGUAGE CPP               #-}
 
-module Cardano.Config.GitRev (
+module Cardano.Config.Git.Rev (
       gitRev
     ) where
 
@@ -13,7 +13,7 @@ import           Data.Text (Text)
 import qualified Data.Text as T
 import           Data.Text.Encoding (decodeUtf8)
 
-import           Cardano.Config.GitRevFromGit (gitRevFromGit)
+import           Cardano.Config.Git.RevFromGit (gitRevFromGit)
 
 gitRev :: Text
 gitRev | gitRevEmbed /= zeroRev = gitRevEmbed
@@ -31,7 +31,7 @@ gitRev | gitRevEmbed /= zeroRev = gitRevEmbed
 #if defined(arm_HOST_ARCH)
         -- cross compiling to arm fails; due to a linker bug
         fromGit = ""
-#else        
+#else
         fromGit = T.strip (T.pack $(gitRevFromGit))
 #endif
 

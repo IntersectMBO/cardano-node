@@ -7,7 +7,7 @@ import qualified Options.Applicative as Opt
 
 import           Cardano.CLI.Parsers (opts, pref)
 import           Cardano.CLI.Run (renderClientCommandError, runClientCommand)
-import           Cardano.Config.TopHandler
+import           Cardano.CLI.TopHandler
 
 
 main :: IO ()
