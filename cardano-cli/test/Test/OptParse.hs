@@ -29,6 +29,7 @@ import           Cardano.CLI.Run (ClientCommand(..),
                    renderClientCommandError, runClientCommand)
 
 import qualified System.Process as IO
+import qualified System.Environment as IO
 
 import qualified Hedgehog as H
 import qualified Hedgehog.Internal.Property as H
@@ -50,7 +51,11 @@ execCardanoCLI
   -- ^ Arguments to the CLI command
   -> IO String
   -- ^ Captured stdout
-execCardanoCLI arguments = IO.readProcess "cabal" ("exec":"--":"cardano-cli":arguments) ""
+execCardanoCLI arguments = do
+  maybeCardanoCli <- IO.lookupEnv "CARDANO_CLI"
+  case maybeCardanoCli of
+    Just cardanoCli -> IO.readProcess cardanoCli arguments ""
+    Nothing -> IO.readProcess "cabal" ("exec":"--":"cardano-cli":arguments) ""
 
 -- | This takes a 'ParserResult', which is pure, and executes it.
 execCardanoCLIParser
