@@ -1,9 +1,7 @@
-{-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
@@ -29,7 +27,6 @@ module Cardano.Config.Types
     , SigningKeyFile (..)
     , ProtocolFilepaths (..)
     , TopologyFile (..)
-    , TraceConstraints
     , SocketPath (..)
     , UpdateProposalFile (..)
     , ViewMode (..)
@@ -45,31 +42,19 @@ import           Data.String (String)
 import qualified Data.Text as Text
 import           Network.Socket (PortNumber)
 
-import           Cardano.BM.Tracing (ToObject)
-
 import qualified Cardano.Chain.Slotting as Byron
 import           Cardano.Crypto.KES.Class (Period)
 
-import           Ouroboros.Consensus.Block (Header, BlockProtocol, ForgeState(..))
+import           Ouroboros.Consensus.Block (ForgeState(..))
 import           Ouroboros.Consensus.Byron.Ledger.Block (ByronBlock)
-import           Ouroboros.Consensus.HeaderValidation (OtherHeaderEnvelopeError)
-import           Ouroboros.Consensus.Ledger.Abstract (LedgerError)
-import           Ouroboros.Consensus.Ledger.Inspect (LedgerEvent)
-import           Ouroboros.Consensus.Ledger.SupportsMempool
-                   (GenTxId, HasTxId, HasTxs(..), ApplyTxErr)
 import           Ouroboros.Consensus.Mock.Ledger.Block (SimpleBlock)
-import           Ouroboros.Consensus.Protocol.Abstract (CannotLead, ValidationErr)
 import           Ouroboros.Consensus.Util.Condense (Condense (..))
 import           Ouroboros.Consensus.Shelley.Ledger.Block (ShelleyBlock)
-import           Ouroboros.Consensus.Shelley.Ledger.Mempool (GenTx, TxId)
+import           Ouroboros.Consensus.Shelley.Ledger.Mempool ()
 import           Ouroboros.Consensus.Shelley.Protocol.Crypto.HotKey (HotKey (..))
 
 import           Ouroboros.Consensus.HardFork.Combinator
 import           Ouroboros.Consensus.HardFork.Combinator.Unary
-
-import           Ouroboros.Network.Block (HeaderHash)
-
-import           Cardano.Config.LedgerQueries
 
 import           Shelley.Spec.Ledger.OCert (KESPeriod (..))
 
@@ -283,36 +268,3 @@ newtype MaxConcurrencyDeadline = MaxConcurrencyDeadline
   { unMaxConcurrencyDeadline :: Word }
   deriving stock (Eq, Ord)
   deriving newtype (FromJSON, Show)
-
-
--- | Tracing-related constraints for monitoring purposes.
---
--- When you need a 'Show' or 'Condense' instance for more types, just add the
--- appropriate constraint here. There's no need to modify the consensus
--- code-base, unless the corresponding instance is missing. Note we are aiming to
--- remove all `Condense` constaints by defining the relevant 'ToObject' instance
--- in 'cardano-node'
-type TraceConstraints blk =
-    ( Condense blk
-    , Condense (Header blk)
-    , Condense (HeaderHash blk)
-    , Condense (GenTx blk)
-    , Condense (TxId (GenTx blk))
-    , HasTxs blk
-    , HasTxId (GenTx blk)
-    , LedgerQueries blk
-    , Show (ApplyTxErr blk)
-    , Show (GenTx blk)
-    , Show (GenTxId blk)
-    , Show blk
-    , Show (TxId (GenTx blk))
-    , ToJSON   (TxId (GenTx blk))
-    , ToObject (ApplyTxErr blk)
-    , ToObject (GenTx blk)
-    , ToObject (Header blk)
-    , ToObject (LedgerError blk)
-    , ToObject (LedgerEvent blk)
-    , ToObject (OtherHeaderEnvelopeError blk)
-    , ToObject (ValidationErr (BlockProtocol blk))
-    , ToObject (CannotLead (BlockProtocol blk))
-    )

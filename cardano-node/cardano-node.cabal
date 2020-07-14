@@ -48,8 +48,10 @@ library
                        Cardano.Node.Topology
                        Cardano.Node.TraceConfig
                        Cardano.Node.Types
+                       Cardano.Tracing.Constraints
                        Cardano.Tracing.Kernel
                        Cardano.Tracing.Peer
+                       Cardano.Tracing.Queries
                        Cardano.Tracing.Tracers
 
   other-modules:       Paths_cardano_node
@@ -59,6 +61,7 @@ library
   build-depends:       aeson
                      , async
                      , base >=4.12 && <5
+                     , byron-spec-ledger
                      , bytestring
                      , deepseq
                      , cardano-api

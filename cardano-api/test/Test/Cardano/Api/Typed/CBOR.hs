@@ -16,6 +16,9 @@ import           Test.Cardano.Api.Typed.Gen
 import           Test.Cardano.Api.Typed.Orphans ()
 
 
+-- TODO: Need to add PaymentExtendedKey roundtrip tests however
+-- we can't derive an Eq instance for Crypto.HD.XPrv
+
 prop_roundtrip_txbody_byron_CBOR :: Property
 prop_roundtrip_txbody_byron_CBOR =
   roundtrip_CBOR AsByronTxBody genTxBodyByron

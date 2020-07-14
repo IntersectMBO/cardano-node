@@ -15,6 +15,7 @@ import qualified Prelude
 
 import           Data.Aeson
 import qualified Data.ByteString.Base16 as B16
+import qualified Data.ByteString.Short as SBS
 import           Data.Scientific (coefficient)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
@@ -70,7 +71,7 @@ instance ToJSON (HeaderHash blk) => ToJSON (Tip blk) where
       ]
 
 instance ToJSON (OneEraHash xs) where
-  toJSON (OneEraHash bs) = toJSON . Text.decodeLatin1 . B16.encode $ bs
+  toJSON (OneEraHash bs) = toJSON . Text.decodeLatin1 . B16.encode . SBS.fromShort $ bs
 
 -- This instance is temporarily duplicated in cardano-cli\
 deriving newtype instance ToJSON BlockNo
