@@ -31,7 +31,6 @@ import           Prelude (String)
 import           Cardano.Prelude hiding (option)
 
 import           Cardano.Chain.Common (Lovelace, mkLovelace)
---import           Cardano.Node.Topology
 import           Cardano.Config.Types
 
 

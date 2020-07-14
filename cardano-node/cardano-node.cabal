@@ -69,6 +69,7 @@ library
   build-depends:       aeson
                      , async
                      , base >=4.12 && <5
+                     , base16-bytestring
                      , byron-spec-ledger
                      , bytestring
                      , deepseq
@@ -105,6 +106,7 @@ library
                      , ouroboros-network-framework
                      , process
                      , safe-exceptions
+                     , scientific
                      , shelley-spec-ledger
                      , strict-concurrency
                      , text
@@ -145,19 +147,26 @@ library cardano-node-config
   exposed-modules:     Cardano.Node.Orphans
                        Cardano.Node.Types
                        Cardano.Node.TraceConfig
+                       Cardano.Tracing.OrphanInstances.Common
 
   build-depends:       aeson
                      , base >=4.12 && <5
+                     , base16-bytestring
+                     , bytestring
                      , cardano-api
                      , cardano-crypto-class
                      , cardano-crypto-wrapper
                      , cardano-ledger
                      , cardano-config
                      , cardano-prelude
+                     , cardano-slotting
                      , filepath
                      , iohk-monitoring
+                     , network
                      , ouroboros-consensus
+                     , ouroboros-consensus-byron
                      , ouroboros-network
+                     , scientific
                      , text
                      , yaml
 

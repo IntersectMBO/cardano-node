@@ -15,7 +15,8 @@ import           Ouroboros.Network.Block (MaxSlotNo(..), SlotNo(..))
 import           Cardano.Node.Types
 import           Cardano.Config.Types (DbFile(..), ProtocolFilepaths(..),
                    NodeProtocolMode(..), TopologyFile(..))
-import           Cardano.Config.Parsers
+import           Cardano.Config.Parsers (parseConfigFile, parseDbPath,
+                   parseNodeAddress, parseSocketPath)
 
 nodeCLIParser  :: Parser NodeCLI
 nodeCLIParser = nodeRealProtocolModeParser <|> nodeMockProtocolModeParser

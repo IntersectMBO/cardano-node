@@ -54,7 +54,7 @@ import           Cardano.Config.Types
                    (ProtocolFilepaths(..), GenesisFile (..))
 
 import           Cardano.Tracing.OrphanInstances.Shelley ()
-import           Cardano.TracingOrphanInstances.HardFork ()
+import           Cardano.Tracing.OrphanInstances.HardFork ()
 
 import           Cardano.Node.Protocol.Types
 

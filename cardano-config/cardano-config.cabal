@@ -24,7 +24,6 @@ library
 
   exposed-modules:     Cardano.Config.GitRev
                        Cardano.Config.GitRevFromGit
-                       Cardano.Config.Orphanage
                        Cardano.Config.Parsers
                        Cardano.Config.TopHandler
                        Cardano.Config.Types
