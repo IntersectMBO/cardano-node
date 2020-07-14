@@ -346,11 +346,7 @@ class ClusterLib:
                 f"txins: {txins} txouts: {txouts} signing keys: {signing_keys}\n{err}"
             )
 
-    def get_current_epoch_no(self):
-        tip = self.get_tip()
-        return int(tip["slotNo"] / self.epoch_length)
-
-    def submit_update_proposal(self, cli_args, epoch=None):
+    def submit_update_proposal(self, cli_args, epoch=1):
         self.cli(
             [
                 "cardano-cli",
@@ -361,7 +357,7 @@ class ClusterLib:
                 "--out-file",
                 "update.proposal",
                 "--epoch",
-                str(epoch or self.get_current_epoch_no()),
+                str(epoch),
                 "--genesis-verification-key-file",
                 str(self.genesis_vkey),
             ]
