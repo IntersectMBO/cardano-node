@@ -27,6 +27,7 @@ cardano-node
    :caption: Stakepool Operations
    :titlesonly:
    :hidden:
+   
    stake-pool-operations/getConfigFiles_AND_Connect
    stake-pool-operations/keys_and_addresses
    stake-pool-operations/register_key
@@ -36,7 +37,7 @@ cardano-node
    stake-pool-operations/register_stakepool
    stake-pool-operations/start_your_nodes
    stake-pool-operations/retire_stakepool
-   
+
 .. toctree::
    :maxdepth: 3
    :caption: Logging & Monitoring
