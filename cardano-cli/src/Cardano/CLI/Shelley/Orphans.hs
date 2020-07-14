@@ -6,25 +6,29 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE UndecidableInstances  #-}
 
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Config.Shelley.Orphans () where
+module Cardano.CLI.Shelley.Orphans () where
 
 import           Cardano.Prelude
 
-import           Data.Aeson (ToJSON (..), ToJSONKey (..),
-                   ToJSONKeyFunction (..), (.=))
+import           Data.Aeson
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Encoding as Aeson
+import qualified Data.ByteString.Base16 as B16
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 
 import           Cardano.Crypto.Hash.Class as Crypto
 import           Cardano.TracingOrphanInstances.Common ()
 
+import           Ouroboros.Consensus.Byron.Ledger.Block (ByronHash(..))
+import           Ouroboros.Consensus.HardFork.Combinator (OneEraHash(..))
 import           Ouroboros.Consensus.Shelley.Protocol.Crypto (TPraosStandardCrypto)
 import           Ouroboros.Consensus.Shelley.Ledger.Block (ShelleyHash(..))
+import           Ouroboros.Network.Block (BlockNo(..), HeaderHash, Tip (..))
 
 import           Shelley.Spec.Ledger.BaseTypes (StrictMaybe)
 import           Shelley.Spec.Ledger.BlockChain (HashHeader(..))
@@ -62,6 +66,24 @@ instance Crypto c => ToJSON (TxOut c) where
       , "amount" .= amount
       ]
 
+instance ToJSON (OneEraHash xs) where
+  toJSON (OneEraHash bs) = toJSON . Text.decodeLatin1 . B16.encode $ bs
+
+deriving newtype instance ToJSON ByronHash
+
+-- This instance is temporarily duplicated in cardano-config
+
+instance ToJSON (HeaderHash blk) => ToJSON (Tip blk) where
+  toJSON TipGenesis = object [ "genesis" .= True ]
+  toJSON (Tip slotNo headerHash blockNo) =
+    object
+      [ "slotNo"     .= slotNo
+      , "headerHash" .= headerHash
+      , "blockNo"    .= blockNo
+      ]
+
+-- This instance is temporarily duplicated in cardano-config
+deriving newtype instance ToJSON BlockNo
 
 --
 -- Simple newtype wrappers JSON conversion

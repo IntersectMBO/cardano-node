@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
@@ -17,29 +18,36 @@ module Cardano.TracingOrphanInstances.Shelley () where
 
 import           Cardano.Prelude
 
+import           Data.Aeson (ToJSON (..), ToJSONKey (..),
+                   ToJSONKeyFunction (..), (.=))
+import qualified Data.Aeson as Aeson
+import qualified Data.Aeson.Encoding as Aeson
 import qualified Data.HashMap.Strict as HMS
 import           Data.Set (Set)
 import qualified Data.Set as Set
 import           Data.Text (Text)
 import qualified Data.Text as Text
+import qualified Data.Text.Encoding as Text
+
 
 import           Cardano.Slotting.Block (BlockNo(..))
 import           Cardano.TracingOrphanInstances.Common
 import           Cardano.TracingOrphanInstances.Consensus ()
-import           Cardano.Config.Shelley.Orphans ()
 
 import           Cardano.Crypto.Hash.Class (Hash)
 import           Cardano.Crypto.KES.Class
                    (VerKeyKES, deriveVerKeyKES, hashVerKeyKES)
 
+import           Cardano.Crypto.Hash.Class as Crypto
 import           Ouroboros.Network.Block
                    (SlotNo(..), blockHash, blockSlot, blockNo)
 import           Ouroboros.Network.Point (WithOrigin, withOriginToMaybe)
 import           Ouroboros.Consensus.Block (Header)
-import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTx, TxId, txId)
+import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTx, txId)
+import qualified Ouroboros.Consensus.Ledger.SupportsMempool as SupportsMempool
 import           Ouroboros.Consensus.Util.Condense (condense)
 
-import           Ouroboros.Consensus.Shelley.Ledger
+import           Ouroboros.Consensus.Shelley.Ledger hiding (TxId)
 import           Ouroboros.Consensus.Shelley.Protocol
                    (TPraosStandardCrypto, TPraosCannotLead(..),
                     TPraosUnusableKey(..))
@@ -78,7 +86,8 @@ import           Shelley.Spec.Ledger.STS.Tickn
 import           Shelley.Spec.Ledger.STS.Updn
 import           Shelley.Spec.Ledger.STS.Utxo
 import           Shelley.Spec.Ledger.STS.Utxow
-import           Shelley.Spec.Ledger.TxData (TxIn(..), MIRPot(..))
+import           Shelley.Spec.Ledger.MetaData (MetaDataHash(..))
+import           Shelley.Spec.Ledger.TxData (TxId(..), TxIn(..), TxOut(..), MIRPot(..))
 
 
 --
@@ -92,7 +101,7 @@ instance Crypto c => ToObject (GenTx (ShelleyBlock c)) where
         [ "txid" .= txId tx ]
      ++ [ "tx"   .= condense tx | verb == MaximalVerbosity ]
 
-instance ToJSON (TxId (GenTx (ShelleyBlock c))) where
+instance ToJSON (SupportsMempool.TxId (GenTx (ShelleyBlock c))) where
   toJSON i = toJSON (condense i)
 
 instance Crypto c => ToObject (Header (ShelleyBlock c)) where
@@ -603,3 +612,28 @@ showLastAppBlockNo :: WithOrigin (LastAppliedBlock crypto) -> Text
 showLastAppBlockNo wOblk =  case withOriginToMaybe wOblk of
                      Nothing -> "Genesis Block"
                      Just blk -> textShow . unBlockNo $ labBlockNo blk
+
+-- Common to cardano-cli
+
+deriving newtype instance Crypto c => ToJSON (MetaDataHash c)
+
+deriving instance Crypto c => ToJSON (TxIn c)
+deriving newtype instance ToJSON (TxId c)
+instance Crypto c => ToJSONKey (TxIn c) where
+  toJSONKey = ToJSONKeyText txInToText (Aeson.text . txInToText)
+
+txInToText :: TxIn c -> Text
+txInToText (TxIn (TxId txidHash) ix) =
+  hashToText txidHash
+    <> Text.pack "#"
+    <> Text.pack (show ix)
+
+instance Crypto c => ToJSON (TxOut c) where
+  toJSON (TxOut addr amount) =
+    Aeson.object
+      [ "address" .= addr
+      , "amount" .= amount
+      ]
+
+hashToText :: Hash crypto a -> Text
+hashToText = Text.decodeLatin1 . Crypto.getHashBytesAsHex

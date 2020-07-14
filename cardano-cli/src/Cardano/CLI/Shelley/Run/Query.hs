@@ -47,9 +47,9 @@ import           Cardano.Api.LocalChainSync (getLocalTip)
 import           Cardano.CLI.Shelley.Commands (QueryFilter(..))
 import           Cardano.CLI.Environment (EnvSocketError, readEnvSocketPath, renderEnvSocketError)
 import           Cardano.CLI.Helpers (HelpersError, pPrintCBOR, renderHelpersError)
+import           Cardano.CLI.Shelley.Orphans ()
 import           Cardano.CLI.Shelley.Parsers (OutputFile (..), QueryCmd (..))
 
-import           Cardano.Config.Shelley.Orphans ()
 import           Cardano.Config.Types (SocketPath(..))
 import           Cardano.Binary (decodeFull)
 

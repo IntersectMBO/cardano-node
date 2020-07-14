@@ -13,7 +13,6 @@ import           Cardano.Prelude
 import qualified Data.Map.Strict as Map
 import qualified Data.Time as Time
 
-import           Cardano.Config.Shelley.Orphans ()
 import           Cardano.Crypto.ProtocolMagic (ProtocolMagicId(..))
 import           Cardano.Slotting.Slot (EpochSize (..))
 
@@ -76,4 +75,3 @@ shelleyGenesisDefaults =
   where
     k = 2160
     zeroTime = Time.UTCTime (Time.fromGregorian 1970 1 1) 0 -- tradition
-

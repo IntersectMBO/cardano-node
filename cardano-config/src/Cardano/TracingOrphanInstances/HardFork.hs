@@ -1,11 +1,14 @@
+{-# LANGUAGE DerivingStrategies    #-}
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns        #-}
 {-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
 {-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE UndecidableInstances  #-}
+{-# LANGUAGE StandaloneDeriving    #-}
 {-# LANGUAGE TypeOperators         #-}
 {-# LANGUAGE TypeApplications      #-}
 
@@ -13,11 +16,11 @@
 
 module Cardano.TracingOrphanInstances.HardFork () where
 
-import           Prelude
+import           Cardano.Prelude hiding (All)
 
+import           Data.Aeson
 import           Data.SOP.Strict
 
-import           Cardano.Config.Orphanage ()
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import           Cardano.TracingOrphanInstances.Common
 import           Cardano.TracingOrphanInstances.Consensus ()
@@ -231,4 +234,3 @@ instance All (ToObject `Compose` WrapChainIndepState) xs
 instance ToObject (ChainIndepState (BlockProtocol blk))
       => ToObject (WrapChainIndepState blk) where
     toObject verb = toObject verb . unwrapChainIndepState
-
