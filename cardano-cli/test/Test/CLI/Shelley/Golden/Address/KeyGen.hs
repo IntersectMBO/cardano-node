@@ -10,6 +10,8 @@ import Hedgehog (Property)
 
 import qualified Test.OptParse as OP
 import qualified System.IO as IO
+import qualified Control.Exception as E
+import qualified Control.DeepSeq as CSD
 
 {- HLINT ignore "Use camelCase" -}
 
@@ -25,8 +27,8 @@ golden_shelleyAddressKeyGen = OP.propertyOnce $ OP.workspace "tmp/address-key-ge
     , "--signing-key-file", addressSKeyFile
     ]
 
-  void $ OP.noteEvalM $ liftIO $ IO.readFile addressVKeyFile
-  void $ OP.noteEvalM $ liftIO $ IO.readFile addressSKeyFile
+  void $ OP.noteEvalM $ liftIO $ E.evaluate . CSD.force =<< IO.readFile addressVKeyFile
+  void $ OP.noteEvalM $ liftIO $ E.evaluate . CSD.force =<< IO.readFile addressSKeyFile
 
   OP.assertFilesExist outputFiles
 
