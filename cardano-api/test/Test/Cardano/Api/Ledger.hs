@@ -20,7 +20,7 @@ import qualified Hedgehog
 import           Ouroboros.Consensus.Shelley.Protocol (TPraosStandardCrypto)
 
 import qualified Test.Shelley.Spec.Ledger.Genesis.Properties as Ledger
-import           Test.Shelley.Spec.Ledger.Generator.Genesis
+import           Test.Shelley.Spec.Ledger.Generator.Genesis (genAddress)
 
 import           Test.Cardano.Api.Examples
 import           Test.Cardano.Prelude

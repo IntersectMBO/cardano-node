@@ -26,9 +26,7 @@ import           Ouroboros.Consensus.Byron.Ledger.Mempool (GenTx(..))
 import           Ouroboros.Consensus.Ledger.SupportsMempool (txId)
 import           Ouroboros.Consensus.Util.Condense (condense)
 
-import           Cardano.Api (Network, toByronProtocolMagic)
-import           Cardano.Api.Typed (NetworkId)
-
+import           Cardano.Api.Typed (NetworkId, toByronProtocolMagicId)
 import           Cardano.CLI.Byron.Genesis (ByronGenesisError)
 import           Cardano.CLI.Byron.Tx (ByronTxError, nodeSubmitTx)
 import           Cardano.CLI.Byron.Key (CardanoEra(..), ByronKeyFailure, readEraSigningKey)
@@ -59,7 +57,7 @@ renderByronVoteError bVerr =
 
 
 runVoteCreation
-  :: Network
+  :: NetworkId
   -> SigningKeyFile
   -> FilePath
   -> Bool
@@ -71,7 +69,7 @@ runVoteCreation nw sKey upPropFp voteBool outputFp = do
   upProp <- firstExceptT ByronVoteUpdateProposalFailure $ readByronUpdateProposal upPropFp
   proposal <- hoistEither . first ByronVoteUpdateProposalFailure $ deserialiseByronUpdateProposal upProp
   let updatePropId = recoverUpId proposal
-      vote = mkVote (toByronProtocolMagic nw) sK updatePropId voteBool
+      vote = mkVote (toByronProtocolMagicId nw) sK updatePropId voteBool
   firstExceptT ByronVoteUpdateHelperError $ ensureNewFileLBS outputFp (serialiseByronVote vote)
 
 convertVoteToGenTx :: AVote ByteString -> GenTx ByronBlock

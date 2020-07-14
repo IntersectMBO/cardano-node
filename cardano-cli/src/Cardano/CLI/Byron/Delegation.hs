@@ -19,7 +19,6 @@ import           Control.Monad.Trans.Except.Extra (left)
 import qualified Data.ByteString.Lazy as LB
 import           Formatting (Format, sformat)
 
-import           Cardano.Api (textShow)
 import           Cardano.Binary (Annotated(..), serialize')
 import qualified Cardano.Chain.Delegation as Dlg
 import           Cardano.Chain.Slotting (EpochNumber)
@@ -31,7 +30,7 @@ import           Cardano.Crypto (ProtocolMagicId, SigningKey)
 import           Cardano.CLI.Byron.Key
                    (CardanoEra(..), serialiseSigningKey,
                    ByronKeyFailure, renderByronKeyFailure)
-
+import           Cardano.CLI.Helpers (textShow)
 
 data ByronDelegationError
   = CertificateValidationErrors !FilePath ![Text]
@@ -125,4 +124,3 @@ serialiseDelegateKey ByronEraLegacy sk = pure
 serialiseDelegateKey ByronEra  sk =
   first ByronDelegationKeyError $
     serialiseSigningKey ByronEra sk
-

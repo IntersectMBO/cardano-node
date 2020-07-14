@@ -140,7 +140,6 @@ import           Cardano.Crypto.Random (runSecureRandom)
 import qualified Cardano.Crypto.Signing as Crypto
 
 import           Cardano.Api.Types
-import           Cardano.Api.Convert as X
 import           Cardano.Api.Error as X
 import           Cardano.Api.TxSubmit as X
 

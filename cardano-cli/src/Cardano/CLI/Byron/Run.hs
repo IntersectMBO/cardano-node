@@ -24,8 +24,8 @@ import qualified Cardano.Crypto.Signing as Crypto
 
 import           Cardano.Config.Types
 
-import           Cardano.Api (Network(..), toByronNetworkMagic, toByronProtocolMagic)
-import           Cardano.Api.Typed (NetworkId)
+import           Cardano.Api.Typed (NetworkId(..), toByronProtocolMagicId)
+import qualified Cardano.Api.Typed as Typed
 
 import           Cardano.CLI.Byron.Commands
 import           Cardano.CLI.Byron.Delegation
@@ -74,7 +74,7 @@ runByronClientCommand c =
     PrettySigningKeyPublic era skF -> runPrettySigningKeyPublic era skF
     MigrateDelegateKeyFrom oldEra oldKey newEra nskf -> runMigrateDelegateKeyFrom oldEra oldKey newEra nskf
     PrintGenesisHash genFp -> runPrintGenesisHash genFp
-    PrintSigningKeyAddress era netMagic skF -> runPrintSigningKeyAddress era netMagic skF
+    PrintSigningKeyAddress era networkid skF -> runPrintSigningKeyAddress era networkid skF
     Keygen era nskf passReq -> runKeygen era nskf passReq
     ToVerification era skFp nvkFp -> runToVerification era skFp nvkFp
     IssueDelegationCertificate nw era epoch issuerSK delVK cert ->
@@ -139,6 +139,7 @@ runPrintGenesisHash genFp = do
   where
     -- For this purpose of getting the hash, it does not matter what network
     -- value we use here.
+    dummyNetwork :: NetworkId
     dummyNetwork = Mainnet
 
     formatter :: Genesis.Config -> Text
@@ -146,11 +147,11 @@ runPrintGenesisHash genFp = do
               . Genesis.unGenesisHash
               . Genesis.configGenesisHash
 
-runPrintSigningKeyAddress :: CardanoEra -> Network -> SigningKeyFile -> ExceptT ByronClientCmdError IO ()
-runPrintSigningKeyAddress era network skF = do
+runPrintSigningKeyAddress :: CardanoEra -> NetworkId -> SigningKeyFile -> ExceptT ByronClientCmdError IO ()
+runPrintSigningKeyAddress era networkid skF = do
   sK <- firstExceptT ByronCmdKeyFailure $ readEraSigningKey era skF
   let sKeyAddress = prettyAddress
-                  . Common.makeVerKeyAddress (toByronNetworkMagic network)
+                  . Common.makeVerKeyAddress (Typed.toByronNetworkMagic networkid)
                   . Crypto.toVerification
                   $ sK
   liftIO $ putTextLn sKeyAddress
@@ -169,7 +170,7 @@ runToVerification era skFp (NewVerificationKeyFile vkFp) = do
   firstExceptT ByronCmdHelpersError $ ensureNewFile TL.writeFile vkFp vKey
 
 runIssueDelegationCertificate
-        :: Network
+        :: NetworkId
         -> CardanoEra
         -> EpochNumber
         -> SigningKeyFile
@@ -180,13 +181,13 @@ runIssueDelegationCertificate nw era epoch issuerSK delegateVK cert = do
   vk <- firstExceptT ByronCmdKeyFailure $ readPaymentVerificationKey delegateVK
   sk <- firstExceptT ByronCmdKeyFailure $ readEraSigningKey era issuerSK
   let byGenDelCert :: Delegation.Certificate
-      byGenDelCert = issueByronGenesisDelegation (toByronProtocolMagic nw) epoch sk vk
+      byGenDelCert = issueByronGenesisDelegation (toByronProtocolMagicId nw) epoch sk vk
       sCert        = serialiseDelegationCert byGenDelCert
   firstExceptT ByronCmdHelpersError $ ensureNewFileLBS (nFp cert) sCert
 
 
 runCheckDelegation
-        :: Network
+        :: NetworkId
         -> CertificateFile
         -> VerificationKeyFile
         -> VerificationKeyFile
@@ -195,7 +196,7 @@ runCheckDelegation nw cert issuerVF delegateVF = do
   issuerVK <- firstExceptT ByronCmdKeyFailure $ readPaymentVerificationKey issuerVF
   delegateVK <- firstExceptT ByronCmdKeyFailure $ readPaymentVerificationKey delegateVF
   firstExceptT ByronCmdDelegationError $
-    checkByronGenesisDelegation cert (toByronProtocolMagic nw)
+    checkByronGenesisDelegation cert (toByronProtocolMagicId nw)
                                 issuerVK delegateVK
 
 runSubmitTx :: NetworkId -> TxFile -> ExceptT ByronClientCmdError IO ()
@@ -206,7 +207,7 @@ runSubmitTx network fp = do
 
 runSpendGenesisUTxO
         :: GenesisFile
-        -> Network
+        -> NetworkId
         -> CardanoEra
         -> NewTxFile
         -> SigningKeyFile
@@ -221,7 +222,7 @@ runSpendGenesisUTxO genesisFile nw era (NewTxFile ctTx) ctKey genRichAddr outs =
     firstExceptT ByronCmdHelpersError $ ensureNewFileLBS ctTx $ toCborTxAux tx
 
 runSpendUTxO
-        :: Network
+        :: NetworkId
         -> CardanoEra
         -> NewTxFile
         -> SigningKeyFile
@@ -233,4 +234,3 @@ runSpendUTxO nw era (NewTxFile ctTx) ctKey ins outs = do
 
     let gTx = txSpendUTxOByronPBFT nw sk ins outs
     firstExceptT ByronCmdHelpersError . ensureNewFileLBS ctTx $ toCborTxAux gTx
-

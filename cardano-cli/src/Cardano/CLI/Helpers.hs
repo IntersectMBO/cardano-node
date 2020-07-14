@@ -15,6 +15,7 @@ module Cardano.CLI.Helpers
   , readBech32
   , renderConversionError
   , renderHelpersError
+  , textShow
   , validateCBOR
   ) where
 
@@ -35,7 +36,6 @@ import qualified Data.ByteString.Lazy as LB
 import qualified Data.Text as Text
 import           System.Directory (doesPathExist)
 
-import           Cardano.Api (textShow)
 import           Cardano.Api.Typed (SigningKey(..), StakeKey, VerificationKey(..))
 import           Cardano.Binary (Decoder, fromCBOR)
 import qualified Cardano.Chain.Delegation as Delegation
@@ -193,3 +193,6 @@ readBech32 fp = do
   handler :: IOException -> Text
   handler e = Text.pack $ "Cardano.Api.Convert.readBech32: "
                         ++ displayException e
+
+textShow :: Show a => a -> Text
+textShow = Text.pack . show

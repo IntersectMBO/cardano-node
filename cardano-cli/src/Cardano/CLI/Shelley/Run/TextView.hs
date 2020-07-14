@@ -11,7 +11,7 @@ import qualified Data.Text as Text
 import           Cardano.CLI.Helpers (HelpersError, pPrintCBOR, renderHelpersError)
 import           Cardano.CLI.Shelley.Parsers
 
-import           Cardano.Api.TextView
+import           Cardano.Api.TextView (TextView(..))
 import           Cardano.Api.Typed (Error (..), FileError, TextEnvelopeError,
                    readTextEnvelopeFromFile)
 

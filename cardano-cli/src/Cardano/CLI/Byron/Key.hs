@@ -42,9 +42,9 @@ import           Formatting (build, (%), sformat)
 
 import           System.IO (hSetEcho, hFlush, stdout, stdin)
 
-import           Cardano.Api (textShow)
 import qualified Cardano.Chain.Common as Common
 import qualified Cardano.Chain.Genesis as Genesis
+import           Cardano.CLI.Helpers (textShow)
 import qualified Cardano.CLI.Legacy.Byron as Legacy
 import           Cardano.Config.Types (SigningKeyFile(..))
 import           Cardano.Crypto (SigningKey(..))

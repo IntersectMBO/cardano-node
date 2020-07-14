@@ -290,6 +290,11 @@ module Cardano.Api.Typed (
     EpochNo,
     NetworkMagic(..),
     makeShelleyUpdateProposal,
+
+    -- ** Conversions
+    toByronNetworkMagic,
+    toByronProtocolMagicId,
+    toByronRequiresNetworkMagic,
   ) where
 
 
@@ -770,6 +775,10 @@ toByronProtocolMagicId (Testnet (NetworkMagic pm)) = Byron.ProtocolMagicId pm
 toByronNetworkMagic :: NetworkId -> Byron.NetworkMagic
 toByronNetworkMagic Mainnet                     = Byron.NetworkMainOrStage
 toByronNetworkMagic (Testnet (NetworkMagic nm)) = Byron.NetworkTestnet nm
+
+toByronRequiresNetworkMagic :: NetworkId -> Byron.RequiresNetworkMagic
+toByronRequiresNetworkMagic Mainnet   = Byron.RequiresNoMagic
+toByronRequiresNetworkMagic Testnet{} = Byron.RequiresMagic
 
 toShelleyNetwork :: NetworkId -> Shelley.Network
 toShelleyNetwork  Mainnet    = Shelley.Mainnet

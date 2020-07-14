@@ -32,7 +32,6 @@ import qualified Data.Text as T
 import qualified Data.Vector as Vector
 import           Formatting ((%), sformat)
 
-import           Cardano.Api (textShow, toByronProtocolMagic)
 import qualified Cardano.Binary as Binary
 
 import           Cardano.Chain.Common (Address)
@@ -50,12 +49,12 @@ import qualified Ouroboros.Consensus.Byron.Ledger as Byron
 import           Ouroboros.Consensus.Byron.Ledger (GenTx(..), ByronBlock)
 import           Ouroboros.Consensus.Cardano (SecurityParam(..))
 
-import           Cardano.Api (Network)
 import           Cardano.Api.Typed
                    (NetworkId, LocalNodeConnectInfo(..), NodeConsensusMode(..),
-                    submitTxToNodeLocal)
+                    submitTxToNodeLocal, toByronProtocolMagicId)
 import           Cardano.Config.Types (SocketPath(..))
 import           Cardano.CLI.Environment
+import           Cardano.CLI.Helpers (textShow)
 
 
 data ByronTxError
@@ -154,7 +153,7 @@ genesisUTxOTxIn gc vk genAddr =
 --   to given outputs, signed by the given key.
 txSpendGenesisUTxOByronPBFT
   :: Genesis.Config
-  -> Network
+  -> NetworkId
   -> SigningKey
   -> Address
   -> NonEmpty TxOut
@@ -164,7 +163,7 @@ txSpendGenesisUTxOByronPBFT gc nw sk genAddr outs =
   where
     tx = UnsafeTx (pure txIn) outs txattrs
 
-    wit = signTxId (toByronProtocolMagic nw) sk (Crypto.serializeCborHash tx)
+    wit = signTxId (toByronProtocolMagicId nw) sk (Crypto.serializeCborHash tx)
 
     txIn :: UTxO.TxIn
     txIn  = genesisUTxOTxIn gc (Crypto.toVerification sk) genAddr
@@ -174,7 +173,7 @@ txSpendGenesisUTxOByronPBFT gc nw sk genAddr outs =
 -- | Generate a transaction from given Tx inputs to outputs,
 --   signed by the given key.
 txSpendUTxOByronPBFT
-  :: Network
+  :: NetworkId
   -> SigningKey
   -> NonEmpty TxIn
   -> NonEmpty TxOut
@@ -184,7 +183,7 @@ txSpendUTxOByronPBFT nw sk ins outs =
   where
     tx = UnsafeTx ins outs txattrs
 
-    wit = signTxId (toByronProtocolMagic nw) sk (Crypto.serializeCborHash tx)
+    wit = signTxId (toByronProtocolMagicId nw) sk (Crypto.serializeCborHash tx)
 
     txattrs = Common.mkAttributes ()
 
