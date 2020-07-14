@@ -310,10 +310,15 @@ pTransaction =
                               <*> pTxFile Output
 
     pTransactionWitness :: Parser TransactionCmd
-    pTransactionWitness = pure TxWitness
+    pTransactionWitness = TxWitness <$> pTxBodyFile Input
+                                    <*> pWitnessSigningKeyFile
+                                    <*> optional pNetworkId
+                                    <*> pOutputFile
 
     pTransactionSignWit :: Parser TransactionCmd
-    pTransactionSignWit = pure TxSignWitness
+    pTransactionSignWit = TxSignWitness <$> pTxBodyFile Input
+                                        <*> some pWitnessFile
+                                        <*> pOutputFile
 
     pTransactionCheck  :: Parser TransactionCmd
     pTransactionCheck = pure TxCheck
@@ -331,8 +336,8 @@ pTransaction =
         <*> pProtocolParamsFile
         <*> pTxInCount
         <*> pTxOutCount
-        <*> pTxShelleyWinessCount
-        <*> pTxByronWinessCount
+        <*> pTxShelleyWitnessCount
+        <*> pTxByronWitnessCount
 
     pTransactionId  :: Parser TransactionCmd
     pTransactionId = TxGetTxId <$> pTxBodyFile Input
@@ -890,6 +895,17 @@ pByronKeyFile fdir =
       <> Opt.completer (Opt.bashCompleter "file")
       )
 
+pWitnessSigningKeyFile :: Parser SigningKeyFile
+pWitnessSigningKeyFile =
+  SigningKeyFile <$>
+    ( Opt.strOption
+        (  Opt.long "witness-signing-key-file"
+        <> Opt.metavar "FILE"
+        <> Opt.help "Filepath of the witness signing key."
+        <> Opt.completer (Opt.bashCompleter "file")
+        )
+    )
+
 pBlockId :: Parser BlockId
 pBlockId =
   BlockId <$>
@@ -1155,6 +1171,16 @@ pTxFee =
       <> Opt.help "The fee amount in Lovelace."
       )
 
+pWitnessFile :: Parser WitnessFile
+pWitnessFile =
+  WitnessFile <$>
+    Opt.strOption
+      (  Opt.long "witness-file"
+      <> Opt.metavar "FILE"
+      <> Opt.help ("Filepath of the witness.")
+      <> Opt.completer (Opt.bashCompleter "file")
+      )
+
 pTxBodyFile :: FileDirection -> Parser TxBodyFile
 pTxBodyFile fdir =
     TxBodyFile <$>
@@ -1216,18 +1242,18 @@ pTxOutCount =
       <> Opt.help "The number of transaction outputs."
       )
 
-pTxShelleyWinessCount :: Parser TxShelleyWinessCount
-pTxShelleyWinessCount =
-  TxShelleyWinessCount <$>
+pTxShelleyWitnessCount :: Parser TxShelleyWitnessCount
+pTxShelleyWitnessCount =
+  TxShelleyWitnessCount <$>
     Opt.option Opt.auto
       (  Opt.long "witness-count"
       <> Opt.metavar "NATURAL"
       <> Opt.help "The number of Shelley key witnesses."
       )
 
-pTxByronWinessCount :: Parser TxByronWinessCount
-pTxByronWinessCount =
-  TxByronWinessCount <$>
+pTxByronWitnessCount :: Parser TxByronWitnessCount
+pTxByronWitnessCount =
+  TxByronWitnessCount <$>
     Opt.option Opt.auto
       (  Opt.long "byron-witness-count"
       <> Opt.metavar "NATURAL"

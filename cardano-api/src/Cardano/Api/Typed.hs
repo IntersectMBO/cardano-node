@@ -1191,10 +1191,10 @@ instance SerialiseAsCBOR (Witness Shelley) where
                                     "Shelley Witness" (fromIntegral t)
 
 instance HasTextEnvelope (Witness Byron) where
-    textEnvelopeType _ = "TxWinessByron"
+    textEnvelopeType _ = "TxWitnessByron"
 
 instance HasTextEnvelope (Witness Shelley) where
-    textEnvelopeType _ = "TxWinessShelley"
+    textEnvelopeType _ = "TxWitnessShelley"
 
 
 getTxBody :: Tx era -> TxBody era

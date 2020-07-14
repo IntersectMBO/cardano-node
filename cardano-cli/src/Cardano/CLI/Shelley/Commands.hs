@@ -20,13 +20,14 @@ module Cardano.CLI.Shelley.Commands
   , GenesisDir (..)
   , TxInCount (..)
   , TxOutCount (..)
-  , TxShelleyWinessCount (..)
-  , TxByronWinessCount (..)
+  , TxShelleyWitnessCount (..)
+  , TxByronWitnessCount (..)
   , ITNKeyFile (..)
   , OpCertCounterFile (..)
   , OutputFile (..)
   , ProtocolParamsFile (..)
   , SigningKeyFile (..)
+  , WitnessFile (..)
   , TxBodyFile (..)
   , TxFile (..)
   , VerificationKeyFile (..)
@@ -110,8 +111,8 @@ data TransactionCmd
       (Maybe UpdateProposalFile)
       TxBodyFile
   | TxSign TxBodyFile [SigningKeyFile] (Maybe NetworkId) TxFile
-  | TxWitness       -- { transaction :: Transaction, key :: PrivKeyFile, nodeAddr :: NodeAddress }
-  | TxSignWitness   -- { transaction :: Transaction, witnesses :: [Witness], nodeAddr :: NodeAddress }
+  | TxWitness TxBodyFile SigningKeyFile (Maybe NetworkId) OutputFile
+  | TxSignWitness TxBodyFile [WitnessFile] OutputFile
   | TxCheck         -- { transaction :: Transaction, nodeAddr :: NodeAddress }
   | TxSubmit Protocol NetworkId FilePath
   | TxCalculateMinFee
@@ -120,8 +121,8 @@ data TransactionCmd
       ProtocolParamsFile
       TxInCount
       TxOutCount
-      TxShelleyWinessCount
-      TxByronWinessCount
+      TxShelleyWitnessCount
+      TxByronWitnessCount
   | TxGetTxId TxBodyFile
   deriving (Eq, Show)
 
@@ -236,12 +237,12 @@ newtype TxOutCount
   = TxOutCount Int
   deriving (Eq, Show)
 
-newtype TxShelleyWinessCount
-  = TxShelleyWinessCount Int
+newtype TxShelleyWitnessCount
+  = TxShelleyWitnessCount Int
   deriving (Eq, Show)
 
-newtype TxByronWinessCount
-  = TxByronWinessCount Int
+newtype TxByronWitnessCount
+  = TxByronWitnessCount Int
   deriving (Eq, Show)
 
 newtype BlockId
@@ -294,6 +295,10 @@ newtype OpCertCounterFile
 
 newtype PrivKeyFile
   = PrivKeyFile FilePath
+  deriving (Eq, Show)
+
+newtype WitnessFile
+  = WitnessFile FilePath
   deriving (Eq, Show)
 
 newtype TxBodyFile
