@@ -14,7 +14,7 @@
 
 {-# OPTIONS_GHC -Wno-orphans  #-}
 
-module Cardano.TracingOrphanInstances.Shelley () where
+module Cardano.Tracing.OrphanInstances.Shelley () where
 
 import           Cardano.Prelude
 
@@ -31,8 +31,8 @@ import qualified Data.Text.Encoding as Text
 
 
 import           Cardano.Slotting.Block (BlockNo(..))
-import           Cardano.TracingOrphanInstances.Common
-import           Cardano.TracingOrphanInstances.Consensus ()
+import           Cardano.Tracing.OrphanInstances.Common
+import           Cardano.Tracing.OrphanInstances.Consensus ()
 
 import           Cardano.Crypto.Hash.Class (Hash)
 import           Cardano.Crypto.KES.Class

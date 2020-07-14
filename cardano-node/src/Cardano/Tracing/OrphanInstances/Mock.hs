@@ -8,14 +8,14 @@
 
 {-# OPTIONS_GHC -Wno-orphans  #-}
 
-module Cardano.TracingOrphanInstances.Mock () where
+module Cardano.Tracing.OrphanInstances.Mock () where
 
 import           Cardano.Prelude
 
 import           Data.Text (pack)
 
-import           Cardano.TracingOrphanInstances.Common
-import           Cardano.TracingOrphanInstances.Consensus ()
+import           Cardano.Tracing.OrphanInstances.Common
+import           Cardano.Tracing.OrphanInstances.Consensus ()
 
 import           Data.Aeson (Value (..), ToJSON, toJSON, (.=))
 

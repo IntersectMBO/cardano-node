@@ -33,7 +33,7 @@ import           Ouroboros.Consensus.Node.ProtocolInfo (NumCoreNodes (..))
 import           Ouroboros.Consensus.Protocol.Abstract (SecurityParam (..))
 
 import           Cardano.Node.Types (NodeMockProtocolConfiguration(..))
-import           Cardano.TracingOrphanInstances.Mock ()
+import           Cardano.Tracing.OrphanInstances.Mock ()
 
 import           Cardano.Node.Protocol.Types
 

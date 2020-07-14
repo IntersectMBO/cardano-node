@@ -15,7 +15,7 @@
 
 {-# OPTIONS_GHC -Wno-orphans  #-}
 
-module Cardano.TracingOrphanInstances.HardFork () where
+module Cardano.Tracing.OrphanInstances.HardFork () where
 
 import           Cardano.Prelude hiding (All)
 
@@ -23,8 +23,8 @@ import           Data.Aeson
 import           Data.SOP.Strict
 
 import qualified Cardano.Crypto.Hash.Class as Crypto
-import           Cardano.TracingOrphanInstances.Common
-import           Cardano.TracingOrphanInstances.Consensus ()
+import           Cardano.Tracing.OrphanInstances.Common
+import           Cardano.Tracing.OrphanInstances.Consensus ()
 
 import           Cardano.Slotting.Slot (EpochSize(..))
 import           Ouroboros.Consensus.Block (BlockProtocol)

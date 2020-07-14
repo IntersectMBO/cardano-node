@@ -2,7 +2,7 @@
 
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.TracingOrphanInstances.Common
+module Cardano.Tracing.OrphanInstances.Common
   (
     -- * ToObject and helpers
     ToObject(..)

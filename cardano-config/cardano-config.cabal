@@ -28,13 +28,6 @@ library
                        Cardano.Config.Parsers
                        Cardano.Config.TopHandler
                        Cardano.Config.Types
-                       Cardano.TracingOrphanInstances.Byron
-                       Cardano.TracingOrphanInstances.Common
-                       Cardano.TracingOrphanInstances.Consensus
-                       Cardano.TracingOrphanInstances.HardFork
-                       Cardano.TracingOrphanInstances.Mock
-                       Cardano.TracingOrphanInstances.Network
-                       Cardano.TracingOrphanInstances.Shelley
 
   build-depends:       base >=4.12 && <5
                      , attoparsec

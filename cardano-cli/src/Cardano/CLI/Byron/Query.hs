@@ -25,7 +25,8 @@ import           Cardano.Config.Types (SocketPath (..))
 import           Cardano.Api.LocalChainSync (getLocalTip)
 import           Cardano.CLI.Environment
                    (EnvSocketError, readEnvSocketPath, renderEnvSocketError)
-import           Cardano.TracingOrphanInstances.HardFork ()
+-- TODO @intricate: This forces us to import "cardano-node". Fix this.
+import           Cardano.Tracing.OrphanInstances.HardFork ()
 
 
 data ByronQueryError

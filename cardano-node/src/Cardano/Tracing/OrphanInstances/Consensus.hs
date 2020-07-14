@@ -10,7 +10,7 @@
 
 {-# OPTIONS_GHC -Wno-orphans  #-}
 
-module Cardano.TracingOrphanInstances.Consensus () where
+module Cardano.Tracing.OrphanInstances.Consensus () where
 
 import           Cardano.Prelude hiding (show)
 import           Prelude (show)
@@ -18,8 +18,8 @@ import           Prelude (show)
 import qualified Data.Text as Text
 import           Data.Text (pack)
 
-import           Cardano.TracingOrphanInstances.Common
-import           Cardano.TracingOrphanInstances.Network (showTip, showPoint)
+import           Cardano.Tracing.OrphanInstances.Common
+import           Cardano.Tracing.OrphanInstances.Network (showTip, showPoint)
 
 import           Ouroboros.Consensus.Block
                    (BlockProtocol, Header, getHeader, headerPoint,
