@@ -16,9 +16,7 @@ import qualified Data.List as L
 import qualified Data.Set as S
 import qualified Data.Time.Clock as DT
 import qualified Data.Time.Format as DT
-import qualified System.Directory as IO
 import qualified System.IO as IO
-import qualified System.IO.Temp as IO
 
 import Hedgehog (Property, forAll, (===))
 
@@ -80,11 +78,8 @@ parseTotalSupply = J.withObject "Object" $ \ o -> do
   fmap sum (sequence (fmap (J.parseJSON @Int . snd) (HM.toList initialFunds)))
 
 golden_shelleyGenesisCreate :: Property
-golden_shelleyGenesisCreate = OP.propertyOnce $ do
-  liftIO $ IO.createDirectoryIfMissing True "tmp"
-  tempDir <- liftIO $ IO.createTempDirectory "tmp" "test"
+golden_shelleyGenesisCreate = OP.propertyOnce $ OP.workspace "tmp/genesis-create" $ \tempDir -> do
   let genesisFile = tempDir <> "/genesis.json"
-  let cleanupPaths = [tempDir]
   
   fmtStartTime <- fmap formatIso8601 $ liftIO DT.getCurrentTime
 
@@ -93,8 +88,7 @@ golden_shelleyGenesisCreate = OP.propertyOnce $ do
   (utxoCount, fmtUtxoCount) <- fmap (withSnd show) $ forAll $ G.int (R.linear 4 19)
 
   -- Create the genesis json file and required keys
-  OP.execCardanoCLIParser cleanupPaths $
-    OP.evalCardanoCLIParser
+  void $ liftIO $ OP.execCardanoCLI
       [ "shelley","genesis","create"
       , "--testnet-magic", "12"
       , "--start-time", fmtStartTime

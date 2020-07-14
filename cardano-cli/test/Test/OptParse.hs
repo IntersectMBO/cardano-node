@@ -4,8 +4,10 @@ module Test.OptParse
   , equivalence
   , evalCardanoCLIParser
   , execCardanoCLIParser
+  , execCardanoCLI
   , fileCleanup
   , propertyOnce
+  , workspace
   ) where
 
 import           Cardano.Prelude
@@ -27,6 +29,11 @@ import           Cardano.CLI.Parsers (opts, pref)
 import           Cardano.CLI.Run (ClientCommand(..),
                    renderClientCommandError, runClientCommand)
 
+import qualified System.Process as IO
+import qualified System.Environment as IO
+import qualified System.IO.Temp as IO
+import qualified System.Directory as IO
+
 import qualified Hedgehog as H
 import qualified Hedgehog.Internal.Property as H
 import           Hedgehog.Internal.Property (Diff, MonadTest, liftTest, mkTest)
@@ -38,6 +45,20 @@ import           Hedgehog.Internal.Source (getCaller)
 -- without running underlying IO.
 evalCardanoCLIParser :: [String] -> Opt.ParserResult ClientCommand
 evalCardanoCLIParser args = Opt.execParserPure pref opts args
+
+-- | Execute cardano-cli via the command line.
+--
+-- Waits for the process to finish and returns the stdout.
+execCardanoCLI
+  :: [String]
+  -- ^ Arguments to the CLI command
+  -> IO String
+  -- ^ Captured stdout
+execCardanoCLI arguments = do
+  maybeCardanoCli <- IO.lookupEnv "CARDANO_CLI"
+  case maybeCardanoCli of
+    Just cardanoCli -> IO.readProcess cardanoCli arguments ""
+    Nothing -> IO.readProcess "cabal" ("exec":"--":"cardano-cli":arguments) ""
 
 -- | This takes a 'ParserResult', which is pure, and executes it.
 execCardanoCLIParser
@@ -115,6 +136,21 @@ checkTextEnvelopeFormat fps tve reference created = do
 --------------------------------------------------------------------------------
 -- Helpers, Error rendering & Clean up
 --------------------------------------------------------------------------------
+
+-- | Create a workspace directory which will exist for at least the duration of
+-- the supplied block.
+--
+-- The directory will have the supplied prefix but contain a generated random
+-- suffix to prevent interference between tests
+--
+-- The directory will be deleted if the block succeeds, but left behind if
+-- the block fails.
+workspace :: FilePath -> (FilePath -> H.PropertyT IO ()) -> H.PropertyT IO ()
+workspace prefixPath f = do
+  liftIO $ IO.createDirectoryIfMissing True prefixPath
+  ws <- liftIO $ IO.createTempDirectory prefixPath "test"
+  f ws
+  liftIO $ IO.removeDirectoryRecursive ws
 
 -- | Checks if all files gives exists. If this fails, all files are deleted.
 assertFilesExist :: HasCallStack => [FilePath] -> H.PropertyT IO ()

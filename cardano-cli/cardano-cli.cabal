@@ -183,7 +183,9 @@ test-suite cardano-cli-pioneers
                       , containers
                       , directory
                       , hedgehog
+                      , lifted-base
                       , optparse-applicative
+                      , process
                       , temporary
                       , text
                       , time
