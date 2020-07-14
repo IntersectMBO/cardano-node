@@ -38,8 +38,6 @@ Before submitting a transaction, it must be built. Create a raw file that contai
                              Filepath of the update proposal.
     --out-file FILE          Output filepath of the TxBody.
 
-
-
 **Fee calculation**
 
 Every transaction on the blockchain carries a fee, which needs to be calculated each time. This fee calculation requires protocol parameters.
