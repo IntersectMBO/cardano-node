@@ -7,6 +7,7 @@ module Test.OptParse
   , execCardanoCLI
   , fileCleanup
   , propertyOnce
+  , workspace
   ) where
 
 import           Cardano.Prelude
@@ -30,6 +31,8 @@ import           Cardano.CLI.Run (ClientCommand(..),
 
 import qualified System.Process as IO
 import qualified System.Environment as IO
+import qualified System.IO.Temp as IO
+import qualified System.Directory as IO
 
 import qualified Hedgehog as H
 import qualified Hedgehog.Internal.Property as H
@@ -133,6 +136,21 @@ checkTextEnvelopeFormat fps tve reference created = do
 --------------------------------------------------------------------------------
 -- Helpers, Error rendering & Clean up
 --------------------------------------------------------------------------------
+
+-- | Create a workspace directory which will exist for at least the duration of
+-- the supplied block.
+--
+-- The directory will have the supplied prefix but contain a generated random
+-- suffix to prevent interference between tests
+--
+-- The directory will be deleted if the block succeeds, but left behind if
+-- the block fails.
+workspace :: FilePath -> (FilePath -> H.PropertyT IO ()) -> H.PropertyT IO ()
+workspace prefixPath f = do
+  liftIO $ IO.createDirectoryIfMissing True prefixPath
+  ws <- liftIO $ IO.createTempDirectory prefixPath "test"
+  f ws
+  liftIO $ IO.removeDirectoryRecursive ws
 
 -- | Checks if all files gives exists. If this fails, all files are deleted.
 assertFilesExist :: HasCallStack => [FilePath] -> H.PropertyT IO ()
