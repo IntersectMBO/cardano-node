@@ -182,6 +182,7 @@ test-suite cardano-cli-pioneers
                       , cardano-cli
                       , cardano-prelude
                       , containers
+                      , deepseq
                       , directory
                       , hedgehog
                       , lifted-base
@@ -197,6 +198,9 @@ test-suite cardano-cli-pioneers
                         Test.CLI.Byron.Golden.TextEnvelope.Tx
                         Test.CLI.Byron.Golden.TextEnvelope.TxBody
                         Test.CLI.Byron.Golden.TextEnvelope.Witness
+                        Test.CLI.Shelley.Golden.Address.Build
+                        Test.CLI.Shelley.Golden.Address.Info
+                        Test.CLI.Shelley.Golden.Address.KeyGen
                         Test.CLI.Shelley.Golden.Genesis.Create
                         Test.CLI.Shelley.Golden.Metadata.StakePoolMetadata
                         Test.CLI.Shelley.Golden.TextEnvelope.Certificates.MIRCertificate
