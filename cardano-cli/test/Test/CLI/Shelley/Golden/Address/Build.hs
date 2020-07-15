@@ -1,5 +1,4 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE ScopedTypeVariables #-}
 
 module Test.CLI.Shelley.Golden.Address.Build
   ( golden_shelleyAddressBuild
@@ -19,11 +18,11 @@ import qualified Test.OptParse as OP
 golden_shelleyAddressBuild :: Property
 golden_shelleyAddressBuild = OP.propertyOnce $ OP.workspace "tmp/address-build" $ \tempDir -> do
   let addressVKeyFile = "test/Test/golden/shelley/keys/payment_keys/verification_key"
-  let addressSKeyFile = "test/Test/golden/shelley/keys/stake_keys/verification_key"
-  let goldenStakingAddressHexFile = "test/Test/golden/shelley/addresses/staking-address.hex"
-  let goldenEnterpriseAddressHexFile = "test/Test/golden/shelley/addresses/enterprise-address.hex"
-  let stakingAddressHexFile = tempDir <> "/staking-address.hex"
-  let enterpriseAddressHexFile = tempDir <> "/enterprise-address.hex"
+      addressSKeyFile = "test/Test/golden/shelley/keys/stake_keys/verification_key"
+      goldenStakingAddressHexFile = "test/Test/golden/shelley/addresses/staking-address.hex"
+      goldenEnterpriseAddressHexFile = "test/Test/golden/shelley/addresses/enterprise-address.hex"
+      stakingAddressHexFile = tempDir <> "/staking-address.hex"
+      enterpriseAddressHexFile = tempDir <> "/enterprise-address.hex"
 
   void $ OP.noteEvalM $ liftIO $ E.evaluate . CSD.force =<< IO.readFile addressVKeyFile
 
