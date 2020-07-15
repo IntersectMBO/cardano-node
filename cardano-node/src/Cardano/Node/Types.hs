@@ -74,6 +74,10 @@ data NodeConfiguration
          -- Node parameters, not protocol-specific:
        , ncSocketPath     :: Maybe SocketPath
 
+         -- BlockFetch configuration
+       , ncMaxConcurrencyBulkSync :: Maybe MaxConcurrencyBulkSync
+       , ncMaxConcurrencyDeadline :: Maybe MaxConcurrencyDeadline
+
          -- Logging parameters:
        , ncViewMode       :: ViewMode
        , ncLoggingSwitch  :: Bool
@@ -100,6 +104,10 @@ instance FromJSON NodeConfiguration where
 
       -- Node parameters, not protocol-specific
       ncSocketPath <- v .:? "SocketPath"
+
+      -- Blockfetch parameters
+      ncMaxConcurrencyBulkSync <- v .:? "MaxConcurrencyBulkSync"
+      ncMaxConcurrencyDeadline <- v .:? "MaxConcurrencyDeadline"
 
       -- Logging parameters
       ncViewMode      <- v .:? "ViewMode"         .!= SimpleView
@@ -129,6 +137,8 @@ instance FromJSON NodeConfiguration where
       pure NodeConfiguration {
              ncProtocolConfig
            , ncSocketPath
+           , ncMaxConcurrencyBulkSync
+           , ncMaxConcurrencyDeadline
            , ncViewMode
            , ncLoggingSwitch
            , ncLogMetrics
