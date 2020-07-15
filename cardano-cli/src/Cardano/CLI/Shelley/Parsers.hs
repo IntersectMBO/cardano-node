@@ -245,7 +245,7 @@ pStakeAddress =
     pStakeAddressDelegationCert :: Parser StakeAddressCmd
     pStakeAddressDelegationCert = StakeKeyDelegationCert
                                     <$> pStakeVerificationKeyFile
-                                    <*> pPoolStakingVerificationKeyFile
+                                    <*> pStakePoolVerificationKeyHashOrFile
                                     <*> pOutputFile
 
     pConvertITNKey :: Parser StakeAddressCmd
@@ -1310,8 +1310,8 @@ pStakeVerificationKeyFile =
     )
 
 
-pPoolStakingVerificationKeyFile :: Parser VerificationKeyFile
-pPoolStakingVerificationKeyFile =
+pPoolStakeVerificationKeyFile :: Parser VerificationKeyFile
+pPoolStakeVerificationKeyFile =
   VerificationKeyFile <$>
     (  Opt.strOption
          (  Opt.long "cold-verification-key-file"
@@ -1325,6 +1325,23 @@ pPoolStakingVerificationKeyFile =
          <> Opt.internal
          )
     )
+
+pStakePoolVerificationKeyHash :: Parser (Hash StakePoolKey)
+pStakePoolVerificationKeyHash =
+    Opt.option
+      (Opt.maybeReader spvkHash)
+        (  Opt.long "cold-verification-key-hash"
+        <> Opt.metavar "HASH"
+        <> Opt.help "Stake pool verification key hash (hex-encoded)."
+        )
+  where
+    spvkHash :: String -> Maybe (Hash StakePoolKey)
+    spvkHash = deserialiseFromRawBytesHex (AsHash AsStakePoolKey) . BSC.pack
+
+pStakePoolVerificationKeyHashOrFile :: Parser StakePoolVerificationKeyHashOrFile
+pStakePoolVerificationKeyHashOrFile =
+  StakePoolVerificationKeyFile <$> pPoolStakeVerificationKeyFile
+    <|> StakePoolVerificationKeyHash <$> pStakePoolVerificationKeyHash
 
 pVRFVerificationKeyFile :: Parser VerificationKeyFile
 pVRFVerificationKeyFile =
@@ -1505,7 +1522,7 @@ pStakePoolMetadataHash =
 pStakePoolRegistrationCert :: Parser PoolCmd
 pStakePoolRegistrationCert =
  PoolRegistrationCert
-  <$> pPoolStakingVerificationKeyFile
+  <$> pPoolStakeVerificationKeyFile
   <*> pVRFVerificationKeyFile
   <*> pPoolPledge
   <*> pPoolCost
@@ -1520,7 +1537,7 @@ pStakePoolRegistrationCert =
 pStakePoolRetirementCert :: Parser PoolCmd
 pStakePoolRetirementCert =
   PoolRetirementCert
-    <$> pPoolStakingVerificationKeyFile
+    <$> pPoolStakeVerificationKeyFile
     <*> pEpochNo
     <*> pOutputFile
 

@@ -11,7 +11,8 @@ import qualified Data.Text as Text
 import qualified Data.Text.IO as Text
 
 import           Control.Monad.Trans.Except (ExceptT)
-import           Control.Monad.Trans.Except.Extra (firstExceptT, hoistEither, newExceptT)
+import           Control.Monad.Trans.Except.Extra (bimapExceptT, firstExceptT, hoistEither,
+                   newExceptT)
 
 import           Cardano.Api.TextView (TextViewDescription (..))
 import           Cardano.Api.Typed
@@ -47,8 +48,8 @@ runStakeAddressCmd (StakeAddressKeyHash vk mOutputFp) = runStakeAddressKeyHash v
 runStakeAddressCmd (StakeAddressBuild vk nw mOutputFp) = runStakeAddressBuild vk nw mOutputFp
 runStakeAddressCmd (StakeKeyRegistrationCert stkKeyVerKeyFp outputFp) =
   runStakeKeyRegistrationCert stkKeyVerKeyFp outputFp
-runStakeAddressCmd (StakeKeyDelegationCert stkKeyVerKeyFp stkPoolVerKeyFp outputFp) =
-  runStakeKeyDelegationCert stkKeyVerKeyFp stkPoolVerKeyFp outputFp
+runStakeAddressCmd (StakeKeyDelegationCert stkKeyVerKeyFp stkPoolVerKeyHashOrFp outputFp) =
+  runStakeKeyDelegationCert stkKeyVerKeyFp stkPoolVerKeyHashOrFp outputFp
 runStakeAddressCmd (StakeKeyDeRegistrationCert stkKeyVerKeyFp outputFp) =
   runStakeKeyDeRegistrationCert stkKeyVerKeyFp outputFp
 runStakeAddressCmd (StakeKeyITNConversion itnKeyFile mOutFile) = runSingleITNKeyConversion itnKeyFile mOutFile
@@ -120,23 +121,28 @@ runStakeKeyRegistrationCert (VerificationKeyFile vkFp) (OutputFile oFp) = do
 runStakeKeyDelegationCert
   :: VerificationKeyFile
   -- ^ Delegator stake verification key file.
-  -> VerificationKeyFile
-  -- ^ Delegatee stake pool verification key file.
+  -> StakePoolVerificationKeyHashOrFile
+  -- ^ Delegatee stake pool verification key hash or file.
   -> OutputFile
   -> ExceptT ShelleyStakeAddressCmdError IO ()
-runStakeKeyDelegationCert (VerificationKeyFile stkKey) (VerificationKeyFile poolVKey) (OutputFile outFp) = do
+runStakeKeyDelegationCert (VerificationKeyFile stkKey) poolVKeyHashOrFile (OutputFile outFp) = do
     stakeVkey <- firstExceptT ShelleyStakeAddressReadFileError
       . newExceptT
       $ readFileTextEnvelope (AsVerificationKey AsStakeKey) stkKey
 
-    poolStakeVkey <- firstExceptT ShelleyStakeAddressReadFileError
-      . newExceptT
-      $ readFileTextEnvelope (AsVerificationKey AsStakePoolKey) poolVKey
+    poolStakeVKeyHash <-
+      case poolVKeyHashOrFile of
+        StakePoolVerificationKeyHash hash -> pure hash
+        StakePoolVerificationKeyFile (VerificationKeyFile fp) ->
+          bimapExceptT
+            ShelleyStakeAddressReadFileError
+            verificationKeyHash
+            (newExceptT $ readFileTextEnvelope (AsVerificationKey AsStakePoolKey) fp)
 
     let stakeCred = StakeCredentialByKey (verificationKeyHash stakeVkey)
         delegCert = makeStakeAddressDelegationCertificate
                       stakeCred
-                      (verificationKeyHash poolStakeVkey)
+                      poolStakeVKeyHash
     firstExceptT ShelleyStakeAddressWriteFileError
       . newExceptT
       $ writeFileTextEnvelope outFp (Just delegCertDesc) delegCert
