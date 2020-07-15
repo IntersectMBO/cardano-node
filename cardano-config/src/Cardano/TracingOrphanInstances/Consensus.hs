@@ -38,6 +38,7 @@ import           Ouroboros.Consensus.Ledger.Abstract
 import qualified Ouroboros.Consensus.Protocol.BFT  as BFT
 import qualified Ouroboros.Consensus.Protocol.PBFT as PBFT
 import           Ouroboros.Consensus.Ledger.Extended
+import           Ouroboros.Consensus.Ledger.Inspect (LedgerWarning)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx, GenTxId,
                    HasTxId, TxId, txId)
 import           Ouroboros.Consensus.Mempool.API (TraceEventMempool (..), MempoolSize(..))
@@ -78,8 +79,10 @@ instance HasSeverityAnnotation (ChainDB.TraceEvent blk) where
     ChainDB.TryAddToCurrentChain {} -> Debug
     ChainDB.TrySwitchToAFork {} -> Info
     ChainDB.StoreButDontChange {} -> Debug
-    ChainDB.AddedToCurrentChain {} -> Notice
-    ChainDB.SwitchedToAFork {} -> Notice
+    ChainDB.AddedToCurrentChain (_:_) _ _ _ -> Warning -- list of warnings
+    ChainDB.AddedToCurrentChain []    _ _ _ -> Notice
+    ChainDB.SwitchedToAFork (_:_) _ _ _ -> Warning -- list of warnings
+    ChainDB.SwitchedToAFork []    _ _ _ -> Notice
     ChainDB.AddBlockValidation ev' -> case ev' of
       ChainDB.InvalidBlock {} -> Error
       ChainDB.InvalidCandidate {} -> Error
@@ -292,8 +295,10 @@ instance Transformable Text IO (TraceLocalTxSubmissionServerEvent blk) where
 
 
 instance ( Condense (HeaderHash blk)
+         , Show (LedgerWarning blk)
          , LedgerSupportsProtocol blk
-         , ToObject (Header blk))
+         , ToObject (Header blk)
+         , ToObject (LedgerWarning blk))
       => Transformable Text IO (ChainDB.TraceEvent blk) where
   trTransformer = trStructuredText
 
@@ -301,7 +306,9 @@ instance ( Condense (HeaderHash blk)
 
 
 
-instance (Condense (HeaderHash blk), LedgerSupportsProtocol blk)
+instance (Condense (HeaderHash blk),
+          Show (LedgerWarning blk),
+          LedgerSupportsProtocol blk)
       => HasTextFormatter (ChainDB.TraceEvent blk) where
     formatText = \case
       ChainDB.TraceAddBlockEvent ev -> case ev of
@@ -321,10 +328,12 @@ instance (Condense (HeaderHash blk), LedgerSupportsProtocol blk)
           "Block fits onto the current chain: " <> condenseT pt
         ChainDB.TrySwitchToAFork pt _ -> \_o ->
           "Block fits onto some fork: " <> condenseT pt
-        ChainDB.AddedToCurrentChain _ _ c -> \_o ->
-          "Chain extended, new tip: " <> condenseT (AF.headPoint c)
-        ChainDB.SwitchedToAFork _ _ c -> \_o ->
-          "Switched to a fork, new tip: " <> condenseT (AF.headPoint c)
+        ChainDB.AddedToCurrentChain ws _ _ c -> \_o ->
+          "Chain extended, new tip: " <> condenseT (AF.headPoint c) <>
+          Text.concat [ "\nWarning: " <> showT w | w <- ws ]
+        ChainDB.SwitchedToAFork ws _ _ c -> \_o ->
+          "Switched to a fork, new tip: " <> condenseT (AF.headPoint c) <>
+          Text.concat [ "\nWarning: " <> showT w | w <- ws ]
         ChainDB.AddBlockValidation ev' -> case ev' of
           ChainDB.InvalidBlock err pt -> \_o ->
             "Invalid block " <> condenseT pt <> ": " <> showT err
@@ -541,7 +550,8 @@ instance Condense (HeaderHash blk)
 
 instance ( Condense (HeaderHash blk)
          , LedgerSupportsProtocol blk
-         , ToObject (Header blk))
+         , ToObject (Header blk)
+         , ToObject (LedgerWarning blk))
       => ToObject (ChainDB.TraceEvent blk) where
   toObject verb (ChainDB.TraceAddBlockEvent ev) = case ev of
     ChainDB.IgnoreBlockOlderThanK pt ->
@@ -571,20 +581,24 @@ instance ( Condense (HeaderHash blk)
     ChainDB.TrySwitchToAFork pt _ ->
       mkObject [ "kind" .= String "TraceAddBlockEvent.TrySwitchToAFork"
                , "block" .= toObject verb pt ]
-    ChainDB.AddedToCurrentChain _ base extended  ->
+    ChainDB.AddedToCurrentChain warnings _ base extended  ->
       mkObject $
                [ "kind" .= String "TraceAddBlockEvent.AddedToCurrentChain"
                , "newtip" .= showPoint verb (AF.headPoint extended)
-               ] ++
-               [ "headers" .= toJSON (toObject verb `map` addedHdrsNewChain base extended)
+               ]
+            ++ [ "headers" .= toJSON (toObject verb `map` addedHdrsNewChain base extended)
                | verb == MaximalVerbosity ]
-    ChainDB.SwitchedToAFork _ old new ->
+            ++ [ "warnings" .= toJSON (map (toObject verb) warnings)
+               | not (null warnings) ]
+    ChainDB.SwitchedToAFork warnings _ old new ->
       mkObject $
                [ "kind" .= String "TraceAddBlockEvent.SwitchedToAFork"
                , "newtip" .= showPoint verb (AF.headPoint new)
-               ] ++
-               [ "headers" .= toJSON (toObject verb `map` addedHdrsNewChain old new)
+               ]
+            ++ [ "headers" .= toJSON (toObject verb `map` addedHdrsNewChain old new)
                | verb == MaximalVerbosity ]
+            ++ [ "warnings" .= toJSON (map (toObject verb) warnings)
+               | not (null warnings) ]
     ChainDB.AddBlockValidation ev' -> case ev' of
       ChainDB.InvalidBlock err pt ->
         mkObject [ "kind" .= String "TraceAddBlockEvent.AddBlockValidation.InvalidBlock"

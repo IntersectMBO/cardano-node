@@ -1,4 +1,5 @@
 {-# LANGUAGE DerivingStrategies    #-}
+{-# LANGUAGE DeriveAnyClass        #-}
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -25,10 +26,13 @@ import qualified Cardano.Crypto.Hash.Class as Crypto
 import           Cardano.TracingOrphanInstances.Common
 import           Cardano.TracingOrphanInstances.Consensus ()
 
+import           Cardano.Slotting.Slot (EpochSize(..))
 import           Ouroboros.Consensus.Block (BlockProtocol)
+import           Ouroboros.Consensus.BlockchainTime (getSlotLength)
 import           Ouroboros.Consensus.Protocol.Abstract
                    (ValidationErr, CannotLead, ChainIndepState)
 import           Ouroboros.Consensus.Ledger.Abstract (LedgerError)
+import           Ouroboros.Consensus.Ledger.Inspect (LedgerWarning)
 import           Ouroboros.Consensus.Ledger.SupportsMempool
                    (GenTx, TxId, ApplyTxErr)
 import           Ouroboros.Consensus.HeaderValidation
@@ -36,8 +40,11 @@ import           Ouroboros.Consensus.HeaderValidation
 import           Ouroboros.Consensus.HardFork.Combinator
 import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras
                    (OneEraValidationErr(..), OneEraLedgerError(..),
+                   OneEraLedgerWarning(..),
                     OneEraEnvelopeErr(..), OneEraCannotLead(..),
                     EraMismatch(..), mkEraMismatch)
+import           Ouroboros.Consensus.HardFork.History.EraParams
+                   (EraParams(..), SafeZone, SafeBeforeEpoch)
 import           Ouroboros.Consensus.TypeFamilyWrappers
 
 import           Ouroboros.Consensus.Util.Condense (Condense(..))
@@ -146,6 +153,41 @@ instance All (ToObject `Compose` WrapLedgerErr) xs => ToObject (OneEraLedgerErro
 
 instance ToObject (LedgerError blk) => ToObject (WrapLedgerErr blk) where
     toObject verb = toObject verb . unwrapLedgerErr
+
+
+--
+-- instances for HardForkLedgerWarning
+--
+
+instance All (ToObject `Compose` WrapLedgerWarning) xs => ToObject (HardForkLedgerWarning xs) where
+    toObject verb (HardForkLedgerWarningInEra err) = toObject verb err
+
+    toObject verb (HardForkLedgerWarningUnexpectedTransition eraParams epoch) =
+      mkObject
+        [ "kind"            .= String "HardForkLedgerWarningUnexpectedTransition"
+        , "eraParams"       .= toObject verb eraParams
+        , "transitionEpoch" .= epoch
+        ]
+
+instance All (ToObject `Compose` WrapLedgerWarning) xs => ToObject (OneEraLedgerWarning xs) where
+    toObject verb =
+        hcollapse
+      . hcmap (Proxy @ (ToObject `Compose` WrapLedgerWarning)) (K . toObject verb)
+      . getOneEraLedgerWarning
+
+instance ToObject (LedgerWarning blk) => ToObject (WrapLedgerWarning blk) where
+    toObject verb = toObject verb . unwrapLedgerWarning
+
+instance ToObject EraParams where
+    toObject _verb EraParams{ eraEpochSize, eraSlotLength, eraSafeZone} =
+      mkObject
+        [ "epochSize"  .= unEpochSize eraEpochSize
+        , "slotLength" .= getSlotLength eraSlotLength
+        , "safeZone"   .= eraSafeZone
+        ]
+
+deriving instance ToJSON SafeZone
+deriving instance ToJSON SafeBeforeEpoch
 
 
 --

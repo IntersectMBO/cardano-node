@@ -55,6 +55,7 @@ import           Ouroboros.Consensus.BlockchainTime (SystemStart (..), TraceBloc
 import           Ouroboros.Consensus.HeaderValidation (OtherHeaderEnvelopeError)
 import           Ouroboros.Consensus.Ledger.Abstract (LedgerErr, LedgerState)
 import           Ouroboros.Consensus.Ledger.Extended (ledgerState)
+import           Ouroboros.Consensus.Ledger.Inspect (LedgerWarning)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx, GenTxId, HasTxs, TxId)
 import           Ouroboros.Consensus.Ledger.SupportsProtocol (LedgerSupportsProtocol)
 import           Ouroboros.Consensus.Mempool.API (MempoolSize (..), TraceEventMempool (..))
@@ -194,7 +195,7 @@ instance ElidingTracer (WithSeverity (ChainDB.TraceEvent blk)) where
   doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.BlockInTheFuture _ _))) = False
   doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.StoreButDontChange _))) = False
   doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.TrySwitchToAFork _ _))) = False
-  doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.SwitchedToAFork _ _ _))) = False
+  doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.SwitchedToAFork{}))) = False
   doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.AddBlockValidation (ChainDB.InvalidBlock _ _)))) = False
   doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.AddBlockValidation (ChainDB.InvalidCandidate _)))) = False
   doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.AddBlockValidation ChainDB.CandidateContainsFutureBlocksExceedingClockSkew{}))) = False
@@ -202,7 +203,7 @@ instance ElidingTracer (WithSeverity (ChainDB.TraceEvent blk)) where
   doelide (WithSeverity _ (ChainDB.TraceCopyToImmDBEvent _)) = True
   doelide _ = False
   conteliding _tverb _tr _ (Nothing, _count) = return (Nothing, 0)
-  conteliding tverb tr ev@(WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.AddedToCurrentChain _pt _ _))) (_old, oldt) = do
+  conteliding tverb tr ev@(WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.AddedToCurrentChain{}))) (_old, oldt) = do
       tnow <- fromIntegral <$> getMonotonicTimeNSec
       let deltat = tnow - oldt
       if (deltat > 1250000000)  -- report at most every 1250 ms
@@ -345,8 +346,10 @@ mkTracers TracingOff _ _ =
 
 teeTraceChainTip
   :: ( Condense (HeaderHash blk)
+     , Show (LedgerWarning blk)
      , LedgerSupportsProtocol blk
      , ToObject (Header blk)
+     , ToObject (LedgerWarning blk)
      )
   => TraceOptions
   -> MVar (Maybe (WithSeverity (ChainDB.TraceEvent blk)), Integer)
@@ -360,8 +363,10 @@ teeTraceChainTip (TracingOn trSel) elided tr =
 
 teeTraceChainTipElide
   :: ( Condense (HeaderHash blk)
+     , Show (LedgerWarning blk)
      , LedgerSupportsProtocol blk
      , ToObject (Header blk)
+     , ToObject (LedgerWarning blk)
      )
   => TracingVerbosity
   -> MVar (Maybe (WithSeverity (ChainDB.TraceEvent blk)), Integer)
@@ -392,9 +397,9 @@ teeTraceChainTip' tr =
     Tracer $ \(WithSeverity _ ev') ->
       case ev' of
           (ChainDB.TraceAddBlockEvent ev) -> case ev of
-            ChainDB.SwitchedToAFork     newTipInfo _ newChain ->
+            ChainDB.SwitchedToAFork _warnings newTipInfo _ newChain ->
               traceChainInformation tr (chainInformation newTipInfo newChain)
-            ChainDB.AddedToCurrentChain newTipInfo _ newChain ->
+            ChainDB.AddedToCurrentChain _warnings newTipInfo _ newChain ->
               traceChainInformation tr (chainInformation newTipInfo newChain)
             _ -> pure ()
           _ -> pure ()
