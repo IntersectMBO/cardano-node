@@ -1,10 +1,13 @@
 module Cardano.Api.MetaData
   ( MetaDataJsonConversionError (..)
+  , TxMetadataValidationError (..)
   , jsonFromMetadata
   , jsonFromMetadataValue
   , jsonToMetadata
   , jsonToMetadataValue
   , renderMetaDataJsonConversionError
+  , renderTxMetadataValidationError
+  , validateTxMetadata
   ) where
 
 import           Cardano.Prelude hiding (MetaData)
@@ -26,6 +29,82 @@ import qualified Data.Text.Encoding as Text
 import qualified Data.Vector as Vector
 
 import           Shelley.Spec.Ledger.MetaData (MetaData (..), MetaDatum (..))
+
+
+
+-- | A transaction metadata validation error.
+data TxMetadataValidationError
+  = TxMetadataTextStringInvalidLengthError
+    -- ^ The length of a text string metadatum value exceeds the maximum.
+      !Int
+      -- ^ Maximum byte length.
+      !Int
+      -- ^ Actual byte length.
+  | TxMetadataByteStringInvalidLengthError
+    -- ^ The length of a byte string metadatum value exceeds the maximum.
+      !Int
+      -- ^ Maximum byte length.
+      !Int
+      -- ^ Actual byte length.
+  deriving (Eq, Show)
+
+-- | The maximum byte length of a transaction metadata text string value.
+txMetadataTextStringMaxByteLength :: Int
+txMetadataTextStringMaxByteLength = 64
+
+-- | The maximum length of a transaction metadata byte string value.
+txMetadataByteStringMaxLength :: Int
+txMetadataByteStringMaxLength = 64
+
+-- | Render a transaction metadata validation error as text.
+renderTxMetadataValidationError :: TxMetadataValidationError -> Text
+renderTxMetadataValidationError err =
+  case err of
+    TxMetadataTextStringInvalidLengthError maxLen actualLen ->
+      "Text string metadatum value must consist of at most "
+        <> show maxLen
+        <> " bytes, but it consists of "
+        <> show actualLen
+        <> " bytes."
+    TxMetadataByteStringInvalidLengthError maxLen actualLen ->
+      "Byte string metadatum value must consist of at most "
+        <> show maxLen
+        <> " bytes, but it consists of "
+        <> show actualLen
+        <> " bytes."
+
+-- | Validate the provided transaction metadata.
+validateTxMetadata
+  :: TxMetadata
+  -> Either (NonEmpty TxMetadataValidationError) TxMetadata
+validateTxMetadata txMd@(TxMetadata (MetaData mdMap)) =
+    maybe (Right txMd) Left . nonEmpty $ foldMap validate mdMap
+  where
+    validate :: MetaDatum -> [TxMetadataValidationError]
+    validate metaDatum =
+      case metaDatum of
+        Map mdPairs -> foldMap (\(k, v) -> validate k <> validate v) mdPairs
+        List mds -> foldMap validate mds
+
+        I _ -> mempty
+
+        B bs
+          | BS.length bs <= txMetadataByteStringMaxLength -> mempty
+          | otherwise ->
+              [ TxMetadataByteStringInvalidLengthError
+                  txMetadataByteStringMaxLength
+                  (BS.length bs)
+              ]
+
+        S txt
+          | BS.length (Text.encodeUtf8 txt) <= txMetadataTextStringMaxByteLength -> mempty
+          | otherwise ->
+              [ TxMetadataTextStringInvalidLengthError
+                  txMetadataTextStringMaxByteLength
+                  (BS.length (Text.encodeUtf8 txt))
+              ]
+
+-- -------------------------------------------------------------------------------------------------
 
 data MetaDataJsonConversionError
   = ConversionErrDecodeJSON !String

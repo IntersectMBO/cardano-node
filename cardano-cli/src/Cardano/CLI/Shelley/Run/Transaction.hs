@@ -15,6 +15,7 @@ import           Prelude (String)
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy as LBS
+import qualified Data.List.NonEmpty as NE
 import qualified Data.Text as Text
 
 import           Control.Monad.Trans.Except (ExceptT)
@@ -48,6 +49,7 @@ data ShelleyTxCmdError
   | ShelleyTxMetaDataFileError !FilePath !IOException
   | ShelleyTxMetaDataConversionError !FilePath !MetaDataJsonConversionError
   | ShelleyTxMetaDecodeError !FilePath !CBOR.DecoderError
+  | ShelleyTxMetaValidationError !FilePath !TxMetadataValidationError
   | ShelleyTxMissingNetworkId
   | ShelleyTxSocketEnvError !EnvSocketError
   | ShelleyTxReadProtocolParamsError !FilePath !IOException
@@ -77,6 +79,9 @@ renderShelleyTxCmdError err =
     ShelleyTxMetaDecodeError fp metaDataErr ->
        "Error decoding CBOR metadata at: " <> show fp
                              <> " Error: " <> show metaDataErr
+    ShelleyTxMetaValidationError fp valErr ->
+      "Error validating transaction metadata at: " <> show fp
+                                     <> " Error: " <> renderTxMetadataValidationError valErr
     ShelleyTxReadUnsignedTxError err' ->
       "Error while reading unsigned shelley tx: " <> Text.pack (Api.displayError err')
     ShelleyTxReadUpdateError apiError ->
@@ -423,5 +428,7 @@ readFileTxMetaData (MetaDataFileJSON fp) = do
 readFileTxMetaData (MetaDataFileCBOR fp) = do
     bs <- handleIOExceptT (ShelleyTxMetaDataFileError fp) $
           BS.readFile fp
-    firstExceptT (ShelleyTxMetaDecodeError fp) $ hoistEither $
+    txMetadata <- firstExceptT (ShelleyTxMetaDecodeError fp) $ hoistEither $
       Api.deserialiseFromCBOR Api.AsTxMetadata bs
+    firstExceptT (ShelleyTxMetaValidationError fp . NE.head) $ hoistEither $
+      validateTxMetadata txMetadata
