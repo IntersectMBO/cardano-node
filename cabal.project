@@ -119,13 +119,6 @@ package cardano-ledger
 
 source-repository-package
   type: git
-  location: https://github.com/input-output-hk/bech32
-  tag: 7b262c6e551af0f0f02e192b69d9ac5d1e3b5f88
-  --sha256: 0xhxmsn9qd4d3sgmnisc2v0wk66d2hkdvncv9lw7zi0nxa5vx2n2
-  subdir: bech32
-
-source-repository-package
-  type: git
   location: https://github.com/input-output-hk/cardano-base
   tag: c454b6e791ee2fe84508b4d5ed2c4dedafb7dce4
   --sha256: 01m5jq6gsym3j4v85lv01n6f8480lglrb0n2mv87aqm5ksh4di9y

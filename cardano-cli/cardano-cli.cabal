@@ -62,7 +62,7 @@ library
                      , aeson
                      , aeson-pretty
                      , attoparsec
-                     , bech32
+                     , bech32 >= 1.1.0
                      , bytestring
                      , base16-bytestring
                      , base58-bytestring
@@ -176,7 +176,7 @@ test-suite cardano-cli-pioneers
 
   build-depends:        base
                       , aeson
-                      , bech32
+                      , bech32 >= 1.1.0
                       , bytestring
                       , cardano-api
                       , cardano-cli
