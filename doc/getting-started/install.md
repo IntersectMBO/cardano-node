@@ -1,6 +1,5 @@
 # Installing and Running a Node
 
-UPDATED FOR TAG: 1.14.2
 
 ## PREREQUISITES
 
