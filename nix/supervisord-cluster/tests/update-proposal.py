@@ -1,18 +1,20 @@
-from base import cluster
+import sys
 import time
 
-sleep_time = cluster.slotLength * cluster.epochLength
+from base import cluster
+
+sleep_time = cluster.slot_length * cluster.epoch_length
 print(f"Waiting 1 epoch to submit proposal ({sleep_time} seconds)")
 time.sleep(sleep_time)
-cluster.submitUpdateProposal(["--decentralization-parameter", "0.5"])
+cluster.submit_update_proposal(["--decentralization-parameter", "0.5"])
 print(f"Update Proposal submited. Sleeping until next epoch ({sleep_time} seconds)")
 time.sleep(sleep_time + 15)
-cluster.refreshPParams()
+cluster.refresh_pparams()
 d = cluster.pparams["decentralisationParam"]
 if d == 0.5:
     print("Cluster update proposal successful!")
-    exit(0)
+    sys.exit(0)
 else:
     print(f"Cluster update proposal failed! Expected 0, got {d}")
-    cluster.printTip()
-    exit(1)
+    print(cluster.get_tip())
+    sys.exit(1)
