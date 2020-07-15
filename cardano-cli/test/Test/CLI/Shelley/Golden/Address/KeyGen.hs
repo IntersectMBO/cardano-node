@@ -33,4 +33,4 @@ golden_shelleyAddressKeyGen = OP.propertyOnce $ OP.workspace "tmp/address-key-ge
   OP.assertFilesExist outputFiles
 
   OP.assertFileOccurences 1 "PaymentVerificationKeyShelley" addressVKeyFile
-  OP.assertFileOccurences 1 "SigningKeyShelley" addressSKeyFile
+  OP.assertFileOccurences 1 "PaymentSigningKeyShelley_ed25519" addressSKeyFile

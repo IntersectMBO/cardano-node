@@ -17,7 +17,7 @@ ${CARDANO_CLI} shelley genesis key-gen-genesis \
 assert_file_exists "${TEST_DIR}/key-gen.vkey"
 assert_file_exists "${TEST_DIR}/key-gen.skey"
 
-assert_string 'Genesis verification key' "${TEST_DIR}/key-gen.vkey"
-assert_string 'Genesis signing key' "${TEST_DIR}/key-gen.skey"
+assert_string 'GenesisVerificationKey_ed25519' "${TEST_DIR}/key-gen.vkey"
+assert_string 'GenesisSigningKey_ed25519' "${TEST_DIR}/key-gen.skey"
 
 report_result ${error}

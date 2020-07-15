@@ -32,7 +32,7 @@ ${CARDANO_CLI} shelley node issue-op-cert \
 
 assert_file_exists "${TEST_DIR}/operational.cert"
 
-assert_string 'Node operational certificate' "${TEST_DIR}/operational.cert"
+assert_string 'NodeOperationalCertificate' "${TEST_DIR}/operational.cert"
 
 #assert_string 'Next certificate issue number: 7' "${TEST_DIR}/delegate-op-cert.counter"
 #TODO: Move to hedgehog

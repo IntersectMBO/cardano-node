@@ -7,7 +7,7 @@ module Test.CLI.Shelley.Golden.Genesis.Create
 
 import Cardano.Prelude hiding (to)
 
-import Prelude(String) 
+import Prelude(String)
 
 import qualified Data.Aeson as J
 import qualified Data.Aeson.Types as J
@@ -86,7 +86,7 @@ golden_shelleyGenesisCreate = OP.propertyOnce $ do
     liftIO $ IO.copyFile sourceGenesisSpecFile (tempDir <> "/genesis.spec.json")
 
     let genesisFile = tempDir <> "/genesis.json"
-    
+
     fmtStartTime <- fmap formatIso8601 $ liftIO DT.getCurrentTime
 
     (supply, fmtSupply) <- fmap (withSnd show) $ forAll $ G.int (R.linear 10000000 4000000000)
@@ -132,21 +132,21 @@ golden_shelleyGenesisCreate = OP.propertyOnce $ do
 
     for_ [1 .. delegateCount] $ \i -> do
       -- Check Genesis keys
-      assertFileOccurences 1 "Genesis signing key" $ tempDir <> "/genesis-keys/genesis" <> show i <> ".skey"
-      assertFileOccurences 1 "Genesis verification key" $ tempDir <> "/genesis-keys/genesis" <> show i <> ".vkey"
+      assertFileOccurences 1 "GenesisSigningKey_ed25519" $ tempDir <> "/genesis-keys/genesis" <> show i <> ".skey"
+      assertFileOccurences 1 "GenesisVerificationKey_ed25519" $ tempDir <> "/genesis-keys/genesis" <> show i <> ".vkey"
 
       -- Check delegate keys
-      assertFileOccurences 1 "Node operator signing key" $ tempDir <> "/delegate-keys/delegate" <> show i <> ".skey"
-      assertFileOccurences 1 "Node operator verification key" $ tempDir <> "/delegate-keys/delegate" <> show i <> ".vkey"
-      assertFileOccurences 1 "Node operational certificate issue counter" $ tempDir <> "/delegate-keys/delegate" <> show i <> ".counter"
+      assertFileOccurences 1 "NodeOperatorSigningKey_ed25519" $ tempDir <> "/delegate-keys/delegate" <> show i <> ".skey"
+      assertFileOccurences 1 "NodeOperatorVerificationKey_ed25519" $ tempDir <> "/delegate-keys/delegate" <> show i <> ".vkey"
+      assertFileOccurences 1 "NodeOperationalCertificateIssueCounter" $ tempDir <> "/delegate-keys/delegate" <> show i <> ".counter"
 
       -- Check utxo keys
-      assertFileOccurences 1 "Genesis UTxO signing key" $ tempDir <> "/utxo-keys/utxo" <> show i <> ".skey"
-      assertFileOccurences 1 "Genesis UTxO verification key"  $ tempDir <> "/utxo-keys/utxo" <> show i <> ".vkey"
+      assertFileOccurences 1 "GenesisUTxOSigningKey_ed25519" $ tempDir <> "/utxo-keys/utxo" <> show i <> ".skey"
+      assertFileOccurences 1 "GenesisUTxOVerificationKey_ed25519"  $ tempDir <> "/utxo-keys/utxo" <> show i <> ".vkey"
 
   OP.workspace "tmp/genesis-create" $ \tempDir -> do
     let genesisFile = tempDir <> "/genesis.json"
-    
+
     fmtStartTime <- fmap formatIso8601 $ liftIO DT.getCurrentTime
 
     (supply, fmtSupply) <- fmap (withSnd show) $ forAll $ G.int (R.linear 10000000 4000000000)
@@ -192,14 +192,14 @@ golden_shelleyGenesisCreate = OP.propertyOnce $ do
 
     for_ [1 .. delegateCount] $ \i -> do
       -- Check Genesis keys
-      assertFileOccurences 1 "Genesis signing key" $ tempDir <> "/genesis-keys/genesis" <> show i <> ".skey"
-      assertFileOccurences 1 "Genesis verification key" $ tempDir <> "/genesis-keys/genesis" <> show i <> ".vkey"
+      assertFileOccurences 1 "GenesisSigningKey_ed25519" $ tempDir <> "/genesis-keys/genesis" <> show i <> ".skey"
+      assertFileOccurences 1 "GenesisVerificationKey_ed25519" $ tempDir <> "/genesis-keys/genesis" <> show i <> ".vkey"
 
       -- Check delegate keys
-      assertFileOccurences 1 "Node operator signing key" $ tempDir <> "/delegate-keys/delegate" <> show i <> ".skey"
-      assertFileOccurences 1 "Node operator verification key" $ tempDir <> "/delegate-keys/delegate" <> show i <> ".vkey"
-      assertFileOccurences 1 "Node operational certificate issue counter" $ tempDir <> "/delegate-keys/delegate" <> show i <> ".counter"
+      assertFileOccurences 1 "NodeOperatorSigningKey_ed25519" $ tempDir <> "/delegate-keys/delegate" <> show i <> ".skey"
+      assertFileOccurences 1 "NodeOperatorVerificationKey_ed25519" $ tempDir <> "/delegate-keys/delegate" <> show i <> ".vkey"
+      assertFileOccurences 1 "NodeOperationalCertificateIssueCounter" $ tempDir <> "/delegate-keys/delegate" <> show i <> ".counter"
 
       -- Check utxo keys
-      assertFileOccurences 1 "Genesis UTxO signing key" $ tempDir <> "/utxo-keys/utxo" <> show i <> ".skey"
-      assertFileOccurences 1 "Genesis UTxO verification key"  $ tempDir <> "/utxo-keys/utxo" <> show i <> ".vkey"
+      assertFileOccurences 1 "GenesisUTxOSigningKey_ed25519" $ tempDir <> "/utxo-keys/utxo" <> show i <> ".skey"
+      assertFileOccurences 1 "GenesisUTxOVerificationKey_ed25519"  $ tempDir <> "/utxo-keys/utxo" <> show i <> ".vkey"
