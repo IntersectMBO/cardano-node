@@ -78,8 +78,10 @@ instance HasSeverityAnnotation (ChainDB.TraceEvent blk) where
     ChainDB.TryAddToCurrentChain {} -> Debug
     ChainDB.TrySwitchToAFork {} -> Info
     ChainDB.StoreButDontChange {} -> Debug
-    ChainDB.AddedToCurrentChain {} -> Notice
-    ChainDB.SwitchedToAFork {} -> Notice
+    ChainDB.AddedToCurrentChain (_:_) _ _ _ -> Warning -- list of warnings
+    ChainDB.AddedToCurrentChain []    _ _ _ -> Notice
+    ChainDB.SwitchedToAFork (_:_) _ _ _ -> Warning -- list of warnings
+    ChainDB.SwitchedToAFork []    _ _ _ -> Notice
     ChainDB.AddBlockValidation ev' -> case ev' of
       ChainDB.InvalidBlock {} -> Error
       ChainDB.InvalidCandidate {} -> Error
@@ -321,9 +323,9 @@ instance (Condense (HeaderHash blk), LedgerSupportsProtocol blk)
           "Block fits onto the current chain: " <> condenseT pt
         ChainDB.TrySwitchToAFork pt _ -> \_o ->
           "Block fits onto some fork: " <> condenseT pt
-        ChainDB.AddedToCurrentChain _ _ c -> \_o ->
+        ChainDB.AddedToCurrentChain ws _ _ c -> \_o ->
           "Chain extended, new tip: " <> condenseT (AF.headPoint c)
-        ChainDB.SwitchedToAFork _ _ c -> \_o ->
+        ChainDB.SwitchedToAFork ws _ _ c -> \_o ->
           "Switched to a fork, new tip: " <> condenseT (AF.headPoint c)
         ChainDB.AddBlockValidation ev' -> case ev' of
           ChainDB.InvalidBlock err pt -> \_o ->
@@ -571,14 +573,14 @@ instance ( Condense (HeaderHash blk)
     ChainDB.TrySwitchToAFork pt _ ->
       mkObject [ "kind" .= String "TraceAddBlockEvent.TrySwitchToAFork"
                , "block" .= toObject verb pt ]
-    ChainDB.AddedToCurrentChain _ base extended  ->
+    ChainDB.AddedToCurrentChain warnings _ base extended  ->
       mkObject $
                [ "kind" .= String "TraceAddBlockEvent.AddedToCurrentChain"
                , "newtip" .= showPoint verb (AF.headPoint extended)
                ] ++
                [ "headers" .= toJSON (toObject verb `map` addedHdrsNewChain base extended)
                | verb == MaximalVerbosity ]
-    ChainDB.SwitchedToAFork _ old new ->
+    ChainDB.SwitchedToAFork warnings _ old new ->
       mkObject $
                [ "kind" .= String "TraceAddBlockEvent.SwitchedToAFork"
                , "newtip" .= showPoint verb (AF.headPoint new)
