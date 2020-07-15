@@ -23,6 +23,7 @@ import           Cardano.Prelude hiding (atomically)
 import           Data.Aeson (ToJSON (..), (.=))
 import qualified Data.Aeson as Aeson
 import           Data.Aeson.Encode.Pretty (encodePretty)
+import qualified Data.ByteString.Base16 as B16
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import           Data.HashMap.Strict (HashMap)
@@ -398,7 +399,7 @@ instance ToJSON DelegationsAndRewards where
         -> HashMap Text Aeson.Value
       delegAndRwdToJson acc k (d, r) =
         HMS.insert
-          (Text.decodeLatin1 $ Ledger.serialiseRewardAcnt k)
+          (Text.decodeLatin1 $ B16.encode $ Ledger.serialiseRewardAcnt k)
           (Aeson.object ["delegation" .= d, "rewardAccountBalance" .= r])
           acc
 

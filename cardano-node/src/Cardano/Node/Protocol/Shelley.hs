@@ -21,13 +21,17 @@ module Cardano.Node.Protocol.Shelley
   ) where
 
 import           Cardano.Prelude
-import           Prelude (String)
+import           Prelude (String, id)
+
+import qualified Data.ByteString as BS
+import qualified Data.Text as T
+import qualified Data.Aeson as Aeson
 
 import           Control.Monad.Trans.Except (ExceptT)
-import           Control.Monad.Trans.Except.Extra (firstExceptT, newExceptT)
-import qualified Data.Text as T
+import           Control.Monad.Trans.Except.Extra
+                   (firstExceptT, newExceptT, handleIOExceptT, hoistEither)
 
-import qualified Data.Aeson as Aeson
+import qualified Cardano.Crypto.Hash.Class as Crypto
 
 import qualified Ouroboros.Consensus.Cardano as Consensus
 
@@ -91,37 +95,30 @@ mkConsensusProtocolShelley NodeShelleyProtocolConfiguration {
                             npcShelleyMaxSupportedProtocolVersion
                           }
                           files = do
-    genesis <- readGenesis npcShelleyGenesisFile
+    (genesis, genesisHash) <- readGenesis npcShelleyGenesisFile
     optionalLeaderCredentials <- readLeaderCredentials files
 
     return $
       Consensus.ProtocolRealTPraos
         genesis
-        initialNonce
+        (Nonce (Crypto.castHash genesisHash))
         (ProtVer npcShelleySupportedProtocolVersionMajor
                  npcShelleySupportedProtocolVersionMinor)
         npcShelleyMaxSupportedProtocolVersion
         optionalLeaderCredentials
-  where
-    -- The initial nonce, typically derived from the hash of Genesis config
-    -- JSON file.
-    --
-    -- WARNING: chains using different values of this parameter will be
-    -- mutually incompatible.
-    --
-    -- TODO: This should also be replaced with the hash of the Shelley genesis
-    -- config JSON file, which should be taken as an argument/configuration
-    -- parameter. But be careful, all testnets so far have used NeutralNonce,
-    -- changing the value will require starting a new testnet.
-    initialNonce = NeutralNonce
 
-readGenesis :: GenesisFile
+readGenesis :: Crypto.HashAlgorithm h
+            => GenesisFile
             -> ExceptT ShelleyProtocolInstantiationError IO
-                       (ShelleyGenesis TPraosStandardCrypto)
-readGenesis (GenesisFile file) =
-    firstExceptT (GenesisReadError file) $
-      ExceptT $ handle (\(e :: IOException) -> return $ Left $ show e) $
-        Aeson.eitherDecodeFileStrict' file
+                       (ShelleyGenesis TPraosStandardCrypto,
+                        Crypto.Hash h ByteString)
+readGenesis (GenesisFile file) = do
+    content <- handleIOExceptT (GenesisReadError file) $
+                 BS.readFile file
+    genesis <- firstExceptT (GenesisDecodeError file) $ hoistEither $
+                 Aeson.eitherDecodeStrict' content
+    let genesisHash = Crypto.hashRaw id content
+    return (genesis, genesisHash)
 
 
 readLeaderCredentials :: Maybe ProtocolFilepaths
@@ -173,14 +170,16 @@ readLeaderCredentials (Just ProtocolFilepaths {shelleyKESFile = Nothing}) =
 -- Errors
 --
 
-data ShelleyProtocolInstantiationError = GenesisReadError !FilePath !String
-                                       | FileError (Api.FileError TextEnvelopeError)
-                          --TODO: pick a less generic constructor than FileError
+data ShelleyProtocolInstantiationError =
+       GenesisReadError !FilePath !IOException
+     | GenesisDecodeError !FilePath !String
+     | FileError (Api.FileError TextEnvelopeError)
+--TODO: pick a less generic constructor than FileError
 
-                                       | OCertNotSpecified
-                                       | VRFKeyNotSpecified
-                                       | KESKeyNotSpecified
-                                       deriving Show
+     | OCertNotSpecified
+     | VRFKeyNotSpecified
+     | KESKeyNotSpecified
+     deriving Show
 
 
 renderShelleyProtocolInstantiationError :: ShelleyProtocolInstantiationError
@@ -188,6 +187,10 @@ renderShelleyProtocolInstantiationError :: ShelleyProtocolInstantiationError
 renderShelleyProtocolInstantiationError pie =
   case pie of
     GenesisReadError fp err ->
+        "There was an error reading the genesis file: "
+     <> toS fp <> " Error: " <> (T.pack $ show err)
+
+    GenesisDecodeError fp err ->
         "There was an error parsing the genesis file: "
      <> toS fp <> " Error: " <> (T.pack $ show err)
 
