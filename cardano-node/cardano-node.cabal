@@ -63,6 +63,7 @@ library
                      , deepseq
                      , cardano-api
                      , cardano-config
+                     , cardano-crypto-class
                      , cardano-crypto-wrapper
                      , cardano-ledger
                      , cardano-prelude
