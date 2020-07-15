@@ -59,13 +59,14 @@ import           Cardano.Node.Types (NodeConfiguration (..), NodeCLI(..),
                    ncProtocol, parseNodeConfiguration)
 import           Cardano.Config.Types (ViewMode (..))
 
+import           Ouroboros.Network.BlockFetch (BlockFetchConfiguration (..))
 import           Ouroboros.Network.Magic (NetworkMagic (..))
 import           Ouroboros.Network.NodeToClient (LocalConnectionId)
 import           Ouroboros.Network.NodeToNode (RemoteConnectionId, AcceptedConnectionsLimit (..))
 import           Ouroboros.Consensus.Block (BlockProtocol)
 import           Ouroboros.Consensus.Node (NodeKernel,
                      DiffusionTracers (..), DiffusionArguments (..),
-                     DnsSubscriptionTarget (..), IPSubscriptionTarget (..),
+                     DnsSubscriptionTarget (..), IPSubscriptionTarget (..), NodeArgs (..),
                      RunNode (..),
                      RunNodeArgs (..))
 import qualified Ouroboros.Consensus.Node as Node (getChainDB, run)
@@ -314,7 +315,8 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
        rnDatabasePath         = dbPath,
        rnProtocolInfo         = pInfo,
        rnCustomiseChainDbArgs = customiseChainDbArgs $ validateDB npm,
-       rnCustomiseNodeArgs    = identity,
+       rnCustomiseNodeArgs    = customiseNodeArgs (ncMaxConcurrencyBulkSync nc)
+                                  (ncMaxConcurrencyDeadline nc),
        rnNodeToNodeVersions   = supportedNodeToNodeVersions (Proxy @blk),
        rnNodeToClientVersions = supportedNodeToClientVersions (Proxy @blk),
        rnNodeKernelHook       = \registry nodeKernel -> do
@@ -324,6 +326,19 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
        rnMaxClockSkew         = defaultClockSkew
     }
  where
+  customiseNodeArgs :: Maybe MaxConcurrencyBulkSync
+                    -> Maybe MaxConcurrencyDeadline
+                    -> NodeArgs IO RemoteConnectionId LocalConnectionId blk
+                    -> NodeArgs IO RemoteConnectionId LocalConnectionId blk
+  customiseNodeArgs bulk_m deadline_m args@NodeArgs{ blockFetchConfiguration } = args {
+      blockFetchConfiguration = blockFetchConfiguration {
+          bfcMaxConcurrencyBulkSync = maybe (bfcMaxConcurrencyBulkSync blockFetchConfiguration)
+            unMaxConcurrencyBulkSync bulk_m
+        , bfcMaxConcurrencyDeadline = maybe (bfcMaxConcurrencyDeadline blockFetchConfiguration)
+            unMaxConcurrencyDeadline deadline_m
+        }
+      }
+
   customiseChainDbArgs :: Bool
                        -> ChainDB.ChainDbArgs IO blk
                        -> ChainDB.ChainDbArgs IO blk

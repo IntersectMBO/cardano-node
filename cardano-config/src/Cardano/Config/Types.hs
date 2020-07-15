@@ -18,6 +18,8 @@ module Cardano.Config.Types
     , GenesisFile (..)
     , KESMetricsData (..)
     , MaxKESEvolutions (..)
+    , MaxConcurrencyBulkSync (..)
+    , MaxConcurrencyDeadline (..)
     , OperationalCertStartKESPeriod (..)
     , HasKESMetricsData (..)
     , NodeAddress (..)
@@ -261,6 +263,17 @@ instance HasKESMetricsData (ShelleyBlock c) where
 instance HasKESMetricsData ByronBlock where
 
 instance HasKESMetricsData (SimpleBlock a b) where
+
+newtype MaxConcurrencyBulkSync = MaxConcurrencyBulkSync
+  { unMaxConcurrencyBulkSync :: Word }
+  deriving stock (Eq, Ord)
+  deriving newtype (FromJSON, Show)
+
+newtype MaxConcurrencyDeadline = MaxConcurrencyDeadline
+  { unMaxConcurrencyDeadline :: Word }
+  deriving stock (Eq, Ord)
+  deriving newtype (FromJSON, Show)
+
 
 -- | Tracing-related constraints for monitoring purposes.
 --
