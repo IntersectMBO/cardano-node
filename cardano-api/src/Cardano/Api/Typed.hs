@@ -410,8 +410,6 @@ import qualified Cardano.Crypto.Wallet      as Crypto.HD
 --
 -- Byron imports
 --
-import qualified Ouroboros.Consensus.Byron.Crypto.DSIGN as Byron
-
 import qualified Cardano.Crypto.Hashing as Byron
 import qualified Cardano.Crypto.Signing as Byron
 import qualified Cardano.Crypto.ProtocolMagic as Byron
@@ -3002,18 +3000,10 @@ instance SerialiseAsRawBytes (Hash ByronKey) where
       ByronKeyHash . Byron.KeyHash <$> Byron.abstractHashFromBytes bs
 
 instance HasTextEnvelope (VerificationKey ByronKey) where
-    textEnvelopeType _ = "PaymentVerificationKeyByron_"
-                      <> fromString (Crypto.algorithmNameDSIGN proxy)
-      where
-        proxy :: Proxy (Byron.ByronDSIGN)
-        proxy = Proxy
+    textEnvelopeType _ = "PaymentVerificationKeyByron_ed25519_bip32"
 
 instance HasTextEnvelope (SigningKey ByronKey) where
-    textEnvelopeType _ = "PaymentSigningKeyByron_"
-                      <> fromString (Crypto.algorithmNameDSIGN proxy)
-      where
-        proxy :: Proxy (Byron.ByronDSIGN)
-        proxy = Proxy
+    textEnvelopeType _ = "PaymentSigningKeyByron_ed25519_bip32"
 
 instance CastVerificationKeyRole ByronKey PaymentExtendedKey where
     castVerificationKey (ByronVerificationKey vk) =
@@ -3251,18 +3241,10 @@ instance SerialiseAsRawBytes (Hash PaymentExtendedKey) where
       PaymentExtendedKeyHash . Shelley.KeyHash <$> Crypto.hashFromBytes bs
 
 instance HasTextEnvelope (VerificationKey PaymentExtendedKey) where
-    textEnvelopeType _ = "PaymentExtendedVerificationKeyShelley_"
-                      <> fromString (Crypto.algorithmNameDSIGN proxy)
-      where
-        proxy :: Proxy (Shelley.DSIGN ShelleyCrypto)
-        proxy = Proxy
+    textEnvelopeType _ = "PaymentExtendedVerificationKeyShelley_ed25519_bip32"
 
 instance HasTextEnvelope (SigningKey PaymentExtendedKey) where
-    textEnvelopeType _ = "PaymentExtendedSigningKeyShelley_"
-                      <> fromString (Crypto.algorithmNameDSIGN proxy)
-      where
-        proxy :: Proxy (Shelley.DSIGN ShelleyCrypto)
-        proxy = Proxy
+    textEnvelopeType _ = "PaymentExtendedSigningKeyShelley_ed25519_bip32"
 
 instance CastVerificationKeyRole PaymentExtendedKey PaymentKey where
     castVerificationKey (PaymentExtendedVerificationKey vk) =
