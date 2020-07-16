@@ -11,7 +11,7 @@ rec {
   confKey = "local";
   private = false;
   networkConfig = {
-    GenesisFile = "keys/genesis.json";
+    GenesisFile = "shelley/genesis.json";
     Protocol = "TPraos";
     RequiresNetworkMagic = "RequiresMagic";
     LastKnownBlockVersion-Major = 0;

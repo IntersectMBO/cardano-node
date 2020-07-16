@@ -2,6 +2,7 @@
 import functools
 import json
 import subprocess
+import os
 from copy import copy
 from pathlib import Path
 from time import sleep
@@ -10,31 +11,52 @@ from time import sleep
 class CardanoCLIError(Exception):
     pass
 
+class CardanoWrongEraError(Exception):
+    pass
+
 class CardanoCluster:
     """Cardano Cluster Tools."""
 
-    def __init__(self, num_delegs, cli):
-        self.cli = cli
-        self.byron_delegate_keys = list(map(lambda x: f"{self.cli.state_dir}/byron/delegate-keys.{x:03}.key", list(range(0,num_delegs))))
-        self.shelley_delegate_skeys = list(map(lambda x: f"{self.cli.state_dir}/shelley/delegate-keys/delegate{x}.skey", list(range(1,num_delegs+1))))
-        self.shelley_genesis_vkeys = list(map(lambda x: f"{self.cli.state_dir}/shelley/genesis-keys/genesis{x}.key", list(range(1,num_delegs+1))))
+    def __init__(self, network_magic, state_dir, num_delegs, protocol="cardano"):
+        self.cli = CardanoCLIWrapper(network_magic, state_dir, protocol=protocol)
+        if(protocol == "cardano" or protocol == "byron"):
+            self.byron_delegate_keys = list(map(lambda x: self.cli.state_dir / "byron" / f"delegate-keys.{x:03}.key", list(range(0,num_delegs))))
+        if(protocol == "cardano" or protocol == "shelley"):
+            self.shelley_delegate_skeys = list(map(lambda x: self.cli.state_dir / "shelley" / "delegate-keys" / f"delegate{x}.skey", list(range(1,num_delegs+1))))
+            self.shelley_genesis_vkeys = list(map(lambda x: self.cli.state_dir / "shelley" / "genesis-keys" / f"genesis{x}.vkey", list(range(1,num_delegs+1))))
+            if os.path.exists( self.cli.state_dir / "shelley" / "genesis-utxo.skey"):
+                self.genesis_utxo_vkey = self.cli.state_dir / "shelley" / "genesis-utxo.vkey"
+                self.genesis_utxo_skey = self.cli.state_dir / "shelley" / "genesis-utxo.skey"
+                self.genesis_utxo_addr = self.cli.get_genesis_addr(self.genesis_utxo_vkey)
 
+    # We're not adding methods to CLIWrapper for these complex byron commands
     def hard_fork_byron(self, version):
         version_params = version.split(".")
-        proposal_path = f"{self.cli.state_dir}/{version}.proposal"
-        self.cli.cli(["cardano-cli", "byron", "create-update-proposal", "--testnet-magic", str(self.cli.network_magic), "--signing-key", self.byron_delegate_keys[0], "--protocol-version-major", version_params[0], "--protocol-version-minor", version_params[1], "--protocol-version-alt", version_params[2], "--application-name", "cardano-sl", "--software-version-num", "1", "--system-tag", "linux", "--installer-hash", "0", "--filepath", proposal_path])
-        self.cli.cli(["cardano-cli", "byron", "submit-update-proposal", "--testnet-magic", str(self.cli.network_magic), "--filepath", proposal_path])
+        proposal_path = self.cli.state_dir / f"{version}.proposal"
+        self.cli.cmd(["cardano-cli", "byron", "create-update-proposal", "--testnet-magic", str(self.cli.network_magic), "--signing-key", self.byron_delegate_keys[0], "--protocol-version-major", version_params[0], "--protocol-version-minor", version_params[1], "--protocol-version-alt", version_params[2], "--application-name", "cardano-sl", "--software-version-num", "1", "--system-tag", "linux", "--installer-hash", "0", "--filepath", proposal_path])
+        self.cli.cmd(["cardano-cli", "byron", "submit-update-proposal", "--testnet-magic", str(self.cli.network_magic), "--filepath", proposal_path])
         for index,key in enumerate(self.byron_delegate_keys, start=1):
             proposal_vote_path = f"{proposal_path}-vote{index}"
-            self.cli.cli(["cardano-cli", "byron", "create-proposal-vote", "--proposal-filepath", proposal_path, "--testnet-magic", str(self.cli.network_magic), "--signing-key", key, "--vote-yes", "--output-filepath", proposal_vote_path])
-            self.cli.cli(["cardano-cli", "byron", "submit-proposal-vote", "--testnet-magic", str(self.cli.network_magic), "--filepath", proposal_vote_path])
+            self.cli.cmd(["cardano-cli", "byron", "create-proposal-vote", "--proposal-filepath", proposal_path, "--testnet-magic", str(self.cli.network_magic), "--signing-key", key, "--vote-yes", "--output-filepath", proposal_vote_path])
+            self.cli.cmd(["cardano-cli", "byron", "submit-proposal-vote", "--testnet-magic", str(self.cli.network_magic), "--filepath", proposal_vote_path])
         self.update_config_version(version_params)
         for i in range(len(self.byron_delegate_keys)):
             self.restart_node(f"bft{i+1}")
             sleep(1)
+        # TODO: wait until new epoch where shelley starts
+        if version == "2.0.0":
+            self.cli.current_protocol = "shelley"
+
+    # only works with shelley
+    def sleep_until_next_epoch(self):
+        tip = self.cli.get_tip()
+        slot = tip["slotNo"]
+        epoch_length = self.cli.epoch_length
+        slots_remaining = epoch_length - (slot % epoch_length)
+        sleep(self.cli.slot_length * slots_remaining)
 
     def restart_node(self, node):
-        self.cli.cli(["supervisorctl", "restart", node])
+        self.cli.cmd(["supervisorctl", "restart", node])
 
     def update_config_version(self, version_params, config_file="config.json"):
         config_file = self.cli.state_dir / config_file
@@ -46,48 +68,124 @@ class CardanoCluster:
         with open(config_file, "w") as out_json:
             json.dump(config, out_json)
 
+    def send_tx_genesis(
+        self, txouts=None, certificates=None, signing_keys=None, proposal_file=None,
+    ):
+        txouts = txouts or []
+        certificates = certificates or []
+        signing_keys = signing_keys or []
 
+        utxo = self.cli.get_utxo(address=self.genesis_utxo_addr)
+        total_input_amount = 0
+        txins = []
+        for k, v in utxo.items():
+            total_input_amount += v["amount"]
+            txin = k.split("#")
+            txin = (txin[0], txin[1])
+            txins.append(txin)
 
+        signing_keys.append(str(self.genesis_utxo_skey))
+        utxo = self.cli.get_utxo(address=self.genesis_utxo_addr)
+        txins = []
+        for k, v in utxo.items():
+            txin = k.split("#")
+            txin = (txin[0], txin[1], v["amount"])
+            txins.append(txin)
+        txout_total = sum(map(lambda x: x[1], txouts))
 
+        # Build, Sign and Send TX to chain
+        try:
+            self.cli.build_tx(
+                txins=txins,
+                txouts=txouts + [(self.genesis_utxo_addr, 0)],
+                certificates=certificates,
+                proposal_file=proposal_file,
+            )
+            fee = self.cli.estimate_fee(len(txins), len(txouts), len(signing_keys))
+            ttl = self.cli.get_tip()["slotNo"] + 5000
+            self.cli.build_tx(
+                txins=txins,
+                txouts=txouts + [(self.genesis_utxo_addr, total_input_amount - fee - txout_total)],
+                certificates=certificates,
+                fee=fee,
+                ttl=ttl,
+                proposal_file=proposal_file,
+            )
+            self.cli.sign_tx(signing_keys=signing_keys)
+            self.cli.submit_tx()
+        except CardanoCLIError as err:
+            raise CardanoCLIError(
+                f"Sending a genesis transaction failed!\n"
+                f"utxo: {utxo}\n"
+                f"txins: {txins} txouts: {txouts} signing keys: {signing_keys}\n{err}"
+            )
+
+    def submit_update_proposal(self, proposal_opts):
+        # TODO: assumption is update proposals submitted near beginning of epoch
+        epoch = self.cli.get_tip()["slotNo"] // self.cli.epoch_length
+
+        self.cli.create_update_proposal(proposal_opts, self.shelley_genesis_vkeys, epoch=epoch)
+        self.send_tx_genesis(signing_keys=self.shelley_delegate_skeys, proposal_file="update.proposal")
+
+    # TODO:
+    def byron_generate_tx_slice(self, start, slice_size, tx_filename, snapshot, wallet, fee):
+        s = slice(start, start+slice_size)
+        records = snapshot[s]
+        txouts = list(map( lambda x: getTxOut(x), records))
+        txouts_total = sum(map(lambda x: x["value"], records))
+
+        wallet["value"] = wallet["value"] - txouts_total - fee
+        txout_args = self.cli.prepend_flag("--txout", txouts)
+        self.cli.cmd(["cardano-cli", "issue-utxo-expenditure", "--tx", tx_filename, "--testnet-magic", str(self.networkMagic), "--byron-formats", "--txin", getTxIn(current_tx), "--wallet-key", str(wallet["key"]), "--txout", getTxOut(wallet) ] + txout_args)
+        return wallet
 
 class CardanoCLIWrapper:
     """Cardano CLI Wrapper."""
 
-    def __init__(self, network_magic, state_dir, shelley_keys="keys", byron_keys="keys", protocol="shelley"):
+    def __init__(self, network_magic, state_dir, shelley_keys="shelley", byron_keys="byron", protocol="shelley"):
         self.network_magic = network_magic
 
         self.state_dir = Path(state_dir).expanduser().absolute()
         self.shelley_genesis_json = self.state_dir / shelley_keys / "genesis.json"
-        self.shelley_genesis_vkey = self.state_dir / shelley_keys / "genesis-keys" / "genesis1.vkey"
-        self.shelley_delegate_skey = self.state_dir / shelley_keys / "delegate-keys" / "delegate1.skey"
+        self.byron_genesis_json = self.state_dir / byron_keys / "genesis.json"
         self.pparams_file = self.state_dir / "pparams.json"
 
         self.check_state_dir()
 
-        with open(self.shelley_genesis_json) as in_json:
-            self.shelley_genesis = json.load(in_json)
 
         self.pparams = None
+        self.current_protocol = protocol
         if protocol == "shelley":
+            with open(self.shelley_genesis_json) as in_json:
+                self.shelley_genesis = json.load(in_json)
             self.refresh_pparams()
             self.slot_length = self.shelley_genesis["slotLength"]
             self.epoch_length = self.shelley_genesis["epochLength"]
+        elif protocol == "byron":
+            with open(self.byron_genesis_json) as in_json:
+                self.byron_genesis = json.load(in_json)
+
+        elif protocol == "cardano":
+            # TODO: check if byron or shelley
+            self.current_protocol = "byron"
+            with open(self.shelley_genesis_json) as in_json:
+                self.shelley_genesis = json.load(in_json)
+            with open(self.byron_genesis_json) as in_json:
+                self.byron_genesis = json.load(in_json)
 
 
     def check_state_dir(self):
         if not self.state_dir.exists():
             raise CardanoCLIError(f"The state dir `{self.state_dir}` doesn't exist.")
 
-        for file_name in (
-            self.shelley_genesis_json,
-            self.shelley_genesis_vkey,
-            self.shelley_delegate_skey,
-        ):
+        for file_name in ([
+            self.shelley_genesis_json
+        ]):
             if not file_name.exists():
                 raise CardanoCLIError(f"The file `{file_name}` doesn't exist.")
 
     @staticmethod
-    def cli(cli_args):
+    def cmd(cli_args):
         p = subprocess.Popen(cli_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         stdout, stderr = p.communicate()
         if p.returncode != 0:
@@ -99,7 +197,7 @@ class CardanoCLIWrapper:
         return sum(([flag, x] for x in contents), [])
 
     def query_cli(self, cli_args):
-        return self.cli(
+        return self.cmd(
             [
                 "cardano-cli",
                 "shelley",
@@ -110,14 +208,17 @@ class CardanoCLIWrapper:
             ]
         )
 
+
     def refresh_pparams(self):
+        if self.current_protocol == "byron":
+            raise CardanoWrongEraError("Attempted to run shelley command in byron era")
         self.query_cli(["protocol-parameters", "--out-file", str(self.pparams_file)])
         with open(self.pparams_file) as in_json:
             self.pparams = json.load(in_json)
 
-    def estimate_fee(self, txbody_file, txins=1, txouts=1, witnesses=1, byron_witnesses=0):
+    def estimate_fee(self, txins=1, txouts=1, witnesses=1, byron_witnesses=0, txbody_file="tx.body"):
         self.refresh_pparams()
-        stdout = self.cli(
+        stdout = self.cmd(
             [
                 "cardano-cli",
                 "shelley",
@@ -142,61 +243,6 @@ class CardanoCLIWrapper:
         fee, __ = stdout.decode().split(" ")
         return int(fee)
 
-    def get_tx_fee(
-        self, txins=None, txouts=None, certificates=None, signing_keys=None, proposal_file=None,
-    ):
-        txins = txins or []
-        txouts_copy = copy(txouts) if txouts else []
-        signing_keys = signing_keys or []
-        certificates = certificates or []
-
-        # TODO: calculate from current tip
-        ttl = 100000
-
-        # TODO: unhardcode genesis utxo
-        change = (self.shelley_genesis_utxo_addr, 0)
-        txouts_copy.append(change)
-
-        txins_combined = [f"{x[0]}#{x[1]}" for x in txins]
-        txouts_combined = [f"{x[0]}+{x[1]}" for x in txouts_copy]
-
-        txin_args = self.prepend_flag("--tx-in", txins_combined)
-        txout_args = self.prepend_flag("--tx-out", txouts_combined)
-        cert_args = self.prepend_flag("--certificate-file", certificates)
-
-        build_args_estimate = [
-            "cardano-cli",
-            "shelley",
-            "transaction",
-            "build-raw",
-            "--ttl",
-            str(ttl),
-            "--fee",
-            "0",
-            "--out-file",
-            "tx.body_estimate",
-            *txin_args,
-            *txout_args,
-            *cert_args,
-        ]
-
-        if proposal_file:
-            build_args_estimate.extend(["--update-proposal-file", proposal_file])
-
-        # Build TX for estimate
-        self.cli(build_args_estimate)
-
-        # Estimate fee
-        fee = self.estimate_fee(
-            "tx.body_estimate",
-            txins=len(txins),
-            txouts=len(txouts_copy),
-            witnesses=len(signing_keys),
-        )
-
-        return fee
-
-    # TODO: add withdrawal support
     def build_tx(
         self,
         out_file="tx.body",
@@ -204,27 +250,13 @@ class CardanoCLIWrapper:
         txouts=None,
         certificates=None,
         fee=0,
+        ttl=100000,
         proposal_file=None,
     ):
         txins = txins or []
         txouts_copy = copy(txouts) if txouts else []
         certificates = certificates or []
 
-        # TODO: make change_address work - Needs CLI endpoint to query utxo by txid
-        # If no change_address specified send to utxo change address
-        # if not change_address:
-        #    change_address = self.shelley_genesis_utxo_addr
-
-        # TODO: calculate from current tip
-        ttl = 100000
-
-        # TODO: unhardcode genesis utxo
-        change = (self.shelley_genesis_utxo_addr, 0)
-        txouts_copy.append(change)
-
-        deposit_amount = 0
-        total_input_amount = functools.reduce(lambda x, y: x + y[2], txins, 0)
-        txouts_copy[-1] = (self.shelley_genesis_utxo_addr, (total_input_amount - fee - deposit_amount))
         txins_combined = [f"{x[0]}#{x[1]}" for x in txins]
         txouts_combined = [f"{x[0]}+{x[1]}" for x in txouts_copy]
 
@@ -251,12 +283,12 @@ class CardanoCLIWrapper:
         if proposal_file:
             build_args.extend(["--update-proposal-file", proposal_file])
 
-        self.cli(build_args)
+        self.cmd(build_args)
 
     def sign_tx(self, tx_body_file="tx.body", out_file="tx.signed", signing_keys=None):
         signing_keys = signing_keys or []
         key_args = self.prepend_flag("--signing-key-file", signing_keys)
-        self.cli(
+        self.cmd(
             [
                 "cardano-cli",
                 "shelley",
@@ -273,7 +305,9 @@ class CardanoCLIWrapper:
         )
 
     def submit_tx(self, tx_file="tx.signed"):
-        self.cli(
+        if self.current_protocol == "byron":
+            raise CardanoWrongEraError("Attempted to run shelley command in byron era")
+        self.cmd(
             [
                 "cardano-cli",
                 "shelley",
@@ -295,7 +329,7 @@ class CardanoCLIWrapper:
             cli_args.extend("--stake-verification-key-file", str(stake_vkey))
 
         return (
-            self.cli(
+            self.cmd(
                 [
                     "cardano-cli",
                     "shelley",
@@ -312,7 +346,7 @@ class CardanoCLIWrapper:
 
     def get_genesis_addr(self, vkey_path):
         return (
-            self.cli(
+            self.cmd(
                 [
                     "cardano-cli",
                     "shelley",
@@ -329,6 +363,8 @@ class CardanoCLIWrapper:
         )
 
     def get_utxo(self, address):
+        if self.current_protocol == "byron":
+            raise CardanoWrongEraError("Attempted to run shelley command in byron era")
         self.query_cli(["utxo", "--address", address, "--out-file", "utxo.json"])
         with open("utxo.json") as in_json:
             utxo = json.load(in_json)
@@ -337,69 +373,35 @@ class CardanoCLIWrapper:
     def get_tip(self):
         return json.loads(self.query_cli(["tip"]))
 
-    def send_tx_genesis(
-        self, txouts=None, certificates=None, signing_keys=None, proposal_file=None,
-    ):
-        txouts = txouts or []
-        certificates = certificates or []
-        signing_keys = signing_keys or []
 
-        utxo = self.get_utxo(address=self.shelley_genesis_utxo_addr)
-        total_input_amount = 0
-        txins = []
-        for k, v in utxo.items():
-            total_input_amount += v["amount"]
-            txin = k.split("#")
-            txin = (txin[0], txin[1])
-            txins.append(txin)
-
-        # TODO: calculate from current tip
-        signing_keys.append(str(self.shelley_genesis_utxo_skey))
-        utxo = self.get_utxo(address=self.shelley_genesis_utxo_addr)
-        txins = []
-        for k, v in utxo.items():
-            txin = k.split("#")
-            txin = (txin[0], txin[1], v["amount"])
-            txins.append(txin)
-
-        # Build, Sign and Send TX to chain
-        try:
-            fee = self.get_tx_fee(txins, txouts, certificates, signing_keys, proposal_file)
-            self.build_tx(
-                txins=txins,
-                txouts=txouts,
-                certificates=certificates,
-                fee=fee,
-                proposal_file=proposal_file,
-            )
-            self.sign_tx(signing_keys=signing_keys)
-            self.submit_tx()
-        except CardanoCLIError as err:
-            raise CardanoCLIError(
-                f"Sending a genesis transaction failed!\n"
-                f"utxo: {utxo}\n"
-                f"txins: {txins} txouts: {txouts} signing keys: {signing_keys}\n{err}"
-            )
-
-    def submit_update_proposal(self, cli_args, epoch=1):
-        self.cli(
+    def create_update_proposal(self, proposal_opts, genesis_keys, epoch=1, file_name="update.proposal"):
+        genesis_key_args = self.prepend_flag("--genesis-verification-key-file", genesis_keys)
+        proposal_args = sum(list(map(lambda x: [ f"--{x[0]}", str(x[1]) ], proposal_opts)), [])
+        self.cmd(
             [
                 "cardano-cli",
                 "shelley",
                 "governance",
                 "create-update-proposal",
-                *cli_args,
                 "--out-file",
-                "update.proposal",
+                file_name,
                 "--epoch",
                 str(epoch),
-                "--genesis-verification-key-file",
-                str(self.shelley_genesis_vkey),
+                *proposal_args,
+                *genesis_key_args
             ]
         )
-        self.send_tx_genesis(
-            proposal_file="update.proposal", signing_keys=[str(self.shelley_delegate_skey)],
-        )
+
+    def convert_itn_vkey(self, key):
+        with open(f"{key}.pk", "w") as fname:
+            fname.write(k)
+        self.cmd(["cardano-cli", "shelley", "stake-address", "convert-itn-key", "--itn-verification-key-file", f"{key}.pk", "--out-file", f"{key}.vkey"])
+
+    def convert_itn_skey(self, key):
+        with open(f"{key}.sk", "w") as fname:
+            fname.write(k)
+        self.cmd(["cardano-cli", "shelley", "stake-address", "convert-itn-key", "--itn-signing-key-file", f"{key}.sk", "--out-file", f"{key}.skey"])
+
     # Byron specific commands
     def byron_txin_format(self, tx):
         return "(\"{}\",{})".format(tx[0],tx[1])
@@ -407,14 +409,4 @@ class CardanoCLIWrapper:
     def byron_txout_format(self, fund):
         return "(\"{}\",{})".format(fund["address"], fund["value"])
 
-    # TODO:
-    def byron_generate_tx_slice(self, start, slice_size, tx_filename, snapshot, wallet, fee):
-        s = slice(start, start+slice_size)
-        records = snapshot[s]
-        txouts = list(map( lambda x: getTxOut(x), records))
-        txouts_total = sum(map(lambda x: x["value"], records))
 
-        wallet["value"] = wallet["value"] - txouts_total - fee
-        txout_args = self.prependFlag("--txout", txouts)
-        self.CLI(["cardano-cli", "issue-utxo-expenditure", "--tx", tx_filename, "--testnet-magic", str(self.networkMagic), "--byron-formats", "--txin", getTxIn(current_tx), "--wallet-key", str(wallet["key"]), "--txout", getTxOut(wallet) ] + txout_args)
-        return wallet

@@ -3,14 +3,11 @@ import time
 
 from base import cluster
 
-sleep_time = cluster.slot_length * cluster.epoch_length
-print(f"Waiting 1 epoch to submit proposal ({sleep_time} seconds)")
-time.sleep(sleep_time)
-cluster.submit_update_proposal(["--decentralization-parameter", "0.5"])
-print(f"Update Proposal submited. Sleeping until next epoch ({sleep_time} seconds)")
-time.sleep(sleep_time + 15)
-cluster.refresh_pparams()
-d = cluster.pparams["decentralisationParam"]
+cluster.submit_update_proposal([("decentralization-parameter", "0.5")])
+print(f"Update Proposal submited. Sleeping until next epoch")
+cluster.sleep_until_next_epoch()
+cluster.cli.refresh_pparams()
+d = cluster.cli.pparams["decentralisationParam"]
 if d == 0.5:
     print("Cluster update proposal successful!")
     sys.exit(0)

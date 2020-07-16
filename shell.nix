@@ -91,6 +91,8 @@ let
         * cardano-cli - used for key generation and other operations tasks
         * start-cluster - start a local development cluster
         * stop-cluster - stop a local development cluster
+        * start-cluster-hfc - start a local development cluster for testing hfc
+        * stop-cluster-hfc - stop a local development cluster for testing hfc
 
       "
     '';

@@ -2,6 +2,7 @@
   pkgs
 , mkCluster
 , cardano-cli
+, cardanolib-py
 , cardano-node
 }: let
   stateDir = "./state-cluster-test";
@@ -14,20 +15,20 @@
     inherit stateDir;
   };
   # Library bash functions for cluster tests
-  pythonDeps = with pkgs.python3Packages; [ pkgs.python3 requests pyyaml docopt ];
+  pythonDeps = with pkgs.python3Packages; [ pkgs.python3 requests pyyaml docopt cardanolib-py ];
   clusterDeps = [ cluster'.start cluster'.stop pkgs.jq cardano-cli cardano-node ];
   # If any command in start-cluster, stop-cluster or cluster-commands exits
   # with a status other than 0, the cluster will fail the test
   mkClusterTest = name: testScript: pkgs.runCommand name { buildInputs = clusterDeps ++ pythonDeps; } ''
     export CARDANO_NODE_SOCKET_PATH=${stateDir}/bft1.socket
     start-cluster
-    export NETWORK_MAGIC=$(jq .networkMagic < ${stateDir}/keys/genesis.json)
+    export NETWORK_MAGIC=$(jq .networkMagic < ${stateDir}/shelley/genesis.json)
     cp ${testScript} script.py
-    cp ${../clusterlib.py} clusterlib.py
-    cp ${../genesis-utxo.vkey} ${stateDir}/keys/genesis-utxo.vkey
-    cp ${../genesis-utxo.skey} ${stateDir}/keys/genesis-utxo.skey
+    chmod -R u+w ${stateDir}
+    cp ${../genesis-utxo.vkey} ${stateDir}/shelley/genesis-utxo.vkey
+    cp ${../genesis-utxo.skey} ${stateDir}/shelley/genesis-utxo.skey
     cp ${./base.py} base.py
-    python3 ./script.py --network-magic "$NETWORK_MAGIC" --state-dir "${stateDir}"
+    python3 ./script.py --network-magic "$NETWORK_MAGIC" --state-dir "${stateDir}" --num-delegs 1
     stop-cluster
     touch $out
   '';
