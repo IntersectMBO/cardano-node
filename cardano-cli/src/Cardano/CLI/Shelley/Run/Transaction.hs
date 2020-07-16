@@ -311,6 +311,7 @@ data SomeWitnessSigningKey
   | APaymentExtendedSigningKey (Api.SigningKey Api.PaymentExtendedKey)
   | AStakeSigningKey           (Api.SigningKey Api.StakeKey)
   | AStakePoolSigningKey       (Api.SigningKey Api.StakePoolKey)
+  | AGenesisSigningKey         (Api.SigningKey Api.GenesisKey)
   | AGenesisDelegateSigningKey (Api.SigningKey Api.GenesisDelegateKey)
   | AGenesisUTxOSigningKey     (Api.SigningKey Api.GenesisUTxOKey)
 
@@ -332,6 +333,8 @@ readSigningKeyFile (SigningKeyFile skfile) =
                           AStakeSigningKey
       , Api.FromSomeType (Api.AsSigningKey Api.AsStakePoolKey)
                           AStakePoolSigningKey
+      , Api.FromSomeType (Api.AsSigningKey Api.AsGenesisKey)
+                          AGenesisSigningKey
       , Api.FromSomeType (Api.AsSigningKey Api.AsGenesisDelegateKey)
                           AGenesisDelegateSigningKey
       , Api.FromSomeType (Api.AsSigningKey Api.AsGenesisUTxOKey)
@@ -348,6 +351,7 @@ categoriseWitnessSigningKey swsk =
     APaymentExtendedSigningKey sk -> Right (Api.WitnessPaymentExtendedKey sk)
     AStakeSigningKey           sk -> Right (Api.WitnessStakeKey           sk)
     AStakePoolSigningKey       sk -> Right (Api.WitnessStakePoolKey       sk)
+    AGenesisSigningKey         sk -> Right (Api.WitnessGenesisKey sk)
     AGenesisDelegateSigningKey sk -> Right (Api.WitnessGenesisDelegateKey sk)
     AGenesisUTxOSigningKey     sk -> Right (Api.WitnessGenesisUTxOKey     sk)
 
