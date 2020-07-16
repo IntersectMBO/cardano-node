@@ -97,6 +97,7 @@ library
                      , ouroboros-network
                      , scientific
                      , shelley-spec-ledger
+                     , small-steps
                      , text
                      , time
                      , transformers

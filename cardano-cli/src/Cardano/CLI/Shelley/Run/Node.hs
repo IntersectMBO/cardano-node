@@ -76,7 +76,7 @@ runNodeKeyGenCold (VerificationKeyFile vkeyPath) (SigningKeyFile skeyPath)
     vkeyDesc = TextViewDescription "Stake Pool Operator Verification Key"
     ocertCtrDesc = TextViewDescription $ "Next certificate issue number: " <> BS.pack (show initialCounter)
 
-    initialCounter :: Natural
+    initialCounter :: Word64
     initialCounter = 0
 
 
@@ -178,10 +178,10 @@ runNodeIssueOpCert (VerificationKeyFile vkeyKesPath)
       . newExceptT
       $ writeFileTextEnvelope certFile Nothing ocert
   where
-    getCounter :: OperationalCertificateIssueCounter -> Natural
+    getCounter :: OperationalCertificateIssueCounter -> Word64
     getCounter (OperationalCertificateIssueCounter n _) = n
 
-    ocertCtrDesc :: Natural -> TextViewDescription
+    ocertCtrDesc :: Word64 -> TextViewDescription
     ocertCtrDesc n = TextViewDescription $ "Next certificate issue number: " <> BS.pack (show n)
 
     possibleBlockIssuers :: [FromSomeType HasTextEnvelope (SigningKey StakePoolKey)]
