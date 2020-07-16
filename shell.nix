@@ -46,6 +46,7 @@ let
 
   devops = let
     cluster = mkCluster customConfig;
+    inherit hfcCluster;
   in
     stdenv.mkDerivation {
     name = "devops-shell";
@@ -55,8 +56,12 @@ let
       bech32
       cardano-node
       python3Packages.supervisor
+      python3Packages.ipython
       cluster.start
       cluster.stop
+      hfcCluster.start
+      hfcCluster.stop
+      cardanolib-py
     ];
     shellHook = ''
       echo "DevOps Tools" \
@@ -86,6 +91,8 @@ let
         * cardano-cli - used for key generation and other operations tasks
         * start-cluster - start a local development cluster
         * stop-cluster - stop a local development cluster
+        * start-cluster-hfc - start a local development cluster for testing hfc
+        * stop-cluster-hfc - stop a local development cluster for testing hfc
 
       "
     '';

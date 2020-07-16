@@ -1,0 +1,44 @@
+{
+    "activeSlotsCoeff": 0.1,
+    "protocolParams": {
+        "poolDeposit": 500000000,
+        "protocolVersion": {
+            "minor": 0,
+            "major": 2
+        },
+        "minUTxOValue": 1000000,
+        "decentralisationParam": 1,
+        "maxTxSize": 16384,
+        "minPoolCost": 228000000,
+        "minFeeA": 44,
+        "maxBlockBodySize": 65536,
+        "minFeeB": 155381,
+        "eMax": 18,
+        "extraEntropy": {
+            "tag": "NeutralNonce"
+        },
+        "maxBlockHeaderSize": 1100,
+        "keyDeposit": 400000,
+        "nOpt": 50,
+        "rho": 1.78650067e-3,
+        "tau": 0.1,
+        "a0": 0.1
+    },
+    "protocolMagicId": 42,
+    "genDelegs": {},
+    "updateQuorum": 3,
+    "networkId": "Testnet",
+    "initialFunds": {},
+    "maxLovelaceSupply": 45000000000000000,
+    "networkMagic": 42,
+    "epochLength": 1000,
+    "staking": {
+        "pools": {},
+        "stake": {}
+    },
+    "systemStart": "2020-07-08T02:39:16.033076859Z",
+    "slotsPerKESPeriod": 7200,
+    "slotLength": 0.2,
+    "maxKESEvolutions": 64,
+    "securityParam": 10
+}
