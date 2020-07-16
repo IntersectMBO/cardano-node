@@ -25,7 +25,10 @@ let
   };
 
   projectPackages = lib.attrNames (haskell-nix.haskellLib.selectProjectPackages
-    (haskell-nix.cabalProject { inherit src; }));
+    (haskell-nix.cabalProject {
+      inherit src;
+      compiler-nix-name = "ghc865";
+    }));
 
   # This creates the Haskell package set.
   # https://input-output-hk.github.io/haskell.nix/user-guide/projects/
@@ -35,6 +38,7 @@ let
     ghc = buildPackages.haskell-nix.compiler.${compiler};
   } // {
     inherit src;
+    compiler-nix-name = compiler;
     #ghc = buildPackages.haskell-nix.compiler.${compiler};
     pkg-def-extras = lib.optional stdenv.hostPlatform.isLinux (hackage: {
       packages = {
