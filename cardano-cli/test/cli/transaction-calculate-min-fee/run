@@ -32,6 +32,6 @@ if test "${line_count}" -ne 1 ; then
   error=1
   fi
 
-assert_string '2594002' "${TEST_DIR}/min-fee.txt"
+assert_string '2541502' "${TEST_DIR}/min-fee.txt"
 
 report_result ${error}

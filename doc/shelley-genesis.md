@@ -261,7 +261,6 @@ example genesis template for us in `example/genesis.spec.json`:
         "tau": 0,
         "a0": 0
     },
-    "protocolMagicId": 42,
     "startTime": "1970-01-01T00:00:00Z",
     "genDelegs": {},
     "updateQuorum": 5,
@@ -325,7 +324,6 @@ $ cat example/genesis.json
         "tau": 0,
         "a0": 0
     },
-    "protocolMagicId": 42,
     "startTime": "2020-05-10T16:28:12.17999965Z",
     "genDelegs": {
         "a4d927a8e50c7a51e0f7d41a75057073cd2fc49bfc87a44891a8a9f80800cd8a":
@@ -546,7 +544,6 @@ file `example/genesis.spec.json`
         "tau": 0,
         "a0": 0
     },
-    "protocolMagicId": 42,
     "startTime": "1970-01-01T00:00:00Z",
     "genDelegs": {},
     "updateQuorum": 5,
@@ -590,7 +587,6 @@ $ cat example/genesis.json
 {
     "decentralisationParam": 1,
     "activeSlotsCoeff": 5.0e-2,
-    "protocolMagicId": 42,
     "startTime": "2020-05-07T01:46:02.884394538Z",
     "genDelegs": {
         "40a5d0f1db7ec1bcf92758f1909677576b4edf7164c94602bee0f7848495c615":
