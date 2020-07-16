@@ -1,5 +1,11 @@
 # Changelog for cardano-api
 
+## 1.16.0 -- July 2020
+
+- Remove the old API (#1444, #1456)
+- Added raw serialisation instances for all key types (#1455)
+- Added bech32 serialisation following draft CIP 5 (#1455)
+
 ## 1.15.1 -- July 2020
 
 - Include tx metadata in transactions in the new api (#1406)

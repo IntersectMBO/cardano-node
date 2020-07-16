@@ -1,5 +1,11 @@
 # Changelog for cardano-cli
 
+## 1.16.0 -- July 2020
+
+- Accept either a pool id or verification key in delegation cli command (#1460)
+- Improved bash completion for flags that accept files (#1459)
+- More and improved integration tests (#1429, #1450, #1453)
+
 ## 1.15.1 -- July 2020
 
 - Support for interacting with nodes running in Byron-only, Shelley-only or
