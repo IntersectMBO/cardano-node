@@ -36,13 +36,14 @@ import           Cardano.Crypto.ProtocolMagic (RequiresNetworkMagic)
 
 import           Ouroboros.Consensus.Cardano hiding (Protocol)
 import qualified Ouroboros.Consensus.Cardano as Consensus
-
-import           Ouroboros.Consensus.Byron.Ledger (ByronBlock)
+import           Ouroboros.Consensus.Cardano.ByronHFC
 
 import           Cardano.Node.Types (NodeByronProtocolConfiguration (..))
 import           Cardano.Config.Types
                    (ProtocolFilepaths(..), GenesisFile (..))
+
 import           Cardano.TracingOrphanInstances.Byron ()
+import           Cardano.TracingOrphanInstances.HardFork ()
 
 import           Cardano.Node.Protocol.Types
 
@@ -78,7 +79,7 @@ mkConsensusProtocolByron
   :: NodeByronProtocolConfiguration
   -> Maybe ProtocolFilepaths
   -> ExceptT ByronProtocolInstantiationError IO
-             (Consensus.Protocol IO ByronBlock ProtocolRealPBFT)
+             (Consensus.Protocol IO ByronBlockHFC ProtocolByron)
 mkConsensusProtocolByron NodeByronProtocolConfiguration {
                            npcByronGenesisFile,
                            npcByronReqNetworkMagic,
@@ -95,7 +96,7 @@ mkConsensusProtocolByron NodeByronProtocolConfiguration {
     optionalLeaderCredentials <- readLeaderCredentials genesisConfig files
 
     return $
-      Consensus.ProtocolRealPBFT
+      Consensus.ProtocolByron
         genesisConfig
         (PBftSignatureThreshold <$> npcByronPbftSignatureThresh)
         (Update.ProtocolVersion npcByronSupportedProtocolVersionMajor

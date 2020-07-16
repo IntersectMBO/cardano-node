@@ -55,6 +55,8 @@ import           Cardano.Config.Types (SocketPath(..))
 import           Cardano.Binary (decodeFull)
 
 import           Ouroboros.Consensus.Cardano.Block (Either (..), EraMismatch (..), Query (..))
+import           Ouroboros.Consensus.HardFork.Combinator.Degenerate
+                   (Query (DegenQuery), Either (DegenQueryResult))
 import           Ouroboros.Consensus.Shelley.Protocol.Crypto (TPraosStandardCrypto)
 import           Ouroboros.Network.Block (getTipPoint)
 
@@ -349,10 +351,11 @@ queryUTxOFromLocalState qFilter connectInfo@LocalNodeConnectInfo{localNodeConsen
 
     ShelleyMode{} -> do
       tip <- liftIO $ getLocalTip connectInfo
-      firstExceptT AcquireFailureError . newExceptT $
+      DegenQueryResult result <- firstExceptT AcquireFailureError . newExceptT $
         queryNodeLocalState
           connectInfo
-          (getTipPoint tip, applyUTxOFilter qFilter)
+          (getTipPoint tip, DegenQuery (applyUTxOFilter qFilter))
+      return result
 
     CardanoMode{} -> do
       tip <- liftIO $ getLocalTip connectInfo
@@ -421,10 +424,11 @@ queryPParamsFromLocalState connectInfo@LocalNodeConnectInfo{
                              localNodeConsensusMode = ShelleyMode
                            } = do
     tip <- liftIO $ getLocalTip connectInfo
-    firstExceptT AcquireFailureError . newExceptT $
+    DegenQueryResult result <- firstExceptT AcquireFailureError . newExceptT $
       queryNodeLocalState
         connectInfo
-        (getTipPoint tip, GetCurrentPParams)
+        (getTipPoint tip, DegenQuery GetCurrentPParams)
+    return result
 
 queryPParamsFromLocalState connectInfo@LocalNodeConnectInfo{
                              localNodeConsensusMode = CardanoMode{}
@@ -456,10 +460,11 @@ queryStakeDistributionFromLocalState connectInfo@LocalNodeConnectInfo{
                                        localNodeConsensusMode = ShelleyMode{}
                                      } = do
   tip <- liftIO $ getLocalTip connectInfo
-  firstExceptT AcquireFailureError . newExceptT $
+  DegenQueryResult result <- firstExceptT AcquireFailureError . newExceptT $
     queryNodeLocalState
       connectInfo
-      (getTipPoint tip, GetStakeDistribution)
+      (getTipPoint tip, DegenQuery GetStakeDistribution)
+  return result
 
 queryStakeDistributionFromLocalState connectInfo@LocalNodeConnectInfo{
                                        localNodeConsensusMode = CardanoMode{}
@@ -483,11 +488,14 @@ queryLocalLedgerState connectInfo@LocalNodeConnectInfo{localNodeConsensusMode} =
 
     ShelleyMode{} -> do
       tip <- liftIO $ getLocalTip connectInfo
-      fmap decodeLedgerState $
-        firstExceptT AcquireFailureError . newExceptT $
+      DegenQueryResult result <- firstExceptT AcquireFailureError . newExceptT $
           queryNodeLocalState
             connectInfo
-            (getTipPoint tip, GetCBOR GetCurrentEpochState) -- Get CBOR-in-CBOR version
+            ( getTipPoint tip
+            , DegenQuery $
+                GetCBOR GetCurrentEpochState  -- Get CBOR-in-CBOR version
+            )
+      return (decodeLedgerState result)
 
     CardanoMode{} -> do
       tip <- liftIO $ getLocalTip connectInfo
@@ -523,12 +531,16 @@ queryDelegationsAndRewardsFromLocalState stakeaddrs
 
     ShelleyMode{} -> do
       tip <- liftIO $ getLocalTip connectInfo
-      fmap (uncurry toDelegsAndRwds) $
+      DegenQueryResult result <-
         firstExceptT AcquireFailureError . newExceptT $
           queryNodeLocalState
             connectInfo
-            (getTipPoint tip, GetFilteredDelegationsAndRewardAccounts
-                                (toShelleyStakeCredentials stakeaddrs))
+            ( getTipPoint tip
+            , DegenQuery $
+                GetFilteredDelegationsAndRewardAccounts
+                  (toShelleyStakeCredentials stakeaddrs)
+            )
+      return (uncurry toDelegsAndRwds result)
 
     CardanoMode{} -> do
       tip <- liftIO $ getLocalTip connectInfo

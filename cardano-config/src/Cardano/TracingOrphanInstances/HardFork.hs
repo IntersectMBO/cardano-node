@@ -46,7 +46,8 @@ import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras
 import           Ouroboros.Consensus.HardFork.History.EraParams
                    (EraParams(..), SafeZone, SafeBeforeEpoch)
 import           Ouroboros.Consensus.TypeFamilyWrappers
-
+import           Ouroboros.Consensus.HardFork.Combinator.Condense ()
+import           Ouroboros.Consensus.Cardano.Condense ()
 import           Ouroboros.Consensus.Util.Condense (Condense(..))
 
 
@@ -91,18 +92,6 @@ instance  All (Compose ToJSON WrapGenTxId) xs => ToJSON (TxId (GenTx (HardForkBl
 instance ToJSON (TxId (GenTx blk)) => ToJSON (WrapGenTxId blk) where
     toJSON = toJSON . unwrapGenTxId
 
-
---
--- instances for GenTx HardForkBlock
---
-
-{-
-instance HasKESMetricsData (HardForkBlock xs) where
-    getKESMetricsData :: ProtocolInfo m (HardForkBlock xs)
-                      -> ForgeState (HardForkBlock xs)
-                      -> KESMetricsData
-    getKESMetricsData protoInfo forgeState =
--}
 
 --
 -- instances for HardForkApplyTxErr

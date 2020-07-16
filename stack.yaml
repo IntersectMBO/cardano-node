@@ -122,7 +122,7 @@ extra-deps:
     #Ouroboros-network dependencies
 
   - git: https://github.com/input-output-hk/ouroboros-network
-    commit: dae680f8e6b0af611c323554c375f50b3bfd5308
+    commit: 46e8fd88b0ba071f38891b2b9c6682dc2fb8c865
     subdirs:
         - io-sim
         - io-sim-classes

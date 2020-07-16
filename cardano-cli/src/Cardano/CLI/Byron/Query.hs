@@ -25,6 +25,8 @@ import           Cardano.Config.Types (SocketPath (..))
 import           Cardano.Api.LocalChainSync (getLocalTip)
 import           Cardano.CLI.Environment
                    (EnvSocketError, readEnvSocketPath, renderEnvSocketError)
+import           Cardano.TracingOrphanInstances.HardFork ()
+
 
 data ByronQueryError
   = ByronQueryEnvVarSocketErr !EnvSocketError
