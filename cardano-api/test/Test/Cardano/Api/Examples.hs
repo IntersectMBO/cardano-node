@@ -12,7 +12,6 @@ import           Cardano.Prelude
 import qualified Data.Map.Strict as Map
 import           Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 
-import           Cardano.Crypto.ProtocolMagic (ProtocolMagicId (..))
 import           Cardano.Slotting.Slot (EpochSize (..))
 import           Ouroboros.Consensus.Shelley.Protocol (TPraosStandardCrypto)
 import           Ouroboros.Consensus.Shelley.Node (emptyGenesisStaking)
@@ -37,7 +36,6 @@ exampleShelleyGenesis =
     { sgSystemStart = posixSecondsToUTCTime $ realToFrac (1234566789 :: Integer)
     , sgNetworkMagic = 4036000900
     , sgNetworkId = Testnet
-    , sgProtocolMagicId = ProtocolMagicId 838299499
     , sgActiveSlotsCoeff = 6.259
     , sgSecurityParam = 120842
     , sgEpochLength = EpochSize 1215

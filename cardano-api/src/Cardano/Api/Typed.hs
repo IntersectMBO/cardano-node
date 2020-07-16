@@ -327,6 +327,7 @@ import           Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BSC
 import qualified Data.ByteString.Lazy as LBS
+import qualified Data.ByteString.Short as SBS
 import qualified Data.ByteString.Base16 as Base16
 import qualified Data.ByteString.Base58 as Base58
 
@@ -840,12 +841,12 @@ instance HasTypeProxy TxId where
     proxyToAsType _ = AsTxId
 
 instance SerialiseAsRawBytes TxId where
-    serialiseToRawBytes (TxId h) = Crypto.getHash h
+    serialiseToRawBytes (TxId h) = Crypto.hashToBytes h
     deserialiseFromRawBytes AsTxId bs = TxId <$> Crypto.hashFromBytes bs
 
 toByronTxId :: TxId -> Byron.TxId
-toByronTxId (TxId (Crypto.UnsafeHash h)) =
-    Byron.unsafeHashFromBytes h
+toByronTxId (TxId h) =
+    Byron.unsafeHashFromBytes (Crypto.hashToBytes h)
 
 toShelleyTxId :: TxId -> Shelley.TxId ShelleyCrypto
 toShelleyTxId (TxId h) =
@@ -857,6 +858,7 @@ getTxId :: TxBody era -> TxId
 getTxId (ByronTxBody tx) =
     TxId
   . Crypto.UnsafeHash
+  . SBS.toShort
   . recoverBytes
   $ tx
 
@@ -1283,10 +1285,10 @@ makeShelleyBootstrapWitness nw (ShelleyTxBody txbody _) (ByronSigningKey sk) =
     ShelleyBootstrapWitness $
       -- Byron era witnesses were weird. This reveals all that weirdness.
       Shelley.BootstrapWitness {
-        Shelley.bwKey       = vk,
-        Shelley.bwSig       = signature,
-        Shelley.bwChainCode = chainCode,
-        Shelley.bwPadding   = padding
+        Shelley.bwKey        = vk,
+        Shelley.bwSig        = signature,
+        Shelley.bwChainCode  = chainCode,
+        Shelley.bwAttributes = attributes
       }
   where
     -- Starting with the easy bits: we /can/ convert the Byron verification key
@@ -1310,17 +1312,17 @@ makeShelleyBootstrapWitness nw (ShelleyTxBody txbody _) (ByronSigningKey sk) =
                   (ShelleyExtendedSigningKey (Byron.unSigningKey sk))
 
     txhash :: Shelley.Hash ShelleyCrypto (Shelley.TxBody ShelleyCrypto)
-    txhash = Crypto.hash txbody
+    txhash = Crypto.hashWith CBOR.serialize' txbody
 
-    -- And finally the really funky bits. We need to provide the extra prefix
-    -- and suffix bytes necessary to reconstruct the mini-Merkel tree that is
-    -- a Byron address. The suffix bytes depend on the address attributes.
-
-    padding = Shelley.byronVerKeyAddressPadding $
-                Byron.mkAttributes Byron.AddrAttributes {
-                  Byron.aaVKDerivationPath = Nothing,
-                  Byron.aaNetworkMagic     = toByronNetworkMagic nw
-                }
+    -- And finally we need to provide the extra suffix bytes necessary to
+    -- reconstruct the mini-Merkel tree that is a Byron address. The suffix
+    -- bytes are the serialised address attributes.
+    attributes =
+      CBOR.serialize' $
+        Byron.mkAttributes Byron.AddrAttributes {
+          Byron.aaVKDerivationPath = Nothing,
+          Byron.aaNetworkMagic     = toByronNetworkMagic nw
+        }
 
 data ShelleyWitnessSigningKey =
        WitnessPaymentKey         (SigningKey PaymentKey)
@@ -1336,7 +1338,7 @@ makeShelleyKeyWitness :: TxBody Shelley
                       -> Witness Shelley
 makeShelleyKeyWitness (ShelleyTxBody txbody _) =
     let txhash :: Shelley.Hash ShelleyCrypto (Shelley.TxBody ShelleyCrypto)
-        txhash = Crypto.hash txbody
+        txhash = Crypto.hashWith CBOR.serialize' txbody
 
         -- To allow sharing of the txhash computation across many signatures we
         -- define and share the txhash outside the lambda for the signing key:
@@ -1408,7 +1410,7 @@ makeShelleyKeyWitnessSignature txhash (ShelleyExtendedSigningKey sk) =
       Crypto.HD.sign
         BS.empty  -- passphrase for (unused) in-mem encryption
         sk
-        (Crypto.getHash txhash)
+        (Crypto.hashToBytes txhash)
   where
     fromXSignature :: Crypto.HD.XSignature
                    -> Shelley.SignedDSIGN ShelleyCrypto b
@@ -1499,8 +1501,7 @@ estimateTransactionFee nw txFeeFixed txFeePerByte (ShelleyTx tx) =
   where
     sizeInput               = smallArray + uint + hashObj
     sizeOutput              = smallArray + uint + address
-    sizeByronKeyWitnesses   = smallArray + keyObj + sigObj + ccodeObj
-                                         + paddingPref + paddingSuff
+    sizeByronKeyWitnesses   = smallArray + keyObj + sigObj + ccodeObj + attrsObj
     sizeShelleyKeyWitnesses = smallArray + keyObj + sigObj
 
     smallArray  = 1
@@ -1522,9 +1523,8 @@ estimateTransactionFee nw txFeeFixed txFeePerByte (ShelleyTx tx) =
     addrHeader  = 1
     addrHashLen = 28
 
-    paddingPref = 2 + BS.length (Shelley.paddingPrefix padding)
-    paddingSuff = 2 + BS.length (Shelley.paddingSuffix padding)
-    padding     = Shelley.byronVerKeyAddressPadding $
+    attrsObj    = 2 + BS.length attributes
+    attributes  = CBOR.serialize' $
                     Byron.mkAttributes Byron.AddrAttributes {
                       Byron.aaVKDerivationPath = Nothing,
                       Byron.aaNetworkMagic     = toByronNetworkMagic nw
@@ -1744,7 +1744,7 @@ toShelleyPoolParams StakePoolParameters {
                           } =
       Shelley.PoolMetaData {
         Shelley._poolMDUrl  = toShelleyUrl stakePoolMetadataURL
-      , Shelley._poolMDHash = Crypto.getHash mdh
+      , Shelley._poolMDHash = Crypto.hashToBytes mdh
       }
 
     toShelleyDnsName :: ByteString -> Shelley.DnsName
@@ -1794,7 +1794,7 @@ instance HasTypeProxy StakePoolMetadata where
     proxyToAsType _ = AsStakePoolMetadata
 
 instance SerialiseAsRawBytes (Hash StakePoolMetadata) where
-    serialiseToRawBytes (StakePoolMetadataHash h) = Crypto.getHash h
+    serialiseToRawBytes (StakePoolMetadataHash h) = Crypto.hashToBytes h
 
     deserialiseFromRawBytes (AsHash AsStakePoolMetadata) bs =
       StakePoolMetadataHash <$> Crypto.hashFromBytes bs
@@ -1883,7 +1883,7 @@ validateAndHashStakePoolMetadata bs
   | BS.length bs <= 512 = do
       md <- first StakePoolMetadataJsonDecodeError
                   (Aeson.eitherDecodeStrict' bs)
-      let mdh = StakePoolMetadataHash (Crypto.hashRaw id bs)
+      let mdh = StakePoolMetadataHash (Crypto.hashWith id bs)
       return (md, mdh)
   | otherwise = Left $ StakePoolMetadataInvalidLengthError 512 (BS.length bs)
 
@@ -2190,7 +2190,7 @@ toShelleyPParamsUpdate
     mkNonce Nothing   = Shelley.NeutralNonce
     mkNonce (Just bs) = Shelley.Nonce
                       . Crypto.castHash
-                      . Crypto.hashRaw id
+                      . Crypto.hashWith id
                       $ bs
 
 -- ----------------------------------------------------------------------------
@@ -2206,7 +2206,7 @@ data OperationalCertificate =
 
 data OperationalCertificateIssueCounter =
      OperationalCertificateIssueCounter
-       !Natural
+       !Word64
        !(VerificationKey StakePoolKey) -- For consistency checking
   deriving (Eq, Show)
   deriving anyclass SerialiseAsCBOR
@@ -2284,11 +2284,9 @@ issueOperationalCertificate (KesVerificationKey kesVKey)
 
     signature :: Crypto.SignedDSIGN
                    (Shelley.DSIGN ShelleyCrypto)
-                   (Shelley.VerKeyKES ShelleyCrypto,
-                    Natural,
-                    Shelley.KESPeriod)
+                   (Shelley.OCertSignable ShelleyCrypto)
     signature = Crypto.signedDSIGN ()
-                  (kesVKey, counter, kesPeriod)
+                  (Shelley.OCertSignable kesVKey counter kesPeriod)
                   poolSKey
 
 
@@ -3099,7 +3097,7 @@ newtype instance Hash PaymentKey =
 
 instance SerialiseAsRawBytes (Hash PaymentKey) where
     serialiseToRawBytes (PaymentKeyHash (Shelley.KeyHash vkh)) =
-      Crypto.getHash vkh
+      Crypto.hashToBytes vkh
 
     deserialiseFromRawBytes (AsHash AsPaymentKey) bs =
       PaymentKeyHash . Shelley.KeyHash <$> Crypto.hashFromBytes bs
@@ -3185,7 +3183,7 @@ instance Key PaymentExtendedKey where
         PaymentExtendedKeyHash
       . Shelley.KeyHash
       . Crypto.castHash
-      $ Crypto.hashRaw Crypto.HD.xpubPublicKey vk
+      $ Crypto.hashWith Crypto.HD.xpubPublicKey vk
 
 
 instance ToCBOR (VerificationKey PaymentExtendedKey) where
@@ -3239,7 +3237,7 @@ newtype instance Hash PaymentExtendedKey =
 
 instance SerialiseAsRawBytes (Hash PaymentExtendedKey) where
     serialiseToRawBytes (PaymentExtendedKeyHash (Shelley.KeyHash vkh)) =
-      Crypto.getHash vkh
+      Crypto.hashToBytes vkh
 
     deserialiseFromRawBytes (AsHash AsPaymentExtendedKey) bs =
       PaymentExtendedKeyHash . Shelley.KeyHash <$> Crypto.hashFromBytes bs
@@ -3338,7 +3336,7 @@ newtype instance Hash StakeKey =
 
 instance SerialiseAsRawBytes (Hash StakeKey) where
     serialiseToRawBytes (StakeKeyHash (Shelley.KeyHash vkh)) =
-      Crypto.getHash vkh
+      Crypto.hashToBytes vkh
 
     deserialiseFromRawBytes (AsHash AsStakeKey) bs =
       StakeKeyHash . Shelley.KeyHash <$> Crypto.hashFromBytes bs
@@ -3420,7 +3418,7 @@ newtype instance Hash GenesisKey =
 
 instance SerialiseAsRawBytes (Hash GenesisKey) where
     serialiseToRawBytes (GenesisKeyHash (Shelley.KeyHash vkh)) =
-      Crypto.getHash vkh
+      Crypto.hashToBytes vkh
 
     deserialiseFromRawBytes (AsHash AsGenesisKey) bs =
       GenesisKeyHash . Shelley.KeyHash <$> Crypto.hashFromBytes bs
@@ -3502,7 +3500,7 @@ newtype instance Hash GenesisDelegateKey =
 
 instance SerialiseAsRawBytes (Hash GenesisDelegateKey) where
     serialiseToRawBytes (GenesisDelegateKeyHash (Shelley.KeyHash vkh)) =
-      Crypto.getHash vkh
+      Crypto.hashToBytes vkh
 
     deserialiseFromRawBytes (AsHash AsGenesisDelegateKey) bs =
       GenesisDelegateKeyHash . Shelley.KeyHash <$> Crypto.hashFromBytes bs
@@ -3594,7 +3592,7 @@ newtype instance Hash GenesisUTxOKey =
 
 instance SerialiseAsRawBytes (Hash GenesisUTxOKey) where
     serialiseToRawBytes (GenesisUTxOKeyHash (Shelley.KeyHash vkh)) =
-      Crypto.getHash vkh
+      Crypto.hashToBytes vkh
 
     deserialiseFromRawBytes (AsHash AsGenesisUTxOKey) bs =
       GenesisUTxOKeyHash . Shelley.KeyHash <$> Crypto.hashFromBytes bs
@@ -3719,7 +3717,7 @@ newtype instance Hash StakePoolKey =
 
 instance SerialiseAsRawBytes (Hash StakePoolKey) where
     serialiseToRawBytes (StakePoolKeyHash (Shelley.KeyHash vkh)) =
-      Crypto.getHash vkh
+      Crypto.hashToBytes vkh
 
     deserialiseFromRawBytes (AsHash AsStakePoolKey) bs =
       StakePoolKeyHash . Shelley.KeyHash <$> Crypto.hashFromBytes bs
@@ -3812,7 +3810,7 @@ newtype instance Hash KesKey =
 
 instance SerialiseAsRawBytes (Hash KesKey) where
     serialiseToRawBytes (KesKeyHash vkh) =
-      Crypto.getHash vkh
+      Crypto.hashToBytes vkh
 
     deserialiseFromRawBytes (AsHash AsKesKey) bs =
       KesKeyHash <$> Crypto.hashFromBytes bs
@@ -3899,7 +3897,7 @@ newtype instance Hash VrfKey =
 
 instance SerialiseAsRawBytes (Hash VrfKey) where
     serialiseToRawBytes (VrfKeyHash vkh) =
-      Crypto.getHash vkh
+      Crypto.hashToBytes vkh
 
     deserialiseFromRawBytes (AsHash AsVrfKey) bs =
       VrfKeyHash <$> Crypto.hashFromBytes bs

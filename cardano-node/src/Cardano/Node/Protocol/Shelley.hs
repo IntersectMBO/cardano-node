@@ -119,7 +119,7 @@ readGenesis (GenesisFile file) = do
                  BS.readFile file
     genesis <- firstExceptT (GenesisDecodeError file) $ hoistEither $
                  Aeson.eitherDecodeStrict' content
-    let genesisHash = Crypto.hashRaw id content
+    let genesisHash = Crypto.hashWith id content
     return (genesis, genesisHash)
 
 

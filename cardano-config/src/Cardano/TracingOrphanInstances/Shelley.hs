@@ -293,11 +293,16 @@ instance Crypto c => ToObject (PredicateFailure (UTXO c)) where
              , "size" .= txsize
              , "maxSize" .= maxtxsize ]
   -- TODO: Add the minimum allowed UTxO value to OutputTooSmallUTxO
-  toObject _verb (OutputTooSmallUTxO tooSmallOutputs) =
+  toObject _verb (OutputTooSmallUTxO badOutputs) =
     mkObject [ "kind" .= String "OutputTooSmallUTxO"
-             , "tooSmallOutputs" .= tooSmallOutputs
+             , "outputs" .= badOutputs
              , "error" .= String "The output is smaller than the allow minimum \
                                  \UTxO value defined in the protocol parameters"
+             ]
+  toObject _verb (OutputBootAddrAttrsTooBig badOutputs) =
+    mkObject [ "kind" .= String "OutputBootAddrAttrsTooBig"
+             , "outputs" .= badOutputs
+             , "error" .= String "The Byron address attributes are too big"
              ]
   toObject _verb InputSetEmptyUTxO =
     mkObject [ "kind" .= String "InputSetEmptyUTxO" ]
@@ -622,7 +627,7 @@ deriving newtype instance ToJSON (TxId c)
 instance Crypto c => ToJSONKey (TxIn c) where
   toJSONKey = ToJSONKeyText txInToText (Aeson.text . txInToText)
 
-txInToText :: TxIn c -> Text
+txInToText :: Crypto c => TxIn c -> Text
 txInToText (TxIn (TxId txidHash) ix) =
   hashToText txidHash
     <> Text.pack "#"
@@ -636,4 +641,4 @@ instance Crypto c => ToJSON (TxOut c) where
       ]
 
 hashToText :: Hash crypto a -> Text
-hashToText = Text.decodeLatin1 . Crypto.getHashBytesAsHex
+hashToText = Text.decodeLatin1 . Crypto.hashToBytesAsHex

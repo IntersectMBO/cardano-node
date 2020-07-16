@@ -22,12 +22,12 @@ import           Cardano.Prelude hiding (All)
 import           Data.Aeson
 import           Data.SOP.Strict
 
-import qualified Cardano.Crypto.Hash.Class as Crypto
 import           Cardano.TracingOrphanInstances.Common
 import           Cardano.TracingOrphanInstances.Consensus ()
 
 import           Cardano.Slotting.Slot (EpochSize(..))
 import           Ouroboros.Consensus.Block (BlockProtocol)
+import           Ouroboros.Consensus.Block.Abstract (ConvertRawHash(toRawHash))
 import           Ouroboros.Consensus.BlockchainTime (getSlotLength)
 import           Ouroboros.Consensus.Protocol.Abstract
                    (ValidationErr, CannotLead, ChainIndepState)
@@ -55,9 +55,8 @@ import           Ouroboros.Consensus.Util.Condense (Condense(..))
 -- instances for hashes
 --
 
-instance Condense (OneEraHash xs) where
-    condense = condense . Crypto.UnsafeHash . getOneEraHash
-
+instance CanHardFork xs => Condense (OneEraHash xs) where
+    condense = condense . toRawHash (Proxy :: Proxy (HardForkBlock xs))
 
 --
 -- instances for Header HardForkBlock

@@ -13,7 +13,6 @@ import           Cardano.Prelude
 import qualified Data.Map.Strict as Map
 import qualified Data.Time as Time
 
-import           Cardano.Crypto.ProtocolMagic (ProtocolMagicId(..))
 import           Cardano.Slotting.Slot (EpochSize (..))
 
 import           Ouroboros.Consensus.Shelley.Node (ShelleyGenesis (..),
@@ -42,7 +41,6 @@ shelleyGenesisDefaults =
       sgSystemStart           = zeroTime
     , sgNetworkMagic          = 42
     , sgNetworkId             = Ledger.Testnet
-    , sgProtocolMagicId       = ProtocolMagicId 42
 
       -- consensus protocol params
     , sgSlotLength            = 1.0 :: Time.NominalDiffTime -- 1s slots

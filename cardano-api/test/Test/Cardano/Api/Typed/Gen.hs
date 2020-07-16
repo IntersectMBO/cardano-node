@@ -20,6 +20,7 @@ import           Cardano.Prelude
 
 import           Control.Monad.Fail (fail)
 
+import qualified Cardano.Binary as CBOR
 import qualified Cardano.Crypto.Hash as Crypto
 import qualified Cardano.Crypto.Seed as Crypto
 import           Cardano.Slotting.Slot (SlotNo(..))
@@ -135,7 +136,7 @@ genShelleyTxOut =
   TxOut <$> genAddressShelley <*> genLovelace
 
 genShelleyHash :: Gen (Crypto.Hash Crypto.Blake2b_256 ())
-genShelleyHash = return $ Crypto.hash ()
+genShelleyHash = return $ Crypto.hashWith CBOR.serialize' ()
 
 genSlotNo :: Gen SlotNo
 genSlotNo = SlotNo <$> Gen.word64 Range.constantBounded

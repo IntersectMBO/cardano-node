@@ -17,9 +17,11 @@ import           Cardano.Prelude
 import           Data.Aeson
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Encoding as Aeson
-import qualified Data.ByteString.Base16 as B16
+import qualified Data.ByteString.Short as SBS
+import qualified Data.ByteString.Base16 as Base16
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
+import           Control.Iterate.SetAlgebra as SetAlgebra
 
 import           Cardano.Crypto.Hash.Class as Crypto
 import           Cardano.TracingOrphanInstances.Common ()
@@ -48,14 +50,14 @@ import           Shelley.Spec.Ledger.UTxO (UTxO(..))
 instance Crypto c => ToJSONKey (TxIn c) where
   toJSONKey = ToJSONKeyText txInToText (Aeson.text . txInToText)
 
-txInToText :: TxIn c -> Text
+txInToText :: Crypto c => TxIn c -> Text
 txInToText (TxIn (TxId txidHash) ix) =
   hashToText txidHash
     <> Text.pack "#"
     <> Text.pack (show ix)
 
 hashToText :: Hash crypto a -> Text
-hashToText = Text.decodeLatin1 . Crypto.getHashBytesAsHex
+hashToText = Text.decodeLatin1 . Crypto.hashToBytesAsHex
 
 deriving instance Crypto c => ToJSON (TxIn c)
 
@@ -67,7 +69,11 @@ instance Crypto c => ToJSON (TxOut c) where
       ]
 
 instance ToJSON (OneEraHash xs) where
-  toJSON (OneEraHash bs) = toJSON . Text.decodeLatin1 . B16.encode $ bs
+  toJSON = toJSON
+         . Text.decodeLatin1
+         . Base16.encode
+         . SBS.fromShort
+         . getOneEraHash
 
 deriving newtype instance ToJSON ByronHash
 
@@ -125,3 +131,6 @@ deriving instance ToJSON (Ledger.UTxOState TPraosStandardCrypto)
 
 deriving instance ToJSONKey Ledger.Ptr
 deriving instance ToJSONKey (Ledger.FutureGenDeleg TPraosStandardCrypto)
+
+instance (ToJSONKey k, ToJSON v) => ToJSON (SetAlgebra.BiMap v k v) where
+  toJSON = toJSON . SetAlgebra.forwards -- to normal Map

@@ -143,7 +143,7 @@ runGenesisKeyGenDelegate (VerificationKeyFile vkeyPath)
     vkeyDesc = TextViewDescription "Genesis delegate operator key"
     certCtrDesc = TextViewDescription $ "Next certificate issue number: " <> BS.pack (show initialCounter)
 
-    initialCounter :: Natural
+    initialCounter :: Word64
     initialCounter = 0
 
 
