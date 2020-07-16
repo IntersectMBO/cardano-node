@@ -99,8 +99,8 @@ for i in $(seq 1 $gendlg_count) ; do
     assert_file_exists "${TEST_DIR}/delegate-keys/delegate${i}.vkey"
     assert_file_exists "${TEST_DIR}/delegate-keys/delegate${i}.counter"
 
-    assert_string 'NodeOperatorSigningKey_ed25519' "${TEST_DIR}/delegate-keys/delegate${i}.skey"
-    assert_string 'NodeOperatorVerificationKey_ed25519' "${TEST_DIR}/delegate-keys/delegate${i}.vkey"
+    assert_string 'GenesisDelegateSigningKey_ed25519' "${TEST_DIR}/delegate-keys/delegate${i}.skey"
+    assert_string 'GenesisDelegateVerificationKey_ed25519' "${TEST_DIR}/delegate-keys/delegate${i}.vkey"
     assert_string 'NodeOperationalCertificateIssueCounter' "${TEST_DIR}/delegate-keys/delegate${i}.counter"
 
     # Check utxo keys:

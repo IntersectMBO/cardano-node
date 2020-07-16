@@ -3515,20 +3515,18 @@ instance SerialiseAsRawBytes (Hash GenesisDelegateKey) where
       GenesisDelegateKeyHash . Shelley.KeyHash <$> Crypto.hashFromBytes bs
 
 instance HasTextEnvelope (VerificationKey GenesisDelegateKey) where
-    textEnvelopeType _ = "NodeOperatorVerificationKey_"
+    textEnvelopeType _ = "GenesisDelegateVerificationKey_"
                       <> fromString (Crypto.algorithmNameDSIGN proxy)
       where
         proxy :: Proxy (Shelley.DSIGN ShelleyCrypto)
         proxy = Proxy
 
 instance HasTextEnvelope (SigningKey GenesisDelegateKey) where
-    textEnvelopeType _ = "NodeOperatorSigningKey_"
+    textEnvelopeType _ = "GenesisDelegateSigningKey_"
                       <> fromString (Crypto.algorithmNameDSIGN proxy)
       where
         proxy :: Proxy (Shelley.DSIGN ShelleyCrypto)
         proxy = Proxy
-    -- TODO: use a different type from the stake pool key, since some operations
-    -- need a genesis key specifically
 
 instance CastVerificationKeyRole GenesisDelegateKey StakePoolKey where
     castVerificationKey (GenesisDelegateVerificationKey (Shelley.VKey vkey)) =
@@ -3747,14 +3745,14 @@ instance ToJSON (Hash StakePoolKey) where
     toJSON = toJSON . Text.decodeLatin1 . serialiseToRawBytesHex
 
 instance HasTextEnvelope (VerificationKey StakePoolKey) where
-    textEnvelopeType _ = "NodeOperatorVerificationKey_"
+    textEnvelopeType _ = "StakePoolVerificationKey_"
                       <> fromString (Crypto.algorithmNameDSIGN proxy)
       where
         proxy :: Proxy (Shelley.DSIGN ShelleyCrypto)
         proxy = Proxy
 
 instance HasTextEnvelope (SigningKey StakePoolKey) where
-    textEnvelopeType _ = "NodeOperatorSigningKey_"
+    textEnvelopeType _ = "StakePoolSigningKey_"
                       <> fromString (Crypto.algorithmNameDSIGN proxy)
       where
         proxy :: Proxy (Shelley.DSIGN ShelleyCrypto)
