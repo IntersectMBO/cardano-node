@@ -8,7 +8,7 @@ let
   sources = import ./sources.nix { inherit pkgs; }
     // sourcesOverride;
   iohkNix = import sources.iohk-nix {};
-  haskellNix = import sources."haskell.nix";
+  haskellNix = (import sources."haskell.nix" { inherit system sourcesOverride; }).nixpkgsArgs;
   # use our own nixpkgs if it exists in our sources,
   # otherwise use iohkNix default nixpkgs.
   nixpkgs = if (sources ? nixpkgs)

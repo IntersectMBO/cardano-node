@@ -1,4 +1,4 @@
-index-state: 2020-05-15T00:00:00Z
+index-state: 2020-07-15T00:00:00Z
 
 packages:
     cardano-api
@@ -116,13 +116,6 @@ package cardano-ledger
 -- git checkout HEAD "$(git rev-parse --show-toplevel)"/cabal.project
 -- sed -ni '1,/--- 8< ---/ p' "$(git rev-parse --show-toplevel)"/cabal.project
 -- Please do not put any `source-repository-package` clause above this line.
-
-source-repository-package
-  type: git
-  location: https://github.com/input-output-hk/bech32
-  tag: 7b262c6e551af0f0f02e192b69d9ac5d1e3b5f88
-  --sha256: 0xhxmsn9qd4d3sgmnisc2v0wk66d2hkdvncv9lw7zi0nxa5vx2n2
-  subdir: bech32
 
 source-repository-package
   type: git

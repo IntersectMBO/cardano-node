@@ -36,7 +36,7 @@ library
                       , base16-bytestring
                       , base58-bytestring
                       , base64
-                      , bech32
+                      , bech32 >= 1.1.0
                       , bytestring
                       , cardano-binary
                       , cardano-config
