@@ -125,7 +125,8 @@ mkConsensusProtocolCardano NodeByronProtocolConfiguration {
                            }
                            NodeHardForkProtocolConfiguration {
                              npcTestShelleyHardForkAtEpoch,
-                             npcTestShelleyHardForkAtVersion
+                             npcTestShelleyHardForkAtVersion,
+                             npcShelleyHardForkNotBeforeEpoch
                            }
                            files = do
     byronGenesis <-
@@ -165,8 +166,7 @@ mkConsensusProtocolCardano NodeByronProtocolConfiguration {
         shelleyLeaderCredentials
 
         -- Hard fork parameters
-        (Just 190) --TODO: Optimisation: once the epoch of the transition is
-                   -- known, set this to the first shelley epoch.
+        npcShelleyHardForkNotBeforeEpoch
 
         -- What will trigger the hard fork?
         (case npcTestShelleyHardForkAtEpoch of
