@@ -48,14 +48,14 @@ prop_convertITNKeys =
     -- Generate haskell stake verification key
     execCardanoCLIParser
       allFiles
-        $ evalCardanoCLIParser [ "shelley","stake-address","convert-itn-key"
+        $ evalCardanoCLIParser [ "shelley","key","convert-itn-key"
                                , "--itn-verification-key-file", itnVerKeyFp
                                , "--out-file", outputHaskellVerKeyFp
                                ]
     -- Generate haskell signing key
     execCardanoCLIParser
       allFiles
-        $ evalCardanoCLIParser [ "shelley","stake-address","convert-itn-key"
+        $ evalCardanoCLIParser [ "shelley","key","convert-itn-key"
                                , "--itn-signing-key-file", itnSignKeyFp
                                , "--out-file", outputHaskellSignKeyFp
                                ]

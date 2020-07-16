@@ -66,6 +66,8 @@ parseShelleyCommands =
           (Opt.info (AddressCmd <$> pAddressCmd) $ Opt.progDesc "Shelley payment address commands")
       , Opt.command "stake-address"
           (Opt.info (StakeAddressCmd <$> pStakeAddress) $ Opt.progDesc "Shelley stake address commands")
+      , Opt.command "key"
+          (Opt.info (KeyCmd <$> pKeyCmd) $ Opt.progDesc "Shelley key conversion commands")
       , Opt.command "transaction"
           (Opt.info (TransactionCmd <$> pTransaction) $ Opt.progDesc "Shelley transaction commands")
       , Opt.command "node"
@@ -135,8 +137,6 @@ pAddressCmd =
           (Opt.info pAddressBuildMultiSig $ Opt.progDesc "Build a Shelley payment multi-sig address.")
       , Opt.command "info"
           (Opt.info pAddressInfo $ Opt.progDesc "Print information about an address.")
-      , Opt.command "convert"
-          (Opt.info pAddressConvert $ Opt.progDesc "Convert a Byron signing key file.")
       ]
   where
     pAddressKeyGen :: Parser AddressCmd
@@ -161,10 +161,6 @@ pAddressCmd =
 
     pAddressInfo :: Parser AddressCmd
     pAddressInfo = AddressInfo <$> pAddress <*> pMaybeOutputFile
-
-    pAddressConvert :: Parser AddressCmd
-    pAddressConvert = AddressConvertKey <$> pByronKeyFile Input
-                                        <*> pSigningKeyFile Output
 
 pPaymentVerificationKeyFile :: Parser VerificationKeyFile
 pPaymentVerificationKeyFile =
@@ -205,8 +201,6 @@ pStakeAddress =
           (Opt.info pStakeAddressDeregistrationCert $ Opt.progDesc "Create a stake address deregistration certificate")
       , Opt.command "delegation-certificate"
           (Opt.info pStakeAddressDelegationCert $ Opt.progDesc "Create a stake address delegation certificate")
-      , Opt.command "convert-itn-key"
-          (Opt.info pConvertITNKey $ Opt.progDesc "Convert an ITN public/private key to a shelley stake verification/signing key")
       ]
   where
     pStakeAddressKeyGen :: Parser StakeAddressCmd
@@ -248,14 +242,6 @@ pStakeAddress =
                                     <*> pStakePoolVerificationKeyHashOrFile
                                     <*> pOutputFile
 
-    pConvertITNKey :: Parser StakeAddressCmd
-    pConvertITNKey = StakeKeyITNConversion
-                       <$> pITNKeyFIle
-                       <*> pMaybeOutputFile
-
-    pITNKeyFIle :: Parser ITNKeyFile
-    pITNKeyFIle = pITNSigningKeyFile <|> pITNVerificationKeyFile
-
 pDelegationFee :: Parser Lovelace
 pDelegationFee =
   Lovelace <$>
@@ -264,6 +250,31 @@ pDelegationFee =
       <> Opt.metavar "LOVELACE"
       <> Opt.help "The delegation fee in Lovelace."
       )
+
+pKeyCmd :: Parser KeyCmd
+pKeyCmd =
+  Opt.subparser $
+    mconcat
+      [ Opt.command "convert-byron-payment-signing-key"
+          (Opt.info pKeyConvertByronPaymentKey $ Opt.progDesc "Convert a Byron payment signing key to a Shelley payment signing key")
+      , Opt.command "convert-itn-key"
+          (Opt.info pKeyConvertITNKey $ Opt.progDesc "Convert an Incentivized Testnet (ITN) non-extended signing or verification key to a corresponding Shelley stake key")
+      ]
+  where
+    pKeyConvertByronPaymentKey :: Parser KeyCmd
+    pKeyConvertByronPaymentKey =
+      KeyConvertByronPaymentKey
+        <$> pByronKeyFile Input
+        <*> pSigningKeyFile Output
+
+    pKeyConvertITNKey :: Parser KeyCmd
+    pKeyConvertITNKey =
+      KeyConvertITNStakeKey
+        <$> pITNKeyFile
+        <*> pMaybeOutputFile
+
+    pITNKeyFile :: Parser ITNKeyFile
+    pITNKeyFile = pITNSigningKeyFile <|> pITNVerificationKeyFile
 
 pTransaction :: Parser TransactionCmd
 pTransaction =

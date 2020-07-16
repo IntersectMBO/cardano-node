@@ -5,6 +5,7 @@ module Cardano.CLI.Shelley.Commands
     ShelleyCommand (..)
   , AddressCmd (..)
   , StakeAddressCmd (..)
+  , KeyCmd (..)
   , TransactionCmd (..)
   , NodeCmd (..)
   , PoolCmd (..)
@@ -65,6 +66,7 @@ import           Shelley.Spec.Ledger.TxData (MIRPot)
 data ShelleyCommand
   = AddressCmd      AddressCmd
   | StakeAddressCmd StakeAddressCmd
+  | KeyCmd          KeyCmd
   | TransactionCmd  TransactionCmd
   | NodeCmd         NodeCmd
   | PoolCmd         PoolCmd
@@ -83,7 +85,6 @@ data AddressCmd
   | AddressBuild VerificationKeyFile (Maybe VerificationKeyFile) NetworkId (Maybe OutputFile)
   | AddressBuildMultiSig  --TODO
   | AddressInfo Text (Maybe OutputFile)
-  | AddressConvertKey SigningKeyFile SigningKeyFile
   deriving (Eq, Show)
 
 data StakeAddressCmd
@@ -96,9 +97,12 @@ data StakeAddressCmd
   | StakeKeyRegistrationCert VerificationKeyFile OutputFile
   | StakeKeyDelegationCert VerificationKeyFile StakePoolVerificationKeyHashOrFile OutputFile
   | StakeKeyDeRegistrationCert VerificationKeyFile OutputFile
-  | StakeKeyITNConversion ITNKeyFile (Maybe OutputFile)
   deriving (Eq, Show)
 
+data KeyCmd
+  = KeyConvertByronPaymentKey SigningKeyFile SigningKeyFile
+  | KeyConvertITNStakeKey ITNKeyFile (Maybe OutputFile)
+  deriving (Eq, Show)
 
 data TransactionCmd
   = TxBuildRaw
