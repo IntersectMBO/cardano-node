@@ -257,6 +257,8 @@ pKeyCmd =
     mconcat
       [ Opt.command "convert-byron-payment-signing-key"
           (Opt.info pKeyConvertByronPaymentKey $ Opt.progDesc "Convert a Byron payment signing key to a Shelley payment signing key")
+      , Opt.command "convert-byron-genesis-key"
+          (Opt.info pKeyConvertByronGenesisVerificationKey $ Opt.progDesc "Convert a Base64-encoded Byron genesis verification key to a Shelley genesis verification key")
       , Opt.command "convert-itn-key"
           (Opt.info pKeyConvertITNKey $ Opt.progDesc "Convert an Incentivized Testnet (ITN) non-extended signing or verification key to a corresponding Shelley stake key")
       ]
@@ -267,14 +269,30 @@ pKeyCmd =
         <$> pByronKeyFile Input
         <*> pSigningKeyFile Output
 
+    pKeyConvertByronGenesisVerificationKey :: Parser KeyCmd
+    pKeyConvertByronGenesisVerificationKey =
+      KeyConvertByronGenesisVerificationKey
+        <$> pByronGenesisVerificationKeyFile
+        <*> pVerificationKeyFile Output
+
+    pByronGenesisVerificationKeyFile :: Parser VerificationKeyFile
+    pByronGenesisVerificationKeyFile =
+      VerificationKeyFile <$>
+        Opt.strOption
+          (  Opt.long "byron-genesis-verification-key-file"
+          <> Opt.metavar "FILE"
+          <> Opt.help "Filepath of the Byron genesis verification key."
+          <> Opt.completer (Opt.bashCompleter "file")
+          )
+
     pKeyConvertITNKey :: Parser KeyCmd
     pKeyConvertITNKey =
       KeyConvertITNStakeKey
-        <$> pITNKeyFile
+        <$> pITNKeyFIle
         <*> pMaybeOutputFile
 
-    pITNKeyFile :: Parser ITNKeyFile
-    pITNKeyFile = pITNSigningKeyFile <|> pITNVerificationKeyFile
+    pITNKeyFIle :: Parser ITNKeyFile
+    pITNKeyFIle = pITNSigningKeyFile <|> pITNVerificationKeyFile
 
 pTransaction :: Parser TransactionCmd
 pTransaction =

@@ -7,10 +7,11 @@ module Cardano.CLI.Shelley.Run.Key
 import           Cardano.Prelude
 
 import qualified Data.Text as Text
+import qualified Data.Text.IO as Text
 
 import           Control.Monad.Trans.Except (ExceptT)
-import           Control.Monad.Trans.Except.Extra (firstExceptT, hoistEither,
-                   newExceptT)
+import           Control.Monad.Trans.Except.Extra (firstExceptT,
+                   handleIOExceptT, hoistEither, hoistMaybe, newExceptT)
 
 import           Cardano.Api.TextView (TextViewDescription (..))
 import           Cardano.Api.Typed
@@ -22,10 +23,21 @@ import           Cardano.CLI.Shelley.Parsers (ITNKeyFile (..), KeyCmd (..),
                    OutputFile (..), SigningKeyFile (..),
                    VerificationKeyFile (..))
 
+import qualified Cardano.Crypto.DSIGN.Class as Crypto
+import qualified Cardano.Crypto.Signing as Byron.Crypto
+import qualified Cardano.Crypto.Wallet as Crypto.HD
+
+import qualified Shelley.Spec.Ledger.Keys as Shelley
+
 data ShelleyKeyCmdError
   = ShelleyKeyCmdReadFileError !(FileError TextEnvelopeError)
   | ShelleyKeyCmdWriteFileError !(FileError ())
   | ShelleyKeyCmdByronKeyFailure !ByronKeyFailure
+  | ShelleyKeyCmdByronKeyParseError
+      !Text
+      -- ^ Text representation of the parse error. Unfortunately, the actual
+      -- error type isn't exported.
+  | ShelleyKeyCmdDeserialiseByronVerKeyError
   | ShelleyKeyCmdItnKeyConvError !ConversionError
   deriving Show
 
@@ -35,6 +47,9 @@ renderShelleyKeyCmdError err =
     ShelleyKeyCmdReadFileError fileErr -> Text.pack (displayError fileErr)
     ShelleyKeyCmdWriteFileError fileErr -> Text.pack (displayError fileErr)
     ShelleyKeyCmdByronKeyFailure e -> renderByronKeyFailure e
+    ShelleyKeyCmdByronKeyParseError errTxt -> errTxt
+    ShelleyKeyCmdDeserialiseByronVerKeyError ->
+      "Failed to deserialise the provided Byron verification key."
     ShelleyKeyCmdItnKeyConvError convErr -> renderConversionError convErr
 
 runKeyCmd :: KeyCmd -> ExceptT ShelleyKeyCmdError IO ()
@@ -42,6 +57,8 @@ runKeyCmd cmd =
   case cmd of
     KeyConvertByronPaymentKey skfOld skfNew ->
       runConvertByronPaymentKey skfOld skfNew
+    KeyConvertByronGenesisVerificationKey oldVkf newVkf ->
+      runConvertByronGenesisVerificationKey oldVkf newVkf
     KeyConvertITNStakeKey itnKeyFile mOutFile ->
       runSingleITNKeyConversion itnKeyFile mOutFile
 
@@ -56,6 +73,27 @@ runConvertByronPaymentKey skeyPathOld (SigningKeyFile skeyPathNew) = do
       writeFileTextEnvelope skeyPathNew (Just skeyDesc) (ByronSigningKey sk)
   where
     skeyDesc = TextViewDescription "Payment Signing Key"
+
+runConvertByronGenesisVerificationKey
+  :: VerificationKeyFile -- ^ Input file: old format
+  -> VerificationKeyFile -- ^ Output file: new format
+  -> ExceptT ShelleyKeyCmdError IO ()
+runConvertByronGenesisVerificationKey (VerificationKeyFile oldVkFp)
+                                      (VerificationKeyFile newVkFp) = do
+  b64ByronVKey <- handleIOExceptT (ShelleyKeyCmdReadFileError . FileIOError oldVkFp) $
+    Text.readFile oldVkFp
+  byronVKey <- firstExceptT (ShelleyKeyCmdByronKeyParseError . show)
+    . hoistEither
+    . Byron.Crypto.parseFullVerificationKey
+    $ b64ByronVKey
+  shelleyGenesisVKey <- hoistMaybe ShelleyKeyCmdDeserialiseByronVerKeyError
+    . fmap (GenesisVerificationKey . Shelley.VKey)
+    . Crypto.rawDeserialiseVerKeyDSIGN
+    . Crypto.HD.xpubPublicKey
+    . Byron.Crypto.unVerificationKey
+    $ byronVKey
+  firstExceptT ShelleyKeyCmdWriteFileError . newExceptT $
+    writeFileTextEnvelope newVkFp Nothing shelleyGenesisVKey
 
 runSingleITNKeyConversion
   :: ITNKeyFile

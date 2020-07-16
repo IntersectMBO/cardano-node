@@ -101,6 +101,7 @@ data StakeAddressCmd
 
 data KeyCmd
   = KeyConvertByronPaymentKey SigningKeyFile SigningKeyFile
+  | KeyConvertByronGenesisVerificationKey VerificationKeyFile VerificationKeyFile
   | KeyConvertITNStakeKey ITNKeyFile (Maybe OutputFile)
   deriving (Eq, Show)
 
