@@ -6,6 +6,10 @@ module Cardano.CLI.Shelley.Parsers
     -- * CLI command and flag types
   , module Cardano.CLI.Shelley.Commands
 
+    -- * CLI option parsers
+  , pNetworkId
+  , pProtocol
+
     -- * Field parser and renderers
   , parseTxIn
   , renderTxIn
