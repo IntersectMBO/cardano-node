@@ -15,18 +15,18 @@ import           Cardano.Prelude hiding (unlines)
 import           Control.Monad.Trans.Except.Extra (firstExceptT)
 import qualified Data.Text as T
 
+import           Cardano.Api.Typed
 import           Cardano.Chain.Slotting (EpochSlots(..))
-import           Ouroboros.Consensus.Cardano (protocolClientInfo)
-import           Ouroboros.Consensus.Node.ProtocolInfo (pClientInfoCodecConfig)
+import           Ouroboros.Consensus.Cardano (SecurityParam(..))
 import           Ouroboros.Consensus.Util.Condense (Condense(..))
 import           Ouroboros.Network.Block
-import           Ouroboros.Network.NodeToClient (withIOManager)
 
-import           Cardano.Config.Byron.Protocol (mkNodeClientProtocolRealPBFT)
-
-import           Cardano.Api (Network(..), getLocalTip)
+import           Cardano.Config.Types (SocketPath (..))
+import           Cardano.Api.LocalChainSync (getLocalTip)
 import           Cardano.CLI.Environment
                    (EnvSocketError, readEnvSocketPath, renderEnvSocketError)
+import           Cardano.TracingOrphanInstances.HardFork ()
+
 
 data ByronQueryError
   = ByronQueryEnvVarSocketErr !EnvSocketError
@@ -41,15 +41,20 @@ renderByronQueryError err =
 -- Query local node's chain tip
 --------------------------------------------------------------------------------
 
-runGetLocalNodeTip :: Network -> ExceptT ByronQueryError IO ()
-runGetLocalNodeTip network = do
-    sockPath <- firstExceptT ByronQueryEnvVarSocketErr $ readEnvSocketPath
-    let ptclClientInfo = pClientInfoCodecConfig . protocolClientInfo $
-          mkNodeClientProtocolRealPBFT (EpochSlots 21600)
-
+runGetLocalNodeTip :: NetworkId -> ExceptT ByronQueryError IO ()
+runGetLocalNodeTip networkId = do
+    SocketPath sockPath <- firstExceptT ByronQueryEnvVarSocketErr $
+                           readEnvSocketPath
+    let connctInfo =
+          LocalNodeConnectInfo {
+            localNodeSocketPath    = sockPath,
+            localNodeNetworkId     = networkId,
+            localNodeConsensusMode = ByronMode
+                                       (EpochSlots 21600)
+                                       (SecurityParam 2160)
+          }
     liftIO $ do
-      tip <- withIOManager $ \iomgr ->
-               getLocalTip iomgr ptclClientInfo network sockPath
+      tip <- getLocalTip connctInfo
       putTextLn (getTipOutput tip)
   where
     getTipOutput :: forall blk. Condense (HeaderHash blk) => Tip blk -> Text

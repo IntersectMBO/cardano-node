@@ -1,5 +1,164 @@
 # Changelog for cardano-node
 
+## 1.15.1 -- July 2020
+
+No changes in the node. There were changes in the cardano-api and cardano-cli.
+
+## 1.15.0 -- July 2020
+
+### node changes
+
+- Support for triggering a hard fork at a specific epoch (#1328)
+- Support for triggering a hard fork at a specific protocol version (#1345)
+- Changes resulting from refactoring in the Cardano API library (#1289, #1316,
+  #1380, #1384)
+- Update the README build instructions, including libsodium (#1325, #1361, #1362)
+- Trace the UTxO size in block forging to help the benchmarking tools (#1329)
+- Remove the "forks created" metric from the live view (#1315)
+
+### consensus changes
+- Fix an off-by-one error in the KES cert validity period (#2306)
+- Fix KES-related tests (#2306)
+- Fix bugs found by the hard fork tests (#2310, #2312)
+- Fix bugs found by the hard fork tests in the hard fork tests themselves (#2305)
+- Extend hard fork tests to include network partitions at interesting times
+  around or during the hard fork (#2292, #2337, #2342)
+- Prefer blocks we created, irrespective of the VRF value (#1286, #2348)
+- Allow setting the intial Praos nonce (#2005, #2289)
+- Richer support for queries when using multiple protocol eras to allow some
+  queries to be answered outside of the era to which they belong (#2349)
+- Optimisation in chain selection for forks (#1223, #2323)
+- Preparation for removing EBBs (#2322, #2336, #2339)
+- Clarify and document the interface for triggering a hard fork (#2307)
+- Internal cleanups and refactoring (#2327, #2328, #2329)
+
+### ledger changes
+- Fix bug in the pool reaping that could cause a crash on epoch boundaries (#1593)
+- Fix a preservation of value bug in rewards to retired stake pools (#1598, #1604)
+- Fix a bug in pool reaping when multiple pools share a reward account (#1605)
+- Fix the calculation of non-myopic rewards that is queried by the wallet (#1601)
+- Allow update proposals to be submitted near the end of an epoch, but apply
+  them only at the end of the following epoch (#1574)
+- Simpler calculation for turning the VRF output into the leader value (#1579)
+- Check the VRF for BFT blocks too (#1590)
+- Tests and other clean-up for witnesses for spending from Byron address in
+  Shelley transactions (#1573, #1591)
+- Additional tests for serialisation of parts of the ledger state (#1603)
+- Fix the presentation of pool metadata hashes in JSON output (#1596)
+- Clean up the serialisation used with hashing (#1602)
+
+### network changes
+- Additional concurrency utilities (#2298)
+- Improved tests for error handling of socket send/recv (#2317)
+- Port existing DNS-related bug fixes to the new DNS provider in the p2p
+  governor (#1873, #1893, #2311)
+- Internal cleanups (#2096)
+
+## 1.14.2 -- June 2020
+
+No changes in the node. There were changes in the cardano-api and cardano-cli.
+
+## 1.14.1 -- June 2020
+
+- Include the libsodium.dll info Windows build artefacts (#1327)
+- Fix compiler warnings on Windows (#1303)
+- Split live view code into more modules (#1323)
+
+## 1.14.0 -- June 2020
+
+### node changes
+- Initial integration of the "Byron;Shelley" composite protocol (#1242, #1294)
+- Fix a minor regression in the logging so all tracers are configurable (#1192)
+- Minor adjustment to logging verbosity defaults (#1225)
+- Log warnings and alerts for certificate expiry (#1228)
+- Report number of missed opportunities to make blocks in the live view (#1202)
+- Allow overriding the hostname shown in logs with an env var (#1278)
+- Fix reporting of git revision (#1263)
+
+### consensus changes
+- Refactoring of serialisation and other details for the Byron-to-Shelley
+  hard-fork (#2147, #2207, #2224, #2226, #2237, #2240, #2241, #2243, #2244, #2246,
+  #2248, #2250, #2252, #2263)
+- Extend the automated testing (#2027, #2029, #2066, #2222, #2277, #2282, #2293)
+- New common protocol params interface for querying ledger-specific params (#2275)
+- Change the ledger state dump query to return the whole state (#2288)
+
+### ledger changes
+- Remove the decaying deposits feature. Deposits are returned in full. (#1512)
+- New feature for a minimum pool cost, via updateable protocol parameter (#1546)
+- Change address hashes to be 224 bit, as in the design spec (#1549)
+- Track historical pool performance for pool ranking (#1565)
+- Support pool ranking with hypothetical amount to delegate (#1543)
+- Remove unnecessary pool relay port number override in DNS SRV case (#1570)
+- Move genesis JSON support into the ledger (#1534, #1536)
+- Add genesis JSON support for initial stake pools and delegation (#1552)
+- Fix genesis JSON conversion of fractional values to preserve precision (#1569)
+- Benchmarks and optimisations (#1527, #1566)
+- Update to latest VRF API changes (#1577)
+- Update the formal specification to cover MIR drawing from the treasury (#1526)
+- Update the design specification address terminology, and multi-sig (#1547, #1554)
+- Update the design specification on stake pool metadata (#1507)
+
+### network changes
+- Timeouts for chain sync are drawn from a Praos-specific distribution (#2249)
+- New keep-alive mini-protocol (#2230)
+- New support for restarting mini-protocols (#2205, #2221, #2286)
+- Testing for bi-directional use of mini-protocols (#2203)
+- Adjust and simplify the block fetch calculation for determining if we are in
+  deadline mode or in bulk sync mode (#2267)
+
+## 1.13.0 -- June 2020
+
+### node changes
+
+- Fix override order for the node socket: CLI then config file (#1124, #1145)
+- New monitoring metric for KES key periods, including remaining (#1030, #1144)
+- Improved logging for mempool tx validation failures (#1035)
+- Log the epoch number as well as the slot number (#1095, #1108)
+- Fix logging of node info on startup (#1122)
+- Extended tracing for benchmarking analysis (#1091)
+- Fix error handling on genesis file parse errors (#1134)
+- Various live view fixes (#1076, #1126)
+
+### consensus changes
+- Hard fork related refactoring and improvements (#2139, #2150, #2151, #2152,
+  #2158, #2165, #2177, #2183, #2192, #2199)
+- Preparation for the Byron-to-Shelley hard-fork (#2163, #2145, #2182, #2185,
+  #2187, #2189)
+- Basic tests for the hard fork combinator (#2063, #2079, #2134, #2167, #2197)
+- Deterministic Praos chain selection using the leader VRF (#2195)
+- Fix Praos stability window calculations (#2201, #2202, #2219, #2220)
+- Add more local ledger state queries (#2161)
+- Mempool refactoring and fixes (#1498, #2006, #2153)
+- Evolve the KES keys eagerly rather than on-demand (#2160)
+- Extended documentation of the "ThreadNet" consensus tests (#2053)
+- Distinguish cases when a node should be slot leader but cannot forge (#2169,
+  #2171, #2172, #2176, #2193)
+- Improved tracing of block forging, and forge errors (#2168, #2170)
+
+### ledger changes (Byron)
+- None
+
+### ledger changes (Shelley)
+- Give delegators a whole epoch to react to pool parameter changes (#1494)
+- Fix off-by-one error in pool retirement epoch (spec and impl) (#1511)
+- Genesis delegate mapping now includes the VRF key hash (#1495, #1501)
+- MIR certs can now draw from the treasury or reserves (#1513)
+- MIR certs are witnessed by the genesis delegates not genesis keys (#1513)
+- Drop the use of the "set" tag from the CDDL (#1505)
+- Use the right binary format for stake addresses (#1491)
+- Include the network id in addresses (by value, not type) (#1487)
+- Document the network id and binary format in the specification doc (#1500)
+- Move serialisation property tests from ouroboros-consensus (#1497, #1506)
+
+### network changes
+- Increase the header size estimate to avoid ingress queue overruns (#2206)
+- Mux refactoring for on-demand and bi-directional mini-protocols (#1731, #2166)
+- Fix long thread delays on 32bit systems more widely (#2135, #2162)
+- New keep alive mini-protocol (#2175)
+- Refactoring of OuroborosApplication type (#2121)
+- Allow compilation with GHC 8.10.x (#2141)
+
 ## 1.12.0 -- May 2020
 
 ### node changes

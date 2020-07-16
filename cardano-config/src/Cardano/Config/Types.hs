@@ -1,4 +1,5 @@
 {-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DeriveAnyClass #-}
@@ -11,39 +12,27 @@
 {-# LANGUAGE StandaloneDeriving #-}
 
 module Cardano.Config.Types
-    ( CardanoEnvironment (..)
-    , CBORObject (..)
+    ( CBORObject (..)
     , CertificateFile (..)
-    , ConfigYamlFilePath (..)
     , ConfigError (..)
     , DbFile (..)
     , GenesisFile (..)
-    , HasTxMaxSize (..)
     , KESMetricsData (..)
     , MaxKESEvolutions (..)
+    , MaxConcurrencyBulkSync (..)
+    , MaxConcurrencyDeadline (..)
     , OperationalCertStartKESPeriod (..)
     , HasKESMetricsData (..)
-    , LastKnownBlockVersion (..)
     , NodeAddress (..)
-    , NodeConfiguration (..)
     , NodeHostAddress (..)
-    , Protocol (..)
-    , NodeCLI (..)
     , NodeProtocolMode (..)
     , SigningKeyFile (..)
-    , SomeConsensusProtocolConstraints
     , ProtocolFilepaths (..)
-    , SomeConsensusProtocol (..)
     , TopologyFile (..)
     , TraceConstraints
     , SocketPath (..)
-    , Update (..)
     , UpdateProposalFile (..)
     , ViewMode (..)
-    , Fd (..)
-    , parseNodeConfiguration
-    , parseNodeConfigurationFP
-    , SomeNodeClientProtocol(..)
     , parseNodeHostAddress
     ) where
 
@@ -54,49 +43,36 @@ import           Data.Aeson
 import           Data.IP (IP)
 import           Data.String (String)
 import qualified Data.Text as Text
-import           Data.Yaml (decodeFileThrow)
 import           Network.Socket (PortNumber)
-import           System.FilePath ((</>), takeDirectory)
-import           System.Posix.Types (Fd(Fd))
 
-import           Cardano.BM.Tracing (ToObject, Transformable)
-import qualified Cardano.Chain.Update as Update
-import           Cardano.Chain.Slotting (EpochSlots)
+import           Cardano.BM.Tracing (ToObject)
+
+import qualified Cardano.Chain.Slotting as Byron
 import           Cardano.Crypto.KES.Class (Period)
-import           Cardano.Crypto.ProtocolMagic (RequiresNetworkMagic)
-import           Ouroboros.Consensus.Block (Header, BlockProtocol, ForgeState)
+
+import           Ouroboros.Consensus.Block (Header, BlockProtocol, ForgeState(..))
 import           Ouroboros.Consensus.Byron.Ledger.Block (ByronBlock)
-import           Ouroboros.Consensus.Byron.Ledger (byronLedgerState)
-import qualified Ouroboros.Consensus.Cardano as Consensus (Protocol, ProtocolClient)
-import           Ouroboros.Consensus.Config (TopLevelConfig (..))
 import           Ouroboros.Consensus.HeaderValidation (OtherHeaderEnvelopeError)
 import           Ouroboros.Consensus.Ledger.Abstract (LedgerError)
-import           Ouroboros.Consensus.Ledger.Extended (ExtLedgerState, ledgerState)
-import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTxId, HasTxId, HasTxs(..),
-                   LedgerSupportsMempool(..))
+import           Ouroboros.Consensus.Ledger.Inspect (LedgerWarning)
+import           Ouroboros.Consensus.Ledger.SupportsMempool
+                   (GenTxId, HasTxId, HasTxs(..), ApplyTxErr)
 import           Ouroboros.Consensus.Mock.Ledger.Block (SimpleBlock)
-import           Ouroboros.Consensus.Node.ProtocolInfo (ProtocolInfo (..))
-import           Ouroboros.Consensus.Node.Run (RunNode)
-import           Ouroboros.Consensus.NodeId (NodeId(..))
 import           Ouroboros.Consensus.Protocol.Abstract (CannotLead, ValidationErr)
 import           Ouroboros.Consensus.Util.Condense (Condense (..))
-import           Ouroboros.Consensus.Shelley.Ledger (TPraosForgeState (..), shelleyState, getPParams)
 import           Ouroboros.Consensus.Shelley.Ledger.Block (ShelleyBlock)
 import           Ouroboros.Consensus.Shelley.Ledger.Mempool (GenTx, TxId)
-import           Ouroboros.Consensus.Shelley.Protocol (ConsensusConfig (..),
-                   TPraosIsCoreNode (..), TPraosParams (..))
-import           Ouroboros.Consensus.Shelley.Protocol.Crypto (HotKey (..))
+import           Ouroboros.Consensus.Shelley.Protocol.Crypto.HotKey (HotKey (..))
 
-import           Ouroboros.Network.Block (HeaderHash, MaxSlotNo(..))
+import           Ouroboros.Consensus.HardFork.Combinator
+import           Ouroboros.Consensus.HardFork.Combinator.Unary
 
-import           Cardano.Chain.Block (adoptedProtocolParameters, cvsUpdateState)
-import           Cardano.Chain.Update (ppMaxBlockSize)
-import           Cardano.Config.Orphanage ()
-import           Cardano.Config.TraceConfig
-import           Cardano.Crypto (RequiresNetworkMagic(..))
+import           Ouroboros.Network.Block (HeaderHash)
 
-import           Shelley.Spec.Ledger.OCert (KESPeriod (..), OCert (..))
-import           Shelley.Spec.Ledger.PParams (_maxTxSize)
+import           Cardano.Config.LedgerQueries
+
+import           Shelley.Spec.Ledger.OCert (KESPeriod (..))
+
 
 -- | Errors for the cardano-config module.
 data ConfigError
@@ -109,40 +85,17 @@ instance Show ConfigError where
 
 -- | Specify what the CBOR file is
 -- i.e a block, a tx, etc
-data CBORObject = CBORBlockByron EpochSlots
+data CBORObject = CBORBlockByron Byron.EpochSlots
                 | CBORDelegationCertificateByron
                 | CBORTxByron
                 | CBORUpdateProposalByron
                 | CBORVoteByron
                 deriving Show
 
---------------------------------------------------------------------------------
--- Cardano Environment
---------------------------------------------------------------------------------
-
--- | Just a placeholder for now.
-data CardanoEnvironment = NoEnvironment
-    deriving (Eq, Show)
 
 --------------------------------------------------------------------------------
 -- Cardano Configuration Data Structures
 --------------------------------------------------------------------------------
-
-data NodeCLI = NodeCLI
-  { nodeMode        :: !NodeProtocolMode
-  , nodeAddr        :: !(Maybe NodeAddress)
-    -- | Filepath of the configuration yaml file. This file determines
-    -- all the configuration settings required for the cardano node
-    -- (logging, tracing, protocol, slot length etc)
-  , configFile      :: !ConfigYamlFilePath
-  , topologyFile    :: !TopologyFile
-  , databaseFile    :: !DbFile
-  , socketFile      :: !(Maybe SocketPath)
-  , protocolFiles   :: !ProtocolFilepaths
-  , validateDB      :: !Bool
-  , shutdownIPC     :: !(Maybe Fd)
-  , shutdownOnSlotSynced :: !MaxSlotNo
-  }
 
 -- | Mock protocols requires different parameters to real protocols.
 -- Therefore we distinguish this at the top level on the command line.
@@ -157,16 +110,6 @@ data ProtocolFilepaths =
      , shelleyVRFFile  :: !(Maybe FilePath)
      , shelleyCertFile :: !(Maybe FilePath)
      }
-
---TODO: things will probably be clearer if we don't use these newtype wrappers and instead
--- use records with named fields in the CLI code.
-
--- | Filepath of the configuration yaml file. This file determines
--- all the configuration settings required for the cardano node
--- (logging, tracing, protocol, slot length etc)
-newtype ConfigYamlFilePath = ConfigYamlFilePath
-  { unConfigPath :: FilePath }
-  deriving newtype (Eq, Show)
 
 newtype TopologyFile = TopologyFile
   { unTopology :: FilePath }
@@ -186,7 +129,7 @@ instance FromJSON GenesisFile where
   parseJSON invalid = panic $ "Parsing of GenesisFile failed due to type mismatch. "
                            <> "Encountered: " <> (Text.pack $ show invalid)
 
--- Encompasses staking certificates, stake pool certificates,
+-- Encompasses stake certificates, stake pool certificates,
 -- genesis delegate certificates and MIR certificates.
 newtype CertificateFile = CertificateFile
   { unCertificateFile :: FilePath }
@@ -205,119 +148,6 @@ newtype SigningKeyFile = SigningKeyFile
   { unSigningKeyFile ::  FilePath }
   deriving stock (Eq, Ord)
   deriving newtype (IsString, Show)
-
-data NodeConfiguration =
-  NodeConfiguration
-    { ncProtocol :: Protocol
-    , ncGenesisFile :: GenesisFile
-    , ncNodeId :: Maybe NodeId
-    , ncNumCoreNodes :: Maybe Word64
-    , ncReqNetworkMagic :: RequiresNetworkMagic
-    , ncPbftSignatureThresh :: Maybe Double
-    , ncLoggingSwitch :: Bool
-    , ncLogMetrics :: Bool
-    , ncSocketPath :: Maybe SocketPath
-    , ncTraceConfig :: TraceOptions
-    , ncViewMode :: ViewMode
-    , ncUpdate :: Update
-    } deriving Show
-
-instance FromJSON NodeConfiguration where
-  parseJSON = withObject "NodeConfiguration" $ \v -> do
-                nId <- v .:? "NodeId"
-                ptcl <- v .: "Protocol" .!= RealPBFT
-                genFile <- v .: "GenesisFile" .!= "genesis/genesis.json"
-                numCoreNode <- v .:? "NumCoreNodes"
-                rNetworkMagic <- v .:? "RequiresNetworkMagic" .!= RequiresNoMagic
-                pbftSignatureThresh <- v .:? "PBftSignatureThreshold"
-                vMode <- v .:? "ViewMode" .!= LiveView
-                socketPath <- v .:? "SocketPath"
-
-                -- Update Parameters
-                appName <- v .:? "ApplicationName" .!= Update.ApplicationName "cardano-sl"
-                appVersion <- v .:? "ApplicationVersion" .!= 1
-                lkBlkVersionMajor <- v .:? "LastKnownBlockVersion-Major" .!= 0
-                lkBlkVersionMinor <- v .:? "LastKnownBlockVersion-Minor" .!= 2
-                lkBlkVersionAlt <- v .:? "LastKnownBlockVersion-Alt" .!= 0
-
-                -- Logging
-                loggingSwitch <- v .:? "TurnOnLogging" .!= True
-                logMetrics <- v .:? "TurnOnLogMetrics" .!= True
-                traceConfig <- if not loggingSwitch
-                               then return TracingOff
-                               else traceConfigParser v
-
-                pure $ NodeConfiguration
-                         { ncProtocol = ptcl
-                         , ncGenesisFile = genFile
-                         , ncNodeId = nId
-                         , ncNumCoreNodes = numCoreNode
-                         , ncReqNetworkMagic = rNetworkMagic
-                         , ncPbftSignatureThresh = pbftSignatureThresh
-                         , ncLoggingSwitch = loggingSwitch
-                         , ncLogMetrics = logMetrics
-                         , ncSocketPath = socketPath
-                         , ncTraceConfig = traceConfig
-                         , ncViewMode = vMode
-                         , ncUpdate = (Update appName appVersion (LastKnownBlockVersion
-                                                                    lkBlkVersionMajor
-                                                                    lkBlkVersionMinor
-                                                                    lkBlkVersionAlt))
-                         }
-
-parseNodeConfigurationFP :: ConfigYamlFilePath -> IO NodeConfiguration
-parseNodeConfigurationFP (ConfigYamlFilePath fp) = do
- nc  <- decodeFileThrow fp
- let genFile = unGenesisFile $ ncGenesisFile nc
- -- Make genesis file relative to configuration yaml filepath.
- let d = takeDirectory fp
- pure $ nc { ncGenesisFile = GenesisFile $ d </> genFile }
-
-parseNodeConfiguration :: NodeCLI -> IO NodeConfiguration
-parseNodeConfiguration NodeCLI{configFile} = parseNodeConfigurationFP configFile
-
-data Protocol = BFT
-              | Praos
-              | MockPBFT
-              | RealPBFT
-              | TPraos
-              deriving (Eq, Generic, Show)
-
-deriving instance NFData Protocol
-deriving instance NoUnexpectedThunks Protocol
-
-instance FromJSON Protocol where
-  parseJSON (String str) = case str of
-                            "BFT" -> pure BFT
-                            "Praos" -> pure Praos
-                            "MockPBFT" -> pure MockPBFT
-                            "RealPBFT" -> pure RealPBFT
-                            "TPraos"   -> pure TPraos
-                            ptcl -> panic $ "Parsing of Protocol: "
-                                          <> ptcl <> " failed. "
-                                          <> ptcl <> " is not a valid protocol"
-  parseJSON invalid  = panic $ "Parsing of Protocol failed due to type mismatch. "
-                             <> "Encountered: " <> (Text.pack $ show invalid)
-
--- TODO: migrate to Update.SoftwareVersion
-data Update = Update
-    { upApplicationName       :: !Update.ApplicationName
-    -- ^ Update application name.
-    , upApplicationVersion    :: !Update.NumSoftwareVersion
-    -- application version.
-    , upLastKnownBlockVersion :: !LastKnownBlockVersion
-    -- ^ Update last known block version.
-    } deriving (Eq, Show)
-
--- TODO: migrate to Update.ProtocolVersion
-data LastKnownBlockVersion = LastKnownBlockVersion
-    { lkbvMajor :: !Word16
-    -- ^ Last known block version major.
-    , lkbvMinor :: !Word16
-    -- ^ Last known block version minor.
-    , lkbvAlt   :: !Word8
-    -- ^ Last known block version alternative.
-    } deriving (Eq, Show)
 
 -- Node can be run in two modes.
 data ViewMode = LiveView    -- Live mode with TUI
@@ -391,33 +221,7 @@ instance ToJSON NodeHostAddress where
 -- Protocol & Tracing Related
 --------------------------------------------------------------------------------
 
-type SomeConsensusProtocolConstraints blk =
-     ( HasKESMetricsData blk
-     , HasTxMaxSize (ExtLedgerState blk)
-     , RunNode blk
-     , TraceConstraints blk
-     , Transformable Text IO (ForgeState blk)
-     )
-
-data SomeConsensusProtocol where
-
-     SomeConsensusProtocol :: SomeConsensusProtocolConstraints blk
-                           => Consensus.Protocol IO blk (BlockProtocol blk)
-                           -> SomeConsensusProtocol
-
-class HasTxMaxSize ledgerState where
-  getMaxTxSize :: ledgerState -> Word32
-
-instance HasTxMaxSize (ExtLedgerState (ShelleyBlock c)) where
-  getMaxTxSize = fromIntegral . _maxTxSize . getPParams . shelleyState . ledgerState
-
-instance HasTxMaxSize (ExtLedgerState ByronBlock) where
-  getMaxTxSize =
-    fromIntegral . ppMaxBlockSize . adoptedProtocolParameters
-      . cvsUpdateState . byronLedgerState . ledgerState
-
-instance HasTxMaxSize (ExtLedgerState (SimpleBlock a b)) where
-  getMaxTxSize = const 4242 -- Does not matter for mock blocks.
+--TODO: move all of these to cardano-node
 
 -- | KES-related data to be traced as metrics.
 data KESMetricsData
@@ -437,46 +241,49 @@ data KESMetricsData
 newtype MaxKESEvolutions = MaxKESEvolutions Word64
 
 -- | The start KES period of the configured operational certificate.
-data OperationalCertStartKESPeriod
-  = NoOperationalCertConfigured
-  | OperationalCertStartKESPeriod !Period
+newtype OperationalCertStartKESPeriod = OperationalCertStartKESPeriod Period
 
 class HasKESMetricsData blk where
-  getKESMetricsData :: ProtocolInfo m blk -> ForgeState blk -> KESMetricsData
+  getKESMetricsData :: ForgeState blk -> KESMetricsData
 
   -- Default to 'NoKESMetricsData'
-  getKESMetricsData _ _ = NoKESMetricsData
+  getKESMetricsData _ = NoKESMetricsData
 
 instance HasKESMetricsData (ShelleyBlock c) where
-  getKESMetricsData protoInfo forgeState =
+  getKESMetricsData forgeState =
       TPraosKESMetricsData currKesPeriod maxKesEvos oCertStartKesPeriod
     where
-      TPraosForgeState { tpraosHotKey } = forgeState
+      HotKey
+        { hkStart     = KESPeriod startKesPeriod
+        , hkEvolution = currKesPeriod
+        , hkEnd       = KESPeriod endKesPeriod
+        } = chainIndepState forgeState
 
-      HotKey currKesPeriod _ = tpraosHotKey
+      maxKesEvos = MaxKESEvolutions $
+          fromIntegral $ endKesPeriod - startKesPeriod
 
-      oCertStartKesPeriod =
-        case pInfoLeaderCreds of
-          Nothing -> NoOperationalCertConfigured
-          Just (TPraosIsCoreNode{tpraosIsCoreNodeOpCert}, _) ->
-            let KESPeriod kp = ocertKESPeriod tpraosIsCoreNodeOpCert
-            in OperationalCertStartKESPeriod kp
-
-      maxKesEvos =
-        MaxKESEvolutions
-          . tpraosMaxKESEvo
-          . tpraosParams
-          . configConsensus
-          $ pInfoConfig
-
-      ProtocolInfo
-        { pInfoConfig
-        , pInfoLeaderCreds
-        } = protoInfo
+      oCertStartKesPeriod = OperationalCertStartKESPeriod startKesPeriod
 
 instance HasKESMetricsData ByronBlock where
 
 instance HasKESMetricsData (SimpleBlock a b) where
+
+instance (HasKESMetricsData x, NoHardForks x)
+      => HasKESMetricsData (HardForkBlock '[x]) where
+  getKESMetricsData forgeState =
+    getKESMetricsData (project forgeState)
+
+
+newtype MaxConcurrencyBulkSync = MaxConcurrencyBulkSync
+  { unMaxConcurrencyBulkSync :: Word }
+  deriving stock (Eq, Ord)
+  deriving newtype (FromJSON, Show)
+
+newtype MaxConcurrencyDeadline = MaxConcurrencyDeadline
+  { unMaxConcurrencyDeadline :: Word }
+  deriving stock (Eq, Ord)
+  deriving newtype (FromJSON, Show)
+
 
 -- | Tracing-related constraints for monitoring purposes.
 --
@@ -494,6 +301,7 @@ type TraceConstraints blk =
     , Condense (TxId (GenTx blk))
     , HasTxs blk
     , HasTxId (GenTx blk)
+    , LedgerQueries blk
     , Show (ApplyTxErr blk)
     , Show (GenTx blk)
     , Show (GenTxId blk)
@@ -504,18 +312,8 @@ type TraceConstraints blk =
     , ToObject (GenTx blk)
     , ToObject (Header blk)
     , ToObject (LedgerError blk)
+    , ToObject (LedgerWarning blk)
     , ToObject (OtherHeaderEnvelopeError blk)
     , ToObject (ValidationErr (BlockProtocol blk))
     , ToObject (CannotLead (BlockProtocol blk))
     )
-
---------------------------------------------------------------------------------
--- Node client requirements
---------------------------------------------------------------------------------
-
-data SomeNodeClientProtocol where
-
-     SomeNodeClientProtocol
-       :: RunNode blk
-       => Consensus.ProtocolClient blk (BlockProtocol blk)
-       -> SomeNodeClientProtocol

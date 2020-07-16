@@ -1,5 +1,5 @@
 name:                   cardano-api
-version:                1.12.0
+version:                1.15.1
 description:            The cardano api
 author:                 IOHK
 maintainer:             operations@iohk.io
@@ -14,35 +14,37 @@ extra-source-files:     README.md, ChangeLog.md
 library
   hs-source-dirs:       src
 
-  exposed-modules:      Cardano.Api
+  exposed-modules:      Cardano.Api.Protocol
+                        Cardano.Api.Protocol.Types
+                        Cardano.Api.Protocol.Byron
+                        Cardano.Api.Protocol.Cardano
+                        Cardano.Api.Protocol.Shelley
+                        Cardano.Api.Shelley.Genesis
+                        Cardano.Api.TextView
                         Cardano.Api.Typed
-
-  other-modules:        Cardano.Api.CBOR
-                        Cardano.Api.Convert
-                        Cardano.Api.Error
                         Cardano.Api.LocalChainSync
-                        Cardano.Api.LocalStateQuery
-                        Cardano.Api.MetaData
                         Cardano.Api.TxSubmit
-                        Cardano.Api.TxSubmit.ErrorRender
+
+  other-modules:        Cardano.Api.TxSubmit.ErrorRender
                         Cardano.Api.TxSubmit.Types
-                        Cardano.Api.Types
-                        Cardano.Api.View
 
 
   build-depends:        base >=4.12 && <5
                       , aeson
+                      , aeson-pretty
                       , attoparsec
                       , base16-bytestring
+                      , base58-bytestring
                       , base64
+                      , bech32 >= 1.1.0
                       , bytestring
                       , cardano-binary
                       , cardano-config
+                      , cardano-crypto
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
                       , cardano-ledger
                       , cardano-prelude
-                      , cardano-shell
                       , cardano-slotting
                       , cborg
                       , contra-tracer
@@ -51,12 +53,15 @@ library
                       , formatting
                       , io-sim-classes
                       , iohk-monitoring
+                      , iproute
                       , memory
                       , network
                       , network-mux
+                      , network-uri
                       , ouroboros-consensus
                       , ouroboros-consensus-byron
                       , ouroboros-consensus-cardano
+                      , ouroboros-consensus-mock
                       , ouroboros-consensus-shelley
                       , ouroboros-network
                       , ouroboros-network-framework
@@ -65,6 +70,8 @@ library
                       , shelley-spec-ledger
                       , stm
                       , text
+                      , time
+                      , transformers
                       , transformers-except
                       , typed-protocols
                       , typed-protocols-examples
@@ -98,19 +105,27 @@ test-suite cardano-api-test
                       , cardano-crypto-wrapper
                       , cardano-ledger-test
                       , cardano-prelude
+                      , cardano-prelude-test
+                      , cardano-slotting
                       , containers
                       , cryptonite
                       , hedgehog
+                      , ouroboros-consensus
                       , ouroboros-consensus-shelley
+                      , ouroboros-network
                       , shelley-spec-ledger
+                      , shelley-spec-ledger-test
+                      , time
 
-  other-modules:        Test.Cardano.Api
-                        Test.Cardano.Api.CBOR
-                        Test.Cardano.Api.Convert
+  other-modules:        Test.Cardano.Api.Examples
                         Test.Cardano.Api.Gen
-                        Test.Cardano.Api.Orphans
-                        Test.Cardano.Api.View
-                        Test.Cardano.Api.Typed
+                        Test.Cardano.Api.Ledger
+                        Test.Cardano.Api.Typed.Bech32
+                        Test.Cardano.Api.Typed.CBOR
+                        Test.Cardano.Api.Typed.Envelope
+                        Test.Cardano.Api.Typed.Gen
+                        Test.Cardano.Api.Typed.Orphans
+                        Test.Cardano.Api.Typed.RawBytes
 
   default-language:     Haskell2010
   default-extensions:   NoImplicitPrelude
@@ -121,25 +136,4 @@ test-suite cardano-api-test
                         -Wredundant-constraints
                         -Wpartial-fields
                         -Wcompat
-                        -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
-
-
-
-executable cardano-api-demo
-  hs-source-dirs:       app
-  main-is:              cardano-api-demo.hs
-
-  build-depends:
-                        base >=4.12 && <5
-                      , bytestring
-                      , cardano-api
-                      , cardano-prelude
-
-  default-language:     Haskell2010
-  default-extensions:   NoImplicitPrelude
-
-  ghc-options:          -Weverything
-                        -fno-warn-missing-import-lists
-                        -fno-warn-safe
-                        -fno-warn-unsafe
                         -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T

@@ -18,7 +18,9 @@ import           Control.Monad.Trans.Except.Extra (handleIOExceptT)
 import           Network.Socket (Socket, AddrInfo (..), AddrInfoFlag (..),
                     SocketType (..), defaultHints, getAddrInfo)
 
-import           Cardano.Config.Types
+import           Cardano.Config.Types (NodeAddress(..), NodeHostAddress(..),
+                   SocketPath(..))
+import           Cardano.Node.Types
 
 #if defined(mingw32_HOST_OS)
 #else
@@ -118,8 +120,8 @@ gatherConfiguredSockets config cli = do
 
     -- Select the socket or path for local node-to-client comms
     --
-    let mbLocalSocketFileConfigOrCLI  = ncSocketPath config `mplus`
-                                        socketFile cli
+    let mbLocalSocketFileConfigOrCLI  = socketFile cli `mplus`
+                                        ncSocketPath config
         mbLocalSocketFromSystemD      = fst <$> mbAllSocketsFromSystemD
 
     local  <- case (mbLocalSocketFileConfigOrCLI,
@@ -137,10 +139,11 @@ gatherConfiguredSockets config cli = do
 -- if it exists already. So we delete it first if it exists. But only on unix.
 --
 removeStaleLocalSocket :: SocketPath -> ExceptT SocketConfigError IO ()
-removeStaleLocalSocket (SocketPath path) =
 #if defined(mingw32_HOST_OS)
+removeStaleLocalSocket _ =
     return ()
 #else
+removeStaleLocalSocket (SocketPath path) =
     handleIOExceptT (LocalSocketError path) $
       removeFile path `catch` \e ->
         if isDoesNotExistError e then return ()

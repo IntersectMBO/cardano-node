@@ -1,7 +1,9 @@
+{-# LANGUAGE BangPatterns          #-}
 {-# LANGUAGE ConstraintKinds       #-}
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE LambdaCase            #-}
+{-# LANGUAGE MonoLocalBinds        #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns        #-}
 {-# LANGUAGE OverloadedStrings     #-}
@@ -16,23 +18,25 @@ module Cardano.Tracing.Tracers
   , Tracers (..)
   , TraceConstraints
   , TraceOptions
-  , initialBlockchainCounters
   , mkTracers
   , nullTracers
   ) where
 
-import           Cardano.Prelude hiding (atomically, show)
+import           Cardano.Prelude hiding (show)
 import           Prelude (String, show)
 
 import           GHC.Clock (getMonotonicTimeNSec)
-import           Control.Tracer
 
 import           Codec.CBOR.Read (DeserialiseFailure)
-import           Data.Aeson (ToJSON)
-import           Data.IORef (IORef, atomicModifyIORef', readIORef)
+import           Data.Aeson (ToJSON(..), Value(..))
+import           Data.IORef (IORef, atomicModifyIORef', newIORef, readIORef)
 import qualified Data.Text as Text
+import qualified Data.HashMap.Strict as Map
 import           Network.Mux (MuxTrace, WithMuxBearer)
 import qualified Network.Socket as Socket (SockAddr)
+
+import           Control.Tracer
+import           Control.Tracer.Transformers
 
 import           Cardano.Slotting.Slot (EpochNo (..))
 
@@ -50,10 +54,11 @@ import           Ouroboros.Consensus.Block (BlockProtocol, ForgeState, Header, r
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..), TraceBlockchainTimeEvent (..))
 import           Ouroboros.Consensus.HeaderValidation (OtherHeaderEnvelopeError)
 import           Ouroboros.Consensus.Ledger.Abstract (LedgerErr, LedgerState)
+import           Ouroboros.Consensus.Ledger.Extended (ledgerState)
+import           Ouroboros.Consensus.Ledger.Inspect (LedgerWarning)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx, GenTxId, HasTxs, TxId)
 import           Ouroboros.Consensus.Ledger.SupportsProtocol (LedgerSupportsProtocol)
 import           Ouroboros.Consensus.Mempool.API (MempoolSize (..), TraceEventMempool (..))
-import           Ouroboros.Consensus.Node.ProtocolInfo (ProtocolInfo (..))
 import qualified Ouroboros.Consensus.Node.Run as Consensus (RunNode)
 import qualified Ouroboros.Consensus.Node.Tracers as Consensus
 import qualified Ouroboros.Consensus.Network.NodeToClient as NodeToClient
@@ -76,13 +81,18 @@ import           Ouroboros.Network.Subscription
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 import qualified Ouroboros.Consensus.Storage.LedgerDB.OnDisk as LedgerDB
 
-import           Cardano.Config.Protocol (TraceConstraints)
-import           Cardano.Config.TraceConfig
-import           Cardano.Config.Types (HasKESMetricsData (..), KESMetricsData (..),
-                                       MaxKESEvolutions (..), OperationalCertStartKESPeriod (..))
+import           Cardano.Config.LedgerQueries
+import           Cardano.Node.TraceConfig
+import           Cardano.Config.Types
+                   (TraceConstraints, HasKESMetricsData (..), KESMetricsData (..),
+                    MaxKESEvolutions (..), OperationalCertStartKESPeriod (..))
+import           Cardano.Tracing.Kernel
 import           Cardano.Tracing.MicroBenchmarking
 
-import           Control.Tracer.Transformers
+-- For tracing instances
+import           Cardano.Node.Protocol.Byron ()
+import           Cardano.Node.Protocol.Shelley ()
+
 
 data Tracers peer localPeer blk = Tracers
   { -- | Trace the ChainDB
@@ -119,7 +129,7 @@ data ForgeTracers = ForgeTracers
   , ftDidntAdoptBlock :: Trace IO Text
   , ftForgedInvalid   :: Trace IO Text
   , ftTraceNodeNotLeader  :: Trace IO Text
-  , ftTraceNotCannotLead :: Trace IO Text
+  , ftTraceNodeCannotLead :: Trace IO Text
   , ftTraceBlockFromFuture :: Trace IO Text
   , ftTraceSlotIsImmutable :: Trace IO Text
   , ftTraceNodeIsLeader :: Trace IO Text
@@ -185,7 +195,7 @@ instance ElidingTracer (WithSeverity (ChainDB.TraceEvent blk)) where
   doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.BlockInTheFuture _ _))) = False
   doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.StoreButDontChange _))) = False
   doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.TrySwitchToAFork _ _))) = False
-  doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.SwitchedToAFork _ _ _))) = False
+  doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.SwitchedToAFork{}))) = False
   doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.AddBlockValidation (ChainDB.InvalidBlock _ _)))) = False
   doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.AddBlockValidation (ChainDB.InvalidCandidate _)))) = False
   doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.AddBlockValidation ChainDB.CandidateContainsFutureBlocksExceedingClockSkew{}))) = False
@@ -193,7 +203,7 @@ instance ElidingTracer (WithSeverity (ChainDB.TraceEvent blk)) where
   doelide (WithSeverity _ (ChainDB.TraceCopyToImmDBEvent _)) = True
   doelide _ = False
   conteliding _tverb _tr _ (Nothing, _count) = return (Nothing, 0)
-  conteliding tverb tr ev@(WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.AddedToCurrentChain _pt _ _))) (_old, oldt) = do
+  conteliding tverb tr ev@(WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.AddedToCurrentChain{}))) (_old, oldt) = do
       tnow <- fromIntegral <$> getMonotonicTimeNSec
       let deltat = tnow - oldt
       if (deltat > 1250000000)  -- report at most every 1250 ms
@@ -240,17 +250,17 @@ instance (StandardHash header, Eq peer) => ElidingTracer
 -- | This structure stores counters of blockchain-related events.
 --   These values will be traced periodically.
 data BlockchainCounters = BlockchainCounters
-  { bcTxsProcessedNum :: !Word64
-  , bcBlocksForgedNum :: !Word64
-  , bcNodeIsLeaderNum :: !Word64
-  , bcSlotsMissedNum  :: !Word64
-  , bcForksCreatedNum :: !Word64
+  { bcTxsProcessedNum        :: !Word64
+  , bcBlocksForgedNum        :: !Word64
+  , bcNodeCannotLeadNum      :: !Word64
+  , bcNodeIsLeaderNum        :: !Word64
+  , bcSlotsMissedNum         :: !Word64
   }
 
 initialBlockchainCounters :: BlockchainCounters
 initialBlockchainCounters = BlockchainCounters 0 0 0 0 0
 
--- | Smart constructor of 'NodeTraces'.
+-- | Tracers for all system components.
 --
 mkTracers
   :: forall peer localPeer blk.
@@ -260,69 +270,75 @@ mkTracers
      , Show peer, Eq peer
      , Show localPeer
      )
-  => ProtocolInfo IO blk
-  -> TraceOptions
+  => TraceOptions
   -> Trace IO Text
-  -> IORef BlockchainCounters
+  -> NodeKernelData blk
   -> IO (Tracers peer localPeer blk)
-mkTracers protoInfo traceConf' tracer bcCounters = do
-  -- We probably don't want to pay the extra IO cost per-counter-increment. -- sk
-  staticMetaCC <- mkLOMeta Critical Confidential
-  let name :: LoggerName = "metrics.Forge"
-  forgeTracers <-
-    ForgeTracers
-      <$> (counting $ liftCounting staticMetaCC name "forged" tracer)
-      <*> (counting $ liftCounting staticMetaCC name "forge-about-to-lead" tracer)
-      <*> (counting $ liftCounting staticMetaCC name "could-not-forge" tracer)
-      <*> (counting $ liftCounting staticMetaCC name "adopted" tracer)
-      <*> (counting $ liftCounting staticMetaCC name "didnt-adopt" tracer)
-      <*> (counting $ liftCounting staticMetaCC name "forged-invalid" tracer)
-      <*> (counting $ liftCounting staticMetaCC name "node-not-leader" tracer)
-      <*> (counting $ liftCounting staticMetaCC name "not-cannot-lead" tracer)
-      <*> (counting $ liftCounting staticMetaCC name "block-from-future" tracer)
-      <*> (counting $ liftCounting staticMetaCC name "slot-is-immutable" tracer)
-      <*> (counting $ liftCounting staticMetaCC name "node-is-leader" tracer)
-
-  -- prepare |Outcome|
-  blockForgeOutcomeExtractor <- mkOutcomeExtractor
+mkTracers tOpts@(TracingOn trSel) tr nodeKern = do
+  bcCounters :: IORef BlockchainCounters <- newIORef initialBlockchainCounters
+  consensusTracers <- mkConsensusTracers trSel verb tr nodeKern bcCounters
   elidedChainDB <- newstate  -- for eliding messages in ChainDB tracer
-  elidedFetchDecision <- newstate  -- for eliding messages in FetchDecision tracer
 
-  case traceConf' of
-    TracingOn traceConf ->
-      pure Tracers
-        { chainDBTracer
-            = annotateSeverity . teeTraceChainTip traceConf' bcCounters elidedChainDB $ appendName "ChainDB" tracer
-        , consensusTracers
-            = mkConsensusTracers' protoInfo elidedFetchDecision blockForgeOutcomeExtractor forgeTracers tracer (TracingOn traceConf) bcCounters
-        , nodeToClientTracers = nodeToClientTracers' (TracingOn traceConf) tracer
-        , nodeToNodeTracers = nodeToNodeTracers' (TracingOn traceConf) tracer
-        , ipSubscriptionTracer = tracerOnOff (traceIpSubscription traceConf) "IpSubscription" tracer
-        , dnsSubscriptionTracer=  tracerOnOff (traceDnsSubscription traceConf) "DnsSubscription" tracer
-        , dnsResolverTracer = tracerOnOff (traceDnsResolver traceConf) "DnsResolver" tracer
-        , errorPolicyTracer = tracerOnOff (traceErrorPolicy traceConf) "ErrorPolicy" tracer
-        , localErrorPolicyTracer = tracerOnOff (traceLocalErrorPolicy traceConf) "LocalErrorPolicy" tracer
-        , acceptPolicyTracer = tracerOnOff (traceAcceptPolicy traceConf) "AcceptPolicy" tracer
-        , muxTracer = tracerOnOff (traceMux traceConf) "Mux" tracer
-        , handshakeTracer = tracerOnOff (traceHandshake traceConf) "Handshake" tracer
-        , localHandshakeTracer = tracerOnOff (traceLocalHandshake traceConf) "LocalHandshake" tracer
-        }
-    TracingOff ->
-      pure Tracers
-        { chainDBTracer = nullTracer
-        , consensusTracers = mkConsensusTracers' protoInfo elidedFetchDecision blockForgeOutcomeExtractor forgeTracers nullTracer TracingOff  bcCounters
-        , nodeToClientTracers = nodeToClientTracers' TracingOff nullTracer
-        , nodeToNodeTracers = nodeToNodeTracers' TracingOff nullTracer
-        , ipSubscriptionTracer = nullTracer
-        , dnsSubscriptionTracer= nullTracer
-        , dnsResolverTracer = nullTracer
-        , errorPolicyTracer = nullTracer
-        , localErrorPolicyTracer = nullTracer
-        , acceptPolicyTracer = nullTracer
-        , muxTracer = nullTracer
-        , handshakeTracer = nullTracer
-        , localHandshakeTracer = nullTracer
-        }
+  pure Tracers
+    { chainDBTracer = tracerOnOff' (traceChainDB trSel) $
+        annotateSeverity . teeTraceChainTip tOpts elidedChainDB $ appendName "ChainDB" tr
+    , consensusTracers = consensusTracers
+    , nodeToClientTracers = nodeToClientTracers' trSel verb tr
+    , nodeToNodeTracers = nodeToNodeTracers' trSel verb tr
+    , ipSubscriptionTracer = tracerOnOff (traceIpSubscription trSel) verb "IpSubscription" tr
+    , dnsSubscriptionTracer =  tracerOnOff (traceDnsSubscription trSel) verb "DnsSubscription" tr
+    , dnsResolverTracer = tracerOnOff (traceDnsResolver trSel) verb "DnsResolver" tr
+    , errorPolicyTracer = tracerOnOff (traceErrorPolicy trSel) verb "ErrorPolicy" tr
+    , localErrorPolicyTracer = tracerOnOff (traceLocalErrorPolicy trSel) verb "LocalErrorPolicy" tr
+    , acceptPolicyTracer = tracerOnOff (traceAcceptPolicy trSel) verb "AcceptPolicy" tr
+    , muxTracer = tracerOnOff (traceMux trSel) verb "Mux" tr
+    , handshakeTracer = tracerOnOff (traceHandshake trSel) verb "Handshake" tr
+    , localHandshakeTracer = tracerOnOff (traceLocalHandshake trSel) verb "LocalHandshake" tr
+    }
+ where
+   verb :: TracingVerbosity
+   verb = traceVerbosity trSel
+
+mkTracers TracingOff _ _ =
+  pure Tracers
+    { chainDBTracer = nullTracer
+    , consensusTracers = Consensus.Tracers
+      { Consensus.chainSyncClientTracer = nullTracer
+      , Consensus.chainSyncServerHeaderTracer = nullTracer
+      , Consensus.chainSyncServerBlockTracer = nullTracer
+      , Consensus.blockFetchDecisionTracer = nullTracer
+      , Consensus.blockFetchClientTracer = nullTracer
+      , Consensus.blockFetchServerTracer = nullTracer
+      , Consensus.forgeStateTracer = nullTracer
+      , Consensus.txInboundTracer = nullTracer
+      , Consensus.txOutboundTracer = nullTracer
+      , Consensus.localTxSubmissionServerTracer = nullTracer
+      , Consensus.mempoolTracer = nullTracer
+      , Consensus.forgeTracer = nullTracer
+      , Consensus.blockchainTimeTracer = nullTracer
+      }
+    , nodeToClientTracers = NodeToClient.Tracers
+      { NodeToClient.tChainSyncTracer = nullTracer
+      , NodeToClient.tTxSubmissionTracer = nullTracer
+      , NodeToClient.tStateQueryTracer = nullTracer
+      }
+    , nodeToNodeTracers = NodeToNode.Tracers
+      { NodeToNode.tChainSyncTracer = nullTracer
+      , NodeToNode.tChainSyncSerialisedTracer = nullTracer
+      , NodeToNode.tBlockFetchTracer = nullTracer
+      , NodeToNode.tBlockFetchSerialisedTracer = nullTracer
+      , NodeToNode.tTxSubmissionTracer = nullTracer
+      }
+    , ipSubscriptionTracer = nullTracer
+    , dnsSubscriptionTracer= nullTracer
+    , dnsResolverTracer = nullTracer
+    , errorPolicyTracer = nullTracer
+    , localErrorPolicyTracer = nullTracer
+    , acceptPolicyTracer = nullTracer
+    , muxTracer = nullTracer
+    , handshakeTracer = nullTracer
+    , localHandshakeTracer = nullTracer
+    }
 
 --------------------------------------------------------------------------------
 -- Chain DB Tracers
@@ -330,27 +346,27 @@ mkTracers protoInfo traceConf' tracer bcCounters = do
 
 teeTraceChainTip
   :: ( Condense (HeaderHash blk)
+     , Show (LedgerWarning blk)
      , LedgerSupportsProtocol blk
      , ToObject (Header blk)
+     , ToObject (LedgerWarning blk)
      )
   => TraceOptions
-  -> IORef BlockchainCounters
   -> MVar (Maybe (WithSeverity (ChainDB.TraceEvent blk)), Integer)
   -> Trace IO Text
   -> Tracer IO (WithSeverity (ChainDB.TraceEvent blk))
-teeTraceChainTip tconf bChainCounters elided tr =
-  case tconf of
-    TracingOff -> nullTracer
-    TracingOn tSelect ->
-      Tracer $ \ev -> do
-       traceWith (teeTraceChainTip' tr) ev
-       traceWith (notifyForkIsCreated bChainCounters tr) ev
-       traceWith (teeTraceChainTipElide (traceVerbosity tSelect) elided tr) ev
+teeTraceChainTip TracingOff _ _ = nullTracer
+teeTraceChainTip (TracingOn trSel) elided tr =
+  Tracer $ \ev -> do
+    traceWith (teeTraceChainTip' tr) ev
+    traceWith (teeTraceChainTipElide (traceVerbosity trSel) elided tr) ev
 
 teeTraceChainTipElide
   :: ( Condense (HeaderHash blk)
+     , Show (LedgerWarning blk)
      , LedgerSupportsProtocol blk
      , ToObject (Header blk)
+     , ToObject (LedgerWarning blk)
      )
   => TracingVerbosity
   -> MVar (Maybe (WithSeverity (ChainDB.TraceEvent blk)), Integer)
@@ -381,37 +397,22 @@ teeTraceChainTip' tr =
     Tracer $ \(WithSeverity _ ev') ->
       case ev' of
           (ChainDB.TraceAddBlockEvent ev) -> case ev of
-            ChainDB.SwitchedToAFork     newTipInfo _ newChain ->
+            ChainDB.SwitchedToAFork _warnings newTipInfo _ newChain ->
               traceChainInformation tr (chainInformation newTipInfo newChain)
-            ChainDB.AddedToCurrentChain newTipInfo _ newChain ->
+            ChainDB.AddedToCurrentChain _warnings newTipInfo _ newChain ->
               traceChainInformation tr (chainInformation newTipInfo newChain)
             _ -> pure ()
-          _ -> pure ()
-
-notifyForkIsCreated
-  :: IORef BlockchainCounters
-  -> Trace IO Text
-  -> Tracer IO (WithSeverity (ChainDB.TraceEvent blk))
-notifyForkIsCreated bcCounters tr =
-    Tracer $ \(WithSeverity _ ev') ->
-      case ev' of
-          ChainDB.TraceAddBlockEvent ev -> case ev of
-              ChainDB.SwitchedToAFork {} -> do
-                  updatesForksCreated <- atomicModifyIORef' bcCounters (\cnts -> let nc = bcForksCreatedNum cnts + 1
-                                                                                 in (cnts { bcForksCreatedNum = nc }, nc)
-                                                                       )
-                  traceCounter "forksCreatedNum" updatesForksCreated tr
-              _ -> pure ()
           _ -> pure ()
 
 --------------------------------------------------------------------------------
 -- Consensus Tracers
 --------------------------------------------------------------------------------
 
-mkConsensusTracers'
+mkConsensusTracers
   :: ( Condense (HeaderHash blk) -- to remove
      , Show peer
      , Eq peer
+     , LedgerQueries blk
      , ToJSON (GenTxId blk)
      , ToObject (ApplyTxErr blk)
      , ToObject (CannotLead (BlockProtocol blk))
@@ -422,78 +423,80 @@ mkConsensusTracers'
      , Consensus.RunNode blk
      , HasKESMetricsData blk
      )
-  => ProtocolInfo IO blk
-  -> MVar (Maybe (WithSeverity [TraceLabelPeer peer (FetchDecision [Point (Header blk)])]),Integer)
-  -> (OutcomeEnhancedTracer IO (Consensus.TraceForgeEvent blk) -> Tracer IO (Consensus.TraceForgeEvent blk))
-  -> ForgeTracers
+  => TraceSelection
+  -> TracingVerbosity
   -> Trace IO Text
-  -> TraceOptions
+  -> NodeKernelData blk
   -> IORef BlockchainCounters
-  -> Consensus.Tracers' peer localPeer blk (Tracer IO)
-mkConsensusTracers' protoInfo elidingFetchDecision measureBlockForging
-                    forgeTracers tracer t@(TracingOn traceConf)
-                    bChainCounters = do
-  Consensus.Tracers
-    { Consensus.chainSyncClientTracer = tracerOnOff (traceChainSyncClient traceConf) "ChainSyncClient" tracer
-    , Consensus.chainSyncServerHeaderTracer = tracerOnOff (traceChainSyncHeaderServer traceConf) "ChainSyncHeaderServer" tracer
-    , Consensus.chainSyncServerBlockTracer = tracerOnOff (traceChainSyncHeaderServer traceConf) "ChainSyncBlockServer" tracer
-    , Consensus.blockFetchDecisionTracer = annotateSeverity $ teeTraceBlockFetchDecision t elidingFetchDecision $ appendName "BlockFetchDecision" tracer
-    , Consensus.blockFetchClientTracer = tracerOnOff (traceBlockFetchClient traceConf) "BlockFetchClient" tracer
-    , Consensus.blockFetchServerTracer = tracerOnOff (traceBlockFetchServer traceConf) "BlockFetchServer" tracer
-    , Consensus.forgeStateTracer = forgeStateTracer protoInfo traceConf tracer
-    , Consensus.txInboundTracer = tracerOnOff (traceTxInbound traceConf) "TxInbound" tracer
-    , Consensus.txOutboundTracer = tracerOnOff (traceTxOutbound traceConf) "TxOutbound" tracer
-    , Consensus.localTxSubmissionServerTracer = tracerOnOff (traceLocalTxSubmissionServer traceConf) "LocalTxSubmissionServer" tracer
-    , Consensus.mempoolTracer = mempoolTracer traceConf tracer bChainCounters
-    , Consensus.forgeTracer
-      = Tracer $ \ev -> do
-          traceWith (forgeTracer forgeTracers t bChainCounters tracer) ev
-          traceWith ( measureBlockForging
-                    $ toLogObject' tracingVerbosity
-                    $ appendName "ForgeTime" tracer ) ev
+  -> IO (Consensus.Tracers' peer localPeer blk (Tracer IO))
+mkConsensusTracers trSel verb tr nodeKern bcCounters = do
+  blockForgeOutcomeExtractor <- mkOutcomeExtractor
+  elidedFetchDecision <- newstate  -- for eliding messages in FetchDecision tr
+  forgeTracers <- mkForgeTracers
 
-    , Consensus.blockchainTimeTracer
-      = Tracer $ \ev ->
-          traceWith (toLogObject tracer) (readableTraceBlockchainTimeEvent ev)
+  pure Consensus.Tracers
+    { Consensus.chainSyncClientTracer = tracerOnOff (traceChainSyncClient trSel) verb "ChainSyncClient" tr
+    , Consensus.chainSyncServerHeaderTracer = tracerOnOff (traceChainSyncHeaderServer trSel) verb "ChainSyncHeaderServer" tr
+    , Consensus.chainSyncServerBlockTracer = tracerOnOff (traceChainSyncHeaderServer trSel) verb "ChainSyncBlockServer" tr
+    , Consensus.blockFetchDecisionTracer = tracerOnOff' (traceBlockFetchDecisions trSel) $
+        annotateSeverity $ teeTraceBlockFetchDecision verb elidedFetchDecision $ appendName "BlockFetchDecision" tr
+    , Consensus.blockFetchClientTracer = tracerOnOff (traceBlockFetchClient trSel) verb "BlockFetchClient" tr
+    , Consensus.blockFetchServerTracer = tracerOnOff (traceBlockFetchServer trSel) verb "BlockFetchServer" tr
+    , Consensus.forgeStateTracer = tracerOnOff' (traceForgeState trSel) $ forgeStateTracer trSel tr
+    , Consensus.txInboundTracer = tracerOnOff (traceTxInbound trSel) verb "TxInbound" tr
+    , Consensus.txOutboundTracer = tracerOnOff (traceTxOutbound trSel) verb "TxOutbound" tr
+    , Consensus.localTxSubmissionServerTracer = tracerOnOff (traceLocalTxSubmissionServer trSel) verb "LocalTxSubmissionServer" tr
+    , Consensus.mempoolTracer = tracerOnOff' (traceMempool trSel) $ mempoolTracer trSel tr bcCounters
+    , Consensus.forgeTracer = tracerOnOff' (traceForge trSel) $
+        Tracer $ \ev -> do
+          traceWith (forgeTracer verb tr forgeTracers nodeKern bcCounters) ev
+          traceWith (blockForgeOutcomeExtractor
+                    $ toLogObject' verb
+                    $ appendName "ForgeTime" tr) ev
+
+    , Consensus.blockchainTimeTracer = tracerOnOff' (traceBlockchainTime trSel) $
+        Tracer $ \ev ->
+          traceWith (toLogObject tr) (readableTraceBlockchainTimeEvent ev)
 
     }
  where
-  tracingVerbosity :: TracingVerbosity
-  tracingVerbosity = traceVerbosity traceConf
+   mkForgeTracers :: IO ForgeTracers
+   mkForgeTracers = do
+     -- We probably don't want to pay the extra IO cost per-counter-increment. -- sk
+     staticMeta <- mkLOMeta Critical Confidential
+     let name :: LoggerName = "metrics.Forge"
+     ForgeTracers
+       <$> (counting $ liftCounting staticMeta name "forged" tr)
+       <*> (counting $ liftCounting staticMeta name "forge-about-to-lead" tr)
+       <*> (counting $ liftCounting staticMeta name "could-not-forge" tr)
+       <*> (counting $ liftCounting staticMeta name "adopted" tr)
+       <*> (counting $ liftCounting staticMeta name "didnt-adopt" tr)
+       <*> (counting $ liftCounting staticMeta name "forged-invalid" tr)
+       <*> (counting $ liftCounting staticMeta name "node-not-leader" tr)
+       <*> (counting $ liftCounting staticMeta name "not-cannot-lead" tr)
+       <*> (counting $ liftCounting staticMeta name "block-from-future" tr)
+       <*> (counting $ liftCounting staticMeta name "slot-is-immutable" tr)
+       <*> (counting $ liftCounting staticMeta name "node-is-leader" tr)
 
-mkConsensusTracers' _ _ _ _ _ TracingOff _ = Consensus.Tracers
-  { Consensus.chainSyncClientTracer = nullTracer
-  , Consensus.chainSyncServerHeaderTracer = nullTracer
-  , Consensus.chainSyncServerBlockTracer = nullTracer
-  , Consensus.blockFetchDecisionTracer = nullTracer
-  , Consensus.blockFetchClientTracer = nullTracer
-  , Consensus.blockFetchServerTracer = nullTracer
-  , Consensus.forgeStateTracer = nullTracer
-  , Consensus.txInboundTracer = nullTracer
-  , Consensus.txOutboundTracer = nullTracer
-  , Consensus.localTxSubmissionServerTracer = nullTracer
-  , Consensus.mempoolTracer = nullTracer
-  , Consensus.forgeTracer = nullTracer
-  , Consensus.blockchainTimeTracer = nullTracer
-  }
-
-teeForge
-  :: ( Condense (HeaderHash blk)
+teeForge ::
+  forall blk
+  . ( Condense (HeaderHash blk)
      , Consensus.RunNode blk
+     , LedgerQueries blk
      , ToObject (CannotLead (BlockProtocol blk))
      , ToObject (LedgerErr (LedgerState blk))
      , ToObject (OtherHeaderEnvelopeError blk)
      , ToObject (ValidationErr (BlockProtocol blk))
      )
   => ForgeTracers
+  -> NodeKernelData blk
   -> TracingVerbosity
   -> Trace IO Text
   -> Tracer IO (WithSeverity (Consensus.TraceForgeEvent blk))
-teeForge ft tverb tr = Tracer $ \ev -> do
-  traceWith (teeForge' tr) ev
+teeForge ft nodeKern tverb tr = Tracer $ \ev@(WithSeverity sev event) -> do
   flip traceWith ev $ fanning $ \(WithSeverity _ e) ->
     case e of
-      Consensus.TraceNotCannotLead _ _ -> teeForge' (ftTraceNotCannotLead ft)
+      Consensus.TraceNodeCannotLead _ _ -> teeForge' (ftTraceNodeCannotLead ft)
       Consensus.TraceForgedBlock{} -> teeForge' (ftForged ft)
       Consensus.TraceStartLeadershipCheck{} -> teeForge' (ftForgeAboutToLead ft)
       Consensus.TraceNoLedgerState{} -> teeForge' (ftCouldNotForge ft)
@@ -505,7 +508,23 @@ teeForge ft tverb tr = Tracer $ \ev -> do
       Consensus.TraceBlockFromFuture{} -> teeForge' (ftTraceBlockFromFuture ft)
       Consensus.TraceSlotIsImmutable{} -> teeForge' (ftTraceSlotIsImmutable ft)
       Consensus.TraceNodeIsLeader{} -> teeForge' (ftTraceNodeIsLeader ft)
-  traceWith (toLogObject' tverb tr) ev
+  case event of
+    Consensus.TraceStartLeadershipCheck slot -> do
+      !utxoSize <- mapNodeKernelDataIO nkUtxoSize nodeKern
+      meta <- mkLOMeta sev Public
+      traceNamedObject tr
+        ( meta
+        , LogStructured $ Map.fromList $
+          [("kind", String "TraceStartLeadershipCheck")
+          ,("slot", toJSON $ unSlotNo slot)]
+          ++ fromSMaybe [] ((:[]) . ("utxoSize",) . toJSON <$> utxoSize))
+    _ -> traceWith (toLogObject' tverb tr) ev
+ where
+   nkUtxoSize
+     :: NodeKernel IO RemoteConnectionId LocalConnectionId blk -> IO Int
+   nkUtxoSize NodeKernel{getChainDB} =
+     atomically (ChainDB.getCurrentLedger getChainDB)
+     <&> ledgerUtxoSize . ledgerState
 
 teeForge'
   :: Trace IO Text
@@ -515,7 +534,8 @@ teeForge' tr =
     meta <- mkLOMeta Critical Confidential
     traceNamedObject (appendName "metrics" tr) . (meta,) $
       case ev of
-        Consensus.TraceNotCannotLead _ _ -> panic "FIXME"
+        Consensus.TraceNodeCannotLead slot _reason ->
+          LogValue "nodeCannotLead" $ PureI $ fromIntegral $ unSlotNo slot
         Consensus.TraceForgedBlock slot _ _ _ ->
           LogValue "forgedSlotLast" $ PureI $ fromIntegral $ unSlotNo slot
         Consensus.TraceStartLeadershipCheck slot ->
@@ -543,29 +563,27 @@ teeForge' tr =
 forgeTracer
   :: ( Condense (HeaderHash blk)
      , Consensus.RunNode blk
+     , LedgerQueries blk
      , ToObject (CannotLead (BlockProtocol blk))
      , ToObject (LedgerErr (LedgerState blk))
      , ToObject (OtherHeaderEnvelopeError blk)
      , ToObject (ValidationErr (BlockProtocol blk))
      )
-  => ForgeTracers
-  -> TraceOptions
-  -> IORef BlockchainCounters
+  => TracingVerbosity
   -> Trace IO Text
+  -> ForgeTracers
+  -> NodeKernelData blk
+  -> IORef BlockchainCounters
   -> Tracer IO (Consensus.TraceForgeEvent blk)
-forgeTracer forgeTracers tOptions bcCounters tracer =
-  case tOptions of
-    TracingOff -> nullTracer
-    TracingOn tselect ->
-     Tracer $ \ev -> do
-      traceWith (measureTxsEnd tracer) ev
-      traceWith (notifyBlockForging bcCounters tracer) ev
-      traceWith (notifySlotsMissedIfNeeded bcCounters tracer) ev
-      -- Consensus tracer
-      traceWith (annotateSeverity
-                   $ teeForge forgeTracers (traceVerbosity tselect)
-                   $ appendName "Forge" tracer) ev
-
+forgeTracer verb tr forgeTracers nodeKern bcCounters =
+  Tracer $ \ev -> do
+    traceWith (measureTxsEnd tr) ev
+    traceWith (notifyBlockForging bcCounters tr) ev
+    traceWith (notifySlotsMissedIfNeeded bcCounters tr) ev
+    -- Consensus tracer
+    traceWith (annotateSeverity
+                 $ teeForge forgeTracers nodeKern verb
+                 $ appendName "Forge" tr) ev
 
 notifyBlockForging
   :: IORef BlockchainCounters
@@ -577,6 +595,13 @@ notifyBlockForging bcCounters tr = Tracer $ \case
                                                                    in (cnts { bcBlocksForgedNum = nc }, nc)
                                                          )
     traceCounter "blocksForgedNum" updatedBlocksForged tr
+  Consensus.TraceNodeCannotLead {} -> do
+    -- It means that node have tried to forge new block, but because of misconfiguration
+    -- (for example, invalid key) it's impossible.
+    updatedNodeCannotLead <- atomicModifyIORef' bcCounters $ \cnts ->
+      let nc = bcNodeCannotLeadNum cnts + 1
+      in (cnts { bcNodeCannotLeadNum = nc }, nc)
+    traceCounter "nodeCannotLead" updatedNodeCannotLead tr
   -- The rest of the constructors.
   _ -> pure ()
 
@@ -676,17 +701,15 @@ mpTracer tc tr = annotateSeverity $ toLogObject' (traceVerbosity tc) tr
 
 forgeStateMetricsTraceTransformer
   :: forall a blk. HasKESMetricsData blk
-  => ProtocolInfo IO blk
-  -> Trace IO a
+  => Trace IO a
   -> Tracer IO (ForgeState blk)
-forgeStateMetricsTraceTransformer protoInfo tr = Tracer $ \forgeState -> do
-    case getKESMetricsData protoInfo forgeState of
+forgeStateMetricsTraceTransformer tr = Tracer $ \forgeState -> do
+    case getKESMetricsData forgeState of
       NoKESMetricsData -> pure ()
-      TPraosKESMetricsData _ _ NoOperationalCertConfigured -> pure ()
       TPraosKESMetricsData kesPeriodOfKey
                            (MaxKESEvolutions maxKesEvos)
                            (OperationalCertStartKESPeriod oCertStartKesPeriod) -> do
-        let tr' = appendName "metrics" tr
+        let metricsTr = appendName "metrics" tr
 
             -- The KES period of the hot key is relative to the start KES
             -- period of the operational certificate.
@@ -714,20 +737,38 @@ forgeStateMetricsTraceTransformer protoInfo tr = Tracer $ \forgeState -> do
               ]
 
         meta <- mkLOMeta Critical Confidential
-        mapM_ (traceNamedObject tr' . (meta,)) logValues
+        mapM_ (traceNamedObject metricsTr . (meta,)) logValues
+
+        -- Trace warning messages on the last 7 KES periods and, in the
+        -- final and subsequent KES periods, trace alert messages.
+        metaWarning <- mkLOMeta Warning Public
+        metaAlert <- mkLOMeta Alert Public
+        when (kesPeriodsUntilExpiry <= 7) $
+          traceWith tr
+            ( mempty
+            , LogObject
+                mempty
+                (if kesPeriodsUntilExpiry <= 1 then metaAlert else metaWarning)
+                (LogStructuredText mempty (expiryLogMessage kesPeriodsUntilExpiry))
+            )
+  where
+    expiryLogMessage :: Word -> Text
+    expiryLogMessage kesPeriodsUntilExpiry =
+      "Operational key will expire in "
+        <> (Text.pack . show) kesPeriodsUntilExpiry
+        <> " KES periods."
 
 forgeStateTracer
   :: forall blk.
      ( HasKESMetricsData blk
      , Show (ForgeState blk)
      )
-  => ProtocolInfo IO blk
-  -> TraceSelection
+  => TraceSelection
   -> Trace IO Text
   -> Tracer IO (ForgeState blk)
-forgeStateTracer p _ts tracer = Tracer $ \ev -> do
-    let tr = appendName "ForgeState" tracer
-    traceWith (forgeStateMetricsTraceTransformer p tr) ev
+forgeStateTracer _ts tracer = Tracer $ \ev -> do
+    let tr = appendName "Forge" tracer
+    traceWith (forgeStateMetricsTraceTransformer tr) ev
     traceWith (fsTracer tr) ev
   where
     fsTracer :: Trace IO Text -> Tracer IO (ForgeState blk)
@@ -739,23 +780,18 @@ forgeStateTracer p _ts tracer = Tracer $ \ev -> do
 
 nodeToClientTracers'
   :: Show localPeer
-  => TraceOptions
+  => TraceSelection
+  -> TracingVerbosity
   -> Trace IO Text
   -> NodeToClient.Tracers' localPeer blk DeserialiseFailure (Tracer IO)
-nodeToClientTracers' (TracingOn traceConf) tracer = NodeToClient.Tracers
-  { NodeToClient.tChainSyncTracer
-    = tracerOnOff (traceLocalChainSyncProtocol traceConf) "LocalChainSyncProtocol" tracer
-  , NodeToClient.tTxSubmissionTracer
-    = tracerOnOff (traceLocalTxSubmissionProtocol traceConf) "LocalTxSubmissionProtocol" tracer
-  , NodeToClient.tStateQueryTracer
-    = tracerOnOff (traceLocalStateQueryProtocol traceConf) "LocalStateQueryProtocol" tracer
-  }
-
-
-nodeToClientTracers' TracingOff _ = NodeToClient.Tracers
-  { NodeToClient.tChainSyncTracer = nullTracer
-  , NodeToClient.tTxSubmissionTracer = nullTracer
-  , NodeToClient.tStateQueryTracer = nullTracer
+nodeToClientTracers' trSel verb tr =
+  NodeToClient.Tracers
+  { NodeToClient.tChainSyncTracer =
+    tracerOnOff (traceLocalChainSyncProtocol trSel) verb "LocalChainSyncProtocol" tr
+  , NodeToClient.tTxSubmissionTracer =
+    tracerOnOff (traceLocalTxSubmissionProtocol trSel) verb "LocalTxSubmissionProtocol" tr
+  , NodeToClient.tStateQueryTracer =
+    tracerOnOff (traceLocalStateQueryProtocol trSel) verb "LocalStateQueryProtocol" tr
   }
 
 --------------------------------------------------------------------------------
@@ -769,23 +805,17 @@ nodeToNodeTracers'
      , HasTxs blk
      , Show peer
      )
-  => TraceOptions
+  => TraceSelection
+  -> TracingVerbosity
   -> Trace IO Text
   -> NodeToNode.Tracers' peer blk DeserialiseFailure (Tracer IO)
-nodeToNodeTracers' (TracingOn traceConf) tracer = NodeToNode.Tracers
-  { NodeToNode.tChainSyncTracer = tracerOnOff (traceChainSyncProtocol traceConf) "ChainSyncProtocol" tracer
-  , NodeToNode.tChainSyncSerialisedTracer = showOnOff (traceChainSyncProtocol traceConf) "ChainSyncProtocolSerialised" tracer
-  , NodeToNode.tBlockFetchTracer = tracerOnOff (traceBlockFetchProtocol traceConf) "BlockFetchProtocol" tracer
-  , NodeToNode.tBlockFetchSerialisedTracer = showOnOff (traceBlockFetchProtocolSerialised traceConf) "BlockFetchProtocolSerialised" tracer
-  , NodeToNode.tTxSubmissionTracer = tracerOnOff (traceTxSubmissionProtocol traceConf) "TxSubmissionProtocol" tracer
-  }
-
-nodeToNodeTracers' TracingOff _ = NodeToNode.Tracers
-  { NodeToNode.tChainSyncTracer = nullTracer
-  , NodeToNode.tChainSyncSerialisedTracer = nullTracer
-  , NodeToNode.tBlockFetchTracer = nullTracer
-  , NodeToNode.tBlockFetchSerialisedTracer = nullTracer
-  , NodeToNode.tTxSubmissionTracer = nullTracer
+nodeToNodeTracers' trSel verb tr =
+  NodeToNode.Tracers
+  { NodeToNode.tChainSyncTracer = tracerOnOff (traceChainSyncProtocol trSel) verb "ChainSyncProtocol" tr
+  , NodeToNode.tChainSyncSerialisedTracer = showOnOff (traceChainSyncProtocol trSel) "ChainSyncProtocolSerialised" tr
+  , NodeToNode.tBlockFetchTracer = tracerOnOff (traceBlockFetchProtocol trSel) verb "BlockFetchProtocol" tr
+  , NodeToNode.tBlockFetchSerialisedTracer = showOnOff (traceBlockFetchProtocolSerialised trSel) "BlockFetchProtocolSerialised" tr
+  , NodeToNode.tTxSubmissionTracer = tracerOnOff (traceTxSubmissionProtocol trSel) verb "TxSubmissionProtocol" tr
   }
 
 teeTraceBlockFetchDecision
@@ -793,17 +823,14 @@ teeTraceBlockFetchDecision
        , HasHeader blk
        , Show peer
        )
-    => TraceOptions
+    => TracingVerbosity
     -> MVar (Maybe (WithSeverity [TraceLabelPeer peer (FetchDecision [Point (Header blk)])]),Integer)
     -> Trace IO Text
     -> Tracer IO (WithSeverity [TraceLabelPeer peer (FetchDecision [Point (Header blk)])])
-teeTraceBlockFetchDecision traceconf eliding tr =
-  case traceconf of
-    TracingOff -> nullTracer
-    TracingOn traceSelection ->
-      Tracer $ \ev -> do
-        traceWith (teeTraceBlockFetchDecision' tr) ev
-        traceWith (teeTraceBlockFetchDecisionElide (traceVerbosity traceSelection) eliding tr) ev
+teeTraceBlockFetchDecision verb eliding tr =
+  Tracer $ \ev -> do
+    traceWith (teeTraceBlockFetchDecision' tr) ev
+    traceWith (teeTraceBlockFetchDecisionElide verb eliding tr) ev
 
 
 teeTraceBlockFetchDecision'
@@ -900,11 +927,16 @@ traceCounter logValueName aCounter tracer = do
 
 tracerOnOff
   :: Transformable Text IO a
-  => Bool -> LoggerName -> Trace IO Text -> Tracer IO a
-tracerOnOff False _ _ = nullTracer
-tracerOnOff True name trcer = annotateSeverity
-                                $ toLogObject' MinimalVerbosity
+  => Bool -> TracingVerbosity -> LoggerName -> Trace IO Text -> Tracer IO a
+tracerOnOff False _ _ _ = nullTracer
+tracerOnOff True verb name trcer = annotateSeverity
+                                $ toLogObject' verb
                                 $ appendName name trcer
+
+tracerOnOff'
+  :: Bool -> Tracer IO a -> Tracer IO a
+tracerOnOff' False _ = nullTracer
+tracerOnOff' True tr = tr
 
 instance Show a => Show (WithSeverity a) where
   show (WithSeverity _sev a) = show a

@@ -11,8 +11,9 @@
 # }'
 , sourcesOverride ? {}
 # pinned version of nixpkgs augmented with overlays (iohk-nix and our packages).
-, pkgs ? import ./nix { inherit system crossSystem config sourcesOverride; }
-, gitrev ? pkgs.iohkNix.commitIdFromGitRepoOrZero ./.git
+, pkgs ? import ./nix/default.nix { inherit system crossSystem config sourcesOverride gitrev; }
+# Git sha1 hash, to be passed when not building from a git work tree.
+, gitrev ? null
 }:
 with pkgs; with commonLib;
 let
@@ -35,34 +36,34 @@ let
     };
     customConfig' = defaultConfig // customConfig;
   in pkgs.callPackage ./nix/docker.nix {
-    inherit (self) cardano-node;
+    inherit (packages) cardano-node;
     scripts = callPackage ./nix/scripts.nix { customConfig = customConfig'; };
   };
 
-  rewrite-libs = _: p: if (isDerivation p && pkgs.stdenv.hostPlatform.isDarwin) then
+  rewrite-static = _: p: if (pkgs.stdenv.hostPlatform.isDarwin) then
     pkgs.runCommandCC p.name {
       nativeBuildInputs = [ pkgs.haskellBuildUtils.package pkgs.buildPackages.binutils pkgs.buildPackages.nix ];
     } ''
       cp -R ${p} $out
       chmod -R +w $out
       rewrite-libs $out/bin $out/bin/*
+    '' else if (pkgs.stdenv.hostPlatform.isMusl) then
+    pkgs.runCommandCC p.name { } ''
+      cp -R ${p} $out
+      chmod -R +w $out
+      $STRIP $out/bin/*
     '' else p;
 
-  self = {
-    inherit haskellPackages scripts nixosTests environments dockerImage;
+  packages = {
+    inherit haskellPackages cardano-node cardano-cli chairman db-converter
+      scripts nixosTests environments dockerImage mkCluster bech32;
 
     inherit (haskellPackages.cardano-node.identifier) version;
-    # Grab the executable component of our package.
-    inherit (haskellPackages.cardano-node.components.exes) cardano-node;
-    cardano-node-profiled = cardanoNodeProfiledHaskellPackages.cardano-node.components.exes.cardano-node;
-    inherit (haskellPackages.cardano-cli.components.exes) cardano-cli;
-    inherit (haskellPackages.cardano-node.components.exes) chairman;
-    # expose the db-converter from the ouroboros-network we depend on
-    inherit (cardanoNodeHaskellPackages.ouroboros-consensus-byron.components.exes) db-converter;
 
-    inherit (pkgs.iohkNix) checkCabalProject;
+    cluster = mkCluster customConfig;
+    clusterTests = import ./nix/supervisord-cluster/tests { inherit pkgs mkCluster cardano-cli cardano-node; };
 
-    exes = mapAttrsRecursiveCond (as: !(isDerivation as)) rewrite-libs (collectComponents' "exes" haskellPackages);
+    exes = mapAttrsRecursiveCond (as: !(isDerivation as)) rewrite-static (collectComponents' "exes" haskellPackages);
 
     # `tests` are the test suites which have been built.
     tests = collectComponents' "tests" haskellPackages;
@@ -79,4 +80,4 @@ let
       withHoogle = true;
     };
 };
-in self
+in packages

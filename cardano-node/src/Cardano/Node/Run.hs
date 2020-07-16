@@ -1,8 +1,5 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE CPP #-}
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DeriveTraversable #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE NamedFieldPuns #-}
@@ -27,7 +24,6 @@ import           Control.Tracer
 import qualified Data.ByteString.Char8 as BSC
 import           Data.Either (partitionEithers)
 import           Data.Functor.Contravariant (contramap)
-import           Data.IORef (IORef, newIORef, readIORef)
 import qualified Data.List as List
 import           Data.Proxy (Proxy (..))
 import           Data.Semigroup ((<>))
@@ -37,6 +33,7 @@ import           Data.Version (showVersion)
 import           Network.HostName (getHostName)
 import           Network.Socket (AddrInfo, Socket)
 import           System.Directory (canonicalizePath, makeAbsolute)
+import           System.Environment (lookupEnv)
 
 import           Paths_cardano_node (version)
 import           Cardano.BM.Data.Aggregated (Measurable (..))
@@ -52,18 +49,24 @@ import           Cardano.BM.Data.Transformers (setHostname)
 import           Cardano.BM.Trace
 
 import           Cardano.Config.GitRev (gitRev)
-import           Cardano.Config.Logging (LoggingLayer (..), Severity (..))
-import           Cardano.Config.TraceConfig (traceBlockFetchDecisions,
-                     TraceOptions(..), TraceSelection(..))
-import           Cardano.Config.Types (NodeConfiguration (..), ViewMode (..))
+import           Cardano.Node.Logging (LoggingLayer (..), Severity (..), shutdownLoggingLayer)
+#ifdef UNIX
+import           Cardano.Node.TraceConfig (traceBlockFetchDecisions)
+#endif
+import           Cardano.Node.TraceConfig (TraceOptions(..), TraceSelection(..))
+import           Cardano.Node.Types (NodeConfiguration (..), NodeCLI(..),
+                   NodeMockProtocolConfiguration(..), NodeProtocolConfiguration(..),
+                   ncProtocol, parseNodeConfiguration)
+import           Cardano.Config.Types (ViewMode (..))
 
+import           Ouroboros.Network.BlockFetch (BlockFetchConfiguration (..))
 import           Ouroboros.Network.Magic (NetworkMagic (..))
 import           Ouroboros.Network.NodeToClient (LocalConnectionId)
 import           Ouroboros.Network.NodeToNode (RemoteConnectionId, AcceptedConnectionsLimit (..))
 import           Ouroboros.Consensus.Block (BlockProtocol)
 import           Ouroboros.Consensus.Node (NodeKernel,
                      DiffusionTracers (..), DiffusionArguments (..),
-                     DnsSubscriptionTarget (..), IPSubscriptionTarget (..),
+                     DnsSubscriptionTarget (..), IPSubscriptionTarget (..), NodeArgs (..),
                      RunNode (..),
                      RunNodeArgs (..))
 import qualified Ouroboros.Consensus.Node as Node (getChainDB, run)
@@ -80,17 +83,18 @@ import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 import           Ouroboros.Consensus.Storage.ImmutableDB (ValidationPolicy (..))
 import           Ouroboros.Consensus.Storage.VolatileDB (BlockValidationPolicy (..))
 
-import           Cardano.Config.Protocol
-                   (SomeConsensusProtocol(..), mkConsensusProtocol,
-                    renderProtocolInstantiationError)
-import           Cardano.Config.Topology
+import           Cardano.Node.Topology
 import           Cardano.Config.Types
+import           Cardano.Node.Protocol
+                   (mkConsensusProtocol,
+                    SomeConsensusProtocol(..), renderProtocolInstantiationError)
 import           Cardano.Node.Socket (gatherConfiguredSockets, SocketOrSocketInfo(..))
 import           Cardano.Node.Shutdown
+import           Cardano.Tracing.Kernel
 import           Cardano.Tracing.Peer
 import           Cardano.Tracing.Tracers
 #ifdef UNIX
-import           Cardano.Node.TUI.LiveView
+import           Cardano.Node.TUI.Run
 #endif
 
 
@@ -99,10 +103,7 @@ runNode
   -> NodeCLI
   -> IO ()
 runNode loggingLayer npm@NodeCLI{protocolFiles} = do
-    hn <- hostname
-
-    let !trace = setHostname hn $
-                 llAppendName loggingLayer "node" (llBasicTrace loggingLayer)
+    !trace <- setupTrace loggingLayer
     let tracer = contramap pack $ toLogObject trace
 
     nc <- parseNodeConfiguration npm
@@ -122,10 +123,6 @@ runNode loggingLayer npm@NodeCLI{protocolFiles} = do
         Left err -> putTextLn (renderProtocolInstantiationError err) >> exitFailure
         Right (SomeConsensusProtocol p) -> pure $ SomeConsensusProtocol p
 
-    bcCounters :: IORef BlockchainCounters <- newIORef initialBlockchainCounters
-
-    tracers <- mkTracers (Consensus.protocolInfo p) (ncTraceConfig nc) trace bcCounters
-
 #ifdef UNIX
     let viewmode = ncViewMode nc
 #else
@@ -135,8 +132,10 @@ runNode loggingLayer npm@NodeCLI{protocolFiles} = do
     upTimeThread <- Async.async $ traceNodeUpTime (appendName "metrics" trace) =<< getMonotonicTimeNSec
 
     -- This IORef contains node kernel structure which holds node kernel.
-    -- We use it to extract an actual information about connected peers periodically.
-    nodeKernelData :: IORef (NodeKernelData blk) <- newIORef initialNodeKernelData
+    -- Used for ledger queries and peer connection status.
+    nodeKernelData :: NodeKernelData blk <- mkNodeKernelData
+
+    tracers <- mkTracers (ncTraceConfig nc) trace nodeKernelData
 
     case viewmode of
       SimpleView -> do
@@ -198,6 +197,22 @@ runNode loggingLayer npm@NodeCLI{protocolFiles} = do
         Async.uninterruptibleCancel upTimeThread
         Async.uninterruptibleCancel peersThread
 #endif
+    shutdownLoggingLayer loggingLayer
+
+-- | Add the application name and unqualified hostname to the logging
+-- layer basic trace.
+--
+-- If the @CARDANO_NODE_LOGGING_HOSTNAME@ environment variable is set,
+-- it overrides the system hostname. This is useful when running a
+-- local test cluster with all nodes on the same host.
+setupTrace
+  :: LoggingLayer
+  -> IO (Trace IO Text)
+setupTrace loggingLayer = do
+    hn <- maybe hostname (pure . pack) =<< lookupEnv "CARDANO_NODE_LOGGING_HOSTNAME"
+    return $
+        setHostname hn $
+        llAppendName loggingLayer "node" (llBasicTrace loggingLayer)
   where
     hostname = do
       hn0 <- pack <$> getHostName
@@ -222,29 +237,22 @@ traceNodeUpTime tr nodeLaunchTime = do
 handlePeersList
   :: NFData a
   => Trace IO Text
-  -> IORef (NodeKernelData blk)
+  -> NodeKernelData blk
   -> LiveViewBackend blk a
   -> IO ()
-handlePeersList tr nodeKernIORef lvbe = forever $ do
-  peers <- getCurrentPeers nodeKernIORef
+handlePeersList tr nodeKern lvbe = forever $ do
+  peers <- getCurrentPeers nodeKern
   storePeersInLiveView peers lvbe
   tracePeers tr peers
-  -- We couldn't get these values during initialisation, so pass them now.
-  (capacity, capacityBytes) <- getMempoolData
-  storeMempoolDataInLiveView capacity capacityBytes lvbe
   threadDelay 2000000 -- 2 seconds.
- where
-  getMempoolData = do
-    nkd <- readIORef nodeKernIORef
-    return (nkdMempoolCapacity nkd, nkdMempoolCapacityBytes nkd)
 #endif
 
 handlePeersListSimple
   :: Trace IO Text
-  -> IORef (NodeKernelData blk)
+  -> NodeKernelData blk
   -> IO ()
-handlePeersListSimple tr nodeKernIORef = forever $ do
-  getCurrentPeers nodeKernIORef >>= tracePeers tr
+handlePeersListSimple tr nodeKern = forever $ do
+  getCurrentPeers nodeKern >>= tracePeers tr
   threadDelay 2000000 -- 2 seconds.
 
 -- | Sets up a simple node, which will run the chain sync protocol and block
@@ -307,7 +315,8 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
        rnDatabasePath         = dbPath,
        rnProtocolInfo         = pInfo,
        rnCustomiseChainDbArgs = customiseChainDbArgs $ validateDB npm,
-       rnCustomiseNodeArgs    = identity,
+       rnCustomiseNodeArgs    = customiseNodeArgs (ncMaxConcurrencyBulkSync nc)
+                                  (ncMaxConcurrencyDeadline nc),
        rnNodeToNodeVersions   = supportedNodeToNodeVersions (Proxy @blk),
        rnNodeToClientVersions = supportedNodeToClientVersions (Proxy @blk),
        rnNodeKernelHook       = \registry nodeKernel -> do
@@ -317,6 +326,19 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
        rnMaxClockSkew         = defaultClockSkew
     }
  where
+  customiseNodeArgs :: Maybe MaxConcurrencyBulkSync
+                    -> Maybe MaxConcurrencyDeadline
+                    -> NodeArgs IO RemoteConnectionId LocalConnectionId blk
+                    -> NodeArgs IO RemoteConnectionId LocalConnectionId blk
+  customiseNodeArgs bulk_m deadline_m args@NodeArgs{ blockFetchConfiguration } = args {
+      blockFetchConfiguration = blockFetchConfiguration {
+          bfcMaxConcurrencyBulkSync = maybe (bfcMaxConcurrencyBulkSync blockFetchConfiguration)
+            unMaxConcurrencyBulkSync bulk_m
+        , bfcMaxConcurrencyDeadline = maybe (bfcMaxConcurrencyDeadline blockFetchConfiguration)
+            unMaxConcurrencyDeadline deadline_m
+        }
+      }
+
   customiseChainDbArgs :: Bool
                        -> ChainDB.ChainDbArgs IO blk
                        -> ChainDB.ChainDbArgs IO blk
@@ -388,9 +410,15 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
   --TODO: there's still lots of duplication here, when only minor things are
   -- different
   createTracers npm'@NodeCLI{nodeMode = MockProtocolMode, nodeAddr, validateDB}
-                _nc _tr tracer cfg = do
+                NodeConfiguration {
+                  ncProtocolConfig =
+                    NodeProtocolConfigurationMock
+                      NodeMockProtocolConfiguration {
+                        npcMockNodeId = CoreNodeId nodeid
+                      }
+                }
+                _tr tracer cfg = do
          eitherTopology <- readTopologyFile npm'
-         nodeid <- nid npm'
          (MockNodeTopology nodeSetups) <- either
                                             (\err -> panic $ "Cardano.Node.Run.readTopologyFile: " <> err)
                                             pure
@@ -417,20 +445,17 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
 
          when validateDB $ traceWith tracer "Performing DB validation"
 
+  createTracers NodeCLI{nodeMode = MockProtocolMode} _ _ _ _ =
+    --TODO: this ability to have a mismatch is silly. We should merge the info
+    -- from the config file and the cli early and resolve it all.
+    panic "createTracers: run in mock mode but config in non-mock mode"
+
 --------------------------------------------------------------------------------
 -- Helper functions
 --------------------------------------------------------------------------------
 
 canonDbPath :: NodeCLI -> IO FilePath
-canonDbPath npm@NodeCLI{databaseFile, nodeMode} = do
-  dbFp <- case nodeMode of
-            MockProtocolMode -> do
-              --TODO: we should eliminate auto-naming here too
-              nodeid <- nid npm
-              pure $ unDB databaseFile <> "-" <> show nodeid
-
-            RealProtocolMode -> pure (unDB databaseFile)
-
+canonDbPath NodeCLI{databaseFile = DbFile dbFp} =
   canonicalizePath =<< makeAbsolute dbFp
 
 createDiffusionArguments
@@ -476,19 +501,6 @@ ipSubscriptionTargets ipProdAddrs =
   in IPSubscriptionTarget { ispIps = ips
                           , ispValency = length ips
                           }
-
--- | NodeIds are only required for mock protocols
-nid :: NodeCLI -> IO Word64
-nid NodeCLI{nodeMode = RealProtocolMode} =
-    panic $ "Cardano.Node.Run.nid: Real protocols do not require node ids"
-nid npm@NodeCLI{nodeMode = MockProtocolMode} = do
-   nc <- parseNodeConfiguration npm
-   case ncNodeId nc of
-        Just (CoreId (CoreNodeId n)) -> pure n
-        Just (RelayId _) -> panic $ "Cardano.Node.Run.nid: "
-                                 <> "Non-core nodes currently not supported"
-        Nothing -> panic $ "Cardano.Node.Run.nid: "
-                         <> "Please specify a NodeId in your configuration .yaml file"
 
 producerAddresses :: NetworkTopology -> ([RemoteAddress], [NodeAddress])
 producerAddresses nt =

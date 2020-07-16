@@ -72,9 +72,13 @@ mkdir ${ALL_NODES}
 for NODE in ${POOL_NODES}; do
 
   cardano-cli shelley node key-gen \
-      --verification-key-file                 ${NODE}/operator.vkey \
-      --signing-key-file                      ${NODE}/operator.skey \
-      --operational-certificate-issue-counter ${NODE}/operator.counter
+      --cold-verification-key-file                 ${NODE}/operator.vkey \
+      --cold-signing-key-file                      ${NODE}/operator.skey \
+      --operational-certificate-issue-counter-file ${NODE}/operator.counter
+
+  cardano-cli shelley node key-gen-VRF \
+      --verification-key-file ${NODE}/vrf.vkey \
+      --signing-key-file      ${NODE}/vrf.skey
 
 done
 
@@ -84,7 +88,9 @@ for N in ${BFT_NODES_N}; do
 
   ln -s ../delegate-keys/delegate${N}.skey node-bft${N}/operator.skey
   ln -s ../delegate-keys/delegate${N}.vkey node-bft${N}/operator.vkey
-  ln -s ../delegate-keys/delegate-opcert${N}.counter node-bft${N}/operator.counter
+  ln -s ../delegate-keys/delegate${N}.counter node-bft${N}/operator.counter
+  ln -s ../delegate-keys/delegate${N}.vrf.vkey node-bft${N}/vrf.vkey
+  ln -s ../delegate-keys/delegate${N}.vrf.skey node-bft${N}/vrf.skey
 
 done
 
@@ -97,16 +103,12 @@ for NODE in ${ALL_NODES}; do
       --verification-key-file ${NODE}/kes.vkey \
       --signing-key-file      ${NODE}/kes.skey
 
-  cardano-cli shelley node key-gen-VRF \
-      --verification-key-file ${NODE}/vrf.vkey \
-      --signing-key-file      ${NODE}/vrf.skey
-
   cardano-cli shelley node issue-op-cert \
       --kes-period 0 \
-      --hot-kes-verification-key-file         ${NODE}/kes.vkey \
-      --cold-signing-key-file                 ${NODE}/operator.skey \
-      --operational-certificate-issue-counter ${NODE}/operator.counter \
-      --out-file                              ${NODE}/node.cert
+      --kes-verification-key-file                  ${NODE}/kes.vkey \
+      --cold-signing-key-file                      ${NODE}/operator.skey \
+      --operational-certificate-issue-counter-file ${NODE}/operator.counter \
+      --out-file                                   ${NODE}/node.cert
 
 done
 
@@ -204,19 +206,19 @@ for ADDR in ${ADDRS}; do
   # Payment addresses
   cardano-cli shelley address build \
       --payment-verification-key-file addresses/${ADDR}.vkey \
-      --staking-verification-key-file addresses/${ADDR}-stake.vkey \
+      --stake-verification-key-file addresses/${ADDR}-stake.vkey \
       --testnet-magic 42 \
-      > addresses/${ADDR}.addr
+      --out-file addresses/${ADDR}.addr
 
   # Stake addresses
   cardano-cli shelley stake-address build \
-      --staking-verification-key-file addresses/${ADDR}-stake.vkey \
+      --stake-verification-key-file addresses/${ADDR}-stake.vkey \
       --testnet-magic 42 \
-      > addresses/${ADDR}-stake.addr
+      --out-file addresses/${ADDR}-stake.addr
 
   # Stake addresses registration certs
   cardano-cli shelley stake-address registration-certificate \
-      --staking-verification-key-file addresses/${ADDR}-stake.vkey \
+      --stake-verification-key-file addresses/${ADDR}-stake.vkey \
       --out-file addresses/${ADDR}-stake.reg.cert
 
 done
@@ -228,8 +230,8 @@ for N in ${USER_POOL_N}; do
 
   # Stake address delegation certs
   cardano-cli shelley stake-address delegation-certificate \
-      --staking-verification-key-file addresses/user${N}-stake.vkey \
-      --stake-pool-verification-key-file node-pool${N}/operator.vkey \
+      --stake-verification-key-file addresses/user${N}-stake.vkey \
+      --cold-verification-key-file  node-pool${N}/operator.vkey \
       --out-file addresses/user${N}-stake.deleg.cert
 
   ln -s ../addresses/pool-owner${N}-stake.vkey node-pool${N}/owner.vkey
@@ -251,11 +253,11 @@ for NODE in ${POOL_NODES}; do
   cardano-cli shelley stake-pool registration-certificate \
     --testnet-magic 42 \
     --pool-pledge 0 --pool-cost 0 --pool-margin 0 \
-    --stake-pool-verification-key-file     ${NODE}/operator.vkey \
-    --vrf-verification-key-file            ${NODE}/vrf.vkey \
-    --reward-account-verification-key-file ${NODE}/owner.vkey \
-    --pool-owner-staking-verification-key  ${NODE}/owner.vkey \
-    --out-file                             ${NODE}/registration.cert
+    --cold-verification-key-file             ${NODE}/operator.vkey \
+    --vrf-verification-key-file              ${NODE}/vrf.vkey \
+    --reward-account-verification-key-file   ${NODE}/owner.vkey \
+    --pool-owner-stake-verification-key-file ${NODE}/owner.vkey \
+    --out-file                               ${NODE}/registration.cert
 done
 
 echo "Generated stake pool registration certs:"
@@ -280,11 +282,11 @@ cardano-cli shelley transaction build-raw \
                 --testnet-magic 42 \
                 --verification-key-file utxo-keys/utxo1.vkey) \
     --tx-out $(cat addresses/user1.addr)+${SUPPLY} \
-    --certificate addresses/pool-owner1-stake.reg.cert \
-    --certificate node-pool1/registration.cert \
-    --certificate addresses/user1-stake.reg.cert \
-    --certificate addresses/user1-stake.deleg.cert \
-    --tx-body-file tx1.txbody
+    --certificate-file addresses/pool-owner1-stake.reg.cert \
+    --certificate-file node-pool1/registration.cert \
+    --certificate-file addresses/user1-stake.reg.cert \
+    --certificate-file addresses/user1-stake.deleg.cert \
+    --out-file tx1.txbody
 
 # So we'll need to sign this with a bunch of keys:
 # 1. the initial utxo spending key, for the funds
@@ -298,8 +300,8 @@ cardano-cli shelley transaction sign \
     --signing-key-file node-pool1/owner.skey \
     --signing-key-file node-pool1/operator.skey \
     --testnet-magic 42 \
-    --tx-body-file tx1.txbody \
-    --tx-file      tx1.tx
+    --tx-body-file  tx1.txbody \
+    --out-file      tx1.tx
 
 echo "Generated a signed 'do it all' transaction:"
 ls -1 tx1.tx

@@ -79,12 +79,16 @@ let
   extraBuilds = {
     # only build nixos tests on first supported system (linux)
     inherit (pkgsFor (builtins.head  supportedSystems)) nixosTests;
-    cardano-deployment = pkgs.iohkNix.cardanoLib.mkConfigHtml { inherit (pkgs.iohkNix.cardanoLib.environments) mainnet testnet ff; };
+    # Environments listed in Network Configuration page
+    cardano-deployment = pkgs.iohkNix.cardanoLib.mkConfigHtml { inherit (pkgs.iohkNix.cardanoLib.environments) mainnet testnet shelley_testnet mainnet_candidate; };
   } // (builtins.listToAttrs (map makeRelease [
+    # Environments we want to build scripts for on hydra
     "mainnet"
+    "mainnet_candidate"
     "staging"
-    "shelley_staging_short"
+    "shelley_qa"
     "shelley_staging"
+    "shelley_testnet"
     "testnet"
   ]));
 
@@ -100,7 +104,7 @@ let
     ) ds);
 
   # Remove build jobs for which cross compiling does not make sense.
-  filterJobsCross = filterAttrs (n: _: n != "dockerImage" && n != "shell" && n != "checkCabalProject");
+  filterJobsCross = filterAttrs (n: _: n != "dockerImage" && n != "shell" && n != "cluster");
 
   inherit (systems.examples) mingwW64 musl64;
 
@@ -123,7 +127,7 @@ let
     cardano-node-linux = import ./nix/binary-release.nix {
       inherit pkgs project;
       platform = "linux";
-      exes = filter (p: p.system == "x86_64-linux") (collectJobs jobs.native.exes);
+      exes = filter (p: p.system == "x86_64-linux") (collectJobs jobs.musl64.exes);
     };
   } // (optionalAttrs windowsBuild {
     "${mingwW64.config}" = mapTestOnCross mingwW64 (packagePlatformsCross (filterJobsCross project));
@@ -138,7 +142,7 @@ let
       (collectJobs jobs.native.exes)
       (optional windowsBuild jobs.cardano-node-win64)
       (optionals windowsBuild (collectJobs jobs.${mingwW64.config}.checks))
-      (map (cluster: collectJobs jobs.${cluster}.scripts.node.${head supportedSystems}) [ "mainnet" "testnet" "staging" ])
+      (map (cluster: collectJobs jobs.${cluster}.scripts.node.${head supportedSystems}) [ "mainnet" "testnet" "staging" "shelley_qa" "shelley_testnet" ])
       (collectJobs jobs.nixosTests.chairmansCluster)
       [
         jobs.cardano-node-linux

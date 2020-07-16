@@ -18,14 +18,13 @@ import           Prelude (show)
 import qualified Data.Text as Text
 import           Data.Text (pack)
 
-import           Cardano.Config.Orphanage ()
-import           Cardano.Crypto.KES (deriveVerKeyKES)
 import           Cardano.TracingOrphanInstances.Common
 import           Cardano.TracingOrphanInstances.Network (showTip, showPoint)
 
 import           Ouroboros.Consensus.Block
                    (BlockProtocol, Header, getHeader, headerPoint,
-                    RealPoint, realPointSlot, realPointHash)
+                    RealPoint, realPointSlot, realPointHash,
+                    ForgeState(..))
 import           Ouroboros.Consensus.MiniProtocol.BlockFetch.Server
                    (TraceBlockFetchServerEvent)
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client
@@ -39,6 +38,7 @@ import           Ouroboros.Consensus.Ledger.Abstract
 import qualified Ouroboros.Consensus.Protocol.BFT  as BFT
 import qualified Ouroboros.Consensus.Protocol.PBFT as PBFT
 import           Ouroboros.Consensus.Ledger.Extended
+import           Ouroboros.Consensus.Ledger.Inspect (LedgerWarning)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx, GenTxId,
                    HasTxId, TxId, txId)
 import           Ouroboros.Consensus.Mempool.API (TraceEventMempool (..), MempoolSize(..))
@@ -47,11 +47,6 @@ import           Ouroboros.Consensus.MiniProtocol.LocalTxSubmission.Server
 import           Ouroboros.Consensus.Node.Run (RunNode (..))
 import           Ouroboros.Consensus.Node.Tracers (TraceForgeEvent (..))
 import           Ouroboros.Consensus.Protocol.Abstract
-
-import           Ouroboros.Consensus.Mock.Protocol.Praos (PraosCrypto (..), PraosForgeState (..))
-
-import           Ouroboros.Consensus.Shelley.Ledger (TPraosForgeState(..))
-import           Ouroboros.Consensus.Shelley.Protocol.Crypto (HotKey(..), TPraosCrypto)
 
 import           Ouroboros.Consensus.Util.Condense
 import           Ouroboros.Consensus.Util.Orphans ()
@@ -84,8 +79,10 @@ instance HasSeverityAnnotation (ChainDB.TraceEvent blk) where
     ChainDB.TryAddToCurrentChain {} -> Debug
     ChainDB.TrySwitchToAFork {} -> Info
     ChainDB.StoreButDontChange {} -> Debug
-    ChainDB.AddedToCurrentChain {} -> Notice
-    ChainDB.SwitchedToAFork {} -> Notice
+    ChainDB.AddedToCurrentChain (_:_) _ _ _ -> Warning -- list of warnings
+    ChainDB.AddedToCurrentChain []    _ _ _ -> Notice
+    ChainDB.SwitchedToAFork (_:_) _ _ _ -> Warning -- list of warnings
+    ChainDB.SwitchedToAFork []    _ _ _ -> Notice
     ChainDB.AddBlockValidation ev' -> case ev' of
       ChainDB.InvalidBlock {} -> Error
       ChainDB.InvalidCandidate {} -> Error
@@ -120,10 +117,10 @@ instance HasSeverityAnnotation (ChainDB.TraceEvent blk) where
     ChainDB.OpenedLgrDB -> Info
 
   getSeverityAnnotation (ChainDB.TraceReaderEvent ev) = case ev of
-    ChainDB.NewReader {} -> Info
-    ChainDB.ReaderNoLongerInMem {} -> Info
-    ChainDB.ReaderSwitchToMem {} -> Info
-    ChainDB.ReaderNewImmIterator {} -> Info
+    ChainDB.NewReader {} -> Debug
+    ChainDB.ReaderNoLongerInMem {} -> Debug
+    ChainDB.ReaderSwitchToMem {} -> Debug
+    ChainDB.ReaderNewImmIterator {} -> Debug
   getSeverityAnnotation (ChainDB.TraceInitChainSelEvent ev) = case ev of
     ChainDB.InitChainSelValidation {} -> Debug
   getSeverityAnnotation (ChainDB.TraceIteratorEvent ev) = case ev of
@@ -146,8 +143,8 @@ instance HasSeverityAnnotation (TraceChainSyncClientEvent blk) where
   getSeverityAnnotation (TraceException _) = Warning
 
 
-instance HasPrivacyAnnotation (TraceChainSyncServerEvent blk b)
-instance HasSeverityAnnotation (TraceChainSyncServerEvent blk b) where
+instance HasPrivacyAnnotation (TraceChainSyncServerEvent blk)
+instance HasSeverityAnnotation (TraceChainSyncServerEvent blk) where
   getSeverityAnnotation _ = Info
 
 
@@ -155,24 +152,20 @@ instance HasPrivacyAnnotation (TraceEventMempool blk)
 instance HasSeverityAnnotation (TraceEventMempool blk) where
   getSeverityAnnotation _ = Info
 
-instance HasPrivacyAnnotation (TPraosForgeState c)
-instance HasSeverityAnnotation (TPraosForgeState c) where
-  getSeverityAnnotation TPraosForgeState {} = Info
+instance HasPrivacyAnnotation (ForgeState c)
+instance HasSeverityAnnotation (ForgeState c) where
+  getSeverityAnnotation _ = Info
 
 instance HasPrivacyAnnotation ()
 instance HasSeverityAnnotation () where
   getSeverityAnnotation () = Info
-
-instance HasPrivacyAnnotation (PraosForgeState c)
-instance HasSeverityAnnotation (PraosForgeState c) where
-  getSeverityAnnotation PraosKey {} = Info
 
 instance HasPrivacyAnnotation (TraceForgeEvent blk)
 instance HasSeverityAnnotation (TraceForgeEvent blk) where
   getSeverityAnnotation TraceForgedBlock {}            = Info
   getSeverityAnnotation TraceStartLeadershipCheck {}   = Info
   getSeverityAnnotation TraceNodeNotLeader {}          = Info
-  getSeverityAnnotation TraceNotCannotLead {}          = Error
+  getSeverityAnnotation TraceNodeCannotLead {}         = Error
   getSeverityAnnotation TraceNodeIsLeader {}           = Info
   getSeverityAnnotation TraceNoLedgerState {}          = Error
   getSeverityAnnotation TraceNoLedgerView {}           = Error
@@ -220,7 +213,7 @@ instance (Condense (HeaderHash blk), LedgerSupportsProtocol blk)
 
 
 instance Condense (HeaderHash blk)
-      => Transformable Text IO (TraceChainSyncServerEvent blk b) where
+      => Transformable Text IO (TraceChainSyncServerEvent blk) where
   trTransformer = trStructured
 
 
@@ -248,16 +241,11 @@ instance ( tx ~ GenTx blk
       => Transformable Text IO (TraceForgeEvent blk) where
   trTransformer = trStructuredText
 
-instance HasTextFormatter (TPraosForgeState c) where
+instance HasTextFormatter (ForgeState blk) where
   formatText _ = pack . show . toList
 
-instance TPraosCrypto c => Transformable Text IO (TPraosForgeState c) where
-  trTransformer = trStructuredText
-
-instance HasTextFormatter (PraosForgeState c) where
-  formatText _ = pack . show . toList
-
-instance PraosCrypto c => Transformable Text IO (PraosForgeState c) where
+instance ToObject (ChainIndepState (BlockProtocol blk))
+      => Transformable Text IO (ForgeState blk) where
   trTransformer = trStructuredText
 
 instance ( tx ~ GenTx blk
@@ -289,7 +277,7 @@ instance ( tx ~ GenTx blk
       "Leading slot " <> showT (unSlotNo slotNo)
     TraceNodeNotLeader slotNo -> const $
       "Not leading slot " <> showT (unSlotNo slotNo)
-    TraceNotCannotLead slotNo reason -> const $
+    TraceNodeCannotLead slotNo reason -> const $
       "We are the leader for slot "
         <> showT (unSlotNo slotNo)
         <> ", but we cannot lead because: "
@@ -307,8 +295,10 @@ instance Transformable Text IO (TraceLocalTxSubmissionServerEvent blk) where
 
 
 instance ( Condense (HeaderHash blk)
+         , Show (LedgerWarning blk)
          , LedgerSupportsProtocol blk
-         , ToObject (Header blk))
+         , ToObject (Header blk)
+         , ToObject (LedgerWarning blk))
       => Transformable Text IO (ChainDB.TraceEvent blk) where
   trTransformer = trStructuredText
 
@@ -316,7 +306,9 @@ instance ( Condense (HeaderHash blk)
 
 
 
-instance (Condense (HeaderHash blk), LedgerSupportsProtocol blk)
+instance (Condense (HeaderHash blk),
+          Show (LedgerWarning blk),
+          LedgerSupportsProtocol blk)
       => HasTextFormatter (ChainDB.TraceEvent blk) where
     formatText = \case
       ChainDB.TraceAddBlockEvent ev -> case ev of
@@ -336,10 +328,12 @@ instance (Condense (HeaderHash blk), LedgerSupportsProtocol blk)
           "Block fits onto the current chain: " <> condenseT pt
         ChainDB.TrySwitchToAFork pt _ -> \_o ->
           "Block fits onto some fork: " <> condenseT pt
-        ChainDB.AddedToCurrentChain _ _ c -> \_o ->
-          "Chain extended, new tip: " <> condenseT (AF.headPoint c)
-        ChainDB.SwitchedToAFork _ _ c -> \_o ->
-          "Switched to a fork, new tip: " <> condenseT (AF.headPoint c)
+        ChainDB.AddedToCurrentChain ws _ _ c -> \_o ->
+          "Chain extended, new tip: " <> condenseT (AF.headPoint c) <>
+          Text.concat [ "\nWarning: " <> showT w | w <- ws ]
+        ChainDB.SwitchedToAFork ws _ _ c -> \_o ->
+          "Switched to a fork, new tip: " <> condenseT (AF.headPoint c) <>
+          Text.concat [ "\nWarning: " <> showT w | w <- ws ]
         ChainDB.AddBlockValidation ev' -> case ev' of
           ChainDB.InvalidBlock err pt -> \_o ->
             "Invalid block " <> condenseT pt <> ": " <> showT err
@@ -519,15 +513,29 @@ instance (Show (PBFT.PBftVerKeyHash c))
       [ "kind" .= String "PBftNotGenesisDelegate"
       , "vk" .= String (pack $ show vkhash)
       ]
-  toObject _verb (PBFT.PBftExceededSignThreshold vkhash n) =
+  toObject _verb (PBFT.PBftExceededSignThreshold vkhash numForged) =
     mkObject
       [ "kind" .= String "PBftExceededSignThreshold"
       , "vk" .= String (pack $ show vkhash)
-      , "n" .= String (pack $ show n)
+      , "numForged" .= String (pack (show numForged))
       ]
   toObject _verb PBFT.PBftInvalidSlot =
     mkObject
       [ "kind" .= String "PBftInvalidSlot"
+      ]
+
+
+instance (Show (PBFT.PBftVerKeyHash c))
+      => ToObject (PBFT.PBftCannotLead c) where
+  toObject _verb (PBFT.PBftCannotLeadInvalidDelegation vkhash) =
+    mkObject
+      [ "kind" .= String "PBftCannotLeadInvalidDelegation"
+      , "vk" .= String (pack $ show vkhash)
+      ]
+  toObject _verb (PBFT.PBftCannotLeadThresholdExceeded numForged) =
+    mkObject
+      [ "kind" .= String "PBftCannotLeadThresholdExceeded"
+      , "numForged" .= numForged
       ]
 
 
@@ -542,7 +550,8 @@ instance Condense (HeaderHash blk)
 
 instance ( Condense (HeaderHash blk)
          , LedgerSupportsProtocol blk
-         , ToObject (Header blk))
+         , ToObject (Header blk)
+         , ToObject (LedgerWarning blk))
       => ToObject (ChainDB.TraceEvent blk) where
   toObject verb (ChainDB.TraceAddBlockEvent ev) = case ev of
     ChainDB.IgnoreBlockOlderThanK pt ->
@@ -572,20 +581,24 @@ instance ( Condense (HeaderHash blk)
     ChainDB.TrySwitchToAFork pt _ ->
       mkObject [ "kind" .= String "TraceAddBlockEvent.TrySwitchToAFork"
                , "block" .= toObject verb pt ]
-    ChainDB.AddedToCurrentChain _ base extended  ->
+    ChainDB.AddedToCurrentChain warnings _ base extended  ->
       mkObject $
                [ "kind" .= String "TraceAddBlockEvent.AddedToCurrentChain"
                , "newtip" .= showPoint verb (AF.headPoint extended)
-               ] ++
-               [ "headers" .= toJSON (toObject verb `map` addedHdrsNewChain base extended)
+               ]
+            ++ [ "headers" .= toJSON (toObject verb `map` addedHdrsNewChain base extended)
                | verb == MaximalVerbosity ]
-    ChainDB.SwitchedToAFork _ old new ->
+            ++ [ "warnings" .= toJSON (map (toObject verb) warnings)
+               | not (null warnings) ]
+    ChainDB.SwitchedToAFork warnings _ old new ->
       mkObject $
                [ "kind" .= String "TraceAddBlockEvent.SwitchedToAFork"
                , "newtip" .= showPoint verb (AF.headPoint new)
-               ] ++
-               [ "headers" .= toJSON (toObject verb `map` addedHdrsNewChain old new)
+               ]
+            ++ [ "headers" .= toJSON (toObject verb `map` addedHdrsNewChain old new)
                | verb == MaximalVerbosity ]
+            ++ [ "warnings" .= toJSON (map (toObject verb) warnings)
+               | not (null warnings) ]
     ChainDB.AddBlockValidation ev' -> case ev' of
       ChainDB.InvalidBlock err pt ->
         mkObject [ "kind" .= String "TraceAddBlockEvent.AddBlockValidation.InvalidBlock"
@@ -727,7 +740,7 @@ instance (Condense (HeaderHash blk), LedgerSupportsProtocol blk)
 
 
 instance Condense (HeaderHash blk)
-      => ToObject (TraceChainSyncServerEvent blk b) where
+      => ToObject (TraceChainSyncServerEvent blk) where
   toObject verb ev = case ev of
     TraceChainSyncServerRead tip (AddBlock hdr) ->
       mkObject [ "kind" .= String "ChainSyncServerEvent.TraceChainSyncServerRead.AddBlock"
@@ -791,20 +804,11 @@ instance HasTextFormatter () where
 instance Transformable Text IO () where
   trTransformer = trStructuredText
 
-instance TPraosCrypto c => ToObject (TPraosForgeState c) where
-  toObject _verb (TPraosForgeState (HotKey period signKey)) =
-    mkObject
-      [ "kind" .= String "TPraosForgeState"
-      , "hotKESVerificationKey" .= String (showT $ deriveVerKeyKES signKey)
-      , "hotKESKeyPeriod" .= period
-      ]
-
-instance PraosCrypto c => ToObject (PraosForgeState c) where
-  toObject _verb (PraosKey signKey) =
-    mkObject
-      [ "kind" .= String "PraosKey"
-      , "praosKESVerificationKey" .= String (showT $ deriveVerKeyKES signKey)
-      ]
+instance ToObject (ChainIndepState (BlockProtocol blk))
+      => ToObject (ForgeState blk) where
+  toObject verb ForgeState { chainIndepState, extraForgeState = _ } =
+    -- We assume there's nothing interesting in the extraForgeState
+    toObject verb chainIndepState
 
 instance ( tx ~ GenTx blk
          , Condense (HeaderHash blk)
@@ -870,9 +874,9 @@ instance ( tx ~ GenTx blk
       [ "kind" .= String "TraceNodeNotLeader"
       , "slot" .= toJSON (unSlotNo slotNo)
       ]
-  toObject verb (TraceNotCannotLead slotNo reason) =
+  toObject verb (TraceNodeCannotLead slotNo reason) =
     mkObject
-      [ "kind" .= String "TraceNotCannotLead"
+      [ "kind" .= String "TraceNodeCannotLead"
       , "slot" .= toJSON (unSlotNo slotNo)
       , "reason" .= toObject verb reason
       ]

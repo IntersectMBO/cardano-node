@@ -19,8 +19,6 @@ import qualified Data.Text as Text
 
 import           Formatting ((%), build, sformat, stext)
 
--- import           Prelude (Show (..))
-
 renderApplyMempoolPayloadErr :: ApplyMempoolPayloadErr -> Text
 renderApplyMempoolPayloadErr err =
     case err of
@@ -70,4 +68,3 @@ renderUTxOError ue =
 
 textShow :: Show a => a -> Text
 textShow = Text.pack . show
-

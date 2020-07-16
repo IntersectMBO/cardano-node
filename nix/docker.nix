@@ -5,22 +5,22 @@
 #
 #   docker load -i $(nix-build -A dockerImage --no-out-link)
 #
-# To launch with provided mainnet configuration and persist state in a docker volume run:
+# To launch with pre-loaded configuration, using the NETWORK env.
+# An example using a docker volume to persist state:
 #
-#   docker run -v /data -e NETWORK=mainnet inputoutput/cardano-node:<TAG>
+#   docker run -v /data -e NETWORK=mainnet inputoutput/cardano-node
 #
-# To launch with provided testnet configuration without persisting state run:
+# Provide a complete command otherwise:
 #
-#   docker run -e NETWORK=testnet inputoutput/cardano-node:<TAG>
-#
-# To launch with custom config, mount a dir containing configuration.yaml, genesis.json, and topology.json
-#
-#   docker run -v $PATH_TO/configuration:/configuration \
-#     inputoutput/cardano-node:<TAG>
+#   docker run -v $PWD/configuration/defaults/byron-mainnet:/configuration \
+#     inputoutput/cardano-node run \
+#      --config /configuration/configuration.yaml \
+#      --topology /configuration/topology.json \
+#      --database-path /db
 #
 # Mount a volume into /ipc for establishing cross-container communication via node.socket
 #
-#   docker run -v node-ipc:/ipc inputoutput/cardano-node:<TAG>
+#   docker run -v node-ipc:/ipc inputoutput/cardano-node:
 #   docker run -v node-ipc:/ipc inputoutput/some-node-client
 ############################################################################
 
@@ -32,11 +32,12 @@
 , cardano-node
 , scripts
 
-# Get the current commit
-, gitrev ? iohkNix.commitIdFromGitRepoOrZero ../.git
+# Set gitrev to null, to ensure the version below is used
+, gitrev ? null
 
 # Other things to include in the image.
 , bashInteractive
+, buildPackages
 , cacert
 , coreutils
 , curl
@@ -84,32 +85,24 @@ let
   nodeDockerImage = let
     entry-point = writeScriptBin "entry-point" ''
       #!${runtimeShell}
-      echo $NETWORK
-      if [[ -d /configuration ]]; then
-        exec ${cardano-node}/bin/cardano-node run \
-          --config /configuration/configuration.yaml \
-          --database-path /data/db \
-          --host-addr 127.0.0.1 \
-          --port 3001 \
-          --socket-path /ipc/node.socket \
-          --topology /configuration/topology.json $@
+      if [[ -z "$NETWORK" ]]; then
+        exec ${cardano-node}/bin/cardano-node $@
       ${clusterStatements}
       else
-        echo "Please set a NETWORK environment variable to one of: mainnet/testnet"
-        echo "Or mount a /configuration volume containing: configuration.yaml, genesis.json, and topology.json"
+        echo "Managed configuration for network "$NETWORK" does not exist"
       fi
     '';
+    gitrev' = if (gitrev == null)
+      then buildPackages.commonLib.commitIdFromGitRepoOrZero ../.git
+      else gitrev;
   in dockerTools.buildImage {
     name = "${repoName}";
     fromImage = baseImage;
-    tag = "${gitrev}";
+    tag = "${gitrev'}";
     created = "now";   # Set creation date to build time. Breaks reproducibility
     contents = [ entry-point ];
     config = {
       EntryPoint = [ "${entry-point}/bin/entry-point" ];
-      ExposedPorts = {
-        "3001/tcp" = {};  # Cardano node p2p
-      };
     };
   };
 

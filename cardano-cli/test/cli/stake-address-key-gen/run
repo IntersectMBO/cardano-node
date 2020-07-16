@@ -17,7 +17,7 @@ ${CARDANO_CLI} shelley stake-address key-gen \
 assert_file_exists "${TEST_DIR}/key-gen-staking.vkey"
 assert_file_exists "${TEST_DIR}/key-gen-staking.skey"
 
-assert_string 'StakingVerificationKeyShelley' "${TEST_DIR}/key-gen-staking.vkey"
-assert_string 'SigningKeyShelley' "${TEST_DIR}/key-gen-staking.skey"
+assert_string 'StakeVerificationKeyShelley_ed25519' "${TEST_DIR}/key-gen-staking.vkey"
+assert_string 'StakeSigningKeyShelley_ed25519' "${TEST_DIR}/key-gen-staking.skey"
 
 report_result ${error}

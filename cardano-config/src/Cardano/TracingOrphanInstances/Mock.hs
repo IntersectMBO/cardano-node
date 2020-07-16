@@ -19,6 +19,10 @@ import           Cardano.TracingOrphanInstances.Consensus ()
 
 import           Data.Aeson (Value (..), ToJSON, toJSON, (.=))
 
+import           Cardano.Crypto.Hash.Class (Hash)
+import           Cardano.Crypto.KES.Class
+                   (VerKeyKES, deriveVerKeyKES, hashVerKeyKES)
+
 import           Ouroboros.Consensus.Block (Header)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTx, TxId, txId)
 import qualified Ouroboros.Consensus.Mock.Ledger as Mock
@@ -40,10 +44,18 @@ instance ( Mock.SimpleCrypto c
     mkObject $
         [ "kind" .= String "SimpleBlockHeader"
         , "hash" .= condense (blockHash b)
-        , "prevhash" .= condense (blockPrevHash b)
         , "slotNo" .= condense (blockSlot b)
         , "blockNo" .= condense (blockNo b) ]
 
+
+instance ToObject (Praos.HotKey Praos.PraosMockCrypto) where
+  toObject _verb (Praos.HotKey signKey) =
+    mkObject
+      [ "kind" .= String "HotKey"
+      , "vkey" .= (hashVerKeyKES (deriveVerKeyKES signKey)
+                     :: Hash (Praos.PraosHash Praos.PraosMockCrypto)
+                             (VerKeyKES (Praos.PraosKES Praos.PraosMockCrypto)))
+      ]
 
 instance StandardHash blk
  => ToObject (Mock.MockError blk) where

@@ -34,22 +34,19 @@ import           Control.Tracer
 
 import           Network.Mux (MuxError, MuxMode(..))
 
-import           Ouroboros.Consensus.Block (BlockProtocol, GetHeader (..))
+import           Cardano.Api.Protocol.Types (SomeNodeClientProtocol(..))
+import           Ouroboros.Consensus.Block (BlockProtocol, Header)
+
+import           Ouroboros.Consensus.Block (CodecConfig, GetHeader (..))
 import           Ouroboros.Consensus.BlockchainTime (SlotLength, getSlotLength)
-import           Ouroboros.Consensus.Config (configBlock, configConsensus, configLedger)
-import           Ouroboros.Consensus.Config.SupportsNode (ConfigSupportsNode (..))
-import           Ouroboros.Consensus.Ledger.Extended (ExtLedgerState (..))
 import           Ouroboros.Consensus.Network.NodeToClient
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
-                  (HasNetworkProtocolVersion (..))
-import           Ouroboros.Consensus.Node.ProtocolInfo
-import           Ouroboros.Consensus.HardFork.Abstract (HasHardForkHistory(..))
-import           Ouroboros.Consensus.HardFork.History
-                  (EraParams(..), EraSummary(..), Summary(..))
+                  (HasNetworkProtocolVersion (..),
+                   supportedNodeToClientVersions)
+import           Ouroboros.Consensus.Node.ProtocolInfo (pClientInfoCodecConfig)
 import           Ouroboros.Consensus.Node.Run
 import           Ouroboros.Consensus.Cardano
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx)
-import           Ouroboros.Consensus.Util.Counting (nonEmptyHead)
 
 import           Ouroboros.Network.Magic (NetworkMagic)
 import           Ouroboros.Network.Mux
@@ -62,8 +59,7 @@ import           Ouroboros.Network.Protocol.LocalTxSubmission.Type
 import           Ouroboros.Network.Protocol.ChainSync.Type
 import           Ouroboros.Network.Protocol.ChainSync.Client
 import           Ouroboros.Network.Protocol.Handshake.Version
-import           Ouroboros.Network.NodeToClient hiding (NodeToClientVersion (..))
-import qualified Ouroboros.Network.NodeToClient as NtC
+import           Ouroboros.Network.NodeToClient
 
 import           Cardano.Config.Types (SocketPath(..))
 
@@ -82,23 +78,27 @@ import           Cardano.Config.Types (SocketPath(..))
 -- that failures can be detected as early as possible. The progress condition
 -- is only checked at the end.
 --
-chairmanTest :: forall blk. RunNode blk
-             => Tracer IO String
-             -> Protocol IO blk (BlockProtocol blk)
+chairmanTest :: Tracer IO String
+             -> SlotLength
+             -> SecurityParam
              -> DiffTime
              -> Maybe BlockNo
              -> [SocketPath]
+             -> SomeNodeClientProtocol
+             -> NetworkMagic
              -> IO ()
-chairmanTest tracer ptcl runningTime optionalProgressThreshold socketPaths = do
+chairmanTest tracer slotLength securityParam runningTime optionalProgressThreshold socketPaths someNodeClientProtocol nw = do
 
     traceWith tracer ("Will observe nodes for " ++ show runningTime)
     traceWith tracer ("Will require chain growth of " ++ show progressThreshold)
 
+    SomeNodeClientProtocol (p :: ProtocolClient blk (BlockProtocol blk)) <- return $ someNodeClientProtocol
+
     -- Run the chairman and get the final snapshot of the chain from each node.
     chainsSnapshot <- runChairman
                         tracer
-                        (getCodecConfig $ configBlock cfg)
-                        (getNetworkMagic $ configBlock cfg)
+                        (pClientInfoCodecConfig $ protocolClientInfo p)
+                        nw
                         securityParam
                         runningTime
                         socketPaths
@@ -119,26 +119,10 @@ chairmanTest tracer ptcl runningTime optionalProgressThreshold socketPaths = do
     traceWith tracer ("================== chairman results ==================")
 
   where
-    ProtocolInfo
-      { pInfoConfig = cfg
-      , pInfoInitLedger = extLedgerSt
-      } = protocolInfo ptcl
-
-    securityParam = protocolSecurityParam (configConsensus cfg)
-
     progressThreshold = deriveProgressThreshold
                           slotLength
                           runningTime
                           optionalProgressThreshold
-
-    hfSummary = hardForkSummary (configLedger cfg) (ledgerState extLedgerSt)
-
-    slotLength =
-      case hfSummary of
-      -- This will need to be generalised to cope with protocols that do
-      -- hard forks. This currently expects a single protocol era.
-        Summary eras -> eraSlotLength . eraParams . nonEmptyHead $ eras
-
 
 -- | The caller specifies how long to run the chairman for and optionally a
 -- chain growth progress threshold. If the threshold is not given, we can
@@ -152,7 +136,7 @@ deriveProgressThreshold _ _ (Just progressThreshold) = progressThreshold
 
 -- If only the progress threshold is not specified, derive it from the running time
 deriveProgressThreshold slotLength runningTime Nothing =
-    Block.BlockNo (floor (runningTime / getSlotLengthDiffTime slotLength) - 1)
+    Block.BlockNo (floor (runningTime / getSlotLengthDiffTime slotLength) - 2)
 
 
 getSlotLengthDiffTime :: SlotLength -> DiffTime
@@ -390,7 +374,6 @@ type ChainsVar m blk = StrictTVar m (Map SocketPath (AnchoredFragment (Header bl
 addBlock
     :: forall blk m.
        ( MonadSTM m
-       , HasHeader (Header blk)
        , GetHeader blk
        )
     => SocketPath
@@ -441,7 +424,6 @@ chainSyncClient
      , MonadAsync m
      , GetHeader blk
      , HasHeader blk
-     , HasHeader (Header blk)
      )
   => Tracer m (ChairmanTrace blk)
   -> SocketPath
@@ -525,26 +507,26 @@ localInitiatorNetworkApplication
   -> SocketPath
   -> ChainsVar m blk
   -> SecurityParam
-  -> Versions NtC.NodeToClientVersion DictVersion
+  -> Versions NodeToClientVersion DictVersion
               (OuroborosApplication InitiatorMode LocalAddress ByteString m () Void)
 localInitiatorNetworkApplication chairmanTracer chainSyncTracer
                                  localTxSubmissionTracer
                                  cfg networkMagic
                                  sockPath chainsVar securityParam =
     foldMapVersions
-      (\v ->
+      (\(version, blockVersion) ->
         versionedNodeToClientProtocols
-          (nodeToClientProtocolVersion proxy v)
+          version
           versionData
-          (const $ protocols v))
-      (supportedNodeToClientVersions proxy)
+          (\_ _ -> protocols blockVersion))
+      (Map.toList (supportedNodeToClientVersions proxy))
   where
     proxy :: Proxy blk
     proxy = Proxy
 
     versionData = NodeToClientVersionData networkMagic
 
-    protocols :: NodeToClientVersion blk
+    protocols :: BlockNodeToClientVersion blk
               -> NodeToClientProtocols InitiatorMode ByteString m () Void
     protocols byronClientVersion  =
         NodeToClientProtocols {

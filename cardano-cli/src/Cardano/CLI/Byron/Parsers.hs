@@ -57,13 +57,12 @@ import           Cardano.Chain.Genesis
                    (TestnetBalanceOptions(..), FakeAvvmOptions(..))
 import           Cardano.Chain.UTxO (TxId, TxIn(..), TxOut(..))
 
-import           Cardano.Api (Network(..), NetworkMagic(..))
+import qualified Cardano.Api.Typed as Typed
 import           Cardano.Config.Types
 import           Cardano.Config.Parsers
                    (parseIntegral, parseFraction, parseLovelace, readDouble,
-                    parseFilePath,  parseConfigFile, parseSigningKeyFile,
+                    parseFilePath,  parseSigningKeyFile,
                     parseGenesisFile, command', parseFlag')
-import           Cardano.Config.Protocol (CardanoEra(..))
 
 import           Cardano.CLI.Byron.Commands
 import           Cardano.CLI.Byron.Genesis
@@ -125,7 +124,8 @@ parseDelegationRelatedValues =
         "Create a delegation certificate allowing the\
         \ delegator to sign blocks on behalf of the issuer"
         $ IssueDelegationCertificate
-        <$> (ConfigYamlFilePath <$> parseConfigFile)
+        <$> pNetworkId
+        <*> parseCardanoEra
         <*> ( EpochNumber
                 <$> parseIntegral
                       "since-epoch"
@@ -144,7 +144,7 @@ parseDelegationRelatedValues =
         "Verify that a given certificate constitutes a valid\
         \ delegation relationship between keys."
         $ CheckDelegation
-            <$> (ConfigYamlFilePath <$> parseConfigFile)
+            <$> pNetworkId
             <*> parseCertificateFile
                   "certificate"
                   "The certificate embodying delegation to verify."
@@ -231,7 +231,7 @@ parseKeyRelatedValues =
             "Print address of a signing key."
             $ PrintSigningKeyAddress
                 <$> parseCardanoEra
-                <*> parseNetwork
+                <*> pNetworkId
                 <*> parseSigningKeyFile
                       "secret"
                       "Signing key, whose address is to be printed."
@@ -249,7 +249,7 @@ parseLocalNodeQueryValues =
     mconcat
         [ command' "get-tip" "Get the tip of your local node's blockchain"
             $ GetLocalNodeTip
-                <$> parseNetwork
+                <$> pNetworkId
         ]
 
 parseMiscellaneous :: Mod CommandFields ByronCommand
@@ -315,13 +315,15 @@ parseTxRelatedValues =
         "submit-tx"
         "Submit a raw, signed transaction, in its on-wire representation."
         $ SubmitTx
-            <$> parseNetwork
+            <$> pNetworkId
             <*> parseTxFile "tx"
     , command'
         "issue-genesis-utxo-expenditure"
         "Write a file with a signed transaction, spending genesis UTxO."
         $ SpendGenesisUTxO
-            <$> (ConfigYamlFilePath <$> parseConfigFile)
+            <$> parseGenesisFile "genesis-json"
+            <*> pNetworkId
+            <*> parseCardanoEra
             <*> parseNewTxFile "tx"
             <*> parseSigningKeyFile
                   "wallet-key"
@@ -335,7 +337,8 @@ parseTxRelatedValues =
         "issue-utxo-expenditure"
         "Write a file with a signed transaction, spending normal UTxO."
         $ SpendUTxO
-            <$> (ConfigYamlFilePath <$> parseConfigFile)
+            <$> pNetworkId
+            <*> parseCardanoEra
             <*> parseNewTxFile "tx"
             <*> parseSigningKeyFile
                   "wallet-key"
@@ -346,6 +349,7 @@ parseTxRelatedValues =
 
 parseVerificationKeyFile :: String -> String -> Parser VerificationKeyFile
 parseVerificationKeyFile opt desc = VerificationKeyFile <$> parseFilePath opt desc
+
 pNodeCmd :: Parser NodeCmd
 pNodeCmd =
   Opt.subparser $
@@ -366,7 +370,7 @@ pNodeCmd =
 parseByronUpdateProposal :: Parser NodeCmd
 parseByronUpdateProposal = do
   UpdateProposal
-    <$> (ConfigYamlFilePath <$> parseConfigFile)
+    <$> pNetworkId
     <*> parseSigningKeyFile "signing-key" "Path to signing key."
     <*> parseProtocolVersion
     <*> parseSoftwareVersion
@@ -378,7 +382,7 @@ parseByronUpdateProposal = do
 parseByronVoteSubmission :: Parser NodeCmd
 parseByronVoteSubmission = do
   SubmitVote
-    <$> parseNetwork
+    <$> pNetworkId
     <*> parseFilePath "filepath" "Filepath of Byron update proposal vote."
 
 parseParametersToUpdate :: Parser [ParametersToUpdate]
@@ -404,14 +408,14 @@ parseParametersToUpdate =
 parseByronUpdateProposalSubmission :: Parser NodeCmd
 parseByronUpdateProposalSubmission =
   SubmitUpdateProposal
-    <$> parseNetwork
+    <$> pNetworkId
     <*> parseFilePath "filepath" "Filepath of Byron update proposal."
 
 
 parseByronVote :: Parser NodeCmd
 parseByronVote =
   CreateVote
-    <$> (ConfigYamlFilePath <$> parseConfigFile)
+    <$> pNetworkId
     <*> (SigningKeyFile <$> parseFilePath "signing-key" "Filepath of signing key.")
     <*> parseFilePath "proposal-filepath" "Filepath of Byron update proposal."
     <*> parseVoteBool
@@ -589,7 +593,7 @@ parseWord optname desc metvar = option (fromInteger <$> auto)
 
 parseAddress :: String -> String -> Parser Address
 parseAddress opt desc =
-  option (cliParseBase58Address <$> auto)
+  option (cliParseBase58Address <$> str)
     $ long opt <> metavar "ADDR" <> help desc
 
 parseCardanoEra :: Parser CardanoEra
@@ -602,15 +606,8 @@ parseCardanoEra = asum
         long "byron-formats"
      <> help "Byron era formats and compatibility"
 
-  , flag' ShelleyEra $
-        long "shelley-formats"
-     <> help "Shelley-era formats and compatibility"
-
-    -- And various hidden compatibility flag aliases:
+    -- And hidden compatibility flag aliases:
   , flag' ByronEraLegacy $ hidden <> long "byron-legacy"
-  , flag' ShelleyEra     $ hidden <> long "bft"
-  , flag' ShelleyEra     $ hidden <> long "praos"
-  , flag' ShelleyEra     $ hidden <> long "mock-pbft"
   , flag' ByronEra       $ hidden <> long "real-pbft"
   ]
 
@@ -644,24 +641,24 @@ parseFractionWithDefault optname desc w =
                 <> value w
                 )
 
-parseNetwork :: Parser Network
-parseNetwork =
-  parseMainnet <|> fmap Testnet parseTestnetMagic
+pNetworkId :: Parser Typed.NetworkId
+pNetworkId =
+  pMainnet' <|> fmap Typed.Testnet pTestnetMagic
+ where
+   pMainnet' :: Parser Typed.NetworkId
+   pMainnet' =
+    Opt.flag' Typed.Mainnet
+      (  Opt.long "mainnet"
+      <> Opt.help "Use the mainnet magic id."
+      )
 
-parseMainnet :: Parser Network
-parseMainnet =
-  Opt.flag' Mainnet
-    (  Opt.long "mainnet"
-    <> Opt.help "Use the mainnet magic id."
-    )
-
-parseTestnetMagic :: Parser NetworkMagic
-parseTestnetMagic =
-  NetworkMagic <$>
+pTestnetMagic :: Parser Typed.NetworkMagic
+pTestnetMagic =
+  Typed.NetworkMagic <$>
     Opt.option Opt.auto
       (  Opt.long "testnet-magic"
-      <> Opt.metavar "INT"
-      <> Opt.help "The testnet network magic number"
+      <> Opt.metavar "NATURAL"
+      <> Opt.help "Specify a testnet magic id."
       )
 
 parseNewCertificateFile :: String -> Parser NewCertificateFile

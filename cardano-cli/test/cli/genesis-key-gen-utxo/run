@@ -17,7 +17,7 @@ ${CARDANO_CLI} shelley genesis key-gen-utxo \
 assert_file_exists "${TEST_DIR}/utxo.vkey"
 assert_file_exists "${TEST_DIR}/utxo.skey"
 
-assert_string 'Genesis UTxO verification key' "${TEST_DIR}/utxo.vkey"
-assert_string 'Genesis UTxO signing key' "${TEST_DIR}/utxo.skey"
+assert_string 'GenesisUTxOVerificationKey_ed25519' "${TEST_DIR}/utxo.vkey"
+assert_string 'GenesisUTxOSigningKey_ed25519' "${TEST_DIR}/utxo.skey"
 
 report_result ${error}

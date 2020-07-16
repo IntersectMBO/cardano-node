@@ -16,8 +16,7 @@ import           Cardano.Chain.Update
                    (InstallerHash(..), ProtocolVersion(..), SoftwareVersion(..),
                     SystemTag(..))
 
-import           Cardano.Api (Network)
-import           Cardano.Config.Protocol (CardanoEra(..))
+import           Cardano.Api.Typed (NetworkId)
 import           Cardano.Config.Types
 
 import           Cardano.CLI.Byron.UpdateProposal
@@ -68,13 +67,14 @@ data ByronCommand =
 
   | PrintSigningKeyAddress
         CardanoEra
-        Network
+        NetworkId
         SigningKeyFile
 
     --- Delegation Related Commands ---
 
   | IssueDelegationCertificate
-        ConfigYamlFilePath
+        NetworkId
+        CardanoEra
         EpochNumber
         -- ^ The epoch from which the delegation is valid.
         SigningKeyFile
@@ -84,23 +84,25 @@ data ByronCommand =
         NewCertificateFile
         -- ^ Filepath of the newly created delegation certificate.
   | CheckDelegation
-        ConfigYamlFilePath
+        NetworkId
         CertificateFile
         VerificationKeyFile
         VerificationKeyFile
 
   | GetLocalNodeTip
-        Network
+        NetworkId
 
     -----------------------------------
 
   | SubmitTx
-        Network
+        NetworkId
         TxFile
         -- ^ Filepath of transaction to submit.
 
   | SpendGenesisUTxO
-        ConfigYamlFilePath
+        GenesisFile
+        NetworkId
+        CardanoEra
         NewTxFile
         -- ^ Filepath of the newly created transaction.
         SigningKeyFile
@@ -110,7 +112,8 @@ data ByronCommand =
         (NonEmpty TxOut)
         -- ^ Tx output.
   | SpendUTxO
-        ConfigYamlFilePath
+        NetworkId
+        CardanoEra
         NewTxFile
         -- ^ Filepath of the newly created transaction.
         SigningKeyFile
@@ -133,13 +136,13 @@ data ByronCommand =
 
 
 data NodeCmd = CreateVote
-               ConfigYamlFilePath
+               NetworkId
                SigningKeyFile
                FilePath -- filepath to update proposal
                Bool
                FilePath
              | UpdateProposal
-               ConfigYamlFilePath
+               NetworkId
                SigningKeyFile
                ProtocolVersion
                SoftwareVersion
@@ -148,11 +151,11 @@ data NodeCmd = CreateVote
                FilePath
                [ParametersToUpdate]
              | SubmitUpdateProposal
-               Network
+               NetworkId
                FilePath
                -- ^ Update proposal filepath.
              | SubmitVote
-               Network
+               NetworkId
                FilePath
                -- ^ Vote filepath.
               deriving Show

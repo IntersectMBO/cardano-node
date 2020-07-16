@@ -38,6 +38,7 @@ let
       dbPrefix = "db-${envConfig.name}";
       extraArgs = [];
       profiling = "none";
+      asserts = false;
       rtsArgs = [];
     } // (builtins.removeAttrs envConfig ["nodeConfig"]);
 
@@ -81,11 +82,12 @@ let
         extraArgs
         rtsArgs
         profiling
+        asserts
         ;
       runtimeDir = null;
       environment = envConfig.name;
       topology = topologyFile;
-      nodeConfigFile = "${__toFile "config-${toString config.nodeId}.json" (__toJSON (svcLib.mkNodeConfig config config.nodeId))}";
+      nodeConfigFile = "${__toFile "config-${toString config.nodeId}.json" (__toJSON envConfig.nodeConfig)}";
     };
     nodeConf = { config.services.cardano-node = serviceConfig; };
     nodeScript = (modules.evalModules {

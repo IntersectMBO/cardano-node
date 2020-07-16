@@ -9,6 +9,13 @@
 GenesisFile: genesis.json
 SocketPath: db/node.socket
 
+##### Blockfetch Protocol
+
+# The maximum number of used peers during bulk sync.
+MaxConcurrencyBulkSync: 1
+# The maximum number of used peers when fetching newly forged blocks.
+MaxConcurrencyDeadline: 2
+
 #TODO: These parameters cannot yet be used in the config file, only on the CLI:
 #DatabasePath: db/
 #Topology: configuration/mainnet-topology.json

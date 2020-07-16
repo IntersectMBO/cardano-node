@@ -5,79 +5,44 @@ module Cardano.CLI.Shelley.Run.Node
   ) where
 
 import           Cardano.Prelude
+import           Prelude (id)
 
 import           Control.Monad.Trans.Except (ExceptT)
-import           Control.Monad.Trans.Except.Extra (firstExceptT)
+import           Control.Monad.Trans.Except.Extra (firstExceptT, hoistEither, newExceptT)
 
-import           Cardano.Config.Shelley.ColdKeys hiding (writeSigningKey)
-import           Cardano.Config.Shelley.KES
-import           Cardano.Config.Shelley.OCert
-import           Cardano.Config.Shelley.VRF
+import qualified Data.ByteString.Char8 as BS
+import qualified Data.Text as Text
 
-import           Cardano.Config.Shelley.ColdKeys (KeyError)
-import           Cardano.Config.TextView (textShow)
+import           Cardano.Api.Typed
+
+import           Cardano.Api.TextView (TextViewDescription (..))
 import           Cardano.Config.Types (SigningKeyFile(..))
 
 import           Cardano.CLI.Shelley.Commands
-import           Cardano.CLI.Shelley.KeyGen
 
 
 data ShelleyNodeCmdError
-  = ShelleyNodeReadStakePoolSignKeyError !FilePath !KeyError
-  | ShelleyNodeWriteOpCertIssueCounterError !FilePath !OperationalCertError
-  | ShelleyNodeWriteOperationalCertError !FilePath !OperationalCertError
-  | ShelleyNodeReadKESVerKeyError !FilePath !KESError
-  | ShelleyNodeWriteKESVerKeyError !FilePath !KESError
-  | ShelleyNodeWriteKESSignKeyError !FilePath !KESError
-  | ShelleyNodeWriteVRFSignKeyError !FilePath !VRFError
-  | ShelleyNodeWriteVRFVerKeyError !FilePath !VRFError
-  | ShelleyNodeReadOperationalCertCounterError !FilePath !OperationalCertError
-  | ShelleyNodeOperatorKeyGenError !VerificationKeyFile !SigningKeyFile !ShelleyKeyGenError
-  -- TODO: Create a module for the shelley update proposal stuff and
-  -- create a custom error type there i.e ShelleyUpdateProposalError
+  = ShelleyNodeReadFileError !(FileError TextEnvelopeError)
+  | ShelleyNodeWriteFileError !(FileError ())
+  | ShelleyNodeOperationalCertificateIssueError !OperationalCertIssueError
   deriving Show
 
 renderShelleyNodeCmdError :: ShelleyNodeCmdError -> Text
 renderShelleyNodeCmdError err =
   case err of
-    ShelleyNodeOperatorKeyGenError (VerificationKeyFile vkFp) (SigningKeyFile skFp) shellKeyGenErr ->
-      "Error generating the operator key pair at: "
-        <> textShow vkFp
-        <> " "
-        <> textShow skFp
-        <> " Error: " <> renderShelleyKeyGenError shellKeyGenErr
-    ShelleyNodeReadOperationalCertCounterError fp opCertErr ->
-      "Error reading the operational certificate issue counter at: " <> textShow fp <> " Error: " <> renderOperationalCertError opCertErr
+    ShelleyNodeReadFileError fileErr -> Text.pack (displayError fileErr)
 
-    ShelleyNodeReadStakePoolSignKeyError fp keyErr ->
-      "Error reading the stake pool operator signing key at: " <> textShow fp <> " Error: " <> renderKeyError keyErr
+    ShelleyNodeWriteFileError fileErr -> Text.pack (displayError fileErr)
 
-    ShelleyNodeReadKESVerKeyError fp kesErr ->
-      "Error reading the KES verification key at: " <> textShow fp <> " Error: " <> renderKESError kesErr
-
-    ShelleyNodeWriteOpCertIssueCounterError fp opCertErr ->
-      "Error writing the operational certificate issue counter at: " <> textShow fp <> " Error: " <> renderOperationalCertError opCertErr
-
-    ShelleyNodeWriteOperationalCertError fp opCertErr ->
-      "Error writing the operational certificate at: " <> textShow fp <> " Error: " <> renderOperationalCertError opCertErr
-
-    ShelleyNodeWriteKESVerKeyError fp kesErr ->
-      "Error writing the KES verification key at: " <> textShow fp <> " Error: " <> renderKESError kesErr
-
-    ShelleyNodeWriteKESSignKeyError fp kesErr ->
-      "Error writing the KES signing key at: " <> textShow fp <> " Error: " <> renderKESError kesErr
-
-    ShelleyNodeWriteVRFVerKeyError fp vrfErr ->
-      "Error writing the VRF verification key at: " <> textShow fp <> " Error: " <> renderVRFError vrfErr
-
-    ShelleyNodeWriteVRFSignKeyError fp vrfErr ->
-      "Error writing the VRF signing key at: " <> textShow fp <> " Error: " <> renderVRFError vrfErr
+    ShelleyNodeOperationalCertificateIssueError issueErr ->
+      Text.pack (displayError issueErr)
 
 
 runNodeCmd :: NodeCmd -> ExceptT ShelleyNodeCmdError IO ()
 runNodeCmd (NodeKeyGenCold vk sk ctr) = runNodeKeyGenCold vk sk ctr
 runNodeCmd (NodeKeyGenKES  vk sk)     = runNodeKeyGenKES  vk sk
 runNodeCmd (NodeKeyGenVRF  vk sk)     = runNodeKeyGenVRF  vk sk
+runNodeCmd (NodeKeyHashVRF vk mOutFp) = runNodeKeyHashVRF vk mOutFp
 runNodeCmd (NodeIssueOpCert vk sk ctr p out) =
   runNodeIssueOpCert vk sk ctr p out
 
@@ -91,12 +56,27 @@ runNodeKeyGenCold :: VerificationKeyFile
                   -> SigningKeyFile
                   -> OpCertCounterFile
                   -> ExceptT ShelleyNodeCmdError IO ()
-runNodeKeyGenCold vkFile skFile (OpCertCounterFile ocertCtrPath) = do
-    firstExceptT (ShelleyNodeOperatorKeyGenError vkFile skFile) $
-      runColdKeyGen (OperatorKey StakePoolOperatorKey) vkFile skFile
-    firstExceptT (ShelleyNodeWriteOpCertIssueCounterError ocertCtrPath) $
-      writeOperationalCertIssueCounter ocertCtrPath initialCounter
+runNodeKeyGenCold (VerificationKeyFile vkeyPath) (SigningKeyFile skeyPath)
+                  (OpCertCounterFile ocertCtrPath) = do
+    skey <- liftIO $ generateSigningKey AsStakePoolKey
+    let vkey = getVerificationKey skey
+    firstExceptT ShelleyNodeWriteFileError
+      . newExceptT
+      $ writeFileTextEnvelope skeyPath (Just skeyDesc) skey
+    firstExceptT ShelleyNodeWriteFileError
+      . newExceptT
+      $ writeFileTextEnvelope vkeyPath (Just vkeyDesc) vkey
+    firstExceptT ShelleyNodeWriteFileError
+      . newExceptT
+      $ writeFileTextEnvelope ocertCtrPath (Just ocertCtrDesc)
+      $ OperationalCertificateIssueCounter initialCounter vkey
   where
+    skeyDesc, vkeyDesc, ocertCtrDesc :: TextViewDescription
+    skeyDesc = TextViewDescription "Stake Pool Operator Signing Key"
+    vkeyDesc = TextViewDescription "Stake Pool Operator Verification Key"
+    ocertCtrDesc = TextViewDescription $ "Next certificate issue number: " <> BS.pack (show initialCounter)
+
+    initialCounter :: Word64
     initialCounter = 0
 
 
@@ -104,19 +84,48 @@ runNodeKeyGenKES :: VerificationKeyFile
                  -> SigningKeyFile
                  -> ExceptT ShelleyNodeCmdError IO ()
 runNodeKeyGenKES (VerificationKeyFile vkeyPath) (SigningKeyFile skeyPath) = do
-  (vkey, skey) <- liftIO $ genKESKeyPair
-  firstExceptT (ShelleyNodeWriteKESVerKeyError vkeyPath) $ writeKESVerKey vkeyPath vkey
-  firstExceptT (ShelleyNodeWriteKESSignKeyError skeyPath) $ writeKESSigningKey skeyPath skey
+    skey <- liftIO $ generateSigningKey AsKesKey
+    let vkey = getVerificationKey skey
+    firstExceptT ShelleyNodeWriteFileError
+      . newExceptT
+      $ writeFileTextEnvelope skeyPath (Just skeyDesc) skey
+    firstExceptT ShelleyNodeWriteFileError
+      . newExceptT
+      $ writeFileTextEnvelope vkeyPath (Just vkeyDesc) vkey
+  where
+    skeyDesc, vkeyDesc :: TextViewDescription
+    skeyDesc = TextViewDescription "KES Signing Key"
+    vkeyDesc = TextViewDescription "KES Verification Key"
 
 
 runNodeKeyGenVRF :: VerificationKeyFile -> SigningKeyFile
                  -> ExceptT ShelleyNodeCmdError IO ()
 runNodeKeyGenVRF (VerificationKeyFile vkeyPath) (SigningKeyFile skeyPath) = do
-      --FIXME: genVRFKeyPair genKESKeyPair results are in an inconsistent order
-      (skey, vkey) <- liftIO genVRFKeyPair
-      firstExceptT (ShelleyNodeWriteVRFVerKeyError vkeyPath) $ writeVRFVerKey vkeyPath vkey
-      firstExceptT (ShelleyNodeWriteVRFSignKeyError skeyPath) $ writeVRFSigningKey skeyPath skey
+    skey <- liftIO $ generateSigningKey AsVrfKey
+    let vkey = getVerificationKey skey
+    firstExceptT ShelleyNodeWriteFileError
+      . newExceptT
+      $ writeFileTextEnvelope skeyPath (Just skeyDesc) skey
+    firstExceptT ShelleyNodeWriteFileError
+      . newExceptT
+      $ writeFileTextEnvelope vkeyPath (Just vkeyDesc) vkey
+  where
+    skeyDesc, vkeyDesc :: TextViewDescription
+    skeyDesc = TextViewDescription "VRF Signing Key"
+    vkeyDesc = TextViewDescription "VRF Verification Key"
 
+runNodeKeyHashVRF :: VerificationKeyFile -> Maybe OutputFile
+                  -> ExceptT ShelleyNodeCmdError IO ()
+runNodeKeyHashVRF (VerificationKeyFile vkeyPath) mOutputFp = do
+  vkey <- firstExceptT ShelleyNodeReadFileError
+    . newExceptT
+    $ readFileTextEnvelope (AsVerificationKey AsVrfKey) vkeyPath
+
+  let hexKeyHash = serialiseToRawBytesHex (verificationKeyHash vkey)
+
+  case mOutputFp of
+    Just (OutputFile fpath) -> liftIO $ BS.writeFile fpath hexKeyHash
+    Nothing -> liftIO $ BS.putStrLn hexKeyHash
 
 runNodeIssueOpCert :: VerificationKeyFile
                    -- ^ This is the hot KES verification key.
@@ -129,27 +138,54 @@ runNodeIssueOpCert :: VerificationKeyFile
                    -- ^ Start of the validity period for this certificate.
                    -> OutputFile
                    -> ExceptT ShelleyNodeCmdError IO ()
-runNodeIssueOpCert (VerificationKeyFile vkeyKESPath)
-                   (SigningKeyFile skeyPath)
+runNodeIssueOpCert (VerificationKeyFile vkeyKesPath)
+                   (SigningKeyFile skeyStakePoolPath)
                    (OpCertCounterFile ocertCtrPath)
                    kesPeriod
                    (OutputFile certFile) = do
-    issueNumber <- firstExceptT (ShelleyNodeReadOperationalCertCounterError ocertCtrPath) $
-      readOperationalCertIssueCounter ocertCtrPath
 
-    verKeyKes <- firstExceptT (ShelleyNodeReadKESVerKeyError vkeyKESPath) $
-      readKESVerKey vkeyKESPath
+    ocertIssueCounter <- firstExceptT ShelleyNodeReadFileError
+      . newExceptT
+      $ readFileTextEnvelope AsOperationalCertificateIssueCounter ocertCtrPath
 
-    signKey <- firstExceptT (ShelleyNodeReadStakePoolSignKeyError skeyPath) $
-      readSigningKey (OperatorKey StakePoolOperatorKey) skeyPath
+    verKeyKes <- firstExceptT ShelleyNodeReadFileError
+      . newExceptT
+      $ readFileTextEnvelope (AsVerificationKey AsKesKey) vkeyKesPath
 
-    let cert = signOperationalCertificate
-                 verKeyKes signKey
-                 issueNumber kesPeriod
-        vkey = deriveVerKey signKey
+    signKey <- firstExceptT ShelleyNodeReadFileError
+      . newExceptT
+      $ readFileTextEnvelopeAnyOf possibleBlockIssuers skeyStakePoolPath
 
-    firstExceptT (ShelleyNodeWriteOpCertIssueCounterError ocertCtrPath) $
-      -- Write the counter first, to reduce the chance of ending up with
-      -- a new cert but without updating the counter.
-      writeOperationalCertIssueCounter ocertCtrPath (succ issueNumber)
-    firstExceptT (ShelleyNodeWriteOperationalCertError certFile) $ writeOperationalCert certFile cert vkey
+    (ocert, nextOcertCtr) <-
+      firstExceptT ShelleyNodeOperationalCertificateIssueError
+        . hoistEither
+        $ issueOperationalCertificate
+            verKeyKes
+            signKey
+            kesPeriod
+            ocertIssueCounter
+
+    -- Write the counter first, to reduce the chance of ending up with
+    -- a new cert but without updating the counter.
+    firstExceptT ShelleyNodeWriteFileError
+      . newExceptT
+      $ writeFileTextEnvelope
+        ocertCtrPath
+        (Just $ ocertCtrDesc $ getCounter nextOcertCtr)
+        nextOcertCtr
+
+    firstExceptT ShelleyNodeWriteFileError
+      . newExceptT
+      $ writeFileTextEnvelope certFile Nothing ocert
+  where
+    getCounter :: OperationalCertificateIssueCounter -> Word64
+    getCounter (OperationalCertificateIssueCounter n _) = n
+
+    ocertCtrDesc :: Word64 -> TextViewDescription
+    ocertCtrDesc n = TextViewDescription $ "Next certificate issue number: " <> BS.pack (show n)
+
+    possibleBlockIssuers :: [FromSomeType HasTextEnvelope (SigningKey StakePoolKey)]
+    possibleBlockIssuers =
+      [ FromSomeType (AsSigningKey AsStakePoolKey)       id
+      , FromSomeType (AsSigningKey AsGenesisDelegateKey) castSigningKey
+      ]

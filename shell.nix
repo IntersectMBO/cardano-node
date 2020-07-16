@@ -44,12 +44,19 @@ let
     inherit withHoogle;
   };
 
-  devops = pkgs.stdenv.mkDerivation {
+  devops = let
+    cluster = mkCluster customConfig;
+  in
+    stdenv.mkDerivation {
     name = "devops-shell";
     buildInputs = [
       niv
-      cardanoNodeHaskellPackages.cardano-cli.components.exes.cardano-cli
-      cardanoNodeHaskellPackages.cardano-node.components.exes.cardano-node
+      cardano-cli
+      bech32
+      cardano-node
+      python3Packages.supervisor
+      cluster.start
+      cluster.stop
     ];
     shellHook = ''
       echo "DevOps Tools" \
@@ -59,6 +66,9 @@ let
       source <(cardano-cli --bash-completion-script cardano-cli)
       source <(cardano-node --bash-completion-script cardano-node)
 
+      # Socket path default to first BFT node launched by "start-cluster":
+      export CARDANO_NODE_SOCKET_PATH=$PWD/${cluster.baseEnvConfig.stateDir}/bft1.socket
+      # Unless using specific network:
       ${lib.optionalString (__hasAttr "network" customConfig) ''
         export CARDANO_NODE_SOCKET_PATH="$PWD/state-node-${customConfig.network}/node.socket"
         ${lib.optionalString (__hasAttr "utxo" pkgs.commonLib.cardanoLib.environments.${customConfig.network}) ''
@@ -74,6 +84,8 @@ let
       echo "Commands:
         * niv update <package> - update package
         * cardano-cli - used for key generation and other operations tasks
+        * start-cluster - start a local development cluster
+        * stop-cluster - stop a local development cluster
 
       "
     '';

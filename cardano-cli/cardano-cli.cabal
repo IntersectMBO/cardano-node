@@ -1,5 +1,5 @@
 name:                  cardano-cli
-version:               1.12.0
+version:               1.15.1
 description:           The Cardano command-line interface.
 author:                IOHK
 maintainer:            operations@iohk.io
@@ -42,7 +42,7 @@ library
                        Cardano.CLI.Byron.Vote
 
                        Cardano.CLI.Shelley.Commands
-                       Cardano.CLI.Shelley.KeyGen
+                       Cardano.CLI.Shelley.Orphans
                        Cardano.CLI.Shelley.Parsers
                        Cardano.CLI.Shelley.Run
                        Cardano.CLI.Shelley.Run.Address
@@ -61,6 +61,8 @@ library
   build-depends:       base >=4.12 && <5
                      , aeson
                      , aeson-pretty
+                     , attoparsec
+                     , bech32 >= 1.1.0
                      , bytestring
                      , base16-bytestring
                      , base58-bytestring
@@ -82,22 +84,27 @@ library
                      , formatting
                      , io-sim-classes
                      , iproute
-                     , lens
                      , memory
+                     , microlens
+                     , network
                      , network-mux
+                     , network-uri
                      , optparse-applicative
                      , ouroboros-consensus
                      , ouroboros-consensus-byron
                      , ouroboros-consensus-cardano
                      , ouroboros-consensus-shelley
                      , ouroboros-network
+                     , scientific
                      , shelley-spec-ledger
+                     , small-steps
                      , text
                      , time
                      , transformers
                      , transformers-except
                      , ouroboros-network-framework
                      , utf8-string
+                     , unordered-containers
                      , vector
 
   default-language:    Haskell2010
@@ -169,16 +176,56 @@ test-suite cardano-cli-pioneers
   type:                 exitcode-stdio-1.0
 
   build-depends:        base
+                      , aeson
+                      , bech32 >= 1.1.0
+                      , bytestring
+                      , cardano-api
                       , cardano-cli
                       , cardano-prelude
+                      , containers
+                      , deepseq
                       , directory
                       , hedgehog
+                      , lifted-base
                       , optparse-applicative
+                      , process
+                      , temporary
                       , text
+                      , time
                       , transformers-except
+                      , unordered-containers
 
-  other-modules:        Test.OptParse
+  other-modules:        Test.CLI.Byron.Golden.TextEnvelope.PaymentKeys
+                        Test.CLI.Byron.Golden.TextEnvelope.Tx
+                        Test.CLI.Byron.Golden.TextEnvelope.TxBody
+                        Test.CLI.Byron.Golden.TextEnvelope.Witness
+                        Test.CLI.Shelley.Golden.Address.Build
+                        Test.CLI.Shelley.Golden.Address.Info
+                        Test.CLI.Shelley.Golden.Address.KeyGen
+                        Test.CLI.Shelley.Golden.Genesis.Create
+                        Test.CLI.Shelley.Golden.Metadata.StakePoolMetadata
+                        Test.CLI.Shelley.Golden.TextEnvelope.Certificates.MIRCertificate
+                        Test.CLI.Shelley.Golden.TextEnvelope.Certificates.OperationalCertificate
+                        Test.CLI.Shelley.Golden.TextEnvelope.Certificates.StakeAddressCertificates
+                        Test.CLI.Shelley.Golden.TextEnvelope.Certificates.StakePoolCertificates
+                        Test.CLI.Shelley.Golden.TextEnvelope.Keys.ExtendedPaymentKeys
+                        Test.CLI.Shelley.Golden.TextEnvelope.Keys.GenesisDelegateKeys
+                        Test.CLI.Shelley.Golden.TextEnvelope.Keys.GenesisKeys
+                        Test.CLI.Shelley.Golden.TextEnvelope.Keys.GenesisUTxOKeys
+                        Test.CLI.Shelley.Golden.TextEnvelope.Keys.KESKeys
+                        Test.CLI.Shelley.Golden.TextEnvelope.Keys.PaymentKeys
+                        Test.CLI.Shelley.Golden.TextEnvelope.Keys.StakeKeys
+                        Test.CLI.Shelley.Golden.TextEnvelope.Keys.VRFKeys
+                        Test.CLI.Shelley.Golden.TextEnvelope.Tx.Tx
+                        Test.CLI.Shelley.Golden.TextEnvelope.Tx.TxBody
+                        Test.CLI.Shelley.Golden.TextEnvelope.Tx.Witness
+                        Test.CLI.Shelley.Tests
+                        Test.ITN
+                        Test.OptParse
                         Test.Pioneers.Exercise1
+                        Test.Pioneers.Exercise2
+                        Test.Pioneers.Exercise3
+                        Test.Pioneers.Exercise4
 
   default-language:     Haskell2010
   default-extensions:   NoImplicitPrelude

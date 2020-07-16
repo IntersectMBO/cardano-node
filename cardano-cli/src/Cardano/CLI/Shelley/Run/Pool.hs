@@ -1,3 +1,5 @@
+{-# LANGUAGE NamedFieldPuns #-}
+
 module Cardano.CLI.Shelley.Run.Pool
   ( ShelleyPoolCmdError
   , renderShelleyPoolCmdError
@@ -6,62 +8,48 @@ module Cardano.CLI.Shelley.Run.Pool
 
 import           Cardano.Prelude
 
-import qualified Data.Set as Set
+import qualified Data.Text as Text
 
 import           Control.Monad.Trans.Except (ExceptT)
-import           Control.Monad.Trans.Except.Extra (firstExceptT, newExceptT)
+import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistEither,
+                   newExceptT)
 
 import qualified Data.ByteString.Char8 as BS
 
-import           Cardano.Api (ApiError(..), ShelleyCoin, ShelleyStakePoolMargin,
-                   ShelleyStakePoolRelay, StakingVerificationKey (..),
-                   ShelleyVerificationKeyHashStakePool,
-                   Network, toShelleyNetwork,
-                   mkShelleyStakingCredential, readStakingVerificationKey,
-                   renderApiError, shelleyRegisterStakePool,
-                   shelleyRetireStakePool, textShow, writeCertificate)
+import           Cardano.Api.Typed
+import           Cardano.Api.TextView (TextViewDescription (..), textShow)
 
-import qualified Shelley.Spec.Ledger.Address as Shelley
-import           Shelley.Spec.Ledger.Keys (KeyHash (..), hashKey, hashVerKeyVRF)
 import qualified Shelley.Spec.Ledger.Slot as Shelley
-
-import           Cardano.Config.Shelley.ColdKeys
-import           Cardano.Config.Shelley.VRF
 
 import           Cardano.CLI.Shelley.Commands
 
-import qualified Cardano.Crypto.Hash.Class as Crypto
 
 data ShelleyPoolCmdError
-  = ShelleyPoolReadStakeVerKeyError !FilePath !ApiError
-  | ShelleyPoolReadStakePoolVerKeyError !FilePath !KeyError
-  | ShelleyPoolReadVRFVerKeyError !FilePath !VRFError
-  | ShelleyPoolWriteRegistrationCertError !FilePath !ApiError
-  | ShelleyPoolWriteRetirementCertError !FilePath !ApiError
+  = ShelleyPoolReadFileError !(FileError TextEnvelopeError)
+  | ShelleyPoolWriteFileError !(FileError ())
+  | ShelleyPoolWriteMetaDataHashError !FilePath !IOException
+  | ShelleyPoolMetaDataValidationError !StakePoolMetadataValidationError
   deriving Show
 
 renderShelleyPoolCmdError :: ShelleyPoolCmdError -> Text
 renderShelleyPoolCmdError err =
   case err of
-    ShelleyPoolReadVRFVerKeyError fp vrfErr ->
-      "Error reading VRF verification key at: " <> textShow fp <> " Error: " <> renderVRFError vrfErr
-    ShelleyPoolReadStakePoolVerKeyError fp keyErr ->
-      "Error reading stake pool verification key at: " <> textShow fp <> " Error: " <> renderKeyError keyErr
-    ShelleyPoolReadStakeVerKeyError fp apiErr ->
-      "Error reading stake verification key at: " <> textShow fp <> " Error: " <> renderApiError apiErr
-    ShelleyPoolWriteRegistrationCertError fp apiErr ->
-      "Error writing stake pool registration certificate at: " <> textShow fp <> " Error: " <> renderApiError apiErr
-    ShelleyPoolWriteRetirementCertError fp apiErr ->
-      "Error writing stake pool retirement certificate at: " <> textShow fp <> " Error: " <> renderApiError apiErr
+    ShelleyPoolReadFileError fileErr -> Text.pack (displayError fileErr)
+    ShelleyPoolWriteFileError fileErr -> Text.pack (displayError fileErr)
+    ShelleyPoolWriteMetaDataHashError fp ioException ->
+      "Error writing stake pool metadata hash at: " <> textShow fp <> " Error: " <> textShow ioException
+    ShelleyPoolMetaDataValidationError validationErr ->
+      "Error validating stake pool metadata: " <> Text.pack (displayError validationErr)
 
 
 
 runPoolCmd :: PoolCmd -> ExceptT ShelleyPoolCmdError IO ()
-runPoolCmd (PoolRegistrationCert sPvkey vrfVkey pldg pCost pMrgn rwdVerFp ownerVerFps relays network outfp) =
-  runStakePoolRegistrationCert sPvkey vrfVkey pldg pCost pMrgn rwdVerFp ownerVerFps relays network outfp
+runPoolCmd (PoolRegistrationCert sPvkey vrfVkey pldg pCost pMrgn rwdVerFp ownerVerFps relays mbMetadata network outfp) =
+  runStakePoolRegistrationCert sPvkey vrfVkey pldg pCost pMrgn rwdVerFp ownerVerFps relays mbMetadata network outfp
 runPoolCmd (PoolRetirementCert sPvkeyFp retireEpoch outfp) =
   runStakePoolRetirementCert sPvkeyFp retireEpoch outfp
 runPoolCmd (PoolGetId sPvkey) = runPoolId sPvkey
+runPoolCmd (PoolMetaDataHash poolMdFile mOutFile) = runPoolMetaDataHash poolMdFile mOutFile
 runPoolCmd cmd = liftIO $ putStrLn $ "runPoolCmd: " ++ show cmd
 
 
@@ -77,19 +65,21 @@ runStakePoolRegistrationCert
   -- ^ Stake pool verification key.
   -> VerificationKeyFile
   -- ^ VRF Verification key.
-  -> ShelleyCoin
+  -> Lovelace
   -- ^ Pool pledge.
-  -> ShelleyCoin
+  -> Lovelace
   -- ^ Pool cost.
-  -> ShelleyStakePoolMargin
+  -> Rational
   -- ^ Pool margin.
   -> VerificationKeyFile
   -- ^ Stake verification key for reward account.
   -> [VerificationKeyFile]
   -- ^ Pool owner stake verification key(s).
-  -> [ShelleyStakePoolRelay]
+  -> [StakePoolRelay]
   -- ^ Stake pool relays.
-  -> Network
+  -> (Maybe StakePoolMetadataReference)
+  -- ^ Stake pool metadata.
+  -> NetworkId
   -> OutputFile
   -> ExceptT ShelleyPoolCmdError IO ()
 runStakePoolRegistrationCert
@@ -101,47 +91,60 @@ runStakePoolRegistrationCert
   (VerificationKeyFile rwdVerFp)
   ownerVerFps
   relays
+  mbMetadata
   network
   (OutputFile outfp) = do
     -- Pool verification key
-    stakePoolVerKey <- firstExceptT (ShelleyPoolReadStakePoolVerKeyError sPvkeyFp) $
-      readVerKey (OperatorKey StakePoolOperatorKey) sPvkeyFp
+    stakePoolVerKey <- firstExceptT ShelleyPoolReadFileError
+      . newExceptT
+      $ readFileTextEnvelope (AsVerificationKey AsStakePoolKey) sPvkeyFp
+    let stakePoolId = verificationKeyHash stakePoolVerKey
 
     -- VRF verification key
-    -- TODO: VRF key reading and writing has two versions and needs to be sorted out.
-    vrfVerKey <- firstExceptT (ShelleyPoolReadVRFVerKeyError vrfVkeyFp) $ readVRFVerKey vrfVkeyFp
+    vrfVerKey <- firstExceptT ShelleyPoolReadFileError
+      . newExceptT
+      $ readFileTextEnvelope (AsVerificationKey AsVrfKey) vrfVkeyFp
+    let vrfKeyHash = verificationKeyHash vrfVerKey
 
     -- Pool reward account
-    StakingVerificationKeyShelley rewardAcctVerKey <-
-      firstExceptT (ShelleyPoolReadStakeVerKeyError rwdVerFp)  . newExceptT $ readStakingVerificationKey rwdVerFp
-    let rewardAccount = Shelley.mkRwdAcnt (toShelleyNetwork network)
-                      . mkShelleyStakingCredential
-                      . hashKey
-                      $ rewardAcctVerKey
+    stakeVerKey <- firstExceptT ShelleyPoolReadFileError
+      . newExceptT
+      $ readFileTextEnvelope (AsVerificationKey AsStakeKey) rwdVerFp
+    let stakeCred = StakeCredentialByKey (verificationKeyHash stakeVerKey)
+        rewardAccountAddr = makeStakeAddress network stakeCred
 
     -- Pool owner(s)
     sPoolOwnerVkeys <-
       mapM
-        (\(VerificationKeyFile fp) -> do
-          StakingVerificationKeyShelley svk <-
-            firstExceptT (ShelleyPoolReadStakeVerKeyError fp) $ newExceptT $ readStakingVerificationKey fp
-          pure svk
+        (\(VerificationKeyFile fp) ->
+          firstExceptT ShelleyPoolReadFileError
+            . newExceptT
+            $ readFileTextEnvelope (AsVerificationKey AsStakeKey) fp
         )
         ownerVerFps
-    let stakePoolOwners = Set.fromList $ map hashKey sPoolOwnerVkeys
+    let stakePoolOwners = map verificationKeyHash sPoolOwnerVkeys
 
-    let registrationCert = shelleyRegisterStakePool
-                             (hashKey stakePoolVerKey)
-                             (hashVerKeyVRF vrfVerKey)
-                             pldg
-                             pCost
-                             pMrgn
-                             rewardAccount
-                             stakePoolOwners
-                             relays
-                             Nothing
+    let stakePoolParams =
+          StakePoolParameters
+            { stakePoolId = stakePoolId
+            , stakePoolVRF = vrfKeyHash
+            , stakePoolCost = pCost
+            , stakePoolMargin = pMrgn
+            , stakePoolRewardAccount = rewardAccountAddr
+            , stakePoolPledge = pldg
+            , stakePoolOwners = stakePoolOwners
+            , stakePoolRelays = relays
+            , stakePoolMetadata = mbMetadata
+            }
 
-    firstExceptT (ShelleyPoolWriteRegistrationCertError outfp) . newExceptT $ writeCertificate outfp registrationCert
+    let registrationCert = makeStakePoolRegistrationCertificate stakePoolParams
+
+    firstExceptT ShelleyPoolWriteFileError
+      . newExceptT
+      $ writeFileTextEnvelope outfp (Just registrationCertDesc) registrationCert
+  where
+    registrationCertDesc :: TextViewDescription
+    registrationCertDesc = TextViewDescription "Stake Pool Registration Certificate"
 
 runStakePoolRetirementCert
   :: VerificationKeyFile
@@ -150,16 +153,37 @@ runStakePoolRetirementCert
   -> ExceptT ShelleyPoolCmdError IO ()
 runStakePoolRetirementCert (VerificationKeyFile sPvkeyFp) retireEpoch (OutputFile outfp) = do
     -- Pool verification key
-    stakePoolVerKey <- firstExceptT (ShelleyPoolReadStakePoolVerKeyError sPvkeyFp) $
-      readVerKey (OperatorKey StakePoolOperatorKey) sPvkeyFp
+    stakePoolVerKey <- firstExceptT ShelleyPoolReadFileError
+      . newExceptT
+      $ readFileTextEnvelope (AsVerificationKey AsStakePoolKey) sPvkeyFp
 
-    let retireCert = shelleyRetireStakePool stakePoolVerKey retireEpoch
+    let stakePoolId = verificationKeyHash stakePoolVerKey
+        retireCert = makeStakePoolRetirementCertificate stakePoolId retireEpoch
 
-    firstExceptT (ShelleyPoolWriteRetirementCertError outfp) . newExceptT $ writeCertificate outfp retireCert
+    firstExceptT ShelleyPoolWriteFileError
+      . newExceptT
+      $ writeFileTextEnvelope outfp (Just retireCertDesc) retireCert
+  where
+    retireCertDesc :: TextViewDescription
+    retireCertDesc = TextViewDescription "Stake Pool Retirement Certificate"
 
 runPoolId :: VerificationKeyFile -> ExceptT ShelleyPoolCmdError IO ()
 runPoolId (VerificationKeyFile vkeyPath) = do
-    stakePoolVerKey <- firstExceptT (ShelleyPoolReadStakePoolVerKeyError vkeyPath) $
-                        readVerKey (OperatorKey StakePoolOperatorKey) vkeyPath
-    let KeyHash hash = hashKey stakePoolVerKey :: ShelleyVerificationKeyHashStakePool
-    liftIO $ BS.putStrLn $ Crypto.getHashBytesAsHex hash
+    stakePoolVerKey <- firstExceptT ShelleyPoolReadFileError
+      . newExceptT
+      $ readFileTextEnvelope (AsVerificationKey AsStakePoolKey) vkeyPath
+    liftIO $ BS.putStrLn $ serialiseToRawBytesHex (verificationKeyHash stakePoolVerKey)
+
+runPoolMetaDataHash :: PoolMetaDataFile -> Maybe OutputFile -> ExceptT ShelleyPoolCmdError IO ()
+runPoolMetaDataHash (PoolMetaDataFile poolMDPath) mOutFile = do
+  metaDataBytes <- handleIOExceptT (ShelleyPoolReadFileError . FileIOError poolMDPath) $
+    BS.readFile poolMDPath
+  (_metaData, metaDataHash) <-
+      firstExceptT ShelleyPoolMetaDataValidationError
+    . hoistEither
+    $ validateAndHashStakePoolMetadata metaDataBytes
+  case mOutFile of
+    Nothing -> liftIO $ BS.putStrLn (serialiseToRawBytesHex metaDataHash)
+    Just (OutputFile fpath) ->
+      handleIOExceptT (ShelleyPoolWriteMetaDataHashError fpath)
+        $ BS.writeFile fpath (serialiseToRawBytesHex metaDataHash)

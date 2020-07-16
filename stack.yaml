@@ -1,4 +1,4 @@
-resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/e0257be9d745a04f85ab8287a48a9c193acafec8/snapshot.yaml
+resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/316c854d1d3089f480708ad5cd5ecf8a74423ddd/snapshot.yaml
 compiler: ghc-8.6.5
 
 packages:
@@ -16,46 +16,50 @@ allow-newer: true
 extra-deps:
   - QuickCheck-2.12.6.1
   - quickcheck-instances-0.3.19
-  - hspec-2.7.0
-  - hspec-core-2.7.0
-  - hspec-discover-2.7.0
-  - text-1.2.4.0
   - base58-bytestring-0.1.0
-  # Waiting on Stackage release
-  - hedgehog-1.0.2
-  - hedgehog-corpus-0.2.0
-  - micro-recursion-schemes-5.0.2.2
-  - streaming-binary-0.3.0.1
-  - canonical-json-0.6.0.0
+  - base64-0.4.2
+  - bech32-1.0.2
   - brick-0.47
   - binary-0.8.7.0
   - bimap-0.4.0
+  - canonical-json-0.6.0.0
   - clock-0.8
   - config-ini-0.2.4.0
   - containers-0.5.11.0
   - data-clist-0.1.2.2
   - generic-monoid-0.1.0.0
+  - ghc-byteorder-4.11.0.0.10
   - gray-code-0.3.1
+  - hedgehog-1.0.2
+  - hedgehog-corpus-0.2.0
+  - hedgehog-quickcheck-0.1.1
+  - hspec-2.7.0
+  - hspec-core-2.7.0
+  - hspec-discover-2.7.0
   - io-streams-1.5.1.0
   - io-streams-haproxy-1.0.1.0
+  - micro-recursion-schemes-5.0.2.2
   - moo-1.2
   - network-3.1.1.1
   - quiet-0.2
   - snap-core-1.0.4.1
   - snap-server-1.1.1.1
   - statistics-linreg-0.3
-  - time-units-1.0.0
+  - streaming-binary-0.3.0.1
+  - systemd-2.3.0
   - tasty-hedgehog-1.0.0.2
-  - transformers-except-0.1.1
+  - text-1.2.4.0
+  - text-ansi-0.1.0
   - text-zipper-0.10.1
+  - th-lift-instances-0.1.14
+  - time-units-1.0.0
+  - transformers-except-0.1.1
   - Unique-0.4.7.6
   - word-wrap-0.4.1
   - websockets-0.12.6.1
-  - th-lift-instances-0.1.14
-  - systemd-2.3.0
 
   - git: https://github.com/input-output-hk/cardano-ledger-specs
-    commit: 37ea0bb59ff2cc7f6690240f8c4d55e15cd30f2c
+    commit: 550a70b9ff83c9e9ddbcb7f7b49ee93161bb29ed
     subdirs:
       # small-steps
       - semantics/executable-spec
@@ -75,24 +79,19 @@ extra-deps:
     commit: 2547ad1e80aeabca2899951601079408becbc92c
 
   - git: https://github.com/input-output-hk/cardano-prelude
-    commit: e0257be9d745a04f85ab8287a48a9c193acafec8
+    commit: 316c854d1d3089f480708ad5cd5ecf8a74423ddd
     subdirs:
       - .
       - test
 
   - git: https://github.com/input-output-hk/cardano-base
-    commit: 8061c5dd00f7aad134b18a4e6818879641f8589f
+    commit: 7d795c3040ea7785812efa1c97864bbb41b15d3e
     subdirs:
       - binary
       - binary/test
       - cardano-crypto-class
       - slotting
 
-    # Following deps are for cardano-shell
-  - git: https://github.com/input-output-hk/cardano-shell
-    commit: 601bb4324c258e3c8cbd2d532e5696fd09e2582e
-    subdirs:
-      - cardano-shell
 
     # Needed for `cardano-ledger-specs`
   - git: https://github.com/input-output-hk/goblins
@@ -100,7 +99,7 @@ extra-deps:
 
     # iohk-monitoring-framework currently not pinned to a release
   - git: https://github.com/input-output-hk/iohk-monitoring-framework
-    commit: 71df15f7b888d2671f619cc632080aaaaca48087
+    commit: efa4b5ecd7f0a13124616b12679cd42517cd905a
     subdirs:
       - contra-tracer
       - iohk-monitoring
@@ -123,7 +122,7 @@ extra-deps:
     #Ouroboros-network dependencies
 
   - git: https://github.com/input-output-hk/ouroboros-network
-    commit: 7fa7f8182d20290e6a4b22168a1f9f61317307cf
+    commit: 17d5199fd4415a0258c22982a099744adbfd2489
     subdirs:
         - io-sim
         - io-sim-classes

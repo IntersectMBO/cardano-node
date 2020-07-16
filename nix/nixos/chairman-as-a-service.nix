@@ -12,7 +12,7 @@ let
   envConfig = environments.${cfg.environment};
   mkChairmanConfig = nodeConfig: chairmanConfig: {
     inherit (nodeConfig) package genesisFile genesisHash genesisHashPath stateDir pbftThreshold;
-    inherit (chairmanConfig) timeout k slot-length node-ids nodeConfigFile nodeConfig;
+    inherit (chairmanConfig) timeout security-parameter slot-length testnet-magic node-ids nodeConfigFile nodeConfig;
   };
   mkScript = cfg:
     let runtimeDir = if ncfg.runtimeDir == null then ncfg.stateDir else "/run/${ncfg.runtimeDir}";
@@ -25,6 +25,9 @@ let
           (socketArgs)
           "--timeout ${toString cfg.timeout}"
           "--config ${cfg.nodeConfigFile}"
+          "--slot-length ${toString cfg.slot-length}"
+          "--security-parameter ${toString cfg.security-parameter}"
+          "--testnet-magic ${toString cfg.testnet-magic}"
         ];
     in ''
         GENESIS_HASH=${if (cfg.genesisHash == null) then "$(cat ${cfg.genesisHashPath})" else cfg.genesisHash}
@@ -84,10 +87,19 @@ in {
           Hash of the genesis file
         '';
       };
+      security-parameter = mkOption {
+        type = int;
+        default = 2160;
+        description = ''Chairman's --security-parameter'';
+      };
       slot-length = mkOption {
         type = int;
         default = 20;
         description = ''Duration of a slot, in seconds.'';
+      };
+      testnet-magic = mkOption {
+        type = int;
+        description = ''Chairman's --testnet-magic'';
       };
     };
   };

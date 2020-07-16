@@ -1,8 +1,12 @@
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE GeneralisedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns        #-}
 {-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE StandaloneDeriving    #-}
 {-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE UndecidableInstances  #-}
 {-# LANGUAGE EmptyCase             #-}
@@ -14,31 +18,50 @@ module Cardano.TracingOrphanInstances.Shelley () where
 
 import           Cardano.Prelude
 
+import           Data.Aeson (ToJSON (..), ToJSONKey (..),
+                   ToJSONKeyFunction (..), (.=))
+import qualified Data.Aeson as Aeson
+import qualified Data.Aeson.Encoding as Aeson
 import qualified Data.HashMap.Strict as HMS
 import           Data.Set (Set)
 import qualified Data.Set as Set
 import           Data.Text (Text)
 import qualified Data.Text as Text
+import qualified Data.Text.Encoding as Text
+
 
 import           Cardano.Slotting.Block (BlockNo(..))
 import           Cardano.TracingOrphanInstances.Common
 import           Cardano.TracingOrphanInstances.Consensus ()
-import           Cardano.Config.Shelley.Orphans ()
 
+import           Cardano.Crypto.Hash.Class (Hash)
+import           Cardano.Crypto.KES.Class
+                   (VerKeyKES, deriveVerKeyKES, hashVerKeyKES)
+
+import           Cardano.Crypto.Hash.Class as Crypto
 import           Ouroboros.Network.Block
-                   (SlotNo(..), blockHash, blockSlot, blockNo, blockPrevHash)
+                   (SlotNo(..), blockHash, blockSlot, blockNo)
 import           Ouroboros.Network.Point (WithOrigin, withOriginToMaybe)
 import           Ouroboros.Consensus.Block (Header)
-import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTx, TxId, txId)
+import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTx, txId)
+import qualified Ouroboros.Consensus.Ledger.SupportsMempool as SupportsMempool
 import           Ouroboros.Consensus.Util.Condense (condense)
 
-import           Ouroboros.Consensus.Shelley.Ledger
+import           Ouroboros.Consensus.Shelley.Ledger hiding (TxId)
+import           Ouroboros.Consensus.Shelley.Protocol
+                   (TPraosStandardCrypto, TPraosCannotLead(..),
+                    TPraosUnusableKey(..))
+import           Ouroboros.Consensus.Shelley.Protocol.Crypto
+import           Ouroboros.Consensus.Shelley.Protocol.Crypto.HotKey (HotKey(..))
+
 -- TODO: this should be exposed via Cardano.Api
 import           Shelley.Spec.Ledger.API
 import           Shelley.Spec.Ledger.BlockChain (LastAppliedBlock(..))
 import           Shelley.Spec.Ledger.Coin
 import           Shelley.Spec.Ledger.Keys (KeyHash(..))
+import           Shelley.Spec.Ledger.LedgerState (WitHashes(..))
 import           Shelley.Spec.Ledger.OCert
+
 import           Shelley.Spec.Ledger.STS.Bbody
 import           Shelley.Spec.Ledger.STS.Chain
 import           Shelley.Spec.Ledger.STS.Deleg
@@ -59,10 +82,12 @@ import           Shelley.Spec.Ledger.STS.Prtcl
 import           Shelley.Spec.Ledger.STS.Rupd
 import           Shelley.Spec.Ledger.STS.Snap
 import           Shelley.Spec.Ledger.STS.Tick
+import           Shelley.Spec.Ledger.STS.Tickn
 import           Shelley.Spec.Ledger.STS.Updn
 import           Shelley.Spec.Ledger.STS.Utxo
 import           Shelley.Spec.Ledger.STS.Utxow
-import           Shelley.Spec.Ledger.TxData (TxIn(..))
+import           Shelley.Spec.Ledger.MetaData (MetaDataHash(..))
+import           Shelley.Spec.Ledger.TxData (TxId(..), TxIn(..), TxOut(..), MIRPot(..))
 
 
 --
@@ -76,7 +101,7 @@ instance Crypto c => ToObject (GenTx (ShelleyBlock c)) where
         [ "txid" .= txId tx ]
      ++ [ "tx"   .= condense tx | verb == MaximalVerbosity ]
 
-instance ToJSON (TxId (GenTx (ShelleyBlock c))) where
+instance ToJSON (SupportsMempool.TxId (GenTx (ShelleyBlock c))) where
   toJSON i = toJSON (condense i)
 
 instance Crypto c => ToObject (Header (ShelleyBlock c)) where
@@ -84,7 +109,6 @@ instance Crypto c => ToObject (Header (ShelleyBlock c)) where
     mkObject $
         [ "kind" .= String "ShelleyBlock"
         , "hash" .= condense (blockHash b)
-        , "prevhash" .= condense (blockPrevHash b)
         , "slotNo" .= condense (blockSlot b)
         , "blockNo" .= condense (blockNo b)
 --      , "delegate" .= condense (headerSignerVk h)
@@ -93,15 +117,46 @@ instance Crypto c => ToObject (ApplyTxError c) where
   toObject verb (ApplyTxError predicateFailures) =
     HMS.unions $ map (toObject verb) predicateFailures
 
--- This instance is completely insane. We really need to have lists as a
--- generic instance.
-instance ToObject (PredicateFailure r) => ToObject [[PredicateFailure r]] where
-  toObject verb fss =
+instance ToObject (HotKey TPraosStandardCrypto) where
+  toObject _verb HotKey {
+                   hkStart,
+                   hkEnd,
+                   hkEvolution,
+                   hkKey
+                 } =
     mkObject
-      [ "kind" .= String "PredicateFailure"
-      , "failures" .= map (toObject verb) (concat fss)
+      [ "kind"      .= String "HotKey"
+      , "start"     .= hkStart
+      , "end"       .= hkEnd
+      , "evolution" .= hkEvolution
+      , "vkey"      .= (hashVerKeyKES (deriveVerKeyKES hkKey)
+                        :: Hash (HASH TPraosStandardCrypto)
+                                (VerKeyKES (KES TPraosStandardCrypto)))
       ]
 
+instance ToObject (TPraosCannotLead c) where
+  toObject _verb (TPraosCannotLeadUnusableKESKey
+                    TPraosUnusableKey {
+                      tpraosUnusableKeyStart,
+                      tpraosUnusableKeyEnd,
+                      tpraosUnusableKeyCurrent,
+                      tpraosUnusableWallClock
+                    }) =
+    mkObject
+      [ "kind" .= String "TPraosCannotLeadUnusableKESKey"
+      , "keyStart"   .= tpraosUnusableKeyStart
+      , "keyEnd"     .= tpraosUnusableKeyEnd
+      , "keyCurrent" .= tpraosUnusableKeyCurrent
+      , "wallClock"  .= tpraosUnusableWallClock
+      ]
+  toObject _verb (TPraosCannotLeadWrongVRF genDlgVRFHash coreNodeVRFHash) =
+    mkObject
+      [ "kind" .= String "TPraosCannotLeadWrongVRF"
+      , "expected" .= genDlgVRFHash
+      , "actual" .= coreNodeVRFHash
+      ]
+
+deriving newtype instance ToJSON KESPeriod
 
 instance Crypto c =>  ToObject (ShelleyLedgerError c) where
   toObject verb (BBodyError (BlockTransitionError fs)) =
@@ -113,6 +168,11 @@ instance Crypto c =>  ToObject (ShelleyLedgerError c) where
              , "failures" .= map (toObject verb) fs
              ]
 
+instance Crypto c => ToObject (ChainTransitionError c) where
+  toObject verb (ChainTransitionError fs) =
+    mkObject [ "kind" .= String "ChainTransitionError"
+             , "failures" .= map (toObject verb) fs
+             ]
 
 instance Crypto c => ToObject (PredicateFailure (CHAIN c)) where
   toObject _verb (HeaderSizeTooLargeCHAIN hdrSz maxHdrSz) =
@@ -138,6 +198,7 @@ instance Crypto c => ToObject (PredicateFailure (CHAIN c)) where
                       \protocol version."
   toObject verb (BbodyFailure f) = toObject verb f
   toObject verb (TickFailure  f) = toObject verb f
+  toObject verb (TicknFailure f) = toObject verb f
   toObject verb (PrtclFailure f) = toObject verb f
   toObject verb (PrtclSeqFailure f) = toObject verb f
 
@@ -186,7 +247,7 @@ instance Crypto c => ToObject (PredicateFailure (UTXOW c)) where
     mkObject [ "kind" .= String "InvalidWitnessesUTXOW"
              , "invalidWitnesses" .= map textShow wits
              ]
-  toObject _verb (MissingVKeyWitnessesUTXOW wits) =
+  toObject _verb (MissingVKeyWitnessesUTXOW (WitHashes wits)) =
     mkObject [ "kind" .= String "MissingVKeyWitnessesUTXOW"
              , "missingWitnesses" .= wits
              ]
@@ -232,11 +293,16 @@ instance Crypto c => ToObject (PredicateFailure (UTXO c)) where
              , "size" .= txsize
              , "maxSize" .= maxtxsize ]
   -- TODO: Add the minimum allowed UTxO value to OutputTooSmallUTxO
-  toObject _verb (OutputTooSmallUTxO tooSmallOutputs) =
+  toObject _verb (OutputTooSmallUTxO badOutputs) =
     mkObject [ "kind" .= String "OutputTooSmallUTxO"
-             , "tooSmallOutputs" .= tooSmallOutputs
+             , "outputs" .= badOutputs
              , "error" .= String "The output is smaller than the allow minimum \
                                  \UTxO value defined in the protocol parameters"
+             ]
+  toObject _verb (OutputBootAddrAttrsTooBig badOutputs) =
+    mkObject [ "kind" .= String "OutputBootAddrAttrsTooBig"
+             , "outputs" .= badOutputs
+             , "error" .= String "The Byron address attributes are too big"
              ]
   toObject _verb InputSetEmptyUTxO =
     mkObject [ "kind" .= String "InputSetEmptyUTxO" ]
@@ -271,15 +337,11 @@ instance ToObject (PredicateFailure (PPUP c)) where
   toObject _verb (NonGenesisUpdatePPUP proposalKeys genesisKeys) =
     mkObject [ "kind" .= String "NonGenesisUpdatePPUP"
              , "keys" .= proposalKeys Set.\\ genesisKeys ]
-  toObject _verb (PPUpdateTooLatePPUP currSlot votesAllowedBoundSlot) =
-    mkObject [ "kind" .= String "PPUpdateTooLatePPUP"
-             , "currentSlotNo" .= currSlot
-             , "votesAllowedBoundSlotNo" .= votesAllowedBoundSlot
-             ]
-  toObject _verb (PPUpdateWrongEpoch currEpoch intendedEpoch) =
+  toObject _verb (PPUpdateWrongEpoch currEpoch intendedEpoch votingPeriod) =
     mkObject [ "kind" .= String "PPUpdateWrongEpoch"
              , "currentEpoch" .= currEpoch
              , "intendedEpoch" .= intendedEpoch
+             , "votingPeriod"  .= String (show votingPeriod)
              ]
   toObject _verb (PVCannotFollowPPUP badPv) =
     mkObject [ "kind" .= String "PVCannotFollowPPUP"
@@ -287,7 +349,7 @@ instance ToObject (PredicateFailure (PPUP c)) where
              ]
 
 
-instance ToObject (PredicateFailure (DELEGS c)) where
+instance Crypto c => ToObject (PredicateFailure (DELEGS c)) where
   toObject _verb (DelegateeNotRegisteredDELEG targetPool) =
     mkObject [ "kind" .= String "DelegateeNotRegisteredDELEG"
              , "targetPool" .= targetPool
@@ -308,6 +370,11 @@ instance ToObject (PredicateFailure (DELEG c)) where
     mkObject [ "kind" .= String "StakeKeyAlreadyRegisteredDELEG"
              , "credential" .= String (textShow alreadyRegistered)
              , "error" .= String "Staking credential already registered"
+             ]
+  toObject _verb (StakeKeyInRewardsDELEG alreadyRegistered) =
+    mkObject [ "kind" .= String "StakeKeyInRewardsDELEG"
+             , "credential" .= String (textShow alreadyRegistered)
+             , "error" .= String "Staking credential registered in rewards map"
              ]
   toObject _verb (StakeKeyNotRegisteredDELEG notRegistered) =
     mkObject [ "kind" .= String "StakeKeyNotRegisteredDELEG"
@@ -335,8 +402,11 @@ instance ToObject (PredicateFailure (DELEG c)) where
              , "duplicateKeyHash" .= String (textShow genesisKeyHash)
              , "error" .= String "This genesis key has already been delegated to"
              ]
-  toObject _verb (InsufficientForInstantaneousRewardsDELEG neededMirAmount reserves) =
+  toObject _verb (InsufficientForInstantaneousRewardsDELEG mirpot neededMirAmount reserves) =
     mkObject [ "kind" .= String "InsufficientForInstantaneousRewardsDELEG"
+             , "pot" .= String (case mirpot of
+                                  ReservesMIR -> "Reserves"
+                                  TreasuryMIR -> "Treasury")
              , "neededAmount" .= neededMirAmount
              , "reserves" .= reserves
              ]
@@ -344,6 +414,10 @@ instance ToObject (PredicateFailure (DELEG c)) where
     mkObject [ "kind" .= String "MIRCertificateTooLateinEpochDELEG"
              , "currentSlotNo" .= currSlot
              , "mustBeSubmittedBeforeSlotNo" .= boundSlotNo
+             ]
+  toObject _verb (DuplicateGenesisVRFDELEG vrfKeyHash) =
+    mkObject [ "kind" .= String "DuplicateGenesisVRFDELEG"
+             , "keyHash" .= vrfKeyHash
              ]
 
 
@@ -359,6 +433,14 @@ instance ToObject (PredicateFailure (POOL c)) where
              , "intendedRetirementEpoch" .= String (textShow intendedRetireEpoch)
              , "maxEpochForRetirement" .= String (textShow maxRetireEpoch)
              ]
+  toObject _verb (StakePoolCostTooLowPOOL certCost protCost) =
+    mkObject [ "kind" .= String "StakePoolCostTooLowPOOL"
+             , "certificateCost" .= String (textShow certCost)
+             , "protocolParCost" .= String (textShow protCost)
+             , "error" .= String "The stake pool cost is too low"
+             ]
+
+
 -- Apparently this should never happen accoring to the shelley exec spec
   toObject _verb (WrongCertificateTypePOOL index) =
     case index of
@@ -381,6 +463,8 @@ instance ToObject (PredicateFailure (TICK c)) where
   toObject verb (NewEpochFailure f) = toObject verb f
   toObject verb (RupdFailure f) = toObject verb f
 
+instance ToObject (PredicateFailure TICKN) where
+  toObject _verb x = case x of {} -- no constructors
 
 instance ToObject (PredicateFailure (NEWEPOCH c)) where
   toObject verb (EpochFailure f) = toObject verb f
@@ -444,10 +528,11 @@ instance Crypto c => ToObject (PredicateFailure (OVERLAY c)) where
              , "previousHashAsNonce" .= (String $ textShow prevHashNonce)
              , "blockNonce" .= (String $ textShow blockNonce)
              ]
-  toObject _verb (VRFKeyWrongVRFKey regVRFKeyHash unregVRFKeyHash) =
+  toObject _verb (VRFKeyWrongVRFKey issuerHash regVRFKeyHash unregVRFKeyHash) =
     mkObject [ "kind" .= String "VRFKeyWrongVRFKeyOVERLAY"
-             , "registeredVRFKeHash" .= (String $ textShow regVRFKeyHash )
-             , "unregisteredVRFKeyHash" .= (String $ textShow unregVRFKeyHash)
+             , "poolHash" .= textShow issuerHash
+             , "registeredVRFKeHash" .= textShow regVRFKeyHash
+             , "unregisteredVRFKeyHash" .= textShow unregVRFKeyHash
              ]
   --TODO: Pipe slot number with VRFKeyUnknown
   toObject _verb (VRFKeyUnknown (KeyHash kHash)) =
@@ -469,6 +554,11 @@ instance Crypto c => ToObject (PredicateFailure (OVERLAY c)) where
     mkObject [ "kind" .= String "WrongGenesisColdKeyOVERLAY"
              , "actual" .= actual
              , "expected" .= expected ]
+  toObject _verb (WrongGenesisVRFKeyOVERLAY issuer actual expected) =
+    mkObject [ "kind" .= String "WrongGenesisVRFKeyOVERLAY"
+             , "issuer" .= issuer
+             , "actual" .= actual
+             , "expected" .= expected ]
   toObject verb (OcertFailure f) = toObject verb f
 
 
@@ -488,8 +578,8 @@ instance ToObject (PredicateFailure (OCERT c)) where
              , "error" .= String "The operational certificate's KES start period is \
                                  \greater than the max number of KES + the KES current period"
              ]
-  toObject _verb (KESPeriodWrongOCERT lastKEScounterUsed currentKESCounter) =
-    mkObject [ "kind" .= String "KESPeriodWrongOCERT"
+  toObject _verb (CounterTooSmallOCERT lastKEScounterUsed currentKESCounter) =
+    mkObject [ "kind" .= String "CounterTooSmallOCert"
              , "currentKESCounter" .= String (textShow currentKESCounter)
              , "lastKESCounter" .= String (textShow lastKEScounterUsed)
              , "error" .= String "The operational certificate's last KES counter is greater \
@@ -527,3 +617,28 @@ showLastAppBlockNo :: WithOrigin (LastAppliedBlock crypto) -> Text
 showLastAppBlockNo wOblk =  case withOriginToMaybe wOblk of
                      Nothing -> "Genesis Block"
                      Just blk -> textShow . unBlockNo $ labBlockNo blk
+
+-- Common to cardano-cli
+
+deriving newtype instance Crypto c => ToJSON (MetaDataHash c)
+
+deriving instance Crypto c => ToJSON (TxIn c)
+deriving newtype instance ToJSON (TxId c)
+instance Crypto c => ToJSONKey (TxIn c) where
+  toJSONKey = ToJSONKeyText txInToText (Aeson.text . txInToText)
+
+txInToText :: Crypto c => TxIn c -> Text
+txInToText (TxIn (TxId txidHash) ix) =
+  hashToText txidHash
+    <> Text.pack "#"
+    <> Text.pack (show ix)
+
+instance Crypto c => ToJSON (TxOut c) where
+  toJSON (TxOut addr amount) =
+    Aeson.object
+      [ "address" .= addr
+      , "amount" .= amount
+      ]
+
+hashToText :: Hash crypto a -> Text
+hashToText = Text.decodeLatin1 . Crypto.hashToBytesAsHex
