@@ -19,8 +19,8 @@ assert_file_exists "${TEST_DIR}/key-gen.vkey"
 assert_file_exists "${TEST_DIR}/key-gen.skey"
 assert_file_exists "${TEST_DIR}/op-cert.counter"
 
-assert_string 'Node operator verification key' "${TEST_DIR}/key-gen.vkey"
-assert_string 'Node operator signing key' "${TEST_DIR}/key-gen.skey"
-assert_string 'Node operational certificate issue counter' "${TEST_DIR}/op-cert.counter"
+assert_string 'StakePoolVerificationKey_ed25519' "${TEST_DIR}/key-gen.vkey"
+assert_string 'StakePoolSigningKey_ed25519' "${TEST_DIR}/key-gen.skey"
+assert_string 'NodeOperationalCertificateIssueCounter' "${TEST_DIR}/op-cert.counter"
 
 report_result ${error}

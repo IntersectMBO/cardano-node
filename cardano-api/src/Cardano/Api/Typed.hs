@@ -1559,7 +1559,7 @@ instance HasTypeProxy Certificate where
     proxyToAsType _ = AsCertificate
 
 instance HasTextEnvelope Certificate where
-    textEnvelopeType _ = "Certificate"
+    textEnvelopeType _ = "CertificateShelley"
     textEnvelopeDefaultDescr (Certificate cert) = case cert of
       Shelley.DCertDeleg (Shelley.RegKey {})    -> "Stake address registration"
       Shelley.DCertDeleg (Shelley.DeRegKey {})  -> "Stake address de-registration"
@@ -1957,7 +1957,7 @@ instance HasTypeProxy UpdateProposal where
     proxyToAsType _ = AsUpdateProposal
 
 instance HasTextEnvelope UpdateProposal where
-    textEnvelopeType _ = "Shelley update proposal"
+    textEnvelopeType _ = "UpdateProposalShelley"
 
 data ProtocolParametersUpdate =
      ProtocolParametersUpdate {
@@ -2238,10 +2238,10 @@ instance HasTypeProxy OperationalCertificateIssueCounter where
     proxyToAsType _ = AsOperationalCertificateIssueCounter
 
 instance HasTextEnvelope OperationalCertificate where
-    textEnvelopeType _ = "Node operational certificate"
+    textEnvelopeType _ = "NodeOperationalCertificate"
 
 instance HasTextEnvelope OperationalCertificateIssueCounter where
-    textEnvelopeType _ = "Node operational certificate issue counter"
+    textEnvelopeType _ = "NodeOperationalCertificateIssueCounter"
 
 data OperationalCertIssueError =
        -- | The stake pool verification key expected for the
@@ -3000,11 +3000,10 @@ instance SerialiseAsRawBytes (Hash ByronKey) where
       ByronKeyHash . Byron.KeyHash <$> Byron.abstractHashFromBytes bs
 
 instance HasTextEnvelope (VerificationKey ByronKey) where
-    textEnvelopeType _ = "PaymentVerificationKeyByron"
+    textEnvelopeType _ = "PaymentVerificationKeyByron_ed25519_bip32"
 
 instance HasTextEnvelope (SigningKey ByronKey) where
-    textEnvelopeType _ = "SigningKeyByron"
-    -- TODO: fix these inconsistent names for the public testnet re-spin
+    textEnvelopeType _ = "PaymentSigningKeyByron_ed25519_bip32"
 
 instance CastVerificationKeyRole ByronKey PaymentExtendedKey where
     castVerificationKey (ByronVerificationKey vk) =
@@ -3103,19 +3102,18 @@ instance SerialiseAsRawBytes (Hash PaymentKey) where
       PaymentKeyHash . Shelley.KeyHash <$> Crypto.hashFromBytes bs
 
 instance HasTextEnvelope (VerificationKey PaymentKey) where
-    textEnvelopeType _ = "PaymentVerificationKeyShelley"
-    -- TODO: include the actual crypto algorithm name, to catch changes:
-{-
+    textEnvelopeType _ = "PaymentVerificationKeyShelley_"
                       <> fromString (Crypto.algorithmNameDSIGN proxy)
       where
         proxy :: Proxy (Shelley.DSIGN ShelleyCrypto)
         proxy = Proxy
--}
 
 instance HasTextEnvelope (SigningKey PaymentKey) where
-    textEnvelopeType _ = "SigningKeyShelley"
-    -- TODO: include the actual crypto algorithm name, to catch changes
-    -- TODO: fix these inconsistent names for the public testnet re-spin
+    textEnvelopeType _ = "PaymentSigningKeyShelley_"
+                      <> fromString (Crypto.algorithmNameDSIGN proxy)
+      where
+        proxy :: Proxy (Shelley.DSIGN ShelleyCrypto)
+        proxy = Proxy
 
 
 --
@@ -3243,10 +3241,10 @@ instance SerialiseAsRawBytes (Hash PaymentExtendedKey) where
       PaymentExtendedKeyHash . Shelley.KeyHash <$> Crypto.hashFromBytes bs
 
 instance HasTextEnvelope (VerificationKey PaymentExtendedKey) where
-    textEnvelopeType _ = "PaymentVerificationKeyShelley extended ed25519"
+    textEnvelopeType _ = "PaymentExtendedVerificationKeyShelley_ed25519_bip32"
 
 instance HasTextEnvelope (SigningKey PaymentExtendedKey) where
-    textEnvelopeType _ = "PaymentSigningKeyShelley extended ed25519"
+    textEnvelopeType _ = "PaymentExtendedSigningKeyShelley_ed25519_bip32"
 
 instance CastVerificationKeyRole PaymentExtendedKey PaymentKey where
     castVerificationKey (PaymentExtendedVerificationKey vk) =
@@ -3342,13 +3340,18 @@ instance SerialiseAsRawBytes (Hash StakeKey) where
       StakeKeyHash . Shelley.KeyHash <$> Crypto.hashFromBytes bs
 
 instance HasTextEnvelope (VerificationKey StakeKey) where
-    textEnvelopeType _ = "StakingVerificationKeyShelley"
-    -- TODO: include the actual crypto algorithm name, to catch changes
+    textEnvelopeType _ = "StakeVerificationKeyShelley_"
+                      <> fromString (Crypto.algorithmNameDSIGN proxy)
+      where
+        proxy :: Proxy (Shelley.DSIGN ShelleyCrypto)
+        proxy = Proxy
 
 instance HasTextEnvelope (SigningKey StakeKey) where
-    textEnvelopeType _ = "SigningKeyShelley"
-    -- TODO: include the actual crypto algorithm name, to catch changes
-    -- TODO: fix these inconsistent names for the public testnet re-spin
+    textEnvelopeType _ = "StakeSigningKeyShelley_"
+                      <> fromString (Crypto.algorithmNameDSIGN proxy)
+      where
+        proxy :: Proxy (Shelley.DSIGN ShelleyCrypto)
+        proxy = Proxy
 
 
 --
@@ -3424,12 +3427,18 @@ instance SerialiseAsRawBytes (Hash GenesisKey) where
       GenesisKeyHash . Shelley.KeyHash <$> Crypto.hashFromBytes bs
 
 instance HasTextEnvelope (VerificationKey GenesisKey) where
-    textEnvelopeType _ = "Genesis verification key"
-    -- TODO: include the actual crypto algorithm name, to catch changes
+    textEnvelopeType _ = "GenesisVerificationKey_"
+                      <> fromString (Crypto.algorithmNameDSIGN proxy)
+      where
+        proxy :: Proxy (Shelley.DSIGN ShelleyCrypto)
+        proxy = Proxy
 
 instance HasTextEnvelope (SigningKey GenesisKey) where
-    textEnvelopeType _ = "Genesis signing key"
-    -- TODO: include the actual crypto algorithm name, to catch changes
+    textEnvelopeType _ = "GenesisSigningKey_"
+                      <> fromString (Crypto.algorithmNameDSIGN proxy)
+      where
+        proxy :: Proxy (Shelley.DSIGN ShelleyCrypto)
+        proxy = Proxy
 
 
 --
@@ -3506,14 +3515,18 @@ instance SerialiseAsRawBytes (Hash GenesisDelegateKey) where
       GenesisDelegateKeyHash . Shelley.KeyHash <$> Crypto.hashFromBytes bs
 
 instance HasTextEnvelope (VerificationKey GenesisDelegateKey) where
-    textEnvelopeType _ = "Node operator verification key"
-    -- TODO: include the actual crypto algorithm name, to catch changes
+    textEnvelopeType _ = "GenesisDelegateVerificationKey_"
+                      <> fromString (Crypto.algorithmNameDSIGN proxy)
+      where
+        proxy :: Proxy (Shelley.DSIGN ShelleyCrypto)
+        proxy = Proxy
 
 instance HasTextEnvelope (SigningKey GenesisDelegateKey) where
-    textEnvelopeType _ = "Node operator signing key"
-    -- TODO: include the actual crypto algorithm name, to catch changes
-    -- TODO: use a different type from the stake pool key, since some operations
-    -- need a genesis key specifically
+    textEnvelopeType _ = "GenesisDelegateSigningKey_"
+                      <> fromString (Crypto.algorithmNameDSIGN proxy)
+      where
+        proxy :: Proxy (Shelley.DSIGN ShelleyCrypto)
+        proxy = Proxy
 
 instance CastVerificationKeyRole GenesisDelegateKey StakePoolKey where
     castVerificationKey (GenesisDelegateVerificationKey (Shelley.VKey vkey)) =
@@ -3598,12 +3611,18 @@ instance SerialiseAsRawBytes (Hash GenesisUTxOKey) where
       GenesisUTxOKeyHash . Shelley.KeyHash <$> Crypto.hashFromBytes bs
 
 instance HasTextEnvelope (VerificationKey GenesisUTxOKey) where
-    textEnvelopeType _ = "Genesis UTxO verification key"
-    -- TODO: include the actual crypto algorithm name, to catch changes
+    textEnvelopeType _ = "GenesisUTxOVerificationKey_"
+                      <> fromString (Crypto.algorithmNameDSIGN proxy)
+      where
+        proxy :: Proxy (Shelley.DSIGN ShelleyCrypto)
+        proxy = Proxy
 
 instance HasTextEnvelope (SigningKey GenesisUTxOKey) where
-    textEnvelopeType _ = "Genesis UTxO signing key"
-    -- TODO: include the actual crypto algorithm name, to catch changes
+    textEnvelopeType _ = "GenesisUTxOSigningKey_"
+                      <> fromString (Crypto.algorithmNameDSIGN proxy)
+      where
+        proxy :: Proxy (Shelley.DSIGN ShelleyCrypto)
+        proxy = Proxy
     -- TODO: use a different type from the stake pool key, since some operations
     -- need a genesis key specifically
 
@@ -3726,12 +3745,18 @@ instance ToJSON (Hash StakePoolKey) where
     toJSON = toJSON . Text.decodeLatin1 . serialiseToRawBytesHex
 
 instance HasTextEnvelope (VerificationKey StakePoolKey) where
-    textEnvelopeType _ = "Node operator verification key"
-    -- TODO: include the actual crypto algorithm name, to catch changes
+    textEnvelopeType _ = "StakePoolVerificationKey_"
+                      <> fromString (Crypto.algorithmNameDSIGN proxy)
+      where
+        proxy :: Proxy (Shelley.DSIGN ShelleyCrypto)
+        proxy = Proxy
 
 instance HasTextEnvelope (SigningKey StakePoolKey) where
-    textEnvelopeType _ = "Node operator signing key"
-    -- TODO: include the actual crypto algorithm name, to catch changes
+    textEnvelopeType _ = "StakePoolSigningKey_"
+                      <> fromString (Crypto.algorithmNameDSIGN proxy)
+      where
+        proxy :: Proxy (Shelley.DSIGN ShelleyCrypto)
+        proxy = Proxy
 
 
 --
@@ -3816,12 +3841,18 @@ instance SerialiseAsRawBytes (Hash KesKey) where
       KesKeyHash <$> Crypto.hashFromBytes bs
 
 instance HasTextEnvelope (VerificationKey KesKey) where
-    textEnvelopeType _ = "VKeyES TPraosStandardCrypto"
-    -- TODO: include the actual crypto algorithm name, to catch changes
+    textEnvelopeType _ = "KesVerificationKey_"
+                      <> fromString (Crypto.algorithmNameKES proxy)
+      where
+        proxy :: Proxy (Shelley.KES ShelleyCrypto)
+        proxy = Proxy
 
 instance HasTextEnvelope (SigningKey KesKey) where
-    textEnvelopeType _ = "SKeyES TPraosStandardCrypto"
-    -- TODO: include the actual crypto algorithm name, to catch changes
+    textEnvelopeType _ = "KesSigningKey_"
+                      <> fromString (Crypto.algorithmNameKES proxy)
+      where
+        proxy :: Proxy (Shelley.KES ShelleyCrypto)
+        proxy = Proxy
 
 
 --
@@ -3903,23 +3934,16 @@ instance SerialiseAsRawBytes (Hash VrfKey) where
       VrfKeyHash <$> Crypto.hashFromBytes bs
 
 instance HasTextEnvelope (VerificationKey VrfKey) where
-    textEnvelopeType _ = "VerKeyVRF " <> fromString (backCompatAlgorithmNameVrf proxy)
+    textEnvelopeType _ = "VrfVerificationKey_" <> fromString (Crypto.algorithmNameVRF proxy)
       where
         proxy :: Proxy (Shelley.VRF ShelleyCrypto)
         proxy = Proxy
 
 instance HasTextEnvelope (SigningKey VrfKey) where
-    textEnvelopeType _ = "SignKeyVRF " <> fromString (backCompatAlgorithmNameVrf proxy)
+    textEnvelopeType _ = "VrfSigningKey_" <> fromString (Crypto.algorithmNameVRF proxy)
       where
         proxy :: Proxy (Shelley.VRF ShelleyCrypto)
         proxy = Proxy
-
--- | Temporary solution for maintaining backward compatibility with the output
--- of 'Cardano.Api.Shelley.VRF.encodeVRFVerificationKey'.
-backCompatAlgorithmNameVrf :: Proxy (Shelley.VRF ShelleyCrypto) -> String
-backCompatAlgorithmNameVrf p =
-  let algoName = Crypto.algorithmNameVRF p
-  in if algoName == "simple" then "SimpleVRF" else algoName
 
 --
 -- Utils

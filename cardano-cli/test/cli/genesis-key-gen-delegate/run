@@ -24,9 +24,9 @@ assert_file_exists "${TEST_DIR}/key-gen.skey"
 assert_file_exists "${TEST_DIR}/op-cert.counter"
 
 # Check type:
-assert_string 'Node operator verification key' "${TEST_DIR}/key-gen.vkey"
-assert_string 'Node operator signing key' "${TEST_DIR}/key-gen.skey"
-assert_string 'Node operational certificate issue counter' "${TEST_DIR}/op-cert.counter"
+assert_string 'GenesisDelegateVerificationKey_ed25519' "${TEST_DIR}/key-gen.vkey"
+assert_string 'GenesisDelegateSigningKey_ed25519' "${TEST_DIR}/key-gen.skey"
+assert_string 'NodeOperationalCertificateIssueCounter' "${TEST_DIR}/op-cert.counter"
 
 # Check title:
 assert_string 'Genesis delegate operator key' "${TEST_DIR}/key-gen.vkey"

@@ -91,24 +91,24 @@ for i in $(seq 1 $gendlg_count) ; do
     assert_file_exists "${TEST_DIR}/genesis-keys/genesis${i}.skey"
     assert_file_exists "${TEST_DIR}/genesis-keys/genesis${i}.vkey"
 
-    assert_string 'Genesis signing key' "${TEST_DIR}/genesis-keys/genesis${i}.skey"
-    assert_string 'Genesis verification key' "${TEST_DIR}/genesis-keys/genesis${i}.vkey"
+    assert_string 'GenesisSigningKey_ed25519' "${TEST_DIR}/genesis-keys/genesis${i}.skey"
+    assert_string 'GenesisVerificationKey_ed25519' "${TEST_DIR}/genesis-keys/genesis${i}.vkey"
 
     # Check delegate keys:
     assert_file_exists "${TEST_DIR}/delegate-keys/delegate${i}.skey"
     assert_file_exists "${TEST_DIR}/delegate-keys/delegate${i}.vkey"
     assert_file_exists "${TEST_DIR}/delegate-keys/delegate${i}.counter"
 
-    assert_string 'Node operator signing key' "${TEST_DIR}/delegate-keys/delegate${i}.skey"
-    assert_string 'Node operator verification key' "${TEST_DIR}/delegate-keys/delegate${i}.vkey"
-    assert_string 'Node operational certificate issue counter' "${TEST_DIR}/delegate-keys/delegate${i}.counter"
+    assert_string 'GenesisDelegateSigningKey_ed25519' "${TEST_DIR}/delegate-keys/delegate${i}.skey"
+    assert_string 'GenesisDelegateVerificationKey_ed25519' "${TEST_DIR}/delegate-keys/delegate${i}.vkey"
+    assert_string 'NodeOperationalCertificateIssueCounter' "${TEST_DIR}/delegate-keys/delegate${i}.counter"
 
     # Check utxo keys:
     assert_file_exists "${TEST_DIR}/utxo-keys/utxo${i}.skey"
     assert_file_exists "${TEST_DIR}/utxo-keys/utxo${i}.vkey"
 
-    assert_string 'Genesis UTxO signing key' "${TEST_DIR}/utxo-keys/utxo${i}.skey"
-    assert_string 'Genesis UTxO verification key' "${TEST_DIR}/utxo-keys/utxo${i}.vkey"
+    assert_string 'GenesisUTxOSigningKey_ed25519' "${TEST_DIR}/utxo-keys/utxo${i}.skey"
+    assert_string 'GenesisUTxOVerificationKey_ed25519' "${TEST_DIR}/utxo-keys/utxo${i}.vkey"
     done
 
 report_result ${error}
