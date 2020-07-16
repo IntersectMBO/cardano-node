@@ -51,4 +51,6 @@ pkgs: _: with pkgs; {
   inherit (cardanoNodeHaskellPackages.ouroboros-consensus-byron.components.exes) db-converter;
 
   mkCluster = callPackage ./supervisord-cluster;
+  hfcCluster = callPackage ./supervisord-cluster/hfc {};
+  cardanolib-py = callPackage ./cardanolib-py {};
 }

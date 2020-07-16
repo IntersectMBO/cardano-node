@@ -257,20 +257,25 @@ let
 
     done
 
+    # Copy genesis-utxo key to ${stateDir}/keys
+
+    cp ${./genesis-utxo.vkey} ${stateDir}/keys/genesis-utxo.vkey
+    cp ${./genesis-utxo.skey} ${stateDir}/keys/genesis-utxo.skey
+
     # Tranfer funds, register pools and delegations, all in one big transaction:
 
     jq .protocolParams < ${stateDir}/keys/genesis.json > ${stateDir}/pparams.json
 
     TXIN_ADDR=$(cardano-cli shelley genesis initial-addr \
                     --testnet-magic ${toString genesisSpecMergedJSON.networkMagic} \
-                    --verification-key-file ${./genesis-utxo.vkey})
+                    --verification-key-file ${stateDir}/keys/genesis-utxo.vkey)
 
     cardano-cli shelley transaction build-raw \
         --ttl 1000 \
         --fee 0 \
         --tx-in $(cardano-cli shelley genesis initial-txin \
                     --testnet-magic ${toString genesisSpecMergedJSON.networkMagic} \
-                    --verification-key-file ${./genesis-utxo.vkey}) \
+                    --verification-key-file ${stateDir}/keys/genesis-utxo.vkey) \
         --tx-out "$TXIN_ADDR+0" \
         ${lib.concatMapStringsSep "" (i: ''
           --tx-out $(cat "${stateDir}/keys/node-pool${toString i}/owner.addr")+${toString delegatePoolAmount} \
@@ -299,7 +304,7 @@ let
         --fee "$FEE" \
         --tx-in $(cardano-cli shelley genesis initial-txin \
                     --testnet-magic ${toString genesisSpecMergedJSON.networkMagic} \
-                    --verification-key-file ${./genesis-utxo.vkey}) \
+                    --verification-key-file ${stateDir}/keys/genesis-utxo.vkey) \
         --tx-out "$TXIN_ADDR+$TXOUT_AMOUNT" \
         ${lib.concatMapStringsSep "" (i: ''
           --tx-out $(cat "${stateDir}/keys/node-pool${toString i}/owner.addr")+${toString delegatePoolAmount} \
@@ -310,7 +315,7 @@ let
         --out-file "${stateDir}/keys/transfer-register-delegate-tx.txbody"
 
     cardano-cli shelley transaction sign \
-      --signing-key-file ${./genesis-utxo.skey} \
+      --signing-key-file ${stateDir}/keys/genesis-utxo.skey \
       ${lib.concatMapStringsSep "" (i: ''
         --signing-key-file "${stateDir}/keys/node-pool${toString i}/owner-stake.skey" \
         --signing-key-file "${stateDir}/keys/node-pool${toString i}/reward.skey" \
