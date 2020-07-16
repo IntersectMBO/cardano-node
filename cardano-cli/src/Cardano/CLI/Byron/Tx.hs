@@ -48,6 +48,8 @@ import qualified Cardano.Crypto.Signing as Crypto
 import qualified Ouroboros.Consensus.Byron.Ledger as Byron
 import           Ouroboros.Consensus.Byron.Ledger (GenTx(..), ByronBlock)
 import           Ouroboros.Consensus.Cardano (SecurityParam(..))
+import           Ouroboros.Consensus.HardFork.Combinator.Degenerate
+                   (GenTx(DegenGenTx))
 
 import           Cardano.Api.Typed
                    (NetworkId, LocalNodeConnectInfo(..), NodeConsensusMode(..),
@@ -203,7 +205,7 @@ nodeSubmitTx network gentx = do
                                        (EpochSlots 21600)
                                        (SecurityParam 2160)
           }
-    _res <- liftIO $ submitTxToNodeLocal connctInfo gentx
+    _res <- liftIO $ submitTxToNodeLocal connctInfo (DegenGenTx gentx)
     --TODO: print failures
     return ()
 

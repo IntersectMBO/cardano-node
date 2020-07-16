@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
 
@@ -10,6 +11,9 @@ import           Prelude (Int, error, (.))
 import qualified Data.Map.Strict as Map
 
 import           Ouroboros.Consensus.Ledger.Abstract
+import           Ouroboros.Consensus.HardFork.Combinator
+import           Ouroboros.Consensus.HardFork.Combinator.Unary
+
 import           Byron.Spec.Ledger.Core (Relation(..))
 
 import qualified Cardano.Chain.Block as Byron
@@ -36,6 +40,10 @@ instance LedgerQueries Byron.ByronBlock where
 instance LedgerQueries (Shelley.ShelleyBlock c) where
   ledgerUtxoSize =
     (\(Shelley.UTxO xs)-> Map.size xs) . Shelley._utxo . Shelley._utxoState . Shelley.esLState . Shelley.nesEs . Shelley.shelleyState
+
+instance (LedgerQueries x, NoHardForks x)
+      => LedgerQueries (HardForkBlock '[x]) where
+  ledgerUtxoSize = ledgerUtxoSize . project
 
 instance LedgerQueries (Cardano.CardanoBlock c) where
   ledgerUtxoSize = \case

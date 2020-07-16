@@ -8,18 +8,18 @@ module Cardano.Api.Protocol.Shelley
 
 
 import           Ouroboros.Consensus.Cardano
-                   (ProtocolClient(ProtocolClientRealTPraos), ProtocolRealTPraos)
+                   (ProtocolClient(ProtocolClientShelley), ProtocolShelley)
+import           Ouroboros.Consensus.Cardano.ShelleyHFC
 
-import           Ouroboros.Consensus.Shelley.Ledger
 import           Ouroboros.Consensus.Shelley.Protocol (TPraosStandardCrypto)
 
 import           Cardano.Api.Protocol.Types (SomeNodeClientProtocol(..))
 
 
 mkNodeClientProtocolShelley :: ProtocolClient
-                                 (ShelleyBlock TPraosStandardCrypto)
-                                 ProtocolRealTPraos
-mkNodeClientProtocolShelley = ProtocolClientRealTPraos
+                                 (ShelleyBlockHFC TPraosStandardCrypto)
+                                 ProtocolShelley
+mkNodeClientProtocolShelley = ProtocolClientShelley
 
 
 mkSomeNodeClientProtocolShelley :: SomeNodeClientProtocol

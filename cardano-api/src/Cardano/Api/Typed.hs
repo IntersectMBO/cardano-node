@@ -392,8 +392,8 @@ import           Ouroboros.Consensus.Node.NetworkProtocolVersion
                    supportedNodeToClientVersions)
 import           Ouroboros.Consensus.Node.Run (SerialiseNodeToClientConstraints)
 
-import           Ouroboros.Consensus.Byron.Ledger.Block (ByronBlock)
-import           Ouroboros.Consensus.Shelley.Ledger (ShelleyBlock)
+import           Ouroboros.Consensus.Cardano.ByronHFC (ByronBlockHFC)
+import           Ouroboros.Consensus.Cardano.ShelleyHFC (ShelleyBlockHFC)
 import           Ouroboros.Consensus.Cardano.Block (CardanoBlock)
 
 --
@@ -2312,10 +2312,10 @@ data NodeConsensusMode mode block where
      ByronMode
        :: Byron.EpochSlots
        -> SecurityParam
-       -> NodeConsensusMode ByronMode ByronBlock
+       -> NodeConsensusMode ByronMode ByronBlockHFC
 
      ShelleyMode
-       :: NodeConsensusMode ShelleyMode (ShelleyBlock ShelleyCrypto)
+       :: NodeConsensusMode ShelleyMode (ShelleyBlockHFC ShelleyCrypto)
 
      CardanoMode
        :: Byron.EpochSlots

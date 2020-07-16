@@ -1,4 +1,5 @@
 {-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DeriveAnyClass #-}
@@ -62,6 +63,9 @@ import           Ouroboros.Consensus.Util.Condense (Condense (..))
 import           Ouroboros.Consensus.Shelley.Ledger.Block (ShelleyBlock)
 import           Ouroboros.Consensus.Shelley.Ledger.Mempool (GenTx, TxId)
 import           Ouroboros.Consensus.Shelley.Protocol.Crypto.HotKey (HotKey (..))
+
+import           Ouroboros.Consensus.HardFork.Combinator
+import           Ouroboros.Consensus.HardFork.Combinator.Unary
 
 import           Ouroboros.Network.Block (HeaderHash)
 
@@ -263,6 +267,12 @@ instance HasKESMetricsData (ShelleyBlock c) where
 instance HasKESMetricsData ByronBlock where
 
 instance HasKESMetricsData (SimpleBlock a b) where
+
+instance (HasKESMetricsData x, NoHardForks x)
+      => HasKESMetricsData (HardForkBlock '[x]) where
+  getKESMetricsData forgeState =
+    getKESMetricsData (project forgeState)
+
 
 newtype MaxConcurrencyBulkSync = MaxConcurrencyBulkSync
   { unMaxConcurrencyBulkSync :: Word }

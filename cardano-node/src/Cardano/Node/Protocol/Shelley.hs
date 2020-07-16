@@ -34,8 +34,8 @@ import           Control.Monad.Trans.Except.Extra
 import qualified Cardano.Crypto.Hash.Class as Crypto
 
 import qualified Ouroboros.Consensus.Cardano as Consensus
+import           Ouroboros.Consensus.Cardano.ShelleyHFC
 
-import           Ouroboros.Consensus.Shelley.Ledger
 import           Ouroboros.Consensus.Shelley.Protocol
                    (TPraosStandardCrypto, TPraosIsCoreNode(..))
 import           Ouroboros.Consensus.Shelley.Node
@@ -50,7 +50,9 @@ import qualified Cardano.Api.Typed as Api (FileError)
 import           Cardano.Node.Types (NodeShelleyProtocolConfiguration(..))
 import           Cardano.Config.Types
                    (ProtocolFilepaths(..), GenesisFile (..))
+
 import           Cardano.TracingOrphanInstances.Shelley ()
+import           Cardano.TracingOrphanInstances.HardFork ()
 
 import           Cardano.Node.Protocol.Types
 
@@ -86,8 +88,8 @@ mkConsensusProtocolShelley
   :: NodeShelleyProtocolConfiguration
   -> Maybe ProtocolFilepaths
   -> ExceptT ShelleyProtocolInstantiationError IO
-             (Consensus.Protocol IO (ShelleyBlock TPraosStandardCrypto)
-                                 Consensus.ProtocolRealTPraos)
+             (Consensus.Protocol IO (ShelleyBlockHFC TPraosStandardCrypto)
+                                 Consensus.ProtocolShelley)
 mkConsensusProtocolShelley NodeShelleyProtocolConfiguration {
                             npcShelleyGenesisFile,
                             npcShelleySupportedProtocolVersionMajor,
@@ -99,7 +101,7 @@ mkConsensusProtocolShelley NodeShelleyProtocolConfiguration {
     optionalLeaderCredentials <- readLeaderCredentials files
 
     return $
-      Consensus.ProtocolRealTPraos
+      Consensus.ProtocolShelley
         genesis
         (Nonce (Crypto.castHash genesisHash))
         (ProtVer npcShelleySupportedProtocolVersionMajor

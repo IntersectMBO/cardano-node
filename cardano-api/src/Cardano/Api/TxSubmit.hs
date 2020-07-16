@@ -1,10 +1,11 @@
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE StandaloneDeriving #-}
 
 module Cardano.Api.TxSubmit
   ( submitTx
@@ -27,6 +28,7 @@ import           Ouroboros.Consensus.Cardano.Block
                    (GenTx (GenTxByron, GenTxShelley),
                     CardanoApplyTxErr, HardForkApplyTxErr (ApplyTxErrByron,
                       ApplyTxErrShelley, ApplyTxErrWrongEra))
+import           Ouroboros.Consensus.HardFork.Combinator.Degenerate
 
 import           Cardano.Api.Typed
 import           Cardano.Api.TxSubmit.ErrorRender
@@ -75,18 +77,22 @@ submitTx :: forall mode block.
 submitTx connctInfo txformode =
     case (localNodeConsensusMode connctInfo, txformode) of
       (ByronMode{}, TxForByronMode (ByronTx tx)) -> do
-        let genTx = Byron.ByronTx (Byron.byronIdTx tx) tx
+        let genTx = DegenGenTx (Byron.ByronTx (Byron.byronIdTx tx) tx)
         result <- submitTxToNodeLocal connctInfo genTx
         case result of
-          SubmitSuccess      -> return TxSubmitSuccess
-          SubmitFail failure -> return (TxSubmitFailureByronMode failure)
+          SubmitSuccess ->
+            return TxSubmitSuccess
+          SubmitFail (DegenApplyTxErr failure) ->
+            return (TxSubmitFailureByronMode failure)
 
       (ShelleyMode{}, TxForShelleyMode (ShelleyTx tx)) -> do
-        let genTx = mkShelleyTx tx
+        let genTx = DegenGenTx (mkShelleyTx tx)
         result <- submitTxToNodeLocal connctInfo genTx
         case result of
-          SubmitSuccess      -> return TxSubmitSuccess
-          SubmitFail failure -> return (TxSubmitFailureShelleyMode failure)
+          SubmitSuccess ->
+            return TxSubmitSuccess
+          SubmitFail (DegenApplyTxErr failure) ->
+            return (TxSubmitFailureShelleyMode failure)
 
       (CardanoMode{}, TxForCardanoMode etx) -> do
         let genTx = case etx of

@@ -50,7 +50,6 @@ import           Cardano.Config.Types
 
 import           Cardano.TracingOrphanInstances.Byron ()
 import           Cardano.TracingOrphanInstances.Shelley ()
-import           Cardano.TracingOrphanInstances.HardFork ()
 
 import qualified Cardano.Node.Protocol.Byron as Byron
 import qualified Cardano.Node.Protocol.Shelley as Shelley
