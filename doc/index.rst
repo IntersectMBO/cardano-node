@@ -27,6 +27,7 @@ cardano-node
    :caption: Stakepool Operations
    :titlesonly:
    :hidden:
+   
    stake-pool-operations/getConfigFiles_AND_Connect
    stake-pool-operations/keys_and_addresses
    stake-pool-operations/register_key
