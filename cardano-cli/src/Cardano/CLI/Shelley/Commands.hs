@@ -18,12 +18,14 @@ module Cardano.CLI.Shelley.Commands
 
     -- * CLI flag types
   , AddressKeyType (..)
+  , ByronKeyType (..)
+  , ByronKeyFormat (..)
   , GenesisDir (..)
   , TxInCount (..)
   , TxOutCount (..)
   , TxShelleyWitnessCount (..)
   , TxByronWitnessCount (..)
-  , ITNKeyFile (..)
+  , SomeKeyFile (..)
   , OpCertCounterFile (..)
   , OutputFile (..)
   , ProtocolParamsFile (..)
@@ -32,6 +34,7 @@ module Cardano.CLI.Shelley.Commands
   , TxBodyFile (..)
   , TxFile (..)
   , VerificationKeyFile (..)
+  , VerificationKeyBase64 (..)
   , GenesisKeyFile (..)
   , MetaDataFile (..)
   , PoolId (..)
@@ -46,6 +49,7 @@ module Cardano.CLI.Shelley.Commands
 import           Prelude
 import           Data.Set (Set)
 import           Data.Text (Text)
+import           Data.ByteString (ByteString)
 
 import           Cardano.Api.Protocol (Protocol)
 import           Cardano.Api.Typed hiding (PoolId)
@@ -100,9 +104,9 @@ data StakeAddressCmd
   deriving (Eq, Show)
 
 data KeyCmd
-  = KeyConvertByronPaymentKey SigningKeyFile SigningKeyFile
-  | KeyConvertByronGenesisVerificationKey VerificationKeyFile VerificationKeyFile
-  | KeyConvertITNStakeKey ITNKeyFile (Maybe OutputFile)
+  = KeyConvertByronKey ByronKeyType SomeKeyFile OutputFile
+  | KeyConvertByronGenesisVKey VerificationKeyBase64 OutputFile
+  | KeyConvertITNStakeKey SomeKeyFile OutputFile
   deriving (Eq, Show)
 
 data TransactionCmd
@@ -284,15 +288,28 @@ newtype GenesisDir
   = GenesisDir FilePath
   deriving (Eq, Show)
 
-data ITNKeyFile
-  = ITNVerificationKeyFile VerificationKeyFile
-  | ITNSigningKeyFile SigningKeyFile
+-- | Either a verification or signing key, used for conversions and other
+-- commands that make sense for both.
+--
+data SomeKeyFile
+  = AVerificationKeyFile VerificationKeyFile
+  | ASigningKeyFile SigningKeyFile
   deriving (Eq, Show)
 
 data AddressKeyType
   = AddressKeyShelley
   | AddressKeyShelleyExtended
   | AddressKeyByron
+  deriving (Eq, Show)
+
+data ByronKeyType
+  = ByronPaymentKey  ByronKeyFormat
+  | ByronGenesisKey  ByronKeyFormat
+  | ByronDelegateKey ByronKeyFormat
+  deriving (Eq, Show)
+
+data ByronKeyFormat = NonLegacyByronKeyFormat
+                    | LegacyByronKeyFormat
   deriving (Eq, Show)
 
 newtype OpCertCounterFile
@@ -317,6 +334,11 @@ newtype TxFile
 
 newtype VerificationKeyFile
   = VerificationKeyFile FilePath
+  deriving (Eq, Show)
+
+-- | A raw verification key given in Base64, and decoded into a ByteString.
+newtype VerificationKeyBase64
+  = VerificationKeyBase64 String
   deriving (Eq, Show)
 
 -- | UTxO query filtering options.

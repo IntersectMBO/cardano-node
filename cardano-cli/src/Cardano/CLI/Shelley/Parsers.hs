@@ -255,13 +255,14 @@ pKeyCmd :: Parser KeyCmd
 pKeyCmd =
   Opt.subparser $
     mconcat
-      [ Opt.command "convert-byron-payment-key" $
-          Opt.info pKeyConvertByronPaymentKey $
-            Opt.progDesc $ "Convert a Byron payment signing key to a Shelley "
-                        ++ "payment signing key"
+      [ Opt.command "convert-byron-key" $
+          Opt.info pKeyConvertByronKey $
+            Opt.progDesc $ "Convert a Byron payment, genesis or genesis "
+                        ++ "delegate key (signing or verification) to a "
+                        ++ "corresponding Shelley-format key."
 
-      , Opt.command "convert-byron-genesis-vkey-base64" $
-          Opt.info pKeyConvertByronGenesisVerificationKey $
+      , Opt.command "convert-byron-genesis-vkey" $
+          Opt.info pKeyConvertByronGenesisVKey $
             Opt.progDesc $ "Convert a Base64-encoded Byron genesis "
                         ++ "verification key to a Shelley genesis "
                         ++ "verification key"
@@ -273,41 +274,93 @@ pKeyCmd =
                         ++ "Shelley stake key"
       ]
   where
-    pKeyConvertByronPaymentKey :: Parser KeyCmd
-    pKeyConvertByronPaymentKey =
-      KeyConvertByronPaymentKey
-        <$> pByronKeyFile Input
-        <*> pSigningKeyFile Output
+    pKeyConvertByronKey :: Parser KeyCmd
+    pKeyConvertByronKey =
+      KeyConvertByronKey
+        <$> pByronKeyType
+        <*> pByronKeyFile
+        <*> pOutputFile
 
-    pKeyConvertByronGenesisVerificationKey :: Parser KeyCmd
-    pKeyConvertByronGenesisVerificationKey =
-      KeyConvertByronGenesisVerificationKey
-        <$> pByronGenesisVerificationKeyFile
-        <*> pVerificationKeyFile Output
+    pByronKeyType :: Parser ByronKeyType
+    pByronKeyType =
+          Opt.flag' (ByronPaymentKey NonLegacyByronKeyFormat)
+            (  Opt.long "byron-payment-key-type"
+            <> Opt.help "Use a Byron-era payment key."
+            )
+      <|> Opt.flag' (ByronPaymentKey LegacyByronKeyFormat)
+            (  Opt.long "legacy-byron-payment-key-type"
+            <> Opt.help "Use a Byron-era payment key, in legacy SL format."
+            )
+      <|> Opt.flag' (ByronGenesisKey NonLegacyByronKeyFormat)
+            (  Opt.long "byron-genesis-key-type"
+            <> Opt.help "Use a Byron-era genesis key."
+            )
+      <|> Opt.flag' (ByronGenesisKey LegacyByronKeyFormat)
+            (  Opt.long "legacy-byron-genesis-key-type"
+            <> Opt.help "Use a Byron-era genesis key, in legacy SL format."
+            )
+      <|> Opt.flag' (ByronDelegateKey NonLegacyByronKeyFormat)
+            (  Opt.long "byron-genesis-delegate-key-type"
+            <> Opt.help "Use a Byron-era genesis delegate key."
+            )
+      <|> Opt.flag' (ByronDelegateKey LegacyByronKeyFormat)
+            (  Opt.long "legacy-byron-genesis-delegate-key-type"
+            <> Opt.help "Use a Byron-era genesis delegate key, in legacy SL format."
+            )
 
-    pByronGenesisVerificationKeyFile :: Parser VerificationKeyFile
-    pByronGenesisVerificationKeyFile =
+    pByronKeyFile :: Parser SomeKeyFile
+    pByronKeyFile =
+          (ASigningKeyFile      <$> pByronSigningKeyFile)
+      <|> (AVerificationKeyFile <$> pByronVerificationKeyFile)
+
+    pByronSigningKeyFile :: Parser SigningKeyFile
+    pByronSigningKeyFile =
+      SigningKeyFile <$>
+        Opt.strOption
+          (  Opt.long "byron-signing-key-file"
+          <> Opt.metavar "FILE"
+          <> Opt.help ("Input filepath of the Byron-format signing key.")
+          <> Opt.completer (Opt.bashCompleter "file")
+          )
+
+    pByronVerificationKeyFile :: Parser VerificationKeyFile
+    pByronVerificationKeyFile =
       VerificationKeyFile <$>
         Opt.strOption
-          (  Opt.long "byron-genesis-verification-key-file"
+          (  Opt.long "byron-verification-key-file"
           <> Opt.metavar "FILE"
-          <> Opt.help "Filepath of the Byron genesis verification key."
+          <> Opt.help ("Input filepath of the Byron-format verification key.")
           <> Opt.completer (Opt.bashCompleter "file")
+          )
+
+    pKeyConvertByronGenesisVKey :: Parser KeyCmd
+    pKeyConvertByronGenesisVKey =
+      KeyConvertByronGenesisVKey
+        <$> pByronGenesisVKeyBase64
+        <*> pOutputFile
+
+    pByronGenesisVKeyBase64 :: Parser VerificationKeyBase64
+    pByronGenesisVKeyBase64 =
+      VerificationKeyBase64 <$>
+        Opt.strOption
+          (  Opt.long "byron-genesis-verification-key"
+          <> Opt.metavar "BASE64"
+          <> Opt.help "Base64 string for the Byron genesis verification key."
           )
 
     pKeyConvertITNKey :: Parser KeyCmd
     pKeyConvertITNKey =
       KeyConvertITNStakeKey
         <$> pITNKeyFIle
-        <*> pMaybeOutputFile
+        <*> pOutputFile
 
-    pITNKeyFIle :: Parser ITNKeyFile
+    pITNKeyFIle :: Parser SomeKeyFile
     pITNKeyFIle = pITNSigningKeyFile
               <|> pITNVerificationKeyFile
 
-    pITNSigningKeyFile :: Parser ITNKeyFile
+    pITNSigningKeyFile :: Parser SomeKeyFile
     pITNSigningKeyFile =
-      ITNSigningKeyFile . SigningKeyFile <$>
+      ASigningKeyFile . SigningKeyFile <$>
         Opt.strOption
           (  Opt.long "itn-signing-key-file"
           <> Opt.metavar "FILE"
@@ -315,9 +368,9 @@ pKeyCmd =
           <> Opt.completer (Opt.bashCompleter "file")
           )
 
-    pITNVerificationKeyFile :: Parser ITNKeyFile
+    pITNVerificationKeyFile :: Parser SomeKeyFile
     pITNVerificationKeyFile =
-      ITNVerificationKeyFile . VerificationKeyFile <$>
+      AVerificationKeyFile . VerificationKeyFile <$>
         Opt.strOption
           (  Opt.long "itn-verification-key-file"
           <> Opt.metavar "FILE"
@@ -932,16 +985,6 @@ pSigningKeyFile fdir =
       (  Opt.long "signing-key-file"
       <> Opt.metavar "FILE"
       <> Opt.help (show fdir ++ " filepath of the signing key.")
-      <> Opt.completer (Opt.bashCompleter "file")
-      )
-
-pByronKeyFile :: FileDirection -> Parser SigningKeyFile
-pByronKeyFile fdir =
-  SigningKeyFile <$>
-    Opt.strOption
-      (  Opt.long "byron-signing-key-file"
-      <> Opt.metavar "FILE"
-      <> Opt.help (show fdir ++ " filepath of the Byron format signing key.")
       <> Opt.completer (Opt.bashCompleter "file")
       )
 
