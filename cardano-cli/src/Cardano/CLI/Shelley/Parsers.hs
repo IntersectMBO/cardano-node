@@ -67,7 +67,7 @@ parseShelleyCommands =
       , Opt.command "stake-address"
           (Opt.info (StakeAddressCmd <$> pStakeAddress) $ Opt.progDesc "Shelley stake address commands")
       , Opt.command "key"
-          (Opt.info (KeyCmd <$> pKeyCmd) $ Opt.progDesc "Shelley key conversion commands")
+          (Opt.info (KeyCmd <$> pKeyCmd) $ Opt.progDesc "Shelley key utility commands")
       , Opt.command "transaction"
           (Opt.info (TransactionCmd <$> pTransaction) $ Opt.progDesc "Shelley transaction commands")
       , Opt.command "node"
@@ -255,12 +255,22 @@ pKeyCmd :: Parser KeyCmd
 pKeyCmd =
   Opt.subparser $
     mconcat
-      [ Opt.command "convert-byron-payment-signing-key"
-          (Opt.info pKeyConvertByronPaymentKey $ Opt.progDesc "Convert a Byron payment signing key to a Shelley payment signing key")
-      , Opt.command "convert-byron-genesis-key"
-          (Opt.info pKeyConvertByronGenesisVerificationKey $ Opt.progDesc "Convert a Base64-encoded Byron genesis verification key to a Shelley genesis verification key")
-      , Opt.command "convert-itn-key"
-          (Opt.info pKeyConvertITNKey $ Opt.progDesc "Convert an Incentivized Testnet (ITN) non-extended signing or verification key to a corresponding Shelley stake key")
+      [ Opt.command "convert-byron-payment-key" $
+          Opt.info pKeyConvertByronPaymentKey $
+            Opt.progDesc $ "Convert a Byron payment signing key to a Shelley "
+                        ++ "payment signing key"
+
+      , Opt.command "convert-byron-genesis-vkey-base64" $
+          Opt.info pKeyConvertByronGenesisVerificationKey $
+            Opt.progDesc $ "Convert a Base64-encoded Byron genesis "
+                        ++ "verification key to a Shelley genesis "
+                        ++ "verification key"
+
+      , Opt.command "convert-itn-key" $
+          Opt.info pKeyConvertITNKey $
+            Opt.progDesc $ "Convert an Incentivized Testnet (ITN) non-extended "
+                        ++ "signing or verification key to a corresponding "
+                        ++ "Shelley stake key"
       ]
   where
     pKeyConvertByronPaymentKey :: Parser KeyCmd
@@ -292,7 +302,28 @@ pKeyCmd =
         <*> pMaybeOutputFile
 
     pITNKeyFIle :: Parser ITNKeyFile
-    pITNKeyFIle = pITNSigningKeyFile <|> pITNVerificationKeyFile
+    pITNKeyFIle = pITNSigningKeyFile
+              <|> pITNVerificationKeyFile
+
+    pITNSigningKeyFile :: Parser ITNKeyFile
+    pITNSigningKeyFile =
+      ITNSigningKeyFile . SigningKeyFile <$>
+        Opt.strOption
+          (  Opt.long "itn-signing-key-file"
+          <> Opt.metavar "FILE"
+          <> Opt.help "Filepath of the ITN signing key."
+          <> Opt.completer (Opt.bashCompleter "file")
+          )
+
+    pITNVerificationKeyFile :: Parser ITNKeyFile
+    pITNVerificationKeyFile =
+      ITNVerificationKeyFile . VerificationKeyFile <$>
+        Opt.strOption
+          (  Opt.long "itn-verification-key-file"
+          <> Opt.metavar "FILE"
+          <> Opt.help "Filepath of the ITN verification key."
+          <> Opt.completer (Opt.bashCompleter "file")
+          )
 
 pTransaction :: Parser TransactionCmd
 pTransaction =
@@ -883,16 +914,6 @@ pColdSigningKeyFile =
       )
     )
 
-pITNSigningKeyFile :: Parser ITNKeyFile
-pITNSigningKeyFile =
-  ITNSigningKeyFile . SigningKeyFile <$>
-    Opt.strOption
-      (  Opt.long "itn-signing-key-file"
-      <> Opt.metavar "FILE"
-      <> Opt.help "Filepath of the ITN signing key."
-      <> Opt.completer (Opt.bashCompleter "file")
-      )
-
 pSomeSigningKeyFiles :: Parser [SigningKeyFile]
 pSomeSigningKeyFiles =
   some $
@@ -1098,16 +1119,6 @@ pKESVerificationKeyFile =
         <> Opt.internal
         )
     )
-
-pITNVerificationKeyFile :: Parser ITNKeyFile
-pITNVerificationKeyFile =
-  ITNVerificationKeyFile . VerificationKeyFile <$>
-    Opt.strOption
-      (  Opt.long "itn-verification-key-file"
-      <> Opt.metavar "FILE"
-      <> Opt.help "Filepath of the ITN verification key."
-      <> Opt.completer (Opt.bashCompleter "file")
-      )
 
 pNetworkId :: Parser NetworkId
 pNetworkId =
