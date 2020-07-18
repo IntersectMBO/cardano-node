@@ -208,8 +208,12 @@ runNodeIssueOpCert (VerificationKeyFile vkeyKesPath)
     ocertCtrDesc :: Word64 -> TextViewDescription
     ocertCtrDesc n = TextViewDescription $ "Next certificate issue number: " <> BS.pack (show n)
 
-    possibleBlockIssuers :: [FromSomeType HasTextEnvelope (SigningKey StakePoolKey)]
+    possibleBlockIssuers
+      :: [FromSomeType HasTextEnvelope
+                       (Either (SigningKey StakePoolKey)
+                               (SigningKey GenesisDelegateExtendedKey))]
     possibleBlockIssuers =
-      [ FromSomeType (AsSigningKey AsStakePoolKey)       id
-      , FromSomeType (AsSigningKey AsGenesisDelegateKey) castSigningKey
+      [ FromSomeType (AsSigningKey AsStakePoolKey)        Left
+      , FromSomeType (AsSigningKey AsGenesisDelegateKey) (Left . castSigningKey)
+      , FromSomeType (AsSigningKey AsGenesisDelegateExtendedKey) Right
       ]
