@@ -496,6 +496,9 @@ pNodeCmd =
       , Opt.command "key-hash-VRF"
           (Opt.info pKeyHashVRF $
              Opt.progDesc "Print hash of a node's operational VRF key.")
+      , Opt.command "new-counter"
+          (Opt.info pNewCounter $
+             Opt.progDesc "Create a new certificate issue counter")
       , Opt.command "issue-op-cert"
           (Opt.info pIssueOpCert $
              Opt.progDesc "Issue a node operational certificate")
@@ -518,6 +521,20 @@ pNodeCmd =
     pKeyHashVRF :: Parser NodeCmd
     pKeyHashVRF =
       NodeKeyHashVRF <$> pVerificationKeyFile Input <*> pMaybeOutputFile
+
+    pNewCounter :: Parser NodeCmd
+    pNewCounter =
+      NodeNewCounter <$> pKESVerificationKeyFile
+                     <*> pCounterValue
+                     <*> pOperatorCertIssueCounterFile
+
+    pCounterValue :: Parser Word
+    pCounterValue =
+        Opt.option Opt.auto
+          (  Opt.long "counter-value"
+          <> Opt.metavar "INT"
+          <> Opt.help "The next certificate issue counter value to use."
+          )
 
     pIssueOpCert :: Parser NodeCmd
     pIssueOpCert =

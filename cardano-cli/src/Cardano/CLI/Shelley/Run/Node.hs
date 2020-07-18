@@ -43,6 +43,7 @@ runNodeCmd (NodeKeyGenCold vk sk ctr) = runNodeKeyGenCold vk sk ctr
 runNodeCmd (NodeKeyGenKES  vk sk)     = runNodeKeyGenKES  vk sk
 runNodeCmd (NodeKeyGenVRF  vk sk)     = runNodeKeyGenVRF  vk sk
 runNodeCmd (NodeKeyHashVRF vk mOutFp) = runNodeKeyHashVRF vk mOutFp
+runNodeCmd (NodeNewCounter vk ctr out) = runNodeNewCounter vk ctr out
 runNodeCmd (NodeIssueOpCert vk sk ctr p out) =
   runNodeIssueOpCert vk sk ctr p out
 
@@ -126,6 +127,29 @@ runNodeKeyHashVRF (VerificationKeyFile vkeyPath) mOutputFp = do
   case mOutputFp of
     Just (OutputFile fpath) -> liftIO $ BS.writeFile fpath hexKeyHash
     Nothing -> liftIO $ BS.putStrLn hexKeyHash
+
+
+runNodeNewCounter :: VerificationKeyFile
+                  -> Word
+                  -> OpCertCounterFile
+                  -> ExceptT ShelleyNodeCmdError IO ()
+runNodeNewCounter (VerificationKeyFile vkeyPath) counter
+                  (OpCertCounterFile ocertCtrPath) = do
+
+    vkey <- firstExceptT ShelleyNodeReadFileError . newExceptT $
+              readFileTextEnvelopeAnyOf
+                [ FromSomeType (AsVerificationKey AsStakePoolKey) id
+                , FromSomeType (AsVerificationKey AsGenesisDelegateKey)
+                               castVerificationKey
+                ]
+                vkeyPath
+
+    let ocertIssueCounter =
+          OperationalCertificateIssueCounter (fromIntegral counter) vkey
+
+    firstExceptT ShelleyNodeWriteFileError . newExceptT $
+      writeFileTextEnvelope ocertCtrPath Nothing ocertIssueCounter
+
 
 runNodeIssueOpCert :: VerificationKeyFile
                    -- ^ This is the hot KES verification key.

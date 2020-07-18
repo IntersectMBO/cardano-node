@@ -143,6 +143,7 @@ data NodeCmd
   | NodeKeyGenKES  VerificationKeyFile SigningKeyFile
   | NodeKeyGenVRF  VerificationKeyFile SigningKeyFile
   | NodeKeyHashVRF  VerificationKeyFile (Maybe OutputFile)
+  | NodeNewCounter  VerificationKeyFile Word OpCertCounterFile
   | NodeIssueOpCert VerificationKeyFile SigningKeyFile OpCertCounterFile
                     KESPeriod OutputFile
   deriving (Eq, Show)
