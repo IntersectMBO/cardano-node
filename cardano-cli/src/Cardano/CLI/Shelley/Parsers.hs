@@ -255,7 +255,18 @@ pKeyCmd :: Parser KeyCmd
 pKeyCmd =
   Opt.subparser $
     mconcat
-      [ Opt.command "convert-byron-key" $
+      [ Opt.command "verification-key" $
+          Opt.info pKeyGetVerificationKey $
+            Opt.progDesc $ "Get a verification key from a signing key. This "
+                        ++ " supports all key types."
+
+      , Opt.command "non-extended-key" $
+          Opt.info pKeyNonExtendedKey $
+            Opt.progDesc $ "Get a non-extended verification key from an "
+                        ++ "extended verification key. This supports all "
+                        ++ "extended key types."
+
+      , Opt.command "convert-byron-key" $
           Opt.info pKeyConvertByronKey $
             Opt.progDesc $ "Convert a Byron payment, genesis or genesis "
                         ++ "delegate key (signing or verification) to a "
@@ -274,6 +285,18 @@ pKeyCmd =
                         ++ "Shelley stake key"
       ]
   where
+    pKeyGetVerificationKey :: Parser KeyCmd
+    pKeyGetVerificationKey =
+      KeyGetVerificationKey
+        <$> pSigningKeyFile      Input
+        <*> pVerificationKeyFile Output
+
+    pKeyNonExtendedKey :: Parser KeyCmd
+    pKeyNonExtendedKey =
+      KeyNonExtendedKey
+        <$> pExtendedVerificationKeyFile Input
+        <*> pVerificationKeyFile Output
+
     pKeyConvertByronKey :: Parser KeyCmd
     pKeyConvertByronKey =
       KeyConvertByronKey
@@ -473,6 +496,9 @@ pNodeCmd =
       , Opt.command "key-hash-VRF"
           (Opt.info pKeyHashVRF $
              Opt.progDesc "Print hash of a node's operational VRF key.")
+      , Opt.command "new-counter"
+          (Opt.info pNewCounter $
+             Opt.progDesc "Create a new certificate issue counter")
       , Opt.command "issue-op-cert"
           (Opt.info pIssueOpCert $
              Opt.progDesc "Issue a node operational certificate")
@@ -495,6 +521,20 @@ pNodeCmd =
     pKeyHashVRF :: Parser NodeCmd
     pKeyHashVRF =
       NodeKeyHashVRF <$> pVerificationKeyFile Input <*> pMaybeOutputFile
+
+    pNewCounter :: Parser NodeCmd
+    pNewCounter =
+      NodeNewCounter <$> pKESVerificationKeyFile
+                     <*> pCounterValue
+                     <*> pOperatorCertIssueCounterFile
+
+    pCounterValue :: Parser Word
+    pCounterValue =
+        Opt.option Opt.auto
+          (  Opt.long "counter-value"
+          <> Opt.metavar "INT"
+          <> Opt.help "The next certificate issue counter value to use."
+          )
 
     pIssueOpCert :: Parser NodeCmd
     pIssueOpCert =
@@ -1133,6 +1173,16 @@ pVerificationKeyFile fdir =
       (  Opt.long "verification-key-file"
       <> Opt.metavar "FILE"
       <> Opt.help (show fdir ++ " filepath of the verification key.")
+      <> Opt.completer (Opt.bashCompleter "file")
+      )
+
+pExtendedVerificationKeyFile :: FileDirection -> Parser VerificationKeyFile
+pExtendedVerificationKeyFile fdir =
+  VerificationKeyFile <$>
+    Opt.strOption
+      (  Opt.long "extended-verification-key-file"
+      <> Opt.metavar "FILE"
+      <> Opt.help (show fdir ++ " filepath of the ed25519-bip32 verification key.")
       <> Opt.completer (Opt.bashCompleter "file")
       )
 

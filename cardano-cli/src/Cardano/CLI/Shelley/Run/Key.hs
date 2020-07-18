@@ -1,4 +1,5 @@
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE RankNTypes #-}
 
 module Cardano.CLI.Shelley.Run.Key
   ( ShelleyKeyCmdError
@@ -58,6 +59,12 @@ renderShelleyKeyCmdError err =
 runKeyCmd :: KeyCmd -> ExceptT ShelleyKeyCmdError IO ()
 runKeyCmd cmd =
   case cmd of
+    KeyGetVerificationKey skf vkf ->
+      runGetVerificationKey skf vkf
+
+    KeyNonExtendedKey evkf vkf ->
+      runNonExtendedKey evkf vkf
+
     KeyConvertByronKey keytype skfOld skfNew ->
       runConvertByronKey keytype skfOld skfNew
 
@@ -66,6 +73,141 @@ runKeyCmd cmd =
 
     KeyConvertITNStakeKey itnKeyFile outFile ->
       runConvertITNStakeKey itnKeyFile outFile
+
+
+runGetVerificationKey :: SigningKeyFile
+                      -> VerificationKeyFile
+                      -> ExceptT ShelleyKeyCmdError IO ()
+runGetVerificationKey skf (VerificationKeyFile vkf) = do
+    ssk <- firstExceptT ShelleyKeyCmdReadFileError $
+             readSigningKeyFile skf
+    withSomeSigningKey ssk $ \sk ->
+      let vk = getVerificationKey sk in
+      firstExceptT ShelleyKeyCmdWriteFileError . newExceptT $
+        writeFileTextEnvelope vkf Nothing vk
+
+
+data SomeSigningKey
+  = AByronSigningKey           (SigningKey ByronKey)
+  | APaymentSigningKey         (SigningKey PaymentKey)
+  | APaymentExtendedSigningKey (SigningKey PaymentExtendedKey)
+  | AStakeSigningKey           (SigningKey StakeKey)
+  | AStakeExtendedSigningKey   (SigningKey StakeExtendedKey)
+  | AStakePoolSigningKey       (SigningKey StakePoolKey)
+  | AGenesisSigningKey         (SigningKey GenesisKey)
+  | AGenesisExtendedSigningKey (SigningKey GenesisExtendedKey)
+  | AGenesisDelegateSigningKey (SigningKey GenesisDelegateKey)
+  | AGenesisDelegateExtendedSigningKey
+                               (SigningKey GenesisDelegateExtendedKey)
+  | AGenesisUTxOSigningKey     (SigningKey GenesisUTxOKey)
+  | AVrfSigningKey             (SigningKey VrfKey)
+  | AKesSigningKey             (SigningKey KesKey)
+
+withSomeSigningKey :: SomeSigningKey
+                   -> (forall keyrole. Key keyrole => SigningKey keyrole -> a)
+                   -> a
+withSomeSigningKey ssk f =
+    case ssk of
+      AByronSigningKey           sk -> f sk
+      APaymentSigningKey         sk -> f sk
+      APaymentExtendedSigningKey sk -> f sk
+      AStakeSigningKey           sk -> f sk
+      AStakeExtendedSigningKey   sk -> f sk
+      AStakePoolSigningKey       sk -> f sk
+      AGenesisSigningKey         sk -> f sk
+      AGenesisExtendedSigningKey sk -> f sk
+      AGenesisDelegateSigningKey sk -> f sk
+      AGenesisDelegateExtendedSigningKey 
+                                 sk -> f sk
+      AGenesisUTxOSigningKey     sk -> f sk
+      AVrfSigningKey             sk -> f sk
+      AKesSigningKey             sk -> f sk
+
+readSigningKeyFile
+  :: SigningKeyFile
+  -> ExceptT (FileError TextEnvelopeError) IO SomeSigningKey
+readSigningKeyFile (SigningKeyFile skfile) =
+    newExceptT $ readFileTextEnvelopeAnyOf fileTypes skfile
+  where
+    fileTypes =
+      [ FromSomeType (AsSigningKey AsByronKey)
+                      AByronSigningKey
+      , FromSomeType (AsSigningKey AsPaymentKey)
+                      APaymentSigningKey
+      , FromSomeType (AsSigningKey AsPaymentExtendedKey)
+                      APaymentExtendedSigningKey
+      , FromSomeType (AsSigningKey AsStakeKey)
+                      AStakeSigningKey
+      , FromSomeType (AsSigningKey AsStakeExtendedKey)
+                      AStakeExtendedSigningKey
+      , FromSomeType (AsSigningKey AsStakePoolKey)
+                      AStakePoolSigningKey
+      , FromSomeType (AsSigningKey AsGenesisKey)
+                      AGenesisSigningKey
+      , FromSomeType (AsSigningKey AsGenesisExtendedKey)
+                      AGenesisExtendedSigningKey
+      , FromSomeType (AsSigningKey AsGenesisDelegateKey)
+                      AGenesisDelegateSigningKey
+      , FromSomeType (AsSigningKey AsGenesisDelegateExtendedKey)
+                      AGenesisDelegateExtendedSigningKey
+      , FromSomeType (AsSigningKey AsGenesisUTxOKey)
+                      AGenesisUTxOSigningKey
+      , FromSomeType (AsSigningKey AsVrfKey)
+                      AVrfSigningKey
+      , FromSomeType (AsSigningKey AsKesKey)
+                      AKesSigningKey
+      ]
+
+
+runNonExtendedKey :: VerificationKeyFile
+                  -> VerificationKeyFile
+                  -> ExceptT ShelleyKeyCmdError IO ()
+runNonExtendedKey evkf (VerificationKeyFile vkf) = do
+    evk <- firstExceptT ShelleyKeyCmdReadFileError $
+             readExtendedVerificationKeyFile evkf
+    withNonExtendedKey evk $ \vk ->
+      firstExceptT ShelleyKeyCmdWriteFileError . newExceptT $
+        writeFileTextEnvelope vkf Nothing vk
+
+withNonExtendedKey :: SomeExtendedVerificationKey
+                   -> (forall keyrole. Key keyrole => VerificationKey keyrole -> a)
+                   -> a
+withNonExtendedKey (APaymentExtendedVerificationKey vk) f =
+    f (castVerificationKey vk :: VerificationKey PaymentKey)
+
+withNonExtendedKey (AStakeExtendedVerificationKey vk) f =
+    f (castVerificationKey vk :: VerificationKey StakeKey)
+
+withNonExtendedKey (AGenesisExtendedVerificationKey vk) f =
+    f (castVerificationKey vk :: VerificationKey GenesisKey)
+
+withNonExtendedKey (AGenesisDelegateExtendedVerificationKey vk) f =
+    f (castVerificationKey vk :: VerificationKey GenesisDelegateKey)
+
+
+data SomeExtendedVerificationKey
+  = APaymentExtendedVerificationKey (VerificationKey PaymentExtendedKey)
+  | AStakeExtendedVerificationKey   (VerificationKey StakeExtendedKey)
+  | AGenesisExtendedVerificationKey (VerificationKey GenesisExtendedKey)
+  | AGenesisDelegateExtendedVerificationKey
+                                    (VerificationKey GenesisDelegateExtendedKey)
+
+readExtendedVerificationKeyFile
+  :: VerificationKeyFile
+  -> ExceptT (FileError TextEnvelopeError) IO SomeExtendedVerificationKey
+readExtendedVerificationKeyFile (VerificationKeyFile evkfile) =
+    newExceptT $ readFileTextEnvelopeAnyOf fileTypes evkfile
+  where
+    fileTypes =
+      [ FromSomeType (AsVerificationKey AsPaymentExtendedKey)
+                      APaymentExtendedVerificationKey
+      , FromSomeType (AsVerificationKey AsStakeExtendedKey)
+                      AStakeExtendedVerificationKey
+      , FromSomeType (AsVerificationKey AsGenesisExtendedKey)
+                      AGenesisExtendedVerificationKey
+      , FromSomeType (AsVerificationKey AsGenesisDelegateExtendedKey)
+                      AGenesisDelegateExtendedVerificationKey
+      ]
 
 
 runConvertByronKey
