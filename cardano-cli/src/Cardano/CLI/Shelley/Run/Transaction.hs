@@ -310,9 +310,13 @@ data SomeWitnessSigningKey
   | APaymentSigningKey         (Api.SigningKey Api.PaymentKey)
   | APaymentExtendedSigningKey (Api.SigningKey Api.PaymentExtendedKey)
   | AStakeSigningKey           (Api.SigningKey Api.StakeKey)
+  | AStakeExtendedSigningKey   (Api.SigningKey Api.StakeExtendedKey)
   | AStakePoolSigningKey       (Api.SigningKey Api.StakePoolKey)
   | AGenesisSigningKey         (Api.SigningKey Api.GenesisKey)
+  | AGenesisExtendedSigningKey (Api.SigningKey Api.GenesisExtendedKey)
   | AGenesisDelegateSigningKey (Api.SigningKey Api.GenesisDelegateKey)
+  | AGenesisDelegateExtendedSigningKey
+                               (Api.SigningKey Api.GenesisDelegateExtendedKey)
   | AGenesisUTxOSigningKey     (Api.SigningKey Api.GenesisUTxOKey)
 
 readSigningKeyFile
@@ -331,12 +335,18 @@ readSigningKeyFile (SigningKeyFile skfile) =
                           APaymentExtendedSigningKey
       , Api.FromSomeType (Api.AsSigningKey Api.AsStakeKey)
                           AStakeSigningKey
+      , Api.FromSomeType (Api.AsSigningKey Api.AsStakeExtendedKey)
+                          AStakeExtendedSigningKey
       , Api.FromSomeType (Api.AsSigningKey Api.AsStakePoolKey)
                           AStakePoolSigningKey
       , Api.FromSomeType (Api.AsSigningKey Api.AsGenesisKey)
                           AGenesisSigningKey
+      , Api.FromSomeType (Api.AsSigningKey Api.AsGenesisExtendedKey)
+                          AGenesisExtendedSigningKey
       , Api.FromSomeType (Api.AsSigningKey Api.AsGenesisDelegateKey)
                           AGenesisDelegateSigningKey
+      , Api.FromSomeType (Api.AsSigningKey Api.AsGenesisDelegateExtendedKey)
+                          AGenesisDelegateExtendedSigningKey
       , Api.FromSomeType (Api.AsSigningKey Api.AsGenesisUTxOKey)
                           AGenesisUTxOSigningKey
       ]
@@ -350,9 +360,13 @@ categoriseWitnessSigningKey swsk =
     APaymentSigningKey         sk -> Right (Api.WitnessPaymentKey         sk)
     APaymentExtendedSigningKey sk -> Right (Api.WitnessPaymentExtendedKey sk)
     AStakeSigningKey           sk -> Right (Api.WitnessStakeKey           sk)
+    AStakeExtendedSigningKey   sk -> Right (Api.WitnessStakeExtendedKey   sk)
     AStakePoolSigningKey       sk -> Right (Api.WitnessStakePoolKey       sk)
     AGenesisSigningKey         sk -> Right (Api.WitnessGenesisKey sk)
+    AGenesisExtendedSigningKey sk -> Right (Api.WitnessGenesisExtendedKey sk)
     AGenesisDelegateSigningKey sk -> Right (Api.WitnessGenesisDelegateKey sk)
+    AGenesisDelegateExtendedSigningKey sk
+                                  -> Right (Api.WitnessGenesisDelegateExtendedKey sk)
     AGenesisUTxOSigningKey     sk -> Right (Api.WitnessGenesisUTxOKey     sk)
 
 runTxGetTxId :: TxBodyFile -> ExceptT ShelleyTxCmdError IO ()

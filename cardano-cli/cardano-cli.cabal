@@ -49,6 +49,7 @@ library
                        Cardano.CLI.Shelley.Run.Address.Info
                        Cardano.CLI.Shelley.Run.Genesis
                        Cardano.CLI.Shelley.Run.Governance
+                       Cardano.CLI.Shelley.Run.Key
                        Cardano.CLI.Shelley.Run.Node
                        Cardano.CLI.Shelley.Run.Pool
                        Cardano.CLI.Shelley.Run.Query
@@ -179,6 +180,7 @@ test-suite cardano-cli-pioneers
                       , aeson
                       , bech32 >= 1.1.0
                       , bytestring
+                      , base16-bytestring
                       , cardano-api
                       , cardano-cli
                       , cardano-prelude

@@ -19,7 +19,6 @@ import           Control.Monad.Trans.Except.Extra (firstExceptT, newExceptT)
 import           Cardano.Api.TextView (TextViewDescription (..))
 import           Cardano.Api.Typed
 
-import           Cardano.CLI.Byron.Key (ByronKeyFailure, CardanoEra (..), readEraSigningKey, renderByronKeyFailure)
 import           Cardano.CLI.Shelley.Parsers
                    (OutputFile (..), SigningKeyFile (..), VerificationKeyFile (..),
                     AddressCmd (..), AddressKeyType (..))
@@ -30,7 +29,6 @@ data ShelleyAddressCmdError
   = ShelleyAddressCmdAddressInfoError !ShelleyAddressInfoError
   | ShelleyAddressCmdReadFileError !(FileError TextEnvelopeError)
   | ShelleyAddressCmdWriteFileError !(FileError ())
-  | ShelleyAddressByronKeyFailure !ByronKeyFailure
   deriving Show
 
 renderShelleyAddressCmdError :: ShelleyAddressCmdError -> Text
@@ -40,7 +38,6 @@ renderShelleyAddressCmdError err =
       Text.pack (displayError addrInfoErr)
     ShelleyAddressCmdReadFileError fileErr -> Text.pack (displayError fileErr)
     ShelleyAddressCmdWriteFileError fileErr -> Text.pack (displayError fileErr)
-    ShelleyAddressByronKeyFailure e -> renderByronKeyFailure e
 
 runAddressCmd :: AddressCmd -> ExceptT ShelleyAddressCmdError IO ()
 runAddressCmd cmd =
@@ -50,7 +47,6 @@ runAddressCmd cmd =
     AddressBuild payVk stkVk nw mOutFp -> runAddressBuild payVk stkVk nw mOutFp
     AddressBuildMultiSig {} -> runAddressBuildMultiSig
     AddressInfo txt mOFp -> firstExceptT ShelleyAddressCmdAddressInfoError $ runAddressInfo txt mOFp
-    AddressConvertKey skfOld skfNew -> runAddressConvertKey skfOld skfNew
 
 
 runAddressKeyGen :: AddressKeyType
@@ -187,19 +183,3 @@ readAddressVerificationKeyFile (VerificationKeyFile vkfile) =
 runAddressBuildMultiSig :: ExceptT ShelleyAddressCmdError IO ()
 runAddressBuildMultiSig =
     liftIO $ putStrLn ("runAddressBuildMultiSig: TODO")
-
-
---
--- Format conversion
---
-
-runAddressConvertKey :: SigningKeyFile -- ^ Input file: old format
-                     -> SigningKeyFile -- ^ Output file: new format
-                     -> ExceptT ShelleyAddressCmdError IO ()
-runAddressConvertKey skeyPathOld (SigningKeyFile skeyPathNew) = do
-    sk <- firstExceptT ShelleyAddressByronKeyFailure $
-            readEraSigningKey ByronEra skeyPathOld
-    firstExceptT ShelleyAddressCmdWriteFileError . newExceptT $
-      writeFileTextEnvelope skeyPathNew (Just skeyDesc) (ByronSigningKey sk)
-  where
-    skeyDesc = TextViewDescription "Payment Signing Key"

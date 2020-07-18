@@ -5,6 +5,7 @@ module Cardano.CLI.Shelley.Commands
     ShelleyCommand (..)
   , AddressCmd (..)
   , StakeAddressCmd (..)
+  , KeyCmd (..)
   , TransactionCmd (..)
   , NodeCmd (..)
   , PoolCmd (..)
@@ -17,12 +18,14 @@ module Cardano.CLI.Shelley.Commands
 
     -- * CLI flag types
   , AddressKeyType (..)
+  , ByronKeyType (..)
+  , ByronKeyFormat (..)
   , GenesisDir (..)
   , TxInCount (..)
   , TxOutCount (..)
   , TxShelleyWitnessCount (..)
   , TxByronWitnessCount (..)
-  , ITNKeyFile (..)
+  , SomeKeyFile (..)
   , OpCertCounterFile (..)
   , OutputFile (..)
   , ProtocolParamsFile (..)
@@ -31,6 +34,7 @@ module Cardano.CLI.Shelley.Commands
   , TxBodyFile (..)
   , TxFile (..)
   , VerificationKeyFile (..)
+  , VerificationKeyBase64 (..)
   , GenesisKeyFile (..)
   , MetaDataFile (..)
   , PoolId (..)
@@ -65,6 +69,7 @@ import           Shelley.Spec.Ledger.TxData (MIRPot)
 data ShelleyCommand
   = AddressCmd      AddressCmd
   | StakeAddressCmd StakeAddressCmd
+  | KeyCmd          KeyCmd
   | TransactionCmd  TransactionCmd
   | NodeCmd         NodeCmd
   | PoolCmd         PoolCmd
@@ -83,7 +88,6 @@ data AddressCmd
   | AddressBuild VerificationKeyFile (Maybe VerificationKeyFile) NetworkId (Maybe OutputFile)
   | AddressBuildMultiSig  --TODO
   | AddressInfo Text (Maybe OutputFile)
-  | AddressConvertKey SigningKeyFile SigningKeyFile
   deriving (Eq, Show)
 
 data StakeAddressCmd
@@ -96,9 +100,13 @@ data StakeAddressCmd
   | StakeKeyRegistrationCert VerificationKeyFile OutputFile
   | StakeKeyDelegationCert VerificationKeyFile StakePoolVerificationKeyHashOrFile OutputFile
   | StakeKeyDeRegistrationCert VerificationKeyFile OutputFile
-  | StakeKeyITNConversion ITNKeyFile (Maybe OutputFile)
   deriving (Eq, Show)
 
+data KeyCmd
+  = KeyConvertByronKey ByronKeyType SomeKeyFile OutputFile
+  | KeyConvertByronGenesisVKey VerificationKeyBase64 OutputFile
+  | KeyConvertITNStakeKey SomeKeyFile OutputFile
+  deriving (Eq, Show)
 
 data TransactionCmd
   = TxBuildRaw
@@ -279,15 +287,28 @@ newtype GenesisDir
   = GenesisDir FilePath
   deriving (Eq, Show)
 
-data ITNKeyFile
-  = ITNVerificationKeyFile VerificationKeyFile
-  | ITNSigningKeyFile SigningKeyFile
+-- | Either a verification or signing key, used for conversions and other
+-- commands that make sense for both.
+--
+data SomeKeyFile
+  = AVerificationKeyFile VerificationKeyFile
+  | ASigningKeyFile SigningKeyFile
   deriving (Eq, Show)
 
 data AddressKeyType
   = AddressKeyShelley
   | AddressKeyShelleyExtended
   | AddressKeyByron
+  deriving (Eq, Show)
+
+data ByronKeyType
+  = ByronPaymentKey  ByronKeyFormat
+  | ByronGenesisKey  ByronKeyFormat
+  | ByronDelegateKey ByronKeyFormat
+  deriving (Eq, Show)
+
+data ByronKeyFormat = NonLegacyByronKeyFormat
+                    | LegacyByronKeyFormat
   deriving (Eq, Show)
 
 newtype OpCertCounterFile
@@ -312,6 +333,11 @@ newtype TxFile
 
 newtype VerificationKeyFile
   = VerificationKeyFile FilePath
+  deriving (Eq, Show)
+
+-- | A raw verification key given in Base64, and decoded into a ByteString.
+newtype VerificationKeyBase64
+  = VerificationKeyBase64 String
   deriving (Eq, Show)
 
 -- | UTxO query filtering options.

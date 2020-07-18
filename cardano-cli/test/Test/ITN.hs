@@ -6,9 +6,10 @@ module Test.ITN
 
 import           Cardano.Prelude
 
-import           Codec.Binary.Bech32 (humanReadablePartToText)
+import qualified Data.ByteString.Base16 as Base16
+import qualified Codec.Binary.Bech32 as Bech32
 
-import           Cardano.CLI.Helpers (dataPartToBase16, decodeBech32Key)
+import           Cardano.CLI.Shelley.Run.Key (decodeBech32Key)
 
 import           Hedgehog (Property, (===))
 import qualified Hedgehog as H
@@ -48,14 +49,14 @@ prop_convertITNKeys =
     -- Generate haskell stake verification key
     execCardanoCLIParser
       allFiles
-        $ evalCardanoCLIParser [ "shelley","stake-address","convert-itn-key"
+        $ evalCardanoCLIParser [ "shelley","key","convert-itn-key"
                                , "--itn-verification-key-file", itnVerKeyFp
                                , "--out-file", outputHaskellVerKeyFp
                                ]
     -- Generate haskell signing key
     execCardanoCLIParser
       allFiles
-        $ evalCardanoCLIParser [ "shelley","stake-address","convert-itn-key"
+        $ evalCardanoCLIParser [ "shelley","key","convert-itn-key"
                                , "--itn-signing-key-file", itnSignKeyFp
                                , "--out-file", outputHaskellSignKeyFp
                                ]
@@ -72,10 +73,10 @@ prop_convertITNKeys =
 golden_bech32Decode :: Property
 golden_bech32Decode = propertyOnce $ do
     (vHumReadPart, vDataPart , _) <- H.evalEither $ decodeBech32Key itnVerKey
-    vDataPartBase16 <- H.evalEither $ dataPartToBase16 vDataPart
+    Just vDataPartBase16 <- pure (dataPartToBase16 vDataPart)
 
     (sHumReadPart, sDataPart , _) <- H.evalEither $ decodeBech32Key itnSignKey
-    sDataPartBase16 <- H.evalEither $ dataPartToBase16 sDataPart
+    Just sDataPartBase16 <- pure (dataPartToBase16 sDataPart)
 
     -- Based on https://slowli.github.io/bech32-buffer/ which are in Base16
     let expectedHumanReadPartVerificationKey = "ed25519_pk"
@@ -85,14 +86,17 @@ golden_bech32Decode = propertyOnce $ do
 
 
     -- ITN Verification key decode check
-    expectedHumanReadPartVerificationKey === humanReadablePartToText vHumReadPart
+    expectedHumanReadPartVerificationKey === Bech32.humanReadablePartToText vHumReadPart
     expectedDataPartVerificationKey ===  vDataPartBase16
 
 
     -- ITN Signing key decode check
-    expectedHumanReadPartSigningKey === humanReadablePartToText sHumReadPart
+    expectedHumanReadPartSigningKey === Bech32.humanReadablePartToText sHumReadPart
     expectedDataPartSigningKey === sDataPartBase16
     H.success
+  where
+    dataPartToBase16 :: Bech32.DataPart -> Maybe ByteString
+    dataPartToBase16 = fmap Base16.encode . Bech32.dataPartToBytes
 
 tests :: IO Bool
 tests =
