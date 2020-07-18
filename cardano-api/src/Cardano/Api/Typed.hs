@@ -409,6 +409,7 @@ import qualified Cardano.Crypto.Hash.Class  as Crypto
 import qualified Cardano.Crypto.DSIGN.Class as Crypto
 import qualified Cardano.Crypto.KES.Class   as Crypto
 import qualified Cardano.Crypto.VRF.Class   as Crypto
+import qualified Cardano.Crypto.Util        as Crypto
 import qualified Cardano.Crypto.Wallet      as Crypto.HD
 
 --
@@ -1310,7 +1311,7 @@ makeShelleyBootstrapWitness nw (ShelleyTxBody txbody _) (ByronSigningKey sk) =
     --
     signature :: Shelley.SignedDSIGN ShelleyCrypto
                   (Shelley.Hash ShelleyCrypto (Shelley.TxBody ShelleyCrypto))
-    signature = makeShelleyKeyWitnessSignature
+    signature = makeShelleySignature
                   txhash
                   -- Make the signature with the extended key directly:
                   (ShelleyExtendedSigningKey (Byron.unSigningKey sk))
@@ -1354,7 +1355,7 @@ makeShelleyKeyWitness (ShelleyTxBody txbody _) =
      in \wsk ->
         let sk        = toShelleySigningKey wsk
             vk        = getShelleyKeyWitnessVerificationKey sk
-            signature = makeShelleyKeyWitnessSignature txhash sk
+            signature = makeShelleySignature txhash sk
          in ShelleyKeyWitness $
               Shelley.WitVKey vk signature
 
@@ -1415,21 +1416,20 @@ getShelleyKeyWitnessVerificationKey (ShelleyExtendedSigningKey sk) =
     $ sk
 
 
-makeShelleyKeyWitnessSignature
-  :: Shelley.Hash ShelleyCrypto (Shelley.TxBody ShelleyCrypto)
+makeShelleySignature
+  :: Crypto.SignableRepresentation tosign
+  => tosign
   -> ShelleySigningKey
-  -> Shelley.SignedDSIGN ShelleyCrypto
-                         (Shelley.Hash ShelleyCrypto
-                                       (Shelley.TxBody ShelleyCrypto))
-makeShelleyKeyWitnessSignature txhash (ShelleyNormalSigningKey sk) =
-    Crypto.signedDSIGN () txhash sk
+  -> Shelley.SignedDSIGN ShelleyCrypto tosign
+makeShelleySignature tosign (ShelleyNormalSigningKey sk) =
+    Crypto.signedDSIGN () tosign sk
 
-makeShelleyKeyWitnessSignature txhash (ShelleyExtendedSigningKey sk) =
+makeShelleySignature tosign (ShelleyExtendedSigningKey sk) =
     fromXSignature $
       Crypto.HD.sign
         BS.empty  -- passphrase for (unused) in-mem encryption
         sk
-        (Crypto.hashToBytes txhash)
+        (Crypto.getSignableRepresentation tosign)
   where
     fromXSignature :: Crypto.HD.XSignature
                    -> Shelley.SignedDSIGN ShelleyCrypto b
