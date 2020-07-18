@@ -103,7 +103,9 @@ data StakeAddressCmd
   deriving (Eq, Show)
 
 data KeyCmd
-  = KeyConvertByronKey ByronKeyType SomeKeyFile OutputFile
+  = KeyGetVerificationKey SigningKeyFile VerificationKeyFile
+  | KeyNonExtendedKey  VerificationKeyFile VerificationKeyFile
+  | KeyConvertByronKey ByronKeyType SomeKeyFile OutputFile
   | KeyConvertByronGenesisVKey VerificationKeyBase64 OutputFile
   | KeyConvertITNStakeKey SomeKeyFile OutputFile
   deriving (Eq, Show)
