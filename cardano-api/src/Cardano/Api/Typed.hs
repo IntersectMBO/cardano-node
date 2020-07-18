@@ -381,6 +381,7 @@ import           Ouroboros.Network.NodeToClient
 import           Ouroboros.Network.Mux
                    (MuxMode(InitiatorMode), MuxPeer(..),
                     RunMiniProtocol(InitiatorProtocolOnly))
+import           Ouroboros.Network.Util.ShowProxy (ShowProxy)
 
 -- TODO: it'd be nice if the consensus imports needed were a bit more coherent
 import           Ouroboros.Consensus.Cardano
@@ -2389,7 +2390,12 @@ nullLocalNodeClientProtocols =
 -- handlers.
 --
 connectToLocalNode :: forall mode block.
-                      (Typeable block, Typeable (ApplyTxErr block))
+                      (Typeable block, Typeable (ApplyTxErr block),
+                       ShowProxy block, ShowProxy (ApplyTxErr block),
+                       ShowProxy (Query block), ShowProxy (GenTx block))
+                       --TODO: too many constraints! we should pass
+                       -- a single protocol to run, not all of them, until we
+                       -- have the more flexible interface to run any combo
                    => LocalNodeConnectInfo mode block
                    -> LocalNodeClientProtocols block
                    -> IO ()
@@ -2476,7 +2482,9 @@ connectToLocalNode LocalNodeConnectInfo {
 -- local state query protocol.
 --
 queryNodeLocalState :: forall mode block result.
-                       (Typeable block, Typeable (ApplyTxErr block))
+                       (Typeable block, Typeable (ApplyTxErr block),
+                        ShowProxy block, ShowProxy (ApplyTxErr block),
+                        ShowProxy (Query block), ShowProxy (GenTx block))
                     => LocalNodeConnectInfo mode block
                     -> (Point block, Query block result)
                     -> IO (Either AcquireFailure result)
@@ -2506,7 +2514,7 @@ queryNodeLocalState connctInfo pointAndQuery = do
                 -- writing into an mvar
                 atomically $ putTMVar resultVar (Right result)
                 pure $ SendMsgRelease $
-                       StateQuery.SendMsgDone ()
+                  pure $ StateQuery.SendMsgDone ()
             }
         , recvMsgFailure = \failure -> do
             --TODO: return the result via the SendMsgDone rather than
@@ -2516,7 +2524,9 @@ queryNodeLocalState connctInfo pointAndQuery = do
         }
 
 submitTxToNodeLocal :: forall mode block.
-                       (Typeable block, Typeable (ApplyTxErr block))
+                       (Typeable block, Typeable (ApplyTxErr block),
+                        ShowProxy block, ShowProxy (ApplyTxErr block),
+                        ShowProxy (Query block), ShowProxy (GenTx block))
                     => LocalNodeConnectInfo mode block
                     -> GenTx block
                     -> IO (SubmitResult (ApplyTxErr block))
