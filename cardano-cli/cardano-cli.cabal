@@ -180,6 +180,7 @@ test-suite cardano-cli-pioneers
                       , aeson
                       , bech32 >= 1.1.0
                       , bytestring
+                      , base16-bytestring
                       , cardano-api
                       , cardano-cli
                       , cardano-prelude

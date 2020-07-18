@@ -49,7 +49,6 @@ module Cardano.CLI.Shelley.Commands
 import           Prelude
 import           Data.Set (Set)
 import           Data.Text (Text)
-import           Data.ByteString (ByteString)
 
 import           Cardano.Api.Protocol (Protocol)
 import           Cardano.Api.Typed hiding (PoolId)

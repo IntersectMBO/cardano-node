@@ -4,6 +4,9 @@ module Cardano.CLI.Shelley.Run.Key
   ( ShelleyKeyCmdError
   , renderShelleyKeyCmdError
   , runKeyCmd
+
+    -- * Exports for testing
+  , decodeBech32Key
   ) where
 
 import           Cardano.Prelude
