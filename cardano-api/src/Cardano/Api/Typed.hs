@@ -2279,14 +2279,15 @@ instance Error OperationalCertIssueError where
       --TODO: include key ids
 
 issueOperationalCertificate :: VerificationKey KesKey
-                            -> SigningKey StakePoolKey
+                            -> Either (SigningKey StakePoolKey)
+                                      (SigningKey GenesisDelegateExtendedKey)
                             -> Shelley.KESPeriod
                             -> OperationalCertificateIssueCounter
                             -> Either OperationalCertIssueError
                                       (OperationalCertificate,
                                       OperationalCertificateIssueCounter)
 issueOperationalCertificate (KesVerificationKey kesVKey)
-                            (StakePoolSigningKey poolSKey)
+                            skey
                             kesPeriod
                             (OperationalCertificateIssueCounter counter poolVKey)
     | poolVKey /= poolVKey'
@@ -2296,7 +2297,15 @@ issueOperationalCertificate (KesVerificationKey kesVKey)
     = Right (OperationalCertificate ocert poolVKey,
             OperationalCertificateIssueCounter (succ counter) poolVKey)
   where
-    poolVKey' = getVerificationKey (StakePoolSigningKey poolSKey)
+    poolVKey' :: VerificationKey StakePoolKey
+    poolVKey' = either getVerificationKey (convert . getVerificationKey) skey
+      where
+        convert :: VerificationKey GenesisDelegateExtendedKey
+                -> VerificationKey StakePoolKey
+        convert = (castVerificationKey :: VerificationKey GenesisDelegateKey
+                                       -> VerificationKey StakePoolKey)
+                . (castVerificationKey :: VerificationKey GenesisDelegateExtendedKey
+                                       -> VerificationKey GenesisDelegateKey)
 
     ocert     :: Shelley.OCert ShelleyCrypto
     ocert     = Shelley.OCert kesVKey counter kesPeriod signature
@@ -2304,9 +2313,16 @@ issueOperationalCertificate (KesVerificationKey kesVKey)
     signature :: Crypto.SignedDSIGN
                    (Shelley.DSIGN ShelleyCrypto)
                    (Shelley.OCertSignable ShelleyCrypto)
-    signature = Crypto.signedDSIGN ()
+    signature = makeShelleySignature
                   (Shelley.OCertSignable kesVKey counter kesPeriod)
-                  poolSKey
+                  skey'
+      where
+        skey' :: ShelleySigningKey
+        skey' = case skey of
+                  Left (StakePoolSigningKey poolSKey) ->
+                    ShelleyNormalSigningKey poolSKey
+                  Right (GenesisDelegateExtendedSigningKey delegSKey) ->
+                    ShelleyExtendedSigningKey delegSKey
 
 
 -- ----------------------------------------------------------------------------
