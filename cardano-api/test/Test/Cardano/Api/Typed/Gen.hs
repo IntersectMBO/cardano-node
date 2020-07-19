@@ -72,18 +72,25 @@ genOperationalCertificateIssueCounter = snd <$> genOperationalCertificateWithCou
 
 genOperationalCertificateWithCounter :: Gen (OperationalCertificate, OperationalCertificateIssueCounter)
 genOperationalCertificateWithCounter = do
-  kesVKey <- genVerificationKey AsKesKey
-  stakePoolSign <- genSigningKey AsStakePoolKey
-  kesP <- genKESPeriod
-  c <- Gen.integral $ Range.linear 0 1000
-  let stakePoolVer = getVerificationKey stakePoolSign
-      iCounter = OperationalCertificateIssueCounter c stakePoolVer
+    kesVKey <- genVerificationKey AsKesKey
+    stkPoolOrGenDelExtSign <- Gen.either (genSigningKey AsStakePoolKey) (genSigningKey AsGenesisDelegateExtendedKey)
+    kesP <- genKESPeriod
+    c <- Gen.integral $ Range.linear 0 1000
+    let stakePoolVer = either getVerificationKey (convert . getVerificationKey) stkPoolOrGenDelExtSign
+        iCounter = OperationalCertificateIssueCounter c stakePoolVer
 
-  case issueOperationalCertificate kesVKey stakePoolSign kesP iCounter of
-    -- This case should be impossible as we clearly derive the verification
-    -- key from the generated signing key.
-    Left err -> fail $ displayError err
-    Right pair -> return pair
+    case issueOperationalCertificate kesVKey stkPoolOrGenDelExtSign kesP iCounter of
+      -- This case should be impossible as we clearly derive the verification
+      -- key from the generated signing key.
+      Left err -> fail $ displayError err
+      Right pair -> return pair
+  where
+    convert :: VerificationKey GenesisDelegateExtendedKey
+            -> VerificationKey StakePoolKey
+    convert = (castVerificationKey :: VerificationKey GenesisDelegateKey
+                                   -> VerificationKey StakePoolKey)
+            . (castVerificationKey :: VerificationKey GenesisDelegateExtendedKey
+                                   -> VerificationKey GenesisDelegateKey)
 
 
 -- TODO: Generate payment credential via script

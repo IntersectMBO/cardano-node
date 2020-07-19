@@ -524,7 +524,7 @@ pNodeCmd =
 
     pNewCounter :: Parser NodeCmd
     pNewCounter =
-      NodeNewCounter <$> pKESVerificationKeyFile
+      NodeNewCounter <$> pColdVerificationKeyFile
                      <*> pCounterValue
                      <*> pOperatorCertIssueCounterFile
 
