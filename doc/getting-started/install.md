@@ -81,7 +81,7 @@ Update cabal
 
 Above instructions install Cabal version `3.2.0.0`. You can check the version by typing
 
-   cabal --version
+   cabal -V
 
 Download and install GHC:
 
