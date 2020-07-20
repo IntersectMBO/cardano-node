@@ -126,11 +126,11 @@ We change our working directory to the downloaded source code folder:
     cd cardano-node
 
 For reproducible builds, we should check out a specific release, a specific "tag".
-For the Shelley Testnet, we will use tag `1.14.2`, which we can check out as follows:
+For the Shelley Testnet, we will use tag `1.15.1`, which we can check out as follows:
 
     git fetch --all --tags
     git tag
-    git checkout tags/1.14.2
+    git checkout tags/1.15.1
 
 
 ## Build and install the node
