@@ -1,3 +1,5 @@
+# WARNING!!! Do not use this file except for chairman test. Not supported for general usage.
+
 { pkgs, cardano-cli-packages ? pkgs.cardanoNodeHaskellPackages.cardano-cli.components.exes }:
 with builtins; with pkgs.lib;
 let
@@ -7,12 +9,12 @@ let
   ## mkNodeConfig
   ##   :: ServiceConfig AttrSet -> NodeId Int -> NodeConfig AttrSet
   mkNodeConfig = cfg: NodeId:
-    cfg.nodeConfig //
-    { inherit NodeId; } //
+    removeAttrs (cfg.nodeConfig //
+    { inherit NodeId; Protocol = "RealPBFT"; } //
     (optionalAttrs (cfg.protover-major or null != null) { LastKnownBlockVersion-Major = cfg.protover-major; }) //
     (optionalAttrs (cfg.protover-minor or null != null) { LastKnownBlockVersion-Minor = cfg.protover-minor; }) //
     (optionalAttrs (cfg.protover-alt   or null != null) { LastKnownBlockVersion-Alt   = cfg.protover-alt;   }) //
-    (optionalAttrs (cfg.genesisFile != null) { GenesisFile = cfg.genesisFile;   });
+    (optionalAttrs (cfg.genesisFile != null) { GenesisFile = cfg.genesisFile;   })) [ "ByronGenesisFile" "ShelleyGenesisFile" ];
 
   ## mkFullyConnectedLocalClusterTopologyWithProxy
   ##   :: (Int NodeId -> String Address)
