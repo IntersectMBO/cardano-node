@@ -260,6 +260,27 @@ instance IsEffectuator (LiveViewBackend blk) Text where
 
                         return $ lvs { lvsEpoch = fromIntegral epoch }
 
+            LogObject _ _ (LogValue "operationalCertificateStartKESPeriod" (PureI oCertStartKesPeriod)) ->
+                modifyMVar_ (getbe lvbe) $ \lvs -> do
+
+                        checkForUnexpectedThunks ["operationalCertificateStartKESPeriod LiveViewBackend"] lvs
+
+                        return $ lvs { lvsOpCertStartKESPeriod = fromIntegral oCertStartKesPeriod }
+
+            LogObject _ _ (LogValue "currentKESPeriod" (PureI currentKesPeriod)) ->
+                modifyMVar_ (getbe lvbe) $ \lvs -> do
+
+                        checkForUnexpectedThunks ["currentKESPeriod LiveViewBackend"] lvs
+
+                        return $ lvs { lvsCurrentKESPeriod = fromIntegral currentKesPeriod }
+
+            LogObject _ _ (LogValue "remainingKESPeriods" (PureI kesPeriodsUntilExpiry)) ->
+                modifyMVar_ (getbe lvbe) $ \lvs -> do
+
+                        checkForUnexpectedThunks ["remainingKESPeriods LiveViewBackend"] lvs
+
+                        return $ lvs { lvsRemainingKESPeriods = fromIntegral kesPeriodsUntilExpiry }
+
             _ -> pure ()
 
     handleOverflow _ = pure ()
@@ -381,6 +402,9 @@ initLiveViewState = do
                 , lvsNetworkUsageOutNs      = 10000
                 , lvsMempoolMaxTxs          = 0
                 , lvsMempoolMaxBytes        = 0
+                , lvsOpCertStartKESPeriod   = 9999999999
+                , lvsCurrentKESPeriod       = 9999999999
+                , lvsRemainingKESPeriods    = 9999999999
                 , lvsMessage                = Nothing
                 , lvsUIThread               = LiveViewThread Nothing
                 , lvsMetricsThread          = LiveViewThread Nothing
