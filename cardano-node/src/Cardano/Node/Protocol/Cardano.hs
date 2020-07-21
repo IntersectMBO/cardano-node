@@ -1,9 +1,9 @@
 {-# LANGUAGE NamedFieldPuns    #-}
 {-# LANGUAGE FlexibleInstances #-}
-
-{-# OPTIONS_GHC -Wno-orphans  #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+
+{-# OPTIONS_GHC -Wno-orphans  #-}
 
 module Cardano.Node.Protocol.Cardano
   (
