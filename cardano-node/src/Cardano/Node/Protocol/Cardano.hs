@@ -24,8 +24,6 @@ import qualified Data.Text as T
 import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT)
 
-import qualified Cardano.Crypto.Hash.Class as Crypto
-
 import qualified Cardano.Chain.Update as Byron
 
 import           Ouroboros.Consensus.Cardano hiding (Protocol)
@@ -38,7 +36,6 @@ import           Ouroboros.Consensus.Cardano.Condense ()
 
 import           Ouroboros.Consensus.Shelley.Protocol (TPraosStandardCrypto)
 import qualified Shelley.Spec.Ledger.PParams as Shelley
-import qualified Shelley.Spec.Ledger.BaseTypes as Shelley
 
 import           Cardano.Node.Types
                    (NodeByronProtocolConfiguration(..),
@@ -109,6 +106,7 @@ mkConsensusProtocolCardano
                                     ProtocolCardano)
 mkConsensusProtocolCardano NodeByronProtocolConfiguration {
                              npcByronGenesisFile,
+                             npcByronGenesisFileHash,
                              npcByronReqNetworkMagic,
                              npcByronPbftSignatureThresh,
                              npcByronApplicationName,
@@ -119,6 +117,7 @@ mkConsensusProtocolCardano NodeByronProtocolConfiguration {
                            }
                            NodeShelleyProtocolConfiguration {
                              npcShelleyGenesisFile,
+                             npcShelleyGenesisFileHash,
                              npcShelleySupportedProtocolVersionMajor,
                              npcShelleySupportedProtocolVersionMinor,
                              npcShelleyMaxSupportedProtocolVersion
@@ -131,7 +130,9 @@ mkConsensusProtocolCardano NodeByronProtocolConfiguration {
                            files = do
     byronGenesis <-
       firstExceptT CardanoProtocolInstantiationErrorByron $
-        Byron.readGenesis npcByronGenesisFile npcByronReqNetworkMagic
+        Byron.readGenesis npcByronGenesisFile
+                          npcByronGenesisFileHash
+                          npcByronReqNetworkMagic
 
     byronLeaderCredentials <-
       firstExceptT CardanoProtocolInstantiationErrorByron $
@@ -140,6 +141,7 @@ mkConsensusProtocolCardano NodeByronProtocolConfiguration {
     (shelleyGenesis, shelleyGenesisHash) <-
       firstExceptT CardanoProtocolInstantiationErrorShelley $
         Shelley.readGenesis npcShelleyGenesisFile
+                            npcShelleyGenesisFileHash
 
     shelleyLeaderCredentials <-
       firstExceptT CardanoProtocolInstantiationErrorShelley $
@@ -159,7 +161,7 @@ mkConsensusProtocolCardano NodeByronProtocolConfiguration {
 
         -- Shelley parameters
         shelleyGenesis
-        (Shelley.Nonce (Crypto.castHash shelleyGenesisHash))
+        (Shelley.genesisHashToPraosNonce shelleyGenesisHash)
         (Shelley.ProtVer npcShelleySupportedProtocolVersionMajor
                          npcShelleySupportedProtocolVersionMinor)
         npcShelleyMaxSupportedProtocolVersion

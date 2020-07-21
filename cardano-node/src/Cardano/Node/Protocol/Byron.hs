@@ -28,17 +28,22 @@ import           Control.Monad.Trans.Except.Extra (bimapExceptT, firstExceptT,
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.Text as Text
 
+import qualified Cardano.Crypto.Hash as Crypto
+
+import qualified Cardano.Crypto.Hashing as Byron.Crypto
+import qualified Cardano.Crypto.Signing as Byron.Crypto
+
 import qualified Cardano.Chain.Genesis as Genesis
 import qualified Cardano.Chain.Update as Update
 import qualified Cardano.Chain.UTxO as UTxO
-import qualified Cardano.Crypto.Signing as Signing
 import           Cardano.Crypto.ProtocolMagic (RequiresNetworkMagic)
 
 import           Ouroboros.Consensus.Cardano hiding (Protocol)
 import qualified Ouroboros.Consensus.Cardano as Consensus
 import           Ouroboros.Consensus.Cardano.ByronHFC
 
-import           Cardano.Node.Types (NodeByronProtocolConfiguration (..))
+import           Cardano.Node.Types
+                   (NodeByronProtocolConfiguration (..), GenesisHash(..))
 import           Cardano.Config.Types
                    (ProtocolFilepaths(..), GenesisFile (..))
 
@@ -82,6 +87,7 @@ mkConsensusProtocolByron
              (Consensus.Protocol IO ByronBlockHFC ProtocolByron)
 mkConsensusProtocolByron NodeByronProtocolConfiguration {
                            npcByronGenesisFile,
+                           npcByronGenesisFileHash,
                            npcByronReqNetworkMagic,
                            npcByronPbftSignatureThresh,
                            npcByronApplicationName,
@@ -91,7 +97,9 @@ mkConsensusProtocolByron NodeByronProtocolConfiguration {
                            npcByronSupportedProtocolVersionAlt
                          }
                          files = do
-    genesisConfig <- readGenesis npcByronGenesisFile npcByronReqNetworkMagic
+    genesisConfig <- readGenesis npcByronGenesisFile
+                                 npcByronGenesisFileHash
+                                 npcByronReqNetworkMagic
 
     optionalLeaderCredentials <- readLeaderCredentials genesisConfig files
 
@@ -108,19 +116,43 @@ mkConsensusProtocolByron NodeByronProtocolConfiguration {
 
 
 readGenesis :: GenesisFile
+            -> Maybe GenesisHash
             -> RequiresNetworkMagic
             -> ExceptT ByronProtocolInstantiationError IO
                        Genesis.Config
-readGenesis (GenesisFile file) ncReqNetworkMagic =
-    firstExceptT (GenesisReadError file) $ do
-      (genesisData, genesisHash) <- Genesis.readGenesisData file
-      return Genesis.Config {
-        Genesis.configGenesisData       = genesisData,
-        Genesis.configGenesisHash       = genesisHash,
-        Genesis.configReqNetMagic       = ncReqNetworkMagic,
-        Genesis.configUTxOConfiguration = UTxO.defaultUTxOConfiguration
-        --TODO: add config support for the UTxOConfiguration if needed
-      }
+readGenesis (GenesisFile file) mbExpectedGenesisHash ncReqNetworkMagic = do
+    (genesisData, genesisHash) <- firstExceptT (GenesisReadError file) $
+                                  Genesis.readGenesisData file
+    checkExpectedGenesisHash genesisHash
+    return Genesis.Config {
+      Genesis.configGenesisData       = genesisData,
+      Genesis.configGenesisHash       = genesisHash,
+      Genesis.configReqNetMagic       = ncReqNetworkMagic,
+      Genesis.configUTxOConfiguration = UTxO.defaultUTxOConfiguration
+      --TODO: add config support for the UTxOConfiguration if needed
+    }
+  where
+    checkExpectedGenesisHash :: Genesis.GenesisHash
+                             -> ExceptT ByronProtocolInstantiationError IO ()
+    checkExpectedGenesisHash actual' =
+      case mbExpectedGenesisHash of
+        Just expected | actual /= expected ->
+            throwError (GenesisHashMismatch actual expected)
+          where
+            actual = fromByronGenesisHash actual'
+
+        _ -> return ()
+
+    fromByronGenesisHash :: Genesis.GenesisHash -> GenesisHash
+    fromByronGenesisHash (Genesis.GenesisHash h) =
+        GenesisHash
+      . fromMaybe impossible
+      . Crypto.hashFromBytes
+      . Byron.Crypto.hashToBytes
+      $ h
+      where
+        impossible =
+          panic "fromByronGenesisHash: old and new crypto libs disagree on hash size"
 
 
 
@@ -155,10 +187,10 @@ readLeaderCredentials genesisConfig
 
   where
     deserialiseSigningKey :: LB.ByteString
-                          -> Either DeserialiseFailure Signing.SigningKey
+                          -> Either DeserialiseFailure Byron.Crypto.SigningKey
     deserialiseSigningKey =
-        fmap (Signing.SigningKey . snd)
-      . deserialiseFromBytes Signing.fromCBORXPrv
+        fmap (Byron.Crypto.SigningKey . snd)
+      . deserialiseFromBytes Byron.Crypto.fromCBORXPrv
 
 ------------------------------------------------------------------------------
 -- Byron Errors
@@ -166,6 +198,7 @@ readLeaderCredentials genesisConfig
 
 data ByronProtocolInstantiationError =
     CanonicalDecodeFailure !FilePath !Text
+  | GenesisHashMismatch !GenesisHash !GenesisHash -- actual, expected
   | DelegationCertificateFilepathNotSpecified
   | GenesisConfigurationError !FilePath !Genesis.ConfigurationError
   | GenesisReadError !FilePath !Genesis.GenesisDataError
@@ -180,6 +213,10 @@ renderByronProtocolInstantiationError pie =
   case pie of
     CanonicalDecodeFailure fp failure -> "Canonical decode failure in " <> toS fp
                                          <> " Canonical failure: " <> failure
+    GenesisHashMismatch actual expected ->
+        "Wrong Byron genesis file: the actual hash is " <> show actual
+     <> ", but the expected Byron genesis hash given in the node configuration "
+     <> "file is " <> show expected
     DelegationCertificateFilepathNotSpecified -> "Delegation certificate filepath not specified"
     --TODO: Implement configuration error render function in cardano-ledger
     GenesisConfigurationError fp genesisConfigError -> "Genesis configuration error in: " <> toS fp

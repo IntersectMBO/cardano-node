@@ -138,6 +138,7 @@ library cardano-node-config
   build-depends:       aeson
                      , base >=4.12 && <5
                      , cardano-api
+                     , cardano-crypto-class
                      , cardano-crypto-wrapper
                      , cardano-ledger
                      , cardano-config
