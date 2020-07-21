@@ -150,7 +150,7 @@ in {
      # TODO: remove
      genesisFile = mkOption {
         type = types.path;
-        default = envConfig.genesisFile;
+        default = envConfig.genesisFile or null;
         description = ''
           Genesis json file
         '';
