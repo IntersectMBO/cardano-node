@@ -231,6 +231,7 @@ data GenesisCmd
   | GenesisVerKey VerificationKeyFile SigningKeyFile
   | GenesisTxIn VerificationKeyFile NetworkId (Maybe OutputFile)
   | GenesisAddr VerificationKeyFile NetworkId (Maybe OutputFile)
+  | GenesisHashFile GenesisFile
   deriving (Eq, Show)
 
 --

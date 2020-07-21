@@ -8,6 +8,7 @@ module Cardano.CLI.Shelley.Run.Genesis
   ) where
 
 import           Cardano.Prelude
+import           Prelude (id)
 
 import qualified Data.Aeson as Aeson
 import           Data.Aeson.Encode.Pretty (encodePretty)
@@ -28,6 +29,8 @@ import           System.IO.Error (isDoesNotExistError)
 import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT,
                    hoistEither, left, newExceptT)
+
+import qualified Cardano.Crypto.Hash as Crypto
 
 import           Cardano.Api.Typed
 import           Cardano.Api.TextView (TextViewDescription(..))
@@ -93,6 +96,7 @@ runGenesisCmd (GenesisVerKey vk sk) = runGenesisVerKey vk sk
 runGenesisCmd (GenesisTxIn vk nw mOutFile) = runGenesisTxIn vk nw mOutFile
 runGenesisCmd (GenesisAddr vk nw mOutFile) = runGenesisAddr vk nw mOutFile
 runGenesisCmd (GenesisCreate gd gn un ms am nw) = runGenesisCreate gd gn un ms am nw
+runGenesisCmd (GenesisHashFile gf) = runGenesisHashFile gf
 
 --
 -- Genesis command implementations
@@ -557,3 +561,16 @@ readInitialFundAddresses utxodir nw = do
                  addr = makeShelleyAddress nw (PaymentCredentialByKey vkh)
                                            NoStakeAddress
            ]
+
+
+--
+-- Hash a geness file
+--
+
+runGenesisHashFile :: GenesisFile -> ExceptT ShelleyGenesisCmdError IO ()
+runGenesisHashFile (GenesisFile fpath) = do
+   content <- handleIOExceptT (ShelleyGenesisCmdReadGenesisIOError fpath) $
+              BS.readFile fpath
+   let gh :: Crypto.Hash Crypto.Blake2b_256 ByteString
+       gh = Crypto.hashWith id content
+   liftIO $ print gh
