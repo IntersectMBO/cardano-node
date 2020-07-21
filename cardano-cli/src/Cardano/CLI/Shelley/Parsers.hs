@@ -1398,7 +1398,8 @@ pTxByronWitnessCount =
     Opt.option Opt.auto
       (  Opt.long "byron-witness-count"
       <> Opt.metavar "NATURAL"
-      <> Opt.help "The number of Byron key witnesses."
+      <> Opt.help "The number of Byron key witnesses (default is 0)."
+      <> Opt.value 0
       )
 
 pQueryFilter :: Parser QueryFilter
