@@ -775,6 +775,10 @@ pGenesisCmd =
           (Opt.info pGenesisCreate $
              Opt.progDesc ("Create a Shelley genesis file from a genesis "
                         ++ "template and genesis/delegation/spending keys."))
+
+      , Opt.command "hash"
+          (Opt.info pGenesisHash $
+             Opt.progDesc "Compute the hash of a genesis file")
       ]
   where
     pGenesisKeyGen :: Parser GenesisCmd
@@ -815,6 +819,10 @@ pGenesisCmd =
                     <*> pMaybeSystemStart
                     <*> pInitialSupply
                     <*> pNetworkId
+
+    pGenesisHash :: Parser GenesisCmd
+    pGenesisHash =
+      GenesisHashFile <$> pGenesisFile
 
     pGenesisDir :: Parser GenesisDir
     pGenesisDir =

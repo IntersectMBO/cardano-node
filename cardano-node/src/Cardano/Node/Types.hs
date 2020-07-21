@@ -11,6 +11,7 @@ module Cardano.Node.Types
   , NodeConfiguration(..)
   , Protocol(..)
   , MockProtocol(..)
+  , GenesisHash(..)
   , NodeByronProtocolConfiguration(..)
   , NodeHardForkProtocolConfiguration(..)
   , NodeProtocolConfiguration(..)
@@ -34,6 +35,7 @@ import           System.Posix.Types (Fd)
 
 import           Cardano.Api.Typed (EpochNo)
 import           Cardano.Config.Types
+import qualified Cardano.Crypto.Hash as Crypto
 import           Cardano.Crypto (RequiresNetworkMagic(..))
 import qualified Cardano.Chain.Update as Byron
 import           Cardano.Node.TraceConfig (TraceOptions(..), traceConfigParser)
@@ -165,6 +167,7 @@ instance FromJSON NodeConfiguration where
                                       ++ "ByronGenesisFile or GenesisFile"
             (Just _, Just _)   -> fail $ "Specify either ByronGenesisFile"
                                       ++ "or GenesisFile, but not both"
+        npcByronGenesisFileHash <- v .:? "ByronGenesisHash"
 
         npcByronReqNetworkMagic     <- v .:? "RequiresNetworkMagic"
                                          .!= RequiresNoMagic
@@ -178,6 +181,7 @@ instance FromJSON NodeConfiguration where
 
         pure NodeByronProtocolConfiguration {
                npcByronGenesisFile
+             , npcByronGenesisFileHash
              , npcByronReqNetworkMagic
              , npcByronPbftSignatureThresh
              , npcByronApplicationName
@@ -198,6 +202,7 @@ instance FromJSON NodeConfiguration where
                                       ++ "ShelleyGenesisFile or GenesisFile"
             (Just _, Just _)   -> fail $ "Specify either ShelleyGenesisFile"
                                       ++ "or GenesisFile, but not both"
+        npcShelleyGenesisFileHash <- v .:? "ShelleyGenesisHash"
 
         --TODO: these are silly names, allow better aliases:
         protVerMajor    <- v .:  "LastKnownBlockVersion-Major"
@@ -206,6 +211,7 @@ instance FromJSON NodeConfiguration where
 
         pure NodeShelleyProtocolConfiguration {
                npcShelleyGenesisFile
+             , npcShelleyGenesisFileHash
              , npcShelleySupportedProtocolVersionMajor = protVerMajor
              , npcShelleySupportedProtocolVersionMinor = protVerMinor
              , npcShelleyMaxSupportedProtocolVersion   = protVerMajroMax
@@ -260,6 +266,9 @@ data MockProtocol = MockBFT
 deriving instance NFData MockProtocol
 deriving instance NoUnexpectedThunks MockProtocol
 
+newtype GenesisHash = GenesisHash (Crypto.Hash Crypto.Blake2b_256 ByteString)
+  deriving newtype (Eq, Show, ToJSON, FromJSON)
+
 data NodeProtocolConfiguration =
        NodeProtocolConfigurationMock    NodeMockProtocolConfiguration
      | NodeProtocolConfigurationByron   NodeByronProtocolConfiguration
@@ -271,7 +280,8 @@ data NodeProtocolConfiguration =
 
 data NodeShelleyProtocolConfiguration =
      NodeShelleyProtocolConfiguration {
-       npcShelleyGenesisFile  :: !GenesisFile
+       npcShelleyGenesisFile     :: !GenesisFile
+     , npcShelleyGenesisFileHash :: !(Maybe GenesisHash)
 
        -- | These declare the version of the protocol that the node is prepared
        -- to run. This is usually the version of the protocol in use on the
@@ -293,6 +303,7 @@ data NodeShelleyProtocolConfiguration =
 data NodeByronProtocolConfiguration =
      NodeByronProtocolConfiguration {
        npcByronGenesisFile         :: !GenesisFile
+     , npcByronGenesisFileHash     :: !(Maybe GenesisHash)
      , npcByronReqNetworkMagic     :: !RequiresNetworkMagic
      , npcByronPbftSignatureThresh :: !(Maybe Double)
 

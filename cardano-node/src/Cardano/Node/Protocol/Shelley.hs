@@ -18,6 +18,7 @@ module Cardano.Node.Protocol.Shelley
     -- * Reusable parts
   , readGenesis
   , readLeaderCredentials
+  , genesisHashToPraosNonce
   ) where
 
 import           Cardano.Prelude
@@ -47,7 +48,8 @@ import           Shelley.Spec.Ledger.Keys (coerceKeyRole)
 import           Cardano.Api.Typed hiding (FileError)
 import qualified Cardano.Api.Typed as Api (FileError)
 
-import           Cardano.Node.Types (NodeShelleyProtocolConfiguration(..))
+import           Cardano.Node.Types
+                   (NodeShelleyProtocolConfiguration(..), GenesisHash(..))
 import           Cardano.Config.Types
                    (ProtocolFilepaths(..), GenesisFile (..))
 
@@ -92,35 +94,49 @@ mkConsensusProtocolShelley
                                  Consensus.ProtocolShelley)
 mkConsensusProtocolShelley NodeShelleyProtocolConfiguration {
                             npcShelleyGenesisFile,
+                            npcShelleyGenesisFileHash,
                             npcShelleySupportedProtocolVersionMajor,
                             npcShelleySupportedProtocolVersionMinor,
                             npcShelleyMaxSupportedProtocolVersion
                           }
                           files = do
     (genesis, genesisHash) <- readGenesis npcShelleyGenesisFile
+                                          npcShelleyGenesisFileHash
+
     optionalLeaderCredentials <- readLeaderCredentials files
 
     return $
       Consensus.ProtocolShelley
         genesis
-        (Nonce (Crypto.castHash genesisHash))
+        (genesisHashToPraosNonce genesisHash)
         (ProtVer npcShelleySupportedProtocolVersionMajor
                  npcShelleySupportedProtocolVersionMinor)
         npcShelleyMaxSupportedProtocolVersion
         optionalLeaderCredentials
 
-readGenesis :: Crypto.HashAlgorithm h
-            => GenesisFile
+genesisHashToPraosNonce :: GenesisHash -> Nonce
+genesisHashToPraosNonce (GenesisHash h) = Nonce (Crypto.castHash h)
+
+readGenesis :: GenesisFile
+            -> Maybe GenesisHash
             -> ExceptT ShelleyProtocolInstantiationError IO
-                       (ShelleyGenesis TPraosStandardCrypto,
-                        Crypto.Hash h ByteString)
-readGenesis (GenesisFile file) = do
+                       (ShelleyGenesis TPraosStandardCrypto, GenesisHash)
+readGenesis (GenesisFile file) mbExpectedGenesisHash = do
     content <- handleIOExceptT (GenesisReadError file) $
                  BS.readFile file
+    let genesisHash = GenesisHash (Crypto.hashWith id content)
+    checkExpectedGenesisHash genesisHash
     genesis <- firstExceptT (GenesisDecodeError file) $ hoistEither $
                  Aeson.eitherDecodeStrict' content
-    let genesisHash = Crypto.hashWith id content
     return (genesis, genesisHash)
+  where
+    checkExpectedGenesisHash :: GenesisHash
+                             -> ExceptT ShelleyProtocolInstantiationError IO ()
+    checkExpectedGenesisHash actual =
+      case mbExpectedGenesisHash of
+        Just expected | actual /= expected
+          -> throwError (GenesisHashMismatch actual expected)
+        _ -> return ()
 
 
 readLeaderCredentials :: Maybe ProtocolFilepaths
@@ -174,6 +190,7 @@ readLeaderCredentials (Just ProtocolFilepaths {shelleyKESFile = Nothing}) =
 
 data ShelleyProtocolInstantiationError =
        GenesisReadError !FilePath !IOException
+     | GenesisHashMismatch !GenesisHash !GenesisHash -- actual, expected
      | GenesisDecodeError !FilePath !String
      | FileError (Api.FileError TextEnvelopeError)
 --TODO: pick a less generic constructor than FileError
@@ -191,6 +208,11 @@ renderShelleyProtocolInstantiationError pie =
     GenesisReadError fp err ->
         "There was an error reading the genesis file: "
      <> toS fp <> " Error: " <> (T.pack $ show err)
+
+    GenesisHashMismatch actual expected ->
+        "Wrong Shelley genesis file: the actual hash is " <> show actual
+     <> ", but the expected Shelley genesis hash given in the node "
+     <> "configuration file is " <> show expected
 
     GenesisDecodeError fp err ->
         "There was an error parsing the genesis file: "
