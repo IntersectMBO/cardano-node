@@ -7,24 +7,25 @@
 let
   sources = import ./sources.nix { inherit pkgs; }
     // sourcesOverride;
-  iohkNix = import sources.iohk-nix {};
+  iohkNixMain = import sources.iohk-nix {};
   haskellNix = (import sources."haskell.nix" { inherit system sourcesOverride; }).nixpkgsArgs;
   # use our own nixpkgs if it exists in our sources,
   # otherwise use iohkNix default nixpkgs.
   nixpkgs = if (sources ? nixpkgs)
     then (builtins.trace "Not using IOHK default nixpkgs (use 'niv drop nixpkgs' to use default for better sharing)"
       sources.nixpkgs)
-    else iohkNix.nixpkgs;
+    else (builtins.trace "Using IOHK default nixpkgs"
+      iohkNixMain.nixpkgs);
 
   # for inclusion in pkgs:
   overlays =
     # Haskell.nix (https://github.com/input-output-hk/haskell.nix)
     haskellNix.overlays
     # haskell-nix.haskellLib.extra: some useful extra utility functions for haskell.nix
-    ++ iohkNix.overlays.haskell-nix-extra
-    ++ iohkNix.overlays.crypto
+    ++ iohkNixMain.overlays.haskell-nix-extra
+    ++ iohkNixMain.overlays.crypto
     # iohkNix: nix utilities and niv:
-    ++ iohkNix.overlays.iohkNix
+    ++ iohkNixMain.overlays.iohkNix
     # our own overlays:
     ++ [
       (pkgs: _: with pkgs; {
