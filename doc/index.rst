@@ -61,17 +61,3 @@ cardano-node
    reference/shelley-genesis
    reference/configuring-a-node-using-yaml
    reference/transactions
-
-.. toctree::
-   :maxdepth: 3
-   :caption: Cardano Components
-   :titlesonly:
-   :hidden:
-
-   cardano-node <https://cardano.readthedocs.io/projects/cardano-node/en/latest/>
-   cardano-adrestia <https://cardano.readthedocs.io/projects/adrestia/en/latest/>
-   cardano-wallet <https://cardano.readthedocs.io/projects/cardano-wallet/en/latest/>
-   plutus <https://cardano.readthedocs.io/projects/plutus/en/latest/>
-
-
-
