@@ -32,7 +32,7 @@ import           Ouroboros.Consensus.BlockchainTime (getSlotLength)
 import           Ouroboros.Consensus.Protocol.Abstract
                    (ValidationErr, CannotLead, ChainIndepState)
 import           Ouroboros.Consensus.Ledger.Abstract (LedgerError)
-import           Ouroboros.Consensus.Ledger.Inspect (LedgerWarning)
+import           Ouroboros.Consensus.Ledger.Inspect (LedgerUpdate, LedgerWarning)
 import           Ouroboros.Consensus.Ledger.SupportsMempool
                    (GenTx, TxId, ApplyTxErr)
 import           Ouroboros.Consensus.HeaderValidation
@@ -40,7 +40,7 @@ import           Ouroboros.Consensus.HeaderValidation
 import           Ouroboros.Consensus.HardFork.Combinator
 import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras
                    (OneEraValidationErr(..), OneEraLedgerError(..),
-                   OneEraLedgerWarning(..),
+                    OneEraLedgerWarning(..), OneEraLedgerUpdate(..),
                     OneEraEnvelopeErr(..), OneEraCannotLead(..),
                     EraMismatch(..), mkEraMismatch)
 import           Ouroboros.Consensus.HardFork.History.EraParams
@@ -147,15 +147,41 @@ instance ToObject (LedgerError blk) => ToObject (WrapLedgerErr blk) where
 -- instances for HardForkLedgerWarning
 --
 
-instance All (ToObject `Compose` WrapLedgerWarning) xs => ToObject (HardForkLedgerWarning xs) where
-    toObject verb (HardForkLedgerWarningInEra err) = toObject verb err
+instance ( All (ToObject `Compose` WrapLedgerWarning) xs
+         , All SingleEraBlock xs
+         ) => ToObject (HardForkLedgerWarning xs) where
+    toObject verb warning = case warning of
+      HardForkWarningInEra err -> toObject verb err
 
-    toObject verb (HardForkLedgerWarningUnexpectedTransition eraParams epoch) =
-      mkObject
-        [ "kind"            .= String "HardForkLedgerWarningUnexpectedTransition"
-        , "eraParams"       .= toObject verb eraParams
-        , "transitionEpoch" .= epoch
-        ]
+      HardForkWarningTransitionMismatch toEra eraParams epoch ->
+        mkObject
+          [ "kind"            .= String "HardForkWarningTransitionMismatch"
+          , "toEra"           .= condense toEra
+          , "eraParams"       .= toObject verb eraParams
+          , "transitionEpoch" .= epoch
+          ]
+
+      HardForkWarningTransitionInFinalEra fromEra epoch ->
+        mkObject
+          [ "kind"            .= String "HardForkWarningTransitionInFinalEra"
+          , "fromEra"         .= condense fromEra
+          , "transitionEpoch" .= epoch
+          ]
+
+      HardForkWarningTransitionUnconfirmed toEra ->
+        mkObject
+          [ "kind"  .= String "HardForkWarningTransitionUnconfirmed"
+          , "toEra" .= condense toEra
+          ]
+
+      HardForkWarningTransitionReconfirmed fromEra toEra prevEpoch newEpoch ->
+        mkObject
+          [ "kind"                .= String "HardForkWarningTransitionReconfirmed"
+          , "fromEra"             .= condense fromEra
+          , "toEra"               .= condense toEra
+          , "prevTransitionEpoch" .= prevEpoch
+          , "newTransitionEpoch"  .= newEpoch
+          ]
 
 instance All (ToObject `Compose` WrapLedgerWarning) xs => ToObject (OneEraLedgerWarning xs) where
     toObject verb =
@@ -176,6 +202,49 @@ instance ToObject EraParams where
 
 deriving instance ToJSON SafeZone
 deriving instance ToJSON SafeBeforeEpoch
+
+
+--
+-- instances for HardForkLedgerUpdate
+--
+
+instance ( All (ToObject `Compose` WrapLedgerUpdate) xs
+         , All SingleEraBlock xs
+         ) => ToObject (HardForkLedgerUpdate xs) where
+    toObject verb update = case update of
+      HardForkUpdateInEra err -> toObject verb err
+
+      HardForkUpdateTransitionConfirmed fromEra toEra epoch ->
+        mkObject
+          [ "kind"            .= String "HardForkUpdateTransitionConfirmed"
+          , "fromEra"         .= condense fromEra
+          , "toEra"           .= condense toEra
+          , "transitionEpoch" .= epoch
+          ]
+
+      HardForkUpdateTransitionDone fromEra toEra epoch ->
+        mkObject
+          [ "kind"            .= String "HardForkUpdateTransitionDone"
+          , "fromEra"         .= condense fromEra
+          , "toEra"           .= condense toEra
+          , "transitionEpoch" .= epoch
+          ]
+
+      HardForkUpdateTransitionRolledBack fromEra toEra ->
+        mkObject
+          [ "kind"    .= String "HardForkUpdateTransitionRolledBack"
+          , "fromEra" .= condense fromEra
+          , "toEra"   .= condense toEra
+          ]
+
+instance All (ToObject `Compose` WrapLedgerUpdate) xs => ToObject (OneEraLedgerUpdate xs) where
+    toObject verb =
+        hcollapse
+      . hcmap (Proxy @ (ToObject `Compose` WrapLedgerUpdate)) (K . toObject verb)
+      . getOneEraLedgerUpdate
+
+instance ToObject (LedgerUpdate blk) => ToObject (WrapLedgerUpdate blk) where
+    toObject verb = toObject verb . unwrapLedgerUpdate
 
 
 --

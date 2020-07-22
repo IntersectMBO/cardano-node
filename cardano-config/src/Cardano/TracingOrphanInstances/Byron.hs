@@ -12,6 +12,9 @@ module Cardano.TracingOrphanInstances.Byron () where
 
 import           Cardano.Prelude
 
+import qualified Data.Set as Set
+import qualified Data.Text as Text
+
 import           Cardano.TracingOrphanInstances.Common
 import           Cardano.TracingOrphanInstances.Consensus ()
 
@@ -21,6 +24,8 @@ import           Ouroboros.Consensus.Block (Header)
 import           Ouroboros.Consensus.Byron.Ledger
                    (ByronBlock(..), byronHeaderRaw,
                     ByronOtherHeaderEnvelopeError(..))
+import           Ouroboros.Consensus.Byron.Ledger.Inspect
+                   (ByronLedgerUpdate (..), ProtocolUpdate (..), UpdateState (..))
 import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTx, TxId, txId)
 import           Ouroboros.Consensus.Util.Condense (condense)
 
@@ -60,6 +65,54 @@ instance ToObject ApplyMempoolPayloadErr where
       [ "kind" .= String "MempoolUpdateVoteErr"
       , "error" .= String (show iFaceErrr)
       ]
+
+instance ToObject ByronLedgerUpdate where
+  toObject verb (ByronUpdatedProtocolUpdates protocolUpdates) =
+    mkObject $
+      [ "kind"            .= String "ByronUpdatedProtocolUpdates"
+      , "protocolUpdates" .= map (toObject verb) protocolUpdates
+      ]
+
+instance ToObject ProtocolUpdate where
+  toObject verb (ProtocolUpdate updateVersion updateState) =
+    mkObject $
+      [ "kind"                  .= String "ProtocolUpdate"
+      , "protocolUpdateVersion" .= updateVersion
+      , "protocolUpdateState"   .= toObject verb updateState
+      ]
+
+instance ToObject UpdateState where
+  toObject _verb updateState = case updateState of
+      UpdateRegistered slot ->
+        mkObject
+          [ "kind" .= String "UpdateRegistered"
+          , "slot" .= slot
+          ]
+      UpdateActive votes ->
+        mkObject
+          [ "kind"  .= String "UpdateActive"
+          , "votes" .= map (Text.pack . show) (Set.toList votes)
+          ]
+      UpdateConfirmed slot ->
+        mkObject
+          [ "kind" .= String "UpdateConfirmed"
+          , "slot" .= slot
+          ]
+      UpdateStablyConfirmed endorsements ->
+        mkObject
+          [ "kind"         .= String "UpdateStablyConfirmed"
+          , "endorsements" .= map (Text.pack . show) (Set.toList endorsements)
+          ]
+      UpdateCandidate slot ->
+        mkObject
+          [ "kind" .= String "UpdateCandidate"
+          , "slot" .= slot
+          ]
+      UpdateStableCandidate transitionEpoch ->
+        mkObject
+          [ "kind"            .= String "UpdateStableCandidate"
+          , "transitionEpoch" .= transitionEpoch
+          ]
 
 instance ToObject (GenTx ByronBlock) where
   toObject verb tx =

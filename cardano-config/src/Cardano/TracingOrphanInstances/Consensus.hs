@@ -38,7 +38,8 @@ import           Ouroboros.Consensus.Ledger.Abstract
 import qualified Ouroboros.Consensus.Protocol.BFT  as BFT
 import qualified Ouroboros.Consensus.Protocol.PBFT as PBFT
 import           Ouroboros.Consensus.Ledger.Extended
-import           Ouroboros.Consensus.Ledger.Inspect (LedgerWarning)
+import           Ouroboros.Consensus.Ledger.Inspect
+                   (InspectLedger, LedgerEvent (..), LedgerUpdate, LedgerWarning)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx, GenTxId,
                    HasTxId, TxId, txId)
 import           Ouroboros.Consensus.Mempool.API (TraceEventMempool (..), MempoolSize(..))
@@ -79,10 +80,10 @@ instance HasSeverityAnnotation (ChainDB.TraceEvent blk) where
     ChainDB.TryAddToCurrentChain {} -> Debug
     ChainDB.TrySwitchToAFork {} -> Info
     ChainDB.StoreButDontChange {} -> Debug
-    ChainDB.AddedToCurrentChain (_:_) _ _ _ -> Warning -- list of warnings
-    ChainDB.AddedToCurrentChain []    _ _ _ -> Notice
-    ChainDB.SwitchedToAFork (_:_) _ _ _ -> Warning -- list of warnings
-    ChainDB.SwitchedToAFork []    _ _ _ -> Notice
+    ChainDB.AddedToCurrentChain events _ _ _ ->
+      maximumDef Notice (map getSeverityAnnotation events)
+    ChainDB.SwitchedToAFork events _ _ _ ->
+      maximumDef Notice (map getSeverityAnnotation events)
     ChainDB.AddBlockValidation ev' -> case ev' of
       ChainDB.InvalidBlock {} -> Error
       ChainDB.InvalidCandidate {} -> Error
@@ -129,6 +130,9 @@ instance HasSeverityAnnotation (ChainDB.TraceEvent blk) where
   getSeverityAnnotation (ChainDB.TraceImmDBEvent _ev) = Debug
   getSeverityAnnotation (ChainDB.TraceVolDBEvent _ev) = Debug
 
+instance HasSeverityAnnotation (LedgerEvent blk) where
+  getSeverityAnnotation (LedgerUpdate _)  = Notice
+  getSeverityAnnotation (LedgerWarning _) = Critical
 
 instance HasPrivacyAnnotation (TraceBlockFetchServerEvent blk)
 instance HasSeverityAnnotation (TraceBlockFetchServerEvent blk) where
@@ -256,38 +260,45 @@ instance ( tx ~ GenTx blk
       => HasTextFormatter (TraceForgeEvent blk) where
   formatText = \case
     TraceAdoptedBlock slotNo blk txs -> const $
-      "Adopted forged block for slot " <> showT (unSlotNo slotNo)
-                               <> ": " <> condenseT (blockHash blk)
-                        <> "; TxIds: " <> showT (map txId txs)
-    TraceBlockFromFuture currentSlot tip -> const $
-      "Forged block from future: current slot " <> showT (unSlotNo currentSlot)
-                              <> ", tip being " <> condenseT tip
-    TraceSlotIsImmutable slotNo tipPoint tipBlkNo -> const $
-      "Forged for immutable slot " <> showT (unSlotNo slotNo)
-                      <> ", tip: " <> pack (showPoint MaximalVerbosity tipPoint)
-                 <> ", block no: " <> showT (unBlockNo tipBlkNo)
+      "Adopted block forged in slot "
+        <> showT (unSlotNo slotNo)
+        <> ": " <> condenseT (blockHash blk)
+        <> ", TxIds: " <> showT (map txId txs)
+    TraceBlockFromFuture currentSlot tipSlot -> const $
+      "Couldn't forge block because current tip is in the future: "
+        <> "current tip slot: " <> showT (unSlotNo tipSlot)
+        <> ", current slot: " <> showT (unSlotNo currentSlot)
+    TraceSlotIsImmutable slotNo immutableTipPoint immutableTipBlkNo -> const $
+      "Couldn't forge block because current slot is immutable: "
+        <> "immutable tip: " <> pack (showPoint MaximalVerbosity immutableTipPoint)
+        <> ", immutable tip block no: " <> showT (unBlockNo immutableTipBlkNo)
+        <> ", current slot: " <> showT (unSlotNo slotNo)
     TraceDidntAdoptBlock slotNo _ -> const $
-      "Didn't adopt forged block at slot " <> showT (unSlotNo slotNo)
+      "Didn't adopt forged block in slot " <> showT (unSlotNo slotNo)
     TraceForgedBlock slotNo _ _ _ -> const $
-      "Forged block for slot " <> showT (unSlotNo slotNo)
+      "Forged block in slot " <> showT (unSlotNo slotNo)
     TraceForgedInvalidBlock slotNo _ reason -> const $
-      "Forged invalid block for slot " <> showT (unSlotNo slotNo)
-                       <> ", reason: " <> showT reason
+      "Forged invalid block in slot "
+        <> showT (unSlotNo slotNo)
+        <> ", reason: " <> showT reason
     TraceNodeIsLeader slotNo -> const $
       "Leading slot " <> showT (unSlotNo slotNo)
     TraceNodeNotLeader slotNo -> const $
       "Not leading slot " <> showT (unSlotNo slotNo)
     TraceNodeCannotLead slotNo reason -> const $
-      "We are the leader for slot "
+      "We are the leader in slot "
         <> showT (unSlotNo slotNo)
         <> ", but we cannot lead because: "
         <> showT reason
-    TraceNoLedgerState slotNo _blk -> const $
-      "No ledger state at slot " <> showT (unSlotNo slotNo)
+    TraceNoLedgerState slotNo pt -> const $
+      "Could not obtain ledger state for point "
+        <> pack (showPoint MaximalVerbosity pt)
+        <> ", current slot: "
+        <> showT (unSlotNo slotNo)
     TraceNoLedgerView slotNo _ -> const $
-      "No ledger view at slot " <> showT (unSlotNo slotNo)
+      "Could not obtain ledger view for slot " <> showT (unSlotNo slotNo)
     TraceStartLeadershipCheck slotNo -> const $
-      "Testing for leadership at slot " <> showT (unSlotNo slotNo)
+      "Checking for leadership in slot " <> showT (unSlotNo slotNo)
 
 
 instance Transformable Text IO (TraceLocalTxSubmissionServerEvent blk) where
@@ -295,10 +306,10 @@ instance Transformable Text IO (TraceLocalTxSubmissionServerEvent blk) where
 
 
 instance ( Condense (HeaderHash blk)
-         , Show (LedgerWarning blk)
          , LedgerSupportsProtocol blk
+         , InspectLedger blk
          , ToObject (Header blk)
-         , ToObject (LedgerWarning blk))
+         , ToObject (LedgerEvent blk))
       => Transformable Text IO (ChainDB.TraceEvent blk) where
   trTransformer = trStructuredText
 
@@ -306,9 +317,9 @@ instance ( Condense (HeaderHash blk)
 
 
 
-instance (Condense (HeaderHash blk),
-          Show (LedgerWarning blk),
-          LedgerSupportsProtocol blk)
+instance ( Condense (HeaderHash blk)
+         , LedgerSupportsProtocol blk
+         , InspectLedger blk)
       => HasTextFormatter (ChainDB.TraceEvent blk) where
     formatText = \case
       ChainDB.TraceAddBlockEvent ev -> case ev of
@@ -328,12 +339,12 @@ instance (Condense (HeaderHash blk),
           "Block fits onto the current chain: " <> condenseT pt
         ChainDB.TrySwitchToAFork pt _ -> \_o ->
           "Block fits onto some fork: " <> condenseT pt
-        ChainDB.AddedToCurrentChain ws _ _ c -> \_o ->
+        ChainDB.AddedToCurrentChain es _ _ c -> \_o ->
           "Chain extended, new tip: " <> condenseT (AF.headPoint c) <>
-          Text.concat [ "\nWarning: " <> showT w | w <- ws ]
-        ChainDB.SwitchedToAFork ws _ _ c -> \_o ->
+          Text.concat [ "\nEvent: " <> showT e | e <- es ]
+        ChainDB.SwitchedToAFork es _ _ c -> \_o ->
           "Switched to a fork, new tip: " <> condenseT (AF.headPoint c) <>
-          Text.concat [ "\nWarning: " <> showT w | w <- ws ]
+          Text.concat [ "\nEvent: " <> showT e | e <- es ]
         ChainDB.AddBlockValidation ev' -> case ev' of
           ChainDB.InvalidBlock err pt -> \_o ->
             "Invalid block " <> condenseT pt <> ": " <> showT err
@@ -548,10 +559,17 @@ instance Condense (HeaderHash blk)
      ++ [ "hash" .= condense (realPointHash p) | verb == MaximalVerbosity ]
 
 
+instance (ToObject (LedgerUpdate blk), ToObject (LedgerWarning blk))
+      => ToObject (LedgerEvent blk) where
+  toObject verb = \case
+    LedgerUpdate  update  -> toObject verb update
+    LedgerWarning warning -> toObject verb warning
+
+
 instance ( Condense (HeaderHash blk)
          , LedgerSupportsProtocol blk
          , ToObject (Header blk)
-         , ToObject (LedgerWarning blk))
+         , ToObject (LedgerEvent blk))
       => ToObject (ChainDB.TraceEvent blk) where
   toObject verb (ChainDB.TraceAddBlockEvent ev) = case ev of
     ChainDB.IgnoreBlockOlderThanK pt ->
@@ -581,24 +599,24 @@ instance ( Condense (HeaderHash blk)
     ChainDB.TrySwitchToAFork pt _ ->
       mkObject [ "kind" .= String "TraceAddBlockEvent.TrySwitchToAFork"
                , "block" .= toObject verb pt ]
-    ChainDB.AddedToCurrentChain warnings _ base extended  ->
+    ChainDB.AddedToCurrentChain events _ base extended ->
       mkObject $
                [ "kind" .= String "TraceAddBlockEvent.AddedToCurrentChain"
                , "newtip" .= showPoint verb (AF.headPoint extended)
                ]
             ++ [ "headers" .= toJSON (toObject verb `map` addedHdrsNewChain base extended)
                | verb == MaximalVerbosity ]
-            ++ [ "warnings" .= toJSON (map (toObject verb) warnings)
-               | not (null warnings) ]
-    ChainDB.SwitchedToAFork warnings _ old new ->
+            ++ [ "events" .= toJSON (map (toObject verb) events)
+               | not (null events) ]
+    ChainDB.SwitchedToAFork events _ old new ->
       mkObject $
                [ "kind" .= String "TraceAddBlockEvent.SwitchedToAFork"
                , "newtip" .= showPoint verb (AF.headPoint new)
                ]
             ++ [ "headers" .= toJSON (toObject verb `map` addedHdrsNewChain old new)
                | verb == MaximalVerbosity ]
-            ++ [ "warnings" .= toJSON (map (toObject verb) warnings)
-               | not (null warnings) ]
+            ++ [ "events" .= toJSON (map (toObject verb) events)
+               | not (null events) ]
     ChainDB.AddBlockValidation ev' -> case ev' of
       ChainDB.InvalidBlock err pt ->
         mkObject [ "kind" .= String "TraceAddBlockEvent.AddBlockValidation.InvalidBlock"

@@ -55,7 +55,7 @@ import           Ouroboros.Consensus.BlockchainTime (SystemStart (..), TraceBloc
 import           Ouroboros.Consensus.HeaderValidation (OtherHeaderEnvelopeError)
 import           Ouroboros.Consensus.Ledger.Abstract (LedgerErr, LedgerState)
 import           Ouroboros.Consensus.Ledger.Extended (ledgerState)
-import           Ouroboros.Consensus.Ledger.Inspect (LedgerWarning)
+import           Ouroboros.Consensus.Ledger.Inspect (InspectLedger, LedgerEvent)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx, GenTxId, HasTxs, TxId)
 import           Ouroboros.Consensus.Ledger.SupportsProtocol (LedgerSupportsProtocol)
 import           Ouroboros.Consensus.Mempool.API (MempoolSize (..), TraceEventMempool (..))
@@ -199,6 +199,7 @@ instance ElidingTracer (WithSeverity (ChainDB.TraceEvent blk)) where
   doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.AddBlockValidation (ChainDB.InvalidBlock _ _)))) = False
   doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.AddBlockValidation (ChainDB.InvalidCandidate _)))) = False
   doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.AddBlockValidation ChainDB.CandidateContainsFutureBlocksExceedingClockSkew{}))) = False
+  doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.AddedToCurrentChain events _ _  _))) = null events
   doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent _)) = True
   doelide (WithSeverity _ (ChainDB.TraceCopyToImmDBEvent _)) = True
   doelide _ = False
@@ -346,10 +347,10 @@ mkTracers TracingOff _ _ =
 
 teeTraceChainTip
   :: ( Condense (HeaderHash blk)
-     , Show (LedgerWarning blk)
      , LedgerSupportsProtocol blk
+     , InspectLedger blk
      , ToObject (Header blk)
-     , ToObject (LedgerWarning blk)
+     , ToObject (LedgerEvent blk)
      )
   => TraceOptions
   -> MVar (Maybe (WithSeverity (ChainDB.TraceEvent blk)), Integer)
@@ -363,10 +364,10 @@ teeTraceChainTip (TracingOn trSel) elided tr =
 
 teeTraceChainTipElide
   :: ( Condense (HeaderHash blk)
-     , Show (LedgerWarning blk)
      , LedgerSupportsProtocol blk
+     , InspectLedger blk
      , ToObject (Header blk)
-     , ToObject (LedgerWarning blk)
+     , ToObject (LedgerEvent blk)
      )
   => TracingVerbosity
   -> MVar (Maybe (WithSeverity (ChainDB.TraceEvent blk)), Integer)
