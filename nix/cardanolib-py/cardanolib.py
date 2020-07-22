@@ -6,6 +6,18 @@ import os
 from copy import copy
 from pathlib import Path
 from time import sleep
+from contextlib import contextmanager
+
+@contextmanager
+def cd(path):
+    if not os.path.exists(path):
+        os.mkdir(path, 0o700)
+    old_dir = os.getcwd()
+    os.chdir(path)
+    try:
+        yield
+    finally:
+        os.chdir(old_dir)
 
 
 class CardanoCLIError(Exception):
@@ -250,9 +262,11 @@ class CardanoCLIWrapper:
         txouts=None,
         certificates=None,
         fee=0,
-        ttl=100000,
+        ttl=None,
         proposal_file=None,
     ):
+        if ttl == None:
+            ttl = self.get_tip()["slotNo"] + 5000
         txins = txins or []
         txouts_copy = copy(txouts) if txouts else []
         certificates = certificates or []
@@ -326,7 +340,7 @@ class CardanoCLIWrapper:
 
         cli_args = ["--payment-verification-key-file", str(payment_vkey)]
         if stake_vkey:
-            cli_args.extend("--stake-verification-key-file", str(stake_vkey))
+            cli_args.extend(["--stake-verification-key-file", str(stake_vkey)])
 
         return (
             self.cmd(
@@ -391,6 +405,165 @@ class CardanoCLIWrapper:
                 *genesis_key_args
             ]
         )
+    def create_utxo(self, name):
+        self.cmd(["cardano-cli",
+                  "shelley",
+                  "address",
+                  "key-gen",
+                  "--verification-key-file",
+                  f"{name}.vkey",
+                  "--signing-key-file",
+                  f"{name}.skey"
+                ])
+
+    def create_stake_address_and_cert(self, name):
+        self.cmd(["cardano-cli",
+                  "shelley",
+                  "stake-address",
+                  "key-gen",
+                  "--verification-key-file",
+                  f"{name}.vkey",
+                  "--signing-key-file",
+                  f"{name}.skey"
+                ])
+        self.cmd(["cardano-cli",
+                  "shelley",
+                  "stake-address",
+                  "registration-certificate",
+                  "--stake-verification-key-file",
+                  f"{name}.vkey",
+                  "--out-file",
+                  f"{name}.cert"
+                ])
+
+
+    def create_cold_key(self, name):
+        self.cmd(["cardano-cli",
+                  "shelley",
+                  "node",
+                  "key-gen",
+                  "--cold-verification-key-file",
+                  f"{name}.vkey",
+                  "--cold-signing-key-file",
+                  f"{name}.skey",
+                  "--operational-certificate-issue-counter-file",
+                  f"{name}.counter"
+                ])
+
+    def create_vrf_key(self, name):
+        self.cmd(["cardano-cli",
+                  "shelley",
+                  "node",
+                  "key-gen-VRF",
+                  "--verification-key-file",
+                  f"{name}.vkey",
+                  "--signing-key-file",
+                  f"{name}.skey"
+                ])
+
+    def create_stake_pool(self, prefix, owner_vkey, pledge, cost, margin, relay_dns, relay_port, metadata_url, metadata_hash):
+        self.cmd(["cardano-cli",
+                  "shelley",
+                  "stake-pool",
+                  "registration-certificate",
+                  "--cold-verification-key-file",
+                  f"{prefix}-cold.vkey",
+                  "--vrf-verification-key-file",
+                  f"{prefix}-vrf.vkey",
+                  "--pool-pledge",
+                  str(pledge),
+                  "--pool-cost",
+                  str(cost),
+                  "--pool-margin",
+                  str(margin),
+                  "--pool-reward-account-verification-key-file",
+                  f"{prefix}-reward.vkey",
+                  "--pool-owner-stake-verification-key-file",
+                  owner_vkey,
+                  "--single-host-pool-relay",
+                  relay_dns,
+                  "--pool-relay-port",
+                  str(relay_port),
+                  "--metadata-url",
+                  metadata_url,
+                  "--metadata-hash",
+                  metadata_hash,
+                  "--out-file",
+                  f"{prefix}.cert",
+                  "--testnet-magic",
+                  str(self.network_magic)
+                ])
+
+    def create_metadata_file(self, name, file_name, description, ticker, homepage):
+        contents = {
+                "name": name,
+                "description": description,
+                "ticker": ticker,
+                "homepage": homepage
+        }
+        with open(file_name, "w") as out_json:
+            json.dump(contents, out_json)
+        return self.cmd(["cardano-cli",
+                  "shelley",
+                  "stake-pool",
+                  "metadata-hash",
+                  "--pool-metadata-file",
+                  file_name
+                ]).rstrip()
+
+    def create_delegation(self, stake, pool, file_name):
+        self.cmd(["cardano-cli",
+                  "shelley",
+                  "stake-address",
+                  "delegation-certificate",
+                  "--stake-verification-key-file",
+                  stake,
+                  "--cold-verification-key-file",
+                  pool,
+                  "--out-file",
+                  file_name
+                ])
+
+    # Creates owners, keys, pool registration and owner delegation, then submits all in a transaction
+    def register_stake_pool(self, name, ticker, description, homepage, pledge, cost, margin, index, relay_dns, relay_port, metadata_url, prefix="node", payment_key="utxo", directory="pools"):
+        self.refresh_pparams()
+        prev_dir = os.getcwd()
+        with cd(directory):
+            # create owner keys and stake registration certificate
+            p = f"{prefix}{index}"
+            if os.path.exists(f"{p}.cert"):
+                raise CardanoCLIError("Pool already exists! Aborting!")
+            self.create_utxo(f"{p}-owner-utxo")
+            self.create_stake_address_and_cert(f"{p}-owner-stake")
+            self.create_stake_address_and_cert(f"{p}-reward")
+            self.create_cold_key(f"{p}-cold")
+            self.create_vrf_key(f"{p}-vrf")
+            metadata_hash = self.create_metadata_file(name, f"{p}-metadata.json", description, ticker, homepage)
+            self.create_stake_pool(p, f"{p}-owner-stake.vkey", pledge, cost, margin, relay_dns, relay_port, metadata_url, metadata_hash)
+            self.create_delegation(f"{p}-owner-stake.vkey", f"{p}-cold.vkey", f"{p}-owner-delegation.cert")
+            source_payment_address = self.get_payment_address(f"{prev_dir}/{payment_key}.vkey")
+            source_payment_utxo = self.get_utxo(source_payment_address)
+            # TODO: function for this???
+            txins = []
+            total_input_amount = 0
+            for k, v in source_payment_utxo.items():
+                total_input_amount += v["amount"]
+                txin = k.split("#")
+                txin = (txin[0], txin[1])
+                txins.append(txin)
+
+            owner_payment_address = self.get_payment_address(f"{p}-owner-utxo.vkey", f"{p}-owner-stake.vkey")
+
+            txouts = [(source_payment_address, total_input_amount), (owner_payment_address, pledge)]
+            deposits = self.pparams["poolDeposit"] + (2 * self.pparams["keyDeposit"])
+            signing_keys = [ f"{prev_dir}/{payment_key}.skey", f"{p}-owner-stake.skey", f"{p}-cold.skey", f"{p}-reward.skey" ]
+            certificates = [ f"{p}-owner-stake.cert", f"{p}-reward.cert", f"{p}.cert", f"{p}-owner-delegation.cert" ]
+            self.build_tx(f"tx-register-{p}.txbody", txins, txouts, certificates)
+            fee = self.estimate_fee(len(txins), len(txouts), len(signing_keys), txbody_file=f"tx-register-{p}.txbody")
+            txouts = [(source_payment_address, total_input_amount - pledge - fee - deposits ), (owner_payment_address, pledge)]
+            self.build_tx(f"tx-register-{p}.txbody", txins, txouts, certificates, fee)
+            self.sign_tx(f"tx-register-{p}.txbody", f"tx-register-{p}.txsigned", signing_keys)
+            self.submit_tx(f"tx-register-{p}.txsigned")
 
     def convert_itn_vkey(self, key):
         with open(f"{key}.pk", "w") as fname:
