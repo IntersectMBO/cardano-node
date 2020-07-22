@@ -1,5 +1,4 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeApplications #-}
 
 module Test.CLI.Shelley.Golden.Genesis.KeyGenGenesis
   ( golden_shelleyGenesisKeyGenGenesis
@@ -24,9 +23,6 @@ golden_shelleyGenesisKeyGenGenesis = OP.propertyOnce $ do
         , "--verification-key-file", verificationKeyFile
         , "--signing-key-file", signingKeyFile
         ]
-
-    -- verificationKey <- OP.noteEvalM . liftIO $ IO.readFile verificationKeyFile
-    -- signingKey <- OP.noteEvalM . liftIO $ IO.readFile signingKeyFile
 
     OP.assertFileOccurences 1 "GenesisVerificationKey_ed25519" $ verificationKeyFile
     OP.assertFileOccurences 1 "GenesisSigningKey_ed25519" $ signingKeyFile

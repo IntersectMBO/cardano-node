@@ -17,8 +17,8 @@ import           Test.CLI.Shelley.Golden.Address.KeyGen
                    (golden_shelleyAddressKeyGen)
 import           Test.CLI.Shelley.Golden.Genesis.Create
                    (golden_shelleyGenesisCreate)
-import           Test.CLI.Shelley.Golden.Genesis.InitialTxin
-                   (golden_shelleyGenesisInitialTxin)
+import           Test.CLI.Shelley.Golden.Genesis.InitialTxIn
+                   (golden_shelleyGenesisInitialTxIn)
 import           Test.CLI.Shelley.Golden.Genesis.KeyGenDelegate
                    (golden_shelleyGenesisKeyGenDelegate)
 import           Test.CLI.Shelley.Golden.Genesis.KeyGenGenesis
@@ -68,7 +68,7 @@ keyTests =
         , ("golden_shelleyAddressKeyGen", golden_shelleyAddressKeyGen)
         , ("golden_shelleyExtendedPaymentKeys", golden_shelleyExtendedPaymentKeys)
         , ("golden_shelleyGenesisCreate", golden_shelleyGenesisCreate)
-        , ("golden_shelleyGenesisInitialTxin", golden_shelleyGenesisInitialTxin)
+        , ("golden_shelleyGenesisInitialTxIn", golden_shelleyGenesisInitialTxIn)
         , ("golden_shelleyGenesisKeyGenDelegate", golden_shelleyGenesisKeyGenDelegate)
         , ("golden_shelleyGenesisKeyGenGenesis", golden_shelleyGenesisKeyGenGenesis)
         , ("golden_shelleyGenesisKeyGenUtxo", golden_shelleyGenesisKeyGenUtxo)

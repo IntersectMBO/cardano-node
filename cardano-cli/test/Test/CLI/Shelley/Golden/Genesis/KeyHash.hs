@@ -1,5 +1,4 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeApplications #-}
 
 module Test.CLI.Shelley.Golden.Genesis.KeyHash
   ( golden_shelleyGenesisKeyHash

@@ -1,8 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeApplications #-}
 
-module Test.CLI.Shelley.Golden.Genesis.InitialTxin
-  ( golden_shelleyGenesisInitialTxin
+module Test.CLI.Shelley.Golden.Genesis.InitialTxIn
+  ( golden_shelleyGenesisInitialTxIn
   ) where
 
 import Cardano.Prelude hiding (to)
@@ -14,8 +13,8 @@ import qualified Test.OptParse as OP
 
 {- HLINT ignore "Use camelCase" -}
 
-golden_shelleyGenesisInitialTxin :: Property
-golden_shelleyGenesisInitialTxin = OP.propertyOnce $ do
+golden_shelleyGenesisInitialTxIn :: Property
+golden_shelleyGenesisInitialTxIn = OP.propertyOnce $ do
   OP.workspace "tmp/genesis-initial-txin" $ \tempDir -> do
     let verificationKeyFile = "test/Test/golden/shelley/keys/genesis_verification_keys/genesis-utxo.vkey"
         utxoHashFile = tempDir <> "/utxo_hash"
