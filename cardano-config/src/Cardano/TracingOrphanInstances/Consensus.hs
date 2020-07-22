@@ -80,10 +80,10 @@ instance HasSeverityAnnotation (ChainDB.TraceEvent blk) where
     ChainDB.TryAddToCurrentChain {} -> Debug
     ChainDB.TrySwitchToAFork {} -> Info
     ChainDB.StoreButDontChange {} -> Debug
-    ChainDB.AddedToCurrentChain (_:_) _ _ _ -> Warning -- list of warnings
-    ChainDB.AddedToCurrentChain []    _ _ _ -> Notice
-    ChainDB.SwitchedToAFork (_:_) _ _ _ -> Warning -- list of warnings
-    ChainDB.SwitchedToAFork []    _ _ _ -> Notice
+    ChainDB.AddedToCurrentChain events _ _ _ ->
+      maximumDef Notice (map getSeverityAnnotation events)
+    ChainDB.SwitchedToAFork events _ _ _ ->
+      maximumDef Notice (map getSeverityAnnotation events)
     ChainDB.AddBlockValidation ev' -> case ev' of
       ChainDB.InvalidBlock {} -> Error
       ChainDB.InvalidCandidate {} -> Error
@@ -130,6 +130,9 @@ instance HasSeverityAnnotation (ChainDB.TraceEvent blk) where
   getSeverityAnnotation (ChainDB.TraceImmDBEvent _ev) = Debug
   getSeverityAnnotation (ChainDB.TraceVolDBEvent _ev) = Debug
 
+instance HasSeverityAnnotation (LedgerEvent blk) where
+  getSeverityAnnotation (LedgerUpdate _)  = Notice
+  getSeverityAnnotation (LedgerWarning _) = Critical
 
 instance HasPrivacyAnnotation (TraceBlockFetchServerEvent blk)
 instance HasSeverityAnnotation (TraceBlockFetchServerEvent blk) where
