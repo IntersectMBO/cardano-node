@@ -260,38 +260,45 @@ instance ( tx ~ GenTx blk
       => HasTextFormatter (TraceForgeEvent blk) where
   formatText = \case
     TraceAdoptedBlock slotNo blk txs -> const $
-      "Adopted forged block for slot " <> showT (unSlotNo slotNo)
-                               <> ": " <> condenseT (blockHash blk)
-                        <> "; TxIds: " <> showT (map txId txs)
-    TraceBlockFromFuture currentSlot tip -> const $
-      "Forged block from future: current slot " <> showT (unSlotNo currentSlot)
-                              <> ", tip being " <> condenseT tip
-    TraceSlotIsImmutable slotNo tipPoint tipBlkNo -> const $
-      "Forged for immutable slot " <> showT (unSlotNo slotNo)
-                      <> ", tip: " <> pack (showPoint MaximalVerbosity tipPoint)
-                 <> ", block no: " <> showT (unBlockNo tipBlkNo)
+      "Adopted block forged in slot "
+        <> showT (unSlotNo slotNo)
+        <> ": " <> condenseT (blockHash blk)
+        <> ", TxIds: " <> showT (map txId txs)
+    TraceBlockFromFuture currentSlot tipSlot -> const $
+      "Couldn't forge block because current tip is in the future: "
+        <> "current tip slot: " <> showT (unSlotNo tipSlot)
+        <> ", current slot: " <> showT (unSlotNo currentSlot)
+    TraceSlotIsImmutable slotNo immutableTipPoint immutableTipBlkNo -> const $
+      "Couldn't forge block because current slot is immutable: "
+        <> "immutable tip: " <> pack (showPoint MaximalVerbosity immutableTipPoint)
+        <> ", immutable tip block no: " <> showT (unBlockNo immutableTipBlkNo)
+        <> ", current slot: " <> showT (unSlotNo slotNo)
     TraceDidntAdoptBlock slotNo _ -> const $
-      "Didn't adopt forged block at slot " <> showT (unSlotNo slotNo)
+      "Didn't adopt forged block in slot " <> showT (unSlotNo slotNo)
     TraceForgedBlock slotNo _ _ _ -> const $
-      "Forged block for slot " <> showT (unSlotNo slotNo)
+      "Forged block in slot " <> showT (unSlotNo slotNo)
     TraceForgedInvalidBlock slotNo _ reason -> const $
-      "Forged invalid block for slot " <> showT (unSlotNo slotNo)
-                       <> ", reason: " <> showT reason
+      "Forged invalid block in slot "
+        <> showT (unSlotNo slotNo)
+        <> ", reason: " <> showT reason
     TraceNodeIsLeader slotNo -> const $
       "Leading slot " <> showT (unSlotNo slotNo)
     TraceNodeNotLeader slotNo -> const $
       "Not leading slot " <> showT (unSlotNo slotNo)
     TraceNodeCannotLead slotNo reason -> const $
-      "We are the leader for slot "
+      "We are the leader in slot "
         <> showT (unSlotNo slotNo)
         <> ", but we cannot lead because: "
         <> showT reason
-    TraceNoLedgerState slotNo _blk -> const $
-      "No ledger state at slot " <> showT (unSlotNo slotNo)
+    TraceNoLedgerState slotNo pt -> const $
+      "Could not obtain ledger state for point "
+        <> pack (showPoint MaximalVerbosity pt)
+        <> ", current slot: "
+        <> showT (unSlotNo slotNo)
     TraceNoLedgerView slotNo _ -> const $
-      "No ledger view at slot " <> showT (unSlotNo slotNo)
+      "Could not obtain ledger view for slot " <> showT (unSlotNo slotNo)
     TraceStartLeadershipCheck slotNo -> const $
-      "Testing for leadership at slot " <> showT (unSlotNo slotNo)
+      "Checking for leadership in slot " <> showT (unSlotNo slotNo)
 
 
 instance Transformable Text IO (TraceLocalTxSubmissionServerEvent blk) where
