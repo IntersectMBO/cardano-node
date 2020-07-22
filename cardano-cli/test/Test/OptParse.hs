@@ -195,8 +195,8 @@ assertFilesExist allFiles@(file:rest) = do
   else liftIO (fileCleanup allFiles) >> failWithCustom callStack Nothing (file <> " has not been successfully created.")
 
 -- | Assert the file contains the given number of occurences of the given string
-assertFileOccurences :: Int -> String -> FilePath -> H.PropertyT IO ()
-assertFileOccurences n s fp = do
+assertFileOccurences :: HasCallStack => Int -> String -> FilePath -> H.PropertyT IO ()
+assertFileOccurences n s fp = withFrozenCallStack $ do
   signingKeyContents <- liftIO $ IO.readFile fp
 
   length (filter (s `L.isInfixOf`) (L.lines signingKeyContents)) H.=== n

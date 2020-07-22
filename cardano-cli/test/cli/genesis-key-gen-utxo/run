@@ -20,4 +20,7 @@ assert_file_exists "${TEST_DIR}/utxo.skey"
 assert_string 'GenesisUTxOVerificationKey_ed25519' "${TEST_DIR}/utxo.vkey"
 assert_string 'GenesisUTxOSigningKey_ed25519' "${TEST_DIR}/utxo.skey"
 
+echo "== ${TEST_DIR}/utxo.vkey =="; cat "${TEST_DIR}/utxo.vkey"; echo ""
+echo "== ${TEST_DIR}/utxo.skey =="; cat "${TEST_DIR}/utxo.skey"; echo ""
+
 report_result ${error}
