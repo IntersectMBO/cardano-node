@@ -1,4 +1,4 @@
-### Start your nodes:
+### Start your nodes
 
 First we restart our __relay node__ with:
 
