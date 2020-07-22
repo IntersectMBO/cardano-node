@@ -58,13 +58,8 @@
   "networkId": "Mainnet",
   "initialFunds": {},
   "maxLovelaceSupply": 45000000000000000,
-  "protocolMagicId": 764824073,
   "networkMagic": 764824073,
   "epochLength": 432000,
-  "staking": {
-    "pools": {},
-    "stake": {}
-  },
   "systemStart": "2017-09-23T21:44:51Z",
   "slotsPerKESPeriod": 129600,
   "slotLength": 1,
