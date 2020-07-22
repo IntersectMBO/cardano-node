@@ -54,7 +54,7 @@ import           Ouroboros.Consensus.Block (Header, BlockProtocol, ForgeState(..
 import           Ouroboros.Consensus.Byron.Ledger.Block (ByronBlock)
 import           Ouroboros.Consensus.HeaderValidation (OtherHeaderEnvelopeError)
 import           Ouroboros.Consensus.Ledger.Abstract (LedgerError)
-import           Ouroboros.Consensus.Ledger.Inspect (LedgerWarning)
+import           Ouroboros.Consensus.Ledger.Inspect (LedgerEvent)
 import           Ouroboros.Consensus.Ledger.SupportsMempool
                    (GenTxId, HasTxId, HasTxs(..), ApplyTxErr)
 import           Ouroboros.Consensus.Mock.Ledger.Block (SimpleBlock)
@@ -294,7 +294,6 @@ newtype MaxConcurrencyDeadline = MaxConcurrencyDeadline
 -- in 'cardano-node'
 type TraceConstraints blk =
     ( Condense blk
-    , Condense [blk]
     , Condense (Header blk)
     , Condense (HeaderHash blk)
     , Condense (GenTx blk)
@@ -312,7 +311,7 @@ type TraceConstraints blk =
     , ToObject (GenTx blk)
     , ToObject (Header blk)
     , ToObject (LedgerError blk)
-    , ToObject (LedgerWarning blk)
+    , ToObject (LedgerEvent blk)
     , ToObject (OtherHeaderEnvelopeError blk)
     , ToObject (ValidationErr (BlockProtocol blk))
     , ToObject (CannotLead (BlockProtocol blk))

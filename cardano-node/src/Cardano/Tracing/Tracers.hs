@@ -55,7 +55,7 @@ import           Ouroboros.Consensus.BlockchainTime (SystemStart (..), TraceBloc
 import           Ouroboros.Consensus.HeaderValidation (OtherHeaderEnvelopeError)
 import           Ouroboros.Consensus.Ledger.Abstract (LedgerErr, LedgerState)
 import           Ouroboros.Consensus.Ledger.Extended (ledgerState)
-import           Ouroboros.Consensus.Ledger.Inspect (LedgerWarning)
+import           Ouroboros.Consensus.Ledger.Inspect (InspectLedger, LedgerEvent)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx, GenTxId, HasTxs, TxId)
 import           Ouroboros.Consensus.Ledger.SupportsProtocol (LedgerSupportsProtocol)
 import           Ouroboros.Consensus.Mempool.API (MempoolSize (..), TraceEventMempool (..))
@@ -346,10 +346,10 @@ mkTracers TracingOff _ _ =
 
 teeTraceChainTip
   :: ( Condense (HeaderHash blk)
-     , Show (LedgerWarning blk)
      , LedgerSupportsProtocol blk
+     , InspectLedger blk
      , ToObject (Header blk)
-     , ToObject (LedgerWarning blk)
+     , ToObject (LedgerEvent blk)
      )
   => TraceOptions
   -> MVar (Maybe (WithSeverity (ChainDB.TraceEvent blk)), Integer)
@@ -363,10 +363,10 @@ teeTraceChainTip (TracingOn trSel) elided tr =
 
 teeTraceChainTipElide
   :: ( Condense (HeaderHash blk)
-     , Show (LedgerWarning blk)
      , LedgerSupportsProtocol blk
+     , InspectLedger blk
      , ToObject (Header blk)
-     , ToObject (LedgerWarning blk)
+     , ToObject (LedgerEvent blk)
      )
   => TracingVerbosity
   -> MVar (Maybe (WithSeverity (ChainDB.TraceEvent blk)), Integer)
