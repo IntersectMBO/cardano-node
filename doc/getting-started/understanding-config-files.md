@@ -1,6 +1,4 @@
-# Understanding your configuration files and how to use them:
-
-UPDATED FOR TAG: 1.14.2
+# Understanding your configuration files and how to use them
 
 ## The topology.json file
 
