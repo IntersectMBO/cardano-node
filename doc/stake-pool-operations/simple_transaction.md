@@ -52,16 +52,16 @@ A simple transaction needs one input, a valid UTXO from `payment.addr`, and two 
 
 Note that to calculate the fee you need to include the draft transaction
 
-   cardano-cli shelley transaction calculate-min-fee \
-   --tx-body-file tx.draft \
-   --tx-in-count 1 \
-   --tx-out-count 2 \
-   --witness-count 1 \
-   --byron-witness-count 0 \
-   --testnet-magic 42 \
-   --protocol-params-file protocol.json
+    cardano-cli shelley transaction calculate-min-fee \
+    --tx-body-file tx.draft \
+    --tx-in-count 1 \
+    --tx-out-count 2 \
+    --witness-count 1 \
+    --byron-witness-count 0 \
+    --testnet-magic 42 \
+    --protocol-params-file protocol.json
 
-   > 167965
+    > 167965
 
 ### Calculate the change to send back to payment.addr, all amounts must be in Lovelace:
 
@@ -138,6 +138,6 @@ We must give it some time to get incorporated into the blockchain, but eventuall
     >                            TxHash                                 TxIx        Lovelace
     > ----------------------------------------------------------------------------------------
     > b64ae44e1195b04663ab863b62337e626c65b0c9855a9fbb9ef4458f81a6f5ee     0         10000000
-    
+
 
 **Note. `--testnet magic 42` identifies the testnets, for mainnet, use `--mainnet` instead.
