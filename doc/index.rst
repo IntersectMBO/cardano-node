@@ -19,7 +19,6 @@ cardano-node
    getting-started/install
    getting-started/building-the-node-using-nix
    getting-started/understanding-config-files
-   getting-started/AWS
    getting-started/cli
 
 .. toctree::
@@ -27,9 +26,10 @@ cardano-node
    :caption: Stakepool Operations
    :titlesonly:
    :hidden:
-   
+
    stake-pool-operations/getConfigFiles_AND_Connect
    stake-pool-operations/keys_and_addresses
+   stake-pool-operations/simple_transaction
    stake-pool-operations/register_key
    stake-pool-operations/node_keys
    stake-pool-operations/KES_period

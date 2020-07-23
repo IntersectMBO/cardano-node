@@ -1,4 +1,4 @@
-# Installing and Running a Node
+# Installing the node from source
 
 ### Prerequisites
 

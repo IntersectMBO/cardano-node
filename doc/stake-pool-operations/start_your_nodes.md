@@ -1,6 +1,6 @@
 ### Start your nodes
 
-First we restart our __relay node__ with:
+Start a __relay node__ with:
 
     cardano-node run \
     --topology shelley_testnet-topology.json \
@@ -10,7 +10,7 @@ First we restart our __relay node__ with:
     --port <PORT> \
     --config shelley_testnet-config.json
 
-then, we start our __block producing__ node with:
+Start a __block producing__ node with:
 
     cardano-node run \
     --topology shelley_testnet-topology.json \
