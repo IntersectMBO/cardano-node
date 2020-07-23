@@ -16,11 +16,11 @@ import qualified Test.OptParse as OP
 golden_shelleyNodeIssueOpCert :: Property
 golden_shelleyNodeIssueOpCert = OP.propertyOnce $ do
   OP.workspace "tmp/node-issue-op-cert" $ \tempDir -> do
-    let hotKesVerificationKeyFile = "test/Test/golden/shelley/keys/kes_keys/verification_key"
-        coldSigningKeyFile = "test/Test/golden/shelley/keys/genesis_delegate_keys/signing_key"
-        originalOperationalCertificateIssueCounterFile = "test/Test/golden/shelley/keys/genesis_delegate_keys/operational_certificate_counter"
-        operationalCertificateIssueCounterFile = tempDir <> "/delegate-op-cert.counter"
-        operationalCertFile = tempDir <> "/operational.cert"
+    hotKesVerificationKeyFile <- OP.noteInputFile "test/Test/golden/shelley/keys/kes_keys/verification_key"
+    coldSigningKeyFile <- OP.noteInputFile "test/Test/golden/shelley/keys/genesis_delegate_keys/signing_key"
+    originalOperationalCertificateIssueCounterFile <- OP.noteInputFile "test/Test/golden/shelley/keys/genesis_delegate_keys/operational_certificate_counter"
+    operationalCertificateIssueCounterFile <- OP.noteTempFile tempDir "delegate-op-cert.counter"
+    operationalCertFile <- OP.noteTempFile tempDir "operational.cert"
 
     void . liftIO $ IO.copyFile originalOperationalCertificateIssueCounterFile operationalCertificateIssueCounterFile
 
