@@ -1,5 +1,13 @@
 # Changelog for cardano-cli
 
+## 1.17.0 -- July 2020
+
+- Allow genesis keys as tx witnesses (#1483)
+- Allow extended genesis delegate keys to sign operational certs (#1497)
+- New cli "key" command with key utilities (#1487, #1493)
+- More helpful flag defaults in cli command for fee calculation (#1516)
+- Default to the Cardano protocol for talking to a node (#1515)
+
 ## 1.16.0 -- July 2020
 
 - Accept either a pool id or verification key in delegation cli command (#1460)

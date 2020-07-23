@@ -1,5 +1,11 @@
 # Changelog for cardano-api
 
+## 1.17.0 -- July 2020
+
+- Allow genesis keys as tx witnesses (#1483)
+- Allow extended genesis delegate keys to sign operational certs (#1497)
+- Add support for extended keys for stake, genesis and delegate keys (#1487)
+
 ## 1.16.0 -- July 2020
 
 - Remove the old API (#1444, #1456)
