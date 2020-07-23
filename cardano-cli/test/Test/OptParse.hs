@@ -170,10 +170,11 @@ newFileWithContents filePath contents = liftIO $ IO.writeFile filePath contents 
 --
 -- The directory will be deleted if the block succeeds, but left behind if
 -- the block fails.
-workspace :: FilePath -> (FilePath -> H.PropertyT IO ()) -> H.PropertyT IO ()
-workspace prefixPath f = do
+workspace :: HasCallStack => FilePath -> (FilePath -> H.PropertyT IO ()) -> H.PropertyT IO ()
+workspace prefixPath f = withFrozenCallStack $ do
   liftIO $ IO.createDirectoryIfMissing True prefixPath
   ws <- liftIO $ IO.createTempDirectory prefixPath "test"
+  H.annotate $ "Workspace: " <> ws
   f ws
   liftIO $ IO.removeDirectoryRecursive ws
 
@@ -197,9 +198,9 @@ assertFilesExist allFiles@(file:rest) = do
 -- | Assert the file contains the given number of occurences of the given string
 assertFileOccurences :: HasCallStack => Int -> String -> FilePath -> H.PropertyT IO ()
 assertFileOccurences n s fp = withFrozenCallStack $ do
-  signingKeyContents <- liftIO $ IO.readFile fp
+  contents <- liftIO $ IO.readFile fp
 
-  length (filter (s `L.isInfixOf`) (L.lines signingKeyContents)) H.=== n
+  length (filter (s `L.isInfixOf`) (L.lines contents)) H.=== n
 
 fileCleanup :: [FilePath] -> IO ()
 fileCleanup fps = mapM_ (\fp -> removeFile fp `catch` fileExists) fps

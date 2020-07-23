@@ -20,7 +20,7 @@ golden_shelleyGenesisKeyHash = OP.propertyOnce $ do
         genesisVerificationKeyHashFile = tempDir <> "/key-hash.hex"
         goldenGenesisVerificationKeyHashFile = "test/Test/golden/shelley/keys/genesis_keys/verification_key.key-hash"
 
-    genesisVerificationKeyHash <-liftIO $ OP.execCardanoCLI
+    genesisVerificationKeyHash <- liftIO $ OP.execCardanoCLI
         [ "shelley","genesis","key-hash"
         , "--verification-key-file", referenceVerificationKey
         ]
