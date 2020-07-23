@@ -236,7 +236,7 @@ writeStakeAddressInfo
   :: Maybe OutputFile
   -> DelegationsAndRewards
   -> ExceptT ShelleyQueryCmdError IO ()
-writeStakeAddressInfo mOutFile dr@(DelegationsAndRewards _delegsAndRwds) =
+writeStakeAddressInfo mOutFile dr@(DelegationsAndRewards _ _delegsAndRwds) =
   case mOutFile of
     Nothing -> liftIO $ LBS.putStrLn (encodePretty dr)
     Just (OutputFile fpath) ->
@@ -386,25 +386,32 @@ queryUTxOFromLocalState qFilter connectInfo@LocalNodeConnectInfo{localNodeConsen
 
 -- | A mapping of Shelley reward accounts to both the stake pool that they
 -- delegate to and their reward account balance.
-newtype DelegationsAndRewards
+data DelegationsAndRewards
   = DelegationsAndRewards
-      (Map (Ledger.RewardAcnt TPraosStandardCrypto) (Maybe (Hash StakePoolKey), Coin))
+      !NetworkId
+      !(Map (Ledger.Credential Ledger.Staking TPraosStandardCrypto)
+            (Maybe (Hash StakePoolKey), Coin))
 
 instance ToJSON DelegationsAndRewards where
-  toJSON (DelegationsAndRewards delegsAndRwds) =
+  toJSON (DelegationsAndRewards nw delegsAndRwds) =
       Aeson.Object $
         Map.foldlWithKey' delegAndRwdToJson HMS.empty delegsAndRwds
     where
       delegAndRwdToJson
         :: HashMap Text Aeson.Value
-        -> Ledger.RewardAcnt TPraosStandardCrypto
+        -> Ledger.Credential Ledger.Staking TPraosStandardCrypto
         -> (Maybe (Hash StakePoolKey), Coin)
         -> HashMap Text Aeson.Value
       delegAndRwdToJson acc k (d, r) =
         HMS.insert
-          (Text.decodeLatin1 $ B16.encode $ Ledger.serialiseRewardAcnt k)
+          (toKey k)
           (Aeson.object ["delegation" .= d, "rewardAccountBalance" .= r])
           acc
+
+      toKey = Text.decodeLatin1
+            . B16.encode
+            . Ledger.serialiseRewardAcnt
+            . Ledger.RewardAcnt (toShelleyNetwork nw)
 
 
 -- | Query the current protocol parameters from a Shelley node via the local
@@ -524,6 +531,7 @@ queryDelegationsAndRewardsFromLocalState
   -> ExceptT LocalStateQueryError IO DelegationsAndRewards
 queryDelegationsAndRewardsFromLocalState stakeaddrs
                                          connectInfo@LocalNodeConnectInfo{
+                                           localNodeNetworkId,
                                            localNodeConsensusMode
                                          } =
   case localNodeConsensusMode of
@@ -562,9 +570,9 @@ queryDelegationsAndRewardsFromLocalState stakeaddrs
       -> Ledger.RewardAccounts TPraosStandardCrypto
       -> DelegationsAndRewards
     toDelegsAndRwds delegs rwdAcnts =
-      DelegationsAndRewards $
+      DelegationsAndRewards localNodeNetworkId $
         Map.mapWithKey
-          (\k v -> (StakePoolKeyHash <$> Map.lookup (Ledger.getRwdCred k) delegs, v))
+          (\k v -> (StakePoolKeyHash <$> Map.lookup k delegs, v))
           rwdAcnts
 
     toShelleyStakeCredentials :: Set StakeAddress

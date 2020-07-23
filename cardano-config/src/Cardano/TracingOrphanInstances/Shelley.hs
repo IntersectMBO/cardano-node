@@ -318,8 +318,16 @@ instance Crypto c => ToObject (PredicateFailure (UTXO c)) where
              ]
   toObject verb (UpdateFailure f) = toObject verb f
 
-  toObject _verb (WrongNetwork _ _) =
-    mkObject [ "kind" .= String "WrongNetwork" ]
+  toObject _verb (WrongNetwork network addrs) =
+    mkObject [ "kind" .= String "WrongNetwork"
+             , "network" .= network
+             , "addrs"   .= addrs
+             ]
+  toObject _verb (WrongNetworkWithdrawal network addrs) =
+    mkObject [ "kind" .= String "WrongNetworkWithdrawal"
+             , "network" .= network
+             , "addrs"   .= addrs
+             ]
 
 
 renderBadInputsUTxOErr ::  Set (TxIn c) -> Value

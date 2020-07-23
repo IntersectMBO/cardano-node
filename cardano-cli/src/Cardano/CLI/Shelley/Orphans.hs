@@ -44,7 +44,6 @@ import           Shelley.Spec.Ledger.MetaData (MetaDataHash(..))
 import           Shelley.Spec.Ledger.PParams (PParams' (..))
 import qualified Shelley.Spec.Ledger.PParams as Ledger
 import           Shelley.Spec.Ledger.TxData (TxId(..), TxIn(..), TxOut(..))
-import qualified Shelley.Spec.Ledger.TxData as Ledger
 import           Shelley.Spec.Ledger.UTxO (UTxO(..))
 
 instance Crypto c => ToJSONKey (TxIn c) where
@@ -110,7 +109,6 @@ deriving newtype instance ToJSON (Ledger.Stake TPraosStandardCrypto)
 deriving anyclass instance ToJSON (Ledger.GenDelegs TPraosStandardCrypto)
 deriving anyclass instance ToJSON (Ledger.ProposedPPUpdates TPraosStandardCrypto)
 deriving anyclass instance ToJSON (Ledger.PPUPState TPraosStandardCrypto)
-deriving anyclass instance ToJSON (Ledger.StakePools TPraosStandardCrypto)
 
 deriving instance ToJSON Ledger.Ptr
 deriving instance ToJSON Ledger.AccountState

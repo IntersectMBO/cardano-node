@@ -296,9 +296,11 @@ module Cardano.Api.Typed (
     makeShelleyUpdateProposal,
 
     -- ** Conversions
+    --TODO: arrange not to export these
     toByronNetworkMagic,
     toByronProtocolMagicId,
     toByronRequiresNetworkMagic,
+    toShelleyNetwork,
   ) where
 
 
@@ -1148,7 +1150,7 @@ data Witness era where
        -> Witness Shelley
 
      ShelleyScriptWitness
-       :: Shelley.MultiSig ShelleyCrypto
+       :: Shelley.Script ShelleyCrypto
        -> Witness Shelley
 
 deriving instance Eq (Witness Byron)
@@ -1193,7 +1195,7 @@ instance SerialiseAsCBOR (Witness Shelley) where
           case t of
             0 -> fmap (fmap ShelleyKeyWitness) fromCBOR
             1 -> fmap (fmap ShelleyBootstrapWitness) fromCBOR
-            2 -> fmap (pure . ShelleyScriptWitness) fromCBOR
+            2 -> fmap (fmap ShelleyScriptWitness) fromCBOR
             _ -> CBOR.cborError $ CBOR.DecoderErrorUnknownTag
                                     "Shelley Witness" (fromIntegral t)
 
@@ -1232,7 +1234,7 @@ getTxWitnesses (ShelleyTx Shelley.Tx {
                      }) =
     map ShelleyBootstrapWitness (Set.elems bootWits)
  ++ map ShelleyKeyWitness       (Set.elems addrWits)
- ++ map ShelleyScriptWitness    (Map.elems msigWits)
+ ++ map (ShelleyScriptWitness . Shelley.MultiSigScript) (Map.elems msigWits)
 
 
 makeSignedTransaction :: [Witness era]
@@ -1258,8 +1260,9 @@ makeSignedTransaction witnesses (ShelleyTxBody txbody txmetadata) =
           Shelley.addrWits = Set.fromList
                                [ w | ShelleyKeyWitness w <- witnesses ],
           Shelley.msigWits = Map.fromList
-                               [ (Shelley.hashScript sw, sw)
-                               | ShelleyScriptWitness sw <- witnesses ]
+                               [ (Shelley.hashMultiSigScript sw, sw)
+                               | ShelleyScriptWitness
+                                   (Shelley.MultiSigScript sw) <- witnesses ]
         }
         (maybeToStrictMaybe txmetadata)
 
