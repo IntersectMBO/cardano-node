@@ -20,8 +20,8 @@
     "minPoolCost": 340000000,
     "keyDeposit": 2000000,
     "nOpt": 150,
-    "rho": 0.0022,
-    "tau": 0.05,
+    "rho": 0.003,
+    "tau": 0.20,
     "a0": 0.3
   },
   "genDelegs": {
