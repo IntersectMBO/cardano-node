@@ -51,8 +51,9 @@ import           Cardano.CLI.Helpers (HelpersError, pPrintCBOR, renderHelpersErr
 import           Cardano.CLI.Shelley.Orphans ()
 import           Cardano.CLI.Shelley.Parsers (OutputFile (..), QueryCmd (..))
 
-import           Cardano.Config.Types (SocketPath(..))
 import           Cardano.Binary (decodeFull)
+import           Cardano.Config.Types (SocketPath(..))
+import           Cardano.Crypto.Hash (hashToBytesAsHex)
 
 import           Ouroboros.Consensus.Cardano.Block (Either (..), EraMismatch (..), Query (..))
 import           Ouroboros.Consensus.HardFork.Combinator.Degenerate
@@ -272,7 +273,7 @@ printFilteredUTxOs (Ledger.UTxO utxo) = do
     printUtxo (Ledger.TxIn (Ledger.TxId txhash) txin , Ledger.TxOut _ (Coin coin)) =
       Text.putStrLn $
         mconcat
-          [ Text.pack (show txhash)
+          [ Text.decodeLatin1 (hashToBytesAsHex txhash)
           , textShowN 6 txin
           , textShowN 18 coin -- enough to display maxLovelaceVal
           ]
