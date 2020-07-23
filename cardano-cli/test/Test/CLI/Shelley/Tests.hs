@@ -17,6 +17,16 @@ import           Test.CLI.Shelley.Golden.Address.KeyGen
                    (golden_shelleyAddressKeyGen)
 import           Test.CLI.Shelley.Golden.Genesis.Create
                    (golden_shelleyGenesisCreate)
+import           Test.CLI.Shelley.Golden.Genesis.InitialTxIn
+                   (golden_shelleyGenesisInitialTxIn)
+import           Test.CLI.Shelley.Golden.Genesis.KeyGenDelegate
+                   (golden_shelleyGenesisKeyGenDelegate)
+import           Test.CLI.Shelley.Golden.Genesis.KeyGenGenesis
+                   (golden_shelleyGenesisKeyGenGenesis)
+import           Test.CLI.Shelley.Golden.Genesis.KeyGenUtxo
+                   (golden_shelleyGenesisKeyGenUtxo)
+import           Test.CLI.Shelley.Golden.Genesis.KeyHash
+                   (golden_shelleyGenesisKeyHash)
 import           Test.CLI.Shelley.Golden.TextEnvelope.Certificates.StakeAddressCertificates
                    (golden_shelleyStakeAddressCertificates)
 import           Test.CLI.Shelley.Golden.TextEnvelope.Certificates.MIRCertificate
@@ -54,12 +64,17 @@ keyTests :: IO Bool
 keyTests =
   H.checkSequential
     $ H.Group "TextEnvelope Key Goldens"
-        [ ("golden_shelleyAddressBuild", golden_shelleyAddressBuild)
-        , ("golden_shelleyAddressInfo", golden_shelleyAddressInfo)
+        [ ("golden_shelleyAddressInfo", golden_shelleyAddressInfo)
         , ("golden_shelleyAddressKeyGen", golden_shelleyAddressKeyGen)
         , ("golden_shelleyExtendedPaymentKeys", golden_shelleyExtendedPaymentKeys)
         , ("golden_shelleyGenesisCreate", golden_shelleyGenesisCreate)
+        , ("golden_shelleyGenesisInitialTxIn", golden_shelleyGenesisInitialTxIn)
+        , ("golden_shelleyGenesisKeyGenDelegate", golden_shelleyGenesisKeyGenDelegate)
+        , ("golden_shelleyGenesisKeyGenGenesis", golden_shelleyGenesisKeyGenGenesis)
+        , ("golden_shelleyGenesisKeyGenUtxo", golden_shelleyGenesisKeyGenUtxo)
+        , ("golden_shelleyGenesisKeyHash", golden_shelleyGenesisKeyHash)
         , ("golden_shelleyPaymentKeys", golden_shelleyPaymentKeys)
+        , ("golden_shelleyAddressBuild", golden_shelleyAddressBuild)
         , ("golden_shelleyStakeKeys", golden_shelleyStakeKeys)
         , ("golden_shelleyGenesisKeys", golden_shelleyGenesisKeys)
         , ("golden_shelleyGenesisDelegateKeys", golden_shelleyGenesisDelegateKeys)

@@ -205,6 +205,11 @@ test-suite cardano-cli-pioneers
                         Test.CLI.Shelley.Golden.Address.Info
                         Test.CLI.Shelley.Golden.Address.KeyGen
                         Test.CLI.Shelley.Golden.Genesis.Create
+                        Test.CLI.Shelley.Golden.Genesis.InitialTxIn
+                        Test.CLI.Shelley.Golden.Genesis.KeyGenDelegate
+                        Test.CLI.Shelley.Golden.Genesis.KeyGenGenesis
+                        Test.CLI.Shelley.Golden.Genesis.KeyGenUtxo
+                        Test.CLI.Shelley.Golden.Genesis.KeyHash
                         Test.CLI.Shelley.Golden.Metadata.StakePoolMetadata
                         Test.CLI.Shelley.Golden.TextEnvelope.Certificates.MIRCertificate
                         Test.CLI.Shelley.Golden.TextEnvelope.Certificates.OperationalCertificate
