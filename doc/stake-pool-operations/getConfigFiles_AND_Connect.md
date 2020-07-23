@@ -76,5 +76,3 @@ Check that the node is syncing by fetching the current tip. When syncing slotNo 
         }
 
 **`--testnet-magic 42` identifies the testnets, for mainnet use `--mainnet` **
-
- 

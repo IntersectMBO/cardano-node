@@ -1,15 +1,9 @@
-
 # Register stake address in the blockchain
 
-Before, we created our payment keys and address, which allow us to control our funds; we also created our stake keys and stake address, which allow us to participate in the protocol by delegating our stake or by creating a stake pool.  
+Stake address needs to be registered in the blockchain to be useful. Registering keys requires:
 
-We need to _register_ our __stake key__ in the blockchain. To achieve this, we:
-
-* Create a registration certificate
-* Determine the Time-to-Live (TTL)
-* Calculate the fees and deposit   
-* Submit the certificate to the blockchain with a transaction
-
+* Create a registration certificate.
+* Submit the certificate to the blockchain with a transaction.
 
 ### Create a _registration certificate_:
 
@@ -17,46 +11,52 @@ We need to _register_ our __stake key__ in the blockchain. To achieve this, we:
     --stake-verification-key-file stake.vkey \
     --out-file stake.cert
 
-Once the certificate has been created, we must include it in a transaction to post it to the blockchain.
+### Draft transaction
 
-### Determine the TTL
-As before, to create the transaction you need to determine the TTL querying the tip and adding some slots to give you sufficient time to build the transaction.
+For the transaction draft, --tx.out, --ttl and --fee can be set to zero.
 
-### Calculate fees and deposit
+    cardano-cli shelley transaction build-raw \
+    --tx-in b64ae44e1195b04663ab863b62337e626c65b0c9855a9fbb9ef4458f81a6f5ee#1 \
+    --tx-out $(cat paymentwithstake.addr)+0 \
+    --ttl 0 \
+    --fee 0 \
+    --out-file tx.raw \
+    --certificate-file stake.cert
 
-This transaction has only 1 input (the UTXO used to pay the transaction fee) and 1 output (our payment.addr to which we are sending the change). This transaction has to be signed by both the payment signing key `payment.skey` and the stake signing key `stake.skey`; and includes the certificate `stake.cert`:
+### Calculate fees
 
     cardano-cli shelley transaction calculate-min-fee \
+    --tx-body-file tx.raw \
     --tx-in-count 1 \
     --tx-out-count 1 \
-    --ttl 987654 \
+    --witness-count 1 \
+    --byron-witness-count 0 \
     --testnet-magic 42 \
-    --signing-key-file payment.skey \
-    --signing-key-file stake.skey \
-    --certificate-file stake.cert \
     --protocol-params-file protocol.json
+
+The output is the transaction fee in lovelace:
 
     > 171485
 
-In this transaction we have to not only pay transaction fees, but also include a _deposit_ (which we will get back when we deregister the key) as stated in the protocol parameters:
+Registering the stake address, not only pay transaction fees, but also includes a _deposit_ (which you get back when deregister the key) as stated in the protocol parameters:
 
-The deposit amount can be found in the `protocol.json` under `keyDeposit`:
+The deposit amount can be found in the `protocol.json` under `keyDeposit`, for example in Shelley Tesntet:
 
-        ...
-        "keyDeposit": 400000,
-        ...
+    ...
+    "keyDeposit": 400000,
+    ...
 
-Query the UTXO:
+Query the UTXO of the address that pays for the transaction and deposit:
 
-        cardano-cli shelley query utxo \
-            --address $(cat payment.addr) \
-            --testnet-magic 42
+    cardano-cli shelley query utxo \
+        --address $(cat payment.addr) \
+        --testnet-magic 42
 
-        >                            TxHash                                 TxIx        Lovelace
-        > ----------------------------------------------------------------------------------------
-        > b64ae44e1195b04663ab863b62337e626c65b0c9855a9fbb9ef4458f81a6f5ee     1      1000000000
+    >                            TxHash                                 TxIx        Lovelace
+    > ----------------------------------------------------------------------------------------
+    > b64ae44e1195b04663ab863b62337e626c65b0c9855a9fbb9ef4458f81a6f5ee     1      1000000000
 
-So we have 1000 ada, calculate the change to send back to `payment.addr`:
+### Calculate the change to send back to payment address after including the deposit
 
     expr 1000000000 - 171485 - 400000
 
@@ -64,11 +64,11 @@ So we have 1000 ada, calculate the change to send back to `payment.addr`:
 
 ### Submit the certificate with a transaction:
 
-Build the transaction:
+Build the transaction, this time include  --ttl and --fee  
 
     cardano-cli shelley transaction build-raw \
     --tx-in b64ae44e1195b04663ab863b62337e626c65b0c9855a9fbb9ef4458f81a6f5ee#1 \
-    --tx-out $(cat payment.addr)+999428515 \
+    --tx-out $(cat paymentwithstake.addr)+999428515 \
     --ttl 987654 \
     --fee 171485 \
     --out-file tx.raw \
@@ -90,3 +90,5 @@ And submit it:
     --testnet-magic 42
 
 Your stake key is now registered in the blockchain.
+
+**Note. `--testnet magic 42` identifies the testnets, for mainnet, use `--mainnet` instead.

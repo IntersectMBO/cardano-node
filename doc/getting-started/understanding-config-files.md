@@ -1,6 +1,6 @@
 # Understanding your configuration files and how to use them
 
-## The topology.json file
+### The topology.json file
 
 Tells your node to which nodes in the network it should talk to. A minimal version of this file looks like this:
 
@@ -22,7 +22,7 @@ Tells your node to which nodes in the network it should talk to. A minimal versi
 Your __block-producing__ node must __ONLY__ talk to your __relay nodes__, and the relay node should talk to other relay nodes in the network. Go to our telegram channel to find out IP addresses and ports of peers.
 
 
-## The genesis.json file
+### The genesis.json file
 
 The genesis file is generated with the `cardano-cli` by reading a `genesis.spec.json` file, which is out of scope for this document.
 But it is important because it is used to set:
@@ -140,7 +140,7 @@ Here is a brief description of each parameter. You can learn more in the [spec](
 | securityParam | Security parameter k |
 
 
-## The config.json file
+### The config.json file
 
 The default `config.json` file that we downloaded is shown below.
 
