@@ -15,8 +15,8 @@ import qualified Test.OptParse as OP
 golden_shelleyGenesisKeyGenUtxo :: Property
 golden_shelleyGenesisKeyGenUtxo = OP.propertyOnce $ do
   OP.workspace "tmp/genesis-key-gen-utxo" $ \tempDir -> do
-    let utxoVerificationKeyFile = tempDir <> "/utxo.vkey"
-        utxoSigningKeyFile = tempDir <> "/utxo.skey"
+    utxoVerificationKeyFile <- OP.noteTempFile tempDir "utxo.vkey"
+    utxoSigningKeyFile <- OP.noteTempFile tempDir "utxo.skey"
 
     void . liftIO $ OP.execCardanoCLI
         [ "shelley","genesis","key-gen-utxo"

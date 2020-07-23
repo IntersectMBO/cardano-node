@@ -17,12 +17,12 @@ import qualified Test.OptParse as OP
 
 golden_shelleyAddressBuild :: Property
 golden_shelleyAddressBuild = OP.propertyOnce $ OP.workspace "tmp/address-build" $ \tempDir -> do
-  let addressVKeyFile = "test/Test/golden/shelley/keys/payment_keys/verification_key"
-      addressSKeyFile = "test/Test/golden/shelley/keys/stake_keys/verification_key"
-      goldenStakingAddressHexFile = "test/Test/golden/shelley/addresses/staking-address.hex"
-      goldenEnterpriseAddressHexFile = "test/Test/golden/shelley/addresses/enterprise-address.hex"
-      stakingAddressHexFile = tempDir <> "/staking-address.hex"
-      enterpriseAddressHexFile = tempDir <> "/enterprise-address.hex"
+  addressVKeyFile <- OP.noteInputFile "test/Test/golden/shelley/keys/payment_keys/verification_key"
+  addressSKeyFile <- OP.noteInputFile "test/Test/golden/shelley/keys/stake_keys/verification_key"
+  goldenStakingAddressHexFile <- OP.noteInputFile "test/Test/golden/shelley/addresses/staking-address.hex"
+  goldenEnterpriseAddressHexFile <- OP.noteInputFile "test/Test/golden/shelley/addresses/enterprise-address.hex"
+  stakingAddressHexFile <- OP.noteTempFile tempDir "staking-address.hex"
+  enterpriseAddressHexFile <- OP.noteTempFile tempDir "enterprise-address.hex"
 
   void $ OP.noteEvalM $ liftIO $ E.evaluate . CSD.force =<< IO.readFile addressVKeyFile
 

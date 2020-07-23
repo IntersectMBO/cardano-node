@@ -15,8 +15,8 @@ import qualified Test.OptParse as OP
 golden_shelleyNodeKeyGenVrf :: Property
 golden_shelleyNodeKeyGenVrf = OP.propertyOnce $ do
   OP.workspace "tmp/node-key-gen-vrf" $ \tempDir -> do
-    let verificationKey = tempDir <> "/kes.vkey"
-        signingKey = tempDir <> "/kes.skey"
+    verificationKey <- OP.noteTempFile tempDir "kes.vkey"
+    signingKey <- OP.noteTempFile tempDir "kes.skey"
 
     void . liftIO $ OP.execCardanoCLI
         [ "shelley","node","key-gen-VRF"

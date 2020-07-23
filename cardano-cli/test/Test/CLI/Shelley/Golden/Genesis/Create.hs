@@ -81,9 +81,10 @@ parseTotalSupply = J.withObject "Object" $ \ o -> do
 golden_shelleyGenesisCreate :: Property
 golden_shelleyGenesisCreate = OP.propertyOnce $ do
   OP.workspace "tmp/genesis-create" $ \tempDir -> do
-    let sourceGenesisSpecFile = "test/Test/golden/shelley/genesis/genesis.spec.json"
+    sourceGenesisSpecFile <- OP.noteInputFile "test/Test/golden/shelley/genesis/genesis.spec.json"
+    genesisSpecFile <- OP.noteTempFile tempDir "genesis.spec.json"
 
-    liftIO $ IO.copyFile sourceGenesisSpecFile (tempDir <> "/genesis.spec.json")
+    liftIO $ IO.copyFile sourceGenesisSpecFile genesisSpecFile
 
     let genesisFile = tempDir <> "/genesis.json"
 
