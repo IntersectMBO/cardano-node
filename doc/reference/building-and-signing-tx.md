@@ -12,13 +12,13 @@ When building and submitting a transaction you need to check the current tip of 
 
 In the following example, the ttl value for this transaction is 200000. The output is written to a `tx001.raw` file.
 
-`cardano-cli shelley transaction build-raw \
+cardano-cli shelley transaction build-raw \
      --tx-in 4e3a6e7fdcb0d0efa17bf79c13aed2b4cb9baf37fb1aa2e39553d5bd720c5c99#4 \
      --tx-out $(cat payment2.addr)+100000000 \
      --tx-out $(cat payment.addr)+999899832035 \
      --ttl 200000 \
      --fee 167965 \
-     --out-file tx001.raw`
+     --out-file tx001.raw
 
 **Signing**
 A transaction must prove that it has the right to spend its inputs. In the most common case, this means that a transaction must be signed by the signing keys belonging to the payment addresses of the inputs. If a transaction contains certificates, it must additionally be signed by somebody with the right to issue those certificates. For example, a stake address registration certificate must be signed by the signing key of the corresponding stake key pair
@@ -28,21 +28,21 @@ Every transaction on the blockchain carries a fee, which needs to be calculated 
 
 The Cardano CLI is used to query the protocol parameters which are then written to the protocol.json file, for example:
 
-`cardano-cli shelley query protocol-parameters \
+cardano-cli shelley query protocol-parameters \
      --testnet-magic 42 \
-     --out-file protocol.json`
+     --out-file protocol.json
 
 where `magic42` identifies the testnet. Other testnets would be identified by different names and numbers.
 
 This is an example of a fee calculation transaction:
 
- `cardano-cli shelley transaction calculate-min-fee \
+ cardano-cli shelley transaction calculate-min-fee \
      --tx-in-count 1 \
      --tx-out-count 2 \
      --ttl 250000 \
      --testnet-magic 42 \
      --signing-key-file payment.skey \
-     --protocol-params-file protocol.json`
+     --protocol-params-file protocol.json
 
 **Building a raw transaction**
 
@@ -50,13 +50,13 @@ A transaction is considered 'raw' until it reaches the signing stage.
 
 Use the build-raw command to create raw transactions. In this example, the transaction is written to a tx001.raw file.
 
- `cardano-cli shelley transaction build-raw \
+ cardano-cli shelley transaction build-raw \
      --tx-in 4e3a6e7fdcb0d0efa17bf79c13aed2b4cb9baf37fb1aa2e39553d5bd720c5c99#4 \
      --tx-out $(cat payment2.addr)+100000000 \
      --tx-out $(cat payment.addr)+999899832035 \
      --ttl 200000 \
      --fee 167965 \
-     --out-file tx001.raw`
+     --out-file tx001.raw
 
 **Signing a transaction**
 
@@ -64,17 +64,17 @@ Keys are created in pairs (public verification key and private signing key). For
 
 Use the key-gen command to generate the keys.
 
- `cardano-cli shelley address key-gen \
+ cardano-cli shelley address key-gen \
      --verification-key-file payment.vkey \
-     --signing-key-file payment.skey`
+     --signing-key-file payment.skey
 
 The following example uses the payment key payment.skey to sign the raw transaction tx001.raw and writes it out to a tx001.signed file.
 
-`cardano-cli shelley transaction sign \
+cardano-cli shelley transaction sign \
      --tx-body-file tx001.raw \
      --signing-key-file payment.skey \
      --testnet-magic 42 \
-     --out-file tx001.signed`
+     --out-file tx001.signed
 
 Once a transaction is signed, it can be submitted to a node, which will share it with the network so it can be included in a block on the chain.
 
@@ -84,10 +84,10 @@ A stake address must be registered on the blockchain if you intend to delegate y
 
 To create a registration certificate, use the following code:
 
-`cardano-cli shelley stake-address registration-certificate \
+cardano-cli shelley stake-address registration-certificate \
      --staking-verification-key-file stake.vkey \
-     --out-file stake.cert`
+     --out-file stake.cert
 
 A deposit amount is specified in the protocol.json file, under keyDeposit. This amount has to be included in the transaction containing the certificate, but will be refunded when the key is deregistered.
 
-`"keyDeposit": 400000,`
+"keyDeposit": 400000,
