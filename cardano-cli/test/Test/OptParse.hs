@@ -14,6 +14,8 @@ module Test.OptParse
   , newFileWithContents
   , noteEval
   , noteEvalM
+  , noteInputFile
+  , noteTempFile
   ) where
 
 import           Cardano.Prelude
@@ -147,6 +149,9 @@ checkTextEnvelopeFormat fps tve reference created = do
 -- Helpers, Error rendering & Clean up
 --------------------------------------------------------------------------------
 
+cardanoCliPath :: FilePath
+cardanoCliPath = "cardano-cli"
+
 -- | Evaluate the value 'f' and annotate the value returned.
 noteEval :: (Show a, Monad m, HasCallStack) => a -> H.PropertyT m a
 noteEval a = withFrozenCallStack (H.annotateShow a >> pure a)
@@ -157,6 +162,19 @@ noteEvalM f = withFrozenCallStack $ do
   a <- f
   H.annotateShow a
   return a
+
+-- | Return the input file path after annotating it relative to the project root directory
+noteInputFile :: (Monad m, HasCallStack) => FilePath -> H.PropertyT m FilePath
+noteInputFile filePath = withFrozenCallStack $ do
+  H.annotate $ cardanoCliPath <> "/" <> filePath
+  return filePath
+
+-- | Return the test file path after annotating it relative to the project root directory
+noteTempFile :: (Monad m, HasCallStack) => FilePath -> FilePath -> H.PropertyT m FilePath
+noteTempFile tempDir filePath = withFrozenCallStack $ do
+  let relPath = tempDir <> "/" <> filePath
+  H.annotate $ cardanoCliPath <> "/" <> relPath
+  return relPath
 
 -- | Create a new file with the given text contents at the specified path
 newFileWithContents :: MonadIO m => FilePath -> String -> m FilePath
@@ -170,10 +188,11 @@ newFileWithContents filePath contents = liftIO $ IO.writeFile filePath contents 
 --
 -- The directory will be deleted if the block succeeds, but left behind if
 -- the block fails.
-workspace :: FilePath -> (FilePath -> H.PropertyT IO ()) -> H.PropertyT IO ()
-workspace prefixPath f = do
+workspace :: HasCallStack => FilePath -> (FilePath -> H.PropertyT IO ()) -> H.PropertyT IO ()
+workspace prefixPath f = withFrozenCallStack $ do
   liftIO $ IO.createDirectoryIfMissing True prefixPath
   ws <- liftIO $ IO.createTempDirectory prefixPath "test"
+  H.annotate $ "Workspace: " <> cardanoCliPath <> "/" <> ws
   f ws
   liftIO $ IO.removeDirectoryRecursive ws
 
@@ -197,9 +216,9 @@ assertFilesExist allFiles@(file:rest) = do
 -- | Assert the file contains the given number of occurences of the given string
 assertFileOccurences :: HasCallStack => Int -> String -> FilePath -> H.PropertyT IO ()
 assertFileOccurences n s fp = withFrozenCallStack $ do
-  signingKeyContents <- liftIO $ IO.readFile fp
+  contents <- liftIO $ IO.readFile fp
 
-  length (filter (s `L.isInfixOf`) (L.lines signingKeyContents)) H.=== n
+  length (filter (s `L.isInfixOf`) (L.lines contents)) H.=== n
 
 fileCleanup :: [FilePath] -> IO ()
 fileCleanup fps = mapM_ (\fp -> removeFile fp `catch` fileExists) fps
