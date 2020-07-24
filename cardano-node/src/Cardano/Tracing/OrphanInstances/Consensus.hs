@@ -836,7 +836,7 @@ instance ( tx ~ GenTx blk
       [ "kind" .= String "TraceAdoptedBlock"
       , "slot" .= toJSON (unSlotNo slotNo)
       , "block hash" .=  (condense $ blockHash blk)
-      , "block size" .= toJSON (nodeBlockFetchSize (getHeader blk))
+      , "blockSize" .= toJSON (nodeBlockFetchSize (getHeader blk))
       , "txIds" .= toJSON (map (show . txId) txs)
       ]
   toObject _verb (TraceAdoptedBlock slotNo blk _txs) =
@@ -844,7 +844,7 @@ instance ( tx ~ GenTx blk
       [ "kind" .= String "TraceAdoptedBlock"
       , "slot" .= toJSON (unSlotNo slotNo)
       , "block hash" .=  (condense $ blockHash blk)
-      , "block size" .= toJSON (nodeBlockFetchSize (getHeader blk))
+      , "blockSize" .= toJSON (nodeBlockFetchSize (getHeader blk))
       ]
   toObject _verb (TraceBlockFromFuture currentSlot tip) =
     mkObject
