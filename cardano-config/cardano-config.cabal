@@ -41,7 +41,6 @@ library
                      , aeson
                      , async
                      , base16-bytestring
-                     , byron-spec-ledger
                      , bytestring
                      , canonical-json >= 0.6 && < 0.7
                      , cardano-binary
