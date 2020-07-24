@@ -18,7 +18,7 @@ golden_shelleyStakeAddressDeregistrationCertificate = OP.propertyOnce $ do
     verificationKeyFile <- OP.noteInputFile "test/Test/golden/shelley/keys/stake_keys/verification_key"
     deregistrationCertFile <- OP.noteTempFile tempDir "deregistrationCertFile"
 
-    void . liftIO $ OP.execCardanoCLI
+    void $ OP.execCardanoCLI
         [ "shelley","stake-address","deregistration-certificate"
         , "--staking-verification-key-file", verificationKeyFile
         , "--out-file", deregistrationCertFile

@@ -20,7 +20,7 @@ golden_shelleyAddressKeyGen = OP.propertyOnce $ OP.workspace "tmp/address-key-ge
   addressVKeyFile <- OP.noteTempFile tempDir "address.vkey"
   addressSKeyFile <- OP.noteTempFile tempDir "address.skey"
 
-  void $ liftIO $ OP.execCardanoCLI
+  void $ OP.execCardanoCLI
     [ "shelley","address","key-gen"
     , "--verification-key-file", addressVKeyFile
     , "--signing-key-file", addressSKeyFile

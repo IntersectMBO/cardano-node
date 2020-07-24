@@ -18,7 +18,7 @@ golden_shelleyStakeAddressRegistrationCertificate = OP.propertyOnce $ do
     keyGenStakingVerificationKeyFile <- OP.noteInputFile "test/Test/golden/shelley/keys/stake_keys/verification_key"
     registrationCertFile <- OP.noteTempFile tempDir "registration.cert"
 
-    void . liftIO $ OP.execCardanoCLI
+    void $ OP.execCardanoCLI
         [ "shelley","stake-address","registration-certificate"
         , "--staking-verification-key-file", keyGenStakingVerificationKeyFile
         , "--out-file", registrationCertFile

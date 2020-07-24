@@ -26,7 +26,7 @@ golden_shelleyAddressBuild = OP.propertyOnce $ OP.workspace "tmp/address-build" 
 
   void $ OP.noteEvalM $ liftIO $ E.evaluate . CSD.force =<< IO.readFile addressVKeyFile
 
-  stakingAddressText <- OP.noteEvalM . liftIO $ OP.execCardanoCLI
+  stakingAddressText <- OP.noteEvalM $ OP.execCardanoCLI
     [ "shelley","address","build"
     , "--testnet-magic", "14"
     , "--payment-verification-key-file", addressVKeyFile
@@ -41,7 +41,7 @@ golden_shelleyAddressBuild = OP.propertyOnce $ OP.workspace "tmp/address-build" 
 
   void $ OP.noteEvalM $ liftIO $ E.evaluate . CSD.force =<< IO.readFile addressSKeyFile
 
-  enterpriseAddressText <- OP.noteEvalM . liftIO $ OP.execCardanoCLI
+  enterpriseAddressText <- OP.noteEvalM $ OP.execCardanoCLI
     [ "shelley","address","build"
     , "--testnet-magic", "14"
     , "--payment-verification-key-file", addressVKeyFile

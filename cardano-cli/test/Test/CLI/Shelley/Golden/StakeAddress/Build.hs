@@ -19,7 +19,7 @@ golden_shelleyStakeAddressBuild = OP.propertyOnce $ do
     verificationKeyFile <- OP.noteInputFile "test/Test/golden/shelley/keys/stake_keys/verification_key"
     rewardAddressFile <- OP.noteTempFile tempDir "reward-address.hex"
 
-    rewardAddress <- liftIO $ OP.execCardanoCLI
+    rewardAddress <- OP.execCardanoCLI
         [ "shelley","stake-address","build"
         , "--mainnet"
         , "--staking-verification-key-file", verificationKeyFile

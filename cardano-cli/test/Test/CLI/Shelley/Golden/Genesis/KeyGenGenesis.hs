@@ -18,7 +18,7 @@ golden_shelleyGenesisKeyGenGenesis = OP.propertyOnce $ do
     verificationKeyFile <- OP.noteTempFile tempDir "key-gen.vkey"
     signingKeyFile <- OP.noteTempFile tempDir "key-gen.skey"
 
-    void . liftIO $ OP.execCardanoCLI
+    void $ OP.execCardanoCLI
         [ "shelley","genesis","key-gen-genesis"
         , "--verification-key-file", verificationKeyFile
         , "--signing-key-file", signingKeyFile

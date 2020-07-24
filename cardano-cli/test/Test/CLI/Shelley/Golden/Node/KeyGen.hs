@@ -19,7 +19,7 @@ golden_shelleyNodeKeyGen = OP.propertyOnce $ do
     signingKeyFile <- OP.noteTempFile tempDir "key-gen.skey"
     opCertCounterFile <- OP.noteTempFile tempDir "op-cert.counter"
 
-    void . liftIO $ OP.execCardanoCLI
+    void $ OP.execCardanoCLI
         [ "shelley","node","key-gen"
         , "--verification-key-file", verificationKeyFile
         , "--signing-key-file", signingKeyFile
