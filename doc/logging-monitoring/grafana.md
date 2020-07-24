@@ -1,9 +1,9 @@
 # Adding a Grafana Dashboard to monitor your nodes
 
 
-### Install grafana
+#### Install grafana
 
-1. Download and install Grafana on your local machine or in your monitoring server: [Grafana](https://grafana.com/grafana/download)
+Download and install Grafana on your local machine or in your monitoring server: [Grafana](https://grafana.com/grafana/download)
 
 The Grafana backend has a number of configuration options defined in its config file (usually located at /etc/grafana/grafana.ini on linux systems).
 Grafana uses port 3000 as default, change it if needed and make sure to configure your firewall accordingly.
@@ -20,9 +20,9 @@ Start Grafana-server with
     sudo /bin/systemctl start grafana-server
 
 
-### Configuring your dashboard
-2. On your local machine you can now go to  a.b.c.d:3000
+#### Configuring your dashboard
 
+On your local machine you can now go to  a.b.c.d:3000
 
 You will see this, default user and password are admin/admin.
 
@@ -67,4 +67,4 @@ Enter to your dashboard, and after a few seconds you should see something like t
 
 ![Dashboard](images/grafana_dashboard.png)
 
-From here you can configure alerts or change the views on your dashboard. 
+From here you can configure alerts or change the views on your dashboard.

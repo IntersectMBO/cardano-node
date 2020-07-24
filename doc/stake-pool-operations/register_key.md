@@ -5,13 +5,13 @@ Stake address needs to be registered in the blockchain to be useful. Registering
 * Create a registration certificate.
 * Submit the certificate to the blockchain with a transaction.
 
-### Create a _registration certificate_:
+#### Create a _registration certificate_:
 
     cardano-cli shelley stake-address registration-certificate \
     --stake-verification-key-file stake.vkey \
     --out-file stake.cert
 
-### Draft transaction
+#### Draft transaction
 
 For the transaction draft, --tx.out, --ttl and --fee can be set to zero.
 
@@ -23,7 +23,7 @@ For the transaction draft, --tx.out, --ttl and --fee can be set to zero.
     --out-file tx.raw \
     --certificate-file stake.cert
 
-### Calculate fees
+#### Calculate fees
 
     cardano-cli shelley transaction calculate-min-fee \
     --tx-body-file tx.raw \
@@ -56,13 +56,13 @@ Query the UTXO of the address that pays for the transaction and deposit:
     > ----------------------------------------------------------------------------------------
     > b64ae44e1195b04663ab863b62337e626c65b0c9855a9fbb9ef4458f81a6f5ee     1      1000000000
 
-### Calculate the change to send back to payment address after including the deposit
+#### Calculate the change to send back to payment address after including the deposit
 
     expr 1000000000 - 171485 - 400000
 
     > 999428515
 
-### Submit the certificate with a transaction:
+#### Submit the certificate with a transaction:
 
 Build the transaction, this time include  --ttl and --fee  
 

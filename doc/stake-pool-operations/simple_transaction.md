@@ -9,7 +9,7 @@ Creating a transaction requires various steps:
 * Sign the transaction
 * Submit the transaction
 
-### Get protocol parameters
+#### Get protocol parameters
 
 Get the protocol parameters and save them to `protocol.json` with:
 
@@ -17,7 +17,7 @@ Get the protocol parameters and save them to `protocol.json` with:
    --testnet-magic 42 \
    --out-file protocol.json
 
-### Get the transaction hash and index of the **UTXO** to spend:
+#### Get the transaction hash and index of the **UTXO** to spend:
 
     cardano-cli shelley query utxo \
     --address $(cat payment.addr) \
@@ -29,7 +29,7 @@ Get the protocol parameters and save them to `protocol.json` with:
 4e3a6e7fdcb0d0efa17bf79c13aed2b4cb9baf37fb1aa2e39553d5bd720c5c99     4         20000000
 ```
 
-### Draft the transaction
+#### Draft the transaction
 
 Create a draft for the transaction and save it in tx.draft
 
@@ -43,7 +43,7 @@ Note that for `--tx-in` we use the following syntax: `TxId#TxIx` where `TxId` is
     --fee 0 \
     --out-file tx.draft
 
-### Calculate the fee
+#### Calculate the fee
 
 A simple transaction needs one input, a valid UTXO from `payment.addr`, and two outputs:
 
@@ -63,7 +63,8 @@ Note that to calculate the fee you need to include the draft transaction
 
     > 167965
 
-### Calculate the change to send back to payment.addr, all amounts must be in Lovelace:
+#### Calculate the change to send back to payment.addr,
+all amounts must be in Lovelace:
 
     expr <UTXO BALANCE> - <AMOUNT TO SEND> - <TRANSACTION FEE>
 
@@ -73,7 +74,7 @@ For example, if we send 10 ADA from a UTxO containing 20 ADA, the change to send
 
     > 9832035
 
-### Determine the TTL (time to Live) for the transaction
+#### Determine the TTL (time to Live) for the transaction
 
 To build the transaction we need to specify the **TTL (Time to live)**, this is the slot height limit for our transaction to be included in a block, if it is not in a block by that slot the transaction will be cancelled. So TTL = slotNo + N slots. Where N is the amount of slots you want to add to give the transaction a window to be included in a block.
 
@@ -91,7 +92,7 @@ Look for the value of `unSlotNo`
 
 Calculate your TTL, for example:  369215 + 200 slots = 369400
 
-### Build the transaction
+#### Build the transaction
 
 We write the transaction in a file, we will name it `tx.raw`.
 
@@ -103,7 +104,7 @@ We write the transaction in a file, we will name it `tx.raw`.
     --fee 167965 \
     --out-file tx.raw
 
-### Sign the transaction
+#### Sign the transaction
 
 Sign the transaction with the signing key **payment.skey** and save the signed transaction in **tx.signed**
 
@@ -113,13 +114,13 @@ Sign the transaction with the signing key **payment.skey** and save the signed t
     --testnet-magic 42 \
     --out-file tx.signed
 
-### Submit the transaction
+#### Submit the transaction
 
     cardano-cli shelley transaction submit \
     --tx-file tx.signed \
     --testnet-magic 42
 
-### Check the balances
+#### Check the balances
 
 We must give it some time to get incorporated into the blockchain, but eventually, we will see the effect:
 
