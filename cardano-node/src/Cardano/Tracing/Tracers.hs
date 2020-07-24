@@ -801,7 +801,6 @@ nodeToClientTracers' trSel verb tr =
 
 nodeToNodeTracers'
   :: ( Consensus.RunNode blk
-     , Condense (HeaderHash blk)
      , Condense (TxId (GenTx blk))
      , HasTxs blk
      , Show peer
