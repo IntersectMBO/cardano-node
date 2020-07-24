@@ -405,7 +405,7 @@ instance ( Condense (TxId (GenTx blk))
     mkObject [ "kind" .= String "MsgBlock"
              , "block hash" .= renderHeaderHash (Proxy @blk) (blockHash blk)
              , "block size" .= toJSON (nodeBlockFetchSize (getHeader blk))
-             , "tx ids" .= toJSON (presentTx <$> extractTxs blk)
+             , "txIds" .= toJSON (presentTx <$> extractTxs blk)
              ]
       where
         presentTx :: GenTx blk -> Value

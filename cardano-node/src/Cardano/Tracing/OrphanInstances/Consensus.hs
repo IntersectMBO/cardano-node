@@ -837,7 +837,7 @@ instance ( tx ~ GenTx blk
       , "slot" .= toJSON (unSlotNo slotNo)
       , "block hash" .=  (condense $ blockHash blk)
       , "block size" .= toJSON (nodeBlockFetchSize (getHeader blk))
-      , "tx ids" .= toJSON (map (show . txId) txs)
+      , "txIds" .= toJSON (map (show . txId) txs)
       ]
   toObject _verb (TraceAdoptedBlock slotNo blk _txs) =
     mkObject
