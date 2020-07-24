@@ -30,7 +30,7 @@ Registering your stake pool requires:
 
 **WARNING:** Generating the **stake pool registration certificate** and the **delegation certificate** requires the **cold keys** So, when doing this on mainnet you may want to generate these certificates in your local machine taking the proper security measures to avoid exposing your cold keys to the internet.
 
-### Create a JSON file with your pool's metadata
+#### Create a JSON file with your pool's metadata
 
       {
       "name": "TestPool",
@@ -42,7 +42,7 @@ Registering your stake pool requires:
 
 Store the file in a url you control. For example [https://teststakepool.com/poolMetadata.json](https://git.io/JJWdJ) You can use a GIST in github, make sure that the URL is less than 65 characters long.
 
-### Get the hash of your metadata JSON file:
+#### Get the hash of your metadata JSON file:
 
 This validates that the JSON fits the required schema, if it does, you will get the hash of your file.
 
@@ -51,7 +51,7 @@ This validates that the JSON fits the required schema, if it does, you will get 
     >6bf124f217d0e5a0a8adb1dbd8540e1334280d49ab861127868339f43b3948af
 
 
-### Generate Stake pool registration certificate
+#### Generate Stake pool registration certificate
 
     cardano-cli shelley stake-pool registration-certificate \
     --cold-verification-key-file cold.vkey \
@@ -98,7 +98,7 @@ The **pool-registration.cert** file should look like this:
     46f1a68bdf8113f50e779d8158203a4e813b6340dc790f772b3d433ce1c371d5c5f5de46f1a68bdf
     8113f50e779d80f6   
 
-### Generate delegation certificate pledge
+#### Generate delegation certificate pledge
 
 To honor your pledge, create a _delegation certificate_:
 
@@ -109,11 +109,11 @@ To honor your pledge, create a _delegation certificate_:
 
 This creates a delegation certificate which delegates funds from all stake addresses associated with key `stake.vkey` to the pool belonging to cold key `cold.vkey`. If we there are many staking keys as pool owners in the first step, we need delegation certificates for all of them.
 
-### Submit the pool certificate and delegation certificate to the blockchain
+#### Submit the pool certificate and delegation certificate to the blockchain
 
 To submit the `pool registration certificate` and the `delegation certificates` to the blockchain by including them in one or more transactions. We can use one transaction for multiple certificates, the certificates will be applied in order.
 
-### Draft the transaction
+#### Draft the transaction
 
     cardano-cli shelley transaction build-raw \
     --tx-in <UTXO>#<TxIx> \
@@ -124,7 +124,7 @@ To submit the `pool registration certificate` and the `delegation certificates` 
     --certificate-file pool-registration.cert \
     --certificate-file delegation.cert
 
-### Calculate the the fees
+#### Calculate the the fees
 
     cardano-cli shelley transaction calculate-min-fee \
     --tx-body-file tx.raw \
@@ -143,12 +143,12 @@ Registering a stake pool requires a deposit. This amount is specified in `protoc
 
 "poolDeposit": 500000000
 
-### Calculate the change for --tx-out
+#### Calculate the change for --tx-out
 All amounts in Lovelace
 
     expr <UTxO BALANCE> - <poolDeposit> - <FEE>
 
-### Build the transaction:
+#### Build the transaction:
 
     cardano-cli shelley transaction build-raw \
     --tx-in <UTXO>#<TxIx> \
@@ -159,7 +159,7 @@ All amounts in Lovelace
     --certificate-file pool-registration.cert \
     --certificate-file delegation.cert
 
-### Sign the transaction:
+#### Sign the transaction:
 
     cardano-cli shelley transaction sign \
     --tx-body-file tx.raw \
@@ -169,14 +169,14 @@ All amounts in Lovelace
     --testnet-magic 42 \
     --out-file tx.signed
 
-### Submit the transaction:
+#### Submit the transaction:
 
     cardano-cli shelley transaction submit \
     --tx-file tx.signed \
     --testnet-magic 42
 
 
-### Verify that your stake pool registration was successful.
+#### Verify that your stake pool registration was successful.
 
 Get Pool ID
 

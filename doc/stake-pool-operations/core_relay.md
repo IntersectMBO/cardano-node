@@ -1,19 +1,8 @@
 # Configure topology files for block-producing and relay nodes.
 
-Before we register our stake pool, let's configure our __block-producing__ and __relay__ nodes:
+Before you start your nodes, you need to prepare the topology files.
 
-__NOTE:__ Here you can find peers to connect to, and submit your own relay's data:  https://github.com/input-output-hk/cardano-ops/blob/master/topologies/ff-peers.nix#L5-L10
-
-### Configure the block-producing node
-
-Get the configuration files for your block-producing node if you don't have them already, for example
-
-    mkdir config-files
-    cd config-files     
-
-    wget https://hydra.iohk.io/job/Cardano/cardano-node/cardano-deployment/latest-finished/download/1/shelley_testnet-config.json
-    wget https://hydra.iohk.io/job/Cardano/cardano-node/cardano-deployment/latest-finished/download/1/shelley_testnet-genesis.json
-    wget https://hydra.iohk.io/job/Cardano/cardano-node/cardano-deployment/latest-finished/download/1/shelley_testnet-topology.json
+#### Configure the block-producing node
 
 Make the __block-producing__ node to "talk" only to __YOUR__ relay node. Do not forget to configure your firewall also:
 
@@ -29,9 +18,9 @@ Make the __block-producing__ node to "talk" only to __YOUR__ relay node. Do not 
   	  ]
   	}
 
-### Configure the relay node:
+#### Configure the relay node:
 
-Make your __relay node__ `talk` to your __block-producing__ node and __other relays__ in the network by editing the `shelley_testnet-topology.json` file:
+Make your __relay node__ `talk` to your __block-producing__ node and __other relays__ in the network by editing the `topology.json` file:
 
 
     nano shelley_testnet-topology.json
@@ -55,3 +44,5 @@ Make your __relay node__ `talk` to your __block-producing__ node and __other rel
         }
       ]
     }
+
+__NOTE:__ Here you can find peers in the **Shelley Testnet** to connect to:  https://github.com/input-output-hk/cardano-ops/blob/batch-ff-relays-pr/topologies/ff-peers.nix

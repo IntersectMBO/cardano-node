@@ -1,6 +1,6 @@
 # Installing the node from source
 
-### Prerequisites
+#### Prerequisites
 
 Set up your platform:
 
@@ -9,7 +9,7 @@ You will need:
 * An x86 host \(AMD or Intel\), Virtual Machine or AWS instance with at least 2 cores, 4GB of RAM and at least 10GB of free disk space;
 * A recent version of Linux.
 
-### Install dependencies
+#### Install dependencies
 
 We need the following packages and tools on our Linux system to download the source code and build it:
 
@@ -38,7 +38,7 @@ For Debian/Ubuntu use the following instead:
 
 If you are using a different flavor of Linux, you will need to use the package manager suitable for your platform instead of `yum` or `apt-get`, and the names of the packages you need to install might differ.
 
-### Download, unpack, install and update Cabal:
+#### Download, unpack, install and update Cabal:
 
     wget https://downloads.haskell.org/~cabal/cabal-install-3.2.0.0/cabal-install-3.2.0.0-x86_64-unknown-linux.tar.xz
     tar -xf cabal-install-3.2.0.0-x86_64-unknown-linux.tar.xz
@@ -66,7 +66,7 @@ Confirm that you installed cabal version `3.2.0.0`.
 
     cabal --version
 
-### Download and install GHC:
+#### Download and install GHC:
 
     wget https://downloads.haskell.org/~ghc/8.6.5/ghc-8.6.5-x86_64-deb9-linux.tar.xz
     tar -xf ghc-8.6.5-x86_64-deb9-linux.tar.xz
@@ -77,7 +77,7 @@ Confirm that you installed cabal version `3.2.0.0`.
 
 Back in your home directory:
 
-### Install Libsodium
+#### Install Libsodium
 
     git clone https://github.com/input-output-hk/libsodium
     cd libsodium
@@ -92,7 +92,7 @@ Add the following to your .bashrc file and source it.
     export LD_LIBRARY_PATH="/usr/local/lib:$LD_LIBRARY_PATH"
     export PKG_CONFIG_PATH="/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH"
 
-### Download the source code for cardano-node
+#### Download the source code for cardano-node
 
     git clone https://github.com/input-output-hk/cardano-node.git
 
@@ -107,7 +107,7 @@ Checkout the latest version of cardano-node
     git tag
     git checkout tags/<TAGGED VERSION>
 
-### Build and install the node
+#### Build and install the node
 
 Build and install the node with `cabal`,
 

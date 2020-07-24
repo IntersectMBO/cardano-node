@@ -9,9 +9,7 @@ To retire our pool we need to:
 * Create a _deregistration certificate_ and
 * Submit the certificate to the blockchain with a transaction
 
-The deregistration certificate contains the _epoch_ in which we want to retire the pool.
-
-This epoch must be _after_ the current epoch and _not later than_ `eMax` epochs in the future, where `eMax` is a protocol parameter.
+The deregistration certificate contains the _epoch_ in which we want to retire the pool. This epoch must be _after_ the current epoch and _not later than_ `eMax` epochs in the future, where `eMax` is a protocol parameter.
 
 So we first need to figure out the current epoch. The number of _slots per epoch_ is recorded in the genesis file, and we can get it with
 
@@ -45,30 +43,40 @@ This means the earliest epoch for retirement is 40 (one in the future), and the 
 
 So for example, we can decide to retire in epoch 41.
 
-### Create deregistration certificate
+#### Create deregistration certificate
 
 **WARNING** This involves the __cold keys__. Take the necessary precautions to not to expose your cold keys to the internet.
 
-Create the deregistration certificate and save it as `pool.dereg`:
+Create the deregistration certificate and save it as `pool.deregistration`:
 
     cardano-cli shelley stake-pool deregistration-certificate \
     --cold-verification-key-file cold.vkey \
     --epoch 41 \
-    --out-file pool.dereg
+    --out-file pool.deregistration
 
-### Build, sign and submit the transaction:
+#### Draft the transaction
 
-Calculate the fees:
+    cardano-cli shelley transaction build-raw \
+    --tx-in <UTXO>#<TxIx> \
+    --tx-out $(cat payment.addr)+0 \
+    --ttl 0 \
+    --fee 0 \
+    --out-file tx.draft \
+    --certificate-file pool.deregistration
+
+#### Calculate the fees:
 
     cardano-cli shelley transaction calculate-min-fee \
+    --tx-body-file tx.draft \
     --tx-in-count 1 \
     --tx-out-count 1 \
-    --ttl 860000 \
+    --witness-count 1 \
+    --byron-witness-count 0 \
     --testnet-magic 42 \
-    --signing-key-file payment.skey \
-    --signing-key-file cold.skey \
-    --certificate pool.dereg \
     --protocol-params-file protocol.json
+
+For example:
+
     > 171309
 
 We query our address for a suitable UTxO to use as input:
@@ -88,6 +96,8 @@ We calculate our change:
     expr 999999267766 - 171309
     > 999999096457
 
+#### Build, sign and submit the transaction:
+
 Build the raw transaction:
 
     cardano-cli shelley transaction build-raw \
@@ -96,11 +106,11 @@ Build the raw transaction:
         --ttl 860000 \
         --fee 171309 \
         --out-file tx.raw \
-        --certificate-file pool.dereg
+        --certificate-file pool.deregistration
 
-Sign it with both the payment signing key and the cold signing key
+**Sign it with both the payment signing key and the cold signing key
 (the first signature is necessary because we are spending funds from `paymant.addr`,
-the second because the certificate needs to be signed by the pool owner):
+the second because the certificate needs to be signed by the pool owner):**
 
     cardano-cli shelley transaction sign \
         --tx-body-file tx.raw \
@@ -115,4 +125,6 @@ And submit to the blockchain:
         --tx-file tx.signed \
         --testnet-magic 42
 
-And we are done. The pool will retire at the end of epoch 40. If we change our mind, we can create and submit a new registration certificate before epoch 41, which will then overrule the deregistration certificate.
+The pool will retire at the end of epoch 40.
+
+If we change our mind, we can create and submit a new registration certificate before epoch 41, which will then overrule the deregistration certificate.
