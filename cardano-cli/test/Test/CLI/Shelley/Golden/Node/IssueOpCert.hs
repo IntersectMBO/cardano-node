@@ -4,7 +4,7 @@ module Test.CLI.Shelley.Golden.Node.IssueOpCert
   ( golden_shelleyNodeIssueOpCert
   ) where
 
-import Cardano.Prelude hiding (to)
+import Cardano.Prelude
 
 import Hedgehog (Property)
 

@@ -4,7 +4,7 @@ module Test.CLI.Shelley.Golden.Address.Info
   ( golden_shelleyAddressInfo
   ) where
 
-import Cardano.Prelude hiding (to)
+import Cardano.Prelude
 
 import Hedgehog (Property)
 

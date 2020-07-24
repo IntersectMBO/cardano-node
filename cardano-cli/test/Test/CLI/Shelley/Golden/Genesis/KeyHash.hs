@@ -4,7 +4,7 @@ module Test.CLI.Shelley.Golden.Genesis.KeyHash
   ( golden_shelleyGenesisKeyHash
   ) where
 
-import Cardano.Prelude hiding (to)
+import Cardano.Prelude
 
 import Hedgehog (Property, (===))
 

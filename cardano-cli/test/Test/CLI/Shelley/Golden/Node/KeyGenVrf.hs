@@ -4,7 +4,7 @@ module Test.CLI.Shelley.Golden.Node.KeyGenVrf
   ( golden_shelleyNodeKeyGenVrf
   ) where
 
-import Cardano.Prelude hiding (to)
+import Cardano.Prelude
 
 import Hedgehog (Property)
 

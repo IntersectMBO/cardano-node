@@ -35,6 +35,14 @@ import           Test.CLI.Shelley.Golden.Node.KeyGenKes
                    (golden_shelleyNodeKeyGenKes)
 import           Test.CLI.Shelley.Golden.Node.KeyGenVrf
                    (golden_shelleyNodeKeyGenVrf)
+import           Test.CLI.Shelley.Golden.StakeAddress.Build
+                   (golden_shelleyStakeAddressBuild)
+import           Test.CLI.Shelley.Golden.StakeAddress.DeregistrationCertificate
+                   (golden_shelleyStakeAddressDeregistrationCertificate)
+import           Test.CLI.Shelley.Golden.StakeAddress.KeyGen
+                   (golden_shelleyStakeAddressKeyGen)
+import           Test.CLI.Shelley.Golden.StakeAddress.RegistrationCertificate
+                   (golden_shelleyStakeAddressRegistrationCertificate)
 import           Test.CLI.Shelley.Golden.TextEnvelope.Certificates.StakeAddressCertificates
                    (golden_shelleyStakeAddressCertificates)
 import           Test.CLI.Shelley.Golden.TextEnvelope.Certificates.MIRCertificate
@@ -85,6 +93,10 @@ keyTests =
         , ("golden_shelleyNodeKeyGen", golden_shelleyNodeKeyGen)
         , ("golden_shelleyNodeKeyGenKes", golden_shelleyNodeKeyGenKes)
         , ("golden_shelleyNodeKeyGenVrf", golden_shelleyNodeKeyGenVrf)
+        , ("golden_shelleyStakeAddressBuild", golden_shelleyStakeAddressBuild)
+        , ("golden_shelleyStakeAddressDeregistrationCertificate", golden_shelleyStakeAddressDeregistrationCertificate)
+        , ("golden_shelleyStakeAddressKeyGen", golden_shelleyStakeAddressKeyGen)
+        , ("golden_shelleyStakeAddressRegistrationCertificate", golden_shelleyStakeAddressRegistrationCertificate)
         , ("golden_shelleyPaymentKeys", golden_shelleyPaymentKeys)
         , ("golden_shelleyAddressBuild", golden_shelleyAddressBuild)
         , ("golden_shelleyStakeKeys", golden_shelleyStakeKeys)

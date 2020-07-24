@@ -4,7 +4,7 @@ module Test.CLI.Shelley.Golden.Address.KeyGen
   ( golden_shelleyAddressKeyGen
   ) where
 
-import Cardano.Prelude hiding (to)
+import Cardano.Prelude
 
 import Hedgehog (Property)
 
