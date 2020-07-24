@@ -1,5 +1,28 @@
 # Changelog for cardano-node
 
+## 1.18.0 -- July 2020
+
+### node changes
+- Properly display tx hash in Shelley UTxO query command output (#1535)
+- Documentation improvements (#1533, #1534, #1536, #1537)
+- Minor changes to test cases (#1538, #1541)
+- Changes to genesis file and NIX setup (#1531, #1532)
+
+### consensus changes
+- Optimise translating Byron to Shelley UTxOs (#2464)
+- Improve error reporting (#2458)
+- Tune defaultDiskPolicy (#2454)
+
+### ledger changes
+- Changed the expected block count to account for the decentralisation parameter (#111)
+- Replace dependency on lens with microlens (#1705)
+- Fix typo in CDDL key name (#1706)
+- Enable more efficient  transaction translations (#1708)
+
+### network changes
+- Reduce default block fetch concurrency deadline to 1 (#2457)
+- Update dependencies with the ledger (#2456)
+
 ## 1.17.0 -- July 2020
 
 ### node changes
