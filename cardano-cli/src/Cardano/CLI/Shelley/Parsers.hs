@@ -1867,7 +1867,10 @@ pProtocol =
     )
   <|>
     -- Default to the Cardano protocol.
-    pure (CardanoProtocol defaultByronEpochSlots defaultSecurityParam)
+    pure
+      (CardanoProtocol
+        (EpochSlots defaultByronEpochSlots)
+        (SecurityParam defaultSecurityParam))
   where
     pByron :: Parser Protocol
     pByron = ByronProtocol <$> pEpochSlots <*> pSecurityParam
@@ -1880,44 +1883,31 @@ pProtocol =
 
     pEpochSlots :: Parser EpochSlots
     pEpochSlots =
-        ( EpochSlots <$>
-            Opt.option Opt.auto
-              (  Opt.long "epoch-slots"
-              <> Opt.metavar "NATURAL"
-              <> Opt.help
-                    (  "The number of slots per epoch for the Byron era "
-                    <> "(default is "
-                    <> show (unEpochSlots defaultByronEpochSlots)
-                    <> ")."
-                    )
-              )
-        )
-      <|>
-        -- Default to the mainnet value.
-        pure defaultByronEpochSlots
+      EpochSlots <$>
+        Opt.option Opt.auto
+          (  Opt.long "epoch-slots"
+          <> Opt.metavar "NATURAL"
+          <> Opt.help "The number of slots per epoch for the Byron era."
+          <> Opt.value defaultByronEpochSlots -- Default to the mainnet value.
+          <> Opt.showDefault
+          )
 
     pSecurityParam :: Parser SecurityParam
     pSecurityParam =
-        ( SecurityParam <$>
-            Opt.option Opt.auto
-              (  Opt.long "security-param"
-              <> Opt.metavar "NATURAL"
-              <> Opt.help
-                    (  "The security parameter (default is "
-                    <> show (maxRollbacks defaultSecurityParam)
-                    <> ")."
-                    )
-              )
-        )
-      <|>
-          -- Default to the mainnet value.
-          pure defaultSecurityParam
+      SecurityParam <$>
+        Opt.option Opt.auto
+          (  Opt.long "security-param"
+          <> Opt.metavar "NATURAL"
+          <> Opt.help "The security parameter."
+          <> Opt.value defaultSecurityParam -- Default to the mainnet value.
+          <> Opt.showDefault
+          )
 
-    defaultByronEpochSlots :: EpochSlots
-    defaultByronEpochSlots = EpochSlots 21600
+    defaultByronEpochSlots :: Word64
+    defaultByronEpochSlots = 21600
 
-    defaultSecurityParam :: SecurityParam
-    defaultSecurityParam = SecurityParam 2160
+    defaultSecurityParam :: Word64
+    defaultSecurityParam = 2160
 
 pProtocolVersion :: Parser (Natural, Natural)
 pProtocolVersion =
