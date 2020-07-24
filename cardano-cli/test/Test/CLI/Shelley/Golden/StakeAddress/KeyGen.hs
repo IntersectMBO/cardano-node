@@ -18,7 +18,7 @@ golden_shelleyStakeAddressKeyGen = OP.propertyOnce $ do
     verificationKeyFile <- OP.noteTempFile tempDir "kes.vkey"
     signingKeyFile <- OP.noteTempFile tempDir "kes.skey"
 
-    void . liftIO $ OP.execCardanoCLI
+    void $ OP.execCardanoCLI
         [ "shelley","stake-address","key-gen"
         , "--verification-key-file", verificationKeyFile
         , "--signing-key-file", signingKeyFile

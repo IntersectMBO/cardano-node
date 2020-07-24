@@ -20,7 +20,7 @@ golden_shelleyGenesisInitialTxIn = OP.propertyOnce $ do
     goldenUtxoHashFile <- OP.noteInputFile "test/Test/golden/shelley/keys/genesis_utxo_hashes/utxo_hash"
     utxoHashFile <- OP.noteTempFile tempDir "utxo_hash"
 
-    utxoHash <-liftIO $ OP.execCardanoCLI
+    utxoHash <- OP.execCardanoCLI
         [ "shelley","genesis","initial-txin"
         , "--testnet-magic", "16"
         , "--verification-key-file", verificationKeyFile

@@ -30,7 +30,7 @@ golden_shelleyNodeIssueOpCert = OP.propertyOnce $ do
     --    cabal run cardano-cli:cardano-cli -- shelley node key-gen-KES \
     --        --verification-key-file cardano-cli/test/cli/node-issue-op-cert/data/node-kes.vkey \
     --        --signing-key-file /dev/null
-    void . liftIO $ OP.execCardanoCLI
+    void $ OP.execCardanoCLI
         [ "shelley","node","issue-op-cert"
         , "--hot-kes-verification-key-file", hotKesVerificationKeyFile
         , "--cold-signing-key-file", coldSigningKeyFile

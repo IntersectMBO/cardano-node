@@ -18,7 +18,7 @@ golden_shelleyNodeKeyGenVrf = OP.propertyOnce $ do
     verificationKey <- OP.noteTempFile tempDir "kes.vkey"
     signingKey <- OP.noteTempFile tempDir "kes.skey"
 
-    void . liftIO $ OP.execCardanoCLI
+    void $ OP.execCardanoCLI
         [ "shelley","node","key-gen-VRF"
         , "--verification-key-file", verificationKey
         , "--signing-key-file", signingKey

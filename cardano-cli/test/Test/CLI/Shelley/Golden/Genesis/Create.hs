@@ -95,7 +95,7 @@ golden_shelleyGenesisCreate = OP.propertyOnce $ do
     (utxoCount, fmtUtxoCount) <- fmap (withSnd show) $ forAll $ G.int (R.linear 4 19)
 
     -- Create the genesis json file and required keys
-    void $ liftIO $ OP.execCardanoCLI
+    void $ OP.execCardanoCLI
         [ "shelley","genesis","create"
         , "--testnet-magic", "12"
         , "--start-time", fmtStartTime
@@ -155,7 +155,7 @@ golden_shelleyGenesisCreate = OP.propertyOnce $ do
     (utxoCount, fmtUtxoCount) <- fmap (withSnd show) $ forAll $ G.int (R.linear 4 19)
 
     -- Create the genesis json file and required keys
-    void $ liftIO $ OP.execCardanoCLI
+    void $ OP.execCardanoCLI
         [ "shelley","genesis","create"
         , "--testnet-magic", "12"
         , "--start-time", fmtStartTime

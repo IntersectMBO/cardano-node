@@ -1,3 +1,5 @@
+{-# LANGUAGE TypeApplications #-}
+
 module Test.OptParse
   ( checkTextEnvelopeFormat
   , assertFilesExist
@@ -18,8 +20,8 @@ module Test.OptParse
   , noteTempFile
   ) where
 
-import           Cardano.Prelude
-import           Prelude (String)
+import           Cardano.Prelude hiding (stderr, stdout)
+import           Prelude (String) 
 import qualified Prelude as Prelude
 
 import           System.IO.Error
@@ -45,6 +47,7 @@ import qualified System.Environment as IO
 import qualified System.IO as IO
 import qualified System.IO.Temp as IO
 import qualified System.Process as IO
+import qualified System.Exit as IO
 
 import qualified Hedgehog as H
 import qualified Hedgehog.Internal.Property as H
@@ -58,19 +61,52 @@ import           Hedgehog.Internal.Source (getCaller)
 evalCardanoCLIParser :: [String] -> Opt.ParserResult ClientCommand
 evalCardanoCLIParser args = Opt.execParserPure pref opts args
 
+-- | Format argument for a shell CLI command.
+--
+-- This includes automatically embedding string in double quotes if necessary, including any necessary escaping.
+--
+-- Note, this function does not cover all the edge cases for shell processing, so avoid use in production code.
+argQuote :: String -> String
+argQuote arg = if ' ' `elem` arg || '"' `elem` arg || '$' `elem` arg
+  then "\"" <> escape arg <> "\""
+  else arg
+  where escape :: String -> String
+        escape ('"':xs) = '\\':'"':escape xs
+        escape ('\\':xs) = '\\':'\\':escape xs
+        escape ('\n':xs) = '\\':'n':escape xs
+        escape ('\r':xs) = '\\':'r':escape xs
+        escape ('\t':xs) = '\\':'t':escape xs
+        escape ('$':xs) = '\\':'$':escape xs
+        escape (x:xs) = x:escape xs
+        escape "" = ""
+
 -- | Execute cardano-cli via the command line.
 --
 -- Waits for the process to finish and returns the stdout.
 execCardanoCLI
-  :: [String]
+  :: HasCallStack
+  => [String]
   -- ^ Arguments to the CLI command
-  -> IO String
+  -> H.PropertyT IO String
   -- ^ Captured stdout
 execCardanoCLI arguments = do
-  maybeCardanoCli <- IO.lookupEnv "CARDANO_CLI"
-  case maybeCardanoCli of
-    Just cardanoCli -> IO.readProcess cardanoCli arguments ""
-    Nothing -> IO.readProcess "cabal" ("exec":"--":"cardano-cli":arguments) ""
+  maybeCardanoCli <- liftIO $ IO.lookupEnv "CARDANO_CLI"
+  (exitResult, stdout, stderr) <- case maybeCardanoCli of
+    Just cardanoCli -> liftIO $ IO.readProcessWithExitCode cardanoCli arguments ""
+    Nothing -> liftIO $ IO.readProcessWithExitCode "cabal" ("exec":"--":"cardano-cli":arguments) ""
+  case exitResult of
+    IO.ExitFailure exitCode -> failWithCustom callStack Nothing . Prelude.unlines $
+      [ "Process exited with non-zero exit-code"
+      , "━━━━ command ━━━━"
+      , "cardano-cli " <> intercalate " " (fmap argQuote arguments)
+      , "━━━━ stdout ━━━━"
+      , stdout
+      , "━━━━ stderr ━━━━"
+      , stderr
+      , "━━━━ exit code ━━━━"
+      , show @Int exitCode
+      ]
+    IO.ExitSuccess -> return stdout
 
 -- | This takes a 'ParserResult', which is pure, and executes it.
 execCardanoCLIParser
