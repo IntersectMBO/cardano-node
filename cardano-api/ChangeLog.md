@@ -1,5 +1,7 @@
 # Changelog for cardano-api
 
+## 1.18.0 -- July 2020
+
 ## 1.17.0 -- July 2020
 
 - Allow genesis keys as tx witnesses (#1483)
