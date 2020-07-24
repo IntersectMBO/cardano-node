@@ -4,7 +4,7 @@ module Test.CLI.Shelley.Golden.Genesis.KeyGenUtxo
   ( golden_shelleyGenesisKeyGenUtxo
   ) where
 
-import Cardano.Prelude hiding (to)
+import Cardano.Prelude
 
 import Hedgehog (Property)
 

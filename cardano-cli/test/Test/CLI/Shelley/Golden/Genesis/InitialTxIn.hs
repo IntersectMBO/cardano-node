@@ -4,7 +4,7 @@ module Test.CLI.Shelley.Golden.Genesis.InitialTxIn
   ( golden_shelleyGenesisInitialTxIn
   ) where
 
-import Cardano.Prelude hiding (to)
+import Cardano.Prelude
 
 import Hedgehog (Property)
 
