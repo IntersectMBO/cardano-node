@@ -50,8 +50,8 @@ POOL_NODES="node-pool1"
 ALL_NODES="${BFT_NODES} ${POOL_NODES}"
 
 NUM_UTXO_KEYS=1
-MAX_SUPPLY=1000000000
-INIT_SUPPLY=1000000000
+MAX_SUPPLY=45000000000000000
+INIT_SUPPLY=30000000000000000
 FUNDS_PER_GENESIS_ADDRESS=$((${INIT_SUPPLY} / ${NUM_BFT_NODES}))
 FUNDS_PER_BYRON_ADDRESS=$((${FUNDS_PER_GENESIS_ADDRESS} * 9 / 10))
 # We need to allow for a fee to transfer the funds out of the genesis.
@@ -305,9 +305,13 @@ sed -i shelley/genesis.spec.json \
     -e 's/"slotLength": 1/"slotLength": 0.2/' \
     -e 's/"activeSlotsCoeff": 5.0e-2/"activeSlotsCoeff": 0.1/' \
     -e 's/"securityParam": 2160/"securityParam": 10/' \
-    -e 's/"epochLength": 432000/"epochLength": 1500/' \
-    -e 's/"maxLovelaceSupply": 0/"maxLovelaceSupply": 1000000000/' \
-    -e 's/"decentralisationParam": 1/"decentralisationParam": 0.7/'
+    -e 's/"epochLength": 432000/"epochLength": 1000/' \
+    -e "s/\"maxLovelaceSupply\": 0/\"maxLovelaceSupply\": $MAX_SUPPLY/" \
+    -e 's/"decentralisationParam": 1/"decentralisationParam": 0.7/' \
+    -e 's/"nOpt": 100/"nOpt": 2/' \
+    -e 's/"rho": 0/"rho": 0.003/' \
+    -e 's/"tau": 0/"tau": 0.20/' \
+    -e 's/"a0": 0/"a0": 0.3/'
 
 # Now generate for real:
 
@@ -513,13 +517,15 @@ cardano-cli shelley transaction build-raw \
 
 
 # TODO: this will become the transaction to register the pool, etc. We'll need to pick the tx-in from the actual UTxO -- since it contains the txid, we'll have to query this via cardano-cli shelley query utxo.
-# cardano-cli shelley transaction build-raw --ttl 1000000 --fee 0 --tx-in 67209bfcdf78f8cd86f649da75053a80fb9bb3fad68465554f9301c31b496c65#0 --tx-out $(cat example/addresses/user1.addr)+450000000 --certificate-file example/addresses/pool-owner1-stake.reg.cert     --certificate-file example/node-pool1/registration.cert     --certificate-file example/addresses/user1-stake.reg.cert     --certificate-file example/addresses/user1-stake.deleg.cert --out-file example/register-pool.txbody
 
-# cardano-cli shelley address convert --byron-key-file example/byron/payment-keys.000.key --signing-key-file example/byron/payment-keys.000-converted.key
+## cardano-cli shelley transaction build-raw --ttl 1000000 --fee 0 --tx-in TXID_FROM_QUERY#0 --tx-out $(cat example/addresses/user1.addr)+AMOUNT_FROM_QUERY --certificate-file example/addresses/pool-owner1-stake.reg.cert     --certificate-file example/node-pool1/registration.cert     --certificate-file example/addresses/user1-stake.reg.cert     --certificate-file example/addresses/user1-stake.deleg.cert --out-file example/register-pool.txbody
 
-# cardano-cli shelley transaction sign --tx-body-file example/register-pool.txbody --testnet-magic 42 --signing-key-file example/byron/payment-keys.000-converted.key --signing-key-file example/shelley/utxo-keys/utxo1.skey --signing-key-file example/addresses/user1-stake.skey --signing-key-file example/node-pool1/owner.skey --signing-key-file example/node-pool1/shelley/operator.skey --out-file example/register-pool.tx
+## cardano-cli shelley key convert-byron-key --byron-payment-key-type --byron-signing-key-file example/byron/payment-keys.000.key --out-file example/byron/payment-keys.000-converted.key
 
-# cardano-cli shelley transaction submit --tx-file example/register-pool.tx --testnet-magic 42
+## cardano-cli shelley transaction sign --tx-body-file example/register-pool.txbody --testnet-magic 42 --signing-key-file example/byron/payment-keys.000-converted.key --signing-key-file example/shelley/utxo-keys/utxo1.skey --signing-key-file example/addresses/user1-stake.skey --signing-key-file example/node-pool1/owner.skey --signing-key-file example/node-pool1/shelley/operator.skey --out-file example/register-pool.tx
+
+## cardano-cli shelley transaction submit --cardano-mode --tx-file example/register-pool.tx --testnet-magic 42
+
 
 # So we'll need to sign this with a bunch of keys:
 # 1. the initial utxo spending key, for the funds
