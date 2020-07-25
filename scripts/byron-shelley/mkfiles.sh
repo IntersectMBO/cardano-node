@@ -45,7 +45,7 @@ BFT_NODES="node-bft1 node-bft2"
 BFT_NODES_N="1 2"
 NUM_BFT_NODES=2
 
-POOL_NODES="node-pool1"
+POOL_NODES="node-pool1 node-pool2"
 
 ALL_NODES="${BFT_NODES} ${POOL_NODES}"
 
@@ -116,6 +116,11 @@ cat > node-bft1/topology.json <<EOF
        "port": 3003,
        "valency": 1
      }
+   , {
+       "addr": "127.0.0.1",
+       "port": 3004,
+       "valency": 1
+     }
    ]
  }
 EOF
@@ -132,6 +137,11 @@ cat > node-bft2/topology.json <<EOF
    , {
        "addr": "127.0.0.1",
        "port": 3003,
+       "valency": 1
+     }
+   , {
+       "addr": "127.0.0.1",
+       "port": 3004,
        "valency": 1
      }
    ]
@@ -152,11 +162,38 @@ cat > node-pool1/topology.json <<EOF
        "port": 3002,
        "valency": 1
      }
+   , {
+       "addr": "127.0.0.1",
+       "port": 3004,
+       "valency": 1
+     }
    ]
  }
 EOF
 echo 3003 > node-pool1/port
 
+cat > node-pool2/topology.json <<EOF
+{
+   "Producers": [
+     {
+       "addr": "127.0.0.1",
+       "port": 3001,
+       "valency": 1
+     }
+   , {
+       "addr": "127.0.0.1",
+       "port": 3002,
+       "valency": 1
+     }
+   , {
+       "addr": "127.0.0.1",
+       "port": 3003,
+       "valency": 1
+     }
+   ]
+}
+EOF
+echo 3004 > node-pool2/port
 
 cat > byron.genesis.spec.json <<EOF
 {
@@ -242,6 +279,15 @@ cardano-cli issue-genesis-utxo-expenditure \
             --rich-addr-from $(head -n 1 byron/genesis-address-000) \
             --txout "(\"$(head -n 1 byron/address-000)\", $FUNDS_PER_BYRON_ADDRESS)"
 
+cardano-cli issue-genesis-utxo-expenditure \
+            --genesis-json byron/genesis.json \
+            --testnet-magic 42 \
+            --byron-formats \
+            --tx tx1.tx \
+            --wallet-key byron/delegate-keys.001.key \
+            --rich-addr-from $(head -n 1 byron/genesis-address-001) \
+            --txout "(\"$(head -n 1 byron/address-001)\", $FUNDS_PER_BYRON_ADDRESS)"
+
 # Update Proposal and votes
 cardano-cli byron create-update-proposal \
             --filepath update-proposal \
@@ -319,7 +365,7 @@ cardano-cli shelley genesis create \
     --testnet-magic 42 \
     --genesis-dir shelley/ \
     --gen-genesis-keys ${NUM_BFT_NODES} \
-    --gen-utxo-keys 1
+    --gen-utxo-keys 2
 
 echo "====================================================================="
 echo "Generated genesis keys and genesis files:"
@@ -411,8 +457,8 @@ echo "====================================================================="
 # pool-owner1..n: will be the owner of the pools and we'll use their reward
 #                 account for pool rewards
 
-USER_ADDRS="user1"
-POOL_ADDRS="pool-owner1"
+USER_ADDRS="user1 user2"
+POOL_ADDRS="pool-owner1 pool-owner2"
 
 ADDRS="${USER_ADDRS} ${POOL_ADDRS}"
 
@@ -451,7 +497,7 @@ for ADDR in ${ADDRS}; do
 done
 
 # user N will delegate to pool N
-USER_POOL_N="1"
+USER_POOL_N="1 2"
 
 for N in ${USER_POOL_N}; do
 
@@ -502,27 +548,25 @@ echo "====================================================================="
 #  3. register the user1 stake address
 #  4. delegate from the user1 stake address to the stake pool
 
-cardano-cli shelley transaction build-raw \
-    --ttl 1000 \
-    --fee 0 \
-    --tx-in $(cardano-cli shelley genesis initial-txin \
-                --testnet-magic 42 \
-                --verification-key-file shelley/utxo-keys/utxo1.vkey) \
-    --tx-out $(cat addresses/user1.addr)+${MAX_SUPPLY} \
-    --certificate-file addresses/pool-owner1-stake.reg.cert \
-    --certificate-file node-pool1/registration.cert \
-    --certificate-file addresses/user1-stake.reg.cert \
-    --certificate-file addresses/user1-stake.deleg.cert \
-    --out-file tx1.txbody
 
 
 # TODO: this will become the transaction to register the pool, etc. We'll need to pick the tx-in from the actual UTxO -- since it contains the txid, we'll have to query this via cardano-cli shelley query utxo.
 
+### POOL 1:
 ## cardano-cli shelley transaction build-raw --ttl 1000000 --fee 0 --tx-in TXID_FROM_QUERY#0 --tx-out $(cat example/addresses/user1.addr)+AMOUNT_FROM_QUERY --certificate-file example/addresses/pool-owner1-stake.reg.cert     --certificate-file example/node-pool1/registration.cert     --certificate-file example/addresses/user1-stake.reg.cert     --certificate-file example/addresses/user1-stake.deleg.cert --out-file example/register-pool.txbody
 
 ## cardano-cli shelley key convert-byron-key --byron-payment-key-type --byron-signing-key-file example/byron/payment-keys.000.key --out-file example/byron/payment-keys.000-converted.key
 
 ## cardano-cli shelley transaction sign --tx-body-file example/register-pool.txbody --testnet-magic 42 --signing-key-file example/byron/payment-keys.000-converted.key --signing-key-file example/shelley/utxo-keys/utxo1.skey --signing-key-file example/addresses/user1-stake.skey --signing-key-file example/node-pool1/owner.skey --signing-key-file example/node-pool1/shelley/operator.skey --out-file example/register-pool.tx
+
+## cardano-cli shelley transaction submit --cardano-mode --tx-file example/register-pool.tx --testnet-magic 42
+
+### POOL 2
+## cardano-cli shelley transaction build-raw --ttl 1000000 --fee 0 --tx-in TXID_FROM_QUERY#0 --tx-out $(cat example/addresses/user2.addr)+AMOUNT_FROM_QUERY --certificate-file example/addresses/pool-owner2-stake.reg.cert     --certificate-file example/node-pool2/registration.cert     --certificate-file example/addresses/user2-stake.reg.cert     --certificate-file example/addresses/user2-stake.deleg.cert --out-file example/register-pool.txbody
+
+## cardano-cli shelley key convert-byron-key --byron-payment-key-type --byron-signing-key-file example/byron/payment-keys.001.key --out-file example/byron/payment-keys.001-converted.key
+
+## cardano-cli shelley transaction sign --tx-body-file example/register-pool.txbody --testnet-magic 42 --signing-key-file example/byron/payment-keys.001-converted.key --signing-key-file example/shelley/utxo-keys/utxo2.skey --signing-key-file example/addresses/user2-stake.skey --signing-key-file example/node-pool2/owner.skey --signing-key-file example/node-pool2/shelley/operator.skey --out-file example/register-pool.tx
 
 ## cardano-cli shelley transaction submit --cardano-mode --tx-file example/register-pool.tx --testnet-magic 42
 
@@ -532,15 +576,6 @@ cardano-cli shelley transaction build-raw \
 # 2. the user1 stake address key, due to the delegatation cert
 # 3. the pool1 owner key, due to the pool registration cert
 # 3. the pool1 operator key, due to the pool registration cert
-
-cardano-cli shelley transaction sign \
-    --signing-key-file shelley/utxo-keys/utxo1.skey \
-    --signing-key-file addresses/user1-stake.skey \
-    --signing-key-file node-pool1/owner.skey \
-    --signing-key-file node-pool1/shelley/operator.skey \
-    --testnet-magic 42 \
-    --tx-body-file  tx1.txbody \
-    --out-file      tx1.tx
 
 echo "Generated a signed 'do it all' transaction:"
 ls -1 tx1.tx
@@ -589,6 +624,11 @@ echo "CARDANO_NODE_SOCKET_PATH=${ROOT}/node-bft1/node.sock \\"
 echo "  cardano-cli submit-tx \\"
 echo "    --testnet-magic 42 \\"
 echo "    --tx ${ROOT}/tx0.tx"
+echo
+echo "CARDANO_NODE_SOCKET_PATH=${ROOT}/node-bft1/node.sock \\"
+echo "  cardano-cli submit-tx \\"
+echo "    --testnet-magic 42 \\"
+echo "    --tx ${ROOT}/tx1.tx"
 echo
 echo "To submit the update proposal for the transition to version 1"
 echo
