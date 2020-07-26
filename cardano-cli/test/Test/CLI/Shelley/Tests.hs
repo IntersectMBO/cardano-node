@@ -43,6 +43,8 @@ import           Test.CLI.Shelley.Golden.StakeAddress.KeyGen
                    (golden_shelleyStakeAddressKeyGen)
 import           Test.CLI.Shelley.Golden.StakeAddress.RegistrationCertificate
                    (golden_shelleyStakeAddressRegistrationCertificate)
+import           Test.CLI.Shelley.Golden.StakePool.RegistrationCertificate
+                   (golden_shelleyStakePoolRegistrationCertificate)
 import           Test.CLI.Shelley.Golden.TextEnvelope.Certificates.StakeAddressCertificates
                    (golden_shelleyStakeAddressCertificates)
 import           Test.CLI.Shelley.Golden.TextEnvelope.Certificates.MIRCertificate
@@ -97,6 +99,7 @@ keyTests =
         , ("golden_shelleyStakeAddressDeregistrationCertificate", golden_shelleyStakeAddressDeregistrationCertificate)
         , ("golden_shelleyStakeAddressKeyGen", golden_shelleyStakeAddressKeyGen)
         , ("golden_shelleyStakeAddressRegistrationCertificate", golden_shelleyStakeAddressRegistrationCertificate)
+        , ("golden_shelleyStakePoolRegistrationCertificate", golden_shelleyStakePoolRegistrationCertificate)
         , ("golden_shelleyPaymentKeys", golden_shelleyPaymentKeys)
         , ("golden_shelleyAddressBuild", golden_shelleyAddressBuild)
         , ("golden_shelleyStakeKeys", golden_shelleyStakeKeys)

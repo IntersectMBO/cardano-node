@@ -219,6 +219,7 @@ test-suite cardano-cli-pioneers
                         Test.CLI.Shelley.Golden.StakeAddress.DeregistrationCertificate
                         Test.CLI.Shelley.Golden.StakeAddress.KeyGen
                         Test.CLI.Shelley.Golden.StakeAddress.RegistrationCertificate
+                        Test.CLI.Shelley.Golden.StakePool.RegistrationCertificate
                         Test.CLI.Shelley.Golden.TextEnvelope.Certificates.MIRCertificate
                         Test.CLI.Shelley.Golden.TextEnvelope.Certificates.OperationalCertificate
                         Test.CLI.Shelley.Golden.TextEnvelope.Certificates.StakeAddressCertificates
