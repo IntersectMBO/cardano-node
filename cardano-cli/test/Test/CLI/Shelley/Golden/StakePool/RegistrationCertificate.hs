@@ -14,7 +14,7 @@ import qualified Test.OptParse as OP
 
 golden_shelleyStakePoolRegistrationCertificate :: Property
 golden_shelleyStakePoolRegistrationCertificate = OP.propertyOnce $ do
-  OP.workspace "tmp/stack-pool-registration-certificate" $ \tempDir -> do
+  OP.workspace "tmp/stake-pool-registration-certificate" $ \tempDir -> do
     operatorVerificationKeyFile <- OP.noteInputFile "test/Test/golden/shelley/node-pool/operator.vkey"
     vrfVerificationKeyFile <- OP.noteInputFile "test/Test/golden/shelley/node-pool/vrf.vkey"
     ownerVerificationKeyFile <- OP.noteInputFile "test/Test/golden/shelley/node-pool/owner.vkey"

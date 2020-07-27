@@ -1,3 +1,6 @@
+module Main
+  ( main
+  ) where
 
 import           Cardano.Prelude
 
