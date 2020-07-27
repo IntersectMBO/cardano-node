@@ -59,5 +59,4 @@ cardano-node
    reference/building-and-signing-tx
    reference/diagnosing-transactions
    reference/shelley-genesis
-   reference/configuring-a-node-using-yaml
-   reference/transactions
+   reference/configuring-a-node-using-yaml   
