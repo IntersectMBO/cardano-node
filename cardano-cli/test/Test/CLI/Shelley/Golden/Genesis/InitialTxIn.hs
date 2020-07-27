@@ -4,7 +4,7 @@ module Test.CLI.Shelley.Golden.Genesis.InitialTxIn
   ( golden_shelleyGenesisInitialTxIn
   ) where
 
-import Cardano.Prelude hiding (to)
+import Cardano.Prelude
 
 import Hedgehog (Property)
 
@@ -16,11 +16,11 @@ import qualified Test.OptParse as OP
 golden_shelleyGenesisInitialTxIn :: Property
 golden_shelleyGenesisInitialTxIn = OP.propertyOnce $ do
   OP.workspace "tmp/genesis-initial-txin" $ \tempDir -> do
-    let verificationKeyFile = "test/Test/golden/shelley/keys/genesis_verification_keys/genesis-utxo.vkey"
-        utxoHashFile = tempDir <> "/utxo_hash"
-        goldenUtxoHashFile = "test/Test/golden/shelley/keys/genesis_utxo_hashes/utxo_hash"
+    verificationKeyFile <- OP.noteInputFile "test/Test/golden/shelley/keys/genesis_verification_keys/genesis-utxo.vkey"
+    goldenUtxoHashFile <- OP.noteInputFile "test/Test/golden/shelley/keys/genesis_utxo_hashes/utxo_hash"
+    utxoHashFile <- OP.noteTempFile tempDir "utxo_hash"
 
-    utxoHash <-liftIO $ OP.execCardanoCLI
+    utxoHash <- OP.execCardanoCLI
         [ "shelley","genesis","initial-txin"
         , "--testnet-magic", "16"
         , "--verification-key-file", verificationKeyFile

@@ -75,7 +75,7 @@ let
         # Needed for the CLI tests.
         # Coreutils because we need 'paste'.
         packages.cardano-cli.components.tests.cardano-cli-test.build-tools =
-          lib.mkForce [buildPackages.bc buildPackages.jq buildPackages.coreutils buildPackages.shellcheck];
+          lib.mkForce [buildPackages.jq buildPackages.coreutils buildPackages.shellcheck];
       }
       {
         # Stamp executables with the git revision
@@ -100,7 +100,7 @@ let
         # split data output for ekg to reduce closure size
         packages.ekg.components.library.enableSeparateDataOutput = true;
 
-        # cardano-cli-tests depends on cardano-cli
+        # cardano-cli-test depends on cardano-cli
         packages.cardano-cli.preCheck = "export CARDANO_CLI=${pkgSet.cardano-cli.components.exes.cardano-cli}/bin/cardano-cli";
       }
       {

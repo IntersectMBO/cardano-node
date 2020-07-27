@@ -1,5 +1,5 @@
 name:                  cardano-cli
-version:               1.17.0
+version:               1.18.0
 description:           The Cardano command-line interface.
 author:                IOHK
 maintainer:            operations@iohk.io
@@ -144,36 +144,7 @@ executable cardano-cli
 
 test-suite cardano-cli-test
   hs-source-dirs:       test
-  main-is:              cardano-cli-test.hs
-  type:                 exitcode-stdio-1.0
-
-  if os(windows)
-    buildable: False
-
-  build-depends:        base
-                      , cardano-cli
-                      , cardano-prelude
-                      , directory
-                      , filepath
-                      , process
-                      , text
-                      , text-ansi
-                      , unix
-
-  default-language:     Haskell2010
-  default-extensions:   NoImplicitPrelude
-
-  ghc-options:          -Wall
-                        -Wincomplete-record-updates
-                        -Wincomplete-uni-patterns
-                        -Wredundant-constraints
-                        -Wpartial-fields
-                        -Wcompat
-                        -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
-
-test-suite cardano-cli-pioneers
-  hs-source-dirs:       test
-  main-is:              cardano-cli-pioneers.hs
+  main-is:              Main.hs
   type:                 exitcode-stdio-1.0
 
   build-depends:        base
@@ -210,7 +181,16 @@ test-suite cardano-cli-pioneers
                         Test.CLI.Shelley.Golden.Genesis.KeyGenGenesis
                         Test.CLI.Shelley.Golden.Genesis.KeyGenUtxo
                         Test.CLI.Shelley.Golden.Genesis.KeyHash
+                        Test.CLI.Shelley.Golden.Node.IssueOpCert
+                        Test.CLI.Shelley.Golden.Node.KeyGen
+                        Test.CLI.Shelley.Golden.Node.KeyGenKes
+                        Test.CLI.Shelley.Golden.Node.KeyGenVrf
                         Test.CLI.Shelley.Golden.Metadata.StakePoolMetadata
+                        Test.CLI.Shelley.Golden.StakeAddress.Build
+                        Test.CLI.Shelley.Golden.StakeAddress.DeregistrationCertificate
+                        Test.CLI.Shelley.Golden.StakeAddress.KeyGen
+                        Test.CLI.Shelley.Golden.StakeAddress.RegistrationCertificate
+                        Test.CLI.Shelley.Golden.StakePool.RegistrationCertificate
                         Test.CLI.Shelley.Golden.TextEnvelope.Certificates.MIRCertificate
                         Test.CLI.Shelley.Golden.TextEnvelope.Certificates.OperationalCertificate
                         Test.CLI.Shelley.Golden.TextEnvelope.Certificates.StakeAddressCertificates
@@ -226,7 +206,12 @@ test-suite cardano-cli-pioneers
                         Test.CLI.Shelley.Golden.TextEnvelope.Tx.Tx
                         Test.CLI.Shelley.Golden.TextEnvelope.Tx.TxBody
                         Test.CLI.Shelley.Golden.TextEnvelope.Tx.Witness
+                        Test.CLI.Shelley.Golden.TextView.DecodeCbor
+                        Test.CLI.Shelley.Golden.Transaction.Build
+                        Test.CLI.Shelley.Golden.Transaction.CalculateMinFee
+                        Test.CLI.Shelley.Golden.Transaction.Sign
                         Test.CLI.Shelley.Tests
+                        Test.CLI.Version
                         Test.ITN
                         Test.OptParse
                         Test.Pioneers.Exercise1

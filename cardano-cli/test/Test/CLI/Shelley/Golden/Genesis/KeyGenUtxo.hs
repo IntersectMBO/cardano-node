@@ -4,7 +4,7 @@ module Test.CLI.Shelley.Golden.Genesis.KeyGenUtxo
   ( golden_shelleyGenesisKeyGenUtxo
   ) where
 
-import Cardano.Prelude hiding (to)
+import Cardano.Prelude
 
 import Hedgehog (Property)
 
@@ -15,10 +15,10 @@ import qualified Test.OptParse as OP
 golden_shelleyGenesisKeyGenUtxo :: Property
 golden_shelleyGenesisKeyGenUtxo = OP.propertyOnce $ do
   OP.workspace "tmp/genesis-key-gen-utxo" $ \tempDir -> do
-    let utxoVerificationKeyFile = tempDir <> "/utxo.vkey"
-        utxoSigningKeyFile = tempDir <> "/utxo.skey"
+    utxoVerificationKeyFile <- OP.noteTempFile tempDir "utxo.vkey"
+    utxoSigningKeyFile <- OP.noteTempFile tempDir "utxo.skey"
 
-    void . liftIO $ OP.execCardanoCLI
+    void $ OP.execCardanoCLI
         [ "shelley","genesis","key-gen-utxo"
         , "--verification-key-file", utxoVerificationKeyFile
         , "--signing-key-file", utxoSigningKeyFile
@@ -26,3 +26,6 @@ golden_shelleyGenesisKeyGenUtxo = OP.propertyOnce $ do
 
     OP.assertFileOccurences 1 "GenesisUTxOVerificationKey_ed25519" $ utxoVerificationKeyFile
     OP.assertFileOccurences 1 "GenesisUTxOSigningKey_ed25519" $ utxoSigningKeyFile
+
+    OP.assertEndsWithSingleNewline utxoVerificationKeyFile
+    OP.assertEndsWithSingleNewline utxoSigningKeyFile

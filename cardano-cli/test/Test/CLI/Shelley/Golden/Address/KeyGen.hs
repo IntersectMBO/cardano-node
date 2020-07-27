@@ -4,7 +4,7 @@ module Test.CLI.Shelley.Golden.Address.KeyGen
   ( golden_shelleyAddressKeyGen
   ) where
 
-import Cardano.Prelude hiding (to)
+import Cardano.Prelude
 
 import Hedgehog (Property)
 
@@ -17,11 +17,10 @@ import qualified Control.DeepSeq as CSD
 
 golden_shelleyAddressKeyGen :: Property
 golden_shelleyAddressKeyGen = OP.propertyOnce $ OP.workspace "tmp/address-key-gen" $ \tempDir -> do
-  let addressVKeyFile = tempDir <> "/address.vkey"
-  let addressSKeyFile = tempDir <> "/address.skey"
-  let outputFiles = [addressVKeyFile, addressSKeyFile]
+  addressVKeyFile <- OP.noteTempFile tempDir "address.vkey"
+  addressSKeyFile <- OP.noteTempFile tempDir "address.skey"
 
-  void $ liftIO $ OP.execCardanoCLI
+  void $ OP.execCardanoCLI
     [ "shelley","address","key-gen"
     , "--verification-key-file", addressVKeyFile
     , "--signing-key-file", addressSKeyFile
@@ -30,7 +29,8 @@ golden_shelleyAddressKeyGen = OP.propertyOnce $ OP.workspace "tmp/address-key-ge
   void $ OP.noteEvalM $ liftIO $ E.evaluate . CSD.force =<< IO.readFile addressVKeyFile
   void $ OP.noteEvalM $ liftIO $ E.evaluate . CSD.force =<< IO.readFile addressSKeyFile
 
-  OP.assertFilesExist outputFiles
-
   OP.assertFileOccurences 1 "PaymentVerificationKeyShelley" addressVKeyFile
   OP.assertFileOccurences 1 "PaymentSigningKeyShelley_ed25519" addressSKeyFile
+
+  OP.assertEndsWithSingleNewline addressVKeyFile
+  OP.assertEndsWithSingleNewline addressSKeyFile

@@ -1,7 +1,11 @@
+{-# LANGUAGE TypeApplications #-}
+
 module Test.OptParse
   ( checkTextEnvelopeFormat
-  , assertFilesExist
+  , assertEndsWithSingleNewline
+  , assertFileLines
   , assertFileOccurences
+  , assertFilesExist
   , equivalence
   , evalCardanoCLIParser
   , execCardanoCLIParser
@@ -14,9 +18,11 @@ module Test.OptParse
   , newFileWithContents
   , noteEval
   , noteEvalM
+  , noteInputFile
+  , noteTempFile
   ) where
 
-import           Cardano.Prelude
+import           Cardano.Prelude hiding (stderr, stdout, lines)
 import           Prelude (String)
 import qualified Prelude as Prelude
 
@@ -43,6 +49,7 @@ import qualified System.Environment as IO
 import qualified System.IO as IO
 import qualified System.IO.Temp as IO
 import qualified System.Process as IO
+import qualified System.Exit as IO
 
 import qualified Hedgehog as H
 import qualified Hedgehog.Internal.Property as H
@@ -56,19 +63,52 @@ import           Hedgehog.Internal.Source (getCaller)
 evalCardanoCLIParser :: [String] -> Opt.ParserResult ClientCommand
 evalCardanoCLIParser args = Opt.execParserPure pref opts args
 
+-- | Format argument for a shell CLI command.
+--
+-- This includes automatically embedding string in double quotes if necessary, including any necessary escaping.
+--
+-- Note, this function does not cover all the edge cases for shell processing, so avoid use in production code.
+argQuote :: String -> String
+argQuote arg = if ' ' `elem` arg || '"' `elem` arg || '$' `elem` arg
+  then "\"" <> escape arg <> "\""
+  else arg
+  where escape :: String -> String
+        escape ('"':xs) = '\\':'"':escape xs
+        escape ('\\':xs) = '\\':'\\':escape xs
+        escape ('\n':xs) = '\\':'n':escape xs
+        escape ('\r':xs) = '\\':'r':escape xs
+        escape ('\t':xs) = '\\':'t':escape xs
+        escape ('$':xs) = '\\':'$':escape xs
+        escape (x:xs) = x:escape xs
+        escape "" = ""
+
 -- | Execute cardano-cli via the command line.
 --
 -- Waits for the process to finish and returns the stdout.
 execCardanoCLI
-  :: [String]
+  :: HasCallStack
+  => [String]
   -- ^ Arguments to the CLI command
-  -> IO String
+  -> H.PropertyT IO String
   -- ^ Captured stdout
 execCardanoCLI arguments = do
-  maybeCardanoCli <- IO.lookupEnv "CARDANO_CLI"
-  case maybeCardanoCli of
-    Just cardanoCli -> IO.readProcess cardanoCli arguments ""
-    Nothing -> IO.readProcess "cabal" ("exec":"--":"cardano-cli":arguments) ""
+  maybeCardanoCli <- liftIO $ IO.lookupEnv "CARDANO_CLI"
+  (exitResult, stdout, stderr) <- case maybeCardanoCli of
+    Just cardanoCli -> liftIO $ IO.readProcessWithExitCode cardanoCli arguments ""
+    Nothing -> liftIO $ IO.readProcessWithExitCode "cabal" ("exec":"--":"cardano-cli":arguments) ""
+  case exitResult of
+    IO.ExitFailure exitCode -> failWithCustom callStack Nothing . Prelude.unlines $
+      [ "Process exited with non-zero exit-code"
+      , "━━━━ command ━━━━"
+      , "cardano-cli " <> intercalate " " (fmap argQuote arguments)
+      , "━━━━ stdout ━━━━"
+      , stdout
+      , "━━━━ stderr ━━━━"
+      , stderr
+      , "━━━━ exit code ━━━━"
+      , show @Int exitCode
+      ]
+    IO.ExitSuccess -> return stdout
 
 -- | This takes a 'ParserResult', which is pure, and executes it.
 execCardanoCLIParser
@@ -147,6 +187,9 @@ checkTextEnvelopeFormat fps tve reference created = do
 -- Helpers, Error rendering & Clean up
 --------------------------------------------------------------------------------
 
+cardanoCliPath :: FilePath
+cardanoCliPath = "cardano-cli"
+
 -- | Evaluate the value 'f' and annotate the value returned.
 noteEval :: (Show a, Monad m, HasCallStack) => a -> H.PropertyT m a
 noteEval a = withFrozenCallStack (H.annotateShow a >> pure a)
@@ -157,6 +200,19 @@ noteEvalM f = withFrozenCallStack $ do
   a <- f
   H.annotateShow a
   return a
+
+-- | Return the input file path after annotating it relative to the project root directory
+noteInputFile :: (Monad m, HasCallStack) => FilePath -> H.PropertyT m FilePath
+noteInputFile filePath = withFrozenCallStack $ do
+  H.annotate $ cardanoCliPath <> "/" <> filePath
+  return filePath
+
+-- | Return the test file path after annotating it relative to the project root directory
+noteTempFile :: (Monad m, HasCallStack) => FilePath -> FilePath -> H.PropertyT m FilePath
+noteTempFile tempDir filePath = withFrozenCallStack $ do
+  let relPath = tempDir <> "/" <> filePath
+  H.annotate $ cardanoCliPath <> "/" <> relPath
+  return relPath
 
 -- | Create a new file with the given text contents at the specified path
 newFileWithContents :: MonadIO m => FilePath -> String -> m FilePath
@@ -170,10 +226,11 @@ newFileWithContents filePath contents = liftIO $ IO.writeFile filePath contents 
 --
 -- The directory will be deleted if the block succeeds, but left behind if
 -- the block fails.
-workspace :: FilePath -> (FilePath -> H.PropertyT IO ()) -> H.PropertyT IO ()
-workspace prefixPath f = do
+workspace :: HasCallStack => FilePath -> (FilePath -> H.PropertyT IO ()) -> H.PropertyT IO ()
+workspace prefixPath f = withFrozenCallStack $ do
   liftIO $ IO.createDirectoryIfMissing True prefixPath
   ws <- liftIO $ IO.createTempDirectory prefixPath "test"
+  H.annotate $ "Workspace: " <> cardanoCliPath <> "/" <> ws
   f ws
   liftIO $ IO.removeDirectoryRecursive ws
 
@@ -197,9 +254,34 @@ assertFilesExist allFiles@(file:rest) = do
 -- | Assert the file contains the given number of occurences of the given string
 assertFileOccurences :: HasCallStack => Int -> String -> FilePath -> H.PropertyT IO ()
 assertFileOccurences n s fp = withFrozenCallStack $ do
-  signingKeyContents <- liftIO $ IO.readFile fp
+  contents <- H.evalM . liftIO $ IO.readFile fp
 
-  length (filter (s `L.isInfixOf`) (L.lines signingKeyContents)) H.=== n
+  length (filter (s `L.isInfixOf`) (L.lines contents)) H.=== n
+
+-- | Assert the file contains the given number of occurences of the given string
+assertFileLines :: HasCallStack => (Int -> Bool) -> FilePath -> H.PropertyT IO ()
+assertFileLines p fp = withFrozenCallStack $ do
+  contents <- H.evalM . liftIO $ IO.readFile fp
+
+  let lines = L.lines contents
+
+  let len = case reverse lines of
+        "":xs -> length xs
+        xs -> length xs
+  
+  when (not (p len)) $ do
+    failWithCustom callStack Nothing (fp <> " has an unexpected number of lines")
+
+-- | Assert the file contains the given number of occurences of the given string
+assertEndsWithSingleNewline :: HasCallStack => FilePath -> H.PropertyT IO ()
+assertEndsWithSingleNewline fp = withFrozenCallStack $ do
+  contents <- H.evalM . liftIO $ IO.readFile fp
+
+  case reverse contents of
+    '\n':'\n':_ -> failWithCustom callStack Nothing (fp <> " ends with too many newlines.")
+    '\n':_ -> return ()
+    _ -> failWithCustom callStack Nothing (fp <> " must end with newline.")
+
 
 fileCleanup :: [FilePath] -> IO ()
 fileCleanup fps = mapM_ (\fp -> removeFile fp `catch` fileExists) fps

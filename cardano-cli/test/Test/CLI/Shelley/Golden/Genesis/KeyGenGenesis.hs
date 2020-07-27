@@ -4,7 +4,7 @@ module Test.CLI.Shelley.Golden.Genesis.KeyGenGenesis
   ( golden_shelleyGenesisKeyGenGenesis
   ) where
 
-import Cardano.Prelude hiding (to)
+import Cardano.Prelude
 
 import Hedgehog (Property)
 
@@ -15,10 +15,10 @@ import qualified Test.OptParse as OP
 golden_shelleyGenesisKeyGenGenesis :: Property
 golden_shelleyGenesisKeyGenGenesis = OP.propertyOnce $ do
   OP.workspace "tmp/genesis-key-gen-genesis" $ \tempDir -> do
-    let verificationKeyFile = tempDir <> "/key-gen.vkey"
-        signingKeyFile = tempDir <> "/key-gen.skey"
+    verificationKeyFile <- OP.noteTempFile tempDir "key-gen.vkey"
+    signingKeyFile <- OP.noteTempFile tempDir "key-gen.skey"
 
-    void . liftIO $ OP.execCardanoCLI
+    void $ OP.execCardanoCLI
         [ "shelley","genesis","key-gen-genesis"
         , "--verification-key-file", verificationKeyFile
         , "--signing-key-file", signingKeyFile
@@ -26,3 +26,6 @@ golden_shelleyGenesisKeyGenGenesis = OP.propertyOnce $ do
 
     OP.assertFileOccurences 1 "GenesisVerificationKey_ed25519" $ verificationKeyFile
     OP.assertFileOccurences 1 "GenesisSigningKey_ed25519" $ signingKeyFile
+
+    OP.assertEndsWithSingleNewline verificationKeyFile
+    OP.assertEndsWithSingleNewline signingKeyFile

@@ -2854,8 +2854,7 @@ writeFileTextEnvelope path mbDescr a =
     runExceptT $ do
       handleIOExceptT (FileIOError path) $ BS.writeFile path content
   where
-    content = LBS.toStrict $
-      encodePretty' TextView.textViewJSONConfig (serialiseToTextEnvelope mbDescr a)
+    content = LBS.toStrict $ encodePretty' TextView.textViewJSONConfig (serialiseToTextEnvelope mbDescr a) <> "\n"
 
 readFileTextEnvelope :: HasTextEnvelope a
                      => AsType a

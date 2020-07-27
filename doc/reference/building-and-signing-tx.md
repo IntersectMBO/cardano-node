@@ -59,10 +59,9 @@ For example:
 
 When building and submitting a transaction you need to check the current tip of the blockchain, for example, if the tip is slot 4000, you should set the TTL to (4000 + N slots), so that you have enough time to build and submit a transaction. Submitting a transaction with a TTL set in the past would result in a tx error.
 
-
     cardano-cli shelley query tip --testnet-magic 42
 
-    Look for the value of `unSlotNo`
+Look for the value of `SlotNo`
 
     {
         "blockNo": 16829,
@@ -74,7 +73,7 @@ Therefore, if N = 200 slots
 
     ttl = 369200 + 200
     ttl = 369400
-
+    
 **Build the transaction**
 
 This time we include all the paramenters:

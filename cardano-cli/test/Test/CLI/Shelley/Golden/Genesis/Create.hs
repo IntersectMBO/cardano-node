@@ -5,19 +5,17 @@ module Test.CLI.Shelley.Golden.Genesis.Create
   ( golden_shelleyGenesisCreate
   ) where
 
-import Cardano.Prelude hiding (to)
+import Cardano.Prelude
 
 import Prelude(String)
 
 import qualified Data.Aeson as J
 import qualified Data.Aeson.Types as J
 import qualified Data.HashMap.Lazy as HM
-import qualified Data.List as L
 import qualified Data.Set as S
 import qualified Data.Time.Clock as DT
 import qualified Data.Time.Format as DT
 import qualified System.Directory as IO
-import qualified System.IO as IO
 
 import Hedgehog (Property, forAll, (===))
 
@@ -29,13 +27,6 @@ import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Text as T
 
 {- HLINT ignore "Use camelCase" -}
-
--- | Assert the file contains the given number of occurences of the given string
-assertFileOccurences :: Int -> String -> FilePath -> H.PropertyT IO ()
-assertFileOccurences n s fp = do
-  signingKeyContents <- liftIO $ IO.readFile fp
-
-  length (filter (s `L.isInfixOf`) (L.lines signingKeyContents)) === n
 
 -- | Format the given time as an ISO 8601 date-time string
 formatIso8601 :: DT.UTCTime -> String
@@ -81,9 +72,10 @@ parseTotalSupply = J.withObject "Object" $ \ o -> do
 golden_shelleyGenesisCreate :: Property
 golden_shelleyGenesisCreate = OP.propertyOnce $ do
   OP.workspace "tmp/genesis-create" $ \tempDir -> do
-    let sourceGenesisSpecFile = "test/Test/golden/shelley/genesis/genesis.spec.json"
+    sourceGenesisSpecFile <- OP.noteInputFile "test/Test/golden/shelley/genesis/genesis.spec.json"
+    genesisSpecFile <- OP.noteTempFile tempDir "genesis.spec.json"
 
-    liftIO $ IO.copyFile sourceGenesisSpecFile (tempDir <> "/genesis.spec.json")
+    liftIO $ IO.copyFile sourceGenesisSpecFile genesisSpecFile
 
     let genesisFile = tempDir <> "/genesis.json"
 
@@ -94,7 +86,7 @@ golden_shelleyGenesisCreate = OP.propertyOnce $ do
     (utxoCount, fmtUtxoCount) <- fmap (withSnd show) $ forAll $ G.int (R.linear 4 19)
 
     -- Create the genesis json file and required keys
-    void $ liftIO $ OP.execCardanoCLI
+    void $ OP.execCardanoCLI
         [ "shelley","genesis","create"
         , "--testnet-magic", "12"
         , "--start-time", fmtStartTime
@@ -132,17 +124,27 @@ golden_shelleyGenesisCreate = OP.propertyOnce $ do
 
     for_ [1 .. delegateCount] $ \i -> do
       -- Check Genesis keys
-      assertFileOccurences 1 "GenesisSigningKey_ed25519" $ tempDir <> "/genesis-keys/genesis" <> show i <> ".skey"
-      assertFileOccurences 1 "GenesisVerificationKey_ed25519" $ tempDir <> "/genesis-keys/genesis" <> show i <> ".vkey"
+      OP.assertFileOccurences 1 "GenesisSigningKey_ed25519" $ tempDir <> "/genesis-keys/genesis" <> show i <> ".skey"
+      OP.assertFileOccurences 1 "GenesisVerificationKey_ed25519" $ tempDir <> "/genesis-keys/genesis" <> show i <> ".vkey"
+
+      OP.assertEndsWithSingleNewline $ tempDir <> "/genesis-keys/genesis" <> show i <> ".skey"
+      OP.assertEndsWithSingleNewline $ tempDir <> "/genesis-keys/genesis" <> show i <> ".vkey"
 
       -- Check delegate keys
-      assertFileOccurences 1 "GenesisDelegateSigningKey_ed25519" $ tempDir <> "/delegate-keys/delegate" <> show i <> ".skey"
-      assertFileOccurences 1 "GenesisDelegateVerificationKey_ed25519" $ tempDir <> "/delegate-keys/delegate" <> show i <> ".vkey"
-      assertFileOccurences 1 "NodeOperationalCertificateIssueCounter" $ tempDir <> "/delegate-keys/delegate" <> show i <> ".counter"
+      OP.assertFileOccurences 1 "GenesisDelegateSigningKey_ed25519" $ tempDir <> "/delegate-keys/delegate" <> show i <> ".skey"
+      OP.assertFileOccurences 1 "GenesisDelegateVerificationKey_ed25519" $ tempDir <> "/delegate-keys/delegate" <> show i <> ".vkey"
+      OP.assertFileOccurences 1 "NodeOperationalCertificateIssueCounter" $ tempDir <> "/delegate-keys/delegate" <> show i <> ".counter"
+
+      OP.assertEndsWithSingleNewline $ tempDir <> "/delegate-keys/delegate" <> show i <> ".skey"
+      OP.assertEndsWithSingleNewline $ tempDir <> "/delegate-keys/delegate" <> show i <> ".vkey"
+      OP.assertEndsWithSingleNewline $ tempDir <> "/delegate-keys/delegate" <> show i <> ".counter"
 
       -- Check utxo keys
-      assertFileOccurences 1 "GenesisUTxOSigningKey_ed25519" $ tempDir <> "/utxo-keys/utxo" <> show i <> ".skey"
-      assertFileOccurences 1 "GenesisUTxOVerificationKey_ed25519"  $ tempDir <> "/utxo-keys/utxo" <> show i <> ".vkey"
+      OP.assertFileOccurences 1 "GenesisUTxOSigningKey_ed25519" $ tempDir <> "/utxo-keys/utxo" <> show i <> ".skey"
+      OP.assertFileOccurences 1 "GenesisUTxOVerificationKey_ed25519"  $ tempDir <> "/utxo-keys/utxo" <> show i <> ".vkey"
+
+      OP.assertEndsWithSingleNewline $ tempDir <> "/utxo-keys/utxo" <> show i <> ".skey"
+      OP.assertEndsWithSingleNewline $ tempDir <> "/utxo-keys/utxo" <> show i <> ".vkey"
 
   OP.workspace "tmp/genesis-create" $ \tempDir -> do
     let genesisFile = tempDir <> "/genesis.json"
@@ -154,7 +156,7 @@ golden_shelleyGenesisCreate = OP.propertyOnce $ do
     (utxoCount, fmtUtxoCount) <- fmap (withSnd show) $ forAll $ G.int (R.linear 4 19)
 
     -- Create the genesis json file and required keys
-    void $ liftIO $ OP.execCardanoCLI
+    void $ OP.execCardanoCLI
         [ "shelley","genesis","create"
         , "--testnet-magic", "12"
         , "--start-time", fmtStartTime
@@ -192,14 +194,24 @@ golden_shelleyGenesisCreate = OP.propertyOnce $ do
 
     for_ [1 .. delegateCount] $ \i -> do
       -- Check Genesis keys
-      assertFileOccurences 1 "GenesisSigningKey_ed25519" $ tempDir <> "/genesis-keys/genesis" <> show i <> ".skey"
-      assertFileOccurences 1 "GenesisVerificationKey_ed25519" $ tempDir <> "/genesis-keys/genesis" <> show i <> ".vkey"
+      OP.assertFileOccurences 1 "GenesisSigningKey_ed25519" $ tempDir <> "/genesis-keys/genesis" <> show i <> ".skey"
+      OP.assertFileOccurences 1 "GenesisVerificationKey_ed25519" $ tempDir <> "/genesis-keys/genesis" <> show i <> ".vkey"
+
+      OP.assertEndsWithSingleNewline $ tempDir <> "/genesis-keys/genesis" <> show i <> ".skey"
+      OP.assertEndsWithSingleNewline $ tempDir <> "/genesis-keys/genesis" <> show i <> ".vkey"
 
       -- Check delegate keys
-      assertFileOccurences 1 "GenesisDelegateSigningKey_ed25519" $ tempDir <> "/delegate-keys/delegate" <> show i <> ".skey"
-      assertFileOccurences 1 "GenesisDelegateVerificationKey_ed25519" $ tempDir <> "/delegate-keys/delegate" <> show i <> ".vkey"
-      assertFileOccurences 1 "NodeOperationalCertificateIssueCounter" $ tempDir <> "/delegate-keys/delegate" <> show i <> ".counter"
+      OP.assertFileOccurences 1 "GenesisDelegateSigningKey_ed25519" $ tempDir <> "/delegate-keys/delegate" <> show i <> ".skey"
+      OP.assertFileOccurences 1 "GenesisDelegateVerificationKey_ed25519" $ tempDir <> "/delegate-keys/delegate" <> show i <> ".vkey"
+      OP.assertFileOccurences 1 "NodeOperationalCertificateIssueCounter" $ tempDir <> "/delegate-keys/delegate" <> show i <> ".counter"
+
+      OP.assertEndsWithSingleNewline $ tempDir <> "/delegate-keys/delegate" <> show i <> ".skey"
+      OP.assertEndsWithSingleNewline $ tempDir <> "/delegate-keys/delegate" <> show i <> ".vkey"
+      OP.assertEndsWithSingleNewline $ tempDir <> "/delegate-keys/delegate" <> show i <> ".counter"
 
       -- Check utxo keys
-      assertFileOccurences 1 "GenesisUTxOSigningKey_ed25519" $ tempDir <> "/utxo-keys/utxo" <> show i <> ".skey"
-      assertFileOccurences 1 "GenesisUTxOVerificationKey_ed25519"  $ tempDir <> "/utxo-keys/utxo" <> show i <> ".vkey"
+      OP.assertFileOccurences 1 "GenesisUTxOSigningKey_ed25519" $ tempDir <> "/utxo-keys/utxo" <> show i <> ".skey"
+      OP.assertFileOccurences 1 "GenesisUTxOVerificationKey_ed25519"  $ tempDir <> "/utxo-keys/utxo" <> show i <> ".vkey"
+
+      OP.assertEndsWithSingleNewline $ tempDir <> "/utxo-keys/utxo" <> show i <> ".skey"
+      OP.assertEndsWithSingleNewline $ tempDir <> "/utxo-keys/utxo" <> show i <> ".vkey"

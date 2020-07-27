@@ -4,7 +4,7 @@ module Test.CLI.Shelley.Golden.Address.Build
   ( golden_shelleyAddressBuild
   ) where
 
-import Cardano.Prelude hiding (to)
+import Cardano.Prelude
 
 import Hedgehog (Property)
 
@@ -17,16 +17,16 @@ import qualified Test.OptParse as OP
 
 golden_shelleyAddressBuild :: Property
 golden_shelleyAddressBuild = OP.propertyOnce $ OP.workspace "tmp/address-build" $ \tempDir -> do
-  let addressVKeyFile = "test/Test/golden/shelley/keys/payment_keys/verification_key"
-      addressSKeyFile = "test/Test/golden/shelley/keys/stake_keys/verification_key"
-      goldenStakingAddressHexFile = "test/Test/golden/shelley/addresses/staking-address.hex"
-      goldenEnterpriseAddressHexFile = "test/Test/golden/shelley/addresses/enterprise-address.hex"
-      stakingAddressHexFile = tempDir <> "/staking-address.hex"
-      enterpriseAddressHexFile = tempDir <> "/enterprise-address.hex"
+  addressVKeyFile <- OP.noteInputFile "test/Test/golden/shelley/keys/payment_keys/verification_key"
+  addressSKeyFile <- OP.noteInputFile "test/Test/golden/shelley/keys/stake_keys/verification_key"
+  goldenStakingAddressHexFile <- OP.noteInputFile "test/Test/golden/shelley/addresses/staking-address.hex"
+  goldenEnterpriseAddressHexFile <- OP.noteInputFile "test/Test/golden/shelley/addresses/enterprise-address.hex"
+  stakingAddressHexFile <- OP.noteTempFile tempDir "staking-address.hex"
+  enterpriseAddressHexFile <- OP.noteTempFile tempDir "enterprise-address.hex"
 
   void $ OP.noteEvalM $ liftIO $ E.evaluate . CSD.force =<< IO.readFile addressVKeyFile
 
-  stakingAddressText <- OP.noteEvalM . liftIO $ OP.execCardanoCLI
+  stakingAddressText <- OP.noteEvalM $ OP.execCardanoCLI
     [ "shelley","address","build"
     , "--testnet-magic", "14"
     , "--payment-verification-key-file", addressVKeyFile
@@ -41,7 +41,7 @@ golden_shelleyAddressBuild = OP.propertyOnce $ OP.workspace "tmp/address-build" 
 
   void $ OP.noteEvalM $ liftIO $ E.evaluate . CSD.force =<< IO.readFile addressSKeyFile
 
-  enterpriseAddressText <- OP.noteEvalM . liftIO $ OP.execCardanoCLI
+  enterpriseAddressText <- OP.noteEvalM $ OP.execCardanoCLI
     [ "shelley","address","build"
     , "--testnet-magic", "14"
     , "--payment-verification-key-file", addressVKeyFile

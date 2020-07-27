@@ -3,27 +3,31 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE TypeApplications      #-}
 {-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE UndecidableInstances  #-}
 
 {-# OPTIONS_GHC -Wno-orphans  #-}
 
 module Cardano.TracingOrphanInstances.Network
-  ( showTip
+  ( renderHeaderHash
+  , showTip
   , showPoint
   ) where
 
 import           Cardano.Prelude hiding (show)
 import           Prelude (String, show, id)
 
+import qualified Data.ByteString.Base16 as B16
 import           Data.Text (pack)
+import qualified Data.Text.Encoding as Text
 
 import qualified Network.Socket as Socket (SockAddr)
 import           Network.Mux (WithMuxBearer (..), MuxTrace (..))
 
 import           Cardano.TracingOrphanInstances.Common
 
-import           Ouroboros.Consensus.Block (getHeader)
+import           Ouroboros.Consensus.Block (ConvertRawHash (..), getHeader)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTx, HasTxs(..),
                    TxId, txId)
 import           Ouroboros.Consensus.Node.Run (RunNode (..))
@@ -81,6 +85,10 @@ showPoint verb pt =
     MinimalVerbosity -> take 7
     NormalVerbosity -> take 7
     MaximalVerbosity -> id
+
+-- | Hex encode and render a 'HeaderHash' as text.
+renderHeaderHash :: ConvertRawHash blk => proxy blk -> HeaderHash blk -> Text
+renderHeaderHash p = Text.decodeLatin1 . B16.encode . toRawHash p
 
 
 --
@@ -394,16 +402,14 @@ instance (Show peer)
 --
 -- NOTE: this list is sorted by the unqualified name of the outermost type.
 
-instance ( Condense (HeaderHash blk)
-         , Condense (TxId (GenTx blk))
-         , HasHeader blk
+instance ( Condense (TxId (GenTx blk))
          , RunNode blk
          , HasTxs blk
          )
       => ToObject (AnyMessage (BlockFetch blk)) where
   toObject MaximalVerbosity (AnyMessage (MsgBlock blk)) =
     mkObject [ "kind" .= String "MsgBlock"
-             , "block hash" .=  (condense $ blockHash blk)
+             , "block hash" .= renderHeaderHash (Proxy @blk) (blockHash blk)
              , "block size" .= toJSON (nodeBlockFetchSize (getHeader blk))
              , "tx ids" .= toJSON (presentTx <$> extractTxs blk)
              ]
@@ -413,7 +419,7 @@ instance ( Condense (HeaderHash blk)
 
   toObject _v (AnyMessage (MsgBlock blk)) =
     mkObject [ "kind" .= String "MsgBlock"
-             , "block hash" .=  (condense $ blockHash blk)
+             , "block hash" .= renderHeaderHash (Proxy @blk) (blockHash blk)
              , "block size" .= toJSON (nodeBlockFetchSize (getHeader blk))
              ]
   toObject _v (AnyMessage MsgRequestRange{}) =

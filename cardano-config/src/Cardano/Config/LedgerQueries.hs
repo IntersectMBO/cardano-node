@@ -14,8 +14,6 @@ import           Ouroboros.Consensus.Ledger.Abstract
 import           Ouroboros.Consensus.HardFork.Combinator
 import           Ouroboros.Consensus.HardFork.Combinator.Unary
 
-import           Byron.Spec.Ledger.Core (Relation(..))
-
 import qualified Cardano.Chain.Block as Byron
 import qualified Cardano.Chain.UTxO as Byron
 import qualified Ouroboros.Consensus.Byron.Ledger.Block as Byron
@@ -35,7 +33,7 @@ class LedgerQueries blk where
   ledgerUtxoSize :: LedgerState blk -> Int
 
 instance LedgerQueries Byron.ByronBlock where
-  ledgerUtxoSize = size . Byron.unUTxO . Byron.cvsUtxo . Byron.byronLedgerState
+  ledgerUtxoSize = Map.size . Byron.unUTxO . Byron.cvsUtxo . Byron.byronLedgerState
 
 instance LedgerQueries (Shelley.ShelleyBlock c) where
   ledgerUtxoSize =
