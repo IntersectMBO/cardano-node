@@ -1,166 +1,151 @@
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
 
 module Cardano.CLI.Byron.Commands
-  ( ByronCommand (..)
-  , NodeCmd (..)
-  , VerificationKeyFile (..)
-  , NewVerificationKeyFile (..)
-  , CertificateFile (..)
-  , NewCertificateFile (..)
-  ) where
+  ( ByronCommand (..),
+    NodeCmd (..),
+    VerificationKeyFile (..),
+    NewVerificationKeyFile (..),
+    CertificateFile (..),
+    NewCertificateFile (..),
+  )
+where
 
-import           Cardano.Prelude
+import Cardano.Api.Typed (NetworkId)
+import Cardano.CLI.Byron.Genesis
+import Cardano.CLI.Byron.Key
+import Cardano.CLI.Byron.Tx
+import Cardano.CLI.Byron.UpdateProposal
+import Cardano.Chain.Common (Address (..))
+import Cardano.Chain.Slotting (EpochNumber (..))
+import Cardano.Chain.UTxO (TxIn (..), TxOut (..))
+import Cardano.Chain.Update
+  ( InstallerHash (..),
+    ProtocolVersion (..),
+    SoftwareVersion (..),
+    SystemTag (..),
+  )
+import Cardano.Config.Types
+import Cardano.Prelude
 
-import           Cardano.Chain.Slotting (EpochNumber(..))
-import           Cardano.Chain.Update
-                   (InstallerHash(..), ProtocolVersion(..), SoftwareVersion(..),
-                    SystemTag(..))
-
-import           Cardano.Api.Typed (NetworkId)
-import           Cardano.Config.Types
-
-import           Cardano.CLI.Byron.UpdateProposal
-
-import           Cardano.CLI.Byron.Genesis
-import           Cardano.CLI.Byron.Key
-import           Cardano.CLI.Byron.Tx
-
-import           Cardano.Chain.Common (Address(..))
-import           Cardano.Chain.UTxO (TxIn(..), TxOut(..))
-
-data ByronCommand =
-
-  --- Node Related Commands ---
+data ByronCommand
+  = --- Node Related Commands ---
     NodeCmd NodeCmd
-
-  --- Genesis Related Commands ---
-  | Genesis
-        NewDirectory
-        GenesisParameters
-        CardanoEra
+  | --- Genesis Related Commands ---
+    Genesis
+      NewDirectory
+      GenesisParameters
+      CardanoEra
   | PrintGenesisHash
-        GenesisFile
-
-  --- Key Related Commands ---
-  | Keygen
-        CardanoEra
-        NewSigningKeyFile
-        PasswordRequirement
+      GenesisFile
+  | --- Key Related Commands ---
+    Keygen
+      CardanoEra
+      NewSigningKeyFile
+      PasswordRequirement
   | ToVerification
-        CardanoEra
-        SigningKeyFile
-        NewVerificationKeyFile
-
+      CardanoEra
+      SigningKeyFile
+      NewVerificationKeyFile
   | PrettySigningKeyPublic
-        CardanoEra
-        SigningKeyFile
-
+      CardanoEra
+      SigningKeyFile
   | MigrateDelegateKeyFrom
-        CardanoEra
-        -- ^ Old CardanoEra
-        SigningKeyFile
-        -- ^ Old key
-        CardanoEra
-        -- ^ New CardanoEra
-        NewSigningKeyFile
-        -- ^ New Key
-
+      CardanoEra
+      -- ^ Old CardanoEra
+      SigningKeyFile
+      -- ^ Old key
+      CardanoEra
+      -- ^ New CardanoEra
+      NewSigningKeyFile
+      -- ^ New Key
   | PrintSigningKeyAddress
-        CardanoEra
-        NetworkId
-        SigningKeyFile
+      CardanoEra
+      NetworkId
+      SigningKeyFile
+  | --- Delegation Related Commands ---
 
-    --- Delegation Related Commands ---
-
-  | IssueDelegationCertificate
-        NetworkId
-        CardanoEra
-        EpochNumber
-        -- ^ The epoch from which the delegation is valid.
-        SigningKeyFile
-        -- ^ The issuer of the certificate, who delegates their right to sign blocks.
-        VerificationKeyFile
-        -- ^ The delegate, who gains the right to sign blocks on behalf of the issuer.
-        NewCertificateFile
-        -- ^ Filepath of the newly created delegation certificate.
+    IssueDelegationCertificate
+      NetworkId
+      CardanoEra
+      EpochNumber
+      -- ^ The epoch from which the delegation is valid.
+      SigningKeyFile
+      -- ^ The issuer of the certificate, who delegates their right to sign blocks.
+      VerificationKeyFile
+      -- ^ The delegate, who gains the right to sign blocks on behalf of the issuer.
+      NewCertificateFile
+      -- ^ Filepath of the newly created delegation certificate.
   | CheckDelegation
-        NetworkId
-        CertificateFile
-        VerificationKeyFile
-        VerificationKeyFile
-
+      NetworkId
+      CertificateFile
+      VerificationKeyFile
+      VerificationKeyFile
   | GetLocalNodeTip
-        NetworkId
+      NetworkId
+  | -----------------------------------
 
-    -----------------------------------
-
-  | SubmitTx
-        NetworkId
-        TxFile
-        -- ^ Filepath of transaction to submit.
-
+    -- | Filepath of transaction to submit.
+    SubmitTx
+      NetworkId
+      TxFile
   | SpendGenesisUTxO
-        GenesisFile
-        NetworkId
-        CardanoEra
-        NewTxFile
-        -- ^ Filepath of the newly created transaction.
-        SigningKeyFile
-        -- ^ Signing key of genesis UTxO owner.
-        Address
-        -- ^ Genesis UTxO address.
-        (NonEmpty TxOut)
-        -- ^ Tx output.
+      GenesisFile
+      NetworkId
+      CardanoEra
+      NewTxFile
+      -- ^ Filepath of the newly created transaction.
+      SigningKeyFile
+      -- ^ Signing key of genesis UTxO owner.
+      Address
+      -- ^ Genesis UTxO address.
+      (NonEmpty TxOut)
+      -- ^ Tx output.
   | SpendUTxO
-        NetworkId
-        CardanoEra
-        NewTxFile
-        -- ^ Filepath of the newly created transaction.
-        SigningKeyFile
-        -- ^ Signing key of Tx underwriter.
-        (NonEmpty TxIn)
-        -- ^ Inputs available for spending to the Tx underwriter's key.
-        (NonEmpty TxOut)
-        -- ^ Genesis UTxO output Address.
+      NetworkId
+      CardanoEra
+      NewTxFile
+      -- ^ Filepath of the newly created transaction.
+      SigningKeyFile
+      -- ^ Signing key of Tx underwriter.
+      (NonEmpty TxIn)
+      -- ^ Inputs available for spending to the Tx underwriter's key.
+      (NonEmpty TxOut)
+      -- ^ Genesis UTxO output Address.
+  | --- Misc Commands ---
 
-    --- Misc Commands ---
-
-  | ValidateCBOR
-        CBORObject
-        -- ^ Type of the CBOR object
-        FilePath
-
+    ValidateCBOR
+      CBORObject
+      -- ^ Type of the CBOR object
+      FilePath
   | PrettyPrintCBOR
-        FilePath
-  deriving Show
+      FilePath
+  deriving (Show)
 
+data NodeCmd
+  = CreateVote
+      NetworkId
+      SigningKeyFile
+      FilePath -- filepath to update proposal
+      Bool
+      FilePath
+  | UpdateProposal
+      NetworkId
+      SigningKeyFile
+      ProtocolVersion
+      SoftwareVersion
+      SystemTag
+      InstallerHash
+      FilePath
+      [ParametersToUpdate]
+  | -- | Update proposal filepath.
+    SubmitUpdateProposal
+      NetworkId
+      FilePath
+  | -- | Vote filepath.
+    SubmitVote
+      NetworkId
+      FilePath
+  deriving (Show)
 
-data NodeCmd = CreateVote
-               NetworkId
-               SigningKeyFile
-               FilePath -- filepath to update proposal
-               Bool
-               FilePath
-             | UpdateProposal
-               NetworkId
-               SigningKeyFile
-               ProtocolVersion
-               SoftwareVersion
-               SystemTag
-               InstallerHash
-               FilePath
-               [ParametersToUpdate]
-             | SubmitUpdateProposal
-               NetworkId
-               FilePath
-               -- ^ Update proposal filepath.
-             | SubmitVote
-               NetworkId
-               FilePath
-               -- ^ Vote filepath.
-              deriving Show
-
-
-newtype NewCertificateFile
-  = NewCertificateFile { nFp :: FilePath }
+newtype NewCertificateFile = NewCertificateFile {nFp :: FilePath}
   deriving (Eq, Show, IsString)

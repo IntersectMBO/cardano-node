@@ -1,92 +1,90 @@
-
 -- | Shelley CLI command types
 module Cardano.CLI.Shelley.Commands
   ( -- * CLI command types
-    ShelleyCommand (..)
-  , AddressCmd (..)
-  , StakeAddressCmd (..)
-  , KeyCmd (..)
-  , TransactionCmd (..)
-  , NodeCmd (..)
-  , PoolCmd (..)
-  , QueryCmd (..)
-  , BlockCmd (..)
-  , SystemCmd (..)
-  , GovernanceCmd (..)
-  , GenesisCmd (..)
-  , TextViewCmd (..)
+    ShelleyCommand (..),
+    AddressCmd (..),
+    StakeAddressCmd (..),
+    KeyCmd (..),
+    TransactionCmd (..),
+    NodeCmd (..),
+    PoolCmd (..),
+    QueryCmd (..),
+    BlockCmd (..),
+    SystemCmd (..),
+    GovernanceCmd (..),
+    GenesisCmd (..),
+    TextViewCmd (..),
 
     -- * CLI flag types
-  , AddressKeyType (..)
-  , ByronKeyType (..)
-  , ByronKeyFormat (..)
-  , GenesisDir (..)
-  , TxInCount (..)
-  , TxOutCount (..)
-  , TxShelleyWitnessCount (..)
-  , TxByronWitnessCount (..)
-  , SomeKeyFile (..)
-  , OpCertCounterFile (..)
-  , OutputFile (..)
-  , ProtocolParamsFile (..)
-  , SigningKeyFile (..)
-  , WitnessFile (..)
-  , TxBodyFile (..)
-  , TxFile (..)
-  , VerificationKeyFile (..)
-  , VerificationKeyBase64 (..)
-  , GenesisKeyFile (..)
-  , MetaDataFile (..)
-  , PoolId (..)
-  , PoolMetaDataFile (..)
-  , GenesisFile (..)
-  , PrivKeyFile (..)
-  , BlockId (..)
-  , QueryFilter (..)
-  , StakePoolVerificationKeyHashOrFile (..)
-  ) where
+    AddressKeyType (..),
+    ByronKeyType (..),
+    ByronKeyFormat (..),
+    GenesisDir (..),
+    TxInCount (..),
+    TxOutCount (..),
+    TxShelleyWitnessCount (..),
+    TxByronWitnessCount (..),
+    SomeKeyFile (..),
+    OpCertCounterFile (..),
+    OutputFile (..),
+    ProtocolParamsFile (..),
+    SigningKeyFile (..),
+    WitnessFile (..),
+    TxBodyFile (..),
+    TxFile (..),
+    VerificationKeyFile (..),
+    VerificationKeyBase64 (..),
+    GenesisKeyFile (..),
+    MetaDataFile (..),
+    PoolId (..),
+    PoolMetaDataFile (..),
+    GenesisFile (..),
+    PrivKeyFile (..),
+    BlockId (..),
+    QueryFilter (..),
+    StakePoolVerificationKeyHashOrFile (..),
+  )
+where
 
-import           Prelude
-import           Data.Set (Set)
-import           Data.Text (Text)
-
-import           Cardano.Api.Protocol (Protocol)
-import           Cardano.Api.Typed hiding (PoolId)
-
-import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
-
-import           Cardano.Config.Types
-                  (CertificateFile (..), NodeAddress, SigningKeyFile(..),
-                   UpdateProposalFile(..))
-import           Shelley.Spec.Ledger.TxData (MIRPot)
+import Cardano.Api.Protocol (Protocol)
+import Cardano.Api.Typed hiding (PoolId)
+import Cardano.Config.Types
+  ( CertificateFile (..),
+    NodeAddress,
+    SigningKeyFile (..),
+    UpdateProposalFile (..),
+  )
+import Data.Set (Set)
+import Data.Text (Text)
+import Ouroboros.Consensus.BlockchainTime (SystemStart (..))
+import Shelley.Spec.Ledger.TxData (MIRPot)
+import Prelude
 
 --
 -- Shelley CLI command data types
 --
 
 -- | All the CLI subcommands under \"shelley\".
---
 data ShelleyCommand
-  = AddressCmd      AddressCmd
+  = AddressCmd AddressCmd
   | StakeAddressCmd StakeAddressCmd
-  | KeyCmd          KeyCmd
-  | TransactionCmd  TransactionCmd
-  | NodeCmd         NodeCmd
-  | PoolCmd         PoolCmd
-  | QueryCmd        QueryCmd
-  | BlockCmd        BlockCmd
-  | SystemCmd       SystemCmd
-  | GovernanceCmd   GovernanceCmd
-  | GenesisCmd      GenesisCmd
-  | TextViewCmd     TextViewCmd
+  | KeyCmd KeyCmd
+  | TransactionCmd TransactionCmd
+  | NodeCmd NodeCmd
+  | PoolCmd PoolCmd
+  | QueryCmd QueryCmd
+  | BlockCmd BlockCmd
+  | SystemCmd SystemCmd
+  | GovernanceCmd GovernanceCmd
+  | GenesisCmd GenesisCmd
+  | TextViewCmd TextViewCmd
   deriving (Eq, Show)
-
 
 data AddressCmd
   = AddressKeyGen AddressKeyType VerificationKeyFile SigningKeyFile
   | AddressKeyHash VerificationKeyFile (Maybe OutputFile)
   | AddressBuild VerificationKeyFile (Maybe VerificationKeyFile) NetworkId (Maybe OutputFile)
-  | AddressBuildMultiSig  --TODO
+  | AddressBuildMultiSig --TODO
   | AddressInfo Text (Maybe OutputFile)
   deriving (Eq, Show)
 
@@ -104,7 +102,7 @@ data StakeAddressCmd
 
 data KeyCmd
   = KeyGetVerificationKey SigningKeyFile VerificationKeyFile
-  | KeyNonExtendedKey  VerificationKeyFile VerificationKeyFile
+  | KeyNonExtendedKey VerificationKeyFile VerificationKeyFile
   | KeyConvertByronKey ByronKeyType SomeKeyFile OutputFile
   | KeyConvertByronGenesisVKey VerificationKeyBase64 OutputFile
   | KeyConvertITNStakeKey SomeKeyFile OutputFile
@@ -124,7 +122,7 @@ data TransactionCmd
   | TxSign TxBodyFile [SigningKeyFile] (Maybe NetworkId) TxFile
   | TxWitness TxBodyFile SigningKeyFile (Maybe NetworkId) OutputFile
   | TxSignWitness TxBodyFile [WitnessFile] OutputFile
-  | TxCheck         -- { transaction :: Transaction, nodeAddr :: NodeAddress }
+  | TxCheck -- { transaction :: Transaction, nodeAddr :: NodeAddress }
   | TxSubmit Protocol NetworkId FilePath
   | TxCalculateMinFee
       TxBodyFile
@@ -137,19 +135,22 @@ data TransactionCmd
   | TxGetTxId TxBodyFile
   deriving (Eq, Show)
 
-
 data NodeCmd
   = NodeKeyGenCold VerificationKeyFile SigningKeyFile OpCertCounterFile
-  | NodeKeyGenKES  VerificationKeyFile SigningKeyFile
-  | NodeKeyGenVRF  VerificationKeyFile SigningKeyFile
-  | NodeKeyHashVRF  VerificationKeyFile (Maybe OutputFile)
-  | NodeNewCounter  VerificationKeyFile Word OpCertCounterFile
-  | NodeIssueOpCert VerificationKeyFile SigningKeyFile OpCertCounterFile
-                    KESPeriod OutputFile
+  | NodeKeyGenKES VerificationKeyFile SigningKeyFile
+  | NodeKeyGenVRF VerificationKeyFile SigningKeyFile
+  | NodeKeyHashVRF VerificationKeyFile (Maybe OutputFile)
+  | NodeNewCounter VerificationKeyFile Word OpCertCounterFile
+  | NodeIssueOpCert
+      VerificationKeyFile
+      SigningKeyFile
+      OpCertCounterFile
+      KESPeriod
+      OutputFile
   deriving (Eq, Show)
 
 data PoolCmd
-  = PoolRegister PoolId   -- { operator :: PubKey, owner :: [PubKey], kes :: PubKey, vrf :: PubKey, rewards :: PubKey, cost :: Lovelace, margin :: Margin, nodeAddr :: NodeAddress }
+  = PoolRegister PoolId -- { operator :: PubKey, owner :: [PubKey], kes :: PubKey, vrf :: PubKey, rewards :: PubKey, cost :: Lovelace, margin :: Margin, nodeAddr :: NodeAddress }
   | PoolReRegister PoolId -- { operator :: PubKey, owner :: [PubKey], kes :: PubKey, vrf :: PubKey, rewards :: PubKey, cost :: Lovelace, margin :: Margin, nodeAddr :: NodeAddress }
   | PoolRetire PoolId EpochNo NodeAddress
   | PoolRegistrationCert
@@ -183,7 +184,6 @@ data PoolCmd
   | PoolMetaDataHash PoolMetaDataFile (Maybe OutputFile)
   deriving (Eq, Show)
 
-
 data QueryCmd
   = QueryPoolId NodeAddress
   | QueryProtocolParameters Protocol NetworkId (Maybe OutputFile)
@@ -196,21 +196,20 @@ data QueryCmd
   | QueryStatus NodeAddress
   deriving (Eq, Show)
 
-
 data BlockCmd
   = BlockInfo BlockId NodeAddress
   deriving (Eq, Show)
 
-
 data GovernanceCmd
   = GovernanceMIRCertificate MIRPot [VerificationKeyFile] [Lovelace] OutputFile
   | GovernanceProtocolUpdate SigningKeyFile -- { parameters :: ProtocolParams, nodeAddr :: NodeAddress }
-  | GovernanceUpdateProposal OutputFile EpochNo
-                             [VerificationKeyFile]
-                             ProtocolParametersUpdate
-  | GovernanceColdKeys SigningKeyFile     -- { genesis :: GenesisKeyFile, keys :: [PubKey], nodeAddr :: NodeAddress }
+  | GovernanceUpdateProposal
+      OutputFile
+      EpochNo
+      [VerificationKeyFile]
+      ProtocolParametersUpdate
+  | GovernanceColdKeys SigningKeyFile -- { genesis :: GenesisKeyFile, keys :: [PubKey], nodeAddr :: NodeAddress }
   deriving (Eq, Show)
-
 
 data TextViewCmd
   = TextViewInfo !FilePath (Maybe OutputFile)
@@ -220,7 +219,6 @@ data SystemCmd
   = SysStart GenesisFile NodeAddress
   | SysStop NodeAddress
   deriving (Eq, Show)
-
 
 data GenesisCmd
   = GenesisCreate GenesisDir Word Word (Maybe SystemStart) (Maybe Lovelace) NetworkId
@@ -270,9 +268,9 @@ newtype GenesisKeyFile
   = GenesisKeyFile FilePath
   deriving (Eq, Show)
 
-data MetaDataFile = MetaDataFileJSON FilePath
-                  | MetaDataFileCBOR FilePath
-
+data MetaDataFile
+  = MetaDataFileJSON FilePath
+  | MetaDataFileCBOR FilePath
   deriving (Eq, Show)
 
 newtype OutputFile
@@ -284,7 +282,7 @@ newtype PoolId
   deriving (Eq, Show)
 
 newtype PoolMetaDataFile = PoolMetaDataFile
-  { unPoolMetaDataFile :: FilePath }
+  {unPoolMetaDataFile :: FilePath}
   deriving (Eq, Show)
 
 newtype GenesisDir
@@ -293,7 +291,6 @@ newtype GenesisDir
 
 -- | Either a verification or signing key, used for conversions and other
 -- commands that make sense for both.
---
 data SomeKeyFile
   = AVerificationKeyFile VerificationKeyFile
   | ASigningKeyFile SigningKeyFile
@@ -306,13 +303,14 @@ data AddressKeyType
   deriving (Eq, Show)
 
 data ByronKeyType
-  = ByronPaymentKey  ByronKeyFormat
-  | ByronGenesisKey  ByronKeyFormat
+  = ByronPaymentKey ByronKeyFormat
+  | ByronGenesisKey ByronKeyFormat
   | ByronDelegateKey ByronKeyFormat
   deriving (Eq, Show)
 
-data ByronKeyFormat = NonLegacyByronKeyFormat
-                    | LegacyByronKeyFormat
+data ByronKeyFormat
+  = NonLegacyByronKeyFormat
+  | LegacyByronKeyFormat
   deriving (Eq, Show)
 
 newtype OpCertCounterFile

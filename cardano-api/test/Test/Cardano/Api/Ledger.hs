@@ -3,28 +3,21 @@
 {-# LANGUAGE TypeApplications #-}
 
 module Test.Cardano.Api.Ledger
-  ( tests
-  ) where
+  ( tests,
+  )
+where
 
-import           Cardano.Prelude
-
-import           Data.Aeson (encode)
-
+import Cardano.Prelude
+import Data.Aeson (encode)
 import qualified Data.ByteString.Lazy.Char8 as LBS
-
-import           Shelley.Spec.Ledger.Address (serialiseAddr, deserialiseAddr)
-
-import           Hedgehog (Property, discover)
+import Hedgehog (Property, discover)
 import qualified Hedgehog
-
-import           Ouroboros.Consensus.Shelley.Protocol (TPraosStandardCrypto)
-
+import Ouroboros.Consensus.Shelley.Protocol (TPraosStandardCrypto)
+import Shelley.Spec.Ledger.Address (deserialiseAddr, serialiseAddr)
+import Test.Cardano.Api.Examples
+import Test.Cardano.Prelude
+import Test.Shelley.Spec.Ledger.Serialisation.Generators.Genesis (genAddress)
 import qualified Test.Shelley.Spec.Ledger.Serialisation.Tripping.JSON as Ledger
-import           Test.Shelley.Spec.Ledger.Serialisation.Generators.Genesis (genAddress)
-
-import           Test.Cardano.Api.Examples
-import           Test.Cardano.Prelude
-
 
 prop_golden_ShelleyGenesis :: Property
 prop_golden_ShelleyGenesis = goldenTestJSONPretty exampleShelleyGenesis "test/Golden/ShelleyGenesis"

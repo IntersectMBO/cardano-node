@@ -2,47 +2,40 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-
 {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 
 module Test.Cardano.Config.Gen
-  ( genAddress
-  , genGenesisDelegationPair
-  , genGenesisFundPair
-  , genNetworkTopology
-  , genNodeAddress
-  , genNodeHostAddress
-  , genNodeSetup
-  , genShelleyGenesis
-  , genSigningKey
-  , genVRFKeyPair
-  ) where
+  ( genAddress,
+    genGenesisDelegationPair,
+    genGenesisFundPair,
+    genNetworkTopology,
+    genNodeAddress,
+    genNodeHostAddress,
+    genNodeSetup,
+    genShelleyGenesis,
+    genSigningKey,
+    genVRFKeyPair,
+  )
+where
 
-import           Cardano.Prelude
-
-import           Cardano.Config.Types
-
-import           Cardano.Crypto.DSIGN.Class
-
+import Cardano.Config.Types
+import Cardano.Crypto.DSIGN.Class
+import Cardano.Prelude
 import qualified Data.IP as IP
-
-import           Hedgehog (Gen)
-import           Hedgehog.Corpus (cooking)
+import Hedgehog (Gen)
+import Hedgehog.Corpus (cooking)
 import qualified Hedgehog.Gen as Gen
+import Hedgehog.Internal.Gen ()
 import qualified Hedgehog.Range as Range
-import           Hedgehog.Internal.Gen ()
-
-import           Ouroboros.Consensus.Shelley.Protocol (TPraosStandardCrypto)
-
-import           Shelley.Spec.Ledger.Crypto
-
-import           Test.Shelley.Spec.Ledger.Generator.Genesis
+import Ouroboros.Consensus.Shelley.Protocol (TPraosStandardCrypto)
+import Shelley.Spec.Ledger.Crypto
+import Test.Shelley.Spec.Ledger.Generator.Genesis
 
 genNetworkTopology :: Gen NetworkTopology
 genNetworkTopology =
   Gen.choice
-    [ MockNodeTopology <$> Gen.list (Range.linear 0 10) genNodeSetup
-    , RealNodeTopology <$> Gen.list (Range.linear 0 10) genRemoteAddress
+    [ MockNodeTopology <$> Gen.list (Range.linear 0 10) genNodeSetup,
+      RealNodeTopology <$> Gen.list (Range.linear 0 10) genRemoteAddress
     ]
 
 genSigningKey :: Gen (SignKeyDSIGN (DSIGN TPraosStandardCrypto))
@@ -60,13 +53,13 @@ genNodeHostAddress :: Gen NodeHostAddress
 genNodeHostAddress =
   NodeHostAddress
     <$> Gen.choice
-          [ fmap (IP.IPv4 . IP.toIPv4w) <$> Gen.maybe Gen.enumBounded
-          , fmap (IP.IPv6 . IP.toIPv6w) <$> Gen.maybe genFourWord32
-          ]
+      [ fmap (IP.IPv4 . IP.toIPv4w) <$> Gen.maybe Gen.enumBounded,
+        fmap (IP.IPv6 . IP.toIPv6w) <$> Gen.maybe genFourWord32
+      ]
   where
     genFourWord32 :: Gen (Word32, Word32, Word32, Word32)
     genFourWord32 =
-       (,,,) <$> Gen.enumBounded <*> Gen.enumBounded <*> Gen.enumBounded <*> Gen.enumBounded
+      (,,,) <$> Gen.enumBounded <*> Gen.enumBounded <*> Gen.enumBounded <*> Gen.enumBounded
 
 genNodeSetup :: Gen NodeSetup
 genNodeSetup =

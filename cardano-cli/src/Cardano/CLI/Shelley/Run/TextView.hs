@@ -1,29 +1,29 @@
 module Cardano.CLI.Shelley.Run.TextView
-  ( ShelleyTextViewFileError(..)
-  , renderShelleyTextViewFileError
-  , runTextViewCmd
-  ) where
+  ( ShelleyTextViewFileError (..),
+    renderShelleyTextViewFileError,
+    runTextViewCmd,
+  )
+where
 
-import           Cardano.Prelude
-
-import qualified Data.Text as Text
-
-import           Cardano.CLI.Helpers (HelpersError, pPrintCBOR, renderHelpersError)
-import           Cardano.CLI.Shelley.Parsers
-
-import           Cardano.Api.TextView (TextView(..))
-import           Cardano.Api.Typed (Error (..), FileError, TextEnvelopeError,
-                   readTextEnvelopeFromFile)
-
-import           Control.Monad.Trans.Except (ExceptT)
-import           Control.Monad.Trans.Except.Extra (firstExceptT, newExceptT)
-
+import Cardano.Api.TextView (TextView (..))
+import Cardano.Api.Typed
+  ( Error (..),
+    FileError,
+    TextEnvelopeError,
+    readTextEnvelopeFromFile,
+  )
+import Cardano.CLI.Helpers (HelpersError, pPrintCBOR, renderHelpersError)
+import Cardano.CLI.Shelley.Parsers
+import Cardano.Prelude
+import Control.Monad.Trans.Except (ExceptT)
+import Control.Monad.Trans.Except.Extra (firstExceptT, newExceptT)
 import qualified Data.ByteString.Lazy.Char8 as LBS
+import qualified Data.Text as Text
 
 data ShelleyTextViewFileError
   = ShelleyTextViewReadFileError ((FileError TextEnvelopeError))
   | ShelleyTextViewCBORPrettyPrintError !HelpersError
-  deriving Show
+  deriving (Show)
 
 renderShelleyTextViewFileError :: ShelleyTextViewFileError -> Text
 renderShelleyTextViewFileError err =
@@ -31,7 +31,6 @@ renderShelleyTextViewFileError err =
     ShelleyTextViewReadFileError fileErr -> Text.pack (displayError fileErr)
     ShelleyTextViewCBORPrettyPrintError hlprsErr ->
       "Error pretty printing CBOR: " <> renderHelpersError hlprsErr
-
 
 runTextViewCmd :: TextViewCmd -> ExceptT ShelleyTextViewFileError IO ()
 runTextViewCmd cmd =

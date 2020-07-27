@@ -1,13 +1,12 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Test.CLI.Shelley.Golden.Node.KeyGen
-  ( golden_shelleyNodeKeyGen
-  ) where
+  ( golden_shelleyNodeKeyGen,
+  )
+where
 
 import Cardano.Prelude
-
 import Hedgehog (Property)
-
 import qualified Test.OptParse as OP
 
 {- HLINT ignore "Use camelCase" -}
@@ -19,11 +18,17 @@ golden_shelleyNodeKeyGen = OP.propertyOnce $ do
     signingKeyFile <- OP.noteTempFile tempDir "key-gen.skey"
     opCertCounterFile <- OP.noteTempFile tempDir "op-cert.counter"
 
-    void $ OP.execCardanoCLI
-        [ "shelley","node","key-gen"
-        , "--verification-key-file", verificationKeyFile
-        , "--signing-key-file", signingKeyFile
-        , "--operational-certificate-issue-counter", opCertCounterFile
+    void $
+      OP.execCardanoCLI
+        [ "shelley",
+          "node",
+          "key-gen",
+          "--verification-key-file",
+          verificationKeyFile,
+          "--signing-key-file",
+          signingKeyFile,
+          "--operational-certificate-issue-counter",
+          opCertCounterFile
         ]
 
     OP.assertFileOccurences 1 "StakePoolVerificationKey_ed25519" $ verificationKeyFile

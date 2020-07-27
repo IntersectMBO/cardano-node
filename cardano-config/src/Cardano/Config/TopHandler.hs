@@ -1,5 +1,5 @@
 module Cardano.Config.TopHandler
-  ( toplevelExceptionHandler
+  ( toplevelExceptionHandler,
   )
 where
 
@@ -11,7 +11,7 @@ where
 --               2015 Edsko de Vries
 --               2009 Duncan Coutts
 --               2007 Galois Inc.
---               2003 Isaac Jones, Simon Marlow 
+--               2003 Isaac Jones, Simon Marlow
 --
 -- Copyright (c) 2003-2017, Cabal Development Team.
 -- See the AUTHORS file for the full list of copyright holders.
@@ -23,16 +23,16 @@ where
 --
 --     * Redistributions of source code must retain the above copyright
 --       notice, this list of conditions and the following disclaimer.
--- 
+--
 --     * Redistributions in binary form must reproduce the above
 --       copyright notice, this list of conditions and the following
 --       disclaimer in the documentation and/or other materials provided
 --       with the distribution.
--- 
+--
 --     * Neither the name of Isaac Jones nor the names of other
 --       contributors may be used to endorse or promote products derived
 --       from this software without specific prior written permission.
--- 
+--
 -- THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 -- "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 -- LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -45,14 +45,11 @@ where
 -- (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 -- OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import Prelude
-
 import Control.Exception
-
 import System.Environment
 import System.Exit
 import System.IO
-
+import Prelude
 
 -- | An exception handler to use for a program top level, as an alternative to
 -- the default top level handler provided by GHC.
@@ -62,17 +59,17 @@ import System.IO
 -- > main :: IO ()
 -- > main = toplevelExceptionHandler $ do
 -- >   ...
---
 toplevelExceptionHandler :: IO a -> IO a
 toplevelExceptionHandler prog = do
-    -- Use line buffering in case we have to print big error messages, because
-    -- by default stderr to a terminal device is NoBuffering which is slow.
-    hSetBuffering stderr LineBuffering
-    catches prog [
-        Handler rethrowAsyncExceptions
-      , Handler rethrowExitCode
-      , Handler handleSomeException
-      ]
+  -- Use line buffering in case we have to print big error messages, because
+  -- by default stderr to a terminal device is NoBuffering which is slow.
+  hSetBuffering stderr LineBuffering
+  catches
+    prog
+    [ Handler rethrowAsyncExceptions,
+      Handler rethrowExitCode,
+      Handler handleSomeException
+    ]
   where
     -- Let async exceptions rise to the top for the default GHC top-handler.
     -- This includes things like ctl-c.
@@ -97,12 +94,10 @@ toplevelExceptionHandler prog = do
     -- sees something readable in the log.
     renderSomeException :: String -> SomeException -> String
     renderSomeException progname e
-      | showOutput /= displayOutput
-      = showOutput ++ "\n\n" ++ progname ++ ": " ++ displayOutput
-
-      | otherwise
-      = "\n" ++ progname ++ ": " ++ showOutput
+      | showOutput /= displayOutput =
+        showOutput ++ "\n\n" ++ progname ++ ": " ++ displayOutput
+      | otherwise =
+        "\n" ++ progname ++ ": " ++ showOutput
       where
-        showOutput    = show e
+        showOutput = show e
         displayOutput = displayException e
-

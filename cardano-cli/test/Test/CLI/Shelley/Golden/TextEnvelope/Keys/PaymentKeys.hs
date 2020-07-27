@@ -1,18 +1,15 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Test.CLI.Shelley.Golden.TextEnvelope.Keys.PaymentKeys
-  ( golden_shelleyPaymentKeys
-  ) where
+  ( golden_shelleyPaymentKeys,
+  )
+where
 
-import           Cardano.Prelude
-
-import           Cardano.Api.Typed (AsType(..), HasTextEnvelope (..))
-
-import           Hedgehog (Property)
+import Cardano.Api.Typed (AsType (..), HasTextEnvelope (..))
+import Cardano.Prelude
+import Hedgehog (Property)
 import qualified Hedgehog as H
-
-import           Test.OptParse
-
+import Test.OptParse
 
 -- | 1. Generate a key pair
 --   2. Check for the existence of the key pair
@@ -20,7 +17,6 @@ import           Test.OptParse
 golden_shelleyPaymentKeys :: Property
 golden_shelleyPaymentKeys =
   propertyOnce $ do
-
     -- Reference keys
     let referenceVerKey = "test/Test/golden/shelley/keys/payment_keys/verification_key"
         referenceSignKey = "test/Test/golden/shelley/keys/payment_keys/signing_key"
@@ -33,13 +29,17 @@ golden_shelleyPaymentKeys =
     -- Generate payment verification key
     execCardanoCLIParser
       createdFiles
-        $ evalCardanoCLIParser [ "shelley","address","key-gen"
-                               , "--verification-key-file", verKey
-                               , "--signing-key-file", signKey
-                               ]
+      $ evalCardanoCLIParser
+        [ "shelley",
+          "address",
+          "key-gen",
+          "--verification-key-file",
+          verKey,
+          "--signing-key-file",
+          signKey
+        ]
 
     assertFilesExist createdFiles
-
 
     let signingKeyType = textEnvelopeType (AsSigningKey AsPaymentKey)
         verificationKeyType = textEnvelopeType (AsVerificationKey AsPaymentKey)

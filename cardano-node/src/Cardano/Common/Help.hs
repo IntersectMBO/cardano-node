@@ -1,19 +1,19 @@
 module Cardano.Common.Help
-  ( parserHelpHeader
-  , parserHelpOptions
-  , renderHelpDoc
-  -- * Re-exports
-  , OptI.Doc
-  , (<$$>)
+  ( parserHelpHeader,
+    parserHelpOptions,
+    renderHelpDoc,
+
+    -- * Re-exports
+    OptI.Doc,
+    (<$$>),
   )
 where
 
-import           Prelude
-
-import           Data.Maybe (fromMaybe)
+import Data.Maybe (fromMaybe)
 import qualified Options.Applicative as Opt
+import Options.Applicative.Help ((<$$>))
 import qualified Options.Applicative.Help as OptI
-import           Options.Applicative.Help ((<$$>))
+import Prelude
 
 -- | Produce just the brief help header for a given CLI option parser,
 --   without the options.

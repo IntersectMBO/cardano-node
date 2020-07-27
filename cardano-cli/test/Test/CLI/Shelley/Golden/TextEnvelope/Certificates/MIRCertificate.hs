@@ -1,17 +1,15 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Test.CLI.Shelley.Golden.TextEnvelope.Certificates.MIRCertificate
-  ( golden_shelleyMIRCertificate
-  ) where
+  ( golden_shelleyMIRCertificate,
+  )
+where
 
-import           Cardano.Prelude
-
-import           Cardano.Api.Typed (AsType(..), HasTextEnvelope (..))
-
-import           Hedgehog (Property)
+import Cardano.Api.Typed (AsType (..), HasTextEnvelope (..))
+import Cardano.Prelude
+import Hedgehog (Property)
 import qualified Hedgehog as H
-
-import           Test.OptParse
+import Test.OptParse
 
 -- | 1. Generate stake key pair
 --   2. Create MIR certificate
@@ -31,22 +29,33 @@ golden_shelleyMIRCertificate =
     -- Generate stake key pair
     execCardanoCLIParser
       createdFiles
-        $ evalCardanoCLIParser [ "shelley","stake-address","key-gen"
-                               , "--verification-key-file", verKey
-                               , "--signing-key-file", signKey
-                               ]
+      $ evalCardanoCLIParser
+        [ "shelley",
+          "stake-address",
+          "key-gen",
+          "--verification-key-file",
+          verKey,
+          "--signing-key-file",
+          signKey
+        ]
 
     assertFilesExist [verKey, signKey]
 
     -- Create MIR certificate
     execCardanoCLIParser
       createdFiles
-        $ evalCardanoCLIParser [ "shelley","governance","create-mir-certificate"
-                               , "--reserves" --TODO: Should also do "--reserves"
-                               , "--stake-verification-key-file", verKey
-                               , "--reward", "1000"
-                               , "--out-file", mirCertificate
-                               ]
+      $ evalCardanoCLIParser
+        [ "shelley",
+          "governance",
+          "create-mir-certificate",
+          "--reserves", --TODO: Should also do "--reserves"
+          "--stake-verification-key-file",
+          verKey,
+          "--reward",
+          "1000",
+          "--out-file",
+          mirCertificate
+        ]
 
     assertFilesExist [mirCertificate]
 

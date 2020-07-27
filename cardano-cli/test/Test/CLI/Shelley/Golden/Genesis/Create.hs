@@ -2,29 +2,26 @@
 {-# LANGUAGE TypeApplications #-}
 
 module Test.CLI.Shelley.Golden.Genesis.Create
-  ( golden_shelleyGenesisCreate
-  ) where
+  ( golden_shelleyGenesisCreate,
+  )
+where
 
 import Cardano.Prelude
-
-import Prelude(String)
-
 import qualified Data.Aeson as J
 import qualified Data.Aeson.Types as J
+import qualified Data.ByteString.Lazy as LBS
 import qualified Data.HashMap.Lazy as HM
 import qualified Data.Set as S
+import qualified Data.Text as T
 import qualified Data.Time.Clock as DT
 import qualified Data.Time.Format as DT
-import qualified System.Directory as IO
-
 import Hedgehog (Property, forAll, (===))
-
 import qualified Hedgehog as H
 import qualified Hedgehog.Gen as G
 import qualified Hedgehog.Range as R
+import qualified System.Directory as IO
 import qualified Test.OptParse as OP
-import qualified Data.ByteString.Lazy as LBS
-import qualified Data.Text as T
+import Prelude (String)
 
 {- HLINT ignore "Use camelCase" -}
 
@@ -65,7 +62,7 @@ parseHashKeys = J.withObject "Object" $ \o -> do
   pure $ fmap fst (HM.toList delegates)
 
 parseTotalSupply :: J.Value -> J.Parser Int
-parseTotalSupply = J.withObject "Object" $ \ o -> do
+parseTotalSupply = J.withObject "Object" $ \o -> do
   initialFunds <- (o J..: "initialFunds") >>= parseHashMap
   fmap sum (sequence (fmap (J.parseJSON @Int . snd) (HM.toList initialFunds)))
 
@@ -86,14 +83,23 @@ golden_shelleyGenesisCreate = OP.propertyOnce $ do
     (utxoCount, fmtUtxoCount) <- fmap (withSnd show) $ forAll $ G.int (R.linear 4 19)
 
     -- Create the genesis json file and required keys
-    void $ OP.execCardanoCLI
-        [ "shelley","genesis","create"
-        , "--testnet-magic", "12"
-        , "--start-time", fmtStartTime
-        , "--supply", fmtSupply
-        , "--gen-genesis-keys", fmtDelegateCount
-        , "--gen-utxo-keys", fmtUtxoCount
-        , "--genesis-dir", tempDir
+    void $
+      OP.execCardanoCLI
+        [ "shelley",
+          "genesis",
+          "create",
+          "--testnet-magic",
+          "12",
+          "--start-time",
+          fmtStartTime,
+          "--supply",
+          fmtSupply,
+          "--gen-genesis-keys",
+          fmtDelegateCount,
+          "--gen-utxo-keys",
+          fmtUtxoCount,
+          "--genesis-dir",
+          tempDir
         ]
 
     OP.assertFilesExist [genesisFile]
@@ -141,7 +147,7 @@ golden_shelleyGenesisCreate = OP.propertyOnce $ do
 
       -- Check utxo keys
       OP.assertFileOccurences 1 "GenesisUTxOSigningKey_ed25519" $ tempDir <> "/utxo-keys/utxo" <> show i <> ".skey"
-      OP.assertFileOccurences 1 "GenesisUTxOVerificationKey_ed25519"  $ tempDir <> "/utxo-keys/utxo" <> show i <> ".vkey"
+      OP.assertFileOccurences 1 "GenesisUTxOVerificationKey_ed25519" $ tempDir <> "/utxo-keys/utxo" <> show i <> ".vkey"
 
       OP.assertEndsWithSingleNewline $ tempDir <> "/utxo-keys/utxo" <> show i <> ".skey"
       OP.assertEndsWithSingleNewline $ tempDir <> "/utxo-keys/utxo" <> show i <> ".vkey"
@@ -156,14 +162,23 @@ golden_shelleyGenesisCreate = OP.propertyOnce $ do
     (utxoCount, fmtUtxoCount) <- fmap (withSnd show) $ forAll $ G.int (R.linear 4 19)
 
     -- Create the genesis json file and required keys
-    void $ OP.execCardanoCLI
-        [ "shelley","genesis","create"
-        , "--testnet-magic", "12"
-        , "--start-time", fmtStartTime
-        , "--supply", fmtSupply
-        , "--gen-genesis-keys", fmtDelegateCount
-        , "--gen-utxo-keys", fmtUtxoCount
-        , "--genesis-dir", tempDir
+    void $
+      OP.execCardanoCLI
+        [ "shelley",
+          "genesis",
+          "create",
+          "--testnet-magic",
+          "12",
+          "--start-time",
+          fmtStartTime,
+          "--supply",
+          fmtSupply,
+          "--gen-genesis-keys",
+          fmtDelegateCount,
+          "--gen-utxo-keys",
+          fmtUtxoCount,
+          "--genesis-dir",
+          tempDir
         ]
 
     OP.assertFilesExist [genesisFile]
@@ -211,7 +226,7 @@ golden_shelleyGenesisCreate = OP.propertyOnce $ do
 
       -- Check utxo keys
       OP.assertFileOccurences 1 "GenesisUTxOSigningKey_ed25519" $ tempDir <> "/utxo-keys/utxo" <> show i <> ".skey"
-      OP.assertFileOccurences 1 "GenesisUTxOVerificationKey_ed25519"  $ tempDir <> "/utxo-keys/utxo" <> show i <> ".vkey"
+      OP.assertFileOccurences 1 "GenesisUTxOVerificationKey_ed25519" $ tempDir <> "/utxo-keys/utxo" <> show i <> ".vkey"
 
       OP.assertEndsWithSingleNewline $ tempDir <> "/utxo-keys/utxo" <> show i <> ".skey"
       OP.assertEndsWithSingleNewline $ tempDir <> "/utxo-keys/utxo" <> show i <> ".vkey"

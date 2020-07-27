@@ -2,18 +2,16 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 module Test.Cardano.Api.Typed.RawBytes
-  ( tests
-  ) where
+  ( tests,
+  )
+where
 
-import           Cardano.Api.Typed
-
-import           Cardano.Prelude
-
-import           Hedgehog (Property, discover)
+import Cardano.Api.Typed
+import Cardano.Prelude
+import Hedgehog (Property, discover)
 import qualified Hedgehog as H
-
-import           Test.Cardano.Api.Typed.Gen
-import           Test.Cardano.Api.Typed.Orphans ()
+import Test.Cardano.Api.Typed.Gen
+import Test.Cardano.Api.Typed.Orphans ()
 
 -- Address CBOR round trips
 
@@ -37,7 +35,6 @@ prop_roundtrip_stake_address_raw = H.property $ do
   addr <- H.forAll genStakeAddress
   H.tripping addr serialiseToRawBytes (deserialiseFromRawBytes AsStakeAddress)
 -}
-
 
 prop_roundtrip_verification_ByronKey_hash_raw :: Property
 prop_roundtrip_verification_ByronKey_hash_raw =
@@ -77,9 +74,10 @@ prop_roundtrip_verification_GenesisUTxOKey_hash_raw =
 
 -- -----------------------------------------------------------------------------
 
-roundtrip_verification_key_hash_raw
-  :: (Key keyrole, Eq (Hash keyrole), Show (Hash keyrole))
-  => AsType keyrole -> Property
+roundtrip_verification_key_hash_raw ::
+  (Key keyrole, Eq (Hash keyrole), Show (Hash keyrole)) =>
+  AsType keyrole ->
+  Property
 roundtrip_verification_key_hash_raw roletoken =
   H.property $ do
     vKey <- H.forAll $ genVerificationKey roletoken
@@ -87,7 +85,6 @@ roundtrip_verification_key_hash_raw roletoken =
     H.tripping vKeyHash serialiseToRawBytes (deserialiseFromRawBytes (AsHash roletoken))
 
 -- -----------------------------------------------------------------------------
-
 
 tests :: IO Bool
 tests =

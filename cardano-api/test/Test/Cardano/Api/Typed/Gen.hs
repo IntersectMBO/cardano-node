@@ -1,51 +1,47 @@
 module Test.Cardano.Api.Typed.Gen
-  ( genAddressByron
-  , genAddressShelley
-  , genByronKeyWitness
-  , genOperationalCertificate
-  , genOperationalCertificateIssueCounter
-  , genShelleyWitness
-  , genSigningKey
-  , genStakeAddress
-  , genTxByron
-  , genTxShelley
-  , genTxBodyByron
-  , genTxBodyShelley
-  , genVerificationKey
-  ) where
+  ( genAddressByron,
+    genAddressShelley,
+    genByronKeyWitness,
+    genOperationalCertificate,
+    genOperationalCertificateIssueCounter,
+    genShelleyWitness,
+    genSigningKey,
+    genStakeAddress,
+    genTxByron,
+    genTxShelley,
+    genTxBodyByron,
+    genTxBodyShelley,
+    genVerificationKey,
+  )
+where
 
-import           Cardano.Api.Typed
-
-import           Cardano.Prelude
-
-import           Control.Monad.Fail (fail)
-
+import Cardano.Api.Typed
 import qualified Cardano.Binary as CBOR
 import qualified Cardano.Crypto.Hash as Crypto
 import qualified Cardano.Crypto.Seed as Crypto
-import           Cardano.Slotting.Slot (SlotNo(..))
-import           Ouroboros.Network.Magic (NetworkMagic(..))
-
-import           Hedgehog (Gen)
+import Cardano.Prelude
+import Cardano.Slotting.Slot (SlotNo (..))
+import Control.Monad.Fail (fail)
+import Hedgehog (Gen)
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
-
-import           Test.Cardano.Chain.UTxO.Gen (genVKWitness)
-import           Test.Cardano.Crypto.Gen (genProtocolMagicId)
+import Ouroboros.Network.Magic (NetworkMagic (..))
+import Test.Cardano.Chain.UTxO.Gen (genVKWitness)
+import Test.Cardano.Crypto.Gen (genProtocolMagicId)
 
 genAddressByron :: Gen (Address Byron)
-genAddressByron = makeByronAddress <$> genNetworkId
-                                   <*> genVerificationKey AsByronKey
+genAddressByron =
+  makeByronAddress <$> genNetworkId
+    <*> genVerificationKey AsByronKey
 
 genAddressShelley :: Gen (Address Shelley)
 genAddressShelley =
   Gen.choice
     [ makeShelleyAddress <$> genNetworkId
-                         <*> genPaymentCredential
-                         <*> genStakeAddressReference
-
-    , makeByronAddress   <$> genNetworkId
-                         <*> genVerificationKey AsByronKey
+        <*> genPaymentCredential
+        <*> genStakeAddressReference,
+      makeByronAddress <$> genNetworkId
+        <*> genVerificationKey AsByronKey
     ]
 
 genKESPeriod :: Gen KESPeriod
@@ -57,8 +53,8 @@ genLovelace = Lovelace <$> Gen.integral (Range.linear 0 5000)
 genNetworkId :: Gen NetworkId
 genNetworkId =
   Gen.choice
-    [ pure Mainnet
-    , Testnet <$> genNetworkMagic
+    [ pure Mainnet,
+      Testnet <$> genNetworkMagic
     ]
 
 genNetworkMagic :: Gen NetworkMagic
@@ -72,26 +68,31 @@ genOperationalCertificateIssueCounter = snd <$> genOperationalCertificateWithCou
 
 genOperationalCertificateWithCounter :: Gen (OperationalCertificate, OperationalCertificateIssueCounter)
 genOperationalCertificateWithCounter = do
-    kesVKey <- genVerificationKey AsKesKey
-    stkPoolOrGenDelExtSign <- Gen.either (genSigningKey AsStakePoolKey) (genSigningKey AsGenesisDelegateExtendedKey)
-    kesP <- genKESPeriod
-    c <- Gen.integral $ Range.linear 0 1000
-    let stakePoolVer = either getVerificationKey (convert . getVerificationKey) stkPoolOrGenDelExtSign
-        iCounter = OperationalCertificateIssueCounter c stakePoolVer
+  kesVKey <- genVerificationKey AsKesKey
+  stkPoolOrGenDelExtSign <- Gen.either (genSigningKey AsStakePoolKey) (genSigningKey AsGenesisDelegateExtendedKey)
+  kesP <- genKESPeriod
+  c <- Gen.integral $ Range.linear 0 1000
+  let stakePoolVer = either getVerificationKey (convert . getVerificationKey) stkPoolOrGenDelExtSign
+      iCounter = OperationalCertificateIssueCounter c stakePoolVer
 
-    case issueOperationalCertificate kesVKey stkPoolOrGenDelExtSign kesP iCounter of
-      -- This case should be impossible as we clearly derive the verification
-      -- key from the generated signing key.
-      Left err -> fail $ displayError err
-      Right pair -> return pair
+  case issueOperationalCertificate kesVKey stkPoolOrGenDelExtSign kesP iCounter of
+    -- This case should be impossible as we clearly derive the verification
+    -- key from the generated signing key.
+    Left err -> fail $ displayError err
+    Right pair -> return pair
   where
-    convert :: VerificationKey GenesisDelegateExtendedKey
-            -> VerificationKey StakePoolKey
-    convert = (castVerificationKey :: VerificationKey GenesisDelegateKey
-                                   -> VerificationKey StakePoolKey)
-            . (castVerificationKey :: VerificationKey GenesisDelegateExtendedKey
-                                   -> VerificationKey GenesisDelegateKey)
-
+    convert ::
+      VerificationKey GenesisDelegateExtendedKey ->
+      VerificationKey StakePoolKey
+    convert =
+      ( castVerificationKey ::
+          VerificationKey GenesisDelegateKey ->
+          VerificationKey StakePoolKey
+      )
+        . ( castVerificationKey ::
+              VerificationKey GenesisDelegateExtendedKey ->
+              VerificationKey GenesisDelegateKey
+          )
 
 -- TODO: Generate payment credential via script
 genPaymentCredential :: Gen PaymentCredential
@@ -101,9 +102,9 @@ genPaymentCredential = do
 
 genSigningKey :: Key keyrole => AsType keyrole -> Gen (SigningKey keyrole)
 genSigningKey roletoken = do
-    seed <- genSeed (fromIntegral seedSize)
-    let sk = deterministicSigningKey roletoken seed
-    return sk
+  seed <- genSeed (fromIntegral seedSize)
+  let sk = deterministicSigningKey roletoken seed
+  return sk
   where
     seedSize :: Word
     seedSize = deterministicSigningKeySeedSize roletoken
@@ -115,8 +116,8 @@ genStakeAddress = makeStakeAddress <$> genNetworkId <*> genStakeCredential
 genStakeAddressReference :: Gen StakeAddressReference
 genStakeAddressReference =
   Gen.choice
-    [ StakeAddressByValue <$> genStakeCredential
-    , return NoStakeAddress
+    [ StakeAddressByValue <$> genStakeCredential,
+      return NoStakeAddress
     ]
 
 -- TODO: Generate StakeCredential via script
@@ -127,12 +128,12 @@ genStakeCredential = do
 
 genTxBodyShelley :: Gen (TxBody Shelley)
 genTxBodyShelley =
-   makeShelleyTransaction
-     <$> genTxExtraContent
-     <*> genTTL
-     <*> genTxFee
-     <*> Gen.list (Range.constant 1 10) genTxIn
-     <*> Gen.list (Range.constant 1 10) genShelleyTxOut
+  makeShelleyTransaction
+    <$> genTxExtraContent
+    <*> genTTL
+    <*> genTxFee
+    <*> Gen.list (Range.constant 1 10) genTxIn
+    <*> Gen.list (Range.constant 1 10) genShelleyTxOut
 
 genByronTxOut :: Gen (TxOut Byron)
 genByronTxOut =
@@ -177,12 +178,12 @@ genTxShelley =
   makeSignedTransaction
     <$> genWitnessList
     <*> genTxBodyShelley
- where
-   genWitnessList :: Gen [Witness Shelley]
-   genWitnessList = do
-     bsWits <- Gen.list (Range.constant 0 10) genShelleyBootstrapWitness
-     keyWits <- Gen.list (Range.constant 0 10) genShelleyKeyWitness
-     return $ bsWits ++ keyWits
+  where
+    genWitnessList :: Gen [Witness Shelley]
+    genWitnessList = do
+      bsWits <- Gen.list (Range.constant 0 10) genShelleyBootstrapWitness
+      keyWits <- Gen.list (Range.constant 0 10) genShelleyKeyWitness
+      return $ bsWits ++ keyWits
 
 genTxExtraContent :: Gen TxExtraContent
 genTxExtraContent = return txExtraContentEmpty
@@ -204,10 +205,10 @@ genByronKeyWitness = do
 
 genShelleyBootstrapWitness :: Gen (Witness Shelley)
 genShelleyBootstrapWitness =
- makeShelleyBootstrapWitness
-   <$> genNetworkId
-   <*> genTxBodyShelley
-   <*> genSigningKey AsByronKey
+  makeShelleyBootstrapWitness
+    <$> genNetworkId
+    <*> genTxBodyShelley
+    <*> genSigningKey AsByronKey
 
 genShelleyKeyWitness :: Gen (Witness Shelley)
 genShelleyKeyWitness =
@@ -220,13 +221,15 @@ genShelleyWitness = Gen.choice [genShelleyKeyWitness, genShelleyBootstrapWitness
 
 genShelleyWitnessSigningKey :: Gen ShelleyWitnessSigningKey
 genShelleyWitnessSigningKey =
-  Gen.choice [ WitnessPaymentKey <$>  (genSigningKey AsPaymentKey)
-             , WitnessPaymentExtendedKey <$>  (genSigningKey AsPaymentExtendedKey)
-             , WitnessStakeKey <$>  (genSigningKey AsStakeKey)
-             , WitnessStakePoolKey <$>  (genSigningKey AsStakePoolKey)
-             , WitnessGenesisDelegateKey <$>  (genSigningKey AsGenesisDelegateKey)
-             , WitnessGenesisUTxOKey <$>  (genSigningKey AsGenesisUTxOKey)
-             ]
+  Gen.choice
+    [ WitnessPaymentKey <$> (genSigningKey AsPaymentKey),
+      WitnessPaymentExtendedKey <$> (genSigningKey AsPaymentExtendedKey),
+      WitnessStakeKey <$> (genSigningKey AsStakeKey),
+      WitnessStakePoolKey <$> (genSigningKey AsStakePoolKey),
+      WitnessGenesisDelegateKey <$> (genSigningKey AsGenesisDelegateKey),
+      WitnessGenesisUTxOKey <$> (genSigningKey AsGenesisUTxOKey)
+    ]
+
 {-
 -- TODO: makeShelleyScriptWitness = undefined
 genShelleyScriptWitness :: Gen (Witness Shelley)

@@ -1,13 +1,12 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Test.CLI.Shelley.Golden.Node.IssueOpCert
-  ( golden_shelleyNodeIssueOpCert
-  ) where
+  ( golden_shelleyNodeIssueOpCert,
+  )
+where
 
 import Cardano.Prelude
-
 import Hedgehog (Property)
-
 import qualified System.Directory as IO
 import qualified Test.OptParse as OP
 
@@ -30,13 +29,21 @@ golden_shelleyNodeIssueOpCert = OP.propertyOnce $ do
     --    cabal run cardano-cli:cardano-cli -- shelley node key-gen-KES \
     --        --verification-key-file cardano-cli/test/cli/node-issue-op-cert/data/node-kes.vkey \
     --        --signing-key-file /dev/null
-    void $ OP.execCardanoCLI
-        [ "shelley","node","issue-op-cert"
-        , "--hot-kes-verification-key-file", hotKesVerificationKeyFile
-        , "--cold-signing-key-file", coldSigningKeyFile
-        , "--operational-certificate-issue-counter", operationalCertificateIssueCounterFile
-        , "--kes-period", "0"
-        , "--out-file", operationalCertFile
+    void $
+      OP.execCardanoCLI
+        [ "shelley",
+          "node",
+          "issue-op-cert",
+          "--hot-kes-verification-key-file",
+          hotKesVerificationKeyFile,
+          "--cold-signing-key-file",
+          coldSigningKeyFile,
+          "--operational-certificate-issue-counter",
+          operationalCertificateIssueCounterFile,
+          "--kes-period",
+          "0",
+          "--out-file",
+          operationalCertFile
         ]
 
     OP.assertFileOccurences 1 "NodeOperationalCertificate" $ operationalCertFile

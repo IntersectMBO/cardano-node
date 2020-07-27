@@ -1,13 +1,12 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Test.CLI.Byron.Golden.TextEnvelope.PaymentKeys
-  ( golden_byronPaymentKeys
-  ) where
+  ( golden_byronPaymentKeys,
+  )
+where
 
-import           Cardano.Prelude
-
-import           Hedgehog (Property)
-
+import Cardano.Prelude
+import Hedgehog (Property)
 
 -- | 1. Generate a key pair
 --   2. Check for the existence of the key pair

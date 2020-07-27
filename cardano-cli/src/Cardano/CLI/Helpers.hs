@@ -2,34 +2,32 @@
 {-# LANGUAGE RankNTypes #-}
 
 module Cardano.CLI.Helpers
-  ( HelpersError(..)
-  , ensureNewFile
-  , ensureNewFileLBS
-  , pPrintCBOR
-  , readCBOR
-  , renderHelpersError
-  , textShow
-  , validateCBOR
-  ) where
+  ( HelpersError (..),
+    ensureNewFile,
+    ensureNewFileLBS,
+    pPrintCBOR,
+    readCBOR,
+    renderHelpersError,
+    textShow,
+    validateCBOR,
+  )
+where
 
-import           Cardano.Prelude
-
-import           Codec.CBOR.Pretty (prettyHexEnc)
-import           Codec.CBOR.Read (DeserialiseFailure, deserialiseFromBytes)
-import           Codec.CBOR.Term (decodeTerm, encodeTerm)
-import           Control.Exception (IOException)
-import           Control.Monad.Trans.Except.Extra (handleIOExceptT, left)
+import Cardano.Binary (Decoder, fromCBOR)
+import Cardano.Chain.Block (fromCBORABlockOrBoundary)
+import qualified Cardano.Chain.Delegation as Delegation
+import qualified Cardano.Chain.UTxO as UTxO
+import qualified Cardano.Chain.Update as Update
+import Cardano.Config.Types
+import Cardano.Prelude
+import Codec.CBOR.Pretty (prettyHexEnc)
+import Codec.CBOR.Read (DeserialiseFailure, deserialiseFromBytes)
+import Codec.CBOR.Term (decodeTerm, encodeTerm)
+import Control.Exception (IOException)
+import Control.Monad.Trans.Except.Extra (handleIOExceptT, left)
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.Text as Text
-import           System.Directory (doesPathExist)
-
-import           Cardano.Binary (Decoder, fromCBOR)
-import qualified Cardano.Chain.Delegation as Delegation
-import qualified Cardano.Chain.Update as Update
-import           Cardano.Chain.Block (fromCBORABlockOrBoundary)
-import qualified Cardano.Chain.UTxO as UTxO
-import           Cardano.Config.Types
-
+import System.Directory (doesPathExist)
 
 data HelpersError
   = CBORPrettyPrintError !DeserialiseFailure
@@ -37,7 +35,7 @@ data HelpersError
   | IOError' !FilePath !IOException
   | OutputMustNotAlreadyExist FilePath
   | ReadCBORFileFailure !FilePath !Text
-  deriving Show
+  deriving (Show)
 
 renderHelpersError :: HelpersError -> Text
 renderHelpersError err =
@@ -48,10 +46,10 @@ renderHelpersError err =
     CBORDecodingError err' -> "Error with CBOR decoding: " <> (Text.pack $ show err')
     IOError' fp ioE -> "Error at: " <> (Text.pack fp) <> " Error: " <> (Text.pack $ show ioE)
 
-decodeCBOR
-  :: LByteString
-  -> (forall s. Decoder s a)
-  -> Either HelpersError (LB.ByteString, a)
+decodeCBOR ::
+  LByteString ->
+  (forall s. Decoder s a) ->
+  Either HelpersError (LB.ByteString, a)
 decodeCBOR bs decoder =
   first CBORDecodingError $ deserialiseFromBytes decoder bs
 
@@ -85,25 +83,20 @@ validateCBOR :: CBORObject -> LByteString -> Either HelpersError Text
 validateCBOR cborObject bs =
   case cborObject of
     CBORBlockByron epochSlots -> do
-      (const () ) <$> decodeCBOR bs (fromCBORABlockOrBoundary epochSlots)
+      (const ()) <$> decodeCBOR bs (fromCBORABlockOrBoundary epochSlots)
       Right "Valid Byron block."
-
     CBORDelegationCertificateByron -> do
-      (const () ) <$> decodeCBOR bs (fromCBOR :: Decoder s Delegation.Certificate)
+      (const ()) <$> decodeCBOR bs (fromCBOR :: Decoder s Delegation.Certificate)
       Right "Valid Byron delegation certificate."
-
     CBORTxByron -> do
-      (const () ) <$> decodeCBOR bs (fromCBOR :: Decoder s UTxO.Tx)
+      (const ()) <$> decodeCBOR bs (fromCBOR :: Decoder s UTxO.Tx)
       Right "Valid Byron Tx."
-
     CBORUpdateProposalByron -> do
-      (const () ) <$> decodeCBOR bs (fromCBOR :: Decoder s Update.Proposal)
+      (const ()) <$> decodeCBOR bs (fromCBOR :: Decoder s Update.Proposal)
       Right "Valid Byron update proposal."
-
     CBORVoteByron -> do
-      (const () ) <$> decodeCBOR bs (fromCBOR :: Decoder s Update.Vote)
+      (const ()) <$> decodeCBOR bs (fromCBOR :: Decoder s Update.Vote)
       Right "Valid Byron vote."
-
 
 textShow :: Show a => a -> Text
 textShow = Text.pack . show

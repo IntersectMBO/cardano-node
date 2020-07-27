@@ -1,42 +1,36 @@
 module Cardano.CLI.Byron.Run
-  ( ByronClientCmdError
-  , renderByronClientCmdError
-  , runByronClientCommand
-  ) where
+  ( ByronClientCmdError,
+    renderByronClientCmdError,
+    runByronClientCommand,
+  )
+where
 
-import           Cardano.Prelude
-
-import           Control.Monad.Trans.Except (ExceptT)
-import           Control.Monad.Trans.Except.Extra (hoistEither, firstExceptT)
-import           Data.Semigroup ((<>))
-import qualified Data.Text.Lazy.IO as TL
-import qualified Data.Text.Lazy.Builder as Builder
-import qualified Formatting as F
-
+import Cardano.Api.Typed (NetworkId (..), toByronProtocolMagicId)
+import qualified Cardano.Api.Typed as Typed
+import Cardano.CLI.Byron.Commands
+import Cardano.CLI.Byron.Delegation
+import Cardano.CLI.Byron.Genesis
+import Cardano.CLI.Byron.Key
+import Cardano.CLI.Byron.Query
+import Cardano.CLI.Byron.Tx
+import Cardano.CLI.Byron.UpdateProposal
+import Cardano.CLI.Byron.Vote
+import Cardano.CLI.Helpers
 import qualified Cardano.Chain.Common as Common
 import qualified Cardano.Chain.Delegation as Delegation
 import qualified Cardano.Chain.Genesis as Genesis
-import           Cardano.Chain.Slotting (EpochNumber)
-import           Cardano.Chain.UTxO (TxIn, TxOut)
-
+import Cardano.Chain.Slotting (EpochNumber)
+import Cardano.Chain.UTxO (TxIn, TxOut)
+import Cardano.Config.Types
 import qualified Cardano.Crypto.Hashing as Crypto
 import qualified Cardano.Crypto.Signing as Crypto
-
-import           Cardano.Config.Types
-
-import           Cardano.Api.Typed (NetworkId(..), toByronProtocolMagicId)
-import qualified Cardano.Api.Typed as Typed
-
-import           Cardano.CLI.Byron.Commands
-import           Cardano.CLI.Byron.Delegation
-import           Cardano.CLI.Byron.Genesis
-import           Cardano.CLI.Byron.Key
-import           Cardano.CLI.Byron.Query
-import           Cardano.CLI.Byron.Tx
-import           Cardano.CLI.Byron.UpdateProposal
-import           Cardano.CLI.Byron.Vote
-
-import           Cardano.CLI.Helpers
+import Cardano.Prelude
+import Control.Monad.Trans.Except (ExceptT)
+import Control.Monad.Trans.Except.Extra (firstExceptT, hoistEither)
+import Data.Semigroup ((<>))
+import qualified Data.Text.Lazy.Builder as Builder
+import qualified Data.Text.Lazy.IO as TL
+import qualified Formatting as F
 
 -- | Data type that encompasses all the possible errors of the
 -- Byron client.
@@ -49,7 +43,7 @@ data ByronClientCmdError
   | ByronCmdTxError !ByronTxError
   | ByronCmdUpdateProposalError !ByronUpdateProposalError
   | ByronCmdVoteError !ByronVoteError
-  deriving Show
+  deriving (Show)
 
 renderByronClientCmdError :: ByronClientCmdError -> Text
 renderByronClientCmdError err =
@@ -86,21 +80,17 @@ runByronClientCommand c =
     SpendUTxO nw era nftx ctKey ins outs ->
       runSpendUTxO nw era nftx ctKey ins outs
 
-
 runNodeCmd :: NodeCmd -> ExceptT ByronClientCmdError IO ()
 runNodeCmd (CreateVote nw sKey upPropFp voteBool outputFp) =
   firstExceptT ByronCmdVoteError $ runVoteCreation nw sKey upPropFp voteBool outputFp
-
 runNodeCmd (SubmitUpdateProposal network proposalFp) =
-    firstExceptT ByronCmdUpdateProposalError
-      $ submitByronUpdateProposal network proposalFp
-
+  firstExceptT ByronCmdUpdateProposalError $
+    submitByronUpdateProposal network proposalFp
 runNodeCmd (SubmitVote network voteFp) =
-    firstExceptT ByronCmdVoteError $ submitByronVote network voteFp
-
+  firstExceptT ByronCmdVoteError $ submitByronVote network voteFp
 runNodeCmd (UpdateProposal nw sKey pVer sVer sysTag insHash outputFp params) =
-  firstExceptT ByronCmdUpdateProposalError
-    $ runProposalCreation nw sKey pVer sVer sysTag insHash outputFp params
+  firstExceptT ByronCmdUpdateProposalError $
+    runProposalCreation nw sKey pVer sVer sysTag insHash outputFp params
 
 runGenesisCommand :: NewDirectory -> GenesisParameters -> CardanoEra -> ExceptT ByronClientCmdError IO ()
 runGenesisCommand outDir params era = do
@@ -123,9 +113,12 @@ runPrettySigningKeyPublic era skF = do
   sK <- firstExceptT ByronCmdKeyFailure $ readEraSigningKey era skF
   liftIO . putTextLn . prettyPublicKey $ Crypto.toVerification sK
 
-runMigrateDelegateKeyFrom
-        :: CardanoEra -> SigningKeyFile -> CardanoEra -> NewSigningKeyFile
-        -> ExceptT ByronClientCmdError IO ()
+runMigrateDelegateKeyFrom ::
+  CardanoEra ->
+  SigningKeyFile ->
+  CardanoEra ->
+  NewSigningKeyFile ->
+  ExceptT ByronClientCmdError IO ()
 runMigrateDelegateKeyFrom oldEra oldKey newEra (NewSigningKeyFile newKey) = do
   sk <- firstExceptT ByronCmdKeyFailure $ readEraSigningKey oldEra oldKey
   sDk <- hoistEither . first ByronCmdDelegationError $ serialiseDelegateKey newEra sk
@@ -133,9 +126,10 @@ runMigrateDelegateKeyFrom oldEra oldKey newEra (NewSigningKeyFile newKey) = do
 
 runPrintGenesisHash :: GenesisFile -> ExceptT ByronClientCmdError IO ()
 runPrintGenesisHash genFp = do
-    genesis <- firstExceptT ByronCmdGenesisError $
-                 readGenesis genFp dummyNetwork
-    liftIO . putTextLn $ formatter genesis
+  genesis <-
+    firstExceptT ByronCmdGenesisError $
+      readGenesis genFp dummyNetwork
+  liftIO . putTextLn $ formatter genesis
   where
     -- For this purpose of getting the hash, it does not matter what network
     -- value we use here.
@@ -143,17 +137,19 @@ runPrintGenesisHash genFp = do
     dummyNetwork = Mainnet
 
     formatter :: Genesis.Config -> Text
-    formatter = F.sformat Crypto.hashHexF
-              . Genesis.unGenesisHash
-              . Genesis.configGenesisHash
+    formatter =
+      F.sformat Crypto.hashHexF
+        . Genesis.unGenesisHash
+        . Genesis.configGenesisHash
 
 runPrintSigningKeyAddress :: CardanoEra -> NetworkId -> SigningKeyFile -> ExceptT ByronClientCmdError IO ()
 runPrintSigningKeyAddress era networkid skF = do
   sK <- firstExceptT ByronCmdKeyFailure $ readEraSigningKey era skF
-  let sKeyAddress = prettyAddress
-                  . Common.makeVerKeyAddress (Typed.toByronNetworkMagic networkid)
-                  . Crypto.toVerification
-                  $ sK
+  let sKeyAddress =
+        prettyAddress
+          . Common.makeVerKeyAddress (Typed.toByronNetworkMagic networkid)
+          . Crypto.toVerification
+          $ sK
   liftIO $ putTextLn sKeyAddress
 
 runKeygen :: CardanoEra -> NewSigningKeyFile -> PasswordRequirement -> ExceptT ByronClientCmdError IO ()
@@ -169,68 +165,69 @@ runToVerification era skFp (NewVerificationKeyFile vkFp) = do
   let vKey = Builder.toLazyText . Crypto.formatFullVerificationKey $ Crypto.toVerification sk
   firstExceptT ByronCmdHelpersError $ ensureNewFile TL.writeFile vkFp vKey
 
-runIssueDelegationCertificate
-        :: NetworkId
-        -> CardanoEra
-        -> EpochNumber
-        -> SigningKeyFile
-        -> VerificationKeyFile
-        -> NewCertificateFile
-        -> ExceptT ByronClientCmdError IO ()
+runIssueDelegationCertificate ::
+  NetworkId ->
+  CardanoEra ->
+  EpochNumber ->
+  SigningKeyFile ->
+  VerificationKeyFile ->
+  NewCertificateFile ->
+  ExceptT ByronClientCmdError IO ()
 runIssueDelegationCertificate nw era epoch issuerSK delegateVK cert = do
   vk <- firstExceptT ByronCmdKeyFailure $ readPaymentVerificationKey delegateVK
   sk <- firstExceptT ByronCmdKeyFailure $ readEraSigningKey era issuerSK
   let byGenDelCert :: Delegation.Certificate
       byGenDelCert = issueByronGenesisDelegation (toByronProtocolMagicId nw) epoch sk vk
-      sCert        = serialiseDelegationCert byGenDelCert
+      sCert = serialiseDelegationCert byGenDelCert
   firstExceptT ByronCmdHelpersError $ ensureNewFileLBS (nFp cert) sCert
 
-
-runCheckDelegation
-        :: NetworkId
-        -> CertificateFile
-        -> VerificationKeyFile
-        -> VerificationKeyFile
-        -> ExceptT ByronClientCmdError IO ()
+runCheckDelegation ::
+  NetworkId ->
+  CertificateFile ->
+  VerificationKeyFile ->
+  VerificationKeyFile ->
+  ExceptT ByronClientCmdError IO ()
 runCheckDelegation nw cert issuerVF delegateVF = do
   issuerVK <- firstExceptT ByronCmdKeyFailure $ readPaymentVerificationKey issuerVF
   delegateVK <- firstExceptT ByronCmdKeyFailure $ readPaymentVerificationKey delegateVF
   firstExceptT ByronCmdDelegationError $
-    checkByronGenesisDelegation cert (toByronProtocolMagicId nw)
-                                issuerVK delegateVK
+    checkByronGenesisDelegation
+      cert
+      (toByronProtocolMagicId nw)
+      issuerVK
+      delegateVK
 
 runSubmitTx :: NetworkId -> TxFile -> ExceptT ByronClientCmdError IO ()
 runSubmitTx network fp = do
-    tx <- firstExceptT ByronCmdTxError $ readByronTx fp
-    firstExceptT ByronCmdTxError $ nodeSubmitTx network tx
+  tx <- firstExceptT ByronCmdTxError $ readByronTx fp
+  firstExceptT ByronCmdTxError $ nodeSubmitTx network tx
 
-
-runSpendGenesisUTxO
-        :: GenesisFile
-        -> NetworkId
-        -> CardanoEra
-        -> NewTxFile
-        -> SigningKeyFile
-        -> Common.Address
-        -> NonEmpty TxOut
-        -> ExceptT ByronClientCmdError IO ()
+runSpendGenesisUTxO ::
+  GenesisFile ->
+  NetworkId ->
+  CardanoEra ->
+  NewTxFile ->
+  SigningKeyFile ->
+  Common.Address ->
+  NonEmpty TxOut ->
+  ExceptT ByronClientCmdError IO ()
 runSpendGenesisUTxO genesisFile nw era (NewTxFile ctTx) ctKey genRichAddr outs = do
-    genesis <- firstExceptT ByronCmdGenesisError $ readGenesis genesisFile nw
-    sk <- firstExceptT ByronCmdKeyFailure $ readEraSigningKey era ctKey
+  genesis <- firstExceptT ByronCmdGenesisError $ readGenesis genesisFile nw
+  sk <- firstExceptT ByronCmdKeyFailure $ readEraSigningKey era ctKey
 
-    let tx = txSpendGenesisUTxOByronPBFT genesis nw sk genRichAddr outs
-    firstExceptT ByronCmdHelpersError $ ensureNewFileLBS ctTx $ toCborTxAux tx
+  let tx = txSpendGenesisUTxOByronPBFT genesis nw sk genRichAddr outs
+  firstExceptT ByronCmdHelpersError $ ensureNewFileLBS ctTx $ toCborTxAux tx
 
-runSpendUTxO
-        :: NetworkId
-        -> CardanoEra
-        -> NewTxFile
-        -> SigningKeyFile
-        -> NonEmpty TxIn
-        -> NonEmpty TxOut
-        -> ExceptT ByronClientCmdError IO ()
+runSpendUTxO ::
+  NetworkId ->
+  CardanoEra ->
+  NewTxFile ->
+  SigningKeyFile ->
+  NonEmpty TxIn ->
+  NonEmpty TxOut ->
+  ExceptT ByronClientCmdError IO ()
 runSpendUTxO nw era (NewTxFile ctTx) ctKey ins outs = do
-    sk <- firstExceptT ByronCmdKeyFailure $ readEraSigningKey era ctKey
+  sk <- firstExceptT ByronCmdKeyFailure $ readEraSigningKey era ctKey
 
-    let gTx = txSpendUTxOByronPBFT nw sk ins outs
-    firstExceptT ByronCmdHelpersError . ensureNewFileLBS ctTx $ toCborTxAux gTx
+  let gTx = txSpendUTxOByronPBFT nw sk ins outs
+  firstExceptT ByronCmdHelpersError . ensureNewFileLBS ctTx $ toCborTxAux gTx

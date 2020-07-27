@@ -1,51 +1,53 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Test.CLI.Shelley.Golden.Metadata.StakePoolMetadata
-  ( golden_stakePoolMetadataHash
-  ) where
+  ( golden_stakePoolMetadataHash,
+  )
+where
 
-import           Cardano.Prelude
-
-import           Hedgehog (Property)
+import Cardano.Prelude
+import Hedgehog (Property)
 import qualified Hedgehog as H
-
-import           Test.OptParse
+import Test.OptParse
 
 golden_stakePoolMetadataHash :: Property
 golden_stakePoolMetadataHash =
-    propertyOnce $ do
+  propertyOnce $ do
+    let referenceStakePoolMetaData = "test/Test/golden/shelley/metadata/stake_pool_metadata_hash"
 
-      let referenceStakePoolMetaData = "test/Test/golden/shelley/metadata/stake_pool_metadata_hash"
+    let stakePoolMetadataFp = "stake-pool-metadata.json"
+        outputStakePoolMetadataHashFp = "stake-pool-metadata-hash.txt"
+        allFiles = [stakePoolMetadataFp, outputStakePoolMetadataHashFp]
 
+    -- Write the example stake pool metadata to disk
+    liftIO $ writeFile stakePoolMetadataFp exampleStakePoolMetadata
+    assertFilesExist [stakePoolMetadataFp]
 
-      let stakePoolMetadataFp = "stake-pool-metadata.json"
-          outputStakePoolMetadataHashFp = "stake-pool-metadata-hash.txt"
-          allFiles = [stakePoolMetadataFp, outputStakePoolMetadataHashFp]
+    -- Hash the stake pool metadata
+    execCardanoCLIParser
+      allFiles
+      $ evalCardanoCLIParser
+        [ "shelley",
+          "stake-pool",
+          "metadata-hash",
+          "--pool-metadata-file",
+          stakePoolMetadataFp,
+          "--out-file",
+          outputStakePoolMetadataHashFp
+        ]
 
-      -- Write the example stake pool metadata to disk
-      liftIO $ writeFile stakePoolMetadataFp exampleStakePoolMetadata
-      assertFilesExist [stakePoolMetadataFp]
+    -- Check for existence of the stake pool metadata hash file.
+    assertFilesExist [outputStakePoolMetadataHashFp]
 
-      -- Hash the stake pool metadata
-      execCardanoCLIParser
-        allFiles
-          $ evalCardanoCLIParser [ "shelley","stake-pool","metadata-hash"
-                                , "--pool-metadata-file", stakePoolMetadataFp
-                                , "--out-file", outputStakePoolMetadataHashFp
-                                ]
+    -- Check that the stake pool metadata hash file content is correct.
+    expectedStakePoolMetadataHash <- liftIO $ readFile referenceStakePoolMetaData
+    actualStakePoolMetadataHash <- liftIO $ readFile outputStakePoolMetadataHashFp
 
-      -- Check for existence of the stake pool metadata hash file.
-      assertFilesExist [outputStakePoolMetadataHashFp]
+    equivalence allFiles expectedStakePoolMetadataHash actualStakePoolMetadataHash
 
-      -- Check that the stake pool metadata hash file content is correct.
-      expectedStakePoolMetadataHash <- liftIO $ readFile referenceStakePoolMetaData
-      actualStakePoolMetadataHash <- liftIO $ readFile outputStakePoolMetadataHashFp
+    liftIO $ fileCleanup allFiles
 
-      equivalence allFiles expectedStakePoolMetadataHash actualStakePoolMetadataHash
-
-      liftIO $ fileCleanup allFiles
-
-      H.success
+    H.success
   where
     exampleStakePoolMetadata :: Text
     exampleStakePoolMetadata = "{\"homepage\":\"https://iohk.io\",\"name\":\"Genesis Pool C\",\"ticker\":\"GPC\",\"description\":\"Lorem Ipsum Dolor Sit Amet.\"}"

@@ -2,35 +2,35 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-
 {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 
 module Test.Cardano.Node.Gen
-  ( genNetworkTopology
-  , genNodeAddress
-  , genNodeHostAddress
-  , genNodeSetup
-  ) where
+  ( genNetworkTopology,
+    genNodeAddress,
+    genNodeHostAddress,
+    genNodeSetup,
+  )
+where
 
-import           Cardano.Prelude
-
-import           Cardano.Config.Types (NodeAddress(..), NodeHostAddress(..))
-import           Cardano.Node.Topology (NetworkTopology(..), NodeSetup(..),
-                   RemoteAddress(..))
-
+import Cardano.Config.Types (NodeAddress (..), NodeHostAddress (..))
+import Cardano.Node.Topology
+  ( NetworkTopology (..),
+    NodeSetup (..),
+    RemoteAddress (..),
+  )
+import Cardano.Prelude
 import qualified Data.IP as IP
-
-import           Hedgehog (Gen)
-import           Hedgehog.Corpus (cooking)
+import Hedgehog (Gen)
+import Hedgehog.Corpus (cooking)
 import qualified Hedgehog.Gen as Gen
+import Hedgehog.Internal.Gen ()
 import qualified Hedgehog.Range as Range
-import           Hedgehog.Internal.Gen ()
 
 genNetworkTopology :: Gen NetworkTopology
 genNetworkTopology =
   Gen.choice
-    [ MockNodeTopology <$> Gen.list (Range.linear 0 10) genNodeSetup
-    , RealNodeTopology <$> Gen.list (Range.linear 0 10) genRemoteAddress
+    [ MockNodeTopology <$> Gen.list (Range.linear 0 10) genNodeSetup,
+      RealNodeTopology <$> Gen.list (Range.linear 0 10) genRemoteAddress
     ]
 
 genNodeAddress :: Gen NodeAddress
@@ -43,13 +43,13 @@ genNodeHostAddress :: Gen NodeHostAddress
 genNodeHostAddress =
   NodeHostAddress
     <$> Gen.choice
-          [ fmap (IP.IPv4 . IP.toIPv4w) <$> Gen.maybe Gen.enumBounded
-          , fmap (IP.IPv6 . IP.toIPv6w) <$> Gen.maybe genFourWord32
-          ]
+      [ fmap (IP.IPv4 . IP.toIPv4w) <$> Gen.maybe Gen.enumBounded,
+        fmap (IP.IPv6 . IP.toIPv6w) <$> Gen.maybe genFourWord32
+      ]
   where
     genFourWord32 :: Gen (Word32, Word32, Word32, Word32)
     genFourWord32 =
-       (,,,) <$> Gen.enumBounded <*> Gen.enumBounded <*> Gen.enumBounded <*> Gen.enumBounded
+      (,,,) <$> Gen.enumBounded <*> Gen.enumBounded <*> Gen.enumBounded <*> Gen.enumBounded
 
 genNodeSetup :: Gen NodeSetup
 genNodeSetup =

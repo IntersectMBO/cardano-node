@@ -2,19 +2,16 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 module Test.Cardano.Api.Typed.CBOR
-  ( tests
-  ) where
+  ( tests,
+  )
+where
 
-import           Cardano.Api.Typed
-
-import           Cardano.Prelude
-
-import           Hedgehog (Gen, Property, discover)
+import Cardano.Api.Typed
+import Cardano.Prelude
+import Hedgehog (Gen, Property, discover)
 import qualified Hedgehog as H
-
-import           Test.Cardano.Api.Typed.Gen
-import           Test.Cardano.Api.Typed.Orphans ()
-
+import Test.Cardano.Api.Typed.Gen
+import Test.Cardano.Api.Typed.Orphans ()
 
 prop_roundtrip_txbody_byron_CBOR :: Property
 prop_roundtrip_txbody_byron_CBOR =
@@ -31,7 +28,6 @@ prop_roundtrip_tx_byron_CBOR =
 prop_roundtrip_tx_shelley_CBOR :: Property
 prop_roundtrip_tx_shelley_CBOR =
   roundtrip_CBOR AsShelleyTx genTxShelley
-
 
 prop_roundtrip_witness_shelley_CBOR :: Property
 prop_roundtrip_witness_shelley_CBOR =
@@ -115,15 +111,15 @@ prop_roundtrip_signing_key_kes_CBOR =
 
 -- -----------------------------------------------------------------------------
 
-roundtrip_CBOR
-  :: (SerialiseAsCBOR a, Eq a, Show a)
-  => AsType a -> Gen a -> Property
+roundtrip_CBOR ::
+  (SerialiseAsCBOR a, Eq a, Show a) =>
+  AsType a ->
+  Gen a ->
+  Property
 roundtrip_CBOR typeProxy gen =
   H.property $ do
     val <- H.forAll gen
     H.tripping val serialiseToCBOR (deserialiseFromCBOR typeProxy)
-
-
 
 -- -----------------------------------------------------------------------------
 

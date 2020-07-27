@@ -2,67 +2,71 @@
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
 
 module Cardano.CLI.Byron.Tx
-  ( ByronTxError(..)
-  , TxFile(..)
-  , NewTxFile(..)
-  , prettyAddress
-  , readByronTx
-  , normalByronTxToGenTx
-  , txSpendGenesisUTxOByronPBFT
-  , txSpendUTxOByronPBFT
-  , nodeSubmitTx
-  , renderByronTxError
-
+  ( ByronTxError (..),
+    TxFile (..),
+    NewTxFile (..),
+    prettyAddress,
+    readByronTx,
+    normalByronTxToGenTx,
+    txSpendGenesisUTxOByronPBFT,
+    txSpendUTxOByronPBFT,
+    nodeSubmitTx,
+    renderByronTxError,
     --TODO: remove when they are exported from the ledger
-  , fromCborTxAux
-  , toCborTxAux
+    fromCborTxAux,
+    toCborTxAux,
   )
 where
 
-import           Prelude (error)
-import           Cardano.Prelude hiding (option, trace, (%))
-
-import           Control.Monad.Trans.Except.Extra (firstExceptT, left)
-import qualified Data.ByteString.Lazy as LB
-import qualified Data.ByteString as B
-import qualified Data.Map.Strict as Map
-import           Data.String (IsString)
-import           Data.Text (Text)
-import qualified Data.Text as T
-import qualified Data.Vector as Vector
-import           Formatting ((%), sformat)
-
+import Cardano.Api.Typed
+  ( LocalNodeConnectInfo (..),
+    NetworkId,
+    NodeConsensusMode (..),
+    submitTxToNodeLocal,
+    toByronProtocolMagicId,
+  )
 import qualified Cardano.Binary as Binary
-
-import           Cardano.Chain.Common (Address)
+import Cardano.CLI.Environment
+import Cardano.CLI.Helpers (textShow)
+import Cardano.Chain.Common (Address)
 import qualified Cardano.Chain.Common as Common
-import           Cardano.Chain.Genesis as Genesis
-import           Cardano.Chain.Slotting (EpochSlots(..))
-import           Cardano.Chain.UTxO ( mkTxAux, annotateTxAux
-                                    , Tx(..), TxId, TxIn, TxOut)
+import Cardano.Chain.Genesis as Genesis
+import Cardano.Chain.Slotting (EpochSlots (..))
+import Cardano.Chain.UTxO
+  ( Tx (..),
+    TxId,
+    TxIn,
+    TxOut,
+    annotateTxAux,
+    mkTxAux,
+  )
 import qualified Cardano.Chain.UTxO as UTxO
-import           Cardano.Crypto (SigningKey(..), ProtocolMagicId)
+import Cardano.Config.Types (SocketPath (..))
+import Cardano.Crypto (ProtocolMagicId, SigningKey (..))
 import qualified Cardano.Crypto.Hashing as Crypto
 import qualified Cardano.Crypto.Signing as Crypto
-
+import Cardano.Prelude hiding (option, trace, (%))
+import Control.Monad.Trans.Except.Extra (firstExceptT, left)
+import qualified Data.ByteString as B
+import qualified Data.ByteString.Lazy as LB
+import qualified Data.Map.Strict as Map
+import Data.String (IsString)
+import Data.Text (Text)
+import qualified Data.Text as T
+import qualified Data.Vector as Vector
+import Formatting (sformat, (%))
+import Ouroboros.Consensus.Byron.Ledger (ByronBlock, GenTx (..))
 import qualified Ouroboros.Consensus.Byron.Ledger as Byron
-import           Ouroboros.Consensus.Byron.Ledger (GenTx(..), ByronBlock)
-import           Ouroboros.Consensus.Cardano (SecurityParam(..))
-import           Ouroboros.Consensus.HardFork.Combinator.Degenerate
-                   (GenTx(DegenGenTx))
-
-import           Cardano.Api.Typed
-                   (NetworkId, LocalNodeConnectInfo(..), NodeConsensusMode(..),
-                    submitTxToNodeLocal, toByronProtocolMagicId)
-import           Cardano.Config.Types (SocketPath(..))
-import           Cardano.CLI.Environment
-import           Cardano.CLI.Helpers (textShow)
-
+import Ouroboros.Consensus.Cardano (SecurityParam (..))
+import Ouroboros.Consensus.HardFork.Combinator.Degenerate
+  ( GenTx (DegenGenTx),
+  )
+import Prelude (error)
 
 data ByronTxError
   = TxDeserialisationFailed !FilePath !Binary.DecoderError
   | EnvSocketError !EnvSocketError
-  deriving Show
+  deriving (Show)
 
 renderByronTxError :: ByronTxError -> Text
 renderByronTxError err =
@@ -71,22 +75,22 @@ renderByronTxError err =
       "Transaction deserialisation failed at " <> textShow txFp <> " Error: " <> textShow decErr
     EnvSocketError envSockErr -> renderEnvSocketError envSockErr
 
-
-newtype TxFile =
-  TxFile FilePath
+newtype TxFile
+  = TxFile FilePath
   deriving (Eq, Ord, Show, IsString)
 
-newtype NewTxFile =
-  NewTxFile FilePath
+newtype NewTxFile
+  = NewTxFile FilePath
   deriving (Eq, Ord, Show, IsString)
-
 
 -- | Pretty-print an address in its Base58 form, and also
 --   its full structure.
 prettyAddress :: Common.Address -> Text
-prettyAddress addr = sformat
-  (Common.addressF %"\n"%Common.addressDetailedF)
-  addr addr
+prettyAddress addr =
+  sformat
+    (Common.addressF % "\n" % Common.addressDetailedF)
+    addr
+    addr
 
 readByronTx :: TxFile -> ExceptT ByronTxError IO (GenTx ByronBlock)
 readByronTx (TxFile fp) = do
@@ -105,12 +109,13 @@ normalByronTxToGenTx tx' = Byron.ByronTx (Byron.byronIdTx tx') tx'
 signTxId :: ProtocolMagicId -> SigningKey -> TxId -> UTxO.TxInWitness
 signTxId pmid sk txid =
   UTxO.VKWitness
-  (Crypto.toVerification sk)
-  (Crypto.sign
-    pmid
-    Crypto.SignTx
-    sk
-    (UTxO.TxSigData txid))
+    (Crypto.toVerification sk)
+    ( Crypto.sign
+        pmid
+        Crypto.SignTx
+        sk
+        (UTxO.TxSigData txid)
+    )
 
 -- | Given a genesis, and a pair of a genesis public key and address,
 --   reconstruct a TxIn corresponding to the genesis UTxO entry.
@@ -120,7 +125,7 @@ genesisUTxOTxIn gc vk genAddr =
   where
     initialUtxo :: Map Common.Address (UTxO.TxIn, UTxO.TxOut)
     initialUtxo =
-          Map.fromList
+      Map.fromList
         . mapMaybe (\(inp, out) -> mkEntry inp genAddr <$> keyMatchesUTxO vk out)
         . fromCompactTxInTxOutList
         . Map.toList
@@ -128,60 +133,64 @@ genesisUTxOTxIn gc vk genAddr =
         . UTxO.genesisUtxo
         $ gc
       where
-        mkEntry :: UTxO.TxIn
-                -> Address
-                -> UTxO.TxOut
-                -> (Address, (UTxO.TxIn, UTxO.TxOut))
+        mkEntry ::
+          UTxO.TxIn ->
+          Address ->
+          UTxO.TxOut ->
+          (Address, (UTxO.TxIn, UTxO.TxOut))
         mkEntry inp addr out = (addr, (inp, out))
 
-    fromCompactTxInTxOutList :: [(UTxO.CompactTxIn, UTxO.CompactTxOut)]
-                             -> [(UTxO.TxIn, UTxO.TxOut)]
+    fromCompactTxInTxOutList ::
+      [(UTxO.CompactTxIn, UTxO.CompactTxOut)] ->
+      [(UTxO.TxIn, UTxO.TxOut)]
     fromCompactTxInTxOutList =
-        map (bimap UTxO.fromCompactTxIn UTxO.fromCompactTxOut)
+      map (bimap UTxO.fromCompactTxIn UTxO.fromCompactTxOut)
 
     keyMatchesUTxO :: Crypto.VerificationKey -> UTxO.TxOut -> Maybe UTxO.TxOut
     keyMatchesUTxO key out =
       if Common.checkVerKeyAddress key (UTxO.txOutAddress out)
-      then Just out else Nothing
+        then Just out
+        else Nothing
 
     handleMissingAddr :: Maybe UTxO.TxIn -> UTxO.TxIn
-    handleMissingAddr  = fromMaybe . error
-      $  "\nGenesis UTxO has no address\n"
-      <> (T.unpack $ prettyAddress genAddr)
-      <> "\n\nIt has the following, though:\n\n"
-      <> Cardano.Prelude.concat (T.unpack . prettyAddress <$> Map.keys initialUtxo)
+    handleMissingAddr =
+      fromMaybe . error $
+        "\nGenesis UTxO has no address\n"
+          <> (T.unpack $ prettyAddress genAddr)
+          <> "\n\nIt has the following, though:\n\n"
+          <> Cardano.Prelude.concat (T.unpack . prettyAddress <$> Map.keys initialUtxo)
 
 -- | Generate a transaction spending genesis UTxO at a given address,
 --   to given outputs, signed by the given key.
-txSpendGenesisUTxOByronPBFT
-  :: Genesis.Config
-  -> NetworkId
-  -> SigningKey
-  -> Address
-  -> NonEmpty TxOut
-  -> UTxO.ATxAux ByteString
+txSpendGenesisUTxOByronPBFT ::
+  Genesis.Config ->
+  NetworkId ->
+  SigningKey ->
+  Address ->
+  NonEmpty TxOut ->
+  UTxO.ATxAux ByteString
 txSpendGenesisUTxOByronPBFT gc nw sk genAddr outs =
-    annotateTxAux $ mkTxAux tx (pure wit)
+  annotateTxAux $ mkTxAux tx (pure wit)
   where
     tx = UnsafeTx (pure txIn) outs txattrs
 
     wit = signTxId (toByronProtocolMagicId nw) sk (Crypto.serializeCborHash tx)
 
     txIn :: UTxO.TxIn
-    txIn  = genesisUTxOTxIn gc (Crypto.toVerification sk) genAddr
+    txIn = genesisUTxOTxIn gc (Crypto.toVerification sk) genAddr
 
     txattrs = Common.mkAttributes ()
 
 -- | Generate a transaction from given Tx inputs to outputs,
 --   signed by the given key.
-txSpendUTxOByronPBFT
-  :: NetworkId
-  -> SigningKey
-  -> NonEmpty TxIn
-  -> NonEmpty TxOut
-  -> UTxO.ATxAux ByteString
+txSpendUTxOByronPBFT ::
+  NetworkId ->
+  SigningKey ->
+  NonEmpty TxIn ->
+  NonEmpty TxOut ->
+  UTxO.ATxAux ByteString
 txSpendUTxOByronPBFT nw sk ins outs =
-    annotateTxAux $ mkTxAux tx (Vector.singleton wit)
+  annotateTxAux $ mkTxAux tx (Vector.singleton wit)
   where
     tx = UnsafeTx ins outs txattrs
 
@@ -189,33 +198,34 @@ txSpendUTxOByronPBFT nw sk ins outs =
 
     txattrs = Common.mkAttributes ()
 
-
 -- | Submit a transaction to a node specified by topology info.
-nodeSubmitTx
-  :: NetworkId
-  -> GenTx ByronBlock
-  -> ExceptT ByronTxError IO ()
+nodeSubmitTx ::
+  NetworkId ->
+  GenTx ByronBlock ->
+  ExceptT ByronTxError IO ()
 nodeSubmitTx network gentx = do
-    SocketPath socketPath <- firstExceptT EnvSocketError readEnvSocketPath
-    let connctInfo =
-          LocalNodeConnectInfo {
-            localNodeSocketPath    = socketPath,
-            localNodeNetworkId     = network,
-            localNodeConsensusMode = ByronMode
-                                       (EpochSlots 21600)
-                                       (SecurityParam 2160)
+  SocketPath socketPath <- firstExceptT EnvSocketError readEnvSocketPath
+  let connctInfo =
+        LocalNodeConnectInfo
+          { localNodeSocketPath = socketPath,
+            localNodeNetworkId = network,
+            localNodeConsensusMode =
+              ByronMode
+                (EpochSlots 21600)
+                (SecurityParam 2160)
           }
-    _res <- liftIO $ submitTxToNodeLocal connctInfo (DegenGenTx gentx)
-    --TODO: print failures
-    return ()
-
+  _res <- liftIO $ submitTxToNodeLocal connctInfo (DegenGenTx gentx)
+  --TODO: print failures
+  return ()
 
 --TODO: remove these local definitions when the updated ledger lib is available
-fromCborTxAux :: LB.ByteString ->  Either Binary.DecoderError (UTxO.ATxAux B.ByteString)
+fromCborTxAux :: LB.ByteString -> Either Binary.DecoderError (UTxO.ATxAux B.ByteString)
 fromCborTxAux lbs =
-    fmap (annotationBytes lbs)
-      $ Binary.decodeFullDecoder "Cardano.Chain.UTxO.TxAux.fromCborTxAux"
-                                 Binary.fromCBOR lbs
+  fmap (annotationBytes lbs) $
+    Binary.decodeFullDecoder
+      "Cardano.Chain.UTxO.TxAux.fromCborTxAux"
+      Binary.fromCBOR
+      lbs
   where
     annotationBytes :: Functor f => LB.ByteString -> f Binary.ByteSpan -> f B.ByteString
     annotationBytes bytes = fmap (LB.toStrict . Binary.slice bytes)

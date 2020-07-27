@@ -1,18 +1,15 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Test.CLI.Shelley.Golden.TextEnvelope.Keys.VRFKeys
-  ( golden_shelleyVRFKeys
-  ) where
+  ( golden_shelleyVRFKeys,
+  )
+where
 
-import           Cardano.Prelude
-
-import           Cardano.Api.Typed (AsType(..), HasTextEnvelope (..))
-
-import           Hedgehog (Property)
+import Cardano.Api.Typed (AsType (..), HasTextEnvelope (..))
+import Cardano.Prelude
+import Hedgehog (Property)
 import qualified Hedgehog as H
-
-import           Test.OptParse
-
+import Test.OptParse
 
 -- | 1. Generate a key pair
 --   2. Check for the existence of the key pair
@@ -20,7 +17,6 @@ import           Test.OptParse
 golden_shelleyVRFKeys :: Property
 golden_shelleyVRFKeys =
   propertyOnce $ do
-
     -- Reference keys
     let referenceVerKey = "test/Test/golden/shelley/keys/vrf_keys/verification_key"
         referenceSignKey = "test/Test/golden/shelley/keys/vrf_keys/signing_key"
@@ -33,10 +29,15 @@ golden_shelleyVRFKeys =
     -- Generate vrf verification key
     execCardanoCLIParser
       createdFiles
-        $ evalCardanoCLIParser [ "shelley","node","key-gen-VRF"
-                               , "--verification-key-file", verKey
-                               , "--signing-key-file", signKey
-                               ]
+      $ evalCardanoCLIParser
+        [ "shelley",
+          "node",
+          "key-gen-VRF",
+          "--verification-key-file",
+          verKey,
+          "--signing-key-file",
+          signKey
+        ]
 
     assertFilesExist createdFiles
 

@@ -1,13 +1,12 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Test.CLI.Shelley.Golden.Genesis.KeyHash
-  ( golden_shelleyGenesisKeyHash
-  ) where
+  ( golden_shelleyGenesisKeyHash,
+  )
+where
 
 import Cardano.Prelude
-
 import Hedgehog (Property, (===))
-
 import qualified System.IO as IO
 import qualified Test.OptParse as OP
 
@@ -20,9 +19,13 @@ golden_shelleyGenesisKeyHash = OP.propertyOnce $ do
     goldenGenesisVerificationKeyHashFile <- OP.noteInputFile "test/Test/golden/shelley/keys/genesis_keys/verification_key.key-hash"
     genesisVerificationKeyHashFile <- OP.noteTempFile tempDir "key-hash.hex"
 
-    genesisVerificationKeyHash <- OP.execCardanoCLI
-        [ "shelley","genesis","key-hash"
-        , "--verification-key-file", referenceVerificationKey
+    genesisVerificationKeyHash <-
+      OP.execCardanoCLI
+        [ "shelley",
+          "genesis",
+          "key-hash",
+          "--verification-key-file",
+          referenceVerificationKey
         ]
 
     liftIO $ IO.writeFile genesisVerificationKeyHashFile genesisVerificationKeyHash
