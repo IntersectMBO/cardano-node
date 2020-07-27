@@ -253,14 +253,14 @@ assertFilesExist allFiles@(file:rest) = do
 -- | Assert the file contains the given number of occurences of the given string
 assertFileOccurences :: HasCallStack => Int -> String -> FilePath -> H.PropertyT IO ()
 assertFileOccurences n s fp = withFrozenCallStack $ do
-  contents <- liftIO $ IO.readFile fp
+  contents <- H.evalM . liftIO $ IO.readFile fp
 
   length (filter (s `L.isInfixOf`) (L.lines contents)) H.=== n
 
 -- | Assert the file contains the given number of occurences of the given string
 assertEndsWithSingleNewline :: HasCallStack => FilePath -> H.PropertyT IO ()
 assertEndsWithSingleNewline fp = withFrozenCallStack $ do
-  contents <- liftIO $ IO.readFile fp
+  contents <- H.evalM . liftIO $ IO.readFile fp
 
   case reverse contents of
     '\n':'\n':_ -> failWithCustom callStack Nothing (fp <> " ends with too many newlines.")
