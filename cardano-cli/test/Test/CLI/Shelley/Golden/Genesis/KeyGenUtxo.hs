@@ -26,3 +26,6 @@ golden_shelleyGenesisKeyGenUtxo = OP.propertyOnce $ do
 
     OP.assertFileOccurences 1 "GenesisUTxOVerificationKey_ed25519" $ utxoVerificationKeyFile
     OP.assertFileOccurences 1 "GenesisUTxOSigningKey_ed25519" $ utxoSigningKeyFile
+
+    OP.assertEndsWithSingleNewline utxoVerificationKeyFile
+    OP.assertEndsWithSingleNewline utxoSigningKeyFile

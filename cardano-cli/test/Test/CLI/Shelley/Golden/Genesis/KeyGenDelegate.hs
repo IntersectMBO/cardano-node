@@ -32,3 +32,7 @@ golden_shelleyGenesisKeyGenDelegate = OP.propertyOnce $ do
 
     OP.assertFileOccurences 1 "Genesis delegate operator key" $ verificationKeyFile
     OP.assertFileOccurences 1 "Genesis delegate operator key" $ signingKeyFile
+
+    OP.assertEndsWithSingleNewline verificationKeyFile
+    OP.assertEndsWithSingleNewline signingKeyFile
+    OP.assertEndsWithSingleNewline operationalCertificateIssueCounterFile

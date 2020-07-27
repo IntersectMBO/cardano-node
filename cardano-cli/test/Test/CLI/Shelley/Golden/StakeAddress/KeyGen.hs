@@ -26,3 +26,6 @@ golden_shelleyStakeAddressKeyGen = OP.propertyOnce $ do
 
     OP.assertFileOccurences 1 "StakeVerificationKeyShelley_ed25519" verificationKeyFile
     OP.assertFileOccurences 1 "StakeSigningKeyShelley_ed25519" signingKeyFile
+
+    OP.assertEndsWithSingleNewline verificationKeyFile
+    OP.assertEndsWithSingleNewline signingKeyFile

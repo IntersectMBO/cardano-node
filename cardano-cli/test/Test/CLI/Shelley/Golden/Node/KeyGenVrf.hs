@@ -26,3 +26,6 @@ golden_shelleyNodeKeyGenVrf = OP.propertyOnce $ do
 
     OP.assertFileOccurences 1 "VRF Verification Key" verificationKey
     OP.assertFileOccurences 1 "VRF Signing Key" signingKey
+
+    OP.assertEndsWithSingleNewline verificationKey
+    OP.assertEndsWithSingleNewline signingKey

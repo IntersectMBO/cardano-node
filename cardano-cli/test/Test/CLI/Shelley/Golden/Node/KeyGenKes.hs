@@ -26,3 +26,6 @@ golden_shelleyNodeKeyGenKes = OP.propertyOnce $ do
 
     OP.assertFileOccurences 1 "KesVerificationKey_ed25519_kes_2^6" verificationKey
     OP.assertFileOccurences 1 "KesSigningKey_ed25519_kes_2^6" signingKey
+
+    OP.assertEndsWithSingleNewline verificationKey
+    OP.assertEndsWithSingleNewline signingKey

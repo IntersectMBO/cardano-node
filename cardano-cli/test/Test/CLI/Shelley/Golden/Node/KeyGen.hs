@@ -29,3 +29,7 @@ golden_shelleyNodeKeyGen = OP.propertyOnce $ do
     OP.assertFileOccurences 1 "StakePoolVerificationKey_ed25519" $ verificationKeyFile
     OP.assertFileOccurences 1 "StakePoolSigningKey_ed25519" $ signingKeyFile
     OP.assertFileOccurences 1 "NodeOperationalCertificateIssueCounter" $ opCertCounterFile
+
+    OP.assertEndsWithSingleNewline verificationKeyFile
+    OP.assertEndsWithSingleNewline signingKeyFile
+    OP.assertEndsWithSingleNewline opCertCounterFile
