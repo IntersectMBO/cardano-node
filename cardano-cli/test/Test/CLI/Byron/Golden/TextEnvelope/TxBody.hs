@@ -2,11 +2,12 @@
 
 module Test.CLI.Byron.Golden.TextEnvelope.TxBody
   ( golden_byronTxBody
-  ) where
+  )
+where
 
 import           Cardano.Prelude
 
-import           Hedgehog (Property)
+import           Hedgehog                       ( Property )
 
 
 golden_byronTxBody :: Property

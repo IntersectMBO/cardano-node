@@ -2,13 +2,14 @@
 
 module Test.CLI.Shelley.Golden.Node.KeyGenKes
   ( golden_shelleyNodeKeyGenKes
-  ) where
+  )
+where
 
-import Cardano.Prelude
+import           Cardano.Prelude
 
-import Hedgehog (Property)
+import           Hedgehog                       ( Property )
 
-import qualified Test.OptParse as OP
+import qualified Test.OptParse                 as OP
 
 {- HLINT ignore "Use camelCase" -}
 
@@ -19,12 +20,18 @@ golden_shelleyNodeKeyGenKes = OP.propertyOnce $ do
     signingKey <- OP.noteTempFile tempDir "kes.skey"
 
     void $ OP.execCardanoCLI
-        [ "shelley","node","key-gen-KES"
-        , "--verification-key-file", verificationKey
-        , "--signing-key-file", signingKey
-        ]
+      [ "shelley"
+      , "node"
+      , "key-gen-KES"
+      , "--verification-key-file"
+      , verificationKey
+      , "--signing-key-file"
+      , signingKey
+      ]
 
-    OP.assertFileOccurences 1 "KesVerificationKey_ed25519_kes_2^6" verificationKey
+    OP.assertFileOccurences 1
+                            "KesVerificationKey_ed25519_kes_2^6"
+                            verificationKey
     OP.assertFileOccurences 1 "KesSigningKey_ed25519_kes_2^6" signingKey
 
     OP.assertEndsWithSingleNewline verificationKey

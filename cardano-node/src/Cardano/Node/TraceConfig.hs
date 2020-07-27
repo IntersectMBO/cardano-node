@@ -3,20 +3,21 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Cardano.Node.TraceConfig
-  ( TraceOptions (..)
-  , TraceSelection (..)
+  ( TraceOptions(..)
+  , TraceSelection(..)
   , traceConfigParser
-  ) where
+  )
+where
 
-import           Prelude (Show(..))
-import           Cardano.Prelude hiding (show)
+import           Prelude                        ( Show(..) )
+import           Cardano.Prelude         hiding ( show )
 
 import           Data.Aeson
-import           Data.Aeson.Types (Parser)
+import           Data.Aeson.Types               ( Parser )
 
-import           Cardano.Node.Orphans ()
+import           Cardano.Node.Orphans           ( )
 
-import           Cardano.BM.Data.Tracer (TracingVerbosity (..))
+import           Cardano.BM.Data.Tracer         ( TracingVerbosity(..) )
 
 
 data TraceOptions
@@ -64,36 +65,100 @@ data TraceSelection
 
 traceConfigParser :: Object -> Parser TraceOptions
 traceConfigParser v =
-  TracingOn <$> (TraceSelection
-    <$> v .:? "TracingVerbosity" .!= NormalVerbosity
+  TracingOn
+    <$> (TraceSelection
+        <$> v
+        .:? "TracingVerbosity"
+        .!= NormalVerbosity
     -- Per-trace toggles, alpha-sorted.
-    <*> v .:? "TraceAcceptPolicy" .!= False
-    <*> v .:? "TraceBlockchainTime" .!= False
-    <*> v .:? "TraceBlockFetchClient" .!= False
-    <*> v .:? "TraceBlockFetchDecisions" .!= True
-    <*> v .:? "TraceBlockFetchProtocol" .!= False
-    <*> v .:? "TraceBlockFetchProtocolSerialised" .!= False
-    <*> v .:? "TraceBlockFetchServer" .!= False
-    <*> v .:? "TraceChainDb" .!= True
-    <*> v .:? "TraceChainSyncClient" .!= True
-    <*> v .:? "TraceChainSyncBlockServer" .!= False
-    <*> v .:? "TraceChainSyncHeaderServer" .!= False
-    <*> v .:? "TraceChainSyncProtocol" .!= False
-    <*> v .:? "TraceDNSResolver" .!= False
-    <*> v .:? "TraceDNSSubscription" .!= True
-    <*> v .:? "TraceErrorPolicy" .!= True
-    <*> v .:? "TraceForge" .!= True
-    <*> v .:? "TraceForgeState" .!= True
-    <*> v .:? "TraceHandshake" .!= False
-    <*> v .:? "TraceIpSubscription" .!= True
-    <*> v .:? "TraceLocalChainSyncProtocol" .!= False
-    <*> v .:? "TraceLocalErrorPolicy" .!= True
-    <*> v .:? "TraceLocalHandshake" .!= False
-    <*> v .:? "TraceLocalTxSubmissionProtocol" .!= False
-    <*> v .:? "TraceLocalTxSubmissionServer" .!= False
-    <*> v .:? "TraceLocalStateQueryProtocol" .!= False
-    <*> v .:? "TraceMempool" .!= True
-    <*> v .:? "TraceMux" .!= True
-    <*> v .:? "TraceTxInbound" .!= False
-    <*> v .:? "TraceTxOutbound" .!= False
-    <*> v .:? "TraceTxSubmissionProtocol" .!= False)
+        <*> v
+        .:? "TraceAcceptPolicy"
+        .!= False
+        <*> v
+        .:? "TraceBlockchainTime"
+        .!= False
+        <*> v
+        .:? "TraceBlockFetchClient"
+        .!= False
+        <*> v
+        .:? "TraceBlockFetchDecisions"
+        .!= True
+        <*> v
+        .:? "TraceBlockFetchProtocol"
+        .!= False
+        <*> v
+        .:? "TraceBlockFetchProtocolSerialised"
+        .!= False
+        <*> v
+        .:? "TraceBlockFetchServer"
+        .!= False
+        <*> v
+        .:? "TraceChainDb"
+        .!= True
+        <*> v
+        .:? "TraceChainSyncClient"
+        .!= True
+        <*> v
+        .:? "TraceChainSyncBlockServer"
+        .!= False
+        <*> v
+        .:? "TraceChainSyncHeaderServer"
+        .!= False
+        <*> v
+        .:? "TraceChainSyncProtocol"
+        .!= False
+        <*> v
+        .:? "TraceDNSResolver"
+        .!= False
+        <*> v
+        .:? "TraceDNSSubscription"
+        .!= True
+        <*> v
+        .:? "TraceErrorPolicy"
+        .!= True
+        <*> v
+        .:? "TraceForge"
+        .!= True
+        <*> v
+        .:? "TraceForgeState"
+        .!= True
+        <*> v
+        .:? "TraceHandshake"
+        .!= False
+        <*> v
+        .:? "TraceIpSubscription"
+        .!= True
+        <*> v
+        .:? "TraceLocalChainSyncProtocol"
+        .!= False
+        <*> v
+        .:? "TraceLocalErrorPolicy"
+        .!= True
+        <*> v
+        .:? "TraceLocalHandshake"
+        .!= False
+        <*> v
+        .:? "TraceLocalTxSubmissionProtocol"
+        .!= False
+        <*> v
+        .:? "TraceLocalTxSubmissionServer"
+        .!= False
+        <*> v
+        .:? "TraceLocalStateQueryProtocol"
+        .!= False
+        <*> v
+        .:? "TraceMempool"
+        .!= True
+        <*> v
+        .:? "TraceMux"
+        .!= True
+        <*> v
+        .:? "TraceTxInbound"
+        .!= False
+        <*> v
+        .:? "TraceTxOutbound"
+        .!= False
+        <*> v
+        .:? "TraceTxSubmissionProtocol"
+        .!= False
+        )

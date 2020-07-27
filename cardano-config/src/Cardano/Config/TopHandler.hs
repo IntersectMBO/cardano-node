@@ -45,13 +45,13 @@ where
 -- (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 -- OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import Prelude
+import           Prelude
 
-import Control.Exception
+import           Control.Exception
 
-import System.Environment
-import System.Exit
-import System.IO
+import           System.Environment
+import           System.Exit
+import           System.IO
 
 
 -- | An exception handler to use for a program top level, as an alternative to
@@ -67,42 +67,42 @@ toplevelExceptionHandler :: IO a -> IO a
 toplevelExceptionHandler prog = do
     -- Use line buffering in case we have to print big error messages, because
     -- by default stderr to a terminal device is NoBuffering which is slow.
-    hSetBuffering stderr LineBuffering
-    catches prog [
-        Handler rethrowAsyncExceptions
-      , Handler rethrowExitCode
-      , Handler handleSomeException
-      ]
-  where
+  hSetBuffering stderr LineBuffering
+  catches
+    prog
+    [ Handler rethrowAsyncExceptions
+    , Handler rethrowExitCode
+    , Handler handleSomeException
+    ]
+ where
     -- Let async exceptions rise to the top for the default GHC top-handler.
     -- This includes things like ctl-c.
-    rethrowAsyncExceptions :: SomeAsyncException -> IO a
-    rethrowAsyncExceptions = throwIO
+  rethrowAsyncExceptions :: SomeAsyncException -> IO a
+  rethrowAsyncExceptions = throwIO
 
-    -- We don't want to print ExitCode, and it should be handled by the default
-    -- top handler because that sets the actual OS process exit code.
-    rethrowExitCode :: ExitCode -> IO a
-    rethrowExitCode = throwIO
+  -- We don't want to print ExitCode, and it should be handled by the default
+  -- top handler because that sets the actual OS process exit code.
+  rethrowExitCode :: ExitCode -> IO a
+  rethrowExitCode = throwIO
 
-    -- Print all other exceptions
-    handleSomeException :: SomeException -> IO a
-    handleSomeException e = do
-      hFlush stdout
-      progname <- getProgName
-      hPutStr stderr (renderSomeException progname e)
-      throwIO (ExitFailure 1)
+  -- Print all other exceptions
+  handleSomeException :: SomeException -> IO a
+  handleSomeException e = do
+    hFlush stdout
+    progname <- getProgName
+    hPutStr stderr (renderSomeException progname e)
+    throwIO (ExitFailure 1)
 
-    -- Print the human-readable output of 'displayException' if it differs
-    -- from the default output (of 'show'), so that the the user/sysadmin
-    -- sees something readable in the log.
-    renderSomeException :: String -> SomeException -> String
-    renderSomeException progname e
-      | showOutput /= displayOutput
-      = showOutput ++ "\n\n" ++ progname ++ ": " ++ displayOutput
-
-      | otherwise
-      = "\n" ++ progname ++ ": " ++ showOutput
-      where
-        showOutput    = show e
-        displayOutput = displayException e
+  -- Print the human-readable output of 'displayException' if it differs
+  -- from the default output (of 'show'), so that the the user/sysadmin
+  -- sees something readable in the log.
+  renderSomeException :: String -> SomeException -> String
+  renderSomeException progname e
+    | showOutput /= displayOutput
+    = showOutput ++ "\n\n" ++ progname ++ ": " ++ displayOutput
+    | otherwise
+    = "\n" ++ progname ++ ": " ++ showOutput
+   where
+    showOutput = show e
+    displayOutput = displayException e
 

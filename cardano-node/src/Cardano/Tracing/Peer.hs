@@ -3,41 +3,61 @@
 {-# LANGUAGE OverloadedStrings     #-}
 
 module Cardano.Tracing.Peer
-  ( Peer (..)
+  ( Peer(..)
   , getCurrentPeers
   , ppPeer
   , tracePeers
-  ) where
+  )
+where
 
-import           Cardano.Prelude hiding (atomically)
-import           Prelude (String)
+import           Cardano.Prelude         hiding ( atomically )
+import           Prelude                        ( String )
 
-import qualified Control.Monad.Class.MonadSTM.Strict as STM
+import qualified Control.Monad.Class.MonadSTM.Strict
+                                               as STM
 
-import           Data.Aeson (ToJSON(..), toJSON, Value (..), (.=))
-import qualified Data.Map.Strict as Map
-import qualified Data.Set as Set
-import qualified Data.Text as Text
-import           Text.Printf (printf)
+import           Data.Aeson                     ( ToJSON(..)
+                                                , toJSON
+                                                , Value(..)
+                                                , (.=)
+                                                )
+import qualified Data.Map.Strict               as Map
+import qualified Data.Set                      as Set
+import qualified Data.Text                     as Text
+import           Text.Printf                    ( printf )
 
-import           Cardano.BM.Data.LogItem (LOContent (..),
-                                          PrivacyAnnotation (..),
-                                          mkLOMeta)
+import           Cardano.BM.Data.LogItem        ( LOContent(..)
+                                                , PrivacyAnnotation(..)
+                                                , mkLOMeta
+                                                )
 import           Cardano.BM.Tracing
-import           Cardano.BM.Trace (traceNamedObject, appendName)
-import           Cardano.BM.Data.Tracer (emptyObject, mkObject)
+import           Cardano.BM.Trace               ( traceNamedObject
+                                                , appendName
+                                                )
+import           Cardano.BM.Data.Tracer         ( emptyObject
+                                                , mkObject
+                                                )
 
-import           Ouroboros.Consensus.Block (Header)
-import           Ouroboros.Consensus.Node (NodeKernel(..), remoteAddress)
-import           Ouroboros.Consensus.Util.Orphans ()
+import           Ouroboros.Consensus.Block      ( Header )
+import           Ouroboros.Consensus.Node       ( NodeKernel(..)
+                                                , remoteAddress
+                                                )
+import           Ouroboros.Consensus.Util.Orphans
+                                                ( )
 
-import qualified Ouroboros.Network.AnchoredFragment as Net
-import qualified Ouroboros.Network.Block as Net
-import           Ouroboros.Network.Block (unSlotNo)
-import qualified Ouroboros.Network.BlockFetch.ClientRegistry as Net
-import           Ouroboros.Network.BlockFetch.ClientState (PeerFetchInFlight (..), PeerFetchStatus (..), readFetchClientState)
-import           Ouroboros.Network.NodeToClient (LocalConnectionId)
-import           Ouroboros.Network.NodeToNode (RemoteConnectionId)
+import qualified Ouroboros.Network.AnchoredFragment
+                                               as Net
+import qualified Ouroboros.Network.Block       as Net
+import           Ouroboros.Network.Block        ( unSlotNo )
+import qualified Ouroboros.Network.BlockFetch.ClientRegistry
+                                               as Net
+import           Ouroboros.Network.BlockFetch.ClientState
+                                                ( PeerFetchInFlight(..)
+                                                , PeerFetchStatus(..)
+                                                , readFetchClientState
+                                                )
+import           Ouroboros.Network.NodeToClient ( LocalConnectionId )
+import           Ouroboros.Network.NodeToNode   ( RemoteConnectionId )
 
 import           Cardano.Tracing.Kernel
 
@@ -50,25 +70,24 @@ data Peer blk =
   deriving (Generic)
 
 instance NoUnexpectedThunks (Peer blk) where
-    whnfNoUnexpectedThunks _ _ = pure NoUnexpectedThunks
+  whnfNoUnexpectedThunks _ _ = pure NoUnexpectedThunks
 
 instance NFData (Peer blk) where
-    rnf _ = ()
+  rnf _ = ()
 
 ppPeer :: Peer blk -> Text
-ppPeer (Peer cid _af status inflight) =
-  Text.pack $ printf "%-15s %-8s %s" (ppCid cid) (ppStatus status) (ppInFlight inflight)
+ppPeer (Peer cid _af status inflight) = Text.pack
+  $ printf "%-15s %-8s %s" (ppCid cid) (ppStatus status) (ppInFlight inflight)
 
 ppCid :: RemoteConnectionId -> String
 ppCid = takeWhile (/= ':') . show . remoteAddress
 
 ppInFlight :: PeerFetchInFlight header -> String
-ppInFlight f = printf
- "%5s  %3d  %5d  %6d"
- (ppMaxSlotNo $ peerFetchMaxSlotNo f)
- (peerFetchReqsInFlight f)
- (Set.size $ peerFetchBlocksInFlight f)
- (peerFetchBytesInFlight f)
+ppInFlight f = printf "%5s  %3d  %5d  %6d"
+                      (ppMaxSlotNo $ peerFetchMaxSlotNo f)
+                      (peerFetchReqsInFlight f)
+                      (Set.size $ peerFetchBlocksInFlight f)
+                      (peerFetchBytesInFlight f)
 
 ppMaxSlotNo :: Net.MaxSlotNo -> String
 ppMaxSlotNo Net.NoMaxSlotNo = "???"
@@ -77,45 +96,45 @@ ppMaxSlotNo (Net.MaxSlotNo x) = show (unSlotNo x)
 ppStatus :: PeerFetchStatus header -> String
 ppStatus PeerFetchStatusShutdown = "shutdown"
 ppStatus PeerFetchStatusAberrant = "aberrant"
-ppStatus PeerFetchStatusBusy     = "fetching"
-ppStatus PeerFetchStatusReady {} = "ready"
+ppStatus PeerFetchStatusBusy = "fetching"
+ppStatus PeerFetchStatusReady{} = "ready"
 
-getCurrentPeers
-  :: NodeKernelData blk
-  -> IO [Peer blk]
+getCurrentPeers :: NodeKernelData blk -> IO [Peer blk]
 getCurrentPeers nkd = mapNodeKernelDataIO extractPeers nkd
-                      <&> fromSMaybe mempty
+  <&> fromSMaybe mempty
  where
   tuple3pop :: (a, b, c) -> (a, b)
   tuple3pop (a, b, _) = (a, b)
 
   getCandidates
-    :: STM.StrictTVar IO (Map peer (STM.StrictTVar IO (Net.AnchoredFragment (Header blk))))
+    :: STM.StrictTVar
+         IO
+         (Map peer (STM.StrictTVar IO (Net.AnchoredFragment (Header blk))))
     -> STM.STM IO (Map peer (Net.AnchoredFragment (Header blk)))
   getCandidates var = STM.readTVar var >>= traverse STM.readTVar
 
-  extractPeers :: NodeKernel IO RemoteConnectionId LocalConnectionId blk
-                -> IO [Peer blk]
+  extractPeers
+    :: NodeKernel IO RemoteConnectionId LocalConnectionId blk -> IO [Peer blk]
   extractPeers kernel = do
-    peerStates <- fmap tuple3pop <$> (   STM.atomically
-                                       . (>>= traverse readFetchClientState)
-                                       . Net.readFetchClientsStateVars
-                                       . getFetchClientRegistry $ kernel
-                                     )
+    peerStates <-
+      fmap tuple3pop
+        <$> (STM.atomically
+            . (>>= traverse readFetchClientState)
+            . Net.readFetchClientsStateVars
+            . getFetchClientRegistry
+            $ kernel
+            )
     candidates <- STM.atomically . getCandidates . getNodeCandidates $ kernel
 
     let peers = flip Map.mapMaybeWithKey candidates $ \cid af ->
-                  maybe Nothing
-                        (\(status, inflight) -> Just $ Peer cid af status inflight)
-                        $ Map.lookup cid peerStates
+          maybe Nothing
+                (\(status, inflight) -> Just $ Peer cid af status inflight)
+            $ Map.lookup cid peerStates
     pure . Map.elems $ peers
 
 -- | Trace peers list, it will be forwarded to an external process
 --   (for example, to RTView service).
-tracePeers
-  :: Trace IO Text
-  -> [Peer blk]
-  -> IO ()
+tracePeers :: Trace IO Text -> [Peer blk] -> IO ()
 tracePeers tr peers = do
   let tr' = appendName "metrics" tr
   let tr'' = appendName "peersFromNodeKernel" tr'
@@ -128,17 +147,18 @@ instance ToObject [Peer blk] where
   toObject MinimalVerbosity _ = emptyObject
   toObject _ [] = emptyObject
   toObject verb xs = mkObject
-    [ "kind"  .= String "NodeKernelPeers"
-    , "peers" .= toJSON
-      (foldl' (\acc x -> toObject verb x : acc) [] xs)
+    [ "kind" .= String "NodeKernelPeers"
+    , "peers" .= toJSON (foldl' (\acc x -> toObject verb x : acc) [] xs)
     ]
 
 instance ToObject (Peer blk) where
-  toObject _verb (Peer cid _af status inflight) =
-    mkObject [ "peerAddress"   .= String (Text.pack . show . remoteAddress $ cid)
-             , "peerStatus"    .= String (Text.pack . ppStatus $ status)
-             , "peerSlotNo"    .= String (Text.pack . ppMaxSlotNo . peerFetchMaxSlotNo $ inflight)
-             , "peerReqsInF"   .= String (show . peerFetchReqsInFlight $ inflight)
-             , "peerBlocksInF" .= String (show . Set.size . peerFetchBlocksInFlight $ inflight)
-             , "peerBytesInF"  .= String (show . peerFetchBytesInFlight $ inflight)
-             ]
+  toObject _verb (Peer cid _af status inflight) = mkObject
+    [ "peerAddress" .= String (Text.pack . show . remoteAddress $ cid)
+    , "peerStatus" .= String (Text.pack . ppStatus $ status)
+    , "peerSlotNo"
+      .= String (Text.pack . ppMaxSlotNo . peerFetchMaxSlotNo $ inflight)
+    , "peerReqsInF" .= String (show . peerFetchReqsInFlight $ inflight)
+    , "peerBlocksInF"
+      .= String (show . Set.size . peerFetchBlocksInFlight $ inflight)
+    , "peerBytesInF" .= String (show . peerFetchBytesInFlight $ inflight)
+    ]

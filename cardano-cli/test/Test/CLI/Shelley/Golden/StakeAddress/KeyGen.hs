@@ -2,13 +2,14 @@
 
 module Test.CLI.Shelley.Golden.StakeAddress.KeyGen
   ( golden_shelleyStakeAddressKeyGen
-  ) where
+  )
+where
 
-import Cardano.Prelude
+import           Cardano.Prelude
 
-import Hedgehog (Property)
+import           Hedgehog                       ( Property )
 
-import qualified Test.OptParse as OP
+import qualified Test.OptParse                 as OP
 
 {- HLINT ignore "Use camelCase" -}
 
@@ -19,12 +20,18 @@ golden_shelleyStakeAddressKeyGen = OP.propertyOnce $ do
     signingKeyFile <- OP.noteTempFile tempDir "kes.skey"
 
     void $ OP.execCardanoCLI
-        [ "shelley","stake-address","key-gen"
-        , "--verification-key-file", verificationKeyFile
-        , "--signing-key-file", signingKeyFile
-        ]
+      [ "shelley"
+      , "stake-address"
+      , "key-gen"
+      , "--verification-key-file"
+      , verificationKeyFile
+      , "--signing-key-file"
+      , signingKeyFile
+      ]
 
-    OP.assertFileOccurences 1 "StakeVerificationKeyShelley_ed25519" verificationKeyFile
+    OP.assertFileOccurences 1
+                            "StakeVerificationKeyShelley_ed25519"
+                            verificationKeyFile
     OP.assertFileOccurences 1 "StakeSigningKeyShelley_ed25519" signingKeyFile
 
     OP.assertEndsWithSingleNewline verificationKeyFile

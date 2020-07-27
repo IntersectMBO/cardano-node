@@ -2,11 +2,12 @@
 
 module Test.CLI.Byron.Golden.TextEnvelope.PaymentKeys
   ( golden_byronPaymentKeys
-  ) where
+  )
+where
 
 import           Cardano.Prelude
 
-import           Hedgehog (Property)
+import           Hedgehog                       ( Property )
 
 
 -- | 1. Generate a key pair

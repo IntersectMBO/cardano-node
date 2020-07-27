@@ -13,23 +13,28 @@ module Cardano.Node.Topology
 where
 
 import           Cardano.Prelude
-import           Prelude (String)
+import           Prelude                        ( String )
 
-import           Control.Exception (IOException)
-import qualified Control.Exception as Exception
+import           Control.Exception              ( IOException )
+import qualified Control.Exception             as Exception
 import           Data.Aeson
-import qualified Data.ByteString as BS
-import qualified Data.ByteString.Lazy.Char8 as LBS
-import qualified Data.IP as IP
-import qualified Data.Text as T
-import           Text.Read (readMaybe)
-import           Network.Socket (PortNumber, SockAddr (..))
+import qualified Data.ByteString               as BS
+import qualified Data.ByteString.Lazy.Char8    as LBS
+import qualified Data.IP                       as IP
+import qualified Data.Text                     as T
+import           Text.Read                      ( readMaybe )
+import           Network.Socket                 ( PortNumber
+                                                , SockAddr(..)
+                                                )
 
 import           Cardano.Node.Types
-import           Cardano.Config.Types (NodeAddress(..), NodeHostAddress(..),
-                   TopologyFile(..))
+import           Cardano.Config.Types           ( NodeAddress(..)
+                                                , NodeHostAddress(..)
+                                                , TopologyFile(..)
+                                                )
 
-import           Ouroboros.Consensus.Util.Condense (Condense (..))
+import           Ouroboros.Consensus.Util.Condense
+                                                ( Condense(..) )
 
 
 newtype TopologyError
@@ -37,11 +42,10 @@ newtype TopologyError
   deriving Show
 
 nodeAddressToSockAddr :: NodeAddress -> SockAddr
-nodeAddressToSockAddr (NodeAddress addr port) =
-  case unNodeHostAddress addr of
-    Just (IP.IPv4 ipv4) -> SockAddrInet port $ IP.toHostAddress ipv4
-    Just (IP.IPv6 ipv6) -> SockAddrInet6 port 0 (IP.toHostAddress6 ipv6) 0
-    Nothing             -> SockAddrInet port 0 -- Could also be any IPv6 addr
+nodeAddressToSockAddr (NodeAddress addr port) = case unNodeHostAddress addr of
+  Just (IP.IPv4 ipv4) -> SockAddrInet port $ IP.toHostAddress ipv4
+  Just (IP.IPv6 ipv6) -> SockAddrInet6 port 0 (IP.toHostAddress6 ipv6) 0
+  Nothing -> SockAddrInet port 0 -- Could also be any IPv6 addr
 
 -- | Domain name with port number
 --
@@ -62,13 +66,13 @@ data RemoteAddress = RemoteAddress
 -- | Parse 'raAddress' field as an IP address; if it parses and the valency is
 -- non zero return corresponding NodeAddress.
 --
-remoteAddressToNodeAddress :: RemoteAddress-> Maybe NodeAddress
+remoteAddressToNodeAddress :: RemoteAddress -> Maybe NodeAddress
 remoteAddressToNodeAddress (RemoteAddress addrStr port val) =
   case readMaybe addrStr of
     Nothing -> Nothing
     Just addr -> if val /= 0
-                 then Just $ NodeAddress (NodeHostAddress $ Just addr) port
-                 else Nothing
+      then Just $ NodeAddress (NodeHostAddress $ Just addr) port
+      else Nothing
 
 
 instance Condense RemoteAddress where
@@ -78,17 +82,18 @@ instance Condense RemoteAddress where
 instance FromJSON RemoteAddress where
   parseJSON = withObject "RemoteAddress" $ \v ->
     RemoteAddress
-      <$> v .: "addr"
+      <$> v
+      .: "addr"
       <*> ((fromIntegral :: Int -> PortNumber) <$> v .: "port")
-      <*> v .: "valency"
+      <*> v
+      .: "valency"
 
 instance ToJSON RemoteAddress where
-  toJSON ra =
-    object
-      [ "addr" .= raAddress ra
-      , "port" .= (fromIntegral (raPort ra) :: Int)
-      , "valency" .= raValency ra
-      ]
+  toJSON ra = object
+    [ "addr" .= raAddress ra
+    , "port" .= (fromIntegral (raPort ra) :: Int)
+    , "valency" .= raValency ra
+    ]
 
 data NodeSetup = NodeSetup
   { nodeId :: !Word64
@@ -98,18 +103,14 @@ data NodeSetup = NodeSetup
 
 instance FromJSON NodeSetup where
   parseJSON = withObject "NodeSetup" $ \o ->
-                NodeSetup
-                  <$> o .: "nodeId"
-                  <*> o .: "nodeAddress"
-                  <*> o .: "producers"
+    NodeSetup <$> o .: "nodeId" <*> o .: "nodeAddress" <*> o .: "producers"
 
 instance ToJSON NodeSetup where
-  toJSON ns =
-    object
-      [ "nodeId" .= nodeId ns
-      , "nodeAddress" .= nodeAddress ns
-      , "producers" .= producers ns
-      ]
+  toJSON ns = object
+    [ "nodeId" .= nodeId ns
+    , "nodeAddress" .= nodeAddress ns
+    , "producers" .= producers ns
+    ]
 
 data NetworkTopology = MockNodeTopology ![NodeSetup]
                      | RealNodeTopology ![RemoteAddress]
@@ -117,15 +118,14 @@ data NetworkTopology = MockNodeTopology ![NodeSetup]
 
 instance FromJSON NetworkTopology where
   parseJSON = withObject "NetworkTopology" $ \o -> asum
-                [ MockNodeTopology <$> o .: "MockProducers"
-                , RealNodeTopology <$> o .: "Producers"
-                ]
+    [ MockNodeTopology <$> o .: "MockProducers"
+    , RealNodeTopology <$> o .: "Producers"
+    ]
 
 instance ToJSON NetworkTopology where
-  toJSON top =
-    case top of
-      MockNodeTopology nss -> object [ "MockProducers" .= toJSON nss ]
-      RealNodeTopology ras -> object [ "Producers" .= toJSON ras ]
+  toJSON top = case top of
+    MockNodeTopology nss -> object ["MockProducers" .= toJSON nss]
+    RealNodeTopology ras -> object ["Producers" .= toJSON ras]
 
 -- | Read the `NetworkTopology` configuration from the specified file.
 -- While running a real protocol, this gives your node its own address and
@@ -140,5 +140,7 @@ readTopologyFile ncli = do
 
  where
   handler :: IOException -> Text
-  handler e = T.pack $ "Cardano.Node.Configuration.Topology.readTopologyFile: "
-                     ++ displayException e
+  handler e =
+    T.pack
+      $ "Cardano.Node.Configuration.Topology.readTopologyFile: "
+      ++ displayException e

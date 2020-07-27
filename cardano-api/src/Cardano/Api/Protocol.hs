@@ -22,16 +22,17 @@ module Cardano.Api.Protocol
   , localNodeConnectInfo
   , withlocalNodeConnectInfo
   , LocalNodeConnectInfoForSomeMode(..)
-  ) where
+  )
+where
 
 import           Cardano.Prelude
 
-import           Cardano.Chain.Slotting (EpochSlots(..))
+import           Cardano.Chain.Slotting         ( EpochSlots(..) )
 
 import           Cardano.Api.Typed
 
-import qualified Ouroboros.Consensus.Cardano as Consensus
-import           Ouroboros.Consensus.Node.Run (RunNode)
+import qualified Ouroboros.Consensus.Cardano   as Consensus
+import           Ouroboros.Consensus.Node.Run   ( RunNode )
 
 
 data Protocol = MockProtocol !MockProtocol
@@ -49,28 +50,27 @@ data MockProtocol = MockBFT
 data LocalNodeConnectInfoForSomeMode where
 
      LocalNodeConnectInfoForSomeMode
-       :: RunNode block
+       ::RunNode block
        => LocalNodeConnectInfo mode block
        -> LocalNodeConnectInfoForSomeMode
 
-withlocalNodeConnectInfo :: Protocol
-                         -> NetworkId
-                         -> FilePath
-                         -> (forall mode block.
-                                RunNode block
-                             => LocalNodeConnectInfo mode block
-                             -> a)
-                         -> a
+withlocalNodeConnectInfo
+  :: Protocol
+  -> NetworkId
+  -> FilePath
+  -> ( forall mode block
+      . RunNode block
+     => LocalNodeConnectInfo mode block
+     -> a
+     )
+  -> a
 withlocalNodeConnectInfo protocol network socketPath f =
-    case localNodeConnectInfo protocol network socketPath of
-      LocalNodeConnectInfoForSomeMode connctInfo -> f connctInfo
+  case localNodeConnectInfo protocol network socketPath of
+    LocalNodeConnectInfoForSomeMode connctInfo -> f connctInfo
 
-localNodeConnectInfo :: Protocol
-                     -> NetworkId
-                     -> FilePath
-                     -> LocalNodeConnectInfoForSomeMode
-localNodeConnectInfo protocol network socketPath =
-    case protocol of
+localNodeConnectInfo
+  :: Protocol -> NetworkId -> FilePath -> LocalNodeConnectInfoForSomeMode
+localNodeConnectInfo protocol network socketPath = case protocol of
 {-
       --TODO
       -- Mock protocols
@@ -80,25 +80,18 @@ localNodeConnectInfo protocol network socketPath =
           MockPBFT -> mkNodeClientProtocolMockPBFT
           Praos    -> mkNodeClientProtocolMockPraos
 -}
-      MockProtocol _ ->
-        panic "TODO: mkNodeClientProtocol NodeProtocolConfigurationMock"
+  MockProtocol _ ->
+    panic "TODO: mkNodeClientProtocol NodeProtocolConfigurationMock"
 
-      -- Real protocols
-      ByronProtocol epSlots secParam ->
-        LocalNodeConnectInfoForSomeMode $
-          LocalNodeConnectInfo
-            socketPath network
-            (ByronMode epSlots secParam)
+  -- Real protocols
+  ByronProtocol epSlots secParam ->
+    LocalNodeConnectInfoForSomeMode
+      $ LocalNodeConnectInfo socketPath network (ByronMode epSlots secParam)
 
-      ShelleyProtocol ->
-        LocalNodeConnectInfoForSomeMode $
-          LocalNodeConnectInfo
-            socketPath network
-            ShelleyMode
+  ShelleyProtocol -> LocalNodeConnectInfoForSomeMode
+    $ LocalNodeConnectInfo socketPath network ShelleyMode
 
-      CardanoProtocol epSlots secParam ->
-        LocalNodeConnectInfoForSomeMode $
-          LocalNodeConnectInfo
-            socketPath network
-            (CardanoMode epSlots secParam)
+  CardanoProtocol epSlots secParam ->
+    LocalNodeConnectInfoForSomeMode
+      $ LocalNodeConnectInfo socketPath network (CardanoMode epSlots secParam)
 

@@ -2,28 +2,36 @@
 
 module Test.CLI.Shelley.Golden.StakeAddress.RegistrationCertificate
   ( golden_shelleyStakeAddressRegistrationCertificate
-  ) where
+  )
+where
 
-import Cardano.Prelude
+import           Cardano.Prelude
 
-import Hedgehog (Property)
+import           Hedgehog                       ( Property )
 
-import qualified Test.OptParse as OP
+import qualified Test.OptParse                 as OP
 
 {- HLINT ignore "Use camelCase" -}
 
 golden_shelleyStakeAddressRegistrationCertificate :: Property
 golden_shelleyStakeAddressRegistrationCertificate = OP.propertyOnce $ do
   OP.workspace "tmp/stake-address-registration-certificate" $ \tempDir -> do
-    keyGenStakingVerificationKeyFile <- OP.noteInputFile "test/Test/golden/shelley/keys/stake_keys/verification_key"
+    keyGenStakingVerificationKeyFile <- OP.noteInputFile
+      "test/Test/golden/shelley/keys/stake_keys/verification_key"
     registrationCertFile <- OP.noteTempFile tempDir "registration.cert"
 
     void $ OP.execCardanoCLI
-        [ "shelley","stake-address","registration-certificate"
-        , "--staking-verification-key-file", keyGenStakingVerificationKeyFile
-        , "--out-file", registrationCertFile
-        ]
+      [ "shelley"
+      , "stake-address"
+      , "registration-certificate"
+      , "--staking-verification-key-file"
+      , keyGenStakingVerificationKeyFile
+      , "--out-file"
+      , registrationCertFile
+      ]
 
-    OP.assertFileOccurences 1 "Stake Address Registration Certificate" registrationCertFile
+    OP.assertFileOccurences 1
+                            "Stake Address Registration Certificate"
+                            registrationCertFile
 
     OP.assertEndsWithSingleNewline registrationCertFile

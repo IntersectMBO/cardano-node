@@ -4,16 +4,19 @@
 
 module Test.Cardano.Api.Typed.Envelope
   ( tests
-  ) where
+  )
+where
 
 import           Cardano.Api.Typed
 
 import           Cardano.Prelude
 
-import           Hedgehog (Property, discover)
-import qualified Hedgehog as H
+import           Hedgehog                       ( Property
+                                                , discover
+                                                )
+import qualified Hedgehog                      as H
 
-import           Test.Cardano.Api.Typed.Orphans ()
+import           Test.Cardano.Api.Typed.Orphans ( )
 import           Test.Cardano.Api.Typed.Gen
 
 prop_roundtrip_ByronVerificationKey_envelope :: Property
@@ -74,8 +77,7 @@ prop_roundtrip_KesVerificationKey_envelope =
   roundtrip_VerificationKey_envelope AsKesKey
 
 prop_roundtrip_KesSigningKey_envelope :: Property
-prop_roundtrip_KesSigningKey_envelope =
-  roundtrip_SigningKey_envelope AsKesKey
+prop_roundtrip_KesSigningKey_envelope = roundtrip_SigningKey_envelope AsKesKey
 
 
 prop_roundtrip_VrfVerificationKey_envelope :: Property
@@ -83,31 +85,28 @@ prop_roundtrip_VrfVerificationKey_envelope =
   roundtrip_VerificationKey_envelope AsVrfKey
 
 prop_roundtrip_VrfSigningKey_envelope :: Property
-prop_roundtrip_VrfSigningKey_envelope =
-  roundtrip_SigningKey_envelope AsVrfKey
+prop_roundtrip_VrfSigningKey_envelope = roundtrip_SigningKey_envelope AsVrfKey
 
 -- -----------------------------------------------------------------------------
 
-roundtrip_VerificationKey_envelope :: Key keyrole
-                                   => AsType keyrole -> Property
-roundtrip_VerificationKey_envelope roletoken =
-  H.property $ do
-    vkey <- H.forAll (genVerificationKey roletoken)
-    H.tripping vkey (serialiseToTextEnvelope Nothing)
-                    (deserialiseFromTextEnvelope (AsVerificationKey roletoken))
+roundtrip_VerificationKey_envelope :: Key keyrole => AsType keyrole -> Property
+roundtrip_VerificationKey_envelope roletoken = H.property $ do
+  vkey <- H.forAll (genVerificationKey roletoken)
+  H.tripping vkey
+             (serialiseToTextEnvelope Nothing)
+             (deserialiseFromTextEnvelope (AsVerificationKey roletoken))
 
-roundtrip_SigningKey_envelope :: (Key keyrole,
-                                  Eq (SigningKey keyrole),
-                                  Show (SigningKey keyrole))
-                              => AsType keyrole -> Property
-roundtrip_SigningKey_envelope roletoken =
-  H.property $ do
-    vkey <- H.forAll (genSigningKey roletoken)
-    H.tripping vkey (serialiseToTextEnvelope Nothing)
-                    (deserialiseFromTextEnvelope (AsSigningKey roletoken))
+roundtrip_SigningKey_envelope
+  :: (Key keyrole, Eq (SigningKey keyrole), Show (SigningKey keyrole))
+  => AsType keyrole
+  -> Property
+roundtrip_SigningKey_envelope roletoken = H.property $ do
+  vkey <- H.forAll (genSigningKey roletoken)
+  H.tripping vkey
+             (serialiseToTextEnvelope Nothing)
+             (deserialiseFromTextEnvelope (AsSigningKey roletoken))
 
 -- -----------------------------------------------------------------------------
 
 tests :: IO Bool
-tests =
-  H.checkParallel $$discover
+tests = H.checkParallel $$discover

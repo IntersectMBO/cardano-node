@@ -13,72 +13,104 @@ module Cardano.TracingOrphanInstances.Network
   ( renderHeaderHash
   , showTip
   , showPoint
-  ) where
+  )
+where
 
-import           Cardano.Prelude hiding (show)
-import           Prelude (String, show, id)
+import           Cardano.Prelude         hiding ( show )
+import           Prelude                        ( String
+                                                , show
+                                                , id
+                                                )
 
-import qualified Data.ByteString.Base16 as B16
-import           Data.Text (pack)
-import qualified Data.Text.Encoding as Text
+import qualified Data.ByteString.Base16        as B16
+import           Data.Text                      ( pack )
+import qualified Data.Text.Encoding            as Text
 
-import qualified Network.Socket as Socket (SockAddr)
-import           Network.Mux (WithMuxBearer (..), MuxTrace (..))
+import qualified Network.Socket                as Socket
+                                                ( SockAddr )
+import           Network.Mux                    ( WithMuxBearer(..)
+                                                , MuxTrace(..)
+                                                )
 
 import           Cardano.TracingOrphanInstances.Common
 
-import           Ouroboros.Consensus.Block (ConvertRawHash (..), getHeader)
-import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTx, HasTxs(..),
-                   TxId, txId)
-import           Ouroboros.Consensus.Node.Run (RunNode (..))
+import           Ouroboros.Consensus.Block      ( ConvertRawHash(..)
+                                                , getHeader
+                                                )
+import           Ouroboros.Consensus.Ledger.SupportsMempool
+                                                ( GenTx
+                                                , HasTxs(..)
+                                                , TxId
+                                                , txId
+                                                )
+import           Ouroboros.Consensus.Node.Run   ( RunNode(..) )
 import           Ouroboros.Network.Block
 import           Ouroboros.Network.BlockFetch.ClientState
-                   (TraceFetchClientState (..), TraceLabelPeer (..))
+                                                ( TraceFetchClientState(..)
+                                                , TraceLabelPeer(..)
+                                                )
 import           Ouroboros.Network.BlockFetch.Decision
-                   (FetchDecision, FetchDecline (..))
-import           Ouroboros.Network.Codec (AnyMessage (..))
-import qualified Ouroboros.Network.NodeToClient as NtC
-import qualified Ouroboros.Network.NodeToNode   as NtN
-import           Ouroboros.Network.NodeToNode
-                   (WithAddr(..), ErrorPolicyTrace(..), TraceSendRecv (..))
+                                                ( FetchDecision
+                                                , FetchDecline(..)
+                                                )
+import           Ouroboros.Network.Codec        ( AnyMessage(..) )
+import qualified Ouroboros.Network.NodeToClient
+                                               as NtC
+import qualified Ouroboros.Network.NodeToNode  as NtN
+import           Ouroboros.Network.NodeToNode   ( WithAddr(..)
+                                                , ErrorPolicyTrace(..)
+                                                , TraceSendRecv(..)
+                                                )
 import           Ouroboros.Network.Protocol.BlockFetch.Type
-                   (BlockFetch, Message(..))
-import           Ouroboros.Network.Protocol.ChainSync.Type (ChainSync)
-import qualified Ouroboros.Network.Protocol.ChainSync.Type as ChainSync
-import           Ouroboros.Network.Protocol.LocalStateQuery.Type (LocalStateQuery)
-import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as LocalStateQuery
-import           Ouroboros.Network.Protocol.LocalTxSubmission.Type (LocalTxSubmission)
-import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Type as LocalTxSub
+                                                ( BlockFetch
+                                                , Message(..)
+                                                )
+import           Ouroboros.Network.Protocol.ChainSync.Type
+                                                ( ChainSync )
+import qualified Ouroboros.Network.Protocol.ChainSync.Type
+                                               as ChainSync
+import           Ouroboros.Network.Protocol.LocalStateQuery.Type
+                                                ( LocalStateQuery )
+import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type
+                                               as LocalStateQuery
+import           Ouroboros.Network.Protocol.LocalTxSubmission.Type
+                                                ( LocalTxSubmission )
+import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Type
+                                               as LocalTxSub
 import           Ouroboros.Network.Protocol.TxSubmission.Type
-                   (Message (..), TxSubmission)
-import           Ouroboros.Network.Snocket (LocalAddress (..))
-import           Ouroboros.Network.Subscription
-                   (ConnectResult (..), DnsTrace (..), SubscriptionTrace (..),
-                    SubscriberError (..), WithDomainName (..), WithIPList (..))
+                                                ( Message(..)
+                                                , TxSubmission
+                                                )
+import           Ouroboros.Network.Snocket      ( LocalAddress(..) )
+import           Ouroboros.Network.Subscription ( ConnectResult(..)
+                                                , DnsTrace(..)
+                                                , SubscriptionTrace(..)
+                                                , SubscriberError(..)
+                                                , WithDomainName(..)
+                                                , WithIPList(..)
+                                                )
 import           Ouroboros.Network.TxSubmission.Inbound
-                   (TraceTxSubmissionInbound(..))
+                                                ( TraceTxSubmissionInbound(..) )
 import           Ouroboros.Network.TxSubmission.Outbound
-                   (TraceTxSubmissionOutbound (..))
+                                                ( TraceTxSubmissionOutbound(..)
+                                                )
 
 -- We do need some consensus imports to provide useful trace messages for some
 -- network protocols
-import           Ouroboros.Consensus.Util.Condense (Condense, condense)
+import           Ouroboros.Consensus.Util.Condense
+                                                ( Condense
+                                                , condense
+                                                )
 
 
-showTip :: Condense (HeaderHash blk)
-        => TracingVerbosity
-        -> Tip blk
-        -> String
+showTip :: Condense (HeaderHash blk) => TracingVerbosity -> Tip blk -> String
 showTip verb = showPoint verb . getTipPoint
 
-showPoint :: Condense (HeaderHash blk)
-          => TracingVerbosity
-          -> Point blk
-          -> String
-showPoint verb pt =
-  case pt of
-    GenesisPoint -> "genesis (origin)"
-    BlockPoint slot h -> trim (condense h) ++ "@" ++ condense slot
+showPoint
+  :: Condense (HeaderHash blk) => TracingVerbosity -> Point blk -> String
+showPoint verb pt = case pt of
+  GenesisPoint -> "genesis (origin)"
+  BlockPoint slot h -> trim (condense h) ++ "@" ++ condense slot
  where
   trim :: [a] -> [a]
   trim = case verb of
@@ -108,8 +140,8 @@ instance HasSeverityAnnotation NtN.HandshakeTr where
 
 instance HasPrivacyAnnotation NtN.AcceptConnectionsPolicyTrace
 instance HasSeverityAnnotation NtN.AcceptConnectionsPolicyTrace where
-  getSeverityAnnotation NtN.ServerTraceAcceptConnectionRateLimiting {} = Info
-  getSeverityAnnotation NtN.ServerTraceAcceptConnectionHardLimit {} = Warning
+  getSeverityAnnotation NtN.ServerTraceAcceptConnectionRateLimiting{} = Info
+  getSeverityAnnotation NtN.ServerTraceAcceptConnectionHardLimit{} = Warning
 
 
 instance HasPrivacyAnnotation (TraceFetchClientState header)
@@ -129,24 +161,23 @@ instance HasSeverityAnnotation a => HasSeverityAnnotation (TraceLabelPeer peer a
 instance HasPrivacyAnnotation [TraceLabelPeer peer (FetchDecision [Point header])]
 instance HasSeverityAnnotation [TraceLabelPeer peer (FetchDecision [Point header])] where
   getSeverityAnnotation [] = Debug
-  getSeverityAnnotation xs =
-      maximum $ map (\(TraceLabelPeer _ a) -> fetchDecisionSeverity a) xs
-    where
-      fetchDecisionSeverity :: FetchDecision a -> Severity
-      fetchDecisionSeverity fd =
-        case fd of
-          Left FetchDeclineChainNotPlausible     -> Debug
-          Left FetchDeclineChainNoIntersection   -> Notice
-          Left FetchDeclineAlreadyFetched        -> Debug
-          Left FetchDeclineInFlightThisPeer      -> Debug
-          Left FetchDeclineInFlightOtherPeer     -> Debug
-          Left FetchDeclinePeerShutdown          -> Info
-          Left FetchDeclinePeerSlow              -> Info
-          Left FetchDeclineReqsInFlightLimit {}  -> Info
-          Left FetchDeclineBytesInFlightLimit {} -> Info
-          Left FetchDeclinePeerBusy {}           -> Info
-          Left FetchDeclineConcurrencyLimit {}   -> Info
-          Right _                                -> Info
+  getSeverityAnnotation xs = maximum
+    $ map (\(TraceLabelPeer _ a) -> fetchDecisionSeverity a) xs
+   where
+    fetchDecisionSeverity :: FetchDecision a -> Severity
+    fetchDecisionSeverity fd = case fd of
+      Left FetchDeclineChainNotPlausible -> Debug
+      Left FetchDeclineChainNoIntersection -> Notice
+      Left FetchDeclineAlreadyFetched -> Debug
+      Left FetchDeclineInFlightThisPeer -> Debug
+      Left FetchDeclineInFlightOtherPeer -> Debug
+      Left FetchDeclinePeerShutdown -> Info
+      Left FetchDeclinePeerSlow -> Info
+      Left FetchDeclineReqsInFlightLimit{} -> Info
+      Left FetchDeclineBytesInFlightLimit{} -> Info
+      Left FetchDeclinePeerBusy{} -> Info
+      Left FetchDeclineConcurrencyLimit{} -> Info
+      Right _ -> Info
 
 
 instance HasPrivacyAnnotation (TraceTxSubmissionInbound txid tx)
@@ -162,57 +193,57 @@ instance HasSeverityAnnotation (TraceTxSubmissionOutbound txid tx) where
 instance HasPrivacyAnnotation (WithAddr addr ErrorPolicyTrace)
 instance HasSeverityAnnotation (WithAddr addr ErrorPolicyTrace) where
   getSeverityAnnotation (WithAddr _ ev) = case ev of
-    ErrorPolicySuspendPeer {} -> Warning -- peer misbehaved
-    ErrorPolicySuspendConsumer {} -> Notice -- peer temporarily not useful
-    ErrorPolicyLocalNodeError {} -> Error
-    ErrorPolicyResumePeer {} -> Debug
-    ErrorPolicyKeepSuspended {} -> Debug
-    ErrorPolicyResumeConsumer {} -> Debug
-    ErrorPolicyResumeProducer {} -> Debug
-    ErrorPolicyUnhandledApplicationException {} -> Error
-    ErrorPolicyUnhandledConnectionException {} -> Error
-    ErrorPolicyAcceptException {} -> Error
+    ErrorPolicySuspendPeer{} -> Warning -- peer misbehaved
+    ErrorPolicySuspendConsumer{} -> Notice -- peer temporarily not useful
+    ErrorPolicyLocalNodeError{} -> Error
+    ErrorPolicyResumePeer{} -> Debug
+    ErrorPolicyKeepSuspended{} -> Debug
+    ErrorPolicyResumeConsumer{} -> Debug
+    ErrorPolicyResumeProducer{} -> Debug
+    ErrorPolicyUnhandledApplicationException{} -> Error
+    ErrorPolicyUnhandledConnectionException{} -> Error
+    ErrorPolicyAcceptException{} -> Error
 
 
 instance HasPrivacyAnnotation (WithDomainName DnsTrace)
 instance HasSeverityAnnotation (WithDomainName DnsTrace) where
   getSeverityAnnotation (WithDomainName _ ev) = case ev of
-    DnsTraceLookupException {} -> Error
-    DnsTraceLookupAError {} -> Error
-    DnsTraceLookupAAAAError {} -> Error
+    DnsTraceLookupException{} -> Error
+    DnsTraceLookupAError{} -> Error
+    DnsTraceLookupAAAAError{} -> Error
     DnsTraceLookupIPv6First -> Debug
     DnsTraceLookupIPv4First -> Debug
-    DnsTraceLookupAResult {} -> Debug
-    DnsTraceLookupAAAAResult {} -> Debug
+    DnsTraceLookupAResult{} -> Debug
+    DnsTraceLookupAAAAResult{} -> Debug
 
 
 instance HasPrivacyAnnotation (WithDomainName (SubscriptionTrace Socket.SockAddr))
 instance HasSeverityAnnotation (WithDomainName (SubscriptionTrace Socket.SockAddr)) where
   getSeverityAnnotation (WithDomainName _ ev) = case ev of
-    SubscriptionTraceConnectStart {} -> Notice
-    SubscriptionTraceConnectEnd {} -> Notice
+    SubscriptionTraceConnectStart{} -> Notice
+    SubscriptionTraceConnectEnd{} -> Notice
     SubscriptionTraceConnectException _ e ->
-        case fromException $ SomeException e of
-             Just (_::SubscriberError) -> Debug
-             Nothing -> Error
-    SubscriptionTraceSocketAllocationException {} -> Error
-    SubscriptionTraceTryConnectToPeer {} -> Info
-    SubscriptionTraceSkippingPeer {} -> Info
+      case fromException $ SomeException e of
+        Just (_ :: SubscriberError) -> Debug
+        Nothing -> Error
+    SubscriptionTraceSocketAllocationException{} -> Error
+    SubscriptionTraceTryConnectToPeer{} -> Info
+    SubscriptionTraceSkippingPeer{} -> Info
     SubscriptionTraceSubscriptionRunning -> Debug
-    SubscriptionTraceSubscriptionWaiting {} -> Debug
+    SubscriptionTraceSubscriptionWaiting{} -> Debug
     SubscriptionTraceSubscriptionFailed -> Warning
-    SubscriptionTraceSubscriptionWaitingNewConnection {} -> Debug
-    SubscriptionTraceStart {} -> Debug
-    SubscriptionTraceRestart {} -> Debug
-    SubscriptionTraceConnectionExist {} -> Info
-    SubscriptionTraceUnsupportedRemoteAddr {} -> Warning
+    SubscriptionTraceSubscriptionWaitingNewConnection{} -> Debug
+    SubscriptionTraceStart{} -> Debug
+    SubscriptionTraceRestart{} -> Debug
+    SubscriptionTraceConnectionExist{} -> Info
+    SubscriptionTraceUnsupportedRemoteAddr{} -> Warning
     SubscriptionTraceMissingLocalAddress -> Warning
     SubscriptionTraceApplicationException _ e ->
-        case fromException $ SomeException e of
-             Just (_::SubscriberError) -> Debug
-             Nothing -> Error
-    SubscriptionTraceAllocateSocket {} -> Debug
-    SubscriptionTraceCloseSocket {} -> Debug
+      case fromException $ SomeException e of
+        Just (_ :: SubscriberError) -> Debug
+        Nothing -> Error
+    SubscriptionTraceAllocateSocket{} -> Debug
+    SubscriptionTraceCloseSocket{} -> Debug
 
 
 instance HasPrivacyAnnotation (WithIPList (SubscriptionTrace Socket.SockAddr))
@@ -224,50 +255,50 @@ instance HasSeverityAnnotation (WithIPList (SubscriptionTrace Socket.SockAddr)) 
       ConnectSuccessLast -> Notice
       ConnectValencyExceeded -> Warning
     SubscriptionTraceConnectException _ e ->
-        case fromException $ SomeException e of
-             Just (_::SubscriberError) -> Debug
-             Nothing -> Error
-    SubscriptionTraceSocketAllocationException {} -> Error
-    SubscriptionTraceTryConnectToPeer {} -> Info
-    SubscriptionTraceSkippingPeer {} -> Info
+      case fromException $ SomeException e of
+        Just (_ :: SubscriberError) -> Debug
+        Nothing -> Error
+    SubscriptionTraceSocketAllocationException{} -> Error
+    SubscriptionTraceTryConnectToPeer{} -> Info
+    SubscriptionTraceSkippingPeer{} -> Info
     SubscriptionTraceSubscriptionRunning -> Debug
-    SubscriptionTraceSubscriptionWaiting {} -> Debug
+    SubscriptionTraceSubscriptionWaiting{} -> Debug
     SubscriptionTraceSubscriptionFailed -> Error
-    SubscriptionTraceSubscriptionWaitingNewConnection {} -> Notice
-    SubscriptionTraceStart {} -> Debug
-    SubscriptionTraceRestart {} -> Info
-    SubscriptionTraceConnectionExist {} -> Notice
-    SubscriptionTraceUnsupportedRemoteAddr {} -> Error
+    SubscriptionTraceSubscriptionWaitingNewConnection{} -> Notice
+    SubscriptionTraceStart{} -> Debug
+    SubscriptionTraceRestart{} -> Info
+    SubscriptionTraceConnectionExist{} -> Notice
+    SubscriptionTraceUnsupportedRemoteAddr{} -> Error
     SubscriptionTraceMissingLocalAddress -> Warning
     SubscriptionTraceApplicationException _ e ->
-        case fromException $ SomeException e of
-             Just (_::SubscriberError) -> Debug
-             Nothing -> Error
-    SubscriptionTraceAllocateSocket {} -> Debug
-    SubscriptionTraceCloseSocket {} -> Info
+      case fromException $ SomeException e of
+        Just (_ :: SubscriberError) -> Debug
+        Nothing -> Error
+    SubscriptionTraceAllocateSocket{} -> Debug
+    SubscriptionTraceCloseSocket{} -> Info
 
 
 instance HasPrivacyAnnotation (Identity (SubscriptionTrace LocalAddress))
 instance HasSeverityAnnotation (Identity (SubscriptionTrace LocalAddress)) where
   getSeverityAnnotation (Identity ev) = case ev of
-    SubscriptionTraceConnectStart {} -> Notice
-    SubscriptionTraceConnectEnd {} -> Notice
-    SubscriptionTraceConnectException {} -> Error
-    SubscriptionTraceSocketAllocationException {} -> Error
-    SubscriptionTraceTryConnectToPeer {} -> Notice
-    SubscriptionTraceSkippingPeer {} -> Info
+    SubscriptionTraceConnectStart{} -> Notice
+    SubscriptionTraceConnectEnd{} -> Notice
+    SubscriptionTraceConnectException{} -> Error
+    SubscriptionTraceSocketAllocationException{} -> Error
+    SubscriptionTraceTryConnectToPeer{} -> Notice
+    SubscriptionTraceSkippingPeer{} -> Info
     SubscriptionTraceSubscriptionRunning -> Notice
-    SubscriptionTraceSubscriptionWaiting {} -> Debug
+    SubscriptionTraceSubscriptionWaiting{} -> Debug
     SubscriptionTraceSubscriptionFailed -> Warning
-    SubscriptionTraceSubscriptionWaitingNewConnection {} -> Debug
-    SubscriptionTraceStart {} -> Notice
-    SubscriptionTraceRestart {} -> Notice
-    SubscriptionTraceConnectionExist {} -> Debug
-    SubscriptionTraceUnsupportedRemoteAddr {} -> Warning
+    SubscriptionTraceSubscriptionWaitingNewConnection{} -> Debug
+    SubscriptionTraceStart{} -> Notice
+    SubscriptionTraceRestart{} -> Notice
+    SubscriptionTraceConnectionExist{} -> Debug
+    SubscriptionTraceUnsupportedRemoteAddr{} -> Warning
     SubscriptionTraceMissingLocalAddress -> Warning
-    SubscriptionTraceApplicationException {} -> Error
-    SubscriptionTraceAllocateSocket {} -> Debug
-    SubscriptionTraceCloseSocket {} -> Debug
+    SubscriptionTraceApplicationException{} -> Error
+    SubscriptionTraceAllocateSocket{} -> Debug
+    SubscriptionTraceCloseSocket{} -> Debug
 
 
 instance Transformable Text IO (Identity (SubscriptionTrace LocalAddress)) where
@@ -278,34 +309,32 @@ instance HasTextFormatter (Identity (SubscriptionTrace LocalAddress)) where
 
 instance ToObject (Identity (SubscriptionTrace LocalAddress)) where
   toObject _verb (Identity ev) =
-    mkObject [ "kind" .= ("SubscriptionTrace" :: String)
-             , "event" .= show ev
-             ]
+    mkObject ["kind" .= ("SubscriptionTrace" :: String), "event" .= show ev]
 
 
 instance HasPrivacyAnnotation (WithMuxBearer peer MuxTrace)
 instance HasSeverityAnnotation (WithMuxBearer peer MuxTrace) where
   getSeverityAnnotation (WithMuxBearer _ ev) = case ev of
     MuxTraceRecvHeaderStart -> Debug
-    MuxTraceRecvHeaderEnd {} -> Debug
-    MuxTraceRecvStart {} -> Debug
-    MuxTraceRecvEnd {} -> Debug
-    MuxTraceSendStart {} -> Debug
+    MuxTraceRecvHeaderEnd{} -> Debug
+    MuxTraceRecvStart{} -> Debug
+    MuxTraceRecvEnd{} -> Debug
+    MuxTraceSendStart{} -> Debug
     MuxTraceSendEnd -> Debug
-    MuxTraceState {} -> Info
-    MuxTraceCleanExit {} -> Notice
-    MuxTraceExceptionExit {} -> Notice
-    MuxTraceChannelRecvStart {} -> Debug
-    MuxTraceChannelRecvEnd {} -> Debug
-    MuxTraceChannelSendStart {} -> Debug
-    MuxTraceChannelSendEnd {} -> Debug
+    MuxTraceState{} -> Info
+    MuxTraceCleanExit{} -> Notice
+    MuxTraceExceptionExit{} -> Notice
+    MuxTraceChannelRecvStart{} -> Debug
+    MuxTraceChannelRecvEnd{} -> Debug
+    MuxTraceChannelSendStart{} -> Debug
+    MuxTraceChannelSendEnd{} -> Debug
     MuxTraceHandshakeStart -> Debug
-    MuxTraceHandshakeClientEnd {} -> Info
+    MuxTraceHandshakeClientEnd{} -> Info
     MuxTraceHandshakeServerEnd -> Debug
-    MuxTraceHandshakeClientError {} -> Error
-    MuxTraceHandshakeServerError {} -> Error
-    MuxTraceRecvDeltaQObservation {} -> Debug
-    MuxTraceRecvDeltaQSample {} -> Debug
+    MuxTraceHandshakeClientError{} -> Error
+    MuxTraceHandshakeServerError{} -> Error
+    MuxTraceRecvDeltaQObservation{} -> Debug
+    MuxTraceRecvDeltaQSample{} -> Debug
     MuxTraceSDUReadTimeoutException -> Notice
     MuxTraceSDUWriteTimeoutException -> Notice
     MuxTraceStartEagerly _ _ -> Debug
@@ -392,9 +421,8 @@ instance (Show peer)
   trTransformer = trStructuredText
 instance (Show peer)
       => HasTextFormatter (WithMuxBearer peer MuxTrace) where
-  formatText (WithMuxBearer peer ev) = \_o ->
-    "Bearer on " <> pack (show peer)
-   <> " event: " <> pack (show ev)
+  formatText (WithMuxBearer peer ev) =
+    \_o -> "Bearer on " <> pack (show peer) <> " event: " <> pack (show ev)
 
 
 --
@@ -407,170 +435,158 @@ instance ( Condense (TxId (GenTx blk))
          , HasTxs blk
          )
       => ToObject (AnyMessage (BlockFetch blk)) where
-  toObject MaximalVerbosity (AnyMessage (MsgBlock blk)) =
-    mkObject [ "kind" .= String "MsgBlock"
-             , "block hash" .= renderHeaderHash (Proxy @blk) (blockHash blk)
-             , "block size" .= toJSON (nodeBlockFetchSize (getHeader blk))
-             , "tx ids" .= toJSON (presentTx <$> extractTxs blk)
-             ]
-      where
-        presentTx :: GenTx blk -> Value
-        presentTx =  String . pack . condense . txId
+  toObject MaximalVerbosity (AnyMessage (MsgBlock blk)) = mkObject
+    [ "kind" .= String "MsgBlock"
+    , "block hash" .= renderHeaderHash (Proxy @blk) (blockHash blk)
+    , "block size" .= toJSON (nodeBlockFetchSize (getHeader blk))
+    , "tx ids" .= toJSON (presentTx <$> extractTxs blk)
+    ]
+   where
+    presentTx :: GenTx blk -> Value
+    presentTx = String . pack . condense . txId
 
-  toObject _v (AnyMessage (MsgBlock blk)) =
-    mkObject [ "kind" .= String "MsgBlock"
-             , "block hash" .= renderHeaderHash (Proxy @blk) (blockHash blk)
-             , "block size" .= toJSON (nodeBlockFetchSize (getHeader blk))
-             ]
+  toObject _v (AnyMessage (MsgBlock blk)) = mkObject
+    [ "kind" .= String "MsgBlock"
+    , "block hash" .= renderHeaderHash (Proxy @blk) (blockHash blk)
+    , "block size" .= toJSON (nodeBlockFetchSize (getHeader blk))
+    ]
   toObject _v (AnyMessage MsgRequestRange{}) =
-    mkObject [ "kind" .= String "MsgRequestRange" ]
+    mkObject ["kind" .= String "MsgRequestRange"]
   toObject _v (AnyMessage MsgStartBatch{}) =
-    mkObject [ "kind" .= String "MsgStartBatch" ]
+    mkObject ["kind" .= String "MsgStartBatch"]
   toObject _v (AnyMessage MsgNoBlocks{}) =
-    mkObject [ "kind" .= String "MsgNoBlocks" ]
+    mkObject ["kind" .= String "MsgNoBlocks"]
   toObject _v (AnyMessage MsgBatchDone{}) =
-    mkObject [ "kind" .= String "MsgBatchDone" ]
+    mkObject ["kind" .= String "MsgBatchDone"]
   toObject _v (AnyMessage MsgClientDone{}) =
-    mkObject [ "kind" .= String "MsgClientDone" ]
+    mkObject ["kind" .= String "MsgClientDone"]
 
 instance ToObject (AnyMessage (LocalStateQuery blk query)) where
   toObject _verb (AnyMessage LocalStateQuery.MsgAcquire{}) =
-    mkObject [ "kind" .= String "MsgAcquire" ]
+    mkObject ["kind" .= String "MsgAcquire"]
   toObject _verb (AnyMessage LocalStateQuery.MsgAcquired{}) =
-    mkObject [ "kind" .= String "MsgAcquired" ]
+    mkObject ["kind" .= String "MsgAcquired"]
   toObject _verb (AnyMessage LocalStateQuery.MsgFailure{}) =
-    mkObject [ "kind" .= String "MsgFailure" ]
+    mkObject ["kind" .= String "MsgFailure"]
   toObject _verb (AnyMessage LocalStateQuery.MsgQuery{}) =
-    mkObject [ "kind" .= String "MsgQuery" ]
+    mkObject ["kind" .= String "MsgQuery"]
   toObject _verb (AnyMessage LocalStateQuery.MsgResult{}) =
-    mkObject [ "kind" .= String "MsgResult" ]
+    mkObject ["kind" .= String "MsgResult"]
   toObject _verb (AnyMessage LocalStateQuery.MsgRelease{}) =
-    mkObject [ "kind" .= String "MsgRelease" ]
+    mkObject ["kind" .= String "MsgRelease"]
   toObject _verb (AnyMessage LocalStateQuery.MsgReAcquire{}) =
-    mkObject [ "kind" .= String "MsgReAcquire" ]
+    mkObject ["kind" .= String "MsgReAcquire"]
   toObject _verb (AnyMessage LocalStateQuery.MsgDone{}) =
-    mkObject [ "kind" .= String "MsgDone" ]
+    mkObject ["kind" .= String "MsgDone"]
 
 instance ToObject (AnyMessage (LocalTxSubmission tx err)) where
   toObject _verb (AnyMessage LocalTxSub.MsgSubmitTx{}) =
-    mkObject [ "kind" .= String "MsgSubmitTx" ]
+    mkObject ["kind" .= String "MsgSubmitTx"]
   toObject _verb (AnyMessage LocalTxSub.MsgAcceptTx{}) =
-    mkObject [ "kind" .= String "MsgAcceptTx" ]
+    mkObject ["kind" .= String "MsgAcceptTx"]
   toObject _verb (AnyMessage LocalTxSub.MsgRejectTx{}) =
-    mkObject [ "kind" .= String "MsgRejectTx" ]
+    mkObject ["kind" .= String "MsgRejectTx"]
   toObject _verb (AnyMessage LocalTxSub.MsgDone{}) =
-    mkObject [ "kind" .= String "MsgDone" ]
+    mkObject ["kind" .= String "MsgDone"]
 
 instance ToObject (AnyMessage (ChainSync blk tip)) where
-   toObject _verb (AnyMessage ChainSync.MsgRequestNext{}) =
-     mkObject [ "kind" .= String "MsgRequestNext" ]
-   toObject _verb (AnyMessage ChainSync.MsgAwaitReply{}) =
-     mkObject [ "kind" .= String "MsgAwaitReply" ]
-   toObject _verb (AnyMessage ChainSync.MsgRollForward{}) =
-     mkObject [ "kind" .= String "MsgRollForward" ]
-   toObject _verb (AnyMessage ChainSync.MsgRollBackward{}) =
-     mkObject [ "kind" .= String "MsgRollBackward" ]
-   toObject _verb (AnyMessage ChainSync.MsgFindIntersect{}) =
-     mkObject [ "kind" .= String "MsgFindIntersect" ]
-   toObject _verb (AnyMessage ChainSync.MsgIntersectFound{}) =
-     mkObject [ "kind" .= String "MsgIntersectFound" ]
-   toObject _verb (AnyMessage ChainSync.MsgIntersectNotFound{}) =
-     mkObject [ "kind" .= String "MsgIntersectNotFound" ]
-   toObject _verb (AnyMessage ChainSync.MsgDone{}) =
-     mkObject [ "kind" .= String "MsgDone" ]
+  toObject _verb (AnyMessage ChainSync.MsgRequestNext{}) =
+    mkObject ["kind" .= String "MsgRequestNext"]
+  toObject _verb (AnyMessage ChainSync.MsgAwaitReply{}) =
+    mkObject ["kind" .= String "MsgAwaitReply"]
+  toObject _verb (AnyMessage ChainSync.MsgRollForward{}) =
+    mkObject ["kind" .= String "MsgRollForward"]
+  toObject _verb (AnyMessage ChainSync.MsgRollBackward{}) =
+    mkObject ["kind" .= String "MsgRollBackward"]
+  toObject _verb (AnyMessage ChainSync.MsgFindIntersect{}) =
+    mkObject ["kind" .= String "MsgFindIntersect"]
+  toObject _verb (AnyMessage ChainSync.MsgIntersectFound{}) =
+    mkObject ["kind" .= String "MsgIntersectFound"]
+  toObject _verb (AnyMessage ChainSync.MsgIntersectNotFound{}) =
+    mkObject ["kind" .= String "MsgIntersectNotFound"]
+  toObject _verb (AnyMessage ChainSync.MsgDone{}) =
+    mkObject ["kind" .= String "MsgDone"]
 
 instance ToObject (FetchDecision [Point header]) where
-  toObject _verb (Left decline) =
-    mkObject [ "kind" .= String "FetchDecision declined"
-             , "declined" .= String (pack $ show $ decline) ]
-  toObject _verb (Right results) =
-    mkObject [ "kind" .= String "FetchDecision results"
-             , "length" .= String (pack $ show $ length results) ]
+  toObject _verb (Left decline) = mkObject
+    [ "kind" .= String "FetchDecision declined"
+    , "declined" .= String (pack $ show $ decline)
+    ]
+  toObject _verb (Right results) = mkObject
+    [ "kind" .= String "FetchDecision results"
+    , "length" .= String (pack $ show $ length results)
+    ]
 
 
 instance ToObject NtC.HandshakeTr where
-  toObject _verb (WithMuxBearer b ev) =
-    mkObject [ "kind" .= String "LocalHandshakeTrace"
-             , "bearer" .= show b
-             , "event" .= show ev ]
+  toObject _verb (WithMuxBearer b ev) = mkObject
+    [ "kind" .= String "LocalHandshakeTrace"
+    , "bearer" .= show b
+    , "event" .= show ev
+    ]
 
 
 instance ToObject NtN.HandshakeTr where
-  toObject _verb (WithMuxBearer b ev) =
-    mkObject [ "kind" .= String "HandshakeTrace"
-             , "bearer" .= show b
-             , "event" .= show ev ]
+  toObject _verb (WithMuxBearer b ev) = mkObject
+    ["kind" .= String "HandshakeTrace", "bearer" .= show b, "event" .= show ev]
 
 
 instance ToObject NtN.AcceptConnectionsPolicyTrace where
-  toObject _verb (NtN.ServerTraceAcceptConnectionRateLimiting delay numOfConnections) =
-    mkObject [ "kind" .= String "ServerTraceAcceptConnectionRateLimiting"
-             , "delay" .= show delay
-             , "numberOfConnection" .= show numOfConnections
-             ]
+  toObject _verb (NtN.ServerTraceAcceptConnectionRateLimiting delay numOfConnections)
+    = mkObject
+      [ "kind" .= String "ServerTraceAcceptConnectionRateLimiting"
+      , "delay" .= show delay
+      , "numberOfConnection" .= show numOfConnections
+      ]
   toObject _verb (NtN.ServerTraceAcceptConnectionHardLimit softLimit) =
-    mkObject [ "kind" .= String "ServerTraceAcceptConnectionHardLimit"
-             , "softLimit" .= show softLimit
-             ]
+    mkObject
+      [ "kind" .= String "ServerTraceAcceptConnectionHardLimit"
+      , "softLimit" .= show softLimit
+      ]
 
 
 instance (Show txid, Show tx)
       => ToObject (AnyMessage (TxSubmission txid tx)) where
-  toObject _verb (AnyMessage (MsgRequestTxs txids)) =
-    mkObject
-      [ "kind" .= String "MsgRequestTxs"
-      , "txIds" .= String (pack $ show txids)
-      ]
+  toObject _verb (AnyMessage (MsgRequestTxs txids)) = mkObject
+    ["kind" .= String "MsgRequestTxs", "txIds" .= String (pack $ show txids)]
   toObject _verb (AnyMessage (MsgReplyTxs txs)) =
-    mkObject
-      [ "kind" .= String "MsgReplyTxs"
-      , "txs" .= String (pack $ show txs)
-      ]
+    mkObject ["kind" .= String "MsgReplyTxs", "txs" .= String (pack $ show txs)]
   toObject _verb (AnyMessage (MsgRequestTxIds _ _ _)) =
-    mkObject
-      [ "kind" .= String "MsgRequestTxIds"
-      ]
+    mkObject ["kind" .= String "MsgRequestTxIds"]
   toObject _verb (AnyMessage (MsgReplyTxIds _)) =
-    mkObject
-      [ "kind" .= String "MsgReplyTxIds"
-      ]
-  toObject _verb (AnyMessage MsgDone) =
-    mkObject
-      [ "kind" .= String "MsgDone"
-      ]
+    mkObject ["kind" .= String "MsgReplyTxIds"]
+  toObject _verb (AnyMessage MsgDone) = mkObject ["kind" .= String "MsgDone"]
   --TODO: Can't use 'MsgKThxBye' because NodeToNodeV_2 is not introduced yet.
-  toObject _verb (AnyMessage _) =
-    mkObject
-      [ "kind" .= String "MsgKThxBye" ]
+  toObject _verb (AnyMessage _) = mkObject ["kind" .= String "MsgKThxBye"]
 
 
 instance Condense (HeaderHash blk)
       => ToObject (Point blk) where
   toObject MinimalVerbosity p = toObject NormalVerbosity p
-  toObject verb p =
-    mkObject [ "kind" .= String "Tip" --TODO: why is this a Tip not a Point?
-             , "tip" .= showPoint verb p ]
+  toObject verb p = mkObject
+    [ "kind" .= String "Tip" --TODO: why is this a Tip not a Point?
+    , "tip" .= showPoint verb p
+    ]
 
 
 instance ToObject SlotNo where
   toObject _verb slot =
-    mkObject [ "kind" .= String "SlotNo"
-             , "slot" .= toJSON (unSlotNo slot) ]
+    mkObject ["kind" .= String "SlotNo", "slot" .= toJSON (unSlotNo slot)]
 
 
 instance ToObject (TraceFetchClientState header) where
-  toObject _verb (AddedFetchRequest {}) =
-    mkObject [ "kind" .= String "AddedFetchRequest" ]
-  toObject _verb (AcknowledgedFetchRequest {}) =
-    mkObject [ "kind" .= String "AcknowledgedFetchRequest" ]
-  toObject _verb (CompletedBlockFetch {}) =
-    mkObject [ "kind" .= String "CompletedBlockFetch" ]
-  toObject _verb (CompletedFetchBatch {}) =
-    mkObject [ "kind" .= String "CompletedFetchBatch" ]
-  toObject _verb (StartedFetchBatch {}) =
-    mkObject [ "kind" .= String "StartedFetchBatch" ]
-  toObject _verb (RejectedFetchBatch {}) =
-    mkObject [ "kind" .= String "RejectedFetchBatch" ]
+  toObject _verb (AddedFetchRequest{}) =
+    mkObject ["kind" .= String "AddedFetchRequest"]
+  toObject _verb (AcknowledgedFetchRequest{}) =
+    mkObject ["kind" .= String "AcknowledgedFetchRequest"]
+  toObject _verb (CompletedBlockFetch{}) =
+    mkObject ["kind" .= String "CompletedBlockFetch"]
+  toObject _verb (CompletedFetchBatch{}) =
+    mkObject ["kind" .= String "CompletedFetchBatch"]
+  toObject _verb (StartedFetchBatch{}) =
+    mkObject ["kind" .= String "StartedFetchBatch"]
+  toObject _verb (RejectedFetchBatch{}) =
+    mkObject ["kind" .= String "RejectedFetchBatch"]
 
 
 instance Show peer
@@ -578,81 +594,77 @@ instance Show peer
   toObject MinimalVerbosity _ = emptyObject
   toObject _ [] = emptyObject
   toObject _ xs = mkObject
-    [ "kind"  .= String "PeersFetch"
-    , "peers" .= toJSON
-      (foldl' (\acc x -> toObject MaximalVerbosity x : acc) [] xs) ]
+    [ "kind" .= String "PeersFetch"
+    , "peers"
+      .= toJSON (foldl' (\acc x -> toObject MaximalVerbosity x : acc) [] xs)
+    ]
 
 
 instance (Show peer, ToObject a) => ToObject (TraceLabelPeer peer a) where
   toObject verb (TraceLabelPeer peerid a) =
-    mkObject [ "peer" .= show peerid ] <> toObject verb a
+    mkObject ["peer" .= show peerid] <> toObject verb a
 
 
 instance ToObject (AnyMessage ps)
       => ToObject (TraceSendRecv ps) where
-  toObject verb (TraceSendMsg m) = mkObject
-    [ "kind" .= String "Send" , "msg" .= toObject verb m ]
-  toObject verb (TraceRecvMsg m) = mkObject
-    [ "kind" .= String "Recv" , "msg" .= toObject verb m ]
+  toObject verb (TraceSendMsg m) =
+    mkObject ["kind" .= String "Send", "msg" .= toObject verb m]
+  toObject verb (TraceRecvMsg m) =
+    mkObject ["kind" .= String "Recv", "msg" .= toObject verb m]
 
 
 instance ToObject (TraceTxSubmissionInbound txid tx) where
   toObject _verb TraceTxSubmissionInbound =
-    mkObject [ "kind" .= String "TraceTxSubmissionInbound" ]
+    mkObject ["kind" .= String "TraceTxSubmissionInbound"]
 
 
 instance (Show txid, Show tx)
       => ToObject (TraceTxSubmissionOutbound txid tx) where
-  toObject MaximalVerbosity (TraceTxSubmissionOutboundRecvMsgRequestTxs txids) =
-    mkObject
+  toObject MaximalVerbosity (TraceTxSubmissionOutboundRecvMsgRequestTxs txids)
+    = mkObject
       [ "kind" .= String "TraceTxSubmissionOutboundRecvMsgRequestTxs"
       , "txIds" .= String (pack $ show txids)
       ]
   toObject _verb (TraceTxSubmissionOutboundRecvMsgRequestTxs _txids) =
-    mkObject
-      [ "kind" .= String "TraceTxSubmissionOutboundRecvMsgRequestTxs"
-      ]
+    mkObject ["kind" .= String "TraceTxSubmissionOutboundRecvMsgRequestTxs"]
   toObject MaximalVerbosity (TraceTxSubmissionOutboundSendMsgReplyTxs txs) =
     mkObject
       [ "kind" .= String "TraceTxSubmissionOutboundSendMsgReplyTxs"
       , "txs" .= String (pack $ show txs)
       ]
   toObject _verb (TraceTxSubmissionOutboundSendMsgReplyTxs _txs) =
-    mkObject
-      [ "kind" .= String "TraceTxSubmissionOutboundSendMsgReplyTxs"
-      ]
+    mkObject ["kind" .= String "TraceTxSubmissionOutboundSendMsgReplyTxs"]
 
 instance Show addr => ToObject (WithAddr addr ErrorPolicyTrace) where
-  toObject _verb (WithAddr addr ev) =
-    mkObject [ "kind" .= String "ErrorPolicyTrace"
-             , "address" .= show addr
-             , "event" .= show ev ]
+  toObject _verb (WithAddr addr ev) = mkObject
+    [ "kind" .= String "ErrorPolicyTrace"
+    , "address" .= show addr
+    , "event" .= show ev
+    ]
 
 
 instance ToObject (WithIPList (SubscriptionTrace Socket.SockAddr)) where
-  toObject _verb (WithIPList localAddresses dests ev) =
-    mkObject [ "kind" .= String "WithIPList SubscriptionTrace"
-             , "localAddresses" .= show localAddresses
-             , "dests" .= show dests
-             , "event" .= show ev ]
+  toObject _verb (WithIPList localAddresses dests ev) = mkObject
+    [ "kind" .= String "WithIPList SubscriptionTrace"
+    , "localAddresses" .= show localAddresses
+    , "dests" .= show dests
+    , "event" .= show ev
+    ]
 
 
 instance ToObject (WithDomainName DnsTrace) where
-  toObject _verb (WithDomainName dom ev) =
-    mkObject [ "kind" .= String "DnsTrace"
-             , "domain" .= show dom
-             , "event" .= show ev ]
+  toObject _verb (WithDomainName dom ev) = mkObject
+    ["kind" .= String "DnsTrace", "domain" .= show dom, "event" .= show ev]
 
 
 instance ToObject (WithDomainName (SubscriptionTrace Socket.SockAddr)) where
-  toObject _verb (WithDomainName dom ev) =
-    mkObject [ "kind" .= String "SubscriptionTrace"
-             , "domain" .= show dom
-             , "event" .= show ev ]
+  toObject _verb (WithDomainName dom ev) = mkObject
+    [ "kind" .= String "SubscriptionTrace"
+    , "domain" .= show dom
+    , "event" .= show ev
+    ]
 
 
 instance (Show peer) => ToObject (WithMuxBearer peer MuxTrace) where
-  toObject _verb (WithMuxBearer b ev) =
-    mkObject [ "kind" .= String "MuxTrace"
-             , "bearer" .= show b
-             , "event" .= show ev ]
+  toObject _verb (WithMuxBearer b ev) = mkObject
+    ["kind" .= String "MuxTrace", "bearer" .= show b, "event" .= show ev]

@@ -3,17 +3,20 @@
 
 module Test.Cardano.Api.Typed.RawBytes
   ( tests
-  ) where
+  )
+where
 
 import           Cardano.Api.Typed
 
 import           Cardano.Prelude
 
-import           Hedgehog (Property, discover)
-import qualified Hedgehog as H
+import           Hedgehog                       ( Property
+                                                , discover
+                                                )
+import qualified Hedgehog                      as H
 
 import           Test.Cardano.Api.Typed.Gen
-import           Test.Cardano.Api.Typed.Orphans ()
+import           Test.Cardano.Api.Typed.Orphans ( )
 
 -- Address CBOR round trips
 
@@ -79,16 +82,17 @@ prop_roundtrip_verification_GenesisUTxOKey_hash_raw =
 
 roundtrip_verification_key_hash_raw
   :: (Key keyrole, Eq (Hash keyrole), Show (Hash keyrole))
-  => AsType keyrole -> Property
-roundtrip_verification_key_hash_raw roletoken =
-  H.property $ do
-    vKey <- H.forAll $ genVerificationKey roletoken
-    let vKeyHash = verificationKeyHash vKey
-    H.tripping vKeyHash serialiseToRawBytes (deserialiseFromRawBytes (AsHash roletoken))
+  => AsType keyrole
+  -> Property
+roundtrip_verification_key_hash_raw roletoken = H.property $ do
+  vKey <- H.forAll $ genVerificationKey roletoken
+  let vKeyHash = verificationKeyHash vKey
+  H.tripping vKeyHash
+             serialiseToRawBytes
+             (deserialiseFromRawBytes (AsHash roletoken))
 
 -- -----------------------------------------------------------------------------
 
 
 tests :: IO Bool
-tests =
-  H.checkParallel $$discover
+tests = H.checkParallel $$discover

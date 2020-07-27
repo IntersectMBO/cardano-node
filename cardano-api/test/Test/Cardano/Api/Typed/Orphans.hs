@@ -5,15 +5,17 @@
 
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Test.Cardano.Api.Typed.Orphans () where
+module Test.Cardano.Api.Typed.Orphans
+  ()
+where
 
 import           Cardano.Prelude
 
 import           Cardano.Api.Typed
-import           Cardano.Crypto.Hash hiding (Hash)
+import           Cardano.Crypto.Hash     hiding ( Hash )
 import           Cardano.Crypto.KES
 
-import           Test.Cardano.Crypto.Orphans ()
+import           Test.Cardano.Crypto.Orphans    ( )
 
 -- Signing Key instances
 

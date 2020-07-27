@@ -12,66 +12,88 @@
 {-# LANGUAGE StandaloneDeriving #-}
 
 module Cardano.Config.Types
-    ( CBORObject (..)
-    , CertificateFile (..)
-    , ConfigError (..)
-    , DbFile (..)
-    , GenesisFile (..)
-    , KESMetricsData (..)
-    , MaxKESEvolutions (..)
-    , MaxConcurrencyBulkSync (..)
-    , MaxConcurrencyDeadline (..)
-    , OperationalCertStartKESPeriod (..)
-    , HasKESMetricsData (..)
-    , NodeAddress (..)
-    , NodeHostAddress (..)
-    , NodeProtocolMode (..)
-    , SigningKeyFile (..)
-    , ProtocolFilepaths (..)
-    , TopologyFile (..)
-    , TraceConstraints
-    , SocketPath (..)
-    , UpdateProposalFile (..)
-    , ViewMode (..)
-    , parseNodeHostAddress
-    ) where
+  ( CBORObject(..)
+  , CertificateFile(..)
+  , ConfigError(..)
+  , DbFile(..)
+  , GenesisFile(..)
+  , KESMetricsData(..)
+  , MaxKESEvolutions(..)
+  , MaxConcurrencyBulkSync(..)
+  , MaxConcurrencyDeadline(..)
+  , OperationalCertStartKESPeriod(..)
+  , HasKESMetricsData(..)
+  , NodeAddress(..)
+  , NodeHostAddress(..)
+  , NodeProtocolMode(..)
+  , SigningKeyFile(..)
+  , ProtocolFilepaths(..)
+  , TopologyFile(..)
+  , TraceConstraints
+  , SocketPath(..)
+  , UpdateProposalFile(..)
+  , ViewMode(..)
+  , parseNodeHostAddress
+  )
+where
 
-import           Prelude (show)
-import           Cardano.Prelude hiding (show)
+import           Prelude                        ( show )
+import           Cardano.Prelude         hiding ( show )
 
 import           Data.Aeson
-import           Data.IP (IP)
-import           Data.String (String)
-import qualified Data.Text as Text
-import           Network.Socket (PortNumber)
+import           Data.IP                        ( IP )
+import           Data.String                    ( String )
+import qualified Data.Text                     as Text
+import           Network.Socket                 ( PortNumber )
 
-import           Cardano.BM.Tracing (ToObject)
+import           Cardano.BM.Tracing             ( ToObject )
 
-import qualified Cardano.Chain.Slotting as Byron
-import           Cardano.Crypto.KES.Class (Period)
+import qualified Cardano.Chain.Slotting        as Byron
+import           Cardano.Crypto.KES.Class       ( Period )
 
-import           Ouroboros.Consensus.Block (Header, BlockProtocol, ForgeState(..))
-import           Ouroboros.Consensus.Byron.Ledger.Block (ByronBlock)
-import           Ouroboros.Consensus.HeaderValidation (OtherHeaderEnvelopeError)
-import           Ouroboros.Consensus.Ledger.Abstract (LedgerError)
-import           Ouroboros.Consensus.Ledger.Inspect (LedgerEvent)
+import           Ouroboros.Consensus.Block      ( Header
+                                                , BlockProtocol
+                                                , ForgeState(..)
+                                                )
+import           Ouroboros.Consensus.Byron.Ledger.Block
+                                                ( ByronBlock )
+import           Ouroboros.Consensus.HeaderValidation
+                                                ( OtherHeaderEnvelopeError )
+import           Ouroboros.Consensus.Ledger.Abstract
+                                                ( LedgerError )
+import           Ouroboros.Consensus.Ledger.Inspect
+                                                ( LedgerEvent )
 import           Ouroboros.Consensus.Ledger.SupportsMempool
-                   (GenTxId, HasTxId, HasTxs(..), ApplyTxErr)
-import           Ouroboros.Consensus.Mock.Ledger.Block (SimpleBlock)
-import           Ouroboros.Consensus.Protocol.Abstract (CannotLead, ValidationErr)
-import           Ouroboros.Consensus.Util.Condense (Condense (..))
-import           Ouroboros.Consensus.Shelley.Ledger.Block (ShelleyBlock)
-import           Ouroboros.Consensus.Shelley.Ledger.Mempool (GenTx, TxId)
-import           Ouroboros.Consensus.Shelley.Protocol.Crypto.HotKey (HotKey (..))
+                                                ( GenTxId
+                                                , HasTxId
+                                                , HasTxs(..)
+                                                , ApplyTxErr
+                                                )
+import           Ouroboros.Consensus.Mock.Ledger.Block
+                                                ( SimpleBlock )
+import           Ouroboros.Consensus.Protocol.Abstract
+                                                ( CannotLead
+                                                , ValidationErr
+                                                )
+import           Ouroboros.Consensus.Util.Condense
+                                                ( Condense(..) )
+import           Ouroboros.Consensus.Shelley.Ledger.Block
+                                                ( ShelleyBlock )
+import           Ouroboros.Consensus.Shelley.Ledger.Mempool
+                                                ( GenTx
+                                                , TxId
+                                                )
+import           Ouroboros.Consensus.Shelley.Protocol.Crypto.HotKey
+                                                ( HotKey(..) )
 
 import           Ouroboros.Consensus.HardFork.Combinator
 import           Ouroboros.Consensus.HardFork.Combinator.Unary
 
-import           Ouroboros.Network.Block (HeaderHash)
+import           Ouroboros.Network.Block        ( HeaderHash )
 
 import           Cardano.Config.LedgerQueries
 
-import           Shelley.Spec.Ledger.OCert (KESPeriod (..))
+import           Shelley.Spec.Ledger.OCert      ( KESPeriod(..) )
 
 
 -- | Errors for the cardano-config module.
@@ -80,8 +102,7 @@ data ConfigError
 
 -- | Instance for showing the @ConfigError@.
 instance Show ConfigError where
-    show (ConfigErrorFileNotFound fp)
-        = "File '" <> fp <> "' not found!"
+  show (ConfigErrorFileNotFound fp) = "File '" <> fp <> "' not found!"
 
 -- | Specify what the CBOR file is
 -- i.e a block, a tx, etc
@@ -126,8 +147,11 @@ newtype GenesisFile = GenesisFile
 
 instance FromJSON GenesisFile where
   parseJSON (String genFp) = pure . GenesisFile $ Text.unpack genFp
-  parseJSON invalid = panic $ "Parsing of GenesisFile failed due to type mismatch. "
-                           <> "Encountered: " <> (Text.pack $ show invalid)
+  parseJSON invalid =
+    panic
+      $ "Parsing of GenesisFile failed due to type mismatch. "
+      <> "Encountered: "
+      <> (Text.pack $ show invalid)
 
 -- Encompasses stake certificates, stake pool certificates,
 -- genesis delegate certificates and MIR certificates.
@@ -156,13 +180,20 @@ data ViewMode = LiveView    -- Live mode with TUI
 
 instance FromJSON ViewMode where
   parseJSON (String str) = case str of
-                            "LiveView" -> pure LiveView
-                            "SimpleView" -> pure SimpleView
-                            view -> panic $ "Parsing of ViewMode: "
-                                          <> view <> " failed. "
-                                          <> view <> " is not a valid view mode"
-  parseJSON invalid = panic $ "Parsing of ViewMode failed due to type mismatch. "
-                            <> "Encountered: " <> (Text.pack $ show invalid)
+    "LiveView" -> pure LiveView
+    "SimpleView" -> pure SimpleView
+    view ->
+      panic
+        $ "Parsing of ViewMode: "
+        <> view
+        <> " failed. "
+        <> view
+        <> " is not a valid view mode"
+  parseJSON invalid =
+    panic
+      $ "Parsing of ViewMode failed due to type mismatch. "
+      <> "Encountered: "
+      <> (Text.pack $ show invalid)
 
 --------------------------------------------------------------------------------
 -- Cardano Topology Related Data Structures
@@ -180,15 +211,15 @@ instance Condense NodeAddress where
 instance FromJSON NodeAddress where
   parseJSON = withObject "NodeAddress" $ \v -> do
     NodeAddress
-      <$> v .: "addr"
+      <$> v
+      .: "addr"
       <*> ((fromIntegral :: Int -> PortNumber) <$> v .: "port")
 
 instance ToJSON NodeAddress where
-  toJSON na =
-    object
-      [ "addr" .= toJSON (naHostAddress na)
-      , "port" .= (fromIntegral (naPort na) :: Int)
-      ]
+  toJSON na = object
+    [ "addr" .= toJSON (naHostAddress na)
+    , "port" .= (fromIntegral (naPort na) :: Int)
+    ]
 
 -- Embedding a Maybe inside a newtype is somewhat icky but this seems to work
 -- and removing the Maybe breaks the functionality in a subtle way that is difficult
@@ -199,23 +230,26 @@ newtype NodeHostAddress
   deriving (Eq, Ord)
 
 instance FromJSON NodeHostAddress where
-  parseJSON (String ipStr) =
-    case readMaybe $ Text.unpack ipStr of
-      Just ip -> pure $ NodeHostAddress (Just ip)
-      Nothing -> panic $ "Parsing of IP failed: " <> ipStr
+  parseJSON (String ipStr) = case readMaybe $ Text.unpack ipStr of
+    Just ip -> pure $ NodeHostAddress (Just ip)
+    Nothing -> panic $ "Parsing of IP failed: " <> ipStr
   parseJSON Null = pure $ NodeHostAddress Nothing
-  parseJSON invalid = panic $ "Parsing of IP failed due to type mismatch. "
-                            <> "Encountered: " <> (Text.pack $ show invalid) <> "\n"
+  parseJSON invalid =
+    panic
+      $ "Parsing of IP failed due to type mismatch. "
+      <> "Encountered: "
+      <> (Text.pack $ show invalid)
+      <> "\n"
 
 parseNodeHostAddress :: String -> Either String NodeHostAddress
 parseNodeHostAddress str =
-   maybe (Left $ "Failed to parse: " ++ str) (Right . NodeHostAddress . Just) $ readMaybe str
+  maybe (Left $ "Failed to parse: " ++ str) (Right . NodeHostAddress . Just)
+    $ readMaybe str
 
 instance ToJSON NodeHostAddress where
-  toJSON mha =
-    case unNodeHostAddress mha of
-      Just ip -> String (Text.pack $ show ip)
-      Nothing -> Null
+  toJSON mha = case unNodeHostAddress mha of
+    Just ip -> String (Text.pack $ show ip)
+    Nothing -> Null
 
 --------------------------------------------------------------------------------
 -- Protocol & Tracing Related
@@ -250,19 +284,17 @@ class HasKESMetricsData blk where
   getKESMetricsData _ = NoKESMetricsData
 
 instance HasKESMetricsData (ShelleyBlock c) where
-  getKESMetricsData forgeState =
-      TPraosKESMetricsData currKesPeriod maxKesEvos oCertStartKesPeriod
-    where
-      HotKey
-        { hkStart     = KESPeriod startKesPeriod
-        , hkEvolution = currKesPeriod
-        , hkEnd       = KESPeriod endKesPeriod
-        } = chainIndepState forgeState
+  getKESMetricsData forgeState = TPraosKESMetricsData currKesPeriod
+                                                      maxKesEvos
+                                                      oCertStartKesPeriod
+   where
+    HotKey { hkStart = KESPeriod startKesPeriod, hkEvolution = currKesPeriod, hkEnd = KESPeriod endKesPeriod }
+      = chainIndepState forgeState
 
-      maxKesEvos = MaxKESEvolutions $
-          fromIntegral $ endKesPeriod - startKesPeriod
+    maxKesEvos =
+      MaxKESEvolutions $ fromIntegral $ endKesPeriod - startKesPeriod
 
-      oCertStartKesPeriod = OperationalCertStartKESPeriod startKesPeriod
+    oCertStartKesPeriod = OperationalCertStartKESPeriod startKesPeriod
 
 instance HasKESMetricsData ByronBlock where
 
@@ -270,8 +302,7 @@ instance HasKESMetricsData (SimpleBlock a b) where
 
 instance (HasKESMetricsData x, NoHardForks x)
       => HasKESMetricsData (HardForkBlock '[x]) where
-  getKESMetricsData forgeState =
-    getKESMetricsData (project forgeState)
+  getKESMetricsData forgeState = getKESMetricsData (project forgeState)
 
 
 newtype MaxConcurrencyBulkSync = MaxConcurrencyBulkSync
@@ -292,8 +323,8 @@ newtype MaxConcurrencyDeadline = MaxConcurrencyDeadline
 -- code-base, unless the corresponding instance is missing. Note we are aiming to
 -- remove all `Condense` constaints by defining the relevant 'ToObject' instance
 -- in 'cardano-node'
-type TraceConstraints blk =
-    ( Condense blk
+type TraceConstraints blk
+  = ( Condense blk
     , Condense (Header blk)
     , Condense (HeaderHash blk)
     , Condense (GenTx blk)
@@ -306,7 +337,7 @@ type TraceConstraints blk =
     , Show (GenTxId blk)
     , Show blk
     , Show (TxId (GenTx blk))
-    , ToJSON   (TxId (GenTx blk))
+    , ToJSON (TxId (GenTx blk))
     , ToObject (ApplyTxErr blk)
     , ToObject (GenTx blk)
     , ToObject (Header blk)

@@ -2,13 +2,14 @@
 
 module Test.CLI.Shelley.Golden.Node.KeyGen
   ( golden_shelleyNodeKeyGen
-  ) where
+  )
+where
 
-import Cardano.Prelude
+import           Cardano.Prelude
 
-import Hedgehog (Property)
+import           Hedgehog                       ( Property )
 
-import qualified Test.OptParse as OP
+import qualified Test.OptParse                 as OP
 
 {- HLINT ignore "Use camelCase" -}
 
@@ -20,15 +21,22 @@ golden_shelleyNodeKeyGen = OP.propertyOnce $ do
     opCertCounterFile <- OP.noteTempFile tempDir "op-cert.counter"
 
     void $ OP.execCardanoCLI
-        [ "shelley","node","key-gen"
-        , "--verification-key-file", verificationKeyFile
-        , "--signing-key-file", signingKeyFile
-        , "--operational-certificate-issue-counter", opCertCounterFile
-        ]
+      [ "shelley"
+      , "node"
+      , "key-gen"
+      , "--verification-key-file"
+      , verificationKeyFile
+      , "--signing-key-file"
+      , signingKeyFile
+      , "--operational-certificate-issue-counter"
+      , opCertCounterFile
+      ]
 
-    OP.assertFileOccurences 1 "StakePoolVerificationKey_ed25519" $ verificationKeyFile
+    OP.assertFileOccurences 1 "StakePoolVerificationKey_ed25519"
+      $ verificationKeyFile
     OP.assertFileOccurences 1 "StakePoolSigningKey_ed25519" $ signingKeyFile
-    OP.assertFileOccurences 1 "NodeOperationalCertificateIssueCounter" $ opCertCounterFile
+    OP.assertFileOccurences 1 "NodeOperationalCertificateIssueCounter"
+      $ opCertCounterFile
 
     OP.assertEndsWithSingleNewline verificationKeyFile
     OP.assertEndsWithSingleNewline signingKeyFile

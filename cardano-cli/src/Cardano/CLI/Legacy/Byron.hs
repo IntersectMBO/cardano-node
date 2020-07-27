@@ -4,24 +4,27 @@
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Cardano.CLI.Legacy.Byron (
-      LegacyDelegateKey(..)
-    , encodeLegacyDelegateKey
-    , decodeLegacyDelegateKey
-    ) where
+module Cardano.CLI.Legacy.Byron
+  ( LegacyDelegateKey(..)
+  , encodeLegacyDelegateKey
+  , decodeLegacyDelegateKey
+  )
+where
 
-import           Cardano.Prelude hiding (option)
+import           Cardano.Prelude         hiding ( option )
 
-import qualified Codec.CBOR.Decoding as D
-import qualified Codec.CBOR.Encoding as E
-import           Lens.Micro (LensLike, _Left)
-import           Data.Coerce (coerce)
-import           Data.Semigroup ((<>))
-import           Data.Text (Text)
-import qualified Data.Text as T
+import qualified Codec.CBOR.Decoding           as D
+import qualified Codec.CBOR.Encoding           as E
+import           Lens.Micro                     ( LensLike
+                                                , _Left
+                                                )
+import           Data.Coerce                    ( coerce )
+import           Data.Semigroup                 ( (<>) )
+import           Data.Text                      ( Text )
+import qualified Data.Text                     as T
 
-import qualified Cardano.Crypto.Wallet as Wallet
-import           Cardano.Crypto.Signing (SigningKey(..))
+import qualified Cardano.Crypto.Wallet         as Wallet
+import           Cardano.Crypto.Signing         ( SigningKey(..) )
 
 -- | LegacyDelegateKey is a subset of the UserSecret's from the legacy codebase:
 -- 1. the VSS keypair must be present
@@ -38,46 +41,56 @@ decodeXPrv :: D.Decoder s Wallet.XPrv
 decodeXPrv =
   toCborError . over _Left T.pack . Wallet.xprv =<< D.decodeBytesCanonical
 
-  where over :: LensLike Identity s t a b -> (a -> b) -> s -> t
-        over = coerce
+ where
+  over :: LensLike Identity s t a b -> (a -> b) -> s -> t
+  over = coerce
 
 -- Stolen from: cardano-sl/binary/src/Pos/Binary/Class/Core.hs
 -- | Enforces that the input size is the same as the decoded one, failing in
 -- case it's not.
 enforceSize :: Text -> Int -> D.Decoder s ()
-enforceSize lbl requestedSize = D.decodeListLenCanonical >>= matchSize requestedSize lbl
+enforceSize lbl requestedSize =
+  D.decodeListLenCanonical >>= matchSize requestedSize lbl
 
 -- Stolen from: cardano-sl/binary/src/Pos/Binary/Class/Core.hs
 -- | Compare two sizes, failing if they are not equal.
 matchSize :: Int -> Text -> Int -> D.Decoder s ()
 matchSize requestedSize lbl actualSize =
-  when (actualSize /= requestedSize) $
-    cborError (lbl <> " failed the size check. Expected " <> show requestedSize <> ", found " <> show actualSize)
+  when (actualSize /= requestedSize) $ cborError
+    (lbl
+    <> " failed the size check. Expected "
+    <> show requestedSize
+    <> ", found "
+    <> show actualSize
+    )
 
 -- | Encoder for a Byron/Classic signing key.
 --   Lifted from cardano-sl legacy codebase.
 encodeLegacyDelegateKey :: LegacyDelegateKey -> E.Encoding
-encodeLegacyDelegateKey (LegacyDelegateKey (SigningKey sk))
-  =  E.encodeListLen 4
-  <> E.encodeListLen 1 <> E.encodeBytes "vss deprecated"
-  <> E.encodeListLen 1 <> encodeXPrv sk
-  <> E.encodeListLenIndef <> E.encodeBreak
-  <> E.encodeListLen 0
+encodeLegacyDelegateKey (LegacyDelegateKey (SigningKey sk)) =
+  E.encodeListLen 4
+    <> E.encodeListLen 1
+    <> E.encodeBytes "vss deprecated"
+    <> E.encodeListLen 1
+    <> encodeXPrv sk
+    <> E.encodeListLenIndef
+    <> E.encodeBreak
+    <> E.encodeListLen 0
 
 -- | Decoder for a Byron/Classic signing key.
 --   Lifted from cardano-sl legacy codebase.
 decodeLegacyDelegateKey :: D.Decoder s LegacyDelegateKey
 decodeLegacyDelegateKey = do
-    enforceSize "UserSecret" 4
-    _    <- do
-      enforceSize "vss" 1
-      D.decodeBytes
-    pkey <- do
-      enforceSize "pkey" 1
-      SigningKey <$> decodeXPrv
-    _    <- do
-      D.decodeListLenIndef
-      D.decodeSequenceLenIndef (flip (:)) [] reverse D.decodeNull
-    _    <- do
-      enforceSize "wallet" 0
-    pure $ LegacyDelegateKey pkey
+  enforceSize "UserSecret" 4
+  _ <- do
+    enforceSize "vss" 1
+    D.decodeBytes
+  pkey <- do
+    enforceSize "pkey" 1
+    SigningKey <$> decodeXPrv
+  _ <- do
+    D.decodeListLenIndef
+    D.decodeSequenceLenIndef (flip (:)) [] reverse D.decodeNull
+  _ <- do
+    enforceSize "wallet" 0
+  pure $ LegacyDelegateKey pkey

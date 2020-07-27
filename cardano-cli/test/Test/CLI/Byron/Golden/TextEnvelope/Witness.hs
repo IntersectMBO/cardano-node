@@ -2,11 +2,12 @@
 
 module Test.CLI.Byron.Golden.TextEnvelope.Witness
   ( golden_byronWitness
-  ) where
+  )
+where
 
 import           Cardano.Prelude
 
-import           Hedgehog (Property)
+import           Hedgehog                       ( Property )
 
 
 golden_byronWitness :: Property

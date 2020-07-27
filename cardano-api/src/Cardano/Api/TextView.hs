@@ -5,10 +5,10 @@
 
 module Cardano.Api.TextView
   ( -- * \"TextView\" format
-    TextView (..)
-  , TextViewError (..)
-  , TextViewType (..)
-  , TextViewDescription (..)
+    TextView(..)
+  , TextViewError(..)
+  , TextViewType(..)
+  , TextViewDescription(..)
   , renderTextViewError
   , expectTextViewOfType
   , textViewJSONConfig
@@ -16,20 +16,29 @@ module Cardano.Api.TextView
   , textShow
 
     -- * File IO support
-  , TextViewFileError (..)
+  , TextViewFileError(..)
   , renderTextViewFileError
-  ) where
+  )
+where
 
 import           Cardano.Prelude
-import           Prelude (String)
+import           Prelude                        ( String )
 
-import           Data.Aeson (FromJSON(..), ToJSON(..), object,
-                   withObject, (.=), (.:))
-import           Data.Aeson.Encode.Pretty (Config(..), defConfig, keyOrder)
-import qualified Data.ByteString.Base16 as Base16
-import           Data.ByteString.Char8 (ByteString)
-import qualified Data.Text as Text
-import qualified Data.Text.Encoding as Text
+import           Data.Aeson                     ( FromJSON(..)
+                                                , ToJSON(..)
+                                                , object
+                                                , withObject
+                                                , (.=)
+                                                , (.:)
+                                                )
+import           Data.Aeson.Encode.Pretty       ( Config(..)
+                                                , defConfig
+                                                , keyOrder
+                                                )
+import qualified Data.ByteString.Base16        as Base16
+import           Data.ByteString.Char8          ( ByteString )
+import qualified Data.Text                     as Text
+import qualified Data.Text.Encoding            as Text
 
 import           Cardano.Binary
 
@@ -59,16 +68,18 @@ data TextView = TextView
 
 instance ToJSON TextView where
   toJSON (TextView (TextViewType tvType) (TextViewDescription desc) rawCBOR) =
-    object [ "type" .= Text.decodeUtf8 tvType
-           , "description" .= Text.decodeUtf8 desc
-           , "cborHex" .= (Text.decodeUtf8 $ Base16.encode rawCBOR)
-           ]
+    object
+      [ "type" .= Text.decodeUtf8 tvType
+      , "description" .= Text.decodeUtf8 desc
+      , "cborHex" .= (Text.decodeUtf8 $ Base16.encode rawCBOR)
+      ]
 
 instance FromJSON TextView where
-  parseJSON = withObject "TextView" $ \v -> TextView
-                <$> (TextViewType . Text.encodeUtf8 <$> v .: "type")
-                <*> (TextViewDescription . Text.encodeUtf8 <$> v .: "description")
-                <*> (fst . Base16.decode . Text.encodeUtf8 <$> v .: "cborHex")
+  parseJSON = withObject "TextView" $ \v ->
+    TextView
+      <$> (TextViewType . Text.encodeUtf8 <$> v .: "type")
+      <*> (TextViewDescription . Text.encodeUtf8 <$> v .: "description")
+      <*> (fst . Base16.decode . Text.encodeUtf8 <$> v .: "cborHex")
 
 textViewJSONConfig :: Config
 textViewJSONConfig = defConfig { confCompare = textViewJSONKeyOrder }
@@ -87,23 +98,27 @@ data TextViewError
   deriving (Eq, Show)
 
 renderTextViewError :: TextViewError -> Text
-renderTextViewError tve =
-  case tve of
-    TextViewFormatError err -> "TextView format error: " <> toS err
+renderTextViewError tve = case tve of
+  TextViewFormatError err -> "TextView format error: " <> toS err
 
-    TextViewTypeError [expType] actType ->
-        "TextView type error: "
-     <> " Expected: " <> Text.decodeLatin1 (unTextViewType expType)
-     <> " Actual: " <> Text.decodeLatin1 (unTextViewType actType)
+  TextViewTypeError [expType] actType ->
+    "TextView type error: "
+      <> " Expected: "
+      <> Text.decodeLatin1 (unTextViewType expType)
+      <> " Actual: "
+      <> Text.decodeLatin1 (unTextViewType actType)
 
-    TextViewTypeError expTypes actType ->
-        "TextView type error: "
-     <> " Expected one of: "
-     <> Text.intercalate ", "
-          [ Text.decodeLatin1 (unTextViewType expType) | expType <- expTypes ]
-     <> " Actual: " <> (Text.decodeLatin1 (unTextViewType actType))
-    TextViewAesonDecodeError decErr -> "TextView aeson decode error: " <> textShow decErr
-    TextViewDecodeError decErr -> "TextView decode error: " <> textShow decErr
+  TextViewTypeError expTypes actType ->
+    "TextView type error: "
+      <> " Expected one of: "
+      <> Text.intercalate
+           ", "
+           [ Text.decodeLatin1 (unTextViewType expType) | expType <- expTypes ]
+      <> " Actual: "
+      <> (Text.decodeLatin1 (unTextViewType actType))
+  TextViewAesonDecodeError decErr ->
+    "TextView aeson decode error: " <> textShow decErr
+  TextViewDecodeError decErr -> "TextView decode error: " <> textShow decErr
 
 -- ----------------------------------------------------------------------------
 
@@ -113,9 +128,9 @@ renderTextViewError tve =
 --
 expectTextViewOfType :: TextViewType -> TextView -> Either TextViewError ()
 expectTextViewOfType expectedType tv = do
-    let actualType = tvType tv
-    unless (expectedType == actualType) $
-      throwError (TextViewTypeError [expectedType] actualType)
+  let actualType = tvType tv
+  unless (expectedType == actualType)
+    $ throwError (TextViewTypeError [expectedType] actualType)
 
 
 -- ----------------------------------------------------------------------------
@@ -128,11 +143,10 @@ data TextViewFileError
   deriving (Eq, Show)
 
 renderTextViewFileError :: TextViewFileError -> Text
-renderTextViewFileError tvfe =
-  case tvfe of
-    TextViewFileError fp err -> toS fp <> ": " <> renderTextViewError err
-    TextViewFileIOError fp ioExcpt ->
-      "TextView IO exception at: " <> toS fp <> " Error: " <> textShow ioExcpt
+renderTextViewFileError tvfe = case tvfe of
+  TextViewFileError fp err -> toS fp <> ": " <> renderTextViewError err
+  TextViewFileIOError fp ioExcpt ->
+    "TextView IO exception at: " <> toS fp <> " Error: " <> textShow ioExcpt
 
 
 -- ----------------------------------------------------------------------------
