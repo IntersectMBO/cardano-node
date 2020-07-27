@@ -68,6 +68,74 @@ prop_convertITNKeys =
 
     H.success
 
+-- | 1. Convert a bech32 ITN extended signing key to a haskell stake signing key
+prop_convertITNExtendedSigningKey :: Property
+prop_convertITNExtendedSigningKey =
+  propertyOnce $ do
+    let itnExtendedSignKey = "ed25519e_sk1qpcplz38tg4fusw0fkqljzspe9qmj06ldu9lgcve99v4fphuk9a535kwj\
+                             \f38hkyn0shcycyaha4k9tmjy6xgvzaz7stw5t7rqjadyjcwfyx6k"
+
+        -- ITN input file paths
+        itnSignKeyFp = "itnExtendedSignKey.key"
+
+        -- Converted keys output file paths
+        outputHaskellSignKeyFp = "stake-signing.key"
+
+        allFiles = [itnSignKeyFp, outputHaskellSignKeyFp]
+
+    -- Write ITN keys to disk
+    liftIO $ writeFile itnSignKeyFp itnExtendedSignKey
+    assertFilesExist [itnSignKeyFp]
+
+    -- Generate haskell signing key
+    execCardanoCLIParser
+      allFiles
+        $ evalCardanoCLIParser [ "shelley","key","convert-itn-extended-key"
+                               , "--itn-signing-key-file", itnSignKeyFp
+                               , "--out-file", outputHaskellSignKeyFp
+                               ]
+
+    -- Check for existence of the converted ITN keys
+    assertFilesExist [outputHaskellSignKeyFp]
+
+    liftIO $ fileCleanup allFiles
+
+    H.success
+
+-- | 1. Convert a bech32 ITN BIP32 signing key to a haskell stake signing key
+prop_convertITNBIP32SigningKey :: Property
+prop_convertITNBIP32SigningKey =
+  propertyOnce $ do
+    let itnExtendedSignKey = "xprv1spkw5suj39723c40mr55gwh7j3vryjv2zdm4e47xs0deka\
+                             \jcza9ud848ckdqf48md9njzc5pkujfxwu2j8wdvtxkx02n3s2qa\
+                             \euhqnfx6zu9dyccpua6vf5x3kur9hsganq2kl0yw7y9hpunts0e9kc5xv3pz0yj"
+        -- ITN input file paths
+        itnSignKeyFp = "itnBIP32SignKey.key"
+
+        -- Converted keys output file paths
+        outputHaskellSignKeyFp = "stake-signing.key"
+
+        allFiles = [itnSignKeyFp, outputHaskellSignKeyFp]
+
+    -- Write ITN keys to disk
+    liftIO $ writeFile itnSignKeyFp itnExtendedSignKey
+    assertFilesExist [itnSignKeyFp]
+
+    -- Generate haskell signing key
+    execCardanoCLIParser
+      allFiles
+        $ evalCardanoCLIParser [ "shelley","key","convert-itn-bip32-key"
+                               , "--itn-signing-key-file", itnSignKeyFp
+                               , "--out-file", outputHaskellSignKeyFp
+                               ]
+
+    -- Check for existence of the converted ITN keys
+    assertFilesExist [outputHaskellSignKeyFp]
+
+    liftIO $ fileCleanup allFiles
+
+    H.success
+
 -- | We check our 'decodeBech32Key' outputs against https://slowli.github.io/bech32-buffer/
 -- using 'itnVerKey' & 'itnSignKey' as inputs.
 golden_bech32Decode :: Property
@@ -103,5 +171,7 @@ tests =
   H.checkSequential
     $ H.Group "ITN key conversion"
         [ ("prop_convertITNKeys", prop_convertITNKeys)
+        , ("prop_convertITNBIP32SigningKey", prop_convertITNBIP32SigningKey)
+        , ("prop_convertITNExtendedSigningKey", prop_convertITNExtendedSigningKey)
         , ("golden_bech32Decode", golden_bech32Decode)
         ]
