@@ -41,3 +41,6 @@ golden_shelleyNodeIssueOpCert = OP.propertyOnce $ do
 
     OP.assertFileOccurences 1 "NodeOperationalCertificate" $ operationalCertFile
     OP.assertFileOccurences 1 "Next certificate issue number: 1" $ operationalCertificateIssueCounterFile
+
+    OP.assertEndsWithSingleNewline operationalCertFile
+    OP.assertEndsWithSingleNewline operationalCertificateIssueCounterFile

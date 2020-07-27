@@ -26,3 +26,6 @@ golden_shelleyGenesisKeyGenGenesis = OP.propertyOnce $ do
 
     OP.assertFileOccurences 1 "GenesisVerificationKey_ed25519" $ verificationKeyFile
     OP.assertFileOccurences 1 "GenesisSigningKey_ed25519" $ signingKeyFile
+
+    OP.assertEndsWithSingleNewline verificationKeyFile
+    OP.assertEndsWithSingleNewline signingKeyFile

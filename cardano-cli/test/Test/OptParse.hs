@@ -4,6 +4,7 @@ module Test.OptParse
   ( checkTextEnvelopeFormat
   , assertFilesExist
   , assertFileOccurences
+  , assertEndsWithSingleNewline
   , equivalence
   , evalCardanoCLIParser
   , execCardanoCLIParser
@@ -255,6 +256,17 @@ assertFileOccurences n s fp = withFrozenCallStack $ do
   contents <- liftIO $ IO.readFile fp
 
   length (filter (s `L.isInfixOf`) (L.lines contents)) H.=== n
+
+-- | Assert the file contains the given number of occurences of the given string
+assertEndsWithSingleNewline :: HasCallStack => FilePath -> H.PropertyT IO ()
+assertEndsWithSingleNewline fp = withFrozenCallStack $ do
+  contents <- liftIO $ IO.readFile fp
+
+  case reverse contents of
+    '\n':'\n':_ -> failWithCustom callStack Nothing (fp <> " ends with too many newlines.")
+    '\n':_ -> return ()
+    _ -> failWithCustom callStack Nothing (fp <> " must end with newline.")
+
 
 fileCleanup :: [FilePath] -> IO ()
 fileCleanup fps = mapM_ (\fp -> removeFile fp `catch` fileExists) fps

@@ -25,3 +25,5 @@ golden_shelleyStakeAddressRegistrationCertificate = OP.propertyOnce $ do
         ]
 
     OP.assertFileOccurences 1 "Stake Address Registration Certificate" registrationCertFile
+
+    OP.assertEndsWithSingleNewline registrationCertFile

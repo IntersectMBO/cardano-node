@@ -25,3 +25,5 @@ golden_shelleyStakeAddressDeregistrationCertificate = OP.propertyOnce $ do
         ]
 
     OP.assertFileOccurences 1 "Stake Address Deregistration Certificate" deregistrationCertFile
+
+    OP.assertEndsWithSingleNewline deregistrationCertFile
