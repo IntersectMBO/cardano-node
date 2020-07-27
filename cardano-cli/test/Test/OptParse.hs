@@ -2,9 +2,10 @@
 
 module Test.OptParse
   ( checkTextEnvelopeFormat
-  , assertFilesExist
-  , assertFileOccurences
   , assertEndsWithSingleNewline
+  , assertFileLines
+  , assertFileOccurences
+  , assertFilesExist
   , equivalence
   , evalCardanoCLIParser
   , execCardanoCLIParser
@@ -21,8 +22,8 @@ module Test.OptParse
   , noteTempFile
   ) where
 
-import           Cardano.Prelude hiding (stderr, stdout)
-import           Prelude (String) 
+import           Cardano.Prelude hiding (stderr, stdout, lines)
+import           Prelude (String)
 import qualified Prelude as Prelude
 
 import           System.IO.Error
@@ -256,6 +257,20 @@ assertFileOccurences n s fp = withFrozenCallStack $ do
   contents <- H.evalM . liftIO $ IO.readFile fp
 
   length (filter (s `L.isInfixOf`) (L.lines contents)) H.=== n
+
+-- | Assert the file contains the given number of occurences of the given string
+assertFileLines :: HasCallStack => (Int -> Bool) -> FilePath -> H.PropertyT IO ()
+assertFileLines p fp = withFrozenCallStack $ do
+  contents <- H.evalM . liftIO $ IO.readFile fp
+
+  let lines = L.lines contents
+
+  let len = case reverse lines of
+        "":xs -> length xs
+        xs -> length xs
+  
+  when (not (p len)) $ do
+    failWithCustom callStack Nothing (fp <> " has an unexpected number of lines")
 
 -- | Assert the file contains the given number of occurences of the given string
 assertEndsWithSingleNewline :: HasCallStack => FilePath -> H.PropertyT IO ()
