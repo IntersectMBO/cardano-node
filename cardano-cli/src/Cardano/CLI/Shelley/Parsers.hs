@@ -281,6 +281,16 @@ pKeyCmd =
             Opt.progDesc $ "Convert an Incentivized Testnet (ITN) non-extended "
                         ++ "signing or verification key to a corresponding "
                         ++ "Shelley stake key"
+      , Opt.command "convert-itn-extended-key" $
+          Opt.info pKeyConvertITNExtendedKey $
+            Opt.progDesc $ "Convert an Incentivized Testnet (ITN) extended "
+                        ++ "signing key to a corresponding "
+                        ++ "Shelley stake signing key"
+      , Opt.command "convert-itn-bip32-key" $
+          Opt.info pKeyConvertITNBip32Key $
+            Opt.progDesc $ "Convert an Incentivized Testnet (ITN) BIP32 "
+                        ++ "signing key to a corresponding "
+                        ++ "Shelley stake signing key"
       ]
   where
     pKeyGetVerificationKey :: Parser KeyCmd
@@ -373,6 +383,18 @@ pKeyCmd =
     pKeyConvertITNKey =
       KeyConvertITNStakeKey
         <$> pITNKeyFIle
+        <*> pOutputFile
+
+    pKeyConvertITNExtendedKey :: Parser KeyCmd
+    pKeyConvertITNExtendedKey =
+      KeyConvertITNExtendedToStakeKey
+        <$> pITNSigningKeyFile
+        <*> pOutputFile
+
+    pKeyConvertITNBip32Key :: Parser KeyCmd
+    pKeyConvertITNBip32Key =
+      KeyConvertITNBip32ToStakeKey
+        <$> pITNSigningKeyFile
         <*> pOutputFile
 
     pITNKeyFIle :: Parser SomeKeyFile

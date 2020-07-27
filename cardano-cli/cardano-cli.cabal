@@ -77,7 +77,7 @@ library
                      , cardano-crypto-class
                      , cardano-crypto-wrapper
                      , cardano-ledger
-                     -- TODO @intricate: We shouldn't be forced to import "cardano-node". Fix this.
+                     -- TODO: We shouldn't be forced to import "cardano-node". Fix this.
                      , cardano-node
                      , cardano-prelude
                      , cardano-slotting
