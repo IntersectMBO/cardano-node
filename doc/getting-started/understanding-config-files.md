@@ -1,6 +1,6 @@
 # Understanding your configuration files and how to use them
 
-### The topology.json file
+#### The topology.json file
 
 Tells your node to which nodes in the network it should talk to. A minimal version of this file looks like this:
 
@@ -22,7 +22,7 @@ Tells your node to which nodes in the network it should talk to. A minimal versi
 Your __block-producing__ node must __ONLY__ talk to your __relay nodes__, and the relay node should talk to other relay nodes in the network. Go to our telegram channel to find out IP addresses and ports of peers.
 
 
-### The genesis.json file
+#### The genesis.json file
 
 The genesis file is generated with the `cardano-cli` by reading a `genesis.spec.json` file, which is out of scope for this document.
 But it is important because it is used to set:
@@ -140,7 +140,7 @@ Here is a brief description of each parameter. You can learn more in the [spec](
 | securityParam | Security parameter k |
 
 
-### The config.json file
+#### The config.json file
 
 The default `config.json` file that we downloaded is shown below.
 
@@ -148,7 +148,7 @@ This file has __4__ sections that allow you to have full control on what your no
 
 __NOTE Due to how the config.json file is generated, fields on the real file are shown in a different (less coherent) order. Here we present them in a more structured way__
 
-### 1 Basic Node Configuration.
+#### Basic Node Configuration.
 
 First section relates the basic node configuration parameters. Make sure you have to `TPraos`as the protocol, the correct path to the `shelley_testnet-genesis.json` file, `RequiresMagic`for its use in a testnet.
 Note that in this example we are using the SimpleView. This will send the output to `stdout`. Other option is `LiveView` which uses a terminal multiplexer to generate a fancy view. We will cover this topic later.
@@ -158,7 +158,7 @@ Note that in this example we are using the SimpleView. This will send the output
 	  "GenesisFile": "shelley_testnet-genesis.json",
 	  "RequiresNetworkMagic": "RequiresMagic",
 
-### 2 Update parameteres
+#### Update parameteres
 
 This protocol version number gets used by block producing nodes as part of the system for agreeing on and synchronising protocol updates.You just need to be aware of the latest version supported by the network. You dont need to change anything here.
 
@@ -169,7 +169,7 @@ This protocol version number gets used by block producing nodes as part of the s
 	  "LastKnownBlockVersion-Minor": 0,
 
 
-### 3 Tracing
+#### Tracing
 
 `Tracers` tell your node what information you are interested in when logging. Like switches that you can turn ON or OFF according the type and quantity of information that you are interesetd in. This provides fairly coarse grained control, but it is relatively efficient at filtering out unwanted trace output.
 
@@ -255,7 +255,7 @@ Also enable the EKG backend if you want to use the EKG or Prometheus monitoring 
 	    "rpMaxAgeHours": 24
 	    },	  
 
-### 4 Fine grained logging control
+#### Fine grained logging control
 
 It is also possible to have more fine grained control over filtering of trace output, and to match and route trace output to particular backends. This is less efficient than the coarse trace filters above but provides much more precise control. `options`:
 
