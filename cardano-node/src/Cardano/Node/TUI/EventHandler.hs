@@ -320,8 +320,11 @@ eventHandler lvs  (VtyEvent e)         =
         Vty.EvKey  Vty.KEsc        []        -> continue $ lvs { lvsScreen = MainView }
         _                                -> continue lvs
   where
-    stopNodeThread :: MonadIO m => m ()
-    stopNodeThread =
+    stopNodeThread :: MonadIO m => m (Async ())
+    stopNodeThread = liftIO $ Async.async $ do
+      -- Because of this 100ms delay, Vty will be halted _before_ stopping node's thread.
+      -- It keeps the terminal in the normal state after quitting.
+      threadDelay 100000
       case getLVThread (lvsNodeThread lvs) of
         Nothing -> return ()
         Just t  -> liftIO $ Async.cancel t
