@@ -57,6 +57,8 @@ library
                        Cardano.CLI.Shelley.Run.TextView
                        Cardano.CLI.Shelley.Run.Transaction
 
+                       Cardano.CLI.TopHandler
+
   other-modules:       Paths_cardano_cli
 
   build-depends:       base >=4.12 && <5
@@ -75,6 +77,8 @@ library
                      , cardano-crypto-class
                      , cardano-crypto-wrapper
                      , cardano-ledger
+                     -- TODO @intricate: We shouldn't be forced to import "cardano-node". Fix this.
+                     , cardano-node
                      , cardano-prelude
                      , cardano-slotting
                      , contra-tracer
@@ -96,6 +100,7 @@ library
                      , ouroboros-consensus-cardano
                      , ouroboros-consensus-shelley
                      , ouroboros-network
+                     , process
                      , scientific
                      , shelley-spec-ledger
                      , small-steps

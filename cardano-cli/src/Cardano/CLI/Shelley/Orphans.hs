@@ -24,7 +24,6 @@ import qualified Data.Text.Encoding as Text
 import           Control.Iterate.SetAlgebra as SetAlgebra
 
 import           Cardano.Crypto.Hash.Class as Crypto
-import           Cardano.TracingOrphanInstances.Common ()
 
 import           Ouroboros.Consensus.Byron.Ledger.Block (ByronHash(..))
 import           Ouroboros.Consensus.HardFork.Combinator (OneEraHash(..))

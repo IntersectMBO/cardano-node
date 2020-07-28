@@ -2,7 +2,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
 
-module Cardano.Config.LedgerQueries
+module Cardano.Tracing.Queries
   (LedgerQueries(..))
 where
 

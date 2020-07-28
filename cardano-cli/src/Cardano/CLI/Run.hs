@@ -23,7 +23,7 @@ import           Cardano.CLI.Shelley.Run (ShelleyClientCmdError, renderShelleyCl
 import           Data.Version (showVersion)
 import           Paths_cardano_cli (version)
 import           System.Info (arch, compilerName, compilerVersion, os)
-import           Cardano.Config.GitRev (gitRev)
+import           Cardano.Config.Git.Rev (gitRev)
 
 -- | Sub-commands of 'cardano-cli'.
 data ClientCommand =

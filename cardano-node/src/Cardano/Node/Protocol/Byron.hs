@@ -47,8 +47,8 @@ import           Cardano.Node.Types
 import           Cardano.Config.Types
                    (ProtocolFilepaths(..), GenesisFile (..))
 
-import           Cardano.TracingOrphanInstances.Byron ()
-import           Cardano.TracingOrphanInstances.HardFork ()
+import           Cardano.Tracing.OrphanInstances.Byron ()
+import           Cardano.Tracing.OrphanInstances.HardFork ()
 
 import           Cardano.Node.Protocol.Types
 

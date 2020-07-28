@@ -4,8 +4,7 @@
 {-# LANGUAGE RankNTypes #-}
 
 module Cardano.Config.Parsers
-  ( command'
-  , parseConfigFile
+  ( parseConfigFile
   , parseCoreNodeId
   , parseDbPath
   , parseFilePath
@@ -31,7 +30,6 @@ import           Prelude (String)
 import           Cardano.Prelude hiding (option)
 
 import           Cardano.Chain.Common (Lovelace, mkLovelace)
---import           Cardano.Node.Topology
 import           Cardano.Config.Types
 
 
@@ -42,11 +40,6 @@ import           Ouroboros.Consensus.NodeId (NodeId(..), CoreNodeId(..))
 
 
 -- Common command line parsers
-
-command' :: String -> String -> Parser a -> Mod CommandFields a
-command' c descr p =
-    command c $ info (p <**> helper)
-              $ mconcat [ progDesc descr ]
 
 parseConfigFile :: Parser FilePath
 parseConfigFile =

@@ -45,12 +45,23 @@ library
                        Cardano.Node.Parsers
                        Cardano.Node.Run
                        Cardano.Node.Shutdown
+                       Cardano.Node.TopHandler
                        Cardano.Node.Topology
                        Cardano.Node.TraceConfig
                        Cardano.Node.Types
+                       Cardano.Tracing.Constraints
                        Cardano.Tracing.Kernel
                        Cardano.Tracing.Peer
+                       Cardano.Tracing.Queries
                        Cardano.Tracing.Tracers
+                       Cardano.Tracing.OrphanInstances.Byron
+                       Cardano.Tracing.OrphanInstances.Common
+                       Cardano.Tracing.OrphanInstances.Consensus
+                       Cardano.Tracing.OrphanInstances.HardFork
+                       Cardano.Tracing.OrphanInstances.Mock
+                       Cardano.Tracing.OrphanInstances.Network
+                       Cardano.Tracing.OrphanInstances.Shelley
+
 
   other-modules:       Paths_cardano_node
                        Cardano.Node.Socket
@@ -59,6 +70,8 @@ library
   build-depends:       aeson
                      , async
                      , base >=4.12 && <5
+                     , base16-bytestring
+                     , byron-spec-ledger
                      , bytestring
                      , deepseq
                      , cardano-api
@@ -94,6 +107,7 @@ library
                      , ouroboros-network-framework
                      , process
                      , safe-exceptions
+                     , scientific
                      , shelley-spec-ledger
                      , strict-concurrency
                      , text
@@ -134,19 +148,26 @@ library cardano-node-config
   exposed-modules:     Cardano.Node.Orphans
                        Cardano.Node.Types
                        Cardano.Node.TraceConfig
+                       Cardano.Tracing.OrphanInstances.Common
 
   build-depends:       aeson
                      , base >=4.12 && <5
+                     , base16-bytestring
+                     , bytestring
                      , cardano-api
                      , cardano-crypto-class
                      , cardano-crypto-wrapper
                      , cardano-ledger
                      , cardano-config
                      , cardano-prelude
+                     , cardano-slotting
                      , filepath
                      , iohk-monitoring
+                     , network
                      , ouroboros-consensus
+                     , ouroboros-consensus-byron
                      , ouroboros-network
+                     , scientific
                      , text
                      , yaml
 
