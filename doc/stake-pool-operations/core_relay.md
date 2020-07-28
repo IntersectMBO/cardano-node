@@ -6,7 +6,7 @@ Before you start your nodes, you need to prepare the topology files.
 
 Make the __block-producing__ node to "talk" only to __YOUR__ relay node. Do not forget to configure your firewall also:
 
-    nano shelley_testnet-topology.json
+    nano mainnet-topology.json
 
   	{
   	  "Producers": [
@@ -23,7 +23,7 @@ Make the __block-producing__ node to "talk" only to __YOUR__ relay node. Do not 
 Make your __relay node__ `talk` to your __block-producing__ node and __other relays__ in the network by editing the `topology.json` file:
 
 
-    nano shelley_testnet-topology.json
+    nano mainnet-topology.json
 
     {
       "Producers": [
@@ -44,5 +44,3 @@ Make your __relay node__ `talk` to your __block-producing__ node and __other rel
         }
       ]
     }
-
-__NOTE:__ Here you can find peers in the **Shelley Testnet** to connect to:  https://github.com/input-output-hk/cardano-ops/blob/batch-ff-relays-pr/topologies/ff-peers.nix

@@ -32,7 +32,7 @@ cardano-cli shelley address build \
 --payment-verification-key-file payment.vkey \
 --stake-verification-key-file stake.vkey \
 --out-file payment.addr \
---testnet-magic 42
+--mainnet
 ```
 #### Stake address
 
@@ -42,7 +42,7 @@ To generate a `stake address`:
 cardano-cli shelley stake-address build \
 --stake-verification-key-file stake.vkey \
 --out-file stake.addr \
---testnet-magic 42
+--mainnet
 ```
 This address __CAN'T__ receive payments but will receive the rewards from participating in the protocol.
 
@@ -54,11 +54,11 @@ To query the balance of an address we need a running node and the environment va
 ```
 cardano-cli shelley query utxo \
 --address $(cat payment.addr) \
---testnet-magic 42
+--mainnet
 ```
 ```
                             TxHash                                 TxIx        Lovelace
 --------------------------------------------------------------------------------------------
 ```
 
-**Note. `--testnet magic 42` identifies the testnets, for mainnet, use `--mainnet` instead.
+**Note**`--mainnet` identifies the Cardano mainnet, for testnets use `--testnet-magic 42` instead. 

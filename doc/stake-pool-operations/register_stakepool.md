@@ -61,7 +61,7 @@ This validates that the JSON fits the required schema, if it does, you will get 
     --pool-margin <POOL COST PER EPOCH IN PERCENTAGE> \
     --pool-reward-account-verification-key-file stake.vkey \
     --pool-owner-stake-verification-key-file stake.vkey \
-    --testnet-magic 42 \
+    --mainnet \
     --pool-relay-ipv4 <RELAY NODE PUBLIC IP> \
     --pool-relay-port <RELAY NODE PORT> \
     --metadata-url https://git.io/JJWdJ \
@@ -130,7 +130,7 @@ To submit the `pool registration certificate` and the `delegation certificates` 
     --tx-body-file tx.raw \
     --tx-in-count 1 \
     --tx-out-count 1 \
-    --testnet-magic 42 \
+    --mainnet \
     --witness-count 1 \
     --byron-witness-count 0 \
     --protocol-params-file protocol.json
@@ -166,14 +166,14 @@ All amounts in Lovelace
     --signing-key-file payment.skey \
     --signing-key-file stake.skey \
     --signing-key-file cold.skey \
-    --testnet-magic 42 \
+    --mainnet \
     --out-file tx.signed
 
 #### Submit the transaction:
 
     cardano-cli shelley transaction submit \
     --tx-file tx.signed \
-    --testnet-magic 42
+    --mainnet
 
 
 #### Verify that your stake pool registration was successful.
@@ -184,4 +184,4 @@ Get Pool ID
 
 Check for the presence of your poolID in the network ledger state, with:
 
-    cardano-cli shelley query ledger-state --testnet-magic 42 | grep publicKey | grep <poolId>
+    cardano-cli shelley query ledger-state --mainnet | grep publicKey | grep <poolId>

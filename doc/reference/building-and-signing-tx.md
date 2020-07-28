@@ -23,7 +23,7 @@ To create a transaction we need to follow this process:
 Query and save the parameters in **protocol.json**
 
     cardano-cli shelley query protocol-parameters \
-    --testnet-magic 42 \
+    --mainnet \
     --out-file protocol.json
 
 **Draft the transaction**
@@ -48,7 +48,7 @@ Use `tx.draft` as `tx-body-file`. **Witnesses** are the amount of keys that must
     --tx-out-count 2 \
     --witness-count 1 \
     --byron-witness-count 0 \
-    --testnet-magic 42 \
+    --mainnet \
     --protocol-params-file protocol.json
 
 For example:
@@ -59,7 +59,7 @@ For example:
 
 When building and submitting a transaction you need to check the current tip of the blockchain, for example, if the tip is slot 4000, you should set the TTL to (4000 + N slots), so that you have enough time to build and submit a transaction. Submitting a transaction with a TTL set in the past would result in a tx error.
 
-    cardano-cli shelley query tip --testnet-magic 42
+    cardano-cli shelley query tip --mainnet
 
 Look for the value of `SlotNo`
 
@@ -93,11 +93,11 @@ A transaction must prove that it has the right to spend its inputs. In the most 
     cardano-cli shelley transaction sign \
     --tx-body-file tx.raw \
     --signing-key-file payment.skey \
-    --testnet-magic 42 \
+    --mainnet \
     --out-file tx.signed
 
 **Submit**
 
     cardano-cli shelley transaction submit \
     --tx-file tx.signed \
-    --testnet-magic 42
+    --mainnet

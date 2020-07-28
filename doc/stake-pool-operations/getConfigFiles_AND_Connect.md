@@ -13,25 +13,19 @@ You can download the configuration files from:
 
 From the CLI you can use
 
-For shelley_testnet
+For Cardano testnet
 
-    wget https://hydra.iohk.io/job/Cardano/cardano-node/cardano-deployment/latest-finished/download/1/shelley_testnet-config.json
-    wget https://hydra.iohk.io/job/Cardano/cardano-node/cardano-deployment/latest-finished/download/1/shelley_testnet-shelley-genesis.json
-    wget https://hydra.iohk.io/job/Cardano/cardano-node/cardano-deployment/latest-finished/download/1/shelley_testnet-topology.json
-
-For Mainnet_Candidate_Testnet_3
-
-    wget https://hydra.iohk.io/build/3596468/download/1/mainnet_candidate_3-config.json
-    wget https://hydra.iohk.io/build/3596468/download/1/mainnet_candidate_3-byron-genesis.json
-    wget https://hydra.iohk.io/build/3596468/download/1/mainnet_candidate_3-shelley-genesis.json
-    wget https://hydra.iohk.io/build/3596468/download/1/mainnet_candidate_3-topology.json
+    wget https://hydra.iohk.io/job/Cardano/cardano-node/cardano-deployment/latest-finished/download/1/testnet-config.json
+    wget https://hydra.iohk.io/job/Cardano/cardano-node/cardano-deployment/latest-finished/download/1/testnet-byron-genesis.json
+    wget https://hydra.iohk.io/job/Cardano/cardano-node/cardano-deployment/latest-finished/download/1/testnet-shelley-genesis.json
+    wget https://hydra.iohk.io/job/Cardano/cardano-node/cardano-deployment/latest-finished/download/1/testnet-topology.json
 
 For Mainnet:
 
-    wget https://hydra.iohk.io/build/3596468/download/1/mainnet-config.json
-    wget https://hydra.iohk.io/build/3596468/download/1/mainnet-byron-genesis.json
-    wget https://hydra.iohk.io/build/3596468/download/1/mainnet_candidate_3-shelley-genesis.json
-    wget https://hydra.iohk.io/build/3596468/download/1/mainnet-topology.json
+wget https://hydra.iohk.io/job/Cardano/cardano-node/cardano-deployment/latest-finished/download/1/mainnet-config.json
+wget https://hydra.iohk.io/job/Cardano/cardano-node/cardano-deployment/latest-finished/download/1/mainnet-byron-genesis.json
+wget https://hydra.iohk.io/job/Cardano/cardano-node/cardano-deployment/latest-finished/download/1/mainnet-shelley-genesis.json
+wget https://hydra.iohk.io/job/Cardano/cardano-node/cardano-deployment/latest-finished/download/1/mainnet-topology.json
 
 Starting the the node uses the command `cardano-node run` and a set of options.
 
@@ -52,12 +46,12 @@ Get the complete list of available options with `cardano-node run --help`
 To start a passive node:
 
      cardano-node run \
-       --topology path/to/shelley_testnet-topology.json \
+       --topology path/to/mainnet-topology.json \
        --database-path path/to/db \
        --socket-path path/to/db/node.socket \
        --host-addr x.x.x.x \
        --port 3001 \
-       --config path/to/shelley_testnet-config.json
+       --config path/to/mainnet-config.json
 
 **Replace x.x.x.x with your public IP and indicate the correct paths to the required files.**
 
@@ -67,7 +61,7 @@ Many commands relay on the environment variable CARDANO_NODE_SOCKET_PATH:
 
 Check that the node is syncing by fetching the current tip. When syncing slotNo should be increasing.
 
-        cardano-cli shelley query tip --testnet-magic 42
+        cardano-cli shelley query tip --mainnet
 
         {
         "blockNo": 36322,
@@ -75,4 +69,4 @@ Check that the node is syncing by fetching the current tip. When syncing slotNo 
         "slotNo": 888561
         }
 
-**`--testnet-magic 42` identifies the testnets, for mainnet use `--mainnet` **
+**Note**`--mainnet` identifies the Cardano mainnet, for testnets use `--testnet-magic 42` instead.
