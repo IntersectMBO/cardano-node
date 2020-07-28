@@ -5,9 +5,11 @@ module Test.CLI.Shelley.Golden.Genesis.Create
   ( golden_shelleyGenesisCreate
   ) where
 
-import Cardano.Prelude
+import           Cardano.Prelude
 
-import Prelude(String)
+import           Prelude
+  ( String
+  )
 
 import qualified Data.Aeson as J
 import qualified Data.Aeson.Types as J
@@ -17,14 +19,18 @@ import qualified Data.Time.Clock as DT
 import qualified Data.Time.Format as DT
 import qualified System.Directory as IO
 
-import Hedgehog (Property, forAll, (===))
+import           Hedgehog
+  ( Property
+  , forAll
+  , (===)
+  )
 
+import qualified Data.ByteString.Lazy as LBS
+import qualified Data.Text as T
 import qualified Hedgehog as H
 import qualified Hedgehog.Gen as G
 import qualified Hedgehog.Range as R
 import qualified Test.OptParse as OP
-import qualified Data.ByteString.Lazy as LBS
-import qualified Data.Text as T
 
 {- HLINT ignore "Use camelCase" -}
 

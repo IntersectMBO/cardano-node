@@ -14,32 +14,77 @@ module Cardano.CLI.Byron.UpdateProposal
 import           Cardano.Prelude
 
 import           Control.Monad.Trans.Except.Extra
-                   (firstExceptT, handleIOExceptT, hoistEither)
-import           Control.Tracer (stdoutTracer, traceWith)
+  ( firstExceptT
+  , handleIOExceptT
+  , hoistEither
+  )
+import           Control.Tracer
+  ( stdoutTracer
+  , traceWith
+  )
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.Map.Strict as M
 
 import qualified Cardano.Binary as Binary
-import           Cardano.Chain.Common (LovelacePortion, TxFeePolicy(..))
-import           Cardano.Chain.Slotting (EpochNumber(..), SlotNumber(..))
+import           Cardano.Chain.Common
+  ( LovelacePortion
+  , TxFeePolicy (..)
+  )
+import           Cardano.Chain.Slotting
+  ( EpochNumber (..)
+  , SlotNumber (..)
+  )
 import           Cardano.Chain.Update
-                   (AProposal(..), ProtocolParametersUpdate(..),
-                    InstallerHash(..), Proposal, ProposalBody(..), ProtocolVersion(..),
-                    SoftforkRule(..), SoftwareVersion(..), SystemTag(..), recoverUpId,
-                    signProposal)
-import           Cardano.CLI.Helpers (textShow)
+  ( AProposal (..)
+  , InstallerHash (..)
+  , Proposal
+  , ProposalBody (..)
+  , ProtocolParametersUpdate (..)
+  , ProtocolVersion (..)
+  , SoftforkRule (..)
+  , SoftwareVersion (..)
+  , SystemTag (..)
+  , recoverUpId
+  , signProposal
+  )
+import           Cardano.CLI.Helpers
+  ( HelpersError
+  , ensureNewFileLBS
+  , renderHelpersError
+  , textShow
+  )
 import           Cardano.Config.Types
-import           Ouroboros.Consensus.Util.Condense (condense)
-import           Cardano.Crypto.Signing (SigningKey, noPassSafeSigner)
-import           Ouroboros.Consensus.Byron.Ledger.Block (ByronBlock)
+import           Cardano.Crypto.Signing
+  ( SigningKey
+  , noPassSafeSigner
+  )
+import           Ouroboros.Consensus.Byron.Ledger.Block
+  ( ByronBlock
+  )
 import qualified Ouroboros.Consensus.Byron.Ledger.Mempool as Mempool
-import           Ouroboros.Consensus.Ledger.SupportsMempool (txId)
+import           Ouroboros.Consensus.Ledger.SupportsMempool
+  ( txId
+  )
+import           Ouroboros.Consensus.Util.Condense
+  ( condense
+  )
 
-import           Cardano.Api.Typed (NetworkId, toByronProtocolMagicId)
-import           Cardano.CLI.Byron.Key (CardanoEra(..), ByronKeyFailure, readEraSigningKey)
-import           Cardano.CLI.Byron.Genesis (ByronGenesisError)
-import           Cardano.CLI.Byron.Tx (ByronTxError, nodeSubmitTx)
-import           Cardano.CLI.Helpers (HelpersError, ensureNewFileLBS, renderHelpersError)
+import           Cardano.Api.Typed
+  ( NetworkId
+  , toByronProtocolMagicId
+  )
+import           Cardano.CLI.Byron.Genesis
+  ( ByronGenesisError
+  )
+import           Cardano.CLI.Byron.Key
+  ( ByronKeyFailure
+  , CardanoEra (..)
+  , readEraSigningKey
+  )
+import           Cardano.CLI.Byron.Tx
+  ( ByronTxError
+  , nodeSubmitTx
+  )
 
 data ByronUpdateProposalError
   = ByronReadUpdateProposalFileFailure !FilePath !Text

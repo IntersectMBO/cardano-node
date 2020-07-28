@@ -4,9 +4,12 @@ module Test.CLI.Shelley.Golden.StakeAddress.Build
   ( golden_shelleyStakeAddressBuild
   ) where
 
-import Cardano.Prelude
+import           Cardano.Prelude
 
-import Hedgehog (Property, (===))
+import           Hedgehog
+  ( Property
+  , (===)
+  )
 
 import qualified System.IO as IO
 import qualified Test.OptParse as OP

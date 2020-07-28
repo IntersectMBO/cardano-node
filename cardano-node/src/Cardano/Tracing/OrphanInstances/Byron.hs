@@ -1,10 +1,10 @@
-{-# LANGUAGE FlexibleContexts      #-}
-{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE OverloadedStrings     #-}
-{-# LANGUAGE ScopedTypeVariables   #-}
-{-# LANGUAGE TypeFamilies          #-}
-{-# LANGUAGE UndecidableInstances  #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 {-# OPTIONS_GHC -Wno-orphans  #-}
 
@@ -16,27 +16,53 @@ import qualified Data.Set as Set
 import qualified Data.Text as Text
 
 import           Cardano.Tracing.OrphanInstances.Common
-import           Cardano.Tracing.OrphanInstances.Consensus ()
+import           Cardano.Tracing.OrphanInstances.Consensus
+  ()
 
+import           Ouroboros.Consensus.Block
+  ( Header
+  )
 import           Ouroboros.Network.Block
-                   (blockHash, blockSlot, blockNo)
-import           Ouroboros.Consensus.Block (Header)
+  ( blockHash
+  , blockNo
+  , blockSlot
+  )
+
 import           Ouroboros.Consensus.Byron.Ledger
-                   (ByronBlock(..), byronHeaderRaw,
-                    ByronOtherHeaderEnvelopeError(..))
+  ( ByronBlock (..)
+  , ByronOtherHeaderEnvelopeError (..)
+  , TxId (..)
+  , byronHeaderRaw
+  )
 import           Ouroboros.Consensus.Byron.Ledger.Inspect
-                   (ByronLedgerUpdate (..), ProtocolUpdate (..), UpdateState (..))
-import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTx, TxId, txId)
-import           Ouroboros.Consensus.Util.Condense (condense)
+  ( ByronLedgerUpdate (..)
+  , ProtocolUpdate (..)
+  , UpdateState (..)
+  )
+import           Ouroboros.Consensus.Ledger.SupportsMempool
+  ( GenTx
+  , txId
+  )
+import           Ouroboros.Consensus.Util.Condense
+  ( condense
+  )
 
 import           Cardano.Chain.Block
-                  (ChainValidationError(..), ABlockOrBoundaryHdr(..),
-                   AHeader(..), delegationCertificate)
-import           Cardano.Chain.Byron.API (ApplyMempoolPayloadErr(..))
-import           Cardano.Chain.Delegation (delegateVK)
-import           Cardano.Crypto.Signing (VerificationKey)
+  ( ABlockOrBoundaryHdr (..)
+  , AHeader (..)
+  , ChainValidationError (..)
+  , delegationCertificate
+  )
+import           Cardano.Chain.Byron.API
+  ( ApplyMempoolPayloadErr (..)
+  )
+import           Cardano.Chain.Delegation
+  ( delegateVK
+  )
+import           Cardano.Crypto.Signing
+  ( VerificationKey
+  )
 
-import           Ouroboros.Consensus.Byron.Ledger (TxId(..))
 
 
 --

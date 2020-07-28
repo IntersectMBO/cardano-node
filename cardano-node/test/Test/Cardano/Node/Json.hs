@@ -6,11 +6,22 @@ module Test.Cardano.Node.Json
 
 import           Cardano.Prelude
 
-import           Data.Aeson (encode, fromJSON, decode, toJSON)
+import           Data.Aeson
+  ( decode
+  , encode
+  , fromJSON
+  , toJSON
+  )
 
-import           Cardano.Config.Types (NodeAddress(..), NodeHostAddress(..))
+import           Cardano.Config.Types
+  ( NodeAddress (..)
+  , NodeHostAddress (..)
+  )
 
-import           Hedgehog (Property, discover)
+import           Hedgehog
+  ( Property
+  , discover
+  )
 import qualified Hedgehog
 
 import           Test.Cardano.Node.Gen

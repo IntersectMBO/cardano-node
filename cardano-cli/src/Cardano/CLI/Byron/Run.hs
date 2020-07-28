@@ -6,25 +6,40 @@ module Cardano.CLI.Byron.Run
 
 import           Cardano.Prelude
 
-import           Control.Monad.Trans.Except (ExceptT)
-import           Control.Monad.Trans.Except.Extra (hoistEither, firstExceptT)
-import           Data.Semigroup ((<>))
-import qualified Data.Text.Lazy.IO as TL
+import           Control.Monad.Trans.Except
+  ( ExceptT
+  )
+import           Control.Monad.Trans.Except.Extra
+  ( firstExceptT
+  , hoistEither
+  )
+import           Data.Semigroup
+  ( (<>)
+  )
 import qualified Data.Text.Lazy.Builder as Builder
+import qualified Data.Text.Lazy.IO as TL
 import qualified Formatting as F
 
 import qualified Cardano.Chain.Common as Common
 import qualified Cardano.Chain.Delegation as Delegation
 import qualified Cardano.Chain.Genesis as Genesis
-import           Cardano.Chain.Slotting (EpochNumber)
-import           Cardano.Chain.UTxO (TxIn, TxOut)
+import           Cardano.Chain.Slotting
+  ( EpochNumber
+  )
+import           Cardano.Chain.UTxO
+  ( TxIn
+  , TxOut
+  )
 
 import qualified Cardano.Crypto.Hashing as Crypto
 import qualified Cardano.Crypto.Signing as Crypto
 
 import           Cardano.Config.Types
 
-import           Cardano.Api.Typed (NetworkId(..), toByronProtocolMagicId)
+import           Cardano.Api.Typed
+  ( NetworkId (..)
+  , toByronProtocolMagicId
+  )
 import qualified Cardano.Api.Typed as Typed
 
 import           Cardano.CLI.Byron.Commands

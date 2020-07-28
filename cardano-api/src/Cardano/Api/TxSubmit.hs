@@ -1,10 +1,10 @@
-{-# LANGUAGE GADTs #-}
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 
 module Cardano.Api.TxSubmit
@@ -16,22 +16,34 @@ module Cardano.Api.TxSubmit
 
 import           Cardano.Prelude
 
-import           Ouroboros.Network.Protocol.LocalTxSubmission.Type (SubmitResult (..))
+import           Ouroboros.Network.Protocol.LocalTxSubmission.Type
+  ( SubmitResult (..)
+  )
 
-import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr)
+import           Ouroboros.Consensus.Ledger.SupportsMempool
+  ( ApplyTxErr
+  )
 
-import           Ouroboros.Consensus.Shelley.Ledger (ShelleyBlock, mkShelleyTx)
+import           Ouroboros.Consensus.Byron.Ledger
+  ( ByronBlock
+  )
 import qualified Ouroboros.Consensus.Byron.Ledger as Byron
-import           Ouroboros.Consensus.Byron.Ledger (ByronBlock)
-import           Ouroboros.Consensus.Shelley.Protocol.Crypto (TPraosStandardCrypto)
 import           Ouroboros.Consensus.Cardano.Block
-                   (GenTx (GenTxByron, GenTxShelley),
-                    CardanoApplyTxErr, HardForkApplyTxErr (ApplyTxErrByron,
-                      ApplyTxErrShelley, ApplyTxErrWrongEra))
+  ( CardanoApplyTxErr
+  , GenTx (GenTxByron, GenTxShelley)
+  , HardForkApplyTxErr (ApplyTxErrByron, ApplyTxErrShelley, ApplyTxErrWrongEra)
+  )
 import           Ouroboros.Consensus.HardFork.Combinator.Degenerate
+import           Ouroboros.Consensus.Shelley.Ledger
+  ( ShelleyBlock
+  , mkShelleyTx
+  )
+import           Ouroboros.Consensus.Shelley.Protocol.Crypto
+  ( TPraosStandardCrypto
+  )
 
-import           Cardano.Api.Typed
 import           Cardano.Api.TxSubmit.ErrorRender
+import           Cardano.Api.Typed
 
 
 data TxForMode mode where

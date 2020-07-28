@@ -1,7 +1,7 @@
-{-# LANGUAGE FlexibleContexts    #-}
-{-# LANGUAGE GADTs               #-}
-{-# LANGUAGE NoImplicitPrelude   #-}
-{-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE NoImplicitPrelude #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Cardano.CLI.Legacy.Byron (
@@ -10,18 +10,31 @@ module Cardano.CLI.Legacy.Byron (
     , decodeLegacyDelegateKey
     ) where
 
-import           Cardano.Prelude hiding (option)
+import           Cardano.Prelude hiding
+  ( option
+  )
 
 import qualified Codec.CBOR.Decoding as D
 import qualified Codec.CBOR.Encoding as E
-import           Lens.Micro (LensLike, _Left)
-import           Data.Coerce (coerce)
-import           Data.Semigroup ((<>))
-import           Data.Text (Text)
+import           Data.Coerce
+  ( coerce
+  )
+import           Data.Semigroup
+  ( (<>)
+  )
+import           Data.Text
+  ( Text
+  )
 import qualified Data.Text as T
+import           Lens.Micro
+  ( LensLike
+  , _Left
+  )
 
+import           Cardano.Crypto.Signing
+  ( SigningKey (..)
+  )
 import qualified Cardano.Crypto.Wallet as Wallet
-import           Cardano.Crypto.Signing (SigningKey(..))
 
 -- | LegacyDelegateKey is a subset of the UserSecret's from the legacy codebase:
 -- 1. the VSS keypair must be present

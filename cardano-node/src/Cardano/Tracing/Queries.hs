@@ -6,11 +6,14 @@ module Cardano.Tracing.Queries
   (LedgerQueries(..))
 where
 
-import           Prelude (Int, error, (.))
+import           Prelude
+  ( Int
+  , error
+  , (.)
+  )
 
 import qualified Data.Map.Strict as Map
 
-import           Ouroboros.Consensus.Ledger.Abstract
 import           Ouroboros.Consensus.HardFork.Combinator
 import           Ouroboros.Consensus.HardFork.Combinator.Unary
 

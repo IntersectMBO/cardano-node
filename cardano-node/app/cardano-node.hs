@@ -2,25 +2,50 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 
-import           Cardano.Prelude hiding (option)
-import           Prelude (String)
+import           Cardano.Prelude hiding
+  ( option
+  )
 import qualified Data.Text as Text
+import           Prelude
+  ( String
+  )
 
-import           Data.Semigroup ((<>))
+import           Data.Semigroup
+  ( (<>)
+  )
 import           Options.Applicative
 import qualified Options.Applicative as Opt
 
-import           Data.Version (showVersion)
-import           Paths_cardano_node (version)
-import           System.Info (arch, compilerName, compilerVersion, os)
-import           Cardano.Config.Git.Rev (gitRev)
+import           Cardano.Config.Git.Rev
+  ( gitRev
+  )
+import           Data.Version
+  ( showVersion
+  )
+import           Paths_cardano_node
+  ( version
+  )
+import           System.Info
+  ( arch
+  , compilerName
+  , compilerVersion
+  , os
+  )
 
 import           Cardano.Common.Help
+import           Cardano.Node.Logging
+  ( createLoggingLayer
+  )
+import           Cardano.Node.Parsers
+  ( nodeCLIParser
+  )
+import           Cardano.Node.Run
+  ( runNode
+  )
 import           Cardano.Node.TopHandler
-import           Cardano.Node.Logging (createLoggingLayer)
-import           Cardano.Node.Parsers (nodeCLIParser)
-import           Cardano.Node.Run (runNode)
-import           Cardano.Node.Types (NodeCLI(..))
+import           Cardano.Node.Types
+  ( NodeCLI (..)
+  )
 
 main :: IO ()
 main = toplevelExceptionHandler $ do

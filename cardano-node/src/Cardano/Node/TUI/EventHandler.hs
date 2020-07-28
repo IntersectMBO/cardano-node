@@ -12,28 +12,77 @@ module Cardano.Node.TUI.EventHandler
   ) where
 
 import           Cardano.Prelude
-import           Prelude (String)
+import           Prelude
+  ( String
+  )
 
+import           Brick.BChan
+  ( newBChan
+  , writeBChan
+  )
+import           Brick.Main
+  ( App (..)
+  , continue
+  , customMain
+  , halt
+  , showFirstCursor
+  )
+import           Brick.Themes
+  ( themeToAttrMap
+  )
+import           Brick.Types
+  ( BrickEvent (..)
+  , EventM
+  , Next
+  )
 import qualified Control.Concurrent.Async as Async
-import           Brick.Main (App(..), continue, customMain, halt, showFirstCursor)
-import           Brick.BChan (newBChan, writeBChan)
-import           Brick.Themes (themeToAttrMap)
-import           Brick.Types (BrickEvent (..), EventM, Next)
 import qualified Data.Text as Text
-import           Data.Time.Clock (diffUTCTime, getCurrentTime)
-import           Data.Version (showVersion)
+import           Data.Time.Clock
+  ( diffUTCTime
+  , getCurrentTime
+  )
+import           Data.Version
+  ( showVersion
+  )
 import qualified Graphics.Vty as Vty
 
-import           Cardano.BM.Data.Aggregated (Measurable(..))
-import           Cardano.BM.Data.Backend (BackendKind(..), IsBackend(..), IsEffectuator(..))
-import           Cardano.BM.Data.Counter (Platform(..))
-import           Cardano.BM.Data.LogItem (LogObject(..), LOContent(..), LOMeta(..), utc2ns)
-import           Cardano.Config.Git.Rev (gitRev)
-import           Cardano.Node.Types (Protocol(..), MockProtocol(..))
-import           Cardano.Node.TUI.Drawing (ColorTheme(..), LiveViewState(..), LiveViewThread(..),
-                   Screen(..), darkTheme, drawUI, lightTheme)
+import           Cardano.BM.Data.Aggregated
+  ( Measurable (..)
+  )
+import           Cardano.BM.Data.Backend
+  ( BackendKind (..)
+  , IsBackend (..)
+  , IsEffectuator (..)
+  )
+import           Cardano.BM.Data.Counter
+  ( Platform (..)
+  )
+import           Cardano.BM.Data.LogItem
+  ( LOContent (..)
+  , LOMeta (..)
+  , LogObject (..)
+  , utc2ns
+  )
+import           Cardano.Config.Git.Rev
+  ( gitRev
+  )
+import           Cardano.Node.TUI.Drawing
+  ( ColorTheme (..)
+  , LiveViewState (..)
+  , LiveViewThread (..)
+  , Screen (..)
+  , darkTheme
+  , drawUI
+  , lightTheme
+  )
+import           Cardano.Node.Types
+  ( MockProtocol (..)
+  , Protocol (..)
+  )
 
-import           Paths_cardano_node (version)
+import           Paths_cardano_node
+  ( version
+  )
 
 
 type LiveViewMVar blk a = MVar (LiveViewState blk a)

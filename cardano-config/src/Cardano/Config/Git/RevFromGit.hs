@@ -3,12 +3,21 @@ module Cardano.Config.Git.RevFromGit (
     ) where
 
 import           Cardano.Prelude
-import           Prelude (String)
+import           Prelude
+  ( String
+  )
 
 import qualified Language.Haskell.TH as TH
-import           System.Exit (ExitCode (..))
-import           System.IO.Error (ioeGetErrorType, isDoesNotExistErrorType)
-import           System.Process (readProcessWithExitCode)
+import           System.Exit
+  ( ExitCode (..)
+  )
+import           System.IO.Error
+  ( ioeGetErrorType
+  , isDoesNotExistErrorType
+  )
+import           System.Process
+  ( readProcessWithExitCode
+  )
 
 -- | Git revision found by running git rev-parse. If git could not be
 -- executed, then this will be an empty string.

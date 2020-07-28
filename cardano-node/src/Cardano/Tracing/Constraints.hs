@@ -9,19 +9,46 @@ import           Cardano.Prelude
 
 import           Data.Aeson
 
-import           Cardano.BM.Tracing (ToObject)
-import           Cardano.Tracing.Queries (LedgerQueries)
+import           Cardano.BM.Tracing
+  ( ToObject
+  )
+import           Cardano.Tracing.Queries
+  ( LedgerQueries
+  )
 
-import           Ouroboros.Consensus.Block (Header, BlockProtocol)
-import           Ouroboros.Consensus.HeaderValidation (OtherHeaderEnvelopeError)
-import           Ouroboros.Consensus.Ledger.Abstract (LedgerError)
-import           Ouroboros.Consensus.Ledger.Inspect (LedgerEvent)
+import           Ouroboros.Consensus.Block
+  ( BlockProtocol
+  , Header
+  )
+import           Ouroboros.Consensus.HeaderValidation
+  ( OtherHeaderEnvelopeError
+  )
+import           Ouroboros.Consensus.Ledger.Abstract
+  ( LedgerError
+  )
+import           Ouroboros.Consensus.Ledger.Inspect
+  ( LedgerEvent
+  )
 import           Ouroboros.Consensus.Ledger.SupportsMempool
-                   (GenTxId, HasTxId, HasTxs(..), ApplyTxErr)
-import           Ouroboros.Consensus.Protocol.Abstract (CannotLead, ValidationErr)
-import           Ouroboros.Consensus.Shelley.Ledger.Mempool (GenTx, TxId)
-import           Ouroboros.Consensus.Util.Condense (Condense)
-import           Ouroboros.Network.Block (HeaderHash)
+  ( ApplyTxErr
+  , GenTxId
+  , HasTxId
+  , HasTxs (..)
+  )
+import           Ouroboros.Consensus.Protocol.Abstract
+  ( CannotLead
+  , ValidationErr
+  )
+import           Ouroboros.Consensus.Shelley.Ledger.Mempool
+  ( GenTx
+  , TxId
+  )
+import           Ouroboros.Consensus.Util.Condense
+  ( Condense
+  )
+import           Ouroboros.Network.Block
+  ( HeaderHash
+  )
 
 
 -- | Tracing-related constraints for monitoring purposes.

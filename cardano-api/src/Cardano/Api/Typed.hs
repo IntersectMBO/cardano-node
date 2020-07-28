@@ -1,20 +1,20 @@
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE InstanceSigs #-}
-{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE InstanceSigs #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE TypeFamilies #-}
 
-{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE DefaultSignatures #-}
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE DefaultSignatures #-}
+{-# LANGUAGE StandaloneDeriving #-}
 
 -- The Shelley ledger uses promoted data kinds which we have to use, but we do
 -- not export any from this API. We also use them unticked as nature intended.
@@ -306,40 +306,65 @@ module Cardano.Api.Typed (
 
 import           Prelude
 
-import           Data.Aeson.Encode.Pretty (encodePretty')
-import           Data.Proxy (Proxy(..))
-import           Data.Typeable (Typeable)
-import           Data.Kind (Constraint)
-import           Data.Void (Void)
-import           Data.Word
-import           Data.Maybe
-import           Data.Bifunctor (first)
+import           Data.Aeson.Encode.Pretty
+  ( encodePretty'
+  )
+import           Data.Bifunctor
+  ( first
+  )
+import           Data.Kind
+  ( Constraint
+  )
 import           Data.List as List
 import qualified Data.List.NonEmpty as NonEmpty
+import           Data.Maybe
+import           Data.Proxy
+  ( Proxy (..)
+  )
+import           Data.Typeable
+  ( Typeable
+  )
+import           Data.Void
+  ( Void
+  )
+import           Data.Word
 --import           Data.Either
-import           Data.String (IsString(fromString))
-import           Data.Text (Text)
+import           Data.String
+  ( IsString (fromString)
+  )
+import           Data.Text
+  ( Text
+  )
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import           Numeric.Natural
 
-import           Data.IP (IPv4, IPv6)
-import           Network.Socket (PortNumber)
+import           Data.IP
+  ( IPv4
+  , IPv6
+  )
+import           Network.Socket
+  ( PortNumber
+  )
 import qualified Network.URI as URI
 
 
-import           Data.ByteString (ByteString)
+import           Data.ByteString
+  ( ByteString
+  )
 import qualified Data.ByteString as BS
+import qualified Data.ByteString.Base16 as Base16
+import qualified Data.ByteString.Base58 as Base58
 import qualified Data.ByteString.Char8 as BSC
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Short as SBS
-import qualified Data.ByteString.Base16 as Base16
-import qualified Data.ByteString.Base58 as Base58
 
-import qualified Data.Set as Set
+import           Data.Map.Strict
+  ( Map
+  )
 import qualified Data.Map.Strict as Map
-import           Data.Map.Strict (Map)
 import qualified Data.Sequence.Strict as Seq
+import qualified Data.Set as Set
 import qualified Data.Vector as Vector
 
 import qualified Codec.Binary.Bech32 as Bech32
@@ -347,84 +372,148 @@ import qualified Codec.Binary.Bech32 as Bech32
 import           Control.Applicative
 import           Control.Monad
 --import Control.Monad.IO.Class
-import           Control.Monad.Trans.Except (ExceptT(..))
-import           Control.Monad.Trans.Except.Extra
-import           Control.Exception (Exception(..), IOException, throwIO)
-import           Control.Tracer (nullTracer)
 import           Control.Concurrent.STM
+import           Control.Exception
+  ( Exception (..)
+  , IOException
+  , throwIO
+  )
+import           Control.Monad.Trans.Except
+  ( ExceptT (..)
+  )
+import           Control.Monad.Trans.Except.Extra
+import           Control.Tracer
+  ( nullTracer
+  )
 
+import           Data.Aeson
+  ( FromJSON (..)
+  , ToJSON (..)
+  , (.:)
+  )
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Types as Aeson
-import           Data.Aeson (ToJSON(..), FromJSON(..), (.:))
 
 
 --
 -- Common types, consensus, network
 --
-import qualified Cardano.Binary as CBOR
 import           Cardano.Binary
-                   (ToCBOR(toCBOR), FromCBOR(fromCBOR),
-                    Annotated(..), reAnnotate, recoverBytes)
-import qualified Cardano.Prelude as CBOR (cborError)
+  ( Annotated (..)
+  , FromCBOR (fromCBOR)
+  , ToCBOR (toCBOR)
+  , reAnnotate
+  , recoverBytes
+  )
+import qualified Cardano.Binary as CBOR
+import qualified Cardano.Prelude as CBOR
+  ( cborError
+  )
 import qualified Shelley.Spec.Ledger.Serialization as CBOR
-                   (CBORGroup(..), encodeNullMaybe, decodeNullMaybe)
+  ( CBORGroup (..)
+  , decodeNullMaybe
+  , encodeNullMaybe
+  )
 
-import           Cardano.Slotting.Slot (SlotNo, EpochNo)
+import           Cardano.Slotting.Slot
+  ( EpochNo
+  , SlotNo
+  )
 
 -- TODO: it'd be nice if the network imports needed were a bit more coherent
-import           Ouroboros.Network.Block (Point, Tip)
-import           Ouroboros.Network.Magic (NetworkMagic(..))
-import           Ouroboros.Network.NodeToClient
-                   (NodeToClientProtocols(..), NodeToClientVersionData(..),
-                    NetworkConnectTracers(..), withIOManager, connectTo,
-                    localSnocket, foldMapVersions,
-                    versionedNodeToClientProtocols, chainSyncPeerNull,
-                    localTxSubmissionPeerNull, localStateQueryPeerNull)
+import           Ouroboros.Network.Block
+  ( Point
+  , Tip
+  )
+import           Ouroboros.Network.Magic
+  ( NetworkMagic (..)
+  )
 import           Ouroboros.Network.Mux
-                   (MuxMode(InitiatorMode), MuxPeer(..),
-                    RunMiniProtocol(InitiatorProtocolOnly))
-import           Ouroboros.Network.Util.ShowProxy (ShowProxy)
+  ( MuxMode (InitiatorMode)
+  , MuxPeer (..)
+  , RunMiniProtocol (InitiatorProtocolOnly)
+  )
+import           Ouroboros.Network.NodeToClient
+  ( NetworkConnectTracers (..)
+  , NodeToClientProtocols (..)
+  , NodeToClientVersionData (..)
+  , chainSyncPeerNull
+  , connectTo
+  , foldMapVersions
+  , localSnocket
+  , localStateQueryPeerNull
+  , localTxSubmissionPeerNull
+  , versionedNodeToClientProtocols
+  , withIOManager
+  )
+import           Ouroboros.Network.Util.ShowProxy
+  ( ShowProxy
+  )
 
 -- TODO: it'd be nice if the consensus imports needed were a bit more coherent
+import           Ouroboros.Consensus.Block
+  ( BlockProtocol
+  )
 import           Ouroboros.Consensus.Cardano
-                   (SecurityParam, ProtocolClient, protocolClientInfo)
-import           Ouroboros.Consensus.Block (BlockProtocol)
-import           Ouroboros.Consensus.Ledger.Abstract (Query)
-import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx)
+  ( ProtocolClient
+  , SecurityParam
+  , protocolClientInfo
+  )
+import           Ouroboros.Consensus.Ledger.Abstract
+  ( Query
+  )
+import           Ouroboros.Consensus.Ledger.SupportsMempool
+  ( ApplyTxErr
+  , GenTx
+  )
 import           Ouroboros.Consensus.Network.NodeToClient
-                   (Codecs'(..), clientCodecs)
-import           Ouroboros.Consensus.Node.ProtocolInfo (ProtocolClientInfo(..))
+  ( Codecs' (..)
+  , clientCodecs
+  )
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
-                  (BlockNodeToClientVersion, SupportedNetworkProtocolVersion,
-                   supportedNodeToClientVersions)
-import           Ouroboros.Consensus.Node.Run (SerialiseNodeToClientConstraints)
+  ( BlockNodeToClientVersion
+  , SupportedNetworkProtocolVersion
+  , supportedNodeToClientVersions
+  )
+import           Ouroboros.Consensus.Node.ProtocolInfo
+  ( ProtocolClientInfo (..)
+  )
+import           Ouroboros.Consensus.Node.Run
+  ( SerialiseNodeToClientConstraints
+  )
 
-import           Ouroboros.Consensus.Cardano.ByronHFC (ByronBlockHFC)
-import           Ouroboros.Consensus.Cardano.ShelleyHFC (ShelleyBlockHFC)
-import           Ouroboros.Consensus.Cardano.Block (CardanoBlock)
+import           Ouroboros.Consensus.Cardano.Block
+  ( CardanoBlock
+  )
+import           Ouroboros.Consensus.Cardano.ByronHFC
+  ( ByronBlockHFC
+  )
+import           Ouroboros.Consensus.Cardano.ShelleyHFC
+  ( ShelleyBlockHFC
+  )
 
 --
 -- Crypto API used by consensus and Shelley (and should be used by Byron)
 --
-import qualified Cardano.Crypto.Seed        as Crypto
-import qualified Cardano.Crypto.Hash.Class  as Crypto
 import qualified Cardano.Crypto.DSIGN.Class as Crypto
-import qualified Cardano.Crypto.KES.Class   as Crypto
-import qualified Cardano.Crypto.VRF.Class   as Crypto
-import qualified Cardano.Crypto.Util        as Crypto
-import qualified Cardano.Crypto.Wallet      as Crypto.HD
+import qualified Cardano.Crypto.Hash.Class as Crypto
+import qualified Cardano.Crypto.KES.Class as Crypto
+import qualified Cardano.Crypto.Seed as Crypto
+import qualified Cardano.Crypto.Util as Crypto
+import qualified Cardano.Crypto.VRF.Class as Crypto
+import qualified Cardano.Crypto.Wallet as Crypto.HD
 
 --
 -- Byron imports
 --
 import qualified Cardano.Crypto.Hashing as Byron
-import qualified Cardano.Crypto.Signing as Byron
 import qualified Cardano.Crypto.ProtocolMagic as Byron
+import qualified Cardano.Crypto.Signing as Byron
 
 import qualified Cardano.Chain.Common as Byron
 import qualified Cardano.Chain.Genesis as Byron
-import qualified Cardano.Chain.UTxO   as Byron
 import qualified Cardano.Chain.Slotting as Byron
+import qualified Cardano.Chain.UTxO as Byron
 
 
 --
@@ -432,27 +521,30 @@ import qualified Cardano.Chain.Slotting as Byron
 --
 import qualified Ouroboros.Consensus.Shelley.Protocol.Crypto as Shelley
 
-import qualified Shelley.Spec.Ledger.Address                 as Shelley
-import qualified Shelley.Spec.Ledger.Address.Bootstrap       as Shelley
-import qualified Shelley.Spec.Ledger.BaseTypes               as Shelley
+import qualified Shelley.Spec.Ledger.Address as Shelley
+import qualified Shelley.Spec.Ledger.Address.Bootstrap as Shelley
 import           Shelley.Spec.Ledger.BaseTypes
-                   (maybeToStrictMaybe, strictMaybeToMaybe)
-import qualified Shelley.Spec.Ledger.Coin                    as Shelley
-import qualified Shelley.Spec.Ledger.Credential              as Shelley
-import qualified Shelley.Spec.Ledger.Genesis                 as Shelley
-import qualified Shelley.Spec.Ledger.LedgerState             as Shelley
-import qualified Shelley.Spec.Ledger.Keys                    as Shelley
-import qualified Shelley.Spec.Ledger.MetaData                as Shelley
-import qualified Shelley.Spec.Ledger.OCert                   as Shelley
-import qualified Shelley.Spec.Ledger.PParams                 as Shelley
-import qualified Shelley.Spec.Ledger.Scripts                 as Shelley
-import qualified Shelley.Spec.Ledger.TxData                  as Shelley
-import qualified Shelley.Spec.Ledger.Tx                      as Shelley
-import qualified Shelley.Spec.Ledger.UTxO                    as Shelley
+  ( maybeToStrictMaybe
+  , strictMaybeToMaybe
+  )
+import qualified Shelley.Spec.Ledger.BaseTypes as Shelley
+import qualified Shelley.Spec.Ledger.Coin as Shelley
+import qualified Shelley.Spec.Ledger.Credential as Shelley
+import qualified Shelley.Spec.Ledger.Genesis as Shelley
+import qualified Shelley.Spec.Ledger.Keys as Shelley
+import qualified Shelley.Spec.Ledger.LedgerState as Shelley
+import qualified Shelley.Spec.Ledger.MetaData as Shelley
+import qualified Shelley.Spec.Ledger.OCert as Shelley
+import qualified Shelley.Spec.Ledger.PParams as Shelley
+import qualified Shelley.Spec.Ledger.Scripts as Shelley
+import qualified Shelley.Spec.Ledger.Tx as Shelley
+import qualified Shelley.Spec.Ledger.TxData as Shelley
+import qualified Shelley.Spec.Ledger.UTxO as Shelley
 
 -- Types we will re-export as-is
 import           Shelley.Spec.Ledger.TxData
-                   (MIRPot(..))
+  ( MIRPot (..)
+  )
 
 -- TODO: replace the above with
 --import qualified Cardano.Api.Byron   as Byron
@@ -461,15 +553,23 @@ import           Shelley.Spec.Ledger.TxData
 --
 -- Other config and common types
 --
+import           Cardano.Api.Protocol.Byron
+  ( mkNodeClientProtocolByron
+  )
+import           Cardano.Api.Protocol.Cardano
+  ( mkNodeClientProtocolCardano
+  )
+import           Cardano.Api.Protocol.Shelley
+  ( mkNodeClientProtocolShelley
+  )
 import qualified Cardano.Api.TextView as TextView
-import           Cardano.Api.Protocol.Byron   (mkNodeClientProtocolByron)
-import           Cardano.Api.Protocol.Shelley (mkNodeClientProtocolShelley)
-import           Cardano.Api.Protocol.Cardano (mkNodeClientProtocolCardano)
 
 import           Ouroboros.Network.Protocol.ChainSync.Client as ChainSync
-import           Ouroboros.Network.Protocol.LocalTxSubmission.Client as TxSubmission
 import           Ouroboros.Network.Protocol.LocalStateQuery.Client as StateQuery
-import           Ouroboros.Network.Protocol.LocalStateQuery.Type (AcquireFailure)
+import           Ouroboros.Network.Protocol.LocalStateQuery.Type
+  ( AcquireFailure
+  )
+import           Ouroboros.Network.Protocol.LocalTxSubmission.Client as TxSubmission
 
 
 

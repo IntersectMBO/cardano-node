@@ -6,9 +6,14 @@ module Test.CLI.Shelley.Golden.TextEnvelope.Keys.PaymentKeys
 
 import           Cardano.Prelude
 
-import           Cardano.Api.Typed (AsType(..), HasTextEnvelope (..))
+import           Cardano.Api.Typed
+  ( AsType (..)
+  , HasTextEnvelope (..)
+  )
 
-import           Hedgehog (Property)
+import           Hedgehog
+  ( Property
+  )
 import qualified Hedgehog as H
 
 import           Test.OptParse

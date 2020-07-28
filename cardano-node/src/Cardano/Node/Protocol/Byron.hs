@@ -21,10 +21,19 @@ module Cardano.Node.Protocol.Byron
 
 import           Cardano.Prelude
 
-import           Codec.CBOR.Read (DeserialiseFailure, deserialiseFromBytes)
-import           Control.Monad.Trans.Except (ExceptT)
-import           Control.Monad.Trans.Except.Extra (bimapExceptT, firstExceptT,
-                                                   hoistEither, left)
+import           Codec.CBOR.Read
+  ( DeserialiseFailure
+  , deserialiseFromBytes
+  )
+import           Control.Monad.Trans.Except
+  ( ExceptT
+  )
+import           Control.Monad.Trans.Except.Extra
+  ( bimapExceptT
+  , firstExceptT
+  , hoistEither
+  , left
+  )
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.Text as Text
 
@@ -36,19 +45,29 @@ import qualified Cardano.Crypto.Signing as Byron.Crypto
 import qualified Cardano.Chain.Genesis as Genesis
 import qualified Cardano.Chain.Update as Update
 import qualified Cardano.Chain.UTxO as UTxO
-import           Cardano.Crypto.ProtocolMagic (RequiresNetworkMagic)
+import           Cardano.Crypto.ProtocolMagic
+  ( RequiresNetworkMagic
+  )
 
-import           Ouroboros.Consensus.Cardano hiding (Protocol)
+import           Ouroboros.Consensus.Cardano hiding
+  ( Protocol
+  )
 import qualified Ouroboros.Consensus.Cardano as Consensus
 import           Ouroboros.Consensus.Cardano.ByronHFC
 
-import           Cardano.Node.Types
-                   (NodeByronProtocolConfiguration (..), GenesisHash(..))
 import           Cardano.Config.Types
-                   (ProtocolFilepaths(..), GenesisFile (..))
+  ( GenesisFile (..)
+  , ProtocolFilepaths (..)
+  )
+import           Cardano.Node.Types
+  ( GenesisHash (..)
+  , NodeByronProtocolConfiguration (..)
+  )
 
-import           Cardano.Tracing.OrphanInstances.Byron ()
-import           Cardano.Tracing.OrphanInstances.HardFork ()
+import           Cardano.Tracing.OrphanInstances.Byron
+  ()
+import           Cardano.Tracing.OrphanInstances.HardFork
+  ()
 
 import           Cardano.Node.Protocol.Types
 

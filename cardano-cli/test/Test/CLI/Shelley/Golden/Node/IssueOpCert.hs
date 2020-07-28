@@ -4,9 +4,11 @@ module Test.CLI.Shelley.Golden.Node.IssueOpCert
   ( golden_shelleyNodeIssueOpCert
   ) where
 
-import Cardano.Prelude
+import           Cardano.Prelude
 
-import Hedgehog (Property)
+import           Hedgehog
+  ( Property
+  )
 
 import qualified System.Directory as IO
 import qualified Test.OptParse as OP

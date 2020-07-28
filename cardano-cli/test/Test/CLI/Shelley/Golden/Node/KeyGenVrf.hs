@@ -4,9 +4,11 @@ module Test.CLI.Shelley.Golden.Node.KeyGenVrf
   ( golden_shelleyNodeKeyGenVrf
   ) where
 
-import Cardano.Prelude
+import           Cardano.Prelude
 
-import Hedgehog (Property)
+import           Hedgehog
+  ( Property
+  )
 
 import qualified Test.OptParse as OP
 

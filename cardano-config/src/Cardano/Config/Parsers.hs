@@ -25,18 +25,30 @@ module Cardano.Config.Parsers
   ) where
 
 
-import           Prelude (String)
+import           Prelude
+  ( String
+  )
 
-import           Cardano.Prelude hiding (option)
+import           Cardano.Prelude hiding
+  ( option
+  )
 
-import           Cardano.Chain.Common (Lovelace, mkLovelace)
+import           Cardano.Chain.Common
+  ( Lovelace
+  , mkLovelace
+  )
 import           Cardano.Config.Types
 
 
-import           Network.Socket (PortNumber)
+import           Network.Socket
+  ( PortNumber
+  )
 import           Options.Applicative
 
-import           Ouroboros.Consensus.NodeId (NodeId(..), CoreNodeId(..))
+import           Ouroboros.Consensus.NodeId
+  ( CoreNodeId (..)
+  , NodeId (..)
+  )
 
 
 -- Common command line parsers

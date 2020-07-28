@@ -9,13 +9,20 @@ module Test.Cardano.Api.Gen
   ) where
 
 
-import           Cardano.Prelude hiding (MetaData)
+import           Cardano.Prelude hiding
+  ( MetaData
+  )
 
 import qualified Data.Map.Strict as Map
 
-import           Shelley.Spec.Ledger.MetaData (MetaData(..), MetaDatum(..))
+import           Shelley.Spec.Ledger.MetaData
+  ( MetaData (..)
+  , MetaDatum (..)
+  )
 
-import           Hedgehog (Gen)
+import           Hedgehog
+  ( Gen
+  )
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 

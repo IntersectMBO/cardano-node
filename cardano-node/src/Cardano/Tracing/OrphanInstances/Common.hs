@@ -44,28 +44,57 @@ import qualified Prelude
 import           Data.Aeson
 import qualified Data.ByteString.Base16 as B16
 import qualified Data.ByteString.Short as SBS
-import           Data.Scientific (coefficient)
+import           Data.Scientific
+  ( coefficient
+  )
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
-import           Data.Void (Void)
-import           Network.Socket (PortNumber)
+import           Data.Void
+  ( Void
+  )
+import           Network.Socket
+  ( PortNumber
+  )
 
-import           Cardano.BM.Tracing
-                   (ToObject(..), TracingVerbosity(..), Transformable(..),
-                    HasSeverityAnnotation(..), Severity(..),
-                    HasPrivacyAnnotation(..), Tracer(..), )
 import           Cardano.BM.Data.LogItem
-                   (LOContent (..), LogObject (..), mkLOMeta,
-                    PrivacyAnnotation(..))
+  ( LOContent (..)
+  , LogObject (..)
+  , PrivacyAnnotation (..)
+  , mkLOMeta
+  )
 import           Cardano.BM.Data.Tracer
-                   (trStructured, HasTextFormatter (..), trStructuredText,
-                    emptyObject, mkObject)
+  ( HasTextFormatter (..)
+  , emptyObject
+  , mkObject
+  , trStructured
+  , trStructuredText
+  )
+import           Cardano.BM.Tracing
+  ( HasPrivacyAnnotation (..)
+  , HasSeverityAnnotation (..)
+  , Severity (..)
+  , ToObject (..)
+  , Tracer (..)
+  , TracingVerbosity (..)
+  , Transformable (..)
+  )
 import qualified Cardano.Chain.Update as Update
-import           Cardano.Slotting.Block (BlockNo (..))
-import           Ouroboros.Consensus.Byron.Ledger.Block (ByronHash(..))
-import           Ouroboros.Consensus.HardFork.Combinator (OneEraHash (..))
-import           Ouroboros.Consensus.NodeId (CoreNodeId (..))
-import           Ouroboros.Network.Block (HeaderHash, Tip (..))
+import           Cardano.Slotting.Block
+  ( BlockNo (..)
+  )
+import           Ouroboros.Consensus.Byron.Ledger.Block
+  ( ByronHash (..)
+  )
+import           Ouroboros.Consensus.HardFork.Combinator
+  ( OneEraHash (..)
+  )
+import           Ouroboros.Consensus.NodeId
+  ( CoreNodeId (..)
+  )
+import           Ouroboros.Network.Block
+  ( HeaderHash
+  , Tip (..)
+  )
 
 
 -- | A bit of a weird one, but needed because some of the very general

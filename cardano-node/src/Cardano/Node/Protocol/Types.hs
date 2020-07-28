@@ -1,7 +1,7 @@
 {-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE GADTSyntax #-}
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GADTSyntax #-}
 
 module Cardano.Node.Protocol.Types
   ( SomeConsensusProtocol(..)
@@ -10,13 +10,26 @@ module Cardano.Node.Protocol.Types
 
 import           Cardano.Prelude
 
-import           Cardano.BM.Tracing (Transformable)
-import           Ouroboros.Consensus.Block (BlockProtocol, ForgeState(..))
-import qualified Ouroboros.Consensus.Cardano as Consensus (Protocol)
-import           Ouroboros.Consensus.Node.Run (RunNode)
+import           Cardano.BM.Tracing
+  ( Transformable
+  )
+import           Ouroboros.Consensus.Block
+  ( BlockProtocol
+  , ForgeState (..)
+  )
+import qualified Ouroboros.Consensus.Cardano as Consensus
+  ( Protocol
+  )
+import           Ouroboros.Consensus.Node.Run
+  ( RunNode
+  )
 
-import           Cardano.Config.Types (HasKESMetricsData)
-import           Cardano.Tracing.Constraints (TraceConstraints)
+import           Cardano.Config.Types
+  ( HasKESMetricsData
+  )
+import           Cardano.Tracing.Constraints
+  ( TraceConstraints
+  )
 
 type SomeConsensusProtocolConstraints blk =
      ( HasKESMetricsData blk

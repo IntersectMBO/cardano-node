@@ -1,10 +1,10 @@
-{-# LANGUAGE DataKinds           #-}
-{-# LANGUAGE FlexibleContexts    #-}
-{-# LANGUAGE GADTs               #-}
-{-# LANGUAGE KindSignatures      #-}
-{-# LANGUAGE NamedFieldPuns      #-}
-{-# LANGUAGE MultiWayIf          #-}
-{-# LANGUAGE RankNTypes          #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE MultiWayIf #-}
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -12,56 +12,114 @@
 
 module Cardano.Chairman (chairmanTest) where
 
-import           Cardano.Prelude hiding (ByteString, STM, atomically, catch, option, show)
-import           Prelude (String, error, show)
+import           Cardano.Prelude hiding
+  ( ByteString
+  , STM
+  , atomically
+  , catch
+  , option
+  , show
+  )
+import           Prelude
+  ( String
+  , error
+  , show
+  )
 
-import           Control.Concurrent.Async (forConcurrently_)
-import           Control.Monad (void)
-import           Data.ByteString.Lazy (ByteString)
-import           Data.Proxy (Proxy (..))
-import           Data.Void (Void)
-import           Data.Coerce (coerce)
-import           Data.Map.Strict (Map)
+import           Control.Concurrent.Async
+  ( forConcurrently_
+  )
+import           Control.Monad
+  ( void
+  )
+import           Data.ByteString.Lazy
+  ( ByteString
+  )
+import           Data.Coerce
+  ( coerce
+  )
+import           Data.Map.Strict
+  ( Map
+  )
 import qualified Data.Map.Strict as Map
+import           Data.Proxy
+  ( Proxy (..)
+  )
+import           Data.Void
+  ( Void
+  )
 
 import           Control.Monad.Class.MonadAsync
 import           Control.Monad.Class.MonadST
 import           Control.Monad.Class.MonadSTM.Strict
 import           Control.Monad.Class.MonadThrow
-import           Control.Monad.Class.MonadTime (DiffTime)
+import           Control.Monad.Class.MonadTime
+  ( DiffTime
+  )
 import           Control.Monad.Class.MonadTimer
 import           Control.Tracer
 
-import           Network.Mux (MuxError, MuxMode(..))
+import           Network.Mux
+  ( MuxError
+  , MuxMode (..)
+  )
 
-import           Cardano.Api.Protocol.Types (SomeNodeClientProtocol(..))
-import           Ouroboros.Consensus.Block (BlockProtocol, Header)
-
-import           Ouroboros.Consensus.Block (CodecConfig, GetHeader (..))
-import           Ouroboros.Consensus.BlockchainTime (SlotLength, getSlotLength)
+import           Cardano.Api.Protocol.Types
+  ( SomeNodeClientProtocol (..)
+  )
+import           Ouroboros.Consensus.Block
+  ( BlockProtocol
+  , CodecConfig
+  , GetHeader (..)
+  , Header
+  )
+import           Ouroboros.Consensus.BlockchainTime
+  ( SlotLength
+  , getSlotLength
+  )
+import           Ouroboros.Consensus.Cardano
+import           Ouroboros.Consensus.Ledger.SupportsMempool
+  ( ApplyTxErr
+  , GenTx
+  )
 import           Ouroboros.Consensus.Network.NodeToClient
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
-                  (HasNetworkProtocolVersion (..),
-                   supportedNodeToClientVersions)
-import           Ouroboros.Consensus.Node.ProtocolInfo (pClientInfoCodecConfig)
+  ( HasNetworkProtocolVersion (..)
+  , supportedNodeToClientVersions
+  )
+import           Ouroboros.Consensus.Node.ProtocolInfo
+  ( pClientInfoCodecConfig
+  )
 import           Ouroboros.Consensus.Node.Run
-import           Ouroboros.Consensus.Cardano
-import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx)
 
-import           Ouroboros.Network.Magic (NetworkMagic)
-import           Ouroboros.Network.Mux
-import           Ouroboros.Network.Block (BlockNo, HasHeader, Point, Tip)
-import qualified Ouroboros.Network.Block as Block
-import           Ouroboros.Network.Point (WithOrigin(..), fromWithOrigin)
-import           Ouroboros.Network.AnchoredFragment (AnchoredFragment, Anchor)
+import           Ouroboros.Network.AnchoredFragment
+  ( Anchor
+  , AnchoredFragment
+  )
 import qualified Ouroboros.Network.AnchoredFragment as AF
-import           Ouroboros.Network.Protocol.LocalTxSubmission.Type
-import           Ouroboros.Network.Protocol.ChainSync.Type
-import           Ouroboros.Network.Protocol.ChainSync.Client
-import           Ouroboros.Network.Protocol.Handshake.Version
+import           Ouroboros.Network.Block
+  ( BlockNo
+  , HasHeader
+  , Point
+  , Tip
+  )
+import qualified Ouroboros.Network.Block as Block
+import           Ouroboros.Network.Magic
+  ( NetworkMagic
+  )
+import           Ouroboros.Network.Mux
 import           Ouroboros.Network.NodeToClient
+import           Ouroboros.Network.Point
+  ( WithOrigin (..)
+  , fromWithOrigin
+  )
+import           Ouroboros.Network.Protocol.ChainSync.Client
+import           Ouroboros.Network.Protocol.ChainSync.Type
+import           Ouroboros.Network.Protocol.LocalTxSubmission.Type
 
-import           Cardano.Config.Types (SocketPath(..))
+import           Cardano.Config.Types
+  ( SocketPath (..)
+  )
 
 
 -- | The chairman checks for consensus and progress.

@@ -5,18 +5,33 @@ module Cardano.Node.Parsers
   ( nodeCLIParser
   ) where
 
-import           Cardano.Prelude hiding (option)
+import           Cardano.Prelude hiding
+  ( option
+  )
 
 import           Options.Applicative
-import           System.Posix.Types (Fd(..))
+import           System.Posix.Types
+  ( Fd (..)
+  )
 
-import           Ouroboros.Network.Block (MaxSlotNo(..), SlotNo(..))
+import           Ouroboros.Network.Block
+  ( MaxSlotNo (..)
+  , SlotNo (..)
+  )
 
+import           Cardano.Config.Parsers
+  ( parseConfigFile
+  , parseDbPath
+  , parseNodeAddress
+  , parseSocketPath
+  )
+import           Cardano.Config.Types
+  ( DbFile (..)
+  , NodeProtocolMode (..)
+  , ProtocolFilepaths (..)
+  , TopologyFile (..)
+  )
 import           Cardano.Node.Types
-import           Cardano.Config.Types (DbFile(..), ProtocolFilepaths(..),
-                   NodeProtocolMode(..), TopologyFile(..))
-import           Cardano.Config.Parsers (parseConfigFile, parseDbPath,
-                   parseNodeAddress, parseSocketPath)
 
 nodeCLIParser  :: Parser NodeCLI
 nodeCLIParser = nodeRealProtocolModeParser <|> nodeMockProtocolModeParser

@@ -19,26 +19,52 @@ module Cardano.Node.Shutdown
   )
 where
 
-import           Cardano.Prelude hiding (ByteString, atomically, take, trace)
+import           Cardano.Prelude hiding
+  ( ByteString
+  , atomically
+  , take
+  , trace
+  )
 
 import qualified Control.Concurrent.Async as Async
-import           Data.Text (pack)
+import           Data.Text
+  ( pack
+  )
 
-import qualified GHC.IO.Handle.FD as IO (fdToHandle)
-import qualified System.Process as IO (createPipeFd)
+import qualified GHC.IO.Handle.FD as IO
+  ( fdToHandle
+  )
 import qualified System.IO as IO
-import qualified System.IO.Error  as IO
-import           System.Posix.Types (Fd(Fd))
+import qualified System.IO.Error as IO
+import           System.Posix.Types
+  ( Fd (Fd)
+  )
+import qualified System.Process as IO
+  ( createPipeFd
+  )
 
+import           Cardano.BM.Data.Tracer
+  ( TracingVerbosity (..)
+  , severityNotice
+  , trTransformer
+  )
 import           Cardano.BM.Trace
-import           Cardano.BM.Data.Tracer (
-                     TracingVerbosity (..), severityNotice, trTransformer)
-import           Cardano.Slotting.Slot (WithOrigin(..))
+import           Cardano.Slotting.Slot
+  ( WithOrigin (..)
+  )
 import           Control.Tracer
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
-import           Ouroboros.Consensus.Util.ResourceRegistry (ResourceRegistry)
-import           Ouroboros.Consensus.Util.STM (onEachChange)
-import           Ouroboros.Network.Block (MaxSlotNo(..), SlotNo, pointSlot)
+import           Ouroboros.Consensus.Util.ResourceRegistry
+  ( ResourceRegistry
+  )
+import           Ouroboros.Consensus.Util.STM
+  ( onEachChange
+  )
+import           Ouroboros.Network.Block
+  ( MaxSlotNo (..)
+  , SlotNo
+  , pointSlot
+  )
 
 import           Cardano.Node.Types
 

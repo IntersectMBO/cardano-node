@@ -1,6 +1,6 @@
-{-# LANGUAGE ConstraintKinds   #-}
-{-# LANGUAGE FlexibleContexts  #-}
-{-# LANGUAGE NamedFieldPuns    #-}
+{-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Cardano.Node.Protocol.Mock
@@ -20,20 +20,34 @@ module Cardano.Node.Protocol.Mock
 
 import           Cardano.Prelude
 
-import           Ouroboros.Consensus.BlockchainTime (SlotLength, slotLengthFromSec)
-import           Ouroboros.Consensus.Cardano hiding (Protocol)
+import           Ouroboros.Consensus.BlockchainTime
+  ( SlotLength
+  , slotLengthFromSec
+  )
+import           Ouroboros.Consensus.Cardano hiding
+  ( Protocol
+  )
 import qualified Ouroboros.Consensus.Cardano as Consensus
-import           Ouroboros.Consensus.HardFork.History (defaultEraParams)
+import           Ouroboros.Consensus.HardFork.History
+  ( defaultEraParams
+  )
 import           Ouroboros.Consensus.Mock.Ledger.Block
 import           Ouroboros.Consensus.Mock.Ledger.Block.BFT
-import           Ouroboros.Consensus.Mock.Ledger.Block.Praos
 import           Ouroboros.Consensus.Mock.Ledger.Block.PBFT
-import           Ouroboros.Consensus.Node.ProtocolInfo (NumCoreNodes (..))
+import           Ouroboros.Consensus.Mock.Ledger.Block.Praos
+import           Ouroboros.Consensus.Node.ProtocolInfo
+  ( NumCoreNodes (..)
+  )
 
-import           Ouroboros.Consensus.Protocol.Abstract (SecurityParam (..))
+import           Ouroboros.Consensus.Protocol.Abstract
+  ( SecurityParam (..)
+  )
 
-import           Cardano.Node.Types (NodeMockProtocolConfiguration(..))
-import           Cardano.Tracing.OrphanInstances.Mock ()
+import           Cardano.Node.Types
+  ( NodeMockProtocolConfiguration (..)
+  )
+import           Cardano.Tracing.OrphanInstances.Mock
+  ()
 
 import           Cardano.Node.Protocol.Types
 

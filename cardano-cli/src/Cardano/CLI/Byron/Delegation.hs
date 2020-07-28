@@ -12,25 +12,51 @@ module Cardano.CLI.Byron.Delegation
   )
 where
 
-import           Cardano.Prelude hiding (option, show, trace)
+import           Cardano.Prelude hiding
+  ( option
+  , show
+  , trace
+  )
 
-import           Codec.CBOR.Write (toLazyByteString)
-import           Control.Monad.Trans.Except.Extra (left)
+import           Codec.CBOR.Write
+  ( toLazyByteString
+  )
+import           Control.Monad.Trans.Except.Extra
+  ( left
+  )
 import qualified Data.ByteString.Lazy as LB
-import           Formatting (Format, sformat)
+import           Formatting
+  ( Format
+  , sformat
+  )
 
-import           Cardano.Binary (Annotated(..), serialize')
+import           Cardano.Binary
+  ( Annotated (..)
+  , serialize'
+  )
 import qualified Cardano.Chain.Delegation as Dlg
-import           Cardano.Chain.Slotting (EpochNumber)
+import           Cardano.Chain.Slotting
+  ( EpochNumber
+  )
 import qualified Cardano.CLI.Legacy.Byron as Legacy
-import           Cardano.Config.Types (CertificateFile (..))
+import           Cardano.Config.Types
+  ( CertificateFile (..)
+  )
+import           Cardano.Crypto
+  ( ProtocolMagicId
+  , SigningKey
+  )
 import qualified Cardano.Crypto as Crypto
-import           Cardano.Crypto (ProtocolMagicId, SigningKey)
 
 import           Cardano.CLI.Byron.Key
-                   (CardanoEra(..), serialiseSigningKey,
-                   ByronKeyFailure, renderByronKeyFailure)
-import           Cardano.CLI.Helpers (textShow)
+  ( ByronKeyFailure
+  , CardanoEra (..)
+  , renderByronKeyFailure
+  , serialiseSigningKey
+  )
+import           Cardano.CLI.Helpers
+  ( textShow
+  )
 
 data ByronDelegationError
   = CertificateValidationErrors !FilePath ![Text]

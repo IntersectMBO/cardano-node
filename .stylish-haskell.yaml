@@ -20,9 +20,9 @@ steps:
   # and only applies to statements where each element occupies a single
   # line.
   - simple_align:
-      cases: true
-      top_level_patterns: true
-      records: true
+      cases: false
+      top_level_patterns: false
+      records: false
 
   # Import cleanup
   - imports:
@@ -57,13 +57,26 @@ steps:
       #   > import qualified Data.List      as List (concat, foldl, foldr, head,
       #   >                                 init, last, length)
       #
+      # - with_module_name: Import list is aligned `list_padding` spaces after
+      #   the module name.
+      #
+      #   > import qualified Data.List      as List (concat, foldl, foldr, head,
+      #                          init, last, length)
+      #
+      #   This is mainly intended for use with `pad_module_names: false`.
+      #
+      #   > import qualified Data.List as List (concat, foldl, foldr, head,
+      #                          init, last, length, scanl, scanr, take, drop,
+      #                          sort, nub)
+      #
       # - new_line: Import list starts always on new line.
       #
       #   > import qualified Data.List      as List
       #   >     (concat, foldl, foldr, head, init, last, length)
       #
       # Default: after_alias
-      list_align: after_alias
+      list_align: new_line
+
 
       # Right-pad the module names to align imports in a group:
       #
@@ -108,7 +121,7 @@ steps:
       #   >     )
       #
       # Default: inline
-      long_list_align: inline
+      long_list_align: multiline
 
       # Align empty list (importing instances)
       #
@@ -130,7 +143,7 @@ steps:
       #
       # - module_name: align under start of module name.
       #   Useful for 'file' and 'group' align settings.
-      list_padding: 4
+      list_padding: 2
 
       # Separate lists option affects formatting of import list for type
       # or class. The only difference is single space between type and list
@@ -179,9 +192,24 @@ steps:
       # Default: vertical.
       style: vertical
 
+      # Align affects alignment of closing pragma brackets.
+      #
+      # - true: Brackets are aligned in same column.
+      #
+      # - false: Brackets are not aligned together. There is only one space
+      #   between actual import and closing bracket.
+      #
+      # Default: true
+      align: false
+
       # stylish-haskell can detect redundancy of some language pragmas. If this
       # is set to true, it will remove those redundant pragmas. Default: true.
       remove_redundant: true
+
+      # Language prefix to be used for pragma declaration, this allows you to
+      # use other options non case-sensitive like "language" or "Language".
+      # If a non correct String is provided, it will default to: LANGUAGE.
+      language_prefix: LANGUAGE
 
   # Replace tabs by spaces. This is disabled by default.
   # - tabs:
@@ -192,9 +220,18 @@ steps:
   # Remove trailing whitespace
   - trailing_whitespace: {}
 
+  # Squash multiple spaces between the left and right hand sides of some
+  # elements into single spaces. Basically, this undoes the effect of
+  # simple_align but is a bit less conservative.
+  # - squash: {}
+
 # A common setting is the number of columns (parts of) code will be wrapped
-# to. Different steps take this into account. Default: 80.
-columns: 80
+# to. Different steps take this into account.
+#
+# Set this to null to disable all line wrapping.
+#
+# Default: 80.
+columns: null
 
 # By default, line endings are converted according to the OS. You can override
 # preferred format here.
@@ -243,3 +280,10 @@ language_extensions:
   - TypeFamilies
   - ViewPatterns
   - ExplicitNamespaces
+
+# Attempt to find the cabal file in ancestors of the current directory, and
+# parse options (currently only language extensions) from that.
+#
+# Default: true
+cabal: true
+
