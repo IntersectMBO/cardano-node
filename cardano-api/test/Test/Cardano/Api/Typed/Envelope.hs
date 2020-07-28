@@ -13,8 +13,8 @@ import           Cardano.Prelude
 import           Hedgehog (Property, discover)
 import qualified Hedgehog as H
 
-import           Test.Cardano.Api.Typed.Orphans ()
 import           Test.Cardano.Api.Typed.Gen
+import           Test.Cardano.Api.Typed.Orphans ()
 
 prop_roundtrip_ByronVerificationKey_envelope :: Property
 prop_roundtrip_ByronVerificationKey_envelope =

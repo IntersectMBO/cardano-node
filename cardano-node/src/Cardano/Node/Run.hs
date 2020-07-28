@@ -28,15 +28,15 @@ import qualified Data.List as List
 import           Data.Proxy (Proxy (..))
 import           Data.Semigroup ((<>))
 import           Data.Text (Text, breakOn, pack, take, unlines)
-import           GHC.Clock (getMonotonicTimeNSec)
 import           Data.Version (showVersion)
+import           GHC.Clock (getMonotonicTimeNSec)
 import           Network.HostName (getHostName)
 import           Network.Socket (AddrInfo, Socket)
 import           System.Directory (canonicalizePath, makeAbsolute)
 import           System.Environment (lookupEnv)
 
-import           Paths_cardano_node (version)
 import           Cardano.BM.Data.Aggregated (Measurable (..))
+import           Paths_cardano_node (version)
 #ifdef UNIX
 import qualified Cardano.BM.Configuration.Model as CM
 import           Cardano.BM.Data.Backend
@@ -44,52 +44,58 @@ import           Cardano.BM.Data.BackendKind (BackendKind (..))
 #endif
 import           Cardano.BM.Data.LogItem (LOContent (..),
                      PrivacyAnnotation (..), mkLOMeta)
-import           Cardano.BM.Data.Tracer (ToLogObject (..), TracingVerbosity(..))
+import           Cardano.BM.Data.Tracer (ToLogObject (..),
+                     TracingVerbosity (..))
 import           Cardano.BM.Data.Transformers (setHostname)
 import           Cardano.BM.Trace
 
 import           Cardano.Config.GitRev (gitRev)
-import           Cardano.Node.Logging (LoggingLayer (..), Severity (..), shutdownLoggingLayer)
+import           Cardano.Node.Logging (LoggingLayer (..), Severity (..),
+                     shutdownLoggingLayer)
 #ifdef UNIX
 import           Cardano.Node.TraceConfig (traceBlockFetchDecisions)
 #endif
-import           Cardano.Node.TraceConfig (TraceOptions(..), TraceSelection(..))
-import           Cardano.Node.Types (NodeConfiguration (..), NodeCLI(..),
-                   NodeMockProtocolConfiguration(..), NodeProtocolConfiguration(..),
-                   ncProtocol, parseNodeConfiguration)
 import           Cardano.Config.Types (ViewMode (..))
+import           Cardano.Node.TraceConfig (TraceOptions (..),
+                     TraceSelection (..))
+import           Cardano.Node.Types (NodeCLI (..), NodeConfiguration (..),
+                     NodeMockProtocolConfiguration (..),
+                     NodeProtocolConfiguration (..), ncProtocol,
+                     parseNodeConfiguration)
 
+import           Ouroboros.Consensus.Block (BlockProtocol)
+import qualified Ouroboros.Consensus.Cardano as Consensus
+import qualified Ouroboros.Consensus.Config as Consensus
+import           Ouroboros.Consensus.Config.SupportsNode
+                     (ConfigSupportsNode (..))
+import           Ouroboros.Consensus.Fragment.InFuture (defaultClockSkew)
+import           Ouroboros.Consensus.Node (DiffusionArguments (..),
+                     DiffusionTracers (..), DnsSubscriptionTarget (..),
+                     IPSubscriptionTarget (..), NodeArgs (..), NodeKernel,
+                     RunNode (..), RunNodeArgs (..))
+import qualified Ouroboros.Consensus.Node as Node (getChainDB, run)
+import           Ouroboros.Consensus.Node.NetworkProtocolVersion
+import           Ouroboros.Consensus.Node.ProtocolInfo
+import           Ouroboros.Consensus.NodeId
+import           Ouroboros.Consensus.Util.Orphans ()
 import           Ouroboros.Network.BlockFetch (BlockFetchConfiguration (..))
 import           Ouroboros.Network.Magic (NetworkMagic (..))
 import           Ouroboros.Network.NodeToClient (LocalConnectionId)
-import           Ouroboros.Network.NodeToNode (RemoteConnectionId, AcceptedConnectionsLimit (..))
-import           Ouroboros.Consensus.Block (BlockProtocol)
-import           Ouroboros.Consensus.Node (NodeKernel,
-                     DiffusionTracers (..), DiffusionArguments (..),
-                     DnsSubscriptionTarget (..), IPSubscriptionTarget (..), NodeArgs (..),
-                     RunNode (..),
-                     RunNodeArgs (..))
-import qualified Ouroboros.Consensus.Node as Node (getChainDB, run)
-import           Ouroboros.Consensus.Node.ProtocolInfo
-import           Ouroboros.Consensus.Node.NetworkProtocolVersion
-import           Ouroboros.Consensus.NodeId
-import           Ouroboros.Consensus.Config.SupportsNode (ConfigSupportsNode (..))
-import           Ouroboros.Consensus.Fragment.InFuture (defaultClockSkew)
-import qualified Ouroboros.Consensus.Config as Consensus
-import qualified Ouroboros.Consensus.Cardano as Consensus
-import           Ouroboros.Consensus.Util.Orphans ()
+import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..),
+                     RemoteConnectionId)
 
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 import           Ouroboros.Consensus.Storage.ImmutableDB (ValidationPolicy (..))
-import           Ouroboros.Consensus.Storage.VolatileDB (BlockValidationPolicy (..))
+import           Ouroboros.Consensus.Storage.VolatileDB
+                     (BlockValidationPolicy (..))
 
-import           Cardano.Node.Topology
 import           Cardano.Config.Types
-import           Cardano.Node.Protocol
-                   (mkConsensusProtocol,
-                    SomeConsensusProtocol(..), renderProtocolInstantiationError)
-import           Cardano.Node.Socket (gatherConfiguredSockets, SocketOrSocketInfo(..))
+import           Cardano.Node.Protocol (SomeConsensusProtocol (..),
+                     mkConsensusProtocol, renderProtocolInstantiationError)
 import           Cardano.Node.Shutdown
+import           Cardano.Node.Socket (SocketOrSocketInfo (..),
+                     gatherConfiguredSockets)
+import           Cardano.Node.Topology
 import           Cardano.Tracing.Kernel
 import           Cardano.Tracing.Peer
 import           Cardano.Tracing.Tracers

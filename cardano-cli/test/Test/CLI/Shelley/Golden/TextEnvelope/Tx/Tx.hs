@@ -6,7 +6,7 @@ module Test.CLI.Shelley.Golden.TextEnvelope.Tx.Tx
 
 import           Cardano.Prelude
 
-import           Cardano.Api.Typed (AsType(..), HasTextEnvelope (..))
+import           Cardano.Api.Typed (AsType (..), HasTextEnvelope (..))
 
 import           Hedgehog (Property)
 import qualified Hedgehog as H

@@ -24,7 +24,7 @@ import           Cardano.Prelude
 import           Codec.CBOR.Read (DeserialiseFailure, deserialiseFromBytes)
 import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (bimapExceptT, firstExceptT,
-                                                   hoistEither, left)
+                     hoistEither, left)
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.Text as Text
 
@@ -42,10 +42,9 @@ import           Ouroboros.Consensus.Cardano hiding (Protocol)
 import qualified Ouroboros.Consensus.Cardano as Consensus
 import           Ouroboros.Consensus.Cardano.ByronHFC
 
-import           Cardano.Node.Types
-                   (NodeByronProtocolConfiguration (..), GenesisHash(..))
-import           Cardano.Config.Types
-                   (ProtocolFilepaths(..), GenesisFile (..))
+import           Cardano.Config.Types (GenesisFile (..), ProtocolFilepaths (..))
+import           Cardano.Node.Types (GenesisHash (..),
+                     NodeByronProtocolConfiguration (..))
 
 import           Cardano.TracingOrphanInstances.Byron ()
 import           Cardano.TracingOrphanInstances.HardFork ()

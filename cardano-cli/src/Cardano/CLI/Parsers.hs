@@ -8,10 +8,10 @@ import           Cardano.Prelude
 import           Options.Applicative
 import qualified Options.Applicative as Opt
 
-import           Cardano.Config.Parsers (command')
-import           Cardano.CLI.Byron.Parsers   (parseByronCommands)
-import           Cardano.CLI.Run (ClientCommand(..))
+import           Cardano.CLI.Byron.Parsers (parseByronCommands)
+import           Cardano.CLI.Run (ClientCommand (..))
 import           Cardano.CLI.Shelley.Parsers (parseShelleyCommands)
+import           Cardano.Config.Parsers (command')
 
 
 opts :: ParserInfo ClientCommand

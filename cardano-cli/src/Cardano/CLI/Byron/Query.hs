@@ -9,22 +9,22 @@ module Cardano.CLI.Byron.Query
   , runGetLocalNodeTip
   ) where
 
-import           Prelude (unlines)
 import           Cardano.Prelude hiding (unlines)
+import           Prelude (unlines)
 
 import           Control.Monad.Trans.Except.Extra (firstExceptT)
 import qualified Data.Text as T
 
 import           Cardano.Api.Typed
-import           Cardano.Chain.Slotting (EpochSlots(..))
-import           Ouroboros.Consensus.Cardano (SecurityParam(..))
-import           Ouroboros.Consensus.Util.Condense (Condense(..))
+import           Cardano.Chain.Slotting (EpochSlots (..))
+import           Ouroboros.Consensus.Cardano (SecurityParam (..))
+import           Ouroboros.Consensus.Util.Condense (Condense (..))
 import           Ouroboros.Network.Block
 
-import           Cardano.Config.Types (SocketPath (..))
 import           Cardano.Api.LocalChainSync (getLocalTip)
-import           Cardano.CLI.Environment
-                   (EnvSocketError, readEnvSocketPath, renderEnvSocketError)
+import           Cardano.CLI.Environment (EnvSocketError, readEnvSocketPath,
+                     renderEnvSocketError)
+import           Cardano.Config.Types (SocketPath (..))
 import           Cardano.TracingOrphanInstances.HardFork ()
 
 

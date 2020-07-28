@@ -11,28 +11,29 @@ module Cardano.CLI.Shelley.Parsers
   , renderTxIn
   ) where
 
-import           Prelude (String)
 import           Cardano.Prelude hiding (option)
+import           Prelude (String)
 
 import           Control.Monad.Fail (fail)
-import qualified Data.ByteString.Char8 as BSC
+import qualified Data.Attoparsec.ByteString.Char8 as Atto
 import qualified Data.ByteString.Base16 as Base16
+import qualified Data.ByteString.Char8 as BSC
 import qualified Data.Char as Char
 import qualified Data.IP as IP
 import qualified Data.Set as Set
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import           Data.Time.Clock (UTCTime)
-import           Data.Time.Format (defaultTimeLocale, iso8601DateFormat, parseTimeOrError)
+import           Data.Time.Format (defaultTimeLocale, iso8601DateFormat,
+                     parseTimeOrError)
 import           Options.Applicative (Parser)
 import qualified Options.Applicative as Opt
-import qualified Data.Attoparsec.ByteString.Char8 as Atto
 
 import           Network.Socket (PortNumber)
 import           Network.URI (URI, parseURI)
 
-import           Cardano.Chain.Slotting (EpochSlots(..))
-import           Cardano.Slotting.Slot (SlotNo(..))
+import           Cardano.Chain.Slotting (EpochSlots (..))
+import           Cardano.Slotting.Slot (SlotNo (..))
 
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
 import           Ouroboros.Consensus.Cardano (SecurityParam (..))
@@ -45,14 +46,14 @@ import           Cardano.Api.Typed hiding (PoolId)
 
 import           Cardano.Slotting.Slot (EpochNo (..))
 
-import           Cardano.Config.Types (CertificateFile (..), SigningKeyFile(..),
-                   UpdateProposalFile (..))
 import           Cardano.Config.Parsers (parseNodeAddress)
+import           Cardano.Config.Types (CertificateFile (..),
+                     SigningKeyFile (..), UpdateProposalFile (..))
 
 import           Cardano.CLI.Shelley.Commands
 
-import qualified Cardano.Crypto.Hash as Crypto
-                   (Blake2b_256, Hash (..), hashFromBytesAsHex)
+import qualified Cardano.Crypto.Hash as Crypto (Blake2b_256, Hash (..),
+                     hashFromBytesAsHex)
 
 --
 -- Shelley CLI command parsers

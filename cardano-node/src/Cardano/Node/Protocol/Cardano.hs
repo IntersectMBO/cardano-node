@@ -1,6 +1,6 @@
-{-# LANGUAGE NamedFieldPuns    #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 {-# OPTIONS_GHC -Wno-orphans  #-}
@@ -22,10 +22,10 @@ module Cardano.Node.Protocol.Cardano
 
 import           Prelude
 
-import           Data.SOP.Strict (NP ((:*), Nil))
-import qualified Data.Text as T
 import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT)
+import           Data.SOP.Strict (NP ((:*), Nil))
+import qualified Data.Text as T
 
 import qualified Cardano.Chain.Update as Byron
 
@@ -34,7 +34,8 @@ import           Ouroboros.Consensus.Cardano hiding (Protocol)
 import qualified Ouroboros.Consensus.Cardano as Consensus
 import qualified Ouroboros.Consensus.Cardano.CanHardFork as Consensus
 import           Ouroboros.Consensus.HardFork.Combinator.Condense ()
-import           Ouroboros.Consensus.HardFork.Combinator.Forge (distribForgeState)
+import           Ouroboros.Consensus.HardFork.Combinator.Forge
+                     (distribForgeState)
 
 import           Ouroboros.Consensus.Cardano.Block (CardanoBlock)
 import           Ouroboros.Consensus.Cardano.Condense ()
@@ -43,12 +44,11 @@ import           Ouroboros.Consensus.Shelley.Ledger.Block (ShelleyBlock)
 import           Ouroboros.Consensus.Shelley.Protocol (TPraosStandardCrypto)
 import qualified Shelley.Spec.Ledger.PParams as Shelley
 
-import           Cardano.Node.Types
-                   (NodeByronProtocolConfiguration(..),
-                    NodeShelleyProtocolConfiguration(..),
-                    NodeHardForkProtocolConfiguration(..))
-import           Cardano.Config.Types
-                   (ProtocolFilepaths(..), HasKESMetricsData(..))
+import           Cardano.Config.Types (HasKESMetricsData (..),
+                     ProtocolFilepaths (..))
+import           Cardano.Node.Types (NodeByronProtocolConfiguration (..),
+                     NodeHardForkProtocolConfiguration (..),
+                     NodeShelleyProtocolConfiguration (..))
 
 import           Cardano.TracingOrphanInstances.Byron ()
 import           Cardano.TracingOrphanInstances.Shelley ()

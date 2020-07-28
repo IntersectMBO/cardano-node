@@ -10,16 +10,16 @@ module Cardano.Node.Socket
   )
 where
 
-import qualified Prelude
-import           Prelude (String)
 import           Cardano.Prelude hiding (local)
+import           Prelude (String)
+import qualified Prelude
 
 import           Control.Monad.Trans.Except.Extra (handleIOExceptT)
-import           Network.Socket (Socket, AddrInfo (..), AddrInfoFlag (..),
-                    SocketType (..), defaultHints, getAddrInfo)
+import           Network.Socket (AddrInfo (..), AddrInfoFlag (..), Socket,
+                     SocketType (..), defaultHints, getAddrInfo)
 
-import           Cardano.Config.Types (NodeAddress(..), NodeHostAddress(..),
-                   SocketPath(..))
+import           Cardano.Config.Types (NodeAddress (..), NodeHostAddress (..),
+                     SocketPath (..))
 import           Cardano.Node.Types
 
 #if defined(mingw32_HOST_OS)

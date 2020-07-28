@@ -1,8 +1,8 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
@@ -36,8 +36,8 @@ module Cardano.Config.Types
     , parseNodeHostAddress
     ) where
 
-import           Prelude (show)
 import           Cardano.Prelude hiding (show)
+import           Prelude (show)
 
 import           Data.Aeson
 import           Data.IP (IP)
@@ -50,19 +50,22 @@ import           Cardano.BM.Tracing (ToObject)
 import qualified Cardano.Chain.Slotting as Byron
 import           Cardano.Crypto.KES.Class (Period)
 
-import           Ouroboros.Consensus.Block (Header, BlockProtocol, ForgeState(..))
+import           Ouroboros.Consensus.Block (BlockProtocol, ForgeState (..),
+                     Header)
 import           Ouroboros.Consensus.Byron.Ledger.Block (ByronBlock)
 import           Ouroboros.Consensus.HeaderValidation (OtherHeaderEnvelopeError)
 import           Ouroboros.Consensus.Ledger.Abstract (LedgerError)
 import           Ouroboros.Consensus.Ledger.Inspect (LedgerEvent)
-import           Ouroboros.Consensus.Ledger.SupportsMempool
-                   (GenTxId, HasTxId, HasTxs(..), ApplyTxErr)
+import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr,
+                     GenTxId, HasTxId, HasTxs (..))
 import           Ouroboros.Consensus.Mock.Ledger.Block (SimpleBlock)
-import           Ouroboros.Consensus.Protocol.Abstract (CannotLead, ValidationErr)
-import           Ouroboros.Consensus.Util.Condense (Condense (..))
+import           Ouroboros.Consensus.Protocol.Abstract (CannotLead,
+                     ValidationErr)
 import           Ouroboros.Consensus.Shelley.Ledger.Block (ShelleyBlock)
 import           Ouroboros.Consensus.Shelley.Ledger.Mempool (GenTx, TxId)
-import           Ouroboros.Consensus.Shelley.Protocol.Crypto.HotKey (HotKey (..))
+import           Ouroboros.Consensus.Shelley.Protocol.Crypto.HotKey
+                     (HotKey (..))
+import           Ouroboros.Consensus.Util.Condense (Condense (..))
 
 import           Ouroboros.Consensus.HardFork.Combinator
 import           Ouroboros.Consensus.HardFork.Combinator.Unary

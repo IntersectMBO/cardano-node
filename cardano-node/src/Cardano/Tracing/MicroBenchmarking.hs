@@ -1,13 +1,13 @@
-{-# LANGUAGE AllowAmbiguousTypes   #-}
-{-# LANGUAGE FlexibleContexts      #-}
-{-# LANGUAGE FlexibleInstances     #-}
-{-# LANGUAGE LambdaCase            #-}
+{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE NamedFieldPuns        #-}
-{-# LANGUAGE ScopedTypeVariables   #-}
-{-# LANGUAGE StandaloneDeriving    #-}
-{-# LANGUAGE TypeFamilies          #-}
-{-# LANGUAGE UndecidableInstances  #-}
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 {-# OPTIONS_GHC -Wno-orphans  #-}
 
@@ -30,17 +30,17 @@ import           Data.Aeson (Value (..), toJSON, (.=))
 import           Data.Time.Clock (diffTimeToPicoseconds)
 
 import           Cardano.BM.Data.Severity (Severity (..))
+import           Cardano.BM.Data.Tracer (emptyObject, mkObject, trStructured)
 import           Cardano.BM.Tracing
-import           Cardano.BM.Data.Tracer (trStructured, emptyObject, mkObject)
 
 import           Control.Tracer.Transformers.ObserveOutcome
 
 import           Ouroboros.Network.Block (SlotNo (..))
 
 import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTx, GenTxId,
-                   HasTxId, txId)
-import           Ouroboros.Consensus.Mempool.API
-                   (MempoolSize (..), TraceEventMempool (..))
+                     HasTxId, txId)
+import           Ouroboros.Consensus.Mempool.API (MempoolSize (..),
+                     TraceEventMempool (..))
 import           Ouroboros.Consensus.Node.Tracers (TraceForgeEvent (..))
 
 --------------------------------------------------------------------------------

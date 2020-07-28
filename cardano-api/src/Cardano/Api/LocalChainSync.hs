@@ -8,15 +8,16 @@ module Cardano.Api.LocalChainSync
 
 import           Cardano.Prelude hiding (atomically, catch)
 
-import           Control.Concurrent.STM
 import           Cardano.Api.Typed
+import           Control.Concurrent.STM
 
-import           Ouroboros.Network.Block (Tip)
-import           Ouroboros.Network.Util.ShowProxy (ShowProxy)
-import           Ouroboros.Network.Protocol.ChainSync.Client
-                   (ChainSyncClient(..), ClientStIdle(..), ClientStNext(..))
-import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx)
 import           Ouroboros.Consensus.Ledger.Abstract (Query)
+import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx)
+import           Ouroboros.Network.Block (Tip)
+import           Ouroboros.Network.Protocol.ChainSync.Client
+                     (ChainSyncClient (..), ClientStIdle (..),
+                     ClientStNext (..))
+import           Ouroboros.Network.Util.ShowProxy (ShowProxy)
 
 
 -- | Get the node's tip using the local chain sync protocol.

@@ -1,17 +1,17 @@
-{-# LANGUAGE DerivingStrategies    #-}
-{-# LANGUAGE DeriveAnyClass        #-}
-{-# LANGUAGE FlexibleContexts      #-}
-{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE NamedFieldPuns        #-}
-{-# LANGUAGE OverloadedStrings     #-}
-{-# LANGUAGE ScopedTypeVariables   #-}
-{-# LANGUAGE TypeFamilies          #-}
-{-# LANGUAGE UndecidableInstances  #-}
-{-# LANGUAGE StandaloneDeriving    #-}
-{-# LANGUAGE TypeOperators         #-}
-{-# LANGUAGE TypeApplications      #-}
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 {-# OPTIONS_GHC -Wno-orphans  #-}
 
@@ -26,29 +26,29 @@ import qualified Cardano.Crypto.Hash.Class as Crypto
 import           Cardano.TracingOrphanInstances.Common
 import           Cardano.TracingOrphanInstances.Consensus ()
 
-import           Cardano.Slotting.Slot (EpochSize(..))
+import           Cardano.Slotting.Slot (EpochSize (..))
 import           Ouroboros.Consensus.Block (BlockProtocol)
 import           Ouroboros.Consensus.BlockchainTime (getSlotLength)
-import           Ouroboros.Consensus.Protocol.Abstract
-                   (ValidationErr, CannotLead, ChainIndepState)
-import           Ouroboros.Consensus.Ledger.Abstract (LedgerError)
-import           Ouroboros.Consensus.Ledger.Inspect (LedgerUpdate, LedgerWarning)
-import           Ouroboros.Consensus.Ledger.SupportsMempool
-                   (GenTx, TxId, ApplyTxErr)
-import           Ouroboros.Consensus.HeaderValidation
-                   (OtherHeaderEnvelopeError)
+import           Ouroboros.Consensus.Cardano.Condense ()
 import           Ouroboros.Consensus.HardFork.Combinator
 import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras
-                   (OneEraValidationErr(..), OneEraLedgerError(..),
-                    OneEraLedgerWarning(..), OneEraLedgerUpdate(..),
-                    OneEraEnvelopeErr(..), OneEraCannotLead(..),
-                    EraMismatch(..), mkEraMismatch)
-import           Ouroboros.Consensus.HardFork.History.EraParams
-                   (EraParams(..), SafeZone, SafeBeforeEpoch)
-import           Ouroboros.Consensus.TypeFamilyWrappers
+                     (EraMismatch (..), OneEraCannotLead (..),
+                     OneEraEnvelopeErr (..), OneEraLedgerError (..),
+                     OneEraLedgerUpdate (..), OneEraLedgerWarning (..),
+                     OneEraValidationErr (..), mkEraMismatch)
 import           Ouroboros.Consensus.HardFork.Combinator.Condense ()
-import           Ouroboros.Consensus.Cardano.Condense ()
-import           Ouroboros.Consensus.Util.Condense (Condense(..))
+import           Ouroboros.Consensus.HardFork.History.EraParams (EraParams (..),
+                     SafeBeforeEpoch, SafeZone)
+import           Ouroboros.Consensus.HeaderValidation (OtherHeaderEnvelopeError)
+import           Ouroboros.Consensus.Ledger.Abstract (LedgerError)
+import           Ouroboros.Consensus.Ledger.Inspect (LedgerUpdate,
+                     LedgerWarning)
+import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx,
+                     TxId)
+import           Ouroboros.Consensus.Protocol.Abstract (CannotLead,
+                     ChainIndepState, ValidationErr)
+import           Ouroboros.Consensus.TypeFamilyWrappers
+import           Ouroboros.Consensus.Util.Condense (Condense (..))
 
 
 --

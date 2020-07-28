@@ -4,12 +4,12 @@ module Test.CLI.Shelley.Golden.TextView.DecodeCbor
   ( golden_shelleyTextViewDecodeCbor
   ) where
 
-import Cardano.Prelude
+import           Cardano.Prelude
 
-import Hedgehog (Property)
+import           Hedgehog (Property)
 
-import qualified Test.OptParse as OP
 import qualified System.IO as IO
+import qualified Test.OptParse as OP
 
 {- HLINT ignore "Use camelCase" -}
 

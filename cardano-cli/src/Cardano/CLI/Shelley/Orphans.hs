@@ -6,7 +6,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE UndecidableInstances  #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -14,37 +14,38 @@ module Cardano.CLI.Shelley.Orphans () where
 
 import           Cardano.Prelude
 
+import           Control.Iterate.SetAlgebra as SetAlgebra
 import           Data.Aeson
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Encoding as Aeson
-import qualified Data.ByteString.Short as SBS
 import qualified Data.ByteString.Base16 as Base16
+import qualified Data.ByteString.Short as SBS
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
-import           Control.Iterate.SetAlgebra as SetAlgebra
 
 import           Cardano.Crypto.Hash.Class as Crypto
 import           Cardano.TracingOrphanInstances.Common ()
 
-import           Ouroboros.Consensus.Byron.Ledger.Block (ByronHash(..))
-import           Ouroboros.Consensus.HardFork.Combinator (OneEraHash(..))
-import           Ouroboros.Consensus.Shelley.Protocol.Crypto (TPraosStandardCrypto)
-import           Ouroboros.Consensus.Shelley.Ledger.Block (ShelleyHash(..))
-import           Ouroboros.Network.Block (BlockNo(..), HeaderHash, Tip (..))
+import           Ouroboros.Consensus.Byron.Ledger.Block (ByronHash (..))
+import           Ouroboros.Consensus.HardFork.Combinator (OneEraHash (..))
+import           Ouroboros.Consensus.Shelley.Ledger.Block (ShelleyHash (..))
+import           Ouroboros.Consensus.Shelley.Protocol.Crypto
+                     (TPraosStandardCrypto)
+import           Ouroboros.Network.Block (BlockNo (..), HeaderHash, Tip (..))
 
 import           Shelley.Spec.Ledger.BaseTypes (StrictMaybe)
-import           Shelley.Spec.Ledger.BlockChain (HashHeader(..))
+import           Shelley.Spec.Ledger.BlockChain (HashHeader (..))
 import qualified Shelley.Spec.Ledger.Credential as Ledger
 import           Shelley.Spec.Ledger.Crypto (Crypto)
 import qualified Shelley.Spec.Ledger.EpochBoundary as Ledger
 import qualified Shelley.Spec.Ledger.Keys as Ledger
 import qualified Shelley.Spec.Ledger.LedgerState as Ledger
-import qualified Shelley.Spec.Ledger.Rewards as Ledger
-import           Shelley.Spec.Ledger.MetaData (MetaDataHash(..))
+import           Shelley.Spec.Ledger.MetaData (MetaDataHash (..))
 import           Shelley.Spec.Ledger.PParams (PParams' (..))
 import qualified Shelley.Spec.Ledger.PParams as Ledger
-import           Shelley.Spec.Ledger.TxData (TxId(..), TxIn(..), TxOut(..))
-import           Shelley.Spec.Ledger.UTxO (UTxO(..))
+import qualified Shelley.Spec.Ledger.Rewards as Ledger
+import           Shelley.Spec.Ledger.TxData (TxId (..), TxIn (..), TxOut (..))
+import           Shelley.Spec.Ledger.UTxO (UTxO (..))
 
 instance Crypto c => ToJSONKey (TxIn c) where
   toJSONKey = ToJSONKeyText txInToText (Aeson.text . txInToText)

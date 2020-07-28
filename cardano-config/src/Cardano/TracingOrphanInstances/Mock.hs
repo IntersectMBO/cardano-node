@@ -1,10 +1,10 @@
-{-# LANGUAGE FlexibleContexts      #-}
-{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE OverloadedStrings     #-}
-{-# LANGUAGE ScopedTypeVariables   #-}
-{-# LANGUAGE TypeFamilies          #-}
-{-# LANGUAGE UndecidableInstances  #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 {-# OPTIONS_GHC -Wno-orphans  #-}
 
@@ -17,11 +17,11 @@ import           Data.Text (pack)
 import           Cardano.TracingOrphanInstances.Common
 import           Cardano.TracingOrphanInstances.Consensus ()
 
-import           Data.Aeson (Value (..), ToJSON, toJSON, (.=))
+import           Data.Aeson (ToJSON, Value (..), toJSON, (.=))
 
 import           Cardano.Crypto.Hash.Class (Hash)
-import           Cardano.Crypto.KES.Class
-                   (VerKeyKES, deriveVerKeyKES, hashVerKeyKES)
+import           Cardano.Crypto.KES.Class (VerKeyKES, deriveVerKeyKES,
+                     hashVerKeyKES)
 
 import           Ouroboros.Consensus.Block (Header)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTx, TxId, txId)

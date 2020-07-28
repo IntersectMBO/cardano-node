@@ -22,12 +22,12 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import qualified Data.IP as IP
 import qualified Data.Text as T
-import           Text.Read (readMaybe)
 import           Network.Socket (PortNumber, SockAddr (..))
+import           Text.Read (readMaybe)
 
+import           Cardano.Config.Types (NodeAddress (..), NodeHostAddress (..),
+                     TopologyFile (..))
 import           Cardano.Node.Types
-import           Cardano.Config.Types (NodeAddress(..), NodeHostAddress(..),
-                   TopologyFile(..))
 
 import           Ouroboros.Consensus.Util.Condense (Condense (..))
 

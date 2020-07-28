@@ -4,9 +4,9 @@ module Test.CLI.Shelley.Golden.Transaction.Build
   ( golden_shelleyTransactionBuild
   ) where
 
-import Cardano.Prelude
+import           Cardano.Prelude
 
-import Hedgehog (Property)
+import           Hedgehog (Property)
 
 import qualified Test.OptParse as OP
 

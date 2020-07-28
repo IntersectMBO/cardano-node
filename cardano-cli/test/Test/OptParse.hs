@@ -23,39 +23,42 @@ module Test.OptParse
   , noteTempFile
   ) where
 
-import           Cardano.Prelude hiding (stderr, stdout, lines)
+import           Cardano.Prelude hiding (lines, stderr, stdout)
 import           Prelude (String)
 import qualified Prelude as Prelude
 
-import           System.IO.Error
 import           Control.Monad.Trans.Except.Extra (runExceptT)
 import qualified Data.Text as Text
-import           Options.Applicative (ParserHelp(..), ParserResult(..))
+import           Options.Applicative (ParserHelp (..), ParserResult (..))
 import qualified Options.Applicative as Opt
 import           Options.Applicative.Help.Chunk
 import           Options.Applicative.Help.Pretty
 import           System.Directory (doesFileExist, removeFile)
+import           System.IO.Error
 
-import           Cardano.Api.TextView (TextView(..), TextViewError, TextViewType(..))
-import           Cardano.Api.Typed (FileError, displayError, readTextEnvelopeOfTypeFromFile)
+import           Cardano.Api.TextView (TextView (..), TextViewError,
+                     TextViewType (..))
+import           Cardano.Api.Typed (FileError, displayError,
+                     readTextEnvelopeOfTypeFromFile)
 import           Cardano.CLI.Parsers (opts, pref)
-import           Cardano.CLI.Run (ClientCommand(..),
-                   renderClientCommandError, runClientCommand)
+import           Cardano.CLI.Run (ClientCommand (..), renderClientCommandError,
+                     runClientCommand)
 
 import qualified Data.List as L
 import qualified Data.Time.Clock as DT
 import qualified Data.Time.Format as DT
 import qualified System.Directory as IO
 import qualified System.Environment as IO
+import qualified System.Exit as IO
 import qualified System.IO as IO
 import qualified System.IO.Temp as IO
 import qualified System.Process as IO
-import qualified System.Exit as IO
 
 import qualified Hedgehog as H
-import qualified Hedgehog.Internal.Property as H
 import           Hedgehog.Internal.Property (Diff, MonadTest, liftTest, mkTest)
-import           Hedgehog.Internal.Show (ValueDiff(ValueSame), mkValue, showPretty, valueDiff)
+import qualified Hedgehog.Internal.Property as H
+import           Hedgehog.Internal.Show (ValueDiff (ValueSame), mkValue,
+                     showPretty, valueDiff)
 import           Hedgehog.Internal.Source (getCaller)
 
 -- | Purely evalutate the cardano-cli parser.
@@ -269,7 +272,7 @@ assertFileLines p fp = withFrozenCallStack $ do
   let len = case reverse lines of
         "":xs -> length xs
         xs -> length xs
-  
+
   when (not (p len)) $ do
     failWithCustom callStack Nothing (fp <> " has an unexpected number of lines")
 

@@ -1,15 +1,15 @@
-{-# LANGUAGE BangPatterns          #-}
-{-# LANGUAGE ConstraintKinds       #-}
-{-# LANGUAGE FlexibleContexts      #-}
-{-# LANGUAGE FlexibleInstances     #-}
-{-# LANGUAGE LambdaCase            #-}
-{-# LANGUAGE MonoLocalBinds        #-}
+{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MonoLocalBinds #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE NamedFieldPuns        #-}
-{-# LANGUAGE OverloadedStrings     #-}
-{-# LANGUAGE ScopedTypeVariables   #-}
-{-# LANGUAGE TupleSections         #-}
-{-# LANGUAGE UndecidableInstances  #-}
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TupleSections #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 {-# OPTIONS_GHC -Wno-orphans  #-}
 
@@ -28,10 +28,10 @@ import           Prelude (String, show)
 import           GHC.Clock (getMonotonicTimeNSec)
 
 import           Codec.CBOR.Read (DeserialiseFailure)
-import           Data.Aeson (ToJSON(..), Value(..))
+import           Data.Aeson (ToJSON (..), Value (..))
+import qualified Data.HashMap.Strict as Map
 import           Data.IORef (IORef, atomicModifyIORef', newIORef, readIORef)
 import qualified Data.Text as Text
-import qualified Data.HashMap.Strict as Map
 import           Network.Mux (MuxTrace, WithMuxBearer)
 import qualified Network.Socket as Socket (SockAddr)
 
@@ -42,37 +42,43 @@ import           Cardano.Slotting.Slot (EpochNo (..))
 
 import           Cardano.BM.Data.Aggregated (Measurable (..))
 import           Cardano.BM.Data.LogItem (LOContent (..), LoggerName,
-                                          PrivacyAnnotation (Confidential),
-                                          mkLOMeta)
-import           Cardano.BM.ElidingTracer
-import           Cardano.BM.Tracing
-import           Cardano.BM.Trace (traceNamedObject, appendName)
+                     PrivacyAnnotation (Confidential), mkLOMeta)
 import           Cardano.BM.Data.Tracer (WithSeverity (..), annotateSeverity)
 import           Cardano.BM.Data.Transformers
+import           Cardano.BM.ElidingTracer
+import           Cardano.BM.Trace (appendName, traceNamedObject)
+import           Cardano.BM.Tracing
 
-import           Ouroboros.Consensus.Block (BlockProtocol, ForgeState, Header, realPointSlot)
-import           Ouroboros.Consensus.BlockchainTime (SystemStart (..), TraceBlockchainTimeEvent (..))
+import           Ouroboros.Consensus.Block (BlockProtocol, ForgeState, Header,
+                     realPointSlot)
+import           Ouroboros.Consensus.BlockchainTime (SystemStart (..),
+                     TraceBlockchainTimeEvent (..))
 import           Ouroboros.Consensus.HeaderValidation (OtherHeaderEnvelopeError)
 import           Ouroboros.Consensus.Ledger.Abstract (LedgerErr, LedgerState)
 import           Ouroboros.Consensus.Ledger.Extended (ledgerState)
 import           Ouroboros.Consensus.Ledger.Inspect (InspectLedger, LedgerEvent)
-import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx, GenTxId, HasTxs, TxId)
-import           Ouroboros.Consensus.Ledger.SupportsProtocol (LedgerSupportsProtocol)
-import           Ouroboros.Consensus.Mempool.API (MempoolSize (..), TraceEventMempool (..))
-import qualified Ouroboros.Consensus.Node.Run as Consensus (RunNode)
-import qualified Ouroboros.Consensus.Node.Tracers as Consensus
+import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx,
+                     GenTxId, HasTxs, TxId)
+import           Ouroboros.Consensus.Ledger.SupportsProtocol
+                     (LedgerSupportsProtocol)
+import           Ouroboros.Consensus.Mempool.API (MempoolSize (..),
+                     TraceEventMempool (..))
 import qualified Ouroboros.Consensus.Network.NodeToClient as NodeToClient
 import qualified Ouroboros.Consensus.Network.NodeToNode as NodeToNode
-import           Ouroboros.Consensus.Protocol.Abstract (CannotLead, ValidationErr)
-import           Ouroboros.Consensus.Util.Condense (Condense) -- This should be removed
+import qualified Ouroboros.Consensus.Node.Run as Consensus (RunNode)
+import qualified Ouroboros.Consensus.Node.Tracers as Consensus
+import           Ouroboros.Consensus.Protocol.Abstract (CannotLead,
+                     ValidationErr)
+import           Ouroboros.Consensus.Util.Condense (Condense)
 import           Ouroboros.Consensus.Util.Orphans ()
 
 import qualified Ouroboros.Network.AnchoredFragment as AF
-import           Ouroboros.Network.Block (Point, BlockNo(..), HasHeader(..),
-                                          HeaderHash, StandardHash, blockNo,
-                                          pointSlot, unBlockNo, unSlotNo)
+import           Ouroboros.Network.Block (BlockNo (..), HasHeader (..),
+                     HeaderHash, Point, StandardHash, blockNo, pointSlot,
+                     unBlockNo, unSlotNo)
 import           Ouroboros.Network.BlockFetch.ClientState (TraceLabelPeer (..))
-import           Ouroboros.Network.BlockFetch.Decision (FetchDecision, FetchDecline (..))
+import           Ouroboros.Network.BlockFetch.Decision (FetchDecision,
+                     FetchDecline (..))
 import qualified Ouroboros.Network.NodeToClient as NtC
 import qualified Ouroboros.Network.NodeToNode as NtN
 import           Ouroboros.Network.Point (fromWithOrigin, withOrigin)
@@ -82,10 +88,10 @@ import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 import qualified Ouroboros.Consensus.Storage.LedgerDB.OnDisk as LedgerDB
 
 import           Cardano.Config.LedgerQueries
+import           Cardano.Config.Types (HasKESMetricsData (..),
+                     KESMetricsData (..), MaxKESEvolutions (..),
+                     OperationalCertStartKESPeriod (..), TraceConstraints)
 import           Cardano.Node.TraceConfig
-import           Cardano.Config.Types
-                   (TraceConstraints, HasKESMetricsData (..), KESMetricsData (..),
-                    MaxKESEvolutions (..), OperationalCertStartKESPeriod (..))
 import           Cardano.Tracing.Kernel
 import           Cardano.Tracing.MicroBenchmarking
 

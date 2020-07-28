@@ -24,8 +24,8 @@ import           Cardano.Prelude hiding (option)
 import           Prelude (String)
 
 import           Data.Bifunctor (first, second)
-import qualified Data.List.NonEmpty as NE
 import qualified Data.ByteString.Lazy.Char8 as C8
+import qualified Data.List.NonEmpty as NE
 import qualified Data.Text as Text
 import           Data.Time (UTCTime)
 import           Data.Time.Clock.POSIX (posixSecondsToUTCTime)
@@ -34,35 +34,31 @@ import           Formatting (build, sformat)
 import           Options.Applicative
 import qualified Options.Applicative as Opt
 
-import           Cardano.Binary (Annotated(..))
+import           Cardano.Binary (Annotated (..))
 
+import           Cardano.Crypto (RequiresNetworkMagic (..), decodeHash)
 import           Cardano.Crypto.Hashing (hashRaw)
-import           Cardano.Crypto (RequiresNetworkMagic(..), decodeHash)
-import           Cardano.Crypto.ProtocolMagic
-                   (AProtocolMagic(..), ProtocolMagic
-                   , ProtocolMagicId(..))
+import           Cardano.Crypto.ProtocolMagic (AProtocolMagic (..),
+                     ProtocolMagic, ProtocolMagicId (..))
 
-import           Cardano.Chain.Slotting
-                   (EpochNumber(..), EpochSlots(..), SlotNumber(..))
-import           Cardano.Chain.Common
-                   (Address(..), decodeAddressBase58,
-                    Lovelace, mkLovelace, rationalToLovelacePortion,
-                    BlockCount(..), TxFeePolicy(..), TxSizeLinear(..))
-import           Cardano.Chain.Update
-                   (ApplicationName(..), checkApplicationName,
-                    InstallerHash(..), NumSoftwareVersion,
-                    ProtocolVersion(..), SoftforkRule(..), SoftwareVersion(..),
-                    SystemTag(..), checkSystemTag)
-import           Cardano.Chain.Genesis
-                   (TestnetBalanceOptions(..), FakeAvvmOptions(..))
-import           Cardano.Chain.UTxO (TxId, TxIn(..), TxOut(..))
+import           Cardano.Chain.Common (Address (..), BlockCount (..), Lovelace,
+                     TxFeePolicy (..), TxSizeLinear (..), decodeAddressBase58,
+                     mkLovelace, rationalToLovelacePortion)
+import           Cardano.Chain.Genesis (FakeAvvmOptions (..),
+                     TestnetBalanceOptions (..))
+import           Cardano.Chain.Slotting (EpochNumber (..), EpochSlots (..),
+                     SlotNumber (..))
+import           Cardano.Chain.Update (ApplicationName (..), InstallerHash (..),
+                     NumSoftwareVersion, ProtocolVersion (..),
+                     SoftforkRule (..), SoftwareVersion (..), SystemTag (..),
+                     checkApplicationName, checkSystemTag)
+import           Cardano.Chain.UTxO (TxId, TxIn (..), TxOut (..))
 
 import qualified Cardano.Api.Typed as Typed
+import           Cardano.Config.Parsers (command', parseFilePath, parseFlag',
+                     parseFraction, parseGenesisFile, parseIntegral,
+                     parseLovelace, parseSigningKeyFile, readDouble)
 import           Cardano.Config.Types
-import           Cardano.Config.Parsers
-                   (parseIntegral, parseFraction, parseLovelace, readDouble,
-                    parseFilePath,  parseSigningKeyFile,
-                    parseGenesisFile, command', parseFlag')
 
 import           Cardano.CLI.Byron.Commands
 import           Cardano.CLI.Byron.Genesis

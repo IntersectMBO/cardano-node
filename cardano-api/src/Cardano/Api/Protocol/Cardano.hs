@@ -8,13 +8,12 @@ module Cardano.Api.Protocol.Cardano
 
 import           Cardano.Chain.Slotting (EpochSlots)
 
-import           Ouroboros.Consensus.Cardano
-                   (ProtocolClient(ProtocolClientCardano), ProtocolCardano,
-                    SecurityParam)
+import           Ouroboros.Consensus.Cardano (ProtocolCardano,
+                     ProtocolClient (ProtocolClientCardano), SecurityParam)
 import           Ouroboros.Consensus.Cardano.Block (CardanoBlock)
 import           Ouroboros.Consensus.Shelley.Protocol (TPraosStandardCrypto)
 
-import           Cardano.Api.Protocol.Types (SomeNodeClientProtocol(..))
+import           Cardano.Api.Protocol.Types (SomeNodeClientProtocol (..))
 
 
 mkNodeClientProtocolCardano :: EpochSlots

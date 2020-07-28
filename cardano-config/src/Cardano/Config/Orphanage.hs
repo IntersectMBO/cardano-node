@@ -1,6 +1,6 @@
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -20,7 +20,7 @@ import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import           Network.Socket (PortNumber)
 
-import           Cardano.BM.Data.Tracer (TracingVerbosity(..))
+import           Cardano.BM.Data.Tracer (TracingVerbosity (..))
 import qualified Cardano.Chain.Update as Update
 import           Cardano.Slotting.Block (BlockNo (..))
 import           Ouroboros.Consensus.HardFork.Combinator (OneEraHash (..))

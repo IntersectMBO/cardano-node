@@ -24,37 +24,36 @@ module Cardano.Node.Protocol.Shelley
 import           Cardano.Prelude
 import           Prelude (String, id)
 
+import qualified Data.Aeson as Aeson
 import qualified Data.ByteString as BS
 import qualified Data.Text as T
-import qualified Data.Aeson as Aeson
 
 import           Control.Monad.Trans.Except (ExceptT)
-import           Control.Monad.Trans.Except.Extra
-                   (firstExceptT, newExceptT, handleIOExceptT, hoistEither)
+import           Control.Monad.Trans.Except.Extra (firstExceptT,
+                     handleIOExceptT, hoistEither, newExceptT)
 
 import qualified Cardano.Crypto.Hash.Class as Crypto
 
 import qualified Ouroboros.Consensus.Cardano as Consensus
 import           Ouroboros.Consensus.Cardano.ShelleyHFC
 
-import           Ouroboros.Consensus.Shelley.Protocol
-                   (TPraosStandardCrypto, TPraosIsCoreNode(..))
-import           Ouroboros.Consensus.Shelley.Node
-                   (TPraosLeaderCredentials(..), ShelleyGenesis, Nonce (..))
+import           Ouroboros.Consensus.Shelley.Node (Nonce (..), ShelleyGenesis,
+                     TPraosLeaderCredentials (..))
+import           Ouroboros.Consensus.Shelley.Protocol (TPraosIsCoreNode (..),
+                     TPraosStandardCrypto)
 
-import           Shelley.Spec.Ledger.PParams (ProtVer(..))
 import           Shelley.Spec.Ledger.Keys (coerceKeyRole)
+import           Shelley.Spec.Ledger.PParams (ProtVer (..))
 
 import           Cardano.Api.Typed hiding (FileError)
 import qualified Cardano.Api.Typed as Api (FileError)
 
-import           Cardano.Node.Types
-                   (NodeShelleyProtocolConfiguration(..), GenesisHash(..))
-import           Cardano.Config.Types
-                   (ProtocolFilepaths(..), GenesisFile (..))
+import           Cardano.Config.Types (GenesisFile (..), ProtocolFilepaths (..))
+import           Cardano.Node.Types (GenesisHash (..),
+                     NodeShelleyProtocolConfiguration (..))
 
-import           Cardano.TracingOrphanInstances.Shelley ()
 import           Cardano.TracingOrphanInstances.HardFork ()
+import           Cardano.TracingOrphanInstances.Shelley ()
 
 import           Cardano.Node.Protocol.Types
 

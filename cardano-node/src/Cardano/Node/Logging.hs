@@ -1,8 +1,8 @@
-{-# LANGUAGE CPP                 #-}
-{-# LANGUAGE LambdaCase          #-}
-{-# LANGUAGE NamedFieldPuns      #-}
-{-# LANGUAGE OverloadedStrings   #-}
-{-# LANGUAGE Rank2Types          #-}
+{-# LANGUAGE CPP #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE Rank2Types #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 #if !defined(mingw32_HOST_OS)
@@ -33,20 +33,20 @@ import           Control.Monad.Trans.Except.Extra (catchIOExceptT)
 import           Cardano.BM.Backend.Aggregation (plugin)
 import           Cardano.BM.Backend.EKGView (plugin)
 import           Cardano.BM.Backend.Monitoring (plugin)
-import           Cardano.BM.Backend.TraceForwarder (plugin)
 import           Cardano.BM.Backend.Switchboard (Switchboard)
 import qualified Cardano.BM.Backend.Switchboard as Switchboard
+import           Cardano.BM.Backend.TraceForwarder (plugin)
 import           Cardano.BM.Configuration (Configuration)
 #ifdef UNIX
 import qualified Cardano.BM.Configuration.Model as CM
 #endif
 import qualified Cardano.BM.Configuration as Config
-import           Cardano.BM.Counters (readCounters)
 import qualified Cardano.BM.Configuration.Model as Config
+import           Cardano.BM.Counters (readCounters)
 import           Cardano.BM.Data.Backend (Backend, BackendKind)
 import           Cardano.BM.Data.Counter
-import           Cardano.BM.Data.LogItem ( LOContent (..), LOMeta (..),
-                    LoggerName, PrivacyAnnotation (..), mkLOMeta)
+import           Cardano.BM.Data.LogItem (LOContent (..), LOMeta (..),
+                     LoggerName, PrivacyAnnotation (..), mkLOMeta)
 import           Cardano.BM.Data.Observable
 #ifdef UNIX
 import           Cardano.BM.Data.Output
@@ -65,8 +65,8 @@ import qualified Cardano.BM.Trace as Trace
 
 import           Cardano.Config.GitRev (gitRev)
 import           Cardano.Config.Types (ConfigError (..), ViewMode (..))
-import           Cardano.Node.Types (ConfigYamlFilePath (..), NodeConfiguration (..),
-                   NodeCLI (..), parseNodeConfiguration)
+import           Cardano.Node.Types (ConfigYamlFilePath (..), NodeCLI (..),
+                     NodeConfiguration (..), parseNodeConfiguration)
 
 --------------------------------
 -- Layer

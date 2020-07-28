@@ -6,7 +6,7 @@ module Cardano.CLI.Shelley.Run.Address.Info
 
 import           Cardano.Prelude
 
-import           Data.Aeson (ToJSON (..), (.=), object)
+import           Data.Aeson (ToJSON (..), object, (.=))
 import           Data.Aeson.Encode.Pretty (encodePretty)
 import qualified Data.ByteString.Lazy.Char8 as LBS
 

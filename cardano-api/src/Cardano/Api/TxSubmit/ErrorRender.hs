@@ -8,16 +8,17 @@ module Cardano.Api.TxSubmit.ErrorRender
 -- They will be defined here for now and then moved where they are supposed to be once they
 -- are working.
 
-import           Cardano.Chain.UTxO.Validation (TxValidationError (..), UTxOValidationError (..))
-import           Cardano.Chain.UTxO.UTxO (UTxOError(..))
 import           Cardano.Chain.Byron.API (ApplyMempoolPayloadErr (..))
+import           Cardano.Chain.UTxO.UTxO (UTxOError (..))
+import           Cardano.Chain.UTxO.Validation (TxValidationError (..),
+                     UTxOValidationError (..))
 
 import           Cardano.Prelude hiding ((%))
 
 import           Data.Text (Text)
 import qualified Data.Text as Text
 
-import           Formatting ((%), build, sformat, stext)
+import           Formatting (build, sformat, stext, (%))
 
 renderApplyMempoolPayloadErr :: ApplyMempoolPayloadErr -> Text
 renderApplyMempoolPayloadErr err =

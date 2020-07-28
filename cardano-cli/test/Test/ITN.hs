@@ -6,8 +6,8 @@ module Test.ITN
 
 import           Cardano.Prelude
 
-import qualified Data.ByteString.Base16 as Base16
 import qualified Codec.Binary.Bech32 as Bech32
+import qualified Data.ByteString.Base16 as Base16
 
 import           Cardano.CLI.Shelley.Run.Key (decodeBech32Key)
 

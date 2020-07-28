@@ -46,18 +46,17 @@ module Cardano.CLI.Shelley.Commands
   , StakePoolVerificationKeyHashOrFile (..)
   ) where
 
-import           Prelude
 import           Data.Set (Set)
 import           Data.Text (Text)
+import           Prelude
 
 import           Cardano.Api.Protocol (Protocol)
 import           Cardano.Api.Typed hiding (PoolId)
 
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
 
-import           Cardano.Config.Types
-                  (CertificateFile (..), NodeAddress, SigningKeyFile(..),
-                   UpdateProposalFile(..))
+import           Cardano.Config.Types (CertificateFile (..), NodeAddress,
+                     SigningKeyFile (..), UpdateProposalFile (..))
 import           Shelley.Spec.Ledger.TxData (MIRPot)
 
 --

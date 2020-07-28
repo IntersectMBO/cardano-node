@@ -14,40 +14,39 @@ import           Prelude (String)
 
 import qualified Data.Aeson as Aeson
 import qualified Data.Attoparsec.Text as Atto
-import qualified Data.Text as Text
+import qualified Data.ByteString.Base16 as Base16
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy as LBS
-import qualified Data.ByteString.Base16 as Base16
-import qualified Data.Scientific as Scientific
-import qualified Data.Map.Strict as Map
 import qualified Data.HashMap.Strict as HashMap
+import qualified Data.Map.Strict as Map
+import qualified Data.Scientific as Scientific
+import qualified Data.Text as Text
 import qualified Data.Vector as Vector
 
 import           Control.Monad.Trans.Except (ExceptT)
-import           Control.Monad.Trans.Except.Extra
-                   (firstExceptT, left, newExceptT, hoistEither, handleIOExceptT)
+import           Control.Monad.Trans.Except.Extra (firstExceptT,
+                     handleIOExceptT, hoistEither, left, newExceptT)
 
 --TODO: do this nicely via the API too:
 import qualified Cardano.Binary as CBOR
 
 import qualified Shelley.Spec.Ledger.PParams as Shelley
 
-import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr)
 import           Ouroboros.Consensus.Byron.Ledger (ByronBlock)
+import           Ouroboros.Consensus.Cardano.Block (EraMismatch (..), HardForkApplyTxErr (ApplyTxErrByron, ApplyTxErrShelley, ApplyTxErrWrongEra))
+import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr)
 import           Ouroboros.Consensus.Shelley.Ledger (ShelleyBlock)
-import           Ouroboros.Consensus.Shelley.Protocol.Crypto (TPraosStandardCrypto)
-import           Ouroboros.Consensus.Cardano.Block
-                   (HardForkApplyTxErr (ApplyTxErrByron,
-                      ApplyTxErrShelley, ApplyTxErrWrongEra), EraMismatch (..))
+import           Ouroboros.Consensus.Shelley.Protocol.Crypto
+                     (TPraosStandardCrypto)
 
-import           Cardano.Config.Types
-import           Cardano.CLI.Shelley.Parsers
 import           Cardano.CLI.Environment (EnvSocketError, readEnvSocketPath,
-                   renderEnvSocketError)
+                     renderEnvSocketError)
+import           Cardano.CLI.Shelley.Parsers
+import           Cardano.Config.Types
 
-import           Cardano.Api.Typed as Api
 import           Cardano.Api.Protocol
 import           Cardano.Api.TxSubmit as Api
+import           Cardano.Api.Typed as Api
 
 
 data ShelleyTxCmdError

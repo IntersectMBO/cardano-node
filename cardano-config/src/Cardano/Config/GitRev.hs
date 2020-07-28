@@ -1,6 +1,6 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TemplateHaskell   #-}
-{-# LANGUAGE CPP               #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Cardano.Config.GitRev (
       gitRev
@@ -31,7 +31,7 @@ gitRev | gitRevEmbed /= zeroRev = gitRevEmbed
 #if defined(arm_HOST_ARCH)
         -- cross compiling to arm fails; due to a linker bug
         fromGit = ""
-#else        
+#else
         fromGit = T.strip (T.pack $(gitRevFromGit))
 #endif
 

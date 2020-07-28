@@ -11,10 +11,9 @@ module Cardano.CLI.Byron.Commands
 
 import           Cardano.Prelude
 
-import           Cardano.Chain.Slotting (EpochNumber(..))
-import           Cardano.Chain.Update
-                   (InstallerHash(..), ProtocolVersion(..), SoftwareVersion(..),
-                    SystemTag(..))
+import           Cardano.Chain.Slotting (EpochNumber (..))
+import           Cardano.Chain.Update (InstallerHash (..), ProtocolVersion (..),
+                     SoftwareVersion (..), SystemTag (..))
 
 import           Cardano.Api.Typed (NetworkId)
 import           Cardano.Config.Types
@@ -25,8 +24,8 @@ import           Cardano.CLI.Byron.Genesis
 import           Cardano.CLI.Byron.Key
 import           Cardano.CLI.Byron.Tx
 
-import           Cardano.Chain.Common (Address(..))
-import           Cardano.Chain.UTxO (TxIn(..), TxOut(..))
+import           Cardano.Chain.Common (Address (..))
+import           Cardano.Chain.UTxO (TxIn (..), TxOut (..))
 
 data ByronCommand =
 

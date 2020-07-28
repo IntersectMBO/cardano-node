@@ -12,8 +12,8 @@ import           Prelude
 
 import           Data.Maybe (fromMaybe)
 import qualified Options.Applicative as Opt
-import qualified Options.Applicative.Help as OptI
 import           Options.Applicative.Help ((<$$>))
+import qualified Options.Applicative.Help as OptI
 
 -- | Produce just the brief help header for a given CLI option parser,
 --   without the options.

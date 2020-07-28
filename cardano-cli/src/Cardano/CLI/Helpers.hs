@@ -24,9 +24,9 @@ import qualified Data.Text as Text
 import           System.Directory (doesPathExist)
 
 import           Cardano.Binary (Decoder, fromCBOR)
+import           Cardano.Chain.Block (fromCBORABlockOrBoundary)
 import qualified Cardano.Chain.Delegation as Delegation
 import qualified Cardano.Chain.Update as Update
-import           Cardano.Chain.Block (fromCBORABlockOrBoundary)
 import qualified Cardano.Chain.UTxO as UTxO
 import           Cardano.Config.Types
 

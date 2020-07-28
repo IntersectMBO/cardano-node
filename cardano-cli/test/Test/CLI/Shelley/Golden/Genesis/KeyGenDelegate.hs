@@ -4,9 +4,9 @@ module Test.CLI.Shelley.Golden.Genesis.KeyGenDelegate
   ( golden_shelleyGenesisKeyGenDelegate
   ) where
 
-import Cardano.Prelude
+import           Cardano.Prelude
 
-import Hedgehog (Property)
+import           Hedgehog (Property)
 
 import qualified Test.OptParse as OP
 

@@ -1,11 +1,11 @@
-{-# LANGUAGE FlexibleContexts      #-}
-{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE OverloadedStrings     #-}
-{-# LANGUAGE ScopedTypeVariables   #-}
-{-# LANGUAGE TypeApplications      #-}
-{-# LANGUAGE TypeFamilies          #-}
-{-# LANGUAGE UndecidableInstances  #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 {-# OPTIONS_GHC -Wno-orphans  #-}
 
@@ -16,49 +16,52 @@ module Cardano.TracingOrphanInstances.Network
   ) where
 
 import           Cardano.Prelude hiding (show)
-import           Prelude (String, show, id)
+import           Prelude (String, id, show)
 
 import qualified Data.ByteString.Base16 as B16
 import           Data.Text (pack)
 import qualified Data.Text.Encoding as Text
 
+import           Network.Mux (MuxTrace (..), WithMuxBearer (..))
 import qualified Network.Socket as Socket (SockAddr)
-import           Network.Mux (WithMuxBearer (..), MuxTrace (..))
 
 import           Cardano.TracingOrphanInstances.Common
 
 import           Ouroboros.Consensus.Block (ConvertRawHash (..), getHeader)
-import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTx, HasTxs(..),
-                   TxId, txId)
+import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTx, HasTxs (..),
+                     TxId, txId)
 import           Ouroboros.Consensus.Node.Run (RunNode (..))
 import           Ouroboros.Network.Block
 import           Ouroboros.Network.BlockFetch.ClientState
-                   (TraceFetchClientState (..), TraceLabelPeer (..))
-import           Ouroboros.Network.BlockFetch.Decision
-                   (FetchDecision, FetchDecline (..))
+                     (TraceFetchClientState (..), TraceLabelPeer (..))
+import           Ouroboros.Network.BlockFetch.Decision (FetchDecision,
+                     FetchDecline (..))
 import           Ouroboros.Network.Codec (AnyMessage (..))
 import qualified Ouroboros.Network.NodeToClient as NtC
-import qualified Ouroboros.Network.NodeToNode   as NtN
-import           Ouroboros.Network.NodeToNode
-                   (WithAddr(..), ErrorPolicyTrace(..), TraceSendRecv (..))
-import           Ouroboros.Network.Protocol.BlockFetch.Type
-                   (BlockFetch, Message(..))
+import           Ouroboros.Network.NodeToNode (ErrorPolicyTrace (..),
+                     TraceSendRecv (..), WithAddr (..))
+import qualified Ouroboros.Network.NodeToNode as NtN
+import           Ouroboros.Network.Protocol.BlockFetch.Type (BlockFetch,
+                     Message (..))
 import           Ouroboros.Network.Protocol.ChainSync.Type (ChainSync)
 import qualified Ouroboros.Network.Protocol.ChainSync.Type as ChainSync
-import           Ouroboros.Network.Protocol.LocalStateQuery.Type (LocalStateQuery)
+import           Ouroboros.Network.Protocol.LocalStateQuery.Type
+                     (LocalStateQuery)
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as LocalStateQuery
-import           Ouroboros.Network.Protocol.LocalTxSubmission.Type (LocalTxSubmission)
+import           Ouroboros.Network.Protocol.LocalTxSubmission.Type
+                     (LocalTxSubmission)
 import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Type as LocalTxSub
-import           Ouroboros.Network.Protocol.TxSubmission.Type
-                   (Message (..), TxSubmission)
+import           Ouroboros.Network.Protocol.TxSubmission.Type (Message (..),
+                     TxSubmission)
 import           Ouroboros.Network.Snocket (LocalAddress (..))
-import           Ouroboros.Network.Subscription
-                   (ConnectResult (..), DnsTrace (..), SubscriptionTrace (..),
-                    SubscriberError (..), WithDomainName (..), WithIPList (..))
+import           Ouroboros.Network.Subscription (ConnectResult (..),
+                     DnsTrace (..), SubscriberError (..),
+                     SubscriptionTrace (..), WithDomainName (..),
+                     WithIPList (..))
 import           Ouroboros.Network.TxSubmission.Inbound
-                   (TraceTxSubmissionInbound(..))
+                     (TraceTxSubmissionInbound (..))
 import           Ouroboros.Network.TxSubmission.Outbound
-                   (TraceTxSubmissionOutbound (..))
+                     (TraceTxSubmissionOutbound (..))
 
 -- We do need some consensus imports to provide useful trace messages for some
 -- network protocols

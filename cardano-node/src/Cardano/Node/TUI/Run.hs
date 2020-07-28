@@ -11,7 +11,8 @@ module Cardano.Node.TUI.Run
     , storePeersInLiveView
     ) where
 
-import           Cardano.Prelude hiding (modifyMVar_, newMVar, on, readMVar, show)
+import           Cardano.Prelude hiding (modifyMVar_, newMVar, on, readMVar,
+                     show)
 import           Prelude (show)
 
 import           Control.Concurrent (threadDelay)
@@ -25,17 +26,18 @@ import qualified Data.Text as Text
 import           Cardano.BM.Counters (readCounters)
 import           Cardano.BM.Data.Backend
 import           Cardano.BM.Data.Counter
-import           Cardano.BM.Data.LogItem (LOContent(..),
-                   PrivacyAnnotation (Confidential), mkLOMeta)
+import           Cardano.BM.Data.LogItem (LOContent (..),
+                     PrivacyAnnotation (Confidential), mkLOMeta)
 import           Cardano.BM.Data.Observable
 import           Cardano.BM.Data.Severity
 import           Cardano.BM.Data.SubTrace
 import           Cardano.BM.Trace
-import           Cardano.Node.TUI.Drawing (LiveViewState(..), LiveViewThread(..))
-import           Cardano.Node.TUI.EventHandler (LiveViewBackend(..))
+import           Cardano.Node.TUI.Drawing (LiveViewState (..),
+                     LiveViewThread (..))
+import           Cardano.Node.TUI.EventHandler (LiveViewBackend (..))
 import           Cardano.Tracing.Peer (Peer (..))
 
-import           Cardano.Config.Types (NodeAddress(..))
+import           Cardano.Config.Types (NodeAddress (..))
 import           Cardano.Node.Types
 
 -- | Change a few fields in the LiveViewState after it has been initialized above.

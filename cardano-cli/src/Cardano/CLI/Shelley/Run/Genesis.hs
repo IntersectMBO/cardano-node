@@ -20,27 +20,28 @@ import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
 import qualified Data.Text.IO as Text
-import           Data.Time.Clock (NominalDiffTime, UTCTime, addUTCTime, getCurrentTime)
+import           Data.Time.Clock (NominalDiffTime, UTCTime, addUTCTime,
+                     getCurrentTime)
 
 import           System.Directory (createDirectoryIfMissing, listDirectory)
-import           System.FilePath ((</>), takeExtension, takeExtensions)
+import           System.FilePath (takeExtension, takeExtensions, (</>))
 import           System.IO.Error (isDoesNotExistError)
 
 import           Control.Monad.Trans.Except (ExceptT)
-import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT,
-                   hoistEither, left, newExceptT)
+import           Control.Monad.Trans.Except.Extra (firstExceptT,
+                     handleIOExceptT, hoistEither, left, newExceptT)
 
 import qualified Cardano.Crypto.Hash as Crypto
 
-import           Cardano.Api.Typed
-import           Cardano.Api.TextView (TextViewDescription(..))
 import           Cardano.Api.Shelley.Genesis
+import           Cardano.Api.TextView (TextViewDescription (..))
+import           Cardano.Api.Typed
 
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
 import           Ouroboros.Consensus.Shelley.Protocol (TPraosStandardCrypto)
 
 import qualified Shelley.Spec.Ledger.Address as Ledger
-import qualified Shelley.Spec.Ledger.Coin    as Ledger
+import qualified Shelley.Spec.Ledger.Coin as Ledger
 import qualified Shelley.Spec.Ledger.Keys as Ledger
 
 import           Cardano.CLI.Helpers (textShow)

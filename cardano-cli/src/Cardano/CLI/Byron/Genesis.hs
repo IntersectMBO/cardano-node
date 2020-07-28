@@ -1,4 +1,4 @@
-{-# LANGUAGE CPP                        #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 #if !defined(mingw32_HOST_OS)
@@ -16,12 +16,11 @@ module Cardano.CLI.Byron.Genesis
   )
 where
 
-import           Prelude (String, show)
 import           Cardano.Prelude hiding (option, show, trace)
+import           Prelude (String, show)
 
 import           Control.Monad.Trans.Except (ExceptT)
-import           Control.Monad.Trans.Except.Extra
-                   (firstExceptT, left, right)
+import           Control.Monad.Trans.Except.Extra (firstExceptT, left, right)
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.Map.Strict as Map
 import           Data.String (IsString)
@@ -42,11 +41,11 @@ import           Cardano.Api.Typed (NetworkId, toByronRequiresNetworkMagic)
 
 import qualified Cardano.Chain.Common as Common
 import           Cardano.Chain.Delegation hiding (Map, epoch)
+import           Cardano.Chain.Genesis (GeneratedSecrets (..))
 import qualified Cardano.Chain.Genesis as Genesis
-import           Cardano.Chain.Genesis (GeneratedSecrets(..))
 import qualified Cardano.Chain.UTxO as UTxO
 
-import           Cardano.Config.Types (GenesisFile(..))
+import           Cardano.Config.Types (GenesisFile (..))
 import           Cardano.Crypto (SigningKey (..))
 import qualified Cardano.Crypto as Crypto
 

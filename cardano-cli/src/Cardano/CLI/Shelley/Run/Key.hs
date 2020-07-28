@@ -1,5 +1,5 @@
-{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Cardano.CLI.Shelley.Run.Key
   ( ShelleyKeyCmdError
@@ -15,10 +15,10 @@ import           Cardano.Prelude
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.Text as Text
 
-import           Control.Monad.Trans.Except (ExceptT)
-import           Control.Monad.Trans.Except.Extra
-                   (firstExceptT, hoistEither, newExceptT)
 import qualified Control.Exception as Exception
+import           Control.Monad.Trans.Except (ExceptT)
+import           Control.Monad.Trans.Except.Extra (firstExceptT, hoistEither,
+                     newExceptT)
 
 import qualified Codec.Binary.Bech32 as Bech32
 
@@ -28,10 +28,10 @@ import qualified Cardano.Crypto.Signing as Byron.Crypto
 import qualified Cardano.Crypto.Signing as Byron
 import qualified Shelley.Spec.Ledger.Keys as Shelley
 
-import           Cardano.Api.Typed hiding (Bech32DecodeError(..))
+import           Cardano.Api.Typed hiding (Bech32DecodeError (..))
 
+import           Cardano.CLI.Byron.Key (CardanoEra (..))
 import qualified Cardano.CLI.Byron.Key as Byron
-import           Cardano.CLI.Byron.Key (CardanoEra(..))
 import           Cardano.CLI.Helpers (textShow)
 import           Cardano.CLI.Shelley.Commands
 
@@ -117,7 +117,7 @@ withSomeSigningKey ssk f =
       AGenesisSigningKey         sk -> f sk
       AGenesisExtendedSigningKey sk -> f sk
       AGenesisDelegateSigningKey sk -> f sk
-      AGenesisDelegateExtendedSigningKey 
+      AGenesisDelegateExtendedSigningKey
                                  sk -> f sk
       AGenesisUTxOSigningKey     sk -> f sk
       AVrfSigningKey             sk -> f sk

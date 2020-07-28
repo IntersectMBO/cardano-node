@@ -4,9 +4,9 @@ module Test.CLI.Shelley.Golden.Address.Build
   ( golden_shelleyAddressBuild
   ) where
 
-import Cardano.Prelude
+import           Cardano.Prelude
 
-import Hedgehog (Property)
+import           Hedgehog (Property)
 
 import qualified Control.DeepSeq as CSD
 import qualified Control.Exception as E
@@ -34,7 +34,7 @@ golden_shelleyAddressBuild = OP.propertyOnce $ OP.workspace "tmp/address-build" 
     ]
 
   goldenStakingAddressHex <- OP.noteEvalM . liftIO $ IO.readFile goldenStakingAddressHexFile
-  
+
   liftIO $ IO.writeFile stakingAddressHexFile stakingAddressText
 
   OP.equivalence [] stakingAddressText goldenStakingAddressHex

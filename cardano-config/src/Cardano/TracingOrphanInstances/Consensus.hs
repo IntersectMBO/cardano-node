@@ -1,12 +1,12 @@
-{-# LANGUAGE FlexibleContexts      #-}
-{-# LANGUAGE FlexibleInstances     #-}
-{-# LANGUAGE LambdaCase            #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE NamedFieldPuns        #-}
-{-# LANGUAGE OverloadedStrings     #-}
-{-# LANGUAGE ScopedTypeVariables   #-}
-{-# LANGUAGE TypeFamilies          #-}
-{-# LANGUAGE UndecidableInstances  #-}
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 {-# OPTIONS_GHC -Wno-orphans  #-}
 
@@ -15,48 +15,48 @@ module Cardano.TracingOrphanInstances.Consensus () where
 import           Cardano.Prelude hiding (show)
 import           Prelude (show)
 
-import qualified Data.Text as Text
 import           Data.Text (pack)
+import qualified Data.Text as Text
 
 import           Cardano.TracingOrphanInstances.Common
-import           Cardano.TracingOrphanInstances.Network (showTip, showPoint)
+import           Cardano.TracingOrphanInstances.Network (showPoint, showTip)
 
-import           Ouroboros.Consensus.Block
-                   (BlockProtocol, Header, getHeader, headerPoint,
-                    RealPoint, realPointSlot, realPointHash,
-                    ForgeState(..))
-import           Ouroboros.Consensus.MiniProtocol.BlockFetch.Server
-                   (TraceBlockFetchServerEvent)
-import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client
-                   (TraceChainSyncClientEvent (..))
-import           Ouroboros.Consensus.MiniProtocol.ChainSync.Server
-                   (TraceChainSyncServerEvent (..))
-import           Ouroboros.Consensus.Ledger.SupportsProtocol
-                   (LedgerSupportsProtocol)
+import           Ouroboros.Consensus.Block (BlockProtocol, ForgeState (..),
+                     Header, RealPoint, getHeader, headerPoint, realPointHash,
+                     realPointSlot)
 import           Ouroboros.Consensus.HeaderValidation
 import           Ouroboros.Consensus.Ledger.Abstract
-import qualified Ouroboros.Consensus.Protocol.BFT  as BFT
-import qualified Ouroboros.Consensus.Protocol.PBFT as PBFT
 import           Ouroboros.Consensus.Ledger.Extended
-import           Ouroboros.Consensus.Ledger.Inspect
-                   (InspectLedger, LedgerEvent (..), LedgerUpdate, LedgerWarning)
-import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx, GenTxId,
-                   HasTxId, TxId, txId)
-import           Ouroboros.Consensus.Mempool.API (TraceEventMempool (..), MempoolSize(..))
+import           Ouroboros.Consensus.Ledger.Inspect (InspectLedger,
+                     LedgerEvent (..), LedgerUpdate, LedgerWarning)
+import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx,
+                     GenTxId, HasTxId, TxId, txId)
+import           Ouroboros.Consensus.Ledger.SupportsProtocol
+                     (LedgerSupportsProtocol)
+import           Ouroboros.Consensus.Mempool.API (MempoolSize (..),
+                     TraceEventMempool (..))
+import           Ouroboros.Consensus.MiniProtocol.BlockFetch.Server
+                     (TraceBlockFetchServerEvent)
+import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client
+                     (TraceChainSyncClientEvent (..))
+import           Ouroboros.Consensus.MiniProtocol.ChainSync.Server
+                     (TraceChainSyncServerEvent (..))
 import           Ouroboros.Consensus.MiniProtocol.LocalTxSubmission.Server
-                   (TraceLocalTxSubmissionServerEvent (..))
+                     (TraceLocalTxSubmissionServerEvent (..))
 import           Ouroboros.Consensus.Node.Run (RunNode (..))
 import           Ouroboros.Consensus.Node.Tracers (TraceForgeEvent (..))
 import           Ouroboros.Consensus.Protocol.Abstract
+import qualified Ouroboros.Consensus.Protocol.BFT as BFT
+import qualified Ouroboros.Consensus.Protocol.PBFT as PBFT
 
 import           Ouroboros.Consensus.Util.Condense
 import           Ouroboros.Consensus.Util.Orphans ()
 
 import qualified Ouroboros.Network.AnchoredFragment as AF
+import           Ouroboros.Network.Block (BlockNo (..), ChainUpdate (..),
+                     HeaderHash, SlotNo (..), StandardHash, blockHash,
+                     pointSlot)
 import           Ouroboros.Network.Point (withOrigin)
-import           Ouroboros.Network.Block
-                   (BlockNo(..), SlotNo(..), ChainUpdate(..),
-                    HeaderHash, StandardHash, blockHash, pointSlot)
 
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 import qualified Ouroboros.Consensus.Storage.LedgerDB.OnDisk as LedgerDB

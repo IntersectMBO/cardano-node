@@ -7,7 +7,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving  #-}
+{-# LANGUAGE StandaloneDeriving #-}
 
 {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 
@@ -17,8 +17,8 @@ module Cardano.CLI.Shelley.Run.Query
   , runQueryCmd
   ) where
 
-import           Prelude (String)
 import           Cardano.Prelude hiding (atomically)
+import           Prelude (String)
 
 import           Data.Aeson (ToJSON (..), (.=))
 import qualified Data.Aeson as Aeson
@@ -38,47 +38,53 @@ import qualified Data.Text.IO as Text
 import           Numeric (showEFloat)
 
 import           Control.Monad.Trans.Except (ExceptT)
-import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT,
-                   newExceptT)
+import           Control.Monad.Trans.Except.Extra (firstExceptT,
+                     handleIOExceptT, newExceptT)
 
-import           Cardano.Api.Typed
-import           Cardano.Api.Protocol
 import           Cardano.Api.LocalChainSync (getLocalTip)
+import           Cardano.Api.Protocol
+import           Cardano.Api.Typed
 
-import           Cardano.CLI.Shelley.Commands (QueryFilter(..))
-import           Cardano.CLI.Environment (EnvSocketError, readEnvSocketPath, renderEnvSocketError)
-import           Cardano.CLI.Helpers (HelpersError, pPrintCBOR, renderHelpersError)
+import           Cardano.CLI.Environment (EnvSocketError, readEnvSocketPath,
+                     renderEnvSocketError)
+import           Cardano.CLI.Helpers (HelpersError, pPrintCBOR,
+                     renderHelpersError)
+import           Cardano.CLI.Shelley.Commands (QueryFilter (..))
 import           Cardano.CLI.Shelley.Orphans ()
 import           Cardano.CLI.Shelley.Parsers (OutputFile (..), QueryCmd (..))
 
 import           Cardano.Binary (decodeFull)
-import           Cardano.Config.Types (SocketPath(..))
+import           Cardano.Config.Types (SocketPath (..))
 import           Cardano.Crypto.Hash (hashToBytesAsHex)
 
-import           Ouroboros.Consensus.Cardano.Block (Either (..), EraMismatch (..), Query (..))
+import           Ouroboros.Consensus.Cardano.Block (Either (..),
+                     EraMismatch (..), Query (..))
 import           Ouroboros.Consensus.HardFork.Combinator.Degenerate
-                   (Query (DegenQuery), Either (DegenQueryResult))
-import           Ouroboros.Consensus.Shelley.Protocol.Crypto (TPraosStandardCrypto)
+                     (Either (DegenQueryResult), Query (DegenQuery))
+import           Ouroboros.Consensus.Shelley.Protocol.Crypto
+                     (TPraosStandardCrypto)
 import           Ouroboros.Network.Block (getTipPoint)
 
 
 import qualified Shelley.Spec.Ledger.Address as Ledger
 import           Shelley.Spec.Ledger.Coin (Coin (..))
-import qualified Shelley.Spec.Ledger.Credential              as Ledger
-import           Shelley.Spec.Ledger.Delegation.Certificates (PoolDistr(..))
-import qualified Shelley.Spec.Ledger.Delegation.Certificates as Ledger (PoolDistr(..))
+import qualified Shelley.Spec.Ledger.Credential as Ledger
+import           Shelley.Spec.Ledger.Delegation.Certificates (PoolDistr (..))
+import qualified Shelley.Spec.Ledger.Delegation.Certificates as Ledger
+                     (PoolDistr (..))
 import qualified Shelley.Spec.Ledger.Keys as Ledger
 import           Shelley.Spec.Ledger.LedgerState (EpochState)
 import qualified Shelley.Spec.Ledger.LedgerState as Ledger
 import           Shelley.Spec.Ledger.PParams (PParams)
-import qualified Shelley.Spec.Ledger.TxData as Ledger (TxId (..), TxIn (..), TxOut (..))
-import qualified Shelley.Spec.Ledger.UTxO as Ledger (UTxO(..))
+import qualified Shelley.Spec.Ledger.TxData as Ledger (TxId (..), TxIn (..),
+                     TxOut (..))
+import qualified Shelley.Spec.Ledger.UTxO as Ledger (UTxO (..))
 
 import           Ouroboros.Consensus.Shelley.Ledger
 
 import           Ouroboros.Network.Block (Serialised (..))
 import           Ouroboros.Network.Protocol.LocalStateQuery.Type as LocalStateQuery
-                   (AcquireFailure (..))
+                     (AcquireFailure (..))
 
 
 data ShelleyQueryCmdError

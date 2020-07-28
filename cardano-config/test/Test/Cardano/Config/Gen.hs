@@ -29,8 +29,8 @@ import qualified Data.IP as IP
 import           Hedgehog (Gen)
 import           Hedgehog.Corpus (cooking)
 import qualified Hedgehog.Gen as Gen
-import qualified Hedgehog.Range as Range
 import           Hedgehog.Internal.Gen ()
+import qualified Hedgehog.Range as Range
 
 import           Ouroboros.Consensus.Shelley.Protocol (TPraosStandardCrypto)
 

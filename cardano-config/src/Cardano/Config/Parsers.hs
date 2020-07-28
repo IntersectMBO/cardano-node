@@ -38,7 +38,7 @@ import           Cardano.Config.Types
 import           Network.Socket (PortNumber)
 import           Options.Applicative
 
-import           Ouroboros.Consensus.NodeId (NodeId(..), CoreNodeId(..))
+import           Ouroboros.Consensus.NodeId (CoreNodeId (..), NodeId (..))
 
 
 -- Common command line parsers

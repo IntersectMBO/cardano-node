@@ -4,9 +4,9 @@ module Test.CLI.Shelley.Golden.Address.Info
   ( golden_shelleyAddressInfo
   ) where
 
-import Cardano.Prelude
+import           Cardano.Prelude
 
-import Hedgehog (Property)
+import           Hedgehog (Property)
 
 import qualified Data.List as L
 import qualified Hedgehog as H
@@ -24,7 +24,7 @@ golden_shelleyAddressInfo = OP.propertyOnce $ do
       [ "shelley","address","info"
       , "--address", byronBase58
       ]
-    
+
     H.assert $ "Encoding: Base58" `L.isInfixOf` infoText1
     H.assert $ "Era: Byron" `L.isInfixOf` infoText1
 
@@ -34,7 +34,7 @@ golden_shelleyAddressInfo = OP.propertyOnce $ do
       [ "shelley","address","info"
       , "--address", byronHex
       ]
-    
+
     H.assert $ "Encoding: Hex" `L.isInfixOf` infoText2
     H.assert $ "Era: Byron" `L.isInfixOf` infoText2
 
@@ -44,6 +44,6 @@ golden_shelleyAddressInfo = OP.propertyOnce $ do
       [ "shelley","address","info"
       , "--address", shelleyHex
       ]
-    
+
     H.assert $ "Encoding: Hex" `L.isInfixOf` infoText3
     H.assert $ "Era: Shelley" `L.isInfixOf` infoText3

@@ -1,4 +1,4 @@
-{-# LANGUAGE EmptyCase                  #-}
+{-# LANGUAGE EmptyCase #-}
 
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -33,19 +33,16 @@ module Cardano.TracingOrphanInstances.Common
   , mkLOMeta
   ) where
 
-import           Data.Aeson (ToJSON(..), Value (..), (.=))
+import           Data.Aeson (ToJSON (..), Value (..), (.=))
 import           Data.Void (Void)
 
-import           Cardano.BM.Tracing
-                   (ToObject(..), TracingVerbosity(..), Transformable(..),
-                    HasSeverityAnnotation(..), Severity(..),
-                    HasPrivacyAnnotation(..), Tracer(..), )
-import           Cardano.BM.Data.LogItem
-                   (LOContent (..), LogObject (..), mkLOMeta,
-                    PrivacyAnnotation(..))
-import           Cardano.BM.Data.Tracer
-                   (trStructured, HasTextFormatter (..), trStructuredText,
-                    emptyObject, mkObject)
+import           Cardano.BM.Data.LogItem (LOContent (..), LogObject (..),
+                     PrivacyAnnotation (..), mkLOMeta)
+import           Cardano.BM.Data.Tracer (HasTextFormatter (..), emptyObject,
+                     mkObject, trStructured, trStructuredText)
+import           Cardano.BM.Tracing (HasPrivacyAnnotation (..),
+                     HasSeverityAnnotation (..), Severity (..), ToObject (..),
+                     Tracer (..), TracingVerbosity (..), Transformable (..))
 
 
 -- | A bit of a weird one, but needed because some of the very general

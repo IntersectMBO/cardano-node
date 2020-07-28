@@ -19,11 +19,11 @@ import           Control.Monad.Trans.Except.Extra (firstExceptT, newExceptT)
 import           Cardano.Api.TextView (TextViewDescription (..))
 import           Cardano.Api.Typed
 
-import           Cardano.CLI.Shelley.Parsers
-                   (OutputFile (..), SigningKeyFile (..), VerificationKeyFile (..),
-                    AddressCmd (..), AddressKeyType (..))
+import           Cardano.CLI.Shelley.Parsers (AddressCmd (..),
+                     AddressKeyType (..), OutputFile (..), SigningKeyFile (..),
+                     VerificationKeyFile (..))
 import           Cardano.CLI.Shelley.Run.Address.Info (ShelleyAddressInfoError,
-                   runAddressInfo)
+                     runAddressInfo)
 
 data ShelleyAddressCmdError
   = ShelleyAddressCmdAddressInfoError !ShelleyAddressInfoError

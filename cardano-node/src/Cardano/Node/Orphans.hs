@@ -8,7 +8,7 @@ module Cardano.Node.Orphans () where
 import           Cardano.Prelude
 import qualified Prelude
 
-import           Data.Aeson (FromJSON (..),Value(..))
+import           Data.Aeson (FromJSON (..), Value (..))
 import qualified Data.Text as Text
 
 import           Cardano.BM.Data.Tracer (TracingVerbosity (..))
