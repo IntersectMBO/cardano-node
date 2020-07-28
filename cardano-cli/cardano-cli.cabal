@@ -234,3 +234,5 @@ test-suite cardano-cli-test
                         -Wpartial-fields
                         -Wcompat
                         -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
+
+  build-tools:          cardano-cli
