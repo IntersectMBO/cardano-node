@@ -24,6 +24,7 @@ library
                         Cardano.Api.TextView
                         Cardano.Api.Typed
                         Cardano.Api.LocalChainSync
+                        Cardano.Api.MetaData
                         Cardano.Api.TxSubmit
 
   other-modules:        Cardano.Api.TxSubmit.ErrorRender
