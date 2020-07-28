@@ -32,7 +32,7 @@ import           Network.Socket (PortNumber)
 import           Network.URI (URI, parseURI)
 
 import           Cardano.Chain.Slotting (EpochSlots(..))
-import           Cardano.Slotting.Slot (SlotNo(..))
+import           Cardano.Slotting.Slot (SlotNo(..), EpochNo (..))
 
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
 import           Ouroboros.Consensus.Cardano (SecurityParam (..))
@@ -43,7 +43,6 @@ import qualified Shelley.Spec.Ledger.TxData as Shelley
 import           Cardano.Api.Protocol (Protocol (..))
 import           Cardano.Api.Typed hiding (PoolId)
 
-import           Cardano.Slotting.Slot (EpochNo (..))
 
 import           Cardano.Config.Types (CertificateFile (..), SigningKeyFile(..),
                    UpdateProposalFile (..))

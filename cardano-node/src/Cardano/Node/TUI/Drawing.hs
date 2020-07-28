@@ -20,7 +20,7 @@ import           Prelude (String)
 
 import qualified Brick.AttrMap as A
 import           Brick.Themes (Theme, newTheme)
-import           Brick.Types (Widget)
+import           Brick.Types (Padding(..), Widget)
 import qualified Brick.Widgets.Border as B
 import qualified Brick.Widgets.Border.Style as BS
 import           Brick.Widgets.Core (hBox, padBottom, padLeft, hLimitPercent,
@@ -30,7 +30,6 @@ import qualified Brick.Widgets.Center as C
 import           Brick.Widgets.ProgressBar (progressBar, progressCompleteAttr,
                    progressIncompleteAttr)
 import           Brick.Util (fg, on)
-import           Brick.Types (Padding(..))
 import qualified Control.Concurrent.Async as Async
 import           Control.DeepSeq (rwhnf)
 import qualified Data.Text as Text

@@ -57,7 +57,7 @@ import           Cardano.Node.TraceConfig (TraceOptions(..), TraceSelection(..))
 import           Cardano.Node.Types (NodeConfiguration (..), NodeCLI(..),
                    NodeMockProtocolConfiguration(..), NodeProtocolConfiguration(..),
                    ncProtocol, parseNodeConfiguration)
-import           Cardano.Config.Types (ViewMode (..))
+import           Cardano.Config.Types
 
 import           Ouroboros.Network.BlockFetch (BlockFetchConfiguration (..))
 import           Ouroboros.Network.Magic (NetworkMagic (..))
@@ -84,7 +84,6 @@ import           Ouroboros.Consensus.Storage.ImmutableDB (ValidationPolicy (..))
 import           Ouroboros.Consensus.Storage.VolatileDB (BlockValidationPolicy (..))
 
 import           Cardano.Node.Topology
-import           Cardano.Config.Types
 import           Cardano.Node.Protocol
                    (mkConsensusProtocol,
                     SomeConsensusProtocol(..), renderProtocolInstantiationError)

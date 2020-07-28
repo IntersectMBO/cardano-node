@@ -59,7 +59,7 @@ import           Ouroboros.Consensus.Cardano.Block (Either (..), EraMismatch (..
 import           Ouroboros.Consensus.HardFork.Combinator.Degenerate
                    (Query (DegenQuery), Either (DegenQueryResult))
 import           Ouroboros.Consensus.Shelley.Protocol.Crypto (TPraosStandardCrypto)
-import           Ouroboros.Network.Block (getTipPoint)
+import           Ouroboros.Network.Block (Serialised (..), getTipPoint)
 
 
 import qualified Shelley.Spec.Ledger.Address as Ledger
@@ -76,7 +76,6 @@ import qualified Shelley.Spec.Ledger.UTxO as Ledger (UTxO(..))
 
 import           Ouroboros.Consensus.Shelley.Ledger
 
-import           Ouroboros.Network.Block (Serialised (..))
 import           Ouroboros.Network.Protocol.LocalStateQuery.Type as LocalStateQuery
                    (AcquireFailure (..))
 

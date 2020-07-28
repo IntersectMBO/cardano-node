@@ -21,12 +21,14 @@ import           Cardano.Tracing.OrphanInstances.Consensus ()
 import           Ouroboros.Network.Block
                    (blockHash, blockSlot, blockNo)
 import           Ouroboros.Consensus.Block (Header)
+
 import           Ouroboros.Consensus.Byron.Ledger
                    (ByronBlock(..), byronHeaderRaw,
-                    ByronOtherHeaderEnvelopeError(..))
+                    ByronOtherHeaderEnvelopeError(..),
+                    TxId(..))
 import           Ouroboros.Consensus.Byron.Ledger.Inspect
                    (ByronLedgerUpdate (..), ProtocolUpdate (..), UpdateState (..))
-import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTx, TxId, txId)
+import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTx, txId)
 import           Ouroboros.Consensus.Util.Condense (condense)
 
 import           Cardano.Chain.Block
@@ -36,7 +38,6 @@ import           Cardano.Chain.Byron.API (ApplyMempoolPayloadErr(..))
 import           Cardano.Chain.Delegation (delegateVK)
 import           Cardano.Crypto.Signing (VerificationKey)
 
-import           Ouroboros.Consensus.Byron.Ledger (TxId(..))
 
 
 --

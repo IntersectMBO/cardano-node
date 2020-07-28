@@ -35,9 +35,7 @@ import           Control.Tracer
 import           Network.Mux (MuxError, MuxMode(..))
 
 import           Cardano.Api.Protocol.Types (SomeNodeClientProtocol(..))
-import           Ouroboros.Consensus.Block (BlockProtocol, Header)
-
-import           Ouroboros.Consensus.Block (CodecConfig, GetHeader (..))
+import           Ouroboros.Consensus.Block (BlockProtocol, Header, CodecConfig, GetHeader (..))
 import           Ouroboros.Consensus.BlockchainTime (SlotLength, getSlotLength)
 import           Ouroboros.Consensus.Network.NodeToClient
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
@@ -58,7 +56,6 @@ import qualified Ouroboros.Network.AnchoredFragment as AF
 import           Ouroboros.Network.Protocol.LocalTxSubmission.Type
 import           Ouroboros.Network.Protocol.ChainSync.Type
 import           Ouroboros.Network.Protocol.ChainSync.Client
-import           Ouroboros.Network.Protocol.Handshake.Version
 import           Ouroboros.Network.NodeToClient
 
 import           Cardano.Config.Types (SocketPath(..))
