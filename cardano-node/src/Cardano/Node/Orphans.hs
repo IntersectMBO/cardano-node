@@ -8,12 +8,19 @@ module Cardano.Node.Orphans () where
 import           Cardano.Prelude
 import qualified Prelude
 
-import           Data.Aeson (FromJSON (..),Value(..))
+import           Data.Aeson
+  ( FromJSON (..)
+  , Value (..)
+  )
 import qualified Data.Text as Text
 
-import           Cardano.BM.Data.Tracer (TracingVerbosity (..))
+import           Cardano.BM.Data.Tracer
+  ( TracingVerbosity (..)
+  )
 import qualified Cardano.Chain.Update as Update
-import           Ouroboros.Consensus.NodeId (CoreNodeId (..))
+import           Ouroboros.Consensus.NodeId
+  ( CoreNodeId (..)
+  )
 
 instance FromJSON TracingVerbosity where
   parseJSON (String str) = case str of

@@ -1,6 +1,6 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TemplateHaskell   #-}
-{-# LANGUAGE CPP               #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Cardano.Config.Git.Rev (
       gitRev
@@ -8,12 +8,20 @@ module Cardano.Config.Git.Rev (
 
 import           Cardano.Prelude
 
-import           Data.FileEmbed (dummySpaceWith)
-import           Data.Text (Text)
+import           Data.FileEmbed
+  ( dummySpaceWith
+  )
+import           Data.Text
+  ( Text
+  )
 import qualified Data.Text as T
-import           Data.Text.Encoding (decodeUtf8)
+import           Data.Text.Encoding
+  ( decodeUtf8
+  )
 
-import           Cardano.Config.Git.RevFromGit (gitRevFromGit)
+import           Cardano.Config.Git.RevFromGit
+  ( gitRevFromGit
+  )
 
 gitRev :: Text
 gitRev | gitRevEmbed /= zeroRev = gitRevEmbed

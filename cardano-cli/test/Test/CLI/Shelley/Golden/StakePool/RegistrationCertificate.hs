@@ -4,9 +4,11 @@ module Test.CLI.Shelley.Golden.StakePool.RegistrationCertificate
   ( golden_shelleyStakePoolRegistrationCertificate
   ) where
 
-import Cardano.Prelude
+import           Cardano.Prelude
 
-import Hedgehog (Property)
+import           Hedgehog
+  ( Property
+  )
 
 import qualified Test.OptParse as OP
 

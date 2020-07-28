@@ -45,13 +45,13 @@ where
 -- (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 -- OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import Prelude
+import           Prelude
 
-import Control.Exception
+import           Control.Exception
 
-import System.Environment
-import System.Exit
-import System.IO
+import           System.Environment
+import           System.Exit
+import           System.IO
 
 
 -- | An exception handler to use for a program top level, as an alternative to

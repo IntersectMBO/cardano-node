@@ -8,19 +8,34 @@ module Cardano.Api.TxSubmit.Types
   ) where
 
 import           Cardano.Api.TxSubmit.ErrorRender
-import           Cardano.Binary (DecoderError)
-import qualified Cardano.Chain.UTxO as Utxo
-import           Cardano.Chain.Byron.API (ApplyMempoolPayloadErr)
+import           Cardano.Binary
+  ( DecoderError
+  )
+import           Cardano.Chain.Byron.API
+  ( ApplyMempoolPayloadErr
+  )
 import qualified Cardano.Chain.Genesis as Genesis
+import qualified Cardano.Chain.UTxO as Utxo
 
-import           Cardano.Prelude hiding ((%))
+import           Cardano.Prelude hiding
+  ( (%)
+  )
 
-import           Data.Aeson (ToJSON (..), Value (..))
+import           Data.Aeson
+  ( ToJSON (..)
+  , Value (..)
+  )
 import qualified Data.Aeson as Aeson
-import           Data.Text (Text)
+import           Data.Text
+  ( Text
+  )
 import qualified Data.Text as Text
 
-import           Formatting ((%), build, sformat)
+import           Formatting
+  ( build
+  , sformat
+  , (%)
+  )
 
 
 data NodeApiEnv = NodeApiEnv

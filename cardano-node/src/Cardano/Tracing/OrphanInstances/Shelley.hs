@@ -1,16 +1,16 @@
 {-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE FlexibleContexts      #-}
-{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE EmptyCase #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE NamedFieldPuns        #-}
-{-# LANGUAGE OverloadedStrings     #-}
-{-# LANGUAGE ScopedTypeVariables   #-}
-{-# LANGUAGE StandaloneDeriving    #-}
-{-# LANGUAGE TypeFamilies          #-}
-{-# LANGUAGE UndecidableInstances  #-}
-{-# LANGUAGE EmptyCase             #-}
-{-# LANGUAGE DerivingStrategies    #-}
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 {-# OPTIONS_GHC -Wno-orphans  #-}
 
@@ -18,50 +18,95 @@ module Cardano.Tracing.OrphanInstances.Shelley () where
 
 import           Cardano.Prelude
 
-import           Data.Aeson (ToJSON (..), ToJSONKey (..),
-                   ToJSONKeyFunction (..), (.=))
+import           Data.Aeson
+  ( ToJSON (..)
+  , ToJSONKey (..)
+  , ToJSONKeyFunction (..)
+  , (.=)
+  )
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Encoding as Aeson
 import qualified Data.HashMap.Strict as HMS
-import           Data.Set (Set)
+import           Data.Set
+  ( Set
+  )
 import qualified Data.Set as Set
-import           Data.Text (Text)
+import           Data.Text
+  ( Text
+  )
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 
 
-import           Cardano.Slotting.Block (BlockNo(..))
+import           Cardano.Slotting.Block
+  ( BlockNo (..)
+  )
 import           Cardano.Tracing.OrphanInstances.Common
-import           Cardano.Tracing.OrphanInstances.Consensus ()
+import           Cardano.Tracing.OrphanInstances.Consensus
+  ()
 
-import           Cardano.Crypto.Hash.Class (Hash)
+import           Cardano.Crypto.Hash.Class
+  ( Hash
+  )
 import           Cardano.Crypto.KES.Class
-                   (VerKeyKES, deriveVerKeyKES, hashVerKeyKES)
+  ( VerKeyKES
+  , deriveVerKeyKES
+  , hashVerKeyKES
+  )
 
 import           Cardano.Crypto.Hash.Class as Crypto
-import           Ouroboros.Network.Block
-                   (SlotNo(..), blockHash, blockSlot, blockNo)
-import           Ouroboros.Network.Point (WithOrigin, withOriginToMaybe)
-import           Ouroboros.Consensus.Block (Header)
-import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTx, txId)
+import           Ouroboros.Consensus.Block
+  ( Header
+  )
+import           Ouroboros.Consensus.Ledger.SupportsMempool
+  ( GenTx
+  , txId
+  )
 import qualified Ouroboros.Consensus.Ledger.SupportsMempool as SupportsMempool
-import           Ouroboros.Consensus.Util.Condense (condense)
+import           Ouroboros.Consensus.Util.Condense
+  ( condense
+  )
+import           Ouroboros.Network.Block
+  ( SlotNo (..)
+  , blockHash
+  , blockNo
+  , blockSlot
+  )
+import           Ouroboros.Network.Point
+  ( WithOrigin
+  , withOriginToMaybe
+  )
 
-import           Ouroboros.Consensus.Shelley.Ledger hiding (TxId)
+import           Ouroboros.Consensus.Shelley.Ledger hiding
+  ( TxId
+  )
 import           Ouroboros.Consensus.Shelley.Protocol
-                   (TPraosStandardCrypto, TPraosCannotLead(..),
-                    TPraosUnusableKey(..))
+  ( TPraosCannotLead (..)
+  , TPraosStandardCrypto
+  , TPraosUnusableKey (..)
+  )
 import           Ouroboros.Consensus.Shelley.Protocol.Crypto
-import           Ouroboros.Consensus.Shelley.Protocol.Crypto.HotKey (HotKey(..))
+import           Ouroboros.Consensus.Shelley.Protocol.Crypto.HotKey
+  ( HotKey (..)
+  )
 
 -- TODO: this should be exposed via Cardano.Api
 import           Shelley.Spec.Ledger.API
-import           Shelley.Spec.Ledger.BlockChain (LastAppliedBlock(..))
+import           Shelley.Spec.Ledger.BlockChain
+  ( LastAppliedBlock (..)
+  )
 import           Shelley.Spec.Ledger.Coin
-import           Shelley.Spec.Ledger.Keys (KeyHash(..))
-import           Shelley.Spec.Ledger.LedgerState (WitHashes(..))
+import           Shelley.Spec.Ledger.Keys
+  ( KeyHash (..)
+  )
+import           Shelley.Spec.Ledger.LedgerState
+  ( WitHashes (..)
+  )
 import           Shelley.Spec.Ledger.OCert
 
+import           Shelley.Spec.Ledger.MetaData
+  ( MetaDataHash (..)
+  )
 import           Shelley.Spec.Ledger.STS.Bbody
 import           Shelley.Spec.Ledger.STS.Chain
 import           Shelley.Spec.Ledger.STS.Deleg
@@ -86,8 +131,12 @@ import           Shelley.Spec.Ledger.STS.Tickn
 import           Shelley.Spec.Ledger.STS.Updn
 import           Shelley.Spec.Ledger.STS.Utxo
 import           Shelley.Spec.Ledger.STS.Utxow
-import           Shelley.Spec.Ledger.MetaData (MetaDataHash(..))
-import           Shelley.Spec.Ledger.TxData (TxId(..), TxIn(..), TxOut(..), MIRPot(..))
+import           Shelley.Spec.Ledger.TxData
+  ( MIRPot (..)
+  , TxId (..)
+  , TxIn (..)
+  , TxOut (..)
+  )
 
 
 --

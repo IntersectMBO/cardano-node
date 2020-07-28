@@ -7,7 +7,11 @@ import           Cardano.Prelude
 
 import           Cardano.Api.Typed
 
-import           Hedgehog (Gen, Property, discover)
+import           Hedgehog
+  ( Gen
+  , Property
+  , discover
+  )
 import qualified Hedgehog as H
 
 import           Test.Cardano.Api.Typed.Gen

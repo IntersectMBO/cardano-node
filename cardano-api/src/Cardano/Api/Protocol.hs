@@ -1,13 +1,13 @@
-{-# LANGUAGE ConstraintKinds     #-}
-{-# LANGUAGE DeriveAnyClass      #-}
-{-# LANGUAGE DeriveGeneric       #-}
-{-# LANGUAGE FlexibleContexts    #-}
-{-# LANGUAGE GADTs               #-}
-{-# LANGUAGE NamedFieldPuns      #-}
-{-# LANGUAGE OverloadedStrings   #-}
-{-# LANGUAGE RankNTypes          #-}
+{-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving  #-}
+{-# LANGUAGE StandaloneDeriving #-}
 
 
 module Cardano.Api.Protocol
@@ -26,12 +26,16 @@ module Cardano.Api.Protocol
 
 import           Cardano.Prelude
 
-import           Cardano.Chain.Slotting (EpochSlots(..))
+import           Cardano.Chain.Slotting
+  ( EpochSlots (..)
+  )
 
 import           Cardano.Api.Typed
 
 import qualified Ouroboros.Consensus.Cardano as Consensus
-import           Ouroboros.Consensus.Node.Run (RunNode)
+import           Ouroboros.Consensus.Node.Run
+  ( RunNode
+  )
 
 
 data Protocol = MockProtocol !MockProtocol

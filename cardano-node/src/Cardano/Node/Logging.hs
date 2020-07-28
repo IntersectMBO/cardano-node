@@ -1,8 +1,8 @@
-{-# LANGUAGE CPP                 #-}
-{-# LANGUAGE LambdaCase          #-}
-{-# LANGUAGE NamedFieldPuns      #-}
-{-# LANGUAGE OverloadedStrings   #-}
-{-# LANGUAGE Rank2Types          #-}
+{-# LANGUAGE CPP #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE Rank2Types #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 #if !defined(mingw32_HOST_OS)
@@ -23,50 +23,102 @@ module Cardano.Node.Logging
   , LOContent (..)
   ) where
 
-import           Cardano.Prelude hiding (trace)
+import           Cardano.Prelude hiding
+  ( trace
+  )
 
 import qualified Control.Concurrent.Async as Async
-import           Control.Exception (IOException)
-import           Control.Exception.Safe (MonadCatch)
-import           Control.Monad.Trans.Except.Extra (catchIOExceptT)
+import           Control.Exception
+  ( IOException
+  )
+import           Control.Exception.Safe
+  ( MonadCatch
+  )
+import           Control.Monad.Trans.Except.Extra
+  ( catchIOExceptT
+  )
 
-import           Cardano.BM.Backend.Aggregation (plugin)
-import           Cardano.BM.Backend.EKGView (plugin)
-import           Cardano.BM.Backend.Monitoring (plugin)
-import           Cardano.BM.Backend.TraceForwarder (plugin)
-import           Cardano.BM.Backend.Switchboard (Switchboard)
+import           Cardano.BM.Backend.Aggregation
+  ( plugin
+  )
+import           Cardano.BM.Backend.EKGView
+  ( plugin
+  )
+import           Cardano.BM.Backend.Monitoring
+  ( plugin
+  )
+import           Cardano.BM.Backend.Switchboard
+  ( Switchboard
+  )
 import qualified Cardano.BM.Backend.Switchboard as Switchboard
-import           Cardano.BM.Configuration (Configuration)
+import           Cardano.BM.Backend.TraceForwarder
+  ( plugin
+  )
+import           Cardano.BM.Configuration
+  ( Configuration
+  )
 #ifdef UNIX
 import qualified Cardano.BM.Configuration.Model as CM
 #endif
 import qualified Cardano.BM.Configuration as Config
-import           Cardano.BM.Counters (readCounters)
 import qualified Cardano.BM.Configuration.Model as Config
-import           Cardano.BM.Data.Backend (Backend, BackendKind)
+import           Cardano.BM.Counters
+  ( readCounters
+  )
+import           Cardano.BM.Data.Backend
+  ( Backend
+  , BackendKind
+  )
 import           Cardano.BM.Data.Counter
-import           Cardano.BM.Data.LogItem ( LOContent (..), LOMeta (..),
-                    LoggerName, PrivacyAnnotation (..), mkLOMeta)
+import           Cardano.BM.Data.LogItem
+  ( LOContent (..)
+  , LOMeta (..)
+  , LoggerName
+  , PrivacyAnnotation (..)
+  , mkLOMeta
+  )
 import           Cardano.BM.Data.Observable
 #ifdef UNIX
 import           Cardano.BM.Data.Output
 #endif
-import           Cardano.BM.Data.Severity (Severity (..))
+import           Cardano.BM.Data.Severity
+  ( Severity (..)
+  )
 import           Cardano.BM.Data.SubTrace
 import qualified Cardano.BM.Observer.Monadic as Monadic
 import qualified Cardano.BM.Observer.STM as Stm
-import           Cardano.BM.Plugin (loadPlugin)
+import           Cardano.BM.Plugin
+  ( loadPlugin
+  )
 #if defined(SYSTEMD)
-import           Cardano.BM.Scribe.Systemd (plugin)
+import           Cardano.BM.Scribe.Systemd
+  ( plugin
+  )
 #endif
-import           Cardano.BM.Setup (setupTrace_, shutdown)
-import           Cardano.BM.Trace (Trace, appendName, traceNamedObject)
+import           Cardano.BM.Setup
+  ( setupTrace_
+  , shutdown
+  )
+import           Cardano.BM.Trace
+  ( Trace
+  , appendName
+  , traceNamedObject
+  )
 import qualified Cardano.BM.Trace as Trace
 
-import           Cardano.Config.Git.Rev (gitRev)
-import           Cardano.Config.Types (ConfigError (..), ViewMode (..))
-import           Cardano.Node.Types (ConfigYamlFilePath (..), NodeConfiguration (..),
-                   NodeCLI (..), parseNodeConfiguration)
+import           Cardano.Config.Git.Rev
+  ( gitRev
+  )
+import           Cardano.Config.Types
+  ( ConfigError (..)
+  , ViewMode (..)
+  )
+import           Cardano.Node.Types
+  ( ConfigYamlFilePath (..)
+  , NodeCLI (..)
+  , NodeConfiguration (..)
+  , parseNodeConfiguration
+  )
 
 --------------------------------
 -- Layer

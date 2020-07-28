@@ -10,81 +10,122 @@ module Test.CLI.Shelley.Tests
 import           Cardano.Prelude
 
 import           Test.CLI.Shelley.Golden.Address.Build
-                   (golden_shelleyAddressBuild)
+  ( golden_shelleyAddressBuild
+  )
 import           Test.CLI.Shelley.Golden.Address.Info
-                   (golden_shelleyAddressInfo)
+  ( golden_shelleyAddressInfo
+  )
 import           Test.CLI.Shelley.Golden.Address.KeyGen
-                   (golden_shelleyAddressKeyGen)
+  ( golden_shelleyAddressKeyGen
+  )
 import           Test.CLI.Shelley.Golden.Genesis.Create
-                   (golden_shelleyGenesisCreate)
+  ( golden_shelleyGenesisCreate
+  )
 import           Test.CLI.Shelley.Golden.Genesis.InitialTxIn
-                   (golden_shelleyGenesisInitialTxIn)
+  ( golden_shelleyGenesisInitialTxIn
+  )
 import           Test.CLI.Shelley.Golden.Genesis.KeyGenDelegate
-                   (golden_shelleyGenesisKeyGenDelegate)
+  ( golden_shelleyGenesisKeyGenDelegate
+  )
 import           Test.CLI.Shelley.Golden.Genesis.KeyGenGenesis
-                   (golden_shelleyGenesisKeyGenGenesis)
+  ( golden_shelleyGenesisKeyGenGenesis
+  )
 import           Test.CLI.Shelley.Golden.Genesis.KeyGenUtxo
-                   (golden_shelleyGenesisKeyGenUtxo)
+  ( golden_shelleyGenesisKeyGenUtxo
+  )
 import           Test.CLI.Shelley.Golden.Genesis.KeyHash
-                   (golden_shelleyGenesisKeyHash)
+  ( golden_shelleyGenesisKeyHash
+  )
 import           Test.CLI.Shelley.Golden.Node.IssueOpCert
-                   (golden_shelleyNodeIssueOpCert)
+  ( golden_shelleyNodeIssueOpCert
+  )
 import           Test.CLI.Shelley.Golden.Node.KeyGen
-                   (golden_shelleyNodeKeyGen)
+  ( golden_shelleyNodeKeyGen
+  )
 import           Test.CLI.Shelley.Golden.Node.KeyGenKes
-                   (golden_shelleyNodeKeyGenKes)
+  ( golden_shelleyNodeKeyGenKes
+  )
 import           Test.CLI.Shelley.Golden.Node.KeyGenVrf
-                   (golden_shelleyNodeKeyGenVrf)
+  ( golden_shelleyNodeKeyGenVrf
+  )
 import           Test.CLI.Shelley.Golden.StakeAddress.Build
-                   (golden_shelleyStakeAddressBuild)
+  ( golden_shelleyStakeAddressBuild
+  )
 import           Test.CLI.Shelley.Golden.StakeAddress.DeregistrationCertificate
-                   (golden_shelleyStakeAddressDeregistrationCertificate)
+  ( golden_shelleyStakeAddressDeregistrationCertificate
+  )
 import           Test.CLI.Shelley.Golden.StakeAddress.KeyGen
-                   (golden_shelleyStakeAddressKeyGen)
+  ( golden_shelleyStakeAddressKeyGen
+  )
 import           Test.CLI.Shelley.Golden.StakeAddress.RegistrationCertificate
-                   (golden_shelleyStakeAddressRegistrationCertificate)
+  ( golden_shelleyStakeAddressRegistrationCertificate
+  )
 import           Test.CLI.Shelley.Golden.StakePool.RegistrationCertificate
-                   (golden_shelleyStakePoolRegistrationCertificate)
-import           Test.CLI.Shelley.Golden.TextEnvelope.Certificates.StakeAddressCertificates
-                   (golden_shelleyStakeAddressCertificates)
+  ( golden_shelleyStakePoolRegistrationCertificate
+  )
 import           Test.CLI.Shelley.Golden.TextEnvelope.Certificates.MIRCertificate
-                   (golden_shelleyMIRCertificate)
+  ( golden_shelleyMIRCertificate
+  )
 import           Test.CLI.Shelley.Golden.TextEnvelope.Certificates.OperationalCertificate
-                   (golden_shelleyOperationalCertificate)
+  ( golden_shelleyOperationalCertificate
+  )
+import           Test.CLI.Shelley.Golden.TextEnvelope.Certificates.StakeAddressCertificates
+  ( golden_shelleyStakeAddressCertificates
+  )
 import           Test.CLI.Shelley.Golden.TextEnvelope.Certificates.StakePoolCertificates
-                   (golden_shelleyStakePoolCertificates)
+  ( golden_shelleyStakePoolCertificates
+  )
 
 import           Test.CLI.Shelley.Golden.Metadata.StakePoolMetadata
-                   (golden_stakePoolMetadataHash)
+  ( golden_stakePoolMetadataHash
+  )
 import           Test.CLI.Shelley.Golden.TextEnvelope.Keys.ExtendedPaymentKeys
-                   (golden_shelleyExtendedPaymentKeys)
+  ( golden_shelleyExtendedPaymentKeys
+  )
 import           Test.CLI.Shelley.Golden.TextEnvelope.Keys.GenesisDelegateKeys
-                   (golden_shelleyGenesisDelegateKeys)
-import           Test.CLI.Shelley.Golden.TextEnvelope.Keys.GenesisUTxOKeys
-                   (golden_shelleyGenesisUTxOKeys)
+  ( golden_shelleyGenesisDelegateKeys
+  )
 import           Test.CLI.Shelley.Golden.TextEnvelope.Keys.GenesisKeys
-                   (golden_shelleyGenesisKeys)
+  ( golden_shelleyGenesisKeys
+  )
+import           Test.CLI.Shelley.Golden.TextEnvelope.Keys.GenesisUTxOKeys
+  ( golden_shelleyGenesisUTxOKeys
+  )
 import           Test.CLI.Shelley.Golden.TextEnvelope.Keys.KESKeys
-                   (golden_shelleyKESKeys)
+  ( golden_shelleyKESKeys
+  )
 import           Test.CLI.Shelley.Golden.TextEnvelope.Keys.PaymentKeys
-                   (golden_shelleyPaymentKeys)
+  ( golden_shelleyPaymentKeys
+  )
 import           Test.CLI.Shelley.Golden.TextEnvelope.Keys.StakeKeys
-                   (golden_shelleyStakeKeys)
+  ( golden_shelleyStakeKeys
+  )
 import           Test.CLI.Shelley.Golden.TextEnvelope.Keys.VRFKeys
-                   (golden_shelleyVRFKeys)
+  ( golden_shelleyVRFKeys
+  )
 import           Test.CLI.Shelley.Golden.TextView.DecodeCbor
-                   (golden_shelleyTextViewDecodeCbor)
+  ( golden_shelleyTextViewDecodeCbor
+  )
 import           Test.CLI.Shelley.Golden.Transaction.Build
-                   (golden_shelleyTransactionBuild)
+  ( golden_shelleyTransactionBuild
+  )
 import           Test.CLI.Shelley.Golden.Transaction.CalculateMinFee
-                   (golden_shelleyTransactionCalculateMinFee)
+  ( golden_shelleyTransactionCalculateMinFee
+  )
 import           Test.CLI.Shelley.Golden.Transaction.Sign
-                   (golden_shelleyTransactionSign)
+  ( golden_shelleyTransactionSign
+  )
 
-import           Test.CLI.Shelley.Golden.TextEnvelope.Tx.Tx (golden_shelleyTx)
-import           Test.CLI.Shelley.Golden.TextEnvelope.Tx.TxBody (golden_shelleyTxBody)
+import           Test.CLI.Shelley.Golden.TextEnvelope.Tx.Tx
+  ( golden_shelleyTx
+  )
+import           Test.CLI.Shelley.Golden.TextEnvelope.Tx.TxBody
+  ( golden_shelleyTxBody
+  )
 
-import           Test.CLI.Version (golden_version)
+import           Test.CLI.Version
+  ( golden_version
+  )
 
 import qualified Hedgehog as H
 

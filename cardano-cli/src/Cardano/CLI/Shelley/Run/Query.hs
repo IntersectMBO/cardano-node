@@ -7,7 +7,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving  #-}
+{-# LANGUAGE StandaloneDeriving #-}
 
 {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 
@@ -17,67 +17,139 @@ module Cardano.CLI.Shelley.Run.Query
   , runQueryCmd
   ) where
 
-import           Prelude (String)
-import           Cardano.Prelude hiding (atomically)
+import           Cardano.Prelude hiding
+  ( atomically
+  )
+import           Prelude
+  ( String
+  )
 
-import           Data.Aeson (ToJSON (..), (.=))
+import           Data.Aeson
+  ( ToJSON (..)
+  , (.=)
+  )
 import qualified Data.Aeson as Aeson
-import           Data.Aeson.Encode.Pretty (encodePretty)
+import           Data.Aeson.Encode.Pretty
+  ( encodePretty
+  )
 import qualified Data.ByteString.Base16 as B16
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy.Char8 as LBS
-import           Data.HashMap.Strict (HashMap)
+import           Data.HashMap.Strict
+  ( HashMap
+  )
 import qualified Data.HashMap.Strict as HMS
 import qualified Data.Map as Map
-import           Data.Set (Set)
+import           Data.Set
+  ( Set
+  )
 import qualified Data.Set as Set
-import           Data.Text (Text)
+import           Data.Text
+  ( Text
+  )
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import qualified Data.Text.IO as Text
-import           Numeric (showEFloat)
+import           Numeric
+  ( showEFloat
+  )
 
-import           Control.Monad.Trans.Except (ExceptT)
-import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT,
-                   newExceptT)
+import           Control.Monad.Trans.Except
+  ( ExceptT
+  )
+import           Control.Monad.Trans.Except.Extra
+  ( firstExceptT
+  , handleIOExceptT
+  , newExceptT
+  )
 
-import           Cardano.Api.Typed
+import           Cardano.Api.LocalChainSync
+  ( getLocalTip
+  )
 import           Cardano.Api.Protocol
-import           Cardano.Api.LocalChainSync (getLocalTip)
+import           Cardano.Api.Typed
 
-import           Cardano.CLI.Shelley.Commands (QueryFilter(..))
-import           Cardano.CLI.Environment (EnvSocketError, readEnvSocketPath, renderEnvSocketError)
-import           Cardano.CLI.Helpers (HelpersError, pPrintCBOR, renderHelpersError)
-import           Cardano.CLI.Shelley.Orphans ()
-import           Cardano.CLI.Shelley.Parsers (OutputFile (..), QueryCmd (..))
+import           Cardano.CLI.Environment
+  ( EnvSocketError
+  , readEnvSocketPath
+  , renderEnvSocketError
+  )
+import           Cardano.CLI.Helpers
+  ( HelpersError
+  , pPrintCBOR
+  , renderHelpersError
+  )
+import           Cardano.CLI.Shelley.Commands
+  ( QueryFilter (..)
+  )
+import           Cardano.CLI.Shelley.Orphans
+  ()
+import           Cardano.CLI.Shelley.Parsers
+  ( OutputFile (..)
+  , QueryCmd (..)
+  )
 
-import           Cardano.Binary (decodeFull)
-import           Cardano.Config.Types (SocketPath(..))
-import           Cardano.Crypto.Hash (hashToBytesAsHex)
+import           Cardano.Binary
+  ( decodeFull
+  )
+import           Cardano.Config.Types
+  ( SocketPath (..)
+  )
+import           Cardano.Crypto.Hash
+  ( hashToBytesAsHex
+  )
 
-import           Ouroboros.Consensus.Cardano.Block (Either (..), EraMismatch (..), Query (..))
+import           Ouroboros.Consensus.Cardano.Block
+  ( Either (..)
+  , EraMismatch (..)
+  , Query (..)
+  )
 import           Ouroboros.Consensus.HardFork.Combinator.Degenerate
-                   (Query (DegenQuery), Either (DegenQueryResult))
-import           Ouroboros.Consensus.Shelley.Protocol.Crypto (TPraosStandardCrypto)
-import           Ouroboros.Network.Block (Serialised (..), getTipPoint)
+  ( Either (DegenQueryResult)
+  , Query (DegenQuery)
+  )
+import           Ouroboros.Consensus.Shelley.Protocol.Crypto
+  ( TPraosStandardCrypto
+  )
+import           Ouroboros.Network.Block
+  ( Serialised (..)
+  , getTipPoint
+  )
 
 
 import qualified Shelley.Spec.Ledger.Address as Ledger
-import           Shelley.Spec.Ledger.Coin (Coin (..))
-import qualified Shelley.Spec.Ledger.Credential              as Ledger
-import           Shelley.Spec.Ledger.Delegation.Certificates (PoolDistr(..))
-import qualified Shelley.Spec.Ledger.Delegation.Certificates as Ledger (PoolDistr(..))
+import           Shelley.Spec.Ledger.Coin
+  ( Coin (..)
+  )
+import qualified Shelley.Spec.Ledger.Credential as Ledger
+import           Shelley.Spec.Ledger.Delegation.Certificates
+  ( PoolDistr (..)
+  )
+import qualified Shelley.Spec.Ledger.Delegation.Certificates as Ledger
+  ( PoolDistr (..)
+  )
 import qualified Shelley.Spec.Ledger.Keys as Ledger
-import           Shelley.Spec.Ledger.LedgerState (EpochState)
+import           Shelley.Spec.Ledger.LedgerState
+  ( EpochState
+  )
 import qualified Shelley.Spec.Ledger.LedgerState as Ledger
-import           Shelley.Spec.Ledger.PParams (PParams)
-import qualified Shelley.Spec.Ledger.TxData as Ledger (TxId (..), TxIn (..), TxOut (..))
-import qualified Shelley.Spec.Ledger.UTxO as Ledger (UTxO(..))
+import           Shelley.Spec.Ledger.PParams
+  ( PParams
+  )
+import qualified Shelley.Spec.Ledger.TxData as Ledger
+  ( TxId (..)
+  , TxIn (..)
+  , TxOut (..)
+  )
+import qualified Shelley.Spec.Ledger.UTxO as Ledger
+  ( UTxO (..)
+  )
 
 import           Ouroboros.Consensus.Shelley.Ledger
 
 import           Ouroboros.Network.Protocol.LocalStateQuery.Type as LocalStateQuery
-                   (AcquireFailure (..))
+  ( AcquireFailure (..)
+  )
 
 
 data ShelleyQueryCmdError

@@ -6,7 +6,11 @@ module Cardano.Tracing.Queries
   (LedgerQueries(..))
 where
 
-import           Prelude (Int, error, (.))
+import           Prelude
+  ( Int
+  , error
+  , (.)
+  )
 
 import qualified Data.Map.Strict as Map
 

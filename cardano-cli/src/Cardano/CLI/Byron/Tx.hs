@@ -19,44 +19,87 @@ module Cardano.CLI.Byron.Tx
   )
 where
 
-import           Prelude (error)
-import           Cardano.Prelude hiding (option, trace, (%))
+import           Cardano.Prelude hiding
+  ( option
+  , trace
+  , (%)
+  )
+import           Prelude
+  ( error
+  )
 
-import           Control.Monad.Trans.Except.Extra (firstExceptT, left)
-import qualified Data.ByteString.Lazy as LB
+import           Control.Monad.Trans.Except.Extra
+  ( firstExceptT
+  , left
+  )
 import qualified Data.ByteString as B
+import qualified Data.ByteString.Lazy as LB
 import qualified Data.Map.Strict as Map
-import           Data.String (IsString)
-import           Data.Text (Text)
+import           Data.String
+  ( IsString
+  )
+import           Data.Text
+  ( Text
+  )
 import qualified Data.Text as T
 import qualified Data.Vector as Vector
-import           Formatting ((%), sformat)
+import           Formatting
+  ( sformat
+  , (%)
+  )
 
 import qualified Cardano.Binary as Binary
 
-import           Cardano.Chain.Common (Address)
+import           Cardano.Chain.Common
+  ( Address
+  )
 import qualified Cardano.Chain.Common as Common
 import           Cardano.Chain.Genesis as Genesis
-import           Cardano.Chain.Slotting (EpochSlots(..))
-import           Cardano.Chain.UTxO ( mkTxAux, annotateTxAux
-                                    , Tx(..), TxId, TxIn, TxOut)
+import           Cardano.Chain.Slotting
+  ( EpochSlots (..)
+  )
+import           Cardano.Chain.UTxO
+  ( Tx (..)
+  , TxId
+  , TxIn
+  , TxOut
+  , annotateTxAux
+  , mkTxAux
+  )
 import qualified Cardano.Chain.UTxO as UTxO
-import           Cardano.Crypto (SigningKey(..), ProtocolMagicId)
+import           Cardano.Crypto
+  ( ProtocolMagicId
+  , SigningKey (..)
+  )
 import qualified Cardano.Crypto.Hashing as Crypto
 import qualified Cardano.Crypto.Signing as Crypto
 
+import           Ouroboros.Consensus.Byron.Ledger
+  ( ByronBlock
+  , GenTx (..)
+  )
 import qualified Ouroboros.Consensus.Byron.Ledger as Byron
-import           Ouroboros.Consensus.Byron.Ledger (GenTx(..), ByronBlock)
-import           Ouroboros.Consensus.Cardano (SecurityParam(..))
+import           Ouroboros.Consensus.Cardano
+  ( SecurityParam (..)
+  )
 import           Ouroboros.Consensus.HardFork.Combinator.Degenerate
-                   (GenTx(DegenGenTx))
+  ( GenTx (DegenGenTx)
+  )
 
 import           Cardano.Api.Typed
-                   (NetworkId, LocalNodeConnectInfo(..), NodeConsensusMode(..),
-                    submitTxToNodeLocal, toByronProtocolMagicId)
-import           Cardano.Config.Types (SocketPath(..))
+  ( LocalNodeConnectInfo (..)
+  , NetworkId
+  , NodeConsensusMode (..)
+  , submitTxToNodeLocal
+  , toByronProtocolMagicId
+  )
 import           Cardano.CLI.Environment
-import           Cardano.CLI.Helpers (textShow)
+import           Cardano.CLI.Helpers
+  ( textShow
+  )
+import           Cardano.Config.Types
+  ( SocketPath (..)
+  )
 
 
 data ByronTxError

@@ -4,8 +4,12 @@ module Main
 
 import           Cardano.Prelude
 
-import           Hedgehog.Main (defaultMain)
-import           System.IO (BufferMode (..))
+import           Hedgehog.Main
+  ( defaultMain
+  )
+import           System.IO
+  ( BufferMode (..)
+  )
 import qualified System.IO as IO
 
 import qualified Test.CLI.Shelley.Tests

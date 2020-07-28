@@ -9,11 +9,15 @@ import           Cardano.Api.Typed
 
 import           Cardano.Prelude
 
-import           Hedgehog (Property, discover)
+import           Hedgehog
+  ( Property
+  , discover
+  )
 import qualified Hedgehog as H
 
 import           Test.Cardano.Api.Typed.Gen
-import           Test.Cardano.Api.Typed.Orphans ()
+import           Test.Cardano.Api.Typed.Orphans
+  ()
 
 -- Address CBOR round trips
 

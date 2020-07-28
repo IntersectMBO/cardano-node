@@ -1,7 +1,9 @@
 
 import           Cardano.Prelude
 
-import           Hedgehog.Main (defaultMain)
+import           Hedgehog.Main
+  ( defaultMain
+  )
 
 import qualified Test.Cardano.Node.Json
 

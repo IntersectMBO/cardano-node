@@ -1,13 +1,13 @@
-{-# LANGUAGE AllowAmbiguousTypes   #-}
-{-# LANGUAGE FlexibleContexts      #-}
-{-# LANGUAGE FlexibleInstances     #-}
-{-# LANGUAGE LambdaCase            #-}
+{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE NamedFieldPuns        #-}
-{-# LANGUAGE ScopedTypeVariables   #-}
-{-# LANGUAGE StandaloneDeriving    #-}
-{-# LANGUAGE TypeFamilies          #-}
-{-# LANGUAGE UndecidableInstances  #-}
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 {-# OPTIONS_GHC -Wno-orphans  #-}
 
@@ -23,25 +23,52 @@ module Cardano.Tracing.MicroBenchmarking
 
 import           Cardano.Prelude
 
-import           Control.Monad.Class.MonadTime (DiffTime, MonadTime, Time (..),
-                     diffTime, getMonotonicTime)
+import           Control.Monad.Class.MonadTime
+  ( DiffTime
+  , MonadTime
+  , Time (..)
+  , diffTime
+  , getMonotonicTime
+  )
 
-import           Data.Aeson (Value (..), toJSON, (.=))
-import           Data.Time.Clock (diffTimeToPicoseconds)
+import           Data.Aeson
+  ( Value (..)
+  , toJSON
+  , (.=)
+  )
+import           Data.Time.Clock
+  ( diffTimeToPicoseconds
+  )
 
-import           Cardano.BM.Data.Severity (Severity (..))
+import           Cardano.BM.Data.Severity
+  ( Severity (..)
+  )
+import           Cardano.BM.Data.Tracer
+  ( emptyObject
+  , mkObject
+  , trStructured
+  )
 import           Cardano.BM.Tracing
-import           Cardano.BM.Data.Tracer (trStructured, emptyObject, mkObject)
 
 import           Control.Tracer.Transformers.ObserveOutcome
 
-import           Ouroboros.Network.Block (SlotNo (..))
+import           Ouroboros.Network.Block
+  ( SlotNo (..)
+  )
 
-import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTx, GenTxId,
-                   HasTxId, txId)
+import           Ouroboros.Consensus.Ledger.SupportsMempool
+  ( GenTx
+  , GenTxId
+  , HasTxId
+  , txId
+  )
 import           Ouroboros.Consensus.Mempool.API
-                   (MempoolSize (..), TraceEventMempool (..))
-import           Ouroboros.Consensus.Node.Tracers (TraceForgeEvent (..))
+  ( MempoolSize (..)
+  , TraceEventMempool (..)
+  )
+import           Ouroboros.Consensus.Node.Tracers
+  ( TraceForgeEvent (..)
+  )
 
 --------------------------------------------------------------------------------
 -- Measure transaction forging time

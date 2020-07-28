@@ -26,13 +26,20 @@ import           Cardano.Crypto.DSIGN.Class
 
 import qualified Data.IP as IP
 
-import           Hedgehog (Gen)
-import           Hedgehog.Corpus (cooking)
+import           Hedgehog
+  ( Gen
+  )
+import           Hedgehog.Corpus
+  ( cooking
+  )
 import qualified Hedgehog.Gen as Gen
+import           Hedgehog.Internal.Gen
+  ()
 import qualified Hedgehog.Range as Range
-import           Hedgehog.Internal.Gen ()
 
-import           Ouroboros.Consensus.Shelley.Protocol (TPraosStandardCrypto)
+import           Ouroboros.Consensus.Shelley.Protocol
+  ( TPraosStandardCrypto
+  )
 
 import           Shelley.Spec.Ledger.Crypto
 

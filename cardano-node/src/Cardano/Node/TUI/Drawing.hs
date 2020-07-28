@@ -15,33 +15,81 @@ module Cardano.Node.TUI.Drawing
     , Screen(..)
     ) where
 
-import           Cardano.Prelude hiding (on)
-import           Prelude (String)
+import           Cardano.Prelude hiding
+  ( on
+  )
+import           Prelude
+  ( String
+  )
 
 import qualified Brick.AttrMap as A
-import           Brick.Themes (Theme, newTheme)
-import           Brick.Types (Padding(..), Widget)
+import           Brick.Themes
+  ( Theme
+  , newTheme
+  )
+import           Brick.Types
+  ( Padding (..)
+  , Widget
+  )
+import           Brick.Util
+  ( fg
+  , on
+  )
 import qualified Brick.Widgets.Border as B
 import qualified Brick.Widgets.Border.Style as BS
-import           Brick.Widgets.Core (hBox, padBottom, padLeft, hLimitPercent,
-                   padTop, padRight, str, txt, updateAttrMap, vBox, vLimitPercent,
-                   withAttr, withBorderStyle)
 import qualified Brick.Widgets.Center as C
-import           Brick.Widgets.ProgressBar (progressBar, progressCompleteAttr,
-                   progressIncompleteAttr)
-import           Brick.Util (fg, on)
+import           Brick.Widgets.Core
+  ( hBox
+  , hLimitPercent
+  , padBottom
+  , padLeft
+  , padRight
+  , padTop
+  , str
+  , txt
+  , updateAttrMap
+  , vBox
+  , vLimitPercent
+  , withAttr
+  , withBorderStyle
+  )
+import           Brick.Widgets.ProgressBar
+  ( progressBar
+  , progressCompleteAttr
+  , progressIncompleteAttr
+  )
 import qualified Control.Concurrent.Async as Async
-import           Control.DeepSeq (rwhnf)
+import           Control.DeepSeq
+  ( rwhnf
+  )
 import qualified Data.Text as Text
-import           Data.Time.Clock (NominalDiffTime, UTCTime(..), addUTCTime)
-import           Data.Time.Calendar (Day(..))
-import           Data.Time.Format (defaultTimeLocale, formatTime)
+import           Data.Time.Calendar
+  ( Day (..)
+  )
+import           Data.Time.Clock
+  ( NominalDiffTime
+  , UTCTime (..)
+  , addUTCTime
+  )
+import           Data.Time.Format
+  ( defaultTimeLocale
+  , formatTime
+  )
 import qualified Graphics.Vty as Vty
-import           Numeric (showFFloat)
-import           Text.Printf (printf)
+import           Numeric
+  ( showFFloat
+  )
+import           Text.Printf
+  ( printf
+  )
 
-import           Cardano.Node.Types (Protocol(..))
-import           Cardano.Tracing.Peer (Peer(..), ppPeer)
+import           Cardano.Node.Types
+  ( Protocol (..)
+  )
+import           Cardano.Tracing.Peer
+  ( Peer (..)
+  , ppPeer
+  )
 
 data ColorTheme
   = DarkTheme
