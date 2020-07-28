@@ -22,7 +22,7 @@ Prometheus needs to be configured to monitor your Cardano Node. A minimalistic c
           - job_name: 'cardano' # To scrape data from the cardano node
             scrape_interval: 5s
             static_configs:
-              - targets: ['a.b.c.d:12789']
+              - targets: ['a.b.c.d:12798']
           - job_name: 'node' # To scrape data from a node exporter to monitor your linux host metrics.
             scrape_interval: 5s
             static_configs:
