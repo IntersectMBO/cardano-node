@@ -1,6 +1,6 @@
-# Register stake address in the blockchain
+# Register stake address on the blockchain
 
-Stake address needs to be registered in the blockchain to be useful. Registering keys requires:
+Stake address needs to be registered on the blockchain to be useful. Registering keys requires:
 
 * Create a registration certificate.
 * Submit the certificate to the blockchain with a transaction.
@@ -89,6 +89,6 @@ And submit it:
     --tx-file tx.signed \
     --mainnet
 
-Your stake key is now registered in the blockchain.
+Your stake key is now registered on the blockchain.
 
 **Note**`--mainnet` identifies the Cardano mainnet, for testnets use `--testnet-magic 42` instead.
